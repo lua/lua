@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.78 2000/04/07 13:13:11 roberto Exp roberto $
+** $Id: lparser.c,v 1.79 2000/04/07 19:35:20 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -36,6 +36,7 @@ typedef struct Constdesc {
 
 typedef struct Breaklabel {
   struct Breaklabel *previous;  /* chain */
+  TString *label;
   int breaklist;
   int stacklevel;
 } Breaklabel;
@@ -168,6 +169,14 @@ static int checkname (LexState *ls) {
 static TString *str_checkname (LexState *ls) {
   int i = checkname(ls);  /* this call may realloc `f->consts' */
   return ls->fs->f->kstr[i];
+}
+
+
+static TString *optionalname (LexState *ls) {
+  if (ls->token == TK_NAME)
+    return str_checkname(ls);
+  else
+    return NULL;
 }
 
 
@@ -317,6 +326,7 @@ static int getvarname (LexState *ls, expdesc *var) {
 
 static void enterbreak (FuncState *fs, Breaklabel *bl) {
   bl->stacklevel = fs->stacklevel;
+  bl->label = NULL;
   bl->breaklist = NO_JUMP;
   bl->previous = fs->bl;
   fs->bl = bl;
@@ -327,6 +337,20 @@ static void leavebreak (FuncState *fs, Breaklabel *bl) {
   fs->bl = bl->previous;
   LUA_ASSERT(fs->L, bl->stacklevel == fs->stacklevel, "wrong levels");
   luaK_patchlist(fs, bl->breaklist, luaK_getlabel(fs));
+}
+
+
+static Breaklabel *findlabel (FuncState *fs, TString *name) {
+  Breaklabel *bl;
+  for (bl=fs->bl; bl; bl=bl->previous) {
+    if (bl->label == name)
+      return bl;
+  }
+  if (name)  /* label not found: choose appropriate error message */
+    luaX_syntaxerror(fs->ls, "break not inside given label", name->str);
+  else
+    luaK_error(fs->ls, "break not inside while or repeat loop");
+  return NULL;  /* to avoid warnings */
 }
 
 
@@ -419,7 +443,7 @@ static int explist1 (LexState *ls) {
     expr(ls, &v);
     n++;
   }
-  luaK_tostack(ls, &v, 0);
+  luaK_tostack(ls, &v, 0);  /* keep open number of values of last expression */
   return n;
 }
 
@@ -427,12 +451,12 @@ static int explist1 (LexState *ls) {
 static int explist (LexState *ls) {
   /* explist -> [ explist1 ] */
   switch (ls->token) {
-    case TK_ELSE: case TK_ELSEIF: case TK_END: case TK_UNTIL:
-    case TK_EOS: case ';': case ')':
-      return 0;  /* empty list */
-
-    default:
+    case TK_NUMBER: case TK_STRING: case TK_NIL: case '{':
+    case TK_FUNCTION: case '(': case TK_NAME: case '%': 
+    case TK_NOT:  case '-':  /* first `expr' */
       return explist1(ls);
+    default:
+      return 0;  /* empty list */
   }
 }
 
@@ -998,44 +1022,73 @@ static void namestat (LexState *ls) {
 }
 
 
+static void retstat (LexState *ls) {
+  /* stat -> RETURN explist */
+  FuncState *fs = ls->fs;
+  setline_and_next(ls);  /* skip RETURN */
+  explist(ls);
+  luaK_code1(fs, OP_RETURN, ls->fs->nlocalvar);
+  fs->stacklevel = fs->nlocalvar;  /* removes all temp values */
+}
+
+
+static void breakstat (LexState *ls) {
+  /* stat -> BREAK [NAME] */
+  FuncState *fs = ls->fs;
+  Breaklabel *bl;
+  int currentlevel = fs->stacklevel;
+  setline_and_next(ls);  /* skip BREAK */
+  bl = findlabel(fs, optionalname(ls));
+  luaK_adjuststack(fs, currentlevel - bl->stacklevel);
+  luaK_concat(fs, &bl->breaklist, luaK_jump(fs));
+  fs->stacklevel = currentlevel;
+}
+
+
 static int stat (LexState *ls) {
   int line = ls->linenumber;  /* may be needed for error messages */
   switch (ls->token) {
     case TK_IF:  /* stat -> ifstat */
       ifstat(ls, line);
-      break;
+      return 1;
 
     case TK_WHILE:  /* stat -> whilestat */
       whilestat(ls, line);
-      break;
+      return 1;
 
-    case TK_DO: {  /* stat -> DO block END */
+    case TK_DO:  /* stat -> DO block END */
       setline_and_next(ls);  /* skip DO */
       block(ls);
       check_END(ls, TK_DO, line);
-      break;
-    }
+      return 1;
 
     case TK_REPEAT:  /* stat -> repeatstat */
       repeatstat(ls, line);
-      break;
+      return 1;
 
     case TK_FUNCTION:  /* stat -> funcstat */
       funcstat(ls, line);
-      break;
+      return 1;
 
     case TK_LOCAL:  /* stat -> localstat */
       localstat(ls);
-      break;
+      return 1;
 
     case TK_NAME: case '%':  /* stat -> namestat */
       namestat(ls);
-      break;
+      return 1;
+
+    case TK_RETURN:  /* stat -> retstat */
+      retstat(ls);
+      return 2;  /* must be last statement */
+
+    case TK_BREAK:  /* stat -> breakstat */
+      breakstat(ls);
+      return 2;  /* must be last statement */
 
     default:
       return 0;  /* no statement */
   }
-  return 1;
 }
 
 
@@ -1092,44 +1145,36 @@ static void body (LexState *ls, int needself, int line) {
 }
 
 
-static void ret (LexState *ls) {
-  /* ret -> [RETURN explist sc | BREAK sc] */
-  FuncState *fs = ls->fs;
-  switch (ls->token) {
-    case TK_RETURN: {
-      setline_and_next(ls);  /* skip RETURN */
-      explist(ls);
-      luaK_code1(fs, OP_RETURN, ls->fs->nlocalvar);
-      fs->stacklevel = fs->nlocalvar;  /* removes all temp values */
-      optional(ls, ';');
-      break;
-    }
-    case TK_BREAK: {
-      Breaklabel *bl = fs->bl;
-      int currentlevel = fs->stacklevel;
-      if (bl == NULL)
-        luaK_error(ls, "break not inside while or repeat loop");
-
-      setline_and_next(ls);  /* skip BREAK */
-      luaK_adjuststack(fs, currentlevel - bl->stacklevel);
-      luaK_concat(fs, &bl->breaklist, luaK_jump(fs));
-      optional(ls, ';');
-      fs->stacklevel = currentlevel;
-      break;
-    }
-  }
-}
-
 /* }====================================================================== */
 
 
+static void label (LexState *ls, Breaklabel *bl) {
+  /* label -> [ '|' NAME '|' ] */ 
+  if (optional(ls, '|')) {
+    enterbreak(ls->fs, bl);
+    bl->label = str_checkname(ls);
+    check(ls, '|');
+  }
+  else
+    bl->label = NULL;  /* there is no label */
+}
+
+
 static void chunk (LexState *ls) {
-  /* chunk -> { stat [;] } ret */
-  while (stat(ls)) {
+  /* chunk -> { [label] stat [';'] } */
+  Breaklabel bl;
+  int a;
+  do {
+    label(ls, &bl);
+    a = stat(ls);
+    if (a != 0)
+      optional(ls, ';');
+    else if (bl.label)
+      luaK_error(ls, "label without a statement");
     LUA_ASSERT(ls->L, ls->fs->stacklevel == ls->fs->nlocalvar,
                "stack size != # local vars");
-    optional(ls, ';');
-  }
-  ret(ls);  /* optional return */
+    if (bl.label)
+      leavebreak(ls->fs, &bl);
+  } while (a == 1);
 }
 
