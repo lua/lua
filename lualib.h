@@ -1,5 +1,5 @@
 /*
-** $Id: lualib.h,v 1.3 1997/12/17 20:48:58 roberto Exp roberto $
+** $Id: lualib.h,v 1.4 1998/06/19 16:14:09 roberto Exp roberto $
 ** Lua standard libraries
 ** See Copyright Notice in lua.h
 */
@@ -10,12 +10,13 @@
 
 #include "lua.h"
 
-
 void lua_iolibopen   (void);
 void lua_strlibopen  (void);
 void lua_mathlibopen (void);
+void lua_dblibopen   (void);
 
 
+void lua_userinit (void);
 
 
 /* To keep compatibility with old versions */

@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.12 1998/05/27 13:03:40 roberto Exp roberto $
+## $Id: makefile,v 1.13 1998/06/19 18:52:27 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -58,7 +58,9 @@ LUAOBJS = \
 LIBOBJS = 	\
 	liolib.o \
 	lmathlib.o \
-	lstrlib.o
+	lstrlib.o \
+	ldblib.o \
+	linit.o
 
 
 lua : lua.o liblua.a liblualib.a
@@ -96,12 +98,14 @@ lauxlib.o: lauxlib.c lauxlib.h lua.h luadebug.h
 lbuffer.o: lbuffer.c lauxlib.h lua.h lmem.h lstate.h lobject.h
 lbuiltin.o: lbuiltin.c lapi.h lua.h lobject.h lauxlib.h lbuiltin.h \
  ldo.h lstate.h lfunc.h lmem.h lstring.h ltable.h ltm.h lundump.h \
- lzio.h
+ lzio.h lvm.h
+ldblib.o: ldblib.c lauxlib.h lua.h luadebug.h
 ldo.o: ldo.c ldo.h lobject.h lua.h lstate.h lfunc.h lgc.h lmem.h \
- lparser.h lzio.h ltm.h luadebug.h lundump.h lvm.h
+ lparser.h lzio.h lstring.h ltm.h luadebug.h lundump.h lvm.h
 lfunc.o: lfunc.c lfunc.h lobject.h lua.h lmem.h lstate.h
 lgc.o: lgc.c ldo.h lobject.h lua.h lstate.h lfunc.h lgc.h lmem.h \
  lstring.h ltable.h ltm.h
+linit.o: linit.c lua.h lualib.h
 liolib.o: liolib.c lauxlib.h lua.h luadebug.h lualib.h
 llex.o: llex.c lauxlib.h lua.h llex.h lobject.h lzio.h lmem.h \
  lparser.h lstate.h lstring.h luadebug.h
