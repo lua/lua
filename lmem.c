@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.6 1998/06/19 16:14:09 roberto Exp roberto $
+** $Id: lmem.c,v 1.7 1998/06/29 22:03:06 roberto Exp $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -12,10 +12,19 @@
 #include "lua.h"
 
 
+/*
+** real ANSI systems do not need some of these tests,
+** since realloc(NULL, s)==malloc(s).
+** But some systems (Sun OS) are not that ANSI...
+*/
+#ifdef OLD_ANSI
+#define realloc(b,s)	((b) == NULL ? malloc(s) : (realloc)(b, s))
+#endif
+
+
 
 int luaM_growaux (void **block, unsigned long nelems, int size,
-                       char *errormsg, unsigned long limit)
-{
+                       char *errormsg, unsigned long limit) {
   if (nelems >= limit)
     lua_error(errormsg);
   nelems = (nelems == 0) ? 32 : nelems*2;
@@ -31,22 +40,16 @@ int luaM_growaux (void **block, unsigned long nelems, int size,
 
 /*
 ** generic allocation routine.
-** real ANSI systems do not need some of these tests,
-** since realloc(NULL, s)==malloc(s) and realloc(b, 0)==free(b).
-** But some systems (e.g. Sun OS) are not that ANSI...
 */
-void *luaM_realloc (void *block, unsigned long size)
-{
+void *luaM_realloc (void *block, unsigned long size) {
   size_t s = (size_t)size;
   if (s != size)
     lua_error("Allocation Error: Block too big");
   if (size == 0) {
-    if (block) {
-      free(block);
-    }
+    free(block);  /* block may be NULL, that is OK for free */
     return NULL;
   }
-  block = block ? realloc(block, s) : malloc(s);
+  block = realloc(block, s);
   if (block == NULL)
     lua_error(memEM);
   return block;
@@ -68,8 +71,7 @@ unsigned long numblocks = 0;
 unsigned long totalmem = 0;
 
 
-static void *checkblock (void *block)
-{
+static void *checkblock (void *block) {
   unsigned long *b = (unsigned long *)((char *)block - HEADER);
   unsigned long size = *b;
   LUA_ASSERT(*(((char *)b)+size+HEADER) == MARK, 
@@ -80,26 +82,22 @@ static void *checkblock (void *block)
 }
 
 
-void *luaM_realloc (void *block, unsigned long size)
-{
+void *luaM_realloc (void *block, unsigned long size) {
   unsigned long realsize = HEADER+size+1;
   if (realsize != (size_t)realsize)
     lua_error("Allocation Error: Block too big");
-  if (size == 0) {  /* ANSI dosen't need this, but some machines... */
+  if (size == 0) {
     if (block) {
       unsigned long *b = (unsigned long *)((char *)block - HEADER);
       memset(block, -1, *b);  /* erase block */
       block = checkblock(block);
-      free(block);
     }
+    free(block);
     return NULL;
   }
-  if (block) {
+  if (block)
     block = checkblock(block);
-    block = (unsigned long *)realloc(block, realsize);
-  }
-  else
-    block = (unsigned long *)malloc(realsize);
+  block = (unsigned long *)realloc(block, realsize);
   if (block == NULL)
     lua_error(memEM);
   totalmem += size;
