@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.22 1999/02/26 15:48:55 roberto Exp roberto $
+** $Id: lgc.c,v 1.23 1999/03/04 21:17:26 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -32,7 +32,7 @@ static int markobject (TObject *o);
 int luaC_ref (TObject *o, int lock) {
   int ref;
   if (ttype(o) == LUA_T_NIL)
-    ref = -1;   /* special ref for nil */
+    ref = LUA_REFNIL;
   else {
     for (ref=0; ref<L->refSize; ref++)
       if (L->refArray[ref].status == FREE)
@@ -57,7 +57,7 @@ void lua_unref (int ref)
 
 TObject* luaC_getref (int ref)
 {
-  if (ref == -1)
+  if (ref == LUA_REFNIL)
     return &luaO_nilobject;
   if (ref >= 0 && ref < L->refSize &&
       (L->refArray[ref].status == LOCK || L->refArray[ref].status == HOLD))
