@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.50 1995/11/16 20:46:24 roberto Exp $";
+char *rcs_opcode="$Id: opcode.c,v 3.52 1996/01/09 20:22:44 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -520,12 +520,8 @@ int lua_call (char *funcname)
 int lua_dofile (char *filename)
 {
   int status;
-  char *message = lua_openfile (filename);
-  if (message)
-  {
-    lua_message(message);
+  if (lua_openfile(filename))
     return 1;
-  }
   status = do_protectedmain();
   lua_closefile();
   return status;
