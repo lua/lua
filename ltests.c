@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.11 2004/08/24 20:12:06 roberto Exp roberto $
+** $Id: ltests.c,v 2.12 2004/09/21 16:54:32 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -1049,8 +1049,8 @@ static int auxgsub (lua_State *L) {
 static int auxgetf (lua_State *L) {
   const char *s = luaL_checkstring(L, 1);
   lua_settop(L, 2);
-  lua_pushstring(L, luaL_getfield(L, s));
-  lua_assert(lua_gettop(L) == 3);
+  lua_pushstring(L, luaL_getfield(L, 2, s));
+  lua_assert(lua_gettop(L) == 4);
   return 2;
 }
 
@@ -1058,8 +1058,8 @@ static int auxgetf (lua_State *L) {
 static int auxsetf (lua_State *L) {
   const char *s = luaL_checkstring(L, 1);
   lua_settop(L, 3);
-  lua_pushstring(L, luaL_setfield(L, s));
-  lua_assert(lua_gettop(L) == 2);
+  lua_pushstring(L, luaL_setfield(L, 2, s));
+  lua_assert(lua_gettop(L) == 3);
   return 1;
 }
 
