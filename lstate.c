@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.112 2002/11/18 11:01:55 roberto Exp roberto $
+** $Id: lstate.c,v 1.113 2002/11/19 14:12:13 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -84,8 +84,9 @@ static void freestack (lua_State *L, lua_State *L1) {
 */
 static void f_luaopen (lua_State *L, void *ud) {
   /* create a new global state */
-  global_State *g = luaM_new(L, global_State);
+  global_State *g = luaM_new(NULL, global_State);
   UNUSED(ud);
+  if (g == NULL) luaD_throw(L, LUA_ERRMEM);
   L->l_G = g;
   g->mainthread = L;
   g->GCthreshold = 0;  /* mark it as unfinished state */
@@ -147,7 +148,7 @@ static void close_state (lua_State *L) {
   freestack(L, L);
   if (G(L)) {
     lua_assert(G(L)->nblocks == sizeof(lua_State) + sizeof(global_State));
-    luaM_freelem(L, G(L));
+    luaM_freelem(NULL, G(L));
   }
   freestate(NULL, L);
 }
