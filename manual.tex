@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.19 1998/08/24 20:14:56 roberto Exp roberto $
+% $Id: manual.tex,v 1.20 1998/11/13 16:48:48 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -41,7 +41,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{\small \verb$Date: 1998/08/24 20:14:56 $}
+%\date{\small \verb$Date: 1998/11/13 16:48:48 $}
 
 \maketitle
 
@@ -2615,12 +2615,14 @@ Unless otherwise stated,
 all I/O functions return \nil\ on failure and
 some value different from \nil\ on success.
 
-\subsubsection*{\ff \T{readfrom (filename)}}\Deffunc{readfrom}
+\subsubsection*{\ff \T{readfrom (filename [, mode])}}\Deffunc{readfrom}
 
 This function may be called in two ways.
 When called with a file name, it opens the named file,
 sets its handle as the value of \verb|_INPUT|,
 and returns this value.
+An optional \verb|mode| argument with the string \verb|"binary"|
+opens file in binary mode (where this applies).
 It does not close the current input file.
 When called without parameters,
 it closes the \verb|_INPUT| file,
@@ -2639,13 +2641,15 @@ the number of files that can be open at the same time is
 usually limited and depends on the system.
 \end{quotation}
 
-\subsubsection*{\ff \T{writeto (filename)}}\Deffunc{writeto}
+\subsubsection*{\ff \T{writeto (filename [, mode])}}\Deffunc{writeto}
 
 This function may be called in two ways.
 When called with a file name,
 it opens the named file,
 sets its handle as the value of \verb|_OUTPUT|,
 and returns this value.
+An optional \verb|mode| argument with the string \verb|"binary"|
+opens file in binary mode (where this applies).
 It does not close the current output file.
 Note that, if the file already exists,
 then it will be \emph{completely erased} with this operation.
@@ -2667,10 +2671,12 @@ the number of files that can be open at the same time is
 usually limited and depends on the system.
 \end{quotation}
 
-\subsubsection*{\ff \T{appendto (filename)}}\Deffunc{appendto}
+\subsubsection*{\ff \T{appendto (filename [, mode])}}\Deffunc{appendto}
 
 Opens a file named \verb|filename| and sets it as the
 value of \verb|_OUTPUT|.
+An optional \verb|mode| argument with the string \verb|"binary"|
+opens file in binary mode (where this applies).
 Unlike the \verb|writeto| operation,
 this function does not erase any previous content of the file.
 If this function fails, it returns \nil,

@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.24 1998/08/30 20:25:24 roberto Exp roberto $
+** $Id: liolib.c,v 1.25 1998/09/07 18:59:59 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -62,6 +62,7 @@ static void pushresult (int i)
   else {
     lua_pushnil();
     lua_pushstring(strerror(errno));
+    lua_pushnumber(errno);
   }
 }
 
@@ -99,6 +100,15 @@ static FILE *getfileparam (char *name, int *arg) {
   }
   else
     return getfilebyname(name);
+}
+
+
+static char *getmode (char mode) {
+  static char m[3];
+  m[0] = mode;
+  m[1] = (*luaL_opt_string(FIRSTARG+1, "text") == 'b') ? 'b' : '\0';
+  m[2] = '\0';
+  return m;
 }
 
 
@@ -140,7 +150,7 @@ static void io_readfrom (void)
     current = lua_getuserdata(f);
   else {
     char *s = luaL_check_string(FIRSTARG);
-    current = (*s == '|') ? popen(s+1, "r") : fopen(s, "r");
+    current = (*s == '|') ? popen(s+1, "r") : fopen(s, getmode('r'));
     if (current == NULL) {
       pushresult(0);
       return;
@@ -162,7 +172,7 @@ static void io_writeto (void)
     current = lua_getuserdata(f);
   else {
     char *s = luaL_check_string(FIRSTARG);
-    current = (*s == '|') ? popen(s+1,"w") : fopen(s,"w");
+    current = (*s == '|') ? popen(s+1,"w") : fopen(s,getmode('w'));
     if (current == NULL) {
       pushresult(0);
       return;
@@ -175,7 +185,7 @@ static void io_writeto (void)
 static void io_appendto (void)
 {
   char *s = luaL_check_string(FIRSTARG);
-  FILE *fp = fopen (s, "a");
+  FILE *fp = fopen (s, getmode('a'));
   if (fp != NULL)
     setreturn(fp, FOUTPUT);
   else
