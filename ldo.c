@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.70 2000/03/29 20:19:20 roberto Exp roberto $
+** $Id: ldo.c,v 1.71 2000/03/30 17:19:48 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -183,14 +183,14 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
   retry:  /* for `function' tag method */
   switch (ttype(func)) {
     case TAG_LCLOSURE: {
-      ttype(func) = TAG_LCLMARK;
+      ttype(func) = TAG_LMARK;
       if (callhook)
         luaD_callHook(L, func, callhook, "call");
       firstResult = luaV_execute(L, clvalue(func), func+1);
       break;
     }
     case TAG_CCLOSURE: {
-      ttype(func) = TAG_CCLMARK;
+      ttype(func) = TAG_CMARK;
       if (callhook)
         luaD_callHook(L, func, callhook, "call");
       firstResult = callCclosure(L, clvalue(func), func+1);

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.56 2000/03/27 20:10:21 roberto Exp roberto $
+** $Id: lobject.h,v 1.57 2000/03/29 20:19:20 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -45,8 +45,8 @@ typedef enum {
   TAG_CCLOSURE,	/* fixed tag for C closures */
   TAG_NIL,	/* last "pre-defined" tag */
 
-  TAG_LCLMARK,	/* mark for Lua closures */
-  TAG_CCLMARK,	/* mark for C closures */
+  TAG_LMARK,	/* mark for Lua closures */
+  TAG_CMARK,	/* mark for C closures */
 
   TAG_LINE
 } lua_Type;
@@ -58,12 +58,12 @@ typedef enum {
 /*
 ** check whether `t' is a mark
 */
-#define is_T_MARK(t)	((t) == TAG_LCLMARK || (t) == TAG_CCLMARK)
+#define is_T_MARK(t)	((t) == TAG_LMARK || (t) == TAG_CMARK)
 
 
 typedef union {
   struct TString *ts;	/* TAG_STRING, TAG_USERDATA */
-  struct Closure *cl;	/* TAG_[CL]CLOSURE, TAG_[CL]CLMARK */
+  struct Closure *cl;	/* TAG_[CL]CLOSURE, TAG_[CL]MARK */
   struct Hash *a;	/* TAG_TABLE */
   Number n;		/* TAG_NUMBER */
   int i;		/* TAG_LINE */

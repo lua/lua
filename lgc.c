@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.44 2000/03/27 20:10:21 roberto Exp roberto $
+** $Id: lgc.c,v 1.45 2000/03/29 20:19:20 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -102,10 +102,10 @@ static int markobject (lua_State *L, TObject *o) {
     case TAG_TABLE:
       hashmark(L, avalue(o));
       break;
-    case TAG_LCLOSURE:  case TAG_LCLMARK:
+    case TAG_LCLOSURE:  case TAG_LMARK:
       protomark(L, clvalue(o)->f.l);
       /* go trhough */
-    case TAG_CCLOSURE:  case TAG_CCLMARK:
+    case TAG_CCLOSURE:  case TAG_CMARK:
       closuremark(L, clvalue(o));
       break;
     default: break;  /* numbers, etc */

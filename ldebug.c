@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.14 2000/03/29 20:19:20 roberto Exp roberto $
+** $Id: ldebug.c,v 1.15 2000/03/30 17:19:48 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -25,7 +25,7 @@
 static const lua_Type normtype[] = {  /* ORDER LUA_T */
   TAG_USERDATA, TAG_NUMBER, TAG_STRING, TAG_TABLE,
   TAG_LCLOSURE, TAG_CCLOSURE, TAG_NIL,
-  TAG_LCLOSURE, TAG_CCLOSURE   /* TAG_LCLMARK, TAG_CCLMARK */
+  TAG_LCLOSURE, TAG_CCLOSURE   /* TAG_LMARK, TAG_CMARK */
 };
 
 
@@ -88,7 +88,7 @@ int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
 static int lua_nups (StkId f) {
   switch (ttype(f)) {
     case TAG_LCLOSURE:  case TAG_CCLOSURE:
-    case TAG_LCLMARK:   case TAG_CCLMARK:
+    case TAG_LMARK:   case TAG_CMARK:
       return f->value.cl->nelems;
     default:
       return 0;
@@ -102,7 +102,7 @@ static int lua_currentline (lua_State *L, StkId f) {
 
 
 static Proto *getluaproto (StkId f) {
-  return (ttype(f) == TAG_LCLMARK) ?  clvalue(f)->f.l : NULL;
+  return (ttype(f) == TAG_LMARK) ?  clvalue(f)->f.l : NULL;
 }
 
 
@@ -135,12 +135,12 @@ int lua_setlocal (lua_State *L, const lua_Debug *ar, lua_Localvar *v) {
 static void lua_funcinfo (lua_Debug *ar) {
   StkId func = ar->_func;
   switch (ttype(func)) {
-    case TAG_LCLOSURE:  case TAG_LCLMARK:
+    case TAG_LCLOSURE:  case TAG_LMARK:
       ar->source = clvalue(func)->f.l->source->str;
       ar->linedefined = clvalue(func)->f.l->lineDefined;
       ar->what = "Lua";
       break;
-    case TAG_CCLOSURE:  case TAG_CCLMARK:
+    case TAG_CCLOSURE:  case TAG_CMARK:
       ar->source = "(C)";
       ar->linedefined = -1;
       ar->what = "C";
