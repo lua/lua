@@ -1,11 +1,11 @@
 /*
-** $Id: $
+** $Id: llimits.h,v 1.1 2000/03/24 17:26:08 roberto Exp roberto $
 ** Limits, basic types, and some other "instalation-dependent" definitions
 ** See Copyright Notice in lua.h
 */
 
-#ifndef llims_h
-#define llims_h
+#ifndef llimits_h
+#define llimits_h
 
 
 #include <limits.h>

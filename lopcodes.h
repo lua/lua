@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.50 2000/03/16 18:03:09 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.51 2000/03/24 17:26:08 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -7,7 +7,7 @@
 #ifndef lopcodes_h
 #define lopcodes_h
 
-#include "llims.h"
+#include "llimits.h"
 
 
 /*===========================================================================
@@ -24,7 +24,7 @@
   The signed argument is represented in excess 2^K; that is, the number
   value is the usigned value minus 2^K.
 
-  The size of each argument is defined in `llims.h'. The usual is an
+  The size of each argument is defined in `llimits.h'. The usual is an
   instruction with 32 bits, U and S arguments with 26 bits (32-6), B
   argument with 9 bits, and A argument with 17 bits (32-6-9). For small
   instalations, the instruction size can be 16, so U and S have 10 bits,

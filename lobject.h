@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.53 2000/03/20 19:14:54 roberto Exp roberto $
+** $Id: lobject.h,v 1.54 2000/03/24 17:26:08 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -8,7 +8,7 @@
 #define lobject_h
 
 
-#include "llims.h"
+#include "llimits.h"
 #include "lua.h"
 
 
