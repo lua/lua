@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.252 2002/08/12 17:23:12 roberto Exp roberto $
+** $Id: lvm.c,v 1.253 2002/08/20 20:03:05 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -555,7 +555,7 @@ StkId luaV_execute (lua_State *L) {
         dojump(pc, GETARG_sBx(i));
         break;
       }
-      case OP_EQ: {  /* skip next instruction if test fails */
+      case OP_EQ: {
         if (equalobj(L, RKB(i), RKC(i)) != GETARG_A(i)) pc++;
         else dojump(pc, GETARG_sBx(*pc) + 1);
         break;

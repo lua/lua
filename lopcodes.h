@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.100 2002/08/05 14:46:43 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.101 2002/08/20 20:03:05 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -121,6 +121,11 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 ** R(x) - register
 ** Kst(x) - constant (in constant table)
 ** RK(x) == if x < MAXSTACK then R(x) else Kst(x-MAXSTACK)
+*/
+
+
+/*
+** grep "ORDER OP" if you change these enums
 */
 
 typedef enum {

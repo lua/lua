@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.109 2002/08/05 14:07:34 roberto Exp roberto $
+** $Id: lcode.c,v 1.110 2002/08/20 20:03:05 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -616,38 +616,21 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
 
 static void codebinop (FuncState *fs, expdesc *res, BinOpr op,
                        int o1, int o2) {
-  switch (op) {
-    case OPR_SUB:
-    case OPR_DIV:
-    case OPR_POW:
-    case OPR_ADD:
-    case OPR_MULT: {  /* ORDER OPR */
-      OpCode opc = cast(OpCode, (op - OPR_ADD) + OP_ADD);
-      res->info = luaK_codeABC(fs, opc, 0, o1, o2);
-      res->k = VRELOCABLE;
-      break;
-    }
-    case OPR_NE:
-    case OPR_EQ: {
-      res->info = luaK_condjump(fs, OP_EQ, (op == OPR_EQ), o1, o2);
-      res->k = VJMP;
-      break;
-    }
-    case OPR_GT:
-    case OPR_GE: {  /* ORDER OPR */
-      int temp;
+  if (op <= OPR_POW) {  /* arithmetic operator? */
+    OpCode opc = cast(OpCode, (op - OPR_ADD) + OP_ADD);  /* ORDER OP */
+    res->info = luaK_codeABC(fs, opc, 0, o1, o2);
+    res->k = VRELOCABLE;
+  }
+  else {  /* test operator */
+    static const OpCode ops[] = {OP_EQ, OP_EQ, OP_LT, OP_LE, OP_LT, OP_LE};
+    int cond = 1;
+    if (op >= OPR_GT) {  /* `>' or `>='? */
+      int temp;  /* exchange args and replace by `<' or `<=' */
       temp = o1; o1 = o2; o2 = temp;  /* o1 <==> o2 */
-      op -= 2;  /* GT -> LT, GE -> LE */
-      /* go through */
     }
-    case OPR_LT:
-    case OPR_LE: {
-      OpCode opc = cast(OpCode, (op - OPR_LT) + OP_LT);
-      res->info = luaK_condjump(fs, opc, 1, o1, o2);
-      res->k = VJMP;
-      break;
-    }
-    default: lua_assert(0);
+    else if (op == OPR_NE) cond = 0;
+    res->info = luaK_condjump(fs, ops[op - OPR_NE], cond, o1, o2);
+    res->k = VJMP;
   }
 }
 
