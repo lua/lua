@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.94 2003/02/11 09:44:38 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.95 2003/02/11 15:32:31 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -103,6 +103,45 @@ LUALIB_API int luaL_findstring (const char *name, const char *const list[]) {
 }
 
 
+LUALIB_API int luaL_newmetatable (lua_State *L, const char *tname) {
+  lua_pushstring(L, tname);
+  lua_rawget(L, LUA_REGISTRYINDEX);  /* get registry.name */
+  if (!lua_isnil(L, -1))  /* name already in use? */
+    return 0;  /* leave previous value on top, but return 0 */
+  lua_pop(L, 1);
+  lua_newtable(L);  /* create metatable */
+  lua_pushstring(L, tname);
+  lua_pushvalue(L, -2);
+  lua_rawset(L, LUA_REGISTRYINDEX);  /* registry.name = metatable */
+  lua_pushvalue(L, -1);
+  lua_pushstring(L, tname);
+  lua_rawset(L, LUA_REGISTRYINDEX);  /* registry[metatable] = name */
+  return 1;
+}
+
+
+LUALIB_API void  luaL_getmetatable (lua_State *L, const char *tname) {
+  lua_pushstring(L, tname);
+  lua_rawget(L, LUA_REGISTRYINDEX);
+}
+
+
+LUALIB_API void *luaL_checkudata (lua_State *L, int ud, const char *tname) {
+  const char *tn;
+  if (!lua_getmetatable(L, ud)) return NULL;  /* no metatable? */
+  lua_rawget(L, LUA_REGISTRYINDEX);  /* get registry[metatable] */
+  tn = lua_tostring(L, -1);
+  if (tn && (strcmp(tn, tname) == 0)) {
+    lua_pop(L, 1);
+    return lua_touserdata(L, ud);
+  }
+  else {
+    lua_pop(L, 1);
+    return NULL;
+  }
+}
+
+
 LUALIB_API void luaL_checkstack (lua_State *L, int space, const char *mes) {
   if (!lua_checkstack(L, space))
     luaL_error(L, "stack overflow (%s)", mes);
@@ -118,19 +157,6 @@ LUALIB_API void luaL_checktype (lua_State *L, int narg, int t) {
 LUALIB_API void luaL_checkany (lua_State *L, int narg) {
   if (lua_type(L, narg) == LUA_TNONE)
     luaL_argerror(L, narg, "value expected");
-}
-
-
-LUALIB_API void *luaL_checkudata (lua_State *L, int ud, const char *tname) {
-  if (!lua_getmetatable(L, ud)) return NULL;  /* no metatable? */
-  lua_pushstring(L, tname);
-  lua_rawget(L, LUA_REGISTRYINDEX);
-  if (!lua_rawequal(L, -1, -2)) {
-    lua_pop(L, 2);
-    return NULL;
-  }
-  lua_pop(L, 2);
-  return lua_touserdata(L, ud);
 }
 
 

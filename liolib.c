@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.36 2003/03/14 19:00:16 roberto Exp roberto $
+** $Id: liolib.c,v 2.37 2003/03/14 19:08:11 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -87,21 +87,15 @@ static int pushresult (lua_State *L, int i, const char *filename) {
 
 
 static FILE **topfile (lua_State *L, int findex) {
-  FILE **f = (FILE **)lua_touserdata(L, findex);
-  if (f == NULL || !lua_getmetatable(L, findex) ||
-                   !lua_rawequal(L, -1, lua_upvalueindex(1))) {
-    luaL_argerror(L, findex, "bad file");
-  }
-  lua_pop(L, 1);
+  FILE **f = (FILE **)luaL_checkudata(L, findex, FILEHANDLE);
+  if (f == NULL) luaL_argerror(L, findex, "bad file");
   return f;
 }
 
 
 static int io_type (lua_State *L) {
-  FILE **f = (FILE **)lua_touserdata(L, 1);
-  if (f == NULL || !lua_getmetatable(L, 1) ||
-                   !lua_rawequal(L, -1, lua_upvalueindex(1)))
-    lua_pushnil(L);
+  FILE **f = (FILE **)luaL_checkudata(L, 1, FILEHANDLE);
+  if (f == NULL) lua_pushnil(L);
   else if (*f == NULL)
     lua_pushliteral(L, "closed file");
   else
@@ -127,8 +121,7 @@ static FILE *tofile (lua_State *L, int findex) {
 static FILE **newfile (lua_State *L) {
   FILE **pf = (FILE **)lua_newuserdata(L, sizeof(FILE *));
   *pf = NULL;  /* file handle is currently `closed' */
-  lua_pushliteral(L, FILEHANDLE);
-  lua_rawget(L, LUA_REGISTRYINDEX);
+  luaL_getmetatable(L, FILEHANDLE);
   lua_setmetatable(L, -2);
   return pf;
 }
@@ -527,15 +520,12 @@ static const luaL_reg flib[] = {
 
 
 static void createmeta (lua_State *L) {
-  lua_pushliteral(L, FILEHANDLE);
-  lua_newtable(L);  /* push new metatable for file handles */
+  luaL_newmetatable(L, FILEHANDLE);  /* create new metatable for file handles */
   /* file methods */
   lua_pushliteral(L, "__index");
   lua_pushvalue(L, -2);  /* push metatable */
   lua_rawset(L, -3);  /* metatable.__index = metatable */
-  lua_pushvalue(L, -1);  /* push metatable (will be upvalue for library) */
-  luaL_openlib(L, NULL, flib, 1);
-  lua_rawset(L, LUA_REGISTRYINDEX);  /* registry.FILEHANDLE = metatable */
+  luaL_openlib(L, NULL, flib, 0);
 }
 
 /* }====================================================== */
@@ -748,10 +738,8 @@ static const luaL_reg syslib[] = {
 
 
 LUALIB_API int luaopen_io (lua_State *L) {
-  createmeta(L);
   luaL_openlib(L, LUA_OSLIBNAME, syslib, 0);
-  lua_pushliteral(L, FILEHANDLE);
-  lua_rawget(L, LUA_REGISTRYINDEX);
+  createmeta(L);
   lua_pushvalue(L, -1);
   luaL_openlib(L, LUA_IOLIBNAME, iolib, 1);
   /* put predefined file handles into `io' table */

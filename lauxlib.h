@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.57 2003/01/27 13:46:16 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.58 2003/02/11 15:32:31 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -16,7 +16,7 @@
 
 
 #ifndef LUALIB_API
-#define LUALIB_API	extern
+#define LUALIB_API	LUA_API
 #endif
 
 
@@ -33,7 +33,6 @@ LUALIB_API int luaL_getmetafield (lua_State *L, int obj, const char *e);
 LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *e);
 LUALIB_API int luaL_typerror (lua_State *L, int narg, const char *tname);
 LUALIB_API int luaL_argerror (lua_State *L, int numarg, const char *extramsg);
-LUALIB_API void *luaL_checkudata (lua_State *L, int ud, const char *tname);
 LUALIB_API const char *luaL_checklstring (lua_State *L, int numArg, size_t *l);
 LUALIB_API const char *luaL_optlstring (lua_State *L, int numArg,
                                            const char *def, size_t *l);
@@ -43,6 +42,10 @@ LUALIB_API lua_Number luaL_optnumber (lua_State *L, int nArg, lua_Number def);
 LUALIB_API void luaL_checkstack (lua_State *L, int sz, const char *msg);
 LUALIB_API void luaL_checktype (lua_State *L, int narg, int t);
 LUALIB_API void luaL_checkany (lua_State *L, int narg);
+
+LUALIB_API int   luaL_newmetatable (lua_State *L, const char *tname);
+LUALIB_API void  luaL_getmetatable (lua_State *L, const char *tname);
+LUALIB_API void *luaL_checkudata (lua_State *L, int ud, const char *tname);
 
 LUALIB_API void luaL_where (lua_State *L, int lvl);
 LUALIB_API int luaL_error (lua_State *L, const char *fmt, ...);
@@ -115,7 +118,7 @@ LUALIB_API void luaL_pushresult (luaL_Buffer *B);
 
 
 /*
-** Compatibility macros
+** Compatibility macros and functions
 */
 
 LUALIB_API int   lua_dofile (lua_State *L, const char *filename);
