@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.40 2002/03/14 18:01:52 roberto Exp roberto $
+** $Id: lparser.h,v 1.41 2002/03/25 17:47:14 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -27,9 +27,9 @@ typedef enum {
   VUPVAL,       /* info = index of upvalue in `upvalues' */
   VGLOBAL,	/* info = index of table; aux = index of global name in `k' */
   VINDEXED,	/* info = table register; aux = index register (or `k') */
+  VJMP,		/* info = instruction pc */
   VRELOCABLE,	/* info = instruction pc */
   VNONRELOC,	/* info = result register */
-  VJMP,		/* info = result register */
   VCALL		/* info = result register */
 } expkind;
 
