@@ -1,5 +1,5 @@
 /*
-** $Id: lualib.h,v 1.26 2003/03/11 12:24:34 roberto Exp roberto $
+** $Id: lualib.h,v 1.27 2003/03/17 13:04:58 roberto Exp roberto $
 ** Lua standard libraries
 ** See Copyright Notice in lua.h
 */
@@ -12,7 +12,7 @@
 
 
 #ifndef LUALIB_API
-#define LUALIB_API	extern
+#define LUALIB_API	LUA_API
 #endif
 
 
