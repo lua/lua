@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.64 2000/05/24 13:54:49 roberto Exp roberto $
+** $Id: liolib.c,v 1.65 2000/05/26 19:17:57 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -160,7 +160,7 @@ static void setreturn (lua_State *L, IOCtrl *ctrl, FILE *f, int inout) {
 
 
 static int closefile (lua_State *L, IOCtrl *ctrl, FILE *f) {
-  if (f == stdin || f == stdout)
+  if (f == stdin || f == stdout || f == stderr)
     return 1;
   else {
     if (f == ctrl->file[INFILE])
@@ -177,6 +177,14 @@ static int closefile (lua_State *L, IOCtrl *ctrl, FILE *f) {
 static void io_close (lua_State *L) {
   IOCtrl *ctrl = (IOCtrl *)lua_getuserdata(L, lua_getparam(L, 1));
   pushresult(L, closefile(L, ctrl, getnonullfile(L, ctrl, 2)));
+}
+
+
+static void file_collect (lua_State *L) {
+  IOCtrl *ctrl = (IOCtrl *)lua_getuserdata(L, lua_getparam(L, 1));
+  FILE *f = getnonullfile(L, ctrl, 2);
+  if (f != stdin && f != stdout && f != stderr)
+    CLOSEFILE(L, f);
 }
 
 
@@ -649,6 +657,10 @@ static void openwithcontrol (lua_State *L) {
   lua_pushusertag(L, ctrl, ctrltag);
   lua_pushcclosure(L, ctrl_collect, 1); 
   lua_settagmethod(L, ctrltag, "gc");
+  /* close files when collected */
+  lua_pushusertag(L, ctrl, ctrltag);
+  lua_pushcclosure(L, file_collect, 1); 
+  lua_settagmethod(L, ctrl->iotag, "gc");
 }
 
 void lua_iolibopen (lua_State *L) {
