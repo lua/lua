@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.61 2002/03/27 12:49:53 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.62 2002/03/27 15:30:41 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -122,7 +122,9 @@ static int luaB_error (lua_State *L) {
 static int luaB_metatable (lua_State *L) {
   luaL_check_any(L, 1);
   if (lua_isnone(L, 2)) {
-    if (lua_getmetatable(L, 1)) {
+    if (!lua_getmetatable(L, 1))
+      return 0;  /* no metatable */
+    else {
       lua_pushliteral(L, "__metatable");
       lua_rawget(L, -2);
       if (lua_isnil(L, -1))
@@ -361,6 +363,9 @@ static int luaB_call (lua_State *L) {
 
 static int luaB_tostring (lua_State *L) {
   char buff[64];
+  luaL_checkany(L, 1);
+  if (luaL_callmeta(L, 1, "__tostring"))  /* is there a metafield? */
+    return 1;  /* use its value */
   switch (lua_type(L, 1)) {
     case LUA_TNUMBER:
       lua_pushstring(L, lua_tostring(L, 1));
@@ -372,25 +377,17 @@ static int luaB_tostring (lua_State *L) {
       lua_pushstring(L, (lua_toboolean(L, 1) ? "true" : "false"));
       return 1;
     case LUA_TTABLE:
-      sprintf(buff, "%.40s: %p", lua_typename(L, lua_type(L, 1)),
-                                 lua_topointer(L, 1));
+      sprintf(buff, "table: %p", lua_topointer(L, 1));
       break;
     case LUA_TFUNCTION:
       sprintf(buff, "function: %p", lua_topointer(L, 1));
       break;
-    case LUA_TUSERDATA: {
-      const char *t = lua_typename(L, lua_type(L, 1));
-      if (strcmp(t, "userdata") == 0)
-        sprintf(buff, "userdata: %p", lua_touserdata(L, 1));
-      else
-        sprintf(buff, "%.40s: %p", t, lua_touserdata(L, 1));
+    case LUA_TUSERDATA:
+      sprintf(buff, "userdata: %p", lua_touserdata(L, 1));
       break;
-    }
     case LUA_TNIL:
       lua_pushliteral(L, "nil");
       return 1;
-    default:
-      luaL_argerror(L, 1, "value expected");
   }
   lua_pushstring(L, buff);
   return 1;
@@ -426,7 +423,7 @@ static const luaL_reg base_funcs[] = {
 static void base_open (lua_State *L) {
   lua_pushliteral(L, "_G");
   lua_pushvalue(L, LUA_GLOBALSINDEX);
-  luaL_openlib(L, base_funcs);  /* open lib into global table */
+  luaL_openlib(L, base_funcs, 0);  /* open lib into global table */
   lua_pushliteral(L, "_VERSION");
   lua_pushliteral(L, LUA_VERSION);
   lua_settable(L, -3);  /* set global _VERSION */
@@ -495,7 +492,7 @@ static const luaL_reg co_funcs[] = {
 
 
 static void co_open (lua_State *L) {
-  luaL_opennamedlib(L, "co", co_funcs);
+  luaL_opennamedlib(L, "co", co_funcs, 0);
   /* create metatable for coroutines */
   lua_pushliteral(L, "Coroutine");
   lua_newtable(L);
@@ -728,7 +725,7 @@ static const luaL_reg array_funcs[] = {
 LUALIB_API int lua_baselibopen (lua_State *L) {
   base_open(L);
   co_open(L);
-  luaL_opennamedlib(L, "A", array_funcs);
+  luaL_opennamedlib(L, "tab", array_funcs, 0);
   /* `require' needs an empty table as upvalue */
   lua_newtable(L);
   lua_pushcclosure(L, luaB_require, 1);
