@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.56 2001/02/09 19:53:16 roberto Exp roberto $
+** $Id: lstring.c,v 1.57 2001/02/09 20:22:29 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -89,13 +89,12 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
 
 
 TString *luaS_newudata (lua_State *L, size_t s, void *udata) {
-  union L_UTString *uts = (union L_UTString *)luaM_malloc(L, sizeudata(s));
-  TString *ts = &uts->ts;
+  TString *ts = (TString *)luaM_malloc(L, sizeudata(s));
   ts->marked = 0;
   ts->nexthash = NULL;
   ts->len = s;
   ts->u.d.tag = 0;
-  ts->u.d.value = (s > 0) ? uts+1 : udata;
+  ts->u.d.value = (s > 0) ? getstr(ts) : udata;
   /* insert it on table */
   newentry(L, &G(L)->udt, ts, lmod(IntPoint(ts->u.d.value), G(L)->udt.size));
   return ts;

@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.20 2000/11/24 17:39:56 roberto Exp roberto $
+** $Id: llimits.h,v 1.21 2000/12/04 18:33:40 roberto Exp roberto $
 ** Limits, basic types, and some other "installation-dependent" definitions
 ** See Copyright Notice in lua.h
 */
@@ -90,7 +90,7 @@ typedef luint32 Instruction;
 ** (accordingly, size_u will be 10, and size_a will be 5)
 */
 #define SIZE_INSTRUCTION        32
-#define SIZE_B          9
+#define SIZE_B          8
 
 #define SIZE_OP         6
 #define SIZE_U          (SIZE_INSTRUCTION-SIZE_OP)

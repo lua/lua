@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.65 2001/02/09 19:53:16 roberto Exp roberto $
+** $Id: ltests.c,v 1.66 2001/02/09 20:22:29 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -356,7 +356,9 @@ static int newuserdata (lua_State *L) {
     return 2;
   }
   else {
-    lua_newuserdata(L, luaL_check_int(L, 1));
+    size_t size = luaL_check_int(L, 1);
+    char *p = (char *)lua_newuserdata(L, size);
+    while (size--) *p++ = '\0';
     return 1;
   }
 }
