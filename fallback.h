@@ -1,5 +1,5 @@
 /*
-** $Id: fallback.h,v 1.22 1997/04/04 22:24:51 roberto Exp roberto $
+** $Id: fallback.h,v 1.24 1997/07/03 22:06:06 roberto Exp $
 */
  
 #ifndef fallback_h
@@ -54,7 +54,6 @@ char *luaI_travfallbacks (int (*fn)(TObject *));
 
 void luaI_settag (int tag, TObject *o);
 void luaI_realtag (int tag);
-TObject *luaI_geterrorim (void);
 int luaI_efectivetag (TObject *o);
 void luaI_settagmethod (void);
 void luaI_gettagmethod (void);

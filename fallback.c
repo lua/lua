@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 2.8 1997/06/17 17:27:07 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 2.10 1997/07/03 22:06:06 roberto Exp $";
 
 #include <stdio.h>
 #include <string.h>
@@ -238,34 +238,19 @@ void luaI_settagmethod (void)
 }
 
 
-static void stderrorim (void)
-{
-  lua_Object s = lua_getparam(1);
-  if (lua_isstring(s))
-    fprintf(stderr, "lua: %s\n", lua_getstring(s));
-}
-
-static TObject errorim = {LUA_T_CFUNCTION, {stderrorim}};
-
-
-TObject *luaI_geterrorim (void)
-{
-  return &errorim;
-}
-
 void luaI_seterrormethod (void)
 {
   lua_Object func = lua_getparam(1);
   luaL_arg_check(lua_isnil(func) || lua_isfunction(func),
                  1, "function expected");
-  luaI_pushobject(&errorim);
-  errorim = *luaI_Address(func);
+  luaI_pushobject(&luaI_errorim);
+  luaI_errorim = *luaI_Address(func);
 }
 
 char *luaI_travfallbacks (int (*fn)(TObject *))
 {
   int e;
-  if (fn(&errorim))
+  if (fn(&luaI_errorim))
     return "error";
   for (e=IM_GETTABLE; e<=IM_FUNCTION; e++) {  /* ORDER IM */
     int t;
@@ -322,8 +307,8 @@ void luaI_setfallback (void)
   luaL_arg_check(lua_isfunction(func), 2, "function expected");
   switch (luaI_findstring(name, oldnames)) {
     case 0:  /* old error fallback */
-      oldfunc = errorim;
-      errorim = *luaI_Address(func);
+      oldfunc = luaI_errorim;
+      luaI_errorim = *luaI_Address(func);
       replace = errorFB;
       break;
     case 1:  /* old getglobal fallback */

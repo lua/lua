@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 4.15 1997/06/26 21:40:57 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 4.17 1997/07/03 22:06:06 roberto Exp $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -465,12 +465,39 @@ void lua_travstack (int (*fn)(TObject *))
 ** Error messages and debug functions
 */
 
+
+static void auxerrorim (char *form)
+{
+  lua_Object s = lua_getparam(1);
+  if (lua_isstring(s))
+    fprintf(stderr, form, lua_getstring(s));
+}
+
+
+static void emergencyerrorf (void)
+{
+  auxerrorim("WARNING - THERE WAS AN ERROR INSIDE AN ERROR METHOD:\n%s\n");
+}
+
+
+static void stderrorim (void)
+{
+  auxerrorim("lua: %s\n");
+}
+
+
+TObject luaI_errorim = {LUA_T_CFUNCTION, {stderrorim}};
+
+
 static void lua_message (char *s)
 {
-  TObject *im = luaI_geterrorim();
-  if (ttype(im) != LUA_T_NIL) {
+  TObject im = luaI_errorim;
+  if (ttype(&im) != LUA_T_NIL) {
+    luaI_errorim.ttype = LUA_T_CFUNCTION;
+    luaI_errorim.value.f = emergencyerrorf;
     lua_pushstring(s);
-    callIM(im, 1, 0);
+    callIM(&im, 1, 0);
+    luaI_errorim = im;
   }
 }
 
