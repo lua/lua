@@ -3,7 +3,7 @@
 ** load bytecodes from files
 */
 
-char* rcs_undump="$Id: undump.c,v 1.12 1996/03/11 22:01:46 lhf Exp lhf $";
+char* rcs_undump="$Id: undump.c,v 1.13 1996/03/12 20:00:40 lhf Exp lhf $";
 
 #include <stdio.h>
 #include <string.h>
@@ -158,7 +158,7 @@ static int LoadWord(FILE* D)
  fread(&w,sizeof(w),1,D);
  if (swapword)
  {
-  Byte* p=&w;					/* TODO: need union? */
+  Byte* p=(Byte*)&w;				/* TODO: need union? */
   Byte t;
   t=p[0]; p[0]=p[1]; p[1]=t;
  }
@@ -267,7 +267,7 @@ static void LoadHeader(FILE* D)			/* TODO: error handling */
  fread(&f,sizeof(f),1,D);			/* test float */
  if (f!=tf)
  {
-  Byte* p=&f;					/* TODO: need union? */
+  Byte* p=(Byte*)&f;				/* TODO: need union? */
   Byte t;
   swapfloat=1;
   t=p[0]; p[0]=p[3]; p[3]=t;
