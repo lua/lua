@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.56 2000/08/07 18:39:16 roberto Exp roberto $
+** $Id: lua.h,v 1.57 2000/08/09 19:16:57 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -71,8 +71,8 @@ int            lua_callfunction (lua_State *L, lua_Object f);
 void	       lua_beginblock (lua_State *L);
 void	       lua_endblock (lua_State *L);
 
-void           lua_pushglobaltable (lua_State *L);
-void           lua_setglobaltable (lua_State *L, lua_Object newtable);
+void           lua_pushglobals (lua_State *L);
+void           lua_setglobals (lua_State *L, lua_Object newtable);
 
 lua_Object     lua_lua2C (lua_State *L, int number);
 #define	       lua_getparam		lua_lua2C
@@ -186,8 +186,8 @@ extern lua_State *lua_state;
 #define lua_callfunction(f)	(lua_callfunction)(lua_state, f)
 #define lua_beginblock()	(lua_beginblock)(lua_state)
 #define lua_endblock()		(lua_endblock)(lua_state)
-#define lua_pushglobaltable()	(lua_pushglobaltable)(lua_state)
-#define lua_setglobaltable(t)	(lua_setglobaltable)(lua_state, t)
+#define lua_pushglobals()	(lua_pushglobals)(lua_state)
+#define lua_setglobals(t)	(lua_setglobals)(lua_state, t)
 #define lua_lua2C(number)	(lua_lua2C)(lua_state, number)
 #define lua_type(obj)		(lua_type)(lua_state, obj)
 #define lua_isnil(obj)		(lua_isnil)(lua_state, obj)

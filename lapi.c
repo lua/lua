@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.85 2000/06/12 13:52:05 roberto Exp roberto $
+** $Id: lapi.c,v 1.86 2000/08/09 19:16:57 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -61,14 +61,14 @@ lua_Object lua_pop (lua_State *L) {
 }
 
 
-void lua_pushglobaltable (lua_State *L) {
+void lua_pushglobals (lua_State *L) {
   hvalue(L->top) = L->gt;
   ttype(L->top) = TAG_TABLE;
   incr_top;
 }
 
 
-void lua_setglobaltable (lua_State *L, lua_Object newtable) {
+void lua_setglobals (lua_State *L, lua_Object newtable) {
   if (lua_type(L, newtable)[0] != 't')  /* type == "table"? */
     lua_error(L, "Lua API error - invalid value for global table");
   L->gt = hvalue(newtable);
@@ -365,7 +365,7 @@ int lua_next (lua_State *L, lua_Object t, int i) {
 */
 
 lua_Object lua_rawgetglobal (lua_State *L, const char *name) {
-  lua_pushglobaltable(L);
+  lua_pushglobals(L);
   lua_pushstring(L, name);
   return lua_rawget(L);
 }
@@ -375,7 +375,7 @@ void lua_rawsetglobal (lua_State *L, const char *name) {
   lua_Object value;
   lua_beginblock(L);
   value = lua_pop(L);
-  lua_pushglobaltable(L);
+  lua_pushglobals(L);
   lua_pushstring(L, name);
   lua_pushobject(L, value);
   lua_rawset(L);

@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.68 2000/06/20 17:13:21 roberto Exp roberto $
+** $Id: liolib.c,v 1.69 2000/08/09 19:16:57 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -73,7 +73,7 @@ static void atribTM (lua_State *L) {
     ctrl->file[inout] = (FILE *)lua_getuserdata(L, newvalue);
   }
   /* set the actual variable */
-  lua_pushglobaltable(L);
+  lua_pushglobals(L);
   lua_pushstring(L, varname);
   lua_pushobject(L, newvalue);
   lua_rawset(L);
@@ -590,7 +590,7 @@ static void errorfb (lua_State *L) {
       sprintf(buff+strlen(buff), " [%.70s]", buffchunk);
     strcat(buff, "\n");
   }
-  lua_pushglobaltable(L);
+  lua_pushglobals(L);
   lua_pushstring(L, LUA_ALERT);
   alertfunc = lua_rawget(L);
   if (lua_isfunction(L, alertfunc)) {  /* avoid loop if _ALERT is not defined */

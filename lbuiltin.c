@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.118 2000/08/04 19:38:35 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.119 2000/08/09 19:16:57 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -101,7 +101,7 @@ void luaB__ALERT (lua_State *L) {
 */
 void luaB__ERRORMESSAGE (lua_State *L) {
   lua_Object al;
-  lua_pushglobaltable(L);
+  lua_pushglobals(L);
   lua_pushstring(L, LUA_ALERT);
   al = lua_rawget(L);
   if (lua_isfunction(L, al)) {  /* avoid error loop if _ALERT is not defined */
@@ -206,9 +206,9 @@ void luaB_copytagmethods (lua_State *L) {
 }
 
 void luaB_globals (lua_State *L) {
-  lua_pushglobaltable(L);
+  lua_pushglobals(L);
   if (lua_getparam(L, 1) != LUA_NOOBJECT)
-    lua_setglobaltable(L, luaL_tablearg(L, 1));
+    lua_setglobals(L, luaL_tablearg(L, 1));
 }
 
 void luaB_rawget (lua_State *L) {

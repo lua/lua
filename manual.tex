@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.39 2000/05/24 13:54:49 roberto Exp roberto $
+% $Id: manual.tex,v 1.40 2000/08/09 19:09:20 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -122,7 +122,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{{\small \tt\$Date: 2000/05/24 13:54:49 $ $}}
+\date{{\small \tt\$Date: 2000/08/09 19:09:20 $ $}}
 
 \maketitle
 
@@ -1933,15 +1933,15 @@ use the \emph{lua_rawset} function over the table of globals.
 
 To get the table of globals,
 you should call
-\Deffunc{lua_pushglobaltable}
+\Deffunc{lua_pushglobals}
 \begin{verbatim}
-void lua_pushglobaltable (lua_State *L);
+void lua_pushglobals (lua_State *L);
 \end{verbatim}
 To set another table as the table of globals,
 you use
-\Deffunc{lua_setglobaltable}
+\Deffunc{lua_setglobals}
 \begin{verbatim}
-void lua_setglobaltable (lua_State *L, lua_Object newtable);
+void lua_setglobals (lua_State *L, lua_Object newtable);
 \end{verbatim}
 
 Tables can also be manipulated via the API.
