@@ -133,3 +133,7 @@ Wed Dec 29 16:05:43 EDT 1999
 >> return gives wrong line in debug information
 (by lhf; since 3.2 [at least])
 
+** ldo.c
+Thu Dec 30 16:39:33 EDT 1999
+>> cannot reopen stdin (for binary mode)
+(by lhf & roberto; since 3.1)
