@@ -4,10 +4,12 @@
 ** Luiz Henrique de Figueiredo - 17 Aug 90
 */
 
-char *rcs_hash="$Id: $";
+char *rcs_hash="$Id: hash.c,v 1.1 1993/12/17 18:41:19 celes Exp celes $";
 
 #include <string.h>
 #include <stdlib.h>
+
+#include "mm.h"
 
 #include "opcode.h"
 #include "hash.h"

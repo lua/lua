@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 1.1 1993/12/17 18:41:19 celes Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 1.2 1994/02/13 20:36:51 roberto Exp celes $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +11,8 @@ char *rcs_opcode="$Id: opcode.c,v 1.1 1993/12/17 18:41:19 celes Exp roberto $";
 #ifdef __GNUC__
 #include <floatingpoint.h>
 #endif
+
+#include "mm.h"
 
 #include "opcode.h"
 #include "hash.h"
