@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.25 1999/03/04 21:23:39 roberto Exp roberto $
+% $Id: manual.tex,v 1.26 1999/03/10 14:09:45 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -41,7 +41,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{\small \verb$Date: 1999/03/04 21:23:39 $}
+%\date{\small \verb$Date: 1999/03/10 14:09:45 $}
 
 \maketitle
 
@@ -685,17 +685,6 @@ from the lower to the higher priority:
 All binary operators are left associative,
 except for \verb|^| (exponentiation),
 which is right associative.
-
-\subsubsection{If Expressions}
-\begin{Produc}
-\produc{exp}{\rwd{if} exp1 \rwd{then} exp1
-   \rep{\rwd{elseif} exp1 \rwd{then} exp1}
-   \opt{\rwd{else} exp1} \rwd{end}}
-\end{Produc}%
-An \Index{if expression} chooses an expression to evaluate
-according to its condition.
-Its final value is the value of the chosen expression.
-An absent else-part is equivalent to \verb|else nil|.
 
 \subsubsection{Table Constructors} \label{tableconstructor}
 Table \Index{constructors} are expressions that create tables;

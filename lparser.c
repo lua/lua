@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.27 1999/03/05 21:16:07 roberto Exp roberto $
+** $Id: lparser.c,v 1.28 1999/03/10 14:09:45 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -118,7 +118,7 @@ static void exp1 (LexState *ls);
 static void exp2 (LexState *ls, vardesc *v);
 static void explist (LexState *ls, listdesc *e);
 static void explist1 (LexState *ls, listdesc *e);
-static void ifpart (LexState *ls, int isexp, int line);
+static void ifpart (LexState *ls, int line);
 static void parlist (LexState *ls);
 static void part (LexState *ls, constdesc *cd);
 static void recfield (LexState *ls);
@@ -684,7 +684,7 @@ static int stat (LexState *ls) {
   FuncState *fs = ls->fs;
   switch (ls->token) {
     case IF:  /* stat -> IF ifpart END */
-      ifpart(ls, 0, line);
+      ifpart(ls, line);
       return 1;
 
     case WHILE: {  /* stat -> WHILE cond DO block END */
@@ -833,31 +833,20 @@ static void body (LexState *ls, int needself, int line) {
 }
 
 
-static void ifpart (LexState *ls, int isexp, int line) {
+static void ifpart (LexState *ls, int line) {
   /* ifpart -> cond THEN block [ELSE block | ELSEIF ifpart] */
-  /* ifpart -> cond THEN exp [ELSE exp | ELSEIF ifpart] */
   int c;
   int e;
   next(ls);  /* skip IF or ELSEIF */
   c = cond(ls);
   check(ls, THEN);
-  if (isexp) {
-    exp1(ls);
-    deltastack(ls, -1);  /* only 'then' x-or 'else' will stay on the stack */
-  }
-  else block(ls);
+  block(ls);
   e = SaveWord(ls);
   if (ls->token == ELSEIF)
-    ifpart(ls, isexp, line);
+    ifpart(ls, line);
   else {
-    int elsepart = optional(ls, ELSE);
-    if (!isexp) {
-      if (elsepart) block(ls);
-    }
-    else {  /* is exp */
-      if (elsepart) exp1(ls);
-      else adjuststack(ls, -1);  /* empty else exp -> push nil */
-    }
+    if (optional(ls, ELSE))
+      block(ls);
     check_match(ls, END, IF, line);
   }
   codeIf(ls, c, e);
@@ -989,10 +978,6 @@ static void simpleexp (LexState *ls, vardesc *v, stack_op *s) {
     case FUNCTION:  /* simpleexp -> FUNCTION body */
       next(ls);
       body(ls, 0, ls->linenumber);
-      break;
-
-    case IF:  /* simpleexp -> IF ifpart END */
-      ifpart(ls, 1, ls->linenumber);
       break;
 
     case '(':  /* simpleexp -> '(' exp0 ')' */
