@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.137 2002/11/18 11:01:55 roberto Exp roberto $
+** $Id: ldebug.c,v 1.138 2002/11/21 15:16:04 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -60,17 +60,15 @@ void luaG_inithooks (lua_State *L) {
 /*
 ** this function can be called asynchronous (e.g. during a signal)
 */
-LUA_API int lua_sethook (lua_State *L, lua_Hook func, unsigned long mask) {
-  ls_count count = lua_getmaskcount(mask);
+LUA_API int lua_sethook (lua_State *L, lua_Hook func, int mask, int count) {
   if (func == NULL || mask == 0) {  /* turn off hooks? */
     mask = 0;
     func = NULL;
   }
-  else if (count > 0) mask |= (1<<LUA_HOOKCOUNT);
   L->hook = func;
   L->basehookcount = count;
   resethookcount(L);
-  L->hookmask = cast(lu_byte, mask & 0xf);
+  L->hookmask = cast(lu_byte, mask);
   L->hookinit = 0;
   return 1;
 }
@@ -81,8 +79,13 @@ LUA_API lua_Hook lua_gethook (lua_State *L) {
 }
 
 
-LUA_API unsigned long lua_gethookmask (lua_State *L) {
-  return L->hookmask | LUA_MASKCOUNT(L->basehookcount);
+LUA_API int lua_gethookmask (lua_State *L) {
+  return L->hookmask;
+}
+
+
+LUA_API int lua_gethookcount (lua_State *L) {
+  return L->basehookcount;
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.144 2002/11/14 16:59:16 roberto Exp roberto $
+** $Id: ltests.c,v 1.145 2002/11/18 15:24:27 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -702,12 +702,14 @@ static void yieldf (lua_State *L, lua_Debug *ar) {
 
 static int setyhook (lua_State *L) {
   if (lua_isnoneornil(L, 1))
-    lua_sethook(L, NULL, 0);  /* turn off hooks */
+    lua_sethook(L, NULL, 0, 0);  /* turn off hooks */
   else {
     const char *smask = luaL_checkstring(L, 1);
-    unsigned long count = LUA_MASKCOUNT(luaL_optint(L, 2, 0));
-    if (strchr(smask, 'l')) count |= LUA_MASKLINE;
-    lua_sethook(L, yieldf, count);
+    int count = luaL_optint(L, 2, 0);
+    int mask = 0;
+    if (strchr(smask, 'l')) mask |= LUA_MASKLINE;
+    if (count > 0) mask |= LUA_MASKCOUNT;
+    lua_sethook(L, yieldf, mask, count);
   }
   return 0;
 }

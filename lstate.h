@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.106 2002/11/22 17:16:52 roberto Exp roberto $
+** $Id: lstate.h,v 1.107 2002/11/22 18:01:46 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -143,8 +143,8 @@ struct lua_State {
   lu_byte hookmask;
   lu_byte allowhook;
   lu_byte hookinit;
-  ls_count basehookcount;
-  ls_count hookcount;
+  int basehookcount;
+  int hookcount;
   lua_Hook hook;
   TObject _gt;  /* table of globals */
   GCObject *openupval;  /* list of open upvalues in this stack */

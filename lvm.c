@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.268 2002/11/21 17:19:42 roberto Exp roberto $
+** $Id: lvm.c,v 1.269 2002/11/25 11:20:29 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -383,7 +383,7 @@ StkId luaV_execute (lua_State *L) {
   for (;;) {
     const Instruction i = *pc++;
     StkId base, ra;
-    if (L->hookmask >= LUA_MASKLINE &&
+    if ((L->hookmask & (LUA_MASKLINE | LUA_MASKCOUNT)) &&
         (--L->hookcount == 0 || L->hookmask & LUA_MASKLINE)) {
       traceexec(L);
       if (L->ci->state & CI_YIELD) {  /* did hook yield? */

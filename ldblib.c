@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.71 2002/11/14 15:41:38 roberto Exp roberto $
+** $Id: ldblib.c,v 1.72 2002/11/18 15:23:15 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -126,16 +126,17 @@ static void hookf (lua_State *L, lua_Debug *ar) {
 }
 
 
-static unsigned long makemask (const char *smask, int count) {
-  unsigned long mask = 0;
+static int makemask (const char *smask, int count) {
+  int mask = 0;
   if (strchr(smask, 'c')) mask |= LUA_MASKCALL;
   if (strchr(smask, 'r')) mask |= LUA_MASKRET;
   if (strchr(smask, 'l')) mask |= LUA_MASKLINE;
-  return mask | LUA_MASKCOUNT(count);
+  if (count > 0) mask |= LUA_MASKCOUNT;
+  return mask;
 }
 
 
-static char *unmakemask (unsigned long mask, char *smask) {
+static char *unmakemask (int mask, char *smask) {
   int i = 0;
   if (mask & LUA_MASKCALL) smask[i++] = 'c';
   if (mask & LUA_MASKRET) smask[i++] = 'r';
@@ -148,14 +149,13 @@ static char *unmakemask (unsigned long mask, char *smask) {
 static int sethook (lua_State *L) {
   if (lua_isnoneornil(L, 1)) {
     lua_settop(L, 1);
-    lua_sethook(L, NULL, 0);  /* turn off hooks */
+    lua_sethook(L, NULL, 0, 0);  /* turn off hooks */
   }
   else {
     const char *smask = luaL_checkstring(L, 2);
     lua_Number count = luaL_optnumber(L, 3, 0);
     luaL_checktype(L, 1, LUA_TFUNCTION);
-    luaL_argcheck(L, count <= LUA_MAXCOUNT, 2, "count too large (>= 2^24)");
-    lua_sethook(L, hookf, makemask(smask, (int)count));
+    lua_sethook(L, hookf, makemask(smask, count), count);
   }
   lua_pushlightuserdata(L, (void *)&KEY_HOOK);
   lua_pushvalue(L, 1);
@@ -166,7 +166,7 @@ static int sethook (lua_State *L) {
 
 static int gethook (lua_State *L) {
   char buff[5];
-  unsigned long mask = lua_gethookmask(L);
+  int mask = lua_gethookmask(L);
   lua_Hook hook = lua_gethook(L);
   if (hook != NULL && hook != hookf)  /* external hook? */
     lua_pushliteral(L, "external hook");
@@ -175,7 +175,7 @@ static int gethook (lua_State *L) {
     lua_rawget(L, LUA_REGISTRYINDEX);   /* get hook */
   }
   lua_pushstring(L, unmakemask(mask, buff));
-  lua_pushnumber(L, lua_getmaskcount(mask));
+  lua_pushnumber(L, lua_gethookcount(L));
   return 3;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.164 2002/11/14 11:51:50 roberto Exp roberto $
+** $Id: lua.h,v 1.165 2002/11/18 11:01:55 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -330,10 +330,7 @@ LUA_API int lua_pushupvalues (lua_State *L);
 #define LUA_MASKCALL	(1 << LUA_HOOKCALL)
 #define LUA_MASKRET	(1 << LUA_HOOKRET)
 #define LUA_MASKLINE	(1 << LUA_HOOKLINE)
-#define LUA_MASKCOUNT(count)	((unsigned long)(count) << 8)
-#define lua_getmaskcount(mask)	((mask) >> 8)
-
-#define LUA_MAXCOUNT	((~(unsigned long)0) >> 8)
+#define LUA_MASKCOUNT	(1 << LUA_HOOKCOUNT)
 
 typedef struct lua_Debug lua_Debug;  /* activation record */
 
@@ -345,9 +342,10 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar);
 LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n);
 LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n);
 
-LUA_API int lua_sethook (lua_State *L, lua_Hook func, unsigned long mask);
+LUA_API int lua_sethook (lua_State *L, lua_Hook func, int mask, int count);
 LUA_API lua_Hook lua_gethook (lua_State *L);
-LUA_API unsigned long lua_gethookmask (lua_State *L);
+LUA_API int lua_gethookmask (lua_State *L);
+LUA_API int lua_gethookcount (lua_State *L);
 
 
 #define LUA_IDSIZE	60

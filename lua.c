@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.108 2002/11/14 15:42:05 roberto Exp roberto $
+** $Id: lua.c,v 1.109 2002/11/19 13:49:43 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -57,9 +57,6 @@ static lua_State *L = NULL;
 static const char *progname;
 
 
-static lua_Hook old_hook = NULL;
-static unsigned long old_mask = 0;
-
 
 static const luaL_reg lualibs[] = {
   {"baselib", lua_baselibopen},
@@ -77,7 +74,7 @@ static const luaL_reg lualibs[] = {
 
 static void lstop (lua_State *l, lua_Debug *ar) {
   (void)ar;  /* unused arg. */
-  lua_sethook(l, old_hook, old_mask);
+  lua_sethook(l, NULL, 0, 0);
   luaL_error(l, "interrupted!");
 }
 
@@ -85,9 +82,7 @@ static void lstop (lua_State *l, lua_Debug *ar) {
 static void laction (int i) {
   signal(i, SIG_DFL); /* if another SIGINT happens before lstop,
                               terminate process (default action) */
-  old_hook = lua_gethook(L);
-  old_mask = lua_gethookmask(L);
-  lua_sethook(L, lstop, LUA_MASKCALL | LUA_MASKRET | LUA_MASKCOUNT(1));
+  lua_sethook(L, lstop, LUA_MASKCALL | LUA_MASKRET | LUA_MASKCOUNT, 1);
 }
 
 
