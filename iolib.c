@@ -242,6 +242,9 @@ static void lua_printstack (FILE *f)
   while ((func = lua_stackedfunction(level++)) != LUA_NOOBJECT) {
     char *name;
     int currentline;
+    char *filename;
+    int linedefined;
+    lua_funcinfo(func, &filename, &linedefined);
     fprintf(f, (level==2) ? "Active Stack:\n\t" : "\t");
     switch (*lua_getobjname(func, &name)) {
       case 'g':
@@ -251,19 +254,19 @@ static void lua_printstack (FILE *f)
         fprintf(f, "`%s' tag method", name);
         break;
       default: {
-        char *filename;
-        int linedefined;
-        lua_funcinfo(func, &filename, &linedefined);
         if (linedefined == 0)
           fprintf(f, "main of %s", filename);
         else if (linedefined < 0)
           fprintf(f, "%s", filename);
         else
           fprintf(f, "function (%s:%d)", filename, linedefined);
+        filename = NULL;
       }
     }
     if ((currentline = lua_currentline(func)) > 0)
       fprintf(f, " at line %d", currentline);
+    if (filename)
+      fprintf(f, " [in file %s]", filename);
     fprintf(f, "\n");
   }
 }
