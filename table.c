@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.11 1994/11/04 17:20:00 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.12 1994/11/07 16:34:44 roberto Exp roberto $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +14,7 @@ char *rcs_table="$Id: table.c,v 2.11 1994/11/04 17:20:00 roberto Exp roberto $";
 #include "inout.h"
 #include "table.h"
 #include "lua.h"
+#include "fallback.h"
 
 #define streq(s1,s2)	(s1[0]==s2[0]&&strcmp(s1+1,s2+1)==0)
 
@@ -69,6 +70,8 @@ static void lua_initsymbol (void)
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_internaldostring;
  n = lua_findsymbol("setfallback");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_setfallback;
+ n = lua_findsymbol("error");
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_error;
 }
 
 
@@ -195,11 +198,14 @@ void lua_markobject (Object *o)
 */
 void lua_pack (void)
 {
- /* mark stack strings */
+ /* mark stack objects */
  lua_travstack(lua_markobject);
  
- /* mark symbol table strings */
+ /* mark symbol table objects */
  lua_travsymbol(lua_markobject);
+
+ /* mark locked objects */
+ luaI_travlock(lua_markobject);
 
  lua_recovered=0; 
 
