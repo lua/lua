@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.60 1997/03/11 18:44:28 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.62 1997/03/21 18:52:37 roberto Exp $";
 
 #include "mem.h"
 #include "opcode.h"
@@ -157,6 +157,13 @@ int luaI_ismarked (Object *o)
 }
 
 
+static void call_nilIM (void)
+{ /* signals end of garbage collection */
+  Object t;
+  ttype(&t) = LUA_T_NIL;
+  luaI_gcIM(&t);  /* end of list */
+}
+
 /*
 ** Garbage collection. 
 ** Delete all unused strings and arrays.
@@ -170,6 +177,7 @@ Long luaI_collectgarbage (void)
   luaI_travfallbacks(lua_markobject);  /* mark fallbacks */
   luaI_hashcallIM();
   luaI_strcallIM();
+  call_nilIM();
   luaI_invalidaterefs();
   recovered += lua_strcollector();
   recovered += lua_hashcollector();

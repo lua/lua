@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.35 1997/03/11 18:44:28 roberto Exp roberto $";
+char *rcs_hash="$Id: hash.c,v 2.36 1997/03/19 19:41:10 roberto Exp roberto $";
 
 
 #include "mem.h"
@@ -170,8 +170,6 @@ void luaI_hashcallIM (void)
       avalue(&t) = curr_array;
       luaI_gcIM(&t);
     }
-  ttype(&t) = LUA_T_NIL;
-  luaI_gcIM(&t);  /* end of list */
 }
 
  
