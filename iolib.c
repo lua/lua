@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: $";
+char *rcs_iolib="$Id: iolib.c,v 1.1 1993/12/17 18:41:19 celes Exp roberto $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -272,22 +272,25 @@ static void io_read (void)
     case 'i':
     {
      long int l;
-     fscanf (in, "%ld", &l);
-     lua_pushnumber(l);
+     if (fscanf (in, "%ld", &l) == EOF)
+       lua_pushnil();
+       else lua_pushnumber(l);
     }
     break;
     case 'f': case 'g': case 'e':
     {
      float f;
-     fscanf (in, "%f", &f);
-     lua_pushnumber(f);
+     if (fscanf (in, "%f", &f) == EOF)
+       lua_pushnil();
+       else lua_pushnumber(f);
     }
     break;
     default: 
     {
      char s[256];
-     fscanf (in, "%s", s);
-     lua_pushstring(s);
+     if (fscanf (in, "%s", s) == EOF)
+       lua_pushnil();
+       else lua_pushstring(s);
     }
     break;
    }
@@ -406,8 +409,8 @@ static void io_write (void)
 }
 
 /*
-** Execute a executable program using "sustem".
-** On error put 0 on stack, otherwise put 1.
+** Execute a executable program using "system".
+** Return the result of execution.
 */
 void io_execute (void)
 {
@@ -419,8 +422,8 @@ void io_execute (void)
  }
  else
  {
-  system(lua_getstring(o));
-  lua_pushnumber (1);
+  int res = system(lua_getstring(o));
+  lua_pushnumber (res);
  }
  return;
 }
