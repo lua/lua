@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.32 2005/03/16 16:58:41 roberto Exp roberto $
+** $Id: lapi.c,v 2.33 2005/03/18 18:55:45 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -907,7 +907,8 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
         g->GCthreshold = g->totalbytes - a;
       else
         g->GCthreshold = 0;
-      luaC_step(L);
+      while (g->GCthreshold <= g->totalbytes)
+        luaC_step(L);
       break;
     }
     case LUA_GCSETPACE: {
