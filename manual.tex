@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.8 1998/04/02 16:09:16 roberto Exp roberto $
+% $Id: manual.tex,v 1.9 1998/05/18 22:26:03 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -38,7 +38,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1998/04/02 16:09:16 $}
+\date{\small \verb$Date: 1998/05/18 22:26:03 $}
 
 \maketitle
 
@@ -2600,7 +2600,12 @@ formatted according to the given string \verb|format|,
 following the same rules of the ANSI C function \verb|strftime|.
 When called without arguments,
 it returns a reasonable date and time representation that depends on
-the host system.
+the host system and the locale.
+
+\subsubsection*{\ff \T{clock ()}}\Deffunc{clock}
+
+This function returns an approximation of the amount of CPU time
+used by the program, in seconds.
 
 \subsubsection*{\ff \T{exit ([code])}}\Deffunc{exit}
 

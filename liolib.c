@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.16 1998/03/06 18:47:42 roberto Exp roberto $
+** $Id: liolib.c,v 1.17 1998/03/24 20:14:25 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -282,6 +282,11 @@ static void io_getenv (void)
 }
 
 
+static void io_clock (void) {
+  lua_pushnumber(((double)clock())/CLOCKS_PER_SEC);
+}
+
+
 static void io_date (void)
 {
   time_t t;
@@ -378,6 +383,7 @@ static struct luaL_reg iolib[] = {
 {"tmpname",   io_tmpname},
 {"getenv",   io_getenv},
 {"date",     io_date},
+{"clock",     io_clock},
 {"exit",     io_exit},
 {"debug",    io_debug},
 {"print_stack", errorfb}
