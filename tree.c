@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.18 1996/02/14 19:11:09 roberto Exp roberto $";
+char *rcs_tree="$Id: tree.c,v 1.19 1996/02/22 20:34:33 roberto Exp $";
 
 
 #include <string.h>
@@ -93,6 +93,7 @@ static TaggedString *insert (char *str, stringtable *tb)
     i = (i+1)%tb->size;
   }
   /* not found */
+  lua_pack();
   if (j != -1)  /* is there an EMPTY space? */
     i = j;
   else
