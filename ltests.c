@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.87 2001/07/05 20:31:14 roberto Exp roberto $
+** $Id: ltests.c,v 1.88 2001/07/12 18:11:58 roberto Exp $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -64,7 +64,7 @@ static void setnameval (lua_State *L, const l_char *name, int val) {
 #define MARK		0x55  /* 01010101 (a nice pattern) */
 
 
-#define blocksize(b)	((size_t *)((l_char *)(b) - HEADER))
+#define blocksize(b)	((size_t *)(b) - HEADER/sizeof(size_t))
 
 unsigned long memdebug_numblocks = 0;
 unsigned long memdebug_total = 0;
@@ -77,7 +77,7 @@ static void *checkblock (void *block) {
   size_t size = *b;
   int i;
   for (i=0;i<MARKSIZE;i++)
-    lua_assert(*(((l_char *)b)+HEADER+size+i) == MARK+i);  /* corrupted block? */
+    lua_assert(*(((char *)b)+HEADER+size+i) == MARK+i);  /* corrupted block? */
   return b;
 }
 
@@ -103,27 +103,27 @@ void *debug_realloc (void *block, size_t oldsize, size_t size) {
   else if (memdebug_total+size-oldsize > memdebug_memlimit)
     return NULL;  /* to test memory allocation errors */
   else {
-    l_char *newblock;
+    void *newblock;
     int i;
     size_t realsize = HEADER+size+MARKSIZE;
     if (realsize < size) return NULL;  /* overflow! */
-    newblock = (l_char *)malloc(realsize);  /* alloc a new block */
+    newblock = malloc(realsize);  /* alloc a new block */
     if (newblock == NULL) return NULL;
     if (oldsize > size) oldsize = size;
     if (block) {
-      memcpy(newblock+HEADER, block, oldsize);
+      memcpy((char *)newblock+HEADER, block, oldsize);
       freeblock(block);  /* erase (and check) old copy */
     }
     /* initialize new part of the block with something `weird' */
-    memset(newblock+HEADER+oldsize, -MARK, size-oldsize);
+    memset((char *)newblock+HEADER+oldsize, -MARK, size-oldsize);
     memdebug_total += size;
     if (memdebug_total > memdebug_maxmem)
       memdebug_maxmem = memdebug_total;
     memdebug_numblocks++;
     *(size_t *)newblock = size;
     for (i=0;i<MARKSIZE;i++)
-      *(newblock+HEADER+size+i) = (l_char)(MARK+i);
-    return newblock+HEADER;
+      *((char *)newblock+HEADER+size+i) = (char)(MARK+i);
+    return (char *)newblock+HEADER;
   }
 }
 
@@ -486,7 +486,7 @@ static int getnum (lua_State *L, const l_char **pc) {
     sig = -1;
     (*pc)++;
   }
-  while (isdigit(**pc)) res = res*10 + (*(*pc)++) - l_c('0');
+  while (isdigit((int)**pc)) res = res*10 + (*(*pc)++) - l_c('0');
   return sig*res;
 }
   
