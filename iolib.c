@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.36 1996/02/16 13:10:14 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.38 1996/03/12 13:14:52 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -535,7 +535,7 @@ static void io_debug (void)
   {
     char buffer[250];
     fprintf(stderr, "lua_debug> ");
-    if (gets(buffer) == 0) return;
+    if (fgets(buffer, sizeof(buffer), stdin) == 0) return;
     if (strcmp(buffer, "cont") == 0) return;
     lua_dostring(buffer);
   }
@@ -558,7 +558,7 @@ void lua_printstack (FILE *f)
         fprintf(f, "function %s", name);
         break;
       case 'f':
-        fprintf(f, "fallback %s", name);
+        fprintf(f, "`%s' fallback", name);
         break;
       default:
       {
@@ -574,7 +574,7 @@ void lua_printstack (FILE *f)
       }
     }
     if ((currentline = lua_currentline(func)) > 0)
-      fprintf(f, "  at line %d", currentline);
+      fprintf(f, " at line %d", currentline);
     fprintf(f, "\n");
   }
 }
@@ -611,25 +611,3 @@ void iolib_open (void)
  lua_setfallback("error", errorfb);
 }
 
-/*
-** Return user formatted time stamp
-*
-static void sys_localtime (void)
-{
- time_t t;
- struct tm *tm;
- lua_Object o = lua_getparam(1);
-
- time(&t); tm = localtime(&t);
- if (lua_isstring(o))
- {
-  char b[BUFSIZ];
-  if (strftime(b,sizeof(b),lua_getstring(o),tm)==0)
-   lua_pushstring(ctime(&t));
-  else
-   lua_pushstring(b);
- }
- else
-  lua_pushstring(ctime(&t));
-}
-*/
