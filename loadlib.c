@@ -1,29 +1,28 @@
 /*
-** $Id: loadlib.c,v 1.5 2003/05/14 21:01:53 roberto Exp roberto $
+** $Id: loadlib.c,v 1.6 2004/04/30 20:13:38 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 *
-* This  Lua library  exports a  single function,  called loadlib,  which is
-* called from Lua  as loadlib(lib,init), where lib is the  full name of the
-* library to be  loaded (including the complete path) and  init is the name
-* of a function  to be called after the library  is loaded. Typically, this
-* function will register other functions,  thus making the complete library
-* available  to Lua.  The init  function is  *not* automatically  called by
-* loadlib. Instead,  loadlib returns  the init function  as a  Lua function
-* that the client  can call when it  thinks is appropriate. In  the case of
-* errors,  loadlib  returns  nil  and two  strings  describing  the  error.
-* The  first string  is  supplied by  the operating  system;  it should  be
-* informative and useful  for error messages. The second  string is "open",
-* "init", or  "absent" to identify  the error and is  meant to be  used for
-* making  decisions without  having to  look into  the first  string (whose
-* format is system-dependent).
-*
-* This module contains  an implementation of loadlib for  Unix systems that
-* have dlfcn, an implementation for Windows,  and a stub for other systems.
-* See  the list  at  the end  of  this  file for  some  links to  available
-* implementations of dlfcn  and interfaces to other  native dynamic loaders
-* on top of which loadlib could be implemented.
-*
+* This Lua library exports a single function, called loadlib, which
+* is called from Lua as loadlib(lib,init), where lib is the full
+* name of the library to be loaded (including the complete path) and
+* init is the name of a function to be called after the library is
+* loaded. Typically, this function will register other functions, thus
+* making the complete library available to Lua.  The init function is
+* *not* automatically called by loadlib. Instead, loadlib returns the
+* init function as a Lua function that the client can call when it
+* thinks is appropriate. In the case of errors, loadlib returns nil and
+* two strings describing the error.  The first string is supplied by
+* the operating system; it should be informative and useful for error
+* messages. The second string is "open", "init", or "absent" to identify
+* the error and is meant to be used for making decisions without having
+* to look into the first string (whose format is system-dependent).
+* This module contains an implementation of loadlib for Unix systems
+* that have dlfcn, an implementation for Darwin (Mac OS X), an
+* implementation for Windows, and a stub for other systems.  See
+* the list at the end of this file for some links to available
+* implementations of dlfcn and interfaces to other native dynamic
+* loaders on top of which loadlib could be implemented.
 */
 
 #define loadlib_c
@@ -126,6 +125,51 @@ static int loadlib(lua_State *L)
  lua_pushstring(L,(lib!=NULL) ? "init" : "open");
  if (lib!=NULL) FreeLibrary(lib);
  return 3;
+}
+
+#endif
+
+/* Native Mac OS X / Darwin Implementation */
+#ifdef USE_DYLD
+#define LOADLIB
+
+#include <mach-o/dyld.h>
+
+static int loadlib (lua_State *L) {
+  const char * err_str;
+  const char * err_file;
+  NSLinkEditErrors err;
+  int err_num;
+  const char *path=luaL_checkstring(L,1);
+  const char *init=luaL_checkstring(L,2);
+  const struct mach_header *lib;
+  /* this would be a rare case, but prevents crashing if it happens */
+  if(!_dyld_present()) {
+    lua_pushnil(L);
+    lua_pushstring(L,"dyld not present.");
+    lua_pushstring(L,"absent");
+    return 3;
+  }
+
+  lib = NSAddImage(path, NSADDIMAGE_OPTION_RETURN_ON_ERROR);
+  if(lib != NULL) {
+    NSSymbol init_sym = NSLookupSymbolInImage(lib, init,
+                              NSLOOKUPSYMBOLINIMAGE_OPTION_BIND |
+                              NSLOOKUPSYMBOLINIMAGE_OPTION_RETURN_ON_ERROR);
+    if(init_sym != NULL) {
+      lua_CFunction f = (lua_CFunction)NSAddressOfSymbol(init_sym);
+      lua_pushlightuserdata(L,(void *)lib);
+      lua_pushcclosure(L,f,1);
+      return 1;
+    }
+  }
+  /* else an error ocurred */
+  NSLinkEditError(&err, &err_num, &err_file, &err_str);
+  lua_pushnil(L);
+  lua_pushstring(L, err_str);
+  lua_pushstring(L, (lib != NULL) ? "init" : "open");
+  /* Can't unload image */
+  return 3;
 }
 
 #endif
