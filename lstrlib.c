@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.57 2000/11/23 13:49:35 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.58 2000/11/24 17:39:56 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -123,12 +123,16 @@ static int str_char (lua_State *L) {
 #endif
 
 
+#define CAP_UNFINISHED	(-1)
+#define CAP_POSITION	(-2)
+
 typedef struct MatchState {
+  const char *src_init;  /* init of source string */
   const char *src_end;  /* end ('\0') of source string */
   int level;  /* total number of captures (finished or unfinished) */
   struct {
     const char *init;
-    sint32 len;  /* -1 signals unfinished capture */
+    sint32 len;
   } capture[MAX_CAPTURES];
   lua_State *L;
 } MatchState;
@@ -140,7 +144,7 @@ typedef struct MatchState {
 
 static int check_capture (MatchState *ms, int l) {
   l -= '1';
-  if (!(0 <= l && l < ms->level && ms->capture[l].len != -1))
+  if (l < 0 || l >= ms->level || ms->capture[l].len == CAP_UNFINISHED)
     lua_error(ms->L, "invalid capture index");
   return l;
 }
@@ -149,7 +153,7 @@ static int check_capture (MatchState *ms, int l) {
 static int capture_to_close (MatchState *ms) {
   int level = ms->level;
   for (level--; level>=0; level--)
-    if (ms->capture[level].len == -1) return level;
+    if (ms->capture[level].len == CAP_UNFINISHED) return level;
   lua_error(ms->L, "invalid pattern capture");
   return 0;  /* to avoid warnings */
 }
@@ -279,14 +283,15 @@ static const char *min_expand (MatchState *ms, const char *s, const char *p,
 }
 
 
-static const char *start_capture (MatchState *ms, const char *s, const char *p){
+static const char *start_capture (MatchState *ms, const char *s,
+                                  const char *p, int what) {
   const char *res;
   int level = ms->level;
   if (level >= MAX_CAPTURES) lua_error(ms->L, "too many captures");
   ms->capture[level].init = s;
-  ms->capture[level].len = -1;
+  ms->capture[level].len = what;
   ms->level = level+1;
-  if ((res=match(ms, s, p+1)) == NULL)  /* match failed? */
+  if ((res=match(ms, s, p)) == NULL)  /* match failed? */
     ms->level--;  /* undo capture */
   return res;
 }
@@ -296,8 +301,8 @@ static const char *end_capture (MatchState *ms, const char *s, const char *p) {
   int l = capture_to_close(ms);
   const char *res;
   ms->capture[l].len = s - ms->capture[l].init;  /* close capture */
-  if ((res = match(ms, s, p+1)) == NULL)  /* match failed? */
-    ms->capture[l].len = -1;  /* undo capture */
+  if ((res = match(ms, s, p)) == NULL)  /* match failed? */
+    ms->capture[l].len = CAP_UNFINISHED;  /* undo capture */
   return res;
 }
 
@@ -316,9 +321,12 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
   init: /* using goto's to optimize tail recursion */
   switch (*p) {
     case '(':  /* start capture */
-      return start_capture(ms, s, p);
+      if (*(p+1) == ')')  /* position capture? */
+        return start_capture(ms, s, p+2, CAP_POSITION);
+      else
+        return start_capture(ms, s, p+1, CAP_UNFINISHED);
     case ')':  /* end capture */
-      return end_capture(ms, s, p);
+      return end_capture(ms, s, p+1);
     case ESC:  /* may be %[0-9] or %b */
       if (isdigit((unsigned char)(*(p+1)))) {  /* capture? */
         s = match_capture(ms, s, *(p+1));
@@ -385,14 +393,21 @@ static const char *lmemfind (const char *s1, size_t l1,
 }
 
 
+static void push_onecapture (MatchState *ms, int i) {
+  int l = ms->capture[i].len;
+  if (l == CAP_UNFINISHED) lua_error(ms->L, "unfinished capture");
+  if (l == CAP_POSITION)
+    lua_pushnumber(ms->L, ms->capture[i].init - ms->src_init + 1);
+  else
+    lua_pushlstring(ms->L, ms->capture[i].init, l);
+}
+
+
 static int push_captures (MatchState *ms) {
   int i;
   luaL_checkstack(ms->L, ms->level, "too many captures");
-  for (i=0; i<ms->level; i++) {
-    int l = ms->capture[i].len;
-    if (l == -1) lua_error(ms->L, "unfinished capture");
-    lua_pushlstring(ms->L, ms->capture[i].init, l);
-  }
+  for (i=0; i<ms->level; i++)
+    push_onecapture(ms, i);
   return ms->level;  /* number of strings pushed */
 }
 
@@ -417,6 +432,7 @@ static int str_find (lua_State *L) {
     int anchor = (*p == '^') ? (p++, 1) : 0;
     const char *s1=s+init;
     ms.L = L;
+    ms.src_init = s;
     ms.src_end = s+l1;
     do {
       const char *res;
@@ -448,7 +464,8 @@ static void add_s (MatchState *ms, luaL_Buffer *b) {
           luaL_putchar(b, news[i]);
         else {
           int level = check_capture(ms, news[i]);
-          luaL_addlstring(b, ms->capture[level].init, ms->capture[level].len);
+          push_onecapture(ms, level);
+          luaL_addvalue(b);  /* add capture to accumulated result */
         }
       }
     }
@@ -480,6 +497,7 @@ static int str_gsub (lua_State *L) {
     3, "string or function expected");
   luaL_buffinit(L, &b);
   ms.L = L;
+  ms.src_init = src;
   ms.src_end = src+srcl;
   while (n < max_s) {
     const char *e;
