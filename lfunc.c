@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.25 2000/06/26 19:28:31 roberto Exp roberto $
+** $Id: lfunc.c,v 1.26 2000/08/07 20:21:34 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,7 @@ Closure *luaF_newclosure (lua_State *L, int nelems) {
 Proto *luaF_newproto (lua_State *L) {
   Proto *f = luaM_new(L, Proto);
   f->code = NULL;
-  f->lines = NULL;
+  f->lineinfo = NULL;
   f->lineDefined = 0;
   f->source = NULL;
   f->kstr = NULL;
@@ -60,7 +60,7 @@ void luaF_freeproto (lua_State *L, Proto *f) {
   luaM_free(L, f->kstr);
   luaM_free(L, f->knum);
   luaM_free(L, f->kproto);
-  luaM_free(L, f->lines);
+  luaM_free(L, f->lineinfo);
   luaM_free(L, f);
 }
 

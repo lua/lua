@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.70 2000/06/30 14:35:17 roberto Exp roberto $
+** $Id: lobject.h,v 1.71 2000/08/07 20:21:34 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -119,7 +119,7 @@ typedef struct Proto {
   Instruction *code;  /* ends with opcode ENDCODE */
   struct Proto *next;
   int marked;
-  int *lines;  /* source line that generated each opcode */
+  int *lineinfo;  /* map from opcodes to source lines */
   int lineDefined;
   TString  *source;
   int numparams;
@@ -180,6 +180,7 @@ typedef struct CallInfo {
   const Instruction **pc;  /* current pc of called function */
   int lastpc;  /* last pc traced */
   int line;  /* current line */
+  int refi;  /* current index in `lineinfo' */
 } CallInfo;
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.27 2000/06/30 14:35:17 roberto Exp roberto $
+** $Id: ldebug.c,v 1.28 2000/08/07 20:21:34 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -99,6 +99,34 @@ static int lua_nups (StkId f) {
 }
 
 
+int luaG_getline (int *lineinfo, int pc, int refline, int *prefi) {
+  int refi = prefi ? *prefi : 0;
+  if (lineinfo[refi] < 0)
+    refline += -lineinfo[refi++]; 
+  LUA_ASSERT(lineinfo[refi] >= 0, "invalid line info");
+  while (lineinfo[refi] > pc) {
+    refline--;
+    refi--;
+    if (lineinfo[refi] < 0)
+      refline -= -lineinfo[refi--]; 
+    LUA_ASSERT(lineinfo[refi] >= 0, "invalid line info");
+  }
+  for (;;) {
+    int nextline = refline + 1;
+    int nextref = refi + 1;
+    if (lineinfo[nextref] < 0)
+      nextline += -lineinfo[nextref++]; 
+    LUA_ASSERT(lineinfo[nextref] >= 0, "invalid line info");
+    if (lineinfo[nextref] > pc)
+      break;
+    refline = nextline;
+    refi = nextref;
+  }
+  if (prefi) *prefi = refi;
+  return refline;
+}
+
+
 static int lua_currentpc (StkId f) {
   CallInfo *ci = infovalue(f);
   LUA_ASSERT(ttype(f) == TAG_LMARK, "function has no pc");
@@ -111,9 +139,10 @@ static int lua_currentline (StkId f) {
     return -1;  /* only active lua functions have current-line information */
   else {
     CallInfo *ci = infovalue(f);
-    int *lines = ci->func->f.l->lines;
-    if (!lines) return -1;  /* no static debug information */
-    else return lines[lua_currentpc(f)];
+    int *lineinfo = ci->func->f.l->lineinfo;
+    if (!lineinfo) return -1;  /* no static debug information */
+    else
+      return luaG_getline(lineinfo, lua_currentpc(f), 1, NULL);
   }
 }
 

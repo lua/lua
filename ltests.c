@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.29 2000/06/30 19:17:08 roberto Exp roberto $
+** $Id: ltests.c,v 1.30 2000/08/04 19:38:35 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -16,6 +16,7 @@
 #include "lapi.h"
 #include "lauxlib.h"
 #include "lcode.h"
+#include "ldebug.h"
 #include "ldo.h"
 #include "lfunc.h"
 #include "lmem.h"
@@ -68,9 +69,9 @@ static int pushop (Proto *p, int pc) {
   Instruction i = p->code[pc];
   OpCode o = GET_OPCODE(i);
   const char *name = instrname[o];
-  int *line = p->lines;
-  if (line)
-    sprintf(buff, "%5d - ", line[pc]);
+  int *lineinfo = p->lineinfo;
+  if (lineinfo)
+    sprintf(buff, "%5d - ", luaG_getline(lineinfo, pc, 1, NULL));
   else
     strcpy(buff, "         ");
   switch ((enum Mode)luaK_opproperties[o].mode) {  
