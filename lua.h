@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.39 1999/11/25 18:44:02 roberto Exp roberto $
+** $Id: lua.h,v 1.40 1999/11/29 19:11:36 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -42,7 +42,7 @@ void           lua_settag (lua_State *L, int tag); /* In: object */
 void           lua_error (lua_State *L, const char *s);
 int            lua_dofile (lua_State *L, const char *filename);
                                                         /* Out: returns */
-int            lua_dostring (lua_State *L, const char *string);
+int            lua_dostring (lua_State *L, const char *str);
                                                         /* Out: returns */
 int            lua_dobuffer (lua_State *L, const char *buff, int size,
                                          const char *name); /* Out: returns */
@@ -56,23 +56,23 @@ lua_Object     lua_lua2C (lua_State *L, int number);
 #define	       lua_getparam		lua_lua2C
 #define	       lua_getresult		lua_lua2C
 
-const char    *lua_type (lua_State *L, lua_Object object);
+const char    *lua_type (lua_State *L, lua_Object obj);
 
-int            lua_isnil (lua_State *L, lua_Object object);
-int            lua_istable (lua_State *L, lua_Object object);
-int            lua_isuserdata (lua_State *L, lua_Object object);
-int            lua_iscfunction (lua_State *L, lua_Object object);
-int            lua_isnumber (lua_State *L, lua_Object object);
-int            lua_isstring (lua_State *L, lua_Object object);
-int            lua_isfunction (lua_State *L, lua_Object object);
+int            lua_isnil (lua_State *L, lua_Object obj);
+int            lua_istable (lua_State *L, lua_Object obj);
+int            lua_isuserdata (lua_State *L, lua_Object obj);
+int            lua_iscfunction (lua_State *L, lua_Object obj);
+int            lua_isnumber (lua_State *L, lua_Object obj);
+int            lua_isstring (lua_State *L, lua_Object obj);
+int            lua_isfunction (lua_State *L, lua_Object obj);
 
 int            lua_equal (lua_State *L, lua_Object o1, lua_Object o2);
 
-double         lua_getnumber (lua_State *L, lua_Object object);
-const char    *lua_getstring (lua_State *L, lua_Object object);
-long           lua_strlen (lua_State *L, lua_Object object);
-lua_CFunction  lua_getcfunction (lua_State *L, lua_Object object);
-void	      *lua_getuserdata (lua_State *L, lua_Object object);
+double         lua_getnumber (lua_State *L, lua_Object obj);
+const char    *lua_getstring (lua_State *L, lua_Object obj);
+long           lua_strlen (lua_State *L, lua_Object obj);
+lua_CFunction  lua_getcfunction (lua_State *L, lua_Object obj);
+void	      *lua_getuserdata (lua_State *L, lua_Object obj);
 
 
 void 	       lua_pushnil (lua_State *L);
@@ -81,7 +81,7 @@ void           lua_pushlstring (lua_State *L, const char *s, long len);
 void           lua_pushstring (lua_State *L, const char *s);
 void           lua_pushcclosure (lua_State *L, lua_CFunction fn, int n);
 void           lua_pushusertag (lua_State *L, void *u, int tag);
-void           lua_pushobject (lua_State *L, lua_Object object);
+void           lua_pushobject (lua_State *L, lua_Object obj);
 
 lua_Object     lua_pop (lua_State *L);
 
@@ -95,7 +95,7 @@ void           lua_rawsettable (lua_State *L); /* In: table, index, value */
 lua_Object     lua_gettable (lua_State *L); /* In: table, index */
 lua_Object     lua_rawgettable (lua_State *L); /* In: table, index */
 
-int            lua_tag (lua_State *L, lua_Object object);
+int            lua_tag (lua_State *L, lua_Object obj);
 
 const char    *lua_nextvar (lua_State *L, const char *varname); /* Out: value */
 int            lua_next (lua_State *L, lua_Object o, int i);
@@ -166,32 +166,32 @@ extern lua_State *lua_state;
 #define lua_settag(tag)		(lua_settag)(lua_state, tag)
 #define lua_error(s)		(lua_error)(lua_state, s)
 #define lua_dofile(filename)	(lua_dofile)(lua_state, filename)
-#define lua_dostring(string)	(lua_dostring)(lua_state, string)
+#define lua_dostring(str)	(lua_dostring)(lua_state, str)
 #define lua_callfunction(f)	(lua_callfunction)(lua_state, f)
 #define lua_beginblock()	(lua_beginblock)(lua_state)
 #define lua_endblock()		(lua_endblock)(lua_state)
 #define lua_lua2C(number)	(lua_lua2C)(lua_state, number)
-#define lua_type(object)	(lua_type)(lua_state, object)
-#define lua_isnil(object)	(lua_isnil)(lua_state, object)
-#define lua_istable(object)	(lua_istable)(lua_state, object)
-#define lua_isuserdata(object)	(lua_isuserdata)(lua_state, object)
-#define lua_iscfunction(object)	(lua_iscfunction)(lua_state, object)
-#define lua_isnumber(object)	(lua_isnumber)(lua_state, object)
-#define lua_isstring(object)	(lua_isstring)(lua_state, object)
-#define lua_isfunction(object)	(lua_isfunction)(lua_state, object)
+#define lua_type(obj)		(lua_type)(lua_state, obj)
+#define lua_isnil(obj)		(lua_isnil)(lua_state, obj)
+#define lua_istable(obj)	(lua_istable)(lua_state, obj)
+#define lua_isuserdata(obj)	(lua_isuserdata)(lua_state, obj)
+#define lua_iscfunction(obj)	(lua_iscfunction)(lua_state, obj)
+#define lua_isnumber(obj)	(lua_isnumber)(lua_state, obj)
+#define lua_isstring(obj)	(lua_isstring)(lua_state, obj)
+#define lua_isfunction(obj)	(lua_isfunction)(lua_state, obj)
 #define lua_equal(o1,o2)	(lua_equal)(lua_state, o1,o2)
-#define lua_getnumber(object)	(lua_getnumber)(lua_state, object)
-#define lua_getstring(object)	(lua_getstring)(lua_state, object)
-#define lua_strlen(object)	(lua_strlen)(lua_state, object)
-#define lua_getcfunction(object)	(lua_getcfunction)(lua_state, object)
-#define lua_getuserdata(object)	(lua_getuserdata)(lua_state, object)
+#define lua_getnumber(obj)	(lua_getnumber)(lua_state, obj)
+#define lua_getstring(obj)	(lua_getstring)(lua_state, obj)
+#define lua_strlen(obj)		(lua_strlen)(lua_state, obj)
+#define lua_getcfunction(obj)	(lua_getcfunction)(lua_state, obj)
+#define lua_getuserdata(obj)	(lua_getuserdata)(lua_state, obj)
 #define lua_pushnil()		(lua_pushnil)(lua_state)
 #define lua_pushnumber(n)	(lua_pushnumber)(lua_state, n)
 #define lua_pushlstring(s,len)	(lua_pushlstring)(lua_state, s,len)
 #define lua_pushstring(s)	(lua_pushstring)(lua_state, s)
 #define lua_pushcclosure(fn,n)	(lua_pushcclosure)(lua_state, fn,n)
 #define lua_pushusertag(u,tag)	(lua_pushusertag)(lua_state, u,tag)
-#define lua_pushobject(object)	(lua_pushobject)(lua_state, object)
+#define lua_pushobject(obj)	(lua_pushobject)(lua_state, obj)
 #define lua_pop()		(lua_pop)(lua_state)
 #define lua_getglobal(name)	(lua_getglobal)(lua_state, name)
 #define lua_rawgetglobal(name)	(lua_rawgetglobal)(lua_state, name)
@@ -201,7 +201,7 @@ extern lua_State *lua_state;
 #define lua_rawsettable()	(lua_rawsettable)(lua_state)
 #define lua_gettable()		(lua_gettable)(lua_state)
 #define lua_rawgettable()	(lua_rawgettable)(lua_state)
-#define lua_tag(object)		(lua_tag)(lua_state, object)
+#define lua_tag(obj)		(lua_tag)(lua_state, obj)
 #define lua_nextvar(varname)	(lua_nextvar)(lua_state, varname)
 #define lua_next(o,i)		(lua_next)(lua_state, o,i)
 #define lua_ref(lock)		(lua_ref)(lua_state, lock)

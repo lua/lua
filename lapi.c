@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.58 1999/11/23 13:58:02 roberto Exp roberto $
+** $Id: lapi.c,v 1.59 1999/11/29 19:11:36 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -246,36 +246,36 @@ int lua_equal(lua_State *L, lua_Object o1, lua_Object o2) {
 }
 
 
-double lua_getnumber (lua_State *L, lua_Object object) {
- if (object == LUA_NOOBJECT) return 0.0;
- if (tonumber(Address(L, object))) return 0.0;
- else return (nvalue(Address(L, object)));
+double lua_getnumber (lua_State *L, lua_Object obj) {
+ if (obj == LUA_NOOBJECT) return 0.0;
+ if (tonumber(Address(L, obj))) return 0.0;
+ else return (nvalue(Address(L, obj)));
 }
 
-const char *lua_getstring (lua_State *L, lua_Object object) {
+const char *lua_getstring (lua_State *L, lua_Object obj) {
   luaC_checkGC(L);  /* `tostring' may create a new string */
-  if (object == LUA_NOOBJECT || tostring(L, Address(L, object)))
+  if (obj == LUA_NOOBJECT || tostring(L, Address(L, obj)))
     return NULL;
-  else return (svalue(Address(L, object)));
+  else return (svalue(Address(L, obj)));
 }
 
-long lua_strlen (lua_State *L, lua_Object object) {
+long lua_strlen (lua_State *L, lua_Object obj) {
   luaC_checkGC(L);  /* `tostring' may create a new string */
-  if (object == LUA_NOOBJECT || tostring(L, Address(L, object)))
+  if (obj == LUA_NOOBJECT || tostring(L, Address(L, obj)))
     return 0L;
-  else return (tsvalue(Address(L, object))->u.s.len);
+  else return (tsvalue(Address(L, obj))->u.s.len);
 }
 
-void *lua_getuserdata (lua_State *L, lua_Object object) {
-  if (object == LUA_NOOBJECT || ttype(Address(L, object)) != LUA_T_USERDATA)
+void *lua_getuserdata (lua_State *L, lua_Object obj) {
+  if (obj == LUA_NOOBJECT || ttype(Address(L, obj)) != LUA_T_USERDATA)
     return NULL;
-  else return tsvalue(Address(L, object))->u.d.value;
+  else return tsvalue(Address(L, obj))->u.d.value;
 }
 
-lua_CFunction lua_getcfunction (lua_State *L, lua_Object object) {
-  if (!lua_iscfunction(L, object))
+lua_CFunction lua_getcfunction (lua_State *L, lua_Object obj) {
+  if (!lua_iscfunction(L, obj))
     return NULL;
-  else return fvalue(luaA_protovalue(Address(L, object)));
+  else return fvalue(luaA_protovalue(Address(L, obj)));
 }
 
 
