@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.35 1999/05/14 12:24:04 roberto Exp roberto $
+** $Id: llex.c,v 1.36 1999/06/17 17:04:03 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -27,7 +27,8 @@
 #define save_and_next(LS)  (save(LS->current), next(LS))
 
 
-char *reserved [] = {"and", "do", "else", "elseif", "end", "function",
+/* ORDER RESERVED */
+static char *reserved [] = {"and", "do", "else", "elseif", "end", "function",
     "if", "local", "nil", "not", "or", "repeat", "return", "then",
     "until", "while"};
 
@@ -391,7 +392,7 @@ int luaX_lex (LexState *LS) {
               "ambiguous syntax (decimal point x string concatenation)");
           }
         }
-      fraction:
+      fraction:  /* LUA_NUMBER */
         while (isdigit(LS->current))
           save_and_next(LS);
         if (toupper(LS->current) == 'E') {

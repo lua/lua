@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.36 1999/06/16 13:35:01 roberto Exp roberto $
+** $Id: lparser.c,v 1.37 1999/06/17 17:04:03 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -145,7 +145,7 @@ static void var_or_func_tail (LexState *ls, vardesc *v);
 static void checklimit (LexState *ls, int val, int limit, char *msg) {
   if (val > limit) {
     char buff[100];
-    sprintf(buff, "too many %s (limit=%d)", msg, limit);
+    sprintf(buff, "too many %.50s (limit=%d)", msg, limit);
     luaX_error(ls, buff);
   }
 }
@@ -617,7 +617,7 @@ static void next (LexState *ls) {
 static void error_expected (LexState *ls, int token) {
   char buff[100], t[TOKEN_LEN];
   luaX_token2str(token, t);
-  sprintf(buff, "`%s' expected", t);
+  sprintf(buff, "`%.20s' expected", t);
   luaX_error(ls, buff);
 }
 
@@ -635,7 +635,7 @@ static void error_unmatched (LexState *ls, int what, int who, int where) {
     char t_what[TOKEN_LEN], t_who[TOKEN_LEN];
     luaX_token2str(what, t_what);
     luaX_token2str(who, t_who);
-    sprintf(buff, "`%s' expected (to close `%s' at line %d)",
+    sprintf(buff, "`%.20s' expected (to close `%.20s' at line %d)",
             t_what, t_who, where);
     luaX_error(ls, buff);
   }

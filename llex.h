@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.11 1999/02/25 19:13:56 roberto Exp roberto $
+** $Id: llex.h,v 1.12 1999/06/17 17:04:03 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -16,6 +16,11 @@
 /* maximum length of a reserved word (+1 for terminal 0) */
 #define TOKEN_LEN	15
 
+
+/*
+* WARNING: if you change the order of this enumeration,
+* grep "ORDER RESERVED"
+*/
 enum RESERVED {
   /* terminal symbols denoted by reserved words */
   AND = FIRST_RESERVED,
