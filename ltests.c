@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.120 2002/05/06 19:05:10 roberto Exp roberto $
+** $Id: ltests.c,v 1.121 2002/05/13 13:10:04 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -638,8 +638,13 @@ static int testC (lua_State *L) {
       int nres = getnum;
       lua_call(L, narg, nres);
     }
-    else if EQ("dostring") {
-      lua_dostring(L, luaL_check_string(L, getnum));
+    else if EQ("loadstring") {
+      size_t sl;
+      const char *s = luaL_check_lstr(L, getnum, &sl);
+      lua_loadbuffer(L, s, sl, s);
+    }
+    else if EQ("loadfile") {
+      lua_loadfile(L, luaL_check_string(L, getnum));
     }
     else if EQ("setmetatable") {
       lua_setmetatable(L, getnum);
