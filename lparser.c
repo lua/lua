@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.126 2001/01/29 13:14:49 roberto Exp roberto $
+** $Id: lparser.c,v 1.127 2001/01/29 15:26:40 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -234,7 +234,7 @@ static void pushupvalue (LexState *ls, TString *n) {
   int level = search_local(ls, n, &v);
   if (level == -1) {  /* global? */
     if (fs->prev == NULL)
-      luaX_syntaxerror(ls, "cannot access upvalue in main", n->str);
+      luaX_syntaxerror(ls, "cannot access an upvalue at top level", n->str);
     v.u.index = string_constant(fs->prev, n);
   }
   else if (level != 1)
