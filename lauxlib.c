@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.93 2003/01/27 13:46:16 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.94 2003/02/11 09:44:38 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -118,6 +118,19 @@ LUALIB_API void luaL_checktype (lua_State *L, int narg, int t) {
 LUALIB_API void luaL_checkany (lua_State *L, int narg) {
   if (lua_type(L, narg) == LUA_TNONE)
     luaL_argerror(L, narg, "value expected");
+}
+
+
+LUALIB_API void *luaL_checkudata (lua_State *L, int ud, const char *tname) {
+  if (!lua_getmetatable(L, ud)) return NULL;  /* no metatable? */
+  lua_pushstring(L, tname);
+  lua_rawget(L, LUA_REGISTRYINDEX);
+  if (!lua_rawequal(L, -1, -2)) {
+    lua_pop(L, 2);
+    return NULL;
+  }
+  lua_pop(L, 2);
+  return lua_touserdata(L, ud);
 }
 
 
