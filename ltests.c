@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.39 2000/08/31 20:23:40 roberto Exp roberto $
+** $Id: ltests.c,v 1.40 2000/09/05 19:33:32 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -267,7 +267,7 @@ static int udataval (lua_State *L) {
 }
 
 static int newstate (lua_State *L) {
-  lua_State *L1 = lua_newstate(luaL_check_int(L, 1));
+  lua_State *L1 = lua_open(luaL_check_int(L, 1));
   if (L1)
     lua_pushuserdata(L, L1);
   else

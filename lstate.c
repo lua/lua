@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.36 2000/09/05 19:33:32 roberto Exp roberto $
+** $Id: lstate.c,v 1.37 2000/09/11 17:38:42 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -25,7 +25,7 @@ void luaB_opentests (lua_State *L);
 #endif
 
 
-lua_State *lua_newstate (int stacksize) {
+lua_State *lua_open (int stacksize) {
   struct lua_longjmp myErrorJmp;
   lua_State *L = luaM_new(NULL, lua_State);
   if (L == NULL) return NULL;  /* memory allocation error */

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.49 2000/08/31 20:23:40 roberto Exp roberto $
+** $Id: lua.c,v 1.50 2000/09/05 19:33:32 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -314,7 +314,7 @@ int main (int argc, char *argv[]) {
   int status;
   opt.toclose = 0;
   getstacksize(argc, argv, &opt);  /* handle option `-s' */
-  L = lua_newstate(opt.stacksize);  /* create state */
+  L = lua_open(opt.stacksize);  /* create state */
   USERINIT();  /* open libraries */
   register_getargs(argv);  /* create `getargs' function */
   status = handle_argv(argv+1, &opt);
