@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.18 1998/03/09 21:49:52 roberto Exp roberto $
+** $Id: lgc.c,v 1.19 1998/07/12 16:10:38 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -163,20 +163,13 @@ static void strmark (TaggedString *s)
 }
 
 
-static void protomark (TProtoFunc *f)
-{
+static void protomark (TProtoFunc *f) {
   if (!f->head.marked) {
-    LocVar *v = f->locvars;
     int i;
     f->head.marked = 1;
     strmark(f->fileName);
     for (i=0; i<f->nconsts; i++)
       markobject(&f->consts[i]);
-    if (v) {
-      for (; v->line != -1; v++)
-        if (v->varname)
-          strmark(v->varname);
-    }
   }
 }
 
