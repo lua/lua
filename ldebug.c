@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.47 2000/10/09 13:47:32 roberto Exp roberto $
+** $Id: ldebug.c,v 1.48 2000/10/20 16:39:03 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -169,7 +169,7 @@ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar,
   L->top--;  /* pop new value */
   if (!fp) return NULL;  /* `f' is not a Lua function? */
   name = luaF_getlocalname(fp, localnum, currentpc(f));
-  if (!name || name[0] == '*') return NULL;  /* `*' starts private locals */
+  if (!name || name[0] == '(') return NULL;  /* `(' starts private locals */
   *((f+1)+(localnum-1)) = *L->top;
   return name;
 }
