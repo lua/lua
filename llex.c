@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.48 1999/12/30 12:40:29 roberto Exp roberto $
+** $Id: llex.c,v 1.49 2000/01/25 18:44:21 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -321,7 +321,6 @@ static void read_string (lua_State *L, LexState *LS, int del) {
 
 int luaX_lex (LexState *LS) {
   lua_State *L = LS->L;
-  luaL_resetbuffer(L);
   for (;;) {
     switch (LS->current) {
 
@@ -340,6 +339,7 @@ int luaX_lex (LexState *LS) {
         continue;
 
       case '[':
+        luaL_resetbuffer(L);
         save_and_next(L, LS);
         if (LS->current != '[') return '[';
         else {
@@ -370,10 +370,12 @@ int luaX_lex (LexState *LS) {
 
       case '"':
       case '\'':
+        luaL_resetbuffer(L);
         read_string(L, LS, LS->current);
         return STRING;
 
       case '.':
+        luaL_resetbuffer(L);
         save_and_next(L, LS);
         if (LS->current == '.') {
           next(LS);
@@ -384,10 +386,11 @@ int luaX_lex (LexState *LS) {
           else return CONC;   /* .. */
         }
         else if (!isdigit(LS->current)) return '.';
-        goto fraction;  /* LS->current is a digit: goes through to number */
+        else goto fraction;  /* LS->current is a digit */
 
       case '0': case '1': case '2': case '3': case '4':
       case '5': case '6': case '7': case '8': case '9':
+        luaL_resetbuffer(L);
         do {
           save_and_next(L, LS);
         } while (isdigit(LS->current));
@@ -431,6 +434,7 @@ int luaX_lex (LexState *LS) {
         }
         tname: {  /* identifier or reserved word */
           TaggedString *ts;
+          luaL_resetbuffer(L);
           do {
             save_and_next(L, LS);
           } while (isalnum(LS->current) || LS->current == '_');
