@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.11 1997/12/15 17:47:55 roberto Exp roberto $
+** $Id: lua.h,v 1.12 1997/12/18 18:32:39 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -146,15 +146,11 @@ long	       lua_collectgarbage	(long limit);
 
 /* ==========================================================================
 ** for compatibility with old versions. Avoid using these macros/functions
-** If your program does not use any of these, define LUA_COMPAT2_5 to 0
+** If your program does need any of these, define LUA_COMPAT2_5
 */
 
-#ifndef LUA_COMPAT2_5
-#define LUA_COMPAT2_5	1
-#endif
 
-
-#if LUA_COMPAT2_5
+#ifdef LUA_COMPAT2_5
 
 
 lua_Object     lua_setfallback		(char *event, lua_CFunction fallback);

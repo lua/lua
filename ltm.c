@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.11 1997/12/11 17:21:11 roberto Exp roberto $
+** $Id: ltm.c,v 1.12 1997/12/15 16:17:20 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -174,7 +174,7 @@ char *luaT_travtagmethods (int (*fn)(TObject *))
 * ===================================================================
 * compatibility with old fallback system
 */
-#if	LUA_COMPAT2_5
+#ifdef LUA_COMPAT2_5
 
 #include "lapi.h"
 

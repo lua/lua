@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.15 1997/12/18 18:32:39 roberto Exp roberto $
+** $Id: lapi.c,v 1.16 1997/12/22 17:52:20 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -580,7 +580,7 @@ lua_Object lua_getref (int ref)
 
 
 
-#if LUA_COMPAT2_5
+#ifdef LUA_COMPAT2_5
 /*
 ** API: set a function as a fallback
 */

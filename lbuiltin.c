@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.19 1997/12/18 18:32:39 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.20 1997/12/30 17:57:45 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -464,7 +464,7 @@ static void testC (void)
 ** Internal functions
 */
 static struct luaL_reg int_funcs[] = {
-#if LUA_COMPAT2_5
+#ifdef LUA_COMPAT2_5
   {"setfallback", luaT_setfallback},
 #endif
 #ifdef DEBUG

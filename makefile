@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.7 1997/12/17 20:48:58 roberto Exp roberto $
+## $Id: makefile,v 1.8 1997/12/23 19:24:36 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -15,11 +15,11 @@
 #   facilities ("strerror" and "locale.h"). Although they are ANSI,
 #   SunOS does not comply; so, add "-DOLD_ANSI" on SunOS
 #
-# define LUA_COMPAT2_5=0 if yous system does not need to be compatible with
+# define LUA_COMPAT2_5 if yous system does need to be compatible with
 # version 2.5 (or older)
 
-CONFIG = -DPOPEN -D_POSIX_SOURCE -DLUA_COMPAT2_5=0
-#CONFIG = -DLUA_COMPAT2_5=0 -DOLD_ANSI -DDEBUG
+CONFIG = -DPOPEN -D_POSIX_SOURCE
+#CONFIG = -DLUA_COMPAT2_5 -DOLD_ANSI -DDEBUG
 
 
 # Compilation parameters
