@@ -295,7 +295,7 @@ static void getbyte (void)
   }
 }
 
-static void createuserdata (void)
+static void newuserdata (void)
 {
   lua_Object t = lua_getparam(1);
   int tag = luaL_opt_number(2, 0);
@@ -335,7 +335,7 @@ static struct luaL_reg iolib[] = {
 {"exit",     io_exit},
 {"debug",    io_debug},
 {"getbyte",    getbyte},
-{"createud",    createuserdata},
+{"userdata",    newuserdata},
 {"print_stack", errorfb}
 };
 
