@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.9 1999/01/22 18:08:57 roberto Exp roberto $
+** $Id: lmem.c,v 1.10 1999/02/24 17:55:51 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -23,20 +23,35 @@
 #endif
 
 
+#define MINSIZE	16	/* minimum size for "growing" vectors */
 
-#ifndef DEBUG
 
-int luaM_growaux (void **block, unsigned long nelems, int size,
-                       char *errormsg, unsigned long limit) {
-  if (nelems >= limit)
-    lua_error(errormsg);
-  nelems = (nelems == 0) ? 32 : nelems*2;
-  if (nelems > limit)
-    nelems = limit;
-  *block = luaM_realloc(*block, nelems*size);
-  return (int)nelems;
+static unsigned long power2 (unsigned long n) {
+  unsigned long p = MINSIZE;
+  while (p<=n) p<<=1;
+  return p;
 }
 
+
+void *luaM_growaux (void *block, unsigned long nelems, int inc, int size,
+                       char *errormsg, unsigned long limit) {
+  unsigned long newn = nelems+inc;
+  if ((newn ^ nelems) > nelems) {  /* cross a power of 2 boundary? */
+    if (newn >= limit)
+      lua_error(errormsg);
+    newn = power2(newn);
+    if (newn > limit)
+      newn = limit;
+    return luaM_realloc(block, newn*size);
+  }
+  else {
+    LUA_ASSERT(power2(nelems) == power2(newn), "bad arithmetic");
+    return block;
+  }
+}
+
+
+#ifndef DEBUG
 
 /*
 ** generic allocation routine.
@@ -61,18 +76,6 @@ void *luaM_realloc (void *block, unsigned long size) {
 /* DEBUG */
 
 #include <string.h>
-
-
-int luaM_growaux (void **block, unsigned long nelems, int size,
-                       char *errormsg, unsigned long limit) {
-  if (nelems >= limit)
-    lua_error(errormsg);
-  nelems = nelems+1;
-  if (nelems > limit)
-    nelems = limit;
-  *block = luaM_realloc(*block, nelems*size);
-  return (int)nelems;
-}
 
 
 #define HEADER	(sizeof(double))

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.19 1998/07/12 16:10:38 roberto Exp roberto $
+** $Id: lgc.c,v 1.20 1999/01/22 18:08:03 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -29,23 +29,19 @@ static int markobject (TObject *o);
 */
 
 
-int luaC_ref (TObject *o, int lock)
-{
+int luaC_ref (TObject *o, int lock) {
   int ref;
   if (ttype(o) == LUA_T_NIL)
     ref = -1;   /* special ref for nil */
   else {
     for (ref=0; ref<L->refSize; ref++)
       if (L->refArray[ref].status == FREE)
-        goto found;
-    /* no more empty spaces */ {
-      int oldSize = L->refSize;
-      L->refSize = luaM_growvector(&L->refArray, L->refSize, struct ref,
-                                   refEM, MAX_INT);
-      for (ref=oldSize; ref<L->refSize; ref++)
-        L->refArray[ref].status = FREE;
-      ref = oldSize;
-    } found:
+        break;
+    if (ref == L->refSize) {  /* no more empty spaces? */
+      L->refArray = luaM_growvector(L->refArray, L->refSize, 1, struct ref,
+                                    refEM, MAX_INT);
+      L->refSize++;
+    }
     L->refArray[ref].o = *o;
     L->refArray[ref].status = lock ? LOCK : HOLD;
   }

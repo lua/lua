@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.21 1999/02/24 15:37:19 roberto Exp roberto $
+** $Id: lparser.c,v 1.22 1999/02/24 17:55:51 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -89,10 +89,7 @@ typedef struct FuncState {
   int maxstacksize;  /* maximum number of values on activation register */
   int nlocalvar;  /* number of active local variables */
   int nupvalues;  /* number of upvalues */
-  int nvars;  /* number of entries in f->locvars */
-  int maxcode;  /* size of f->code */
-  int maxvars;  /* size of f->locvars (-1 if no debug information) */
-  int maxconsts;  /* size of f->consts */
+  int nvars;  /* number of entries in f->locvars (-1 if no debug information) */
   int lastsetline;  /* line where last SETLINE was issued */
   vardesc upvalues[MAXUPVALUES];  /* upvalues */
   TaggedString *localvar[MAXLOCALS];  /* store local variable names */
@@ -134,9 +131,7 @@ static void var_or_func_tail (LexState *ls, vardesc *v);
 
 
 static void check_pc (FuncState *fs, int n) {
-  if (fs->pc+n > fs->maxcode)
-    fs->maxcode = luaM_growvector(&fs->f->code, fs->maxcode+n,
-                                  Byte, codeEM, MAX_INT);
+  fs->f->code = luaM_growvector(fs->f->code, fs->pc, n, Byte, codeEM, MAX_INT);
 }
 
 
@@ -221,9 +216,8 @@ static void code_constant (LexState *ls, int c) {
 
 static int next_constant (FuncState *fs) {
   TProtoFunc *f = fs->f;
-  if (f->nconsts >= fs->maxconsts)
-    fs->maxconsts = luaM_growvector(&f->consts, fs->maxconsts, TObject,
-                                    constantEM, MAX_ARG);
+  f->consts = luaM_growvector(f->consts, f->nconsts, 1, TObject,
+                              constantEM, MAX_ARG);
   return f->nconsts++;
 }
 
@@ -293,11 +287,9 @@ static void flush_list (LexState *ls, int m, int n) {
 
 static void luaI_registerlocalvar (FuncState *fs, TaggedString *varname,
                                    int line) {
-  if (fs->maxvars != -1) {  /* debug information? */
+  if (fs->nvars != -1) {  /* debug information? */
     TProtoFunc *f = fs->f;
-    if (fs->nvars >= fs->maxvars)
-      fs->maxvars = luaM_growvector(&f->locvars, fs->maxvars,
-                                    LocVar, "", MAX_INT);
+    f->locvars = luaM_growvector(f->locvars, fs->nvars, 1, LocVar, "", MAX_INT);
     f->locvars[fs->nvars].varname = varname;
     f->locvars[fs->nvars].line = line;
     fs->nvars++;
@@ -555,13 +547,8 @@ static void init_state (LexState *ls, FuncState *fs, TaggedString *filename) {
   fs->f = f;
   f->fileName = filename;
   fs->pc = 0;
-  fs->maxcode = 0;
   f->code = NULL;
-  fs->maxconsts = 0;
-  if (L->debug)
-    fs->nvars = fs->maxvars = 0;
-  else
-    fs->maxvars = -1;  /* flag no debug information */
+  fs->nvars = (L->debug) ? 0 : -1;  /* flag no debug information? */
   code_byte(fs, 0);  /* to be filled with maxstacksize */
   code_byte(fs, 0);  /* to be filled with arg information */
   /* push function (to avoid GC) */
@@ -577,7 +564,7 @@ static void close_func (LexState *ls) {
   f->code[0] = (Byte)fs->maxstacksize;
   f->code = luaM_reallocvector(f->code, fs->pc, Byte);
   f->consts = luaM_reallocvector(f->consts, f->nconsts, TObject);
-  if (fs->maxvars != -1) {  /* debug information? */
+  if (fs->nvars != -1) {  /* debug information? */
     luaI_registerlocalvar(fs, NULL, -1);  /* flag end of vector */
     f->locvars = luaM_reallocvector(f->locvars, fs->nvars, LocVar);
   }
