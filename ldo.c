@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.5 2004/05/14 19:25:09 roberto Exp roberto $
+** $Id: ldo.c,v 2.6 2004/05/31 18:51:50 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -256,8 +256,8 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     ci->func = func;
     L->base = ci->base = base;
     ci->top = L->base + p->maxstacksize;
-    ci->u.l.savedpc = p->code;  /* starting point */
-    ci->u.l.tailcalls = 0;
+    ci->savedpc = p->code;  /* starting point */
+    ci->tailcalls = 0;
     ci->nresults = nresults;
     for (st = L->top; st < ci->top; st++)
       setnilvalue(st);
@@ -293,7 +293,7 @@ static StkId callrethooks (lua_State *L, StkId firstResult) {
   ptrdiff_t fr = savestack(L, firstResult);  /* next call may change stack */
   luaD_callhook(L, LUA_HOOKRET, -1);
   if (f_isLua(L->ci)) {  /* Lua function? */
-    while (L->ci->u.l.tailcalls--)  /* call hook for eventual tail calls */
+    while (L->ci->tailcalls--)  /* call hook for eventual tail calls */
       luaD_callhook(L, LUA_HOOKTAILRET, -1);
   }
   return restorestack(L, fr);
@@ -352,8 +352,8 @@ static void resume (lua_State *L, void *ud) {
     if (!f_isLua(ci)) {  /* `common' yield? */
       /* finish interrupted execution of `OP_CALL' */
       int nresults = ci->nresults;
-      lua_assert(GET_OPCODE(*((ci-1)->u.l.savedpc - 1)) == OP_CALL ||
-                 GET_OPCODE(*((ci-1)->u.l.savedpc - 1)) == OP_TAILCALL);
+      lua_assert(GET_OPCODE(*((ci-1)->savedpc - 1)) == OP_CALL ||
+                 GET_OPCODE(*((ci-1)->savedpc - 1)) == OP_TAILCALL);
       luaD_poscall(L, nresults, L->top - nargs);  /* complete it */
       if (nresults >= 0) L->top = L->ci->top;
     }  /* else yielded inside a hook: just continue its execution */

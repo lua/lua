@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.3 2004/05/14 19:25:09 roberto Exp roberto $
+** $Id: lstate.h,v 2.4 2004/05/31 18:51:50 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -12,30 +12,6 @@
 #include "lobject.h"
 #include "ltm.h"
 #include "lzio.h"
-
-
-/*
-** macros for thread synchronization inside Lua core machine:
-** all accesses to the global state and to global objects are synchronized.
-** Because threads can read the stack of other threads
-** (when running garbage collection),
-** a thread must also synchronize any write-access to its own stack.
-** Unsynchronized accesses are allowed only when reading its own stack,
-** or when reading immutable fields from global objects
-** (such as string values and udata values). 
-*/
-#ifndef lua_lock
-#define lua_lock(L)	((void) 0)
-#endif
-
-#ifndef lua_unlock
-#define lua_unlock(L)	((void) 0)
-#endif
-
-
-#ifndef lua_userstateopen
-#define lua_userstateopen(l)
-#endif
 
 
 
@@ -74,15 +50,8 @@ typedef struct CallInfo {
   StkId func;  /* function index in the stack */
   StkId	top;  /* top for this function */
   int nresults;  /* expected number of results from this function */
-  union {
-    struct {  /* for Lua functions */
-      const Instruction *savedpc;
-      int tailcalls;  /* number of tail calls lost under this entry */
-    } l;
-    struct {  /* for C functions */
-      int dummy;  /* just to avoid an empty struct */
-    } c;
-  } u;
+  const Instruction *savedpc;
+  int tailcalls;  /* number of tail calls lost under this entry */
 } CallInfo;
 
 

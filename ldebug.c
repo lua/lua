@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.4 2004/04/30 20:13:38 roberto Exp roberto $
+** $Id: ldebug.c,v 2.5 2004/05/31 18:51:50 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,7 @@ static const char *getfuncname (CallInfo *ci, const char **name);
 
 static int currentpc (CallInfo *ci) {
   if (!isLua(ci)) return -1;  /* function is not a Lua function? */
-  return pcRel(ci->u.l.savedpc, ci_func(ci)->l.p);
+  return pcRel(ci->savedpc, ci_func(ci)->l.p);
 }
 
 
@@ -86,7 +86,7 @@ LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
   for (ci = L->ci; level > 0 && ci > L->base_ci; ci--) {
     level--;
     if (f_isLua(ci))  /* Lua function? */
-      level -= ci->u.l.tailcalls;  /* skip lost tail calls */
+      level -= ci->tailcalls;  /* skip lost tail calls */
   }
   if (level > 0 || ci == L->base_ci) status = 0;  /* there is no such level */
   else if (level < 0) {  /* level is of a lost tail call */
@@ -255,8 +255,9 @@ static int precheck (const Proto *pt) {
 }
 
 
-static int checkopenop (const Proto *pt, int pc) {
-  Instruction i = pt->code[pc+1];
+#define checkopenop(pt,pc)	luaG_checkopenop((pt)->code[(pc)+1])
+
+int luaG_checkopenop (Instruction i) {
   switch (GET_OPCODE(i)) {
     case OP_CALL:
     case OP_TAILCALL:
@@ -487,7 +488,7 @@ static const char *getobjname (CallInfo *ci, int stackpos, const char **name) {
 
 static const char *getfuncname (CallInfo *ci, const char **name) {
   Instruction i;
-  if ((isLua(ci) && ci->u.l.tailcalls > 0) || !isLua(ci - 1))
+  if ((isLua(ci) && ci->tailcalls > 0) || !isLua(ci - 1))
     return NULL;  /* calling function is not Lua (or is unknown) */
   ci--;  /* calling function */
   i = ci_func(ci)->l.p->code[currentpc(ci)];

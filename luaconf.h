@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.4 2004/05/28 18:32:51 roberto Exp roberto $
+** $Id: luaconf.h,v 1.5 2004/06/02 13:24:43 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -213,6 +213,32 @@
 	{ if ((c)->status == 0) (c)->status = -1; }
 #define l_jmpbuf	int  /* dummy variable */
 #endif
+
+
+
+/*
+** macros for thread synchronization inside Lua core machine:
+** all accesses to the global state and to global objects are synchronized.
+** Because threads can read the stack of other threads
+** (when running garbage collection),
+** a thread must also synchronize any write-access to its own stack.
+** Unsynchronized accesses are allowed only when reading its own stack,
+** or when reading immutable fields from global objects
+** (such as string values and udata values).
+*/
+#define lua_lock(L)     ((void) 0)
+#define lua_unlock(L)   ((void) 0)
+
+/*
+** this macro allows a thread switch in appropriate places in the Lua
+** core
+*/
+#define lua_threadyield(L)	{lua_unlock(L); lua_lock(L);}
+
+
+
+/* allows user-specific initialization on new threads */
+#define lua_userstateopen(l)	/* empty */
 
 
 #endif
