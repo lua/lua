@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.24 2000/04/14 17:50:30 roberto Exp $
+## $Id: makefile,v 1.24 2000/04/14 17:52:09 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -18,11 +18,11 @@
 # define LUA_NUM_TYPE if you need numbers to be different from double
 # (for instance, -DLUA_NUM_TYPE=float)
 #
-# define COMPAT_READPATTERN if you need read patterns
+# define LUA_COMPAT_READPATTERN if you need read patterns
 # (only for compatibility with previous versions)
 
 CONFIG = -DPOPEN -D_POSIX_SOURCE
-#CONFIG = -DOLD_ANSI -DDEBUG -DCOMPAT_READPATTERN
+#CONFIG = -DOLD_ANSI -DDEBUG -DLUA_COMPAT_READPATTERN
 
 
 # Compilation parameters

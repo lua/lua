@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.60 2000/03/22 16:24:13 roberto Exp roberto $
+** $Id: liolib.c,v 1.61 2000/03/30 17:19:48 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -231,7 +231,7 @@ static void io_appendto (lua_State *L) {
 
 
 
-#ifdef COMPAT_READPATTERN
+#ifdef LUA_COMPAT_READPATTERN
 
 /*
 ** We cannot lookahead without need, because this can lock stdin.
