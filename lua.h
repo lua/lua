@@ -1,15 +1,47 @@
 /*
+** $Id: $
 ** LUA - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
-** $Id: lua.h,v 4.10 1997/06/19 18:03:04 roberto Exp roberto $
 */
+
+/*********************************************************************
+* Copyright  © 1994-1996 TeCGraf, PUC-Rio.  Written by Waldemar Ce­
+* les Filho, Roberto Ierusalimschy and Luiz Henrique de Figueiredo.
+* All rights reserved.
+* 
+* Permission is hereby granted, without written agreement and with­
+* out license or royalty fees, to use, copy, modify, and distribute
+* this  software  and its documentation for any purpose, subject to
+* the following conditions:
+* 
+* The above copyright notice and this permission notice  shall  ap­
+* pear in all copies or substantial portions of this software.
+* 
+* The name "Lua" cannot be used for any modified form of this soft­
+* ware that does not originate from the authors. Nevertheless,  the
+* name  "Lua"  may and should be used to designate the language im­
+* plemented and described in this package, even if embedded in  any
+* other  system,  as  long  as  its syntax and semantics remain un­
+* changed.
+* 
+* The authors specifically disclaim any warranties, including,  but
+* not  limited  to,  the  implied warranties of merchantability and
+* fitness for a particular purpose. The software provided hereunder
+* is  on  an  "as  is" basis, and the authors have no obligation to
+* provide maintenance, support, updates, enhancements, or modifica­
+* tions.  In no event shall TeCGraf, PUC-Rio, or the authors be li­
+* able to any party for direct, indirect, special,  incidental,  or
+* consequential damages arising out of the use of this software and
+* its documentation.
+*********************************************************************/
+
 
 
 #ifndef lua_h
 #define lua_h
 
-#define LUA_VERSION	"Lua 3.0"
+#define LUA_VERSION	"Lua 3.1"
 #define LUA_COPYRIGHT	"Copyright (C) 1994-1997 TeCGraf"
 #define LUA_AUTHORS 	"W. Celes, R. Ierusalimschy & L. H. de Figueiredo"
 
@@ -21,9 +53,9 @@
 typedef void (*lua_CFunction) (void);
 typedef unsigned int lua_Object;
 
-lua_Object     lua_settagmethod	(int tag, char *event);  /* In: new method */
+lua_Object     lua_settagmethod	(int tag, char *event);  /* In: luaM_new method */
 lua_Object     lua_gettagmethod	(int tag, char *event);
-lua_Object     lua_seterrormethod (void);  /* In: new method */
+lua_Object     lua_seterrormethod (void);  /* In: luaM_new method */
 
 int            lua_newtag		(void);
 void           lua_settag		(int tag); /* In: object */
@@ -102,7 +134,7 @@ long	       lua_collectgarbage	(long limit);
 
 
 
-/* ========================================================================== 
+/* ==========================================================================
 ** for compatibility with old versions. Avoid using these macros/functions
 ** If your program does not use any of these, define LUA_COMPAT2_5 to 0
 */
