@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.202 2005/02/18 12:40:02 roberto Exp roberto $
+** $Id: lua.h,v 1.203 2005/03/22 16:04:29 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -94,7 +94,7 @@ typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 /*
 ** generic extra include file
 */
-#ifdef LUA_USER_H
+#if defined(LUA_USER_H)
 #include LUA_USER_H
 #endif
 

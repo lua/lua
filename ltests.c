@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.20 2005/02/18 12:40:02 roberto Exp roberto $
+** $Id: ltests.c,v 2.21 2005/03/16 16:58:41 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -34,7 +34,7 @@
 /*
 ** The whole module only makes sense with LUA_DEBUG on
 */
-#ifdef LUA_DEBUG
+#if defined(LUA_DEBUG)
 
 
 int Trick = 0;
@@ -979,7 +979,7 @@ static int testC (lua_State *L) {
     }
 #endif
     else if EQ("throw") {
-#ifdef __cplusplus
+#if defined(__cplusplus)
 static struct X { int x; } x;
       throw x;
 #else
