@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.9 1997/11/27 15:59:25 roberto Exp roberto $
+** $Id: lapi.c,v 1.10 1997/11/27 18:25:14 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -463,16 +463,16 @@ void lua_funcinfo (lua_Object func, char **filename, int *linedefined)
 
 static int checkfunc (TObject *o)
 {
-    return (o->ttype == LUA_T_FUNCTION) &&
-           ((L->functofind->ttype == LUA_T_FUNCTION) ||
-            (L->functofind->ttype == LUA_T_MARK)) &&
-           (L->functofind->value.cl == o->value.cl);
+  return o->ttype == LUA_T_FUNCTION &&
+         (ttype(L->stack.top) == LUA_T_FUNCTION ||
+          ttype(L->stack.top) == LUA_T_MARK) &&
+         clvalue(L->stack.top) == o->value.cl;
 }
 
 
 char *lua_getobjname (lua_Object o, char **name)
 { /* try to find a name for given function */
-  L->functofind = Address(o);
+  *(L->stack.top) = *Address(o);  /* to be accessed by "checkfunc */
   if ((*name = luaT_travtagmethods(checkfunc)) != NULL)
     return "tag-method";
   else if ((*name = luaS_travsymbol(checkfunc)) != NULL)

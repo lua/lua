@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.3 1997/11/26 20:28:22 roberto Exp roberto $
+** $Id: lstate.h,v 1.4 1997/11/27 15:59:25 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -51,7 +51,6 @@ typedef struct LState {
   TObject errorim;  /* error tag method */
   struct C_Lua_Stack Cblocks[MAX_C_BLOCKS];
   int numCblocks;  /* number of nested Cblocks */
-  TObject *functofind;  /* auxiliar */
   GCnode rootproto;  /* list of all prototypes */
   GCnode rootcl;  /* list of all closures */
   GCnode roottable;  /* list of all tables */
