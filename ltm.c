@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.51 2000/10/02 20:10:55 roberto Exp roberto $
+** $Id: ltm.c,v 1.52 2000/10/03 14:27:44 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -38,7 +38,7 @@ static int luaI_checkevent (lua_State *L, const char *name, int t) {
   int e = findevent(name);
   if (e >= IM_N)
     luaO_verror(L, "event `%.50s' is deprecated", name);
-  if (e == IM_GC && t == TAG_TABLE)
+  if (e == IM_GC && t == LUA_TTABLE)
     luaO_verror(L, "event `gc' for tables is deprecated");
   if (e < 0)
     luaO_verror(L, "`%.50s' is not a valid event name", name);
@@ -47,29 +47,28 @@ static int luaI_checkevent (lua_State *L, const char *name, int t) {
 
 
 
-/* events in TAG_NIL are all allowed, since this is used as a
+/* events in LUA_TNIL are all allowed, since this is used as a
 *  'placeholder' for "default" fallbacks
 */
 /* ORDER LUA_T, ORDER IM */
 static const char luaT_validevents[NUM_TAGS][IM_N] = {
-  {1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* TAG_USERDATA */
-  {1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},  /* TAG_NUMBER */
-  {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},  /* TAG_STRING */
-  {0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* TAG_TABLE */
-  {1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* TAG_LCLOSURE */
-  {1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* TAG_CCLOSURE */
-  {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}   /* TAG_NIL */
+  {1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* LUA_TUSERDATA */
+  {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},  /* LUA_TNIL */
+  {1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},  /* LUA_TNUMBER */
+  {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_TSTRING */
+  {0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* LUA_TTABLE */
+  {1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}   /* LUA_TFUNCTION */
 };
 
 int luaT_validevent (int t, int e) {  /* ORDER LUA_T */
-  return (t > TAG_NIL) ?  1 : luaT_validevents[t][e];
+  return (t >= NUM_TAGS) ?  1 : luaT_validevents[t][e];
 }
 
 
 static void init_entry (lua_State *L, int tag) {
   int i;
   for (i=0; i<IM_N; i++)
-    ttype(luaT_getim(L, tag, i)) = TAG_NIL;
+    ttype(luaT_getim(L, tag, i)) = LUA_TNIL;
   L->IMtable[tag].collected = NULL;
 }
 
@@ -100,7 +99,7 @@ static void checktag (lua_State *L, int tag) {
 }
 
 void luaT_realtag (lua_State *L, int tag) {
-  if (!(NUM_TAGS <= tag && tag <= L->last_tag))
+  if (!validtag(tag))
     luaO_verror(L, "tag %d was not created by `newtag'", tag);
 }
 
@@ -117,20 +116,12 @@ int lua_copytagmethods (lua_State *L, int tagto, int tagfrom) {
 }
 
 
-const TObject *luaT_gettagmethods (lua_State *L, const TObject *o) {
-  lua_Tag t = ttype(o);
+int luaT_tag (const TObject *o) {
+  int t = ttype(o);
   switch (t) {
-    case TAG_USERDATA: {
-      int tag = tsvalue(o)->u.d.tag;
-      if (tag > L->last_tag)
-        return L->IMtable[TAG_USERDATA].int_method;
-      else
-        return L->IMtable[tag].int_method;
-    }
-    case TAG_TABLE:
-      return L->IMtable[hvalue(o)->htag].int_method;
-    default:
-      return L->IMtable[(int)t].int_method;;
+    case LUA_TUSERDATA: return tsvalue(o)->u.d.tag;
+    case LUA_TTABLE:    return hvalue(o)->htag;
+    default:            return t;
   }
 }
 
@@ -142,7 +133,7 @@ void lua_gettagmethod (lua_State *L, int t, const char *event) {
   if (luaT_validevent(t, e))
     *L->top = *luaT_getim(L, t,e);
   else
-    ttype(L->top) = TAG_NIL;
+    ttype(L->top) = LUA_TNIL;
   incr_top;
 }
 
@@ -156,8 +147,8 @@ void lua_settagmethod (lua_State *L, int t, const char *event) {
   checktag(L, t);
   if (!luaT_validevent(t, e))
     luaO_verror(L, "cannot change `%.20s' tag method for type `%.20s'%.20s",
-                luaT_eventname[e], lua_typename(L, luaO_tag2type(t)),
-                (t == TAG_TABLE || t == TAG_USERDATA) ? " with default tag"
+                luaT_eventname[e], luaO_typenames[t],
+                (t == LUA_TTABLE || t == LUA_TUSERDATA) ? " with default tag"
                                                           : "");
   temp = *(L->top - 1);
   *(L->top - 1) = *luaT_getim(L, t,e);

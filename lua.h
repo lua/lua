@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.71 2000/10/02 14:47:43 roberto Exp roberto $
+** $Id: lua.h,v 1.72 2000/10/02 20:10:55 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -47,11 +47,17 @@ typedef struct lua_State lua_State;
 
 typedef int (*lua_CFunction) (lua_State *L);
 
+/*
+** types returned by `lua_type'
+*/
+#define LUA_TNONE	(-1)
 
-typedef enum lua_Type {
-  LUA_NOVALUE, LUA_TUSERDATA, LUA_TNUMBER, LUA_TSTRING,
-  LUA_TTABLE, LUA_TFUNCTION, LUA_TNIL
-} lua_Type;
+#define LUA_TUSERDATA	0
+#define LUA_TNIL	1
+#define LUA_TNUMBER	2
+#define LUA_TSTRING	3
+#define LUA_TTABLE	4
+#define LUA_TFUNCTION	5
 
 
 
@@ -77,8 +83,8 @@ int            lua_stackspace (lua_State *L);
 ** access functions (stack -> C)
 */
 
-lua_Type       lua_type (lua_State *L, int index);
-const char    *lua_typename (lua_State *L, lua_Type t);
+int            lua_type (lua_State *L, int index);
+const char    *lua_typename (lua_State *L, int t);
 int            lua_isnumber (lua_State *L, int index);
 int            lua_isstring (lua_State *L, int index);
 int            lua_iscfunction (lua_State *L, int index);
@@ -184,7 +190,7 @@ void           lua_concat (lua_State *L, int n);
 #define lua_istable(L,n)	(lua_type(L,n) == LUA_TTABLE)
 #define lua_isuserdata(L,n)	(lua_type(L,n) == LUA_TUSERDATA)
 #define lua_isnil(L,n)		(lua_type(L,n) == LUA_TNIL)
-#define lua_isnull(L,n)		(lua_type(L,n) == LUA_NOVALUE)
+#define lua_isnull(L,n)		(lua_type(L,n) == LUA_TNONE)
 
 #endif
 
@@ -224,3 +230,4 @@ void           lua_concat (lua_State *L, int n);
 *
 * This implementation contains no third-party code.
 ******************************************************************************/
+

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.77 2000/09/29 12:42:13 roberto Exp roberto $
+** $Id: lobject.h,v 1.78 2000/10/02 20:10:55 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -31,41 +31,24 @@
 #endif
 
 
-/*
-** Lua TYPES
-** WARNING: if you change the order of this enumeration,
-** grep "ORDER LUA_T"
-*/
-typedef enum {
-  TAG_USERDATA  =  0, /* default tag for userdata */
-  TAG_NUMBER,	/* fixed tag for numbers */
-  TAG_STRING,	/* fixed tag for strings */
-  TAG_TABLE,	/* default tag for tables */
-  TAG_LCLOSURE,	/* fixed tag for Lua closures */
-  TAG_CCLOSURE,	/* fixed tag for C closures */
-  TAG_NIL,	/* last "pre-defined" tag */
+/* mark for closures active in the stack */
+#define LUA_TMARK	6
 
-  TAG_LMARK,	/* mark for Lua closures */
-  TAG_CMARK	/* mark for C closures */
-
-} lua_Tag;
 
 /* tags for values visible from Lua == first user-created tag */
-#define NUM_TAGS	7
+#define NUM_TAGS	6
 
 
-/*
-** check whether `t' is a mark
-*/
-#define is_T_MARK(t)	((t) == TAG_LMARK || (t) == TAG_CMARK)
+/* check whether `t' is a mark */
+#define is_T_MARK(t)	((t) == LUA_TMARK)
 
 
 typedef union {
-  struct TString *ts;	/* TAG_STRING, TAG_USERDATA */
-  struct Closure *cl;	/* TAG_[CL]CLOSURE, TAG_CMARK */
-  struct Hash *a;	/* TAG_TABLE */
-  struct CallInfo *i;	/* TAG_LMARK */
-  Number n;		/* TAG_NUMBER */
+  struct TString *ts;	/* LUA_TSTRING, LUA_TUSERDATA */
+  struct Closure *cl;	/* LUA_TFUNCTION */
+  struct Hash *a;	/* LUA_TTABLE */
+  struct CallInfo *i;	/* LUA_TLMARK */
+  Number n;		/* LUA_TNUMBER */
 } Value;
 
 
@@ -80,7 +63,7 @@ typedef union {
 
 
 typedef struct lua_TObject {
-  lua_Tag ttype;
+  int ttype;
   Value value;
 } TObject;
 
@@ -150,9 +133,13 @@ typedef struct Closure {
   } f;
   struct Closure *next;
   struct Closure *mark;  /* marked closures (point to itself when not marked) */
-  int nupvalues;
+  short isC;  /* 0 for Lua functions, 1 for C functions */
+  short nupvalues;
   TObject upvalue[1];
 } Closure;
+
+
+#define iscfunction(o)	(ttype(o) == LUA_TFUNCTION && clvalue(o)->isC)
 
 
 typedef struct Node {
@@ -189,12 +176,12 @@ typedef struct CallInfo {
 } CallInfo;
 
 
-extern const lua_Type luaO_typearr[];
 extern const TObject luaO_nilobject;
+extern const char *const luaO_typenames[];
 
-#define luaO_tag2type(t)	(luaO_typearr[(int)(t)])
-#define luaO_type(o)		(luaO_tag2type(ttype(o)))
-#define luaO_typename(L, o)	(lua_typename(L, luaO_type(o)))
+
+#define luaO_typename(o)	(luaO_typenames[ttype(o)])
+
 
 lint32 luaO_power2 (lint32 n);
 char *luaO_openspace (lua_State *L, size_t n);

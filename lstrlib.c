@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.52 2000/09/11 17:38:42 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.53 2000/09/14 14:09:31 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -525,7 +525,7 @@ static void luaI_addquoted (lua_State *L, luaL_Buffer *b, int arg) {
   luaL_putchar(b, '"');
 }
 
-/* maximum size of each formated item (> len(format('%99.99f', -1e308))) */
+/* maximum size of each formatted item (> len(format('%99.99f', -1e308))) */
 #define MAX_ITEM	512
 /* maximum size of each format specification (such as '%-099.99d') */
 #define MAX_FORMAT	20

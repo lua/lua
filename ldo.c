@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.100 2000/10/02 20:10:55 roberto Exp roberto $
+** $Id: ldo.c,v 1.101 2000/10/04 12:16:08 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -73,7 +73,7 @@ void luaD_adjusttop (lua_State *L, StkId base, int extra) {
   else {
     luaD_checkstack(L, diff);
     while (diff--)
-      ttype(L->top++) = TAG_NIL;
+      ttype(L->top++) = LUA_TNIL;
   }
 }
 
@@ -91,7 +91,7 @@ static void luaD_openstack (lua_State *L, StkId pos) {
 static void dohook (lua_State *L, lua_Debug *ar, lua_Hook hook) {
   StkId old_Cbase = L->Cbase;
   StkId old_top = L->Cbase = L->top;
-  luaD_checkstack(L, LUA_MINSTACK);  /* assures minimum stack size */
+  luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
   L->allowhooks = 0;  /* cannot call hooks inside a hook */
   (*hook)(L, ar);
   LUA_ASSERT(L->allowhooks == 0, "invalid allow");
@@ -129,7 +129,7 @@ static StkId callCclosure (lua_State *L, const struct Closure *cl, StkId base) {
   StkId old_Cbase = L->Cbase;
   int n;
   L->Cbase = base;       /* new base for C function */
-  luaD_checkstack(L, nup+LUA_MINSTACK);  /* assures minimum stack size */
+  luaD_checkstack(L, nup+LUA_MINSTACK);  /* ensure minimum stack size */
   for (n=0; n<nup; n++)  /* copy upvalues as extra arguments */
     *(L->top++) = cl->upvalue[n];
   if (callhook)
@@ -159,32 +159,26 @@ void luaD_callTM (lua_State *L, const TObject *f, int nParams, int nResults) {
 */ 
 void luaD_call (lua_State *L, StkId func, int nResults) {
   StkId firstResult;
-  retry:  /* for `function' tag method */
-  switch (ttype(func)) {
-    case TAG_LCLOSURE: {
-      CallInfo ci;
-      ci.func = clvalue(func);
-      infovalue(func) = &ci;
-      ttype(func) = TAG_LMARK;
-      firstResult = luaV_execute(L, ci.func, func+1);
-      LUA_ASSERT(ttype(func) == TAG_LMARK, "invalid tag");
-      break;
-    }
-    case TAG_CCLOSURE: {
-      ttype(func) = TAG_CMARK;
-      firstResult = callCclosure(L, clvalue(func), func+1);
-      LUA_ASSERT(ttype(func) == TAG_CMARK, "invalid tag");
-      break;
-    }
-    default: { /* `func' is not a function; check the `function' tag method */
-      const TObject *im = luaT_getimbyObj(L, func, IM_FUNCTION);
-      if (ttype(im) == TAG_NIL)
-        luaG_typeerror(L, func, "call");
-      luaD_openstack(L, func);
-      *func = *im;  /* tag method is the new function to be called */
-      goto retry;   /* retry the call */
-    }
+  CallInfo ci;
+  Closure *cl;
+  if (ttype(func) != LUA_TFUNCTION) {
+    /* `func' is not a function; check the `function' tag method */
+    const TObject *im = luaT_getimbyObj(L, func, IM_FUNCTION);
+    if (ttype(im) == LUA_TNIL)
+      luaG_typeerror(L, func, "call");
+    luaD_openstack(L, func);
+    *func = *im;  /* tag method is the new function to be called */
+    LUA_ASSERT(ttype(func) == LUA_TFUNCTION, "invalid tag method");
   }
+  cl = clvalue(func);
+  ci.func = cl;
+  infovalue(func) = &ci;
+  ttype(func) = LUA_TMARK;
+  if (cl->isC)
+    firstResult = callCclosure(L, cl, func+1);
+  else
+    firstResult = luaV_execute(L, cl, func+1);
+  LUA_ASSERT(ttype(func) == LUA_TMARK, "invalid tag");
   /* adjust the number of results */
   if (nResults == LUA_MULTRET)
     nResults = L->top - firstResult;
@@ -250,7 +244,7 @@ static int protectedparser (lua_State *L, ZIO *z, int bin) {
   old_blocks = L->nblocks;
   status = luaD_runprotected(L, f_parser, &p);
   if (status == 0) {
-    /* add new memory to threshould (as it probably will stay) */
+    /* add new memory to threshold (as it probably will stay) */
     L->GCthreshold += (L->nblocks - old_blocks);
   }
   else if (status == LUA_ERRRUN)  /* an error occurred: correct error code */
@@ -331,7 +325,7 @@ struct lua_longjmp {
 
 static void message (lua_State *L, const char *s) {
   const TObject *em = luaH_getglobal(L, LUA_ERRORMESSAGE);
-  if (luaO_type(em) == LUA_TFUNCTION) {
+  if (ttype(em) == LUA_TFUNCTION) {
     *L->top = *em;
     incr_top;
     lua_pushstring(L, s);

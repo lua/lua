@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.7 2000/10/02 14:47:43 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.8 2000/10/02 20:10:55 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -322,7 +322,7 @@ static int luaB_tostring (lua_State *L) {
     case LUA_TNIL:
       lua_pushstring(L, "nil");
       return 1;
-    case LUA_NOVALUE:
+    default:
       luaL_argerror(L, 1, "value expected");
   }
   lua_pushstring(L, buff);

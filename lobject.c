@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.50 2000/10/02 20:10:55 roberto Exp roberto $
+** $Id: lobject.c,v 1.51 2000/10/03 14:03:21 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -18,14 +18,13 @@
 
 
 
-const lua_Type luaO_typearr[] = { /* ORDER LUA_T */
-  LUA_TUSERDATA, LUA_TNUMBER, LUA_TSTRING, LUA_TTABLE,
-  LUA_TFUNCTION, LUA_TFUNCTION, LUA_TNIL
+const TObject luaO_nilobject = {LUA_TNIL, {NULL}};
+
+
+const char *const luaO_typenames[] = {
+  "userdata", "nil", "number", "string", "table", "function"
 };
 
-
-
-const TObject luaO_nilobject = {TAG_NIL, {NULL}};
 
 
 /*
@@ -41,17 +40,17 @@ lint32 luaO_power2 (lint32 n) {
 int luaO_equalObj (const TObject *t1, const TObject *t2) {
   if (ttype(t1) != ttype(t2)) return 0;
   switch (ttype(t1)) {
-    case TAG_NUMBER:
+    case LUA_TNUMBER:
       return nvalue(t1) == nvalue(t2);
-    case TAG_STRING: case TAG_USERDATA:
+    case LUA_TSTRING: case LUA_TUSERDATA:
       return tsvalue(t1) == tsvalue(t2);
-    case TAG_TABLE: 
+    case LUA_TTABLE: 
       return hvalue(t1) == hvalue(t2);
-    case TAG_CCLOSURE: case TAG_LCLOSURE:
+    case LUA_TFUNCTION:
       return clvalue(t1) == clvalue(t2);
     default:
-      LUA_ASSERT(ttype(t1) == TAG_NIL, "invalid type");
-      return 1; /* TAG_NIL */
+      LUA_ASSERT(ttype(t1) == LUA_TNIL, "invalid type");
+      return 1; /* LUA_TNIL */
   }
 }
 
@@ -80,7 +79,7 @@ int luaO_str2d (const char *s, Number *result) {  /* LUA_NUMBER */
 /* this function needs to handle only '%d' and '%.XXs' formats */
 void luaO_verror (lua_State *L, const char *fmt, ...) {
   va_list argp;
-  char buff[600];  /* to hold formated message */
+  char buff[600];  /* to hold formatted message */
   va_start(argp, fmt);
   vsprintf(buff, fmt, argp);
   va_end(argp);

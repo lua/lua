@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.55 2000/09/11 20:29:27 roberto Exp roberto $
+** $Id: ltable.c,v 1.56 2000/09/29 12:42:13 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -31,7 +31,7 @@
 
 
 
-#define TagDefault TAG_TABLE
+#define TagDefault LUA_TTABLE
 
 
 
@@ -42,19 +42,19 @@
 Node *luaH_mainposition (const Hash *t, const TObject *key) {
   unsigned long h;
   switch (ttype(key)) {
-    case TAG_NUMBER:
+    case LUA_TNUMBER:
       h = (unsigned long)(long)nvalue(key);
       break;
-    case TAG_STRING:
+    case LUA_TSTRING:
       h = tsvalue(key)->u.s.hash;
       break;
-    case TAG_USERDATA:
+    case LUA_TUSERDATA:
       h = IntPoint(tsvalue(key));
       break;
-    case TAG_TABLE:
+    case LUA_TTABLE:
       h = IntPoint(hvalue(key));
       break;
-    case TAG_LCLOSURE:  case TAG_CCLOSURE:
+    case LUA_TFUNCTION:
       h = IntPoint(clvalue(key));
       break;
     default:
@@ -84,7 +84,7 @@ static const TObject *luaH_getany (lua_State *L, const Hash *t,
 const TObject *luaH_getnum (const Hash *t, Number key) {
   Node *n = &t->node[(unsigned long)(long)key&(t->size-1)];
   do {
-    if (ttype(&n->key) == TAG_NUMBER && nvalue(&n->key) == key)
+    if (ttype(&n->key) == LUA_TNUMBER && nvalue(&n->key) == key)
       return &n->val;
     n = n->next;
   } while (n);
@@ -96,7 +96,7 @@ const TObject *luaH_getnum (const Hash *t, Number key) {
 const TObject *luaH_getstr (const Hash *t, TString *key) {
   Node *n = &t->node[key->u.s.hash&(t->size-1)];
   do {
-    if (ttype(&n->key) == TAG_STRING && tsvalue(&n->key) == key)
+    if (ttype(&n->key) == LUA_TSTRING && tsvalue(&n->key) == key)
       return &n->val;
     n = n->next;
   } while (n);
@@ -106,8 +106,8 @@ const TObject *luaH_getstr (const Hash *t, TString *key) {
 
 const TObject *luaH_get (lua_State *L, const Hash *t, const TObject *key) {
   switch (ttype(key)) {
-    case TAG_NUMBER: return luaH_getnum(t, nvalue(key));
-    case TAG_STRING: return luaH_getstr(t, tsvalue(key));
+    case LUA_TNUMBER: return luaH_getnum(t, nvalue(key));
+    case LUA_TSTRING: return luaH_getstr(t, tsvalue(key));
     default:         return luaH_getany(L, t, key);
   }
 }
@@ -115,7 +115,7 @@ const TObject *luaH_get (lua_State *L, const Hash *t, const TObject *key) {
 
 Node *luaH_next (lua_State *L, const Hash *t, const TObject *key) {
   int i;
-  if (ttype(key) == TAG_NIL)
+  if (ttype(key) == LUA_TNIL)
     i = 0;  /* first iteration */
   else {
     const TObject *v = luaH_get(L, t, key);
@@ -126,7 +126,7 @@ Node *luaH_next (lua_State *L, const Hash *t, const TObject *key) {
   }
   for (; i<t->size; i++) {
     Node *n = node(t, i);
-    if (ttype(val(n)) != TAG_NIL)
+    if (ttype(val(n)) != LUA_TNIL)
       return n;
   }
   return NULL;  /* no more elements */
@@ -138,8 +138,8 @@ Node *luaH_next (lua_State *L, const Hash *t, const TObject *key) {
 ** hash, change `key' for a number with the same hash.
 */
 void luaH_remove (Hash *t, TObject *key) {
-  if (ttype(key) == TAG_NUMBER ||
-       (ttype(key) == TAG_STRING && tsvalue(key)->u.s.len <= 30))
+  if (ttype(key) == LUA_TNUMBER ||
+       (ttype(key) == LUA_TSTRING && tsvalue(key)->u.s.len <= 30))
   return;  /* do not remove numbers nor small strings */
   else {
     /* try to find a number `n' with the same hash as `key' */
@@ -151,7 +151,7 @@ void luaH_remove (Hash *t, TObject *key) {
         return;  /* give up; (to avoid overflow) */
       n += t->size;
     }
-    ttype(key) = TAG_NUMBER;
+    ttype(key) = LUA_TNUMBER;
     nvalue(key) = n;
     LUA_ASSERT(luaH_mainposition(t, key) == mp, "cannot change hash");
   }
@@ -164,7 +164,7 @@ static void setnodevector (lua_State *L, Hash *t, lint32 size) {
     lua_error(L, "table overflow");
   t->node = luaM_newvector(L, size, Node);
   for (i=0; i<(int)size; i++) {
-    ttype(&t->node[i].key) = ttype(&t->node[i].val) = TAG_NIL;
+    ttype(&t->node[i].key) = ttype(&t->node[i].val) = LUA_TNIL;
     t->node[i].next = NULL;
   }
   L->nblocks += gcsize(L, size) - gcsize(L, t->size);
@@ -200,7 +200,7 @@ static int numuse (const Hash *t) {
   int realuse = 0;
   int i;
   for (i=0; i<size; i++) {
-    if (ttype(&v[i].val) != TAG_NIL)
+    if (ttype(&v[i].val) != LUA_TNIL)
       realuse++;
   }
   return realuse;
@@ -222,7 +222,7 @@ static void rehash (lua_State *L, Hash *t) {
     setnodevector(L, t, oldsize);
   for (i=0; i<oldsize; i++) {
     Node *old = nold+i;
-    if (ttype(&old->val) != TAG_NIL)
+    if (ttype(&old->val) != LUA_TNIL)
       *luaH_set(L, t, &old->key) = old->val;
   }
   luaM_free(L, nold);  /* free old array */
@@ -248,7 +248,7 @@ TObject *luaH_set (lua_State *L, Hash *t, const TObject *key) {
     else n = n->next;
   } while (n);
   /* `key' not found; must insert it */
-  if (ttype(&mp->key) != TAG_NIL) {  /* main position is not free? */
+  if (ttype(&mp->key) != LUA_TNIL) {  /* main position is not free? */
     Node *othern;  /* main position of colliding node */
     n = t->firstfree;  /* get a free place */
     /* is colliding node out of its main position? (can only happens if
@@ -269,7 +269,7 @@ TObject *luaH_set (lua_State *L, Hash *t, const TObject *key) {
   }
   mp->key = *key;
   for (;;) {  /* correct `firstfree' */
-    if (ttype(&t->firstfree->key) == TAG_NIL)
+    if (ttype(&t->firstfree->key) == LUA_TNIL)
       return &mp->val;  /* OK; table still has a free place */
     else if (t->firstfree == t->node) break;  /* cannot decrement from here */
     else (t->firstfree)--;
@@ -281,7 +281,7 @@ TObject *luaH_set (lua_State *L, Hash *t, const TObject *key) {
 
 TObject *luaH_setint (lua_State *L, Hash *t, int key) {
   TObject index;
-  ttype(&index) = TAG_NUMBER;
+  ttype(&index) = LUA_TNUMBER;
   nvalue(&index) = key;
   return luaH_set(L, t, &index);
 }
@@ -289,10 +289,10 @@ TObject *luaH_setint (lua_State *L, Hash *t, int key) {
 
 void luaH_setstrnum (lua_State *L, Hash *t, TString *key, Number val) {
   TObject *value, index;
-  ttype(&index) = TAG_STRING;
+  ttype(&index) = LUA_TSTRING;
   tsvalue(&index) = key;
   value = luaH_set(L, t, &index);
-  ttype(value) = TAG_NUMBER;
+  ttype(value) = LUA_TNUMBER;
   nvalue(value) = val;
 }
 

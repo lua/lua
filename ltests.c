@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.46 2000/10/02 14:47:43 roberto Exp roberto $
+** $Id: ltests.c,v 1.47 2000/10/02 20:10:55 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -93,7 +93,8 @@ static int listcode (lua_State *L) {
   int pc;
   Proto *p;
   int res;
-  luaL_arg_check(L, lua_tag(L, 1) == TAG_LCLOSURE, 1, "Lua function expected");
+  luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
+                 1, "Lua function expected");
   p = clvalue(luaA_index(L, 1))->f.l;
   lua_newtable(L);
   setnameval(L, "maxstack", p->maxstacksize);
@@ -111,7 +112,8 @@ static int listcode (lua_State *L) {
 static int liststrings (lua_State *L) {
   Proto *p;
   int i;
-  luaL_arg_check(L, lua_tag(L, 1) == TAG_LCLOSURE, 1, "Lua function expected");
+  luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
+                 1, "Lua function expected");
   p = clvalue(luaA_index(L, 1))->f.l;
   lua_newtable(L);
   for (i=0; i<p->nkstr; i++) {
@@ -128,7 +130,8 @@ static int listlocals (lua_State *L) {
   int pc = luaL_check_int(L, 2) - 1;
   int i = 0;
   const char *name;
-  luaL_arg_check(L, lua_tag(L, 1) == TAG_LCLOSURE, 1, "Lua function expected");
+  luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
+                 1, "Lua function expected");
   p = clvalue(luaA_index(L, 1))->f.l;
   while ((name = luaF_getlocalname(p, ++i, pc)) != NULL)
     lua_pushstring(L, name);
@@ -177,7 +180,7 @@ static int mem_query (lua_State *L) {
 
 static int hash_query (lua_State *L) {
   if (lua_isnull(L, 2)) {
-    luaL_arg_check(L, lua_tag(L, 1) == TAG_STRING, 1, "string expected");
+    luaL_arg_check(L, lua_tag(L, 1) == LUA_TSTRING, 1, "string expected");
     lua_pushnumber(L, tsvalue(luaA_index(L, 1))->u.s.hash);
   }
   else {
@@ -226,7 +229,7 @@ static int string_query (lua_State *L) {
     TString *ts;
     int n = 0;
     for (ts = tb->hash[s]; ts; ts = ts->nexthash) {
-      ttype(L->top) = TAG_STRING;
+      ttype(L->top) = LUA_TSTRING;
       tsvalue(L->top) = ts;
       incr_top;
       n++;

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.37 2000/09/29 12:40:56 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.38 2000/10/02 20:10:55 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -40,7 +40,7 @@ void luaL_argerror (lua_State *L, int narg, const char *extramsg) {
 }
 
 
-static void type_error (lua_State *L, int narg, lua_Type t) {
+static void type_error (lua_State *L, int narg, int t) {
   char buff[100];
   const char *rt = lua_typename(L, lua_type(L, narg));
   if (*rt == 'N') rt = "no value";
@@ -55,14 +55,14 @@ void luaL_checkstack (lua_State *L, int space, const char *mes) {
 }
 
 
-void luaL_checktype(lua_State *L, int narg, lua_Type t) {
+void luaL_checktype(lua_State *L, int narg, int t) {
   if (lua_type(L, narg) != t)
     type_error(L, narg, t);
 }
 
 
 void luaL_checkany (lua_State *L, int narg) {
-  if (lua_type(L, narg) == LUA_NOVALUE)
+  if (lua_type(L, narg) == LUA_TNONE)
     luaL_argerror(L, narg, "value expected");
 }
 

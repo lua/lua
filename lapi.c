@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.103 2000/10/02 20:10:55 roberto Exp roberto $
+** $Id: lapi.c,v 1.104 2000/10/03 14:27:44 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -116,20 +116,18 @@ void lua_pushvalue (lua_State *L, int index) {
   return ((test) ? (value) : (default)); }
 
 
-lua_Type lua_type (lua_State *L, int index) {
-  btest(L, index, luaO_type(o), LUA_NOVALUE);
+int lua_type (lua_State *L, int index) {
+  btest(L, index, ttype(o), LUA_TNONE);
 }
 
-const char *lua_typename (lua_State *L, lua_Type t) {
-  static const char *const names[] = {
-    "NO VALUE", "userdata", "number", "string", "table", "function", "nil"
-  };
+const char *lua_typename (lua_State *L, int t) {
   UNUSED(L);
-  return names[(int)t];
+  return luaO_typenames[t];
 }
+
 
 int lua_iscfunction (lua_State *L, int index) {
-  btest(L, index, (ttype(o) == TAG_CCLOSURE), 0);
+  btest(L, index, iscfunction(o), 0);
 }
 
 int lua_isnumber (lua_State *L, int index) {
@@ -137,18 +135,13 @@ int lua_isnumber (lua_State *L, int index) {
 }
 
 int lua_isstring (lua_State *L, int index) {
-  lua_Type t = lua_type(L, index);
+  int t = lua_type(L, index);
   return (t == LUA_TSTRING || t == LUA_TNUMBER);
 }
 
 
-static int auxtag (const TObject *o) {
-return ((ttype(o) == TAG_USERDATA) ? tsvalue(o)->u.d.tag :
-        (ttype(o) == TAG_TABLE) ? hvalue(o)->htag : (int)ttype(o));
-}
-
 int lua_tag (lua_State *L, int index) {
-  btest(L, index, auxtag(o), LUA_NOTAG);
+  btest(L, index, luaT_tag(o), LUA_NOTAG);
 }
 
 int lua_equal (lua_State *L, int index1, int index2) {
@@ -168,7 +161,7 @@ int lua_lessthan (lua_State *L, int index1, int index2) {
 
 
 double lua_tonumber (lua_State *L, int index) {
-  access(L, index, (tonumber(o) == 0), 0.0, nvalue(o));
+  access(L, index, (tonumber(o) == 0), 0, nvalue(o));
 }
 
 const char *lua_tostring (lua_State *L, int index) {
@@ -180,19 +173,19 @@ size_t lua_strlen (lua_State *L, int index) {
 }
 
 lua_CFunction lua_tocfunction (lua_State *L, int index) {
-  access(L, index, (ttype(o) == TAG_CCLOSURE), NULL, clvalue(o)->f.c);
+  access(L, index, iscfunction(o), NULL, clvalue(o)->f.c);
 }
 
 void *lua_touserdata (lua_State *L, int index) {
-  access(L, index, (ttype(o) == TAG_USERDATA), NULL, tsvalue(o)->u.d.value);
+  access(L, index, (ttype(o) == LUA_TUSERDATA), NULL, tsvalue(o)->u.d.value);
 }
 
 const void *lua_topointer (lua_State *L, int index) {
   StkId o = Index(L, index);
   switch (ttype(o)) {
-    case TAG_TABLE: 
+    case LUA_TTABLE: 
       return hvalue(o);
-    case TAG_CCLOSURE: case TAG_LCLOSURE:
+    case LUA_TFUNCTION:
       return clvalue(o);
     default: return NULL;
   }
@@ -206,13 +199,13 @@ const void *lua_topointer (lua_State *L, int index) {
 
 
 void lua_pushnil (lua_State *L) {
-  ttype(L->top) = TAG_NIL;
+  ttype(L->top) = LUA_TNIL;
   api_incr_top(L);
 }
 
 
 void lua_pushnumber (lua_State *L, double n) {
-  ttype(L->top) = TAG_NUMBER;
+  ttype(L->top) = LUA_TNUMBER;
   nvalue(L->top) = n;
   api_incr_top(L);
 }
@@ -220,7 +213,7 @@ void lua_pushnumber (lua_State *L, double n) {
 
 void lua_pushlstring (lua_State *L, const char *s, size_t len) {
   tsvalue(L->top) = luaS_newlstr(L, s, len);
-  ttype(L->top) = TAG_STRING;
+  ttype(L->top) = LUA_TSTRING;
   api_incr_top(L);
 }
 
@@ -239,10 +232,10 @@ void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
 
 
 void lua_pushusertag (lua_State *L, void *u, int tag) {  /* ORDER LUA_T */
-  if (tag != LUA_ANYTAG && tag != TAG_USERDATA && tag < NUM_TAGS)
+  if (!(tag == LUA_ANYTAG || tag == LUA_TUSERDATA || validtag(tag)))
     luaO_verror(L, "invalid tag for a userdata (%d)", tag);
   tsvalue(L->top) = luaS_createudata(L, u, tag);
-  ttype(L->top) = TAG_USERDATA;
+  ttype(L->top) = LUA_TUSERDATA;
   api_incr_top(L);
 }
 
@@ -271,14 +264,14 @@ void lua_gettable (lua_State *L, int index) {
 
 void lua_rawget (lua_State *L, int index) {
   StkId t = Index(L, index);
-  LUA_ASSERT(ttype(t) == TAG_TABLE, "table expected");
+  LUA_ASSERT(ttype(t) == LUA_TTABLE, "table expected");
   *(L->top - 1) = *luaH_get(L, hvalue(t), L->top - 1);
 }
 
 
 void lua_rawgeti (lua_State *L, int index, int n) {
   StkId o = Index(L, index);
-  LUA_ASSERT(ttype(o) == TAG_TABLE, "table expected");
+  LUA_ASSERT(ttype(o) == LUA_TTABLE, "table expected");
   *L->top = *luaH_getnum(hvalue(o), n);
   api_incr_top(L);
 }
@@ -286,14 +279,14 @@ void lua_rawgeti (lua_State *L, int index, int n) {
 
 void lua_getglobals (lua_State *L) {
   hvalue(L->top) = L->gt;
-  ttype(L->top) = TAG_TABLE;
+  ttype(L->top) = LUA_TTABLE;
   api_incr_top(L);
 }
 
 
 int lua_getref (lua_State *L, int ref) {
   if (ref == LUA_REFNIL)
-    ttype(L->top) = TAG_NIL;
+    ttype(L->top) = LUA_TNIL;
   else if (0 <= ref && ref < L->refSize &&
           (L->refArray[ref].st == LOCK || L->refArray[ref].st == HOLD))
     *L->top = L->refArray[ref].o;
@@ -306,7 +299,7 @@ int lua_getref (lua_State *L, int ref) {
 
 void lua_newtable (lua_State *L) {
   hvalue(L->top) = luaH_new(L, 0);
-  ttype(L->top) = TAG_TABLE;
+  ttype(L->top) = LUA_TTABLE;
   api_incr_top(L);
 }
 
@@ -334,7 +327,7 @@ void lua_settable (lua_State *L, int index) {
 
 void lua_rawset (lua_State *L, int index) {
   StkId t = Index(L, index);
-  LUA_ASSERT(ttype(t) == TAG_TABLE, "table expected");
+  LUA_ASSERT(ttype(t) == LUA_TTABLE, "table expected");
   *luaH_set(L, hvalue(t), L->top-2) = *(L->top-1);
   L->top -= 2;
 }
@@ -342,7 +335,7 @@ void lua_rawset (lua_State *L, int index) {
 
 void lua_rawseti (lua_State *L, int index, int n) {
   StkId o = Index(L, index);
-  LUA_ASSERT(ttype(o) == TAG_TABLE, "table expected");
+  LUA_ASSERT(ttype(o) == LUA_TTABLE, "table expected");
   *luaH_setint(L, hvalue(o), n) = *(L->top-1);
   L->top--;
 }
@@ -350,14 +343,14 @@ void lua_rawseti (lua_State *L, int index, int n) {
 
 void lua_setglobals (lua_State *L) {
   StkId newtable = --L->top;
-  LUA_ASSERT(ttype(newtable) == TAG_TABLE, "table expected");
+  LUA_ASSERT(ttype(newtable) == LUA_TTABLE, "table expected");
   L->gt = hvalue(newtable);
 }
 
 
 int lua_ref (lua_State *L,  int lock) {
   int ref;
-  if (ttype(L->top-1) == TAG_NIL)
+  if (ttype(L->top-1) == LUA_TNIL)
     ref = LUA_REFNIL;
   else {
     if (L->refFree != NONEXT) {  /* is there a free place? */
@@ -420,15 +413,15 @@ void lua_setgcthreshold (lua_State *L, int newthreshold) {
 void lua_settag (lua_State *L, int tag) {
   luaT_realtag(L, tag);
   switch (ttype(L->top-1)) {
-    case TAG_TABLE:
+    case LUA_TTABLE:
       hvalue(L->top-1)->htag = tag;
       break;
-    case TAG_USERDATA:
+    case LUA_TUSERDATA:
       tsvalue(L->top-1)->u.d.tag = tag;
       break;
     default:
       luaO_verror(L, "cannot change the tag of a %.20s",
-                  luaO_typename(L, L->top-1));
+                  luaO_typename(L->top-1));
   }
   L->top--;
 }
@@ -446,7 +439,7 @@ void lua_unref (lua_State *L, int ref) {
 int lua_next (lua_State *L, int index) {
   StkId t = Index(L, index);
   Node *n;
-  LUA_ASSERT(ttype(t) == TAG_TABLE, "table expected");
+  LUA_ASSERT(ttype(t) == LUA_TTABLE, "table expected");
   n = luaH_next(L, hvalue(t), Index(L, -1));
   if (n) {
     *(L->top-1) = *key(n);
@@ -464,15 +457,15 @@ int lua_next (lua_State *L, int index) {
 int lua_getn (lua_State *L, int index) {
   Hash *h = hvalue(Index(L, index));
   const TObject *value = luaH_getstr(h, luaS_new(L, "n"));  /* value = h.n */
-  if (ttype(value) == TAG_NUMBER)
+  if (ttype(value) == LUA_TNUMBER)
     return (int)nvalue(value);
   else {
     Number max = 0;
     int i = h->size;
     Node *n = h->node;
     while (i--) {
-      if (ttype(key(n)) == TAG_NUMBER &&
-          ttype(val(n)) != TAG_NIL &&
+      if (ttype(key(n)) == LUA_TNUMBER &&
+          ttype(val(n)) != LUA_TNIL &&
           nvalue(key(n)) > max)
         max = nvalue(key(n));
       n++;

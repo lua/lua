@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.68 2000/09/29 12:42:13 roberto Exp roberto $
+** $Id: lgc.c,v 1.69 2000/10/02 14:47:43 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -24,7 +24,7 @@ typedef struct GCState {
 
 
 
-static int markobject (GCState *st, TObject *o);
+static void markobject (GCState *st, TObject *o);
 
 
 /* mark a string; marks larger than 1 cannot be changed */
@@ -73,39 +73,36 @@ static void marktagmethods (lua_State *L, GCState *st) {
 }
 
 
-static int markobject (GCState *st, TObject *o) {
+static void markclosure (GCState *st, Closure *cl) {
+  if (!ismarked(cl)) {
+    if (!cl->isC)
+      protomark(cl->f.l);
+    cl->mark = st->cmark;  /* chain it for later traversal */
+    st->cmark = cl;
+  }
+}
+
+
+static void markobject (GCState *st, TObject *o) {
   switch (ttype(o)) {
-    case TAG_USERDATA:  case TAG_STRING:
+    case LUA_TUSERDATA:  case LUA_TSTRING:
       strmark(tsvalue(o));
       break;
-    case TAG_TABLE: {
+    case LUA_TMARK:
+      markclosure(st, infovalue(o)->func);
+      break;
+    case LUA_TFUNCTION:
+      markclosure(st, clvalue(o));
+      break;
+    case LUA_TTABLE: {
       if (!ismarked(hvalue(o))) {
         hvalue(o)->mark = st->tmark;  /* chain it in list of marked */
         st->tmark = hvalue(o);
       }
       break;
     }
-    case TAG_LMARK: {
-      Closure *cl = infovalue(o)->func;
-      if (!ismarked(cl)) {
-        protomark(cl->f.l);
-        cl->mark = st->cmark;  /* chain it for later traversal */
-        st->cmark = cl;
-      }
-      break;
-    }
-    case TAG_LCLOSURE:
-      protomark(clvalue(o)->f.l);
-      /* go through */
-    case TAG_CCLOSURE:  case TAG_CMARK:
-      if (!ismarked(clvalue(o))) {
-        clvalue(o)->mark = st->cmark;  /* chain it for later traversal */
-        st->cmark = clvalue(o);
-      }
-      break;
     default: break;  /* numbers, etc */
   }
-  return 0;
 }
 
 
@@ -131,8 +128,8 @@ static void markall (lua_State *L) {
       st.tmark = h->mark;  /* remove it from list */
       for (i=0; i<h->size; i++) {
         Node *n = node(h, i);
-        if (ttype(key(n)) != TAG_NIL) {
-          if (ttype(val(n)) == TAG_NIL)
+        if (ttype(key(n)) != LUA_TNIL) {
+          if (ttype(val(n)) == LUA_TNIL)
             luaH_remove(h, key(n));  /* dead element; try to remove it */
           markobject(&st, &n->key);
           markobject(&st, &n->val);
@@ -147,11 +144,11 @@ static void markall (lua_State *L) {
 static int hasmark (const TObject *o) {
   /* valid only for locked objects */
   switch (o->ttype) {
-    case TAG_STRING: case TAG_USERDATA:
+    case LUA_TSTRING: case LUA_TUSERDATA:
       return tsvalue(o)->marked;
-    case TAG_TABLE:
+    case LUA_TTABLE:
       return ismarked(hvalue(o));
-    case TAG_LCLOSURE:  case TAG_CCLOSURE:
+    case LUA_TFUNCTION:
       return ismarked(clvalue(o));
     default:  /* number */
       return 1;
@@ -271,7 +268,6 @@ static void collectudata (lua_State *L, int all) {
       } 
       else {  /* collect */
         int tag = next->u.d.tag;
-        if (tag > L->last_tag) tag = TAG_USERDATA;
         *p = next->nexthash;
         next->nexthash = L->IMtable[tag].collected;  /* chain udata */
         L->IMtable[tag].collected = next;
@@ -297,7 +293,7 @@ static void checkMbuffer (lua_State *L) {
 
 static void callgcTM (lua_State *L, const TObject *o) {
   const TObject *im = luaT_getimbyObj(L, o, IM_GC);
-  if (ttype(im) != TAG_NIL) {
+  if (ttype(im) != LUA_TNIL) {
     int oldah = L->allowhooks;
     L->allowhooks = 0;  /* stop debug hooks during GC tag methods */
     luaD_checkstack(L, 2);
@@ -313,7 +309,7 @@ static void callgcTM (lua_State *L, const TObject *o) {
 static void callgcTMudata (lua_State *L) {
   int tag;
   TObject o;
-  ttype(&o) = TAG_USERDATA;
+  ttype(&o) = LUA_TUSERDATA;
   L->GCthreshold = 2*L->nblocks;  /* avoid GC during tag methods */
   for (tag=L->last_tag; tag>=0; tag--) {  /* for each tag (in reverse order) */
     TString *udata;
