@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.75 1996/09/24 17:30:28 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.76 1996/09/24 21:46:44 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -548,8 +548,10 @@ int lua_dofile (char *filename)
     return 2;
   c = fgetc(f);
   ungetc(c, f);
-  if (c == ID_CHUNK)
+  if (c == ID_CHUNK) {
+    f = freopen(filename, "rb", f);  /* set binary mode */
     status = luaI_undump(f);
+  }
   else {
     if (c == '#')
       while ((c=fgetc(f)) != '\n') /* skip first line */;
