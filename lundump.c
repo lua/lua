@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.35 2000/12/04 18:33:40 roberto Exp roberto $
+** $Id: lundump.c,v 1.36 2000/12/28 12:55:41 roberto Exp roberto $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -104,9 +104,9 @@ static TString* LoadString (lua_State* L, ZIO* Z, int swap)
 
 static void LoadCode (lua_State* L, Proto* tf, ZIO* Z, int swap)
 {
- int size;
- tf->sizecode=size=LoadInt(L,Z,swap);
+ int size=LoadInt(L,Z,swap);
  tf->code=luaM_newvector(L,size,Instruction);
+ tf->sizecode=size;
  LoadVector(L,tf->code,size,sizeof(*tf->code),Z,swap);
  if (tf->code[size-1]!=OP_END) luaO_verror(L,"bad code in `%.99s'",ZNAME(Z));
 }
@@ -114,8 +114,9 @@ static void LoadCode (lua_State* L, Proto* tf, ZIO* Z, int swap)
 static void LoadLocals (lua_State* L, Proto* tf, ZIO* Z, int swap)
 {
  int i,n;
- tf->sizelocvars=n=LoadInt(L,Z,swap);
+ n=LoadInt(L,Z,swap);
  tf->locvars=luaM_newvector(L,n,LocVar);
+ tf->sizelocvars=n;
  for (i=0; i<n; i++)
  {
   tf->locvars[i].varname=LoadString(L,Z,swap);
@@ -127,8 +128,9 @@ static void LoadLocals (lua_State* L, Proto* tf, ZIO* Z, int swap)
 static void LoadLines (lua_State* L, Proto* tf, ZIO* Z, int swap)
 {
  int n;
- tf->sizelineinfo=n=LoadInt(L,Z,swap);
+ n=LoadInt(L,Z,swap);
  tf->lineinfo=luaM_newvector(L,n,int);
+ tf->sizelineinfo=n;
  LoadVector(L,tf->lineinfo,n,sizeof(*tf->lineinfo),Z,swap);
 }
 
@@ -137,15 +139,18 @@ static Proto* LoadFunction (lua_State* L, ZIO* Z, int swap);
 static void LoadConstants (lua_State* L, Proto* tf, ZIO* Z, int swap)
 {
  int i,n;
- tf->sizekstr=n=LoadInt(L,Z,swap);
+ n=LoadInt(L,Z,swap);
  tf->kstr=luaM_newvector(L,n,TString*);
+ tf->sizekstr=n;
  for (i=0; i<n; i++)
   tf->kstr[i]=LoadString(L,Z,swap);
- tf->sizeknum=n=LoadInt(L,Z,swap);
+ n=LoadInt(L,Z,swap);
  tf->knum=luaM_newvector(L,n,lua_Number);
+ tf->sizeknum=n;
  LoadVector(L,tf->knum,n,sizeof(*tf->knum),Z,swap);
- tf->sizekproto=n=LoadInt(L,Z,swap);
+ n=LoadInt(L,Z,swap);
  tf->kproto=luaM_newvector(L,n,Proto*);
+ tf->sizekproto=n;
  for (i=0; i<n; i++)
   tf->kproto[i]=LoadFunction(L,Z,swap);
 }
