@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.20 1994/11/25 19:27:03 roberto Exp $";
+char *rcs_hash="$Id: hash.c,v 2.20 1994/11/28 15:10:51 roberto Exp roberto $";
 
 #include "mem.h"
 #include "opcode.h"
@@ -313,9 +313,9 @@ void lua_next (void)
  Hash   *t;
  lua_Object o = lua_getparam(1);
  lua_Object r = lua_getparam(2);
- if (o == 0 || r == 0)
+ if (o == LUA_NOOBJECT || r == LUA_NOOBJECT)
    lua_error ("too few arguments to function `next'");
- if (lua_getparam(3) != 0)
+ if (lua_getparam(3) != LUA_NOOBJECT)
    lua_error ("too many arguments to function `next'");
  if (!lua_istable(o))
    lua_error ("first argument of function `next' is not a table");

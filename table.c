@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.22 1994/11/21 21:41:09 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.23 1994/11/23 14:31:11 roberto Stab roberto $";
 
 #include <string.h>
 
@@ -226,9 +226,9 @@ static void lua_nextvar (void)
  char *varname;
  TreeNode *next;
  lua_Object o = lua_getparam(1);
- if (o == 0)
+ if (o == LUA_NOOBJECT)
    lua_reportbug("too few arguments to function `nextvar'");
- if (lua_getparam(2) != NULL)
+ if (lua_getparam(2) != LUA_NOOBJECT)
    lua_reportbug("too many arguments to function `nextvar'");
  if (lua_isnil(o))
    varname = NULL;
