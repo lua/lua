@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.43 2002/08/07 00:36:03 lhf Exp $
+** $Id: lundump.c,v 1.52 2002/08/12 13:37:19 roberto Exp roberto $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -99,7 +99,7 @@ static TString* LoadString (LoadState* S)
   return NULL;
  else
  {
-  char* s=luaO_openspace(S->L,size,char);
+  char* s=luaO_openspace(S->L,size);
   ezread(S,s,size);
   return luaS_newlstr(S->L,s,size-1);	/* remove trailing '\0' */
  }

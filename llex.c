@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.110 2002/09/03 11:57:38 roberto Exp roberto $
+** $Id: llex.c,v 1.111 2002/09/05 19:45:42 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -141,7 +141,7 @@ void luaX_setinput (lua_State *L, LexState *LS, ZIO *z, TString *source) {
 #define EXTRABUFF	128
 #define checkbuffer(L, len)	\
     if (((len)+10)*sizeof(char) > G(L)->Mbuffsize) \
-      luaO_openspace(L, (len)+EXTRABUFF, char)
+      luaO_openspace(L, (len)+EXTRABUFF)
 
 #define save(L, c, l)	(cast(char *, G(L)->Mbuffer)[l++] = cast(char, c))
 #define save_and_next(L, LS, l)  (save(L, LS->current, l), next(LS))

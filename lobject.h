@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.144 2002/08/30 19:09:21 roberto Exp roberto $
+** $Id: lobject.h,v 1.145 2002/09/02 19:54:49 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -316,8 +316,7 @@ extern const TObject luaO_nilobject;
 int luaO_log2 (unsigned int x);
 
 
-#define luaO_openspace(L,n,t)	cast(t *, luaO_openspaceaux(L,(n)*sizeof(t)))
-void *luaO_openspaceaux (lua_State *L, size_t n);
+char *luaO_openspace (lua_State *L, size_t n);
 
 int luaO_rawequalObj (const TObject *t1, const TObject *t2);
 int luaO_str2d (const char *s, lua_Number *result);
