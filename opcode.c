@@ -1,8 +1,9 @@
 /*
 ** opcode.c
 ** TecCGraf - PUC-Rio
-** 26 Apr 93
 */
+
+char *rcs_opcode="$Id: $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -137,6 +138,8 @@ static int lua_tostring (Object *obj)
 */
 int lua_execute (Byte *pc)
 {
+ Object *oldbase = base;
+ base = top;
  while (1)
  {
   switch ((OpCode)*pc++)
@@ -252,7 +255,7 @@ int lua_execute (Byte *pc)
    case STOREFIELD:
     if (tag(top-3) != T_ARRAY)
     {
-     lua_error ("internal error - table expected");
+     lua_reportbug ("internal error - table expected");
      return 1;
     }
     *(lua_hashdefine (avalue(top-3), top-2)) = *(top-1);
@@ -516,6 +519,7 @@ int lua_execute (Byte *pc)
    break;
    
    case HALT:
+    base = oldbase;
    return 0;		/* success */
    
    case SETFUNCTION:
@@ -577,6 +581,7 @@ int lua_dostring (char *string)
 {
  if (lua_openstring (string)) return 1;
  if (lua_parse ()) return 1;
+ lua_closestring();
  return 0;
 }
 
@@ -612,6 +617,7 @@ Object *lua_getparam (int number)
 */
 real lua_getnumber (Object *object)
 {
+ if (object == NULL || tag(object) == T_NIL) return 0.0;
  if (tonumber (object)) return 0.0;
  else                   return (nvalue(object));
 }
@@ -621,6 +627,7 @@ real lua_getnumber (Object *object)
 */
 char *lua_getstring (Object *object)
 {
+ if (object == NULL || tag(object) == T_NIL) return NULL;
  if (tostring (object)) return NULL;
  else                   return (svalue(object));
 }
@@ -630,6 +637,7 @@ char *lua_getstring (Object *object)
 */
 char *lua_copystring (Object *object)
 {
+ if (object == NULL || tag(object) == T_NIL) return NULL;
  if (tostring (object)) return NULL;
  else                   return (strdup(svalue(object)));
 }
@@ -639,6 +647,7 @@ char *lua_copystring (Object *object)
 */
 lua_CFunction lua_getcfunction (Object *object)
 {
+ if (object == NULL) return NULL;
  if (tag(object) != T_CFUNCTION) return NULL;
  else                            return (fvalue(object));
 }
@@ -648,6 +657,7 @@ lua_CFunction lua_getcfunction (Object *object)
 */
 void *lua_getuserdata (Object *object)
 {
+ if (object == NULL) return NULL;
  if (tag(object) != T_USERDATA) return NULL;
  else                           return (uvalue(object));
 }
@@ -658,6 +668,7 @@ void *lua_getuserdata (Object *object)
 */
 Object *lua_getfield (Object *object, char *field)
 {
+ if (object == NULL) return NULL;
  if (tag(object) != T_ARRAY)
   return NULL;
  else
@@ -675,6 +686,7 @@ Object *lua_getfield (Object *object, char *field)
 */
 Object *lua_getindexed (Object *object, float index)
 {
+ if (object == NULL) return NULL;
  if (tag(object) != T_ARRAY)
   return NULL;
  else
@@ -930,4 +942,29 @@ void lua_print (void)
   else			         printf("invalid value to print\n");
  }
 }
+
+/*
+** Internal function: do a file
+*/
+void lua_internaldofile (void)
+{
+ lua_Object obj = lua_getparam (1);
+ if (lua_isstring(obj) && !lua_dofile(lua_getstring(obj)))
+  lua_pushnumber(1);
+ else
+  lua_pushnil();
+}
+
+/*
+** Internal function: do a string
+*/
+void lua_internaldostring (void)
+{
+ lua_Object obj = lua_getparam (1);
+ if (lua_isstring(obj) && !lua_dostring(lua_getstring(obj)))
+  lua_pushnumber(1);
+ else
+  lua_pushnil();
+}
+
 

@@ -1,7 +1,6 @@
 /*
-** opcode.h
 ** TeCGraf - PUC-Rio
-** 16 Apr 92
+** $Id: $
 */
 
 #ifndef opcode_h
@@ -140,5 +139,7 @@ int     lua_parse      (void); 		/* from "lua.stx" module */
 void    lua_type       (void);
 void 	lua_obj2number (void);
 void 	lua_print      (void);
+void 	lua_internaldofile (void);
+void 	lua_internaldostring (void);
 
 #endif
