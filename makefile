@@ -1,4 +1,4 @@
-# $Id: makefile,v 1.24 1996/05/03 17:27:03 roberto Exp roberto $
+# $Id: makefile,v 1.25 1996/05/06 14:38:40 roberto Exp $
 
 #configuration
 
@@ -49,14 +49,14 @@ lualib.a : $(LIBOBJS)
 liblua.so.1.0 : lua.o
 	ld -o liblua.so.1.0 $(LUAOBJS)
 
-y.tab.c y.tab.h  : lua.stx
-	yacc++ -d lua.stx
+#y.tab.c y.tab.h  : lua.stx
+#	yacc++ -d lua.stx
 
-parser.c : y.tab.c
-	sed -e 's/yy/luaY_/g' -e 's/malloc\.h/stdlib\.h/g' y.tab.c > parser.c
+#parser.c : y.tab.c
+#	sed -e 's/yy/luaY_/g' -e 's/malloc\.h/stdlib\.h/g' y.tab.c > parser.c
 
-parser.h : y.tab.h
-	sed -e 's/yy/luaY_/g' y.tab.h > parser.h
+#parser.h : y.tab.h
+#	sed -e 's/yy/luaY_/g' y.tab.h > parser.h
 
 clear	:
 	rcsclean
@@ -65,8 +65,8 @@ clear	:
 	co lua.h lualib.h luadebug.h
 
 
-% : RCS/%,v
-	co $@
+#% : RCS/%,v
+#	co $@
 
 
 fallback.o : fallback.c mem.h fallback.h lua.h opcode.h types.h tree.h func.h \

@@ -3,15 +3,12 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_mem = "$Id: mem.c,v 1.10 1996/03/21 16:31:32 roberto Exp roberto $";
+char *rcs_mem = "$Id: mem.c,v 1.11 1996/03/21 18:54:29 roberto Exp roberto $";
 
 #include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
 
 #include "mem.h"
 #include "lua.h"
-#include "table.h"
 
 
 #define mem_error()  lua_error(memEM)
