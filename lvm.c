@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.126 2000/08/11 16:17:28 roberto Exp roberto $
+** $Id: lvm.c,v 1.127 2000/08/14 14:05:06 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -115,35 +115,31 @@ void luaV_Lclosure (lua_State *L, Proto *l, int nelems) {
 ** Receives the table at top-2 and the index at top-1.
 */
 void luaV_gettable (lua_State *L, StkId top) {
-  StkId table = top-2;
-  const TObject *im;
-  if (ttype(table) != TAG_TABLE) {  /* not a table, get gettable TM */
-    im = luaT_getimbyObj(L, table, IM_GETTABLE);
-    if (ttype(im) == TAG_NIL) {
+  StkId t = top-2;
+  int tg;
+  if (ttype(t) == TAG_TABLE &&  /* `t' is a table? */
+      ((tg = hvalue(t)->htag) == TAG_TABLE ||  /* with default tag? */
+        ttype(luaT_getim(L, tg, IM_GETTABLE)) == TAG_NIL)) { /* or no TM? */
+    /* do a primitive get */
+    const TObject *h = luaH_get(L, hvalue(t), t+1);
+    /* result is no nil or there is no `index' tag method? */
+    const TObject *im;
+    if (ttype(h) != TAG_NIL ||
+        (ttype(im=luaT_getim(L, tg, IM_INDEX)) == TAG_NIL))
+      *t = *h;  /* put result into table position */
+    else {  /* call `index' tag method */
       L->top = top;
-      luaG_typeerror(L, table, "index");
+      luaD_callTM(L, im, 2, 1);
     }
   }
-  else {  /* object is a table... */
-    int tg = hvalue(table)->htag;
-    im = luaT_getim(L, tg, IM_GETTABLE);
-    if (ttype(im) == TAG_NIL) {  /* and does not have a `gettable' TM */
-      const TObject *h = luaH_get(L, hvalue(table), table+1);
-      if (ttype(h) == TAG_NIL &&
-          (ttype(im=luaT_getim(L, tg, IM_INDEX)) != TAG_NIL)) {
-        /* result is nil and there is an `index' tag method */
-        L->top = top;
-        luaD_callTM(L, im, 2, 1);  /* calls it */
-      }
-      else
-        *table = *h;  /* `push' result into table position */
-      return;
-    }
-    /* else it has a `gettable' TM, go through to next command */
+  else {  /* try a 'gettable' TM */
+    const TObject *im = luaT_getimbyObj(L, t, IM_GETTABLE);
+    L->top = top;
+    if (ttype(im) != TAG_NIL)  /* call `gettable' tag method */
+      luaD_callTM(L, im, 2, 1);
+    else  /* no tag method */
+      luaG_typeerror(L, t, "index");
   }
-  /* object is not a table, or it has a `gettable' TM */
-  L->top = top;
-  luaD_callTM(L, im, 2, 1);
 }
 
 
@@ -151,30 +147,26 @@ void luaV_gettable (lua_State *L, StkId top) {
 ** Receives table at *t, index at *(t+1) and value at `top'.
 */
 void luaV_settable (lua_State *L, StkId t, StkId top) {
-  const TObject *im;
-  if (ttype(t) != TAG_TABLE) {  /* not a table, get `settable' method */
+  int tg;
+  if (ttype(t) == TAG_TABLE &&  /* `t' is a table? */
+      ((tg = hvalue(t)->htag) == TAG_TABLE ||  /* with default tag? */
+        ttype(luaT_getim(L, tg, IM_SETTABLE)) == TAG_NIL)) /* or no TM? */
+    *luaH_set(L, hvalue(t), t+1) = *(top-1);  /* do a primitive set */
+  else {  /* try a `settable' tag method */
+    const TObject *im = luaT_getimbyObj(L, t, IM_SETTABLE);
     L->top = top;
-    im = luaT_getimbyObj(L, t, IM_SETTABLE);
-    if (ttype(im) == TAG_NIL)
+    if (ttype(im) != TAG_NIL) {
+      luaD_checkstack(L, 3);
+      *(top+2) = *(top-1);
+      *(top+1) = *(t+1);
+      *(top) = *t;
+      *(top-1) = *im;
+      L->top = top+3;
+      luaD_call(L, top-1, 0);  /* call `settable' tag method */
+    }
+    else  /* no tag method... */
       luaG_typeerror(L, t, "index");
   }
-  else {  /* object is a table... */
-    im = luaT_getim(L, hvalue(t)->htag, IM_SETTABLE);
-    if (ttype(im) == TAG_NIL) {  /* and does not have a `settable' method */
-      *luaH_set(L, hvalue(t), t+1) = *(top-1);
-      return;
-    }
-    /* else it has a `settable' method, go through to next command */
-  }
-  /* object is not a table, or it has a `settable' method */
-  /* prepare arguments and call the tag method */
-  luaD_checkstack(L, 3);
-  *(top+2) = *(top-1);
-  *(top+1) = *(t+1);
-  *(top) = *t;
-  *(top-1) = *im;
-  L->top = top+3;
-  luaD_call(L, top-1, 0);
 }
 
 
