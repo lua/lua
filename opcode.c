@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.13 1994/11/16 17:38:08 roberto Exp $";
+char *rcs_opcode="$Id: opcode.c,v 3.14 1994/11/17 13:58:57 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -434,6 +434,23 @@ lua_Object lua_getsubscript (void)
     return (Ref(top-1));
   else
     return 0;
+}
+
+/*
+** API: starts a new block
+*/
+int lua_beginblock (void)
+{
+  return CBase;
+}
+
+/*
+** API: ends a block
+*/
+void lua_endblock (int block)
+{
+  CBase = block;
+  adjustC(0);
 }
 
 /* 
