@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.161 2002/10/25 21:31:28 roberto Exp roberto $
+** $Id: lua.h,v 1.162 2002/11/06 19:08:00 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -123,7 +123,7 @@ LUA_API void  lua_insert (lua_State *L, int idx);
 LUA_API void  lua_replace (lua_State *L, int idx);
 LUA_API int   lua_checkstack (lua_State *L, int sz);
 
-LUA_API void  lua_movethread (lua_State *from, lua_State *to, int n);
+LUA_API void  lua_xmove (lua_State *from, lua_State *to, int n);
 
 
 /*

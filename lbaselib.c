@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.103 2002/10/25 21:36:54 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.104 2002/11/06 19:08:00 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -561,17 +561,17 @@ static int auxresume (lua_State *L, lua_State *co, int narg) {
   int status;
   if (!lua_checkstack(co, narg))
     luaL_error(L, "too many arguments to resume");
-  lua_movethread(L, co, narg);
+  lua_xmove(L, co, narg);
   status = lua_resume(co, narg);
   if (status == 0) {
     int nres = lua_gettop(co);
     if (!lua_checkstack(L, narg))
       luaL_error(L, "too many results to resume");
-    lua_movethread(co, L, nres);  /* move yielded values */
+    lua_xmove(co, L, nres);  /* move yielded values */
     return nres;
   }
   else {
-    lua_movethread(co, L, 1);  /* move error message */
+    lua_xmove(co, L, 1);  /* move error message */
     return -1;  /* error flag */
   }
 }
@@ -608,7 +608,7 @@ static int luaB_cocreate (lua_State *L) {
   luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1), 1,
     "Lua function expected");
   lua_pushvalue(L, 1);  /* move function to top */
-  lua_movethread(L, NL, 1);  /* move function from L to NL */
+  lua_xmove(L, NL, 1);  /* move function from L to NL */
   return 1;
 }
 
