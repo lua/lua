@@ -254,10 +254,14 @@ static int hash_query (lua_State *L) {
 }
 
 
-static int Cstacklevel (lua_State *L) {
+static int stacklevel (lua_State *L) {
   unsigned long a = 0;
+  lua_pushnumber(L, (int)(L->top - L->stack));
+  lua_pushnumber(L, (int)(L->stack_last - L->stack));
+  lua_pushnumber(L, (int)(L->ci - L->base_ci));
+  lua_pushnumber(L, (int)(L->end_ci - L->base_ci));
   lua_pushnumber(L, (unsigned long)&a);
-  return 1;
+  return 5;
 }
 
 
@@ -307,7 +311,7 @@ static int string_query (lua_State *L) {
     int n = 0;
     for (ts = tb->hash[s]; ts; ts = ts->tsv.nexthash) {
       setsvalue(L->top, ts);
-      incr_top;
+      incr_top(L);
       n++;
     }
     return n;
@@ -629,7 +633,7 @@ static const struct luaL_reg tests_funcs[] = {
   {"listk", listk},
   {"listlocals", listlocals},
   {"loadlib", loadlib},
-  {"Cstacklevel", Cstacklevel},
+  {"stacklevel", stacklevel},
   {"querystr", string_query},
   {"querytab", table_query},
   {"testC", testC},

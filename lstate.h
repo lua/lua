@@ -64,8 +64,17 @@ struct lua_longjmp;  /* defined in ldo.c */
 
 #define RESERVED_STACK_PREFIX	3
 
-/* space to handle stack overflow errors */
-#define EXTRA_STACK   (2*LUA_MINSTACK)
+
+/* space to handle TM calls */
+#define EXTRA_STACK   4
+
+
+#define BASIC_CI_SIZE           6
+
+#define BASIC_STACK_SIZE        (2*LUA_MINSTACK)
+
+#define DEFAULT_MAXSTACK        12000
+
 
 
 
@@ -84,6 +93,7 @@ typedef struct CallInfo {
   const Instruction *savedpc;
   StkId	top;  /* top for this function (when it's a Lua function) */
   const Instruction **pc;
+  StkId *pb;
   /* extra information for line tracing */
   int lastpc;  /* last pc traced */
   int line;  /* current line */
@@ -124,6 +134,7 @@ struct lua_State {
   StkId stack_last;  /* last free slot in the stack */
   StkId stack;  /* stack base */
   int stacksize;
+  int maxstacksize;
   CallInfo *end_ci;  /* points after end of ci array*/
   CallInfo *base_ci;  /* array of CallInfo's */
   int size_ci;  /* size of array `base_ci' */

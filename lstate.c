@@ -20,6 +20,7 @@
 #include "ltm.h"
 
 
+
 struct Sopen {
   int stacksize;
   lua_State *L;
@@ -29,21 +30,21 @@ struct Sopen {
 static void close_state (lua_State *L);
 
 
-static void stack_init (lua_State *L, lua_State *OL, int stacksize) {
-  if (stacksize == 0)
-    stacksize = DEFAULT_STACK_SIZE;
+static void stack_init (lua_State *L, lua_State *OL, int maxstacksize) {
+  if (maxstacksize == 0)
+    maxstacksize = DEFAULT_MAXSTACK;
   else
-    stacksize += LUA_MINSTACK;
-  stacksize += EXTRA_STACK;
-  L->stack = luaM_newvector(OL, stacksize, TObject);
-  L->stacksize = stacksize;
+    maxstacksize += 2*LUA_MINSTACK;
+  L->stack = luaM_newvector(OL, BASIC_STACK_SIZE, TObject);
+  L->maxstacksize = maxstacksize;
+  L->stacksize = BASIC_STACK_SIZE;
   L->top = L->stack + RESERVED_STACK_PREFIX;
-  L->stack_last = L->stack+(L->stacksize-EXTRA_STACK)-1;
-  L->base_ci = luaM_newvector(OL, 10, CallInfo);
+  L->stack_last = L->stack+(BASIC_STACK_SIZE-EXTRA_STACK)-1;
+  L->base_ci = luaM_newvector(OL, BASIC_CI_SIZE, CallInfo);
   L->ci = L->base_ci;
   L->ci->base = L->top;
-  L->ci->savedpc = NULL;
-  L->size_ci = 10;
+  L->ci->pc = NULL;
+  L->size_ci = BASIC_CI_SIZE;
   L->end_ci = L->base_ci + L->size_ci;
 }
 
@@ -84,6 +85,7 @@ static void f_luaopen (lua_State *L, void *ud) {
 static void preinit_state (lua_State *L) {
   L->stack = NULL;
   L->stacksize = 0;
+  L->maxstacksize = 1;
   L->errorJmp = NULL;
   L->callhook = NULL;
   L->linehook = NULL;

@@ -72,11 +72,6 @@ typedef unsigned char lu_byte;
 
 
 
-#ifndef DEFAULT_STACK_SIZE
-#define DEFAULT_STACK_SIZE      1024
-#endif
-
-
 
 /* type to ensure maximum alignment */
 #ifndef LUSER_ALIGNMENT_T

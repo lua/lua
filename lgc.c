@@ -20,7 +20,6 @@
 #include "ltm.h"
 
 
-
 typedef struct GCState {
   Table *tmark;  /* list of marked tables to be visited */
   Table *toclear;  /* list of visited weak tables (to be cleared after GC) */
@@ -36,11 +35,12 @@ typedef struct GCState {
 /* mark tricks for userdata */
 #define isudmarked(u)	(u->uv.len & 1)
 #define markud(u)	(u->uv.len |= 1)
-#define unmarkud(u)	(u->uv.len--)
+#define unmarkud(u)	(u->uv.len &= (~(size_t)1))
 
 
 /* mark tricks for upvalues (assume that open upvalues are always marked) */
 #define isupvalmarked(uv)	((uv)->v != &(uv)->value)
+
 
 
 static void markobject (GCState *st, TObject *o);
@@ -122,6 +122,17 @@ static void markobject (GCState *st, TObject *o) {
 }
 
 
+static void checkstacksizes (lua_State *L, StkId lim) {
+  int used = L->ci - L->base_ci;  /* number of `ci' in use */
+  if (4*used < L->size_ci && 2*BASIC_CI_SIZE < L->size_ci)
+    luaD_reallocCI(L, L->size_ci/2);  /* still big enough... */
+  if (lim < L->top) lim = L->top;
+  used = lim - L->stack;  /* part of stack in use */
+  if (3*used < L->stacksize && 2*BASIC_STACK_SIZE < L->stacksize)
+    luaD_reallocstack(L, L->stacksize/2);  /* still big enough... */
+}
+
+
 static void markstacks (GCState *st) {
   lua_State *L1 = st->L;
   do {  /* for each thread */
@@ -137,6 +148,7 @@ static void markstacks (GCState *st) {
     lim = (L1->stack_last - L1->ci->base > MAXSTACK) ? L1->ci->base+MAXSTACK
                                                      : L1->stack_last;
     for (; o<=lim; o++) setnilvalue(o);
+    checkstacksizes(L1, lim);
     lua_assert(L1->previous->next == L1 && L1->next->previous == L1);
     L1 = L1->next;
   } while (L1 != st->L);
@@ -374,11 +386,10 @@ static void checkMbuffer (lua_State *L) {
 static void do1gcTM (lua_State *L, Udata *udata) {
   const TObject *tm = fasttm(L, udata->uv.eventtable, TM_GC);
   if (tm != NULL) {
-    StkId top = L->top;
-    setobj(top, tm);
-    setuvalue(top+1, udata);
+    setobj(L->top, tm);
+    setuvalue(L->top+1, udata);
     L->top += 2;
-    luaD_call(L, top, 0);
+    luaD_call(L, L->top - 2, 0);
   }
 }
 
@@ -396,6 +407,7 @@ static void unprotectedcallGCTM (lua_State *L, void *pu) {
     do1gcTM(L, udata);
     /* mark udata as finalized (default event table) */
     uvalue(L->top-1)->uv.eventtable = hvalue(defaultet(L));
+    unmarkud(uvalue(L->top-1));
   }
   L->top--;
 }

@@ -29,10 +29,9 @@
 
 static void luaV_checkGC (lua_State *L, StkId top) {
   if (G(L)->nblocks >= G(L)->GCthreshold) {
-    StkId temp = L->top;
-    L->top = top;
+    L->top = top;  /* limit for active registers */
     luaC_collectgarbage(L);
-    L->top = temp;  /* restore old top position */
+    L->top = L->ci->top;  /* restore old top position */
   }
 }
 
@@ -83,32 +82,37 @@ static void traceexec (lua_State *L, lua_Hook linehook) {
   if (newline != ci->line || pc <= ci->lastpc) {
     ci->line = newline;
     luaD_lineHook(L, newline, linehook);
+    ci = L->ci;  /* previous call may realocate `ci' */
   }
   ci->lastpc = pc;
 }
 
 
+static void callTMres (lua_State *L, const TObject *f,
+                       const TObject *p1, const TObject *p2, TObject *result ) {
+  StkId stack = L->stack;
+  setobj(L->top, f);  /* push function */
+  setobj(L->top+1, p1);  /* 1st argument */
+  setobj(L->top+2, p2);  /* 2nd argument */
+  luaD_checkstack(L, 3);  /* cannot check before (could invalidate p1, p2) */
+  L->top += 3;
+  luaD_call(L, L->top - 3, 1);
+  if (stack != L->stack)  /* stack changed? */
+    result = (result - stack) + L->stack;  /* correct pointer */
+  setobj(result, --L->top);  /* get result */
+}
 
-/* maximum stack used by a call to a tag method (func + args) */
-#define MAXSTACK_TM	4
+
 
 static void callTM (lua_State *L, const TObject *f,
-     const TObject *p1, const TObject *p2, const TObject *p3, TObject *result ) {
-  StkId base = L->top;
-  luaD_checkstack(L, MAXSTACK_TM);
-  setobj(base, f);  /* push function */
-  setobj(base+1, p1);  /* 1st argument */
-  setobj(base+2, p2);  /* 2nd argument */
-  L->top += 3;
-  if (p3) {
-    setobj(base+3, p3);  /* 3th argument */
-    L->top++;
-  }
-  luaD_call(L, base, 1);
-  if (result) {  /* need a result? */
-    setobj(result, base);  /* get it */
-  }
-  L->top = base;  /* restore top */
+                    const TObject *p1, const TObject *p2, const TObject *p3) {
+  setobj(L->top, f);  /* push function */
+  setobj(L->top+1, p1);  /* 1st argument */
+  setobj(L->top+2, p2);  /* 2nd argument */
+  setobj(L->top+3, p3);  /* 3th argument */
+  luaD_checkstack(L, 4);  /* cannot check before (could invalidate p1...p3) */
+  L->top += 4;
+  luaD_call(L, L->top - 4, 0);
 }
 
 
@@ -139,7 +143,7 @@ void luaV_gettable (lua_State *L, StkId t, TObject *key, StkId res) {
     }
   }
   if (ttype(tm) == LUA_TFUNCTION)
-    callTM(L, tm, t, key, NULL, res);
+    callTMres(L, tm, t, key, res);
   else {
     t = (StkId)tm;  /* ?? */
     goto init;  /* return luaV_gettable(L, tm, key, res); */
@@ -167,7 +171,7 @@ void luaV_settable (lua_State *L, StkId t, TObject *key, StkId val) {
     }
   }
   if (ttype(tm) == LUA_TFUNCTION)
-    callTM(L, tm, t, key, val, NULL);
+    callTM(L, tm, t, key, val);
   else {
     t = (StkId)tm;  /* ?? */
     goto init;  /* luaV_settable(L, tm, key, val); */
@@ -181,7 +185,7 @@ static int call_binTM (lua_State *L, const TObject *p1, const TObject *p2,
   if (ttype(tm) == LUA_TNIL)
     tm = luaT_gettmbyobj(L, p2, event);  /* try second operand */
   if (ttype(tm) != LUA_TFUNCTION) return 0;
-  callTM(L, tm, p1, p2, NULL, res);
+  callTMres(L, tm, p1, p2, res);
   return 1;
 }
 
@@ -229,7 +233,6 @@ int luaV_lessthan (lua_State *L, const TObject *l, const TObject *r) {
 
 
 void luaV_strconc (lua_State *L, int total, int last) {
-  luaV_checkGC(L, L->ci->base + last + 1);
   do {
     StkId top = L->ci->base + last + 1;
     int n = 2;  /* number of elements handled in this pass (at least 2) */
@@ -273,7 +276,7 @@ static void powOp (lua_State *L, StkId ra, StkId rb, StkId rc) {
     luaV_gettable(L, gt(L), &o, &f);
     if (ttype(&f) != LUA_TFUNCTION)
       luaD_error(L, "`pow' (for `^' operator) is not a function");
-    callTM(L, &f, b, c, NULL, ra);
+    callTMres(L, &f, b, c, ra);
   }
   else
     call_arith(L, rb, rc, ra, TM_POW);
@@ -324,17 +327,18 @@ StkId luaV_execute (lua_State *L) {
   k = cl->p->k;
   linehook = L->linehook;
   L->ci->pc = &pc;
+  L->ci->pb = &base;
   pc = L->ci->savedpc;
-  L->ci->savedpc = NULL;
   /* main loop of interpreter */
   for (;;) {
     const Instruction i = *pc++;
-    const StkId ra = RA(i);
+    StkId ra;
     if (linehook)
       traceexec(L, linehook);
+    ra = RA(i);
+    lua_assert(L->top <= L->stack + L->stacksize && L->top >= L->ci->base);
     lua_assert(L->top == L->ci->top || GET_OPCODE(i) == OP_CALL ||
          GET_OPCODE(i) == OP_RETURN || GET_OPCODE(i) == OP_SETLISTO);
-    lua_assert(L->ci->savedpc == NULL);
     switch (GET_OPCODE(i)) {
       case OP_MOVE: {
         setobj(ra, RB(i));
@@ -342,10 +346,6 @@ StkId luaV_execute (lua_State *L) {
       }
       case OP_LOADK: {
         setobj(ra, KBc(i));
-        break;
-      }
-      case OP_LOADINT: {
-        setnvalue(ra, (lua_Number)GETARG_sBc(i));
         break;
       }
       case OP_LOADBOOL: {
@@ -441,8 +441,9 @@ StkId luaV_execute (lua_State *L) {
       case OP_CONCAT: {
         int b = GETARG_B(i);
         int c = GETARG_C(i);
-        luaV_strconc(L, c-b+1, c);
-        setobj(ra, base+b);
+        luaV_strconc(L, c-b+1, c);  /* this call may change `base' (and `ra') */
+        setobj(base+GETARG_A(i), base+b);
+        luaV_checkGC(L, base+c+1);
         break;
       }
       case OP_JMP: {
@@ -493,7 +494,7 @@ StkId luaV_execute (lua_State *L) {
         nresults = GETARG_C(i) - 1;
         firstResult = luaD_precall(L, ra);
         if (firstResult) {
-          if (firstResult == base) {  /* yield?? */
+          if (firstResult > L->top) {  /* yield? */
             (L->ci-1)->savedpc = pc;
             return NULL;
           }
@@ -514,16 +515,16 @@ StkId luaV_execute (lua_State *L) {
         b = GETARG_B(i);
         if (b != 0) L->top = ra+b-1;
         ci = L->ci - 1;
-        if (ci->savedpc == NULL)
-          return ra;
-        else {  /* previous function is Lua: continue its execution */
+        lua_assert((ci+1)->pc == &pc);
+        if (ci->pc != &pc)  /* previous function was running `here'? */
+          return ra;  /* no: return */
+        else {  /* yes: continue its execution */
           int nresults;
           lua_assert(ttype(ci->base-1) == LUA_TFUNCTION);
           base = ci->base;  /* restore previous values */
           cl = &clvalue(base - 1)->l;
           k = cl->p->k;
           pc = ci->savedpc;
-          ci->savedpc = NULL;
           lua_assert(GET_OPCODE(*(pc-1)) == OP_CALL);
           nresults = GETARG_C(*(pc-1)) - 1;
           luaD_poscall(L, nresults, ra);
@@ -607,7 +608,6 @@ StkId luaV_execute (lua_State *L) {
         Proto *p;
         Closure *ncl;
         int nup, j;
-        luaV_checkGC(L, L->top);
         p = cl->p->p[GETARG_Bc(i)];
         nup = p->nupvalues;
         ncl = luaF_newLclosure(L, nup);
@@ -621,6 +621,7 @@ StkId luaV_execute (lua_State *L) {
           }
         }
         setclvalue(ra, ncl);
+        luaV_checkGC(L, L->top);
         break;
       }
     }
