@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.32 2000/09/21 03:15:36 lhf Exp lhf $
+** $Id: lundump.c,v 1.33 2000/10/31 16:57:23 lhf Exp $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -178,7 +178,7 @@ static void TestSize (lua_State* L, int s, const char* what, ZIO* Z)
  int r=ezgetc(L,Z);
  if (r!=s)
   luaO_verror(L,"virtual machine mismatch in `%.99s':\n"
-	"  %s is %d but read %d",ZNAME(Z),what,s,r);
+	"  %.20s is %d but read %d",ZNAME(Z),what,s,r);
 }
 
 #define TESTSIZE(s)	TestSize(L,s,#s,Z)
