@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.37 1996/05/28 21:07:32 roberto Exp $";
+char *rcs_inout="$Id: inout.c,v 2.38 1996/07/12 20:00:26 roberto Exp roberto $";
 
 #include <stdio.h>
 
@@ -31,7 +31,8 @@ static char *st;
 */
 static int fileinput (void)
 {
- return fgetc (fp);
+  int c = fgetc(fp);
+  return (c == EOF) ? 0 : c;
 }
 
 /*

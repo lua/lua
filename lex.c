@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.33 1996/05/28 21:07:32 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.34 1996/05/30 14:04:07 roberto Exp roberto $";
 
 
 #include <ctype.h>
@@ -82,7 +82,6 @@ static int read_long_string (char *yytext, int buffsize)
       yytext = luaI_buffer(buffsize *= 2);
     switch (current)
     {
-      case EOF:
       case 0:
         save(0);
         return WRONGTOKEN;
@@ -132,10 +131,6 @@ int luaY_lex (void)
     int tokensize = 0;
     switch (current)
     {
-      case EOF:
-      case 0:
-       save(0);
-       return 0;
       case '\n': linelasttoken = ++lua_linenumber;
       case ' ':
       case '\r':  /* CR: to avoid problems with DOS/Windows */
@@ -206,7 +201,6 @@ int luaY_lex (void)
             yytext = luaI_buffer(buffsize *= 2);
           switch (current)
           {
-            case EOF:
             case 0:
             case '\n':
               save(0);
@@ -316,7 +310,7 @@ int luaY_lex (void)
           return NUMBER;
         }
 
-      default: 		/* also end of file */
+      default: 		/* also end of program (0) */
       {
         save_and_next();
         return yytext[0];
