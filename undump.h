@@ -1,8 +1,11 @@
 /*
 ** undump.h
 ** definitions for lua decompiler
-** $Id: undump.h,v 1.4 1997/04/14 12:12:40 lhf Exp roberto $
+** $Id: undump.h,v 1.5 1997/06/16 16:50:22 roberto Exp roberto $
 */
+
+#ifndef undump_h
+#define undump_h
 
 #include "func.h"
 #include "zio.h"
@@ -21,4 +24,7 @@
 #define	TEST_FLOAT	0.123456789e-23	/* a float for testing representation */
 
 
+TFunc* luaI_undump1(ZIO* Z);
 int luaI_undump(ZIO* Z);		/* load all chunks */
+
+#endif

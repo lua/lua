@@ -3,7 +3,7 @@
 ** load bytecodes from files
 */
 
-char* rcs_undump="$Id: undump.c,v 1.24 1997/06/13 11:08:47 lhf Exp $";
+char* rcs_undump="$Id: undump.c,v 1.23 1997/06/16 16:50:22 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -301,7 +301,7 @@ static void LoadChunk(ZIO* Z)
 ** load one chunk from a file.
 ** return list of functions found, headed by main, or NULL at EOF.
 */
-static TFunc* luaI_undump1(ZIO* Z)
+TFunc* luaI_undump1(ZIO* Z)
 {
  int c=zgetc(Z);
  if (c==ID_CHUNK)
