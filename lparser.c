@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: lparser.c,v 1.1 1998/05/27 13:08:34 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -1075,6 +1075,7 @@ static int funcparams (LexState *ls, int slf) {
       break;
 
     case STRING:  /* funcparams -> STRING */
+      code_string(ls, ls->seminfo.ts);
       next(ls);
       break;
 
