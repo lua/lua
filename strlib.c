@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.42 1997/06/16 20:29:59 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.43 1997/06/18 20:15:47 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -94,7 +94,7 @@ static void str_sub (void)
     addnchar(s+start-1, end-start+1);
     lua_pushstring(luaI_addchar(0));
   }
-  else lua_pushliteral("");
+  else lua_pushstring("");
 }
 
 /*

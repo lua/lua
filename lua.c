@@ -3,7 +3,7 @@
 ** Linguagem para Usuarios de Aplicacao
 */
 
-char *rcs_lua="$Id: lua.c,v 1.15 1997/04/04 22:24:51 roberto Exp roberto $";
+char *rcs_lua="$Id: lua.c,v 1.16 1997/06/09 17:29:16 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -56,7 +56,7 @@ static void testC (void)
 
       case 'r': { int n = getnum(s); reg[n] = lua_getref(locks[getnum(s)]); break; }
 
-      case 'u': lua_unlock(locks[getnum(s)]); break;
+      case 'u': lua_unref(locks[getnum(s)]); break;
 
       case 'p': { int n = getnum(s); reg[n] = lua_getparam(getnum(s)); break; }
 
