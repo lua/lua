@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.47 1995/10/25 13:05:51 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.48 1995/10/26 14:21:56 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -178,11 +178,8 @@ static void adjust_top (StkId newtop)
   top = nt;  /* top could be bigger than newtop */
 }
 
+#define adjustC(nParams)	adjust_top(CBase+nParams)
 
-static void adjustC (int nParams)
-{
-  adjust_top(CBase+nParams);
-}
 
 /*
 ** Open a hole below "nelems" from the top.
