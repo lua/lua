@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.216 2003/02/28 19:45:15 roberto Exp roberto $
+** $Id: ldo.c,v 1.217 2003/04/03 13:35:34 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -39,6 +39,20 @@
 */
 
 
+#ifndef LUA_USEEXCEPTIONS
+
+#define L_THROW(c)	longjmp((c)->b, 1)
+#define L_TRY(c,a)	if (setjmp((c)->b) == 0) { a }
+
+#else
+
+#define L_THROW(c)	throw(c)
+#define L_TRY(c,a)	try { a } catch(...) \
+				{ if ((c)->status == 0) (c)->status = -1; }
+
+#endif
+
+
 /* chain list of long jump buffers */
 struct lua_longjmp {
   struct lua_longjmp *previous;
@@ -70,7 +84,7 @@ static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
 void luaD_throw (lua_State *L, int errcode) {
   if (L->errorJmp) {
     L->errorJmp->status = errcode;
-    longjmp(L->errorJmp->b, 1);
+    L_THROW(L->errorJmp);
   }
   else {
     G(L)->panic(L);
@@ -84,8 +98,9 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
   lj.status = 0;
   lj.previous = L->errorJmp;  /* chain new error handler */
   L->errorJmp = &lj;
-  if (setjmp(lj.b) == 0)
+  L_TRY(&lj,
     (*f)(L, ud);
+  );
   L->errorJmp = lj.previous;  /* restore old error handler */
   return lj.status;
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.158 2003/04/07 14:35:00 roberto Exp roberto $
+** $Id: ltests.c,v 1.159 2003/04/28 19:58:06 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -732,6 +732,15 @@ static int testC (lua_State *L) {
       int n = cast(int, lua_tonumber(L, -1));
       luaL_setn(L, i, n);
       lua_pop(L, 1);
+    }
+    else if EQ("throw") {
+#ifdef _cplusplus
+static struct X { int x; } x;
+      throw x;
+#else
+      luaL_error(L, "C++");
+#endif
+      break;
     }
     else luaL_error(L, "unknown instruction %s", buff);
   }
