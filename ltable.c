@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.118 2002/08/30 19:09:21 roberto Exp roberto $
+** $Id: ltable.c,v 1.119 2002/09/02 19:54:49 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -111,7 +111,7 @@ static int arrayindex (const TObject *key) {
 ** elements in the array part, then elements in the hash part. The
 ** beginning and end of a traversal are signalled by -1.
 */
-static int luaH_index (lua_State *L, Table *t, const TObject *key) {
+static int luaH_index (lua_State *L, Table *t, StkId key) {
   int i;
   if (ttisnil(key)) return -1;  /* first iteration */
   i = arrayindex(key);
@@ -129,19 +129,19 @@ static int luaH_index (lua_State *L, Table *t, const TObject *key) {
 }
 
 
-int luaH_next (lua_State *L, Table *t, TObject *key) {
+int luaH_next (lua_State *L, Table *t, StkId key) {
   int i = luaH_index(L, t, key);  /* find original element */
   for (i++; i < t->sizearray; i++) {  /* try first array part */
     if (!ttisnil(&t->array[i])) {  /* a non-nil value? */
       setnvalue(key, i+1);
-      setobj(key+1, &t->array[i]);
+      setobj2s(key+1, &t->array[i]);
       return 1;
     }
   }
   for (i -= t->sizearray; i < sizenode(t); i++) {  /* then hash part */
     if (!ttisnil(val(node(t, i)))) {  /* a non-nil value? */
-      setobj(key, key(node(t, i)));
-      setobj(key+1, val(node(t, i)));
+      setobj2s(key, key(node(t, i)));
+      setobj2s(key+1, val(node(t, i)));
       return 1;
     }
   }
@@ -270,7 +270,7 @@ static void resize (lua_State *L, Table *t, int nasize, int nhsize) {
     /* re-insert elements from vanishing slice */
     for (i=nasize; i<oldasize; i++) {
       if (!ttisnil(&t->array[i]))
-        setobj(luaH_setnum(L, t, i+1), &t->array[i]);
+        setobjt2t(luaH_setnum(L, t, i+1), &t->array[i]);
     }
     /* shrink array */
     luaM_reallocvector(L, t->array, oldasize, nasize, TObject);
@@ -279,7 +279,7 @@ static void resize (lua_State *L, Table *t, int nasize, int nhsize) {
   for (i = twoto(oldhsize) - 1; i >= 0; i--) {
     Node *old = nold+i;
     if (!ttisnil(val(old)))
-      setobj(luaH_set(L, t, key(old)), val(old));
+      setobjt2t(luaH_set(L, t, key(old)), val(old));
   }
   if (oldhsize)
     luaM_freearray(L, nold, twoto(oldhsize), Node);  /* free old array */
@@ -373,7 +373,7 @@ static TObject *newkey (lua_State *L, Table *t, const TObject *key) {
       mp = n;
     }
   }
-  setobj(key(mp), key);
+  setobj2t(key(mp), key);
   lua_assert(ttisnil(val(mp)));
   for (;;) {  /* correct `firstfree' */
     if (ttisnil(key(t->firstfree)))

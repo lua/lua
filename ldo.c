@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.197 2002/10/25 20:05:28 roberto Exp roberto $
+** $Id: ldo.c,v 1.198 2002/11/06 19:08:00 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -47,16 +47,16 @@ struct lua_longjmp {
 static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
   switch (errcode) {
     case LUA_ERRMEM: {
-      setsvalue(oldtop, luaS_new(L, MEMERRMSG));
+      setsvalue2s(oldtop, luaS_new(L, MEMERRMSG));
       break;
     }
     case LUA_ERRERR: {
-      setsvalue(oldtop, luaS_new(L, "error in error handling"));
+      setsvalue2s(oldtop, luaS_new(L, "error in error handling"));
       break;
     }
     case LUA_ERRSYNTAX:
     case LUA_ERRRUN: {
-      setobj(oldtop, L->top - 1);  /* error message on current top */
+      setobjs2s(oldtop, L->top - 1);  /* error message on current top */
       break;
     }
   }
@@ -188,7 +188,7 @@ static void adjust_varargs (lua_State *L, int nfixargs, StkId base) {
   actual -= nfixargs;  /* number of extra arguments */
   htab = luaH_new(L, 0, 0);  /* create `arg' table */
   for (i=0; i<actual; i++)  /* put extra arguments into `arg' table */
-    setobj(luaH_setnum(L, htab, i+1), L->top - actual + i);
+    setobj2t(luaH_setnum(L, htab, i+1), L->top - actual + i);
   /* store counter in field `n' */
   setsvalue(&nname, luaS_newliteral(L, "n"));
   setnvalue(luaH_set(L, htab, &nname), actual);
@@ -205,10 +205,10 @@ static StkId tryfuncTM (lua_State *L, StkId func) {
   if (!ttisfunction(tm))
     luaG_typeerror(L, func, "call");
   /* Open a hole inside the stack at `func' */
-  for (p = L->top; p > func; p--) setobj(p, p-1);
+  for (p = L->top; p > func; p--) setobjs2s(p, p-1);
   incr_top(L);
   func = restorestack(L, funcr);  /* previous call may change stack */
-  setobj(func, tm);  /* tag method is the new function to be called */
+  setobj2s(func, tm);  /* tag method is the new function to be called */
   return func;
 }
 
@@ -270,7 +270,7 @@ void luaD_poscall (lua_State *L, int wanted, StkId firstResult) {
   L->ci--;
   /* move results to correct place */
   while (wanted != 0 && firstResult < L->top) {
-    setobj(res++, firstResult++);
+    setobjs2s(res++, firstResult++);
     wanted--;
   }
   while (wanted-- > 0)
@@ -333,10 +333,10 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
   old_allowhooks = allowhook(L);
   lua_assert(L->errfunc == 0);
   status = luaD_rawrunprotected(L, resume, &nargs);
-  if (status != 0) {
-    L->ci = L->base_ci;  /* `kill' thread (??) */
+  if (status != 0) {  /* error? */
+    L->ci = L->base_ci;  /* go back to initial level */
+    luaF_close(L, L->ci->base);  /* close eventual pending closures */
     seterrorobj(L, status, L->ci->base);
-    luaF_close(L, L->top);  /* close eventual pending closures */
     setallowhook(L, old_allowhooks);
     restore_stack_limit(L);
   }
@@ -355,7 +355,7 @@ LUA_API int lua_yield (lua_State *L, int nresults) {
   if (L->top - nresults > ci->base) {  /* is there garbage in the stack? */
     int i;
     for (i=0; i<nresults; i++)  /* move down results */
-      setobj(ci->base + i, L->top - nresults + i);
+      setobjs2s(ci->base + i, L->top - nresults + i);
     L->top = ci->base + nresults;
   }
   lua_unlock(L);
@@ -391,8 +391,8 @@ int luaD_pcall (lua_State *L, int nargs, int nresults, ptrdiff_t errfunc) {
   status = luaD_rawrunprotected(L, &f_call, &c);
   if (status != 0) {  /* an error occurred? */
     StkId oldtop = restorestack(L, old_top) - (nargs+1);
+    luaF_close(L, oldtop);  /* close eventual pending closures */
     seterrorobj(L, status, oldtop);
-    luaF_close(L, L->top);  /* close eventual pending closures */
     L->ci = restoreci(L, old_ci);
     setallowhook(L, old_allowhooks);
     restore_stack_limit(L);

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.153 2002/10/22 17:58:14 roberto Exp roberto $
+** $Id: lgc.c,v 1.154 2002/10/25 20:05:28 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -344,7 +344,7 @@ static void checkSizes (lua_State *L) {
 static void do1gcTM (lua_State *L, Udata *udata) {
   const TObject *tm = fasttm(L, udata->uv.metatable, TM_GC);
   if (tm != NULL) {
-    setobj(L->top, tm);
+    setobj2s(L->top, tm);
     setuvalue(L->top+1, udata);
     L->top += 2;
     luaD_call(L, L->top - 2, 0);

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.215 2002/10/25 21:31:28 roberto Exp roberto $
+** $Id: lapi.c,v 1.216 2002/11/06 19:08:00 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -84,7 +84,7 @@ static TObject *luaA_indexAcceptable (lua_State *L, int index) {
 
 
 void luaA_pushobject (lua_State *L, const TObject *o) {
-  setobj(L->top, o);
+  setobj2s(L->top, o);
   incr_top(L);
 }
 
@@ -111,7 +111,7 @@ LUA_API void lua_movethread (lua_State *from, lua_State *to, int n) {
   api_checknelems(from, n);
   from->top -= n;
   for (i = 0; i < n; i++) {
-    setobj(to->top, from->top + i);
+    setobj2s(to->top, from->top + i);
     api_incr_top(to);
   }
   lua_unlock(to);
@@ -171,7 +171,7 @@ LUA_API void lua_remove (lua_State *L, int index) {
   StkId p;
   lua_lock(L);
   p = luaA_index(L, index);
-  while (++p < L->top) setobj(p-1, p);
+  while (++p < L->top) setobjs2s(p-1, p);
   L->top--;
   lua_unlock(L);
 }
@@ -182,8 +182,8 @@ LUA_API void lua_insert (lua_State *L, int index) {
   StkId q;
   lua_lock(L);
   p = luaA_index(L, index);
-  for (q = L->top; q>p; q--) setobj(q, q-1);
-  setobj(p, L->top);
+  for (q = L->top; q>p; q--) setobjs2s(q, q-1);
+  setobjs2s(p, L->top);
   lua_unlock(L);
 }
 
@@ -191,7 +191,7 @@ LUA_API void lua_insert (lua_State *L, int index) {
 LUA_API void lua_replace (lua_State *L, int index) {
   lua_lock(L);
   api_checknelems(L, 1);
-  setobj(luaA_index(L, index), L->top - 1);
+  setobj(luaA_index(L, index), L->top - 1);  /* unknown destination */
   L->top--;
   lua_unlock(L);
 }
@@ -199,7 +199,7 @@ LUA_API void lua_replace (lua_State *L, int index) {
 
 LUA_API void lua_pushvalue (lua_State *L, int index) {
   lua_lock(L);
-  setobj(L->top, luaA_index(L, index));
+  setobj2s(L->top, luaA_index(L, index));
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -394,7 +394,7 @@ LUA_API void lua_pushnumber (lua_State *L, lua_Number n) {
 
 LUA_API void lua_pushlstring (lua_State *L, const char *s, size_t len) {
   lua_lock(L);
-  setsvalue(L->top, luaS_newlstr(L, s, len));
+  setsvalue2s(L->top, luaS_newlstr(L, s, len));
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -469,11 +469,9 @@ LUA_API void lua_pushlightuserdata (lua_State *L, void *p) {
 
 LUA_API void lua_gettable (lua_State *L, int index) {
   StkId t;
-  const TObject *v;
   lua_lock(L);
   t = luaA_index(L, index);
-  v = luaV_gettable(L, t, L->top-1, 0);
-  setobj(L->top - 1, v);
+  setobj2s(L->top - 1, luaV_gettable(L, t, L->top - 1, 0));
   lua_unlock(L);
 }
 
@@ -483,7 +481,7 @@ LUA_API void lua_rawget (lua_State *L, int index) {
   lua_lock(L);
   t = luaA_index(L, index);
   api_check(L, ttistable(t));
-  setobj(L->top - 1, luaH_get(hvalue(t), L->top - 1));
+  setobj2s(L->top - 1, luaH_get(hvalue(t), L->top - 1));
   lua_unlock(L);
 }
 
@@ -493,7 +491,7 @@ LUA_API void lua_rawgeti (lua_State *L, int index, int n) {
   lua_lock(L);
   o = luaA_index(L, index);
   api_check(L, ttistable(o));
-  setobj(L->top, luaH_getnum(hvalue(o), n));
+  setobj2s(L->top, luaH_getnum(hvalue(o), n));
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -553,7 +551,7 @@ LUA_API void lua_getglobals (lua_State *L, int index) {
   StkId o;
   lua_lock(L);
   o = luaA_index(L, index);
-  setobj(L->top, isLfunction(o) ? &clvalue(o)->l.g : gt(L));
+  setobj2s(L->top, isLfunction(o) ? &clvalue(o)->l.g : gt(L));
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -581,7 +579,7 @@ LUA_API void lua_rawset (lua_State *L, int index) {
   api_checknelems(L, 2);
   t = luaA_index(L, index);
   api_check(L, ttistable(t));
-  setobj(luaH_set(L, hvalue(t), L->top-2), L->top-1);
+  setobj2t(luaH_set(L, hvalue(t), L->top-2), L->top-1);
   L->top -= 2;
   lua_unlock(L);
 }
@@ -593,7 +591,7 @@ LUA_API void lua_rawseti (lua_State *L, int index, int n) {
   api_checknelems(L, 1);
   o = luaA_index(L, index);
   api_check(L, ttistable(o));
-  setobj(luaH_setnum(L, hvalue(o), n), L->top-1);
+  setobj2t(luaH_setnum(L, hvalue(o), n), L->top-1);
   L->top--;
   lua_unlock(L);
 }
@@ -787,7 +785,7 @@ LUA_API void lua_concat (lua_State *L, int n) {
     luaC_checkGC(L);
   }
   else if (n == 0) {  /* push empty string */
-    setsvalue(L->top, luaS_newlstr(L, NULL, 0));
+    setsvalue2s(L->top, luaS_newlstr(L, NULL, 0));
     api_incr_top(L);
   }
   /* else n == 1; nothing to do */
@@ -815,7 +813,7 @@ LUA_API int lua_pushupvalues (lua_State *L) {
   n = func->c.nupvalues;
   luaD_checkstack(L, n + LUA_MINSTACK);
   for (i=0; i<n; i++) {
-    setobj(L->top, &func->c.upvalue[i]);
+    setobj2s(L->top, &func->c.upvalue[i]);
     L->top++;
   }
   lua_unlock(L);

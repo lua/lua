@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.134 2002/09/05 19:45:42 roberto Exp roberto $
+** $Id: ldebug.c,v 1.135 2002/10/16 20:40:58 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -127,7 +127,7 @@ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
     if (!name || name[0] == '(')  /* `(' starts private locals */
       name = NULL;
     else
-      setobj(ci->base+(n-1), L->top);
+      setobjs2s(ci->base+(n-1), L->top);
   }
   lua_unlock(L);
   return name;
@@ -218,7 +218,7 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
         break;
       }
       case 'f': {
-        setobj(L->top, f);
+        setobj2s(L->top, f);
         status = 2;
         break;
       }
@@ -538,8 +538,8 @@ void luaG_errormsg (lua_State *L) {
   if (L->errfunc != 0) {  /* is there an error handling function? */
     StkId errfunc = restorestack(L, L->errfunc);
     if (!ttisfunction(errfunc)) luaD_throw(L, LUA_ERRERR);
-    setobj(L->top, L->top - 1);  /* move argument */
-    setobj(L->top - 1, errfunc);  /* push function */
+    setobjs2s(L->top, L->top - 1);  /* move argument */
+    setobjs2s(L->top - 1, errfunc);  /* push function */
     incr_top(L);
     luaD_call(L, L->top - 2, 1);  /* call it */
   }

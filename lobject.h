@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.150 2002/10/25 20:05:28 roberto Exp roberto $
+** $Id: lobject.h,v 1.151 2002/11/04 12:31:44 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -132,6 +132,7 @@ typedef struct lua_TObject {
 #define setnilvalue(obj) ((obj)->tt=LUA_TNIL)
 
 
+
 /*
 ** for internal debug only
 */
@@ -143,6 +144,22 @@ typedef struct lua_TObject {
   { const TObject *o2=(obj2); TObject *o1=(obj1); \
     checkconsistency(o2); \
     o1->tt=o2->tt; o1->value = o2->value; }
+
+
+/*
+** different types of sets, according to destination
+*/
+
+/* from stack to (same) stack */
+#define setobjs2s	setobj
+/* to stack (not from same stack) */
+#define setobj2s	setobj
+/* from table to same table */
+#define setobjt2t	setobj
+/* to table */
+#define setobj2t	setobj
+/* string to stack */
+#define setsvalue2s	setsvalue
 
 #define setttype(obj, tt) (ttype(obj) = (tt))
 
