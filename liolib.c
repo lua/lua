@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.42 2003/05/14 19:03:43 roberto Exp roberto $
+** $Id: liolib.c,v 2.43 2003/05/14 21:01:53 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -137,7 +137,7 @@ static int aux_close (lua_State *L) {
 
 
 static int io_close (lua_State *L) {
-  if (lua_isnone(L, 1))
+  if (lua_isnone(L, 1) && lua_type(L, lua_upvalueindex(1)) == LUA_TTABLE)
     lua_rawgeti(L, lua_upvalueindex(1), IO_OUTPUT);
   return pushresult(L, aux_close(L), NULL);
 }
