@@ -1,4 +1,4 @@
-
+--[[
 ** lua.stx / llex.c
 Tue Dec  2 10:45:48 EDT 1997
 >> BUG: "lastline" was not reset on function entry, so debug information
@@ -333,4 +333,160 @@ Fri Feb 28 14:20:33 EST 2003
 Thu Mar 20 11:40:12 EST 2003
 >> zio mixes a 255 as first char in a buffer with EOZ
 (by lhf; since 5.0a)
+
+
+
+--]]
+-----------------------------------------------------------------
+-- Lua 5.0 (final)
+
+Bug{
+what = [[lua_closethread exists only in the manual]],
+report = [[by Nguyen Binh, 28/04/2003]],
+patch = [[no patch; the manual is wrong]],
+}
+
+
+Bug{
+what = [[attempt to resume a running coroutine crashes Lua]],
+example = [[
+function co_func (current_co)
+   coroutine.resume(co)
+end
+co = coroutine.create(co_func)
+coroutine.resume(co)
+coroutine.resume(co)     --> seg. fault
+]],
+report = [[by Alex Bilyk, 09/05/2003]], 
+patch = [[???]],
+}
+
+
+Bug{
+what = [[file:close cannot be called without a file. (results in seg fault)]],
+example = [[
+> io.stdin.close()    -- correct call shold be io.stdin:close()
+]],
+report = [[by Tuomo Valkonen, 27/05/2003]], 
+patch = [[
+* liolib.c:
+161c161
+<   if (lua_isnone(L, 1)) {
+---
+>   if (lua_isnone(L, 1) && lua_type(L, lua_upvalueindex(1)) == LUA_TTABLE) {
+]],   --}}
+}
+
+
+Bug{
+what = [[C functions also may have stacks larger than current top]],
+example = [[
+Must recompile lua with a change in lua.c and with lua_assert defined:
+* lua.c:
+381a382
+>   lua_checkstack(l, 1000);
+]],
+report = [[Alex Bilyk, 09/06/2003]],
+patch = [[
+* lgc.c:
+247c247
+<     if (!(ci->state & CI_C) && lim < ci->top)
+---
+>     if (lim < ci->top)
+]],
+}
+
+Bug{
+what = [[`pc' address is invalidated when a coroutine is suspended]],
+example = [[
+function g(x)
+    coroutine.yield(x)
+end
+
+function f (i)
+  debug.sethook(print, "l")
+  for j=1,1000 do
+    g(i+j)
+  end
+end
+
+co = coroutine.wrap(f)
+co(10)
+pcall(co)
+pcall(co)
+]],
+report = [[Nick Trout, 07/07/2003]],
+patch = [[
+* lvm.c:
+402d401
+<   L->ci->u.l.pc = &pc;
+405a405
+>   L->ci->u.l.pc = &pc;
+676,678c676
+<           lua_assert(ci->u.l.pc == &pc &&
+<                      ttisfunction(ci->base - 1) &&
+<                      (ci->state & CI_SAVEDPC));
+---
+>           lua_assert(ttisfunction(ci->base - 1) && (ci->state & CI_SAVEDPC));
+]]
+}
+
+
+Bug{
+what = [[userdata to be collected still counts into new GC threshold,
+increasing memory consumption]],
+report = [[Roberto, 25/07/2003]],
+example = [[
+a = newproxy(true)
+getmetatable(a).__gc = function () end
+for i=1,10000000 do
+  newproxy(a)
+  if math.mod(i, 10000) == 0 then print(gcinfo()) end
+end
+]],
+patch = [[
+*lgc.h:
+18c18
+< void luaC_separateudata (lua_State *L);
+---
+> size_t luaC_separateudata (lua_State *L);
+
+*lgc.c:
+113c113,114
+< void luaC_separateudata (lua_State *L) {
+---
+> size_t luaC_separateudata (lua_State *L) {
+>   size_t deadmem = 0;
+127a129
+>       deadmem += sizeudata(gcotou(curr)->uv.len);
+136a139
+>   return deadmem;
+390c393
+< static void checkSizes (lua_State *L) {
+---
+> static void checkSizes (lua_State *L, size_t deadmem) {
+400c403
+<   G(L)->GCthreshold = 2*G(L)->nblocks;  /* new threshold */
+---
+>   G(L)->GCthreshold = 2*G(L)->nblocks - deadmem;  /* new threshold */
+454c457,458
+< static void mark (lua_State *L) {
+---
+> static size_t mark (lua_State *L) {
+>   size_t deadmem;
+467c471
+<   luaC_separateudata(L);  /* separate userdata to be preserved */
+---
+>   deadmem = luaC_separateudata(L);  /* separate userdata to be preserved */
+475a480
+>   return deadmem;
+480c485
+<   mark(L);
+---
+>   size_t deadmem = mark(L);
+482c487
+<   checkSizes(L);
+---
+>   checkSizes(L, deadmem);
+]]
 
