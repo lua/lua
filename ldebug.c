@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.125 2002/07/16 14:26:56 roberto Exp roberto $
+** $Id: ldebug.c,v 1.126 2002/08/05 14:51:21 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,7 @@ static int isLua (CallInfo *ci) {
 
 static int currentpc (lua_State *L, CallInfo *ci) {
   if (!isLua(ci)) return -1;  /* function is not a Lua function? */
-  if (ci->pc && ci->pc != &luaV_callingmark)
+  if (ci->pc != &luaV_callingmark)  /* is not calling another Lua function? */
     ci->u.l.savedpc = *ci->pc;  /* `pc' may not be saved; save it */
   /* function's pc is saved */
   return pcRel(ci->u.l.savedpc, ci_func(ci)->l.p);
@@ -51,19 +51,9 @@ static int currentline (lua_State *L, CallInfo *ci) {
 }
 
 
-/*
-** save all `pc's from active Lua functions
-*/
-void luaG_saveallpcs (lua_State *L) {
-  CallInfo *ci;
-  /* first save all not saved `pc's */
-  for (ci = L->ci; ci != L->base_ci; ci--)
-    currentpc(L, ci);  /* save `pc', if necessary */
-}
-
-
 LUA_API int lua_sethook (lua_State *L, lua_Hook func, int mask) {
   int allow;
+  CallInfo *ci;
   lua_lock(L);
   allow = allowhook(L);
   if (func == NULL) mask = 0;
@@ -72,7 +62,8 @@ LUA_API int lua_sethook (lua_State *L, lua_Hook func, int mask) {
   L->hookmask = mask;
   setallowhook(L, allow);
   resethookcount(L);
-  luaG_saveallpcs(L);
+  for (ci = L->ci; ci != L->base_ci; ci--)  /* update all `savedpc's */
+    currentpc(L, ci);
   lua_unlock(L);
   return 1;
 }
@@ -547,6 +538,14 @@ static void addinfo (lua_State *L, int internal) {
 void luaG_errormsg (lua_State *L, int internal) {
   if (ttisstring(L->top - 1))
     addinfo(L, internal);
+  if (L->errfunc != 0) {  /* is there an error handling function? */
+    StkId errfunc = restorestack(L, L->errfunc);
+    if (!ttisfunction(errfunc)) luaD_throw(L, LUA_ERRERR);
+    setobj(L->top, L->top - 1);  /* move argument */
+    setobj(L->top - 1, errfunc);  /* push function */
+    incr_top(L);
+    luaD_call(L, L->top - 2, 1);  /* call it */
+  }
   luaD_throw(L, LUA_ERRRUN);
 }
 

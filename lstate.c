@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.100 2002/08/05 17:36:24 roberto Exp roberto $
+** $Id: lstate.c,v 1.101 2002/08/05 18:45:45 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -47,8 +47,6 @@ static void stack_init (lua_State *L, lua_State *OL) {
   L->ci->top = L->top + LUA_MINSTACK;
   L->size_ci = BASIC_CI_SIZE;
   L->end_ci = L->base_ci + L->size_ci;
-  L->toreset = luaM_newvector(OL, 2, Protection);
-  L->size_toreset = 2;
 }
 
 
@@ -102,8 +100,7 @@ static void preinit_state (lua_State *L) {
   L->openupval = NULL;
   L->size_ci = 0;
   L->base_ci = L->ci = NULL;
-  L->toreset = NULL;
-  L->size_toreset = L->number_toreset = 0;
+  L->errfunc = 0;
   setnilvalue(defaultmeta(L));
   setnilvalue(gt(L));
   setnilvalue(registry(L));
@@ -154,7 +151,6 @@ void luaE_closethread (lua_State *OL, lua_State *L) {
   L->previous->next = L->next;
   L->next->previous = L->previous;
   luaM_freearray(OL, L->base_ci, L->size_ci, CallInfo);
-  luaM_freearray(OL, L->toreset, L->size_toreset, Protection);
   luaM_freearray(OL, L->stack, L->stacksize, TObject);
   luaM_freelem(OL, L);
 }

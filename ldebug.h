@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.h,v 1.25 2002/07/08 20:22:08 roberto Exp roberto $
+** $Id: ldebug.h,v 1.26 2002/08/05 14:51:21 roberto Exp roberto $
 ** Auxiliary functions from Debug Interface module
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,6 @@
 #define allowhook(L)		((L->hookmask) & 1)
 
 
-void luaG_saveallpcs (lua_State *L);
 void luaG_typeerror (lua_State *L, const TObject *o, const char *opname);
 void luaG_concaterror (lua_State *L, StkId p1, StkId p2);
 void luaG_aritherror (lua_State *L, StkId p1, const TObject *p2);

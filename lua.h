@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.147 2002/07/17 16:25:13 roberto Exp roberto $
+** $Id: lua.h,v 1.148 2002/08/05 14:51:47 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -183,10 +183,9 @@ LUA_API int   lua_setglobals (lua_State *L, int level);
 ** `load' and `call' functions (load and run Lua code)
 */
 LUA_API void  lua_call (lua_State *L, int nargs, int nresults);
-LUA_API int   lua_pcall (lua_State *L, int nargs, int nresults);
+LUA_API int   lua_pcall (lua_State *L, int nargs, int nresults, int errfunc);
 LUA_API int   lua_load (lua_State *L, lua_Chunkreader reader, void *data,
                         const char *chunkname);
-LUA_API void  lua_pcallreset (lua_State *L);
 
 
 /*

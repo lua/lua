@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.205 2002/07/17 16:25:13 roberto Exp roberto $
+** $Id: lapi.c,v 1.206 2002/08/05 14:43:38 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -610,19 +610,14 @@ LUA_API void lua_call (lua_State *L, int nargs, int nresults) {
 }
 
 
-LUA_API int lua_pcall (lua_State *L, int nargs, int nresults) {
+LUA_API int lua_pcall (lua_State *L, int nargs, int nresults, int errfunc) {
   int status;
+  ptrdiff_t func;
   lua_lock(L);
-  status = luaD_pcall(L, nargs, nresults);
+  func = (errfunc == 0) ? 0 : savestack(L, luaA_index(L, errfunc));
+  status = luaD_pcall(L, nargs, nresults, func);
   lua_unlock(L);
   return status;
-}
-
-
-LUA_API void lua_pcallreset (lua_State *L) {
-  lua_lock(L);
-  luaD_resetprotection(L);  /* reset error handler */
-  lua_unlock(L);
 }
 
 

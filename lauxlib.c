@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.78 2002/07/01 19:23:58 roberto Exp $
+** $Id: lauxlib.c,v 1.79 2002/08/05 17:36:24 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -404,9 +404,7 @@ static void callalert (lua_State *L, int status) {
 
 static int aux_do (lua_State *L, int status) {
   if (status == 0) {  /* parse OK? */
-    status = lua_pcall(L, 0, LUA_MULTRET);  /* call main */
-    if (status != 0)
-      lua_pcallreset(L);
+    status = lua_pcall(L, 0, LUA_MULTRET, 0);  /* call main */
   }
   callalert(L, status);
   return status;

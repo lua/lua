@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.188 2002/07/16 14:26:56 roberto Exp roberto $
+** $Id: ldo.c,v 1.189 2002/08/05 17:36:24 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -64,9 +64,6 @@ static void seterrorobj (lua_State *L, int errcode) {
 
 
 void luaD_throw (lua_State *L, int errcode) {
-  if (errcode == LUA_ERRRUN)
-    luaD_checkstack(L, LUA_MINSTACK);  /* ensure stack space to handle error */
-  luaG_saveallpcs(L);  /* C stack will disapear */
   if (L->errorJmp) {
     L->errorJmp->status = errcode;
     longjmp(L->errorJmp->b, 1);
@@ -97,30 +94,6 @@ static void restore_stack_limit (lua_State *L) {
     if (inuse + 1 < LUA_MAXCALLS)  /* can `undo' overflow? */
       luaD_reallocCI(L, LUA_MAXCALLS);
   }
-}
-
-
-void luaD_resetprotection (lua_State *L) {
-  Protection *p;
-  StkId err = L->top - 1;  /* error msg. position (if there is one) */
-  lua_assert(L->number_toreset > 0);
-  p = &L->toreset[--L->number_toreset];
-  L->ci = restoreci(L, p->ci);
-  L->top = restorestack(L, p->top);
-  L->ci->top = L->top + LUA_MINSTACK;
-  setallowhook(L, p->allowhooks);
-  restore_stack_limit(L);
-  setobj(L->top++, err);  /* copy error message to corrected top */
-}
-
-
-/*
-** invalidate all pc pointers from stack part that becomes inactive
-*/
-static void deactivateinfo (lua_State *L, CallInfo *p_ci) {
-  CallInfo *ci;
-  for (ci = L->ci; ci > p_ci; ci--)
-    ci->pc = NULL;
 }
 
 /* }====================================================== */
@@ -168,7 +141,6 @@ void luaD_growstack (lua_State *L, int n) {
 
 
 static void luaD_growCI (lua_State *L) {
-  L->ci--;
   if (L->size_ci > LUA_MAXCALLS)  /* overflow while handling overflow? */
     luaD_throw(L, LUA_ERRERR);
   else {
@@ -176,7 +148,6 @@ static void luaD_growCI (lua_State *L) {
     if (L->size_ci > LUA_MAXCALLS)
       luaG_runerror(L, "stack overflow");
   }
-  L->ci++;
 }
 
 
@@ -412,34 +383,34 @@ struct CallS {  /* data to `f_call' */
 
 static void f_call (lua_State *L, void *ud) {
   struct CallS *c = cast(struct CallS *, ud);
-  luaM_growvector(L, L->toreset, L->number_toreset, L->size_toreset,
-                     Protection, MAX_INT, "");
   luaD_call(L, c->func, c->nresults);
 }
 
 
-int luaD_pcall (lua_State *L, int nargs, int nresults) {
+int luaD_pcall (lua_State *L, int nargs, int nresults, ptrdiff_t errfunc) {
   struct CallS c;
   int status;
-  int protectionlevel = L->number_toreset;
-  Protection protection;
-  protection.top = savestack(L, L->top);
-  protection.ci = saveci(L, L->ci);
-  protection.allowhooks = allowhook(L);
+  ptrdiff_t old_top = savestack(L, L->top);
+  ptrdiff_t old_ci = saveci(L, L->ci);
+  int old_allowhooks = allowhook(L);
+  ptrdiff_t old_errfunc = L->errfunc;
+  L->errfunc = errfunc;
   c.func = L->top - (nargs+1);  /* function to be called */
   c.nresults = nresults;
   status = luaD_rawrunprotected(L, &f_call, &c);
   if (status != 0) {  /* an error occurred? */
-    /* remove parameters and func from the stack */
-    protection.top = savestack(L, restorestack(L, protection.top) - (nargs+1));
-    /* close eventual pending closures */
-    luaF_close(L, restorestack(L, protection.top));
-    L->ci->top = L->top + LUA_MINSTACK;  /* extra space to handle error */
+    StkId err;  /* error msg. position */
     seterrorobj(L, status);
-    deactivateinfo(L, restoreci(L, protection.ci));
-    L->number_toreset = protectionlevel + 1;
-    L->toreset[L->number_toreset - 1] = protection;
+    err = L->top - 1;
+    /* remove parameters and func from the stack */
+    L->top = restorestack(L, old_top) - (nargs+1);
+    setobj(L->top++, err);  /* copy error message to corrected top */
+    luaF_close(L, L->top);  /* close eventual pending closures */
+    L->ci = restoreci(L, old_ci);
+    setallowhook(L, old_allowhooks);
+    restore_stack_limit(L);
   }
+  L->errfunc = old_errfunc;
   return status;
 }
 

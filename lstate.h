@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.89 2002/07/16 14:26:56 roberto Exp roberto $
+** $Id: lstate.h,v 1.90 2002/08/05 17:36:24 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -101,15 +101,6 @@ typedef struct CallInfo {
 } CallInfo;
 
 
-/*
-** informations about a `protection' (error recovery points)
-*/
-typedef struct Protection {
-  ptrdiff_t ci;
-  ptrdiff_t top;
-  int allowhooks;
-} Protection;
-
 
 #define ci_func(ci)	(clvalue((ci)->base - 1))
 
@@ -154,9 +145,7 @@ struct lua_State {
   lua_Hook hook;
   UpVal *openupval;  /* list of open upvalues in this stack */
   struct lua_longjmp *errorJmp;  /* current error recover point */
-  Protection *toreset;  /* array of pending pcall resets */
-  int number_toreset;
-  int size_toreset;
+  ptrdiff_t errfunc;  /* current error handling function (stack index) */
   lua_State *next;  /* circular double linked list of states */
   lua_State *previous;
   TObject globs[NUMGLOBS];  /* registry, table of globals, etc. */
