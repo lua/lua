@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.14 1997/12/30 19:08:23 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.16 1998/03/10 17:15:05 roberto Exp $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -119,9 +119,9 @@ SETTABLE0,/*	-	v i t		-		t[i]=v  */
 
 SETTABLE,/*	b	v a_b...a_1 i t	a_b...a_1 i t	t[i]=v  */
 
-SETLIST,/*	b c	v_b...v_1 t	-		t[i+c*FPF]=v_i  */
+SETLIST,/*	b c	v_c...v_1 t	-		t[i+b*FPF]=v_i  */
 SETLIST0,/*	b	v_b...v_1 t	-		t[i]=v_i  */
-SETLISTW,/*	w c	v_b...v_1 t	-		t[i+c*FPF]=v_i  */
+SETLISTW,/*	w c	v_c...v_1 t	-		t[i+w*FPF]=v_i  */
 
 SETMAP,/*	b	v_b k_b ...v_0 k_0 t	t	t[k_i]=v_i  */
 SETMAP0,/*	-	v_0 k_0 t		t	t[k_0]=v_0  */

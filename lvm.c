@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.24 1998/03/06 16:54:42 roberto Exp roberto $
+** $Id: lvm.c,v 1.25 1998/03/09 21:49:52 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -136,9 +136,9 @@ void luaV_gettable (void)
 
 /*
 ** Function to store indexed based on values at the stack.top
-** mode = 0: raw store (without internal methods)
-** mode = 1: normal store (with internal methods)
-** mode = 2: "deep L->stack.stack" store (with internal methods)
+** mode = 0: raw store (without tag methods)
+** mode = 1: normal store (with tag methods)
+** mode = 2: "deep L->stack.stack" store (with tag methods)
 */
 void luaV_settable (TObject *t, int mode)
 {
