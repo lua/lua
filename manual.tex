@@ -1,4 +1,4 @@
-% $Id: $
+% $Id: manual.tex,v 1.2 1996/01/29 17:08:23 roberto Exp roberto $
 
 \documentstyle[A4,11pt,bnf]{article}
 
@@ -13,7 +13,7 @@
 \newcommand{\Def}[1]{{\em #1}\index{#1}}
 \newcommand{\Deffunc}[1]{\index{{\tt #1}}}
 
-
+%\makeindex
 
 \begin{document}
 
@@ -32,7 +32,7 @@ Waldemar Celes Filho
 Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{November, 1995}
+\date{\small \verb$Date: 1996/01/29 17:08:23 $}
 
 \maketitle
 
@@ -44,8 +44,6 @@ as a configuration language for any program that needs one.
 This document describes version 2.2 of the Lua programming language and the
 API that allows interaction between Lua programs and its host C program.
 It also presents some examples of using the main features of the system.
-
-{\em Lua manual: \verb$Date$, \verb$Revision$}
 \end{abstract}
 
 \vspace{4ex}
@@ -649,6 +647,12 @@ not present in a table.
 It receives as arguments the table and the index.
 Its return value is the final result of the indexing operation.
 The default function returns nil.
+\item[``getglobal'']\index{index getglobal}
+called when Lua tries to retrieve the value of a global variable
+which has a nil value (or which has not been initialized).
+It receives as argument the name of the variable.
+Its return value is the final result of the expression.
+The default function returns nil.
 \item[``gettable'']\index{gettable fallback}
 called when Lua tries to index a non table value.
 It receives as arguments the non table value and the index.
@@ -751,7 +755,8 @@ executes the ``file'' {\tt stdin}.
 
 \subsection{Converting Values between C and Lua} \label{valuesCLua}
 Because Lua has no static type system,
-all values passed between Lua and C have type \IndexVerb{lua\_Object},
+all values passed between Lua and C have type
+\verb'lua_Object'\Deffunc{lua_Object},
 which works like an abstract type in C that can hold any Lua value.
 
 Lua has automatic memory management, and garbage collection.
@@ -832,7 +837,8 @@ otherwise, the function returns 0 (the null pointer).
 The reverse process, that is, passing a specific C value to Lua,
 is done by using the following functions:
 \Deffunc{lua_pushnumber}\Deffunc{lua_pushstring}\Deffunc{lua_pushliteral}
-\Deffunc{lua_pushcfunction}\Deffunc{lua_pushusertag}\Deffunc{lua_pushuserdata}
+\Deffunc{lua_pushcfunction}\Deffunc{lua_pushusertag}
+\Deffunc{lua_pushuserdata}
 \begin{verbatim}
 void           lua_pushnumber           (double n);
 void           lua_pushstring           (char *s);
@@ -1040,7 +1046,8 @@ lua_Object     lua_getparam             (int number);
 \end{verbatim}
 where \verb'number' starts with 1 to get the first argument.
 When called with a number larger than the actual number of arguments,
-this function returns \IndexVerb{LUA\_NOOBJECT}.
+this function returns
+\verb'LUA_NOOBJECT'\Deffunc{LUA_NOOBJECT}.
 In this way, it is possible to write functions that work with
 a variable number of parameters.
 
@@ -1780,5 +1787,10 @@ with no intermediate calls to Lua.
 Special care should be taken with macros like
 \verb'lua_getindexed' and \verb'lua_getfield'.
 \end{itemize}
+
+\newcommand{\indexentry}[2]{\item {#1} #2}
+\begin{theindex}
+\input{manual.idx}
+\end{theindex}
 
 \end{document}
