@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.6 1997/12/17 20:48:58 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.8 1998/01/09 15:06:07 roberto Exp $
 ** Auxiliar functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -8,25 +8,27 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+/* Please Notice: This file uses only the oficial API of Lua
+** Any function declared here could be written as an application
+** function. With care, these functions can be used by other libraries.
+*/
 #include "lauxlib.h"
 #include "lua.h"
 #include "luadebug.h"
 
 
 
-void luaL_arg_check (int cond, int numarg, char *extramsg)
+void luaL_argerror (int numarg, char *extramsg)
 {
-  if (!cond) {
-    char *funcname;
-    lua_getobjname(lua_stackedfunction(0), &funcname);
-    if (funcname == NULL)
-      funcname = "???";
-    if (extramsg == NULL)
-      luaL_verror("bad argument #%d to function `%.50s'", numarg, funcname);
-    else
-      luaL_verror("bad argument #%d to function `%.50s' (%.100s)",
-                      numarg, funcname, extramsg);
-  }
+  char *funcname;
+  lua_getobjname(lua_stackedfunction(0), &funcname);
+  if (funcname == NULL)
+    funcname = "???";
+  if (extramsg == NULL)
+    luaL_verror("bad argument #%d to function `%.50s'", numarg, funcname);
+  else
+    luaL_verror("bad argument #%d to function `%.50s' (%.100s)",
+                    numarg, funcname, extramsg);
 }
 
 char *luaL_check_string (int numArg)
