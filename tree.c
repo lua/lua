@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.16 1996/02/12 18:32:40 roberto Exp roberto $";
+char *rcs_tree="$Id: tree.c,v 1.17 1996/02/14 13:35:51 roberto Exp roberto $";
 
 
 #include <string.h>
@@ -15,8 +15,6 @@ char *rcs_tree="$Id: tree.c,v 1.16 1996/02/12 18:32:40 roberto Exp roberto $";
 #include "hash.h"
 #include "table.h"
 
-
-#define lua_streq(a,b)	(a[0] == b[0] && strcmp(a,b) == 0)
 
 #define NUM_HASHS  64
 
@@ -30,7 +28,7 @@ static int initialized = 0;
 
 static stringtable string_root[NUM_HASHS];
 
-static TaggedString EMPTY = {NOT_USED, NOT_USED, 0, 0, {0}};
+static TaggedString EMPTY = {NOT_USED, NOT_USED, 0, 2, {0}};
 
 
 static unsigned long hash (char *str)
@@ -92,7 +90,7 @@ static TaggedString *insert (char *str, stringtable *tb)
   {
     if (tb->hash[i] == &EMPTY)
       j = i;
-    else if (lua_streq(str, tb->hash[i]->str))
+    else if (strcmp(str, tb->hash[i]->str) == 0)
       return tb->hash[i];
     i = (i+1)%tb->size;
   }
@@ -130,7 +128,7 @@ Long lua_strcollector (void)
     for (j=0; j<tb->size; j++)
     {
       TaggedString *t = tb->hash[j];
-      if (t != NULL && t != &EMPTY && t->marked <= 1)
+      if (t != NULL && t->marked <= 1)
       {
         if (t->marked)
           t->marked = 0;

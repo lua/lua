@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.26 1996/02/13 17:30:39 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.27 1996/02/14 13:35:51 roberto Exp roberto $";
  
 
 #include <ctype.h>
@@ -15,8 +15,6 @@ char *rcs_lex = "$Id: lex.c,v 2.26 1996/02/13 17:30:39 roberto Exp roberto $";
 #include "ugly.h"
 
 #define MINBUFF 260
-
-#define lua_strcmp(a,b)	(a[0]<b[0]?(-1):(a[0]>b[0]?(1):strcmp(a,b)))
 
 #define next() { current = input(); }
 #define save(x) { *yytextLast++ = (x); }
@@ -165,12 +163,12 @@ int luaY_lex (void)
 	while (isalnum(current) || current == '_')
           save_and_next();
         *yytextLast = 0;
-	if (lua_strcmp(yytext, "debug") == 0)
+	if (strcmp(yytext, "debug") == 0)
 	{
 	  luaY_lval.vInt = 1;
 	  return DEBUG;
         }
-	else if (lua_strcmp(yytext, "nodebug") == 0)
+	else if (strcmp(yytext, "nodebug") == 0)
 	{
 	  luaY_lval.vInt = 0;
 	  return DEBUG;
