@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 1.2 1994/02/13 20:36:51 roberto Exp celes $";
+char *rcs_opcode="$Id: opcode.c,v 1.3 1994/03/28 15:14:02 celes Exp celes $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -147,8 +147,6 @@ int lua_execute (Byte *pc)
   OpCode opcode;
   switch (opcode = (OpCode)*pc++)
   {
-   case NOP: break;
-   
    case PUSHNIL: tag(top++) = T_NIL; break;
    
    case PUSH0: tag(top) = T_NUMBER; nvalue(top++) = 0; break;
@@ -158,17 +156,26 @@ int lua_execute (Byte *pc)
    case PUSHBYTE: tag(top) = T_NUMBER; nvalue(top++) = *pc++; break;
    
    case PUSHWORD: 
-    tag(top) = T_NUMBER; nvalue(top++) = *((Word *)(pc)); pc += sizeof(Word);
+   {
+    CodeWord code;
+    get_word(code,pc);
+    tag(top) = T_NUMBER; nvalue(top++) = code.w;
+   }
    break;
    
    case PUSHFLOAT:
-    tag(top) = T_NUMBER; nvalue(top++) = *((float *)(pc)); pc += sizeof(float);
+   {
+    CodeFloat code;
+    get_float(code,pc);
+    tag(top) = T_NUMBER; nvalue(top++) = code.f;
+   }
    break;
+
    case PUSHSTRING:
    {
-    int w = *((Word *)(pc));
-    pc += sizeof(Word);
-    tag(top) = T_STRING; svalue(top++) = lua_constant[w];
+    CodeWord code;
+    get_word(code,pc);
+    tag(top) = T_STRING; svalue(top++) = lua_constant[code.w];
    }
    break;
    
@@ -180,7 +187,11 @@ int lua_execute (Byte *pc)
    case PUSHLOCAL: *top++ = *(base + (*pc++)); break;
    
    case PUSHGLOBAL: 
-    *top++ = s_object(*((Word *)(pc))); pc += sizeof(Word);
+   {
+    CodeWord code;
+    get_word(code,pc);
+    *top++ = s_object(code.w);
+   }
    break;
    
    case PUSHINDEXED:
@@ -209,7 +220,11 @@ int lua_execute (Byte *pc)
    case STORELOCAL: *(base + (*pc++)) = *(--top); break;
    
    case STOREGLOBAL:
-    s_object(*((Word *)(pc))) = *(--top); pc += sizeof(Word);
+   {
+    CodeWord code;
+    get_word(code,pc);
+    s_object(code.w) = *(--top);
+   }
    break;
 
    case STOREINDEXED0:
@@ -278,9 +293,9 @@ int lua_execute (Byte *pc)
     }
     while (n)
     {
-     int w = *((Word *)(pc));
-     pc += sizeof(Word);
-     tag(top) = T_STRING; svalue(top) = lua_constant[w];
+     CodeWord code;
+     get_word(code,pc);
+     tag(top) = T_STRING; svalue(top) = lua_constant[code.w];
      *(lua_hashdefine (avalue(arr), top)) = *(top-1);
      top--;
      n--;
@@ -438,39 +453,51 @@ int lua_execute (Byte *pc)
    
    case ONTJMP:
    {
-    int n = *((Word *)(pc));
-    pc += sizeof(Word);
-    if (tag(top-1) != T_NIL) pc += n;
+    CodeWord code;
+    get_word(code,pc);
+    if (tag(top-1) != T_NIL) pc += code.w;
    }
    break;
    
    case ONFJMP:	   
    {
-    int n = *((Word *)(pc));
-    pc += sizeof(Word);
-    if (tag(top-1) == T_NIL) pc += n;
+    CodeWord code;
+    get_word(code,pc);
+    if (tag(top-1) == T_NIL) pc += code.w;
    }
    break;
    
-   case JMP: pc += *((Word *)(pc)) + sizeof(Word); break;
+   case JMP:
+   {
+    CodeWord code;
+    get_word(code,pc);
+    pc += code.w;
+   }
+   break;
     
-   case UPJMP: pc -= *((Word *)(pc)) - sizeof(Word); break; 
+   case UPJMP:
+   {
+    CodeWord code;
+    get_word(code,pc);
+    pc -= code.w;
+   }
+   break;
    
    case IFFJMP:
    {
-    int n = *((Word *)(pc));
-    pc += sizeof(Word);
+    CodeWord code;
+    get_word(code,pc);
     top--;
-    if (tag(top) == T_NIL) pc += n;
+    if (tag(top) == T_NIL) pc += code.w;
    }
    break;
 
    case IFFUPJMP:
    {
-    int n = *((Word *)(pc));
-    pc += sizeof(Word);
+    CodeWord code;
+    get_word(code,pc);
     top--;
-    if (tag(top) == T_NIL) pc -= n;
+    if (tag(top) == T_NIL) pc -= code.w;
    }
    break;
 
@@ -547,19 +574,20 @@ int lua_execute (Byte *pc)
    
    case SETFUNCTION:
    {
-    int file, func;
-    file = *((Word *)(pc));
-    pc += sizeof(Word);
-    func = *((Word *)(pc));
-    pc += sizeof(Word);
-    if (lua_pushfunction (file, func))
+    CodeWord file, func;
+    get_word(file,pc);
+    get_word(func,pc);
+    if (lua_pushfunction (file.w, func.w))
      return 1;
    }
    break;
    
    case SETLINE:
-    lua_debugline = *((Word *)(pc));
-    pc += sizeof(Word);
+   {
+    CodeWord code;
+    get_word(code,pc);
+    lua_debugline = code.w;
+   }
    break;
    
    case RESET:

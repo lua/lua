@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 1.2 1993/12/22 21:15:16 roberto Exp roberto $
+** $Id: opcode.h,v 1.3 1994/02/13 20:35:53 roberto Exp celes $
 */
 
 #ifndef opcode_h
@@ -20,9 +20,20 @@ typedef unsigned char  Byte;
 
 typedef unsigned short Word;
 
+typedef union
+{
+ struct {char c1; char c2;} m;
+ Word w;
+} CodeWord;
+
+typedef union
+{
+ struct {char c1; char c2; char c3; char c4;} m;
+ float f;
+} CodeFloat;
+
 typedef enum 
 { 
- NOP,
  PUSHNIL,
  PUSH0, PUSH1, PUSH2,
  PUSHBYTE,
@@ -128,6 +139,11 @@ typedef struct
 #define s_avalue(i)	(avalue(&s_object(i)))
 #define s_fvalue(i)	(fvalue(&s_object(i)))
 #define s_uvalue(i)	(uvalue(&s_object(i)))
+
+#define get_word(code,pc)    {code.m.c1 = *pc++; code.m.c2 = *pc++;}
+#define get_float(code,pc)   {code.m.c1 = *pc++; code.m.c2 = *pc++;\
+                              code.m.c3 = *pc++; code.m.c4 = *pc++;}
+ 
 
 
 /* Exported functions */

@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 1.4 1994/02/13 20:38:20 roberto Exp celes $";
+char *rcs_luastx = "$Id: lua.stx,v 1.5 1994/03/28 15:14:54 celes Exp celes $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,10 +15,6 @@ char *rcs_luastx = "$Id: lua.stx,v 1.4 1994/02/13 20:38:20 roberto Exp celes $";
 #include "lua.h"
 
 #define LISTING 0
-
-#ifndef ALIGNMENT
-#define ALIGNMENT	(sizeof(void *))
-#endif
 
 #ifndef MAXCODE
 #define MAXCODE 1024
@@ -56,34 +52,30 @@ static void code_byte (Byte c)
  *pc++ = c;
 }
 
-#define align(t,n)  align_n(sizeof(t),n)
-static void align_n (unsigned size, int gap)
-{
- if (size > ALIGNMENT) size = ALIGNMENT;
- while (((pc+gap-code)%size) != 0)	/* +gap to include BYTECODEs */
-  code_byte (NOP);
-}
-
 static void code_word (Word n)
 {
- if (pc-basepc>MAXCODE-sizeof(Word))
- {
-  lua_error ("code buffer overflow");
-  err = 1;
- }
- *((Word *)pc) = n;
- pc += sizeof(Word);
+ CodeWord code;
+ code.w = n;
+ code_byte(code.m.c1);
+ code_byte(code.m.c2);
 }
 
 static void code_float (float n)
 {
- if (pc-basepc>MAXCODE-sizeof(float))
- {
-  lua_error ("code buffer overflow");
-  err = 1;
- }
- *((float *)pc) = n;
- pc += sizeof(float);
+ CodeFloat code;
+ code.f = n;
+ code_byte(code.m.c1);
+ code_byte(code.m.c2);
+ code_byte(code.m.c3);
+ code_byte(code.m.c4);
+}
+
+static void code_word_at (Byte *p, Word n)
+{
+ CodeWord code;
+ code.w = n;
+ *p++ = code.m.c1;
+ *p++ = code.m.c2;
 }
 
 static void push_field (Word name)
@@ -101,7 +93,6 @@ static void flush_record (int n)
 {
   int i;
   if (n == 0) return;
-  align(Word,2);  /* two bytes before the actual word */
   code_byte(STORERECORD);
   code_byte(n);
   for (i=0; i<n; i++)
@@ -168,14 +159,12 @@ static void code_number (float f)
    }
    else
    {
-    align(Word,1);
     code_byte(PUSHWORD);
     code_word(i);
    }
   }
   else
   {
-   align(float,1);
    code_byte(PUSHFLOAT);
    code_float(f);
   }
@@ -229,7 +218,7 @@ functionlist : /* empty */
 		{
 		  maincode=pc;
 #if LISTING
- PrintCode(basepc,maincode);
+ PrintCode(basepc,maincode,(Byte*)mainbuffer);
 #endif
 		}
 	     | functionlist function
@@ -240,7 +229,6 @@ function     : FUNCTION NAME {pc=basepc=code; nlocalvar=0;} '(' parlist ')'
 	       {
 	        if (lua_debug)
 		{
-		 align(Word,1);
 	         code_byte(SETFUNCTION); 
                  code_word(lua_nfile-1);
 		 code_word($2);
@@ -256,7 +244,7 @@ function     : FUNCTION NAME {pc=basepc=code; nlocalvar=0;} '(' parlist ')'
 	        s_bvalue($2) = calloc (pc-code, sizeof(Byte));
 	        memcpy (s_bvalue($2), code, (pc-code)*sizeof(Byte));
 #if LISTING
-PrintCode(code,pc);
+PrintCode(code,pc,(Byte*)buffer);
 #endif
 	       }
 	       ;
@@ -269,7 +257,7 @@ stat	 : {
             ntemp = 0; 
             if (lua_debug)
             {
-             align(Word,1); code_byte(SETLINE); code_word(lua_linenumber);
+             code_byte(SETLINE); code_word(lua_linenumber);
             }
 	   }
 	   stat1
@@ -284,16 +272,15 @@ stat1  : IF expr1 THEN PrepJump block PrepJump elsepart END
 	 if (pc - elseinit == 0)		/* no else */
 	 {
 	  pc -= sizeof(Word)+1;
-	 /* if (*(pc-1) == NOP) --pc; */
 	  elseinit = pc;
 	 }
 	 else
 	 {
 	  *($6) = JMP;
-	  *((Word *)($6+1)) = pc - elseinit;
+	  code_word_at($6+1, pc - elseinit);
 	 }
 	 *($4) = IFFJMP;
-	 *((Word *)($4+1)) = elseinit - ($4 + sizeof(Word)+1);
+	 code_word_at($4+1, elseinit - ($4 + sizeof(Word)+1));
 	}
        }
      
@@ -301,17 +288,17 @@ stat1  : IF expr1 THEN PrepJump block PrepJump elsepart END
      	
        {
         *($5) = IFFJMP;
-        *((Word *)($5+1)) = pc - ($5 + sizeof(Word)+1);
+	code_word_at($5+1, pc - ($5 + sizeof(Word)+1));
         
         *($7) = UPJMP;
-        *((Word *)($7+1)) = pc - $<pByte>2;
+	code_word_at($7+1, pc - $<pByte>2);
        }
      
        | REPEAT {$<pByte>$ = pc;} block UNTIL expr1 PrepJump
      	
        {
         *($6) = IFFUPJMP;
-        *((Word *)($6+1)) = pc - $<pByte>2;
+	code_word_at($6+1, pc - $<pByte>2);
        }
 
 
@@ -347,10 +334,10 @@ elsepart : /* empty */
 	   else
 	   {
 	    *($6) = JMP;
-	    *((Word *)($6+1)) = pc - elseinit;
+	    code_word_at($6+1, pc - elseinit);
 	   }
 	   *($4) = IFFJMP;
-	   *((Word *)($4+1)) = elseinit - ($4 + sizeof(Word)+1);
+	   code_word_at($4+1, elseinit - ($4 + sizeof(Word)+1));
 	  }  
          }   
          ;
@@ -366,7 +353,7 @@ block    : {$<vInt>$ = nlocalvar;} statlist {ntemp = 0;} ret
          ;
 
 ret	: /* empty */
-        | { if (lua_debug){align(Word,1);code_byte(SETLINE);code_word(lua_linenumber);}}
+        | { if (lua_debug){code_byte(SETLINE);code_word(lua_linenumber);}}
           RETURN  exprlist sc 	
           { 
            if (lua_debug) code_byte(RESET); 
@@ -376,7 +363,6 @@ ret	: /* empty */
 
 PrepJump : /* empty */
 	 { 
-          align(Word,1); 
 	  $$ = pc;
 	  code_byte(0);		/* open space */
 	  code_word (0);
@@ -409,7 +395,6 @@ expr :	'(' expr ')'    { $$ = $2; }
      |	NUMBER          { code_number($1); $$ = 1; }
      |	STRING
      {
-      align(Word,1);
       code_byte(PUSHSTRING);
       code_word($1);
       $$ = 1;
@@ -421,20 +406,20 @@ expr :	'(' expr ')'    { $$ = $2; }
       $$ = 0;
       if (lua_debug)
       {
-       align(Word,1); code_byte(SETLINE); code_word(lua_linenumber);
+       code_byte(SETLINE); code_word(lua_linenumber);
       }
      }
      |	NOT expr1	{ code_byte(NOTOP);  $$ = 1;}
      |	expr1 AND PrepJump {code_byte(POP); ntemp--;} expr1
      { 
       *($3) = ONFJMP;
-      *((Word *)($3+1)) = pc - ($3 + sizeof(Word)+1);
+      code_word_at($3+1, pc - ($3 + sizeof(Word)+1));
       $$ = 1;
      }
      |	expr1 OR PrepJump {code_byte(POP); ntemp--;} expr1	
      { 
       *($3) = ONTJMP;
-      *((Word *)($3+1)) = pc - ($3 + sizeof(Word)+1);
+      code_word_at($3+1, pc - ($3 + sizeof(Word)+1));
       $$ = 1;
      }
      ;
@@ -465,7 +450,7 @@ typeconstructor: '@'
        $$ = 0;
        if (lua_debug)
        {
-        align(Word,1); code_byte(SETLINE); code_word(lua_linenumber);
+        code_byte(SETLINE); code_word(lua_linenumber);
        }
       }
      }
@@ -566,7 +551,6 @@ var	  :	NAME
 	  }
 	  |	var {lua_pushvar ($1);} '.' NAME
 	  {
-	   align(Word,1);
 	   code_byte(PUSHSTRING);
 	   code_word(lua_findconstant (s_name($4))); incr_ntemp();
 	   $$ = 0;		/* indexed variable */
@@ -605,7 +589,6 @@ static void lua_pushvar (long number)
 { 
  if (number > 0)	/* global var */
  {
-  align(Word,1);
   code_byte(PUSHGLOBAL);
   code_word(number-1);
   incr_ntemp();
@@ -638,7 +621,6 @@ static void lua_codestore (int i)
 {
  if (varbuffer[i] > 0)		/* global var */
  {
-  align(Word,1);
   code_byte(STOREGLOBAL);
   code_word(varbuffer[i]-1);
  }
@@ -703,14 +685,13 @@ int lua_parse (void)
 
 #if LISTING
 
-static void PrintCode (Byte *p, Byte *end)
+static void PrintCode (Byte *p, Byte *end, Byte *code)
 {
  printf ("\n\nCODE\n");
  while (p != end)
  {
   switch ((OpCode)*p)
   {
-   case NOP:		printf ("%d    NOP\n", (p++)-code); break;
    case PUSHNIL:	printf ("%d    PUSHNIL\n", (p++)-code); break;
    case PUSH0: case PUSH1: case PUSH2:
     			printf ("%d    PUSH%c\n", p-code, *p-PUSH0+'0');
@@ -721,16 +702,31 @@ static void PrintCode (Byte *p, Byte *end)
     			p++;
    			break;
    case PUSHWORD:
-    			printf ("%d    PUSHWORD   %d\n", p-code, *((Word *)(p+1)));
-    			p += 1 + sizeof(Word);
+                        {
+			 CodeWord c;
+			 int n = p-code;
+			 p++;
+			 get_word(c,p);
+    			 printf ("%d    PUSHWORD   %d\n", n, c.w);
+			}
    			break;
    case PUSHFLOAT:
-    			printf ("%d    PUSHFLOAT  %f\n", p-code, *((float *)(p+1)));
-    			p += 1 + sizeof(float);
+			{
+			 CodeFloat c;
+			 int n = p-code;
+			 p++;
+			 get_float(c,p);
+    			 printf ("%d    PUSHFLOAT  %f\n", n, c.f);
+			}
    			break;
    case PUSHSTRING:
-    			printf ("%d    PUSHSTRING   %d\n", p-code, *((Word *)(p+1)));
-    			p += 1 + sizeof(Word);
+    			{
+			 CodeWord c;
+			 int n = p-code;
+			 p++;
+			 get_word(c,p);
+    			 printf ("%d    PUSHSTRING   %d\n", n, c.w);
+			}
    			break;
    case PUSHLOCAL0: case PUSHLOCAL1: case PUSHLOCAL2: case PUSHLOCAL3:
    case PUSHLOCAL4: case PUSHLOCAL5: case PUSHLOCAL6: case PUSHLOCAL7:
@@ -742,8 +738,13 @@ static void PrintCode (Byte *p, Byte *end)
     			p++;
    			break;
    case PUSHGLOBAL:
-    			printf ("%d    PUSHGLOBAL   %d\n", p-code, *((Word *)(p+1)));
-    			p += 1 + sizeof(Word);
+    			{
+			 CodeWord c;
+			 int n = p-code;
+			 p++;
+			 get_word(c,p);
+    			 printf ("%d    PUSHGLOBAL   %d\n", n, c.w);
+			}
    			break;
    case PUSHINDEXED:    printf ("%d    PUSHINDEXED\n", (p++)-code); break;
    case PUSHMARK:       printf ("%d    PUSHMARK\n", (p++)-code); break;
@@ -759,8 +760,13 @@ static void PrintCode (Byte *p, Byte *end)
     			p++;
    			break;
    case STOREGLOBAL:
-    			printf ("%d    STOREGLOBAL   %d\n", p-code, *((Word *)(p+1)));
-    			p += 1 + sizeof(Word);
+    			{
+			 CodeWord c;
+			 int n = p-code;
+			 p++;
+			 get_word(c,p);
+    			 printf ("%d    STOREGLOBAL   %d\n", n, c.w);
+			}
    			break;
    case STOREINDEXED0:  printf ("%d    STOREINDEXED0\n", (p++)-code); break;
    case STOREINDEXED:   printf ("%d    STOREINDEXED   %d\n", p-code, *(++p));
@@ -794,28 +800,58 @@ static void PrintCode (Byte *p, Byte *end)
    case MINUSOP:       	printf ("%d    MINUSOP\n", (p++)-code); break;
    case NOTOP:       	printf ("%d    NOTOP\n", (p++)-code); break;
    case ONTJMP:	   
-    			printf ("%d    ONTJMP  %d\n", p-code, *((Word *)(p+1)));
-    			p += sizeof(Word) + 1;
+    			{
+			 CodeWord c;
+			 int n = p-code;
+			 p++;
+			 get_word(c,p);
+    			 printf ("%d    ONTJMP  %d\n", n, c.w);
+			}
    			break;
    case ONFJMP:	   
-    			printf ("%d    ONFJMP  %d\n", p-code, *((Word *)(p+1)));
-    			p += sizeof(Word) + 1;
+    			{
+			 CodeWord c;
+			 int n = p-code;
+			 p++;
+			 get_word(c,p);
+    			 printf ("%d    ONFJMP  %d\n", n, c.w);
+			}
    			break;
    case JMP:	   
-    			printf ("%d    JMP  %d\n", p-code, *((Word *)(p+1)));
-    			p += sizeof(Word) + 1;
+    			{
+			 CodeWord c;
+			 int n = p-code;
+			 p++;
+			 get_word(c,p);
+    			 printf ("%d    JMP  %d\n", n, c.w);
+			}
    			break;
    case UPJMP:
-    			printf ("%d    UPJMP  %d\n", p-code, *((Word *)(p+1)));
-    			p += sizeof(Word) + 1;
+    			{
+			 CodeWord c;
+			 int n = p-code;
+			 p++;
+			 get_word(c,p);
+    			 printf ("%d    UPJMP  %d\n", n, c.w);
+			}
    			break;
    case IFFJMP:
-    			printf ("%d    IFFJMP  %d\n", p-code, *((Word *)(p+1)));
-    			p += sizeof(Word) + 1;
+    			{
+			 CodeWord c;
+			 int n = p-code;
+			 p++;
+			 get_word(c,p);
+    			 printf ("%d    IFFJMP  %d\n", n, c.w);
+			}
    			break;
    case IFFUPJMP:
-    			printf ("%d    IFFUPJMP  %d\n", p-code, *((Word *)(p+1)));
-    			p += sizeof(Word) + 1;
+    			{
+			 CodeWord c;
+			 int n = p-code;
+			 p++;
+			 get_word(c,p);
+    			 printf ("%d    IFFUPJMP  %d\n", n, c.w);
+			}
    			break;
    case POP:       	printf ("%d    POP\n", (p++)-code); break;
    case CALLFUNC:	printf ("%d    CALLFUNC\n", (p++)-code); break;
@@ -823,7 +859,7 @@ static void PrintCode (Byte *p, Byte *end)
     			printf ("%d    RETCODE   %d\n", p-code, *(++p));
     			p++;
    			break;
-   default:		printf ("%d    Cannot happen\n", (p++)-code); break;
+   default:		printf ("%d    Cannot happen: code %d\n", (p++)-code, *(p-1)); break;
   }
  }
 }
