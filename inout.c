@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.20 1995/05/16 17:23:58 roberto Exp $";
+char *rcs_inout="$Id: inout.c,v 2.21 1995/10/04 14:20:26 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -258,10 +258,8 @@ void luaI_type (void)
       lua_pushliteral("table");
       break;
     case LUA_T_FUNCTION :
-      lua_pushliteral("function");
-      break;
     case LUA_T_CFUNCTION :
-      lua_pushliteral("cfunction");
+      lua_pushliteral("function");
       break;
     default :
       lua_pushliteral("userdata");
