@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.77 2002/04/22 14:40:23 roberto Exp roberto $
+** $Id: lobject.c,v 1.78 2002/05/06 15:51:41 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -16,6 +16,8 @@
 #include "lmem.h"
 #include "lobject.h"
 #include "lstate.h"
+#include "lstring.h"
+#include "lvm.h"
 
 
 
@@ -89,17 +91,72 @@ int luaO_str2d (const char *s, lua_Number *result) {
 }
 
 
-/* maximum length of a string format for `luaO_verror' */
-#define MAX_VERROR	280
 
-/* this function needs to handle only '%d' and '%.XXs' formats */
-void luaO_verror (lua_State *L, const char *fmt, ...) {
+static void pushstr (lua_State *L, const char *str) {
+  setsvalue(L->top, luaS_new(L, str));
+  incr_top(L);
+}
+
+
+/* this function handles only `%d', `%c', %f, and `%s' formats */
+const char *luaO_vpushstr (lua_State *L, const char *fmt, va_list argp) {
+  int n = 0;
+  for (;;) {
+    const char *e = strchr(fmt, '%');
+    if (e == NULL) break;
+    setsvalue(L->top, luaS_newlstr(L, fmt, e-fmt));
+    incr_top(L);
+    switch (*(e+1)) {
+      case 's':
+        pushstr(L, va_arg(argp, char *));
+        break;
+      case 'c': {
+        char buff[2];
+        buff[0] = va_arg(argp, int);
+        buff[1] = '\0';
+        pushstr(L, buff);
+        break;
+      }
+      case 'd':
+        setnvalue(L->top, va_arg(argp, int));
+        incr_top(L);
+        break;
+      case 'f':
+        setnvalue(L->top, va_arg(argp, lua_Number));
+        incr_top(L);
+        break;
+      case '%':
+        pushstr(L, "%");
+        break;
+      default: lua_assert(0);
+    }
+    n += 2;
+    fmt = e+2;
+  }
+  pushstr(L, fmt);
+  luaV_strconc(L, n+1, L->top - L->ci->base - 1);
+  L->top -= n;
+  return svalue(L->top - 1);
+}
+
+
+const char *luaO_pushstr (lua_State *L, const char *fmt, ...) {
+  const char *msg;
   va_list argp;
-  char buff[MAX_VERROR];  /* to hold formatted message */
   va_start(argp, fmt);
-  vsprintf(buff, fmt, argp);
+  msg = luaO_vpushstr(L, fmt, argp);
   va_end(argp);
-  luaD_runerror(L, buff);
+  return msg;
+}
+
+
+void luaO_verror (lua_State *L, const char *fmt, ...) {
+  const char *msg;
+  va_list argp;
+  va_start(argp, fmt);
+  msg = luaO_vpushstr(L, fmt, argp);
+  va_end(argp);
+  luaD_runerror(L, msg);
 }
 
 
@@ -108,31 +165,32 @@ void luaO_chunkid (char *out, const char *source, int bufflen) {
     strncpy(out, source+1, bufflen);  /* remove first char */
     out[bufflen-1] = '\0';  /* ensures null termination */
   }
-  else {
+  else {  /* out = "file `source'", or "file `...source'" */
     if (*source == '@') {
       int l;
       source++;  /* skip the `@' */
-      bufflen -= sizeof("file `...%s'");
+      bufflen -= sizeof(" file `...' ");
       l = strlen(source);
+      strcpy(out, "file `");
       if (l>bufflen) {
         source += (l-bufflen);  /* get last part of file name */
-        sprintf(out, "file `...%.99s'", source);
+        strcat(out, "...");
       }
-      else
-        sprintf(out, "file `%.99s'", source);
+      strcat(out, source);
+      strcat(out, "'");
     }
     else {
       int len = strcspn(source, "\n");  /* stop at first newline */
-      bufflen -= sizeof("string \"%.*s...\"");
+      bufflen -= sizeof(" string \"...\" ");
       if (len > bufflen) len = bufflen;
+      strcpy(out, "string \"");
       if (source[len] != '\0') {  /* must truncate? */
-        strcpy(out, "string \"");
-        out += strlen(out);
-        strncpy(out, source, len);
-        strcpy(out+len, "...\"");
+        strncat(out, source, len);
+        strcat(out, "...");
       }
       else
-        sprintf(out, "string \"%.99s\"", source);
+        strcat(out, source);
+      strcat(out, "\"");
     }
   }
 }

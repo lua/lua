@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.97 2002/04/24 20:07:46 roberto Exp roberto $
+** $Id: lcode.c,v 1.98 2002/05/06 15:51:41 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -21,11 +21,6 @@
 
 
 #define hasjumps(e)	((e)->t != (e)->f)
-
-
-void luaK_error (LexState *ls, const char *msg) {
-  luaX_error(ls, msg, ls->t.token);
-}
 
 
 void luaK_nil (FuncState *fs, int from, int n) {
@@ -67,7 +62,7 @@ static void luaK_fixjump (FuncState *fs, int pc, int dest) {
   else {  /* jump is relative to position following jump instruction */
     int offset = dest-(pc+1);
     if (abs(offset) > MAXARG_sBx)
-      luaK_error(fs->ls, "control structure too long");
+      luaX_syntaxerror(fs->ls, "control structure too long");
     SETARG_sBx(*jmp, offset);
   }
 }
@@ -182,7 +177,7 @@ static void luaK_checkstack (FuncState *fs, int n) {
   int newstack = fs->freereg + n;
   if (newstack > fs->f->maxstacksize) {
     if (newstack >= MAXSTACK)
-      luaK_error(fs->ls, "function or expression too complex");
+      luaX_syntaxerror(fs->ls, "function or expression too complex");
     fs->f->maxstacksize = cast(lu_byte, newstack);
   }
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.177 2002/04/22 14:38:52 roberto Exp roberto $
+** $Id: lparser.c,v 1.178 2002/04/24 20:07:46 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -66,10 +66,8 @@ static void lookahead (LexState *ls) {
 
 
 static void error_expected (LexState *ls, int token) {
-  char buff[30], t[TOKEN_LEN];
-  luaX_token2str(token, t);
-  sprintf(buff, "`%.10s' expected", t);
-  luaK_error(ls, buff);
+  luaX_syntaxerror(ls,
+         luaO_pushstr(ls->L, "`%s' expected", luaX_token2str(ls, token)));
 }
 
 
@@ -80,7 +78,7 @@ static void check (LexState *ls, int c) {
 }
 
 
-#define check_condition(ls,c,msg)	{ if (!(c)) luaK_error(ls, msg); }
+#define check_condition(ls,c,msg)	{ if (!(c)) luaX_syntaxerror(ls, msg); }
 
 
 static int optional (LexState *ls, int c) {
@@ -97,13 +95,9 @@ static void check_match (LexState *ls, int what, int who, int where) {
     if (where == ls->linenumber)
       error_expected(ls, what);
     else {
-      char buff[70];
-      char t_what[TOKEN_LEN], t_who[TOKEN_LEN];
-      luaX_token2str(what, t_what);
-      luaX_token2str(who, t_who);
-      sprintf(buff, "`%.10s' expected (to close `%.10s' at line %d)",
-              t_what, t_who, where);
-      luaK_error(ls, buff);
+      luaX_syntaxerror(ls, luaO_pushstr(ls->L,
+             "`%s' expected (to close `%s' at line %d)",
+              luaX_token2str(ls, what), luaX_token2str(ls, who), where));
     }
   }
   next(ls);
@@ -256,7 +250,7 @@ static int singlevar_aux (FuncState *fs, TString *n, expdesc *var, int nd) {
       if (var->k == VGLOBAL) {
         if (k == VNIL && nd && fs->defaultglob != NO_REG) {
           if (fs->defaultglob == NO_REG1)
-            luaK_error(fs->ls, "undeclared global");
+            luaX_syntaxerror(fs->ls, "undeclared global");
           init_exp(var, VLOCAL, fs->defaultglob);
           k = VGLOBAL;  /* now there is a declaration */
         }
@@ -479,7 +473,7 @@ static void funcargs (LexState *ls, expdesc *f) {
   switch (ls->t.token) {
     case '(': {  /* funcargs -> `(' [ explist1 ] `)' */
       if (line != ls->lastline)
-        luaK_error(ls, "ambiguous syntax (function call x new statement)");
+        luaX_syntaxerror(ls,"ambiguous syntax (function call x new statement)");
       next(ls);
       if (ls->t.token == ')')  /* arg list is empty? */
         args.k = VVOID;
@@ -500,7 +494,7 @@ static void funcargs (LexState *ls, expdesc *f) {
       break;
     }
     default: {
-      luaK_error(ls, "function arguments expected");
+      luaX_syntaxerror(ls, "function arguments expected");
       return;
     }
   }
@@ -657,9 +651,10 @@ static void prefixexp (LexState *ls, expdesc *v) {
   /* prefixexp -> NAME | '(' expr ')' */
   switch (ls->t.token) {
     case '(': {
+      int line = ls->linenumber;
       next(ls);
       expr(ls, v);
-      check(ls, ')');
+      check_match(ls, ')', '(', line);
       luaK_dischargevars(ls->fs, v);
       return;
     }
@@ -676,7 +671,7 @@ static void prefixexp (LexState *ls, expdesc *v) {
       return;
     }
     default: {
-      luaK_error(ls, "unexpected symbol");
+      luaX_syntaxerror(ls, "unexpected symbol");
       return;
     }
   }
@@ -1070,7 +1065,7 @@ static void forstat (LexState *ls, int line) {
   switch (ls->t.token) {
     case '=': fornum(ls, varname, line); break;
     case ',': case TK_IN: forlist(ls, varname); break;
-    default: luaK_error(ls, "`=' or `in' expected");
+    default: luaX_syntaxerror(ls, "`=' or `in' expected");
   }
   check_match(ls, TK_END, TK_FOR, line);
   leaveblock(fs);
@@ -1245,7 +1240,7 @@ static void breakstat (LexState *ls) {
     bl = bl->previous;
   }
   if (!bl)
-    luaK_error(ls, "no loop to break");
+    luaX_syntaxerror(ls, "no loop to break");
   if (upval)
     luaK_codeABC(fs, OP_CLOSE, bl->nactloc, 0, 0);
   luaK_concat(fs, &bl->breaklist, luaK_jump(fs));
@@ -1314,7 +1309,7 @@ static void parlist (LexState *ls) {
       switch (ls->t.token) {
         case TK_DOTS: dots = 1; break;
         case TK_NAME: new_localvar(ls, str_checkname(ls), nparams++); break;
-        default: luaK_error(ls, "<name> or `...' expected");
+        default: luaX_syntaxerror(ls, "<name> or `...' expected");
       }
       next(ls);
     } while (!dots && optional(ls, ','));

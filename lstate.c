@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.91 2002/04/23 15:04:39 roberto Exp roberto $
+** $Id: lstate.c,v 1.92 2002/05/01 20:40:42 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -30,7 +30,7 @@ static void close_state (lua_State *L);
 ** call `lua_setpanicf'
 */
 static int default_panic (lua_State *L) {
-  fprintf(stderr, "unable to recover; exiting\n");
+  fputs("unable to recover; exiting\n", stderr);
   return 0;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.188 2002/05/06 15:51:41 roberto Exp roberto $
+** $Id: lapi.c,v 1.189 2002/05/06 19:05:10 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -354,6 +354,13 @@ LUA_API void lua_pushstring (lua_State *L, const char *s) {
 }
 
 
+LUA_API void  lua_vpushstr (lua_State *L, const char *fmt, va_list argp) {
+  lua_lock(L);
+  luaO_vpushstr(L, fmt, argp);
+  lua_unlock(L);
+}
+
+
 LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   Closure *cl;
   lua_lock(L);
@@ -514,7 +521,7 @@ LUA_API void lua_setmetatable (lua_State *L, int objindex) {
       uvalue(obj)->uv.metatable = hvalue(mt);
       break;
     default:
-      luaO_verror(L, "cannot change the meta table of a %.20s",
+      luaO_verror(L, "cannot change the meta table of a %s",
                   luaT_typenames[ttype(obj)]);
   }
   lua_unlock(L);

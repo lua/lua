@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.129 2002/04/05 18:54:31 roberto Exp roberto $
+** $Id: lobject.h,v 1.130 2002/05/06 15:51:41 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -250,6 +250,8 @@ void *luaO_openspaceaux (lua_State *L, size_t n);
 int luaO_equalObj (const TObject *t1, const TObject *t2);
 int luaO_str2d (const char *s, lua_Number *result);
 
+const char *luaO_vpushstr (lua_State *L, const char *fmt, va_list argp);
+const char *luaO_pushstr (lua_State *L, const char *fmt, ...);
 void luaO_verror (lua_State *L, const char *fmt, ...);
 void luaO_chunkid (char *out, const char *source, int len);
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.172 2002/04/22 14:40:50 roberto Exp roberto $
+** $Id: ldo.c,v 1.173 2002/05/01 20:40:42 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -436,8 +436,7 @@ int luaD_protectedparser (lua_State *L, ZIO *z, int bin) {
   }
   else {
     setobj(L->top++, &p.err);
-    if (status == LUA_ERRRUN)  /* an error occurred: correct error code */
-      status = LUA_ERRSYNTAX;
+    lua_assert(status != LUA_ERRRUN);
   }
   lua_unlock(L);
   return status;
@@ -459,9 +458,8 @@ static void message (lua_State *L, const TObject *msg, int nofunc) {
   }
   else {  /* call error function */
     setobj(L->top, m);
-    incr_top(L);
-    setobj(L->top, msg);
-    incr_top(L);
+    setobj(L->top + 1, msg);
+    L->top += 2;
     luaD_call(L, L->top - 2, 1);
     setobj(m, L->top - 1);
   }

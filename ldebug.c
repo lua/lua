@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.110 2002/04/24 20:07:46 roberto Exp roberto $
+** $Id: ldebug.c,v 1.111 2002/05/02 13:06:20 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -487,10 +487,10 @@ void luaG_typeerror (lua_State *L, const TObject *o, const char *op) {
   if (isinstack(L->ci, o))
     kind = getobjname(L, L->ci, o - L->ci->base, &name);
   if (kind)
-    luaO_verror(L, "attempt to %.30s %.20s `%.40s' (a %.10s value)",
+    luaO_verror(L, "attempt to %s %s `%s' (a %s value)",
                 op, kind, name, t);
   else
-    luaO_verror(L, "attempt to %.30s a %.10s value", op, t);
+    luaO_verror(L, "attempt to %s a %s value", op, t);
 }
 
 
@@ -513,8 +513,8 @@ void luaG_ordererror (lua_State *L, const TObject *p1, const TObject *p2) {
   const char *t1 = luaT_typenames[ttype(p1)];
   const char *t2 = luaT_typenames[ttype(p2)];
   if (t1[2] == t2[2])
-    luaO_verror(L, "attempt to compare two %.10s values", t1);
+    luaO_verror(L, "attempt to compare two %s values", t1);
   else
-    luaO_verror(L, "attempt to compare %.10s with %.10s", t1, t2);
+    luaO_verror(L, "attempt to compare %s with %s", t1, t2);
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.67 2002/05/01 20:40:42 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.68 2002/05/06 19:05:10 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -142,38 +142,10 @@ LUALIB_API void luaL_opennamedlib (lua_State *L, const char *libname,
 }
 
 
-static void vstr (lua_State *L, const char *fmt, va_list argp) {
-  luaL_Buffer b;
-  luaL_buffinit(L, &b);
-  for (;;) {
-    const char *e = strchr(fmt, '%');
-    if (e == NULL) break;
-    luaL_addlstring(&b, fmt, e-fmt);
-    switch (*(e+1)) {
-      case 's':
-        luaL_addstring(&b, va_arg(argp, char *));
-        break;
-      case 'd':
-        lua_pushnumber(L, va_arg(argp, int));
-        luaL_addvalue (&b);
-        break;
-      case '%':
-        luaL_putchar(&b, '%');
-        break;
-      default:
-        lua_error(L, "invalid format option");
-    }
-    fmt = e+2;
-  }
-  luaL_addstring(&b, fmt);
-  luaL_pushresult(&b);
-}
-
-
 LUALIB_API void luaL_vstr (lua_State *L, const char *fmt, ...) {
   va_list argp;
   va_start(argp, fmt);
-  vstr(L, fmt, argp);
+  lua_vpushstr(L, fmt, argp);
   va_end(argp);
 }
 
@@ -181,7 +153,7 @@ LUALIB_API void luaL_vstr (lua_State *L, const char *fmt, ...) {
 LUALIB_API int luaL_verror (lua_State *L, const char *fmt, ...) {
   va_list argp;
   va_start(argp, fmt);
-  vstr(L, fmt, argp);
+  lua_vpushstr(L, fmt, argp);
   va_end(argp);
   return lua_errorobj(L);
 }

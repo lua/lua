@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.49 2002/05/01 20:40:42 roberto Exp roberto $
+** $Id: ldblib.c,v 1.50 2002/05/06 19:05:10 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -34,7 +34,6 @@ static void settabsi (lua_State *L, const char *i, int v) {
 static int getinfo (lua_State *L) {
   lua_Debug ar;
   const char *options = luaL_opt_string(L, 2, "flnSu");
-  char buff[20];
   if (lua_isnumber(L, 1)) {
     if (!lua_getstack(L, (int)(lua_tonumber(L, 1)), &ar)) {
       lua_pushnil(L);  /* level out of range */
@@ -42,9 +41,9 @@ static int getinfo (lua_State *L) {
     }
   }
   else if (lua_isfunction(L, 1)) {
+    luaL_vstr(L, ">%s", options);
+    options = lua_tostring(L, -1);
     lua_pushvalue(L, 1);
-    sprintf(buff, ">%.10s", options);
-    options = buff;
   }
   else
     return luaL_argerror(L, 1, "function or level expected");
@@ -170,7 +169,7 @@ static int setlinehook (lua_State *L) {
 static int debug (lua_State *L) {
   for (;;) {
     char buffer[250];
-    fprintf(stderr, "lua_debug> ");
+    fputs("lua_debug> ", stderr);
     if (fgets(buffer, sizeof(buffer), stdin) == 0 ||
         strcmp(buffer, "cont\n") == 0)
       return 0;
