@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.34 2000/06/05 14:56:18 roberto Exp roberto $
+** $Id: lcode.c,v 1.35 2000/06/12 13:52:05 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -268,20 +268,29 @@ void luaK_concat (FuncState *fs, int *l1, int l2) {
 
 
 static void luaK_testgo (FuncState *fs, expdesc *v, int invert, OpCode jump) {
+  int prevpos;  /* position of last instruction */
   Instruction *previous;
-  int *golist = &v->u.l.f;
-  int *exitlist = &v->u.l.t;
-  if (invert) {  /* interchange `golist' and `exitlist' */
-    int *temp = golist; golist = exitlist; exitlist = temp;
+  int *golist, *exitlist;
+  if (!invert) {
+    golist = &v->u.l.f;    /* go if false */
+    exitlist = &v->u.l.t;  /* exit if true */
+  }
+  else {
+    golist = &v->u.l.t;    /* go if true */
+    exitlist = &v->u.l.f;  /* exit if false */
   }
   discharge1(fs, v);
-  previous = &fs->f->code[fs->pc-1];
-  LUA_ASSERT(L, GET_OPCODE(*previous) != OP_SETLINE, "bad place to set line");
+  prevpos = fs->pc-1;
+  previous = &fs->f->code[prevpos];
+  LUA_ASSERT(L, *previous==previous_instruction(fs), "no jump allowed here");
+  LUA_ASSERT(L, GET_OPCODE(*previous) != OP_SETLINE, "no setline allowed here");
   if (!ISJUMP(GET_OPCODE(*previous)))
-    luaK_code1(fs, jump, NO_JUMP);
-  else if (invert)
-    SET_OPCODE(*previous, invertjump(GET_OPCODE(*previous)));
-  luaK_concat(fs, exitlist, fs->pc-1);  /* insert last jump in `exitlist' */
+    prevpos = luaK_code1(fs, jump, NO_JUMP);
+  else {  /* last instruction is already a jump */
+    if (invert)
+      SET_OPCODE(*previous, invertjump(GET_OPCODE(*previous)));
+  }
+  luaK_concat(fs, exitlist, prevpos);  /* insert last jump in `exitlist' */
   luaK_patchlist(fs, *golist, luaK_getlabel(fs));
   *golist = NO_JUMP;
 }
@@ -292,7 +301,7 @@ void luaK_goiftrue (FuncState *fs, expdesc *v, int keepvalue) {
 }
 
 
-void luaK_goiffalse (FuncState *fs, expdesc *v, int keepvalue) {
+static void luaK_goiffalse (FuncState *fs, expdesc *v, int keepvalue) {
   luaK_testgo(fs, v, 0, keepvalue ? OP_JMPONT : OP_JMPT);
 }
 
@@ -319,8 +328,8 @@ void luaK_tostack (LexState *ls, expdesc *v, int onlyone) {
       int j = NO_JUMP;  /*  eventual  jump over values */
       int p_nil = NO_JUMP;  /* position of an eventual PUSHNIL */
       int p_1 = NO_JUMP;  /* position of an eventual PUSHINT */
-      if (ISJUMP(previous) || need_value(fs, v->u.l.f, OP_JMPONF) ||
-                              need_value(fs, v->u.l.t, OP_JMPONT)) {
+      if (ISJUMP(previous) || need_value(fs, v->u.l.f, OP_JMPONF)
+                           || need_value(fs, v->u.l.t, OP_JMPONT)) {
         /* expression needs values */
         if (ISJUMP(previous))
           luaK_concat(fs, &v->u.l.t, fs->pc-1);  /* put `previous' in t. list */
@@ -425,34 +434,33 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
   int delta = luaK_opproperties[o].delta;
   int optm = 0;  /* 1 when there is an optimization */
   switch (o) {
-
-    case OP_CLOSURE:
+    case OP_CLOSURE: {
       delta = -arg2+1;
       break;
-
-    case OP_SETTABLE:
+    }
+    case OP_SETTABLE: {
       delta = -arg2;
       break;
-
-    case OP_SETLIST:
+    }
+    case OP_SETLIST: {
       if (arg2 == 0) return NO_JUMP;  /* nothing to do */
       delta = -arg2;
       break;
-
-    case OP_SETMAP:
+    }
+    case OP_SETMAP: {
       if (arg1 == 0) return NO_JUMP;  /* nothing to do */
       delta = -2*arg1;
       break;
-
-    case OP_RETURN:
+    }
+    case OP_RETURN: {
       if (GET_OPCODE(i) == OP_CALL && GETARG_B(i) == MULT_RET) {
         SET_OPCODE(i, OP_TAILCALL);
         SETARG_B(i, arg1);
         optm = 1;
       }
       break;
-
-    case OP_PUSHNIL:
+    }
+    case OP_PUSHNIL: {
       if (arg1 == 0) return NO_JUMP;  /* nothing to do */
       delta = arg1;
       switch(GET_OPCODE(i)) {
@@ -460,8 +468,8 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
         default: break;
       }
       break;
-
-    case OP_POP:
+    }
+    case OP_POP: {
       if (arg1 == 0) return NO_JUMP;  /* nothing to do */
       delta = -arg1;
       switch(GET_OPCODE(i)) {
@@ -469,8 +477,8 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
         default: break;
       }
       break;
-
-    case OP_GETTABLE:
+    }
+    case OP_GETTABLE: {
       switch(GET_OPCODE(i)) {
         case OP_PUSHSTRING:  /* `t.x' */
           SET_OPCODE(i, OP_GETDOTTED);
@@ -483,15 +491,15 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
         default: break;
       }
       break;
-
-    case OP_ADD:
+    }
+    case OP_ADD: {
       switch(GET_OPCODE(i)) {
         case OP_PUSHINT: SET_OPCODE(i, OP_ADDI); optm = 1; break;  /* `a+k' */
         default: break;
       }
       break;
-
-    case OP_SUB:
+    }
+    case OP_SUB: {
       switch(GET_OPCODE(i)) {
         case OP_PUSHINT:  /* `a-k' */
           i = CREATE_S(OP_ADDI, -GETARG_S(i));
@@ -500,8 +508,8 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
         default: break;
       }
       break;
-
-    case OP_CONCAT:
+    }
+    case OP_CONCAT: {
       delta = -arg1+1;
       switch(GET_OPCODE(i)) {
         case OP_CONCAT:  /* `a..b..c' */
@@ -511,8 +519,8 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
         default: break;
       }
       break;
-
-    case OP_MINUS:
+    }
+    case OP_MINUS: {
       switch(GET_OPCODE(i)) {
         case OP_PUSHINT:  /* `-k' */
           SETARG_S(i, -GETARG_S(i));
@@ -525,50 +533,91 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
         default: break;
       }
       break;
-
-    case OP_JMPNE:
+    }
+    case OP_JMPNE: {
       if (i == CREATE_U(OP_PUSHNIL, 1)) {  /* `a~=nil' */
         i = CREATE_S(OP_JMPT, NO_JUMP);
         optm = 1;
       }
       break;
-
-    case OP_JMPEQ:
+    }
+    case OP_JMPEQ: {
       if (i == CREATE_U(OP_PUSHNIL, 1)) {  /* `a==nil' */
         i = CREATE_0(OP_NOT);
         delta = -1;  /* just undo effect of previous PUSHNIL */
         optm = 1;
       }
       break;
-
+    }
     case OP_JMPT:
-    case OP_JMPF:
-    case OP_JMPONT:
-    case OP_JMPONF:
+    case OP_JMPONT: {
       switch (GET_OPCODE(i)) {
-        case OP_NOT: i = CREATE_S(invertjump(o), NO_JUMP); optm = 1; break;
+        case OP_NOT: {
+          i = CREATE_S(OP_JMPF, NO_JUMP);
+          optm = 1;
+          break;
+        }
+        case OP_PUSHINT: {
+          if (o == OP_JMPT) {  /* JMPONT must keep original integer value */
+            i = CREATE_S(OP_JMP, NO_JUMP);
+            optm = 1;
+          }
+          break;
+        }
+        case OP_PUSHNIL: {
+          if (GETARG_U(i) == 1) {
+            fs->pc--;  /* erase previous instruction */
+            luaK_deltastack(fs, -1);  /* correct stack */
+            return NO_JUMP; 
+          }
+          break;
+        }
         default: break;
       }
       break;
-
+    }
+    case OP_JMPF:
+    case OP_JMPONF: {
+      switch (GET_OPCODE(i)) {
+        case OP_NOT: {
+          i = CREATE_S(OP_JMPT, NO_JUMP);
+          optm = 1;
+          break;
+        }
+        case OP_PUSHINT: {  /* `while 1 do ...' */
+          fs->pc--;  /* erase previous instruction */
+          luaK_deltastack(fs, -1);  /* correct stack */
+          return NO_JUMP; 
+        }
+        case OP_PUSHNIL: {  /* `repeat ... until nil' */
+          if (GETARG_U(i) == 1) {
+            i = CREATE_S(OP_JMP, NO_JUMP);
+            optm = 1;
+          }
+          break;
+        }
+        default: break;
+      }
+      break;
+    }
     case OP_GETDOTTED:
     case OP_GETINDEXED:
     case OP_TAILCALL:
-    case OP_ADDI:
+    case OP_ADDI: {
       LUA_INTERNALERROR(L, "instruction used only for optimizations");
       break;
-
-    default:
+    }
+    default: {
       LUA_ASSERT(L, delta != VD, "invalid delta");
       break;
-
+    }
   }
   luaK_deltastack(fs, delta);
   if (optm) {  /* optimize: put instruction in place of last one */
       fs->f->code[fs->pc-1] = i;  /* change previous instruction */
       return fs->pc-1;  /* do not generate new instruction */
   }
-  /* build new instruction */
+  /* else build new instruction */
   switch ((enum Mode)luaK_opproperties[o].mode) {
     case iO: i = CREATE_0(o); break;
     case iU: i = CREATE_U(o, arg1); break;
