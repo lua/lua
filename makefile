@@ -1,4 +1,4 @@
-# $Id: makefile,v 1.23 1996/04/25 14:01:27 roberto Exp roberto $
+# $Id: makefile,v 1.24 1996/05/03 17:27:03 roberto Exp roberto $
 
 #configuration
 
@@ -69,8 +69,8 @@ clear	:
 	co $@
 
 
-
-fallback.o : fallback.c mem.h fallback.h opcode.h lua.h types.h tree.h func.h 
+fallback.o : fallback.c mem.h fallback.h lua.h opcode.h types.h tree.h func.h \
+  table.h 
 func.o : func.c luadebug.h lua.h table.h tree.h types.h opcode.h func.h mem.h 
 hash.o : hash.c mem.h opcode.h lua.h types.h tree.h func.h hash.h table.h 
 inout.o : inout.c lex.h opcode.h lua.h types.h tree.h func.h inout.h table.h \
