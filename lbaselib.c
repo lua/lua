@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.155 2004/08/30 15:28:32 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.156 2004/08/30 18:35:14 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -273,25 +273,25 @@ static int luaB_loadfile (lua_State *L) {
 }
 
 
-struct Aux_load {
-  int func;
-  int res;
-};
-
-
+/*
+** Reader for generic `load' function: `lua_load' uses the
+** stack for internal stuff, so the reader cannot change the
+** stack top. Instead, it keeps its resulting string in a
+** reserved slot inside the stack.
+*/
 static const char *generic_reader (lua_State *L, void *ud, size_t *size) {
-  struct Aux_load *al = (struct Aux_load *)ud;
-  luaL_unref(L, al->res, LUA_REGISTRYINDEX);
-  lua_getref(L, al->func);
-  lua_call(L, 0, 1);
+  luaL_checkstack(L, 2, "too many nested functions");
+  lua_pushvalue(L, 1);  /* get function */
+  lua_call(L, 0, 1);  /* call it */
   if (lua_isnil(L, -1)) {
     *size = 0;
     return NULL;
   }
   else if (lua_isstring(L, -1)) {
-    const char *res = lua_tostring(L, -1);
-    *size = lua_strlen(L, -1);
-    al->res = luaL_ref(L, LUA_REGISTRYINDEX);
+    const char *res;
+    lua_replace(L, 3);  /* save string in a reserved stack slot */
+    res = lua_tostring(L, 3);
+    *size = lua_strlen(L, 3);
     return res;
   }
   else luaL_error(L, "reader function must return a string");
@@ -300,16 +300,11 @@ static const char *generic_reader (lua_State *L, void *ud, size_t *size) {
 
 
 static int luaB_load (lua_State *L) {
-  struct Aux_load al;
   int status;
   const char *cname = luaL_optstring(L, 2, "=(load)");
   luaL_checktype(L, 1, LUA_TFUNCTION);
-  lua_settop(L, 1);
-  al.func = luaL_ref(L, LUA_REGISTRYINDEX);
-  al.res = LUA_REFNIL;
-  status = lua_load(L, generic_reader, &al, cname);
-  luaL_unref(L, al.func, LUA_REGISTRYINDEX);
-  luaL_unref(L, al.res, LUA_REGISTRYINDEX);
+  lua_settop(L, 3);  /* function, eventual name, plus one reserved slot */
+  status = lua_load(L, generic_reader, NULL, cname);
   return load_aux(L, status);
 }
 
