@@ -1,4 +1,4 @@
-# $Id: makefile,v 1.10 1994/12/23 20:47:59 roberto Exp celes $
+# $Id: makefile,v 1.12 1995/02/02 19:02:03 roberto Exp $
 # Compilation parameters
 CC = gcc
 CFLAGS = -I/usr/5include -Wall -Wmissing-prototypes -Wshadow -ansi -O2
@@ -48,8 +48,8 @@ liblua.so.1.0 : lua.o
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 
-parser.c : lua.stx exscript
-	yacc -d lua.stx ; mv -f y.tab.c parser.c ; mv -f y.tab.h parser.h ; ex parser.c <exscript
+parser.c : lua.stx
+	yacc++ -d lua.stx ; mv -f y.tab.c parser.c ; mv -f y.tab.h parser.h
 
 clear	:
 	rcsclean
