@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.26 2000/04/14 17:47:24 roberto Exp roberto $
+** $Id: lcode.c,v 1.27 2000/04/17 14:05:34 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -38,7 +38,7 @@ static Instruction previous_instruction (FuncState *fs) {
 
 
 int luaK_jump (FuncState *fs) {
-  int j = luaK_code1(fs, OP_JMP, NO_JUMP);
+  int j = luaK_code0(fs, OP_JMP);
   if (j == fs->lasttarget) {  /* possible jumps to this jump? */
     luaK_concat(fs, &j, fs->jlt);  /* keep them on hold */
     fs->jlt = NO_JUMP;
@@ -328,7 +328,7 @@ void luaK_tostack (LexState *ls, expdesc *v, int onlyone) {
       int p_1 = NO_JUMP;  /* position of an eventual PUSHINT */
       if (ISJUMP(previous) || need_value(fs, v->u.l.f, OP_JMPONF) ||
                               need_value(fs, v->u.l.t, OP_JMPONT)) {
-        /* expression need values */
+        /* expression needs values */
         if (ISJUMP(previous))
           luaK_concat(fs, &v->u.l.t, fs->pc-1);  /* put `previous' in t. list */
         else {
