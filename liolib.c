@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.16 2002/08/16 20:02:13 roberto Exp roberto $
+** $Id: liolib.c,v 2.17 2002/08/21 14:57:48 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -32,7 +32,6 @@
 
 
 #define FILEHANDLE		"FileHandle"
-#define CLOSEDFILEHANDLE	"ClosedFileHandle"
 
 #define IO_INPUT		"_input"
 #define IO_OUTPUT		"_output"
@@ -54,13 +53,17 @@ static int pushresult (lua_State *L, int i) {
 
 static FILE *tofile (lua_State *L, int findex) {
   FILE **f = (FILE **)lua_touserdata(L, findex);
-  if (f && lua_getmetatable(L, findex) &&
+  if (f && *f && lua_getmetatable(L, findex) &&
       lua_rawequal(L, -1, lua_upvalueindex(1))) {
     lua_pop(L, 1);
     return *f;
   }
-  if (findex > 0)
-    luaL_argerror(L, findex, "bad file");
+  if (findex > 0) {
+    if (f && *f == NULL)
+      luaL_error(L, "attempt to use a closed file");
+    else
+      luaL_argerror(L, findex, "bad file");
+  }
   return NULL;
 }
 
@@ -96,22 +99,29 @@ static int setnewfile (lua_State *L, FILE *f) {
 }
 
 
+static int aux_close (lua_State *L) {
+  FILE *f = tofile(L, 1);
+  if (f == stdin || f == stdout || f == stderr)
+    return 0;  /* file cannot be closed */
+  *(FILE **)lua_touserdata(L, 1) = NULL;  /* mark file as closed */
+  return (pclose(f) != -1) || (fclose(f) == 0);
+}
+
+
 static int io_close (lua_State *L) {
-  FILE *f;
-  int status = 1;
   if (lua_isnone(L, 1)) {
     lua_pushstring(L, IO_OUTPUT);
     lua_rawget(L, lua_upvalueindex(1));
   }
-  f = tofile(L, 1);
-  if (f != stdin && f != stdout && f != stderr) {
-    lua_settop(L, 1);  /* make sure file is on top */
-    lua_pushliteral(L, CLOSEDFILEHANDLE);
-    lua_rawget(L, LUA_REGISTRYINDEX);
-    lua_setmetatable(L, 1);
-    status = (pclose(f) != -1) || (fclose(f) == 0);
-  }
-  return pushresult(L, status);
+  return pushresult(L, aux_close(L));
+}
+
+
+static int io_gc (lua_State *L) {
+  FILE **f = (FILE **)lua_touserdata(L, 1);
+  if (!(f && *f == NULL))  /* ignore closed files */
+    aux_close(L);
+  return 0;
 }
 
 
@@ -179,6 +189,30 @@ static int io_input (lua_State *L) {
 
 static int io_output (lua_State *L) {
   return g_iofile(L, IO_OUTPUT, "w");
+}
+
+
+static int io_readline (lua_State *L);
+
+static int io_lines (lua_State *L) {
+  FILE *f = fopen(luaL_check_string(L, 1), "r");
+  luaL_arg_check(L, f, 1,  strerror(errno));
+  lua_pushliteral(L, FILEHANDLE);
+  lua_rawget(L, LUA_REGISTRYINDEX);
+  newfile(L, f);
+  lua_pushboolean(L, 1);  /* must close file when finished */
+  lua_pushcclosure(L, io_readline, 3);
+  return 1;
+}
+
+static int f_lines (lua_State *L) {
+  tofile(L, 1);  /* check that it's a valid file handle */
+  lua_pushliteral(L, FILEHANDLE);
+  lua_rawget(L, LUA_REGISTRYINDEX);
+  lua_pushvalue(L, 1);
+  lua_pushboolean(L, 0);  /* does not close file when finished */
+  lua_pushcclosure(L, io_readline, 3);
+  return 1;
 }
 
 
@@ -303,6 +337,22 @@ static int f_read (lua_State *L) {
   return g_read(L, tofile(L, 1), 2);
 }
 
+
+static int io_readline (lua_State *L) {
+  FILE *f = *(FILE **)lua_touserdata(L, lua_upvalueindex(2));
+  if (f == NULL)  /* file is already closed? */
+    luaL_error(L, "file is already closed");
+  if (read_line(L, f)) return 1;
+  else {  /* EOF */
+    if (lua_toboolean(L, lua_upvalueindex(3))) {  /* generator created file? */
+      lua_settop(L, 0);
+      lua_pushvalue(L, lua_upvalueindex(2));
+      aux_close(L);  /* close it */
+    }
+    return 0;
+  }
+}
+
 /* }====================================================== */
 
 
@@ -366,6 +416,7 @@ static int f_flush (lua_State *L) {
 static const luaL_reg iolib[] = {
   {"input", io_input},
   {"output", io_output},
+  {"lines", io_lines},
   {"close", io_close},
   {"flush", io_flush},
   {"open", io_open},
@@ -380,6 +431,7 @@ static const luaL_reg iolib[] = {
 static const luaL_reg flib[] = {
   {"flush", f_flush},
   {"read", f_read},
+  {"lines", f_lines},
   {"seek", f_seek},
   {"write", f_write},
   {"close", io_close},
@@ -393,7 +445,7 @@ static void createmeta (lua_State *L) {
   /* close files when collected */
   lua_pushliteral(L, "__gc");  /* S: `gc' mt FH */
   lua_pushvalue(L, -2);  /* S: mt `gc' mt FH */
-  lua_pushcclosure(L, io_close, 1);  /* S: close `gc' mt FH */
+  lua_pushcclosure(L, io_gc, 1);  /* S: close `gc' mt FH */
   lua_rawset(L, -3);  /* S: mt FH */
   /* file methods */
   lua_pushliteral(L, "__gettable");  /* S: `gettable' mt FH */
@@ -403,10 +455,6 @@ static void createmeta (lua_State *L) {
   luaL_openlib(L, flib, 1);  /* S: mt FH */
   /* put new metatable into registry */
   lua_rawset(L, LUA_REGISTRYINDEX);  /* S: empty */
-  /* meta table for CLOSEDFILEHANDLE */
-  lua_pushliteral(L, CLOSEDFILEHANDLE);
-  lua_newtable(L);
-  lua_rawset(L, LUA_REGISTRYINDEX);
 }
 
 /* }====================================================== */
