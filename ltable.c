@@ -273,7 +273,7 @@ static void rehash (lua_State *L, Table *t) {
 
 Table *luaH_new (lua_State *L, int narray, int lnhash) {
   Table *t = luaM_new(L, Table);
-  t->eventtable = hvalue(defaultet(L));
+  t->metatable = hvalue(defaultmeta(L));
   t->next = G(L)->roottable;
   G(L)->roottable = t;
   t->mark = t;

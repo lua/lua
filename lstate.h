@@ -53,8 +53,8 @@ struct lua_longjmp;  /* defined in ldo.c */
 ** reserve init of stack to store some global values
 */
 
-/* default event table (both for tables and udata) */
-#define defaultet(L)	(L->stack)
+/* default meta table (both for tables and udata) */
+#define defaultmeta(L)	(L->stack)
 
 /* table of globals */
 #define gt(L)	(L->stack + 1)

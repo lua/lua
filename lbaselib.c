@@ -135,15 +135,15 @@ static int luaB_getglobal (lua_State *L) {
 }
 
 
-static int luaB_eventtable (lua_State *L) {
+static int luaB_metatable (lua_State *L) {
   luaL_check_type(L, 1, LUA_TTABLE);
   if (lua_isnone(L, 2))
-    lua_geteventtable(L, 1);
+    lua_getmetatable(L, 1);
   else {
     int t = lua_type(L, 2);
     luaL_arg_check(L, t == LUA_TNIL || t == LUA_TTABLE, 2, "nil/table expected");
     lua_settop(L, 2);
-    lua_seteventtable(L, 1);
+    lua_setmetatable(L, 1);
   }
   return 1;
 }
@@ -447,7 +447,7 @@ static int luaB_coroutine (lua_State *L) {
   lua_cobegin(NL, n-1);
   lua_newuserdatabox(L, NL);
   lua_getstr(L, LUA_REGISTRYINDEX, "Coroutine");
-  lua_seteventtable(L, -2);
+  lua_setmetatable(L, -2);
   lua_pushcclosure(L, luaB_resume, 1);
   return 1;
 }
@@ -517,6 +517,7 @@ static int luaB_tinsert (lua_State *L) {
     v = 3;  /* function may be called with more than 3 args */
     pos = luaL_check_int(L, 2);  /* 2nd argument is the position */
   }
+  if (pos > n+1) n = pos-1;
   aux_setn(L, 1, n+1);  /* t.n = n+1 */
   for (; n>=pos; n--) {
     lua_rawgeti(L, 1, n);
@@ -665,7 +666,7 @@ static const luaL_reg base_funcs[] = {
   {"dofile", luaB_dofile},
   {"dostring", luaB_dostring},
   {"error", luaB_error},
-  {"eventtable", luaB_eventtable},
+  {"metatable", luaB_metatable},
   {"foreach", luaB_foreach},
   {"foreachi", luaB_foreachi},
   {"gcinfo", luaB_gcinfo},

@@ -69,10 +69,10 @@ static void f_luaopen (lua_State *L, void *ud) {
   G(L)->tmudata = NULL;
   G(L)->nblocks = sizeof(lua_State) + sizeof(global_State);
   stack_init(L, L, so->stacksize);  /* init stack */
-  /* create default event table with a dummy table, and then close the loop */
-  sethvalue(defaultet(L), NULL);
-  sethvalue(defaultet(L), luaH_new(L, 0, 4));
-  hvalue(defaultet(L))->eventtable = hvalue(defaultet(L));
+  /* create default meta table with a dummy table, and then close the loop */
+  sethvalue(defaultmeta(L), NULL);
+  sethvalue(defaultmeta(L), luaH_new(L, 0, 4));
+  hvalue(defaultmeta(L))->metatable = hvalue(defaultmeta(L));
   sethvalue(gt(L), luaH_new(L, 0, 4));  /* table of globals */
   sethvalue(registry(L), luaH_new(L, 0, 0));  /* registry */
   luaS_resize(L, 4);  /* initial size of string table */
@@ -107,7 +107,7 @@ LUA_API lua_State *lua_newthread (lua_State *OL, int stacksize) {
   OL->next = L;
   L->previous = OL;
   stack_init(L, OL, stacksize);  /* init stack */
-  setobj(defaultet(L), defaultet(OL));  /* share default event table */
+  setobj(defaultmeta(L), defaultmeta(OL));  /* share default meta table */
   setobj(gt(L), gt(OL));  /* share table of globals */
   setobj(registry(L), registry(OL));  /* share registry */
   lua_unlock(OL);

@@ -88,7 +88,7 @@ Udata *luaS_newudata (lua_State *L, size_t s) {
   if (s & 1) s++;  /* make sure size is even */
   u = cast(Udata *, luaM_malloc(L, sizeudata(s)));
   u->uv.len = s;
-  u->uv.eventtable = hvalue(defaultet(L));
+  u->uv.metatable = hvalue(defaultmeta(L));
   u->uv.value = u + 1;
   /* chain it on udata list */
   u->uv.next = G(L)->rootudata;

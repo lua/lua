@@ -402,25 +402,25 @@ LUA_API void lua_newtable (lua_State *L) {
 }
 
 
-LUA_API void lua_geteventtable (lua_State *L, int objindex) {
+LUA_API void lua_getmetatable (lua_State *L, int objindex) {
   StkId obj;
-  Table *et;
+  Table *mt;
   lua_lock(L);
   obj = luaA_indexAcceptable(L, objindex);
   switch (ttype(obj)) {
     case LUA_TTABLE:
-      et = hvalue(obj)->eventtable;
+      mt = hvalue(obj)->metatable;
       break;
     case LUA_TUSERDATA:
-      et = uvalue(obj)->uv.eventtable;
+      mt = uvalue(obj)->uv.metatable;
       break;
     default:
-      et = hvalue(defaultet(L));
+      mt = hvalue(defaultmeta(L));
   }
-  if (et == hvalue(defaultet(L)))
+  if (mt == hvalue(defaultmeta(L)))
     setnilvalue(L->top);
   else
-    sethvalue(L->top, et);
+    sethvalue(L->top, mt);
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -488,24 +488,24 @@ LUA_API void lua_setglobals (lua_State *L) {
 }
 
 
-LUA_API void lua_seteventtable (lua_State *L, int objindex) {
-  StkId obj, et;
+LUA_API void lua_setmetatable (lua_State *L, int objindex) {
+  StkId obj, mt;
   lua_lock(L);
   api_checknelems(L, 1);
   obj = luaA_indexAcceptable(L, objindex);
-  et = --L->top;
-  if (ttype(et) == LUA_TNIL)
-    et = defaultet(L);
-  api_check(L, ttype(et) == LUA_TTABLE);
+  mt = --L->top;
+  if (ttype(mt) == LUA_TNIL)
+    mt = defaultmeta(L);
+  api_check(L, ttype(mt) == LUA_TTABLE);
   switch (ttype(obj)) {
     case LUA_TTABLE:
-      hvalue(obj)->eventtable = hvalue(et);
+      hvalue(obj)->metatable = hvalue(mt);
       break;
     case LUA_TUSERDATA:
-      uvalue(obj)->uv.eventtable = hvalue(et);
+      uvalue(obj)->uv.metatable = hvalue(mt);
       break;
     default:
-      luaO_verror(L, "cannot change the event table of a %.20s",
+      luaO_verror(L, "cannot change the meta table of a %.20s",
                   luaT_typenames[ttype(obj)]);
   }
   lua_unlock(L);

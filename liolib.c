@@ -72,7 +72,7 @@ static int pushresult (lua_State *L, int i) {
 
 static int checkfile (lua_State *L, int findex, const char *tname) {
   int res;
-  lua_geteventtable(L, findex);
+  lua_getmetatable(L, findex);
   lua_getstr(L, LUA_REGISTRYINDEX, tname);
   res = lua_equal(L, -1, -2);
   lua_pop(L, 2);
@@ -112,7 +112,7 @@ static FILE *getopthandle (lua_State *L, int inout) {
 static void newfile (lua_State *L, FILE *f) {
   lua_newuserdatabox(L, f);
   lua_getstr(L, LUA_REGISTRYINDEX, FILEHANDLE);
-  lua_seteventtable(L, -2);
+  lua_setmetatable(L, -2);
 }
 
 
@@ -148,7 +148,7 @@ static int io_close (lua_State *L) {
   if (f != stdin && f != stdout && f != stderr) {
     lua_settop(L, 1);  /* make sure file is on top */
     lua_getstr(L, LUA_REGISTRYINDEX, CLOSEDFILEHANDLE);
-    lua_seteventtable(L, 1);
+    lua_setmetatable(L, 1);
     status = (CLOSEFILE(L, f) == 0);
   }
   return pushresult(L, status);
@@ -693,13 +693,13 @@ static const luaL_reg iolib[] = {
 
 
 LUALIB_API int lua_iolibopen (lua_State *L) {
-  lua_newtable(L);  /* event table for FILEHANDLE */
+  lua_newtable(L);  /* meta table for FILEHANDLE */
   /* close files when collected */
   lua_pushcfunction(L, file_collect);
   lua_setstr(L, -2, "gc");
-  /* put new eventtable into registry */
+  /* put new metatable into registry */
   lua_setstr(L, LUA_REGISTRYINDEX, FILEHANDLE);
-  /* event table for CLOSEDFILEHANDLE */
+  /* meta table for CLOSEDFILEHANDLE */
   lua_newtable(L);
   lua_setstr(L, LUA_REGISTRYINDEX, CLOSEDFILEHANDLE);
   luaL_openl(L, iolib);

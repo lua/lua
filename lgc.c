@@ -122,13 +122,12 @@ static void markobject (GCState *st, TObject *o) {
 }
 
 
-static void checkstacksizes (lua_State *L, StkId lim) {
+static void checkstacksizes (lua_State *L) {
   int used = L->ci - L->base_ci;  /* number of `ci' in use */
   if (4*used < L->size_ci && 2*BASIC_CI_SIZE < L->size_ci)
     luaD_reallocCI(L, L->size_ci/2);  /* still big enough... */
-  if (lim < L->top) lim = L->top;
-  used = lim - L->stack;  /* part of stack in use */
-  if (3*used < L->stacksize && 2*BASIC_STACK_SIZE < L->stacksize)
+  used = L->top - L->stack;  /* part of stack in use */
+  if (2*(used+MAXSTACK) < L->stacksize && 2*BASIC_STACK_SIZE < L->stacksize)
     luaD_reallocstack(L, L->stacksize/2);  /* still big enough... */
 }
 
@@ -148,7 +147,7 @@ static void markstacks (GCState *st) {
     lim = (L1->stack_last - L1->ci->base > MAXSTACK) ? L1->ci->base+MAXSTACK
                                                      : L1->stack_last;
     for (; o<=lim; o++) setnilvalue(o);
-    checkstacksizes(L1, lim);
+    checkstacksizes(L1);
     lua_assert(L1->previous->next == L1 && L1->next->previous == L1);
     L1 = L1->next;
   } while (L1 != st->L);
@@ -158,9 +157,9 @@ static void markstacks (GCState *st) {
 static void markudet (GCState *st) {
   Udata *u;
   for (u = G(st->L)->rootudata; u; u = u->uv.next)
-    marktable(st, u->uv.eventtable);
+    marktable(st, u->uv.metatable);
   for (u = G(st->L)->tmudata; u; u = u->uv.next)
-    marktable(st, u->uv.eventtable);
+    marktable(st, u->uv.metatable);
 }
 
 
@@ -176,8 +175,8 @@ static void traversetable (GCState *st, Table *h) {
   const TObject *mode;
   int weakkey = 0;
   int weakvalue = 0;
-  marktable(st, h->eventtable);
-  mode = fasttm(st->L, h->eventtable, TM_WEAKMODE);
+  marktable(st, h->metatable);
+  mode = fasttm(st->L, h->metatable, TM_WEAKMODE);
   if (mode) {  /* weak table? must be cleared after GC... */
     h->mark = st->toclear;  /* put in the appropriate list */
     st->toclear = h;
@@ -204,10 +203,10 @@ static void traversetable (GCState *st, Table *h) {
 
 
 static void markall (GCState *st) {
-  lua_assert(hvalue(defaultet(st->L))->flags == cast(unsigned short, ~0));
+  lua_assert(hvalue(defaultmeta(st->L))->flags == cast(unsigned short, ~0));
                                                       /* table is unchanged */
   markstacks(st); /* mark all stacks */
-  markudet(st);  /* mark userdata's event tables */
+  markudet(st);  /* mark userdata's meta tables */
   while (st->tmark) {  /* traverse marked tables */
     Table *h = st->tmark;  /* get first table from list */
     st->tmark = h->mark;  /* remove it from list */
@@ -333,7 +332,7 @@ static void collectudata (lua_State *L) {
     }
     else {
       *p = curr->uv.next;
-      if (fasttm(L, curr->uv.eventtable, TM_GC) != NULL) {  /* gc event? */
+      if (fasttm(L, curr->uv.metatable, TM_GC) != NULL) {  /* gc event? */
         curr->uv.next = NULL;  /* link `curr' at the end of `collected' list */
         *lastcollected = curr;
         lastcollected = &curr->uv.next;
@@ -384,7 +383,7 @@ static void checkMbuffer (lua_State *L) {
 
 
 static void do1gcTM (lua_State *L, Udata *udata) {
-  const TObject *tm = fasttm(L, udata->uv.eventtable, TM_GC);
+  const TObject *tm = fasttm(L, udata->uv.metatable, TM_GC);
   if (tm != NULL) {
     setobj(L->top, tm);
     setuvalue(L->top+1, udata);
@@ -405,8 +404,8 @@ static void unprotectedcallGCTM (lua_State *L, void *pu) {
     udata->uv.next = G(L)->rootudata;  /* resurect it */
     G(L)->rootudata = udata;
     do1gcTM(L, udata);
-    /* mark udata as finalized (default event table) */
-    uvalue(L->top-1)->uv.eventtable = hvalue(defaultet(L));
+    /* mark udata as finalized (default meta table) */
+    uvalue(L->top-1)->uv.metatable = hvalue(defaultmeta(L));
     unmarkud(uvalue(L->top-1));
   }
   L->top--;
@@ -420,8 +419,8 @@ static void callGCTM (lua_State *L) {
     Udata *udata;
     if (luaD_runprotected(L, unprotectedcallGCTM, &udata) != 0) {
       /* `udata' generated an error during its gc */
-      /* mark it as finalized (default event table) */
-      udata->uv.eventtable = hvalue(defaultet(L));
+      /* mark it as finalized (default meta table) */
+      udata->uv.metatable = hvalue(defaultmeta(L));
     }
   }
   L->allowhooks = oldah;  /* restore hooks */

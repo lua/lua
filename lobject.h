@@ -120,7 +120,7 @@ typedef union TString {
 typedef union Udata {
   union L_Umaxalign dummy;  /* ensures maximum alignment for `local' udata */
   struct {
-    struct Table *eventtable;
+    struct Table *metatable;
     void *value;
     size_t len;  /* least bit reserved for gc mark */
     union Udata *next;  /* chain for list of all udata */
@@ -221,7 +221,7 @@ typedef struct Node {
 
 
 typedef struct Table {
-  struct Table *eventtable;
+  struct Table *metatable;
   TObject *array;  /* array part */
   Node *node;
   int sizearray;  /* size of `array' array */

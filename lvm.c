@@ -125,7 +125,7 @@ void luaV_gettable (lua_State *L, StkId t, TObject *key, StkId res) {
   const TObject *tm;
   init:
   if (ttype(t) == LUA_TTABLE) {  /* `t' is a table? */
-    Table *et = hvalue(t)->eventtable;
+    Table *et = hvalue(t)->metatable;
     if ((tm = fasttm(L, et, TM_GETTABLE)) == NULL) {  /* no gettable TM? */
       const TObject *h = luaH_get(hvalue(t), key);  /* do a primitive get */
       /* result is no nil or there is no `index' tag method? */
@@ -158,7 +158,7 @@ void luaV_settable (lua_State *L, StkId t, TObject *key, StkId val) {
   const TObject *tm;
   init:
   if (ttype(t) == LUA_TTABLE) {  /* `t' is a table? */
-    Table *et = hvalue(t)->eventtable;
+    Table *et = hvalue(t)->metatable;
     if ((tm = fasttm(L, et, TM_SETTABLE)) == NULL) {  /* no TM? */
       luaH_set(L, hvalue(t), key, val);  /* do a primitive set */
       return;

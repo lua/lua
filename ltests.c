@@ -344,14 +344,14 @@ static int unref (lua_State *L) {
   return 0;
 }
 
-static int eventtable (lua_State *L) {
+static int metatable (lua_State *L) {
   luaL_check_any(L, 1);
   if (lua_isnone(L, 2))
-    lua_geteventtable(L, 1);
+    lua_getmetatable(L, 1);
   else {
     lua_settop(L, 2);
     luaL_check_type(L, 2, LUA_TTABLE);
-    lua_seteventtable(L, 1);
+    lua_setmetatable(L, 1);
   }
   return 1;
 }
@@ -608,11 +608,11 @@ static int testC (lua_State *L) {
     else if EQ("dostring") {
       lua_dostring(L, luaL_check_string(L, getnum));
     }
-    else if EQ("seteventtable") {
-      lua_seteventtable(L, getnum);
+    else if EQ("setmetatable") {
+      lua_setmetatable(L, getnum);
     }
-    else if EQ("geteventtable") {
-      lua_geteventtable(L, getnum);
+    else if EQ("getmetatable") {
+      lua_getmetatable(L, getnum);
     }
     else if EQ("type") {
       lua_pushstring(L, lua_typename(L, lua_type(L, getnum)));
@@ -642,7 +642,7 @@ static const struct luaL_reg tests_funcs[] = {
   {"unref", unref},
   {"d2s", d2s},
   {"s2d", s2d},
-  {"eventtable", eventtable},
+  {"metatable", metatable},
   {"newuserdata", newuserdata},
   {"newuserdatabox", newuserdatabox},
   {"udataval", udataval},

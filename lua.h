@@ -153,7 +153,7 @@ LUA_API void  lua_gettable (lua_State *L, int index);
 LUA_API void  lua_rawget (lua_State *L, int index);
 LUA_API void  lua_rawgeti (lua_State *L, int index, int n);
 LUA_API void  lua_newtable (lua_State *L);
-LUA_API void  lua_geteventtable (lua_State *L, int objindex);
+LUA_API void  lua_getmetatable (lua_State *L, int objindex);
 
 
 /*
@@ -164,7 +164,7 @@ LUA_API void  lua_settable (lua_State *L, int index);
 LUA_API void  lua_rawset (lua_State *L, int index);
 LUA_API void  lua_rawseti (lua_State *L, int index, int n);
 LUA_API void  lua_setglobals (lua_State *L);
-LUA_API void  lua_seteventtable (lua_State *L, int objindex);
+LUA_API void  lua_setmetatable (lua_State *L, int objindex);
 
 
 /*
