@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.69 1999/12/01 19:50:08 roberto Exp roberto $
+** $Id: lvm.c,v 1.70 1999/12/06 11:40:55 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -170,21 +170,15 @@ void luaV_rawsettable (lua_State *L, StkId t) {
 void luaV_getglobal (lua_State *L, GlobalVar *gv) {
   /* WARNING: caller must assure stack space */
   const TObject *value = &gv->value;
-  switch (ttype(value)) {
-    /* only userdata, tables and nil can have getglobal tag methods */
-    case LUA_T_USERDATA: case LUA_T_ARRAY: case LUA_T_NIL: {
-      TObject *im = luaT_getimbyObj(L, value, IM_GETGLOBAL);
-      if (ttype(im) != LUA_T_NIL) {  /* is there a tag method? */
-        ttype(L->top) = LUA_T_STRING;
-        tsvalue(L->top) = gv->name;  /* global name */
-        L->top++;
-        *L->top++ = *value;
-        luaD_callTM(L, im, 2, 1);
-        return;
-      }
-      /* else no tag method: go through to default behavior */
-    }
-    default: *L->top++ = *value;  /* default behavior */
+  TObject *im = luaT_getimbyObj(L, value, IM_GETGLOBAL);
+  if (ttype(im) != LUA_T_NIL) {  /* is there a tag method? */
+    ttype(L->top) = LUA_T_STRING;
+    tsvalue(L->top) = gv->name;  /* global name */
+    L->top++;
+    *L->top++ = *value;
+    luaD_callTM(L, im, 2, 1);
+  } else {  /* no tag method */
+    *L->top++ = *value;  /* default behavior */
   }
 }
 
