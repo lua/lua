@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.32 2001/07/24 22:40:08 roberto Exp roberto $
+## $Id: makefile,v 1.32 2001/07/24 22:40:08 roberto Exp $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -11,35 +11,31 @@
 #
 # define (undefine) _POSIX_SOURCE if your system is (not) POSIX compliant
 #
-# define (undefine) OLD_ANSI if your system does NOT have some new ANSI
-# facilities (e.g. strerror, locale.h, memmove). SunOS does not comply;
-# so, add "-DOLD_ANSI" on SunOS
-#
 # define LUA_NUM_TYPE if you need numbers to be different from double
 # (for instance, -DLUA_NUM_TYPE=float)
 # you may need to adapat the code, too.
-#
+
 
 #EXTRA_H=-DLUA_USER_H='"ltests.h"'
 
-CONFIG = -DPOPEN -D_POSIX_SOURCE  $(EXTRA_H)
-#CONFIG = -DOLD_ANSI
+CONFIG = -D_POSIX_SOURCE  $(EXTRA_H)
 
 
 # Compilation parameters
-CC = gcc
-CWARNS = -Wall -W -pedantic \
+CC = g++
+CWARNS = -Wall -pedantic \
 	-Waggregate-return \
 	-Wcast-align \
 	-Wmissing-prototypes \
+	-Wstrict-prototypes \
 	-Wnested-externs \
 	-Wpointer-arith \
 	-Wshadow \
 	-Wwrite-strings \
+#	-Wtraditional \
 #	-Wcast-qual
-#	-Wtraditional
 
-CFLAGS = $(CONFIG) $(CWARNS) -ansi -O3 -fomit-frame-pointer
+CFLAGS = $(CONFIG) $(CWARNS) -ansi -O2  #-fomit-frame-pointer
 
 
 # To make early versions
@@ -75,8 +71,8 @@ LUAOBJS = \
 LIBOBJS = 	\
 	lauxlib.o \
 	lbaselib.o \
-	liolib.o \
 	lmathlib.o \
+ 	liolib.o \
 	lstrlib.o \
 	ldblib.o
 
@@ -145,7 +141,6 @@ lstring.o: lstring.c lua.h lmem.h llimits.h lobject.h lstate.h ltm.h \
 lstrlib.o: lstrlib.c lua.h lauxlib.h lualib.h
 ltable.o: ltable.c lua.h ldo.h lobject.h llimits.h lstate.h ltm.h \
  luadebug.h lmem.h ltable.h
-ltags.o: ltags.c
 ltests.o: ltests.c lua.h lapi.h lobject.h llimits.h lauxlib.h lcode.h \
  llex.h lzio.h lopcodes.h lparser.h ltable.h ldebug.h lstate.h ltm.h \
  luadebug.h ldo.h lfunc.h lmem.h lstring.h lualib.h
