@@ -5,9 +5,10 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.38 1996/07/12 20:00:26 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.39 1996/09/09 14:11:11 roberto Exp roberto $";
 
 #include <stdio.h>
+#include <string.h>
 
 #include "lex.h"
 #include "opcode.h"
@@ -79,12 +80,17 @@ void lua_closefile (void)
 /*
 ** Function to open a string to be input unit
 */
+#define SIZE_PREF 20  /* size of string prefix to appear in error messages */
 void lua_openstring (char *s)
 {
- lua_setinput (stringinput);
- st = s;
- lua_linenumber = 1;
- lua_parsedfile = luaI_createfixedstring("(string)")->str;
+  char buff[SIZE_PREF+25];
+  lua_setinput(stringinput);
+  st = s;
+  lua_linenumber = 1;
+  strcpy(buff, "(dostring) >> ");
+  strncat(buff, s, SIZE_PREF);
+  if (strlen(s) > SIZE_PREF) strcat(buff, "...");
+  lua_parsedfile = luaI_createfixedstring(buff)->str;
 }
 
 /*
