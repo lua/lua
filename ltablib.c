@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.27 2004/12/07 18:28:47 roberto Exp roberto $
+** $Id: ltablib.c,v 1.28 2005/03/16 16:58:41 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,7 @@ static int foreachi (lua_State *L) {
   int i;
   int n = aux_getn(L, 1);
   luaL_checktype(L, 2, LUA_TFUNCTION);
-  for (i=LUA_FIRSTINDEX; i < n+LUA_FIRSTINDEX; i++) {
+  for (i=1; i <= n; i++) {
     lua_pushvalue(L, 2);  /* function */
     lua_pushinteger(L, i);  /* 1st argument */
     lua_rawgeti(L, 1, i);  /* 2nd argument */
@@ -73,7 +73,7 @@ static int setn (lua_State *L) {
 
 
 static int tinsert (lua_State *L) {
-  int e = aux_getn(L, 1) + LUA_FIRSTINDEX;  /* first empty element */
+  int e = aux_getn(L, 1) + 1;  /* first empty element */
   int pos;  /* where to insert new element */
   if (lua_isnone(L, 3))  /* called with only 2 arguments */
     pos = e;  /* insert new element at the end */
@@ -87,17 +87,17 @@ static int tinsert (lua_State *L) {
       lua_rawseti(L, 1, i);  /* t[i] = t[i-1] */
     }
   }
-  luaL_setn(L, 1, e - LUA_FIRSTINDEX + 1);  /* new size */
+  luaL_setn(L, 1, e);  /* new size */
   lua_rawseti(L, 1, pos);  /* t[pos] = v */
   return 0;
 }
 
 
 static int tremove (lua_State *L) {
-  int e = aux_getn(L, 1) + LUA_FIRSTINDEX - 1;
+  int e = aux_getn(L, 1);
   int pos = luaL_optint(L, 2, e);
-  if (e < LUA_FIRSTINDEX) return 0;  /* table is `empty' */
-  luaL_setn(L, 1, e - LUA_FIRSTINDEX);  /* t.n = n-1 */
+  if (e == 0) return 0;  /* table is `empty' */
+  luaL_setn(L, 1, e - 1);  /* t.n = n-1 */
   lua_rawgeti(L, 1, pos);  /* result = t[pos] */
   for ( ;pos<e; pos++) {
     lua_rawgeti(L, 1, pos+1);
@@ -113,11 +113,11 @@ static int str_concat (lua_State *L) {
   luaL_Buffer b;
   size_t lsep;
   const char *sep = luaL_optlstring(L, 2, "", &lsep);
-  int i = luaL_optint(L, 3, LUA_FIRSTINDEX);
+  int i = luaL_optint(L, 3, 1);
   int last = luaL_optint(L, 4, -2);
   luaL_checktype(L, 1, LUA_TTABLE);
   if (last == -2)
-    last = luaL_getn(L, 1) + LUA_FIRSTINDEX - 1;
+    last = luaL_getn(L, 1);
   luaL_buffinit(L, &b);
   for (; i <= last; i++) {
     lua_rawgeti(L, 1, i);
@@ -229,7 +229,7 @@ static int sort (lua_State *L) {
   if (!lua_isnoneornil(L, 2))  /* is there a 2nd argument? */
     luaL_checktype(L, 2, LUA_TFUNCTION);
   lua_settop(L, 2);  /* make sure there is two arguments */
-  auxsort(L, LUA_FIRSTINDEX, n + LUA_FIRSTINDEX - 1);
+  auxsort(L, 1, n);
   return 0;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.21 2005/03/16 16:58:41 roberto Exp roberto $
+** $Id: ltests.c,v 2.22 2005/03/23 17:51:11 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -430,7 +430,7 @@ static int listk (lua_State *L) {
   lua_createtable(L, p->sizek, 0);
   for (i=0; i<p->sizek; i++) {
     luaA_pushobject(L, p->k+i);
-    lua_rawseti(L, -2, i+LUA_FIRSTINDEX);
+    lua_rawseti(L, -2, i+1);
   }
   return 1;
 }

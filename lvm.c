@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.33 2005/03/16 16:59:21 roberto Exp roberto $
+** $Id: lvm.c,v 2.34 2005/03/18 18:01:37 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -760,7 +760,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         if (c == 0) c = cast(int, *pc++);
         runtime_check(L, ttistable(ra));
         h = hvalue(ra);
-        last = ((c-1)*LFIELDS_PER_FLUSH) + n + LUA_FIRSTINDEX - 1;
+        last = ((c-1)*LFIELDS_PER_FLUSH) + n;
         if (last > h->sizearray)  /* needs more space? */
           luaH_resizearray(L, h, last);  /* pre-alloc it at once */
         for (; n > 0; n--) {

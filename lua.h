@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.203 2005/03/22 16:04:29 roberto Exp roberto $
+** $Id: lua.h,v 1.204 2005/03/23 17:51:11 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -82,9 +82,6 @@ typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 #define LUA_TUSERDATA	7
 #define LUA_TTHREAD	8
 
-
-/* first index for arrays */
-#define LUA_FIRSTINDEX		1
 
 
 /* minimum Lua stack available to a C function */
