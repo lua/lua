@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.27 1999/02/25 19:13:56 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.28 1999/02/26 15:49:53 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -285,10 +285,12 @@ static char *match (char *s, char *p, struct Capture *cap) {
         cap->capture[l].len = -1;  /* undo capture */
       return res;
     }
-    case '\0': case '$':  /* (possibly) end of pattern */
-      if (*p == 0 || (*(p+1) == 0 && s == cap->src_end))
-        return s;
-      /* else go through */
+    case '\0':  /* end of pattern */
+      return s;  /* match succeeded */
+    case '$':
+      if (*(p+1) == '\0')  /* is the '$' the last char in pattern? */
+        return (s == cap->src_end) ? s : NULL;  /* check end of string */
+      /* else is a regular '$'; go through */
     default: {  /* it is a pattern item */
       char *ep;  /* will point to what is next */
       char *s1 = matchitem(s, p, cap, &ep);

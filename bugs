@@ -4,6 +4,7 @@ Tue Dec  2 10:45:48 EDT 1997
 >> started only in the 2nd line of a function.
 
 
+
 --- Version 3.1 alpha
 
 ** lua.c
@@ -13,7 +14,7 @@ Thu Jan 15 14:34:58 EDT 1998
 ** lbuiltin.c / lobject.h
 Thu Jan 15 14:34:58 EDT 1998
 >> MAX_WORD may be bigger than MAX_INT
-
+(by lhf)
 
 ** llex.c
 Mon Jan 19 18:17:18 EDT 1998
@@ -42,6 +43,7 @@ Mon May 18 19:20:00 EST 1998
 >> arguments for "format" 'x', 'X', 'o' and 'u' must be unsigned int.
 
 
+
 --- Version 3.1
 
 ** liolib.c / lauxlib.c
@@ -52,11 +54,13 @@ of view) when functions have upvalues.
 ** lstrlib.c
 Tue Nov 10 17:29:36 EDT 1998
 >> gsub/strfind do not check whether captures are properly finished.
+(by roberto/tomas)
 
 ** lbuiltin.c
 Fri Dec 18 11:22:55 EDT 1998
 >> "tonumber" goes crazy with negative numbers in other bases (not 10),
 because "strtol" returns long, not unsigned long.
+(by Visual C++)
 
 ** lstrlib.c
 Mon Jan  4 10:41:40 EDT 1999
@@ -70,8 +74,19 @@ lua_isnumber can modify it.
 ** lstrlib.c
 Thu Feb  4 17:08:50 EDT 1999
 >> format "%s" may break limit of "sprintf" on some machines.
-
+(by Marcelo Sales)
 
 ** lzio.c
 Thu Mar  4 11:49:37 EST 1999
 >> file stream cannot call fread after EOF.
+(by lhf)
+
+
+
+--- Version 3.2 (beta)
+
+** lstrlib.c
+Fri Apr 30 11:10:20 EST 1999
+>> '$' at end of pattern was matching regular '$', too.
+(by anna)
+
