@@ -5,6 +5,8 @@
 */
 
 
+#include <errno.h>
+#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,11 +18,6 @@
 #include "luadebug.h"
 #include "lualib.h"
 
-
-#ifndef OLD_ANSI
-#include <errno.h>
-#include <locale.h>
-#endif
 
 
 
@@ -568,9 +565,12 @@ static int io_setloc (lua_State *L) {
                       LC_NUMERIC, LC_TIME};
   static const char *const catnames[] = {"all", "collate", "ctype", "monetary",
      "numeric", "time", NULL};
+  const char *l = lua_tostring(L, 1);
   int op = luaL_findstring(luaL_opt_string(L, 2, "all"), catnames);
+  luaL_arg_check(L, l || lua_isnil(L, 1) || lua_isnone(L, 1), 1,
+                 "string expected");
   luaL_arg_check(L, op != -1, 2, "invalid option");
-  lua_pushstring(L, setlocale(cat[op], luaL_check_string(L, 1)));
+  lua_pushstring(L, setlocale(cat[op], l));
   return 1;
 }
 
