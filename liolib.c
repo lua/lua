@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
+** $Id: liolib.c,v 1.2 1997/09/23 14:12:44 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -56,17 +56,34 @@ static void pushresult (int i)
 }
 
 
+static int ishandler (lua_Object f)
+{
+  if (lua_isuserdata(f)) {
+    if (lua_tag(f) == closedtag)
+      lua_error("trying to access a closed file");
+    return lua_tag(f) == lua_tagio;
+  }
+  else return 0;
+}
 
 static FILE *getfile (char *name)
 {
   lua_Object f = lua_getglobal(name);
-  if (!lua_isuserdata(f) || lua_tag(f) != lua_tagio) {
-    if (lua_tag(f) == closedtag)
-      luaL_verror("file %s has been closed", name);
-    else
+  if (!ishandler(f))
       luaL_verror("global variable %s is not a file handle", name);
-  }
   return lua_getuserdata(f);
+}
+
+
+static FILE *getfileparam (char *name, int *arg)
+{
+  lua_Object f = lua_getparam(*arg);
+  if (ishandler(f)) {
+    (*arg)++;
+    return lua_getuserdata(f);
+  }
+  else
+    return getfile(name);
 }
 
 
@@ -154,9 +171,10 @@ static void io_appendto (void)
 
 static void io_read (void)
 {
-  FILE *f = getfile("_INPUT");
+  int arg = 1;
+  FILE *f = getfileparam("_INPUT", &arg);
   char *buff;
-  char *p = luaL_opt_string(1, "[^\n]*{\n}");
+  char *p = luaL_opt_string(arg, "[^\n]*{\n}");
   int inskip = 0;  /* to control {skips} */
   int c = NEED_OTHER;
   luaI_emptybuff();
@@ -204,8 +222,8 @@ static void io_read (void)
 
 static void io_write (void)
 {
-  FILE *f = getfile("_OUTPUT");
   int arg = 1;
+  FILE *f = getfileparam("_OUTPUT", &arg);
   int status = 1;
   char *s;
   while ((s = luaL_opt_string(arg++, NULL)) != NULL)
