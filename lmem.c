@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.17 1999/05/24 17:51:05 roberto Exp roberto $
+** $Id: lmem.c,v 1.18 1999/08/16 20:52:00 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -129,7 +129,7 @@ void *luaM_realloc (void *block, unsigned long size) {
     numblocks++;
     *(unsigned long *)newblock = size;
     for (i=0;i<MARKSIZE;i++)
-      *(newblock+HEADER+size+i) = MARK+i;
+      *(newblock+HEADER+size+i) = (char)(MARK+i);
     return newblock+HEADER;
   }
 }

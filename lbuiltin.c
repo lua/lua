@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.66 1999/10/11 16:13:11 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.67 1999/10/14 19:13:31 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -671,7 +671,7 @@ static void extra_services (void) {
       lua_settagmethod(luaL_check_int(2), "gc");
       break;
 
-    default: luaL_arg_check(0, 1, "invalid service");
+    default: luaL_argerror(1, "invalid service");
   }
 }
 

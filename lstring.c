@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.23 1999/10/11 16:13:11 roberto Exp roberto $
+** $Id: lstring.c,v 1.24 1999/10/14 19:13:31 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -146,7 +146,7 @@ static TaggedString *insert_s (const char *str, long l,
 
 
 static TaggedString *insert_u (void *buff, int tag, stringtable *tb) {
-  unsigned long h = (unsigned long)buff;
+  unsigned long h = (IntPoint)buff;
   int h1 = h%tb->size;
   TaggedString *ts;
   for (ts = tb->hash[h1]; ts; ts = ts->nexthash)
@@ -160,7 +160,7 @@ static TaggedString *insert_u (void *buff, int tag, stringtable *tb) {
 
 
 TaggedString *luaS_createudata (void *udata, int tag) {
-  int t = ((unsigned int)udata%NUM_HASHUDATA)+NUM_HASHSTR;
+  int t = ((IntPoint)udata%NUM_HASHUDATA)+NUM_HASHSTR;
   return insert_u(udata, tag, &L->string_root[t]);
 }
 
