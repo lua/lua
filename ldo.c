@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.185 2002/07/04 12:29:32 roberto Exp roberto $
+** $Id: ldo.c,v 1.186 2002/07/08 18:21:33 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -125,16 +125,6 @@ static void luaD_growCI (lua_State *L) {
 }
 
 
-/*
-** Open a hole inside the stack at `pos'
-*/
-static void luaD_openstack (lua_State *L, StkId pos) {
-  StkId p;
-  for (p = L->top; p > pos; p--) setobj(p, p-1);
-  incr_top(L);
-}
-
-
 void luaD_callhook (lua_State *L, lua_Hookevent event, int line) {
   lua_Hook hook = L->hook;
   if (hook && allowhook(L)) {
@@ -187,11 +177,14 @@ static void adjust_varargs (lua_State *L, int nfixargs) {
 
 static StkId tryfuncTM (lua_State *L, StkId func) {
   const TObject *tm = luaT_gettmbyobj(L, func, TM_CALL);
+  StkId p;
   if (ttype(tm) != LUA_TFUNCTION) {
     L->ci--;  /* undo increment (no function here) */
     luaG_typeerror(L, func, "call");
   }
-  luaD_openstack(L, func);
+  /* Open a hole inside the stack at `func' */
+  for (p = L->top; p > func; p--) setobj(p, p-1);
+  incr_top(L);
   func = L->ci->base - 1;  /* previous call may change stack */
   setobj(func, tm);  /* tag method is the new function to be called */
   return func;
