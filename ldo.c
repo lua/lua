@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.18 1997/12/22 20:57:18 roberto Exp roberto $
+** $Id: ldo.c,v 1.19 1997/12/23 12:50:49 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -96,9 +96,8 @@ void luaD_adjusttop (StkId newtop)
 */
 void luaD_openstack (int nelems)
 {
-  int i;
-  for (i=0; i<nelems; i++)
-    *(L->stack.top-i) = *(L->stack.top-i-1);
+  luaO_memup(L->stack.top-nelems+1, L->stack.top-nelems,
+             nelems*sizeof(TObject));
   incr_top;
 }
 

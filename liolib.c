@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.11 1997/12/18 18:32:39 roberto Exp roberto $
+** $Id: liolib.c,v 1.12 1997/12/18 19:11:43 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -20,7 +20,6 @@
 #ifndef OLD_ANSI
 #include <locale.h>
 #else
-#define	strcoll(a,b)	strcmp(a,b)
 #define setlocale(a,b)	0
 #define LC_ALL		0
 #define LC_COLLATE	0

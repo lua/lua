@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.11 1997/12/15 16:17:20 roberto Exp roberto $
+** $Id: lobject.h,v 1.12 1997/12/23 19:24:19 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -8,10 +8,9 @@
 #define lobject_h
 
 
-#include "lua.h"
-
-
 #include <limits.h>
+
+#include "lua.h"
 
 
 /*
@@ -181,5 +180,13 @@ int luaO_redimension (int oldsize);
 int luaO_findstring (char *name, char *list[]);
 void luaO_insertlist (GCnode *root, GCnode *node);
 
+#ifdef OLD_ANSI
+void luaO_memup (void *dest, void *src, int size);
+void luaO_memdown (void *dest, void *src, int size);
+#else
+#include <string.h>
+#define luaO_memup(d,s,n)	memmove(d,s,n)
+#define luaO_memdown(d,s,n)	memmove(d,s,n)
+#endif
 
 #endif

@@ -1,6 +1,6 @@
 %{
 /*
-** $Id: lua.stx,v 1.25 1997/12/22 20:57:18 roberto Exp roberto $
+** $Id: lua.stx,v 1.26 1997/12/23 19:24:19 roberto Exp roberto $
 ** Syntax analizer and code generator
 ** See Copyright Notice in lua.h
 */
@@ -108,24 +108,10 @@ void luaY_error (char *s)
 
 static void check_pc (int n)
 {
-  if (L->currState->pc+n > L->currState->maxcode)
-    L->currState->maxcode = luaM_growvector(&L->currState->f->code,
-                                L->currState->maxcode, Byte, codeEM, MAX_INT);
-}
-
-
-static void movecode_up (int d, int s, int n)
-{
-  while (n--)
-    L->currState->f->code[d+n] = L->currState->f->code[s+n];
-}
-
-
-static void movecode_down (int d, int s, int n)
-{
-  int i;
-  for (i=0; i<n; i++)
-    L->currState->f->code[d+i] = L->currState->f->code[s+i];
+  FuncState *fs = L->currState;
+  if (fs->pc+n > fs->maxcode)
+    fs->maxcode = luaM_growvector(&fs->f->code, fs->maxcode,
+                                  Byte, codeEM, MAX_INT);
 }
 
 
@@ -138,31 +124,33 @@ static void code_byte (Byte c)
 
 static void deltastack (int delta)
 {
-  L->currState->stacksize += delta;
-  if (L->currState->stacksize > L->currState->maxstacksize) {
-    if (L->currState->stacksize > 255)
+  FuncState *fs = L->currState;
+  fs->stacksize += delta;
+  if (fs->stacksize > fs->maxstacksize) {
+    if (fs->stacksize > 255)
       luaY_error("function/expression too complex");
-    L->currState->maxstacksize = L->currState->stacksize;
+    fs->maxstacksize = fs->stacksize;
   }
 }
 
 
 static int code_oparg_at (int pc, OpCode op, int builtin, int arg, int delta)
 {
+  Byte *code = L->currState->f->code;
   deltastack(delta);
   if (arg < builtin) {
-    L->currState->f->code[pc] = op+1+arg;
+    code[pc] = op+1+arg;
     return 1;
   }
   else if (arg <= 255) {
-    L->currState->f->code[pc] = op;
-    L->currState->f->code[pc+1] = arg;
+    code[pc] = op;
+    code[pc+1] = arg;
     return 2;
   }
   else if (arg <= MAX_WORD) {
-    L->currState->f->code[pc] = op+1+builtin;
-    L->currState->f->code[pc+1] = arg&0xFF;
-    L->currState->f->code[pc+2] = arg>>8;
+    code[pc] = op+1+builtin;
+    code[pc+1] = arg&0xFF;
+    code[pc+2] = arg>>8;
     return 3;
   }
   else luaY_error("code too long " MES_LIM("64K"));
@@ -172,14 +160,15 @@ static int code_oparg_at (int pc, OpCode op, int builtin, int arg, int delta)
 
 static int fix_opcode (int pc, OpCode op, int builtin, int arg)
 {
+  FuncState *fs = L->currState;
   if (arg < builtin) {  /* close space */
-    movecode_down(pc+1, pc+2, L->currState->pc-(pc+2));
-    L->currState->pc--;
+    luaO_memdown(fs->f->code+pc+1, fs->f->code+pc+2, fs->pc-(pc+2));
+    fs->pc--;
   }
   else if (arg > 255) {  /* open space */
     check_pc(1);
-    movecode_up(pc+1, pc, L->currState->pc-pc);
-    L->currState->pc++;
+    luaO_memup(fs->f->code+pc+1, fs->f->code+pc, fs->pc-pc);
+    fs->pc++;
   }
   return code_oparg_at(pc, op, builtin, arg, 0) - 2;
 }
@@ -301,13 +290,14 @@ static void flush_list (int m, int n)
 
 static void luaI_registerlocalvar (TaggedString *varname, int line)
 {
-  if (L->currState->maxvars != -1) {  /* debug information? */
-    if (L->currState->nvars >= L->currState->maxvars)
-      L->currState->maxvars = luaM_growvector(&L->currState->f->locvars,
-                                      L->currState->maxvars, LocVar, "", MAX_WORD);
-    L->currState->f->locvars[L->currState->nvars].varname = varname;
-    L->currState->f->locvars[L->currState->nvars].line = line;
-    L->currState->nvars++;
+  FuncState *fs = L->currState;
+  if (fs->maxvars != -1) {  /* debug information? */
+    if (fs->nvars >= fs->maxvars)
+      fs->maxvars = luaM_growvector(&fs->f->locvars, fs->maxvars,
+                                    LocVar, "", MAX_WORD);
+    fs->f->locvars[fs->nvars].varname = varname;
+    fs->f->locvars[fs->nvars].line = line;
+    fs->nvars++;
   }
 }
 
@@ -569,22 +559,23 @@ static void func_onstack (TProtoFunc *f)
 static void init_state (TaggedString *filename)
 {
   TProtoFunc *f = luaF_newproto();
-  L->currState->stacksize = 0;
-  L->currState->maxstacksize = 0;
-  L->currState->nlocalvar = 0;
-  L->currState->nupvalues = 0;
-  L->currState->f = f;
+  FuncState *fs = L->currState;
+  fs->stacksize = 0;
+  fs->maxstacksize = 0;
+  fs->nlocalvar = 0;
+  fs->nupvalues = 0;
+  fs->f = f;
   f->fileName = filename;
-  L->currState->pc = 0;
-  L->currState->maxcode = 0;
+  fs->pc = 0;
+  fs->maxcode = 0;
   f->code = NULL;
-  L->currState->maxconsts = 0;
+  fs->maxconsts = 0;
   if (lua_debug) {
-    L->currState->nvars = 0;
-    L->currState->maxvars = 0;
+    fs->nvars = 0;
+    fs->maxvars = 0;
   }
   else
-    L->currState->maxvars = -1;  /* flag no debug information */
+    fs->maxvars = -1;  /* flag no debug information */
   code_byte(0);  /* to be filled with stacksize */
   L->lexstate->lastline = 0;  /* invalidate it */
 }
@@ -696,13 +687,13 @@ stat   : IF cond THEN block SaveWord elsepart END { codeIf($2, $5); }
 
        | WHILE GetPC cond DO block END
        {{
+	 FuncState *fs = L->currState;
          int expsize = $3-$2;
 	 int newpos = $2+JMPSIZE;
 	 check_pc(expsize);
-	 memcpy(&L->currState->f->code[L->currState->pc],
-                &L->currState->f->code[$2], expsize);
-	 movecode_down($2, $3, L->currState->pc-$2);
-	 newpos += fix_jump($2, JMP, L->currState->pc-expsize);
+	 memcpy(fs->f->code+fs->pc, fs->f->code+$2, expsize);
+	 luaO_memdown(fs->f->code+$2, fs->f->code+$3, fs->pc-$2);
+	 newpos += fix_jump($2, JMP, fs->pc-expsize);
 	 fix_upjmp(IFTUPJMP, newpos);
        }}
 

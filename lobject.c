@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.7 1997/11/19 17:29:23 roberto Exp roberto $
+** $Id: lobject.c,v 1.8 1997/12/15 16:17:20 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -74,4 +74,21 @@ void luaO_insertlist (GCnode *root, GCnode *node)
   root->next = node;
   node->marked = 0;
 }
+
+#ifdef OLD_ANSI
+void luaO_memup (void *dest, void *src, int size)
+{
+  char *d = dest;
+  char *s = src;
+  while (size--) d[size]=s[size];
+}
+
+void luaO_memdown (void *dest, void *src, int size)
+{
+  char *d = dest;
+  char *s = src;
+  int i;
+  for (i=0; i<size; i++) d[i]=s[i];
+}
+#endif
 
