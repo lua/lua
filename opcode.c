@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.71 1996/07/24 17:55:57 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.72 1996/08/15 18:40:55 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -682,7 +682,8 @@ int lua_isstring (lua_Object object)
 int lua_isfunction (lua_Object object)
 {
   int t = lua_type(object);
-  return (t == LUA_T_FUNCTION) || (t == LUA_T_CFUNCTION);
+  return (t == LUA_T_FUNCTION) || (t == LUA_T_CFUNCTION) ||
+         (t == LUA_T_MARK) || (t == LUA_T_CMARK);
 }
 
 /*
@@ -710,7 +711,8 @@ char *lua_getstring (lua_Object object)
 */
 lua_CFunction lua_getcfunction (lua_Object object)
 {
- if (object == LUA_NOOBJECT || tag(Address(object)) != LUA_T_CFUNCTION)
+ if (object == LUA_NOOBJECT || ((tag(Address(object)) != LUA_T_CFUNCTION) &&
+                                (tag(Address(object)) != LUA_T_CMARK)))
    return NULL;
  else return (fvalue(Address(object)));
 }
@@ -847,7 +849,10 @@ void lua_pushobject (lua_Object o)
 {
   if (o == LUA_NOOBJECT)
     lua_error("attempt to push a NOOBJECT");
-  luaI_pushobject(Address(o));
+  *top = *Address(o);
+  if (tag(top) == LUA_T_MARK) tag(top) = LUA_T_FUNCTION;
+  else if (tag(top) == LUA_T_CMARK) tag(top) = LUA_T_CFUNCTION;
+  incr_top;
 }
 
 int lua_type (lua_Object o)
