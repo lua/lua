@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.39 1999/01/15 13:14:24 roberto Exp roberto $
+** $Id: lvm.c,v 1.40 1999/01/20 20:22:06 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -90,12 +90,11 @@ void luaV_setn (Hash *t, int val) {
   TObject index, value;
   ttype(&index) = LUA_T_STRING; tsvalue(&index) = luaS_new("n");
   ttype(&value) = LUA_T_NUMBER; nvalue(&value) = val;
-  *(luaH_set(t, &index)) = value;
+  luaH_set(t, &index, &value);
 }
 
 
-void luaV_closure (int nelems)
-{
+void luaV_closure (int nelems) {
   if (nelems > 0) {
     struct Stack *S = &L->stack;
     Closure *c = luaF_newclosure(nelems);
@@ -155,7 +154,7 @@ void luaV_settable (TObject *t, int deep) {
   else {  /* object is a table... */
     im = luaT_getim(avalue(t)->htag, IM_SETTABLE);
     if (ttype(im) == LUA_T_NIL) {  /* and does not have a "settable" method */
-      *(luaH_set(avalue(t), t+1)) = *(S->top-1);
+      luaH_set(avalue(t), t+1, S->top-1);
       /* if deep, pop only value; otherwise, pop table, index and value */
       S->top -= (deep) ? 1 : 3;
       return;
@@ -180,7 +179,7 @@ void luaV_rawsettable (TObject *t) {
     lua_error("indexed expression not a table");
   else {
     struct Stack *S = &L->stack;
-    *(luaH_set(avalue(t), t+1)) = *(S->top-1);
+    luaH_set(avalue(t), t+1, S->top-1);
     S->top -= 3;
   }
 }
@@ -482,12 +481,8 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base)
       setlist: {
         int n = *(pc++);
         TObject *arr = S->top-n-1;
-        for (; n; n--) {
-          ttype(S->top) = LUA_T_NUMBER;
-          nvalue(S->top) = n+aux;
-          *(luaH_set(avalue(arr), S->top)) = *(S->top-1);
-          S->top--;
-        }
+        for (; n; n--)
+          luaH_setint(avalue(arr), n+aux, --S->top);
         break;
       }
 
@@ -499,7 +494,7 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base)
       setmap: {
         TObject *arr = S->top-(2*aux)-3;
         do {
-          *(luaH_set(avalue(arr), S->top-2)) = *(S->top-1);
+          luaH_set(avalue(arr), S->top-2, S->top-1);
           S->top-=2;
         } while (aux--);
         break;
