@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.3 1997/09/26 16:46:20 roberto Exp roberto $
+** $Id: lobject.h,v 1.4 1997/10/16 10:59:34 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -35,20 +35,21 @@ typedef unsigned int IntPoint; /* unsigned with same size as a pointer (for hash
 ** grep "ORDER LUA_T"
 */
 typedef enum {
-  LUA_T_NIL      = -10,
-  LUA_T_NUMBER   = -9,
-  LUA_T_STRING   = -8,
-  LUA_T_ARRAY    = -7,  /* array==table */
-  LUA_T_PROTO    = -6,
-  LUA_T_FUNCTION = -5,
-  LUA_T_CFUNCTION= -4,
-  LUA_T_MARK     = -3,
-  LUA_T_CMARK    = -2,
-  LUA_T_LINE     = -1,
-  LUA_T_USERDATA = 0
+  LUA_T_USERDATA =  0,  /* tag default for userdata */
+  LUA_T_NUMBER   = -1,  /* fixed tag for numbers */
+  LUA_T_STRING   = -2,  /* fixed tag for strings */
+  LUA_T_ARRAY    = -3,  /* tag default for tables (or arrays) */
+  LUA_T_FUNCTION = -4,  /* fixed tag for functions */
+  LUA_T_CFUNCTION= -5,  /* fixed tag for Cfunctions */
+  LUA_T_NIL      = -6,  /* last "pre-defined" tag */
+  LUA_T_PROTO    = -7,
+  LUA_T_MARK     = -8,
+  LUA_T_CMARK    = -9,
+  LUA_T_LINE     = -10
 } lua_Type;
 
 #define NUM_TYPES 11
+#define NUM_TAGS  7
 
 
 typedef union {

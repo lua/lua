@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
+** $Id: ltm.c,v 1.2 1997/09/26 15:02:26 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -14,31 +14,7 @@
 #include "lobject.h"
 #include "ltm.h"
 
-static struct IM init_IM[NUM_TYPES] = {
-{{{LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}}},
-{{{LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}}},
-{{{LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}}},
-{{{LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}}},
+static struct IM init_IM[NUM_TAGS] = {
 {{{LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
   {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
   {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
@@ -89,8 +65,7 @@ static struct IM init_IM[NUM_TYPES] = {
 char *luaT_eventname[] = {  /* ORDER IM */
   "gettable", "settable", "index", "getglobal", "setglobal", "add",
   "sub", "mul", "div", "pow", "unm", "lt", "le", "gt", "ge",
-  "concat", "gc", "function",
-  NULL
+  "concat", "gc", "function", NULL
 };
 
 
@@ -105,26 +80,22 @@ static int luaI_checkevent (char *name, char *list[])
 
 struct IM *luaT_IMtable = init_IM;
 
-static int IMtable_size = NUM_TYPES;
+static int IMtable_size = NUM_TAGS;
 
-static int last_tag = -(NUM_TYPES-1);
+static int last_tag = -(NUM_TAGS-1);
 
 
-/* events in LUA_T_LINE are all allowed, since this is used as a
+/* events in LUA_T_NIL are all allowed, since this is used as a
 *  'placeholder' for "default" fallbacks
 */
-static char validevents[NUM_TYPES][IM_N] = { /* ORDER LUA_T, ORDER IM */
+static char validevents[NUM_TAGS][IM_N] = { /* ORDER LUA_T, ORDER IM */
 {1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* LUA_T_USERDATA */
-{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},  /* LUA_T_LINE */
-{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},  /* LUA_T_CMARK */
-{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},  /* LUA_T_MARK */
-{1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_CFUNCTION */
-{1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_FUNCTION */
-{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},  /* LUA_T_PROTO */
-{0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},  /* LUA_T_ARRAY */
-{1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_T_STRING */
 {1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_T_NUMBER */
-{1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}   /* LUA_T_NIL */
+{1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_T_STRING */
+{0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},  /* LUA_T_ARRAY */
+{1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_FUNCTION */
+{1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_CFUNCTION */
+{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}   /* LUA_T_NIL */
 };
 
 static int validevent (lua_Type t, int e)
@@ -159,7 +130,7 @@ int lua_newtag (void)
 
 
 static void checktag (int tag)
-{ /* ORDER LUA_T */
+{
   if (!(last_tag <= tag && tag <= 0))
     luaL_verror("%d is not a valid tag", tag);
 }
@@ -289,7 +260,7 @@ void luaT_setfallback (void)
     }
     case 3: {  /* old order fallback */
       int i;
-      oldfunc = *luaT_getim(LUA_T_LINE, IM_LT);
+      oldfunc = *luaT_getim(LUA_T_NIL, IM_LT);
       for (i=IM_LT; i<=IM_GE; i++)  /* ORDER IM */
         fillvalids(i, luaA_Address(func));
       replace = typeFB;
@@ -298,7 +269,7 @@ void luaT_setfallback (void)
     default: {
       int e;
       if ((e = luaO_findstring(name, luaT_eventname)) >= 0) {
-        oldfunc = *luaT_getim(LUA_T_LINE, e);
+        oldfunc = *luaT_getim(LUA_T_NIL, e);
         fillvalids(e, luaA_Address(func));
         replace = (e == IM_GC || e == IM_INDEX) ? nilFB : typeFB;
       }
