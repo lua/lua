@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.58 2000/04/13 16:51:01 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.59 2000/04/14 17:45:25 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -51,7 +51,7 @@
 #define GET_OPCODE(i)	((OpCode)((i)&MASK1(SIZE_OP,0)))
 #define SET_OPCODE(i,o)	((i) = (((i)&MASK0(SIZE_OP,0)) | (Instruction)(o)))
 
-#define CREATE_U(o,u)	 ((Instruction)(o) | (Instruction)(u)<<POS_U)
+#define CREATE_U(o,u)	 ((Instruction)(o) | ((Instruction)(u)<<POS_U))
 #define GETARG_U(i)	((int)((i)>>POS_U))
 #define SETARG_U(i,u)	((i) = (((i)&MASK0(SIZE_U,POS_U)) | \
                                ((Instruction)(u)<<POS_U)))
