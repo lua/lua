@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.30 1999/12/23 18:19:57 roberto Exp roberto $
+** $Id: ltm.c,v 1.31 2000/01/19 12:00:45 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -18,9 +18,8 @@
 
 
 const char *const luaT_eventname[] = {  /* ORDER IM */
-  "gettable", "settable", "index", "getglobal", "setglobal", "add",
-  "sub", "mul", "div", "pow", "unm", "lt", "le", "gt", "ge",
-  "concat", "gc", "function", NULL
+  "gettable", "settable", "index", "getglobal", "setglobal", "add", "sub",
+  "mul", "div", "pow", "unm", "lt", "concat", "gc", "function", NULL
 };
 
 
@@ -38,13 +37,13 @@ static int luaI_checkevent (lua_State *L, const char *name, const char *const li
 */
 /* ORDER LUA_T, ORDER IM */
 static const char luaT_validevents[NUM_TAGS][IM_N] = {
-{1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* LUA_T_USERDATA */
-{1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_T_NUMBER */
-{1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_T_STRING */
-{0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* LUA_T_ARRAY */
-{1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_LPROTO */
-{1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_CPROTO */
-{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}   /* LUA_T_NIL */
+{1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* LUA_T_USERDATA */
+{1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},  /* LUA_T_NUMBER */
+{1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_T_STRING */
+{0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* LUA_T_ARRAY */
+{1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_LPROTO */
+{1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_CPROTO */
+{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}   /* LUA_T_NIL */
 };
 
 int luaT_validevent (int t, int e) {  /* ORDER LUA_T */
@@ -122,7 +121,13 @@ int luaT_effectivetag (const TObject *o) {
 
 
 const TObject *luaT_gettagmethod (lua_State *L, int t, const char *event) {
-  int e = luaI_checkevent(L, event, luaT_eventname);
+  int e;
+#ifdef LUA_COMPAT_ORDER_TM
+  static const char *old_order[] = {"le", "gt", "ge", NULL};
+  if (luaL_findstring(event, old_order) >= 0)
+     return &luaO_nilobject;
+#endif
+  e = luaI_checkevent(L, event, luaT_eventname);
   checktag(L, t);
   if (luaT_validevent(t, e))
     return luaT_getim(L, t,e);
@@ -133,7 +138,13 @@ const TObject *luaT_gettagmethod (lua_State *L, int t, const char *event) {
 
 void luaT_settagmethod (lua_State *L, int t, const char *event, TObject *func) {
   TObject temp;
-  int e = luaI_checkevent(L, event, luaT_eventname);
+  int e;
+#ifdef LUA_COMPAT_ORDER_TM
+  static const char *old_order[] = {"le", "gt", "ge", NULL};
+  if (luaL_findstring(event, old_order) >= 0)
+     return;  /* do nothing for old operators */
+#endif
+  e = luaI_checkevent(L, event, luaT_eventname);
   checktag(L, t);
   if (!luaT_validevent(t, e))
     luaL_verror(L, "cannot change tag method `%.20s' for type `%.20s'%.20s",
@@ -146,7 +157,8 @@ void luaT_settagmethod (lua_State *L, int t, const char *event, TObject *func) {
 }
 
 
-const char *luaT_travtagmethods (lua_State *L, int (*fn)(lua_State *, TObject *)) {  /* ORDER IM */
+const char *luaT_travtagmethods (lua_State *L,
+                         int (*fn)(lua_State *, TObject *)) {  /* ORDER IM */
   int e;
   for (e=IM_GETTABLE; e<=IM_FUNCTION; e++) {
     int t;

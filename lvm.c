@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.87 2000/02/14 16:51:08 roberto Exp roberto $
+** $Id: lvm.c,v 1.88 2000/02/22 13:31:30 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -138,7 +138,6 @@ void luaV_gettable (lua_State *L, StkId top) {
 
 /*
 ** Receives table at *t, index at *(t+1) and value at `top'.
-** WARNING: caller must assure 3 extra stack slots (to call a tag method)
 */
 void luaV_settable (lua_State *L, StkId t, StkId top) {
   const TObject *im;
@@ -158,6 +157,7 @@ void luaV_settable (lua_State *L, StkId t, StkId top) {
   }
   /* object is not a table, or it has a `settable' method */
   /* prepare arguments and call the tag method */
+  luaD_checkstack(L, 3);
   *(top+2) = *(top-1);
   *(top+1) = *(t+1);
   *(top) = *t;
@@ -177,15 +177,13 @@ void luaV_rawsettable (lua_State *L, StkId t) {
 }
 
 
-/*
-** WARNING: caller must assure 3 extra stack slots (to call a tag method)
-*/
 void luaV_getglobal (lua_State *L, GlobalVar *gv, StkId top) {
   const TObject *value = &gv->value;
   TObject *im = luaT_getimbyObj(L, value, IM_GETGLOBAL);
   if (ttype(im) == LUA_T_NIL)  /* is there a tag method? */
     *top = *value;  /* default behavior */
   else {  /* tag method */
+    luaD_checkstack(L, 3);
     *top = *im;
     ttype(top+1) = LUA_T_STRING;
     tsvalue(top+1) = gv->name;  /* global name */
@@ -196,15 +194,13 @@ void luaV_getglobal (lua_State *L, GlobalVar *gv, StkId top) {
 }
 
 
-/*
-** WARNING: caller must assure 3 extra stack slots (to call a tag method)
-*/
 void luaV_setglobal (lua_State *L, GlobalVar *gv, StkId top) {
   const TObject *oldvalue = &gv->value;
   const TObject *im = luaT_getimbyObj(L, oldvalue, IM_SETGLOBAL);
   if (ttype(im) == LUA_T_NIL)  /* is there a tag method? */
     gv->value = *(top-1);
   else {
+    luaD_checkstack(L, 3);
     *(top+2) = *(top-1);  /* new value */
     *(top+1) = *oldvalue;
     ttype(top) = LUA_T_STRING;
@@ -258,30 +254,31 @@ static int luaV_strcomp (const TaggedString *ls, const TaggedString *rs) {
   }
 }
 
-void luaV_comparison (lua_State *L) {
-  const TObject *l = L->top-2;
-  const TObject *r = L->top-1;
-  int result;
+
+int luaV_lessthan (lua_State *L, TObject *l, TObject *r) {
   if (ttype(l) == LUA_T_NUMBER && ttype(r) == LUA_T_NUMBER)
-    result = nvalue(l) < nvalue(r);
+    return (nvalue(l) < nvalue(r));
   else if (ttype(l) == LUA_T_STRING && ttype(r) == LUA_T_STRING)
-    result = luaV_strcomp(tsvalue(l), tsvalue(r)) < 0;
+    return (luaV_strcomp(tsvalue(l), tsvalue(r)) < 0);
   else {
+    /* update top and put arguments in correct order to call Tag Method */
+    if (l<r)  /* are arguments in correct order? */
+      L->top = r+1;  /* yes; 2nd is on top */
+    else {  /* no; exchange them */
+      TObject temp = *r;
+      *r = *l;
+      *l = temp;
+      L->top = l+1;  /* 1st is on top */
+    }
     call_binTM(L, L->top, IM_LT, "unexpected type in comparison");
-    return;
+    L->top--;
+    return (ttype(L->top) != LUA_T_NIL);
   }
-  L->top--;
-  if (result) {
-    nvalue(L->top-1) = 1.0;
-    ttype(L->top-1) = LUA_T_NUMBER;
-  }
-  else
-    ttype(L->top-1) = LUA_T_NIL;
 }
 
 
 #define setbool(o,cond) if (cond) { \
-                              ttype(o) = LUA_T_NUMBER; nvalue(o) = 1.0; } \
+                             ttype(o) = LUA_T_NUMBER; nvalue(o) = 1.0; } \
                         else ttype(o) = LUA_T_NIL
 
 
@@ -484,42 +481,22 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
 
       case LTOP:
         top--;
-        if (ttype(top-1) == LUA_T_NUMBER && ttype(top) == LUA_T_NUMBER)
-          setbool(top-1, nvalue(top-1) < nvalue(top));
-        else if (ttype(top-1) == LUA_T_STRING && ttype(top) == LUA_T_STRING)
-          setbool(top-1, luaV_strcomp(tsvalue(top-1), tsvalue(top)) < 0);
-        else
-          call_binTM(L, top+1, IM_LT, "unexpected type in comparison");
+        setbool(top-1, luaV_lessthan(L, top-1, top));
         break;
 
-      case LEOP:
+      case LEOP:  /* a <= b  ===  !(b<a) */
         top--;
-        if (ttype(top-1) == LUA_T_NUMBER && ttype(top) == LUA_T_NUMBER)
-          setbool(top-1, nvalue(top-1) <= nvalue(top));
-        else if (ttype(top-1) == LUA_T_STRING && ttype(top) == LUA_T_STRING)
-          setbool(top-1, luaV_strcomp(tsvalue(top-1), tsvalue(top)) <= 0);
-        else
-          call_binTM(L, top+1, IM_LE, "unexpected type in comparison");
+        setbool(top-1, !luaV_lessthan(L, top, top-1));
         break;
 
-      case GTOP:
+      case GTOP:  /* a > b  ===  (b<a) */
         top--;
-        if (ttype(top-1) == LUA_T_NUMBER && ttype(top) == LUA_T_NUMBER)
-          setbool(top-1, nvalue(top-1) > nvalue(top));
-        else if (ttype(top-1) == LUA_T_STRING && ttype(top) == LUA_T_STRING)
-          setbool(top-1, luaV_strcomp(tsvalue(top-1), tsvalue(top)) > 0);
-        else
-          call_binTM(L, top+1, IM_GT, "unexpected type in comparison");
+        setbool(top-1, luaV_lessthan(L, top, top-1));
         break;
 
-      case GEOP:
+      case GEOP:  /* a >= b  ===  !(a<b) */
         top--;
-        if (ttype(top-1) == LUA_T_NUMBER && ttype(top) == LUA_T_NUMBER)
-          setbool(top-1, nvalue(top-1) >= nvalue(top));
-        else if (ttype(top-1) == LUA_T_STRING && ttype(top) == LUA_T_STRING)
-          setbool(top-1, luaV_strcomp(tsvalue(top-1), tsvalue(top)) >= 0);
-        else
-          call_binTM(L, top+1, IM_GE, "unexpected type in comparison");
+        setbool(top-1, !luaV_lessthan(L, top-1, top));
         break;
 
       case ADDOP:

@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.21 1999/10/04 17:51:04 roberto Exp roberto $
+## $Id: makefile,v 1.22 2000/02/22 13:31:43 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -24,8 +24,8 @@
 # define COMPAT_READPATTERN if you need read patterns
 # (only for compatibility with previous versions)
 
-CONFIG = -DPOPEN -D_POSIX_SOURCE
-#CONFIG = -DOLD_ANSI -DDEBUG -DLUA_COMPAT_GC -DCOMPAT_READPATTERN
+CONFIG = -DPOPEN -D_POSIX_SOURCE -DDEBUG -DLUA_COMPAT_ORDER_TM
+#CONFIG = -DOLD_ANSI -DDEBUG -DLUA_COMPAT_GC -DCOMPAT_READPATTERN -DLUA_COMPAT_ORDER_TM
 
 
 # Compilation parameters

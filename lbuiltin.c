@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.91 1999/12/30 18:27:03 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.92 2000/01/19 16:50:30 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -539,13 +539,16 @@ static int sort_comp (lua_State *L, lua_Object f, const TObject *a,
     *(L->top+2) = *b;
     L->top += 3;
     luaD_call(L, L->top-3, 1);
+    L->top--;
+    return (ttype(L->top) != LUA_T_NIL);
   }
   else {  /* a < b? */
-    *(L->top++) = *a;
-    *(L->top++) = *b;
-    luaV_comparison(L);
+    int res;
+    *(L->top) = *a;
+    *(L->top+1) = *b;
+    res = luaV_lessthan(L, L->top, L->top+1);
+    return res;
   }
-  return ttype(--(L->top)) != LUA_T_NIL;
 }
 
 static void auxsort (lua_State *L, Hash *a, int l, int u, lua_Object f) {
