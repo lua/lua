@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.130 2001/02/14 17:04:11 roberto Exp roberto $
+** $Id: lapi.c,v 1.131 2001/02/20 18:15:33 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -531,7 +531,7 @@ LUA_API int lua_ref (lua_State *L,  int lock) {
 
 
 /*
-** "do" functions (run Lua code)
+** `do' functions (run Lua code)
 ** (most of them are in ldo.c)
 */
 

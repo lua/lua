@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.66 2001/02/20 18:28:11 roberto Exp roberto $
+** $Id: ldebug.c,v 1.67 2001/02/21 16:52:09 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -277,7 +277,7 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
   if (isactive)
     func = ar->_func;
   else {
-    what++;  /* skip the '>' */
+    what++;  /* skip the `>' */
     func = L->top - 1;
   }
   for (; *what; what++) {

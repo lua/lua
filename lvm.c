@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.169 2001/02/12 13:04:19 roberto Exp roberto $
+** $Id: lvm.c,v 1.170 2001/02/20 18:15:33 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -237,13 +237,13 @@ static int luaV_strlessthan (const TString *ls, const TString *rs) {
   for (;;) {
     int temp = strcoll(l, r);
     if (temp != 0) return (temp < 0);
-    else {  /* strings are equal up to a '\0' */
-      size_t len = strlen(l);  /* index of first '\0' in both strings */
+    else {  /* strings are equal up to a `\0' */
+      size_t len = strlen(l);  /* index of first `\0' in both strings */
       if (len == lr)  /* r is finished? */
         return 0;  /* l is equal or greater than r */
       else if (len == ll)  /* l is finished? */
         return 1;  /* l is smaller than r (because r is not finished) */
-      /* both strings longer than `len'; go on comparing (after the '\0') */
+      /* both strings longer than `len'; go on comparing (after the `\0') */
       len++;
       l += len; ll -= len; r += len; lr -= len;
     }
@@ -600,7 +600,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
           luaD_error(L, "`for' limit must be a number");
         if (tonumber(top-3))
           luaD_error(L, "`for' initial value must be a number");
-        pc += -jmp;  /* "jump" to loop end (delta is negated here) */
+        pc += -jmp;  /* `jump' to loop end (delta is negated here) */
         goto forloop;  /* do not increment index */
       }
       case OP_FORLOOP: {
@@ -626,7 +626,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         setnvalue(top-3, -1);  /* initial index */
         setnilvalue(top-2);
         setnilvalue(top-1);
-        pc += -jmp;  /* "jump" to loop end (delta is negated here) */
+        pc += -jmp;  /* `jump' to loop end (delta is negated here) */
         /* go through */
       }
       case OP_LFORLOOP: {

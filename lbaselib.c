@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.24 2001/02/20 18:29:54 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.25 2001/02/22 17:15:18 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -447,7 +447,7 @@ static int luaB_tremove (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
   n = lua_getn(L, 1);
   pos = luaL_opt_int(L, 2, n);
-  if (n <= 0) return 0;  /* table is "empty" */
+  if (n <= 0) return 0;  /* table is `empty' */
   lua_rawgeti(L, 1, pos);  /* result = t[pos] */
   for ( ;pos<n; pos++) {
     lua_rawgeti(L, 1, pos+1);
@@ -545,7 +545,7 @@ static void auxsort (lua_State *L, int l, int u) {
     lua_rawgeti(L, 1, i);
     set2(L, u-1, i);  /* swap pivot (a[u-1]) with a[i] */
     /* a[l..i-1] <= a[i] == P <= a[i+1..u] */
-    /* adjust so that smaller "half" is in [j..i] and larger one in [l..u] */
+    /* adjust so that smaller half is in [j..i] and larger one in [l..u] */
     if (i-l < u-i) {
       j=l; i=i-1; l=i+2;
     }

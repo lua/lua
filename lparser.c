@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.135 2001/02/20 18:15:33 roberto Exp roberto $
+** $Id: lparser.c,v 1.136 2001/02/20 18:28:11 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -26,7 +26,7 @@
 ** Constructors descriptor:
 ** `n' indicates number of elements, and `k' signals whether
 ** it is a list constructor (k = 0) or a record constructor (k = 1)
-** or empty (k = ';' or '}')
+** or empty (k = `;' or `}')
 */
 typedef struct Constdesc {
   int n;
@@ -381,7 +381,7 @@ Proto *luaY_parser (lua_State *L, ZIO *z) {
 
 
 static int explist1 (LexState *ls) {
-  /* explist1 -> expr { ',' expr } */
+  /* explist1 -> expr { `,' expr } */
   int n = 1;  /* at least one expression */
   expdesc v;
   expr(ls, &v);
@@ -400,7 +400,7 @@ static void funcargs (LexState *ls, int slf) {
   FuncState *fs = ls->fs;
   int slevel = fs->stacklevel - slf - 1;  /* where is func in the stack */
   switch (ls->t.token) {
-    case '(': {  /* funcargs -> '(' [ explist1 ] ')' */
+    case '(': {  /* funcargs -> `(' [ explist1 ] `)' */
       int line = ls->linenumber;
       int nargs = 0;
       next(ls);
@@ -442,7 +442,7 @@ static void funcargs (LexState *ls, int slf) {
 
 
 static void recfield (LexState *ls) {
-  /* recfield -> (NAME | '['exp1']') = exp1 */
+  /* recfield -> (NAME | `['exp1`]') = exp1 */
   switch (ls->t.token) {
     case TK_NAME: {
       luaK_kstr(ls, checkname(ls));
@@ -462,7 +462,7 @@ static void recfield (LexState *ls) {
 
 
 static int recfields (LexState *ls) {
-  /* recfields -> recfield { ',' recfield } [','] */
+  /* recfields -> recfield { `,' recfield } [`,'] */
   FuncState *fs = ls->fs;
   int n = 1;  /* at least one element */
   recfield(ls);
@@ -481,7 +481,7 @@ static int recfields (LexState *ls) {
 
 
 static int listfields (LexState *ls) {
-  /* listfields -> exp1 { ',' exp1 } [','] */
+  /* listfields -> exp1 { `,' exp1 } [`,'] */
   FuncState *fs = ls->fs;
   int n = 1;  /* at least one element */
   exp1(ls);
@@ -531,7 +531,7 @@ static void constructor_part (LexState *ls, Constdesc *cd) {
 
 
 static void constructor (LexState *ls) {
-  /* constructor -> '{' constructor_part [';' constructor_part] '}' */
+  /* constructor -> `{' constructor_part [`;' constructor_part] `}' */
   FuncState *fs = ls->fs;
   int line = ls->linenumber;
   int pc = luaK_code1(fs, OP_CREATETABLE, 0);
@@ -617,18 +617,18 @@ static void primaryexp (LexState *ls, expdesc *v) {
 
 static void simpleexp (LexState *ls, expdesc *v) {
   /* simpleexp ->
-        primaryexp { '.' NAME | '[' exp ']' | ':' NAME funcargs | funcargs } */
+        primaryexp { `.' NAME | `[' exp `]' | `:' NAME funcargs | funcargs } */
   primaryexp(ls, v);
   for (;;) {
     switch (ls->t.token) {
-      case '.': {  /* '.' NAME */
+      case '.': {  /* `.' NAME */
         next(ls);
         luaK_tostack(ls, v, 1);  /* `v' must be on stack */
         luaK_kstr(ls, checkname(ls));
         v->k = VINDEXED;
         break;
       }
-      case '[': {  /* '[' exp1 ']' */
+      case '[': {  /* `[' exp1 `]' */
         next(ls);
         luaK_tostack(ls, v, 1);  /* `v' must be on stack */
         v->k = VINDEXED;
@@ -636,7 +636,7 @@ static void simpleexp (LexState *ls, expdesc *v) {
         check(ls, ']');
         break;
       }
-      case ':': {  /* ':' NAME funcargs */
+      case ':': {  /* `:' NAME funcargs */
         next(ls);
         luaK_tostack(ls, v, 1);  /* `v' must be on stack */
         luaK_code1(ls->fs, OP_PUSHSELF, checkname(ls));
@@ -775,14 +775,14 @@ static void block (LexState *ls) {
 static int assignment (LexState *ls, expdesc *v, int nvars) {
   int left = 0;  /* number of values left in the stack after assignment */
   luaX_checklimit(ls, nvars, MAXVARSLH, "variables in a multiple assignment");
-  if (ls->t.token == ',') {  /* assignment -> ',' simpleexp assignment */
+  if (ls->t.token == ',') {  /* assignment -> `,' simpleexp assignment */
     expdesc nv;
     next(ls);
     simpleexp(ls, &nv);
     check_condition(ls, (nv.k != VEXP), "syntax error");
     left = assignment(ls, &nv, nvars+1);
   }
-  else {  /* assignment -> '=' explist1 */
+  else {  /* assignment -> `=' explist1 */
     int nexps;
     check(ls, '=');
     nexps = explist1(ls);
@@ -943,11 +943,11 @@ static void ifstat (LexState *ls, int line) {
 
 
 static void localstat (LexState *ls) {
-  /* stat -> LOCAL NAME {',' NAME} ['=' explist1] */
+  /* stat -> LOCAL NAME {`,' NAME} [`=' explist1] */
   int nvars = 0;
   int nexps;
   do {
-    next(ls);  /* skip LOCAL or ',' */
+    next(ls);  /* skip LOCAL or `,' */
     new_localvar(ls, str_checkname(ls), nvars++);
   } while (ls->t.token == ',');
   if (optional(ls, '='))
@@ -960,7 +960,7 @@ static void localstat (LexState *ls) {
 
 
 static int funcname (LexState *ls, expdesc *v) {
-  /* funcname -> NAME {'.' NAME} [':' NAME] */
+  /* funcname -> NAME {`.' NAME} [`:' NAME] */
   int needself = 0;
   singlevar(ls, str_checkname(ls), v);
   while (ls->t.token == '.') {
@@ -1083,7 +1083,7 @@ static int stat (LexState *ls) {
 
 
 static void parlist (LexState *ls) {
-  /* parlist -> [ param { ',' param } ] */
+  /* parlist -> [ param { `,' param } ] */
   int nparams = 0;
   short dots = 0;
   if (ls->t.token != ')') {  /* is `parlist' not empty? */
@@ -1100,7 +1100,7 @@ static void parlist (LexState *ls) {
 
 
 static void body (LexState *ls, int needself, int line) {
-  /* body ->  '(' parlist ')' chunk END */
+  /* body ->  `(' parlist `)' chunk END */
   FuncState new_fs;
   open_func(ls, &new_fs);
   new_fs.f->lineDefined = line;
@@ -1122,7 +1122,7 @@ static void body (LexState *ls, int needself, int line) {
 
 
 static void chunk (LexState *ls) {
-  /* chunk -> { stat [';'] } */
+  /* chunk -> { stat [`;'] } */
   int islast = 0;
   while (!islast && !block_follow(ls->t.token)) {
     islast = stat(ls);

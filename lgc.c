@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.89 2001/02/20 18:15:33 roberto Exp roberto $
+** $Id: lgc.c,v 1.90 2001/02/20 18:28:11 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -18,7 +18,7 @@
 
 
 /*
-** optional "lock" for GC
+** optional lock for GC
 ** (when Lua calls GC tag methods it unlocks the regular lock)
 */
 #ifndef LUA_LOCKGC

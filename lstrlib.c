@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.62 2001/02/02 19:02:40 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.63 2001/02/22 17:15:18 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -17,7 +17,7 @@
 #include "lualib.h"
 
 
-typedef long sint32;	/* a "signed" version for size_t */
+typedef long sint32;	/* a signed version for size_t */
 
 
 static int str_len (lua_State *L) {
@@ -128,7 +128,7 @@ static int str_char (lua_State *L) {
 
 typedef struct MatchState {
   const char *src_init;  /* init of source string */
-  const char *src_end;  /* end ('\0') of source string */
+  const char *src_end;  /* end (`\0') of source string */
   int level;  /* total number of captures (finished or unfinished) */
   struct {
     const char *init;
@@ -166,9 +166,9 @@ static const char *luaI_classend (MatchState *ms, const char *p) {
       return p+1;
     case '[':
       if (*p == '^') p++;
-      do {  /* look for a ']' */
+      do {  /* look for a `]' */
         if (*p == '\0') lua_error(ms->L, "malformed pattern (missing `]')");
-        if (*(p++) == ESC && *p != '\0') p++;  /* skip escapes (e.g. '%]') */
+        if (*(p++) == ESC && *p != '\0') p++;  /* skip escapes (e.g. `%]') */
       } while (*p != ']');
       return p+1;
     default:
@@ -200,7 +200,7 @@ static int matchbracketclass (char c, const char *p, const char *endclass) {
   int sig = 1;
   if (*(p+1) == '^') {
     sig = 0;
-    p++;  /* skip the '^' */
+    p++;  /* skip the `^' */
   }
   while (++p < endclass) {
     if (*p == ESC) {
@@ -342,7 +342,7 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
     case '\0':  /* end of pattern */
       return s;  /* match succeeded */
     case '$':
-      if (*(p+1) == '\0')  /* is the '$' the last char in pattern? */
+      if (*(p+1) == '\0')  /* is the `$' the last char in pattern? */
         return (s == ms->src_end) ? s : NULL;  /* check end of string */
       else goto dflt;
     default: dflt: {  /* it is a pattern item */
@@ -601,7 +601,7 @@ static int str_format (lua_State *L) {
           break;
         case 'q':
           luaI_addquoted(L, &b, arg);
-          continue;  /* skip the "addsize" at the end */
+          continue;  /* skip the `addsize' at the end */
         case 's': {
           size_t l;
           const char *s = luaL_check_lstr(L, arg, &l);
@@ -610,7 +610,7 @@ static int str_format (lua_State *L) {
                keep original string */
             lua_pushvalue(L, arg);
             luaL_addvalue(&b);
-            continue;  /* skip the "addsize" at the end */
+            continue;  /* skip the `addsize' at the end */
           }
           else {
             sprintf(buff, form, s);

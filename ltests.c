@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.69 2001/02/20 18:18:00 roberto Exp roberto $
+** $Id: ltests.c,v 1.70 2001/02/21 16:51:25 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -473,7 +473,7 @@ static int equal (lua_State *L) {
 
 /*
 ** {======================================================
-** function to test the API with C. It interprets a kind of "assembler"
+** function to test the API with C. It interprets a kind of assembler
 ** language with calls to the API, so the test can be driven by Lua code
 ** =======================================================
 */

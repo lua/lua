@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.77 2001/02/09 20:22:29 roberto Exp roberto $
+** $Id: llex.c,v 1.78 2001/02/22 17:15:18 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -89,7 +89,7 @@ static void luaX_invalidchar (LexState *ls, int c) {
 
 
 static void inclinenumber (LexState *LS) {
-  next(LS);  /* skip '\n' */
+  next(LS);  /* skip `\n' */
   ++LS->linenumber;
   luaX_checklimit(LS, LS->linenumber, MAX_INT, "lines in a chunk");
 }
@@ -167,7 +167,7 @@ static void read_number (LexState *LS, int comma, SemInfo *seminfo) {
     save_and_next(L, LS, l);
   }
   if (LS->current == 'e' || LS->current == 'E') {
-    save_and_next(L, LS, l);  /* read 'E' */
+    save_and_next(L, LS, l);  /* read `E' */
     if (LS->current == '+' || LS->current == '-')
       save_and_next(L, LS, l);  /* optional exponent sign */
     while (isdigit(LS->current)) {
@@ -186,8 +186,8 @@ static void read_long_string (LexState *LS, SemInfo *seminfo) {
   int cont = 0;
   size_t l = 0;
   checkbuffer(L, 10, l);
-  save(L, '[', l);  /* save first '[' */
-  save_and_next(L, LS, l);  /* pass the second '[' */
+  save(L, '[', l);  /* save first `[' */
+  save_and_next(L, LS, l);  /* pass the second `[' */
   for (;;) {
     checkbuffer(L, 10, l);
     switch (LS->current) {
@@ -218,7 +218,7 @@ static void read_long_string (LexState *LS, SemInfo *seminfo) {
         save_and_next(L, LS, l);
     }
   } endloop:
-  save_and_next(L, LS, l);  /* skip the second ']' */
+  save_and_next(L, LS, l);  /* skip the second `]' */
   save(L, '\0', l);
   seminfo->ts = luaS_newlstr(L, G(L)->Mbuffer+2, l-5);
 }
@@ -237,7 +237,7 @@ static void read_string (LexState *LS, int del, SemInfo *seminfo) {
         luaX_error(LS, "unfinished string", TK_STRING);
         break;  /* to avoid warnings */
       case '\\':
-        next(LS);  /* do not save the '\' */
+        next(LS);  /* do not save the `\' */
         switch (LS->current) {
           case 'a': save(L, '\a', l); next(LS); break;
           case 'b': save(L, '\b', l); next(LS); break;
