@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.38 2001/06/20 17:25:30 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.39 2001/07/12 18:11:58 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -544,14 +544,16 @@ static int luaB_getn (lua_State *L) {
 
 
 static int luaB_tinsert (lua_State *L) {
-  int v = lua_gettop(L);  /* last argument: to be inserted */
+  int v = lua_gettop(L);  /* number of arguments */
   int n, pos;
   luaL_checktype(L, 1, LUA_TTABLE);
   n = lua_getn(L, 1);
   if (v == 2)  /* called with only 2 arguments */
     pos = n+1;
-  else
+  else {
+    v = 3;  /* function may be called with more than 3 args */
     pos = luaL_check_int(L, 2);  /* 2nd argument is the position */
+  }
   aux_setn(L, 1, n+1);  /* t.n = n+1 */
   for (; n>=pos; n--) {
     lua_rawgeti(L, 1, n);
