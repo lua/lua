@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.81 2002/04/05 18:54:31 roberto Exp roberto $
+** $Id: lua.c,v 1.82 2002/04/09 20:19:06 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -200,16 +200,16 @@ static int trap_eof (lua_State *l) {
 
 
 static int load_string (void) {
-  lua_getglobal(L, LUA_ERRORMESSAGE);
+  lua_getglobal(L, "_ERRORMESSAGE");
   lua_pushvalue(L, 1);
-  lua_setglobal(L, LUA_ERRORMESSAGE);
+  lua_setglobal(L, "_ERRORMESSAGE");
   incomplete = 0;
   for (;;) {  /* repeat until gets a complete line */
     int result;
     char *buffer = readline(get_prompt(incomplete));
     if (buffer == NULL) {  /* input end? */
       lua_settop(L, 2);
-      lua_setglobal(L, LUA_ERRORMESSAGE);
+      lua_setglobal(L, "_ERRORMESSAGE");
       return 0;
     }
     if (!incomplete && buffer[0] == '=') {
@@ -225,7 +225,7 @@ static int load_string (void) {
     lua_remove(L, 3);
     if (result == 0) {
       lua_insert(L, 2);  /* swap compiled chunk with old _ERRORMESSAGE */
-      lua_setglobal(L, LUA_ERRORMESSAGE);  /* restore old _ERRORMESSAGE */
+      lua_setglobal(L, "_ERRORMESSAGE");  /* restore old _ERRORMESSAGE */
       return 1;
     }
     else

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.170 2002/04/15 19:34:42 roberto Exp roberto $
+** $Id: ldo.c,v 1.171 2002/04/16 17:08:28 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -38,7 +38,9 @@ struct lua_longjmp {
   jmp_buf b;
   int allowhooks;  /* `allowhook' state when protection was set */
   volatile int status;  /* error code */
+  TObject err;  /* function to be called in case of errors */
 };
+
 
 
 static void correctstack (lua_State *L, TObject *oldstack) {
@@ -108,11 +110,11 @@ void luaD_growstack (lua_State *L, int n) {
 static void luaD_growCI (lua_State *L) {
   L->ci--;
   if (L->size_ci > LUA_MAXCALLS)  /* overflow while handling overflow? */
-    luaD_breakrun(L, LUA_ERRERR);  /* break run without error message */
+    luaD_error(L, NULL, LUA_ERRERR);  /* break run without error message */
   else {
     luaD_reallocCI(L, 2*L->size_ci);
     if (L->size_ci > LUA_MAXCALLS)
-      luaD_error(L, "stack overflow");
+      luaD_runerror(L, "stack overflow");
   }
   L->ci++;
 }
@@ -278,7 +280,7 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
     firstResult = luaV_execute(L);  /* call it */
     if (firstResult == NULL) {
       luaD_poscall(L, 0, L->top);
-      luaD_error(L, "attempt to `yield' across tag-method/C-call boundary");
+      luaD_runerror(L, "attempt to `yield' across tag-method/C-call boundary");
     }
   }
   luaD_poscall(L, nResults, firstResult);
@@ -325,14 +327,17 @@ static void resume (lua_State *L, void *numres) {
 LUA_API int lua_resume (lua_State *L, lua_State *co) {
   CallInfo *ci;
   int numres;
+  TObject o;
   int status;
   lua_lock(L);
   ci = co->ci;
   if (ci == co->base_ci)  /* no activation record? ?? */
-    luaD_error(L, "thread is dead - cannot be resumed");
+    luaD_runerror(L, "thread is dead - cannot be resumed");
   if (co->errorJmp != NULL)  /* ?? */
-    luaD_error(L, "thread is active - cannot be resumed");
-  status = luaD_runprotected(co, resume, &numres);
+    luaD_runerror(L, "thread is active - cannot be resumed");
+  setsvalue(&o, luaS_newliteral(L, "_ERRORMESSAGE"));
+  luaV_gettable(L, gt(L), &o, &o);
+  status = luaD_runprotected(co, resume, &o, &numres);
   if (status == 0)  
     move_results(L, co->top - numres, co->top);
   lua_unlock(L);
@@ -345,7 +350,7 @@ LUA_API int lua_yield (lua_State *L, int nresults) {
   lua_lock(L);
   ci = L->ci;
   if (ci_func(ci-1)->c.isC)
-    luaD_error(L, "cannot `yield' a C function");
+    luaD_runerror(L, "cannot `yield' a C function");
   ci->yield_results = nresults;
   lua_unlock(L);
   return -1;
@@ -360,24 +365,23 @@ struct CallS {  /* data to `f_call' */
   int nresults;
 };
 
+
 static void f_call (lua_State *L, void *ud) {
   struct CallS *c = cast(struct CallS *, ud);
   luaD_call(L, c->func, c->nresults);
 }
 
 
-LUA_API int lua_call (lua_State *L, int nargs, int nresults) {
+int luaD_pcall (lua_State *L, int nargs, int nresults, const TObject *err) {
   struct CallS c;
   int status;
-  lua_lock(L);
   c.func = L->top - (nargs+1);  /* function to be called */
   c.nresults = nresults;
-  status = luaD_runprotected(L, f_call, &c);
+  status = luaD_runprotected(L, &f_call, err, &c);
   if (status != 0) {  /* an error occurred? */
     L->top -= nargs+1;  /* remove parameters and func from the stack */
     luaF_close(L, L->top);  /* close eventual pending closures */
   }
-  lua_unlock(L);
   return status;
 }
 
@@ -400,8 +404,9 @@ static void f_parser (lua_State *L, void *ud) {
 }
 
 
-static int protectedparser (lua_State *L, ZIO *z, int bin) {
+int luaD_protectedparser (lua_State *L, ZIO *z, int bin) {
   struct SParser p;
+  TObject o;
   lu_mem old_blocks;
   int status;
   lua_lock(L);
@@ -410,7 +415,9 @@ static int protectedparser (lua_State *L, ZIO *z, int bin) {
   if (G(L)->nblocks/8 >= G(L)->GCthreshold/10)
     luaC_collectgarbage(L);
   old_blocks = G(L)->nblocks;
-  status = luaD_runprotected(L, f_parser, &p);
+  setsvalue(&o, luaS_newliteral(L, "_ERRORMESSAGE"));
+  luaV_gettable(L, gt(L), &o, &o);
+  status = luaD_runprotected(L, f_parser, &o, &p);
   if (status == 0) {
     /* add new memory to threshold (as it probably will stay) */
     lua_assert(G(L)->nblocks >= old_blocks);
@@ -423,47 +430,6 @@ static int protectedparser (lua_State *L, ZIO *z, int bin) {
 }
 
 
-LUA_API int lua_loadfile (lua_State *L, const char *filename) {
-  ZIO z;
-  int status;
-  int bin;  /* flag for file mode */
-  int nlevel;  /* level on the stack of filename */
-  FILE *f = (filename == NULL) ? stdin : fopen(filename, "r");
-  if (f == NULL) return LUA_ERRFILE;  /* unable to open file */
-  bin = (ungetc(getc(f), f) == LUA_SIGNATURE[0]);
-  if (bin && f != stdin) {
-    fclose(f);
-    f = fopen(filename, "rb");  /* reopen in binary mode */
-    if (f == NULL) return LUA_ERRFILE;  /* unable to reopen file */
-  }
-  if (filename == NULL)
-    lua_pushstring(L, "=stdin");
-  else {
-    lua_pushliteral(L, "@");
-    lua_pushstring(L, filename);
-    lua_concat(L, 2);
-  }
-  nlevel = lua_gettop(L);
-  filename = lua_tostring(L, -1);  /* filename = `@'..filename */
-  luaZ_Fopen(&z, f, filename);
-  status = protectedparser(L, &z, bin);
-  if (ferror(f)) status = LUA_ERRFILE;
-  lua_remove(L, nlevel);  /* remove filename */
-  if (f != stdin)
-    fclose(f);
-  return status;
-}
-
-
-LUA_API int lua_loadbuffer (lua_State *L, const char *buff, size_t size,
-                          const char *name) {
-  ZIO z;
-  if (!name) name = "?";
-  luaZ_mopen(&z, buff, size, name);
-  return protectedparser(L, &z, buff[0]==LUA_SIGNATURE[0]);
-}
-
-
 
 /*
 ** {======================================================
@@ -472,16 +438,14 @@ LUA_API int lua_loadbuffer (lua_State *L, const char *buff, size_t size,
 */
 
 
-static void message (lua_State *L, const char *s) {
-  TObject o, m;
-  setsvalue(&o, luaS_newliteral(L, LUA_ERRORMESSAGE));
-  luaV_gettable(L, gt(L), &o, &m);
-  if (ttype(&m) == LUA_TFUNCTION) {
-    setobj(L->top, &m);
+static void message (lua_State *L, const char *msg) {
+  TObject *m = &L->errorJmp->err;
+  if (ttype(m) == LUA_TFUNCTION) {
+    setobj(L->top, m);
     incr_top(L);
-    setsvalue(L->top, luaS_new(L, s));
+    setsvalue(L->top, luaS_new(L, msg));
     incr_top(L);
-    luaD_call(L, L->top-2, 0);
+    luaD_call(L, L->top - 2, 0);
   }
 }
 
@@ -489,15 +453,10 @@ static void message (lua_State *L, const char *s) {
 /*
 ** Reports an error, and jumps up to the available recovery label
 */
-void luaD_error (lua_State *L, const char *s) {
-  if (s) message(L, s);
-  luaD_breakrun(L, LUA_ERRRUN);
-}
-
-
-void luaD_breakrun (lua_State *L, int errcode) {
+void luaD_error (lua_State *L, const char *s, int errcode) {
   if (L->errorJmp) {
     L->errorJmp->status = errcode;
+    if (s) message(L, s);
     longjmp(L->errorJmp->b, 1);
   }
   else {
@@ -507,12 +466,18 @@ void luaD_breakrun (lua_State *L, int errcode) {
 }
 
 
-int luaD_runprotected (lua_State *L, void (*f)(lua_State *, void *), void *ud) {
+void luaD_runerror (lua_State *L, const char *s) {
+  luaD_error(L, s, LUA_ERRRUN);
+}
+
+
+int luaD_runprotected (lua_State *L, Pfunc f, const TObject *err, void *ud) {
   struct lua_longjmp lj;
   lj.ci = L->ci;
   lj.top = L->top;
   lj.allowhooks = L->allowhooks;
   lj.status = 0;
+  lj.err = *err;
   lj.previous = L->errorJmp;  /* chain new error handler */
   L->errorJmp = &lj;
   if (setjmp(lj.b) == 0)

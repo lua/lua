@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.h,v 1.41 2002/03/20 12:52:32 roberto Exp roberto $
+** $Id: ldo.h,v 1.42 2002/03/25 17:47:14 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -10,6 +10,7 @@
 
 #include "lobject.h"
 #include "lstate.h"
+#include "lzio.h"
 
 
 /*
@@ -27,17 +28,22 @@
 #define restorestack(L,n)	((TObject *)((char *)L->stack + (n)))
 
 
+/* type of protected functions, to be ran by `runprotected' */
+typedef void (*Pfunc) (lua_State *L, void *v);
+
+int luaD_protectedparser (lua_State *L, ZIO *z, int bin);
 void luaD_lineHook (lua_State *L, int line);
 StkId luaD_precall (lua_State *L, StkId func);
 void luaD_call (lua_State *L, StkId func, int nResults);
+int luaD_pcall (lua_State *L, int nargs, int nresults, const TObject *err);
 void luaD_poscall (lua_State *L, int wanted, StkId firstResult);
 void luaD_reallocCI (lua_State *L, int newsize);
 void luaD_reallocstack (lua_State *L, int newsize);
 void luaD_growstack (lua_State *L, int n);
 
-void luaD_error (lua_State *L, const char *s);
-void luaD_breakrun (lua_State *L, int errcode);
-int luaD_runprotected (lua_State *L, void (*f)(lua_State *, void *), void *ud);
+void luaD_error (lua_State *L, const char *s, int errcode);
+void luaD_runerror (lua_State *L, const char *s);
+int luaD_runprotected (lua_State *L, Pfunc f, const TObject *err, void *ud);
 
 
 #endif
