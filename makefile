@@ -1,4 +1,4 @@
-# $Id: makefile,v 1.30 1997/03/31 14:17:09 roberto Exp roberto $
+# $Id: makefile,v 1.31 1997/03/31 14:23:49 roberto Exp roberto $
 
 #configuration
 
@@ -9,7 +9,8 @@
 CONFIG = -DPOPEN -D_POSIX_SOURCE
 # Compilation parameters
 CC = gcc
-CFLAGS = $(CONFIG) -Wall -Wmissing-prototypes -Wshadow -ansi -O2 -pedantic
+CWARNS = -Wall -Wmissing-prototypes -Wshadow -pedantic -Wpointer-arith -Wcast-align -Waggregate-return
+CFLAGS = $(CONFIG) $(CWARNS) -ansi -O2 -fomit-frame-pointer
 
 #CC = acc
 #CFLAGS = -fast -I/usr/5include
