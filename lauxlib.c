@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.112 2004/05/10 17:50:51 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.113 2004/05/31 19:27:14 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -481,9 +481,10 @@ static const char *getF (lua_State *L, void *ud, size_t *size) {
 }
 
 
-static int errfile (lua_State *L, int fnameindex) {
+static int errfile (lua_State *L, const char *what, int fnameindex) {
+  const char *serr = strerror(errno);
   const char *filename = lua_tostring(L, fnameindex) + 1;
-  lua_pushfstring(L, "cannot read %s: %s", filename, strerror(errno));
+  lua_pushfstring(L, "cannot %s %s: %s", what, filename, serr);
   lua_remove(L, fnameindex);
   return LUA_ERRFILE;
 }
@@ -502,7 +503,7 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
   else {
     lua_pushfstring(L, "@%s", filename);
     lf.f = fopen(filename, "r");
-    if (lf.f == NULL) return errfile(L, fnameindex);  /* unable to open file */
+    if (lf.f == NULL) return errfile(L, "open", fnameindex);
   }
   c = getc(lf.f);
   if (c == '#') {  /* Unix exec. file? */
@@ -513,7 +514,7 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
   if (c == LUA_SIGNATURE[0] && lf.f != stdin) {  /* binary file? */
     fclose(lf.f);
     lf.f = fopen(filename, "rb");  /* reopen in binary mode */
-    if (lf.f == NULL) return errfile(L, fnameindex); /* unable to reopen file */
+    if (lf.f == NULL) return errfile(L, "reopen", fnameindex);
     /* skip eventual `#!...' */
    while ((c = getc(lf.f)) != EOF && c != LUA_SIGNATURE[0]) ;
     lf.extraline = 0;
@@ -524,7 +525,7 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
   if (lf.f != stdin) fclose(lf.f);  /* close file (even in case of errors) */
   if (readstatus) {
     lua_settop(L, fnameindex);  /* ignore results from `lua_load' */
-    return errfile(L, fnameindex);
+    return errfile(L, "read", fnameindex);
   }
   lua_remove(L, fnameindex);
   return status;
