@@ -1,5 +1,5 @@
 /*
-** $Id: inout.h,v 1.14 1996/03/15 13:13:13 roberto Exp roberto $
+** $Id: inout.h,v 1.15 1996/03/15 18:21:58 roberto Exp roberto $
 */
 
 
@@ -29,5 +29,6 @@ void	luaI_error     (void);
 void    luaI_assert    (void);
 void	luaI_setglobal (void);
 void	luaI_getglobal (void);
+void	luaI_call	(void);
 
 #endif

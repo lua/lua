@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.53 1996/04/29 18:53:53 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.54 1996/05/06 14:29:35 roberto Exp roberto $";
 
 #include "mem.h"
 #include "opcode.h"
@@ -39,6 +39,7 @@ static struct {
   lua_CFunction func;
 } int_funcs[] = {
   {"assert", luaI_assert},
+  {"call", luaI_call},
   {"dofile", lua_internaldofile},
   {"dostring", lua_internaldostring},
   {"error", luaI_error},

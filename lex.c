@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.31 1996/03/19 16:50:24 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.32 1996/03/21 16:33:47 roberto Exp roberto $";
  
 
 #include <ctype.h>
@@ -280,7 +280,13 @@ int luaY_lex (void)
         if (current == '.')
         {
           save_and_next();
-          return CONC;
+          if (current == '.')
+          {
+            save_and_next();
+            return DOTS;   /* ... */
+          }
+          else
+            return CONC;   /* .. */
         }
         else if (!isdigit(current)) return '.';
         /* current is a digit: goes through to number */

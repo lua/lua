@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.19 1996/03/06 13:11:23 roberto Exp $
+** $Id: opcode.h,v 3.20 1996/03/15 13:13:13 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -65,7 +65,8 @@ typedef enum
  CALLFUNC,
  RETCODE0,
  RETCODE,
- SETLINE
+ SETLINE,
+ VARARGS
 } OpCode;
 
 #define MULT_RET	255
@@ -107,28 +108,10 @@ typedef struct Object
 #define s_fvalue(i)	(fvalue(&s_object(i)))
 #define s_uvalue(i)	(uvalue(&s_object(i)))
 
-typedef union
-{
- struct {Byte c1; Byte c2;} m;
- Word w;
-} CodeWord;
-#define get_word(code,pc)    {code.m.c1 = *pc++; code.m.c2 = *pc++;}
-
-typedef union
-{
- struct {Byte c1; Byte c2; Byte c3; Byte c4;} m;
- float f;
-} CodeFloat;
-#define get_float(code,pc)   {code.m.c1 = *pc++; code.m.c2 = *pc++;\
-                              code.m.c3 = *pc++; code.m.c4 = *pc++;}
-
-typedef union
-{
- struct {Byte c1; Byte c2; Byte c3; Byte c4;} m;
- TFunc *tf;
-} CodeCode;
-#define get_code(code,pc)    {code.m.c1 = *pc++; code.m.c2 = *pc++;\
-                              code.m.c3 = *pc++; code.m.c4 = *pc++;}
+#define get_word(code,pc) {memcpy(&code, pc, sizeof(Word)); pc+=sizeof(Word);}
+#define get_float(code,pc){memcpy(&code, pc, sizeof(real)); pc+=sizeof(real);}
+#define get_code(code,pc) {memcpy(&code, pc, sizeof(TFunc *)); \
+                           pc+=sizeof(TFunc *);}
 
 
 /* Exported functions */
@@ -139,5 +122,6 @@ Object *luaI_Address (lua_Object o);
 void	luaI_pushobject (Object *o);
 void    luaI_gcFB       (Object *o);
 int     luaI_dorun (TFunc *tf);
+void	luaI_packarg (Object *firstelem, Object *arg);
 
 #endif

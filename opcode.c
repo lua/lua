@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.67 1996/04/22 18:00:37 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.68 1996/04/25 14:10:00 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -117,7 +117,7 @@ static void growstack (void)
 */
 static char *lua_strconc (char *l, char *r)
 {
-  int nl = strlen(l);
+  size_t nl = strlen(l);
   char *buffer = luaI_buffer(nl+strlen(r)+1);
   strcpy(buffer, l);
   strcpy(buffer+nl, r);
@@ -886,6 +886,40 @@ static void comparison (lua_Type tag_less, lua_Type tag_equal,
 }
 
 
+void luaI_packarg (Object *firstelem, Object *arg)
+{
+  int nvararg = (firstelem != NULL) ? top-firstelem : 0;
+  int i;
+  if (nvararg < 0) nvararg = 0;
+  avalue(arg)  = lua_createarray(nvararg+1);  /* +1 for field 'n' */
+  tag(arg) = LUA_T_ARRAY;
+  for (i=0; i<nvararg; i++)
+  {
+    Object index;
+    tag(&index) = LUA_T_NUMBER;
+    nvalue(&index) = i+1;
+    *(lua_hashdefine(avalue(arg), &index)) = *(firstelem+i);
+  }
+  /* store counter in field "n" */
+  {
+    Object index, extra;
+    tag(&index) = LUA_T_STRING;
+    tsvalue(&index) = lua_createstring("n");
+    tag(&extra) = LUA_T_NUMBER;
+    nvalue(&extra) = nvararg;
+    *(lua_hashdefine(avalue(arg), &index)) = extra;
+  }
+}
+
+
+static void adjust_varargs (StkId first_extra_arg)
+{
+  Object arg;
+  luaI_packarg(stack+first_extra_arg, &arg);
+  adjust_top(first_extra_arg);
+  *top = arg; incr_top;
+}
+
 
 /*
 ** Execute the given opcode, until a RET. Parameters are between
@@ -914,38 +948,38 @@ static StkId lua_execute (Byte *pc, StkId base)
 
    case PUSHWORD:
    {
-    CodeWord code;
-    get_word(code,pc);
-    tag(top) = LUA_T_NUMBER; nvalue(top) = code.w;
+    Word w;
+    get_word(w,pc);
+    tag(top) = LUA_T_NUMBER; nvalue(top) = w;
     incr_top;
    }
    break;
 
    case PUSHFLOAT:
    {
-    CodeFloat code;
-    get_float(code,pc);
-    tag(top) = LUA_T_NUMBER; nvalue(top) = code.f;
+    real num;
+    get_float(num,pc);
+    tag(top) = LUA_T_NUMBER; nvalue(top) = num;
     incr_top;
    }
    break;
 
    case PUSHSTRING:
    {
-    CodeWord code;
-    get_word(code,pc);
-    tag(top) = LUA_T_STRING; tsvalue(top) = lua_constant[code.w];
+    Word w;
+    get_word(w,pc);
+    tag(top) = LUA_T_STRING; tsvalue(top) = lua_constant[w];
     incr_top;
    }
    break;
 
    case PUSHFUNCTION:
    {
-    CodeCode code;
-    get_code(code,pc);
-    luaI_insertfunction(code.tf);  /* may take part in GC */
+    TFunc *f;
+    get_code(f,pc);
+    luaI_insertfunction(f);  /* may take part in GC */
     top->tag = LUA_T_FUNCTION;
-    top->value.tf = code.tf;
+    top->value.tf = f;
     incr_top;
    }
    break;
@@ -960,9 +994,9 @@ static StkId lua_execute (Byte *pc, StkId base)
 
    case PUSHGLOBAL:
    {
-    CodeWord code;
-    get_word(code,pc);
-    getglobal(code.w);
+    Word w;
+    get_word(w,pc);
+    getglobal(w);
    }
    break;
 
@@ -973,9 +1007,9 @@ static StkId lua_execute (Byte *pc, StkId base)
    case PUSHSELF:
    {
      Object receiver = *(top-1);
-     CodeWord code;
-     get_word(code,pc);
-     tag(top) = LUA_T_STRING; tsvalue(top) = lua_constant[code.w];
+     Word w;
+     get_word(w,pc);
+     tag(top) = LUA_T_STRING; tsvalue(top) = lua_constant[w];
      incr_top;
      pushsubscript();
      *top = receiver;
@@ -994,9 +1028,9 @@ static StkId lua_execute (Byte *pc, StkId base)
 
    case STOREGLOBAL:
    {
-    CodeWord code;
-    get_word(code,pc);
-    s_object(code.w) = *(--top);
+    Word w;
+    get_word(w,pc);
+    s_object(w) = *(--top);
    }
    break;
 
@@ -1050,9 +1084,9 @@ static StkId lua_execute (Byte *pc, StkId base)
     Object *arr = top-n-1;
     while (n)
     {
-     CodeWord code;
-     get_word(code,pc);
-     tag(top) = LUA_T_STRING; tsvalue(top) = lua_constant[code.w];
+     Word w;
+     get_word(w,pc);
+     tag(top) = LUA_T_STRING; tsvalue(top) = lua_constant[w];
      *(lua_hashdefine (avalue(arr), top)) = *(top-1);
      top--;
      n--;
@@ -1068,11 +1102,15 @@ static StkId lua_execute (Byte *pc, StkId base)
      adjust_top(base + *(pc++));
      break;
 
+   case VARARGS:
+     adjust_varargs(base + *(pc++));
+     break;
+
    case CREATEARRAY:
    {
-    CodeWord size;
+    Word size;
     get_word(size,pc);
-    avalue(top) = lua_createarray(size.w);
+    avalue(top) = lua_createarray(size);
     tag(top) = LUA_T_ARRAY;
     incr_top;
    }
@@ -1195,51 +1233,51 @@ static StkId lua_execute (Byte *pc, StkId base)
 
    case ONTJMP:
    {
-    CodeWord code;
-    get_word(code,pc);
-    if (tag(top-1) != LUA_T_NIL) pc += code.w;
+    Word w;
+    get_word(w,pc);
+    if (tag(top-1) != LUA_T_NIL) pc += w;
    }
    break;
 
    case ONFJMP:	
    {
-    CodeWord code;
-    get_word(code,pc);
-    if (tag(top-1) == LUA_T_NIL) pc += code.w;
+    Word w;
+    get_word(w,pc);
+    if (tag(top-1) == LUA_T_NIL) pc += w;
    }
    break;
 
    case JMP:
    {
-    CodeWord code;
-    get_word(code,pc);
-    pc += code.w;
+    Word w;
+    get_word(w,pc);
+    pc += w;
    }
    break;
 
    case UPJMP:
    {
-    CodeWord code;
-    get_word(code,pc);
-    pc -= code.w;
+    Word w;
+    get_word(w,pc);
+    pc -= w;
    }
    break;
 
    case IFFJMP:
    {
-    CodeWord code;
-    get_word(code,pc);
+    Word w;
+    get_word(w,pc);
     top--;
-    if (tag(top) == LUA_T_NIL) pc += code.w;
+    if (tag(top) == LUA_T_NIL) pc += w;
    }
    break;
 
    case IFFUPJMP:
    {
-    CodeWord code;
-    get_word(code,pc);
+    Word w;
+    get_word(w,pc);
     top--;
-    if (tag(top) == LUA_T_NIL) pc -= code.w;
+    if (tag(top) == LUA_T_NIL) pc -= w;
    }
    break;
 
@@ -1262,8 +1300,8 @@ static StkId lua_execute (Byte *pc, StkId base)
 
    case SETLINE:
    {
-    CodeWord code;
-    get_word(code,pc);
+    Word line;
+    get_word(line,pc);
     if ((stack+base-1)->tag != LUA_T_LINE)
     {
       /* open space for LINE value */
@@ -1271,9 +1309,9 @@ static StkId lua_execute (Byte *pc, StkId base)
       base++;
       (stack+base-1)->tag = LUA_T_LINE;
     }
-    (stack+base-1)->value.i = code.w;
+    (stack+base-1)->value.i = line;
     if (lua_linehook)
-      lineHook (code.w);
+      lineHook (line);
     break;
    }
 
