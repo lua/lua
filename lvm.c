@@ -1,11 +1,13 @@
 /*
-** $Id: lvm.c,v 1.31 1998/07/12 16:16:43 roberto Exp roberto $
+** $Id: lvm.c,v 1.32 1998/12/03 15:45:15 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
 
 
+#include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "lauxlib.h"
@@ -24,6 +26,7 @@
 
 #ifdef OLD_ANSI
 #define strcoll(a,b)	strcmp(a,b)
+double strtod();
 #endif
 
 
@@ -48,19 +51,19 @@ static TaggedString *strconc (TaggedString *l, TaggedString *r)
 }
 
 
-int luaV_tonumber (TObject *obj)
-{  /* LUA_NUMBER */
-  double t;
-  char c;
+int luaV_tonumber (TObject *obj) {
+  /* LUA_NUMBER */
   if (ttype(obj) != LUA_T_STRING)
     return 1;
-  else if (sscanf(svalue(obj), "%lf %c",&t, &c) == 1) {
+  else {
+    char *e;
+    double t = strtod(svalue(obj), &e);
+    while (isspace(*e)) e++;
+    if (*e != '\0') return 2;
     nvalue(obj) = (real)t;
     ttype(obj) = LUA_T_NUMBER;
     return 0;
   }
-  else
-    return 2;
 }
 
 
