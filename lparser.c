@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.79 2000/04/07 19:35:20 roberto Exp roberto $
+** $Id: lparser.c,v 1.80 2000/04/10 19:21:14 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -214,8 +214,15 @@ static void adjustlocalvars (LexState *ls, int nvars, int line) {
 }
 
 
-static void add_localvar (LexState *ls, TString *name) {
-  store_localvar(ls, name, 0);
+static void removelocalvars (LexState *ls, int nvars, int line) {
+  ls->fs->nlocalvar -= nvars;
+  while (nvars--)
+    luaI_unregisterlocalvar(ls, line);
+}
+
+
+static void add_localvar (LexState *ls, const char *name) {
+  store_localvar(ls, luaS_newfixed(ls->L, name), 0);
   adjustlocalvars(ls, 1, 0);
 }
 
@@ -305,7 +312,7 @@ static void code_args (LexState *ls, int nparams, int dots) {
     luaK_deltastack(fs, nparams);
   else {
     luaK_deltastack(fs, nparams+1);
-    add_localvar(ls, luaS_newfixed(ls->L, "arg"));
+    add_localvar(ls, "arg");
   }
 }
 
@@ -830,8 +837,7 @@ static void block (LexState *ls) {
   int nlocalvar = fs->nlocalvar;
   chunk(ls);
   luaK_adjuststack(fs, fs->nlocalvar - nlocalvar);  /* remove local variables */
-  for (; fs->nlocalvar > nlocalvar; fs->nlocalvar--)
-    luaI_unregisterlocalvar(ls, fs->lastsetline);
+  removelocalvars(ls, fs->nlocalvar - nlocalvar, fs->lastsetline);
 }
 
 
@@ -892,16 +898,10 @@ static void repeatstat (LexState *ls, int line) {
   enterbreak(fs, &bl);
   setline_and_next(ls);  /* trace REPEAT when looping */
   block(ls);
-  if (ls->token == TK_END) {
-    luaK_patchlist(fs, luaK_jump(fs), repeat_init);
-    next(ls);
-  }
-  else {
-    check_match(ls, TK_UNTIL, TK_REPEAT, line);
-    expr(ls, &v);
-    luaK_goiftrue(fs, &v, 0);
-    luaK_patchlist(fs, v.u.l.f, repeat_init);
-  }
+  check_match(ls, TK_UNTIL, TK_REPEAT, line);
+  expr(ls, &v);
+  luaK_goiftrue(fs, &v, 0);
+  luaK_patchlist(fs, v.u.l.f, repeat_init);
   leavebreak(fs, &bl);
 }
 
@@ -1135,7 +1135,7 @@ static void body (LexState *ls, int needself, int line) {
   new_fs.f->lineDefined = line;
   check(ls, '(');
   if (needself)
-    add_localvar(ls, luaS_newfixed(ls->L, "self"));
+    add_localvar(ls, "self");
   parlist(ls);
   check(ls, ')');
   chunk(ls);
