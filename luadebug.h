@@ -1,5 +1,5 @@
 /*
-** $Id: luadebug.h,v 1.24 2002/02/08 22:42:41 roberto Exp roberto $
+** $Id: luadebug.h,v 1.25 2002/03/11 12:45:00 roberto Exp roberto $
 ** Debugging API
 ** See Copyright Notice in lua.h
 */
@@ -28,7 +28,7 @@ LUA_API lua_Hook lua_setlinehook (lua_State *L, lua_Hook func);
 #define LUA_IDSIZE	60
 
 struct lua_Debug {
-  const char *event;     /* `call', `return' */
+  const char *event;     /* `call', `return', `line' */
   const char *name;      /* (n) */
   const char *namewhat;  /* (n) `global', `tag method', `local', `field' */
   const char *what;      /* (S) `Lua' function, `C' function, Lua `main' */
