@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.174 2001/03/07 13:22:55 roberto Exp roberto $
+** $Id: lvm.c,v 1.175 2001/03/07 18:09:25 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -330,7 +330,6 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
   const Proto *const tf = cl->f.l;
   StkId top;  /* keep top local, for performance */
   const Instruction *pc = tf->code;
-  TString **const kstr = tf->kstr;
   const lua_Hook linehook = L->linehook;
   L->ci->pc = &pc;
   if (tf->is_vararg)  /* varargs? */
@@ -375,7 +374,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
       }
       case OP_PUSHSTRING: {
-        setsvalue(top, kstr[GETARG_U(i)]);
+        setsvalue(top, tf->kstr[GETARG_U(i)]);
         top++;
         break;
       }
@@ -398,7 +397,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
       }
       case OP_GETGLOBAL: {
-        luaV_getglobal(L, kstr[GETARG_U(i)], top);
+        luaV_getglobal(L, tf->kstr[GETARG_U(i)], top);
         top++;
         break;
       }
@@ -408,7 +407,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
       }
       case OP_GETDOTTED: {
-        setsvalue(top, kstr[GETARG_U(i)]);
+        setsvalue(top, tf->kstr[GETARG_U(i)]);
         luaV_gettable(L, top-1, top, top-1);
         break;
       }
@@ -418,7 +417,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       }
       case OP_PUSHSELF: {
         setobj(top, top-1);
-        setsvalue(top+1, kstr[GETARG_U(i)]);
+        setsvalue(top+1, tf->kstr[GETARG_U(i)]);
         luaV_gettable(L, top-1, top+1, top-1);
         top++;
         break;
@@ -435,7 +434,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       }
       case OP_SETGLOBAL: {
         top--;
-        luaV_setglobal(L, kstr[GETARG_U(i)], top);
+        luaV_setglobal(L, tf->kstr[GETARG_U(i)], top);
         break;
       }
       case OP_SETTABLE: {
