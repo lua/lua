@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.218 2003/09/05 14:00:27 roberto Exp roberto $
+** $Id: lparser.c,v 1.219 2003/09/29 16:41:35 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -156,6 +156,10 @@ static int luaI_registerlocalvar (LexState *ls, TString *varname) {
 }
 
 
+#define new_localvarliteral(ls,v,n) \
+  new_localvar(ls, luaX_newstring(ls, "" v, (sizeof(v)/sizeof(char))-1), n)
+
+
 static void new_localvar (LexState *ls, TString *name, int n) {
   FuncState *fs = ls->fs;
   luaX_checklimit(ls, fs->nactvar+n+1, MAXVARS, "local variables");
@@ -177,12 +181,6 @@ static void removevars (LexState *ls, int tolevel) {
   FuncState *fs = ls->fs;
   while (fs->nactvar > tolevel)
     getlocvar(fs, --fs->nactvar).endpc = fs->pc;
-}
-
-
-static void new_localvarstr (LexState *ls, const char *name, int n) {
-  TString *ts = luaX_newstring(ls, name, strlen(name));
-  new_localvar(ls, ts, n);
 }
 
 
@@ -556,7 +554,7 @@ static void parlist (LexState *ls) {
         case TK_DOTS: {  /* param -> `...' */
           next(ls);
           /* use `arg' as default name */
-          new_localvarstr(ls, "arg", nparams++);
+          new_localvarliteral(ls, "arg", nparams++);
           f->is_vararg = 1;
           break;
         }
@@ -577,7 +575,7 @@ static void body (LexState *ls, expdesc *e, int needself, int line) {
   new_fs.f->lineDefined = line;
   check(ls, '(');
   if (needself) {
-    new_localvarstr(ls, "self", 0);
+    new_localvarliteral(ls, "self", 0);
     adjustlocalvars(ls, 1);
   }
   parlist(ls);
@@ -1071,9 +1069,9 @@ static void fornum (LexState *ls, TString *varname, int line) {
   /* fornum -> NAME = exp1,exp1[,exp1] forbody */
   FuncState *fs = ls->fs;
   int base = fs->freereg;
-  new_localvarstr(ls, "(for index)", 0);
-  new_localvarstr(ls, "(for limit)", 1);
-  new_localvarstr(ls, "(for step)", 2);
+  new_localvarliteral(ls, "(for index)", 0);
+  new_localvarliteral(ls, "(for limit)", 1);
+  new_localvarliteral(ls, "(for step)", 2);
   new_localvar(ls, varname, 3);
   check(ls, '=');
   exp1(ls);  /* initial value */
@@ -1097,9 +1095,9 @@ static void forlist (LexState *ls, TString *indexname) {
   int line;
   int base = fs->freereg;
   /* create control variables */
-  new_localvarstr(ls, "(for generator)", nvars++);
-  new_localvarstr(ls, "(for state)", nvars++);
-  new_localvarstr(ls, "(for control)", nvars++);
+  new_localvarliteral(ls, "(for generator)", nvars++);
+  new_localvarliteral(ls, "(for state)", nvars++);
+  new_localvarliteral(ls, "(for control)", nvars++);
   /* create declared variables */
   new_localvar(ls, indexname, nvars++);
   while (testnext(ls, ','))
