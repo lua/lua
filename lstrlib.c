@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.26 1999/02/12 19:23:02 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.27 1999/02/25 19:13:56 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -209,7 +209,7 @@ int luaI_singlematch (int c, char *p, char **ep) {
         }
         else if ((*(p+1) == '-') && (p+2 < end)) {
           p+=2;
-          if ((unsigned char)*(p-2) <= c && c <= (unsigned char)*p)
+          if ((int)(unsigned char)*(p-2) <= c && c <= (int)(unsigned char)*p)
             return sig;
         }
         else if ((unsigned char)*p == c) return sig;

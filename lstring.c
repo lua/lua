@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.17 1999/01/25 17:38:04 roberto Exp roberto $
+** $Id: lstring.c,v 1.18 1999/02/08 16:28:48 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -173,7 +173,7 @@ TaggedString *luaS_createudata (void *udata, int tag) {
 }
 
 TaggedString *luaS_newlstr (char *str, long l) {
-  int t = (l==0) ? 0 : ((unsigned char)str[0]*l)%NUM_HASHSTR;
+  int t = (l==0) ? 0 : ((int)((unsigned char)str[0]*l))%NUM_HASHSTR;
   return insert_s(str, l, &L->string_root[t]);
 }
 
