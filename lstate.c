@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.109 2002/10/25 21:30:00 roberto Exp roberto $
+** $Id: lstate.c,v 1.110 2002/11/13 11:31:39 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -129,7 +129,7 @@ lua_State *luaE_newthread (lua_State *L) {
   preinit_state(L1);
   L1->l_G = L->l_G;
   stack_init(L1, L);  /* init stack */
-  setobj(gt(L1), gt(L));  /* share table of globals */
+  setobj2n(gt(L1), gt(L));  /* share table of globals */
   return L1;
 }
 

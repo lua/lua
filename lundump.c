@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.43 2002/08/07 00:36:03 lhf Exp lhf $
+** $Id: lundump.c,v 1.56 2002/10/25 21:30:41 roberto Exp roberto $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -154,7 +154,7 @@ static void LoadConstants (LoadState* S, Proto* f)
 	setnvalue(o,LoadNumber(S));
 	break;
    case LUA_TSTRING:
-	setsvalue(o,LoadString(S));
+	setsvalue2n(o,LoadString(S));
 	break;
    case LUA_TNIL:
    	setnilvalue(o);

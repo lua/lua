@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.61 2002/10/21 20:41:46 roberto Exp roberto $
+** $Id: lfunc.c,v 1.62 2002/11/13 11:31:39 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -64,7 +64,7 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
 void luaF_close (lua_State *L, StkId level) {
   UpVal *p;
   while ((p = ngcotouv(L->openupval)) != NULL && p->v >= level) {
-    setobj(&p->value, p->v);  /* save current value */
+    setobj(&p->value, p->v);  /* save current value (write barrier) */
     p->v = &p->value;  /* now current value lives here */
     L->openupval = p->next;  /* remove from `open' list */
     luaC_link(L, valtogco(p), LUA_TUPVAL);

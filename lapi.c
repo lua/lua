@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.218 2002/11/07 15:39:23 roberto Exp roberto $
+** $Id: lapi.c,v 1.219 2002/11/14 11:51:50 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -191,7 +191,7 @@ LUA_API void lua_insert (lua_State *L, int index) {
 LUA_API void lua_replace (lua_State *L, int index) {
   lua_lock(L);
   api_checknelems(L, 1);
-  setobj(luaA_index(L, index), L->top - 1);  /* unknown destination */
+  setobj(luaA_index(L, index), L->top - 1);  /* write barrier */
   L->top--;
   lua_unlock(L);
 }
@@ -438,7 +438,7 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   cl->c.f = fn;
   L->top -= n;
   while (n--)
-    setobj(&cl->c.upvalue[n], L->top+n);
+    setobj2n(&cl->c.upvalue[n], L->top+n);
   setclvalue(L->top, cl);
   api_incr_top(L);
   lua_unlock(L);
@@ -565,7 +565,7 @@ LUA_API void lua_rawset (lua_State *L, int index) {
   api_checknelems(L, 2);
   t = luaA_index(L, index);
   api_check(L, ttistable(t));
-  setobj2t(luaH_set(L, hvalue(t), L->top-2), L->top-1);
+  setobj2t(luaH_set(L, hvalue(t), L->top-2), L->top-1);  /* write barrier */
   L->top -= 2;
   lua_unlock(L);
 }
@@ -577,7 +577,7 @@ LUA_API void lua_rawseti (lua_State *L, int index, int n) {
   api_checknelems(L, 1);
   o = luaA_index(L, index);
   api_check(L, ttistable(o));
-  setobj2t(luaH_setnum(L, hvalue(o), n), L->top-1);
+  setobj2t(luaH_setnum(L, hvalue(o), n), L->top-1);  /* write barrier */
   L->top--;
   lua_unlock(L);
 }
@@ -593,11 +593,11 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
   api_check(L, ttistable(mt));
   switch (ttype(obj)) {
     case LUA_TTABLE: {
-      hvalue(obj)->metatable = hvalue(mt);
+      hvalue(obj)->metatable = hvalue(mt);  /* write barrier */
       break;
     }
     case LUA_TUSERDATA: {
-      uvalue(obj)->uv.metatable = hvalue(mt);
+      uvalue(obj)->uv.metatable = hvalue(mt);  /* write barrier */
       break;
     }
     default: {
