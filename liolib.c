@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.40 2003/04/30 20:15:55 roberto Exp roberto $
+** $Id: liolib.c,v 2.41 2003/04/30 20:24:38 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -457,6 +457,17 @@ static int f_seek (lua_State *L) {
 }
 
 
+static int f_setvbuf (lua_State *L) {
+  static const int mode[] = {_IONBF, _IOFBF, _IOLBF};
+  static const char *const modenames[] = {"no", "full", "line", NULL};
+  FILE *f = tofile(L, 1);
+  int op = luaL_findstring(luaL_checkstring(L, 2), modenames);
+  luaL_argcheck(L, op != -1, 2, "invalid mode");
+  return pushresult(L, setvbuf(f, NULL, mode[op], 0) == 0, NULL);
+}
+
+
+
 static int io_flush (lua_State *L) {
   return pushresult(L, fflush(getiofile(L, IO_OUTPUT)) == 0, NULL);
 }
@@ -488,6 +499,7 @@ static const luaL_reg flib[] = {
   {"read", f_read},
   {"lines", f_lines},
   {"seek", f_seek},
+  {"setvbuf", f_setvbuf},
   {"write", f_write},
   {"close", io_close},
   {"__gc", io_gc},
