@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.31 2005/03/08 13:27:36 roberto Exp roberto $
+** $Id: luaconf.h,v 1.32 2005/03/08 18:00:16 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -223,7 +223,6 @@ __inline int l_lrint (double flt)
 
 #elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199900L)
 /* on machines compliant with C99, you can try `lrint' */
-#include <math.h>
 #define lua_number2int(i,d)	((i)=lrint(d))
 
 #else
@@ -237,7 +236,6 @@ __inline int l_lrint (double flt)
 
 
 /* function to convert a lua_Number to a string */
-#include <stdio.h>
 #define lua_number2str(s,n)	sprintf((s), LUA_NUMBER_FMT, (n))
 /* maximum size of previous conversion */
 #define MAX_NUMBER2STR	32 /* 16 digits, sign, point and \0  (+ some extra) */
@@ -260,7 +258,6 @@ __inline int l_lrint (double flt)
 #define num_eq(a,b)	((a)==(b))
 #define num_lt(a,b)	((a)<(b))
 #define num_le(a,b)	((a)<=(b))
-#include <math.h>
 #define num_mod(a,b)	((a) - floor((a)/(b))*(b))
 #define num_pow(a,b)	pow(a,b)
 
@@ -277,7 +274,6 @@ __inline int l_lrint (double flt)
 */
 #ifndef __cplusplus
 /* default handling with long jumps */
-#include <setjmp.h>
 #define L_THROW(L,c)	longjmp((c)->b, 1)
 #define L_TRY(L,c,a)	if (setjmp((c)->b) == 0) { a }
 #define l_jmpbuf	jmp_buf

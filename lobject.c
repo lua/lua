@@ -1,11 +1,12 @@
 /*
-** $Id: lobject.c,v 2.7 2004/11/24 19:16:03 roberto Exp roberto $
+** $Id: lobject.c,v 2.8 2005/01/10 18:17:39 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
 
 #include <ctype.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
