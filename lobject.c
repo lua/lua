@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.89 2002/10/04 14:31:03 roberto Exp roberto $
+** $Id: lobject.c,v 1.90 2002/10/08 18:46:08 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -116,7 +116,7 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
         incr_top(L);
         break;
       case 'f':
-        setnvalue(L->top, va_arg(argp, lua_Number));
+        setnvalue(L->top, va_arg(argp, l_uacNumber));
         incr_top(L);
         break;
       case '%':

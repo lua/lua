@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.134 2002/08/30 19:09:21 roberto Exp roberto $
+** $Id: ltests.c,v 1.135 2002/09/05 19:57:08 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -58,7 +58,7 @@ static void setnameval (lua_State *L, const char *name, int val) {
 
 
 /* ensures maximum alignment for HEADER */
-#define HEADER	(sizeof(union L_Umaxalign))
+#define HEADER	(sizeof(L_Umaxalign))
 
 #define MARKSIZE	32
 #define MARK		0x55  /* 01010101 (a nice pattern) */

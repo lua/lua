@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.156 2002/08/30 20:00:59 roberto Exp roberto $
+** $Id: lua.h,v 1.157 2002/09/02 20:00:41 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -86,9 +86,10 @@ typedef const char * (*lua_Chunkreader) (lua_State *L, void *ud, size_t *sz);
 
 /* type of Numbers in Lua */
 #ifndef LUA_NUMBER
-#define LUA_NUMBER	double
-#endif
+typedef double lua_Number;
+#else
 typedef LUA_NUMBER lua_Number;
+#endif
 
 
 /* mark for all API functions */

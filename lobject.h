@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.147 2002/10/08 18:46:08 roberto Exp roberto $
+** $Id: lobject.h,v 1.148 2002/10/16 20:40:58 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -140,7 +140,7 @@ typedef TObject *StkId;  /* index to stack elements */
 ** String headers for string table
 */
 typedef union TString {
-  union L_Umaxalign dummy;  /* ensures maximum alignment for strings */
+  L_Umaxalign dummy;  /* ensures maximum alignment for strings */
   struct {
     union GCObject *next;  /* pointer to next object */
     lu_byte tt;  /* object type */
@@ -158,7 +158,7 @@ typedef union TString {
 
 
 typedef union Udata {
-  union L_Umaxalign dummy;  /* ensures maximum alignment for `local' udata */
+  L_Umaxalign dummy;  /* ensures maximum alignment for `local' udata */
   struct {
     union GCObject *next;  /* pointer to next object */
     lu_byte tt;  /* object type */
