@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.38 1999/01/13 19:09:04 roberto Exp roberto $
+** $Id: lvm.c,v 1.39 1999/01/15 13:14:24 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -187,13 +187,13 @@ void luaV_rawsettable (TObject *t) {
 
 
 void luaV_getglobal (TaggedString *ts) {
+  /* WARNING: caller must assure stack space */
   /* only userdata, tables and nil can have getglobal tag methods */
   static char valid_getglobals[] = {1, 0, 0, 1, 0, 0, 1, 0};  /* ORDER LUA_T */
   TObject *value = &ts->u.s.globalval;
   if (valid_getglobals[-ttype(value)]) {
     TObject *im = luaT_getimbyObj(value, IM_GETGLOBAL);
     if (ttype(im) != LUA_T_NIL) {  /* is there a tag method? */
-      /* WARNING: caller must assure stack space */
       struct Stack *S = &L->stack;
       ttype(S->top) = LUA_T_STRING;
       tsvalue(S->top) = ts;
@@ -248,7 +248,7 @@ static void call_arith (IMS event)
 }
 
 
-static int strcomp (char *l, long ll, char *r, long lr)
+static int luaV_strcomp (char *l, long ll, char *r, long lr)
 {
   for (;;) {
     long temp = strcoll(l, r);
@@ -266,17 +266,16 @@ static int strcomp (char *l, long ll, char *r, long lr)
 }
 
 void luaV_comparison (lua_Type ttype_less, lua_Type ttype_equal,
-                      lua_Type ttype_great, IMS op)
-{
+                      lua_Type ttype_great, IMS op) {
   struct Stack *S = &L->stack;
   TObject *l = S->top-2;
   TObject *r = S->top-1;
-  int result;
+  real result;
   if (ttype(l) == LUA_T_NUMBER && ttype(r) == LUA_T_NUMBER)
-    result = (nvalue(l) < nvalue(r)) ? -1 : (nvalue(l) == nvalue(r)) ? 0 : 1;
+    result = nvalue(l)-nvalue(r);
   else if (ttype(l) == LUA_T_STRING && ttype(r) == LUA_T_STRING)
-    result = strcomp(svalue(l), tsvalue(l)->u.s.len,
-                     svalue(r), tsvalue(r)->u.s.len);
+    result = luaV_strcomp(svalue(l), tsvalue(l)->u.s.len,
+                          svalue(r), tsvalue(r)->u.s.len);
   else {
     call_binTM(op, "unexpected type in comparison");
     return;
