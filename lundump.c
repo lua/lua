@@ -1,10 +1,11 @@
 /*
-** $Id: lundump.c,v 1.7 1998/03/05 15:45:08 lhf Exp lhf $
+** $Id: lundump.c,v 1.9 1998/06/13 16:54:15 lhf Exp $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
 
 #include <stdio.h>
+
 #include "lauxlib.h"
 #include "lfunc.h"
 #include "lmem.h"
@@ -15,11 +16,7 @@
 #define	LoadNative(t,D)		LoadBlock(&t,sizeof(t),D)
 
 /* LUA_NUMBER */
-/* if you change the definition of real, make sure you set ID_NUMBER
-* accordingly lundump.h, specially if sizeof(long)!=4.
-* for types other than the ones listed below, you'll have to write your own
-* dump and undump routines.
-*/
+/* see comment in lundump.h */
 
 #if ID_NUMBER==ID_REAL4
 	#define	LoadNumber	LoadFloat
@@ -65,20 +62,23 @@ static unsigned long LoadLong(ZIO* Z)
  return (hi<<16)|lo;
 }
 
+#if ID_NUMBER==ID_REAL4
 /* LUA_NUMBER */
 /* assumes sizeof(long)==4 and sizeof(float)==4 (IEEE) */
 static float LoadFloat(ZIO* Z)
 {
- long l=LoadLong(Z);
+ unsigned long l=LoadLong(Z);
  float f=*(float*)&l;
  return f;
 }
+#endif
 
+#if ID_NUMBER==ID_REAL8
 /* LUA_NUMBER */
 /* assumes sizeof(long)==4 and sizeof(double)==8 (IEEE) */
 static double LoadDouble(ZIO* Z)
 {
- long l[2];
+ unsigned long l[2];
  double f;
  int x=1;
  if (*(char*)&x==1)			/* little-endian */
@@ -94,10 +94,11 @@ static double LoadDouble(ZIO* Z)
  f=*(double*)l;
  return f;
 }
+#endif
 
 static Byte* LoadCode(ZIO* Z)
 {
- long size=LoadLong(Z);
+ unsigned long size=LoadLong(Z);
  unsigned int s=size;
  void* b;
  if (s!=size) luaL_verror("code too long (%ld bytes) in %s",size,zname(Z));
@@ -214,7 +215,7 @@ static void LoadHeader(ZIO* Z)
  f=LoadNumber(Z);
  if (f!=tf)
   luaL_verror("unknown number representation in %s: "
-	"read %g; expected %g",		/* LUA_NUMBER */
+	"read " NUMBER_FMT "; expected " NUMBER_FMT "",	/* LUA_NUMBER */
 	zname(Z),(double)f,(double)tf);
 }
 
