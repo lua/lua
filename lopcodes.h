@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.47 2000/03/09 13:57:37 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.48 2000/03/10 18:37:44 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -20,8 +20,8 @@
   type 3: 1st unsigned argument in the higher 16 bits      (`A')
           2nd unsigned argument in the middle 8 bits       (`B')
 
-  The signed argument is represented in excess 2^23; that is, the Number value
-  is the usigned value minus 2^23.
+  The signed argument is represented in excess 2^23; that is, the number
+  value is the usigned value minus 2^23.
 ===========================================================================*/
 
 #define SIZE_INSTRUCTION	32
@@ -92,7 +92,7 @@ OP_END,/*	-	-		(return)			*/
 OP_RETURN,/*	U	-		(return)			*/
 
 OP_CALL,/*	A B	v_n-v_1 f(at a)	r_b-r_1		f(v1,...,v_n)	*/
-OP_TAILCALL,/*	A B	v_a-v_1 f	(return)	f(v1,...,v_a)	*/
+OP_TAILCALL,/*	A B	v_n-v_1 f(at a)	(return)	f(v1,...,v_n)	*/
 
 OP_PUSHNIL,/*	U	-		nil_1-nil_u			*/
 OP_POP,/*	U	a_u-a_1		-				*/
@@ -158,7 +158,7 @@ OP_SETLINE/*	U	-		-		LINE=u		*/
 
 
 #define RFIELDS_PER_FLUSH 32	/* records (SETMAP) */
-#define LFIELDS_PER_FLUSH 64    /* FPF - lists (SETLIST) (<=MAXARG_B) */
+#define LFIELDS_PER_FLUSH 64	/* FPF - lists (SETLIST) (<=MAXARG_B) */
 
 
 #endif
