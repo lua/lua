@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.38 1996/03/12 15:56:03 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.39 1996/03/14 15:55:18 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -422,9 +422,10 @@ static void io_write (void)
   if (lua_getparam (2) == LUA_NOOBJECT)   /* free format */
   {
     lua_Object o1 = lua_getparam(1);
-    if (lua_isnumber(o1))
+    int t = lua_type(o1);
+    if (t == LUA_T_NUMBER)
       status = fprintf (out, "%g", lua_getnumber(o1)) >= 0;
-    else if (lua_isstring(o1))
+    else if (t == LUA_T_STRING)
       status = fprintf (out, "%s", lua_getstring(o1)) >= 0;
   }
   else					/* formated */

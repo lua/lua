@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.34 1996/03/15 13:13:13 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.35 1996/03/19 16:50:24 roberto Exp roberto $";
 
 #include <stdio.h>
 
@@ -128,21 +128,26 @@ void lua_internaldofile (void)
 static char *tostring (lua_Object obj)
 {
   char *buff = luaI_buffer(20);
-  if (lua_isstring(obj))
+  if (lua_isstring(obj))   /* get strings and numbers */
     return lua_getstring(obj);
-  if (lua_isnumber(obj))
-    sprintf(buff, "%g", lua_getnumber(obj));
-  else if (lua_isfunction(obj))
-    sprintf(buff, "function: %p", (luaI_Address(obj))->value.tf);
-  else if (lua_iscfunction(obj))
-    sprintf(buff, "cfunction: %p", lua_getcfunction(obj));
-  else if (lua_isuserdata(obj))
-    sprintf(buff, "userdata: %p", lua_getuserdata(obj));
-  else if (lua_istable(obj))
-    sprintf(buff, "table: %p", avalue(luaI_Address(obj)));
-  else if (lua_isnil(obj))
-    sprintf(buff, "nil");
-  else buff[0] = 0;
+  else switch(lua_type(obj))
+  {
+    case LUA_T_FUNCTION:
+      sprintf(buff, "function: %p", (luaI_Address(obj))->value.tf);
+      break;
+    case LUA_T_CFUNCTION:
+      sprintf(buff, "cfunction: %p", lua_getcfunction(obj));
+      break;
+    case LUA_T_ARRAY:
+      sprintf(buff, "table: %p", avalue(luaI_Address(obj)));
+      break;
+    case LUA_T_NIL:
+      sprintf(buff, "nil");
+      break;
+    default:
+      sprintf(buff, "userdata: %p", lua_getuserdata(obj));
+      break;
+  }
   return buff;
 }
 
@@ -201,16 +206,7 @@ void lua_obj2number (void)
 {
   lua_Object o = lua_getparam(1);
   if (lua_isnumber(o))
-    lua_pushobject(o);
-  else if (lua_isstring(o))
-  {
-    char c;
-    float f;
-    if (sscanf(lua_getstring(o),"%f %c",&f,&c) == 1)
-      lua_pushnumber(f);
-    else
-      lua_pushnil();
-  }
+    lua_pushnumber(lua_getnumber(o));
   else
     lua_pushnil();
 }

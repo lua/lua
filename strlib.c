@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.18 1996/02/12 18:34:44 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.19 1996/03/14 15:52:35 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -24,7 +24,7 @@ void lua_arg_error(char *funcname)
 char *lua_check_string (int numArg, char *funcname)
 {
   lua_Object o = lua_getparam(numArg);
-  if (!(lua_isstring(o) || lua_isnumber(o)))
+  if (!lua_isstring(o))
     lua_arg_error(funcname);
   return lua_getstring(o);
 }
@@ -32,17 +32,9 @@ char *lua_check_string (int numArg, char *funcname)
 double lua_check_number (int numArg, char *funcname)
 {
   lua_Object o = lua_getparam(numArg);
-  if (lua_isnumber(o))
-    return lua_getnumber(o);
-  else if (lua_isstring(o))
-  {
-    float t;
-    char c;
-    if (sscanf(lua_getstring(o), "%f %c",&t, &c) == 1)
-      return t;
-  }
-  lua_arg_error(funcname);
-  return 0;  /* to avoid warnings */
+  if (!lua_isnumber(o))
+    lua_arg_error(funcname);
+  return lua_getnumber(o);
 }
 
 char *luaI_addchar (int c)

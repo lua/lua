@@ -2,7 +2,7 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lua.h,v 3.22 1996/02/12 18:32:09 roberto Exp roberto $
+** $Id: lua.h,v 3.23 1996/02/14 13:40:26 roberto Exp $
 */
 
 
@@ -52,6 +52,14 @@ void	       lua_endblock		(void);
 lua_Object     lua_getparam 		(int number);
 #define	       lua_getresult(_)		lua_getparam(_)
 
+#define        lua_isnil(_)             (lua_type(_)==LUA_T_NIL)
+#define        lua_istable(_)           (lua_type(_)==LUA_T_ARRAY)
+#define        lua_isuserdata(_)        (lua_type(_)>=LUA_T_USERDATA)
+#define        lua_iscfunction(_)       (lua_type(_)==LUA_T_CFUNCTION)
+int            lua_isnumber             (lua_Object object);
+int            lua_isstring             (lua_Object object);
+int            lua_isfunction           (lua_Object object);
+
 float          lua_getnumber 		(lua_Object object);
 char          *lua_getstring 		(lua_Object object);
 lua_CFunction  lua_getcfunction 	(lua_Object object);
@@ -87,14 +95,6 @@ lua_Object     lua_createtable		(void);
 #define lua_register(n,f)	(lua_pushcfunction(f), lua_storeglobal(n))
 
 #define lua_pushuserdata(u)     lua_pushusertag(u, LUA_T_USERDATA)
-
-#define lua_isnil(_)            (lua_type(_)==LUA_T_NIL)
-#define lua_isnumber(_)         (lua_type(_)==LUA_T_NUMBER)
-#define lua_isstring(_)         (lua_type(_)==LUA_T_STRING)
-#define lua_istable(_)          (lua_type(_)==LUA_T_ARRAY)
-#define lua_isfunction(_)       (lua_type(_)==LUA_T_FUNCTION)
-#define lua_iscfunction(_)      (lua_type(_)==LUA_T_CFUNCTION)
-#define lua_isuserdata(_)       (lua_type(_)>=LUA_T_USERDATA)
 
 
 /* for compatibility with old versions. Avoid using these macros */
