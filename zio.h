@@ -1,13 +1,22 @@
 /*
 * zio.h
 * a generic input stream interface
-* $Id: zio.h,v 1.4 1997/06/13 13:49:16 lhf Exp $
+* $Id: zio.h,v 1.1 1997/06/16 16:50:22 roberto Exp roberto $
 */
 
 #ifndef zio_h
 #define zio_h
 
 #include <stdio.h>
+
+
+
+/* For Lua only */
+#define zFopen	luaz_Fopen
+#define zfopen	luaz_fopen
+#define zpopen	luaz_popen
+#define zsopen	luaz_sopen
+#define zmopen	luaz_mopen
 
 #define EOZ	(-1)			/* end of stream */
 
