@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.86 2002/05/15 18:57:44 roberto Exp roberto $
+** $Id: lua.c,v 1.87 2002/05/16 19:09:19 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -67,8 +67,7 @@ static void laction (int i) {
 
 
 static void report (int status) {
-  if (status == 0) return;
-  else {
+  if (status) {
     lua_getglobal(L, "_ALERT");
     lua_pushvalue(L, -2);
     lua_pcall(L, 1, 0, 0);
@@ -151,19 +150,20 @@ static int l_getargs (lua_State *l) {
 }
 
 
-static int file_input (const char *name) {
-  int status = lua_loadfile(L, name);
+static int docall (int status) {
   if (status == 0) status = lcall(1);
   report(status);
   return status;
 }
 
 
+static int file_input (const char *name) {
+  return docall(lua_loadfile(L, name));
+}
+
+
 static int dostring (const char *s, const char *name) {
-  int status = lua_loadbuffer(L, s, strlen(s), name);
-  if (status == 0) status = lcall(1);
-  report(status);
-  return status;
+  return docall(lua_loadbuffer(L, s, strlen(s), name));
 }
 
 
