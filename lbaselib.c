@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.134 2003/10/07 20:13:41 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.135 2003/10/10 12:57:55 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -78,10 +78,8 @@ static int luaB_tonumber (lua_State *L) {
 
 static int luaB_error (lua_State *L) {
   int level = luaL_optint(L, 2, 1);
-  luaL_checkany(L, 1);
-  if (!lua_isstring(L, 1) || level == 0)
-    lua_pushvalue(L, 1);  /* propagate error message without changes */
-  else {  /* add extra information */
+  lua_settop(L, 1);
+  if (lua_isstring(L, 1) && level > 0) {  /* add extra information? */
     luaL_where(L, level);
     lua_pushvalue(L, 1);
     lua_concat(L, 2);

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.122 2003/04/03 13:34:42 roberto Exp roberto $
+** $Id: lua.c,v 1.123 2003/05/07 16:02:16 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -117,10 +117,9 @@ static void l_message (const char *pname, const char *msg) {
 
 
 static int report (int status) {
-  const char *msg;
-  if (status) {
-    msg = lua_tostring(L, -1);
-    if (msg == NULL) msg = "(error with no message)";
+  if (status && !lua_isnil(L, -1)) {
+    const char *msg = lua_tostring(L, -1);
+    if (msg == NULL) msg = "(error object is not a string)";
     l_message(progname, msg);
     lua_pop(L, 1);
   }
