@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.9 1998/05/27 19:09:39 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.10 1998/06/19 16:14:09 roberto Exp roberto $
 ** Lua standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -204,7 +204,6 @@ static struct luaL_reg mathlib[] = {
 void lua_mathlibopen (void)
 {
   luaL_openlib(mathlib, (sizeof(mathlib)/sizeof(mathlib[0])));
-  lua_pushstring("deg"); lua_setglobal("_TRIGMODE");
   lua_pushcfunction(math_pow);
   lua_pushnumber(0);  /* to get its tag */
   lua_settagmethod(lua_tag(lua_pop()), "pow");
