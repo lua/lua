@@ -1,6 +1,6 @@
 %{
 /*
-** $Id: lua.stx,v 1.31 1997/12/30 19:08:23 roberto Exp roberto $
+** $Id: lua.stx,v 1.32 1998/01/12 13:00:51 roberto Exp roberto $
 ** Syntax analizer and code generator
 ** See Copyright Notice in lua.h
 */
@@ -448,11 +448,15 @@ static void adjust_mult_assign (int vars, long exps)
 
 static void code_args (int nparams, int dots)
 {
-  L->currState->nlocalvar += nparams;
-  if (!dots)
-    code_oparg(ARGS, 4, L->currState->nlocalvar, L->currState->nlocalvar);
+  L->currState->nlocalvar += nparams;  /* "self" may already be there */
+  nparams = L->currState->nlocalvar;
+  if (!dots) {
+    L->currState->f->code[1] = nparams;  /* fill-in arg information */
+    deltastack(nparams);
+  }
   else {
-    code_oparg(VARARGS, 0, L->currState->nlocalvar, L->currState->nlocalvar+1);
+    L->currState->f->code[1] = nparams+ZEROVARARG;
+    deltastack(nparams+1);
     add_localvar(luaS_new("arg"));
   }
 }
@@ -577,6 +581,7 @@ static void init_state (TaggedString *filename)
   else
     fs->maxvars = -1;  /* flag no debug information */
   code_byte(0);  /* to be filled with stacksize */
+  code_byte(0);  /* to be filled with arg information */
   L->lexstate->lastline = 0;  /* invalidate it */
 }
 

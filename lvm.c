@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.20 1997/12/29 17:35:46 roberto Exp roberto $
+** $Id: lvm.c,v 1.21 1997/12/30 19:08:23 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -289,6 +289,12 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base)
   if (lua_callhook)
     luaD_callHook(base, tf, 0);
   luaD_checkstack((*pc++)+EXTRA_STACK);
+  if (*pc < ZEROVARARG)
+    luaD_adjusttop(base+*(pc++));
+  else {  /* varargs */
+    luaC_checkGC();
+    adjust_varargs(base+(*pc++)-ZEROVARARG);
+  }
   while (1) {
     int aux;
     switch ((OpCode)(aux = *pc++)) {
@@ -471,20 +477,6 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base)
         aux -= POP0;
       pop:
         S->top -= (aux+1);
-        break;
-
-      case ARGS:
-        aux = *pc++; goto args;
-
-      case ARGS0: case ARGS1: case ARGS2: case ARGS3:
-        aux -= ARGS0;
-      args:
-        luaD_adjusttop(base+aux);
-        break;
-
-      case VARARGS:
-        luaC_checkGC();
-        adjust_varargs(base+(*pc++));
         break;
 
       case CREATEARRAYW:
