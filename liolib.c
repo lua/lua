@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.38 2003/03/18 12:25:32 roberto Exp roberto $
+** $Id: liolib.c,v 2.39 2003/03/19 21:16:12 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -65,8 +65,8 @@
 
 #define FILEHANDLE		"FILE*"
 
-#define IO_INPUT		"_input"
-#define IO_OUTPUT		"_output"
+#define IO_INPUT		1
+#define IO_OUTPUT		2
 
 
 static int pushresult (lua_State *L, int i, const char *filename) {
@@ -127,23 +127,6 @@ static FILE **newfile (lua_State *L) {
 }
 
 
-/*
-** assumes that top of the stack is the `io' library, and next is
-** the `io' metatable
-*/
-static void registerfile (lua_State *L, FILE *f, const char *name,
-                                                 const char *impname) {
-  lua_pushstring(L, name);
-  *newfile(L) = f;
-  if (impname) {
-    lua_pushstring(L, impname);
-    lua_pushvalue(L, -2);
-    lua_settable(L, -6);  /* metatable[impname] = file */
-  }
-  lua_settable(L, -3);  /* io[name] = file */
-}
-
-
 static int aux_close (lua_State *L) {
   FILE *f = tofile(L, 1);
   if (f == stdin || f == stdout || f == stderr)
@@ -158,10 +141,8 @@ static int aux_close (lua_State *L) {
 
 
 static int io_close (lua_State *L) {
-  if (lua_isnone(L, 1)) {
-    lua_pushstring(L, IO_OUTPUT);
-    lua_rawget(L, lua_upvalueindex(1));
-  }
+  if (lua_isnone(L, 1))
+    lua_rawgeti(L, lua_upvalueindex(1), IO_OUTPUT);
   return pushresult(L, aux_close(L), NULL);
 }
 
@@ -216,17 +197,15 @@ static int io_tmpfile (lua_State *L) {
 }
 
 
-static FILE *getiofile (lua_State *L, const char *name) {
-  lua_pushstring(L, name);
-  lua_rawget(L, lua_upvalueindex(1));
+static FILE *getiofile (lua_State *L, int f) {
+  lua_rawgeti(L, lua_upvalueindex(1), f);
   return tofile(L, -1);
 }
 
 
-static int g_iofile (lua_State *L, const char *name, const char *mode) {
+static int g_iofile (lua_State *L, int f, const char *mode) {
   if (!lua_isnoneornil(L, 1)) {
     const char *filename = lua_tostring(L, 1);
-    lua_pushstring(L, name);
     if (filename) {
       FILE **pf = newfile(L);
       *pf = fopen(filename, mode);
@@ -239,11 +218,10 @@ static int g_iofile (lua_State *L, const char *name, const char *mode) {
       tofile(L, 1);  /* check that it's a valid file handle */
       lua_pushvalue(L, 1);
     }
-    lua_rawset(L, lua_upvalueindex(1));
+    lua_rawseti(L, lua_upvalueindex(1), f);
   }
   /* return current value */
-  lua_pushstring(L, name);
-  lua_rawget(L, lua_upvalueindex(1));
+  lua_rawgeti(L, lua_upvalueindex(1), f);
   return 1;
 }
 
@@ -279,8 +257,8 @@ static int f_lines (lua_State *L) {
 
 static int io_lines (lua_State *L) {
   if (lua_isnoneornil(L, 1)) {  /* no arguments? */
-    lua_pushstring(L, IO_INPUT);
-    lua_rawget(L, lua_upvalueindex(1));  /* will iterate over default input */
+    /* will iterate over default input */
+    lua_rawgeti(L, lua_upvalueindex(1), IO_INPUT);
     return f_lines(L);
   }
   else {
@@ -520,6 +498,11 @@ static const luaL_reg flib[] = {
 
 static void createmeta (lua_State *L) {
   luaL_newmetatable(L, FILEHANDLE);  /* create new metatable for file handles */
+  /* create (and set) default files */
+  *newfile(L) = stdin;
+  lua_rawseti(L, -2, IO_INPUT);
+  *newfile(L) = stdout;
+  lua_rawseti(L, -2, IO_OUTPUT);
   /* file methods */
   lua_pushliteral(L, "__index");
   lua_pushvalue(L, -2);  /* push metatable */
@@ -742,9 +725,15 @@ LUALIB_API int luaopen_io (lua_State *L) {
   lua_pushvalue(L, -1);
   luaL_openlib(L, LUA_IOLIBNAME, iolib, 1);
   /* put predefined file handles into `io' table */
-  registerfile(L, stdin, "stdin", IO_INPUT);
-  registerfile(L, stdout, "stdout", IO_OUTPUT);
-  registerfile(L, stderr, "stderr", NULL);
+  lua_pushstring(L, "stdin");
+  lua_rawgeti(L, 2, IO_INPUT);
+  lua_rawset(L, 3);
+  lua_pushstring(L, "stdout");
+  lua_rawgeti(L, 2, IO_OUTPUT);
+  lua_rawset(L, 3);
+  lua_pushstring(L, "stderr");
+  *newfile(L) = stderr;
+  lua_rawset(L, 3);
   return 1;
 }
 
