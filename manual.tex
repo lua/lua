@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.18 1996/06/18 20:08:40 roberto Exp roberto $
+% $Id: manual.tex,v 1.19 1996/08/28 20:46:26 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -13,7 +13,9 @@
 \newcommand{\Def}[1]{{\em #1}\index{#1}}
 \newcommand{\Deffunc}[1]{\index{#1}}
 
-\newcommand{\Version}{2.4}
+\newcommand{\ff}{$\bullet$\ }
+
+\newcommand{\Version}{2.5 (beta)}
 
 \makeindex
 
@@ -24,7 +26,7 @@
 \author{%
 Roberto Ierusalimschy\quad
 Luiz Henrique de Figueiredo\quad
-Waldemar Celes Filho
+Waldemar Celes
 \vspace{1.0ex}\\
 %\small \tecgraf \ --- PUC-Rio\\
 \smallskip
@@ -34,7 +36,7 @@ Waldemar Celes Filho
 \tecgraf\ --- Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1996/06/18 20:08:40 $}
+\date{\small \verb$Date: 1996/08/28 20:46:26 $}
 
 \maketitle
 
@@ -72,11 +74,8 @@ general procedural programming features with data description
 facilities.
 It is intended to be used as a configuration language for any
 program that needs one.
-%Its main extensions are related to object-oriented facilities,
-%and fallbacks,
-%but it has some other minor contributions.
 Lua has been designed and implemented by
-W.~Celes~F., L.~H.~de Figueiredo and R.~Ierusalimschy.
+W.~Celes, L.~H.~de Figueiredo and R.~Ierusalimschy.
 
 Lua is implemented as a library, written in C.
 Being an extension language, Lua has no notion of a ``main'' program:
@@ -123,10 +122,11 @@ The syntax%
 one or more {\em a\/}'s.}
 for chunks is:
 \begin{Produc}
-\produc{chunk}{\rep{statement \Or function}}
+\produc{chunk}{\rep{statement \Or function} \opt{ret}}
 \end{Produc}%
 A chunk may contain statements and function definitions,
 and may be in a file or in a string inside the host program.
+A chunk may optionally ends with a return statement (\see{return}).
 When a chunk is executed, first all its functions and statements are compiled,
 then the statements are executed in sequential order.
 All modifications a chunk effects on the global environment persist
@@ -231,6 +231,10 @@ and do not interpret escape sequences.
 
 \Index{Comments} start anywhere outside a string with a
 double hyphen (\verb'--') and run until the end of the line.
+Moreover, if the first line of a chunk file starts with \verb'#',
+this line is skiped%
+\footnote{This facility allows the use of Lua as a script interpreter
+in Unix systems.}.
 
 \Index{Numerical constants} may be written with an optional decimal part,
 and an optional decimal exponent.
@@ -281,7 +285,7 @@ and local variable declarations (Section~\ref{localvar}).
 A \Index{block} is a list of statements, which is executed sequentially.
 Any statement can be optionally followed by a semicolon:
 \begin{Produc}
-\produc{block}{\rep{stat sc} \opt{ret sc}}
+\produc{block}{\rep{stat sc} \opt{ret}}
 \produc{sc}{\opt{\ter{;}}}
 \end{Produc}%
 For syntactic reasons, a \IndexVerb{return} statement can only be written
@@ -344,11 +348,12 @@ All values different from \nil\ are considered true;
 \produc{elseif}{\rwd{elseif} exp1 \rwd{then} block}
 \end{Produc}
 
-A {\tt return} is used to return values from a function. \label{return}
-Because a function may return more than one value,
+A {\tt return} is used to return values from a function or a chunk.
+\label{return}
+Because they may return more than one value,
 the syntax for a \Index{return statement} is:
 \begin{Produc}
-\produc{ret}{\rwd{return} explist}
+\produc{ret}{\rwd{return} explist \opt{sc}}
 \end{Produc}
 
 \subsubsection{Function Calls as Statements} \label{funcstat}
@@ -434,7 +439,12 @@ The \Index{logical operators} are:
 \begin{verbatim}
              and   or   not
 \end{verbatim}
-The operators \verb'and' and \verb'or' use \Index{short-cut evaluation},
+The operator \verb'and' returns \nil\ if its first argument is \nil;
+otherwise it returns its second argument.
+The operator \verb'or' returns its first argument
+if it is different from \nil;
+otherwise it returns its second argument.
+Both \verb'and' and \verb'or' use \Index{short-cut evaluation},
 that is,
 the second operand is evaluated only if necessary.
 
@@ -485,7 +495,7 @@ For example:
 \begin{verbatim}
    a = {"v1", "v2", 34}
 \end{verbatim}
-is equivalent to:
+is roughly equivalent to:
 \begin{verbatim}
    temp = {}
    temp[1] = "v1"
@@ -503,11 +513,11 @@ For example:
 \begin{verbatim}
    a = {x = 1, y = 3}
 \end{verbatim}
-is equivalent to:
+is roughly equivalent to:
 \begin{verbatim}
    temp = {}
-   temp.x = 1
-   temp.y = 3
+   temp.x = 1    -- or temp["x"] = 1
+   temp.y = 3    -- or temp["y"] = 3
    a = temp
 \end{verbatim}
 
@@ -518,7 +528,7 @@ A \Index{function call} has the following syntax:
 \produc{functioncall}{var realParams}
 \end{Produc}%
 Here, \verb'var' can be any variable (global, local, indexed, etc).
-If its type is {\em function\/} or {\em CFunction\/},
+If its value has type {\em function\/} or {\em CFunction\/},
 then this function is called.
 Otherwise, the ``function'' fallback is called,
 having as first parameter the value of \verb'var',
@@ -630,7 +640,7 @@ and one of the following strings describing the offended operator:
   add  sub  mul  div  pow  unm
 \end{verbatim}
 Its return value is the final result of the arithmetic operation.
-The default function issues an error.
+The default handler issues an error.
 \item[``order'':]\index{order fallback}
 called when an order comparison is applied to non numerical or
 non string operands.
@@ -641,40 +651,40 @@ one of the following strings describing the offended operator:
   lt gt le ge
 \end{verbatim}
 Its return value is the final result of the comparison operation.
-The default function issues an error.
+The default handler issues an error.
 \item[``concat'':]\index{concatenation fallback}
 called when a concatenation is applied to non string operands.
 It receives the two operands as arguments.
 Its return value is the final result of the concatenation operation.
-The default function issues an error.
+The default handler issues an error.
 \item[``index'':]\index{index fallback}
 called when Lua tries to retrieve the value of an index
 not present in a table.
 It receives as arguments the table and the index.
 Its return value is the final result of the indexing operation.
-The default function returns nil.
+The default handler returns nil.
 \item[``getglobal'':]\index{index getglobal}
 called when Lua tries to retrieve the value of a global variable
 which has a nil value (or which has not been initialized).
 It receives as argument the name of the variable.
 Its return value is the final result of the expression.
-The default function returns nil.
+The default handler returns nil.
 \item[``gettable'':]\index{gettable fallback}
 called when Lua tries to index a non table value.
 It receives as arguments the non table value and the index.
 Its return value is the final result of the indexing operation.
-The default function issues an error.
+The default handler issues an error.
 \item[``settable'':]\index{settable fallback}
 called when Lua tries to assign indexed a non table value.
 It receives as arguments the non table value,
 the index, and the assigned value.
-The default function issues an error.
+The default handler issues an error.
 \item[``function'':]\index{function falback}
 called when Lua tries to call a non function value.
 It receives as arguments the non function value and the
 arguments given in the original call.
 Its return values are the final results of the call operation.
-The default function issues an error.
+The default handler issues an error.
 \item[``gc'':]
 called during garbage collection.
 It receives as argument the table being collected.
@@ -683,17 +693,17 @@ Because this function operates during garbage collection,
 it must be used with great care,
 and programmers should avoid the creation of new objects
 (tables or strings) in this function.
-The default function does nothing.
+The default handler does nothing.
 \item[``error'':]\index{error fallback}
 called when an error occurs.
 It receives as argument a string describing the error.
-The default function prints the message on the standard error output.
+The default handler prints the message on the standard error output.
 \end{description}
 
-The function \IndexVerb{setfallback} is used to change a fallback function.
+The function \IndexVerb{setfallback} is used to change a fallback handler.
 Its first argument is the name of a fallback condition,
 and the second argument is the new function to be called.
-It returns the old function for the given fallback.
+It returns the old handler function for the given fallback.
 
 Section \ref{exfallback} shows an example of the use of fallbacks.
 
@@ -706,7 +716,7 @@ Whenever an error occurs during Lua compilation or execution,
 an ``error'' fallback function is called,
 and then the corresponding function from the library
 (\verb'lua_dofile', \verb'lua_dostring',
-\verb'lua_call', and \verb'lua_callfunction')
+\verb'lua_call', or \verb'lua_callfunction')
 is terminated returning an error condition.
 
 The only argument to the ``error'' fallback function is a string
@@ -722,10 +732,10 @@ This pragma must be written in a line by itself.
 When an error occurs in a program compiled with this option,
 the error routine is able to print also the lines where the calls
 (and the error) were made.
-If needed, it is possible to change the ``error'' fallback routine
+If needed, it is possible to change the ``error'' fallback handler
 (\see{fallback}).
 
-Lua code can generate an error by calling the built-in
+Lua code can explicitly generate an error by calling the built-in
 function \verb'error' (\see{pdf-error}).
 
 
@@ -916,16 +926,6 @@ and returns the contents of the table at that index.
 As in Lua, if the first object is not a table,
 or the index is not present in the table,
 the corresponding fallback is called.
-
-%For compatibility with previous versions of the API,
-%the following macros are supported:
-%\Deffunc{lua_getindexed}\Deffunc{lua_getfield}
-%\begin{verbatim}
-%lua_Object     lua_getindexed           (lua_Object table, float index);
-%lua_Object     lua_getfield             (lua_Object table, char *field);
-%\end{verbatim}
-%The first one is used for numeric indices,
-%while the second can be used for any string index.
 
 To store a value in an index,
 the program must push onto the stack the table, the index,
@@ -1133,20 +1133,24 @@ declared in \verb-lualib.h-.
 
 \subsection{Predefined Functions}
 
-\subsubsection*{{\tt dofile (filename)}}\Deffunc{dofile}
+\subsubsection*{\ff{\tt dofile (filename)}}\Deffunc{dofile}
 This function receives a file name,
 opens it, and executes its contents as a Lua chunk,
 or as pre-compiled chunks.
 When called without arguments,
 it executes the contents of the standard input (\verb'stdin').
-It returns 1 if there are no errors, \nil\ otherwise.
+If there is any error executing the file, it returns \nil.
+Otherwise, it returns the values returned by the chunk,
+or a non \nil\ value if the chunk returns no values.
 It issues an error when called with a non string argument.
 
-\subsubsection*{{\tt dostring (string)}}\Deffunc{dostring}
+\subsubsection*{\ff{\tt dostring (string)}}\Deffunc{dostring}
 This function executes a given string as a Lua chunk.
-It returns 1 if there are no errors, \nil\ otherwise.
+If there is any error executing the string, it returns \nil.
+Otherwise, it returns the values returned by the chunk,
+or a non \nil\ value if the chunk returns no values.
 
-\subsubsection*{{\tt next (table, index)}}\Deffunc{next}
+\subsubsection*{\ff{\tt next (table, index)}}\Deffunc{next}
 This function allows a program to traverse all fields of a table.
 Its first argument is a table and its second argument
 is an index in this table.
@@ -1167,7 +1171,7 @@ The order the indices are enumerated is not specified,
 
 See Section \ref{exnext} for an example of the use of this function.
 
-\subsubsection*{{\tt nextvar (name)}}\Deffunc{nextvar}
+\subsubsection*{\ff{\tt nextvar (name)}}\Deffunc{nextvar}
 This function is similar to the function \verb'next',
 but iterates over the global variables.
 Its single argument is the name of a global variable,
@@ -1177,11 +1181,11 @@ and its value,
 or \nil\ if there are no more variables.
 See Section \ref{exnext} for an example of the use of this function.
 
-\subsubsection*{{\tt tostring (e)}}\Deffunc{tostring}
+\subsubsection*{\ff{\tt tostring (e)}}\Deffunc{tostring}
 This function receives an argument of any type and
 converts it to a string in a reasonable format.
 
-\subsubsection*{{\tt print (e1, e2, ...)}}\Deffunc{print}
+\subsubsection*{\ff{\tt print (e1, e2, ...)}}\Deffunc{print}
 This function receives any number of arguments,
 and prints their values in a reasonable format.
 Each value is printed in a new line.
@@ -1190,14 +1194,14 @@ but as a quick way to show a value,
 for instance for error messages or debugging.
 See Section~\ref{libio} for functions for formatted output.
 
-\subsubsection*{{\tt tonumber (e)}}\Deffunc{tonumber}
+\subsubsection*{\ff{\tt tonumber (e)}}\Deffunc{tonumber}
 This function receives one argument,
 and tries to convert it to a number.
 If the argument is already a number or a string convertible
 to a number (\see{coercion}), then it returns that number;
 otherwise, it returns \nil.
 
-\subsubsection*{{\tt type (v)}}\Deffunc{type}
+\subsubsection*{\ff{\tt type (v)}}\Deffunc{type}
 This function allows Lua to test the type of a value.
 It receives one argument, and returns its type, coded as a string.
 The possible results of this function are
@@ -1214,54 +1218,59 @@ This tag can be used to distinguish between user
 data with different tags,
 and between C functions and Lua functions.
 
-\subsubsection*{{\tt assert (v)}}\Deffunc{assert}
+\subsubsection*{\ff{\tt assert (v)}}\Deffunc{assert}
 This function issues an {\em ``assertion failed!''} error
 when its argument is \nil.
 
-\subsubsection*{{\tt error (message)}}\Deffunc{error}\label{pdf-error}
+\subsubsection*{\ff{\tt error (message)}}\Deffunc{error}\label{pdf-error}
 This function issues an error message and terminates
 the last called function from the library
 (\verb'lua_dofile', \verb'lua_dostring', \ldots).
 It never returns.
 
-\subsubsection*{{\tt setglobal (name, value)}}\Deffunc{setglobal}
+\subsubsection*{\ff{\tt setglobal (name, value)}}\Deffunc{setglobal}
 This function assigns the given value to a global variable.
 The string \verb'name' does not need to be a syntactically valid variable name.
 Therefore, this function can set global variables with strange names like
-\verb'm v 1' or \verb'34'.
+\verb|`m v 1'| or \verb'34'.
 It returns the value of its second argument.
 
-\subsubsection*{{\tt getglobal (name)}}\Deffunc{getglobal}
+\subsubsection*{\ff{\tt getglobal (name)}}\Deffunc{getglobal}
 This function retrieves the value of a global variable.
 The string \verb'name' does not need to be a syntactically valid variable name.
 
-\subsubsection*{{\tt setfallback (fallbackname, newfallback)}}
+\subsubsection*{\ff{\tt setfallback (fallbackname, newfallback)}}
 \Deffunc{setfallback}
 This function sets a new fallback function to the given fallback.
 It returns the old fallback function.
 
 \subsection{String Manipulation}
 This library provides generic functions for string manipulation,
-such as finding and extracting substrings.
+such as finding and extracting substrings and pattern matching.
 When indexing a string, the first character has position 1.
-See Section \ref{exstring} for some examples on string manipulation
+See Page~\pageref{pm} for an explanation about patterns,
+and Section~\ref{exstring} for some examples on string manipulation
 in Lua.
 
-\subsubsection*{{\tt strfind (str, substr, [init, [end]])}}
+\subsubsection*{\ff{\tt strfind (str, pattern [, init [, plain]])}}
 \Deffunc{strfind}
-Receives two string arguments,
-and returns a number.
-This number indicates the first position where the second argument appears
-in the first argument.
-If the second argument is not a substring of the first one,
-then \verb'strfind' returns \nil.
-A third optional numerical argument specifies where to start the search.
-Another optional numerical argument specifies where to stop it.
+This function looks for the first {\em match} of
+\verb-pattern- in \verb-str-.
+If it finds one, it returns the indexes on \verb-str-
+where this occurence starts and ends;
+otherwise, it returns \nil.
+If the pattern specifies captures,
+the captured strings are returned as extra results.
+A third optional numerical argument specifies where to start the search;
+its default value is 1.
+A value of 1 as a forth optional argument
+turns off the pattern matching facilities,
+so the function does a plain ``find substring'' operation.
 
-\subsubsection*{{\tt strlen (s)}}\Deffunc{strlen}
+\subsubsection*{\ff{\tt strlen (s)}}\Deffunc{strlen}
 Receives a string and returns its length.
 
-\subsubsection*{{\tt strsub (s, i, [j])}}\Deffunc{strsub}
+\subsubsection*{\ff{\tt strsub (s, i [, j])}}\Deffunc{strsub}
 Returns another string, which is a substring of \verb's',
 starting at \verb'i'  and runing until \verb'j'.
 If \verb'j' is absent,
@@ -1271,21 +1280,25 @@ with length \verb'j',
 whereas the call \verb'strsub(s,i)' returns a suffix of \verb's',
 starting at \verb'i'.
 
-\subsubsection*{{\tt strlower (s)}}\Deffunc{strlower}
+\subsubsection*{\ff{\tt strlower (s)}}\Deffunc{strlower}
 Receives a string and returns a copy of that string with all
 upper case letters changed to lower case.
 All other characters are left unchanged.
 
-\subsubsection*{{\tt strupper (s)}}\Deffunc{strupper}
+\subsubsection*{\ff{\tt strupper (s)}}\Deffunc{strupper}
 Receives a string and returns a copy of that string with all
 lower case letters changed to upper case.
 All other characters are left unchanged.
 
-\subsubsection*{{\tt ascii (s, [i])}}\Deffunc{ascii}
+\subsubsection*{\ff{\tt strrep (s, n)}}\Deffunc{strrep}
+Returns a string which is the concatenation of \verb-n- copies of 
+the string \verb-s-.
+
+\subsubsection*{\ff{\tt ascii (s [, i])}}\Deffunc{ascii}
 Returns the ascii code of the character \verb's[i]'.
 If \verb'i' is absent, then it is assumed to be 1.
 
-\subsubsection*{{\tt format (formatstring, e1, e2, \ldots)}}\Deffunc{format}
+\subsubsection*{\ff{\tt format (formatstring, e1, e2, \ldots)}}\Deffunc{format}
 \label{format}
 This function returns a formated version of its variable number of arguments
 following the description given in its first argument (which must be a string). 
@@ -1300,12 +1313,120 @@ back by the Lua interpreter.
 The string is written between double quotes,
 and all double quotes, returns and backslashes in the string
 are correctly escaped when written.
+For instance, the call
+\begin{verbatim}
+format('%q', 'a string with "quotes" and \n new line')
+\end{verbatim}
+will produce the string:
+\begin{verbatim}
+"a string with \"quotes\" and \
+ new line"
+\end{verbatim}
 
 The options \verb'c', \verb'd', \verb'E', \verb'e', \verb'f',
 \verb'g' \verb'i', \verb'o', \verb'u', \verb'X', and \verb'x' all
-expect a number argument,
+expect a number as argument,
 whereas \verb'q' and \verb's' expect a string.
 
+\subsubsection*{\ff{\tt gsub (s, from, to [, n])}}\Deffunc{gsub}
+Returns a copy of \verb-s-,
+where all ocurrences of the pattern \verb-from- have been
+replaced by a replacement string specified by \verb-to-.
+This function also returns, as a second value,
+the total number of substitutions made.
+
+If \verb-to- is a string, its value is used for replacement.
+Any sequence in \verb-to- of the form \verb-%n- with \verb-n- between 1 and 9
+stands for the value of the n-th captured substring.
+
+If \verb-to- is a function, this function is called every time a
+match occurs, with all captured substrings as parameters.
+If the value returned by this function is a string,
+it is used as the replacement string;
+otherwise, the replacement string is the empty string.
+
+An optional parameter \verb-n- limits 
+the maximum number of substitutions to occur.
+For instance, when \verb-n- is 1 only the first ocurrence of
+\verb-from- is replaced.
+
+As an example, in the following expression each ocurrence of the form
+\verb-$name$- calls the function \verb|getenv|,
+passing \verb|name| as argument
+(because only this part of the pattern is captured).
+The value returned by \verb|getenv| will replace the pattern.
+Therefore, the whole expression:
+\begin{verbatim}
+  gsub('home = $HOME$, user = $USER$', "$(%w%w*)$", getenv)
+\end{verbatim}
+may return the string:
+\begin{verbatim}
+home = /home/roberto, user = roberto
+\end{verbatim}
+
+\subsubsection*{Patterns} \label{pm}
+
+A \Def{character class} is used to represent a set of characters.
+The following combinations are allowed in describing a character class:
+\begin{description}
+\item[{\em x}] (where {\em x} is any character not in the list \verb'()%.[*?')
+--- represents the character {\em x} itself.
+\item[{\tt .}] --- represents all characters.
+\item[{\tt \%a}] --- represents all letters.
+\item[{\tt \%A}] --- represents all non letter characters.
+\item[{\tt \%d}] --- represents all digits.
+\item[{\tt \%D}] --- represents all non digits.
+\item[{\tt \%l}] --- represents all lower case letters.
+\item[{\tt \%L}] --- represents all non lower case letter characters.
+\item[{\tt \%s}] --- represents all space characters.
+\item[{\tt \%S}] --- represents all non space characters.
+\item[{\tt \%u}] --- represents all upper case letters.
+\item[{\tt \%U}] --- represents all non upper case letter characters.
+\item[{\tt \%w}] --- represents all alphanumeric characters.
+\item[{\tt \%W}] --- represents all non alphanumeric characters.
+\item[{\tt \%\em x}] (where {\em x} is any non alphanumeric character)  ---
+represents the character {\em x}.
+\item[{\tt [char-set]}] --- 
+Represents the class which is the union of all
+characters in char-set.
+To include a \verb']' in char-set, it must be the first character.
+A range of characters may be specified by
+separating the end characters of the range with a \verb'-';
+e.g., \verb'A-Z' specifies the upper case characters.
+If \verb'-' appears as the first or last character of char-set,
+then it represents itself.
+All classes \verb'%'{\em x} described above can also be used as
+components in a char-set.
+All other characters in char-set represent themselves.
+\item[{\tt [\^{ }char-set]}] ---
+represents the complement of char-set,
+where char-set is interpreted as above.
+\end{description}
+
+A \Def{pattern item} may be a single character class,
+or a character class followed by \verb'*' or by \verb'?'.
+A single character class matches any single character in the class.
+A character class followed by \verb'*' matches 0 or more repetitions
+of characters in the class.
+A character class followed by \verb'?' matches 0 or one ocurrence
+of a character in the class.
+A pattern item may also has the form \verb'%n',
+for \verb-n- between 1 and 9.
+Such item matches a sub-string equal to the n-th captured string.
+
+A \Def{pattern} is a sequence of pattern items.
+Any repetition item (\verb'*') inside a pattern will always
+match the longest possible sequence.
+A \verb'^' at the beginning of a pattern anchors the match at the
+beginning of the subject string.
+A \verb'$' at the end of a pattern anchors the match at the
+end of the subject string.
+
+A pattern may contain sub-patterns enclosed in parentheses,
+that describe \Def{captures}.
+When a match succeeds, the sub-strings of the subject string
+that match captures are {\em captured} for future use.
+Captures are numbered according to their left delimiter.
 
 \subsection{Mathematical Functions} \label{mathlib}
 
@@ -1333,8 +1454,6 @@ value of its numeric arguments.
 Similarly, \verb'min' computes the minimum.
 Both can be used with an unlimited number of arguments.
 
-The function \verb'mod' is equivalent to the \verb'%' operator in C.
-
 The functions \verb'random' and \verb'randomseed' are interfaces to
 the simple random generator functions \verb'rand' and \verb'srand',
 provided by ANSI C.
@@ -1350,129 +1469,127 @@ Initially, the current input file is \verb'stdin',
 and the current output file is \verb'stdout'.
 
 Unless otherwise stated,
-all I/O functions return 1 on success and \nil\ on failure.
+all I/O functions return \nil\ on failure and
+some value different from \nil\ on success.
 
-\subsubsection*{{\tt readfrom (filename)}}\Deffunc{readfrom}
+\subsubsection*{\ff{\tt readfrom (filename)}}\Deffunc{readfrom}
 
-This function opens a file named \verb'filename' and sets it as the
-{\em current} input file.
+This function may be called in three ways.
+When called with a file name,
+it opens the named file,
+sets it as the {\em current} input file,
+and returns a {\em handle} to the file
+(this handle is a user data containing the file stream \verb|FILE *|).
+When called with a file handle, returned by a previous call,
+it restores the file as the current input.
 When called without parameters,
-this function closes the current input file,
+it closes the current input file,
 and restores \verb'stdin' as the current input file.
+
+If this function fails, it returns \nil.
 
 {\em System dependent:} if \verb'filename' starts with a \verb'|',
 then a \Index{piped input} is open, via function \IndexVerb{popen}.
 
-\subsubsection*{{\tt writeto (filename)}}\Deffunc{writeto}
+\subsubsection*{\ff{\tt writeto (filename)}}\Deffunc{writeto}
 
-This function opens a file named \verb'filename' and sets it as the
-{\em current} output file.
+This function may be called in three ways.
+When called with a file name,
+it opens the named file,
+sets it as the {\em current} output file,
+and returns a {\em handle} to the file
+(this handle is a user data containing the file stream \verb|FILE *|).
 Notice that, if the file already exists,
 it will be {\em completely erased} with this operation.
+When called with a file handle, returned by a previous call,
+it restores the file as the current output.
 When called without parameters,
 this function closes the current output file,
 and restores \verb'stdout' as the current output file.
 \index{closing a file}
 
+If this function fails, it returns \nil.
+
 {\em System dependent:} if \verb'filename' starts with a \verb'|',
 then a \Index{piped output} is open, via function \IndexVerb{popen}.
 
-\subsubsection*{{\tt appendto (filename)}}\Deffunc{appendto}
+\subsubsection*{\ff{\tt appendto (filename)}}\Deffunc{appendto}
 
 This function opens a file named \verb'filename' and sets it as the
 {\em current} output file.
+It returns the file handle,
+or \nil\ in case of error.
 Unlike the \verb'writeto' operation,
 this function does not erase any previous content of the file.
 
-\subsubsection*{{\tt remove (filename)}}\Deffunc{remove}
+\subsubsection*{\ff{\tt remove (filename)}}\Deffunc{remove}
 
 This function deletes the file with the given name.
 
-\subsubsection*{{\tt rename (name1, name2)}}\Deffunc{rename}
+\subsubsection*{\ff{\tt rename (name1, name2)}}\Deffunc{rename}
 
 This function renames file \verb'name1' to \verb'name2'.
 
-\subsubsection*{{\tt tmpname ()}}\Deffunc{tmpname}
+\subsubsection*{\ff{\tt tmpname ()}}\Deffunc{tmpname}
 
 This function returns a string with a file name that can safely
 be used for a temporary file.
 
-\subsubsection*{{\tt read ([format])}}\Deffunc{read}
+\subsubsection*{\ff{\tt read ([readpattern])}}\Deffunc{read}
 
-This function returns a value read from the current input.
-An optional string argument specifies the way the input is interpreted.
+This function reads the current input
+according to a read pattern, that specifies how much to read;
+characters are read from the current input file until
+the read pattern fails or ends.
+The function \verb|read| returns a string with the characters read,
+or \nil\ if the result string would be empty {\em and\/}
+the read pattern fails.
+When called without parameters,
+it uses a default pattern that reads the next line
+(see below).
 
-Without a format argument, {\tt read} first skips blanks, tabs and newlines.
-Then it checks whether the current character is \verb'"' or \verb-'-.
-If so, it reads a string up to the ending quotation mark,
-and returns this string, without the quotation marks.
-Otherwise it reads up to a blank, tab or newline.
+A \Def{read pattern} is a sequence of read pattern items.
+An item may be a single character class
+or a character class followed by \verb'?' or by \verb'*'.
+A single character class reads the next character from the input
+if it belongs to the class, otherwise it fails.
+A character class followed by \verb'?' reads the next character
+from the input if it belongs to the class;
+it never fails.
+A character class followed by \verb'*' reads until a character that
+does not belong to the class, or end of file;
+it never fails.%
+\footnote{
+Notice that this behaviour is different from regular pattern matching,
+where a \verb'*' expands to the maximum length {\em such that}
+the rest of the pattern does not fail.}
 
-The format string can have the following format:
-\begin{verbatim}
-   ?[n]
-\end{verbatim}
-where \verb'?' can be:
-\begin{description}
-\item['s' or 'S'] to read a string;
-\item['f' or 'F'] to read a real number;
-\item['i' or 'I'] to read an integer.
-\end{description}
-The optional \verb'n' is a number which specifies how many characters
-must be read to compose the input value.
-Particularly, the format \verb'"s1"' reads a single character.
+A pattern item may contain sub-patterns enclosed in curly brackets,
+that describe \Def{skips}.
+Characters matching a skip are read,
+but are not included in the resulting string.
 
-\subsubsection*{{\tt readuntil (char)}}\Deffunc{readuntil}
-
-Reads the current input until the first ocurrence of the given character.
-When called with no parameters,
-reads until the end of the current input file.
-Returns the string read.
-The character itself is not read.
-
-\subsubsection*{{\tt write (value, [format])}}\Deffunc{write}
-
-This function writes the value of its first argument to the current output.
-An optional second argument specifies the format to be used.
-This format is given as a string, composed of four parts.
-The first part is the only one not optional, and must be one of the
-following characters:
-\begin{description}
-\item['s' or 'S'] to write strings;
-\item['f' or 'F'] to write floats;
-\item['i' or 'I'] to write integers;
-\item['q' or 'Q'] to write quoted strings.
-This format writes the string in a form suitable to be safely read
-back by the Lua interpreter.
-The string is written between double quotes,
-and all double quotes, returns and backslashes in the string
-are correctly escaped when written.
-\end{description}
-These characters can be followed by
-\begin{verbatim}
-   [?][m][.n]
-\end{verbatim}
-where:
-\begin{description}
-\item[\verb'?'] indicates justification inside the field.
+Following are some examples of read patterns and their meanings:
 \begin{itemize}
-\item['\verb'<''] right justification (default);
-\item['\verb'>''] left justification;
-\item['\verb'|''] center justification.
+\item \verb|"."| returns the next character, or \nil\ on end of file.
+\item \verb|".*"| reads the whole file.
+\item \verb|"[^\n]*{\n}"| returns the next line
+(skipping the end of line), or \nil\ on end of file.
+This is the default pattern.
+\item \verb|"{%s*}%S%S*"| returns the next word
+(maximal sequence of non white-space characters),
+or \nil\ on end of file.
+\item \verb|"{%s*}[+-]?%d%d*"| returns the next integer
+or \nil\ if the next characters do not conform to an integer format.
 \end{itemize}
-\item[\verb'm'] Indicates the field size in characters.
-\item[\verb'.n'] For reals, indicates the number of digital places.
-For integers, it is the minimum number of digits.
-This option has no meaning for strings.
-\end{description}
 
-When called without a format string,
-this function writes numbers using the \verb'%g' format
-and strings with \verb'%s'.
-For better format facilities,
-the function \verb'format' should be used (\see{format}).
+\subsubsection*{\ff{\tt write (value1, ...)}}\Deffunc{write}
 
-\subsubsection*{{\tt date ([format])}}\Deffunc{date}
+This function writes the value of each of its arguments to the
+current output file.
+The arguments must be strings or numbers.
+
+\subsubsection*{\ff{\tt date ([format])}}\Deffunc{date}
 
 This function returns a string containing date and time
 formatted according to the given string \verb'format',
@@ -1480,14 +1597,22 @@ following the same rules of the ANSI C function \verb'strftime'.
 When called without arguments,
 it returns a reasonable date and time representation.
 
-This function replaces functions \verb'date' and \verb'time' from
-previous Lua versions.
-
-\subsubsection*{{\tt exit ([code])}}\Deffunc{exit}
+\subsubsection*{\ff{\tt exit ([code])}}\Deffunc{exit}
 
 This function calls the C function \verb-exit-,
 with an optional \verb-code-,
 to terminate the program.
+
+\subsubsection*{\ff{\tt getenv (varname)}}\Deffunc{getenv}
+
+Returns the value of the environment variable \verb|varname|,
+or \nil\ if the variable is not defined.
+
+\subsubsection*{\ff{\tt execute (command)}}\Deffunc{execute}
+
+This function is equivalent to the C function \verb|system|.
+It passes \verb|command| to be executed by an Operating System Shell.
+It returns an error code, which is implementation-defined.
 
 
 \section{The Debugger Interface} \label{debugI}
@@ -1496,7 +1621,7 @@ Lua has no built-in debugger facilities.
 Instead, it offers a special interface,
 by means of functions and {\em hooks},
 which allows the construction of different
-kinds of debugers, profilers, and other tools
+kinds of debuggers, profilers, and other tools
 that need ``inside information'' from the interpreter.
 This interface is declared in the header file \verb'luadebug.h'.
 
@@ -1699,32 +1824,21 @@ end
 
 \subsection{String Manipulation} \label{exstring}
 
-The first example is a function to trim extra blanks at the beginning
+The first example is a function to trim extra white-spaces at the beginning
 and end of a string.
 \begin{verbatim}
 function trim(s)
-  local l = 1
-  while strsub(s,l,l) == ' ' do
-    l = l+1
-  end
-  local r = strlen(s)
-  while strsub(s,r,r) == ' ' do
-    r = r-1
-  end
-  return strsub(s,l,r)
+  local _, i = strfind(s, '^ *')
+  local f, __ = strfind(s, ' *$')
+  return strsub(s, i+1, f-1)
 end
 \end{verbatim}
 
-The second example shows a function that eliminates all blanks
+The second example shows a function that eliminates all spaces
 of a string.
 \begin{verbatim}
 function remove_blanks (s)
-  local b = strfind(s, ' ')
-  while b do
-    s = strsub(s, 1, b-1) .. strsub(s, b+1)
-    b = strfind(s, ' ')
-  end
-  return s
+  return gsub(s, "%s%s*", "")
 end
 \end{verbatim}
 
@@ -2058,6 +2172,46 @@ void remove_blanks (char *s)
 \end{verbatim}
 
 
+\section{\Index{Lua Stand-alone}}
+
+Although Lua has been designed as an extension language,
+the language can also be used as a stand-alone interpreter.
+An implementation of such an interpreter,
+called simply \verb|lua|,
+is provided with the standard distribution.
+This program can be called with any sequence of the following arguments:
+\begin{description}
+\item[{\tt -v}] prints version information.
+\item[{\tt -}] runs interactively, accepting commands from standard input
+until an \verb|EOF|.
+\item[{\tt -e stat}] executes \verb|stat| as a Lua chunck.
+\item[{\tt var=exp}] executes \verb|var=exp| as a Lua chunck.
+\item[{\tt filename}] executes file \verb|filename| as a Lua chunck.
+\end{description}
+All arguments are handle in order.
+For instance, an invocation like
+\begin{verbatim}
+$ lua - a=1 prog.lua
+\end{verbatim}
+will first interact with the user until an \verb|EOF|,
+then will set \verb'a' to 1,
+and finally will run file \verb'prog.lua'.
+
+Please notice that the interaction with the shell may lead to
+unintended results.
+For instance, a call like
+\begin{verbatim}
+$ lua a="name" prog.lua
+\end{verbatim}
+will {\em not} set \verb|a| to the string \verb|"name"|.
+Instead, the quotes will be handled by the shell,
+lua will get only \verb'a=name' to run,
+and \verb'a' will finish with \nil.
+Instead, one should write
+\begin{verbatim}
+$ lua 'a="name"' prog.lua
+\end{verbatim}
+
 \section*{Acknowledgments}
 
 The authors would like to thank CENPES/PETROBR\'AS which,
@@ -2076,7 +2230,27 @@ Lua means {\em moon} in Portuguese.
 Although great care has been taken to avoid incompatibilities with
 the previous public versions of Lua,
 some differences had to be introduced.
-Here is a list of all these differences.
+Here is a list of all these incompatibilities.
+
+\subsection*{Incompatibilities with \Index{version 2.4}}
+The whole I/O facilities have been rewritten.
+We strongly encourage programmers to addapt their code
+to this new version.
+However, we are keeping the old version of the libraries
+in the distribution,
+to allow a smooth transition.
+The incompatibilities between the new and the old libraries are:
+\begin{itemize}
+\item The format facility of function \verb'write' has been supersed by
+function \verb'format';
+therefore this facility has been dropped.
+\item Function \verb'read' now uses {\em read patterns} to specify
+what to read;
+this is incompatible with the old format options.
+\item Function \verb'strfind' now accepts patterns,
+so it may have a different behavior when the pattern includes
+special characteres.
+\end{itemize}
 
 \subsection*{Incompatibilities with \Index{version 2.2}}
 \begin{itemize}
