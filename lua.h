@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.132 2002/05/07 17:36:56 roberto Exp roberto $
+** $Id: lua.h,v 1.133 2002/05/16 18:39:46 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: info@lua.org
@@ -321,37 +321,25 @@ LUA_API int lua_pushupvalues (lua_State *L);
 
 
 /******************************************************************************
-* Copyright (C) 1994-2001 Tecgraf, PUC-Rio.  All rights reserved.
-* 
-* Permission is hereby granted, without written agreement and without license
-* or royalty fees, to use, copy, modify, and distribute this software and its
-* documentation for any purpose, including commercial applications, subject to
-* the following conditions:
-* 
-*  - The above copyright notice and this permission notice shall appear in all
-*    copies or substantial portions of this software.
-* 
-*  - The origin of this software must not be misrepresented; you must not
-*    claim that you wrote the original software. If you use this software in a
-*    product, an acknowledgment in the product documentation would be greatly
-*    appreciated (but it is not required).
-* 
-*  - Altered source versions must be plainly marked as such, and must not be
-*    misrepresented as being the original software.
-*    
-* The authors specifically disclaim any warranties, including, but not limited
-* to, the implied warranties of merchantability and fitness for a particular
-* purpose.  The software provided hereunder is on an "as is" basis, and the
-* authors have no obligation to provide maintenance, support, updates,
-* enhancements, or modifications.  In no event shall Tecgraf, PUC-Rio, or the
-* authors be held liable to any party for direct, indirect, special,
-* incidental, or consequential damages arising out of the use of this software
-* and its documentation.
-* 
-* The Lua language and this implementation have been entirely designed and
-* written by Waldemar Celes Filho, Roberto Ierusalimschy and
-* Luiz Henrique de Figueiredo at Tecgraf, PUC-Rio.
+* Copyright (C) 2002 Tecgraf, PUC-Rio.  All rights reserved.
 *
-* This implementation contains no third-party code.
+* Permission is hereby granted, free of charge, to any person obtaining
+* a copy of this software and associated documentation files (the
+* "Software"), to deal in the Software without restriction, including
+* without limitation the rights to use, copy, modify, merge, publish,
+* distribute, sublicense, and/or sell copies of the Software, and to
+* permit persons to whom the Software is furnished to do so, subject to
+* the following conditions:
+*
+* The above copyright notice and this permission notice shall be
+* included in all copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ******************************************************************************/
 
