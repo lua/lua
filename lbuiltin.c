@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.38 1998/12/15 15:21:09 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.40 1998/12/27 20:22:36 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -133,7 +133,7 @@ static void luaB_print (void) {
 
 
 static void luaB_tonumber (void) {
-  int base = luaL_opt_number(2, 10);
+  int base = luaL_opt_int(2, 10);
   if (base == 10) {  /* standard conversion */
     lua_Object o = lua_getparam(1);
     if (lua_isnumber(o))
@@ -186,7 +186,7 @@ static void luaB_luatag (void) {
 static void luaB_settag (void) {
   lua_Object o = luaL_tablearg(1);
   lua_pushobject(o);
-  lua_settag(luaL_check_number(2));
+  lua_settag(luaL_check_int(2));
   lua_pushobject(o);  /* returns first argument */
 }
 
@@ -195,8 +195,8 @@ static void luaB_newtag (void) {
 }
 
 static void luaB_copytagmethods (void) {
-  lua_pushnumber(lua_copytagmethods(luaL_check_number(1),
-                                    luaL_check_number(2)));
+  lua_pushnumber(lua_copytagmethods(luaL_check_int(1),
+                                    luaL_check_int(2)));
 }
 
 static void luaB_rawgettable (void) {
@@ -215,13 +215,11 @@ static void luaB_rawsettable (void) {
 static void luaB_settagmethod (void) {
   lua_Object nf = luaL_nonnullarg(3);
   lua_pushobject(nf);
-  lua_pushobject(lua_settagmethod((int)luaL_check_number(1),
-                                  luaL_check_string(2)));
+  lua_pushobject(lua_settagmethod(luaL_check_int(1), luaL_check_string(2)));
 }
 
 static void luaB_gettagmethod (void) {
-  lua_pushobject(lua_gettagmethod((int)luaL_check_number(1),
-                                  luaL_check_string(2)));
+  lua_pushobject(lua_gettagmethod(luaL_check_int(1), luaL_check_string(2)));
 }
 
 static void luaB_seterrormethod (void) {
@@ -231,7 +229,7 @@ static void luaB_seterrormethod (void) {
 }
 
 static void luaB_collectgarbage (void) {
-  lua_pushnumber(lua_collectgarbage(luaL_opt_number(1, 0)));
+  lua_pushnumber(lua_collectgarbage(luaL_opt_int(1, 0)));
 }
 
 

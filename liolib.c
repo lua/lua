@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.26 1998/11/20 15:41:43 roberto Exp roberto $
+** $Id: liolib.c,v 1.27 1998/12/27 20:21:28 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -105,8 +105,11 @@ static FILE *getfileparam (char *name, int *arg) {
 static char *getmode (char mode) {
   static char m[3];
   m[0] = mode;
-  m[1] = (*luaL_opt_string(FIRSTARG+1, "text") == 'b') ? 'b' : '\0';
-  m[2] = '\0';
+  if (*luaL_opt_string(FIRSTARG+1, "text") == 'b') {
+     m[1] = 'b';
+     m[2] = '\0';
+  }
+  else m[1] = '\0';
   return m;
 }
 
@@ -308,7 +311,7 @@ static void io_read (void) {
     l = luaL_getsize();
     if (!success && l==0) return;  /* read fails */
     lua_pushlstring(luaL_buffer(), l);
-  } while ((p = luaL_opt_string(arg++, NULL)));
+  } while ((p = luaL_opt_string(arg++, NULL)) != NULL);
 }
 
 
@@ -319,7 +322,7 @@ static void io_write (void) {
   char *s;
   long l;
   while ((s = luaL_opt_lstr(arg++, NULL, &l)) != NULL)
-    status = status && (fwrite(s, 1, l, f) == l);
+    status = status && ((long)fwrite(s, 1, l, f) == l);
   pushresult(status);
 }
 
@@ -329,7 +332,7 @@ static void io_seek (void) {
   static char *modenames[] = {"set", "cur", "end", NULL};
   FILE *f = getfile(FIRSTARG-1+1);
   int op = luaL_findstring(luaL_opt_string(FIRSTARG-1+2, "cur"), modenames);
-  long offset = luaL_opt_number(FIRSTARG-1+3, 0);
+  long offset = luaL_opt_long(FIRSTARG-1+3, 0);
   luaL_arg_check(f, FIRSTARG-1+1, "invalid file handler");
   luaL_arg_check(op != -1, FIRSTARG-1+2, "invalid mode");
   op = fseek(f, offset, mode[op]);

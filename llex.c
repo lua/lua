@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.25 1998/12/03 15:45:15 roberto Exp $
+** $Id: llex.c,v 1.26 1998/12/27 20:25:20 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -61,7 +61,7 @@ void luaX_error (LexState *ls, char *s) {
 
 void luaX_token2str (int token, char *s) {
   if (token < 255) {
-    s[0] = token;
+    s[0] = (char)token;
     s[1] = '\0';
   }
   else
@@ -138,7 +138,7 @@ static void readname (LexState *LS, char *buff)
       buff[PRAGMASIZE] = 0;
       luaX_syntaxerror(LS, "pragma too long", buff);
     }
-    buff[i++] = LS->current;
+    buff[i++] = (char)LS->current;
     next(LS);
   }
   buff[i] = 0;
@@ -344,7 +344,7 @@ int luaX_lex (LexState *LS) {
                       c = 10*c + (LS->current-'0');
                       next(LS);
                     } while (++i<3 && isdigit(LS->current));
-                    if (c > (unsigned char)c)
+                    if (c != (unsigned char)c)
                       luaX_error(LS, "escape sequence too large");
                     save(c);
                   }

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.13 1998/01/19 19:49:49 roberto Exp roberto $
+** $Id: lua.c,v 1.14 1998/02/11 20:56:05 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -32,27 +32,27 @@ typedef void (*handler)(int);  /* type for signal actions */
 
 static void laction (int i);
 
-static handler lreset (void)
-{
+
+static handler lreset (void) {
   lua_linehook = NULL;
   lua_callhook = NULL;
   return signal(SIGINT, laction);
 }
 
-static void lstop (void)
-{
+
+static void lstop (void) {
   lreset();
   lua_error("interrupted!");
 }
 
-static void laction (int i)
-{
+
+static void laction (int i) {
   lua_linehook = (lua_LHFunction)lstop;
   lua_callhook = (lua_CHFunction)lstop;
 }
 
-static int ldo (int (*f)(char *), char *name)
-{
+
+static int ldo (int (*f)(char *), char *name) {
   int res;
   handler h = lreset();
   res = f(name);  /* dostring | dofile */
@@ -61,8 +61,7 @@ static int ldo (int (*f)(char *), char *name)
 }
 
 
-static void print_message (void)
-{
+static void print_message (void) {
   fprintf(stderr,
 "Lua: command line options:\n"
 "  -v       print version information\n"
@@ -76,8 +75,7 @@ static void print_message (void)
 }
 
 
-static void assign (char *arg)
-{
+static void assign (char *arg) {
   if (strlen(arg) >= 500)
     fprintf(stderr, "lua: shell argument too long");
   else {
@@ -90,13 +88,11 @@ static void assign (char *arg)
   }
 }
 
-#define BUF_SIZE	512
 
-static void manual_input (int prompt)
-{
+static void manual_input (int prompt) {
   int cont = 1;
   while (cont) {
-    char buffer[BUF_SIZE];
+    char buffer[BUFSIZ];
     int i = 0;
     lua_beginblock();
     if (prompt)
@@ -112,13 +108,13 @@ static void manual_input (int prompt)
           buffer[i-1] = '\n';
         else break;
       }
-      else if (i >= BUF_SIZE-1) {
+      else if (i >= BUFSIZ-1) {
         fprintf(stderr, "lua: argument line too long\n");
         break;
       }
-      else buffer[i++] = c;
+      else buffer[i++] = (char)c;
     }
-    buffer[i] = 0;
+    buffer[i] = '\0';
     ldo(lua_dostring, buffer);
     lua_endblock();
   }

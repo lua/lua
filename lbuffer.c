@@ -1,5 +1,5 @@
 /*
-** $Id: lbuffer.c,v 1.3 1998/06/02 20:37:04 roberto Exp roberto $
+** $Id: lbuffer.c,v 1.4 1998/06/19 16:14:09 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -42,7 +42,7 @@ char *luaL_openspace (int size)
 void luaL_addchar (int c)
 {
   openspace(BUFF_STEP);
-  L->Mbuffer[L->Mbuffnext++] = c;
+  L->Mbuffer[L->Mbuffnext++] = (char)c;
 }
 
 

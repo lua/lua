@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.5 1998/08/11 13:28:05 roberto Exp roberto $
+** $Id: lparser.c,v 1.6 1998/12/23 14:06:57 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -158,18 +158,18 @@ static int code_oparg_at (LexState *ls, int pc, OpCode op, int builtin,
   Byte *code = ls->fs->f->code;
   deltastack(ls, delta);
   if (arg < builtin) {
-    code[pc] = op+1+arg;
+    code[pc] = (Byte)(op+1+arg);
     return 1;
   }
   else if (arg <= 255) {
-    code[pc] = op;
-    code[pc+1] = arg;
+    code[pc] = (Byte)op;
+    code[pc+1] = (Byte)arg;
     return 2;
   }
   else if (arg <= MAX_WORD) {
-    code[pc] = op+1+builtin;
-    code[pc+1] = arg>>8;
-    code[pc+2] = arg&0xFF;
+    code[pc] = (Byte)(op+1+builtin);
+    code[pc+1] = (Byte)(arg>>8);
+    code[pc+2] = (Byte)(arg&0xFF);
     return 3;
   }
   else luaX_error(ls, "code too long " MES_LIM("64K")
@@ -202,7 +202,7 @@ static void code_oparg (LexState *ls, OpCode op, int builtin, int arg,
 
 static void code_opcode (LexState *ls, OpCode op, int delta) {
   deltastack(ls, delta);
-  code_byte(ls->fs, op);
+  code_byte(ls->fs, (Byte)op);
 }
 
 
@@ -277,7 +277,7 @@ static void flush_record (LexState *ls, int n) {
 static void flush_list (LexState *ls, int m, int n) {
   if (n == 0) return;
   code_oparg(ls, SETLIST, 1, m, -n);
-  code_byte(ls->fs, n);
+  code_byte(ls->fs, (Byte)n);
 }
 
 
@@ -391,7 +391,7 @@ static void adjuststack (LexState *ls, int n) {
 static void close_exp (LexState *ls, int pc, int nresults) {
   if (pc > 0) {  /* expression is an open function call */
     Byte *code = ls->fs->f->code;
-    int nparams = code[pc];  /* save nparams */
+    Byte nparams = code[pc];  /* save nparams */
     pc += fix_opcode(ls, pc-2, CALLFUNC, 2, nresults);
     code[pc] = nparams;  /* restore nparams */
     if (nresults != MULT_RET)
@@ -426,11 +426,11 @@ static void code_args (LexState *ls, int nparams, int dots) {
   fs->nlocalvar += nparams;  /* "self" may already be there */
   nparams = fs->nlocalvar;
   if (!dots) {
-    fs->f->code[1] = nparams;  /* fill-in arg information */
+    fs->f->code[1] = (Byte)nparams;  /* fill-in arg information */
     deltastack(ls, nparams);
   }
   else {
-    fs->f->code[1] = nparams+ZEROVARARG;
+    fs->f->code[1] = (Byte)(nparams+ZEROVARARG);
     deltastack(ls, nparams+1);
     add_localvar(ls, luaS_new("arg"));
   }
@@ -515,7 +515,7 @@ static void func_onstack (LexState *ls, FuncState *func) {
     for (i=0; i<func->nupvalues; i++)
       lua_pushvar(ls, &func->upvalues[i]);
     code_oparg(ls, CLOSURE, 0, c, -func->nupvalues+1);
-    code_byte(fs, func->nupvalues);
+    code_byte(fs, (Byte)func->nupvalues);
   }
 }
 
@@ -548,7 +548,7 @@ static void close_func (LexState *ls) {
   FuncState *fs = ls->fs;
   TProtoFunc *f = fs->f;
   code_opcode(ls, ENDCODE, 0);
-  f->code[0] = fs->maxstacksize;
+  f->code[0] = (Byte)fs->maxstacksize;
   f->code = luaM_reallocvector(f->code, fs->pc, Byte);
   f->consts = luaM_reallocvector(f->consts, f->nconsts, TObject);
   if (fs->maxvars != -1) {  /* debug information? */
@@ -1092,7 +1092,7 @@ static int funcparams (LexState *ls, int slf) {
   }
   code_byte(fs, 0);  /* save space for opcode */
   code_byte(fs, 0);  /* and nresult */
-  code_byte(fs, nparams+slf);
+  code_byte(fs, (Byte)(nparams+slf));
   return fs->pc-1;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.10 1998/06/19 16:14:09 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.11 1998/09/08 19:25:35 roberto Exp roberto $
 ** Lua standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -122,7 +122,7 @@ static void math_frexp (void) {
 }
 
 static void math_ldexp (void) {
-  lua_pushnumber(ldexp(luaL_check_number(1), luaL_check_number(2)));
+  lua_pushnumber(ldexp(luaL_check_number(1), luaL_check_int(2)));
 }
 
 
@@ -166,9 +166,8 @@ static void math_random (void)
 }
 
 
-static void math_randomseed (void)
-{
-  srand(luaL_check_number(1));
+static void math_randomseed (void) {
+  srand(luaL_check_int(1));
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.20 1998/11/10 19:38:12 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.21 1998/12/01 18:41:25 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -46,8 +46,8 @@ static long posrelat (long pos, long len) {
 static void str_sub (void) {
   long l;
   char *s = luaL_check_lstr(1, &l);
-  long start = posrelat(luaL_check_number(2), l);
-  long end = posrelat(luaL_opt_number(3, -1), l);
+  long start = posrelat(luaL_check_long(2), l);
+  long end = posrelat(luaL_opt_long(3, -1), l);
   if (start < 1) start = 1;
   if (end > l) end = l;
   if (start <= end)
@@ -82,7 +82,7 @@ static void str_rep (void)
 {
   long l;
   char *s = luaL_check_lstr(1, &l);
-  int n = (int)luaL_check_number(2);
+  int n = luaL_check_int(2);
   luaL_resetbuffer();
   while (n-- > 0)
     addnchar(s, l);
@@ -94,7 +94,7 @@ static void str_byte (void)
 {
   long l;
   char *s = luaL_check_lstr(1, &l);
-  long pos = posrelat(luaL_opt_number(2, 1), l);
+  long pos = posrelat(luaL_opt_long(2, 1), l);
   luaL_arg_check(0<pos && pos<=l, 2,  "out of range");
   lua_pushnumber((unsigned char)s[pos-1]);
 }
@@ -105,7 +105,7 @@ static void str_char (void) {
   while (lua_getparam(++i) != LUA_NOOBJECT) {
     double c = luaL_check_number(i);
     luaL_arg_check((unsigned char)c == c, i, "invalid value");
-    luaL_addchar((int)c);
+    luaL_addchar((unsigned char)c);
   }
   closeandpush();
 }
@@ -338,7 +338,7 @@ static void str_find (void)
   long l;
   char *s = luaL_check_lstr(1, &l);
   char *p = luaL_check_string(2);
-  long init = posrelat(luaL_opt_number(3, 1), l) - 1;
+  long init = posrelat(luaL_opt_long(3, 1), l) - 1;
   struct Capture cap;
   luaL_arg_check(0 <= init && init <= l, 3, "out of range");
   if (lua_getparam(4) != LUA_NOOBJECT ||
@@ -418,7 +418,7 @@ static void str_gsub (void)
   char *src = luaL_check_lstr(1, &srcl);
   char *p = luaL_check_string(2);
   lua_Object newp = lua_getparam(3);
-  int max_s = (int)luaL_opt_number(4, srcl+1);
+  int max_s = luaL_opt_int(4, srcl+1);
   int anchor = (*p == '^') ? (p++, 1) : 0;
   int n = 0;
   struct Capture cap;
@@ -507,7 +507,7 @@ static void str_format (void)
           break;
         }
         case 'c':  case 'd':  case 'i':
-          sprintf(buff, form, (int)luaL_check_number(arg));
+          sprintf(buff, form, luaL_check_int(arg));
           break;
         case 'o':  case 'u':  case 'x':  case 'X':
           sprintf(buff, form, (unsigned int)luaL_check_number(arg));
