@@ -1,3 +1,4 @@
+
 ** lua.stx / llex.c
 Tue Dec  2 10:45:48 EDT 1997
 >> BUG: "lastline" was not reset on function entry, so debug information
@@ -110,3 +111,10 @@ the number of returns of a function.
 Wed Aug 18 11:28:38 EST 1999
 >> random(0) and random(x,0) are wrong (0 is read as no argument!).
 (by Dave Bollinger; since 3.1)
+
+** lparser.c
+Thu Sep  2 10:07:20 EST 1999
+>> in the (old) expression << ls->fs->f->consts[checkname(ls)] >>, checkname
+could realloc f->consts.
+(by Supratik Champati; since 3.2 beta)
+
