@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.125 2002/12/02 12:06:10 roberto Exp roberto $
+** $Id: ltable.c,v 1.126 2002/12/04 17:38:31 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -178,21 +178,24 @@ static void computesizes  (int nums[], int ntotal, int *narray, int *nhash) {
 
 static void numuse (const Table *t, int *narray, int *nhash) {
   int nums[MAXBITS+1];
-  int i;
+  int i, lg;
   int totaluse = 0;
-  for (i=0; i<=MAXBITS; i++) nums[i] = 0;  /* init `nums' */
   /* count elements in array part */
-  i = luaO_log2(t->sizearray) + 1;  /* number of `slices' */
-  while (i--) {  /* for each slice [2^(i-1) to 2^i) */
-    int to = twoto(i);
-    int from = to/2;
-    if (to > t->sizearray) to = t->sizearray;
-    for (; from < to; from++)
-      if (!ttisnil(&t->array[from])) {
-        nums[i]++;
+  for (i=0, lg=0; lg<=MAXBITS; lg++) {  /* for each slice [2^(lg-1) to 2^lg) */
+    int ttlg = twoto(lg);  /* 2^lg */
+    if (ttlg > t->sizearray) {
+      ttlg = t->sizearray;
+      if (i >= ttlg) break;
+    }
+    nums[lg] = 0;
+    for (; i<ttlg; i++) {
+      if (!ttisnil(&t->array[i])) {
+        nums[lg]++;
         totaluse++;
       }
+    }
   }
+  for (; lg<=MAXBITS; lg++) nums[lg] = 0;  /* reset other counts */
   *narray = totaluse;  /* all previous uses were in array part */
   /* count elements in hash part */
   i = sizenode(t);
