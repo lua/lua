@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.154 2003/02/27 12:33:07 roberto Exp roberto $
+** $Id: ltests.c,v 1.155 2003/03/11 12:24:34 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -307,14 +307,14 @@ static int table_query (lua_State *L) {
     lua_pushnil(L); 
   }
   else if ((i -= t->sizearray) < sizenode(t)) {
-    if (!ttisnil(val(node(t, i))) ||
-        ttisnil(key(node(t, i))) ||
-        ttisnumber(key(node(t, i)))) {
-      luaA_pushobject(L, key(node(t, i)));
+    if (!ttisnil(gval(gnode(t, i))) ||
+        ttisnil(gkey(gnode(t, i))) ||
+        ttisnumber(gkey(gnode(t, i)))) {
+      luaA_pushobject(L, gkey(gnode(t, i)));
     }
     else
       lua_pushstring(L, "<undef>");
-    luaA_pushobject(L, val(&t->node[i]));
+    luaA_pushobject(L, gval(gnode(t, i)));
     if (t->node[i].next)
       lua_pushnumber(L, t->node[i].next - t->node);
     else
