@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.6 1994/12/13 15:54:21 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.7 1994/12/16 15:53:57 roberto Exp roberto $";
 
 #include <string.h>
 #include <ctype.h>
@@ -15,20 +15,42 @@ char *rcs_strlib="$Id: strlib.c,v 1.6 1994/12/13 15:54:21 roberto Exp roberto $"
 /*
 ** Return the position of the first caracter of a substring into a string
 ** LUA interface:
-**			n = strfind (string, substring)
+**			n = strfind (string, substring, init, end)
 */
 static void str_find (void)
 {
  char *s1, *s2, *f;
+ int init; 
  lua_Object o1 = lua_getparam (1);
  lua_Object o2 = lua_getparam (2);
+ lua_Object o3 = lua_getparam (3);
+ lua_Object o4 = lua_getparam (4);
  if (!lua_isstring(o1) || !lua_isstring(o2))
    lua_error ("incorrect arguments to function `strfind'");
+ if (o3 == LUA_NOOBJECT)
+  init = 0;
+ else if (lua_isnumber(o3))
+  init = lua_getnumber(o3)-1;
+ else
+ {
+   lua_error ("incorrect arguments to function `strfind'");
+   return;  /* to avoid warnings */
+ }
  s1 = lua_getstring(o1);
  s2 = lua_getstring(o2);
- f = strstr(s1,s2);
+ f = strstr(s1+init,s2);
  if (f != NULL)
-  lua_pushnumber (f-s1+1);
+ {
+  int pos = f-s1+1;
+  if (o4 == LUA_NOOBJECT)
+   lua_pushnumber (pos);
+  else if (!lua_isnumber(o4))
+   lua_error ("incorrect arguments to function `strfind'");
+  else if ((int)lua_getnumber(o4) >= pos+strlen(s2)-1)
+   lua_pushnumber (pos);
+  else
+   lua_pushnil();
+ }
  else
   lua_pushnil();
 }
