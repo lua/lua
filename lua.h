@@ -2,7 +2,7 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lua.h,v 3.33 1997/02/11 11:40:01 roberto Exp roberto $
+** $Id: lua.h,v 3.34 1997/02/20 15:51:14 roberto Exp roberto $
 */
 
 
@@ -19,13 +19,19 @@
 typedef void (*lua_CFunction) (void);
 typedef unsigned int lua_Object;
 
-lua_Object     lua_setfallback		(char *name, lua_CFunction fallback);
+lua_Object     lua_setfallback		(char *event, lua_CFunction fallback);
+void           lua_setintmethod	(int tag, char *event, lua_CFunction method);
+
+int            lua_newtag		(char *t);
+void           lua_settag		(int tag); /* In: object */
 
 void           lua_error		(char *s);
-int            lua_dofile 		(char *filename);
-int            lua_dostring 		(char *string);
-int            lua_callfunction		(lua_Object function);
+int            lua_dofile 		(char *filename); /* Out: returns */
+int            lua_dostring 		(char *string); /* Out: returns */
+int            lua_callfunction		(lua_Object f);
+					  /* In: parameters; Out: returns */
 int	       lua_call			(char *funcname);
+					  /* In: parameters; Out: returns */
 
 void	       lua_beginblock		(void);
 void	       lua_endblock		(void);
@@ -56,15 +62,17 @@ void           lua_pushusertag     	(void *u, int tag);
 void           lua_pushobject       	(lua_Object object);
 
 lua_Object     lua_getglobal 		(char *name);
-void           lua_storeglobal		(char *name);
+void           lua_storeglobal		(char *name); /* In: value */
 
-void           lua_storesubscript	(void);
-lua_Object     lua_getsubscript         (void);
+void           lua_storesubscript	(void); /* In: table, index, value */
+void           lua_basicstoreindex	(void); /* In: table, index, value */
+lua_Object     lua_getsubscript		(void); /* In: table, index */
+lua_Object     lua_basicindex		(void); /* In: table, index */
 
-int            lua_type 		(lua_Object object);
+int            lua_tag			(lua_Object object);
 
 
-int            lua_ref			(int lock);
+int            lua_ref			(int lock); /* In: value */
 lua_Object     lua_getref		(int ref);
 void	       lua_pushref		(int ref);
 void	       lua_unref		(int ref);
@@ -83,6 +91,8 @@ lua_Object     lua_createtable		(void);
 
 
 /* for compatibility with old versions. Avoid using these macros */
+
+#define lua_type(o)		(lua_tag(o))
 
 #define lua_getuserdata(o)      (*(void **)lua_getbinarydata(o))
 

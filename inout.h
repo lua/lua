@@ -1,5 +1,5 @@
 /*
-** $Id: inout.h,v 1.15 1996/03/15 18:21:58 roberto Exp roberto $
+** $Id: inout.h,v 1.16 1996/05/28 21:07:32 roberto Exp roberto $
 */
 
 
@@ -19,16 +19,6 @@ void lua_closefile    (void);
 void lua_openstring   (char *s);
 void lua_closestring  (void);
 
-void    lua_internaldofile (void);
-void    lua_internaldostring (void);
-void    luaI_tostring   (void);
-void    luaI_print      (void);
-void    luaI_type       (void);
-void    lua_obj2number (void);
-void	luaI_error     (void);
-void    luaI_assert    (void);
-void	luaI_setglobal (void);
-void	luaI_getglobal (void);
-void	luaI_call	(void);
+void luaI_predefine (void);
 
 #endif

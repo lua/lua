@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.42 1996/09/24 21:46:44 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.43 1996/09/25 12:57:22 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -16,7 +16,9 @@ char *rcs_inout="$Id: inout.c,v 2.42 1996/09/24 21:46:44 roberto Exp roberto $";
 #include "table.h"
 #include "tree.h"
 #include "lua.h"
+#include "hash.h"
 #include "mem.h"
+#include "fallback.h"
 
 
 /* Exported variables */
@@ -109,6 +111,21 @@ static void check_arg (int cond, char *func)
   }
 }
 
+static char *check_string (int numArg, char *funcname)
+{
+  lua_Object o = lua_getparam(numArg);
+  check_arg(lua_isstring(o), funcname);
+  return lua_getstring(o);
+}
+
+static int check_number (int numArg, char *funcname)
+{
+  lua_Object o = lua_getparam(numArg);
+  check_arg(lua_isnumber(o), funcname);
+  return (int)lua_getnumber(o);
+}
+
+
 
 static int passresults (void)
 {
@@ -122,10 +139,9 @@ static int passresults (void)
 /*
 ** Internal function: do a string
 */
-void lua_internaldostring (void)
+static void lua_internaldostring (void)
 {
-  lua_Object obj = lua_getparam (1);
-  if (lua_isstring(obj) && lua_dostring(lua_getstring(obj)) == 0)
+  if (lua_dostring(check_string(1, "dostring")) == 0)
     if (passresults() == 0)
       lua_pushuserdata(NULL);  /* at least one result to signal no errors */
 }
@@ -133,7 +149,7 @@ void lua_internaldostring (void)
 /*
 ** Internal function: do a file
 */
-void lua_internaldofile (void)
+static void lua_internaldofile (void)
 {
  lua_Object obj = lua_getparam (1);
  char *fname = NULL;
@@ -150,36 +166,24 @@ void lua_internaldofile (void)
 
 static char *tostring (lua_Object obj)
 {
-  char *buff = luaI_buffer(20);
   if (lua_isstring(obj))   /* get strings and numbers */
     return lua_getstring(obj);
-  else switch(lua_type(obj))
-  {
-    case LUA_T_FUNCTION:
-      sprintf(buff, "function: %p", (luaI_Address(obj))->value.tf);
-      break;
-    case LUA_T_CFUNCTION:
-      sprintf(buff, "cfunction: %p", lua_getcfunction(obj));
-      break;
-    case LUA_T_ARRAY:
-      sprintf(buff, "table: %p", avalue(luaI_Address(obj)));
-      break;
-    case LUA_T_NIL:
-      sprintf(buff, "nil");
-      break;
-    default:
-      sprintf(buff, "userdata: %p", lua_getuserdata(obj));
-      break;
-  }
-  return buff;
+  else if (lua_istable(obj))
+    return "<table>";
+  else if (lua_isfunction(obj))
+    return "<function>";
+  else if (lua_isnil(obj))
+    return "nil";
+  else /* if (lua_isuserdata(obj)) */
+    return "<userdata>";
 }
 
-void luaI_tostring (void)
+static void luaI_tostring (void)
 {
   lua_pushstring(tostring(lua_getparam(1)));
 }
 
-void luaI_print (void)
+static void luaI_print (void)
 {
   int i = 1;
   lua_Object obj;
@@ -190,42 +194,35 @@ void luaI_print (void)
 /*
 ** Internal function: return an object type.
 */
-void luaI_type (void)
+static void luaI_type (void)
 {
   lua_Object o = lua_getparam(1);
-  int t;
-  if (o == LUA_NOOBJECT)
+  int t = lua_tag(o);
+  char *s;
+  if (t == LUA_T_NUMBER)
+    s = "number";
+  else if (lua_isstring(o))
+    s = "string";
+  else if (lua_istable(o))
+    s = "table";
+  else if (lua_isnil(o))
+    s = "nil";
+  else if (lua_isfunction(o))
+    s = "function";
+  else if (lua_isuserdata(o))
+    s = "userdata";
+  else {
     lua_error("no parameter to function 'type'");
-  t = lua_type(o);
-  switch (t)
-  {
-    case LUA_T_NIL :
-      lua_pushliteral("nil");
-      break;
-    case LUA_T_NUMBER :
-      lua_pushliteral("number");
-      break;
-    case LUA_T_STRING :
-      lua_pushliteral("string");
-      break;
-    case LUA_T_ARRAY :
-      lua_pushliteral("table");
-      break;
-    case LUA_T_FUNCTION :
-    case LUA_T_CFUNCTION :
-      lua_pushliteral("function");
-      break;
-    default :
-      lua_pushliteral("userdata");
-      break;
+    return; /* to avoid warnings */
   }
+  lua_pushliteral(s);
   lua_pushnumber(t);
 }
  
 /*
 ** Internal function: convert an object to a number
 */
-void lua_obj2number (void)
+static void lua_obj2number (void)
 {
   lua_Object o = lua_getparam(1);
   if (lua_isnumber(o))
@@ -233,39 +230,36 @@ void lua_obj2number (void)
 }
 
 
-void luaI_error (void)
+static void luaI_error (void)
 {
   char *s = lua_getstring(lua_getparam(1));
   if (s == NULL) s = "(no message)";
   lua_error(s);
 }
 
-void luaI_assert (void)
+static void luaI_assert (void)
 {
   lua_Object p = lua_getparam(1);
   if (p == LUA_NOOBJECT || lua_isnil(p))
     lua_error("assertion failed!");
 }
 
-void luaI_setglobal (void)
+static void luaI_setglobal (void)
 {
-  lua_Object name = lua_getparam(1);
   lua_Object value = lua_getparam(2);
-  check_arg(lua_isstring(name), "setglobal");
+  check_arg(value != LUA_NOOBJECT, "setglobal");
   lua_pushobject(value);
-  lua_storeglobal(lua_getstring(name));
+  lua_storeglobal(check_string(1, "setglobal"));
   lua_pushobject(value);  /* return given value */
 }
 
-void luaI_getglobal (void)
+static void luaI_getglobal (void)
 {
-  lua_Object name = lua_getparam(1);
-  check_arg(lua_isstring(name), "getglobal");
-  lua_pushobject(lua_getglobal(lua_getstring(name)));
+  lua_pushobject(lua_getglobal(check_string(1, "getglobal")));
 }
 
 #define MAXPARAMS	256
-void luaI_call (void)
+static void luaI_call (void)
 {
   lua_Object f = lua_getparam(1);
   lua_Object arg = lua_getparam(2);
@@ -298,3 +292,86 @@ void luaI_call (void)
   else
     passresults();
 }
+
+static void luaIl_settag (void)
+{
+  lua_Object o = lua_getparam(1);
+  check_arg(o != LUA_NOOBJECT, "settag");
+  lua_pushobject(o);
+  lua_settag(check_number(2, "settag"));
+}
+
+static void luaIl_newtag (void)
+{
+  lua_pushnumber(lua_newtag(check_string(1, "newtag")));
+}
+
+static void basicindex (void)
+{
+  lua_Object t = lua_getparam(1);
+  lua_Object i = lua_getparam(2);
+  check_arg(t != LUA_NOOBJECT && i != LUA_NOOBJECT, "basicindex");
+  lua_pushobject(t);
+  lua_pushobject(i);
+  lua_pushobject(lua_basicindex());
+}
+
+static void basicstoreindex (void)
+{
+  lua_Object t = lua_getparam(1);
+  lua_Object i = lua_getparam(2);
+  lua_Object v = lua_getparam(3);
+  check_arg(t != LUA_NOOBJECT && i != LUA_NOOBJECT && v != LUA_NOOBJECT,
+            "basicindex");
+  lua_pushobject(t);
+  lua_pushobject(i);
+  lua_pushobject(v);
+  lua_basicstoreindex();
+}
+
+
+
+/*
+** Internal functions
+*/
+static struct {
+  char *name;
+  lua_CFunction func;
+} int_funcs[] = {
+  {"assert", luaI_assert},
+  {"call", luaI_call},
+  {"basicindex", basicindex},
+  {"basicstoreindex", basicstoreindex},
+  {"settag", luaIl_settag},
+  {"dofile", lua_internaldofile},
+  {"dostring", lua_internaldostring},
+  {"error", luaI_error},
+  {"getglobal", luaI_getglobal},
+  {"next", lua_next},
+  {"nextvar", luaI_nextvar},
+  {"newtag", luaIl_newtag},
+  {"print", luaI_print},
+  {"setfallback", luaI_setfallback},
+  {"setintmethod", luaI_setintmethod},
+  {"setglobal", luaI_setglobal},
+  {"tonumber", lua_obj2number},
+  {"tostring", luaI_tostring},
+  {"type", luaI_type}
+};
+ 
+#define INTFUNCSIZE (sizeof(int_funcs)/sizeof(int_funcs[0]))
+
+
+void luaI_predefine (void)
+{
+  int i;
+  Word n;
+  for (i=0; i<INTFUNCSIZE; i++) {
+    n = luaI_findsymbolbyname(int_funcs[i].name);
+    s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = int_funcs[i].func;
+  }
+  n = luaI_findsymbolbyname("_VERSION_");
+  s_tag(n) = LUA_T_STRING; s_tsvalue(n) = lua_createstring(LUA_VERSION);
+}
+
+

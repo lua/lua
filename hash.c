@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.32 1996/11/18 13:48:44 roberto Exp roberto $";
+char *rcs_hash="$Id: hash.c,v 2.33 1997/02/11 11:35:05 roberto Exp roberto $";
 
 
 #include "mem.h"
@@ -23,6 +23,8 @@ char *rcs_hash="$Id: hash.c,v 2.32 1996/11/18 13:48:44 roberto Exp roberto $";
 
 
 #define REHASH_LIMIT    0.70    /* avoid more than this % full */
+
+#define TagDefault LUA_T_ARRAY;
 
 
 static Hash *listhead = NULL;
@@ -121,6 +123,7 @@ static Hash *hashcreate (int nhash)
  nhash(t) = nhash;
  nuse(t) = 0;
  markarray(t) = 0;
+ t->htag = TagDefault;
  return t;
 }
 

@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.57 1996/07/12 20:00:26 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.58 1996/11/01 12:47:45 roberto Exp roberto $";
 
 #include "mem.h"
 #include "opcode.h"
@@ -29,47 +29,12 @@ static Long lua_maxconstant = 0;
 
 #define GARBAGE_BLOCK 50
 
-static void lua_nextvar (void);
-
-/*
-** Internal functions
-*/
-static struct {
-  char *name;
-  lua_CFunction func;
-} int_funcs[] = {
-  {"assert", luaI_assert},
-  {"call", luaI_call},
-  {"dofile", lua_internaldofile},
-  {"dostring", lua_internaldostring},
-  {"error", luaI_error},
-  {"getglobal", luaI_getglobal},
-  {"next", lua_next},
-  {"nextvar", lua_nextvar},
-  {"print", luaI_print},
-  {"setfallback", luaI_setfallback},
-  {"setglobal", luaI_setglobal},
-  {"tonumber", lua_obj2number},
-  {"tostring", luaI_tostring},
-  {"type", luaI_type}
-};
-
-#define INTFUNCSIZE (sizeof(int_funcs)/sizeof(int_funcs[0]))
-
 
 void luaI_initsymbol (void)
 {
-  int i;
-  Word n;
   lua_maxsymbol = BUFFER_BLOCK;
   lua_table = newvector(lua_maxsymbol, Symbol);
-  for (i=0; i<INTFUNCSIZE; i++)
-  {
-    n = luaI_findsymbolbyname(int_funcs[i].name);
-    s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = int_funcs[i].func;
-  }
-  n = luaI_findsymbolbyname("_VERSION_");
-  s_tag(n) = LUA_T_STRING; s_tsvalue(n) = lua_createstring(LUA_VERSION);
+  luaI_predefine();
 }
 
 
@@ -225,7 +190,7 @@ void lua_pack (void)
 /*
 ** Internal function: return next global variable
 */
-static void lua_nextvar (void)
+void luaI_nextvar (void)
 {
  Word next;
  lua_Object o = lua_getparam(1);

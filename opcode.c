@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.80 1997/02/11 11:35:05 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.81 1997/02/20 15:51:14 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -261,15 +261,20 @@ static StkId callC (lua_CFunction func, StkId base)
   return firstResult;
 }
 
+static void callIM (Object *f, int nParams, int nResults)
+{
+  open_stack(nParams);
+  *(top-nParams-1) = *f;
+  do_call((top-stack)-nParams, nResults);
+}
+
 /*
 ** Call the specified fallback, putting it on the stack below its arguments
 */
 static void callFB (int fb)
 {
-  int nParams = luaI_fallBacks[fb].nParams;
-  open_stack(nParams);
-  *(top-nParams-1) = luaI_fallBacks[fb].function;
-  do_call((top-stack)-nParams, luaI_fallBacks[fb].nResults);
+  callIM(&luaI_fallBacks[fb].function, luaI_fallBacks[fb].nParams,
+         luaI_fallBacks[fb].nResults);
 }
 
 
@@ -320,35 +325,77 @@ static void do_call (StkId base, int nResults)
 */
 static void pushsubscript (void)
 {
-  if (tag(top-2) != LUA_T_ARRAY)
-    callFB(FB_GETTABLE);
-  else 
-  {
-    Object *h = lua_hashget(avalue(top-2), top-1);
-    if (h == NULL || tag(h) == LUA_T_NIL)
-      callFB(FB_INDEX);
-    else
-    {
-      --top;
-      *(top-1) = *h;
-    }
+  int tg = luaI_tag(top-2);
+  Object *im = luaI_getim(tg, FB_GETTABLE);
+  if (tag(top-2) == LUA_T_ARRAY && im == NULL) {
+      Object *h = lua_hashget(avalue(top-2), top-1);
+      if (h != NULL && tag(h) != LUA_T_NIL) {
+        --top;
+        *(top-1) = *h;
+      }
+      else if (tg == LUA_T_ARRAY &&
+              (im=luaI_getim(0, FB_INDEX)) != NULL)
+        callIM(im, 2, 1);
+      else {
+        --top;
+        tag(top-1) = LUA_T_NIL;
+      }
   }
+  else {  /* object is not a table, and/or has a specific "gettable" method */
+    if (im)
+      callIM(im, 2, 1);
+    else
+      lua_error("indexed expression not a table");
+  }
+}
+
+
+lua_Object lua_basicindex (void)
+{
+  adjustC(2);
+  if (tag(top-2) != LUA_T_ARRAY)
+    lua_error("indexed expression not a table in basic indexing");
+  else {
+    Object *h = lua_hashget(avalue(top-2), top-1);
+    --top;
+    if (h != NULL)
+      *(top-1) = *h;
+    else
+      tag(top-1) = LUA_T_NIL;
+  }
+  CLS_current.base++;  /* incorporate object in the stack */
+  return (Ref(top-1));
 }
 
 
 /*
 ** Function to store indexed based on values at the top
+** mode = 0: basic store (without internal methods)
+** mode = 1: normal store (with internal methods)
+** mode = 2: "deep stack" store (with internal methods)
 */
-static void storesubscript (void)
+static void storesubscript (Object *t, int mode)
 {
- if (tag(top-3) != LUA_T_ARRAY)
-   callFB(FB_SETTABLE);
- else
- {
-  Object *h = lua_hashdefine (avalue(top-3), top-2);
-  *h = *(top-1);
-  top -= 3;
- }
+  Object *im = (mode == 0) ? NULL : luaI_getim(luaI_tag(t), FB_SETTABLE);
+  if (tag(t) == LUA_T_ARRAY && im == NULL) {
+    Object *h = lua_hashdefine(avalue(t), t+1);
+    *h = *(top-1);
+    top -= (mode == 2) ? 1 : 3;
+  }
+  else {  /* object is not a table, and/or has a specific "settable" method */
+    if (im) {
+      if (mode == 2) {
+        lua_checkstack(top+2);
+        *(top+1) = *(top-1);
+        *(top) = *(t+1);
+        *(top-1) = *t;
+        top += 2;
+      }
+      callIM(im, 3, 0);
+    }
+    else
+      lua_error("indexed expression not a table");
+  }
 }
 
 
@@ -450,6 +497,26 @@ int lua_setlocal (lua_Function func, int local_number)
     return 0;
 }
 
+/*
+** Call the function at CLS_current.base, and incorporate results on
+** the Lua2C structure.
+*/
+static void do_callinc (int nResults)
+{
+  do_call(CLS_current.base+1, nResults);
+  CLS_current.num = (top-stack) - CLS_current.base;  /* number of results */
+  CLS_current.base += CLS_current.num;  /* incorporate results on the stack */
+}
+
+static void do_unprotectedrun (lua_CFunction f, int nParams, int nResults)
+{
+  adjustC(nParams);
+  open_stack((top-stack)-CLS_current.base);
+  stack[CLS_current.base].tag = LUA_T_CFUNCTION;
+  stack[CLS_current.base].value.f = f;
+  do_callinc(nResults);
+}
+
 
 /*
 ** Execute a protected call. Assumes that function is at CLS_current.base and
@@ -462,15 +529,11 @@ static int do_protectedrun (int nResults)
   struct C_Lua_Stack oldCLS = CLS_current;
   jmp_buf *oldErr = errorJmp;
   errorJmp = &myErrorJmp;
-  if (setjmp(myErrorJmp) == 0)
-  {
-    do_call(CLS_current.base+1, nResults);
-    CLS_current.num = (top-stack) - CLS_current.base;  /* number of results */
-    CLS_current.base += CLS_current.num;  /* incorporate results on the stack */
+  if (setjmp(myErrorJmp) == 0) {
+    do_callinc(nResults);
     status = 0;
   }
-  else
-  { /* an error occurred: restore CLS_current and top */
+  else { /* an error occurred: restore CLS_current and top */
     CLS_current = oldCLS;
     top = stack+CLS_current.base;
     status = 1;
@@ -586,15 +649,18 @@ int lua_dostring (char *str)
 */
 lua_Object lua_setfallback (char *name, lua_CFunction fallback)
 {
-  adjustC(1);  /* one slot for the pseudo-function */
-  stack[CLS_current.base].tag = LUA_T_CFUNCTION;
-  stack[CLS_current.base].value.f = luaI_setfallback;
   lua_pushstring(name);
   lua_pushcfunction(fallback);
-  if (do_protectedrun(1) == 0)
-    return (Ref(top-1));
-  else
-    return LUA_NOOBJECT;
+  do_unprotectedrun(luaI_setfallback, 2, 1);
+  return (Ref(top-1));
+}
+
+void lua_setintmethod (int tag, char *event, lua_CFunction method)
+{
+  lua_pushnumber(tag);
+  lua_pushstring(event);
+  lua_pushcfunction (method);
+  do_unprotectedrun(luaI_setintmethod, 3, 0);
 }
 
 
@@ -637,13 +703,25 @@ void lua_endblock (void)
   adjustC(0);
 }
 
+void lua_settag (int tag)
+{
+  adjustC(1);
+  luaI_settag(tag, --top);
+}
+
 /* 
 ** API: receives on the stack the table, the index, and the new value.
 */
 void lua_storesubscript (void)
 {
   adjustC(3);
-  storesubscript();
+  storesubscript(top-3, 1);
+}
+
+void lua_basicstoreindex (void)
+{
+  adjustC(3);
+  storesubscript(top-3, 0);
 }
 
 /*
@@ -688,7 +766,7 @@ int lua_isuserdata (lua_Object o)
 
 int lua_iscfunction (lua_Object o)
 {
-  int t = lua_type(o);
+  int t = lua_tag(o);
   return (t == LUA_T_CMARK) || (t == LUA_T_CFUNCTION);
 }
 
@@ -699,13 +777,13 @@ int lua_isnumber (lua_Object o)
 
 int lua_isstring (lua_Object o)
 {
-  int t = lua_type(o);
+  int t = lua_tag(o);
   return (t == LUA_T_STRING) || (t == LUA_T_NUMBER);
 }
 
 int lua_isfunction (lua_Object o)
 {
-  int t = lua_type(o);
+  int t = lua_tag(o);
   return (t == LUA_T_FUNCTION) || (t == LUA_T_CFUNCTION) ||
          (t == LUA_T_MARK) || (t == LUA_T_CMARK);
 }
@@ -893,16 +971,9 @@ void lua_pushobject (lua_Object o)
   incr_top;
 }
 
-int lua_type (lua_Object o)
+int lua_tag (lua_Object o)
 {
-  if (o == LUA_NOOBJECT)
-    return LUA_T_NIL;
-  else {
-    lua_Type t = tag(Address(o));
-    if (t == LUA_T_USERDATA)
-      return (Address(o))->value.ts->tag;
-    else return t;
-  }
+  return (o == LUA_NOOBJECT) ?  LUA_T_NIL : luaI_tag(Address(o));
 }
 
 
@@ -1085,29 +1156,14 @@ static StkId lua_execute (Byte *pc, StkId base)
    break;
 
    case STOREINDEXED0:
-    storesubscript();
+    storesubscript(top-3, 1);
     break;
 
-   case STOREINDEXED:
-   {
-    int n = *pc++;
-    if (tag(top-3-n) != LUA_T_ARRAY)
-    {
-      lua_checkstack(top+2);
-      *(top+1) = *(top-1);
-      *(top) = *(top-2-n);
-      *(top-1) = *(top-3-n);
-      top += 2;
-      callFB(FB_SETTABLE);
-    }
-    else
-    {
-     Object *h = lua_hashdefine (avalue(top-3-n), top-2-n);
-     *h = *(top-1);
-     top--;
-    }
+   case STOREINDEXED: {
+     int n = *pc++;
+     storesubscript(top-3-n, 2);
+     break;
    }
-   break;
 
    case STORELIST0:
    case STORELIST:

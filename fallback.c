@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.24 1996/04/22 18:00:37 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.25 1996/04/25 14:10:00 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -13,6 +13,8 @@ char *rcs_fallback="$Id: fallback.c,v 1.24 1996/04/22 18:00:37 roberto Exp rober
 #include "opcode.h"
 #include "lua.h"
 #include "table.h"
+#include "tree.h"
+#include "hash.h"
 
 
 static void errorFB (void);
@@ -29,8 +31,6 @@ static void funcFB (void);
 ** Warning: This list must be in the same order as the #define's
 */
 struct FB  luaI_fallBacks[] = {
-{"error", {LUA_T_CFUNCTION, {errorFB}}, 1, 0},
-{"index", {LUA_T_CFUNCTION, {indexFB}}, 2, 1},
 {"gettable", {LUA_T_CFUNCTION, {gettableFB}}, 2, 1},
 {"arith", {LUA_T_CFUNCTION, {arithFB}}, 3, 1},
 {"order", {LUA_T_CFUNCTION, {orderFB}}, 3, 1},
@@ -39,11 +39,25 @@ struct FB  luaI_fallBacks[] = {
 {"gc", {LUA_T_CFUNCTION, {GDFB}}, 1, 0},
 {"function", {LUA_T_CFUNCTION, {funcFB}}, -1, -1},
                                 /* no fixed number of params or results */
-{"getglobal", {LUA_T_CFUNCTION, {indexFB}}, 1, 1}
+{"getglobal", {LUA_T_CFUNCTION, {indexFB}}, 1, 1},
                                 /* same default behavior of index FB */
+{"index", {LUA_T_CFUNCTION, {indexFB}}, 2, 1},
+{"error", {LUA_T_CFUNCTION, {errorFB}}, 1, 0}
 };
 
 #define N_FB  (sizeof(luaI_fallBacks)/sizeof(struct FB))
+
+static int luaI_findevent (char *name)
+{
+  int i;
+  for (i=0; i<N_FB; i++)
+    if (strcmp(luaI_fallBacks[i].kind, name) == 0)
+      return i;
+  /* name not found */
+  lua_error("invalid event name");
+  return 0;  /* to avoid warnings */
+}
+
 
 void luaI_setfallback (void)
 {
@@ -52,17 +66,9 @@ void luaI_setfallback (void)
   lua_Object func = lua_getparam(2);
   if (name == NULL || !lua_isfunction(func))
     lua_error("incorrect argument to function `setfallback'");
-  for (i=0; i<N_FB; i++)
-  {
-    if (strcmp(luaI_fallBacks[i].kind, name) == 0)
-    {
-      luaI_pushobject(&luaI_fallBacks[i].function);
-      luaI_fallBacks[i].function = *luaI_Address(func);
-      return;
-    }
-  }
-  /* name not found */
-  lua_error("incorrect argument to function `setfallback'");
+  i = luaI_findevent(name);
+  luaI_pushobject(&luaI_fallBacks[i].function);
+  luaI_fallBacks[i].function = *luaI_Address(func);
 }
 
 
@@ -112,7 +118,7 @@ static void funcFB (void)
 }
 
 
-/*
+/* -------------------------------------------
 ** Reference routines
 */
 
@@ -188,4 +194,96 @@ char *luaI_travfallbacks (int (*fn)(Object *))
     if (fn(&luaI_fallBacks[i].function))
       return luaI_fallBacks[i].kind;
   return NULL;
+}
+
+
+/* -------------------------------------------
+* Internal Methods 
+*/
+#define BASE_TAG 1000
+
+static struct IM {
+  lua_Type tp;
+  Object int_method[FB_N];
+ } *luaI_IMtable = NULL;
+static int IMtable_size = 0;
+static int last_tag = BASE_TAG-1;
+
+int lua_newtag (char *t)
+{
+  int i;
+  ++last_tag;
+  if ((last_tag-BASE_TAG) >= IMtable_size)
+    IMtable_size = growvector(&luaI_IMtable, IMtable_size,
+                              struct IM, memEM, MAX_INT);
+  if (strcmp(t, "table") == 0)
+    luaI_IMtable[last_tag-BASE_TAG].tp = LUA_T_ARRAY;
+  else if (strcmp(t, "userdata") == 0)
+    luaI_IMtable[last_tag-BASE_TAG].tp = LUA_T_USERDATA;
+  else
+    lua_error("invalid type for new tag");
+  for (i=0; i<FB_N; i++)
+    luaI_IMtable[last_tag-BASE_TAG].int_method[i].tag = LUA_T_NIL;
+  return last_tag;
+}
+
+static int validtag (int tag)
+{
+  return (BASE_TAG <= tag && tag <= last_tag);
+}
+
+static void checktag (int tag)
+{
+  if (!validtag(tag))
+    lua_error("invalid tag");
+}
+
+void luaI_settag (int tag, Object *o)
+{
+  checktag(tag);
+  if (tag(o) != luaI_IMtable[tag-BASE_TAG].tp)
+    lua_error("Tag is not compatible with this type");
+  if (o->tag == LUA_T_ARRAY)
+    o->value.a->htag = tag;
+  else  /* must be userdata */
+    o->value.ts->tag = tag;
+}
+
+int luaI_tag (Object *o)
+{
+  lua_Type t = tag(o);
+  if (t == LUA_T_USERDATA)
+    return o->value.ts->tag;
+  else if (t == LUA_T_ARRAY)
+    return o->value.a->htag;
+  else return t;
+}
+
+Object *luaI_getim (int tag, int event)
+{
+  if (tag == 0)
+    return &luaI_fallBacks[event].function;
+  else if (validtag(tag)) {
+    Object *func = &luaI_IMtable[tag-BASE_TAG].int_method[event];
+    if (func->tag == LUA_T_NIL)
+      return NULL;
+    else
+      return func;
+  }
+  else return NULL;
+}
+
+void luaI_setintmethod (void)
+{
+  lua_Object tag = lua_getparam(1);
+  lua_Object event = lua_getparam(2);
+  lua_Object func = lua_getparam(3);
+  if (!(lua_isnumber(tag) && lua_isstring(event) && lua_isfunction(func)))
+    lua_error("incorrect arguments to function `setintmethod'");
+  else {
+    int i = luaI_findevent(lua_getstring(event));
+    int t = lua_getnumber(tag);
+    checktag(t);
+    luaI_IMtable[t-BASE_TAG].int_method[i] = *luaI_Address(func);
+  }
 }
