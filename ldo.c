@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.26 1998/06/15 21:34:14 roberto Exp roberto $
+** $Id: ldo.c,v 1.27 1998/06/19 18:47:06 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -172,11 +172,10 @@ static StkId callCclosure (struct Closure *cl, lua_CFunction f, StkId base)
 }
 
 
-void luaD_callTM (TObject *f, int nParams, int nResults)
-{
+void luaD_callTM (TObject *f, int nParams, int nResults) {
   luaD_openstack(nParams);
   *(L->stack.top-nParams-1) = *f;
-  luaD_call((L->stack.top-L->stack.stack)-nParams, nResults);
+  luaD_calln(nParams, nResults);
 }
 
 
@@ -229,6 +228,10 @@ void luaD_call (StkId base, int nResults)
   L->stack.top -= firstResult-base;
 }
 
+
+void luaD_calln (int nArgs, int nResults) {
+    luaD_call((L->stack.top-L->stack.stack)-nArgs, nResults);
+}
 
 
 /*
