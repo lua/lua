@@ -198,10 +198,6 @@ static int luaB_newtype (lua_State *L) {
   return 1;
 }
 
-static int luaB_copytagmethods (lua_State *L) {
-  lua_pushnumber(L, lua_copytagmethods(L, gettag(L, 1), gettag(L, 2)));
-  return 1;
-}
 
 static int luaB_globals (lua_State *L) {
   lua_getglobals(L);  /* value to be returned */
@@ -697,7 +693,6 @@ static const luaL_reg base_funcs[] = {
   {l_s(LUA_ERRORMESSAGE), luaB__ERRORMESSAGE},
   {l_s("call"), luaB_call},
   {l_s("collectgarbage"), luaB_collectgarbage},
-  {l_s("copytagmethods"), luaB_copytagmethods},
   {l_s("dofile"), luaB_dofile},
   {l_s("dostring"), luaB_dostring},
   {l_s("error"), luaB_error},

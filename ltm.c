@@ -108,20 +108,6 @@ static void checktag (lua_State *L, int tag) {
 }
 
 
-LUA_API int lua_copytagmethods (lua_State *L, int tagto, int tagfrom) {
-  int e;
-  lua_lock(L);
-  checktag(L, tagto);
-  checktag(L, tagfrom);
-  for (e=0; e<TM_N; e++) {
-    if (luaT_validevent(tagto, e))
-      luaT_gettm(G(L), tagto, e) = luaT_gettm(G(L), tagfrom, e);
-  }
-  lua_unlock(L);
-  return tagto;
-}
-
-
 int luaT_tag (const TObject *o) {
   int t = ttype(o);
   switch (t) {

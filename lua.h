@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.102 2001/07/19 13:24:18 roberto Exp roberto $
+** $Id: lua.h,v 1.103 2001/08/31 19:46:07 roberto Exp $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: info@lua.org
@@ -202,7 +202,6 @@ LUA_API void  lua_setgcthreshold (lua_State *L, int newthreshold);
 ** miscellaneous functions
 */
 LUA_API int   lua_newtype (lua_State *L, const lua_char *name, int basictype);
-LUA_API int   lua_copytagmethods (lua_State *L, int tagto, int tagfrom);
 LUA_API void  lua_settag (lua_State *L, int tag);
 
 LUA_API int             lua_name2tag (lua_State *L, const lua_char *name);
@@ -237,7 +236,6 @@ LUA_API int   lua_getweakmode (lua_State *L, int index);
 
 #define lua_register(L,n,f)	(lua_pushcfunction(L, f), lua_setglobal(L, n))
 #define lua_pushcfunction(L,f)	lua_pushcclosure(L, f, 0)
-#define lua_clonetag(L,t)	lua_copytagmethods(L, lua_newtag(L), (t))
 
 #define lua_isfunction(L,n)	(lua_rawtag(L,n) == LUA_TFUNCTION)
 #define lua_istable(L,n)	(lua_rawtag(L,n) == LUA_TTABLE)
