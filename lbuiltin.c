@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.62 1999/09/08 20:45:18 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.63 1999/09/20 14:57:29 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -222,9 +222,15 @@ static void luaB_rawsettable (void) {
 }
 
 static void luaB_settagmethod (void) {
+  int tag = luaL_check_int(1);
+  const char *event = luaL_check_string(2);
   lua_Object nf = luaL_nonnullarg(3);
+#ifndef LUA_COMPAT_GC
+  if (strcmp(event, "gc") == 0 && tag != LUA_T_NIL)
+    lua_error("cannot set this tag method from Lua");
+#endif
   lua_pushobject(nf);
-  lua_pushobject(lua_settagmethod(luaL_check_int(1), luaL_check_string(2)));
+  lua_pushobject(lua_settagmethod(tag, event));
 }
 
 static void luaB_gettagmethod (void) {
@@ -437,12 +443,11 @@ static void luaB_foreach (void) {
 
 
 static void luaB_foreachvar (void) {
-  GCnode *g;
+  TaggedString *s;
   TObject f;  /* see comment in 'foreachi' */
   f = *luaA_Address(luaL_functionarg(1));
   luaD_checkstack(4);  /* for extra var name, f, var name, and globalval */
-  for (g = L->rootglobal.next; g; g = g->next) {
-    TaggedString *s = (TaggedString *)g;
+  for (s = L->rootglobal; s; s = s->next) {
     if (s->u.s.globalval.ttype != LUA_T_NIL) {
       pushtagstring(s);  /* keep (extra) s on stack to avoid GC */
       *(L->stack.top++) = f;
@@ -451,10 +456,10 @@ static void luaB_foreachvar (void) {
       luaD_calln(2, 1);
       if (ttype(L->stack.top-1) != LUA_T_NIL) {
         L->stack.top--;
-        *(L->stack.top-1) = *L->stack.top;  /* remove extra s */
+        *(L->stack.top-1) = *L->stack.top;  /* remove extra `s' */
         return;
       }
-      L->stack.top-=2;  /* remove result and extra s */
+      L->stack.top-=2;  /* remove result and extra `s' */
     }
   }
 }
@@ -602,20 +607,42 @@ static void mem_query (void) {
 
 
 static void query_strings (void) {
-  lua_pushnumber(L->string_root[luaL_check_int(1)].nuse);
+  int h = luaL_check_int(1) - 1;
+  int s = luaL_opt_int(2, 0) - 1;
+  if (s==-1) {
+    if (h < NUM_HASHS) {
+      lua_pushnumber(L->string_root[h].nuse);
+      lua_pushnumber(L->string_root[h].size);
+    }
+  }
+  else {
+    TaggedString *ts = L->string_root[h].hash[s];
+    if (ts == NULL) lua_pushstring("<NIL>");
+    else if (ts == &luaS_EMPTY) lua_pushstring("<EMPTY>");
+    else if (ts->constindex == -1) lua_pushstring("<USERDATA>");
+    else lua_pushstring(ts->str);
+  }
 }
 
 
-static void countlist (void) {
-  const char *s = luaL_check_string(1);
-  GCnode *l = (s[0]=='t') ? L->roottable.next : (s[0]=='c') ? L->rootcl.next :
-              (s[0]=='p') ? L->rootproto.next : L->rootglobal.next;
-  int i=0;
-  while (l) {
-    i++;
-    l = l->next;
+static void extra_services (void) {
+  const char *service = luaL_check_string(1);
+  switch (*service) {
+    case 'U':  /* create a userdata with a given value/tag */
+      lua_pushusertag((void *)luaL_check_int(2), luaL_check_int(3));
+      break;
+
+    case 'u':  /* return the value of a userdata */
+      lua_pushnumber((int)lua_getuserdata(lua_getparam(2)));
+      break;
+
+    case 't':  /* set `gc' tag method */
+      lua_pushobject(lua_getparam(3));
+      lua_settagmethod(luaL_check_int(2), "gc");
+      break;
+
+    default: luaL_arg_check(0, 1, "invalid service");
   }
-  lua_pushnumber(i);
 }
 
 
@@ -679,9 +706,9 @@ static void testC (void) {
 
 static const struct luaL_reg builtin_funcs[] = {
 #ifdef DEBUG
+  {"extra", extra_services},
   {"testC", testC},
   {"totalmem", mem_query},
-  {"count", countlist},
   {"querystr", query_strings},
 #endif
   {"_ALERT", luaB_alert},

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.29 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: lobject.h,v 1.30 1999/09/06 20:34:18 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -86,20 +86,12 @@ typedef struct TObject {
 
 
 /*
-** generic header for garbage collector lists
-*/
-typedef struct GCnode {
-  struct GCnode *next;
-  int marked;
-} GCnode;
-
-
-/*
 ** String headers for string table
 */
 
 typedef struct TaggedString {
-  GCnode head;
+  struct TaggedString *next;
+  int marked;
   unsigned long hash;
   int constindex;  /* hint to reuse constants (= -1 if this is a userdata) */
   union {
@@ -122,7 +114,8 @@ typedef struct TaggedString {
 ** Function Prototypes
 */
 typedef struct TProtoFunc {
-  GCnode head;
+  struct TProtoFunc *next;
+  int marked;
   struct TObject *consts;
   int nconsts;
   Byte *code;  /* ends with opcode ENDCODE */
@@ -157,7 +150,8 @@ typedef struct LocVar {
 ** Closures
 */
 typedef struct Closure {
-  GCnode head;
+  struct Closure *next;
+  int marked;
   int nelems;  /* not included the first one (always the prototype) */
   TObject consts[1];  /* at least one for prototype */
 } Closure;
@@ -170,7 +164,8 @@ typedef struct node {
 } Node;
 
 typedef struct Hash {
-  GCnode head;
+  struct Hash *next;
+  int marked;
   Node *node;
   int nhash;
   int nuse;
@@ -189,7 +184,6 @@ extern const TObject luaO_nilobject;
                                       : luaO_equalval(t1,t2))
 int luaO_equalval (const TObject *t1, const TObject *t2);
 int luaO_redimension (int oldsize);
-void luaO_insertlist (GCnode *root, GCnode *node);
 int luaO_str2d (const char *s, real *result);
 
 #ifdef OLD_ANSI

@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.26 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: ltm.c,v 1.27 1999/09/20 14:57:29 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -39,13 +39,17 @@ static const char luaT_validevents[NUM_TAGS][IM_N] = {
 {1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* LUA_T_USERDATA */
 {1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_T_NUMBER */
 {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_T_STRING */
-{0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},  /* LUA_T_ARRAY */
+{0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* LUA_T_ARRAY */
 {1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_PROTO */
 {1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_CPROTO */
 {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}   /* LUA_T_NIL */
 };
 
 int luaT_validevent (int t, int e) {  /* ORDER LUA_T */
+#ifdef LUA_COMPAT_GC
+  if (t == LUA_T_ARRAY && e == IM_GC)
+    return 1;  /* old versions allowed gc tag method for tables */
+#endif
   return (t < LUA_T_NIL) ?  1 : luaT_validevents[-t][e];
 }
 

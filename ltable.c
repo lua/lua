@@ -1,10 +1,9 @@
 /*
-** $Id: ltable.c,v 1.23 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: ltable.c,v 1.24 1999/09/22 14:38:45 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
 
-#include <stdlib.h>
 
 #include "lauxlib.h"
 #include "lmem.h"
@@ -69,17 +68,6 @@ Node *luaH_present (const Hash *t, const TObject *key) {
 }
 
 
-void luaH_free (Hash *frees) {
-  while (frees) {
-    Hash *next = (Hash *)frees->head.next;
-    L->nblocks -= gcsize(frees->nhash);
-    luaM_free(nodevector(frees));
-    luaM_free(frees);
-    frees = next;
-  }
-}
-
-
 static Node *hashnodecreate (int nhash) {
   Node *const v = luaM_newvector(nhash, Node);
   int i;
@@ -96,9 +84,18 @@ Hash *luaH_new (int nhash) {
   nhash(t) = nhash;
   nuse(t) = 0;
   t->htag = TagDefault;
-  luaO_insertlist(&(L->roottable), (GCnode *)t);
+  t->next = L->roottable;
+  L->roottable = t;
+  t->marked = 0;
   L->nblocks += gcsize(nhash);
   return t;
+}
+
+
+void luaH_free (Hash *t) {
+  L->nblocks -= gcsize(t->nhash);
+  luaM_free(nodevector(t));
+  luaM_free(t);
 }
 
 

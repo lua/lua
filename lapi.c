@@ -1,11 +1,10 @@
 /*
-** $Id: lapi.c,v 1.49 1999/09/20 14:57:29 roberto Exp roberto $
+** $Id: lapi.c,v 1.50 1999/09/21 16:10:13 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
 
 
-#include <stdlib.h>
 #include <string.h>
 
 #include "lapi.h"
@@ -15,6 +14,7 @@
 #include "lgc.h"
 #include "lmem.h"
 #include "lobject.h"
+#include "lref.h"
 #include "lstate.h"
 #include "lstring.h"
 #include "ltable.h"
@@ -387,14 +387,14 @@ void lua_settag (int tag) {
 
 TaggedString *luaA_nextvar (TaggedString *g) {
   if (g == NULL)
-    g = (TaggedString *)L->rootglobal.next;  /* first variable */
+    g = L->rootglobal;  /* first variable */
   else {
     /* check whether name is in global var list */
-    luaL_arg_check((GCnode *)g != g->head.next, 1, "variable name expected");
-    g = (TaggedString *)g->head.next;  /* get next */
+    luaL_arg_check(g != g->next, 1, "variable name expected");
+    g = g->next;  /* get next */
   }
   while (g && g->u.s.globalval.ttype == LUA_T_NIL)  /* skip globals with nil */
-    g = (TaggedString *)g->head.next;
+    g = g->next;
   if (g) {
     ttype(L->stack.top) = LUA_T_STRING; tsvalue(L->stack.top) = g;
     incr_top;
@@ -574,12 +574,18 @@ static int checkfunc (TObject *o) {
 
 const char *lua_getobjname (lua_Object o, const char **name) {
   /* try to find a name for given function */
+  TaggedString *g;
   set_normalized(L->stack.top, Address(o)); /* to be accessed by "checkfunc" */
-  if ((*name = luaS_travsymbol(checkfunc)) != NULL)
-    return "global";
-  else if ((*name = luaT_travtagmethods(checkfunc)) != NULL)
+  for (g=L->rootglobal; g; g=g->next) {
+    if (checkfunc(&g->u.s.globalval)) {
+      *name = g->str;
+      return "global";
+    }
+  }
+  /* not found: try tag methods */
+  if ((*name = luaT_travtagmethods(checkfunc)) != NULL)
     return "tag-method";
-  else return "";
+  else return "";  /* not found at all */
 }
 
 /* }====================================================== */
@@ -615,7 +621,7 @@ void lua_endblock (void) {
 int lua_ref (int lock) {
   int ref;
   checkCparams(1);
-  ref = luaC_ref(L->stack.top-1, lock);
+  ref = luaR_ref(L->stack.top-1, lock);
   L->stack.top--;
   return ref;
 }
@@ -623,7 +629,7 @@ int lua_ref (int lock) {
 
 
 lua_Object lua_getref (int ref) {
-  const TObject *o = luaC_getref(ref);
+  const TObject *o = luaR_getref(ref);
   return (o ? put_luaObject(o) : LUA_NOOBJECT);
 }
 

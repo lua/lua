@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.12 1999/05/11 20:08:20 roberto Exp roberto $
+** $Id: lstate.c,v 1.13 1999/08/16 20:52:00 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -7,13 +7,11 @@
 
 #include "lbuiltin.h"
 #include "ldo.h"
-#include "lfunc.h"
 #include "lgc.h"
 #include "llex.h"
 #include "lmem.h"
 #include "lstate.h"
 #include "lstring.h"
-#include "ltable.h"
 #include "ltm.h"
 
 
@@ -36,14 +34,10 @@ void lua_open (void) {
   L->debug = 0;
   L->callhook = NULL;
   L->linehook = NULL;
-  L->rootproto.next = NULL;
-  L->rootproto.marked = 0;
-  L->rootcl.next = NULL;
-  L->rootcl.marked = 0;
-  L->rootglobal.next = NULL;
-  L->rootglobal.marked = 0;
-  L->roottable.next = NULL;
-  L->roottable.marked = 0;
+  L->rootproto = NULL;
+  L->rootcl = NULL;
+  L->rootglobal = NULL;
+  L->roottable = NULL;
   L->IMtable = NULL;
   L->refArray = NULL;
   L->refSize = 0;
@@ -58,21 +52,14 @@ void lua_open (void) {
 
 
 void lua_close (void) {
-  TaggedString *alludata = luaS_collectudata();
-  L->GCthreshold = MAX_INT;  /* to avoid GC during GC */
-  luaC_hashcallIM((Hash *)L->roottable.next);  /* GC t.methods for tables */
-  luaC_strcallIM(alludata);  /* GC tag methods for userdata */
-  luaD_gcIM(&luaO_nilobject);  /* GC tag method for nil (signal end of GC) */
-  luaH_free((Hash *)L->roottable.next);
-  luaF_freeproto((TProtoFunc *)L->rootproto.next);
-  luaF_freeclosure((Closure *)L->rootcl.next);
-  luaS_free(alludata);
+  luaC_collect(1);  /* collect all elements */
   luaS_freeall();
   luaM_free(L->stack.stack);
   luaM_free(L->IMtable);
   luaM_free(L->refArray);
   luaM_free(L->Mbuffer);
   luaM_free(L->Cblocks);
+  LUA_ASSERT(L->nblocks == 0, "wrong count for nblocks");
   luaM_free(L);
   L = NULL;
 #ifdef DEBUG

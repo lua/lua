@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.22 1999/09/06 20:19:22 roberto Exp roberto $
+** $Id: lobject.c,v 1.23 1999/09/08 20:45:18 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -52,13 +52,6 @@ int luaO_equalval (const TObject *t1, const TObject *t2) {
      LUA_INTERNALERROR("invalid type");
      return 0; /* UNREACHABLE */
   }
-}
-
-
-void luaO_insertlist (GCnode *root, GCnode *node) {
-  node->next = root->next;
-  root->next = node;
-  node->marked = 0;
 }
 
 

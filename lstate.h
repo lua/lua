@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.18 1999/05/11 14:19:32 roberto Exp roberto $
+** $Id: lstate.h,v 1.19 1999/05/11 20:08:20 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -73,10 +73,10 @@ struct lua_State {
   lua_CHFunction callhook;
   lua_LHFunction linehook;
   /* global state */
-  GCnode rootproto;  /* list of all prototypes */
-  GCnode rootcl;  /* list of all closures */
-  GCnode roottable;  /* list of all tables */
-  GCnode rootglobal;  /* list of strings with global values */
+  TProtoFunc *rootproto;  /* list of all prototypes */
+  Closure *rootcl;  /* list of all closures */
+  Hash *roottable;  /* list of all tables */
+  TaggedString *rootglobal;  /* list of strings with global values */
   stringtable *string_root;  /* array of hash tables for strings and udata */
   struct IM *IMtable;  /* table for tag methods */
   int last_tag;  /* last used tag in IMtable */

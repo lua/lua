@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.32 1999/05/11 20:46:28 roberto Exp roberto $
+% $Id: manual.tex,v 1.33 1999/05/27 20:21:03 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -41,7 +41,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{{\small \tt\$Date: 1999/05/11 20:46:28 $ $}}
+\date{{\small \tt\$Date: 1999/05/27 20:21:03 $ $}}
 
 \maketitle
 
@@ -1273,7 +1273,8 @@ is terminated, returning an error condition.
 
 The only argument to \verb|_ERRORMESSAGE| is a string
 describing the error.
-The default definition for this function calls \verb|_ALERT|,
+The default definition for
+this function calls \verb|_ALERT|, \Deffunc{_ALERT}
 which prints the message to \verb|stderr| \see{alert}.
 The standard I/O library redefines \verb|_ERRORMESSAGE|,
 and uses the debug facilities \see{debugI}
@@ -1835,6 +1836,8 @@ void       lua_unref  (int ref);
 The function \verb|lua_ref| creates a reference
 to the object that is on the top of the stack,
 and returns this reference.
+For a \nil{} object, the reference is always -1;
+otherwise, it is a non-negative integer.
 If \verb|lock| is true, the object is \emph{locked}:
 this means the object will not be garbage collected.
 Note that an unlocked reference may be garbage collected.
@@ -2503,26 +2506,32 @@ The following combinations are allowed in describing a character class:
 \item[\T{\%s}] --- represents all space characters.
 \item[\T{\%u}] --- represents all upper case letters.
 \item[\T{\%w}] --- represents all alphanumeric characters.
-\item[\T{\%x}] --- represents all hexa-decimal digits.
+\item[\T{\%x}] --- represents all hexadecimal digits.
 \item[\T{\%z}] --- represents the character with representation 0.
 \item[\T{\%\M{x}}] (where \M{x} is any non alphanumeric character)  ---
 represents the character \M{x}.
 This is the standard way to escape the magic characters \verb|()%.[]*-?|.
 It is strongly recommended that any control character (even the non magic),
 when used to represent itself in a pattern, should be preceded by a \verb|%|.
+
 \item[\T{[char-set]}] ---
 Represents the class which is the union of all
 characters in char-set.
-To include a \verb|]| in char-set, it must be the first character.
 A range of characters may be specified by
 separating the end characters of the range with a \verb|-|.
-If \verb|-| appears as the first or last character of char-set,
-then it represents itself.
 All classes \verb|%|\emph{x} described above can also be used as
 components in a char-set.
 All other characters in char-set represent themselves.
-E.g., assuming an \emph{ascii} character set,
-\verb|[%dA-Fa-f]| specifies the hexa-decimal digits.
+E.g., \verb|[%w_]| (or \verb|[_%w]|)
+represents all alphanumeric characters plus the underscore,
+\verb|[0-7]| represents the octal digits,
+and \verb|[0-7%l%-]| represents the octal digits plus
+the lower case letters plus the \verb|-| character.
+
+The interaction between ranges and classes is not defined.
+Therefore, patterns like \verb|[%a-z]| or \verb|[a-%%]|
+have no meaning.
+
 \item[\T{[\^{ }char-set]}] ---
 represents the complement of char-set,
 where char-set is interpreted as above.
@@ -3187,6 +3196,8 @@ accepting commands from standard input until an \verb|EOF|.
 Each line entered is immediately executed.
 \item[\T{-q}] same as \T{-i}, but without a prompt (quiet mode).
 \item[\T{-}] executes \verb|stdin| as a file.
+\item[\T{--}] stops the execution of arguments;
+all arguments after it are simply passed to the Lua script.
 \item[\T{var=value}] sets global \verb|var| with string \verb|"value"|.
 \item[\T{filename}] executes file \verb|filename| as a Lua chunk.
 \end{description}
@@ -3203,6 +3214,37 @@ will first interact with the user until an \verb|EOF|,
 then will set \verb|a| to \verb|"test"|,
 and finally will run the file \verb|prog.lua|.
 
+All arguments from the command line are passed to the Lua program in
+a table called \verb|arg|.
+If the command line has the \verb|--| argument,
+this argument is at index 0;
+the arguments after it get indices 1, 2, \ldots;
+and the arguments before it get negative indices.
+The field \verb|n| gets the index of the last argument,
+and the field \verb|nn| gets the index of the first argument
+(always a negative number).
+For instance:
+\begin{verbatim}
+$ lua -e "foreach(arg, print)" -- a b
+-1      foreach(arg, print)
+-2      -e
+-3      lua
+0       --
+1       a
+2       b
+nn      -3
+n       2
+\end{verbatim}
+If the command line has no \verb|--| argument,
+all arguments have negative indices, with the last one at position -1.
+As a general rule, if you want to traverse all the
+arguments after the \verb|--|, you loop from 1 to \verb|arg.n|
+(you can use the \verb|foreachi| function, for instance).
+If you want to traverse all arguments,
+you loop from \verb|arg.nn| until \verb|arg.n|.
+In any case, you may call \verb|exit| at the end of a script,
+to stop Lua from running the other arguments.
+
 When in interactive mode,
 a multi-line statement can be written finishing intermediate
 lines with a backslash (\verb|\|).
@@ -3215,6 +3257,7 @@ $ lua _PROMPT='myprompt> ' -i
 In Unix systems, Lua scripts can be made into executable programs
 by using the \verb|#!| form,
 as in \verb|#!/usr/local/bin/lua|.
+
 
 \section*{Acknowledgments}
 
