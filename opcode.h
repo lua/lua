@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.22 1996/09/24 21:46:44 roberto Exp roberto $
+** $Id: opcode.h,v 3.23 1996/09/26 21:08:41 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -127,6 +127,7 @@ typedef struct Object
 #define s_tag(i)	(tag(&s_object(i)))
 #define s_nvalue(i)	(nvalue(&s_object(i)))
 #define s_svalue(i)	(svalue(&s_object(i)))
+#define s_tsvalue(i)	(tsvalue(&s_object(i)))
 #define s_avalue(i)	(avalue(&s_object(i)))
 #define s_fvalue(i)	(fvalue(&s_object(i)))
 #define s_uvalue(i)	(uvalue(&s_object(i)))
