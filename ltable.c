@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.107 2002/05/13 13:38:59 roberto Exp roberto $
+** $Id: ltable.c,v 1.108 2002/05/15 18:57:44 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -56,7 +56,7 @@
 #define hashboolean(t,p) (node(t, lmod(p, sizenode(t))))
 
 /*
-** for pointers, avoid modulus by power of 2, as they tend to have many
+** avoid modulus by power of 2 for pointers, as they tend to have many
 ** 2 factors.
 */
 #define hashpointer(t,p) (node(t, (IntPoint(p) % ((sizenode(t)-1)|1))))
@@ -261,7 +261,7 @@ static void resize (lua_State *L, Table *t, int nasize, int nhsize) {
     /* re-insert elements from vanishing slice */
     for (i=nasize; i<oldasize; i++) {
       if (ttype(&t->array[i]) != LUA_TNIL)
-        luaH_setnum(L, t, i+1, &t->array[i]);
+        setobj(luaH_setnum(L, t, i+1), &t->array[i]);
     }
     /* shrink array */
     luaM_reallocvector(L, t->array, oldasize, nasize, TObject);
@@ -270,7 +270,7 @@ static void resize (lua_State *L, Table *t, int nasize, int nhsize) {
   for (i = twoto(oldhsize) - 1; i >= 0; i--) {
     Node *old = nold+i;
     if (ttype(val(old)) != LUA_TNIL)
-      luaH_set(L, t, key(old), val(old));
+      setobj(luaH_set(L, t, key(old)), val(old));
   }
   if (oldhsize)
     luaM_freearray(L, nold, twoto(oldhsize), Node);  /* free old array */
@@ -344,8 +344,8 @@ void luaH_remove (Table *t, Node *e) {
 ** put new key in its main position; otherwise (colliding node is in its main 
 ** position), new key goes to an empty position. 
 */
-static void newkey (lua_State *L, Table *t, const TObject *key,
-                                           const TObject *val) {
+static TObject *newkey (lua_State *L, Table *t, const TObject *key) {
+  TObject *val;
   Node *mp = luaH_mainposition(t, key);
   if (ttype(val(mp)) != LUA_TNIL) {  /* main position is not free? */
     Node *othern = luaH_mainposition(t, key(mp));  /* `mp' of colliding node */
@@ -367,14 +367,19 @@ static void newkey (lua_State *L, Table *t, const TObject *key,
   }
   setobj(key(mp), key);
   lua_assert(ttype(val(mp)) == LUA_TNIL);
-  settableval(val(mp), val);
   for (;;) {  /* correct `firstfree' */
     if (ttype(key(t->firstfree)) == LUA_TNIL)
-      return;  /* OK; table still has a free place */
+      return val(mp);  /* OK; table still has a free place */
     else if (t->firstfree == t->node) break;  /* cannot decrement from here */
     else (t->firstfree)--;
   }
-  rehash(L, t);  /* no more free places; must create one */
+  /* no more free places; must create one */
+  setbvalue(val(mp), 0);  /* avoid new key being removed */
+  rehash(L, t);  /* grow table */
+  val = cast(TObject *, luaH_get(t, key));  /* get new position */
+  lua_assert(ttype(val) == LUA_TBOOLEAN);
+  setnilvalue(val);
+  return val;
 }
 
 
@@ -444,28 +449,26 @@ const TObject *luaH_get (Table *t, const TObject *key) {
 }
 
 
-void luaH_set (lua_State *L, Table *t, const TObject *key, const TObject *val) {
+TObject *luaH_set (lua_State *L, Table *t, const TObject *key) {
   const TObject *p = luaH_get(t, key);
-  if (p != &luaO_nilobject) {
-    settableval(p, val);
-  }
+  t->flags = 0;
+  if (p != &luaO_nilobject)
+    return cast(TObject *, p);
   else {
     if (ttype(key) == LUA_TNIL) luaG_runerror(L, "table index is nil");
-    newkey(L, t, key, val);
+    return newkey(L, t, key);
   }
-  t->flags = 0;
 }
 
 
-void luaH_setnum (lua_State *L, Table *t, int key, const TObject *val) {
+TObject *luaH_setnum (lua_State *L, Table *t, int key) {
   const TObject *p = luaH_getnum(t, key);
-  if (p != &luaO_nilobject) {
-    settableval(p, val);
-  }
+  if (p != &luaO_nilobject)
+    return cast(TObject *, p);
   else {
     TObject k;
     setnvalue(&k, key);
-    newkey(L, t, &k, val);
+    return newkey(L, t, &k);
   }
 }
 

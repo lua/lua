@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.103 2002/05/13 13:07:48 roberto Exp roberto $
+** $Id: lcode.c,v 1.104 2002/05/14 17:52:22 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -211,13 +211,11 @@ static int addk (FuncState *fs, TObject *k, TObject *v) {
     return cast(int, nvalue(index));
   }
   else {  /* constant not found; create a new entry */
-    TObject o;
     Proto *f = fs->f;
     luaM_growvector(fs->L, f->k, fs->nk, f->sizek, TObject,
                     MAXARG_Bx, "constant table overflow");
     setobj(&f->k[fs->nk], v);
-    setnvalue(&o, fs->nk);
-    luaH_set(fs->L, fs->h, k, &o);
+    setnvalue(luaH_set(fs->L, fs->h, k), fs->nk);
     return fs->nk++;
   }
 }

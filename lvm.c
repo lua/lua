@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.231 2002/05/13 13:09:00 roberto Exp roberto $
+** $Id: lvm.c,v 1.232 2002/05/15 18:57:44 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -114,13 +114,13 @@ void luaV_gettable (lua_State *L, const TObject *t, TObject *key, StkId res) {
   int loop = 0;
   init:
   if (ttype(t) == LUA_TTABLE) {  /* `t' is a table? */
-    Table *et = hvalue(t)->metatable;
+    Table *h = hvalue(t);
+    Table *et = h->metatable;
     if ((tm = fasttm(L, et, TM_GETTABLE)) == NULL) {  /* no gettable TM? */
-      const TObject *h = luaH_get(hvalue(t), key);  /* do a primitive get */
-      /* result is no nil or there is no `index' tag method? */
-      if (ttype(h) != LUA_TNIL ||  /* no nil? */
-          (tm = fasttm(L, et, TM_INDEX)) == NULL) {  /* or no index TM? */
-        setobj(res, h);  /* default get */
+      const TObject *v = luaH_get(h, key);  /* do a primitive get */
+      if (ttype(v) != LUA_TNIL ||  /* result is no nil ... */
+          (tm = fasttm(L, et, TM_INDEX)) == NULL) {  /* ... or no index TM? */
+        setobj(res, v);  /* default get */
         return;
       }
     }
@@ -149,13 +149,18 @@ void luaV_settable (lua_State *L, const TObject *t, TObject *key, StkId val) {
   int loop = 0;
   init:
   if (ttype(t) == LUA_TTABLE) {  /* `t' is a table? */
-    Table *et = hvalue(t)->metatable;
-    if ((tm = fasttm(L, et, TM_SETTABLE)) == NULL) {  /* no TM? */
-      luaH_set(L, hvalue(t), key, val);  /* do a primitive set */
-      return;
+    Table *h = hvalue(t);
+    Table *et = h->metatable;
+    if ((tm = fasttm(L, et, TM_SETTABLE)) == NULL) {  /* no settable TM? */
+      TObject *oldval = luaH_set(L, h, key); /* do a primitive set */
+      if (ttype(oldval) != LUA_TNIL ||  /* result is no nil ... */
+          (tm = fasttm(L, et, TM_NEWINDEX)) == NULL) {  /* ... or no TM? */
+        setobj(oldval, val);
+        return;
+      }
     }
     /* else will try the tag method */
-  } else {  /* not a table; try a `settable' tag method */
+  } else {  /* `t' is not a table; try a `settable' tag method */
     if (ttype(tm = luaT_gettmbyobj(L, t, TM_SETTABLE)) == LUA_TNIL) {
       luaG_typeerror(L, t, "index");
       return;  /* to avoid warnings */
@@ -577,7 +582,7 @@ StkId luaV_execute (lua_State *L) {
         }
         bc &= ~(LFIELDS_PER_FLUSH-1);  /* bc = bc - bc%FPF */
         for (; n > 0; n--)
-          luaH_setnum(L, h, bc+n, ra+n);
+          setobj(luaH_setnum(L, h, bc+n), ra+n);
         break;
       }
       case OP_CLOSE: {

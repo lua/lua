@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.175 2002/05/15 18:57:44 roberto Exp roberto $
+** $Id: ldo.c,v 1.176 2002/05/16 18:39:46 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -171,7 +171,7 @@ static void luaD_callHook (lua_State *L, lua_Hook callhook, const char *event) {
 static void adjust_varargs (lua_State *L, int nfixargs) {
   int i;
   Table *htab;
-  TObject n, nname;
+  TObject nname;
   int actual = L->top - L->ci->base;  /* actual number of arguments */
   if (actual < nfixargs) {
     luaD_checkstack(L, nfixargs - actual);
@@ -181,11 +181,10 @@ static void adjust_varargs (lua_State *L, int nfixargs) {
   actual -= nfixargs;  /* number of extra arguments */
   htab = luaH_new(L, 0, 0);  /* create `arg' table */
   for (i=0; i<actual; i++)  /* put extra arguments into `arg' table */
-    luaH_setnum(L, htab, i+1, L->top - actual + i);
+    setobj(luaH_setnum(L, htab, i+1), L->top - actual + i);
   /* store counter in field `n' */
-  setnvalue(&n, actual);
   setsvalue(&nname, luaS_newliteral(L, "n"));
-  luaH_set(L, htab, &nname, &n);
+  setnvalue(luaH_set(L, htab, &nname), actual);
   L->top -= actual;  /* remove extra elements from the stack */
   sethvalue(L->top, htab);
   incr_top(L);
