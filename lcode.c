@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.73 2001/06/08 19:00:57 roberto Exp roberto $
+** $Id: lcode.c,v 1.74 2001/06/11 14:56:42 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -271,7 +271,7 @@ void luaK_setcallreturns (FuncState *fs, expdesc *e, int nresults) {
 }
 
 
-static void dischargevars (FuncState *fs, expdesc *e) {
+void luaK_dischargevars (FuncState *fs, expdesc *e) {
   switch (e->k) {
     case VLOCAL: {
       e->k = VNONRELOC;
@@ -325,7 +325,7 @@ static void dischargejumps (FuncState *fs, expdesc *e, int reg) {
 
 
 static void discharge2reg (FuncState *fs, expdesc *e, int reg) {
-  dischargevars(fs, e);
+  luaK_dischargevars(fs, e);
   switch (e->k) {
     case VNIL: {
       luaK_nil(fs, reg, 1);
@@ -392,7 +392,7 @@ static void luaK_exp2reg (FuncState *fs, expdesc *e, int reg) {
 
 void luaK_exp2nextreg (FuncState *fs, expdesc *e) {
   int reg;
-  dischargevars(fs, e);
+  luaK_dischargevars(fs, e);
   freeexp(fs, e);
   reg = fs->freereg;
   luaK_reserveregs(fs, 1);
@@ -401,7 +401,7 @@ void luaK_exp2nextreg (FuncState *fs, expdesc *e) {
 
 
 int luaK_exp2anyreg (FuncState *fs, expdesc *e) {
-  dischargevars(fs, e);
+  luaK_dischargevars(fs, e);
   if (e->k == VNONRELOC) {
     if (!hasjumps(e)) return e->u.i.info;  /* exp is already in a register */ 
     if (e->u.i.info >= fs->nactloc) {  /* reg. is not a local? */
@@ -418,7 +418,7 @@ void luaK_exp2val (FuncState *fs, expdesc *e) {
   if (hasjumps(e))
     luaK_exp2anyreg(fs, e);
   else
-    dischargevars(fs, e);
+    luaK_dischargevars(fs, e);
 }
 
 
@@ -510,7 +510,7 @@ static int jumponcond (FuncState *fs, expdesc *e, OpCode op) {
 
 void luaK_goiftrue (FuncState *fs, expdesc *e) {
   int pc;  /* pc of last jump */
-  dischargevars(fs, e);
+  luaK_dischargevars(fs, e);
   switch (e->k) {
     case VK: case VNUMBER: {
       pc = NO_JUMP;  /* always true; do nothing */
@@ -544,7 +544,7 @@ void luaK_goiftrue (FuncState *fs, expdesc *e) {
 
 static void luaK_goiffalse (FuncState *fs, expdesc *e) {
   int pc;  /* pc of last jump */
-  dischargevars(fs, e);
+  luaK_dischargevars(fs, e);
   switch (e->k) {
     case VNIL: {
       pc = NO_JUMP;  /* always false; do nothing */
@@ -573,7 +573,7 @@ static void luaK_goiffalse (FuncState *fs, expdesc *e) {
 
 
 static void codenot (FuncState *fs, expdesc *e) {
-  dischargevars(fs, e);
+  luaK_dischargevars(fs, e);
   switch (e->k) {
     case VNIL: {
       e->u.n = 1;
@@ -680,14 +680,14 @@ void luaK_posfix (FuncState *fs, BinOpr op, expdesc *e1, expdesc *e2) {
   switch (op) {
     case OPR_AND: {
       lua_assert(e1->t == NO_JUMP);  /* list must be closed */
-      dischargevars(fs, e2);
+      luaK_dischargevars(fs, e2);
       luaK_concat(fs, &e1->f, e2->f);
       e1->k = e2->k; e1->u = e2->u; e1->t = e2->t;
       break;
     }
     case OPR_OR: {
       lua_assert(e1->f == NO_JUMP);  /* list must be closed */
-      dischargevars(fs, e2);
+      luaK_dischargevars(fs, e2);
       luaK_concat(fs, &e1->t, e2->t);
       e1->k = e2->k; e1->u = e2->u; e1->f = e2->f;
       break;

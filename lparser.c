@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.147 2001/06/08 19:00:57 roberto Exp roberto $
+** $Id: lparser.c,v 1.148 2001/06/11 14:56:42 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -636,6 +636,7 @@ static void primaryexp (LexState *ls, expdesc *v) {
       next(ls);
       expr(ls, v);
       check(ls, l_c(')'));
+      luaK_dischargevars(ls->fs, v);
       return;
     }
     case TK_NAME: {

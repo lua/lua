@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.21 2001/02/23 17:17:25 roberto Exp roberto $
+** $Id: lcode.h,v 1.22 2001/06/05 18:17:01 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -44,6 +44,7 @@ int luaK_codeABC (FuncState *fs, OpCode o, int A, int B, int C);
 void luaK_nil (FuncState *fs, int from, int n);
 void luaK_reserveregs (FuncState *fs, int n);
 int luaK_stringk (FuncState *fs, TString *s);
+void luaK_dischargevars (FuncState *fs, expdesc *e);
 int luaK_exp2anyreg (FuncState *fs, expdesc *e);
 void luaK_exp2nextreg (FuncState *fs, expdesc *e);
 void luaK_exp2val (FuncState *fs, expdesc *e);
