@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.45 1999/06/22 20:37:23 roberto Exp roberto $
+** $Id: ldo.c,v 1.46 1999/08/16 20:52:00 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -190,7 +190,7 @@ void luaD_calln (int nArgs, int nResults) {
       break;
     case LUA_T_CLOSURE: {
       Closure *c = clvalue(func);
-      TObject *proto = &(c->consts[0]);
+      TObject *proto = c->consts;
       ttype(func) = LUA_T_CLMARK;
       firstResult = (ttype(proto) == LUA_T_CPROTO) ?
                        callCclosure(c, fvalue(proto), base) :
