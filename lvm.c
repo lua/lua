@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.30 1998/06/11 18:21:37 roberto Exp roberto $
+** $Id: lvm.c,v 1.31 1998/07/12 16:16:43 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -316,7 +316,7 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base)
     luaC_checkGC();
     adjust_varargs(base+(*pc++)-ZEROVARARG);
   }
-  while (1) {
+  for (;;) {
     int aux;
     switch ((OpCode)(aux = *pc++)) {
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.34 1998/08/21 17:43:44 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.35 1998/11/13 16:39:18 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -549,7 +549,7 @@ static void testC (void)
   char nome[2];
   char *s = luaL_check_string(1);
   nome[1] = 0;
-  while (1) {
+  for (;;) {
     switch (*s++) {
       case '0': case '1': case '2': case '3': case '4':
       case '5': case '6': case '7': case '8': case '9':

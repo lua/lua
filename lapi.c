@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.27 1998/08/21 17:43:44 roberto Exp roberto $
+** $Id: lapi.c,v 1.28 1998/09/07 18:59:59 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -34,7 +34,7 @@ TObject *luaA_Address (lua_Object o) {
 }
 
 
-static int normalized_type (TObject *o)
+static lua_Type normalized_type (TObject *o)
 {
   int t = ttype(o);
   switch (t) {

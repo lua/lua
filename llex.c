@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.23 1998/07/06 22:04:58 roberto Exp roberto $
+** $Id: llex.c,v 1.24 1998/07/24 18:02:38 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -234,7 +234,7 @@ static void inclinenumber (LexState *LS)
 static int read_long_string (LexState *LS)
 {
   int cont = 0;
-  while (1) {
+  for (;;) {
     switch (LS->current) {
       case EOZ:
         luaX_error(LS, "unfinished long string");
@@ -272,7 +272,7 @@ static int read_long_string (LexState *LS)
 int luaX_lex (LexState *LS) {
   double a;
   luaL_resetbuffer();
-  while (1) {
+  for (;;) {
     switch (LS->current) {
 
       case ' ': case '\t': case '\r':  /* CR: to avoid problems with DOS */
