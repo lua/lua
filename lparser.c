@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.19 1999/02/09 15:59:10 roberto Exp roberto $
+** $Id: lparser.c,v 1.20 1999/02/09 18:01:55 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -135,7 +135,7 @@ static void var_or_func_tail (LexState *ls, vardesc *v);
 
 static void check_pc (FuncState *fs, int n) {
   if (fs->pc+n > fs->maxcode)
-    fs->maxcode = luaM_growvector(&fs->f->code, fs->maxcode,
+    fs->maxcode = luaM_growvector(&fs->f->code, fs->maxcode+n,
                                   Byte, codeEM, MAX_INT);
 }
 
@@ -295,8 +295,8 @@ static void luaI_registerlocalvar (FuncState *fs, TaggedString *varname,
                                    int line) {
   if (fs->maxvars != -1) {  /* debug information? */
     TProtoFunc *f = fs->f;
-    if (fs->nvars+1 > fs->maxvars)
-      fs->maxvars = luaM_growvector(&f->locvars, fs->maxvars+1,
+    if (fs->nvars >= fs->maxvars)
+      fs->maxvars = luaM_growvector(&f->locvars, fs->maxvars,
                                     LocVar, "", MAX_INT);
     f->locvars[fs->nvars].varname = varname;
     f->locvars[fs->nvars].line = line;
@@ -398,7 +398,7 @@ static void adjuststack (LexState *ls, int n) {
 static void close_exp (LexState *ls, int pc, int nresults) {
   if (pc > 0) {  /* expression is an open function call */
     Byte *code = ls->fs->f->code;
-    code[pc-1] = nresults;  /* set nresults */
+    code[pc-1] = (Byte)nresults;  /* set nresults */
     if (nresults != MULT_RET)
       deltastack(ls, nresults);  /* push results */
     deltastack(ls, -(code[pc]+1));  /* pop params (at code[pc]) and function */
