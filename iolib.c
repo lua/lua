@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.31 1996/01/22 17:46:55 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.32 1996/01/29 16:40:09 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -142,14 +142,13 @@ static char getformat (char *f, int *just, int *m, int *n)
   int t;
   switch (*f++)
   {
+    case 'q': case 'Q':
     case 's': case 'S':
-      t = 's';
+    case 'i': case 'I':
+      t = tolower(*(f-1));
       break;
     case 'f': case 'F': case 'g': case 'G': case 'e': case 'E':
       t = 'f';
-      break;
-    case 'i': case 'I':
-      t = 'i';
       break;
     default:
       t = 0;  /* to avoid compiler warnings */
@@ -293,6 +292,8 @@ static void io_read (void)
           lua_pushnil();
         break;
       }
+      default:
+        lua_arg_error("read (format)");
     }
   }
 }
@@ -369,6 +370,34 @@ static int write_string (char *s, int just, int m)
   return status;
 }
 
+static int write_quoted (int just, int m)
+{
+  char *s = lua_check_string(1, "write");
+  luaI_addchar(0);
+  luaI_addchar('"');
+  while (1)
+  {
+    switch (*s)
+    {
+      case '"':  case '\\':
+        luaI_addchar('\\');
+        luaI_addchar(*s);
+        break;
+      case '\n':
+        luaI_addchar('\\');
+        luaI_addchar('n');
+        break;
+      case 0:
+        goto END_WHILE;
+      default:
+        luaI_addchar(*s);
+    }
+    s++;
+  } END_WHILE:
+  luaI_addchar('"');
+  return write_string(luaI_addchar(0), just, m);
+}
+
 static int write_float (int just, int m, int n)
 {
   char buffer[100];
@@ -413,7 +442,7 @@ static void io_write (void)
   else					/* formated */
   {
     int just, m, n;
-    switch (getformat (lua_check_string(2, "write"), &just, &m, &n))
+    switch (getformat(lua_check_string(2, "write"), &just, &m, &n))
     {
       case 's':
       {
@@ -424,6 +453,9 @@ static void io_write (void)
           status = 0;
         break;
       }
+      case 'q':
+        status = write_quoted(just, m);
+        break;
       case 'f':
         status = write_float(just, m, n);
         break;

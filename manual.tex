@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.4 1996/01/30 15:24:49 roberto Exp roberto $
+% $Id: manual.tex,v 1.5 1996/02/05 14:52:47 roberto Exp roberto $
 
 \documentstyle[A4,11pt,bnf]{article}
 
@@ -11,7 +11,7 @@
 \newcommand{\Index}[1]{#1\index{#1}}
 \newcommand{\IndexVerb}[1]{{\tt #1}\index{#1}}
 \newcommand{\Def}[1]{{\em #1}\index{#1}}
-\newcommand{\Deffunc}[1]{\index{{\tt #1}}}
+\newcommand{\Deffunc}[1]{\index{#1}}
 
 %\makeindex
 
@@ -32,7 +32,7 @@ Waldemar Celes Filho
 Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1996/01/30 15:24:49 $}
+\date{\small \verb$Date: 1996/02/05 14:52:47 $}
 
 \maketitle
 
@@ -1268,6 +1268,7 @@ Returns the ascii code of the character \verb's[i]'.
 If \verb'i' is absent, it is assumed to be 1.
 
 \subsubsection*{{\tt format (formatstring, e1, e2, \ldots)}}\Deffunc{format}
+\label{format}
 This function returns a formated version of its variable number of arguments
 following the description given in its first argument (which must be a string). 
 The format string follows the same rules as the \verb'printf' family of
@@ -1400,7 +1401,13 @@ following characters:
 \begin{description}
 \item['s' or 'S'] to write strings;
 \item['f' or 'F'] to write floats;
-\item['i' or 'I'] to write integers.
+\item['i' or 'I'] to write integers;
+\item['q' or 'Q'] to write quoted strings.
+This format writes the string in a form suitable to be safely read
+back by the Lua interpreter.
+The string is written between double quotes,
+and all double quotes, returns and backslashes in the string
+are correctly escaped when written.
 \end{description}
 These characters can be followed by
 \begin{verbatim}
@@ -1420,13 +1427,11 @@ For integers, it is the minimum number of digits.
 This option has no meaning for strings.
 \end{description}
 
-{\em Warning:}
-This format parameter is now obsolete;
-formated output should use the \verb'format' function.
-
 When called without a format string,
 this function writes numbers using the \verb'%g' format
 and strings with \verb'%s'.
+For better format facilities,
+the function \verb'format' should be used (\see{format}).
 
 \subsubsection*{{\tt date ()}}\Deffunc{date}
 
@@ -1571,7 +1576,7 @@ To store a single value with a name,
 the following code is enough:
 \begin{verbatim}
 function store (name, value)
-  write('\n' .. name .. '=')
+  write(format('\n%s =', name))
   write_value(value)
 end
 \end{verbatim}
@@ -1580,7 +1585,7 @@ function write_value (value)
   local t = type(value)
       if t == 'nil'    then write('nil')
   elseif t == 'number' then write(value)
-  elseif t == 'string' then write('[[' .. value .. ']]')
+  elseif t == 'string' then write(value, 'q')
   end
 end
 \end{verbatim}
@@ -1597,7 +1602,7 @@ function write_value (value)
   local t = type(value)
       if t == 'nil'    then write('nil')
   elseif t == 'number' then write(value)
-  elseif t == 'string' then write('"' .. value .. '"')
+  elseif t == 'string' then write(value, 'q')
   elseif t == 'table'  then write_record(value)
   end
 end
