@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.13 1994/12/06 14:27:18 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.14 1994/12/20 21:20:36 roberto Exp celes $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -175,6 +175,189 @@ static void code_number (float f)
    code_byte(PUSHFLOAT);
    code_float(f);
   }
+}
+
+/*
+** Search a local name and if find return its index. If do not find return -1
+*/
+static int lua_localname (Word n)
+{
+ int i;
+ for (i=nlocalvar-1; i >= 0; i--)
+  if (n == localvar[i]) return i;	/* local var */
+ return -1;		        /* global var */
+}
+
+/*
+** Push a variable given a number. If number is positive, push global variable
+** indexed by (number -1). If negative, push local indexed by ABS(number)-1.
+** Otherwise, if zero, push indexed variable (record).
+*/
+static void lua_pushvar (Long number)
+{ 
+ if (number > 0)	/* global var */
+ {
+  code_byte(PUSHGLOBAL);
+  code_word(number-1);
+ }
+ else if (number < 0)	/* local var */
+ {
+  number = (-number) - 1;
+  if (number < 10) code_byte(PUSHLOCAL0 + number);
+  else
+  {
+   code_byte(PUSHLOCAL);
+   code_byte(number);
+  }
+ }
+ else
+ {
+  code_byte(PUSHINDEXED);
+ }
+}
+
+static void lua_codeadjust (int n)
+{
+ if (n+nlocalvar == 0)
+   code_byte(ADJUST0);
+ else
+ {
+   code_byte(ADJUST);
+   code_byte(n+nlocalvar);
+ }
+}
+
+static void init_function (TreeNode *func)
+{
+ if (funcCode == NULL)	/* first function */
+ {
+  funcCode = newvector(CODE_BLOCK, Byte);
+  maxcode = CODE_BLOCK;
+ }
+ pc=0; basepc=funcCode; maxcurr=maxcode; 
+ nlocalvar=0;
+  if (lua_debug)
+  {
+    code_byte(SETFUNCTION); 
+    code_code((Byte *)strdup(lua_file[lua_nfile-1]));
+    code_word(luaI_findconstant(func));
+  }
+}
+
+static void codereturn (void)
+{
+  if (lua_debug) code_byte(RESET); 
+  if (nlocalvar == 0)
+    code_byte(RETCODE0);
+  else
+  {
+    code_byte(RETCODE);
+    code_byte(nlocalvar);
+  }
+}
+
+static void codedebugline (void)
+{
+  if (lua_debug)
+  {
+    code_byte(SETLINE);
+    code_word(lua_linenumber);
+  }
+}
+
+static void adjust_mult_assign (int vars, int exps, int temps)
+{
+  if (exps < 0) 
+  {
+    int r = vars - (-exps-1);
+    if (r >= 0)
+      code_byte(r);
+    else
+    {
+      code_byte(0);
+      lua_codeadjust(temps);
+    }
+  }
+  else if (vars != exps)
+    lua_codeadjust(temps);
+}
+
+static void lua_codestore (int i)
+{
+ if (varbuffer[i] > 0)		/* global var */
+ {
+  code_byte(STOREGLOBAL);
+  code_word(varbuffer[i]-1);
+ }
+ else if (varbuffer[i] < 0)      /* local var */
+ {
+  int number = (-varbuffer[i]) - 1;
+  if (number < 10) code_byte(STORELOCAL0 + number);
+  else
+  {
+   code_byte(STORELOCAL);
+   code_byte(number);
+  }
+ }
+ else				  /* indexed var */
+ {
+  int j;
+  int upper=0;     	/* number of indexed variables upper */
+  int param;		/* number of itens until indexed expression */
+  for (j=i+1; j <nvarbuffer; j++)
+   if (varbuffer[j] == 0) upper++;
+  param = upper*2 + i;
+  if (param == 0)
+   code_byte(STOREINDEXED0);
+  else
+  {
+   code_byte(STOREINDEXED);
+   code_byte(param);
+  }
+ }
+}
+
+static void codeIf (Long thenAdd, Long elseAdd)
+{
+  Long elseinit = elseAdd+sizeof(Word)+1;
+  if (pc == elseinit)		/* no else */
+  {
+    pc -= sizeof(Word)+1;
+    elseinit = pc;
+  }
+  else
+  {
+    basepc[elseAdd] = JMP;
+    code_word_at(basepc+elseAdd+1, pc-elseinit);
+  }
+  basepc[thenAdd] = IFFJMP;
+  code_word_at(basepc+thenAdd+1,elseinit-(thenAdd+sizeof(Word)+1));
+}
+
+static void yyerror (char *s)
+{
+ static char msg[256];
+ sprintf (msg,"%s near \"%s\" at line %d in file \"%s\"",
+          s, lua_lasttext (), lua_linenumber, lua_filename());
+ lua_error (msg);
+}
+
+
+/*
+** Parse LUA code.
+*/
+void lua_parse (Byte **code)
+{
+ initcode = code;
+ *initcode = newvector(CODE_BLOCK, Byte);
+ maincode = 0; 
+ maxmain = CODE_BLOCK;
+ if (yyparse ()) lua_error("parse error");
+ (*initcode)[maincode++] = RETCODE0;
+#if LISTING
+{ static void PrintCode (Byte *c, Byte *end);
+ PrintCode(*initcode,*initcode+maincode); }
+#endif
 }
 
 
@@ -554,190 +737,6 @@ decinit	  : /* empty */  { $$ = 0; }
 setdebug  : DEBUG {lua_debug = $1;}
 
 %%
-
-/*
-** Search a local name and if find return its index. If do not find return -1
-*/
-static int lua_localname (Word n)
-{
- int i;
- for (i=nlocalvar-1; i >= 0; i--)
-  if (n == localvar[i]) return i;	/* local var */
- return -1;		        /* global var */
-}
-
-/*
-** Push a variable given a number. If number is positive, push global variable
-** indexed by (number -1). If negative, push local indexed by ABS(number)-1.
-** Otherwise, if zero, push indexed variable (record).
-*/
-static void lua_pushvar (Long number)
-{ 
- if (number > 0)	/* global var */
- {
-  code_byte(PUSHGLOBAL);
-  code_word(number-1);
- }
- else if (number < 0)	/* local var */
- {
-  number = (-number) - 1;
-  if (number < 10) code_byte(PUSHLOCAL0 + number);
-  else
-  {
-   code_byte(PUSHLOCAL);
-   code_byte(number);
-  }
- }
- else
- {
-  code_byte(PUSHINDEXED);
- }
-}
-
-static void lua_codeadjust (int n)
-{
- if (n+nlocalvar == 0)
-   code_byte(ADJUST0);
- else
- {
-   code_byte(ADJUST);
-   code_byte(n+nlocalvar);
- }
-}
-
-static void init_function (TreeNode *func)
-{
- if (funcCode == NULL)	/* first function */
- {
-  funcCode = newvector(CODE_BLOCK, Byte);
-  maxcode = CODE_BLOCK;
- }
- pc=0; basepc=funcCode; maxcurr=maxcode; 
- nlocalvar=0;
-  if (lua_debug)
-  {
-    code_byte(SETFUNCTION); 
-    code_code((Byte *)strdup(lua_file[lua_nfile-1]));
-    code_word(luaI_findconstant(func));
-  }
-}
-
-static void codereturn (void)
-{
-  if (lua_debug) code_byte(RESET); 
-  if (nlocalvar == 0)
-    code_byte(RETCODE0);
-  else
-  {
-    code_byte(RETCODE);
-    code_byte(nlocalvar);
-  }
-}
-
-static void codedebugline (void)
-{
-  if (lua_debug)
-  {
-    code_byte(SETLINE);
-    code_word(lua_linenumber);
-  }
-}
-
-static void adjust_mult_assign (int vars, int exps, int temps)
-{
-  if (exps < 0) 
-  {
-    int r = vars - (-exps-1);
-    if (r >= 0)
-      code_byte(r);
-    else
-    {
-      code_byte(0);
-      lua_codeadjust(temps);
-    }
-  }
-  else if (vars != exps)
-    lua_codeadjust(temps);
-}
-
-static void lua_codestore (int i)
-{
- if (varbuffer[i] > 0)		/* global var */
- {
-  code_byte(STOREGLOBAL);
-  code_word(varbuffer[i]-1);
- }
- else if (varbuffer[i] < 0)      /* local var */
- {
-  int number = (-varbuffer[i]) - 1;
-  if (number < 10) code_byte(STORELOCAL0 + number);
-  else
-  {
-   code_byte(STORELOCAL);
-   code_byte(number);
-  }
- }
- else				  /* indexed var */
- {
-  int j;
-  int upper=0;     	/* number of indexed variables upper */
-  int param;		/* number of itens until indexed expression */
-  for (j=i+1; j <nvarbuffer; j++)
-   if (varbuffer[j] == 0) upper++;
-  param = upper*2 + i;
-  if (param == 0)
-   code_byte(STOREINDEXED0);
-  else
-  {
-   code_byte(STOREINDEXED);
-   code_byte(param);
-  }
- }
-}
-
-static void codeIf (Long thenAdd, Long elseAdd)
-{
-  Long elseinit = elseAdd+sizeof(Word)+1;
-  if (pc == elseinit)		/* no else */
-  {
-    pc -= sizeof(Word)+1;
-    elseinit = pc;
-  }
-  else
-  {
-    basepc[elseAdd] = JMP;
-    code_word_at(basepc+elseAdd+1, pc-elseinit);
-  }
-  basepc[thenAdd] = IFFJMP;
-  code_word_at(basepc+thenAdd+1,elseinit-(thenAdd+sizeof(Word)+1));
-}
-
-static void yyerror (char *s)
-{
- static char msg[256];
- sprintf (msg,"%s near \"%s\" at line %d in file \"%s\"",
-          s, lua_lasttext (), lua_linenumber, lua_filename());
- lua_error (msg);
-}
-
-
-/*
-** Parse LUA code.
-*/
-void lua_parse (Byte **code)
-{
- initcode = code;
- *initcode = newvector(CODE_BLOCK, Byte);
- maincode = 0; 
- maxmain = CODE_BLOCK;
- if (yyparse ()) lua_error("parse error");
- (*initcode)[maincode++] = RETCODE0;
-#if LISTING
-{ static void PrintCode (Byte *c, Byte *end);
- PrintCode(*initcode,*initcode+maincode); }
-#endif
-}
-
 
 #if LISTING
 
