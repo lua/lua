@@ -96,4 +96,7 @@ lecho:
 	@make echo | grep = | sed -e 's/= /= "/' -e 's/$$/"/' #-e 's/""/nil/'
 	@echo "-- EOF"
 
+newer:
+	@find . -newer MANIFEST -type f
+
 # (end of Makefile)

@@ -1,5 +1,5 @@
-This is Lua 5.0.1, an update of Lua 5.0 that includes the following changes,
-which fix all known bugs in Lua 5.0.
+This is Lua 5.0.2, an update of Lua 5.0 that includes the following changes,
+which fix all known bugs in Lua 5.0. For the exact differences, see DIFFS.
 
 src/ldo.c
 	Attempt to resume running coroutine crashed Lua
@@ -15,10 +15,9 @@ src/lvm.c
 	Count hook might be called without being set
 src/lib/lbaselib.c
 	Buffer overflow for unusual %p representation
+	Wrong number of returns from chunks loaded from stdin
 src/lib/liolib.c
 	`file.close()' could not be called without arguments
 	Buffer overflow for unusual %p representation
 src/luac/luac.c
 	Missing lock/unlock
-
-To use this update, simply open this tarball over the original Lua 5.0 source.
