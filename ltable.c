@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.37 2000/03/27 20:10:21 roberto Exp roberto $
+** $Id: ltable.c,v 1.38 2000/03/29 20:19:20 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -198,7 +198,7 @@ void luaH_set (lua_State *L, Hash *t, const TObject *key, const TObject *val) {
   mp->key = *key;
   mp->val = *val;
   for (;;) {  /* check free places */
-    if (ttype(&(t->firstfree)->key) == TAG_NIL)
+    if (ttype(&t->firstfree->key) == TAG_NIL)
       return;  /* OK; table still has a free place */
     else if (t->firstfree == t->node) break;  /* cannot decrement from here */
     else (t->firstfree)--;

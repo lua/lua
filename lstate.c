@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.23 1999/12/21 18:04:41 roberto Exp roberto $
+** $Id: lstate.c,v 1.24 2000/01/13 16:30:47 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -19,11 +19,6 @@
 #include "lstate.h"
 #include "lstring.h"
 #include "ltm.h"
-
-
-#ifndef DEFAULT_STACK_SIZE
-#define DEFAULT_STACK_SIZE      1024
-#endif
 
 
 lua_State *lua_state = NULL;

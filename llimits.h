@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.2 2000/03/24 19:49:23 roberto Exp roberto $
+** $Id: llimits.h,v 1.3 2000/03/27 20:08:33 roberto Exp roberto $
 ** Limits, basic types, and some other "instalation-dependent" definitions
 ** See Copyright Notice in lua.h
 */
@@ -41,6 +41,13 @@ typedef LUA_NUM_TYPE Number;
 
 
 #define MINPOWER2       4       /* minimum size for "growing" vectors */
+
+
+
+#ifndef DEFAULT_STACK_SIZE
+#define DEFAULT_STACK_SIZE      1024
+#endif
+
 
 
 /*
@@ -151,7 +158,11 @@ typedef unsigned long Instruction;
 
 
 /* number of list items to accumulate before a SETLIST instruction */
+#define LFIELDS_PER_FLUSH	64
+#if LFIELDS_PER_FLUSH>(MAXSTACK/4)
+#undef LFIELDS_PER_FLUSH
 #define LFIELDS_PER_FLUSH	(MAXSTACK/4)
+#endif
 
 /* number of record items to accumulate before a SETMAP instruction */
 /* (each item counts 2 elements on the stack: an index and a value) */
