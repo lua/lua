@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.h,v 1.11 2001/02/23 17:17:25 roberto Exp roberto $
+** $Id: ldebug.h,v 1.12 2001/06/05 18:17:01 roberto Exp roberto $
 ** Auxiliary functions from Debug Interface module
 ** See Copyright Notice in lua.h
 */
@@ -26,7 +26,7 @@ enum OpModeMask {
   OpModeT		/* operator is a test */
 };
 
-extern const unsigned char luaG_opmodes[];
+extern const lu_byte luaG_opmodes[];
 
 #define getOpMode(m)		((enum OpMode)(luaG_opmodes[m] & 3))
 #define testOpMode(m, b)	(luaG_opmodes[m] & (1 << (b)))

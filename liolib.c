@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.112 2001/04/23 16:35:45 roberto Exp roberto $
+** $Id: liolib.c,v 1.113 2001/06/06 18:00:19 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -58,7 +58,7 @@ static const l_char *const basicfiles[] = {l_s("_STDIN"), l_s("_STDOUT")};
 
 static int pushresult (lua_State *L, int i) {
   if (i) {
-    lua_newuserdatabox(L, NULL);
+    lua_pushnumber(L, 1);
     return 1;
   }
   else {

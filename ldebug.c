@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.76 2001/04/06 18:25:00 roberto Exp roberto $
+** $Id: ldebug.c,v 1.77 2001/06/05 18:17:01 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -580,7 +580,7 @@ void luaG_ordererror (lua_State *L, const TObject *p1, const TObject *p2) {
    ((sa)<<OpModesetA) | ((k)<<OpModeK) | (m))
 
 
-const unsigned char luaG_opmodes[] = {
+const lu_byte luaG_opmodes[] = {
 /*       T A B C sA K mode		   opcode    */
   opmode(0,1,1,0, 1,0,iABC),		/* OP_MOVE */
   opmode(0,1,0,0, 1,1,iABc),		/* OP_LOADK */
