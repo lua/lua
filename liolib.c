@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.20 2002/10/11 20:40:32 roberto Exp roberto $
+** $Id: liolib.c,v 2.21 2002/10/16 20:41:35 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -100,8 +100,12 @@ static int aux_close (lua_State *L) {
   FILE *f = tofile(L, 1);
   if (f == stdin || f == stdout || f == stderr)
     return 0;  /* file cannot be closed */
-  *(FILE **)lua_touserdata(L, 1) = NULL;  /* mark file as closed */
-  return (pclose(f) != -1) || (fclose(f) == 0);
+  else {
+    int ok = (pclose(f) != -1) || (fclose(f) == 0);
+    if (ok)
+      *(FILE **)lua_touserdata(L, 1) = NULL;  /* mark file as closed */
+    return ok;
+  }
 }
 
 
