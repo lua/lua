@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.101 2004/01/02 11:54:14 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.102 2004/04/30 20:13:38 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -140,6 +140,7 @@ static int writer (lua_State *L, const void* b, size_t size, void* B) {
 static int str_dump (lua_State *L) {
   luaL_Buffer b;
   luaL_checktype(L, 1, LUA_TFUNCTION);
+  lua_settop(L, 1);
   luaL_buffinit(L,&b);
   if (!lua_dump(L, writer, &b))
     luaL_error(L, "unable to dump given function");
