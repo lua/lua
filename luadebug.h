@@ -1,5 +1,5 @@
 /*
-** $Id: luadebug.h,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
+** $Id: luadebug.h,v 1.2 1998/06/19 16:14:09 roberto Exp roberto $
 ** Debugging API
 ** See Copyright Notice in lua.h
 */
@@ -24,6 +24,7 @@ char *lua_getobjname (lua_Object o, char **name);
 lua_Object lua_getlocal (lua_Function func, int local_number, char **name);
 int lua_setlocal (lua_Function func, int local_number);
 
+int lua_nups (lua_Function func);
 
 extern lua_LHFunction lua_linehook;
 extern lua_CHFunction lua_callhook;

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.26 1998/07/12 16:16:02 roberto Exp roberto $
+** $Id: lapi.c,v 1.27 1998/08/21 17:43:44 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -449,6 +449,12 @@ lua_Function lua_stackedfunction (int level)
         return Ref(L->stack.stack+i);
   }
   return LUA_NOOBJECT;
+}
+
+
+int lua_nups (lua_Function func) {
+  TObject *o = luaA_Address(func);
+  return (!o || normalized_type(o) != LUA_T_CLOSURE) ? 0 : o->value.cl->nelems;
 }
 
 
