@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.13 2004/09/29 21:00:25 roberto Exp roberto $
+** $Id: ltests.c,v 2.14 2004/10/06 18:34:16 roberto Exp $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -759,7 +759,7 @@ static int log2_aux (lua_State *L) {
 static int int2fb_aux (lua_State *L) {
   int b = luaO_int2fb(luaL_checkint(L, 1));
   lua_pushinteger(L, b);
-  lua_pushinteger(L, fb2int(b));
+  lua_pushinteger(L, luaO_fb2int(b));
   return 2;
 }
 

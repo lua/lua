@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.4 2004/07/09 16:01:38 roberto Exp roberto $
+** $Id: lobject.c,v 2.5 2004/10/06 18:34:16 roberto Exp $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -31,12 +31,21 @@ const TValue luaO_nilobject = {{NULL}, LUA_TNIL};
 ** (mmmmmxxx), where the real value is (xxx) * 2^(mmmmm)
 */
 int luaO_int2fb (unsigned int x) {
-  int m = 0;  /* mantissa */
-  while (x >= (1<<3)) {
+  int e = 0;  /* expoent */
+  while (x >= 16) {
     x = (x+1) >> 1;
-    m++;
+    e++;
   }
-  return (m << 3) | cast(int, x);
+  if (x < 8) return x;
+  else return ((e+1) << 3) | (cast(int, x) - 8);
+}
+
+
+/* converts back */
+int luaO_fb2int (int x) {
+  int e = (x >> 3) & 31;
+  if (e == 0) return x;
+  else return ((x & 7)+8) << (e - 1);
 }
 
 

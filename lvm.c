@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.15 2004/10/04 19:01:53 roberto Exp roberto $
+** $Id: lvm.c,v 2.16 2004/10/28 17:45:51 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -461,7 +461,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
       }
       case OP_NEWTABLE: {
         int b = GETARG_B(i);
-        b = fb2int(b);
+        b = luaO_fb2int(b);
         sethvalue(L, ra, luaH_new(L, b, GETARG_C(i)));
         L->ci->savedpc = pc;
         luaC_checkGC(L);  /***/

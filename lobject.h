@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.5 2004/05/31 18:51:50 roberto Exp roberto $
+** $Id: lobject.h,v 2.6 2004/10/06 18:34:16 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -352,7 +352,7 @@ extern const TValue luaO_nilobject;
 
 int luaO_log2 (unsigned int x);
 int luaO_int2fb (unsigned int x);
-#define fb2int(x)	(((x) & 7) << ((x) >> 3))
+int luaO_fb2int (int x);
 
 int luaO_rawequalObj (const TValue *t1, const TValue *t2);
 int luaO_str2d (const char *s, lua_Number *result);
