@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.62 2000/03/03 14:58:26 roberto Exp roberto $
+** $Id: lparser.c,v 1.63 2000/03/03 18:53:17 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -717,14 +717,14 @@ static int get_priority (int op, int *rp) {
     case  '>':  case  '<':  case  LE:  case  GE:
       *rp = 2; return 2;
     case  CONC:
-      *rp = 3; return 3;
+      *rp = 4; return 4;  /* left associative (?) */
     case  '+':  case  '-':
-      *rp = 4; return 4;
-    case  '*':  case  '/':
       *rp = 5; return 5;
-    /* priority 6 is for unary operators */
+    case  '*':  case  '/':
+      *rp = 6; return 6;
+#define UNARY_PRIORITY	7
     case  '^':
-      *rp = 7; return 8;  /* right associative */
+      *rp = 8; return 9;  /* right associative */
     default:
       *rp = -1; return -1;
   }
@@ -740,7 +740,7 @@ static void operator_expr (LexState *ls, expdesc *v, int limit) {
   if (ls->token == '-' || ls->token == NOT) {
     int op = ls->token;  /* operator */
     next(ls);
-    operator_expr(ls, v, 6);  /* 6 == priority of NOT and unary `-' */
+    operator_expr(ls, v, UNARY_PRIORITY);
     luaK_prefix(ls, op, v);
   }
   else simpleexp(ls, v);
