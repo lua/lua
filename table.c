@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.6 1994/10/18 18:34:47 roberto Exp $";
+char *rcs_table="$Id: table.c,v 2.7 1994/11/02 19:09:23 roberto Exp roberto $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -54,19 +54,19 @@ static void lua_initsymbol (void)
   return;
  }
  n = lua_findsymbol("type"); 
- s_tag(n) = T_CFUNCTION; s_fvalue(n) = lua_type;
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_type;
  n = lua_findsymbol("tonumber");
- s_tag(n) = T_CFUNCTION; s_fvalue(n) = lua_obj2number;
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_obj2number;
  n = lua_findsymbol("next");
- s_tag(n) = T_CFUNCTION; s_fvalue(n) = lua_next;
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_next;
  n = lua_findsymbol("nextvar");
- s_tag(n) = T_CFUNCTION; s_fvalue(n) = lua_nextvar;
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_nextvar;
  n = lua_findsymbol("print");
- s_tag(n) = T_CFUNCTION; s_fvalue(n) = lua_print;
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_print;
  n = lua_findsymbol("dofile");
- s_tag(n) = T_CFUNCTION; s_fvalue(n) = lua_internaldofile;
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_internaldofile;
  n = lua_findsymbol("dostring");
- s_tag(n) = T_CFUNCTION; s_fvalue(n) = lua_internaldostring;
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_internaldostring;
 }
 
 
@@ -126,7 +126,7 @@ int lua_findsymbol (char *s)
    }
   }
   indexstring(n) = lua_ntable;
-  s_tag(lua_ntable) = T_NIL;
+  s_tag(lua_ntable) = LUA_T_NIL;
   lua_ntable++;
  }
  return indexstring(n);
@@ -190,9 +190,9 @@ void lua_travsymbol (void (*fn)(Object *))
 */
 void lua_markobject (Object *o)
 {
- if (tag(o) == T_STRING && indexstring(svalue(o)) == UNMARKED_STRING)
+ if (tag(o) == LUA_T_STRING && indexstring(svalue(o)) == UNMARKED_STRING)
   indexstring(svalue(o)) = MARKED_STRING;
- else if (tag(o) == T_ARRAY)
+ else if (tag(o) == LUA_T_ARRAY)
   lua_hashmark (avalue(o));
 }
 
@@ -278,11 +278,11 @@ void lua_nextvar (void)
  { lua_error ("too few arguments to function `nextvar'"); return; }
  if (lua_getparam (2) != NULL)
  { lua_error ("too many arguments to function `nextvar'"); return; }
- if (tag(o) == T_NIL)
+ if (tag(o) == LUA_T_NIL)
  {
   varname = 0;
  }
- else if (tag(o) != T_STRING) 
+ else if (tag(o) != LUA_T_STRING) 
  { 
   lua_error ("incorrect argument to function `nextvar'"); 
   return;
@@ -300,7 +300,7 @@ void lua_nextvar (void)
  else
  {
   Object name;
-  tag(&name) = T_STRING;
+  tag(&name) = LUA_T_STRING;
   svalue(&name) = next;
   if (lua_pushobject (&name)) return;
   if (lua_pushobject (&s_object(indexstring(next)))) return;

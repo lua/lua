@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.9 1994/10/17 19:03:23 celes Exp roberto $";
+char *rcs_hash="$Id: hash.c,v 2.10 1994/11/01 17:54:31 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdlib.h>
@@ -54,9 +54,9 @@ static int hashindex (Hash *t, Object *ref)		/* hash function */
 {
  switch (tag(ref))
  {
-  case T_NUMBER:
+  case LUA_T_NUMBER:
    return (((int)nvalue(ref))%nhash(t));
-  case T_STRING:
+  case LUA_T_STRING:
   {
    int h;
    char *name = svalue(ref);
@@ -68,13 +68,13 @@ static int hashindex (Hash *t, Object *ref)		/* hash function */
    }
    return h;
   }
-  case T_FUNCTION:
+  case LUA_T_FUNCTION:
    return (((int)bvalue(ref))%nhash(t));
-  case T_CFUNCTION:
+  case LUA_T_CFUNCTION:
    return (((int)fvalue(ref))%nhash(t));
-  case T_ARRAY:
+  case LUA_T_ARRAY:
    return (((int)avalue(ref))%nhash(t));
-  case T_USERDATA:
+  case LUA_T_USERDATA:
    return (((int)uvalue(ref))%nhash(t));
   default:
    lua_reportbug ("unexpected type to index table");
@@ -87,8 +87,8 @@ static int equalObj (Object *t1, Object *t2)
   if (tag(t1) != tag(t2)) return 0;
   switch (tag(t1))
   {
-    case T_NUMBER: return nvalue(t1) == nvalue(t2);
-    case T_STRING: return streq(svalue(t1), svalue(t2));
+    case LUA_T_NUMBER: return nvalue(t1) == nvalue(t2);
+    case LUA_T_STRING: return streq(svalue(t1), svalue(t2));
     default: return uvalue(t1) == uvalue(t2);
   }
 }
@@ -97,7 +97,7 @@ static int present (Hash *t, Object *ref)
 { 
  int h = hashindex(t, ref);
  if (h < 0) return h;
- while (tag(ref(node(t, h))) != T_NIL)
+ while (tag(ref(node(t, h))) != LUA_T_NIL)
  {
   if (equalObj(ref, ref(node(t, h))))
     return h;
@@ -120,7 +120,7 @@ static Node *hashnodecreate (int nhash)
   return NULL;
  }
  for (i=0; i<nhash; i++)
-  tag(ref(&v[i])) = T_NIL;
+  tag(ref(&v[i])) = LUA_T_NIL;
  return v;
 }
 
@@ -169,7 +169,7 @@ void lua_hashmark (Hash *h)
   for (i=0; i<nhash(h); i++)
   {
    Node *n = node(h,i);
-   if (tag(ref(n)) != T_NIL)
+   if (tag(ref(n)) != LUA_T_NIL)
    {
     lua_markobject(&n->ref);
     lua_markobject(&n->val);
@@ -243,7 +243,7 @@ static void rehash (Hash *t)
  for (i=0; i<nold; i++)
  {
   Node *n = vold+i;
-  if (tag(ref(n)) != T_NIL && tag(val(n)) != T_NIL)
+  if (tag(ref(n)) != LUA_T_NIL && tag(val(n)) != LUA_T_NIL)
    *node(t, present(t, ref(n))) = *n;  /* copy old node to new hahs */
  }
  free(vold);
@@ -257,10 +257,10 @@ static void rehash (Hash *t)
 Object *lua_hashget (Hash *t, Object *ref)
 {
  static int count = 1000;
- static Object nil_obj = {T_NIL, {NULL}};
+ static Object nil_obj = {LUA_T_NIL, {NULL}};
  int h = present(t, ref);
  if (h < 0) return &nil_obj; 
- if (tag(ref(node(t, h))) != T_NIL) return val(node(t, h));
+ if (tag(ref(node(t, h))) != LUA_T_NIL) return val(node(t, h));
  if (--count == 0) 
  {
   lua_reportbug ("hierarchy too deep (maybe there is an inheritance loop)");
@@ -271,25 +271,25 @@ Object *lua_hashget (Hash *t, Object *ref)
   Hash *p;
   Object parent;
   Object godparent;
-  tag(&parent) = T_STRING; svalue(&parent) = "parent";
-  tag(&godparent) = T_STRING; svalue(&godparent) = "godparent";
+  tag(&parent) = LUA_T_STRING; svalue(&parent) = "parent";
+  tag(&godparent) = LUA_T_STRING; svalue(&godparent) = "godparent";
 
   h = present(t, &parent); /* assert(h >= 0); */
-  p = tag(ref(node(t, h))) != T_NIL && tag(val(node(t, h))) == T_ARRAY ?
+  p = tag(ref(node(t, h))) != LUA_T_NIL && tag(val(node(t, h))) == LUA_T_ARRAY ?
       avalue(val(node(t, h))) : NULL;
   if (p != NULL)
   {
    Object *r = lua_hashget(p, ref);
-   if (tag(r) != T_NIL) { count++; return r; }
+   if (tag(r) != LUA_T_NIL) { count++; return r; }
   }
 
   h = present(t, &godparent); /* assert(h >= 0); */
-  p = tag(ref(node(t, h))) != T_NIL && tag(val(node(t, h))) == T_ARRAY ?
+  p = tag(ref(node(t, h))) != LUA_T_NIL && tag(val(node(t, h))) == LUA_T_ARRAY ?
       avalue(val(node(t, h))) : NULL;
   if (p != NULL)
   {
    Object *r = lua_hashget(p, ref);
-   if (tag(r) != T_NIL) { count++; return r; }
+   if (tag(r) != LUA_T_NIL) { count++; return r; }
   }
  }
  count++;
@@ -308,7 +308,7 @@ Object *lua_hashdefine (Hash *t, Object *ref)
  h = present(t, ref);
  if (h < 0) return NULL; 
  n = node(t, h);
- if (tag(ref(n)) == T_NIL)
+ if (tag(ref(n)) == LUA_T_NIL)
  {
   nuse(t)++;
   if ((float)nuse(t) > (float)nhash(t)*REHASH_LIMIT)
@@ -318,7 +318,7 @@ Object *lua_hashdefine (Hash *t, Object *ref)
    n = node(t, h);
   }
   *ref(n) = *ref;
-  tag(val(n)) = T_NIL;
+  tag(val(n)) = LUA_T_NIL;
  }
  return (val(n));
 }
@@ -337,7 +337,7 @@ static void hashnext (Hash *t, int i)
   lua_pushnil(); lua_pushnil();
   return;
  }
- while (tag(ref(node(t,i))) == T_NIL || tag(val(node(t,i))) == T_NIL)
+ while (tag(ref(node(t,i))) == LUA_T_NIL || tag(val(node(t,i))) == LUA_T_NIL)
  {
   if (++i >= nhash(t))
   {
@@ -358,11 +358,11 @@ void lua_next (void)
  { lua_error ("too few arguments to function `next'"); return; }
  if (lua_getparam (3) != NULL)
  { lua_error ("too many arguments to function `next'"); return; }
- if (tag(o) != T_ARRAY)
+ if (tag(o) != LUA_T_ARRAY)
  { lua_error ("first argument of function `next' is not a table"); return; }
 
  t = avalue(o);
- if (tag(r) == T_NIL)
+ if (tag(r) == LUA_T_NIL)
  {
   hashnext(t, 0);
  }
