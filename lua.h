@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.149 2002/08/06 15:32:22 roberto Exp roberto $
+** $Id: lua.h,v 1.150 2002/08/06 17:06:56 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -54,7 +54,7 @@ typedef int (*lua_CFunction) (lua_State *L);
 /*
 ** functions that read blocks when loading Lua chunk
 */
-typedef const char * (*lua_Chunkreader) (void *ud, size_t *size);
+typedef const char * (*lua_Chunkreader) (lua_State *L, void *ud, size_t *size);
 
 
 /*

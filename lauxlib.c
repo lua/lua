@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.79 2002/08/05 17:36:24 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.80 2002/08/06 15:32:22 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -315,8 +315,9 @@ typedef struct LoadF {
 } LoadF;
 
 
-static const char *getF (void *ud, size_t *size) {
+static const char *getF (lua_State *L, void *ud, size_t *size) {
   LoadF *lf = (LoadF *)ud;
+  (void)L;
   if (feof(lf->f)) return NULL;
   *size = fread(lf->buff, 1, LUAL_BUFFERSIZE, lf->f);
   return (*size > 0) ? lf->buff : NULL;
@@ -365,8 +366,9 @@ typedef struct LoadS {
 } LoadS;
 
 
-static const char *getS (void *ud, size_t *size) {
+static const char *getS (lua_State *L, void *ud, size_t *size) {
   LoadS *ls = (LoadS *)ud;
+  (void)L;
   if (ls->size == 0) return NULL;
   *size = ls->size;
   ls->size = 0;
