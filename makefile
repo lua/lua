@@ -1,4 +1,4 @@
-# $Id: makefile,v 1.13 1995/10/04 19:19:46 roberto Exp roberto $
+# $Id: makefile,v 1.13 1995/10/09 18:51:49 roberto Exp roberto $
 
 #configuration
 
@@ -61,7 +61,7 @@ clear	:
 	rcsclean
 	rm -f *.o
 	rm -f parser.c parser.h
-	co lua.h lualib.h
+	co lua.h lualib.h luadebug.h
 
 % : RCS/%,v
 	co $@
@@ -72,14 +72,14 @@ func.o : func.c table.h tree.h types.h opcode.h lua.h func.h mem.h
 hash.o : hash.c mem.h opcode.h lua.h types.h tree.h func.h hash.h table.h 
 inout.o : inout.c mem.h opcode.h lua.h types.h tree.h func.h hash.h inout.h \
   table.h 
-iolib.o : iolib.c lua.h lualib.h 
+iolib.o : iolib.c lua.h lualib.h luadebug.h
 lex.o : lex.c mem.h tree.h types.h table.h opcode.h lua.h func.h inout.h parser.h \
   ugly.h 
 lua.o : lua.c lua.h lualib.h 
 mathlib.o : mathlib.c lualib.h lua.h 
 mem.o : mem.c mem.h lua.h 
 opcode.o : opcode.c mem.h opcode.h lua.h types.h tree.h func.h hash.h inout.h \
-  table.h fallback.h 
+  table.h fallback.h luadebug.h
 parser.o : parser.c mem.h opcode.h lua.h types.h tree.h func.h hash.h inout.h \
   table.h 
 strlib.o : strlib.c lua.h lualib.h 

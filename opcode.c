@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.43 1995/10/13 15:16:25 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.44 1995/10/17 11:58:41 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -11,6 +11,7 @@ char *rcs_opcode="$Id: opcode.c,v 3.43 1995/10/13 15:16:25 roberto Exp roberto $
 #include <string.h>
 #include <math.h>
 
+#include "luadebug.h"
 #include "mem.h"
 #include "opcode.h"
 #include "hash.h"
@@ -353,7 +354,7 @@ void lua_error (char *s)
 }
 
 
-lua_Object luaD_stackedfunction (int level)
+lua_Object lua_stackedfunction (int level)
 {
   Object *p = top;
   while (--p >= stack)
@@ -364,7 +365,7 @@ lua_Object luaD_stackedfunction (int level)
 }
 
 
-void luaD_funcInfo (lua_Object func, char **filename, char **funcname,
+void lua_funcinfo (lua_Object func, char **filename, char **funcname,
                     char **objname, int *linedefined)
 {
   return luaI_funcInfo(Address(func), filename, funcname, objname, linedefined);

@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.22 1995/10/04 13:53:10 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.23 1995/10/11 20:50:56 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -14,6 +14,7 @@ char *rcs_iolib="$Id: iolib.c,v 1.22 1995/10/04 13:53:10 roberto Exp roberto $";
 #include <stdlib.h>
 
 #include "lua.h"
+#include "luadebug.h"
 #include "lualib.h"
 
 static FILE *in=stdin, *out=stdout;
@@ -580,7 +581,7 @@ static void io_exit (void)
 {
  lua_Object o = lua_getparam(1);
  if (lua_isstring(o))
-  printf("%s\n", lua_getstring(o));
+  fprintf(stderr, "%s\n", lua_getstring(o));
  exit(1);
 }
 
@@ -597,6 +598,33 @@ static void io_debug (void)
     if (gets(buffer) == 0) return;
     if (strcmp(buffer, "cont") == 0) return;
     lua_dostring(buffer);
+  }
+}
+
+
+static void print_message (void)
+{
+  lua_Object o = lua_getparam(1);
+  char *s = lua_isstring(o) ? lua_getstring(o) : "(no messsage)";
+  int level = 0;
+  lua_Object func;
+  fprintf(stderr, "lua: %s\n", s);
+  fprintf(stderr, "Active Stack:\n");
+  while ((func = lua_stackedfunction(level++)) != LUA_NOOBJECT)
+  {
+    char *filename; char *funcname;
+    char *objname; int linedefined;
+    lua_funcinfo(func, &filename, &funcname, &objname, &linedefined);
+    if (objname == NULL)
+      if (funcname)
+        fprintf(stderr, "\t%s\n", funcname);
+      else
+      {
+        fprintf(stderr, "\tmain of %s\n", filename);
+      }
+    else
+      fprintf(stderr, "\t%s:%s\n", objname, funcname);
+/*    fprintf(stderr, "\t(in file: %s)\n", filename); */
   }
 }
 
@@ -619,4 +647,5 @@ void iolib_open (void)
  lua_register ("beep",     io_beep);
  lua_register ("exit",     io_exit);
  lua_register ("debug",    io_debug);
+ lua_setfallback("error", print_message);
 }
