@@ -1,5 +1,5 @@
 /*
-** $Id: lzio.c,v 1.14 2001/03/26 14:31:49 roberto Exp $
+** $Id: lzio.c,v 1.15 2001/11/28 20:13:13 roberto Exp roberto $
 ** a generic input stream interface
 ** See Copyright Notice in lua.h
 */
@@ -33,12 +33,6 @@ ZIO* zmopen (ZIO* z, const char* b, size_t size, const char *name) {
   return z;
 }
 
-/* ------------------------------------------------------------ strings --- */
-
-ZIO* zsopen (ZIO* z, const char* s, const char *name) {
-  if (s==NULL) return NULL;
-  return zmopen(z, s, strlen(s), name);
-}
 
 /* -------------------------------------------------------------- FILEs --- */
 
