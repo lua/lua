@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.44 1997/06/18 21:20:45 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.45 1997/06/19 17:45:28 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -390,10 +390,11 @@ static void add_s (lua_Object newp, lua_Object table, int n)
     struct lbuff oldbuff;
     int status;
     lua_beginblock();
-    if (lua_istable(table))
+    if (lua_istable(table)) {
       lua_pushobject(table);
+      lua_pushnumber(n);
+    }
     push_captures();
-    lua_pushnumber(n);
     /* function may use lbuffer, so save it and create a new one */
     oldbuff = lbuffer;
     lbuffer.b = NULL; lbuffer.max = lbuffer.size = 0;
