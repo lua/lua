@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.54 1999/10/14 19:13:31 roberto Exp roberto $
+** $Id: lapi.c,v 1.55 1999/11/04 17:22:26 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -209,15 +209,15 @@ const char *lua_type (lua_Object o) {
 }
 
 int lua_isnil (lua_Object o) {
-  return (o!= LUA_NOOBJECT) && (ttype(Address(o)) == LUA_T_NIL);
+  return (o != LUA_NOOBJECT) && (ttype(Address(o)) == LUA_T_NIL);
 }
 
 int lua_istable (lua_Object o) {
-  return (o!= LUA_NOOBJECT) && (ttype(Address(o)) == LUA_T_ARRAY);
+  return (o != LUA_NOOBJECT) && (ttype(Address(o)) == LUA_T_ARRAY);
 }
 
 int lua_isuserdata (lua_Object o) {
-  return (o!= LUA_NOOBJECT) && (ttype(Address(o)) == LUA_T_USERDATA);
+  return (o != LUA_NOOBJECT) && (ttype(Address(o)) == LUA_T_USERDATA);
 }
 
 int lua_iscfunction (lua_Object o) {
@@ -225,7 +225,7 @@ int lua_iscfunction (lua_Object o) {
 }
 
 int lua_isnumber (lua_Object o) {
-  return (o!= LUA_NOOBJECT) && (tonumber(Address(o)) == 0);
+  return (o != LUA_NOOBJECT) && (tonumber(Address(o)) == 0);
 }
 
 int lua_isstring (lua_Object o) {
@@ -236,6 +236,11 @@ int lua_isstring (lua_Object o) {
 int lua_isfunction (lua_Object o) {
   int t = lua_tag(o);
   return (t == LUA_T_PROTO) || (t == LUA_T_CPROTO);
+}
+
+int lua_equalobj (lua_Object o1, lua_Object o2) {
+  if (o1 == LUA_NOOBJECT || o2 == LUA_NOOBJECT) return 0;
+  else return luaO_equalObj(Address(o1), Address(o2));
 }
 
 

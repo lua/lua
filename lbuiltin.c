@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.70 1999/11/04 17:22:26 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.71 1999/11/10 15:41:11 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -740,6 +740,10 @@ static void testC (void) {
       case 'n' : { int n=getnum(s);
                    n=lua_next(reg[n], (int)lua_getnumber(reg[getnum(s)]));
                    lua_pushnumber(n); break;
+                 }
+      case 'q' : { int n1=getnum(s); int n2=getnum(s);
+                   lua_pushnumber(lua_equalobj(reg[n1], reg[n2]));
+                   break;
                  }
       default: luaL_verror("unknown command in `testC': %c", *(s-1));
     }
