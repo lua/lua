@@ -1,7 +1,7 @@
 /*
 ** Module to control static tables
 ** TeCGraf - PUC-Rio
-** $Id: table.h,v 2.23 1997/03/31 14:02:58 roberto Exp roberto $
+** $Id: table.h,v 2.24 1997/04/07 14:48:53 roberto Exp roberto $
 */
 
 #ifndef table_h
@@ -33,7 +33,6 @@ void luaI_nextvar (void);
 TaggedString *luaI_createfixedstring  (char *str);
 int   lua_markobject      (TObject *o);
 int luaI_ismarked (TObject *o);
-Long luaI_collectgarbage (void);
 void  lua_pack            (void);
 
 
