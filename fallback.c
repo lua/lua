@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.6 1994/11/16 17:38:08 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.7 1994/11/18 19:46:21 roberto Exp roberto $";
 
 #include <stdio.h>
  
@@ -33,7 +33,6 @@ struct FB  luaI_fallBacks[] = {
 {"arith", {LUA_T_CFUNCTION, arithFB}},
 {"order", {LUA_T_CFUNCTION, orderFB}},
 {"concat", {LUA_T_CFUNCTION, concatFB}},
-{"unminus", {LUA_T_CFUNCTION, arithFB}},
 {"settable", {LUA_T_CFUNCTION, gettableFB}},
 {"gc", {LUA_T_CFUNCTION, GDFB}}
 };

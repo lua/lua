@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.17 1994/11/17 21:23:43 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.18 1994/11/18 19:46:21 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -989,7 +989,10 @@ static int lua_execute (Byte *pc, int base)
 
    case MINUSOP:
     if (tonumber(top-1))
-      do_call(&luaI_fallBacks[FB_UNMINUS].function, (top-stack)-1, 1, (top-stack)-1);
+    {
+      tag(top++) = LUA_T_NIL;
+      call_arith("unm");
+    }
     else
       nvalue(top-1) = - nvalue(top-1);
    break;
