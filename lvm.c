@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.270 2002/11/25 17:47:13 roberto Exp roberto $
+** $Id: lvm.c,v 1.271 2002/12/04 17:38:31 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -671,14 +671,23 @@ StkId luaV_execute (lua_State *L) {
         break;
       }
       case OP_TFORLOOP: {
-        setobjs2s(ra+4, ra+2);
-        setobjs2s(ra+3, ra+1);
-        setobjs2s(ra+2, ra);
-        L->top = ra+5;
-        luaD_call(L, ra+2, GETARG_C(i) + 1);
+        int nvar = GETARG_C(i) + 1;
+        StkId cb = ra + nvar + 2;  /* call base */
+        setobjs2s(cb, ra);
+        setobjs2s(cb+1, ra+1);
+        setobjs2s(cb+2, ra+2);
+        L->top = cb+3;  /* func. + 2 args (state and index) */
+        luaD_call(L, cb, nvar);
         L->top = L->ci->top;
-        if (ttisnil(XRA(i)+2)) pc++;  /* skip jump (break loop) */
-        else dojump(pc, GETARG_sBx(*pc) + 1);  /* else jump back */
+        ra = XRA(i);  /* call may change stack */
+        cb = ra + nvar + 2;
+        if (ttisnil(cb))  /* break loop? */
+          pc++;  /* skip jump (break loop) */
+        else {
+          while (nvar--)  /* move results to proper positions */
+            setobjs2s(ra+2+nvar, cb+nvar);
+          dojump(pc, GETARG_sBx(*pc) + 1);  /* jump back */
+        }
         break;
       }
       case OP_TFORPREP: {  /* for compatibility only */

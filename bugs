@@ -298,3 +298,8 @@ Fri Aug 30 13:49:14 EST 2002
 >> userdata may not be cleared properly
 (by Roberto; since 5.0a)
 
+** lparser.c
+Fri Dec  6 17:06:40 UTC 2002
+>> scope of generic for variables is not sound
+(by Gavin Wraith; since 5.0a)
+
