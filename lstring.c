@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.48 2000/12/28 12:55:41 roberto Exp roberto $
+** $Id: lstring.c,v 1.49 2001/01/10 17:41:50 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -43,7 +43,7 @@ void luaS_resize (lua_State *L, stringtable *tb, int newsize) {
       TString *next = p->nexthash;  /* save next */
       luint32 h = (tb == &L->strt) ? p->u.s.hash : IntPoint(p->u.d.value);
       int h1 = lmod(h, newsize);  /* new position */
-      LUA_ASSERT(h%newsize == lmod(h, newsize),
+      LUA_ASSERT((int)(h%newsize) == lmod(h, newsize),
                     "a&(x-1) == a%x, for x power of 2");
       p->nexthash = newhash[h1];  /* chain it in new position */
       newhash[h1] = p;

@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.96 2000/12/22 17:32:28 roberto Exp roberto $
+** $Id: liolib.c,v 1.97 2001/01/10 16:58:11 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -278,7 +278,7 @@ static int read_line (lua_State *L, FILE *f) {
 
 static void read_file (lua_State *L, FILE *f) {
   size_t len = 0;
-  size_t size = BUFSIZ;
+  size_t size = LUAL_BUFFERSIZE;
   char *buffer = NULL;
   for (;;) {
     char *newbuffer = (char *)realloc(buffer, size);
@@ -299,8 +299,8 @@ static void read_file (lua_State *L, FILE *f) {
 static int read_chars (lua_State *L, FILE *f, size_t n) {
   char *buffer;
   size_t n1;
-  char statbuff[BUFSIZ];
-  if (n <= BUFSIZ)
+  char statbuff[LUAL_BUFFERSIZE];
+  if (n <= LUAL_BUFFERSIZE)
     buffer = statbuff;
   else {
     buffer = (char  *)malloc(n);
