@@ -1,11 +1,12 @@
 /*
-** $Id: ltests.c,v 1.9 2000/03/10 18:37:44 roberto Exp roberto $
+** $Id: ltests.c,v 1.10 2000/03/16 20:35:07 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
 
 
 #include <ctype.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -14,6 +15,7 @@
 #include "lapi.h"
 #include "lauxlib.h"
 #include "lmem.h"
+#include "lopcodes.h"
 #include "lstate.h"
 #include "lstring.h"
 #include "ltable.h"
@@ -28,6 +30,131 @@ void luaB_opentests (lua_State *L);
 ** The whole module only makes sense with DEBUG on
 */
 #ifdef DEBUG
+
+
+
+static void setnameval (lua_State *L, lua_Object t, const char *name, int val) {
+  lua_pushobject(L, t);
+  lua_pushstring(L, name);
+  lua_pushnumber(L, val);
+  lua_settable(L);
+}
+
+
+/*
+** {======================================================
+** Disassembler
+** =======================================================
+*/
+
+
+#define O(o)	sprintf(buff, "%s", o)
+#define U(o)	sprintf(buff, "%-12s%4u", o, GETARG_U(i))
+#define S(o)	sprintf(buff, "%-12s%4d", o, GETARG_S(i))
+#define AB(o)	sprintf(buff, "%-12s%4d %4d", o, GETARG_A(i), GETARG_B(i))
+#define sAB(o)	sprintf(buff, "%-12s%4d %4d", o, GETARG_sA(i), GETARG_B(i))
+
+
+
+static int printop (lua_State *L, Instruction i) {
+  char buff[100];
+  switch (GET_OPCODE(i)) {
+    case OP_END: O("END"); lua_pushstring(L, buff); return 0;
+    case OP_RETURN: U("RETURN"); break;
+    case OP_CALL: AB("CALL"); break;
+    case OP_TAILCALL: AB("TAILCALL"); break;
+    case OP_PUSHNIL: U("PUSHNIL"); break;
+    case OP_POP: U("POP"); break;
+    case OP_PUSHINT: S("PUSHINT"); break;
+    case OP_PUSHSTRING: U("PUSHSTRING"); break;
+    case OP_PUSHNUM: U("PUSHNUM"); break;
+    case OP_PUSHNEGNUM: U("PUSHNEGNUM"); break;
+    case OP_PUSHUPVALUE: U("PUSHUPVALUE"); break;
+    case OP_PUSHLOCAL: U("PUSHLOCAL"); break;
+    case OP_GETGLOBAL: U("GETGLOBAL"); break;
+    case OP_GETTABLE: O("GETTABLE"); break;
+    case OP_GETDOTTED: U("GETDOTTED"); break;
+    case OP_PUSHSELF: U("PUSHSELF"); break;
+    case OP_CREATETABLE: U("CREATETABLE"); break;
+    case OP_SETLOCAL: U("SETLOCAL"); break;
+    case OP_SETGLOBAL: U("SETGLOBAL"); break;
+    case OP_SETTABLEPOP: O("SETTABLEPOP"); break;
+    case OP_SETTABLE: U("SETTABLE"); break;
+    case OP_SETLIST: AB("SETLIST"); break;
+    case OP_SETMAP: U("SETMAP"); break;
+    case OP_ADD: O("ADD"); break;
+    case OP_INCLOCAL: sAB("INCLOCAL"); break;
+    case OP_ADDI: S("ADDI"); break;
+    case OP_SUB: O("SUB"); break;
+    case OP_MULT: O("MULT"); break;
+    case OP_DIV: O("DIV"); break;
+    case OP_POW: O("POW"); break;
+    case OP_CONC: U("CONC"); break;
+    case OP_MINUS: O("MINUS"); break;
+    case OP_NOT: O("NOT"); break;
+    case OP_JMPNEQ: S("JMPNEQ"); break;
+    case OP_JMPEQ: S("JMPEQ"); break;
+    case OP_JMPLT: S("JMPLT"); break;
+    case OP_JMPLE: S("JMPLE"); break;
+    case OP_JMPGT: S("JMPGT"); break;
+    case OP_JMPGE: S("JMPGE"); break;
+    case OP_JMPONT: S("JMPONT"); break;
+    case OP_JMPONF: S("JMPONF"); break;
+    case OP_JMP: S("JMP"); break;
+    case OP_PUSHNILJMP: O("PUSHNILJMP"); break;
+    case OP_JMPT: S("JMPT"); break;
+    case OP_JMPF: S("JMPF"); break;
+    case OP_CLOSURE: AB("CLOSURE"); break;
+    case OP_SETLINE: U("SETLINE"); break;
+  }
+  lua_pushstring(L, buff);
+  return 1;
+}
+
+static void printcode (lua_State *L) {
+  lua_Object o = luaL_nonnullarg(L, 1);
+  lua_Object t = lua_createtable(L);
+  Instruction *pc;
+  Proto *p;
+  int res;
+  luaL_arg_check(L, ttype(o) == TAG_LCLOSURE, 1, "Lua function expected");
+  p = clvalue(o)->f.l;
+  setnameval(L, t, "maxstack", p->maxstacksize);
+  setnameval(L, t, "numparams", p->numparams);
+  pc = p->code;
+  do {
+    lua_pushobject(L, t);
+    lua_pushnumber(L, pc - p->code + 1);
+    res = printop(L, *pc++);
+    lua_settable(L);
+  } while (res);
+  lua_pushobject(L, t);
+}
+
+/* }====================================================== */
+
+
+
+static void get_limits (lua_State *L) {
+  lua_Object t = lua_createtable(L);
+  setnameval(L, t, "SIZE_OP", SIZE_OP);
+  setnameval(L, t, "SIZE_U", SIZE_U);
+  setnameval(L, t, "SIZE_A", SIZE_A);
+  setnameval(L, t, "SIZE_B", SIZE_B);
+  setnameval(L, t, "MAXARG_U", MAXARG_U);
+  setnameval(L, t, "MAXARG_S", MAXARG_S);
+  setnameval(L, t, "MAXARG_A", MAXARG_A);
+  setnameval(L, t, "MAXARG_B", MAXARG_B);
+  setnameval(L, t, "MAXARG_sA", MAXARG_sA);
+  setnameval(L, t, "MAXSTACK", MAXSTACK);
+  setnameval(L, t, "MAXLOCALS", MAXLOCALS);
+  setnameval(L, t, "MAXUPVALUES", MAXUPVALUES);
+  setnameval(L, t, "MAXVARSLH", MAXVARSLH);
+  setnameval(L, t, "MAXPARAMS", MAXPARAMS);
+  setnameval(L, t, "LFPF", LFIELDS_PER_FLUSH);
+  setnameval(L, t, "RFPF", RFIELDS_PER_FLUSH);
+  lua_pushobject(L, t);
+}
 
 
 static void mem_query (lua_State *L) {
@@ -66,7 +193,7 @@ static void table_query (lua_State *L) {
 }
 
 
-static void query_strings (lua_State *L) {
+static void string_query (lua_State *L) {
   int h = luaL_check_int(L, 1) - 1;
   int s = luaL_opt_int(L, 2, 0) - 1;
   if (s==-1) {
@@ -85,7 +212,14 @@ static void query_strings (lua_State *L) {
 }
 
 
-static const char *delimits = " \t\n,;";
+/*
+** {======================================================
+** function to test the API with C. It interprets a kind of "assembler"
+** language with calls to the API, so the test can be driven by Lua code
+** =======================================================
+*/
+
+static const char *const delimits = " \t\n,;";
 
 static void skip (const char **pc) {
   while (**pc != '\0' && strchr(delimits, **pc)) (*pc)++;
@@ -117,10 +251,7 @@ static const char *getname (const char **pc) {
 
 #define EQ(s1)	(strcmp(s1, inst) == 0)
 
-/*
-** function to test the API with C. It interprets a kind of "assembler"
-** language with calls to the API, so the test can be driven by Lua code
-*/
+
 static void testC (lua_State *L) {
   lua_Object reg[10];
   const char *pc = luaL_check_string(L, 1);
@@ -265,10 +396,15 @@ static void testC (lua_State *L) {
   }
 }
 
+/* }====================================================== */
+
+
 
 static const struct luaL_reg tests_funcs[] = {
   {"hash", hash_query},
-  {"querystr", query_strings},
+  {"limits", get_limits},
+  {"printcode", printcode},
+  {"querystr", string_query},
   {"querytab", table_query},
   {"testC", testC},
   {"totalmem", mem_query}
