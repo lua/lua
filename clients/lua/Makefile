@@ -13,7 +13,7 @@ T=$(BIN)/lua
 
 all: $T
 
-$T: $(OBJS)
+$T: $(OBJS) $(LIB)/liblua.a $(LIB)/liblualib.a
 	$(CC) -o $@ $(OBJS) -L$(LIB) -llua -llualib -lm
 
 dynamic:

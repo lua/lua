@@ -3,9 +3,10 @@
 ** print bytecodes
 */
 
-char* rcs_print="$Id: print.c,v 1.6 1996/03/12 20:00:24 lhf Exp $";
+char* rcs_print="$Id: print.c,v 1.11 1996/11/18 11:24:16 lhf Exp $";
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "luac.h"
 #include "print.h"
@@ -24,7 +25,7 @@ static void PrintCode(Byte* code, Byte* end)
  {
 	OpCode op=(OpCode)*p;
 	if (op>SETLINE) op=SETLINE+1;
-	printf("%6d\t%s",p-code,OpCodeName[op]);
+	printf("%6d\t%s",(int)(p-code),OpCodeName[op]);
 	switch (op)
 	{
 	case PUSHNIL:
@@ -109,44 +110,44 @@ static void PrintCode(Byte* code, Byte* end)
 	case IFFUPJMP:
 	case SETLINE:
 	{
-		CodeWord c;
+		Word w;
 		p++;
-		get_word(c,p);
-		printf("\t%d",c.w);
+		get_word(w,p);
+		printf("\t%d",w);
 		break;
 	}
 	case PUSHFLOAT:
 	{
-		CodeFloat c;
+		float f;
 		p++;
-		get_float(c,p);
-		printf("\t%g",c.f);
+		get_float(f,p);
+		printf("\t%g",f);
 		break;
 	}
 	case PUSHSELF:
 	case PUSHSTRING:
 	{
-		CodeWord c;
+		Word w;
 		p++;
-		get_word(c,p);
-		printf("\t%d\t; \"%s\"",c.w,StrStr(c.w));
+		get_word(w,p);
+		printf("\t%d\t; \"%s\"",w,StrStr(w));
 		break;
 	}
 	case PUSHFUNCTION:
 	{
-		CodeCode c;
+		TFunc* tf;
 		p++;
-		get_code(c,p);
-		printf("\t%p\t; \"%s\":%d",c.tf,c.tf->fileName,c.tf->lineDefined);
+		get_code(tf,p);
+		printf("\t%p\t; \"%s\":%d",tf,tf->fileName,tf->lineDefined);
 		break;
 	}
 	case PUSHGLOBAL:
 	case STOREGLOBAL:
 	{
-		CodeWord c;
+		Word w;
 		p++;
-		get_word(c,p);
-		printf("\t%d\t; %s",c.w,VarStr(c.w));
+		get_word(w,p);
+		printf("\t%d\t; %s",w,VarStr(w));
 		break;
 	}
 	case STORELIST:
@@ -161,10 +162,10 @@ static void PrintCode(Byte* code, Byte* end)
 		p++;
 		while (n--)
 		{
-			CodeWord c;
-			printf("\n%6d\t      FIELD",p-code);
-			get_word(c,p);
-			printf("\t%d\t; \"%s\"",c.w,StrStr(c.w));
+			Word w;
+			printf("\n%6d\t      FIELD",(int)(p-code));
+			get_word(w,p);
+			printf("\t%d\t; \"%s\"",w,StrStr(w));
 		}
 		break;
 	}

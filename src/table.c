@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.54 1996/05/06 14:29:35 roberto Exp $";
+char *rcs_table="$Id: table.c,v 2.58 1996/11/01 12:47:45 roberto Exp $";
 
 #include "mem.h"
 #include "opcode.h"
@@ -39,6 +39,7 @@ static struct {
   lua_CFunction func;
 } int_funcs[] = {
   {"assert", luaI_assert},
+  {"call", luaI_call},
   {"dofile", lua_internaldofile},
   {"dostring", lua_internaldostring},
   {"error", luaI_error},
@@ -59,13 +60,16 @@ static struct {
 void luaI_initsymbol (void)
 {
   int i;
+  Word n;
   lua_maxsymbol = BUFFER_BLOCK;
   lua_table = newvector(lua_maxsymbol, Symbol);
   for (i=0; i<INTFUNCSIZE; i++)
   {
-    Word n = luaI_findsymbolbyname(int_funcs[i].name);
+    n = luaI_findsymbolbyname(int_funcs[i].name);
     s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = int_funcs[i].func;
   }
+  n = luaI_findsymbolbyname("_VERSION_");
+  s_tag(n) = LUA_T_STRING; s_tsvalue(n) = lua_createstring(LUA_VERSION);
 }
 
 
@@ -213,7 +217,7 @@ void lua_pack (void)
   unsigned long recovered = 0;
   if (nentity++ < block) return;
   recovered = luaI_collectgarbage();
-  block = block*2*(1.0 - (float)recovered/nentity);
+  block = 2*(block-recovered);
   nentity -= recovered;
 } 
 
@@ -239,12 +243,7 @@ static void lua_nextvar (void)
  else
    next = luaI_findsymbolbyname(lua_getstring(o)) + 1;
  while (next < lua_ntable && s_tag(next) == LUA_T_NIL) next++;
- if (next >= lua_ntable)
- {
-  lua_pushnil();
-  lua_pushnil();
- }
- else
+ if (next < lua_ntable)
  {
   lua_pushstring(lua_table[next].varname->str);
   luaI_pushobject(&s_object(next));

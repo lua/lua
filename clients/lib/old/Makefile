@@ -1,6 +1,6 @@
 # makefile for lualib
 
-LUA= ../..
+LUA= ../../..
 
 include $(LUA)/config
 
@@ -9,10 +9,10 @@ EXTRA_DEFS= $(POPEN) $(NOSTRERROR)
 OBJS= iolib.o mathlib.o strlib.o
 SRCS= iolib.c mathlib.c strlib.c
 
-SLIB= $(LIB)/liblualib.a
+SLIB= $(LIB)/liboldlualib.a
 
 # dynamic libraries only work for SunOs
-DLIB= $(LIB)/liblualib.so.$(VERSION)
+DLIB= $(LIB)/liboldlualib.so.$(VERSION)
 
 all: $(SLIB)
 
@@ -29,7 +29,7 @@ clean:
 	rm -f $(OBJS) $(SLIB) $(DLIB)
 
 co:
-	co -f -M $(SRCS)
+	co -f -M -rv2_4 $(SRCS)
 
 klean:	clean
 	rm -f $(SRCS)

@@ -1,7 +1,7 @@
 /*
 ** mem.c
 ** memory manager for lua
-** $Id: mem.h,v 1.7 1996/04/22 18:00:37 roberto Exp $
+** $Id: mem.h,v 1.8 1996/05/24 14:31:10 roberto Exp $
 */
  
 #ifndef mem_h
@@ -24,12 +24,12 @@
 
 
 void luaI_free (void *block);
-void *luaI_malloc (unsigned long size);
 void *luaI_realloc (void *oldblock, unsigned long size);
 void *luaI_buffer (unsigned long size);
 int luaI_growvector (void **block, unsigned long nelems, int size,
                        char *errormsg, unsigned long limit);
 
+#define luaI_malloc(s)	luaI_realloc(NULL, (s))
 #define new(s)          ((s *)luaI_malloc(sizeof(s)))
 #define newvector(n,s)  ((s *)luaI_malloc((n)*sizeof(s)))
 #define growvector(old,n,s,e,l) \

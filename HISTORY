@@ -1,4 +1,11 @@
-Current version is 2.4 (version 2.3 was never publicly released)
+Current version is 2.5
+
+* Changes since version 2.4
+  + io and string libraries are now based on pattern matching;
+    the old libraries are still available for compatibility
+  + dofile and dostring can now return values (via return statement)
+  + better support for 16- and 64-bit machines
+  + expanded documentation, with more examples
 
 * Changes since version 2.2
   + external compiler creates portable binary files that can be loaded faster

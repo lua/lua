@@ -3,7 +3,7 @@
 ** load bytecodes from files
 */
 
-char* rcs_undump="$Id: undump.c,v 1.14 1996/03/14 17:31:15 lhf Exp $";
+char* rcs_undump="$Id: undump.c,v 1.21 1996/11/18 11:18:29 lhf Exp $";
 
 #include <stdio.h>
 #include <string.h>
@@ -90,7 +90,7 @@ static void FixCode(Byte* code, Byte* end)	/* swap words */
 		p+=3;
 		break;
 	case PUSHFUNCTION:
-		p+=5;
+		p+=5;			/* TODO: use sizeof(TFunc*) or old? */
 		break;
 	case PUSHWORD:
 	case PUSHSELF:
@@ -111,7 +111,7 @@ static void FixCode(Byte* code, Byte* end)	/* swap words */
 		p+=3;
 		break;
 	}
-	case PUSHFLOAT:
+	case PUSHFLOAT:			/* assumes sizeof(float)==4 */
 	{
 		Byte t;
 		t=p[1]; p[1]=p[4]; p[4]=t;
@@ -142,13 +142,11 @@ static void Unthread(Byte* code, int i, int v)
 {
  while (i!=0)
  {
-  CodeWord c;
+  Word w;
   Byte* p=code+i;
-  get_word(c,p);
-  i=c.w;
-  c.w=v;
-  p[-2]=c.m.c1;
-  p[-1]=c.m.c2;
+  memcpy(&w,p,sizeof(w));
+  i=w; w=v;
+  memcpy(p,&w,sizeof(w));
  }
 }
 
@@ -174,9 +172,9 @@ static int LoadSize(FILE* D)
  return s;
 }
 
-static char* LoadBlock(int size, FILE* D)
+static void* LoadBlock(int size, FILE* D)
 {
- char* b=luaI_malloc(size);
+ void* b=luaI_malloc(size);
  fread(b,size,1,D);
  return b;
 }
@@ -208,13 +206,9 @@ static void LoadFunction(FILE* D)
  }
  else						/* fix PUSHFUNCTION */
  {
-  CodeCode c;
-  Byte* p;
   tf->marked=LoadWord(D);
   tf->fileName=Main->fileName;
-  p=Main->code+tf->marked;
-  c.tf=tf;
-  *p++=c.m.c1; *p++=c.m.c2; *p++=c.m.c3; *p++=c.m.c4;
+  memcpy(Main->code+tf->marked,&tf,sizeof(tf));
   lastF=lastF->next=tf;
  }
  tf->code=LoadBlock(tf->size,D);
@@ -256,8 +250,21 @@ static void LoadHeader(FILE* D)			/* TODO: error handling */
 {
  Word w,tw=TEST_WORD;
  float f,tf=TEST_FLOAT;
+ int version;
  LoadSignature(D);
- getc(D);					/* skip version */
+ version=getc(D);
+ if (version>0x23)				/* after 2.5 */
+ {
+  int oldsizeofW=getc(D);
+  int oldsizeofF=getc(D);
+  int oldsizeofP=getc(D);
+  if (oldsizeofW!=2)
+   lua_error("cannot load binary file created on machine with sizeof(Word)!=2");
+  if (oldsizeofF!=4)
+   lua_error("cannot load binary file created on machine with sizeof(float)!=4. not an IEEE machine?");
+  if (oldsizeofP!=sizeof(TFunc*))		/* TODO: pack */
+   lua_error("cannot load binary file: different pointer sizes");
+ }
  fread(&w,sizeof(w),1,D);			/* test word */
  if (w!=tw)
  {
