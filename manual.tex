@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.5 1996/02/05 14:52:47 roberto Exp roberto $
+% $Id: manual.tex,v 1.6 1996/02/05 21:32:19 roberto Exp roberto $
 
 \documentstyle[A4,11pt,bnf]{article}
 
@@ -32,10 +32,9 @@ Waldemar Celes Filho
 Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1996/02/05 14:52:47 $}
+\date{\small \verb$Date: 1996/02/05 21:32:19 $}
 
 \maketitle
-
 
 \begin{abstract}
 \noindent
@@ -572,7 +571,7 @@ into the variable \verb'var'.
 Parameters act as local variables,
 initialized with the argument values.
 \begin{Produc}
-\produc{parlist1}{'name' \rep{\ter{,} name}}
+\produc{parlist1}{name \rep{\ter{,} name}}
 \end{Produc}
 
 Results are returned using the \verb'return' statement (\see{return}).
@@ -704,11 +703,12 @@ is terminated returning an error condition.
 The only argument to the error fallback function is a string describing
 the error.
 The standard I/O library redefines this fallback,
-using the debug API, in order to print some extra informations,
+using the debug facilities (\see{debugI},
+in order to print some extra informations,
 like the stack of calls.
 For more information about an error,
 the Lua program can include the compilation pragma \verb'$debug'.
-\index{debug pragma}
+\index{debug pragma}\label{pragma}
 This pragma must be written in a line by itself.
 When an error occurs in a program compiled with this option,
 the error routine is able to print also the lines where the calls
@@ -1454,6 +1454,135 @@ hours ([0-23]), minutes, and seconds.
 % This function then returns and the execution of the program continues.
 
 
+
+\section{The Debuger Interface} \label{debugI}
+
+Lua has no built in debuger facilities.
+Instead, it offers a special interface,
+by means of functions and {\em hooks},
+which allows the construction of different
+kinds of debugers, profiles, and other tools
+that need ``inside'' information from the interpreter.
+This interface is declared in the file \verb'luadebug.h'.
+
+\subsection{Stack and Function Information}
+
+The main function to get information about the interpreter stack
+is
+\begin{verbatim}
+lua_Function lua_stackedfunction (int level);
+\end{verbatim}
+It returns a handle (\verb'lua_Function') to the {\em activation record}
+of the function executing at a given level.
+Level 0 is the current running function,
+while level $n+1$ is the function that has called level $n$.
+When called with a level greater than the stack depth,
+\verb'lua_stackedfunction' returns \verb'LUA_NOOBJECT'.
+
+The type \verb'lua_Function' is just another name
+to \verb'lua_Object'.
+Although, in this library,
+a \verb'lua_Function' can be used wherever a \verb'lua_Object' is required,
+a parameter \verb'lua_Function' accepts only a handle returned by
+\verb'lua_stackedfunction'.
+
+Three other functions produce extra information about a function:
+\begin{verbatim}
+void lua_funcinfo (lua_Object func, char **filename, int *linedefined);
+int lua_currentline (lua_Function func);
+char *lua_getobjname (lua_Object o, char **name);
+\end{verbatim}
+\verb'lua_funcinfo' gives the file name and the line where the
+given function has been defined.
+If the ``function'' is in fact the main code of a chunk,
+\verb'linedefined' is 0.
+If the function is a C function,
+\verb'linedefined' is -1, and \verb'filename' is \verb'"(C)"'.
+
+The function \verb'lua_currentline' gives the current line where
+a given function is executing.
+It only works if the function has been pre-compiled with debug
+information (\see{pragma}).
+When no line information is available, it returns -1.
+
+Function \verb'lua_getobjname' tries to find a reasonable name for
+a given function.
+Because functions in Lua are first class values,
+they do not have a fixed name.
+Some functions may be the value of many global variables,
+while others may be stored only in a table field.
+Function \verb'lua_getobjname' first checks whether the given
+function is a fallback.
+If so, it returns the string \verb'"fallback"',
+and \verb'name' is set to point to the fallback name.
+Otherwise, if the given function is the value of a global variable,
+\verb'lua_getobjname' returns the string \verb'"global"',
+while \verb'name' points to the variable name.
+If the given function is neither a fallback nor a global variable,
+\verb'lua_getobjname' returns the empty string,
+and \verb'name' is set to \verb'NULL'.
+
+\subsection{Manipulating Local Variables}
+
+The following functions allow the manipulation of the
+local variables of a given activation record.
+They only work if the function has been pre-compiled with debug
+information (\see{pragma}).
+\begin{verbatim}
+lua_Object lua_getlocal (lua_Function func, int local_number, char **name);
+int lua_setlocal (lua_Function func, int local_number);
+\end{verbatim}
+The first one returns the value of a local variable,
+and sets \verb'name' to point to the variable name.
+\verb'local_number' is an index for local variables.
+The first parameter has index 1, and so on, until the
+last active local variable.
+When called with a \verb'local_number' greater than the
+number of active local variables,
+or if the activation record has no debug information,
+\verb'lua_getlocal' returns \verb'LUA_NOOBJECT'.
+
+The function \verb'lua_setlocal' sets the local variable
+\verb'local_number' to the value previously pushed on the stack
+(\see{valuesCLua}).
+If the function succeeds it returns 1.
+If \verb'local_number' is greater than the number
+of active local variables,
+or if the activation record has no debug information,
+this function fails and returns 0.
+
+\subsection{Hooks}
+
+The Lua interpreter offers two hooks for debug purposes:
+\begin{verbatim}
+typedef void (*lua_CHFunction) (lua_Function func, char *file, int line);
+typedef void (*lua_LHFunction) (int line);
+\end{verbatim}
+The first one is called whenever the interpreter enters or leaves a
+function.
+When entering a function,
+its parameters are a handle to the function activation record,
+plus the file and the line where the function is defined (the same
+information which is provided by \verb'lua_funcinfo');
+when leaving a function, \verb'func' is \verb'LUA_NOOBJECT',
+\verb'file' is \verb'"(return)"', and \verb'line' is 0.
+
+The other hook is called every time the interpreter changes
+the line of code it is executing.
+Its only parameter is the line number
+(the same information which is provided by the call
+\verb'lua_currentline(lua_stackedfunction(0))').
+This second hook is only called if the active function
+has been pre-compiled with debug information (\see{pragma}).
+
+To set these hooks, there are the functions:
+\begin{verbatim}
+lua_LHFunction lua_setlinehook (lua_LHFunction hook);
+lua_CHFunction lua_setcallhook (lua_CHFunction hook);
+\end{verbatim}
+Both return the previous hook.
+
+
 \section{Some Examples}
 
 This section gives examples showing some features of Lua.
@@ -1473,7 +1602,8 @@ Arrays can be indexed by 0, negative numbers, or any other value (but \nil).
 Records are also trivially implemented by the syntactic sugar
 \verb'a.x'.
 
-The best way to implement a set is to use the indices of a table.
+The best way to implement a set is to store
+its elements as indices of a table.
 The statement \verb's = {}' creates an empty set \verb's'. 
 The statement \verb's[x] = 1' inserts the value of \verb'x' into
 the set \verb's'.
@@ -1874,8 +2004,8 @@ The authors would like to thank CENPES/PETROBR\'AS which,
 jointly with TeCGraf, used extensively early versions of
 this system and gave valuable comments.
 The authors would also like to thank Carlos Henrique Levy,
-who found the name of the game%
-\footnote{BTW, Lua means {\em moon} in Portuguese.}.
+who found the name of the game.
+Lua means {\em moon} in Portuguese.
 
 
 
@@ -1945,7 +2075,10 @@ Special care should be taken with macros like
 \verb'lua_getindexed' and \verb'lua_getfield'.
 \end{itemize}
 
+\pagebreak
+\tableofcontents
 \newcommand{\indexentry}[2]{\item {#1} #2}
+%\catcode`\_=12
 \begin{theindex}
 \input{manual.idx}
 \end{theindex}
