@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.45 1996/05/22 21:59:07 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.46 1996/05/27 14:06:58 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -32,8 +32,6 @@ static void pushresult (int i)
 {
   if (i)
     lua_pushnumber (1);
-  else
-   lua_pushnil();
 }
 
 static void closeread (void)
@@ -106,9 +104,7 @@ static void io_writeto (void)
  {
    char *s = lua_check_string(1, "writeto");
    FILE *fp = (*s == '|') ? popen(s+1,"w") : fopen(s,"w");
-   if (fp == NULL)
-    lua_pushnil();
-   else
+   if (fp)
    {
     closewrite();
     out = fp;
@@ -130,9 +126,7 @@ static void io_appendto (void)
 {
  char *s = lua_check_string(1, "appendto");
  FILE *fp = fopen (s, "a");
- if (fp == NULL)
-  lua_pushnil();
- else
+ if (fp)
  {
   if (out != stdout) fclose (out);
   out = fp;
@@ -156,7 +150,7 @@ static char getformat (char *f, int *just, long *m, int *n)
       break;
     default:
       t = 0;  /* to avoid compiler warnings */
-      lua_arg_error("read/write (format)");
+      lua_arg_check(0, "read/write (format)");
   }
   *just = (*f == '<' || *f == '>' || *f == '|') ? *f++ : '>';
   if (isdigit(*f))
@@ -225,16 +219,11 @@ static void read_free (void)
   while (isspace(c=fgetc(in)))
    ;
   if (c == EOF)
-  {
-    lua_pushnil();
     return;
-  }
   if (c == '\"' || c == '\'')
   { /* string */
     c = read_until_char(c);
-    if (c == EOF)
-      lua_pushnil();
-    else
+    if (c != EOF)
       lua_pushstring(luaI_addchar(0));
   }
   else
@@ -274,8 +263,6 @@ static void io_read (void)
         s = luaI_addchar(0);
         if ((m >= 0 && strlen(s) == m) || (m < 0 && strlen(s) > 0))
           lua_pushstring(s);
-        else
-          lua_pushnil();
         break;
       }
 
@@ -293,12 +280,10 @@ static void io_read (void)
         }
         if (result == 1)
           lua_pushnumber(d);
-        else
-          lua_pushnil();
         break;
       }
       default:
-        lua_arg_error("read (format)");
+        lua_arg_check(0, "read (format)");
     }
   }
 }
@@ -452,8 +437,6 @@ static void io_write (void)
   }
   if (status)
     lua_pushnumber(status);
-  else
-    lua_pushnil();
 }
 
 /*
