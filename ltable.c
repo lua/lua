@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.129 2003/03/18 12:50:04 roberto Exp roberto $
+** $Id: ltable.c,v 1.130 2003/03/20 20:26:33 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -21,6 +21,7 @@
 ** performance penalties.
 */
 
+#include <string.h>
 
 #define ltable_c
 
@@ -54,17 +55,41 @@
 #endif
 
 
-#define hashg(t,n)      (gnode(t, lmod((n), sizenode(t))))
+#define hashpow2(t,n)      (gnode(t, lmod((n), sizenode(t))))
   
-#define hashnum(t,n)    hashg(t, cast(lu_hash, cast(ls_hash, (n))))
-#define hashstr(t,str)  hashg(t, (str)->tsv.hash)
-#define hashboolean(t,p)        hashg(t, p)
+#define hashstr(t,str)  hashpow2(t, (str)->tsv.hash)
+#define hashboolean(t,p)        hashpow2(t, p)
+
 
 /*
-** avoid modulus by power of 2 for pointers, as they tend to have many
-** 2 factors.
+** for some types, it is better to avoid modulus by power of 2, as
+** they tend to have many 2 factors.
 */
-#define hashpointer(t,p)	(gnode(t, (IntPoint(p) % ((sizenode(t)-1)|1))))
+#define hashmod(t,n)	(gnode(t, ((n) % ((sizenode(t)-1)|1))))
+
+
+#define hashpointer(t,p)	hashmod(t, IntPoint(p))
+
+
+/*
+** number of ints inside a lua_Number
+*/
+#define numints		cast(int, sizeof(lua_Number)/sizeof(int))
+
+
+/*
+** hash for lua_Numbers
+*/
+static Node *hashnum (const Table *t, lua_Number n) {
+  unsigned int a[numints];
+  int i;
+  n += 1;  /* normalize number (avoid -0) */
+  lua_assert(sizeof(a) <= sizeof(n));
+  memcpy(a, &n, sizeof(a));
+  for (i = 1; i < numints; i++) a[0] += a[i];
+  return hashmod(t, cast(lu_hash, a[0]));
+}
+
 
 
 /*
@@ -73,11 +98,8 @@
 */
 Node *luaH_mainposition (const Table *t, const TObject *key) {
   switch (ttype(key)) {
-    case LUA_TNUMBER: {
-      int ikey;
-      lua_number2int(ikey, nvalue(key));
-      return hashnum(t, ikey);
-    }
+    case LUA_TNUMBER:
+      return hashnum(t, nvalue(key));
     case LUA_TSTRING:
       return hashstr(t, tsvalue(key));
     case LUA_TBOOLEAN:
@@ -416,9 +438,10 @@ const TObject *luaH_getnum (Table *t, int key) {
   if (1 <= key && key <= t->sizearray)
     return &t->array[key-1];
   else {
-    Node *n = hashnum(t, key);
+    lua_Number nk = cast(lua_Number, key);
+    Node *n = hashnum(t, nk);
     do {  /* check whether `key' is somewhere in the chain */
-      if (ttisnumber(gkey(n)) && nvalue(gkey(n)) == (lua_Number)key)
+      if (ttisnumber(gkey(n)) && nvalue(gkey(n)) == nk)
         return gval(n);  /* that's it */
       else n = n->next;
     } while (n);
