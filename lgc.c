@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.130 2002/03/07 18:14:29 roberto Exp roberto $
+** $Id: lgc.c,v 1.131 2002/03/20 18:37:28 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -234,10 +234,7 @@ static void traversetable (GCState *st, Table *h) {
 }
 
 
-static void markall (GCState *st) {
-  lua_assert(hvalue(defaultmeta(st->L))->flags == cast(unsigned short, ~0));
-                                                      /* table is unchanged */
-  markstacks(st); /* mark all stacks */
+static void propagatemarks (GCState *st) {
   while (st->tmark) {  /* traverse marked tables */
     Table *h = st->tmark;  /* get first table from list */
     st->tmark = h->mark;  /* remove it from list */
@@ -456,10 +453,11 @@ void luaC_collectgarbage (lua_State *L) {
   st.L = L;
   st.tmark = NULL;
   st.toclear = NULL;
-  markall(&st);  /* mark all reachable objects */
+  markstacks(&st); /* mark all stacks */
+  propagatemarks(&st);  /* mark all reachable objects */
   separateudata(L);  /* separate userdata to be preserved */
   marktmu(&st);  /* mark `preserved' userdata */
-  markall(&st);  /* remark */
+  propagatemarks(&st);  /* remark */
   cleartables(st.toclear);
   luaC_collect(L, 0);
   checkMbuffer(L);
