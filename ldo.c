@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.11 2004/09/22 12:37:52 roberto Exp roberto $
+** $Id: ldo.c,v 2.12 2004/12/01 15:52:54 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -147,7 +147,7 @@ void luaD_growstack (lua_State *L, int n) {
 }
 
 
-static CallInfo *luaD_growCI (lua_State *L) {
+static CallInfo *growCI (lua_State *L) {
   if (L->size_ci > LUA_MAXCALLS)  /* overflow while handling overflow? */
     luaD_throw(L, LUA_ERRERR);
   else {
@@ -238,7 +238,7 @@ static StkId tryfuncTM (lua_State *L, StkId func) {
 
 
 #define inc_ci(L) \
-  ((L->ci == L->end_ci) ? luaD_growCI(L) : \
+  ((L->ci == L->end_ci) ? growCI(L) : \
    (condhardstacktests(luaD_reallocCI(L, L->size_ci)), ++L->ci))
 
 

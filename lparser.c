@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.8 2004/12/03 20:35:33 roberto Exp roberto $
+** $Id: lparser.c,v 2.9 2004/12/03 20:44:19 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -423,7 +423,7 @@ static void field (LexState *ls, expdesc *v) {
 }
 
 
-static void luaY_index (LexState *ls, expdesc *v) {
+static void yindex (LexState *ls, expdesc *v) {
   /* index -> '[' expr ']' */
   next(ls);  /* skip the '[' */
   expr(ls, v);
@@ -459,7 +459,7 @@ static void recfield (LexState *ls, struct ConsControl *cc) {
     checkname(ls, &key);
   }
   else  /* ls->t.token == '[' */
-    luaY_index(ls, &key);
+    yindex(ls, &key);
   check(ls, '=');
   luaK_exp2RK(fs, &key);
   expr(ls, &val);
@@ -706,7 +706,7 @@ static void primaryexp (LexState *ls, expdesc *v) {
       case '[': {  /* `[' exp1 `]' */
         expdesc key;
         luaK_exp2anyreg(fs, v);
-        luaY_index(ls, &key);
+        yindex(ls, &key);
         luaK_indexed(fs, v, &key);
         break;
       }

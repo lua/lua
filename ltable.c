@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.9 2004/11/24 19:16:03 roberto Exp roberto $
+** $Id: ltable.c,v 2.10 2004/11/24 19:20:21 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -124,7 +124,7 @@ static int arrayindex (const TValue *key) {
 ** elements in the array part, then elements in the hash part. The
 ** beginning and end of a traversal are signalled by -1.
 */
-static int luaH_index (lua_State *L, Table *t, StkId key) {
+static int findindex (lua_State *L, Table *t, StkId key) {
   int i;
   if (ttisnil(key)) return -1;  /* first iteration */
   i = arrayindex(key);
@@ -142,7 +142,7 @@ static int luaH_index (lua_State *L, Table *t, StkId key) {
 
 
 int luaH_next (lua_State *L, Table *t, StkId key) {
-  int i = luaH_index(L, t, key);  /* find original element */
+  int i = findindex(L, t, key);  /* find original element */
   for (i++; i < t->sizearray; i++) {  /* try first array part */
     if (!ttisnil(&t->array[i])) {  /* a non-nil value? */
       setnvalue(key, cast(lua_Number, i+1));

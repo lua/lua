@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.16 2004/10/28 17:45:51 roberto Exp $
+** $Id: lvm.c,v 2.17 2004/11/01 15:06:50 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -214,7 +214,7 @@ static int call_orderTM (lua_State *L, const TValue *p1, const TValue *p2,
 }
 
 
-static int luaV_strcmp (const TString *ls, const TString *rs) {
+static int l_strcmp (const TString *ls, const TString *rs) {
   const char *l = getstr(ls);
   size_t ll = ls->tsv.len;
   const char *r = getstr(rs);
@@ -243,21 +243,21 @@ int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
   else if (ttisnumber(l))
     return nvalue(l) < nvalue(r);
   else if (ttisstring(l))
-    return luaV_strcmp(rawtsvalue(l), rawtsvalue(r)) < 0;
+    return l_strcmp(rawtsvalue(l), rawtsvalue(r)) < 0;
   else if ((res = call_orderTM(L, l, r, TM_LT)) != -1)
     return res;
   return luaG_ordererror(L, l, r);
 }
 
 
-static int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
+static int lessequal (lua_State *L, const TValue *l, const TValue *r) {
   int res;
   if (ttype(l) != ttype(r))
     return luaG_ordererror(L, l, r);
   else if (ttisnumber(l))
     return nvalue(l) <= nvalue(r);
   else if (ttisstring(l))
-    return luaV_strcmp(rawtsvalue(l), rawtsvalue(r)) <= 0;
+    return l_strcmp(rawtsvalue(l), rawtsvalue(r)) <= 0;
   else if ((res = call_orderTM(L, l, r, TM_LE)) != -1)  /* first try `le' */
     return res;
   else if ((res = call_orderTM(L, r, l, TM_LT)) != -1)  /* else try `lt' */
@@ -568,7 +568,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
       }
       case OP_LE: {
         L->ci->savedpc = pc;
-        if (luaV_lessequal(L, RKB(i), RKC(i)) != GETARG_A(i)) pc++;  /***/
+        if (lessequal(L, RKB(i), RKC(i)) != GETARG_A(i)) pc++;  /***/
         else dojump(L, pc, GETARG_sBx(*pc) + 1);
         base = L->base;
         continue;

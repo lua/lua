@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.9 2004/10/04 19:04:34 roberto Exp roberto $
+** $Id: ldebug.c,v 2.10 2004/10/07 17:27:00 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -284,7 +284,7 @@ static int checkArgMode (const Proto *pt, int r, enum OpArgMask mode) {
 }
 
 
-static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
+static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
   int pc;
   int last;  /* stores position of last instruction that changed `reg' */
   last = pt->sizecode-1;  /* points to final return (a `neutral' instruction) */
@@ -434,7 +434,7 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
 
 
 int luaG_checkcode (const Proto *pt) {
-  return (luaG_symbexec(pt, pt->sizecode, NO_REG) != 0);
+  return (symbexec(pt, pt->sizecode, NO_REG) != 0);
 }
 
 
@@ -454,7 +454,7 @@ static const char *getobjname (CallInfo *ci, int stackpos, const char **name) {
     *name = luaF_getlocalname(p, stackpos+1, pc);
     if (*name)  /* is a local? */
       return "local";
-    i = luaG_symbexec(p, pc, stackpos);  /* try symbolic execution */
+    i = symbexec(p, pc, stackpos);  /* try symbolic execution */
     lua_assert(pc != -1);
     switch (GET_OPCODE(i)) {
       case OP_GETGLOBAL: {
