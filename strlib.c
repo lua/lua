@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.12 1995/02/06 19:37:51 roberto Exp $";
+char *rcs_strlib="$Id: strlib.c,v 1.13 1995/10/09 12:49:21 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -14,27 +14,27 @@ char *rcs_strlib="$Id: strlib.c,v 1.12 1995/02/06 19:37:51 roberto Exp $";
 #include "lualib.h"
 
 
-static void str_error(char *funcname)
+void lua_arg_error(char *funcname)
 {
-  char buff[250];
+  char buff[100];
   sprintf(buff, "incorrect arguments to function `%s'", funcname);
   lua_error(buff);
 }
 
-static char *check_and_get_string (int numArg, char *funcname)
+char *lua_check_string (int numArg, char *funcname)
 {
   lua_Object o = lua_getparam(numArg);
   if (!(lua_isstring(o) || lua_isnumber(o)))
-    str_error(funcname);
+    lua_arg_error(funcname);
   return lua_getstring(o);
 }
 
-static int check_and_get_int (int numArg, char *funcname)
+float lua_check_number (int numArg, char *funcname)
 {
   lua_Object o = lua_getparam(numArg);
   if (!lua_isnumber(o))
-    str_error(funcname);
-  return (int)lua_getnumber(o);
+    lua_arg_error(funcname);
+  return lua_getnumber(o);
 }
 
 static char *newstring (char *s)
@@ -54,17 +54,17 @@ static char *newstring (char *s)
 */
 static void str_find (void)
 {
- char *s1 = check_and_get_string(1, "strfind");
- char *s2 = check_and_get_string(2, "strfind");
+ char *s1 = lua_check_string(1, "strfind");
+ char *s2 = lua_check_string(2, "strfind");
  int init = (lua_getparam(3) == LUA_NOOBJECT) ? 0 :
-                                 check_and_get_int(3, "strfind")-1;
+                                 (int)lua_check_number(3, "strfind")-1;
  char *f = strstr(s1+init,s2);
  if (f != NULL)
  {
   int pos = f-s1+1;
   if (lua_getparam (4) == LUA_NOOBJECT)
    lua_pushnumber (pos);
-  else if (check_and_get_int(4, "strfind") >= pos+strlen(s2)-1)
+  else if ((int)lua_check_number(4, "strfind") >= pos+strlen(s2)-1)
    lua_pushnumber (pos);
   else
    lua_pushnil();
@@ -80,7 +80,7 @@ static void str_find (void)
 */
 static void str_len (void)
 {
- char *s = check_and_get_string(1, "strlen");
+ char *s = lua_check_string(1, "strlen");
  lua_pushnumber(strlen(s));
 }
 
@@ -92,10 +92,10 @@ static void str_len (void)
 */
 static void str_sub (void)
 {
- char *s = check_and_get_string(1, "strsub");
- int start = check_and_get_int(2, "strsub");
+ char *s = lua_check_string(1, "strsub");
+ int start = (int)lua_check_number(2, "strsub");
  int end = (lua_getparam(3) == LUA_NOOBJECT) ? strlen(s) :
-                                    check_and_get_int(3, "strsub");
+                                    (int)lua_check_number(3, "strsub");
  if (end < start || start < 1 || end > strlen(s))
   lua_pushliteral("");
  else
@@ -114,7 +114,7 @@ typedef int (*strfunc)(int s);
 static void str_apply (strfunc f, char *funcname)
 {
  char *s, *c;
- c = s = newstring(check_and_get_string(1, funcname));
+ c = s = newstring(lua_check_string(1, funcname));
  while (*c != 0)
  {
   *c = f(*c);
@@ -150,12 +150,12 @@ static void str_upper (void)
 */
 static void str_ascii (void)
 {
-  char *s = check_and_get_string(1, "ascii");
+  char *s = lua_check_string(1, "ascii");
   lua_Object o2 = lua_getparam(2);
   int pos;
-  pos = (o2 == LUA_NOOBJECT) ? 0 : check_and_get_int(2, "ascii")-1;
+  pos = (o2 == LUA_NOOBJECT) ? 0 : (int)lua_check_number(2, "ascii")-1;
   if (pos<0 || pos>=strlen(s))
-    str_error("ascii");
+    lua_arg_error("ascii");
   lua_pushnumber(s[pos]);
 }
 
@@ -171,7 +171,7 @@ static void str_int2str (void)
   {
     if (i > maxparams)
       lua_error("too many parameters to function `int2str'");
-    s[i-1] = check_and_get_int(i, "int2str");
+    s[i-1] = (int)lua_check_number(i, "int2str");
   }
   s[i-1] = 0;
   lua_pushstring(s);

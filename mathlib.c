@@ -3,7 +3,7 @@
 ** Mathematics library to LUA
 */
 
-char *rcs_mathlib="$Id: mathlib.c,v 1.11 1995/10/04 13:52:09 roberto Exp $";
+char *rcs_mathlib="$Id: mathlib.c,v 1.12 1995/10/09 12:48:38 roberto Exp roberto $";
 
 #include <stdio.h>		/* NULL */
 #include <math.h>
@@ -17,25 +17,9 @@ char *rcs_mathlib="$Id: mathlib.c,v 1.11 1995/10/04 13:52:09 roberto Exp $";
 #define TODEGREE(a) ((a)*180.0/PI)
 #define TORAD(a)    ((a)*PI/180.0)
 
-
-static void str_error(char *funcname)
-{
-  char buff[250];
-  sprintf(buff, "incorrect arguments to function `%s'", funcname);
-  lua_error(buff);
-}
-
-static float get_and_check_float (int numArg, char *funcname)
-{
-  lua_Object o = lua_getparam(numArg);
-  if (!lua_isnumber(o))
-    str_error(funcname);
-  return lua_getnumber(o);
-}
-
 static void math_abs (void)
 {
- double d = get_and_check_float(1, "abs"); 
+ double d = lua_check_number(1, "abs"); 
  if (d < 0) d = -d;
  lua_pushnumber (d);
 }
@@ -43,7 +27,7 @@ static void math_abs (void)
 
 static void math_sin (void)
 {
- double d = get_and_check_float(1, "sin");
+ double d = lua_check_number(1, "sin");
  lua_pushnumber (sin(TORAD(d)));
 }
 
@@ -51,7 +35,7 @@ static void math_sin (void)
 
 static void math_cos (void)
 {
- double d = get_and_check_float(1, "cos");
+ double d = lua_check_number(1, "cos");
  lua_pushnumber (cos(TORAD(d)));
 }
 
@@ -59,64 +43,64 @@ static void math_cos (void)
 
 static void math_tan (void)
 {
- double d = get_and_check_float(1, "tan");
+ double d = lua_check_number(1, "tan");
  lua_pushnumber (tan(TORAD(d)));
 }
 
 
 static void math_asin (void)
 {
- double d = get_and_check_float(1, "asin");
+ double d = lua_check_number(1, "asin");
  lua_pushnumber (TODEGREE(asin(d)));
 }
 
 
 static void math_acos (void)
 {
- double d = get_and_check_float(1, "acos");
+ double d = lua_check_number(1, "acos");
  lua_pushnumber (TODEGREE(acos(d)));
 }
 
 
 static void math_atan (void)
 {
- double d = get_and_check_float(1, "atan");
+ double d = lua_check_number(1, "atan");
  lua_pushnumber (TODEGREE(atan(d)));
 }
 
 
 static void math_atan2 (void)
 {
- double d1 = get_and_check_float(1, "atan2");
- double d2 = get_and_check_float(2, "atan2");
+ double d1 = lua_check_number(1, "atan2");
+ double d2 = lua_check_number(2, "atan2");
  lua_pushnumber (TODEGREE(atan2(d1, d2)));
 }
 
 
 static void math_ceil (void)
 {
- double d = get_and_check_float(1, "ceil");
+ double d = lua_check_number(1, "ceil");
  lua_pushnumber (ceil(d));
 }
 
 
 static void math_floor (void)
 {
- double d = get_and_check_float(1, "floor");
+ double d = lua_check_number(1, "floor");
  lua_pushnumber (floor(d));
 }
 
 static void math_mod (void)
 {
- int d1 = (int)get_and_check_float(1, "mod");
- int d2 = (int)get_and_check_float(2, "mod");
+ int d1 = (int)lua_check_number(1, "mod");
+ int d2 = (int)lua_check_number(2, "mod");
  lua_pushnumber (d1%d2);
 }
 
 
 static void math_sqrt (void)
 {
- double d = get_and_check_float(1, "sqrt");
+ double d = lua_check_number(1, "sqrt");
  lua_pushnumber (sqrt(d));
 }
 
@@ -147,10 +131,10 @@ static void math_pow (void)
 static void math_min (void)
 {
  int i=1;
- double dmin = get_and_check_float(i, "min");
+ double dmin = lua_check_number(i, "min");
  while (lua_getparam(++i) != LUA_NOOBJECT)
  {
-  double d = get_and_check_float(i, "min");
+  double d = lua_check_number(i, "min");
   if (d < dmin) dmin = d;
  }
  lua_pushnumber (dmin);
@@ -159,10 +143,10 @@ static void math_min (void)
 static void math_max (void)
 {
  int i=1;
- double dmax = get_and_check_float(i, "max");
+ double dmax = lua_check_number(i, "max");
  while (lua_getparam(++i) != LUA_NOOBJECT)
  {
-  double d = get_and_check_float(i, "max");
+  double d = lua_check_number(i, "max");
   if (d > dmax) dmax = d;
  }
  lua_pushnumber (dmax);
@@ -170,33 +154,33 @@ static void math_max (void)
 
 static void math_log (void)
 {
- double d = get_and_check_float(1, "log");
+ double d = lua_check_number(1, "log");
  lua_pushnumber (log(d));
 }
 
 
 static void math_log10 (void)
 {
- double d = get_and_check_float(1, "log10");
+ double d = lua_check_number(1, "log10");
  lua_pushnumber (log10(d));
 }
 
 
 static void math_exp (void)
 {
- double d = get_and_check_float(1, "exp");
+ double d = lua_check_number(1, "exp");
  lua_pushnumber (exp(d));
 }
 
 static void math_deg (void)
 {
- float d = get_and_check_float(1, "deg");
+ float d = lua_check_number(1, "deg");
  lua_pushnumber (d*180./PI);
 }
 
 static void math_rad (void)
 {
- float d = get_and_check_float(1, "rad");
+ float d = lua_check_number(1, "rad");
  lua_pushnumber (d/180.*PI);
 }
 
