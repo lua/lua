@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.79 2000/09/11 20:29:27 roberto Exp roberto $
+** $Id: liolib.c,v 1.80 2000/09/12 13:48:34 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -246,6 +246,8 @@ static int io_appendto (lua_State *L) {
 static int read_pattern (lua_State *L, FILE *f, const char *p) {
   int inskip = 0;  /* {skip} level */
   int c = NEED_OTHER;
+  luaL_Buffer b;
+  luaL_buffinit(L, &b);
   while (*p != '\0') {
     switch (*p) {
       case '{':
@@ -263,7 +265,7 @@ static int read_pattern (lua_State *L, FILE *f, const char *p) {
         if (c == NEED_OTHER) c = getc(f);
         m = (c==EOF) ? 0 : luaI_singlematch(c, p, ep);
         if (m) {
-          if (!inskip) luaL_putchar(L, c);
+          if (!inskip) luaL_putchar(&b, c);
           c = NEED_OTHER;
         }
         switch (*ep) {
@@ -274,7 +276,7 @@ static int read_pattern (lua_State *L, FILE *f, const char *p) {
             while (m) {  /* reads the same item until it fails */
               c = getc(f);
               m = (c==EOF) ? 0 : luaI_singlematch(c, p, ep);
-              if (m && !inskip) luaL_putchar(L, c);
+              if (m && !inskip) luaL_putchar(&b, c);
             }
             /* go through to continue reading the pattern */
           case '?':  /* optional */
@@ -288,6 +290,7 @@ static int read_pattern (lua_State *L, FILE *f, const char *p) {
     }
   } break_while:
   if (c != NEED_OTHER) ungetc(c, f);
+  luaL_pushresult(&b);  /* close buffer */
   return (*p == '\0');
 }
 
