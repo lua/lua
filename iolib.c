@@ -41,7 +41,7 @@ static void pushresult (int i)
 static FILE *getfile (char *name)
 {
   lua_Object f = lua_getglobal(name);
-  if (lua_tag(f) != lua_tagio)
+  if (!lua_isuserdata(f) || lua_tag(f) != lua_tagio)
     luaL_verror("global variable %s is not a file handle", name);
   return lua_getuserdata(f);
 }
