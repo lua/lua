@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.58 2001/01/26 11:45:51 roberto Exp roberto $
+** $Id: lua.c,v 1.59 2001/02/06 18:18:58 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -167,47 +167,47 @@ static int file_input (const char *argv) {
 }
 
 
-/* maximum length of an input string */
+/* maximum length of an input line */
 #ifndef MAXINPUT
-#define MAXINPUT	BUFSIZ
+#define MAXINPUT	512
 #endif
 
+
+static void show_prompt (void) {
+  const char *s;
+  lua_getglobal(L, "_PROMPT");
+  s = lua_tostring(L, -1);
+  if (!s) s = PROMPT;
+  fputs(s, stdout);
+  lua_pop(L, 1);  /* remove global */
+}
+
+
 static void manual_input (int version, int prompt) {
-  int cont = 1;
   if (version) print_version();
-  while (cont) {
-    char buffer[MAXINPUT];
-    int i = 0;
-    if (prompt) {
-      const char *s;
-      lua_getglobal(L, "_PROMPT");
-      s = lua_tostring(L, -1);
-      if (!s) s = PROMPT;
-      fputs(s, stdout);
-      lua_pop(L, 1);  /* remove global */
-    }
+  for (;;) {
+    if (prompt) show_prompt();
     for(;;) {
-      int c = getchar();
-      if (c == EOF) {
-        cont = 0;
+      char buffer[MAXINPUT];
+      size_t l;
+      if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+        printf("\n");
+        return;
+      }
+      l = strlen(buffer);
+      if (buffer[l-1] == '\n' && buffer[l-2] == '\\') {
+        buffer[l-2] = '\n';
+        lua_pushlstring(L, buffer, l-1);
+      }
+      else {
+        lua_pushlstring(L, buffer, l);
         break;
       }
-      else if (c == '\n') {
-        if (i>0 && buffer[i-1] == '\\')
-          buffer[i-1] = '\n';
-        else break;
-      }
-      else if (i >= MAXINPUT-1) {
-        fprintf(stderr, "lua: input line too long\n");
-        break;
-      }
-      else buffer[i++] = (char)c;
     }
-    buffer[i] = '\0';
-    ldo(lua_dostring, buffer);
+    lua_concat(L, lua_gettop(L));
+    ldo(lua_dostring, lua_tostring(L, -1));
     lua_settop(L, 0);  /* remove eventual results */
   }
-  printf("\n");
 }
 
 
