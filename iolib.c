@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.15 1994/11/13 14:54:18 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.16 1994/11/16 17:38:08 roberto Stab roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -585,7 +585,7 @@ static void io_debug (void)
   while (1)
   {
     char buffer[250];
-    printf("lua_debug> ");
+    fprintf(stderr, "lua_debug> ");
     if (gets(buffer) == 0) return;
     if (strcmp(buffer, "cont") == 0) return;
     lua_dostring(buffer);
