@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.16 1998/03/11 13:59:50 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.17 1998/03/25 18:52:29 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -67,16 +67,16 @@ GETGLOBALW,/*	w	-		VAR[CNST[w]]  */
 
 GETTABLE,/*	-	i t		t[i]  */
 
-GETDOTTED,/*	b	t		t[CONST[b]]  */
-GETDOTTED0,/*	-	t		t[CONST[0]]  */
-GETDOTTED1,/*	-	t		t[CONST[1]]  */
-GETDOTTED2,/*	-	t		t[CONST[2]]  */
-GETDOTTED3,/*	-	t		t[CONST[3]]  */
-GETDOTTED4,/*	-	t		t[CONST[4]]  */
-GETDOTTED5,/*	-	t		t[CONST[5]]  */
-GETDOTTED6,/*	-	t		t[CONST[6]]  */
-GETDOTTED7,/*	-	t		t[CONST[7]]  */
-GETDOTTEDW,/*	w	t		t[CONST[w]]  */
+GETDOTTED,/*	b	t		t[CNST[b]]  */
+GETDOTTED0,/*	-	t		t[CNST[0]]  */
+GETDOTTED1,/*	-	t		t[CNST[1]]  */
+GETDOTTED2,/*	-	t		t[CNST[2]]  */
+GETDOTTED3,/*	-	t		t[CNST[3]]  */
+GETDOTTED4,/*	-	t		t[CNST[4]]  */
+GETDOTTED5,/*	-	t		t[CNST[5]]  */
+GETDOTTED6,/*	-	t		t[CNST[6]]  */
+GETDOTTED7,/*	-	t		t[CNST[7]]  */
+GETDOTTEDW,/*	w	t		t[CNST[w]]  */
 
 PUSHSELF,/*	b	t		t t[CNST[b]]  */
 PUSHSELF0,/*	-	t		t t[CNST[0]]  */
@@ -155,7 +155,7 @@ IFFUPJMP,/*	b	x		-		(x==nil)? PC-=b  */
 IFFUPJMPW,/*	w	x		-		(x==nil)? PC-=w  */
 
 CLOSURE,/*	b c	v_c...v_1	closure(CNST[b], v_c...v_1) */
-CLOSUREW,/*	w b	v_b...v_1	closure(CNST[w], v_b...v_1) */
+CLOSUREW,/*	w c	v_b...v_1	closure(CNST[w], v_c...v_1) */
 
 CALLFUNC,/*	b c	v_c...v_1 f	r_b...r_1	f(v1,...,v_c)  */
 CALLFUNC0,/*	b	v_b...v_1 f	-		f(v1,...,v_b)  */
