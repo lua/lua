@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.39 1996/01/09 20:23:19 roberto Exp $";
+char *rcs_table="$Id: table.c,v 2.40 1996/01/22 14:15:13 roberto Exp roberto $";
 
 /*#include <string.h>*/
 
@@ -44,6 +44,14 @@ static void lua_initsymbol (void)
  Word n;
  lua_maxsymbol = BUFFER_BLOCK;
  lua_table = newvector(lua_maxsymbol, Symbol);
+ n = luaI_findsymbolbyname("nextvar");
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_nextvar;
+ n = luaI_findsymbolbyname("error");
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_error;
+ n = luaI_findsymbolbyname("tonumber");
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_obj2number;
+ n = luaI_findsymbolbyname("setfallback");
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_setfallback;
  n = luaI_findsymbolbyname("next");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_next;
  n = luaI_findsymbolbyname("dofile");
@@ -52,20 +60,14 @@ static void lua_initsymbol (void)
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = setglobal;
  n = luaI_findsymbolbyname("getglobal");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = getglobal;
- n = luaI_findsymbolbyname("nextvar");
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_nextvar;
  n = luaI_findsymbolbyname("type"); 
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_type;
- n = luaI_findsymbolbyname("tonumber");
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_obj2number;
+ n = luaI_findsymbolbyname("tostring");
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_tostring;
  n = luaI_findsymbolbyname("print");
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_print;
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_print;
  n = luaI_findsymbolbyname("dostring");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_internaldostring;
- n = luaI_findsymbolbyname("setfallback");
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_setfallback;
- n = luaI_findsymbolbyname("error");
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_error;
 }
 
 

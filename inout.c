@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.24 1995/10/23 13:54:11 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.25 1995/10/25 13:05:51 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -132,27 +132,40 @@ void lua_internaldofile (void)
   lua_pushnil();
 }
  
-/*
-** Internal function: print object values
-*/
-void lua_print (void)
+
+static char *tostring (lua_Object obj)
 {
- int i=1;
- lua_Object obj;
- while ((obj=lua_getparam (i++)) != LUA_NOOBJECT)
- {
-  if      (lua_isnumber(obj))    printf("%g\n",lua_getnumber(obj));
-  else if (lua_isstring(obj))    printf("%s\n",lua_getstring(obj));
-  else if (lua_isfunction(obj))  printf("function: %p\n",(luaI_Address(obj))->value.tf);
-  else if (lua_iscfunction(obj)) printf("cfunction: %p\n",lua_getcfunction(obj)
-);
-  else if (lua_isuserdata(obj))  printf("userdata: %p\n",lua_getuserdata(obj));
-  else if (lua_istable(obj))     printf("table: %p\n",avalue(luaI_Address(obj)));
-  else if (lua_isnil(obj))       printf("nil\n");
-  else                           printf("invalid value to print\n");
- }
+  static char buff[20];
+  if (lua_isstring(obj))
+    return lua_getstring(obj);
+  if (lua_isnumber(obj))
+    sprintf(buff, "%g", lua_getnumber(obj));
+  else if (lua_isfunction(obj))
+    sprintf(buff, "function: %p", (luaI_Address(obj))->value.tf);
+  else if (lua_iscfunction(obj))
+    sprintf(buff, "cfunction: %p", lua_getcfunction(obj));
+  else if (lua_isuserdata(obj))
+    sprintf(buff, "userdata: %p", lua_getuserdata(obj));
+  else if (lua_istable(obj))
+    sprintf(buff, "table: %p", avalue(luaI_Address(obj)));
+  else if (lua_isnil(obj))
+    sprintf(buff, "nil");
+  else buff[0] = 0;
+  return buff;
 }
 
+void luaI_tostring (void)
+{
+  lua_pushstring(tostring(lua_getparam(1)));
+}
+
+void luaI_print (void)
+{
+  int i = 1;
+  lua_Object obj;
+  while ((obj = lua_getparam(i++)) != LUA_NOOBJECT)
+    printf("%s\n", tostring(obj));
+}
 
 /*
 ** Internal function: return an object type.
