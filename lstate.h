@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.99 2002/10/25 20:05:28 roberto Exp roberto $
+** $Id: lstate.h,v 1.100 2002/11/06 19:08:00 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -144,6 +144,7 @@ struct lua_State {
   lua_Hook hook;
   TObject _gt;  /* table of globals */
   GCObject *openupval;  /* list of open upvalues in this stack */
+  GCObject *gclist;
   struct lua_longjmp *errorJmp;  /* current error recover point */
   ptrdiff_t errfunc;  /* current error handling function (stack index) */
 };
@@ -165,6 +166,21 @@ union GCObject {
   struct UpVal uv;
   struct lua_State th;  /* thread */
 };
+
+
+/* macros to convert a GCObject into a specific value */
+#define gcotots(o)	check_exp((o)->gch.tt == LUA_TSTRING, &((o)->ts))
+#define gcotou(o)	check_exp((o)->gch.tt == LUA_TUSERDATA, &((o)->u))
+#define gcotocl(o)	check_exp((o)->gch.tt == LUA_TFUNCTION, &((o)->cl))
+#define gcotoh(o)	check_exp((o)->gch.tt == LUA_TTABLE, &((o)->h))
+#define gcotop(o)	check_exp((o)->gch.tt == LUA_TPROTO, &((o)->p))
+#define gcotouv(o)	check_exp((o)->gch.tt == LUA_TUPVAL, &((o)->uv))
+#define ngcotouv(o) \
+	check_exp((o) == NULL || (o)->gch.tt == LUA_TUPVAL, &((o)->uv))
+#define gcototh(o)	check_exp((o)->gch.tt == LUA_TTHREAD, &((o)->th))
+
+/* macro to convert any value into a GCObject */
+#define valtogco(v)	(cast(GCObject *, (v)))
 
 
 lua_State *luaE_newthread (lua_State *L);

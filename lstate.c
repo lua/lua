@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.108 2002/10/25 20:05:28 roberto Exp roberto $
+** $Id: lstate.c,v 1.109 2002/10/25 21:30:00 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -125,7 +125,7 @@ static void preinit_state (lua_State *L) {
 
 lua_State *luaE_newthread (lua_State *L) {
   lua_State *L1 = newthread(L);
-  luaC_link(L, cast(GCObject *, L1), LUA_TTHREAD);
+  luaC_link(L, valtogco(L1), LUA_TTHREAD);
   preinit_state(L1);
   L1->l_G = L->l_G;
   stack_init(L1, L);  /* init stack */
@@ -137,6 +137,7 @@ lua_State *luaE_newthread (lua_State *L) {
 LUA_API lua_State *lua_open (void) {
   lua_State *L = newthread(NULL);
   if (L) {  /* allocation OK? */
+    L->tt = LUA_TTHREAD;
     preinit_state(L);
     L->l_G = NULL;
     if (luaD_rawrunprotected(L, f_luaopen, NULL) != 0) {

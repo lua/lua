@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.119 2002/09/02 19:54:49 roberto Exp roberto $
+** $Id: ltable.c,v 1.120 2002/11/07 15:37:10 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -301,7 +301,7 @@ static void rehash (lua_State *L, Table *t) {
 
 Table *luaH_new (lua_State *L, int narray, int lnhash) {
   Table *t = luaM_new(L, Table);
-  luaC_link(L, cast(GCObject *, t), LUA_TTABLE);
+  luaC_link(L, valtogco(t), LUA_TTABLE);
   t->metatable = hvalue(defaultmeta(L));
   t->flags = cast(lu_byte, ~0);
   t->mode = 0;

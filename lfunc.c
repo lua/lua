@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.60 2002/10/16 20:40:58 roberto Exp roberto $
+** $Id: lfunc.c,v 1.61 2002/10/21 20:41:46 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -26,7 +26,7 @@
 
 Closure *luaF_newCclosure (lua_State *L, int nelems) {
   Closure *c = cast(Closure *, luaM_malloc(L, sizeCclosure(nelems)));
-  luaC_link(L, cast(GCObject *, c), LUA_TFUNCTION);
+  luaC_link(L, valtogco(c), LUA_TFUNCTION);
   c->c.isC = 1;
   c->c.nupvalues = cast(lu_byte, nelems);
   return c;
@@ -35,7 +35,7 @@ Closure *luaF_newCclosure (lua_State *L, int nelems) {
 
 Closure *luaF_newLclosure (lua_State *L, int nelems, TObject *gt) {
   Closure *c = cast(Closure *, luaM_malloc(L, sizeLclosure(nelems)));
-  luaC_link(L, cast(GCObject *, c), LUA_TFUNCTION);
+  luaC_link(L, valtogco(c), LUA_TFUNCTION);
   c->l.isC = 0;
   c->l.g = *gt;
   c->l.nupvalues = cast(lu_byte, nelems);
@@ -45,35 +45,36 @@ Closure *luaF_newLclosure (lua_State *L, int nelems, TObject *gt) {
 
 UpVal *luaF_findupval (lua_State *L, StkId level) {
   GCObject **pp = &L->openupval;
-  GCObject *p;
+  UpVal *p;
   UpVal *v;
-  while ((p = *pp) != NULL && (&p->uv)->v >= level) {
-    if ((&p->uv)->v == level) return &p->uv;
-    pp = &p->gch.next;
+  while ((p = ngcotouv(*pp)) != NULL && p->v >= level) {
+    if (p->v == level) return p;
+    pp = &p->next;
   }
   v = luaM_new(L, UpVal);  /* not found: create a new one */
+  v->tt = LUA_TUPVAL;
   v->marked = 1;  /* open upvalues should not be collected */
   v->v = level;  /* current value lives in the stack */
   v->next = *pp;  /* chain it in the proper position */
-  *pp = cast(GCObject *, v);
+  *pp = valtogco(v);
   return v;
 }
 
 
 void luaF_close (lua_State *L, StkId level) {
   UpVal *p;
-  while ((p = &(L->openupval)->uv) != NULL && p->v >= level) {
+  while ((p = ngcotouv(L->openupval)) != NULL && p->v >= level) {
     setobj(&p->value, p->v);  /* save current value */
     p->v = &p->value;  /* now current value lives here */
     L->openupval = p->next;  /* remove from `open' list */
-    luaC_link(L, cast(GCObject *, p), LUA_TUPVAL);
+    luaC_link(L, valtogco(p), LUA_TUPVAL);
   }
 }
 
 
 Proto *luaF_newproto (lua_State *L) {
   Proto *f = luaM_new(L, Proto);
-  luaC_link(L, cast(GCObject *, f), LUA_TPROTO);
+  luaC_link(L, valtogco(f), LUA_TPROTO);
   f->k = NULL;
   f->sizek = 0;
   f->p = NULL;

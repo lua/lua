@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.139 2002/10/25 21:29:20 roberto Exp roberto $
+** $Id: ltests.c,v 1.140 2002/11/07 15:37:10 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -326,7 +326,7 @@ static int string_query (lua_State *L) {
     GCObject *ts;
     int n = 0;
     for (ts = tb->hash[s]; ts; ts = ts->gch.next) {
-      setsvalue2s(L->top, &ts->ts);
+      setsvalue2s(L->top, gcotots(ts));
       incr_top(L);
       n++;
     }
