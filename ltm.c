@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.95 2002/06/13 13:39:55 roberto Exp roberto $
+** $Id: ltm.c,v 1.96 2002/06/24 20:17:59 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -26,7 +26,7 @@ const char *const luaT_typenames[] = {
 void luaT_init (lua_State *L) {
   static const char *const luaT_eventname[] = {  /* ORDER TM */
     "__index", "__newindex",
-    "__gc", "__eq", "__weakmode",
+    "__gc", "__eq", "__mode",
     "__gettable", "__settable",
     "__add", "__sub", "__mul", "__div",
     "__pow", "__unm", "__lt", "__le",
@@ -46,7 +46,7 @@ void luaT_init (lua_State *L) {
 */
 const TObject *luaT_gettm (Table *events, TMS event, TString *ename) {
   const TObject *tm = luaH_getstr(events, ename);
-  lua_assert(event <= TM_WEAKMODE);
+  lua_assert(event <= TM_MODE);
   if (ttype(tm) == LUA_TNIL) {  /* no tag method? */
     events->flags |= (1u<<event);  /* cache this fact */
     return NULL;
