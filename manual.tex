@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.43 2000/09/18 19:41:16 roberto Exp roberto $
+% $Id: manual.tex,v 1.44 2000/09/20 17:21:20 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -20,8 +20,6 @@
 \newcommand{\IndexEmph}[1]{\emph{#1}\index{#1}}
 \newcommand{\Def}[1]{\emph{#1}\index{#1}}
 \newcommand{\Deffunc}[1]{\index{#1}}
-
-\newcommand{\Tochange}[1]{(#1 may change in the final 4.0 version.)}
 
 \newcommand{\ff}{$\bullet$\ }
 
@@ -131,7 +129,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{{\small \tt\$Date: 2000/09/18 19:41:16 $ $}}
+\date{{\small \tt\$Date: 2000/09/20 17:21:20 $ $}}
 
 \maketitle
 
@@ -868,7 +866,7 @@ The second idiom is
 \begin{verbatim}
        x = a and b or c
 \end{verbatim}
-which should be read as \verb|x = a and (b or c)|.
+which should be read as \verb|x = (a and b) or c|.
 This idiom is equivalent to
 \begin{verbatim}
        if a then x = b else x = c end
@@ -1522,9 +1520,13 @@ Lua does the equivalent of the following function:
          end
        end
 \end{verbatim}
-Moreover, at the end of a garbage collection cycle,
+In a garbage-collection cicle,
+the tag methods for userdata are called in reverse
+order of tag creation:
+That is, the first tag methods to be called are those associated
+with the last tag created in the program.
+Moreover, at the end of the cycle,
 Lua does the equivalent of the call \verb|gc_event(nil)|.
-\Tochange{This}
 
 \end{description}
 
@@ -1549,7 +1551,7 @@ and so do not generate hidden side-effects.
 \subsection{States} \label{mangstate}
 
 The Lua library is fully reentrant:
-it does not have any global variable.
+it does not have any global variables.
 The whole state of the Lua interpreter
 (global variables, stack, tag methods, etc.)
 is stored in a dynamically allocated structure; \Deffunc{lua_State}
@@ -1818,18 +1820,43 @@ which accepts an explicit size.
 
 \subsection{Garbage Collection}\label{GC}
 
-A garbage collection cycle can be forced by:
-\Deffunc{lua_collectgarbage}
-\begin{verbatim}
-       long lua_collectgarbage (lua_State *L, long limit);
-\end{verbatim}
-This function returns the number of objects collected.
-The argument \verb|limit| makes the next cycle occur only
-after that number of new objects have been created.
-If \verb|limit| is 0,
-then Lua uses an adaptive heuristic to set this limit.
+Lua keeps two numbers to control its garbage collection.
+One number counts how many bytes of dynamic memory Lua is using,
+and the other keeps a threshold.
+(This internal byte counter kept by Lua is not completely acurate:
+Instead, it is a lower bound, usually within 10\% of the correct value.)
+When the number of bytes crosses the threshold,
+Lua runs a garbage-collection cycle,
+that reclaims the memory of all ``dead'' objects
+(that is, objects no longer accessible from Lua).
+The byte counter is corrected,
+and then the threshold is reset to twice the value of the byte counter.
 
-\Tochange{This function}
+You can access the current values of these two numbers through the
+following functions:
+\Deffunc{lua_getgcthreshold} \Deffunc{lua_getgccount}
+\begin{verbatim}
+       int  lua_getgccount (lua_State *L);
+       int  lua_getgcthreshold (lua_State *L);
+\end{verbatim}
+Both return their respective values in Kbytes.
+You can change the threshold value with
+\Deffunc{lua_setgcthreshold}
+\begin{verbatim}
+       void  lua_setgcthreshold (lua_State *L, int newthreshold);
+\end{verbatim}
+Again, the \verb|newthreshold| value is given in Kbytes.
+When you call this function,
+Lua sets the new threshold and checks it against the byte counter;
+if the new threshold is smaller than the byte counter,
+Lua runs immediately the garbage collector
+(and, after it, sets a new threshold according to the previous rule).
+
+If you want to change the adaptative behavior of the garbage collector,
+you can use the garbage-collection tag method for the tag \nil
+to set your own threshold
+(the tag method is called after Lua resets the threshold). 
+
 
 \subsection{Userdata and Tags}\label{C-tags}
 
@@ -1853,7 +1880,7 @@ Tags are created with the function
        int lua_newtag (lua_State *L);
 \end{verbatim}
 The function \verb|lua_settag| changes the tag of
-the object on top of the stack (and pops it):
+the object on top of the stack (without popping it):
 \Deffunc{lua_settag}
 \begin{verbatim}
        void lua_settag (lua_State *L, int tag);
@@ -1875,15 +1902,18 @@ These functions return
 0 in case of success, or one of the following error codes if they fail
 (these constants are defined in \verb|lua.h|.):
 \begin{itemize}
-\item \verb|LUA_ERRRUN| ---
+\item \IndexVerb{LUA_ERRRUN} ---
 error while running the chunk.
-\item \verb|LUA_ERRSYNTAX| ---
+\item \IndexVerb{LUA_ERRSYNTAX} ---
 syntax error during pre-compilation.
-\item \verb|LUA_ERRMEM| ---
+\item \IndexVerb{LUA_ERRMEM} ---
 memory allocation error.
 For such errors, Lua does not call the \verb|_ERRORMESSAGE| function
 \see{error}.
-\item \verb|LUA_ERRFILE| ---
+\item \IndexVerb{LUA_ERRERR} ---
+error while running the \verb|_ERRORMESSAGE| function.
+For such errors, Lua does not call the function again, to avoid loops.
+\item \IndexVerb{LUA_ERRFILE} ---
 error opening the file (only for \verb|lua_dofile|).
 In this case,
 you may want to
@@ -2021,7 +2051,7 @@ Finally, the function
 \begin{verbatim}
        void lua_newtable (lua_State *L);
 \end{verbatim}
-creates a new, empty table and and pushes it onto the stack.
+creates a new, empty table and pushes it onto the stack.
 
 \subsection{Using Tables as Arrays}
 The API has functions that help to use Lua tables as arrays,
@@ -2120,8 +2150,7 @@ Tag methods can be changed with \Deffunc{lua_settagmethod}
 \end{verbatim}
 The second parameter is the tag,
 and the third is the event name \see{tag-method};
-the new method is popped from the stack,
-and the old one is pushed in its place.
+the new method is popped from the stack.
 To just get the current value of a tag method,
 use the function \Deffunc{lua_gettagmethod}
 \begin{verbatim}
@@ -2245,7 +2274,7 @@ these upvalues are inserted as the \emph{last} arguments to the function,
 after the actual arguments provided in the call.
 This makes it easy to get the upvalues without knowing how many arguments
 the function received (recall that functions in Lua can receive any number of
-arguments): The \M{i}-th upvalue is in the stack at index \Math{i-n+1},
+arguments): The \M{i}-th upvalue is in the stack at index \Math{i-(n+1)},
 where \M{n} is the number of upvalues.
 
 For more examples of C~functions and closures, see files
@@ -2286,6 +2315,18 @@ if the object has been collected,
 When a reference is no longer needed,
 it should be released with a call to \verb|lua_unref|.
 
+
+\subsubsection*{Registry}
+
+When Lua starts, it registers a table at position
+\IndexVerb{LUA_REFREGISTRY}.
+It can be accessed through the macro\Deffunc{lua_getregistry}
+\begin{verbatim}
+  #define lua_getregistry(L)      lua_getref(L, LUA_REFREGISTRY)
+\end{verbatim}
+This table can be used by C libraries as a general registry mechanism.
+Any C library can store data into this table,
+as long as it chooses a key different from other libraries.
 
 
 \section{Standard Libraries}
@@ -2368,17 +2409,17 @@ In particular, if \verb|errhandler| is \nil,
 no error messages will be issued during the execution of the called function.
 
 \subsubsection*{\ff \T{collectgarbage ([limit])}}\Deffunc{collectgarbage}
-Forces a garbage collection cycle.
-Returns the number of objects collected.
-The optional argument \verb|limit| is a number that
-makes the next cycle occur only after that number of new
-objects have been created.
-If \verb|limit| is absent or equal to 0,
-then Lua uses an adaptive algorithm to set this limit.
-\verb|collectgarbage| is equivalent to
-the API function \verb|lua_collectgarbage|.
 
-\Tochange{This function}
+Sets the garbage-collection threshold for the given limit
+(in Kbytes), and checks it against the byte counter;
+if the new threshold is smaller than the byte counter,
+Lua runs immediately the garbage collector \see{GC}.
+
+If \verb|limit| is absent, it defaults to zero
+(thus forcing a garbage-collection cycle).
+
+\verb|collectgarbage| is equivalent to
+the API function \verb|lua_setgcthreshold|.
 
 \subsubsection*{\ff \T{copytagmethods (tagto, tagfrom)}}
 \Deffunc{copytagmethods}
@@ -2499,6 +2540,9 @@ This function could be defined in Lua:
 Returns the current tag method
 for a given pair \M{(tag, event)}.
 
+This function cannot be used to get a tag method for the ``gc'' event.
+(Such tag methods can only be manipulated by C code.)
+
 \subsubsection*{\ff \T{globals ([table])}}\Deffunc{globals}
 Returns the current table of globals.
 If the argument \verb|table| is given,
@@ -2594,6 +2638,9 @@ Sets a new tag method to the given pair \M{(tag, event)}.
 It returns the old method.
 If \verb|newmethod| is \nil,
 then \verb|settagmethod| restores the default behavior for the given event.
+
+This function cannot be used to set a tag method for the ``gc'' event.
+(Such tag methods can only be manipulated by C code.)
 
 \subsubsection*{\ff \T{sort (table [, comp])}}\Deffunc{sort}
 Sorts table elements in a given order, \emph{in-place},
@@ -2710,7 +2757,6 @@ The possible results of this function are
 \verb|"table"|,
 \verb|"function"|,
 and \verb|"userdata"|.
-\verb|type| is equivalent to the API function \verb|lua_type|.
 
 
 \subsection{String Manipulation}
@@ -3622,6 +3668,8 @@ is provided with the standard distribution.
 
 This program can be called with any sequence of the following arguments:
 \begin{description}\leftskip=20pt
+\item[\T{-sNUM}] sets the stack size to \T{NUM}
+(if present, this must be the first option);
 \item[\T{-} ] executes \verb|stdin| as a file;
 \item[\T{-c}] calls \verb|lua_close| after running all arguments;
 \item[\T{-e} \rm\emph{stat}] executes string \verb|stat|;
@@ -3812,7 +3860,7 @@ The debug API has been completely rewritten.
 %{===============================================================
 \section*{The Complete Syntax of Lua} \label{BNF}
 
-\addcontentsline{toc}{section}{The complete syntax of Lua}
+\addcontentsline{toc}{section}{The Complete Syntax of Lua}
 
 \renewenvironment{Produc}{\vspace{0.8ex}\par\noindent\hspace{3ex}\it\begin{tabular}{rrl}}{\end{tabular}\vspace{0.8ex}\par\noindent}
 
@@ -3927,13 +3975,11 @@ The debug API has been completely rewritten.
 \end{Produc}
 %}===============================================================
 
-% restore underscore to usual meaning
-\catcode`\_=8
+% Index
 
-\newcommand{\indexentry}[2]{\item {#1} #2}
-\begin{theindex}
+\newpage
 \addcontentsline{toc}{section}{Index}
 \input{manual.id}
-\end{theindex}
+
 
 \end{document}
