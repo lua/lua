@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.16 2000/10/31 13:10:24 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.17 2000/11/06 13:45:18 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -38,7 +38,7 @@ static int luaB__ERRORMESSAGE (lua_State *L) {
   lua_getglobal(L, LUA_ALERT);
   if (lua_isfunction(L, -1)) {  /* avoid error loop if _ALERT is not defined */
     lua_Debug ar;
-    lua_pushstring(L, "error: ");
+    lua_pushliteral(L, "error: ");
     lua_pushvalue(L, 1);
     if (lua_getstack(L, 1, &ar)) {
       lua_getinfo(L, "Sl", &ar);
@@ -49,7 +49,7 @@ static int luaB__ERRORMESSAGE (lua_State *L) {
         lua_concat(L, 2);
       }
     }
-    lua_pushstring(L, "\n");
+    lua_pushliteral(L, "\n");
     lua_concat(L, 3);
     lua_rawcall(L, 1, 0);
   }
@@ -327,7 +327,7 @@ static int luaB_tostring (lua_State *L) {
       sprintf(buff, "userdata(%d): %p", lua_tag(L, 1), lua_touserdata(L, 1));
       break;
     case LUA_TNIL:
-      lua_pushstring(L, "nil");
+      lua_pushliteral(L, "nil");
       return 1;
     default:
       luaL_argerror(L, 1, "value expected");
@@ -397,7 +397,7 @@ static int luaB_tinsert (lua_State *L) {
     pos = n+1;
   else
     pos = luaL_check_int(L, 2);  /* 2nd argument is the position */
-  lua_pushstring(L, "n");
+  lua_pushliteral(L, "n");
   lua_pushnumber(L, n+1);
   lua_rawset(L, 1);  /* t.n = n+1 */
   for (; n>=pos; n--) {
@@ -421,7 +421,7 @@ static int luaB_tremove (lua_State *L) {
     lua_rawgeti(L, 1, pos+1);
     lua_rawseti(L, 1, pos);  /* a[pos] = a[pos+1] */
   }
-  lua_pushstring(L, "n");
+  lua_pushliteral(L, "n");
   lua_pushnumber(L, n-1);
   lua_rawset(L, 1);  /* t.n = n-1 */
   lua_pushnil(L);
@@ -644,7 +644,7 @@ static const struct luaL_reg base_funcs[] = {
 
 LUALIB_API void lua_baselibopen (lua_State *L) {
   luaL_openl(L, base_funcs);
-  lua_pushstring(L, LUA_VERSION);
+  lua_pushliteral(L, LUA_VERSION);
   lua_setglobal(L, "_VERSION");
   deprecated_funcs(L);
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.59 2000/12/04 14:43:06 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.60 2000/12/18 13:41:41 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -43,7 +43,7 @@ static int str_sub (lua_State *L) {
   if (end > (sint32)l) end = l;
   if (start <= end)
     lua_pushlstring(L, s+start-1, end-start+1);
-  else lua_pushstring(L, "");
+  else lua_pushliteral(L, "");
   return 1;
 }
 

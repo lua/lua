@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.80 2000/12/04 18:33:40 roberto Exp roberto $
+** $Id: lua.h,v 1.81 2000/12/22 16:58:41 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -22,7 +22,7 @@
 #endif
 
 
-#define LUA_VERSION	"Lua 4.1(work)"
+#define LUA_VERSION	"Lua 4.1 (work)"
 #define LUA_COPYRIGHT	"Copyright (C) 1994-2000 TeCGraf, PUC-Rio"
 #define LUA_AUTHORS 	"W. Celes, R. Ierusalimschy & L. H. de Figueiredo"
 
@@ -209,6 +209,8 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size);
 #define lua_isnull(L,n)		(lua_type(L,n) == LUA_TNONE)
 
 #define lua_getregistry(L)	lua_getref(L, LUA_REFREGISTRY)
+
+#define lua_pushliteral(L, s)	lua_pushlstring(L, "" s, (sizeof(s))-1)
 
 #endif
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.30 2000/11/14 18:46:20 roberto Exp $
+** $Id: ldblib.c,v 1.30 2000/11/23 13:47:39 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -71,7 +71,7 @@ static int getinfo (lua_State *L) {
         settabss(L, "namewhat", ar.namewhat);
         break;
       case 'f':
-        lua_pushstring(L, "func");
+        lua_pushliteral(L, "func");
         lua_pushvalue(L, -3);
         lua_settable(L, -3);
         break;

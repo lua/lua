@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.54 2000/10/17 13:36:24 roberto Exp roberto $
+** $Id: lua.c,v 1.55 2000/10/20 16:36:32 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -137,7 +137,7 @@ static void getargs (char *argv[]) {
     lua_settable(L, -3);
   }
   /* arg.n = maximum index in table `arg' */
-  lua_pushstring(L, "n");
+  lua_pushliteral(L, "n");
   lua_pushnumber(L, i-1);
   lua_settable(L, -3);
 }

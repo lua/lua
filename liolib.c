@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.95 2000/12/22 16:57:13 roberto Exp roberto $
+** $Id: liolib.c,v 1.96 2000/12/22 17:32:28 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -327,7 +327,7 @@ static int io_read (lua_State *L) {
   if (firstarg > lastarg) {  /* no arguments? */
     lua_settop(L, 0);  /* erase upvalue and other eventual garbage */
     firstarg = lastarg = 1;  /* correct indices */
-    lua_pushstring(L, "*l");  /* push default argument */
+    lua_pushliteral(L, "*l");  /* push default argument */
   }
   else  /* ensure stack space for all results and for auxlib's buffer */
     luaL_checkstack(L, lastarg-firstarg+1+LUA_MINSTACK, "too many arguments");
