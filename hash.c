@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.25 1995/05/02 18:43:03 roberto Exp $";
+char *rcs_hash="$Id: hash.c,v 2.26 1995/10/04 14:20:26 roberto Exp roberto $";
 
 #include <string.h>
 
@@ -80,7 +80,7 @@ static Word hashindex (Hash *t, Object *ref)		/* hash function */
  }
 }
 
-Bool lua_equalObj (Object *t1, Object *t2)
+int lua_equalObj (Object *t1, Object *t2)
 {
   if (tag(t1) != tag(t2)) return 0;
   switch (tag(t1))
