@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.18 1994/11/17 13:58:57 roberto Exp roberto $";
+char *rcs_hash="$Id: hash.c,v 2.20 1994/11/25 19:27:03 roberto Exp $";
 
 #include "mem.h"
 #include "opcode.h"
@@ -56,15 +56,15 @@ static int hashindex (Hash *t, Object *ref)		/* hash function */
    return (((int)nvalue(ref))%nhash(t));
   case LUA_T_STRING:
   {
-   int h;
-   char *name = svalue(ref);
-   for (h=0; *name!=0; name++)		/* interpret name as binary number */
-    {
-    h <<= 8;
-    h  += (unsigned char) *name;		/* avoid sign extension */
-    h  %= nhash(t);			/* make it a valid index */
+   unsigned long h = tsvalue(ref)->hash;
+   if (h == 0)
+   {
+     char *name = svalue(ref);
+     while (*name)
+       h = ((h<<5)-h)^(unsigned char)*(name++);
+     tsvalue(ref)->hash = h;
    }
-   return h;
+   return h%nhash(t);	/* make it a valid index */
   }
   case LUA_T_FUNCTION:
    return (((int)bvalue(ref))%nhash(t));
