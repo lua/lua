@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.63 2002/11/18 14:37:57 roberto Exp $
+% $Id: manual.tex,v 1.63 2002/11/18 14:39:34 roberto Exp roberto $
 %{[(
 
 \documentclass[11pt,twoside]{article}
@@ -134,7 +134,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{{\small \tt\$Date: 2002/11/18 14:37:57 $ $}}
+%\date{{\small \tt\$Date: 2002/11/18 14:39:34 $ $}}
 
 \maketitle
 
@@ -306,9 +306,9 @@ variables do not have types; only values do.
 There are no type definitions in the language.
 All values carry their own type.
 
-There are seven \Index{basic types} in Lua:
+There are eight \Index{basic types} in Lua:
 \Def{nil}, \Def{boolean}, \Def{number},
-\Def{string}, \Def{function}, \Def{userdata}, and \Def{table}.
+\Def{string}, \Def{function}, \Def{userdata}, \Def{thread}, and \Def{table}.
 \emph{Nil} is the type of the value \nil,
 whose main property is to be different from any other value;
 usually it represents the absence of a useful value.
@@ -340,6 +340,11 @@ the programmer can define operations for userdata values
 Userdata values cannot be created or modified in Lua,
 only through the C~API.
 This guarantees the integrity of data owned by the host program.
+
+The type \Def{thread} represents independent threads of execution,
+and it is used to implement coroutines.
+(This is an experimental area; it needs more documentation,
+and is subject to changes in the future.)
 
 The type \emph{table} implements \Index{associative arrays},
 that is, \Index{arrays} that can be indexed not only with numbers,
@@ -862,9 +867,8 @@ A \rwd{for} statement like
 is equivalent to the code:
 \begin{verbatim}
        do
-         local _f, _s, var_1 = explist
+         local _f, _s, var_1, ..., var_n = explist
          while 1 do
-           local var_2, ..., var_n
            var_1, ..., var_n = _f(_s, var_1)
            if var_1 == nil then break end
            block
@@ -1653,14 +1657,14 @@ Unlike ``real'' threads, however,
 a coroutine only suspends its execution by explicitly calling
 an yield function.
 
-You create a coroutine with a call to \verb|coroutine.create|.
+You create a coroutine with a call to \IndexVerb{coroutine.create}.
 Its sole argument is a function,
 which is the main function of the coroutine.
 The \verb|coroutine.create| only creates a new coroutine and
 returns a handle to it (an object of type \emph{thread}).
 It does not start the coroutine execution.
 
-When you first call \verb|coroutine.resume|,
+When you first call \IndexVerb{coroutine.resume},
 passing as argument the thread returned by \verb|coroutine.create|,
 the coroutine starts its execution,
 at the first line of its main function.
@@ -1678,7 +1682,7 @@ plus any values returned by the coroutine main function.
 In case of errors, \verb|coroutine.resume| returns \False
 plus an error message.
 
-A coroutine yields calling \verb|coroutine.yield|.
+A coroutine yields calling \IndexVerb{coroutine.yield}.
 When a coroutine yields,
 the corresponding \verb|coroutine.resume| returns immediately,
 even if the yield happens inside nested function calls
@@ -1690,6 +1694,56 @@ The next time you resume the same coroutine,
 it continues its execution from the point where it yielded,
 with the call to \verb|coroutine.yield| returning any extra
 arguments passed to \verb|coroutine.resume|.
+
+The \IndexVerb{coroutine.wrap} function creates a coroutine
+like \verb|coroutine.create|,
+but instead of returning the coroutine itself,
+it returns a function that, when called, resumes the coroutine.
+Any arguments passed to that function
+go as extra arguments to resume.
+The function returns all the values returned by resume,
+but the first one (the boolean error code).
+Unlike \verb|coroutine.resume|,
+this function does not catch errors;
+any error is propagated to the caller.
+
+As a complete example,
+consider the next code:
+\begin{verbatim}
+function foo1 (a)
+  print("foo", a)
+  return coroutine.yield(2*a)
+end
+
+co = coroutine.create(function (a,b)
+      print("co-body", a, b)
+      local r = foo1(a+1)
+      print("co-body", r)
+      local r, s = coroutine.yield(a+b, a-b)
+      print("co-body", r, s)
+      return b, "end"
+end)
+       
+a, b = coroutine.resume(co, 1, 10)
+print("main", a, b)
+a, b, c = coroutine.resume(co, "r")
+print("main", a, b, c)
+a, b, c = coroutine.resume(co, "x", "y")
+print("main", a, b, c)
+a, b = coroutine.resume(co, "x", "y")
+print("main", a, b)
+\end{verbatim}
+When you run it, it produces the following output:
+\begin{verbatim}
+co-body 1       10
+foo     2
+main    true    4
+co-body r
+main    true    11      -9
+co-body x       y
+main    true    10      end
+main    false   cannot resume dead coroutine
+\end{verbatim}
 
 
 
@@ -2814,7 +2868,6 @@ and a \emph{count} event, that happens every ``count'' instructions.
 Lua identifies them with the following constants:
 \DefAPI{LUA_HOOKCALL}, \DefAPI{LUA_HOOKRET},
 \DefAPI{LUA_HOOKLINE}, and \DefAPI{LUA_HOOKCOUNT}.
-\end{verbatim}
 
 A hook has type \verb|lua_Hook|, defined as follows:
 \begin{verbatim}
@@ -4109,7 +4162,7 @@ The options are:
 \begin{description}\leftskip=20pt
 \item[\T{-} ] executes \verb|stdin| as a file;
 \item[\T{-e} \rm\emph{stat}] executes string \emph{stat};
-\item[\T{-l} \rm\emph{file}] executes file \emph{file};
+\item[\T{-l} \rm\emph{file}] ``requires'' \emph{file};
 \item[\T{-i}] enters interactive mode after running \emph{script};
 \item[\T{-v}] prints version information;
 \item[\T{--}] stop handling options.
@@ -4175,11 +4228,17 @@ the program would end just after the assignment to \verb|_PROMPT|.
 
 In Unix systems, Lua scripts can be made into executable programs
 by using \verb|chmod +x| and the~\verb|#!| form,
-as in \verb|#!/usr/local/bin/lua|.
+as in
+\begin{verbatim}
+#!/usr/local/bin/lua
+\end{verbatim}
 (Of course,
 the location of the Lua interpreter may be different in your machine.
 If \verb|lua| is in your \verb|PATH|,
-then a more portable solution is \verb|#!/usr/bin/env lua|.)
+then a more portable solution is
+\begin{verbatim}
+#!/usr/bin/env lua
+\end{verbatim}
 
 
 %------------------------------------------------------------------------------
