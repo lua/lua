@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.197 2002/06/12 14:51:31 roberto Exp roberto $
+** $Id: lapi.c,v 1.198 2002/06/13 13:39:55 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -555,7 +555,7 @@ LUA_API void lua_setmetatable (lua_State *L, int objindex) {
 ** `load' and `call' functions (run Lua code)
 */
 
-LUA_API void lua_rawcall (lua_State *L, int nargs, int nresults) {
+LUA_API void lua_upcall (lua_State *L, int nargs, int nresults) {
   StkId func;
   lua_lock(L);
   api_checknelems(L, nargs+1);

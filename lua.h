@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.138 2002/06/06 12:40:22 roberto Exp roberto $
+** $Id: lua.h,v 1.139 2002/06/13 13:39:55 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -25,7 +25,7 @@
 
 
 
-/* option for multiple returns in `lua_pcall' and `lua_rawcall' */
+/* option for multiple returns in `lua_pcall' and `lua_upcall' */
 #define LUA_MULTRET	(-1)
 
 
@@ -179,7 +179,7 @@ LUA_API void  lua_setmetatable (lua_State *L, int objindex);
 /*
 ** `load' and `call' functions (load and run Lua code)
 */
-LUA_API void  lua_rawcall (lua_State *L, int nargs, int nresults);
+LUA_API void  lua_upcall (lua_State *L, int nargs, int nresults);
 LUA_API int   lua_pcall (lua_State *L, int nargs, int nresults, int errf);
 LUA_API int   lua_load (lua_State *L, lua_Chunkreader reader, void *data,
                         const char *chunkname);

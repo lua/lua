@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.72 2002/06/03 20:11:41 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.73 2002/06/05 16:59:37 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -150,7 +150,7 @@ LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event) {
     return 0;
   }
   lua_pushvalue(L, obj);
-  lua_rawcall(L, 1, 1);
+  lua_upcall(L, 1, 1);
   return 1;
 }
 

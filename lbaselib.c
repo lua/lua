@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.79 2002/06/06 12:39:48 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.80 2002/06/13 13:39:55 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -34,7 +34,7 @@ static int luaB_print (lua_State *L) {
     const char *s;
     lua_pushvalue(L, -1);  /* function to be called */
     lua_pushvalue(L, i);   /* value to print */
-    lua_rawcall(L, 1, 1);
+    lua_upcall(L, 1, 1);
     s = lua_tostring(L, -1);  /* get result */
     if (s == NULL)
       return luaL_verror(L, "`tostring' must return a string to `print'");
@@ -378,7 +378,7 @@ static int luaB_require (lua_State *L) {
   }
   switch (status) {
     case 0: {
-      lua_rawcall(L, 0, 0);  /* run loaded module */
+      lua_upcall(L, 0, 0);  /* run loaded module */
       lua_pushvalue(L, 1);
       lua_pushboolean(L, 1);
       lua_settable(L, 2);  /* mark it as loaded */
