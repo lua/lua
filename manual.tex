@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 2.2 1997/06/18 21:11:53 roberto Exp roberto $
+% $Id: manual.tex,v 2.3 1997/06/19 18:03:04 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -38,7 +38,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1997/06/18 21:11:53 $}
+\date{\small \verb$Date: 1997/06/19 18:03:04 $}
 
 \maketitle
 
@@ -1624,12 +1624,15 @@ or a non \nil\ value if the chunk returns no values.
 It issues an error when called with a non string argument.
 \verb|dofile| is equivalent to the API function \verb|lua_dofile|.
 
-\subsubsection*{\ff {\tt dostring (string)}}\Deffunc{dostring}
+\subsubsection*{\ff {\tt dostring (string [, errmethod])}}\Deffunc{dostring}
 This function executes a given string as a Lua chunk.
 If there is any error executing the string, it returns \nil.
 Otherwise, it returns the values returned by the chunk,
 or a non \nil\ value if the chunk returns no values.
-\verb|dostring| is equivalent to the API function \verb|lua_dostring|.
+If provided, \verb|errmethod| is temporarily set as the error method,
+while \verb|string| runs.
+As a particular case, if \verb|errmethod| is \nil,
+no error messages will be issued during the execution of the string.
 
 \subsubsection*{\ff {\tt newtag ()}}\Deffunc{newtag}\label{pdf-newtag}
 Returns a new tag.
@@ -1890,10 +1893,11 @@ stands for the value of the n-th captured substring.
 
 If \verb|repl| is a function, then this function is called every time a
 match occurs, with the following arguments:
-If \verb|table| is present, it is the first argument;
-then all captured substrings, in order (see below);
-finally, the last argument is a match counter
-(1 for the first call).
+If \verb|table| is present, the the first argument is this table
+and the second one is a match counter (1 for the first call).
+Independently of these two optional arguments,
+all captured substrings are passed as arguments,
+in order (see below);
 If the value returned by this function is a string,
 then it is used as the replacement string;
 otherwise, the replacement string is the empty string.
@@ -1914,17 +1918,17 @@ See some examples below:
   x = gsub("4+5 = $return 4+5$", "$(.-)%$", dostring)
   --> x="4+5 = 9"
 
+  function f(t, i, v) return t[v] end
   t = {name="lua", version="3.0"}
-  x = gsub("$name - $version", "$(%w%w*)", rawgettable, t)
+  x = gsub("$name - $version", "$(%w%w*)", f, t)
   --> x="lua - 3.0"
 
   t = {"apple", "orange", "lime"}
   x = gsub("x and x and x", "x", rawgettable, t)
   --> x="apple and orange and lime"
 
-  function f(t,v,i) t[i]=v end
   t = {}
-  gsub("first second word", "(%w%w*)", f, t)
+  gsub("first second word", "(%w%w*)", rawsettable, t)
   --> t={"first", "second", "word"}
 \end{verbatim}
 
