@@ -250,7 +250,7 @@ static void read_string (LexState *LS, int del, SemInfo *seminfo) {
     switch (LS->current) {
       case EOZ:  case '\n':
         save(L, '\0', l);
-        luaX_error(LS, "unfinished string", TK_STRING);
+        luaX_error(LS, "unfinished string", TK_EOS);
         break;  /* to avoid warnings */
       case '\\':
         next(LS);  /* do not save the `\' */
