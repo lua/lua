@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.15 1994/12/16 15:55:04 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.16 1994/12/20 21:20:36 roberto Exp celes $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,8 +71,8 @@ char *lua_openfile (char *fn)
  fp = fopen (fn, "r");
  if (fp == NULL)
  {
-   static char buff[32];
-   sprintf(buff, "unable to open file %.10s", fn);
+   static char buff[255];
+   sprintf(buff, "unable to open file %.230s", fn);
    return buff;
  }
  return lua_addfile (fn);
