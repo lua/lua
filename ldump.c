@@ -1,5 +1,5 @@
 /*
-** $Id: ldump.c,v 1.4 2003/02/11 23:52:12 lhf Exp $
+** $Id: ldump.c,v 1.4 2003/02/11 23:52:12 lhf Exp lhf $
 ** save bytecodes
 ** See Copyright Notice in lua.h
 */
@@ -22,6 +22,7 @@ typedef struct {
  lua_State* L;
  lua_Chunkwriter write;
  void* data;
+ int strip;
 } DumpState;
 
 static void DumpBlock(const void* b, size_t size, DumpState* D)
@@ -132,9 +133,9 @@ static void DumpFunction(const Proto* f, const TString* p, DumpState* D)
  DumpByte(f->numparams,D);
  DumpByte(f->is_vararg,D);
  DumpByte(f->maxstacksize,D);
- DumpLines(f,D);
- DumpLocals(f,D);
- DumpUpvalues(f,D);
+ if (D->strip) DumpInt(0,D); else DumpLines(f,D);
+ if (D->strip) DumpInt(0,D); else DumpLocals(f,D);
+ if (D->strip) DumpInt(0,D); else DumpUpvalues(f,D);
  DumpConstants(f,D);
  DumpCode(f,D);
 }
@@ -147,10 +148,6 @@ static void DumpHeader(DumpState* D)
  DumpByte(sizeof(int),D);
  DumpByte(sizeof(size_t),D);
  DumpByte(sizeof(Instruction),D);
- DumpByte(SIZE_OP,D);
- DumpByte(SIZE_A,D);
- DumpByte(SIZE_B,D);
- DumpByte(SIZE_C,D);
  DumpByte(sizeof(lua_Number),D);
  DumpNumber(TEST_NUMBER,D);
 }
@@ -158,13 +155,14 @@ static void DumpHeader(DumpState* D)
 /*
 ** dump function as precompiled chunk
 */
-void luaU_dump (lua_State* L, const Proto* Main, lua_Chunkwriter w, void* data)
+int luaU_dump (lua_State* L, const Proto* Main, lua_Chunkwriter w, void* data, int strip)
 {
  DumpState D;
  D.L=L;
  D.write=w;
  D.data=data;
+ D.strip=strip;
  DumpHeader(&D);
  DumpFunction(Main,NULL,&D);
+ return 1;
 }
-

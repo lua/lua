@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.49 2003/04/07 20:34:20 lhf Exp $
+** $Id: lundump.c,v 1.49 2003/04/07 20:34:20 lhf Exp lhf $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -241,10 +241,6 @@ static void LoadHeader (LoadState* S)
  TESTSIZE(sizeof(int),"int");
  TESTSIZE(sizeof(size_t), "size_t");
  TESTSIZE(sizeof(Instruction), "Instruction");
- TESTSIZE(SIZE_OP, "OP");
- TESTSIZE(SIZE_A, "A");
- TESTSIZE(SIZE_B, "B");
- TESTSIZE(SIZE_C, "C");
  TESTSIZE(sizeof(lua_Number), "number");
  x=LoadNumber(S);
  if ((long)x!=(long)tx)		/* disregard errors in last bits of fraction */
