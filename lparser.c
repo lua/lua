@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.4 1998/07/24 18:02:38 roberto Exp roberto $
+** $Id: lparser.c,v 1.5 1998/08/11 13:28:05 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -586,6 +586,12 @@ static void error_expected (LexState *ls, int token) {
   luaX_error(ls, buff);
 }
 
+
+static void error_unexpected (LexState *ls) {
+  luaX_error(ls, "unexpected token");
+}
+
+
 static void error_unmatched (LexState *ls, int what, int who, int where) {
   if (where == ls->linenumber)
     error_expected(ls, what);
@@ -759,7 +765,7 @@ static int stat (LexState *ls) {
       return 0;
 
     default:
-      luaX_error(ls, "<statement> expected");
+      error_unexpected(ls);
       return 0;  /* to avoid warnings */
   }
 }
@@ -1252,7 +1258,7 @@ static void part (LexState *ls, constdesc *cd) {
             code_string(ls, ls->fs->localvar[v.info]);
             break;
           default:
-            luaX_error(ls, "`=' unexpected");
+            error_unexpected(ls);
         }
         next(ls);
         exp1(ls);
