@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.32 1999/02/12 19:23:02 roberto Exp roberto $
+** $Id: ldo.c,v 1.33 1999/02/22 13:51:44 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -235,7 +235,8 @@ void luaD_travstack (int (*fn)(TObject *))
 
 static void message (char *s) {
   TObject *em = &(luaS_new("_ERRORMESSAGE")->u.s.globalval);
-  if (ttype(em) != LUA_T_NIL) {
+  if (ttype(em) == LUA_T_PROTO || ttype(em) == LUA_T_CPROTO ||
+      ttype(em) == LUA_T_CLOSURE) {
     *L->stack.top = *em;
     incr_top;
     lua_pushstring(s);
@@ -246,14 +247,12 @@ static void message (char *s) {
 /*
 ** Reports an error, and jumps up to the available recover label
 */
-void lua_error (char *s)
-{
+void lua_error (char *s) {
   if (s) message(s);
   if (L->errorJmp)
     longjmp(*((jmp_buf *)L->errorJmp), 1);
   else {
-    lua_pushstring("lua: exit(1). Unable to recover.\n");
-    lua_call("_ALERT");
+    message("exit(1). Unable to recover.\n");
     exit(1);
   }
 }

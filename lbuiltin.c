@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.50 1999/02/08 16:29:35 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.51 1999/02/12 19:23:02 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -82,9 +82,8 @@ static Hash *gethash (int arg) {
 
 
 /*
-** If your system does not support "stderr", remove this function and
-** define your own "_ALERT" function. You *must* have an _ALERT function
-** defined for Lua to work properly.
+** If your system does not support "stderr", redefine this function, or
+** redefine _ERRORMESSAGE so that it won't need _ALERT.
 */
 static void luaB_alert (void) {
   fputs(luaL_check_string(1), stderr);
@@ -96,10 +95,13 @@ static void luaB_alert (void) {
 ** The library "iolib" redefines _ERRORMESSAGE for better error information.
 */
 static void error_message (void) {
-  char buff[600];
-  sprintf(buff, "lua error: %.500s\n", luaL_check_string(1));
-  lua_pushstring(buff);
-  lua_call("_ALERT");
+  lua_Object al = lua_rawgetglobal("_ALERT");
+  if (lua_isfunction(al)) {  /* avoid error loop if _ALERT is not defined */
+    char buff[600];
+    sprintf(buff, "lua error: %.500s\n", luaL_check_string(1));
+    lua_pushstring(buff);
+    lua_callfunction(al);
+  }
 }
 
 
@@ -301,7 +303,6 @@ static void luaB_call (void) {
 /* }====================================================== */
 
 
-#ifdef	EXTRALIB
 /*
 ** {======================================================
 ** "Extra" functions
@@ -501,7 +502,6 @@ static void luaB_sort (void) {
 }
 
 /* }}===================================================== */
-#endif
 
 
 /*
@@ -709,10 +709,9 @@ static struct luaL_reg builtin_funcs[] = {
   {"tag", luaB_luatag},
   {"tonumber", luaB_tonumber},
   {"tostring", luaB_tostring},
-  {"type", luaB_type}
-#ifdef EXTRALIB
+  {"type", luaB_type},
   /* "Extra" functions */
- ,{"assert", luaB_assert},
+  {"assert", luaB_assert},
   {"foreach", luaB_foreach},
   {"foreachi", luaB_foreachi},
   {"foreachvar", luaB_foreachvar},
@@ -720,7 +719,6 @@ static struct luaL_reg builtin_funcs[] = {
   {"sort", luaB_sort},
   {"tinsert", luaB_tinsert},
   {"tremove", luaB_tremove}
-#endif
 };
 
 

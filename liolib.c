@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.29 1999/01/04 12:41:12 roberto Exp roberto $
+** $Id: liolib.c,v 1.30 1999/02/05 15:22:43 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -459,7 +459,7 @@ static void errorfb (void) {
   char buff[MAXMESSAGE];
   int level = 1;  /* skip level 0 (it's this function) */
   lua_Object func;
-  sprintf(buff, "lua: %.200s\n", lua_getstring(lua_getparam(1)));
+  sprintf(buff, "lua error: %.200s\n", lua_getstring(lua_getparam(1)));
   while ((func = lua_stackedfunction(level++)) != LUA_NOOBJECT) {
     char *name;
     int currentline;
@@ -496,8 +496,11 @@ static void errorfb (void) {
       sprintf(buff+strlen(buff), " [in chunk %.50s]", chunkname);
     strcat(buff, "\n");
   }
-  lua_pushstring(buff);
-  lua_call("_ALERT");
+  func = lua_rawgetglobal("_ALERT");
+  if (lua_isfunction(func)) {  /* avoid error loop if _ALERT is not defined */
+    lua_pushstring(buff);
+    lua_callfunction(func);
+  }
 }
 
 
