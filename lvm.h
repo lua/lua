@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 1.12 1999/11/22 13:12:07 roberto Exp roberto $
+** $Id: lvm.h,v 1.13 1999/12/01 19:50:08 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -28,7 +28,6 @@ void luaV_getglobal (lua_State *L, GlobalVar *gv);
 void luaV_setglobal (lua_State *L, GlobalVar *gv);
 StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf, StkId base);
 void luaV_closure (lua_State *L, int nelems);
-void luaV_comparison (lua_State *L, StkId top, lua_Type ttype_less,
-                      lua_Type ttype_equal, lua_Type ttype_great, IMS op);
+void luaV_comparison (lua_State *L);
 
 #endif

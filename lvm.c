@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.79 2000/01/13 15:56:03 roberto Exp roberto $
+** $Id: lvm.c,v 1.80 2000/01/19 12:00:45 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -236,7 +236,11 @@ static void call_arith (lua_State *L, StkId top, IMS event) {
 }
 
 
-static int luaV_strcomp (const char *l, long ll, const char *r, long lr) {
+static int luaV_strcomp (const TaggedString *ls, const TaggedString *rs) {
+  const char *l = ls->str;
+  long ll = ls->u.s.len;
+  const char *r = rs->str;
+  long lr = rs->u.s.len;
   for (;;) {
     long temp = strcoll(l, r);
     if (temp != 0) return temp;
@@ -252,23 +256,25 @@ static int luaV_strcomp (const char *l, long ll, const char *r, long lr) {
   }
 }
 
-void luaV_comparison (lua_State *L, StkId top, lua_Type ttype_less,
-                      lua_Type ttype_equal, lua_Type ttype_great, IMS op) {
-  const TObject *l = top-2;
-  const TObject *r = top-1;
-  real result;
+void luaV_comparison (lua_State *L) {
+  const TObject *l = L->top-2;
+  const TObject *r = L->top-1;
+  int result;
   if (ttype(l) == LUA_T_NUMBER && ttype(r) == LUA_T_NUMBER)
-    result = nvalue(l)-nvalue(r);
+    result = nvalue(l) < nvalue(r);
   else if (ttype(l) == LUA_T_STRING && ttype(r) == LUA_T_STRING)
-    result = luaV_strcomp(svalue(l), tsvalue(l)->u.s.len,
-                          svalue(r), tsvalue(r)->u.s.len);
+    result = luaV_strcomp(tsvalue(l), tsvalue(r)) < 0;
   else {
-    call_binTM(L, top, op, "unexpected type in comparison");
+    call_binTM(L, L->top, IM_LT, "unexpected type in comparison");
     return;
   }
-  nvalue(top-2) = 1;
-  ttype(top-2) = (result < 0) ? ttype_less :
-                                (result == 0) ? ttype_equal : ttype_great;
+  L->top--;
+  if (result) {
+    nvalue(L->top-1) = 1.0;
+    ttype(L->top-1) = LUA_T_NUMBER;
+  }
+  else
+    ttype(L->top-1) = LUA_T_NIL;
 }
 
 
@@ -380,6 +386,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
       case GETGLOBALW: aux += highbyte(L, *pc++);
       case GETGLOBAL:  aux += *pc++;
         L->top = top;
+        LUA_ASSERT(L, ttype(&consts[aux]) == LUA_T_STRING, "unexpected type");
         luaV_getglobal(L, tsvalue(&consts[aux])->u.s.gv);
         top++;
         LUA_ASSERT(L, top==L->top, "top's not synchronized");
@@ -394,7 +401,9 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
 
       case GETDOTTEDW: aux += highbyte(L, *pc++);
       case GETDOTTED:  aux += *pc++;
-        *top++ = consts[aux];
+        LUA_ASSERT(L, ttype(&consts[aux]) == LUA_T_STRING, "unexpected type");
+        ttype(top) = LUA_T_STRING;
+        tsvalue(top++) = tsvalue(&consts[aux]);
         L->top = top;
         luaV_gettable(L);
         top--;
@@ -405,7 +414,9 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
       case PUSHSELF:  aux += *pc++; {
         TObject receiver;
         receiver = *(top-1);
-        *top++ = consts[aux];
+        LUA_ASSERT(L, ttype(&consts[aux]) == LUA_T_STRING, "unexpected type");
+        ttype(top) = LUA_T_STRING;
+        tsvalue(top++) = tsvalue(&consts[aux]);
         L->top = top;
         luaV_gettable(L);
         *(top-1) = receiver;
@@ -427,6 +438,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
 
       case SETGLOBALW: aux += highbyte(L, *pc++);
       case SETGLOBAL:  aux += *pc++;
+        LUA_ASSERT(L, ttype(&consts[aux]) == LUA_T_STRING, "unexpected type");
         L->top = top;
         luaV_setglobal(L, tsvalue(&consts[aux])->u.s.gv);
         top--;
@@ -469,34 +481,64 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
       }
 
       case NEQOP: aux = 1;
-      case EQOP: {
-        int res = luaO_equalObj(top-2, top-1);
-        if (aux) res = !res;
+      case EQOP:
         top--;
-        ttype(top-1) = res ? LUA_T_NUMBER : LUA_T_NIL;
-        nvalue(top-1) = 1;
+        aux = (luaO_equalObj(top-1, top) != aux);
+      booleanresult:
+        if (aux) {
+          ttype(top-1) = LUA_T_NUMBER;
+          nvalue(top-1) = 1.0;
+        }
+        else ttype(top-1) = LUA_T_NIL;
         break;
-      }
 
-       case LTOP:
-         luaV_comparison(L, top, LUA_T_NUMBER, LUA_T_NIL, LUA_T_NIL, IM_LT);
-         top--;
-         break;
+      case LTOP:
+        top--;
+        if (ttype(top-1) == LUA_T_NUMBER && ttype(top) == LUA_T_NUMBER)
+          aux = nvalue(top-1) < nvalue(top);
+        else if (ttype(top-1) == LUA_T_STRING && ttype(top) == LUA_T_STRING)
+          aux = luaV_strcomp(tsvalue(top-1), tsvalue(top)) < 0;
+        else {
+          call_binTM(L, top+1, IM_LT, "unexpected type in comparison");
+          break;
+        }
+        goto booleanresult;
 
       case LEOP:
-        luaV_comparison(L, top, LUA_T_NUMBER, LUA_T_NUMBER, LUA_T_NIL, IM_LE);
         top--;
-        break;
+        if (ttype(top-1) == LUA_T_NUMBER && ttype(top) == LUA_T_NUMBER)
+          aux = nvalue(top-1) <= nvalue(top);
+        else if (ttype(top-1) == LUA_T_STRING && ttype(top) == LUA_T_STRING)
+          aux = luaV_strcomp(tsvalue(top-1), tsvalue(top)) <= 0;
+        else {
+          call_binTM(L, top+1, IM_LE, "unexpected type in comparison");
+          break;
+        }
+        goto booleanresult;
 
       case GTOP:
-        luaV_comparison(L, top, LUA_T_NIL, LUA_T_NIL, LUA_T_NUMBER, IM_GT);
         top--;
-        break;
+        if (ttype(top-1) == LUA_T_NUMBER && ttype(top) == LUA_T_NUMBER)
+          aux = nvalue(top-1) > nvalue(top);
+        else if (ttype(top-1) == LUA_T_STRING && ttype(top) == LUA_T_STRING)
+          aux = luaV_strcomp(tsvalue(top-1), tsvalue(top)) > 0;
+        else {
+          call_binTM(L, top+1, IM_GT, "unexpected type in comparison");
+          break;
+        }
+        goto booleanresult;
 
       case GEOP:
-        luaV_comparison(L, top, LUA_T_NIL, LUA_T_NUMBER, LUA_T_NUMBER, IM_GE);
         top--;
-        break;
+        if (ttype(top-1) == LUA_T_NUMBER && ttype(top) == LUA_T_NUMBER)
+          aux = nvalue(top-1) >= nvalue(top);
+        else if (ttype(top-1) == LUA_T_STRING && ttype(top) == LUA_T_STRING)
+          aux = luaV_strcomp(tsvalue(top-1), tsvalue(top)) >= 0;
+        else {
+          call_binTM(L, top+1, IM_GE, "unexpected type in comparison");
+          break;
+        }
+        goto booleanresult;
 
       case ADDOP:
         if (tonumber(top-1) || tonumber(top-2))
