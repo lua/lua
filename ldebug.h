@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.h,v 1.27 2002/08/06 15:32:22 roberto Exp roberto $
+** $Id: ldebug.h,v 1.28 2002/08/06 18:01:50 roberto Exp roberto $
 ** Auxiliary functions from Debug Interface module
 ** See Copyright Notice in lua.h
 */
@@ -27,7 +27,7 @@ void luaG_concaterror (lua_State *L, StkId p1, StkId p2);
 void luaG_aritherror (lua_State *L, StkId p1, const TObject *p2);
 int luaG_ordererror (lua_State *L, const TObject *p1, const TObject *p2);
 void luaG_runerror (lua_State *L, const char *fmt, ...);
-void luaG_errormsg (lua_State *L, int internal);
+void luaG_errormsg (lua_State *L);
 int luaG_checkcode (const Proto *pt);
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.129 2002/08/07 14:35:55 roberto Exp roberto $
+** $Id: ldebug.c,v 1.130 2002/08/07 19:22:39 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -518,13 +518,10 @@ int luaG_ordererror (lua_State *L, const TObject *p1, const TObject *p2) {
 }
 
 
-static void addinfo (lua_State *L, int internal) {
-  const char *msg = svalue(L->top - 1);
+static void addinfo (lua_State *L, const char *msg) {
   CallInfo *ci = L->ci;
-  if (!internal && ci > L->base_ci) ci--;
-  if (strchr(msg, '\n')) return;  /* message already `formatted' */
   if (!isLua(ci)) {  /* no Lua code? */
-    luaO_pushfstring(L, "%s\n", msg);  /* no extra info */
+    luaO_pushfstring(L, "%s\n", msg);  /* no extra info; just add '\n' */
   }
   else {  /* add file:line information */
     char buff[LUA_IDSIZE];
@@ -535,9 +532,7 @@ static void addinfo (lua_State *L, int internal) {
 }
 
 
-void luaG_errormsg (lua_State *L, int internal) {
-  if (ttisstring(L->top - 1))
-    addinfo(L, internal);
+void luaG_errormsg (lua_State *L) {
   if (L->errfunc != 0) {  /* is there an error handling function? */
     StkId errfunc = restorestack(L, L->errfunc);
     if (!ttisfunction(errfunc)) luaD_throw(L, LUA_ERRERR);
@@ -553,8 +548,8 @@ void luaG_errormsg (lua_State *L, int internal) {
 void luaG_runerror (lua_State *L, const char *fmt, ...) {
   va_list argp;
   va_start(argp, fmt);
-  luaO_pushvfstring(L, fmt, argp);
+  addinfo(L, luaO_pushvfstring(L, fmt, argp));
   va_end(argp);
-  luaG_errormsg(L, 1);
+  luaG_errormsg(L);
 }
 
