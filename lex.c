@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.28 1996/02/14 19:11:09 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.29 1996/02/26 22:35:51 roberto Exp roberto $";
  
 
 #include <ctype.h>
@@ -12,7 +12,6 @@ char *rcs_lex = "$Id: lex.c,v 2.28 1996/02/14 19:11:09 roberto Exp roberto $";
 #include "inout.h"
 #include "luadebug.h"
 #include "parser.h"
-#include "ugly.h"
 
 #define MINBUFF 260
 
@@ -143,9 +142,6 @@ int luaY_lex (void)
   while (1)
   {
     yytextLast = yytext;
-#if 0
-    fprintf(stderr,"'%c' %d\n",current,current);
-#endif
     switch (current)
     {
       case EOF:
@@ -177,8 +173,7 @@ int luaY_lex (void)
 
       case '-':
         save_and_next();
-        if (current != '-') return '-';  /* else goes through */
-      case '#':
+        if (current != '-') return '-';
         do { next(); } while (current != '\n' && current != 0);
         continue;
 
@@ -322,22 +317,6 @@ fraction:
           luaY_lval.vFloat = a;
           return NUMBER;
         }
-
-      case U_and: case U_do: case U_else: case U_elseif: case U_end:
-      case U_function: case U_if: case U_local: case U_nil: case U_not:
-      case U_or: case U_repeat: case U_return: case U_then:
-      case U_until: case U_while:
-      {
-        int old = current;
-        next();
-        return reserved[old-U_and].token;
-      }
-
-      case U_eq:	next(); return EQ;
-      case U_le:	next(); return LE;
-      case U_ge:	next(); return GE;
-      case U_ne:	next(); return NE;
-      case U_sc:	next(); return CONC;
 
       default: 		/* also end of file */
       {
