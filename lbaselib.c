@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.63 2002/04/02 20:42:20 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.64 2002/04/05 18:54:31 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -441,6 +441,7 @@ static void base_open (lua_State *L) {
 
 static int luaB_resume (lua_State *L) {
   lua_State *co = (lua_State *)lua_getfrombox(L, lua_upvalueindex(1));
+  lua_settop(L, 0);
   if (lua_resume(L, co) != 0)
     lua_error(L, "error running co-routine");
   return lua_gettop(L);
