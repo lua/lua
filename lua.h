@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.44 1999/12/30 18:29:46 roberto Exp roberto $
+** $Id: lua.h,v 1.45 2000/03/27 14:00:35 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -23,7 +23,7 @@
 
 typedef struct lua_State lua_State;
 
-typedef void (*lua_CFunction) ( /* lua_State *L */ );
+typedef void (*lua_CFunction) (lua_State *L);
 
 typedef struct TObject *lua_Object;
 
@@ -154,7 +154,7 @@ lua_Object     lua_seterrormethod (lua_State *L);  /* In: new method */
 
 extern lua_State *lua_state;
 
-#define lua_open()	((void)(lua_state?0:(lua_state=lua_newstate(NULL))))
+#define lua_open()	((void)(lua_state?0:(lua_state=lua_newstate(0))))
 
 #define lua_close()		(lua_close)(lua_state)
 #define lua_settagmethod(tag,event)	(lua_settagmethod)(lua_state, tag,event)
@@ -188,7 +188,6 @@ extern lua_State *lua_state;
 #define lua_pushnumber(n)	(lua_pushnumber)(lua_state, n)
 #define lua_pushlstring(s,len)	(lua_pushlstring)(lua_state, s,len)
 #define lua_pushstring(s)	(lua_pushstring)(lua_state, s)
-#define lua_pushcclosure(fn,n)	(lua_pushcclosure)(lua_state, fn,n)
 #define lua_pushusertag(u,tag)	(lua_pushusertag)(lua_state, u,tag)
 #define lua_pushobject(obj)	(lua_pushobject)(lua_state, obj)
 #define lua_pop()		(lua_pop)(lua_state)
@@ -209,11 +208,18 @@ extern lua_State *lua_state;
 #define lua_createtable()	(lua_createtable)(lua_state)
 #define lua_collectgarbage(limit)	(lua_collectgarbage)(lua_state, limit)
 #define lua_seterrormethod()	(lua_seterrormethod)(lua_state)
+/*
+** the following typecast is a little dirty, but we cannot find another
+** way to keep compatibility with old definition of `lua_CFunction'
+*/
+#define lua_pushcclosure(fn,n) \
+		(lua_pushcclosure)(lua_state, (lua_CFunction)(fn), n)
 
 #endif
 
 
 #endif
+
 
 
 
