@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: lstrlib.c,v 1.77 2002/02/08 22:39:36 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -434,12 +434,18 @@ static void push_onecapture (MatchState *ms, int i) {
 }
 
 
-static int push_captures (MatchState *ms) {
+static int push_captures (MatchState *ms, const char *s, const char *e) {
   int i;
   luaL_check_stack(ms->L, ms->level, "too many captures");
-  for (i=0; i<ms->level; i++)
-    push_onecapture(ms, i);
-  return ms->level;  /* number of strings pushed */
+  if (ms->level == 0 && s) {  /* no explicit captures? */
+    lua_pushlstring(ms->L, s, e-s);  /* return whole match */
+    return 1;
+  }
+  else {  /* return all captures */
+    for (i=0; i<ms->level; i++)
+      push_onecapture(ms, i);
+    return ms->level;  /* number of strings pushed */
+  }
 }
 
 
@@ -472,7 +478,7 @@ static int str_find (lua_State *L) {
       if ((res=match(&ms, s1, p)) != NULL) {
         lua_pushnumber(L, s1-s+1);  /* start */
         lua_pushnumber(L, res-s);   /* end */
-        return push_captures(&ms) + 2;
+        return push_captures(&ms, NULL, 0) + 2;
       }
     } while (s1++<ms.src_end && !anchor);
   }
@@ -481,7 +487,44 @@ static int str_find (lua_State *L) {
 }
 
 
-static void add_s (MatchState *ms, luaL_Buffer *b) {
+static int gfind_aux (lua_State *L) {
+  MatchState ms;
+  const char *s = lua_tostring(L, lua_upvalueindex(1));
+  size_t ls = lua_strlen(L, lua_upvalueindex(1));
+  const char *p = lua_tostring(L, lua_upvalueindex(2));
+  const char *src;
+  ms.L = L;
+  ms.src_init = s;
+  ms.src_end = s+ls;
+  for (src = s + (size_t)lua_tonumber(L, lua_upvalueindex(3));
+       src <= ms.src_end;
+       src++) {
+    const char *e;
+    ms.level = 0;
+    if ((e = match(&ms, src, p)) != NULL) {
+      int newstart = e-s;
+      if (e == src) newstart++;  /* empty match? go at least one position */
+      lua_pushnumber(L, newstart);
+      lua_replace(L, lua_upvalueindex(3));
+      return push_captures(&ms, src, e);
+    }
+  }
+  return 0;  /* not found */
+}
+
+
+static int gfind (lua_State *L) {
+  luaL_check_string(L, 1);
+  luaL_check_string(L, 2);
+  lua_settop(L, 2);
+  lua_pushnumber(L, 0);
+  lua_pushcclosure(L, gfind_aux, 3);
+  return 1;
+}
+
+
+static void add_s (MatchState *ms, luaL_Buffer *b,
+                   const char *s, const char *e) {
   lua_State *L = ms->L;
   if (lua_isstring(L, 3)) {
     const char *news = lua_tostring(L, 3);
@@ -505,7 +548,7 @@ static void add_s (MatchState *ms, luaL_Buffer *b) {
   else {  /* is a function */
     int n;
     lua_pushvalue(L, 3);
-    n = push_captures(ms);
+    n = push_captures(ms, s, e);
     lua_rawcall(L, n, 1);
     if (lua_isstring(L, -1))
       luaL_addvalue(b);  /* add return to accumulated result */
@@ -537,7 +580,7 @@ static int str_gsub (lua_State *L) {
     e = match(&ms, src, p);
     if (e) {
       n++;
-      add_s(&ms, &b);
+      add_s(&ms, &b, src, e);
     }
     if (e && e>src) /* non empty match? */
       src = e;  /* skip it */
@@ -674,6 +717,7 @@ static const luaL_reg strlib[] = {
 {"concat", str_concat},
 {"format", str_format},
 {"strfind", str_find},
+{"gfind", gfind},
 {"gsub", str_gsub}
 };
 
