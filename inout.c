@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.26 1996/01/22 17:40:00 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.27 1996/01/26 14:05:28 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -122,7 +122,13 @@ void lua_internaldostring (void)
 void lua_internaldofile (void)
 {
  lua_Object obj = lua_getparam (1);
- if (lua_isstring(obj) && !lua_dofile(lua_getstring(obj)))
+ char *fname = NULL;
+ if (lua_isstring(obj))
+   fname = lua_getstring(obj);
+ else if (obj != LUA_NOOBJECT)
+   lua_error("invalid argument to function `dofile'");
+ /* else fname = NULL */
+ if (!lua_dofile(fname))
   lua_pushnumber(1);
  else
   lua_pushnil();
