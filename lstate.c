@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.45 2000/10/20 16:39:03 roberto Exp roberto $
+** $Id: lstate.c,v 1.46 2000/10/24 19:12:06 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -98,6 +98,7 @@ LUA_API lua_State *lua_open (int stacksize) {
 
 
 LUA_API void lua_close (lua_State *L) {
+  LUA_ASSERT(L != lua_state || lua_gettop(L) == 0, "garbage in C stack");
   luaC_collect(L, 1);  /* collect all elements */
   LUA_ASSERT(L->rootproto == NULL, "list should be empty");
   LUA_ASSERT(L->rootcl == NULL, "list should be empty");

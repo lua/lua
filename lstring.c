@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.42 2000/08/09 19:16:57 roberto Exp roberto $
+** $Id: lstring.c,v 1.43 2000/09/29 12:42:13 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -81,17 +81,17 @@ static void newentry (lua_State *L, stringtable *tb, TString *ts, int h) {
 
 TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
   unsigned long h = hash_s(str, l);
-  int h1 = h&(L->strt.size-1);
+  int h1 = h & (L->strt.size-1);
   TString *ts;
   for (ts = L->strt.hash[h1]; ts; ts = ts->nexthash) {
-    if (ts->u.s.len == l && (memcmp(str, ts->str, l) == 0))
+    if (ts->len == l && (memcmp(str, ts->str, l) == 0))
       return ts;
   }
   /* not found */
   ts = (TString *)luaM_malloc(L, sizestring(l));
   ts->marked = 0;
   ts->nexthash = NULL;
-  ts->u.s.len = l;
+  ts->len = l;
   ts->u.s.hash = h;
   ts->u.s.constindex = 0;
   memcpy(ts->str, str, l);
@@ -102,22 +102,31 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
 }
 
 
+TString *luaS_newudata (lua_State *L, size_t s, void *udata) {
+  TString *ts = (TString *)luaM_malloc(L, (lint32)sizeof(TString)+s);
+  ts->marked = 0;
+  ts->nexthash = NULL;
+  ts->len = s;
+  ts->u.d.tag = 0;
+  ts->u.d.value = (udata == NULL) ? ts+1 : udata;
+  L->nblocks += sizestring(s);
+ /* insert it on table */
+  newentry(L, &L->udt, ts, IntPoint(ts->u.d.value) & (L->udt.size-1));
+  return ts;
+}
+
+
 TString *luaS_createudata (lua_State *L, void *udata, int tag) {
-  unsigned long h = IntPoint(udata);
-  int h1 = h&(L->udt.size-1);
+  int h1 = IntPoint(udata) & (L->udt.size-1);
   TString *ts;
   for (ts = L->udt.hash[h1]; ts; ts = ts->nexthash) {
     if (udata == ts->u.d.value && (tag == ts->u.d.tag || tag == LUA_ANYTAG))
       return ts;
   }
   /* not found */
-  ts = luaM_new(L, TString);
-  ts->marked = 0;
-  ts->nexthash = NULL;
-  ts->u.d.value = udata;
-  ts->u.d.tag = (tag == LUA_ANYTAG) ? 0 : tag;
-  L->nblocks += gcsizeudata;
-  newentry(L, &L->udt, ts, h1);  /* insert it on table */
+  ts = luaS_newudata(L, 0, udata);
+  if (tag != LUA_ANYTAG)
+    ts->u.d.tag = tag;
   return ts;
 }
 

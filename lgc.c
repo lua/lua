@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.70 2000/10/05 12:14:08 roberto Exp roberto $
+** $Id: lgc.c,v 1.71 2000/10/05 13:00:17 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -248,7 +248,7 @@ static void collectstrings (lua_State *L, int all) {
       else {  /* collect */
         *p = next->nexthash;
         L->strt.nuse--;
-        L->nblocks -= sizestring(next->u.s.len);
+        L->nblocks -= sizestring(next->len);
         luaM_free(L, next);
       }
     }
@@ -273,7 +273,7 @@ static void collectudata (lua_State *L, int all) {
         *p = next->nexthash;
         next->nexthash = L->TMtable[tag].collected;  /* chain udata */
         L->TMtable[tag].collected = next;
-        L->nblocks -= gcsizeudata;
+        L->nblocks -= sizestring(next->len);
         L->udt.nuse--;
       }
     }

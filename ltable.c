@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.56 2000/09/29 12:42:13 roberto Exp roberto $
+** $Id: ltable.c,v 1.57 2000/10/05 12:14:08 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -139,7 +139,7 @@ Node *luaH_next (lua_State *L, const Hash *t, const TObject *key) {
 */
 void luaH_remove (Hash *t, TObject *key) {
   if (ttype(key) == LUA_TNUMBER ||
-       (ttype(key) == LUA_TSTRING && tsvalue(key)->u.s.len <= 30))
+       (ttype(key) == LUA_TSTRING && tsvalue(key)->len <= 30))
   return;  /* do not remove numbers nor small strings */
   else {
     /* try to find a number `n' with the same hash as `key' */

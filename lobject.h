@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.78 2000/10/02 20:10:55 roberto Exp roberto $
+** $Id: lobject.h,v 1.79 2000/10/05 12:14:08 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -73,9 +73,9 @@ typedef struct lua_TObject {
 */
 typedef struct TString {
   union {
+    union L_Umaxalign dummy;  /* ensures maximum alignment for `local' udata */
     struct {  /* for strings */
       unsigned long hash;
-      size_t len;
       int constindex;  /* hint to reuse constants */
     } s;
     struct {  /* for userdata */
@@ -83,6 +83,7 @@ typedef struct TString {
       void *value;
     } d;
   } u;
+  size_t len;
   struct TString *nexthash;  /* chain for hash table */
   unsigned char marked;
   char str[1];   /* variable length string!! must be the last field! */

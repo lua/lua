@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.107 2000/10/20 16:39:03 roberto Exp roberto $
+** $Id: lapi.c,v 1.108 2000/10/24 19:19:15 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -173,7 +173,7 @@ LUA_API const char *lua_tostring (lua_State *L, int index) {
 LUA_API size_t lua_strlen (lua_State *L, int index) {
   StkId o = luaA_indexAcceptable(L, index);
   if (o == NULL || tostring(L, o)) return 0;
-  else return tsvalue(o)->u.s.len;
+  else return tsvalue(o)->len;
 }
 
 LUA_API lua_CFunction lua_tocfunction (lua_State *L, int index) {
@@ -489,5 +489,14 @@ LUA_API void lua_concat (lua_State *L, int n) {
   luaV_strconc(L, n, top);
   L->top = top-(n-1);
   luaC_checkGC(L);
+}
+
+
+LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
+  TString *ts = luaS_newudata(L, size, NULL);
+  tsvalue(L->top) = ts;
+  ttype(L->top) = LUA_TUSERDATA;
+  api_incr_top(L);
+  return ts->u.d.value;
 }
 

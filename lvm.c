@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.144 2000/10/05 13:00:17 roberto Exp roberto $
+** $Id: lvm.c,v 1.145 2000/10/06 12:45:25 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -249,9 +249,9 @@ static void call_arith (lua_State *L, StkId top, TMS event) {
 
 static int luaV_strcomp (const TString *ls, const TString *rs) {
   const char *l = ls->str;
-  size_t ll = ls->u.s.len;
+  size_t ll = ls->len;
   const char *r = rs->str;
-  size_t lr = rs->u.s.len;
+  size_t lr = rs->len;
   for (;;) {
     int temp = strcoll(l, r);
     if (temp != 0) return temp;
@@ -293,21 +293,21 @@ void luaV_strconc (lua_State *L, int total, StkId top) {
       if (!call_binTM(L, top, TM_CONCAT))
         luaG_binerror(L, top-2, LUA_TSTRING, "concat");
     }
-    else if (tsvalue(top-1)->u.s.len > 0) {  /* if len=0, do nothing */
+    else if (tsvalue(top-1)->len > 0) {  /* if len=0, do nothing */
       /* at least two string values; get as many as possible */
-      lint32 tl = (lint32)tsvalue(top-1)->u.s.len + 
-                  (lint32)tsvalue(top-2)->u.s.len;
+      lint32 tl = (lint32)tsvalue(top-1)->len + 
+                  (lint32)tsvalue(top-2)->len;
       char *buffer;
       int i;
       while (n < total && !tostring(L, top-n-1)) {  /* collect total length */
-        tl += tsvalue(top-n-1)->u.s.len;
+        tl += tsvalue(top-n-1)->len;
         n++;
       }
       if (tl > MAX_SIZET) lua_error(L, "string size overflow");
       buffer = luaO_openspace(L, tl);
       tl = 0;
       for (i=n; i>0; i--) {  /* concat all strings */
-        size_t l = tsvalue(top-i)->u.s.len;
+        size_t l = tsvalue(top-i)->len;
         memcpy(buffer+tl, tsvalue(top-i)->str, l);
         tl += l;
       }

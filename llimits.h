@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.17 2000/10/06 19:28:38 roberto Exp roberto $
+** $Id: llimits.h,v 1.18 2000/10/09 13:47:32 roberto Exp roberto $
 ** Limits, basic types, and some other "installation-dependent" definitions
 ** See Copyright Notice in lua.h
 */
@@ -73,6 +73,11 @@ typedef unsigned long lint32;  /* unsigned int with at least 32 bits */
 #ifndef DEFAULT_STACK_SIZE
 #define DEFAULT_STACK_SIZE      1024
 #endif
+
+
+
+/* type to ensure maximum alignment */
+union L_Umaxalign { double d; char *s; long l; };
 
 
 

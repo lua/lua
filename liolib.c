@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.86 2000/10/02 20:10:55 roberto Exp roberto $
+** $Id: liolib.c,v 1.87 2000/10/20 16:39:03 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -159,18 +159,9 @@ static int io_close (lua_State *L) {
 
 static int file_collect (lua_State *L) {
   IOCtrl *ctrl = (IOCtrl *)lua_touserdata(L, -1);
-  lua_pop(L, 1);  /* remove upvalue */
-  if (ctrl == (IOCtrl *)lua_touserdata(L, 1)) {
-    /* collecting `ctrl' itself */
-    lua_unref(L, ctrl->ref[INFILE]);
-    lua_unref(L, ctrl->ref[OUTFILE]);
-    free(ctrl);
-  }
-  else {  /* collecting a file: Close it */
-    FILE *f = getnonullfile(L, ctrl, 1);
-    if (f != stdin && f != stdout && f != stderr)
-      CLOSEFILE(L, f);
-  }
+  FILE *f = getnonullfile(L, ctrl, 1);
+  if (f != stdin && f != stdout && f != stderr)
+    CLOSEFILE(L, f);
   return 0;
 }
 
@@ -690,14 +681,13 @@ static const struct luaL_reg iolibtag[] = {
 
 
 static void openwithcontrol (lua_State *L) {
-  IOCtrl *ctrl = (IOCtrl *)malloc(sizeof(IOCtrl));
+  IOCtrl *ctrl = (IOCtrl *)lua_newuserdata(L, sizeof(IOCtrl));
   unsigned int i;
-  int ctrltag = lua_newtag(L);
   ctrl->iotag = lua_newtag(L);
   ctrl->closedtag = lua_newtag(L);
   for (i=0; i<sizeof(iolibtag)/sizeof(iolibtag[0]); i++) {
     /* put `ctrl' as upvalue for these functions */
-    lua_pushusertag(L, ctrl, ctrltag);
+    lua_pushvalue(L, -1);
     lua_pushcclosure(L, iolibtag[i].func, 1);
     lua_setglobal(L, iolibtag[i].name);
   }
@@ -712,12 +702,10 @@ static void openwithcontrol (lua_State *L) {
   setfilebyname(L, ctrl, stdin, "_STDIN");
   setfilebyname(L, ctrl, stdout, "_STDOUT");
   setfilebyname(L, ctrl, stderr, "_STDERR");
-  /* delete `ctrl' when collected */
-  lua_pushusertag(L, ctrl, ctrltag);
-  lua_pushcclosure(L, file_collect, 1); 
-  lua_settagmethod(L, ctrltag, "gc");
   /* close files when collected */
-  lua_copytagmethods(L, ctrl->iotag, ctrltag);
+  lua_pushcclosure(L, file_collect, 1);  /* pops `ctrl' from stack */
+  lua_settagmethod(L, ctrl->iotag, "gc");
+  lua_pop(L, 1);  /* remove tag method returned by previous call */
 }
 
 

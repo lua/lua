@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.50 2000/10/06 19:29:26 roberto Exp roberto $
+** $Id: ltests.c,v 1.51 2000/10/20 16:39:03 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -260,7 +260,10 @@ static int unref (lua_State *L) {
 }
 
 static int newuserdata (lua_State *L) {
-  lua_pushusertag(L, (void *)luaL_check_int(L, 1), luaL_check_int(L, 2));
+  if (lua_isnumber(L, 2))
+    lua_pushusertag(L, (void *)luaL_check_int(L, 1), luaL_check_int(L, 2));
+  else
+    lua_newuserdata(L, luaL_check_int(L, 1));
   return 1;
 }
 
