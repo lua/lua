@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 1.5 1999/01/15 13:11:57 roberto Exp roberto $
+** $Id: ltm.h,v 1.6 1999/08/16 20:52:00 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -57,6 +57,6 @@ void luaT_settagmethod (int t, const char *event, TObject *func);
 const TObject *luaT_gettagmethod (int t, const char *event);
 const char *luaT_travtagmethods (int (*fn)(TObject *));
 
-void luaT_setfallback (void);  /* only if LUA_COMPAT2_5 */
+int luaT_validevent (int t, int e);
 
 #endif

@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.25 1999/05/21 19:41:49 roberto Exp roberto $
+** $Id: ltm.c,v 1.26 1999/08/16 20:52:00 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -45,7 +45,7 @@ static const char luaT_validevents[NUM_TAGS][IM_N] = {
 {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}   /* LUA_T_NIL */
 };
 
-static int luaT_validevent (int t, int e) {  /* ORDER LUA_T */
+int luaT_validevent (int t, int e) {  /* ORDER LUA_T */
   return (t < LUA_T_NIL) ?  1 : luaT_validevents[-t][e];
 }
 
@@ -154,97 +154,4 @@ const char *luaT_travtagmethods (int (*fn)(TObject *)) {  /* ORDER IM */
   }
   return NULL;
 }
-
-
-/*
-* ===================================================================
-* compatibility with old fallback system
-*/
-#ifdef LUA_COMPAT2_5
-
-#include "lapi.h"
-#include "lstring.h"
-
-static void errorFB (void)
-{
-  lua_Object o = lua_getparam(1);
-  if (lua_isstring(o))
-    fprintf(stderr, "lua: %s\n", lua_getstring(o));
-  else
-    fprintf(stderr, "lua: unknown error\n");
-}
-
-
-static void nilFB (void) { }
-
-
-static void typeFB (void) {
-  lua_error("unexpected type");
-}
-
-
-static void fillvalids (IMS e, TObject *func) {
-  int t;
-  for (t=LUA_T_NIL; t<=LUA_T_USERDATA; t++)
-    if (luaT_validevent(t, e))
-      *luaT_getim(t, e) = *func;
-}
-
-
-void luaT_setfallback (void) {
-  static const char *const oldnames [] = {"error", "getglobal", "arith",
-                                          "order", NULL};
-  TObject oldfunc;
-  lua_CFunction replace;
-  const char *name = luaL_check_string(1);
-  lua_Object func = lua_getparam(2);
-  luaL_arg_check(lua_isfunction(func), 2, "function expected");
-  switch (luaL_findstring(name, oldnames)) {
-    case 0: {  /* old error fallback */
-      TObject *em = &(luaS_new("_ERRORMESSAGE")->u.s.globalval);
-      oldfunc = *em;
-      *em = *luaA_Address(func);
-      replace = errorFB;
-      break;
-    }
-    case 1:  /* old getglobal fallback */
-      oldfunc = *luaT_getim(LUA_T_NIL, IM_GETGLOBAL);
-      *luaT_getim(LUA_T_NIL, IM_GETGLOBAL) = *luaA_Address(func);
-      replace = nilFB;
-      break;
-    case 2: {  /* old arith fallback */
-      int i;
-      oldfunc = *luaT_getim(LUA_T_NUMBER, IM_POW);
-      for (i=IM_ADD; i<=IM_UNM; i++)  /* ORDER IM */
-        fillvalids(i, luaA_Address(func));
-      replace = typeFB;
-      break;
-    }
-    case 3: {  /* old order fallback */
-      int i;
-      oldfunc = *luaT_getim(LUA_T_NIL, IM_LT);
-      for (i=IM_LT; i<=IM_GE; i++)  /* ORDER IM */
-        fillvalids(i, luaA_Address(func));
-      replace = typeFB;
-      break;
-    }
-    default: {
-      int e;
-      if ((e = luaL_findstring(name, luaT_eventname)) >= 0) {
-        oldfunc = *luaT_getim(LUA_T_NIL, e);
-        fillvalids(e, luaA_Address(func));
-        replace = (e == IM_GC || e == IM_INDEX) ? nilFB : typeFB;
-      }
-      else {
-        luaL_verror("`%.50s' is not a valid fallback name", name);
-        replace = NULL;  /* to avoid warnings */
-      }
-    }
-  }
-  if (oldfunc.ttype != LUA_T_NIL)
-    luaA_pushobject(&oldfunc);
-  else
-    lua_pushcfunction(replace);
-}
-#endif
 

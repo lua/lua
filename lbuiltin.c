@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.61 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.62 1999/09/08 20:45:18 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -44,13 +44,14 @@ static void pushtagstring (TaggedString *s) {
 
 static real getsize (const Hash *h) {
   real max = 0;
-  int i;
-  for (i = 0; i<nhash(h); i++) {
-    Node *n = h->node+i;
+  int i = nhash(h);
+  Node *n = h->node;
+  while (i--) {
     if (ttype(ref(n)) == LUA_T_NUMBER && 
         ttype(val(n)) != LUA_T_NIL &&
         nvalue(ref(n)) > max)
       max = nvalue(ref(n));
+    n++;
   }
   return max;
 }
@@ -677,9 +678,6 @@ static void testC (void) {
 
 
 static const struct luaL_reg builtin_funcs[] = {
-#ifdef LUA_COMPAT2_5
-  {"setfallback", luaT_setfallback},
-#endif
 #ifdef DEBUG
   {"testC", testC},
   {"totalmem", mem_query},

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.47 1999/06/22 20:37:23 roberto Exp roberto $
+** $Id: lapi.c,v 1.48 1999/08/16 20:52:00 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -85,7 +85,7 @@ static lua_Object put_luaObject (const TObject *o) {
 }
 
 
-static lua_Object put_luaObjectonTop (void) {
+lua_Object put_luaObjectonTop (void) {
   luaD_openstack((L->stack.top-L->stack.stack)-L->Cstack.base);
   L->stack.stack[L->Cstack.base++] = *(--L->stack.top);
   return L->Cstack.base;  /* this is +1 real position (see Ref) */
@@ -628,27 +628,4 @@ lua_Object lua_getref (int ref) {
 }
 
 /* }====================================================== */
-
-
-
-#ifdef LUA_COMPAT2_5
-/*
-** API: set a function as a fallback
-*/
-
-static void do_unprotectedrun (lua_CFunction f, int nParams, int nResults) {
-  luaD_openstack(nParams);
-  (L->stack.top-nParams)->ttype = LUA_T_CPROTO;
-  (L->stack.top-nParams)->value.f = f;
-  luaD_calln(nParams, nResults);
-}
-
-
-lua_Object lua_setfallback (char *name, lua_CFunction fallback) {
-  lua_pushstring(name);
-  lua_pushcfunction(fallback);
-  do_unprotectedrun(luaT_setfallback, 2, 1);
-  return put_luaObjectonTop();
-}
-#endif
 
