@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.11 1998/05/18 22:26:03 roberto Exp roberto $
+## $Id: makefile,v 1.12 1998/05/27 13:03:40 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -95,7 +95,8 @@ lapi.o: lapi.c lapi.h lua.h lobject.h lauxlib.h ldo.h lstate.h lfunc.h \
 lauxlib.o: lauxlib.c lauxlib.h lua.h luadebug.h
 lbuffer.o: lbuffer.c lauxlib.h lua.h lmem.h lstate.h lobject.h
 lbuiltin.o: lbuiltin.c lapi.h lua.h lobject.h lauxlib.h lbuiltin.h \
- ldo.h lstate.h lfunc.h lmem.h lstring.h ltable.h ltm.h
+ ldo.h lstate.h lfunc.h lmem.h lstring.h ltable.h ltm.h lundump.h \
+ lzio.h
 ldo.o: ldo.c ldo.h lobject.h lua.h lstate.h lfunc.h lgc.h lmem.h \
  lparser.h lzio.h ltm.h luadebug.h lundump.h lvm.h
 lfunc.o: lfunc.c lfunc.h lobject.h lua.h lmem.h lstate.h
