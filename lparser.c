@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.9 1999/01/21 18:38:39 roberto Exp roberto $
+** $Id: lparser.c,v 1.10 1999/01/29 13:48:58 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -118,7 +118,7 @@ static void exp1 (LexState *ls);
 static void exp2 (LexState *ls, vardesc *v);
 static void explist (LexState *ls, listdesc *e);
 static void explist1 (LexState *ls, listdesc *e);
-static void ifpart (LexState *ls);
+static void ifpart (LexState *ls, int isexp, int line);
 static void parlist (LexState *ls);
 static void part (LexState *ls, constdesc *cd);
 static void recfield (LexState *ls);
@@ -689,12 +689,9 @@ static int stat (LexState *ls) {
   int line = ls->linenumber;  /* may be needed for error messages */
   FuncState *fs = ls->fs;
   switch (ls->token) {
-    case IF: {  /* stat -> IF ifpart END */
-      next(ls);
-      ifpart(ls);
-      check_match(ls, END, IF, line);
+    case IF:  /* stat -> IF ifpart END */
+      ifpart(ls, 0, line);
       return 1;
-    }
 
     case WHILE: {  /* stat -> WHILE cond DO block END */
       TProtoFunc *f = fs->f;
@@ -841,26 +838,34 @@ static void body (LexState *ls, int needself, int line) {
   func_onstack(ls, &newfs);
 }
 
-static void ifpart (LexState *ls) {
-  /* ifpart -> cond THEN block [ELSE block | ELSEIF ifpart] */
-  int c = cond(ls);
-  int e;
-  check(ls, THEN);
-  block(ls);
-  e = SaveWord(ls);
-  switch (ls->token) {
-    case ELSE:
-      next(ls);
-      block(ls);
-      break;
 
-    case ELSEIF:
-      next(ls);
-      ifpart(ls);
-      break;
+static void ifpart (LexState *ls, int isexp, int line) {
+  /* ifpart -> cond THEN block [ELSE block | ELSEIF ifpart] */
+  /* ifpart -> cond THEN exp [ELSE exp | ELSEIF ifpart] */
+  int c;
+  int e;
+  next(ls);  /* skip IF or ELSEIF */
+  c = cond(ls);
+  check(ls, THEN);
+  if (isexp) exp1(ls);
+  else block(ls);
+  e = SaveWord(ls);
+  if (ls->token == ELSEIF)
+    ifpart(ls, isexp, line);
+  else {
+    int elsepart = optional(ls, ELSE);
+    if (!isexp) {
+      if (elsepart) block(ls);
+    }
+    else {  /* is exp */
+      if (elsepart) exp1(ls);
+      else code_oparg(ls, PUSHNIL, 1, 0, 1);  /* empty else exp */
+    }
+    check_match(ls, END, IF, line);
   }
   codeIf(ls, c, e);
 }
+
 
 static void ret (LexState *ls) {
   /* ret -> [RETURN explist sc] */
@@ -986,12 +991,14 @@ static void simpleexp (LexState *ls, vardesc *v, stack_op *s) {
       constructor(ls);
       break;
 
-    case FUNCTION: {  /* simpleexp -> FUNCTION body */
-      int line = ls->linenumber;
+    case FUNCTION:  /* simpleexp -> FUNCTION body */
       next(ls);
-      body(ls, 0, line);
+      body(ls, 0, ls->linenumber);
       break;
-    }
+
+    case IF:  /* simpleexp -> IF ifpart END */
+      ifpart(ls, 1, ls->linenumber);
+      break;
 
     case '(':  /* simpleexp -> '(' exp0 ')' */
       next(ls);
