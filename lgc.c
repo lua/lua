@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.159 2002/11/18 11:01:55 roberto Exp roberto $
+** $Id: lgc.c,v 1.160 2002/11/21 14:17:15 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -237,6 +237,7 @@ static void traversestack (GCState *st, lua_State *L1) {
   lim = L1->top;
   for (ci = L1->base_ci; ci <= L1->ci; ci++) {
     lua_assert(ci->top <= L1->stack_last);
+    lua_assert(ci->state & (CI_C | CI_HASFRAME | CI_SAVEDPC));
     if (!(ci->state & CI_C) && lim < ci->top)
       lim = ci->top;
   }
