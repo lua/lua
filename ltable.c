@@ -138,20 +138,22 @@ int luaH_nexti (Table *t, int i, TObject *where) {
 
 
 static void computesizes  (int nums[], int ntotal, int *narray, int *nhash) {
-  int n = 0;  /* optimal (log of) size for array part */
+  int n = 0;  /* (log of) optimal size for array part */
   int na = 0;  /* number of elements to go to array part */
-  int a = nums[0];  /* accumulator */
-  int i;
-  for (i=1; i<=MAXBITS; i++) {
-    if (nums[i] == 0) continue;  /* ignore empty slices */
-    a += nums[i];  /* number of elements smaller than 2^i */
-    if (a >= (1<<(i-1))) {  /* more than half elements in use? */
+  int i=0;
+  int a = nums[0];  /* number of elements smaller than 2^i */
+  while (++i <= MAXBITS && *narray >= twoto(i-1)) {
+    if (nums[i] == 0) continue;
+    a += nums[i];
+    if (a >= twoto(i-1)) {  /* more than half elements in use? */
       n = i;
       na = a;
     }
   }
+  lua_assert(na <= *narray && *narray <= ntotal);
   *nhash = ntotal - na;
   *narray = (n == 0) ? 0 : (1<<n);
+  lua_assert(na <= *narray && na >= *narray/2);
 }
 
 
@@ -172,13 +174,16 @@ static void numuse (const Table *t, int *narray, int *nhash) {
         totaluse++;
       }
   }
+  *narray = totaluse;  /* all previous uses were in array part */
   /* count elements in hash part */
   i = sizenode(t);
   while (i--) {
     if (ttype(val(&t->node[i])) != LUA_TNIL) {
       int k = arrayindex(key(&t->node[i]));
-      if (k >= 0)  /* is `key' an appropriate array index? */
+      if (k >= 0) {  /* is `key' an appropriate array index? */
         nums[luaO_log2(k-1)+1]++;  /* count as such */
+        (*narray)++;
+      }
       totaluse++;
     }
   }
