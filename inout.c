@@ -2,9 +2,10 @@
 ** inout.c
 ** Provide function to realise the input/output function and debugger 
 ** facilities.
+** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.4 1994/10/11 14:38:17 celes Exp $";
+char *rcs_inout="$Id: inout.c,v 2.5 1994/10/17 19:04:19 celes Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -108,15 +109,6 @@ void lua_closestring (void)
  lua_delfile();
 }
 
-/*
-** Call user function to handle error messages, if registred. Or report error
-** using standard function (fprintf).
-*/
-void lua_error (char *s)
-{
- if (usererror != NULL) usererror (s);
- else			    fprintf (stderr, "lua: %s\n", s);
-}
 
 /*
 ** Called to execute  SETFUNCTION opcode, this function pushs a function into
@@ -176,3 +168,82 @@ void lua_reportbug (char *s)
  lua_error (msg);
 }
 
+ 
+/*
+** Internal function: do a string
+*/
+void lua_internaldostring (void)
+{
+ lua_Object obj = lua_getparam (1);
+ if (lua_isstring(obj) && !lua_dostring(lua_getstring(obj)))
+  lua_pushnumber(1);
+ else
+  lua_pushnil();
+}
+
+/*
+** Internal function: do a file
+*/
+void lua_internaldofile (void)
+{
+ lua_Object obj = lua_getparam (1);
+ if (lua_isstring(obj) && !lua_dofile(lua_getstring(obj)))
+  lua_pushnumber(1);
+ else
+  lua_pushnil();
+}
+ 
+/*
+** Internal function: print object values
+*/
+void lua_print (void)
+{
+ int i=1;
+ Object *obj;
+ while ((obj=lua_getparam (i++)) != NULL)
+ {
+  if      (lua_isnumber(obj))    printf("%g\n",lua_getnumber (obj));
+  else if (lua_isstring(obj))    printf("%s\n",lua_getstring (obj));
+  else if (lua_isfunction(obj))  printf("function: %p\n",bvalue(obj));
+  else if (lua_iscfunction(obj)) printf("cfunction: %p\n",lua_getcfunction (obj)
+);
+  else if (lua_isuserdata(obj))  printf("userdata: %p\n",lua_getuserdata (obj));
+  else if (lua_istable(obj))     printf("table: %p\n",obj);
+  else if (lua_isnil(obj))       printf("nil\n");
+  else                           printf("invalid value to print\n");
+ }
+}
+ 
+ 
+/*
+** Internal function: return an object type.
+*/
+void lua_type (void)
+{
+  Object *o = lua_getparam(1);
+  switch (tag(o))
+  {
+    case LUA_T_NIL :
+      lua_pushstring("nil");
+      break;
+    case LUA_T_NUMBER :
+      lua_pushstring("number");
+      break;
+    case LUA_T_STRING :
+      lua_pushstring("string");
+      break;
+    case LUA_T_ARRAY :
+      lua_pushstring("table");
+      break;
+    case LUA_T_FUNCTION :
+      lua_pushstring("function");
+      break;
+    case LUA_T_CFUNCTION :
+      lua_pushstring("cfunction");
+      break;
+    default :
+      lua_pushstring("userdata");
+      break;
+  }
+}
+ 
