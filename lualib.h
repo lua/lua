@@ -2,7 +2,7 @@
 ** Libraries to be used in LUA programs
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lualib.h,v 1.8 1996/04/30 21:13:55 roberto Exp roberto $
+** $Id: lualib.h,v 1.9 1996/08/01 14:55:33 roberto Exp roberto $
 */
 
 #ifndef lualib_h
@@ -30,6 +30,9 @@ double lua_check_number (int numArg, char *funcname);
 long lua_opt_number (int numArg, long def, char *funcname);
 char *luaI_addchar (int c);
 void luaI_addquoted (char *s);
+
+char *item_end (char *p);
+int singlematch (int c, char *p);
 
 #endif
 

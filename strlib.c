@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.24 1996/05/22 21:59:07 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.25 1996/08/01 14:55:33 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -178,7 +178,7 @@ static void str_ascii (void)
 #define ESC	'%'
 #define SPECIALS  "^$*?.([%"
 
-static char *item_end (char *p)
+char *item_end (char *p)
 {
   switch (*p) {
     case '\0': return p;
@@ -212,9 +212,9 @@ static int matchclass (int c, int cl)
   return (islower(cl) ? res : !res);
 }
 
-static int singlematch (int c, char *p)
+int singlematch (int c, char *p)
 {
-  if (c == 0) return 0;
+  if (c <= 0) return 0;  /* \0, EOF or other strange flags */
   switch (*p) {
     case '.': return 1;
     case ESC: return matchclass(c, *(p+1));
@@ -323,13 +323,13 @@ static char *match (char *s, char *p, int level)
       int m = singlematch(*s, p);
       char *ep = item_end(p);  /* get what is next */
       switch (*ep) {
-        case '*': {  /* repetition? */
+        case '*': {  /* repetition */
           char *res;
           if (m && (res = match(s+1, p, level)))
             return res;
           p=ep+1; goto init;  /* else return match(s, ep+1, level); */
         }
-        case '?': {  /* optional? */
+        case '?': {  /* optional */
           char *res;
           if (m && (res = match(s+1, ep+1, level)))
             return res;
@@ -487,7 +487,7 @@ static struct lua_reg strlib[] = {
 {"ascii", str_ascii},
 {"format", str_format},
 {"strfind", str_find},
-{"s",    str_s}
+{"gsub",    str_s}
 };
 
 
