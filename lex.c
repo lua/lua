@@ -1,11 +1,16 @@
-char *rcs_lex = "$Id: lex.c,v 1.1 1993/12/22 21:15:16 roberto Exp celes $";
+char *rcs_lex = "$Id: lex.c,v 1.2 1993/12/22 21:39:15 celes Exp roberto $";
 /*$Log: lex.c,v $
+ * Revision 1.2  1993/12/22  21:39:15  celes
+ * Tratamento do token $debug e $nodebug
+ *
  * Revision 1.1  1993/12/22  21:15:16  roberto
  * Initial revision
  **/
 
 #include <ctype.h>
 #include <math.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "opcode.h"
 #include "hash.h"
