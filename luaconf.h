@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.6 2004/06/02 19:07:55 roberto Exp roberto $
+** $Id: luaconf.h,v 1.7 2004/06/23 15:57:29 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -271,7 +271,7 @@
 #define LUA_PATH_SEP	';'
 
 /* wild char in each template */
-#define LUA_PATH_MARK	'?'
+#define LUA_PATH_MARK	"?"
 
 /* default path */
 #define LUA_PATH_DEFAULT	"?;?.lua"

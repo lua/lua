@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.66 2004/06/02 17:37:03 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.67 2004/06/21 20:05:29 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -25,7 +25,7 @@ typedef struct luaL_reg {
 } luaL_reg;
 
 
-typedef int (*luaL_Loader)(void *data, const char *name);
+typedef int (*luaL_Loader)(lua_State *L, const char *name);
 
 LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
                                const luaL_reg *l, int nup);
@@ -56,8 +56,8 @@ LUALIB_API int luaL_error (lua_State *L, const char *fmt, ...);
 
 LUALIB_API int luaL_findstring (const char *st, const char *const lst[]);
 
-LUALIB_API int luaL_searchpath (lua_State *L, const char *name,
-                                const char *path, luaL_Loader f, void *data);
+LUALIB_API const char *luaL_searchpath (lua_State *L, const char *name,
+                                                      const char *path);
 
 LUALIB_API int luaL_ref (lua_State *L, int t);
 LUALIB_API void luaL_unref (lua_State *L, int t, int ref);

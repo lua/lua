@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.116 2004/06/17 14:06:52 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.117 2004/06/21 20:05:29 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -354,41 +354,42 @@ static const char *pushnexttemplate (lua_State *L, const char *path) {
 }
 
 
-static void pushcomposename (lua_State *L) {
-  const char *tem = lua_tostring(L, -1);
+static const char *gsub (lua_State *L, const char *s, const char *p,
+                                       const char *r) {
   const char *wild;
-  int n = 1;
-  while ((wild = strchr(tem, LUA_PATH_MARK)) != NULL) {
-    /* is there stack space for prefix, name, and eventual last suffix? */
-    luaL_checkstack(L, 3, "too many marks in a path component");
-    lua_pushlstring(L, tem, wild - tem);  /* push prefix */
-    lua_pushvalue(L, 1);  /* push package name (in place of MARK) */
-    tem = wild + 1;  /* continue after MARK */
-    n += 2;
+  int l = strlen(p);
+  luaL_Buffer b;
+  luaL_buffinit(L, &b);
+  while ((wild = strstr(s, p)) != NULL) {
+    luaL_addlstring(&b, s, wild - s);  /* push prefix */
+    luaL_addstring(&b, r);  /* push replacement in place of pattern */
+    s = wild + l;  /* continue after p */
   }
-  lua_pushstring(L, tem);  /* push last suffix (`n' already includes this) */
-  lua_concat(L, n);
+  luaL_addstring(&b, s);  /* push last suffix (`n' already includes this) */
+  luaL_pushresult(&b);
+  return lua_tostring(L, -1);
 }
 
 
-LUALIB_API int luaL_searchpath (lua_State *L, const char *name,
-                                const char *path, luaL_Loader f, void *data) {
-  int status;
+LUALIB_API const char *luaL_searchpath (lua_State *L, const char *name,
+                                                      const char *path) {
+  FILE *f;
   const char *p = path;
-  int top = lua_gettop(L);
-  do {
-    lua_settop(L, top);
+  for (;;) {
+    const char *fname;
     if ((p = pushnexttemplate(L, p)) == NULL) {
-      lua_pushfstring(L, "cound not find `%s' in path `%s'", name, path);
-      return LUA_ERRFILE;
+      lua_pushfstring(L, "no readable `%s' in path `%s'", name, path);
+      return NULL;
     }
-    pushcomposename(L);
+    fname = gsub(L, lua_tostring(L, -1), LUA_PATH_MARK, name);
     lua_remove(L, -2);  /* remove path template */
-    lua_assert(lua_gettop(L) == top + 1);
-    status = f(data, lua_tostring(L, -1));  /* try to load it */
-    lua_remove(L, top+1);  /* remove file name */
-  } while (status == LUA_ERRFILE);
-  return status;
+    f = fopen(fname, "r");  /* try to read it */
+    if (f) {
+      fclose(f);
+      return fname;
+    }
+    lua_pop(L, 1);  /* remove file name */ 
+  }
 }
 
 
