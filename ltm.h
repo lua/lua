@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 1.25 2001/06/06 18:00:19 roberto Exp roberto $
+** $Id: ltm.h,v 1.26 2001/07/12 18:11:58 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -40,11 +40,11 @@ typedef enum {
 ** masks for allowable tag methods
 ** (see `luaT_validevents')
 */
-#define HAS_TM_GETGLOBAL(L,t)	(1<<(t) & ((1<<LUA_TUSERDATA) | \
+#define HAS_TM_GETGLOBAL(L,t)	((1<<(t)) & ((1<<LUA_TUSERDATA) | \
                                            (1<<LUA_TTABLE) | \
                                            (1<<LUA_TNIL)))
 
-#define HAS_TM_SETGLOBAL(L,t)	(1<<(t) & ((1<<LUA_TUSERDATA) | \
+#define HAS_TM_SETGLOBAL(L,t)	((1<<(t)) & ((1<<LUA_TUSERDATA) | \
                                            (1<<LUA_TTABLE) | \
                                            (1<<LUA_TNIL) | \
                                            (1<<LUA_TFUNCTION)))
