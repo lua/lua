@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.105 2001/06/15 19:17:33 roberto Exp roberto $
+** $Id: lgc.c,v 1.106 2001/06/15 20:36:57 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -268,7 +268,7 @@ static void collecttable (lua_State *L) {
 }
 
 
-void luaC_collectudata (lua_State *L) {
+static void collectudata (lua_State *L, int keep) {
   Udata **p = &G(L)->rootudata;
   Udata *curr;
   while ((curr = *p) != NULL) {
@@ -279,8 +279,13 @@ void luaC_collectudata (lua_State *L) {
     else {  /* collect */
       int tag = curr->uv.tag;
       *p = curr->uv.next;
-      curr->uv.next = G(L)->TMtable[tag].collected;  /* chain udata */
-      G(L)->TMtable[tag].collected = curr;
+      if (keep ||  /* must keep all of them (to close state)? */
+          luaT_gettm(G(L), tag, TM_GC)) {  /* or is there a GC tag method? */
+        curr->uv.next = G(L)->TMtable[tag].collected;  /* chain udata ... */
+        G(L)->TMtable[tag].collected = curr;  /* ... to call its TM later */
+      }
+      else  /* no tag method; delete udata */
+        luaM_free(L, curr, sizeudata(curr->uv.len));
     }
   }
 }
@@ -327,7 +332,6 @@ static void callgcTM (lua_State *L, const TObject *obj) {
     int oldah = L->allowhooks;
     StkId top = L->top;
     L->allowhooks = 0;  /* stop debug hooks during GC tag methods */
-    luaD_checkstack(L, 2);
     setclvalue(top, tm);
     setobj(top+1, obj);
     L->top += 2;
@@ -338,23 +342,35 @@ static void callgcTM (lua_State *L, const TObject *obj) {
 }
 
 
-void luaC_callgcTMudata (lua_State *L) {
+static void callgcTMudata (lua_State *L) {
   int tag;
+  luaD_checkstack(L, 3);
   for (tag=G(L)->ntag-1; tag>=0; tag--) {  /* for each tag (in reverse order) */
     Udata *udata;
     while ((udata = G(L)->TMtable[tag].collected) != NULL) {
-      TObject obj;
       G(L)->TMtable[tag].collected = udata->uv.next;  /* remove it from list */
-      setuvalue(&obj, udata);
-      callgcTM(L, &obj);
-      luaM_free(L, udata, sizeudata(udata->uv.len));
+      udata->uv.next = G(L)->rootudata;  /* resurect it */
+      G(L)->rootudata = udata;
+      setuvalue(L->top, udata);
+      L->top++;  /* keep it in stack to avoid being (recursively) collected */
+      callgcTM(L, L->top-1);
+      uvalue(L->top-1)->uv.tag = 0;  /* default tag (udata is `finalized') */
+      L->top--;
     }
   }
 }
 
 
+void luaC_callallgcTM (lua_State *L) {
+  if (G(L)->rootudata) {  /* avoid problems with incomplete states */
+    collectudata(L, 1);  /* collect all udata into tag lists */
+    callgcTMudata(L);  /* call their GC tag methods */
+  }
+}
+
+
 void luaC_collect (lua_State *L, int all) {
-  luaC_collectudata(L);
+  collectudata(L, 0);
   collectstrings(L, all);
   collecttable(L);
   collectproto(L);
@@ -367,9 +383,8 @@ void luaC_collectgarbage (lua_State *L) {
   cleartables(G(L));
   luaC_collect(L, 0);
   checkMbuffer(L);
-  G(L)->GCthreshold = 2*G(L)->nblocks;  /* temporary threshold (for TM) */
-  luaC_callgcTMudata(L);
   G(L)->GCthreshold = 2*G(L)->nblocks;  /* new threshold */
+  callgcTMudata(L);
   callgcTM(L, &luaO_nilobject);
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.63 2001/06/06 18:00:19 roberto Exp roberto $
+** $Id: lstate.c,v 1.64 2001/06/12 18:43:13 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -112,12 +112,10 @@ static void close_state (lua_State *L, lua_State *OL) {
     L->next->previous = L->previous;
   }
   else if (G(L)) {  /* last thread; close global state */
-    while (G(L)->rootudata) {
-      luaC_collectudata(L);  /* collect all user data */
-      luaC_callgcTMudata(L);  /* call their tag methods */
-    }  /* repeat, as tag methods may create new userdata objects */
-    luaC_collect(L, 1);  /* collect all other elements */
+    luaC_callallgcTM(L);  /* call GC tag methods for all udata */
+    luaC_collect(L, 1);  /* collect all elements */
     lua_assert(G(L)->rootproto == NULL);
+    lua_assert(G(L)->rootudata == NULL);
     lua_assert(G(L)->rootcl == NULL);
     lua_assert(G(L)->roottable == NULL);
     luaS_freeall(L);
