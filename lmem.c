@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.7 1998/06/29 22:03:06 roberto Exp $
+** $Id: lmem.c,v 1.8 1999/01/22 17:28:00 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -19,6 +19,7 @@
 */
 #ifdef OLD_ANSI
 #define realloc(b,s)	((b) == NULL ? malloc(s) : (realloc)(b, s))
+#define free(b)		if (b) (free)(b)
 #endif
 
 
