@@ -2,9 +2,9 @@
 ** hash.c
 ** hash manager for lua
 ** Luiz Henrique de Figueiredo - 17 Aug 90
-** Modified by Waldemar Celes Filho
-** 12 May 93
 */
+
+char *rcs_hash="$Id: $";
 
 #include <string.h>
 #include <stdlib.h>
@@ -184,11 +184,25 @@ static void firstnode (Hash *a, int h)
   int i;
   for (i=h; i<nhash(a); i++)
   {
-   if (list(a,i) != NULL && tag(&list(a,i)->val) != T_NIL)
+   if (list(a,i) != NULL)
    {
-    lua_pushobject (&list(a,i)->ref);
-    lua_pushobject (&list(a,i)->val);
-    return;
+    if (tag(&list(a,i)->val) != T_NIL)
+    {
+     lua_pushobject (&list(a,i)->ref);
+     lua_pushobject (&list(a,i)->val);
+     return;
+    }
+    else
+    {
+     Node *next = list(a,i)->next;
+     while (next != NULL && tag(&next->val) == T_NIL) next = next->next;
+     if (next != NULL)
+     {
+      lua_pushobject (&next->ref);
+      lua_pushobject (&next->val);
+      return;
+     }
+    }
    }
   }
  }
@@ -257,3 +271,4 @@ void lua_next (void)
   }
  }
 }
+
