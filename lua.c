@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.113 2002/12/04 17:38:31 roberto Exp roberto $
+** $Id: lua.c,v 1.114 2003/01/17 15:27:28 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -43,6 +43,9 @@ static int isatty (int x) { return x==0; }  /* assume stdin is a tty */
 #define PROMPT2		">> "
 #endif
 
+#ifndef PROGNAME
+#define PROGNAME	"lua"
+#endif
 
 #ifndef lua_userinit
 #define lua_userinit(L)		openstdlibs(L)
@@ -56,7 +59,7 @@ static int isatty (int x) { return x==0; }  /* assume stdin is a tty */
 
 static lua_State *L = NULL;
 
-static const char *progname;
+static const char *progname = PROGNAME;
 
 
 
@@ -131,13 +134,6 @@ static int lcall (int narg, int clear) {
   signal(SIGINT, SIG_DFL);
   lua_remove(L, base);  /* remove traceback function */
   return status;
-}
-
-
-static int l_panic (lua_State *l) {
-  (void)l;
-  l_message(progname, "unable to recover; exiting");
-  return 0;
 }
 
 
@@ -329,10 +325,10 @@ static int handle_argv (char *argv[], int *interactive) {
           if (*chunk == '\0') chunk = argv[++i];
           if (chunk == NULL) {
             print_usage();
-            return EXIT_FAILURE;
+            return 1;
           }
           if (dostring(chunk, "=<command line>") != 0)
-            return EXIT_FAILURE;
+            return 1;
           break;
         }
         case 'l': {
@@ -340,10 +336,10 @@ static int handle_argv (char *argv[], int *interactive) {
           if (*filename == '\0') filename = argv[++i];
           if (filename == NULL) {
             print_usage();
-            return EXIT_FAILURE;
+            return 1;
           }
           if (load_file(filename))
-            return EXIT_FAILURE;  /* stop if file fails */
+            return 1;  /* stop if file fails */
           break;
         }
         case 'c': {
@@ -356,7 +352,7 @@ static int handle_argv (char *argv[], int *interactive) {
         }
         default: {
           print_usage();
-          return EXIT_FAILURE;
+          return 1;
         }
       }
     } endloop:
@@ -401,7 +397,7 @@ static int pmain (lua_State *l) {
   struct Smain *s = (struct Smain *)lua_touserdata(l, 1);
   int status;
   int interactive = 0;
-  progname = s->argv[0];
+  if (s->argv[0][0] != '\0') progname = s->argv[0];
   L = l;
   lua_userinit(l);  /* open libraries */
   status = handle_luainit();
@@ -424,7 +420,6 @@ int main (int argc, char *argv[]) {
   }
   s.argc = argc;
   s.argv = argv;
-  lua_atpanic(l, l_panic);
   status = lua_cpcall(l, &pmain, &s);
   report(status);
   lua_close(l);
