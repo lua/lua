@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.h,v 1.6 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: lfunc.h,v 1.7 1999/10/04 17:51:04 roberto Exp roberto $
 ** Lua Function structures
 ** See Copyright Notice in lua.h
 */
@@ -17,7 +17,8 @@ Closure *luaF_newclosure (int nelems);
 void luaF_freeproto (TProtoFunc *f);
 void luaF_freeclosure (Closure *c);
 
-const char *luaF_getlocalname (TProtoFunc *func, int local_number, int line);
+const char *luaF_getlocalname (const TProtoFunc *func,
+                               int local_number, int line);
 
 
 #endif

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.48 1999/10/04 17:51:04 roberto Exp roberto $
+** $Id: ldo.c,v 1.49 1999/10/14 17:53:35 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -101,7 +101,7 @@ void luaD_lineHook (int line) {
 }
 
 
-void luaD_callHook (StkId base, TProtoFunc *tf, int isreturn) {
+void luaD_callHook (StkId base, const TProtoFunc *tf, int isreturn) {
   struct C_Lua_Stack oldCLS = L->Cstack;
   StkId old_top = L->Cstack.lua2C = L->Cstack.base = L->stack.top-L->stack.stack;
   L->Cstack.num = 0;
@@ -143,7 +143,8 @@ static StkId callC (lua_CFunction f, StkId base) {
 }
 
 
-static StkId callCclosure (struct Closure *cl, lua_CFunction f, StkId base) {
+static StkId callCclosure (const struct Closure *cl,
+                           lua_CFunction f, StkId base) {
   TObject *pbase;
   int nup = cl->nelems;  /* number of upvalues */
   luaD_checkstack(nup);

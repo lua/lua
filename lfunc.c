@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.11 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: lfunc.c,v 1.12 1999/10/04 17:51:04 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -62,7 +62,8 @@ void luaF_freeclosure (Closure *c) {
 ** Look for n-th local variable at line "line" in function "func".
 ** Returns NULL if not found.
 */
-const char *luaF_getlocalname (TProtoFunc *func, int local_number, int line) {
+const char *luaF_getlocalname (const TProtoFunc *func,
+                               int local_number, int line) {
   int count = 0;
   const char *varname = NULL;
   LocVar *lv = func->locvars;
