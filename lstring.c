@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.7 1997/12/01 20:31:25 roberto Exp roberto $
+** $Id: lstring.c,v 1.8 1997/12/09 13:35:19 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -106,16 +106,13 @@ static TaggedString *insert (char *buff, int tag, stringtable *tb)
   int j = -1;
   if ((long)tb->nuse*3 >= (long)tb->size*2)
     grow(tb);
-  i = h%tb->size;
-  while ((ts = tb->hash[i]) != NULL)
-  {
+  for (i = h%tb->size; (ts = tb->hash[i]) != NULL; i = (i+1)%tb->size) {
     if (ts == &EMPTY)
       j = i;
     else if ((ts->constindex >= 0) ?  /* is a string? */
               (tag == LUA_T_STRING && (strcmp(buff, ts->str) == 0)) :
               ((tag == ts->u.d.tag || tag == LUA_ANYTAG) && buff == ts->u.d.v))
       return ts;
-    i = (i+1)%tb->size;
   }
   /* not found */
   if (j != -1)  /* is there an EMPTY space? */
