@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.3 1998/07/06 22:07:51 roberto Exp roberto $
+** $Id: lparser.c,v 1.4 1998/07/24 18:02:38 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -172,7 +172,8 @@ static int code_oparg_at (LexState *ls, int pc, OpCode op, int builtin,
     code[pc+2] = arg&0xFF;
     return 3;
   }
-  else luaX_error(ls, "code too long " MES_LIM("64K"));
+  else luaX_error(ls, "code too long " MES_LIM("64K")
+                      " (try turning off debug mode)");
   return 0;   /* to avoid warnings */
 }
 
