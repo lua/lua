@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.91 2000/10/31 13:10:24 roberto Exp roberto $
+** $Id: liolib.c,v 1.92 2000/11/23 13:49:35 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -476,7 +476,7 @@ static int io_getenv (lua_State *L) {
 
 
 static int io_clock (lua_State *L) {
-  lua_pushnumber(L, ((double)clock())/CLOCKS_PER_SEC);
+  lua_pushnumber(L, ((lua_Number)clock())/(lua_Number)CLOCKS_PER_SEC);
   return 1;
 }
 

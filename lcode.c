@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.51 2000/09/29 12:42:13 roberto Exp roberto $
+** $Id: lcode.c,v 1.52 2000/11/30 18:50:47 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -99,7 +99,7 @@ void luaK_kstr (LexState *ls, int c) {
 }
 
 
-static int number_constant (FuncState *fs, Number r) {
+static int number_constant (FuncState *fs, lua_Number r) {
   /* check whether `r' has appeared within the last LOOKBACKNUMS entries */
   Proto *f = fs->f;
   int c = f->nknum;
@@ -107,7 +107,7 @@ static int number_constant (FuncState *fs, Number r) {
   while (--c >= lim)
     if (f->knum[c] == r) return c;
   /* not found; create a new entry */
-  luaM_growvector(fs->L, f->knum, f->nknum, 1, Number,
+  luaM_growvector(fs->L, f->knum, f->nknum, 1, lua_Number,
                   "constant table overflow", MAXARG_U);
   c = f->nknum++;
   f->knum[c] = r;
@@ -115,8 +115,8 @@ static int number_constant (FuncState *fs, Number r) {
 }
 
 
-void luaK_number (FuncState *fs, Number f) {
-  if (f <= (Number)MAXARG_S && (Number)(int)f == f)
+void luaK_number (FuncState *fs, lua_Number f) {
+  if (f <= (lua_Number)MAXARG_S && (lua_Number)(int)f == f)
     luaK_code1(fs, OP_PUSHINT, (int)f);  /* f has a short integer value */
   else
     luaK_code1(fs, OP_PUSHNUM, number_constant(fs, f));

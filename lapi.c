@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.110 2000/10/30 12:50:09 roberto Exp roberto $
+** $Id: lapi.c,v 1.111 2000/11/24 17:39:56 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -154,7 +154,7 @@ LUA_API int lua_lessthan (lua_State *L, int index1, int index2) {
 
 
 
-LUA_API double lua_tonumber (lua_State *L, int index) {
+LUA_API lua_Number lua_tonumber (lua_State *L, int index) {
   StkId o = luaA_indexAcceptable(L, index);
   return (o == NULL || tonumber(o)) ? 0 : nvalue(o);
 }
@@ -205,7 +205,7 @@ LUA_API void lua_pushnil (lua_State *L) {
 }
 
 
-LUA_API void lua_pushnumber (lua_State *L, double n) {
+LUA_API void lua_pushnumber (lua_State *L, lua_Number n) {
   nvalue(L->top) = n;
   ttype(L->top) = LUA_TNUMBER;
   api_incr_top(L);
@@ -461,7 +461,7 @@ LUA_API int lua_getn (lua_State *L, int index) {
   if (ttype(value) == LUA_TNUMBER)
     return (int)nvalue(value);
   else {
-    Number max = 0;
+    lua_Number max = 0;
     int i = h->size;
     Node *n = h->node;
     while (i--) {

@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.33 2000/10/31 16:57:23 lhf Exp $
+** $Id: lundump.c,v 1.34 2000/11/07 12:44:44 roberto Exp roberto $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -82,9 +82,9 @@ static size_t LoadSize (lua_State* L, ZIO* Z, int swap)
  return x;
 }
 
-static Number LoadNumber (lua_State* L, ZIO* Z, int swap)
+static lua_Number LoadNumber (lua_State* L, ZIO* Z, int swap)
 {
- Number x;
+ lua_Number x;
  LoadBlock(L,&x,sizeof(x),Z,swap);
  return x;
 }
@@ -142,7 +142,7 @@ static void LoadConstants (lua_State* L, Proto* tf, ZIO* Z, int swap)
  for (i=0; i<n; i++)
   tf->kstr[i]=LoadString(L,Z,swap);
  tf->nknum=n=LoadInt(L,Z,swap);
- tf->knum=luaM_newvector(L,n,Number);
+ tf->knum=luaM_newvector(L,n,lua_Number);
  LoadVector(L,tf->knum,n,sizeof(*tf->knum),Z,swap);
  tf->nkproto=n=LoadInt(L,Z,swap);
  tf->kproto=luaM_newvector(L,n,Proto*);
@@ -187,7 +187,7 @@ static void TestSize (lua_State* L, int s, const char* what, ZIO* Z)
 static int LoadHeader (lua_State* L, ZIO* Z)
 {
  int version,swap;
- Number f=0,tf=TEST_NUMBER;
+ lua_Number f=0,tf=TEST_NUMBER;
  LoadSignature(L,Z);
  version=ezgetc(L,Z);
  if (version>VERSION)
@@ -205,7 +205,7 @@ static int LoadHeader (lua_State* L, ZIO* Z)
  TESTSIZE(SIZE_INSTRUCTION);
  TESTSIZE(SIZE_OP);
  TESTSIZE(SIZE_B);
- TESTSIZE(sizeof(Number));
+ TESTSIZE(sizeof(lua_Number));
  f=LoadNumber(L,Z,swap);
  if ((long)f!=(long)tf)		/* disregard errors in last bit of fraction */
   luaO_verror(L,"unknown number format in `%.99s':\n"

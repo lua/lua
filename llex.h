@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.30 2000/06/21 18:13:56 roberto Exp roberto $
+** $Id: llex.h,v 1.31 2000/09/27 17:41:58 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -36,7 +36,7 @@ enum RESERVED {
 
 
 typedef union {
-  Number r;
+  lua_Number r;
   TString *ts;
 } SemInfo;  /* semantics information */
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.117 2000/11/29 11:57:42 roberto Exp roberto $
+** $Id: lparser.c,v 1.118 2000/11/30 18:50:47 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -332,7 +332,7 @@ static void close_func (LexState *ls) {
   luaK_getlabel(fs);  /* close eventual list of pending jumps */
   luaM_reallocvector(L, f->code, fs->pc, Instruction);
   luaM_reallocvector(L, f->kstr, f->nkstr, TString *);
-  luaM_reallocvector(L, f->knum, f->nknum, Number);
+  luaM_reallocvector(L, f->knum, f->nknum, lua_Number);
   luaM_reallocvector(L, f->kproto, f->nkproto, Proto *);
   removelocalvars(ls, fs->nactloc);
   luaM_reallocvector(L, f->locvars, f->nlocvars, LocVar);
@@ -608,7 +608,7 @@ static void simpleexp (LexState *ls, expdesc *v) {
   FuncState *fs = ls->fs;
   switch (ls->t.token) {
     case TK_NUMBER: {  /* simpleexp -> NUMBER */
-      Number r = ls->t.seminfo.r;
+      lua_Number r = ls->t.seminfo.r;
       next(ls);
       luaK_number(fs, r);
       break;

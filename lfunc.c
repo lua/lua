@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.33 2000/10/18 17:19:09 roberto Exp roberto $
+** $Id: lfunc.c,v 1.34 2000/10/30 12:20:29 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -57,7 +57,7 @@ Proto *luaF_newproto (lua_State *L) {
 
 static size_t protosize (Proto *f) {
   return sizeof(Proto)
-       + f->nknum*sizeof(Number)
+       + f->nknum*sizeof(lua_Number)
        + f->nkstr*sizeof(TString *)
        + f->nkproto*sizeof(Proto *)
        + f->ncode*sizeof(Instruction)

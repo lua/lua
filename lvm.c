@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.146 2000/10/26 12:47:05 roberto Exp roberto $
+** $Id: lvm.c,v 1.147 2000/11/24 17:39:56 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -402,7 +402,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       }
       case OP_PUSHINT: {
         ttype(top) = LUA_TNUMBER;
-        nvalue(top) = (Number)GETARG_S(i);
+        nvalue(top) = (lua_Number)GETARG_S(i);
         top++;
         break;
       }
@@ -523,11 +523,11 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       case OP_ADDI: {
         if (tonumber(top-1)) {
           ttype(top) = LUA_TNUMBER;
-          nvalue(top) = (Number)GETARG_S(i);
+          nvalue(top) = (lua_Number)GETARG_S(i);
           call_arith(L, top+1, TM_ADD);
         }
         else
-          nvalue(top-1) += (Number)GETARG_S(i);
+          nvalue(top-1) += (lua_Number)GETARG_S(i);
         break;
       }
       case OP_SUB: {

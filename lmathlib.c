@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.31 2000/10/27 16:15:53 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.32 2000/10/31 13:10:24 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -139,10 +139,10 @@ static int math_ldexp (lua_State *L) {
 
 static int math_min (lua_State *L) {
   int n = lua_gettop(L);  /* number of arguments */
-  double dmin = luaL_check_number(L, 1);
+  lua_Number dmin = luaL_check_number(L, 1);
   int i;
   for (i=2; i<=n; i++) {
-    double d = luaL_check_number(L, i);
+    lua_Number d = luaL_check_number(L, i);
     if (d < dmin)
       dmin = d;
   }
@@ -153,10 +153,10 @@ static int math_min (lua_State *L) {
 
 static int math_max (lua_State *L) {
   int n = lua_gettop(L);  /* number of arguments */
-  double dmax = luaL_check_number(L, 1);
+  lua_Number dmax = luaL_check_number(L, 1);
   int i;
   for (i=2; i<=n; i++) {
-    double d = luaL_check_number(L, i);
+    lua_Number d = luaL_check_number(L, i);
     if (d > dmax)
       dmax = d;
   }
@@ -168,7 +168,7 @@ static int math_max (lua_State *L) {
 static int math_random (lua_State *L) {
   /* the '%' avoids the (rare) case of r==1, and is needed also because on
      some systems (SunOS!) "rand()" may return a value larger than RAND_MAX */
-  double r = (double)(rand()%RAND_MAX) / (double)RAND_MAX;
+  lua_Number r = (lua_Number)(rand()%RAND_MAX) / (lua_Number)RAND_MAX;
   switch (lua_gettop(L)) {  /* check number of arguments */
     case 0: {  /* no arguments */
       lua_pushnumber(L, r);  /* Number between 0 and 1 */

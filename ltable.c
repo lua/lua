@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.58 2000/10/26 12:47:05 roberto Exp roberto $
+** $Id: ltable.c,v 1.59 2000/11/24 17:39:56 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -81,7 +81,7 @@ static const TObject *luaH_getany (lua_State *L, const Hash *t,
 
 
 /* specialized version for numbers */
-const TObject *luaH_getnum (const Hash *t, Number key) {
+const TObject *luaH_getnum (const Hash *t, lua_Number key) {
   Node *n = &t->node[(luint32)(lint32)key&(t->size-1)];
   do {
     if (ttype(&n->key) == LUA_TNUMBER && nvalue(&n->key) == key)
@@ -290,7 +290,7 @@ TObject *luaH_setint (lua_State *L, Hash *t, int key) {
 }
 
 
-void luaH_setstrnum (lua_State *L, Hash *t, TString *key, Number val) {
+void luaH_setstrnum (lua_State *L, Hash *t, TString *key, lua_Number val) {
   TObject *value, index;
   ttype(&index) = LUA_TSTRING;
   tsvalue(&index) = key;

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.16 2000/08/09 14:49:13 roberto Exp roberto $
+** $Id: lcode.h,v 1.17 2000/11/30 18:50:47 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -58,7 +58,7 @@ void luaK_goiftrue (FuncState *fs, expdesc *v, int keepvalue);
 int luaK_getlabel (FuncState *fs);
 void luaK_deltastack (FuncState *fs, int delta);
 void luaK_kstr (LexState *ls, int c);
-void luaK_number (FuncState *fs, Number f);
+void luaK_number (FuncState *fs, lua_Number f);
 void luaK_adjuststack (FuncState *fs, int n);
 int luaK_lastisopen (FuncState *fs);
 void luaK_setcallreturns (FuncState *fs, int nresults);

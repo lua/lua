@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.82 2000/10/30 17:49:19 roberto Exp roberto $
+** $Id: lobject.h,v 1.83 2000/11/24 17:39:56 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -48,7 +48,7 @@ typedef union {
   struct Closure *cl;	/* LUA_TFUNCTION */
   struct Hash *a;	/* LUA_TTABLE */
   struct CallInfo *i;	/* LUA_TLMARK */
-  Number n;		/* LUA_TNUMBER */
+  lua_Number n;		/* LUA_TNUMBER */
 } Value;
 
 
@@ -101,7 +101,7 @@ typedef struct TString {
 ** Function Prototypes
 */
 typedef struct Proto {
-  Number *knum;  /* Number numbers used by the function */
+  lua_Number *knum;  /* numbers used by the function */
   int nknum;  /* size of `knum' */
   struct TString **kstr;  /* strings used by the function */
   int nkstr;  /* size of `kstr' */
@@ -195,7 +195,7 @@ luint32 luaO_power2 (luint32 n);
 char *luaO_openspace (lua_State *L, size_t n);
 
 int luaO_equalObj (const TObject *t1, const TObject *t2);
-int luaO_str2d (const char *s, Number *result);
+int luaO_str2d (const char *s, lua_Number *result);
 
 void luaO_verror (lua_State *L, const char *fmt, ...);
 void luaO_chunkid (char *out, const char *source, int len);
