@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.103 2001/06/12 18:43:13 roberto Exp roberto $
+** $Id: lgc.c,v 1.104 2001/06/13 18:51:20 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -62,7 +62,7 @@ static void markclosure (GCState *st, Closure *cl) {
 
 static void marktable (GCState *st, Hash *h) {
   if (!ismarked(h)) {
-    h->mark = st->tmark;  /* chain it in list of marked */
+    h->mark = st->tmark;  /* chain it for later traversal */
     st->tmark = h;
   }
 }
@@ -127,8 +127,9 @@ static void traverseclosure (GCState *st, Closure *f) {
 
 
 static void removekey (Node *n) {
+  lua_assert(ttype(val(n)) == LUA_TNIL);
   if (ttype_key(n) != LUA_TNIL && ttype_key(n) != LUA_TNUMBER)
-    n->key_value.ts = NULL;  /* dead key; remove it */
+    ttype_key(n) = LUA_TNONE;  /* dead key; remove it */
 }
 
 
@@ -180,30 +181,29 @@ static void markall (lua_State *L) {
 }
 
 
-static int hasmark (const TObject *o) {
-  switch (ttype(o)) {
+static int hasmark (int tt, Value *v) {
+  switch (tt) {
     case LUA_TSTRING:
-      return tsvalue(o)->marked;
+      return v->ts->marked;
     case LUA_TUSERDATA:
-      return ismarkedudata(uvalue(o));
+      return ismarkedudata(v->u);
     case LUA_TTABLE:
-      return ismarked(hvalue(o));
+      return ismarked(v->h);
     case LUA_TFUNCTION:
-      return ismarked(clvalue(o));
+      return ismarked(v->cl);
     default:  /* number, nil */
       return 1;
   }
 }
 
 
-static void invalidatetable (Hash *h) {
+static void cleardeadnodes (Hash *h) {
   int i;
   for (i=0; i<h->size; i++) {
     Node *n = node(h, i);
-    TObject k;
     if (ttype(val(n)) == LUA_TNIL) continue;  /* empty node */
-    setkey2obj(&k, n);
-    if (!hasmark(val(n)) || !hasmark(&k)) {
+    if (!hasmark(ttype(val(n)), &(val(n)->value)) ||
+        !hasmark(ttype_key(n), &n->key_value)) {
       setnilvalue(val(n));  /* remove value */
       removekey(n);
     }
@@ -211,27 +211,26 @@ static void invalidatetable (Hash *h) {
 }
 
 
-static void invalidatetables (global_State *G) {
+static void cleartables (global_State *G) {
   Hash *h;
   for (h = G->roottable; h; h = h->next) {
-    if (ismarked(h) && h->weakmode)
-      invalidatetable(h);
+    if (h->weakmode && ismarked(h))
+      cleardeadnodes(h);
   }
 }
 
 
-
 static void collectproto (lua_State *L) {
   Proto **p = &G(L)->rootproto;
-  Proto *next;
-  while ((next = *p) != NULL) {
-    if (next->marked) {
-      next->marked = 0;
-      p = &next->next;
+  Proto *curr;
+  while ((curr = *p) != NULL) {
+    if (curr->marked) {
+      curr->marked = 0;
+      p = &curr->next;
     }
     else {
-      *p = next->next;
-      luaF_freeproto(L, next);
+      *p = curr->next;
+      luaF_freeproto(L, curr);
     }
   }
 }
@@ -239,15 +238,15 @@ static void collectproto (lua_State *L) {
 
 static void collectclosure (lua_State *L) {
   Closure **p = &G(L)->rootcl;
-  Closure *next;
-  while ((next = *p) != NULL) {
-    if (ismarked(next)) {
-      next->mark = next;  /* unmark */
-      p = &next->next;
+  Closure *curr;
+  while ((curr = *p) != NULL) {
+    if (ismarked(curr)) {
+      curr->mark = curr;  /* unmark */
+      p = &curr->next;
     }
     else {
-      *p = next->next;
-      luaF_freeclosure(L, next);
+      *p = curr->next;
+      luaF_freeclosure(L, curr);
     }
   }
 }
@@ -255,15 +254,15 @@ static void collectclosure (lua_State *L) {
 
 static void collecttable (lua_State *L) {
   Hash **p = &G(L)->roottable;
-  Hash *next;
-  while ((next = *p) != NULL) {
-    if (ismarked(next)) {
-      next->mark = next;  /* unmark */
-      p = &next->next;
+  Hash *curr;
+  while ((curr = *p) != NULL) {
+    if (ismarked(curr)) {
+      curr->mark = curr;  /* unmark */
+      p = &curr->next;
     }
     else {
-      *p = next->next;
-      luaH_free(L, next);
+      *p = curr->next;
+      luaH_free(L, curr);
     }
   }
 }
@@ -271,17 +270,17 @@ static void collecttable (lua_State *L) {
 
 void luaC_collectudata (lua_State *L) {
   Udata **p = &G(L)->rootudata;
-  Udata *next;
-  while ((next = *p) != NULL) {
-    if (ismarkedudata(next)) {
-      switchudatamark(next);  /* unmark */
-      p = &next->next;
+  Udata *curr;
+  while ((curr = *p) != NULL) {
+    if (ismarkedudata(curr)) {
+      switchudatamark(curr);  /* unmark */
+      p = &curr->next;
     }
     else {  /* collect */
-      int tag = next->tag;
-      *p = next->next;
-      next->next = G(L)->TMtable[tag].collected;  /* chain udata */
-      G(L)->TMtable[tag].collected = next;
+      int tag = curr->tag;
+      *p = curr->next;
+      curr->next = G(L)->TMtable[tag].collected;  /* chain udata */
+      G(L)->TMtable[tag].collected = curr;
     }
   }
 }
@@ -291,17 +290,17 @@ static void collectstrings (lua_State *L, int all) {
   int i;
   for (i=0; i<G(L)->strt.size; i++) {  /* for each list */
     TString **p = &G(L)->strt.hash[i];
-    TString *next;
-    while ((next = *p) != NULL) {
-      if (next->marked && !all) {  /* preserve? */
-        if (next->marked < FIXMARK)  /* does not change FIXMARKs */
-          next->marked = 0;
-        p = &next->nexthash;
+    TString *curr;
+    while ((curr = *p) != NULL) {
+      if (curr->marked && !all) {  /* preserve? */
+        if (curr->marked < FIXMARK)  /* does not change FIXMARKs */
+          curr->marked = 0;
+        p = &curr->nexthash;
       } 
       else {  /* collect */
-        *p = next->nexthash;
+        *p = curr->nexthash;
         G(L)->strt.nuse--;
-        luaM_free(L, next, sizestring(next->len));
+        luaM_free(L, curr, sizestring(curr->len));
       }
     }
   }
@@ -365,11 +364,12 @@ void luaC_collect (lua_State *L, int all) {
 
 void luaC_collectgarbage (lua_State *L) {
   markall(L);
-  invalidatetables(G(L));
+  cleartables(G(L));
   luaC_collect(L, 0);
   checkMbuffer(L);
-  G(L)->GCthreshold = 2*G(L)->nblocks;  /* set new threshold */
+  G(L)->GCthreshold = 2*G(L)->nblocks;  /* temporary threshold (for TM) */
   luaC_callgcTMudata(L);
+  G(L)->GCthreshold = 2*G(L)->nblocks;  /* new threshold */
   callgcTM(L, &luaO_nilobject);
 }
 
