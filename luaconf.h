@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.2 2004/05/10 13:58:26 roberto Exp roberto $
+** $Id: luaconf.h,v 1.3 2004/05/10 17:50:51 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -255,16 +255,6 @@
 #define USE_TMPNAME	0
 #else
 #define USE_TMPNAME	1 
-#endif
-
-
-/*
-** by default, posix systems get `popen'
-*/
-#if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 2
-#define USE_POPEN	1
-#else
-#define USE_POPEN	0
 #endif
 
 

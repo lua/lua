@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.50 2004/04/30 20:13:38 roberto Exp roberto $
+** $Id: liolib.c,v 2.51 2004/05/10 20:26:37 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -28,11 +28,6 @@
 ** FILE Operations
 ** =======================================================
 */
-
-
-#if !USE_POPEN
-#define pclose(f)    (-1)
-#endif
 
 
 #define FILEHANDLE		"FILE*"
@@ -145,20 +140,6 @@ static int io_open (lua_State *L) {
   FILE **pf = newfile(L);
   *pf = fopen(filename, mode);
   return (*pf == NULL) ? pushresult(L, 0, filename) : 1;
-}
-
-
-static int io_popen (lua_State *L) {
-#if !USE_POPEN
-  luaL_error(L, "`popen' not supported");
-  return 0;
-#else
-  const char *filename = luaL_checkstring(L, 1);
-  const char *mode = luaL_optstring(L, 2, "r");
-  FILE **pf = newfile(L);
-  *pf = popen(filename, mode);
-  return (*pf == NULL) ? pushresult(L, 0, filename) : 1;
-#endif
 }
 
 
@@ -456,7 +437,6 @@ static const luaL_reg iolib[] = {
   {"close", io_close},
   {"flush", io_flush},
   {"open", io_open},
-  {"popen", io_popen},
   {"read", io_read},
   {"tmpfile", io_tmpfile},
   {"type", io_type},
