@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.70 2001/10/25 19:14:14 roberto Exp roberto $
+** $Id: lstate.c,v 1.71 2001/10/31 19:58:11 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -39,7 +39,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   else
     so->stacksize += LUA_MINSTACK;
   if (so->L != NULL) {  /* shared global state? */
-    L->G = G(so->L);
+    L->_G = G(so->L);
     L->gt = so->L->gt;  /* share table of globals */
     so->L->next->previous = L;  /* insert L into linked list */
     L->next = so->L->next;
@@ -48,7 +48,7 @@ static void f_luaopen (lua_State *L, void *ud) {
     luaD_init(L, so->stacksize);  /* init stack */
   }
   else {  /* create a new global state */
-    L->G = luaM_new(L, global_State);
+    L->_G = luaM_new(L, global_State);
     G(L)->strt.size = 0;
     G(L)->strt.nuse = 0;
     G(L)->strt.hash = NULL;
@@ -81,7 +81,7 @@ LUA_API lua_State *lua_newthread (lua_State *OL, int stacksize) {
   if (OL) lua_lock(OL);
   L = luaM_new(OL, lua_State);
   if (L) {  /* allocation OK? */
-    L->G = NULL;
+    L->_G = NULL;
     L->stack = NULL;
     L->stacksize = 0;
     L->ci = &L->basefunc;
@@ -121,7 +121,7 @@ static void close_state (lua_State *L, lua_State *OL) {
     luaS_freeall(L);
     luaM_freearray(L, G(L)->TMtable, G(L)->sizeTM, struct TM);
     luaM_freearray(L, G(L)->Mbuffer, G(L)->Mbuffsize, l_char);
-    luaM_freelem(NULL, L->G);
+    luaM_freelem(NULL, L->_G);
   }
   luaM_freearray(OL, L->stack, L->stacksize, TObject);
   luaM_freelem(OL, L);
