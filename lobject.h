@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.143 2002/08/16 14:45:55 roberto Exp roberto $
+** $Id: lobject.h,v 1.144 2002/08/30 19:09:21 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -67,6 +67,7 @@ typedef struct lua_TObject {
 
 /* Macros to access values */
 #define ttype(o)	((o)->tt)
+#define gcvalue(o)	check_exp(iscollectable(o), (o)->value.gc)
 #define pvalue(o)	check_exp(ttislightuserdata(o), (o)->value.p)
 #define nvalue(o)	check_exp(ttisnumber(o), (o)->value.n)
 #define tsvalue(o)	check_exp(ttisstring(o), &(o)->value.gc->ts)
@@ -113,6 +114,9 @@ typedef struct lua_TObject {
 #define setnilvalue(obj) ((obj)->tt=LUA_TNIL)
 
 
+/*
+** for internal debug only
+*/
 #define checkconsistency(obj) \
   lua_assert(!iscollectable(obj) || (ttype(obj) == (obj)->value.gc->gch.tt))
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.147 2002/08/16 20:00:28 roberto Exp roberto $
+** $Id: lgc.c,v 1.148 2002/08/30 19:09:21 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -48,10 +48,15 @@ typedef struct GCState {
 
 static void reallymarkobject (GCState *st, GCObject *o);
 
-#define markobject(st,o) \
-	if (iscollectable(o)) reallymarkobject(st,(o)->value.gc)
+#define markobject(st,o) { checkconsistency(o); \
+  if (iscollectable(o) && !ismarked(gcvalue(o))) reallymarkobject(st,gcvalue(o)); }
 
-#define marktable(st,t) reallymarkobject(st, cast(GCObject *, (t)))
+#define condmarkobject(st,o,c) { checkconsistency(o); \
+  if (iscollectable(o) && !ismarked(gcvalue(o)) && (c)) \
+    reallymarkobject(st,gcvalue(o)); }
+
+#define marktable(st,t) { if (!ismarked(cast(GCObject *, t))) \
+		reallymarkobject(st, cast(GCObject *, (t))); }
 
 
 static void markproto (Proto *f) {
@@ -96,7 +101,6 @@ static void markclosure (GCState *st, Closure *cl) {
 
 
 static void reallymarkobject (GCState *st, GCObject *o) {
-  if (ismarked(o)) return;
   mark(o);
   switch (o->gch.tt) {
     case LUA_TFUNCTION: {
@@ -157,10 +161,8 @@ static void traversestacks (GCState *st) {
 
 static void marktmu (GCState *st) {
   GCObject *u;
-  for (u = G(st->L)->tmudata; u; u = u->uv.next) {
-    mark(u);
-    marktable(st, (&u->u)->uv.metatable);
-  }
+  for (u = G(st->L)->tmudata; u; u = u->uv.next)
+    reallymarkobject(st, u);
 }
 
 
@@ -221,8 +223,8 @@ static void traversetable (GCState *st, Table *h) {
     Node *n = node(h, i);
     if (!ttisnil(val(n))) {
       lua_assert(!ttisnil(key(n)));
-      if (!weakkey) markobject(st, key(n));
-      if (!weakvalue) markobject(st, val(n));
+      condmarkobject(st, key(n), !weakkey);
+      condmarkobject(st, val(n), !weakvalue);
     }
   }
 }
