@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.112 2002/05/07 17:36:56 roberto Exp roberto $
+** $Id: ldebug.c,v 1.113 2002/05/09 14:14:34 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -336,6 +336,9 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         check(c < MAXSTACK && b < c);
         break;
       }
+      case OP_TFORLOOP:
+        checkreg(pt, a+2+c);
+        /* go through */
       case OP_FORLOOP:
         checkreg(pt, a+2);
         /* go through */
@@ -345,11 +348,6 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         /* not full check and jump is forward and do not skip `lastpc'? */
         if (reg != NO_REG && pc < dest && dest <= lastpc)
           pc += b;  /* do the jump */
-        break;
-      }
-      case OP_TFORLOOP: {
-        checkreg(pt, a+2+c);
-        check(pc+2 < pt->sizecode);  /* check skip */
         break;
       }
       case OP_CALL: {

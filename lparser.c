@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.180 2002/05/10 17:02:32 roberto Exp roberto $
+** $Id: lparser.c,v 1.181 2002/05/10 19:22:11 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -979,15 +979,16 @@ static void whilestat (LexState *ls, int line) {
   int whileinit, blockinit, expinit;
   expdesc v;
   BlockCnt bl;
-  next(ls);
-  whileinit = luaK_jump(fs);
+  next(ls);  /* skip WHILE */
+  whileinit = luaK_jump(fs);  /* jump to condition (which will be moved) */
   expinit = luaK_getlabel(fs);
-  expr(ls, &v);
+  expr(ls, &v);  /* parse condition */
   if (v.k == VK) v.k = VTRUE;  /* `trues' are all equal here */
   lineexp = ls->linenumber;
   luaK_goiffalse(fs, &v);
-  luaK_dischargejpc(fs);
-  sizeexp = fs->pc - expinit;
+  luaK_concat(fs, &v.f, fs->jpc);
+  fs->jpc = NO_JUMP;
+  sizeexp = fs->pc - expinit;  /* size of expression code */
   if (sizeexp > MAXEXPWHILE) 
     luaX_syntaxerror(ls, "while condition too complex");
   for (i = 0; i < sizeexp; i++)  /* save `exp' code */
@@ -998,14 +999,15 @@ static void whilestat (LexState *ls, int line) {
   blockinit = luaK_getlabel(fs);
   block(ls);
   luaK_patchtohere(fs, whileinit);  /* initial jump jumps to here */
+  /* move `exp' back to code */
   if (v.t != NO_JUMP) v.t += fs->pc - expinit;
   if (v.f != NO_JUMP) v.f += fs->pc - expinit;
   for (i=0; i<sizeexp; i++)
     luaK_code(fs, codeexp[i], lineexp);
-  luaK_patchlist(fs, v.t, blockinit);
-  luaK_patchtohere(fs, v.f);
   check_match(ls, TK_END, TK_WHILE, line);
   leaveblock(fs);
+  luaK_patchlist(fs, v.t, blockinit);  /* true conditions go back to loop */
+  luaK_patchtohere(fs, v.f);  /* false conditions finish the loop */
 }
 
 
@@ -1061,8 +1063,8 @@ static void fornum (LexState *ls, TString *varname, int line) {
   block(ls);
   luaK_patchtohere(fs, prep-1);
   endfor = luaK_codeAsBx(fs, OP_FORLOOP, base, NO_JUMP);
+  luaK_fixline(fs, line);  /* pretend that `OP_FOR' starts the loop */
   luaK_patchlist(fs, endfor, prep);
-  fs->f->lineinfo[endfor] = line;  /* pretend that `OP_FOR' starts the loop */
 }
 
 
@@ -1070,6 +1072,7 @@ static void forlist (LexState *ls, TString *indexname) {
   /* forlist -> NAME {,NAME} IN explist1 DO body */
   FuncState *fs = ls->fs;
   expdesc e;
+  int line;
   int nvars = 0;
   int prep;
   int base = fs->freereg;
@@ -1081,16 +1084,19 @@ static void forlist (LexState *ls, TString *indexname) {
     next(ls);
   }
   check(ls, TK_IN);
+  line = ls->linenumber;
   adjust_assign(ls, 3, explist1(ls, &e), &e);
   luaK_reserveregs(fs, nvars - 3);  /* registers for other variables */
-  luaK_codeABC(fs, OP_TFORPREP, base, 0, 0);
-  luaK_codeABC(fs, OP_TFORLOOP, base, 0, nvars - 3);
+  luaK_codeAsBx(fs, OP_TFORPREP, base, NO_JUMP);
   adjustlocalvars(ls, nvars);  /* scope for all variables */
-  prep = luaK_jump(fs);
   check(ls, TK_DO);
+  prep = luaK_getlabel(fs);
   block(ls);
-  luaK_patchlist(fs, luaK_jump(fs), prep-1);
-  luaK_patchtohere(fs, prep);
+  luaK_patchtohere(fs, prep-1);
+  removevars(fs->ls, fs->nactvar - nvars);  /* deactivate locals for next op. */
+  luaK_codeABC(fs, OP_TFORLOOP, base, 0, nvars - 3);
+  luaK_fixline(fs, line);  /* pretend that `OP_FOR' starts the loop */
+  luaK_patchlist(fs, luaK_jump(fs), prep);
 }
 
 

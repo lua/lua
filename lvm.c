@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.229 2002/05/06 15:51:41 roberto Exp roberto $
+** $Id: lvm.c,v 1.230 2002/05/09 14:14:34 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -548,7 +548,8 @@ StkId luaV_execute (lua_State *L) {
         L->top = ra+5;
         luaD_call(L, ra+2, GETARG_C(i) + 1);
         L->top = L->ci->top;
-        if (ttype(ra+2) != LUA_TNIL) pc++;  /* skip jump (keep looping) */
+        if (ttype(ra+2) == LUA_TNIL) pc++;  /* skip jump (break loop) */
+        else dojump(pc, GETARG_sBx(*pc) + 1);  /* else jump back */
         break;
       }
       case OP_TFORPREP: {
@@ -557,6 +558,7 @@ StkId luaV_execute (lua_State *L) {
           setsvalue(ra, luaS_new(L, "next"));
           luaV_gettable(L, gt(L), ra, ra);
         }
+        dojump(pc, GETARG_sBx(i));
         break;
       }
       case OP_SETLIST:

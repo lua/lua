@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.95 2002/04/24 20:07:46 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.96 2002/05/06 15:51:41 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -170,7 +170,8 @@ OP_FORLOOP,/*	A sBx	R(A)+=R(A+2); if R(A) <?= R(A+1) then PC+= sBx	*/
 
 OP_TFORLOOP,/*	A C	R(A+2), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2)); 
                         if R(A+2) ~= nil then pc++			*/
-OP_TFORPREP,/*	A	if type(R(A)) == table then R(A+1):=R(A), R(A):=next */
+OP_TFORPREP,/*	A sBx	if type(R(A)) == table then R(A+1):=R(A), R(A):=next;
+			PC += sBx					*/
 
 OP_SETLIST,/*	A Bx	R(A)[Bx-Bx%FPF+i] := R(A+i), 1 <= i <= Bx%FPF+1	*/
 OP_SETLISTO,/*	A Bx							*/
@@ -193,6 +194,8 @@ OP_CLOSURE/*	A Bx	R(A) := closure(KPROTO[Bx], R(A), ... ,R(A+n))	*/
   (2) In OP_RETURN, if (B == 0) then return up to `top'
 
   (3) For comparisons, B specifies what conditions the test should accept.
+
+  (4) All `skips' (pc++) assume that next instruction is a jump
 ===========================================================================*/
 
 
