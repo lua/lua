@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.7 1996/02/09 16:37:58 roberto Exp roberto $
+% $Id: manual.tex,v 1.8 1996/02/09 17:21:27 roberto Exp roberto $
 
 \documentstyle[A4,11pt,bnf]{article}
 
@@ -32,7 +32,7 @@ Waldemar Celes Filho
 Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1996/02/09 16:37:58 $}
+\date{\small \verb$Date: 1996/02/09 17:21:27 $}
 
 \maketitle
 
@@ -1440,17 +1440,17 @@ and strings with \verb'%s'.
 For better format facilities,
 the function \verb'format' should be used (\see{format}).
 
-\subsubsection*{{\tt date ()}}\Deffunc{date}
+\subsubsection*{{\tt date ([format])}}\Deffunc{date}
 
-This function returns 4 values:
-the current day of the month,
-the month ([1-12]), the current year,
-and the day of the week (1 = Sunday, 7 = Saturday).
+This function returns a string containing date and time
+formatted according to the given string \verb'format',
+following the same rules of the ANSI C function \verb'strftime'.
+When called without arguments,
+it returns a reasonable date and time representation.
 
-\subsubsection*{{\tt time ()}}\Deffunc{time}
+This function replaces functions \verb'date' and \verb'time' from
+previous Lua versions.
 
-This function returns the current time through 3 values:
-hours ([0-23]), minutes, and seconds.
 
 % \subsubsection*{{\tt debug ()}}
 % This function, when called, repeatedly presents a prompt \verb'lua_debug> '

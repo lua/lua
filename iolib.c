@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.32 1996/01/29 16:40:09 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.33 1996/02/05 21:32:19 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -12,6 +12,7 @@ char *rcs_iolib="$Id: iolib.c,v 1.32 1996/01/29 16:40:09 roberto Exp roberto $";
 #include <string.h>
 #include <time.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include "lua.h"
 #include "luadebug.h"
@@ -490,9 +491,14 @@ static void io_remove  (void)
    lua_pushnil();
 }
 
+static void io_errorno (void)
+{
+/*  lua_pushstring(strerror(errno));*/
+}
+
 
 /*
-** To get a environment variables
+** To get a environment variable
 */
 static void io_getenv (void)
 {
@@ -502,42 +508,23 @@ static void io_getenv (void)
 }
 
 /*
-** Return time: hour, min, sec
-*/
-static void io_time (void)
-{
- time_t t;
- struct tm *s;
- 
- time(&t);
- s = localtime(&t);
- lua_pushnumber(s->tm_hour);
- lua_pushnumber(s->tm_min);
- lua_pushnumber(s->tm_sec);
-}
- 
-/*
-** Return date: dd, mm, yyyy, weekday
+** Return user formatted time stamp
 */
 static void io_date (void)
 {
  time_t t;
- struct tm *s;
- 
- time(&t);
- s = localtime(&t);
- lua_pushnumber(s->tm_mday);
- lua_pushnumber(s->tm_mon+1);
- lua_pushnumber(s->tm_year+1900);
- lua_pushnumber(s->tm_wday+1);
-}
- 
-/*
-** Beep
-*/
-static void io_beep (void)
-{
- printf("\a");
+ struct tm *tm;
+ char *s;
+ char b[BUFSIZ];
+ if (lua_getparam(1) == LUA_NOOBJECT)
+  s = "%c";
+ else
+  s = lua_check_string(1, "date");
+ time(&t); tm = localtime(&t);
+ if (strftime(b,sizeof(b),s,tm))
+  lua_pushstring(b);
+ else
+  lua_error("`date' format too long");
 }
  
 /*
@@ -628,10 +615,9 @@ void iolib_open (void)
  lua_register ("write",    io_write);
  lua_register ("execute",  io_execute);
  lua_register ("remove",   io_remove);
+ lua_register ("ioerror",   io_errorno);
  lua_register ("getenv",   io_getenv);
- lua_register ("time",     io_time);
  lua_register ("date",     io_date);
- lua_register ("beep",     io_beep);
  lua_register ("exit",     io_exit);
  lua_register ("debug",    io_debug);
  lua_register ("print_stack", errorfb);
