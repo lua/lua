@@ -1,11 +1,12 @@
-% $Id: manual.tex,v 2.0 1997/06/17 18:45:16 roberto Exp roberto $
+% $Id: manual.tex,v 2.1 1997/06/18 20:14:52 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
 \newcommand{\rw}[1]{{\bf #1}}
 \newcommand{\See}[1]{Section~\ref{#1}}
 \newcommand{\see}[1]{(see \See{#1})}
-\newcommand{\M}[1]{$#1$}
+\newcommand{\M}[1]{\emph{#1}}
+\newcommand{\Math}[1]{$#1$}
 \newcommand{\nil}{{\bf nil}}
 \newcommand{\Line}{\rule{\linewidth}{.5mm}}
 \def\tecgraf{{\sf TeC\kern-.21em\lower.7ex\hbox{Graf}}}
@@ -37,7 +38,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1997/06/17 18:45:16 $}
+\date{\small \verb$Date: 1997/06/18 20:14:52 $}
 
 \maketitle
 
@@ -2024,7 +2025,7 @@ and the part matching \verb|%s*| has number 3.
 
 This library is an interface to some functions of the standard C math library.
 In addition, it registers a tag method for the binary operator \verb|^| that
-returns \M{x^y} when applied to numbers \verb|x^y|.
+returns \Math{x^y} when applied to numbers \verb|x^y|.
 
 The library provides the following functions:
 \Deffunc{abs}\Deffunc{acos}\Deffunc{asin}\Deffunc{atan}
@@ -2050,7 +2051,7 @@ The functions \verb|random| and \verb|randomseed| are interfaces to
 the simple random generator functions \verb|rand| and \verb|srand|,
 provided by ANSI C.
 The function \verb|random| returns pseudo-random numbers in the
-range \M{[0,1)}.
+range \Math{[0,1)}.
 
 
 \subsection{I/O Facilities} \label{libio}
@@ -2265,8 +2266,8 @@ lua_Function lua_stackedfunction (int level);
 \end{verbatim}
 It returns a handle (\verb|lua_Function|) to the {\em activation record\/}
 of the function executing at a given level.
-Level 0 is the current running function,
-while level \M{n+1} is the function that has called level \M{n}.
+Level~0 is the current running function,
+while level \Math{n+1} is the function that has called level \Math{n}.
 When called with a level greater than the stack depth,
 \verb|lua_stackedfunction| returns \verb|LUA_NOOBJECT|.
 
