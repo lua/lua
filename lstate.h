@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.78 2002/03/07 18:11:51 roberto Exp roberto $
+** $Id: lstate.h,v 1.79 2002/03/11 12:45:00 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -91,15 +91,11 @@ typedef struct CallInfo {
   StkId	top;  /* top for this function (when it's a Lua function) */
   const Instruction **pc;  /* points to `pc' variable in `luaV_execute' */
   StkId *pb;  /* points to `base' variable in `luaV_execute' */
-  /* extra information for line tracing */
   int lastpc;  /* last pc traced */
-  int line;  /* current line */
-  int refi;  /* current index in `lineinfo' */
+  int yield_results;
 } CallInfo;
 
 #define ci_func(ci)	(clvalue((ci)->base - 1))
-
-#define yield_results	refi	/* reuse this field */
 
 
 /*

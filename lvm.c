@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.221 2002/03/20 12:52:32 roberto Exp roberto $
+** $Id: lvm.c,v 1.222 2002/03/22 16:54:31 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -62,33 +62,17 @@ int luaV_tostring (lua_State *L, TObject *obj) {
 }
 
 
-static void traceexec (lua_State *L, lua_Hook linehook) {
+static void traceexec (lua_State *L) {
   CallInfo *ci = L->ci;
   int *lineinfo = ci_func(ci)->l.p->lineinfo;
   int pc = cast(int, *ci->pc - ci_func(ci)->l.p->code) - 1;
-  int newline;
-  if (testOpMode(GET_OPCODE(*(*ci->pc - 1)), OpModeNoTrace))
-    return;
-  if (ci->line == -1) return;  /* no linehooks for this function */
-  else if (ci->line == 0) {  /* first linehook? */
-    if (pc == 0) {  /* function is starting now? */
-      ci->line = 1;
-      ci->refi = 0;
-      ci->lastpc = pc+1;  /* make sure it will call linehook */
-    }
-    else {  /* function started without hooks: */
-      ci->line = -1;  /* keep it that way */
-      return;
-    }
-  }
-  newline = luaG_getline(lineinfo, pc, ci->line, &ci->refi);
+  int newline = lineinfo[pc];
+  if (pc == 0)  /* tracing may be starting now? */
+    ci->lastpc = 0;  /* initialize `lastpc' */
   /* calls linehook when enters a new line or jumps back (loop) */
-  if (newline != ci->line || pc <= ci->lastpc) {
-    ci->line = newline;
-    luaD_lineHook(L, newline, linehook);
-    ci = L->ci;  /* previous call may realocate `ci' */
-  }
-  ci->lastpc = pc;
+  if (pc <= ci->lastpc || newline != lineinfo[ci->lastpc])
+    luaD_lineHook(L, newline);
+  L->ci->lastpc = pc;
 }
 
 
@@ -316,21 +300,17 @@ static void powOp (lua_State *L, StkId ra, StkId rb, StkId rc) {
 
 #define dojump(pc, i)	((pc) += (i))
 
-/*
-** Executes current Lua function. Parameters are between [base,top).
-** Returns n such that the results are between [n,top).
-*/
+
 StkId luaV_execute (lua_State *L) {
   StkId base;
   LClosure *cl;
   TObject *k;
   const Instruction *pc;
-  lua_Hook linehook;
- reinit:
-  linehook = L->linehook;
+ callentry:  /* entry point when calling new functions */
   L->ci->pc = &pc;
-  pc = L->ci->savedpc;
   L->ci->pb = &base;
+  pc = L->ci->savedpc;
+ retentry:  /* entry point when returning to old functions */
   base = L->ci->base;
   cl = &clvalue(base - 1)->l;
   k = cl->p->k;
@@ -338,13 +318,13 @@ StkId luaV_execute (lua_State *L) {
   for (;;) {
     const Instruction i = *pc++;
     StkId ra;
-    if (linehook)
-      traceexec(L, linehook);
+    if (L->linehook)
+      traceexec(L);
     ra = RA(i);
     lua_assert(L->top <= L->stack + L->stacksize && L->top >= L->ci->base);
-    lua_assert(L->top == L->ci->top || GET_OPCODE(i) == OP_CALL ||
-         GET_OPCODE(i) == OP_TAILCALL || GET_OPCODE(i) == OP_RETURN ||
-         GET_OPCODE(i) == OP_SETLISTO);
+    lua_assert(L->top == L->ci->top ||
+         GET_OPCODE(i) == OP_CALL ||   GET_OPCODE(i) == OP_TAILCALL ||
+         GET_OPCODE(i) == OP_RETURN || GET_OPCODE(i) == OP_SETLISTO);
     switch (GET_OPCODE(i)) {
       case OP_MOVE: {
         setobj(ra, RB(i));
@@ -453,7 +433,6 @@ StkId luaV_execute (lua_State *L) {
         break;
       }
       case OP_JMP: {
-        linehook = L->linehook;
         dojump(pc, GETARG_sBc(i));
         break;
       }
@@ -511,7 +490,7 @@ StkId luaV_execute (lua_State *L) {
         }
         else {  /* it is a Lua function: `call' it */
           (L->ci-1)->savedpc = pc;
-          goto reinit;
+          goto callentry;
         }
         break;
       }
@@ -521,7 +500,7 @@ StkId luaV_execute (lua_State *L) {
         if (b != 0) L->top = ra+b;  /* else previous instruction set top */
         luaD_poscall(L, LUA_MULTRET, ra);  /* move down function and args. */
         ra = luaD_precall(L, base-1);
-        if (ra == NULL) goto reinit;  /* it is a Lua function */
+        if (ra == NULL) goto callentry;  /* it is a Lua function */
         else if (ra > L->top) return NULL;  /* yield??? */
         else goto ret;
       }
@@ -540,14 +519,12 @@ StkId luaV_execute (lua_State *L) {
         else {  /* yes: continue its execution */
           int nresults;
           lua_assert(ttype(ci->base-1) == LUA_TFUNCTION);
-          base = ci->base;  /* restore previous values */
-          cl = &clvalue(base - 1)->l;
-          k = cl->p->k;
           pc = ci->savedpc;
           lua_assert(GET_OPCODE(*(pc-1)) == OP_CALL);
           nresults = GETARG_C(*(pc-1)) - 1;
           luaD_poscall(L, nresults, ra);
           if (nresults >= 0) L->top = L->ci->top;
+          goto retentry;
         }
         break;
       }
@@ -556,7 +533,6 @@ StkId luaV_execute (lua_State *L) {
         int j = GETARG_sBc(i);
         const TObject *plimit = ra+1;
         const TObject *pstep = ra+2;
-        dojump(pc, j);  /* jump back before tests (for error messages) */
         if (ttype(ra) != LUA_TNUMBER)
           luaD_error(L, "`for' initial value must be a number");
         if (!tonumber(plimit, ra+1))
@@ -567,11 +543,9 @@ StkId luaV_execute (lua_State *L) {
         index = nvalue(ra) + step;  /* increment index */
         limit = nvalue(plimit);
         if (step > 0 ? index <= limit : index >= limit) {
+          dojump(pc, j);  /* jump back */
           chgnvalue(ra, index);  /* update index */
-          linehook = L->linehook;
         }
-        else
-          dojump(pc, -j);  /* undo jump */
         break;
       }
       case OP_TFORLOOP: {

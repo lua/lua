@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.171 2002/03/18 14:49:46 roberto Exp roberto $
+** $Id: lparser.c,v 1.172 2002/03/21 20:32:22 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -376,11 +376,9 @@ static void open_func (LexState *ls, FuncState *fs) {
   fs->nk = 0;
   fs->h = luaH_new(ls->L, 0, 0);
   fs->np = 0;
-  fs->nlineinfo = 0;
   fs->nlocvars = 0;
   fs->nactloc = 0;
   fs->nactvar = 0;
-  fs->lastline = 0;
   fs->defaultglob = NO_REG;  /* default is free globals */
   fs->bl = NULL;
   f->code = NULL;
@@ -402,6 +400,7 @@ static void close_func (LexState *ls) {
   G(L)->roottable = fs->h->next;
   luaH_free(L, fs->h);
   luaM_reallocvector(L, f->code, f->sizecode, fs->pc, Instruction);
+  luaM_reallocvector(L, f->lineinfo, f->sizecode, fs->pc, int);
   f->sizecode = fs->pc;
   luaM_reallocvector(L, f->k, f->sizek, fs->nk, TObject);
   f->sizek = fs->nk;
@@ -409,9 +408,6 @@ static void close_func (LexState *ls) {
   f->sizep = fs->np;
   luaM_reallocvector(L, f->locvars, f->sizelocvars, fs->nlocvars, LocVar);
   f->sizelocvars = fs->nlocvars;
-  luaM_reallocvector(L, f->lineinfo, f->sizelineinfo, fs->nlineinfo+1, int);
-  f->lineinfo[fs->nlineinfo++] = MAX_INT;  /* end flag */
-  f->sizelineinfo = fs->nlineinfo;
   lua_assert(luaG_checkcode(f));
   lua_assert(fs->bl == NULL);
   ls->fs = fs->prev;
@@ -999,10 +995,10 @@ static int exp1 (LexState *ls) {
 }
 
 
-static void fornum (LexState *ls, TString *varname) {
+static void fornum (LexState *ls, TString *varname, int line) {
   /* fornum -> NAME = exp1,exp1[,exp1] DO body */
   FuncState *fs = ls->fs;
-  int prep;
+  int prep, endfor;
   int base = fs->freereg;
   new_localvar(ls, varname, 0);
   new_localvarstr(ls, "(for limit)", 1);
@@ -1024,7 +1020,9 @@ static void fornum (LexState *ls, TString *varname) {
   check(ls, TK_DO);
   block(ls);
   luaK_patchtohere(fs, prep-1);
-  luaK_patchlist(fs, luaK_codeAsBc(fs, OP_FORLOOP, base, NO_JUMP), prep);
+  endfor = luaK_codeAsBc(fs, OP_FORLOOP, base, NO_JUMP);
+  luaK_patchlist(fs, endfor, prep);
+  fs->f->lineinfo[endfor] = line;  /* pretend that `OP_FOR' starts the loop */
 }
 
 
@@ -1065,7 +1063,7 @@ static void forstat (LexState *ls, int line) {
   varname = str_checkname(ls);  /* first variable name */
   next(ls);  /* skip var name */
   switch (ls->t.token) {
-    case '=': fornum(ls, varname); break;
+    case '=': fornum(ls, varname, line); break;
     case ',': case TK_IN: forlist(ls, varname); break;
     default: luaK_error(ls, "`=' or `in' expected");
   }

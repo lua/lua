@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.91 2002/03/18 14:49:46 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.92 2002/03/21 20:32:22 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -207,8 +207,7 @@ enum OpModeMask {
   OpModeCreg,           /* C is a register/constant */
   OpModesetA,           /* instruction set register A */
   OpModeK,              /* Bc is a constant */
-  OpModeT,		/* operator is a test */
-  OpModeNoTrace		/* operator should not be traced */
+  OpModeT		/* operator is a test */
 };
 
 extern const lu_byte luaP_opmodes[NUM_OPCODES];

@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.12 2002/03/08 19:10:32 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.13 2002/03/21 20:32:22 roberto Exp roberto $
 ** extracted automatically from lopcodes.h by mkprint.lua
 ** DO NOT EDIT
 ** See Copyright Notice in lua.h
@@ -59,11 +59,11 @@ const char *const luaP_opnames[] = {
 
 #define opmode(t,x,b,c,sa,k,m) (((t)<<OpModeT) | \
    ((b)<<OpModeBreg) | ((c)<<OpModeCreg) | \
-   ((sa)<<OpModesetA) | ((k)<<OpModeK) | (x)<<OpModeNoTrace | (m))
+   ((sa)<<OpModesetA) | ((k)<<OpModeK) | (m))
 
 
 const lu_byte luaP_opmodes[NUM_OPCODES] = {
-/*       T n B C sA K mode		   opcode    */
+/*       T _ B C sA K mode		   opcode    */
   opmode(0,0,1,0, 1,0,iABC)		/* OP_MOVE */
  ,opmode(0,0,0,0, 1,1,iABc)		/* OP_LOADK */
  ,opmode(0,0,0,0, 1,0,iABC)		/* OP_LOADBOOL */
@@ -96,7 +96,7 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_CALL */
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_TAILCALL */
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_RETURN */
- ,opmode(0,1,0,0, 0,0,iAsBc)		/* OP_FORLOOP */
+ ,opmode(0,0,0,0, 0,0,iAsBc)		/* OP_FORLOOP */
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_TFORLOOP */
  ,opmode(0,0,0,0, 0,0,iABc)		/* OP_SETLIST */
  ,opmode(0,0,0,0, 0,0,iABc)		/* OP_SETLISTO */

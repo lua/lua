@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.39 2002/02/08 22:42:41 roberto Exp roberto $
+** $Id: lparser.h,v 1.40 2002/03/14 18:01:52 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -68,11 +68,9 @@ typedef struct FuncState {
   int defaultglob;  /* where to look for non-declared globals */
   int nk;  /* number of elements in `k' */
   int np;  /* number of elements in `p' */
-  int nlineinfo;  /* number of elements in `lineinfo' */
   int nlocvars;  /* number of elements in `locvars' */
   int nactloc;  /* number of active local variables */
   int nactvar;  /* number of elements in array `actvar' */
-  int lastline;  /* line where last `lineinfo' was generated */
   expdesc upvalues[MAXUPVALUES];  /* upvalues */
   vardesc actvar[MAXVARS];  /* declared-variable stack */
 } FuncState;

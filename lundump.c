@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.43 2001/07/24 21:57:19 roberto Exp $
+** $Id: lundump.c,v 1.44 2001/11/28 20:13:13 roberto Exp roberto $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -133,7 +133,6 @@ static void LoadLines (lua_State* L, Proto* f, ZIO* Z, int swap)
  int n;
  n=LoadInt(L,Z,swap);
  f->lineinfo=luaM_newvector(L,n,int);
- f->sizelineinfo=n;
  LoadVector(L,f->lineinfo,n,sizeof(*f->lineinfo),Z,swap);
 }
 

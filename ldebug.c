@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.103 2002/03/19 12:45:25 roberto Exp roberto $
+** $Id: ldebug.c,v 1.104 2002/03/22 16:54:31 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -34,6 +34,24 @@ static int isLmark (CallInfo *ci) {
 }
 
 
+static int currentpc (lua_State *L, CallInfo *ci) {
+  if (ci->pc == NULL) return -1;  /* function is not an active Lua function */
+  if (ci == L->ci || ci->pc != (ci+1)->pc)  /* no other function using `pc'? */
+    return (*ci->pc - ci_func(ci)->l.p->code) - 1;
+  else  /* function's pc is saved */
+    return (ci->savedpc - ci_func(ci)->l.p->code) - 1;
+}
+
+
+static int currentline (lua_State *L, CallInfo *ci) {
+  int pc = currentpc(L, ci);
+  if (pc < 0)
+    return -1;  /* only active lua functions have current-line information */
+  else
+    return ci_func(ci)->l.p->lineinfo[pc];
+}
+
+
 LUA_API lua_Hook lua_setcallhook (lua_State *L, lua_Hook func) {
   lua_Hook oldhook;
   lua_lock(L);
@@ -45,10 +63,13 @@ LUA_API lua_Hook lua_setcallhook (lua_State *L, lua_Hook func) {
 
 
 LUA_API lua_Hook lua_setlinehook (lua_State *L, lua_Hook func) {
+  CallInfo *ci;
   lua_Hook oldhook;
   lua_lock(L);
   oldhook = L->linehook;
   L->linehook = func;
+  for (ci = L->base_ci; ci <= L->ci; ci++)
+    ci->lastpc = currentpc(L, ci);
   lua_unlock(L);
   return oldhook;
 }
@@ -65,57 +86,6 @@ LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
   lua_unlock(L);
   return status;
 }
-
-
-int luaG_getline (int *lineinfo, int pc, int refline, int *prefi) {
-  int refi;
-  if (lineinfo == NULL) return -1;  /* no line info */
-  refi = prefi ? *prefi : 0;
-  if (lineinfo[refi] < 0)
-    refline += -lineinfo[refi++];
-  lua_assert(lineinfo[refi] >= 0);
-  while (lineinfo[refi] > pc) {
-    refline--;
-    refi--;
-    if (lineinfo[refi] < 0)
-      refline -= -lineinfo[refi--];
-    lua_assert(lineinfo[refi] >= 0);
-  }
-  for (;;) {
-    int nextline = refline + 1;
-    int nextref = refi + 1;
-    if (lineinfo[nextref] < 0)
-      nextline += -lineinfo[nextref++];
-    lua_assert(lineinfo[nextref] >= 0);
-    if (lineinfo[nextref] > pc)
-      break;
-    refline = nextline;
-    refi = nextref;
-  }
-  if (prefi) *prefi = refi;
-  return refline;
-}
-
-
-static int currentpc (lua_State *L, CallInfo *ci) {
-  lua_assert(isLmark(ci));
-  if (ci->pc == NULL) return 0;  /* function is not active */
-  if (ci == L->ci || ci->pc != (ci+1)->pc)  /* no other function using `pc'? */
-    return (*ci->pc - ci_func(ci)->l.p->code) - 1;
-  else  /* function's pc is saved */
-    return (ci->savedpc - ci_func(ci)->l.p->code) - 1;
-}
-
-
-static int currentline (lua_State *L, CallInfo *ci) {
-  if (!isLmark(ci))
-    return -1;  /* only active lua functions have current-line information */
-  else {
-    int *lineinfo = ci_func(ci)->l.p->lineinfo;
-    return luaG_getline(lineinfo, currentpc(L, ci), 1, NULL);
-  }
-}
-
 
 
 static Proto *getluaproto (CallInfo *ci) {
@@ -272,19 +242,8 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
 #define checkreg(pt,reg)	check((reg) < (pt)->maxstacksize)
 
 
-static int checklineinfo (const Proto *pt) {
-  int *lineinfo = pt->lineinfo;
-  if (lineinfo == NULL) return 1;
-  check(pt->sizelineinfo >= 2 && lineinfo[pt->sizelineinfo-1] == MAX_INT);
-  lua_assert(luaG_getline(lineinfo, pt->sizecode-1, 1, NULL) < MAX_INT);
-  if (*lineinfo < 0) lineinfo++;
-  check(*lineinfo == 0);
-  return 1;
-}
-
 
 static int precheck (const Proto *pt) {
-  check(checklineinfo(pt));
   check(pt->maxstacksize <= MAXSTACK);
   lua_assert(pt->numparams+pt->is_vararg <= pt->maxstacksize);
   check(GET_OPCODE(pt->code[pt->sizecode-1]) == OP_RETURN);

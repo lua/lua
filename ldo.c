@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.164 2002/03/15 17:17:16 roberto Exp roberto $
+** $Id: ldo.c,v 1.165 2002/03/20 12:52:32 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -122,13 +122,13 @@ static void dohook (lua_State *L, lua_Debug *ar, lua_Hook hook) {
 }
 
 
-void luaD_lineHook (lua_State *L, int line, lua_Hook linehook) {
+void luaD_lineHook (lua_State *L, int line) {
   if (L->allowhooks) {
     lua_Debug ar;
     ar.event = "line";
     ar.i_ci = L->ci - L->base_ci;
     ar.currentline = line;
-    dohook(L, &ar, linehook);
+    dohook(L, &ar, L->linehook);
   }
 }
 
@@ -221,7 +221,6 @@ StkId luaD_precall (lua_State *L, StkId func) {
     if (p->is_vararg)  /* varargs? */
       adjust_varargs(L, p->numparams);
     luaD_checkstack(L, p->maxstacksize);
-    ci->line = 0;
     ci->top = ci->base + p->maxstacksize;
     while (L->top < ci->top)
       setnilvalue(L->top++);
@@ -250,7 +249,7 @@ void luaD_poscall (lua_State *L, int wanted, StkId firstResult) {
     luaD_callHook(L, L->callhook, "return");
     firstResult = restorestack(L, fr);
   }
-  res = L->ci->base - 1;  /* func == final position of 1st result */
+  res = L->ci->base - 1;  /* res == final position of 1st result */
   L->ci--;
   /* move results to correct place */
   while (wanted != 0 && firstResult < L->top) {

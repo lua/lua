@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.91 2002/03/08 19:10:32 roberto Exp roberto $
+** $Id: lcode.c,v 1.92 2002/03/21 20:31:43 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -737,31 +737,16 @@ void luaK_posfix (FuncState *fs, BinOpr op, expdesc *e1, expdesc *e2) {
 }
 
 
-static void codelineinfo (FuncState *fs) {
-  Proto *f = fs->f;
-  LexState *ls = fs->ls;
-  if (ls->lastline > fs->lastline) {
-    if (ls->lastline > fs->lastline+1) {
-      luaM_growvector(fs->L, f->lineinfo, fs->nlineinfo, f->sizelineinfo, int,
-                      MAX_INT, "line info overflow");
-      f->lineinfo[fs->nlineinfo++] = -(ls->lastline - (fs->lastline+1));
-    }
-    luaM_growvector(fs->L, f->lineinfo, fs->nlineinfo, f->sizelineinfo, int,
-                    MAX_INT, "line info overflow");
-    f->lineinfo[fs->nlineinfo++] = fs->pc;
-    fs->lastline = ls->lastline;
-  }
-}
-
-
 static int luaK_code (FuncState *fs, Instruction i) {
-  Proto *f;
-  codelineinfo(fs);
-  f = fs->f;
+  Proto *f = fs->f;
+  int oldsize = f->sizecode;
   /* put new instruction in code array */
   luaM_growvector(fs->L, f->code, fs->pc, f->sizecode, Instruction,
                   MAX_INT, "code size overflow");
   f->code[fs->pc] = i;
+  if (f->sizecode != oldsize)
+    luaM_reallocvector(fs->L, f->lineinfo, oldsize, f->sizecode, int);
+  f->lineinfo[fs->pc] = fs->ls->lastline;
   return fs->pc++;
 }
 
