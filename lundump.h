@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.h,v 1.7 1998/06/25 15:50:09 lhf Exp $
+** $Id: lundump.h,v 1.4 1998/06/25 16:48:44 roberto Exp roberto $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -10,7 +10,7 @@
 #include "lobject.h"
 #include "lzio.h"
 
-TProtoFunc* luaU_undump1(ZIO* Z);	/* load one chunk */
+TProtoFunc *luaU_undump1 (ZIO* Z);	/* load one chunk */
 
 #define	SIGNATURE	"Lua"
 #define	VERSION		0x31		/* last format change was in 3.1 */

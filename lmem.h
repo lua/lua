@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.h,v 1.4 1997/12/01 20:30:44 roberto Exp roberto $
+** $Id: lmem.h,v 1.5 1997/12/17 20:48:58 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -8,10 +8,7 @@
 #define lmem_h
 
 
-#ifndef NULL
-#define NULL 0
-#endif
-
+#include <stdlib.h>
 
 /* memory error messages */
 #define codeEM   "code size overflow"
