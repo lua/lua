@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.89 2002/07/01 19:23:58 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.90 2002/07/04 17:58:02 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -310,7 +310,7 @@ static int luaB_tostring (lua_State *L) {
       sprintf(buff, "function: %p", lua_topointer(L, 1));
       break;
     case LUA_TUSERDATA:
-    case LUA_TUDATAVAL:
+    case LUA_TLIGHTUSERDATA:
       sprintf(buff, "userdata: %p", lua_touserdata(L, 1));
       break;
     case LUA_TNIL:
@@ -484,7 +484,7 @@ static const luaL_reg base_funcs[] = {
 
 
 static int luaB_resume (lua_State *L) {
-  lua_State *co = (lua_State *)lua_getfrombox(L, lua_upvalueindex(1));
+  lua_State *co = (lua_State *)lua_unboxpointer(L, lua_upvalueindex(1));
   int status;
   lua_settop(L, 0);
   status = lua_resume(L, co);
@@ -503,7 +503,7 @@ static int luaB_resume (lua_State *L) {
 
 
 static int gc_coroutine (lua_State *L) {
-  lua_State *co = (lua_State *)lua_getfrombox(L, 1);
+  lua_State *co = (lua_State *)lua_unboxpointer(L, 1);
   lua_closethread(L, co);
   return 0;
 }
@@ -526,7 +526,7 @@ static int luaB_coroutine (lua_State *L) {
     lua_unref(L, ref);
   }
   lua_cobegin(NL, n-1);
-  lua_newpointerbox(L, NL);
+  lua_boxpointer(L, NL);
   lua_pushliteral(L, "Coroutine");
   lua_rawget(L, LUA_REGISTRYINDEX);
   lua_setmetatable(L, -2);

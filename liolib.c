@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.12 2002/06/26 16:37:13 roberto Exp roberto $
+** $Id: liolib.c,v 2.13 2002/07/12 18:54:53 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -67,7 +67,7 @@ static FILE *tofile (lua_State *L, int findex) {
 
 
 static void newfile (lua_State *L, FILE *f) {
-  lua_newpointerbox(L, f);
+  lua_boxpointer(L, f);
   lua_pushliteral(L, FILEHANDLE);
   lua_rawget(L, LUA_REGISTRYINDEX);
   lua_setmetatable(L, -2);

@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.62 2002/07/08 18:21:33 roberto Exp roberto $
+** $Id: ldblib.c,v 1.63 2002/07/08 20:22:08 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -113,7 +113,7 @@ static const char KEY_HOOK = 'h';
 
 static void hookf (lua_State *L, lua_Debug *ar) {
   static const char *const hooknames[] = {"call", "return", "line", "count"};
-  lua_pushudataval(L, (void *)&KEY_HOOK);
+  lua_pushlightuserdata(L, (void *)&KEY_HOOK);
   lua_rawget(L, LUA_REGISTRYINDEX);
   if (lua_isfunction(L, -1)) {
     lua_pushstring(L, hooknames[(int)ar->event]);
@@ -157,7 +157,7 @@ static int sethook (lua_State *L) {
     luaL_check_type(L, 1, LUA_TFUNCTION);
     lua_sethook(L, hookf, makemask(smask, count));
   }
-  lua_pushudataval(L, (void *)&KEY_HOOK);
+  lua_pushlightuserdata(L, (void *)&KEY_HOOK);
   lua_pushvalue(L, 1);
   lua_rawset(L, LUA_REGISTRYINDEX);  /* set new hook */
   return 0;
@@ -167,7 +167,7 @@ static int sethook (lua_State *L) {
 static int gethook (lua_State *L) {
   char buff[5];
   int mask = lua_gethookmask(L);
-  lua_pushudataval(L, (void *)&KEY_HOOK);
+  lua_pushlightuserdata(L, (void *)&KEY_HOOK);
   lua_rawget(L, LUA_REGISTRYINDEX);   /* get hook */
   lua_pushstring(L, unmakemask(mask, buff));
   lua_pushnumber(L, lua_getmaskcount(mask));

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.128 2002/06/25 19:16:44 roberto Exp roberto $
+** $Id: ltests.c,v 1.129 2002/07/09 14:58:28 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -413,7 +413,7 @@ static int newuserdata (lua_State *L) {
 
 
 static int pushuserdata (lua_State *L) {
-  lua_pushudataval(L, cast(void *, luaL_check_int(L, 1)));
+  lua_pushlightuserdata(L, cast(void *, luaL_check_int(L, 1)));
   return 1;
 }
 
@@ -579,7 +579,7 @@ static int testC (lua_State *L) {
       lua_pushnumber(L, lua_isuserdata(L, getnum));
     }
     else if EQ("isudataval") {
-      lua_pushnumber(L, lua_isudataval(L, getnum));
+      lua_pushnumber(L, lua_islightuserdata(L, getnum));
     }
     else if EQ("isnil") {
       lua_pushnumber(L, lua_isnil(L, getnum));
@@ -741,11 +741,12 @@ static void fim (void) {
 }
 
 
-void luaB_opentests (lua_State *L) {
+int luaB_opentests (lua_State *L) {
   *cast(int **, L) = &islocked;  /* init lock */
   lua_state = L;  /* keep first state to be opened */
   luaL_opennamedlib(L, "T", tests_funcs, 0);
   atexit(fim);
+  return 0;
 }
 
 #endif

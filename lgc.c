@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.141 2002/07/04 17:57:42 roberto Exp $
+** $Id: lgc.c,v 1.142 2002/07/08 18:21:33 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -58,7 +58,7 @@ typedef struct GCState {
 
 #define ismarkable(o)	(!((1 << ttype(o)) & \
 	((1 << LUA_TNIL)     | (1 << LUA_TNUMBER) | \
-	 (1 << LUA_TBOOLEAN) | (1 << LUA_TUDATAVAL))))
+	 (1 << LUA_TBOOLEAN) | (1 << LUA_TLIGHTUSERDATA))))
 
 static void reallymarkobject (GCState *st, TObject *o);
 

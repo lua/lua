@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.138 2002/06/24 20:17:59 roberto Exp roberto $
+** $Id: lobject.h,v 1.139 2002/07/01 17:06:58 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,7 @@ typedef struct lua_TObject {
 
 /* Macros to access values */
 #define ttype(o)	((o)->tt)
-#define pvalue(o)	check_exp(ttype(o)==LUA_TUDATAVAL, (o)->value.p)
+#define pvalue(o)	check_exp(ttype(o)==LUA_TLIGHTUSERDATA, (o)->value.p)
 #define nvalue(o)	check_exp(ttype(o)==LUA_TNUMBER, (o)->value.n)
 #define tsvalue(o)	check_exp(ttype(o)==LUA_TSTRING, (o)->value.ts)
 #define uvalue(o)	check_exp(ttype(o)==LUA_TUSERDATA, (o)->value.u)
@@ -54,7 +54,7 @@ typedef struct lua_TObject {
 	check_exp(ttype(obj)==LUA_TNUMBER, (obj)->value.n=(x))
 
 #define setpvalue(obj,x) \
-  { TObject *i_o=(obj); i_o->tt=LUA_TUDATAVAL; i_o->value.p=(x); }
+  { TObject *i_o=(obj); i_o->tt=LUA_TLIGHTUSERDATA; i_o->value.p=(x); }
 
 #define setbvalue(obj,x) \
   { TObject *i_o=(obj); i_o->tt=LUA_TBOOLEAN; i_o->value.b=(x); }

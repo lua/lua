@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.145 2002/07/01 19:31:10 roberto Exp roberto $
+** $Id: lua.h,v 1.146 2002/07/09 14:58:28 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -70,9 +70,9 @@ typedef const char * (*lua_Chunkreader) (void *ud, size_t *size);
 #define LUA_TSTRING	2
 #define LUA_TBOOLEAN	3
 #define LUA_TTABLE	4
-#define LUA_TUSERDATA	5
-#define LUA_TUDATAVAL	6
-#define LUA_TFUNCTION	7
+#define LUA_TFUNCTION	5
+#define LUA_TUSERDATA	6
+#define LUA_TLIGHTUSERDATA	7
 
 
 /* minimum Lua stack available to a C function */
@@ -158,7 +158,7 @@ LUA_API const char *lua_pushvfstring (lua_State *L, const char *fmt,
 LUA_API const char *lua_pushfstring (lua_State *L, const char *fmt, ...);
 LUA_API void  lua_pushcclosure (lua_State *L, lua_CFunction fn, int n);
 LUA_API void  lua_pushboolean (lua_State *L, int b);
-LUA_API void  lua_pushudataval (lua_State *L, void *p);
+LUA_API void  lua_pushlightuserdata (lua_State *L, void *p);
 
 
 /*
@@ -225,10 +225,10 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size);
 ** ===============================================================
 */
 
-#define lua_newpointerbox(L,u) \
+#define lua_boxpointer(L,u) \
 	(*(void **)(lua_newuserdata(L, sizeof(void *))) = (u))
 
-#define lua_getfrombox(L,i)	(*(void **)(lua_touserdata(L, i)))
+#define lua_unboxpointer(L,i)	(*(void **)(lua_touserdata(L, i)))
 
 #define lua_pop(L,n)		lua_settop(L, -(n)-1)
 
@@ -241,8 +241,8 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size);
 
 #define lua_isfunction(L,n)	(lua_type(L,n) == LUA_TFUNCTION)
 #define lua_istable(L,n)	(lua_type(L,n) == LUA_TTABLE)
-#define lua_isuserdata(L,n)	(lua_type(L,n) == LUA_TUSERDATA)
-#define lua_isudataval(L,n)	(lua_type(L,n) == LUA_TUDATAVAL)
+#define lua_isuserdata(L,n)	(lua_type(L,n) >= LUA_TUSERDATA)
+#define lua_islightuserdata(L,n)	(lua_type(L,n) == LUA_TLIGHTUSERDATA)
 #define lua_isnil(L,n)		(lua_type(L,n) == LUA_TNIL)
 #define lua_isboolean(L,n)	(lua_type(L,n) == LUA_TBOOLEAN)
 #define lua_isnone(L,n)		(lua_type(L,n) == LUA_TNONE)

@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.112 2002/07/01 19:31:10 roberto Exp roberto $
+** $Id: ltable.c,v 1.113 2002/07/02 17:54:23 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -80,7 +80,7 @@ Node *luaH_mainposition (const Table *t, const TObject *key) {
       return hashstr(t, tsvalue(key));
     case LUA_TBOOLEAN:
       return hashboolean(t, bvalue(key));
-    case LUA_TUDATAVAL:
+    case LUA_TLIGHTUSERDATA:
       return hashpointer(t, pvalue(key));
     case LUA_TUSERDATA:
       return hashpointer(t, uvalue(key));

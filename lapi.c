@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.203 2002/06/25 19:15:41 roberto Exp roberto $
+** $Id: lapi.c,v 1.204 2002/06/26 19:28:44 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -305,7 +305,7 @@ LUA_API void *lua_touserdata (lua_State *L, int index) {
   if (o == NULL) return NULL;
   switch (ttype(o)) {
     case LUA_TUSERDATA: return (uvalue(o) + 1);
-    case LUA_TUDATAVAL: return pvalue(o);
+    case LUA_TLIGHTUSERDATA: return pvalue(o);
     default: return NULL;
   }
 }
@@ -318,6 +318,9 @@ LUA_API const void *lua_topointer (lua_State *L, int index) {
     switch (ttype(o)) {
       case LUA_TTABLE: return hvalue(o);
       case LUA_TFUNCTION: return clvalue(o);
+      case LUA_TUSERDATA:
+      case LUA_TLIGHTUSERDATA:
+        return lua_touserdata(L, index);
       default: return NULL;
     }
   }
@@ -407,7 +410,7 @@ LUA_API void lua_pushboolean (lua_State *L, int b) {
 }
 
 
-LUA_API void lua_pushudataval (lua_State *L, void *p) {
+LUA_API void lua_pushlightuserdata (lua_State *L, void *p) {
   lua_lock(L);
   setpvalue(L->top, p);
   api_incr_top(L);

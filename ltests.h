@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 1.13 2002/06/11 16:26:12 roberto Exp roberto $
+** $Id: ltests.h,v 1.14 2002/06/13 13:45:31 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -47,16 +47,15 @@ extern int islocked;
 #define lua_unlock(L)   lua_assert(--(**cast(int **, L)) == 0)
 
 
-void luaB_opentests (lua_State *L);
+int luaB_opentests (lua_State *L);
 
-#define LUA_USERINIT(L) (luaB_opentests(L), openstdlibs(L))
+#define lua_userinit(L) (luaB_opentests(L) + openstdlibs(L))
 
 
 
 /* change some sizes to give some bugs a chance */
 
 #define LUAL_BUFFERSIZE		27
-#define ZBSIZE			29
 #define MINSTRTABSIZE		2
 
 #endif
