@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.73 2000/08/29 14:33:31 roberto Exp roberto $
+** $Id: liolib.c,v 1.74 2000/08/29 20:43:28 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -159,7 +159,7 @@ static int file_collect (lua_State *L) {
   IOCtrl *ctrl = (IOCtrl *)lua_touserdata(L, -1);
   lua_settop(L, -1);  /* remove upvalue */
   if (ctrl == (IOCtrl *)lua_touserdata(L, 1)) {
-    /* collectig `ctrl' itself */
+    /* collecting `ctrl' itself */
     lua_unref(L, ctrl->ref[INFILE]);
     lua_unref(L, ctrl->ref[OUTFILE]);
     free(ctrl);
@@ -372,7 +372,8 @@ static int io_read (lua_State *L) {
     firstarg = lastarg = 1;  /* correct indices */
     lua_pushstring(L, "*l");  /* push default argument */
   }
-  luaL_checkstack(L, lastarg-firstarg+1, "too many results");
+  else
+    luaL_checkstack(L, lastarg-firstarg+1, "too many arguments");
   for (n = firstarg; n<=lastarg; n++) {
     size_t l;
     int success;
