@@ -245,3 +245,8 @@ Wed Nov 29 09:51:44 EDT 2000
 >> parser does not accept a `;' after a `return'
 (by lhf; since 4.0b)
 
+** liolib.c
+Fri Dec 22 15:30:42 EDT 2000
+>> when `read' fails it must return nil (and not no value)
+(by cassino; since at least 3.1)
+

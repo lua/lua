@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.94 2000/12/18 13:42:19 roberto Exp roberto $
+** $Id: liolib.c,v 1.95 2000/12/22 16:57:13 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -318,6 +318,7 @@ static int io_read (lua_State *L) {
   IOCtrl *ctrl = (IOCtrl *)lua_touserdata(L, -1);
   int lastarg = lua_gettop(L) - 1;
   int firstarg = 1;
+  int success;
   FILE *f = gethandle(L, ctrl, firstarg);
   int n;
   if (f) firstarg++;
@@ -330,8 +331,8 @@ static int io_read (lua_State *L) {
   }
   else  /* ensure stack space for all results and for auxlib's buffer */
     luaL_checkstack(L, lastarg-firstarg+1+LUA_MINSTACK, "too many arguments");
-  for (n = firstarg; n<=lastarg; n++) {
-    int success;
+  success = 1;
+  for (n = firstarg; n<=lastarg && success; n++) {
     if (lua_isnumber(L, n))
       success = read_chars(L, f, (size_t)lua_tonumber(L, n));
     else {
@@ -343,8 +344,8 @@ static int io_read (lua_State *L) {
       else {
         switch (p[1]) {
           case 'n':  /* number */
-            if (!read_number(L, f)) goto endloop;  /* read fails */
-            continue;  /* number is already pushed; avoid the "pushstring" */
+            success = read_number(L, f);
+            break;
           case 'l':  /* line */
             success = read_line(L, f);
             break;
@@ -361,11 +362,11 @@ static int io_read (lua_State *L) {
         }
       }
     }
-    if (!success) {
-      lua_pop(L, 1);  /* remove last result */
-      break;  /* read fails */
-    }
-  } endloop:
+  }
+  if (!success) {
+    lua_pop(L, 1);  /* remove last result */
+    lua_pushnil(L);  /* push nil instead */
+  }
   return n - firstarg;
 }
 
