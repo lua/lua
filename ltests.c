@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.133 2002/08/06 18:01:50 roberto Exp roberto $
+** $Id: ltests.c,v 1.134 2002/08/30 19:09:21 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -103,7 +103,7 @@ void *debug_realloc (void *block, size_t oldsize, size_t size) {
     freeblock(block);
     return NULL;
   }
-  else if (memdebug_total+size-oldsize > memdebug_memlimit)
+  else if (size > oldsize && memdebug_total+size-oldsize > memdebug_memlimit)
     return NULL;  /* to test memory allocation errors */
   else {
     void *newblock;
