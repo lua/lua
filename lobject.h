@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.44 2000/01/25 13:57:18 roberto Exp roberto $
+** $Id: lobject.h,v 1.45 2000/01/28 16:53:00 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -81,10 +81,7 @@ typedef enum {
   LUA_T_LMARK    = -11, /* mark for Lua prototypes */
   LUA_T_CMARK    = -12, /* mark for C prototypes */
 
-  LUA_T_LINE     = -13,
-  LUA_T_NGLOBAL  = -14,
-  LUA_T_NLOCAL   = -15,
-  LUA_T_NDOT     = -16
+  LUA_T_LINE     = -13
 } lua_Type;
 
 #define NUM_TAGS	7	/* tags for values visible from Lua */

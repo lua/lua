@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.84 2000/01/28 16:53:00 roberto Exp roberto $
+** $Id: lvm.c,v 1.85 2000/02/08 16:39:42 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -642,27 +642,18 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
 
       case SETLINEW: aux += highbyte(L, *pc++);
       case SETLINE:  aux += *pc++;
-        if ((base-2)->ttype != LUA_T_LINE) {
-          /* open space for LINE and NAME values */
+        if ((base-1)->ttype != LUA_T_LINE) {
+          /* open space for LINE value */
           int i = top-base;
-          while (i--) base[i+2] = base[i];
-          base += 2;
-          top += 2;
-          (base-1)->ttype = LUA_T_NIL;  /* initial value for NAME */
-          (base-2)->ttype = LUA_T_LINE;
+          while (i--) base[i+1] = base[i];
+          base++;
+          top++;
+          (base-1)->ttype = LUA_T_LINE;
         }
-        (base-2)->value.i = aux;
+        (base-1)->value.i = aux;
         if (L->linehook) {
           L->top = top;
-          luaD_lineHook(L, base-3, aux);
-        }
-        break;
-
-      case SETNAMEW: aux += highbyte(L, *pc++);
-      case SETNAME:  aux += *pc++;
-        if ((base-2)->ttype == LUA_T_LINE) {  /* function has debug info? */
-          (base-1)->ttype = (lua_Type)(-(*pc++));
-          (base-1)->value.i = aux;
+          luaD_lineHook(L, base-2, aux);
         }
         break;
 

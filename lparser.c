@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.56 2000/01/25 18:44:21 roberto Exp roberto $
+** $Id: lparser.c,v 1.57 2000/01/28 16:53:00 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -63,8 +63,6 @@ typedef enum {
 typedef struct vardesc {
   varkind k;
   int info;
-  varkind prev_k;  /* for debug information (NAMEs) */
-  int prev_info;
 } vardesc;
 
 
@@ -386,31 +384,6 @@ static void check_debugline (LexState *ls) {
 }
 
 
-static void code_setname (LexState *ls, const vardesc *v) {
-  if (ls->L->debug) {
-    switch (v->prev_k) {
-      case VGLOBAL:
-        code_oparg(ls, SETNAME, v->prev_info, 0);
-        code_byte(ls, -LUA_T_NGLOBAL);
-        break;
-      case VLOCAL: {
-        TaggedString *varname = ls->fs->localvar[v->prev_info];
-        code_oparg(ls, SETNAME, string_constant(ls, ls->fs, varname), 0);
-        code_byte(ls, -LUA_T_NLOCAL);
-        break;
-      }
-      case VDOT:
-        code_oparg(ls, SETNAME, v->prev_info, 0);
-        code_byte(ls, -LUA_T_NDOT);
-        break;
-      default:  /* VINDEXED or VEXP: no debug information */
-        code_oparg(ls, SETNAME, 0, 0);
-        code_byte(ls, -LUA_T_NIL);
-    }
-  }
-}
-
-
 static void adjuststack (LexState *ls, int n) {
   if (n > 0)
     code_oparg(ls, POP, n, -n);
@@ -485,19 +458,15 @@ static void lua_pushvar (LexState *ls, vardesc *var) {
       assertglobal(ls, var->info);  /* make sure that there is a global */
       break;
     case VDOT:
-      code_setname(ls, var);
       code_oparg(ls, GETDOTTED, var->info, 0);
       break;
     case VINDEXED:
-      code_setname(ls, var);
       code_opcode(ls, GETTABLE, -1);
       break;
     case VEXP:
       close_exp(ls, var->info, 1);  /* function must return 1 value */
       break;
   }
-  var->prev_k = var->k;  /* save previous var kind and info */
-  var->prev_info = var->info;
   var->k = VEXP;
   var->info = 0;  /* now this is a closed expression */
 }
@@ -513,7 +482,6 @@ static void storevar (LexState *ls, const vardesc *var) {
       assertglobal(ls, var->info);  /* make sure that there is a global */
       break;
     case VINDEXED:
-      code_setname(ls, var);
       code_opcode(ls, SETTABLEPOP, -3);
       break;
     default:
@@ -749,7 +717,7 @@ static void explist (LexState *ls, listdesc *d) {
 }
 
 
-static int funcparams (LexState *ls, int slf, vardesc *v) {
+static int funcparams (LexState *ls, int slf) {
   FuncState *fs = ls->fs;
   int slevel = fs->stacksize - slf - 1;  /* where is func in the stack */
   switch (ls->token) {
@@ -776,7 +744,6 @@ static int funcparams (LexState *ls, int slf, vardesc *v) {
       luaY_error(ls, "function arguments expected");
       break;
   }
-  code_setname(ls, v);
   code_byte(ls, CALL);
   code_byte(ls, 0);  /* save space for nresult */
   code_byte(ls, (Byte)slevel);
@@ -808,19 +775,16 @@ static void var_or_func_tail (LexState *ls, vardesc *v) {
         next(ls);
         name = checkname(ls);
         lua_pushvar(ls, v);  /* `v' must be on stack */
-        code_setname(ls, v);
         code_oparg(ls, PUSHSELF, name, 1);
-        v->prev_k = VDOT;  /* ':' is syntactic sugar for '.' */
-        v->prev_info = name;
         v->k = VEXP;
-        v->info = funcparams(ls, 1, v);
+        v->info = funcparams(ls, 1);
         break;
       }
 
       case '(': case STRING: case '{':  /* var_or_func_tail -> funcparams */
         lua_pushvar(ls, v);  /* `v' must be on stack */
         v->k = VEXP;
-        v->info = funcparams(ls, 0, v);
+        v->info = funcparams(ls, 0);
         break;
 
       default: return;  /* should be follow... */
@@ -1203,7 +1167,6 @@ static int assignment (LexState *ls, vardesc *v, int nvars) {
     storevar(ls, v);
   }
   else {  /* indexed var with values in between*/
-    code_setname(ls, v);
     code_oparg(ls, SETTABLE, left+(nvars-1), -1);
     left += 2;  /* table&index are not popped, because they aren't on top */
   }
