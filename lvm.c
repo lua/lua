@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.37 1999/01/12 18:38:35 roberto Exp roberto $
+** $Id: lvm.c,v 1.38 1999/01/13 19:09:04 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -186,30 +186,32 @@ void luaV_rawsettable (TObject *t) {
 }
 
 
-void luaV_getglobal (TaggedString *ts)
-{
-  /* WARNING: caller must assure stack space */
+void luaV_getglobal (TaggedString *ts) {
+  /* only userdata, tables and nil can have getglobal tag methods */
+  static char valid_getglobals[] = {1, 0, 0, 1, 0, 0, 1, 0};  /* ORDER LUA_T */
   TObject *value = &ts->u.s.globalval;
-  TObject *im = luaT_getimbyObj(value, IM_GETGLOBAL);
-  if (ttype(im) == LUA_T_NIL) {  /* default behavior */
-    *L->stack.top++ = *value;
+  if (valid_getglobals[-ttype(value)]) {
+    TObject *im = luaT_getimbyObj(value, IM_GETGLOBAL);
+    if (ttype(im) != LUA_T_NIL) {  /* is there a tag method? */
+      /* WARNING: caller must assure stack space */
+      struct Stack *S = &L->stack;
+      ttype(S->top) = LUA_T_STRING;
+      tsvalue(S->top) = ts;
+      S->top++;
+      *S->top++ = *value;
+      luaD_callTM(im, 2, 1);
+      return;
+    }
+    /* else no tag method: go through to default behavior */
   }
-  else {
-    struct Stack *S = &L->stack;
-    ttype(S->top) = LUA_T_STRING;
-    tsvalue(S->top) = ts;
-    S->top++;
-    *S->top++ = *value;
-    luaD_callTM(im, 2, 1);
-  }
+  *L->stack.top++ = *value;  /* default behavior */
 }
 
 
-void luaV_setglobal (TaggedString *ts)
-{
+void luaV_setglobal (TaggedString *ts) {
   TObject *oldvalue = &ts->u.s.globalval;
   TObject *im = luaT_getimbyObj(oldvalue, IM_SETGLOBAL);
-  if (ttype(im) == LUA_T_NIL)  /* default behavior */
+  if (ttype(im) == LUA_T_NIL)  /* is there a tag method? */
     luaS_rawsetglobal(ts, --L->stack.top);
   else {
     /* WARNING: caller must assure stack space */
