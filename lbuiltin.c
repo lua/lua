@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.84 1999/12/14 18:31:20 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.85 1999/12/14 18:42:57 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -29,14 +29,10 @@
 
 
 
-#ifdef DEBUG
 /*
 ** function defined in ltests.c, to open some internal-test functions
 */
 void luaB_opentests (lua_State *L);
-#else
-#define luaB_opentests(L)	/* do nothing */
-#endif
 
 
 
@@ -656,7 +652,9 @@ void luaB_predefine (lua_State *L) {
   luaS_newfixed(L, tableEM);
   luaS_newfixed(L, memEM);
   luaL_openl(L, builtin_funcs);
-  luaB_opentests(L);  /* internal test functions (when DEBUG is on) */
+#ifdef DEBUG
+  luaB_opentests(L);  /* internal test functions */
+#endif
   lua_pushstring(L, LUA_VERSION);
   lua_setglobal(L, "_VERSION");
 }
