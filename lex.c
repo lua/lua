@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.38 1996/11/08 12:49:35 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.39 1996/11/08 19:08:30 roberto Exp roberto $";
 
 
 #include <ctype.h>
@@ -96,6 +96,7 @@ static int inclinenumber (int pragma_allowed)
     else if (strcmp(buff, "nodebug") == 0)
       lua_debug = 0;
     else luaI_syntaxerror("invalid pragma");
+    buff[1] = buff[2] = buff[3] = 0;  /* (re)set for next token */
   }
   return lua_linenumber;
 }
