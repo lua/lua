@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 2.12 1994/11/01 18:25:20 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.1 1994/11/02 20:30:53 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,27 +30,36 @@ static Long    maxstack;
 static Object *stack=NULL;
 static Object *top;
 
-static int CBase;  /* when Lua calls C or C calls Lua, points to the */
-                   /* first slot after the last parameter. */
-static int CnResults = 0; /* when Lua calls C, has the number of parameters; */
-                          /* when C calls Lua, has the number of results. */
 
-static jmp_buf *errorJmp;
+static int CBase = 0;   /* when Lua calls C or C calls Lua, points to the */
+                        /* first slot after the last parameter. */
+static int CnResults = 0; /* when Lua calls C, has the number of parameters; */
+                         /* when C calls Lua, has the number of results. */
+
+static  jmp_buf *errorJmp = NULL; /* current error recover point */
+
 
 static int lua_execute (Byte *pc, int base);
 
 
+static void lua_message (char *s)
+{
+  fprintf (stderr, "lua: %s\n", s);
+}
 
 /*
 ** Reports an error, and jumps up to the available recover label
 */
 void lua_error (char *s)
 {
-  fprintf (stderr, "lua: %s\n", s);
+  lua_message(s);
   if (errorJmp)
     longjmp(*errorJmp, 1);
   else
+  {
+    fprintf (stderr, "lua: exit(1). Unable to recover\n");
     exit(1);
+  }
 }
 
 
@@ -73,7 +82,7 @@ static void lua_initstack (void)
 static void lua_checkstack (Word n)
 {
  if (stack == NULL)
-  return lua_initstack();
+   lua_initstack();
  if (n > maxstack)
  {
   int t = top-stack;
@@ -99,12 +108,6 @@ static char *lua_strconc (char *l, char *r)
  return strcat(strcpy(buffer,l),r);
 }
 
-static int ToReal (char* s, float* f)
-{
- char c;
- float t;
- if (sscanf(s,"%f %c",&t,&c) == 1) { *f=t; return 1; } else return 0;
-}
 
 /*
 ** Convert, if possible, to a number object.
@@ -112,31 +115,18 @@ static int ToReal (char* s, float* f)
 */
 static int lua_tonumber (Object *obj)
 {
+ char c;
+ float t;
  if (tag(obj) != LUA_T_STRING)
-   return 1;;
- if (!ToReal(svalue(obj), &nvalue(obj)))
-   return 2;
- tag(obj) = LUA_T_NUMBER;
- return 0;
-}
-
-/*
-** Test if it is possible to convert an object to a number object.
-** If possible, return the converted object, otherwise return nil object.
-*/
-static Object *lua_convtonumber (Object *obj)
-{
- static Object cvt;
- if (tag(obj) == LUA_T_NUMBER)
+   return 1;
+ else if (sscanf(svalue(obj), "%f %c",&t,&c) == 1)
  {
-  cvt = *obj;
-  return &cvt;
+   nvalue(obj) = t;
+   tag(obj) = LUA_T_NUMBER;
+   return 0;
  }
- if (tag(obj) == LUA_T_STRING && ToReal(svalue(obj), &nvalue(&cvt)))
-  tag(&cvt) = LUA_T_NUMBER;
  else
-  tag(&cvt) = LUA_T_NIL;
- return &cvt;
+   return 2;
 }
 
 
@@ -182,7 +172,8 @@ static int callC (lua_CFunction func, int base)
   int oldCnResults = CnResults;
   int firstResult;
   CnResults = (top-stack) - base;
-  CBase = base+CnResults;  /* incorporate parameters on the stack */
+  /* incorporate parameters on the stack */
+  CBase = base+CnResults;
   (*func)();
   firstResult = CBase;
   CBase = oldBase;
@@ -221,22 +212,17 @@ static void do_call (Object *func, int base, int nResults, int whereRes)
 
 
 /*
-** Function to index the values on the top
+** Function to index a table. Receives the table at top-2 and the index
+** at top-1. Remove them from stack and push the result.
 */
-int lua_pushsubscript (void)
+static void pushsubscript (void)
 {
- --top;
- if (tag(top-1) != LUA_T_ARRAY)
- {
-  lua_reportbug ("indexed expression not a table");
-  return 1;
- }
- {
-  Object *h = lua_hashget (avalue(top-1), top);
-  if (h == NULL) return 1;
+  Object *h;
+  if (tag(top-2) != LUA_T_ARRAY)
+    lua_reportbug ("indexed expression not a table");
+  h = lua_hashget (avalue(top-2), top-1);
+  --top;
   *(top-1) = *h;
- }
- return 0;
 }
 
 
@@ -272,63 +258,36 @@ void lua_travstack (void (*fn)(Object *))
 
 
 /*
-** Executes a main procedure. Uses as Base the top of the stack, as it
-** uses no parameters and left no results.
+** Execute a protected call. If function is null compiles the pre-set input.
+** Leave nResults on the stack.
 */
-static void do_main (Byte *main)
+static int do_protectedrun (Object *function, int nResults)
 {
-  if (main)
-  {
-    Object f;
-    tag(&f) = LUA_T_FUNCTION; bvalue(&f) = main;
-    do_call(&f, top-stack, 0, top-stack);
-    free(main);
-  }
-}
-
-
-/*
-** Open file, generate opcode and execute global statement. Return 0 on
-** success or 1 on error.
-*/
-int lua_dofile (char *filename)
-{
+  Object f;
   jmp_buf myErrorJmp;
   int status;
+  int oldCBase = CBase;
   jmp_buf *oldErr = errorJmp;
   errorJmp = &myErrorJmp;
   if (setjmp(myErrorJmp) == 0)
   {
-    lua_openfile (filename);
-    do_main(lua_parse());
+    if (function == NULL)
+    {
+      function = &f;
+      tag(function) = LUA_T_FUNCTION;
+      bvalue(function) = lua_parse();
+    }
+    do_call(function, CBase, nResults, CBase);
+    CnResults = (top-stack) - CBase;  /* number of results */
+    CBase += CnResults;  /* incorporate results on the stack */
     status = 0;
   }
   else
-    status = 1;
-  lua_closefile();
-  errorJmp = oldErr;
-  return status;
-}
-
-/*
-** Generate opcode stored on string and execute global statement. Return 0 on
-** success or 1 on error.
-*/
-int lua_dostring (char *string)
-{
-  jmp_buf myErrorJmp;
-  int status;
-  jmp_buf *oldErr = errorJmp;
-  errorJmp = &myErrorJmp;
-  if (setjmp(myErrorJmp) == 0)
   {
-    lua_openstring(string);
-    do_main(lua_parse());
-    status = 0;
-  }
-  else
+    CBase = oldCBase;
+    top = stack+CBase;
     status = 1;
-  lua_closestring();
+  }
   errorJmp = oldErr;
   return status;
 }
@@ -338,22 +297,49 @@ int lua_dostring (char *string)
 */
 int lua_callfunction (Object *function)
 {
-  jmp_buf myErrorJmp;
-  int status;
-  jmp_buf *oldErr = errorJmp;
-  errorJmp = &myErrorJmp;
-  if (setjmp(myErrorJmp) == 0)
-  {
-    do_call(function, CBase, MULT_RET, CBase);
-    CnResults = (top-stack) - CBase;  /* number of results */
-    CBase += CnResults;  /* incorporate results on the stack */
-    status = 0;
-  }
+  if (function == NULL)
+    return 1;
   else
-    status = 1;
-  errorJmp = oldErr;
+    return do_protectedrun (function, MULT_RET);
+}
+
+
+/*
+** Open file, generate opcode and execute global statement. Return 0 on
+** success or 1 on error.
+*/
+int lua_dofile (char *filename)
+{
+  int status;
+  char *message = lua_openfile (filename);
+  if (message)
+  {
+    lua_message(message);
+    return 1;
+  }
+  status = do_protectedrun(NULL, 0);
+  lua_closefile();
   return status;
 }
+
+/*
+** Generate opcode stored on string and execute global statement. Return 0 on
+** success or 1 on error.
+*/
+int lua_dostring (char *string)
+{
+  int status;
+  char *message = lua_openstring(string);
+  if (message)
+  {
+    lua_message(message);
+    return 1;
+  }
+  status = do_protectedrun(NULL, 0);
+  lua_closestring();
+  return status;
+}
+
 
 /*
 ** Get a parameter, returning the object handle or NULL on error.
@@ -423,42 +409,6 @@ void *lua_gettable (Object *object)
  if (object == NULL) return NULL;
  if (tag(object) != LUA_T_ARRAY) return NULL;
  else                        return (avalue(object));
-}
-
-/*
-** Given an object handle and a field name, return its field object.
-** On error, return NULL.
-*/
-Object *lua_getfield (Object *object, char *field)
-{
- if (object == NULL) return NULL;
- if (tag(object) != LUA_T_ARRAY)
-  return NULL;
- else
- {
-  Object ref;
-  tag(&ref) = LUA_T_STRING;
-  svalue(&ref) = lua_constant[lua_findconstant(field)];
-  return (lua_hashget(avalue(object), &ref));
- }
-}
-
-/*
-** Given an object handle and an index, return its indexed object.
-** On error, return NULL.
-*/
-Object *lua_getindexed (Object *object, float index)
-{
- if (object == NULL) return NULL;
- if (tag(object) != LUA_T_ARRAY)
-  return NULL;
- else
- {
-  Object ref;
-  tag(&ref) = LUA_T_NUMBER;
-  nvalue(&ref) = index;
-  return (lua_hashget(avalue(object), &ref));
- }
 }
 
 /*
@@ -550,7 +500,7 @@ int lua_storeglobal (char *name)
 {
  int n = lua_findsymbol (name);
  if (n < 0) return 1;
- if (tag(top-1) == LUA_T_MARK) return 1;
+ if (top-stack <= CBase) return 1;
  s_object(n) = *(--top);
  return 0;
 }
@@ -598,72 +548,13 @@ int lua_storeindexed (lua_Object object, float index)
 }
 
 
-/*
-** Given an object handle, return if it is nil.
-*/
-int lua_isnil (Object *object)
+int lua_type (lua_Object o)
 {
- return (object != NULL && tag(object) == LUA_T_NIL);
+  if (o == NULL)
+    return LUA_T_NIL;
+  else
+    return tag(o);
 }
-
-/*
-** Given an object handle, return if it is a number one.
-*/
-int lua_isnumber (Object *object)
-{
- return (object != NULL && tag(object) == LUA_T_NUMBER);
-}
-
-/*
-** Given an object handle, return if it is a string one.
-*/
-int lua_isstring (Object *object)
-{
- return (object != NULL && tag(object) == LUA_T_STRING);
-}
-
-/*
-** Given an object handle, return if it is an array one.
-*/
-int lua_istable (Object *object)
-{
- return (object != NULL && tag(object) == LUA_T_ARRAY);
-}
-
-/*
-** Given an object handle, return if it is a lua function.
-*/
-int lua_isfunction (Object *object)
-{
- return (object != NULL && tag(object) == LUA_T_FUNCTION);
-}
-
-/*
-** Given an object handle, return if it is a cfunction one.
-*/
-int lua_iscfunction (Object *object)
-{
- return (object != NULL && tag(object) == LUA_T_CFUNCTION);
-}
-
-/*
-** Given an object handle, return if it is an user data one.
-*/
-int lua_isuserdata (Object *object)
-{
- return (object != NULL && tag(object) == LUA_T_USERDATA);
-}
-
- 
-/*
-** Internal function: convert an object to a number
-*/
-void lua_obj2number (void)
-{
- Object *o = lua_getparam(1);
- lua_pushobject (lua_convtonumber(o));
-}
-
 
 
 /*
@@ -674,8 +565,7 @@ void lua_obj2number (void)
 static int lua_execute (Byte *pc, int base)
 {
  lua_debugline = 0;  /* reset debug flag */
- if (stack == NULL)
-  lua_initstack();
+ lua_checkstack(STACKGAP+MAX_TEMPS+base);
  while (1)
  {
   OpCode opcode;
@@ -737,16 +627,13 @@ static int lua_execute (Byte *pc, int base)
    break;
 
    case PUSHINDEXED:
-   {
-    int s = lua_pushsubscript();
-    if (s == 1) return 1;
-   }
-   break;
+    pushsubscript();
+    break;
 
    case PUSHSELF:
    {
      Object receiver = *(top-2);
-     if (lua_pushsubscript() == 1) return 1;
+     pushsubscript();
      *(top++) = receiver;
      break;
    }
@@ -779,10 +666,7 @@ static int lua_execute (Byte *pc, int base)
    {
     int n = *pc++;
     if (tag(top-3-n) != LUA_T_ARRAY)
-    {
-     lua_reportbug ("indexed expression not a table");
-     return 1;
-    }
+      lua_reportbug ("indexed expression not a table");
     {
      Object *h = lua_hashdefine (avalue(top-3-n), top-2-n);
      if (h == NULL) return 1;
@@ -802,10 +686,7 @@ static int lua_execute (Byte *pc, int base)
     n = *(pc++);
     arr = top-n-1;
     if (tag(arr) != LUA_T_ARRAY)
-    {
-     lua_reportbug ("internal error - table expected");
-     return 1;
-    }
+      lua_reportbug ("internal error - table expected");
     while (n)
     {
      tag(top) = LUA_T_NUMBER; nvalue(top) = n+m;
@@ -821,10 +702,7 @@ static int lua_execute (Byte *pc, int base)
     int n = *(pc++);
     Object *arr = top-n-1;
     if (tag(arr) != LUA_T_ARRAY)
-    {
-     lua_reportbug ("internal error - table expected");
-     return 1;
-    }
+      lua_reportbug ("internal error - table expected");
     while (n)
     {
      CodeWord code;
@@ -851,8 +729,6 @@ static int lua_execute (Byte *pc, int base)
     get_word(size,pc);
     top++;
     avalue(top-1) = lua_createarray(size.w);
-    if (avalue(top-1) == NULL)
-     return 1;
     tag(top-1) = LUA_T_ARRAY;
    }
    break;
@@ -870,7 +746,7 @@ static int lua_execute (Byte *pc, int base)
      switch (tag(l))
      {
       case LUA_T_NIL:
-        res = 0; break;
+        res = 1; break;
       case LUA_T_NUMBER:
         res = (nvalue(l) == nvalue(r)); break;
       case LUA_T_ARRAY:
