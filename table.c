@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.19 1994/11/16 17:39:16 roberto Exp $";
+char *rcs_table="$Id: table.c,v 2.20 1994/11/17 13:58:57 roberto Exp roberto $";
 
 #include <string.h>
 
@@ -177,16 +177,6 @@ void lua_pack (void)
   block=2*block-3*recovered/2;	/* adapt block size */
   if (block < MIN_GARBAGE_BLOCK) block = MIN_GARBAGE_BLOCK;
 } 
-
-
-/*
-** If the string isn't allocated, allocate a new string at string tree.
-*/
-char *lua_createstring (char *s)
-{
- if (s == NULL) return NULL;
- return lua_strcreate(s);
-}
 
 
 /*
