@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.11 1994/11/14 21:40:14 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.12 1994/11/21 21:41:09 roberto Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -166,7 +166,7 @@ void lua_reportbug (char *s)
    {
      sprintf (strchr(msg,0),
        "\t-> function \"%s\" at file \"%s\":%d\n", 
-                            lua_constant[func->function], func->file, line);
+                     lua_constant[func->function]->str, func->file, line);
      line = func->line;
      func = func->next;
      lua_popfunction();

@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.8 1994/11/17 13:58:57 roberto Exp roberto $";
+char *rcs_tree="$Id: tree.c,v 1.9 1994/11/18 19:27:38 roberto Exp roberto $";
 
 
 #include <string.h>
@@ -19,12 +19,10 @@ char *rcs_tree="$Id: tree.c,v 1.8 1994/11/17 13:58:57 roberto Exp roberto $";
 
 typedef struct StringNode {
   struct StringNode *next;
-  Word mark;
-  char str[1];
+  TaggedString ts;
 } StringNode;
 
 static StringNode *string_root = NULL;
-
 
 static TreeNode *constant_root = NULL;
 
@@ -37,13 +35,14 @@ static TreeNode *tree_create (TreeNode **node, char *str)
  {
   *node = (TreeNode *) luaI_malloc(sizeof(TreeNode)+strlen(str));
   (*node)->left = (*node)->right = NULL;
-  strcpy((*node)->str, str);
-  (*node)->varindex = (*node)->constindex = UNMARKED_STRING;
+  strcpy((*node)->ts.str, str);
+  (*node)->ts.marked = 0;
+  (*node)->varindex = (*node)->constindex = NOT_USED;
   return *node;
  }
  else
  {
-  int c = lua_strcmp(str, (*node)->str);
+  int c = lua_strcmp(str, (*node)->ts.str);
   if (c < 0) 
    return tree_create(&(*node)->left, str);
   else if (c > 0)
@@ -53,17 +52,17 @@ static TreeNode *tree_create (TreeNode **node, char *str)
  }
 }
 
-char *lua_createstring (char *str) 
+TaggedString *lua_createstring (char *str) 
 {
   StringNode *newString;
   if (str == NULL) return NULL;
   lua_pack();
   newString = (StringNode *)luaI_malloc(sizeof(StringNode)+strlen(str));
-  newString->mark = UNMARKED_STRING;
-  strcpy(newString->str, str);
+  newString->ts.marked = 0;
+  strcpy(newString->ts.str, str);
   newString->next = string_root;
   string_root = newString;
-  return newString->str;
+  return &(newString->ts);
 }
 
 
@@ -84,7 +83,7 @@ int lua_strcollector (void)
   while (curr)
   {
     StringNode *next = curr->next;
-    if (curr->mark == UNMARKED_STRING)
+    if (!curr->ts.marked)
     {
       if (prev == NULL) string_root = next;
       else prev->next = next;
@@ -93,7 +92,7 @@ int lua_strcollector (void)
     }
     else
     {
-      curr->mark = UNMARKED_STRING;
+      curr->ts.marked = 0;
       prev = curr;
     }
     curr = next;
@@ -110,7 +109,7 @@ static TreeNode *tree_next (TreeNode *node, char *str)
  else if (str == NULL) return node;
  else
  {
-  int c = lua_strcmp(str, node->str);
+  int c = lua_strcmp(str, node->ts.str);
   if (c == 0)
    return node->left != NULL ? node->left : node->right;
   else if (c < 0)
@@ -131,10 +130,10 @@ TreeNode *lua_varnext (char *n)
   { /* repeat until a valid (non nil) variable */
     result = tree_next(constant_root, name);
     if (result == NULL) return NULL;
-    if (result->varindex != UNMARKED_STRING &&
+    if (result->varindex != NOT_USED &&
         s_tag(result->varindex) != LUA_T_NIL)
       return result;
-    name = result->str;
+    name = result->ts.str;
   }
 }
 

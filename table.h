@@ -1,16 +1,17 @@
 /*
 ** Module to control static tables
 ** TeCGraf - PUC-Rio
-** $Id: table.h,v 2.7 1994/11/17 13:58:57 roberto Exp roberto $
+** $Id: table.h,v 2.8 1994/11/18 19:27:38 roberto Exp roberto $
 */
 
 #ifndef table_h
 #define table_h
 
 #include "tree.h"
+#include "opcode.h"
 
 extern Symbol *lua_table;
-extern char  **lua_constant;
+extern TaggedString **lua_constant;
 
 extern char   *lua_file[];
 extern int     lua_nfile;

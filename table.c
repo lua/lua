@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.21 1994/11/18 19:27:38 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.22 1994/11/21 21:41:09 roberto Exp roberto $";
 
 #include <string.h>
 
@@ -17,13 +17,15 @@ char *rcs_table="$Id: table.c,v 2.21 1994/11/18 19:27:38 roberto Exp roberto $";
 #include "fallback.h"
 
 
+#define MAX_WORD  0xFFFD
+
 #define BUFFER_BLOCK 256
 
 Symbol *lua_table;
 static Word lua_ntable = 0;
 static Long lua_maxsymbol = 0;
 
-char **lua_constant;
+TaggedString **lua_constant;
 static Word lua_nconstant = 0;
 static Long lua_maxconstant = 0;
 
@@ -79,7 +81,7 @@ static void lua_initsymbol (void)
 void lua_initconstant (void)
 {
  lua_maxconstant = BUFFER_BLOCK;
- lua_constant = newvector(lua_maxconstant, char *);
+ lua_constant = newvector(lua_maxconstant, TaggedString *);
 }
 
 
@@ -92,7 +94,7 @@ int luaI_findsymbol (TreeNode *t)
 {
  if (lua_table == NULL)
   lua_initsymbol(); 
- if (t->varindex == UNMARKED_STRING)
+ if (t->varindex == NOT_USED)
  {
   if (lua_ntable == lua_maxsymbol)
   {
@@ -124,17 +126,17 @@ int luaI_findconstant (TreeNode *t)
 {
  if (lua_constant == NULL)
   lua_initconstant();
- if (t->constindex == UNMARKED_STRING)
+ if (t->constindex == NOT_USED)
  {
   if (lua_nconstant == lua_maxconstant)
   {
    lua_maxconstant *= 2;
    if (lua_maxconstant > MAX_WORD)
      lua_error("constant table overflow");
-   lua_constant = growvector(lua_constant, lua_maxconstant, char*);
+   lua_constant = growvector(lua_constant, lua_maxconstant, TaggedString *);
   }
   t->constindex = lua_nconstant;
-  lua_constant[lua_nconstant] = t->str;
+  lua_constant[lua_nconstant] = &(t->ts);
   lua_nconstant++;
  }
  return t->constindex;
@@ -157,10 +159,10 @@ void lua_travsymbol (void (*fn)(Object *))
 */
 void lua_markobject (Object *o)
 {
- if (tag(o) == LUA_T_STRING && indexstring(svalue(o)) == UNMARKED_STRING)
-  indexstring(svalue(o)) = MARKED_STRING;
+ if (tag(o) == LUA_T_STRING && !tsvalue(o)->marked)
+   tsvalue(o)->marked = 1;
  else if (tag(o) == LUA_T_ARRAY)
-  lua_hashmark (avalue(o));
+   lua_hashmark (avalue(o));
 }
 
 
@@ -247,7 +249,7 @@ static void lua_nextvar (void)
  {
   Object name;
   tag(&name) = LUA_T_STRING;
-  svalue(&name) = next->str;
+  tsvalue(&name) = &(next->ts);
   luaI_pushobject(&name);
   luaI_pushobject(&s_object(next->varindex));
  }

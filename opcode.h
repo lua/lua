@@ -1,12 +1,13 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.7 1994/11/10 17:11:52 roberto Exp roberto $
+** $Id: opcode.h,v 3.8 1994/11/10 17:36:54 roberto Exp roberto $
 */
 
 #ifndef opcode_h
 #define opcode_h
 
 #include "lua.h"
+#include "tree.h"
 
 #ifndef STACKGAP
 #define STACKGAP	128
@@ -109,7 +110,7 @@ typedef union
 {
  Cfunction     f;
  real          n;
- char         *s;
+ TaggedString *ts;
  Byte         *b;
  struct Hash    *a;
  void           *u;
@@ -129,7 +130,8 @@ typedef struct
 /* Macros to access structure members */
 #define tag(o)		((o)->tag)
 #define nvalue(o)	((o)->value.n)
-#define svalue(o)	((o)->value.s)
+#define svalue(o)	((o)->value.ts->str)
+#define tsvalue(o)	((o)->value.ts)
 #define bvalue(o)	((o)->value.b)
 #define avalue(o)	((o)->value.a)
 #define fvalue(o)	((o)->value.f)

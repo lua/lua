@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.20 1994/11/21 18:22:58 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.21 1994/11/22 16:02:53 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -165,8 +165,8 @@ static int lua_tostring (Object *obj)
    sprintf (s, "%d", (int) nvalue(obj));
  else
    sprintf (s, "%g", nvalue(obj));
- svalue(obj) = lua_createstring(s);
- if (svalue(obj) == NULL)
+ tsvalue(obj) = lua_createstring(s);
+ if (tsvalue(obj) == NULL)
   return 1;
  tag(obj) = LUA_T_STRING;
  return 0;
@@ -637,7 +637,7 @@ int lua_pushnumber (real n)
 int lua_pushstring (char *s)
 {
  lua_checkstack(top-stack+1);
- svalue(top) = lua_createstring(s);
+ tsvalue(top) = lua_createstring(s);
  tag(top) = LUA_T_STRING;
  top++;
  return 0;
@@ -770,7 +770,7 @@ static int lua_execute (Byte *pc, int base)
    {
     CodeWord code;
     get_word(code,pc);
-    tag(top) = LUA_T_STRING; svalue(top++) = lua_constant[code.w];
+    tag(top) = LUA_T_STRING; tsvalue(top++) = lua_constant[code.w];
    }
    break;
 
@@ -877,7 +877,7 @@ static int lua_execute (Byte *pc, int base)
     {
      CodeWord code;
      get_word(code,pc);
-     tag(top) = LUA_T_STRING; svalue(top) = lua_constant[code.w];
+     tag(top) = LUA_T_STRING; tsvalue(top) = lua_constant[code.w];
      *(lua_hashdefine (avalue(arr), top)) = *(top-1);
      top--;
      n--;
@@ -996,7 +996,7 @@ static int lua_execute (Byte *pc, int base)
       do_call(&luaI_fallBacks[FB_CONCAT].function, (top-stack)-2, 1, (top-stack)-2);
     else
     {
-      svalue(l) = lua_createstring (lua_strconc(svalue(l),svalue(r)));
+      tsvalue(l) = lua_createstring (lua_strconc(svalue(l),svalue(r)));
       --top;
     }
    }
