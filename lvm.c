@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.10 1997/10/16 10:59:34 roberto Exp roberto $
+** $Id: lvm.c,v 1.11 1997/10/24 17:17:24 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -334,6 +334,20 @@ StkId luaV_execute (Closure *cl, StkId base)
       case GETTABLE:
        luaV_gettable();
        break;
+
+      case GETDOTTEDW:
+        aux = next_word(pc); goto getdotted;
+
+      case GETDOTTED:
+        aux = *pc++; goto getdotted;
+
+      case GETDOTTED0: case GETDOTTED1: case GETDOTTED2: case GETDOTTED3:
+      case GETDOTTED4: case GETDOTTED5: case GETDOTTED6: case GETDOTTED7:
+        aux -= GETDOTTED0;
+      getdotted:
+        *luaD_stack.top++ = consts[aux];
+        luaV_gettable();
+        break;
 
       case PUSHSELFW:
         aux = next_word(pc); goto pushself;

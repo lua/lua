@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.10 1997/10/16 21:14:47 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.11 1997/10/24 17:17:24 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -66,6 +66,17 @@ GETGLOBAL7,/*	-	-		VAR[CNST[7]]  */
 GETGLOBALW,/*	w	-		VAR[CNST[w]]  */
 
 GETTABLE,/*	-	i t		t[i]  */
+
+GETDOTTED,/*	b	t		t[CONST[b]]  */
+GETDOTTED0,/*	-	t		t[CONST[0]]  */
+GETDOTTED1,/*	-	t		t[CONST[1]]  */
+GETDOTTED2,/*	-	t		t[CONST[2]]  */
+GETDOTTED3,/*	-	t		t[CONST[3]]  */
+GETDOTTED4,/*	-	t		t[CONST[4]]  */
+GETDOTTED5,/*	-	t		t[CONST[5]]  */
+GETDOTTED6,/*	-	t		t[CONST[6]]  */
+GETDOTTED7,/*	-	t		t[CONST[7]]  */
+GETDOTTEDW,/*	w	t		t[CONST[w]]  */
 
 PUSHSELF,/*	b	t		t t[CNST[b]]  */
 PUSHSELFW,/*	w	t		t t[CNST[w]]  */

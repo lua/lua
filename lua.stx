@@ -1,6 +1,6 @@
 %{
 /*
-** $Id: lua.stx,v 1.12 1997/10/18 16:46:39 roberto Exp roberto $
+** $Id: lua.stx,v 1.13 1997/10/24 17:17:24 roberto Exp roberto $
 ** Syntax analizer and code generator
 ** See Copyright Notice in lua.h
 */
@@ -31,6 +31,8 @@ int luaY_parse (void);
 /* maximum number of local variables */
 #define MAXLOCALS 32
 
+#define MINGLOBAL (MAXLOCALS+1)
+
 /* maximum number of variables in a multiple assignment */
 #define MAXVAR 32
 
@@ -41,13 +43,21 @@ int luaY_parse (void);
 #define MAXUPVALUES 16
 
 /*
-** Variable descriptor: if n>0, represents global variable indexed
-** by (n-1); if n<0, represents local variable index (-n)-1;
-** if n==0, represents an indexed variable (table and index on top of stack)
+** Variable descriptor:
+** if 0<n<MINGLOBAL, represents local variable indexed by (n-1);
+** if MINGLOBAL<=n, represents global variable at position (n-MINGLOBAL);
+** if n<0, indexed variable with index (-n)-1 (table on top of stack);
+** if n==0, an indexed variable (table and index on top of stack)
 ** Must be long to store negative Word values.
 */
 typedef long vardesc;
 
+#define isglobal(v)	(MINGLOBAL<=(v))
+#define globalindex(v)	((v)-MINGLOBAL)
+#define islocal(v)	(0<(v) && (v)<MINGLOBAL)
+#define localindex(v)	((v)-1)
+#define isdot(v)	(v<0)
+#define dotindex(v)	((-(v))-1)
 
 /* state needed to generate code for a given function */
 typedef struct State {
@@ -313,11 +323,25 @@ static void add_localvar (TaggedString *name)
   currState->nlocalvar++;
 }
 
+
+/* 
+** dotted variables <a.x> must be stored like regular indexed vars <a["x"]>
+*/
+static vardesc var2store (vardesc var)
+{
+  if (isdot(var)) {
+    code_constant(dotindex(var));
+    var = 0;
+  }
+  return var;
+}
+
+
 static void add_varbuffer (vardesc var, int n)
 {
   if (n >= MAXVAR)
     luaY_error("variable buffer overflow");
-  currState->varbuffer[n] = var;
+  currState->varbuffer[n] = var2store(var);
 }
 
 
@@ -338,9 +362,9 @@ static vardesc singlevar (TaggedString *n, State *st)
     for (l=1; l<=(st-mainState); l++)
       if (aux_localname(n, st-l) >= 0)
         luaY_syntaxerror("cannot access a variable in outer scope", n->str);
-    return string_constant(n, st)+1;  /* positive value */
+    return string_constant(n, st)+MINGLOBAL;  /* global value */
   }
-  else return -(i+1);  /* negative value */
+  else return i+1;  /* local value */
 }
 
 
@@ -353,7 +377,7 @@ static int indexupvalue (TaggedString *n)
       return i;
   }
   /* new one */
-  if (++currState->nupvalues > MAXUPVALUES)
+  if (++(currState->nupvalues) > MAXUPVALUES)
     luaY_error("too many upvalues in a single function");
   currState->upvalues[i] = v;  /* i = currState->nupvalues - 1 */
   return i;
@@ -435,25 +459,27 @@ static void code_args (int nparams, int dots)
 }
 
 
-static void lua_pushvar (vardesc number)
+static void lua_pushvar (vardesc var)
 {
-  if (number > 0)  /* global var */
-    code_oparg(GETGLOBAL, 8, number-1, 1);
-  else if (number < 0)  /* local var */
-    code_oparg(PUSHLOCAL, 8, (-number)-1, 1);
+  if (isglobal(var))
+    code_oparg(GETGLOBAL, 8, globalindex(var), 1);
+  else if (islocal(var))
+    code_oparg(PUSHLOCAL, 8, localindex(var), 1);
+  else if (isdot(var))
+    code_oparg(GETDOTTED, 8, dotindex(var), 0);
   else
     code_pop(GETTABLE);
 }
 
 
-static void storevar (vardesc number)
+static void storevar (vardesc var)
 {
-  if (number == 0)  /* indexed var */
+  if (var == 0)  /* indexed var */
     code_opcode(SETTABLE0, -3);
-  else if (number > 0)  /* global var */
-    code_oparg(SETGLOBAL, 8, number-1, -1);
-  else  /* number < 0 - local var */
-    code_oparg(SETLOCAL, 8, (-number)-1, -1);
+  else if (isglobal(var))
+    code_oparg(SETGLOBAL, 8, globalindex(var), -1);
+  else  /* local var */
+    code_oparg(SETLOCAL, 8, localindex(var), -1);
 }
 
 
@@ -698,7 +724,7 @@ block    : {$<vInt>$ = currState->nlocalvar;} chunk
          }
          ;
 
-funcname	: var { init_func(); $$ = $1; }
+funcname	: var { $$ = var2store($1); init_func(); }
 		| varexp ':' NAME
 	{
 	  code_string($3);
@@ -872,7 +898,7 @@ varlist1  : var { $$ = 1; add_varbuffer($1, 0); }
 		
 var	  :	NAME { $$ = singlevar($1, currState); }
 	  |	varexp '[' expr1 ']' { $$ = 0; }  /* indexed variable */
-	  |	varexp '.' NAME { code_string($3); $$ = 0; }/* ind. var. */
+	  |	varexp '.' NAME { $$ = (-string_constant($3, currState))-1; }
 	  ;
 		
 varexp	: var { lua_pushvar($1); }
