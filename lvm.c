@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.101 2000/04/12 18:57:19 roberto Exp roberto $
+** $Id: lvm.c,v 1.102 2000/04/13 16:51:01 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -456,8 +456,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, register StkId base) {
         break;
 
       case OP_SETLOCAL:
-        *(base+GETARG_A(i)) = *(top-1);
-        top -= GETARG_B(i);
+        *(base+GETARG_U(i)) = *(--top);
         break;
 
       case OP_SETGLOBAL:

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.14 2000/04/12 19:56:50 roberto Exp roberto $
+** $Id: ltests.c,v 1.15 2000/04/13 16:51:01 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -55,7 +55,7 @@ static void setnameval (lua_State *L, lua_Object t, const char *name, int val) {
 
 
 
-static int printop (lua_State *L, Instruction i) {
+static int pushop (lua_State *L, Instruction i) {
   char buff[100];
   switch (GET_OPCODE(i)) {
     case OP_END: O("END"); lua_pushstring(L, buff); return 0;
@@ -76,7 +76,7 @@ static int printop (lua_State *L, Instruction i) {
     case OP_GETINDEXED: U("GETINDEXED"); break;
     case OP_PUSHSELF: U("PUSHSELF"); break;
     case OP_CREATETABLE: U("CREATETABLE"); break;
-    case OP_SETLOCAL: AB("SETLOCAL"); break;
+    case OP_SETLOCAL: U("SETLOCAL"); break;
     case OP_SETGLOBAL: U("SETGLOBAL"); break;
     case OP_SETTABLE: AB("SETTABLE"); break;
     case OP_SETLIST: AB("SETLIST"); break;
@@ -111,7 +111,7 @@ static int printop (lua_State *L, Instruction i) {
   return 1;
 }
 
-static void printcode (lua_State *L) {
+static void listcode (lua_State *L) {
   lua_Object o = luaL_nonnullarg(L, 1);
   lua_Object t = lua_createtable(L);
   Instruction *pc;
@@ -125,7 +125,7 @@ static void printcode (lua_State *L) {
   do {
     lua_pushobject(L, t);
     lua_pushnumber(L, pc - p->code + 1);
-    res = printop(L, *pc++);
+    res = pushop(L, *pc++);
     lua_settable(L);
   } while (res);
   lua_pushobject(L, t);
@@ -402,7 +402,7 @@ static void testC (lua_State *L) {
 static const struct luaL_reg tests_funcs[] = {
   {"hash", hash_query},
   {"limits", get_limits},
-  {"printcode", printcode},
+  {"listcode", listcode},
   {"querystr", string_query},
   {"querytab", table_query},
   {"testC", testC},

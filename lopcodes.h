@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.57 2000/04/12 18:57:19 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.58 2000/04/13 16:51:01 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -108,7 +108,7 @@ OP_PUSHSELF,/*	K	t		t t[KSTR[k]]			*/
 
 OP_CREATETABLE,/* U	-		newarray(size = u)		*/
 
-OP_SETLOCAL,/*	L B	v_b-v_1		-		LOC[l]=v_b	*/
+OP_SETLOCAL,/*	L	x		-		LOC[l]=x	*/
 OP_SETGLOBAL,/*	K	x		-		VAR[KSTR[k]]=x	*/
 OP_SETTABLE,/*	A B	v a_a-a_1 i t	(pops b values)	t[i]=v		*/
 
