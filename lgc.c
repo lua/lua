@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.101 2001/06/07 15:01:21 roberto Exp roberto $
+** $Id: lgc.c,v 1.102 2001/06/08 19:01:38 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -17,18 +17,6 @@
 #include "ltable.h"
 #include "ltm.h"
 
-
-/*
-** optional lock for GC
-** (when Lua calls GC tag methods it unlocks the regular lock)
-*/
-#ifndef lua_lockgc
-#define lua_lockgc(L)		{
-#endif
-
-#ifndef lua_unlockgc
-#define lua_unlockgc(L)		}
-#endif
 
 
 typedef struct GCState {
@@ -281,7 +269,7 @@ static void collecttable (lua_State *L) {
 }
 
 
-static void collectudata (lua_State *L) {
+void luaC_collectudata (lua_State *L) {
   Udata **p = &G(L)->rootudata;
   Udata *next;
   while ((next = *p) != NULL) {
@@ -351,9 +339,8 @@ static void callgcTM (lua_State *L, const TObject *obj) {
 }
 
 
-static void callgcTMudata (lua_State *L) {
+void luaC_callgcTMudata (lua_State *L) {
   int tag;
-  G(L)->GCthreshold = 2*G(L)->nblocks;  /* avoid GC during tag methods */
   for (tag=G(L)->ntag-1; tag>=0; tag--) {  /* for each tag (in reverse order) */
     Udata *udata;
     while ((udata = G(L)->TMtable[tag].collected) != NULL) {
@@ -368,14 +355,14 @@ static void callgcTMudata (lua_State *L) {
 
 
 void luaC_collect (lua_State *L, int all) {
-  lua_lockgc(L);
-  collectudata(L);
-  callgcTMudata(L);
+  luaC_collectudata(L);
   collectstrings(L, all);
   collecttable(L);
   collectproto(L);
   collectclosure(L);
-  lua_unlockgc(L);
+  checkMbuffer(L);
+  G(L)->GCthreshold = 2*G(L)->nblocks;  /* set new threshold */
+  luaC_callgcTMudata(L);
 }
 
 
@@ -383,8 +370,6 @@ void luaC_collectgarbage (lua_State *L) {
   markall(L);
   invalidatetables(G(L));
   luaC_collect(L, 0);
-  checkMbuffer(L);
-  G(L)->GCthreshold = 2*G(L)->nblocks;  /* set new threshold */
   callgcTM(L, &luaO_nilobject);
 }
 

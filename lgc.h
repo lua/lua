@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 1.9 2001/02/02 16:23:20 roberto Exp roberto $
+** $Id: lgc.h,v 1.10 2001/06/05 19:27:32 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -15,6 +15,8 @@
 			  luaC_collectgarbage(L)
 
 
+void luaC_collectudata (lua_State *L);
+void luaC_callgcTMudata (lua_State *L);
 void luaC_collect (lua_State *L, int all);
 void luaC_collectgarbage (lua_State *L);
 
