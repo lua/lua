@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.25 2000/03/31 16:28:45 roberto Exp roberto $
+** $Id: lstate.c,v 1.26 2000/05/08 19:32:53 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -8,6 +8,8 @@
 #include <stdarg.h>
 
 #define LUA_REENTRANT
+
+#include "lua.h"
 
 #include "lauxlib.h"
 #include "lbuiltin.h"

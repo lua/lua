@@ -1,5 +1,5 @@
 /*
-** $Id: lref.c,v 1.12 2000/05/24 13:54:49 roberto Exp roberto $
+** $Id: lref.c,v 1.13 2000/06/08 17:48:31 roberto Exp roberto $
 ** reference mechanism
 ** See Copyright Notice in lua.h
 */
@@ -7,11 +7,12 @@
 
 #define LUA_REENTRANT
 
+#include "lua.h"
+
 #include "lapi.h"
 #include "lmem.h"
 #include "lref.h"
 #include "lstate.h"
-#include "lua.h"
 
 
 int lua_ref (lua_State *L,  int lock) {

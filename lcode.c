@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.33 2000/05/24 18:04:17 roberto Exp roberto $
+** $Id: lcode.c,v 1.34 2000/06/05 14:56:18 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -8,6 +8,8 @@
 #include "stdlib.h"
 
 #define LUA_REENTRANT
+
+#include "lua.h"
 
 #include "lcode.h"
 #include "ldo.h"

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.113 2000/06/06 16:31:41 roberto Exp roberto $
+** $Id: lvm.c,v 1.114 2000/06/08 17:48:31 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -10,6 +10,8 @@
 #include <string.h>
 
 #define LUA_REENTRANT
+
+#include "lua.h"
 
 #include "lapi.h"
 #include "lauxlib.h"

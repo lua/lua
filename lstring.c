@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.36 2000/05/10 16:33:20 roberto Exp roberto $
+** $Id: lstring.c,v 1.37 2000/05/24 13:54:49 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -9,11 +9,12 @@
 
 #define LUA_REENTRANT
 
+#include "lua.h"
+
 #include "lmem.h"
 #include "lobject.h"
 #include "lstate.h"
 #include "lstring.h"
-#include "lua.h"
 
 
 

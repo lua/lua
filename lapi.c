@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.83 2000/06/06 16:31:41 roberto Exp roberto $
+** $Id: lapi.c,v 1.84 2000/06/08 17:48:31 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -8,6 +8,8 @@
 #include <string.h>
 
 #define LUA_REENTRANT
+
+#include "lua.h"
 
 #include "lapi.h"
 #include "lauxlib.h"
@@ -21,7 +23,6 @@
 #include "lstring.h"
 #include "ltable.h"
 #include "ltm.h"
-#include "lua.h"
 #include "lvm.h"
 
 

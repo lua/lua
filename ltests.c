@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.23 2000/06/02 19:10:01 roberto Exp roberto $
+** $Id: ltests.c,v 1.24 2000/06/08 17:48:31 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -11,6 +11,8 @@
 #include <string.h>
 
 
+#include "lua.h"
+
 #include "lapi.h"
 #include "lauxlib.h"
 #include "lcode.h"
@@ -20,7 +22,6 @@
 #include "lstate.h"
 #include "lstring.h"
 #include "ltable.h"
-#include "lua.h"
 #include "luadebug.h"
 
 

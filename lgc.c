@@ -1,10 +1,12 @@
 /*
-** $Id: lgc.c,v 1.55 2000/06/05 20:07:53 roberto Exp roberto $
+** $Id: lgc.c,v 1.56 2000/06/08 17:48:31 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
 
 #define LUA_REENTRANT
+
+#include "lua.h"
 
 #include "ldo.h"
 #include "lfunc.h"
@@ -16,7 +18,6 @@
 #include "lstring.h"
 #include "ltable.h"
 #include "ltm.h"
-#include "lua.h"
 
 
 

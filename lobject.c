@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.39 2000/05/24 13:54:49 roberto Exp roberto $
+** $Id: lobject.c,v 1.40 2000/06/08 17:48:31 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -9,8 +9,9 @@
 
 #define LUA_REENTRANT
 
-#include "lobject.h"
 #include "lua.h"
+
+#include "lobject.h"
 
 
 const char *const luaO_typenames[] = { /* ORDER LUA_T */

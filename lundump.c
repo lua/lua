@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.20 2000/04/25 16:44:31 roberto Exp roberto $
+** $Id: lundump.c,v 1.21 2000/05/08 19:32:53 roberto Exp roberto $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -8,6 +8,8 @@
 #include <string.h>
 
 #define LUA_REENTRANT
+
+#include "lua.h"
 
 #include "lauxlib.h"
 #include "lfunc.h"

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.21 2000/05/30 19:00:31 roberto Exp roberto $
+** $Id: ldebug.c,v 1.22 2000/06/08 17:48:31 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -8,6 +8,8 @@
 #include <stdlib.h>
 
 #define LUA_REENTRANT
+
+#include "lua.h"
 
 #include "lapi.h"
 #include "lauxlib.h"
@@ -18,7 +20,6 @@
 #include "lstate.h"
 #include "ltable.h"
 #include "ltm.h"
-#include "lua.h"
 #include "luadebug.h"
 
 

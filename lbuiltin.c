@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.114 2000/06/06 16:31:41 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.115 2000/06/08 17:48:31 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -21,6 +21,8 @@
 
 #define LUA_REENTRANT
 
+#include "lua.h"
+
 #include "lapi.h"
 #include "lauxlib.h"
 #include "lbuiltin.h"
@@ -32,7 +34,6 @@
 #include "lstring.h"
 #include "ltable.h"
 #include "ltm.h"
-#include "lua.h"
 #include "lundump.h"
 #include "lvm.h"
 

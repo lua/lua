@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.46 2000/06/06 16:31:41 roberto Exp roberto $
+** $Id: ltable.c,v 1.47 2000/06/08 17:48:31 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -20,13 +20,14 @@
 
 #define LUA_REENTRANT
 
+#include "lua.h"
+
 #include "lauxlib.h"
 #include "lmem.h"
 #include "lobject.h"
 #include "lstate.h"
 #include "lstring.h"
 #include "ltable.h"
-#include "lua.h"
 
 
 #define gcsize(L, n)	numblocks(L, n*2, sizeof(Hash))
