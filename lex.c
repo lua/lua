@@ -1,5 +1,9 @@
-char *rcs_lex = "$Id: lex.c,v 2.1 1994/04/15 19:00:28 celes Exp celes $";
+char *rcs_lex = "$Id: lex.c,v 2.2 1994/08/05 19:27:41 celes Exp celes $";
 /*$Log: lex.c,v $
+ * Revision 2.2  1994/08/05  19:27:41  celes
+ * implementacao de dois buffer de 'yytext' para evitar bug
+ * no look ahead do yacc
+ *
  * Revision 2.1  1994/04/15  19:00:28  celes
  * Retirar chamada da funcao lua_findsymbol associada a cada
  * token NAME. A decisao de chamar lua_findsymbol ou lua_findconstant
@@ -25,6 +29,8 @@ char *rcs_lex = "$Id: lex.c,v 2.1 1994/04/15 19:00:28 celes Exp celes $";
 #include "inout.h"
 #include "table.h"
 #include "y.tab.h"
+
+#define lua_strcmp(a,b)	(a[0]<b[0]?(-1):(a[0]>b[0]?(1):strcmp(a,b))) 
 
 #define next() { current = input(); }
 #define save(x) { *yytextLast++ = (x); }
@@ -83,7 +89,7 @@ static int findReserved (char *name)
   while (l <= h)
   {
     int m = (l+h)/2;
-    int comp = strcmp(name, reserved[m].name);
+    int comp = lua_strcmp(name, reserved[m].name);
     if (comp < 0)
       h = m-1;
     else if (comp == 0)
@@ -114,12 +120,12 @@ int yylex ()
 	while (isalnum(current) || current == '_')
           save_and_next();
         *yytextLast = 0;
-	if (strcmp(yytext[currentText], "debug") == 0)
+	if (lua_strcmp(yytext[currentText], "debug") == 0)
 	{
 	  yylval.vInt = 1;
 	  return DEBUG;
         }
-	else if (strcmp(yytext[currentText], "nodebug") == 0)
+	else if (lua_strcmp(yytext[currentText], "nodebug") == 0)
 	{
 	  yylval.vInt = 0;
 	  return DEBUG;
