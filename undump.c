@@ -3,7 +3,7 @@
 ** load bytecodes from files
 */
 
-char* rcs_undump="$Id: undump.c,v 1.18 1996/11/14 13:33:15 lhf Exp lhf $";
+char* rcs_undump="$Id: undump.c,v 1.19 1996/11/14 15:00:32 lhf Exp lhf $";
 
 #include <stdio.h>
 #include <string.h>
@@ -172,9 +172,9 @@ static int LoadSize(FILE* D)
  return s;
 }
 
-static char* LoadBlock(int size, FILE* D)
+static void* LoadBlock(int size, FILE* D)
 {
- char* b=luaI_malloc(size);
+ void* b=luaI_malloc(size);
  fread(b,size,1,D);
  return b;
 }
