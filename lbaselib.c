@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.116 2002/12/20 09:55:56 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.117 2003/02/10 10:21:31 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -295,20 +295,11 @@ static int luaB_assert (lua_State *L) {
 static int luaB_unpack (lua_State *L) {
   int n, i;
   luaL_checktype(L, 1, LUA_TTABLE);
-  lua_pushliteral(L, "n");
-  lua_rawget(L, 1);
-  n = (lua_isnumber(L, -1)) ?  (int)lua_tonumber(L, -1) : -1;
-  for (i=0; i<n || n==-1; i++) {  /* push arg[1...n] */
-    luaL_checkstack(L, LUA_MINSTACK, "table too big to unpack");
-    lua_rawgeti(L, 1, i+1);
-    if (n == -1) {  /* no explicit limit? */
-      if (lua_isnil(L, -1)) {  /* stop at first `nil' element */
-        lua_pop(L, 1);  /* remove `nil' */
-        break;
-      }
-    }
-  }
-  return i;
+  n = luaL_getn(L, 1);
+  luaL_checkstack(L, n, "table too big to unpack");
+  for (i=1; i<=n; i++)  /* push arg[1...n] */
+    lua_rawgeti(L, 1, i);
+  return n;
 }
 
 
