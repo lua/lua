@@ -42,6 +42,8 @@ void luaI_insertfunction (TFunc *f)
 static void freefunc (TFunc *f)
 {
   luaI_free (f->code);
+  if (f->locvars)
+    luaI_free (f->locvars);
   luaI_free (f);
 }
 
