@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.85 2002/05/01 20:40:42 roberto Exp roberto $
+** $Id: lua.c,v 1.86 2002/05/15 18:57:44 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -69,9 +69,9 @@ static void laction (int i) {
 static void report (int status) {
   if (status == 0) return;
   else {
-    const char *msg = lua_tostring(L, -1);
-    if (msg == NULL) msg = "(no message)";
-    fprintf(stderr, "%s\n", msg);
+    lua_getglobal(L, "_ALERT");
+    lua_pushvalue(L, -2);
+    lua_pcall(L, 1, 0, 0);
     lua_pop(L, 1);
   }
 }
@@ -134,6 +134,13 @@ static void getargs (char *argv[]) {
   lua_pushliteral(L, "n");
   lua_pushnumber(L, i-1);
   lua_rawset(L, -3);
+}
+
+
+static int l_alert (lua_State *l) {
+  fputs(luaL_check_string(l, 1), stderr);
+  putc('\n', stderr);
+  return 0;
 }
 
 
@@ -323,10 +330,11 @@ static int handle_argv (char *argv[], int *toclose) {
 }
 
 
-static void register_getargs (char *argv[]) {
+static void register_own (char *argv[]) {
   lua_pushudataval(L, argv);
   lua_pushcclosure(L, l_getargs, 1);
   lua_setglobal(L, "getargs");
+  lua_register(L, "_ALERT", l_alert);
 }
 
 
@@ -356,7 +364,7 @@ int main (int argc, char *argv[]) {
   (void)argc;  /* to avoid warnings */
   L = lua_open();  /* create state */
   LUA_USERINIT(L);  /* open libraries */
-  register_getargs(argv);  /* create `getargs' function */
+  register_own(argv);  /* create own function */
   status = handle_luainit();
   if (status != 0) return status;
   status = handle_argv(argv+1, &toclose);

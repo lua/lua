@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.73 2002/05/13 13:10:58 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.74 2002/05/16 18:39:46 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -18,17 +18,6 @@
 #include "lualib.h"
 
 
-
-
-/*
-** If your system does not support `stderr', redefine this function, or
-** redefine _ERRORMESSAGE so that it won't need _ALERT.
-*/
-static int luaB__ALERT (lua_State *L) {
-  fputs(luaL_check_string(L, 1), stderr);
-  putc('\n', stderr);
-  return 0;
-}
 
 
 /*
@@ -385,7 +374,6 @@ static int luaB_require (lua_State *L) {
 
 
 static const luaL_reg base_funcs[] = {
-  {LUA_ALERT, luaB__ALERT},
   {"error", luaB_error},
   {"metatable", luaB_metatable},
   {"globals", luaB_globals},
