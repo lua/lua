@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.41 1999/10/11 16:13:42 roberto Exp roberto $
+** $Id: llex.c,v 1.42 1999/10/19 13:33:22 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -34,7 +34,7 @@ static const char *const reserved [] = {"and", "do", "else", "elseif", "end",
 
 
 void luaX_init (void) {
-  int i;
+  unsigned int i;
   for (i=0; i<(sizeof(reserved)/sizeof(reserved[0])); i++) {
     TaggedString *ts = luaS_new(reserved[i]);
     ts->marked = (unsigned char)(RESERVEDMARK+i);  /* reserved word */

@@ -1,5 +1,5 @@
 /*
-** $Id: lzio.c,v 1.7 1999/03/05 13:15:50 roberto Exp roberto $
+** $Id: lzio.c,v 1.8 1999/08/16 20:52:00 roberto Exp roberto $
 ** a generic input stream interface
 ** See Copyright Notice in lua.h
 */
@@ -16,6 +16,7 @@
 /* ----------------------------------------------------- memory buffers --- */
 
 static int zmfilbuf (ZIO* z) {
+  (void)z;  /* to avoid warnings */
   return EOZ;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.48 1999/10/19 13:33:22 roberto Exp roberto $
+** $Id: liolib.c,v 1.49 1999/10/26 11:00:12 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -608,7 +608,7 @@ static const struct luaL_reg iolibtag[] = {
 
 
 static void openwithtags (void) {
-  int i;
+  unsigned int i;
   int iotag = lua_newtag();
   lua_newtag();  /* alloc CLOSEDTAG: assume that CLOSEDTAG = iotag-1 */
   for (i=0; i<sizeof(iolibtag)/sizeof(iolibtag[0]); i++) {
