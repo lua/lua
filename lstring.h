@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.8 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: lstring.h,v 1.9 1999/10/04 17:51:04 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -11,12 +11,18 @@
 #include "lobject.h"
 
 
-#define NUM_HASHSTR     31
-#define NUM_HASHUDATA   31
+#define NUM_HASHSTR     31  /* a prime not in array `dimensions' */
+#define NUM_HASHUDATA   31  /* idem */
 #define NUM_HASHS  (NUM_HASHSTR+NUM_HASHUDATA)
 
 
-extern TaggedString luaS_EMPTY;
+/*
+** any taggedstring with mark>=FIXMARK is never collected.
+** Marks>=RESERVEDMARK are used to identify reserved words.
+*/
+#define FIXMARK		2
+#define RESERVEDMARK	3
+
 
 void luaS_init (void);
 TaggedString *luaS_createudata (void *udata, int tag);

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.30 1999/09/06 20:34:18 roberto Exp roberto $
+** $Id: lobject.h,v 1.31 1999/10/04 17:51:04 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -14,13 +14,15 @@
 
 
 #ifdef DEBUG
-#include "lauxlib.h"
-#define LUA_INTERNALERROR(s)	\
-	luaL_verror("INTERNAL ERROR - %s [%s:%d]",(s),__FILE__,__LINE__)
-#define LUA_ASSERT(c,s) { if (!(c)) LUA_INTERNALERROR(s); }
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
+#include <assert.h>
+#define LUA_INTERNALERROR(s)	assert(0)
+#define LUA_ASSERT(c,s)		assert(c)
 #else
-#define LUA_INTERNALERROR(s)  /* empty */
-#define LUA_ASSERT(c,s)  /* empty */
+#define LUA_INTERNALERROR(s)	/* empty */
+#define LUA_ASSERT(c,s)		/* empty */
 #endif
 
 
@@ -90,8 +92,8 @@ typedef struct TObject {
 */
 
 typedef struct TaggedString {
-  struct TaggedString *next;
-  int marked;
+  struct TaggedString *nexthash;  /* chain hash table */
+  struct TaggedString *nextglobal;  /* chain global variables */
   unsigned long hash;
   int constindex;  /* hint to reuse constants (= -1 if this is a userdata) */
   union {
@@ -104,6 +106,7 @@ typedef struct TaggedString {
       void *v;  /* if this is a userdata, here is its value */
     } d;
   } u;
+  unsigned char marked;
   char str[1];   /* \0 byte already reserved */
 } TaggedString;
 

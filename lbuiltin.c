@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.64 1999/10/04 17:51:04 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.65 1999/10/07 19:04:30 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -447,7 +447,7 @@ static void luaB_foreachvar (void) {
   TObject f;  /* see comment in 'foreachi' */
   f = *luaA_Address(luaL_functionarg(1));
   luaD_checkstack(4);  /* for extra var name, f, var name, and globalval */
-  for (s = L->rootglobal; s; s = s->next) {
+  for (s = L->rootglobal; s; s = s->nextglobal) {
     if (s->u.s.globalval.ttype != LUA_T_NIL) {
       pushtagstring(s);  /* keep (extra) s on stack to avoid GC */
       *(L->stack.top++) = f;
@@ -606,6 +606,12 @@ static void mem_query (void) {
 }
 
 
+static void hash_query (void) {
+  const TObject *o = luaA_Address(luaL_nonnullarg(1));
+  lua_pushnumber(luaH_hashindex(o));
+}
+
+
 static void query_strings (void) {
   int h = luaL_check_int(1) - 1;
   int s = luaL_opt_int(2, 0) - 1;
@@ -617,10 +623,10 @@ static void query_strings (void) {
   }
   else {
     TaggedString *ts = L->string_root[h].hash[s];
-    if (ts == NULL) lua_pushstring("<NIL>");
-    else if (ts == &luaS_EMPTY) lua_pushstring("<EMPTY>");
-    else if (ts->constindex == -1) lua_pushstring("<USERDATA>");
-    else lua_pushstring(ts->str);
+    for (ts = L->string_root[h].hash[s]; ts; ts = ts->nexthash) {
+      if (ts->constindex == -1) lua_pushstring("<USERDATA>");
+      else lua_pushstring(ts->str);
+    }
   }
 }
 
@@ -707,9 +713,10 @@ static void testC (void) {
 static const struct luaL_reg builtin_funcs[] = {
 #ifdef DEBUG
   {"extra", extra_services},
+  {"hash", hash_query},
+  {"querystr", query_strings},
   {"testC", testC},
   {"totalmem", mem_query},
-  {"querystr", query_strings},
 #endif
   {"_ALERT", luaB_alert},
   {"_ERRORMESSAGE", error_message},

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.51 1999/10/04 17:51:04 roberto Exp roberto $
+** $Id: lapi.c,v 1.52 1999/10/07 19:04:30 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -393,11 +393,11 @@ TaggedString *luaA_nextvar (TaggedString *g) {
     g = L->rootglobal;  /* first variable */
   else {
     /* check whether name is in global var list */
-    luaL_arg_check(g != g->next, 1, "variable name expected");
-    g = g->next;  /* get next */
+    luaL_arg_check(g != g->nextglobal, 1, "variable name expected");
+    g = g->nextglobal;  /* get next */
   }
   while (g && g->u.s.globalval.ttype == LUA_T_NIL)  /* skip globals with nil */
-    g = g->next;
+    g = g->nextglobal;
   if (g) {
     ttype(L->stack.top) = LUA_T_STRING; tsvalue(L->stack.top) = g;
     incr_top;
@@ -579,7 +579,7 @@ const char *lua_getobjname (lua_Object o, const char **name) {
   /* try to find a name for given function */
   TaggedString *g;
   set_normalized(L->stack.top, Address(o)); /* to be accessed by "checkfunc" */
-  for (g=L->rootglobal; g; g=g->next) {
+  for (g=L->rootglobal; g; g=g->nextglobal) {
     if (checkfunc(&g->u.s.globalval)) {
       *name = g->str;
       return "global";

@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.39 1999/09/06 13:55:09 roberto Exp roberto $
+** $Id: llex.c,v 1.40 1999/10/04 17:51:04 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -37,7 +37,7 @@ void luaX_init (void) {
   int i;
   for (i=0; i<(sizeof(reserved)/sizeof(reserved[0])); i++) {
     TaggedString *ts = luaS_new(reserved[i]);
-    ts->marked = FIRST_RESERVED+i;  /* reserved word  (always > 255) */
+    ts->marked = RESERVEDMARK+i;  /* reserved word */
   }
 }
 
@@ -426,8 +426,8 @@ int luaX_lex (LexState *LS) {
           } while (isalnum(LS->current) || LS->current == '_');
           save('\0');
           ts = luaS_new(L->Mbuffer+L->Mbuffbase);
-          if (ts->marked >= FIRST_RESERVED)
-            return ts->marked;  /* reserved word */
+          if (ts->marked >= RESERVEDMARK)  /* reserved word? */
+            return ts->marked-RESERVEDMARK+FIRST_RESERVED;
           LS->seminfo.ts = ts;
           return NAME;
         }

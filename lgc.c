@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.26 1999/09/27 18:00:25 roberto Exp roberto $
+** $Id: lgc.c,v 1.27 1999/10/04 17:51:04 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -64,7 +64,7 @@ static void hashmark (Hash *h) {
 
 static void globalmark (void) {
   TaggedString *g;
-  for (g=L->rootglobal; g; g=g->next) {
+  for (g=L->rootglobal; g; g=g->nextglobal) {
     LUA_ASSERT(g->constindex >= 0, "userdata in global list");
     if (g->u.s.globalval.ttype != LUA_T_NIL) {
       markobject(&g->u.s.globalval);
@@ -161,8 +161,8 @@ static void clear_global_list (void) {
   TaggedString **p = &L->rootglobal;
   TaggedString *next;
   while ((next = *p) != NULL) {
-    if (next->marked) p = &next->next;
-    else *p = next->next;
+    if (next->marked) p = &next->nextglobal;
+    else *p = next->nextglobal;
   }
 }
 
@@ -177,22 +177,28 @@ static void collectstring (int limit) {
   int i;
   ttype(&o) = LUA_T_USERDATA;
   clear_global_list();
-  for (i=0; i<NUM_HASHS; i++) {
+  for (i=0; i<NUM_HASHS; i++) {  /* for each hash table */
     stringtable *tb = &L->string_root[i];
     int j;
-    for (j=0; j<tb->size; j++) {
-      TaggedString *t = tb->hash[j];
-      if (t == NULL) continue;
-      if (t->marked < limit) {
-        if (t->constindex == -1) {  /* is userdata? */
-          tsvalue(&o) = t;
-          luaD_gcIM(&o);
+    for (j=0; j<tb->size; j++) {  /* for each list */
+      TaggedString **p = &tb->hash[j];
+      TaggedString *next;
+      while ((next = *p) != NULL) {
+       if (next->marked >= limit) {
+         if (next->marked < FIXMARK)  /* does not change FIXMARKs */
+           next->marked = 0;
+         p = &next->nexthash;
+       } 
+       else {  /* collect */
+          if (next->constindex == -1) {  /* is userdata? */
+            tsvalue(&o) = next;
+            luaD_gcIM(&o);
+          }
+          *p = next->nexthash;
+          luaS_free(next);
+          tb->nuse--;
         }
-        luaS_free(t);
-        tb->hash[j] = &luaS_EMPTY;
       }
-      else if (t->marked == 1)
-        t->marked = 0;
     }
   }
 }
