@@ -1,5 +1,5 @@
 /*
-** $Id: lualib.h,v 1.28 2003/03/18 12:24:26 roberto Exp roberto $
+** $Id: lualib.h,v 1.29 2004/03/24 15:46:49 roberto Exp roberto $
 ** Lua standard libraries
 ** See Copyright Notice in lua.h
 */
@@ -14,6 +14,10 @@
 #ifndef LUALIB_API
 #define LUALIB_API	LUA_API
 #endif
+
+
+/* Key to file-handle type */
+#define LUA_FILEHANDLE		"FILE*"
 
 
 #define LUA_COLIBNAME	"coroutine"

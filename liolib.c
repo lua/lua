@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.51 2004/05/10 20:26:37 roberto Exp roberto $
+** $Id: liolib.c,v 2.52 2004/05/28 18:32:51 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -30,8 +30,6 @@
 */
 
 
-#define FILEHANDLE		"FILE*"
-
 #define IO_INPUT		1
 #define IO_OUTPUT		2
 
@@ -54,14 +52,14 @@ static int pushresult (lua_State *L, int i, const char *filename) {
 
 
 static FILE **topfile (lua_State *L, int findex) {
-  FILE **f = (FILE **)luaL_checkudata(L, findex, FILEHANDLE);
+  FILE **f = (FILE **)luaL_checkudata(L, findex, LUA_FILEHANDLE);
   if (f == NULL) luaL_argerror(L, findex, "bad file");
   return f;
 }
 
 
 static int io_type (lua_State *L) {
-  FILE **f = (FILE **)luaL_checkudata(L, 1, FILEHANDLE);
+  FILE **f = (FILE **)luaL_checkudata(L, 1, LUA_FILEHANDLE);
   if (f == NULL) lua_pushnil(L);
   else if (*f == NULL)
     lua_pushliteral(L, "closed file");
@@ -88,7 +86,7 @@ static FILE *tofile (lua_State *L, int findex) {
 static FILE **newfile (lua_State *L) {
   FILE **pf = (FILE **)lua_newuserdata(L, sizeof(FILE *));
   *pf = NULL;  /* file handle is currently `closed' */
-  luaL_getmetatable(L, FILEHANDLE);
+  luaL_getmetatable(L, LUA_FILEHANDLE);
   lua_setmetatable(L, -2);
   return pf;
 }
@@ -193,7 +191,7 @@ static int io_readline (lua_State *L);
 
 
 static void aux_lines (lua_State *L, int idx, int close) {
-  lua_getfield(L, LUA_REGISTRYINDEX, FILEHANDLE);
+  lua_getfield(L, LUA_REGISTRYINDEX, LUA_FILEHANDLE);
   lua_pushvalue(L, idx);
   lua_pushboolean(L, close);  /* close/not close file when finished */
   lua_pushcclosure(L, io_readline, 3);
@@ -460,7 +458,7 @@ static const luaL_reg flib[] = {
 
 
 static void createmeta (lua_State *L) {
-  luaL_newmetatable(L, FILEHANDLE);  /* create new metatable for file handles */
+  luaL_newmetatable(L, LUA_FILEHANDLE);  /* create metatable for file handles */
   /* create (and set) default files */
   *newfile(L) = stdin;
   lua_rawseti(L, -2, IO_INPUT);
