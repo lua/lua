@@ -140,8 +140,9 @@ static int luaB_eventtable (lua_State *L) {
   if (lua_isnone(L, 2))
     lua_geteventtable(L, 1);
   else {
+    int t = lua_type(L, 2);
+    luaL_arg_check(L, t == LUA_TNIL || t == LUA_TTABLE, 2, "nil/table expected");
     lua_settop(L, 2);
-    luaL_check_type(L, 2, LUA_TTABLE);
     lua_seteventtable(L, 1);
   }
   return 1;

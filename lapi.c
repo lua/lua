@@ -35,7 +35,7 @@ const char lua_ident[] =
 
 #define api_checknelems(L, n)	api_check(L, (n) <= (L->top - L->ci->base))
 
-#define api_incr_top(L)	incr_top
+#define api_incr_top(L)	incr_top(L)
 
 
 
@@ -81,7 +81,7 @@ static TObject *luaA_indexAcceptable (lua_State *L, int index) {
 
 void luaA_pushobject (lua_State *L, const TObject *o) {
   setobj(L->top, o);
-  incr_top;
+  incr_top(L);
 }
 
 LUA_API int lua_stackspace (lua_State *L) {
@@ -335,7 +335,7 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   while (n--)
     setobj(&cl->c.upvalue[n], L->top+n);
   setclvalue(L->top, cl);
-  incr_top;
+  api_incr_top(L);
   lua_unlock(L);
 }
 
@@ -494,6 +494,8 @@ LUA_API void lua_seteventtable (lua_State *L, int objindex) {
   api_checknelems(L, 1);
   obj = luaA_indexAcceptable(L, objindex);
   et = --L->top;
+  if (ttype(et) == LUA_TNIL)
+    et = defaultet(L);
   api_check(L, ttype(et) == LUA_TTABLE);
   switch (ttype(obj)) {
     case LUA_TTABLE:
