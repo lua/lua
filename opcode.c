@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.37 1995/05/02 18:43:03 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.38 1995/05/16 17:23:58 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -446,7 +446,7 @@ int lua_dostring (char *string)
 */
 lua_Object lua_setfallback (char *name, lua_CFunction fallback)
 {
-  static Object func = {LUA_T_CFUNCTION, luaI_setfallback};
+  static Object func = {LUA_T_CFUNCTION, {luaI_setfallback}};
   adjustC(0);
   lua_pushstring(name);
   lua_pushcfunction(fallback);

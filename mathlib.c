@@ -3,7 +3,7 @@
 ** Mathematics library to LUA
 */
 
-char *rcs_mathlib="$Id: mathlib.c,v 1.8 1995/01/04 18:49:54 roberto Exp $";
+char *rcs_mathlib="$Id: mathlib.c,v 1.9 1995/02/06 19:36:43 roberto Exp roberto $";
 
 #include <stdio.h>		/* NULL */
 #include <math.h>
@@ -11,7 +11,9 @@ char *rcs_mathlib="$Id: mathlib.c,v 1.8 1995/01/04 18:49:54 roberto Exp $";
 #include "lualib.h"
 #include "lua.h"
 
+#ifndef PI
 #define PI          3.14159265358979323846
+#endif
 #define TODEGREE(a) ((a)*180.0/PI)
 #define TORAD(a)    ((a)*PI/180.0)
 
