@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.102 2001/06/08 19:01:38 roberto Exp roberto $
+** $Id: lgc.c,v 1.103 2001/06/12 18:43:13 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -360,9 +360,6 @@ void luaC_collect (lua_State *L, int all) {
   collecttable(L);
   collectproto(L);
   collectclosure(L);
-  checkMbuffer(L);
-  G(L)->GCthreshold = 2*G(L)->nblocks;  /* set new threshold */
-  luaC_callgcTMudata(L);
 }
 
 
@@ -370,6 +367,9 @@ void luaC_collectgarbage (lua_State *L) {
   markall(L);
   invalidatetables(G(L));
   luaC_collect(L, 0);
+  checkMbuffer(L);
+  G(L)->GCthreshold = 2*G(L)->nblocks;  /* set new threshold */
+  luaC_callgcTMudata(L);
   callgcTM(L, &luaO_nilobject);
 }
 
