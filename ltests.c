@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.7 2004/05/31 18:50:48 roberto Exp roberto $
+** $Id: ltests.c,v 2.8 2004/05/31 19:41:52 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -687,11 +687,11 @@ static int d2s (lua_State *L) {
 
 
 static int newstate (lua_State *L) {
-  lua_State *L1 = lua_newstate(debug_realloc, &memcontrol);
-  if (L1) {
-    lua_userstateopen(L1);  /* init lock */
+  void *ud;
+  lua_Alloc f = lua_getallocf(L, &ud);
+  lua_State *L1 = lua_newstate(f, ud);
+  if (L1)
     lua_pushinteger(L, (unsigned long)L1);
-  }
   else
     lua_pushnil(L);
   return 1;
@@ -810,153 +810,165 @@ static const char *getname_aux (char *buff, const char **pc) {
 
 static int testC (lua_State *L) {
   char buff[30];
-  const char *pc = luaL_checkstring(L, 1);
+  lua_State *L1;
+  const char *pc;
+  if (lua_isnumber(L, 1)) {
+    L1 = cast(lua_State *,cast(unsigned long,luaL_checknumber(L, 1)));
+    pc = luaL_checkstring(L, 2);
+  }
+  else {
+    L1 = L;
+    pc = luaL_checkstring(L, 1);
+  }
   for (;;) {
     const char *inst = getname;
     if EQ("") return 0;
     else if EQ("isnumber") {
-      lua_pushinteger(L, lua_isnumber(L, getnum));
+      lua_pushinteger(L1, lua_isnumber(L1, getnum));
     }
     else if EQ("isstring") {
-      lua_pushinteger(L, lua_isstring(L, getnum));
+      lua_pushinteger(L1, lua_isstring(L1, getnum));
     }
     else if EQ("istable") {
-      lua_pushinteger(L, lua_istable(L, getnum));
+      lua_pushinteger(L1, lua_istable(L1, getnum));
     }
     else if EQ("iscfunction") {
-      lua_pushinteger(L, lua_iscfunction(L, getnum));
+      lua_pushinteger(L1, lua_iscfunction(L1, getnum));
     }
     else if EQ("isfunction") {
-      lua_pushinteger(L, lua_isfunction(L, getnum));
+      lua_pushinteger(L1, lua_isfunction(L1, getnum));
     }
     else if EQ("isuserdata") {
-      lua_pushinteger(L, lua_isuserdata(L, getnum));
+      lua_pushinteger(L1, lua_isuserdata(L1, getnum));
     }
     else if EQ("isudataval") {
-      lua_pushinteger(L, lua_islightuserdata(L, getnum));
+      lua_pushinteger(L1, lua_islightuserdata(L1, getnum));
     }
     else if EQ("isnil") {
-      lua_pushinteger(L, lua_isnil(L, getnum));
+      lua_pushinteger(L1, lua_isnil(L1, getnum));
     }
     else if EQ("isnull") {
-      lua_pushinteger(L, lua_isnone(L, getnum));
+      lua_pushinteger(L1, lua_isnone(L1, getnum));
     }
     else if EQ("tonumber") {
-      lua_pushnumber(L, lua_tonumber(L, getnum));
+      lua_pushnumber(L1, lua_tonumber(L1, getnum));
     }
     else if EQ("tostring") {
-      const char *s = lua_tostring(L, getnum);
-      lua_pushstring(L, s);
+      const char *s = lua_tostring(L1, getnum);
+      lua_pushstring(L1, s);
     }
     else if EQ("objsize") {
-      lua_pushinteger(L, lua_objsize(L, getnum));
+      lua_pushinteger(L1, lua_objsize(L1, getnum));
     }
     else if EQ("tocfunction") {
-      lua_pushcfunction(L, lua_tocfunction(L, getnum));
+      lua_pushcfunction(L1, lua_tocfunction(L1, getnum));
     }
     else if EQ("return") {
       return getnum;
     }
     else if EQ("gettop") {
-      lua_pushinteger(L, lua_gettop(L));
+      lua_pushinteger(L1, lua_gettop(L1));
     }
     else if EQ("settop") {
-      lua_settop(L, getnum);
+      lua_settop(L1, getnum);
     }
     else if EQ("pop") {
-      lua_pop(L, getnum);
+      lua_pop(L1, getnum);
     }
     else if EQ("pushnum") {
-      lua_pushinteger(L, getnum);
+      lua_pushinteger(L1, getnum);
+    }
+    else if EQ("pushstring") {
+      lua_pushstring(L1, getname);
     }
     else if EQ("pushnil") {
-      lua_pushnil(L);
+      lua_pushnil(L1);
     }
     else if EQ("pushbool") {
-      lua_pushboolean(L, getnum);
+      lua_pushboolean(L1, getnum);
     }
     else if EQ("tobool") {
-      lua_pushinteger(L, lua_toboolean(L, getnum));
+      lua_pushinteger(L1, lua_toboolean(L1, getnum));
     }
     else if EQ("pushvalue") {
-      lua_pushvalue(L, getnum);
+      lua_pushvalue(L1, getnum);
     }
     else if EQ("pushcclosure") {
-      lua_pushcclosure(L, testC, getnum);
+      lua_pushcclosure(L1, testC, getnum);
     }
     else if EQ("remove") {
-      lua_remove(L, getnum);
+      lua_remove(L1, getnum);
     }
     else if EQ("insert") {
-      lua_insert(L, getnum);
+      lua_insert(L1, getnum);
     }
     else if EQ("replace") {
-      lua_replace(L, getnum);
+      lua_replace(L1, getnum);
     }
     else if EQ("gettable") {
-      lua_gettable(L, getnum);
+      lua_gettable(L1, getnum);
     }
     else if EQ("settable") {
-      lua_settable(L, getnum);
+      lua_settable(L1, getnum);
     }
     else if EQ("next") {
-      lua_next(L, -2);
+      lua_next(L1, -2);
     }
     else if EQ("concat") {
-      lua_concat(L, getnum);
+      lua_concat(L1, getnum);
     }
     else if EQ("lessthan") {
       int a = getnum;
-      lua_pushboolean(L, lua_lessthan(L, a, getnum));
+      lua_pushboolean(L1, lua_lessthan(L1, a, getnum));
     }
     else if EQ("equal") {
       int a = getnum;
-      lua_pushboolean(L, lua_equal(L, a, getnum));
+      lua_pushboolean(L1, lua_equal(L1, a, getnum));
     }
     else if EQ("rawcall") {
       int narg = getnum;
       int nres = getnum;
-      lua_call(L, narg, nres);
+      lua_call(L1, narg, nres);
     }
     else if EQ("call") {
       int narg = getnum;
       int nres = getnum;
-      lua_pcall(L, narg, nres, 0);
+      lua_pcall(L1, narg, nres, 0);
     }
     else if EQ("loadstring") {
       size_t sl;
-      const char *s = luaL_checklstring(L, getnum, &sl);
-      luaL_loadbuffer(L, s, sl, s);
+      const char *s = luaL_checklstring(L1, getnum, &sl);
+      luaL_loadbuffer(L1, s, sl, s);
     }
     else if EQ("loadfile") {
-      luaL_loadfile(L, luaL_checkstring(L, getnum));
+      luaL_loadfile(L1, luaL_checkstring(L1, getnum));
     }
     else if EQ("setmetatable") {
-      lua_setmetatable(L, getnum);
+      lua_setmetatable(L1, getnum);
     }
     else if EQ("getmetatable") {
-      if (lua_getmetatable(L, getnum) == 0)
-        lua_pushnil(L);
+      if (lua_getmetatable(L1, getnum) == 0)
+        lua_pushnil(L1);
     }
     else if EQ("type") {
-      lua_pushstring(L, lua_typename(L, lua_type(L, getnum)));
+      lua_pushstring(L1, lua_typename(L1, lua_type(L1, getnum)));
     }
     else if EQ("getn") {
       int i = getnum;
-      lua_pushinteger(L, luaL_getn(L, i));
+      lua_pushinteger(L1, luaL_getn(L1, i));
     }
     else if EQ("setn") {
       int i = getnum;
-      int n = cast(int, lua_tonumber(L, -1));
-      luaL_setn(L, i, n);
-      lua_pop(L, 1);
+      int n = cast(int, lua_tonumber(L1, -1));
+      luaL_setn(L1, i, n);
+      lua_pop(L1, 1);
     }
     else if EQ("throw") {
 #ifdef __cplusplus
 static struct X { int x; } x;
       throw x;
 #else
-      luaL_error(L, "C++");
+      luaL_error(L1, "C++");
 #endif
       break;
     }
@@ -1071,7 +1083,6 @@ int luaB_opentests (lua_State *L) {
   lua_assert(lua_getallocf(L, &ud) == debug_realloc);
   lua_assert(ud == cast(void *, &memcontrol));
   lua_atpanic(L, l_panic);
-  lua_userstateopen(L);  /* init lock */
   lua_state = L;  /* keep first state to be opened */
   luaL_openlib(L, "T", tests_funcs, 0);
   atexit(fim);
