@@ -92,8 +92,8 @@ typedef struct CallInfo {
   StkId base;  /* base for called function */
   const Instruction *savedpc;
   StkId	top;  /* top for this function (when it's a Lua function) */
-  const Instruction **pc;
-  StkId *pb;
+  const Instruction **pc;  /* points to `pc' variable in `luaV_execute' */
+  StkId *pb;  /* points to `base' variable in `luaV_execute' */
   /* extra information for line tracing */
   int lastpc;  /* last pc traced */
   int line;  /* current line */
