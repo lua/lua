@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: lvm.c,v 1.216 2002/02/14 21:46:43 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -574,7 +574,7 @@ StkId luaV_execute (lua_State *L) {
           loop = (ttype(ra+1) != LUA_TNIL);
         }
         else
-          luaD_error(L, "`for' value must be a table or function");
+          luaD_error(L, "`for' generator must be a table or function");
         if (!loop)
           pc -= j;  /* undo jump */
         break;
