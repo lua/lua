@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.135 2005/01/10 17:21:10 roberto Exp roberto $
+** $Id: lua.c,v 1.136 2005/03/21 18:12:07 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -186,6 +186,7 @@ static int pushline (lua_State *L, int firstline) {
     lua_pushfstring(L, "return %s", b+1);  /* change it to `return' */
   else
     lua_pushstring(L, b);
+  lua_freeline(L, b);
   return 1;
 }
 
