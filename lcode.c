@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.20 2000/04/05 17:51:58 roberto Exp roberto $
+** $Id: lcode.c,v 1.21 2000/04/06 17:36:52 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -88,9 +88,11 @@ static void luaK_minus (FuncState *fs) {
 
 static void luaK_gettable (FuncState *fs) {
   /* PUSHSTRING u; GETTABLE -> GETDOTTED u   (t.x) */
+  /* GETLOCAL u; GETTABLE  -> GETINDEXED u   (t[i]) */
   Instruction previous = prepare(fs, CREATE_0(OP_GETTABLE), -1);
   switch(GET_OPCODE(previous)) {
     case OP_PUSHSTRING: SET_OPCODE(previous, OP_GETDOTTED); break;
+    case OP_GETLOCAL: SET_OPCODE(previous, OP_GETINDEXED); break;
     default: return;
   }
   setprevious(fs, previous);
@@ -123,22 +125,32 @@ static void luaK_sub (FuncState *fs) {
 
 
 static void luaK_conc (FuncState *fs) {
-  /* CONC u; CONC 2 -> CONC u+1   (a..b..c) */
-  Instruction previous = prepare(fs, CREATE_U(OP_CONC, 2), -1);
+  /* CONCAT u; CONCAT 2 -> CONCAT u+1   (a..b..c) */
+  Instruction previous = prepare(fs, CREATE_U(OP_CONCAT, 2), -1);
   switch(GET_OPCODE(previous)) {
-    case OP_CONC: SETARG_U(previous, GETARG_U(previous)+1); break;
+    case OP_CONCAT: SETARG_U(previous, GETARG_U(previous)+1); break;
     default: return;
   }
   setprevious(fs, previous);
 }
 
 
+static void luaK_getlocal (FuncState *fs, int l) {
+  /* SETLOCAL l 1; GETLOCAL l -> SETLOCAL l 0 */
+  Instruction previous = prepare(fs, CREATE_U(OP_GETLOCAL, l), 1);
+  if (previous == CREATE_AB(OP_SETLOCAL, l, 1)) {
+    SETARG_B(previous, 0);
+    setprevious(fs, previous);
+  }
+}
+
+
 static void luaK_setlocal (FuncState *fs, int l) {
-  /* PUSHLOCAL l; ADDI k, SETLOCAL l -> INCLOCAL k, l   ((local)a=a+k) */
+  /* GETLOCAL l; ADDI k, SETLOCAL l -> INCLOCAL k, l   ((local)a=a+k) */
   Instruction *code = fs->f->code;
   int pc = fs->pc;
   if (pc-1 > fs->lasttarget &&  /* no jumps in-between instructions? */
-      code[pc-2] == CREATE_U(OP_PUSHLOCAL, l) &&
+      code[pc-2] == CREATE_U(OP_GETLOCAL, l) &&
       GET_OPCODE(code[pc-1]) == OP_ADDI &&
       abs(GETARG_S(code[pc-1])) <= MAXARG_sA) {
     int inc = GETARG_S(code[pc-1]);
@@ -147,7 +159,7 @@ static void luaK_setlocal (FuncState *fs, int l) {
     luaK_deltastack(fs, -1);
   }
   else
-    luaK_U(fs, OP_SETLOCAL, l, -1);
+    luaK_AB(fs, OP_SETLOCAL, l, 1, -1);
 }
 
 
@@ -162,8 +174,8 @@ static void luaK_eq (FuncState *fs) {
 
 
 static void luaK_neq (FuncState *fs) {
-  /* PUSHNIL 1; JMPNEQ -> JMPT   (a~=nil) */
-  Instruction previous = prepare(fs, CREATE_S(OP_JMPNEQ, NO_JUMP), -2);
+  /* PUSHNIL 1; JMPNE -> JMPT   (a~=nil) */
+  Instruction previous = prepare(fs, CREATE_S(OP_JMPNE, NO_JUMP), -2);
   if (previous == CREATE_U(OP_PUSHNIL, 1)) {
     setprevious(fs, CREATE_S(OP_JMPT, NO_JUMP));
   }
@@ -195,6 +207,17 @@ static void luaK_pushnil (FuncState *fs, int n) {
   Instruction previous = prepare(fs, CREATE_U(OP_PUSHNIL, n), n);
   switch(GET_OPCODE(previous)) {
     case OP_PUSHNIL: SETARG_U(previous, GETARG_U(previous)+n); break;
+    default: return;
+  }
+  setprevious(fs, previous);
+}
+
+
+static void luaK_pop (FuncState *fs, int n) {
+  Instruction previous = prepare(fs, CREATE_U(OP_POP, n), -n);
+  switch(GET_OPCODE(previous)) {
+    case OP_SETTABLE: SETARG_B(previous, GETARG_B(previous)+n); break;
+    case OP_SETLOCAL: SETARG_B(previous, GETARG_B(previous)+n); break;
     default: return;
   }
   setprevious(fs, previous);
@@ -280,7 +303,7 @@ void luaK_number (FuncState *fs, Number f) {
 
 void luaK_adjuststack (FuncState *fs, int n) {
   if (n > 0)
-    luaK_U(fs, OP_POP, n, -n);
+    luaK_pop(fs, n);
   else if (n < 0)
     luaK_pushnil(fs, -n);
 }
@@ -311,7 +334,7 @@ static void assertglobal (FuncState *fs, int index) {
 static int discharge (FuncState *fs, expdesc *var) {
   switch (var->k) {
     case VLOCAL:
-      luaK_U(fs, OP_PUSHLOCAL, var->u.index, 1);
+      luaK_getlocal(fs, var->u.index);
       break;
     case VGLOBAL:
       luaK_U(fs, OP_GETGLOBAL, var->u.index, 1);
@@ -347,8 +370,8 @@ void luaK_storevar (LexState *ls, const expdesc *var) {
       luaK_U(fs, OP_SETGLOBAL, var->u.index, -1);
       assertglobal(fs, var->u.index);  /* make sure that there is a global */
       break;
-    case VINDEXED:
-      luaK_0(fs, OP_SETTABLEPOP, -3);
+    case VINDEXED:  /* table is at top-3; pop 3 elements after operation */
+      luaK_AB(fs, OP_SETTABLE, 3, 3, -3);
       break;
     default:
       LUA_INTERNALERROR(ls->L, "invalid var kind to store");
@@ -358,8 +381,8 @@ void luaK_storevar (LexState *ls, const expdesc *var) {
 
 static OpCode invertjump (OpCode op) {
   switch (op) {
-    case OP_JMPNEQ: return OP_JMPEQ;
-    case OP_JMPEQ: return OP_JMPNEQ;
+    case OP_JMPNE: return OP_JMPEQ;
+    case OP_JMPEQ: return OP_JMPNE;
     case OP_JMPLT: return OP_JMPGE;
     case OP_JMPLE: return OP_JMPGT;
     case OP_JMPGT: return OP_JMPLE;
@@ -566,7 +589,7 @@ void luaK_posfix (LexState *ls, int op, expdesc *v1, expdesc *v2) {
       case '*': luaK_0(fs, OP_MULT, -1); break;
       case '/': luaK_0(fs, OP_DIV, -1); break;
       case '^': luaK_0(fs, OP_POW, -1); break;
-      case TK_CONC: luaK_conc(fs); break;
+      case TK_CONCAT: luaK_conc(fs); break;
       case TK_EQ: luaK_eq(fs); break;
       case TK_NE: luaK_neq(fs); break;
       case '>': luaK_S(fs, OP_JMPGT, NO_JUMP, -2); break;

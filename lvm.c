@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.98 2000/03/29 20:19:20 roberto Exp roberto $
+** $Id: lvm.c,v 1.99 2000/04/04 20:48:44 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -231,6 +231,13 @@ static void call_arith (lua_State *L, StkId top, IMS event) {
 }
 
 
+static void addK (lua_State *L, StkId top, int k) {
+  ttype(top) = TAG_NUMBER;
+  nvalue(top) = (Number)k;
+  call_arith(L, top+1, IM_ADD);
+}
+
+
 static int luaV_strcomp (const TString *ls, const TString *rs) {
   const char *l = ls->str;
   long ll = ls->u.s.len;
@@ -403,7 +410,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, register StkId base) {
         *top++ = cl->consts[GETARG_U(i)];
         break;
 
-      case OP_PUSHLOCAL:
+      case OP_GETLOCAL:
         *top++ = *(base+GETARG_U(i));
         break;
 
@@ -420,6 +427,12 @@ StkId luaV_execute (lua_State *L, const Closure *cl, register StkId base) {
       case OP_GETDOTTED:
         ttype(top) = TAG_STRING;
         tsvalue(top++) = kstr[GETARG_U(i)];
+        luaV_gettable(L, top);
+        top--;
+        break;
+
+      case OP_GETINDEXED:
+        *top++ = *(base+GETARG_U(i));
         luaV_gettable(L, top);
         top--;
         break;
@@ -443,7 +456,8 @@ StkId luaV_execute (lua_State *L, const Closure *cl, register StkId base) {
         break;
 
       case OP_SETLOCAL:
-        *(base+GETARG_U(i)) = *(--top);
+        *(base+GETARG_A(i)) = *(top-1);
+        top -= GETARG_B(i);
         break;
 
       case OP_SETGLOBAL:
@@ -451,14 +465,9 @@ StkId luaV_execute (lua_State *L, const Closure *cl, register StkId base) {
         top--;
         break;
 
-      case OP_SETTABLEPOP:
-        luaV_settable(L, top-3, top);
-        top -= 3;  /* pop table, index, and value */
-        break;
-
       case OP_SETTABLE:
-        luaV_settable(L, top-3-GETARG_U(i), top);
-        top--;  /* pop value */
+        luaV_settable(L, top-GETARG_A(i), top);
+        top -= GETARG_B(i);  /* pop values */
         break;
 
       case OP_SETLIST: {
@@ -496,9 +505,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, register StkId base) {
         int n = GETARG_sA(i);
         if (tonumber(var)) {
           *top = *var;  /* PUSHLOCAL */
-          ttype(top+1) = TAG_NUMBER;
-          nvalue(top+1) = (Number)n;  /* PUSHINT */
-          call_arith(L, top+2, IM_ADD);
+          addK(L, top+1, n);
           *var = *top;  /* SETLOCAL */
         }
         else
@@ -507,11 +514,8 @@ StkId luaV_execute (lua_State *L, const Closure *cl, register StkId base) {
       }
 
       case OP_ADDI:
-        if (tonumber(top-1)) {
-          ttype(top) = TAG_NUMBER;
-          nvalue(top) = (Number)GETARG_S(i);
-          call_arith(L, top+1, IM_ADD);
-        }
+        if (tonumber(top-1))
+          addK(L, top, GETARG_S(i));
         else
           nvalue(top-1) += (Number)GETARG_S(i);
         break;
@@ -545,7 +549,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, register StkId base) {
         top--;
         break;
 
-      case OP_CONC: {
+      case OP_CONCAT: {
         int n = GETARG_U(i);
         strconc(L, n, top);
         top -= n-1;
@@ -569,7 +573,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, register StkId base) {
         nvalue(top-1) = 1;
         break;
 
-      case OP_JMPNEQ:
+      case OP_JMPNE:
         top -= 2;
         if (!luaO_equalObj(top, top+1)) pc += GETARG_S(i);
         break;

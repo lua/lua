@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.76 2000/04/05 17:51:58 roberto Exp roberto $
+** $Id: lparser.c,v 1.77 2000/04/06 17:36:52 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -751,7 +751,7 @@ static int get_priority (int op, int *rp) {
 
     case  '+': case  '-': *rp = 5; return 5;
 
-    case  TK_CONC: *rp = 3; return 4;  /* right associative (?) */
+    case  TK_CONCAT: *rp = 3; return 4;  /* right associative (?) */
 
     case TK_EQ: case  TK_NE: case  '>': case  '<': case  TK_LE: case  TK_GE:
       *rp = 2; return 2;
@@ -832,13 +832,11 @@ static int assignment (LexState *ls, expdesc *v, int nvars) {
     nexps = explist1(ls);
     adjust_mult_assign(ls, nvars, nexps);
   }
-  if (v->k != VINDEXED || left+(nvars-1) == 0) {
-    /* global/local var or indexed var without values in between */
+  if (v->k != VINDEXED)
     luaK_storevar(ls, v);
-  }
-  else {  /* indexed var with values in between*/
-    luaK_U(ls->fs, OP_SETTABLE, left+(nvars-1), -1);
-    left += 2;  /* table&index are not popped, because they aren't on top */
+  else {  /* there may be garbage between table-index and value */
+    luaK_AB(ls->fs, OP_SETTABLE, left+nvars+2, 1, -1);
+    left += 2;
   }
   return left;
 }
