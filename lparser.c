@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.5 2004/05/31 18:51:50 roberto Exp $
+** $Id: lparser.c,v 2.6 2004/10/04 19:01:53 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -157,7 +157,7 @@ static void checkname(LexState *ls, expdesc *e) {
 }
 
 
-static int luaI_registerlocalvar (LexState *ls, TString *varname) {
+static int registerlocalvar (LexState *ls, TString *varname) {
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
   int oldsize = f->sizelocvars;
@@ -177,8 +177,7 @@ static int luaI_registerlocalvar (LexState *ls, TString *varname) {
 static void new_localvar (LexState *ls, TString *name, int n) {
   FuncState *fs = ls->fs;
   luaY_checklimit(fs, fs->nactvar+n+1, MAXVARS, "local variables");
-  fs->actvar[fs->nactvar+n] = cast(unsigned short,
-                                   luaI_registerlocalvar(ls, name));
+  fs->actvar[fs->nactvar+n] = cast(unsigned short, registerlocalvar(ls, name));
 }
 
 
