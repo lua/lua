@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.50 2000/09/05 19:33:32 roberto Exp roberto $
+** $Id: lua.c,v 1.51 2000/09/11 19:42:57 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -16,8 +16,7 @@
 #include "lualib.h"
 
 
-lua_State *lua_state = NULL;
-#define L	lua_state
+static lua_State *L = NULL;
 
 
 #ifndef PROMPT
