@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.29 1998/05/31 22:18:24 roberto Exp roberto $
+** $Id: lvm.c,v 1.30 1998/06/11 18:21:37 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -112,7 +112,7 @@ void luaV_gettable (void)
     im = luaT_getim(tg, IM_GETTABLE);
     if (ttype(im) == LUA_T_NIL) {  /* and does not have a "gettable" method */
       TObject *h = luaH_get(avalue(S->top-2), S->top-1);
-      if (h != NULL && ttype(h) != LUA_T_NIL) {
+      if (ttype(h) != LUA_T_NIL) {
         --S->top;
         *(S->top-1) = *h;
       }
@@ -242,8 +242,8 @@ static int strcomp (char *l, long ll, char *r, long lr)
   }
 }
 
-static void comparison (lua_Type ttype_less, lua_Type ttype_equal,
-                        lua_Type ttype_great, IMS op)
+void luaV_comparison (lua_Type ttype_less, lua_Type ttype_equal,
+                      lua_Type ttype_great, IMS op)
 {
   struct Stack *S = &L->stack;
   TObject *l = S->top-2;
@@ -269,22 +269,19 @@ void luaV_pack (StkId firstel, int nvararg, TObject *tab)
 {
   TObject *firstelem = L->stack.stack+firstel;
   int i;
+  Hash *htab;
   if (nvararg < 0) nvararg = 0;
-  avalue(tab)  = luaH_new(nvararg+1);  /* +1 for field 'n' */
+  htab = avalue(tab) = luaH_new(nvararg+1);  /* +1 for field 'n' */
   ttype(tab) = LUA_T_ARRAY;
-  for (i=0; i<nvararg; i++) {
-    TObject index;
-    ttype(&index) = LUA_T_NUMBER;
-    nvalue(&index) = i+1;
-    *(luaH_set(avalue(tab), &index)) = *(firstelem+i);
-  }
+  for (i=0; i<nvararg; i++)
+    luaH_setint(htab, i+1, firstelem+i);
   /* store counter in field "n" */ {
     TObject index, extra;
     ttype(&index) = LUA_T_STRING;
     tsvalue(&index) = luaS_new("n");
     ttype(&extra) = LUA_T_NUMBER;
     nvalue(&extra) = nvararg;
-    *(luaH_set(avalue(tab), &index)) = extra;
+    *(luaH_set(htab, &index)) = extra;
   }
 }
 
@@ -528,19 +525,19 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base)
       }
 
        case LTOP:
-         comparison(LUA_T_NUMBER, LUA_T_NIL, LUA_T_NIL, IM_LT);
+         luaV_comparison(LUA_T_NUMBER, LUA_T_NIL, LUA_T_NIL, IM_LT);
          break;
 
       case LEOP:
-        comparison(LUA_T_NUMBER, LUA_T_NUMBER, LUA_T_NIL, IM_LE);
+        luaV_comparison(LUA_T_NUMBER, LUA_T_NUMBER, LUA_T_NIL, IM_LE);
         break;
 
       case GTOP:
-        comparison(LUA_T_NIL, LUA_T_NIL, LUA_T_NUMBER, IM_GT);
+        luaV_comparison(LUA_T_NIL, LUA_T_NIL, LUA_T_NUMBER, IM_GT);
         break;
 
       case GEOP:
-        comparison(LUA_T_NIL, LUA_T_NUMBER, LUA_T_NUMBER, IM_GE);
+        luaV_comparison(LUA_T_NIL, LUA_T_NUMBER, LUA_T_NUMBER, IM_GE);
         break;
 
       case ADDOP: {

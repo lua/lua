@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.31 1998/06/19 18:47:06 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.32 1998/06/29 18:24:06 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -23,6 +23,7 @@
 #include "ltm.h"
 #include "lua.h"
 #include "lundump.h"
+#include "lvm.h"
 
 
 
@@ -35,18 +36,17 @@ static void pushstring (TaggedString *s)
 }
 
 
-static void nextvar (void)
-{
+static void nextvar (void) {
   TObject *o = luaA_Address(luaL_nonnullarg(1));
   TaggedString *g;
   if (ttype(o) == LUA_T_NIL)
-    g = (TaggedString *)L->rootglobal.next;
+    g = (TaggedString *)L->rootglobal.next;  /* first variable */
   else {
     luaL_arg_check(ttype(o) == LUA_T_STRING, 1, "variable name expected");
-    g = tsvalue(o);
+    g = tsvalue(o);  /* find given variable name */
     /* check whether name is in global var list */
     luaL_arg_check((GCnode *)g != g->head.next, 1, "variable name expected");
-    g = (TaggedString *)g->head.next;
+    g = (TaggedString *)g->head.next;  /* get next */
   }
   while (g && g->u.s.globalval.ttype == LUA_T_NIL)  /* skip globals with nil */
     g = (TaggedString *)g->head.next;
@@ -54,26 +54,26 @@ static void nextvar (void)
     pushstring(g);
     luaA_pushobject(&g->u.s.globalval);
   }
-  else lua_pushnil();
+  else lua_pushnil();  /* no more globals */
 }
 
 
-static void foreachvar (void)
-{
+static void foreachvar (void) {
   TObject f = *luaA_Address(luaL_functionarg(1));
   GCnode *g;
   StkId name = L->Cstack.base++;  /* place to keep var name (to avoid GC) */
+  luaD_checkstack(4);  /* for var name, f, s, and globalvar */
   ttype(L->stack.stack+name) = LUA_T_NIL;
-  L->stack.top++;
+  L->stack.top++;  /* top == base */
   for (g = L->rootglobal.next; g; g = g->next) {
     TaggedString *s = (TaggedString *)g;
     if (s->u.s.globalval.ttype != LUA_T_NIL) {
       ttype(L->stack.stack+name) = LUA_T_STRING;
       tsvalue(L->stack.stack+name) = s;  /* keep s on stack to avoid GC */
-      luaA_pushobject(&f);
+      *(L->stack.top++) = f;
       pushstring(s);
-      luaA_pushobject(&s->u.s.globalval);
-      luaD_call((L->stack.top-L->stack.stack)-2, 1);
+      *(L->stack.top++) = s->u.s.globalval;
+      luaD_calln(2, 1);
       if (ttype(L->stack.top-1) != LUA_T_NIL)
         return;
       L->stack.top--;
@@ -82,11 +82,9 @@ static void foreachvar (void)
 }
 
 
-static void next (void)
-{
-  lua_Object o = luaL_tablearg(1);
-  lua_Object r = luaL_nonnullarg(2);
-  Node *n = luaH_next(luaA_Address(o), luaA_Address(r));
+static void next (void) {
+  Node *n = luaH_next(luaA_Address(luaL_tablearg(1)),
+                      luaA_Address(luaL_nonnullarg(2)));
   if (n) {
     luaA_pushobject(&n->ref);
     luaA_pushobject(&n->val);
@@ -95,18 +93,18 @@ static void next (void)
 }
 
 
-static void foreach (void)
-{
+static void foreach (void) {
   TObject t = *luaA_Address(luaL_tablearg(1));
   TObject f = *luaA_Address(luaL_functionarg(2));
   int i;
+  luaD_checkstack(3);  /* for f, ref, and val */
   for (i=0; i<avalue(&t)->nhash; i++) {
     Node *nd = &(avalue(&t)->node[i]);
     if (ttype(ref(nd)) != LUA_T_NIL && ttype(val(nd)) != LUA_T_NIL) {
-      luaA_pushobject(&f);
-      luaA_pushobject(ref(nd));
-      luaA_pushobject(val(nd));
-      luaD_call((L->stack.top-L->stack.stack)-2, 1);
+      *(L->stack.top++) = f;
+      *(L->stack.top++) = *ref(nd);
+      *(L->stack.top++) = *val(nd);
+      luaD_calln(2, 1);
       if (ttype(L->stack.top-1) != LUA_T_NIL)
         return;
       L->stack.top--;
@@ -138,8 +136,8 @@ static void internaldofile (void)
 
 static void to_string (void) {
   lua_Object obj = lua_getparam(1);
-  char *buff = luaL_openspace(30);
   TObject *o = luaA_Address(obj);
+  char buff[32];
   switch (ttype(o)) {
     case LUA_T_NUMBER:
       lua_pushstring(lua_getstring(obj));
@@ -184,10 +182,10 @@ static void luaI_print (void) {
   while ((obj = lua_getparam(i++)) != LUA_NOOBJECT) {
     luaA_pushobject(&ts->u.s.globalval);
     lua_pushobject(obj);
-    luaD_call((L->stack.top-L->stack.stack)-1, 1);
+    luaD_calln(1, 1);
     if (ttype(L->stack.top-1) != LUA_T_STRING)
       lua_error("`tostring' must return a string to `print'");
-    printf("%s\t", svalue(L->stack.top-1));
+    printf("%.200s\t", svalue(L->stack.top-1));
     L->stack.top--;
   }
   printf("\n");
@@ -197,12 +195,12 @@ static void luaI_print (void) {
 static void luaI_type (void)
 {
   lua_Object o = luaL_nonnullarg(1);
-  lua_pushstring(luaO_typenames[-ttype(luaA_Address(o))]);
+  lua_pushstring(luaO_typename(luaA_Address(o)));
   lua_pushnumber(lua_tag(o));
 }
 
 
-static void tonumber (void)
+static void luaB_tonumber (void)
 {
   int base = luaL_opt_number(2, 10);
   if (base == 10) {  /* standard conversion */
@@ -270,16 +268,30 @@ static void luatag (void)
 }
 
 
-static int getnarg (lua_Object table)
-{
+static int getsize (TObject *t) {
+  int max = 0;
+  int i;
+  Hash *h = avalue(t);
+  LUA_ASSERT(ttype(t) == LUA_T_ARRAY, "table expected");
+  for (i = 0; i<nhash(h); i++) {
+    Node *n = h->node+i;
+    if (ttype(ref(n)) == LUA_T_NUMBER && ttype(val(n)) != LUA_T_NIL &&
+                                         (int)nvalue(ref(n)) > max)
+      max = nvalue(ref(n));
+  }
+  return max;
+}
+
+
+static int getnarg (lua_Object table) {
   lua_Object temp;
   /* temp = table.n */
   lua_pushobject(table); lua_pushstring("n"); temp = lua_rawgettable();
-  return (lua_isnumber(temp) ? lua_getnumber(temp) : MAX_INT);
+  return (lua_isnumber(temp) ? lua_getnumber(temp) :
+                               getsize(luaA_Address(table)));
 }
 
-static void luaI_call (void)
-{
+static void luaI_call (void) {
   lua_Object f = luaL_nonnullarg(1);
   lua_Object arg = luaL_tablearg(2);
   char *options = luaL_opt_string(3, "");
@@ -291,14 +303,9 @@ static void luaI_call (void)
     err = lua_seterrormethod();
   }
   /* push arg[1...n] */
-  for (i=0; i<narg; i++) {
-    lua_Object temp;
-    /* temp = arg[i+1] */
-    lua_pushobject(arg); lua_pushnumber(i+1); temp = lua_rawgettable();
-    if (narg == MAX_INT && lua_isnil(temp))
-      break;
-    lua_pushobject(temp);
-  }
+  luaD_checkstack(narg);
+  for (i=0; i<narg; i++)
+    *(L->stack.top++) = *luaH_getint(avalue(luaA_Address(arg)), i+1);
   status = lua_callfunction(f);
   if (err != LUA_NOOBJECT) {  /* restore old error method */
     lua_pushobject(err);
@@ -312,7 +319,7 @@ static void luaI_call (void)
     else
       lua_error(NULL);
   }
-  else { /* no errors */
+  else {  /* no errors */
     if (strchr(options, 'p'))
       luaA_packresults();
     else
@@ -387,6 +394,79 @@ static void seterrormethod (void)
 static void luaI_collectgarbage (void)
 {
   lua_pushnumber(lua_collectgarbage(luaL_opt_number(1, 0)));
+}
+
+
+
+static void swap (Hash *a, int i, int j) {
+  /* notice: must use two temporary vars, because luaH_setint may cause a
+     rehash and change the addresses of values in the array */
+  TObject ai = *luaH_getint(a, i);
+  TObject aj = *luaH_getint(a, j);
+  luaH_setint(a, i, &aj);
+  luaH_setint(a, j, &ai);
+}
+
+static int sort_comp (TObject *f, TObject *a, TObject *b) {
+  /* notice: the caller (auxsort) must check stack space */
+  if (f) {
+    *(L->stack.top++) = *f;
+    *(L->stack.top++) = *a;
+    *(L->stack.top++) = *b;
+    luaD_calln(2, 1);
+  }
+  else {  /* a < b? */
+    *(L->stack.top++) = *a;
+    *(L->stack.top++) = *b;
+    luaV_comparison(LUA_T_NUMBER, LUA_T_NIL, LUA_T_NIL, IM_LT);
+  }
+  return ttype(--(L->stack.top)) != LUA_T_NIL;
+}
+
+/*
+** quicksort algorithm from "Programming Pearls", pg. 112
+*/
+static void auxsort (Hash *a, int l, int u, TObject *f) {
+  if (u <= l) return;  /* 0 or 1 element */
+  luaD_checkstack(4);  /* for pivot, f, a, b (sort_comp) */
+  if (u-l == 1) {  /* only two elements? */
+    if (sort_comp(f, luaH_getint(a, u), luaH_getint(a, l)))  /* a[u] < a[l]? */
+      swap(a, l, u);
+  }
+  else {
+    int i;
+    int m = l;
+    swap(a, l, (l+u)/2);  /* put middle element as pivot (a[l]) */
+    *(L->stack.top++) = *luaH_getint(a, l);  /* save pivot on stack (for GC) */
+    for  (i=l+1; i<=u; i++) {
+      /* invariant: a[l+1..m] < P <= a[m+1..i-1] */
+      if (sort_comp(f, luaH_getint(a, i), L->stack.top-1)) {  /* a[i] < P? */
+        m++;
+        swap(a, m, i);
+      }
+    }
+    L->stack.top--;  /* remove pivot from stack */
+    swap(a, l, m);
+    /* a[l..m-1] < a[m] <= a[m+1..u] */
+    auxsort(a, l, m-1, f);
+    auxsort(a, m+1, u, f);
+  }
+}
+
+static void luaB_sort (void) {
+  lua_Object t = luaL_tablearg(1);
+  int n = getnarg(t);
+  Hash *a = avalue(luaA_Address(t));
+  lua_Object func = lua_getparam(2);
+  TObject *f;
+  if (func == LUA_NOOBJECT)
+    f = NULL;
+  else {
+    luaL_arg_check(lua_isfunction(func), 2, "function expected");
+    f = luaA_Address(func);
+  }
+  auxsort(a, 1, n, f);
+  lua_pushobject(t);
 }
 
 
@@ -504,7 +584,8 @@ static struct luaL_reg int_funcs[] = {
   {"settagmethod", settagmethod},
   {"gettagmethod", gettagmethod},
   {"settag", settag},
-  {"tonumber", tonumber},
+  {"sort", luaB_sort},
+  {"tonumber", luaB_tonumber},
   {"tostring", to_string},
   {"tag", luatag},
   {"type", luaI_type}

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 1.3 1997/10/16 10:59:34 roberto Exp roberto $
+** $Id: lvm.h,v 1.4 1997/12/15 16:17:20 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -10,6 +10,7 @@
 
 #include "ldo.h"
 #include "lobject.h"
+#include "ltm.h"
 
 
 #define tonumber(o) ((ttype(o) != LUA_T_NUMBER) && (luaV_tonumber(o) != 0))
@@ -25,5 +26,7 @@ void luaV_getglobal (TaggedString *ts);
 void luaV_setglobal (TaggedString *ts);
 StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base);
 void luaV_closure (int nelems);
+void luaV_comparison (lua_Type ttype_less, lua_Type ttype_equal,
+                      lua_Type ttype_great, IMS op);
 
 #endif
