@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.42 1997/05/08 20:43:30 roberto Exp roberto $";
+char *rcs_hash="$Id: hash.c,v 2.43 1997/05/14 18:38:29 roberto Exp roberto $";
 
 
 #include "luamem.h"
@@ -327,6 +327,11 @@ void lua_next (void)
   t = avalue(luaI_Address(o));
   if (lua_isnil(r))
     hashnext(t, 0);
-  else
-    hashnext(t, present(t, luaI_Address(r))+1);
+  else {
+    int i = present(t, luaI_Address(r));
+    Node *n = node(t, i);
+    luaL_arg_check(ttype(ref(n))!=LUA_T_NIL && ttype(val(n))!=LUA_T_NIL,
+                   2, "key not found");
+    hashnext(t, i+1);
+  }
 }
