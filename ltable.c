@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.10 1998/01/09 14:44:55 roberto Exp roberto $
+** $Id: ltable.c,v 1.11 1998/01/13 18:06:27 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -121,36 +121,36 @@ Hash *luaH_new (int nhash)
 }
 
 
-/*
-** Rehash:
-** Check if table has deleted slots. It it has, it does not need to
-** grow, since rehash will reuse them.
-*/
-static int emptyslots (Hash *t)
+static int newsize (Hash *t)
 {
+  Node *v = t->node;
+  int size = nhash(t);
+  int realuse = 0;
   int i;
-  for (i=nhash(t)-1; i>=0; i--) {
-    Node *n = node(t, i);
-    if (ttype(ref(n)) != LUA_T_NIL && ttype(val(n)) == LUA_T_NIL)
-      return 1;
+  for (i=0; i<size; i++) {
+    if (ttype(ref(v+i)) != LUA_T_NIL && ttype(val(v+i)) != LUA_T_NIL)
+      realuse++;
   }
-  return 0;
+  if (2*(realuse+1) <= size)  /* +1 is the new element */
+    return size;  /* don't need to grow, just rehash */
+  else
+    return luaO_redimension(size);
 }
 
 static void rehash (Hash *t)
 {
-  int   nold = nhash(t);
+  int nold = nhash(t);
   Node *vold = nodevector(t);
+  int nnew = newsize(t);
   int i;
-  if (!emptyslots(t))
-    nhash(t) = luaO_redimension(nhash(t));
-  nodevector(t) = hashnodecreate(nhash(t));
+  nodevector(t) = hashnodecreate(nnew);
+  nhash(t) = nnew;
   for (i=0; i<nold; i++) {
     Node *n = vold+i;
     if (ttype(ref(n)) != LUA_T_NIL && ttype(val(n)) != LUA_T_NIL)
       *node(t, present(t, ref(n))) = *n;  /* copy old node to luaM_new hash */
   }
-  L->nblocks += gcsize(t->nhash)-gcsize(nold);
+  L->nblocks += gcsize(nnew)-gcsize(nold);
   luaM_free(vold);
 }
 

@@ -21,11 +21,15 @@ Mon Jan 19 18:17:18 EDT 1998
 
 ** lstrlib.c
 Tue Jan 27 15:27:49 EDT 1998
->> formats like "%020d" were considered too big (3 algarithms); moreover,
+>> formats like "%020d" were considered too big (3 digits); moreover,
 >> some sistems limit printf to at most 500 chars, so we can limit sizes
 >> to 2 digits (99).
 
 ** lapi.c
 Tue Jan 27 17:12:36 EDT 1998
 >> "lua_getstring" may create a new string, so should check GC
+
+** lstring.c / ltable.c
+Wed Jan 28 14:48:12 EDT 1998
+>> tables can become full of "emptys" slots, and keep growing without limits.
 

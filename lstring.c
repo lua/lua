@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.9 1997/12/30 19:15:52 roberto Exp roberto $
+** $Id: lstring.c,v 1.10 1998/01/13 18:06:27 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -50,26 +50,43 @@ static unsigned long hash (char *s, int tag)
 }
 
 
+static int newsize (stringtable *tb)
+{
+  int size = tb->size;
+  int realuse = 0;
+  int i;
+  /* count how many entries are really in use */
+  for (i=0; i<size; i++)
+    if (tb->hash[i] != NULL && tb->hash[i] != &EMPTY)
+      realuse++;
+  if (2*(realuse+1) <= size)  /* +1 is the new element */
+    return size;  /* don't need to grow, just rehash to clear EMPTYs */
+  else
+    return luaO_redimension(size);
+}
+
+
 static void grow (stringtable *tb)
 {
-  int newsize = luaO_redimension(tb->size);
-  TaggedString **newhash = luaM_newvector(newsize, TaggedString *);
+  
+  int ns = newsize(tb);
+  TaggedString **newhash = luaM_newvector(ns, TaggedString *);
   int i;
-  for (i=0; i<newsize; i++)
+  for (i=0; i<ns; i++)
     newhash[i] = NULL;
   /* rehash */
   tb->nuse = 0;
   for (i=0; i<tb->size; i++) {
     if (tb->hash[i] != NULL && tb->hash[i] != &EMPTY) {
-      int h = tb->hash[i]->hash%newsize;
+      int h = tb->hash[i]->hash%ns;
       while (newhash[h])
-        h = (h+1)%newsize;
+        h = (h+1)%ns;
       newhash[h] = tb->hash[i];
       tb->nuse++;
     }
   }
   luaM_free(tb->hash);
-  tb->size = newsize;
+  tb->size = ns;
   tb->hash = newhash;
 }
 
@@ -86,7 +103,7 @@ static TaggedString *newone (char *buff, int tag, unsigned long h)
     L->nblocks += gcsizestring(l);
   }
   else {
-    ts = (TaggedString *)luaM_malloc(sizeof(TaggedString));
+    ts = luaM_new(TaggedString);
     ts->u.d.v = buff;
     ts->u.d.tag = tag == LUA_ANYTAG ? 0 : tag;
     ts->constindex = -1;  /* tag -> this is a userdata */
