@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.40 1997/04/06 14:08:08 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.41 1997/04/06 14:17:06 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -106,9 +106,12 @@ static void str_len (void)
 static void str_sub (void)
 {
   char *s = luaL_check_string(1);
+  long l = strlen(s);
   long start = (long)luaL_check_number(2);
-  long end = (long)luaL_opt_number(3, strlen(s));
-  if (1 <= start && start <= end && end <= strlen(s)) {
+  long end = (long)luaL_opt_number(3, -1);
+  if (start < 0) start = l+start+1;
+  if (end < 0) end = l+end+1;
+  if (1 <= start && start <= end && end <= l) {
     luaI_emptybuff();
     addnchar(s+start-1, end-start+1);
     lua_pushstring(luaI_addchar(0));
