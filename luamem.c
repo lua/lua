@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_mem = "$Id: mem.c,v 1.7 1996/02/04 16:59:12 roberto Exp roberto $";
+char *rcs_mem = "$Id: mem.c,v 1.8 1996/02/22 20:34:33 roberto Exp roberto $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -51,5 +51,15 @@ void *luaI_realloc (void *oldblock, unsigned long size)
   if (block == NULL)
     mem_error();
   return block;
+}
+
+
+void* luaI_buffer (unsigned long size)
+{
+  static unsigned long buffsize = 0;
+  static char* buffer = NULL;
+  if (size > buffsize)
+    buffer = luaI_realloc(buffer, buffsize=size);
+  return buffer;
 }
 
