@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.113 2002/12/04 15:38:25 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.114 2002/12/04 17:38:31 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -242,8 +242,16 @@ static int luaB_ipairs (lua_State *L) {
 }
 
 
-static int passresults (lua_State *L, int status) {
-  if (status == 0) return 1;
+static int load_aux (lua_State *L, int status) {
+  if (status == 0) {  /* OK? */
+    lua_Debug ar;
+    lua_getstack(L, 1, &ar);
+    lua_getinfo(L, "f", &ar);  /* get calling function */
+    lua_getglobals(L, -1);  /* get its global table */
+    lua_setglobals(L, -3);  /* set it as the global table of the new chunk */
+    lua_pop(L, 1);  /* remove calling function */
+    return 1;
+  }
   else {
     lua_pushnil(L);
     lua_insert(L, -2);
@@ -256,13 +264,13 @@ static int luaB_loadstring (lua_State *L) {
   size_t l;
   const char *s = luaL_checklstring(L, 1, &l);
   const char *chunkname = luaL_optstring(L, 2, s);
-  return passresults(L, luaL_loadbuffer(L, s, l, chunkname));
+  return load_aux(L, luaL_loadbuffer(L, s, l, chunkname));
 }
 
 
 static int luaB_loadfile (lua_State *L) {
   const char *fname = luaL_optstring(L, 1, NULL);
-  return passresults(L, luaL_loadfile(L, fname));
+  return load_aux(L, luaL_loadfile(L, fname));
 }
 
 
