@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.56 1996/06/18 21:12:23 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.57 1996/07/12 20:00:26 roberto Exp roberto $";
 
 #include "mem.h"
 #include "opcode.h"
@@ -60,13 +60,16 @@ static struct {
 void luaI_initsymbol (void)
 {
   int i;
+  Word n;
   lua_maxsymbol = BUFFER_BLOCK;
   lua_table = newvector(lua_maxsymbol, Symbol);
   for (i=0; i<INTFUNCSIZE; i++)
   {
-    Word n = luaI_findsymbolbyname(int_funcs[i].name);
+    n = luaI_findsymbolbyname(int_funcs[i].name);
     s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = int_funcs[i].func;
   }
+  n = luaI_findsymbolbyname("_VERSION_");
+  s_tag(n) = LUA_T_STRING; s_tsvalue(n) = lua_createstring(LUA_VERSION);
 }
 
 
