@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.17 2005/03/09 16:28:07 roberto Exp roberto $
+** $Id: ldo.c,v 2.18 2005/03/16 20:02:48 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -135,7 +135,7 @@ void luaD_reallocstack (lua_State *L, int newsize) {
 void luaD_reallocCI (lua_State *L, int newsize) {
   CallInfo *oldci = L->base_ci;
   luaM_reallocvector(L, L->base_ci, L->size_ci, newsize, CallInfo);
-  L->size_ci = cast(unsigned short, newsize);
+  L->size_ci = newsize;
   L->ci = (L->ci - oldci) + L->base_ci;
   L->end_ci = L->base_ci + L->size_ci - 1;
 }
@@ -436,7 +436,7 @@ LUA_API int lua_yield (lua_State *L, int nresults) {
 int luaD_pcall (lua_State *L, Pfunc func, void *u,
                 ptrdiff_t old_top, ptrdiff_t ef) {
   int status;
-  unsigned short oldnCcalls = L->nCcalls;
+  int oldnCcalls = L->nCcalls;
   ptrdiff_t old_ci = saveci(L, L->ci);
   lu_byte old_allowhooks = L->allowhook;
   ptrdiff_t old_errfunc = L->errfunc;
