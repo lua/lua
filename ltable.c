@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.18 1999/01/22 18:47:23 roberto Exp roberto $
+** $Id: ltable.c,v 1.19 1999/01/25 12:30:11 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -53,21 +53,17 @@ static long int hashindex (TObject *ref) {
 }
 
 
-Node *luaH_present (Hash *t, TObject *ref) {
+Node *luaH_present (Hash *t, TObject *key) {
   int tsize = nhash(t);
-  long int h = hashindex(ref);
+  long int h = hashindex(key);
   int h1 = h%tsize;
   Node *n = node(t, h1);
-  /* keep looking until an entry with "ref" equal to ref or nil */
-  if ((ttype(ref(n)) == ttype(ref) ? !luaO_equalval(ref, ref(n))
-                                   : ttype(ref(n)) != LUA_T_NIL)) {
-    int h2 = h%(tsize-2) + 1;
-    do {
-      h1 += h2;
-      if (h1 >= tsize) h1 -= tsize;
-      n = node(t, h1);
-    } while ((ttype(ref(n)) == ttype(ref) ? !luaO_equalval(ref, ref(n))
-                                          : ttype(ref(n)) != LUA_T_NIL));
+  /* keep looking until an entry with "ref" equal to key or nil */
+  while ((ttype(ref(n)) == ttype(key)) ? !luaO_equalval(key, ref(n))
+                                       : ttype(ref(n)) != LUA_T_NIL) {
+    h1 += (h&(tsize-2)) + 1;  /* double hashing */
+    if (h1 >= tsize) h1 -= tsize;
+    n = node(t, h1);
   }
   return n;
 }
@@ -139,21 +135,20 @@ static void rehash (Hash *t) {
 }
 
 
-/*
-** If the hash node is present, return its pointer, otherwise create a new
-** node for the given reference and also return its pointer.
-*/
-TObject *luaH_set (Hash *t, TObject *ref) {
+void luaH_set (Hash *t, TObject *ref, TObject *val) {
   Node *n = luaH_present(t, ref);
-  if (ttype(ref(n)) == LUA_T_NIL) {
+  if (ttype(ref(n)) != LUA_T_NIL)
+    *val(n) = *val;
+  else {
+    TObject buff = *val;  /* rehash may invalidate this address */
     if ((long)nuse(t)*3L > (long)nhash(t)*2L) {
       rehash(t);
       n = luaH_present(t, ref);
     }
     nuse(t)++;
     *ref(n) = *ref;
+    *val(n) = buff;
   }
-  return (val(n));
 }
 
 
@@ -186,7 +181,7 @@ void luaH_setint (Hash *t, int ref, TObject *val) {
   TObject index;
   ttype(&index) = LUA_T_NUMBER;
   nvalue(&index) = ref;
-  *(luaH_set(t, &index)) = *val;
+  luaH_set(t, &index, val);
 }
 
 
@@ -197,13 +192,3 @@ TObject *luaH_getint (Hash *t, int ref) {
   return luaH_get(t, &index);
 }
 
-
-void luaH_move (Hash *t, int from, int to) {
-  TObject index;
-  TObject *toadd;
-  ttype(&index) = LUA_T_NUMBER;
-  nvalue(&index) = to;
-  toadd = luaH_set(t, &index);
-  nvalue(&index) = from;
-  *toadd = *luaH_get(t, &index);
-}
