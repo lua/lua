@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.38 1996/03/12 13:14:52 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.38 1996/03/12 15:56:03 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -29,6 +29,14 @@ int pclose();
 #define pclose(x)  (-1)
 #endif
 
+
+static void pushresult (int i)
+{
+  if (i)
+    lua_pushnumber (1);
+  else
+   lua_pushnil();
+}
 
 static void closeread (void)
 {
@@ -373,16 +381,8 @@ static int write_string (char *s, int just, int m)
 
 static int write_quoted (int just, int m)
 {
-  char *s;
   luaI_addchar(0);
-  luaI_addchar('"');
-  for (s = lua_check_string(1, "write"); *s; s++)
-  {
-    if (*s == '"' || *s == '\\' || *s == '\n')
-      luaI_addchar('\\');
-    luaI_addchar(*s);
-  }
-  luaI_addchar('"');
+  luaI_addquoted(lua_check_string(1, "write"));
   return write_string(luaI_addchar(0), just, m);
 }
 
@@ -472,10 +472,19 @@ static void io_execute (void)
 */
 static void io_remove  (void)
 {
- if (remove(lua_check_string(1, "remove")) == 0)
-   lua_pushnumber (1);
- else
-   lua_pushnil();
+  pushresult(remove(lua_check_string(1, "remove")) == 0);
+}
+
+static void io_rename (void)
+{
+  char *f1 = lua_check_string(1, "rename");
+  char *f2 = lua_check_string(2, "rename");
+  pushresult(rename(f1, f2) == 0);
+}
+
+static void io_tmpname (void)
+{
+  lua_pushstring(tmpnam(NULL));
 }
 
 static void io_errorno (void)
@@ -490,8 +499,7 @@ static void io_errorno (void)
 static void io_getenv (void)
 {
  char *env = getenv(lua_check_string(1, "getenv"));
- if (env == NULL) lua_pushnil();
- else             lua_pushstring(env); 
+ lua_pushstring(env);  /* if NULL push nil */
 }
 
 /*
@@ -602,6 +610,8 @@ void iolib_open (void)
  lua_register ("write",    io_write);
  lua_register ("execute",  io_execute);
  lua_register ("remove",   io_remove);
+ lua_register ("rename",   io_rename);
+ lua_register ("tmpname",   io_tmpname);
  lua_register ("ioerror",   io_errorno);
  lua_register ("getenv",   io_getenv);
  lua_register ("date",     io_date);
