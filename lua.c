@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.112 2002/12/04 17:28:27 roberto Exp roberto $
+** $Id: lua.c,v 1.113 2002/12/04 17:38:31 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -26,7 +26,7 @@
 #endif
 
 
-#ifdef _POSIX_SOURCE
+#ifdef _POSIX_C_SOURCE
 #include <unistd.h>
 #else
 static int isatty (int x) { return x==0; }  /* assume stdin is a tty */

@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.28 2002/12/04 17:38:31 roberto Exp roberto $
+** $Id: liolib.c,v 2.29 2002/12/20 10:26:33 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -26,6 +26,13 @@
 ** FILE Operations
 ** =======================================================
 */
+
+
+#ifdef _POSIX_C_SOURCE
+#if _POSIX_C_SOURCE >= 2
+#define USE_POPEN
+#endif
+#endif
 
 
 #ifndef USE_POPEN
