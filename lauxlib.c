@@ -27,7 +27,7 @@ LUALIB_API const char *luaL_errstr (int errcode) {
     "run-time error",
     "cannot open file",
     "syntax error",
-    "memory allocation error",
+    "not enough memory",
     "error in error handling"
   };
   return errstr[errcode];
