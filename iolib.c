@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.23 1995/10/11 20:50:56 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.24 1995/10/17 14:12:45 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -617,14 +617,15 @@ static void print_message (void)
     lua_funcinfo(func, &filename, &funcname, &objname, &linedefined);
     if (objname == NULL)
       if (funcname)
-        fprintf(stderr, "\t%s\n", funcname);
+        fprintf(stderr, "\t%s", funcname);
       else
       {
         fprintf(stderr, "\tmain of %s\n", filename);
+        continue;
       }
     else
-      fprintf(stderr, "\t%s:%s\n", objname, funcname);
-/*    fprintf(stderr, "\t(in file: %s)\n", filename); */
+      fprintf(stderr, "\t%s:%s", objname, funcname);
+    fprintf(stderr, "\t(defined in %s)\n", filename);
   }
 }
 

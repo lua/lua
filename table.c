@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.34 1995/10/13 15:16:25 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.35 1995/10/17 11:58:41 roberto Exp roberto $";
 
 #include <string.h>
 
@@ -277,12 +277,16 @@ void luaI_funcInfo (struct Object *func, char **filename, char **funcname,
   {
     /* temporario: */
     cfunc = func->value.f;
-    *filename = "(?)";
-    *objname = 0;
+    *filename = "(C)";
     *linedefined = 0;
     *funcname = lua_travsymbol(checkfunc);
-    if (*funcname == NULL)
+    if (*funcname)
+      *objname = 0;
+    else
+    {
       *funcname = luaI_travfallbacks(checkfunc);
+      *objname = "(FB)";
+    }
   }
 }
 
