@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.47 1999/12/14 18:42:57 roberto Exp roberto $
+** $Id: lparser.c,v 1.48 1999/12/21 17:31:28 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -974,7 +974,7 @@ static void exp1 (LexState *ls) {
   exp0(ls, &v);
   lua_pushvar(ls, &v);
   if (is_in(ls->token, expfollow) < 0)
-    luaX_error(ls, "ill-formed expression");
+    luaX_error(ls, "malformed expression");
 }
 
 
@@ -1282,7 +1282,9 @@ static int assignment (LexState *ls, vardesc *v, int nvars) {
   }
   else {  /* assignment -> '=' explist1 */
     listdesc d;
-    check(ls, '=');
+    if (ls->token != '=')
+      error_unexpected(ls);
+    next(ls);
     explist1(ls, &d);
     adjust_mult_assign(ls, nvars, &d);
   }
