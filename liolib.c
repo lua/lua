@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.80 2000/09/12 13:48:34 roberto Exp roberto $
+** $Id: liolib.c,v 1.81 2000/09/12 13:58:37 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -597,10 +597,12 @@ static int errorfb (lua_State *L) {
   luaL_buffinit(L, &b);
   luaL_addstring(&b, "error: ");
   luaL_addstring(&b, luaL_check_string(L, 1));
-  luaL_addstring(&b, "\nstack traceback:\n");
+  luaL_addstring(&b, "\n");
   while (lua_getstack(L, level++, &ar)) {
     char buff[120];  /* enough to fit following `sprintf's */
-    if (level > LEVELS1 && firstpart) {
+    if (level == 2)
+      luaL_addstring(&b, "stack traceback:\n");
+    else if (level > LEVELS1 && firstpart) {
       /* no more than `LEVELS2' more levels? */
       if (!lua_getstack(L, level+LEVELS2, &ar))
         level--;  /* keep going */
@@ -627,11 +629,11 @@ static int errorfb (lua_State *L) {
         break;
       default: {
         if (*ar.what == 'm')  /* main? */
-          sprintf(buff, "main of %.70s", ar.source_id);
+          sprintf(buff, "main of %.70s", ar.short_src);
         else if (*ar.what == 'C')  /* C function? */
-          sprintf(buff, "%.70s", ar.source_id);
+          sprintf(buff, "%.70s", ar.short_src);
         else
-          sprintf(buff, "function <%d:%.70s>", ar.linedefined, ar.source_id);
+          sprintf(buff, "function <%d:%.70s>", ar.linedefined, ar.short_src);
         ar.source = NULL;  /* do not print source again */
       }
     }
@@ -641,17 +643,15 @@ static int errorfb (lua_State *L) {
       luaL_addstring(&b, buff);
     }
     if (ar.source) {
-      sprintf(buff, " [%.70s]", ar.source_id);
+      sprintf(buff, " [%.70s]", ar.short_src);
       luaL_addstring(&b, buff);
     }
     luaL_addstring(&b, "\n");
   }
   luaL_pushresult(&b);
-  lua_getglobals(L);
-  lua_pushstring(L, LUA_ALERT);
-  lua_rawget(L, -2);
+  lua_getglobal(L, LUA_ALERT);
   if (lua_isfunction(L, -1)) {  /* avoid loop if _ALERT is not defined */
-    lua_pushvalue(L, -3);  /* error message */
+    lua_pushvalue(L, -2);  /* error message */
     lua_call(L, 1, 0);
   }
   return 0;
