@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.137 2001/03/26 14:31:49 roberto Exp roberto $
+** $Id: lapi.c,v 1.138 2001/04/11 14:42:41 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -533,7 +533,6 @@ LUA_API int lua_ref (lua_State *L,  int lock) {
 
 /*
 ** `do' functions (run Lua code)
-** (most of them are in ldo.c)
 */
 
 LUA_API void lua_rawcall (lua_State *L, int nargs, int nresults) {
@@ -542,6 +541,31 @@ LUA_API void lua_rawcall (lua_State *L, int nargs, int nresults) {
   luaD_call(L, L->top-(nargs+1), nresults);
   lua_unlock(L);
 }
+
+
+LUA_API int lua_dofile (lua_State *L, const l_char *filename) {
+  int status;
+  status = lua_loadfile(L, filename);
+  if (status == 0)  /* parse OK? */
+    status = lua_call(L, 0, LUA_MULTRET);  /* call main */
+  return status;
+}
+
+
+LUA_API int lua_dobuffer (lua_State *L, const l_char *buff, size_t size,
+                          const l_char *name) {
+  int status;
+  status = lua_loadbuffer(L, buff, size, name);
+  if (status == 0)  /* parse OK? */
+    status = lua_call(L, 0, LUA_MULTRET);  /* call main */
+  return status;
+}
+
+
+LUA_API int lua_dostring (lua_State *L, const l_char *str) {
+  return lua_dobuffer(L, str, strlen(str), str);
+}
+
 
 
 /*

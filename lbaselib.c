@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.32 2001/04/06 18:25:00 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.33 2001/04/11 14:42:41 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -311,6 +311,7 @@ static int passresults (lua_State *L, int status, int oldtop) {
   }
 }
 
+
 static int luaB_dostring (lua_State *L) {
   int oldtop = lua_gettop(L);
   size_t l;
@@ -320,11 +321,27 @@ static int luaB_dostring (lua_State *L) {
 }
 
 
+static int luaB_loadstring (lua_State *L) {
+  int oldtop = lua_gettop(L);
+  size_t l;
+  const l_char *s = luaL_check_lstr(L, 1, &l);
+  const l_char *chunkname = luaL_opt_string(L, 2, s);
+  return passresults(L, lua_loadbuffer(L, s, l, chunkname), oldtop);
+}
+
 static int luaB_dofile (lua_State *L) {
   int oldtop = lua_gettop(L);
   const l_char *fname = luaL_opt_string(L, 1, NULL);
   return passresults(L, lua_dofile(L, fname), oldtop);
 }
+
+
+static int luaB_loadfile (lua_State *L) {
+  int oldtop = lua_gettop(L);
+  const l_char *fname = luaL_opt_string(L, 1, NULL);
+  return passresults(L, lua_loadfile(L, fname), oldtop);
+}
+
 
 
 #define LUA_PATH	l_s("LUA_PATH")
@@ -753,6 +770,8 @@ static const luaL_reg base_funcs[] = {
   {l_s("getglobal"), luaB_getglobal},
   {l_s("gettagmethod"), luaB_gettagmethod},
   {l_s("globals"), luaB_globals},
+  {l_s("loadfile"), luaB_loadfile},
+  {l_s("loadstring"), luaB_loadstring},
   {l_s("newtype"), luaB_newtype},
   {l_s("newtag"), luaB_newtype},  /* for compatibility 4.0 */
   {l_s("next"), luaB_next},

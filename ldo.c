@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.132 2001/03/26 14:31:49 roberto Exp roberto $
+** $Id: ldo.c,v 1.133 2001/04/06 19:26:06 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -255,7 +255,7 @@ static int protectedparser (lua_State *L, ZIO *z, int bin) {
 }
 
 
-static int parse_file (lua_State *L, const l_char *filename) {
+LUA_API int lua_loadfile (lua_State *L, const l_char *filename) {
   ZIO z;
   int status;
   int bin;  /* flag for file mode */
@@ -282,17 +282,8 @@ static int parse_file (lua_State *L, const l_char *filename) {
 }
 
 
-LUA_API int lua_dofile (lua_State *L, const l_char *filename) {
-  int status;
-  status = parse_file(L, filename);
-  if (status == 0)  /* parse OK? */
-    status = lua_call(L, 0, LUA_MULTRET);  /* call main */
-  return status;
-}
-
-
-static int parse_buffer (lua_State *L, const l_char *buff, size_t size,
-                         const l_char *name) {
+LUA_API int lua_loadbuffer (lua_State *L, const l_char *buff, size_t size,
+                          const l_char *name) {
   ZIO z;
   int status;
   if (!name) name = l_s("?");
@@ -301,19 +292,6 @@ static int parse_buffer (lua_State *L, const l_char *buff, size_t size,
   return status;
 }
 
-
-LUA_API int lua_dobuffer (lua_State *L, const l_char *buff, size_t size, const l_char *name) {
-  int status;
-  status = parse_buffer(L, buff, size, name);
-  if (status == 0)  /* parse OK? */
-    status = lua_call(L, 0, LUA_MULTRET);  /* call main */
-  return status;
-}
-
-
-LUA_API int lua_dostring (lua_State *L, const l_char *str) {
-  return lua_dobuffer(L, str, strlen(str), str);
-}
 
 
 /*
