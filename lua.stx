@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.2 1994/11/03 22:32:42 roberto Exp $";
+char *rcs_luastx = "$Id: lua.stx,v 3.3 1994/11/06 15:35:04 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,7 +12,9 @@ char *rcs_luastx = "$Id: lua.stx,v 3.2 1994/11/03 22:32:42 roberto Exp $";
 #include "table.h"
 #include "lua.h"
 
+#ifndef LISTING
 #define LISTING 0
+#endif
 
 #ifndef CODE_BLOCK
 #define CODE_BLOCK 256
@@ -21,7 +23,7 @@ static Long   maxcode;
 static Long   maxmain;
 static Long   maxcurr ;
 static Byte  *code = NULL;
-static Byte  *initcode;
+static Byte **initcode;
 static Byte  *basepc;
 static Long   maincode;
 static Long   pc;
@@ -37,7 +39,6 @@ static int     nlocalvar=0;	     /* number of local variables */
 #define MAXFIELDS FIELDS_PER_FLUSH*2
 static Word    fields[MAXFIELDS];     /* fieldnames to be flushed */
 static int     nfields=0;
-static int     err;		     /* flag to indicate error */
 
 /* Internal functions */
 
@@ -48,10 +49,7 @@ static void code_byte (Byte c)
   maxcurr *= 2;
   basepc = (Byte *)realloc(basepc, maxcurr*sizeof(Byte));
   if (basepc == NULL)
-  {
    lua_error ("not enough memory");
-   err = 1;
-  }
  }
  basepc[pc++] = c;
 }
@@ -97,10 +95,7 @@ static void push_field (Word name)
   if (nfields < STACKGAP-1)
     fields[nfields++] = name;
   else
-  {
    lua_error ("too many fields in a constructor");
-   err = 1;
-  }
 }
 
 static void flush_record (int n)
@@ -125,10 +120,7 @@ static void flush_list (int m, int n)
     code_byte(m);
   }
   else
-  {
    lua_error ("list constructor too long");
-   err = 1;
-  }
   code_byte(n);
 }
 
@@ -137,10 +129,7 @@ static void add_nlocalvar (int n)
  if (MAX_TEMPS+nlocalvar+MAXVAR+n < STACKGAP)
   nlocalvar += n;
  else
- {
   lua_error ("too many local variables");
-  err = 1;
- }
 }
 
 static void incr_nvarbuffer (void)
@@ -148,10 +137,7 @@ static void incr_nvarbuffer (void)
  if (nvarbuffer < MAXVAR-1)
   nvarbuffer++;
  else
- {
   lua_error ("variable buffer overflow");
-  err = 1;
- }
 }
 
 static void code_number (float f)
@@ -184,10 +170,7 @@ static void init_function (void)
  {
   code = (Byte *) calloc(CODE_BLOCK, sizeof(Byte));
   if (code == NULL)
-  {
    lua_error("not enough memory");
-   err = 1;
-  }
   maxcode = CODE_BLOCK;
  }
 }
@@ -242,12 +225,12 @@ static void init_function (void)
 functionlist : /* empty */
 	     | functionlist 
 	        {
-	  	  pc=maincode; basepc=initcode; maxcurr=maxmain;
+	  	  pc=maincode; basepc=*initcode; maxcurr=maxmain;
 		  nlocalvar=0;
 	        }
 	       stat sc 
 		{
-		  maincode=pc; initcode=basepc; maxmain=maxcurr;
+		  maincode=pc; *initcode=basepc; maxmain=maxcurr;
 		}
 	     | functionlist function
 	     | functionlist method
@@ -266,7 +249,7 @@ function     : FUNCTION NAME
 	        if (lua_debug)
 		{
 	         code_byte(SETFUNCTION); 
-                 code_code((Byte *)lua_file[lua_nfile-1]);
+                 code_code((Byte *)strdup(lua_file[lua_nfile-1]));
 		 code_word($<vWord>3);
 		}
 	        lua_codeadjust (0);
@@ -278,10 +261,7 @@ function     : FUNCTION NAME
 	        s_tag($<vWord>3) = LUA_T_FUNCTION;
 	        s_bvalue($<vWord>3) = calloc (pc, sizeof(Byte));
 		if (s_bvalue($<vWord>3) == NULL)
-		{
-		 lua_error("not enough memory");
-		 err = 1;
-		}
+		  lua_error("not enough memory");
 	        memcpy (s_bvalue($<vWord>3), basepc, pc*sizeof(Byte));
 		code = basepc; maxcode=maxcurr;
 #if LISTING
@@ -304,7 +284,7 @@ method         : FUNCTION NAME { $<vWord>$ = lua_findsymbol($2); } ':' NAME
 	        if (lua_debug)
 		{
 	         code_byte(SETFUNCTION); 
-                 code_code((Byte *)lua_file[lua_nfile-1]);
+                 code_code((Byte *)strdup(lua_file[lua_nfile-1]));
 		 code_word($<vWord>6);
 		}
 	        lua_codeadjust (0);
@@ -316,17 +296,14 @@ method         : FUNCTION NAME { $<vWord>$ = lua_findsymbol($2); } ':' NAME
 	        codereturn();
 	        b = calloc (pc, sizeof(Byte));
 		if (b == NULL)
-		{
-		 lua_error("not enough memory");
-		 err = 1;
-		}
+		  lua_error("not enough memory");
 	        memcpy (b, basepc, pc*sizeof(Byte));
 		code = basepc; maxcode=maxcurr;
 #if LISTING
                 PrintCode(code,code+pc);
 #endif
 	        /* assign function to table field */
-	        pc=maincode; basepc=initcode; maxcurr=maxmain;
+	        pc=maincode; basepc=*initcode; maxcurr=maxmain;
 	        nlocalvar=0;
 
 		lua_pushvar($<vWord>3+1);
@@ -336,7 +313,7 @@ method         : FUNCTION NAME { $<vWord>$ = lua_findsymbol($2); } ':' NAME
                 code_code(b);
                 code_byte(STOREINDEXED0);
 
-		maincode=pc; initcode=basepc; maxmain=maxcurr;
+		maincode=pc; *initcode=basepc; maxmain=maxcurr;
 	       }
 	       ;
 
@@ -344,18 +321,13 @@ statlist : /* empty */
 	 | statlist stat sc
 	 ;
 
-stat	 : {
-            if (lua_debug)
-            {
-             code_byte(SETLINE); code_word(lua_linenumber);
-            }
-	   }
-	   stat1
+stat	 : { codedebugline(); } stat1 ;
 		
 sc	 : /* empty */ | ';' ;
 
+cond	: { codedebugline(); } expr1 ;
 
-stat1  : IF expr1 THEN PrepJump block PrepJump elsepart END
+stat1  : IF cond THEN PrepJump block PrepJump elsepart END
        {
         {
 	 Long elseinit = $6+sizeof(Word)+1;
@@ -374,7 +346,7 @@ stat1  : IF expr1 THEN PrepJump block PrepJump elsepart END
 	}
        }
      
-       | WHILE {$<vLong>$=pc;} expr1 DO PrepJump block PrepJump END
+       | WHILE {$<vLong>$=pc;} cond DO PrepJump block PrepJump END
      	
        {
         basepc[$5] = IFFJMP;
@@ -403,7 +375,7 @@ stat1  : IF expr1 THEN PrepJump block PrepJump elsepart END
 	  lua_codeadjust (0);
 	}
        } 
-       | functioncall			{ code_byte(0); }
+       | functioncall	{ code_byte(0); }
        | LOCAL localdeclist decinit   
 	{ add_nlocalvar($2);
 	  adjust_mult_assign($2, $3, 0);
@@ -443,7 +415,7 @@ block    : {$<vInt>$ = nlocalvar;} statlist ret
          ;
 
 ret	: /* empty */
-        | { if (lua_debug){code_byte(SETLINE);code_word(lua_linenumber);}}
+        | { codedebugline(); }
           RETURN  exprlist sc 	
           { 
            if ($3 < 0) code_byte(MULT_RET);
@@ -486,14 +458,7 @@ expr :  '(' expr ')'  { $$ = $2; }
       $$ = 1;
      }
      |	NIL		{code_byte(PUSHNIL); $$ = 1; }
-     |  functioncall
-     {
-      $$ = 0;
-      if (lua_debug)
-      {
-       code_byte(SETLINE); code_word(lua_linenumber);
-      }
-     }
+     |  functioncall    { $$ = 0; }
      |	NOT expr1	{ code_byte(NOTOP);  $$ = 1;}
      |	expr1 AND PrepJump {code_byte(POP); } expr1
      { 
@@ -723,6 +688,15 @@ static void codereturn (void)
   }
 }
 
+static void codedebugline (void)
+{
+  if (lua_debug)
+  {
+    code_byte(SETLINE);
+    code_word(lua_linenumber);
+  }
+}
+
 static void adjust_mult_assign (int vars, int exps, int temps)
 {
   if (exps < 0) 
@@ -781,7 +755,6 @@ void yyerror (char *s)
  sprintf (msg,"%s near \"%s\" at line %d in file \"%s\"",
           s, lua_lasttext (), lua_linenumber, lua_filename());
  lua_error (msg);
- err = 1;
 }
 
 int yywrap (void)
@@ -791,27 +764,21 @@ int yywrap (void)
 
 
 /*
-** Parse LUA code and returns global statements.
+** Parse LUA code.
 */
-Byte *lua_parse (void)
+void lua_parse (Byte **code)
 {
- Byte *init = initcode = (Byte *) calloc(CODE_BLOCK, sizeof(Byte));
+ initcode = code;
+ *initcode = (Byte *) calloc(CODE_BLOCK, sizeof(Byte));
  maincode = 0; 
  maxmain = CODE_BLOCK;
- if (init == NULL)
- {
-  lua_error("not enough memory");
-  return NULL;
- }
- err = 0;
- if (yyparse () || (err==1)) return NULL;
- initcode[maincode++] = RETCODE0;
- init = initcode;
+ if (*initcode == NULL) lua_error("not enough memory");
+ if (yyparse ()) lua_error("parse error");
+ (*initcode)[maincode++] = RETCODE0;
 #if LISTING
 { static void PrintCode (Byte *code, Byte *end);
- PrintCode(init,init+maincode); }
+ PrintCode(*initcode,*initcode+maincode); }
 #endif
- return init;
 }
 
 
