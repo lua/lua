@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.108 2001/02/23 17:17:25 roberto Exp roberto $
+** $Id: liolib.c,v 1.109 2001/02/23 17:28:12 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -675,7 +675,7 @@ static const luaL_reg iolib[] = {
 };
 
 
-LUALIB_API void lua_iolibopen (lua_State *L) {
+LUALIB_API int lua_iolibopen (lua_State *L) {
   int iotag = lua_newtype(L, FILEHANDLE, LUA_TUSERDATA);
   lua_newtype(L, l_s("ClosedFileHandle"), LUA_TUSERDATA);
   luaL_openl(L, iolib);
@@ -688,5 +688,6 @@ LUALIB_API void lua_iolibopen (lua_State *L) {
   /* close files when collected */
   lua_pushcfunction(L, file_collect);
   lua_settagmethod(L, iotag, l_s("gc"));
+  return 0;
 }
 

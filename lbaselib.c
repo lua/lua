@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.27 2001/02/23 17:17:25 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.28 2001/02/23 17:28:12 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -296,14 +296,23 @@ static int luaB_dofile (lua_State *L) {
 }
 
 
+static int aux_unpack (lua_State *L, int arg) {
+  int n, i;
+  luaL_checktype(L, arg, LUA_TTABLE);
+  n = lua_getn(L, arg);
+  luaL_checkstack(L, n, l_s("too many arguments"));
+  for (i=1; i<=n; i++)  /* push arg[1...n] */
+    lua_rawgeti(L, arg, i);
+  return n;
+}
+
+
 static int luaB_call (lua_State *L) {
   int oldtop;
   const l_char *options = luaL_opt_string(L, 3, l_s(""));
   int err = 0;  /* index of old error method */
-  int i, status;
+  int status;
   int n;
-  luaL_checktype(L, 2, LUA_TTABLE);
-  n = lua_getn(L, 2);
   if (!lua_isnull(L, 4)) {  /* set new error method */
     lua_getglobal(L, LUA_ERRORMESSAGE);
     err = lua_gettop(L);  /* get index */
@@ -313,9 +322,7 @@ static int luaB_call (lua_State *L) {
   oldtop = lua_gettop(L);  /* top before function-call preparation */
   /* push function */
   lua_pushvalue(L, 1);
-  luaL_checkstack(L, n, l_s("too many arguments"));
-  for (i=0; i<n; i++)  /* push arg[1...n] */
-    lua_rawgeti(L, 2, i+1);
+  n = aux_unpack(L, 2);  /* push arg[1...n] */
   status = lua_call(L, n, LUA_MULTRET);
   if (err != 0) {  /* restore old error method */
     lua_pushvalue(L, err);
@@ -676,10 +683,11 @@ static const luaL_reg base_funcs[] = {
 
 
 
-LUALIB_API void lua_baselibopen (lua_State *L) {
+LUALIB_API int lua_baselibopen (lua_State *L) {
   luaL_openl(L, base_funcs);
   lua_pushliteral(L, LUA_VERSION);
   lua_setglobal(L, l_s("_VERSION"));
   deprecated_funcs(L);
+  return 0;
 }
 

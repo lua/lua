@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.72 2001/02/23 17:17:25 roberto Exp roberto $
+** $Id: ltests.c,v 1.73 2001/03/02 17:27:50 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -417,15 +417,12 @@ static int newstate (lua_State *L) {
 }
 
 static int loadlib (lua_State *L) {
-  lua_State *L1 = (lua_State *)lua_touserdata(L, 1);
-  switch (*luaL_check_string(L, 2)) {
-    case l_c('m'): lua_mathlibopen(L1); break;
-    case l_c('s'): lua_strlibopen(L1); break;
-    case l_c('i'): lua_iolibopen(L1); break;
-    case l_c('d'): lua_dblibopen(L1); break;
-    case l_c('b'): lua_baselibopen(L1); break;
-    default: luaL_argerror(L, 2, l_s("invalid option"));
-  }
+  lua_State *L1 = (lua_State *)(unsigned long)luaL_check_number(L, 1);
+  lua_register(L1, "mathlibopen", lua_mathlibopen);
+  lua_register(L1, "strlibopen", lua_strlibopen);
+  lua_register(L1, "iolibopen", lua_iolibopen);
+  lua_register(L1, "dblibopen", lua_dblibopen);
+  lua_register(L1, "baselibopen", lua_baselibopen);
   return 0;
 }
 
@@ -451,6 +448,7 @@ static int doremote (lua_State *L) {
     int i = 0;
     while (!lua_isnull(L1, ++i))
       lua_pushstring(L, lua_tostring(L1, i));
+    lua_pop(L1, i-1);
     return i-1;
   }
 }

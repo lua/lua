@@ -1,5 +1,5 @@
 /*
-** $Id: lualib.h,v 1.18 2001/02/23 17:28:12 roberto Exp roberto $
+** $Id: lualib.h,v 1.19 2001/02/23 20:31:37 roberto Exp roberto $
 ** Lua standard libraries
 ** See Copyright Notice in lua.h
 */
@@ -18,11 +18,11 @@
 
 #define LUA_ALERT               l_s("_ALERT")
 
-LUALIB_API void lua_baselibopen (lua_State *L);
-LUALIB_API void lua_iolibopen (lua_State *L);
-LUALIB_API void lua_strlibopen (lua_State *L);
-LUALIB_API void lua_mathlibopen (lua_State *L);
-LUALIB_API void lua_dblibopen (lua_State *L);
+LUALIB_API int lua_baselibopen (lua_State *L);
+LUALIB_API int lua_iolibopen (lua_State *L);
+LUALIB_API int lua_strlibopen (lua_State *L);
+LUALIB_API int lua_mathlibopen (lua_State *L);
+LUALIB_API int lua_dblibopen (lua_State *L);
 
 
 
