@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.152 2001/07/10 20:02:22 roberto Exp roberto $
+** $Id: lparser.c,v 1.153 2001/08/10 20:53:03 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -318,6 +318,7 @@ static void open_func (LexState *ls, FuncState *fs) {
   fs->jlt = NO_JUMP;
   fs->freereg = 0;
   fs->nk = 0;
+  fs->h = luaH_new(ls->L, 0);
   fs->np = 0;
   fs->nlineinfo = 0;
   fs->nlocvars = 0;
@@ -339,6 +340,9 @@ static void close_func (LexState *ls) {
   luaK_codeABC(fs, OP_RETURN, 0, 0, 0);  /* final return */
   luaK_getlabel(fs);  /* close eventual list of pending jumps */
   removelocalvars(ls, fs->nactloc);
+  lua_assert(G(L)->roottable == fs->h);
+  G(L)->roottable = fs->h->next;
+  luaH_free(L, fs->h);
   luaM_reallocvector(L, f->code, f->sizecode, fs->pc, Instruction);
   f->sizecode = fs->pc;
   luaM_reallocvector(L, f->k, f->sizek, fs->nk, TObject);

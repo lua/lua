@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.77 2001/07/17 14:30:44 roberto Exp roberto $
+** $Id: lcode.c,v 1.78 2001/07/24 17:19:07 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -18,6 +18,7 @@
 #include "lobject.h"
 #include "lopcodes.h"
 #include "lparser.h"
+#include "ltable.h"
 
 
 #define hasjumps(e)	((e)->t != (e)->f)
@@ -222,38 +223,33 @@ static void freeexp (FuncState *fs, expdesc *e) {
 
 
 static int addk (FuncState *fs, TObject *k) {
-  Proto *f = fs->f;
-  luaM_growvector(fs->L, f->k, fs->nk, f->sizek, TObject,
-                  MAXARG_Bc, l_s("constant table overflow"));
-  setobj(&f->k[fs->nk], k);
-  return fs->nk++;
+  const TObject *index = luaH_get(fs->h, k);
+  if (ttype(index) == LUA_TNUMBER) {
+    lua_assert(luaO_equalObj(&fs->f->k[(int)nvalue(index)], k));
+    return (int)nvalue(index);
+  }
+  else {  /* constant not found; create a new entry */
+    TObject o;
+    Proto *f = fs->f;
+    luaM_growvector(fs->L, f->k, fs->nk, f->sizek, TObject,
+                    MAXARG_Bc, l_s("constant table overflow"));
+    setobj(&f->k[fs->nk], k);
+    setnvalue(&o, fs->nk);
+    setobj(luaH_set(fs->L, fs->h, k), &o);
+    return fs->nk++;
+  }
 }
 
 
 int luaK_stringk (FuncState *fs, TString *s) {
-  Proto *f = fs->f;
-  int c = s->tsv.constindex;
-  if (c >= fs->nk || ttype(&f->k[c]) != LUA_TSTRING || tsvalue(&f->k[c]) != s) {
-    TObject o;
-    setsvalue(&o, s);
-    c = addk(fs, &o);
-    s->tsv.constindex = (unsigned short)c;  /* hint for next time */
-  }
-  return c;
+  TObject o;
+  setsvalue(&o, s);
+  return addk(fs, &o);
 }
 
 
 static int number_constant (FuncState *fs, lua_Number r) {
-  /* check whether `r' has appeared within the last LOOKBACKNUMS entries */
   TObject o;
-  Proto *f = fs->f;
-  int c = fs->nk;
-  int lim = c < LOOKBACKNUMS ? 0 : c-LOOKBACKNUMS;
-  while (--c >= lim) {
-    if (ttype(&f->k[c]) == LUA_TNUMBER && nvalue(&f->k[c]) == r)
-      return c;
-  }
-  /* not found; create a new entry */
   setnvalue(&o, r);
   return addk(fs, &o);
 }

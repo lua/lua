@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.64 2001/06/07 15:01:21 roberto Exp roberto $
+** $Id: lstring.c,v 1.65 2001/06/15 20:36:57 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -54,7 +54,6 @@ static TString *newlstr (lua_State *L, const l_char *str, size_t l, lu_hash h) {
   ts->tsv.len = l;
   ts->tsv.hash = h;
   ts->tsv.marked = 0;
-  ts->tsv.constindex = 0;
   memcpy(getstr(ts), str, l*sizeof(l_char));
   getstr(ts)[l] = l_c('\0');  /* ending 0 */
   tb = &G(L)->strt;
