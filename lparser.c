@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.186 2002/06/06 13:16:02 roberto Exp roberto $
+** $Id: lparser.c,v 1.187 2002/06/06 13:52:37 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -73,16 +73,6 @@ static void error_expected (LexState *ls, int token) {
 }
 
 
-static void check (LexState *ls, int c) {
-  if (ls->t.token != c)
-    error_expected(ls, c);
-  next(ls);
-}
-
-
-#define check_condition(ls,c,msg)	{ if (!(c)) luaX_syntaxerror(ls, msg); }
-
-
 static int testnext (LexState *ls, int c) {
   if (ls->t.token == c) {
     next(ls);
@@ -92,8 +82,18 @@ static int testnext (LexState *ls, int c) {
 }
 
 
+static void check (LexState *ls, int c) {
+  if (!testnext(ls, c))
+    error_expected(ls, c);
+}
+
+
+#define check_condition(ls,c,msg)	{ if (!(c)) luaX_syntaxerror(ls, msg); }
+
+
+
 static void check_match (LexState *ls, int what, int who, int where) {
-  if (ls->t.token != what) {
+  if (!testnext(ls, what)) {
     if (where == ls->linenumber)
       error_expected(ls, what);
     else {
@@ -102,7 +102,6 @@ static void check_match (LexState *ls, int what, int who, int where) {
               luaX_token2str(ls, what), luaX_token2str(ls, who), where));
     }
   }
-  next(ls);
 }
 
 
@@ -400,8 +399,7 @@ static int explist1 (LexState *ls, expdesc *v) {
   /* explist1 -> expr { `,' expr } */
   int n = 1;  /* at least one expression */
   expr(ls, v);
-  while (ls->t.token == ',') {
-    next(ls);  /* skip comma */
+  while (testnext(ls, ',')) {
     luaK_exp2nextreg(ls->fs, v);
     expr(ls, v);
     n++;
@@ -544,7 +542,7 @@ static void constructor (LexState *ls, expdesc *t) {
   init_exp(&cc.v, VVOID, 0);  /* no value (yet) */
   luaK_exp2nextreg(ls->fs, t);  /* fix it at stack top (for gc) */
   check(ls, '{');
-  for (;;) {
+  do {
     lua_assert(cc.v.k == VVOID || cc.tostore > 0);
     testnext(ls, ';');  /* compatibility only */
     if (ls->t.token == '}') break;
@@ -567,11 +565,7 @@ static void constructor (LexState *ls, expdesc *t) {
         break;
       }
     }
-    if (ls->t.token == ',' || ls->t.token == ';')
-      next(ls);
-    else
-      break;
-  }
+  } while (testnext(ls, ',') || testnext(ls, ';'));
   check_match(ls, '}', '{', line);
   lastlistfield(fs, &cc);
   if (cc.na > 0)
@@ -857,10 +851,9 @@ static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
   expdesc e;
   check_condition(ls, VLOCAL <= lh->v.k && lh->v.k <= VINDEXED,
                       "syntax error");
-  if (ls->t.token == ',') {  /* assignment -> `,' primaryexp assignment */
+  if (testnext(ls, ',')) {  /* assignment -> `,' primaryexp assignment */
     struct LHS_assign nv;
     nv.prev = lh;
-    next(ls);
     primaryexp(ls, &nv.v);
     if (nv.v.k == VLOCAL)
       check_conflict(ls, lh, &nv.v);
@@ -1083,7 +1076,7 @@ static void ifstat (LexState *ls, int line) {
   if (ls->t.token == TK_ELSE) {
     luaK_concat(fs, &escapelist, luaK_jump(fs));
     luaK_patchtohere(fs, v.f);
-    next(ls);  /* skip ELSE */
+    next(ls);  /* skip ELSE (after patch, for correct line info) */
     block(ls);  /* `else' part */
   }
   else
@@ -1093,12 +1086,21 @@ static void ifstat (LexState *ls, int line) {
 }
 
 
+static void localfunc (LexState *ls) {
+  expdesc v, b;
+  new_localvar(ls, str_checkname(ls), 0);
+  init_exp(&v, VLOCAL, ls->fs->freereg++);
+  adjustlocalvars(ls, 1);
+  body(ls, &b, 0, ls->linenumber);
+  luaK_storevar(ls->fs, &v, &b);
+}
+
+
 static void localstat (LexState *ls) {
   /* stat -> LOCAL NAME {`,' NAME} [`=' explist1] */
   int nvars = 0;
   int nexps;
   expdesc e;
-  next(ls);  /* skip LOCAL */
   do {
     new_localvar(ls, str_checkname(ls), nvars++);
   } while (testnext(ls, ','));
@@ -1234,7 +1236,11 @@ static int statement (LexState *ls) {
       return 0;
     }
     case TK_LOCAL: {  /* stat -> localstat */
-      localstat(ls);
+      next(ls);  /* skip LOCAL */
+      if (testnext(ls, TK_FUNCTION))  /* local function? */
+        localfunc(ls);
+      else
+        localstat(ls);
       return 0;
     }
     case TK_RETURN: {  /* stat -> retstat */
