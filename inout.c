@@ -5,11 +5,12 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.45 1997/03/11 18:44:28 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.46 1997/03/17 17:01:10 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
 
+#include "auxlib.h"
 #include "lex.h"
 #include "opcode.h"
 #include "inout.h"
@@ -322,6 +323,7 @@ static struct {
   {"print", luaI_print},
   {"setfallback", luaI_setfallback},
   {"setintmethod", luaI_setintmethod},
+  {"setglobalmethod", luaI_setglobalmethod},
   {"setglobal", luaI_setglobal},
   {"tonumber", lua_obj2number},
   {"tostring", luaI_tostring},

@@ -3,11 +3,12 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.26 1997/02/26 17:38:41 roberto Unstable roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.27 1997/03/11 18:44:28 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
  
+#include "auxlib.h"
 #include "mem.h"
 #include "fallback.h"
 #include "opcode.h"
@@ -17,105 +18,6 @@ char *rcs_fallback="$Id: fallback.c,v 1.26 1997/02/26 17:38:41 roberto Unstable 
 #include "hash.h"
 
 
-static void errorFB (void);
-static void indexFB (void);
-static void gettableFB (void);
-static void arithFB (void);
-static void concatFB (void);
-static void orderFB (void);
-static void GDFB (void);
-static void funcFB (void);
-
-
-/*
-** Warning: This list must be in the same order as the #define's
-*/
-struct FB  luaI_fallBacks[] = {
-{"gettable", {LUA_T_CFUNCTION, {gettableFB}}, 2, 1},
-{"arith", {LUA_T_CFUNCTION, {arithFB}}, 3, 1},
-{"order", {LUA_T_CFUNCTION, {orderFB}}, 3, 1},
-{"concat", {LUA_T_CFUNCTION, {concatFB}}, 2, 1},
-{"settable", {LUA_T_CFUNCTION, {gettableFB}}, 3, 0},
-{"gc", {LUA_T_CFUNCTION, {GDFB}}, 1, 0},
-{"function", {LUA_T_CFUNCTION, {funcFB}}, -1, -1},
-                                /* no fixed number of params or results */
-{"getglobal", {LUA_T_CFUNCTION, {indexFB}}, 1, 1},
-                                /* same default behavior of index FB */
-{"index", {LUA_T_CFUNCTION, {indexFB}}, 2, 1},
-{"error", {LUA_T_CFUNCTION, {errorFB}}, 1, 0}
-};
-
-#define N_FB  (sizeof(luaI_fallBacks)/sizeof(struct FB))
-
-static int luaI_findevent (char *name)
-{
-  int i;
-  for (i=0; i<N_FB; i++)
-    if (strcmp(luaI_fallBacks[i].kind, name) == 0)
-      return i;
-  /* name not found */
-  lua_error("invalid event name");
-  return 0;  /* to avoid warnings */
-}
-
-
-void luaI_setfallback (void)
-{
-  int i;
-  char *name = lua_getstring(lua_getparam(1));
-  lua_Object func = lua_getparam(2);
-  if (name == NULL || !lua_isfunction(func))
-    lua_error("incorrect argument to function `setfallback'");
-  i = luaI_findevent(name);
-  luaI_pushobject(&luaI_fallBacks[i].function);
-  luaI_fallBacks[i].function = *luaI_Address(func);
-}
-
-
-static void errorFB (void)
-{
-  lua_Object o = lua_getparam(1);
-  if (lua_isstring(o))
-    fprintf (stderr, "lua: %s\n", lua_getstring(o));
-  else
-    fprintf(stderr, "lua: unknown error\n");
-}
- 
-
-static void indexFB (void)
-{
-  lua_pushnil();
-}
- 
-
-static void gettableFB (void)
-{
-  lua_error("indexed expression not a table");
-}
- 
-
-static void arithFB (void)
-{
-  lua_error("unexpected type at conversion to number");
-}
-
-static void concatFB (void)
-{
-  lua_error("unexpected type at conversion to string");
-}
-
-
-static void orderFB (void)
-{
-  lua_error("unexpected type at comparison");
-}
-
-static void GDFB (void) { }
-
-static void funcFB (void)
-{
-  lua_error("call expression not a function");
-}
 
 
 /* -------------------------------------------
@@ -187,50 +89,127 @@ void luaI_invalidaterefs (void)
       refArray[i].status = COLLECTED;
 }
 
-char *luaI_travfallbacks (int (*fn)(Object *))
-{
-  int i;
-  for (i=0; i<N_FB; i++)
-    if (fn(&luaI_fallBacks[i].function))
-      return luaI_fallBacks[i].kind;
-  return NULL;
-}
-
 
 /* -------------------------------------------
 * Internal Methods 
 */
-#define BASE_TAG 1000
+
+char *eventname[] = {
+  "gettable",  /* IM_GETTABLE */
+  "arith",  /* IM_ARITH */
+  "order",  /* IM_ORDER */
+  "concat",  /* IM_CONCAT */
+  "settable",  /* IM_SETTABLE */
+  "gc",  /* IM_GC */
+  "function",  /* IM_FUNCTION */
+  "index",  /* IM_INDEX */
+  NULL
+};
+
+
+char *geventname[] = {
+  "error",  /* GIM_ERROR */
+  "getglobal",  /* GIM_GETGLOBAL */
+  "setglobal",  /* GIM_SETGLOBAL */
+  NULL
+};
+
+static int luaI_findevent (char *name, char *list[])
+{
+  int i;
+  for (i=0; list[i]; i++)
+    if (strcmp(list[i], name) == 0)
+      return i;
+  /* name not found */
+  return -1;
+}
+
+static int luaI_checkevent (char *name, char *list[])
+{
+  int e = luaI_findevent(name, list);
+  if (e < 0)
+    lua_error("invalid event name");
+  return e;
+}
+
 
 static struct IM {
   lua_Type tp;
-  Object int_method[FB_N];
- } *luaI_IMtable = NULL;
+  Object int_method[IM_N];
+} *luaI_IMtable = NULL;
+
 static int IMtable_size = 0;
-static int last_tag = BASE_TAG-1;
+static int last_tag = LUA_T_NIL;
+
+static struct {
+  lua_Type t;
+  int event;
+} exceptions[] = {  /* list of events that cannot be modified */
+    {LUA_T_NUMBER, IM_ARITH},
+    {LUA_T_NUMBER, IM_ORDER},
+    {LUA_T_NUMBER, IM_GC},
+    {LUA_T_STRING, IM_ARITH},
+    {LUA_T_STRING, IM_ORDER},
+    {LUA_T_STRING, IM_CONCAT},
+    {LUA_T_STRING, IM_GC},
+    {LUA_T_ARRAY, IM_GETTABLE},
+    {LUA_T_ARRAY, IM_SETTABLE},
+    {LUA_T_FUNCTION, IM_FUNCTION},
+    {LUA_T_FUNCTION, IM_GC},
+    {LUA_T_CFUNCTION, IM_FUNCTION},
+    {LUA_T_CFUNCTION, IM_GC},
+    {LUA_T_NIL, 0}  /* flag end of list */
+};
+
+
+static int validevent (int t, int event)
+{
+  int i;
+  if (t == LUA_T_NIL)  /* cannot modify any event for nil */
+    return 0;
+  for (i=0; exceptions[i].t != LUA_T_NIL; i++)
+    if (exceptions[i].t == t && exceptions[i].event == event)
+      return 0;
+  return 1;
+}
+
+static void init_entry (int tag)
+{
+  int i;
+  for (i=0; i<IM_N; i++)
+    luaI_IMtable[-tag].int_method[i].ttype = LUA_T_NIL;
+}
+
+void luaI_initfallbacks (void)
+{
+  int i;
+  IMtable_size = NUM_TYPES+10;
+  luaI_IMtable = newvector(IMtable_size, struct IM);
+  for (i=LUA_T_NIL; i<=LUA_T_USERDATA; i++) {
+    luaI_IMtable[-i].tp = (lua_Type)i;
+    init_entry(i);
+  }
+}
 
 int lua_newtag (char *t)
 {
-  int i;
-  ++last_tag;
-  if ((last_tag-BASE_TAG) >= IMtable_size)
+  --last_tag;
+  if ((-last_tag) >= IMtable_size)
     IMtable_size = growvector(&luaI_IMtable, IMtable_size,
                               struct IM, memEM, MAX_INT);
   if (strcmp(t, "table") == 0)
-    luaI_IMtable[last_tag-BASE_TAG].tp = LUA_T_ARRAY;
+    luaI_IMtable[-last_tag].tp = LUA_T_ARRAY;
   else if (strcmp(t, "userdata") == 0)
-    luaI_IMtable[last_tag-BASE_TAG].tp = LUA_T_USERDATA;
+    luaI_IMtable[-last_tag].tp = LUA_T_USERDATA;
   else
     lua_error("invalid type for new tag");
-  for (i=0; i<FB_N; i++)
-    luaI_IMtable[last_tag-BASE_TAG].int_method[i].ttype = LUA_T_NIL;
+  init_entry(last_tag);
   return last_tag;
 }
 
-static int validtag (int tag)
-{
-  return (BASE_TAG <= tag && tag <= last_tag);
-}
+
+#define validtag(tag)  (last_tag <= (tag) && (tag) <= 0)
+
 
 static void checktag (int tag)
 {
@@ -238,10 +217,18 @@ static void checktag (int tag)
     lua_error("invalid tag");
 }
 
+lua_Type luaI_typetag (int tag)
+{
+  if (tag >= 0) return LUA_T_USERDATA;
+  else {
+    checktag(tag);
+    return luaI_IMtable[-tag].tp;
+  }
+}
+
 void luaI_settag (int tag, Object *o)
 {
-  checktag(tag);
-  if (ttype(o) != luaI_IMtable[tag-BASE_TAG].tp)
+  if (ttype(o) != luaI_typetag(tag))
     lua_error("Tag is not compatible with this type");
   if (o->ttype == LUA_T_ARRAY)
     o->value.a->htag = tag;
@@ -261,29 +248,123 @@ int luaI_tag (Object *o)
 
 Object *luaI_getim (int tag, int event)
 {
-  if (tag == 0)
-    return &luaI_fallBacks[event].function;
-  else if (validtag(tag)) {
-    Object *func = &luaI_IMtable[tag-BASE_TAG].int_method[event];
-    if (func->ttype == LUA_T_NIL)
-      return NULL;
-    else
-      return func;
-  }
-  else return NULL;
+  if (tag > LUA_T_USERDATA)
+    tag = LUA_T_USERDATA;  /* default for non-registered tags */
+  return &luaI_IMtable[-tag].int_method[event];
+}
+
+Object *luaI_getimbyObj (Object *o, int event)
+{
+  return luaI_getim(luaI_tag(o), event);
 }
 
 void luaI_setintmethod (void)
 {
-  lua_Object tag = lua_getparam(1);
-  lua_Object event = lua_getparam(2);
+  int t = (int)luaL_check_number(1, "setintmethod");
+  int e = luaI_checkevent(luaL_check_string(2, "setintmethod"), eventname);
   lua_Object func = lua_getparam(3);
-  if (!(lua_isnumber(tag) && lua_isstring(event) && lua_isfunction(func)))
-    lua_error("incorrect arguments to function `setintmethod'");
-  else {
-    int i = luaI_findevent(lua_getstring(event));
-    int t = lua_getnumber(tag);
-    checktag(t);
-    luaI_IMtable[t-BASE_TAG].int_method[i] = *luaI_Address(func);
+  if (!validevent(t, e))
+    lua_error("cannot change this internal method");
+  luaL_arg_check(lua_isnil(func) || lua_isfunction(func), "setintmethod",
+                 3, "function expected");
+  checktag(t);
+  luaI_IMtable[-t].int_method[e] = *luaI_Address(func);
+}
+
+static Object gmethod[GIM_N] = {
+  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}
+};
+
+Object *luaI_getgim (int event)
+{
+  return &gmethod[event];
+}
+
+void luaI_setglobalmethod (void)
+{
+  int e = luaI_checkevent(luaL_check_string(1, "setintmethod"), geventname);
+  lua_Object func = lua_getparam(2);
+  luaL_arg_check(lua_isnil(func) || lua_isfunction(func), "setintmethod",
+                 2, "function expected");
+  gmethod[e] = *luaI_Address(func);
+}
+
+char *luaI_travfallbacks (int (*fn)(Object *))
+{ /* ??????????
+  int i;
+  for (i=0; i<N_FB; i++)
+    if (fn(&luaI_fallBacks[i].function))
+      return luaI_fallBacks[i].kind; */
+  return NULL;
+}
+
+
+/*
+* ===================================================================
+* compatibility with old fallback system
+*/
+
+
+static void errorFB (void)
+{
+  lua_Object o = lua_getparam(1);
+  if (lua_isstring(o))
+    fprintf (stderr, "lua: %s\n", lua_getstring(o));
+  else
+    fprintf(stderr, "lua: unknown error\n");
+}
+ 
+
+static void nilFB (void) { }
+ 
+
+static void typeFB (void)
+{
+  lua_error("unexpected type");
+}
+
+
+void luaI_setfallback (void)
+{
+  int e;
+  char *name = luaL_check_string(1, "setfallback");
+  lua_Object func = lua_getparam(2);
+  luaL_arg_check(lua_isfunction(func), "setfallback", 2, "function expected");
+  e = luaI_findevent(name, geventname);
+  if (e >= 0) {  /* global event */
+    switch (e) {
+      case GIM_ERROR:
+        gmethod[e] = *luaI_Address(func);
+        lua_pushcfunction(errorFB);
+        break;
+      case GIM_GETGLOBAL:  /* goes through */
+      case GIM_SETGLOBAL:
+        gmethod[e] = *luaI_Address(func);
+        lua_pushcfunction(nilFB);
+        break;
+      default: lua_error("internal error");
+    }
+  }
+  else {  /* tagged name? */
+    int t;
+    Object oldfunc;
+    e = luaI_checkevent(name, eventname);
+    oldfunc = luaI_IMtable[LUA_T_USERDATA].int_method[e];
+    for (t=LUA_T_NIL; t<=LUA_T_USERDATA; t++)
+      if (validevent(t, e))
+        luaI_IMtable[-t].int_method[e] = *luaI_Address(func);
+    if (oldfunc.ttype != LUA_T_NIL)
+      luaI_pushobject(&oldfunc);
+    else {
+      switch (e) {
+       case IM_GC:  case IM_INDEX:
+         lua_pushcfunction(nilFB);
+         break;
+       default:
+         lua_pushcfunction(typeFB);
+         break;
+      }
+    }
   }
 }
+ 

@@ -1,5 +1,5 @@
 /*
-** $Id: fallback.h,v 1.13 1996/04/25 14:10:00 roberto Exp roberto $
+** $Id: fallback.h,v 1.14 1997/02/26 17:38:41 roberto Unstable roberto $
 */
  
 #ifndef fallback_h
@@ -8,24 +8,20 @@
 #include "lua.h"
 #include "opcode.h"
 
-extern struct FB {
-  char *kind;
-  Object function;
-  int nParams;
-  int nResults;
-} luaI_fallBacks[];
+#define IM_GETTABLE  0
+#define IM_ARITH  1
+#define IM_ORDER  2
+#define IM_CONCAT  3
+#define IM_SETTABLE  4
+#define IM_GC 5
+#define IM_FUNCTION 6
+#define IM_INDEX  7
+#define IM_N 8
 
-#define FB_GETTABLE  0
-#define FB_ARITH  1
-#define FB_ORDER  2
-#define FB_CONCAT  3
-#define FB_SETTABLE  4
-#define FB_GC 5
-#define FB_FUNCTION 6
-#define FB_GETGLOBAL 7
-#define FB_INDEX  8
-#define FB_ERROR  9
-#define FB_N 10
+#define GIM_ERROR 0
+#define GIM_GETGLOBAL 1
+#define GIM_SETGLOBAL 2
+#define GIM_N 3
 
 void luaI_setfallback (void);
 int luaI_ref (Object *object, int lock);
@@ -35,9 +31,14 @@ void luaI_invalidaterefs (void);
 char *luaI_travfallbacks (int (*fn)(Object *));
 
 void luaI_settag (int tag, Object *o);
+lua_Type luaI_typetag (int tag);
 Object *luaI_getim (int tag, int event);
+Object *luaI_getgim (int event);
+Object *luaI_getimbyObj (Object *o, int event);
 int luaI_tag (Object *o);
 void luaI_setintmethod (void);
+void luaI_setglobalmethod (void);
+void luaI_initfallbacks (void);
 
 #endif
 

@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.59 1997/02/26 17:38:41 roberto Unstable roberto $";
+char *rcs_table="$Id: table.c,v 2.60 1997/03/11 18:44:28 roberto Exp roberto $";
 
 #include "mem.h"
 #include "opcode.h"
@@ -168,6 +168,8 @@ Long luaI_collectgarbage (void)
   lua_travsymbol(lua_markobject); /* mark symbol table objects */
   luaI_travlock(lua_markobject); /* mark locked objects */
   luaI_travfallbacks(lua_markobject);  /* mark fallbacks */
+  luaI_hashcallIM();
+  luaI_strcallIM();
   luaI_invalidaterefs();
   recovered += lua_strcollector();
   recovered += lua_hashcollector();

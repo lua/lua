@@ -1,7 +1,7 @@
 /*
 ** tree.h
 ** TecCGraf - PUC-Rio
-** $Id: tree.h,v 1.14 1996/02/26 17:07:49 roberto Exp roberto $
+** $Id: tree.h,v 1.15 1997/02/11 11:35:05 roberto Exp roberto $
 */
 
 #ifndef tree_h
@@ -27,5 +27,6 @@ typedef struct TaggedString
 TaggedString *lua_createstring (char *str);
 TaggedString *luaI_createuserdata (char *buff, long size, int tag);
 Long lua_strcollector (void);
+void luaI_strcallIM (void);
 
 #endif

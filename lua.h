@@ -2,7 +2,7 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lua.h,v 3.35 1997/02/26 17:38:41 roberto Unstable roberto $
+** $Id: lua.h,v 3.36 1997/03/17 17:01:10 roberto Exp roberto $
 */
 
 
@@ -21,6 +21,7 @@ typedef unsigned int lua_Object;
 
 lua_Object     lua_setfallback		(char *event, lua_CFunction fallback);
 void           lua_setintmethod	(int tag, char *event, lua_CFunction method);
+void           lua_setglobalmethod (char *event, lua_CFunction method);
 
 int            lua_newtag		(char *t);
 void           lua_settag		(int tag); /* In: object */
@@ -36,8 +37,9 @@ int	       lua_call			(char *funcname);
 void	       lua_beginblock		(void);
 void	       lua_endblock		(void);
 
-lua_Object     lua_getparam 		(int number);
-#define	       lua_getresult(_)		lua_getparam(_)
+lua_Object     lua_lua2C 		(int number);
+#define	       lua_getparam(_)		lua_lua2C(_)
+#define	       lua_getresult(_)		lua_lua2C(_)
 
 int            lua_isnil                (lua_Object object);
 int            lua_istable              (lua_Object object);
@@ -62,7 +64,9 @@ void           lua_pushusertag     	(void *u, int tag);
 void           lua_pushobject       	(lua_Object object);
 
 lua_Object     lua_getglobal 		(char *name);
+lua_Object     lua_basicgetglobal	(char *name);
 void           lua_storeglobal		(char *name); /* In: value */
+void           lua_basicstoreglobal	(char *name); /* In: value */
 
 void           lua_storesubscript	(void); /* In: table, index, value */
 void           lua_basicstoreindex	(void); /* In: table, index, value */
@@ -88,16 +92,6 @@ lua_Object     lua_createtable		(void);
 #define lua_register(n,f)	(lua_pushcfunction(f), lua_storeglobal(n))
 
 #define lua_pushuserdata(u)     lua_pushusertag(u, 0)
-
-
-/* =============================================================== */
-/* Auxiliar functions for libraries */
-
-void luaL_arg_check(int cond, char *funcname, int numarg, char *extramsg);
-char *luaL_check_string (int numArg, char *funcname);
-char *luaL_opt_string (int numArg, char *def, char *funcname);
-double luaL_check_number (int numArg, char *funcname);
-double luaL_opt_number (int numArg, double def, char *funcname);
 
 
 /* =============================================================== */

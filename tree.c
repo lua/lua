@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.20 1996/03/14 15:56:26 roberto Exp roberto $";
+char *rcs_tree="$Id: tree.c,v 1.21 1997/02/11 11:35:05 roberto Exp roberto $";
 
 
 #include <string.h>
@@ -14,6 +14,7 @@ char *rcs_tree="$Id: tree.c,v 1.20 1996/03/14 15:56:26 roberto Exp roberto $";
 #include "lex.h"
 #include "hash.h"
 #include "table.h"
+#include "fallback.h"
 
 
 #define NUM_HASHS  64
@@ -45,6 +46,7 @@ static void initialize (void)
   luaI_addReserved();
   luaI_initsymbol();
   luaI_initconstant();
+  luaI_initfallbacks();
 }
 
 
@@ -117,6 +119,25 @@ TaggedString *luaI_createuserdata (char *buff, long size, int tag)
 TaggedString *lua_createstring (char *str)
 {
   return luaI_createuserdata(str, strlen(str)+1, LUA_T_STRING);
+}
+
+
+void luaI_strcallIM (void)
+{
+  int i;
+  Object o;
+  ttype(&o) = LUA_T_USERDATA;
+  for (i=0; i<NUM_HASHS; i++) {
+    stringtable *tb = &string_root[i];
+    int j;
+    for (j=0; j<tb->size; j++) {
+      TaggedString *t = tb->hash[j];
+      if (t != NULL && t->tag != LUA_T_STRING && t->marked == 0) {
+        tsvalue(&o) = t;
+        luaI_gcIM(&o);
+      }
+    }
+  }
 }
 
 

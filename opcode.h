@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.27 1997/03/06 17:30:55 roberto Exp roberto $
+** $Id: opcode.h,v 3.28 1997/03/11 18:44:28 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -16,17 +16,19 @@
 
 typedef enum
 {
- LUA_T_NIL      = -1,
- LUA_T_NUMBER   = -2,
- LUA_T_STRING   = -3,
- LUA_T_ARRAY    = -4,  /* array==table */
+ LUA_T_NIL      = -9,
+ LUA_T_NUMBER   = -8,
+ LUA_T_STRING   = -7,
+ LUA_T_ARRAY    = -6,  /* array==table */
  LUA_T_FUNCTION = -5,
- LUA_T_CFUNCTION= -6,
- LUA_T_MARK     = -7,
- LUA_T_CMARK    = -8,
- LUA_T_LINE     = -9,
+ LUA_T_CFUNCTION= -4,
+ LUA_T_MARK     = -3,
+ LUA_T_CMARK    = -2,
+ LUA_T_LINE     = -1,
  LUA_T_USERDATA = 0
 } lua_Type;
+
+#define NUM_TYPES 10
 
 
 typedef enum {
@@ -156,7 +158,7 @@ void	luaI_codedebugline (int line);  /* from "lua.stx" module */
 void    lua_travstack (int (*fn)(Object *));
 Object *luaI_Address (lua_Object o);
 void	luaI_pushobject (Object *o);
-void    luaI_gcFB       (Object *o);
+void    luaI_gcIM       (Object *o);
 int     luaI_dorun (TFunc *tf);
 
 #endif

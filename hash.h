@@ -1,7 +1,7 @@
 /*
 ** hash.h
 ** hash manager for lua
-** $Id: hash.h,v 2.12 1996/05/06 14:30:27 roberto Exp roberto $
+** $Id: hash.h,v 2.13 1997/02/26 17:38:41 roberto Unstable roberto $
 */
 
 #ifndef hash_h
@@ -30,6 +30,7 @@ int      luaI_redimension (int nhash);
 Hash    *lua_createarray (int nhash);
 void     lua_hashmark (Hash *h);
 Long     lua_hashcollector (void);
+void	 luaI_hashcallIM (void);
 Object  *lua_hashget (Hash *t, Object *ref);
 Object 	*lua_hashdefine (Hash *t, Object *ref);
 void     lua_next (void);

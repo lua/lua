@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.34 1997/02/26 17:38:41 roberto Unstable roberto $";
+char *rcs_hash="$Id: hash.c,v 2.35 1997/03/11 18:44:28 roberto Exp roberto $";
 
 
 #include "mem.h"
@@ -159,7 +159,7 @@ void lua_hashmark (Hash *h)
 }
 
 
-static void call_fallbacks (void)
+void luaI_hashcallIM (void)
 {
   Hash *curr_array;
   Object t;
@@ -168,10 +168,10 @@ static void call_fallbacks (void)
     if (markarray(curr_array) != 1)
     {
       avalue(&t) = curr_array;
-      luaI_gcFB(&t);
+      luaI_gcIM(&t);
     }
   ttype(&t) = LUA_T_NIL;
-  luaI_gcFB(&t);  /* end of list */
+  luaI_gcIM(&t);  /* end of list */
 }
 
  
@@ -183,7 +183,6 @@ Long lua_hashcollector (void)
 {
  Hash *curr_array = listhead, *prev = NULL;
  Long counter = 0;
- call_fallbacks();
  while (curr_array != NULL)
  {
   Hash *next = curr_array->next;

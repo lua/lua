@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.83 1997/03/06 17:30:55 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.84 1997/03/11 18:44:28 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -268,15 +268,6 @@ static void callIM (Object *f, int nParams, int nResults)
   do_call((top-stack)-nParams, nResults);
 }
 
-/*
-** Call the specified fallback, putting it on the stack below its arguments
-*/
-static void callFB (int fb)
-{
-  callIM(&luaI_fallBacks[fb].function, luaI_fallBacks[fb].nParams,
-         luaI_fallBacks[fb].nResults);
-}
-
 
 /*
 ** Call a function (C or Lua). The parameters must be on the stack,
@@ -289,21 +280,21 @@ static void do_call (StkId base, int nResults)
   StkId firstResult;
   Object *func = stack+base-1;
   int i;
-  if (ttype(func) == LUA_T_CFUNCTION)
-  {
+  if (ttype(func) == LUA_T_CFUNCTION) {
     ttype(func) = LUA_T_CMARK;
     firstResult = callC(fvalue(func), base);
   }
-  else if (ttype(func) == LUA_T_FUNCTION)
-  {
+  else if (ttype(func) == LUA_T_FUNCTION) {
     ttype(func) = LUA_T_MARK;
     firstResult = lua_execute(func->value.tf->code, base);
   }
-  else
-  { /* func is not a function */
-    /* Call the fallback for invalid functions */
+  else { /* func is not a function */
+    /* Check the fallback for invalid functions */
+    Object *im = luaI_getimbyObj(func, IM_FUNCTION);
+    if (ttype(im) == LUA_T_NIL)
+      lua_error("call expression not a function");
     open_stack((top-stack)-(base-1));
-    stack[base-1] = luaI_fallBacks[FB_FUNCTION].function;
+    stack[base-1] = *im;
     do_call(base, nResults);
     return;
   }
@@ -326,15 +317,14 @@ static void do_call (StkId base, int nResults)
 static void pushsubscript (void)
 {
   int tg = luaI_tag(top-2);
-  Object *im = luaI_getim(tg, FB_GETTABLE);
-  if (ttype(top-2) == LUA_T_ARRAY && im == NULL) {
+  Object *im = luaI_getim(tg, IM_GETTABLE);
+  if (ttype(top-2) == LUA_T_ARRAY && ttype(im) == LUA_T_NIL) {
       Object *h = lua_hashget(avalue(top-2), top-1);
       if (h != NULL && ttype(h) != LUA_T_NIL) {
         --top;
         *(top-1) = *h;
       }
-      else if (tg == LUA_T_ARRAY &&
-              (im=luaI_getim(0, FB_INDEX)) != NULL)
+      else if (ttype(im=luaI_getim(tg, IM_INDEX)) != LUA_T_NIL)
         callIM(im, 2, 1);
       else {
         --top;
@@ -376,14 +366,14 @@ lua_Object lua_basicindex (void)
 */
 static void storesubscript (Object *t, int mode)
 {
-  Object *im = (mode == 0) ? NULL : luaI_getim(luaI_tag(t), FB_SETTABLE);
-  if (ttype(t) == LUA_T_ARRAY && im == NULL) {
+  Object *im = (mode == 0) ? NULL : luaI_getimbyObj(t, IM_SETTABLE);
+  if (ttype(t) == LUA_T_ARRAY && (im == NULL || ttype(im) == LUA_T_NIL)) {
     Object *h = lua_hashdefine(avalue(t), t+1);
     *h = *(top-1);
     top -= (mode == 2) ? 1 : 3;
   }
   else {  /* object is not a table, and/or has a specific "settable" method */
-    if (im) {
+    if (im && ttype(im) != LUA_T_NIL) {
       if (mode == 2) {
         lua_checkstack(top+2);
         *(top+1) = *(top-1);
@@ -403,11 +393,13 @@ static void getglobal (Word n)
 {
   *top = lua_table[n].object;
   incr_top;
-  if (ttype(top-1) == LUA_T_NIL)
-  { /* must call getglobal fallback */
-    ttype(top-1) = LUA_T_STRING;
-    tsvalue(top-1) = lua_table[n].varname;
-    callFB(FB_GETGLOBAL);
+  if (ttype(top-1) == LUA_T_NIL) {  /* check i.m. */
+    Object *im = luaI_getgim(GIM_GETGLOBAL);
+    if (ttype(im) != LUA_T_NIL) {
+      ttype(top-1) = LUA_T_STRING;
+      tsvalue(top-1) = lua_table[n].varname;
+      callIM(im, 1, 1);
+    }
   }
 }
 
@@ -428,8 +420,13 @@ void lua_travstack (int (*fn)(Object *))
 
 static void lua_message (char *s)
 {
-  lua_pushstring(s);
-  callFB(FB_ERROR);
+  Object *im = luaI_getgim(GIM_ERROR);
+  if (ttype(im) == LUA_T_NIL)
+    fprintf(stderr, "lua: %s\n", s);
+  else {
+    lua_pushstring(s);
+    callIM(im, 1, 0);
+  }
 }
 
 /*
@@ -659,8 +656,18 @@ void lua_setintmethod (int tag, char *event, lua_CFunction method)
 {
   lua_pushnumber(tag);
   lua_pushstring(event);
-  lua_pushcfunction (method);
+  if (method)
+    lua_pushcfunction (method);
+  else
+    lua_pushnil();
   do_unprotectedrun(luaI_setintmethod, 3, 0);
+}
+
+void lua_setglobalmethod (char *event, lua_CFunction method)
+{
+  lua_pushstring(event);
+  lua_pushcfunction (method);
+  do_unprotectedrun(luaI_setglobalmethod, 3, 0);
 }
 
 
@@ -741,7 +748,7 @@ lua_Object lua_createtable (void)
 ** Get a parameter, returning the object handle or LUA_NOOBJECT on error.
 ** 'number' must be 1 to get the first parameter.
 */
-lua_Object lua_getparam (int number)
+lua_Object lua_lua2C (int number)
 {
  if (number <= 0 || number > CLS_current.num) return LUA_NOOBJECT;
  /* Ref(stack+(CLS_current.base-CLS_current.num+number-1)) ==
@@ -874,6 +881,17 @@ lua_Object lua_getglobal (char *name)
  return Ref(top-1);
 }
 
+
+lua_Object lua_basicgetglobal (char *name)
+{
+  adjustC(0);
+  *top = lua_table[luaI_findsymbolbyname(name)].object;
+  incr_top;
+  CLS_current.base++;  /* incorporate object in the stack */
+  return Ref(top-1);
+}
+
+
 /*
 ** Store top of the stack at a global variable array field.
 */
@@ -944,7 +962,7 @@ void lua_pushbinarydata (void *buff, int size, int tag)
 */
 void lua_pushusertag (void *u, int tag)
 {
-  if (tag < LUA_T_USERDATA) 
+  if (luaI_typetag(tag) != LUA_T_USERDATA)
     lua_error("invalid tag in `lua_pushusertag'");
   lua_pushbinarydata(&u, sizeof(void *), tag);
 }
@@ -977,18 +995,47 @@ int lua_tag (lua_Object o)
 }
 
 
-void luaI_gcFB (Object *o)
+void luaI_gcIM (Object *o)
 {
-  *top = *o;
-  incr_top;
-  callFB(FB_GC);
+  Object *im = luaI_getimbyObj(o, IM_GC);
+  if (ttype(im) != LUA_T_NIL) {
+    *top = *o;
+    incr_top;
+    callIM(im, 1, 0);
+  }
 }
 
 
 static void call_arith (char *op)
 {
+  Object *im = luaI_getimbyObj(top-2, IM_ARITH);  /* try first operand */
+  if (ttype(im) == LUA_T_NIL) {
+    im = luaI_getimbyObj(top-1, IM_ARITH);  /* try second operand */
+    if (ttype(im) == LUA_T_NIL) {
+      im = luaI_getim(0, IM_ARITH);  /* try a 'global' i.m. */
+      if (ttype(im) == LUA_T_NIL)
+        lua_error("unexpected type at conversion to number");
+    }
+  }
   lua_pushstring(op);
-  callFB(FB_ARITH);
+  callIM(im, 3, 1);
+}
+
+static void concim (Object *o)
+{
+  Object *im = luaI_getimbyObj(o, IM_CONCAT);
+  if (ttype(im) == LUA_T_NIL)
+    lua_error("unexpected type at conversion to string");
+  callIM(im, 2, 1);
+}
+
+static void ordim (Object *o, char *op)
+{
+  Object *im = luaI_getimbyObj(o, IM_ORDER);
+  if (ttype(im) == LUA_T_NIL)
+    lua_error("unexpected type at comparison");
+  lua_pushstring(op);
+  callIM(im, 3, 1);
 }
 
 static void comparison (lua_Type ttype_less, lua_Type ttype_equal, 
@@ -999,10 +1046,12 @@ static void comparison (lua_Type ttype_less, lua_Type ttype_equal,
   int result;
   if (ttype(l) == LUA_T_NUMBER && ttype(r) == LUA_T_NUMBER)
     result = (nvalue(l) < nvalue(r)) ? -1 : (nvalue(l) == nvalue(r)) ? 0 : 1;
-  else if (tostring(l) || tostring(r))
-  {
-    lua_pushstring(op);
-    callFB(FB_ORDER);
+  else if (tostring(l)) {
+    ordim(l, op);
+    return;
+  }
+  else if (tostring(r)) {
+    ordim(r, op);
     return;
   }
   else
@@ -1318,17 +1367,17 @@ static StkId lua_execute (Byte *pc, StkId base)
     call_arith("pow");
     break;
 
-   case CONCOP:
-   {
-    Object *l = top-2;
-    Object *r = top-1;
-    if (tostring(r) || tostring(l))
-      callFB(FB_CONCAT);
-    else
-    {
-      tsvalue(l) = lua_createstring (lua_strconc(svalue(l),svalue(r)));
-      --top;
-    }
+   case CONCOP: {
+     Object *l = top-2;
+     Object *r = top-1;
+     if (tostring(l))  /* first argument is not a string */
+       concim(l);
+     else if (tostring(r))  /* second argument is not a string */
+       concim(r);
+     else {
+       tsvalue(l) = lua_createstring(lua_strconc(svalue(l),svalue(r)));
+       --top;
+     }
    }
    break;
 
@@ -1356,7 +1405,7 @@ static StkId lua_execute (Byte *pc, StkId base)
    }
    break;
 
-   case ONFJMP:	
+   case ONFJMP:
    {
     Word w;
     get_word(w,pc);
