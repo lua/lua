@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.51 1999/11/04 17:22:26 roberto Exp roberto $
+** $Id: ldo.c,v 1.52 1999/11/22 13:12:07 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -162,23 +162,21 @@ static StkId callCclosure (lua_State *L, const struct Closure *cl,
 void luaD_callTM (lua_State *L, const TObject *f, int nParams, int nResults) {
   luaD_openstack(L, nParams);
   *(L->stack.top-nParams-1) = *f;
-  luaD_calln(L, nParams, nResults);
+  luaD_call(L, L->stack.top-nParams-1, nResults);
 }
 
 
 /*
-** Call a function (C or Lua). The parameters must be on the stack,
-** between [top-nArgs,top). The function to be called is right below the
-** arguments.
-** When returns, the results are on the stack, between [top-nArgs-1,top).
+** Call a function (C or Lua). The function to be called is at *func.
+** The arguments are on the stack, right after the function.
+** When returns, the results are on the stack, starting at the original
+** function position.
 ** The number of results is nResults, unless nResults=MULT_RET.
-*/
-void luaD_calln (lua_State *L, int nArgs, int nResults) {
+*/ 
+void luaD_call (lua_State *L, TObject *func, int nResults) {
   struct Stack *S = &L->stack;  /* to optimize */
-  StkId base = (S->top-S->stack)-nArgs;
-  TObject *func = S->stack+base-1;
+  StkId base = func - S->stack + 1;  /* where is first argument */
   StkId firstResult;
-  int i;
   switch (ttype(func)) {
     case LUA_T_CPROTO:
       ttype(func) = LUA_T_CMARK;
@@ -213,8 +211,7 @@ void luaD_calln (lua_State *L, int nArgs, int nResults) {
     luaD_adjusttop(L, firstResult+nResults);
   /* move results to base-1 (to erase parameters and function) */
   base--;
-  for (i=0; i<nResults; i++)
-    *(S->stack+base+i) = *(S->stack+firstResult+i);
+  luaO_memdown(S->stack+base, S->stack+firstResult, nResults*sizeof(TObject));
   S->top -= firstResult-base;
 }
 
@@ -226,7 +223,7 @@ static void message (lua_State *L, const char *s) {
     *L->stack.top = *em;
     incr_top;
     lua_pushstring(L, s);
-    luaD_calln(L, 1, 0);
+    luaD_call(L, L->stack.top-2, 0);
   }
 }
 
@@ -256,7 +253,7 @@ int luaD_protectedrun (lua_State *L) {
   L->errorJmp = &myErrorJmp;
   if (setjmp(myErrorJmp.b) == 0) {
     StkId base = L->Cstack.base;
-    luaD_calln(L, (L->stack.top-L->stack.stack)-base-1, MULT_RET);
+    luaD_call(L, L->stack.stack+base, MULT_RET);
     L->Cstack.lua2C = base;  /* position of the new results */
     L->Cstack.num = (L->stack.top-L->stack.stack) - base;
     L->Cstack.base = base + L->Cstack.num;  /* incorporate results on stack */
