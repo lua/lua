@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.148 2001/06/11 14:56:42 roberto Exp roberto $
+** $Id: lparser.c,v 1.149 2001/06/12 14:36:48 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -960,12 +960,7 @@ static void forlist (LexState *ls, TString *indexname) {
   TString *valname;
   check(ls, l_c(','));
   valname = str_checkname(ls);
-  /* next test is dirty, but avoids `in' being a reserved word */
-  check_condition(ls,
-       (ls->t.token == TK_NAME &&
-        ls->t.seminfo.ts == luaS_newliteral(ls->L, l_s("in"))),
-       l_s("`in' expected"));
-  next(ls);  /* skip `in' */
+  check(ls, TK_IN);
   exp1(ls);  /* table */
   new_localvarstr(ls, l_s("(table)"), 0);
   new_localvarstr(ls, l_s("(index)"), 1);

@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.86 2001/06/13 14:25:49 roberto Exp roberto $
+** $Id: llex.c,v 1.87 2001/06/15 20:36:57 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -28,10 +28,11 @@
 /* ORDER RESERVED */
 static const l_char *const token2string [] = {
     l_s("and"), l_s("break"), l_s("do"), l_s("else"), l_s("elseif"),
-    l_s("end"), l_s("for"), l_s("function"), l_s("if"), l_s("local"),
-    l_s("nil"), l_s("not"), l_s("or"), l_s("repeat"), l_s("return"),
-    l_s("then"), l_s("until"), l_s("while"), l_s(""), l_s(".."), l_s("..."),
-    l_s("=="), l_s(">="), l_s("<="), l_s("~="), l_s(""), l_s(""), l_s("<eof>")
+    l_s("end"), l_s("for"), l_s("function"), l_s("global"), l_s("if"),
+    l_s("in"), l_s("local"), l_s("nil"), l_s("not"), l_s("or"), l_s("repeat"),
+    l_s("return"), l_s("then"), l_s("until"), l_s("while"), l_s(""),
+    l_s(".."), l_s("..."), l_s("=="), l_s(">="), l_s("<="), l_s("~="),
+    l_s(""), l_s(""), l_s("<eof>")
 };
 
 
