@@ -1,7 +1,7 @@
 /*
 ** tree.h
 ** TecCGraf - PUC-Rio
-** $Id: tree.h,v 1.12 1996/02/12 18:32:40 roberto Exp roberto $
+** $Id: tree.h,v 1.13 1996/02/14 13:35:51 roberto Exp roberto $
 */
 
 #ifndef tree_h
@@ -14,8 +14,8 @@
 
 typedef struct TaggedString
 {
-  unsigned short varindex;  /* != NOT_USED  if this is a symbol */
-  unsigned short constindex;  /* != NOT_USED  if this is a constant */
+  Word varindex;  /* != NOT_USED  if this is a symbol */
+  Word constindex;  /* != NOT_USED  if this is a constant */
   unsigned long hash;  /* 0 if not initialized */
   int marked;   /* for garbage collection; never collect (nor change) if > 1 */
   char str[1];   /* \0 byte already reserved */
