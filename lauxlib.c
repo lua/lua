@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.68 2002/05/06 19:05:10 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.69 2002/05/07 17:36:56 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -151,10 +151,17 @@ LUALIB_API void luaL_vstr (lua_State *L, const char *fmt, ...) {
 
 
 LUALIB_API int luaL_verror (lua_State *L, const char *fmt, ...) {
+  lua_Debug ar;
   va_list argp;
   va_start(argp, fmt);
   lua_vpushstr(L, fmt, argp);
   va_end(argp);
+  if (lua_getstack(L, 1, &ar)) {  /* check calling function */
+    lua_getinfo(L, "Snl", &ar);
+    if (ar.currentline > 0)
+      luaL_vstr(L, "%s:%d: %s",
+                   ar.short_src, ar.currentline, lua_tostring(L, -1));
+  }
   return lua_errorobj(L);
 }
 

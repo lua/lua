@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.106 2002/05/08 17:34:00 roberto Exp roberto $
+** $Id: ltable.c,v 1.107 2002/05/13 13:38:59 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -25,6 +25,7 @@
 
 #include "lua.h"
 
+#include "ldebug.h"
 #include "ldo.h"
 #include "lmem.h"
 #include "lobject.h"
@@ -111,7 +112,7 @@ static int luaH_index (lua_State *L, Table *t, const TObject *key) {
   else {
     const TObject *v = luaH_get(t, key);
     if (v == &luaO_nilobject)
-      luaD_runerror(L, "invalid key for `next'");
+      luaG_runerror(L, "invalid key for `next'");
     i = cast(int, (cast(const lu_byte *, v) -
                    cast(const lu_byte *, val(node(t, 0)))) / sizeof(Node));
     return i + t->sizearray;  /* hash elements are numbered after array ones */
@@ -214,7 +215,7 @@ static void setnodevector (lua_State *L, Table *t, int lsize) {
   int i;
   int size = twoto(lsize);
   if (lsize > MAXBITS)
-    luaD_runerror(L, "table overflow");
+    luaG_runerror(L, "table overflow");
   if (lsize == 0) {  /* no elements to hash part? */
     t->node = G(L)->dummynode;  /* use common `dummynode' */
     lua_assert(ttype(key(t->node)) == LUA_TNIL);  /* assert invariants: */
@@ -449,7 +450,7 @@ void luaH_set (lua_State *L, Table *t, const TObject *key, const TObject *val) {
     settableval(p, val);
   }
   else {
-    if (ttype(key) == LUA_TNIL) luaD_runerror(L, "table index is nil");
+    if (ttype(key) == LUA_TNIL) luaG_runerror(L, "table index is nil");
     newkey(L, t, key, val);
   }
   t->flags = 0;

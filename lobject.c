@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.78 2002/05/06 15:51:41 roberto Exp roberto $
+** $Id: lobject.c,v 1.79 2002/05/07 17:36:56 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -100,7 +100,8 @@ static void pushstr (lua_State *L, const char *str) {
 
 /* this function handles only `%d', `%c', %f, and `%s' formats */
 const char *luaO_vpushstr (lua_State *L, const char *fmt, va_list argp) {
-  int n = 0;
+  int n = 1;
+  pushstr(L, "");
   for (;;) {
     const char *e = strchr(fmt, '%');
     if (e == NULL) break;
@@ -150,47 +151,36 @@ const char *luaO_pushstr (lua_State *L, const char *fmt, ...) {
 }
 
 
-void luaO_verror (lua_State *L, const char *fmt, ...) {
-  const char *msg;
-  va_list argp;
-  va_start(argp, fmt);
-  msg = luaO_vpushstr(L, fmt, argp);
-  va_end(argp);
-  luaD_runerror(L, msg);
-}
-
-
 void luaO_chunkid (char *out, const char *source, int bufflen) {
   if (*source == '=') {
     strncpy(out, source+1, bufflen);  /* remove first char */
     out[bufflen-1] = '\0';  /* ensures null termination */
   }
-  else {  /* out = "file `source'", or "file `...source'" */
+  else {  /* out = "source", or "...source" */
     if (*source == '@') {
       int l;
       source++;  /* skip the `@' */
-      bufflen -= sizeof(" file `...' ");
+      bufflen -= sizeof(" `...' ");
       l = strlen(source);
-      strcpy(out, "file `");
+      strcpy(out, "");
       if (l>bufflen) {
         source += (l-bufflen);  /* get last part of file name */
         strcat(out, "...");
       }
       strcat(out, source);
-      strcat(out, "'");
     }
-    else {
+    else {  /* out = [string "string"] */
       int len = strcspn(source, "\n");  /* stop at first newline */
-      bufflen -= sizeof(" string \"...\" ");
+      bufflen -= sizeof(" [string \"...\"] ");
       if (len > bufflen) len = bufflen;
-      strcpy(out, "string \"");
+      strcpy(out, "[string \"");
       if (source[len] != '\0') {  /* must truncate? */
         strncat(out, source, len);
         strcat(out, "...");
       }
       else
         strcat(out, source);
-      strcat(out, "\"");
+      strcat(out, "\"]");
     }
   }
 }

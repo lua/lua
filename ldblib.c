@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.50 2002/05/06 19:05:10 roberto Exp roberto $
+** $Id: ldblib.c,v 1.51 2002/05/07 17:36:56 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -54,8 +54,7 @@ static int getinfo (lua_State *L) {
     switch (*options) {
       case 'S':
         settabss(L, "source", ar.source);
-        if (ar.source)
-          settabss(L, "short_src", ar.short_src);
+        settabss(L, "short_src", ar.short_src);
         settabsi(L, "linedefined", ar.linedefined);
         settabss(L, "what", ar.what);
         break;
@@ -205,31 +204,28 @@ static int errorfb (lua_State *L) {
       firstpart = 0;
       continue;
     }
-    sprintf(buff, "%4d:  ", level-1);
+    sprintf(buff, "%4d-  ", level-1);
     lua_pushstring(L, buff);
     lua_getinfo(L, "Snl", &ar);
+    luaL_vstr(L, "%s:", ar.short_src);
+    if (ar.currentline > 0)
+      luaL_vstr(L, "%d:", ar.currentline);
     switch (*ar.namewhat) {
-      case 'g':  case 'l':  /* global, local */
-        luaL_vstr(L, "function `%s'", ar.name);
-        break;
+      case 'g':  /* global */ 
+      case 'l':  /* local */
       case 'f':  /* field */
       case 'm':  /* method */
-        luaL_vstr(L, "method `%s'", ar.name);
+        luaL_vstr(L, " in function `%s'", ar.name);
         break;
       default: {
         if (*ar.what == 'm')  /* main? */
-          luaL_vstr(L, "main of %s", ar.short_src);
+          luaL_vstr(L, " in main chunk");
         else if (*ar.what == 'C')  /* C function? */
           luaL_vstr(L, "%s", ar.short_src);
         else
-          luaL_vstr(L, "function <%d:%s>", ar.linedefined, ar.short_src);
-        ar.source = NULL;  /* do not print source again */
+          luaL_vstr(L, " in function <%s:%d>", ar.short_src, ar.linedefined);
       }
     }
-    if (ar.currentline > 0)
-      luaL_vstr(L, " at line %d", ar.currentline);
-    if (ar.source)
-      luaL_vstr(L, " [%s]", ar.short_src);
     lua_pushliteral(L, "\n");
     lua_concat(L, lua_gettop(L));
   }

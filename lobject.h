@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.130 2002/05/06 15:51:41 roberto Exp roberto $
+** $Id: lobject.h,v 1.131 2002/05/07 17:36:56 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -252,7 +252,6 @@ int luaO_str2d (const char *s, lua_Number *result);
 
 const char *luaO_vpushstr (lua_State *L, const char *fmt, va_list argp);
 const char *luaO_pushstr (lua_State *L, const char *fmt, ...);
-void luaO_verror (lua_State *L, const char *fmt, ...);
 void luaO_chunkid (char *out, const char *source, int len);
 
 

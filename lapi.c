@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.189 2002/05/06 19:05:10 roberto Exp roberto $
+** $Id: lapi.c,v 1.190 2002/05/07 17:36:56 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -11,6 +11,7 @@
 #include "lua.h"
 
 #include "lapi.h"
+#include "ldebug.h"
 #include "ldo.h"
 #include "lfunc.h"
 #include "lgc.h"
@@ -521,8 +522,8 @@ LUA_API void lua_setmetatable (lua_State *L, int objindex) {
       uvalue(obj)->uv.metatable = hvalue(mt);
       break;
     default:
-      luaO_verror(L, "cannot change the meta table of a %s",
-                  luaT_typenames[ttype(obj)]);
+      luaG_runerror(L, "cannot change the meta table of a %s",
+                       luaT_typenames[ttype(obj)]);
   }
   lua_unlock(L);
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.114 2002/05/13 13:09:00 roberto Exp roberto $
+** $Id: ldebug.c,v 1.115 2002/05/14 17:52:22 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -144,11 +144,11 @@ static void funcinfo (lua_State *L, lua_Debug *ar, StkId func) {
   if (ttype(func) == LUA_TFUNCTION)
     cl = clvalue(func);
   else {
-    luaD_runerror(L, "value for `lua_getinfo' is not a function");
+    luaG_runerror(L, "value for `lua_getinfo' is not a function");
     cl = NULL;  /* to avoid warnings */
   }
   if (cl->c.isC) {
-    ar->source = "=C";
+    ar->source = "=[C]";
     ar->linedefined = -1;
     ar->what = "C";
   }
@@ -481,10 +481,10 @@ void luaG_typeerror (lua_State *L, const TObject *o, const char *op) {
   if (isinstack(L->ci, o))
     kind = getobjname(L, L->ci, o - L->ci->base, &name);
   if (kind)
-    luaO_verror(L, "attempt to %s %s `%s' (a %s value)",
+    luaG_runerror(L, "attempt to %s %s `%s' (a %s value)",
                 op, kind, name, t);
   else
-    luaO_verror(L, "attempt to %s a %s value", op, t);
+    luaG_runerror(L, "attempt to %s a %s value", op, t);
 }
 
 
@@ -507,8 +507,24 @@ void luaG_ordererror (lua_State *L, const TObject *p1, const TObject *p2) {
   const char *t1 = luaT_typenames[ttype(p1)];
   const char *t2 = luaT_typenames[ttype(p2)];
   if (t1[2] == t2[2])
-    luaO_verror(L, "attempt to compare two %s values", t1);
+    luaG_runerror(L, "attempt to compare two %s values", t1);
   else
-    luaO_verror(L, "attempt to compare %s with %s", t1, t2);
+    luaG_runerror(L, "attempt to compare %s with %s", t1, t2);
+}
+
+
+void luaG_runerror (lua_State *L, const char *fmt, ...) {
+  const char *msg;
+  va_list argp;
+  va_start(argp, fmt);
+  msg = luaO_vpushstr(L, fmt, argp);
+  va_end(argp);
+  if (isLmark(L->ci)) {
+    char buff[LUA_IDSIZE];
+    int line = currentline(L, L->ci);
+    luaO_chunkid(buff, getstr(getluaproto(L->ci)->source), LUA_IDSIZE);
+    msg = luaO_pushstr(L, "%s:%d: %s", buff, line, msg);
+  }
+  luaD_error(L, msg, LUA_ERRRUN);
 }
 

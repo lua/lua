@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.230 2002/05/09 14:14:34 roberto Exp roberto $
+** $Id: lvm.c,v 1.231 2002/05/13 13:09:00 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -134,7 +134,7 @@ void luaV_gettable (lua_State *L, const TObject *t, TObject *key, StkId res) {
   if (ttype(tm) == LUA_TFUNCTION)
     callTMres(L, tm, t, key, res);
   else {
-    if (++loop == MAXTAGLOOP) luaD_runerror(L, "loop in gettable");
+    if (++loop == MAXTAGLOOP) luaG_runerror(L, "loop in gettable");
     t = tm;
     goto init;  /* return luaV_gettable(L, tm, key, res); */
   }
@@ -164,7 +164,7 @@ void luaV_settable (lua_State *L, const TObject *t, TObject *key, StkId val) {
   if (ttype(tm) == LUA_TFUNCTION)
     callTM(L, tm, t, key, val);
   else {
-    if (++loop == MAXTAGLOOP) luaD_runerror(L, "loop in settable");
+    if (++loop == MAXTAGLOOP) luaG_runerror(L, "loop in settable");
     t = tm;
     goto init;  /* luaV_settable(L, tm, key, val); */
   }
@@ -251,7 +251,7 @@ void luaV_strconc (lua_State *L, int total, int last) {
         tl += tsvalue(top-n-1)->tsv.len;
         n++;
       }
-      if (tl > MAX_SIZET) luaD_runerror(L, "string size overflow");
+      if (tl > MAX_SIZET) luaG_runerror(L, "string size overflow");
       buffer = luaO_openspace(L, tl, char);
       tl = 0;
       for (i=n; i>0; i--) {  /* concat all strings */
@@ -276,7 +276,7 @@ static void powOp (lua_State *L, StkId ra, StkId rb, StkId rc) {
     setsvalue(&o, luaS_newliteral(L, "pow"));
     luaV_gettable(L, gt(L), &o, &f);
     if (ttype(&f) != LUA_TFUNCTION)
-      luaD_runerror(L, "`pow' (for `^' operator) is not a function");
+      luaG_runerror(L, "`pow' (for `^' operator) is not a function");
     callTMres(L, &f, b, c, ra);
   }
   else
@@ -527,11 +527,11 @@ StkId luaV_execute (lua_State *L) {
         const TObject *plimit = ra+1;
         const TObject *pstep = ra+2;
         if (ttype(ra) != LUA_TNUMBER)
-          luaD_runerror(L, "`for' initial value must be a number");
+          luaG_runerror(L, "`for' initial value must be a number");
         if (!tonumber(plimit, ra+1))
-          luaD_runerror(L, "`for' limit must be a number");
+          luaG_runerror(L, "`for' limit must be a number");
         if (!tonumber(pstep, ra+2))
-          luaD_runerror(L, "`for' step must be a number");
+          luaG_runerror(L, "`for' step must be a number");
         step = nvalue(pstep);
         index = nvalue(ra) + step;  /* increment index */
         limit = nvalue(plimit);

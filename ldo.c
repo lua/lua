@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.173 2002/05/01 20:40:42 roberto Exp roberto $
+** $Id: ldo.c,v 1.174 2002/05/07 17:36:56 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -113,7 +113,7 @@ static void luaD_growCI (lua_State *L) {
   else {
     luaD_reallocCI(L, 2*L->size_ci);
     if (L->size_ci > LUA_MAXCALLS)
-      luaD_runerror(L, "stack overflow");
+      luaG_runerror(L, "stack overflow");
   }
   L->ci++;
 }
@@ -279,7 +279,7 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
     firstResult = luaV_execute(L);  /* call it */
     if (firstResult == NULL) {
       luaD_poscall(L, 0, L->top);
-      luaD_runerror(L, "attempt to `yield' across tag-method/C-call boundary");
+      luaG_runerror(L, "attempt to `yield' across tag-method/C-call boundary");
     }
   }
   luaD_poscall(L, nResults, firstResult);
@@ -335,9 +335,9 @@ LUA_API int lua_resume (lua_State *L, lua_State *co) {
   lua_lock(L);
   ci = co->ci;
   if (ci == co->base_ci)  /* no activation record? ?? */
-    luaD_runerror(L, "thread is dead - cannot be resumed");
+    luaG_runerror(L, "thread is dead - cannot be resumed");
   if (co->errorJmp != NULL)  /* ?? */
-    luaD_runerror(L, "thread is active - cannot be resumed");
+    luaG_runerror(L, "thread is active - cannot be resumed");
   if (L->errorJmp) {
     setobj(&ud.err, L->errorJmp->err);
   }
@@ -359,7 +359,7 @@ LUA_API int lua_yield (lua_State *L, int nresults) {
   lua_lock(L);
   ci = L->ci;
   if (ci_func(ci-1)->c.isC)
-    luaD_runerror(L, "cannot `yield' a C function");
+    luaG_runerror(L, "cannot `yield' a C function");
   ci->yield_results = nresults;
   lua_unlock(L);
   return -1;
@@ -489,11 +489,6 @@ void luaD_error (lua_State *L, const char *s, int errcode) {
   else
     setsvalue(&errobj, luaS_new(L, s));
   luaD_errorobj(L, &errobj, errcode);
-}
-
-
-void luaD_runerror (lua_State *L, const char *s) {
-  luaD_error(L, s, LUA_ERRRUN);
 }
 
 

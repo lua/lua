@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.84 2002/04/23 14:59:22 roberto Exp roberto $
+** $Id: lua.c,v 1.85 2002/05/01 20:40:42 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -71,7 +71,7 @@ static void report (int status) {
   else {
     const char *msg = lua_tostring(L, -1);
     if (msg == NULL) msg = "(no message)";
-    fprintf(stderr, "error: %s\n", msg);
+    fprintf(stderr, "%s\n", msg);
     lua_pop(L, 1);
   }
 }
@@ -152,8 +152,8 @@ static int file_input (const char *name) {
 }
 
 
-static int dostring (const char *s) {
-  int status = lua_loadbuffer(L, s, strlen(s), s);
+static int dostring (const char *s, const char *name) {
+  int status = lua_loadbuffer(L, s, strlen(s), name);
   if (status == 0) status = lcall(1);
   report(status);
   return status;
@@ -198,7 +198,7 @@ static const char *get_prompt (int firstline) {
 
 static int incomplete (int status) {
   if (status == LUA_ERRSYNTAX &&
-         strstr(lua_tostring(L, -1), "last token read: `<eof>'") != NULL) {
+         strstr(lua_tostring(L, -1), "near `<eof>'") != NULL) {
     lua_pop(L, 1);
     return 1;
   }
@@ -289,7 +289,7 @@ static int handle_argv (char *argv[], int *toclose) {
               print_usage();
               return EXIT_FAILURE;
             }
-            if (dostring(argv[i]) != 0) {
+            if (dostring(argv[i], "=prog. argument") != 0) {
               fprintf(stderr, "%s: error running argument `%.99s'\n",
                       LUA_PROGNAME, argv[i]);
               return EXIT_FAILURE;
@@ -340,6 +340,16 @@ static void openstdlibs (lua_State *l) {
 }
 
 
+static int handle_luainit (void) {
+  const char *init = getenv("LUA_INIT");
+  if (init == NULL) return 0;  /* status OK */
+  else if (init[0] == '@')
+    return file_input(init+1);
+  else
+    return dostring(init, "=LUA_INIT");
+}
+
+
 int main (int argc, char *argv[]) {
   int status;
   int toclose = 0;
@@ -347,6 +357,8 @@ int main (int argc, char *argv[]) {
   L = lua_open();  /* create state */
   LUA_USERINIT(L);  /* open libraries */
   register_getargs(argv);  /* create `getargs' function */
+  status = handle_luainit();
+  if (status != 0) return status;
   status = handle_argv(argv+1, &toclose);
   if (toclose)
     lua_close(L);

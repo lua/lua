@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.53 2002/04/22 14:40:23 roberto Exp roberto $
+** $Id: lmem.c,v 1.54 2002/05/01 20:40:42 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -9,6 +9,7 @@
 
 #include "lua.h"
 
+#include "ldebug.h"
 #include "ldo.h"
 #include "lmem.h"
 #include "lobject.h"
@@ -34,7 +35,7 @@ void *luaM_growaux (lua_State *L, void *block, int *size, int size_elems,
   else if (*size >= limit/2) {  /* cannot double it? */
     if (*size < limit - MINSIZEARRAY)  /* try something smaller... */
       newsize = limit;  /* still have at least MINSIZEARRAY free places */
-    else luaD_runerror(L, errormsg);
+    else luaG_runerror(L, errormsg);
   }
   newblock = luaM_realloc(L, block,
                           cast(lu_mem, *size)*cast(lu_mem, size_elems),
@@ -53,7 +54,7 @@ void *luaM_realloc (lua_State *L, void *block, lu_mem oldsize, lu_mem size) {
     block = NULL;
   }
   else if (size >= MAX_SIZET)
-    luaD_runerror(L, "memory allocation error: block too big");
+    luaG_runerror(L, "memory allocation error: block too big");
   else {
     block = l_realloc(block, oldsize, size);
     if (block == NULL) {

@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.99 2002/03/08 19:25:24 roberto Exp roberto $
+** $Id: llex.c,v 1.100 2002/05/07 17:36:56 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -61,8 +61,7 @@ static void luaX_error (LexState *ls, const char *s, const char *token) {
   lua_State *L = ls->L;
   char buff[MAXSRC];
   luaO_chunkid(buff, getstr(ls->source), MAXSRC);
-  luaO_pushstr(L, "%s;\n  last token read: `%s' at line %d in %s",
-                        s, token, ls->linenumber, buff);
+  luaO_pushstr(L, "%s:%d: %s near `%s'", buff, ls->linenumber, s, token); 
   luaD_errorobj(L, L->top - 1, LUA_ERRSYNTAX);
 }
 
