@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: lgc.c,v 1.127 2002/01/30 17:26:44 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -43,7 +43,12 @@ typedef struct GCState {
 
 
 
-static void markobject (GCState *st, TObject *o);
+#define ismarkable(o)	(!((1 << ttype(o)) & \
+	((1 << LUA_TNIL) | (1 << LUA_TNUMBER) | (1 << LUA_TBOOLEAN))))
+
+static void reallymarkobject (GCState *st, TObject *o);
+
+#define markobject(st,o)	if (ismarkable(o)) reallymarkobject(st,o)
 
 
 static void protomark (Proto *f) {
@@ -96,7 +101,7 @@ static void marktable (GCState *st, Table *h) {
 }
 
 
-static void markobject (GCState *st, TObject *o) {
+static void reallymarkobject (GCState *st, TObject *o) {
   switch (ttype(o)) {
     case LUA_TSTRING:
       strmark(tsvalue(o));
@@ -112,12 +117,7 @@ static void markobject (GCState *st, TObject *o) {
       marktable(st, hvalue(o));
       break;
     }
-    default: {
-      lua_assert(ttype(o) == LUA_TNIL ||
-                 ttype(o) == LUA_TNUMBER ||
-                 ttype(o) == LUA_TBOOLEAN);
-      break;
-    }
+    default: lua_assert(0);  /* should not be called with other types */
   }
 }
 
