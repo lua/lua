@@ -1,7 +1,7 @@
 /*
 ** Module to control static tables
 ** TeCGraf - PUC-Rio
-** $Id: $
+** $Id: table.h,v 1.1 1993/12/17 18:41:19 celes Exp roberto $
 */
 
 #ifndef table_h
@@ -26,7 +26,6 @@ extern int     lua_nfile;
 
 
 int   lua_findsymbol           (char *s);
-int   lua_findenclosedconstant (char *s);
 int   lua_findconstant         (char *s);
 void  lua_markobject           (Object *o);
 char *lua_createstring         (char *s);

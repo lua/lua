@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: $";
+char *rcs_table="$Id: table.c,v 1.1 1993/12/17 18:41:19 celes Exp roberto $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -113,57 +113,6 @@ int lua_findsymbol (char *s)
  searchlist = p;
 
  return lua_ntable++;
-}
-
-/*
-** Given a constant string, eliminate its delimeters (" or '), search it at 
-** constant table and return its index. If not found, allocate at end of 
-** the table, checking oveflow and return its index.
-**
-** For each allocation, the function allocate a extra char to be used to
-** mark used string (it's necessary to deal with constant and string 
-** uniformily). The function store at the table the second position allocated,
-** that represents the beginning of the real string. On error, return -1.
-** 
-*/
-int lua_findenclosedconstant (char *s)
-{
- int i, j, l=strlen(s);
- char *c = calloc (l, sizeof(char)); 	/* make a copy */
- 
- c++;		/* create mark space */
-
- /* introduce scape characters */ 
- for (i=1,j=0; i<l-1; i++)
- {
-  if (s[i] == '\\')
-  {
-   switch (s[i+1])
-   {
-    case 'n': c[j++] = '\n'; i++; break;
-    case 't': c[j++] = '\t'; i++; break;
-    case 'r': c[j++] = '\r'; i++; break;
-    default : c[j++] = '\\'; break;
-   }
-  }
-  else
-   c[j++] = s[i];
- }
- c[j++] = 0;
- 
- for (i=0; i<lua_nconstant; i++)
-  if (streq(c,lua_constant[i]))
-  {
-   free (c-1);
-   return i;
-  }
- if (lua_nconstant >= MAXCONSTANT-1)
- {
-  lua_error ("lua: constant string table overflow"); 
-  return -1;
- }
- lua_constant[lua_nconstant++] = c;
- return (lua_nconstant-1);
 }
 
 /*
