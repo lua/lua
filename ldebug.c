@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.71 2001/03/02 17:27:50 roberto Exp roberto $
+** $Id: ldebug.c,v 1.72 2001/03/06 14:46:54 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -405,11 +405,6 @@ static Instruction luaG_symbexec (lua_State *L, const Proto *pt,
         push = arg2;
         break;
       }
-      case OP_TAILCALL: {
-        check(arg1 < top && arg2 <= top);
-        pop = top-arg2;
-        break;
-      }
       case OP_PUSHNIL: {
         check(arg1 > 0);
         push = arg1;
@@ -585,12 +580,9 @@ static const l_char *getfuncname (lua_State *L, StkId f, const l_char **name) {
     Instruction i;
     if (pc == -1) return NULL;  /* function is not activated */
     i = p->code[pc];
-    switch (GET_OPCODE(i)) {
-      case OP_CALL: case OP_TAILCALL:
-        return getobjname(L, (func+1)+GETARG_A(i), name);
-      default:
-        return NULL;  /* no useful name found */
-    }
+    return (GET_OPCODE(i) == OP_CALL
+             ? getobjname(L, (func+1)+GETARG_A(i), name)
+             : NULL);  /* no useful name found */
   }
 }
 

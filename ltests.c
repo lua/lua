@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.73 2001/03/02 17:27:50 roberto Exp roberto $
+** $Id: ltests.c,v 1.74 2001/03/06 20:09:38 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -139,14 +139,53 @@ void *debug_realloc (void *block, size_t oldsize, size_t size) {
 
 
 static const l_char *const instrname[NUM_OPCODES] = {
-  l_s("RETURN"), l_s("CALL"), l_s("TAILCALL"), l_s("PUSHNIL"), l_s("POP"), l_s("PUSHINT"), 
-  l_s("PUSHSTRING"), l_s("PUSHNUM"), l_s("PUSHNEGNUM"), l_s("PUSHUPVALUE"), l_s("GETLOCAL"), 
-  l_s("GETGLOBAL"), l_s("GETTABLE"), l_s("GETDOTTED"), l_s("GETINDEXED"), l_s("PUSHSELF"), 
-  l_s("CREATETABLE"), l_s("SETLOCAL"), l_s("SETGLOBAL"), l_s("SETTABLE"), l_s("SETLIST"), l_s("SETMAP"), 
-  l_s("ADD"), l_s("ADDI"), l_s("SUB"), l_s("MULT"), l_s("DIV"), l_s("POW"), l_s("CONCAT"), l_s("MINUS"), l_s("NOT"), 
-  l_s("JMPNE"), l_s("JMPEQ"), l_s("JMPLT"), l_s("JMPLE"), l_s("JMPGT"), l_s("JMPGE"), l_s("JMPT"), l_s("JMPF"), 
-  l_s("JMPONT"), l_s("JMPONF"), l_s("JMP"), l_s("PUSHNILJMP"), l_s("FORPREP"), l_s("FORLOOP"), l_s("LFORPREP"), 
-  l_s("LFORLOOP"), l_s("CLOSURE")
+  l_s("RETURN"),
+  l_s("CALL"),
+  l_s("PUSHNIL"),
+  l_s("POP"),
+  l_s("PUSHINT"),
+  l_s("PUSHSTRING"),
+  l_s("PUSHNUM"),
+  l_s("PUSHNEGNUM"),
+  l_s("PUSHUPVALUE"),
+  l_s("GETLOCAL"),
+  l_s("GETGLOBAL"),
+  l_s("GETTABLE"),
+  l_s("GETDOTTED"),
+  l_s("GETINDEXED"),
+  l_s("PUSHSELF"),
+  l_s("CREATETABLE"),
+  l_s("SETLOCAL"),
+  l_s("SETGLOBAL"),
+  l_s("SETTABLE"),
+  l_s("SETLIST"),
+  l_s("SETMAP"),
+  l_s("ADD"),
+  l_s("ADDI"),
+  l_s("SUB"),
+  l_s("MULT"),
+  l_s("DIV"),
+  l_s("POW"),
+  l_s("CONCAT"),
+  l_s("MINUS"),
+  l_s("NOT"),
+  l_s("JMPNE"),
+  l_s("JMPEQ"),
+  l_s("JMPLT"),
+  l_s("JMPLE"),
+  l_s("JMPGT"),
+  l_s("JMPGE"),
+  l_s("JMPT"),
+  l_s("JMPF"),
+  l_s("JMPONT"),
+  l_s("JMPONF"),
+  l_s("JMP"),
+  l_s("PUSHNILJMP"),
+  l_s("FORPREP"),
+  l_s("FORLOOP"),
+  l_s("LFORPREP"),
+  l_s("LFORLOOP"),
+  l_s("CLOSURE")
 };
 
 

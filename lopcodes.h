@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.69 2000/12/04 18:33:40 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.70 2001/01/15 16:13:24 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -85,7 +85,6 @@ name		args	stack before	stack after	side effects
 OP_RETURN,/*	U	v_n-v_x(at u)	(return)	returns v_x-v_n	*/
 
 OP_CALL,/*	A B	v_n-v_1 f(at a)	r_b-r_1		f(v1,...,v_n)	*/
-OP_TAILCALL,/*	A B	v_n-v_1 f(at a)	(return)	f(v1,...,v_n)	*/
 
 OP_PUSHNIL,/*	U	-		nil_1-nil_u			*/
 OP_POP,/*	U	a_u-a_1		-				*/

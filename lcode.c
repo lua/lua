@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.63 2001/02/23 17:17:25 roberto Exp roberto $
+** $Id: lcode.c,v 1.64 2001/02/23 20:28:19 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -482,14 +482,6 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
       pop = 2*arg1;
       break;
     }
-    case OP_RETURN: {
-      if (GET_OPCODE(i) == OP_CALL && GETARG_B(i) == MULT_RET) {
-        SET_OPCODE(i, OP_TAILCALL);
-        SETARG_B(i, arg1);
-        optm = 1;
-      }
-      break;
-    }
     case OP_PUSHNIL: {
       if (arg1 == 0) return NO_JUMP;  /* nothing to do */
       push = arg1;
@@ -632,7 +624,6 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
     }
     case OP_GETDOTTED:
     case OP_GETINDEXED:
-    case OP_TAILCALL:
     case OP_ADDI: {
       lua_assert(0);  /* instruction used only for optimizations */
       break;
@@ -669,7 +660,6 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
 const OpProperties luaK_opproperties[] = {
   {iU, 0, 0},	/* OP_RETURN */
   {iAB, 0, 0},	/* OP_CALL */
-  {iAB, 0, 0},	/* OP_TAILCALL */
   {iU, VD, 0},	/* OP_PUSHNIL */
   {iU, 0, VD},	/* OP_POP */
   {iS, 1, 0},	/* OP_PUSHINT */
