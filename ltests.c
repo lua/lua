@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.126 2002/06/18 15:19:27 roberto Exp roberto $
+** $Id: ltests.c,v 1.127 2002/06/20 20:40:38 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -665,7 +665,7 @@ static int testC (lua_State *L) {
     else if EQ("rawcall") {
       int narg = getnum;
       int nres = getnum;
-      lua_upcall(L, narg, nres);
+      lua_call(L, narg, nres);
     }
     else if EQ("call") {
       int narg = getnum;

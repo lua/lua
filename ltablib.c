@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.6 2002/06/13 13:44:50 roberto Exp roberto $
+** $Id: ltablib.c,v 1.7 2002/06/18 15:16:18 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -25,7 +25,7 @@ static int luaB_foreachi (lua_State *L) {
     lua_pushvalue(L, 2);  /* function */
     lua_pushnumber(L, i);  /* 1st argument */
     lua_rawgeti(L, 1, i);  /* 2nd argument */
-    lua_upcall(L, 2, 1);
+    lua_call(L, 2, 1);
     if (!lua_isnil(L, -1))
       return 1;
     lua_pop(L, 1);  /* remove nil result */
@@ -44,7 +44,7 @@ static int luaB_foreach (lua_State *L) {
     lua_pushvalue(L, 2);  /* function */
     lua_pushvalue(L, -3);  /* key */
     lua_pushvalue(L, -3);  /* value */
-    lua_upcall(L, 2, 1);
+    lua_call(L, 2, 1);
     if (!lua_isnil(L, -1))
       return 1;
     lua_pop(L, 2);  /* remove value and result */
@@ -128,7 +128,7 @@ static int sort_comp (lua_State *L, int a, int b) {
     lua_pushvalue(L, 2);
     lua_pushvalue(L, a-1);  /* -1 to compensate function */
     lua_pushvalue(L, b-2);  /* -2 to compensate function and `a' */
-    lua_upcall(L, 2, 1);
+    lua_call(L, 2, 1);
     res = lua_toboolean(L, -1);
     lua_pop(L, 1);
     return res;
