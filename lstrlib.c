@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.68 2001/03/26 14:31:49 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.69 2001/07/17 18:46:49 roberto Exp $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -181,26 +181,26 @@ static const l_char *luaI_classend (MatchState *ms, const l_char *p) {
 }
 
 
-static int match_class (l_char c, l_char cl) {
+static int match_class (l_charint c, l_charint cl) {
   int res;
-  switch (tolower(uchar(cl))) {
-    case l_c('a') : res = isalpha(uchar(c)); break;
-    case l_c('c') : res = iscntrl(uchar(c)); break;
-    case l_c('d') : res = isdigit(uchar(c)); break;
-    case l_c('l') : res = islower(uchar(c)); break;
-    case l_c('p') : res = ispunct(uchar(c)); break;
-    case l_c('s') : res = isspace(uchar(c)); break;
-    case l_c('u') : res = isupper(uchar(c)); break;
-    case l_c('w') : res = isalnum(uchar(c)); break;
-    case l_c('x') : res = isxdigit(uchar(c)); break;
-    case l_c('z') : res = (c == l_c('\0')); break;
+  switch (tolower(cl)) {
+    case l_c('a') : res = isalpha(c); break;
+    case l_c('c') : res = iscntrl(c); break;
+    case l_c('d') : res = isdigit(c); break;
+    case l_c('l') : res = islower(c); break;
+    case l_c('p') : res = ispunct(c); break;
+    case l_c('s') : res = isspace(c); break;
+    case l_c('u') : res = isupper(c); break;
+    case l_c('w') : res = isalnum(c); break;
+    case l_c('x') : res = isxdigit(c); break;
+    case l_c('z') : res = (c == 0); break;
     default: return (cl == c);
   }
-  return (islower(uchar(cl)) ? res : !res);
+  return (islower(cl) ? res : !res);
 }
 
 
-static int matchbracketclass (l_char c, const l_char *p, const l_char *ec) {
+static int matchbracketclass (l_charint c, const l_char *p, const l_char *ec) {
   int sig = 1;
   if (*(p+1) == l_c('^')) {
     sig = 0;
@@ -214,16 +214,16 @@ static int matchbracketclass (l_char c, const l_char *p, const l_char *ec) {
     }
     else if ((*(p+1) == l_c('-')) && (p+2 < ec)) {
       p+=2;
-      if (uchar(*(p-2)) <= uchar(c) && uchar(c) <= uchar(*p))
+      if (uchar(*(p-2)) <= c && c <= uchar(*p))
         return sig;
     }
-    else if (*p == c) return sig;
+    else if (uchar(*p) == c) return sig;
   }
   return !sig;
 }
 
 
-static int luaI_singlematch (l_char c, const l_char *p, const l_char *ep) {
+static int luaI_singlematch (l_charint c, const l_char *p, const l_char *ep) {
   switch (*p) {
     case l_c('.'):  /* matches any char */
       return 1;
@@ -232,7 +232,7 @@ static int luaI_singlematch (l_char c, const l_char *p, const l_char *ep) {
     case l_c('['):
       return matchbracketclass(c, p, ep-1);
     default:
-      return (*p == c);
+      return (uchar(*p) == c);
   }
 }
 
@@ -263,7 +263,7 @@ static const l_char *matchbalance (MatchState *ms, const l_char *s,
 static const l_char *max_expand (MatchState *ms, const l_char *s,
                                  const l_char *p, const l_char *ep) {
   sint32 i = 0;  /* counts maximum expand for item */
-  while ((s+i)<ms->src_end && luaI_singlematch(*(s+i), p, ep))
+  while ((s+i)<ms->src_end && luaI_singlematch(uchar(*(s+i)), p, ep))
     i++;
   /* keeps trying to match with the maximum repetitions */
   while (i>=0) {
@@ -281,7 +281,7 @@ static const l_char *min_expand (MatchState *ms, const l_char *s,
     const l_char *res = match(ms, s, ep+1);
     if (res != NULL)
       return res;
-    else if (s<ms->src_end && luaI_singlematch(*s, p, ep))
+    else if (s<ms->src_end && luaI_singlematch(uchar(*s), p, ep))
       s++;  /* try with one more repetition */
     else return NULL;
   }
@@ -354,7 +354,7 @@ static const l_char *match (MatchState *ms, const l_char *s, const l_char *p) {
       else goto dflt;
     default: dflt: {  /* it is a pattern item */
       const l_char *ep = luaI_classend(ms, p);  /* points to what is next */
-      int m = s<ms->src_end && luaI_singlematch(*s, p, ep);
+      int m = s<ms->src_end && luaI_singlematch(uchar(*s), p, ep);
       switch (*ep) {
         case l_c('?'): {  /* optional */
           const l_char *res;
