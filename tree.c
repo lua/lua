@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.9 1994/11/18 19:27:38 roberto Exp roberto $";
+char *rcs_tree="$Id: tree.c,v 1.10 1994/11/23 14:31:11 roberto Stab roberto $";
 
 
 #include <string.h>
@@ -37,6 +37,7 @@ static TreeNode *tree_create (TreeNode **node, char *str)
   (*node)->left = (*node)->right = NULL;
   strcpy((*node)->ts.str, str);
   (*node)->ts.marked = 0;
+  (*node)->ts.hash = 0;
   (*node)->varindex = (*node)->constindex = NOT_USED;
   return *node;
  }
@@ -59,6 +60,7 @@ TaggedString *lua_createstring (char *str)
   lua_pack();
   newString = (StringNode *)luaI_malloc(sizeof(StringNode)+strlen(str));
   newString->ts.marked = 0;
+  newString->ts.hash = 0;
   strcpy(newString->ts.str, str);
   newString->next = string_root;
   string_root = newString;

@@ -1,7 +1,7 @@
 /*
 ** tree.h
 ** TecCGraf - PUC-Rio
-** $Id: tree.h,v 1.5 1994/11/18 19:27:38 roberto Exp roberto $
+** $Id: tree.h,v 1.6 1994/11/23 14:31:11 roberto Stab roberto $
 */
 
 #ifndef tree_h
@@ -13,6 +13,7 @@
 
 typedef struct TaggedString
 {
+  unsigned long hash;  /* 0 if not initialized */
   char marked;   /* for garbage collection */
   char str[1];   /* \0 byte already reserved */
 } TaggedString;
