@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.9 2005/01/05 18:20:51 roberto Exp $
+** $Id: lobject.h,v 2.10 2005/01/18 17:18:09 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -218,6 +218,7 @@ typedef union Udata {
   struct {
     CommonHeader;
     struct Table *metatable;
+    struct Table *env;
     size_t len;
   } uv;
 } Udata;
@@ -286,7 +287,8 @@ typedef struct UpVal {
 */
 
 #define ClosureHeader \
-	CommonHeader; lu_byte isC; lu_byte nupvalues; GCObject *gclist
+	CommonHeader; lu_byte isC; lu_byte nupvalues; GCObject *gclist; \
+	struct Table *env
 
 typedef struct CClosure {
   ClosureHeader;
@@ -298,7 +300,6 @@ typedef struct CClosure {
 typedef struct LClosure {
   ClosureHeader;
   struct Proto *p;
-  TValue g;  /* global table for this closure */
   UpVal *upvals[1];
 } LClosure;
 

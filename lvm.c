@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.22 2005/01/10 18:17:39 roberto Exp roberto $
+** $Id: lvm.c,v 2.23 2005/01/10 18:33:37 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -428,9 +428,11 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         continue;
       }
       case OP_GETGLOBAL: {
+        TValue g;
         TValue *rb = KBx(i);
-        lua_assert(ttisstring(rb) && ttistable(&cl->g));
-        base = luaV_gettable(L, &cl->g, rb, ra, pc);  /***/
+        sethvalue(L, &g, cl->env);
+        lua_assert(ttisstring(rb));
+        base = luaV_gettable(L, &g, rb, ra, pc);  /***/
         continue;
       }
       case OP_GETTABLE: {
@@ -438,8 +440,10 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         continue;
       }
       case OP_SETGLOBAL: {
-        lua_assert(ttisstring(KBx(i)) && ttistable(&cl->g));
-        base = luaV_settable(L, &cl->g, KBx(i), ra, pc);  /***/
+        TValue g;
+        sethvalue(L, &g, cl->env);
+        lua_assert(ttisstring(KBx(i)));
+        base = luaV_settable(L, &g, KBx(i), ra, pc);  /***/
         continue;
       }
       case OP_SETUPVAL: {
@@ -740,7 +744,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         int nup, j;
         p = cl->p->p[GETARG_Bx(i)];
         nup = p->nups;
-        ncl = luaF_newLclosure(L, nup, &cl->g);
+        ncl = luaF_newLclosure(L, nup, cl->env);
         ncl->l.p = p;
         for (j=0; j<nup; j++, pc++) {
           if (GET_OPCODE(*pc) == OP_GETUPVAL)

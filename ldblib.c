@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.91 2005/01/10 17:21:10 roberto Exp roberto $
+** $Id: ldblib.c,v 1.92 2005/01/18 17:23:25 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -17,6 +17,40 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
+
+
+static int getmetatable (lua_State *L) {
+  luaL_checkany(L, 1);
+  if (!lua_getmetatable(L, 1)) {
+    lua_pushnil(L);  /* no metatable */
+  }
+  return 1;
+}
+
+
+static int setmetatable (lua_State *L) {
+  int t = lua_type(L, 2);
+  luaL_argcheck(L, t == LUA_TNIL || t == LUA_TTABLE, 2,
+                    "nil or table expected");
+  lua_settop(L, 2);
+  lua_pushboolean(L, lua_setmetatable(L, 1));
+  return 1;
+}
+
+
+static int getfenv (lua_State *L) {
+  lua_getfenv(L, 1);
+  return 1;
+}
+
+
+static int setfenv (lua_State *L) {
+  luaL_checktype(L, 2, LUA_TTABLE);
+  lua_settop(L, 2);
+  if (lua_setfenv(L, 1) == 0)
+    luaL_error(L, "`setfenv' cannot change environment of given object");
+  return 1;
+}
 
 
 static void settabss (lua_State *L, const char *i, const char *v) {
@@ -328,6 +362,10 @@ static int errorfb (lua_State *L) {
 
 
 static const luaL_reg dblib[] = {
+  {"getmetatable", getmetatable},
+  {"setmetatable", setmetatable},
+  {"getfenv", getfenv},
+  {"setfenv", setfenv},
   {"getlocal", getlocal},
   {"getinfo", getinfo},
   {"gethook", gethook},

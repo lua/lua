@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.56 2004/08/09 14:35:59 roberto Exp roberto $
+** $Id: liolib.c,v 2.57 2004/08/13 19:52:13 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -105,8 +105,8 @@ static int aux_close (lua_State *L) {
 
 
 static int io_close (lua_State *L) {
-  if (lua_isnone(L, 1) && lua_type(L, lua_upvalueindex(1)) == LUA_TTABLE)
-    lua_rawgeti(L, lua_upvalueindex(1), IO_OUTPUT);
+  if (lua_isnone(L, 1))
+    lua_rawgeti(L, LUA_ENVIRONINDEX, IO_OUTPUT);
   return pushresult(L, aux_close(L), NULL);
 }
 
@@ -147,7 +147,7 @@ static int io_tmpfile (lua_State *L) {
 
 static FILE *getiofile (lua_State *L, int findex) {
   FILE *f;
-  lua_rawgeti(L, lua_upvalueindex(1), findex);
+  lua_rawgeti(L, LUA_ENVIRONINDEX, findex);
   lua_assert(luaL_checkudata(L, -1, LUA_FILEHANDLE));
   f = *(FILE **)lua_touserdata(L, -1);
   if (f == NULL)
@@ -170,10 +170,10 @@ static int g_iofile (lua_State *L, int f, const char *mode) {
       lua_pushvalue(L, 1);
     }
     lua_assert(luaL_checkudata(L, -1, LUA_FILEHANDLE));
-    lua_rawseti(L, lua_upvalueindex(1), f);
+    lua_rawseti(L, LUA_ENVIRONINDEX, f);
   }
   /* return current value */
-  lua_rawgeti(L, lua_upvalueindex(1), f);
+  lua_rawgeti(L, LUA_ENVIRONINDEX, f);
   return 1;
 }
 
@@ -192,10 +192,9 @@ static int io_readline (lua_State *L);
 
 
 static void aux_lines (lua_State *L, int idx, int close) {
-  lua_getfield(L, LUA_REGISTRYINDEX, LUA_FILEHANDLE);
   lua_pushvalue(L, idx);
   lua_pushboolean(L, close);  /* close/not close file when finished */
-  lua_pushcclosure(L, io_readline, 3);
+  lua_pushcclosure(L, io_readline, 2);
 }
 
 
@@ -209,7 +208,7 @@ static int f_lines (lua_State *L) {
 static int io_lines (lua_State *L) {
   if (lua_isnoneornil(L, 1)) {  /* no arguments? */
     /* will iterate over default input */
-    lua_rawgeti(L, lua_upvalueindex(1), IO_INPUT);
+    lua_rawgeti(L, LUA_ENVIRONINDEX, IO_INPUT);
     return f_lines(L);
   }
   else {
@@ -349,7 +348,7 @@ static int f_read (lua_State *L) {
 
 
 static int io_readline (lua_State *L) {
-  FILE *f = *(FILE **)lua_touserdata(L, lua_upvalueindex(2));
+  FILE *f = *(FILE **)lua_touserdata(L, lua_upvalueindex(1));
   int sucess;
   if (f == NULL)  /* file is already closed? */
     luaL_error(L, "file is already closed");
@@ -358,9 +357,9 @@ static int io_readline (lua_State *L) {
     luaL_error(L, "%s", strerror(errno));
   if (sucess) return 1;
   else {  /* EOF */
-    if (lua_toboolean(L, lua_upvalueindex(3))) {  /* generator created file? */
+    if (lua_toboolean(L, lua_upvalueindex(2))) {  /* generator created file? */
       lua_settop(L, 0);
-      lua_pushvalue(L, lua_upvalueindex(2));
+      lua_pushvalue(L, lua_upvalueindex(1));
       aux_close(L);  /* close it */
     }
     return 0;
@@ -489,12 +488,13 @@ LUALIB_API int luaopen_io (lua_State *L) {
   createmeta(L);
   createupval(L);
   lua_pushvalue(L, -1);
-  luaL_openlib(L, LUA_IOLIBNAME, iolib, 1);
+  lua_replace(L, LUA_ENVIRONINDEX);
+  luaL_openlib(L, LUA_IOLIBNAME, iolib, 0);
   /* put predefined file handles into `io' table */
-  lua_rawgeti(L, -2, IO_INPUT);  /* get current input from metatable */
-  lua_setfield(L, -2, "stdin");  /* io.stdin = metatable[IO_INPUT] */
-  lua_rawgeti(L, -2, IO_OUTPUT);  /* get current output from metatable */
-  lua_setfield(L, -2, "stdout");  /* io.stdout = metatable[IO_OUTPUT] */
+  lua_rawgeti(L, -2, IO_INPUT);  /* get current input from upval */
+  lua_setfield(L, -2, "stdin");  /* io.stdin = upval[IO_INPUT] */
+  lua_rawgeti(L, -2, IO_OUTPUT);  /* get current output from upval */
+  lua_setfield(L, -2, "stdout");  /* io.stdout = upval[IO_OUTPUT] */
   *newfile(L) = stderr;
   lua_setfield(L, -2, "stderr");  /* io.stderr = newfile(stderr) */
   return 1;

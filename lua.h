@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.200 2005/01/14 14:19:42 roberto Exp roberto $
+** $Id: lua.h,v 1.201 2005/01/17 23:50:55 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -34,7 +34,8 @@
 ** pseudo-indices
 */
 #define LUA_REGISTRYINDEX	(-10000)
-#define LUA_GLOBALSINDEX	(-10001)
+#define LUA_ENVIRONINDEX	(-10001)
+#define LUA_GLOBALSINDEX	(-10002)
 #define lua_upvalueindex(i)	(LUA_GLOBALSINDEX-(i))
 
 

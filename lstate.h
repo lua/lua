@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.13 2005/01/18 17:18:09 roberto Exp roberto $
+** $Id: lstate.h,v 2.14 2005/02/11 20:03:35 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -116,6 +116,7 @@ struct lua_State {
   int hookcount;
   lua_Hook hook;
   TValue _gt;  /* table of globals */
+  TValue env;  /* temporary place for environments */
   GCObject *openupval;  /* list of open upvalues in this stack */
   GCObject *gclist;
   struct lua_longjmp *errorJmp;  /* current error recover point */

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.17 2005/01/14 14:19:42 roberto Exp $
+** $Id: ltests.c,v 2.19 2005/01/19 15:54:26 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -249,6 +249,7 @@ static void checkproto (global_State *g, Proto *f) {
 
 static void checkclosure (global_State *g, Closure *cl) {
   GCObject *clgc = obj2gco(cl);
+  checkobjref(g, clgc, cl->l.env);
   if (cl->c.isC) {
     int i;
     for (i=0; i<cl->c.nupvalues; i++)
@@ -257,7 +258,6 @@ static void checkclosure (global_State *g, Closure *cl) {
   else {
     int i;
     lua_assert(cl->l.nupvalues == cl->l.p->nups);
-    checkobjref(g, clgc, hvalue(&cl->l.g));
     checkobjref(g, clgc, cl->l.p);
     for (i=0; i<cl->l.nupvalues; i++) {
       if (cl->l.upvals[i]) {
@@ -622,20 +622,6 @@ static int unref (lua_State *L) {
   return 0;
 }
 
-static int metatable (lua_State *L) {
-  luaL_checkany(L, 1);
-  if (lua_isnone(L, 2)) {
-    if (lua_getmetatable(L, 1) == 0)
-      lua_pushnil(L);
-  }
-  else {
-    lua_settop(L, 2);
-    luaL_checktype(L, 2, LUA_TTABLE);
-    lua_setmetatable(L, 1);
-  }
-  return 1;
-}
-
 
 static int upvalue (lua_State *L) {
   int n = luaL_checkint(L, 2);
@@ -814,10 +800,22 @@ static const char *getname_aux (char *buff, const char **pc) {
 }
 
 
+static int getindex_aux (lua_State *L, const char **pc) {
+  skip(pc);
+  switch (*(*pc)++) {
+    case 'R': return LUA_REGISTRYINDEX;
+    case 'G': return LUA_GLOBALSINDEX;
+    case 'E': return LUA_ENVIRONINDEX;
+    case 'U': return lua_upvalueindex(getnum_aux(L, pc));
+    default: (*pc)--; return getnum_aux(L, pc);
+  }
+}
+
 #define EQ(s1)	(strcmp(s1, inst) == 0)
 
 #define getnum	(getnum_aux(L, &pc))
 #define getname	(getname_aux(buff, &pc))
+#define getindex (getindex_aux(L, &pc))
 
 
 static int testC (lua_State *L) {
@@ -836,44 +834,44 @@ static int testC (lua_State *L) {
     const char *inst = getname;
     if EQ("") return 0;
     else if EQ("isnumber") {
-      lua_pushinteger(L1, lua_isnumber(L1, getnum));
+      lua_pushinteger(L1, lua_isnumber(L1, getindex));
     }
     else if EQ("isstring") {
-      lua_pushinteger(L1, lua_isstring(L1, getnum));
+      lua_pushinteger(L1, lua_isstring(L1, getindex));
     }
     else if EQ("istable") {
-      lua_pushinteger(L1, lua_istable(L1, getnum));
+      lua_pushinteger(L1, lua_istable(L1, getindex));
     }
     else if EQ("iscfunction") {
-      lua_pushinteger(L1, lua_iscfunction(L1, getnum));
+      lua_pushinteger(L1, lua_iscfunction(L1, getindex));
     }
     else if EQ("isfunction") {
-      lua_pushinteger(L1, lua_isfunction(L1, getnum));
+      lua_pushinteger(L1, lua_isfunction(L1, getindex));
     }
     else if EQ("isuserdata") {
-      lua_pushinteger(L1, lua_isuserdata(L1, getnum));
+      lua_pushinteger(L1, lua_isuserdata(L1, getindex));
     }
     else if EQ("isudataval") {
-      lua_pushinteger(L1, lua_islightuserdata(L1, getnum));
+      lua_pushinteger(L1, lua_islightuserdata(L1, getindex));
     }
     else if EQ("isnil") {
-      lua_pushinteger(L1, lua_isnil(L1, getnum));
+      lua_pushinteger(L1, lua_isnil(L1, getindex));
     }
     else if EQ("isnull") {
-      lua_pushinteger(L1, lua_isnone(L1, getnum));
+      lua_pushinteger(L1, lua_isnone(L1, getindex));
     }
     else if EQ("tonumber") {
-      lua_pushnumber(L1, lua_tonumber(L1, getnum));
+      lua_pushnumber(L1, lua_tonumber(L1, getindex));
     }
     else if EQ("tostring") {
-      const char *s = lua_tostring(L1, getnum);
+      const char *s = lua_tostring(L1, getindex);
       lua_pushstring(L1, s);
     }
     else if EQ("objsize") {
-      lua_pushinteger(L1, lua_objsize(L1, getnum));
+      lua_pushinteger(L1, lua_objsize(L1, getindex));
     }
     else if EQ("tocfunction") {
-      lua_pushcfunction(L1, lua_tocfunction(L1, getnum));
+      lua_pushcfunction(L1, lua_tocfunction(L1, getindex));
     }
     else if EQ("return") {
       return getnum;
@@ -899,11 +897,14 @@ static int testC (lua_State *L) {
     else if EQ("pushbool") {
       lua_pushboolean(L1, getnum);
     }
+    else if EQ("newuserdata") {
+      lua_newuserdata(L1, getnum);
+    }
     else if EQ("tobool") {
-      lua_pushinteger(L1, lua_toboolean(L1, getnum));
+      lua_pushinteger(L1, lua_toboolean(L1, getindex));
     }
     else if EQ("pushvalue") {
-      lua_pushvalue(L1, getnum);
+      lua_pushvalue(L1, getindex);
     }
     else if EQ("pushcclosure") {
       lua_pushcclosure(L1, testC, getnum);
@@ -915,13 +916,13 @@ static int testC (lua_State *L) {
       lua_insert(L1, getnum);
     }
     else if EQ("replace") {
-      lua_replace(L1, getnum);
+      lua_replace(L1, getindex);
     }
     else if EQ("gettable") {
-      lua_gettable(L1, getnum);
+      lua_gettable(L1, getindex);
     }
     else if EQ("settable") {
-      lua_settable(L1, getnum);
+      lua_settable(L1, getindex);
     }
     else if EQ("next") {
       lua_next(L1, -2);
@@ -930,12 +931,12 @@ static int testC (lua_State *L) {
       lua_concat(L1, getnum);
     }
     else if EQ("lessthan") {
-      int a = getnum;
-      lua_pushboolean(L1, lua_lessthan(L1, a, getnum));
+      int a = getindex;
+      lua_pushboolean(L1, lua_lessthan(L1, a, getindex));
     }
     else if EQ("equal") {
-      int a = getnum;
-      lua_pushboolean(L1, lua_equal(L1, a, getnum));
+      int a = getindex;
+      lua_pushboolean(L1, lua_equal(L1, a, getindex));
     }
     else if EQ("rawcall") {
       int narg = getnum;
@@ -956,21 +957,21 @@ static int testC (lua_State *L) {
       luaL_loadfile(L1, luaL_checkstring(L1, getnum));
     }
     else if EQ("setmetatable") {
-      lua_setmetatable(L1, getnum);
+      lua_setmetatable(L1, getindex);
     }
     else if EQ("getmetatable") {
-      if (lua_getmetatable(L1, getnum) == 0)
+      if (lua_getmetatable(L1, getindex) == 0)
         lua_pushnil(L1);
     }
     else if EQ("type") {
       lua_pushstring(L1, luaL_typename(L1, getnum));
     }
     else if EQ("getn") {
-      int i = getnum;
+      int i = getindex;
       lua_pushinteger(L1, luaL_getn(L1, i));
     }
     else if EQ("setn") {
-      int i = getnum;
+      int i = getindex;
       int n = cast(int, lua_tonumber(L1, -1));
       luaL_setn(L1, i, n);
       lua_pop(L1, 1);
@@ -1095,7 +1096,6 @@ static const struct luaL_reg tests_funcs[] = {
   {"unref", unref},
   {"d2s", d2s},
   {"s2d", s2d},
-  {"metatable", metatable},
   {"upvalue", upvalue},
   {"newuserdata", newuserdata},
   {"pushuserdata", pushuserdata},

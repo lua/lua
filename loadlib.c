@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.15 2004/12/29 18:56:34 roberto Exp roberto $
+** $Id: loadlib.c,v 1.16 2005/01/14 14:17:18 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 *
@@ -302,7 +302,7 @@ static int loader_Lua (lua_State *L) {
   path = lua_tostring(L, -1);
   if (!path) {
     lua_pop(L, 1);
-    luaL_getfield(L, LUA_REGISTRYINDEX, "_PACKAGE.path");
+    lua_getfield(L, LUA_ENVIRONINDEX, "path");
     path = lua_tostring(L, -1);
   }
   if (path == NULL)
@@ -320,7 +320,7 @@ static int loader_C (lua_State *L) {
   const char *fname = luaL_gsub(L, name, ".", LUA_DIRSEP);
   const char *path;
   const char *funcname;
-  luaL_getfield(L, LUA_REGISTRYINDEX, "_PACKAGE.cpath");
+  lua_getfield(L, LUA_ENVIRONINDEX, "cpath");
   path = lua_tostring(L, -1);
   if (path == NULL)
     luaL_error(L, "`package.cpath' must be a string");
@@ -335,7 +335,7 @@ static int loader_C (lua_State *L) {
 
 
 static int loader_preload (lua_State *L) {
-  luaL_getfield(L, LUA_REGISTRYINDEX, "_PACKAGE.preload");
+  lua_getfield(L, LUA_ENVIRONINDEX, "preload");
   if (!lua_istable(L, -1))
     luaL_error(L, "`package.preload' must be a table");
   lua_getfield(L, -1, luaL_checkstring(L, 1));
@@ -355,7 +355,7 @@ static int ll_require (lua_State *L) {
   lua_pushboolean(L, 1);
   lua_setfield(L, 2, name);  /* _LOADED[name] = true */
   /* iterate over available loaders */
-  luaL_getfield(L, LUA_REGISTRYINDEX, "_PACKAGE.loaders");
+  lua_getfield(L, LUA_ENVIRONINDEX, "loaders");
   if (!lua_istable(L, -1))
     luaL_error(L, "`package.loaders' must be a table");
   for (i=1;; i++) {
@@ -457,6 +457,8 @@ LUALIB_API int luaopen_loadlib (lua_State *L) {
   lua_setglobal(L, "package");
   lua_pushvalue(L, -1);
   lua_setfield(L, LUA_REGISTRYINDEX, "_PACKAGE");
+  lua_pushvalue(L, -1);
+  lua_replace(L, LUA_ENVIRONINDEX);
   /* create `loaders' table */
   lua_newtable(L);
   /* fill it with pre-defined loaders */

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.24 2005/02/11 20:03:35 roberto Exp roberto $
+** $Id: lgc.c,v 2.25 2005/02/14 13:19:50 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -79,6 +79,7 @@ static void reallymarkobject (global_State *g, GCObject *o) {
       Table *mt = gco2u(o)->metatable;
       gray2black(o);  /* udata are never gray */
       if (mt) markobject(g, mt);
+      markobject(g, gco2u(o)->env);
       return;
     }
     case LUA_TUPVAL: {
@@ -223,6 +224,7 @@ static void traverseproto (global_State *g, Proto *f) {
 
 
 static void traverseclosure (global_State *g, Closure *cl) {
+  markobject(g, cl->c.env);
   if (cl->c.isC) {
     int i;
     for (i=0; i<cl->c.nupvalues; i++)  /* mark its upvalues */
@@ -231,7 +233,6 @@ static void traverseclosure (global_State *g, Closure *cl) {
   else {
     int i;
     lua_assert(cl->l.nupvalues == cl->l.p->nups);
-    markobject(g, hvalue(&cl->l.g));
     markobject(g, cl->l.p);
     for (i=0; i<cl->l.nupvalues; i++)  /* mark its upvalues */
       markobject(g, cl->l.upvals[i]);

@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.165 2005/01/14 14:19:42 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.166 2005/02/14 13:19:44 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -131,7 +131,10 @@ static void getfunc (lua_State *L) {
 
 static int luaB_getfenv (lua_State *L) {
   getfunc(L);
-  lua_getfenv(L, -1);
+  if (lua_iscfunction(L, -1))  /* is a C function? */
+    lua_pushvalue(L, LUA_GLOBALSINDEX);  /* return the global env. */
+  else
+    lua_getfenv(L, -1);
   return 1;
 }
 
@@ -144,8 +147,8 @@ static int luaB_setfenv (lua_State *L) {
     lua_replace(L, LUA_GLOBALSINDEX);
     return 0;
   }
-  else if (lua_setfenv(L, -2) == 0)
-    luaL_error(L, "`setfenv' cannot change environment of given function");
+  else if (lua_iscfunction(L, -2) || lua_setfenv(L, -2) == 0)
+    luaL_error(L, "`setfenv' cannot change environment of given object");
   return 1;
 }
 
