@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 2.2 1994/07/19 21:27:18 celes Exp celes $
+** $Id: opcode.h,v 2.3 1994/08/05 19:31:09 celes Exp celes $
 */
 
 #ifndef opcode_h
@@ -55,7 +55,7 @@ typedef enum
  PUSHGLOBAL,
  PUSHINDEXED,
  PUSHMARK,
- PUSHOBJECT,
+ PUSHMARKMET,
  STORELOCAL0, STORELOCAL1, STORELOCAL2, STORELOCAL3, STORELOCAL4,
  STORELOCAL5, STORELOCAL6, STORELOCAL7, STORELOCAL8, STORELOCAL9,
  STORELOCAL,
@@ -74,6 +74,7 @@ typedef enum
  SUBOP,
  MULTOP,
  DIVOP,
+ POWOP,
  CONCOP,
  MINUSOP,
  NOTOP,

@@ -3,11 +3,12 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 2.8 1994/09/27 21:43:30 celes Exp celes $";
+char *rcs_opcode="$Id: opcode.c,v 2.9 1994/10/11 14:38:17 celes Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #ifdef __GNUC__
 #include <floatingpoint.h>
 #endif
@@ -245,8 +246,14 @@ int lua_execute (Byte *pc)
    break;
    
    case PUSHMARK: tag(top++) = T_MARK; break;
-   
-   case PUSHOBJECT: *top = *(top-3); top++; break;
+   case PUSHMARKMET: 
+   {
+     Object receiver = *(top-2);
+     if (lua_pushsubscript() == 1) return 1;
+     tag(top++) = T_MARK;
+     *(top++) = receiver;
+     break;
+   }
    
    case STORELOCAL0: case STORELOCAL1: case STORELOCAL2:
    case STORELOCAL3: case STORELOCAL4: case STORELOCAL5:
@@ -456,6 +463,17 @@ int lua_execute (Byte *pc)
     --top;
    }
    break; 
+   
+   case POWOP:
+   {
+    Object *l = top-2;
+    Object *r = top-1;
+    if (tonumber(r) || tonumber(l))
+     return 1;
+    nvalue(l) = pow(nvalue(l), nvalue(r));
+    --top;
+   }
+   break;
    
    case CONCOP:
    {
@@ -819,7 +837,7 @@ Object *lua_getfield (Object *object, char *field)
  {
   Object ref;
   tag(&ref) = T_STRING;
-  svalue(&ref) = lua_createstring(field);
+  svalue(&ref) = lua_constant[lua_findconstant(field)];
   return (lua_hashget(avalue(object), &ref));
  }
 }
