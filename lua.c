@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.43 2000/08/04 19:38:35 roberto Exp roberto $
+** $Id: lua.c,v 1.44 2000/08/09 19:16:57 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -53,7 +53,7 @@ static lua_Hook old_callhook = NULL;
 extern void USERINIT (void);
 #else
 #define USERINIT	userinit
-void userinit (void) {
+static void userinit (void) {
   lua_iolibopen();
   lua_strlibopen();
   lua_mathlibopen();

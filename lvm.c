@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.125 2000/08/10 19:50:47 roberto Exp roberto $
+** $Id: lvm.c,v 1.126 2000/08/11 16:17:28 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -371,25 +371,24 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
     if (linehook)
       traceexec(L, base, top, linehook);
     switch (GET_OPCODE(i)) {
-
-      case OP_END:
+      case OP_END: {
         return L->top;  /* no results */
-
-      case OP_RETURN:
+      }
+      case OP_RETURN: {
         L->top = top;
         return base+GETARG_U(i);
-
-      case OP_CALL:
+      }
+      case OP_CALL: {
         L->top = top;
         luaD_call(L, base+GETARG_A(i), GETARG_B(i));
         top = L->top;
         break;
-
-      case OP_TAILCALL:
+      }
+      case OP_TAILCALL: {
         L->top = top;
         luaD_call(L, base+GETARG_A(i), MULT_RET);
         return base+GETARG_B(i);
-
+      }
       case OP_PUSHNIL: {
         int n = GETARG_U(i);
         LUA_ASSERT(n>0, "invalid argument");
@@ -398,66 +397,65 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         } while (--n > 0);
         break;
       }
-
-      case OP_POP:
+      case OP_POP: {
         top -= GETARG_U(i);
         break;
-
-      case OP_PUSHINT:
+      }
+      case OP_PUSHINT: {
         ttype(top) = TAG_NUMBER;
         nvalue(top) = (Number)GETARG_S(i);
         top++;
         break;
-
-      case OP_PUSHSTRING:
+      }
+      case OP_PUSHSTRING: {
         ttype(top) = TAG_STRING;
         tsvalue(top) = kstr[GETARG_U(i)];
         top++;
         break;
-
-      case OP_PUSHNUM:
+      }
+      case OP_PUSHNUM: {
         ttype(top) = TAG_NUMBER;
         nvalue(top) = tf->knum[GETARG_U(i)];
         top++;
         break;
-
-      case OP_PUSHNEGNUM:
+      }
+      case OP_PUSHNEGNUM: {
         ttype(top) = TAG_NUMBER;
         nvalue(top) = -tf->knum[GETARG_U(i)];
         top++;
         break;
-
-      case OP_PUSHUPVALUE:
+      }
+      case OP_PUSHUPVALUE: {
         *top++ = cl->upvalue[GETARG_U(i)];
         break;
-
-      case OP_GETLOCAL:
+      }
+      case OP_GETLOCAL: {
         *top++ = *(base+GETARG_U(i));
         break;
-
-      case OP_GETGLOBAL:
+      }
+      case OP_GETGLOBAL: {
         luaV_getglobal(L, kstr[GETARG_U(i)], top);
         top++;
         break;
-
-      case OP_GETTABLE:
+      }
+      case OP_GETTABLE: {
         luaV_gettable(L, top);
         top--;
         break;
-
-      case OP_GETDOTTED:
+      }
+      case OP_GETDOTTED: {
         ttype(top) = TAG_STRING;
         tsvalue(top++) = kstr[GETARG_U(i)];
         luaV_gettable(L, top);
         top--;
         break;
-
-      case OP_GETINDEXED:
+      }
+      case OP_GETINDEXED: {
         *top++ = *(base+GETARG_U(i));
         luaV_gettable(L, top);
         top--;
         break;
-
+      }
       case OP_PUSHSELF: {
         TObject receiver;
         receiver = *(top-1);
@@ -467,29 +465,28 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         *(top-1) = receiver;
         break;
       }
-
-      case OP_CREATETABLE:
+      case OP_CREATETABLE: {
         L->top = top;
         luaC_checkGC(L);
         hvalue(top) = luaH_new(L, GETARG_U(i));
         ttype(top) = TAG_TABLE;
         top++;
         break;
-
-      case OP_SETLOCAL:
+      }
+      case OP_SETLOCAL: {
         *(base+GETARG_U(i)) = *(--top);
         break;
-
-      case OP_SETGLOBAL:
+      }
+      case OP_SETGLOBAL: {
         luaV_setglobal(L, kstr[GETARG_U(i)], top);
         top--;
         break;
-
-      case OP_SETTABLE:
+      }
+      case OP_SETTABLE: {
         luaV_settable(L, top-GETARG_A(i), top);
         top -= GETARG_B(i);  /* pop values */
         break;
-
+      }
       case OP_SETLIST: {
         int aux = GETARG_A(i) * LFIELDS_PER_FLUSH;
         int n = GETARG_B(i);
@@ -499,7 +496,6 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
           *luaH_setint(L, arr, n+aux) = *(--top);
         break;
       }
-
       case OP_SETMAP: {
         int n = GETARG_U(i);
         StkId finaltop = top-2*n;
@@ -511,16 +507,15 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         }
         break;
       }
-
-      case OP_ADD:
+      case OP_ADD: {
         if (tonumber(top-2) || tonumber(top-1))
           call_arith(L, top, IM_ADD);
         else
           nvalue(top-2) += nvalue(top-1);
         top--;
         break;
-
-      case OP_ADDI:
+      }
+      case OP_ADDI: {
         if (tonumber(top-1)) {
           ttype(top) = TAG_NUMBER;
           nvalue(top) = (Number)GETARG_S(i);
@@ -529,37 +524,37 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         else
           nvalue(top-1) += (Number)GETARG_S(i);
         break;
-
-      case OP_SUB:
+      }
+      case OP_SUB: {
         if (tonumber(top-2) || tonumber(top-1))
           call_arith(L, top, IM_SUB);
         else
           nvalue(top-2) -= nvalue(top-1);
         top--;
         break;
-
-      case OP_MULT:
+      }
+      case OP_MULT: {
         if (tonumber(top-2) || tonumber(top-1))
           call_arith(L, top, IM_MUL);
         else
           nvalue(top-2) *= nvalue(top-1);
         top--;
         break;
-
-      case OP_DIV:
+      }
+      case OP_DIV: {
         if (tonumber(top-2) || tonumber(top-1))
           call_arith(L, top, IM_DIV);
         else
           nvalue(top-2) /= nvalue(top-1);
         top--;
         break;
-
-      case OP_POW:
+      }
+      case OP_POW: {
         if (!call_binTM(L, top, IM_POW))
           lua_error(L, "undefined operation");
         top--;
         break;
-
+      }
       case OP_CONCAT: {
         int n = GETARG_U(i);
         strconc(L, n, top);
@@ -568,8 +563,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         luaC_checkGC(L);
         break;
       }
-
-      case OP_MINUS:
+      case OP_MINUS: {
         if (tonumber(top-1)) {
           ttype(top) = TAG_NIL;
           call_arith(L, top+1, IM_UNM);
@@ -577,71 +571,71 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         else
           nvalue(top-1) = -nvalue(top-1);
         break;
-
-      case OP_NOT:
+      }
+      case OP_NOT: {
         ttype(top-1) =
            (ttype(top-1) == TAG_NIL) ? TAG_NUMBER : TAG_NIL;
         nvalue(top-1) = 1;
         break;
-
-      case OP_JMPNE:
+      }
+      case OP_JMPNE: {
         top -= 2;
         if (!luaO_equalObj(top, top+1)) pc += GETARG_S(i);
         break;
-
-      case OP_JMPEQ:
+      }
+      case OP_JMPEQ: {
         top -= 2;
         if (luaO_equalObj(top, top+1)) pc += GETARG_S(i);
         break;
-
-      case OP_JMPLT:
+      }
+      case OP_JMPLT: {
         top -= 2;
         if (luaV_lessthan(L, top, top+1, top+2)) pc += GETARG_S(i);
         break;
-
-      case OP_JMPLE:  /* a <= b  ===  !(b<a) */
+      }
+      case OP_JMPLE: {  /* a <= b  ===  !(b<a) */
         top -= 2;
         if (!luaV_lessthan(L, top+1, top, top+2)) pc += GETARG_S(i);
         break;
-
-      case OP_JMPGT:  /* a > b  ===  (b<a) */
+      }
+      case OP_JMPGT: {  /* a > b  ===  (b<a) */
         top -= 2;
         if (luaV_lessthan(L, top+1, top, top+2)) pc += GETARG_S(i);
         break;
-
-      case OP_JMPGE:  /* a >= b  ===  !(a<b) */
+      }
+      case OP_JMPGE: {  /* a >= b  ===  !(a<b) */
         top -= 2;
         if (!luaV_lessthan(L, top, top+1, top+2)) pc += GETARG_S(i);
         break;
-
-      case OP_JMPT:
+      }
+      case OP_JMPT: {
         if (ttype(--top) != TAG_NIL) pc += GETARG_S(i);
         break;
-
-      case OP_JMPF:
+      }
+      case OP_JMPF: {
         if (ttype(--top) == TAG_NIL) pc += GETARG_S(i);
         break;
-
-      case OP_JMPONT:
+      }
+      case OP_JMPONT: {
         if (ttype(top-1) != TAG_NIL) pc += GETARG_S(i);
         else top--;
         break;
-
-      case OP_JMPONF:
+      }
+      case OP_JMPONF: {
         if (ttype(top-1) == TAG_NIL) pc += GETARG_S(i);
         else top--;
         break;
-
-      case OP_JMP:
+      }
+      case OP_JMP: {
         pc += GETARG_S(i);
         break;
-
-      case OP_PUSHNILJMP:
+      }
+      case OP_PUSHNILJMP: {
         ttype(top++) = TAG_NIL;
         pc++;
         break;
-
-      case OP_FORPREP:
+      }
+      case OP_FORPREP: {
         if (tonumber(top-1))
           lua_error(L, "`for' step must be a number");
         if (tonumber(top-2))
@@ -655,7 +649,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
           pc += GETARG_S(i)+1;  /* jump to loop end */
         }
         break;
-
+      }
       case OP_FORLOOP: {
         LUA_ASSERT(ttype(top-1) == TAG_NUMBER, "invalid step");
         LUA_ASSERT(ttype(top-2) == TAG_NUMBER, "invalid limit");
@@ -670,7 +664,6 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
           pc += GETARG_S(i);  /* repeat loop */
         break;
       }
-
       case OP_LFORPREP: {
         if (ttype(top-1) != TAG_TABLE)
           lua_error(L, "`for' table must be a table");
@@ -688,7 +681,6 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         }
         break;
       }
-
       case OP_LFORLOOP: {
         int n;
         top -= 2;  /* remove old index,value */
@@ -705,14 +697,13 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         }
         break;
       }
-
-      case OP_CLOSURE:
+      case OP_CLOSURE: {
         L->top = top;
         luaV_Lclosure(L, tf->kproto[GETARG_A(i)], GETARG_B(i));
         top = L->top;
         luaC_checkGC(L);
         break;
-
+      }
     }
   }
 }
