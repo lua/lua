@@ -3,12 +3,13 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.8 1995/01/06 20:31:10 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.10 1995/02/02 18:54:58 roberto Exp $";
 
 #include <string.h>
+#include <strings.h>
+#include <stdlib.h>
 #include <ctype.h>
 
-#include "mem.h"
 #include "lua.h"
 #include "lualib.h"
 
@@ -87,7 +88,7 @@ static void str_sub (void)
    lua_error ("incorrect third argument to function `strsub'");
  s = lua_copystring(o1);
  start = lua_getnumber (o2);
- end = o3 == NULL ? strlen(s) : lua_getnumber (o3);
+ end = o3 == LUA_NOOBJECT ? strlen(s) : lua_getnumber (o3);
  if (end < start || start < 1 || end > strlen(s))
   lua_pushliteral("");
  else
@@ -95,7 +96,7 @@ static void str_sub (void)
   s[end] = 0;
   lua_pushstring (&s[start-1]);
  }
- luaI_free(s);
+ free(s);
 }
 
 /*
@@ -109,14 +110,14 @@ static void str_lower (void)
  lua_Object o = lua_getparam (1);
  if (!lua_isstring(o))
    lua_error ("incorrect arguments to function `strlower'");
- c = s = luaI_strdup(lua_getstring(o));
+ c = s = lua_copystring(o);
  while (*c != 0)
  {
   *c = tolower(*c);
   c++;
  }
  lua_pushstring(s);
- luaI_free(s);
+ free(s);
 } 
 
 
@@ -131,14 +132,14 @@ static void str_upper (void)
  lua_Object o = lua_getparam (1);
  if (!lua_isstring(o))
    lua_error ("incorrect arguments to function `strlower'");
- c = s = luaI_strdup(lua_getstring(o));
+ c = s = lua_copystring(o);
  while (*c != 0)
  {
   *c = toupper(*c);
   c++;
  }
  lua_pushstring(s);
- luaI_free(s);
+ free(s);
 } 
 
 

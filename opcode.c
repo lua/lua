@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.31 1994/12/30 17:45:11 roberto Exp celes $";
+char *rcs_opcode="$Id: opcode.c,v 3.32 1995/01/27 17:19:06 celes Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -373,7 +373,7 @@ static int do_protectedmain (void)
 */
 int lua_callfunction (lua_Object function)
 {
-  if (function == NULL)
+  if (function == LUA_NOOBJECT)
     return 1;
   else
     return do_protectedrun (Address(function), MULT_RET);
