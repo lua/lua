@@ -20,6 +20,7 @@
 #endif
 
 
+
 typedef struct luaL_reg {
   const char *name;
   lua_CFunction func;
@@ -47,6 +48,9 @@ LUALIB_API int luaL_findstring (const char *name,
 
 LUALIB_API int luaL_ref (lua_State *L, int t);
 LUALIB_API void luaL_unref (lua_State *L, int t, int ref);
+
+/* error messages corresponding to error codes */
+LUALIB_API const char *luaL_errstr (int errcode);
 
 
 /*

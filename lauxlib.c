@@ -21,6 +21,18 @@
 #include "lualib.h"
 
 
+LUALIB_API const char *luaL_errstr (int errcode) {
+  static const char *const errstr[] = {
+    "ok",
+    "run-time error",
+    "cannot open file",
+    "syntax error",
+    "memory allocation error",
+    "error in error handling"
+  };
+  return errstr[errcode];
+}
+
 
 LUALIB_API int luaL_findstring (const char *name, const char *const list[]) {
   int i;

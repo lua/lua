@@ -213,9 +213,6 @@ static int luaB_next (lua_State *L) {
 
 
 static int passresults (lua_State *L, int status, int oldtop) {
-  static const char *const errornames[] =
-    {"ok", "run-time error", "file error", "syntax error",
-     "memory error", "error in error handling"};
   if (status == 0) {
     int nresults = lua_gettop(L) - oldtop;
     if (nresults > 0)
@@ -227,7 +224,7 @@ static int passresults (lua_State *L, int status, int oldtop) {
   }
   else {  /* error */
     lua_pushnil(L);
-    lua_pushstring(L, errornames[status]);  /* error code */
+    lua_pushstring(L, luaL_errstr(status));  /* error code */
     return 2;
   }
 }
@@ -415,7 +412,8 @@ static int luaB_tostring (lua_State *L) {
 
 static int luaB_resume (lua_State *L) {
   lua_State *co = (lua_State *)lua_touserdata(L, lua_upvalueindex(1));
-  lua_resume(L, co);
+  if (lua_resume(L, co) != 0)
+    lua_error(L, "error running co-routine");
   return lua_gettop(L);
 }
 
