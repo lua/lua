@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.h,v 1.26 2002/05/01 20:40:42 roberto Exp roberto $
+** $Id: lmem.h,v 1.27 2004/11/19 15:52:40 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -29,8 +29,8 @@ void *luaM_toobig (lua_State *L);
 void *luaM_growaux (lua_State *L, void *block, int *size, size_t size_elem,
                     int limit, const char *errormsg);
 
-#define luaM_free(L, b, s)	luaM_realloc(L, (b), (s), 0)
-#define luaM_freelem(L, b)	luaM_realloc(L, (b), sizeof(*(b)), 0)
+#define luaM_freemem(L, b, s)	luaM_realloc(L, (b), (s), 0)
+#define luaM_free(L, b)		luaM_realloc(L, (b), sizeof(*(b)), 0)
 #define luaM_freearray(L, b, n, t)   luaM_reallocv(L, (b), n, 0, sizeof(t))
 
 #define luaM_malloc(L,t)	luaM_realloc(L, NULL, 0, (t))

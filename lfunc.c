@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.3 2004/03/15 21:04:33 roberto Exp roberto $
+** $Id: lfunc.c,v 2.4 2004/04/30 20:13:38 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -75,7 +75,7 @@ void luaF_close (lua_State *L, StkId level) {
     lua_assert(!isblack(o));
     L->openupval = uv->next;  /* remove from `open' list */
     if (isdead(g, o))
-      luaM_freelem(L, uv);  /* free upvalue */
+      luaM_free(L, uv);  /* free upvalue */
     else {
       setobj(L, &uv->value, uv->v);
       uv->v = &uv->value;  /* now current value lives here */
@@ -117,14 +117,14 @@ void luaF_freeproto (lua_State *L, Proto *f) {
   luaM_freearray(L, f->lineinfo, f->sizelineinfo, int);
   luaM_freearray(L, f->locvars, f->sizelocvars, struct LocVar);
   luaM_freearray(L, f->upvalues, f->sizeupvalues, TString *);
-  luaM_freelem(L, f);
+  luaM_free(L, f);
 }
 
 
 void luaF_freeclosure (lua_State *L, Closure *c) {
   int size = (c->c.isC) ? sizeCclosure(c->c.nupvalues) :
                           sizeLclosure(c->l.nupvalues);
-  luaM_free(L, c, size);
+  luaM_freemem(L, c, size);
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.8 2004/11/24 18:55:42 roberto Exp roberto $
+** $Id: ltable.c,v 2.9 2004/11/24 19:16:03 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -335,7 +335,7 @@ void luaH_free (lua_State *L, Table *t) {
   if (t->lsizenode)
     luaM_freearray(L, t->node, sizenode(t), Node);
   luaM_freearray(L, t->array, t->sizearray, TValue);
-  luaM_freelem(L, t);
+  luaM_free(L, t);
 }
 
 

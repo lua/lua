@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.15 2004/11/19 15:52:40 roberto Exp roberto $
+** $Id: lgc.c,v 2.16 2004/11/24 18:55:56 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -379,7 +379,7 @@ static void freeobj (lua_State *L, GCObject *o) {
   switch (o->gch.tt) {
     case LUA_TPROTO: luaF_freeproto(L, gco2p(o)); break;
     case LUA_TFUNCTION: luaF_freeclosure(L, gco2cl(o)); break;
-    case LUA_TUPVAL: luaM_freelem(L, gco2uv(o)); break;
+    case LUA_TUPVAL: luaM_free(L, gco2uv(o)); break;
     case LUA_TTABLE: luaH_free(L, gco2h(o)); break;
     case LUA_TTHREAD: {
       lua_assert(gco2th(o) != L && gco2th(o) != G(L)->mainthread);
@@ -388,11 +388,11 @@ static void freeobj (lua_State *L, GCObject *o) {
     }
     case LUA_TSTRING: {
       G(L)->strt.nuse--;
-      luaM_free(L, o, sizestring(gco2ts(o)));
+      luaM_freemem(L, o, sizestring(gco2ts(o)));
       break;
     }
     case LUA_TUSERDATA: {
-      luaM_free(L, o, sizeudata(gco2u(o)));
+      luaM_freemem(L, o, sizeudata(gco2u(o)));
       break;
     }
     default: lua_assert(0);
