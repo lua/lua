@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.28 1999/02/22 19:13:12 roberto Exp roberto $
+** $Id: lua.h,v 1.29 1999/02/23 14:57:28 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -188,5 +188,6 @@ lua_Object     lua_setfallback		(char *event, lua_CFunction fallback);
 * The Lua language and this implementation have been entirely designed and
 * written by Waldemar Celes Filho, Roberto Ierusalimschy and
 * Luiz Henrique de Figueiredo at TeCGraf, PUC-Rio.
+*
 * This implementation contains no third-party code.
 ******************************************************************************/

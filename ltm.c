@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.21 1999/02/04 18:59:31 roberto Exp roberto $
+** $Id: ltm.c,v 1.22 1999/02/25 15:16:26 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -82,7 +82,7 @@ static void checktag (int tag) {
 
 void luaT_realtag (int tag) {
   if (!(L->last_tag <= tag && tag < LUA_T_NIL))
-    luaL_verror("tag %d is not result of `newtag'", tag);
+    luaL_verror("tag %d was not created by `newtag'", tag);
 }
 
 

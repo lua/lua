@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.25 1999/02/05 11:22:58 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.26 1999/02/12 19:23:02 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -532,7 +532,7 @@ static struct luaL_reg strlib[] = {
 {"strupper", str_upper},
 {"strchar", str_char},
 {"strrep", str_rep},
-{"ascii", str_byte},  /* for compatibility */
+{"ascii", str_byte},  /* for compatibility with 3.0 and earlier */
 {"strbyte", str_byte},
 {"format", str_format},
 {"strfind", str_find},

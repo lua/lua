@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.22 1999/02/24 17:55:51 roberto Exp roberto $
+** $Id: lparser.c,v 1.23 1999/02/25 15:16:26 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -926,7 +926,7 @@ static void exp1 (LexState *ls) {
   exp0(ls, &v);
   lua_pushvar(ls, &v);
   if (is_in(ls->token, expfollow) < 0)
-    luaX_error(ls, "ill formed expression");
+    luaX_error(ls, "ill-formed expression");
 }
 
 

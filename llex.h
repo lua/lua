@@ -1,6 +1,6 @@
 /*
-** $Id: llex.h,v 1.9 1998/06/19 16:14:09 roberto Exp roberto $
-** Lexical Analizer
+** $Id: llex.h,v 1.10 1998/07/24 18:02:38 roberto Exp roberto $
+** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
 
@@ -30,7 +30,7 @@ enum RESERVED {
 /* "ifstate" keeps the state of each nested $if the lexical is dealing with. */
 
 struct ifState {
-  int elsepart;  /* true if its in the $else part */
+  int elsepart;  /* true if it's in the $else part */
   int condition;  /* true if $if condition is true */
   int skip;  /* true if part must be skipped */
 };

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.12 1998/06/19 16:14:09 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.13 1998/09/07 18:59:59 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -10,9 +10,10 @@
 #include <string.h>
 
 /* Please Notice: This file uses only the official API of Lua
-** Any function declared here could be written as an application
-** function. With care, these functions can be used by other libraries.
+** Any function declared here could be written as an application function.
+** With care, these functions can be used by other libraries.
 */
+
 #include "lauxlib.h"
 #include "lua.h"
 #include "luadebug.h"
@@ -33,7 +34,7 @@ void luaL_argerror (int numarg, char *extramsg) {
   lua_getobjname(f, &funcname);
   numarg -= lua_nups(f);
   if (funcname == NULL)
-    funcname = "???";
+    funcname = "(unknown)";
   if (extramsg == NULL)
     luaL_verror("bad argument #%d to function `%.50s'", numarg, funcname);
   else

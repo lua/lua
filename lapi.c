@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.37 1999/02/22 19:13:12 roberto Exp roberto $
+** $Id: lapi.c,v 1.38 1999/02/23 14:57:28 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -477,7 +477,7 @@ int luaA_next (Hash *t, int i) {
 int lua_next (lua_Object o, int i) {
   TObject *t = Address(o);
   if (ttype(t) != LUA_T_ARRAY)
-    lua_error("API error: object is not a table in `lua_next'"); 
+    lua_error("API error - object is not a table in `lua_next'"); 
   i = luaA_next(avalue(t), i);
   top2LC((i==0) ? 0 : 2);
   return i;
@@ -620,7 +620,7 @@ static int checkfunc (TObject *o)
 
 char *lua_getobjname (lua_Object o, char **name)
 { /* try to find a name for given function */
-  set_normalized(L->stack.top, Address(o)); /* to be accessed by "checkfunc */
+  set_normalized(L->stack.top, Address(o)); /* to be accessed by "checkfunc" */
   if ((*name = luaT_travtagmethods(checkfunc)) != NULL)
     return "tag-method";
   else if ((*name = luaS_travsymbol(checkfunc)) != NULL)
