@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.3 1994/11/09 18:12:42 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.4 1994/11/10 17:11:52 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,18 +14,28 @@ char *rcs_fallback="$Id: fallback.c,v 1.3 1994/11/09 18:12:42 roberto Exp robert
 #include "lua.h"
 
 
+static void errorFB (void);
+static void indexFB (void);
+static void gettableFB (void);
+static void arithFB (void);
+static void concatFB (void);
+static void orderFB (void);
+static void GDFB (void);
+
+
 /*
 ** Warning: This list must be in the same order as the #define's
 */
 struct FB  luaI_fallBacks[] = {
-{"error", {LUA_T_CFUNCTION, luaI_errorFB}},
-{"index", {LUA_T_CFUNCTION, luaI_indexFB}},
-{"gettable", {LUA_T_CFUNCTION, luaI_gettableFB}},
-{"arith", {LUA_T_CFUNCTION, luaI_arithFB}},
-{"order", {LUA_T_CFUNCTION, luaI_orderFB}},
-{"concat", {LUA_T_CFUNCTION, luaI_concatFB}},
-{"unminus", {LUA_T_CFUNCTION, luaI_arithFB}},
-{"settable", {LUA_T_CFUNCTION, luaI_gettableFB}}
+{"error", {LUA_T_CFUNCTION, errorFB}},
+{"index", {LUA_T_CFUNCTION, indexFB}},
+{"gettable", {LUA_T_CFUNCTION, gettableFB}},
+{"arith", {LUA_T_CFUNCTION, arithFB}},
+{"order", {LUA_T_CFUNCTION, orderFB}},
+{"concat", {LUA_T_CFUNCTION, concatFB}},
+{"unminus", {LUA_T_CFUNCTION, arithFB}},
+{"settable", {LUA_T_CFUNCTION, gettableFB}},
+{"gc", {LUA_T_CFUNCTION, GDFB}}
 };
 
 #define N_FB  (sizeof(luaI_fallBacks)/sizeof(struct FB))
@@ -54,7 +64,7 @@ void luaI_setfallback (void)
 }
 
 
-void luaI_errorFB (void)
+static void errorFB (void)
 {
   lua_Object o = lua_getparam(1);
   if (lua_isstring(o))
@@ -64,33 +74,35 @@ void luaI_errorFB (void)
 }
  
 
-void luaI_indexFB (void)
+static void indexFB (void)
 {
   lua_pushnil();
 }
  
 
-void luaI_gettableFB (void)
+static void gettableFB (void)
 {
   lua_reportbug("indexed expression not a table");
 }
  
 
-void luaI_arithFB (void)
+static void arithFB (void)
 {
   lua_reportbug("unexpected type at conversion to number");
 }
 
-void luaI_concatFB (void)
+static void concatFB (void)
 {
   lua_reportbug("unexpected type at conversion to string");
 }
 
 
-void luaI_orderFB (void)
+static void orderFB (void)
 {
   lua_reportbug("unexpected type at comparison");
 }
+
+static void GDFB (void) { }
 
 
 /*

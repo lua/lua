@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.13 1994/11/07 15:19:51 roberto Exp roberto $";
+char *rcs_hash="$Id: hash.c,v 2.14 1994/11/07 16:34:44 roberto Exp $";
 
 #include <string.h>
 #include <stdlib.h>
@@ -169,6 +169,23 @@ void lua_hashmark (Hash *h)
   }
  } 
 }
+
+
+static void call_fallbacks (void)
+{
+  Hash *curr_array;
+  Object t;
+  tag(&t) = LUA_T_ARRAY;
+  for (curr_array = listhead; curr_array; curr_array = curr_array->next)
+    if (markarray(curr_array) != 1)
+    {
+      avalue(&t) = curr_array;
+      luaI_gcFB(&t);
+    }
+  tag(&t) = LUA_T_NIL;
+  luaI_gcFB(&t);  /* end of list */
+}
+
  
 /*
 ** Garbage collection to arrays
@@ -177,6 +194,7 @@ void lua_hashmark (Hash *h)
 void lua_hashcollector (void)
 {
  Hash *curr_array = listhead, *prev = NULL;
+ call_fallbacks();
  while (curr_array != NULL)
  {
   Hash *next = curr_array->next;

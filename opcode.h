@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.6 1994/11/09 18:10:58 roberto Exp roberto $
+** $Id: opcode.h,v 3.7 1994/11/10 17:11:52 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -162,5 +162,6 @@ void    lua_parse      (Byte **code);	/* from "lua.stx" module */
 void    lua_travstack (void (*fn)(Object *));
 Object *luaI_Address (lua_Object o);
 void	luaI_pushobject (Object *o);
+void    luaI_gcFB       (Object *o);
 
 #endif

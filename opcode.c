@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.7 1994/11/09 18:13:29 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.8 1994/11/10 17:11:52 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -630,6 +630,13 @@ int lua_type (lua_Object o)
     return LUA_T_NIL;
   else
     return tag(Address(o));
+}
+
+
+void luaI_gcFB (Object *o)
+{
+  *(top++) = *o;
+  do_call(&luaI_fallBacks[FB_GC].function, (top-stack)-1, 0, (top-stack)-1);
 }
 
 
