@@ -1,11 +1,10 @@
 /*
-** $Id: lparser.c,v 1.183 2002/05/14 17:52:22 roberto Exp roberto $
+** $Id: lparser.c,v 1.184 2002/05/16 18:39:46 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
 
 
-#include <stdio.h>
 #include <string.h>
 
 #include "lua.h"
@@ -852,7 +851,7 @@ static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
 static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
   expdesc e;
   check_condition(ls, VLOCAL <= lh->v.k && lh->v.k <= VINDEXED,
-                      "syntax error!");
+                      "syntax error");
   if (ls->t.token == ',') {  /* assignment -> `,' primaryexp assignment */
     struct LHS_assign nv;
     nv.prev = lh;
