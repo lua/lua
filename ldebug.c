@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.87 2001/07/03 17:01:34 roberto Exp $
+** $Id: ldebug.c,v 1.88 2001/09/07 17:39:10 roberto Exp $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -331,7 +331,6 @@ static int checkopenop (const Proto *pt, int pc) {
       check(GETARG_B(i) == NO_REG);
       return 1;
     }
-    case OP_CLOSE: return checkopenop(pt, pc+1);
     case OP_SETLISTO: return 1;
     default: return 0;  /* invalid instruction after an open call */
   }

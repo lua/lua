@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.190 2001/06/28 14:57:17 roberto Exp roberto $
+** $Id: lvm.c,v 1.193 2001/09/07 17:39:10 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -556,7 +556,9 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
       }
       case OP_RETURN: {
-        int b = GETARG_B(i);
+        int b;
+        luaF_close(L, base);
+        b = GETARG_B(i);
         if (b != NO_REG)
           L->top = ra+b;
         return ra;

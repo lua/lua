@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.156 2001/09/07 17:39:10 roberto Exp $
+** $Id: lparser.c,v 1.157 2001/09/25 17:06:48 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -184,9 +184,10 @@ static void closelevel (LexState *ls, int level) {
 }
 
 
-static void removelocalvars (LexState *ls, int nvars) {
+static void removelocalvars (LexState *ls, int nvars, int toclose) {
   FuncState *fs = ls->fs;
-  closelevel(ls, fs->nactloc - nvars);
+  if (toclose)
+    closelevel(ls, fs->nactloc - nvars);
   while (nvars--)
     fs->f->locvars[fs->actloc[--fs->nactloc]].endpc = fs->pc;
 }
@@ -333,7 +334,7 @@ static void close_func (LexState *ls) {
   lua_State *L = ls->L;
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
-  removelocalvars(ls, fs->nactloc);
+  removelocalvars(ls, fs->nactloc, 0);
   luaK_codeABC(fs, OP_RETURN, 0, 0, 0);  /* final return */
   luaK_getlabel(fs);  /* close eventual list of pending jumps */
   lua_assert(G(L)->roottable == fs->h);
@@ -816,7 +817,7 @@ static void block (LexState *ls) {
   FuncState *fs = ls->fs;
   int nactloc = fs->nactloc;
   chunk(ls);
-  removelocalvars(ls, fs->nactloc - nactloc);
+  removelocalvars(ls, fs->nactloc - nactloc, 1);
   fs->freereg = nactloc;  /* free registers used by locals */
 }
 
@@ -951,7 +952,7 @@ static void forbody (LexState *ls, int nvar, OpCode prepfor, OpCode loopfor) {
   block(ls);
   luaK_patchlist(fs, luaK_codeAsBc(fs, loopfor, basereg, NO_JUMP), blockinit);
   luaK_fixfor(fs, prep, luaK_getlabel(fs));
-  removelocalvars(ls, nvar);
+  removelocalvars(ls, nvar, 1);
 }
 
 
@@ -1128,7 +1129,6 @@ static void retstat (LexState *ls) {
       nret = fs->freereg - first;  /* return all `active' values */
     }
   }
-  closelevel(ls, 0);
   luaK_codeABC(fs, OP_RETURN, first, nret, 0);
   fs->freereg = fs->nactloc;  /* removes all temp values */
 }
