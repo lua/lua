@@ -1,12 +1,12 @@
 /*
-** $Id: lauxlib.h,v 1.14 1999/11/22 13:12:07 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.15 1999/11/22 17:39:51 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
 
 
-#ifndef auxlib_h
-#define auxlib_h
+#ifndef lauxlib_h
+#define lauxlib_h
 
 
 #include "lua.h"
