@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.289 2003/07/16 20:49:02 roberto Exp roberto $
+** $Id: lvm.c,v 1.290 2003/10/27 19:14:31 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -151,7 +151,8 @@ void luaV_settable (lua_State *L, const TObject *t, TObject *key, StkId val) {
       TObject *oldval = luaH_set(L, h, key); /* do a primitive set */
       if (!ttisnil(oldval) ||  /* result is no nil? */
           (tm = fasttm(L, h->metatable, TM_NEWINDEX)) == NULL) { /* or no TM? */
-        setobj2t(oldval, val);  /* write barrier */
+        setobj2t(oldval, val);
+        luaC_barrier(L, h, val);
         return;
       }
       /* else will try the tag method */
@@ -454,8 +455,9 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         break;
       }
       case OP_SETUPVAL: {
-        int b = GETARG_B(i);
-        setobj(cl->upvals[b]->v, ra);  /* write barrier */
+        UpVal *uv = cl->upvals[GETARG_B(i)];
+        setobj(uv->v, ra);
+        luaC_barrier(L, uv, ra);
         break;
       }
       case OP_SETTABLE: {
@@ -713,8 +715,11 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
           L->top = L->ci->top;
         }
         bc &= ~(LFIELDS_PER_FLUSH-1);  /* bc = bc - bc%FPF */
-        for (; n > 0; n--)
-          setobj2t(luaH_setnum(L, h, bc+n), ra+n);  /* write barrier */
+        for (; n > 0; n--) {
+          TObject *val = ra+n;
+          setobj2t(luaH_setnum(L, h, bc+n), val);
+          luaC_barrier(L, h, val);
+        }
         break;
       }
       case OP_CLOSE: {

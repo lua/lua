@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 1.26 2003/12/03 20:03:07 roberto Exp roberto $
+** $Id: lgc.h,v 1.27 2003/12/04 17:22:42 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -58,18 +58,37 @@
 #define FIXEDBIT	5
 
 
+#define iswhite(x)      test2bits((x)->gch.marked, WHITE0BIT, WHITE1BIT)
+#define isblack(x)      testbit((x)->gch.marked, BLACKBIT)
+
+
+#define otherwhite(g)	(g->currentwhite ^ bit2mask(WHITE0BIT, WHITE1BIT))
+#define isdead(g,v)	((v)->gch.marked & otherwhite(g))
+
+#define changewhite(x)	((x)->gch.marked ^= bit2mask(WHITE0BIT, WHITE1BIT))
+
+#define valiswhite(x)	(iscollectable(x) && iswhite(gcvalue(x)))
+
 #define luaC_white(g)	cast(lu_byte, (g)->currentwhite)
 
 
 #define luaC_checkGC(L) { if (G(L)->nblocks >= G(L)->GCthreshold) \
-	luaC_collectgarbage(L); }
+	luaC_step(L); }
 
+
+#define luaC_barrier(L,p,v) { if (valiswhite(v) && isblack(valtogco(p)))  \
+	luaC_barrierf(L,valtogco(p),gcvalue(v)); }
+
+#define luaC_objbarrier(L,p,o)  \
+	{ if (iswhite(valtogco(o)) && isblack(valtogco(p))) \
+		luaC_barrierf(L,valtogco(p),valtogco(o)); }
 
 size_t luaC_separateudata (lua_State *L);
 void luaC_callGCTM (lua_State *L);
 void luaC_sweepall (lua_State *L);
-void luaC_collectgarbage (lua_State *L);
+void luaC_step (lua_State *L);
 void luaC_link (lua_State *L, GCObject *o, lu_byte tt);
+void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v);
 
 
 #endif

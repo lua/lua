@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.249 2003/10/20 17:42:41 roberto Exp roberto $
+** $Id: lapi.c,v 1.250 2003/12/01 18:22:56 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -193,7 +193,7 @@ LUA_API void lua_replace (lua_State *L, int idx) {
   api_checknelems(L, 1);
   o = luaA_index(L, idx);
   api_checkvalidindex(L, o);
-  setobj(o, L->top - 1);  /* write barrier */
+  setobj(o, L->top - 1);  /* write barrier???? */
   L->top--;
   lua_unlock(L);
 }
@@ -615,7 +615,8 @@ LUA_API void lua_rawset (lua_State *L, int idx) {
   api_checknelems(L, 2);
   t = luaA_index(L, idx);
   api_check(L, ttistable(t));
-  setobj2t(luaH_set(L, hvalue(t), L->top-2), L->top-1);  /* write barrier */
+  setobj2t(luaH_set(L, hvalue(t), L->top-2), L->top-1);
+  luaC_barrier(L, hvalue(t), L->top-1);
   L->top -= 2;
   lua_unlock(L);
 }
@@ -627,7 +628,8 @@ LUA_API void lua_rawseti (lua_State *L, int idx, int n) {
   api_checknelems(L, 1);
   o = luaA_index(L, idx);
   api_check(L, ttistable(o));
-  setobj2t(luaH_setnum(L, hvalue(o), n), L->top-1);  /* write barrier */
+  setobj2t(luaH_setnum(L, hvalue(o), n), L->top-1);
+  luaC_barrier(L, hvalue(o), L->top-1);
   L->top--;
   lua_unlock(L);
 }
@@ -649,11 +651,15 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
   }
   switch (ttype(obj)) {
     case LUA_TTABLE: {
-      hvalue(obj)->metatable = mt;  /* write barrier */
+      hvalue(obj)->metatable = mt;
+      if (mt)
+        luaC_objbarrier(L, hvalue(obj), mt);
       break;
     }
     case LUA_TUSERDATA: {
-      uvalue(obj)->uv.metatable = mt;  /* write barrier */
+      uvalue(obj)->uv.metatable = mt;
+      if (mt)
+        luaC_objbarrier(L, uvalue(obj), mt);
       break;
     }
     default: {
@@ -907,10 +913,8 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
 
 
 
-static const char *aux_upvalue (lua_State *L, int funcindex, int n,
-                                TObject **val) {
+static const char *aux_upvalue (lua_State *L, StkId fi, int n, TObject **val) {
   Closure *f;
-  StkId fi = luaA_index(L, funcindex);
   if (!ttisfunction(fi)) return NULL;
   f = clvalue(fi);
   if (f->c.isC) {
@@ -931,7 +935,7 @@ LUA_API const char *lua_getupvalue (lua_State *L, int funcindex, int n) {
   const char *name;
   TObject *val;
   lua_lock(L);
-  name = aux_upvalue(L, funcindex, n, &val);
+  name = aux_upvalue(L, luaA_index(L, funcindex), n, &val);
   if (name) {
     setobj2s(L->top, val);
     api_incr_top(L);
@@ -944,12 +948,15 @@ LUA_API const char *lua_getupvalue (lua_State *L, int funcindex, int n) {
 LUA_API const char *lua_setupvalue (lua_State *L, int funcindex, int n) {
   const char *name;
   TObject *val;
+  StkId fi;
   lua_lock(L);
+  fi = luaA_index(L, funcindex);
   api_checknelems(L, 1);
-  name = aux_upvalue(L, funcindex, n, &val);
+  name = aux_upvalue(L, fi, n, &val);
   if (name) {
     L->top--;
-    setobj(val, L->top);  /* write barrier */
+    setobj(val, L->top);
+    luaC_barrier(L, clvalue(fi), L->top);
   }
   lua_unlock(L);
   return name;

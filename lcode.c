@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.119 2003/08/27 21:01:44 roberto Exp roberto $
+** $Id: lcode.c,v 1.120 2003/11/19 19:59:18 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -14,6 +14,7 @@
 #include "lcode.h"
 #include "ldebug.h"
 #include "ldo.h"
+#include "lgc.h"
 #include "llex.h"
 #include "lmem.h"
 #include "lobject.h"
@@ -219,7 +220,8 @@ static int addk (FuncState *fs, TObject *k, TObject *v) {
     luaM_growvector(fs->L, f->k, fs->nk, f->sizek, TObject,
                     MAXARG_Bx, "constant table overflow");
     while (oldsize < f->sizek) setnilvalue(&f->k[oldsize++]);
-    setobj(&f->k[fs->nk], v);  /* write barrier */
+    setobj(&f->k[fs->nk], v);
+    luaC_barrier(fs->L, f, v);
     return fs->nk++;
   }
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.185 2003/12/04 17:22:42 roberto Exp roberto $
+** $Id: lgc.c,v 1.186 2003/12/04 18:52:23 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -25,12 +25,8 @@
 #define GCSTEPSIZE	(20*sizeof(TObject))
 
 
-#define otherwhite(g)	(g->currentwhite ^ bit2mask(WHITE0BIT, WHITE1BIT))
-
-#define isblack(x)	testbit((x)->gch.marked, BLACKBIT)
 #define gray2black(x)	setbit((x)->gch.marked, BLACKBIT)
 
-#define iswhite(x)	test2bits((x)->gch.marked, WHITE0BIT, WHITE1BIT)
 #define maskmarks \
 	cast(lu_byte, ~(bitmask(BLACKBIT)|bit2mask(WHITE0BIT, WHITE1BIT)))
 #define makewhite(g,x)	\
@@ -45,7 +41,6 @@
 
 #define isfinalized(u)		testbit((u)->uv.marked, FINALIZEDBIT)
 #define markfinalized(u)	setbit((u)->uv.marked, FINALIZEDBIT)
-
 
 
 #define KEYWEAK         bitmask(KEYWEAKBIT)
@@ -110,7 +105,7 @@ static size_t objsize (GCObject *o) {
 
 static void reallymarkobject (global_State *g, GCObject *o) {
   lua_assert(iswhite(o));
-  lua_assert(!(o->gch.marked & otherwhite(g)));
+  lua_assert(!isdead(g, o));
   white2gray(o);
   switch (o->gch.tt) {
     case LUA_TSTRING: {
@@ -118,6 +113,7 @@ static void reallymarkobject (global_State *g, GCObject *o) {
     }
     case LUA_TUSERDATA: {
       Table *mt = gcotou(o)->uv.metatable;
+      gray2black(o);  /* udata are never gray */
       if (mt) markobject(g, mt);
       return;
     }
@@ -442,7 +438,6 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, int all,
   int dead = otherwhite(g);
   while ((curr = *p) != NULL) {
     int mark = curr->gch.marked;
-    lua_assert(all || !(mark & g->currentwhite));
     lim -= objsize(curr);
     if (!all && (!(mark & dead) || testbit(mark, FIXEDBIT))) {
       makewhite(g, curr);
@@ -469,9 +464,9 @@ static l_mem sweepstrings (lua_State *L, int all, l_mem lim) {
     while ((curr = *p) != NULL) {
       int mark = curr->gch.marked;
       lu_mem size = sizestring(gcotots(curr)->tsv.len);
-      lua_assert(all || !(mark & g->currentwhite));
       if (!all && (!(mark & dead) || testbit(mark, FIXEDBIT))) {
         makewhite(g, curr);
+        lua_assert(iswhite(curr) && !isdead(g, curr));
         p = &curr->gch.next;
       }
       else {
@@ -499,8 +494,6 @@ static void checkSizes (lua_State *L) {
     size_t newsize = luaZ_sizebuffer(&g->buff) / 2;
     luaZ_resizebuffer(L, &g->buff, newsize);
   }
-  lua_assert(g->nblocks > g->GCthreshold);
-  g->GCthreshold = 2*G(L)->nblocks - g->GCthreshold;  /* new threshold */
 }
 
 
@@ -562,11 +555,13 @@ static void markroot (lua_State *L) {
 
 static void atomic (lua_State *L) {
   global_State *g = G(L);
+  /* there may be some gray elements due to the write barrier */
+  propagatemarks(g, MAXLMEM);  /* traverse them */
   lua_assert(g->gray == NULL);
   g->gray = g->grayagain;
   g->grayagain = NULL;
   propagatemarks(g, MAXLMEM);
-  g->GCthreshold = luaC_separateudata(L);  /* separate userdata to be preserved */
+  luaC_separateudata(L);  /* separate userdata to be preserved */
   marktmu(g);  /* mark `preserved' userdata */
   propagatemarks(g, MAXLMEM);  /* remark, to propagate `preserveness' */
   cleartable(g->weak);  /* remove collected objects from weak tables */
@@ -597,30 +592,48 @@ static void sweepstep (lua_State *L) {
   global_State *g = G(L);
   l_mem lim = GCSTEPSIZE;
   g->sweepgc = sweeplist(L, g->sweepgc, 0, &lim);
-  if (lim == GCSTEPSIZE)  /* nothing more to sweep? */
+  if (lim == GCSTEPSIZE) {  /* nothing more to sweep? */
     g->gcstate = GCSfinalize;  /* end sweep phase */
+    checkSizes(L);
+  }
 }
 
 
-void luaC_collectgarbage (lua_State *L) {
+void luaC_step (lua_State *L) {
   global_State *g = G(L);
-  /* GCSroot */
-  markroot(L);
-  /* GCSpropagate */
-  while (g->gcstate == GCSpropagate)
-    propagatemarks(g, GCSTEPSIZE);
-  /* atomic */
-  atomic(L);
-  /* GCSsweepstring */
-  while (g->gcstate == GCSsweepstring)
-    sweepstringstep(L);
-  /* GCSsweep */
-  while (g->gcstate == GCSsweep)
-    sweepstep(L);
-  /* GCSfinalize */
-  checkSizes(L);
-  while (g->gcstate == GCSfinalize)
-    GCTM(L);
+  switch (g->gcstate) {
+    case GCSroot:
+      markroot(L);
+      break;
+    case GCSpropagate:
+      propagatemarks(g, GCSTEPSIZE);
+      break;
+    case GCSatomic:
+      atomic(L);
+      break;
+    case GCSsweepstring:
+      sweepstringstep(L);
+      break;
+    case GCSsweep:
+      sweepstep(L);
+      break;
+    case GCSfinalize:
+      GCTM(L);
+      break;
+    default: lua_assert(0);
+  }
+  g->GCthreshold = g->nblocks + GCSTEPSIZE;
+}
+
+
+void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v) {
+  global_State *g = G(L);
+  lua_assert(isblack(o) && iswhite(v));
+  lua_assert(!isdead(g, v) && !isdead(g, o));
+  if (g->gcstate > GCSatomic)  /* sweeping phases? */
+    black2gray(o);  /* just mark as gray to avoid other barriers */
+  else  /* breaking invariant! */
+    reallymarkobject(g, v);  /* restore it */
 }
 
 

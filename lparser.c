@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.220 2003/10/03 16:04:24 roberto Exp roberto $
+** $Id: lparser.c,v 1.221 2003/10/09 17:56:23 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -151,7 +151,8 @@ static int luaI_registerlocalvar (LexState *ls, TString *varname) {
   luaM_growvector(ls->L, f->locvars, fs->nlocvars, f->sizelocvars,
                   LocVar, USHRT_MAX, "too many local variables");
   while (oldsize < f->sizelocvars) f->locvars[oldsize++].varname = NULL;
-  f->locvars[fs->nlocvars].varname = varname;  /* write barrier */
+  f->locvars[fs->nlocvars].varname = varname;
+  luaC_objbarrier(ls->L, f, varname);
   return fs->nlocvars++;
 }
 
@@ -199,7 +200,8 @@ static int indexupvalue (FuncState *fs, TString *name, expdesc *v) {
   luaM_growvector(fs->L, f->upvalues, f->nups, f->sizeupvalues,
                   TString *, MAX_INT, "");
   while (oldsize < f->sizeupvalues) f->upvalues[oldsize++] = NULL;
-  f->upvalues[f->nups] = name;  /* write barrier */
+  f->upvalues[f->nups] = name;
+  luaC_objbarrier(fs->L, f, name);
   lua_assert(v->k == VLOCAL || v->k == VUPVAL);
   fs->upvalues[f->nups].k = cast(lu_byte, v->k);
   fs->upvalues[f->nups].info = cast(lu_byte, v->info);
@@ -307,7 +309,8 @@ static void pushclosure (LexState *ls, FuncState *func, expdesc *v) {
   luaM_growvector(ls->L, f->p, fs->np, f->sizep, Proto *,
                   MAXARG_Bx, "constant table overflow");
   while (oldsize < f->sizep) f->p[oldsize++] = NULL;
-  f->p[fs->np++] = func->f;  /* write barrier */
+  f->p[fs->np++] = func->f;
+  luaC_objbarrier(ls->L, f, func->f);
   init_exp(v, VRELOCABLE, luaK_codeABx(fs, OP_CLOSURE, 0, fs->np-1));
   for (i=0; i<func->f->nups; i++) {
     OpCode o = (func->upvalues[i].k == VLOCAL) ? OP_MOVE : OP_GETUPVAL;
