@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.89 1999/12/27 17:33:22 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.90 1999/12/28 19:23:41 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -106,8 +106,9 @@ void luaB__ALERT (lua_State *L) {
 void luaB__ERRORMESSAGE (lua_State *L) {
   lua_Object al = lua_rawgetglobal(L, "_ALERT");
   if (lua_isfunction(L, al)) {  /* avoid error loop if _ALERT is not defined */
-    char buff[600];
-    sprintf(buff, "error: %.500s\n", luaL_check_string(L, 1));
+    const char *s = luaL_check_string(L, 1);
+    char *buff = luaL_openspace(L, strlen(s)+sizeof("error: \n"));
+    strcpy(buff, "error: "); strcat(buff, s); strcat(buff, "\n");
     lua_pushstring(L, buff);
     lua_callfunction(L, al);
   }
@@ -169,7 +170,7 @@ void luaB_tonumber (lua_State *L) {
 
 
 void luaB_error (lua_State *L) {
-  lua_error(L, lua_getstring(L, lua_getparam(L, 1)));
+  lua_error(L, luaL_opt_string(L, 1, NULL));
 }
 
 void luaB_setglobal (lua_State *L) {
@@ -231,6 +232,8 @@ void luaB_settagmethod (lua_State *L) {
   int tag = luaL_check_int(L, 1);
   const char *event = luaL_check_string(L, 2);
   lua_Object nf = luaL_nonnullarg(L, 3);
+  luaL_arg_check(L, lua_isnil(L, nf) || lua_isfunction(L, nf), 3,
+                 "function or nil expected");
 #ifndef LUA_COMPAT_GC
   if (strcmp(event, "gc") == 0 && tag != LUA_T_NIL)
     lua_error(L, "cannot set this tag method from Lua");
