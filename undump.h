@@ -1,13 +1,10 @@
 /*
 ** undump.h
 ** definitions for lua decompiler
-** $Id$
+** $Id: undump.h,v 1.1 1996/03/08 21:43:21 lhf Exp lhf $
 */
 
-#include "inout.h"
-#include "mem.h"
-#include "opcode.h"
-#include "table.h"
+#include "func.h"
 
 #define IsMain(f)	(f->lineDefined==0)
 
@@ -23,4 +20,4 @@
 #define	TEST_FLOAT	0.123456789e-23	/* a float for testing representation */
 
 TFunc* luaI_undump1(FILE* D);		/* load one chunk */
-void luaI_undump(FILE* D);		/* load all chunks */
+int luaI_undump(FILE* D);		/* load all chunks */
