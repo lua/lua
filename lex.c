@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.43 1997/03/18 15:30:50 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.44 1997/03/31 14:17:09 roberto Exp roberto $";
 
 
 #include <ctype.h>
@@ -337,11 +337,13 @@ int luaY_lex (void)
           return NUMBER;
         }
 
-      default: 		/* also end of program (0) */
-      {
+      case 0:
+        save(0);
+        return 0;
+
+      default:
         save_and_next();
         return yytext[0];
-      }
     }
   }
 }
