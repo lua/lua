@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.213 2003/02/13 16:08:47 roberto Exp roberto $
+** $Id: ldo.c,v 1.214 2003/02/27 11:52:30 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -428,22 +428,13 @@ struct SParser {  /* data to `f_parser' */
 };
 
 static void f_parser (lua_State *L, void *ud) {
-  lu_mem old_blocks;
-  Proto *tf;
-  Closure *cl;
   struct SParser *p = cast(struct SParser *, ud);
-  /* before parsing, give a (good) chance to GC */
-  if (G(L)->nblocks + G(L)->nblocks/4 >= G(L)->GCthreshold)
-    luaC_collectgarbage(L);
-  old_blocks = G(L)->nblocks;
-  tf = p->bin ? luaU_undump(L, p->z, &p->buff) : luaY_parser(L, p->z, &p->buff);
-  cl = luaF_newLclosure(L, 0, gt(L));
+  Proto *tf = p->bin ? luaU_undump(L, p->z, &p->buff) :
+                       luaY_parser(L, p->z, &p->buff);
+  Closure *cl = luaF_newLclosure(L, 0, gt(L));
   cl->l.p = tf;
   setclvalue(L->top, cl);
   incr_top(L);
-  /* add new memory to threshold (as it probably will stay) */
-  lua_assert(G(L)->nblocks >= old_blocks);
-  G(L)->GCthreshold += (G(L)->nblocks - old_blocks);
 }
 
 
@@ -455,7 +446,7 @@ int luaD_protectedparser (lua_State *L, ZIO *z, int bin) {
   luaZ_initbuffer(L, &p.buff);
   status = luaD_rawrunprotected(L, f_parser, &p);
   luaZ_freebuffer(L, &p.buff);
-  if (status != 0) {  /* error */
+  if (status != 0) {  /* error? */
     StkId oldtop = restorestack(L, oldtopr);
     seterrorobj(L, status, oldtop);
   }
