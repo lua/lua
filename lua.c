@@ -3,7 +3,7 @@
 ** Linguagem para Usuarios de Aplicacao
 */
 
-char *rcs_lua="$Id: lua.c,v 1.16 1997/06/09 17:29:16 roberto Exp roberto $";
+char *rcs_lua="$Id: lua.c,v 1.17 1997/06/18 21:20:45 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -20,7 +20,7 @@ char *rcs_lua="$Id: lua.c,v 1.16 1997/06/09 17:29:16 roberto Exp roberto $";
 #endif
 
 
-#define DEBUG	1
+#define DEBUG	0
 
 static void testC (void)
 {
