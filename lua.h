@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.68 2000/09/12 13:46:59 roberto Exp roberto $
+** $Id: lua.h,v 1.69 2000/09/14 14:09:31 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -101,9 +101,9 @@ void           lua_pushusertag (lua_State *L, void *u, int tag);
 ** get functions (Lua -> stack)
 */
 void           lua_getglobal (lua_State *L, const char *name);
-void           lua_gettable (lua_State *L, int tableindex);
-void           lua_rawget (lua_State *L, int tableindex);
-void           lua_rawgeti (lua_State *L, int tableindex, int n);
+void           lua_gettable (lua_State *L, int index);
+void           lua_rawget (lua_State *L, int index);
+void           lua_rawgeti (lua_State *L, int index, int n);
 void           lua_getglobals (lua_State *L);
 void           lua_gettagmethod (lua_State *L, int tag, const char *event);
 
@@ -116,9 +116,9 @@ void           lua_newtable (lua_State *L);
 ** set functions (stack -> Lua)
 */
 void           lua_setglobal (lua_State *L, const char *name);
-void           lua_settable (lua_State *L, int tableindex);
-void           lua_rawset (lua_State *L, int tableindex);
-void           lua_rawseti (lua_State *L, int tableindex, int n);
+void           lua_settable (lua_State *L, int index);
+void           lua_rawset (lua_State *L, int index);
+void           lua_rawseti (lua_State *L, int index, int n);
 void           lua_setglobals (lua_State *L);
 void           lua_settagmethod (lua_State *L, int tag, const char *event);
 int            lua_ref (lua_State *L, int lock);
@@ -148,8 +148,8 @@ void	       lua_unref (lua_State *L, int ref);
 
 long	       lua_collectgarbage (lua_State *L, long limit);
 
-int            lua_next (lua_State *L, int tableindex);
-int            lua_getn (lua_State *L, int tableindex);
+int            lua_next (lua_State *L, int index);
+int            lua_getn (lua_State *L, int index);
 
 void           lua_concat (lua_State *L, int n);
 
