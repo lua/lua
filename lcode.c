@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.53 2000/12/04 18:33:40 roberto Exp roberto $
+** $Id: lcode.c,v 1.54 2000/12/26 18:46:09 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -102,14 +102,14 @@ void luaK_kstr (LexState *ls, int c) {
 static int number_constant (FuncState *fs, lua_Number r) {
   /* check whether `r' has appeared within the last LOOKBACKNUMS entries */
   Proto *f = fs->f;
-  int c = f->nknum;
+  int c = fs->nknum;
   int lim = c < LOOKBACKNUMS ? 0 : c-LOOKBACKNUMS;
   while (--c >= lim)
     if (f->knum[c] == r) return c;
   /* not found; create a new entry */
-  luaM_growvector(fs->L, f->knum, f->nknum, fs->sizeknum, lua_Number,
+  luaM_growvector(fs->L, f->knum, fs->nknum, f->sizeknum, lua_Number,
                   MAXARG_U, "constant table overflow");
-  c = f->nknum++;
+  c = fs->nknum++;
   f->knum[c] = r;
   return c;
 }
@@ -424,13 +424,13 @@ static void codelineinfo (FuncState *fs) {
   LexState *ls = fs->ls;
   if (ls->lastline > fs->lastline) {
     if (ls->lastline > fs->lastline+1) {
-      luaM_growvector(fs->L, f->lineinfo, f->nlineinfo, fs->sizelineinfo, int,
+      luaM_growvector(fs->L, f->lineinfo, fs->nlineinfo, f->sizelineinfo, int,
                       MAX_INT, "line info overflow");
-      f->lineinfo[f->nlineinfo++] = -(ls->lastline - (fs->lastline+1));
+      f->lineinfo[fs->nlineinfo++] = -(ls->lastline - (fs->lastline+1));
     }
-    luaM_growvector(fs->L, f->lineinfo, f->nlineinfo, fs->sizelineinfo, int,
+    luaM_growvector(fs->L, f->lineinfo, fs->nlineinfo, f->sizelineinfo, int,
                     MAX_INT, "line info overflow");
-    f->lineinfo[f->nlineinfo++] = fs->pc;
+    f->lineinfo[fs->nlineinfo++] = fs->pc;
     fs->lastline = ls->lastline;
   }
 }
@@ -447,6 +447,7 @@ int luaK_code1 (FuncState *fs, OpCode o, int arg1) {
 
 
 int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
+  Proto *f;
   Instruction i = previous_instruction(fs);
   int delta = (int)luaK_opproperties[o].push - (int)luaK_opproperties[o].pop;
   int optm = 0;  /* 1 when there is an optimization */
@@ -629,9 +630,10 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
       break;
     }
   }
+  f = fs->f;
   luaK_deltastack(fs, delta);
   if (optm) {  /* optimize: put instruction in place of last one */
-      fs->f->code[fs->pc-1] = i;  /* change previous instruction */
+      f->code[fs->pc-1] = i;  /* change previous instruction */
       return fs->pc-1;  /* do not generate new instruction */
   }
   /* else build new instruction */
@@ -643,9 +645,9 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
   }
   codelineinfo(fs);
   /* put new instruction in code array */
-  luaM_growvector(fs->L, fs->f->code, fs->pc, fs->sizecode, Instruction,
+  luaM_growvector(fs->L, f->code, fs->pc, f->sizecode, Instruction,
                   MAX_INT, "code size overflow");
-  fs->f->code[fs->pc] = i;
+  f->code[fs->pc] = i;
   return fs->pc++;
 }
 

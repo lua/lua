@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.48 2000/10/30 16:29:59 roberto Exp roberto $
+** $Id: lstate.c,v 1.49 2000/12/26 18:46:09 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -58,8 +58,8 @@ static void f_luaopen (lua_State *L, void *ud) {
 #ifdef LUA_DEBUG
   luaB_opentests(L);
   if (lua_state == NULL) lua_state = L;  /* keep first state to be opened */
-#endif
   LUA_ASSERT(lua_gettop(L) == 0, "wrong API stack");
+#endif
 }
 
 
@@ -67,10 +67,10 @@ LUA_API lua_State *lua_open (int stacksize) {
   lua_State *L = luaM_new(NULL, lua_State);
   if (L == NULL) return NULL;  /* memory allocation error */
   L->stack = NULL;
+  L->stacksize = 0;
   L->strt.size = L->udt.size = 0;
   L->strt.nuse = L->udt.nuse = 0;
-  L->strt.hash = NULL;
-  L->udt.hash = NULL;
+  L->strt.hash = L->udt.hash = NULL;
   L->Mbuffer = NULL;
   L->Mbuffsize = 0;
   L->rootproto = NULL;
@@ -106,17 +106,12 @@ LUA_API void lua_close (lua_State *L) {
   LUA_ASSERT(L->rootcl == NULL, "list should be empty");
   LUA_ASSERT(L->roottable == NULL, "list should be empty");
   luaS_freeall(L);
-  if (L->stack)
-    L->nblocks -= (L->stack_last - L->stack + 1)*sizeof(TObject);
-  luaM_free(L, L->stack);
-  L->nblocks -= L->ntag*sizeof(struct TM);
-  luaM_free(L, L->TMtable);
-  L->nblocks -= (L->nref)*sizeof(struct Ref);
-  luaM_free(L, L->refArray);
-  L->nblocks -= (L->Mbuffsize)*sizeof(char);
-  luaM_free(L, L->Mbuffer);
+  luaM_freearray(L, L->stack, L->stacksize, TObject);
+  luaM_freearray(L, L->TMtable, L->sizeTM, struct TM);
+  luaM_freearray(L, L->refArray, L->sizeref, struct Ref);
+  luaM_freearray(L, L->Mbuffer, L->Mbuffsize, char);
   LUA_ASSERT(L->nblocks == sizeof(lua_State), "wrong count for nblocks");
-  luaM_free(L, L);
+  luaM_freelem(L, L, lua_State);
   LUA_ASSERT(L != lua_state || memdebug_numblocks == 0, "memory leak!");
   LUA_ASSERT(L != lua_state || memdebug_total == 0,"memory leak!");
 }

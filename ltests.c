@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.53 2000/10/30 16:29:59 roberto Exp roberto $
+** $Id: ltests.c,v 1.54 2000/10/31 13:10:24 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -116,7 +116,7 @@ static int liststrings (lua_State *L) {
                  1, "Lua function expected");
   p = clvalue(luaA_index(L, 1))->f.l;
   lua_newtable(L);
-  for (i=0; i<p->nkstr; i++) {
+  for (i=0; i<p->sizekstr; i++) {
     lua_pushnumber(L, i+1);
     lua_pushstring(L, p->kstr[i]->str);
     lua_settable(L, -3);

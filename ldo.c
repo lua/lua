@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.109 2000/10/30 12:38:50 roberto Exp roberto $
+** $Id: ldo.c,v 1.110 2000/11/24 17:39:56 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -28,35 +28,37 @@
 
 
 /* space to handle stack overflow errors */
-#define EXTRA_STACK	(2*LUA_MINSTACK)
+#define EXTRA_STACK   (2*LUA_MINSTACK)
+
+
+static void restore_stack_limit (lua_State *L) {
+  StkId limit = L->stack+(L->stacksize-EXTRA_STACK)-1;
+  if (L->top < limit)
+    L->stack_last = limit;
+}
 
 
 void luaD_init (lua_State *L, int stacksize) {
-  L->stack = luaM_newvector(L, stacksize+EXTRA_STACK, TObject);
-  L->nblocks += stacksize*sizeof(TObject);
-  L->stack_last = L->stack+(stacksize-1);
+  stacksize += EXTRA_STACK;
+  L->stack = luaM_newvector(L, stacksize, TObject);
   L->stacksize = stacksize;
   L->Cbase = L->top = L->stack;
+  restore_stack_limit(L);
 }
 
 
 void luaD_checkstack (lua_State *L, int n) {
   if (L->stack_last - L->top <= n) {  /* stack overflow? */
-    if (L->stack_last-L->stack > (L->stacksize-1)) {
+    if (L->stack_last == L->stack+L->stacksize-1) {
       /* overflow while handling overflow */
       luaD_breakrun(L, LUA_ERRERR);  /* break run without error message */
     }
     else {
       L->stack_last += EXTRA_STACK;  /* to be used by error message */
+      LUA_ASSERT(L->stack_last == L->stack+L->stacksize-1, "wrong stack limit");
       lua_error(L, "stack overflow");
     }
   }
-}
-
-
-static void restore_stack_limit (lua_State *L) {
-  if (L->top - L->stack < L->stacksize - 1)
-    L->stack_last = L->stack + (L->stacksize-1);
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.46 2000/11/24 17:39:56 roberto Exp roberto $
+** $Id: lstring.c,v 1.47 2000/12/22 16:57:46 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -15,32 +15,18 @@
 #include "lstring.h"
 
 
-/*
-** type equivalent to TString, but with maximum alignment requirements
-*/
-union L_UTString {
-  TString ts;
-  union L_Umaxalign dummy;  /* ensures maximum alignment for `local' udata */
-};
-
-
 
 void luaS_init (lua_State *L) {
-  L->strt.hash = luaM_newvector(L, 1, TString *);
-  L->udt.hash = luaM_newvector(L, 1, TString *);
-  L->nblocks += 2*sizeof(TString *);
-  L->strt.size = L->udt.size = 1;
-  L->strt.nuse = L->udt.nuse = 0;
-  L->strt.hash[0] = L->udt.hash[0] = NULL;
+  luaS_resize(L, &L->strt, MINPOWER2);
+  luaS_resize(L, &L->udt, MINPOWER2);
 }
 
 
 void luaS_freeall (lua_State *L) {
   LUA_ASSERT(L->strt.nuse==0, "non-empty string table");
-  L->nblocks -= (L->strt.size + L->udt.size)*sizeof(TString *);
-  luaM_free(L, L->strt.hash);
+  luaM_freearray(L, L->strt.hash, L->strt.size, TString *);
   LUA_ASSERT(L->udt.nuse==0, "non-empty udata table");
-  luaM_free(L, L->udt.hash);
+  luaM_freearray(L, L->udt.hash, L->udt.size, TString *);
 }
 
 
@@ -71,9 +57,7 @@ void luaS_resize (lua_State *L, stringtable *tb, int newsize) {
       p = next;
     }
   }
-  luaM_free(L, tb->hash);
-  L->nblocks -= tb->size*sizeof(TString *);
-  L->nblocks += newsize*sizeof(TString *);
+  luaM_freearray(L, tb->hash, tb->size, TString *);
   tb->size = newsize;
   tb->hash = newhash;
 }
@@ -106,23 +90,20 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
   ts->u.s.constindex = 0;
   memcpy(ts->str, str, l);
   ts->str[l] = 0;  /* ending 0 */
-  L->nblocks += sizestring(l);
   newentry(L, &L->strt, ts, h1);  /* insert it on table */
   return ts;
 }
 
 
 TString *luaS_newudata (lua_State *L, size_t s, void *udata) {
-  union L_UTString *uts = (union L_UTString *)luaM_malloc(L,
-                                (luint32)sizeof(union L_UTString)+s);
+  union L_UTString *uts = (union L_UTString *)luaM_malloc(L, sizeudata(s));
   TString *ts = &uts->ts;
   ts->marked = 0;
   ts->nexthash = NULL;
   ts->len = s;
   ts->u.d.tag = 0;
   ts->u.d.value = (udata == NULL) ? uts+1 : udata;
-  L->nblocks += sizestring(s);
- /* insert it on table */
+  /* insert it on table */
   newentry(L, &L->udt, ts, IntPoint(ts->u.d.value) & (L->udt.size-1));
   return ts;
 }

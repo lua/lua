@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.73 2000/11/24 17:39:56 roberto Exp roberto $
+** $Id: lgc.c,v 1.74 2000/12/26 18:46:09 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -37,11 +37,11 @@ static void protomark (Proto *f) {
     int i;
     f->marked = 1;
     strmark(f->source);
-    for (i=0; i<f->nkstr; i++)
+    for (i=0; i<f->sizekstr; i++)
       strmark(f->kstr[i]);
-    for (i=0; i<f->nkproto; i++)
+    for (i=0; i<f->sizekproto; i++)
       protomark(f->kproto[i]);
-    for (i=0; i<f->nlocvars; i++)  /* mark local-variable names */
+    for (i=0; i<f->sizelocvars; i++)  /* mark local-variable names */
       strmark(f->locvars[i].varname);
   }
 }
@@ -248,8 +248,7 @@ static void collectstrings (lua_State *L, int all) {
       else {  /* collect */
         *p = next->nexthash;
         L->strt.nuse--;
-        L->nblocks -= sizestring(next->len);
-        luaM_free(L, next);
+        luaM_free(L, next, sizestring(next->len));
       }
     }
   }
@@ -273,7 +272,6 @@ static void collectudata (lua_State *L, int all) {
         *p = next->nexthash;
         next->nexthash = L->TMtable[tag].collected;  /* chain udata */
         L->TMtable[tag].collected = next;
-        L->nblocks -= sizestring(next->len);
         L->udt.nuse--;
       }
     }
@@ -286,9 +284,8 @@ static void collectudata (lua_State *L, int all) {
 static void checkMbuffer (lua_State *L) {
   if (L->Mbuffsize > MINBUFFER*2) {  /* is buffer too big? */
     size_t newsize = L->Mbuffsize/2;  /* still larger than MINBUFFER */
-    L->nblocks -= (L->Mbuffsize - newsize)*sizeof(char);
+    luaM_reallocvector(L, L->Mbuffer, L->Mbuffsize, newsize, char);
     L->Mbuffsize = newsize;
-    luaM_reallocvector(L, L->Mbuffer, newsize, char);
   }
 }
 
@@ -320,7 +317,7 @@ static void callgcTMudata (lua_State *L) {
       L->TMtable[tag].collected = udata->nexthash;  /* remove it from list */
       tsvalue(&o) = udata;
       callgcTM(L, &o);
-      luaM_free(L, udata);
+      luaM_free(L, udata, sizeudata(udata->len));
     }
   }
 }

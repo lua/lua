@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.147 2000/11/24 17:39:56 roberto Exp roberto $
+** $Id: lvm.c,v 1.148 2000/12/04 18:33:40 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,7 @@
 ** Extra stack size to run a function:
 ** TAG_LINE(1), NAME(1), TM calls(3) (plus some extra...)
 */
-#define	EXTRA_STACK	8
+#define	EXTRA_FSTACK	8
 
 
 
@@ -355,7 +355,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
   TString **const kstr = tf->kstr;
   const lua_Hook linehook = L->linehook;
   infovalue(base-1)->pc = &pc;
-  luaD_checkstack(L, tf->maxstacksize+EXTRA_STACK);
+  luaD_checkstack(L, tf->maxstacksize+EXTRA_FSTACK);
   if (tf->is_vararg)  /* varargs? */
     adjust_varargs(L, base, tf->numparams);
   else

@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.60 2000/12/04 18:33:40 roberto Exp roberto $
+** $Id: ltable.c,v 1.61 2000/12/22 16:57:46 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -25,9 +25,6 @@
 #include "lstate.h"
 #include "lstring.h"
 #include "ltable.h"
-
-
-#define gcsize(L, n)	(sizeof(Hash)+(n)*sizeof(Node))
 
 
 
@@ -167,8 +164,6 @@ static void setnodevector (lua_State *L, Hash *t, luint32 size) {
     ttype(&t->node[i].key) = ttype(&t->node[i].val) = LUA_TNIL;
     t->node[i].next = NULL;
   }
-  L->nblocks -= gcsize(L, t->size);  /* old size */
-  L->nblocks += gcsize(L, size);  /* new size */
   t->size = size;
   t->firstfree = &t->node[size-1];  /* first free position to be used */
 }
@@ -181,7 +176,6 @@ Hash *luaH_new (lua_State *L, int size) {
   L->roottable = t;
   t->mark = t;
   t->size = 0;
-  L->nblocks += gcsize(L, 0);
   t->node = NULL;
   setnodevector(L, t, luaO_power2(size));
   return t;
@@ -189,9 +183,8 @@ Hash *luaH_new (lua_State *L, int size) {
 
 
 void luaH_free (lua_State *L, Hash *t) {
-  L->nblocks -= gcsize(L, t->size);
-  luaM_free(L, t->node);
-  luaM_free(L, t);
+  luaM_freearray(L, t->node, t->size, Node);
+  luaM_freelem(L, t, Hash);
 }
 
 
@@ -226,7 +219,7 @@ static void rehash (lua_State *L, Hash *t) {
     if (ttype(&old->val) != LUA_TNIL)
       *luaH_set(L, t, &old->key) = old->val;
   }
-  luaM_free(L, nold);  /* free old array */
+  luaM_freearray(L, nold, oldsize, Node);  /* free old array */
 }
 
 

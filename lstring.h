@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.24 2000/10/30 17:49:19 roberto Exp roberto $
+** $Id: lstring.h,v 1.25 2000/11/24 17:39:56 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -12,6 +12,17 @@
 #include "lstate.h"
 
 
+
+/*
+** type equivalent to TString, but with maximum alignment requirements
+*/
+union L_UTString {
+  TString ts;
+  union L_Umaxalign dummy;  /* ensures maximum alignment for `local' udata */
+};
+
+
+
 /*
 ** any TString with mark>=FIXMARK is never collected.
 ** Marks>=RESERVEDMARK are used to identify reserved words.
@@ -22,6 +33,8 @@
 
 #define sizestring(l)	((lint32)sizeof(TString) + \
                          ((lint32)(l+1)-TSPACK)*(lint32)sizeof(char))
+
+#define sizeudata(l)	((luint32)sizeof(union L_UTString)+(l))
 
 
 void luaS_init (lua_State *L);

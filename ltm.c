@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.57 2000/11/30 18:50:47 roberto Exp roberto $
+** $Id: ltm.c,v 1.58 2000/12/26 18:46:09 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -75,9 +75,8 @@ static void init_entry (lua_State *L, int tag) {
 
 void luaT_init (lua_State *L) {
   int t;
+  L->TMtable = luaM_newvector(L, NUM_TAGS+2, struct TM);
   L->sizeTM = NUM_TAGS+2;
-  L->TMtable = luaM_newvector(L, L->sizeTM, struct TM);
-  L->nblocks += NUM_TAGS*sizeof(struct TM);
   L->ntag = NUM_TAGS;
   for (t=0; t<L->ntag; t++)
     init_entry(L, t);
@@ -87,7 +86,6 @@ void luaT_init (lua_State *L) {
 LUA_API int lua_newtag (lua_State *L) {
   luaM_growvector(L, L->TMtable, L->ntag, L->sizeTM, struct TM,
                   MAX_INT, "tag table overflow");
-  L->nblocks += sizeof(struct TM);
   init_entry(L, L->ntag);
   return L->ntag++;
 }

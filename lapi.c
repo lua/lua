@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.112 2000/12/04 18:33:40 roberto Exp roberto $
+** $Id: lapi.c,v 1.113 2000/12/26 18:46:09 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -362,7 +362,6 @@ LUA_API int lua_ref (lua_State *L,  int lock) {
     else {  /* no more free places */
       luaM_growvector(L, L->refArray, L->nref, L->sizeref, struct Ref,
                       MAX_INT, "reference table overflow");
-      L->nblocks += sizeof(struct Ref);
       ref = L->nref++;
     }
     L->refArray[ref].o = *(L->top-1);

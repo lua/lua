@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.119 2000/12/04 18:33:40 roberto Exp roberto $
+** $Id: lparser.c,v 1.120 2000/12/26 18:46:09 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -120,10 +120,10 @@ static void check_match (LexState *ls, int what, int who, int where) {
 static int string_constant (FuncState *fs, TString *s) {
   Proto *f = fs->f;
   int c = s->u.s.constindex;
-  if (c >= f->nkstr || f->kstr[c] != s) {
-    luaM_growvector(fs->L, f->kstr, f->nkstr, fs->sizekstr, TString *,
+  if (c >= fs->nkstr || f->kstr[c] != s) {
+    luaM_growvector(fs->L, f->kstr, fs->nkstr, f->sizekstr, TString *,
                     MAXARG_U, "constant table overflow");
-    c = f->nkstr++;
+    c = fs->nkstr++;
     f->kstr[c] = s;
     s->u.s.constindex = c;  /* hint for next time */
   }
@@ -151,11 +151,12 @@ static int checkname (LexState *ls) {
 
 
 static int luaI_registerlocalvar (LexState *ls, TString *varname) {
-  Proto *f = ls->fs->f;
-  luaM_growvector(ls->L, f->locvars, f->nlocvars, ls->fs->sizelocvars,
+  FuncState *fs = ls->fs;
+  Proto *f = fs->f;
+  luaM_growvector(ls->L, f->locvars, fs->nlocvars, f->sizelocvars,
                   LocVar, MAX_INT, "");
-  f->locvars[f->nlocvars].varname = varname;
-  return f->nlocvars++;
+  f->locvars[fs->nlocvars].varname = varname;
+  return fs->nlocvars++;
 }
 
 
@@ -295,10 +296,10 @@ static void pushclosure (LexState *ls, FuncState *func) {
   int i;
   for (i=0; i<func->nupvalues; i++)
     luaK_tostack(ls, &func->upvalues[i], 1);
-  luaM_growvector(ls->L, f->kproto, f->nkproto, fs->sizekproto, Proto *,
+  luaM_growvector(ls->L, f->kproto, fs->nkproto, f->sizekproto, Proto *,
                   MAXARG_A, "constant table overflow");
-  f->kproto[f->nkproto++] = func->f;
-  luaK_code2(fs, OP_CLOSURE, f->nkproto-1, func->nupvalues);
+  f->kproto[fs->nkproto++] = func->f;
+  luaK_code2(fs, OP_CLOSURE, fs->nkproto-1, func->nupvalues);
 }
 
 
@@ -313,12 +314,11 @@ static void open_func (LexState *ls, FuncState *fs) {
   fs->lasttarget = 0;
   fs->jlt = NO_JUMP;
   fs->stacklevel = 0;
-  fs->sizekstr = 0;
-  fs->sizekproto = 0;
-  fs->sizeknum = 0;
-  fs->sizelineinfo = 0;
-  fs->sizecode = 0;
-  fs->sizelocvars = 0;
+  fs->nkstr = 0;
+  fs->nkproto = 0;
+  fs->nknum = 0;
+  fs->nlineinfo = 0;
+  fs->nlocvars = 0;
   fs->nactloc = 0;
   fs->nupvalues = 0;
   fs->lastline = 0;
@@ -337,15 +337,20 @@ static void close_func (LexState *ls) {
   Proto *f = fs->f;
   luaK_code0(fs, OP_END);
   luaK_getlabel(fs);  /* close eventual list of pending jumps */
-  luaM_reallocvector(L, f->code, fs->pc, Instruction);
-  luaM_reallocvector(L, f->kstr, f->nkstr, TString *);
-  luaM_reallocvector(L, f->knum, f->nknum, lua_Number);
-  luaM_reallocvector(L, f->kproto, f->nkproto, Proto *);
   removelocalvars(ls, fs->nactloc);
-  luaM_reallocvector(L, f->locvars, f->nlocvars, LocVar);
-  luaM_reallocvector(L, f->lineinfo, f->nlineinfo+1, int);
-  f->lineinfo[f->nlineinfo++] = MAX_INT;  /* end flag */
-  luaF_protook(L, f, fs->pc);  /* proto is ok now */
+  luaM_reallocvector(L, f->code, f->sizecode, fs->pc, Instruction);
+  f->sizecode = fs->pc;
+  luaM_reallocvector(L, f->kstr, f->sizekstr, fs->nkstr, TString *);
+  f->sizekstr = fs->nkstr;
+  luaM_reallocvector(L, f->knum, f->sizeknum, fs->nknum, lua_Number);
+  f->sizeknum = fs->nknum;
+  luaM_reallocvector(L, f->kproto, f->sizekproto, fs->nkproto, Proto *);
+  f->sizekproto = fs->nkproto;
+  luaM_reallocvector(L, f->locvars, f->sizelocvars, fs->nlocvars, LocVar);
+  f->sizelocvars = fs->nlocvars;
+  luaM_reallocvector(L, f->lineinfo, f->sizelineinfo, fs->nlineinfo+1, int);
+  f->lineinfo[fs->nlineinfo++] = MAX_INT;  /* end flag */
+  f->sizelineinfo = fs->nlineinfo;
   ls->fs = fs->prev;
   LUA_ASSERT(fs->bl == NULL, "wrong list end");
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.34 2000/10/30 12:20:29 roberto Exp roberto $
+** $Id: lfunc.c,v 1.35 2000/12/04 18:33:40 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -18,13 +18,11 @@
 
 
 Closure *luaF_newclosure (lua_State *L, int nelems) {
-  int size = sizeclosure(nelems);
-  Closure *c = (Closure *)luaM_malloc(L, size);
+  Closure *c = (Closure *)luaM_malloc(L, sizeclosure(nelems));
   c->next = L->rootcl;
   L->rootcl = c;
   c->mark = c;
   c->nupvalues = nelems;
-  L->nblocks += size;
   return c;
 }
 
@@ -32,20 +30,20 @@ Closure *luaF_newclosure (lua_State *L, int nelems) {
 Proto *luaF_newproto (lua_State *L) {
   Proto *f = luaM_new(L, Proto);
   f->knum = NULL;
-  f->nknum = 0;
+  f->sizeknum = 0;
   f->kstr = NULL;
-  f->nkstr = 0;
+  f->sizekstr = 0;
   f->kproto = NULL;
-  f->nkproto = 0;
+  f->sizekproto = 0;
   f->code = NULL;
-  f->ncode = 0;
+  f->sizecode = 0;
   f->numparams = 0;
   f->is_vararg = 0;
   f->maxstacksize = 0;
   f->marked = 0;
   f->lineinfo = NULL;
-  f->nlineinfo = 0;
-  f->nlocvars = 0;
+  f->sizelocvars = 0;
+  f->sizelineinfo = 0;
   f->locvars = NULL;
   f->lineDefined = 0;
   f->source = NULL;
@@ -55,39 +53,19 @@ Proto *luaF_newproto (lua_State *L) {
 }
 
 
-static size_t protosize (Proto *f) {
-  return sizeof(Proto)
-       + f->nknum*sizeof(lua_Number)
-       + f->nkstr*sizeof(TString *)
-       + f->nkproto*sizeof(Proto *)
-       + f->ncode*sizeof(Instruction)
-       + f->nlocvars*sizeof(struct LocVar)
-       + f->nlineinfo*sizeof(int);
-}
-
-
-void luaF_protook (lua_State *L, Proto *f, int pc) {
-  f->ncode = pc;  /* signal that proto was properly created */
-  L->nblocks += protosize(f);
-}
-
-
 void luaF_freeproto (lua_State *L, Proto *f) {
-  if (f->ncode > 0)  /* function was properly created? */
-    L->nblocks -= protosize(f);
-  luaM_free(L, f->code);
-  luaM_free(L, f->locvars);
-  luaM_free(L, f->kstr);
-  luaM_free(L, f->knum);
-  luaM_free(L, f->kproto);
-  luaM_free(L, f->lineinfo);
-  luaM_free(L, f);
+  luaM_freearray(L, f->code, f->sizecode, Instruction);
+  luaM_freearray(L, f->locvars, f->sizelocvars, struct LocVar);
+  luaM_freearray(L, f->kstr, f->sizekstr, TString *);
+  luaM_freearray(L, f->knum, f->sizeknum, lua_Number);
+  luaM_freearray(L, f->kproto, f->sizekproto, Proto *);
+  luaM_freearray(L, f->lineinfo, f->sizelineinfo, int);
+  luaM_freelem(L, f, Proto);
 }
 
 
 void luaF_freeclosure (lua_State *L, Closure *c) {
-  L->nblocks -= sizeclosure(c->nupvalues);
-  luaM_free(L, c);
+  luaM_free(L, c, sizeclosure(c->nupvalues));
 }
 
 
@@ -97,7 +75,7 @@ void luaF_freeclosure (lua_State *L, Closure *c) {
 */
 const char *luaF_getlocalname (const Proto *f, int local_number, int pc) {
   int i;
-  for (i = 0; i<f->nlocvars && f->locvars[i].startpc <= pc; i++) {
+  for (i = 0; i<f->sizelocvars && f->locvars[i].startpc <= pc; i++) {
     if (pc < f->locvars[i].endpc) {  /* is variable active? */
       local_number--;
       if (local_number == 0)

@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.34 2000/11/07 12:44:44 roberto Exp roberto $
+** $Id: lundump.c,v 1.35 2000/12/04 18:33:40 roberto Exp roberto $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -104,17 +104,17 @@ static TString* LoadString (lua_State* L, ZIO* Z, int swap)
 
 static void LoadCode (lua_State* L, Proto* tf, ZIO* Z, int swap)
 {
- int size=LoadInt(L,Z,swap);
+ int size;
+ tf->sizecode=size=LoadInt(L,Z,swap);
  tf->code=luaM_newvector(L,size,Instruction);
  LoadVector(L,tf->code,size,sizeof(*tf->code),Z,swap);
  if (tf->code[size-1]!=OP_END) luaO_verror(L,"bad code in `%.99s'",ZNAME(Z));
- luaF_protook(L,tf,size);
 }
 
 static void LoadLocals (lua_State* L, Proto* tf, ZIO* Z, int swap)
 {
  int i,n;
- tf->nlocvars=n=LoadInt(L,Z,swap);
+ tf->sizelocvars=n=LoadInt(L,Z,swap);
  tf->locvars=luaM_newvector(L,n,LocVar);
  for (i=0; i<n; i++)
  {
@@ -127,7 +127,7 @@ static void LoadLocals (lua_State* L, Proto* tf, ZIO* Z, int swap)
 static void LoadLines (lua_State* L, Proto* tf, ZIO* Z, int swap)
 {
  int n;
- tf->nlineinfo=n=LoadInt(L,Z,swap);
+ tf->sizelineinfo=n=LoadInt(L,Z,swap);
  tf->lineinfo=luaM_newvector(L,n,int);
  LoadVector(L,tf->lineinfo,n,sizeof(*tf->lineinfo),Z,swap);
 }
@@ -137,14 +137,14 @@ static Proto* LoadFunction (lua_State* L, ZIO* Z, int swap);
 static void LoadConstants (lua_State* L, Proto* tf, ZIO* Z, int swap)
 {
  int i,n;
- tf->nkstr=n=LoadInt(L,Z,swap);
+ tf->sizekstr=n=LoadInt(L,Z,swap);
  tf->kstr=luaM_newvector(L,n,TString*);
  for (i=0; i<n; i++)
   tf->kstr[i]=LoadString(L,Z,swap);
- tf->nknum=n=LoadInt(L,Z,swap);
+ tf->sizeknum=n=LoadInt(L,Z,swap);
  tf->knum=luaM_newvector(L,n,lua_Number);
  LoadVector(L,tf->knum,n,sizeof(*tf->knum),Z,swap);
- tf->nkproto=n=LoadInt(L,Z,swap);
+ tf->sizekproto=n=LoadInt(L,Z,swap);
  tf->kproto=luaM_newvector(L,n,Proto*);
  for (i=0; i<n; i++)
   tf->kproto[i]=LoadFunction(L,Z,swap);

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.83 2000/11/24 17:39:56 roberto Exp roberto $
+** $Id: lobject.h,v 1.84 2000/12/04 18:33:40 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -102,13 +102,13 @@ typedef struct TString {
 */
 typedef struct Proto {
   lua_Number *knum;  /* numbers used by the function */
-  int nknum;  /* size of `knum' */
+  int sizeknum;  /* size of `knum' */
   struct TString **kstr;  /* strings used by the function */
-  int nkstr;  /* size of `kstr' */
+  int sizekstr;  /* size of `kstr' */
   struct Proto **kproto;  /* functions defined inside the function */
-  int nkproto;  /* size of `kproto' */
+  int sizekproto;  /* size of `kproto' */
   Instruction *code;
-  int ncode;  /* size of `code'; when 0 means an incomplete `Proto' */
+  int sizecode;
   short numparams;
   short is_vararg;
   short maxstacksize;
@@ -116,9 +116,9 @@ typedef struct Proto {
   struct Proto *next;
   /* debug information */
   int *lineinfo;  /* map from opcodes to source lines */
-  int nlineinfo;  /* size of `lineinfo' */
-  int nlocvars;
+  int sizelineinfo;  /* size of `lineinfo' */
   struct LocVar *locvars;  /* information about local variables */
+  int sizelocvars;
   int lineDefined;
   TString  *source;
 } Proto;
