@@ -42,8 +42,7 @@ void luaI_insertfunction (TFunc *f)
 static void freefunc (TFunc *f)
 {
   luaI_free (f->code);
-  if (f->locvars)
-    luaI_free (f->locvars);
+  luaI_free (f->locvars);
   luaI_free (f);
 }
 
@@ -100,16 +99,10 @@ void lua_funcinfo (lua_Object func, char **filename, int *linedefined)
 void luaI_registerlocalvar (TaggedString *varname, int line)
 {
   if (numcurrvars >= maxcurrvars)
-    if (currvars == NULL)
-    {
-      maxcurrvars = LOCALVARINITSIZE;
-      currvars = newvector (maxcurrvars, LocVar);
-    }
-    else
-    {
-      maxcurrvars *= 2;
-      currvars = growvector (currvars, maxcurrvars, LocVar);
-    }
+  {
+    maxcurrvars = (maxcurrvars == 0) ? LOCALVARINITSIZE : maxcurrvars*2;
+    currvars = growvector(currvars, maxcurrvars, LocVar);
+  }
   currvars[numcurrvars].varname = varname;
   currvars[numcurrvars].line = line;
   numcurrvars++;

@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.56 1996/02/08 17:03:20 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.57 1996/02/12 18:32:40 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -135,8 +135,7 @@ static char *lua_strconc (char *l, char *r)
  if (n > buffer_size)
   {
    buffer_size = n;
-   if (buffer != NULL)
-     luaI_free(buffer);
+   luaI_free(buffer);
    buffer = newvector(buffer_size, char);
   }
   strcpy(buffer,l);
@@ -525,8 +524,7 @@ static int do_protectedmain (void)
     adjustC(0);  /* erase extra slot */
   }
   errorJmp = oldErr;
-  if (tf.code)
-    luaI_free(tf.code);
+  luaI_free(tf.code);
   return status;
 }
 

@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_mem = "$Id: mem.c,v 1.6 1996/01/22 14:15:13 roberto Exp roberto $";
+char *rcs_mem = "$Id: mem.c,v 1.7 1996/02/04 16:59:12 roberto Exp roberto $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -27,8 +27,11 @@ static void mem_error (void)
 
 void luaI_free (void *block)
 {
-  *((int *)block) = -1;  /* to catch errors */
-  free(block);
+  if (block)
+  {
+    *((int *)block) = -1;  /* to catch errors */
+    free(block);
+  }
 }
 
 
@@ -43,16 +46,10 @@ void *luaI_malloc (unsigned long size)
 
 void *luaI_realloc (void *oldblock, unsigned long size)
 {
-  void *block = realloc(oldblock, (size_t)size);
+  void *block = oldblock ? realloc(oldblock, (size_t)size) :
+                           malloc((size_t)size);
   if (block == NULL)
     mem_error();
   return block;
 }
 
-
-char *luaI_strdup (char *str)
-{
-  char *newstr = luaI_malloc(strlen(str)+1);
-  strcpy(newstr, str);
-  return newstr;
-}

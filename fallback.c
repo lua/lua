@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.18 1996/01/30 15:25:23 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.19 1996/02/08 19:08:34 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -132,16 +132,8 @@ int luaI_lock (Object *object)
     }
   /* no more empty spaces */
   oldSize = lockSize;
-  if (lockArray == NULL)
-  {
-    lockSize = 10;
-    lockArray = newvector(lockSize, Object);
-  }
-  else
-  {
-    lockSize = 3*oldSize/2 + 5;
-    lockArray = growvector(lockArray, lockSize, Object);
-  }
+  lockSize = (lockSize == 0) ? 10 : 3*lockSize/2 + 5;
+  lockArray = growvector(lockArray, lockSize, Object);
   for (i=oldSize; i<lockSize; i++)
     tag(&lockArray[i]) = LUA_T_NIL;
   lockArray[oldSize] = *object;

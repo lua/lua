@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.17 1996/02/14 13:35:51 roberto Exp roberto $";
+char *rcs_tree="$Id: tree.c,v 1.18 1996/02/14 19:11:09 roberto Exp roberto $";
 
 
 #include <string.h>
@@ -55,20 +55,18 @@ static void grow (stringtable *tb)
   int i;
   for (i=0; i<newsize; i++)
     newhash[i] = NULL;
-  if (tb->size > 0)
-  { /* rehash */
-    tb->nuse = 0;
-    for (i=0; i<tb->size; i++)
-      if (tb->hash[i] != NULL && tb->hash[i] != &EMPTY)
-      {
-        int h = tb->hash[i]->hash%newsize;
-        while (newhash[h])
-          h = (h+1)%newsize;
-        newhash[h] = tb->hash[i];
-        tb->nuse++;
-      }
-    luaI_free(tb->hash); 
-  }
+  /* rehash */
+  tb->nuse = 0;
+  for (i=0; i<tb->size; i++)
+    if (tb->hash[i] != NULL && tb->hash[i] != &EMPTY)
+    {
+      int h = tb->hash[i]->hash%newsize;
+      while (newhash[h])
+        h = (h+1)%newsize;
+      newhash[h] = tb->hash[i];
+      tb->nuse++;
+    }
+  luaI_free(tb->hash); 
   tb->size = newsize;
   tb->hash = newhash;
 }
