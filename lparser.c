@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.73 2000/03/24 17:26:08 roberto Exp roberto $
+** $Id: lparser.c,v 1.74 2000/03/29 20:19:20 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -901,17 +901,16 @@ static int funcname (LexState *ls, expdesc *v) {
 }
 
 
-static int funcstat (LexState *ls, int line) {
+static void funcstat (LexState *ls, int line) {
   /* funcstat -> FUNCTION funcname body */
   int needself;
   expdesc v;
   if (ls->fs->prev)  /* inside other function? */
-    return 0;
+    luaK_error(ls, "cannot nest this kind of function declaration");
   setline_and_next(ls);  /* skip FUNCTION */
   needself = funcname(ls, &v);
   body(ls, needself, line);
   luaK_storevar(ls, &v);
-  return 1;
 }
 
 
@@ -969,42 +968,39 @@ static int stat (LexState *ls) {
     case TK_IF:  /* stat -> IF ifpart END */
       ifpart(ls);
       check_END(ls, TK_IF, line);
-      return 1;
+      break;
 
     case TK_WHILE:  /* stat -> whilestat */
       whilestat(ls, line);
-      return 1;
+      break;
 
     case TK_DO: {  /* stat -> DO block END */
       setline_and_next(ls);  /* skip DO */
       block(ls);
       check_END(ls, TK_DO, line);
-      return 1;
+      break;
     }
 
     case TK_REPEAT:  /* stat -> repeatstat */
       repeatstat(ls, line);
-      return 1;
+      break;
 
     case TK_FUNCTION:  /* stat -> funcstat */
-      return funcstat(ls, line);
+      funcstat(ls, line);
+      break;
 
     case TK_LOCAL:  /* stat -> localstat */
       localstat(ls);
-      return 1;
+      break;
 
     case TK_NAME: case '%':  /* stat -> namestat */
       namestat(ls);
-      return 1;
-
-    case TK_RETURN: case TK_END: case TK_UNTIL:
-    case ';': case TK_ELSE: case TK_ELSEIF: case TK_EOS:  /* `stat' follow */
-      return 0;
+      break;
 
     default:
-      error_unexpected(ls);
-      return 0;  /* to avoid warnings */
+      return 0;  /* no statement */
   }
+  return 1;
 }
 
 
