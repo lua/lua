@@ -52,3 +52,9 @@ of view) when functions have upvalues.
 ** lstrlib.c
 Tue Nov 10 17:29:36 EDT 1998
 >> gsub/strfind do not check whether captures are properly finished.
+
+** lbuiltin.c
+Fri Dec 18 11:22:55 EDT 1998
+>> "tonumber" goes crazy with negative numbers in other bases (not 10),
+because "strtol" returns long, not unsigned long.
+

@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.37 1998/12/15 14:59:59 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.38 1998/12/15 15:21:09 roberto Exp $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -268,7 +268,7 @@ static void luaB_tonumber (void) {
   }
   else {
     char *s = luaL_check_string(1);
-    unsigned long n;
+    long n;
     luaL_arg_check(0 <= base && base <= 36, 2, "base out of range");
     n = strtol(s, &s, base);
     while (isspace(*s)) s++;  /* skip trailing spaces */
