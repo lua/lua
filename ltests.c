@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.145 2002/11/18 15:24:27 roberto Exp roberto $
+** $Id: ltests.c,v 1.146 2002/11/25 17:47:13 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -782,6 +782,15 @@ int luaB_opentests (lua_State *L) {
   luaL_openlib(L, "T", tests_funcs, 0);
   atexit(fim);
   return 0;
+}
+
+
+#undef main
+int main (int argc, char *argv[]) {
+  char *limit = getenv("MEMLIMIT");
+  if (limit)
+    memdebug_memlimit = strtoul(limit, NULL, 10);
+  l_main(argc, argv);
 }
 
 #endif
