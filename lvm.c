@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.150 2001/01/10 17:41:50 roberto Exp roberto $
+** $Id: lvm.c,v 1.151 2001/01/10 18:56:11 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -237,20 +237,20 @@ static void call_arith (lua_State *L, StkId top, TMS event) {
 }
 
 
-static int luaV_strcomp (const TString *ls, const TString *rs) {
+static int luaV_strlessthan (const TString *ls, const TString *rs) {
   const char *l = ls->str;
   size_t ll = ls->len;
   const char *r = rs->str;
   size_t lr = rs->len;
   for (;;) {
     int temp = strcoll(l, r);
-    if (temp != 0) return temp;
+    if (temp != 0) return (temp < 0);
     else {  /* strings are equal up to a '\0' */
       size_t len = strlen(l);  /* index of first '\0' in both strings */
-      if (len == ll)  /* l is finished? */
-        return (len == lr) ? 0 : -1;  /* l is equal or smaller than r */
-      else if (len == lr)  /* r is finished? */
-        return 1;  /* l is greater than r (because l is not finished) */
+      if (len == lr)  /* r is finished? */
+        return 0;  /* l is equal or greater than r */
+      else if (len == ll)  /* l is finished? */
+        return 1;  /* l is smaller than r (because r is not finished) */
       /* both strings longer than `len'; go on comparing (after the '\0') */
       len++;
       l += len; ll -= len; r += len; lr -= len;
@@ -263,7 +263,7 @@ int luaV_lessthan (lua_State *L, const TObject *l, const TObject *r, StkId top) 
   if (ttype(l) == LUA_TNUMBER && ttype(r) == LUA_TNUMBER)
     return (nvalue(l) < nvalue(r));
   else if (ttype(l) == LUA_TSTRING && ttype(r) == LUA_TSTRING)
-    return (luaV_strcomp(tsvalue(l), tsvalue(r)) < 0);
+    return luaV_strlessthan(tsvalue(l), tsvalue(r));
   else {  /* call TM */
     luaD_checkstack(L, 2);
     *top++ = *l;
