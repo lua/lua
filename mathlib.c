@@ -3,7 +3,7 @@
 ** Mathematics library to LUA
 */
 
-char *rcs_mathlib="$Id: mathlib.c,v 1.9 1995/02/06 19:36:43 roberto Exp roberto $";
+char *rcs_mathlib="$Id: mathlib.c,v 1.10 1995/10/02 17:03:33 roberto Exp roberto $";
 
 #include <stdio.h>		/* NULL */
 #include <math.h>
@@ -109,6 +109,19 @@ static void math_atan (void)
    lua_error ("incorrect arguments to function `atan'");
  d = lua_getnumber(o);
  lua_pushnumber (TODEGREE(atan(d)));
+}
+
+
+static void math_atan2 (void)
+{
+ int d1, d2;
+ lua_Object o1 = lua_getparam (1);
+ lua_Object o2 = lua_getparam (2);
+ if (!lua_isnumber(o1) || !lua_isnumber(o2))
+   lua_error ("incorrect arguments to function `atan2'");
+ d1 = (int) lua_getnumber(o1);
+ d2 = (int) lua_getnumber(o2);
+ lua_pushnumber (TODEGREE(atan2(d1, d2)));
 }
 
 
@@ -302,6 +315,7 @@ void mathlib_open (void)
  lua_register ("asin",  math_asin);
  lua_register ("acos",  math_acos);
  lua_register ("atan",  math_atan);
+ lua_register ("atan2",  math_atan2);
  lua_register ("ceil",  math_ceil);
  lua_register ("floor", math_floor);
  lua_register ("mod",   math_mod);
