@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.34 1999/10/04 17:51:04 roberto Exp roberto $
+% $Id: manual.tex,v 1.35 2000/04/14 17:47:55 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -41,7 +41,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{{\small \tt\$Date: 1999/10/04 17:51:04 $ $}}
+\date{{\small \tt\$Date: 2000/04/14 17:47:55 $ $}}
 
 \maketitle
 
@@ -456,7 +456,7 @@ and can be optionally followed by a semicolon:
 \begin{Produc}
 \produc{block}{\opt{label} \rep{stat sc}}
 \produc{sc}{\opt{\ter{;}}}
-\produc{label}{\ter{|} name \ter{|}}
+\produc{label}{\ter{$\vert$} name \ter{$\vert$}}
 \end{Produc}%
 For syntactic reasons, \rwd{return} and
 \rwd{break} statements can only be written
@@ -680,7 +680,7 @@ giving the expected meaning to \Index{exponentiation}
 \subsubsection{Relational Operators}
 Lua provides the following \Index{relational operators}:
 \begin{verbatim}
-       <   >   <=  >=  ~=  ==
+       ==  ~=  <   >   <=  >=
 \end{verbatim}
 All these return \nil\ as false and a value different from \nil\ as true.
 
@@ -698,7 +698,7 @@ Thus, \verb|"0"==0| evaluates to false,
 and \verb|t[0]| and \verb|t["0"]| denote different
 entries in a table.
 
-The other operators work as follows.
+The order operators work as follows.
 If both arguments are numbers, then they are compared as such.
 Otherwise, if both arguments are strings,
 then their values are compared using lexicographical order.
@@ -1311,10 +1311,8 @@ called when Lua tries to call a non function value.
         else
           local tm = gettagmethod(tag(func), "function")
           if tm then
-            local i = arg.n
-            while i > 0 do
+            for i=arg.n,1,-1 do
               arg[i+1] = arg[i]
-              i = i-1
             end
             arg.n = arg.n+1
             arg[1] = func
@@ -1430,7 +1428,7 @@ Currently, the function accepts the following options:
 \item \verb|"stack"| - the stack size.
 Each function call needs one stack position for each local variable
 and temporary variables, plus one position.
-The stack must also have at least ten positions available.
+The stack must also have at least ten extra positions available.
 For very small implementations, without recursive functions,
 a size of 100 should be enough.
 The default is 1K.
@@ -1459,7 +1457,7 @@ void lua_close (lua_State *L);
 This function destroys all objects in the current Lua environment
 (calling the correspondent garbage collector tag methods),
 and frees all dynamic memory used by the state.
-Frequently, you do not need to call this function,
+Usually, you do not need to call this function,
 because these resources are naturally released when the program ends.
 
 With the exception of \verb|lua_newstate|,
@@ -1470,6 +1468,9 @@ functions, and also to keep compatibility with old versions of Lua,
 the API provides a set of macros and one global variable that
 take care of this state argument for single-state applications:
 \begin{verbatim}
+#ifndef LUA_REENTRANT
+\end{verbatim}
+\begin{verbatim}
 extern lua_State *lua_state;
 \end{verbatim}
 \begin{verbatim}
@@ -1478,9 +1479,12 @@ extern lua_State *lua_state;
 #define lua_dostring(str)       (lua_dostring)(lua_state, str)
    ...
 \end{verbatim}
+\begin{verbatim}
+#endif
+\end{verbatim}
 For each function in the API, there is a macro with the same name
 that supplies \verb|lua_state| as the first argument to the call.
-(The parentheses around the function name is to avoid it being expanded
+(The parentheses around the function name avoid it being expanded
 again as a macro.)
 The only exception is \verb|lua_newstate|;
 in this case, the corresponding macro is
@@ -1488,7 +1492,7 @@ in this case, the corresponding macro is
 #define lua_open()      ((void)(lua_state?0:(lua_state=lua_newstate(0))))
 \end{verbatim}
 It checks whether the global state has been initialized;
-if not, it then creates a new state with default settings and
+if not, it creates a new state with default settings and
 assigns it to \verb|lua_newstate|.
 
 By default, those macros are all active.
@@ -2030,8 +2034,11 @@ void       lua_unref  (int ref);
 The function \verb|lua_ref| creates a reference
 to the object that is on the top of the stack,
 and returns this reference.
-For a \nil{} object, the reference is always -1;
+For a \nil{} object,
+the reference is always \verb|LUA_REFNIL|;\Deffunc{LUA_REFNIL}
 otherwise, it is a non-negative integer.
+The constant \verb|LUA_NOREF| \Deffunc{LUA_NOREF}
+is different from any valid reference.
 If \verb|lock| is true, the object is \emph{locked}:
 this means the object will not be garbage collected.
 Note that an unlocked reference may be garbage collected.
@@ -2347,11 +2354,11 @@ This function could be defined in Lua:
 \begin{verbatim}
       function getn (t)
         if type(t.n) == 'number' then return t.n end
-        local max = 0
-        local i = next(t, nil)
-        while i do
-          if type(i) == 'number' and i>max then max=i end
+        local max, i = 0, nil
+        while 1 do
           i = next(t, i)
+          if not i then break end
+          if type(i) == 'number' and i>max then max=i end
         end
         return max
       end
@@ -2369,11 +2376,12 @@ as the final value of \verb|foreach|.
 This function could be defined in Lua:
 \begin{verbatim}
       function foreach (t, f)
-        local i, v = next(t, nil)
-        while i do
+        local i, v = nil
+        while 1 do
+          i, v = next(t, i)
+          if not i then break end
           local res = f(i, v)
           if res then return res end
-          i, v = next(t, i)
         end
       end
 \end{verbatim}
@@ -2398,11 +2406,9 @@ as the final value of \verb|foreachi|.
 This function could be defined in Lua:
 \begin{verbatim}
       function foreachi (t, f)
-        local i, n = 1, getn(t)
-        while i <= n do
+        for i=1,getn(t) do
           local res = f(i, t[i])
           if res then return res end
-          i = i+1
         end
       end
 \end{verbatim}
@@ -2418,11 +2424,12 @@ as the final value of \verb|foreachvar|.
 This function could be defined in Lua:
 \begin{verbatim}
       function foreachvar (f)
-        local n, v = nextvar(nil)
-        while n do
+        local n, v = nil
+        while 1 do
+          n, v = nextvar(n)
+          if not n then break end
           local res = f(n, v)
           if res then return res end
-          n, v = nextvar(n)
         end
       end
 \end{verbatim}
@@ -2454,9 +2461,8 @@ except that the table accesses are all raw (that is, without tag methods):
           pos, value = arg[1], arg[2]
         end
         t.n = n+1;
-        while n >= pos do
-          t[n+1] = t[n]
-          n = n-1
+        for i=n,pos,-1 do
+          t[i+1] = t[i]
         end
         t[pos] = value
       end
@@ -2480,12 +2486,11 @@ except that the table accesses are all raw (that is, without tag methods):
 \begin{verbatim}
       function tremove (t, pos)
         local n = getn(t)
+        if n<=0 then return end
         pos = pos or n
         local value = t[pos]
-        if n<=0 then return end
-        while pos < n do
-          t[pos] = t[pos+1]
-          pos = pos+1
+        for i=pos,n-1 do
+          t[i] = t[i+1]
         end
         t[n] = nil
         t.n = n-1
@@ -3266,18 +3271,19 @@ int listvars (lua_State *L, int level) {
 
 The Lua interpreter offers two hooks for debugging purposes:
 a \emph{call} hook and a \emph{line} hook.
-Both have the same type, and you can set them with the
-following functions:
-\Deffunc{lua_Hook}\Deffunc{lua_setcallhook}\Deffunc{lua_setlinehook}
+Both have the same type,
 \begin{verbatim}
 typedef void (*lua_Hook) (lua_State *L, lua_Debug *ar);
-
+\end{verbatim}
+and you can set them with the following functions:
+\Deffunc{lua_Hook}\Deffunc{lua_setcallhook}\Deffunc{lua_setlinehook}
+\begin{verbatim}
 lua_Hook lua_setcallhook (lua_State *L, lua_Hook func);
 lua_Hook lua_setlinehook (lua_State *L, lua_Hook func);
 \end{verbatim}
 A hook is disabled when its value is \verb|NULL|,
 which is the initial value of both hooks.
-Both \verb|lua_setcallhook| and \verb|lua_setlinehook|
+The functions \verb|lua_setcallhook| and \verb|lua_setlinehook|
 set their corresponding hooks and return their previous values.
 
 The call hook is called whenever the
