@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: ldblib.c,v 1.1 1999/01/08 16:47:44 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -11,6 +11,7 @@
 #include "lauxlib.h"
 #include "lua.h"
 #include "luadebug.h"
+#include "lualib.h"
 
 
 
