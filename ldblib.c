@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.56 2002/06/06 12:40:36 roberto Exp roberto $
+** $Id: ldblib.c,v 1.57 2002/06/13 13:44:50 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -185,10 +185,7 @@ static int errorfb (lua_State *L) {
   int level = 1;  /* skip level 0 (it's this function) */
   int firstpart = 1;  /* still before eventual `...' */
   lua_Debug ar;
-  if (!lua_isstring(L, 1))
-    return lua_gettop(L);
-  lua_settop(L, 1);
-  lua_pushliteral(L, "\n");
+  lua_settop(L, 0);
   lua_pushliteral(L, "stack traceback:\n");
   while (lua_getstack(L, level++, &ar)) {
     char buff[10];
@@ -242,13 +239,16 @@ static const luaL_reg dblib[] = {
   {"setlinehook", setlinehook},
   {"setlocal", setlocal},
   {"debug", debug},
+  {"traceback", errorfb},
   {NULL, NULL}
 };
 
 
 LUALIB_API int lua_dblibopen (lua_State *L) {
   luaL_opennamedlib(L, LUA_DBLIBNAME, dblib, 0);
-  lua_register(L, "_ERRORMESSAGE", errorfb);
+  lua_pushliteral(L, LUA_TRACEBACK);
+  lua_pushcfunction(L, errorfb);
+  lua_settable(L, LUA_REGISTRYINDEX);
   return 0;
 }
 
