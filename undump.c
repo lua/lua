@@ -3,10 +3,13 @@
 ** load bytecodes from files
 */
 
-char* rcs_undump="$Id: undump.c,v 1.10 1996/03/06 21:40:10 lhf Exp lhf $";
+char* rcs_undump="$Id: undump.c,v 1.11 1996/03/08 21:44:12 lhf Exp lhf $";
 
 #include <stdio.h>
 #include <string.h>
+#include "opcode.h"
+#include "mem.h"
+#include "table.h"
 #include "undump.h"
 
 static int swapword=0;
@@ -16,7 +19,9 @@ static TFunc* lastF=NULL;
 
 static void warn(char* s)			/* TODO: remove */
 {
+#if 0
  fprintf(stderr,"undump: %s\n",s);
+#endif
 }
 
 static void FixCode(Byte* code, Byte* end)	/* swap words */
@@ -160,13 +165,6 @@ static int LoadWord(FILE* D)
  return w;
 }
 
-static char* LoadBlock(int size, FILE* D)
-{
- char* b=luaI_malloc(size);
- fread(b,size,1,D);
- return b;
-}
-
 static int LoadSize(FILE* D)
 {
  Word hi=LoadWord(D);
@@ -176,7 +174,22 @@ static int LoadSize(FILE* D)
  return s;
 }
 
+static char* LoadBlock(int size, FILE* D)
+{
+ char* b=luaI_malloc(size);
+ fread(b,size,1,D);
+ return b;
+}
+
 static char* LoadString(FILE* D)
+{
+ int size=LoadWord(D);
+ char *b=luaI_buffer(size);
+ fread(b,size,1,D);
+ return b;
+}
+
+static char* LoadNewString(FILE* D)
 {
  return LoadBlock(LoadWord(D),D);
 }
@@ -190,7 +203,7 @@ static void LoadFunction(FILE* D)
  tf->lineDefined=LoadWord(D);
  if (IsMain(tf))				/* new main */
  {
-  tf->fileName=LoadString(D);
+  tf->fileName=LoadNewString(D);
   Main=lastF=tf;
  }
  else						/* fix PUSHFUNCTION */
@@ -204,9 +217,7 @@ static void LoadFunction(FILE* D)
   *p++=c.m.c1; *p++=c.m.c2; *p++=c.m.c3; *p++=c.m.c4;
   lastF=lastF->next=tf;
  }
-#if 0
- tf->marked=0;					/* TODO: is this ok? */
-#endif
+ tf->marked=0;
  tf->code=LoadBlock(tf->size,D);
  if (swapword || swapfloat) FixCode(tf->code,tf->code+tf->size);
  while (1)					/* unthread */
@@ -216,14 +227,14 @@ static void LoadFunction(FILE* D)
   {
    int i=LoadWord(D);
    char* s=LoadString(D);
-   int v=luaI_findsymbolbyname(s);		/* TODO: free s? */
+   int v=luaI_findsymbolbyname(s);
    Unthread(tf->code,i,v);
   }
   else if (c==ID_STR)				/* constant string */
   {
    int i=LoadWord(D);
    char* s=LoadString(D);
-   int v=luaI_findconstantbyname(s);		/* TODO: free s? */
+   int v=luaI_findconstantbyname(s);
    Unthread(tf->code,i,v);
   }
   else
@@ -303,25 +314,14 @@ TFunc* luaI_undump1(FILE* D)
 /*
 ** load and run all chunks in a file
 */
-void luaI_undump(FILE* D)
+int luaI_undump(FILE* D)
 {
  TFunc* m;
  while ((m=luaI_undump1(D)))
  {
-#if 0
-  luaI_dorun(m);
-  luaI_freefunc(m);				/* TODO: free others? */
-#endif
+  int status=luaI_dorun(m);
+  luaI_freefunc(m);
+  if (status!=0) return status;
  }
-}
-
-char* luaI_buffer(int n)
-{
- static int size=0;
- static char* buffer=NULL;
- if (buffer==NULL)
-  buffer=luaI_malloc(n);
- else if (n>size)
-  buffer=luaI_realloc(buffer,size=n);
- return buffer;
+ return 0;
 }
