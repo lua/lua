@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.88 2002/05/23 19:43:04 roberto Exp roberto $
+** $Id: lua.c,v 1.89 2002/06/03 20:11:41 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -370,7 +370,7 @@ int main (int argc, char *argv[]) {
   int toclose = 0;
   (void)argc;  /* to avoid warnings */
   L = lua_open();  /* create state */
-  lua_setpanicf(L, l_panic);
+  lua_atpanic(L, l_panic);
   LUA_USERINIT(L);  /* open libraries */
   register_own(argv);  /* create own function */
   status = handle_luainit();

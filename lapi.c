@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.194 2002/06/03 17:46:34 roberto Exp roberto $
+** $Id: lapi.c,v 1.195 2002/06/03 20:11:07 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -100,7 +100,7 @@ LUA_API int lua_checkstack (lua_State *L, int size) {
 }
 
 
-LUA_API lua_CFunction lua_setpanicf (lua_State *L, lua_CFunction panicf) {
+LUA_API lua_CFunction lua_atpanic (lua_State *L, lua_CFunction panicf) {
   lua_CFunction old;
   lua_lock(L);
   old = G(L)->panic;
@@ -563,14 +563,14 @@ LUA_API int lua_pcall (lua_State *L, int nargs, int nresults, int errf) {
 }
 
 
-LUA_API int lua_load (lua_State *L, lua_Getblock getblock, void *ud,
+LUA_API int lua_load (lua_State *L, lua_Chunkreader reader, void *data,
                       const char *chunkname) {
   ZIO z;
   int status;
   int c;
   lua_lock(L);
   if (!chunkname) chunkname = "?";
-  luaZ_init(&z, getblock, ud, chunkname);
+  luaZ_init(&z, reader, data, chunkname);
   c = luaZ_lookahead(&z);
   status = luaD_protectedparser(L, &z, (c == LUA_SIGNATURE[0]));
   lua_unlock(L);

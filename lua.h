@@ -1,9 +1,8 @@
 /*
-** $Id: lua.h,v 1.136 2002/06/03 20:11:07 roberto Exp roberto $
+** $Id: lua.h,v 1.137 2002/06/05 12:34:19 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
-** Tecgraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
-** e-mail: info@lua.org
-** www: http://www.lua.org
+** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
+** http://www.lua.org	mailto:info@lua.org
 ** See Copyright Notice at the end of this file
 */
 
@@ -26,7 +25,7 @@
 
 
 
-/* option for multiple returns in `lua_call' */
+/* option for multiple returns in `lua_pcall' and `lua_rawcall' */
 #define LUA_MULTRET	(-1)
 
 
@@ -38,7 +37,7 @@
 #define lua_upvalueindex(i)	(LUA_GLOBALSINDEX-(i))
 
 
-/* error codes for `lua_load*' and `lua_pcall' */
+/* error codes for `lua_load' and `lua_pcall' */
 #define LUA_ERRRUN	1
 #define LUA_ERRFILE	2
 #define LUA_ERRSYNTAX	3
@@ -52,9 +51,9 @@ typedef int (*lua_CFunction) (lua_State *L);
 
 
 /*
-** function for loading Lua code
+** functions that read blocks when loading Lua chunk
 */
-typedef const char * (*lua_Getblock) (void *ud, size_t *size);
+typedef const char * (*lua_Chunkreader) (void *ud, size_t *size);
 
 
 /*
@@ -84,7 +83,7 @@ typedef const char * (*lua_Getblock) (void *ud, size_t *size);
 #endif
 
 
-/* Lua numerical type */
+/* type of Numbers in Lua */
 #ifndef LUA_NUMBER
 #define LUA_NUMBER	double
 #endif
@@ -105,7 +104,7 @@ LUA_API void       lua_close (lua_State *L);
 LUA_API lua_State *lua_newthread (lua_State *L);
 LUA_API void       lua_closethread (lua_State *L, lua_State *thread);
 
-LUA_API lua_CFunction lua_setpanicf (lua_State *L, lua_CFunction panicf);
+LUA_API lua_CFunction lua_atpanic (lua_State *L, lua_CFunction panicf);
 
 
 /*
@@ -181,7 +180,7 @@ LUA_API void  lua_setmetatable (lua_State *L, int objindex);
 */
 LUA_API void  lua_rawcall (lua_State *L, int nargs, int nresults);
 LUA_API int   lua_pcall (lua_State *L, int nargs, int nresults, int errf);
-LUA_API int   lua_load (lua_State *L, lua_Getblock getblock, void *ud,
+LUA_API int   lua_load (lua_State *L, lua_Chunkreader reader, void *data,
                         const char *chunkname);
 
 
@@ -244,8 +243,8 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size);
 #define lua_isnone(L,n)		(lua_type(L,n) == LUA_TNONE)
 #define lua_isnoneornil(L, n)	(lua_type(L,n) <= 0)
 
-#define lua_pushliteral(L, s)	lua_pushlstring(L, "" s, \
-                                                (sizeof(s)/sizeof(char))-1)
+#define lua_pushliteral(L, s)	\
+	lua_pushlstring(L, "" s, (sizeof(s)/sizeof(char))-1)
 
 
 
