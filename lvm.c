@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.71 1999/12/06 19:30:53 roberto Exp roberto $
+** $Id: lvm.c,v 1.72 1999/12/09 20:01:48 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -64,7 +64,7 @@ int luaV_tostring (lua_State *L, TObject *obj) {  /* LUA_NUMBER */
   if (ttype(obj) != LUA_T_NUMBER)
     return 1;
   else {
-    char s[32];  /* 16 digits, signal, point and \0  (+ some extra...) */
+    char s[32];  /* 16 digits, sign, point and \0  (+ some extra...) */
     sprintf(s, "%.16g", (double)nvalue(obj));
     tsvalue(obj) = luaS_new(L, s);
     ttype(obj) = LUA_T_STRING;

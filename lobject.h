@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.38 1999/11/26 18:59:20 roberto Exp roberto $
+** $Id: lobject.h,v 1.39 1999/12/02 16:24:45 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -197,7 +197,7 @@ typedef struct Hash {
 
 extern const char *const luaO_typenames[];
 
-#define luaO_typename(L, o)        luaO_typenames[-ttype(o)]
+#define luaO_typename(o)        luaO_typenames[-ttype(o)]
 
 #define MINPOWER2	4	/* minimum size for "growing" vectors */
 

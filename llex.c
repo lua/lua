@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.44 1999/11/22 13:12:07 roberto Exp roberto $
+** $Id: llex.c,v 1.45 1999/12/02 16:41:29 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -64,7 +64,7 @@ void luaX_error (LexState *ls, const char *s) {
 
 
 void luaX_token2str (int token, char *s) {
-  if (token < 255) {
+  if (token < 256) {
     s[0] = (char)token;
     s[1] = '\0';
   }
@@ -225,7 +225,7 @@ static void inclinenumber (lua_State *L, LexState *LS) {
 
 /*
 ** =======================================================
-** LEXICAL ANALIZER
+** LEXICAL ANALYZER
 ** =======================================================
 */
 
@@ -407,7 +407,7 @@ int luaX_lex (LexState *LS) {
         }
         save(L, '\0');
         if (!luaO_str2d(L->Mbuffer+L->Mbuffbase, &LS->seminfo.r))
-          luaX_error(LS, "invalid numeric format");
+          luaX_error(LS, "malformed number");
         return NUMBER;
 
       case EOZ:

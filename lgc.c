@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.34 1999/11/26 18:59:20 roberto Exp roberto $
+** $Id: lgc.c,v 1.35 1999/12/01 19:50:08 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,7 @@
 static int markobject (lua_State *L, TObject *o);
 
 
-/* mark a string; marks bigger than 1 cannot be changed */
+/* mark a string; marks larger than 1 cannot be changed */
 #define strmark(L, s)    {if ((s)->marked == 0) (s)->marked = 1;}
 
 

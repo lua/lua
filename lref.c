@@ -1,5 +1,5 @@
 /*
-** $Id: lref.c,v 1.2 1999/11/10 15:37:50 roberto Exp roberto $
+** $Id: lref.c,v 1.3 1999/11/22 13:12:07 roberto Exp roberto $
 ** REF mechanism
 ** See Copyright Notice in lua.h
 */
@@ -7,15 +7,17 @@
 
 #define LUA_REENTRANT
 
+#include "lapi.h"
 #include "lmem.h"
 #include "lref.h"
 #include "lstate.h"
 #include "lua.h"
 
 
-int luaR_ref (lua_State *L, const TObject *o, int lock) {
+int lua_ref (lua_State *L,  int lock) {
   int ref;
-  if (ttype(o) == LUA_T_NIL)
+  luaA_checkCparams(L, 1);
+  if (ttype(L->top-1) == LUA_T_NIL)
     ref = LUA_REFNIL;
   else {
     if (L->refFree != NONEXT) {  /* is there a free place? */
@@ -26,9 +28,10 @@ int luaR_ref (lua_State *L, const TObject *o, int lock) {
       luaM_growvector(L, L->refArray, L->refSize, 1, struct ref, refEM, MAX_INT);
       ref = L->refSize++;
     }
-    L->refArray[ref].o = *o;
+    L->refArray[ref].o = *(L->top-1);
     L->refArray[ref].st = lock ? LOCK : HOLD;
   }
+  L->top--;
   return ref;
 }
 
@@ -43,15 +46,36 @@ void lua_unref (lua_State *L, int ref) {
 }
 
 
-const TObject *luaR_getref (lua_State *L, int ref) {
+lua_Object lua_getref (lua_State *L, int ref) {
   if (ref == LUA_REFNIL)
-    return &luaO_nilobject;
+    return luaA_putluaObject(L, &luaO_nilobject);
   else if (0 <= ref && ref < L->refSize &&
           (L->refArray[ref].st == LOCK || L->refArray[ref].st == HOLD))
-    return &L->refArray[ref].o;
+    return luaA_putluaObject(L, &L->refArray[ref].o);
   else
-    return NULL;
+    return LUA_NOOBJECT;
 }
+
+
+void lua_beginblock (lua_State *L) {
+  luaM_growvector(L, L->Cblocks, L->numCblocks, 1, struct C_Lua_Stack,
+                  "too many nested blocks", L->stacksize);
+  L->Cblocks[L->numCblocks] = L->Cstack;
+  L->numCblocks++;
+}
+
+
+void lua_endblock (lua_State *L) {
+  if (L->numCblocks <= 0)
+    lua_error(L, "API error - no block to end");
+  --L->numCblocks;
+  L->Cstack = L->Cblocks[L->numCblocks];
+  L->top = L->Cstack.base;
+}
+
+
+
+
 
 
 static int ismarked (const TObject *o) {
