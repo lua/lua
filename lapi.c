@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.42 1999/03/26 13:14:00 roberto Exp roberto $
+** $Id: lapi.c,v 1.43 1999/05/11 14:19:32 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -167,15 +167,12 @@ lua_Object lua_gettable (void)
 }
 
 
-lua_Object lua_rawgettable (void)
-{
+lua_Object lua_rawgettable (void) {
   checkCparams(2);
   if (ttype(L->stack.top-2) != LUA_T_ARRAY)
     lua_error("indexed expression not a table in rawgettable");
-  else {
-    *(L->stack.top-2) = *luaH_get(avalue(L->stack.top-2), L->stack.top-1);
-    --L->stack.top;
-  }
+  *(L->stack.top-2) = *luaH_get(avalue(L->stack.top-2), L->stack.top-1);
+  --L->stack.top;
   return put_luaObjectonTop();
 }
 
@@ -368,14 +365,11 @@ void luaA_pushobject (TObject *o)
   incr_top;
 }
 
-void lua_pushobject (lua_Object o)
-{
+void lua_pushobject (lua_Object o) {
   if (o == LUA_NOOBJECT)
     lua_error("API error - attempt to push a NOOBJECT");
-  else {
-    set_normalized(L->stack.top, Address(o));
-    incr_top;
-  }
+  set_normalized(L->stack.top, Address(o));
+  incr_top;
 }
 
 
@@ -638,16 +632,13 @@ char *lua_getobjname (lua_Object o, char **name)
 
 
 #ifndef	MAX_C_BLOCKS
-#define MAX_C_BLOCKS	500
+#define MAX_C_BLOCKS	1000
 #endif
 
 
 void lua_beginblock (void) {
-  if (L->numCblocks >= L->sizeCblocks) {
-    luaM_growvector(L->Cblocks, L->numCblocks, 1, struct C_Lua_Stack,
-                    "too many nested blocks", MAX_C_BLOCKS);
-    L->sizeCblocks++;
-  }
+  luaM_growvector(L->Cblocks, L->numCblocks, 1, struct C_Lua_Stack,
+                  "too many nested blocks", MAX_C_BLOCKS);
   L->Cblocks[L->numCblocks] = L->Cstack;
   L->numCblocks++;
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.17 1999/05/10 13:54:01 roberto Exp roberto $
+** $Id: lstate.h,v 1.18 1999/05/11 14:19:32 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -68,7 +68,6 @@ struct lua_State {
   int Mbuffsize;  /* size of Mbuffer */
   int Mbuffnext;  /* next position to fill in Mbuffer */
   struct C_Lua_Stack *Cblocks;
-  int sizeCblocks;  /* size of Cblocks */
   int numCblocks;  /* number of nested Cblocks */
   int debug;
   lua_CHFunction callhook;

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.10 1999/04/13 19:30:51 roberto Exp roberto $
+** $Id: lstate.c,v 1.11 1999/05/11 14:19:32 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -33,7 +33,6 @@ void lua_open (void)
   L->Mbuffsize = 0;
   L->Mbuffnext = 0;
   L->Cblocks = NULL;
-  L->sizeCblocks = 0;
   L->numCblocks = 0;
   L->debug = 0;
   L->callhook = NULL;
