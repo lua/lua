@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.110 2000/05/24 13:54:49 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.111 2000/05/26 19:17:57 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -438,10 +438,49 @@ void luaB_tremove (lua_State *L) {
 }
 
 
+static void luaB_foreachi (lua_State *L) {
+  const Hash *t = gettable(L, 1);
+  int n = (int)getnarg(L, t);
+  int i;
+  lua_Object f = luaL_functionarg(L, 2);
+  luaD_checkstack(L, 3);  /* for f, key, and val */
+  for (i=1; i<=n; i++) {
+    *(L->top++) = *f;
+    ttype(L->top) = TAG_NUMBER; nvalue(L->top++) = i;
+    *(L->top++) = *luaH_getnum(t, i);
+    luaD_call(L, L->top-3, 1);
+    if (ttype(L->top-1) != TAG_NIL)
+      return;
+    L->top--;  /* remove nil result */
+  }
+}
+
+
+static void luaB_foreach (lua_State *L) {
+  const Hash *a = gettable(L, 1);
+  lua_Object f = luaL_functionarg(L, 2);
+  int i;
+  luaD_checkstack(L, 3);  /* for f, key, and val */
+  for (i=0; i<a->size; i++) {
+    const Node *nd = &(a->node[i]);
+    if (ttype(val(nd)) != TAG_NIL) {
+      *(L->top++) = *f;
+      *(L->top++) = *key(nd);
+      *(L->top++) = *val(nd);
+      luaD_call(L, L->top-3, 1);
+      if (ttype(L->top-1) != TAG_NIL)
+        return;
+      L->top--;  /* remove result */
+    }
+  }
+}
+
+
 /*
 ** {======================================================
 ** Quicksort
-** (based on `Algorithms in MODULA-3', Robert Sedgewick; Addison-Wesley, 1993.)
+** (based on `Algorithms in MODULA-3', Robert Sedgewick;
+**  Addison-Wesley, 1993.)
 */
 
 static void swap (lua_State *L, Hash *a, int i, int j) {
@@ -539,43 +578,6 @@ void luaB_sort (lua_State *L) {
 
 #ifdef LUA_DEPRECATETFUNCS
 
-static void luaB_foreachi (lua_State *L) {
-  const Hash *t = gettable(L, 1);
-  int n = (int)getnarg(L, t);
-  int i;
-  lua_Object f = luaL_functionarg(L, 2);
-  luaD_checkstack(L, 3);  /* for f, key, and val */
-  for (i=1; i<=n; i++) {
-    *(L->top++) = *f;
-    ttype(L->top) = TAG_NUMBER; nvalue(L->top++) = i;
-    *(L->top++) = *luaH_getnum(t, i);
-    luaD_call(L, L->top-3, 1);
-    if (ttype(L->top-1) != TAG_NIL)
-      return;
-    L->top--;  /* remove nil result */
-  }
-}
-
-
-static void luaB_foreach (lua_State *L) {
-  const Hash *a = gettable(L, 1);
-  lua_Object f = luaL_functionarg(L, 2);
-  int i;
-  luaD_checkstack(L, 3);  /* for f, key, and val */
-  for (i=0; i<a->size; i++) {
-    const Node *nd = &(a->node[i]);
-    if (ttype(val(nd)) != TAG_NIL) {
-      *(L->top++) = *f;
-      *(L->top++) = *key(nd);
-      *(L->top++) = *val(nd);
-      luaD_call(L, L->top-3, 1);
-      if (ttype(L->top-1) != TAG_NIL)
-        return;
-      L->top--;  /* remove result */
-    }
-  }
-}
-
 #define num_deprecated	4
 
 static const struct luaL_reg deprecated_global_funcs[num_deprecated] = {
@@ -587,8 +589,6 @@ static const struct luaL_reg deprecated_global_funcs[num_deprecated] = {
 
 
 static const struct luaL_reg other_deprecated_global_funcs[] = {
-  {"foreach", luaB_foreach},
-  {"foreachi", luaB_foreachi},
   {"rawgettable", luaB_rawget},
   {"rawsettable", luaB_rawset}
 };
@@ -618,10 +618,10 @@ static void obsolete_func (lua_State *L) {
 }
 
 
-#define num_deprecated	8
+#define num_deprecated	6
 
 static const char *const obsolete_names [num_deprecated] = {
-  "foreach", "foreachi", "foreachvar", "nextvar", "rawgetglobal",
+  "foreachvar", "nextvar", "rawgetglobal",
   "rawgettable", "rawsetglobal", "rawsettable"
 };
 
@@ -648,6 +648,8 @@ static const struct luaL_reg builtin_funcs[] = {
   {"dofile", luaB_dofile},
   {"dostring", luaB_dostring},
   {"error", luaB_error},
+  {"foreach", luaB_foreach},
+  {"foreachi", luaB_foreachi},
   {"getglobal", luaB_getglobal},
   {"gettagmethod", luaB_gettagmethod},
   {"globals", luaB_globals},
