@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.13 1995/10/02 17:03:33 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.14 1995/10/04 14:20:26 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -28,15 +28,16 @@ static void funcFB (void);
 ** Warning: This list must be in the same order as the #define's
 */
 struct FB  luaI_fallBacks[] = {
-{"error", {LUA_T_CFUNCTION, {errorFB}}},
-{"index", {LUA_T_CFUNCTION, {indexFB}}},
-{"gettable", {LUA_T_CFUNCTION, {gettableFB}}},
-{"arith", {LUA_T_CFUNCTION, {arithFB}}},
-{"order", {LUA_T_CFUNCTION, {orderFB}}},
-{"concat", {LUA_T_CFUNCTION, {concatFB}}},
-{"settable", {LUA_T_CFUNCTION, {gettableFB}}},
-{"gc", {LUA_T_CFUNCTION, {GDFB}}},
-{"function", {LUA_T_CFUNCTION, {funcFB}}}
+{"error", {LUA_T_CFUNCTION, {errorFB}}, 1, 0},
+{"index", {LUA_T_CFUNCTION, {indexFB}}, 2, 1},
+{"gettable", {LUA_T_CFUNCTION, {gettableFB}}, 2, 1},
+{"arith", {LUA_T_CFUNCTION, {arithFB}}, 3, 1},
+{"order", {LUA_T_CFUNCTION, {orderFB}}, 3, 1},
+{"concat", {LUA_T_CFUNCTION, {concatFB}}, 2, 1},
+{"settable", {LUA_T_CFUNCTION, {gettableFB}}, 3, 0},
+{"gc", {LUA_T_CFUNCTION, {GDFB}}, 1, 0},
+{"function", {LUA_T_CFUNCTION, {funcFB}}, -1, -1}
+                                /* no fixed number of params or results */
 };
 
 #define N_FB  (sizeof(luaI_fallBacks)/sizeof(struct FB))

@@ -1,5 +1,5 @@
 /*
-** $Id: fallback.h,v 1.7 1994/11/21 18:22:58 roberto Stab roberto $
+** $Id: fallback.h,v 1.8 1995/10/04 14:20:26 roberto Exp roberto $
 */
  
 #ifndef fallback_h
@@ -10,6 +10,8 @@
 extern struct FB {
   char *kind;
   Object function;
+  int nParams;
+  int nResults;
 } luaI_fallBacks[];
 
 #define FB_ERROR  0
