@@ -31,27 +31,15 @@ void luaK_error (LexState *ls, const char *msg) {
 }
 
 
-/*
-** Returns the the previous instruction, for optimizations.
-** If there is a jump target between this and the current instruction,
-** returns a dummy instruction to avoid wrong optimizations.
-*/
-static Instruction previous_instruction (FuncState *fs) {
-  if (fs->pc > fs->lasttarget)  /* no jumps to current position? */
-    return fs->f->code[fs->pc-1];  /* returns previous instruction */
-  else
-    return cast(Instruction, -1);/* invalid instruction avoids optimizations */
-}
-
-
 void luaK_nil (FuncState *fs, int from, int n) {
-  Instruction previous = previous_instruction(fs);
-  if (GET_OPCODE(previous) == OP_LOADNIL) {
-    int pfrom = GETARG_A(previous);
-    int pto = GETARG_B(previous);
+  Instruction *previous;
+  if (fs->pc > fs->lasttarget &&  /* no jumps to current position? */
+      GET_OPCODE(*(previous = &fs->f->code[fs->pc-1])) == OP_LOADNIL) {
+    int pfrom = GETARG_A(*previous);
+    int pto = GETARG_B(*previous);
     if (pfrom <= from && from <= pto+1) {  /* can connect both? */
       if (from+n-1 > pto)
-        SETARG_B(fs->f->code[fs->pc-1], from+n-1);
+        SETARG_B(*previous, from+n-1);
       return;
     }
   }
@@ -126,8 +114,6 @@ static int luaK_getjump (FuncState *fs, int pc) {
 
 static Instruction *getjumpcontrol (FuncState *fs, int pc) {
   Instruction *pi = &fs->f->code[pc];
-  OpCode op = GET_OPCODE(*pi);
-  lua_assert(op == OP_JMP || op == OP_FORLOOP || op == OP_TFORLOOP);
   if (pc >= 1 && testOpMode(GET_OPCODE(*(pi-1)), OpModeT))
     return pi-1;
   else
@@ -790,7 +776,6 @@ static int luaK_code (FuncState *fs, Instruction i) {
   luaM_growvector(fs->L, f->code, fs->pc, f->sizecode, Instruction,
                   MAX_INT, "code size overflow");
   f->code[fs->pc] = i;
-/*printf("free: %d  ", fs->freereg); printopcode(f, fs->pc);*/
   return fs->pc++;
 }
 
