@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.44 2000/08/09 19:16:57 roberto Exp roberto $
+** $Id: lua.c,v 1.45 2000/08/14 17:45:59 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -10,14 +10,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define LUA_SINGLESTATE
-
 #include "lua.h"
 
 #include "luadebug.h"
 #include "lualib.h"
 
+
 lua_State *lua_state = NULL;
+#define L	lua_state
 
 
 #ifndef PROMPT
@@ -54,10 +54,10 @@ extern void USERINIT (void);
 #else
 #define USERINIT	userinit
 static void userinit (void) {
-  lua_iolibopen();
-  lua_strlibopen();
-  lua_mathlibopen();
-  lua_dblibopen();
+  lua_iolibopen(L);
+  lua_strlibopen(L);
+  lua_mathlibopen(L);
+  lua_dblibopen(L);
 }
 #endif
 
@@ -68,10 +68,10 @@ static handler lreset (void) {
 
 
 static void lstop (void) {
-  lua_setlinehook(lua_state, old_linehook);
-  lua_setcallhook(lua_state, old_callhook);
+  lua_setlinehook(L, old_linehook);
+  lua_setcallhook(L, old_callhook);
   lreset();
-  lua_error("interrupted!");
+  lua_error(L, "interrupted!");
 }
 
 
@@ -79,15 +79,15 @@ static void laction (int i) {
   (void)i;  /* to avoid warnings */
   signal(SIGINT, SIG_DFL); /* if another SIGINT happens before lstop,
                               terminate process (default action) */
-  old_linehook = lua_setlinehook(lua_state, (lua_Hook)lstop);
-  old_callhook = lua_setcallhook(lua_state, (lua_Hook)lstop);
+  old_linehook = lua_setlinehook(L, (lua_Hook)lstop);
+  old_callhook = lua_setcallhook(L, (lua_Hook)lstop);
 }
 
 
-static int ldo (int (*f)(lua_State *L, const char *), const char *name) {
+static int ldo (int (*f)(lua_State *l, const char *), const char *name) {
   int res;
   handler h = lreset();
-  res = f(lua_state, name);  /* dostring | dofile */
+  res = f(L, name);  /* dostring | dofile */
   signal(SIGINT, h);  /* restore old action */
   if (res == LUA_ERRMEM) {
     /* Lua gives no message in such case, so lua.c provides one */
@@ -122,29 +122,29 @@ static void print_version (void) {
 static void assign (char *arg) {
   char *eq = strchr(arg, '=');
   *eq = '\0';  /* spilt `arg' in two strings (name & value) */
-  lua_pushstring(eq+1);
-  lua_setglobal(arg);
+  lua_pushstring(L, eq+1);
+  lua_setglobal(L, arg);
 }
 
 
-static lua_Object getargs (char *argv[]) {
-  lua_Object args = lua_createtable();
+static void getargs (char *argv[]) {
   int i;
+  lua_newtable(L);
   for (i=0; argv[i]; i++) {
     /* arg[i] = argv[i] */
-    lua_pushobject(args); lua_pushnumber(i);
-    lua_pushstring(argv[i]); lua_settable();
+    lua_pushobject(L, -1); lua_pushnumber(L, i);
+    lua_pushstring(L, argv[i]); lua_settable(L);
   }
   /* arg.n = maximum index in table `arg' */
-  lua_pushobject(args); lua_pushstring("n");
-  lua_pushnumber(i-1); lua_settable();
-  return args;
+  lua_pushobject(L, -1); lua_pushstring(L, "n");
+  lua_pushnumber(L, i-1); lua_settable(L);
 }
 
 
-static void l_getargs (void) {
-  char **argv = (char **)lua_getuserdata(lua_getparam(1));
-  lua_pushobject(getargs(argv));
+static int l_getargs (lua_State *l) {
+  char **argv = (char **)lua_touserdata(l, 1);
+  getargs(argv);
+  return 1;
 }
 
 
@@ -173,9 +173,11 @@ static void manual_input (int version, int prompt) {
   while (cont) {
     char buffer[MAXINPUT];
     int i = 0;
-    lua_beginblock();
     if (prompt) {
-      const char *s = lua_getstring(lua_getglobal("_PROMPT"));
+      const char *s;
+      lua_getglobal(L, "_PROMPT");
+      s = lua_tostring(L, -1);
+      lua_settop(L, -1);  /* remove global */
       if (!s) s = PROMPT;
       fputs(s, stdout);
     }
@@ -198,7 +200,7 @@ static void manual_input (int version, int prompt) {
     }
     buffer[i] = '\0';
     ldo(lua_dostring, buffer);
-    lua_endblock();
+    lua_settop(L, 0);  /* remove eventual results */
   }
   printf("\n");
 }
@@ -262,8 +264,8 @@ static int handle_argv (char *argv[], struct Options *opt) {
               print_message();
               return EXIT_FAILURE;
             }
-            lua_pushobject(getargs(argv+i));  /* collect remaining arguments */
-            lua_setglobal("arg");
+            getargs(argv+i);  /* collect remaining arguments */
+            lua_setglobal(L, "arg");
             return file_input(argv[i]);  /* stop scanning arguments */
           }
           case 's': {
@@ -296,9 +298,9 @@ static void getstacksize (int argc, char *argv[], struct Options *opt) {
 
 
 static void register_getargs (char *argv[]) {
-  lua_pushuserdata(argv);
-  lua_pushcclosure(l_getargs, 1);
-  lua_setglobal("getargs");
+  lua_pushuserdata(L, argv);
+  lua_pushcclosure(L, l_getargs, 1);
+  lua_setglobal(L, "getargs");
 }
 
 
@@ -307,12 +309,12 @@ int main (int argc, char *argv[]) {
   int status;
   opt.toclose = 0;
   getstacksize(argc, argv, &opt);  /* handle option `-s' */
-  lua_state = lua_newstate(opt.stacksize, 1);  /* create state */
+  L = lua_newstate(opt.stacksize, 1);  /* create state */
   USERINIT();  /* open libraries */
   register_getargs(argv);  /* create `getargs' function */
   status = handle_argv(argv+1, &opt);
   if (opt.toclose)
-    lua_close();
+    lua_close(L);
   return status;
 }
 

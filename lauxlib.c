@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.29 2000/06/12 13:52:05 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.30 2000/08/09 19:16:57 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -41,71 +41,60 @@ void luaL_argerror (lua_State *L, int narg, const char *extramsg) {
 }
 
 
-static void type_error (lua_State *L, int narg, const char *type_name,
-                        lua_Object o) {
+static void type_error (lua_State *L, int narg, const char *type_name) {
   char buff[100];
-  const char *otype = (o == LUA_NOOBJECT) ? "no value" : lua_type(L, o);
-  sprintf(buff, "%.10s expected, got %.10s", type_name, otype);
+  const char *rt = lua_type(L, narg);
+  if (*rt == 'N') rt = "no value";
+  sprintf(buff, "%.10s expected, got %.10s", type_name, rt);
   luaL_argerror(L, narg, buff);
 }
 
 
-static const char *checkstr (lua_State *L, lua_Object o, int narg,
-                             size_t *len) {
-  const char *s = lua_getstring(L, o);
-  if (!s) type_error(L, narg, "string", o);
-  if (len) *len = lua_strlen(L, o);
+/*
+** use the 3rd letter of type names for testing:
+** nuMber, niL, stRing, fuNction, usErdata, taBle, anY
+*/
+void luaL_checktype(lua_State *L, int narg, const char *tname) {
+  const char *rt = lua_type(L, narg);
+  if (!(*rt != 'N' && (tname[2] == 'y' || tname[2] == rt[2])))
+    type_error(L, narg, tname);
+}
+
+
+static const char *checkstr (lua_State *L, int narg, size_t *len) {
+  const char *s = lua_tostring(L, narg);
+  if (!s) type_error(L, narg, "string");
+  if (len) *len = lua_strlen(L, narg);
   return s;
 }
 
 const char *luaL_check_lstr (lua_State *L, int narg, size_t *len) {
-  return checkstr(L, lua_getparam(L, narg), narg, len);
+  return checkstr(L, narg, len);
 }
 
 const char *luaL_opt_lstr (lua_State *L, int narg, const char *def,
                            size_t *len) {
-  lua_Object o = lua_getparam(L, narg);
-  if (o == LUA_NOOBJECT) {
+  if (lua_isnull(L, narg)) {
     if (len) *len = def ? strlen(def) : 0;
     return def;
   }
-  else return checkstr(L, o, narg, len);
+  else return checkstr(L, narg, len);
 }
 
 double luaL_check_number (lua_State *L, int narg) {
-  lua_Object o = lua_getparam(L, narg);
-  if (!lua_isnumber(L, o)) type_error(L, narg, "number", o);
-  return lua_getnumber(L, o);
+  if (!lua_isnumber(L, narg)) type_error(L, narg, "number");
+  return lua_tonumber(L, narg);
 }
 
 
 double luaL_opt_number (lua_State *L, int narg, double def) {
-  lua_Object o = lua_getparam(L, narg);
-  if (o == LUA_NOOBJECT) return def;
+  if (lua_isnull(L, narg)) return def;
   else {
-    if (!lua_isnumber(L, o)) type_error(L, narg, "number", o);
-    return lua_getnumber(L, o);
+    if (!lua_isnumber(L, narg)) type_error(L, narg, "number");
+    return lua_tonumber(L, narg);
   }
 }
 
-
-lua_Object luaL_tablearg (lua_State *L, int narg) {
-  lua_Object o = lua_getparam(L, narg);
-  if (!lua_istable(L, o)) type_error(L, narg, "table", o);
-  return o;
-}
-
-lua_Object luaL_functionarg (lua_State *L, int narg) {
-  lua_Object o = lua_getparam(L, narg);
-  if (!lua_isfunction(L, o)) type_error(L, narg, "function", o);
-  return o;
-}
-
-lua_Object luaL_nonnullarg (lua_State *L, int narg) {
-  lua_Object o = lua_getparam(L, narg);
-  luaL_arg_check(L, o != LUA_NOOBJECT, narg, "value expected");
-  return o;
-}
 
 void luaL_openlib (lua_State *L, const struct luaL_reg *l, int n) {
   int i;
@@ -150,3 +139,4 @@ void luaL_filesource (char *out, const char *filename, int len) {
   if (filename == NULL) filename = "(stdin)";
   sprintf(out, "@%.*s", len-2, filename);  /* -2 for '@' and '\0' */
 }
+

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.84 2000/08/09 19:16:57 roberto Exp roberto $
+** $Id: ldo.c,v 1.85 2000/08/10 19:50:47 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -41,8 +41,7 @@ void luaD_init (lua_State *L, int stacksize) {
   L->stack = luaM_newvector(L, stacksize+EXTRA_STACK, TObject);
   L->stack_last = L->stack+(stacksize-1);
   L->stacksize = stacksize;
-  L->Cstack.base = L->Cstack.lua2C = L->top = L->stack;
-  L->Cstack.num = 0;
+  L->Cbase = L->top = L->stack;
 }
 
 
@@ -68,8 +67,8 @@ void luaD_checkstack (lua_State *L, int n) {
 
 
 static void restore_stack_limit (lua_State *L) {
-  if (L->top-L->stack < L->stacksize-1)
-    L->stack_last = L->stack+(L->stacksize-1);
+  if (L->top - L->stack < L->stacksize - 1)
+    L->stack_last = L->stack + (L->stacksize-1);
 }
 
 
@@ -103,9 +102,8 @@ void luaD_openstack (lua_State *L, StkId pos) {
 void luaD_lineHook (lua_State *L, StkId func, int line, lua_Hook linehook) {
   if (L->allowhooks) {
     lua_Debug ar;
-    struct C_Lua_Stack oldCLS = L->Cstack;
-    StkId old_top = L->Cstack.lua2C = L->Cstack.base = L->top;
-    L->Cstack.num = 0;
+    StkId old_Cbase = L->Cbase;
+    StkId old_top = L->Cbase = L->top;
     ar._func = func;
     ar.event = "line";
     ar.currentline = line;
@@ -113,7 +111,7 @@ void luaD_lineHook (lua_State *L, StkId func, int line, lua_Hook linehook) {
     (*linehook)(L, &ar);
     L->allowhooks = 1;
     L->top = old_top;
-    L->Cstack = oldCLS;
+    L->Cbase = old_Cbase;
   }
 }
 
@@ -122,42 +120,36 @@ static void luaD_callHook (lua_State *L, StkId func, lua_Hook callhook,
                     const char *event) {
   if (L->allowhooks) {
     lua_Debug ar;
-    struct C_Lua_Stack oldCLS = L->Cstack;
-    StkId old_top = L->Cstack.lua2C = L->Cstack.base = L->top;
-    L->Cstack.num = 0;
+    StkId old_Cbase = L->Cbase;
+    StkId old_top = L->Cbase = L->top;
     ar._func = func;
     ar.event = event;
     L->allowhooks = 0;  /* cannot call hooks inside a hook */
     callhook(L, &ar);
     L->allowhooks = 1;
     L->top = old_top;
-    L->Cstack = oldCLS;
+    L->Cbase = old_Cbase;
   }
 }
 
 
 static StkId callCclosure (lua_State *L, const struct Closure *cl, StkId base) {
   int nup = cl->nupvalues;  /* number of upvalues */
-  int numarg = L->top-base;
-  struct C_Lua_Stack oldCLS = L->Cstack;
-  StkId firstResult;
+  StkId old_Cbase = L->Cbase;
+  int nres;  /* number of results */
   if (nup > 0) {
-    int n = numarg;
+    int n = L->top - base;  /* number of arguments */
     luaD_checkstack(L, nup);
     /* open space for upvalues as extra arguments */
     while (n--) *(base+nup+n) = *(base+n);
     L->top += nup;
-    numarg += nup;
     /* copy upvalues into stack */
     while (nup--) *(base+nup) = cl->upvalue[nup];
   }
-  L->Cstack.num = numarg;
-  L->Cstack.lua2C = base;
-  L->Cstack.base = L->top;
-  (*cl->f.c)(L);  /* do the actual call */
-  firstResult = L->Cstack.base;
-  L->Cstack = oldCLS;
-  return firstResult;
+  L->Cbase = base;       /* new base for C function */
+  nres = (*cl->f.c)(L);  /* do the actual call */
+  L->Cbase = old_Cbase;  /* restore old C base */
+  return L->top - nres;  /* return index of first result */
 }
 
 
@@ -257,42 +249,36 @@ void lua_error (lua_State *L, const char *s) {
 
 
 static void chain_longjmp (lua_State *L, struct lua_longjmp *lj) {
-  lj->base = L->Cstack.base;
-  lj->numCblocks = L->numCblocks;
+  lj->status = 0;
+  lj->base = L->Cbase;
   lj->previous = L->errorJmp;
   L->errorJmp = lj;
 }
 
 
-static void restore_longjmp (lua_State *L, struct lua_longjmp *lj) {
-  L->Cstack.num = 0;  /* no results */
-  L->top = L->Cstack.base = L->Cstack.lua2C = lj->base;
-  L->numCblocks = lj->numCblocks;
+static int restore_longjmp (lua_State *L, struct lua_longjmp *lj) {
+  L->Cbase = lj->base;
   L->errorJmp = lj->previous;
+  return lj->status;
 }
 
 
 /*
-** Execute a protected call. Assumes that function is at Cstack.base and
-** parameters are on top of it.
+** Execute a protected call.
 */
-int luaD_protectedrun (lua_State *L) {
+int lua_call (lua_State *L, int nargs, int nresults) {
+  StkId func = L->top - (nargs+1);  /* function to be called */
   struct lua_longjmp myErrorJmp;
   chain_longjmp(L, &myErrorJmp);
+  if (nresults == LUA_MULTRET) nresults = MULT_RET;  /* internal code */
   if (setjmp(myErrorJmp.b) == 0) {
-    StkId base = L->Cstack.base;
-    luaD_call(L, base, MULT_RET);
-    L->Cstack.lua2C = base;  /* position of the new results */
-    L->Cstack.num = L->top - base;
-    L->Cstack.base = base + L->Cstack.num;  /* incorporate results on stack */
-    L->errorJmp = myErrorJmp.previous;
-    return 0;
+    luaD_call(L, func, nresults);
   }
-  else {  /* an error occurred: restore the stack */
-    restore_longjmp(L, &myErrorJmp);
+  else {  /* an error occurred: restore the state */
+    L->top = func;  /* remove garbage from the stack */
     restore_stack_limit(L);
-    return myErrorJmp.status;
   }
+  return restore_longjmp(L, &myErrorJmp);
 }
 
 
@@ -302,20 +288,17 @@ int luaD_protectedrun (lua_State *L) {
 static int protectedparser (lua_State *L, ZIO *z, int bin) {
   struct lua_longjmp myErrorJmp;
   chain_longjmp(L, &myErrorJmp);
-  L->top = L->Cstack.base;   /* clear C2Lua */
   if (setjmp(myErrorJmp.b) == 0) {
     Proto *tf = bin ? luaU_undump1(L, z) : luaY_parser(L, z);
-    L->errorJmp = myErrorJmp.previous;
-    if (tf == NULL) return -1;  /* `natural' end */
+    if (tf == NULL)
+      myErrorJmp.status = -1;  /* `natural' end */
     luaV_Lclosure(L, tf, 0);
-    return 0;
   }
-  else {  /* an error occurred */
-    restore_longjmp(L, &myErrorJmp);
+  else {  /* an error occurred: correct error code */
     if (myErrorJmp.status == LUA_ERRRUN)
       myErrorJmp.status = LUA_ERRSYNTAX;
-    return myErrorJmp.status;  /* error code */
   }
+  return restore_longjmp(L, &myErrorJmp);  /* error code */
 }
 
 
@@ -331,7 +314,7 @@ static int do_main (lua_State *L, ZIO *z, int bin) {
     else {
       unsigned long newelems2 = 2*(L->nblocks-old_blocks);
       L->GCthreshold += newelems2;
-      status = luaD_protectedrun(L);
+      status = lua_call(L, 0, LUA_MULTRET);
       L->GCthreshold -= newelems2;
     }
   } while (bin && status == 0);

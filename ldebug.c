@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.35 2000/08/14 17:59:20 roberto Exp roberto $
+** $Id: ldebug.c,v 1.36 2000/08/15 18:28:48 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -144,26 +144,28 @@ static Proto *getluaproto (StkId f) {
 }
 
 
-int lua_getlocal (lua_State *L, const lua_Debug *ar, lua_Localvar *v) {
+const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int localnum) {
+  const char *name;
   StkId f = ar->_func;
   Proto *fp = getluaproto(f);
-  if (!fp) return 0;  /* `f' is not a Lua function? */
-  v->name = luaF_getlocalname(fp, v->index, lua_currentpc(f));
-  if (!v->name) return 0;
-  v->value = luaA_putluaObject(L, (f+1)+(v->index-1));
-  return 1;
+  if (!fp) return NULL;  /* `f' is not a Lua function? */
+  name = luaF_getlocalname(fp, localnum, lua_currentpc(f));
+  if (!name) return NULL;
+  luaA_pushobject(L, (f+1)+(localnum-1));  /* push value */
+  return name;
 }
 
 
-int lua_setlocal (lua_State *L, const lua_Debug *ar, lua_Localvar *v) {
+const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int localnum) {
+  const char *name;
   StkId f = ar->_func;
   Proto *fp = getluaproto(f);
   UNUSED(L);
-  if (!fp) return 0;  /* `f' is not a Lua function? */
-  v->name = luaF_getlocalname(fp, v->index, lua_currentpc(f));
-  if (!v->name || v->name[0] == '*') return 0;  /* `*' starts private locals */
-  *((f+1)+(v->index-1)) = *v->value;
-  return 1;
+  if (!fp) return NULL;  /* `f' is not a Lua function? */
+  name = luaF_getlocalname(fp, localnum, lua_currentpc(f));
+  if (!name || name[0] == '*') return NULL;  /* `*' starts private locals */
+  *((f+1)+(localnum-1)) = *(--L->top);
+  return name;
 }
 
 
@@ -236,7 +238,7 @@ int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
     func = ar->_func;
   else {
     what++;  /* skip the '>' */
-    func = ar->func;
+    func = L->top - 1;
   }
   for (; *what; what++) {
     switch (*what) {
@@ -260,13 +262,13 @@ int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
       }
       case 'f': {
         setnormalized(L->top, func);
-        incr_top;
-        ar->func = lua_pop(L);
+        incr_top;  /* push function */
         break;
       }
       default: return 0;  /* invalid option */
     }
   }
+  if (!isactive) L->top--;  /* pop function */
   return 1;
 }
 
@@ -420,7 +422,7 @@ static const char *getfuncname (lua_State *L, StkId f, const char **name) {
 void luaG_typeerror (lua_State *L, StkId o, const char *op) {
   const char *name;
   const char *kind = getobjname(L, o, &name);
-  const char *t = lua_type(L, o);
+  const char *t = luaO_typename(o);
   if (kind)
     luaL_verror(L, "attempt to %.30s %.20s `%.40s' (a %.10s value)",
                 op, kind, name, t);
@@ -437,8 +439,8 @@ void luaG_binerror (lua_State *L, StkId p1, lua_Type t, const char *op) {
 
 
 void luaG_ordererror (lua_State *L, StkId top) {
-  const char *t1 = lua_type(L, top-2);
-  const char *t2 = lua_type(L, top-1);
+  const char *t1 = luaO_typename(top-2);
+  const char *t2 = luaO_typename(top-1);
   if (t1[2] == t2[2])
     luaL_verror(L, "attempt to compare two %.10s values", t1);
   else

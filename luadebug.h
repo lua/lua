@@ -1,5 +1,5 @@
 /*
-** $Id: luadebug.h,v 1.11 2000/08/08 20:42:07 roberto Exp roberto $
+** $Id: luadebug.h,v 1.12 2000/08/11 16:17:28 roberto Exp roberto $
 ** Debugging API
 ** See Copyright Notice in lua.h
 */
@@ -19,8 +19,8 @@ typedef void (*lua_Hook) (lua_State *L, lua_Debug *ar);
 
 int lua_getstack (lua_State *L, int level, lua_Debug *ar);
 int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar);
-int lua_getlocal (lua_State *L, const lua_Debug *ar, lua_Localvar *v);
-int lua_setlocal (lua_State *L, const lua_Debug *ar, lua_Localvar *v);
+const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int localnum);
+const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int localnum);
 
 lua_Hook lua_setcallhook (lua_State *L, lua_Hook func);
 lua_Hook lua_setlinehook (lua_State *L, lua_Hook func);
@@ -36,16 +36,8 @@ struct lua_Debug {
   const char *name;      /* (n) */
   const char *namewhat;  /* (n) `global', `tag method', `local', `field' */
   int nups;              /* (u) number of upvalues */
-  lua_Object func;       /* (f) function being executed */
   /* private part */
-  lua_Object _func;  /* active function */
-};
-
-
-struct lua_Localvar {
-  int index;
-  const char *name;
-  lua_Object value;
+  struct lua_TObject *_func;  /* active function */
 };
 
 

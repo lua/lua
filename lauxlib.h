@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.18 2000/05/24 13:54:49 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.19 2000/08/09 19:16:57 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -27,13 +27,14 @@ const char *luaL_opt_lstr (lua_State *L, int numArg, const char *def,
                            size_t *len);
 double luaL_check_number (lua_State *L, int numArg);
 double luaL_opt_number (lua_State *L, int numArg, double def);
-lua_Object luaL_functionarg (lua_State *L, int arg);
-lua_Object luaL_tablearg (lua_State *L, int arg);
-lua_Object luaL_nonnullarg (lua_State *L, int numArg);
+
+void luaL_checktype(lua_State *L, int narg, const char *tname);
+
 void luaL_verror (lua_State *L, const char *fmt, ...);
 int luaL_findstring (const char *name, const char *const list[]);
 void luaL_chunkid (char *out, const char *source, int len);
 void luaL_filesource (char *out, const char *filename, int len);
+
 
 char *luaL_openspace (lua_State *L, size_t size);
 void luaL_resetbuffer (lua_State *L);
@@ -91,9 +92,6 @@ char *luaL_buffer (lua_State *L);
 				(luaL_opt_lstr)(lua_state,numArg,def,len)
 #define luaL_check_number(numArg)	(luaL_check_number)(lua_state,numArg)
 #define luaL_opt_number(numArg,def)	(luaL_opt_number)(lua_state,numArg,def)
-#define luaL_functionarg(arg)	(luaL_functionarg)(lua_state,arg)
-#define luaL_tablearg(arg)	(luaL_tablearg)(lua_state,arg)
-#define luaL_nonnullarg(numArg)	(luaL_nonnullarg)(lua_state,numArg)
 #define luaL_openspace(size)	(luaL_openspace)(lua_state,size)
 #define luaL_resetbuffer()	(luaL_resetbuffer)(lua_state)
 #define luaL_addchar(c)		(luaL_addchar)(lua_state,c)

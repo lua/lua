@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.24 2000/08/09 19:16:57 roberto Exp roberto $
+** $Id: lundump.c,v 1.25 2000/08/24 14:19:39 roberto Exp roberto $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -130,7 +130,7 @@ static void LoadCode (lua_State* L, Proto* tf, ZIO* Z)
 }
 
 static void LoadLocals (lua_State* L, Proto* tf, ZIO* Z)
-{
+{ 
 }
 
 static Proto* LoadFunction (lua_State* L, ZIO* Z, int native);

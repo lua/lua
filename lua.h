@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.58 2000/08/14 19:10:14 roberto Exp roberto $
+** $Id: lua.h,v 1.59 2000/08/17 13:18:01 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -30,8 +30,10 @@
 
 #define LUA_ANYTAG	(-1)
 
+#define LUA_MULTRET	(-1)
 
-/* error code for lua_do* */
+
+/* error codes for lua_do* */
 #define LUA_ERRFILE	2
 #define LUA_ERRSYNTAX	3
 #define LUA_ERRRUN	1
@@ -40,94 +42,102 @@
 
 typedef struct lua_State lua_State;
 
-typedef void (*lua_CFunction) (lua_State *L);
-
-typedef struct lua_TObject *lua_Object;
-
-#define LUA_NOOBJECT	((lua_Object)0)
+typedef int (*lua_CFunction) (lua_State *L);
 
 
+/*
+** state manipulation
+*/
 lua_State     *lua_newstate (int stacksize, int builtin);
 void           lua_close (lua_State *L);
 
-lua_Object     lua_settagmethod (lua_State *L, int tag, const char *event);
-                                                       /* In: new method */
-lua_Object     lua_gettagmethod (lua_State *L, int tag, const char *event);
 
-int            lua_newtag (lua_State *L);
-int            lua_copytagmethods (lua_State *L, int tagto, int tagfrom);
-void           lua_settag (lua_State *L, int tag); /* In: object */
-
-void           lua_error (lua_State *L, const char *s);
-int            lua_dofile (lua_State *L, const char *filename);
-                                                        /* Out: returns */
-int            lua_dostring (lua_State *L, const char *str);
-                                                        /* Out: returns */
-int            lua_dobuffer (lua_State *L, const char *buff, size_t size,
-                             const char *name);         /* Out: returns */
-int            lua_callfunction (lua_State *L, lua_Object f);
-					  /* In: arguments; Out: returns */
-
-void	       lua_beginblock (lua_State *L);
-void	       lua_endblock (lua_State *L);
-
-void           lua_pushglobals (lua_State *L);
-void           lua_setglobals (lua_State *L, lua_Object newtable);
-
-lua_Object     lua_lua2C (lua_State *L, int number);
-#define	       lua_getparam		lua_lua2C
-#define	       lua_getresult		lua_lua2C
-
-const char    *lua_type (lua_State *L, lua_Object obj);
-
-int            lua_isnil (lua_State *L, lua_Object obj);
-int            lua_istable (lua_State *L, lua_Object obj);
-int            lua_isuserdata (lua_State *L, lua_Object obj);
-int            lua_iscfunction (lua_State *L, lua_Object obj);
-int            lua_isnumber (lua_State *L, lua_Object obj);
-int            lua_isstring (lua_State *L, lua_Object obj);
-int            lua_isfunction (lua_State *L, lua_Object obj);
-
-int            lua_equal (lua_State *L, lua_Object o1, lua_Object o2);
-
-double         lua_getnumber (lua_State *L, lua_Object obj);
-const char    *lua_getstring (lua_State *L, lua_Object obj);
-size_t         lua_strlen (lua_State *L, lua_Object obj);
-lua_CFunction  lua_getcfunction (lua_State *L, lua_Object obj);
-void	      *lua_getuserdata (lua_State *L, lua_Object obj);
+/*
+** basic stack manipulation
+*/
+int            lua_gettop (lua_State *L);
+void           lua_settop (lua_State *L, int index);
+void           lua_pushobject (lua_State *L, int index);
 
 
-void 	       lua_pushnil (lua_State *L);
+/*
+** access functions (stack -> C)
+*/
+
+const char    *lua_type (lua_State *L, int index);
+int            lua_isnumber (lua_State *L, int index);
+int            lua_iscfunction (lua_State *L, int index);
+int            lua_tag (lua_State *L, int index);
+
+int            lua_equal (lua_State *L, int index1, int index2);
+
+double         lua_tonumber (lua_State *L, int index);
+const char    *lua_tostring (lua_State *L, int index);
+size_t         lua_strlen (lua_State *L, int index);
+lua_CFunction  lua_tocfunction (lua_State *L, int index);
+void	      *lua_touserdata (lua_State *L, int index);
+
+
+/*
+** push functions (C -> stack)
+*/
+void           lua_pushnil (lua_State *L);
 void           lua_pushnumber (lua_State *L, double n);
 void           lua_pushlstring (lua_State *L, const char *s, size_t len);
 void           lua_pushstring (lua_State *L, const char *s);
 void           lua_pushcclosure (lua_State *L, lua_CFunction fn, int n);
 void           lua_pushusertag (lua_State *L, void *u, int tag);
-void           lua_pushobject (lua_State *L, lua_Object obj);
 
-lua_Object     lua_pop (lua_State *L);
 
-lua_Object     lua_getglobal (lua_State *L, const char *name);
-void           lua_setglobal (lua_State *L, const char *name); /* In: value */
+/*
+** get functions (Lua -> stack)
+*/
+void           lua_getglobal (lua_State *L, const char *name);
+void           lua_gettable (lua_State *L);
+void           lua_rawget (lua_State *L);
+void           lua_getglobals (lua_State *L);
+void           lua_gettagmethod (lua_State *L, int tag, const char *event);
 
-void           lua_settable (lua_State *L); /* In: table, index, value */
-lua_Object     lua_gettable (lua_State *L); /* In: table, index */
+int            lua_getref (lua_State *L, int ref);
 
-void           lua_rawset (lua_State *L); /* In: table, index, value */
-lua_Object     lua_rawget (lua_State *L); /* In: table, index */
+void           lua_newtable (lua_State *L);
 
-int            lua_tag (lua_State *L, lua_Object obj);
 
-int            lua_next (lua_State *L, lua_Object o, int i);
-						/* Out: index, value */ 
+/*
+** set functions (stack -> Lua)
+*/
+void           lua_setglobal (lua_State *L, const char *name);
+void           lua_settable (lua_State *L);
+void           lua_rawset (lua_State *L);
+void           lua_setglobals (lua_State *L);
+void           lua_settagmethod (lua_State *L, int tag, const char *event);
+int            lua_ref (lua_State *L, int lock);
 
-int            lua_ref (lua_State *L, int lock); /* In: value */
-int            lua_pushref (lua_State *L, int ref);  /* Out: value */
+
+/*
+** "do" functions (run Lua code)
+*/
+int            lua_call (lua_State *L, int nargs, int nresults);
+int            lua_dofile (lua_State *L, const char *filename);
+int            lua_dostring (lua_State *L, const char *str);
+int            lua_dobuffer (lua_State *L, const char *buff, size_t size,
+                             const char *name);
+
+
+/*
+** miscelaneous functions
+*/
+int            lua_newtag (lua_State *L);
+int            lua_copytagmethods (lua_State *L, int tagto, int tagfrom);
+void           lua_settag (lua_State *L, int tag);
+
+void           lua_error (lua_State *L, const char *s);
+
 void	       lua_unref (lua_State *L, int ref);
 
-lua_Object     lua_createtable (lua_State *L);
-
 long	       lua_collectgarbage (lua_State *L, long limit);
+
+int            lua_next (lua_State *L, int index, int i);
 
 
 
@@ -137,122 +147,17 @@ long	       lua_collectgarbage (lua_State *L, long limit);
 ** ===============================================================
 */
 
-#ifndef LUA_SINGLESTATE
-
-#define lua_call(L,name)	lua_callfunction(L, lua_getglobal(L, name))
-#define lua_getref(L, ref)  (lua_pushref(L, ref) ? lua_pop(L) : LUA_NOOBJECT)
-#define lua_refobject(L,o,l)	(lua_pushobject(L, o), lua_ref(L, l))
 #define lua_register(L,n,f)	(lua_pushcfunction(L, f), lua_setglobal(L, n))
 #define lua_pushuserdata(L,u)	lua_pushusertag(L, u, 0)
 #define lua_pushcfunction(L,f)	lua_pushcclosure(L, f, 0)
 #define lua_clonetag(L,t)	lua_copytagmethods(L, lua_newtag(L), (t))
 
-#else
-
-#define lua_call(name)		lua_callfunction(lua_getglobal(name))
-#define lua_getref(ref)		(lua_pushref(ref) ? lua_pop() : LUA_NOOBJECT)
-#define lua_refobject(o,l)	(lua_pushobject(o), lua_ref(l))
-#define lua_register(n,f)	(lua_pushcfunction(f), lua_setglobal(n))
-#define lua_pushuserdata(u)	lua_pushusertag(u, 0)
-#define lua_pushcfunction(f)	lua_pushcclosure(f, 0)
-#define lua_clonetag(t)		lua_copytagmethods(lua_newtag(), (t))
-
-#endif
-
-
-
-#ifdef LUA_SINGLESTATE
-/* 
-** {==============================================================
-** Macros for single-state use
-** ===============================================================
-*/
-
-extern lua_State *lua_state;
-
-#define lua_open()	((void)(lua_state?0:(lua_state=lua_newstate(0, 1))))
-
-#define lua_close()		(lua_close)(lua_state)
-#define lua_settagmethod(tag,event)	(lua_settagmethod)(lua_state, tag,event)
-#define lua_gettagmethod(tag,event)	(lua_gettagmethod)(lua_state, tag,event)
-#define lua_newtag()		(lua_newtag)(lua_state)
-#define lua_copytagmethods(tagto,tagfrom)	\
-		(lua_copytagmethods)(lua_state, tagto,tagfrom)
-#define lua_settag(tag)		(lua_settag)(lua_state, tag)
-#define lua_error(s)		(lua_error)(lua_state, s)
-#define lua_dofile(filename)	(lua_dofile)(lua_state, filename)
-#define lua_dostring(str)	(lua_dostring)(lua_state, str)
-#define lua_dobuffer(b,s,n)	(lua_dobuffer)(lua_state, b,s,n)
-#define lua_callfunction(f)	(lua_callfunction)(lua_state, f)
-#define lua_beginblock()	(lua_beginblock)(lua_state)
-#define lua_endblock()		(lua_endblock)(lua_state)
-#define lua_pushglobals()	(lua_pushglobals)(lua_state)
-#define lua_setglobals(t)	(lua_setglobals)(lua_state, t)
-#define lua_lua2C(number)	(lua_lua2C)(lua_state, number)
-#define lua_type(obj)		(lua_type)(lua_state, obj)
-#define lua_isnil(obj)		(lua_isnil)(lua_state, obj)
-#define lua_istable(obj)	(lua_istable)(lua_state, obj)
-#define lua_isuserdata(obj)	(lua_isuserdata)(lua_state, obj)
-#define lua_iscfunction(obj)	(lua_iscfunction)(lua_state, obj)
-#define lua_isnumber(obj)	(lua_isnumber)(lua_state, obj)
-#define lua_isstring(obj)	(lua_isstring)(lua_state, obj)
-#define lua_isfunction(obj)	(lua_isfunction)(lua_state, obj)
-#define lua_equal(o1,o2)	(lua_equal)(lua_state, o1,o2)
-#define lua_getnumber(obj)	(lua_getnumber)(lua_state, obj)
-#define lua_getstring(obj)	(lua_getstring)(lua_state, obj)
-#define lua_strlen(obj)		(lua_strlen)(lua_state, obj)
-#define lua_getcfunction(obj)	(lua_getcfunction)(lua_state, obj)
-#define lua_getuserdata(obj)	(lua_getuserdata)(lua_state, obj)
-#define lua_pushnil()		(lua_pushnil)(lua_state)
-#define lua_pushnumber(n)	(lua_pushnumber)(lua_state, n)
-#define lua_pushlstring(s,len)	(lua_pushlstring)(lua_state, s,len)
-#define lua_pushstring(s)	(lua_pushstring)(lua_state, s)
-#define lua_pushusertag(u,tag)	(lua_pushusertag)(lua_state, u,tag)
-#define lua_pushobject(obj)	(lua_pushobject)(lua_state, obj)
-#define lua_pop()		(lua_pop)(lua_state)
-#define lua_getglobal(name)	(lua_getglobal)(lua_state, name)
-#define lua_setglobal(name)	(lua_setglobal)(lua_state, name)
-#define lua_settable()		(lua_settable)(lua_state)
-#define lua_gettable()		(lua_gettable)(lua_state)
-#define lua_rawset()		(lua_rawset)(lua_state)
-#define lua_rawget()		(lua_rawget)(lua_state)
-#define lua_tag(obj)		(lua_tag)(lua_state, obj)
-#define lua_next(o,i)		(lua_next)(lua_state, o,i)
-#define lua_ref(lock)		(lua_ref)(lua_state, lock)
-#define lua_pushref(ref)	(lua_pushref)(lua_state, ref)
-#define lua_unref(ref)		(lua_unref)(lua_state, ref)
-#define lua_createtable()	(lua_createtable)(lua_state)
-#define lua_collectgarbage(limit)	(lua_collectgarbage)(lua_state, limit)
-/*
-** the following typecast is a little dirty, but we know of no other
-** way to keep compatibility with old definition of `lua_CFunction'
-*/
-#define lua_pushcclosure(fn,n) \
-		(lua_pushcclosure)(lua_state, (lua_CFunction)(fn), n)
-
-
-/*
-** }==============================================================
-*/
-#endif
-
-/*
-** compatibility with 3.2
-** these functions are only available when Lua is compiled with 
-** the option LUA_DEPRECATETFUNCS
-*/
-
-#define lua_rawsettable		lua_rawset
-#define lua_rawgettable		lua_rawget
-
-lua_Object     lua_rawgetglobal (lua_State *L, const char *name);
-void           lua_rawsetglobal (lua_State *L, const char *name);/* In: value */
-
-#ifdef LUA_SINGLESTATE
-#define lua_rawgetglobal(name)	(lua_rawgetglobal(lua_state, name))
-#define lua_rawsetglobal(name)	(lua_rawsetglobal(lua_state, name))
-#endif
-
+#define lua_isfunction(L,n)	(*lua_type(L,n) == 'f')
+#define lua_isstring(L,n)	(lua_tostring(L,n))
+#define lua_istable(L,n)	(*lua_type(L,n) == 't')
+#define lua_isuserdata(L,n)	(*lua_type(L,n) == 'u')
+#define lua_isnil(L,n)		(lua_type(L,n)[2] == 'l')
+#define lua_isnull(L,n)		(*lua_type(L,n) == 'N')
 
 #endif
 

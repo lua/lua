@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.62 2000/08/09 19:16:57 roberto Exp roberto $
+** $Id: lgc.c,v 1.63 2000/08/22 17:44:17 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -11,7 +11,6 @@
 #include "lgc.h"
 #include "lmem.h"
 #include "lobject.h"
-#include "lref.h"
 #include "lstate.h"
 #include "lstring.h"
 #include "ltable.h"
@@ -143,6 +142,43 @@ static void markall (lua_State *L) {
     else break;  /* nothing else to mark */
   }
 }
+
+
+static int hasmark (const TObject *o) {
+  /* valid only for locked objects */
+  switch (o->ttype) {
+    case TAG_STRING: case TAG_USERDATA:
+      return tsvalue(o)->marked;
+    case TAG_TABLE:
+      return ismarked(hvalue(o));
+    case TAG_LCLOSURE:  case TAG_CCLOSURE:
+      return ismarked(clvalue(o)->mark);
+    default:  /* number */
+      return 1;
+  }
+}
+
+
+/* macro for internal debugging; check if a link of free refs is valid */
+#define VALIDLINK(L, st,n)      (NONEXT <= (st) && (st) < (n))
+
+static void invalidaterefs (lua_State *L) {
+  int n = L->refSize;
+  int i;
+  for (i=0; i<n; i++) {
+    struct Ref *r = &L->refArray[i];
+    if (r->st == HOLD && !hasmark(&r->o))
+      r->st = COLLECTED;
+    LUA_ASSERT((r->st == LOCK && hasmark(&r->o)) ||
+               (r->st == HOLD && hasmark(&r->o)) ||
+                r->st == COLLECTED ||
+                r->st == NONEXT ||
+               (r->st < n && VALIDLINK(L, L->refArray[r->st].st, n)),
+               "inconsistent ref table");
+  }
+  LUA_ASSERT(VALIDLINK(L, L->refFree, n), "inconsistent ref table");
+}
+
 
 
 static void collectproto (lua_State *L) {
@@ -300,7 +336,7 @@ void luaC_collect (lua_State *L, int all) {
 long lua_collectgarbage (lua_State *L, long limit) {
   unsigned long recovered = L->nblocks;  /* to subtract `nblocks' after gc */
   markall(L);
-  luaR_invalidaterefs(L);
+  invalidaterefs(L);
   luaC_collect(L, 0);
   recovered = recovered - L->nblocks;
   L->GCthreshold = (limit == 0) ? 2*L->nblocks : L->nblocks+limit;

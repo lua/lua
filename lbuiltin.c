@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.120 2000/08/14 19:10:14 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.121 2000/08/15 18:28:48 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -50,7 +50,6 @@ void luaB_opentests (lua_State *L);
 ** =======================================================
 */
 
-
 static Number getsize (const Hash *h) {
   Number max = 0;
   int i = h->size;
@@ -73,7 +72,8 @@ static Number getnarg (lua_State *L, const Hash *a) {
 
 
 static Hash *gettable (lua_State *L, int arg) {
-  return hvalue(luaL_tablearg(L, arg));
+  luaL_checktype(L, arg, "table");
+  return hvalue(luaA_index(L, arg));
 }
 
 /* }====================================================== */
@@ -90,8 +90,9 @@ static Hash *gettable (lua_State *L, int arg) {
 ** If your system does not support `stderr', redefine this function, or
 ** redefine _ERRORMESSAGE so that it won't need _ALERT.
 */
-void luaB__ALERT (lua_State *L) {
+int luaB__ALERT (lua_State *L) {
   fputs(luaL_check_string(L, 1), stderr);
+  return 0;
 }
 
 
@@ -99,18 +100,19 @@ void luaB__ALERT (lua_State *L) {
 ** Standard implementation of _ERRORMESSAGE.
 ** The library `liolib' redefines _ERRORMESSAGE for better error information.
 */
-void luaB__ERRORMESSAGE (lua_State *L) {
-  lua_Object al;
-  lua_pushglobals(L);
+int luaB__ERRORMESSAGE (lua_State *L) {
+  lua_getglobals(L);
   lua_pushstring(L, LUA_ALERT);
-  al = lua_rawget(L);
-  if (lua_isfunction(L, al)) {  /* avoid error loop if _ALERT is not defined */
+  lua_rawget(L);
+  if (lua_isfunction(L, -1)) {  /* avoid error loop if _ALERT is not defined */
     const char *s = luaL_check_string(L, 1);
     char *buff = luaL_openspace(L, strlen(s)+sizeof("error: \n"));
     strcpy(buff, "error: "); strcat(buff, s); strcat(buff, "\n");
+    lua_pushobject(L, -1);  /* function to be called */
     lua_pushstring(L, buff);
-    lua_callfunction(L, al);
+    lua_call(L, 1, 0);
   }
+  return 0;
 }
 
 
@@ -120,36 +122,35 @@ void luaB__ERRORMESSAGE (lua_State *L) {
 ** model but changing `fputs' to put the strings at a proper place
 ** (a console window or a log file, for instance).
 */
-void luaB_print (lua_State *L) {
-  lua_Object args[MAXPRINT];
-  lua_Object obj;
-  int n = 0;
+int luaB_print (lua_State *L) {
+  int n = lua_gettop(L);  /* number of arguments */
   int i;
-  while ((obj = lua_getparam(L, n+1)) != LUA_NOOBJECT) {
-    luaL_arg_check(L, n < MAXPRINT, n+1, "too many arguments");
-    args[n++] = obj;
-  }
-  for (i=0; i<n; i++) {
-    lua_pushobject(L, args[i]);
-    if (lua_call(L, "tostring"))
+  lua_getglobal(L, "tostring");
+  for (i=1; i<=n; i++) {
+    const char *s;
+    lua_pushobject(L, -1);  /* function to be called */
+    lua_pushobject(L, i);
+    if (lua_call(L, 1, 1) != 0)
       lua_error(L, "error in `tostring' called by `print'");
-    obj = lua_getresult(L, 1);
-    if (!lua_isstring(L, obj))
+    s = lua_tostring(L, -1);  /* get result */
+    if (s == NULL)
       lua_error(L, "`tostring' must return a string to `print'");
-    if (i>0) fputs("\t", stdout);
-    fputs(lua_getstring(L, obj), stdout);
+    if (i>1) fputs("\t", stdout);
+    fputs(s, stdout);
+    lua_settop(L, -1);  /* pop result */
   }
   fputs("\n", stdout);
+  return 0;
 }
 
 
-void luaB_tonumber (lua_State *L) {
+int luaB_tonumber (lua_State *L) {
   int base = luaL_opt_int(L, 2, 10);
   if (base == 10) {  /* standard conversion */
-    lua_Object o = luaL_nonnullarg(L, 1);
-    if (lua_isnumber(L, o)) {
-      lua_pushnumber(L, lua_getnumber(L, o));
-      return;
+    luaL_checktype(L, 1, "any");
+    if (lua_isnumber(L, 1)) {
+      lua_pushnumber(L, lua_tonumber(L, 1));
+      return 1;
     }
   }
   else {
@@ -162,94 +163,108 @@ void luaB_tonumber (lua_State *L) {
       while (isspace((unsigned char)*s2)) s2++;  /* skip trailing spaces */
       if (*s2 == '\0') {  /* no invalid trailing characters? */
         lua_pushnumber(L, n);
-        return;
+        return 1;
       }
     }
   }
   lua_pushnil(L);  /* else not a number */
+  return 1;
 }
 
 
-void luaB_error (lua_State *L) {
+int luaB_error (lua_State *L) {
   lua_error(L, luaL_opt_string(L, 1, NULL));
+  return 0;  /* to avoid errors */
 }
 
-void luaB_setglobal (lua_State *L) {
-  const char *name = luaL_check_string(L, 1);
-  lua_Object value = luaL_nonnullarg(L, 2);
-  lua_pushobject(L, value);
-  lua_setglobal(L, name);
+int luaB_setglobal (lua_State *L) {
+  luaL_checktype(L, 2, "any");
+  lua_setglobal(L, luaL_check_string(L, 1));
+  return 0;
 }
 
-void luaB_getglobal (lua_State *L) {
-  lua_pushobject(L, lua_getglobal(L, luaL_check_string(L, 1)));
+int luaB_getglobal (lua_State *L) {
+  lua_getglobal(L, luaL_check_string(L, 1));
+  return 1;
 }
 
-void luaB_tag (lua_State *L) {
-  lua_pushnumber(L, lua_tag(L, luaL_nonnullarg(L, 1)));
+int luaB_tag (lua_State *L) {
+  luaL_checktype(L, 1, "any");
+  lua_pushnumber(L, lua_tag(L, 1));
+  return 1;
 }
 
-void luaB_settag (lua_State *L) {
-  lua_Object o = luaL_tablearg(L, 1);
-  lua_pushobject(L, o);
+int luaB_settag (lua_State *L) {
+  luaL_checktype(L, 1, "table");
+  lua_pushobject(L, 1);  /* push table */
   lua_settag(L, luaL_check_int(L, 2));
-  lua_pushobject(L, o);  /* return first argument */
+  lua_pushobject(L, 1);  /* return first argument */
+  return 1;
 }
 
-void luaB_newtag (lua_State *L) {
+int luaB_newtag (lua_State *L) {
   lua_pushnumber(L, lua_newtag(L));
+  return 1;
 }
 
-void luaB_copytagmethods (lua_State *L) {
+int luaB_copytagmethods (lua_State *L) {
   lua_pushnumber(L, lua_copytagmethods(L, luaL_check_int(L, 1),
                                           luaL_check_int(L, 2)));
+  return 1;
 }
 
-void luaB_globals (lua_State *L) {
-  lua_pushglobals(L);
-  if (lua_getparam(L, 1) != LUA_NOOBJECT)
-    lua_setglobals(L, luaL_tablearg(L, 1));
+int luaB_globals (lua_State *L) {
+  lua_getglobals(L);  /* value to be returned */
+  if (!lua_isnull(L, 1)) {
+    luaL_checktype(L, 1, "table");
+    lua_pushobject(L, 1);  /* new table of globals */
+    lua_setglobals(L);
+  }
+  return 1;
 }
 
-void luaB_rawget (lua_State *L) {
-  lua_pushobject(L, luaL_nonnullarg(L, 1));
-  lua_pushobject(L, luaL_nonnullarg(L, 2));
-  lua_pushobject(L, lua_rawget(L));
+int luaB_rawget (lua_State *L) {
+  luaL_checktype(L, 1, "table");
+  luaL_checktype(L, 2, "any");
+  lua_rawget(L);
+  return 1;
 }
 
-void luaB_rawset (lua_State *L) {
-  lua_pushobject(L, luaL_nonnullarg(L, 1));
-  lua_pushobject(L, luaL_nonnullarg(L, 2));
-  lua_pushobject(L, luaL_nonnullarg(L, 3));
+int luaB_rawset (lua_State *L) {
+  luaL_checktype(L, 1, "table");
+  luaL_checktype(L, 2, "any");
+  luaL_checktype(L, 3, "any");
   lua_rawset(L);
+  return 1;
 }
 
-void luaB_settagmethod (lua_State *L) {
-  int tag = luaL_check_int(L, 1);
+int luaB_settagmethod (lua_State *L) {
+  int tag = (int)luaL_check_int(L, 1);
   const char *event = luaL_check_string(L, 2);
-  lua_Object nf = luaL_nonnullarg(L, 3);
-  luaL_arg_check(L, lua_isnil(L, nf) || lua_isfunction(L, nf), 3,
+  luaL_arg_check(L, lua_isfunction(L, 3) || lua_isnil(L, 3), 3,
                  "function or nil expected");
   if (strcmp(event, "gc") == 0 && tag != TAG_NIL)
     lua_error(L, "deprecated use: cannot set the `gc' tag method from Lua");
-  lua_pushobject(L, nf);
-  lua_pushobject(L, lua_settagmethod(L, tag, event));
+  lua_settagmethod(L, tag, event);
+  return 1;
 }
 
-void luaB_gettagmethod (lua_State *L) {
-  lua_pushobject(L, lua_gettagmethod(L, luaL_check_int(L, 1),
-                                        luaL_check_string(L, 2)));
+int luaB_gettagmethod (lua_State *L) {
+  lua_gettagmethod(L, luaL_check_int(L, 1), luaL_check_string(L, 2));
+  return 1;
 }
 
 
-void luaB_collectgarbage (lua_State *L) {
+int luaB_collectgarbage (lua_State *L) {
   lua_pushnumber(L, lua_collectgarbage(L, luaL_opt_int(L, 1, 0)));
+  return 1;
 }
 
 
-void luaB_type (lua_State *L) {
-  lua_Object o = luaL_nonnullarg(L, 1);
-  lua_pushstring(L, lua_type(L, o));
+int luaB_type (lua_State *L) {
+  luaL_checktype(L, 1, "any");
+  lua_pushstring(L, lua_type(L, 1));
+  return 1;
 }
 
 /* }====================================================== */
@@ -263,99 +278,115 @@ void luaB_type (lua_State *L) {
 */
 
 
-static void passresults (lua_State *L) {
-  L->Cstack.base = L->Cstack.lua2C;  /* position of first result */
-  if (L->Cstack.num == 0)
-    lua_pushuserdata(L, NULL);  /* at least one result to signal no errors */
+static int passresults (lua_State *L, int status, int oldtop) {
+  if (status == 0) {
+    int nresults = lua_gettop(L) - oldtop;
+    if (nresults > 0)
+      return nresults;  /* results are already on the stack */
+    else {
+      lua_pushuserdata(L, NULL);  /* at least one result to signal no errors */
+      return 1;
+    }
+  }
+  else {  /* error */
+    lua_pushnil(L);
+    lua_pushnumber(L, status);  /* error code */
+    return 2;
+  }
 }
 
-void luaB_dostring (lua_State *L) {
+int luaB_dostring (lua_State *L) {
+  int oldtop = lua_gettop(L);
   size_t l;
   const char *s = luaL_check_lstr(L, 1, &l);
   if (*s == ID_CHUNK)
     lua_error(L, "`dostring' cannot run pre-compiled code");
-  if (lua_dobuffer(L, s, l, luaL_opt_string(L, 2, s)) == 0)
-    passresults(L);
-  else
-    lua_pushnil(L);
+  return passresults(L, lua_dobuffer(L, s, l, luaL_opt_string(L, 2, s)), oldtop);
 }
 
 
-void luaB_dofile (lua_State *L) {
+int luaB_dofile (lua_State *L) {
+  int oldtop = lua_gettop(L);
   const char *fname = luaL_opt_string(L, 1, NULL);
-  if (lua_dofile(L, fname) == 0)
-    passresults(L);
-  else
-    lua_pushnil(L);
+  return passresults(L, lua_dofile(L, fname), oldtop);
 }
 
 
-void luaB_call (lua_State *L) {
-  lua_Object f = luaL_nonnullarg(L, 1);
+int luaB_call (lua_State *L) {
+  int oldtop;
   const Hash *arg = gettable(L, 2);
   const char *options = luaL_opt_string(L, 3, "");
-  lua_Object err = lua_getparam(L, 4);
-  int narg = (int)getnarg(L, arg);
+  int err = 0;  /* index of old error method */
+  int n = (int)getnarg(L, arg);
   int i, status;
-  if (err != LUA_NOOBJECT) {  /* set new error method */
-    lua_Object oldem = lua_getglobal(L, LUA_ERRORMESSAGE);
-    lua_pushobject(L, err);
+  if (!lua_isnull(L, 4)) {  /* set new error method */
+    lua_getglobal(L, LUA_ERRORMESSAGE);
+    err = lua_gettop(L);  /* get index */
+    lua_pushobject(L, 4);
     lua_setglobal(L, LUA_ERRORMESSAGE);
-    err = oldem;
   }
+  oldtop = lua_gettop(L);  /* top before function-call preparation */
+  /* push function */
+  lua_pushobject(L, 1);
   /* push arg[1...n] */
-  luaD_checkstack(L, narg);
-  for (i=0; i<narg; i++)
+  luaD_checkstack(L, n);
+  for (i=0; i<n; i++)
     *(L->top++) = *luaH_getnum(arg, i+1);
-  status = lua_callfunction(L, f);
-  if (err != LUA_NOOBJECT) {  /* restore old error method */
+  status = lua_call(L, n, LUA_MULTRET);
+  n = lua_gettop(L) - oldtop;  /* number of results */
+  if (err != 0) {  /* restore old error method */
     lua_pushobject(L, err);
     lua_setglobal(L, LUA_ERRORMESSAGE);
   }
   if (status != 0) {  /* error in call? */
-    if (strchr(options, 'x')) {
-      lua_pushnil(L);
-      return;  /* return nil to signal the error */
-    }
+    if (strchr(options, 'x'))
+      lua_pushnil(L);  /* return nil to signal the error */
     else
       lua_error(L, NULL);  /* propagate error without additional messages */
+    return 1;
   }
   else {  /* no errors */
     if (strchr(options, 'p')) {  /* pack results? */
-      luaV_pack(L, L->Cstack.lua2C, L->Cstack.num, L->top);
+      luaV_pack(L, luaA_index(L, oldtop+1), n, L->top);
       incr_top;
+      return 1;  /* only table is returned */
     }
     else
-      L->Cstack.base = L->Cstack.lua2C;  /* position of first result */
+      return n;  /* results are already on the stack */
   }
 }
 
 
-void luaB_next (lua_State *L) {
+int luaB_next (lua_State *L) {
   const Hash *a = gettable(L, 1);
-  lua_Object k = lua_getparam(L, 2);
   int i;  /* `luaA_next' gets first element after `i' */
-  if (k == LUA_NOOBJECT || ttype(k) == TAG_NIL)
+  if (lua_isnull(L, 2) || lua_isnil(L, 2))  /* no index or nil index? */
     i = 0;  /* get first */
   else {
-    i = luaH_pos(L, a, k)+1;
+    i = luaH_pos(L, a, luaA_index(L, 2))+1;
     luaL_arg_check(L, i != 0, 2, "key not found");
   }
-  if (luaA_next(L, a, i) == 0)
+  if (luaA_next(L, a, i) != 0)
+    return 2;  /* `luaA_next' left them on the stack */
+  else {
     lua_pushnil(L);
+    return 1;
+  }
 }
 
 
-void luaB_tostring (lua_State *L) {
-  lua_Object o = luaL_nonnullarg(L, 1);
+int luaB_tostring (lua_State *L) {
   char buff[64];
+  const TObject *o;
+  luaL_checktype(L, 1, "any");
+  o = luaA_index(L, 1);
   switch (ttype(o)) {
     case TAG_NUMBER:
-      lua_pushstring(L, lua_getstring(L, o));
-      return;
+      lua_pushstring(L, lua_tostring(L, 1));
+      return 1;
     case TAG_STRING:
-      lua_pushobject(L, o);
-      return;
+      lua_pushobject(L, 1);
+      return 1;
     case TAG_TABLE:
       sprintf(buff, "table: %p", hvalue(o));
       break;
@@ -368,11 +399,12 @@ void luaB_tostring (lua_State *L) {
       break;
     case TAG_NIL:
       lua_pushstring(L, "nil");
-      return;
+      return 1;
     default:
       LUA_INTERNALERROR("invalid type");
   }
   lua_pushstring(L, buff);
+  return 1;
 }
 
 /* }====================================================== */
@@ -389,15 +421,17 @@ void luaB_tostring (lua_State *L) {
 ** =======================================================
 */
 
-void luaB_assert (lua_State *L) {
-  lua_Object p = luaL_nonnullarg(L, 1);
-  if (lua_isnil(L, p))
+int luaB_assert (lua_State *L) {
+  luaL_checktype(L, 1, "any");
+  if (lua_isnil(L, 1))
     luaL_verror(L, "assertion failed!  %.90s", luaL_opt_string(L, 2, ""));
+  return 0;
 }
 
 
-void luaB_getn (lua_State *L) {
+int luaB_getn (lua_State *L) {
   lua_pushnumber(L, getnarg(L, gettable(L, 1)));
+  return 1;
 }
 
 
@@ -408,72 +442,72 @@ static void t_move (lua_State *L, Hash *t, int from, int to) {
 }
 
 
-void luaB_tinsert (lua_State *L) {
+int luaB_tinsert (lua_State *L) {
   Hash *a = gettable(L, 1);
-  lua_Object v = lua_getparam(L, 3);
   int n = (int)getnarg(L, a);
+  int v = lua_gettop(L);  /* last argument: to be inserted */
   int pos;
-  if (v != LUA_NOOBJECT)
-    pos = luaL_check_int(L, 2);
-  else {  /* called with only 2 arguments */
-    v = luaL_nonnullarg(L, 2);
+  if (v == 2)  /* called with only 2 arguments */
     pos = n+1;
-  }
+  else
+    pos = luaL_check_int(L, 2);  /* 2nd argument is the position */
   luaH_setstrnum(L, a, luaS_new(L, "n"), n+1);  /* a.n = n+1 */
   for (; n>=pos; n--)
     t_move(L, a, n, n+1);  /* a[n+1] = a[n] */
-  *luaH_setint(L, a, pos) = *v;  /* a[pos] = v */
+  *luaH_setint(L, a, pos) = *luaA_index(L, v);  /* a[pos] = v */
+  return 0;
 }
 
 
-void luaB_tremove (lua_State *L) {
+int luaB_tremove (lua_State *L) {
   Hash *a = gettable(L, 1);
   int n = (int)getnarg(L, a);
   int pos = luaL_opt_int(L, 2, n);
-  if (n <= 0) return;  /* table is "empty" */
+  if (n <= 0) return 0;  /* table is "empty" */
   luaA_pushobject(L, luaH_getnum(a, pos));  /* result = a[pos] */
   for ( ;pos<n; pos++)
     t_move(L, a, pos+1, pos);  /* a[pos] = a[pos+1] */
   luaH_setstrnum(L, a, luaS_new(L, "n"), n-1);  /* a.n = n-1 */
   ttype(luaH_setint(L, a, n)) = TAG_NIL;  /* a[n] = nil */
+  return 1;
 }
 
 
-static void luaB_foreachi (lua_State *L) {
+static int luaB_foreachi (lua_State *L) {
   const Hash *t = gettable(L, 1);
   int n = (int)getnarg(L, t);
   int i;
-  lua_Object f = luaL_functionarg(L, 2);
-  luaD_checkstack(L, 3);  /* for f, key, and val */
+  luaL_checktype(L, 2, "function");
   for (i=1; i<=n; i++) {
-    *(L->top++) = *f;
+    lua_pushobject(L, 2);
     ttype(L->top) = TAG_NUMBER; nvalue(L->top++) = i;
     *(L->top++) = *luaH_getnum(t, i);
     luaD_call(L, L->top-3, 1);
     if (ttype(L->top-1) != TAG_NIL)
-      return;
+      return 1;
     L->top--;  /* remove nil result */
   }
+  return 0;
 }
 
 
-static void luaB_foreach (lua_State *L) {
+static int luaB_foreach (lua_State *L) {
   const Hash *a = gettable(L, 1);
-  lua_Object f = luaL_functionarg(L, 2);
   int i;
-  luaD_checkstack(L, 3);  /* for f, key, and val */
+  luaL_checktype(L, 2, "function");
   for (i=0; i<a->size; i++) {
     const Node *nd = &(a->node[i]);
     if (ttype(val(nd)) != TAG_NIL) {
-      *(L->top++) = *f;
+      lua_pushobject(L, 2);
       *(L->top++) = *key(nd);
       *(L->top++) = *val(nd);
       luaD_call(L, L->top-3, 1);
       if (ttype(L->top-1) != TAG_NIL)
-        return;
+        return 1;
       L->top--;  /* remove result */
     }
   }
+  return 0;
 }
 
 
@@ -492,10 +526,10 @@ static void swap (lua_State *L, Hash *a, int i, int j) {
   *luaH_setint(L, a, j) = temp;
 }
 
-static int sort_comp (lua_State *L, lua_Object f, const TObject *a,
-                                                  const TObject *b) {
+static int sort_comp (lua_State *L, const TObject *f, const TObject *a,
+                                                      const TObject *b) {
   /* WARNING: the caller (auxsort) must ensure stack space */
-  if (f != LUA_NOOBJECT) {
+  if (f != NULL) {
     *(L->top) = *f;
     *(L->top+1) = *a;
     *(L->top+2) = *b;
@@ -508,7 +542,7 @@ static int sort_comp (lua_State *L, lua_Object f, const TObject *a,
     return luaV_lessthan(L, a, b, L->top);
 }
 
-static void auxsort (lua_State *L, Hash *a, int l, int u, lua_Object f) {
+static void auxsort (lua_State *L, Hash *a, int l, int u, const TObject *f) {
   StkId P = L->top++;  /* temporary place for pivot */
   ttype(P) = TAG_NIL;
   while (l < u) {  /* for tail recursion */
@@ -552,14 +586,16 @@ static void auxsort (lua_State *L, Hash *a, int l, int u, lua_Object f) {
   L->top--;  /* remove pivot from stack */
 }
 
-void luaB_sort (lua_State *L) {
+int luaB_sort (lua_State *L) {
   Hash *a = gettable(L, 1);
   int n = (int)getnarg(L, a);
-  lua_Object func = lua_getparam(L, 2);
-  luaL_arg_check(L, func == LUA_NOOBJECT || lua_isfunction(L, func), 2,
-                 "function expected");
-  luaD_checkstack(L, 4);  /* for pivot, f, a, b (sort_comp) */
+  const TObject *func = NULL;
+  if (!lua_isnull(L, 2)) {  /* is there a 2nd argument? */
+    luaL_checktype(L, 2, "function");
+    func = luaA_index(L, 2);
+  }
   auxsort(L, a, 1, n, func);
+  return 0;
 }
 
 /* }====================================================== */
@@ -615,8 +651,9 @@ static void deprecated_funcs (lua_State *L) {
 /*
 ** gives an explicit error in any attempt to call a deprecated function
 */
-static void deprecated_func (lua_State *L) {
+static int deprecated_func (lua_State *L) {
   luaL_verror(L, "function `%.20s' is deprecated", luaL_check_string(L, 1));
+  return 0;  /* to avoid warnings */
 }
 
 

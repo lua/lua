@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.11 2000/06/28 17:03:32 roberto Exp roberto $
+** $Id: llimits.h,v 1.12 2000/08/15 18:28:48 roberto Exp roberto $
 ** Limits, basic types, and some other "installation-dependent" definitions
 ** See Copyright Notice in lua.h
 */
@@ -195,12 +195,6 @@ typedef unsigned long Instruction;
 /* number of record items to accumulate before a SETMAP instruction */
 /* (each item counts 2 elements on the stack: an index and a value) */
 #define RFIELDS_PER_FLUSH	(LFIELDS_PER_FLUSH/2)
-
-
-/* maximum number of values printed in one call to `print' */
-#ifndef MAXPRINT
-#define MAXPRINT        40	/* arbitrary limit */
-#endif
 
 
 /* maximum lookback to find a real constant (for code generation) */
