@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.3 1994/11/10 20:41:37 roberto Exp roberto $";
+char *rcs_tree="$Id: tree.c,v 1.4 1994/11/14 21:40:14 roberto Exp roberto $";
 
 
 #include <stdlib.h>
@@ -169,9 +169,18 @@ static TreeNode *tree_next (TreeNode *node, char *str)
  }
 }
 
-char *lua_varnext (char *n)
+TreeNode *lua_varnext (char *n)
 {
- TreeNode *result = tree_next(constant_root, n);
- return result != NULL ? result->str : NULL;
+  TreeNode *result;
+  char *name = n;
+  while (1)
+  { /* repeat until a valid (non nil) variable */
+    result = tree_next(constant_root, name);
+    if (result == NULL) return NULL;
+    if (result->varindex != UNMARKED_STRING &&
+        s_tag(result->varindex) != LUA_T_NIL)
+      return result;
+    name = result->str;
+  }
 }
 

@@ -1,7 +1,7 @@
 /*
 ** tree.h
 ** TecCGraf - PUC-Rio
-** $Id: tree.h,v 1.1 1994/07/19 21:24:17 celes Exp roberto $
+** $Id: tree.h,v 1.2 1994/11/14 21:40:14 roberto Exp roberto $
 */
 
 #ifndef tree_h
@@ -31,6 +31,6 @@ typedef struct TreeNode
 char *lua_strcreate    (char *str);
 TreeNode *lua_constcreate  (char *str);
 void  lua_strcollector (void);
-char *lua_varnext      (char *n);
+TreeNode *lua_varnext      (char *n);
 
 #endif

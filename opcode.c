@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.10 1994/11/11 14:00:08 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.11 1994/11/13 16:17:04 roberto Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -117,14 +117,14 @@ static void lua_checkstack (Word n)
 
 
 /*
-** Concatenate two given strings, creating a mark space at the beginning.
-** Return the new string pointer.
+** Concatenate two given strings. Return the new string pointer.
 */
 static char *lua_strconc (char *l, char *r)
 {
  static char *buffer = NULL;
  static int buffer_size = 0;
- int n = strlen(l)+strlen(r)+1;
+ int nl = strlen(l);
+ int n = nl+strlen(r)+1;
  if (n > buffer_size)
  {
    buffer_size = n;
@@ -137,7 +137,9 @@ static char *lua_strconc (char *l, char *r)
      lua_error("concat - not enough memory");
    }
   }
-  return strcat(strcpy(buffer,l),r);
+  strcpy(buffer,l);
+  strcpy(buffer+nl, r);
+  return buffer;
 }
 
 
@@ -373,7 +375,7 @@ int lua_callfunction (lua_Object function)
 
 int lua_call (char *funcname)
 {
- int n = lua_findsymbol(funcname);
+ int n = luaI_findsymbolbyname(funcname);
  return do_protectedrun(&s_object(n), MULT_RET);
 }
 
@@ -548,7 +550,7 @@ lua_Object lua_getlocked (int ref)
 */
 lua_Object lua_getglobal (char *name)
 {
- int n = lua_findsymbol(name);
+ int n = luaI_findsymbolbyname(name);
  adjustC(0);
  *(top++) = s_object(n);
  CBase++;  /* incorporate object in the stack */
@@ -561,7 +563,7 @@ lua_Object lua_getglobal (char *name)
 */
 int lua_storeglobal (char *name)
 {
- int n = lua_findsymbol (name);
+ int n = luaI_findsymbolbyname(name);
  if (n < 0) return 1;
  adjustC(1);
  s_object(n) = *(--top);
@@ -698,9 +700,10 @@ static int lua_execute (Byte *pc, int base)
   {
    case PUSHNIL: tag(top++) = LUA_T_NIL; break;
 
-   case PUSH0: tag(top) = LUA_T_NUMBER; nvalue(top++) = 0; break;
-   case PUSH1: tag(top) = LUA_T_NUMBER; nvalue(top++) = 1; break;
-   case PUSH2: tag(top) = LUA_T_NUMBER; nvalue(top++) = 2; break;
+   case PUSH0: case PUSH1: case PUSH2:
+     tag(top) = LUA_T_NUMBER;
+     nvalue(top++) = opcode-PUSH0;
+     break;
 
    case PUSHBYTE: tag(top) = LUA_T_NUMBER; nvalue(top++) = *pc++; break;
 
@@ -813,8 +816,6 @@ static int lua_execute (Byte *pc, int base)
     else m = *(pc++) * FIELDS_PER_FLUSH;
     n = *(pc++);
     arr = top-n-1;
-    if (tag(arr) != LUA_T_ARRAY)
-      lua_reportbug ("internal error - table expected");
     while (n)
     {
      tag(top) = LUA_T_NUMBER; nvalue(top) = n+m;
@@ -829,8 +830,6 @@ static int lua_execute (Byte *pc, int base)
    {
     int n = *(pc++);
     Object *arr = top-n-1;
-    if (tag(arr) != LUA_T_ARRAY)
-      lua_reportbug ("internal error - table expected");
     while (n)
     {
      CodeWord code;
@@ -856,39 +855,15 @@ static int lua_execute (Byte *pc, int base)
     CodeWord size;
     get_word(size,pc);
     top++;
-    avalue(top-1) = lua_createarray(size.w);
     tag(top-1) = LUA_T_ARRAY;
+    avalue(top-1) = lua_createarray(size.w);
    }
    break;
 
    case EQOP:
    {
-    int res;
-    Object *l = top-2;
-    Object *r = top-1;
+    int res = lua_equalObj(top-2, top-1);
     --top;
-    if (tag(l) != tag(r))
-     res = 0;
-    else
-    {
-     switch (tag(l))
-     {
-      case LUA_T_NIL:
-        res = 1; break;
-      case LUA_T_NUMBER:
-        res = (nvalue(l) == nvalue(r)); break;
-      case LUA_T_ARRAY:
-        res = (avalue(l) == avalue(r)); break;
-      case LUA_T_FUNCTION:
-        res = (bvalue(l) == bvalue(r)); break;
-      case LUA_T_CFUNCTION:
-       res = (fvalue(l) == fvalue(r)); break;
-      case LUA_T_STRING:
-        res = (strcmp (svalue(l), svalue(r)) == 0); break;
-      default:
-        res = (uvalue(l) == uvalue(r)); break;
-     }
-    }
     tag(top-1) = res ? LUA_T_NUMBER : LUA_T_NIL;
     nvalue(top-1) = 1;
    }
@@ -1003,6 +978,7 @@ static int lua_execute (Byte *pc, int base)
 
    case NOTOP:
     tag(top-1) = (tag(top-1) == LUA_T_NIL) ? LUA_T_NUMBER : LUA_T_NIL;
+    nvalue(top-1) = 1;
    break;
 
    case ONTJMP:

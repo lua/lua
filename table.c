@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.16 1994/11/11 14:00:08 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.17 1994/11/14 21:40:14 roberto Exp $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -40,6 +40,8 @@ Word lua_block=GARBAGE_BLOCK; /* when garbage collector will be called */
 Word lua_nentity;   /* counter of new entities (strings and arrays) */
 Word lua_recovered;   /* counter of recovered entities (strings and arrays) */
 
+
+static void lua_nextvar (void);
 
 /*
 ** Initialise symbol table with internal functions
@@ -239,9 +241,10 @@ char *lua_filename (void)
 /*
 ** Internal function: return next global variable
 */
-void lua_nextvar (void)
+static void lua_nextvar (void)
 {
- char *varname, *next;
+ char *varname;
+ TreeNode *next;
  lua_Object o = lua_getparam(1);
  if (o == 0)
    lua_error ("too few arguments to function `nextvar'");
@@ -266,8 +269,8 @@ void lua_nextvar (void)
  {
   Object name;
   tag(&name) = LUA_T_STRING;
-  svalue(&name) = next;
+  svalue(&name) = next->str;
   luaI_pushobject(&name);
-  luaI_pushobject(&s_object(indexstring(next)));
+  luaI_pushobject(&s_object(next->varindex));
  }
 }
