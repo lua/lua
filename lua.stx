@@ -1,6 +1,6 @@
 %{
 /*
-** $Id: lua.stx,v 1.5 1997/09/24 19:43:11 roberto Exp roberto $
+** $Id: lua.stx,v 1.6 1997/09/26 15:02:26 roberto Exp roberto $
 ** Syntax analizer and code generator
 ** See Copyright Notice in lua.h
 */
@@ -27,6 +27,9 @@ int luaY_parse (void);
 #define realloc luaM_realloc
 #define free luaM_free
 
+
+/* size of a "normal" jump instruction: OpCode + 1 byte */
+#define JMPSIZE	2
 
 /* maximum number of local variables */
 #define MAXLOCALS 32
@@ -85,11 +88,32 @@ void luaY_error (char *s)
 }
 
 
-static void code_byte (Byte c)
+static void check_pc (int n)
 {
-  if (currState->pc >= currState->maxcode)
+  if (currState->pc+n > currState->maxcode)
     currState->maxcode = luaM_growvector(&currState->f->code,
                                 currState->maxcode, Byte, codeEM, MAX_INT);
+}
+
+
+static void movecode_up (int d, int s, int n)
+{
+  while (n--)
+    currState->f->code[d+n] = currState->f->code[s+n];
+}
+
+
+static void movecode_down (int d, int s, int n)
+{
+  int i;
+  for (i=0; i<n; i++)
+    currState->f->code[d+i] = currState->f->code[s+i];
+}
+
+
+static void code_byte (Byte c)
+{
+  check_pc(1);
   currState->f->code[currState->pc++] = c;
 }
 
@@ -103,19 +127,36 @@ static void code_word_at (int pc, int n)
 }
 
 
-static void fix_jump (int pc, OpCode op, int n)
+static void code_word (int n)
 {
-  currState->f->code[pc] = op;
-  code_word_at(pc+1, n);
+  check_pc(2);
+  currState->pc += 2;
+  code_word_at(currState->pc-2, n);
 }
 
 
-static void code_word (int n)
+static int fix_opcode (int pc, OpCode op, int n)
 {
-  if (n > MAX_WORD)
-    luaY_error("construction too big; unable to compile");
-  code_byte(n&0xFF);
-  code_byte(n>>8);
+  if (n <= 255) {
+    currState->f->code[pc] = op;
+    currState->f->code[pc+1] = n;
+    return 0;
+  }
+  else {
+    check_pc(1);  /* open space */
+    movecode_up(pc+1, pc, currState->pc-pc);
+    currState->pc++;
+    currState->f->code[pc] = op+1;  /* opcode must be word variant */
+    code_word_at(pc+1, n);
+    return 1;
+  }
+}
+
+static int fix_jump (int pc, OpCode op, int n)
+{
+  n -= pc+1;  /* jump is relative to position following jump opcode */
+  if (n > 255) n++;  /* jump must be 1 bigger */
+  return fix_opcode(pc, op, n);
 }
 
 
@@ -462,14 +503,14 @@ static int lua_codestore (int i, int left)
 
 static void codeIf (int thenAdd, int elseAdd)
 {
-  int elseinit = elseAdd+sizeof(Word)+1;
+  int elseinit = elseAdd+JMPSIZE;
   if (currState->pc == elseinit) {  /* no else part */
-    currState->pc -= sizeof(Word)+1;
+    currState->pc -= JMPSIZE;
     elseinit = currState->pc;
   }
   else
-    fix_jump(elseAdd, JMP, currState->pc-(elseAdd+1));
-  fix_jump(thenAdd, IFFJMP, elseinit-(thenAdd+1));
+    elseinit += fix_jump(elseAdd, JMPB, currState->pc);
+  fix_jump(thenAdd, IFFJMPB, elseinit);
 }
 
 
@@ -593,7 +634,7 @@ TProtoFunc *luaY_parser (ZIO *z, char *chunkname)
 %token <vReal> NUMBER
 %token <pTStr>  NAME STRING
 
-%type <vInt> PrepJump, PrepJumpPop, PrepJumpSC
+%type <vInt> SaveWord, cond, GetPC, SaveWordPop, SaveWordPush
 %type <vLong> exprlist, exprlist1  /* if > 0, points to function return
 	counter (which has list length); if <= 0, -list lenght */
 %type <vLong> functioncall, expr  /* if != 0, points to function return
@@ -628,18 +669,24 @@ statlist : /* empty */
 
 sc	 : /* empty */ | ';' ;
 
-stat   : IF expr1 THEN PrepJumpPop block PrepJump elsepart END
-	{ codeIf($4, $6); }
+stat   : IF cond THEN block SaveWord elsepart END
+	{ codeIf($2, $5); }
 
-       | WHILE {$<vInt>$=currState->pc;} expr1 DO PrepJumpPop block END
-       {
-	 code_opborw(UPJMPB, currState->pc+1 - ($<vInt>2), 0);
-         fix_jump($5, IFFJMP, currState->pc - ($5+1));
-       }
+       | WHILE GetPC cond DO block END
+       {{
+         int expsize = $3-$2;
+	 int newpos = $2+JMPSIZE;
+	 check_pc(expsize);
+	 memcpy(&currState->f->code[currState->pc],
+                &currState->f->code[$2], expsize);
+	 movecode_down($2, $3, currState->pc-$2);
+	 newpos += fix_jump($2, JMPB, currState->pc-expsize);
+	 code_opborw(IFTUPJMPB, currState->pc+1 - newpos, 0);
+       }}
 
-       | REPEAT {$<vInt>$=currState->pc;} block UNTIL expr1
+       | REPEAT GetPC block UNTIL expr1
        {
-         code_opborw(IFFUPJMPB, currState->pc+1 - ($<vInt>2), -1);
+         code_opborw(IFFUPJMPB, currState->pc+1 - $2, -1);
        }
 
        | varlist1 '=' exprlist1
@@ -687,8 +734,8 @@ body :  '(' parlist ')' chunk END { $$ = close_func(); }
 
 elsepart : /* empty */
 	 | ELSE block
-         | ELSEIF expr1 THEN PrepJumpPop block PrepJump elsepart
-	{ codeIf($4, $6); }
+         | ELSEIF cond THEN block SaveWord elsepart
+	{ codeIf($2, $5); }
          ;
 
 ret	: /* empty */
@@ -699,19 +746,19 @@ ret	: /* empty */
           }
 	;
 
-PrepJump : /* empty */
-	 {
-	   $$ = currState->pc;
-	   code_byte(0);  /* open space */
-	   code_word(0);
-         }
-	 ;
-
-PrepJumpSC : /* empty */
-	{ $$ = currState->pc; code_opcode(0, -1); code_byte(0); }
+GetPC	: /* empty */ { $$ = currState->pc; }
 	;
 
-PrepJumpPop : PrepJump	{ $$ = $1; deltastack(-1);  /* pop condition */ }
+SaveWord : GetPC { $$ = $1; code_word(0);  /* open space */ }
+	 ;
+
+SaveWordPop : SaveWord { $$ = $1; deltastack(-1);  /* pop condition */ }
+	;
+
+SaveWordPush : SaveWord { $$ = $1; deltastack(1);  /* push a value */ }
+	;
+
+cond	:	expr1 SaveWordPop  { $$ = $2; }
 	 ;
 
 expr1	 : expr { adjust_functioncall($1, 1); }
@@ -739,14 +786,11 @@ expr :  '(' expr ')'     { $$ = $2; }
      |	NIL		 {code_opcode(PUSHNIL, 1); $$ = 0; }
      |  functioncall     { $$ = $1; }
      | FUNCTION { init_func(); } body { func_onstack($3); $$ = 0; }
-     |	expr1 AND PrepJumpSC expr1 { code_shortcircuit(ONFJMP, $3); $$ = 0; }
-     |	expr1 OR PrepJumpSC expr1 { code_shortcircuit(ONTJMP, $3); $$ = 0; }
+     |	expr1 AND SaveWordPop expr1 { code_shortcircuit(ONFJMP, $3); $$ = 0; }
+     |	expr1 OR SaveWordPop expr1 { code_shortcircuit(ONTJMP, $3); $$ = 0; }
      ;
 
-table :
-     { $<vInt>$ = currState->pc+1; code_opw(CREATEARRAY, 0, 1); }
-       '{' fieldlist '}'
-     { code_word_at($<vInt>1, $3); }
+table : '{' SaveWordPush fieldlist '}' { fix_opcode($2, CREATEARRAYB, $3); }
          ;
 
 functioncall : funcvalue funcParams
@@ -892,3 +936,4 @@ decinit	  : /* empty */  { $$ = 0; }
 	  ;
 
 %%
+

@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.4 1997/09/22 20:53:20 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.5 1997/09/24 19:43:11 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -76,6 +76,7 @@ GETTABLE,/*		i t		t[i]  */
 PUSHSELFB,/*	b	t		t t[CNST[b]]  */
 PUSHSELF,/*	w	t		t t[CNST[w]]  */
 
+CREATEARRAYB,/*	b	-		newarray(size = b)  */
 CREATEARRAY,/*	w	-		newarray(size = w)  */
 
 SETLOCAL0,/*		x		-		LOC[0]=x  */
@@ -118,10 +119,12 @@ NOTOP,/*		x		(x==nil)? 1 : nil  */
 /* NOTICE: all jumps are relative to the position following the opcode */
 ONTJMP,/*	b	x		(x!=nil)? x : -	(x!=nil)? PC+=b  */
 ONFJMP,/*	b	x		(x==nil)? x : -	(x==nil)? PC+=b  */
+JMPB,/*		b	-		-		PC+=b  */
 JMP,/*		w	-		-		PC+=w  */
-UPJMPB,/*	b	-		-		PC-=b  */
-UPJMP,/*	w	-		-		PC-=w  */
+IFFJMPB,/*	b	x		-		(x==nil)? PC+=b  */
 IFFJMP,/*	w	x		-		(x==nil)? PC+=w  */
+IFTUPJMPB,/*	b	x		-		(x!=nil)? PC-=b  */
+IFTUPJMP,/*	w	x		-		(x!=nil)? PC-=w  */
 IFFUPJMPB,/*	b	x		-		(x==nil)? PC-=b  */
 IFFUPJMP,/*	w	x		-		(x==nil)? PC-=w  */
 
