@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.51 1999/12/29 16:31:15 roberto Exp roberto $
+** $Id: lparser.c,v 1.52 1999/12/29 18:07:10 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -674,7 +674,7 @@ static void check_match (LexState *ls, int what, int who, int where) {
 static int checkname (LexState *ls) {
   int sc;
   if (ls->token != NAME)
-    luaX_error(ls, "`NAME' expected");
+    luaX_error(ls, "<name> expected");
   sc = string_constant(ls, ls->fs, ls->seminfo.ts);
   next(ls);
   return sc;
@@ -884,7 +884,7 @@ static void recfield (LexState *ls) {
       check(ls, ']');
       break;
 
-    default: luaX_error(ls, "NAME or `[' expected");
+    default: luaX_error(ls, "<name> or `[' expected");
   }
   check(ls, '=');
   exp1(ls);
@@ -1423,14 +1423,14 @@ static void parlist (LexState *ls) {
           case NAME:  /* tailparlist -> NAME [',' tailparlist] */
             goto init;
 
-          default: luaX_error(ls, "NAME or `...' expected");
+          default: luaX_error(ls, "<name> or `...' expected");
         }
       }
       break;
 
     case ')': break;  /* parlist -> empty */
 
-    default: luaX_error(ls, "NAME or `...' expected");
+    default: luaX_error(ls, "<name> or `...' expected");
   }
   code_args(ls, nparams, dots);
 }
