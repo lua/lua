@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.102 2002/05/16 18:39:46 roberto Exp roberto $
+** $Id: llex.c,v 1.103 2002/06/03 14:09:57 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -306,15 +306,11 @@ int luaX_lex (LexState *LS, SemInfo *seminfo) {
   for (;;) {
     switch (LS->current) {
 
-      case ' ': case '\t': case '\r':  /* `\r' to avoid problems with DOS */
-        next(LS);
-        continue;
-
-      case '\n':
+      case '\n': {
         inclinenumber(LS);
         continue;
-
-      case '-':
+      }
+      case '-': {
         next(LS);
         if (LS->current != '-') return '-';
         /* else is a comment */
@@ -325,41 +321,41 @@ int luaX_lex (LexState *LS, SemInfo *seminfo) {
           while (LS->current != '\n' && LS->current != EOZ)
             next(LS);
         continue;
-
-      case '[':
+      }
+      case '[': {
         next(LS);
         if (LS->current != '[') return '[';
         else {
           read_long_string(LS, seminfo);
           return TK_STRING;
         }
-
-      case '=':
+      }
+      case '=': {
         next(LS);
         if (LS->current != '=') return '=';
         else { next(LS); return TK_EQ; }
-
-      case '<':
+      }
+      case '<': {
         next(LS);
         if (LS->current != '=') return '<';
         else { next(LS); return TK_LE; }
-
-      case '>':
+      }
+      case '>': {
         next(LS);
         if (LS->current != '=') return '>';
         else { next(LS); return TK_GE; }
-
-      case '~':
+      }
+      case '~': {
         next(LS);
         if (LS->current != '=') return '~';
         else { next(LS); return TK_NE; }
-
+      }
       case '"':
-      case '\'':
+      case '\'': {
         read_string(LS, LS->current, seminfo);
         return TK_STRING;
-
-      case '.':
+      }
+      case '.': {
         next(LS);
         if (LS->current == '.') {
           next(LS);
@@ -374,12 +370,16 @@ int luaX_lex (LexState *LS, SemInfo *seminfo) {
           read_number(LS, 1, seminfo);
           return TK_NUMBER;
         }
-
-      case EOZ:
+      }
+      case EOZ: {
         return TK_EOS;
-
+      }
       default: {
-        if (isdigit(LS->current)) {
+        if (isspace(LS->current)) {
+          next(LS);
+          continue;
+        }
+        else if (isdigit(LS->current)) {
           read_number(LS, 0, seminfo);
           return TK_NUMBER;
         }
