@@ -1,10 +1,11 @@
 /*
-** $Id: liolib.c,v 1.44 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: liolib.c,v 1.45 1999/09/13 19:42:02 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
 
 
+#include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -221,6 +222,9 @@ static void io_appendto (void) {
 */
 
 
+
+#ifdef COMPAT_READPATTERN
+
 /*
 ** We cannot lookahead without need, because this can lock stdin.
 ** This flag signals when we need to read a next char.
@@ -276,6 +280,12 @@ static int read_pattern (FILE *f, const char *p) {
   return (*p == '\0');
 }
 
+#else
+
+#define read_pattern(f,p)   (lua_error("read patterns are deprecated"), 0)
+
+#endif
+
 
 static int read_number (FILE *f) {
   double d;
@@ -287,11 +297,21 @@ static int read_number (FILE *f) {
 }
 
 
+static void read_word (FILE *f) {
+  int c;
+  do { c = fgetc(f); } while isspace(c);  /* skip spaces */
+  while (c != EOF && !isspace(c)) {
+    luaL_addchar(c);
+    c = fgetc(f);
+  }
+  ungetc(c, f);
+}
+
+
 #define HUNK_LINE	256
 #define HUNK_FILE	BUFSIZ
 
 static int read_line (FILE *f) {
-  /* equivalent to: return read_pattern(f, "[^\n]*{\n}"); */
   int n;
   char *b;
   do {
@@ -306,46 +326,63 @@ static int read_line (FILE *f) {
 
 
 static void read_file (FILE *f) {
-  /* equivalent to: return read_pattern(f, ".*"); */
   int n;
   do {
     char *b = luaL_openspace(HUNK_FILE);
     n = fread(b, sizeof(char), HUNK_FILE, f);
-    luaL_addsize(n); 
+    luaL_addsize(n);
   } while (n==HUNK_FILE);
 }
 
 
+static int read_chars (FILE *f, int n) {
+  char *b = luaL_openspace(n);
+  int n1 = fread(b, sizeof(char), n, f);
+  luaL_addsize(n1);
+  return (n == n1);
+}
+
+
 static void io_read (void) {
-  static const char *const options[] = {"*n", "*l", "*a", ".*", "*w", NULL};
   int arg = FIRSTARG;
   FILE *f = getfileparam(FINPUT, &arg);
-  const char *p = luaL_opt_string(arg++, "*l");
-  do { /* repeat for each part */
+  lua_Object op = lua_getparam(arg);
+  do {  /* repeat for each part */
     long l;
     int success;
     luaL_resetbuffer();
-    switch (luaL_findstring(p, options)) {
-      case 0:  /* number */
-        if (!read_number(f)) return;  /* read fails */
-        continue;  /* number is already pushed; avoid the "pushstring" */
-      case 1:  /* line */
-        success = read_line(f);
-        break;
-      case 2: case 3:  /* file */
-        read_file(f);
-        success = 1; /* always success */
-        break;
-      case 4:  /* word */
-        success = read_pattern(f, "{%s*}%S+");
-        break;
-      default:
-        success = read_pattern(f, p);
+    if (lua_isnumber(op))
+      success = read_chars(f, lua_getnumber(op));
+    else {
+      const char *p = luaL_opt_string(arg, "*l");
+      if (p[0] != '*')
+        success = read_pattern(f, p);  /* deprecated! */
+      else {
+        switch (p[1]) {
+          case 'n':  /* number */
+            if (!read_number(f)) return;  /* read fails */
+            continue;  /* number is already pushed; avoid the "pushstring" */
+          case 'l':  /* line */
+            success = read_line(f);
+            break;
+          case 'a':  /* file */
+            read_file(f);
+            success = 1; /* always success */
+            break;
+          case 'w':  /* word */
+            read_word(f);
+            success = 0;  /* must read something to succeed */
+            break;
+          default:
+            luaL_argerror(arg, "invalid format");
+            success = 0;  /* to avoid warnings */
+        }
+      }
     }
     l = luaL_getsize();
     if (!success && l==0) return;  /* read fails */
     lua_pushlstring(luaL_buffer(), l);
-  } while ((p = luaL_opt_string(arg++, NULL)) != NULL);
+  } while ((op = lua_getparam(++arg)) != LUA_NOOBJECT);
 }
 
 /* }====================================================== */
@@ -355,10 +392,22 @@ static void io_write (void) {
   int arg = FIRSTARG;
   FILE *f = getfileparam(FOUTPUT, &arg);
   int status = 1;
-  const char *s;
-  long l;
-  while ((s = luaL_opt_lstr(arg++, NULL, &l)) != NULL)
-    status = status && ((long)fwrite(s, sizeof(char), l, f) == l);
+  lua_Object o;
+  while ((o = lua_getparam(arg++)) != LUA_NOOBJECT) {
+    switch (lua_type(o)[2]) {
+      case 'r': {  /* stRing? */
+        long l = lua_strlen(o);
+        status = status &&
+                 ((long)fwrite(lua_getstring(o), sizeof(char), l, f) == l);
+        break;
+      }
+      case 'm': /* nuMber? */  /* LUA_NUMBER */
+        /* optimization: could be done exactly as for strings */
+        status = status && fprintf(f, "%.16g", lua_getnumber(o)) > 0;
+        break;
+      default: luaL_argerror(arg-1, "string expected");
+    }
+  }
   pushresult(status);
 }
 
