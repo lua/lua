@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.26 1999/10/14 19:13:31 roberto Exp roberto $
+** $Id: ltable.c,v 1.27 1999/10/19 13:33:22 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -38,7 +38,7 @@
 ** returns the `main' position of an element in a table (that is, the index
 ** of its hash value)
 */
-static Node *luaH_mainposition (const Hash *t, const TObject *key) {
+Node *luaH_mainposition (const Hash *t, const TObject *key) {
   unsigned long h;
   switch (ttype(key)) {
     case LUA_T_NUMBER:
@@ -90,7 +90,7 @@ static Node *hashnodecreate (int nhash) {
   Node *v = luaM_newvector(nhash, Node);
   int i;
   for (i=0; i<nhash; i++) {
-    ttype(key(&v[i])) = ttype(val(&v[i])) = LUA_T_NIL;
+    ttype(&v[i].key) = ttype(&v[i].val) = LUA_T_NIL;
     v[i].next = NULL;
   }
   return v;
@@ -129,46 +129,11 @@ static int newsize (const Hash *t) {
   int realuse = 0;
   int i;
   for (i=0; i<size; i++) {
-    if (ttype(val(v+i)) != LUA_T_NIL)
+    if (ttype(&v[i].val) != LUA_T_NIL)
       realuse++;
   }
   return luaO_redimension(realuse*2);
 }
-
-
-#ifdef DEBUG
-/* check invariant of a table */
-static int listfind (const Node *m, const Node *n) {
-  do {
-    if (m==n) return 1;
-    m = m->next;
-  } while (m);
-  return 0;
-}
-
-static int check_invariant (const Hash *t, int filled) {
-  Node *n;
-  for (n=t->node; n<t->firstfree; n++) {
-    TObject *key = &n->key;
-    LUA_ASSERT(ttype(key) == LUA_T_NIL || n == luaH_mainposition(t, key),
-      "all elements before firstfree are empty or in their main positions");
-  }
-  if (!filled)
-    LUA_ASSERT(ttype(&(n++)->key) == LUA_T_NIL, "firstfree must be empty");
-  else
-    LUA_ASSERT(n == t->node, "table cannot have empty places");
-  for (; n<t->node+t->size; n++) {
-    TObject *key = &n->key;
-    Node *mp = luaH_mainposition(t, key);
-    LUA_ASSERT(ttype(key) != LUA_T_NIL,
-      "cannot exist empty elements after firstfree");
-    LUA_ASSERT(n == mp || luaH_mainposition(t, &mp->key) == mp,
-      "either an element or its colliding element is in its main position");
-    LUA_ASSERT(listfind(mp,n), "element is in its main position list");
-  }
-  return 1;
-}
-#endif
 
 
 /*
@@ -180,7 +145,6 @@ static void rehash (Hash *t) {
   int oldsize = t->size;
   Node *nold = t->node;
   int i;
-  LUA_ASSERT(check_invariant(t, 1), "invalid table");
   L->nblocks -= gcsize(oldsize);
   setnodevector(t, newsize(t));  /* create new array of nodes */
   /* first loop; set only elements that can go in their main positions */
@@ -216,7 +180,6 @@ static void rehash (Hash *t) {
       } while (ttype(&t->firstfree->key) != LUA_T_NIL);
     }
   }
-  LUA_ASSERT(check_invariant(t, 0), "invalid table");
   luaM_free(nold);  /* free old array */
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.67 1999/10/14 19:13:31 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.68 1999/10/19 13:33:22 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -68,7 +68,7 @@ static real getnarg (const Hash *a) {
 }
 
 
-static Hash *gethash (int arg) {
+static Hash *gettable (int arg) {
   return avalue(luaA_Address(luaL_tablearg(arg)));
 }
 
@@ -285,7 +285,7 @@ static void luaB_dofile (void) {
 
 static void luaB_call (void) {
   lua_Object f = luaL_nonnullarg(1);
-  const Hash *arg = gethash(2);
+  const Hash *arg = gettable(2);
   const char *options = luaL_opt_string(3, "");
   lua_Object err = lua_getparam(4);
   int narg = (int)getnarg(arg);
@@ -335,7 +335,7 @@ static void luaB_nextvar (void) {
 
 
 static void luaB_next (void) {
-  const Hash *a = gethash(1);
+  const Hash *a = gettable(1);
   const TObject *k = luaA_Address(luaL_nonnullarg(2));
   int i;  /* will get first element after `i' */
   if (ttype(k) == LUA_T_NIL)
@@ -406,7 +406,7 @@ static void luaB_assert (void) {
 
 
 static void luaB_foreachi (void) {
-  const Hash *t = gethash(1);
+  const Hash *t = gettable(1);
   int i;
   int n = (int)getnarg(t);
   TObject f;
@@ -428,7 +428,7 @@ static void luaB_foreachi (void) {
 
 
 static void luaB_foreach (void) {
-  const Hash *a = gethash(1);
+  const Hash *a = gettable(1);
   int i;
   TObject f;  /* see comment in 'foreachi' */
   f = *luaA_Address(luaL_functionarg(2));
@@ -472,12 +472,12 @@ static void luaB_foreachvar (void) {
 
 
 static void luaB_getn (void) {
-  lua_pushnumber(getnarg(gethash(1)));
+  lua_pushnumber(getnarg(gettable(1)));
 }
 
 
 static void luaB_tinsert (void) {
-  Hash *a = gethash(1);
+  Hash *a = gettable(1);
   lua_Object v = lua_getparam(3);
   int n = (int)getnarg(a);
   int pos;
@@ -495,7 +495,7 @@ static void luaB_tinsert (void) {
 
 
 static void luaB_tremove (void) {
-  Hash *a = gethash(1);
+  Hash *a = gettable(1);
   int n = (int)getnarg(a);
   int pos = luaL_opt_int(2, n);
   if (n <= 0) return;  /* table is "empty" */
@@ -583,7 +583,7 @@ static void auxsort (Hash *a, int l, int u, lua_Object f) {
 
 static void luaB_sort (void) {
   lua_Object t = lua_getparam(1);
-  Hash *a = gethash(1);
+  Hash *a = gettable(1);
   int n = (int)getnarg(a);
   lua_Object func = lua_getparam(2);
   luaL_arg_check(func == LUA_NOOBJECT || lua_isfunction(func), 2,
@@ -616,8 +616,14 @@ static void mem_query (void) {
 
 static void hash_query (void) {
   const TObject *o = luaA_Address(luaL_nonnullarg(1));
-  luaL_arg_check(ttype(o) == LUA_T_STRING, 1, "string expected");
-  lua_pushnumber(tsvalue(o)->hash);
+  if (lua_getparam(2) == LUA_NOOBJECT) {
+    luaL_arg_check(ttype(o) == LUA_T_STRING, 1, "string expected");
+    lua_pushnumber(tsvalue(o)->hash);
+  }
+  else {
+    const Hash *t = avalue(luaA_Address(luaL_tablearg(2)));
+    lua_pushnumber(luaH_mainposition(t, o) - t->node);
+  }
 }
 
 
@@ -631,7 +637,8 @@ static void table_query (void) {
   else if (i < t->size) {
     luaA_pushobject(&t->node[i].key);
     luaA_pushobject(&t->node[i].val);
-    lua_pushnumber(t->node[i].next == NULL ? 0 : t->node[i].next - t->node);
+    if (t->node[i].next)
+      lua_pushnumber(t->node[i].next - t->node);
   }
 }
 
