@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.51 2000/05/24 13:54:49 roberto Exp roberto $
+** $Id: lgc.c,v 1.52 2000/05/30 18:54:49 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -44,10 +44,10 @@ static void protomark (lua_State *L, Proto *f) {
 
 static void closuremark (lua_State *L, Closure *f) {
   if (!f->marked) {
-    int i = f->nelems;
+    int i = f->nupvalues;
     f->marked = 1;
     while (i--)
-      markobject(L, &f->consts[i]);
+      markobject(L, &f->upvalue[i]);
   }
 }
 

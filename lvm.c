@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.108 2000/05/24 13:54:49 roberto Exp roberto $
+** $Id: lvm.c,v 1.109 2000/05/25 19:02:21 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -77,7 +77,7 @@ static Closure *luaV_closure (lua_State *L, lua_Type t, int nelems) {
   Closure *c = luaF_newclosure(L, nelems);
   L->top -= nelems;
   while (nelems--)
-    c->consts[nelems] = *(L->top+nelems);
+    c->upvalue[nelems] = *(L->top+nelems);
   ttype(L->top) = t;
   clvalue(L->top) = c;
   incr_top;
@@ -409,7 +409,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
 
       case OP_PUSHUPVALUE:
-        *top++ = cl->consts[GETARG_U(i)];
+        *top++ = cl->upvalue[GETARG_U(i)];
         break;
 
       case OP_GETLOCAL:

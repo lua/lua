@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.64 2000/05/10 16:33:20 roberto Exp roberto $
+** $Id: lobject.h,v 1.65 2000/05/24 13:54:49 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -144,8 +144,8 @@ typedef struct Closure {
     lua_CFunction c;  /* C functions */
     struct Proto *l;  /* Lua functions */
   } f;
-  int nelems;
-  TObject consts[1];
+  int nupvalues;
+  TObject upvalue[1];
 } Closure;
 
 
