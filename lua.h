@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.97 2001/04/23 16:35:45 roberto Exp roberto $
+** $Id: lua.h,v 1.98 2001/06/06 18:00:19 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: info@lua.org
@@ -292,10 +292,16 @@ LUA_API void lua_pushusertag (lua_State *L, void *u, int tag);
 #define l_charint	int
 #endif
 
-/* function to convert a lua_Number to a string */
-#ifndef LUA_NUMBER_FMT
-#define LUA_NUMBER_FMT      "%.16g"
+/*
+** formats for Lua numbers
+*/
+#ifndef LUA_SCAN_NUMBER
+#define LUA_SCAN_NUMBER		"%lf"
 #endif
+#ifndef LUA_NUMBER_FMT
+#define LUA_NUMBER_FMT		"%.16g"
+#endif
+/* function to convert a lua_Number to a string */
 #ifndef lua_number2str
 #define lua_number2str(s,n)     sprintf((s), l_s(LUA_NUMBER_FMT), (n))
 #endif

@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.115 2001/06/08 16:48:32 roberto Exp roberto $
+** $Id: liolib.c,v 1.116 2001/06/22 13:49:42 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -263,7 +263,7 @@ static int read_until (lua_State *L, FILE *f, const l_char *p, int pl) {
 
 static int read_number (lua_State *L, FILE *f) {
   double d;
-  if (fscanf(f, l_s("%lf"), &d) == 1) {
+  if (fscanf(f, l_s(LUA_SCAN_NUMBER), &d) == 1) {
     lua_pushnumber(L, d);
     return 1;
   }
