@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.114 2002/03/25 17:47:14 roberto Exp roberto $
+** $Id: ltests.c,v 1.115 2002/04/02 20:43:08 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -368,14 +368,14 @@ static int newuserdata (lua_State *L) {
   return 1;
 }
 
-static int newuserdatabox (lua_State *L) {
-  lua_newuserdatabox(L, cast(void *, luaL_check_int(L, 1)));
+
+static int pushuserdata (lua_State *L) {
+  lua_pushudataval(L, cast(void *, luaL_check_int(L, 1)));
   return 1;
 }
 
 
 static int udataval (lua_State *L) {
-  luaL_check_type(L, 1, LUA_TUSERDATA);
   lua_pushnumber(L, cast(int, lua_touserdata(L, 1)));
   return 1;
 }
@@ -662,7 +662,7 @@ static const struct luaL_reg tests_funcs[] = {
   {"s2d", s2d},
   {"metatable", metatable},
   {"newuserdata", newuserdata},
-  {"newuserdatabox", newuserdatabox},
+  {"pushuserdata", pushuserdata},
   {"udataval", udataval},
   {"doonnewstack", doonnewstack},
   {"newstate", newstate},

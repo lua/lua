@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.181 2002/03/27 12:49:53 roberto Exp roberto $
+** $Id: lapi.c,v 1.182 2002/04/02 20:43:18 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -278,7 +278,12 @@ LUA_API lua_CFunction lua_tocfunction (lua_State *L, int index) {
 
 LUA_API void *lua_touserdata (lua_State *L, int index) {
   StkId o = luaA_indexAcceptable(L, index);
-  return (o == NULL || ttype(o) != LUA_TUSERDATA) ? NULL : uvalue(o)->uv.value;
+  if (o == NULL) return NULL;
+  switch (ttype(o)) {
+    case LUA_TUSERDATA: return (uvalue(o) + 1);
+    case LUA_TUDATAVAL: return pvalue(o);
+    default: return NULL;
+  }
 }
 
 
@@ -351,6 +356,14 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
 LUA_API void lua_pushboolean (lua_State *L, int b) {
   lua_lock(L);
   setbvalue(L->top, (b != 0));  /* ensure that true is 1 */
+  api_incr_top(L);
+  lua_unlock(L);
+}
+
+
+LUA_API void lua_pushudataval (lua_State *L, void *p) {
+  lua_lock(L);
+  setpvalue(L->top, p);
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -472,7 +485,7 @@ LUA_API void lua_setmetatable (lua_State *L, int objindex) {
   StkId obj, mt;
   lua_lock(L);
   api_checknelems(L, 1);
-  obj = luaA_indexAcceptable(L, objindex);
+  obj = luaA_index(L, objindex);
   mt = --L->top;
   if (ttype(mt) == LUA_TNIL)
     mt = defaultmeta(L);
@@ -649,31 +662,14 @@ LUA_API void lua_concat (lua_State *L, int n) {
 }
 
 
-static Udata *pushnewudata (lua_State *L, size_t size) {
-  Udata *u = luaS_newudata(L, size);
-  setuvalue(L->top, u);
-  api_incr_top(L);
-  return uvalue(L->top-1);
-}
-
-
 LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
   Udata *u;
-  void *p;
   lua_lock(L);
-  u = pushnewudata(L, size);
-  p = u->uv.value;
+  u = luaS_newudata(L, size);
+  setuvalue(L->top, u);
+  api_incr_top(L);
   lua_unlock(L);
-  return p;
-}
-
-
-LUA_API void lua_newuserdatabox (lua_State *L, void *p) {
-  Udata *u;
-  lua_lock(L);
-  u = pushnewudata(L, 0);
-  u->uv.value = p;
-  lua_unlock(L);
+  return u + 1;
 }
 
 

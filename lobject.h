@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.127 2002/03/18 18:16:16 roberto Exp roberto $
+** $Id: lobject.h,v 1.128 2002/03/25 17:47:14 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -13,15 +13,15 @@
 
 
 /* tags for values visible from Lua */
-#define NUM_TAGS	6
+#define NUM_TAGS	LUA_TFUNCTION
 
 
 typedef union {
+  void *p;
   union TString *ts;
   union Udata *u;
   union Closure *cl;
   struct Table *h;
-  struct lua_TObject *v;
   lua_Number n;
   int b;
 } Value;
@@ -35,12 +35,12 @@ typedef struct lua_TObject {
 
 /* Macros to access values */
 #define ttype(o)        ((o)->tt)
+#define pvalue(o)	((o)->value.p)
 #define nvalue(o)       ((o)->value.n)
 #define tsvalue(o)      ((o)->value.ts)
 #define uvalue(o)      ((o)->value.u)
 #define clvalue(o)      ((o)->value.cl)
 #define hvalue(o)       ((o)->value.h)
-#define vvalue(o)	((o)->value.v)
 #define bvalue(o)	((o)->value.b)
 
 #define l_isfalse(o)	(ttype(o) == LUA_TNIL || \
@@ -51,6 +51,9 @@ typedef struct lua_TObject {
   { TObject *i_o=(obj); i_o->tt=LUA_TNUMBER; i_o->value.n=(x); }
 
 #define chgnvalue(obj,x)	((obj)->value.n=(x))
+
+#define setpvalue(obj,x) \
+  { TObject *i_o=(obj); i_o->tt=LUA_TUDATAVAL; i_o->value.p=(x); }
 
 #define setbvalue(obj,x) \
   { TObject *i_o=(obj); i_o->tt=LUA_TBOOLEAN; i_o->value.b=(x); }
@@ -68,9 +71,6 @@ typedef struct lua_TObject {
   { TObject *i_o=(obj); i_o->tt=LUA_TTABLE; i_o->value.h=(x); }
 
 #define setnilvalue(obj) ((obj)->tt=LUA_TNIL)
-
-#define setupvalue(obj,x,t) \
-  { TObject *i_o=(obj); i_o->tt=(t); i_o->value.v=(x); }
 
 #define setobj(obj1,obj2) \
   { TObject *o1=(obj1); const TObject *o2=(obj2); \
@@ -106,9 +106,8 @@ typedef union Udata {
   union L_Umaxalign dummy;  /* ensures maximum alignment for `local' udata */
   struct {
     struct Table *metatable;
-    void *value;
     union Udata *next;  /* chain for list of all udata */
-    size_t len;  /* least bit reserved for gc mark */
+    size_t len;  /* least 2 bits reserved for gc mark */
   } uv;
 } Udata;
 

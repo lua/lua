@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.124 2002/03/27 12:49:53 roberto Exp roberto $
+** $Id: lua.h,v 1.125 2002/03/27 15:30:41 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: info@lua.org
@@ -17,8 +17,8 @@
 
 
 
-#define LUA_VERSION	"Lua 4.1 (beta)"
-#define LUA_COPYRIGHT	"Copyright (C) 1994-2001 TeCGraf, PUC-Rio"
+#define LUA_VERSION	"Lua 5.0 (alpha)"
+#define LUA_COPYRIGHT	"Copyright (C) 1994-2002 TeCGraf, PUC-Rio"
 #define LUA_AUTHORS 	"W. Celes, R. Ierusalimschy & L. H. de Figueiredo"
 
 
@@ -63,7 +63,8 @@ typedef int (*lua_CFunction) (lua_State *L);
 #define LUA_TBOOLEAN	3
 #define LUA_TTABLE	4
 #define LUA_TUSERDATA	5
-#define LUA_TFUNCTION	6
+#define LUA_TUDATAVAL	6
+#define LUA_TFUNCTION	7
 
 
 /* minimum Lua stack available to a C function */
@@ -143,6 +144,7 @@ LUA_API void  lua_pushlstring (lua_State *L, const char *s, size_t len);
 LUA_API void  lua_pushstring (lua_State *L, const char *s);
 LUA_API void  lua_pushcclosure (lua_State *L, lua_CFunction fn, int n);
 LUA_API void  lua_pushboolean (lua_State *L, int b);
+LUA_API void  lua_pushudataval (lua_State *L, void *p);
 
 
 /*
@@ -204,7 +206,6 @@ LUA_API int   lua_getn (lua_State *L, int index);
 LUA_API void  lua_concat (lua_State *L, int n);
 
 LUA_API void *lua_newuserdata (lua_State *L, size_t size);
-LUA_API void  lua_newuserdatabox (lua_State *L, void *u);
 
 
 
@@ -213,6 +214,11 @@ LUA_API void  lua_newuserdatabox (lua_State *L, void *u);
 ** some useful macros
 ** ===============================================================
 */
+
+#define lua_newpointerbox(L,u) \
+	(*(void **)(lua_newuserdata(L, sizeof(void *))) = (u))
+
+#define lua_getfrombox(L,i)	(*(void **)(lua_touserdata(L, i)))
 
 #define lua_pop(L,n)		lua_settop(L, -(n)-1)
 

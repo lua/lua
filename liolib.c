@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.133 2002/03/27 15:30:41 roberto Exp roberto $
+** $Id: liolib.c,v 2.1 2002/04/04 20:24:56 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -54,11 +54,11 @@ static int pushresult (lua_State *L, int i) {
 
 
 static FILE *tofile (lua_State *L, int findex) {
-  FILE *f = (FILE *)lua_touserdata(L, findex);
+  FILE **f = (FILE **)lua_touserdata(L, findex);
   if (f && lua_getmetatable(L, findex) &&
       lua_equal(L, -1, lua_upvalueindex(1))) {
     lua_pop(L, 1);
-    return f;
+    return *f;
   }
   luaL_argerror(L, findex, "bad file");
   return NULL;  /* to avoid warnings */
@@ -66,7 +66,7 @@ static FILE *tofile (lua_State *L, int findex) {
 
 
 static void newfile (lua_State *L, FILE *f) {
-  lua_newuserdatabox(L, f);
+  lua_newpointerbox(L, f);
   lua_pushliteral(L, FILEHANDLE);
   lua_rawget(L, LUA_REGISTRYINDEX);
   lua_setmetatable(L, -2);

@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.62 2002/03/27 15:30:41 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.63 2002/04/02 20:42:20 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -206,7 +206,7 @@ static int passresults (lua_State *L, int status, int oldtop) {
     if (nresults > 0)
       return nresults;  /* results are already on the stack */
     else {
-      lua_newuserdatabox(L, NULL); /* at least one result to signal no errors */
+      lua_pushboolean(L, 1); /* at least one result to signal no errors */
       return 1;
     }
   }
@@ -383,6 +383,7 @@ static int luaB_tostring (lua_State *L) {
       sprintf(buff, "function: %p", lua_topointer(L, 1));
       break;
     case LUA_TUSERDATA:
+    case LUA_TUDATAVAL:
       sprintf(buff, "userdata: %p", lua_touserdata(L, 1));
       break;
     case LUA_TNIL:
@@ -439,7 +440,7 @@ static void base_open (lua_State *L) {
 
 
 static int luaB_resume (lua_State *L) {
-  lua_State *co = (lua_State *)lua_touserdata(L, lua_upvalueindex(1));
+  lua_State *co = (lua_State *)lua_getfrombox(L, lua_upvalueindex(1));
   if (lua_resume(L, co) != 0)
     lua_error(L, "error running co-routine");
   return lua_gettop(L);
@@ -448,7 +449,7 @@ static int luaB_resume (lua_State *L) {
 
 
 static int gc_coroutine (lua_State *L) {
-  lua_State *co = (lua_State *)lua_touserdata(L, 1);
+  lua_State *co = (lua_State *)lua_getfrombox(L, 1);
   lua_closethread(L, co);
   return 0;
 }
@@ -471,7 +472,7 @@ static int luaB_coroutine (lua_State *L) {
     lua_unref(L, ref);
   }
   lua_cobegin(NL, n-1);
-  lua_newuserdatabox(L, NL);
+  lua_newpointerbox(L, NL);
   lua_pushliteral(L, "Coroutine");
   lua_rawget(L, LUA_REGISTRYINDEX);
   lua_setmetatable(L, -2);

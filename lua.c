@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.79 2002/03/27 18:00:13 roberto Exp roberto $
+** $Id: lua.c,v 1.80 2002/04/01 14:42:33 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -334,7 +334,7 @@ static int handle_argv (char *argv[], int *toclose) {
 
 
 static void register_getargs (char *argv[]) {
-  lua_newuserdatabox(L, argv);
+  lua_pushudataval(L, argv);
   lua_pushcclosure(L, l_getargs, 1);
   lua_setglobal(L, "getargs");
 }
