@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: ltm.h,v 1.31 2002/01/09 21:50:35 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,7 @@ typedef enum {
 
 
 #define fasttm(l,et,e) \
-  (((et)->flags & (1<<(e))) ? NULL : luaT_gettm(et, e, G(l)->tmname[e]))
+  (((et)->flags & (1u<<(e))) ? NULL : luaT_gettm(et, e, G(l)->tmname[e]))
 
 
 const TObject *luaT_gettm (Table *events, TMS event, TString *ename);
