@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.271 2002/12/04 17:38:31 roberto Exp roberto $
+** $Id: lvm.c,v 1.272 2002/12/06 17:09:00 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -679,15 +679,16 @@ StkId luaV_execute (lua_State *L) {
         L->top = cb+3;  /* func. + 2 args (state and index) */
         luaD_call(L, cb, nvar);
         L->top = L->ci->top;
-        ra = XRA(i);  /* call may change stack */
-        cb = ra + nvar + 2;
-        if (ttisnil(cb))  /* break loop? */
+        ra = XRA(i) + 2;  /* final position of first result */
+        cb = ra + nvar;
+        do {  /* move results to proper positions */
+          nvar--;
+          setobjs2s(ra+nvar, cb+nvar);
+        } while (nvar > 0);
+        if (ttisnil(ra))  /* break loop? */
           pc++;  /* skip jump (break loop) */
-        else {
-          while (nvar--)  /* move results to proper positions */
-            setobjs2s(ra+2+nvar, cb+nvar);
+        else
           dojump(pc, GETARG_sBx(*pc) + 1);  /* jump back */
-        }
         break;
       }
       case OP_TFORPREP: {  /* for compatibility only */
