@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.9 2004/07/09 14:29:29 roberto Exp roberto $
+** $Id: luaconf.h,v 1.10 2004/08/30 13:44:04 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -271,10 +271,8 @@
 
 
 /* `assert' options */
-/* name of global that holds table with loaded packages */
-#define REQTAB		"_LOADED"
 
-/* name of global that holds the search path for packages */
+/* environment variable that holds the search path for packages */
 #define LUA_PATH	"LUA_PATH"
 
 /* separator of templates in a path */

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.130 2004/07/13 19:56:44 roberto Exp roberto $
+** $Id: lua.c,v 1.131 2004/08/26 14:19:55 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -127,7 +127,12 @@ static int dostring (lua_State *L, const char *s, const char *name) {
 
 
 static int dolibrary (lua_State *L, const char *name) {
-  name = luaL_searchpath(L, name, NULL);
+  lua_getfield(L, LUA_GLOBALSINDEX, "_PATH");
+  if (!lua_isstring(L, -1)) {
+    l_message(progname, "global _PATH must be a string");
+    return 1;
+  }
+  name = luaL_searchpath(L, name, lua_tostring(L, -1));
   if (name == NULL) return report(L, 1);
   else  return dofile(L, name);
 }

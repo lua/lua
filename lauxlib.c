@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.121 2004/07/13 20:11:32 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.122 2004/08/13 19:52:53 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -341,17 +341,6 @@ LUALIB_API int luaL_getn (lua_State *L, int t) {
 /* }====================================================== */
 
 
-static const char *getpath (lua_State *L) {
-  const char *path;
-  lua_getglobal(L, LUA_PATH);  /* try global variable */
-  path = lua_tostring(L, -1);
-  if (path) return path;
-  path = getenv(LUA_PATH);  /* else try environment variable */
-  if (path) return path;
-  return LUA_PATH_DEFAULT;  /* else use default */
-}
-
-
 static const char *pushnexttemplate (lua_State *L, const char *path) {
   const char *l;
   if (*path == '\0') return NULL;  /* no more templates */
@@ -383,10 +372,7 @@ static const char *luaL_gsub (lua_State *L, const char *s,
 LUALIB_API const char *luaL_searchpath (lua_State *L, const char *name,
                                                       const char *path) {
   FILE *f;
-  const char *p;
-  if (path == NULL) path = getpath(L);
-  else lua_pushnil(L);  /* to balance item pushed by `getpath' */
-  p = path;
+  const char *p = path;
   for (;;) {
     const char *fname;
     if ((p = pushnexttemplate(L, p)) == NULL) {
@@ -398,7 +384,6 @@ LUALIB_API const char *luaL_searchpath (lua_State *L, const char *name,
     f = fopen(fname, "r");  /* try to read it */
     if (f) {
       fclose(f);
-      lua_remove(L, -2);  /* remove path */
       return fname;
     }
     lua_pop(L, 1);  /* remove file name */ 
