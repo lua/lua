@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.86 1999/12/20 13:10:38 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.87 1999/12/23 18:19:57 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -107,7 +107,7 @@ void luaB_ERRORMESSAGE (lua_State *L) {
   lua_Object al = lua_rawgetglobal(L, "_ALERT");
   if (lua_isfunction(L, al)) {  /* avoid error loop if _ALERT is not defined */
     char buff[600];
-    sprintf(buff, "lua error: %.500s\n", luaL_check_string(L, 1));
+    sprintf(buff, "error: %.500s\n", luaL_check_string(L, 1));
     lua_pushstring(L, buff);
     lua_callfunction(L, al);
   }
