@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.12 2004/09/15 20:38:15 roberto Exp roberto $
+** $Id: lgc.c,v 2.13 2004/10/06 18:34:16 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -529,6 +529,7 @@ static void remarkupvals (global_State *g) {
 
 static void atomic (lua_State *L) {
   global_State *g = G(L);
+  size_t udsize;  /* total size of userdata to be finalized */
   int aux;
   /* remark objects cautch by write barrier */
   propagateall(g);
@@ -544,7 +545,7 @@ static void atomic (lua_State *L) {
   g->gray = g->grayagain;
   g->grayagain = NULL;
   propagateall(g);
-  luaC_separateudata(L, 0);  /* separate userdata to be preserved */
+  udsize = luaC_separateudata(L, 0);  /* separate userdata to be finalized */
   marktmu(g);  /* mark `preserved' userdata */
   propagateall(g);  /* remark, to propagate `preserveness' */
   cleartable(g->weak);  /* remove collected objects from weak tables */
@@ -557,7 +558,7 @@ static void atomic (lua_State *L) {
   g->gcgenerational = (g->estimate <= 4*g->prevestimate/2);
   if (!aux)  /* last collection was full? */
     g->prevestimate = g->estimate;  /* keep estimate of last full collection */
-  g->estimate = g->totalbytes;  /* first estimate */
+  g->estimate = g->totalbytes - udsize;  /* first estimate */
 }
 
 
@@ -601,7 +602,9 @@ static l_mem singlestep (lua_State *L) {
     }
     case GCSfinalize: {
       if (g->tmudata) {
+        g->GCthreshold += GCFINALIZECOST;  /* avoid GC steps inside method */
         GCTM(L);
+        g->GCthreshold -= GCFINALIZECOST;  /* correct threshold */
         return GCFINALIZECOST;
       }
       else {
@@ -661,7 +664,6 @@ void luaC_fullgc (lua_State *L) {
     singlestep(L);
     g->gcgenerational = 0;  /* keep it in this mode */
   }
-  lua_assert(g->estimate == g->totalbytes);
   g->GCthreshold = 2*g->estimate;
   luaC_callGCTM(L);  /* call finalizers */
 }
