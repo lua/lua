@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.38 1995/05/16 17:23:58 roberto Exp $";
+char *rcs_opcode="$Id: opcode.c,v 3.40 1995/10/04 14:20:26 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -54,7 +54,7 @@ static  jmp_buf *errorJmp = NULL; /* current error recover point */
 
 
 static StkId lua_execute (Byte *pc, StkId base);
-static void do_call (Object *func, StkId base, int nResults, StkId whereRes);
+static void do_call (StkId base, int nResults);
 
 
 
@@ -63,32 +63,6 @@ Object *luaI_Address (lua_Object o)
   return Address(o);
 }
 
-
-/*
-** Error messages
-*/
-
-
-static void lua_message (char *s)
-{
-  luaI_reportbug(s, 1);
-  do_call(&luaI_fallBacks[FB_ERROR].function, (top-stack)-1, 0, (top-stack)-1);
-}
-
-/*
-** Reports an error, and jumps up to the available recover label
-*/
-void lua_error (char *s)
-{
-  if (s) lua_message(s);
-  if (errorJmp)
-    longjmp(*errorJmp, 1);
-  else
-  {
-    fprintf (stderr, "lua: exit(1). Unable to recover\n");
-    exit(1);
-  }
-}
 
 
 /*
@@ -211,6 +185,17 @@ static void adjustC (int nParams)
   adjust_top(CBase+nParams);
 }
 
+/*
+** Open a hole below "nelems" from the top.
+*/
+static void open_stack (int nelems)
+{
+  int i;
+  for (i=0; i<nelems; i++)
+    *(top-i) = *(top-i-1);
+  incr_top;
+}
+
 
 /*
 ** Call a C function. CBase will point to the top of the stack,
@@ -233,49 +218,58 @@ static StkId callC (lua_CFunction func, StkId base)
 }
 
 /*
+** Call the specified fallback, putting it on the stack below its arguments
+*/
+static void callFB (int fb)
+{
+  int nParams = luaI_fallBacks[fb].nParams;
+  open_stack(nParams);
+  *(top-nParams-1) = luaI_fallBacks[fb].function;
+  do_call((top-stack)-nParams, luaI_fallBacks[fb].nResults);
+}
+
+/*
 ** Call the fallback for invalid functions (see do_call)
 */
-static void call_funcFB (Object *func, StkId base, int nResults, StkId whereRes)
+static void call_funcFB (StkId base, int nResults)
 {
-  StkId i;
-  /* open space for first parameter (func) */
-  for (i=top-stack; i>base; i--)
-    stack[i] = stack[i-1];
-  incr_top;
-  stack[base] = *func;
-  do_call(&luaI_fallBacks[FB_FUNCTION].function, base, nResults, whereRes);
+  open_stack((top-stack)-(base-1));
+  stack[base-1] = luaI_fallBacks[FB_FUNCTION].function;
+  do_call(base, nResults);
 }
 
 
 /*
 ** Call a function (C or Lua). The parameters must be on the stack,
-** between [stack+base,top). When returns, the results are on the stack,
-** between [stack+whereRes,top). The number of results is nResults, unless
-** nResults=MULT_RET.
+** between [stack+base,top). The function to be called is at stack+base-1.
+** When returns, the results are on the stack, between [stack+base-1,top).
+** The number of results is nResults, unless nResults=MULT_RET.
 */
-static void do_call (Object *func, StkId base, int nResults, StkId whereRes)
+static void do_call (StkId base, int nResults)
 {
   StkId firstResult;
+  Object *func = stack+base-1;
   if (tag(func) == LUA_T_CFUNCTION)
     firstResult = callC(fvalue(func), base);
   else if (tag(func) == LUA_T_FUNCTION)
     firstResult = lua_execute(func->value.tf->code, base);
   else
   { /* func is not a function */
-    call_funcFB(func, base, nResults, whereRes);
+    call_funcFB(base, nResults);
     return;
   }
   /* adjust the number of results */
   if (nResults != MULT_RET && top - (stack+firstResult) != nResults)
     adjust_top(firstResult+nResults);
-  /* move results to the given position */
-  if (firstResult != whereRes)
+  /* move results to base-1 (to erase parameters and function) */
+  base--;
+  if (firstResult != base)
   {
     int i;
     nResults = top - (stack+firstResult);  /* actual number of results */
     for (i=0; i<nResults; i++)
-      *(stack+whereRes+i) = *(stack+firstResult+i);
-    top -= firstResult-whereRes;
+      *(stack+base+i) = *(stack+firstResult+i);
+    top -= firstResult-base;
   }
 }
 
@@ -287,12 +281,12 @@ static void do_call (Object *func, StkId base, int nResults, StkId whereRes)
 static void pushsubscript (void)
 {
   if (tag(top-2) != LUA_T_ARRAY)
-    do_call(&luaI_fallBacks[FB_GETTABLE].function, (top-stack)-2, 1, (top-stack)-2);
+    callFB(FB_GETTABLE);
   else 
   {
     Object *h = lua_hashget(avalue(top-2), top-1);
     if (h == NULL || tag(h) == LUA_T_NIL)
-      do_call(&luaI_fallBacks[FB_INDEX].function, (top-stack)-2, 1, (top-stack)-2);
+      callFB(FB_INDEX);
     else
     {
       --top;
@@ -308,7 +302,7 @@ static void pushsubscript (void)
 static void storesubscript (void)
 {
  if (tag(top-3) != LUA_T_ARRAY)
-   do_call(&luaI_fallBacks[FB_SETTABLE].function, (top-stack)-3, 0, (top-stack)-3);
+   callFB(FB_SETTABLE);
  else
  {
   Object *h = lua_hashdefine (avalue(top-3), top-2);
@@ -330,10 +324,36 @@ void lua_travstack (void (*fn)(Object *))
 
 
 /*
-** Execute a protected call. If function is null compiles the pre-set input.
-** Leave nResults on the stack.
+** Error messages
 */
-static int do_protectedrun (Object *function, int nResults)
+
+static void lua_message (char *s)
+{
+  luaI_reportbug(s, 1);
+  callFB(FB_ERROR);
+}
+
+/*
+** Reports an error, and jumps up to the available recover label
+*/
+void lua_error (char *s)
+{
+  if (s) lua_message(s);
+  if (errorJmp)
+    longjmp(*errorJmp, 1);
+  else
+  {
+    fprintf (stderr, "lua: exit(1). Unable to recover\n");
+    exit(1);
+  }
+}
+
+
+/*
+** Execute a protected call. Assumes that function is at CBase and
+** parameters are on top of it. Leave nResults on the stack. 
+*/
+static int do_protectedrun (int nResults)
 {
   jmp_buf myErrorJmp;
   int status;
@@ -342,13 +362,13 @@ static int do_protectedrun (Object *function, int nResults)
   errorJmp = &myErrorJmp;
   if (setjmp(myErrorJmp) == 0)
   {
-    do_call(function, CBase, nResults, CBase);
+    do_call(CBase+1, nResults);
     CnResults = (top-stack) - CBase;  /* number of results */
     CBase += CnResults;  /* incorporate results on the stack */
     status = 0;
   }
   else
-  {
+  { /* an error occurred: restore CBase and top */
     CBase = oldCBase;
     top = stack+CBase;
     status = 1;
@@ -362,27 +382,26 @@ static int do_protectedmain (void)
 {
   TFunc tf;
   int status;
-  StkId oldCBase = CBase;
   jmp_buf myErrorJmp;
   jmp_buf *oldErr = errorJmp;
   errorJmp = &myErrorJmp;
+  adjustC(1);  /* one slot for the pseudo-function */
+  stack[CBase].tag = LUA_T_FUNCTION;
+  stack[CBase].value.tf = &tf;
   tf.code = NULL;
   if (setjmp(myErrorJmp) == 0)
   {
-    Object f;
-    f.tag = LUA_T_FUNCTION;
-    f.value.tf = &tf;
     lua_parse(&tf);
-    do_call(&f, CBase, 0, CBase);
-    status = 0;
+    status = do_protectedrun(0);
   }
   else
+  {
     status = 1;
+    adjustC(0);  /* erase extra slot */
+  }
+  errorJmp = oldErr;
   if (tf.code)
     luaI_free(tf.code);
-  errorJmp = oldErr;
-  CBase = oldCBase;
-  top = stack+CBase;
   return status;
 }
 
@@ -395,14 +414,20 @@ int lua_callfunction (lua_Object function)
   if (function == LUA_NOOBJECT)
     return 1;
   else
-    return do_protectedrun (Address(function), MULT_RET);
+  {
+    open_stack((top-stack)-CBase);
+    stack[CBase] = *Address(function);
+    return do_protectedrun (MULT_RET);
+  }
 }
 
 
 int lua_call (char *funcname)
 {
  Word n = luaI_findsymbolbyname(funcname);
- return do_protectedrun(&s_object(n), MULT_RET);
+ open_stack((top-stack)-CBase);
+ stack[CBase] = s_object(n);
+ return do_protectedrun(MULT_RET);
 }
 
 
@@ -448,11 +473,12 @@ int lua_dostring (char *string)
 */
 lua_Object lua_setfallback (char *name, lua_CFunction fallback)
 {
-  static Object func = {LUA_T_CFUNCTION, {luaI_setfallback}};
-  adjustC(0);
+  adjustC(1);  /* one slot for the pseudo-function */
+  stack[CBase].tag = LUA_T_CFUNCTION;
+  stack[CBase].value.f = luaI_setfallback;
   lua_pushstring(name);
   lua_pushcfunction(fallback);
-  do_protectedrun(&func, 1);
+  do_protectedrun(1);
   return (Ref(top-1));
 }
 
@@ -597,8 +623,9 @@ int lua_lock (void)
 }
 
 
+
 /*
-** Get a global object. Return the object handle or NULL on error.
+** Get a global object.
 */
 lua_Object lua_getglobal (char *name)
 {
@@ -708,14 +735,14 @@ void luaI_gcFB (Object *o)
 {
   *top = *o;
   incr_top;
-  do_call(&luaI_fallBacks[FB_GC].function, (top-stack)-1, 0, (top-stack)-1);
+  callFB(FB_GC);
 }
 
 
 static void call_arith (char *op)
 {
   lua_pushstring(op);
-  do_call(&luaI_fallBacks[FB_ARITH].function, (top-stack)-3, 1, (top-stack)-3);
+  callFB(FB_ARITH);
 }
 
 static void comparison (lua_Type tag_less, lua_Type tag_equal, 
@@ -729,7 +756,7 @@ static void comparison (lua_Type tag_less, lua_Type tag_equal,
   else if (tostring(l) || tostring(r))
   {
     lua_pushstring(op);
-    do_call(&luaI_fallBacks[FB_ORDER].function, (top-stack)-3, 1, (top-stack)-3);
+    callFB(FB_ORDER);
     return;
   }
   else
@@ -867,7 +894,7 @@ static StkId lua_execute (Byte *pc, StkId base)
       *(top) = *(top-2-n);
       *(top-1) = *(top-3-n);
       top += 2;
-      do_call(&luaI_fallBacks[FB_SETTABLE].function, (top-stack)-3, 0, (top-stack)-3);
+      callFB(FB_SETTABLE);
     }
     else
     {
@@ -1021,7 +1048,7 @@ static StkId lua_execute (Byte *pc, StkId base)
     Object *l = top-2;
     Object *r = top-1;
     if (tostring(r) || tostring(l))
-      do_call(&luaI_fallBacks[FB_CONCAT].function, (top-stack)-2, 1, (top-stack)-2);
+      callFB(FB_CONCAT);
     else
     {
       tsvalue(l) = lua_createstring (lua_strconc(svalue(l),svalue(r)));
@@ -1102,9 +1129,8 @@ static StkId lua_execute (Byte *pc, StkId base)
    {
      int nParams = *(pc++);
      int nResults = *(pc++);
-     Object *func = top-1-nParams; /* function is below parameters */
      StkId newBase = (top-stack)-nParams;
-     do_call(func, newBase, nResults, newBase-1);
+     do_call(newBase, nResults);
    }
    break;
 
