@@ -2,7 +2,7 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lua.h,v 3.13 1994/12/16 15:55:55 roberto Exp roberto $
+** $Id: lua.h,v 3.14 1994/12/28 12:55:47 roberto Exp celes $
 */
 
 
@@ -92,7 +92,7 @@ lua_Object     lua_createtable		(void);
 /* for lua 1.1 compatibility. Avoid using these macros */
 
 #define lua_getindexed(o,n) (lua_pushobject(o), lua_pushnumber(n), lua_getsubscript())
-#define lua_getfield(o,f)   (lua_pushobject(o), lua_pushstring(f), lua_getsubscript())
+#define lua_getfield(o,f)   (lua_pushobject(o), lua_pushliteral(f), lua_getsubscript())
 
 #define lua_copystring(o) (strdup(lua_getstring(o)))
 
