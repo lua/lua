@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.97 2002/03/04 15:27:14 roberto Exp roberto $
+** $Id: llex.c,v 1.98 2002/03/08 19:07:01 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -209,7 +209,8 @@ static void read_long_string (LexState *LS, SemInfo *seminfo) {
     switch (LS->current) {
       case EOZ:
         save(L, '\0', l);
-        luaX_error(LS, "unfinished long string", TK_EOS);
+        luaX_error(LS, (seminfo) ? "unfinished long string" :
+                                   "unfinished long comment", TK_EOS);
         break;  /* to avoid warnings */
       case '[':
         save_and_next(L, LS, l);
