@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.111 2001/09/07 17:39:10 roberto Exp $
+** $Id: lgc.c,v 1.112 2001/10/02 16:45:03 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -171,8 +171,7 @@ static void markall (lua_State *L) {
   marktagmethods(G(L), &st);  /* mark tag methods */
   markstacks(L, &st); /* mark all stacks */
   marktable(&st, G(L)->type2tag);
-  marktable(&st, G(L)->registry);
-  marktable(&st, G(L)->weakregistry);
+  markobject(&st, &G(L)->registry);
   while (st.tmark) {  /* mark tables */
     Hash *h = st.tmark;  /* get first table from list */
     st.tmark = h->mark;  /* remove it from list */

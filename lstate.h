@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.59 2001/09/07 17:39:10 roberto Exp $
+** $Id: lstate.h,v 1.60 2001/10/02 16:43:29 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -58,8 +58,7 @@ typedef struct global_State {
   size_t Mbuffsize;  /* size of Mbuffer */
   stringtable strt;  /* hash table for strings */
   Hash *type2tag;  /* hash table from type names to tags */
-  Hash *registry;  /* (strong) registry table */
-  Hash *weakregistry;  /* weakregistry table */
+  TObject registry;  /* registry table */
   struct TM *TMtable;  /* table for tag methods */
   int sizeTM;  /* size of TMtable */
   int ntag;  /* number of tags in TMtable */

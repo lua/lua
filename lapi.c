@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.152 2001/09/07 17:39:10 roberto Exp $
+** $Id: lapi.c,v 1.154 2001/10/11 21:40:56 roberto Exp $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -40,15 +40,28 @@ const l_char lua_ident[] =
 
 
 
+static TObject *negindex (lua_State *L, int index) {
+  if (index > LUA_REGISTRYINDEX) {
+    api_check(L, index != 0 && -index <= L->top - L->ci->base);
+    return L->top+index;
+  } else if (index == LUA_REGISTRYINDEX)  /* pseudo-indices */
+      return &G(L)->registry;
+  else {
+    TObject *func = (L->ci->base - 1);
+    index = LUA_REGISTRYINDEX - index;
+    api_check(L, iscfunction(func) && index <= clvalue(func)->c.nupvalues);
+    return &clvalue(func)->c.upvalue[index-1];
+  }
+}
+
+
 TObject *luaA_index (lua_State *L, int index) {
   if (index > 0) {
     api_check(L, index <= L->top - L->ci->base);
     return L->ci->base+index-1;
   }
-  else {
-    api_check(L, index != 0 && -index <= L->top - L->ci->base);
-    return L->top+index;
-  }
+  else
+    return negindex(L, index);
 }
 
 
@@ -59,10 +72,8 @@ static TObject *luaA_indexAcceptable (lua_State *L, int index) {
     if (o >= L->top) return NULL;
     else return o;
   }
-  else {
-    api_check(L, index != 0 && -index <= L->top - L->ci->base);
-    return L->top+index;
-  }
+  else
+    return negindex(L, index);
 }
 
 
@@ -378,43 +389,9 @@ LUA_API void lua_getglobals (lua_State *L) {
 }
 
 
-LUA_API int lua_getref (lua_State *L, int ref) {
-  int status;
-  lua_lock(L);
-  if (ref == LUA_REFNIL) {
-    setnilvalue(L->top);
-    status = 1;
-  }
-  else {
-    setobj(L->top, luaH_getnum(G(L)->weakregistry, ref));
-    status = (ttype(L->top) != LUA_TNIL);
-  }
-  if (status)
-    api_incr_top(L);
-  lua_unlock(L);
-  return status;
-}
-
-
 LUA_API void lua_newtable (lua_State *L) {
   lua_lock(L);
   sethvalue(L->top, luaH_new(L, 0));
-  api_incr_top(L);
-  lua_unlock(L);
-}
-
-
-LUA_API void  lua_getregistry (lua_State *L) {
-  lua_lock(L);
-  sethvalue(L->top, G(L)->registry);
-  api_incr_top(L);
-  lua_unlock(L);
-}
-
-
-LUA_API void  lua_getweakregistry (lua_State *L) {
-  lua_lock(L);
-  sethvalue(L->top, G(L)->weakregistry);
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -483,26 +460,25 @@ LUA_API void lua_setglobals (lua_State *L) {
 
 LUA_API int lua_ref (lua_State *L,  int lock) {
   int ref;
+  if (lock == 0) lua_error(L, l_s("unlocked references are obsolete"));
   if (lua_isnil(L, -1)) {
     lua_pop(L, 1);
-    ref = LUA_REFNIL;
+    return LUA_REFNIL;
   }
-  else {
-    lua_getweakregistry(L);
-    ref = lua_getn(L, -1) + 1;
-    lua_pushvalue(L, -2);
-    lua_rawseti(L, -2, ref);
-    if (lock) {
-      lua_getregistry(L);
-      lua_pushvalue(L, -3);
-      lua_rawseti(L, -2, ref);
-      lua_pop(L, 1);  /* remove registry */
-    }
+  lua_rawgeti(L, LUA_REGISTRYINDEX, 0);  /* get first free element */
+  ref = lua_tonumber(L, -1);
+  lua_pop(L, 1);  /* remove it from stack */
+  if (ref != 0) {  /* some free element? */
+    lua_rawgeti(L, LUA_REGISTRYINDEX, ref);  /* remove it from list */
+    lua_rawseti(L, LUA_REGISTRYINDEX, 0);
+  }
+  else {  /* no free elements */
+    ref = lua_getn(L, LUA_REGISTRYINDEX) + 1;  /* use next `n' */
     lua_pushliteral(L, l_s("n"));
     lua_pushnumber(L, ref);
-    lua_settable(L, -3);
-    lua_pop(L, 2);
+    lua_settable(L, LUA_REGISTRYINDEX);  /* n = n+1 */
   }
+  lua_rawseti(L, LUA_REGISTRYINDEX, ref);
   return ref;
 }
 
@@ -661,13 +637,10 @@ LUA_API void lua_error (lua_State *L, const l_char *s) {
 
 LUA_API void lua_unref (lua_State *L, int ref) {
   if (ref >= 0) {
-    lua_getregistry(L);
-    lua_pushnil(L);
-    lua_rawseti(L, -2, ref);
-    lua_getweakregistry(L);
-    lua_pushnil(L);
-    lua_rawseti(L, -2, ref);
-    lua_pop(L, 2);  /* remove both registries */
+    lua_rawgeti(L, LUA_REGISTRYINDEX, 0);
+    lua_pushnumber(L, ref);
+    lua_rawseti(L, LUA_REGISTRYINDEX, 0);
+    lua_rawseti(L, LUA_REGISTRYINDEX, ref);
   }
 }
 
@@ -786,4 +759,23 @@ LUA_API void  lua_setweakmode (lua_State *L, int mode) {
   hvalue(L->top-1)->weakmode = mode;
   lua_unlock(L);
 }
+
+
+
+LUA_API void lua_pushupvalues (lua_State *L) {
+  TObject *func;
+  int n, i;
+  lua_lock(L);
+  func = (L->ci->base - 1);
+  api_check(L, iscfunction(func));
+  n = clvalue(func)->c.nupvalues;
+  if (LUA_MINSTACK+n > lua_stackspace(L))
+    luaD_error(L, l_s("stack overflow"));
+  for (i=0; i<n; i++) {
+    setobj(L->top, &clvalue(func)->c.upvalue[i]);
+    L->top++;
+  }
+  lua_unlock(L);
+}
+
 

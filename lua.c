@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.69 2001/08/30 20:54:02 roberto Exp $
+** $Id: lua.c,v 1.70 2001/09/25 17:06:34 roberto Exp $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -141,7 +141,7 @@ static void getargs (l_char *argv[]) {
 
 
 static int l_getargs (lua_State *l) {
-  l_char **argv = (l_char **)lua_touserdata(l, -1);
+  l_char **argv = (l_char **)lua_touserdata(l, lua_upvalueindex(1));
   getargs(argv);
   return 1;
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.41 2001/08/31 19:46:07 roberto Exp $
+** $Id: lbaselib.c,v 1.43 2001/10/11 21:41:21 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -363,18 +363,8 @@ static int luaB_require (lua_State *L) {
     lua_pushvalue(L, -1);  /* duplicate to leave a copy on stack */
     lua_setglobal(L, LUA_PATH);
   }
-  lua_getregistry(L);
-  lua_pushliteral(L, LUA_PATH);
-  lua_gettable(L, 3);  /* get book-keeping table */
-  if (lua_isnil(L, 4)) {  /* no book-keeping table? */
-    lua_pop(L, 1);  /* pop the `nil' */
-    lua_newtable(L);  /* create book-keeping table */
-    lua_pushliteral(L, LUA_PATH);
-    lua_pushvalue(L, -2);  /* duplicate table to leave a copy on stack */
-    lua_settable(L, 3);  /* store book-keeping table in registry */
-  }
-  lua_pushvalue(L, 1);
-  lua_gettable(L, 4);  /* check package's name in book-keeping table */
+  lua_pushvalue(L, 1);  /* check package's name in book-keeping table */
+  lua_gettable(L, lua_upvalueindex(1));
   if (!lua_isnil(L, -1))  /* is it there? */
     return 0;  /* package is already loaded */
   else {  /* must load it */
@@ -385,7 +375,7 @@ static int luaB_require (lua_State *L) {
       lua_pushvalue(L, 1);  /* package name */
       lua_concat(L, 2);  /* concat directory with package name */
       res = lua_dofile(L, lua_tostring(L, -1));  /* try to load it */
-      lua_settop(L, 4);  /* pop string and eventual results from dofile */
+      lua_settop(L, 2);  /* pop string and eventual results from dofile */
       if (res == 0) break;  /* ok; file done */
       else if (res != LUA_ERRFILE)
         lua_error(L, NULL);  /* error running package; propagate it */
@@ -397,7 +387,7 @@ static int luaB_require (lua_State *L) {
   }
   lua_pushvalue(L, 1);
   lua_pushnumber(L, 1);
-  lua_settable(L, 4);  /* mark it as loaded */
+  lua_settable(L, lua_upvalueindex(1));  /* mark it as loaded */
   return 0;
 }
 
@@ -713,7 +703,6 @@ static const luaL_reg base_funcs[] = {
   {l_s("rawgettable"), luaB_rawget},  /* for compatibility 3.2 */
   {l_s("rawsettable"), luaB_rawset},  /* for compatibility 3.2 */
   {l_s("rawtype"), luaB_rawtype},
-  {l_s("require"), luaB_require},
   {l_s("setglobal"), luaB_setglobal},
   {l_s("settag"), luaB_settype},  /* for compatibility 4.0 */
   {l_s("settype"), luaB_settype},
@@ -737,6 +726,10 @@ LUALIB_API int lua_baselibopen (lua_State *L) {
   luaL_openl(L, base_funcs);
   lua_pushliteral(L, l_s(LUA_VERSION));
   lua_setglobal(L, l_s("_VERSION"));
+  /* `require' needs an empty table as upvalue */
+  lua_newtable(L);
+  lua_pushcclosure(L, luaB_require, 1);
+  lua_setglobal(L, l_s("require"));
   return 0;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.37 2001/06/06 18:00:19 roberto Exp $
+** $Id: ldblib.c,v 1.38 2001/08/31 19:46:07 roberto Exp $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -116,16 +116,14 @@ static int setlocal (lua_State *L) {
 
 
 static void hookf (lua_State *L, const l_char *key) {
-  lua_getregistry(L);
   lua_pushstring(L, key);
-  lua_gettable(L, -2);
+  lua_gettable(L, LUA_REGISTRYINDEX);
   if (lua_isfunction(L, -1)) {
-    lua_pushvalue(L, -3);  /* original argument (below table and function) */
+    lua_pushvalue(L, -2);  /* original argument (below function) */
     lua_rawcall(L, 1, 0);
   }
   else
     lua_pop(L, 1);  /* pop result from gettable */
-  lua_pop(L, 1);  /* pop table */
 }
 
 
@@ -150,13 +148,11 @@ static void sethook (lua_State *L, const l_char *key, lua_Hook hook,
     (*sethookf)(L, hook);
   else
     luaL_argerror(L, 1, l_s("function expected"));
-  lua_getregistry(L);
   lua_pushstring(L, key);
-  lua_pushvalue(L, -1);  /* dup key */
-  lua_gettable(L, -3);   /* get old value */
-  lua_pushvalue(L, -2);  /* key (again) */
+  lua_gettable(L, LUA_REGISTRYINDEX);   /* get old value */
+  lua_pushstring(L, key);
   lua_pushvalue(L, 1);
-  lua_settable(L, -5);  /* set new value */
+  lua_settable(L, LUA_REGISTRYINDEX);  /* set new value */
 }
 
 

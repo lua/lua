@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.91 2001/09/07 17:39:10 roberto Exp $
+** $Id: ltests.c,v 1.92 2001/10/02 16:45:03 roberto Exp $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -317,21 +317,16 @@ static int tref (lua_State *L) {
   int level = lua_gettop(L);
   luaL_checkany(L, 1);
   lua_pushvalue(L, 1);
-  lua_pushnumber(L, lua_ref(L, luaL_opt_int(L, 2, 1)));
+  lua_pushnumber(L, lua_ref(L, 1));
   assert(lua_gettop(L) == level+1);  /* +1 for result */
   return 1;
 }
 
 static int getref (lua_State *L) {
   int level = lua_gettop(L);
-  if (lua_getref(L, luaL_check_int(L, 1))) {
-    assert(lua_gettop(L) == level+1);
-    return 1;
-  }
-  else {
-    assert(lua_gettop(L) == level);
-    return 0;
-  }
+  lua_getref(L, luaL_check_int(L, 1));
+  assert(lua_gettop(L) == level+1);
+  return 1;
 }
 
 static int unref (lua_State *L) {
@@ -569,6 +564,12 @@ static int testC (lua_State *L) {
     }
     else if EQ(l_s("pushvalue")) {
       lua_pushvalue(L, getnum);
+    }
+    else if EQ(l_s("pushcclosure")) {
+      lua_pushcclosure(L, testC, getnum);
+    }
+    else if EQ(l_s("pushupvalues")) {
+      lua_pushupvalues(L);
     }
     else if EQ(l_s("remove")) {
       lua_remove(L, getnum);

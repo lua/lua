@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.141 2001/09/25 17:05:49 roberto Exp $
+** $Id: ldo.c,v 1.142 2001/10/02 16:45:03 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -44,7 +44,8 @@ void luaD_init (lua_State *L, int stacksize) {
   stacksize += EXTRA_STACK;
   L->stack = luaM_newvector(L, stacksize, TObject);
   L->stacksize = stacksize;
-  L->basefunc.base = L->top = L->stack;
+  setnilvalue(L->stack);  /* the `initial' function */
+  L->top = L->basefunc.base = L->stack + 1;
   restore_stack_limit(L);
 }
 
@@ -119,12 +120,12 @@ static void luaD_callHook (lua_State *L, lua_Hook callhook,
 
 
 static StkId callCclosure (lua_State *L, const struct CClosure *cl) {
-  int nup = cl->nupvalues;  /* number of upvalues */
   int n;
-  luaD_checkstack(L, nup+LUA_MINSTACK);  /* ensure minimum stack size */
-  for (n=0; n<nup; n++)  /* copy upvalues as extra arguments */
-    setobj(L->top++, &cl->upvalue[n]);
+  luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
   lua_unlock(L);
+#if LUA_COMPATUPVALUES
+  lua_pushupvalues(L);
+#endif
   n = (*cl->f)(L);  /* do the actual call */
   lua_lock(L);
   return L->top - n;  /* return index of first result */

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.103 2001/08/31 19:46:07 roberto Exp $
+** $Id: lua.h,v 1.104 2001/10/11 21:41:21 roberto Exp $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: info@lua.org
@@ -33,6 +33,13 @@
 
 /* option for multiple returns in `lua_call' */
 #define LUA_MULTRET	(-1)
+
+
+/* pseudo-index for registry */
+#define LUA_REGISTRYINDEX	(-10000)
+
+/* pseudo-indices for upvalues */
+#define lua_upvalueindex(i)	(LUA_REGISTRYINDEX-(i))
 
 
 /* error codes for `lua_do*' and the like */
@@ -160,9 +167,7 @@ LUA_API void  lua_rawget (lua_State *L, int index);
 LUA_API void  lua_rawgeti (lua_State *L, int index, int n);
 LUA_API void  lua_getglobals (lua_State *L);
 LUA_API void  lua_gettagmethod (lua_State *L, int tag, const lua_char *event);
-LUA_API int   lua_getref (lua_State *L, int ref);
 LUA_API void  lua_newtable (lua_State *L);
-LUA_API void  lua_getregistry (lua_State *L);
 LUA_API void  lua_getweakregistry (lua_State *L);
 
 
@@ -246,13 +251,18 @@ LUA_API int   lua_getweakmode (lua_State *L, int index);
 #define lua_pushliteral(L, s)	lua_pushlstring(L, s, \
                                                 (sizeof(s)/sizeof(lua_char))-1)
 
+#define lua_getregistry(L)	lua_pushvalue(L, LUA_REGISTRYINDEX);
+
+#define lua_getref(L,ref)	lua_rawgeti(L, LUA_REGISTRYINDEX, ref)
 
 
 /*
-** compatibility macros
+** compatibility macros and functions
 */
 #define lua_newtag(L)	lua_newtype(L, NULL, LUA_TNONE)
 #define lua_typename	lua_tag2name
+
+LUA_API void lua_pushupvalues (lua_State *L);
 
 #endif
 
