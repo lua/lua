@@ -286,3 +286,15 @@ Wed Jun 19 13:31:49 EST 2002
 >> (in function `parse_file')
 (by Alex Bilyk; since 4.0)
 
+
+
+
+=================================================================
+--- Version 5.0 alpha
+
+** lgc.c
+Fri Aug 30 13:49:14 EST 2002
+>> GC metamethod stored in a weak metatable being collected together with
+>> userdata may not be cleared properly
+(by Roberto; since 5.0a)
+
