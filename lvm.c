@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.36 1998/12/30 17:26:49 roberto Exp roberto $
+** $Id: lvm.c,v 1.37 1999/01/12 18:38:35 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -51,8 +51,7 @@ static TaggedString *strconc (TaggedString *l, TaggedString *r) {
 }
 
 
-int luaV_tonumber (TObject *obj) {
-  /* LUA_NUMBER */
+int luaV_tonumber (TObject *obj) {  /* LUA_NUMBER */
   if (ttype(obj) != LUA_T_STRING)
     return 1;
   else {
@@ -74,18 +73,12 @@ int luaV_tonumber (TObject *obj) {
 }
 
 
-int luaV_tostring (TObject *obj) {
-  /* LUA_NUMBER */
+int luaV_tostring (TObject *obj) {  /* LUA_NUMBER */
   if (ttype(obj) != LUA_T_NUMBER)
     return 1;
   else {
-    char s[60];
-    real f = nvalue(obj);
-    long i;
-    if ((real)LONG_MIN <= f && f <= (real)LONG_MAX && (real)(i=(long)f) == f)
-      sprintf(s, "%ld", i);
-    else
-      sprintf(s, "%.15g", (double)nvalue(obj));
+    char s[32];  /* 16 digits, signal, point and \0  (+ some extra...) */
+    sprintf(s, "%.16g", (double)nvalue(obj));
     tsvalue(obj) = luaS_new(s);
     ttype(obj) = LUA_T_STRING;
     return 0;
