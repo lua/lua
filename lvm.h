@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: lvm.h,v 1.36 2002/02/07 17:24:05 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -15,7 +15,8 @@
 
 #define tostring(L,o) ((ttype(o) == LUA_TSTRING) || (luaV_tostring(L, o)))
 
-#define tonumber(o,n)	(((o) = luaV_tonumber(o,n)) != NULL)
+#define tonumber(o,n)	(ttype(o) == LUA_TNUMBER || \
+                         (((o) = luaV_tonumber(o,n)) != NULL))
 
 
 const TObject *luaV_tonumber (const TObject *obj, TObject *n);
