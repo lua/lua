@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.28 1997/06/11 14:24:40 roberto Exp roberto $";
+char *rcs_tree="$Id: tree.c,v 1.29 1997/07/30 22:00:50 roberto Exp roberto $";
 
 
 #include <string.h>
@@ -17,7 +17,7 @@ char *rcs_tree="$Id: tree.c,v 1.28 1997/06/11 14:24:40 roberto Exp roberto $";
 #include "fallback.h"
 
 
-#define NUM_HASHS  64
+#define NUM_HASHS  61
 
 typedef struct {
   int size;
