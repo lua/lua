@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.70 1997/05/26 14:42:51 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.71 1997/06/09 17:28:14 roberto Exp roberto $";
 
 #include "luamem.h"
 #include "auxlib.h"
@@ -258,7 +258,7 @@ char *lua_getobjname (lua_Object o, char **name)
 { /* try to find a name for given function */
   functofind = luaI_Address(o);
   if ((*name = luaI_travfallbacks(checkfunc)) != NULL)
-    return "fallback";
+    return "tag-method";
   else if ((*name = lua_travsymbol(checkfunc)) != NULL)
     return "global";
   else return "";

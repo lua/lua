@@ -247,7 +247,7 @@ static void lua_printstack (FILE *f)
       case 'g':
         fprintf(f, "function %s", name);
         break;
-      case 'f':
+      case 't':
         fprintf(f, "`%s' tag method", name);
         break;
       default: {
