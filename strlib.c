@@ -3,15 +3,26 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.10 1995/02/02 18:54:58 roberto Exp $";
+char *rcs_strlib="$Id: strlib.c,v 1.11 1995/02/02 20:05:37 roberto Exp roberto $";
 
 #include <string.h>
-#include <strings.h>
 #include <stdlib.h>
 #include <ctype.h>
 
 #include "lua.h"
 #include "lualib.h"
+
+
+static char *newstring (lua_Object o)
+{
+  char *s = lua_getstring(o);
+  char *ns = (char *)malloc(strlen(s)+1);
+  if (ns == 0)
+    lua_error("not enough memory for new string");
+  strcpy(ns, s);
+  return ns;
+}
+
 
 /*
 ** Return the position of the first caracter of a substring into a string
@@ -86,7 +97,7 @@ static void str_sub (void)
    lua_error ("incorrect arguments to function `strsub'");
  if (o3 != LUA_NOOBJECT && !lua_isnumber(o3))
    lua_error ("incorrect third argument to function `strsub'");
- s = lua_copystring(o1);
+ s = newstring(o1);
  start = lua_getnumber (o2);
  end = o3 == LUA_NOOBJECT ? strlen(s) : lua_getnumber (o3);
  if (end < start || start < 1 || end > strlen(s))
@@ -110,7 +121,7 @@ static void str_lower (void)
  lua_Object o = lua_getparam (1);
  if (!lua_isstring(o))
    lua_error ("incorrect arguments to function `strlower'");
- c = s = lua_copystring(o);
+ c = s = newstring(o);
  while (*c != 0)
  {
   *c = tolower(*c);
@@ -132,7 +143,7 @@ static void str_upper (void)
  lua_Object o = lua_getparam (1);
  if (!lua_isstring(o))
    lua_error ("incorrect arguments to function `strlower'");
- c = s = lua_copystring(o);
+ c = s = newstring(o);
  while (*c != 0)
  {
   *c = toupper(*c);
