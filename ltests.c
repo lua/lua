@@ -64,7 +64,7 @@ static void setnameval (lua_State *L, const l_char *name, int val) {
 #define MARK		0x55  /* 01010101 (a nice pattern) */
 
 
-#define blocksize(b)	((size_t *)(b) - HEADER/sizeof(size_t))
+#define blocksize(b)	(cast(size_t *, b) - HEADER/sizeof(size_t))
 
 unsigned long memdebug_numblocks = 0;
 unsigned long memdebug_total = 0;
@@ -77,7 +77,7 @@ static void *checkblock (void *block) {
   size_t size = *b;
   int i;
   for (i=0;i<MARKSIZE;i++)
-    lua_assert(*(((char *)b)+HEADER+size+i) == MARK+i);  /* corrupted block? */
+    lua_assert(*(cast(char *, b)+HEADER+size+i) == MARK+i); /* corrupted block? */
   return b;
 }
 
@@ -111,19 +111,19 @@ void *debug_realloc (void *block, size_t oldsize, size_t size) {
     if (newblock == NULL) return NULL;
     if (oldsize > size) oldsize = size;
     if (block) {
-      memcpy((char *)newblock+HEADER, block, oldsize);
+      memcpy(cast(char *, newblock)+HEADER, block, oldsize);
       freeblock(block);  /* erase (and check) old copy */
     }
     /* initialize new part of the block with something `weird' */
-    memset((char *)newblock+HEADER+oldsize, -MARK, size-oldsize);
+    memset(cast(char *, newblock)+HEADER+oldsize, -MARK, size-oldsize);
     memdebug_total += size;
     if (memdebug_total > memdebug_maxmem)
       memdebug_maxmem = memdebug_total;
     memdebug_numblocks++;
-    *(size_t *)newblock = size;
+    *cast(size_t *, newblock) = size;
     for (i=0;i<MARKSIZE;i++)
-      *((char *)newblock+HEADER+size+i) = (char)(MARK+i);
-    return (char *)newblock+HEADER;
+      *(cast(char *, newblock)+HEADER+size+i) = cast(char, MARK+i);
+    return cast(char *, newblock)+HEADER;
   }
 }
 
@@ -343,13 +343,13 @@ static int unref (lua_State *L) {
 
 static int newuserdata (lua_State *L) {
   size_t size = luaL_check_int(L, 1);
-  l_char *p = (l_char *)lua_newuserdata(L, size);
+  l_char *p = cast(l_char *, lua_newuserdata(L, size));
   while (size--) *p++ = l_c('\0');
   return 1;
 }
 
 static int newuserdatabox (lua_State *L) {
-  lua_newuserdatabox(L, (void *)luaL_check_int(L, 1));
+  lua_newuserdatabox(L, cast(void *, luaL_check_int(L, 1)));
   return 1;
 }
 
@@ -362,20 +362,20 @@ static int settag (lua_State *L) {
 
 static int udataval (lua_State *L) {
   luaL_checktype(L, 1, LUA_TUSERDATA);
-  lua_pushnumber(L, (int)lua_touserdata(L, 1));
+  lua_pushnumber(L, cast(int, lua_touserdata(L, 1)));
   return 1;
 }
 
 static int newtag (lua_State *L) {
   lua_pushnumber(L, lua_newtype(L, lua_tostring(L, 1),
-                                   (int)lua_tonumber(L, 2)));
+                                   cast(int, lua_tonumber(L, 2))));
   return 1;
 }
 
 static int doonnewstack (lua_State *L) {
   lua_State *L1 = lua_newthread(L, luaL_check_int(L, 1));
   if (L1 == NULL) return 0;
-  *((int **)L1) = &islocked;  /* initialize the lock */
+  *cast(int **, L1) = &islocked;  /* initialize the lock */
   lua_dostring(L1, luaL_check_string(L, 2));
   lua_pushnumber(L, 1);
   lua_close(L1);
@@ -384,13 +384,13 @@ static int doonnewstack (lua_State *L) {
 
 
 static int s2d (lua_State *L) {
-  lua_pushnumber(L, *(double *)luaL_check_string(L, 1));
+  lua_pushnumber(L, *cast(double *, luaL_check_string(L, 1)));
   return 1;
 }
 
 static int d2s (lua_State *L) {
   double d = luaL_check_number(L, 1);
-  lua_pushlstring(L, (l_char *)&d, sizeof(d));
+  lua_pushlstring(L, cast(l_char *, &d), sizeof(d));
   return 1;
 }
 
@@ -398,7 +398,7 @@ static int d2s (lua_State *L) {
 static int newstate (lua_State *L) {
   lua_State *L1 = lua_open(luaL_check_int(L, 1));
   if (L1) {
-    *((int **)L1) = &islocked;  /* initialize the lock */
+    *cast(int **, L1) = &islocked;  /* initialize the lock */
     lua_pushnumber(L, (unsigned long)L1);
   }
   else
@@ -407,7 +407,7 @@ static int newstate (lua_State *L) {
 }
 
 static int loadlib (lua_State *L) {
-  lua_State *L1 = (lua_State *)(unsigned long)luaL_check_number(L, 1);
+  lua_State *L1 = cast(lua_State *, cast(unsigned long, luaL_check_number(L, 1)));
   lua_register(L1, "mathlibopen", lua_mathlibopen);
   lua_register(L1, "strlibopen", lua_strlibopen);
   lua_register(L1, "iolibopen", lua_iolibopen);
@@ -417,7 +417,7 @@ static int loadlib (lua_State *L) {
 }
 
 static int closestate (lua_State *L) {
-  lua_State *L1 = (lua_State *)(unsigned long)luaL_check_number(L, 1);
+  lua_State *L1 = cast(lua_State *, cast(unsigned long, luaL_check_number(L, 1)));
   lua_close(L1);
   lua_unlock(L);  /* close cannot unlock that */
   return 0;
@@ -427,7 +427,7 @@ static int doremote (lua_State *L) {
   lua_State *L1;
   const l_char *code = luaL_check_string(L, 2);
   int status;
-  L1 = (lua_State *)(unsigned long)luaL_check_number(L, 1);
+  L1 = cast(lua_State *, cast(unsigned long, luaL_check_number(L, 1)));
   status = lua_dostring(L1, code);
   if (status != 0) {
     lua_pushnil(L);
@@ -472,12 +472,12 @@ static void skip (const l_char **pc) {
   while (**pc != l_c('\0') && strchr(delimits, **pc)) (*pc)++;
 }
 
-static int getnum (lua_State *L, const l_char **pc) {
+static int getnum_aux (lua_State *L, const l_char **pc) {
   int res = 0;
   int sig = 1;
   skip(pc);
   if (**pc == l_c('.')) {
-    res = (int)lua_tonumber(L, -1);
+    res = cast(int, lua_tonumber(L, -1));
     lua_pop(L, 1);
     (*pc)++;
     return res;
@@ -486,11 +486,11 @@ static int getnum (lua_State *L, const l_char **pc) {
     sig = -1;
     (*pc)++;
   }
-  while (isdigit((int)**pc)) res = res*10 + (*(*pc)++) - l_c('0');
+  while (isdigit(cast(int, **pc))) res = res*10 + (*(*pc)++) - l_c('0');
   return sig*res;
 }
   
-static const l_char *getname (l_char *buff, const l_char **pc) {
+static const l_char *getname_aux (l_char *buff, const l_char **pc) {
   int i = 0;
   skip(pc);
   while (**pc != l_c('\0') && !strchr(delimits, **pc))
@@ -502,8 +502,8 @@ static const l_char *getname (l_char *buff, const l_char **pc) {
 
 #define EQ(s1)	(strcmp(s1, inst) == 0)
 
-#define getnum	((getnum)(L, &pc))
-#define getname	((getname)(buff, &pc))
+#define getnum	(getnum_aux(L, &pc))
+#define getname	(getname_aux(buff, &pc))
 
 
 static int testC (lua_State *L) {
@@ -661,7 +661,7 @@ static const struct luaL_reg tests_funcs[] = {
 
 
 void luaB_opentests (lua_State *L) {
-  *((int **)L) = &islocked;  /* init lock */
+  *cast(int **, L) = &islocked;  /* init lock */
   lua_state = L;  /* keep first state to be opened */
   /* open lib in a new table */
   lua_newtable(L);

@@ -41,7 +41,7 @@ static Instruction previous_instruction (FuncState *fs) {
   if (fs->pc > fs->lasttarget)  /* no jumps to current position? */
     return fs->f->code[fs->pc-1];  /* returns previous instruction */
   else
-    return (Instruction)(-1);/* no optimizations after an invalid instruction */
+    return cast(Instruction, -1);/* invalid instruction avoids optimizations */
 }
 
 
@@ -203,7 +203,7 @@ void luaK_reserveregs (FuncState *fs, int n) {
   if (fs->freereg > fs->f->maxstacksize) {
     if (fs->freereg >= MAXSTACK)
       luaK_error(fs->ls, l_s("function or expression too complex"));
-    fs->f->maxstacksize = (short)fs->freereg;
+    fs->f->maxstacksize = cast(short, fs->freereg);
   }
 }
 
@@ -225,8 +225,8 @@ static void freeexp (FuncState *fs, expdesc *e) {
 static int addk (FuncState *fs, TObject *k) {
   const TObject *index = luaH_get(fs->h, k);
   if (ttype(index) == LUA_TNUMBER) {
-    lua_assert(luaO_equalObj(&fs->f->k[(int)nvalue(index)], k));
-    return (int)nvalue(index);
+    lua_assert(luaO_equalObj(&fs->f->k[cast(int, nvalue(index))], k));
+    return cast(int, nvalue(index));
   }
   else {  /* constant not found; create a new entry */
     TObject o;
@@ -329,7 +329,7 @@ static void discharge2reg (FuncState *fs, expdesc *e, int reg) {
     }
     case VNUMBER: {
       lua_Number f = e->u.n;
-      int i = (int)f;
+      int i = cast(int, f);
       if ((lua_Number)i == f && -MAXARG_sBc <= i && i <= MAXARG_sBc)
         luaK_codeAsBc(fs, OP_LOADINT, reg, i);  /* f has a small int value */
       else

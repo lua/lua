@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.2 2001/07/03 17:02:02 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.3 2001/08/27 15:14:57 roberto Exp $
 ** extracted automatically from lopcodes.h by mkprint.lua
 ** DO NOT EDIT
 ** See Copyright Notice in lua.h
@@ -9,6 +9,7 @@
 #define LUA_PRIVATE
 #include "lua.h"
 
+#include "lobject.h"
 #include "lopcodes.h"
 
 

@@ -61,7 +61,7 @@ static const lu_byte luaT_validevents[NUM_TAGS][TM_N] = {
 };
 
 int luaT_validevent (int t, int e) {  /* ORDER LUA_T */
-  return (t >= NUM_TAGS) ?  1 : (int)luaT_validevents[t][e];
+  return (t >= NUM_TAGS) ?  1 : cast(int, luaT_validevents[t][e]);
 }
 
 
@@ -88,7 +88,7 @@ int luaT_newtag (lua_State *L, const l_char *name, int basictype) {
     TObject otag;
     ts = luaS_new(L, name);
     v = luaH_getstr(G(L)->type2tag, ts);
-    if (ttype(v) == LUA_TNUMBER) return (int)nvalue(v);
+    if (ttype(v) == LUA_TNUMBER) return cast(int, nvalue(v));
     setnvalue(&otag, tag);
     luaH_setstr(L, G(L)->type2tag, ts, &otag);
   }

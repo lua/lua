@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.120 2001/07/16 18:48:31 roberto Exp roberto $
+** $Id: liolib.c,v 1.121 2001/07/22 00:59:36 roberto Exp $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -73,7 +73,7 @@ static int pushresult (lua_State *L, int i) {
 
 
 static FILE *getopthandle (lua_State *L, int inout) {
-  FILE *p = (FILE *)lua_touserdata(L, 1);
+  FILE *p = (FILE *)(lua_touserdata(L, 1));
   if (p != NULL) {  /* is it a userdata ? */
     if (!checkfile(L, 1)) {  /* not a valid file handle? */
       if (strcmp(lua_type(L, 1), CLOSEDFILEHANDLE) == 0)
@@ -88,7 +88,7 @@ static FILE *getopthandle (lua_State *L, int inout) {
     if (!checkfile(L,-1))
       luaL_verror(L, l_s("global variable `%.10s' is not a valid file handle"),
                   filenames[inout]);
-    p = (FILE *)lua_touserdata(L, -1);
+    p = (FILE *)(lua_touserdata(L, -1));
   }
   return p;  /* leave handle at stack top to avoid GC */
 }
@@ -127,7 +127,7 @@ static void resetfile (lua_State *L, int inout) {
 
 
 static int io_close (lua_State *L) {
-  FILE *f = (FILE *)luaL_check_userdata(L, 1, FILEHANDLE);
+  FILE *f = (FILE *)(luaL_check_userdata(L, 1, FILEHANDLE));
   int status = 1;
   if (f != stdin && f != stdout && f != stderr) {
     lua_settop(L, 1);  /* make sure file is on top */
@@ -139,7 +139,7 @@ static int io_close (lua_State *L) {
 
 
 static int file_collect (lua_State *L) {
-  FILE *f = (FILE *)luaL_check_userdata(L, 1, FILEHANDLE);
+  FILE *f = (FILE *)(luaL_check_userdata(L, 1, FILEHANDLE));
   if (f != stdin && f != stdout && f != stderr)
     CLOSEFILE(L, f);
   return 0;
@@ -328,7 +328,7 @@ static int io_read (lua_State *L) {
             size_t pl = lua_strlen(L, n) - 2;
             luaL_arg_check(L, 0 < pl && pl <= LUA_MAXUNTIL, n,
                               l_s("invalid read-until length"));
-            success = read_until(L, f, p+2, (int)pl);
+            success = read_until(L, f, p+2, (int)(pl));
             break;
           }
           default:
@@ -373,7 +373,7 @@ static int io_write (lua_State *L) {
 static int io_seek (lua_State *L) {
   static const int mode[] = {SEEK_SET, SEEK_CUR, SEEK_END};
   static const l_char *const modenames[] = {l_s("set"), l_s("cur"), l_s("end"), NULL};
-  FILE *f = (FILE *)luaL_check_userdata(L, 1, FILEHANDLE);
+  FILE *f = (FILE *)(luaL_check_userdata(L, 1, FILEHANDLE));
   int op = luaL_findstring(luaL_opt_string(L, 2, l_s("cur")), modenames);
   long offset = luaL_opt_long(L, 3, 0);
   luaL_arg_check(L, op != -1, 2, l_s("invalid mode"));
@@ -388,8 +388,8 @@ static int io_seek (lua_State *L) {
 
 
 static int io_flush (lua_State *L) {
-  FILE *f = (lua_isnull(L, 1)) ? (FILE *)NULL :
-                                 (FILE *)luaL_check_userdata(L, 1, FILEHANDLE);
+  FILE *f = (lua_isnull(L, 1)) ? (FILE *)(NULL) :
+                                 (FILE *)(luaL_check_userdata(L, 1, FILEHANDLE));
   return pushresult(L, fflush(f) == 0);
 }
 
@@ -461,7 +461,7 @@ static int getfield (lua_State *L, const l_char *key, int d) {
   lua_pushstring(L, key);
   lua_rawget(L, -2);
   if (lua_isnumber(L, -1))
-    res = (int)lua_tonumber(L, -1);
+    res = (int)(lua_tonumber(L, -1));
   else {
     if (d == -2)
       luaL_verror(L, l_s("field `%.20s' missing in date table"), key);
@@ -474,9 +474,9 @@ static int getfield (lua_State *L, const l_char *key, int d) {
 
 static int io_date (lua_State *L) {
   const l_char *s = luaL_opt_string(L, 1, l_s("%c"));
-  time_t t = (time_t)luaL_opt_number(L, 2, -1);
+  time_t t = (time_t)(luaL_opt_number(L, 2, -1));
   struct tm *stm;
-  if (t == (time_t)-1)  /* no time given? */
+  if (t == (time_t)(-1))  /* no time given? */
     t = time(NULL);  /* use current time */
   if (*s == l_c('!')) {  /* UTC? */
     stm = gmtime(&t);
@@ -525,7 +525,7 @@ static int io_time (lua_State *L) {
     ts.tm_year = getfield(L, l_s("year"), -2)-1900;
     ts.tm_isdst = getfield(L, l_s("isdst"), -1);
     t = mktime(&ts);
-    if (t == (time_t)-1)
+    if (t == (time_t)(-1))
       lua_pushnil(L);
     else
       lua_pushnumber(L, t);
@@ -535,8 +535,8 @@ static int io_time (lua_State *L) {
 
 
 static int io_difftime (lua_State *L) {
-  lua_pushnumber(L, difftime((time_t)luaL_check_number(L, 1),
-                             (time_t)luaL_opt_number(L, 2, 0)));
+  lua_pushnumber(L, difftime((time_t)(luaL_check_number(L, 1)),
+                             (time_t)(luaL_opt_number(L, 2, 0))));
   return 1;
 }
 

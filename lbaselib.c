@@ -141,7 +141,7 @@ static int luaB_getglobal (lua_State *L) {
 static int gettag (lua_State *L, int narg) {
   switch (lua_rawtag(L, narg)) {
     case LUA_TNUMBER:
-      return (int)lua_tonumber(L, narg);
+      return (int)(lua_tonumber(L, narg));
     case LUA_TSTRING: {
       const l_char *name = lua_tostring(L, narg);
       int tag = lua_name2tag(L, name);

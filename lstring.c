@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.65 2001/06/15 20:36:57 roberto Exp roberto $
+** $Id: lstring.c,v 1.66 2001/08/27 15:16:28 roberto Exp $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,7 @@ void luaS_resize (lua_State *L, int newsize) {
       TString *next = p->tsv.nexthash;  /* save next */
       lu_hash h = p->tsv.hash;
       int h1 = lmod(h, newsize);  /* new position */
-      lua_assert((int)(h%newsize) == lmod(h, newsize));
+      lua_assert(cast(int, h%newsize) == lmod(h, newsize));
       p->tsv.nexthash = newhash[h1];  /* chain it in new position */
       newhash[h1] = p;
       p = next;
@@ -48,7 +48,7 @@ void luaS_resize (lua_State *L, int newsize) {
 
 
 static TString *newlstr (lua_State *L, const l_char *str, size_t l, lu_hash h) {
-  TString *ts = (TString *)luaM_malloc(L, sizestring(l));
+  TString *ts = cast(TString *, luaM_malloc(L, sizestring(l)));
   stringtable *tb;
   ts->tsv.nexthash = NULL;
   ts->tsv.len = l;
@@ -61,7 +61,7 @@ static TString *newlstr (lua_State *L, const l_char *str, size_t l, lu_hash h) {
   ts->tsv.nexthash = tb->hash[h];  /* chain new entry */
   tb->hash[h] = ts;
   tb->nuse++;
-  if (tb->nuse > (ls_nstr)tb->size && tb->size <= MAX_INT/2)
+  if (tb->nuse > cast(ls_nstr, tb->size) && tb->size <= MAX_INT/2)
     luaS_resize(L, tb->size*2);  /* too crowded */
   return ts;
 }
@@ -85,7 +85,7 @@ TString *luaS_newlstr (lua_State *L, const l_char *str, size_t l) {
 
 
 Udata *luaS_newudata (lua_State *L, size_t s) {
-  Udata *u = (Udata *)luaM_malloc(L, sizeudata(s));
+  Udata *u = cast(Udata *, luaM_malloc(L, sizeudata(s)));
   u->uv.len = s;
   u->uv.tag = 0;
   u->uv.value = u + 1;

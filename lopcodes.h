@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.78 2001/07/24 17:19:07 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.79 2001/08/27 15:14:57 roberto Exp $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -76,37 +76,37 @@ enum OpMode {iABC, iABc, iAsBc};  /* basic instruction format */
 ** the following macros help to manipulate instructions
 */
 
-#define GET_OPCODE(i)	((OpCode)((i)&MASK1(SIZE_OP,0)))
-#define SET_OPCODE(i,o)	(((i)&MASK0(SIZE_OP,0)) | (Instruction)(o))
+#define GET_OPCODE(i)	(cast(OpCode, (i)&MASK1(SIZE_OP,0)))
+#define SET_OPCODE(i,o)	(((i)&MASK0(SIZE_OP,0)) | cast(Instruction, o))
 
-#define GETARG_A(i)	((int)((i)>>POS_A))
+#define GETARG_A(i)	(cast(int, (i)>>POS_A))
 #define SETARG_A(i,u)	((i) = (((i)&MASK0(SIZE_A,POS_A)) | \
-                               ((Instruction)(u)<<POS_A)))
+                               (cast(Instruction, u)<<POS_A)))
 
-#define GETARG_B(i)	((int)(((i)>>POS_B) & MASK1(SIZE_B,0)))
+#define GETARG_B(i)	(cast(int, ((i)>>POS_B) & MASK1(SIZE_B,0)))
 #define SETARG_B(i,b)	((i) = (((i)&MASK0(SIZE_B,POS_B)) | \
-                               ((Instruction)(b)<<POS_B)))
+                               (cast(Instruction, b)<<POS_B)))
 
-#define GETARG_C(i)	((int)(((i)>>POS_C) & MASK1(SIZE_C,0)))
+#define GETARG_C(i)	(cast(int, ((i)>>POS_C) & MASK1(SIZE_C,0)))
 #define SETARG_C(i,b)	((i) = (((i)&MASK0(SIZE_C,POS_C)) | \
-                               ((Instruction)(b)<<POS_C)))
+                               (cast(Instruction, b)<<POS_C)))
 
-#define GETARG_Bc(i)	((int)(((i)>>POS_Bc) & MASK1(SIZE_Bc,0)))
+#define GETARG_Bc(i)	(cast(int, ((i)>>POS_Bc) & MASK1(SIZE_Bc,0)))
 #define SETARG_Bc(i,b)	((i) = (((i)&MASK0(SIZE_Bc,POS_Bc)) | \
-                               ((Instruction)(b)<<POS_Bc)))
+                               (cast(Instruction, b)<<POS_Bc)))
 
 #define GETARG_sBc(i)	(GETARG_Bc(i)-MAXARG_sBc)
-#define SETARG_sBc(i,b)	SETARG_Bc((i),(unsigned int)((b)+MAXARG_sBc))
+#define SETARG_sBc(i,b)	SETARG_Bc((i),cast(unsigned int, (b)+MAXARG_sBc))
 
 
-#define CREATE_ABC(o,a,b,c)	((Instruction)(o) \
-			| ((Instruction)(a)<<POS_A) \
-			| ((Instruction)(b)<<POS_B) \
-			| ((Instruction)(c)<<POS_C))
+#define CREATE_ABC(o,a,b,c)	(cast(Instruction, o) \
+			| (cast(Instruction, a)<<POS_A) \
+			| (cast(Instruction, b)<<POS_B) \
+			| (cast(Instruction, c)<<POS_C))
 
-#define CREATE_ABc(o,a,bc)	((Instruction)(o) \
-			| ((Instruction)(a)<<POS_A) \
-			| ((Instruction)(bc)<<POS_Bc))
+#define CREATE_ABc(o,a,bc)	(cast(Instruction, o) \
+			| (cast(Instruction, a)<<POS_A) \
+			| (cast(Instruction, bc)<<POS_Bc))
 
 
 
@@ -184,7 +184,7 @@ OP_CLOSURE /*	A Bc	R(A) := closure(KPROTO[Bc], R(A), ... ,R(A+n))	*/
 } OpCode;
 
 
-#define NUM_OPCODES	((int)OP_CLOSURE+1)
+#define NUM_OPCODES	(cast(int, OP_CLOSURE+1))
 
 
 
@@ -215,7 +215,7 @@ enum OpModeMask {
 
 extern const lu_byte luaP_opmodes[NUM_OPCODES];
 
-#define getOpMode(m)            ((enum OpMode)(luaP_opmodes[m] & 3))
+#define getOpMode(m)            (cast(enum OpMode, luaP_opmodes[m] & 3))
 #define testOpMode(m, b)        (luaP_opmodes[m] & (1 << (b)))
 
 

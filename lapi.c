@@ -544,8 +544,8 @@ LUA_API int lua_dostring (lua_State *L, const l_char *str) {
 */
 
 /* GC values are expressed in Kbytes: #bytes/2^10 */
-#define GCscale(x)		((int)((x)>>10))
-#define GCunscale(x)		((lu_mem)(x)<<10)
+#define GCscale(x)		(cast(int, (x)>>10))
+#define GCunscale(x)		(cast(lu_mem, (x)<<10))
 
 LUA_API int lua_getgcthreshold (lua_State *L) {
   int threshold;
@@ -602,7 +602,7 @@ LUA_API int lua_name2tag (lua_State *L, const l_char *name) {
     tag = LUA_TNONE;
   else {
     lua_assert(ttype(v) == LUA_TNUMBER);
-    tag = (int)nvalue(v);
+    tag = cast(int, nvalue(v));
   }
   lua_unlock(L);
   return tag;
@@ -695,7 +695,7 @@ LUA_API int lua_getn (lua_State *L, int index) {
   api_check(L, ttype(t) == LUA_TTABLE);
   value = luaH_getstr(hvalue(t), luaS_newliteral(L, l_s("n")));  /* = t.n */
   if (ttype(value) == LUA_TNUMBER)
-    n = (int)nvalue(value);
+    n = cast(int, nvalue(value));
   else {
     lua_Number max = 0;
     int i = hvalue(t)->size;
@@ -707,7 +707,7 @@ LUA_API int lua_getn (lua_State *L, int index) {
         max = nvalue(key(nd));
       nd++;
     }
-    n = (int)max;
+    n = cast(int, max);
   }
   lua_unlock(L);
   return n;

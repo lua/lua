@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.137 2001/07/12 19:34:03 roberto Exp roberto $
+** $Id: ldo.c,v 1.138 2001/07/16 20:24:48 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -176,7 +176,7 @@ struct CallS {  /* data to `f_call' */
 };
 
 static void f_call (lua_State *L, void *ud) {
-  struct CallS *c = (struct CallS *)ud;
+  struct CallS *c = cast(struct CallS *, ud);
   luaD_call(L, c->func);
   if (c->nresults != LUA_MULTRET)
     luaD_adjusttop(L, c->func + c->nresults);
@@ -207,7 +207,7 @@ struct SParser {  /* data to `f_parser' */
 };
 
 static void f_parser (lua_State *L, void *ud) {
-  struct SParser *p = (struct SParser *)ud;
+  struct SParser *p = cast(struct SParser *, ud);
   Proto *tf = p->bin ? luaU_undump(L, p->z) : luaY_parser(L, p->z);
   luaV_Lclosure(L, tf, 0);
 }

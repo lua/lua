@@ -32,9 +32,9 @@
 #define TagDefault LUA_TTABLE
 
 
-#define hashnum(t,n)		(node(t, lmod((lu_hash)(ls_hash)(n), t->size)))
-#define hashstr(t,str)		(node(t, lmod((str)->tsv.hash, t->size)))
-#define hashpointer(t,p)	(node(t, lmod(IntPoint(p), t->size)))
+#define hashnum(t,n)	 (node(t, lmod(cast(lu_hash, cast(ls_hash, n)), t->size)))
+#define hashstr(t,str)	 (node(t, lmod((str)->tsv.hash, t->size)))
+#define hashpointer(t,p) (node(t, lmod(IntPoint(p), t->size)))
 
 
 /*
@@ -61,8 +61,8 @@ Node *luaH_next (lua_State *L, Hash *t, const TObject *key) {
     const TObject *v = luaH_get(t, key);
     if (v == &luaO_nilobject)
       luaD_error(L, l_s("invalid key for `next'"));
-    i = (int)(((const lu_byte *)v -
-               (const lu_byte *)(val(node(t, 0)))) / sizeof(Node)) + 1;
+    i = cast(int, (cast(const lu_byte *, v) -
+                   cast(const lu_byte *, val(node(t, 0)))) / sizeof(Node)) + 1;
   }
   for (; i<t->size; i++) {
     Node *n = node(t, i);
@@ -259,8 +259,8 @@ const TObject *luaH_get (Hash *t, const TObject *key) {
   switch (ttype(key)) {
     case LUA_TSTRING: return luaH_getstr(t, tsvalue(key));
     case LUA_TNUMBER: {
-      int k = (int)nvalue(key);
-      if ((lua_Number)k == nvalue(key))  /* is an integer index? */
+      int k = cast(int, nvalue(key));
+      if (cast(lua_Number, k) == nvalue(key))  /* is an integer index? */
         return luaH_getnum(t, k);  /* use specialized version */
       /* else go through */
     }

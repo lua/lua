@@ -41,7 +41,7 @@ void luaX_init (lua_State *L) {
   for (i=0; i<NUM_RESERVED; i++) {
     TString *ts = luaS_new(L, token2string[i]);
     lua_assert(strlen(token2string[i])+1 <= TOKEN_LEN);
-    ts->tsv.marked = (unsigned short)(RESERVEDMARK+i);  /* reserved word */
+    ts->tsv.marked = cast(unsigned short, RESERVEDMARK+i);  /* reserved word */
   }
 }
 
@@ -71,7 +71,7 @@ void luaX_error (LexState *ls, const l_char *s, int token) {
   l_char buff[TOKEN_LEN];
   luaX_token2str(token, buff);
   if (buff[0] == l_c('\0'))
-    luaX_syntaxerror(ls, s, (l_char *)G(ls->L)->Mbuffer);
+    luaX_syntaxerror(ls, s, cast(l_char *, G(ls->L)->Mbuffer));
   else
     luaX_syntaxerror(ls, s, buff);
 }
@@ -134,7 +134,7 @@ void luaX_setinput (lua_State *L, LexState *LS, ZIO *z, TString *source) {
     if (((len)+(n))*sizeof(l_char) > G(L)->Mbuffsize) \
       luaO_openspace(L, (len)+(n)+EXTRABUFF, l_char)
 
-#define save(L, c, l)	(((l_char *)G(L)->Mbuffer)[l++] = (l_char)c)
+#define save(L, c, l)	(cast(l_char *, G(L)->Mbuffer)[l++] = (l_char)c)
 #define save_and_next(L, LS, l)  (save(L, LS->current, l), next(LS))
 
 
@@ -185,7 +185,7 @@ static void read_number (LexState *LS, int comma, SemInfo *seminfo) {
     }
   }
   save(L, l_c('\0'), l);
-  if (!luaO_str2d((l_char *)G(L)->Mbuffer, &seminfo->r))
+  if (!luaO_str2d(cast(l_char *, G(L)->Mbuffer), &seminfo->r))
     luaX_error(LS, l_s("malformed number"), TK_NUMBER);
 }
 
@@ -231,7 +231,7 @@ static void read_long_string (LexState *LS, SemInfo *seminfo) {
   } endloop:
   save_and_next(L, LS, l);  /* skip the second `]' */
   save(L, l_c('\0'), l);
-  seminfo->ts = luaS_newlstr(L, (l_char *)G(L)->Mbuffer+2, l-5);
+  seminfo->ts = luaS_newlstr(L, cast(l_char *, G(L)->Mbuffer)+2, l-5);
 }
 
 
@@ -283,7 +283,7 @@ static void read_string (LexState *LS, int del, SemInfo *seminfo) {
   }
   save_and_next(L, LS, l);  /* skip delimiter */
   save(L, l_c('\0'), l);
-  seminfo->ts = luaS_newlstr(L, (l_char *)G(L)->Mbuffer+1, l-3);
+  seminfo->ts = luaS_newlstr(L, cast(l_char *, G(L)->Mbuffer)+1, l-3);
 }
 
 
@@ -371,7 +371,7 @@ int luaX_lex (LexState *LS, SemInfo *seminfo) {
         else if (isalpha(LS->current) || LS->current == l_c('_')) {
           /* identifier or reserved word */
           size_t l = readname(LS);
-          TString *ts = luaS_newlstr(LS->L, (l_char *)G(LS->L)->Mbuffer, l);
+          TString *ts = luaS_newlstr(LS->L, cast(l_char *, G(LS->L)->Mbuffer), l);
           if (ts->tsv.marked >= RESERVEDMARK)  /* reserved word? */
             return ts->tsv.marked-RESERVEDMARK+FIRST_RESERVED;
           seminfo->ts = ts;

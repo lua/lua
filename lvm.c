@@ -293,8 +293,8 @@ void luaV_strconc (lua_State *L, int total, StkId top) {
         luaG_concaterror(L, top-2, top-1);
     } else if (tsvalue(top-1)->tsv.len > 0) {  /* if len=0, do nothing */
       /* at least two string values; get as many as possible */
-      lu_mem tl = (lu_mem)tsvalue(top-1)->tsv.len +
-                  (lu_mem)tsvalue(top-2)->tsv.len;
+      lu_mem tl = cast(lu_mem, tsvalue(top-1)->tsv.len) +
+                  cast(lu_mem, tsvalue(top-2)->tsv.len);
       l_char *buffer;
       int i;
       while (n < total && !tostring(L, top-n-1)) {  /* collect total length */
@@ -618,7 +618,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         runtime_check(L, ttype(ra) == LUA_TTABLE &&
                          ttype(ra+1) == LUA_TNUMBER);
         t = hvalue(ra);
-        n = (int)nvalue(ra+1);
+        n = cast(int, nvalue(ra+1));
         n = luaH_nexti(t, n);
         if (n != -1) {  /* repeat loop? */
           Node *node = node(t, n);

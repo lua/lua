@@ -14,7 +14,7 @@
 #define key(_n)		(&(_n)->key)
 #define val(_n)		(&(_n)->val)
 
-#define settableval(p,v)	setobj((TObject *)p, v)
+#define settableval(p,v)	setobj(cast(TObject *, p), v)
 
 
 const TObject *luaH_getnum (Hash *t, int key);

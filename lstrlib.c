@@ -91,7 +91,7 @@ static int str_byte (lua_State *L) {
   size_t l;
   const l_char *s = luaL_check_lstr(L, 1, &l);
   sint32 pos = posrelat(luaL_opt_long(L, 2, 1), l);
-  luaL_arg_check(L, 0<pos && (size_t)pos<=l, 2,  l_s("out of range"));
+  luaL_arg_check(L, 0 < pos && (size_t)(pos) <= l, 2,  l_s("out of range"));
   lua_pushnumber(L, uchar(s[pos-1]));
   return 1;
 }
@@ -424,7 +424,7 @@ static int str_find (lua_State *L) {
   const l_char *s = luaL_check_lstr(L, 1, &l1);
   const l_char *p = luaL_check_lstr(L, 2, &l2);
   sint32 init = posrelat(luaL_opt_long(L, 3, 1), l1) - 1;
-  luaL_arg_check(L, 0 <= init && (size_t)init <= l1, 3, l_s("out of range"));
+  luaL_arg_check(L, 0 <= init && (size_t)(init) <= l1, 3, l_s("out of range"));
   if (lua_gettop(L) > 3 ||  /* extra argument? */
       strpbrk(p, SPECIALS) == NULL) {  /* or no special characters? */
     const l_char *s2 = lmemfind(s+init, l1-init, p, l2);
@@ -603,7 +603,7 @@ static int str_format (lua_State *L) {
           sprintf(buff, form, luaL_check_int(L, arg));
           break;
         case l_c('o'):  case l_c('u'):  case l_c('x'):  case l_c('X'):
-          sprintf(buff, form, (unsigned int)luaL_check_number(L, arg));
+          sprintf(buff, form, (unsigned int)(luaL_check_number(L, arg)));
           break;
         case l_c('e'):  case l_c('E'): case l_c('f'):
         case l_c('g'): case l_c('G'):

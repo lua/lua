@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.153 2001/08/10 20:53:03 roberto Exp roberto $
+** $Id: lparser.c,v 1.154 2001/08/27 15:16:28 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -266,7 +266,7 @@ static void code_params (LexState *ls, int nparams, short dots) {
   FuncState *fs = ls->fs;
   adjustlocalvars(ls, nparams);
   luaX_checklimit(ls, fs->nactloc, MAXPARAMS, l_s("parameters"));
-  fs->f->numparams = (short)fs->nactloc;  /* `self' could be there already */
+  fs->f->numparams = cast(short, fs->nactloc);  /* `self' could be there already */
   fs->f->is_vararg = dots;
   if (dots) {
     new_localvarstr(ls, l_s("arg"), 0);
@@ -758,13 +758,13 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
   else simpleexp(ls, v);
   /* expand while operators have priorities higher than `limit' */
   op = getbinopr(ls->t.token);
-  while (op != OPR_NOBINOPR && (int)priority[op].left > limit) {
+  while (op != OPR_NOBINOPR && cast(int, priority[op].left) > limit) {
     expdesc v2;
     BinOpr nextop;
     next(ls);
     luaK_infix(ls->fs, op, v);
     /* read sub-expression with higher priority */
-    nextop = subexpr(ls, &v2, (int)priority[op].right);
+    nextop = subexpr(ls, &v2, cast(int, priority[op].right));
     luaK_posfix(ls->fs, op, v, &v2);
     op = nextop;
   }

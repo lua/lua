@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.36 2001/06/20 21:07:57 roberto Exp roberto $
+** $Id: llex.h,v 1.37 2001/07/22 00:59:36 roberto Exp $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -33,7 +33,7 @@ enum RESERVED {
 };
 
 /* number of reserved words */
-#define NUM_RESERVED	((int)(TK_WHILE-FIRST_RESERVED+1))
+#define NUM_RESERVED	(cast(int, TK_WHILE-FIRST_RESERVED+1))
 
 
 typedef union {

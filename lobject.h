@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.109 2001/06/28 14:56:25 roberto Exp roberto $
+** $Id: lobject.h,v 1.110 2001/08/27 15:16:28 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -21,6 +21,10 @@
 #define UNUSED(x)	((void)(x))	/* to avoid warnings */
 #endif
 
+
+#ifndef cast
+#define cast(t, exp)	((t)(exp))
+#endif
 
 
 /* tags for values visible from Lua == first user-created tag */
@@ -96,7 +100,7 @@ typedef union TString {
 } TString;
 
 
-#define getstr(ts)	((l_char *)((ts) + 1))
+#define getstr(ts)	cast(l_char *, (ts) + 1)
 #define svalue(o)       getstr(tsvalue(o))
 
 
@@ -196,7 +200,7 @@ typedef struct Hash {
 /*
 ** `module' operation for hashing (size is always a power of 2)
 */
-#define lmod(s,size)	((int)((s) & ((size)-1)))
+#define lmod(s,size)	(cast(int, (s) & ((size)-1)))
 
 
 /*
@@ -217,7 +221,7 @@ typedef struct CallInfo {
 extern const TObject luaO_nilobject;
 
 
-#define luaO_openspace(L,n,t)	((t *)luaO_openspaceaux(L,(n)*sizeof(t)))
+#define luaO_openspace(L,n,t)	cast(t *, luaO_openspaceaux(L,(n)*sizeof(t)))
 void *luaO_openspaceaux (lua_State *L, size_t n);
 
 int luaO_equalObj (const TObject *t1, const TObject *t2);

@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.48 2001/02/23 17:17:25 roberto Exp roberto $
+** $Id: lmem.c,v 1.49 2001/03/26 14:31:49 roberto Exp $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -34,8 +34,9 @@ void *luaM_growaux (lua_State *L, void *block, int *size, int size_elems,
       newsize = limit;  /* still have at least MINPOWER2 free places */
     else luaD_error(L, errormsg);
   }
-  newblock = luaM_realloc(L, block, (lu_mem)(*size)*(lu_mem)size_elems,
-                                    (lu_mem)newsize*(lu_mem)size_elems);
+  newblock = luaM_realloc(L, block,
+                          cast(lu_mem, *size)*cast(lu_mem, size_elems),
+                          cast(lu_mem, newsize)*cast(lu_mem, size_elems));
   *size = newsize;  /* update only when everything else is OK */
   return newblock;
 }

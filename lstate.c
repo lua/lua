@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.65 2001/06/21 16:41:34 roberto Exp roberto $
+** $Id: lstate.c,v 1.66 2001/07/17 17:54:46 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -33,7 +33,7 @@ static void close_state (lua_State *L, lua_State *OL);
 ** open parts that may cause memory-allocation errors
 */
 static void f_luaopen (lua_State *L, void *ud) {
-  struct Sopen *so = (struct Sopen *)ud;
+  struct Sopen *so = cast(struct Sopen *, ud);
   if (so->stacksize == 0)
     so->stacksize = DEFAULT_STACK_SIZE;
   else
