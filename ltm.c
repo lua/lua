@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.76 2001/07/24 22:39:34 roberto Exp roberto $
+** $Id: ltm.c,v 1.78 2001/08/31 19:46:07 roberto Exp $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -60,7 +60,7 @@ static const lu_byte luaT_validevents[NUM_TAGS][TM_N] = {
   {1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}   /* LUA_TFUNCTION */
 };
 
-int luaT_validevent (int t, int e) {  /* ORDER LUA_T */
+static int luaT_validevent (int t, int e) {  /* ORDER LUA_T */
   return (t >= NUM_TAGS) ?  1 : cast(int, luaT_validevents[t][e]);
 }
 

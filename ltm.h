@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 1.26 2001/07/12 18:11:58 roberto Exp roberto $
+** $Id: ltm.h,v 1.27 2001/08/27 15:13:59 roberto Exp $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -74,7 +74,6 @@ void luaT_init (lua_State *L);
 int luaT_newtag (lua_State *L, const l_char *name, int basictype);
 const l_char *luaT_typename (global_State *G, const TObject *o);
 int luaT_tag (const TObject *o);
-int luaT_validevent (int t, int e);  /* used by compatibility module */
 
 
 #endif
