@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.25 1994/12/13 15:54:21 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.26 1994/12/16 15:56:45 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -269,7 +269,7 @@ static void pushsubscript (void)
   else 
   {
     Object *h = lua_hashget(avalue(top-2), top-1);
-    if (h == NULL)
+    if (h == NULL || tag(h) == LUA_T_NIL)
       do_call(&luaI_fallBacks[FB_INDEX].function, (top-stack)-2, 1, (top-stack)-2);
     else
     {
