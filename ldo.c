@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.11 1997/11/26 20:28:22 roberto Exp $
+** $Id: ldo.c,v 1.12 1997/11/26 20:44:52 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -143,25 +143,36 @@ void luaD_callHook (StkId base, lua_Type type, int isreturn)
 
 
 /*
-** Call a C function. L->Cstack.base will point to the top of the stack,
-** and L->Cstack.num is the number of parameters. Returns an index
-** to the first result from C.
+** Call a C function.
+** Cstack.num is the number of arguments; Cstack.lua2C points to the
+** first argument. Returns an index to the first result from C.
 */
-static StkId callC (lua_CFunction func, StkId base)
+static StkId callC (struct Closure *cl, StkId base)
 {
-  struct C_Lua_Stack oldCLS = L->Cstack;
+  struct C_Lua_Stack *CS = &L->Cstack;
+  struct C_Lua_Stack oldCLS = *CS;
   StkId firstResult;
-  L->Cstack.num = (L->stack.top-L->stack.stack) - base;
-  /* incorporate parameters on the L->stack.stack */
-  L->Cstack.lua2C = base;
-  L->Cstack.base = base+L->Cstack.num;  /* == top-stack */
+  int numarg = (L->stack.top-L->stack.stack) - base;
+  if (cl->nelems > 0) {  /* are there upvalues? */
+    int i;
+    luaD_checkstack(cl->nelems);
+    for (i=1; i<=numarg; i++)  /* open space */
+      *(L->stack.top+cl->nelems-i) = *(L->stack.top-i);
+    /* copy upvalues to stack */
+    memcpy(L->stack.top-numarg, cl->consts+1, cl->nelems*sizeof(TObject));
+    L->stack.top += cl->nelems;
+    numarg += cl->nelems;
+  }
+  CS->num = numarg;
+  CS->lua2C = base;
+  CS->base = base+numarg;  /* == top-stack */
   if (lua_callhook)
     luaD_callHook(base, LUA_T_CPROTO, 0);
-  (*func)();
+  (*(fvalue(cl->consts)))();  /* do the actual call */
   if (lua_callhook)  /* func may have changed lua_callhook */
     luaD_callHook(base, LUA_T_CPROTO, 1);
-  firstResult = L->Cstack.base;
-  L->Cstack = oldCLS;
+  firstResult = CS->base;
+  *CS = oldCLS;
   return firstResult;
 }
 
@@ -188,7 +199,7 @@ void luaD_call (StkId base, int nResults)
   if (ttype(func) == LUA_T_FUNCTION) {
     TObject *proto = protovalue(func);
     ttype(func) = LUA_T_MARK;
-    firstResult = (ttype(proto) == LUA_T_CPROTO) ? callC(fvalue(proto), base)
+    firstResult = (ttype(proto) == LUA_T_CPROTO) ? callC(clvalue(func), base)
                                          : luaV_execute(func->value.cl, base);
   }
   else { /* func is not a function */

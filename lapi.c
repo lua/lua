@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.8 1997/11/26 18:53:45 roberto Exp roberto $
+** $Id: lapi.c,v 1.9 1997/11/27 15:59:25 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -92,18 +92,6 @@ lua_Object lua_lua2C (int number)
   /* Ref(L->stack.stack+(L->Cstack.lua2C+number-1)) ==
      L->stack.stack+(L->Cstack.lua2C+number-1)-L->stack.stack+1 == */
   return L->Cstack.lua2C+number;
-}
-
-
-lua_Object lua_upvalue (int n)
-{
-  TObject *f = L->stack.stack+L->Cstack.lua2C-1;
-  if (ttype(f) != LUA_T_MARK || n <= 0 || n > clvalue(f)->nelems)
-    return LUA_NOOBJECT;
-if (ttype(protovalue(f)) != LUA_T_CPROTO) lua_error("BAD!!");
-  *L->stack.top = clvalue(f)->consts[n];
-  incr_top;
-  return put_luaObjectonTop();
 }
 
 
@@ -317,17 +305,13 @@ void lua_pushstring (char *s)
 
 void lua_pushCclosure (lua_CFunction fn, int n)
 {
-  if (fn == NULL) {
-    ttype(L->stack.top) = LUA_T_NIL;
-    incr_top;
-  }
-  else {
-    checkCparams(n);
-    ttype(L->stack.top) = LUA_T_CPROTO;
-    fvalue(L->stack.top) = fn;
-    incr_top;
-    luaV_closure(n);
-  }
+  if (fn == NULL)
+    lua_error("API error - attempt to push a NULL Cfunction");
+  checkCparams(n);
+  ttype(L->stack.top) = LUA_T_CPROTO;
+  fvalue(L->stack.top) = fn;
+  incr_top;
+  luaV_closure(n);
 }
 
 void lua_pushusertag (void *u, int tag)

@@ -1,6 +1,6 @@
 /*
-** $Id: lua.h,v 1.5 1997/11/26 18:53:45 roberto Exp roberto $
-** LUA - An Extensible Extension Language
+** $Id: lua.h,v 1.6 1997/11/27 15:59:25 roberto Exp roberto $
+** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
 */
@@ -75,7 +75,6 @@ void	       lua_endblock		(void);
 lua_Object     lua_lua2C 		(int number);
 #define	       lua_getparam(_)		lua_lua2C(_)
 #define	       lua_getresult(_)		lua_lua2C(_)
-lua_Object     lua_upvalue		(int n);
 
 int            lua_isnil                (lua_Object object);
 int            lua_istable              (lua_Object object);

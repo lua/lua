@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.10 1997/11/26 19:40:27 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.11 1997/11/27 15:59:44 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -399,7 +399,10 @@ static void testC (void)
         break;
 
       case 'c': reg[getnum(s)] = lua_createtable(); break;
-      case 'C': lua_pushCclosure(testC, getnum(s)); break;
+      case 'C': { lua_CFunction f = lua_getcfunction(lua_getglobal(getname(s)));
+                  lua_pushCclosure(f, getnum(s));
+                  break;
+                }
       case 'P': reg[getnum(s)] = lua_pop(); break;
       case 'g': { int n=getnum(s); reg[n]=lua_getglobal(getname(s)); break; }
       case 'G': { int n = getnum(s);
@@ -419,7 +422,6 @@ static void testC (void)
       case 'I': reg[getnum(s)] = lua_rawgettable(); break;
       case 't': lua_settable(); break;
       case 'T': lua_rawsettable(); break;
-      case 'U': { int n=getnum(s); reg[n]=lua_upvalue(getnum(s)); break; }
       default: luaL_verror("unknown command in `testC': %c", *(s-1));
     }
   if (*s == 0) return;
