@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.83 2002/06/20 20:41:46 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.84 2002/06/24 17:23:16 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -34,7 +34,7 @@ static int luaB_print (lua_State *L) {
     const char *s;
     lua_pushvalue(L, -1);  /* function to be called */
     lua_pushvalue(L, i);   /* value to print */
-    lua_upcall(L, 1, 1);
+    lua_call(L, 1, 1);
     s = lua_tostring(L, -1);  /* get result */
     if (s == NULL)
       return luaL_error(L, "`tostring' must return a string to `print'");
@@ -83,8 +83,10 @@ static int luaB_error (lua_State *L) {
 
 static int luaB_getmetatable (lua_State *L) {
   luaL_check_any(L, 1);
-  if (!lua_getmetatable(L, 1))
-    return 0;  /* no metatable */
+  if (!lua_getmetatable(L, 1)) {
+    lua_pushnil(L);
+    return 1;  /* no metatable */
+  }
   else {
     lua_pushliteral(L, "__metatable");
     lua_rawget(L, -2);
@@ -182,11 +184,20 @@ static int luaB_next (lua_State *L) {
 }
 
 
-static int luaB_nexti (lua_State *L) {
+static int luaB_pairs (lua_State *L) {
+  luaL_check_type(L, 1, LUA_TTABLE);
+  lua_getglobal(L, "next");  /* return generator, */
+  lua_pushvalue(L, 1);  /* state, */
+  lua_pushnil(L);  /* and initial value */
+  return 3;
+}
+
+
+static int luaB_ipairs (lua_State *L) {
   lua_Number i = lua_tonumber(L, 2);
   luaL_check_type(L, 1, LUA_TTABLE);
   if (i == 0 && lua_isnull(L, 2)) {  /* `for' start? */
-    lua_getglobal(L, "nexti");  /* return generator, */
+    lua_getglobal(L, "ipairs");  /* return generator, */
     lua_pushvalue(L, 1);  /* state, */
     lua_pushnumber(L, 0);  /* and initial value */
     return 3;
@@ -222,6 +233,15 @@ static int luaB_loadstring (lua_State *L) {
 static int luaB_loadfile (lua_State *L) {
   const char *fname = luaL_opt_string(L, 1, NULL);
   return passresults(L, luaL_loadfile(L, fname));
+}
+
+
+static int luaB_dofile (lua_State *L) {
+  const char *fname = luaL_opt_string(L, 1, NULL);
+  int status = luaL_loadfile(L, fname);
+  if (status != 0) lua_error(L);
+  lua_call(L, 0, LUA_MULTRET);
+  return lua_gettop(L) - 1;
 }
 
 
@@ -294,21 +314,27 @@ static int luaB_tostring (lua_State *L) {
 
 
 static int luaB_newproxy (lua_State *L) {
-  void *u;
-  lua_pushnil(L);  /* default argument (if there is nothing at stack[1]) */
-  u = lua_newuserdata(L, sizeof(lua_CFunction));  /* create proxy */
-  *(lua_CFunction *)u = luaB_newproxy;  /* mark it as a proxy */
+  static const char dummy = '\0';
+  lua_settop(L, 1);
+  luaL_weakregistry(L);  /* get weak registry */
+  lua_newuserdata(L, 0);  /* create proxy */
   if (lua_toboolean(L, 1) == 0)
     return 1;  /* no metatable */
-  else if ((u = lua_touserdata(L, 1)) != NULL) {
-    luaL_arg_check(L, *(lua_CFunction *)u == luaB_newproxy, 1, "invalid proxy");
-    lua_getmetatable(L, 1);  /* reuse metatable */
+  else if (lua_isboolean(L, 1)) {
+    lua_newtable(L);  /* create a new metatable `m' ... */
+    lua_pushvalue(L, -1);  /* ... and mark `m' as a valid metatable */
+    lua_pushudataval(L, (void *)&dummy);
+    lua_rawset(L, 2);  /* weakregistry[m] = &dummy */
   }
   else {
-    luaL_check_type(L, 1, LUA_TBOOLEAN);
-    lua_newtable(L);  /* create a new metatable */
+    if (lua_getmetatable(L, 1))  /* check whether registry[m] == &dummy */
+      lua_rawget(L, 2);
+    luaL_arg_check(L, (char *)lua_touserdata(L, -1) == &dummy, 1,
+                      "boolean/proxy expected");
+    lua_getmetatable(L, 1);  /* metatable is valid */
   }
-  lua_setmetatable(L, -2);
+  lua_setmetatable(L, 3);
+  lua_pushvalue(L, 3);
   return 1;
 }
 
@@ -380,7 +406,7 @@ static int luaB_require (lua_State *L) {
   if (!lua_istable(L, 2)) return luaL_error(L, REQTAB " is not a table");
   path = getpath(L);
   lua_pushvalue(L, 1);  /* check package's name in book-keeping table */
-  lua_gettable(L, 2);
+  lua_rawget(L, 2);
   if (!lua_isnil(L, -1))  /* is it there? */
     return 0;  /* package is already loaded */
   else {  /* must load it */
@@ -393,10 +419,10 @@ static int luaB_require (lua_State *L) {
   }
   switch (status) {
     case 0: {
-      lua_upcall(L, 0, 0);  /* run loaded module */
+      lua_call(L, 0, 0);  /* run loaded module */
       lua_pushvalue(L, 1);
       lua_pushboolean(L, 1);
-      lua_settable(L, 2);  /* mark it as loaded */
+      lua_rawset(L, 2);  /* mark it as loaded */
       return 0;
     }
     case LUA_ERRFILE: {  /* file not found */
@@ -419,7 +445,8 @@ static const luaL_reg base_funcs[] = {
   {"getglobals", luaB_getglobals},
   {"setglobals", luaB_setglobals},
   {"next", luaB_next},
-  {"nexti", luaB_nexti},
+  {"ipairs", luaB_ipairs},
+  {"pairs", luaB_pairs},
   {"print", luaB_print},
   {"tonumber", luaB_tonumber},
   {"tostring", luaB_tostring},
@@ -434,6 +461,7 @@ static const luaL_reg base_funcs[] = {
   {"collectgarbage", luaB_collectgarbage},
   {"gcinfo", luaB_gcinfo},
   {"loadfile", luaB_loadfile},
+  {"dofile", luaB_dofile},
   {"loadstring", luaB_loadstring},
   {"require", luaB_require},
   {NULL, NULL}
@@ -531,8 +559,8 @@ static void base_open (lua_State *L) {
   luaL_openlib(L, base_funcs, 0);  /* open lib into global table */
   lua_pushliteral(L, "_VERSION");
   lua_pushliteral(L, LUA_VERSION);
-  lua_settable(L, -3);  /* set global _VERSION */
-  lua_settable(L, -1);  /* set global _G */
+  lua_rawset(L, -3);  /* set global _VERSION */
+  lua_rawset(L, -1);  /* set global _G */
 }
 
 
