@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.150 2004/06/29 16:58:17 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.151 2004/07/01 14:26:28 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -462,17 +462,12 @@ static int luaB_newproxy (lua_State *L) {
 static int luaB_require (lua_State *L) {
   const char *name = luaL_checkstring(L, 1);
   const char *fname;
-  int loaded;
-  lua_getglobal(L, REQTAB);
-  loaded = lua_gettop(L);
-  if (!lua_istable(L, loaded))
-    return luaL_error(L, "global `" REQTAB "' is not a table");
-  lua_getfield(L, loaded, name);
+  lua_getfield(L, lua_upvalueindex(1), name);
   if (lua_toboolean(L, -1))  /* is it there? */
     return 1;  /* package is already loaded; return its result */
   /* else must load it; first mark it as loaded */
   lua_pushboolean(L, 1);
-  lua_setfield(L, loaded, name);  /* _LOADED[name] = true */
+  lua_setfield(L, lua_upvalueindex(1), name);  /* _LOADED[name] = true */
   fname = luaL_searchpath(L, name, NULL);
   if (fname == NULL || luaL_loadfile(L, fname) != 0)
     return luaL_error(L, "error loading package `%s' (%s)", name,
@@ -480,8 +475,8 @@ static int luaB_require (lua_State *L) {
   lua_pushvalue(L, 1);  /* pass name as argument to module */
   lua_call(L, 1, 1);  /* run loaded module */
   if (!lua_isnil(L, -1))  /* nil return? */
-    lua_setfield(L, loaded, name);
-  lua_getfield(L, loaded, name);  /* return _LOADED[name] */
+    lua_setfield(L, lua_upvalueindex(1), name);
+  lua_getfield(L, lua_upvalueindex(1), name);  /* return _LOADED[name] */
   return 1;
 }
 
@@ -513,7 +508,6 @@ static const luaL_reg base_funcs[] = {
   {"dofile", luaB_dofile},
   {"loadstring", luaB_loadstring},
   {"load", luaB_load},
-  {"require", luaB_require},
   {NULL, NULL}
 };
 
@@ -650,15 +644,21 @@ static void base_open (lua_State *L) {
   lua_setfield(L, -2, "__mode");  /* metatable(w).__mode = "kv" */
   lua_pushcclosure(L, luaB_newproxy, 1);
   lua_setfield(L, -2, "newproxy");  /* set global `newproxy' */
-  lua_setfield(L, -1, "_G");  /* set global _G */
+  /* `require' needs a table to keep loaded chunks */
+  lua_newtable(L);
+  lua_pushvalue(L, -1);
+  lua_setglobal(L, REQTAB);
+  lua_pushcclosure(L, luaB_require, 1);
+  lua_setfield(L, -2, "require");
+  /* set global _G */
+  lua_pushvalue(L, -1);
+  lua_setfield(L, -2, "_G");
 }
 
 
 LUALIB_API int luaopen_base (lua_State *L) {
   base_open(L);
   luaL_openlib(L, LUA_COLIBNAME, co_funcs, 0);
-  lua_newtable(L);
-  lua_setglobal(L, REQTAB);
   return 2;
 }
 
