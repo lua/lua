@@ -3,7 +3,7 @@
 ** Mathematics library to LUA
 */
 
-char *rcs_mathlib="$Id: mathlib.c,v 1.3 1994/08/15 14:13:44 celes Exp celes $";
+char *rcs_mathlib="$Id: mathlib.c,v 1.4 1994/10/11 13:06:47 celes Exp roberto $";
 
 #include <stdio.h>		/* NULL */
 #include <math.h>
@@ -160,16 +160,27 @@ static void math_sqrt (void)
  lua_pushnumber (sqrt(d));
 }
 
+static int old_pow;
+
 static void math_pow (void)
 {
- double d1, d2;
  lua_Object o1 = lua_getparam (1);
  lua_Object o2 = lua_getparam (2);
- if (!lua_isnumber(o1) || !lua_isnumber(o2))
- { lua_error ("incorrect arguments to function `pow'"); return; }
- d1 = lua_getnumber(o1);
- d2 = lua_getnumber(o2);
- lua_pushnumber (pow(d1,d2));
+ lua_Object op = lua_getparam(3);
+ if (!lua_isnumber(o1) || !lua_isnumber(o2) || *(lua_getstring(op)) != 'p')
+ {
+   lua_pushobject(o1);
+   lua_pushobject(o2);
+   lua_pushobject(op);
+   if (lua_callfunction(lua_getlocked(old_pow)) != 0)
+     lua_error(NULL);
+ }
+ else
+ {
+   double d1 = lua_getnumber(o1);
+   double d2 = lua_getnumber(o2);
+   lua_pushnumber (pow(d1,d2));
+ }
 }
 
 static void math_min (void)
@@ -292,7 +303,6 @@ void mathlib_open (void)
  lua_register ("floor", math_floor);
  lua_register ("mod",   math_mod);
  lua_register ("sqrt",  math_sqrt);
- lua_register ("pow",   math_pow);
  lua_register ("min",   math_min);
  lua_register ("max",   math_max);
  lua_register ("log",   math_log);
@@ -300,4 +310,5 @@ void mathlib_open (void)
  lua_register ("exp",   math_exp);
  lua_register ("deg",   math_deg);
  lua_register ("rad",   math_rad);
+ old_pow = lua_lock(lua_setfallback("arith", math_pow));
 }

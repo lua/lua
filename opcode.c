@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.14 1994/11/17 13:58:57 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.15 1994/11/17 16:41:42 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -69,7 +69,7 @@ static void lua_message (char *s)
 */
 void lua_error (char *s)
 {
-  lua_message(s);
+  if (s) lua_message(s);
   if (errorJmp)
     longjmp(*errorJmp, 1);
   else
@@ -877,19 +877,19 @@ static int lua_execute (Byte *pc, int base)
    break;
 
     case LTOP:
-      comparison(LUA_T_NUMBER, LUA_T_NIL, LUA_T_NIL, "<");
+      comparison(LUA_T_NUMBER, LUA_T_NIL, LUA_T_NIL, "lt");
       break;
 
    case LEOP:
-      comparison(LUA_T_NUMBER, LUA_T_NUMBER, LUA_T_NIL, "<=");
+      comparison(LUA_T_NUMBER, LUA_T_NUMBER, LUA_T_NIL, "le");
       break;
 
    case GTOP:
-      comparison(LUA_T_NIL, LUA_T_NIL, LUA_T_NUMBER, ">");
+      comparison(LUA_T_NIL, LUA_T_NIL, LUA_T_NUMBER, "gt");
       break;
 
    case GEOP:
-      comparison(LUA_T_NIL, LUA_T_NUMBER, LUA_T_NUMBER, ">=");
+      comparison(LUA_T_NIL, LUA_T_NUMBER, LUA_T_NUMBER, "ge");
       break;
 
    case ADDOP:
@@ -897,7 +897,7 @@ static int lua_execute (Byte *pc, int base)
     Object *l = top-2;
     Object *r = top-1;
     if (tonumber(r) || tonumber(l))
-      call_arith("+");
+      call_arith("add");
     else
     {
       nvalue(l) += nvalue(r);
@@ -911,7 +911,7 @@ static int lua_execute (Byte *pc, int base)
     Object *l = top-2;
     Object *r = top-1;
     if (tonumber(r) || tonumber(l))
-      call_arith("-");
+      call_arith("sub");
     else
     {
       nvalue(l) -= nvalue(r);
@@ -925,7 +925,7 @@ static int lua_execute (Byte *pc, int base)
     Object *l = top-2;
     Object *r = top-1;
     if (tonumber(r) || tonumber(l))
-      call_arith("*");
+      call_arith("mul");
     else
     {
       nvalue(l) *= nvalue(r);
@@ -939,7 +939,7 @@ static int lua_execute (Byte *pc, int base)
     Object *l = top-2;
     Object *r = top-1;
     if (tonumber(r) || tonumber(l))
-      call_arith("/");
+      call_arith("div");
     else
     {
       nvalue(l) /= nvalue(r);
@@ -949,18 +949,8 @@ static int lua_execute (Byte *pc, int base)
    break;
 
    case POWOP:
-   {
-    Object *l = top-2;
-    Object *r = top-1;
-    if (tonumber(r) || tonumber(l))
-      call_arith("^");
-    else
-    {
-      nvalue(l) = pow(nvalue(l), nvalue(r));
-      --top;
-    }
-   }
-   break;
+    call_arith("pow");
+    break;
 
    case CONCOP:
    {
