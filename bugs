@@ -58,3 +58,6 @@ Fri Dec 18 11:22:55 EDT 1998
 >> "tonumber" goes crazy with negative numbers in other bases (not 10),
 because "strtol" returns long, not unsigned long.
 
+** lstrlib.c
+Mon Jan  4 10:41:40 EDT 1999
+>> "format" does not check size of format item (such as "%00000...00000d").

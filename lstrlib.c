@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.21 1998/12/01 18:41:25 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.22 1998/12/28 13:44:54 roberto Exp $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -67,8 +67,7 @@ static void str_lower (void) {
 }
 
 
-static void str_upper (void)
-{
+static void str_upper (void) {
   long l;
   int i;
   char *s = luaL_check_lstr(1, &l);
@@ -90,14 +89,14 @@ static void str_rep (void)
 }
 
 
-static void str_byte (void)
-{
+static void str_byte (void) {
   long l;
   char *s = luaL_check_lstr(1, &l);
   long pos = posrelat(luaL_opt_long(2, 1), l);
   luaL_arg_check(0<pos && pos<=l, 2,  "out of range");
   lua_pushnumber((unsigned char)s[pos-1]);
 }
+
 
 static void str_char (void) {
   int i = 0;
@@ -111,8 +110,9 @@ static void str_char (void) {
 }
 
 
+
 /*
-** =======================================================
+** {======================================================
 ** PATTERN MATCHING
 ** =======================================================
 */
@@ -120,8 +120,8 @@ static void str_char (void) {
 #define MAX_CAPT 9
 
 struct Capture {
-  int level;  /* total number of captures (finished or unfinished) */
   char *src_end;  /* end ('\0') of source string */
+  int level;  /* total number of captures (finished or unfinished) */
   struct {
     char *init;
     int len;  /* -1 signals unfinished capture */
@@ -133,8 +133,7 @@ struct Capture {
 #define SPECIALS  "^$*?.([%-"
 
 
-static void push_captures (struct Capture *cap)
-{
+static void push_captures (struct Capture *cap) {
   int i;
   for (i=0; i<cap->level; i++) {
     int l = cap->capture[i].len;
@@ -144,8 +143,7 @@ static void push_captures (struct Capture *cap)
 }
 
 
-static int check_cap (int l, struct Capture *cap)
-{
+static int check_cap (int l, struct Capture *cap) {
   l -= '1';
   if (!(0 <= l && l < cap->level && cap->capture[l].len != -1))
     lua_error("invalid capture index");
@@ -153,8 +151,7 @@ static int check_cap (int l, struct Capture *cap)
 }
 
 
-static int capture_to_close (struct Capture *cap)
-{
+static int capture_to_close (struct Capture *cap) {
   int level = cap->level;
   for (level--; level>=0; level--)
     if (cap->capture[level].len == -1) return level;
@@ -163,14 +160,12 @@ static int capture_to_close (struct Capture *cap)
 }
 
 
-static char *bracket_end (char *p)
-{
+static char *bracket_end (char *p) {
   return (*p == 0) ? NULL : strchr((*p=='^') ? p+2 : p+1, ']');
 }
 
 
-static int matchclass (int c, int cl)
-{
+static int matchclass (int c, int cl) {
   int res;
   switch (tolower(cl)) {
     case 'a' : res = isalpha(c); break;
@@ -181,15 +176,15 @@ static int matchclass (int c, int cl)
     case 's' : res = isspace(c); break;
     case 'u' : res = isupper(c); break;
     case 'w' : res = isalnum(c); break;
+    case 'x' : res = isxdigit(c); break;
     case 'z' : res = (c == '\0'); break;
     default: return (cl == c);
   }
-  return (islower((unsigned char)cl) ? res : !res);
+  return (islower(cl) ? res : !res);
 }
 
 
-int luaI_singlematch (int c, char *p, char **ep)
-{
+int luaI_singlematch (int c, char *p, char **ep) {
   switch (*p) {
     case '.':  /* matches any char */
       *ep = p+1;
@@ -228,8 +223,7 @@ int luaI_singlematch (int c, char *p, char **ep)
 }
 
 
-static char *matchbalance (char *s, int b, int e, struct Capture *cap)
-{
+static char *matchbalance (char *s, int b, int e, struct Capture *cap) {
   if (*s != b) return NULL;
   else {
     int cont = 1;
@@ -244,8 +238,7 @@ static char *matchbalance (char *s, int b, int e, struct Capture *cap)
 }
 
 
-static char *matchitem (char *s, char *p, struct Capture *cap, char **ep)
-{
+static char *matchitem (char *s, char *p, struct Capture *cap, char **ep) {
   if (*p == ESC) {
     p++;
     if (isdigit((unsigned char)*p)) {  /* capture */
@@ -265,14 +258,13 @@ static char *matchitem (char *s, char *p, struct Capture *cap, char **ep)
     }
     else p--;  /* and go through */
   }
-  /* "luaI_singlematch" sets "ep" (so must be called even when *s == 0) */
+  /* "luaI_singlematch" sets "ep" (so must be called even at the end of "s" */
   return (luaI_singlematch((unsigned char)*s, p, ep) && s<cap->src_end) ?
                     s+1 : NULL;
 }
 
 
-static char *match (char *s, char *p, struct Capture *cap)
-{
+static char *match (char *s, char *p, struct Capture *cap) {
   init: /* using goto's to optimize tail recursion */
   switch (*p) {
     case '(': {  /* start capture */
@@ -298,7 +290,7 @@ static char *match (char *s, char *p, struct Capture *cap)
         return s;
       /* else go through */
     default: {  /* it is a pattern item */
-      char *ep;  /* get what is next */
+      char *ep;  /* will point to what is next */
       char *s1 = matchitem(s, p, cap, &ep);
       switch (*ep) {
         case '*': {  /* repetition */
@@ -333,8 +325,7 @@ static char *match (char *s, char *p, struct Capture *cap)
 }
 
 
-static void str_find (void)
-{
+static void str_find (void) {
   long l;
   char *s = luaL_check_lstr(1, &l);
   char *p = luaL_check_string(2);
@@ -369,8 +360,7 @@ static void str_find (void)
 }
 
 
-static void add_s (lua_Object newp, struct Capture *cap)
-{
+static void add_s (lua_Object newp, struct Capture *cap) {
   if (lua_isstring(newp)) {
     char *news = lua_getstring(newp);
     int l = lua_strlen(newp);
@@ -412,8 +402,7 @@ static void add_s (lua_Object newp, struct Capture *cap)
 }
 
 
-static void str_gsub (void)
-{
+static void str_gsub (void) {
   long srcl;
   char *src = luaL_check_lstr(1, &srcl);
   char *p = luaL_check_string(2);
@@ -446,6 +435,8 @@ static void str_gsub (void)
   lua_pushnumber(n);  /* number of substitutions */
 }
 
+/* }====================================================== */
+
 
 static void luaI_addquoted (int arg) {
   long l;
@@ -465,10 +456,10 @@ static void luaI_addquoted (int arg) {
   luaL_addchar('"');
 }
 
-#define MAX_FORMAT 200
+/* maximum size of each format specification (such as '%-099.99d') */
+#define MAX_FORMAT 20
 
-static void str_format (void)
-{
+static void str_format (void) {
   int arg = 1;
   char *strfrmt = luaL_check_string(arg);
   struct Capture cap;
@@ -491,11 +482,14 @@ static void str_format (void)
       }
       arg++;
       strfrmt = match(initf, "[-+ #0]*(%d*)%.?(%d*)", &cap);
-      if (cap.capture[0].len > 2 || cap.capture[1].len > 2)  /* < 100? */
+      if (cap.capture[0].len > 2 || cap.capture[1].len > 2 ||  /* < 100? */
+          strfrmt-initf > MAX_FORMAT-2)
         lua_error("invalid format (width or precision too long)");
       strncpy(form+1, initf, strfrmt-initf+1); /* +1 to include conversion */
       form[strfrmt-initf+2] = 0;
-      buff = luaL_openspace(1000);  /* to store the formatted value */
+      /* to store the formatted value
+         (450 > size of format('%99.99f', -1e308) */
+      buff = luaL_openspace(450);
       switch (*strfrmt++) {
         case 'q':
           luaI_addquoted(arg);
