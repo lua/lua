@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.108 2000/10/24 19:19:15 roberto Exp roberto $
+** $Id: lapi.c,v 1.109 2000/10/26 12:47:05 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -108,26 +108,23 @@ LUA_API void lua_pushvalue (lua_State *L, int index) {
 
 LUA_API int lua_type (lua_State *L, int index) {
   StkId o = luaA_indexAcceptable(L, index);
-  if (o == NULL) return LUA_TNONE;
-  else return ttype(o);
+  return (o == NULL) ? LUA_TNONE : ttype(o);
 }
 
 LUA_API const char *lua_typename (lua_State *L, int t) {
   UNUSED(L);
-  return luaO_typenames[t];
+  return (t == LUA_TNONE) ? "no value" : luaO_typenames[t];
 }
 
 
 LUA_API int lua_iscfunction (lua_State *L, int index) {
   StkId o = luaA_indexAcceptable(L, index);
-  if (o == NULL) return 0;
-  else return iscfunction(o);
+  return (o == NULL) ? 0 : iscfunction(o);
 }
 
 LUA_API int lua_isnumber (lua_State *L, int index) {
   TObject *o = luaA_indexAcceptable(L, index);
-  if (o == NULL) return 0;
-  else return (tonumber(o) == 0);
+  return (o == NULL) ? 0 : (tonumber(o) == 0);
 }
 
 LUA_API int lua_isstring (lua_State *L, int index) {
@@ -138,8 +135,7 @@ LUA_API int lua_isstring (lua_State *L, int index) {
 
 LUA_API int lua_tag (lua_State *L, int index) {
   StkId o = luaA_indexAcceptable(L, index);
-  if (o == NULL) return LUA_NOTAG;
-  else return luaT_tag(o);
+  return (o == NULL) ? LUA_NOTAG : luaT_tag(o);
 }
 
 LUA_API int lua_equal (lua_State *L, int index1, int index2) {
@@ -160,32 +156,28 @@ LUA_API int lua_lessthan (lua_State *L, int index1, int index2) {
 
 LUA_API double lua_tonumber (lua_State *L, int index) {
   StkId o = luaA_indexAcceptable(L, index);
-  if (o == NULL || tonumber(o)) return 0;
-  else return nvalue(o);
+  return (o == NULL || tonumber(o)) ? 0 : nvalue(o);
 }
 
 LUA_API const char *lua_tostring (lua_State *L, int index) {
   StkId o = luaA_indexAcceptable(L, index);
-  if (o == NULL || tostring(L, o)) return NULL;
-  else return svalue(o);
+  return (o == NULL || tostring(L, o)) ? NULL : svalue(o);
 }
 
 LUA_API size_t lua_strlen (lua_State *L, int index) {
   StkId o = luaA_indexAcceptable(L, index);
-  if (o == NULL || tostring(L, o)) return 0;
-  else return tsvalue(o)->len;
+  return (o == NULL || tostring(L, o)) ? 0 : tsvalue(o)->len;
 }
 
 LUA_API lua_CFunction lua_tocfunction (lua_State *L, int index) {
   StkId o = luaA_indexAcceptable(L, index);
-  if (o == NULL || !iscfunction(o)) return NULL;
-  else return clvalue(o)->f.c;
+  return (o == NULL || !iscfunction(o)) ? NULL : clvalue(o)->f.c;
 }
 
 LUA_API void *lua_touserdata (lua_State *L, int index) {
   StkId o = luaA_indexAcceptable(L, index);
-  if (o == NULL || ttype(o) != LUA_TUSERDATA) return NULL;
-  else return tsvalue(o)->u.d.value;
+  return (o == NULL || ttype(o) != LUA_TUSERDATA) ? NULL :
+                                                    tsvalue(o)->u.d.value;
 }
 
 LUA_API const void *lua_topointer (lua_State *L, int index) {
