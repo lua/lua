@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.130 2002/08/07 19:22:39 roberto Exp roberto $
+** $Id: ldebug.c,v 1.131 2002/08/08 20:08:41 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -33,11 +33,8 @@ static const char *getfuncname (CallInfo *ci, const char **name);
 
 static int currentpc (CallInfo *ci) {
   if (!isLua(ci)) return -1;  /* function is not a Lua function? */
-  if (!(ci->state & CI_SAVEDPC)) {  /* savedpc outdated? */
-    lua_assert(ci->state & CI_HASFRAME);
-    ci->u.l.savedpc = *ci->u.l.pc;
-    ci->state |= CI_SAVEDPC;
-  }
+  if (ci->state & CI_HASFRAME)  /* function has a frame? */
+    ci->u.l.savedpc = *ci->u.l.pc;  /* use `pc' from there */
   /* function's pc is saved */
   return pcRel(ci->u.l.savedpc, ci_func(ci)->l.p);
 }
@@ -52,7 +49,7 @@ static int currentline (CallInfo *ci) {
 }
 
 
-LUA_API int lua_sethook (lua_State *L, lua_Hook func, int mask) {
+LUA_API int lua_sethook (lua_State *L, lua_Hook func, unsigned long mask) {
   int allow;
   CallInfo *ci;
   lua_lock(L);
@@ -75,7 +72,7 @@ LUA_API lua_Hook lua_gethook (lua_State *L) {
 }
 
 
-LUA_API int lua_gethookmask (lua_State *L) {
+LUA_API unsigned long lua_gethookmask (lua_State *L) {
   return L->hookmask;
 }
 

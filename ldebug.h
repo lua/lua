@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.h,v 1.28 2002/08/06 18:01:50 roberto Exp roberto $
+** $Id: ldebug.h,v 1.29 2002/08/08 20:08:41 roberto Exp roberto $
 ** Auxiliary functions from Debug Interface module
 ** See Copyright Notice in lua.h
 */
@@ -15,8 +15,7 @@
 
 #define getline(f,pc)	(((f)->lineinfo) ? (f)->lineinfo[pc] : 0)
 
-#define resethookcount(L) \
-  (L->hookcount = lua_getmaskcount(L->hookmask), L->hookcount *= L->hookcount)
+#define resethookcount(L)	(L->hookcount = lua_getmaskcount(L->hookmask))
 
 #define setallowhook(L,cond)	((L->hookmask) = ((L->hookmask) & ~1) | (cond))
 #define allowhook(L)		((L->hookmask) & 1)

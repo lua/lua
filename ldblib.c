@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.65 2002/08/05 17:36:24 roberto Exp roberto $
+** $Id: ldblib.c,v 1.66 2002/08/06 18:01:50 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -126,8 +126,8 @@ static void hookf (lua_State *L, lua_Debug *ar) {
 }
 
 
-static int makemask (const char *smask, int count) {
-  int mask = 0;
+static unsigned long makemask (const char *smask, int count) {
+  unsigned long mask = 0;
   if (strchr(smask, 'c')) mask |= LUA_MASKCALL;
   if (strchr(smask, 'r')) mask |= LUA_MASKRET;
   if (strchr(smask, 'l')) mask |= LUA_MASKLINE;
@@ -135,7 +135,7 @@ static int makemask (const char *smask, int count) {
 }
 
 
-static char *unmakemask (int mask, char *smask) {
+static char *unmakemask (unsigned long mask, char *smask) {
   int i = 0;
   if (mask & LUA_MASKCALL) smask[i++] = 'c';
   if (mask & LUA_MASKRET) smask[i++] = 'r';
@@ -152,8 +152,9 @@ static int sethook (lua_State *L) {
   }
   else {
     const char *smask = luaL_check_string(L, 2);
-    int count = luaL_opt_int(L, 3, 0);
+    lua_Number count = luaL_opt_number(L, 3, 0);
     luaL_check_type(L, 1, LUA_TFUNCTION);
+    luaL_arg_check(L, count <= LUA_MAXCOUNT, 2, "count too large (>= 2^24)");
     lua_sethook(L, hookf, makemask(smask, count));
   }
   lua_pushlightuserdata(L, (void *)&KEY_HOOK);
@@ -165,7 +166,7 @@ static int sethook (lua_State *L) {
 
 static int gethook (lua_State *L) {
   char buff[5];
-  int mask = lua_gethookmask(L);
+  unsigned long mask = lua_gethookmask(L);
   lua_pushlightuserdata(L, (void *)&KEY_HOOK);
   lua_rawget(L, LUA_REGISTRYINDEX);   /* get hook */
   lua_pushstring(L, unmakemask(mask, buff));

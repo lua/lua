@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.100 2002/08/07 20:54:17 roberto Exp roberto $
+** $Id: lua.c,v 1.101 2002/08/08 20:08:41 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -45,7 +45,7 @@ static const char *progname;
 
 
 static lua_Hook old_hook = NULL;
-static int old_mask = 0;
+static unsigned long old_mask = 0;
 
 
 static void lstop (lua_State *l, lua_Debug *ar) {
