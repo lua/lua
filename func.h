@@ -1,5 +1,5 @@
 /*
-** $Id: func.h,v 1.9 1997/05/14 18:38:29 roberto Exp roberto $
+** $Id: func.h,v 1.10 1997/07/29 19:44:02 roberto Exp roberto $
 */
 
 #ifndef func_h
@@ -36,9 +36,6 @@ void luaI_insertfunction (TFunc *f);
 void luaI_initTFunc (TFunc *f);
 void luaI_freefunc (TFunc *f);
 
-void luaI_registerlocalvar (TaggedString *varname, int line);
-void luaI_unregisterlocalvar (int line);
-void luaI_closelocalvars (TFunc *func);
 char *luaI_getlocalname (TFunc *func, int local_number, int line);
 
 #endif

@@ -1,7 +1,7 @@
 /*
 ** mem.c
 ** memory manager for lua
-** $Id: luamem.h,v 1.8 1996/05/24 14:31:10 roberto Exp roberto $
+** $Id: luamem.h,v 1.9 1997/03/31 14:10:11 roberto Exp roberto $
 */
  
 #ifndef luamem_h
@@ -34,6 +34,7 @@ int luaI_growvector (void **block, unsigned long nelems, int size,
 #define newvector(n,s)  ((s *)luaI_malloc((n)*sizeof(s)))
 #define growvector(old,n,s,e,l) \
           (luaI_growvector((void**)old,n,sizeof(s),e,l))
+#define shrinkvector(v,n,t) ((t *)luaI_realloc(v,(n)*sizeof(t)))
 
 #endif 
 
