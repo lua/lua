@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.28 2000/04/19 13:41:37 roberto Exp roberto $
+** $Id: lcode.c,v 1.29 2000/05/08 19:32:53 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -471,6 +471,18 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
 
     case OP_FORPREP:
     case OP_JMP:
+      arg1 = NO_JUMP;
+      mode = iS;
+      break;
+
+    case OP_LFORPREP:
+      delta = 3;
+      arg1 = NO_JUMP;
+      mode = iS;
+      break;
+
+    case OP_LFORLOOP:
+      delta = -4;
       arg1 = NO_JUMP;
       mode = iS;
       break;

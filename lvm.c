@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.104 2000/04/19 13:36:25 roberto Exp roberto $
+** $Id: lvm.c,v 1.105 2000/05/08 19:32:53 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -11,6 +11,7 @@
 
 #define LUA_REENTRANT
 
+#include "lapi.h"
 #include "lauxlib.h"
 #include "ldebug.h"
 #include "ldo.h"
@@ -634,12 +635,40 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         if (ttype(top-3) != TAG_NUMBER)
           lua_error(L, "`for' index must be a number");
         index = nvalue(top-3)+step;
-        if ((step>0) ? index<=limit : index>=limit) {
+        if ((step>0) ? index>limit : index<limit)
+          top -= 3;  /* end loop: remove control variables */
+        else {
           nvalue(top-3) = index;
           pc += GETARG_S(i);
         }
-        else  /* end of `for': remove control variables */
-          top -= 3;
+        break;
+      }
+
+      case OP_LFORPREP: {
+        if (ttype(top-1) != TAG_TABLE)
+          lua_error(L, "`for' table must be a table");
+        top += 3;  /* counter + index,value */
+        ttype(top-3) = TAG_NUMBER;
+        nvalue(top-3) = 0.0;  /* counter */
+        ttype(top-2) = ttype(top-1) = TAG_NIL;
+        pc += GETARG_S(i);
+        break;
+      }
+
+      case OP_LFORLOOP: {
+        int n;
+        top -= 2;  /* remove old index,value */
+        LUA_ASSERT(L, ttype(top-2) == TAG_TABLE, "invalid table");
+        LUA_ASSERT(L, ttype(top-1) == TAG_NUMBER, "invalid counter");
+        L->top = top;
+        n = luaA_next(L, avalue(top-2), (int)nvalue(top-1));
+        if (n == 0)  /* end loop? */
+          top -= 2;  /* remove table and counter */
+        else {
+          nvalue(top-1) = (Number)n;
+          top += 2;  /* new index,value */
+          pc += GETARG_S(i);  /* repeat loop */
+        }
         break;
       }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.85 2000/05/10 16:33:20 roberto Exp roberto $
+** $Id: lparser.c,v 1.86 2000/05/12 18:12:04 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -205,7 +205,8 @@ static void store_localvar (LexState *ls, TString *name, int n) {
 }
 
 
-static void adjustlocalvars (LexState *ls, int nvars, int line) {
+static void adjustlocalvars (LexState *ls, int nvars) {
+  int line = ls->fs->lastsetline;
   FuncState *fs = ls->fs;
   int i;
   fs->nlocalvar += nvars;
@@ -214,7 +215,8 @@ static void adjustlocalvars (LexState *ls, int nvars, int line) {
 }
 
 
-static void removelocalvars (LexState *ls, int nvars, int line) {
+static void removelocalvars (LexState *ls, int nvars) {
+  int line = ls->fs->lastsetline;
   ls->fs->nlocalvar -= nvars;
   while (nvars--)
     luaI_unregisterlocalvar(ls, line);
@@ -223,7 +225,7 @@ static void removelocalvars (LexState *ls, int nvars, int line) {
 
 static void add_localvar (LexState *ls, const char *name) {
   store_localvar(ls, luaS_newfixed(ls->L, name), 0);
-  adjustlocalvars(ls, 1, 0);
+  adjustlocalvars(ls, 1);
 }
 
 
@@ -303,7 +305,7 @@ static void adjust_mult_assign (LexState *ls, int nvars, int nexps) {
 
 static void code_args (LexState *ls, int nparams, int dots) {
   FuncState *fs = ls->fs;
-  adjustlocalvars(ls, nparams, 0);
+  adjustlocalvars(ls, nparams);
   checklimit(ls, fs->nlocalvar, MAXPARAMS, "parameters");
   nparams = fs->nlocalvar;  /* `self' could be there already */
   fs->f->numparams = nparams;
@@ -838,7 +840,7 @@ static void block (LexState *ls) {
   int nlocalvar = fs->nlocalvar;
   chunk(ls);
   luaK_adjuststack(fs, fs->nlocalvar - nlocalvar);  /* remove local variables */
-  removelocalvars(ls, fs->nlocalvar - nlocalvar, fs->lastsetline);
+  removelocalvars(ls, fs->nlocalvar - nlocalvar);
 }
 
 
@@ -907,15 +909,20 @@ static void repeatstat (LexState *ls, int line) {
 }
 
 
-static void forstat (LexState *ls, int line) {
-  /* forstat -> FOR NAME '=' expr1 ',' expr1 [',' expr1] DO block END */
+static void forbody (LexState *ls, OpCode prepfor, OpCode loopfor) {
   FuncState *fs = ls->fs;
-  int prep;
-  int blockinit;
-  Breaklabel bl;
-  enterbreak(fs, &bl);
-  setline_and_next(ls);  /* skip for */
-  store_localvar(ls, str_checkname(ls), 0);  /* control variable */
+  int prep = luaK_code0(fs, prepfor);
+  int blockinit = luaK_getlabel(fs);
+  check(ls, TK_DO);
+  block(ls);
+  luaK_patchlist(fs, prep, luaK_getlabel(fs));
+  luaK_patchlist(fs, luaK_code0(fs, loopfor), blockinit);
+}
+
+
+static void fornum (LexState *ls, TString *varname) {
+  FuncState *fs = ls->fs;
+  store_localvar(ls, varname, 0);
   check(ls, '=');
   exp1(ls);  /* initial value */
   check(ls, ',');
@@ -924,18 +931,49 @@ static void forstat (LexState *ls, int line) {
     exp1(ls);  /* optional step */
   else
     luaK_code1(fs, OP_PUSHINT, 1);  /* default step */
-  adjustlocalvars(ls, 1, 0);  /* init scope for control variable */
-  add_localvar(ls, " limit ");
-  add_localvar(ls, " step ");
-  prep = luaK_code0(fs, OP_FORPREP);
-  blockinit = luaK_getlabel(fs);
-  check(ls, TK_DO);
-  block(ls);
-  luaK_patchlist(fs, prep, luaK_getlabel(fs));
-  luaK_patchlist(fs, luaK_code0(fs, OP_FORLOOP), blockinit);
+  adjustlocalvars(ls, 1);  /* scope for control variables */
+  add_localvar(ls, "*limit*");
+  add_localvar(ls, "*step*");
+  forbody(ls, OP_FORPREP, OP_FORLOOP);
+  removelocalvars(ls, 3);
+}
+
+
+static void forlist (LexState *ls, TString *indexname) {
+  TString *valname;
+  check(ls, ',');
+  valname = str_checkname(ls);
+  /* next test is dirty, but avoids `in' being a reserved word */
+  if (ls->token != TK_NAME || ls->seminfo.ts != luaS_new(ls->L, "in"))
+    luaK_error(ls, "`in' expected");
+  next(ls);  /* skip `in' */
+  exp1(ls);  /* table */
+  add_localvar(ls, "*table*");
+  add_localvar(ls, "*counter*");
+  store_localvar(ls, indexname, 0);
+  store_localvar(ls, valname, 1);
+  adjustlocalvars(ls, 2);  /* scope for control variable */
+  forbody(ls, OP_LFORPREP, OP_LFORLOOP);
+  removelocalvars(ls, 4);
+}
+
+
+static void forstat (LexState *ls, int line) {
+  /* forstat -> FOR NAME '=' expr1 ',' expr1 [',' expr1] DO block END */
+  /* forstat -> FOR NAME1, NAME2 IN expr1 DO block END */
+  FuncState *fs = ls->fs;
+  TString *varname;
+  Breaklabel bl;
+  enterbreak(fs, &bl);
+  setline_and_next(ls);  /* skip `for' */
+  varname = str_checkname(ls);  /* first variable name */
+  switch (ls->token) {
+    case '=': fornum(ls, varname); break;
+    case ',': forlist(ls, varname); break;
+    default: luaK_error(ls, "`=' or `,' expected");
+  }
   check_END(ls, TK_FOR, line);
   leavebreak(fs, &bl);
-  removelocalvars(ls, 3, fs->lastsetline);
 }
 
 
@@ -999,13 +1037,12 @@ static int decinit (LexState *ls) {
 
 static void localstat (LexState *ls) {
   /* stat -> LOCAL localnamelist decinit */
-  FuncState *fs = ls->fs;
   int nvars;
   int nexps;
   setline_and_next(ls);  /* skip LOCAL */
   nvars = localnamelist(ls);
   nexps = decinit(ls);
-  adjustlocalvars(ls, nvars, fs->lastsetline);
+  adjustlocalvars(ls, nvars);
   adjust_mult_assign(ls, nvars, nexps);
 }
 

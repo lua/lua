@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.17 2000/05/08 19:32:53 roberto Exp roberto $
+** $Id: ltests.c,v 1.18 2000/05/10 16:33:20 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -103,8 +103,10 @@ static int pushop (lua_State *L, Instruction i) {
     case OP_JMPONF: S("JMPONF"); break;
     case OP_JMP: S("JMP"); break;
     case OP_PUSHNILJMP: O("PUSHNILJMP"); break;
-    case OP_FORPREP: S("OP_FORPREP"); break;
-    case OP_FORLOOP: S("OP_FORLOOP"); break;
+    case OP_FORPREP: S("FORPREP"); break;
+    case OP_FORLOOP: S("FORLOOP"); break;
+    case OP_LFORPREP: S("LFORPREP"); break;
+    case OP_LFORLOOP: S("LFORLOOP"); break;
     case OP_CLOSURE: AB("CLOSURE"); break;
     case OP_SETLINE: U("SETLINE"); break;
   }
