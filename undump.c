@@ -3,11 +3,14 @@
 ** load bytecodes from files
 */
 
-char *rcs_undump="$Id: undump.c,v 1.6 1996/02/28 23:10:46 lhf Exp lhf $";
+char *rcs_undump="$Id: undump.c,v 1.7 1996/03/01 03:43:50 lhf Exp lhf $";
 
 #include <stdio.h>
 #include <string.h>
 #include "luac.h"
+
+static int swapword=0;
+static int swapfloat=0;
 
 static void warn(char *s)			/* TODO: remove */
 {
@@ -38,6 +41,12 @@ static int LoadWord(FILE *D)
 {
  Word w;
  fread(&w,sizeof(w),1,D);
+ if (swapword)
+ {
+  Byte *p=&w;
+  Byte t;
+  t=p[0]; p[0]=p[1]; p[1]=t;
+ }
  return w;
 }
 
@@ -82,6 +91,7 @@ static void LoadFunction(FILE *D)
  tf->marked=0;					/* TODO: is this ok? */
 #endif
  tf->code=LoadBlock(tf->size,D);
+ if (swapword || swapfloat) FixCode(tf->code,tf->code+tf->size);
  while (1)					/* unthread */
  {
   int c=getc(D);
@@ -135,9 +145,17 @@ static void LoadHeader(FILE *D)			/* TODO: error handling */
  LoadSignature(D);
  getc(D);					/* skip version */
  fread(&w,sizeof(w),1,D);		/* a word for testing byte ordering */
- if (w!=tw) warn("different byte order");
+ if (w!=tw)
+ {
+  swapword=1;
+  warn("different byte order");
+ }
  fread(&f,sizeof(f),1,D);		/* a float for testing byte ordering */
- if (f!=tf) warn("different float representation");
+ if (f!=tf)
+ {
+  swapfloat=1;
+  if (f!=tf) warn("different float representation");
+ }
 }
 
 static void LoadChunk(FILE *D)
@@ -173,11 +191,12 @@ void luaI_undump(FILE *D)
 
 int main(int argc, char* argv[])
 {
- FILE *f=freopen("luac.out","rb",stdin);
+ char* fn=(argc>1)? argv[1] : "luac.out";
+ FILE *f=freopen(fn,"rb",stdin);
  if (f==NULL)
  {
   fprintf(stderr,"undump: cannot open ");
-  perror("luac.out");
+  perror(fn);
   exit(1);
  }
  luaI_undump(stdin); 
