@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.3 1994/11/07 15:20:56 roberto Exp $";
+char *rcs_opcode="$Id: opcode.c,v 3.4 1994/11/07 16:34:44 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -99,7 +99,7 @@ void luaI_setfallback (void)
   {
     if (strcmp(fallBacks[i].kind, name) == 0)
     {
-      lua_pushobject(Ref(&fallBacks[i].function));
+      luaI_pushobject(&fallBacks[i].function);
       fallBacks[i].function = *Address(func);
       return;
     }
@@ -245,6 +245,12 @@ static void adjust_top (Object *newtop)
 }
 
 
+static void adjustC (int nParams)
+{
+  adjust_top(stack+CBase+nParams);
+}
+
+
 /*
 ** Call a C function. CBase will point to the top of the stack,
 ** and CnResults is the number of parameters. Returns an index
@@ -297,7 +303,7 @@ static void do_call (Object *func, int base, int nResults, int whereRes)
 
 /*
 ** Function to index a table. Receives the table at top-2 and the index
-** at top-1. Remove them from stack and push the result.
+** at top-1.
 */
 static void pushsubscript (void)
 {
@@ -433,6 +439,51 @@ int lua_dostring (char *string)
 
 
 /*
+** API: set a function as a fallback
+*/
+lua_Object lua_setfallback (char *name, lua_CFunction fallback)
+{
+  static Object func = {LUA_T_CFUNCTION, luaI_setfallback};
+  adjustC(0);
+  lua_pushstring(name);
+  lua_pushcfunction(fallback);
+  do_protectedrun(&func, 1);
+  return (Ref(top-1));
+}
+
+
+/* 
+** API: receives on the stack the table and the index.
+** returns the value.
+*/
+lua_Object lua_getsubscript (void)
+{
+  static Byte code[2] = {PUSHINDEXED, RETCODE0};
+  int status;
+  Object func;
+  tag(&func) = LUA_T_FUNCTION; bvalue(&func) = code;
+  adjustC(2);
+  status = do_protectedrun(&func, 1);
+  if (status == 0)
+    return (Ref(top-1));
+  else
+    return 0;
+}
+
+/* 
+** API: receives on the stack the table, the index, and the new value.
+*/
+int lua_storesubscript (void)
+{
+  static Byte code[2] = {STOREINDEXED, RETCODE0};
+  Object func;
+  tag(&func) = LUA_T_FUNCTION; bvalue(&func) = code;
+  adjustC(3);
+  return(do_protectedrun(&func, 0));
+}
+
+
+/*
 ** Get a parameter, returning the object handle or 0 on error.
 ** 'number' must be 1 to get the first parameter.
 */
@@ -501,9 +552,21 @@ lua_Object lua_getglobal (char *name)
 {
  int n = lua_findsymbol(name);
  if (n < 0) return 0;
- *(top-1) = s_object(n);
- top++;
+ *(top++) = s_object(n);
  return Ref(top-1);
+}
+
+/*
+** Store top of the stack at a global variable array field.
+** Return 1 on error, 0 on success.
+*/
+int lua_storeglobal (char *name)
+{
+ int n = lua_findsymbol (name);
+ if (n < 0) return 1;
+ adjustC(1);
+ s_object(n) = *(--top);
+ return 0;
 }
 
 /*
@@ -574,18 +637,6 @@ void luaI_pushobject (Object *o)
 {
  lua_checkstack(top-stack+1);
  *top++ = *o;
-}
-
-/*
-** Store top of the stack at a global variable array field.
-** Return 1 on error, 0 on success.
-*/
-int lua_storeglobal (char *name)
-{
- int n = lua_findsymbol (name);
- if (n < 0) return 1;
- s_object(n) = *(--top);
- return 0;
 }
 
 int lua_type (lua_Object o)

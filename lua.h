@@ -2,7 +2,7 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lua.h,v 3.2 1994/11/04 10:47:49 roberto Exp roberto $
+** $Id: lua.h,v 3.3 1994/11/07 16:34:44 roberto Exp $
 */
 
 
@@ -29,6 +29,8 @@ typedef enum
 typedef void (*lua_CFunction) (void);
 typedef unsigned int lua_Object;
 
+lua_Object     lua_setfallback		(char *name, lua_CFunction fallback);
+
 void           lua_error		(char *s);
 int            lua_dofile 		(char *filename);
 int            lua_dostring 		(char *string);
@@ -54,7 +56,7 @@ lua_Object     lua_getglobal 		(char *name);
 int            lua_storeglobal		(char *name);
 
 int            lua_storesubscript	(void);
-lua_Object     lua_getIndex         	(void);
+lua_Object     lua_getsubscript         (void);
 
 int            lua_type 		(lua_Object object);
 
@@ -65,8 +67,8 @@ int            lua_type 		(lua_Object object);
 
 #define lua_call(f)           lua_callfunction(lua_getglobal(f))
 
-#define lua_getindexed(o,n) (lua_pushobject(o), lua_pushnumber(n), lua_getIndex())
-#define lua_getfield(o,f)   (lua_pushobject(o), lua_pushstring(f), lua_getIndex())
+#define lua_getindexed(o,n) (lua_pushobject(o), lua_pushnumber(n), lua_getsubscript())
+#define lua_getfield(o,f)   (lua_pushobject(o), lua_pushstring(f), lua_getsubscript())
 
 #define lua_isnil(_)            (lua_type(_)==LUA_T_NIL)
 #define lua_isnumber(_)         (lua_type(_)==LUA_T_NUMBER)
