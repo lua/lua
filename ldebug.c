@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.152 2003/05/13 20:15:59 roberto Exp roberto $
+** $Id: ldebug.c,v 1.153 2003/05/14 12:09:12 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -320,6 +320,7 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
     int a = GETARG_A(i);
     int b = 0;
     int c = 0;
+    check(op < NUM_OPCODES);
     checkreg(pt, a);
     switch (getOpMode(op)) {
       case iABC: {
