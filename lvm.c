@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.15 1997/11/21 19:00:46 roberto Exp roberto $
+** $Id: lvm.c,v 1.16 1997/12/09 13:35:19 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -79,13 +79,15 @@ int luaV_tostring (TObject *obj)
 
 void luaV_closure (int nelems)
 {
-  struct Stack *S = &L->stack;
-  Closure *c = luaF_newclosure(nelems);
-  c->consts[0] = *(S->top-1);
-  memcpy(&c->consts[1], S->top-(nelems+1), nelems*sizeof(TObject));
-  S->top -= nelems;
-  ttype(S->top-1) = LUA_T_FUNCTION;
-  (S->top-1)->value.cl = c;
+  if (nelems > 0) {
+    struct Stack *S = &L->stack;
+    Closure *c = luaF_newclosure(nelems);
+    c->consts[0] = *(S->top-1);
+    memcpy(&c->consts[1], S->top-(nelems+1), nelems*sizeof(TObject));
+    S->top -= nelems;
+    ttype(S->top-1) = LUA_T_CLOSURE;
+    (S->top-1)->value.cl = c;
+  }
 }
 
 
@@ -279,13 +281,13 @@ static void adjust_varargs (StkId first_extra_arg)
 ** [stack+base,top). Returns n such that the the results are between
 ** [stack+n,top).
 */
-StkId luaV_execute (Closure *cl, StkId base)
+StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base)
 {
   struct Stack *S = &L->stack;  /* to optimize */
-  Byte *pc = cl->consts[0].value.tf->code;
-  TObject *consts = cl->consts[0].value.tf->consts;
+  Byte *pc = tf->code;
+  TObject *consts = tf->consts;
   if (lua_callhook)
-    luaD_callHook(base, LUA_T_PROTO, 0);
+    luaD_callHook(base, tf, 0);
   luaD_checkstack((*pc++)+EXTRA_STACK);
   while (1) {
     int aux;
@@ -679,7 +681,7 @@ StkId luaV_execute (Closure *cl, StkId base)
         /* goes through */
       case RETCODE:
         if (lua_callhook)
-          luaD_callHook(base, LUA_T_PROTO, 1);
+          luaD_callHook(base, NULL, 1);
         return (base + ((aux==RETCODE) ? *pc : 0));
 
       case SETLINEW:

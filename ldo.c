@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.13 1997/11/27 18:25:14 roberto Exp roberto $
+** $Id: ldo.c,v 1.14 1997/12/09 13:35:19 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -44,13 +44,6 @@ static void stderrorim (void)
 }
 
 
-static void initCfunc (TObject *o, lua_CFunction f)
-{
-  ttype(o) = LUA_T_CPROTO;
-  fvalue(o) = f;
-  luaF_simpleclosure(o);
-}
-
 
 #define STACK_UNIT	128
 
@@ -60,7 +53,8 @@ void luaD_init (void)
   L->stack.stack = luaM_newvector(STACK_UNIT, TObject);
   L->stack.top = L->stack.stack;
   L->stack.last = L->stack.stack+(STACK_UNIT-1);
-  initCfunc(&L->errorim, stderrorim);
+  ttype(&L->errorim) = LUA_T_CPROTO;
+  fvalue(&L->errorim) = stderrorim;
 }
 
 
@@ -122,7 +116,7 @@ void luaD_lineHook (int line)
 }
 
 
-void luaD_callHook (StkId base, lua_Type type, int isreturn)
+void luaD_callHook (StkId base, TProtoFunc *tf, int isreturn)
 {
   struct C_Lua_Stack oldCLS = L->Cstack;
   StkId old_top = L->Cstack.lua2C = L->Cstack.base = L->stack.top-L->stack.stack;
@@ -131,9 +125,8 @@ void luaD_callHook (StkId base, lua_Type type, int isreturn)
     (*lua_callhook)(LUA_NOOBJECT, "(return)", 0);
   else {
     TObject *f = L->stack.stack+base-1;
-    if (type == LUA_T_PROTO)
-      (*lua_callhook)(Ref(f), tfvalue(protovalue(f))->fileName->str,
-                              tfvalue(protovalue(f))->lineDefined);
+    if (tf)
+      (*lua_callhook)(Ref(f), tf->fileName->str, tf->lineDefined);
     else
       (*lua_callhook)(Ref(f), "(C)", -1);
   }
@@ -147,13 +140,13 @@ void luaD_callHook (StkId base, lua_Type type, int isreturn)
 ** Cstack.num is the number of arguments; Cstack.lua2C points to the
 ** first argument. Returns an index to the first result from C.
 */
-static StkId callC (struct Closure *cl, StkId base)
+static StkId callC (struct Closure *cl, lua_CFunction f, StkId base)
 {
   struct C_Lua_Stack *CS = &L->Cstack;
   struct C_Lua_Stack oldCLS = *CS;
   StkId firstResult;
   int numarg = (L->stack.top-L->stack.stack) - base;
-  if (cl->nelems > 0) {  /* are there upvalues? */
+  if (cl) {  /* are there upvalues? */
     int i;
     luaD_checkstack(cl->nelems);
     for (i=1; i<=numarg; i++)  /* open space */
@@ -167,10 +160,10 @@ static StkId callC (struct Closure *cl, StkId base)
   CS->lua2C = base;
   CS->base = base+numarg;  /* == top-stack */
   if (lua_callhook)
-    luaD_callHook(base, LUA_T_CPROTO, 0);
-  (*(fvalue(cl->consts)))();  /* do the actual call */
+    luaD_callHook(base, NULL, 0);
+  (*f)();  /* do the actual call */
   if (lua_callhook)  /* func may have changed lua_callhook */
-    luaD_callHook(base, LUA_T_CPROTO, 1);
+    luaD_callHook(base, NULL, 1);
   firstResult = CS->base;
   *CS = oldCLS;
   return firstResult;
@@ -196,19 +189,32 @@ void luaD_call (StkId base, int nResults)
   StkId firstResult;
   TObject *func = L->stack.stack+base-1;
   int i;
-  if (ttype(func) == LUA_T_FUNCTION) {
-    TObject *proto = protovalue(func);
-    ttype(func) = LUA_T_MARK;
-    firstResult = (ttype(proto) == LUA_T_CPROTO) ? callC(clvalue(func), base)
-                                         : luaV_execute(func->value.cl, base);
-  }
-  else { /* func is not a function */
-    /* Check the tag method for invalid functions */
-    TObject *im = luaT_getimbyObj(func, IM_FUNCTION);
-    if (ttype(im) == LUA_T_NIL)
-      lua_error("call expression not a function");
-    luaD_callTM(im, (L->stack.top-L->stack.stack)-(base-1), nResults);
-    return;
+  switch (ttype(func)) {
+    case LUA_T_CPROTO:
+      ttype(func) = LUA_T_CMARK;
+      firstResult = callC(NULL, fvalue(func), base);
+      break;
+    case LUA_T_PROTO:
+      ttype(func) = LUA_T_PMARK;
+      firstResult = luaV_execute(NULL, tfvalue(func), base);
+      break;
+    case LUA_T_CLOSURE: {
+      Closure *c = clvalue(func);
+      TObject *proto = &(c->consts[0]);
+      ttype(func) = LUA_T_CLMARK;
+      firstResult = (ttype(proto) == LUA_T_CPROTO) ?
+                       callC(c, fvalue(proto), base) :
+                       luaV_execute(c, tfvalue(proto), base);
+      break;
+    }
+    default: { /* func is not a function */
+      /* Check the tag method for invalid functions */
+      TObject *im = luaT_getimbyObj(func, IM_FUNCTION);
+      if (ttype(im) == LUA_T_NIL)
+        lua_error("call expression not a function");
+      luaD_callTM(im, (L->stack.top-L->stack.stack)-(base-1), nResults);
+      return;
+    }
   }
   /* adjust the number of results */
   if (nResults != MULT_RET)

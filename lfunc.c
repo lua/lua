@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.6 1997/11/19 17:29:23 roberto Exp roberto $
+** $Id: lfunc.c,v 1.7 1997/12/09 13:35:19 roberto Exp roberto $
 ** Auxiliar functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -23,15 +23,6 @@ Closure *luaF_newclosure (int nelems)
   L->nblocks += gcsizeclosure(c);
   c->nelems = nelems;
   return c;
-}
-
-
-void luaF_simpleclosure (TObject *o)
-{
-  Closure *c = luaF_newclosure(0);
-  c->consts[0] = *o;
-  ttype(o) = LUA_T_FUNCTION;
-  clvalue(o) = c;
 }
 
 

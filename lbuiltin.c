@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.15 1997/12/09 13:35:19 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.16 1997/12/11 17:21:11 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -140,8 +140,16 @@ static char *to_string (lua_Object obj)
       sprintf(buff, "table: %p", (void *)o->value.a);
       return buff;
     }
-    case LUA_T_FUNCTION: {
+    case LUA_T_CLOSURE: {
       sprintf(buff, "function: %p", (void *)o->value.cl);
+      return buff;
+    }
+    case LUA_T_PROTO: {
+      sprintf(buff, "function: %p", (void *)o->value.tf);
+      return buff;
+    }
+    case LUA_T_CPROTO: {
+      sprintf(buff, "function: %p", (void *)o->value.f);
       return buff;
     }
     case LUA_T_USERDATA: {
@@ -372,6 +380,20 @@ static void mem_query (void)
 }
 
 
+static void countlist (void)
+{
+  char *s = luaL_check_string(1);
+  GCnode *l = (s[0]=='t') ? L->roottable.next : (s[0]=='c') ? L->rootcl.next :
+              (s[0]=='p') ? L->rootproto.next : L->rootglobal.next;
+  int i=0;
+  while (l) {
+    i++;
+    l = l->next;
+  }
+  lua_pushnumber(i);
+}
+
+
 static void testC (void)
 {
 #define getnum(s)	((*s++) - '0')
@@ -433,6 +455,7 @@ static struct luaL_reg int_funcs[] = {
 #ifdef DEBUG
   {"testC", testC},
   {"totalmem", mem_query},
+  {"count", countlist},
 #endif
   {"assert", luaI_assert},
   {"call", luaI_call},

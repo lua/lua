@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.11 1997/12/09 13:35:19 roberto Exp roberto $
+** $Id: lgc.c,v 1.12 1997/12/11 14:48:46 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -87,13 +87,15 @@ static int ismarked (TObject *o)
   switch (o->ttype) {
     case LUA_T_STRING: case LUA_T_USERDATA:
       return o->value.ts->head.marked;
-    case LUA_T_FUNCTION:
+    case LUA_T_CLOSURE:
       return o->value.cl->head.marked;
+    case LUA_T_PROTO:
+      return o->value.tf->head.marked;
     case LUA_T_ARRAY:
       return o->value.a->head.marked;
 #ifdef DEBUG
-    case LUA_T_LINE: case LUA_T_MARK:
-    case LUA_T_PROTO: case LUA_T_CPROTO:
+    case LUA_T_LINE: case LUA_T_CLMARK:
+    case LUA_T_CMARK: case LUA_T_PMARK:
       lua_error("internal error");
 #endif
     default:  /* nil, number or cproto */
@@ -180,7 +182,7 @@ static void protomark (TProtoFunc *f)
 }
 
 
-static void funcmark (Closure *f)
+static void closuremark (Closure *f)
 {
   if (!f->head.marked) {
     int i;
@@ -227,10 +229,10 @@ static int markobject (TObject *o)
     case LUA_T_ARRAY:
       hashmark(avalue(o));
       break;
-    case LUA_T_FUNCTION:  case LUA_T_MARK:
-      funcmark(o->value.cl);
+    case LUA_T_CLOSURE:  case LUA_T_CLMARK:
+      closuremark(o->value.cl);
       break;
-    case LUA_T_PROTO:
+    case LUA_T_PROTO: case LUA_T_PMARK:
       protomark(o->value.tf);
       break;
     default: break;  /* numbers, cprotos, etc */

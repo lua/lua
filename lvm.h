@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 1.2 1997/09/26 15:02:26 roberto Exp roberto $
+** $Id: lvm.h,v 1.3 1997/10/16 10:59:34 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,7 @@ void luaV_gettable (void);
 void luaV_settable (TObject *t, int mode);
 void luaV_getglobal (TaggedString *ts);
 void luaV_setglobal (TaggedString *ts);
-StkId luaV_execute (Closure *func, StkId base);
+StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base);
 void luaV_closure (int nelems);
 
 #endif

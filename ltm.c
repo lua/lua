@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.10 1997/12/11 14:48:46 roberto Exp roberto $
+** $Id: ltm.c,v 1.11 1997/12/11 17:21:11 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -112,16 +112,17 @@ int luaT_efectivetag (TObject *o)
 {
   int t;
   switch (t = ttype(o)) {
+    case LUA_T_ARRAY:
+      return o->value.a->htag;
     case LUA_T_USERDATA: {
       int tag = o->value.ts->u.d.tag;
       return (tag >= 0) ? LUA_T_USERDATA : tag;
     }
-    case LUA_T_ARRAY:
-      return o->value.a->htag;
-    case LUA_T_FUNCTION: case LUA_T_MARK:
+    case LUA_T_CLOSURE:
       return o->value.cl->consts[0].ttype;
 #ifdef DEBUG
-     case LUA_T_LINE: case LUA_T_PROTO: case LUA_T_CPROTO:
+    case LUA_T_PMARK: case LUA_T_CMARK:
+    case LUA_T_CLMARK: case LUA_T_LINE:
       lua_error("internal error");
 #endif
     default:
