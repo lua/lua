@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.113 2002/05/09 14:14:34 roberto Exp roberto $
+** $Id: ldebug.c,v 1.114 2002/05/13 13:09:00 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -432,11 +432,6 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int stackpos,
         break;
       }
       case OP_GETTABLE: {
-        *name = luaF_getlocalname(p, GETARG_B(i)+1, pc);
-        if (*name && *name[0] == '*') {
-          *name = kname(p, GETARG_C(i));
-          return "global";
-        }
         *name = kname(p, GETARG_C(i));
         return "field";
         break;

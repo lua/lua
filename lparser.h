@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.42 2002/05/09 18:00:38 roberto Exp roberto $
+** $Id: lparser.h,v 1.43 2002/05/10 19:22:11 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -41,17 +41,8 @@ typedef struct expdesc {
 } expdesc;
 
 
-/* describe declared variables */
-typedef struct vardesc {
-  int i;  /* if local, its index in `locvars';
-             if global, its name index in `k' */
-  lu_byte k;
-  lu_byte level;  /* if local, stack level;
-                     if global, corresponding local (NO_REG for free globals) */
-} vardesc;
-
-
 struct BlockCnt;  /* defined in lparser.c */
+
 
 /* state needed to generate code for a given function */
 typedef struct FuncState {
@@ -63,16 +54,14 @@ typedef struct FuncState {
   struct BlockCnt *bl;  /* chain of current blocks */
   int pc;  /* next position to code (equivalent to `ncode') */
   int lasttarget;   /* `pc' of last `jump target' */
-  int jpc;  /* list of jumps to `pc' */
+  int jpc;  /* list of pending jumps to `pc' */
   int freereg;  /* first free register */
-  int defaultglob;  /* where to look for non-declared globals */
   int nk;  /* number of elements in `k' */
   int np;  /* number of elements in `p' */
   int nlocvars;  /* number of elements in `locvars' */
-  int nactloc;  /* number of active local variables */
-  int nactvar;  /* number of elements in array `actvar' */
+  int nactvar;  /* number of active local variables */
   expdesc upvalues[MAXUPVALUES];  /* upvalues */
-  vardesc actvar[MAXVARS];  /* declared-variable stack */
+  int actvar[MAXVARS];  /* declared-variable stack */
 } FuncState;
 
 

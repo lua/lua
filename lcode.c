@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.102 2002/05/10 19:22:11 roberto Exp roberto $
+** $Id: lcode.c,v 1.103 2002/05/13 13:07:48 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -191,7 +191,7 @@ void luaK_reserveregs (FuncState *fs, int n) {
 
 
 static void freereg (FuncState *fs, int reg) {
-  if (reg >= fs->nactloc && reg < MAXSTACK) {
+  if (reg >= fs->nactvar && reg < MAXSTACK) {
     fs->freereg--;
     lua_assert(reg == fs->freereg);
   }
@@ -375,7 +375,7 @@ int luaK_exp2anyreg (FuncState *fs, expdesc *e) {
   luaK_dischargevars(fs, e);
   if (e->k == VNONRELOC) {
     if (!hasjumps(e)) return e->info;  /* exp is already in a register */ 
-    if (e->info >= fs->nactloc) {  /* reg. is not a local? */
+    if (e->info >= fs->nactvar) {  /* reg. is not a local? */
       luaK_exp2reg(fs, e, e->info);  /* put value on it */
       return e->info;
     }
