@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.40 1996/09/11 21:53:02 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.41 1996/09/24 17:30:28 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -281,15 +281,13 @@ void luaI_call (void)
   temp = lua_getsubscript();
   narg = lua_isnumber(temp) ? lua_getnumber(temp) : MAXPARAMS+1;
   /* read arg[1...n] */
-  for (i=0; i<narg; i++)
-  {
+  for (i=0; i<narg; i++) {
     if (i>=MAXPARAMS)
       lua_error("argument list too long in function `call'");
     lua_pushobject(arg);
     lua_pushnumber(i+1);
     params[i] = lua_getsubscript();
-    if (narg == MAXPARAMS+1 && lua_isnil(params[i]))
-    {
+    if (narg == MAXPARAMS+1 && lua_isnil(params[i])) {
       narg = i;
       break;
     }
@@ -298,14 +296,7 @@ void luaI_call (void)
   for (i=0; i<narg; i++)
     lua_pushobject(params[i]);
   if (lua_callfunction(f))
-  { /* error */
     lua_error(NULL);
-  }
   else
-  { /* push results */
-    Object r;
-    arg = lua_getresult(1);
-    luaI_packarg((arg == LUA_NOOBJECT)?NULL:luaI_Address(arg), &r);
-    luaI_pushobject(&r);
-  }
+    passresults();
 }

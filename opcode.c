@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.74 1996/09/20 12:51:16 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.75 1996/09/24 17:30:28 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -897,39 +897,33 @@ static void comparison (lua_Type tag_less, lua_Type tag_equal,
 }
 
 
-void luaI_packarg (Object *firstelem, Object *arg)
+static void adjust_varargs (StkId first_extra_arg)
 {
-  int nvararg = (firstelem != NULL) ? top-firstelem : 0;
+  Object arg;
+  Object *firstelem = stack+first_extra_arg;
+  int nvararg = top-firstelem;
   int i;
   if (nvararg < 0) nvararg = 0;
-  avalue(arg)  = lua_createarray(nvararg+1);  /* +1 for field 'n' */
-  tag(arg) = LUA_T_ARRAY;
-  for (i=0; i<nvararg; i++)
-  {
+  avalue(&arg)  = lua_createarray(nvararg+1);  /* +1 for field 'n' */
+  tag(&arg) = LUA_T_ARRAY;
+  for (i=0; i<nvararg; i++) {
     Object index;
     tag(&index) = LUA_T_NUMBER;
     nvalue(&index) = i+1;
-    *(lua_hashdefine(avalue(arg), &index)) = *(firstelem+i);
+    *(lua_hashdefine(avalue(&arg), &index)) = *(firstelem+i);
   }
-  /* store counter in field "n" */
-  {
+  /* store counter in field "n" */ {
     Object index, extra;
     tag(&index) = LUA_T_STRING;
     tsvalue(&index) = lua_createstring("n");
     tag(&extra) = LUA_T_NUMBER;
     nvalue(&extra) = nvararg;
-    *(lua_hashdefine(avalue(arg), &index)) = extra;
+    *(lua_hashdefine(avalue(&arg), &index)) = extra;
   }
-}
-
-
-static void adjust_varargs (StkId first_extra_arg)
-{
-  Object arg;
-  luaI_packarg(stack+first_extra_arg, &arg);
   adjust_top(first_extra_arg);
   *top = arg; incr_top;
 }
+
 
 
 /*
