@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.87 2002/05/16 19:09:19 roberto Exp roberto $
+** $Id: lua.c,v 1.88 2002/05/23 19:43:04 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -107,16 +107,23 @@ static void print_usage (void) {
 }
 
 
+static int l_panic (lua_State *l) {
+  (void)l;
+  fputs("unable to recover; exiting\n", stderr);
+  return 0;
+}
+
+
 static void print_version (void) {
   printf("%.80s  %.80s\n", LUA_VERSION, LUA_COPYRIGHT);
 }
 
 
-static void assign (char *arg) {
-  char *eq = strchr(arg, '=');
-  *eq = '\0';  /* spilt `arg' in two strings (name & value) */
-  lua_pushstring(L, eq+1);
-  lua_setglobal(L, arg);
+static void assign (const char *arg) {
+  char *eq = strchr(arg, '=');  /* arg is `name=value'; find the `=' */
+  lua_pushlstring(L, arg, eq-arg);  /* push name */
+  lua_pushstring(L, eq+1);  /* push value */
+  lua_settable(L, LUA_GLOBALSINDEX);  /* _G.name = value */
 }
 
 
@@ -158,12 +165,12 @@ static int docall (int status) {
 
 
 static int file_input (const char *name) {
-  return docall(lua_loadfile(L, name));
+  return docall(luaL_loadfile(L, name));
 }
 
 
 static int dostring (const char *s, const char *name) {
-  return docall(lua_loadbuffer(L, s, strlen(s), name));
+  return docall(luaL_loadbuffer(L, s, strlen(s), name));
 }
 
 
@@ -231,7 +238,7 @@ static int load_string (void) {
     firstline = 0;
     push_line(buffer);
     lua_concat(L, lua_gettop(L));
-    status = lua_loadbuffer(L, lua_tostring(L, 1), lua_strlen(L, 1), "=stdin");
+    status = luaL_loadbuffer(L, lua_tostring(L, 1), lua_strlen(L, 1), "=stdin");
   } while (incomplete(status));  /* repeat loop to get rest of `line' */
   save_line(lua_tostring(L, 1));
   lua_remove(L, 1);
@@ -363,6 +370,7 @@ int main (int argc, char *argv[]) {
   int toclose = 0;
   (void)argc;  /* to avoid warnings */
   L = lua_open();  /* create state */
+  lua_setpanicf(L, l_panic);
   LUA_USERINIT(L);  /* open libraries */
   register_own(argv);  /* create own function */
   status = handle_luainit();

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.121 2002/05/13 13:10:04 roberto Exp roberto $
+** $Id: ltests.c,v 1.122 2002/05/16 14:59:49 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -397,7 +397,7 @@ static int doonnewstack (lua_State *L) {
   lua_State *L1 = lua_newthread(L);
   size_t l;
   const char *s = luaL_check_lstr(L, 1, &l);
-  int status = lua_loadbuffer(L1, s, l, s);
+  int status = luaL_loadbuffer(L1, s, l, s);
   if (status == 0)
     status = lua_pcall(L1, 0, 0, 0);
   lua_pushnumber(L, status);
@@ -641,10 +641,10 @@ static int testC (lua_State *L) {
     else if EQ("loadstring") {
       size_t sl;
       const char *s = luaL_check_lstr(L, getnum, &sl);
-      lua_loadbuffer(L, s, sl, s);
+      luaL_loadbuffer(L, s, sl, s);
     }
     else if EQ("loadfile") {
-      lua_loadfile(L, luaL_check_string(L, getnum));
+      luaL_loadfile(L, luaL_check_string(L, getnum));
     }
     else if EQ("setmetatable") {
       lua_setmetatable(L, getnum);

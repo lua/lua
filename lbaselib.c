@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.74 2002/05/16 18:39:46 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.75 2002/05/16 19:09:19 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -174,7 +174,7 @@ static int luaB_nexti (lua_State *L) {
   else {  /* `for' step */
     i++;  /* next value */
     lua_pushnumber(L, i);
-    lua_rawgeti(L, 1, i);
+    lua_rawgeti(L, 1, (int)i);
     return (lua_isnil(L, -1)) ? 0 : 2;
   }
 }
@@ -194,20 +194,20 @@ static int luaB_loadstring (lua_State *L) {
   size_t l;
   const char *s = luaL_check_lstr(L, 1, &l);
   const char *chunkname = luaL_opt_string(L, 2, s);
-  return passresults(L, lua_loadbuffer(L, s, l, chunkname));
+  return passresults(L, luaL_loadbuffer(L, s, l, chunkname));
 }
 
 
 static int luaB_loadfile (lua_State *L) {
   const char *fname = luaL_opt_string(L, 1, NULL);
-  return passresults(L, lua_loadfile(L, fname));
+  return passresults(L, luaL_loadfile(L, fname));
 }
 
 
 static int luaB_assert (lua_State *L) {
   luaL_check_any(L, 1);
   if (!lua_toboolean(L, 1))
-    return luaL_verror(L, "assertion failed!  %s", luaL_opt_string(L, 2, ""));
+    return luaL_verror(L, "%s", luaL_opt_string(L, 2, "assertion failed!"));
   lua_settop(L, 1);
   return 1;
 }
@@ -349,7 +349,7 @@ static int luaB_require (lua_State *L) {
       lua_settop(L, 3);  /* reset stack position */
       if ((path = pushnextpath(L, path)) == NULL) break;
       pushcomposename(L);
-      status = lua_loadfile(L, lua_tostring(L, -1));  /* try to load it */
+      status = luaL_loadfile(L, lua_tostring(L, -1));  /* try to load it */
     }
   }
   switch (status) {

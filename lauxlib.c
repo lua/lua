@@ -1,33 +1,36 @@
 /*
-** $Id: lauxlib.c,v 1.70 2002/05/15 18:57:44 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.71 2002/05/16 18:39:46 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
 
 
+#include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
+#ifndef lua_filerror
+#include <errno.h>
+#define lua_fileerror	(strerror(errno))
+#endif
+
+
 /* This file uses only the official API of Lua.
 ** Any function declared here could be written as an application function.
-** With care, these functions can be used by other libraries.
 */
 
 #include "lua.h"
 
 #include "lauxlib.h"
 #include "luadebug.h"
-#include "lualib.h"
 
 
-LUALIB_API int luaL_findstring (const char *name, const char *const list[]) {
-  int i;
-  for (i=0; list[i]; i++)
-    if (strcmp(list[i], name) == 0)
-      return i;
-  return -1;  /* name not found */
-}
+/*
+** {======================================================
+** Error-report functions
+** =======================================================
+*/
 
 
 LUALIB_API int luaL_argerror (lua_State *L, int narg, const char *extramsg) {
@@ -51,6 +54,33 @@ LUALIB_API int luaL_typerror (lua_State *L, int narg, const char *tname) {
 
 static void tag_error (lua_State *L, int narg, int tag) {
   luaL_typerror(L, narg, lua_typename(L, tag)); 
+}
+
+
+LUALIB_API int luaL_verror (lua_State *L, const char *fmt, ...) {
+  lua_Debug ar;
+  const char *msg;
+  va_list argp;
+  va_start(argp, fmt);
+  msg = lua_pushvfstring(L, fmt, argp);
+  va_end(argp);
+  if (lua_getstack(L, 1, &ar)) {  /* check calling function */
+    lua_getinfo(L, "Snl", &ar);
+    if (ar.currentline > 0)
+      lua_pushfstring(L, "%s:%d: %s", ar.short_src, ar.currentline, msg);
+  }
+  return lua_errorobj(L);
+}
+
+/* }====================================================== */
+
+
+LUALIB_API int luaL_findstring (const char *name, const char *const list[]) {
+  int i;
+  for (i=0; list[i]; i++)
+    if (strcmp(list[i], name) == 0)
+      return i;
+  return -1;  /* name not found */
 }
 
 
@@ -142,21 +172,6 @@ LUALIB_API void luaL_opennamedlib (lua_State *L, const char *libname,
   lua_settable(L, LUA_GLOBALSINDEX);
 }
 
-
-LUALIB_API int luaL_verror (lua_State *L, const char *fmt, ...) {
-  lua_Debug ar;
-  const char *msg;
-  va_list argp;
-  va_start(argp, fmt);
-  msg = lua_pushvfstring(L, fmt, argp);
-  va_end(argp);
-  if (lua_getstack(L, 1, &ar)) {  /* check calling function */
-    lua_getinfo(L, "Snl", &ar);
-    if (ar.currentline > 0)
-      lua_pushfstring(L, "%s:%d: %s", ar.short_src, ar.currentline, msg);
-  }
-  return lua_errorobj(L);
-}
 
 
 /*
@@ -284,3 +299,144 @@ LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
   }
 }
 
+
+/*
+** {======================================================
+** Load functions
+** =======================================================
+*/
+
+typedef struct LoadF {
+  FILE *f;
+  char buff[LUAL_BUFFERSIZE];
+} LoadF;
+
+
+static const char *getF (void *ud, size_t *size) {
+  LoadF *lf = (LoadF *)ud;
+  *size = fread(lf->buff, 1, LUAL_BUFFERSIZE, lf->f);
+  return (*size > 0) ? lf->buff : NULL;
+}
+
+
+static int errfile (lua_State *L, const char *filename) {
+  if (filename == NULL) filename = "stdin";
+  lua_pushfstring(L, "cannot read %s: %s", filename, lua_fileerror);
+  return LUA_ERRFILE;
+}
+
+
+LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
+  LoadF lf;
+  int status;
+  int c;
+  int old_top = lua_gettop(L);
+  lf.f = (filename == NULL) ? stdin : fopen(filename, "r");
+  if (lf.f == NULL) return errfile(L, filename);  /* unable to open file */
+  c = ungetc(getc(lf.f), lf.f);
+  if (!(isspace(c) || isprint(c)) && lf.f != stdin) {  /* binary file? */
+    fclose(lf.f);
+    lf.f = fopen(filename, "rb");  /* reopen in binary mode */
+    if (lf.f == NULL) return errfile(L, filename);  /* unable to reopen file */
+  }
+  if (filename == NULL)
+    lua_pushliteral(L, "=stdin");
+  else
+    lua_pushfstring(L, "@%s", filename);
+  status = lua_load(L, getF, &lf, lua_tostring(L, -1));
+  lua_remove(L, old_top+1);  /* remove filename from stack */
+  if (ferror(lf.f)) {
+    lua_settop(L, old_top);  /* ignore results from `lua_load' */
+    return errfile(L, filename);
+  }
+  if (lf.f != stdin)
+    fclose(lf.f);
+  return status;
+}
+
+
+typedef struct LoadS {
+  const char *s;
+  size_t size;
+} LoadS;
+
+
+static const char *getS (void *ud, size_t *size) {
+  LoadS *ls = (LoadS *)ud;
+  if (ls->size == 0) return NULL;
+  *size = ls->size;
+  ls->size = 0;
+  return ls->s;
+}
+
+
+LUALIB_API int luaL_loadbuffer (lua_State *L, const char *buff, size_t size,
+                                const char *name) {
+  LoadS ls;
+  ls.s = buff;
+  ls.size = size;
+  return lua_load(L, getS, &ls, name);
+}
+
+/* }====================================================== */
+
+
+/*
+** {======================================================
+** compatibility code
+** =======================================================
+*/
+
+
+static void callalert (lua_State *L, int status) {
+  if (status != 0) {
+    int top = lua_gettop(L);
+    lua_getglobal(L, "_ALERT");
+    lua_insert(L, -2);
+    lua_pcall(L, 1, 0, 0);
+    lua_settop(L, top-1);
+  }
+}
+
+
+LUALIB_API int lua_call (lua_State *L, int nargs, int nresults) {
+  int status;
+  int errpos = lua_gettop(L) - nargs;
+  lua_getglobal(L, "_ERRORMESSAGE");
+  lua_insert(L, errpos);  /* put below function and args */
+  status = lua_pcall(L, nargs, nresults, errpos);
+  lua_remove(L, errpos);
+  callalert(L, status);
+  return status;
+}
+
+
+static int aux_do (lua_State *L, int status) {
+  if (status == 0) {  /* parse OK? */
+    int err = lua_gettop(L);
+    lua_getglobal(L, "_ERRORMESSAGE");
+    lua_insert(L, err);
+    status = lua_pcall(L, 0, LUA_MULTRET, err);  /* call main */
+    lua_remove(L, err);  /* remove error function */
+  }
+  callalert(L, status);
+  return status;
+}
+
+
+LUALIB_API int lua_dofile (lua_State *L, const char *filename) {
+  return aux_do(L, luaL_loadfile(L, filename));
+}
+
+
+LUALIB_API int lua_dobuffer (lua_State *L, const char *buff, size_t size,
+                          const char *name) {
+  return aux_do(L, luaL_loadbuffer(L, buff, size, name));
+}
+
+
+LUALIB_API int lua_dostring (lua_State *L, const char *str) {
+  return lua_dobuffer(L, str, strlen(str), str);
+}
+
+/* }====================================================== */
