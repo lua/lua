@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.22 1996/11/06 20:26:56 roberto Exp roberto $
+% $Id: manual.tex,v 1.23 1996/11/12 16:00:16 roberto Exp $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -35,7 +35,7 @@ Waldemar Celes
 \tecgraf\ --- Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1996/11/06 20:26:56 $}
+\date{\small \verb$Date: 1996/11/12 16:00:16 $}
 
 \maketitle
 
@@ -231,7 +231,7 @@ and do not interpret escape sequences.
 \Index{Comments} start anywhere outside a string with a
 double hyphen (\verb'--') and run until the end of the line.
 Moreover, if the first line of a chunk file starts with \verb'#',
-this line is skiped%
+this line is skipped%
 \footnote{This facility allows the use of Lua as a script interpreter
 in Unix systems.}.
 
@@ -678,7 +678,7 @@ called when Lua tries to assign indexed a non table value.
 It receives as arguments the non table value,
 the index, and the assigned value.
 The default handler issues an error.
-\item[``function'':]\index{function falback}
+\item[``function'':]\index{function fallback}
 called when Lua tries to call a non function value.
 It receives as arguments the non function value and the
 arguments given in the original call.
@@ -1334,7 +1334,7 @@ whereas \verb'q' and \verb's' expect a string.
 
 \subsubsection*{\ff{\tt gsub (s, pat, repl [, n])}}\Deffunc{gsub}
 Returns a copy of \verb-s-,
-where all ocurrences of the pattern \verb-pat- have been
+where all occurrences of the pattern \verb-pat- have been
 replaced by a replacement string specified by \verb-repl-.
 This function also returns, as a second value,
 the total number of substitutions made.
@@ -1352,10 +1352,10 @@ otherwise, the replacement string is the empty string.
 
 An optional parameter \verb-n- limits 
 the maximum number of substitutions to occur.
-For instance, when \verb-n- is 1 only the first ocurrence of
+For instance, when \verb-n- is 1 only the first occurrence of
 \verb-pat- is replaced.
 
-As an example, in the following expression each ocurrence of the form
+As an example, in the following expression each occurrence of the form
 \verb-$name$- calls the function \verb|getenv|,
 passing \verb|name| as argument
 (because only this part of the pattern is captured).
@@ -1415,7 +1415,7 @@ or a character class followed by \verb'*' or by \verb'?'.
 A single character class matches any single character in the class.
 A character class followed by \verb'*' matches 0 or more repetitions
 of characters in the class.
-A character class followed by \verb'?' matches 0 or one ocurrence
+A character class followed by \verb'?' matches 0 or one occurrence
 of a character in the class.
 A pattern item may also has the form \verb'%n',
 for \verb-n- between 1 and 9;
@@ -2204,9 +2204,9 @@ This program can be called with any sequence of the following arguments:
 \item[{\tt -v}] prints version information.
 \item[{\tt -}] runs interactively, accepting commands from standard input
 until an \verb|EOF|.
-\item[{\tt -e stat}] executes \verb|stat| as a Lua chunck.
-\item[{\tt var=exp}] executes \verb|var=exp| as a Lua chunck.
-\item[{\tt filename}] executes file \verb|filename| as a Lua chunck.
+\item[{\tt -e stat}] executes \verb|stat| as a Lua chunk.
+\item[{\tt var=exp}] executes \verb|var=exp| as a Lua chunk.
+\item[{\tt filename}] executes file \verb|filename| as a Lua chunk.
 \end{description}
 All arguments are handle in order.
 For instance, an invocation like
