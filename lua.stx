@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.36 1996/03/21 16:31:32 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.37 1996/05/28 21:07:32 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -591,6 +591,7 @@ PrepJump : /* empty */
 	  code_byte(0);		/* open space */
 	  code_word (0);
          }
+	 ;
 	   
 expr1	 : expr { adjust_functioncall($1, 1); }
 	 ;
@@ -700,6 +701,7 @@ parlist1 :	par		  { $$ = $1; }
 
 par : NAME	{ add_localvar($1); $$ = 0; }
     | DOTS	{ $$ = 1; }
+    ;
 		
 fieldlist  : lfieldlist
   	     { flush_list($1/FIELDS_PER_FLUSH, $1%FIELDS_PER_FLUSH); }
