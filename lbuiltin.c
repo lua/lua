@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.23 1998/01/19 19:49:22 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.24 1998/02/12 19:23:32 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -312,6 +312,7 @@ static void settag (void)
   lua_Object o = luaL_tablearg(1);
   lua_pushobject(o);
   lua_settag(luaL_check_number(2));
+  lua_pushobject(o);  /* returns first argument */
 }
 
 
