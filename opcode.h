@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 2.4 1994/10/17 19:00:40 celes Exp roberto $
+** $Id: opcode.h,v 3.1 1994/11/02 20:30:53 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -156,8 +156,8 @@ char   *lua_strdup (char *l);
 
 void    lua_setinput   (Input fn);	/* from "lex.c" module */
 char   *lua_lasttext   (void);		/* from "lex.c" module */
+int     yylex (void);		        /* from "lex.c" module */
 Byte   *lua_parse      (void); 		/* from "lua.stx" module */
-void 	lua_obj2number (void);
 void    lua_travstack (void (*fn)(Object *));
 
 #endif
