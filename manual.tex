@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 2.10 1997/07/02 17:09:48 roberto Exp roberto $
+% $Id: manual.tex,v 2.11 1997/07/04 22:35:38 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -38,7 +38,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1997/07/02 17:09:48 $}
+\date{\small \verb$Date: 1997/07/04 22:35:38 $}
 
 \maketitle
 
@@ -2085,8 +2085,10 @@ Both can be used with an unlimited number of arguments.
 The functions \verb|random| and \verb|randomseed| are interfaces to
 the simple random generator functions \verb|rand| and \verb|srand|,
 provided by ANSI C.
-The function \verb|random| returns pseudo-random numbers in the
-range \Math{[0,1)}.
+The function \verb|random|, when called without arguments,
+returns a pseudo-random real number in the range \Math{[0,1)}.
+When called with a number \Math{n},
+returns a pseudo-random integer in the range \Math{[1,n]}.
 
 
 \subsection{I/O Facilities} \label{libio}

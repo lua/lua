@@ -3,7 +3,7 @@
 ** Mathematics library to LUA
 */
 
-char *rcs_mathlib="$Id: mathlib.c,v 1.24 1997/06/09 17:30:10 roberto Exp roberto $";
+char *rcs_mathlib="$Id: mathlib.c,v 1.25 1997/06/19 18:03:04 roberto Exp roberto $";
 
 #include <stdlib.h>
 #include <math.h>
@@ -171,7 +171,11 @@ static void math_rad (void)
 
 static void math_random (void)
 {
-  lua_pushnumber((double)(rand()%RAND_MAX) / (double)RAND_MAX);
+  double r = (double)(rand()%RAND_MAX) / (double)RAND_MAX;
+  if (lua_getparam(1) == LUA_NOOBJECT)
+    lua_pushnumber(r);
+  else
+    lua_pushnumber((int)(r*luaL_check_number(1)) + 1);
 }
 
 static void math_randomseed (void)
