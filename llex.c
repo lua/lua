@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.66 2000/08/08 20:42:07 roberto Exp roberto $
+** $Id: llex.c,v 1.67 2000/08/09 19:16:57 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -113,20 +113,6 @@ static void inclinenumber (LexState *LS) {
 }
 
 
-static void checkpragma (lua_State *L, LexState *LS) {
-  static const char *const pragmas [] = {"debug", "nodebug", NULL};
-  if (LS->current == '$') {  /* is a pragma? */
-    switch (luaL_findstring(readname(L, LS)+1, pragmas)) {
-      case 0:  /* debug */
-      case 1:  /* nodebug */
-        break;
-      default:
-        luaX_error(LS, "unknown pragma", TK_STRING);
-    }
-  }
-}
-
-
 void luaX_setinput (lua_State *L, LexState *LS, ZIO *z, TString *source) {
   LS->L = L;
   LS->lookahead.token = TK_EOS;  /* no look-ahead token */
@@ -141,7 +127,6 @@ void luaX_setinput (lua_State *L, LexState *LS, ZIO *z, TString *source) {
       next(LS);
     } while (LS->current != '\n' && LS->current != EOZ);
   }
-  else checkpragma(L, LS);
 }
 
 
@@ -247,8 +232,11 @@ int luaX_lex (LexState *LS) {
 
       case '\n':
         inclinenumber(LS);
-        checkpragma(L, LS);
         continue;
+
+      case '$':
+        luaX_error(LS, "unexpected `$' (pragmas are no longer supported)", '$');
+        break;
 
       case '-':
         next(LS);
