@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.168 2003/02/10 17:32:50 roberto Exp roberto $
+** $Id: lgc.c,v 1.169 2003/02/11 10:46:24 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -27,7 +27,7 @@ typedef struct GCState {
   GCObject *wk;  /* list of traversed key-weak tables (to be cleared) */
   GCObject *wv;  /* list of traversed value-weak tables */
   GCObject *wkv;  /* list of traversed key-value weak tables */
-  global_State *G;
+  global_State *g;
 } GCState;
 
 
@@ -102,7 +102,7 @@ static void reallymarkobject (GCState *st, GCObject *o) {
 
 static void marktmu (GCState *st) {
   GCObject *u;
-  for (u = st->G->tmudata; u; u = u->gch.next) {
+  for (u = st->g->tmudata; u; u = u->gch.next) {
     unmark(u);  /* may be marked, if left from previous GC */
     reallymarkobject(st, u);
   }
@@ -138,9 +138,9 @@ void luaC_separateudata (lua_State *L) {
 
 
 static void removekey (Node *n) {
-  setnilvalue(val(n));  /* remove corresponding value ... */
-  if (iscollectable(key(n)))
-    setttype(key(n), LUA_TNONE);  /* dead key; remove it */
+  setnilvalue(gval(n));  /* remove corresponding value ... */
+  if (iscollectable(gkey(n)))
+    setttype(gkey(n), LUA_TNONE);  /* dead key; remove it */
 }
 
 
@@ -150,8 +150,8 @@ static void traversetable (GCState *st, Table *h) {
   int weakvalue = 0;
   const TObject *mode;
   markvalue(st, h->metatable);
-  lua_assert(h->lsizenode || h->node == st->G->dummynode);
-  mode = gfasttm(st->G, h->metatable, TM_MODE);
+  lua_assert(h->lsizenode || h->node == st->g->dummynode);
+  mode = gfasttm(st->g, h->metatable, TM_MODE);
   if (mode && ttisstring(mode)) {  /* is there a weak mode? */
     weakkey = (strchr(svalue(mode), 'k') != NULL);
     weakvalue = (strchr(svalue(mode), 'v') != NULL);
@@ -167,17 +167,17 @@ static void traversetable (GCState *st, Table *h) {
     }
   }
   if (!weakvalue) {
-    i = sizearray(h);
+    i = h->sizearray;
     while (i--)
       markobject(st, &h->array[i]);
   }
   i = sizenode(h);
   while (i--) {
-    Node *n = node(h, i);
-    if (!ttisnil(val(n))) {
-      lua_assert(!ttisnil(key(n)));
-      condmarkobject(st, key(n), !weakkey);
-      condmarkobject(st, val(n), !weakvalue);
+    Node *n = gnode(h, i);
+    if (!ttisnil(gval(n))) {
+      lua_assert(!ttisnil(gkey(n)));
+      condmarkobject(st, gkey(n), !weakkey);
+      condmarkobject(st, gval(n), !weakvalue);
     }
   }
 }
@@ -303,8 +303,8 @@ static void cleartablekeys (GCObject *l) {
     int i = sizenode(h);
     lua_assert(h->marked & KEYWEAK);
     while (i--) {
-      Node *n = node(h, i);
-      if (!valismarked(key(n)))  /* key was collected? */
+      Node *n = gnode(h, i);
+      if (!valismarked(gkey(n)))  /* key was collected? */
         removekey(n);  /* remove entry from table */
     }
     l = h->gclist;
@@ -318,7 +318,7 @@ static void cleartablekeys (GCObject *l) {
 static void cleartablevalues (GCObject *l) {
   while (l) {
     Table *h = gcotoh(l);
-    int i = sizearray(h);
+    int i = h->sizearray;
     lua_assert(h->marked & VALUEWEAK);
     while (i--) {
       TObject *o = &h->array[i];
@@ -327,8 +327,8 @@ static void cleartablevalues (GCObject *l) {
     }
     i = sizenode(h);
     while (i--) {
-      Node *n = node(h, i);
-      if (!valismarked(val(n)))  /* value was collected? */
+      Node *n = gnode(h, i);
+      if (!valismarked(gval(n)))  /* value was collected? */
         removekey(n);  /* remove entry from table */
     }
     l = h->gclist;
@@ -441,11 +441,11 @@ void luaC_sweep (lua_State *L, int all) {
 
 /* mark root set */
 static void markroot (GCState *st, lua_State *L) {
-  global_State *G = st->G;
+  global_State *g = st->g;
   markobject(st, defaultmeta(L));
   markobject(st, registry(L));
-  traversestack(st, G->mainthread);
-  if (L != G->mainthread)  /* another thread is running? */
+  traversestack(st, g->mainthread);
+  if (L != g->mainthread)  /* another thread is running? */
     markvalue(st, L);  /* cannot collect it */
 }
 
@@ -453,7 +453,7 @@ static void markroot (GCState *st, lua_State *L) {
 static void mark (lua_State *L) {
   GCState st;
   GCObject *wkv;
-  st.G = G(L);
+  st.g = G(L);
   st.tmark = NULL;
   st.wkv = st.wk = st.wv = NULL;
   markroot(&st, L);

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.157 2003/02/11 10:46:24 roberto Exp roberto $
+** $Id: lobject.h,v 1.158 2003/02/18 16:02:56 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -316,7 +316,6 @@ typedef struct Table {
 
 #define twoto(x)	(1<<(x))
 #define sizenode(t)	(twoto((t)->lsizenode))
-#define sizearray(t)	((t)->sizearray)
 
 
 

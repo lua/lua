@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.h,v 1.42 2002/05/27 20:35:40 roberto Exp roberto $
+** $Id: ltable.h,v 1.43 2002/11/07 16:03:33 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -10,9 +10,9 @@
 #include "lobject.h"
 
 
-#define node(t,i)	(&(t)->node[i])
-#define key(n)		(&(n)->i_key)
-#define val(n)		(&(n)->i_val)
+#define gnode(t,i)	(&(t)->node[i])
+#define gkey(n)		(&(n)->i_key)
+#define gval(n)		(&(n)->i_val)
 
 
 const TObject *luaH_getnum (Table *t, int key);

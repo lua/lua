@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.147 2003/02/27 12:32:30 roberto Exp roberto $
+** $Id: ldebug.c,v 1.148 2003/03/18 12:24:38 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -178,9 +178,9 @@ static const char *travglobals (lua_State *L, const TObject *o) {
   Table *g = hvalue(gt(L));
   int i = sizenode(g);
   while (i--) {
-    Node *n = node(g, i);
-    if (luaO_rawequalObj(o, val(n)) && ttisstring(key(n)))
-      return getstr(tsvalue(key(n)));
+    Node *n = gnode(g, i);
+    if (luaO_rawequalObj(o, gval(n)) && ttisstring(gkey(n)))
+      return getstr(tsvalue(gkey(n)));
   }
   return NULL;
 }

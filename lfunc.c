@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.65 2002/12/19 11:11:55 roberto Exp roberto $
+** $Id: lfunc.c,v 1.66 2003/02/11 10:46:24 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -35,11 +35,11 @@ Closure *luaF_newCclosure (lua_State *L, int nelems) {
 }
 
 
-Closure *luaF_newLclosure (lua_State *L, int nelems, TObject *gt) {
+Closure *luaF_newLclosure (lua_State *L, int nelems, TObject *e) {
   Closure *c = cast(Closure *, luaM_malloc(L, sizeLclosure(nelems)));
   luaC_link(L, valtogco(c), LUA_TFUNCTION);
   c->l.isC = 0;
-  c->l.g = *gt;
+  c->l.g = *e;
   c->l.nupvalues = cast(lu_byte, nelems);
   return c;
 }
