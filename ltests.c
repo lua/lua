@@ -142,7 +142,8 @@ static char *buildop (Proto *p, int pc, char *buff) {
   Instruction i = p->code[pc];
   OpCode o = GET_OPCODE(i);
   const char *name = luaP_opnames[o];
-  sprintf(buff, "%4d - ", pc);
+  int line = luaG_getline(p->lineinfo, pc, 1, NULL);
+  sprintf(buff, "(%4d) %4d - ", line, pc);
   switch (getOpMode(o)) {  
     case iABC:
       sprintf(buff+strlen(buff), "%-12s%4d %4d %4d", name,
@@ -574,6 +575,9 @@ static int testC (lua_State *L) {
     }
     else if EQ("insert") {
       lua_insert(L, getnum);
+    }
+    else if EQ("replace") {
+      lua_replace(L, getnum);
     }
     else if EQ("gettable") {
       lua_gettable(L, getnum);
