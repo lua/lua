@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.4 1994/11/07 16:34:44 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.5 1994/11/07 18:27:39 roberto Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -545,14 +545,24 @@ void *lua_getuserdata (lua_Object object)
  else return (uvalue(Address(object)));
 }
 
+
+lua_Object lua_getlocked (int ref)
+{
+ adjustC(0);
+ *(top++) = *luaI_getlocked(ref);
+ CBase++;  /* incorporate object in the stack */
+ return Ref(top-1);
+}
+
 /*
 ** Get a global object. Return the object handle or NULL on error.
 */
 lua_Object lua_getglobal (char *name)
 {
  int n = lua_findsymbol(name);
- if (n < 0) return 0;
+ adjustC(0);
  *(top++) = s_object(n);
+ CBase++;  /* incorporate object in the stack */
  return Ref(top-1);
 }
 

@@ -2,7 +2,7 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lua.h,v 3.3 1994/11/07 16:34:44 roberto Exp $
+** $Id: lua.h,v 3.4 1994/11/07 18:27:39 roberto Exp roberto $
 */
 
 
@@ -59,6 +59,10 @@ int            lua_storesubscript	(void);
 lua_Object     lua_getsubscript         (void);
 
 int            lua_type 		(lua_Object object);
+
+int	       lua_lock			(lua_Object object);
+lua_Object     lua_getlocked		(int ref);
+void	       lua_unlock		(int ref);
 
 
 /* for lua 1.1 */
