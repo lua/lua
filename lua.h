@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.43 1999/12/06 11:41:28 roberto Exp roberto $
+** $Id: lua.h,v 1.44 1999/12/30 18:29:46 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -114,8 +114,6 @@ long	       lua_collectgarbage (lua_State *L, long limit);
 
 lua_Object     lua_seterrormethod (lua_State *L);  /* In: new method */
 
-lua_State     *lua_setstate (lua_State *st);
-
 
 /* 
 ** ===============================================================
@@ -159,7 +157,6 @@ extern lua_State *lua_state;
 #define lua_open()	((void)(lua_state?0:(lua_state=lua_newstate(NULL))))
 
 #define lua_close()		(lua_close)(lua_state)
-#define lua_setstate(st)	(lua_setstate)(lua_state, st)
 #define lua_settagmethod(tag,event)	(lua_settagmethod)(lua_state, tag,event)
 #define lua_gettagmethod(tag,event)	(lua_gettagmethod)(lua_state, tag,event)
 #define lua_newtag()		(lua_newtag)(lua_state)
