@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.37 1996/05/28 21:07:32 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.38 1996/07/24 14:38:12 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -428,7 +428,7 @@ void lua_parse (TFunc *tf)
  TaggedString *pTStr;
 }
 
-%start functionlist
+%start chunk
 
 %token WRONGTOKEN
 %token NIL
@@ -466,11 +466,12 @@ void lua_parse (TFunc *tf)
 
 %% /* beginning of rules section */
 
+chunk	: chunklist ret
 
-functionlist : /* empty */
-	     | functionlist globalstat
-	     | functionlist function
-	     ;
+chunklist : /* empty */
+	  | chunklist globalstat
+	  | chunklist function
+	  ;
 
 globalstat   : stat sc
 	     | setdebug
