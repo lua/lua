@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.120 2003/03/19 21:15:18 roberto Exp roberto $
+** $Id: lua.c,v 1.121 2003/03/24 12:40:01 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -31,8 +31,9 @@
 */
 #ifdef _POSIX_C_SOURCE
 #include <unistd.h>
+#define stdin_is_tty()	isatty(0)
 #else
-static int isatty (int x) { return x==0; }  /* assume stdin is a tty */
+#define stdin_is_tty()	1  /* assume stdin is a tty */
 #endif
 
 
@@ -297,7 +298,7 @@ static void manual_input (void) {
 
 static int handle_argv (char *argv[], int *interactive) {
   if (argv[1] == NULL) {  /* no more arguments? */
-    if (isatty(0)) {
+    if (stdin_is_tty()) {
       print_version();
       manual_input();
     }
