@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.12 1998/06/02 20:37:04 roberto Exp roberto $
+% $Id: manual.tex,v 1.13 1998/06/06 21:05:52 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -39,7 +39,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{\small \verb$Date: 1998/06/02 20:37:04 $}
+%\date{\small \verb$Date: 1998/06/06 21:05:52 $}
 
 \maketitle
 
@@ -1575,7 +1575,7 @@ using the following functions:
 \begin{verbatim}
 int lua_dofile   (char *filename);
 int lua_dostring (char *string);
-int lua_dobuffer (char *buff, int size);
+int lua_dobuffer (char *buff, int size, char *name);
 \end{verbatim}
 All these functions return an error code:
 0, in case of success; non zero, in case of errors.
@@ -1583,11 +1583,18 @@ More specifically, \verb|lua_dofile| returns 2 if for any reason
 it could not open the file.
 The function \verb|lua_dofile|, if called with argument \verb|NULL|,
 executes the \verb|stdin| stream.
-Function \verb|lua_dofile| is also able to execute pre-compiled chunks.
-It automatically detects whether the file is text or binary,
-and loads it accordingly (see program \IndexVerb{luac}).
-Function \verb|lua_dostring| executes only source code,
-and function \verb|lua_dobuffer| executes only pre-compiled chunks.
+Functions \verb|lua_dofile| and \verb|lua_dobuffer|
+are both able to execute pre-compiled chunks.
+They automatically detect whether the chunk is text or binary,
+and load it accordingly (see program \IndexVerb{luac}).
+Function \verb|lua_dostring| executes only source code.
+
+The third parameter to \verb|lua_dobuffer| (\verb|name|)
+is the ``name of the chunk'',
+used in error messages and debug information.
+In files this name is the file name,
+and \verb|lua_dostring| uses a small prefix
+of the string as the chunk name.
 
 These functions return, in structure lua2C,
 any values eventually returned by the chunks.

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.24 1998/01/29 15:59:35 roberto Exp roberto $
+** $Id: ldo.c,v 1.25 1998/05/31 22:22:00 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -392,30 +392,25 @@ int lua_dofile (char *filename)
 #define SSIZE_PREF "20"
 
 
-int lua_dostring (char *str)
-{
-  int status;
+int lua_dostring (char *str) {
   char name[SIZE_PREF+25];
   char *temp;
-  ZIO z;
-  if (str == NULL) return 1;
+  if (str == NULL || *str == ID_CHUNK) return 1;
   sprintf(name, "(dostring) >> \"%." SSIZE_PREF "s\"", str);
   temp = strchr(name, '\n');
   if (temp) {  /* end string after first line */
    *temp = '"';
    *(temp+1) = 0;
   }
-  luaZ_sopen(&z, str, name);
-  status = do_main(&z, 0);
-  return status;
+  return lua_dobuffer(str, strlen(str), name);
 }
 
 
-int lua_dobuffer (char *buff, int size) {
+int lua_dobuffer (char *buff, int size, char *name) {
   int status;
   ZIO z;
-  luaZ_mopen(&z, buff, size, "(buffer)");
-  status = do_main(&z, 1);
+  luaZ_mopen(&z, buff, size, (name==NULL) ? "(buffer)" : name);
+  status = do_main(&z, buff[0]==ID_CHUNK);
   return status;
 }
 
