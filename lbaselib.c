@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.164 2005/01/07 19:53:32 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.165 2005/01/14 14:19:42 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -186,9 +186,9 @@ static int luaB_collectgarbage (lua_State *L) {
   static const int optsnum[] = {LUA_GCSTOP, LUA_GCRESTART, LUA_GCCOLLECT,
     LUA_GCCOUNT, LUA_GCSTEP, LUA_GCSETPACE, LUA_GCSETSTEPMUL};
   int o = luaL_findstring(luaL_optstring(L, 1, "collect"), opts);
-  lua_Number ex = luaL_optnumber(L, 2, 0);
+  int ex = luaL_optinteger(L, 2, 0);
   luaL_argcheck(L, o >= 0, 1, "invalid option");
-  lua_pushinteger(L, lua_gc(L, optsnum[o], ex * 100));
+  lua_pushinteger(L, lua_gc(L, optsnum[o], ex));
   return 1;
 }
 
