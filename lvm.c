@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.148 2000/12/04 18:33:40 roberto Exp roberto $
+** $Id: lvm.c,v 1.149 2000/12/28 12:55:41 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -325,7 +325,7 @@ static void luaV_pack (lua_State *L, StkId firstelem) {
   for (i=0; firstelem+i<L->top; i++)
     *luaH_setint(L, htab, i+1) = *(firstelem+i);
   /* store counter in field `n' */
-  luaH_setstrnum(L, htab, luaS_new(L, "n"), i);
+  luaH_setstrnum(L, htab, luaS_newliteral(L, "n"), i);
   L->top = firstelem;  /* remove elements from the stack */
   ttype(L->top) = LUA_TTABLE;
   hvalue(L->top) = htab;

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.113 2000/12/26 18:46:09 roberto Exp roberto $
+** $Id: lapi.c,v 1.114 2000/12/28 12:55:41 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -456,7 +456,7 @@ LUA_API int lua_next (lua_State *L, int index) {
 
 LUA_API int lua_getn (lua_State *L, int index) {
   Hash *h = hvalue(luaA_index(L, index));
-  const TObject *value = luaH_getstr(h, luaS_new(L, "n"));  /* value = h.n */
+  const TObject *value = luaH_getstr(h, luaS_newliteral(L, "n"));  /* = h.n */
   if (ttype(value) == LUA_TNUMBER)
     return (int)nvalue(value);
   else {

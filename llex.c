@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.72 2000/10/20 16:39:03 roberto Exp roberto $
+** $Id: llex.c,v 1.73 2001/01/10 16:40:56 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -133,7 +133,7 @@ void luaX_setinput (lua_State *L, LexState *LS, ZIO *z, TString *source) {
 #define save_and_next(L, LS, l)  (save(L, LS->current, l), next(LS))
 
 
-static const char *readname (LexState *LS) {
+static size_t readname (LexState *LS) {
   lua_State *L = LS->L;
   size_t l = 0;
   checkbuffer(L, 10, l);
@@ -142,7 +142,7 @@ static const char *readname (LexState *LS) {
     save_and_next(L, LS, l);
   } while (isalnum(LS->current) || LS->current == '_');
   save(L, '\0', l);
-  return L->Mbuffer;
+  return l-1;
 }
 
 
@@ -369,7 +369,8 @@ int luaX_lex (LexState *LS, SemInfo *seminfo) {
           return c;
         }
         tname: {  /* identifier or reserved word */
-          TString *ts = luaS_new(LS->L, readname(LS));
+          size_t l = readname(LS);
+          TString *ts = luaS_newlstr(LS->L, LS->L->Mbuffer, l);
           if (ts->marked >= RESERVEDMARK)  /* reserved word? */
             return ts->marked-RESERVEDMARK+FIRST_RESERVED;
           seminfo->ts = ts;

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.121 2000/12/28 12:55:41 roberto Exp roberto $
+** $Id: lparser.c,v 1.122 2001/01/10 16:40:56 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -182,7 +182,7 @@ static void removelocalvars (LexState *ls, int nvars) {
 
 
 static void new_localvarstr (LexState *ls, const char *name, int n) {
-  new_localvar(ls, luaS_newfixed(ls->L, name), n);
+  new_localvar(ls, luaS_new(ls->L, name), n);
 }
 
 
@@ -884,7 +884,8 @@ static void forlist (LexState *ls, TString *indexname) {
   valname = str_checkname(ls);
   /* next test is dirty, but avoids `in' being a reserved word */
   check_condition(ls,
-       (ls->t.token == TK_NAME && ls->t.seminfo.ts == luaS_new(ls->L, "in")),
+       (ls->t.token == TK_NAME &&
+        ls->t.seminfo.ts == luaS_newliteral(ls->L, "in")),
        "`in' expected");
   next(ls);  /* skip `in' */
   exp1(ls);  /* table */
