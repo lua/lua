@@ -29,29 +29,11 @@
 #include "lzio.h"
 
 
-/* space to handle stack overflow errors */
-#define EXTRA_STACK   (2*LUA_MINSTACK)
-
 
 static void restore_stack_limit (lua_State *L) {
   StkId limit = L->stack+(L->stacksize-EXTRA_STACK)-1;
   if (L->top < limit)
     L->stack_last = limit;
-}
-
-
-void luaD_init (lua_State *L, int stacksize) {
-  stacksize += EXTRA_STACK;
-  L->stack = luaM_newvector(L, stacksize, TObject);
-  L->stacksize = stacksize;
-  L->top = L->stack + RESERVED_STACK_PREFIX;
-  restore_stack_limit(L);
-  luaM_reallocvector(L, L->base_ci, 0, 20, CallInfo);
-  L->ci = L->base_ci;
-  L->ci->base = L->top;
-  L->ci->savedpc = NULL;
-  L->size_ci = 20;
-  L->end_ci = L->base_ci + L->size_ci;
 }
 
 
@@ -231,12 +213,18 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
 
 
 LUA_API void lua_cobegin (lua_State *L, int nargs) {
-  StkId func;
   lua_lock(L);
-  func = L->top - (nargs+1);  /* coroutine main function */
-  if (luaD_precall(L, func) != NULL)
-    luaD_error(L, "coroutine started with a C function");
+  luaD_precall(L, L->top - (nargs+1));
   lua_unlock(L);
+}
+
+
+static void resume_results (lua_State *L, lua_State *from, int numresults) {
+  while (numresults) {
+    setobj(L->top, from->top - numresults);
+    numresults--;
+    incr_top;
+  }
 }
 
 
@@ -248,10 +236,13 @@ LUA_API void lua_resume (lua_State *L, lua_State *co) {
   lua_assert(co->errorJmp == NULL);
   co->errorJmp = L->errorJmp;
   firstResult = luaV_execute(co);
-  if (firstResult != NULL)  /* `return'? */
-    luaD_poscall(co, LUA_MULTRET, firstResult);  /* ends this coroutine */
+  if (firstResult != NULL) {  /* `return'? */
+    resume_results(L, co, co->top - firstResult);
+    luaD_poscall(co, 0, firstResult);  /* ends this coroutine */
+  }
   else {  /* `yield' */
     int nresults = GETARG_C(*((co->ci-1)->savedpc - 1)) - 1;
+    resume_results(L, co, co->ci->yield_results);
     luaD_poscall(co, nresults, co->top);  /* complete it */
     if (nresults >= 0) co->top = co->ci->top;
   }
@@ -264,10 +255,11 @@ LUA_API int lua_yield (lua_State *L, int nresults) {
   CallInfo *ci;
   int ibase;
   lua_lock(L);
-  ci = L->ci - 1;  /* call info of calling function */
-  if (ci->pc == NULL)
+  ci = L->ci;
+  if (ci_func(ci-1)->c.isC)
     luaD_error(L, "cannot `yield' a C function");
-  ibase = L->top - ci->base;
+  ci->yield_results = nresults;  /* very dirty trick! */
+  ibase = L->top - (ci-1)->base;
   lua_unlock(L);
   return ibase;
 }
