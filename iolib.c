@@ -29,11 +29,7 @@ static void pushresult (int i)
     lua_pushuserdata(NULL);
   else {
     lua_pushnil();
-#ifndef OLD_ANSI
     lua_pushstring(strerror(errno));
-#else
-    lua_pushstring("O.S. unable to define the error");
-#endif
   }
 }
 
