@@ -1,6 +1,6 @@
 %{
 /*
-** $Id: lua.stx,v 1.35 1998/03/09 21:49:52 roberto Exp roberto $
+** $Id: lua.stx,v 1.36 1998/03/25 18:52:29 roberto Exp roberto $
 ** Syntax analizer and code generator
 ** See Copyright Notice in lua.h
 */
@@ -149,8 +149,8 @@ static int code_oparg_at (int pc, OpCode op, int builtin, int arg, int delta)
   }
   else if (arg <= MAX_WORD) {
     code[pc] = op+1+builtin;
-    code[pc+1] = arg&0xFF;
-    code[pc+2] = arg>>8;
+    code[pc+1] = arg>>8;
+    code[pc+2] = arg&0xFF;
     return 3;
   }
   else luaY_error("code too long " MES_LIM("64K"));

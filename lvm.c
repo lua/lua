@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.26 1998/03/11 13:59:50 roberto Exp roberto $
+** $Id: lvm.c,v 1.27 1998/03/25 18:52:29 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -28,7 +28,7 @@
 
 
 #define skip_word(pc)	(pc+=2)
-#define get_word(pc)	(*(pc)+(*((pc)+1)<<8))
+#define get_word(pc)	((*(pc)<<8)+(*((pc)+1)))
 #define next_word(pc)   (pc+=2, get_word(pc-2))
 
 
