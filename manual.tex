@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.9 1996/02/09 19:02:30 roberto Exp roberto $
+% $Id: manual.tex,v 1.10 1996/02/12 18:32:09 roberto Exp roberto $
 
 \documentstyle[A4,11pt,bnf]{article}
 
@@ -13,11 +13,13 @@
 \newcommand{\Def}[1]{{\em #1}\index{#1}}
 \newcommand{\Deffunc}[1]{\index{#1}}
 
-%\makeindex
+\newcommand{\Version}{2.3}
+
+\makeindex
 
 \begin{document}
 
-\title{Reference Manual of the Programming Language Lua 2.2}
+\title{Reference Manual of the Programming Language Lua \Version}
 
 \author{%
 Roberto Ierusalimschy\quad
@@ -29,10 +31,10 @@ Waldemar Celes Filho
 \small\tt roberto,lhf,celes@icad.puc-rio.br
 \vspace{2.0ex}\\
 %MCC 08/95 ---
-Departamento de Inform\'atica --- PUC-Rio
+\tecgraf\ --- Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1996/02/09 19:02:30 $}
+\date{\small \verb$Date: 1996/02/12 18:32:09 $}
 
 \maketitle
 
@@ -40,8 +42,8 @@ Departamento de Inform\'atica --- PUC-Rio
 \noindent
 Lua is an extension programming language designed to be used
 as a configuration language for any program that needs one.
-This document describes version 2.2 of the Lua programming language and the
-API that allows interaction between Lua programs and its host C program.
+This document describes Version \Version\ of the Lua programming language and
+the API that allows interaction between Lua programs and its host C program.
 It also presents some examples of using the main features of the system.
 \end{abstract}
 
@@ -54,9 +56,9 @@ It also presents some examples of using the main features of the system.
 Lua \'e uma linguagem de extens\~ao projetada para ser usada como
 linguagem de configura\c{c}\~ao em qualquer programa que precise de
 uma.
-Este documento descreve a vers\~ao 2.2 da linguagem de programa\c{c}\~ao Lua e a
-Interface de Programa\c{c}\~ao que permite a intera\c{c}\~ao entre programas Lua
-e o programa C hospedeiro.
+Este documento descreve a vers\~ao \Version\ da linguagem de
+programa\c{c}\~ao Lua e a Interface de Programa\c{c}\~ao que permite
+a intera\c{c}\~ao entre programas Lua e o programa C hospedeiro.
 O documento tamb\'em apresenta alguns exemplos de uso das principais
 ca\-racte\-r\'{\i}sticas do sistema.
 \end{quotation}
@@ -91,7 +93,7 @@ and provided as usual with no guarantees.
 The implementation described in this manual is available
 by anonymous ftp from
 \begin{verbatim}
-   ftp.icad.puc-rio.br:/pub/lua/lua-2.2.tar.gz
+   ftp.icad.puc-rio.br:/pub/lua/lua.tar.gz
 \end{verbatim}
 or by WWW (World Wide Web) from
 \begin{verbatim}
@@ -1472,7 +1474,7 @@ is
 \begin{verbatim}
 lua_Function lua_stackedfunction (int level);
 \end{verbatim}
-It returns a handle (\verb'lua_Function') to the {\em activation record}
+It returns a handle (\verb'lua_Function') to the {\em activation record\/}
 of the function executing at a given level.
 Level 0 is the current running function,
 while level $n+1$ is the function that has called level $n$.
@@ -2001,7 +2003,7 @@ void remove_blanks (char *s)
 \section*{Acknowledgments}
 
 The authors would like to thank CENPES/PETROBR\'AS which,
-jointly with TeCGraf, used extensively early versions of
+jointly with \tecgraf, used extensively early versions of
 this system and gave valuable comments.
 The authors would also like to thank Carlos Henrique Levy,
 who found the name of the game.
@@ -2018,10 +2020,24 @@ the previous public versions of Lua,
 some differences had to be introduced.
 Here is a list of all these differences.
 
+\subsection*{Incompatibilities with \Index{version 2.2}}
+\begin{itemize}
+\item
+Functions \verb'date' and \verb'time' (from \verb'iolib')
+have been superseded by the new version of function \verb'date'.
+\item
+Function \verb'int2str' (from \verb'strlib') has been superseded by new
+function \verb'format', with parameter \verb'"%c"'.
+\item
+API function \verb'lua_pushliteral' now is just a macro to
+\verb'lua_pushstring'.
+Programmers are encouraged not to use this macro.
+\end{itemize}
+
 \subsection*{Incompatibilities with \Index{version 2.1}}
 \begin{itemize}
 \item
-The function {\tt type} now returns the string {\tt function}
+The function \verb'type' now returns the string \verb'"function"'
 both for C and Lua functions.
 Because Lua functions and C functions are compatible,
 this behavior is usually more useful.
@@ -2075,12 +2091,13 @@ Special care should be taken with macros like
 \verb'lua_getindexed' and \verb'lua_getfield'.
 \end{itemize}
 
-\pagebreak
-\tableofcontents
 \newcommand{\indexentry}[2]{\item {#1} #2}
 %\catcode`\_=12
 \begin{theindex}
-\input{manual.idx}
+\input{manual.id}
 \end{theindex}
+
+\pagebreak
+\tableofcontents
 
 \end{document}
