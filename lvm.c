@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.26 2005/02/23 17:30:22 roberto Exp roberto $
+** $Id: lvm.c,v 2.27 2005/03/07 16:59:01 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -354,7 +354,7 @@ static StkId Arith (lua_State *L, StkId ra, const TValue *rb,
 ** some macros for common tasks in `luaV_execute'
 */
 
-#define runtime_check(L, c)	{ if (!(c)) return 0; }
+#define runtime_check(L, c)	{ if (!(c)) break; }
 
 #define RA(i)	(base+GETARG_A(i))
 /* to be used after possible stack reallocation */
@@ -717,13 +717,13 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         int c = GETARG_C(i);
         int last;
         Table *h;
-        runtime_check(L, ttistable(ra));
-        h = hvalue(ra);
         if (n == 0) {
           n = L->top - ra - 1;
           L->top = L->ci->top;
         }
         if (c == 0) c = cast(int, *pc++);
+        runtime_check(L, ttistable(ra));
+        h = hvalue(ra);
         last = ((c-1)*LFIELDS_PER_FLUSH) + n + LUA_FIRSTINDEX - 1;
         if (last > h->sizearray)  /* needs more space? */
           luaH_resizearray(L, h, last);  /* pre-alloc it at once */
