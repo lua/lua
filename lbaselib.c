@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.71 2002/05/02 17:12:27 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.72 2002/05/06 19:05:10 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -198,14 +198,15 @@ static int luaB_next (lua_State *L) {
 static int luaB_nexti (lua_State *L) {
   lua_Number i = lua_tonumber(L, 2);
   luaL_check_type(L, 1, LUA_TTABLE);
-  if (i == 0) {  /* `for' start? */
+  if (i == 0 && lua_isnull(L, 2)) {  /* `for' start? */
     lua_getglobal(L, "nexti");  /* return generator, */
     lua_pushvalue(L, 1);  /* state, */
-    lua_pushnumber(L, 1);  /* and initial value */
+    lua_pushnumber(L, 0);  /* and initial value */
     return 3;
   }
   else {  /* `for' step */
-    lua_pushnumber(L, i+1);  /* next value */
+    i++;  /* next value */
+    lua_pushnumber(L, i);
     lua_rawgeti(L, 1, i);
     return (lua_isnil(L, -1)) ? 0 : 2;
   }
