@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.4 1994/11/09 18:07:38 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.5 1994/11/13 14:54:18 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,6 +9,7 @@ char *rcs_luastx = "$Id: lua.stx,v 3.4 1994/11/09 18:07:38 roberto Exp roberto $
 #include "opcode.h"
 #include "hash.h"
 #include "inout.h"
+#include "tree.h"
 #include "table.h"
 #include "lua.h"
 
@@ -39,6 +40,7 @@ static int     nlocalvar=0;	     /* number of local variables */
 #define MAXFIELDS FIELDS_PER_FLUSH*2
 static Word    fields[MAXFIELDS];     /* fieldnames to be flushed */
 static int     nfields=0;
+
 
 /* Internal functions */
 
@@ -164,17 +166,6 @@ static void code_number (float f)
   }
 }
 
-static void init_function (void)
-{
- if (funcCode == NULL)	/* first function */
- {
-  funcCode = (Byte *) calloc(CODE_BLOCK, sizeof(Byte));
-  if (funcCode == NULL)
-   lua_error("not enough memory");
-  maxcode = CODE_BLOCK;
- }
-}
-	     
 
 %}
 
@@ -187,6 +178,7 @@ static void init_function (void)
  Word  vWord;
  Long  vLong;
  Byte *pByte;
+ TreeNode *pNode;
 }
 
 %start functionlist
@@ -198,8 +190,8 @@ static void init_function (void)
 %token LOCAL
 %token FUNCTION
 %token <vFloat> NUMBER
-%token <pChar>  STRING
-%token <pChar>  NAME 
+%token <vWord>  STRING
+%token <pNode>  NAME 
 %token <vInt>   DEBUG
 
 %type <vLong> PrepJump
@@ -208,7 +200,7 @@ static void init_function (void)
 %type <vInt>  ffieldlist1
 %type <vInt>  lfieldlist1
 %type <vLong> var, singlevar
-
+%type <pByte> body
 
 %left AND OR
 %left EQ NE '>' '<' LE GE
@@ -239,83 +231,53 @@ functionlist : /* empty */
 
 function     : FUNCTION NAME 
                {
-		init_function();
-		pc=0; basepc=funcCode; maxcurr=maxcode; 
-		nlocalvar=0;
-		$<vWord>$ = lua_findsymbol($2); 
+		init_function($2);
 	       }
-	       '(' parlist ')' 
-	       {
-	        if (lua_debug)
-		{
-	         code_byte(SETFUNCTION); 
-                 code_code((Byte *)strdup(lua_file[lua_nfile-1]));
-		 code_word($<vWord>3);
-		}
-	        lua_codeadjust (0);
-	       }
-               block
-               END 	 
+               body 	 
 	       { 
-	        codereturn();
-	        s_tag($<vWord>3) = LUA_T_FUNCTION;
-	        s_bvalue($<vWord>3) = calloc (pc, sizeof(Byte));
-		if (s_bvalue($<vWord>3) == NULL)
-		  lua_error("not enough memory");
-	        memcpy (s_bvalue($<vWord>3), basepc, pc*sizeof(Byte));
-		funcCode = basepc; maxcode=maxcurr;
+		Word func = luaI_findsymbol($2);
+	        s_tag(func) = LUA_T_FUNCTION;
+	        s_bvalue(func) = $4;
 #if LISTING
                 PrintCode(funcCode,funcCode+pc);
 #endif
 	       }
 	       ;
 
-method         : FUNCTION NAME { $<vWord>$ = lua_findsymbol($2); } ':' NAME
+method         : FUNCTION NAME ':' NAME
 	       {
-		init_function();
-		pc=0; basepc=funcCode; maxcurr=maxcode;
-		nlocalvar=0;
-	        localvar[nlocalvar]=lua_findsymbol("self"); /* self param. */
+		init_function($4);
+	        localvar[nlocalvar]=luaI_findsymbolbyname("self");
 	        add_nlocalvar(1);
-		$<vWord>$ = lua_findconstant($5);
 	       }
-	       '(' parlist ')'
+	       body
 	       {
-	        if (lua_debug)
-		{
-	         code_byte(SETFUNCTION); 
-                 code_code((Byte *)strdup(lua_file[lua_nfile-1]));
-		 code_word($<vWord>6);
-		}
-	        lua_codeadjust (0);
-	       }
-	       block
-	       END
-	       {
-		Byte *b;
-	        codereturn();
-	        b = calloc (pc, sizeof(Byte));
-		if (b == NULL)
-		  lua_error("not enough memory");
-	        memcpy (b, basepc, pc*sizeof(Byte));
-		funcCode = basepc; maxcode=maxcurr;
 #if LISTING
                 PrintCode(funcCode,funcCode+pc);
 #endif
 	        /* assign function to table field */
 	        pc=maincode; basepc=*initcode; maxcurr=maxmain;
 	        nlocalvar=0;
-
-		lua_pushvar($<vWord>3+1);
+		lua_pushvar(luaI_findsymbol($2)+1);
                 code_byte(PUSHSTRING);
-		code_word($<vWord>6);
+		code_word(luaI_findconstant($4));
                 code_byte(PUSHFUNCTION);
-                code_code(b);
+                code_code($6);
                 code_byte(STOREINDEXED0);
-
 		maincode=pc; *initcode=basepc; maxmain=maxcurr;
 	       }
 	       ;
+
+body :  '(' parlist ')' block END
+	{
+          codereturn();
+	  $$ = calloc (pc, sizeof(Byte));
+	  if ($$ == NULL)
+	    lua_error("not enough memory");
+	  memcpy ($$, basepc, pc*sizeof(Byte));
+	  funcCode = basepc; maxcode=maxcurr;
+	}
+		;
 
 statlist : /* empty */
 	 | statlist stat sc
@@ -454,7 +416,7 @@ expr :  '(' expr ')'  { $$ = $2; }
      |  STRING
      {
       code_byte(PUSHSTRING);
-      code_word(lua_findconstant($1));
+      code_word($1);
       $$ = 1;
      }
      |	NIL		{code_byte(PUSHNIL); $$ = 1; }
@@ -493,7 +455,7 @@ funcvalue    : varexp { $$ = 0; }
 	     | varexp ':' NAME 
 	     { 
 	       code_byte(PUSHSTRING);
-	       code_word(lua_findconstant($3));
+	       code_word(luaI_findconstant($3));
                code_byte(PUSHSELF); 
                $$ = 1;
 	     }
@@ -516,18 +478,18 @@ exprlist1 :	expr	{ if ($1 == 0) $$ = -1; else $$ = 1; }
 	}
 	  ;
 
-parlist  :	/* empty */
-	  |	parlist1
+parlist  :	/* empty */ { lua_codeadjust(0); }
+	  |	parlist1    { lua_codeadjust(0); }
 	  ;
 		
 parlist1 :	NAME		  
 		{
-		 localvar[nlocalvar]=lua_findsymbol($1); 
+		 localvar[nlocalvar]=luaI_findsymbol($1); 
 		 add_nlocalvar(1);
 		}
 	  |	parlist1 ',' NAME 
 		{
-		 localvar[nlocalvar]=lua_findsymbol($3); 
+		 localvar[nlocalvar]=luaI_findsymbol($3); 
 		 add_nlocalvar(1);
 		}
 	  ;
@@ -555,9 +517,9 @@ ffieldlist1 : ffield			{$$=1;}
 		}
 	   ; 
 
-ffield      : NAME {$<vWord>$ = lua_findconstant($1);} '=' expr1 
+ffield      : NAME '=' expr1 
 	      { 
-	       push_field($<vWord>2);
+	       push_field(luaI_findconstant($1));
 	      }
            ;
 
@@ -591,14 +553,14 @@ var	  :	singlevar { $$ = $1; }
 	  |	varexp '.' NAME
 	  {
 	   code_byte(PUSHSTRING);
-	   code_word(lua_findconstant($3));
+	   code_word(luaI_findconstant($3));
 	   $$ = 0;		/* indexed variable */
 	  }
 	  ;
 		
 singlevar :	NAME
 	  {
-	   Word s = lua_findsymbol($1);
+	   Word s = luaI_findsymbol($1);
 	   int local = lua_localname (s);
 	   if (local == -1)	/* global var */
 	    $$ = s + 1;		/* return positive value */
@@ -610,10 +572,10 @@ singlevar :	NAME
 varexp	: var { lua_pushvar($1); }
 	;
 	  
-localdeclist  : NAME {localvar[nlocalvar]=lua_findsymbol($1); $$ = 1;}
+localdeclist  : NAME {localvar[nlocalvar]=luaI_findsymbol($1); $$ = 1;}
      	  | localdeclist ',' NAME 
 	    {
-	     localvar[nlocalvar+$1]=lua_findsymbol($3); 
+	     localvar[nlocalvar+$1]=luaI_findsymbol($3); 
 	     $$ = $1+1;
 	    }
 	  ;
@@ -674,6 +636,25 @@ static void lua_codeadjust (int n)
    code_byte(ADJUST);
    code_byte(n+nlocalvar);
  }
+}
+
+static void init_function (TreeNode *func)
+{
+ if (funcCode == NULL)	/* first function */
+ {
+  funcCode = (Byte *) calloc(CODE_BLOCK, sizeof(Byte));
+  if (funcCode == NULL)
+   lua_error("not enough memory");
+  maxcode = CODE_BLOCK;
+ }
+ pc=0; basepc=funcCode; maxcurr=maxcode; 
+ nlocalvar=0;
+  if (lua_debug)
+  {
+    code_byte(SETFUNCTION); 
+    code_code((Byte *)strdup(lua_file[lua_nfile-1]));
+    code_word(luaI_findconstant(func));
+  }
 }
 
 static void codereturn (void)

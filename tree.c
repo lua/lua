@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.2 1994/10/18 17:36:11 celes Exp roberto $";
+char *rcs_tree="$Id: tree.c,v 1.3 1994/11/10 20:41:37 roberto Exp roberto $";
 
 
 #include <stdlib.h>
@@ -17,22 +17,13 @@ char *rcs_tree="$Id: tree.c,v 1.2 1994/10/18 17:36:11 celes Exp roberto $";
 #define lua_strcmp(a,b)	(a[0]<b[0]?(-1):(a[0]>b[0]?(1):strcmp(a,b))) 
 
 
-typedef struct TreeNode
-{
- struct TreeNode *right;
- struct TreeNode *left;
- Word            index;
- char            str[1];        /* \0 byte already reserved */
-} TreeNode;
-
 static TreeNode *string_root = NULL;
 static TreeNode *constant_root = NULL;
-static TreeNode *variable_root = NULL;
 
 /*
 ** Insert a new string/constant/variable at the tree. 
 */
-static char *tree_create (TreeNode **node, char *str, int *created)
+static TreeNode *tree_create (TreeNode **node, char *str, int *created)
 {
  if (*node == NULL)
  {
@@ -41,9 +32,9 @@ static char *tree_create (TreeNode **node, char *str, int *created)
     lua_error("not enough memory");
   (*node)->left = (*node)->right = NULL;
   strcpy((*node)->str, str);
-  (*node)->index = UNMARKED_STRING;
+  (*node)->varindex = (*node)->constindex = UNMARKED_STRING;
   *created = 1;
-  return (*node)->str;
+  return *node;
  }
  else
  {
@@ -53,34 +44,27 @@ static char *tree_create (TreeNode **node, char *str, int *created)
   else if (c > 0)
    return tree_create(&(*node)->right, str, created);
   else
-   return (*node)->str;
+   return *node;
  }
 }
 
 char *lua_strcreate (char *str) 
 {
  int created=0;
- char *s = tree_create(&string_root, str, &created);
+ TreeNode *t = tree_create(&string_root, str, &created);
  if (created)
  {
   if (lua_nentity == lua_block) lua_pack ();
   lua_nentity++;
  }
- return s;
+ return t->str;
 }
 
-char *lua_constcreate (char *str) 
+TreeNode *lua_constcreate (char *str) 
 {
  int created;
  return tree_create(&constant_root, str, &created);
 }
-
-char *lua_varcreate (char *str) 
-{
- int created;
- return tree_create(&variable_root, str, &created);
-}
-
 
 
 /*
@@ -141,14 +125,14 @@ static TreeNode *lua_travcollector (TreeNode *r)
  if (r == NULL) return NULL;
  r->right = lua_travcollector(r->right);
  r->left  = lua_travcollector(r->left);
- if (r->index == UNMARKED_STRING) 
+ if (r->constindex == UNMARKED_STRING) 
  {
   ++lua_recovered;
   return lua_strfree(r);
  }
  else
  {
-  r->index = UNMARKED_STRING;
+  r->constindex = UNMARKED_STRING;
   return r;
  }
 }
@@ -168,18 +152,6 @@ void lua_strcollector (void)
 */
 static TreeNode *tree_next (TreeNode *node, char *str)
 {
-#if 0
- if (node == NULL) return NULL;
- if (str == NULL || lua_strcmp(str, node->str) < 0)
- {
-  TreeNode *result = tree_next(node->left, str);
-  return result == NULL ? node : result;
- }
- else
- {
-  return tree_next(node->right, str);
- }
-#else
  if (node == NULL) return NULL;
  else if (str == NULL) return node;
  else
@@ -195,30 +167,11 @@ static TreeNode *tree_next (TreeNode *node, char *str)
   else
    return tree_next(node->right, str);
  }
-#endif
 }
 
 char *lua_varnext (char *n)
 {
- TreeNode *result = tree_next(variable_root, n);
+ TreeNode *result = tree_next(constant_root, n);
  return result != NULL ? result->str : NULL;
 }
 
-
-/*
-** Given an id, find the string with exaustive search
-*/
-static char *tree_name (TreeNode *node, Word index)
-{
- if (node == NULL) return NULL;
- if (node->index == index) return node->str;
- else
- {
-  char *result = tree_name(node->left, index);
-  return result != NULL ? result : tree_name(node->right, index);
- }
-}
-char *lua_varname (Word index)
-{
- return tree_name(variable_root, index);
-}

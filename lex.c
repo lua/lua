@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.9 1994/11/03 17:09:20 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.10 1994/11/13 14:39:04 roberto Exp roberto $";
  
 
 #include <ctype.h>
@@ -7,6 +7,8 @@ char *rcs_lex = "$Id: lex.c,v 2.9 1994/11/03 17:09:20 roberto Exp roberto $";
 #include <stdlib.h>
 #include <string.h>
 
+#include "tree.h"
+#include "table.h"
 #include "opcode.h"
 #include "inout.h"
 #include "y.tab.h"
@@ -19,9 +21,8 @@ char *rcs_lex = "$Id: lex.c,v 2.9 1994/11/03 17:09:20 roberto Exp roberto $";
 #define save_and_next()  { save(current); next(); }
 
 static int current;
-static char yytext[2][256];
+static char yytext[256];
 static char *yytextLast;
-static int currentText = 0;
 
 static Input input;
 
@@ -34,7 +35,7 @@ void lua_setinput (Input fn)
 char *lua_lasttext (void)
 {
   *yytextLast = 0;
-  return yytext[currentText];
+  return yytext;
 }
 
 
@@ -87,10 +88,9 @@ static int findReserved (char *name)
 int yylex (void)
 {
   float a;
-  currentText = !currentText;
   while (1)
   {
-    yytextLast = yytext[currentText];
+    yytextLast = yytext;
 #if 0
     fprintf(stderr,"'%c' %d\n",current,current);
 #endif
@@ -110,12 +110,12 @@ int yylex (void)
 	while (isalnum(current) || current == '_')
           save_and_next();
         *yytextLast = 0;
-	if (lua_strcmp(yytext[currentText], "debug") == 0)
+	if (lua_strcmp(yytext, "debug") == 0)
 	{
 	  yylval.vInt = 1;
 	  return DEBUG;
         }
-	else if (lua_strcmp(yytext[currentText], "nodebug") == 0)
+	else if (lua_strcmp(yytext, "nodebug") == 0)
 	{
 	  yylval.vInt = 0;
 	  return DEBUG;
@@ -179,7 +179,7 @@ int yylex (void)
         }
         next();  /* skip the delimiter */
         *yytextLast = 0;
-        yylval.pChar = yytext[currentText];
+        yylval.vWord = luaI_findconstant(lua_constcreate(yytext));
         return STRING;
       }
 
@@ -200,9 +200,9 @@ int yylex (void)
         int res;
         do { save_and_next(); } while (isalnum(current) || current == '_');
         *yytextLast = 0;
-        res = findReserved(yytext[currentText]);
+        res = findReserved(yytext);
         if (res) return res;
-        yylval.pChar = yytext[currentText];
+        yylval.pNode = lua_constcreate(yytext);
         return NAME;
       }
 
@@ -266,7 +266,7 @@ fraction:
       default: 		/* also end of file */
       {
         save_and_next();
-        return yytext[currentText][0];
+        return yytext[0];
       }
     }
   }

@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.15 1994/11/10 20:41:37 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.16 1994/11/11 14:00:08 roberto Exp roberto $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -51,23 +51,23 @@ static void lua_initsymbol (void)
  lua_table = (Symbol *) calloc(lua_maxsymbol, sizeof(Symbol));
  if (lua_table == NULL)
    lua_error ("symbol table: not enough memory");
- n = lua_findsymbol("next");
+ n = luaI_findsymbolbyname("next");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_next;
- n = lua_findsymbol("nextvar");
+ n = luaI_findsymbolbyname("nextvar");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_nextvar;
- n = lua_findsymbol("type"); 
+ n = luaI_findsymbolbyname("type"); 
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_type;
- n = lua_findsymbol("tonumber");
+ n = luaI_findsymbolbyname("tonumber");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_obj2number;
- n = lua_findsymbol("print");
+ n = luaI_findsymbolbyname("print");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_print;
- n = lua_findsymbol("dofile");
+ n = luaI_findsymbolbyname("dofile");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_internaldofile;
- n = lua_findsymbol("dostring");
+ n = luaI_findsymbolbyname("dostring");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_internaldostring;
- n = lua_findsymbol("setfallback");
+ n = luaI_findsymbolbyname("setfallback");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_setfallback;
- n = lua_findsymbol("error");
+ n = luaI_findsymbolbyname("error");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_error;
 }
 
@@ -89,13 +89,11 @@ void lua_initconstant (void)
 ** found, allocate it.
 ** On error, return -1.
 */
-int lua_findsymbol (char *s)
+int luaI_findsymbol (TreeNode *t)
 {
- char *n; 
  if (lua_table == NULL)
   lua_initsymbol(); 
- n = lua_varcreate(s);
- if (indexstring(n) == UNMARKED_STRING)
+ if (t->varindex == UNMARKED_STRING)
  {
   if (lua_ntable == lua_maxsymbol)
   {
@@ -106,11 +104,17 @@ int lua_findsymbol (char *s)
    if (lua_table == NULL)
      lua_error ("symbol table: not enough memory");
   }
-  indexstring(n) = lua_ntable;
+  t->varindex = lua_ntable;
   s_tag(lua_ntable) = LUA_T_NIL;
   lua_ntable++;
  }
- return indexstring(n);
+ return t->varindex;
+}
+
+
+int luaI_findsymbolbyname (char *name)
+{
+  return luaI_findsymbol(lua_constcreate(name));
 }
 
 
@@ -119,13 +123,11 @@ int lua_findsymbol (char *s)
 ** found, allocate it.
 ** On error, return -1.
 */
-int lua_findconstant (char *s)
+int luaI_findconstant (TreeNode *t)
 {
- char *n;
  if (lua_constant == NULL)
   lua_initconstant();
- n = lua_constcreate(s);
- if (indexstring(n) == UNMARKED_STRING)
+ if (t->constindex == UNMARKED_STRING)
  {
   if (lua_nconstant == lua_maxconstant)
   {
@@ -136,11 +138,11 @@ int lua_findconstant (char *s)
    if (lua_constant == NULL)
      lua_error ("constant table: not enough memory");
   }
-  indexstring(n) = lua_nconstant;
-  lua_constant[lua_nconstant] = n;
+  t->constindex = lua_nconstant;
+  lua_constant[lua_nconstant] = t->str;
   lua_nconstant++;
  }
- return indexstring(n);
+ return t->constindex;
 }
 
 

@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.9 1994/11/08 20:06:15 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.10 1994/11/09 18:09:22 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -150,12 +150,12 @@ void lua_reportbug (char *s)
   {
    sprintf (strchr(msg,0), 
          "\n\tin statement begining at line %d in function \"%s\" of file \"%s\"",
-         lua_debugline, lua_varname(funcstack[nfuncstack-1].function),
+         lua_debugline, lua_constant[funcstack[nfuncstack-1].function],
   	 funcstack[nfuncstack-1].file);
    sprintf (strchr(msg,0), "\n\tactive stack\n");
    for (i=nfuncstack-1; i>=0; i--)
     sprintf (strchr(msg,0), "\t-> function \"%s\" of file \"%s\"\n", 
-                            lua_varname(funcstack[i].function),
+                            lua_constant[funcstack[i].function],
 			    funcstack[i].file);
   }
   else
