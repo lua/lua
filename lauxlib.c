@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.124 2004/09/03 13:17:14 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.125 2004/09/21 16:54:32 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -239,16 +239,22 @@ LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
                               const luaL_reg *l, int nup) {
   if (libname) {
     /* check whether lib already exists */
-    lua_getglobal(L, libname);
-    if (lua_isnil(L, -1)) {  /* no? */
-      lua_pop(L, 1);
+    luaL_getfield(L, LUA_GLOBALSINDEX, libname);
+    if (lua_isnil(L, -1)) {  /* not found? */
+      lua_pop(L, 1);  /* remove previous result */
       lua_newtable(L);  /* create it */
       if (lua_getmetatable(L, LUA_GLOBALSINDEX))
         lua_setmetatable(L, -2);  /* share metatable with global table */
-      lua_pushvalue(L, -1);
       /* register it with given name */
-      lua_setglobal(L, libname);
+      lua_pushvalue(L, -1);
+      luaL_setfield(L, LUA_GLOBALSINDEX, libname);
     }
+    else if (!lua_istable(L, -1))
+      luaL_error(L, "name conflict for library `%s'", libname);
+    lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
+    lua_pushvalue(L, -2);
+    lua_setfield(L, -2, libname);  /* _LOADED[modname] = new table */
+    lua_pop(L, 1);  /* remove _LOADED table */
     lua_insert(L, -(nup+1));  /* move library table to below upvalues */
   }
   for (; l->name; l++) {
@@ -381,37 +387,45 @@ LUALIB_API const char *luaL_searchpath (lua_State *L, const char *name,
     }
     fname = luaL_gsub(L, lua_tostring(L, -1), LUA_PATH_MARK, name);
     lua_remove(L, -2);  /* remove path template */
-    f = fopen(fname, "r");  /* try to read it */
+    f = fopen(fname, "r");  /* try to open it */
     if (f) {
+      int err;
+      getc(f);  /* try to read file */
+      err = ferror(f);
       fclose(f);
-      return fname;
+      if (err == 0)  /* open and read sucessful? */
+        return fname;  /* return that file name */
     }
     lua_pop(L, 1);  /* remove file name */ 
   }
 }
 
 
-LUALIB_API const char *luaL_getfield (lua_State *L, const char *fname) {
+LUALIB_API const char *luaL_getfield (lua_State *L, int idx,
+                                                    const char *fname) {
   const char *e;
+  lua_pushvalue(L, idx);
   while ((e = strchr(fname, '.')) != NULL) {
     lua_pushlstring(L, fname, e - fname);
-    lua_gettable(L, -2);
+    lua_rawget(L, -2);
     lua_remove(L, -2);  /* remove previous table */
     fname = e + 1;
     if (!lua_istable(L, -1)) return fname;
   }
-  lua_getfield(L, -1, fname);  /* get last field */
+  lua_pushstring(L, fname);
+  lua_rawget(L, -2);  /* get last field */
   lua_remove(L, -2);  /* remove previous table */
   return NULL;
 }
 
 
-LUALIB_API const char *luaL_setfield (lua_State *L, const char *fname) {
+LUALIB_API const char *luaL_setfield (lua_State *L, int idx,
+                                                    const char *fname) {
   const char *e;
-  lua_insert(L, -2);  /* move value to below table */
+  lua_pushvalue(L, idx);
   while ((e = strchr(fname, '.')) != NULL) {
     lua_pushlstring(L, fname, e - fname);
-    lua_gettable(L, -2);
+    lua_rawget(L, -2);
     if (lua_isnil(L, -1)) {  /* no such field? */
       lua_pop(L, 1);  /* remove this nil */
       lua_newtable(L);  /* create a new table for field */
@@ -426,9 +440,10 @@ LUALIB_API const char *luaL_setfield (lua_State *L, const char *fname) {
       return fname;
     }
   }
-  lua_insert(L, -2);  /* move table to below value */
-  lua_setfield(L, -2, fname);  /* set last field */
-  lua_remove(L, -2);  /* remove table */
+  lua_pushstring(L, fname);
+  lua_pushvalue(L, -3);  /* move value to the top */
+  lua_rawset(L, -3);  /* set last field */
+  lua_pop(L, 2);  /* remove value and table */
   return NULL;
 }
 

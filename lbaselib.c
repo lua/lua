@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.157 2004/09/03 13:16:48 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.158 2004/09/15 20:39:42 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -463,23 +463,78 @@ static const char *getpath (lua_State *L) {
 static int luaB_require (lua_State *L) {
   const char *name = luaL_checkstring(L, 1);
   const char *fname;
-  lua_getfield(L, lua_upvalueindex(1), name);
+  lua_settop(L, 1);
+  lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
+  lua_getfield(L, 2, name);
   if (lua_toboolean(L, -1))  /* is it there? */
     return 1;  /* package is already loaded; return its result */
   /* else must load it; first mark it as loaded */
   lua_pushboolean(L, 1);
-  lua_setfield(L, lua_upvalueindex(1), name);  /* _LOADED[name] = true */
-  fname = luaL_searchpath(L, name, getpath(L));
+  lua_setfield(L, 2, name);  /* _LOADED[name] = true */
+  fname = luaL_gsub(L, name, ".", LUA_DIRSEP);
+  fname = luaL_searchpath(L, fname, getpath(L));
   if (fname == NULL || luaL_loadfile(L, fname) != 0)
     return luaL_error(L, "error loading package `%s' (%s)", name,
                          lua_tostring(L, -1));
   lua_pushvalue(L, 1);  /* pass name as argument to module */
   lua_call(L, 1, 1);  /* run loaded module */
   if (!lua_isnil(L, -1))  /* nil return? */
-    lua_setfield(L, lua_upvalueindex(1), name);
-  lua_getfield(L, lua_upvalueindex(1), name);  /* return _LOADED[name] */
+    lua_setfield(L, 2, name);
+  lua_getfield(L, 2, name);  /* return _LOADED[name] */
   return 1;
 }
+
+
+static void setfenv (lua_State *L) {
+  lua_Debug ar;
+  lua_getstack(L, 1, &ar);
+  lua_getinfo(L, "f", &ar);
+  lua_pushvalue(L, -2);
+  lua_setfenv(L, -2);
+}
+
+
+static int luaB_module (lua_State *L) {
+  const char *modname = luaL_checkstring(L, 1);
+  const char *dot;
+  lua_settop(L, 1);
+  lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
+  /* try to find given table */
+  luaL_getfield(L, LUA_GLOBALSINDEX, modname);
+  if (lua_isnil(L, -1)) {  /* not found? */
+    lua_pop(L, 1);  /* remove previous result */
+    lua_newtable(L);  /* create it */
+    /* register it with given name */
+    lua_pushvalue(L, -1);
+    luaL_setfield(L, LUA_GLOBALSINDEX, modname);
+  }
+  else if (!lua_istable(L, -1))
+    return luaL_error(L, "name conflict for module `%s'", modname);
+  /* check whether table already has a _NAME field */
+  lua_getfield(L, -1, "_NAME");
+  if (!lua_isnil(L, -1))  /* is table an initialized module? */
+    lua_pop(L, 1);
+  else {  /* no; initialize it */
+    lua_pop(L, 1);
+    lua_newtable(L);  /* create new metatable */
+    lua_pushvalue(L, LUA_GLOBALSINDEX);
+    lua_setfield(L, -2, "__index");  /* mt.__index = _G */
+    lua_setmetatable(L, -2);
+    lua_pushstring(L, modname);
+    lua_setfield(L, -2, "_NAME");
+    dot = strrchr(modname, '.');  /* look for last dot in module name */
+    if (dot == NULL) dot = modname;
+    else dot++;
+    /* set _PACK as package name (full module name minus last part) */
+    lua_pushlstring(L, modname, dot - modname);
+    lua_setfield(L, -2, "_PACK");
+  }
+  lua_pushvalue(L, -1);
+  lua_setfield(L, 2, modname);  /* _LOADED[modname] = new table */
+  setfenv(L);
+  return 0;
+}
+
 
 /* }====================================================== */
 
@@ -509,6 +564,8 @@ static const luaL_reg base_funcs[] = {
   {"dofile", luaB_dofile},
   {"loadstring", luaB_loadstring},
   {"load", luaB_load},
+  {"require", luaB_require},
+  {"module", luaB_module},
   {NULL, NULL}
 };
 
@@ -676,8 +733,7 @@ static void base_open (lua_State *L) {
   lua_newtable(L);
   lua_pushvalue(L, -1);
   lua_setglobal(L, "_LOADED");
-  lua_pushcclosure(L, luaB_require, 1);
-  lua_setfield(L, LUA_GLOBALSINDEX, "require");
+  lua_setfield(L, LUA_REGISTRYINDEX, "_LOADED");
   /* set global _G */
   lua_pushvalue(L, LUA_GLOBALSINDEX);
   lua_setfield(L, LUA_GLOBALSINDEX, "_G");
