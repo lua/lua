@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.85 2004/04/30 20:13:38 roberto Exp roberto $
+** $Id: ldblib.c,v 1.86 2004/05/31 19:27:14 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -303,22 +303,16 @@ static int errorfb (lua_State *L) {
     lua_pushfstring(L, "%s:", ar.short_src);
     if (ar.currentline > 0)
       lua_pushfstring(L, "%d:", ar.currentline);
-    switch (*ar.namewhat) {
-      case 'g':  /* global */ 
-      case 'l':  /* local */
-      case 'f':  /* field */
-      case 'm':  /* method */
+    if (*ar.namewhat != '\0')  /* is there a name? */
         lua_pushfstring(L, " in function `%s'", ar.name);
-        break;
-      default: {
-        if (*ar.what == 'm')  /* main? */
-          lua_pushfstring(L, " in main chunk");
-        else if (*ar.what == 'C' || *ar.what == 't')
-          lua_pushliteral(L, " ?");  /* C function or tail call */
-        else
-          lua_pushfstring(L, " in function <%s:%d>",
-                             ar.short_src, ar.linedefined);
-      }
+    else {
+      if (*ar.what == 'm')  /* main? */
+        lua_pushfstring(L, " in main chunk");
+      else if (*ar.what == 'C' || *ar.what == 't')
+        lua_pushliteral(L, " ?");  /* C function or tail call */
+      else
+        lua_pushfstring(L, " in function <%s:%d>",
+                           ar.short_src, ar.linedefined);
     }
     lua_concat(L, lua_gettop(L) - arg);
   }
