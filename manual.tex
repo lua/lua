@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.51 2001/07/24 17:25:03 roberto Exp roberto $
+% $Id: manual.tex,v 1.53 2001/10/31 18:06:05 roberto Exp roberto $
 
 \documentclass[11pt,twoside,draft]{article}
 \usepackage{fullpage}
@@ -138,7 +138,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{{\small \tt\$Date: 2001/07/24 17:25:03 $ $}}
+%\date{{\small \tt\$Date: 2001/10/31 18:06:05 $ $}}
 
 \maketitle
 
@@ -1869,8 +1869,8 @@ any function that accepts valid indices can also be called with
 which represent some Lua values that are accessible to the C~code
 but are not in the stack.
 
-Pseudo-indices are used to access the registry
-and the upvalues of a C function \see{c-closure}.
+Pseudo-indices are used to access the table of globals \see{globals},
+the registry, and the upvalues of a C function \see{c-closure}.
 
 \subsection{Stack Manipulation}
 The API offers the following functions for basic stack manipulation:
@@ -2240,7 +2240,7 @@ The compiled chunk is left as a function on top of the stack.
 The return values are the same as those of
 \verb|lua_dofile| and \verb|lua_dobuffer|.
 
-\subsection{Manipulating Global Variables}
+\subsection{Manipulating Global Variables} \label{globals}
 
 To read the value of a global Lua variable,
 you call
@@ -2275,12 +2275,7 @@ use \verb|lua_rawset| over the table of globals
 (see below).
 
 All global variables are kept in an ordinary Lua table.
-You can get this table calling
-\begin{verbatim}
-       void lua_getglobals (lua_State *L);
-\end{verbatim}
-\DefAPI{lua_getglobals}
-which pushes the current table of globals onto the stack.
+This table is always at pseudo-index \IndexAPI{LUA_GLOBALSINDEX}.
 To set another table as the table of globals,
 you call
 \begin{verbatim}
