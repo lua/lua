@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 3.5 1997/06/16 16:50:22 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 3.6 1997/07/01 19:32:41 roberto Exp roberto $";
 
 
 #include <ctype.h>
@@ -37,6 +37,16 @@ static struct {
 static int iflevel;  /* level of nested $if's */
 
 
+
+static void firstline (void)
+{
+  int c = zgetc(lex_z);
+  if (c == '#')
+    while((c=zgetc(lex_z)) != '\n' && c != EOZ) /* skip first line */;
+  zungetc(lex_z);
+}
+
+
 void lua_setinput (ZIO *z)
 {
   current = '\n';
@@ -45,6 +55,7 @@ void lua_setinput (ZIO *z)
   ifstate[0].skip = 0;
   ifstate[0].elsepart = 1;  /* to avoid a free $else */
   lex_z = z;
+  firstline();
 }
 
 

@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.69 1997/06/27 22:38:49 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.70 1997/07/07 21:05:51 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -71,12 +71,8 @@ int lua_dofile (char *filename)
     f = freopen(filename, "rb", f);  /* set binary mode */
     status = lua_doFILE(f, 1);
   }
-  else {
-    if (c == '#')
-      while ((c=fgetc(f)) != '\n' && c != 0) /* skip first line */;
-    ungetc(c, f);
+  else
     status = lua_doFILE(f, 0);
-  }
   if (f != stdin)
     fclose(f);
   return status;
