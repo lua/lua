@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.17 1997/12/15 16:17:20 roberto Exp roberto $
+** $Id: lvm.c,v 1.18 1997/12/17 20:48:58 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -43,7 +43,7 @@ static TaggedString *strconc (char *l, char *r)
 
 
 int luaV_tonumber (TObject *obj)
-{
+{  /* LUA_NUMBER */
   double t;
   char c;
   if (ttype(obj) != LUA_T_STRING)
@@ -59,7 +59,7 @@ int luaV_tonumber (TObject *obj)
 
 
 int luaV_tostring (TObject *obj)
-{
+{ /* LUA_NUMBER */
   if (ttype(obj) != LUA_T_NUMBER)
     return 1;
   else {

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.10 1997/11/27 18:25:06 roberto Exp roberto $
+** $Id: lobject.h,v 1.11 1997/12/15 16:17:20 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -13,9 +13,15 @@
 
 #include <limits.h>
 
+
+/*
+** "real" is the type "number" of Lua
+** GREP LUA_NUMBER to change that
+*/
 #ifndef real
 #define real float
 #endif
+
 
 #define Byte lua_Byte	/* some systems have Byte as a predefined type */
 typedef unsigned char  Byte;  /* unsigned 8 bits */
