@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.23 2002/11/14 15:41:38 roberto Exp roberto $
+** $Id: liolib.c,v 2.24 2002/11/18 16:53:19 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -54,21 +54,24 @@ static int pushresult (lua_State *L, int i, const char *filename) {
 }
 
 
-static FILE *tofile (lua_State *L, int findex) {
+static FILE **topfile (lua_State *L, int findex) {
   FILE **f = (FILE **)lua_touserdata(L, findex);
-  if (f && *f && lua_getmetatable(L, findex) &&
-      lua_rawequal(L, -1, lua_upvalueindex(1))) {
-    lua_pop(L, 1);
-    return *f;
+  if (f == NULL || !lua_getmetatable(L, findex) ||
+                   !lua_rawequal(L, -1, lua_upvalueindex(1))) {
+    luaL_argerror(L, findex, "bad file");
   }
-  if (findex > 0) {
-    if (f && *f == NULL)
-      luaL_error(L, "attempt to use a closed file");
-    else
-      luaL_argerror(L, findex, "bad file");
-  }
-  return NULL;
+  lua_pop(L, 1);
+  return f;
 }
+
+
+static FILE *tofile (lua_State *L, int findex) {
+  FILE **f = topfile(L, findex);
+  if (*f == NULL)
+    luaL_error(L, "attempt to use a closed file");
+  return *f;
+}
+
 
 
 /*
@@ -126,10 +129,22 @@ static int io_close (lua_State *L) {
 
 
 static int io_gc (lua_State *L) {
-  FILE **f = (FILE **)lua_touserdata(L, 1);
-  if (!(f && *f == NULL))  /* ignore closed files */
+  FILE **f = topfile(L, 1);
+  if (*f != NULL)  /* ignore closed files */
     aux_close(L);
   return 0;
+}
+
+
+static int io_tostring (lua_State *L) {
+  char buff[32];
+  FILE **f = topfile(L, 1);
+  if (*f == NULL)
+    strcpy(buff, "closed");
+  else
+    sprintf(buff, "%p", lua_touserdata(L, 1));
+  lua_pushfstring(L, "file (%s)", buff);
+  return 1;
 }
 
 
@@ -164,13 +179,9 @@ static int io_tmpfile (lua_State *L) {
 
 
 static FILE *getiofile (lua_State *L, const char *name) {
-  FILE *f;
   lua_pushstring(L, name);
   lua_rawget(L, lua_upvalueindex(1));
-  f = tofile(L, -1);
-  if (f == NULL)
-    luaL_error(L, "%s is closed", name);
-  return f;
+  return tofile(L, -1);
 }
 
 
@@ -478,6 +489,10 @@ static void createmeta (lua_State *L) {
   lua_pushvalue(L, -2);  /* push metatable (will be upvalue for `gc' method) */
   lua_pushcclosure(L, io_gc, 1);
   lua_rawset(L, -3);  /* metatable.__gc = io_gc */
+  lua_pushliteral(L, "__tostring");
+  lua_pushvalue(L, -2);  /* push metatable */
+  lua_pushcclosure(L, io_tostring, 1);
+  lua_rawset(L, -3);
   /* file methods */
   lua_pushliteral(L, "__index");
   lua_pushvalue(L, -2);  /* push metatable */
