@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.118 2001/07/12 14:59:14 roberto Exp roberto $
+** $Id: liolib.c,v 1.119 2001/07/12 18:11:58 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -237,7 +237,7 @@ static int read_until (lua_State *L, FILE *f, const l_char *p, int pl) {
   luaL_buffinit(L, &b);
   prep_read_until(next, p, pl);
   j = 0;
-  while ((c = fgetc(f)) != EOF) {
+  while ((c = getc(f)) != EOF) {
   NoRead:
     if (c == p[j]) {
       j++;  /* go to next char in pattern */
@@ -272,7 +272,7 @@ static int read_number (lua_State *L, FILE *f) {
 
 
 static int test_eof (lua_State *L, FILE *f) {
-  l_charint c = fgetc(f);
+  l_charint c = getc(f);
   ungetc(c, f);
   lua_pushlstring(L, NULL, 0);
   return (c != EOF);

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.136 2001/06/08 19:00:57 roberto Exp roberto $
+** $Id: ldo.c,v 1.137 2001/07/12 19:34:03 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -243,7 +243,7 @@ LUA_API int lua_loadfile (lua_State *L, const l_char *filename) {
   int nlevel;  /* level on the stack of filename */
   FILE *f = (filename == NULL) ? stdin : fopen(filename, l_s("r"));
   if (f == NULL) return LUA_ERRFILE;  /* unable to open file */
-  bin = (ungetc(fgetc(f), f) == LUA_SIGNATURE[0]);
+  bin = (ungetc(getc(f), f) == LUA_SIGNATURE[0]);
   if (bin && f != stdin) {
     fclose(f);
     f = fopen(filename, l_s("rb"));  /* reopen in binary mode */
