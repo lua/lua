@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 1.19 2000/12/26 18:46:09 roberto Exp roberto $
+** $Id: ltm.h,v 1.20 2001/01/19 13:20:30 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -33,6 +33,21 @@ typedef enum {
   TM_FUNCTION,
   TM_N		/* number of elements in the enum */
 } TMS;
+
+
+
+/*
+** masks for allowable tag methods
+*/
+#define HAS_TM_GETGLOBAL(L,t)	(1<<(t) & ((1<<LUA_TUSERDATA) | \
+                                           (1<<LUA_TTABLE) | \
+                                           (1<<LUA_TNIL)))
+
+#define HAS_TM_SETGLOBAL(L,t)	(1<<(t) & ((1<<LUA_TUSERDATA) | \
+                                           (1<<LUA_TTABLE) | \
+                                           (1<<LUA_TNIL) | \
+                                           (1<<LUA_TFUNCTION)))
+
 
 
 struct TM {

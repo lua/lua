@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.155 2001/01/19 13:20:30 roberto Exp roberto $
+** $Id: lvm.c,v 1.156 2001/01/24 15:45:33 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -174,8 +174,9 @@ void luaV_settable (lua_State *L, StkId t, StkId key) {
 
 const TObject *luaV_getglobal (lua_State *L, TString *s) {
   const TObject *value = luaH_getstr(L->gt, s);
-  Closure *tm = luaT_gettmbyObj(G(L), value, TM_GETGLOBAL);
-  if (tm == NULL)  /* is there a tag method? */
+  Closure *tm;
+  if (!HAS_TM_GETGLOBAL(L, ttype(value)) ||  /* is there a tag method? */
+      (tm = luaT_gettmbyObj(G(L), value, TM_GETGLOBAL)) == NULL)
     return value;  /* default behavior */
   else {  /* tag method */
     luaD_checkstack(L, 3);
@@ -191,8 +192,9 @@ const TObject *luaV_getglobal (lua_State *L, TString *s) {
 
 void luaV_setglobal (lua_State *L, TString *s) {
   TObject *oldvalue = luaH_setstr(L, L->gt, s);
-  Closure *tm = luaT_gettmbyObj(G(L), oldvalue, TM_SETGLOBAL);
-  if (tm == NULL) {  /* no tag methods? */
+  Closure *tm;
+  if (!HAS_TM_SETGLOBAL(L, ttype(oldvalue)) ||  /* no tag methods? */
+     (tm = luaT_gettmbyObj(G(L), oldvalue, TM_SETGLOBAL)) == NULL) {
     setobj(oldvalue, L->top - 1);  /* raw set */
   }
   else {  /* call tag method */
