@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.11 2000/03/13 20:37:16 roberto Exp roberto $
+** $Id: lcode.c,v 1.12 2000/03/15 20:50:33 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -38,7 +38,7 @@ static Instruction *previous_instruction (FuncState *fs) {
 
 
 static int luaK_primitivecode (FuncState *fs, Instruction i) {
-  luaM_growvector(fs->L, fs->f->code, fs->pc, 1, Instruction, codeEM, MAXARG_S);
+  luaM_growvector(fs->L, fs->f->code, fs->pc, 1, Instruction, codeEM, MAX_INT);
   fs->f->code[fs->pc] = i;
   return fs->pc++;
 }
@@ -114,6 +114,7 @@ static void luaK_neq (FuncState *fs) {
   if (*previous == CREATE_U(OP_PUSHNIL, 1)) {
     fs->pc--;  /* remove PUSHNIL */
     luaK_deltastack(fs, -1);  /* undo effect of PUSHNIL */
+    luaK_getlabel(fs);  /* previous instruction could be a (closed) call */
   }
   else
     luaK_S(fs, OP_IFNEQJMP, 0, -2);
@@ -150,12 +151,14 @@ int luaK_code (FuncState *fs, Instruction i, int delta) {
 
 void luaK_fixjump (FuncState *fs, int pc, int dest) {
   Instruction *jmp = &fs->f->code[pc];
-  if (dest != NO_JUMP) {
-    /* jump is relative to position following jump instruction */
-    SETARG_S(*jmp, dest-(pc+1));
-  }
-  else
+  if (dest == NO_JUMP)
     SETARG_S(*jmp, 0);  /* absolute value to represent end of list */
+  else {  /* jump is relative to position following jump instruction */
+    int offset = dest-(pc+1);
+    if (offset < -MAXARG_S || offset > MAXARG_S)
+      luaK_error(fs->ls, "control structure too long");
+    SETARG_S(*jmp, offset);
+  }
 }
 
 
@@ -164,7 +167,7 @@ static int luaK_getjump (FuncState *fs, int pc) {
   if (offset == 0)
     return NO_JUMP;  /* end of list */
   else
-    return (pc+1)+offset;
+    return (pc+1)+offset;  /* turn offset into absolute position */
 }
 
 
@@ -344,9 +347,9 @@ static void luaK_patchlistaux (FuncState *fs, int list, int target,
     Instruction *i = &code[list];
     OpCode op = GET_OPCODE(*i);
     if (op == special)  /* this `op' already has a value */
-      SETARG_S(*i, special_target-(list+1));
+      luaK_fixjump(fs, list, special_target);
     else {
-      SETARG_S(*i, target-(list+1));  /* do the patch */
+      luaK_fixjump(fs, list, target);  /* do the patch */
       if (op == OP_ONTJMP)  /* remove eventual values */
         SET_OPCODE(*i, OP_IFTJMP);
       else if (op == OP_ONFJMP)

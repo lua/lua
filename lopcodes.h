@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.48 2000/03/10 18:37:44 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.49 2000/03/13 20:37:16 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -159,6 +159,27 @@ OP_SETLINE/*	U	-		-		LINE=u		*/
 
 #define RFIELDS_PER_FLUSH 32	/* records (SETMAP) */
 #define LFIELDS_PER_FLUSH 64	/* FPF - lists (SETLIST) (<=MAXARG_B) */
+
+
+/* 
+** we use int to manipulte most arguments, so they must fit
+*/
+#if MAXARG_U > MAX_INT
+#undef MAXARG_U
+#define MAXARG_U	MAX_INT
+#endif
+#if MAXARG_S > MAX_INT
+#undef MAXARG_S
+#define MAXARG_S	MAX_INT
+#endif
+#if MAXARG_A > MAX_INT
+#undef MAXARG_A
+#define MAXARG_A	MAX_INT
+#endif
+#if MAXARG_B > MAX_INT
+#undef MAXARG_B
+#define MAXARG_B	MAX_INT
+#endif
 
 
 #endif
