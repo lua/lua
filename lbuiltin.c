@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.43 1998/12/30 13:16:50 roberto Exp $
+** $Id: lbuiltin.c,v 1.44 1999/01/04 12:55:09 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -445,21 +445,20 @@ static int sort_comp (TObject *f, TObject *a, TObject *b) {
 }
 
 static void auxsort (Hash *a, int l, int u, TObject *f) {
-  init: /* using goto's to optimize tail recursion */
-  if (u <= l) return;  /* 0 or 1 element */
-  else {
+  while (l < u) {  /* for tail recursion */
     TObject *P;
     int i, j;
     /* sort elements a[l], a[(l+u)/2] and a[u] */
     if (sort_comp(f, luaH_getint(a, u), luaH_getint(a, l)))  /* a[l]>a[u]? */
       swap(a, l, u);
-    if (u-l == 1) return;  /* only 2 elements */
+    if (u-l == 1) break;  /* only 2 elements */
     i = (l+u)/2;
-    if (sort_comp(f, luaH_getint(a, i), luaH_getint(a, l)))  /* a[l]>a[i]? */
+    P = luaH_getint(a, i);
+    if (sort_comp(f, P, luaH_getint(a, l)))  /* a[l]>a[i]? */
       swap(a, l, i);
-    else if (sort_comp(f, luaH_getint(a, u), luaH_getint(a, i)))  /* a[i]>a[u]? */
+    else if (sort_comp(f, luaH_getint(a, u), P))  /* a[i]>a[u]? */
       swap(a, i, u);
-    if (u-l == 2) return;  /* only 3 elements */
+    if (u-l == 2) break;  /* only 3 elements */
     P = L->stack.top++;
     *P = *luaH_getint(a, i);  /* save pivot on stack (for GC) */
     swap(a, i, u-1);  /* put median element as pivot (a[u-1]) */
@@ -477,15 +476,15 @@ static void auxsort (Hash *a, int l, int u, TObject *f) {
     swap(a, u-1, i);  /* swap pivot (a[u-1]) with a[i] */
     L->stack.top--;  /* remove pivot from stack */
     /* a[l..i-1] <= a[i] == P <= a[i+1..u] */
-    if (i-l < u-i) {  /* check which "half" is bigger */
-      auxsort(a, l, i-1, f);  /* call recursively the smaller one */
-      l = i+1; goto init;  /* auxsort(a, i+1, u, f); */
+    /* adjust so that smaller "half" is in [j..i] and larger one in [l..u] */
+    if (i-l < u-i) {
+      j=l; i=i-1; l=i+2;
     }
     else {
-      auxsort(a, i+1, u, f);
-      u = i-1; goto init;  /* auxsort(a, l, i-1, f); */
+      j=i+1; i=u; u=j-2;
     }
-  }
+    auxsort(a, j, i, f);  /* call recursively the smaller one */
+  }  /* repeat the routine for the larger one */
 }
 
 static void luaB_sort (void) {
