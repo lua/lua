@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.128 2005/02/10 17:12:02 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.129 2005/02/23 17:30:22 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -25,12 +25,7 @@
 #include "lauxlib.h"
 
 
-/* number of prereserved references (for internal use) */
-#define RESERVED_REFS	2
-
-/* reserved references */
-#define FREELIST_REF	1	/* free list of references */
-#define ARRAYSIZE_REF	2	/* array sizes */
+#define FREELIST_REF	0	/* free list of references */
 
 
 /* convert a stack index to positive */
@@ -275,6 +270,8 @@ LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
 ** =======================================================
 */
 
+#ifndef luaL_getn
+
 static int checkint (lua_State *L, int topop) {
   int n = (lua_type(L, -1) == LUA_TNUMBER) ? lua_tointeger(L, -1) : -1;
   lua_pop(L, topop);
@@ -283,7 +280,7 @@ static int checkint (lua_State *L, int topop) {
 
 
 static void getsizes (lua_State *L) {
-  lua_rawgeti(L, LUA_REGISTRYINDEX, ARRAYSIZE_REF);
+  lua_getfield(L, LUA_REGISTRYINDEX, "LUA_SIZES");
   if (lua_isnil(L, -1)) {  /* no `size' table? */
     lua_pop(L, 1);  /* remove nil */
     lua_newtable(L);  /* create it */
@@ -292,7 +289,7 @@ static void getsizes (lua_State *L) {
     lua_pushliteral(L, "kv");
     lua_setfield(L, -2, "__mode");  /* metatable(N).__mode = "kv" */
     lua_pushvalue(L, -1);
-    lua_rawseti(L, LUA_REGISTRYINDEX, ARRAYSIZE_REF);  /* store in register */
+    lua_setfield(L, LUA_REGISTRYINDEX, "LUA_SIZES");  /* store in register */
   }
 }
 
@@ -307,31 +304,6 @@ LUALIB_API void luaL_setn (lua_State *L, int t, int n) {
 }
 
 
-/* find an `n' such that t[n] ~= nil and t[n+1] == nil */
-static int countn (lua_State *L, int t) {
-  int i = LUA_FIRSTINDEX - 1;
-  int j = 2;
-  /* find `i' such that i <= n < i*2 (= j) */
-  for (;;) {
-    lua_rawgeti(L, t, j);
-    if (lua_isnil(L, -1)) break;
-    lua_pop(L, 1);
-    i = j;
-    j = i*2;
-  }
-  lua_pop(L, 1);
-  /* i <= n < j; do a binary search */
-  while (i < j-1) {
-    int m = (i+j)/2;
-    lua_rawgeti(L, t, m);
-    if (lua_isnil(L, -1)) j = m;
-    else i = m;
-    lua_pop(L, 1);
-  }
-  return i - LUA_FIRSTINDEX + 1;
-}
-
-
 LUALIB_API int luaL_getn (lua_State *L, int t) {
   int n;
   t = abs_index(L, t);
@@ -341,8 +313,10 @@ LUALIB_API int luaL_getn (lua_State *L, int t) {
   if ((n = checkint(L, 2)) >= 0) return n;
   lua_getfield(L, t, "n");  /* else try t.n */
   if ((n = checkint(L, 1)) >= 0) return n;
-  return countn(L, t);
+  return lua_objsize(L, t);
 }
+
+#endif
 
 /* }====================================================== */
 
@@ -562,11 +536,8 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
     lua_rawseti(L, t, FREELIST_REF);  /* (t[FREELIST_REF] = t[ref]) */
   }
   else {  /* no free elements */
-    ref = luaL_getn(L, t);
-    if (ref < RESERVED_REFS)
-      ref = RESERVED_REFS;  /* skip reserved references */
+    ref = lua_objsize(L, t);
     ref++;  /* create new reference */
-    luaL_setn(L, t, ref);
   }
   lua_rawseti(L, t, ref);
   return ref;

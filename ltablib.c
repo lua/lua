@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.26 2004/06/15 13:37:21 roberto Exp roberto $
+** $Id: ltablib.c,v 1.27 2004/12/07 18:28:47 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -62,29 +62,32 @@ static int getn (lua_State *L) {
 
 static int setn (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
+#ifndef luaL_setn
   luaL_setn(L, 1, luaL_checkint(L, 2));
+#else
+  luaL_error(L, "`setn' is obsolete");
+#endif
   lua_pushvalue(L, 1);
   return 1;
 }
 
 
 static int tinsert (lua_State *L) {
-  int v = lua_gettop(L);  /* number of arguments */
   int e = aux_getn(L, 1) + LUA_FIRSTINDEX;  /* first empty element */
   int pos;  /* where to insert new element */
-  if (v == 2)  /* called with only 2 arguments */
+  if (lua_isnone(L, 3))  /* called with only 2 arguments */
     pos = e;  /* insert new element at the end */
   else {
+    int i;
     pos = luaL_checkint(L, 2);  /* 2nd argument is the position */
     if (pos > e) e = pos;  /* `grow' array if necessary */
-    v = 3;  /* function may be called with more than 3 args */
+    lua_settop(L, 3);  /* function may be called with more than 3 args */
+    for (i = e; i > pos; i--) {  /* move up elements */
+      lua_rawgeti(L, 1, i-1);
+      lua_rawseti(L, 1, i);  /* t[i] = t[i-1] */
+    }
   }
   luaL_setn(L, 1, e - LUA_FIRSTINDEX + 1);  /* new size */
-  while (--e >= pos) {  /* move up elements */
-    lua_rawgeti(L, 1, e);
-    lua_rawseti(L, 1, e+1);  /* t[e+1] = t[e] */
-  }
-  lua_pushvalue(L, v);
   lua_rawseti(L, 1, pos);  /* t[pos] = v */
   return 0;
 }

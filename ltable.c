@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.17 2005/03/08 20:10:05 roberto Exp roberto $
+** $Id: ltable.c,v 2.18 2005/03/09 16:28:07 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -522,5 +522,53 @@ TValue *luaH_setstr (lua_State *L, Table *t, TString *key) {
     setsvalue(L, &k, key);
     return newkey(L, t, &k);
   }
+}
+
+
+static int unbound_search (Table *t, unsigned int j) {
+  unsigned int i = j;  /* i is zero or a present index */
+  j = j+1;
+  /* find `i' and `j' such that i is present and j is not */
+  while (!ttisnil(luaH_getnum(t, j))) {
+    i = j;
+    j = i*2;
+    if (j > cast(unsigned int, MAX_INT)) {  /* overflow? */
+      /* table was built with bad purposes: resort to linear search */
+      i = 1;
+      while (!ttisnil(luaH_getnum(t, i))) i++;
+      return i - 1;
+    }
+  }
+  /* now do a binary search between them */
+  while (i < j-1) {
+    unsigned int m = (i+j)/2;
+    if (ttisnil(luaH_getnum(t, m))) j = m;
+    else i = m;
+  }
+  return i;
+}
+
+
+/*
+** Try to find a boundary in table `t'. A `boundary' is an integer index
+** such that t[i] is non-nil and t[i+1] is nil (and 0 if t[1] is nil).
+*/
+int luaH_getn (Table *t) {
+  unsigned int j = t->sizearray;
+  if (j > 0 && ttisnil(&t->array[j - 1])) {
+    /* there is a boundary in the array part: (binary) search for it */
+    unsigned int i = 1;
+    if (ttisnil(&t->array[1 - 1])) return 0;
+    while (i < j - 1) {
+      unsigned int m = (i+j)/2;
+      if (ttisnil(&t->array[m - 1])) j = m;
+      else i = m;
+    }
+    return i;
+  }
+  /* else must find a boundary in hash part */
+  else if (t->node == &luaH_dummynode)  /* hash part is empty? */
+    return j;  /* that is easy... */
+  else return unbound_search(t, j);
 }
 

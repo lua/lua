@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.19 2005/01/19 15:54:26 roberto Exp roberto $
+** $Id: ltests.c,v 2.20 2005/02/18 12:40:02 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -456,11 +456,11 @@ static int listlocals (lua_State *L) {
 
 static int get_limits (lua_State *L) {
   lua_createtable(L, 0, 5);
-  setnameval(L, "BITS_INT", LUA_BITSINT);
+  setnameval(L, "BITS_INT", LUAI_BITSINT);
   setnameval(L, "LFPF", LFIELDS_PER_FLUSH);
-  setnameval(L, "MAXVARS", MAXVARS);
+  setnameval(L, "MAXVARS", LUAI_MAXVARS);
   setnameval(L, "MAXSTACK", MAXSTACK);
-  setnameval(L, "MAXUPVALUES", MAXUPVALUES);
+  setnameval(L, "MAXUPVALUES", LUAI_MAXUPVALUES);
   setnameval(L, "NUM_OPCODES", NUM_OPCODES);
   return 1;
 }
@@ -970,12 +970,14 @@ static int testC (lua_State *L) {
       int i = getindex;
       lua_pushinteger(L1, luaL_getn(L1, i));
     }
+#ifndef luaL_setn
     else if EQ("setn") {
       int i = getindex;
       int n = cast(int, lua_tonumber(L1, -1));
       luaL_setn(L1, i, n);
       lua_pop(L1, 1);
     }
+#endif
     else if EQ("throw") {
 #ifdef __cplusplus
 static struct X { int x; } x;
