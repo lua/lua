@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.27 2002/12/04 15:27:17 roberto Exp roberto $
+** $Id: liolib.c,v 2.28 2002/12/04 17:38:31 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -732,6 +732,6 @@ LUALIB_API int lua_iolibopen (lua_State *L) {
   registerfile(L, stdin, "stdin", IO_INPUT);
   registerfile(L, stdout, "stdout", IO_OUTPUT);
   registerfile(L, stderr, "stderr", NULL);
-  return 0;
+  return 1;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.16 2002/11/14 15:41:38 roberto Exp roberto $
+** $Id: ltablib.c,v 1.17 2002/12/04 17:38:31 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -296,6 +296,6 @@ LUALIB_API int lua_tablibopen (lua_State *L) {
   lua_pushliteral(L, "k");
   lua_rawset(L, -3);  /* metatable(N).__mode = "k" */
   luaL_openlib(L, LUA_TABLIBNAME, tab_funcs, 1);
-  return 0;
+  return 1;
 }
 

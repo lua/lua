@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.148 2002/12/04 17:38:31 roberto Exp roberto $
+** $Id: ltests.c,v 1.149 2002/12/19 11:11:55 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -457,13 +457,21 @@ static int newstate (lua_State *L) {
   return 1;
 }
 
+
 static int loadlib (lua_State *L) {
-  lua_State *L1 = cast(lua_State *, cast(unsigned long, luaL_checknumber(L, 1)));
-  lua_register(L1, "mathlibopen", lua_mathlibopen);
-  lua_register(L1, "strlibopen", lua_strlibopen);
-  lua_register(L1, "iolibopen", lua_iolibopen);
-  lua_register(L1, "dblibopen", lua_dblibopen);
-  lua_register(L1, "baselibopen", lua_baselibopen);
+  static const luaL_reg libs[] = {
+    {"mathlibopen", lua_mathlibopen},
+    {"strlibopen", lua_strlibopen},
+    {"iolibopen", lua_iolibopen},
+    {"tablibopen", lua_tablibopen},
+    {"dblibopen", lua_dblibopen},
+    {"baselibopen", lua_baselibopen},
+    {NULL, NULL}
+  };
+  lua_State *L1 = cast(lua_State *,
+                       cast(unsigned long, luaL_checknumber(L, 1)));
+  lua_pushvalue(L1, LUA_GLOBALSINDEX);
+  luaL_openlib(L1, NULL, libs, 0);
   return 0;
 }
 
@@ -486,7 +494,8 @@ static int doremote (lua_State *L) {
   if (status != 0) {
     lua_pushnil(L);
     lua_pushnumber(L, status);
-    return 2;
+    lua_pushstring(L, lua_tostring(L1, -1));
+    return 3;
   }
   else {
     int i = 0;

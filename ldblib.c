@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.75 2002/12/05 17:50:10 roberto Exp roberto $
+** $Id: ldblib.c,v 1.76 2002/12/19 11:11:55 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -292,6 +292,6 @@ LUALIB_API int lua_dblibopen (lua_State *L) {
   lua_pushliteral(L, "_TRACEBACK");
   lua_pushcfunction(L, errorfb);
   lua_settable(L, LUA_GLOBALSINDEX);
-  return 0;
+  return 1;
 }
 
