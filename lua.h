@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.38 1999/11/22 13:12:07 roberto Exp roberto $
+** $Id: lua.h,v 1.39 1999/11/25 18:44:02 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -66,7 +66,7 @@ int            lua_isnumber (lua_State *L, lua_Object object);
 int            lua_isstring (lua_State *L, lua_Object object);
 int            lua_isfunction (lua_State *L, lua_Object object);
 
-int            lua_equalobj (lua_State *L, lua_Object o1, lua_Object o2);
+int            lua_equal (lua_State *L, lua_Object o1, lua_Object o2);
 
 double         lua_getnumber (lua_State *L, lua_Object object);
 const char    *lua_getstring (lua_State *L, lua_Object object);
@@ -179,7 +179,7 @@ extern lua_State *lua_state;
 #define lua_isnumber(object)	(lua_isnumber)(lua_state, object)
 #define lua_isstring(object)	(lua_isstring)(lua_state, object)
 #define lua_isfunction(object)	(lua_isfunction)(lua_state, object)
-#define lua_equalobj(o1,o2)	(lua_equalobj)(lua_state, o1,o2)
+#define lua_equal(o1,o2)	(lua_equal)(lua_state, o1,o2)
 #define lua_getnumber(object)	(lua_getnumber)(lua_state, object)
 #define lua_getstring(object)	(lua_getstring)(lua_state, object)
 #define lua_strlen(object)	(lua_strlen)(lua_state, object)

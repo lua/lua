@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.57 1999/11/22 13:12:07 roberto Exp roberto $
+** $Id: lapi.c,v 1.58 1999/11/23 13:58:02 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -240,8 +240,8 @@ int lua_isfunction (lua_State *L, lua_Object o) {
   return (t == LUA_T_PROTO) || (t == LUA_T_CPROTO);
 }
 
-int lua_equalobj (lua_State *L, lua_Object o1, lua_Object o2) {
-  if (o1 == LUA_NOOBJECT || o2 == LUA_NOOBJECT) return 0;
+int lua_equal(lua_State *L, lua_Object o1, lua_Object o2) {
+  if (o1 == LUA_NOOBJECT || o2 == LUA_NOOBJECT) return (o1 == o2);
   else return luaO_equalObj(Address(L, o1), Address(L, o2));
 }
 
