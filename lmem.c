@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.27 2000/03/10 14:01:05 roberto Exp roberto $
+** $Id: lmem.c,v 1.28 2000/03/10 18:37:44 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -54,6 +54,7 @@
 
 unsigned long memdebug_numblocks = 0;
 unsigned long memdebug_total = 0;
+unsigned long memdebug_maxmem = 0;
 
 
 static void *checkblock (void *block) {
@@ -95,6 +96,7 @@ static void *debug_realloc (void *block, size_t size) {
       freeblock(block);  /* erase (and check) old copy */
     }
     memdebug_total += size;
+    if (memdebug_total > memdebug_maxmem) memdebug_maxmem = memdebug_total;
     memdebug_numblocks++;
     *(unsigned long *)newblock = size;
     for (i=0;i<MARKSIZE;i++)
