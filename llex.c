@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.84 2001/03/26 14:31:49 roberto Exp roberto $
+** $Id: llex.c,v 1.85 2001/06/07 15:01:21 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -40,7 +40,7 @@ void luaX_init (lua_State *L) {
   for (i=0; i<NUM_RESERVED; i++) {
     TString *ts = luaS_new(L, token2string[i]);
     lua_assert(strlen(token2string[i])+1 <= TOKEN_LEN);
-    ts->marked = (unsigned short)RESERVEDMARK+i;  /* reserved word */
+    ts->marked = (unsigned short)(RESERVEDMARK+i);  /* reserved word */
   }
 }
 
