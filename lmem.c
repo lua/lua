@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.56 2002/06/11 16:23:47 roberto Exp roberto $
+** $Id: lmem.c,v 1.57 2002/06/18 15:19:27 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -18,13 +18,20 @@
 
 
 /*
-** definition for realloc function. It must assure that
-** l_realloc(block, x, 0) frees the block, and l_realloc(NULL, 0, x)
-** allocates a new block (ANSI C assures that).
-** (`os' is the old block size; some allocators may use that.)
+** definition for realloc function. It must assure that l_realloc(NULL,
+** 0, x) allocates a new block (ANSI C assures that). (`os' is the old
+** block size; some allocators may use that.)
 */
 #ifndef l_realloc
 #define l_realloc(b,os,s)	realloc(b,s)
+#endif
+
+/*
+** definition for free function. (`os' is the old block size; some
+** allocators may use that.)
+*/
+#ifndef l_free
+#define l_free(b,os)	free(b)
 #endif
 
 
@@ -56,7 +63,7 @@ void *luaM_growaux (lua_State *L, void *block, int *size, int size_elems,
 void *luaM_realloc (lua_State *L, void *block, lu_mem oldsize, lu_mem size) {
   if (size == 0) {
     if (block != NULL) {
-      l_realloc(block, oldsize, size);
+      l_free(block, oldsize);
       block = NULL;
     }
   }
