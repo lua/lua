@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.81 2002/03/26 20:46:10 roberto Exp roberto $
+** $Id: lstate.h,v 1.82 2002/04/10 12:11:07 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -112,6 +112,7 @@ typedef struct global_State {
   size_t Mbuffsize;  /* size of Mbuffer */
   lu_mem GCthreshold;
   lu_mem nblocks;  /* number of `bytes' currently allocated */
+  lua_CFunction panic;  /* to be called in unprotected errors */
   TString *tmname[TM_N];  /* array with tag-method names */
 } global_State;
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.87 2002/03/11 12:45:00 roberto Exp roberto $
+** $Id: lstate.c,v 1.88 2002/03/20 12:52:32 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -23,6 +23,16 @@
 
 
 static void close_state (lua_State *L);
+
+
+/*
+** you can change this function through the official API
+** call `lua_setpanicf'
+*/
+static int default_panic (lua_State *L) {
+  fprintf(stderr, "unable to recover; exiting\n");
+  return 0;
+}
 
 
 static void stack_init (lua_State *L, lua_State *OL) {
@@ -52,6 +62,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   G(L)->strt.hash = NULL;
   G(L)->Mbuffer = NULL;
   G(L)->Mbuffsize = 0;
+  G(L)->panic = &default_panic;
   G(L)->rootproto = NULL;
   G(L)->rootcl = NULL;
   G(L)->roottable = NULL;

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.169 2002/04/10 12:10:54 roberto Exp roberto $
+** $Id: ldo.c,v 1.170 2002/04/15 19:34:42 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -501,8 +501,7 @@ void luaD_breakrun (lua_State *L, int errcode) {
     longjmp(L->errorJmp->b, 1);
   }
   else {
-    if (errcode != LUA_ERRMEM && errcode != LUA_ERRERR)
-      message(L, "unable to recover; exiting\n");
+    G(L)->panic(L);
     exit(EXIT_FAILURE);
   }
 }

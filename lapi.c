@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.182 2002/04/02 20:43:18 roberto Exp roberto $
+** $Id: lapi.c,v 1.183 2002/04/05 18:54:31 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -97,6 +97,15 @@ LUA_API int lua_checkstack (lua_State *L, int size) {
   return res;
 }
 
+
+LUA_API lua_CFunction lua_setpanicf (lua_State *L, lua_CFunction panicf) {
+  lua_CFunction old;
+  lua_lock(L);
+  old = G(L)->panic;
+  G(L)->panic = panicf;
+  lua_unlock(L);
+  return old;
+}
 
 
 /*
