@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.19 2000/08/28 17:57:04 roberto Exp roberto $
+** $Id: ldblib.c,v 1.20 2000/09/05 19:33:32 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -55,6 +55,8 @@ static int getinfo (lua_State *L) {
     switch (*options) {
       case 'S':
         settabss(L, "source", ar.source);
+        if (ar.source)
+          settabss(L, "short_src", ar.short_src);
         settabsi(L, "linedefined", ar.linedefined);
         settabss(L, "what", ar.what);
         break;
