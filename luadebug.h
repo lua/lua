@@ -1,5 +1,5 @@
 /*
-** $Id: luadebug.h,v 1.10 2000/03/30 17:19:48 roberto Exp roberto $
+** $Id: luadebug.h,v 1.11 2000/08/08 20:42:07 roberto Exp roberto $
 ** Debugging API
 ** See Copyright Notice in lua.h
 */
@@ -34,7 +34,7 @@ struct lua_Debug {
   const char *what;      /* (S) `Lua' function, `C' function, Lua `main' */
   int currentline;       /* (l) */
   const char *name;      /* (n) */
-  const char *namewhat;  /* (n) global, tag method, local, field */
+  const char *namewhat;  /* (n) `global', `tag method', `local', `field' */
   int nups;              /* (u) number of upvalues */
   lua_Object func;       /* (f) function being executed */
   /* private part */

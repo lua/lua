@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.31 2000/08/09 19:16:57 roberto Exp roberto $
+** $Id: ldebug.c,v 1.32 2000/08/10 19:50:47 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -22,6 +22,8 @@
 #include "ltm.h"
 #include "luadebug.h"
 
+
+static const char *getfuncname (lua_State *L, StkId f, const char **name);
 
 
 static void setnormalized (TObject *d, const TObject *s) {
@@ -229,7 +231,8 @@ static void lua_getname (lua_State *L, StkId f, lua_Debug *ar) {
 
 int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
   StkId func;
-  if (*what != '>')
+  int isactive = (*what != '>');
+  if (isactive)
     func = ar->_func;
   else {
     what++;  /* skip the '>' */
@@ -237,23 +240,30 @@ int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
   }
   for (; *what; what++) {
     switch (*what) {
-      case 'S':
+      case 'S': {
         lua_funcinfo(ar, func);
         break;
-      case 'l':
+      }
+      case 'l': {
         ar->currentline = lua_currentline(func);
         break;
-      case 'u':
+      }
+      case 'u': {
         ar->nups = lua_nups(func);
         break;
-      case 'n':
-        lua_getname(L, func, ar);
+      }
+      case 'n': {
+        ar->namewhat = getfuncname(L, func, &ar->name);
+        if (ar->namewhat == NULL)
+          lua_getname(L, func, ar);
         break;
-      case 'f':
+      }
+      case 'f': {
         setnormalized(L->top, func);
         incr_top;
         ar->func = lua_pop(L);
         break;
+      }
       default: return 0;  /* invalid option */
     }
   }
@@ -286,21 +296,17 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int stackpos) {
     const Instruction i = code[pc++];
     LUA_ASSERT(0 <= top && top <= pt->maxstacksize, "wrong stack");
     switch (GET_OPCODE(i)) {
-      case OP_RETURN: {
-        LUA_ASSERT(top >= GETARG_U(i), "wrong stack");
-        top = GETARG_U(i);
-        break;
+      case OP_RETURN:
+      case OP_TAILCALL:
+      case OP_END: {
+        LUA_INTERNALERROR("invalid symbolic run");
+        return CREATE_0(OP_END);  /* stop execution */
       }
       case OP_CALL: {
         int nresults = GETARG_B(i);
         if (nresults == MULT_RET) nresults = 1;
         LUA_ASSERT(top >= GETARG_A(i), "wrong stack");
         top = pushpc(stack, pc, GETARG_A(i), nresults);
-        break;
-      }
-      case OP_TAILCALL: {
-        LUA_ASSERT(top >= GETARG_A(i), "wrong stack");
-        top = GETARG_B(i);
         break;
       }
       case OP_PUSHNIL: {
@@ -384,6 +390,23 @@ static const char *getobjname (lua_State *L, StkId obj, const char **name) {
 }
 
 
+static const char *getfuncname (lua_State *L, StkId f, const char **name) {
+  StkId func = aux_stackedfunction(L, 0, f);  /* calling function */
+  if (func == NULL || ttype(func) != TAG_LMARK)
+    return NULL;  /* not a Lua function */
+  else {
+    Proto *p = infovalue(func)->func->f.l;
+    Instruction i = p->code[lua_currentpc(func)];
+    switch (GET_OPCODE(i)) {
+      case OP_CALL: case OP_TAILCALL:
+        return getobjname(L, (func+1)+GETARG_A(i), name);
+      default:
+        return NULL;  /* no usefull name found */
+    }
+  }
+}
+
+
 /* }====================================================== */
 
 
@@ -403,5 +426,15 @@ void luaG_binerror (lua_State *L, StkId p1, lua_Type t, const char *op) {
   if (ttype(p1) == t) p1++;
   LUA_ASSERT(ttype(p1) != t, "must be an error");
   luaG_typeerror(L, p1, op);
+}
+
+
+void luaG_ordererror (lua_State *L, StkId top) {
+  const char *t1 = lua_type(L, top-2);
+  const char *t2 = lua_type(L, top-1);
+  if (t1[2] == t2[2])
+    luaL_verror(L, "attempt to compare two %.10s values", t1);
+  else
+    luaL_verror(L, "attempt to compare %.10s with %.10s", t1, t2);
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.124 2000/08/09 19:16:57 roberto Exp roberto $
+** $Id: lvm.c,v 1.125 2000/08/10 19:50:47 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -279,7 +279,7 @@ int luaV_lessthan (lua_State *L, const TObject *l, const TObject *r, StkId top) 
     *top++ = *l;
     *top++ = *r;
     if (!call_binTM(L, top, IM_LT))
-      lua_error(L, "unexpected type in comparison");
+      luaG_ordererror(L, top-2);
     L->top--;
     return (ttype(L->top) != TAG_NIL);
   }
