@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.2 1994/11/04 10:47:49 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.3 1994/11/07 15:20:56 roberto Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,6 +32,12 @@ static Object *stack = NULL;
 static Object *top = NULL;
 
 
+/* macros to convert from lua_Object to (Object *) and back */
+ 
+#define Address(lo)     ((lo)+stack-1)
+#define Ref(st)         ((st)-stack+1)
+ 
+
 static int CBase = 0;   /* when Lua calls C or C calls Lua, points to the */
                         /* first slot after the last parameter. */
 static int CnResults = 0; /* when Lua calls C, has the number of parameters; */
@@ -42,6 +48,12 @@ static  jmp_buf *errorJmp = NULL; /* current error recover point */
 
 static int lua_execute (Byte *pc, int base);
 static void do_call (Object *func, int base, int nResults, int whereRes);
+
+
+Object *luaI_Address (lua_Object o)
+{
+  return Address(o);
+}
 
 
 /*
@@ -87,14 +99,15 @@ void luaI_setfallback (void)
   {
     if (strcmp(fallBacks[i].kind, name) == 0)
     {
-      lua_pushobject(&fallBacks[i].function);
-      fallBacks[i].function = *func;
+      lua_pushobject(Ref(&fallBacks[i].function));
+      fallBacks[i].function = *Address(func);
       return;
     }
   }
   /* name not found */
   lua_pushnil();
 }
+
 
 /*
 ** Error messages
@@ -373,12 +386,12 @@ static int do_protectedrun (Object *function, int nResults)
 /*
 ** Execute the given lua function. Return 0 on success or 1 on error.
 */
-int lua_callfunction (Object *function)
+int lua_callfunction (lua_Object function)
 {
   if (function == NULL)
     return 1;
   else
-    return do_protectedrun (function, MULT_RET);
+    return do_protectedrun (Address(function), MULT_RET);
 }
 
 
@@ -420,73 +433,77 @@ int lua_dostring (char *string)
 
 
 /*
-** Get a parameter, returning the object handle or NULL on error.
+** Get a parameter, returning the object handle or 0 on error.
 ** 'number' must be 1 to get the first parameter.
 */
-Object *lua_getparam (int number)
+lua_Object lua_getparam (int number)
 {
- if (number <= 0 || number > CnResults) return NULL;
- return (stack+(CBase-CnResults+number-1));
+ if (number <= 0 || number > CnResults) return 0;
+ /* Ref(stack+(CBase-CnResults+number-1)) ==
+    stack+(CBase-CnResults+number-1)-stack+1 == */
+ return CBase-CnResults+number;
 }
 
 /*
 ** Given an object handle, return its number value. On error, return 0.0.
 */
-real lua_getnumber (Object *object)
+real lua_getnumber (lua_Object object)
 {
- if (object == NULL || tag(object) == LUA_T_NIL) return 0.0;
- if (tonumber (object)) return 0.0;
- else                   return (nvalue(object));
+ if (object == 0 || tag(Address(object)) == LUA_T_NIL) return 0.0;
+ if (tonumber (Address(object))) return 0.0;
+ else                   return (nvalue(Address(object)));
 }
 
 /*
 ** Given an object handle, return its string pointer. On error, return NULL.
 */
-char *lua_getstring (Object *object)
+char *lua_getstring (lua_Object object)
 {
- if (object == NULL || tag(object) == LUA_T_NIL) return NULL;
- if (tostring (object)) return NULL;
- else                   return (svalue(object));
+ if (object == 0 || tag(Address(object)) == LUA_T_NIL) return NULL;
+ if (tostring (Address(object))) return NULL;
+ else return (svalue(Address(object)));
 }
 
 /*
 ** Given an object handle, return a copy of its string. On error, return NULL.
 */
-char *lua_copystring (Object *object)
+char *lua_copystring (lua_Object object)
 {
- if (object == NULL || tag(object) == LUA_T_NIL) return NULL;
- if (tostring (object)) return NULL;
- else                   return (strdup(svalue(object)));
+ if (object == 0 || tag(Address(object)) == LUA_T_NIL) return NULL;
+ if (tostring (Address(object))) return NULL;
+ else return (strdup(svalue(Address(object))));
 }
 
 /*
 ** Given an object handle, return its cfuntion pointer. On error, return NULL.
 */
-lua_CFunction lua_getcfunction (Object *object)
+lua_CFunction lua_getcfunction (lua_Object object)
 {
- if (object == NULL) return NULL;
- if (tag(object) != LUA_T_CFUNCTION) return NULL;
- else                            return (fvalue(object));
+ if (object == 0) return NULL;
+ if (tag(Address(object)) != LUA_T_CFUNCTION) return NULL;
+ else return (fvalue(Address(object)));
 }
 
 /*
 ** Given an object handle, return its user data. On error, return NULL.
 */
-void *lua_getuserdata (Object *object)
+void *lua_getuserdata (lua_Object object)
 {
- if (object == NULL) return NULL;
- if (tag(object) != LUA_T_USERDATA) return NULL;
- else                           return (uvalue(object));
+ if (object == 0) return NULL;
+ if (tag(Address(object)) != LUA_T_USERDATA) return NULL;
+ else return (uvalue(Address(object)));
 }
 
 /*
 ** Get a global object. Return the object handle or NULL on error.
 */
-Object *lua_getglobal (char *name)
+lua_Object lua_getglobal (char *name)
 {
  int n = lua_findsymbol(name);
- if (n < 0) return NULL;
- return &s_object(n);
+ if (n < 0) return 0;
+ *(top-1) = s_object(n);
+ top++;
+ return Ref(top-1);
 }
 
 /*
@@ -541,13 +558,22 @@ int lua_pushuserdata (void *u)
 }
 
 /*
-** Push an object to stack.
+** Push a lua_Object to stack.
 */
-int lua_pushobject (Object *o)
+int lua_pushobject (lua_Object o)
+{
+ lua_checkstack(top-stack+1);
+ *top++ = *Address(o);
+ return 0;
+}
+
+/*
+** Push an object on the stack.
+*/
+void luaI_pushobject (Object *o)
 {
  lua_checkstack(top-stack+1);
  *top++ = *o;
- return 0;
 }
 
 /*
@@ -558,60 +584,16 @@ int lua_storeglobal (char *name)
 {
  int n = lua_findsymbol (name);
  if (n < 0) return 1;
- if (top-stack <= CBase) return 1;
  s_object(n) = *(--top);
  return 0;
 }
 
-
-/*
-** Store top of the stack at an array field. Return 1 on error, 0 on success.
-*/
-int lua_storefield (lua_Object object, char *field)
-{
- if (tag(object) != LUA_T_ARRAY)
-  return 1;
- else
- {
-  Object ref, *h;
-  tag(&ref) = LUA_T_STRING;
-  svalue(&ref) = lua_createstring(field);
-  h = lua_hashdefine(avalue(object), &ref);
-  if (h == NULL) return 1;
-  if (tag(top-1) == LUA_T_MARK) return 1;
-  *h = *(--top);
- }
- return 0;
-}
-
-
-/*
-** Store top of the stack at an array index. Return 1 on error, 0 on success.
-*/
-int lua_storeindexed (lua_Object object, float index)
-{
- if (tag(object) != LUA_T_ARRAY)
-  return 1;
- else
- {
-  Object ref, *h;
-  tag(&ref) = LUA_T_NUMBER;
-  nvalue(&ref) = index;
-  h = lua_hashdefine(avalue(object), &ref);
-  if (h == NULL) return 1;
-  if (tag(top-1) == LUA_T_MARK) return 1;
-  *h = *(--top);
- }
- return 0;
-}
-
-
 int lua_type (lua_Object o)
 {
-  if (o == NULL)
+  if (o == 0)
     return LUA_T_NIL;
   else
-    return tag(o);
+    return tag(Address(o));
 }
 
 
@@ -1062,4 +1044,5 @@ static int lua_execute (Byte *pc, int base)
   }
  }
 }
+
 

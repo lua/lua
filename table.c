@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.10 1994/11/03 22:33:40 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.11 1994/11/04 17:20:00 roberto Exp roberto $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -259,23 +259,23 @@ char *lua_filename (void)
 void lua_nextvar (void)
 {
  char *varname, *next;
- Object *o = lua_getparam (1);
- if (o == NULL)
+ lua_Object o = lua_getparam(1);
+ if (o == 0)
  { lua_error ("too few arguments to function `nextvar'"); return; }
- if (lua_getparam (2) != NULL)
+ if (lua_getparam(2) != NULL)
  { lua_error ("too many arguments to function `nextvar'"); return; }
- if (tag(o) == LUA_T_NIL)
+ if (lua_isnil(o))
  {
-  varname = 0;
+  varname = NULL;
  }
- else if (tag(o) != LUA_T_STRING) 
+ else if (!lua_isstring(o))
  { 
   lua_error ("incorrect argument to function `nextvar'"); 
   return;
  }
  else
  {
-  varname = svalue(o);
+  varname = lua_getstring(o);
  }
  next = lua_varnext(varname);
  if (next == NULL)
@@ -288,7 +288,7 @@ void lua_nextvar (void)
   Object name;
   tag(&name) = LUA_T_STRING;
   svalue(&name) = next;
-  if (lua_pushobject (&name)) return;
-  if (lua_pushobject (&s_object(indexstring(next)))) return;
+  luaI_pushobject(&name);
+  luaI_pushobject(&s_object(indexstring(next)));
  }
 }

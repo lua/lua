@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.12 1994/11/03 22:20:15 roberto Exp $";
+char *rcs_hash="$Id: hash.c,v 2.13 1994/11/07 15:19:51 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdlib.h>
@@ -293,29 +293,29 @@ static void hashnext (Hash *t, int i)
    return;
   }
  }
- lua_pushobject(ref(node(t,i)));
- lua_pushobject(val(node(t,i)));
+ luaI_pushobject(ref(node(t,i)));
+ luaI_pushobject(val(node(t,i)));
 }
 
 void lua_next (void)
 {
  Hash   *t;
- Object *o = lua_getparam (1);
- Object *r = lua_getparam (2);
- if (o == NULL || r == NULL)
+ lua_Object o = lua_getparam(1);
+ lua_Object r = lua_getparam(2);
+ if (o == 0 || r == 0)
    lua_error ("too few arguments to function `next'");
- if (lua_getparam (3) != NULL)
+ if (lua_getparam(3) != 0)
    lua_error ("too many arguments to function `next'");
- if (tag(o) != LUA_T_ARRAY)
+ if (!lua_istable(o))
    lua_error ("first argument of function `next' is not a table");
- t = avalue(o);
- if (tag(r) == LUA_T_NIL)
+ t = avalue(luaI_Address(o));
+ if (lua_isnil(r))
  {
   hashnext(t, 0);
  }
  else
  {
-  int h = present (t, r);
+  int h = present (t, luaI_Address(r));
   hashnext(t, h+1);
  }
 }

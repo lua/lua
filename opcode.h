@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.3 1994/11/06 15:35:04 roberto Exp $
+** $Id: opcode.h,v 3.4 1994/11/07 15:20:56 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -152,7 +152,6 @@ typedef struct
                               code.m.c3 = *pc++; code.m.c4 = *pc++;}
  
 
-
 /* Exported functions */
 char   *lua_strdup (char *l);
 
@@ -162,5 +161,7 @@ int     yylex (void);		        /* from "lex.c" module */
 Byte   *lua_parse      (void); 		/* from "lua.stx" module */
 void    lua_travstack (void (*fn)(Object *));
 void    luaI_setfallback (void);
+Object *luaI_Address (lua_Object o);
+void	luaI_pushobject (Object *o);
 
 #endif

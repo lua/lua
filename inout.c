@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.6 1994/11/02 20:29:39 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.7 1994/11/03 22:34:29 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,15 +32,6 @@ static int nfuncstack=0;
 
 static FILE *fp;
 static char *st;
-static void (*usererror) (char *s);
-
-/*
-** Function to set user function to handle errors.
-*/
-void lua_errorfunction (void (*fn) (char *s))
-{
- usererror = fn;
-}
 
 /*
 ** Function to get the next character from the input file
@@ -202,16 +193,16 @@ void lua_internaldofile (void)
 void lua_print (void)
 {
  int i=1;
- Object *obj;
- while ((obj=lua_getparam (i++)) != NULL)
+ lua_Object obj;
+ while ((obj=lua_getparam (i++)) != 0)
  {
-  if      (lua_isnumber(obj))    printf("%g\n",lua_getnumber (obj));
-  else if (lua_isstring(obj))    printf("%s\n",lua_getstring (obj));
-  else if (lua_isfunction(obj))  printf("function: %p\n",bvalue(obj));
-  else if (lua_iscfunction(obj)) printf("cfunction: %p\n",lua_getcfunction (obj)
+  if      (lua_isnumber(obj))    printf("%g\n",lua_getnumber(obj));
+  else if (lua_isstring(obj))    printf("%s\n",lua_getstring(obj));
+  else if (lua_isfunction(obj))  printf("function: %p\n",bvalue(luaI_Address(obj)));
+  else if (lua_iscfunction(obj)) printf("cfunction: %p\n",lua_getcfunction(obj)
 );
-  else if (lua_isuserdata(obj))  printf("userdata: %p\n",lua_getuserdata (obj));
-  else if (lua_istable(obj))     printf("table: %p\n",avalue(obj));
+  else if (lua_isuserdata(obj))  printf("userdata: %p\n",lua_getuserdata(obj));
+  else if (lua_istable(obj))     printf("table: %p\n",avalue(luaI_Address(obj)));
   else if (lua_isnil(obj))       printf("nil\n");
   else                           printf("invalid value to print\n");
  }
@@ -223,10 +214,10 @@ void lua_print (void)
 */
 void luaI_type (void)
 {
-  Object *o = lua_getparam(1);
-  if (o == NULL)
+  lua_Object o = lua_getparam(1);
+  if (o == 0)
     lua_error("no parameter to function 'type'");
-  switch (tag(o))
+  switch (lua_type(o))
   {
     case LUA_T_NIL :
       lua_pushstring("nil");
