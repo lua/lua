@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 2.4 1994/08/05 19:31:09 celes Exp celes $";
+char *rcs_opcode="$Id: opcode.c,v 2.5 1994/08/17 15:02:03 celes Exp celes $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -340,11 +340,11 @@ int lua_execute (Byte *pc)
    
    case CREATEARRAY:
     if (tag(top-1) == T_NIL) 
-     nvalue(top-1) = 101;
+     nvalue(top-1) = 1;
     else 
     {
      if (tonumber(top-1)) return 1;
-     if (nvalue(top-1) <= 0) nvalue(top-1) = 101;
+     if (nvalue(top-1) <= 0) nvalue(top-1) = 1;
     }
     avalue(top-1) = lua_createarray(nvalue(top-1));
     if (avalue(top-1) == NULL)
