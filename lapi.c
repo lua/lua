@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.246 2003/10/10 12:57:55 roberto Exp roberto $
+** $Id: lapi.c,v 1.247 2003/10/10 13:29:08 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -882,6 +882,12 @@ LUA_API void lua_concat (lua_State *L, int n) {
 }
 
 
+LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud) {
+  *ud = G(L)->ud;
+  return G(L)->realloc;
+}
+
+
 LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
   Udata *u;
   lua_lock(L);
@@ -892,6 +898,8 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
   lua_unlock(L);
   return u + 1;
 }
+
+
 
 
 static const char *aux_upvalue (lua_State *L, int funcindex, int n,

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.165 2003/10/07 20:13:41 roberto Exp roberto $
+** $Id: ltests.c,v 1.166 2003/10/10 13:29:08 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -836,6 +836,9 @@ static int l_panic (lua_State *L) {
 
 
 int luaB_opentests (lua_State *L) {
+  void *ud;
+  lua_assert(lua_getallocf(L, &ud) == debug_realloc);
+  lua_assert(ud == cast(void *, &memcontrol));
   lua_atpanic(L, l_panic);
   lua_userstateopen(L);  /* init lock */
   lua_state = L;  /* keep first state to be opened */
