@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.26 2000/06/21 17:05:49 roberto Exp roberto $
+** $Id: ltests.c,v 1.27 2000/06/26 19:28:31 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -17,6 +17,7 @@
 #include "lauxlib.h"
 #include "lcode.h"
 #include "ldo.h"
+#include "lfunc.h"
 #include "lmem.h"
 #include "lopcodes.h"
 #include "lstate.h"
@@ -62,22 +63,28 @@ static const char *const instrname[NUM_OPCODES] = {
 };
 
 
-static int pushop (Instruction i) {
+static int pushop (Proto *p, int pc) {
   char buff[100];
+  Instruction i = p->code[pc];
   OpCode o = GET_OPCODE(i);
   const char *name = instrname[o];
+  int *line = p->lines;
+  if (line)
+    sprintf(buff, "%5d - ", line[pc]);
+  else
+    strcpy(buff, "         ");
   switch ((enum Mode)luaK_opproperties[o].mode) {  
     case iO:
-      sprintf(buff, "%s", name);
+      sprintf(buff+8, "%s", name);
       break;
     case iU:
-      sprintf(buff, "%-12s%4u", name, GETARG_U(i));
+      sprintf(buff+8, "%-12s%4u", name, GETARG_U(i));
       break;
     case iS:
-      sprintf(buff, "%-12s%4d", name, GETARG_S(i));
+      sprintf(buff+8, "%-12s%4d", name, GETARG_S(i));
       break;
     case iAB:
-      sprintf(buff, "%-12s%4d %4d", name, GETARG_A(i), GETARG_B(i));
+      sprintf(buff+8, "%-12s%4d %4d", name, GETARG_A(i), GETARG_B(i));
       break;
   }
   lua_pushstring(buff);
@@ -88,18 +95,18 @@ static int pushop (Instruction i) {
 static void listcode (void) {
   lua_Object o = luaL_nonnullarg(1);
   lua_Object t = lua_createtable();
-  Instruction *pc;
+  int pc;
   Proto *p;
   int res;
   luaL_arg_check(ttype(o) == TAG_LCLOSURE, 1, "Lua function expected");
   p = clvalue(o)->f.l;
   setnameval(t, "maxstack", p->maxstacksize);
   setnameval(t, "numparams", p->numparams);
-  pc = p->code;
+  pc = 0;
   do {
     lua_pushobject(t);
-    lua_pushnumber(pc - p->code + 1);
-    res = pushop(*pc++);
+    lua_pushnumber(pc+1);
+    res = pushop(p, pc++);
     lua_settable();
   } while (res);
   lua_pushobject(t);
@@ -123,27 +130,40 @@ static void liststrings (void) {
 }
 
 
+static void listlocals (void) {
+  lua_Object o = luaL_nonnullarg(1);
+  Proto *p;
+  int pc = luaL_check_int(2) - 1;
+  int i = 1;
+  const char *name;
+  luaL_arg_check(ttype(o) == TAG_LCLOSURE, 1, "Lua function expected");
+  p = clvalue(o)->f.l;
+  while ((name = luaF_getlocalname(p, i++, pc)) != NULL)
+    lua_pushstring(name);
+}
+
 /* }====================================================== */
 
 
 
 static void get_limits (void) {
   lua_Object t = lua_createtable();
-  setnameval(t, "SIZE_OP", SIZE_OP);
-  setnameval(t, "SIZE_U", SIZE_U);
-  setnameval(t, "SIZE_A", SIZE_A);
-  setnameval(t, "SIZE_B", SIZE_B);
-  setnameval(t, "MAXARG_U", MAXARG_U);
-  setnameval(t, "MAXARG_S", MAXARG_S);
+  setnameval(t, "BITS_INT", BITS_INT);
+  setnameval(t, "LFPF", LFIELDS_PER_FLUSH);
   setnameval(t, "MAXARG_A", MAXARG_A);
   setnameval(t, "MAXARG_B", MAXARG_B);
-  setnameval(t, "MAXSTACK", MAXSTACK);
+  setnameval(t, "MAXARG_S", MAXARG_S);
+  setnameval(t, "MAXARG_U", MAXARG_U);
   setnameval(t, "MAXLOCALS", MAXLOCALS);
+  setnameval(t, "MAXPARAMS", MAXPARAMS);
+  setnameval(t, "MAXSTACK", MAXSTACK);
   setnameval(t, "MAXUPVALUES", MAXUPVALUES);
   setnameval(t, "MAXVARSLH", MAXVARSLH);
-  setnameval(t, "MAXPARAMS", MAXPARAMS);
-  setnameval(t, "LFPF", LFIELDS_PER_FLUSH);
   setnameval(t, "RFPF", RFIELDS_PER_FLUSH);
+  setnameval(t, "SIZE_A", SIZE_A);
+  setnameval(t, "SIZE_B", SIZE_B);
+  setnameval(t, "SIZE_OP", SIZE_OP);
+  setnameval(t, "SIZE_U", SIZE_U);
   lua_pushobject(t);
 }
 
@@ -397,6 +417,7 @@ static const struct luaL_reg tests_funcs[] = {
   {"limits", (lua_CFunction)get_limits},
   {"listcode", (lua_CFunction)listcode},
   {"liststrings", (lua_CFunction)liststrings},
+  {"listlocals", (lua_CFunction)listlocals},
   {"querystr", (lua_CFunction)string_query},
   {"querytab", (lua_CFunction)table_query},
   {"testC", (lua_CFunction)testC},
