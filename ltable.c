@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.47 2000/06/08 17:48:31 roberto Exp roberto $
+** $Id: ltable.c,v 1.48 2000/06/12 13:52:05 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -73,7 +73,7 @@ static const TObject *luaH_getany (lua_State *L, const Hash *t,
                                    const TObject *key) {
   Node *n = luaH_mainposition(t, key);
   if (!n)
-    lua_error(L, "unexpected type to index table");
+    lua_error(L, "table index is nil");
   else do {
     if (luaO_equalObj(key, &n->key))
       return &n->val;
@@ -226,7 +226,7 @@ TObject *luaH_set (lua_State *L, Hash *t, const TObject *key) {
   Node *mp = luaH_mainposition(t, key);
   Node *n = mp;
   if (!mp)
-    lua_error(L, "unexpected type to index table");
+    lua_error(L, "table index is nil");
   do {  /* check whether `key' is somewhere in the chain */
     if (luaO_equalObj(key, &n->key))
       return &n->val;  /* that's all */
