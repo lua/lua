@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.18 1999/01/26 11:50:58 roberto Exp roberto $
+** $Id: lua.c,v 1.19 1999/02/04 17:47:59 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -14,12 +14,6 @@
 #include "luadebug.h"
 #include "lualib.h"
 
-
-#ifndef OLD_ANSI
-#include <locale.h>
-#else
-#define setlocale(a,b)  0
-#endif
 
 #ifdef _POSIX_SOURCE
 #include <unistd.h>
@@ -131,7 +125,6 @@ int main (int argc, char *argv[])
   int i;
   lua_open();
   lua_pushstring("> "); lua_setglobal("_PROMPT");
-  setlocale(LC_ALL, "");
   lua_userinit();
   if (argc < 2) {  /* no arguments? */
     if (isatty(0)) {
