@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.4 1998/06/25 16:48:44 roberto Exp roberto $
+** $Id: lundump.c,v 1.5 1998/12/15 14:59:43 roberto Exp $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -200,9 +200,8 @@ static void LoadHeader (ZIO* Z)
  }
  doLoadNumber(f,Z);
  if (f!=tf)
-  luaL_verror("unknown number representation in %s: "
-	"read " NUMBER_FMT "; expected " NUMBER_FMT "",	/* LUA_NUMBER */
-	zname(Z),(double)f,(double)tf);
+  luaL_verror("unknown number representation in %s: read %g; expected %g",
+	zname(Z),(double)f,(double)tf);  /* LUA_NUMBER */
 }
 
 static TProtoFunc* LoadChunk (ZIO* Z)
