@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.26 1999/03/10 14:09:45 roberto Exp roberto $
+% $Id: manual.tex,v 1.27 1999/03/11 19:00:12 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -41,7 +41,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{\small \verb$Date: 1999/03/10 14:09:45 $}
+%\date{\small \verb$Date: 1999/03/11 19:00:12 $}
 
 \maketitle
 
@@ -2624,8 +2624,8 @@ When called with two arguments, \Math{l} and \Math{u},
 
 \subsection{I/O Facilities} \label{libio}
 
-All input and output operations in Lua are done over two
-\Def{file handles}, one for reading and one for writing.
+All input and output operations in Lua are done, by default,
+over two \Def{file handles}, one for reading and one for writing.
 These handles are stored in two Lua global variables,
 called \verb|_INPUT| and \verb|_OUTPUT|.
 The global variables
@@ -2638,20 +2638,45 @@ Initially, \verb|_INPUT=_STDIN| and \verb|_OUTPUT=_STDOUT|.
 
 A file handle is a userdata containing the file stream \verb|FILE*|,
 and with a distinctive tag created by the I/O library.
-
+Whenever a file handle is collected by the garbage collector,
+its correspondent stream is automatically closed.
 
 Unless otherwise stated,
 all I/O functions return \nil\ on failure and
 some value different from \nil\ on success.
 
-\subsubsection*{\ff \T{readfrom (filename [, mode])}}\Deffunc{readfrom}
+\subsubsection*{\ff \T{openfile (filename, mode)}}\Deffunc{openfile}
+
+This function opens a file,
+in the mode specified in the string \verb|mode|.
+It returns a new file handle,
+or, in case of errors, \nil\ plus a string describing the error.
+This function does not modify neither \verb|_INPUT| nor \verb|_OUTPUT|.
+
+The string mode can be any of the following:
+\begin{description}
+\item["r"] read mode;
+\item["w"] write mode;
+\item["a"] append mode;
+\item["r+"] update mode, all previous data is preserved;
+\item["w+"] update mode, all previous data is erased;
+\item["a+"] append update mode, previous data is preserved,
+  writing is only allowed at the end of file.
+\end{description}
+The string mode may also have a \verb|b| at the end,
+which is needed in some systems to open the file in binary mode.
+
+\subsubsection*{\ff \T{closefile (handle)}}\Deffunc{closefile}
+
+This function closes the given file.
+It does not modify neither \verb|_INPUT| nor \verb|_OUTPUT|.
+
+\subsubsection*{\ff \T{readfrom (filename)}}\Deffunc{readfrom}
 
 This function may be called in two ways.
 When called with a file name, it opens the named file,
 sets its handle as the value of \verb|_INPUT|,
 and returns this value.
-An optional \verb|mode| argument with the string \verb|"binary"|
-opens file in binary mode (where this applies).
 It does not close the current input file.
 When called without parameters,
 it closes the \verb|_INPUT| file,
@@ -2670,15 +2695,13 @@ the number of files that can be open at the same time is
 usually limited and depends on the system.
 \end{quotation}
 
-\subsubsection*{\ff \T{writeto (filename [, mode])}}\Deffunc{writeto}
+\subsubsection*{\ff \T{writeto (filename)}}\Deffunc{writeto}
 
 This function may be called in two ways.
 When called with a file name,
 it opens the named file,
 sets its handle as the value of \verb|_OUTPUT|,
 and returns this value.
-An optional \verb|mode| argument with the string \verb|"binary"|
-opens file in binary mode (where this applies).
 It does not close the current output file.
 Note that, if the file already exists,
 then it will be \emph{completely erased} with this operation.
@@ -2700,19 +2723,14 @@ the number of files that can be open at the same time is
 usually limited and depends on the system.
 \end{quotation}
 
-\subsubsection*{\ff \T{appendto (filename [, mode])}}\Deffunc{appendto}
+\subsubsection*{\ff \T{appendto (filename)}}\Deffunc{appendto}
 
 Opens a file named \verb|filename| and sets it as the
 value of \verb|_OUTPUT|.
-An optional \verb|mode| argument with the string \verb|"binary"|
-opens file in binary mode (where this applies).
 Unlike the \verb|writeto| operation,
 this function does not erase any previous content of the file.
 If this function fails, it returns \nil,
 plus a string describing the error.
-
-Note that function \verb|writeto| is
-available to close an output file opened by \verb|appendto|.
 
 \subsubsection*{\ff \T{remove (filename)}}\Deffunc{remove}
 
@@ -2741,9 +2759,9 @@ measured in bytes from the beginning of the file,
 to the position given by \verb|offset| plus a base
 specified by the string \verb|whence|, as follows:
 \begin{description}
-\item[\tt "set"] base is position 0 (beginning of the file);
-\item[\tt "cur"] base is current position;
-\item[\tt "end"] base is end of file;
+\item["set"] base is position 0 (beginning of the file);
+\item["cur"] base is current position;
+\item["end"] base is end of file;
 \end{description}
 In case of success, function \verb|seek| returns the final file position,
 measured in bytes from the beginning of the file.
@@ -2765,18 +2783,17 @@ Returns a string with a file name that can safely
 be used for a temporary file.
 The file must be explicitly removed when no longer needed.
 
-\subsubsection*{\ff \T{read ([filehandle] [readpattern])}}\Deffunc{read}
+\subsubsection*{\ff \T{read ([filehandle] {readpattern})}}\Deffunc{read}
 
 Reads file \verb|_INPUT|,
 or \verb|filehandle| if this argument is given,
-according to a read pattern, which specifies how much to read;
-characters are read from the input file until
-the read pattern fails or ends.
-The function \verb|read| returns a string with the characters read,
+according to read patterns, which specify how much to read.
+For each pattern,
+the function returns a string with the characters read,
 even if the pattern succeeds only partially,
 or \nil\ if the read pattern fails \emph{and}
 the result string would be empty.
-When called without parameters,
+When called without patterns,
 it uses a default pattern that reads the next line
 (see below).
 
@@ -2803,20 +2820,21 @@ that describe \Def{skips}.
 Characters matching a skip are read,
 but are not included in the resulting string.
 
-Following are some examples of read patterns and their meanings:
-\begin{itemize}
-\item \verb|"."| returns the next character, or \nil\ on end of file.
-\item \verb|".*"| reads the whole file.
-\item \verb|"[^\n]*{\n}"| returns the next line
+There are some predefined patterns, as follows:
+\begin{description}
+\item["*n"] reads a number;
+this is the only pattern that returns a number instead of a string.
+\item["*l"] returns the next line
 (skipping the end of line), or \nil\ on end of file.
 This is the default pattern.
-\item \verb|"{%s*}%S%S*"| returns the next word
+It is equivalent to the pattern \verb|"[^\n]*{\n}"|.
+\item["*a"] reads the whole file.
+It is equivalent to the pattern \verb|".*"|.
+\item["*w"] returns the next word
 (maximal sequence of non white-space characters),
-skipping spaces if necessary,
-or \nil\ on end of file.
-\item \verb|"{%s*}[+-]?%d%d*"| returns the next integer
-or \nil\ if the next characters do not conform to an integer format.
-\end{itemize}
+skipping spaces if necessary, or \nil\ on end of file.
+It is equivalent to the pattern \verb|"{%s*}%S%S*"|.
+\end{description}
 
 \subsubsection*{\ff \T{write ([filehandle, ] value1, ...)}}\Deffunc{write}
 
@@ -3010,7 +3028,7 @@ the line of code it is executing.
 Its only parameter is the line number
 (the same information which is provided by the call
 \verb|lua_currentline(lua_stackedfunction(0))|).
-This second hook is only called if the active function
+This second hook is called only if the active function
 has been compiled with debug information \see{pragma}.
 
 A hook is disabled when its value is \verb|NULL|,
@@ -3018,6 +3036,122 @@ which is the initial value of both hooks.
 Both \verb|lua_setcallhook| and \verb|lua_setlinehook|
 set their corresponding hooks and return their previous values.
 
+
+
+\subsection{The Reflexive Debugger Interface}
+
+The library \verb|ldblib| provides
+the functionallity of the debugger interface to Lua programs.
+If you want to use this library,
+your host application must open it first,
+calling \verb|lua_dblibopen|.
+
+You should exert great care when using this library.
+Functions provided here should be used exclusively for debugging
+and similar tasks (e.g. profiling):
+Please resist the temptation to use them as a
+usual programming tool.
+They are slow and violate some (otherwise) secure aspects of the
+language (e.g. privacy of local variables).
+As a general rule, if your program does not need this library,
+do not open it.
+
+
+\subsubsection*{\ff \T{funcinfo (function)}}\Deffunc{funcinfo}
+
+This function returns a table with information about the given function.
+The table contains the following fields:
+\begin{description}
+\item[kind]: may be \verb|"C"|, if this is a C function,
+\verb|"chunk"|, if this is the main part of a chunk,
+or \verb|"Lua"| if this is a Lua function.
+
+\item[source] the source where the function was defined.
+If the function was defined in a string,
+\verb|source| is that string;
+If the function was defined in a file,
+\verb|source| starts with a \verb|@| followed by the file name.
+
+\item[def_line] the line where the function was defined in the source
+(only valid if this is a Lua function).
+
+\item[where] can be \verb|"global"| if this function has a global name,
+or \verb|"tag-method"| if this function is a tag method handler.
+
+\item[name] if \verb|where| = \verb|global|,
+\verb|name| is the global name of the function;
+if \verb|where| = \verb|tag-method|,
+\verb|name| is the event name of the tag method.
+\end{description}
+
+\subsubsection*{\ff \T{getstack (index)}}\Deffunc{getstack}
+
+This function returns a table with informations about the function
+running at level \verb|index| of the stack.
+Index 0 is the current function (\verb|getstack| itself).
+If \verb|index| is bigger than the number of active functions,
+the function returns \nil.
+The table contains all the fields returned by \verb|funcinfo|,
+plus the following:
+\begin{description}
+\item[func] the function at that level.
+\item[current] the current line on the function execution;
+this will be available only when the function is
+precompiled with debug information.
+\end{description}
+
+\subsubsection*{\ff \T{getlocal (index [, local])}}\Deffunc{getlocal}
+
+This function returns information about the local variables of the
+function at level \verb|index| of the stack.
+It can be called in three ways.
+When called without a \verb|local| argument,
+it returns a table, which associates variable names to their values.
+When called with a name (a string) as \verb|local|,
+it returns the value of the local variable with that name.
+Finally, when called with an index (a number),
+it returns the value and the name of the local variable
+with that index.
+(The first parameter has index 1, and so on,
+until the last active local variable.)
+In that case, the function returns \nil\ if there is no local
+variable with the given index.
+The specification by index is the only way to distinguish
+homonym variables in a function.
+
+\subsubsection*{\ff \T{setlocal (index, local, newvalue)}}\Deffunc{setlocal}
+
+This function changes the values of  the local variables of the
+function at level \verb|index| of the stack.
+The local variable can be specified by name or by index;
+see function \verb|getlocal|.
+
+\subsubsection*{\ff \T{setcallhook (hook)}}\Deffunc{setcallhook}
+
+Sets the function \verb|hook| as the call hook;
+this hook will be called every time the interpreter starts and
+exits the execution of a function.
+When Lua enters a function,
+the hook is called with the function been called,
+plus the source and the line where the function is defined.
+When Lua exits a function,
+the hook is called with no arguments.
+
+When called without arguments,
+this function turns off call hooks.
+
+\subsubsection*{\ff \T{setlinehook (hook)}}\Deffunc{setlinehook}
+
+Sets the function \verb|hook| as the line hook;
+this hook will be called every time the interpreter changes
+the line of code it is executing.
+The only argument to the hook is the line number the interpreter
+is about to execut.
+This hook is called only if the active function
+has been compiled with debug information \see{pragma}.
+
+When called without arguments,
+this function turns off line hooks.
 
 
 \section{\Index{Lua Stand-alone}} \label{lua-sa}
