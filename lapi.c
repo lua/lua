@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.61 1999/12/01 19:50:08 roberto Exp roberto $
+** $Id: lapi.c,v 1.62 1999/12/02 16:24:45 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -592,19 +592,16 @@ const char *lua_getobjname (lua_State *L, lua_Object o, const char **name) {
 */
 
 
-#ifndef	MAX_C_BLOCKS
-#define MAX_C_BLOCKS	1000  /* arbitrary limit */
-#endif
-
-
 void lua_beginblock (lua_State *L) {
   luaM_growvector(L, L->Cblocks, L->numCblocks, 1, struct C_Lua_Stack,
-                  "too many nested blocks", MAX_C_BLOCKS);
+                  "too many nested blocks", L->stacksize);
   L->Cblocks[L->numCblocks] = L->Cstack;
   L->numCblocks++;
 }
 
 void lua_endblock (lua_State *L) {
+  if (L->numCblocks <= 0)
+    lua_error(L, "API error - no block to end");
   --L->numCblocks;
   L->Cstack = L->Cblocks[L->numCblocks];
   L->top = L->Cstack.base;

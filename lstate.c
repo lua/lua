@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.19 1999/12/01 19:50:08 roberto Exp roberto $
+** $Id: lstate.c,v 1.20 1999/12/06 11:41:28 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -99,6 +99,7 @@ void lua_close (lua_State *L) {
   luaM_free(L, L->refArray);
   luaM_free(L, L->Mbuffer);
   luaM_free(L, L->Cblocks);
+  LUA_ASSERT(L, L->numCblocks == 0, "Cblocks still open");
   LUA_ASSERT(L, L->nblocks == 0, "wrong count for nblocks");
   LUA_ASSERT(L, L != lua_state || L->Cstack.lua2C == L->stack, "bad stack");
   LUA_ASSERT(L, L != lua_state || L->Cstack.base == L->stack, "bad stack");

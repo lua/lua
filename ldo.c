@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.56 1999/12/02 16:41:29 roberto Exp roberto $
+** $Id: ldo.c,v 1.57 1999/12/06 11:43:58 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -243,12 +243,13 @@ void lua_error (lua_State *L, const char *s) {
 
 
 /*
-** Execute a protected call. Assumes that function is at L->Cstack.base and
-** parameters are on top of it. Leave nResults on the stack.
+** Execute a protected call. Assumes that function is at Cstack.base and
+** parameters are on top of it.
 */
 int luaD_protectedrun (lua_State *L) {
   struct lua_longjmp myErrorJmp;
   volatile StkId base = L->Cstack.base;
+  volatile int numCblocks = L->numCblocks;
   volatile int status;
   struct lua_longjmp *volatile oldErr = L->errorJmp;
   L->errorJmp = &myErrorJmp;
@@ -262,6 +263,7 @@ int luaD_protectedrun (lua_State *L) {
   else {  /* an error occurred: restore the stack */
     L->Cstack.num = 0;  /* no results */
     L->top = L->Cstack.base = L->Cstack.lua2C = base;
+    L->numCblocks = numCblocks;
     restore_stack_limit(L);
     status = 1;
   }
@@ -276,6 +278,7 @@ int luaD_protectedrun (lua_State *L) {
 static int protectedparser (lua_State *L, ZIO *z, int bin) {
   struct lua_longjmp myErrorJmp;
   volatile StkId base = L->Cstack.base;
+  volatile int numCblocks = L->numCblocks;
   volatile int status;
   TProtoFunc *volatile tf;
   struct lua_longjmp *volatile oldErr = L->errorJmp;
@@ -288,6 +291,7 @@ static int protectedparser (lua_State *L, ZIO *z, int bin) {
   else {  /* an error occurred: restore Cstack and top */
     L->Cstack.num = 0;  /* no results */
     L->top = L->Cstack.base = L->Cstack.lua2C = base;
+    L->numCblocks = numCblocks;
     tf = NULL;
     status = 1;
   }
