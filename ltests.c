@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.21 2000/05/26 19:17:57 roberto Exp roberto $
+** $Id: ltests.c,v 1.22 2000/06/02 17:06:42 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -103,6 +103,24 @@ static void listcode (void) {
   } while (res);
   lua_pushobject(t);
 }
+
+
+static void liststrings (void) {
+  lua_Object o = luaL_nonnullarg(1);
+  lua_Object t = lua_createtable();
+  Proto *p;
+  int i;
+  luaL_arg_check(ttype(o) == TAG_LCLOSURE, 1, "Lua function expected");
+  p = clvalue(o)->f.l;
+  for (i=0; i<p->nkstr; i++) {
+    lua_pushobject(t);
+    lua_pushnumber(i+1);
+    lua_pushstring(p->kstr[i]->str);
+    lua_settable();
+  }
+  lua_pushobject(t);
+}
+
 
 /* }====================================================== */
 
@@ -377,6 +395,7 @@ static const struct luaL_reg tests_funcs[] = {
   {"hash", (lua_CFunction)hash_query},
   {"limits", (lua_CFunction)get_limits},
   {"listcode", (lua_CFunction)listcode},
+  {"liststrings", (lua_CFunction)liststrings},
   {"querystr", (lua_CFunction)string_query},
   {"querytab", (lua_CFunction)table_query},
   {"testC", (lua_CFunction)testC},
