@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.20 1997/12/26 18:38:16 roberto Exp roberto $
+** $Id: ldo.c,v 1.21 1998/01/07 16:26:48 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -399,7 +399,7 @@ int lua_dostring (char *str)
   char *temp;
   ZIO z;
   if (str == NULL) return 1;
-  sprintf(name, "(dostring) >> %." SSIZE_PREF "s", str);
+  sprintf(name, "(dostring) >> \"%." SSIZE_PREF "s\"", str);
   temp = strchr(name, '\n');
   if (temp) *temp = 0;  /* end string after first line */
   luaZ_sopen(&z, str, name);
