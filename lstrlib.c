@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.107 2004/11/01 14:33:33 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.108 2004/11/19 16:58:43 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -24,8 +24,6 @@
 #define uchar(c)        ((unsigned char)(c))
 
 
-typedef lua_Integer sint32;	/* a signed version for size_t */
-
 
 static int str_len (lua_State *L) {
   size_t l;
@@ -35,19 +33,19 @@ static int str_len (lua_State *L) {
 }
 
 
-static sint32 posrelat (sint32 pos, size_t len) {
+static ptrdiff_t posrelat (ptrdiff_t pos, size_t len) {
   /* relative string position: negative means back from end */
-  return (pos>=0) ? pos : (sint32)len+pos+1;
+  return (pos>=0) ? pos : (ptrdiff_t)len+pos+1;
 }
 
 
 static int str_sub (lua_State *L) {
   size_t l;
   const char *s = luaL_checklstring(L, 1, &l);
-  sint32 start = posrelat(luaL_checkinteger(L, 2), l);
-  sint32 end = posrelat(luaL_optinteger(L, 3, -1), l);
+  ptrdiff_t start = posrelat(luaL_checkinteger(L, 2), l);
+  ptrdiff_t end = posrelat(luaL_optinteger(L, 3, -1), l);
   if (start < 1) start = 1;
-  if (end > (sint32)l) end = (sint32)l;
+  if (end > (ptrdiff_t)l) end = (ptrdiff_t)l;
   if (start <= end)
     lua_pushlstring(L, s+start-1, end-start+1);
   else lua_pushliteral(L, "");
@@ -107,8 +105,8 @@ static int str_rep (lua_State *L) {
 static int str_byte (lua_State *L) {
   size_t l;
   const char *s = luaL_checklstring(L, 1, &l);
-  sint32 posi = posrelat(luaL_optinteger(L, 2, 1), l);
-  sint32 pose = posrelat(luaL_optinteger(L, 3, posi), l);
+  ptrdiff_t posi = posrelat(luaL_optinteger(L, 2, 1), l);
+  ptrdiff_t pose = posrelat(luaL_optinteger(L, 3, posi), l);
   int n, i;
   if (posi <= 0) posi = 1;
   if ((size_t)pose > l) pose = l;
@@ -173,7 +171,7 @@ typedef struct MatchState {
   int level;  /* total number of captures (finished or unfinished) */
   struct {
     const char *init;
-    sint32 len;
+    ptrdiff_t len;
   } capture[MAX_CAPTURES];
 } MatchState;
 
@@ -299,7 +297,7 @@ static const char *matchbalance (MatchState *ms, const char *s,
 
 static const char *max_expand (MatchState *ms, const char *s,
                                  const char *p, const char *ep) {
-  sint32 i = 0;  /* counts maximum expand for item */
+  ptrdiff_t i = 0;  /* counts maximum expand for item */
   while ((s+i)<ms->src_end && singlematch(uchar(*(s+i)), p, ep))
     i++;
   /* keeps trying to match with the maximum repetitions */
@@ -490,9 +488,9 @@ static int str_find (lua_State *L) {
   size_t l1, l2;
   const char *s = luaL_checklstring(L, 1, &l1);
   const char *p = luaL_checklstring(L, 2, &l2);
-  sint32 init = posrelat(luaL_optinteger(L, 3, 1), l1) - 1;
+  ptrdiff_t init = posrelat(luaL_optinteger(L, 3, 1), l1) - 1;
   if (init < 0) init = 0;
-  else if ((size_t)(init) > l1) init = (sint32)l1;
+  else if ((size_t)(init) > l1) init = (ptrdiff_t)l1;
   if (lua_toboolean(L, 4) ||  /* explicit request? */
       strpbrk(p, SPECIALS) == NULL) {  /* or no special characters? */
     /* do a plain search */
