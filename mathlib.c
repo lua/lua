@@ -3,9 +3,9 @@
 ** Mathematics library to LUA
 */
 
-char *rcs_mathlib="$Id: mathlib.c,v 1.12 1995/10/09 12:48:38 roberto Exp roberto $";
+char *rcs_mathlib="$Id: mathlib.c,v 1.13 1995/11/10 17:54:31 roberto Exp roberto $";
 
-#include <stdio.h>		/* NULL */
+#include <stdlib.h>
 #include <math.h>
 
 #include "lualib.h"
@@ -184,6 +184,18 @@ static void math_rad (void)
  lua_pushnumber (d/180.*PI);
 }
 
+static void math_random (void)
+{
+  lua_pushnumber((double)(rand()%RAND_MAX) / (double)RAND_MAX);
+}
+
+static void math_randomseed (void)
+{
+  srand(lua_check_number(1, "randomseed"));
+}
+
+
+
 /*
 ** Open math library
 */
@@ -208,5 +220,8 @@ void mathlib_open (void)
  lua_register ("exp",   math_exp);
  lua_register ("deg",   math_deg);
  lua_register ("rad",   math_rad);
+ lua_register ("random",     math_random);
+ lua_register ("randomseed", math_randomseed);
+
  old_pow = lua_lockobject(lua_setfallback("arith", math_pow));
 }

@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.6 1996/02/05 21:32:19 roberto Exp roberto $
+% $Id: manual.tex,v 1.7 1996/02/09 16:37:58 roberto Exp roberto $
 
 \documentstyle[A4,11pt,bnf]{article}
 
@@ -32,7 +32,7 @@ Waldemar Celes Filho
 Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1996/02/05 21:32:19 $}
+\date{\small \verb$Date: 1996/02/09 16:37:58 $}
 
 \maketitle
 
@@ -1293,9 +1293,10 @@ The library provides the following functions:
 \Deffunc{atan2}\Deffunc{ceil}\Deffunc{cos}\Deffunc{floor}
 \Deffunc{log}\Deffunc{log10}\Deffunc{max}\Deffunc{min}
 \Deffunc{mod}\Deffunc{sin}\Deffunc{sqrt}\Deffunc{tan}
+\Deffunc{random}\Deffunc{randomseed}
 \begin{verbatim}
-abs acos asin atan atan2 ceil cos floor
-log log10 max min  mod  sin  sqrt tan
+abs acos asin atan atan2 ceil cos floor log log10
+max min  mod  sin  sqrt tan random randomseed
 \end{verbatim}
 Most of them
 are only interfaces to the homonymous functions in the C library,
@@ -1308,6 +1309,12 @@ Similarly, \verb'min' computes the minimum.
 Both can be used with an unlimited number of arguments.
 
 The function \verb'mod' is equivalent to the \verb'%' operator in C.
+
+The functions \verb'random' and \verb'randomseed' are interfaces to
+the simple random generator functions \verb'rand' and \verb'srand',
+provided by ANSI C.
+The function \verb'random' returns pseudo-random numbers in the range
+$[0,1)$.
 
 
 \subsection{I/O Facilities} \label{libio}
