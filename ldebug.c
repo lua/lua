@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.59 2001/02/02 15:13:05 roberto Exp roberto $
+** $Id: ldebug.c,v 1.60 2001/02/07 18:13:49 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -106,20 +106,20 @@ int luaG_getline (int *lineinfo, int pc, int refline, int *prefi) {
     return -1;  /* no line info or function is not active */
   refi = prefi ? *prefi : 0;
   if (lineinfo[refi] < 0)
-    refline += -lineinfo[refi++]; 
+    refline += -lineinfo[refi++];
   lua_assert(lineinfo[refi] >= 0);
   while (lineinfo[refi] > pc) {
     refline--;
     refi--;
     if (lineinfo[refi] < 0)
-      refline -= -lineinfo[refi--]; 
+      refline -= -lineinfo[refi--];
     lua_assert(lineinfo[refi] >= 0);
   }
   for (;;) {
     int nextline = refline + 1;
     int nextref = refi + 1;
     if (lineinfo[nextref] < 0)
-      nextline += -lineinfo[nextref++]; 
+      nextline += -lineinfo[nextref++];
     lua_assert(lineinfo[nextref] >= 0);
     if (lineinfo[nextref] > pc)
       break;
@@ -248,7 +248,7 @@ static const char *travglobals (lua_State *L, const TObject *o) {
   int i;
   for (i=0; i<g->size; i++) {
     if (luaO_equalObj(o, val(node(g, i))) &&
-        ttype_key(node(g, i)) == LUA_TSTRING) 
+        ttype_key(node(g, i)) == LUA_TSTRING)
       return tsvalue_key(node(g, i))->str;
   }
   return NULL;
@@ -321,12 +321,8 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
 */
 
 
-static int pushpc (int *stack, int pc, int top, int n) {
-  while (n--)
-    stack[top++] = pc-1;
-  return top;
-}
-
+#define check(x)		if (!(x)) return 0;
+#define checkjump(pt, pc)	check(0 <= (pc) && (pc) < (pt)->sizecode)
 
 static Instruction luaG_symbexec (const Proto *pt, int lastpc, int stackpos) {
   int stack[MAXSTACK];  /* stores last instruction that changed a stack entry */
@@ -335,78 +331,159 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int stackpos) {
   int pc = 0;
   if (pt->is_vararg)  /* varargs? */
     top++;  /* `arg' */
+  check (top <= pt->maxstacksize && pt->maxstacksize <= MAXSTACK);
   while (pc < lastpc) {
     const Instruction i = code[pc++];
-    lua_assert(0 <= top && top <= pt->maxstacksize);
-    switch (GET_OPCODE(i)) {
+    OpCode op = GET_OPCODE(i);
+    int push = (int)luaK_opproperties[op].push;
+    int pop = (int)luaK_opproperties[op].pop;
+    int arg1 = 0;
+    int arg2 = 0;
+    switch ((enum Mode)luaK_opproperties[op].mode) {
+      case iO: break;
+      case iU: arg1 = GETARG_U(i); break;
+      case iS: arg1 = GETARG_S(i); break;
+      case iAB: arg1 = GETARG_A(i); arg2 = GETARG_B(i); break;
+    }
+    check(0 <= top && top <= pt->maxstacksize);
+    switch (op) {
       case OP_RETURN: {
-        lua_assert(top >= GETARG_U(i));
-        top = GETARG_U(i);
-        break;
-      }
-      case OP_TAILCALL: {
-        lua_assert(top >= GETARG_A(i));
-        top = GETARG_B(i);
+        pop = top-arg1;
         break;
       }
       case OP_CALL: {
-        int nresults = GETARG_B(i);
-        if (nresults == MULT_RET) nresults = 1;
-        lua_assert(top >= GETARG_A(i));
-        top = pushpc(stack, pc, GETARG_A(i), nresults);
+        if (arg2 == MULT_RET) arg2 = 1;
+        pop = top-arg1;
+        push = arg2;
+        break;
+      }
+      case OP_TAILCALL: {
+        check(arg1 <= top);
+        pop = top-arg2;
         break;
       }
       case OP_PUSHNIL: {
-        top = pushpc(stack, pc, top, GETARG_U(i));
+        check(arg1 > 0);
+        push = arg1;
         break;
       }
       case OP_POP: {
-        top -= GETARG_U(i);
+        pop = arg1;
         break;
       }
-      case OP_SETTABLE:
+      case OP_PUSHSTRING:
+      case OP_GETGLOBAL:
+      case OP_GETDOTTED:
+      case OP_PUSHSELF:
+      case OP_SETGLOBAL: {
+        check(arg1 < pt->sizekstr);
+        break;
+      }
+      case OP_PUSHNUM:
+      case OP_PUSHNEGNUM: {
+        check(arg1 < pt->sizeknum);
+        break;
+      }
+      case OP_PUSHUPVALUE: {
+        /* ?? */
+        break;
+      }
+      case OP_GETLOCAL:
+      case OP_GETINDEXED:
+      case OP_SETLOCAL: {
+        check(arg1 < top);
+        break;
+      }
+      case OP_SETTABLE: {
+        check(2 <= arg1 && arg1 <= top);
+        pop = arg2;
+        break;
+      }
       case OP_SETLIST: {
-        top -= GETARG_B(i);
+        pop = arg2;
+        check(top-pop >= 1);  /* there must be a table below the list */
         break;
       }
       case OP_SETMAP: {
-        top -= 2*GETARG_U(i);
+        pop = 2*arg1;
+        check(top-pop >= 1);
         break;
       }
       case OP_CONCAT: {
-        top -= GETARG_U(i);
-        stack[top++] = pc-1;
+        pop = arg1;
         break;
       }
       case OP_CLOSURE: {
-        top -= GETARG_B(i);
-        stack[top++] = pc-1;
+        /* ?? */
+        pop = arg2;
+        break;
+      }
+      case OP_JMPNE:
+      case OP_JMPEQ:
+      case OP_JMPLT:
+      case OP_JMPLE:
+      case OP_JMPGT:
+      case OP_JMPGE:
+      case OP_JMPT:
+      case OP_JMPF:
+      case OP_JMP:
+      case OP_FORLOOP:
+      case OP_LFORLOOP: {
+        checkjump(pt, pc+arg1);
+        break;
+      }
+      case OP_PUSHNILJMP: {
+        checkjump(pt, pc+1);
         break;
       }
       case OP_JMPONT:
       case OP_JMPONF: {
-        int newpc = pc + GETARG_S(i);
-        /* jump is forward and do not skip `lastpc'? */
-        if (pc < newpc && newpc <= lastpc) {
+        int newpc = pc + arg1;
+        checkjump(pt, newpc);
+        /* jump is forward and do not skip `lastpc' and not full check? */
+        if (pc < newpc && newpc <= lastpc && stackpos >= 0) {
           stack[top-1] = pc-1;  /* value comes from `and'/`or' */
           pc = newpc;  /* do the jump */
+          pop = 0;  /* do not pop */
         }
-        else
-          top--;  /* do not jump; pop value */
         break;
       }
-      default: {
-        OpCode op = GET_OPCODE(i);
-        int push = (int)luaK_opproperties[op].push;
-        int pop = (int)luaK_opproperties[op].pop;
-        lua_assert(push != VD && pop != VD);
-        lua_assert(0 <= top-pop && top+push <= pt->maxstacksize);
-        top -= pop;
-        top = pushpc(stack, pc, top, push);
+      case OP_FORPREP: {
+        check(top >= 3);
+        checkjump(pt, pc-arg1);  /* jump is `negative' here */
+        break;
+      }
+      case OP_LFORPREP: {
+        check(top >= 1);
+        checkjump(pt, pc-arg1);  /* jump is `negative' here */
+        break;
+      }
+      case OP_PUSHINT:
+      case OP_GETTABLE:
+      case OP_CREATETABLE:
+      case OP_ADD:
+      case OP_ADDI:
+      case OP_SUB:
+      case OP_MULT:
+      case OP_DIV:
+      case OP_POW:
+      case OP_MINUS:
+      case OP_NOT: {
+        break;
       }
     }
+    check(0 <= pop && 0 <= push);
+    check(0 <= top-pop && top+(push-pop) <= pt->maxstacksize);
+    top -= pop;
+    while (push--) stack[top++] = pc-1;
   }
-  return code[stack[stackpos]];
+  check(GET_OPCODE(code[pt->sizecode-1]) == OP_RETURN);
+  return (stackpos >= 0) ? code[stack[stackpos]] : 1;
+}
+
+
+int luaG_checkcode (const Proto *pt) {
+  return luaG_symbexec(pt, pt->sizecode-1, -1);
 }
 
 

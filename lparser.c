@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.129 2001/02/05 17:48:52 roberto Exp roberto $
+** $Id: lparser.c,v 1.130 2001/02/08 11:19:10 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -11,6 +11,7 @@
 #include "lua.h"
 
 #include "lcode.h"
+#include "ldebug.h"
 #include "lfunc.h"
 #include "llex.h"
 #include "lmem.h"
@@ -351,6 +352,7 @@ static void close_func (LexState *ls) {
   luaM_reallocvector(L, f->lineinfo, f->sizelineinfo, fs->nlineinfo+1, int);
   f->lineinfo[fs->nlineinfo++] = MAX_INT;  /* end flag */
   f->sizelineinfo = fs->nlineinfo;
+  lua_assert(luaG_checkcode(f));
   ls->fs = fs->prev;
   lua_assert(fs->bl == NULL);
 }
