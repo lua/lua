@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.105 2004/08/06 17:35:38 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.106 2004/08/09 13:30:33 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -250,7 +250,7 @@ static int matchbracketclass (int c, const char *p, const char *ec) {
   while (++p < ec) {
     if (*p == ESC) {
       p++;
-      if (match_class(c, *p))
+      if (match_class(c, uchar(*p)))
         return sig;
     }
     else if ((*(p+1) == '-') && (p+2 < ec)) {
@@ -267,7 +267,7 @@ static int matchbracketclass (int c, const char *p, const char *ec) {
 static int luaI_singlematch (int c, const char *p, const char *ep) {
   switch (*p) {
     case '.': return 1;  /* matches any char */
-    case ESC: return match_class(c, *(p+1));
+    case ESC: return match_class(c, uchar(*(p+1)));
     case '[': return matchbracketclass(c, p, ep-1);
     default:  return (uchar(*p) == c);
   }
@@ -393,7 +393,7 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
         }
         default: {
           if (isdigit(uchar(*(p+1)))) {  /* capture results (%0-%9)? */
-            s = match_capture(ms, s, *(p+1));
+            s = match_capture(ms, s, uchar(*(p+1)));
             if (s == NULL) return NULL;
             p+=2; goto init;  /* else return match(ms, s, p+2) */
           }
