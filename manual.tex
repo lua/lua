@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.40 2000/08/09 19:09:20 roberto Exp roberto $
+% $Id: manual.tex,v 1.41 2000/08/14 19:18:14 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -27,6 +27,7 @@
 
 % LHF
 \renewcommand{\ter}[1]{{\rm`{\tt#1}'}}
+\newcommand{\Nter}[1]{{\rm{\tt#1}}}
 \newcommand{\NOTE}{\par\noindent\emph{NOTE}: }
 
 \makeindex
@@ -122,7 +123,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{{\small \tt\$Date: 2000/08/09 19:09:20 $ $}}
+\date{{\small \tt\$Date: 2000/08/14 19:18:14 $ $}}
 
 \maketitle
 
@@ -267,7 +268,7 @@ A chunk is simply a sequence of statements,
 which are executed sequentially.
 Each statement can be optionally followed by a semicolon:
 \begin{Produc}
-\produc{chunk}{\rep{stat} \opt{\ter{;}}}
+\produc{chunk}{\rep{stat \opt{\ter{;}}}}
 \end{Produc}%
 Statements are described in \See{stats}.
 (The notation above is the usual extended BNF,
@@ -664,7 +665,7 @@ The table \rwd{for} statement traverses all pairs
 index--value of a given table.
 It has the following syntax:
 \begin{Produc}
-\produc{stat}{\rwd{for} name \ter{,} name \rwd{in} exp
+\produc{stat}{\rwd{for} name \ter{,} name \rwd{in} exp1
                     \rwd{do} block \rwd{end}}
 \end{Produc}%
 A \rwd{for} statement like
@@ -974,7 +975,7 @@ Arguments have the following syntax:
 \begin{Produc}
 \produc{args}{\ter{(} \opt{explist1} \ter{)}}
 \produc{args}{tableconstructor}
-\produc{args}{\ter{literal}}
+\produc{args}{\Nter{literal}}
 \produc{explist1}{\rep{exp1 \ter{,}} exp}
 \end{Produc}%
 All argument expressions are evaluated before the call.
@@ -1561,7 +1562,7 @@ the stack size for the interpreter and a boolean that
 indicates whether the predefined functions should be loaded or not.
 Each function call needs one stack position for each local variable
 and temporary variables, plus one position for book-keeping.
-The stack must also have at least ten extra positions available.
+The stack must also have some 20 extra positions available.
 For very small implementations, without recursive functions,
 a stack size of 100 should be enough.
 A value 0 for \verb|stacksize| uses a default size of 1024 positions.
@@ -1598,51 +1599,6 @@ to avoid growing too big.
 
 With the exception of \verb|lua_newstate|,
 all functions in the API need a state as their first argument.
-
->>>>>>>>>>>>
-However, most applications use a single state.
-To avoid the burden of passing this only state explicitly to all
-functions, and also to keep compatibility with old versions of Lua,
-the API provides a set of macros and one global variable that
-take care of this state argument for single-state applications:
-\begin{verbatim}
-#ifndef LUA_REENTRANT
-\end{verbatim}
-\begin{verbatim}
-extern lua_State *lua_state;
-\end{verbatim}
-\begin{verbatim}
-#define lua_close()             (lua_close)(lua_state)
-#define lua_dofile(filename)    (lua_dofile)(lua_state, filename)
-#define lua_dostring(str)       (lua_dostring)(lua_state, str)
-   ...
-\end{verbatim}
-\begin{verbatim}
-#endif
-\end{verbatim}
-For each function in the API, there is a macro with the same name
-that supplies \verb|lua_state| as the first argument to the call.
-(The parentheses around the function name avoid it being expanded
-again as a macro.)
-The only exception is \verb|lua_newstate|;
-in this case, the corresponding macro is
-\begin{verbatim}
-#define lua_open()      ((void)(lua_state?0:(lua_state=lua_newstate(0, 1))))
-\end{verbatim}
-This code checks whether the global state has been initialized;
-if not, it creates a new state with default settings and
-assigns it to \verb|lua_state|.
-
-By default, the single-state macros are all active.
-If you need to use multiple states,
-and therefore will provide the state argument explicitly in each call,
-you should define \IndexVerb{LUA_REENTRANT} before
-including \verb|lua.h| in your code:
-\begin{verbatim}
-#define LUA_REENTRANT
-#include "lua.h"
-\end{verbatim}
-<<<<<<<<<
 
 
 \subsection{Exchanging Values between C and Lua} \label{valuesCLua}
@@ -1801,9 +1757,9 @@ nested blocks can be defined with the functions
 void lua_beginblock (lua_State *L);
 void lua_endblock   (lua_State *L);
 \end{verbatim}
-After the end of the block,
-all \verb|lua_Object|s created inside it are released.
-The \verb|lua_endblock| function also empties the C2Lua stack.
+At the end of a block,
+Lua releases all \verb|lua_Object|s created inside the block,
+and empties the C2lua stack.
 
 \subsection{Garbage Collection}\label{GC}
 Because Lua has automatic memory management and garbage collection,
@@ -2026,7 +1982,7 @@ equivalent to the Lua code:
   lua_setglobal(L, "b");                         /* set global variable 'b' */
 \end{verbatim}
 
-Some special Lua functions have exclusive interfaces.
+Some special Lua functions have direct interfaces.
 The host program can generate a Lua error calling the function
 \Deffunc{lua_error}
 \begin{verbatim}
@@ -2071,13 +2027,13 @@ int lua_next (lua_State *L, lua_Object t, int i);
 \end{verbatim}
 Its first argument is the table to be traversed,
 and the second is a \emph{cursor};
-this cursor starts in 0,
+this cursor starts at 0,
 and for each call the function returns a value to
 be used in the next call,
 or 0 to signal the end of the traversal.
-The function also returns, in the Lua2C array,
+The function also returns, in the lua2C array,
 a key-value pair from the table.
-A typical traversal looks like the following code:
+A typical traversal looks like this:
 \begin{verbatim}
   int i;
   lua_Object t;
@@ -2161,12 +2117,12 @@ If the C code needs to keep a \verb|lua_Object|
 outside block boundaries,
 then it must create a \Def{reference} to the object.
 The routines to manipulate references are the following:
-\Deffunc{lua_ref}\Deffunc{lua_getref}
+\Deffunc{lua_ref}\Deffunc{lua_pushref}
 \Deffunc{lua_unref}
 \begin{verbatim}
-int        lua_ref    (lua_State *L, int lock);
-lua_Object lua_getref (lua_State *L, int ref);
-void       lua_unref  (lua_State *L, int ref);
+int   lua_ref     (lua_State *L, int lock);
+int   lua_pushref (lua_State *L, int ref);
+void  lua_unref   (lua_State *L, int ref);
 \end{verbatim}
 The function \verb|lua_ref| creates a reference
 to the object that is on the top of the stack,
@@ -2180,10 +2136,10 @@ If \verb|lock| is true, then the object is \emph{locked}:
 this means the object will not be garbage collected.
 \emph{Unlocked references may be garbage collected}.
 Whenever the referenced object is needed in~C,
-a call to \verb|lua_getref|
-returns a handle to it;
+a call to \verb|lua_pushref|
+pushes that object into the C2lua stack;
 if the object has been collected,
-\verb|lua_getref| returns \verb|LUA_NOOBJECT|.
+\verb|lua_getref| returns 0 (and does not push anything).
 
 When a reference is no longer needed,
 it can be released with a call to \verb|lua_unref|.
@@ -3257,7 +3213,7 @@ it returns 0.
 The structure \verb|lua_Debug| is used to carry different pieces of information
 about an active function:
 \begin{verbatim}
-struct lua_Debug {
+typedef struct lua_Debug {
   const char *event;     /* "call", "return" */
   const char *source;    /* (S) */
   int linedefined;       /* (S) */
@@ -3269,7 +3225,7 @@ struct lua_Debug {
   lua_Object func;       /* (f) function being executed */
   /* private part */
   ...
-};
+} lua_Debug;
 \end{verbatim}
 The \verb|lua_getstack| function fills only the private part
 of this structure, for future use.
@@ -3282,9 +3238,10 @@ This function returns 0 on error
 (e.g., an invalid option in \verb|what|).
 Each character in the string \verb|what|
 selects some fields of \verb|ar| to be filled,
-as indicated by the letter in parentheses in the definition of \verb|lua_Debug|;
-that is, an \verb|S| fills the fields \verb|source| and \verb|linedefined|,
-and \verb|l| fills the field \verb|currentline|, etc.
+as indicated by the letter in parentheses in the definition of \verb|lua_Debug|:
+An \verb|S| fills in the fields \verb|source|, \verb|linedefined|,
+and \verb|what|;
+\verb|l| fills in the field \verb|currentline|, etc.
 
 To get information about a function that is not active (that is,
 it is not in the stack),
@@ -3310,7 +3267,7 @@ if the function was defined in a file,
 \verb|source| starts with a \verb|@| followed by the file name.
 
 \item[linedefined]
-the line number where starts the definition of the function.
+the line number where the definition of the function starts.
 
 \item[what] the string \verb|"Lua"| if this is a Lua function,
 \verb|"C"| if this is a C~function,
@@ -3345,9 +3302,7 @@ if the function is a tag method,
 otherwise \verb|namewhat| is \verb|""| (the empty string).
 
 \item[nups]
-Number of upvalues of a C~function.
-If the function is not a C~function,
-\verb|nups| is set to 0.
+Number of upvalues of a function.
 
 \item[func]
 The function being executed, as a \verb|lua_Object|.
@@ -3388,24 +3343,20 @@ value of that variable.
 For \verb|lua_setlocal|,
 you fill the \verb|index| and the \verb|value| fields of \verb|v|,
 and the function assigns that value to the variable.
-Both functions return 0 on failure, that happens
-if the index is greater than the number of active local variables.
+Both functions return 0 on failure;
+that happens if the index is greater than the number of active local variables.
 
 As an example, the following function lists the names of all
 local variables for a function in a given level of the stack:
 \begin{verbatim}
 int listvars (lua_State *L, int level) {
   lua_Debug ar;
-  int i;
+  lua_Localvar v;
   if (lua_getstack(L, level, &ar) == 0)
     return 0;  /* failure: no such level on the stack */
-  for (i=1; ; i++) {
-    lua_Localvar v;
-    v.index = i;
-    if (lua_getlocal(L, &ar, &v) == 0)
-      return 1;  /* no more locals */
+  for (v.index = 1; lua_getlocal(L, &ar, &v); v.index++)
     printf("%s\n", v.name);
-  }
+  return 1;
 }
 \end{verbatim}
 
@@ -3505,7 +3456,7 @@ until the last active local variable.)
 The function returns \nil\ if there is no local
 variable with the given index,
 and raises an error when called with a \verb|level| out of range.
-(You can call \verb|getstack| to check wheter the level is valid.)
+(You can call \verb|getstack| to check whether the level is valid.)
 
 \subsubsection*{\ff \T{setlocal (level, local, value)}}\Deffunc{setlocal}
 
@@ -3638,43 +3589,96 @@ some differences had to be introduced.
 Here is a list of all these incompatibilities.
 
 \subsection*{Incompatibilities with \Index{version 3.2}}
+
+\subsubsection*{Changes in the Language}
 \begin{itemize}
 
 \item
-General read patterns are now deprecated.
+All pragmas (\verb|$debug|, \verb|$if|, \ldots) are deprecated.
+
+\item \rwd{for}, \rwd{break}, and \rwd{in} now are reserved words.
+
 \item
 Garbage-collection tag methods for tables is now deprecated.
+
 \item
-\verb|setglobal|, \verb|rawsetglobal|, and \verb|sort| no longer return a value;
-\verb|type| no longer return a second value.
+There is now only one tag method for order operators.
+
 \item
 In nested function calls like \verb|f(g(x))|
 \emph{all} return values from \verb|g| are passed as arguments to \verb|f|.
 (This only happens when \verb|g| is the last
 [or the only] argument to \verb|f|.)
+
 \item
-There is now only one tag method for order operators.
-\item
-The debug API has been completely rewritten.
-\item
-The pre-compiler may use the fact that some operators are associative,
+The pre-compiler may assume that some operators are associative,
 for optimizations.
 This may cause problems if these operators
 have non-associative tag methods.
+
+\item Old pre-compiled code is obsolete, and must be re-compiled.
+
+\end{itemize}
+
+
+\subsubsection*{Changes in the Libraries}
+\begin{itemize}
+
 \item
-All functions from the old API are now macros.
+General read patterns are now deprecated.
+
+\item
+The functions \verb|rawgettable| and \verb|rawsettable|
+were renamed to \verb|rawget| and \verb|rawset|.
+
+\item
+The functions \verb|foreachvar|, \verb|nextvar|,
+\verb|rawsetglobal|, and \verb|rawgetglobal| are deprecated.
+You can get their functionality using table operations 
+over the table of globals.
+
+\item
+\verb|setglobal| and \verb|sort| no longer return a value;
+\verb|type| no longer returns a second value.
+
+\end{itemize}
+
+
+\subsubsection*{Changes in the API}
+\begin{itemize}
+
+\item
+The whole API is now reentrant,
+which means that all functions have
+an extra first argument, a Lua state.
+You can still use the old format:
+If you define \verb|LUA_SINGLESTATE| before including \verb|lua.h|,
+all functions from the old API are defined as macros.
+You will also have to define a variable
+\begin{verbatim}
+lua_State *lua_state = NULL;
+\end{verbatim}
+somewhere in your program.
+
+\item
+The debug API has been completely rewritten.
+
 \item
 A \verb|const| qualifier has been added to \verb|char *|
 in all API functions that handle C~strings.
+
+\item
+Some types \verb|long| were changed to \verb|size_t|.
+
 \item
 \verb|luaL_openlib| no longer automatically calls \verb|lua_open|.
 So,
 you must now explicitly call \verb|lua_open| before opening
 the standard libraries.
+
 \item
 \verb|lua_type| now returns a string describing the type,
 and is no longer a synonym for \verb|lua_tag|.
-\item Old pre-compiled code is obsolete, and must be re-compiled.
 
 \end{itemize}
 
@@ -3687,7 +3691,7 @@ and is no longer a synonym for \verb|lua_tag|.
 
 \begin{Produc}
 
-\produc{chunk}{\rep{stat} \opt{\ter{;}}}
+\produc{chunk}{\rep{stat \opt{\ter{;}}}}
 
 \produc{block}{chunk}
 
@@ -3702,43 +3706,72 @@ and is no longer a synonym for \verb|lua_tag|.
 	\opt{\rwd{else} block} \rwd{end}
 \OrNL	\rwd{return} \opt{explist1}
 \OrNL	\rwd{break}
-\OrNL	\rwd{for} name \ter{=} exp1 \ter{,} exp1 \opt{\ter{,} exp1}
+\OrNL	\rwd{for} \Nter{name} \ter{=} exp1 \ter{,} exp1 \opt{\ter{,} exp1}
 	\rwd{do} block \rwd{end}
+\OrNL   \rwd{for} \Nter{name} \ter{,} \Nter{name} \rwd{in} exp1
+                    \rwd{do} block \rwd{end}
 \OrNL	\rwd{function} funcname \ter{(} \opt{parlist1} \ter{)} block \rwd{end}
 \OrNL	\rwd{local} declist \opt{init}
 }
 
+\produc{funcname}{%
+	\Nter{name}
+\Or	\Nter{name} \ter{.} \Nter{name}
+\Or	\Nter{name} \ter{:} \Nter{name}
+}
+
+\produc{varlist1}{var \rep{\ter{,} var}}
+
 \produc{var}{%
-	name
-\OrNL	varorfunc \ter{[} exp1 \ter{]}
-\OrNL	varorfunc \ter{.} name
+	\Nter{name}
+\Or	varorfunc \ter{[} exp1 \ter{]}
+\Or	varorfunc \ter{.} \Nter{name}
 }
 
 \produc{varorfunc}{var \Or functioncall}
 
-\produc{varlist1}{var \rep{\ter{,} var}}
-
-\produc{declist}{name \rep{\ter{,} name}}
+\produc{declist}{\Nter{name} \rep{\ter{,} \Nter{name}}}
 
 \produc{init}{\ter{=} explist1}
 
+\produc{explist1}{\rep{exp1 \ter{,}} exp}
+
+\produc{exp1}{exp}
+
 \produc{exp}{%
 	\rwd{nil}
-\Or	number
-\Or	literal
+\Or	\Nter{number}
+\Or	\Nter{literal}
+\Or	var
 \Or	function
 \Or	upvalue
-\Or	functioncall
+\OrNL	functioncall
 \Or	tableconstructor
 \Or	\ter{(} exp \ter{)}
 \Or	exp binop exp
 \Or	unop exp
 }
 
-\produc{exp1}{exp}
 
-\produc{explist1}{\rep{exp1 \ter{,}} exp}
+\produc{functioncall}{%
+	varorfunc args
+\Or	varorfunc \ter{:} \Nter{name} args
+}
 
+\produc{args}{%
+	\ter{(} \opt{explist1} \ter{)}
+\Or	tableconstructor
+\Or	\Nter{literal}
+}
+
+\produc{function}{\rwd{function} \ter{(} \opt{parlist1} \ter{)} block \rwd{end}}
+
+\produc{parlist1}{%
+	\ter{\ldots}
+\Or	\Nter{name} \rep{\ter{,} \Nter{name}} \opt{\ter{,} \ter{\ldots}}
+}
+
+\produc{upvalue}{\ter{\%} \Nter{name}}
 
 \produc{tableconstructor}{\ter{\{} fieldlist \ter{\}}}
 \produc{fieldlist}{%
@@ -3753,34 +3786,14 @@ and is no longer a synonym for \verb|lua_tag|.
 \produc{ffieldlist1}{ffield \rep{\ter{,} ffield} \opt{\ter{,}}}
 \produc{ffield}{%
 	\ter{[} exp \ter{]} \ter{=} exp
-\Or	name \ter{=} exp
+\Or	\Nter{name} \ter{=} exp
 }
 
-\produc{functioncall}{%
-	varorfunc args
-\Or	varorfunc \ter{:} name args
-}
+\produc{binop}{\ter{+} \Or \ter{-} \Or \ter{*} \Or \ter{/} \Or \ter{\^{ }} \Or
+  \ter{..} \OrNL \ter{<} \Or \ter{<=} \Or \ter{>} \Or \ter{>=}
+  \Or \ter{==} \Or \ter{\~{ }=} \OrNL \rwd{and} \Or \rwd{or}}
 
-\produc{args}{%
-	\ter{(} \opt{explist1} \ter{)}
-\Or	tableconstructor
-\Or	\ter{literal}
-}
-
-\produc{function}{\rwd{function} \ter{(} \opt{parlist1} \ter{)} block \rwd{end}}
-
-\produc{funcname}{%
-	name
-\OrNL	name \ter{.} name
-\OrNL	name \ter{:} name
-}
-
-\produc{parlist1}{%
-	\ter{\ldots}
-\Or	name \rep{\ter{,} name} \opt{\ter{,} \ter{\ldots}}
-}
-
-\produc{upvalue}{\ter{\%} name}
+\produc{unop}{\ter{-} \Or \rwd{not}}
 
 \end{Produc}
 %}===============================================================
