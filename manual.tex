@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.13 1998/06/06 21:05:52 roberto Exp roberto $
+% $Id: manual.tex,v 1.14 1998/06/15 21:34:14 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -39,7 +39,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{\small \verb$Date: 1998/06/06 21:05:52 $}
+%\date{\small \verb$Date: 1998/06/15 21:34:14 $}
 
 \maketitle
 
@@ -56,17 +56,6 @@ arrays and extensible semantics.
 Lua is dynamically typed, interpreted from bytecodes,
 and has automatic memory management with garbage collection,
 making it ideal for configuration, scripting, and rapid prototyping. 
-
-Lua is implemented as a small library of C functions,
-written in ANSI C, and compiles unmodified in all known platforms.
-The implementation goals are simplicity, efficiency, portability,
-and low embedding cost. 
-
-Lua has been developed at TeCGraf,
-the Computer Graphics Technology Group of PUC-Rio
-(the Pontifical Catholic University of Rio de Janeiro in Brazil).
-TeCGraf is a laboratory of the Department of Computer Science.
-Dozens of industrial products developed by TeCGraf use Lua. 
 
 This document describes version \Version\ of the Lua programming language
 and the API that allows interaction between Lua programs and their
@@ -90,12 +79,6 @@ e tem gerenciamento autom\'atico de mem\'oria com coleta de lixo,
 tornando-se ideal para configura\c{c}\~ao, scripting,
 e prototipagem r\'apida.
 
-Lua \'e implementada como uma pequena biblioteca de fun\c{c}\~oes C,
-escrita em ANSI C, e compila sem modifica\c{c}\~oes em todas as
-plataformas conhecidas.
-Os objetivos da implementa\c{c}\~ao s\~ao simplicidade, efici\^encia,
-portabilidade, e baixo custo.
-
 Este documento descreve a vers\~ao \Version\ da linguagem de
 programa\c{c}\~ao Lua e a Interface de Programa\c{c}\~ao (API) que permite
 a intera\c{c}\~ao entre programas Lua e programas C hospedeiros.
@@ -108,6 +91,7 @@ a intera\c{c}\~ao entre programas Lua e programas C hospedeiros.
 \footnotesize
 Copyright \copyright\ 1994--1998 TeCGraf, PUC-Rio.  All rights reserved.
 
+\noindent
 Permission is hereby granted, without written agreement and without license
 or royalty fees, to use, copy, modify, and distribute this software and its
 documentation for any purpose, including commercial applications, subject to
@@ -126,18 +110,19 @@ the following conditions:
 \end{itemize}
 The authors specifically disclaim any warranties, including, but not limited
 to, the implied warranties of merchantability and fitness for a particular
-purpose.  The software provided hereunder is on an "as is" basis, and the
+purpose.  The software provided hereunder is on an ``as is'' basis, and the
 authors have no obligation to provide maintenance, support, updates,
 enhancements, or modifications.  In no event shall TeCGraf, PUC-Rio, or the
 authors be held liable to any party for direct, indirect, special,
 incidental, or consequential damages arising out of the use of this software
 and its documentation.
 
-The Lua language and this implementation have been entirely designed and
-written by Waldemar Celes Filho, Roberto Ierusalimschy and
-Luiz Henrique de Figueiredo at TeCGraf, PUC-Rio.
-This implementation contains no third-party code.
-\end{quotation}
+\noindent
+The Lua language and this implementation have been entirely designed and 
+written by Waldemar Celes, Roberto Ierusalimschy and Luiz Henrique de 
+Figueiredo at TeCGraf, PUC-Rio. This implementation contains no third-party 
+code.
+\end{quotation} 
 
 \newpage
 
@@ -153,7 +138,7 @@ This implementation contains no third-party code.
 Lua is an extension programming language designed to support
 general procedural programming with data description
 facilities.
-It is intended to be used as a light-weight, but powerful,
+Lua is intended to be used as a light-weight, but powerful,
 configuration language for any program that needs one.
 Lua has been designed and implemented by
 W.~Celes,
@@ -173,7 +158,7 @@ thus creating customized programming languages sharing a syntactical framework.
 
 Lua is free-distribution software,
 and provided as usual with no guarantees,
-as stated in the copyright notice in the front page of this manual.
+as stated in the copyright notice.
 The implementation described in this manual is available
 at the following URL's:
 \begin{verbatim}
@@ -188,6 +173,8 @@ All statements in Lua are executed in a \Def{global environment}.
 This environment, which keeps all global variables,
 is initialized at the beginning of the embedding program and
 persists until its end.
+Optionally, a user can create multiple independent global
+environments \see{mangstate}.
 
 The global environment can be manipulated by Lua code or
 by the embedding program,
@@ -236,23 +223,23 @@ There are six \Index{basic types} in Lua: \Def{nil}, \Def{number},
 \Def{string}, \Def{function}, \Def{userdata}, and \Def{table}.
 \emph{Nil} is the type of the value \nil,
 whose main property is to be different from any other value.
-\emph{Number} represents real (floating-point with double precision) numbers,
-while \emph{string} has the usual meaning;
-notice that Lua is \Index{eight-bit clean},
-and so strings can contain any ISO character,
-\emph{including} \verb|'\0'|.
+\emph{Number} represents real (double precision floating point) numbers,
+while \emph{string} has the usual meaning.
+Lua is \Index{eight-bit clean},
+and so strings may contain any 8-bit character,
+\emph{including} embedded zeros (\verb|'\0'|).
 The function \verb|type| returns a string describing the type
 of a given value \see{pdf-type}.
 
 Functions are considered first-class values in Lua.
 This means that functions can be stored in variables,
-passed as arguments to other functions and returned as results.
+passed as arguments to other functions, and returned as results.
 Lua can call (and manipulate) functions written in Lua and
 functions written in C.
 They can be distinguished by their tags:
 all Lua functions have the same tag,
 and all C functions have the same tag,
-which is different from the tag of a Lua function.
+which is different from the tag of Lua functions.
 
 The type \emph{userdata} is provided to allow
 arbitrary \Index{C pointers} to be stored in Lua variables.
@@ -278,9 +265,9 @@ The form \verb|t:f(x)| is syntactic sugar for \verb|t.f(t,x)|,
 which calls the method \verb|f| from the table \verb|t| passing
 itself as the first parameter \see{func-def}.
 
-It is important to notice that tables are \emph{objects}, and not values.
+Note that tables are \emph{objects}, and not values.
 Variables cannot contain tables, only \emph{references} to them.
-Assignment, parameter passing and returns always manipulate references
+Assignment, parameter passing, and returns always manipulate references
 to tables, and do not imply any kind of copy.
 Moreover, tables must be explicitly created before used
 \see{tableconstructor}.
@@ -309,7 +296,8 @@ This section describes the lexis, the syntax and the semantics of Lua.
 
 \subsection{Lexical Conventions} \label{lexical}
 
-\Index{Identifiers} can be any string of letters, digits, and underscores,
+\Index{Identifiers} in Lua can be any string of letters,
+digits, and underscores,
 not beginning with a digit.
 The definition of letter depends on the current locale:
 Any character considered alphabetic by the current locale
@@ -330,8 +318,8 @@ uppercase letters should not be used in regular programs.
 
 The following strings denote other \Index{tokens}:
 \begin{verbatim}
-         ~=  <=  >=  <   >   ==  =   ..  +   -   *   /
-         %   (   )   {   }   [   ]   ;   ,   .   ...
+         ~=  <=  >=  <   >   ==  =   +   -   *   /   %
+         (   )   {   }   [   ]   ;   ,   .   ..  ...
 \end{verbatim}
 
 \Index{Literal strings} can be delimited by matching single or double quotes,
@@ -343,13 +331,13 @@ and can contain the C-like escape sequences
 \verb|'\r'| (carriage return),
 \verb|'\t'| (horizontal tab),
 \verb|'\v'| (vertical tab),
-\verb|'\\'|,
-\verb|'\"'|,
-and \verb|'\''|.
+\verb|'\\'|, (backslash),
+\verb|'\"'|, (double quote),
+and \verb|'\''| (single quote).
 A character in a string may also be specified by its numerical value,
 through the escape sequence \verb|'\ddd'|,
 where \verb|ddd| is a sequence of up to three \emph{decimal} digits.
-Strings in Lua may contain any 8-bit value, including 0.
+Strings in Lua may contain any 8-bit value, including embedded 0.
 
 Literal strings can also be delimited by matching \verb|[[ ... ]]|.
 Literals in this bracketed form may run for several lines,
@@ -371,7 +359,7 @@ the following three literals are equivalent:
 \Index{Comments} start anywhere outside a string with a
 double hyphen (\verb|--|) and run until the end of the line.
 Moreover,
-the first line of a chunk file is skipped if it starts with \verb|#|.
+the first line of a chunk is skipped if it starts with \verb|#|.
 This facility allows the use of Lua as a script interpreter
 in Unix systems \see{lua-sa}.
 
@@ -384,18 +372,19 @@ Examples of valid numerical constants are:
 
 \subsection{The \Index{Pre-processor}} \label{pre-processor}
 
-All lines that start with a \verb|$| are handled by a pre-processor.
-The \verb|$| must be immediately followed by one of the following directives:
+All lines that start with a \verb|$| sign are handled by a pre-processor.
+The \verb|$| sign must be immediately
+followed by one of the following directives:
 \begin{description}
-\item[\T{debug}] --- turn on some debugging facilities \see{pragma}.
-\item[\T{nodebug}] --- turn off some debugging facilities \see{pragma}.
+\item[\T{debug}] --- turn on debugging facilities \see{pragma}.
+\item[\T{nodebug}] --- turn off debugging facilities \see{pragma}.
 \item[\T{if \M{cond}}] --- starts a conditional part.
 If \M{cond} is false, then this part is skipped by the lexical analyzer.
 \item[\T{ifnot \M{cond}}] --- starts a conditional part.
 If \M{cond} is true, then this part is skipped by the lexical analyzer.
 \item[\T{end}] --- ends a conditional part.
 \item[\T{else}] --- starts an ``else'' conditional part,
-flopping the ``skip'' status.
+flipping the ``skip'' status.
 \item[\T{endinput}] --- ends the lexical parse of the file.
 \end{description}
 
@@ -409,7 +398,7 @@ A \M{cond} part may be:
 \item[\T{1}] --- always true.
 \item[\M{name}] --- true if the value of the
 global variable \M{name} is different from \nil.
-Notice that \M{name} is evaluated before the chunk starts its execution.
+Note that \M{name} is evaluated \emph{before} the chunk starts its execution.
 Therefore, actions in a chunk do not affect its own conditional directives.
 \end{description}
 
@@ -666,10 +655,18 @@ Both \verb|and| and \verb|or| use \Index{short-cut evaluation},
 that is,
 the second operand is evaluated only when necessary.
 
+A useful Lua idiom is \verb|x = x or v|,
+which is equivalent to
+\begin{verbatim}
+      if x == nil then x = v end
+\end{verbatim}
+i.e., it sets \verb|x| to a default value \verb|v| when
+\verb|x| is not set.
+
 \subsubsection{Concatenation}
-Lua offers a string \Index{concatenation} operator,
+The string \Index{concatenation} operator in Lua is
 denoted by ``\IndexVerb{..}''.
-If operands are strings or numbers, then they are converted to
+If both operands are strings or numbers, they are converted to
 strings according to the rules in \See{coercion}.
 Otherwise, the ``concat'' tag method is called \see{tag-method}.
 
@@ -748,7 +745,7 @@ is equivalent to:
 An expression like \verb|{x = 1, y = 4}| is
 in fact syntactic sugar for \verb|{["x"] = 1, ["y"] = 4}|.
 
-Both forms may have an optional ending comma,
+Both forms may have an optional trailing comma,
 and can be used in the same constructor separated by
 a semi-collon.
 For example, all forms below are correct:
@@ -812,6 +809,17 @@ thus discarding all returned values but the first one.
 If the function is called in a place that can hold many values
 (syntactically denoted by the non-terminal \M{exp}),
 then no adjustment is made.
+Note that the only place that can hold many values
+is the last expression (or the only one) in an assignment
+or in a return statement; see examples below.
+\begin{verbatim}
+      f();  -- adjusted to 0
+      g(x, f());     -- f() is adjusted to 1
+      a,b,c = f(), x;   -- f() is adjusted to 1 result (and c gets nil)
+      a,b,c = x, f();   -- f() is adjusted to 2
+      a,b,c = f();   -- f() is adjusted to 3
+      return f();   -- returns all values returned by f()
+\end{verbatim}
 
 \subsubsection{\Index{Function Definitions}} \label{func-def}
 
@@ -890,7 +898,7 @@ If control reaches the end of a function without a return instruction,
 then the function returns with no results.
 
 There is a special syntax for defining \Index{methods},
-that is, functions that have an extra parameter \IndexVerb{self}.
+that is, functions that have an implicit extra parameter \IndexVerb{self}.
 \begin{Produc}
 \produc{function}{\rwd{function} name \ter{:} name \ter{(} \opt{parlist1}
   \ter{)} block \rwd{end}}
@@ -908,7 +916,7 @@ v.f = function (self, ...)
 end
 \end{verbatim}
 that is, the function gets an extra formal parameter called \verb|self|.
-Notice that the variable \verb|v| must have been
+Note that the variable \verb|v| must have been
 previously initialized with a table value.
 
 
@@ -936,19 +944,19 @@ at the point where the function is defined.
 
 Here are some examples:
 \begin{verbatim}
-a,b,c = 1  -- global variables
-function f ()
-  local x,b   -- x and b are local to f
-  function g ()
-    local a,y  -- a and y are local to g
+a,b,c = 1,2,3   -- global variables
+function f (x)
+  local b   -- x and b are local to f
+  local g = function (a)
+    local y  -- a and y are local to g
     p = a   -- OK, access local 'a'
     p = c   -- OK, access global 'c'
     p = b   -- ERROR: cannot access a variable in outer scope
     p = %b  -- OK, access frozen value of 'b' (local to 'f')
     p = %c  -- OK, access frozen value of global 'c'
     p = %y  -- ERROR: 'y' is not visible where 'g' is defined
-  end
-end
+  end  -- g
+end  -- f
 \end{verbatim}
 
 
@@ -956,9 +964,9 @@ end
 
 Lua provides a powerful mechanism to extend its semantics,
 called \Def{Tag Methods}.
-A tag method (TM) is a programmer-defined function
+A tag method is a programmer-defined function
 that is called at specific key points during the evaluation of a program,
-allowing a programmer to change the standard Lua behavior at these points.
+allowing the programmer to change the standard Lua behavior at these points.
 Each of these points is called an \Def{event}.
 
 The tag method called for any specific event is selected
@@ -966,11 +974,11 @@ according to the tag of the values involved
 in the event \see{TypesSec}.
 The function \IndexVerb{settagmethod} changes the tag method
 associated with a given pair \M{(tag, event)}.
-Its first parameter is the tag, the second the event name
+Its first parameter is the tag, the second is the event name
 (a string, see below),
 and the third parameter is the new method (a function),
 or \nil\ to restore the default behavior.
-The function returns the previous tag method.
+The function returns the previous tag method for that pair.
 Another function, \IndexVerb{gettagmethod},
 receives a tag and an event name and returns the
 current method associated with the pair.
@@ -995,7 +1003,7 @@ called when a \verb|+| operation is applied to non numerical operands.
 
 The function \verb|getbinmethod| defines how Lua chooses a tag method
 for a binary operation.
-First Lua tries the first operand.
+First, Lua tries the first operand.
 If its tag does not define a tag method for the operation,
 then Lua tries the second operand.
 If it also fails, then it gets a tag method from tag~0:
@@ -1011,7 +1019,7 @@ If it also fails, then it gets a tag method from tag~0:
         local o1, o2 = tonumber(op1), tonumber(op2)
         if o1 and o2 then  -- both operands are numeric
           return o1+o2  -- '+' here is the primitive 'add'
-        else  -- at least one of the operands is not numeric.
+        else  -- at least one of the operands is not numeric
           local tm = getbinmethod(op1, op2, "add")
           if tm then
             -- call the method with both operands and an extra
@@ -1147,7 +1155,7 @@ created by \verb|newtag|.
         end
       end
 \end{verbatim}
-Notice: the function \verb|getglobal| is pre-defined in Lua \see{predefined}.
+The function \verb|getglobal| is pre-defined in Lua \see{predefined}.
 
 \item[``setglobal'':]\index{setglobal event}
 called whenever Lua assigns to a global variable.
@@ -1179,7 +1187,7 @@ This method cannot be set for tables with default tag.
         else
           local v = rawgettable(table, index)
           tm = gettagmethod(tag(table), "index")
-          if (v == nil) and tm then
+          if v == nil and tm then
             return tm(table, index)
           else
             return v
@@ -1257,12 +1265,13 @@ calling a function from the Lua library.
 Whenever an error occurs during Lua compilation or execution,
 the \Def{error method} is called,
 and then the corresponding function from the library
-(\verb|lua_dofile|, \verb|lua_dostring|, or \verb|lua_callfunction|)
-is terminated returning an error condition.
+(\verb|lua_dofile|, \verb|lua_dostring|,
+\verb|lua_dobuffer|, or \verb|lua_callfunction|)
+is terminated, returning an error condition.
 
 The only argument to the error method is a string
 describing the error.
-The default method prints this message in \verb|stderr|.
+The default method prints this message to \verb|stderr|.
 If needed, it is possible to change the error method with the
 function \verb|seterrormethod|,
 which gets the new error handler as its only parameter
@@ -1304,7 +1313,7 @@ The API functions can be classified in the following categories:
 All API functions and related types and constants
 are declared in the header file \verb|lua.h|.
 
-\subsection{Managing States}
+\subsection{Managing States} \label{mangstate}
 The whole state of the Lua interpreter
 (global variables, stack, tag methods, etc)
 is stored in a dynamic structure pointed by\Deffunc{lua_state}
@@ -1317,23 +1326,23 @@ Before calling any API function,
 this state must be initialized.
 This is done by calling\Deffunc{lua_open}
 \begin{verbatim}
-void           lua_open                 (void);
+void lua_open (void);
 \end{verbatim}
 This function allocates and initializes some internal structures,
 and defines all pre-defined functions of Lua.
 If \verb|lua_state| is already different from \verb|NULL|,
-this function has no effect;
+\verb|lua_open| has no effect;
 therefore, it is safe to call this function multiple times.
 All standard libraries call \verb|lua_open| when they are opened.
 
 Function \verb|lua_setstate| is used to change the current state
 of Lua:\Deffunc{lua_setstate}
 \begin{verbatim}
-lua_State      *lua_setstate            (lua_State *st);
+lua_State *lua_setstate (lua_State *st);
 \end{verbatim}
 It sets \verb|lua_state| to \verb|st| and returns the old state.
 
-Multiple, independent, states may be created.
+Multiple, independent states may be created.
 For that, you must set \verb|lua_state| back to \verb|NULL| before
 calling \verb|lua_open|.
 An easy way to do that is defining an auxiliary function:
@@ -1346,13 +1355,13 @@ lua_State *lua_newstate (void) {
 \end{verbatim}
 This function creates a new state without changing the current state
 of the interpreter.
-Notice that any new state is built with all predefined functions;
-any additional library (such as the standard libraries) must be
+Note that any new state is built with all predefined functions,
+but any additional library (such as the standard libraries) must be
 explicitly open in the new state, if needed.
 
 If necessary, a state may be released:\Deffunc{lua_close}
 \begin{verbatim}
-void           lua_close                (void);
+void lua_close (void);
 \end{verbatim}
 This function destroys all objects in the current Lua environment
 (calling the correspondent garbage collector tag methods),
@@ -1361,7 +1370,7 @@ and then sets \verb|lua_state| to \verb|NULL|.
 Usually, there is no need to call this function,
 since these resources are naturally released when the program ends.
 If \verb|lua_state| is already \verb|NULL|,
-this function has no effect.
+\verb|lua_close| has no effect.
 
 If you are using multiple states,
 you may find useful the following function,
@@ -1389,13 +1398,13 @@ the following functions are available:
 \Deffunc{lua_istable}\Deffunc{lua_iscfunction}\Deffunc{lua_isuserdata}
 \Deffunc{lua_isfunction}
 \begin{verbatim}
-int            lua_isnil                (lua_Object object);
-int            lua_isnumber             (lua_Object object);
-int            lua_isstring             (lua_Object object);
-int            lua_istable              (lua_Object object);
-int            lua_isfunction           (lua_Object object);
-int            lua_iscfunction          (lua_Object object);
-int            lua_isuserdata           (lua_Object object);
+int lua_isnil       (lua_Object object);
+int lua_isnumber    (lua_Object object);
+int lua_isstring    (lua_Object object);
+int lua_istable     (lua_Object object);
+int lua_isfunction  (lua_Object object);
+int lua_iscfunction (lua_Object object);
+int lua_isuserdata  (lua_Object object);
 \end{verbatim}
 All macros return 1 if the object is compatible with the given type,
 and 0 otherwise.
@@ -1408,7 +1417,7 @@ To get the tag of a \verb|lua_Object|,
 the following function is available:
 \Deffunc{lua_tag}
 \begin{verbatim}
-int            lua_tag                  (lua_Object object);
+int lua_tag (lua_Object object);
 \end{verbatim}
 
 To translate a value from type \verb|lua_Object| to a specific C type,
@@ -1416,16 +1425,16 @@ the programmer can use:
 \Deffunc{lua_getnumber}\Deffunc{lua_getstring}\Deffunc{lua_strlen}
 \Deffunc{lua_getcfunction}\Deffunc{lua_getuserdata}
 \begin{verbatim}
-double         lua_getnumber            (lua_Object object);
-char          *lua_getstring            (lua_Object object);
-long           lua_strlen               (lua_Object object);
-lua_CFunction  lua_getcfunction         (lua_Object object);
-void          *lua_getuserdata          (lua_Object object);
+double         lua_getnumber    (lua_Object object);
+char          *lua_getstring    (lua_Object object);
+long           lua_strlen       (lua_Object object);
+lua_CFunction  lua_getcfunction (lua_Object object);
+void          *lua_getuserdata  (lua_Object object);
 \end{verbatim}
 
 \verb|lua_getnumber| converts a \verb|lua_Object| to a floating-point number.
 This \verb|lua_Object| must be a number or a string convertible to number
-\see{coercion}; otherwise, the function returns~0.
+\see{coercion}; otherwise, \verb|lua_getnumber| returns~0.
 
 \verb|lua_getstring| converts a \verb|lua_Object| to a string (\verb|char*|).
 This \verb|lua_Object| must be a string or a number;
@@ -1435,19 +1444,19 @@ but returns a pointer to a string inside the Lua environment.
 Those strings always have a 0 after their last character (like in C),
 but may contain other zeros in their body.
 If you do not know whether a string may contain zeros,
-you can use \verb|lua_strlen| to check the actual length.
+you can use \verb|lua_strlen| to get the actual length.
 Because Lua has garbage collection,
 there is no guarantee that such pointer will be valid after the block ends
 \see{GC}.
 
 \verb|lua_getcfunction| converts a \verb|lua_Object| to a C function.
 This \verb|lua_Object| must have type \emph{CFunction};
-otherwise, the function returns 0 (the \verb|NULL| pointer).
+otherwise, \verb|lua_getcfunction| returns 0 (the \verb|NULL| pointer).
 The type \verb|lua_CFunction| is explained in \See{LuacallC}.
 
 \verb|lua_getuserdata| converts a \verb|lua_Object| to \verb|void*|.
 This \verb|lua_Object| must have type \emph{userdata};
-otherwise, the function returns 0 (the \verb|NULL| pointer).
+otherwise, \verb|lua_getuserdata| returns 0 (the \verb|NULL| pointer).
 
 \subsection{Garbage Collection}\label{GC}
 Because Lua has automatic memory management and garbage collection,
@@ -1462,12 +1471,12 @@ and never to store \verb|lua_Object|s in C global variables.
 A garbage collection cycle can be forced by:
 \Deffunc{lua_collectgarbage}
 \begin{verbatim}
-long           lua_collectgarbage       (long limit);
+long lua_collectgarbage (long limit);
 \end{verbatim}
 This function returns the number of objects collected.
 The argument \verb|limit| makes the next cycle occur only
 after that number of new objects have been created.
-If \verb|limit|=0, then Lua uses an adaptable heuristics to set this limit.
+If \verb|limit|=0, then Lua uses an adaptive heuristics to set this limit.
 
 
 All communication between Lua and C is done through two
@@ -1482,7 +1491,7 @@ The structure lua2C is an abstract array,
 which can be indexed with the function:
 \Deffunc{lua_lua2C}
 \begin{verbatim}
-lua_Object     lua_lua2C                (int number);
+lua_Object lua_lua2C (int number);
 \end{verbatim}
 where \verb|number| starts with 1.
 When called with a number larger than the array size,
@@ -1490,7 +1499,7 @@ this function returns \verb|LUA_NOOBJECT|\Deffunc{LUA_NOOBJECT}.
 In this way, it is possible to write C functions that receive
 a variable number of parameters,
 and to call Lua functions that return a variable number of results.
-Notice that the structure lua2C cannot be directly modified by C code.
+Note that the structure lua2C cannot be directly modified by C code.
 
 The second structure, C2lua, is an abstract stack.
 Pushing elements into this stack
@@ -1500,13 +1509,13 @@ is done with the following functions and macros:
 \Deffunc{lua_pushnil}\Deffunc{lua_pushobject}
 \Deffunc{lua_pushuserdata}\label{pushing}
 \begin{verbatim}
-void           lua_pushnumber           (double n);
-void           lua_pushlstring          (char *s, long len);
-void           lua_pushstring           (char *s);
-void           lua_pushusertag          (void *u, int tag);
-void           lua_pushnil              (void);
-void           lua_pushobject           (lua_Object object);
-void           lua_pushcfunction        (lua_CFunction f);  /* macro */
+void lua_pushnumber    (double n);
+void lua_pushlstring   (char *s, long len);
+void lua_pushstring    (char *s);
+void lua_pushusertag   (void *u, int tag);
+void lua_pushnil       (void);
+void lua_pushobject    (lua_Object object);
+void lua_pushcfunction (lua_CFunction f);  /* macro */
 \end{verbatim}
 All of them receive a C value,
 convert it to a corresponding \verb|lua_Object|,
@@ -1514,12 +1523,12 @@ and leave the result on the top of C2lua.
 Particularly, functions \verb|lua_pushlstring| and \verb|lua_pushstring|
 make an internal copy of the given string.
 Function \verb|lua_pushstring| can only be used to push proper C strings
-(that is, strings which do not contain zeros and end with a zero);
-otherwise you can use the more generic \verb|lua_pushlstring|.
+(that is, strings that do not contain zeros and end with a zero);
+otherwise you should use the more generic \verb|lua_pushlstring|.
 The function
 \Deffunc{lua_pop}
 \begin{verbatim}
-lua_Object     lua_pop                  (void);
+lua_Object lua_pop (void);
 \end{verbatim}
 returns a reference to the object at the top of the C2lua stack,
 and pops it.
@@ -1533,25 +1542,25 @@ If Lua has a userdata with the given value (\verb|void*|) and tag,
 that userdata is pushed.
 Otherwise, a new userdata is created, with the given value and tag.
 If this function is called with
-\verb|tag|=\verb|LUA_ANYTAG|\Deffunc{LUA_ANYTAG},
+\verb|tag| equal to \verb|LUA_ANYTAG|\Deffunc{LUA_ANYTAG},
 then Lua will try to find any userdata with the given value,
 regardless of its tag.
 If there is no userdata with that value, then a new one is created,
-with tag equals to 0.
+with tag equal to 0.
 
 Userdata can have different tags,
 whose semantics are only known to the host program.
 Tags are created with the function:
 \Deffunc{lua_newtag}
 \begin{verbatim}
-int            lua_newtag               (void);
+int lua_newtag (void);
 \end{verbatim}
 The function \verb|lua_settag| changes the tag of
 the object on the top of C2lua (and pops it);
 the object must be a userdata or a table.
 \Deffunc{lua_settag}
 \begin{verbatim}
-void           lua_settag               (int tag);
+void lua_settag (int tag);
 \end{verbatim}
 \verb|tag| must be a value created with \verb|lua_newtag|.
 
@@ -1561,16 +1570,17 @@ and may cause a stack overflow.
 To avoid this,
 nested blocks can be defined with the functions:
 \begin{verbatim}
-void           lua_beginblock           (void);
-void           lua_endblock             (void);
+void lua_beginblock (void);
+void lua_endblock   (void);
 \end{verbatim}
 After the end of the block,
 all \verb|lua_Object|'s created inside it are released.
-The use of explicit nested blocks is strongly encouraged.
+The use of explicit nested blocks is good progamming practice
+and is strongly encouraged.
 
 \subsection{Executing Lua Code}
 A host program can execute Lua chunks written in a file or in a string
-using the following functions:
+using the following functions:%
 \Deffunc{lua_dofile}\Deffunc{lua_dostring}\Deffunc{lua_dobuffer}
 \begin{verbatim}
 int lua_dofile   (char *filename);
@@ -1581,8 +1591,8 @@ All these functions return an error code:
 0, in case of success; non zero, in case of errors.
 More specifically, \verb|lua_dofile| returns 2 if for any reason
 it could not open the file.
-The function \verb|lua_dofile|, if called with argument \verb|NULL|,
-executes the \verb|stdin| stream.
+When called with argument \verb|NULL|,
+\verb|lua_dofile| executes the \verb|stdin| stream.
 Functions \verb|lua_dofile| and \verb|lua_dobuffer|
 are both able to execute pre-compiled chunks.
 They automatically detect whether the chunk is text or binary,
@@ -1606,47 +1616,47 @@ To read the value of any global Lua variable,
 one uses the function:
 \Deffunc{lua_getglobal}
 \begin{verbatim}
-lua_Object     lua_getglobal            (char *varname);
+lua_Object lua_getglobal (char *varname);
 \end{verbatim}
 As in Lua, this function may trigger a tag method.
 To read the real value of any global variable,
 without invoking any tag method,
-this function has a \emph{raw} version:
+use the \emph{raw} version:
 \Deffunc{lua_rawgetglobal}
 \begin{verbatim}
-lua_Object     lua_rawgetglobal         (char *varname);
+lua_Object lua_rawgetglobal (char *varname);
 \end{verbatim}
 
 To store a value previously pushed onto C2lua in a global variable,
 there is the function:
 \Deffunc{lua_setglobal}
 \begin{verbatim}
-void           lua_setglobal            (char *varname);
+void lua_setglobal (char *varname);
 \end{verbatim}
 As in Lua, this function may trigger a tag method.
 To set the real value of any global variable,
 without invoking any tag method,
-this function has a \emph{raw} version:
+use the \emph{raw} version:
 \Deffunc{lua_rawgetglobal}
 \begin{verbatim}
-void           lua_rawsetglobal         (char *varname);
+void lua_rawsetglobal (char *varname);
 \end{verbatim}
 
 Tables can also be manipulated via the API.
 The function
 \Deffunc{lua_gettable}
 \begin{verbatim}
-lua_Object     lua_gettable             (void);
+lua_Object lua_gettable (void);
 \end{verbatim}
 pops from the stack C2lua a table and an index,
 and returns the contents of the table at that index.
 As in Lua, this operation may trigger a tag method.
 To get the real value of any table index,
 without invoking any tag method,
-this function has a \emph{raw} version:
+use the \emph{raw} version:
 \Deffunc{lua_rawgetglobal}
 \begin{verbatim}
-lua_Object     lua_rawgettable          (void);
+lua_Object lua_rawgettable (void);
 \end{verbatim}
 
 To store a value in an index,
@@ -1655,35 +1665,35 @@ and the value onto C2lua,
 and then call the function:
 \Deffunc{lua_settable}
 \begin{verbatim}
-void           lua_settable             (void);
+void lua_settable (void);
 \end{verbatim}
 Again, the tag method for ``settable'' may be called.
 To set the real value of any table index,
 without invoking any tag method,
-this function has a \emph{raw} version:
+use the \emph{raw} version:
 \Deffunc{lua_rawsettable}
 \begin{verbatim}
-void           lua_rawsettable          (void);
+void lua_rawsettable (void);
 \end{verbatim}
 
 Finally, the function
 \Deffunc{lua_createtable}
 \begin{verbatim}
-lua_Object     lua_createtable          (void);
+lua_Object lua_createtable (void);
 \end{verbatim}
 creates and returns a new, empty table.
 
 
 \subsection{Calling Lua Functions}
-Functions defined in Lua by a chunk executed with
-\verb|dofile| or \verb|dostring| can be called from the host program.
+Functions defined in Lua by a chunk
+can be called from the host program.
 This is done using the following protocol:
 first, the arguments to the function are pushed onto C2lua
 \see{pushing}, in direct order, i.e., the first argument is pushed first.
 Then, the function is called using
 \Deffunc{lua_callfunction}
 \begin{verbatim}
-int            lua_callfunction         (lua_Object function);
+int lua_callfunction (lua_Object function);
 \end{verbatim}
 This function returns an error code:
 0, in case of success; non zero, in case of errors.
@@ -1691,24 +1701,26 @@ Finally, the results (a Lua function may return many values)
 are returned in structure lua2C,
 and can be retrieved with the macro \verb|lua_getresult|,
 \Deffunc{lua_getresult}
-which is just another name to the function \verb|lua_lua2C|.
-Notice that the function \verb|lua_callfunction|
+which is just another name to function \verb|lua_lua2C|.
+Note that function \verb|lua_callfunction|
 pops all elements from the C2lua stack.
 
 The following example shows how a C program may do the
 equivalent to the Lua code:
 \begin{verbatim}
-      a = f("how", t.x, 4)
+      a,b = f("how", t.x, 4)
 \end{verbatim}
 \begin{verbatim}
   lua_pushstring("how");                               /* 1st argument */
   lua_pushobject(lua_getglobal("t"));      /* push value of global 't' */
   lua_pushstring("x");                          /* push the string 'x' */
   lua_pushobject(lua_gettable());      /* push result of t.x (2nd arg) */
-  lua_pushnumber(4);                                   /* 3th argument */
+  lua_pushnumber(4);                                   /* 3rd argument */
   lua_callfunction(lua_getglobal("f"));           /* call Lua function */
   lua_pushobject(lua_getresult(1));   /* push first result of the call */
   lua_setglobal("a");                      /* sets global variable 'a' */
+  lua_pushobject(lua_getresult(2));   /* push second result of the call */
+  lua_setglobal("b");                      /* sets global variable 'b' */
 \end{verbatim}
 
 Some special Lua functions have exclusive interfaces.
@@ -1726,36 +1738,34 @@ The \verb|message| is passed to the error handler method.
 If \verb|message| is \verb|NULL|,
 the error handler method is not called.
 
-The error handler method \see{error} can be changed with:
-\Deffunc{lua_seterrormethod}
+The error handler method \see{error} can be
+changed with: \Deffunc{lua_seterrormethod}
 \begin{verbatim}
-lua_Object     lua_seterrormethod (void);
+lua_Object lua_seterrormethod (void);
 \end{verbatim}
 This function sets the object at the top of C2lua
 as the new error method,
 and returns the old error method value.
 
-Tag methods can be changed with:
-\Deffunc{lua_settagmethod}
+Tag methods can be changed with: \Deffunc{lua_settagmethod}
 \begin{verbatim}
-lua_Object     lua_settagmethod (int tag, char *event);
+lua_Object lua_settagmethod (int tag, char *event);
 \end{verbatim}
 The first parameter is the tag,
-the second is the event name \see{tag-method};
+and the second is the event name \see{tag-method};
 the new method is pushed from C2lua.
 This function returns a \verb|lua_Object|,
 which is the old tag method value.
 To get just the current value of a tag method,
-there is the function
-\Deffunc{lua_gettagmethod}
+use the function \Deffunc{lua_gettagmethod}
 \begin{verbatim}
-lua_Object     lua_gettagmethod (int tag, char *event);
+lua_Object lua_gettagmethod (int tag, char *event);
 \end{verbatim}
 
-It is also possible to copy all tag methods from one tag to another:
-\Deffunc{lua_copytagmethods}
+It is also possible to copy all tag methods from one tag
+to another: \Deffunc{lua_copytagmethods}
 \begin{verbatim}
-int            lua_copytagmethods       (int tagto, int tagfrom);
+int lua_copytagmethods (int tagto, int tagfrom);
 \end{verbatim}
 This function returns \verb|tagto|.
 
@@ -1798,15 +1808,15 @@ as common arguments.
 To associate upvalues to a function,
 first these values must be pushed on C2lua.
 Then the function:
-\Deffunc{lua_pushCclosure}
+\Deffunc{lua_pushcclosure}
 \begin{verbatim}
-void           lua_pushCclosure         (lua_CFunction fn, int n);
+void lua_pushcclosure (lua_CFunction fn, int n);
 \end{verbatim}
 is used to put the C function on C2lua,
 with the argument \verb|n| telling how many upvalues must be
 associated with the function;
 in fact, the macro \verb|lua_pushcfunction| is defined as
-\verb|lua_pushCclosure| with \verb|n| set to 0.
+\verb|lua_pushcclosure| with \verb|n| set to 0.
 Then, any time the function is called,
 these upvalues are inserted as the first arguments to the function,
 before the actual arguments provided in the call.
@@ -1824,16 +1834,16 @@ The routines to manipulate references are the following:
 \Deffunc{lua_ref}\Deffunc{lua_getref}
 \Deffunc{lua_unref}
 \begin{verbatim}
-int            lua_ref (int lock);
-lua_Object     lua_getref  (int ref);
-void           lua_unref (int ref);
+int        lua_ref    (int lock);
+lua_Object lua_getref (int ref);
+void       lua_unref  (int ref);
 \end{verbatim}
 The function \verb|lua_ref| creates a reference
 to the object that is on the top of the stack,
 and returns this reference.
 If \verb|lock| is true, the object is \emph{locked}:
 this means the object will not be garbage collected.
-Notice that an unlocked reference may be garbage collected.
+Note that an unlocked reference may be garbage collected.
 Whenever the referenced object is needed,
 a call to \verb|lua_getref|
 returns a handle to it;
@@ -1868,7 +1878,7 @@ To have access to these libraries,
 the C host program must call the functions
 \verb|lua_strlibopen|, \verb|lua_mathlibopen|,
 and \verb|lua_iolibopen|, declared in \verb|lualib.h|.
-\Deffunc{lua_strlibopen}\Deffunc{lua_mathlibopen}\Deffunc{lua_iolibopen}.
+\Deffunc{lua_strlibopen}\Deffunc{lua_mathlibopen}\Deffunc{lua_iolibopen}
 
 
 \subsection{Predefined Functions} \label{predefined}
@@ -1882,7 +1892,7 @@ The call is equivalent to
       func(arg[1], arg[2], ..., arg[arg.n])
 \end{verbatim}
 If \verb|arg.n| is not defined,
-then Lua stops getting arguments at the first nil value.
+then Lua stops getting arguments at the first \nil\ value.
 
 By default,
 all results from \verb|func| are just returned by the call.
@@ -1921,7 +1931,7 @@ Returns the number of objects collected.
 An optional argument, \verb|limit|, is a number that
 makes the next cycle occur only after that number of new
 objects have been created.
-If absent, Lua uses an adaptable algorithm to set
+If absent, Lua uses an adaptive algorithm to set
 this limit.
 \verb|collectgarbage| is equivalent to
 the API function \verb|lua_collectgarbage|.
@@ -1941,7 +1951,8 @@ It issues an error when called with a non string argument.
 
 \subsubsection*{\ff \T{dostring (string)}}\Deffunc{dostring}
 This function executes a given string as a Lua chunk.
-If there is any error executing the string, it returns \nil.
+If there is any error executing the string,
+\verb|dostring| returns \nil.
 Otherwise, it returns the values returned by the chunk,
 or a non \nil\ value if the chunk returns no values.
 \verb|dostring| is equivalent to the API function \verb|lua_dostring|.
@@ -1977,7 +1988,7 @@ This function cannot be written with the standard API.
 
 \subsubsection*{\ff \T{nextvar (name)}}\Deffunc{nextvar}
 This function is similar to the function \verb|next|,
-but iterates over the global variables.
+but iterates instead over the global variables.
 Its single argument is the name of a global variable,
 or \nil\ to get a first name.
 Similarly to \verb|next|, it returns the name of another variable
@@ -1992,7 +2003,7 @@ This function cannot be written with the standard API.
 Executes the given \verb|function| over all elements of \verb|table|.
 For each element, the function is called with the index and
 respective value as arguments.
-If the function returns any non-nil value,
+If the function returns any non-\nil\ value,
 the loop is broken, and the value is returned
 as the final value of \verb|foreach|.
 
@@ -2031,12 +2042,14 @@ end
 \subsubsection*{\ff \T{tostring (e)}}\Deffunc{tostring}
 This function receives an argument of any type and
 converts it to a string in a reasonable format.
+For complete control on how numbers are converted,
+use function \verb|format|.
 
 \subsubsection*{\ff \T{print (e1, e2, ...)}}\Deffunc{print}
 This function receives any number of arguments,
 and prints their values using the strings returned by \verb|tostring|.
 This function is not intended for formatted output,
-but as a quick way to show a value,
+but only as a quick way to show a value,
 for instance for error messages or debugging.
 See \See{libio} for functions for formatted output.
 
@@ -2044,7 +2057,7 @@ See \See{libio} for functions for formatted output.
 This function receives one argument,
 and tries to convert it to a number.
 If the argument is already a number or a string convertible
-to a number, then it returns that number;
+to a number, then \verb|tonumber| returns that number;
 otherwise, it returns \nil.
 
 An optional argument specifies the base to interpret the numeral.
@@ -2054,7 +2067,7 @@ represents 10, `B' represents 11, and so forth, with `Z' representing 35.
 
 In base 10 (the default), the number may have a decimal part,
 as well as an optional exponent part \see{coercion}.
-In other bases only integers are accepted.
+In other bases, only integers are accepted.
 
 \subsubsection*{\ff \T{type (v)}}\Deffunc{type}\label{pdf-type}
 This function allows Lua to test the type of a value.
@@ -2097,10 +2110,11 @@ end
 \subsubsection*{\ff \T{error (message)}}\Deffunc{error}\label{pdf-error}
 This function calls the error handler and then terminates
 the last protected function called
-(in C: \verb|lua_dofile|, \verb|lua_dostring|, or \verb|lua_callfunction|;
+(in~C: \verb|lua_dofile|, \verb|lua_dostring|,
+\verb|lua_dobuffer|, or \verb|lua_callfunction|;
 in Lua: \verb|dofile|, \verb|dostring|, or \verb|call| in protected mode).
 If \verb|message| is \nil, the error handler is not called.
-It never returns.
+Function \verb|error| never returns.
 \verb|error| is equivalent to the API function \verb|lua_error|.
 
 \subsubsection*{\ff \T{rawgettable (table, index)}}\Deffunc{rawgettable}
@@ -2110,7 +2124,7 @@ without invoking any tag method.
 and \verb|index| is any value different from \nil.
 
 \subsubsection*{\ff \T{rawsettable (table, index, value)}}\Deffunc{rawsettable}
-Sets the real value \verb|table[index]=value|,
+Sets the real value of \verb|table[index]| to \verb|value|,
 without invoking any tag method.
 \verb|table| must be a table,
 \verb|index| is any value different from \nil,
@@ -2123,10 +2137,7 @@ syntactically valid variable name.
 Therefore,
 this function can set global variables with strange names like
 \verb|"m v 1"| or \verb|34|.
-It returns the value of its second argument.
-
-The string \verb|name| does not need to be a
-syntactically valid variable name.
+Function \verb|rawsetglobal| returns the value of its second argument.
 
 \subsubsection*{\ff \T{setglobal (name, value)}}\Deffunc{setglobal}
 This function assigns the given value to a global variable,
@@ -2134,6 +2145,7 @@ or calls a tag method.
 Its full semantics is explained in \See{tag-method}.
 The string \verb|name| does not need to be a
 syntactically valid variable name.
+Function \verb|setglobal| returns the value of its second argument.
 
 \subsubsection*{\ff \T{rawgetglobal (name)}}\Deffunc{rawgetglobal}
 This function retrieves the value of a global variable.
@@ -2144,7 +2156,6 @@ syntactically valid variable name.
 This function retrieves the value of a global variable,
 or calls a tag method.
 Its full semantics is explained in \See{tag-method}.
-
 The string \verb|name| does not need to be a
 syntactically valid variable name.
 
@@ -2160,7 +2171,7 @@ Returns the old error handler.
 This function sets a new tag method to the given pair \M{(tag, event)}.
 It returns the old method.
 If \verb|newmethod| is \nil,
-it restores the default behavior for the given event.
+\verb|settagmethod| restores the default behavior for the given event.
 
 \subsubsection*{\ff \T{gettagmethod (tag, event)}}
 \Deffunc{gettagmethod}
@@ -2193,7 +2204,7 @@ its default value is 1.
 If \verb|init| is negative,
 it is replaced by the length of the string minus its
 absolute value plus 1.
-Therefore, \M{-1} points to the last character of \verb|str|.
+Therefore, \Math{-1} points to the last character of \verb|str|.
 A value of 1 as a fourth optional argument
 turns off the pattern matching facilities,
 so the function does a plain ``find substring'' operation,
@@ -2208,9 +2219,9 @@ starting at \verb|i|  and running until \verb|j|.
 If \verb|i| or \verb|j| are negative,
 they are replaced by the length of the string minus their
 absolute value plus 1.
-Therefore, \M{-1} points to the last character of \verb|s|
-and \M{-2} to the previous one.
-If \verb|j| is absent, it is assumed to be equal to \M{-1}
+Therefore, \Math{-1} points to the last character of \verb|s|
+and \Math{-2} to the previous one.
+If \verb|j| is absent, it is assumed to be equal to \Math{-1}
 (which is the same as the string length).
 In particular,
 the call \verb|strsub(s,1,j)| returns a prefix of \verb|s|
@@ -2242,13 +2253,17 @@ If \verb|i| is absent, then it is assumed to be 1.
 If \verb|i| is negative,
 it is replaced by the length of the string minus its
 absolute value plus 1.
-Therefore, \M{-1} points to the last character of \verb|s|.
+Therefore, \Math{-1} points to the last character of \verb|s|.
+
+Note that numerical codes are not necessarily portable across platforms.
 
 \subsubsection*{\ff \T{strchar (i1, i2, \ldots)}}\Deffunc{strchar}
 Receives 0 or more integers.
 Returns a string with length equal to the number of arguments,
 wherein each character has the internal numerical code equal
 to its correspondent argument.
+
+Note that numerical codes are not necessarily portable across platforms.
 
 \subsubsection*{\ff \T{format (formatstring, e1, e2, \ldots)}}\Deffunc{format}
 \label{format}
@@ -2295,7 +2310,7 @@ the appropriate format string.
 For example, \verb|"%*g"| can be simulated with
 \verb|"%"..width.."g"|.
 
-\emph{Function \T{format} can only be used with strings that do not
+\emph{Note: function \T{format} can only be used with strings that do not
 contain zeros.}
 
 \subsubsection*{\ff \T{gsub (s, pat, repl [, n])}}
@@ -2331,15 +2346,18 @@ See some examples below:
   x = gsub("hello world", "(%w%w*)", "%1 %1", 1)
   --> x="hello hello world"
 
+  x = gsub("hello world from Lua", "(%w%w*)%s*(%w%w*)", "%2 %1")
+  --> x="world hello Lua from"
+
   x = gsub("home = $HOME, user = $USER", "$(%w%w*)", getenv)
   --> x="home = /home/roberto, user = roberto"  (for instance)
 
   x = gsub("4+5 = $return 4+5$", "$(.-)%$", dostring)
   --> x="4+5 = 9"
 
-  local t = {name="lua", version="3.0"}
+  local t = {name="lua", version="3.1"}
   x = gsub("$name - $version", "$(%w%w*)", function (v) return %t[v] end)
-  --> x="lua - 3.0"
+  --> x="lua - 3.1"
 
   t = {n=0}
   gsub("first second word", "(%w%w*)",
@@ -2356,7 +2374,7 @@ The following combinations are allowed in describing a character class:
 \begin{description}
 \item[\emph{x}] (where \emph{x} is any character not in the list \verb|()%.[*-?|)
 --- represents the character \emph{x} itself.
-\item[\T{.}] --- represents all characters.
+\item[\T{.}] --- (a dot) represents all characters.
 \item[\T{\%a}] --- represents all letters.
 \item[\T{\%A}] --- represents all non letter characters.
 \item[\T{\%d}] --- represents all digits.
@@ -2377,13 +2395,14 @@ Represents the class which is the union of all
 characters in char-set.
 To include a \verb|]| in char-set, it must be the first character.
 A range of characters may be specified by
-separating the end characters of the range with a \verb|-|;
-e.g., \verb|A-Z| specifies the English upper case characters.
+separating the end characters of the range with a \verb|-|.
 If \verb|-| appears as the first or last character of char-set,
 then it represents itself.
 All classes \verb|%|\emph{x} described above can also be used as
 components in a char-set.
 All other characters in char-set represent themselves.
+E.g., assuming an \emph{ascii} character set,
+\verb|[%dA-Fa-f]| specifies the hexa-decimal digits.
 \item[\T{[\^{ }char-set]}] ---
 represents the complement of char-set,
 where char-set is interpreted as above.
@@ -2441,9 +2460,9 @@ that match captures are stored (\emph{captured}) for future use.
 Captures are numbered according to their left parentheses.
 For instance, in the pattern \verb|"(a*(.)%w(%s*))"|,
 the part of the string matching \verb|"a*(.)%w(%s*)"| is
-stored as the first capture (and therefore has number 1);
-the character matching \verb|.| is captured with number 2,
-and the part matching \verb|%s*| has number 3.
+stored as the first capture (and therefore has number~1);
+the character matching \verb|.| is captured with number~2,
+and the part matching \verb|%s*| has number~3.
 
 
 \subsection{Mathematical Functions} \label{mathlib}
@@ -2540,7 +2559,7 @@ it opens the named file,
 sets its handle as the value of \verb|_OUTPUT|,
 and returns this value.
 It does not close the current output file.
-Notice that, if the file already exists,
+Note that, if the file already exists,
 then it will be \emph{completely erased} with this operation.
 When called without parameters,
 this function closes the \verb|_OUTPUT| file,
@@ -2569,7 +2588,7 @@ this function does not erase any previous content of the file.
 If this function fails, it returns \nil,
 plus a string describing the error.
 
-Notice that function \verb|writeto| is
+Note that function \verb|writeto| is
 available to close an output file opened by \verb|appendto|.
 
 \subsubsection*{\ff \T{remove (filename)}}\Deffunc{remove}
@@ -2594,7 +2613,7 @@ The file must be explicitly removed when no longer needed.
 
 This function reads the file \verb|_INPUT|,
 or from \verb|filehandle| if this argument is given,
-according to a read pattern, that specifies how much to read;
+according to a read pattern, which specifies how much to read;
 characters are read from the input file until
 the read pattern fails or ends.
 The function \verb|read| returns a string with the characters read,
@@ -2616,7 +2635,7 @@ it never fails.
 A character class followed by \verb|*| reads until a character that
 does not belong to the class, or end of file;
 since it can match a sequence of zero characters, it never fails.
-Notice that the behavior of read patterns is slightly different from
+Note that the behavior of read patterns is slightly different from
 the regular pattern matching behavior,
 where a \verb|*| expands to the maximum length \emph{such that}
 the rest of the pattern does not fail.
@@ -2677,7 +2696,7 @@ The default value for \verb|code| is 1.
 
 \subsubsection*{\ff \T{getenv (varname)}}\Deffunc{getenv}
 
-Returns the value of the environment variable \verb|varname|,
+Returns the value of the process environment variable \verb|varname|,
 or \nil\ if the variable is not defined.
 
 \subsubsection*{\ff \T{execute (command)}}\Deffunc{execute}
@@ -2690,10 +2709,10 @@ It returns an error code, which is system-dependent.
 
 This function is an interface to the ANSI C function \verb|setlocale|.
 \verb|locale| is a string specifying a locale;
-\verb|category| is a number describing which category to change:
-0 is \verb|LC_ALL|, 1 is \verb|LC_COLLATE|, 2 is \verb|LC_CTYPE|,
-3 is \verb|LC_MONETARY|, 4 is \verb|LC_NUMERIC|, and 5 is \verb|LC_TIME|;
-the default category is \verb|LC_ALL|.
+\verb|category| is an optional string describing which category to change:
+\verb|"all"|, \verb|"collate"|, \verb|"ctype"|,
+\verb|"monetary"|, \verb|"numeric"|, or \verb|"time"|;
+the default category is \verb|"all"|.
 The function returns the name of the new locale,
 or \nil\ if the request cannot be honored.
 
@@ -2741,13 +2760,14 @@ given function has been defined.
 If the ``function'' is in fact the main code of a chunk,
 then \verb|linedefined| is 0.
 If the function is a C function,
-then \verb|linedefined| is \M{-1}, and \verb|filename| is \verb|"(C)"|.
+then \verb|linedefined| is \Math{-1}, and \verb|filename| is \verb|"(C)"|.
 
 The function \verb|lua_currentline| gives the current line where
 a given function is executing.
 It only works if the function has been compiled with debug
 information \see{pragma}.
-When no line information is available, it returns \M{-1}.
+When no line information is available,
+\verb|lua_currentline| returns \Math{-1}.
 
 Function \verb|lua_getobjname| tries to find a reasonable name for
 a given function.
@@ -2870,6 +2890,10 @@ Therefore, the prompt can be changed like below:
 $ lua _PROMPT='myprompt> ' -i
 \end{verbatim}
 
+In Unix systems, Lua scripts can be made into executable programs
+by using the \verb|#!| form,
+as in \verb|#!/usr/local/bin/lua|.
+
 \section*{Acknowledgments}
 
 The authors would like to thank CENPES/PETROBRAS which,
@@ -2897,8 +2921,8 @@ Here is a list of all these incompatibilities.
 Lua 3.1 must be explicitly opened before used,
 with function \verb|lua_open|.
 However, all standard libraries check whether Lua is already opened,
-so any program that opens at least one standard library before calling
-Lua does not need to be modified.
+so any existing program that opens at least one standard
+library before calling Lua does not need to be modified.
 
 \item Function \verb|dostring| no longer accepts an optional second argument,
 with a temporary error method.
