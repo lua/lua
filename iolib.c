@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.10 1994/10/07 22:47:05 celes Exp celes $";
+char *rcs_iolib="$Id: iolib.c,v 1.11 1994/10/13 17:18:32 celes Exp celes $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -374,7 +374,7 @@ static void io_readuntil (void)
 */
 static char *buildformat (char *e, lua_Object o)
 {
- static char buffer[512];
+ static char buffer[2048];
  static char f[80];
  char *string = &buffer[255];
  char *fstart=e, *fspace, *send;
