@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.38 1999/07/22 19:29:42 roberto Exp roberto $
+** $Id: lparser.c,v 1.39 1999/08/16 20:52:00 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -52,7 +52,7 @@
 
 /*
 ** Variable descriptor:
-** must include an "exp" option because LL(1) cannot distinguish
+** must include an `exp' option because LL(1) cannot distinguish
 ** between variables, upvalues and function calls on first sight.
 */
 typedef enum {
@@ -60,7 +60,7 @@ typedef enum {
   VLOCAL,   /* info is stack index */
   VDOT,     /* info is constant index of index name */
   VINDEXED, /* no info (table and index are on the stack) */
-  VEXP      /* info is pc index of "nparam" of a call (or 0 if exp is closed) */
+  VEXP      /* info is pc index of `nparam' of a call (or 0 if exp is closed) */
 } varkind;
 
 typedef struct vardesc {
@@ -83,7 +83,7 @@ typedef struct listdesc {
 
 /*
 ** Constructors descriptor:
-** "n" indicates number of elements, and "k" signals whether
+** `n' indicates number of elements, and `k' signals whether
 ** it is a list constructor (k = 0) or a record constructor (k = 1)
 ** or empty (k = ';' or '}')
 */
@@ -451,7 +451,7 @@ static void adjust_mult_assign (LexState *ls, int nvars, listdesc *d) {
 
 static void code_args (LexState *ls, int nparams, int dots) {
   FuncState *fs = ls->fs;
-  fs->nlocalvar += nparams;  /* "self" may already be there */
+  fs->nlocalvar += nparams;  /* `self' may already be there */
   checklimit(ls, fs->nlocalvar, MAXPARAMS, "parameters");
   nparams = fs->nlocalvar;
   if (!dots) {
@@ -666,7 +666,8 @@ static int checkname (LexState *ls) {
 
 
 static TaggedString *str_checkname (LexState *ls) {
-  return tsvalue(&ls->fs->f->consts[checkname(ls)]);
+  int i = checkname(ls);  /* this call may realloc `f->consts' */
+  return tsvalue(&ls->fs->f->consts[i]);
 }
 
 
@@ -794,7 +795,7 @@ static int stat (LexState *ls) {
       }
       else {  /* stat -> ['%'] NAME assignment */
         int left = assignment(ls, &v, 1);
-        adjuststack(ls, left);  /* remove eventual 'garbage' left on stack */
+        adjuststack(ls, left);  /* remove eventual garbage left on stack */
       }
       return 1;
     }
@@ -987,7 +988,7 @@ static void simpleexp (LexState *ls, vardesc *v, stack_op *s) {
       real r = ls->seminfo.r;
       next(ls);
       /* dirty trick: check whether it is a -NUMBER not followed by '^' */
-      /* (because the priority of '^' is closer than '-'...)            */
+      /* (because the priority of '^' is higher than '-'...)            */
       if (s->top > 0 && s->ops[s->top-1] == INDMINUS && ls->token != '^') {
         s->top--;  /* remove '-' from stack */
         r = -r;
@@ -997,7 +998,7 @@ static void simpleexp (LexState *ls, vardesc *v, stack_op *s) {
     }
 
     case STRING:  /* simpleexp -> STRING */
-      code_string(ls, ls->seminfo.ts);  /* must use 'seminfo' before "next" */
+      code_string(ls, ls->seminfo.ts);  /* must use 'seminfo' before `next' */
       next(ls);
       break;
 
@@ -1083,14 +1084,14 @@ static void var_or_func_tail (LexState *ls, vardesc *v) {
     switch (ls->token) {
       case '.':  /* var_or_func_tail -> '.' NAME */
         next(ls);
-        lua_pushvar(ls, v);  /* 'v' must be on stack */
+        lua_pushvar(ls, v);  /* `v' must be on stack */
         v->k = VDOT;
         v->info = checkname(ls);
         break;
 
       case '[':  /* var_or_func_tail -> '[' exp1 ']' */
         next(ls);
-        lua_pushvar(ls, v);  /* 'v' must be on stack */
+        lua_pushvar(ls, v);  /* `v' must be on stack */
         exp1(ls);
         check(ls, ']');
         v->k = VINDEXED;
@@ -1098,14 +1099,14 @@ static void var_or_func_tail (LexState *ls, vardesc *v) {
 
       case ':':  /* var_or_func_tail -> ':' NAME funcparams */
         next(ls);
-        lua_pushvar(ls, v);  /* 'v' must be on stack */
+        lua_pushvar(ls, v);  /* `v' must be on stack */
         code_oparg(ls, PUSHSELF, checkname(ls), 1);
         v->k = VEXP;
         v->info = funcparams(ls, 1);
         break;
 
       case '(': case STRING: case '{':  /* var_or_func_tail -> funcparams */
-        lua_pushvar(ls, v);  /* 'v' must be on stack */
+        lua_pushvar(ls, v);  /* `v' must be on stack */
         v->k = VEXP;
         v->info = funcparams(ls, 0);
         break;
@@ -1135,7 +1136,7 @@ static int funcparams (LexState *ls, int slf) {
       break;
 
     case STRING:  /* funcparams -> STRING */
-      code_string(ls, ls->seminfo.ts);  /* must use 'seminfo' before "next" */
+      code_string(ls, ls->seminfo.ts);  /* must use 'seminfo' before `next' */
       next(ls);
       break;
 
