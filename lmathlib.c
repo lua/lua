@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.7 1997/12/09 13:35:19 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.8 1997/12/26 18:36:31 roberto Exp roberto $
 ** Lua standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -115,6 +115,16 @@ static void math_rad (void)
   lua_pushnumber(luaL_check_number(1)*(PI/180.0));
 }
 
+static void math_frexp (void) {
+  int e;
+  lua_pushnumber(frexp(luaL_check_number(1), &e));
+  lua_pushnumber(e);
+}
+
+static void math_ldexp (void) {
+  lua_pushnumber(ldexp(luaL_check_number(1), luaL_check_number(2)));
+}
+
 
 
 static void math_min (void)
@@ -170,10 +180,12 @@ static struct luaL_reg mathlib[] = {
 {"asin",  math_asin},
 {"acos",  math_acos},
 {"atan",  math_atan},
-{"atan2",  math_atan2},
+{"atan2", math_atan2},
 {"ceil",  math_ceil},
 {"floor", math_floor},
 {"mod",   math_mod},
+{"frexp", math_frexp},
+{"ldexp", math_ldexp},
 {"sqrt",  math_sqrt},
 {"min",   math_min},
 {"max",   math_max},

@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.9 1998/05/18 22:26:03 roberto Exp roberto $
+% $Id: manual.tex,v 1.10 1998/05/20 22:21:35 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -38,7 +38,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1998/05/18 22:26:03 $}
+\date{\small \verb$Date: 1998/05/20 22:21:35 $}
 
 \maketitle
 
@@ -2398,10 +2398,12 @@ The library provides the following functions:
 \Deffunc{atan2}\Deffunc{ceil}\Deffunc{cos}\Deffunc{floor}
 \Deffunc{log}\Deffunc{log10}\Deffunc{max}\Deffunc{min}
 \Deffunc{mod}\Deffunc{sin}\Deffunc{sqrt}\Deffunc{tan}
+\Deffunc{frexp}\Deffunc{ldexp}
 \Deffunc{random}\Deffunc{randomseed}
 \begin{verbatim}
-abs acos asin atan atan2 ceil cos deg floor log log10
-max min  mod  rad  sin   sqrt tan random    randomseed
+abs acos asin atan atan2 ceil cos deg   floor log log10
+max min  mod  rad  sin   sqrt tan frexp ldexp
+random   randomseed
 \end{verbatim}
 plus a global variable \IndexVerb{PI}.
 Most of them
