@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.29 1995/11/10 18:32:59 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.31 1996/01/22 17:38:57 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -177,32 +177,6 @@ static char getformat (char *f, int *just, int *m, int *n)
 }
 
 
-static char *add_char (int c)
-{
-  static char *buff = NULL;
-  static int max = 0;
-  static int n = 0;
-  if (n >= max)
-  {
-    if (max == 0)
-    {
-      max = 100;
-      buff = (char *)malloc(max);
-    }
-    else
-    {
-      max *= 2;
-      buff = (char *)realloc(buff, max);
-    }
-    if (buff == NULL)
-      lua_error("memory overflow");
-  }
-  buff[n++] = c;
-  if (c == 0)
-    n = 0;  /* prepare for next string */
-  return buff;
-}
-
 /*
 ** Read a variable. On error put nil on stack.
 ** LUA interface:
@@ -222,7 +196,7 @@ static int read_until_char (int del)
 {
   int c;
   while((c = fgetc(in)) != EOF && c != del)
-    add_char(c);
+    luaI_addchar(c);
   return c;
 }
 
@@ -230,7 +204,7 @@ static int read_until_blank (void)
 {
   int c;
   while((c = fgetc(in)) != EOF && !isspace(c))
-    add_char(c);
+    luaI_addchar(c);
   return c;
 }
 
@@ -238,7 +212,7 @@ static void read_m (int m)
 {
   int c;
   while (m-- && (c = fgetc(in)) != EOF)
-    add_char(c);
+    luaI_addchar(c);
 }
 
 
@@ -256,21 +230,18 @@ static void read_free (void)
   { /* string */
     c = read_until_char(c);
     if (c == EOF)
-    {
-      add_char(0);  /* to be ready for next time */
       lua_pushnil();
-    }
     else
-      lua_pushstring(add_char(0));
+      lua_pushstring(luaI_addchar(0));
   }
   else
   {
     double d;
     char dummy;
     char *s;
-    add_char(c);
+    luaI_addchar(c);
     read_until_blank();
-    s = add_char(0);
+    s = luaI_addchar(0);
     if (sscanf(s, "%lf %c", &d, &dummy) == 1)
       lua_pushnumber(d);
     else
@@ -281,6 +252,7 @@ static void read_free (void)
 static void io_read (void)
 {
   lua_Object o = lua_getparam (1);
+  luaI_addchar(0);  /* initialize buffer */
   if (o == LUA_NOOBJECT) 	/* free format */
     read_free();
   else				/* formatted */
@@ -295,7 +267,7 @@ static void io_read (void)
           read_until_blank();
         else
           read_m(m);
-        s = add_char(0);
+        s = luaI_addchar(0);
         if ((m >= 0 && strlen(s) == m) || (m < 0 && strlen(s) > 0))
           lua_pushstring(s);
         else
@@ -313,7 +285,7 @@ static void io_read (void)
         else
         {
           read_m(m);
-          result = sscanf(add_char(0), "%lf", &d);
+          result = sscanf(luaI_addchar(0), "%lf", &d);
         }
         if (result == 1)
           lua_pushnumber(d);
@@ -333,13 +305,14 @@ static void io_readuntil (void)
 {
  int del, c;
  lua_Object p = lua_getparam(1);
+ luaI_addchar(0);  /* initialize buffer */
  if (p == LUA_NOOBJECT || lua_isnil(p))
    del = EOF;
  else
   del = *lua_check_string(1, "readuntil");
  c = read_until_char(del);
  if (c != EOF) ungetc(c,in);
- lua_pushstring(add_char(0));
+ lua_pushstring(luaI_addchar(0));
 }
 
 
@@ -512,7 +485,7 @@ static void io_time (void)
 }
  
 /*
-** Return date: dd, mm, yyyy
+** Return date: dd, mm, yyyy, weekday
 */
 static void io_date (void)
 {
@@ -524,6 +497,7 @@ static void io_date (void)
  lua_pushnumber(s->tm_mday);
  lua_pushnumber(s->tm_mon+1);
  lua_pushnumber(s->tm_year+1900);
+ lua_pushnumber(s->tm_wday+1);
 }
  
 /*
@@ -632,3 +606,25 @@ void iolib_open (void)
  lua_setfallback("error", errorfb);
 }
 
+/*
+** Return user formatted time stamp
+*
+static void sys_localtime (void)
+{
+ time_t t;
+ struct tm *tm;
+ lua_Object o = lua_getparam(1);
+
+ time(&t); tm = localtime(&t);
+ if (lua_isstring(o))
+ {
+  char b[BUFSIZ];
+  if (strftime(b,sizeof(b),lua_getstring(o),tm)==0)
+   lua_pushstring(ctime(&t));
+  else
+   lua_pushstring(b);
+ }
+ else
+  lua_pushstring(ctime(&t));
+}
+*/
