@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.183 2003/12/03 12:30:41 roberto Exp roberto $
+** $Id: lgc.c,v 1.184 2003/12/03 20:03:07 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -430,14 +430,14 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, int all,
   GCObject *curr;
   global_State *g = G(L);
   l_mem lim = *plim;
-  int white = otherwhite(g);
+  int dead = otherwhite(g);
   while ((curr = *p) != NULL) {
     int mark = curr->gch.marked;
     lua_assert(all || !(mark & g->currentwhite));
-    if (!all && (!(mark & white) || testbit(mark, FIXEDBIT))) {
+    lim -= objsize(curr);
+    if (!all && (!(mark & dead) || testbit(mark, FIXEDBIT))) {
       makewhite(g, curr);
       p = &curr->gch.next;
-      lim -= objsize(curr);
     }
     else {
       *p = curr->gch.next;
@@ -450,27 +450,32 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, int all,
 }
 
 
-static void sweepstrings (lua_State *L, int all) {
+static l_mem sweepstrings (lua_State *L, int all, l_mem lim) {
   int i;
   global_State *g = G(L);
-  int white = otherwhite(g);
-  for (i = 0; i < g->strt.size; i++) {  /* for each list */
+  int dead = otherwhite(g);
+  for (i = g->sweepstrgc; i < g->strt.size; i++) {  /* for each list */
     GCObject *curr;
     GCObject **p = &G(L)->strt.hash[i];
     while ((curr = *p) != NULL) {
       int mark = curr->gch.marked;
+      lu_mem size = sizestring(gcotots(curr)->tsv.len);
       lua_assert(all || !(mark & g->currentwhite));
-      if (!all && (!(mark & white) || testbit(mark, FIXEDBIT))) {
+      if (!all && (!(mark & dead) || testbit(mark, FIXEDBIT))) {
         makewhite(g, curr);
         p = &curr->gch.next;
       }
       else {
         g->strt.nuse--;
         *p = curr->gch.next;
-        luaM_free(L, curr, sizestring(gcotots(curr)->tsv.len));
+        luaM_free(L, curr, size);
       }
+      lim -= size;
     }
+    if (lim <= 0) break;
   }
+  g->sweepstrgc = i+1;
+  return lim;
 }
 
 
@@ -527,7 +532,8 @@ void luaC_callGCTM (lua_State *L) {
 
 void luaC_sweepall (lua_State *L) {
   l_mem dummy = MAXLMEM;
-  sweepstrings(L, 1);
+  G(L)->sweepstrgc = 0;
+  sweepstrings(L, 1, dummy);
   sweeplist(L, &G(L)->rootgc, 1, &dummy);
 }
 
@@ -540,7 +546,6 @@ static void markroot (lua_State *L) {
   makewhite(g, valtogco(g->mainthread));
   markobject(g, g->mainthread);
   markvalue(g, registry(L));
-  markobject(g, g->firstudata);
   markobject(g, L);  /* mark running thread */
   g->gcstate = GCSpropagate;
 }
@@ -552,14 +557,25 @@ static void atomic (lua_State *L) {
   marktmu(g);  /* mark `preserved' userdata */
   propagatemarks(g, MAXLMEM);  /* remark, to propagate `preserveness' */
   cleartable(g->weak);  /* remove collected objects from weak tables */
-  /* echange current white */
+  /* flip current white */
   g->currentwhite = otherwhite(g);
   /* first element of root list will be used as temporary head for sweep
-     phase, so it won't be seeped */
+     phase, so it won't be swept */
   makewhite(g, g->rootgc);
   g->sweepgc = &g->rootgc->gch.next;
-  sweepstrings(L, 0);
-  g->gcstate = GCSsweep;
+  g->sweepstrgc = 0;
+  g->gcstate = GCSsweepstring;
+}
+
+
+static void sweepstringstep (lua_State *L) {
+  global_State *g = G(L);
+  l_mem lim = sweepstrings(L, 0, GCSTEPSIZE);
+  if (lim == GCSTEPSIZE) {  /* nothing more to sweep? */
+    lua_assert(g->sweepstrgc > g->strt.size);
+    g->sweepstrgc = 0;
+    g->gcstate = GCSsweep;  /* end sweep-string phase */
+  }
 }
 
 
@@ -567,9 +583,8 @@ static void sweepstep (lua_State *L) {
   global_State *g = G(L);
   l_mem lim = GCSTEPSIZE;
   g->sweepgc = sweeplist(L, g->sweepgc, 0, &lim);
-  if (lim == GCSTEPSIZE) {  /* nothing more to sweep? */
+  if (lim == GCSTEPSIZE)  /* nothing more to sweep? */
     g->gcstate = GCSfinalize;  /* end sweep phase */
-  }
 }
 
 
@@ -582,6 +597,9 @@ void luaC_collectgarbage (lua_State *L) {
     propagatemarks(g, GCSTEPSIZE);
   /* atomic */
   atomic(L);
+  /* GCSsweepstring */
+  while (g->gcstate == GCSsweepstring)
+    sweepstringstep(L);
   /* GCSsweep */
   while (g->gcstate == GCSsweep)
     sweepstep(L);
