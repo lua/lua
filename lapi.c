@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.41 1999/03/04 21:17:26 roberto Exp roberto $
+** $Id: lapi.c,v 1.42 1999/03/26 13:14:00 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -637,16 +637,22 @@ char *lua_getobjname (lua_Object o, char **name)
 */
 
 
-void lua_beginblock (void)
-{
-  if (L->numCblocks >= MAX_C_BLOCKS)
-    lua_error("too many nested blocks");
+#ifndef	MAX_C_BLOCKS
+#define MAX_C_BLOCKS	500
+#endif
+
+
+void lua_beginblock (void) {
+  if (L->numCblocks >= L->sizeCblocks) {
+    luaM_growvector(L->Cblocks, L->numCblocks, 1, struct C_Lua_Stack,
+                    "too many nested blocks", MAX_C_BLOCKS);
+    L->sizeCblocks++;
+  }
   L->Cblocks[L->numCblocks] = L->Cstack;
   L->numCblocks++;
 }
 
-void lua_endblock (void)
-{
+void lua_endblock (void) {
   --L->numCblocks;
   L->Cstack = L->Cblocks[L->numCblocks];
   luaD_adjusttop(L->Cstack.base);
@@ -654,8 +660,7 @@ void lua_endblock (void)
 
 
 
-int lua_ref (int lock)
-{
+int lua_ref (int lock) {
   int ref;
   checkCparams(1);
   ref = luaC_ref(L->stack.top-1, lock);
@@ -665,8 +670,7 @@ int lua_ref (int lock)
 
 
 
-lua_Object lua_getref (int ref)
-{
+lua_Object lua_getref (int ref) {
   TObject *o = luaC_getref(ref);
   return (o ? put_luaObject(o) : LUA_NOOBJECT);
 }
