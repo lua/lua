@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.35 2000/08/28 17:57:04 roberto Exp roberto $
+** $Id: ltests.c,v 1.36 2000/08/29 14:57:10 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -239,6 +239,89 @@ static int string_query (lua_State *L) {
 }
 
 
+static int tref (lua_State *L) {
+  luaL_checktype(L, 1, "any");
+  lua_pushobject(L, 1);
+  lua_pushnumber(L, lua_ref(L, luaL_opt_int(L, 2, 1)));
+  return 1;
+}
+
+static int getref (lua_State *L) {
+  if (lua_getref(L, luaL_check_int(L, 1)))
+    return 1;
+  else
+    return 0;
+}
+
+static int unref (lua_State *L) {
+  lua_unref(L, luaL_check_int(L, 1));
+  return 0;
+}
+
+static int newuserdata (lua_State *L) {
+  lua_pushusertag(L, (void *)luaL_check_int(L, 1), luaL_check_int(L, 2));
+  return 1;
+}
+
+static int udataval (lua_State *L) {
+  luaL_checktype(L, 1, "userdata");
+  lua_pushnumber(L, (int)lua_touserdata(L, 1));
+  return 1;
+}
+
+static int newstate (lua_State *L) {
+  lua_State *L1 = lua_newstate(luaL_check_int(L, 1), luaL_check_int(L, 2));
+  if (L1)
+    lua_pushuserdata(L, L1);
+  else
+    lua_pushnil(L);
+  return 1;
+}
+
+static int closestate (lua_State *L) {
+  luaL_checktype(L, 1, "userdata");
+  lua_close((lua_State *)lua_touserdata(L, 1));
+  return 0;
+}
+
+static int doremote (lua_State *L) {
+  lua_State *L1;
+  const char *code = luaL_check_string(L, 2);
+  int status;
+  luaL_checktype(L, 1, "userdata");
+  L1 = (lua_State *)lua_touserdata(L, 1);
+  status = lua_dostring(L1, code);
+  if (status != 0) {
+    lua_pushnil(L);
+    lua_pushnumber(L, status);
+    return 2;
+  }
+  else {
+    int i = 0;
+    while (!lua_isnull(L1, ++i))
+      lua_pushstring(L, lua_tostring(L1, i));
+    return i-1;
+  }
+}
+
+static int settagmethod (lua_State *L) {
+  luaL_checktype(L, 3, "any");
+  lua_settagmethod(L, luaL_check_int(L, 1), luaL_check_string(L, 2));
+  return 1;
+}
+
+static int pushbool (lua_State *L, int b) {
+  if (b) lua_pushnumber(L, 1);
+  else lua_pushnil(L);
+  return 1;
+}
+
+static int equal (lua_State *L) {
+  return pushbool(L, lua_equal(L, 1, 2));
+}
+
+  
+
 /*
 ** {======================================================
 ** function to test the API with C. It interprets a kind of "assembler"
@@ -321,33 +404,8 @@ static int testC (lua_State *L) {
     else if EQ("pushnum") {
       lua_pushnumber(L, getnum);
     }
-    else if EQ("newtable") {
-      lua_newtable(L);
-    }
     else if EQ("pushobject") {
       lua_pushobject(L, getnum);
-    }
-    else if EQ("getglobal") {
-      lua_getglobal(L, getname);
-    }
-    else if EQ("getglobals") {
-      lua_getglobals(L);
-    }
-    else if EQ("ref") {
-      reg[getreg] = lua_ref(L, 0);
-    }
-    else if EQ("reflock") {
-      reg[getreg] = lua_ref(L, 1);
-    }
-    else if EQ("getref") {
-      int n = getreg;
-      reg[n] = lua_getref(L, getnum);
-    }
-    else if EQ("unref") {
-      lua_unref(L, getnum);
-    }
-    else if EQ("setglobal") {
-      lua_setglobal(L, getname);
     }
     else if EQ("pushstring") {
       lua_pushstring(L, getname);
@@ -357,97 +415,8 @@ static int testC (lua_State *L) {
       int nres = getnum;
       if (lua_call(L, narg, nres)) lua_error(L, NULL);
     }
-    else if EQ("gettable") {
-      lua_gettable(L);
-    }
-    else if EQ("rawget") {
-      lua_rawget(L);
-    }
-    else if EQ("settable") {
-      lua_settable(L);
-    }
-    else if EQ("rawset") {
-      lua_rawset(L);
-    }
-    else if EQ("tag") {
-      int n = getreg;
-      reg[n] = lua_tag(L, getnum);
-    }
     else if EQ("type") {
       lua_pushstring(L, lua_type(L, getnum));
-    }
-    else if EQ("isnil") {
-      lua_pushnumber(L, lua_isnil(L, getnum));
-    }
-    else if EQ("isnull") {
-      lua_pushnumber(L, lua_isnull(L, getnum));
-    }
-    else if EQ("isnumber") {
-      lua_pushnumber(L, lua_isnumber(L, getnum));
-    }
-    else if EQ("isstring") {
-      lua_pushnumber(L, lua_isstring(L, getnum));
-    }
-    else if EQ("istable") {
-      lua_pushnumber(L, lua_istable(L, getnum));
-    }
-    else if EQ("isfunction") {
-      lua_pushnumber(L, lua_isfunction(L, getnum));
-    }
-    else if EQ("iscfunction") {
-      lua_pushnumber(L, lua_iscfunction(L, getnum));
-    }
-    else if EQ("isuserdata") {
-      lua_pushnumber(L, lua_isuserdata(L, getnum));
-    }
-    else if EQ("equal") {
-      int n1 = getreg;
-      int n2 = getnum;
-      int n3 = getnum;
-      reg[n1] = lua_equal(L, n2, n3);
-    }
-    else if EQ("pushusertag") {
-      int val = getnum;
-      int tag = getnum;
-      lua_pushusertag(L, (void *)val, tag);
-    }
-    else if EQ("udataval") {
-      int n = getreg;
-      reg[n] = (int)lua_touserdata(L, getnum);
-    }
-    else if EQ("settagmethod") {
-      int n = getnum;
-      lua_settagmethod(L, n, getname);
-    }
-    else if EQ("newstate") {
-      int stacksize = getnum;
-      lua_State *L1 = lua_newstate(stacksize, getnum);
-      if (L1)
-        lua_pushuserdata(L, L1);
-      else
-        lua_pushnil(L);
-    }
-    else if EQ("closestate") {
-      (lua_close)((lua_State *)lua_touserdata(L, getnum));
-    }
-    else if EQ("doremote") {
-      int ol1 = getnum;
-      int str = getnum;
-      lua_State *L1;
-      int status;
-      if (!lua_isuserdata(L, ol1) || !lua_isstring(L, str))
-        lua_error(L, "bad arguments for `doremote'");
-      L1 = (lua_State *)lua_touserdata(L, ol1);
-      status = lua_dostring(L1, lua_tostring(L, str));
-      if (status != 0) {
-        lua_pushnil(L);
-        lua_pushnumber(L, status);
-      }
-      else {
-        int i = 0;
-        while (!lua_isnull(L1, ++i))
-          lua_pushstring(L, lua_tostring(L1, i));
-      }
     }
     else luaL_verror(L, "unknown instruction %.30s", buff);
   }
@@ -467,12 +436,28 @@ static const struct luaL_reg tests_funcs[] = {
   {"querystr", string_query},
   {"querytab", table_query},
   {"testC", testC},
+  {"ref", tref},
+  {"getref", getref},
+  {"unref", unref},
+  {"newuserdata", newuserdata},
+  {"udataval", udataval},
+  {"newstate", newstate},
+  {"closestate", closestate},
+  {"doremote", doremote},
+  {"settagmethod", settagmethod},
+  {"equal", equal},
   {"totalmem", mem_query}
 };
 
 
 void luaB_opentests (lua_State *L) {
-  luaL_openl(L, tests_funcs);
+  lua_newtable(L);
+  lua_getglobals(L);
+  lua_pushobject(L, -2);
+  lua_setglobals(L);
+  luaL_openl(L, tests_funcs);  /* open functions inside new table */
+  lua_setglobals(L);  /* restore old table of globals */
+  lua_setglobal(L, "T");  /* set new table as global T */
 }
 
 #endif
