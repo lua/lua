@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.160 2001/11/16 16:29:51 roberto Exp $
+** $Id: lapi.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -45,8 +45,8 @@ static TObject *negindex (lua_State *L, int index) {
     return L->top+index;
   }
   else switch (index) {  /* pseudo-indices */
-    case LUA_REGISTRYINDEX: return &G(L)->registry;
-    case LUA_GLOBALSINDEX: return &L->gt;
+    case LUA_REGISTRYINDEX: return registry(L);
+    case LUA_GLOBALSINDEX: return gt(L);
     default: {
       TObject *func = (L->ci->base - 1);
       index = LUA_GLOBALSINDEX - index;
@@ -149,20 +149,15 @@ LUA_API void lua_pushvalue (lua_State *L, int index) {
 */
 
 
-LUA_API int lua_rawtag (lua_State *L, int index) {
+LUA_API int lua_type (lua_State *L, int index) {
   StkId o = luaA_indexAcceptable(L, index);
   return (o == NULL) ? LUA_TNONE : ttype(o);
 }
 
 
-LUA_API const char *lua_type (lua_State *L, int index) {
-  StkId o;
-  const char *type;
-  lua_lock(L);
-  o = luaA_indexAcceptable(L, index);
-  type = (o == NULL) ? "no value" : luaT_typename(G(L), o);
-  lua_unlock(L);
-  return type;
+LUA_API const char *lua_typename (lua_State *L, int t) {
+  UNUSED(L);
+  return (t == LUA_TNONE) ? "no value" : luaT_typenames[t];
 }
 
 
@@ -180,19 +175,8 @@ LUA_API int lua_isnumber (lua_State *L, int index) {
 
 
 LUA_API int lua_isstring (lua_State *L, int index) {
-  int t = lua_rawtag(L, index);
+  int t = lua_type(L, index);
   return (t == LUA_TSTRING || t == LUA_TNUMBER);
-}
-
-
-LUA_API int lua_tag (lua_State *L, int index) {
-  StkId o;
-  int i;
-  lua_lock(L);  /* other thread could be changing the tag */
-  o = luaA_indexAcceptable(L, index);
-  i = (o == NULL) ? LUA_NOTAG : luaT_tag(o);
-  lua_unlock(L);
-  return i;
 }
 
 
@@ -346,8 +330,10 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
 
 
 LUA_API void lua_getglobal (lua_State *L, const char *name) {
+  TObject o;
   lua_lock(L);
-  luaV_getglobal(L, luaS_new(L, name), L->top);
+  setsvalue(&o, luaS_new(L, name));
+  luaV_gettable(L, gt(L), &o, L->top);
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -391,6 +377,29 @@ LUA_API void lua_newtable (lua_State *L) {
 }
 
 
+LUA_API void lua_geteventtable (lua_State *L, int objindex) {
+  StkId obj;
+  Table *et;
+  lua_lock(L);
+  obj = luaA_indexAcceptable(L, objindex);
+  switch (ttype(obj)) {
+    case LUA_TTABLE:
+      et = hvalue(obj)->eventtable;
+      break;
+    case LUA_TUSERDATA:
+      et = uvalue(obj)->uv.eventtable;
+      break;
+    default:
+      et = hvalue(defaultet(L));
+  }
+  if (et == hvalue(defaultet(L)))
+    setnilvalue(L->top);
+  else
+    sethvalue(L->top, et);
+  api_incr_top(L);
+  lua_unlock(L);
+}
+
 
 /*
 ** set functions (stack -> Lua)
@@ -398,9 +407,11 @@ LUA_API void lua_newtable (lua_State *L) {
 
 
 LUA_API void lua_setglobal (lua_State *L, const char *name) {
+  TObject o;
   lua_lock(L);
   api_checknelems(L, 1);
-  luaV_setglobal(L, luaS_new(L, name), L->top - 1);
+  setsvalue(&o, luaS_new(L, name));
+  luaV_settable(L, gt(L), &o, L->top - 1);
   L->top--;  /* remove element from the top */
   lua_unlock(L);
 }
@@ -447,10 +458,31 @@ LUA_API void lua_setglobals (lua_State *L) {
   api_checknelems(L, 1);
   newtable = --L->top;
   api_check(L, ttype(newtable) == LUA_TTABLE);
-  setobj(&L->gt, newtable);
+  setobj(gt(L), newtable);
   lua_unlock(L);
 }
 
+
+LUA_API void lua_seteventtable (lua_State *L, int objindex) {
+  StkId obj, et;
+  lua_lock(L);
+  api_checknelems(L, 1);
+  obj = luaA_indexAcceptable(L, objindex);
+  et = --L->top;
+  api_check(L, ttype(et) == LUA_TTABLE);
+  switch (ttype(obj)) {
+    case LUA_TTABLE:
+      hvalue(obj)->eventtable = hvalue(et);
+      break;
+    case LUA_TUSERDATA:
+      uvalue(obj)->uv.eventtable = hvalue(et);
+      break;
+    default:
+      luaO_verror(L, "cannot change the event table of a %.20s",
+                  luaT_typenames[ttype(obj)]);
+  }
+  lua_unlock(L);
+}
 
 
 /*
@@ -532,70 +564,6 @@ LUA_API void lua_setgcthreshold (lua_State *L, int newthreshold) {
 /*
 ** miscellaneous functions
 */
-
-LUA_API int lua_newtype (lua_State *L, const char *name, int basictype) {
-  int tag;
-  lua_lock(L);
-  if (basictype != LUA_TNONE &&
-      basictype != LUA_TTABLE &&
-      basictype != LUA_TUSERDATA)
-    luaO_verror(L, "invalid basic type (%d) for new type", basictype);
-  tag = luaT_newtag(L, name, basictype);
-  if (tag == LUA_TNONE)
-    luaO_verror(L, "type name '%.30s' already exists", name);
-  lua_unlock(L);
-  return tag;
-}
-
-
-LUA_API int lua_name2tag (lua_State *L, const char *name) {
-  int tag;
-  const TObject *v;
-  lua_lock(L);
-  v = luaH_getstr(G(L)->type2tag, luaS_new(L, name));
-  if (ttype(v) == LUA_TNIL)
-    tag = LUA_TNONE;
-  else {
-    lua_assert(ttype(v) == LUA_TNUMBER);
-    tag = cast(int, nvalue(v));
-  }
-  lua_unlock(L);
-  return tag;
-}
-
-
-LUA_API const char *lua_tag2name (lua_State *L, int tag) {
-  const char *s;
-  lua_lock(L);
-  s = (tag == LUA_TNONE) ? "no value" : typenamebytag(G(L), tag);
-  lua_unlock(L);
-  return s;
-}
-
-
-LUA_API void lua_settag (lua_State *L, int tag) {
-  int basictype;
-  lua_lock(L);
-  api_checknelems(L, 1);
-  if (tag < 0 || tag >= G(L)->ntag)
-    luaO_verror(L, "%d is not a valid tag", tag);
-  basictype = G(L)->TMtable[tag].basictype;
-  if (basictype != LUA_TNONE && basictype != ttype(L->top-1))
-    luaO_verror(L, "tag %d can only be used for type '%.20s'", tag,
-                typenamebytag(G(L), basictype));
-  switch (ttype(L->top-1)) {
-    case LUA_TTABLE:
-      hvalue(L->top-1)->htag = tag;
-      break;
-    case LUA_TUSERDATA:
-      uvalue(L->top-1)->uv.tag = tag;
-      break;
-    default:
-      luaO_verror(L, "cannot change the tag of a %.20s",
-                  luaT_typename(G(L), L->top-1));
-  }
-  lua_unlock(L);
-}
 
 
 LUA_API void lua_error (lua_State *L, const char *s) {

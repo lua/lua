@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.124 2001/10/26 17:33:30 roberto Exp $
+** $Id: liolib.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -61,6 +61,7 @@ static int pushresult (lua_State *L, int i) {
 }
 
 
+
 /*
 ** {======================================================
 ** FILE Operations
@@ -68,14 +69,30 @@ static int pushresult (lua_State *L, int i) {
 */
 
 
-#define checkfile(L,f)	(strcmp(lua_type(L,(f)), FILEHANDLE) == 0)
+
+static int checkfile (lua_State *L, int findex, const char *tname) {
+  int res;
+  lua_geteventtable(L, findex);
+  lua_pushstring(L, tname);
+  lua_gettable(L, LUA_REGISTRYINDEX);
+  res = lua_equal(L, -1, -2);
+  lua_pop(L, 2);
+  return res;
+}
+
+
+/* temporary?? should be in auxlib... */
+static void *luaL_check_userdata (lua_State *L, int findex, const char *tn) {
+  luaL_arg_check(L, checkfile(L, findex, tn), findex, "bad file");
+  return lua_touserdata(L, findex);
+}
 
 
 static FILE *getopthandle (lua_State *L, int inout) {
   FILE *p = (FILE *)(lua_touserdata(L, 1));
   if (p != NULL) {  /* is it a userdata ? */
-    if (!checkfile(L, 1)) {  /* not a valid file handle? */
-      if (strcmp(lua_type(L, 1), CLOSEDFILEHANDLE) == 0)
+    if (!checkfile(L, 1, FILEHANDLE)) {  /* not a valid file handle? */
+      if (checkfile(L, 1, CLOSEDFILEHANDLE))
         luaL_argerror(L, 1, "file is closed");
       else
         luaL_argerror(L, 1, "(invalid value)");
@@ -84,7 +101,7 @@ static FILE *getopthandle (lua_State *L, int inout) {
   }
   else {  /* try global value */
     lua_getglobal(L, filenames[inout]);
-    if (!checkfile(L,-1))
+    if (!checkfile(L, -1, FILEHANDLE))
       luaL_verror(L, "global variable `%.10s' is not a valid file handle",
                   filenames[inout]);
     p = (FILE *)(lua_touserdata(L, -1));
@@ -95,7 +112,9 @@ static FILE *getopthandle (lua_State *L, int inout) {
 
 static void newfile (lua_State *L, FILE *f) {
   lua_newuserdatabox(L, f);
-  lua_settag(L, lua_name2tag(L, FILEHANDLE));
+  lua_pushliteral(L, FILEHANDLE);
+  lua_gettable(L, LUA_REGISTRYINDEX);
+  lua_seteventtable(L, -2);
 }
 
 
@@ -130,7 +149,9 @@ static int io_close (lua_State *L) {
   int status = 1;
   if (f != stdin && f != stdout && f != stderr) {
     lua_settop(L, 1);  /* make sure file is on top */
-    lua_settag(L, lua_name2tag(L, CLOSEDFILEHANDLE));
+    lua_pushliteral(L, CLOSEDFILEHANDLE);
+    lua_gettable(L, LUA_REGISTRYINDEX);
+    lua_seteventtable(L, 1);
     status = (CLOSEFILE(L, f) == 0);
   }
   return pushresult(L, status);
@@ -301,7 +322,7 @@ static int io_read (lua_State *L) {
     luaL_check_stack(L, nargs+LUA_MINSTACK, "too many arguments");
     success = 1;
     for (n = 1; n<=nargs && success; n++) {
-      if (lua_rawtag(L, n) == LUA_TNUMBER) {
+      if (lua_type(L, n) == LUA_TNUMBER) {
         size_t l = (size_t)lua_tonumber(L, n);
         success = (l == 0) ? test_eof(L, f) : read_chars(L, f, l);
       }
@@ -353,7 +374,7 @@ static int io_write (lua_State *L) {
   int arg;
   int status = 1;
   for (arg=1; arg<=nargs; arg++) {
-    if (lua_rawtag(L, arg) == LUA_TNUMBER) {
+    if (lua_type(L, arg) == LUA_TNUMBER) {
       /* optimization: could be done exactly as for strings */
       status = status &&
           fprintf(f, LUA_NUMBER_FMT, lua_tonumber(L, arg)) > 0;
@@ -514,7 +535,7 @@ static int io_time (lua_State *L) {
   else {
     time_t t;
     struct tm ts;
-    luaL_check_rawtype(L, 1, LUA_TTABLE);
+    luaL_check_type(L, 1, LUA_TTABLE);
     lua_settop(L, 1);  /* make sure table is at the top */
     ts.tm_sec = getfield(L, "sec", 0);
     ts.tm_min = getfield(L, "min", 0);
@@ -677,8 +698,18 @@ static const luaL_reg iolib[] = {
 
 
 LUALIB_API int lua_iolibopen (lua_State *L) {
-  int iotag = lua_newtype(L, FILEHANDLE, LUA_TUSERDATA);
-  lua_newtype(L, CLOSEDFILEHANDLE, LUA_TUSERDATA);
+  lua_pushliteral(L, FILEHANDLE);
+  lua_newtable(L);  /* event table for FILEHANDLE */
+  /* close files when collected */
+  lua_pushliteral(L, "gc");
+  lua_pushcfunction(L, file_collect);
+  lua_settable(L, -3);
+  /* put new eventtable into registry */
+  lua_settable(L, LUA_REGISTRYINDEX);  /* registry.FILEHANDLE = eventtable */
+  lua_pushliteral(L, CLOSEDFILEHANDLE);
+  /* event table for CLOSEDFILEHANDLE */
+  lua_newtable(L);
+  lua_settable(L, LUA_REGISTRYINDEX);
   luaL_openl(L, iolib);
   /* predefined file handles */
   newfilewithname(L, stdin, basicfiles[INFILE]);
@@ -686,9 +717,6 @@ LUALIB_API int lua_iolibopen (lua_State *L) {
   newfilewithname(L, stderr, "_STDERR");
   resetfile(L, INFILE);
   resetfile(L, OUTFILE);
-  /* close files when collected */
-  lua_pushcfunction(L, file_collect);
-  lua_settagmethod(L, iotag, "gc");
   return 0;
 }
 

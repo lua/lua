@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.53 2001/10/31 19:40:14 roberto Exp $
+** $Id: lauxlib.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -43,7 +43,8 @@ LUALIB_API void luaL_argerror (lua_State *L, int narg, const char *extramsg) {
 
 LUALIB_API void luaL_typerror (lua_State *L, int narg, const char *tname) {
   char buff[80];
-  sprintf(buff, "%.25s expected, got %.25s", tname, lua_type(L,narg));
+  sprintf(buff, "%.25s expected, got %.25s", tname,
+                                             lua_typename(L, lua_type(L,narg)));
   luaL_argerror(L, narg, buff);
 }
 
@@ -59,23 +60,15 @@ LUALIB_API void luaL_check_stack (lua_State *L, int space, const char *mes) {
 }
 
 
-LUALIB_API void luaL_check_rawtype(lua_State *L, int narg, int t) {
-  if (lua_rawtag(L, narg) != t)
+LUALIB_API void luaL_check_type(lua_State *L, int narg, int t) {
+  if (lua_type(L, narg) != t)
     tag_error(L, narg, t);
 }
 
 
 LUALIB_API void luaL_check_any (lua_State *L, int narg) {
-  if (lua_rawtag(L, narg) == LUA_TNONE)
+  if (lua_type(L, narg) == LUA_TNONE)
     luaL_argerror(L, narg, "value expected");
-}
-
-
-LUALIB_API void *luaL_check_userdata (lua_State *L, int narg,
-                                      const char *name) {
-  if (strcmp(lua_type(L, narg), name) != 0)
-    luaL_typerror(L, narg, name);
-  return lua_touserdata(L, narg);
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.88 2001/11/16 16:29:51 roberto Exp $
+** $Id: ltable.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -258,11 +258,12 @@ static void rehash (lua_State *L, Table *t) {
 
 Table *luaH_new (lua_State *L, int narray, int lnhash) {
   Table *t = luaM_new(L, Table);
-  t->htag = TagDefault;
+  t->eventtable = hvalue(defaultet(L));
   t->next = G(L)->roottable;
   G(L)->roottable = t;
   t->mark = t;
   t->weakmode = 0;
+  t->flags = ~0;
   /* temporary values (kept only if some malloc fails) */
   t->array = NULL;
   t->sizearray = 0;
@@ -419,19 +420,7 @@ void luaH_set (lua_State *L, Table *t, const TObject *key, const TObject *val) {
     if (ttype(key) == LUA_TNIL) luaD_error(L, "table index is nil");
     newkey(L, t, key, val);
   }
-}
-
-
-void luaH_setstr (lua_State *L, Table *t, TString *key, const TObject *val) {
-  const TObject *p = luaH_getstr(t, key);
-  if (p != &luaO_nilobject) {
-    settableval(p, val);
-  }
-  else {
-    TObject k;
-    setsvalue(&k, key);
-    newkey(L, t, &k, val);
-  }
+  t->flags = 0;
 }
 
 

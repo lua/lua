@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.92 2001/10/31 19:58:11 roberto Exp $
+** $Id: ldebug.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -205,22 +205,8 @@ static void funcinfo (lua_State *L, lua_Debug *ar, StkId func) {
 }
 
 
-static const char *travtagmethods (global_State *G, const TObject *o) {
-  if (ttype(o) == LUA_TFUNCTION) {
-    int e;
-    for (e=0; e<TM_N; e++) {
-      int t;
-      for (t=0; t<G->ntag; t++)
-        if (clvalue(o) == luaT_gettm(G, t, e))
-          return luaT_eventname[e];
-    }
-  }
-  return NULL;
-}
-
-
 static const char *travglobals (lua_State *L, const TObject *o) {
-  Table *g = hvalue(&L->gt);
+  Table *g = hvalue(gt(L));
   int i = sizenode(g);
   while (i--) {
     Node *n = node(g, i);
@@ -235,10 +221,7 @@ static void getname (lua_State *L, const TObject *f, lua_Debug *ar) {
   /* try to find a name for given function */
   if ((ar->name = travglobals(L, f)) != NULL)
     ar->namewhat = "global";
-  /* not found: try tag methods */
-  else if ((ar->name = travtagmethods(G(L), f)) != NULL)
-    ar->namewhat = "tag-method";
-  else ar->namewhat = "";  /* not found at all */
+  else ar->namewhat = "";  /* not found */
 }
 
 
@@ -531,7 +514,7 @@ static const char *getfuncname (lua_State *L, CallInfo *ci,
 void luaG_typeerror (lua_State *L, StkId o, const char *op) {
   const char *name;
   const char *kind = getobjname(L, o, &name);
-  const char *t = luaT_typename(G(L), o);
+  const char *t = luaT_typenames[ttype(o)];
   if (kind)
     luaO_verror(L, "attempt to %.30s %.20s `%.40s' (a %.10s value)",
                 op, kind, name, t);
@@ -556,8 +539,8 @@ void luaG_aritherror (lua_State *L, StkId p1, TObject *p2) {
 
 
 void luaG_ordererror (lua_State *L, const TObject *p1, const TObject *p2) {
-  const char *t1 = luaT_typename(G(L), p1);
-  const char *t2 = luaT_typename(G(L), p2);
+  const char *t1 = luaT_typenames[ttype(p1)];
+  const char *t2 = luaT_typenames[ttype(p2)];
   if (t1[2] == t2[2])
     luaO_verror(L, "attempt to compare two %.10s values", t1);
   else

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.116 2001/11/06 21:41:53 roberto Exp $
+** $Id: lobject.h,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -29,15 +29,6 @@
 
 /* tags for values visible from Lua */
 #define NUM_TAGS	6
-
-
-/*
-** extra tags:
-** first is used locally when moving an upvalue from the stack to the heap;
-** second prefixes upvalues in the heap
-*/
-#define LUA_TUPVAL	6
-#define LUA_HEAPUPVAL	7
 
 
 typedef union {
@@ -122,16 +113,13 @@ typedef union TString {
 typedef union Udata {
   union L_Umaxalign dummy;  /* ensures maximum alignment for `local' udata */
   struct {
-    int tag;  /* negative means `marked' (only during GC) */
+    struct Table *eventtable;
     void *value;
-    size_t len;
+    size_t len;  /* least bit reserved for gc mark */
     union Udata *next;  /* chain for list of all udata */
   } uv;
 } Udata;
 
-
-#define switchudatamark(u)	((u)->uv.tag = (-((u)->uv.tag+1)))
-#define ismarkedudata(u)	((u)->uv.tag < 0)
 
 
 
@@ -175,7 +163,6 @@ typedef struct LocVar {
 
 typedef struct UpVal {
   TObject *v;  /* points to stack or to its own value */
-  int mark;
   struct UpVal *next;
   TObject value;  /* the value (when closed) */
 } UpVal;
@@ -227,12 +214,13 @@ typedef struct Node {
 
 
 typedef struct Table {
+  struct Table *eventtable;
   TObject *array;  /* array part */
   Node *node;
-  int htag;
   int sizearray;  /* size of `array' array */
   lu_byte lsizenode;  /* log2 of size of `node' array */
   lu_byte weakmode;
+  unsigned short flags;  /* 1<<p means tagmethod(p) is not present */ 
   Node *firstfree;  /* this position is free; all positions after it are full */
   struct Table *next;
   struct Table *mark;  /* marked tables (point to itself when not marked) */

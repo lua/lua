@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.45 2001/10/26 17:33:30 roberto Exp $
+** $Id: lbaselib.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -41,7 +41,7 @@ static int luaB__ALERT (lua_State *L) {
 ** The library `liolib' redefines _ERRORMESSAGE for better error information.
 */
 static int luaB__ERRORMESSAGE (lua_State *L) {
-  luaL_check_rawtype(L, 1, LUA_TSTRING);
+  luaL_check_type(L, 1, LUA_TSTRING);
   lua_getglobal(L, LUA_ALERT);
   if (lua_isfunction(L, -1)) {  /* avoid error loop if _ALERT is not defined */
     lua_Debug ar;
@@ -136,41 +136,22 @@ static int luaB_getglobal (lua_State *L) {
 }
 
 
-/* auxiliary function to get `tags' */
-static int gettag (lua_State *L, int narg) {
-  switch (lua_rawtag(L, narg)) {
-    case LUA_TNUMBER:
-      return (int)(lua_tonumber(L, narg));
-    case LUA_TSTRING: {
-      const char *name = lua_tostring(L, narg);
-      int tag = lua_name2tag(L, name);
-      if (tag == LUA_TNONE)
-        luaL_verror(L, "'%.30s' is not a valid type name", name);
-      return tag;
-    }
-    default:
-      luaL_argerror(L, narg, "tag or type name expected");
-      return 0;  /* to avoid warnings */
+static int luaB_eventtable (lua_State *L) {
+  luaL_check_type(L, 1, LUA_TTABLE);
+  if (lua_isnull(L, 2))
+    lua_geteventtable(L, 1);
+  else {
+    lua_settop(L, 2);
+    luaL_check_type(L, 2, LUA_TTABLE);
+    lua_seteventtable(L, 1);
   }
-}
-
-
-static int luaB_tag (lua_State *L) {
-  luaL_check_any(L, 1);
-  lua_pushnumber(L, lua_tag(L, 1));
   return 1;
 }
 
-static int luaB_settype (lua_State *L) {
-  luaL_check_rawtype(L, 1, LUA_TTABLE);
-  lua_pushvalue(L, 1);  /* push table */
-  lua_settag(L, gettag(L, 2));
-  return 1;  /* return table */
-}
 
 static int luaB_weakmode (lua_State *L) {
   const char *mode = luaL_check_string(L, 2);
-  luaL_check_rawtype(L, 1, LUA_TTABLE);
+  luaL_check_type(L, 1, LUA_TTABLE);
   if (*mode == '?') {
     char buff[3];
     char *s = buff;
@@ -191,17 +172,11 @@ static int luaB_weakmode (lua_State *L) {
   }
 }
 
-static int luaB_newtype (lua_State *L) {
-  const char *name = luaL_opt_string(L, 1, NULL);
-  lua_pushnumber(L, lua_newtype(L, name, LUA_TTABLE));
-  return 1;
-}
-
 
 static int luaB_globals (lua_State *L) {
   lua_getglobals(L);  /* value to be returned */
   if (!lua_isnull(L, 1)) {
-    luaL_check_rawtype(L, 1, LUA_TTABLE);
+    luaL_check_type(L, 1, LUA_TTABLE);
     lua_pushvalue(L, 1);  /* new table of globals */
     lua_setglobals(L);
   }
@@ -209,40 +184,17 @@ static int luaB_globals (lua_State *L) {
 }
 
 static int luaB_rawget (lua_State *L) {
-  luaL_check_rawtype(L, 1, LUA_TTABLE);
+  luaL_check_type(L, 1, LUA_TTABLE);
   luaL_check_any(L, 2);
   lua_rawget(L, -2);
   return 1;
 }
 
 static int luaB_rawset (lua_State *L) {
-  luaL_check_rawtype(L, 1, LUA_TTABLE);
+  luaL_check_type(L, 1, LUA_TTABLE);
   luaL_check_any(L, 2);
   luaL_check_any(L, 3);
   lua_rawset(L, -3);
-  return 1;
-}
-
-static int luaB_settagmethod (lua_State *L) {
-  int tag = gettag(L, 1);
-  const char *event = luaL_check_string(L, 2);
-  luaL_arg_check(L, lua_isfunction(L, 3) || lua_isnil(L, 3), 3,
-                 "function or nil expected");
-  if (strcmp(event, "gc") == 0)
-    lua_error(L, "cannot set `gc' tag method from Lua");
-  lua_gettagmethod(L, tag, event);
-  lua_pushvalue(L, 3);
-  lua_settagmethod(L, tag, event);
-  return 1;
-}
-
-
-static int luaB_gettagmethod (lua_State *L) {
-  int tag = gettag(L, 1);
-  const char *event = luaL_check_string(L, 2);
-  if (strcmp(event, "gc") == 0)
-    lua_error(L, "cannot get `gc' tag method from Lua");
-  lua_gettagmethod(L, tag, event);
   return 1;
 }
 
@@ -262,20 +214,20 @@ static int luaB_collectgarbage (lua_State *L) {
 
 static int luaB_type (lua_State *L) {
   luaL_check_any(L, 1);
-  lua_pushstring(L, lua_type(L, 1));
-  return 1;
-}
-
-
-static int luaB_rawtype (lua_State *L) {
-  luaL_check_any(L, 1);
-  lua_pushstring(L, lua_tag2name(L, lua_rawtag(L, 1)));
+  if (lua_isnull(L, 2))
+    lua_pushstring(L, lua_typename(L, lua_type(L, 1)));
+  else {
+    if (strcmp(lua_typename(L, lua_type(L, 1)), luaL_check_string(L, 2)) == 0)
+      lua_pushnumber(L, 1);
+    else
+      lua_pushnil(L);
+  }
   return 1;
 }
 
 
 static int luaB_next (lua_State *L) {
-  luaL_check_rawtype(L, 1, LUA_TTABLE);
+  luaL_check_type(L, 1, LUA_TTABLE);
   lua_settop(L, 2);  /* create a 2nd argument if there isn't one */
   if (lua_next(L, 1))
     return 2;
@@ -393,7 +345,7 @@ static int luaB_require (lua_State *L) {
 
 static int aux_unpack (lua_State *L, int arg) {
   int n, i;
-  luaL_check_rawtype(L, arg, LUA_TTABLE);
+  luaL_check_type(L, arg, LUA_TTABLE);
   n = lua_getn(L, arg);
   luaL_check_stack(L, n, "table too big to unpack");
   for (i=1; i<=n; i++)  /* push arg[1...n] */
@@ -443,7 +395,7 @@ static int luaB_call (lua_State *L) {
 
 static int luaB_tostring (lua_State *L) {
   char buff[64];
-  switch (lua_rawtag(L, 1)) {
+  switch (lua_type(L, 1)) {
     case LUA_TNUMBER:
       lua_pushstring(L, lua_tostring(L, 1));
       return 1;
@@ -451,16 +403,15 @@ static int luaB_tostring (lua_State *L) {
       lua_pushvalue(L, 1);
       return 1;
     case LUA_TTABLE:
-      sprintf(buff, "%.40s: %p", lua_type(L, 1), lua_topointer(L, 1));
+      sprintf(buff, "%.40s: %p", lua_typename(L, lua_type(L, 1)), lua_topointer(L, 1));
       break;
     case LUA_TFUNCTION:
       sprintf(buff, "function: %p", lua_topointer(L, 1));
       break;
     case LUA_TUSERDATA: {
-      const char *t = lua_type(L, 1);
+      const char *t = lua_typename(L, lua_type(L, 1));
       if (strcmp(t, "userdata") == 0)
-        sprintf(buff, "userdata(%d): %p", lua_tag(L, 1),
-                lua_touserdata(L, 1));
+        sprintf(buff, "userdata: %p", lua_touserdata(L, 1));
       else
         sprintf(buff, "%.40s: %p", t, lua_touserdata(L, 1));
       break;
@@ -478,8 +429,8 @@ static int luaB_tostring (lua_State *L) {
 
 static int luaB_foreachi (lua_State *L) {
   int n, i;
-  luaL_check_rawtype(L, 1, LUA_TTABLE);
-  luaL_check_rawtype(L, 2, LUA_TFUNCTION);
+  luaL_check_type(L, 1, LUA_TTABLE);
+  luaL_check_type(L, 2, LUA_TFUNCTION);
   n = lua_getn(L, 1);
   for (i=1; i<=n; i++) {
     lua_pushvalue(L, 2);  /* function */
@@ -495,8 +446,8 @@ static int luaB_foreachi (lua_State *L) {
 
 
 static int luaB_foreach (lua_State *L) {
-  luaL_check_rawtype(L, 1, LUA_TTABLE);
-  luaL_check_rawtype(L, 2, LUA_TFUNCTION);
+  luaL_check_type(L, 1, LUA_TTABLE);
+  luaL_check_type(L, 2, LUA_TFUNCTION);
   lua_pushnil(L);  /* first index */
   for (;;) {
     if (lua_next(L, 1) == 0)
@@ -523,7 +474,7 @@ static int luaB_assert (lua_State *L) {
 
 
 static int luaB_getn (lua_State *L) {
-  luaL_check_rawtype(L, 1, LUA_TTABLE);
+  luaL_check_type(L, 1, LUA_TTABLE);
   lua_pushnumber(L, lua_getn(L, 1));
   return 1;
 }
@@ -532,7 +483,7 @@ static int luaB_getn (lua_State *L) {
 static int luaB_tinsert (lua_State *L) {
   int v = lua_gettop(L);  /* number of arguments */
   int n, pos;
-  luaL_check_rawtype(L, 1, LUA_TTABLE);
+  luaL_check_type(L, 1, LUA_TTABLE);
   n = lua_getn(L, 1);
   if (v == 2)  /* called with only 2 arguments */
     pos = n+1;
@@ -553,7 +504,7 @@ static int luaB_tinsert (lua_State *L) {
 
 static int luaB_tremove (lua_State *L) {
   int pos, n;
-  luaL_check_rawtype(L, 1, LUA_TTABLE);
+  luaL_check_type(L, 1, LUA_TTABLE);
   n = lua_getn(L, 1);
   pos = luaL_opt_int(L, 2, n);
   if (n <= 0) return 0;  /* table is `empty' */
@@ -665,10 +616,10 @@ static void auxsort (lua_State *L, int l, int u) {
 
 static int luaB_sort (lua_State *L) {
   int n;
-  luaL_check_rawtype(L, 1, LUA_TTABLE);
+  luaL_check_type(L, 1, LUA_TTABLE);
   n = lua_getn(L, 1);
   if (!lua_isnull(L, 2))  /* is there a 2nd argument? */
-    luaL_check_rawtype(L, 2, LUA_TFUNCTION);
+    luaL_check_type(L, 2, LUA_TFUNCTION);
   lua_settop(L, 2);  /* make sure there is two arguments */
   auxsort(L, 1, n);
   return 0;
@@ -686,28 +637,19 @@ static const luaL_reg base_funcs[] = {
   {"dofile", luaB_dofile},
   {"dostring", luaB_dostring},
   {"error", luaB_error},
+  {"eventtable", luaB_eventtable},
   {"foreach", luaB_foreach},
   {"foreachi", luaB_foreachi},
   {"gcinfo", luaB_gcinfo},
-  {"getglobal", luaB_getglobal},
-  {"gettagmethod", luaB_gettagmethod},
+  {"getglobal", luaB_getglobal},  /* compatibility with 4.0 */
   {"globals", luaB_globals},
   {"loadfile", luaB_loadfile},
   {"loadstring", luaB_loadstring},
-  {"newtype", luaB_newtype},
-  {"newtag", luaB_newtype},  /* for compatibility 4.0 */
   {"next", luaB_next},
   {"print", luaB_print},
   {"rawget", luaB_rawget},
   {"rawset", luaB_rawset},
-  {"rawgettable", luaB_rawget},  /* for compatibility 3.2 */
-  {"rawsettable", luaB_rawset},  /* for compatibility 3.2 */
-  {"rawtype", luaB_rawtype},
-  {"setglobal", luaB_setglobal},
-  {"settag", luaB_settype},  /* for compatibility 4.0 */
-  {"settype", luaB_settype},
-  {"settagmethod", luaB_settagmethod},
-  {"tag", luaB_tag},
+  {"setglobal", luaB_setglobal},  /* compatibility with 4.0 */
   {"tonumber", luaB_tonumber},
   {"tostring", luaB_tostring},
   {"type", luaB_type},

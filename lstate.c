@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.72 2001/11/06 21:40:51 roberto Exp $
+** $Id: lstate.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -40,12 +40,14 @@ static void f_luaopen (lua_State *L, void *ud) {
     so->stacksize += LUA_MINSTACK;
   if (so->L != NULL) {  /* shared global state? */
     L->_G = G(so->L);
-    L->gt = so->L->gt;  /* share table of globals */
     so->L->next->previous = L;  /* insert L into linked list */
     L->next = so->L->next;
     so->L->next = L;
     L->previous = so->L;
     luaD_init(L, so->stacksize);  /* init stack */
+    setobj(defaultet(L), defaultet(so->L));  /* share default event table */
+    setobj(gt(L), gt(so->L));  /* share table of globals */
+    setobj(registry(L), registry(so->L));  /* share registry */
   }
   else {  /* create a new global state */
     L->_G = luaM_new(L, global_State);
@@ -59,17 +61,17 @@ static void f_luaopen (lua_State *L, void *ud) {
     G(L)->roottable = NULL;
     G(L)->rootudata = NULL;
     G(L)->rootupval = NULL;
-    G(L)->TMtable = NULL;
-    G(L)->sizeTM = 0;
-    G(L)->ntag = 0;
     G(L)->nblocks = sizeof(lua_State) + sizeof(global_State);
     luaD_init(L, so->stacksize);  /* init stack */
-    sethvalue(&L->gt, luaH_new(L, 0, 4));  /* table of globals */
-    G(L)->type2tag = luaH_new(L, 0, 3);
-    sethvalue(&G(L)->registry, luaH_new(L, 0, 0));
+    /* create default event table with a dummy table, and then close the loop */
+    sethvalue(defaultet(L), NULL);
+    sethvalue(defaultet(L), luaH_new(L, 0, 4));
+    hvalue(defaultet(L))->eventtable = hvalue(defaultet(L));
+    sethvalue(gt(L), luaH_new(L, 0, 4));  /* table of globals */
+    sethvalue(registry(L), luaH_new(L, 0, 0));  /* registry */
     luaS_resize(L, 4);  /* initial size of string table */
-    luaX_init(L);
     luaT_init(L);
+    luaX_init(L);
     G(L)->GCthreshold = 4*G(L)->nblocks;
   }
 }
@@ -122,7 +124,6 @@ static void close_state (lua_State *L, lua_State *OL) {
     lua_assert(G(L)->rootupval == NULL);
     lua_assert(G(L)->roottable == NULL);
     luaS_freeall(L);
-    luaM_freearray(L, G(L)->TMtable, G(L)->sizeTM, struct TM);
     luaM_freearray(L, G(L)->Mbuffer, G(L)->Mbuffsize, char);
     luaM_freelem(NULL, L->_G);
   }

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.96 2001/11/06 21:41:43 roberto Exp $
+** $Id: ltests.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -240,13 +240,13 @@ static int mem_query (lua_State *L) {
 
 static int hash_query (lua_State *L) {
   if (lua_isnull(L, 2)) {
-    luaL_arg_check(L, lua_tag(L, 1) == LUA_TSTRING, 1, "string expected");
+    luaL_arg_check(L, lua_type(L, 1) == LUA_TSTRING, 1, "string expected");
     lua_pushnumber(L, tsvalue(luaA_index(L, 1))->tsv.hash);
   }
   else {
     TObject *o = luaA_index(L, 1);
     Table *t;
-    luaL_check_rawtype(L, 2, LUA_TTABLE);
+    luaL_check_type(L, 2, LUA_TTABLE);
     t = hvalue(luaA_index(L, 2));
     lua_pushnumber(L, luaH_mainposition(t, o) - t->node);
   }
@@ -257,7 +257,7 @@ static int hash_query (lua_State *L) {
 static int table_query (lua_State *L) {
   const Table *t;
   int i = luaL_opt_int(L, 2, -1);
-  luaL_check_rawtype(L, 1, LUA_TTABLE);
+  luaL_check_type(L, 1, LUA_TTABLE);
   t = hvalue(luaA_index(L, 1));
   if (i == -1) {
     lua_pushnumber(L, t->sizearray);
@@ -333,6 +333,18 @@ static int unref (lua_State *L) {
   return 0;
 }
 
+static int eventtable (lua_State *L) {
+  luaL_check_any(L, 1);
+  if (lua_isnull(L, 2))
+    lua_geteventtable(L, 1);
+  else {
+    lua_settop(L, 2);
+    luaL_check_type(L, 2, LUA_TTABLE);
+    lua_seteventtable(L, 1);
+  }
+  return 1;
+}
+
 static int newuserdata (lua_State *L) {
   size_t size = luaL_check_int(L, 1);
   char *p = cast(char *, lua_newuserdata(L, size));
@@ -345,24 +357,13 @@ static int newuserdatabox (lua_State *L) {
   return 1;
 }
 
-static int settag (lua_State *L) {
-  luaL_check_any(L, 1);
-  lua_pushvalue(L, 1);  /* push value */
-  lua_settag(L, luaL_check_int(L, 2));
-  return 1;  /* return value */
-}
 
 static int udataval (lua_State *L) {
-  luaL_check_rawtype(L, 1, LUA_TUSERDATA);
+  luaL_check_type(L, 1, LUA_TUSERDATA);
   lua_pushnumber(L, cast(int, lua_touserdata(L, 1)));
   return 1;
 }
 
-static int newtag (lua_State *L) {
-  lua_pushnumber(L, lua_newtype(L, lua_tostring(L, 1),
-                                   cast(int, lua_tonumber(L, 2))));
-  return 1;
-}
 
 static int doonnewstack (lua_State *L) {
   lua_State *L1 = lua_newthread(L, luaL_check_int(L, 1));
@@ -433,16 +434,6 @@ static int doremote (lua_State *L) {
     lua_pop(L1, i-1);
     return i-1;
   }
-}
-
-static int settagmethod (lua_State *L) {
-  int tag = luaL_check_int(L, 1);
-  const char *event = luaL_check_string(L, 2);
-  luaL_check_any(L, 3);
-  lua_gettagmethod(L, tag, event);
-  lua_pushvalue(L, 3);
-  lua_settagmethod(L, tag, event);
-  return 1;
 }
 
 
@@ -614,18 +605,14 @@ static int testC (lua_State *L) {
     else if EQ("dostring") {
       lua_dostring(L, luaL_check_string(L, getnum));
     }
-    else if EQ("settagmethod") {
-      int tag = getnum;
-      const char *event = getname;
-      lua_settagmethod(L, tag, event);
+    else if EQ("seteventtable") {
+      lua_seteventtable(L, getnum);
     }
-    else if EQ("gettagmethod") {
-      int tag = getnum;
-      const char *event = getname;
-      lua_gettagmethod(L, tag, event);
+    else if EQ("geteventtable") {
+      lua_geteventtable(L, getnum);
     }
     else if EQ("type") {
-      lua_pushstring(L, lua_type(L, getnum));
+      lua_pushstring(L, lua_typename(L, lua_type(L, getnum)));
     }
     else luaL_verror(L, "unknown instruction %.30s", buff);
   }
@@ -651,16 +638,14 @@ static const struct luaL_reg tests_funcs[] = {
   {"unref", unref},
   {"d2s", d2s},
   {"s2d", s2d},
+  {"eventtable", eventtable},
   {"newuserdata", newuserdata},
   {"newuserdatabox", newuserdatabox},
-  {"settag", settag},
   {"udataval", udataval},
-  {"newtag", newtag},
   {"doonnewstack", doonnewstack},
   {"newstate", newstate},
   {"closestate", closestate},
   {"doremote", doremote},
-  {"settagmethod", settagmethod},
   {"log2", log2_aux},
   {"totalmem", mem_query}
 };

@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 1.28 2001/10/02 16:43:54 roberto Exp $
+** $Id: ltm.h,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -9,7 +9,6 @@
 
 
 #include "lobject.h"
-#include "lstate.h"
 
 /*
 * WARNING: if you change the order of this enumeration,
@@ -19,8 +18,7 @@ typedef enum {
   TM_GETTABLE = 0,
   TM_SETTABLE,
   TM_INDEX,
-  TM_GETGLOBAL,
-  TM_SETGLOBAL,
+  TM_GC,
   TM_ADD,
   TM_SUB,
   TM_MUL,
@@ -29,51 +27,20 @@ typedef enum {
   TM_UNM,
   TM_LT,
   TM_CONCAT,
-  TM_GC,
-  TM_FUNCTION,
+  TM_CALL,
   TM_N		/* number of elements in the enum */
 } TMS;
 
 
 
-/*
-** masks for allowable tag methods
-** (see `luaT_validevents')
-*/
-#define HAS_TM_GETGLOBAL(L,t)	((1<<(t)) & ((1<<LUA_TUSERDATA) | \
-                                           (1<<LUA_TTABLE) | \
-                                           (1<<LUA_TNIL)))
-
-#define HAS_TM_SETGLOBAL(L,t)	((1<<(t)) & ((1<<LUA_TUSERDATA) | \
-                                           (1<<LUA_TTABLE) | \
-                                           (1<<LUA_TNIL) | \
-                                           (1<<LUA_TFUNCTION)))
+#define fasttm(l,et,e) \
+  (((et)->flags & (1<<(e))) ? NULL : luaT_gettm(et, e, G(l)->tmname[e]))
 
 
-
-struct TM {
-  Closure *method[TM_N];
-  Udata *collected;  /* list of garbage-collected udata with this tag */
-  TString *name;  /* type name */
-  int basictype;
-};
-
-
-#define luaT_gettm(G,tag,event) (G->TMtable[tag].method[event])
-#define luaT_gettmbyObj(G,o,e)  (luaT_gettm((G),luaT_tag(o),(e)))
-
-#define typenamebytag(G, t)	getstr(G->TMtable[t].name)
-
-
-#define validtag(G,t) (NUM_TAGS <= (t) && (t) < G->ntag)
-
-extern const char *const luaT_eventname[];
-
-
+const TObject *luaT_gettm (Table *events, TMS event, TString *ename);
+const TObject *luaT_gettmbyobj (lua_State *L, const TObject *o, TMS event);
 void luaT_init (lua_State *L);
-int luaT_newtag (lua_State *L, const char *name, int basictype);
-const char *luaT_typename (global_State *G, const TObject *o);
-int luaT_tag (const TObject *o);
 
+extern const char *const luaT_typenames[];
 
 #endif

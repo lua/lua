@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.116 2001/11/06 21:41:53 roberto Exp $
+** $Id: lgc.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -29,6 +29,15 @@ typedef struct GCState {
 /* mark a string; marks larger than 1 cannot be changed */
 #define strmark(s)    {if ((s)->tsv.marked == 0) (s)->tsv.marked = 1;}
 
+
+/* mark tricks for userdata */
+#define isudmarked(u)	(u->uv.len & 1)
+#define markud(u)	(u->uv.len |= 1)
+#define unmarkud(u)	(u->uv.len--)
+
+
+/* mark tricks for upvalues (assume that open upvalues are always marked) */
+#define isupvalmarked(uv)	((uv)->v != &(uv)->value)
 
 
 static void markobject (GCState *st, TObject *o);
@@ -66,9 +75,9 @@ static void markclosure (GCState *st, Closure *cl) {
       protomark(cl->l.p);
       for (i=0; i<cl->l.nupvalues; i++) {  /* mark its upvalues */
         UpVal *u = cl->l.upvals[i];
-        if (!u->mark) {
-          u->mark = 1;
-          markobject(st, u->v);
+        if (!isupvalmarked(u)) {
+          markobject(st, &u->value);
+          u->v = NULL;  /* mark it! */
         }
       }
     }
@@ -90,8 +99,8 @@ static void markobject (GCState *st, TObject *o) {
       strmark(tsvalue(o));
       break;
     case LUA_TUSERDATA:
-      if (!ismarkedudata(uvalue(o)))
-        switchudatamark(uvalue(o));
+      if (!isudmarked(uvalue(o)))
+        markud(uvalue(o));
       break;
     case LUA_TFUNCTION:
       markclosure(st, clvalue(o));
@@ -112,7 +121,6 @@ static void markstacks (lua_State *L, GCState *st) {
   lua_State *L1 = L;
   do {  /* for each thread */
     StkId o, lim;
-    markobject(st, &L1->gt);  /* mark table of globals */
     for (o=L1->stack; o<L1->top; o++)
       markobject(st, o);
     lim = (L1->stack_last - L1->ci->base > MAXSTACK) ? L1->ci->base+MAXSTACK
@@ -124,17 +132,10 @@ static void markstacks (lua_State *L, GCState *st) {
 }
 
 
-static void marktagmethods (global_State *G, GCState *st) {
-  int t;
-  for (t=0; t<G->ntag; t++) {
-    struct TM *tm = &G->TMtable[t];
-    int e;
-    if (tm->name) strmark(tm->name);
-    for (e=0; e<TM_N; e++) {
-      Closure *cl = tm->method[e];
-      if (cl) markclosure(st, cl);
-    }
-  }
+static void markudet (lua_State *L, GCState *st) {
+  Udata *u;
+  for (u = G(L)->rootudata; u; u = u->uv.next)
+    marktable(st, u->uv.eventtable);
 }
 
 
@@ -152,6 +153,7 @@ static void traversetable (GCState *st, Table *h) {
     h->mark = st->toclear;  /* put in the appropriate list */
     st->toclear = h;
   }
+  marktable(st, h->eventtable);
   if (!(mode & LUA_WEAK_VALUE)) {
     i = sizearray(h);
     while (i--)
@@ -172,11 +174,9 @@ static void traversetable (GCState *st, Table *h) {
 
 
 static void markall (lua_State *L, GCState *st) {
-  marktagmethods(G(L), st);  /* mark tag methods */
   markstacks(L, st); /* mark all stacks */
-  marktable(st, G(L)->type2tag);
-  markobject(st, &G(L)->registry);
-  while (st->tmark) {  /* mark tables */
+  markudet(L, st);  /* mark userdata's event tables */
+  while (st->tmark) {  /* traverse marked tables */
     Table *h = st->tmark;  /* get first table from list */
     st->tmark = h->mark;  /* remove it from list */
     traversetable(st, h);
@@ -189,7 +189,7 @@ static int hasmark (const TObject *o) {
     case LUA_TSTRING:
       return tsvalue(o)->tsv.marked;
     case LUA_TUSERDATA:
-      return ismarkedudata(uvalue(o));
+      return isudmarked(uvalue(o));
     case LUA_TTABLE:
       return ismarked(hvalue(o));
     case LUA_TFUNCTION:
@@ -261,8 +261,9 @@ static void collectupval (lua_State *L) {
   UpVal **v = &G(L)->rootupval;
   UpVal *curr;
   while ((curr = *v) != NULL) {
-    if (curr->mark) {
-      curr->mark = 0;
+    if (isupvalmarked(curr)) {
+      lua_assert(curr->v == NULL);
+      curr->v = &curr->value;  /* unmark */
       v = &curr->next;  /* next */
     }
     else {
@@ -289,26 +290,27 @@ static void collecttable (lua_State *L) {
 }
 
 
-static void collectudata (lua_State *L, int keep) {
+static Udata *collectudata (lua_State *L, int keep) {
   Udata **p = &G(L)->rootudata;
   Udata *curr;
+  Udata *collected = NULL;
   while ((curr = *p) != NULL) {
-    if (ismarkedudata(curr)) {
-      switchudatamark(curr);  /* unmark */
+    if (isudmarked(curr)) {
+      unmarkud(curr);
       p = &curr->uv.next;
     }
     else {  /* collect */
-      int tag = curr->uv.tag;
+      const TObject *tm = fasttm(L, curr->uv.eventtable, TM_GC);
       *p = curr->uv.next;
-      if (keep ||  /* must keep all of them (to close state)? */
-          luaT_gettm(G(L), tag, TM_GC)) {  /* or is there a GC tag method? */
-        curr->uv.next = G(L)->TMtable[tag].collected;  /* chain udata ... */
-        G(L)->TMtable[tag].collected = curr;  /* ... to call its TM later */
+      if (keep || tm != NULL) {
+        curr->uv.next = collected;
+        collected = curr;
       }
-      else  /* no tag method; delete udata */
+      else  /* no gc action; delete udata */
         luaM_free(L, curr, sizeudata(curr->uv.len));
     }
   }
+  return collected;
 }
 
 
@@ -347,14 +349,14 @@ static void checkMbuffer (lua_State *L) {
 }
 
 
-static void callgcTM (lua_State *L, const TObject *obj) {
-  Closure *tm = luaT_gettmbyObj(G(L), obj, TM_GC);
-  if (tm != NULL) {
+static void callgcTM (lua_State *L, Udata *udata) {
+  const TObject *tm = fasttm(L, udata->uv.eventtable, TM_GC);
+  if (tm != NULL && ttype(tm) == LUA_TFUNCTION) {
     int oldah = L->allowhooks;
     StkId top = L->top;
     L->allowhooks = 0;  /* stop debug hooks during GC tag methods */
-    setclvalue(top, tm);
-    setobj(top+1, obj);
+    setobj(top, tm);
+    setuvalue(top+1, udata);
     L->top += 2;
     luaD_call(L, top);
     L->top = top;  /* restore top */
@@ -363,53 +365,52 @@ static void callgcTM (lua_State *L, const TObject *obj) {
 }
 
 
-static void callgcTMudata (lua_State *L) {
-  int tag;
+static void callgcTMudata (lua_State *L, Udata *c) {
   luaD_checkstack(L, 3);
-  for (tag=G(L)->ntag-1; tag>=0; tag--) {  /* for each tag (in reverse order) */
-    Udata *udata;
-    while ((udata = G(L)->TMtable[tag].collected) != NULL) {
-      G(L)->TMtable[tag].collected = udata->uv.next;  /* remove it from list */
-      udata->uv.next = G(L)->rootudata;  /* resurect it */
-      G(L)->rootudata = udata;
-      setuvalue(L->top, udata);
-      L->top++;  /* keep it in stack to avoid being (recursively) collected */
-      callgcTM(L, L->top-1);
-      uvalue(L->top-1)->uv.tag = 0;  /* default tag (udata is `finalized') */
-      L->top--;
-    }
+  L->top++;  /* reserve space to keep udata while runs its gc method */
+  while (c != NULL) {
+    Udata *udata = c;
+    c = udata->uv.next;  /* remove udata from list */
+    udata->uv.next = G(L)->rootudata;  /* resurect it */
+    G(L)->rootudata = udata;
+    setuvalue(L->top - 1, udata);
+    callgcTM(L, udata);
+    /* mark udata as finalized (default event table) */
+    uvalue(L->top-1)->uv.eventtable = hvalue(defaultet(L));
   }
+  L->top--;
 }
 
 
 void luaC_callallgcTM (lua_State *L) {
   if (G(L)->rootudata) {  /* avoid problems with incomplete states */
-    collectudata(L, 1);  /* collect all udata into tag lists */
-    callgcTMudata(L);  /* call their GC tag methods */
+    Udata *c = collectudata(L, 1);  /* collect all udata */
+    callgcTMudata(L, c);  /* call their GC tag methods */
   }
 }
 
 
-void luaC_collect (lua_State *L, int all) {
-  collectudata(L, 0);
+Udata *luaC_collect (lua_State *L, int all) {
+  Udata *c = collectudata(L, 0);
   collectstrings(L, all);
   collecttable(L);
   collectproto(L);
   collectupval(L);
   collectclosures(L);
+  return c;
 }
 
 
 void luaC_collectgarbage (lua_State *L) {
+  Udata *c;
   GCState st;
   st.tmark = NULL;
   st.toclear = NULL;
   markall(L, &st);
   cleartables(st.toclear);
-  luaC_collect(L, 0);
+  c = luaC_collect(L, 0);
   checkMbuffer(L);
   G(L)->GCthreshold = 2*G(L)->nblocks;  /* new threshold */
-  callgcTMudata(L);
-  callgcTM(L, &luaO_nilobject);
+  callgcTMudata(L, c);
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.144 2001/11/27 20:56:47 roberto Exp $
+** $Id: ldo.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -43,8 +43,7 @@ void luaD_init (lua_State *L, int stacksize) {
   stacksize += EXTRA_STACK;
   L->stack = luaM_newvector(L, stacksize, TObject);
   L->stacksize = stacksize;
-  setnilvalue(L->stack);  /* the `initial' function */
-  L->top = L->basefunc.base = L->stack + 1;
+  L->top = L->basefunc.base = L->stack + RESERVED_STACK_PREFIX;
   restore_stack_limit(L);
 }
 
@@ -143,12 +142,13 @@ void luaD_call (lua_State *L, StkId func) {
   CallInfo ci;
   if (ttype(func) != LUA_TFUNCTION) {
     /* `func' is not a function; check the `function' tag method */
-    Closure *tm = luaT_gettmbyObj(G(L), func, TM_FUNCTION);
-    if (tm == NULL)
+    const TObject *tm = luaT_gettmbyobj(L, func, TM_CALL);
+    if (tm == NULL || ttype(tm) != LUA_TFUNCTION)
       luaG_typeerror(L, func, "call");
     luaD_openstack(L, func);
-    setclvalue(func, tm);  /* tag method is the new function to be called */
+    setobj(func, tm);  /* tag method is the new function to be called */
   }
+  lua_assert(ttype(func) == LUA_TFUNCTION);
   ci.prev = L->ci;  /* chain new callinfo */
   L->ci = &ci;
   ci.base = func+1;
@@ -300,9 +300,12 @@ struct lua_longjmp {
 
 
 static void message (lua_State *L, const char *s) {
-  StkId top = L->top;
-  luaV_getglobal(L, luaS_newliteral(L, LUA_ERRORMESSAGE), top);
-  if (ttype(top) == LUA_TFUNCTION) {
+  TObject o, m;
+  setsvalue(&o, luaS_newliteral(L, LUA_ERRORMESSAGE));
+  luaV_gettable(L, gt(L), &o, &m);
+  if (ttype(&m) == LUA_TFUNCTION) {
+    StkId top = L->top;
+    setobj(top, &m);
     incr_top;
     setsvalue(top+1, luaS_new(L, s));
     incr_top;

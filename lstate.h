@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.64 2001/11/06 21:40:51 roberto Exp $
+** $Id: lstate.h,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -7,8 +7,10 @@
 #ifndef lstate_h
 #define lstate_h
 
-#include "lobject.h"
 #include "lua.h"
+
+#include "lobject.h"
+#include "ltm.h"
 #include "luadebug.h"
 
 
@@ -40,7 +42,24 @@
 
 
 struct lua_longjmp;  /* defined in ldo.c */
-struct TM;  /* defined in ltm.h */
+
+
+
+/*
+** reserve init of stack to store some global values
+*/
+
+/* default event table (both for tables and udata) */
+#define defaultet(L)	(L->stack)
+
+/* table of globals */
+#define gt(L)	(L->stack + 1)
+
+/* registry */
+#define registry(L)	(L->stack + 2)
+
+#define RESERVED_STACK_PREFIX	3
+
 
 
 typedef struct stringtable {
@@ -57,11 +76,6 @@ typedef struct global_State {
   void *Mbuffer;  /* global buffer */
   size_t Mbuffsize;  /* size of Mbuffer */
   stringtable strt;  /* hash table for strings */
-  Table *type2tag;  /* hash table from type names to tags */
-  TObject registry;  /* registry table */
-  struct TM *TMtable;  /* table for tag methods */
-  int sizeTM;  /* size of TMtable */
-  int ntag;  /* number of tags in TMtable */
   lu_mem GCthreshold;
   lu_mem nblocks;  /* number of `bytes' currently allocated */
   Proto *rootproto;  /* list of all prototypes */
@@ -69,6 +83,7 @@ typedef struct global_State {
   Table *roottable;  /* list of all tables */
   Udata *rootudata;   /* list of all userdata */
   UpVal *rootupval;  /* list of closed up values */
+  TString *tmname[TM_N];  /* array with tag-method names */
 } global_State;
 
 
@@ -80,10 +95,9 @@ struct lua_State {
   StkId top;  /* first free slot in the stack */
   CallInfo *ci;  /* call info for current function */
   StkId stack_last;  /* last free slot in the stack */
-  TObject gt;  /* table for globals */
-  global_State *_G;
   StkId stack;  /* stack base */
   int stacksize;
+  global_State *_G;
   lua_Hook callhook;
   lua_Hook linehook;
   int allowhooks;
