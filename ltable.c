@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.13 1998/07/12 16:15:19 roberto Exp roberto $
+** $Id: ltable.c,v 1.14 1998/08/10 21:36:32 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -19,8 +19,6 @@
 #define nuse(t)		((t)->nuse)
 #define nodevector(t)	((t)->node)
 
-
-#define REHASH_LIMIT    0.70    /* avoid more than this % full */
 
 #define TagDefault LUA_T_ARRAY;
 
@@ -107,10 +105,9 @@ void luaH_free (Hash *frees)
 }
 
 
-Hash *luaH_new (int nhash)
-{
+Hash *luaH_new (int nhash) {
   Hash *t = luaM_new(Hash);
-  nhash = luaO_redimension((int)((float)nhash/REHASH_LIMIT));
+  nhash = luaO_redimension(nhash*3/2);
   nodevector(t) = hashnodecreate(nhash);
   nhash(t) = nhash;
   nuse(t) = 0;
@@ -133,18 +130,20 @@ static int newsize (Hash *t) {
   return luaO_redimension((realuse+1)*2);  /* +1 is the new element */
 }
 
-static void rehash (Hash *t)
-{
+static void rehash (Hash *t) {
   int nold = nhash(t);
   Node *vold = nodevector(t);
   int nnew = newsize(t);
   int i;
   nodevector(t) = hashnodecreate(nnew);
   nhash(t) = nnew;
+  nuse(t) = 0;
   for (i=0; i<nold; i++) {
     Node *n = vold+i;
-    if (ttype(ref(n)) != LUA_T_NIL && ttype(val(n)) != LUA_T_NIL)
+    if (ttype(ref(n)) != LUA_T_NIL && ttype(val(n)) != LUA_T_NIL) {
       *node(t, present(t, ref(n))) = *n;  /* copy old node to luaM_new hash */
+      nuse(t)++;
+    }
   }
   L->nblocks += gcsize(nnew)-gcsize(nold);
   luaM_free(vold);
@@ -170,11 +169,11 @@ TObject *luaH_set (Hash *t, TObject *ref)
 {
   Node *n = node(t, present(t, ref));
   if (ttype(ref(n)) == LUA_T_NIL) {
-    nuse(t)++;
-    if ((float)nuse(t) > (float)nhash(t)*REHASH_LIMIT) {
+    if ((long)nuse(t)*3L > (long)nhash(t)*2L) {
       rehash(t);
       n = node(t, present(t, ref));
     }
+    nuse(t)++;
     *ref(n) = *ref;
     ttype(val(n)) = LUA_T_NIL;
   }
