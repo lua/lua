@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.110 2002/11/13 11:31:39 roberto Exp roberto $
+** $Id: lstate.c,v 1.111 2002/11/14 16:15:53 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -112,8 +112,9 @@ static void preinit_state (lua_State *L) {
   L->stacksize = 0;
   L->errorJmp = NULL;
   L->hook = NULL;
-  L->hookmask = 0;
-  setallowhook(L, 1);
+  L->hookmask = L->hookinit = 0;
+  L->basehookcount = 0;
+  L->allowhook = 1;
   resethookcount(L);
   L->openupval = NULL;
   L->size_ci = 0;

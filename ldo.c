@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.200 2002/11/13 11:31:39 roberto Exp roberto $
+** $Id: ldo.c,v 1.201 2002/11/14 16:15:53 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -154,7 +154,7 @@ static void luaD_growCI (lua_State *L) {
 
 void luaD_callhook (lua_State *L, int event, int line) {
   lua_Hook hook = L->hook;
-  if (hook && allowhook(L)) {
+  if (hook && L->allowhook) {
     ptrdiff_t top = savestack(L, L->top);
     ptrdiff_t ci_top = savestack(L, L->ci->top);
     lua_Debug ar;
@@ -163,12 +163,12 @@ void luaD_callhook (lua_State *L, int event, int line) {
     ar.i_ci = L->ci - L->base_ci;
     luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
     L->ci->top = L->top + LUA_MINSTACK;
-    setallowhook(L, 0);  /* cannot call hooks inside a hook */
+    L->allowhook = 0;  /* cannot call hooks inside a hook */
     lua_unlock(L);
     (*hook)(L, &ar);
     lua_lock(L);
-    lua_assert(!allowhook(L));
-    setallowhook(L, 1);
+    lua_assert(!L->allowhook);
+    L->allowhook = 1;
     L->ci->top = restorestack(L, ci_top);
     L->top = restorestack(L, top);
   }
@@ -328,16 +328,16 @@ static void resume (lua_State *L, void *ud) {
 
 LUA_API int lua_resume (lua_State *L, int nargs) {
   int status;
-  int old_allowhooks;
+  lu_byte old_allowhooks;
   lua_lock(L);
-  old_allowhooks = allowhook(L);
+  old_allowhooks = L->allowhook;
   lua_assert(L->errfunc == 0);
   status = luaD_rawrunprotected(L, resume, &nargs);
   if (status != 0) {  /* error? */
     L->ci = L->base_ci;  /* go back to initial level */
     luaF_close(L, L->ci->base);  /* close eventual pending closures */
     seterrorobj(L, status, L->ci->base);
-    setallowhook(L, old_allowhooks);
+    L->allowhook = old_allowhooks;
     restore_stack_limit(L);
   }
   lua_unlock(L);
@@ -383,7 +383,7 @@ int luaD_pcall (lua_State *L, int nargs, int nresults, ptrdiff_t errfunc) {
   int status;
   ptrdiff_t old_top = savestack(L, L->top);
   ptrdiff_t old_ci = saveci(L, L->ci);
-  int old_allowhooks = allowhook(L);
+  lu_byte old_allowhooks = L->allowhook;
   ptrdiff_t old_errfunc = L->errfunc;
   L->errfunc = errfunc;
   c.func = L->top - (nargs+1);  /* function to be called */
@@ -394,7 +394,7 @@ int luaD_pcall (lua_State *L, int nargs, int nresults, ptrdiff_t errfunc) {
     luaF_close(L, oldtop);  /* close eventual pending closures */
     seterrorobj(L, status, oldtop);
     L->ci = restoreci(L, old_ci);
-    setallowhook(L, old_allowhooks);
+    L->allowhook = old_allowhooks;
     restore_stack_limit(L);
   }
   L->errfunc = old_errfunc;

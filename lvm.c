@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.260 2002/11/07 15:37:10 roberto Exp roberto $
+** $Id: lvm.c,v 1.261 2002/11/14 16:15:53 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -70,7 +70,7 @@ int luaV_tostring (lua_State *L, StkId obj) {
 
 
 static void traceexec (lua_State *L) {
-  unsigned long mask = L->hookmask;
+  lu_byte mask = L->hookmask;
   if (mask > LUA_MASKLINE) {  /* instruction-hook set? */
     if (L->hookcount == 0) {
       luaD_callhook(L, LUA_HOOKCOUNT, -1);
@@ -82,6 +82,10 @@ static void traceexec (lua_State *L) {
     CallInfo *ci = L->ci;
     Proto *p = ci_func(ci)->l.p;
     int newline = getline(p, pcRel(*ci->u.l.pc, p));
+    if (!L->hookinit) {
+      luaG_inithooks(L);
+      return;
+    }
     lua_assert(ci->state & CI_HASFRAME);
     if (pcRel(*ci->u.l.pc, p) == 0)  /* tracing may be starting now? */
       ci->u.l.savedpc = *ci->u.l.pc;  /* initialize `savedpc' */

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.135 2002/10/16 20:40:58 roberto Exp roberto $
+** $Id: ldebug.c,v 1.136 2002/11/07 15:37:10 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -49,20 +49,29 @@ static int currentline (CallInfo *ci) {
 }
 
 
-LUA_API int lua_sethook (lua_State *L, lua_Hook func, unsigned long mask) {
-  int allow;
+void luaG_inithooks (lua_State *L) {
   CallInfo *ci;
-  lua_lock(L);
-  allow = allowhook(L);
-  if (func == NULL) mask = 0;
-  else if (mask == 0) func = NULL;
-  L->hook = func;
-  L->hookmask = mask;
-  setallowhook(L, allow);
-  resethookcount(L);
   for (ci = L->ci; ci != L->base_ci; ci--)  /* update all `savedpc's */
     currentpc(ci);
-  lua_unlock(L);
+  L->hookinit = 1;
+}
+
+
+/*
+** this function can be called asynchronous (e.g. during a signal)
+*/
+LUA_API int lua_sethook (lua_State *L, lua_Hook func, unsigned long mask) {
+  ls_count count = lua_getmaskcount(mask);
+  if (func == NULL || mask == 0) {  /* turn off hooks? */
+    mask = 0;
+    func = NULL;
+  }
+  else if (count > 0) mask |= (1<<LUA_HOOKCOUNT);
+  L->hook = func;
+  L->basehookcount = count;
+  resethookcount(L);
+  L->hookmask = cast(lu_byte, mask & 0xf);
+  L->hookinit = 0;
   return 1;
 }
 
@@ -73,7 +82,7 @@ LUA_API lua_Hook lua_gethook (lua_State *L) {
 
 
 LUA_API unsigned long lua_gethookmask (lua_State *L) {
-  return L->hookmask;
+  return L->hookmask | LUA_MASKCOUNT(L->basehookcount);
 }
 
 

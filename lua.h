@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.163 2002/11/07 15:39:23 roberto Exp roberto $
+** $Id: lua.h,v 1.164 2002/11/14 11:51:50 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -327,13 +327,13 @@ LUA_API int lua_pushupvalues (lua_State *L);
 /*
 ** Event masks
 */
-#define LUA_MASKCALL	(2 << LUA_HOOKCALL)
-#define LUA_MASKRET	(2 << LUA_HOOKRET)
-#define LUA_MASKLINE	(2 << LUA_HOOKLINE)
+#define LUA_MASKCALL	(1 << LUA_HOOKCALL)
+#define LUA_MASKRET	(1 << LUA_HOOKRET)
+#define LUA_MASKLINE	(1 << LUA_HOOKLINE)
 #define LUA_MASKCOUNT(count)	((unsigned long)(count) << 8)
 #define lua_getmaskcount(mask)	((mask) >> 8)
 
-#define LUA_MAXCOUNT	((1<<24) - 1)
+#define LUA_MAXCOUNT	((~(unsigned long)0) >> 8)
 
 typedef struct lua_Debug lua_Debug;  /* activation record */
 
