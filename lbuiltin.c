@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.8 1997/11/19 17:29:23 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.9 1997/11/26 18:53:45 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -213,7 +213,7 @@ static void luaI_assert (void)
 {
   lua_Object p = lua_getparam(1);
   if (p == LUA_NOOBJECT || lua_isnil(p))
-    lua_error("assertion failed!");
+    luaL_verror("assertion failed!  %.100s", luaL_opt_string(2, ""));
 }
 
 
