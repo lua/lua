@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
+** $Id: ltable.c,v 1.2 1997/09/26 16:46:20 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -15,7 +15,6 @@
 
 #define nuse(t)		((t)->nuse)
 #define nodevector(t)	((t)->node)
-#define val(n)		(&(n)->val)
 
 
 #define REHASH_LIMIT    0.70    /* avoid more than this % full */

@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.h,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
+** $Id: ltable.h,v 1.2 1997/09/26 16:46:20 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -15,6 +15,7 @@ extern GCnode luaH_root;
 
 #define node(t,i)       (&(t)->node[i])
 #define ref(n)		(&(n)->ref)
+#define val(n)		(&(n)->val)
 #define nhash(t)	((t)->nhash)
 
 Hash *luaH_new (int nhash);
