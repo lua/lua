@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.98 2001/06/06 18:00:19 roberto Exp roberto $
+** $Id: lua.h,v 1.99 2001/06/28 14:45:44 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: info@lua.org
@@ -69,6 +69,9 @@ typedef int (*lua_CFunction) (lua_State *L);
 #define LUA_NOTAG	(-2)
 
 
+/* minimum Lua stack available to a C function */
+#define LUA_MINSTACK	20
+
 
 /*
 ** generic extra include file
@@ -76,10 +79,6 @@ typedef int (*lua_CFunction) (lua_State *L);
 #ifdef LUA_USER_H
 #include LUA_USER_H
 #endif
-
-
-/* minimum Lua stack available to a C function */
-#define LUA_MINSTACK	20
 
 
 /* Lua numerical type */
