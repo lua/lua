@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.104 2002/04/22 14:40:23 roberto Exp roberto $
+** $Id: ltable.c,v 1.105 2002/04/23 15:04:39 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -147,21 +147,22 @@ int luaH_next (lua_State *L, Table *t, TObject *key) {
 
 
 static void computesizes  (int nums[], int ntotal, int *narray, int *nhash) {
-  int n = 0;  /* (log of) optimal size for array part */
-  int na = 0;  /* number of elements to go to array part */
   int i;
   int a = nums[0];  /* number of elements smaller than 2^i */
+  int na = a;  /* number of elements to go to array part */
+  int n = (na == 0) ? -1 : 0;  /* (log of) optimal size for array part */
   for (i = 1; i <= MAXBITS && *narray >= twoto(i-1); i++) {
-    if (nums[i] == 0) continue;
-    a += nums[i];
-    if (a >= twoto(i-1)) {  /* more than half elements in use? */
-      n = i;
-      na = a;
+    if (nums[i] > 0) {
+      a += nums[i];
+      if (a >= twoto(i-1)) {  /* more than half elements in use? */
+        n = i;
+        na = a;
+      }
     }
   }
   lua_assert(na <= *narray && *narray <= ntotal);
   *nhash = ntotal - na;
-  *narray = (n == 0) ? 0 : twoto(n);
+  *narray = (n == -1) ? 0 : twoto(n);
   lua_assert(na <= *narray && na >= *narray/2);
 }
 
