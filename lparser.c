@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.77 2000/04/06 17:36:52 roberto Exp roberto $
+** $Id: lparser.c,v 1.78 2000/04/07 13:13:11 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -91,7 +91,7 @@ static void setline (LexState *ls) {
   FuncState *fs = ls->fs;
   if (ls->L->debug && ls->linenumber != fs->lastsetline) {
     checklimit(ls, ls->linenumber, MAXARG_U, "lines in a chunk");
-    luaK_U(fs, OP_SETLINE, ls->linenumber, 0);
+    luaK_code1(fs, OP_SETLINE, ls->linenumber);
     fs->lastsetline = ls->linenumber;
   }
 }
@@ -260,7 +260,7 @@ static void pushupvalue (LexState *ls, TString *n) {
     luaX_syntaxerror(ls, "cannot access upvalue in main", n->str);
   if (aux_localname(ls->fs, n) >= 0)
     luaX_syntaxerror(ls, "cannot access an upvalue in current scope", n->str);
-  luaK_U(fs, OP_PUSHUPVALUE, indexupvalue(ls, n), 1);
+  luaK_code1(fs, OP_PUSHUPVALUE, indexupvalue(ls, n));
 }
 
 
@@ -339,8 +339,7 @@ static void func_onstack (LexState *ls, FuncState *func) {
   luaM_growvector(ls->L, f->kproto, f->nkproto, 1, Proto *,
                   constantEM, MAXARG_A);
   f->kproto[f->nkproto++] = func->f;
-  luaK_deltastack(fs, 1);  /* CLOSURE puts one extra element before popping */
-  luaK_AB(fs, OP_CLOSURE, f->nkproto-1, func->nupvalues, -func->nupvalues);
+  luaK_code2(fs, OP_CLOSURE, f->nkproto-1, func->nupvalues);
 }
 
 
@@ -373,7 +372,7 @@ static void close_func (LexState *ls) {
   lua_State *L = ls->L;
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
-  luaK_0(fs, OP_END, 0);
+  luaK_code0(fs, OP_END);
   luaK_getlabel(fs);  /* close eventual list of pending jumps */
   luaM_reallocvector(L, f->code, fs->pc, Instruction);
   luaM_reallocvector(L, f->kstr, f->nkstr, TString *);
@@ -469,7 +468,7 @@ static void funcargs (LexState *ls, int slf) {
       break;
   }
   fs->stacklevel = slevel;  /* call will remove function and arguments */
-  luaK_AB(fs, OP_CALL, slevel, MULT_RET, 0);
+  luaK_code2(fs, OP_CALL, slevel, MULT_RET);
 }
 
 
@@ -496,7 +495,7 @@ static void var_or_func_tail (LexState *ls, expdesc *v) {
         next(ls);
         name = checkname(ls);
         luaK_tostack(ls, v, 1);  /* `v' must be on stack */
-        luaK_U(ls->fs, OP_PUSHSELF, name, 1);
+        luaK_code1(ls->fs, OP_PUSHSELF, name);
         funcargs(ls, 1);
         v->k = VEXP;
         v->u.l.t = v->u.l.f = NO_JUMP;
@@ -569,12 +568,12 @@ static int recfields (LexState *ls) {
     recfield(ls);
     n++;
     if (++mod_n == RFIELDS_PER_FLUSH) {
-      luaK_U(fs, OP_SETMAP, RFIELDS_PER_FLUSH-1, -2*RFIELDS_PER_FLUSH);
+      luaK_code1(fs, OP_SETMAP, RFIELDS_PER_FLUSH-1);
       mod_n = 0;
     }
   }
   if (mod_n)
-    luaK_U(fs, OP_SETMAP, mod_n-1, -2*mod_n);
+    luaK_code1(fs, OP_SETMAP, mod_n-1);
   return n;
 }
 
@@ -593,13 +592,12 @@ static int listfields (LexState *ls) {
     checklimit(ls, n, MAXARG_A*LFIELDS_PER_FLUSH,
                "items in a list initializer");
     if (++mod_n == LFIELDS_PER_FLUSH) {
-      luaK_AB(fs, OP_SETLIST, n/LFIELDS_PER_FLUSH - 1, LFIELDS_PER_FLUSH-1,
-              -LFIELDS_PER_FLUSH);
+      luaK_code2(fs, OP_SETLIST, n/LFIELDS_PER_FLUSH - 1, LFIELDS_PER_FLUSH-1);
       mod_n = 0;
     }
   }
   if (mod_n > 0)
-    luaK_AB(fs, OP_SETLIST, n/LFIELDS_PER_FLUSH, mod_n-1, -mod_n);
+    luaK_code2(fs, OP_SETLIST, n/LFIELDS_PER_FLUSH, mod_n-1);
   return n;
 }
 
@@ -649,7 +647,7 @@ static void constructor (LexState *ls) {
   /* constructor -> '{' constructor_part [';' constructor_part] '}' */
   FuncState *fs = ls->fs;
   int line = ls->linenumber;
-  int pc = luaK_U(fs, OP_CREATETABLE, 0, 1);
+  int pc = luaK_code1(fs, OP_CREATETABLE, 0);
   int nelems;
   Constdesc cd;
   check(ls, '{');
@@ -835,7 +833,7 @@ static int assignment (LexState *ls, expdesc *v, int nvars) {
   if (v->k != VINDEXED)
     luaK_storevar(ls, v);
   else {  /* there may be garbage between table-index and value */
-    luaK_AB(ls->fs, OP_SETTABLE, left+nvars+2, 1, -1);
+    luaK_code2(ls->fs, OP_SETTABLE, left+nvars+2, 1);
     left += 2;
   }
   return left;
@@ -1099,10 +1097,9 @@ static void ret (LexState *ls) {
   FuncState *fs = ls->fs;
   switch (ls->token) {
     case TK_RETURN: {
-      int nexps;  /* number of expressions returned */
       setline_and_next(ls);  /* skip RETURN */
-      nexps = explist(ls);
-      luaK_retcode(fs, ls->fs->nlocalvar, nexps);
+      explist(ls);
+      luaK_code1(fs, OP_RETURN, ls->fs->nlocalvar);
       fs->stacklevel = fs->nlocalvar;  /* removes all temp values */
       optional(ls, ';');
       break;
