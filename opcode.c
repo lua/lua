@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.21 1994/11/22 16:02:53 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.22 1994/11/23 14:31:11 roberto Stab roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -485,7 +485,7 @@ void lua_endblock (void)
 */
 int lua_storesubscript (void)
 {
-  static Byte code[2] = {STOREINDEXED, RETCODE0};
+  static Byte code[2] = {STOREINDEXED0, RETCODE0};
   Object func;
   tag(&func) = LUA_T_FUNCTION; bvalue(&func) = code;
   adjustC(3);
