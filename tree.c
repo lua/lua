@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: $";
+char *rcs_tree="$Id: tree.c,v 1.1 1994/07/19 21:24:17 celes Exp $";
 
 
 #include <stdlib.h>
@@ -11,6 +11,7 @@ char *rcs_tree="$Id: $";
 
 #include "lua.h"
 #include "tree.h"
+#include "table.h"
 
 
 #define lua_strcmp(a,b)	(a[0]<b[0]?(-1):(a[0]>b[0]?(1):strcmp(a,b))) 
@@ -31,7 +32,7 @@ static TreeNode *variable_root = NULL;
 /*
 ** Insert a new string/constant/variable at the tree. 
 */
-static char *tree_create (TreeNode **node, char *str)
+static char *tree_create (TreeNode **node, char *str, int *created)
 {
  if (*node == NULL)
  {
@@ -41,15 +42,16 @@ static char *tree_create (TreeNode **node, char *str)
   (*node)->left = (*node)->right = NULL;
   strcpy((*node)->str, str);
   (*node)->index = UNMARKED_STRING;
+  *created = 1;
   return (*node)->str;
  }
  else
  {
   int c = lua_strcmp(str, (*node)->str);
   if (c < 0) 
-   return tree_create(&(*node)->left, str);
+   return tree_create(&(*node)->left, str, created);
   else if (c > 0)
-   return tree_create(&(*node)->right, str);
+   return tree_create(&(*node)->right, str, created);
   else
    return (*node)->str;
  }
@@ -57,17 +59,26 @@ static char *tree_create (TreeNode **node, char *str)
 
 char *lua_strcreate (char *str) 
 {
- return tree_create(&string_root, str);
+ int created=0;
+ char *s = tree_create(&string_root, str, &created);
+ if (created)
+ {
+  if (lua_nentity == lua_block) lua_pack ();
+  lua_nentity++;
+ }
+ return s;
 }
 
 char *lua_constcreate (char *str) 
 {
- return tree_create(&constant_root, str);
+ int created;
+ return tree_create(&constant_root, str, &created);
 }
 
 char *lua_varcreate (char *str) 
 {
- return tree_create(&variable_root, str);
+ int created;
+ return tree_create(&variable_root, str, &created);
 }
 
 
@@ -131,7 +142,10 @@ static TreeNode *lua_travcollector (TreeNode *r)
  r->right = lua_travcollector(r->right);
  r->left  = lua_travcollector(r->left);
  if (r->index == UNMARKED_STRING) 
+ {
+  ++lua_recovered;
   return lua_strfree(r);
+ }
  else
  {
   r->index = UNMARKED_STRING;
