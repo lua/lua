@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.25 2004/05/10 18:06:14 roberto Exp roberto $
+** $Id: ltablib.c,v 1.26 2004/06/15 13:37:21 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -19,7 +19,7 @@
 #define aux_getn(L,n)	(luaL_checktype(L, n, LUA_TTABLE), luaL_getn(L, n))
 
 
-static int luaB_foreachi (lua_State *L) {
+static int foreachi (lua_State *L) {
   int i;
   int n = aux_getn(L, 1);
   luaL_checktype(L, 2, LUA_TFUNCTION);
@@ -36,7 +36,7 @@ static int luaB_foreachi (lua_State *L) {
 }
 
 
-static int luaB_foreach (lua_State *L) {
+static int foreach (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
   luaL_checktype(L, 2, LUA_TFUNCTION);
   lua_pushnil(L);  /* first key */
@@ -54,13 +54,13 @@ static int luaB_foreach (lua_State *L) {
 }
 
 
-static int luaB_getn (lua_State *L) {
+static int getn (lua_State *L) {
   lua_pushinteger(L, aux_getn(L, 1));
   return 1;
 }
 
 
-static int luaB_setn (lua_State *L) {
+static int setn (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
   luaL_setn(L, 1, luaL_checkint(L, 2));
   lua_pushvalue(L, 1);
@@ -68,7 +68,7 @@ static int luaB_setn (lua_State *L) {
 }
 
 
-static int luaB_tinsert (lua_State *L) {
+static int tinsert (lua_State *L) {
   int v = lua_gettop(L);  /* number of arguments */
   int e = aux_getn(L, 1) + LUA_FIRSTINDEX;  /* first empty element */
   int pos;  /* where to insert new element */
@@ -90,7 +90,7 @@ static int luaB_tinsert (lua_State *L) {
 }
 
 
-static int luaB_tremove (lua_State *L) {
+static int tremove (lua_State *L) {
   int e = aux_getn(L, 1) + LUA_FIRSTINDEX - 1;
   int pos = luaL_optint(L, 2, e);
   if (e < LUA_FIRSTINDEX) return 0;  /* table is `empty' */
@@ -220,7 +220,7 @@ static void auxsort (lua_State *L, int l, int u) {
   }  /* repeat the routine for the larger one */
 }
 
-static int luaB_sort (lua_State *L) {
+static int sort (lua_State *L) {
   int n = aux_getn(L, 1);
   luaL_checkstack(L, 40, "");  /* assume array is smaller than 2^40 */
   if (!lua_isnoneornil(L, 2))  /* is there a 2nd argument? */
@@ -235,13 +235,13 @@ static int luaB_sort (lua_State *L) {
 
 static const luaL_reg tab_funcs[] = {
   {"concat", str_concat},
-  {"foreach", luaB_foreach},
-  {"foreachi", luaB_foreachi},
-  {"getn", luaB_getn},
-  {"setn", luaB_setn},
-  {"sort", luaB_sort},
-  {"insert", luaB_tinsert},
-  {"remove", luaB_tremove},
+  {"foreach", foreach},
+  {"foreachi", foreachi},
+  {"getn", getn},
+  {"setn", setn},
+  {"sort", sort},
+  {"insert", tinsert},
+  {"remove", tremove},
   {NULL, NULL}
 };
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.9 2004/12/03 20:44:19 roberto Exp roberto $
+** $Id: lparser.c,v 2.10 2004/12/03 20:50:25 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -109,8 +109,13 @@ static int testnext (LexState *ls, int c) {
 
 
 static void check (LexState *ls, int c) {
-  if (!testnext(ls, c))
+  if (ls->t.token != c)
     error_expected(ls, c);
+}
+
+static void checknext (LexState *ls, int c) {
+  check(ls, c);
+  next(ls);
 }
 
 
@@ -133,7 +138,7 @@ static void check_match (LexState *ls, int what, int who, int where) {
 
 static TString *str_checkname (LexState *ls) {
   TString *ts;
-  if (ls->t.token != TK_NAME) error_expected(ls, TK_NAME);
+  check(ls, TK_NAME);
   ts = ls->t.seminfo.ts;
   next(ls);
   return ts;
@@ -396,7 +401,7 @@ Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, const char *name) {
   funcstate.f->is_vararg = NEWSTYLEVARARG;
   next(&lexstate);  /* read first token */
   chunk(&lexstate);
-  check_condition(&lexstate, (lexstate.t.token == TK_EOS), "<eof> expected");
+  check(&lexstate, TK_EOS);
   close_func(&lexstate);
   lua_assert(funcstate.prev == NULL);
   lua_assert(funcstate.f->nups == 0);
@@ -428,7 +433,7 @@ static void yindex (LexState *ls, expdesc *v) {
   next(ls);  /* skip the '[' */
   expr(ls, v);
   luaK_exp2val(ls->fs, v);
-  check(ls, ']');
+  checknext(ls, ']');
 }
 
 
@@ -460,7 +465,7 @@ static void recfield (LexState *ls, struct ConsControl *cc) {
   }
   else  /* ls->t.token == '[' */
     yindex(ls, &key);
-  check(ls, '=');
+  checknext(ls, '=');
   luaK_exp2RK(fs, &key);
   expr(ls, &val);
   luaK_codeABC(fs, OP_SETTABLE, cc->t->info, luaK_exp2RK(fs, &key),
@@ -514,7 +519,7 @@ static void constructor (LexState *ls, expdesc *t) {
   init_exp(t, VRELOCABLE, pc);
   init_exp(&cc.v, VVOID, 0);  /* no value (yet) */
   luaK_exp2nextreg(ls->fs, t);  /* fix it at stack top (for gc) */
-  check(ls, '{');
+  checknext(ls, '{');
   do {
     lua_assert(cc.v.k == VVOID || cc.tostore > 0);
     testnext(ls, ';');  /* compatibility only */
@@ -584,13 +589,13 @@ static void body (LexState *ls, expdesc *e, int needself, int line) {
   FuncState new_fs;
   open_func(ls, &new_fs);
   new_fs.f->lineDefined = line;
-  check(ls, '(');
+  checknext(ls, '(');
   if (needself) {
     new_localvarliteral(ls, "self", 0);
     adjustlocalvars(ls, 1);
   }
   parlist(ls);
-  check(ls, ')');
+  checknext(ls, ')');
   chunk(ls);
   check_match(ls, TK_END, TK_FUNCTION, line);
   close_func(ls);
@@ -944,7 +949,7 @@ static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
   }
   else {  /* assignment -> `=' explist1 */
     int nexps;
-    check(ls, '=');
+    checknext(ls, '=');
     nexps = explist1(ls, &e);
     if (nexps != nvars) {
       adjust_assign(ls, nvars, nexps, &e);
@@ -1011,7 +1016,7 @@ static void whilestat (LexState *ls, int line) {
     codeexp[i] = fs->f->code[expinit + i];
   fs->pc = expinit;  /* remove `exp' code */
   enterblock(fs, &bl, 1);
-  check(ls, TK_DO);
+  checknext(ls, TK_DO);
   blockinit = luaK_getlabel(fs);
   block(ls);
   luaK_patchtohere(fs, whileinit);  /* initial jump jumps to here */
@@ -1059,7 +1064,7 @@ static void forbody (LexState *ls, int base, int line, int nvars, int isnum) {
   FuncState *fs = ls->fs;
   int prep, endfor;
   adjustlocalvars(ls, 3);  /* control variables */
-  check(ls, TK_DO);
+  checknext(ls, TK_DO);
   prep = luaK_codeAsBx(fs, (isnum ? OP_FORPREP : OP_TFORPREP), base, NO_JUMP);
   enterblock(fs, &bl, 0);  /* scope for declared variables */
   adjustlocalvars(ls, nvars);
@@ -1082,9 +1087,9 @@ static void fornum (LexState *ls, TString *varname, int line) {
   new_localvarliteral(ls, "(for limit)", 1);
   new_localvarliteral(ls, "(for step)", 2);
   new_localvar(ls, varname, 3);
-  check(ls, '=');
+  checknext(ls, '=');
   exp1(ls);  /* initial value */
-  check(ls, ',');
+  checknext(ls, ',');
   exp1(ls);  /* limit */
   if (testnext(ls, ','))
     exp1(ls);  /* optional step */
@@ -1111,7 +1116,7 @@ static void forlist (LexState *ls, TString *indexname) {
   new_localvar(ls, indexname, nvars++);
   while (testnext(ls, ','))
     new_localvar(ls, str_checkname(ls), nvars++);
-  check(ls, TK_IN);
+  checknext(ls, TK_IN);
   line = ls->linenumber;
   adjust_assign(ls, 3, explist1(ls, &e), &e);
   luaK_checkstack(fs, 3);  /* extra space to call generator */
@@ -1142,7 +1147,7 @@ static int test_then_block (LexState *ls) {
   int flist;
   next(ls);  /* skip IF or ELSEIF */
   flist = cond(ls);
-  check(ls, TK_THEN);
+  checknext(ls, TK_THEN);
   block(ls);  /* `then' part */
   return flist;
 }
