@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.7 1994/11/03 22:34:29 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.8 1994/11/07 16:34:44 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -262,5 +262,13 @@ void lua_obj2number (void)
   }
   else
     lua_pushnil();
+}
+
+
+void luaI_error (void)
+{
+  char *s = lua_getstring(lua_getparam(1));
+  if (s == NULL) s = "(no message)";
+  lua_error(s);
 }
 

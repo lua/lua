@@ -1,5 +1,5 @@
 /*
-** $Id: inout.h,v 1.3 1994/11/02 20:29:39 roberto Exp roberto $
+** $Id: inout.h,v 1.4 1994/11/03 22:34:29 roberto Exp roberto $
 */
 
 
@@ -23,5 +23,6 @@ void    lua_internaldostring (void);
 void    lua_print      (void);
 void    luaI_type       (void);
 void    lua_obj2number (void);
+void	luaI_error     (void);
 
 #endif
