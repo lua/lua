@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.58 2000/02/11 16:52:54 roberto Exp roberto $
+** $Id: lparser.c,v 1.59 2000/02/14 16:51:08 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -8,6 +8,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#define LUA_REENTRANT
+
+#include "lcode.h"
 #include "ldo.h"
 #include "lfunc.h"
 #include "llex.h"
@@ -17,50 +20,6 @@
 #include "lparser.h"
 #include "lstate.h"
 #include "lstring.h"
-
-
-
-/* maximum number of local variables */
-#ifndef MAXLOCALS
-#define MAXLOCALS 200  /* arbitrary limit (<MAXARG_B) */
-#endif
-
-
-/* maximum number of upvalues */
-#ifndef MAXUPVALUES
-#define MAXUPVALUES 32  /* arbitrary limit (<MAXARG_B) */
-#endif
-
-
-/* maximum number of variables in the left side of an assignment */
-#ifndef MAXVARSLH
-#define MAXVARSLH	100  /* arbitrary limit (<MAXARG_B) */
-#endif
-
-
-/* maximum number of parameters in a function */
-#ifndef MAXPARAMS
-#define MAXPARAMS	100  /* arbitrary limit (<MAXLOCALS) */
-#endif
-
-
-/*
-** Variable descriptor:
-** must include an `exp' option because LL(1) cannot distinguish
-** between variables, upvalues and function calls on first sight.
-*/
-typedef enum {
-  VGLOBAL,  /* info is constant index of global name */
-  VLOCAL,   /* info is stack index */
-  VDOT,     /* info is constant index of index name */
-  VINDEXED, /* no info (table and index are on the stack) */
-  VEXP      /* info is pc index of a call (or 0 if exp is closed) */
-} varkind;
-
-typedef struct vardesc {
-  varkind k;
-  int info;
-} vardesc;
 
 
 /*
@@ -87,19 +46,6 @@ typedef struct constdesc {
 } constdesc;
 
 
-/* state needed to generate code for a given function */
-typedef struct FuncState {
-  TProtoFunc *f;  /* current function header */
-  struct FuncState *prev;  /* enclosing function */
-  int pc;  /* next position to code */
-  int stacksize;  /* number of values on activation register */
-  int nlocalvar;  /* number of active local variables */
-  int nupvalues;  /* number of upvalues */
-  int nvars;  /* number of entries in f->locvars (-1 if no debug information) */
-  int lastsetline;  /* line where last SETLINE was issued */
-  vardesc upvalues[MAXUPVALUES];  /* upvalues */
-  TaggedString *localvar[MAXLOCALS];  /* store local variable names */
-} FuncState;
 
 
 /*
@@ -112,9 +58,56 @@ static void expr (LexState *ls, vardesc *v);
 static void exp1 (LexState *ls);
 
 
+static void next (LexState *ls) {
+  ls->token = luaX_lex(ls);
+}
+
 
 static void luaY_error (LexState *ls, const char *msg) {
   luaX_error(ls, msg, ls->token);
+}
+
+
+static void error_expected (LexState *ls, int token) {
+  char buff[100], t[TOKEN_LEN];
+  luaX_token2str(token, t);
+  sprintf(buff, "`%.20s' expected", t);
+  luaY_error(ls, buff);
+}
+
+
+static void error_unexpected (LexState *ls) {
+  luaY_error(ls, "unexpected token");
+}
+
+
+static void error_unmatched (LexState *ls, int what, int who, int where) {
+  if (where == ls->linenumber)
+    error_expected(ls, what);
+  else {
+    char buff[100];
+    char t_what[TOKEN_LEN], t_who[TOKEN_LEN];
+    luaX_token2str(what, t_what);
+    luaX_token2str(who, t_who);
+    sprintf(buff, "`%.20s' expected (to close `%.20s' at line %d)",
+            t_what, t_who, where);
+    luaY_error(ls, buff);
+  }
+}
+
+static void check (LexState *ls, int c) {
+  if (ls->token != c)
+    error_expected(ls, c);
+  next(ls);
+}
+
+
+static int optional (LexState *ls, int c) {
+  if (ls->token == c) {
+    next(ls);
+    return 1;
+  }
+  else return 0;
 }
 
 
@@ -127,25 +120,12 @@ static void checklimit (LexState *ls, int val, int limit, const char *msg) {
 }
 
 
-static int code_instruction (LexState *ls, Instruction i) {
-  FuncState *fs = ls->fs;
-  luaM_growvector(ls->L, fs->f->code, fs->pc, 1, Instruction, codeEM, MAXARG_S);
-  fs->f->code[fs->pc] = i;
-  return fs->pc++;
-}
-
-
-static void fix_jump (LexState *ls, int pc, int dest) {
-  Instruction *jmp = &ls->fs->f->code[pc];
-  /* jump is relative to position following jump instruction */
-  *jmp = SETARG_S(*jmp, dest-(pc+1));
-}
-
 
 static void deltastack (LexState *ls, int delta) {
   FuncState *fs = ls->fs;
   fs->stacksize += delta;
   if (delta > 0 && fs->stacksize > fs->f->maxstacksize) {
+    checklimit(ls, fs->stacksize, MAXSTACK, "temporaries or local variables");
     fs->f->maxstacksize = fs->stacksize;
   }
 }
@@ -153,7 +133,7 @@ static void deltastack (LexState *ls, int delta) {
 
 static int aux_code (LexState *ls, OpCode op, Instruction i, int delta) {
   deltastack(ls, delta);
-  return code_instruction(ls, SET_OPCODE(i, op));
+  return luaK_code(ls, SET_OPCODE(i, op));
 }
 
 
@@ -179,6 +159,22 @@ static int code_AB (LexState *ls, OpCode op, int a, int b, int delta) {
   Instruction i = SETARG_A(0, a);
   i = SETARG_B(i, b);
   return aux_code(ls, op, i, delta);
+}
+
+
+static void check_debugline (LexState *ls) {
+  if (ls->L->debug && ls->linenumber != ls->fs->lastsetline) {
+    code_U(ls, SETLINE, ls->linenumber, 0);
+    ls->fs->lastsetline = ls->linenumber;
+  }
+}
+
+
+static void check_match (LexState *ls, int what, int who, int where) {
+  if (ls->token != what)
+    error_unmatched(ls, what, who, where);
+  check_debugline(ls);  /* to `mark' the `what' */
+  next(ls);
 }
 
 
@@ -228,10 +224,26 @@ static int real_constant (LexState *ls, real r) {
 
 
 static void code_number (LexState *ls, real f) {
-  if ((real)(-MAXARG_S) <= f && f <= (real)MAXARG_S && (int)f == f)
+  if (f <= (real)MAXARG_S && (int)f == f)
     code_S(ls, PUSHINT, (int)f, 1);  /* f has a short integer value */
   else
-    code_U(ls, PUSHNUMBER, real_constant(ls, f), 1);
+    code_U(ls, PUSHNUM, real_constant(ls, f), 1);
+}
+
+
+static int checkname (LexState *ls) {
+  int sc;
+  if (ls->token != NAME)
+    luaY_error(ls, "<name> expected");
+  sc = string_constant(ls, ls->fs, ls->seminfo.ts);
+  next(ls);
+  return sc;
+}
+
+
+static TaggedString *str_checkname (LexState *ls) {
+  int i = checkname(ls);  /* this call may realloc `f->consts' */
+  return ls->fs->f->kstr[i];
 }
 
 
@@ -327,15 +339,6 @@ static void pushupvalue (LexState *ls, TaggedString *n) {
 }
 
 
-
-static void check_debugline (LexState *ls) {
-  if (ls->L->debug && ls->linenumber != ls->fs->lastsetline) {
-    code_U(ls, SETLINE, ls->linenumber, 0);
-    ls->fs->lastsetline = ls->linenumber;
-  }
-}
-
-
 static void adjuststack (LexState *ls, int n) {
   if (n > 0)
     code_U(ls, POP, n, -n);
@@ -344,7 +347,7 @@ static void adjuststack (LexState *ls, int n) {
 }
 
 
-static void close_exp (LexState *ls, int pc, int nresults) {
+static void close_call (LexState *ls, int pc, int nresults) {
   if (pc > 0) {  /* expression is an open function call? */
     Instruction *i = &ls->fs->f->code[pc];
     *i = SETARG_B(*i, nresults);  /* set nresults */
@@ -364,10 +367,10 @@ static void adjust_mult_assign (LexState *ls, int nvars, listdesc *d) {
     diff--;  /* do not count function call itself */
     if (diff <= 0) {  /* more variables than values? */
       /* function call must provide extra values */
-      close_exp(ls, d->pc, -diff);
+      close_call(ls, d->pc, -diff);
     }
     else {  /* more values than variables */
-      close_exp(ls, d->pc, 0);  /* call should provide no value */
+      close_call(ls, d->pc, 0);  /* call should provide no value */
       adjuststack(ls, diff);  /* pop eventual extra values */
     }
   }
@@ -390,16 +393,21 @@ static void code_args (LexState *ls, int nparams, int dots) {
 }
 
 
-static void unloaddot (LexState *ls, vardesc *v) {
-  /* dotted variables <a.x> must be stored as regular indexed vars <a["x"]> */
-  if (v->k == VDOT) {
-    code_kstr(ls, v->info);
-    v->k = VINDEXED;
+static int getvarname (LexState *ls, vardesc *var) {
+  switch (var->k) {
+    case VGLOBAL:
+      return var->info;
+    case VLOCAL:
+      return string_constant(ls, ls->fs, ls->fs->localvar[var->info]);
+      break;
+    default:
+      error_unexpected(ls);  /* there is no `var name' */
+      return 0;  /* to avoid warnings */
   }
 }
 
 
-static void lua_pushvar (LexState *ls, vardesc *var) {
+static void close_exp (LexState *ls, vardesc *var) {
   switch (var->k) {
     case VLOCAL:
       code_U(ls, PUSHLOCAL, var->info, 1);
@@ -408,14 +416,11 @@ static void lua_pushvar (LexState *ls, vardesc *var) {
       code_U(ls, GETGLOBAL, var->info, 1);
       assertglobal(ls, var->info);  /* make sure that there is a global */
       break;
-    case VDOT:
-      code_U(ls, GETDOTTED, var->info, 0);
-      break;
     case VINDEXED:
       code_0(ls, GETTABLE, -1);
       break;
     case VEXP:
-      close_exp(ls, var->info, 1);  /* function must return 1 value */
+      close_call(ls, var->info, 1);  /* call must return 1 value */
       break;
   }
   var->k = VEXP;
@@ -445,7 +450,7 @@ static void func_onstack (LexState *ls, FuncState *func) {
   TProtoFunc *f = ls->fs->f;
   int i;
   for (i=0; i<func->nupvalues; i++)
-    lua_pushvar(ls, &func->upvalues[i]);
+    close_exp(ls, &func->upvalues[i]);
   luaM_growvector(ls->L, f->kproto, f->nkproto, 1, TProtoFunc *,
                   constantEM, MAXARG_A);
   f->kproto[f->nkproto++] = func->f;
@@ -466,6 +471,7 @@ static void init_state (LexState *ls, FuncState *fs, TaggedString *source) {
   fs->f = f;
   f->source = source;
   fs->pc = 0;
+  fs->last_pc = -1;  /* invalid index to signal no last instruction */
   f->code = NULL;
   f->maxstacksize = 0;
   f->numparams = 0;  /* default for main chunk */
@@ -495,76 +501,6 @@ static void close_func (LexState *ls) {
 }
 
 
-static void next (LexState *ls) {
-  ls->token = luaX_lex(ls);
-}
-
-
-static void error_expected (LexState *ls, int token) {
-  char buff[100], t[TOKEN_LEN];
-  luaX_token2str(token, t);
-  sprintf(buff, "`%.20s' expected", t);
-  luaY_error(ls, buff);
-}
-
-
-static void error_unexpected (LexState *ls) {
-  luaY_error(ls, "unexpected token");
-}
-
-
-static void error_unmatched (LexState *ls, int what, int who, int where) {
-  if (where == ls->linenumber)
-    error_expected(ls, what);
-  else {
-    char buff[100];
-    char t_what[TOKEN_LEN], t_who[TOKEN_LEN];
-    luaX_token2str(what, t_what);
-    luaX_token2str(who, t_who);
-    sprintf(buff, "`%.20s' expected (to close `%.20s' at line %d)",
-            t_what, t_who, where);
-    luaY_error(ls, buff);
-  }
-}
-
-static void check (LexState *ls, int c) {
-  if (ls->token != c)
-    error_expected(ls, c);
-  next(ls);
-}
-
-static void check_match (LexState *ls, int what, int who, int where) {
-  if (ls->token != what)
-    error_unmatched(ls, what, who, where);
-  check_debugline(ls);  /* to `mark' the `what' */
-  next(ls);
-}
-
-static int checkname (LexState *ls) {
-  int sc;
-  if (ls->token != NAME)
-    luaY_error(ls, "<name> expected");
-  sc = string_constant(ls, ls->fs, ls->seminfo.ts);
-  next(ls);
-  return sc;
-}
-
-
-static TaggedString *str_checkname (LexState *ls) {
-  int i = checkname(ls);  /* this call may realloc `f->consts' */
-  return ls->fs->f->kstr[i];
-}
-
-
-static int optional (LexState *ls, int c) {
-  if (ls->token == c) {
-    next(ls);
-    return 1;
-  }
-  else return 0;
-}
-
-
 TProtoFunc *luaY_parser (lua_State *L, ZIO *z) {
   struct LexState lexstate;
   struct FuncState funcstate;
@@ -591,14 +527,14 @@ static void explist1 (LexState *ls, listdesc *d) {
   d->n = 1;
   while (ls->token == ',') {
     d->n++;
-    lua_pushvar(ls, &v);
+    close_exp(ls, &v);
     next(ls);
     expr(ls, &v);
   }
   if (v.k == VEXP)
     d->pc = v.info;
   else {
-    lua_pushvar(ls, &v);
+    close_exp(ls, &v);
     d->pc = 0;
   }
 }
@@ -628,7 +564,7 @@ static int funcparams (LexState *ls, int slf) {
       next(ls);
       explist(ls, &e);
       check_match(ls, ')', '(', line);
-      close_exp(ls, e.pc, MULT_RET);  /* close 1 for old semantics */
+      close_call(ls, e.pc, MULT_RET);  /* close 1 for old semantics */
       break;
     }
 
@@ -655,14 +591,14 @@ static void var_or_func_tail (LexState *ls, vardesc *v) {
     switch (ls->token) {
       case '.':  /* var_or_func_tail -> '.' NAME */
         next(ls);
-        lua_pushvar(ls, v);  /* `v' must be on stack */
-        v->k = VDOT;
-        v->info = checkname(ls);
+        close_exp(ls, v);  /* `v' must be on stack */
+        code_kstr(ls, checkname(ls));
+        v->k = VINDEXED;
         break;
 
       case '[':  /* var_or_func_tail -> '[' exp1 ']' */
         next(ls);
-        lua_pushvar(ls, v);  /* `v' must be on stack */
+        close_exp(ls, v);  /* `v' must be on stack */
         exp1(ls);
         check(ls, ']');
         v->k = VINDEXED;
@@ -672,7 +608,7 @@ static void var_or_func_tail (LexState *ls, vardesc *v) {
         int name;
         next(ls);
         name = checkname(ls);
-        lua_pushvar(ls, v);  /* `v' must be on stack */
+        close_exp(ls, v);  /* `v' must be on stack */
         code_U(ls, PUSHSELF, name, 1);
         v->k = VEXP;
         v->info = funcparams(ls, 1);
@@ -680,7 +616,7 @@ static void var_or_func_tail (LexState *ls, vardesc *v) {
       }
 
       case '(': case STRING: case '{':  /* var_or_func_tail -> funcparams */
-        lua_pushvar(ls, v);  /* `v' must be on stack */
+        close_exp(ls, v);  /* `v' must be on stack */
         v->k = VEXP;
         v->info = funcparams(ls, 0);
         break;
@@ -710,6 +646,7 @@ static void var_or_func (LexState *ls, vardesc *v) {
 ** Rules for Constructors
 ** =======================================================================
 */
+
 
 static void recfield (LexState *ls) {
   /* recfield -> (NAME | '['exp1']') = exp1 */
@@ -788,23 +725,14 @@ static void constructor_part (LexState *ls, constdesc *cd) {
       vardesc v;
       expr(ls, &v);
       if (ls->token == '=') {
-        switch (v.k) {
-          case VGLOBAL:
-            code_kstr(ls, v.info);
-            break;
-          case VLOCAL:
-            code_string(ls, ls->fs->localvar[v.info]);
-            break;
-          default:
-            error_unexpected(ls);
-        }
-        next(ls);
-        exp1(ls);
+      code_kstr(ls, getvarname(ls, &v));
+      next(ls);  /* skip '=' */
+      exp1(ls);
         cd->n = recfields(ls);
         cd->k = 1;  /* record */
       }
       else {
-        lua_pushvar(ls, &v);
+        close_exp(ls, &v);
         cd->n = listfields(ls);
         cd->k = 0;  /* list */
       }
@@ -923,18 +851,12 @@ static void pop_to (LexState *ls, stack_op *s, int prio) {
   }
 }
 
-static void simpleexp (LexState *ls, vardesc *v, stack_op *s) {
+static void simpleexp (LexState *ls, vardesc *v) {
   check_debugline(ls);
   switch (ls->token) {
     case NUMBER: {  /* simpleexp -> NUMBER */
       real r = ls->seminfo.r;
       next(ls);
-      /* dirty trick: check whether it is a -NUMBER not followed by '^'   */
-      /* (because the priority of '^' is higher than the priority of '-') */
-      if (s->top > 0 && s->ops[s->top-1] == INDMINUS && ls->token != '^') {
-        s->top--;  /* remove '-' from stack */
-        r = -r;
-      }
       code_number(ls, r);
       break;
     }
@@ -982,7 +904,7 @@ static void prefixexp (LexState *ls, vardesc *v, stack_op *s) {
     push(ls, s, (ls->token==NOT)?INDNOT:INDMINUS);
     next(ls);
   }
-  simpleexp(ls, v, s);
+  simpleexp(ls, v);
 }
 
 
@@ -992,16 +914,16 @@ static void arith_exp (LexState *ls, vardesc *v) {
   s.top = 0;
   prefixexp(ls, v, &s);
   while ((op = binop(ls->token)) >= 0) {
-    lua_pushvar(ls, v);
+    close_exp(ls, v);
     /* '^' is right associative, so must 'simulate' a higher priority */
     pop_to(ls, &s, (op == POW)?priority[op]+1:priority[op]);
     push(ls, &s, op);
     next(ls);
     prefixexp(ls, v, &s);
-    lua_pushvar(ls, v);
+    close_exp(ls, v);
   }
   if (s.top > 0) {
-    lua_pushvar(ls, v);
+    close_exp(ls, v);
     pop_to(ls, &s, 0);
   }
 }
@@ -1010,7 +932,7 @@ static void arith_exp (LexState *ls, vardesc *v) {
 static void exp1 (LexState *ls) {
   vardesc v;
   expr(ls, &v);
-  lua_pushvar(ls, &v);
+  close_exp(ls, &v);
 }
 
 
@@ -1020,12 +942,12 @@ static void expr (LexState *ls, vardesc *v) {
   while (ls->token == AND || ls->token == OR) {
     OpCode op = (ls->token == AND) ? ONFJMP : ONTJMP;
     int pc;
-    lua_pushvar(ls, v);
+    close_exp(ls, v);
     next(ls);
     pc = code_S(ls, op, 0, -1);
     arith_exp(ls, v);
-    lua_pushvar(ls, v);
-    fix_jump(ls, pc, ls->fs->pc);
+    close_exp(ls, v);
+    luaK_fixjump(ls, pc, ls->fs->pc);
   }
 }
 
@@ -1054,7 +976,6 @@ static void block (LexState *ls) {
 static int assignment (LexState *ls, vardesc *v, int nvars) {
   int left = 0;
   checklimit(ls, nvars, MAXVARSLH, "variables in a multiple assignment");
-  unloaddot(ls, v);
   if (ls->token == ',') {  /* assignment -> ',' NAME assignment */
     vardesc nv;
     next(ls);
@@ -1083,19 +1004,37 @@ static int assignment (LexState *ls, vardesc *v, int nvars) {
 }
 
 
+/* maximum size of a while condition */
+#ifndef MAX_WHILE_EXP
+#define MAX_WHILE_EXP 200	/* arbitrary limit */
+#endif
+
 static void whilestat (LexState *ls, int line) {
   /* whilestat -> WHILE exp1 DO block END */
+  Instruction buffer[MAX_WHILE_EXP];
   FuncState *fs = ls->fs;
   int while_init = fs->pc;
-  int j1;
-  next(ls);
-  exp1(ls);
-  j1 = code_U(ls, IFFJMP, 0, -1);  /* jump to exit loop */
+  int cond_size;
+  int i;
+  next(ls);  /* skip WHILE */
+  exp1(ls);  /* read condition */
+  cond_size = fs->pc - while_init;
+  /* save condition (to move it to after body) */
+  if (cond_size > MAX_WHILE_EXP)
+    luaY_error(ls, "while condition too complex");
+  for (i=0; i<cond_size; i++) buffer[i] = fs->f->code[while_init+i];
+  /* go back to state prior condition */
+  fs->pc = while_init;
+  deltastack(ls, -1);
+  code_S(ls, JMP, 0, 0);  /* initial jump to condition */
   check(ls, DO);
   block(ls);
   check_match(ls, END, WHILE, line);
-  fix_jump(ls, code_U(ls, JMP, 0, 0), while_init);  /* jump to keep loop */
-  fix_jump(ls, j1, fs->pc);
+  luaK_fixjump(ls, while_init, fs->pc);
+  /* copy condition to new position, and correct stack */
+  for (i=0; i<cond_size; i++) luaK_primitivecode(ls, buffer[i]);
+  deltastack(ls, 1);
+  luaK_fixjump(ls, code_S(ls, IFTJMP, 0, -1), while_init+1);
 }
 
 
@@ -1107,7 +1046,7 @@ static void repeatstat (LexState *ls, int line) {
   block(ls);
   check_match(ls, UNTIL, REPEAT, line);
   exp1(ls);
-  fix_jump(ls, code_U(ls, IFFJMP, 0, -1), repeat_init);
+  luaK_fixjump(ls, code_S(ls, IFFJMP, 0, -1), repeat_init);
 }
 
 
@@ -1157,7 +1096,7 @@ static int funcname (LexState *ls, vardesc *v) {
   if (ls->token == ':' || ls->token == '.') {
     needself = (ls->token == ':');
     next(ls);
-    lua_pushvar(ls, v);
+    close_exp(ls, v);
     code_kstr(ls, checkname(ls));
     v->k = VINDEXED;
   }
@@ -1188,7 +1127,7 @@ static void namestat (LexState *ls) {
   if (v.k == VEXP) {  /* stat -> func */
     if (v.info == 0)  /* is just an upper value? */
       luaY_error(ls, "syntax error");
-    close_exp(ls, v.info, 0);
+    close_call(ls, v.info, 0);  /* call statement uses no results */
   }
   else {  /* stat -> ['%'] NAME assignment */
     int left = assignment(ls, &v, 1);
@@ -1200,14 +1139,16 @@ static void namestat (LexState *ls) {
 static void ifpart (LexState *ls, int line) {
   /* ifpart -> cond THEN block [ELSE block | ELSEIF ifpart] */
   FuncState *fs = ls->fs;
-  int c;
-  int je;
+  int c;  /* address of the conditional jump */
+  int je;  /* address of the unconditional jump (to skip `else' part) */
+  int elseinit;
   next(ls);  /* skip IF or ELSEIF */
   exp1(ls);  /* cond */
-  c = code_U(ls, IFFJMP, 0, -1);  /* jump `then' if `cond' is false */
+  c = code_S(ls, IFFJMP, 0, -1);  /* jump `then' if `cond' is false */
   check(ls, THEN);
   block(ls);  /* `then' part */
-  je = code_U(ls, JMP, 0, 0);  /* jump `else' part after `then' */
+  je = code_S(ls, JMP, 0, 0);  /* jump `else' part after `then' */
+  elseinit = fs->pc;
   if (ls->token == ELSEIF)
     ifpart(ls, line);
   else {
@@ -1215,13 +1156,14 @@ static void ifpart (LexState *ls, int line) {
       block(ls);  /* `else' part */
     check_match(ls, END, IF, line);
   }
-  if (fs->pc == je+1) {  /* `else' part empty? */
+  if (fs->pc > elseinit)  /* is there an `else' part? */
+    luaK_fixjump(ls, je, fs->pc);  /* last jump jumps over it */
+  else {
     fs->pc--;  /* remove last jump */
-    je--;  /* first jump will be smaller */
+    elseinit--;  /* first jump will be smaller */
+    LUA_ASSERT(L, fs->pc == je, "jump out of place");
   }
-  else
-    fix_jump(ls, je, fs->pc);  /* fix last jump */
-  fix_jump(ls, c, je+1);  /* fix first jump to beginning of `else' part */
+  luaK_fixjump(ls, c, elseinit);  /* fix first jump to `else' part */
 }
 
 
@@ -1329,13 +1271,8 @@ static void ret (LexState *ls) {
     check_debugline(ls);
     next(ls);
     explist(ls, &e); 
-    if (e.pc > 0) {  /* expression is an open function call? */
-      Instruction *i = &ls->fs->f->code[e.pc];
-      *i = SET_OPCODE(*i, TAILCALL);  /* instead of a conventional CALL */
-      *i = SETARG_B(*i, ls->fs->nlocalvar);
-    }
-    else
-      code_U(ls, RETCODE, ls->fs->nlocalvar, 0);
+    close_call(ls, e.pc, MULT_RET);
+    code_U(ls, RETCODE, ls->fs->nlocalvar, 0);
     ls->fs->stacksize = ls->fs->nlocalvar;  /* removes all temp values */
     optional(ls, ';');
   }

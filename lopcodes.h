@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.39 2000/02/11 16:52:54 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.40 2000/02/14 16:51:08 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -47,6 +47,11 @@
 
 
 
+/*
+** K = U argument used as index to `kstr'
+** J = S argument used as jump offset (relative to pc of next instruction)
+*/
+
 typedef enum {
 /* name          parm    before          after           side effect
 -----------------------------------------------------------------------------*/
@@ -60,24 +65,25 @@ PUSHNIL,/*	U	-		nil_0-nil_u			*/
 POP,/*		U	a_u-a_1		-				*/
 
 PUSHINT,/*	S	-		(real)s				*/
-PUSHSTRING,/*	U	-		KSTR[u]				*/
-PUSHNUMBER,/*	U	-		KNUM[u]				*/
+PUSHSTRING,/*	K	-		KSTR[k]				*/
+PUSHNUM,/*	U	-		KNUM[u]				*/
+PUSHNEGNUM,/*	U	-		-KNUM[u]			*/
 
 PUSHUPVALUE,/*	U	-		Closure[u]			*/
 
 PUSHLOCAL,/*	U	-		LOC[u]				*/
-GETGLOBAL,/*	U	-		VAR[CNST[u]]			*/
+GETGLOBAL,/*	K	-		VAR[CNST[k]]			*/
 
 GETTABLE,/*	-	i t		t[i]				*/
-GETDOTTED,/*	U	t		t[CNST[u]]			*/
-PUSHSELF,/*	U	t		t t[CNST[u]]			*/
+GETDOTTED,/*	K	t		t[KSTR[k]]			*/
+PUSHSELF,/*	K	t		t t[KSTR[k]]			*/
 
 CREATETABLE,/*	U	-		newarray(size = u)		*/
 
 SETLOCAL,/*	U	x		-		LOC[u]=x	*/
-SETGLOBAL,/*	U	x		-		VAR[CNST[u]]=x	*/
+SETGLOBAL,/*	K	x		-		VAR[KSTR[k]]=x	*/
 SETTABLEPOP,/*	-	v i t		-		t[i]=v		*/
-SETTABLE,/*	U	v a_u-a_1 i t	 a_u-a_1 i t	  t[i]=v	*/
+SETTABLE,/*	U	v a_u-a_1 i t	 a_u-a_1 i t	t[i]=v		*/
 
 SETLIST,/*	A B	v_b-v_0 t	t		t[i+a*FPF]=v_i	*/
 SETMAP,/*	U	v_u k_u - v_0 k_0 t	t	t[k_i]=v_i	*/
@@ -88,7 +94,9 @@ LTOP,/*		-	y x		(x<y)? 1 : nil			*/
 LEOP,/*		-	y x		(x<y)? 1 : nil			*/
 GTOP,/*		-	y x		(x>y)? 1 : nil			*/
 GEOP,/*		-	y x		(x>=y)? 1 : nil			*/
+
 ADDOP,/*	-	y x		x+y				*/
+ADDI,/*		S	x		x+s				*/
 SUBOP,/*	-	y x		x-y				*/
 MULTOP,/*	-	y x		x*y				*/
 DIVOP,/*	-	y x		x/y				*/
@@ -97,11 +105,11 @@ CONCOP,/*	-	y x		x..y				*/
 MINUSOP,/*	-	x		-x				*/
 NOTOP,/*	-	x		(x==nil)? 1 : nil		*/
 
-ONTJMP,/*	S	x		(x!=nil)? x : -	(x!=nil)? PC+=s	*/
-ONFJMP,/*	S	x		(x==nil)? x : -	(x==nil)? PC+=s	*/
-JMP,/*		S	-		-		PC+=s		*/
-IFTJMP,/*	S	x		-		(x!=nil)? PC+=s	*/
-IFFJMP,/*	S	x		-		(x==nil)? PC+=s	*/
+ONTJMP,/*	J	x		(x!=nil)? x : -	(x!=nil)? PC+=s	*/
+ONFJMP,/*	J	x		(x==nil)? x : -	(x==nil)? PC+=s	*/
+JMP,/*		J	-		-		PC+=s		*/
+IFTJMP,/*	J	x		-		(x!=nil)? PC+=s	*/
+IFFJMP,/*	J	x		-		(x==nil)? PC+=s	*/
 
 CLOSURE,/*	A B	v_b-v_1		closure(CNST[a], v_b-v_1)	*/
 
@@ -111,7 +119,7 @@ SETLINE/*	U	-		-		LINE=u		*/
 
 
 #define RFIELDS_PER_FLUSH 32	/* records (SETMAP) */
-#define LFIELDS_PER_FLUSH 64    /* FPF - lists (SETLIST) (<MAXARG_B) */
+#define LFIELDS_PER_FLUSH 64    /* FPF - lists (SETLIST) (<=MAXARG_B) */
 
 
 #endif
