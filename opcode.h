@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.17 1996/02/13 17:30:39 roberto Exp roberto $
+** $Id: opcode.h,v 3.18 1996/03/01 16:54:00 roberto Exp $
 */
 
 #ifndef opcode_h
@@ -132,8 +132,6 @@ typedef union
 
 
 /* Exported functions */
-char   *lua_strdup (char *l);
-
 void    lua_parse      (TFunc *tf);	/* from "lua.stx" module */
 void	luaI_codedebugline (int line);  /* from "lua.stx" module */
 void    lua_travstack (int (*fn)(Object *));
