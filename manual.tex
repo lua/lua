@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.45 2000/10/31 18:20:01 roberto Exp roberto $
+% $Id: manual.tex,v 1.47 2000/11/14 18:46:09 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage}
@@ -134,7 +134,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{{\small \tt\$Date: 2000/10/31 18:20:01 $ $}}
+\date{{\small \tt\$Date: 2000/11/14 18:46:09 $ $}}
 
 \maketitle
 
@@ -332,12 +332,6 @@ This means that functions can be stored in variables,
 passed as arguments to other functions, and returned as results.
 Lua can call (and manipulate) functions written in Lua and
 functions written in C.
-The two kinds of functions can be distinguished by their tags:
-all Lua functions have the same tag,
-and all C~functions have the same tag,
-which is different from the tag of Lua functions.
-The \verb|tag| function returns the tag
-of a given value \see{pdf-tag}.
 
 The type \emph{userdata} is provided to allow
 arbitrary \Index{C~pointers} to be stored in Lua variables.
@@ -422,8 +416,10 @@ are reserved for internal variables.
 
 The following strings denote other \Index{tokens}:
 \begin{verbatim}
-       ~=    <=    >=    <     >     ==    =     +     -     *     /     %
-       (     )     {     }     [     ]     ;     ,     .     ..    ...
+   +     -     *     /     ^     %    
+   ~=    <=    >=    <     >     ==    =
+   (     )     {     }     [     ]
+   ;     :     ,     .     ..    ...
 \end{verbatim}
 
 \IndexEmph{Literal strings}
@@ -659,7 +655,7 @@ The numerical \rwd{for} loop has the following syntax:
 \end{Produc}%
 A \rwd{for} statement like
 \begin{verbatim}
-       for var = e1 ,e2, e3 do block end
+       for var = e1, e2, e3 do block end
 \end{verbatim}
 is equivalent to the code:
 \begin{verbatim}
@@ -1568,16 +1564,17 @@ it does not have any global variables.
 \index{state}
 The whole state of the Lua interpreter
 (global variables, stack, tag methods, etc.)
-is stored in a dynamically allocated structure of type \verb|lua_State|; \DefAPI{lua_State}
+is stored in a dynamically allocated structure of type \verb|lua_State|;
+\DefAPI{lua_State}
 this state must be passed as the first argument to
 every function in the library (except \verb|lua_open| below).
 
 Before calling any API function,
 you must create a state by calling
-\DefAPI{lua_open}
 \begin{verbatim}
        lua_State *lua_open (int stacksize);
 \end{verbatim}
+\DefAPI{lua_open}
 The sole argument to this function is the stack size for the interpreter.
 (Each function call needs one stack position for each argument, local variable,
 and temporary value, plus one position for book-keeping.
@@ -1588,10 +1585,10 @@ If \verb|stacksize| is zero,
 then a default size of~1024 is used.
 
 To release a state created with \verb|lua_open|, call
-\DefAPI{lua_close}
 \begin{verbatim}
        void lua_close (lua_State *L);
 \end{verbatim}
+\DefAPI{lua_close}
 This function destroys all objects in the given Lua environment
 (calling the corresponding garbage-collection tag methods, if any)
 and frees all dynamic memory used by that state.
@@ -1628,25 +1625,26 @@ index~\Math{-1} also represents the last element
 (that is, the element at the top),
 and index \Math{-n} represents the first element.
 We say that an index is \emph{valid}
-if it lays between~1 and the stack top
+if it lies between~1 and the stack top
 (that is, if \verb|1 <= abs(index) <= top|).
 \index{stack index} \index{valid index}
 
 At any time, you can get the index of the top element by calling
-\DefAPI{lua_gettop}
 \begin{verbatim}
        int lua_gettop (lua_State *L);
 \end{verbatim}
+\DefAPI{lua_gettop}
 Because indices start at~1,
 the result of \verb|lua_gettop| is equal to the number of elements in the stack
 (and so 0~means an empty stack).
 
 When you interact with Lua API,
 \emph{you are responsible for controlling stack overflow}.
-The function \DefAPI{lua_stackspace}
+The function
 \begin{verbatim}
        int lua_stackspace (lua_State *L);
 \end{verbatim}
+\DefAPI{lua_stackspace}
 returns the number of stack positions still available.
 Whenever Lua calls C, \DefAPI{LUA_MINSTACK}
 it ensures that
@@ -1667,14 +1665,14 @@ Note that 0 is not an acceptable index.
 
 \subsection{Stack Manipulation}
 The API offers the following functions for basic stack manipulation:
-\DefAPI{lua_settop}\DefAPI{lua_pushvalue}
-\DefAPI{lua_remove}\DefAPI{lua_insert}
 \begin{verbatim}
        void lua_settop    (lua_State *L, int index);
        void lua_pushvalue (lua_State *L, int index);
        void lua_remove    (lua_State *L, int index);
        void lua_insert    (lua_State *L, int index);
 \end{verbatim}
+\DefAPI{lua_settop}\DefAPI{lua_pushvalue}
+\DefAPI{lua_remove}\DefAPI{lua_insert}
 
 \verb|lua_settop| accepts any acceptable index,
 or 0,
@@ -1686,6 +1684,7 @@ A useful macro defined in the API is
 \begin{verbatim}
        #define lua_pop(L,n) lua_settop(L, -(n)-1)
 \end{verbatim}
+\DefAPI{lua_pop}
 which pops \verb|n| elements from the stack.
 
 \verb|lua_pushvalue| pushes onto the stack a \emph{copy} of the element
@@ -1714,10 +1713,6 @@ then
 
 To check the type of a stack element,
 the following functions are available:
-\DefAPI{lua_type}\DefAPI{lua_tag}
-\DefAPI{lua_isnil}\DefAPI{lua_isnumber}\DefAPI{lua_isstring}
-\DefAPI{lua_istable}
-\DefAPI{lua_isfunction}\DefAPI{lua_iscfunction}\DefAPI{lua_isuserdata}
 \begin{verbatim}
        int         lua_type        (lua_State *L, int index);
        int         lua_tag         (lua_State *L, int index);
@@ -1729,7 +1724,13 @@ the following functions are available:
        int         lua_iscfunction (lua_State *L, int index);
        int         lua_isuserdata  (lua_State *L, int index);
 \end{verbatim}
+\DefAPI{lua_type}\DefAPI{lua_tag}
+\DefAPI{lua_isnil}\DefAPI{lua_isnumber}\DefAPI{lua_isstring}
+\DefAPI{lua_istable}
+\DefAPI{lua_isfunction}\DefAPI{lua_iscfunction}\DefAPI{lua_isuserdata}
 These functions can be called with any acceptable index.
+The \verb|lua_isnumber| function may have a side effect of changing the
+actual value in the stack from a string to a number.
 
 \verb|lua_type| returns one of the following constants,
 according to the type of the given object:
@@ -1743,10 +1744,10 @@ If the index is non-valid
 (that is, if that stack position is ``empty''),
 then \verb|lua_type| returns \verb|LUA_TNONE|.
 These constants can be converted to strings with
-\DefAPI{lua_typename}
 \begin{verbatim}
        const char *lua_typename (lua_State *L, int t);
 \end{verbatim}
+\DefAPI{lua_typename}
 where \verb|t| is a type returned by \verb|lua_type|.
 The strings returned by \verb|lua_typename| are
 \verb|"nil"|, \verb|"number"|, \verb|"string"|, \verb|"table"|,
@@ -1754,6 +1755,8 @@ The strings returned by \verb|lua_typename| are
 
 \verb|lua_tag| returns the tag of a value,
 or \verb|LUA_NOTAG| for a non-valid index.
+The default tag value for all types is equal to the value
+returned by \verb|lua_type|.
 
 The \verb|lua_is*| functions return~1 if the object is compatible
 with the given type, and 0 otherwise.
@@ -1767,12 +1770,11 @@ To distinguish between numbers and numerical strings,
 you can use \verb|lua_type|.
 
 The API also has functions to compare two values in the stack:
-\DefAPI{lua_equal}
-\DefAPI{lua_lessthan}
 \begin{verbatim}
        int lua_equal    (lua_State *L, int index1, int index2);
        int lua_lessthan (lua_State *L, int index1, int index2);
 \end{verbatim}
+\DefAPI{lua_equal} \DefAPI{lua_lessthan}
 These functions are equivalent to their counterparts in Lua.
 Specifically, \verb|lua_lessthan| is equivalent to the \verb|lt_event|
 described in \See{tag-method}.
@@ -1780,8 +1782,6 @@ Both functions return 0 if any of the indices are non-valid.
 
 To translate a value in the stack to a specific C~type,
 you can use the following conversion functions:
-\DefAPI{lua_tonumber}\DefAPI{lua_tostring}\DefAPI{lua_strlen}
-\DefAPI{lua_tocfunction}\DefAPI{lua_touserdata}
 \begin{verbatim}
        double         lua_tonumber    (lua_State *L, int index);
        const char    *lua_tostring    (lua_State *L, int index);
@@ -1789,6 +1789,8 @@ you can use the following conversion functions:
        lua_CFunction  lua_tocfunction (lua_State *L, int index);
        void          *lua_touserdata  (lua_State *L, int index);
 \end{verbatim}
+\DefAPI{lua_tonumber}\DefAPI{lua_tostring}\DefAPI{lua_strlen}
+\DefAPI{lua_tocfunction}\DefAPI{lua_touserdata}
 These functions can be called with any acceptable index.
 When called with a non-valid index,
 they act as if the given value had an incorrect type.
@@ -1797,13 +1799,20 @@ they act as if the given value had an incorrect type.
 to a floating-point number.
 This value must be a number or a string convertible to number
 \see{coercion}; otherwise, \verb|lua_tonumber| returns~0.
+If the value is a string,
+\verb|lua_tonumber| also changes the
+actual value in the stack to a number.
 
 \verb|lua_tostring| converts a Lua value to a string
 (\verb|const char*|).
 This value must be a string or a number;
 otherwise, the function returns \verb|NULL|.
+If the value is a number,
+\verb|lua_tostring| also changes the
+actual value in the stack to a string.
 This function returns a pointer to a string inside the Lua environment.
-Those strings always have a zero (\verb|'\0'|) after their last character (as in C),
+Those strings always have a zero (\verb|'\0'|)
+after their last character (as in C),
 but may contain other zeros in their body.
 If you do not know whether a string may contain zeros,
 you should use \verb|lua_strlen| to get its actual length.
@@ -1826,9 +1835,6 @@ otherwise, \verb|lua_touserdata| returns \verb|NULL|.
 
 The API has the following functions to
 push C~values onto the stack:
-\DefAPI{lua_pushnumber}\DefAPI{lua_pushlstring}\DefAPI{lua_pushstring}
-\DefAPI{lua_pushcfunction}\DefAPI{lua_pushusertag}
-\DefAPI{lua_pushnil}\DefAPI{lua_pushuserdata}\label{pushing}
 \begin{verbatim}
        void lua_pushnumber    (lua_State *L, double n);
        void lua_pushlstring   (lua_State *L, const char *s, size_t len);
@@ -1837,6 +1843,9 @@ push C~values onto the stack:
        void lua_pushnil       (lua_State *L);
        void lua_pushcfunction (lua_State *L, lua_CFunction f);
 \end{verbatim}
+\DefAPI{lua_pushnumber}\DefAPI{lua_pushlstring}\DefAPI{lua_pushstring}
+\DefAPI{lua_pushcfunction}\DefAPI{lua_pushusertag}
+\DefAPI{lua_pushnil}\DefAPI{lua_pushuserdata}\label{pushing}
 These functions receive a C~value,
 convert it to a corresponding Lua value,
 and push the result onto the stack.
@@ -1853,8 +1862,6 @@ which accepts an explicit size.
 Lua uses two numbers to control its garbage collection.
 One number counts how many bytes of dynamic memory Lua is using,
 and the other is a threshold.
-(This internal byte counter kept by Lua is not completely acurate;
-it is just a lower bound, usually within~10\% of the correct value.)
 When the number of bytes crosses the threshold,
 Lua runs a garbage-collection cycle,
 which reclaims the memory of all ``dead'' objects
@@ -1864,17 +1871,17 @@ and then the threshold is reset to twice the value of the byte counter.
 
 You can access the current values of these two numbers through the
 following functions:
-\DefAPI{lua_getgcthreshold} \DefAPI{lua_getgccount}
 \begin{verbatim}
        int  lua_getgccount (lua_State *L);
        int  lua_getgcthreshold (lua_State *L);
 \end{verbatim}
+\DefAPI{lua_getgcthreshold} \DefAPI{lua_getgccount}
 Both return their respective values in Kbytes.
 You can change the threshold value with
-\DefAPI{lua_setgcthreshold}
 \begin{verbatim}
        void  lua_setgcthreshold (lua_State *L, int newthreshold);
 \end{verbatim}
+\DefAPI{lua_setgcthreshold}
 Again, the \verb|newthreshold| value is given in Kbytes.
 When you call this function,
 Lua sets the new threshold and checks it against the byte counter.
@@ -1883,7 +1890,7 @@ then Lua immediately runs the garbage collector;
 after the collection, 
 a new threshold is set according to the previous rule.
 
-If you want to change the adaptative behavior of the garbage collector,
+If you want to change the adaptive behavior of the garbage collector,
 you can use the garbage-collection tag method for \nil\ %
 to set your own threshold
 (the tag method is called after Lua resets the threshold).
@@ -1906,29 +1913,29 @@ with tag equal to 0.
 Userdata can have different tags,
 whose semantics are only known to the host program.
 Tags are created with the function
-\DefAPI{lua_newtag}
 \begin{verbatim}
        int lua_newtag (lua_State *L);
 \end{verbatim}
+\DefAPI{lua_newtag}
 The function \verb|lua_settag| changes the tag of
 the object on top of the stack (without popping it):
-\DefAPI{lua_settag}
 \begin{verbatim}
        void lua_settag (lua_State *L, int tag);
 \end{verbatim}
+\DefAPI{lua_settag}
 The object must be a userdata or a table;
 the given \verb|tag| must be a value created with \verb|lua_newtag|.
 
 \subsection{Executing Lua Code}\label{luado}
 A host program can execute Lua chunks written in a file or in a string
 by using the following functions:%
-\DefAPI{lua_dofile}\DefAPI{lua_dostring}\DefAPI{lua_dobuffer}%
 \begin{verbatim}
        int lua_dofile   (lua_State *L, const char *filename);
        int lua_dostring (lua_State *L, const char *string);
        int lua_dobuffer (lua_State *L, const char *buff,
                          size_t size, const char *name);
 \end{verbatim}
+\DefAPI{lua_dofile}\DefAPI{lua_dostring}\DefAPI{lua_dobuffer}%
 These functions return
 0 in case of success, or one of the following error codes if they fail:
 \begin{itemize}
@@ -1994,10 +2001,10 @@ leaving the stack as it was before the call:
 
 To read the value of a global Lua variable,
 you call
-\DefAPI{lua_getglobal}
 \begin{verbatim}
        void lua_getglobal (lua_State *L, const char *varname);
 \end{verbatim}
+\DefAPI{lua_getglobal}
 which pushes onto the stack the value of the given variable.
 As in Lua, this function may trigger a tag method
 for the ``getglobal'' event \see{tag-method}.
@@ -2008,10 +2015,10 @@ use \verb|lua_rawget| over the table of globals
 
 To store a value in a global variable,
 you call
-\DefAPI{lua_setglobal}
 \begin{verbatim}
        void lua_setglobal (lua_State *L, const char *varname);
 \end{verbatim}
+\DefAPI{lua_setglobal}
 which pops from the stack the value to be stored in the given variable.
 As in Lua, this function may trigger a tag method
 for the ``setglobal'' event \see{tag-method}.
@@ -2022,30 +2029,27 @@ use \verb|lua_rawset| over the table of globals
 
 All global variables are kept in an ordinary Lua table.
 You can get this table calling
-\DefAPI{lua_getglobals}
 \begin{verbatim}
        void lua_getglobals (lua_State *L);
 \end{verbatim}
+\DefAPI{lua_getglobals}
 which pushes the current table of globals onto the stack.
 To set another table as the table of globals,
 you call
-\DefAPI{lua_setglobals}
 \begin{verbatim}
        void lua_setglobals (lua_State *L);
 \end{verbatim}
+\DefAPI{lua_setglobals}
 The table to be used is popped from the stack.
 
 \subsection{Manipulating Tables in Lua}
 Lua tables can also be manipulated through the API.
 
-To read the value of in a table,
-the table must reside somewhere in the stack.
-With this set,
-you call
-\DefAPI{lua_gettable}
+To read a value from a table, call
 \begin{verbatim}
        void lua_gettable (lua_State *L, int index);
 \end{verbatim}
+\DefAPI{lua_gettable}
 where \verb|index| refers to the table.
 \verb|lua_gettable| pops a key from the stack,
 and returns (on the stack) the contents of the table at that key.
@@ -2054,19 +2058,19 @@ for the ``gettable'' event.
 To get the real value of any table key,
 without invoking any tag method,
 use the \emph{raw} version:
-\DefAPI{lua_rawget}
 \begin{verbatim}
        void lua_rawget (lua_State *L, int index);
 \end{verbatim}
+\DefAPI{lua_rawget}
 
 To store a value into a table that resides somewhere in the stack,
 you push the key and the value onto the stack
 (in this order),
 and then call
-\DefAPI{lua_settable}
 \begin{verbatim}
        void lua_settable (lua_State *L, int index);
 \end{verbatim}
+\DefAPI{lua_settable}
 where \verb|index| refers to the table.
 \verb|lua_settable| pops from the stack both the key and the value.
 As in Lua, this operation may trigger a tag method
@@ -2074,30 +2078,30 @@ for the ``settable'' event.
 To set the real value of any table index,
 without invoking any tag method,
 use the \emph{raw} version:
-\DefAPI{lua_rawset}
 \begin{verbatim}
        void lua_rawset (lua_State *L, int index);
 \end{verbatim}
+\DefAPI{lua_rawset}
 
 Finally, the function
-\DefAPI{lua_newtable}
 \begin{verbatim}
        void lua_newtable (lua_State *L);
 \end{verbatim}
+\DefAPI{lua_newtable}
 creates a new, empty table and pushes it onto the stack.
 
 \subsection{Using Tables as Arrays}
 The API has functions that help to use Lua tables as arrays,
 that is,
 tables indexed by numbers only:
-\DefAPI{lua_rawgeti}
-\DefAPI{lua_rawseti}
-\DefAPI{lua_getn}
 \begin{verbatim}
        void lua_rawgeti (lua_State *L, int index, int n);
        void lua_rawseti (lua_State *L, int index, int n);
        int  lua_getn    (lua_State *L, int index);
 \end{verbatim}
+\DefAPI{lua_rawgeti}
+\DefAPI{lua_rawseti}
+\DefAPI{lua_getn}
 
 \verb|lua_rawgeti| gets the value of the \M{n}-th element of the table
 at stack position \verb|index|.
@@ -2122,19 +2126,19 @@ First, the function to be called is pushed onto the stack;
 then, the arguments to the function are pushed
 \see{pushing} in \emph{direct order}, that is, the first argument is pushed first.
 Finally, the function is called using
-\DefAPI{lua_call}
 \begin{verbatim}
        int lua_call (lua_State *L, int nargs, int nresults);
 \end{verbatim}
+\DefAPI{lua_call}
 This function returns the same error codes as \verb|lua_dostring| and
 friends \see{luado}.
 If you want to propagate the error,
 instead of returning an error code,
 use
-\DefAPI{lua_rawcall}
 \begin{verbatim}
        void lua_rawcall (lua_State *L, int nargs, int nresults);
 \end{verbatim}
+\DefAPI{lua_rawcall}
 
 In both functions,
 \verb|nargs| is the number of arguments that you pushed onto the stack.
@@ -2174,10 +2178,10 @@ This is considered good programming practice.
 
 Some special Lua functions have their own C~interfaces.
 The host program can generate a Lua error calling the function
-\DefAPI{lua_error}
 \begin{verbatim}
        void lua_error (lua_State *L, const char *message);
 \end{verbatim}
+\DefAPI{lua_error}
 This function never returns.
 If \verb|lua_error| is called from a C~function that has been called from Lua,
 then the corresponding Lua execution terminates,
@@ -2192,32 +2196,36 @@ then \verb|_ERRORMESSAGE| is not called.
 
 \medskip
 
-Tag methods can be changed with \DefAPI{lua_settagmethod}
+Tag methods can be changed with
 \begin{verbatim}
        void lua_settagmethod (lua_State *L, int tag, const char *event);
 \end{verbatim}
+\DefAPI{lua_settagmethod}
 The second parameter is the tag,
 and the third is the event name \see{tag-method};
 the new method is popped from the stack.
 To get the current value of a tag method,
-use the function \DefAPI{lua_gettagmethod}
+use the function
 \begin{verbatim}
        void lua_gettagmethod (lua_State *L, int tag, const char *event);
 \end{verbatim}
+\DefAPI{lua_gettagmethod}
 
 It is also possible to copy all tag methods from one tag
-to another: \DefAPI{lua_copytagmethods}
+to another:
 \begin{verbatim}
        int lua_copytagmethods (lua_State *L, int tagto, int tagfrom);
 \end{verbatim}
+\DefAPI{lua_copytagmethods}
 This function returns \verb|tagto|.
 
 \medskip
 
-You can traverse a table with the function \DefAPI{lua_next}
+You can traverse a table with the function
 \begin{verbatim}
        int lua_next (lua_State *L, int index);
 \end{verbatim}
+\DefAPI{lua_next}
 where \verb|index| refers to the table to be traversed.
 The function pops a key from the stack,
 and pushes a key-value pair from the table
@@ -2236,10 +2244,11 @@ A typical traversal looks like this:
        }
 \end{verbatim}
 
-The function \DefAPI{lua_concat}
+The function
 \begin{verbatim}
        void lua_concat (lua_State *L, int n);
 \end{verbatim}
+\DefAPI{lua_concat}
 concatenates the \verb|n| values at the top of the stack,
 pops them, and leaves the result at the top;
 \verb|n|~must be at least 2.
@@ -2250,20 +2259,20 @@ Concatenation is done following the usual semantics of Lua
 \subsection{Defining C Functions} \label{LuacallC}
 To register a C~function to Lua,
 there is the following convenience macro:
-\DefAPI{lua_register}
 \begin{verbatim}
      #define lua_register(L, n, f) (lua_pushcfunction(L, f), lua_setglobal(L, n))
      /* const char *n;   */
      /* lua_CFunction f; */
 \end{verbatim}
+\DefAPI{lua_register}
 which receives the name the function will have in Lua,
 and a pointer to the function.
 This pointer must have type \verb|lua_CFunction|,
 which is defined as
-\DefAPI{lua_CFunction}
 \begin{verbatim}
        typedef int (*lua_CFunction) (lua_State *L);
 \end{verbatim}
+\DefAPI{lua_CFunction}
 that is, a pointer to a function with integer result and a single argument,
 a Lua environment.
 
@@ -2309,10 +2318,11 @@ these values are passed to the function whenever it is called,
 as ordinary arguments.
 To associate upvalues to a C~function,
 first these values should be pushed onto the stack.
-Then the function \DefAPI{lua_pushcclosure}
+Then the function
 \begin{verbatim}
        void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n);
 \end{verbatim}
+\DefAPI{lua_pushcclosure}
 is used to push the C~function onto the stack,
 with the argument \verb|n| telling how many upvalues should be
 associated with the function
@@ -2337,13 +2347,12 @@ If the C~code needs to keep a Lua value
 outside the life span of a C~function,
 then it must create a \Def{reference} to the value.
 The functions to manipulate references are the following:
-\DefAPI{lua_ref}\DefAPI{lua_getref}
-\DefAPI{lua_unref}
 \begin{verbatim}
        int   lua_ref    (lua_State *L, int lock);
        int   lua_getref (lua_State *L, int ref);
        void  lua_unref  (lua_State *L, int ref);
 \end{verbatim}
+\DefAPI{lua_ref}\DefAPI{lua_getref}\DefAPI{lua_unref}
 
 \verb|lua_ref| pops a value from
 the stack, creates a reference to it,
@@ -2371,10 +2380,11 @@ it should be released with a call to \verb|lua_unref|.
 
 When Lua starts, it registers a table at position
 \IndexAPI{LUA_REFREGISTRY}.
-It can be accessed through the macro\DefAPI{lua_getregistry}
+It can be accessed through the macro
 \begin{verbatim}
   #define lua_getregistry(L)      lua_getref(L, LUA_REFREGISTRY)
 \end{verbatim}
+\DefAPI{lua_getregistry}
 This table can be used by C~libraries as a general registry mechanism.
 Any C~library can store data into this table,
 as long as it chooses a key different from other libraries.
@@ -2710,7 +2720,7 @@ use function \verb|format|.
 
 
 
-\subsubsection*{\ff \T{tinsert (table [, pos] , value)}}\DefLIB{tinsert}
+\subsubsection*{\ff \T{tinsert (table, [pos,] value)}}\DefLIB{tinsert}
 
 Inserts element \verb|value| at table position \verb|pos|,
 shifting other elements to open space, if necessary.
@@ -2788,7 +2798,7 @@ such as finding and extracting substrings and pattern matching.
 When indexing a string in Lua, the first character is at position~1
 (not at~0, as in C).
 Also,
-indices are allowed to be negative and are intepreted as indexing backwards,
+indices are allowed to be negative and are interpreted as indexing backwards,
 from the end of the string. Thus, the last character is at position \Math{-1},
 and so on.
 
@@ -2887,16 +2897,6 @@ will produce the string:
 "a string with \"quotes\" and \
  new line"
 \end{verbatim}
-
-Conversions can be applied to the \M{n}-th argument in the argument list,
-rather than the next unused argument.
-In this case, the conversion character \verb|%| is replaced
-by the sequence \verb|%d$|, where \verb|d| is a
-decimal digit in the range [1,9],
-giving the position of the argument in the argument list.
-For instance, the call \verb|format("%2$d -> %1$03d", 1, 34)| will
-result in \verb|"34 -> 001"|.
-The same argument can be used in more than one conversion.
 
 The options \verb|c|, \verb|d|, \verb|E|, \verb|e|, \verb|f|,
 \verb|g|, \verb|G|, \verb|i|, \verb|o|, \verb|u|, \verb|X|, and \verb|x| all
@@ -3220,7 +3220,7 @@ usually limited and depends on the system.
 
 \subsubsection*{\ff \T{appendto (filename)}}\DefLIB{appendto}
 
-Opens a file named \verb|filename| and sets it as the
+Opens a file named \verb|filename| and sets its handle as the
 value of \verb|_OUTPUT|.
 Unlike the \verb|writeto| operation,
 this function does not erase any previous contents of the file;
@@ -3377,11 +3377,11 @@ This interface is declared in \verb|luadebug.h|.
 
 \subsection{Stack and Function Information}
 
-\DefAPI{lua_getstack}
 The main function to get information about the interpreter stack is
 \begin{verbatim}
        int lua_getstack (lua_State *L, int level, lua_Debug *ar);
 \end{verbatim}
+\DefAPI{lua_getstack}
 It fills parts of a \verb|lua_Debug| structure with
 an identification of the \emph{activation record}
 of the function executing at a given level.
@@ -3391,7 +3391,6 @@ Usually, \verb|lua_getstack| returns 1;
 when called with a level greater than the stack depth,
 it returns 0.
 
-\DefAPI{lua_Debug}
 The structure \verb|lua_Debug| is used to carry different pieces of
 information about an active function:
 \begin{verbatim}
@@ -3410,13 +3409,15 @@ information about an active function:
         ...
       } lua_Debug;
 \end{verbatim}
+\DefAPI{lua_Debug}
 \verb|lua_getstack| fills only the private part
 of this structure, for future use.
 To fill in the other fields of \verb|lua_Debug| with useful information,
-call \DefAPI{lua_getinfo}
+call
 \begin{verbatim}
        int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar);
 \end{verbatim}
+\DefAPI{lua_getinfo}
 This function returns 0 on error
 (e.g., an invalid option in \verb|what|).
 Each character in the string \verb|what|
@@ -3500,13 +3501,13 @@ For the manipulation of local variables,
 The first parameter or local variable has index~1, and so on,
 until the last active local variable.
 
-\DefAPI{lua_getlocal}\DefAPI{lua_setlocal}
 The following functions allow the manipulation of the
 local variables of a given activation record.
 \begin{verbatim}
        const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n);
        const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n);
 \end{verbatim}
+\DefAPI{lua_getlocal}\DefAPI{lua_setlocal}
 The parameter \verb|ar| must be a valid activation record,
 filled by a previous call to \verb|lua_getstack| or
 given as argument to a hook \see{sub-hooks}.
@@ -3543,16 +3544,16 @@ local variables for a function at a given level of the stack:
 The Lua interpreter offers two hooks for debugging purposes:
 a \emph{call} hook and a \emph{line} hook.
 Both have the same type,
-\DefAPI{lua_Hook}
 \begin{verbatim}
        typedef void (*lua_Hook) (lua_State *L, lua_Debug *ar);
 \end{verbatim}
+\DefAPI{lua_Hook}
 and you can set them with the following functions:
-\DefAPI{lua_setcallhook}\DefAPI{lua_setlinehook}
 \begin{verbatim}
        lua_Hook lua_setcallhook (lua_State *L, lua_Hook func);
        lua_Hook lua_setlinehook (lua_State *L, lua_Hook func);
 \end{verbatim}
+\DefAPI{lua_setcallhook}\DefAPI{lua_setlinehook}
 A hook is disabled when its value is \verb|NULL|,
 which is the initial value of both hooks.
 The functions \verb|lua_setcallhook| and \verb|lua_setlinehook|
