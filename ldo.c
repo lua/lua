@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.16 2005/03/08 20:10:05 roberto Exp roberto $
+** $Id: ldo.c,v 2.17 2005/03/09 16:28:07 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -74,6 +74,7 @@ void luaD_throw (lua_State *L, int errcode) {
     LUAI_THROW(L, L->errorJmp);
   }
   else {
+    L->status = errcode;
     if (G(L)->panic) G(L)->panic(L);
     exit(EXIT_FAILURE);
   }

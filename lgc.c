@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.28 2005/03/08 20:10:05 roberto Exp roberto $
+** $Id: lgc.c,v 2.29 2005/03/09 16:28:07 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -539,7 +539,7 @@ static void atomic (lua_State *L) {
   propagateall(g);  /* remark, to propagate `preserveness' */
   cleartable(g->weak);  /* remove collected objects from weak tables */
   /* flip current white */
-  g->currentwhite = otherwhite(g);
+  g->currentwhite = cast(lu_byte, otherwhite(g));
   g->sweepstrgc = 0;
   g->sweepgc = &g->rootgc;
   g->gcstate = GCSsweepstring;
