@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.15 1999/01/04 12:41:12 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.16 1999/02/19 17:33:35 roberto Exp roberto $
 ** Lua standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -13,6 +13,7 @@
 #include "lualib.h"
 
 
+#undef PI
 #define PI	(3.14159265358979323846)
 #define RADIANS_PER_DEGREE	(PI/180.0)
 
