@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.2 2004/03/12 19:53:56 roberto Exp roberto $
+** $Id: llex.c,v 2.3 2004/04/30 20:13:38 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -181,12 +181,12 @@ static void read_numeral (LexState *ls, SemInfo *seminfo) {
 }
 
 
-static int skip_ast (LexState *ls) {
+static int skip_sep (LexState *ls) {
   int count = 0;
   int s = ls->current;
   lua_assert(s == '[' || s == ']');
   save_and_next(ls);
-  while (ls->current == '*') {
+  while (ls->current == '=') {
     save_and_next(ls);
     count++;
   }
@@ -194,7 +194,7 @@ static int skip_ast (LexState *ls) {
 }
 
 
-static void read_long_string (LexState *ls, SemInfo *seminfo, int ast) {
+static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
   int cont = 0;
   save_and_next(ls);  /* skip 2nd `[' */
   if (currIsNewline(ls))  /* string starts with a newline? */
@@ -206,13 +206,13 @@ static void read_long_string (LexState *ls, SemInfo *seminfo, int ast) {
                                    "unfinished long comment", TK_EOS);
         break;  /* to avoid warnings */
       case '[':
-        if (skip_ast(ls) == ast) {
+        if (skip_sep(ls) == sep) {
           save_and_next(ls);  /* skip 2nd `[' */
           cont++;
         }
         continue;
       case ']':
-        if (skip_ast(ls) == ast) {
+        if (skip_sep(ls) == sep) {
           save_and_next(ls);  /* skip 2nd `]' */
           if (cont-- == 0) goto endloop;
         }
@@ -229,8 +229,8 @@ static void read_long_string (LexState *ls, SemInfo *seminfo, int ast) {
     }
   } endloop:
   if (seminfo)
-    seminfo->ts = luaX_newstring(ls, luaZ_buffer(ls->buff) + (2 + ast),
-                                     luaZ_bufflen(ls->buff) - 2*(2 + ast));
+    seminfo->ts = luaX_newstring(ls, luaZ_buffer(ls->buff) + (2 + sep),
+                                     luaZ_bufflen(ls->buff) - 2*(2 + sep));
 }
 
 
@@ -305,10 +305,10 @@ int luaX_lex (LexState *ls, SemInfo *seminfo) {
         /* else is a comment */
         next(ls);
         if (ls->current == '[') {
-          int ast = skip_ast(ls);
-          luaZ_resetbuffer(ls->buff);  /* `skip_ast' may dirty the buffer */
-          if (ast >= 0) {
-            read_long_string(ls, NULL, ast);  /* long comment */
+          int sep = skip_sep(ls);
+          luaZ_resetbuffer(ls->buff);  /* `skip_sep' may dirty the buffer */
+          if (sep >= 0) {
+            read_long_string(ls, NULL, sep);  /* long comment */
             luaZ_resetbuffer(ls->buff);
             continue;
           }
@@ -319,12 +319,12 @@ int luaX_lex (LexState *ls, SemInfo *seminfo) {
         continue;
       }
       case '[': {
-        int ast = skip_ast(ls);
-        if (ast >= 0) {
-          read_long_string(ls, seminfo, ast);
+        int sep = skip_sep(ls);
+        if (sep >= 0) {
+          read_long_string(ls, seminfo, sep);
           return TK_STRING;
         }
-        else if (ast == -1) return '[';
+        else if (sep == -1) return '[';
         else luaX_lexerror(ls, "invalid long string delimiter", TK_STRING);
       }
       case '=': {
