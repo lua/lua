@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.111 2000/08/31 14:08:27 roberto Exp roberto $
+** $Id: lparser.c,v 1.112 2000/09/20 17:57:08 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -60,13 +60,13 @@ static void next (LexState *ls) {
     ls->lookahead.token = TK_EOS;  /* and discharge it */
   }
   else
-    ls->t.token = luaX_lex(ls);  /* read next token */
+    ls->t.token = luaX_lex(ls, &ls->t.seminfo);  /* read next token */
 }
 
 
 static void lookahead (LexState *ls) {
   LUA_ASSERT(ls->lookahead.token == TK_EOS, "two look-aheads");
-  ls->lookahead.token = luaX_lex(ls);
+  ls->lookahead.token = luaX_lex(ls, &ls->lookahead.seminfo);
 }
 
 

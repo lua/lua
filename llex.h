@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.29 2000/06/19 18:05:14 roberto Exp roberto $
+** $Id: llex.h,v 1.30 2000/06/21 18:13:56 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -35,13 +35,17 @@ enum RESERVED {
 #define NUM_RESERVED	((int)(TK_WHILE-FIRST_RESERVED+1))
 
 
+typedef union {
+  Number r;
+  TString *ts;
+} SemInfo;  /* semantics information */
+
+
 typedef struct Token {
   int token;
-  union {
-    Number r;
-    TString *ts;
-  } seminfo;  /* semantics information */
+  SemInfo seminfo;
 } Token;
+
 
 typedef struct LexState {
   int current;  /* current character */
@@ -58,7 +62,7 @@ typedef struct LexState {
 
 void luaX_init (lua_State *L);
 void luaX_setinput (lua_State *L, LexState *LS, ZIO *z, TString *source);
-int luaX_lex (LexState *LS);
+int luaX_lex (LexState *LS, SemInfo *seminfo);
 void luaX_checklimit (LexState *ls, int val, int limit, const char *msg);
 void luaX_syntaxerror (LexState *ls, const char *s, const char *token);
 void luaX_error (LexState *ls, const char *s, int token);

@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.69 2000/09/11 17:38:42 roberto Exp roberto $
+** $Id: llex.c,v 1.70 2000/09/11 20:29:27 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -58,7 +58,7 @@ void luaX_checklimit (LexState *ls, int val, int limit, const char *msg) {
 void luaX_syntaxerror (LexState *ls, const char *s, const char *token) {
   char buff[MAXSRC];
   luaO_chunkid(buff, ls->source->str, sizeof(buff));
-  luaO_verror(ls->L, "%.100s;\n  last token read: `%.50s' at line %d in %.80s",
+  luaO_verror(ls->L, "%.99s;\n  last token read: `%.50s' at line %d in %.80s",
               s, token, ls->linenumber, buff);
 }
 
@@ -146,7 +146,7 @@ static const char *readname (LexState *LS) {
 
 
 /* LUA_NUMBER */
-static void read_number (LexState *LS, int comma) {
+static void read_number (LexState *LS, int comma, SemInfo *seminfo) {
   lua_State *L = LS->L;
   size_t l = 0;
   checkbuffer(L, 10, l);
@@ -178,12 +178,12 @@ static void read_number (LexState *LS, int comma) {
     }
   }
   save(L, '\0', l);
-  if (!luaO_str2d(L->Mbuffer, &LS->t.seminfo.r))
+  if (!luaO_str2d(L->Mbuffer, &seminfo->r))
     luaX_error(LS, "malformed number", TK_NUMBER);
 }
 
 
-static void read_long_string (LexState *LS) {
+static void read_long_string (LexState *LS, SemInfo *seminfo) {
   lua_State *L = LS->L;
   int cont = 0;
   size_t l = 0;
@@ -222,11 +222,11 @@ static void read_long_string (LexState *LS) {
   } endloop:
   save_and_next(L, LS, l);  /* skip the second ']' */
   save(L, '\0', l);
-  LS->t.seminfo.ts = luaS_newlstr(L, L->Mbuffer+2, l-5);
+  seminfo->ts = luaS_newlstr(L, L->Mbuffer+2, l-5);
 }
 
 
-static void read_string (LexState *LS, int del) {
+static void read_string (LexState *LS, int del, SemInfo *seminfo) {
   lua_State *L = LS->L;
   size_t l = 0;
   checkbuffer(L, 10, l);
@@ -274,11 +274,11 @@ static void read_string (LexState *LS, int del) {
   }
   save_and_next(L, LS, l);  /* skip delimiter */
   save(L, '\0', l);
-  LS->t.seminfo.ts = luaS_newlstr(L, L->Mbuffer+1, l-3);
+  seminfo->ts = luaS_newlstr(L, L->Mbuffer+1, l-3);
 }
 
 
-int luaX_lex (LexState *LS) {
+int luaX_lex (LexState *LS, SemInfo *seminfo) {
   for (;;) {
     switch (LS->current) {
 
@@ -304,7 +304,7 @@ int luaX_lex (LexState *LS) {
         next(LS);
         if (LS->current != '[') return '[';
         else {
-          read_long_string(LS);
+          read_long_string(LS, seminfo);
           return TK_STRING;
         }
 
@@ -330,7 +330,7 @@ int luaX_lex (LexState *LS) {
 
       case '"':
       case '\'':
-        read_string(LS, LS->current);
+        read_string(LS, LS->current, seminfo);
         return TK_STRING;
 
       case '.':
@@ -345,13 +345,13 @@ int luaX_lex (LexState *LS) {
         }
         else if (!isdigit(LS->current)) return '.';
         else {
-          read_number(LS, 1);
+          read_number(LS, 1, seminfo);
           return TK_NUMBER;
         }
 
       case '0': case '1': case '2': case '3': case '4':
       case '5': case '6': case '7': case '8': case '9':
-        read_number(LS, 0);
+        read_number(LS, 0, seminfo);
         return TK_NUMBER;
 
       case EOZ:
@@ -371,7 +371,7 @@ int luaX_lex (LexState *LS) {
           TString *ts = luaS_new(LS->L, readname(LS));
           if (ts->marked >= RESERVEDMARK)  /* reserved word? */
             return ts->marked-RESERVEDMARK+FIRST_RESERVED;
-          LS->t.seminfo.ts = ts;
+          seminfo->ts = ts;
           return TK_NAME;
         }
     }

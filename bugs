@@ -223,3 +223,9 @@ Wed Sep 27 09:50:19 EST 2000
 >> lua_tag should return LUA_NOTAG for non-valid indices
 (by Paul Hankin; since 4.0b)
 
+** llex.h / llex.c / lparser.c
+Wed Sep 27 13:39:45 EST 2000
+>> parser overwrites semantic information when looking ahead
+>> (e.g. «a = {print'foo'}»)
+(by Edgar Toernig; since 4.0b, deriving from previous bug)
+
