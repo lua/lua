@@ -1,4 +1,4 @@
-# $Id: makefile,v 1.16 1995/11/10 17:56:06 roberto Exp roberto $
+# $Id: makefile,v 1.17 1995/12/21 16:14:04 roberto Exp roberto $
 
 #configuration
 
@@ -67,7 +67,7 @@ clear	:
 
 
 fallback.o : fallback.c mem.h fallback.h opcode.h lua.h types.h tree.h func.h 
-func.o : func.c table.h tree.h types.h opcode.h lua.h func.h mem.h 
+func.o : func.c table.h tree.h types.h opcode.h lua.h func.h mem.h luadebug.h
 hash.o : hash.c mem.h opcode.h lua.h types.h tree.h func.h hash.h table.h 
 inout.o : inout.c mem.h opcode.h lua.h types.h tree.h func.h hash.h inout.h \
   table.h 
@@ -83,5 +83,5 @@ parser.o : parser.c mem.h opcode.h lua.h types.h tree.h func.h hash.h inout.h \
   table.h 
 strlib.o : strlib.c lua.h lualib.h 
 table.o : table.c mem.h opcode.h lua.h types.h tree.h func.h hash.h table.h \
-  inout.h fallback.h 
+  inout.h fallback.h luadebug.h
 tree.o : tree.c mem.h lua.h tree.h types.h table.h opcode.h func.h 
