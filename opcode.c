@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.52 1996/01/09 20:22:44 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.53 1996/01/23 18:43:07 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -374,6 +374,18 @@ static void storesubscript (void)
 }
 
 
+static void getglobal (Word n)
+{
+  *top = lua_table[n].object;
+  incr_top;
+  if (tag(top-1) == LUA_T_NIL)
+  { /* must call getglobal fallback */
+    tag(top-1) = LUA_T_STRING;
+    tsvalue(top-1) = &lua_table[n].varname->ts;
+    callFB(FB_GETGLOBAL);
+  }
+}
+
 /*
 ** Traverse all objects on stack
 */
@@ -704,10 +716,8 @@ int lua_lock (void)
 */
 lua_Object lua_getglobal (char *name)
 {
- Word n = luaI_findsymbolbyname(name);
  adjustC(0);
- *top = s_object(n);
- incr_top;
+ getglobal(luaI_findsymbolbyname(name));
  CBase++;  /* incorporate object in the stack */
  return Ref(top-1);
 }
@@ -919,8 +929,7 @@ static StkId lua_execute (Byte *pc, StkId base)
    {
     CodeWord code;
     get_word(code,pc);
-    *top = s_object(code.w);
-    incr_top;
+    getglobal(code.w);
    }
    break;
 

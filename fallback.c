@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.16 1995/10/17 11:52:38 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.17 1995/10/17 14:30:05 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -36,8 +36,10 @@ struct FB  luaI_fallBacks[] = {
 {"concat", {LUA_T_CFUNCTION, {concatFB}}, 2, 1},
 {"settable", {LUA_T_CFUNCTION, {gettableFB}}, 3, 0},
 {"gc", {LUA_T_CFUNCTION, {GDFB}}, 1, 0},
-{"function", {LUA_T_CFUNCTION, {funcFB}}, -1, -1}
+{"function", {LUA_T_CFUNCTION, {funcFB}}, -1, -1},
                                 /* no fixed number of params or results */
+{"getglobal", {LUA_T_CFUNCTION, {indexFB}}, 1, 1}
+                                /* same default behavior of index FB */
 };
 
 #define N_FB  (sizeof(luaI_fallBacks)/sizeof(struct FB))
