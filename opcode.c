@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 2.9 1994/10/11 14:38:17 celes Exp $";
+char *rcs_opcode="$Id: opcode.c,v 2.10 1994/10/17 19:00:40 celes Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,8 +12,6 @@ char *rcs_opcode="$Id: opcode.c,v 2.9 1994/10/11 14:38:17 celes Exp $";
 #ifdef __GNUC__
 #include <floatingpoint.h>
 #endif
-
-#include "mm.h"
 
 #include "opcode.h"
 #include "hash.h"
@@ -76,7 +74,7 @@ static int lua_checkstack (Word n)
 
 
 /*
-** Concatenate two given string, creating a mark space at the beginning.
+** Concatenate two given strings, creating a mark space at the beginning.
 ** Return the new string pointer.
 */
 static char *lua_strconc (char *l, char *r)
@@ -119,7 +117,7 @@ static int lua_tonumber (Object *obj)
 }
 
 /*
-** Test if is possible to convert an object to a number object.
+** Test if it is possible to convert an object to a number object.
 ** If possible, return the converted object, otherwise return nil object.
 */ 
 static Object *lua_convtonumber (Object *obj)
@@ -648,7 +646,7 @@ int lua_execute (Byte *pc)
 
 
 /*
-** Function to indexed the values on the top
+** Function to index the values on the top
 */
 int lua_pushsubscript (void)
 {
