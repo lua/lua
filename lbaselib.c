@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.152 2004/07/02 18:09:11 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.153 2004/07/09 16:01:38 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -195,7 +195,7 @@ static int luaB_collectgarbage (lua_State *L) {
 
 static int luaB_type (lua_State *L) {
   luaL_checkany(L, 1);
-  lua_pushstring(L, lua_typename(L, lua_type(L, 1)));
+  lua_pushstring(L, luaL_typename(L, 1));
   return 1;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.118 2004/06/29 16:57:56 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.119 2004/07/01 14:26:28 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -63,7 +63,7 @@ LUALIB_API int luaL_argerror (lua_State *L, int narg, const char *extramsg) {
 
 LUALIB_API int luaL_typerror (lua_State *L, int narg, const char *tname) {
   const char *msg = lua_pushfstring(L, "%s expected, got %s",
-                                    tname, lua_typename(L, lua_type(L,narg)));
+                                    tname, luaL_typename(L, narg));
   return luaL_argerror(L, narg, msg);
 }
 

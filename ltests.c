@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.8 2004/05/31 19:41:52 roberto Exp roberto $
+** $Id: ltests.c,v 2.9 2004/06/02 19:08:52 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -951,7 +951,7 @@ static int testC (lua_State *L) {
         lua_pushnil(L1);
     }
     else if EQ("type") {
-      lua_pushstring(L1, lua_typename(L1, lua_type(L1, getnum)));
+      lua_pushstring(L1, luaL_typename(L1, getnum));
     }
     else if EQ("getn") {
       int i = getnum;
