@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.77 1996/11/18 13:48:44 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.78 1996/11/22 13:08:28 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -157,16 +157,20 @@ static int lua_tonumber (Object *obj)
 */
 static int lua_tostring (Object *obj)
 {
- char s[256];
- if (tag(obj) != LUA_T_NUMBER)
-   return 1;
- if ((int) nvalue(obj) == nvalue(obj))
-   sprintf (s, "%d", (int) nvalue(obj));
- else
-   sprintf (s, "%g", nvalue(obj));
- tsvalue(obj) = lua_createstring(s);
- tag(obj) = LUA_T_STRING;
- return 0;
+  if (tag(obj) != LUA_T_NUMBER)
+    return 1;
+  else {
+    char s[60];
+    real f = nvalue(obj);
+    int i;
+    if ((real)(-MAX_INT) <= f && f <= (real)MAX_INT && (real)(i=(int)f) == f)
+      sprintf (s, "%d", i);
+    else
+      sprintf (s, "%g", nvalue(obj));
+    tsvalue(obj) = lua_createstring(s);
+    tag(obj) = LUA_T_STRING;
+    return 0;
+  }
 }
 
 

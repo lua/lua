@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.41 1996/11/08 12:49:35 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.42 1997/01/15 16:11:37 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -163,9 +163,9 @@ static void add_varbuffer (Long var)
 
 static void code_number (float f)
 { 
-  Word i = (Word)f;
-  if (f == (float)i)  /* f has an (short) integer value */
-  {
+  Word i;
+  if (f >= 0 && f <= (float)MAX_WORD && (float)(i=(Word)f) == f) {
+   /* f has an (short) integer value */
    if (i <= 2) code_byte(PUSH0 + i);
    else if (i <= 255)
    {
