@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.2 1994/11/04 10:47:49 roberto Exp $
+** $Id: opcode.h,v 3.3 1994/11/06 15:35:04 roberto Exp $
 */
 
 #ifndef opcode_h
@@ -117,7 +117,7 @@ typedef union
 
 typedef struct Object
 {
- Type  tag;
+ lua_Type  tag;
  Value value;
 } Object;
 
