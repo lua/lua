@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.90 2005/01/10 16:30:59 roberto Exp roberto $
+** $Id: ldblib.c,v 1.91 2005/01/10 17:21:10 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -281,7 +281,7 @@ static int errorfb (lua_State *L) {
   lua_State *L1 = getthread(L, &arg);
   lua_Debug ar;
   if (lua_isnumber(L, arg+2)) {
-    level = lua_tonumber(L, arg+2);
+    level = lua_tointeger(L, arg+2);
     lua_pop(L, 1);
   }
   else
