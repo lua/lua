@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.25 2005/02/18 12:50:08 roberto Exp roberto $
+** $Id: lvm.c,v 2.26 2005/02/23 17:30:22 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -620,7 +620,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
           int aux;
           StkId func = ci->func;
           StkId pfunc = (ci+1)->func;  /* previous function index */
-          if (L->openupval) luaF_close(L, base);
+          if (L->openupval) luaF_close(L, ci->base);
           base = ci->base = ci->func + ((ci+1)->base - pfunc);
           L->base = base;
           for (aux = 0; pfunc+aux < L->top; aux++)  /* move frame down */
