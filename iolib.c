@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.31 1996/01/22 17:38:57 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.31 1996/01/22 17:46:55 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -200,12 +200,12 @@ static int read_until_char (int del)
   return c;
 }
 
-static int read_until_blank (void)
+static void read_until_blank (void)
 {
   int c;
   while((c = fgetc(in)) != EOF && !isspace(c))
     luaI_addchar(c);
-  return c;
+  if (c != EOF) ungetc(c,in);
 }
 
 static void read_m (int m)
