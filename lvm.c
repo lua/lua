@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.10 2004/06/29 17:05:00 roberto Exp roberto $
+** $Id: lvm.c,v 2.11 2004/06/29 18:49:02 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -150,7 +150,7 @@ StkId luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val,
       if (!ttisnil(oldval) ||  /* result is no nil? */
           (tm = fasttm(L, h->metatable, TM_NEWINDEX)) == NULL) { /* or no TM? */
         setobj2t(L, oldval, val);
-        luaC_barrier(L, h, val);
+        luaC_barriert(L, h, val);
         return L->base;
       }
       /* else will try the tag method */
@@ -729,7 +729,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         for (; n > 0; n--) {
           TValue *val = ra+n;
           setobj2t(L, luaH_setnum(L, h, last--), val);
-          luaC_barrier(L, h, val);
+          luaC_barriert(L, h, val);
         }
         continue;
       }

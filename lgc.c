@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.6 2004/03/23 12:57:12 roberto Exp roberto $
+** $Id: lgc.c,v 2.7 2004/04/30 20:13:38 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -24,9 +24,11 @@
 
 
 #define GCSTEPSIZE	(40*sizeof(TValue))
-#define GCFREECOST	(sizeof(TValue)/2)
-#define GCSWEEPCOST	sizeof(TValue)
+#define STEPMUL		2
+#define GCFREECOST	(sizeof(TValue)/10)
+#define GCSWEEPCOST	(sizeof(TValue)/20)
 #define GCFINALIZECOST	(10*sizeof(TValue))
+#define WAITNEXTCYCLE	(10 * GCSTEPSIZE)
 
 
 #define FIXEDMASK	bitmask(FIXEDBIT)
@@ -531,8 +533,10 @@ static void remarkupvals (global_State *g) {
     if (iswhite(o)) {
       GCObject *curr;
       for (curr = gco2th(o)->openupval; curr != NULL; curr = curr->gch.next) {
-        if (isgray(curr))
-          markvalue(g, gco2uv(curr)->v);
+        if (isgray(curr)) {
+          UpVal *uv = gco2uv(curr);
+          markvalue(g, uv->v);
+        }
       }
     }
   }
@@ -612,14 +616,16 @@ static l_mem singlestep (lua_State *L, l_mem lim) {
 
 void luaC_step (lua_State *L) {
   global_State *g = G(L);
-  l_mem lim = (g->nblocks - (g->GCthreshold - GCSTEPSIZE)) * 2;
+  l_mem lim = (g->nblocks - (g->GCthreshold - GCSTEPSIZE)) * STEPMUL;
   do {
     lim = singlestep(L, lim);
-    if (g->gcstate == GCSfinalize && g->tmudata == NULL)
+    if (g->gcstate == GCSfinalize && g->tmudata == NULL) {
+      lim = -WAITNEXTCYCLE;
       break;  /* do not start new collection */
+    }
   } while (lim > 0);
-  g->GCthreshold = g->nblocks + GCSTEPSIZE - lim/2;
-  lua_assert((long)g->nblocks + (long)GCSTEPSIZE >= lim/2);
+  g->GCthreshold = g->nblocks + GCSTEPSIZE - lim/STEPMUL;
+  lua_assert((long)g->nblocks + (long)GCSTEPSIZE >= lim/STEPMUL);
 }
 
 
@@ -645,6 +651,16 @@ void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v) {
     black2gray(o);  /* just mark as gray to avoid other barriers */
   else  /* breaking invariant! */
     reallymarkobject(g, v);  /* restore it */
+}
+
+
+void luaC_barrierback (lua_State *L, GCObject *o, GCObject *v) {
+  global_State *g = G(L);
+  lua_assert(isblack(o) && iswhite(v) && !isdead(g, v) && !isdead(g, o));
+  lua_assert(g->gcstate != GCSfinalize);
+  black2gray(o);  /* make table gray (again) */
+  gco2h(o)->gclist = g->grayagain;
+  g->grayagain = o;
 }
 
 
