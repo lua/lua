@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.19 1998/05/18 22:26:03 roberto Exp roberto $
+** $Id: lobject.h,v 1.20 1998/06/11 18:21:37 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -196,7 +196,6 @@ extern TObject luaO_nilobject;
 
 int luaO_equalObj (TObject *t1, TObject *t2);
 int luaO_redimension (int oldsize);
-int luaO_findstring (char *name, char *list[]);
 void luaO_insertlist (GCnode *root, GCnode *node);
 
 #ifdef OLD_ANSI

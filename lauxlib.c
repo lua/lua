@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.9 1998/03/06 16:54:42 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.10 1998/03/06 18:47:42 roberto Exp roberto $
 ** Auxiliar functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -7,6 +7,7 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 
 /* Please Notice: This file uses only the oficial API of Lua
 ** Any function declared here could be written as an application
@@ -17,6 +18,14 @@
 #include "luadebug.h"
 
 
+
+int luaL_findstring (char *name, char *list[]) {
+  int i;
+  for (i=0; list[i]; i++)
+    if (strcmp(list[i], name) == 0)
+      return i;
+  return -1;  /* name not found */
+}
 
 void luaL_argerror (int numarg, char *extramsg)
 {

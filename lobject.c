@@ -1,11 +1,10 @@
 /*
-** $Id: lobject.c,v 1.10 1998/01/09 14:44:55 roberto Exp roberto $
+** $Id: lobject.c,v 1.11 1998/03/09 21:49:52 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
 
 #include <stdlib.h>
-#include <string.h>
 
 #include "lobject.h"
 #include "lua.h"
@@ -55,16 +54,6 @@ int luaO_equalObj (TObject *t1, TObject *t2)
      LUA_INTERNALERROR("invalid type");
      return 0; /* UNREACHEABLE */
   }
-}
-
-
-int luaO_findstring (char *name, char *list[])
-{
-  int i;
-  for (i=0; list[i]; i++)
-    if (strcmp(list[i], name) == 0)
-      return i;
-  return -1;  /* name not found */
 }
 
 

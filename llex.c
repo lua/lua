@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.19 1998/05/27 13:03:40 roberto Exp roberto $
+** $Id: llex.c,v 1.20 1998/06/06 20:44:05 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -118,7 +118,7 @@ static void skipspace (LexState *LS)
 static int checkcond (LexState *LS, char *buff)
 {
   static char *opts[] = {"nil", "1", NULL};
-  int i = luaO_findstring(buff, opts);
+  int i = luaL_findstring(buff, opts);
   if (i >= 0) return i;
   else if (isalpha((unsigned char)buff[0]) || buff[0] == '_')
     return luaS_globaldefined(buff);
@@ -172,7 +172,7 @@ static void inclinenumber (LexState *LS)
     int skip = LS->ifstate[LS->iflevel].skip;
     next(LS);  /* skip $ */
     readname(LS, buff);
-    switch (luaO_findstring(buff, pragmas)) {
+    switch (luaL_findstring(buff, pragmas)) {
       case 0:  /* debug */
         if (!skip) lua_debug = 1;
         break;

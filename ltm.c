@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.14 1998/03/09 21:49:52 roberto Exp roberto $
+** $Id: ltm.c,v 1.15 1998/03/11 13:59:50 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -24,7 +24,7 @@ char *luaT_eventname[] = {  /* ORDER IM */
 
 static int luaI_checkevent (char *name, char *list[])
 {
-  int e = luaO_findstring(name, list);
+  int e = luaL_findstring(name, list);
   if (e < 0)
     luaL_verror("`%.50s' is not a valid event name", name);
   return e;
@@ -214,7 +214,7 @@ void luaT_setfallback (void)
   char *name = luaL_check_string(1);
   lua_Object func = lua_getparam(2);
   luaL_arg_check(lua_isfunction(func), 2, "function expected");
-  switch (luaO_findstring(name, oldnames)) {
+  switch (luaL_findstring(name, oldnames)) {
     case 0:  /* old error fallback */
       oldfunc = L->errorim;
       L->errorim = *luaA_Address(func);
@@ -243,7 +243,7 @@ void luaT_setfallback (void)
     }
     default: {
       int e;
-      if ((e = luaO_findstring(name, luaT_eventname)) >= 0) {
+      if ((e = luaL_findstring(name, luaT_eventname)) >= 0) {
         oldfunc = *luaT_getim(LUA_T_NIL, e);
         fillvalids(e, luaA_Address(func));
         replace = (e == IM_GC || e == IM_INDEX) ? nilFB : typeFB;
