@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.15 2000/03/17 14:46:04 roberto Exp roberto $
+** $Id: lcode.c,v 1.16 2000/03/20 19:15:37 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -408,49 +408,47 @@ static void concatlists (FuncState *fs, int *l1, int l2) {
 }
 
 
-void luaK_goiftrue (FuncState *fs, expdesc *v, int keepvalue) {
+static void luaK_testgo (FuncState *fs, expdesc *v, int invert, OpCode jump) {
   Instruction *previous;
+  int *golist = &v->u.l.f;
+  int *exitlist = &v->u.l.t;
+  if (invert) {  /* interchange `golist' and `exitlist' */
+    int *temp = golist; golist = exitlist; exitlist = temp;
+  }
   discharge1(fs, v);
   previous = &fs->f->code[fs->pc-1];
   LUA_ASSERT(L, GET_OPCODE(*previous) != OP_SETLINE, "bad place to set line");
-  if (ISJUMP(GET_OPCODE(*previous)))
-    SET_OPCODE(*previous, invertjump(GET_OPCODE(*previous)));
-  else {
-    OpCode jump = keepvalue ? OP_ONFJMP : OP_IFFJMP;
-    luaK_jump(fs, jump);
+  if (ISJUMP(GET_OPCODE(*previous))) {
+    if (invert)
+      SET_OPCODE(*previous, invertjump(GET_OPCODE(*previous)));
   }
-  insert_last(fs, &v->u.l.f);
-  luaK_patchlist(fs, v->u.l.t, luaK_getlabel(fs));
-  v->u.l.t = NO_JUMP;
+  else
+    luaK_jump(fs, jump);
+  insert_last(fs, exitlist);
+  luaK_patchlist(fs, *golist, luaK_getlabel(fs));
+  *golist = NO_JUMP;
+}
+
+
+void luaK_goiftrue (FuncState *fs, expdesc *v, int keepvalue) {
+  luaK_testgo(fs, v, 1, keepvalue ? OP_ONFJMP : OP_IFFJMP);
 }
 
 
 void luaK_goiffalse (FuncState *fs, expdesc *v, int keepvalue) {
-  Instruction previous;
-  discharge1(fs, v);
-  previous = fs->f->code[fs->pc-1];
-  LUA_ASSERT(L, GET_OPCODE(previous) != OP_SETLINE, "bad place to set line");
-  if (!ISJUMP(GET_OPCODE(previous))) {
-    OpCode jump = keepvalue ? OP_ONTJMP : OP_IFTJMP;
-    luaK_jump(fs, jump);
-  }
-  insert_last(fs, &v->u.l.t);
-  luaK_patchlist(fs, v->u.l.f, luaK_getlabel(fs));
-  v->u.l.f = NO_JUMP;
+  luaK_testgo(fs, v, 0, keepvalue ? OP_ONTJMP : OP_IFTJMP);
 }
 
 
 void luaK_tostack (LexState *ls, expdesc *v, int onlyone) {
   FuncState *fs = ls->fs;
-  if (discharge(fs, v)) return;
-  else {  /* is an expression */
+  if (!discharge(fs, v)) {  /* `v' is an expression? */
     OpCode previous = GET_OPCODE(fs->f->code[fs->pc-1]);
     LUA_ASSERT(L, previous != OP_SETLINE, "bad place to set line");
     if (!ISJUMP(previous) && v->u.l.f == NO_JUMP && v->u.l.t == NO_JUMP) {
       /* it is an expression without jumps */
-      if (onlyone && v->k == VEXP)
+      if (onlyone)
         luaK_setcallreturns(fs, 1);  /* call must return 1 value */
-      return;
     }
     else {  /* expression has jumps... */
       int p_nil = 0;  /* position of an eventual PUSHNIL */
