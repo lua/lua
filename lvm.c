@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.161 2001/01/29 17:16:58 roberto Exp roberto $
+** $Id: lvm.c,v 1.162 2001/02/01 16:03:38 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -465,12 +465,14 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
       }
       case OP_SETGLOBAL: {
+        L->top = top;  /* primitive set may generate an error */
         luaV_setglobal(L, kstr[GETARG_U(i)], top);
         top--;
         break;
       }
       case OP_SETTABLE: {
         StkId t = top-GETARG_A(i);
+        L->top = top;  /* primitive set may generate an error */
         luaV_settable(L, t, t+1, top);
         top -= GETARG_B(i);  /* pop values */
         break;
@@ -479,6 +481,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         int aux = GETARG_A(i) * LFIELDS_PER_FLUSH;
         int n = GETARG_B(i);
         Hash *arr = hvalue(top-n-1);
+        L->top = top-n;
         for (; n; n--)
           setobj(luaH_setnum(L, arr, n+aux), --top);
         break;
@@ -487,6 +490,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         int n = GETARG_U(i);
         StkId finaltop = top-2*n;
         Hash *arr = hvalue(finaltop-1);
+        L->top = finaltop;
         for (; n; n--) {
           top-=2;
           setobj(luaH_set(L, arr, top), top+1);
