@@ -3,7 +3,7 @@
 ** load bytecodes from files
 */
 
-char* rcs_undump="$Id: undump.c,v 1.15 1996/11/07 13:59:51 lhf Exp lhf $";
+char* rcs_undump="$Id: undump.c,v 1.16 1996/11/07 14:13:28 lhf Exp lhf $";
 
 #include <stdio.h>
 #include <string.h>
@@ -90,7 +90,7 @@ static void FixCode(Byte* code, Byte* end)	/* swap words */
 		p+=3;
 		break;
 	case PUSHFUNCTION:
-		p+=5;
+		p+=5;			/* TODO: use sizeof(TFunc*) or old? */
 		break;
 	case PUSHWORD:
 	case PUSHSELF:
@@ -111,7 +111,7 @@ static void FixCode(Byte* code, Byte* end)	/* swap words */
 		p+=3;
 		break;
 	}
-	case PUSHFLOAT:
+	case PUSHFLOAT:			/* assumes sizeof(float)==4 */
 	{
 		Byte t;
 		t=p[1]; p[1]=p[4]; p[4]=t;
@@ -250,8 +250,18 @@ static void LoadHeader(FILE* D)			/* TODO: error handling */
 {
  Word w,tw=TEST_WORD;
  float f,tf=TEST_FLOAT;
+ int version;
  LoadSignature(D);
- getc(D);					/* skip version */
+ version=getc(D);
+ if (version>23)				/* after 2.5 */
+ {
+  int oldsizeofI=getc(D);
+  int oldsizeofF=getc(D);
+  int oldsizeofP=getc(D);
+  if (oldsizeofF!=4) lua_error("sizeof(float)!=4. not an IEEE machine?");
+  if (oldsizeofFP!=sizeof(TFunc*))		/* TODO: pack */
+   lua_error("different pointer sizes");
+ }
  fread(&w,sizeof(w),1,D);			/* test word */
  if (w!=tw)
  {
