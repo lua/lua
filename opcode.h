@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.16 1996/01/26 18:03:19 roberto Exp roberto $
+** $Id: opcode.h,v 3.17 1996/02/13 17:30:39 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -109,14 +109,14 @@ typedef struct Object
 
 typedef union
 {
- struct {char c1; char c2;} m;
+ struct {Byte c1; Byte c2;} m;
  Word w;
 } CodeWord;
 #define get_word(code,pc)    {code.m.c1 = *pc++; code.m.c2 = *pc++;}
 
 typedef union
 {
- struct {char c1; char c2; char c3; char c4;} m;
+ struct {Byte c1; Byte c2; Byte c3; Byte c4;} m;
  float f;
 } CodeFloat;
 #define get_float(code,pc)   {code.m.c1 = *pc++; code.m.c2 = *pc++;\
@@ -124,7 +124,7 @@ typedef union
 
 typedef union
 {
- struct {char c1; char c2; char c3; char c4;} m;
+ struct {Byte c1; Byte c2; Byte c3; Byte c4;} m;
  TFunc *tf;
 } CodeCode;
 #define get_code(code,pc)    {code.m.c1 = *pc++; code.m.c2 = *pc++;\
