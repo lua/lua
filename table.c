@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 1.3 1994/03/28 15:15:59 celes Exp celes $";
+char *rcs_table="$Id: table.c,v 1.4 1994/04/06 12:55:08 celes Exp celes $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -232,7 +232,10 @@ char *lua_createstring (char *s)
  
  for (i=0; i<lua_nstring; i++)
   if (streq(s,lua_string[i]))
-   return s;
+  {
+   free(s-1);
+   return lua_string[i];
+  }
 
  if (lua_nstring >= MAXSTRING-1)
  {
