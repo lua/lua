@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.21 2004/12/22 17:43:27 roberto Exp roberto $
+** $Id: luaconf.h,v 1.22 2004/12/27 15:58:15 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -96,7 +96,7 @@
 #define stdin_is_tty()		isatty(0)
 #elif defined(_WIN32)
 #include <io.h>
-#include <fcntl.h>
+#include <stdio.h>
 #define stdin_is_tty()		_isatty(_fileno(stdin))
 #else
 #define stdin_is_tty()		1  /* assume stdin is a tty */
@@ -217,8 +217,7 @@
 #if defined(__GNUC__) && defined(__i386)
 #define lua_number2int(i,d)	__asm__ ("fistpl %0":"=m"(i):"t"(d):"st")
 
-#elif defined(_WIN32) && defined(_M_IX86)
-#include <math.h>
+#elif defined(_MSC_VER) && defined(_M_IX86)
 #pragma warning(disable: 4514)
 __inline int l_lrint (double flt)
 {     int i;
