@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.8 2004/06/02 19:07:55 roberto Exp roberto $
+** $Id: lvm.c,v 2.9 2004/06/08 16:23:58 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -412,53 +412,53 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
     switch (GET_OPCODE(i)) {
       case OP_MOVE: {
         setobjs2s(L, ra, RB(i));
-        break;
+        continue;
       }
       case OP_LOADK: {
         setobj2s(L, ra, KBx(i));
-        break;
+        continue;
       }
       case OP_LOADBOOL: {
         setbvalue(ra, GETARG_B(i));
         if (GETARG_C(i)) pc++;  /* skip next instruction (if C) */
-        break;
+        continue;
       }
       case OP_LOADNIL: {
         TValue *rb = RB(i);
         do {
           setnilvalue(rb--);
         } while (rb >= ra);
-        break;
+        continue;
       }
       case OP_GETUPVAL: {
         int b = GETARG_B(i);
         setobj2s(L, ra, cl->upvals[b]->v);
-        break;
+        continue;
       }
       case OP_GETGLOBAL: {
         TValue *rb = KBx(i);
         lua_assert(ttisstring(rb) && ttistable(&cl->g));
         base = luaV_gettable(L, &cl->g, rb, ra, pc);  /***/
-        break;
+        continue;
       }
       case OP_GETTABLE: {
         base = luaV_gettable(L, RB(i), RKC(i), ra, pc);  /***/
-        break;
+        continue;
       }
       case OP_SETGLOBAL: {
         lua_assert(ttisstring(KBx(i)) && ttistable(&cl->g));
         base = luaV_settable(L, &cl->g, KBx(i), ra, pc);  /***/
-        break;
+        continue;
       }
       case OP_SETUPVAL: {
         UpVal *uv = cl->upvals[GETARG_B(i)];
         setobj(L, uv->v, ra);
         luaC_barrier(L, uv, ra);
-        break;
+        continue;
       }
       case OP_SETTABLE: {
         base = luaV_settable(L, ra, RKB(i), RKC(i), pc);  /***/
-        break;
+        continue;
       }
       case OP_NEWTABLE: {
         int b = GETARG_B(i);
@@ -467,13 +467,13 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         L->ci->savedpc = pc;
         luaC_checkGC(L);  /***/
         base = L->base;
-        break;
+        continue;
       }
       case OP_SELF: {
         StkId rb = RB(i);
         setobjs2s(L, ra+1, rb);
         base = luaV_gettable(L, rb, RKC(i), ra, pc);  /***/
-        break;
+        continue;
       }
       case OP_ADD: {
         TValue *rb = RKB(i);
@@ -483,7 +483,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         }
         else
           base = Arith(L, ra, rb, rc, TM_ADD, pc);  /***/
-        break;
+        continue;
       }
       case OP_SUB: {
         TValue *rb = RKB(i);
@@ -493,7 +493,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         }
         else
           base = Arith(L, ra, rb, rc, TM_SUB, pc);  /***/
-        break;
+        continue;
       }
       case OP_MUL: {
         TValue *rb = RKB(i);
@@ -503,7 +503,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         }
         else
           base = Arith(L, ra, rb, rc, TM_MUL, pc);  /***/
-        break;
+        continue;
       }
       case OP_DIV: {
         TValue *rb = RKB(i);
@@ -513,11 +513,11 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         }
         else
           base = Arith(L, ra, rb, rc, TM_DIV, pc);  /***/
-        break;
+        continue;
       }
       case OP_POW: {
         base = Arith(L, ra, RKB(i), RKC(i), TM_POW, pc);  /***/
-        break;
+        continue;
       }
       case OP_UNM: {
         const TValue *rb = RB(i);
@@ -532,12 +532,12 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
             luaG_aritherror(L, RB(i), &temp);
           base = L->base;
         }
-        break;
+        continue;
       }
       case OP_NOT: {
         int res = l_isfalse(RB(i));  /* next assignment may change this value */
         setbvalue(ra, res);
-        break;
+        continue;
       }
       case OP_CONCAT: {
         int b = GETARG_B(i);
@@ -547,32 +547,32 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         luaC_checkGC(L);  /***/
         base = L->base;
         setobjs2s(L, RA(i), base+b);
-        break;
+        continue;
       }
       case OP_JMP: {
         dojump(L, pc, GETARG_sBx(i));
-        break;
+        continue;
       }
       case OP_EQ: {
         L->ci->savedpc = pc;
         if (equalobj(L, RKB(i), RKC(i)) != GETARG_A(i)) pc++;  /***/
         else dojump(L, pc, GETARG_sBx(*pc) + 1);
         base = L->base;
-        break;
+        continue;
       }
       case OP_LT: {
         L->ci->savedpc = pc;
         if (luaV_lessthan(L, RKB(i), RKC(i)) != GETARG_A(i)) pc++;  /***/
         else dojump(L, pc, GETARG_sBx(*pc) + 1);
         base = L->base;
-        break;
+        continue;
       }
       case OP_LE: {
         L->ci->savedpc = pc;
         if (luaV_lessequal(L, RKB(i), RKC(i)) != GETARG_A(i)) pc++;  /***/
         else dojump(L, pc, GETARG_sBx(*pc) + 1);
         base = L->base;
-        break;
+        continue;
       }
       case OP_TEST: {
         TValue *rb = RB(i);
@@ -581,7 +581,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
           setobjs2s(L, ra, rb);
           dojump(L, pc, GETARG_sBx(*pc) + 1);
         }
-        break;
+        continue;
       }
       case OP_CALL: {  /***/
         int pcr;
@@ -598,7 +598,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
           /* it was a C function (`precall' called it); adjust results */
           if (nresults >= 0) L->top = L->ci->top;
           base = L->base;
-          break;
+          continue;
         }
         else {
           lua_assert(pcr == PCRYIELD);
@@ -632,7 +632,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         else if (pcr == PCRC) {
           /* it was a C function (`precall' called it) */
           base = L->base;
-          break;
+          continue;
         }
         else {
           lua_assert(pcr == PCRYIELD);
@@ -665,7 +665,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
           setnvalue(ra, idx);  /* update internal index... */
           setnvalue(ra+3, idx);  /* ...and external index */
         }
-        break;
+        continue;
       }
       case OP_FORPREP: {  /***/
         const TValue *init = ra;
@@ -680,7 +680,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
           luaG_runerror(L, "`for' step must be a number");
         setnvalue(ra, nvalue(ra) - nvalue(pstep));
         dojump(L, pc, GETARG_sBx(i));
-        break;
+        continue;
       }
       case OP_TFORLOOP: {
         StkId cb = ra + 3;  /* call base */
@@ -699,7 +699,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
           setobjs2s(L, cb-1, cb);  /* save control variable */
           dojump(L, pc, GETARG_sBx(*pc) + 1);  /* jump back */
         }
-        break;
+        continue;
       }
       case OP_TFORPREP: {  /* for compatibility only */
         if (ttistable(ra)) {
@@ -707,7 +707,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
           setobj2s(L, ra, luaH_getstr(hvalue(gt(L)), luaS_new(L, "next")));
         }
         dojump(L, pc, GETARG_sBx(i));
-        break;
+        continue;
       }
       case OP_SETLIST:
       case OP_SETLISTO: {
@@ -731,11 +731,11 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
           setobj2t(L, luaH_setnum(L, h, last--), val);
           luaC_barrier(L, h, val);
         }
-        break;
+        continue;
       }
       case OP_CLOSE: {
         luaF_close(L, ra);
-        break;
+        continue;
       }
       case OP_CLOSURE: {
         Proto *p;
@@ -757,7 +757,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         L->ci->savedpc = pc;
         luaC_checkGC(L);  /***/
         base = L->base;
-        break;
+        continue;
       }
       case OP_VARARG: {
         int b = GETARG_B(i) - 1;
@@ -772,7 +772,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
           setobjs2s(L, ra+j, ci->base - n + j);
         for (; j<b; j++)
           setnilvalue(ra+j);
-        break;
+        continue;
       }
     }
   }
