@@ -1,7 +1,7 @@
-% $Id: manual.tex,v 1.60 2002/08/13 19:44:47 roberto Exp roberto $
+% $Id: manual.tex,v 1.61 2002/08/13 20:00:51 roberto Exp roberto $
 %{[(
 
-\documentclass[11pt,twoside,draft]{article}
+\documentclass[11pt,twoside]{article}
 \usepackage{fullpage}
 \usepackage{bnf}
 \usepackage{graphicx}
@@ -134,7 +134,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{{\small \tt\$Date: 2002/08/13 19:44:47 $ $}}
+%\date{{\small \tt\$Date: 2002/08/13 20:00:51 $ $}}
 
 \maketitle
 
@@ -3138,7 +3138,7 @@ from the end of the string.
 Thus, the last character is at position \Math{-1}, and so on.
 
 The string library provides all its functions inside the table
-\DefLIB{string}.
+\IndexLIB{string}.
 
 \subsubsection*{\ff \T{string.byte (s [, i])}}\DefLIB{string.byte}
 Returns the internal numerical code of the \M{i}-th character of \verb|s|.
@@ -3422,7 +3422,7 @@ A pattern cannot contain embedded zeros.  Use \verb|%z| instead.
 
 \subsection{Table Manipulation}
 This library provides generic functions for table manipulation,
-It provides all its functions inside the table \DefLIB{table}.
+It provides all its functions inside the table \IndexLIB{table}.
 
 Most functions in the table library library assume that the table
 represents an array or a list.
@@ -3559,10 +3559,8 @@ The library provides the following functions:
 \end{verbatim}
 plus a variable \IndexLIB{math.pi}.
 Most of them
-are only interfaces to the homonymous functions in the C~library,
-except that, for the trigonometric functions,
-all angles are expressed in \emph{degrees}, not radians.
-The functions \verb|math.deg| and \verb|math.rad| can be used to convert
+are only interfaces to the homonymous functions in the C~library.
+The functions \verb|math.deg| and \verb|math.rad| convert
 between radians and degrees.
 
 The function \verb|math.max| returns the maximum
@@ -3593,14 +3591,14 @@ and all input/output operations are over those default files.
 The second style uses explicit file descriptors.
 
 When using implicit file descriptors,
-all operations are supplied by table \DefLIB{io}.
+all operations are supplied by table \IndexLIB{io}.
 When using explicit file descriptors,
-the operation \DefLIB{io.open} returns a file descriptor,
+the operation \IndexLIB{io.open} returns a file descriptor,
 and then all operations are supplied as methods by the file descriptor.
 
 Moreover, the table \verb|io| also provides
 three predefined file descriptors:
-\DefLIB{io.stdin}, \DefLIB{io.stdout}, and \DefLIB{io.stderr},
+\IndexLIB{io.stdin}, \IndexLIB{io.stdout}, and \IndexLIB{io.stderr},
 with their usual meaning from C.
 
 A file handle is a userdata containing the file stream (\verb|FILE*|),
@@ -3613,7 +3611,8 @@ and some value different from \nil{} on success.
 
 \subsubsection*{\ff \T{io.close ([handle])}}\DefLIB{io.close}
 
-Equivalent to \verb|fh:close| over the default output file.
+Equivalent to \verb|handle:close()|.
+Without a \verb|handle|, closes the default output file.
 
 \subsubsection*{\ff \T{io.flush ()}}\DefLIB{io.flush}
 
@@ -3746,7 +3745,7 @@ plus a string describing the error.
 
 \subsection{Operating System Facilities} \label{libiosys}
 
-This library is implemented through table \DefLIB{os}.
+This library is implemented through table \IndexLIB{os}.
 
 \subsubsection*{\ff \T{os.clock ()}}\DefLIB{os.clock}
 
@@ -4121,6 +4120,11 @@ The precedence of \rwd{or} is smaller than the precedence of \rwd{and}.
 \rwd{in} is a reserved word.
 
 \item
+The old construction \verb|for k,v in t|, where \verb|t| is a table,
+is deprecated (although it is still supported).
+Use \verb|for k,v in pairs(t)| instead.
+
+\item
 When a literal string of the form \verb|[[...]]| starts with a newline,
 this newline is ignored.
 
@@ -4136,6 +4140,17 @@ this newline is ignored.
 Most library functions now are defined inside tables.
 There is a compatibility script (\verb|compat.lua|) that
 redefine most of them as global names.
+
+\item
+In the math library, angles are expressed in radians.
+With the compatibility script (\verb|compat.lua|),
+functions still work in degrees.
+
+\item
+The \verb|call| function is deprecated.
+Use \verb|f(unpack(tab))| instead of \verb|call(f, tab)|
+for unprotected calls,
+or the new \verb|pcall| function for protected calls.
 
 \item
 \verb|dofile| do not handle errors, but simply propagate them.
