@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.17 2004/11/01 15:06:50 roberto Exp roberto $
+** $Id: lvm.c,v 2.18 2004/12/03 20:35:33 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -461,8 +461,8 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
       }
       case OP_NEWTABLE: {
         int b = GETARG_B(i);
-        b = luaO_fb2int(b);
-        sethvalue(L, ra, luaH_new(L, b, GETARG_C(i)));
+        int c = GETARG_C(i);
+        sethvalue(L, ra, luaH_new(L, luaO_fb2int(b), luaO_fb2int(c) - 1));
         L->ci->savedpc = pc;
         luaC_checkGC(L);  /***/
         base = L->base;
@@ -723,7 +723,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         if (c == 0) c = cast(int, *pc++);
         last = ((c-1)*LFIELDS_PER_FLUSH) + n + LUA_FIRSTINDEX - 1;
         if (last > h->sizearray)  /* needs more space? */
-          luaH_resize(L, h,  last, h->lsizenode);  /* pre-alloc it at once */
+          luaH_resizearray(L, h, last);  /* pre-alloc it at once */
         for (; n > 0; n--) {
           TValue *val = ra+n;
           setobj2t(L, luaH_setnum(L, h, last--), val);

@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.11 2004/12/03 20:50:25 roberto Exp roberto $
+** $Id: ltable.c,v 2.12 2004/12/04 18:10:22 roberto Exp $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -197,7 +197,18 @@ static void computesizes  (int nums[], int ntotal, int *narray, int *nhash) {
 }
 
 
-static void numuse (const Table *t, int *narray, int *nhash) {
+static int countint (const TValue *key, int *nums) {
+  int k = arrayindex(key);
+  if (0 < k && k <= MAXASIZE) {  /* is `key' an appropriate array index? */
+    nums[luaO_log2(k-1)+1]++;  /* count as such */
+    return 1;
+  }
+  else
+    return 0;
+}
+
+
+static void numuse (const Table *t, int *narray, int *nhash, const TValue *ek) {
   int nums[MAXBITS+1];
   int i, lg;
   int totaluse = 0;
@@ -223,14 +234,13 @@ static void numuse (const Table *t, int *narray, int *nhash) {
   while (i--) {
     Node *n = &t->node[i];
     if (!ttisnil(gval(n))) {
-      int k = arrayindex(key2tval(n));
-      if (0 < k && k <= MAXASIZE) {  /* is `key' an appropriate array index? */
-        nums[luaO_log2(k-1)+1]++;  /* count as such */
-        (*narray)++;
-      }
+      *narray += countint(key2tval(n), nums);
       totaluse++;
     }
   }
+  /* count extra key */
+  *narray += countint(ek, nums);
+  totaluse++;
   computesizes(nums, totaluse, narray, nhash);
 }
 
@@ -268,7 +278,7 @@ static void setnodevector (lua_State *L, Table *t, int lsize) {
 }
 
 
-void luaH_resize (lua_State *L, Table *t, int nasize, int nhsize) {
+static void luaH_resize (lua_State *L, Table *t, int nasize, int nhsize) {
   int i;
   int oldasize = t->sizearray;
   int oldhsize = t->lsizenode;
@@ -310,9 +320,16 @@ void luaH_resize (lua_State *L, Table *t, int nasize, int nhsize) {
 }
 
 
-static void rehash (lua_State *L, Table *t) {
+void luaH_resizearray (lua_State *L, Table *t, int nasize) {
+  luaH_resize(L, t, nasize, t->lsizenode);
+}
+
+
+static void rehash (lua_State *L, Table *t, const TValue *ek) {
   int nasize, nhsize;
-  numuse(t, &nasize, &nhsize);  /* compute new sizes for array and hash parts */
+  /* compute new sizes for array and hash parts */
+  numuse(t, &nasize, &nhsize, ek);
+  /* resize the table to new computed sizes */
   luaH_resize(L, t, nasize, luaO_log2(nhsize)+1);
 }
 
@@ -323,7 +340,7 @@ static void rehash (lua_State *L, Table *t) {
 */
 
 
-Table *luaH_new (lua_State *L, int narray, int lnhash) {
+Table *luaH_new (lua_State *L, int narray, int nhash) {
   Table *t = luaM_new(L, Table);
   luaC_link(L, obj2gco(t), LUA_TTABLE);
   t->metatable = NULL;
@@ -334,7 +351,7 @@ Table *luaH_new (lua_State *L, int narray, int lnhash) {
   t->lsizenode = 0;
   t->node = NULL;
   setarrayvector(L, t, narray);
-  setnodevector(L, t, lnhash);
+  setnodevector(L, t, luaO_log2(nhash)+1);
   return t;
 }
 
@@ -356,7 +373,6 @@ void luaH_free (lua_State *L, Table *t) {
 ** position), new key goes to an empty position. 
 */
 static TValue *newkey (lua_State *L, Table *t, const TValue *key) {
-  TValue *val;
   Node *mp = luaH_mainposition(t, key);
   if (!ttisnil(gval(mp))) {  /* main position is not free? */
     /* `mp' of colliding node */
@@ -387,12 +403,8 @@ static TValue *newkey (lua_State *L, Table *t, const TValue *key) {
     else (t->firstfree)--;
   }
   /* no more free places; must create one */
-  setbvalue(gval(mp), 0);  /* avoid new key being removed */
-  rehash(L, t);  /* grow table */
-  val = cast(TValue *, luaH_get(t, key));  /* get new position */
-  lua_assert(ttisboolean(val));
-  setnilvalue(val);
-  return val;
+  rehash(L, t, key);  /* grow table */
+  return luaH_set(L, t, key);  /* re-insert in new table */
 }
 
 
