@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.101 2003/05/15 12:20:24 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.102 2003/05/16 18:59:08 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -74,7 +74,7 @@ static void tag_error (lua_State *L, int narg, int tag) {
 LUALIB_API void luaL_where (lua_State *L, int level) {
   lua_Debug ar;
   if (lua_getstack(L, level, &ar)) {  /* check function at level */
-    lua_getinfo(L, "Snl", &ar);  /* get info about it */
+    lua_getinfo(L, "Sl", &ar);  /* get info about it */
     if (ar.currentline > 0) {  /* is there info? */
       lua_pushfstring(L, "%s:%d: ", ar.short_src, ar.currentline);
       return;
