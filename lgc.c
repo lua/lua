@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.148 2002/08/30 19:09:21 roberto Exp roberto $
+** $Id: lgc.c,v 1.149 2002/09/02 19:54:49 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -331,15 +331,16 @@ static void sweepstrings (lua_State *L, int all) {
   for (i=0; i<G(L)->strt.size; i++) {  /* for each list */
     G(L)->strt.nuse -= sweeplist(L, &G(L)->strt.hash[i], all);
   }
-  if (G(L)->strt.nuse < cast(ls_nstr, G(L)->strt.size/4) &&
-      G(L)->strt.size > MINSTRTABSIZE*2)
-    luaS_resize(L, G(L)->strt.size/2);  /* table is too big */
 }
 
 
-
 #define MINBUFFER	256
-static void checkMbuffer (lua_State *L) {
+static void checkSizes (lua_State *L) {
+  /* check size of string hash */
+  if (G(L)->strt.nuse < cast(ls_nstr, G(L)->strt.size/4) &&
+      G(L)->strt.size > MINSTRTABSIZE*2)
+    luaS_resize(L, G(L)->strt.size/2);  /* table is too big */
+  /* check size of buffer */
   if (G(L)->Mbuffsize > MINBUFFER*2) {  /* is buffer too big? */
     size_t newsize = G(L)->Mbuffsize/2;  /* still larger than MINBUFFER */
     luaM_reallocvector(L, G(L)->Mbuffer, G(L)->Mbuffsize, newsize, char);
@@ -406,7 +407,7 @@ void luaC_collectgarbage (lua_State *L) {
   cleartablevalues(&st);  /* again, for eventual weak preserved tables */ 
   cleartablekeys(&st);
   luaC_sweep(L, 0);
-  checkMbuffer(L);
+  checkSizes(L);
   G(L)->GCthreshold = 2*G(L)->nblocks;  /* new threshold */
   callGCTM(L);
 }
