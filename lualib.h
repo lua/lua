@@ -1,5 +1,5 @@
 /*
-** $Id: lualib.h,v 1.25 2002/07/09 18:49:13 roberto Exp roberto $
+** $Id: lualib.h,v 1.26 2003/03/11 12:24:34 roberto Exp roberto $
 ** Lua standard libraries
 ** See Copyright Notice in lua.h
 */
@@ -34,6 +34,9 @@ LUALIB_API int luaopen_math (lua_State *L);
 
 #define LUA_DBLIBNAME	"debug"
 LUALIB_API int luaopen_debug (lua_State *L);
+
+
+LUALIB_API int luaopen_loadlib (lua_State *L);
 
 
 /* to help testing the libraries */
