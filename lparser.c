@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.90 2000/05/24 18:04:17 roberto Exp roberto $
+** $Id: lparser.c,v 1.91 2000/05/25 18:26:42 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -56,18 +56,18 @@ static void exp1 (LexState *ls);
 
 
 static void next (LexState *ls) {
-  if (ls->next.token != TK_EOS) {  /* is there an `unget' token? */
-    ls->t = ls->next;  /* use this one */
-    ls->next.token = TK_EOS;  /* and discharge it */
+  if (ls->lookahead.token != TK_EOS) {  /* is there a look-ahead token? */
+    ls->t = ls->lookahead;  /* use this one */
+    ls->lookahead.token = TK_EOS;  /* and discharge it */
   }
   else
     ls->t.token = luaX_lex(ls);  /* read next token */
 }
 
 
-static void ungettoken (LexState *ls, Token *t) {
-  ls->next = ls->t;
-  ls->t = *t;
+static void lookahead (LexState *ls) {
+  LUA_ASSERT(ls->L, ls->lookahead.token == TK_EOS, "two look-aheads");
+  ls->lookahead.token = luaX_lex(ls);
 }
 
 
@@ -633,13 +633,8 @@ static void constructor_part (LexState *ls, Constdesc *cd) {
       break;
     }
     case TK_NAME: {  /* may be listfields or recfields */
-      Token current;
-      int nexttoken;  /* to get the look ahead */
-      current = ls->t;  /* save for `unget' */
-      next(ls);
-      nexttoken = ls->t.token;
-      ungettoken(ls, &current);
-      if (nexttoken != '=')  /* expression? */
+      lookahead(ls);
+      if (ls->lookahead.token != '=')  /* expression? */
         goto case_default;
       /* else go through to recfields */
     }

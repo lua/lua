@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.59 2000/05/24 13:54:49 roberto Exp roberto $
+** $Id: llex.c,v 1.60 2000/05/24 18:04:17 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -108,7 +108,7 @@ static void firstline (LexState *LS)
 void luaX_setinput (lua_State *L, LexState *LS, ZIO *z) {
   LS->L = L;
   LS->current = '\n';
-  LS->next.token = TK_EOS;  /* no next token */
+  LS->lookahead.token = TK_EOS;  /* no look-ahead token */
   LS->linenumber = 0;
   LS->iflevel = 0;
   LS->ifstate[0].skip = 0;
