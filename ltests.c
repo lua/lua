@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.2 2004/02/16 19:09:52 roberto Exp roberto $
+** $Id: ltests.c,v 2.3 2004/03/15 21:04:54 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -686,7 +686,7 @@ static int d2s (lua_State *L) {
 
 
 static int newstate (lua_State *L) {
-  lua_State *L1 = lua_open();
+  lua_State *L1 = lua_newstate(debug_realloc, &memcontrol);
   if (L1) {
     lua_userstateopen(L1);  /* init lock */
     lua_pushinteger(L, (unsigned long)L1);
