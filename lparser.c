@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.150 2001/06/20 21:07:57 roberto Exp roberto $
+** $Id: lparser.c,v 1.151 2001/06/28 14:57:17 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -121,11 +121,8 @@ static void check_match (LexState *ls, int what, int who, int where) {
 
 
 static TString *str_checkname (LexState *ls) {
-  TString *ts;
   check_condition(ls, (ls->t.token == TK_NAME), l_s("<name> expected"));
-  ts = ls->t.seminfo.ts;
-  next(ls);
-  return ts;
+  return ls->t.seminfo.ts;
 }
 
 
@@ -141,7 +138,10 @@ static void codestring (LexState *ls, expdesc *e, TString *s) {
 }
 
 
-#define checkname(ls,e)		codestring(ls,e,str_checkname(ls))
+static void checkname(LexState *ls, expdesc *e) {
+  codestring(ls, e, str_checkname(ls));
+  next(ls);
+}
 
 
 static int luaI_registerlocalvar (LexState *ls, TString *varname) {
@@ -641,11 +641,13 @@ static void primaryexp (LexState *ls, expdesc *v) {
     }
     case TK_NAME: {
       singlevar(ls, str_checkname(ls), v);
+      next(ls);
       return;
     }
     case l_c('%'): {
       next(ls);  /* skip `%' */
       codeupvalue(ls, v, str_checkname(ls));
+      next(ls);
       break;
     }
     default: {
@@ -960,6 +962,7 @@ static void forlist (LexState *ls, TString *indexname) {
   TString *valname;
   check(ls, l_c(','));
   valname = str_checkname(ls);
+  next(ls);  /* skip var name */
   check(ls, TK_IN);
   exp1(ls);  /* table */
   new_localvarstr(ls, l_s("(table)"), 0);
@@ -979,6 +982,7 @@ static void forstat (LexState *ls, int line) {
   enterbreak(fs, &bl);
   next(ls);  /* skip `for' */
   varname = str_checkname(ls);  /* first variable name */
+  next(ls);  /* skip var name */
   switch (ls->t.token) {
     case l_c('='): fornum(ls, varname); break;
     case l_c(','): forlist(ls, varname); break;
@@ -1030,6 +1034,7 @@ static void localstat (LexState *ls) {
   do {
     next(ls);  /* skip LOCAL or `,' */
     new_localvar(ls, str_checkname(ls), nvars++);
+    next(ls);  /* skip var name */
   } while (ls->t.token == l_c(','));
   if (optional(ls, l_c('=')))
     nexps = explist1(ls, &e);
@@ -1046,6 +1051,7 @@ static int funcname (LexState *ls, expdesc *v) {
   /* funcname -> NAME {field} [`:' NAME] */
   int needself = 0;
   singlevar(ls, str_checkname(ls), v);
+  next(ls);  /* skip var name */
   while (ls->t.token == l_c('.')) {
     luaY_field(ls, v);
   }
@@ -1188,10 +1194,11 @@ static void parlist (LexState *ls) {
   if (ls->t.token != l_c(')')) {  /* is `parlist' not empty? */
     do {
       switch (ls->t.token) {
-        case TK_DOTS: next(ls); dots = 1; break;
+        case TK_DOTS: dots = 1; break;
         case TK_NAME: new_localvar(ls, str_checkname(ls), nparams++); break;
         default: luaK_error(ls, l_s("<name> or `...' expected"));
       }
+      next(ls);
     } while (!dots && optional(ls, l_c(',')));
   }
   code_params(ls, nparams, dots);
