@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.33 2000/08/29 20:43:28 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.34 2000/09/11 17:38:42 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -115,28 +115,6 @@ void luaL_verror (lua_State *L, const char *fmt, ...) {
   vsprintf(buff, fmt, argp);
   va_end(argp);
   lua_error(L, buff);
-}
-
-
-#define EXTRALEN	sizeof("string \"...\"0")
-
-void luaL_chunkid (char *out, const char *source, int len) {
-  if (*source == '(') {
-    strncpy(out, source+1, len-1);  /* remove first char */
-    out[len-1] = '\0';  /* make sure `out' has an end */
-    out[strlen(out)-1] = '\0';  /* remove last char */
-  }
-  else {
-    len -= EXTRALEN;
-    if (*source == '@')
-      sprintf(out, "file `%.*s'", len, source+1);
-    else {
-      const char *b = strchr(source , '\n');  /* stop at first new line */
-      int lim = (b && (b-source)<len) ? b-source : len;
-      sprintf(out, "string \"%.*s\"", lim, source);
-      strcpy(out+lim+(EXTRALEN-sizeof("...\"0")), "...\"");
-    }
-  }
 }
 
 

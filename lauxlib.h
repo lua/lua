@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.22 2000/09/04 18:27:32 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.23 2000/09/11 17:38:42 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -34,7 +34,6 @@ void luaL_checktype (lua_State *L, int narg, const char *tname);
 
 void luaL_verror (lua_State *L, const char *fmt, ...);
 int luaL_findstring (const char *name, const char *const list[]);
-void luaL_chunkid (char *out, const char *source, int len);
 
 
 

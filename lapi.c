@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.94 2000/09/05 19:33:32 roberto Exp roberto $
+** $Id: lapi.c,v 1.95 2000/09/11 19:45:27 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -10,7 +10,6 @@
 #include "lua.h"
 
 #include "lapi.h"
-#include "lauxlib.h"
 #include "ldo.h"
 #include "lfunc.h"
 #include "lgc.h"
@@ -234,7 +233,7 @@ void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
 void lua_pushusertag (lua_State *L, void *u, int tag) {  /* ORDER LUA_T */
   luaC_checkGC(L);
   if (tag != LUA_ANYTAG && tag != TAG_USERDATA && tag < NUM_TAGS)
-    luaL_verror(L, "invalid tag for a userdata (%d)", tag);
+    luaO_verror(L, "invalid tag for a userdata (%d)", tag);
   tsvalue(L->top) = luaS_createudata(L, u, tag);
   ttype(L->top) = TAG_USERDATA;
   api_incr_top(L);
@@ -387,7 +386,7 @@ void lua_settag (lua_State *L, int tag) {
       tsvalue(L->top-1)->u.d.tag = tag;
       break;
     default:
-      luaL_verror(L, "cannot change the tag of a %.20s",
+      luaO_verror(L, "cannot change the tag of a %.20s",
                   luaO_typename(L->top-1));
   }
   L->top--;

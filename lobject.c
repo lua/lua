@@ -1,11 +1,14 @@
 /*
-** $Id: lobject.c,v 1.45 2000/08/11 16:17:28 roberto Exp roberto $
+** $Id: lobject.c,v 1.46 2000/09/11 17:38:42 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
 
 #include <ctype.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "lua.h"
 
@@ -123,3 +126,34 @@ int luaO_str2d (const char *s, Number *result) {  /* LUA_NUMBER */
   return 1;
 }
 
+
+void luaO_verror (lua_State *L, const char *fmt, ...) {
+  char buff[500];
+  va_list argp;
+  va_start(argp, fmt);
+  vsprintf(buff, fmt, argp);
+  va_end(argp);
+  lua_error(L, buff);
+}
+
+
+#define EXTRALEN	sizeof("string \"...\"0")
+
+void luaO_chunkid (char *out, const char *source, int len) {
+  if (*source == '(') {
+    strncpy(out, source+1, len-1);  /* remove first char */
+    out[len-1] = '\0';  /* make sure `out' has an end */
+    out[strlen(out)-1] = '\0';  /* remove last char */
+  }
+  else {
+    len -= EXTRALEN;
+    if (*source == '@')
+      sprintf(out, "file `%.*s'", len, source+1);
+    else {
+      const char *b = strchr(source , '\n');  /* stop at first new line */
+      int lim = (b && (b-source)<len) ? b-source : len;
+      sprintf(out, "string \"%.*s\"", lim, source);
+      strcpy(out+lim+(EXTRALEN-sizeof("...\"0")), "...\"");
+    }
+  }
+}

@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.77 2000/09/05 19:33:32 roberto Exp $
+** $Id: liolib.c,v 1.78 2000/09/11 17:38:42 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -393,8 +393,8 @@ static int io_read (lua_State *L) {
     firstarg = lastarg = 1;  /* correct indices */
     lua_pushstring(L, "*l");  /* push default argument */
   }
-  else
-    luaL_checkstack(L, lastarg-firstarg+1, "too many arguments");
+  else  /* ensure stack space for all results and for auxlib's buffer */
+    luaL_checkstack(L, lastarg-firstarg+1+LUA_MINSTACK, "too many arguments");
   for (n = firstarg; n<=lastarg; n++) {
     int success;
     if (lua_isnumber(L, n))
@@ -598,7 +598,6 @@ static int errorfb (lua_State *L) {
   lua_concat(L, 3);
   while (lua_getstack(L, level++, &ar)) {
     char buff[120];  /* enough to fit following `sprintf's */
-    char buffchunk[60];
     int toconcat = 1;  /* number of strings in the stack to concat */
     if (level > LEVELS1 && firstpart) {
       /* no more than `LEVELS2' more levels? */
@@ -607,7 +606,7 @@ static int errorfb (lua_State *L) {
       else {
         lua_pushstring(L, "       ...\n");  /* too many levels */
         lua_concat(L, 2);
-        while (lua_getstack(L, level+LEVELS2, &ar))  /* get last levels */
+        while (lua_getstack(L, level+LEVELS2, &ar))  /* find last levels */
         level++;
       }
       firstpart = 0;
@@ -616,7 +615,6 @@ static int errorfb (lua_State *L) {
     sprintf(buff, "%4d:  ", level-1);
     lua_pushstring(L, buff); toconcat++;
     lua_getinfo(L, "Snl", &ar);
-    luaL_chunkid(buffchunk, ar.source, sizeof(buffchunk));
     switch (*ar.namewhat) {
       case 'g':  case 'l':  /* global, local */
         sprintf(buff, "function `%.50s'", ar.name);
@@ -629,11 +627,11 @@ static int errorfb (lua_State *L) {
         break;
       default: {
         if (*ar.what == 'm')  /* main? */
-          sprintf(buff, "main of %.70s", buffchunk);
+          sprintf(buff, "main of %.70s", ar.source_id);
         else if (*ar.what == 'C')  /* C function? */
-          sprintf(buff, "%.70s", buffchunk);
+          sprintf(buff, "%.70s", ar.source_id);
         else
-          sprintf(buff, "function <%d:%.70s>", ar.linedefined, buffchunk);
+          sprintf(buff, "function <%d:%.70s>", ar.linedefined, ar.source_id);
         ar.source = NULL;
       }
     }
@@ -643,7 +641,7 @@ static int errorfb (lua_State *L) {
       lua_pushstring(L, buff); toconcat++;
     }
     if (ar.source) {
-      sprintf(buff, " [%.70s]", buffchunk);
+      sprintf(buff, " [%.70s]", ar.source_id);
       lua_pushstring(L, buff); toconcat++;
     }
     lua_pushstring(L, "\n"); toconcat++;

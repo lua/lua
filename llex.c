@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.68 2000/08/22 20:07:56 roberto Exp $
+** $Id: llex.c,v 1.69 2000/09/11 17:38:42 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -11,7 +11,6 @@
 
 #include "lua.h"
 
-#include "lauxlib.h"
 #include "llex.h"
 #include "lmem.h"
 #include "lobject.h"
@@ -58,8 +57,8 @@ void luaX_checklimit (LexState *ls, int val, int limit, const char *msg) {
 
 void luaX_syntaxerror (LexState *ls, const char *s, const char *token) {
   char buff[MAXSRC];
-  luaL_chunkid(buff, ls->source->str, sizeof(buff));
-  luaL_verror(ls->L, "%.100s;\n  last token read: `%.50s' at line %d in %.80s",
+  luaO_chunkid(buff, ls->source->str, sizeof(buff));
+  luaO_verror(ls->L, "%.100s;\n  last token read: `%.50s' at line %d in %.80s",
               s, token, ls->linenumber, buff);
 }
 

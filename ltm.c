@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.47 2000/09/05 19:33:32 roberto Exp roberto $
+** $Id: ltm.c,v 1.48 2000/09/11 19:45:27 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -10,7 +10,6 @@
 
 #include "lua.h"
 
-#include "lauxlib.h"
 #include "ldo.h"
 #include "lmem.h"
 #include "lobject.h"
@@ -26,14 +25,23 @@ const char *const luaT_eventname[] = {  /* ORDER IM */
 };
 
 
+static int findevent (const char *name) {
+  int i;
+  for (i=0; luaT_eventname[i]; i++)
+    if (strcmp(luaT_eventname[i], name) == 0)
+      return i;
+  return -1;  /* name not found */
+}
+
+
 static int luaI_checkevent (lua_State *L, const char *name, int t) {
-  int e = luaL_findstring(name, luaT_eventname);
+  int e = findevent(name);
   if (e >= IM_N)
-    luaL_verror(L, "event `%.50s' is deprecated", name);
+    luaO_verror(L, "event `%.50s' is deprecated", name);
   if (e == IM_GC && t == TAG_TABLE)
-    luaL_verror(L, "event `gc' for tables is deprecated");
+    luaO_verror(L, "event `gc' for tables is deprecated");
   if (e < 0)
-    luaL_verror(L, "`%.50s' is not a valid event name", name);
+    luaO_verror(L, "`%.50s' is not a valid event name", name);
   return e;
 }
 
@@ -86,12 +94,12 @@ int lua_newtag (lua_State *L) {
 
 static void checktag (lua_State *L, int tag) {
   if (!(0 <= tag && tag <= L->last_tag))
-    luaL_verror(L, "%d is not a valid tag", tag);
+    luaO_verror(L, "%d is not a valid tag", tag);
 }
 
 void luaT_realtag (lua_State *L, int tag) {
   if (!(NUM_TAGS <= tag && tag <= L->last_tag))
-    luaL_verror(L, "tag %d was not created by `newtag'", tag);
+    luaO_verror(L, "tag %d was not created by `newtag'", tag);
 }
 
 
@@ -140,7 +148,7 @@ void lua_settagmethod (lua_State *L, int t, const char *event) {
   e = luaI_checkevent(L, event, t);
   checktag(L, t);
   if (!luaT_validevent(t, e))
-    luaL_verror(L, "cannot change `%.20s' tag method for type `%.20s'%.20s",
+    luaO_verror(L, "cannot change `%.20s' tag method for type `%.20s'%.20s",
                 luaT_eventname[e], luaO_typenames[t],
                 (t == TAG_TABLE || t == TAG_USERDATA) ? " with default tag"
                                                           : "");

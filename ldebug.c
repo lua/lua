@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.38 2000/08/28 20:22:21 roberto Exp roberto $
+** $Id: ldebug.c,v 1.39 2000/08/31 13:29:12 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -10,7 +10,6 @@
 #include "lua.h"
 
 #include "lapi.h"
-#include "lauxlib.h"
 #include "lcode.h"
 #include "ldebug.h"
 #include "ldo.h"
@@ -18,6 +17,7 @@
 #include "lobject.h"
 #include "lopcodes.h"
 #include "lstate.h"
+#include "lstring.h"
 #include "ltable.h"
 #include "ltm.h"
 #include "luadebug.h"
@@ -172,17 +172,20 @@ const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int localnum) {
 }
 
 
+static void infoLproto (lua_Debug *ar, Proto *f) {
+  ar->source = f->source->str;
+  ar->linedefined = f->lineDefined;
+  ar->what = "Lua";
+}
+
+
 static void lua_funcinfo (lua_Debug *ar, StkId func) {
   switch (ttype(func)) {
     case TAG_LCLOSURE:
-      ar->source = clvalue(func)->f.l->source->str;
-      ar->linedefined = clvalue(func)->f.l->lineDefined;
-      ar->what = "Lua";
+      infoLproto(ar, clvalue(func)->f.l);
       break;
     case TAG_LMARK:
-      ar->source = infovalue(func)->func->f.l->source->str;
-      ar->linedefined = infovalue(func)->func->f.l->lineDefined;
-      ar->what = "Lua";
+      infoLproto(ar, infovalue(func)->func->f.l);
       break;
     case TAG_CCLOSURE:  case TAG_CMARK:
       ar->source = "(C)";
@@ -192,6 +195,7 @@ static void lua_funcinfo (lua_Debug *ar, StkId func) {
     default:
       LUA_INTERNALERROR("invalid `func' value");
   }
+  luaO_chunkid(ar->source_id, ar->source, sizeof(ar->source_id));
   if (ar->linedefined == 0)
     ar->what = "main";
 }
@@ -431,10 +435,10 @@ void luaG_typeerror (lua_State *L, StkId o, const char *op) {
   const char *kind = getobjname(L, o, &name);
   const char *t = luaO_typename(o);
   if (kind)
-    luaL_verror(L, "attempt to %.30s %.20s `%.40s' (a %.10s value)",
+    luaO_verror(L, "attempt to %.30s %.20s `%.40s' (a %.10s value)",
                 op, kind, name, t);
   else
-    luaL_verror(L, "attempt to %.30s a %.10s value", op, t);
+    luaO_verror(L, "attempt to %.30s a %.10s value", op, t);
 }
 
 
@@ -449,8 +453,8 @@ void luaG_ordererror (lua_State *L, StkId top) {
   const char *t1 = luaO_typename(top-2);
   const char *t2 = luaO_typename(top-1);
   if (t1[2] == t2[2])
-    luaL_verror(L, "attempt to compare two %.10s values", t1);
+    luaO_verror(L, "attempt to compare two %.10s values", t1);
   else
-    luaL_verror(L, "attempt to compare %.10s with %.10s", t1, t2);
+    luaO_verror(L, "attempt to compare %.10s with %.10s", t1, t2);
 }
 
