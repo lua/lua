@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.17 2000/05/08 19:32:53 roberto Exp roberto $
+** $Id: ldebug.c,v 1.18 2000/05/08 20:49:05 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -132,8 +132,7 @@ int lua_setlocal (lua_State *L, const lua_Debug *ar, lua_Localvar *v) {
 }
 
 
-static void lua_funcinfo (lua_Debug *ar) {
-  StkId func = ar->_func;
+static void lua_funcinfo (lua_Debug *ar, StkId func) {
   switch (ttype(func)) {
     case TAG_LCLOSURE:  case TAG_LMARK:
       ar->source = clvalue(func)->f.l->source->str;
@@ -164,7 +163,7 @@ static void lua_getobjname (lua_State *L, StkId f, lua_Debug *ar) {
   /* try to find a name for given function */
   setnormalized(L->top, f); /* to be used by `checkfunc' */
   for (i=0; i<=g->size; i++) {
-    if (checkfunc(L, val(node(g,i))) && ttype(key(node(g,i))) == TAG_STRING) {
+    if (ttype(key(node(g,i))) == TAG_STRING && checkfunc(L, val(node(g,i)))) {
       ar->name = tsvalue(key(node(g,i)))->str;
       ar->namewhat = "global";
       return;
@@ -178,12 +177,17 @@ static void lua_getobjname (lua_State *L, StkId f, lua_Debug *ar) {
 
 
 int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
-  StkId func = ar->_func;
-  LUA_ASSERT(L, is_T_MARK(ttype(func)), "invalid activation record");
+  StkId func;
+  if (*what != '>')
+    func = ar->_func;
+  else {
+    what++;  /* skip the '>' */
+    func = ar->func;
+  }
   for (; *what; what++) {
     switch (*what) {
       case 'S':
-        lua_funcinfo(ar);
+        lua_funcinfo(ar, func);
         break;
       case 'l':
         ar->currentline = lua_currentline(L, func);

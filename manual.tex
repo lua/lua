@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.36 2000/04/17 19:23:48 roberto Exp roberto $
+% $Id: manual.tex,v 1.37 2000/05/12 19:19:18 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -122,7 +122,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{{\small \tt\$Date: 2000/04/17 19:23:48 $ $}}
+\date{{\small \tt\$Date: 2000/05/12 19:19:18 $ $}}
 
 \maketitle
 
@@ -3329,7 +3329,22 @@ selects some fields of \verb|ar| to be filled,
 as indicated by the letter in parentheses in the definition of \verb|lua_Debug|;
 that is, an \verb|S| fills the fields \verb|source| and \verb|linedefined|,
 and \verb|l| fills the field \verb|currentline|, etc.
-We describe each field below:
+
+To get information about a function that is not active (that is,
+it is not in the stack),
+you set the \verb|func| field of the \verb|lua_Debug| structure
+with the function,
+and start the \verb|what| string with the character \verb|>|.
+For instance, to know in which line a function \verb|f| was defined,
+you can write
+\begin{verbatim}
+  lua_Debug ar;
+  ar.func = lua_getglobal(L, "f");
+  lua_getinfo(L, ">S", &ar);
+  printf("%d\n", ar.linedefined);
+\end{verbatim}
+
+The fields of \verb|lua_Debug| have the following meaning:
 \begin{description}
 
 \item[source]
@@ -3523,21 +3538,26 @@ As a general rule, if your program does not need this library,
 do not open it.
 
 
-\subsubsection*{\ff \T{getstack (level, [what])}}\Deffunc{getstack}
+\subsubsection*{\ff \T{getinfo (function, [what])}}\Deffunc{getinfo}
 
-This function returns a table with information about the function
-running at level \verb|level| of the stack.
-Level 0 is the current function (\verb|getstack| itself);
-level 1 is the function that called \verb|getstack|.
-If \verb|level| is larger than the number of active functions,
-the function returns \nil.
-The table contains all the fields returned by \verb|lua_getinfo|,
+This function returns a table with information about a function.
+You can give the function directly,
+or you can give a number as the value of \verb|function|,
+which means the function running at level \verb|function| of the stack:
+Level 0 is the current function (\verb|getinfo| itself);
+level 1 is the function that called \verb|getinfo|;
+and so on.
+If \verb|function| is a number larger than the number of active functions,
+\verb|getinfo| returns \nil.
+
+The returned table contains all the fields returned by \verb|lua_getinfo|,
 with the string \verb|what| describing what to get.
-The default for \rerb|what| is to get all information available.
+The default for \verb|what| is to get all information available.
 
-For instance, the expression \verb|getstack(1,"n").name| returns
-the name of the current function,
-if a reasonable name can be found.
+For instance, the expression \verb|getinfo(1,"n").name| returns
+the name of the current function, if a reasonable name can be found,
+and \verb|getinfo(print)| returns a table with all available information
+about the \verb|print| function.
 
 
 \subsubsection*{\ff \T{getlocal (level, local)}}\Deffunc{getlocal}

@@ -1,10 +1,11 @@
 /*
-** $Id: ldblib.c,v 1.13 2000/04/14 17:44:20 roberto Exp roberto $
+** $Id: ldblib.c,v 1.14 2000/05/08 13:21:35 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
 
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -41,40 +42,51 @@ static void settabso (lua_State *L, lua_Object t, const char *i, lua_Object v) {
 }
 
 
-static void getstack (lua_State *L) {
+static void getinfo (lua_State *L) {
   lua_Debug ar;
-  if (!lua_getstack(L, luaL_check_int(L, 1), &ar))  /* level out of range? */
-    return;
-  else {
-    const char *options = luaL_opt_string(L, 2, "flnSu");
-    lua_Object res = lua_createtable(L);
-    if (!lua_getinfo(L, options, &ar))
-      luaL_argerror(L, 2, "invalid option");
-    for (; *options; options++) {
-      switch (*options) {
-        case 'S':
-          settabss(L, res, "source", ar.source);
-          settabsi(L, res, "linedefined", ar.linedefined);
-          settabss(L, res, "what", ar.what);
-          break;
-        case 'l':
-          settabsi(L, res, "currentline", ar.currentline);
-          break;
-        case 'u':
-          settabsi(L, res, "nups", ar.nups);
-          break;
-        case 'n':
-          settabss(L, res, "name", ar.name);
-          settabss(L, res, "namewhat", ar.namewhat);
-          break;
-        case 'f':
-          settabso(L, res, "func", ar.func);
-          break;
-
-      }
+  lua_Object res;
+  lua_Object func = lua_getparam(L, 1);
+  const char *options = luaL_opt_string(L, 2, "flnSu");
+  char buff[20];
+  if (lua_isnumber(L, func)) {
+    if (!lua_getstack(L, lua_getnumber(L, func), &ar)) {
+      lua_pushnil(L);  /* level out of range */
+      return;
     }
-    lua_pushobject(L, res);
   }
+  else if (lua_isfunction(L, func)) {
+    ar.func = func;
+    sprintf(buff, ">%.10s", options);
+    options = buff;
+  }
+  else
+    luaL_argerror(L, 1, "function or level expected");
+  res = lua_createtable(L);
+  if (!lua_getinfo(L, options, &ar))
+    luaL_argerror(L, 2, "invalid option");
+  for (; *options; options++) {
+    switch (*options) {
+      case 'S':
+        settabss(L, res, "source", ar.source);
+        settabsi(L, res, "linedefined", ar.linedefined);
+        settabss(L, res, "what", ar.what);
+        break;
+      case 'l':
+        settabsi(L, res, "currentline", ar.currentline);
+        break;
+      case 'u':
+        settabsi(L, res, "nups", ar.nups);
+        break;
+      case 'n':
+        settabss(L, res, "name", ar.name);
+        settabss(L, res, "namewhat", ar.namewhat);
+        break;
+      case 'f':
+        settabso(L, res, "func", ar.func);
+        break;
+    }
+  }
+  lua_pushobject(L, res);
 }
     
 
@@ -163,7 +175,7 @@ static void setlinehook (lua_State *L) {
 
 static const struct luaL_reg dblib[] = {
   {"getlocal", getlocal},
-  {"getstack", getstack},
+  {"getinfo", getinfo},
   {"setcallhook", setcallhook},
   {"setlinehook", setlinehook},
   {"setlocal", setlocal}
