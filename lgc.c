@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.145 2002/08/06 17:06:56 roberto Exp roberto $
+** $Id: lgc.c,v 1.146 2002/08/16 14:45:55 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -58,7 +58,7 @@ static void reallymarkobject (GCState *st, TObject *o);
 #define markobject(st,o)	if (ismarkable(o)) reallymarkobject(st,o)
 
 
-static void protomark (Proto *f) {
+static void markproto (Proto *f) {
   if (!f->marked) {
     int i;
     f->marked = 1;
@@ -68,7 +68,7 @@ static void protomark (Proto *f) {
         strmark(tsvalue(f->k+i));
     }
     for (i=0; i<f->sizep; i++)
-      protomark(f->p[i]);
+      markproto(f->p[i]);
     for (i=0; i<f->sizelocvars; i++)  /* mark local-variable names */
       strmark(f->locvars[i].varname);
   }
@@ -97,7 +97,7 @@ static void markclosure (GCState *st, Closure *cl) {
       int i;
       lua_assert(cl->l.nupvalues == cl->l.p->nupvalues);
       marktable(st, hvalue(&cl->l.g));
-      protomark(cl->l.p);
+      markproto(cl->l.p);
       for (i=0; i<cl->l.nupvalues; i++) {  /* mark its upvalues */
         UpVal *u = cl->l.upvals[i];
         if (!u->marked) {
@@ -147,7 +147,7 @@ static void checkstacksizes (lua_State *L, StkId max) {
 }
 
 
-static void markstacks (GCState *st) {
+static void traversestacks (GCState *st) {
   lua_State *L1 = st->L;
   do {  /* for each thread */
     StkId o, lim;
@@ -251,7 +251,7 @@ static void propagatemarks (GCState *st) {
 }
 
 
-static int hasmark (const TObject *o) {
+static int ismarked (const TObject *o) {
   switch (ttype(o)) {
     case LUA_TUSERDATA:
       return isudmarked(uvalue(o));
@@ -279,7 +279,7 @@ static void cleartablekeys (GCState *st) {
       int i = sizenode(h);
       while (i--) {
         Node *n = node(h, i);
-        if (!hasmark(key(n)))  /* key was collected? */
+        if (!ismarked(key(n)))  /* key was collected? */
           removekey(n);  /* remove entry from table */
       }
     }
@@ -297,13 +297,13 @@ static void cleartablevalues (GCState *st) {
       int i = sizearray(h);
       while (i--) {
         TObject *o = &h->array[i];
-        if (!hasmark(o))  /* value was collected? */
+        if (!ismarked(o))  /* value was collected? */
           setnilvalue(o);  /* remove value */
       }
       i = sizenode(h);
       while (i--) {
         Node *n = node(h, i);
-        if (!hasmark(val(n)))  /* value was collected? */
+        if (!ismarked(val(n)))  /* value was collected? */
           removekey(n);  /* remove entry from table */
       }
     }
@@ -311,7 +311,7 @@ static void cleartablevalues (GCState *st) {
 }
 
 
-static void collectproto (lua_State *L) {
+static void sweepproto (lua_State *L) {
   Proto **p = &G(L)->rootproto;
   Proto *curr;
   while ((curr = *p) != NULL) {
@@ -327,7 +327,7 @@ static void collectproto (lua_State *L) {
 }
 
 
-static void collectclosures (lua_State *L) {
+static void sweepclosures (lua_State *L) {
   Closure **p = &G(L)->rootcl;
   Closure *curr;
   while ((curr = *p) != NULL) {
@@ -343,7 +343,7 @@ static void collectclosures (lua_State *L) {
 }
 
 
-static void collectupval (lua_State *L) {
+static void sweepupval (lua_State *L) {
   UpVal **v = &G(L)->rootupval;
   UpVal *curr;
   while ((curr = *v) != NULL) {
@@ -359,7 +359,7 @@ static void collectupval (lua_State *L) {
 }
 
 
-static void collecttable (lua_State *L) {
+static void sweeptable (lua_State *L) {
   Table **p = &G(L)->roottable;
   Table *curr;
   while ((curr = *p) != NULL) {
@@ -376,7 +376,7 @@ static void collecttable (lua_State *L) {
 
 
 
-static void collectudata (lua_State *L) {
+static void sweepudata (lua_State *L) {
   Udata **p = &G(L)->rootudata;
   Udata *curr;
   while ((curr = *p) != NULL) {
@@ -392,7 +392,7 @@ static void collectudata (lua_State *L) {
 }
 
 
-static void collectstrings (lua_State *L, int all) {
+static void sweepstrings (lua_State *L, int all) {
   int i;
   for (i=0; i<G(L)->strt.size; i++) {  /* for each list */
     TString **p = &G(L)->strt.hash[i];
@@ -462,13 +462,13 @@ void luaC_callallgcTM (lua_State *L) {
 }
 
 
-void luaC_collect (lua_State *L, int all) {
-  collectudata(L);
-  collectstrings(L, all);
-  collecttable(L);
-  collectproto(L);
-  collectupval(L);
-  collectclosures(L);
+void luaC_sweep (lua_State *L, int all) {
+  sweepudata(L);
+  sweepstrings(L, all);
+  sweeptable(L);
+  sweepproto(L);
+  sweepupval(L);
+  sweepclosures(L);
 }
 
 
@@ -477,14 +477,14 @@ void luaC_collectgarbage (lua_State *L) {
   st.L = L;
   st.tmark = NULL;
   st.toclear = NULL;
-  markstacks(&st); /* mark all stacks */
+  traversestacks(&st); /* mark all stacks */
   propagatemarks(&st);  /* mark all reachable objects */
   cleartablevalues(&st);
   separateudata(L);  /* separate userdata to be preserved */
   marktmu(&st);  /* mark `preserved' userdata */
   propagatemarks(&st);  /* remark */
   cleartablekeys(&st);
-  luaC_collect(L, 0);
+  luaC_sweep(L, 0);
   checkMbuffer(L);
   G(L)->GCthreshold = 2*G(L)->nblocks;  /* new threshold */
   callGCTM(L);

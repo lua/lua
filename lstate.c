@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.102 2002/08/06 15:32:22 roberto Exp roberto $
+** $Id: lstate.c,v 1.103 2002/08/07 19:22:39 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -159,7 +159,7 @@ void luaE_closethread (lua_State *OL, lua_State *L) {
 static void close_state (lua_State *L) {
   luaF_close(L, L->stack);  /* close all upvalues for this thread */
   if (G(L)) {  /* close global state */
-    luaC_collect(L, 1);  /* collect all elements */
+    luaC_sweep(L, 1);  /* collect all elements */
     lua_assert(G(L)->rootproto == NULL);
     lua_assert(G(L)->rootudata == NULL);
     lua_assert(G(L)->rootcl == NULL);
