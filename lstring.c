@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.16 1999/01/04 13:37:29 roberto Exp roberto $
+** $Id: lstring.c,v 1.17 1999/01/25 17:38:04 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -14,7 +14,9 @@
 #include "lua.h"
 
 
-#define NUM_HASHS  61
+#define NUM_HASHSTR	31
+#define NUM_HASHUDATA	31
+#define NUM_HASHS  (NUM_HASHSTR+NUM_HASHUDATA)
 
 
 #define gcsizestring(l)	(1+(l/64))  /* "weight" for a string with length 'l' */
@@ -121,10 +123,8 @@ static TaggedString *insert_s (char *str, long l, stringtable *tb) {
   while ((ts = tb->hash[h1]) != NULL) {
     if (ts == &EMPTY)
       j = h1;
-    else if (ts->constindex >= 0 &&
-             ts->u.s.len == l &&
-             (memcmp(str, ts->str, l) == 0))
-           return ts;
+    else if (ts->u.s.len == l && (memcmp(str, ts->str, l) == 0))
+      return ts;
     h1 += (h&(size-2)) + 1;  /* double hashing */
     if (h1 >= size) h1 -= size;
   }
@@ -136,6 +136,7 @@ static TaggedString *insert_s (char *str, long l, stringtable *tb) {
   ts = tb->hash[h1] = newone_s(str, l, h);
   return ts;
 }
+
 
 static TaggedString *insert_u (void *buff, int tag, stringtable *tb) {
   TaggedString *ts;
@@ -151,10 +152,8 @@ static TaggedString *insert_u (void *buff, int tag, stringtable *tb) {
   while ((ts = tb->hash[h1]) != NULL) {
     if (ts == &EMPTY)
       j = h1;
-    else if (ts->constindex < 0 &&  /* is a udata? */
-             (tag == ts->u.d.tag || tag == LUA_ANYTAG) &&
-             buff == ts->u.d.v)
-           return ts;
+    else if ((tag == ts->u.d.tag || tag == LUA_ANYTAG) && buff == ts->u.d.v)
+      return ts;
     h1 += (h&(size-2)) + 1;  /* double hashing */
     if (h1 >= size) h1 -= size;
   }
@@ -169,12 +168,13 @@ static TaggedString *insert_u (void *buff, int tag, stringtable *tb) {
 
 
 TaggedString *luaS_createudata (void *udata, int tag) {
-  return insert_u(udata, tag, &L->string_root[(unsigned)udata%NUM_HASHS]);
+  int t = ((unsigned)udata%NUM_HASHUDATA)+NUM_HASHSTR;
+  return insert_u(udata, tag, &L->string_root[t]);
 }
 
 TaggedString *luaS_newlstr (char *str, long l) {
-  int i = (l==0)?0:(unsigned char)str[0];
-  return insert_s(str, l, &L->string_root[i%NUM_HASHS]);
+  int t = (l==0) ? 0 : ((unsigned char)str[0]*l)%NUM_HASHSTR;
+  return insert_s(str, l, &L->string_root[t]);
 }
 
 TaggedString *luaS_new (char *str) {
@@ -240,13 +240,14 @@ TaggedString *luaS_collectudata (void) {
   TaggedString *frees = NULL;
   int i;
   L->rootglobal.next = NULL;  /* empty list of globals */
-  for (i=0; i<NUM_HASHS; i++) {
+  for (i=NUM_HASHSTR; i<NUM_HASHS; i++) {
     stringtable *tb = &L->string_root[i];
     int j;
     for (j=0; j<tb->size; j++) {
       TaggedString *t = tb->hash[j];
-      if (t == NULL || t == &EMPTY || t->constindex != -1)
-        continue;  /* get only user data */
+      if (t == NULL || t == &EMPTY)
+        continue;
+      LUA_ASSERT(t->constindex == -1, "must be userdata");
       t->head.next = (GCnode *)frees;
       frees = t;
       tb->hash[j] = &EMPTY;
