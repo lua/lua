@@ -1,5 +1,10 @@
-char *rcs_lex = "$Id: lex.c,v 1.3 1993/12/28 16:42:29 roberto Exp celes $";
+char *rcs_lex = "$Id: lex.c,v 2.1 1994/04/15 19:00:28 celes Exp celes $";
 /*$Log: lex.c,v $
+ * Revision 2.1  1994/04/15  19:00:28  celes
+ * Retirar chamada da funcao lua_findsymbol associada a cada
+ * token NAME. A decisao de chamar lua_findsymbol ou lua_findconstant
+ * fica a cargo do modulo "lua.stx".
+ *
  * Revision 1.3  1993/12/28  16:42:29  roberto
  * "include"s de string.h e stdlib.h para evitar warnings
  *
@@ -26,8 +31,9 @@ char *rcs_lex = "$Id: lex.c,v 1.3 1993/12/28 16:42:29 roberto Exp celes $";
 #define save_and_next()  { save(current); next(); }
 
 static int current;
-static char yytext[256];
+static char yytext[2][256];
 static char *yytextLast;
+static int currentText = 0;
 
 static Input input;
 
@@ -40,10 +46,11 @@ void lua_setinput (Input fn)
 char *lua_lasttext (void)
 {
   *yytextLast = 0;
-  return yytext;
+  return yytext[currentText];
 }
 
 
+/* The reserved words must be listed in lexicographic order */
 static struct 
   {
     char *name;
@@ -69,7 +76,7 @@ static struct
 #define RESERVEDSIZE (sizeof(reserved)/sizeof(reserved[0]))
 
 
-int findReserved (char *name)
+static int findReserved (char *name)
 {
   int l = 0;
   int h = RESERVEDSIZE - 1;
@@ -90,9 +97,10 @@ int findReserved (char *name)
 
 int yylex ()
 {
+  currentText = !currentText;
   while (1)
   {
-    yytextLast = yytext;
+    yytextLast = yytext[currentText];
     switch (current)
     {
       case '\n': lua_linenumber++;
@@ -106,12 +114,12 @@ int yylex ()
 	while (isalnum(current) || current == '_')
           save_and_next();
         *yytextLast = 0;
-	if (strcmp(yytext, "debug") == 0)
+	if (strcmp(yytext[currentText], "debug") == 0)
 	{
 	  yylval.vInt = 1;
 	  return DEBUG;
         }
-	else if (strcmp(yytext, "nodebug") == 0)
+	else if (strcmp(yytext[currentText], "nodebug") == 0)
 	{
 	  yylval.vInt = 0;
 	  return DEBUG;
@@ -167,7 +175,7 @@ int yylex ()
         }
         next();  /* skip the delimiter */
         *yytextLast = 0;
-        yylval.vWord = lua_findconstant (yytext);
+        yylval.vWord = lua_findconstant (yytext[currentText]);
         return STRING;
       }
 
@@ -188,9 +196,9 @@ int yylex ()
         int res;
         do { save_and_next(); } while (isalnum(current) || current == '_');
         *yytextLast = 0;
-        res = findReserved(yytext);
+        res = findReserved(yytext[currentText]);
         if (res) return res;
-        yylval.pChar = yytext;
+        yylval.pChar = yytext[currentText];
         return NAME;
       }
    
@@ -219,13 +227,13 @@ fraction: while (isdigit(current)) save_and_next();
           do { save_and_next(); } while (isdigit(current));
         }
         *yytextLast = 0;
-        yylval.vFloat = atof(yytext);
+        yylval.vFloat = atof(yytext[currentText]);
         return NUMBER;
 
       default: 		/* also end of file */
       {
         save_and_next();
-        return *yytext;      
+        return yytext[currentText][0];      
       }
     }
   }
