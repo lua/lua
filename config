@@ -2,31 +2,31 @@
 
 # you need an ANSI C compiler
 CC= gcc
-WARN= -ansi -Wall # -Wmissing-prototypes -Wshadow
+WARN= -ansi -Wall
 
 # for SGI's with cc
 #CC= cc
 #WARN= -ansi -fullwarn
 
 # in SunOs 4.1.x, uncomment the following line to avoid prototypes warnings
-# for standard functions
+# for standard functions:
 #EXTRA_INCS=  -I/usr/5include
 
 # if you don't have popen() in your C library, comment the following line:
 POPEN= -DPOPEN
 
 # if your C library is not POSIX compliant, comment the following line:
-POSIX= -DPOSIX
+POSIX= -D_POSIX_SOURCE
 
 # if you don't have strerror() in your C library, uncomment the following line:
 #NOSTRERROR= -DNOSTRERROR
 
-# if your system doesn't have ranlib, change "ranlib" to "true" 
+# if your system doesn't have (or need) ranlib, change "ranlib" to "true":
 RANLIB=ranlib
 
 ### NO NEED TO CHANGE ANYTHING BELOW THIS LINE ================================
 
-VERSION= 2.5
+VERSION= 3.0
 
 INC= $(LUA)/include
 LIB= $(LUA)/lib

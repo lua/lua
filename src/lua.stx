@@ -1,13 +1,13 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.41 1996/11/08 12:49:35 roberto Exp $";
+char *rcs_luastx = "$Id: lua.stx,v 3.47 1997/06/19 17:46:12 roberto Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "luadebug.h"
-#include "mem.h"
+#include "luamem.h"
 #include "lex.h"
 #include "opcode.h"
 #include "hash.h"
@@ -50,8 +50,6 @@ static TaggedString *localvar[MAXLOCALS];  /* store local variable names */
 static int     nlocalvar=0;	     /* number of local variables */
 
 #define MAXFIELDS FIELDS_PER_FLUSH*2
-static Word    fields[MAXFIELDS];     /* fieldnames to be flushed */
-static int     nfields=0;
 
 int lua_debug = 0;
 
@@ -103,22 +101,11 @@ static void code_word_at (Byte *p, int n)
   memcpy(p, &w, sizeof(Word));
 }
 
-static void push_field (Word name)
-{
-  if (nfields < MAXFIELDS)
-    fields[nfields++] = name;
-  else
-   yyerror ("too many fields in nested constructors");
-}
-
 static void flush_record (int n)
 {
-  int i;
   if (n == 0) return;
-  code_byte(STORERECORD);
+  code_byte(STOREMAP);
   code_byte(n);
-  for (i=0; i<n; i++)
-    code_word(fields[--nfields]);
 }
 
 static void flush_list (int m, int n)
@@ -161,11 +148,22 @@ static void add_varbuffer (Long var)
   yyerror ("variable buffer overflow");
 }
 
+static void code_string (Word w)
+{
+  code_byte(PUSHSTRING);
+  code_word(w);
+}
+
+static void code_constant (TaggedString *s)
+{
+  code_string(luaI_findconstant(s));
+}
+
 static void code_number (float f)
 { 
-  Word i = (Word)f;
-  if (f == (float)i)  /* f has an (short) integer value */
-  {
+  Word i;
+  if (f >= 0 && f <= (float)MAX_WORD && (float)(i=(Word)f) == f) {
+   /* f has an (short) integer value */
    if (i <= 2) code_byte(PUSH0 + i);
    else if (i <= 255)
    {
@@ -459,7 +457,7 @@ void lua_parse (TFunc *tf)
 
 %% /* beginning of rules section */
 
-chunk	: chunklist ret
+chunk	: chunklist ret ;
 
 chunklist : /* empty */
 	  | chunklist stat sc
@@ -477,8 +475,7 @@ function     : FUNCTION funcname body
 funcname	: var { $$ =$1; init_func(); }
 		| varexp ':' NAME
 	{
-	  code_byte(PUSHSTRING);
-	  code_word(luaI_findconstant($3));
+	  code_constant($3);
 	  $$ = 0;  /* indexed variable */
 	  init_func();
 	  add_localvar(luaI_createfixedstring("self"));
@@ -492,7 +489,6 @@ body :  '(' parlist ')' block END
           luaI_initTFunc($$);
 	  $$->size = pc;
 	  $$->code = newvector(pc, Byte);
-	  $$->fileName = lua_parsedfile;
 	  $$->lineDefined = $2;
 	  memcpy($$->code, basepc, pc*sizeof(Byte));
           if (lua_debug)
@@ -540,7 +536,7 @@ stat   : IF expr1 THEN PrepJump block PrepJump elsepart END
 	  lua_codeadjust (0);
 	}
        } 
-       | functioncall
+       | functioncall {;}
        | LOCAL localdeclist decinit
 	{ nlocalvar += $2;
 	  adjust_mult_assign($2, $3, 0);
@@ -605,9 +601,8 @@ expr :  '(' expr ')'  { $$ = $2; }
      |  NUMBER          { code_number($1); $$ = 0; }
      |  STRING
      {
-      code_byte(PUSHSTRING);
-      code_word($1);
-      $$ = 0;
+       code_string($1);
+       $$ = 0;
      }
      |	NIL		{code_byte(PUSHNIL); $$ = 0; }
      |  functioncall    { $$ = $1; }
@@ -723,11 +718,12 @@ ffieldlist1 : ffield			{$$=1;}
 		}
 	   ; 
 
-ffield      : NAME '=' expr1 
-	      { 
-	       push_field(luaI_findconstant($1));
-	      }
+ffield      : ffieldkey '=' expr1
            ;
+
+ffieldkey   : '[' expr1 ']'
+	    | NAME { code_constant($1); }
+	    ;
 
 lfieldlist  : /* empty */ { $$ = 0; }
 	    | lfieldlist1 lastcomma { $$ = $1; }
@@ -762,9 +758,8 @@ var	  :	singlevar { $$ = $1; }
 	  }
 	  |	varexp '.' NAME
 	  {
-	   code_byte(PUSHSTRING);
-	   code_word(luaI_findconstant($3));
-	   $$ = 0;		/* indexed variable */
+	    code_constant($3);
+	    $$ = 0;		/* indexed variable */
 	  }
 	  ;
 		

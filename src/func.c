@@ -2,9 +2,10 @@
 
 #include "luadebug.h"
 #include "table.h"
-#include "mem.h"
+#include "luamem.h"
 #include "func.h"
 #include "opcode.h"
+#include "inout.h"
 
 
 static TFunc *function_root = NULL;
@@ -23,7 +24,7 @@ void luaI_initTFunc (TFunc *f)
   f->size = 0;
   f->code = NULL;
   f->lineDefined = 0;
-  f->fileName = NULL;
+  f->fileName = lua_parsedfile;
   f->locvars = NULL;
 }
 
@@ -49,47 +50,56 @@ void luaI_freefunc (TFunc *f)
   luaI_free (f);
 }
 
+
+void luaI_funcfree (TFunc *l)
+{
+  while (l) {
+    TFunc *next = l->next;
+    luaI_freefunc(l);
+    l = next;
+  }
+}
+
 /*
 ** Garbage collection function.
-** This function traverse the function list freeing unindexed functions
 */
-Long luaI_funccollector (void)
+TFunc *luaI_funccollector (long *acum)
 {
   TFunc *curr = function_root;
   TFunc *prev = NULL;
-  Long counter = 0;
-  while (curr)
-  {
+  TFunc *frees = NULL;
+  long counter = 0;
+  while (curr) {
     TFunc *next = curr->next;
-    if (!curr->marked)
-    {
+    if (!curr->marked) {
       if (prev == NULL)
         function_root = next;
       else
         prev->next = next;
-      luaI_freefunc (curr);
+      curr->next = frees;
+      frees = curr;
       ++counter;
     }
-    else
-    {
+    else {
       curr->marked = 0;
       prev = curr;
     } 
     curr = next;
   }
-  return counter;
+  *acum += counter;
+  return frees;
 }
 
 
 void lua_funcinfo (lua_Object func, char **filename, int *linedefined)
 {
-  Object *f = luaI_Address(func);
-  if (f->tag == LUA_T_MARK || f->tag == LUA_T_FUNCTION)
+  TObject *f = luaI_Address(func);
+  if (f->ttype == LUA_T_MARK || f->ttype == LUA_T_FUNCTION)
   {
     *filename = f->value.tf->fileName;
     *linedefined = f->value.tf->lineDefined;
   }
-  else if (f->tag == LUA_T_CMARK || f->tag == LUA_T_CFUNCTION)
+  else if (f->ttype == LUA_T_CMARK || f->ttype == LUA_T_CFUNCTION)
   {
     *filename = "(C)";
     *linedefined = -1;

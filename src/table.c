@@ -3,9 +3,11 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.58 1996/11/01 12:47:45 roberto Exp $";
+char *rcs_table="$Id: table.c,v 2.72 1997/06/17 18:09:31 roberto Exp $";
 
-#include "mem.h"
+#include "luamem.h"
+#include "auxlib.h"
+#include "func.h"
 #include "opcode.h"
 #include "tree.h"
 #include "hash.h"
@@ -27,49 +29,14 @@ Word lua_nconstant = 0;
 static Long lua_maxconstant = 0;
 
 
-#define GARBAGE_BLOCK 50
-
-static void lua_nextvar (void);
-
-/*
-** Internal functions
-*/
-static struct {
-  char *name;
-  lua_CFunction func;
-} int_funcs[] = {
-  {"assert", luaI_assert},
-  {"call", luaI_call},
-  {"dofile", lua_internaldofile},
-  {"dostring", lua_internaldostring},
-  {"error", luaI_error},
-  {"getglobal", luaI_getglobal},
-  {"next", lua_next},
-  {"nextvar", lua_nextvar},
-  {"print", luaI_print},
-  {"setfallback", luaI_setfallback},
-  {"setglobal", luaI_setglobal},
-  {"tonumber", lua_obj2number},
-  {"tostring", luaI_tostring},
-  {"type", luaI_type}
-};
-
-#define INTFUNCSIZE (sizeof(int_funcs)/sizeof(int_funcs[0]))
+#define GARBAGE_BLOCK 100
 
 
 void luaI_initsymbol (void)
 {
-  int i;
-  Word n;
   lua_maxsymbol = BUFFER_BLOCK;
   lua_table = newvector(lua_maxsymbol, Symbol);
-  for (i=0; i<INTFUNCSIZE; i++)
-  {
-    n = luaI_findsymbolbyname(int_funcs[i].name);
-    s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = int_funcs[i].func;
-  }
-  n = luaI_findsymbolbyname("_VERSION_");
-  s_tag(n) = LUA_T_STRING; s_tsvalue(n) = lua_createstring(LUA_VERSION);
+  luaI_predefine();
 }
 
 
@@ -92,17 +59,17 @@ void luaI_initconstant (void)
 */
 Word luaI_findsymbol (TaggedString *t)
 {
- if (t->varindex == NOT_USED)
+ if (t->u.s.varindex == NOT_USED)
  {
   if (lua_ntable == lua_maxsymbol)
     lua_maxsymbol = growvector(&lua_table, lua_maxsymbol, Symbol,
                       symbolEM, MAX_WORD);
-  t->varindex = lua_ntable;
+  t->u.s.varindex = lua_ntable;
   lua_table[lua_ntable].varname = t;
-  s_tag(lua_ntable) = LUA_T_NIL;
+  s_ttype(lua_ntable) = LUA_T_NIL;
   lua_ntable++;
  }
- return t->varindex;
+ return t->u.s.varindex;
 }
 
 
@@ -118,16 +85,16 @@ Word luaI_findsymbolbyname (char *name)
 */
 Word luaI_findconstant (TaggedString *t)
 {
- if (t->constindex == NOT_USED)
+ if (t->u.s.constindex == NOT_USED)
  {
   if (lua_nconstant == lua_maxconstant)
     lua_maxconstant = growvector(&lua_constant, lua_maxconstant, TaggedString *,
                         constantEM, MAX_WORD);
-  t->constindex = lua_nconstant;
+  t->u.s.constindex = lua_nconstant;
   lua_constant[lua_nconstant] = t;
   lua_nconstant++;
  }
- return t->constindex;
+ return t->u.s.constindex;
 }
 
 
@@ -145,10 +112,16 @@ TaggedString *luaI_createfixedstring (char *name)
 }
 
 
+int luaI_globaldefined (char *name)
+{
+  return ttype(&lua_table[luaI_findsymbolbyname(name)].object) != LUA_T_NIL;
+}
+
+
 /*
 ** Traverse symbol table objects
 */
-static char *lua_travsymbol (int (*fn)(Object *))
+static char *lua_travsymbol (int (*fn)(TObject *))
 {
  Word i;
  for (i=0; i<lua_ntable; i++)
@@ -161,13 +134,14 @@ static char *lua_travsymbol (int (*fn)(Object *))
 /*
 ** Mark an object if it is a string or a unmarked array.
 */
-int lua_markobject (Object *o)
+int lua_markobject (TObject *o)
 {/* if already marked, does not change mark value */
- if (tag(o) == LUA_T_STRING && !tsvalue(o)->marked)
+ if (ttype(o) == LUA_T_USERDATA ||
+     (ttype(o) == LUA_T_STRING && !tsvalue(o)->marked))
    tsvalue(o)->marked = 1;
- else if (tag(o) == LUA_T_ARRAY)
+ else if (ttype(o) == LUA_T_ARRAY)
    lua_hashmark (avalue(o));
- else if ((o->tag == LUA_T_FUNCTION || o->tag == LUA_T_MARK)
+ else if ((o->ttype == LUA_T_FUNCTION || o->ttype == LUA_T_MARK)
            && !o->value.tf->marked)
    o->value.tf->marked = 1;
  return 0;
@@ -176,11 +150,11 @@ int lua_markobject (Object *o)
 /*
 * returns 0 if the object is going to be (garbage) collected
 */
-int luaI_ismarked (Object *o)
+int luaI_ismarked (TObject *o)
 {
-  switch (o->tag)
+  switch (o->ttype)
   {
-   case LUA_T_STRING:
+   case LUA_T_STRING: case LUA_T_USERDATA:
      return o->value.ts->marked;
    case LUA_T_FUNCTION:
     return o->value.tf->marked;
@@ -192,76 +166,90 @@ int luaI_ismarked (Object *o)
 }
 
 
+static void call_nilIM (void)
+{ /* signals end of garbage collection */
+  TObject t;
+  ttype(&t) = LUA_T_NIL;
+  luaI_gcIM(&t);  /* end of list */
+}
+
 /*
 ** Garbage collection. 
 ** Delete all unused strings and arrays.
 */
-Long luaI_collectgarbage (void)
+static long gc_block = GARBAGE_BLOCK;
+static long gc_nentity = 0;  /* total of strings, arrays, etc */
+
+static void markall (void)
 {
-  Long recovered = 0;
   lua_travstack(lua_markobject); /* mark stack objects */
   lua_travsymbol(lua_markobject); /* mark symbol table objects */
   luaI_travlock(lua_markobject); /* mark locked objects */
   luaI_travfallbacks(lua_markobject);  /* mark fallbacks */
+}
+
+
+long lua_collectgarbage (long limit)
+{
+  long recovered = 0;
+  Hash *freetable;
+  TaggedString *freestr;
+  TFunc *freefunc;
+  markall();
   luaI_invalidaterefs();
-  recovered += lua_strcollector();
-  recovered += lua_hashcollector();
-  recovered += luaI_funccollector();
+  freetable = luaI_hashcollector(&recovered);
+  freestr = luaI_strcollector(&recovered);
+  freefunc = luaI_funccollector(&recovered);
+  gc_nentity -= recovered;
+  gc_block = (limit == 0) ? 2*(gc_block-recovered) : gc_nentity+limit;
+  luaI_hashcallIM(freetable);
+  luaI_strcallIM(freestr);
+  call_nilIM();
+  luaI_hashfree(freetable);
+  luaI_strfree(freestr);
+  luaI_funcfree(freefunc);
   return recovered;
 } 
 
+
 void lua_pack (void)
 {
-  static unsigned long block = GARBAGE_BLOCK;
-  static unsigned long nentity = 0;  /* total of strings, arrays, etc */
-  unsigned long recovered = 0;
-  if (nentity++ < block) return;
-  recovered = luaI_collectgarbage();
-  block = 2*(block-recovered);
-  nentity -= recovered;
+  if (++gc_nentity >= gc_block)
+    lua_collectgarbage(0);
 } 
 
 
 /*
 ** Internal function: return next global variable
 */
-static void lua_nextvar (void)
+void luaI_nextvar (void)
 {
- Word next;
- lua_Object o = lua_getparam(1);
- if (o == LUA_NOOBJECT)
-   lua_error("too few arguments to function `nextvar'");
- if (lua_getparam(2) != LUA_NOOBJECT)
-   lua_error("too many arguments to function `nextvar'");
- if (lua_isnil(o))
-   next = 0;
- else if (!lua_isstring(o))
- {
-   lua_error("incorrect argument to function `nextvar'"); 
-   return;  /* to avoid warnings */
- }
- else
-   next = luaI_findsymbolbyname(lua_getstring(o)) + 1;
- while (next < lua_ntable && s_tag(next) == LUA_T_NIL) next++;
- if (next < lua_ntable)
- {
-  lua_pushstring(lua_table[next].varname->str);
-  luaI_pushobject(&s_object(next));
- }
+  Word next;
+  if (lua_isnil(lua_getparam(1)))
+    next = 0;
+  else 
+    next = luaI_findsymbolbyname(luaL_check_string(1)) + 1;
+  while (next < lua_ntable && s_ttype(next) == LUA_T_NIL)
+    next++;
+  if (next < lua_ntable) {
+    lua_pushstring(lua_table[next].varname->str);
+    luaI_pushobject(&s_object(next));
+  }
 }
 
 
-static Object *functofind;
-static int checkfunc (Object *o)
+static TObject *functofind;
+static int checkfunc (TObject *o)
 {
-  if (o->tag == LUA_T_FUNCTION)
+  if (o->ttype == LUA_T_FUNCTION)
     return
-       ((functofind->tag == LUA_T_FUNCTION || functofind->tag == LUA_T_MARK)
+       ((functofind->ttype == LUA_T_FUNCTION || functofind->ttype == LUA_T_MARK)
             && (functofind->value.tf == o->value.tf));
-  if (o->tag == LUA_T_CFUNCTION)
+  if (o->ttype == LUA_T_CFUNCTION)
     return
-       ((functofind->tag == LUA_T_CFUNCTION || functofind->tag == LUA_T_CMARK)
-            && (functofind->value.f == o->value.f));
+       ((functofind->ttype == LUA_T_CFUNCTION ||
+         functofind->ttype == LUA_T_CMARK) &&
+         (functofind->value.f == o->value.f));
   return 0;
 }
 
@@ -270,7 +258,7 @@ char *lua_getobjname (lua_Object o, char **name)
 { /* try to find a name for given function */
   functofind = luaI_Address(o);
   if ((*name = luaI_travfallbacks(checkfunc)) != NULL)
-    return "fallback";
+    return "tag-method";
   else if ((*name = lua_travsymbol(checkfunc)) != NULL)
     return "global";
   else return "";

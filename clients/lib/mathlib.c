@@ -3,12 +3,13 @@
 ** Mathematics library to LUA
 */
 
-char *rcs_mathlib="$Id: mathlib.c,v 1.18 1996/08/01 14:55:33 roberto Exp $";
+char *rcs_mathlib="$Id: mathlib.c,v 1.25 1997/06/19 18:03:04 roberto Exp $";
 
 #include <stdlib.h>
 #include <math.h>
 
 #include "lualib.h"
+#include "auxlib.h"
 #include "lua.h"
 
 #ifndef PI
@@ -19,7 +20,7 @@ char *rcs_mathlib="$Id: mathlib.c,v 1.18 1996/08/01 14:55:33 roberto Exp $";
 
 static void math_abs (void)
 {
- double d = lua_check_number(1, "abs"); 
+ double d = luaL_check_number(1); 
  if (d < 0) d = -d;
  lua_pushnumber (d);
 }
@@ -27,7 +28,7 @@ static void math_abs (void)
 
 static void math_sin (void)
 {
- double d = lua_check_number(1, "sin");
+ double d = luaL_check_number(1);
  lua_pushnumber (sin(TORAD(d)));
 }
 
@@ -35,7 +36,7 @@ static void math_sin (void)
 
 static void math_cos (void)
 {
- double d = lua_check_number(1, "cos");
+ double d = luaL_check_number(1);
  lua_pushnumber (cos(TORAD(d)));
 }
 
@@ -43,98 +44,82 @@ static void math_cos (void)
 
 static void math_tan (void)
 {
- double d = lua_check_number(1, "tan");
+ double d = luaL_check_number(1);
  lua_pushnumber (tan(TORAD(d)));
 }
 
 
 static void math_asin (void)
 {
- double d = lua_check_number(1, "asin");
+ double d = luaL_check_number(1);
  lua_pushnumber (TODEGREE(asin(d)));
 }
 
 
 static void math_acos (void)
 {
- double d = lua_check_number(1, "acos");
+ double d = luaL_check_number(1);
  lua_pushnumber (TODEGREE(acos(d)));
 }
 
 
 static void math_atan (void)
 {
- double d = lua_check_number(1, "atan");
+ double d = luaL_check_number(1);
  lua_pushnumber (TODEGREE(atan(d)));
 }
 
 
 static void math_atan2 (void)
 {
- double d1 = lua_check_number(1, "atan2");
- double d2 = lua_check_number(2, "atan2");
+ double d1 = luaL_check_number(1);
+ double d2 = luaL_check_number(2);
  lua_pushnumber (TODEGREE(atan2(d1, d2)));
 }
 
 
 static void math_ceil (void)
 {
- double d = lua_check_number(1, "ceil");
+ double d = luaL_check_number(1);
  lua_pushnumber (ceil(d));
 }
 
 
 static void math_floor (void)
 {
- double d = lua_check_number(1, "floor");
+ double d = luaL_check_number(1);
  lua_pushnumber (floor(d));
 }
 
 static void math_mod (void)
 {
-  float x = lua_check_number(1, "mod");
-  float y = lua_check_number(2, "mod");
+  float x = luaL_check_number(1);
+  float y = luaL_check_number(2);
   lua_pushnumber(fmod(x, y));
 }
 
 
 static void math_sqrt (void)
 {
- double d = lua_check_number(1, "sqrt");
+ double d = luaL_check_number(1);
  lua_pushnumber (sqrt(d));
 }
 
-static int old_pow;
 
 static void math_pow (void)
 {
- lua_Object o1 = lua_getparam (1);
- lua_Object o2 = lua_getparam (2);
- lua_Object op = lua_getparam(3);
- if (!lua_isnumber(o1) || !lua_isnumber(o2) || *(lua_getstring(op)) != 'p')
- {
-   lua_Object old = lua_getref(old_pow);
-   lua_pushobject(o1);
-   lua_pushobject(o2);
-   lua_pushobject(op);
-   if (lua_callfunction(old) != 0)
-     lua_error(NULL);
- }
- else
- {
-   double d1 = lua_getnumber(o1);
-   double d2 = lua_getnumber(o2);
-   lua_pushnumber (pow(d1,d2));
- }
+  double d1 = luaL_check_number(1);
+  double d2 = luaL_check_number(2);
+  lua_pushnumber(pow(d1,d2));
 }
 
 static void math_min (void)
 {
  int i=1;
- double dmin = lua_check_number(i, "min");
+ double dmin = luaL_check_number(i);
  while (lua_getparam(++i) != LUA_NOOBJECT)
  {
-  double d = lua_check_number(i, "min");
+  double d = luaL_check_number(i);
   if (d < dmin) dmin = d;
  }
  lua_pushnumber (dmin);
@@ -143,10 +128,10 @@ static void math_min (void)
 static void math_max (void)
 {
  int i=1;
- double dmax = lua_check_number(i, "max");
+ double dmax = luaL_check_number(i);
  while (lua_getparam(++i) != LUA_NOOBJECT)
  {
-  double d = lua_check_number(i, "max");
+  double d = luaL_check_number(i);
   if (d > dmax) dmax = d;
  }
  lua_pushnumber (dmax);
@@ -154,33 +139,33 @@ static void math_max (void)
 
 static void math_log (void)
 {
- double d = lua_check_number(1, "log");
+ double d = luaL_check_number(1);
  lua_pushnumber (log(d));
 }
 
 
 static void math_log10 (void)
 {
- double d = lua_check_number(1, "log10");
+ double d = luaL_check_number(1);
  lua_pushnumber (log10(d));
 }
 
 
 static void math_exp (void)
 {
- double d = lua_check_number(1, "exp");
+ double d = luaL_check_number(1);
  lua_pushnumber (exp(d));
 }
 
 static void math_deg (void)
 {
- float d = lua_check_number(1, "deg");
+ float d = luaL_check_number(1);
  lua_pushnumber (d*180./PI);
 }
 
 static void math_rad (void)
 {
- float d = lua_check_number(1, "rad");
+ float d = luaL_check_number(1);
  lua_pushnumber (d/180.*PI);
 }
 
@@ -191,11 +176,11 @@ static void math_random (void)
 
 static void math_randomseed (void)
 {
-  srand(lua_check_number(1, "randomseed"));
+  srand(luaL_check_number(1));
 }
 
 
-static struct lua_reg mathlib[] = {
+static struct luaL_reg mathlib[] = {
 {"abs",   math_abs},
 {"sin",   math_sin},
 {"cos",   math_cos},
@@ -224,7 +209,9 @@ static struct lua_reg mathlib[] = {
 */
 void mathlib_open (void)
 {
-  luaI_openlib(mathlib, (sizeof(mathlib)/sizeof(mathlib[0])));
-  old_pow = lua_refobject(lua_setfallback("arith", math_pow), 1);
+  luaL_openlib(mathlib, (sizeof(mathlib)/sizeof(mathlib[0])));
+  lua_pushcfunction(math_pow);
+  lua_pushnumber(0);  /* to get its tag */
+  lua_settagmethod(lua_tag(lua_pop()), "pow");
 }
 

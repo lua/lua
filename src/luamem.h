@@ -1,11 +1,11 @@
 /*
 ** mem.c
 ** memory manager for lua
-** $Id: mem.h,v 1.8 1996/05/24 14:31:10 roberto Exp $
+** $Id: luamem.h,v 1.9 1997/03/31 14:10:11 roberto Exp $
 */
  
-#ifndef mem_h
-#define mem_h
+#ifndef luamem_h
+#define luamem_h
 
 #ifndef NULL
 #define NULL 0

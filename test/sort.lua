@@ -28,7 +28,7 @@ function selectionsort(a,n)
 end
 
 function show(m,x)
- write(m.."\n\t")
+ write(m,"\n\t")
  local i=0
  while x[i] do
   write(x[i])

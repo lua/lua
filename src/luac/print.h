@@ -1,10 +1,10 @@
 /*
 ** print.h
 ** opcode names
-** $Id: print.h,v 1.1 1996/02/23 19:04:13 lhf Exp $
+** $Id: print.h,v 1.3 1997/04/14 14:42:50 lhf Exp $
 */
 
-static char* OpCodeName[]={	/* attention: same order as enum in opcode.h */
+static char* OpCodeName[]={	/* ATTENTION: same order as enum in opcode.h */
  "PUSHNIL",
  "PUSH0",
  "PUSH1",
@@ -72,5 +72,8 @@ static char* OpCodeName[]={	/* attention: same order as enum in opcode.h */
  "RETCODE0",
  "RETCODE",
  "SETLINE",
- ""
+ "VARARGS",
+ "STOREMAP"
 };
+
+#define NOPCODES	(sizeof(OpCodeName)/sizeof(OpCodeName[0]))

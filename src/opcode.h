@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.24 1996/11/01 12:46:59 roberto Exp $
+** $Id: opcode.h,v 3.34 1997/06/16 16:50:22 roberto Exp $
 */
 
 #ifndef opcode_h
@@ -14,6 +14,28 @@
 
 #define FIELDS_PER_FLUSH 40
 
+/*
+* WARNING: if you change the order of this enumeration,
+* grep "ORDER LUA_T"
+*/
+typedef enum
+{
+ LUA_T_NIL      = -9,
+ LUA_T_NUMBER   = -8,
+ LUA_T_STRING   = -7,
+ LUA_T_ARRAY    = -6,  /* array==table */
+ LUA_T_FUNCTION = -5,
+ LUA_T_CFUNCTION= -4,
+ LUA_T_MARK     = -3,
+ LUA_T_CMARK    = -2,
+ LUA_T_LINE     = -1,
+ LUA_T_USERDATA = 0
+} lua_Type;
+
+#define NUM_TYPES 10
+
+
+extern char *luaI_typenames[];
 
 typedef enum {
 /* name          parm    before          after           side effect
@@ -38,7 +60,7 @@ PUSHLOCAL6,/*		-		LOC[6]  */
 PUSHLOCAL7,/*		-		LOC[7]  */
 PUSHLOCAL8,/*		-		LOC[8]  */
 PUSHLOCAL9,/*		-		LOC[9]  */
-PUSHLOCAL,/*	w	-		LOC[w]  */
+PUSHLOCAL,/*	b	-		LOC[b]  */
 PUSHGLOBAL,/*	w	-		VAR[w]  */
 PUSHINDEXED,/*		i t		t[i]  */
 PUSHSELF,/*	w	t		t t[STR[w]]  */
@@ -52,14 +74,14 @@ STORELOCAL6,/*		x		-		LOC[6]=x  */
 STORELOCAL7,/*		x		-		LOC[7]=x  */
 STORELOCAL8,/*		x		-		LOC[8]=x  */
 STORELOCAL9,/*		x		-		LOC[9]=x  */
-STORELOCAL,/*	w	x		-		LOC[w]=x  */
+STORELOCAL,/*	b	x		-		LOC[b]=x  */
 STOREGLOBAL,/*	w	x		-		VAR[w]=x  */
 STOREINDEXED0,/*	v i t		-		t[i]=v  */
 STOREINDEXED,/*	b	v a_b...a_1 i t	a_b...a_1 i t	t[i]=v  */
-STORELIST0,/*	w	v_w...v_1 t	-		t[i]=v_i  */
-STORELIST,/*	w n	v_w...v_1 t	-		t[i+n*FPF]=v_i  */
-STORERECORD,/*	n
-		w_n...w_1 v_n...v_1 t	-		t[STR[w_i]]=v_i  */
+STORELIST0,/*	b	v_b...v_1 t	-		t[i]=v_i  */
+STORELIST,/*	b c	v_b...v_1 t	-		t[i+c*FPF]=v_i  */
+STORERECORD,/*	b
+		w_b...w_1 v_b...v_1 t	-		t[STR[w_i]]=v_i  */
 ADJUST0,/*		-		-		TOP=BASE  */
 ADJUST,/*	b	-		-		TOP=BASE+b  */
 CREATEARRAY,/*	w	-		newarray(size = w)  */
@@ -76,19 +98,19 @@ POWOP,/*		y x		x^y  */
 CONCOP,/*		y x		x..y  */
 MINUSOP,/*		x		-x  */
 NOTOP,/*		x		(x==nil)? 1 : nil  */
-ONTJMP,/*		w	x	-		(x!=nil)? PC+=w  */
-ONFJMP,/*		w	x	-		(x==nil)? PC+=w  */
+ONTJMP,/*	w	x		-		(x!=nil)? PC+=w  */
+ONFJMP,/*	w	x		-		(x==nil)? PC+=w  */
 JMP,/*		w	-		-		PC+=w  */
-UPJMP,/*		w	-	-		PC-=w  */
-IFFJMP,/*		w	x	-		(x==nil)? PC+=w  */
+UPJMP,/*	w	-		-		PC-=w  */
+IFFJMP,/*	w	x		-		(x==nil)? PC+=w  */
 IFFUPJMP,/*	w	x		-		(x==nil)? PC-=w  */
 POP,/*			x		-  */
-CALLFUNC,/*	n m	v_n...v_1 f	r_m...r_1	f(v1,...,v_n)  */
+CALLFUNC,/*	b c	v_b...v_1 f	r_c...r_1	f(v1,...,v_b)  */
 RETCODE0,
 RETCODE,/*	b	-		-  */
 SETLINE,/*	w	-		-		LINE=w  */
-VARARGS/*	b	v_n...v_1	{v_1...v_n;n=n}  */
-
+VARARGS,/*	b	v_b...v_1	{v_1...v_b;n=b}  */
+STOREMAP/*	b	v_b k_b ...v_1 k_1 t	-	t[k_i]=v_i  */
 } OpCode;
 
 
@@ -102,29 +124,27 @@ typedef union
  TaggedString *ts;
  TFunc         *tf;
  struct Hash    *a;
- void           *u;
  int	       i;
 } Value;
 
-typedef struct Object
+typedef struct TObject
 {
- lua_Type  tag;
+ lua_Type ttype;
  Value value;
-} Object;
+} TObject;
 
 
 /* Macros to access structure members */
-#define tag(o)		((o)->tag)
+#define ttype(o)	((o)->ttype)
 #define nvalue(o)	((o)->value.n)
 #define svalue(o)	((o)->value.ts->str)
 #define tsvalue(o)	((o)->value.ts)
 #define avalue(o)	((o)->value.a)
 #define fvalue(o)	((o)->value.f)
-#define uvalue(o)	((o)->value.u)
 
 /* Macros to access symbol table */
 #define s_object(i)	(lua_table[i].object)
-#define s_tag(i)	(tag(&s_object(i)))
+#define s_ttype(i)	(ttype(&s_object(i)))
 #define s_nvalue(i)	(nvalue(&s_object(i)))
 #define s_svalue(i)	(svalue(&s_object(i)))
 #define s_tsvalue(i)	(tsvalue(&s_object(i)))
@@ -141,10 +161,11 @@ typedef struct Object
 /* Exported functions */
 void    lua_parse      (TFunc *tf);	/* from "lua.stx" module */
 void	luaI_codedebugline (int line);  /* from "lua.stx" module */
-void    lua_travstack (int (*fn)(Object *));
-Object *luaI_Address (lua_Object o);
-void	luaI_pushobject (Object *o);
-void    luaI_gcFB       (Object *o);
+void    lua_travstack (int (*fn)(TObject *));
+TObject *luaI_Address (lua_Object o);
+void	luaI_pushobject (TObject *o);
+void    luaI_gcIM       (TObject *o);
 int     luaI_dorun (TFunc *tf);
+int     lua_domain (void);
 
 #endif

@@ -4,19 +4,23 @@ LUA= ..
 
 include $(LUA)/config
 
-OBJS=	fallback.o\
+OBJS=	auxlib.o\
+	fallback.o\
 	func.o\
 	hash.o\
 	inout.o\
 	lex.o\
-	mem.o\
+	luamem.o\
 	opcode.o\
 	parser.o\
 	table.o\
 	tree.o\
-	undump.o
+	undump.o\
+	zio.o
 
-SRCS=	fallback.c\
+SRCS=	auxlib.c\
+	auxlib.h\
+	fallback.c\
 	fallback.h\
 	func.c\
 	func.h\
@@ -26,8 +30,8 @@ SRCS=	fallback.c\
 	inout.h\
 	lex.c\
 	lex.h\
-	mem.c\
-	mem.h\
+	luamem.c\
+	luamem.h\
 	opcode.c\
 	opcode.h\
 	parser.c\
@@ -39,6 +43,8 @@ SRCS=	fallback.c\
 	types.h\
 	undump.c\
 	undump.h\
+	zio.c\
+	zio.h\
 	lua.stx
 
 SLIB= $(LIB)/liblua.a

@@ -1,4 +1,18 @@
-Current version is 2.5
+This is version 3.0.
+
+* Changes since version 2.5 (no versions between 2.5 and 3.0)
+  + NEW CONCEPT: "tag methods".
+    Tag methods replace fallbacks as the meta-mechanism for extending the
+    semantics of Lua. Whereas fallbacks had a global nature, tag methods
+    work on objects having the same tag (e.g., groups of tables).
+    Existing code that uses fallbacks should work without change.
+  + new, general syntax for constructors {[exp] = exp, ... }.
+  + support for handling variable number of arguments in functions (varargs).
+  + support for conditional compilation ($if ... $else ... $end).
+  + cleaner semantics in API simplifies host code.
+  + better support for writing libraries (auxlib.h).
+  + better type checking and error messages in the standard library.
+  + luac can now also undump.
 
 * Changes since version 2.4
   + io and string libraries are now based on pattern matching;

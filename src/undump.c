@@ -3,33 +3,28 @@
 ** load bytecodes from files
 */
 
-char* rcs_undump="$Id: undump.c,v 1.21 1996/11/18 11:18:29 lhf Exp $";
+char* rcs_undump="$Id: undump.c,v 1.24 1997/06/17 18:19:17 roberto Exp $";
 
 #include <stdio.h>
 #include <string.h>
+#include "auxlib.h"
 #include "opcode.h"
-#include "mem.h"
+#include "luamem.h"
 #include "table.h"
 #include "undump.h"
+#include "zio.h"
 
 static int swapword=0;
 static int swapfloat=0;
 static TFunc* Main=NULL;			/* functions in a chunk */
 static TFunc* lastF=NULL;
 
-static void warn(char* s)			/* TODO: remove */
-{
-#if 0
- fprintf(stderr,"undump: %s\n",s);
-#endif
-}
-
 static void FixCode(Byte* code, Byte* end)	/* swap words */
 {
  Byte* p;
  for (p=code; p!=end;)
  {
-	OpCode op=(OpCode)*p;
+	int op=*p;
 	switch (op)
 	{
 	case PUSHNIL:
@@ -83,6 +78,8 @@ static void FixCode(Byte* code, Byte* end)	/* swap words */
 	case STORELIST0:
 	case ADJUST:
 	case RETCODE:
+	case VARARGS:
+	case STOREMAP:
 		p+=2;
 		break;
 	case STORELIST:
@@ -132,7 +129,8 @@ static void FixCode(Byte* code, Byte* end)	/* swap words */
 		break;
 	}
 	default:
-		lua_error("corrupt binary file");
+		luaL_verror("corrupt binary file: bad opcode %d at %d\n",
+			op,(int)(p-code));
 		break;
 	}
  }
@@ -150,149 +148,152 @@ static void Unthread(Byte* code, int i, int v)
  }
 }
 
-static int LoadWord(FILE* D)
+static int LoadWord(ZIO* Z)
 {
  Word w;
- fread(&w,sizeof(w),1,D);
+ zread(Z,&w,sizeof(w));
  if (swapword)
  {
-  Byte* p=(Byte*)&w;				/* TODO: need union? */
+  Byte* p=(Byte*)&w;
   Byte t;
   t=p[0]; p[0]=p[1]; p[1]=t;
  }
  return w;
 }
 
-static int LoadSize(FILE* D)
+static int LoadSize(ZIO* Z)
 {
- Word hi=LoadWord(D);
- Word lo=LoadWord(D);
+ Word hi=LoadWord(Z);
+ Word lo=LoadWord(Z);
  int s=(hi<<16)|lo;
  if ((Word)s != s) lua_error("code too long");
  return s;
 }
 
-static void* LoadBlock(int size, FILE* D)
+static void* LoadBlock(int size, ZIO* Z)
 {
  void* b=luaI_malloc(size);
- fread(b,size,1,D);
+ zread(Z,b,size);
  return b;
 }
 
-static char* LoadString(FILE* D)
+static char* LoadString(ZIO* Z)
 {
- int size=LoadWord(D);
+ int size=LoadWord(Z);
  char *b=luaI_buffer(size);
- fread(b,size,1,D);
+ zread(Z,b,size);
  return b;
 }
 
-static char* LoadNewString(FILE* D)
+static char* LoadNewString(ZIO* Z)
 {
- return LoadBlock(LoadWord(D),D);
+ return LoadBlock(LoadWord(Z),Z);
 }
 
-static void LoadFunction(FILE* D)
+static void LoadFunction(ZIO* Z)
 {
  TFunc* tf=new(TFunc);
  tf->next=NULL;
  tf->locvars=NULL;
- tf->size=LoadSize(D);
- tf->lineDefined=LoadWord(D);
+ tf->size=LoadSize(Z);
+ tf->lineDefined=LoadWord(Z);
  if (IsMain(tf))				/* new main */
  {
-  tf->fileName=LoadNewString(D);
+  tf->fileName=LoadNewString(Z);
   Main=lastF=tf;
  }
  else						/* fix PUSHFUNCTION */
  {
-  tf->marked=LoadWord(D);
+  tf->marked=LoadWord(Z);
   tf->fileName=Main->fileName;
   memcpy(Main->code+tf->marked,&tf,sizeof(tf));
   lastF=lastF->next=tf;
  }
- tf->code=LoadBlock(tf->size,D);
+ tf->code=LoadBlock(tf->size,Z);
  if (swapword || swapfloat) FixCode(tf->code,tf->code+tf->size);
  while (1)					/* unthread */
  {
-  int c=getc(D);
+  int c=zgetc(Z);
   if (c==ID_VAR)				/* global var */
   {
-   int i=LoadWord(D);
-   char* s=LoadString(D);
+   int i=LoadWord(Z);
+   char* s=LoadString(Z);
    int v=luaI_findsymbolbyname(s);
    Unthread(tf->code,i,v);
   }
   else if (c==ID_STR)				/* constant string */
   {
-   int i=LoadWord(D);
-   char* s=LoadString(D);
+   int i=LoadWord(Z);
+   char* s=LoadString(Z);
    int v=luaI_findconstantbyname(s);
    Unthread(tf->code,i,v);
   }
   else
   {
-   ungetc(c,D);
+   zungetc(Z);
    break;
   }
  }
 }
 
-static void LoadSignature(FILE* D)
+static void LoadSignature(ZIO* Z)
 {
  char* s=SIGNATURE;
- while (*s!=0 && getc(D)==*s)
+ while (*s!=0 && zgetc(Z)==*s)
   ++s;
- if (*s!=0) lua_error("bad signature");
+ if (*s!=0) lua_error("cannot load binary file: bad signature");
 }
 
-static void LoadHeader(FILE* D)			/* TODO: error handling */
+static void LoadHeader(ZIO* Z)
 {
  Word w,tw=TEST_WORD;
  float f,tf=TEST_FLOAT;
  int version;
- LoadSignature(D);
- version=getc(D);
+ LoadSignature(Z);
+ version=zgetc(Z);
  if (version>0x23)				/* after 2.5 */
  {
-  int oldsizeofW=getc(D);
-  int oldsizeofF=getc(D);
-  int oldsizeofP=getc(D);
+  int oldsizeofW=zgetc(Z);
+  int oldsizeofF=zgetc(Z);
+  int oldsizeofP=zgetc(Z);
   if (oldsizeofW!=2)
-   lua_error("cannot load binary file created on machine with sizeof(Word)!=2");
+   luaL_verror(
+	"cannot load binary file created on machine with sizeof(Word)=%d; "
+	"expected 2",oldsizeofW);
   if (oldsizeofF!=4)
-   lua_error("cannot load binary file created on machine with sizeof(float)!=4. not an IEEE machine?");
-  if (oldsizeofP!=sizeof(TFunc*))		/* TODO: pack */
-   lua_error("cannot load binary file: different pointer sizes");
+   luaL_verror(
+	"cannot load binary file created on machine with sizeof(float)=%d; "
+	"expected 4\nnot an IEEE machine?",oldsizeofF);
+  if (oldsizeofP!=sizeof(TFunc*))		/* TODO: pack? */
+   luaL_verror(
+	"cannot load binary file created on machine with sizeof(TFunc*)=%d; "
+	"expected %d",oldsizeofP,(int)sizeof(TFunc*));
  }
- fread(&w,sizeof(w),1,D);			/* test word */
+ zread(Z,&w,sizeof(w));			/* test word */
  if (w!=tw)
  {
   swapword=1;
-  warn("different byte order");
  }
- fread(&f,sizeof(f),1,D);			/* test float */
+ zread(Z,&f,sizeof(f));			/* test float */
  if (f!=tf)
  {
-  Byte* p=(Byte*)&f;				/* TODO: need union? */
+  Byte* p=(Byte*)&f;
   Byte t;
   swapfloat=1;
   t=p[0]; p[0]=p[3]; p[3]=t;
   t=p[1]; p[1]=p[2]; p[2]=t;
   if (f!=tf)					/* TODO: try another perm? */
-   lua_error("different float representation");
-  else
-   warn("different byte order in floats");
+   lua_error("cannot load binary file: unknown float representation");
  }
 }
 
-static void LoadChunk(FILE* D)
+static void LoadChunk(ZIO* Z)
 {
- LoadHeader(D);
+ LoadHeader(Z);
  while (1)
  {
-  int c=getc(D);
-  if (c==ID_FUN) LoadFunction(D); else { ungetc(c,D); break; }
+  int c=zgetc(Z);
+  if (c==ID_FUN) LoadFunction(Z); else { zungetc(Z); break; }
  }
 }
 
@@ -300,30 +301,26 @@ static void LoadChunk(FILE* D)
 ** load one chunk from a file.
 ** return list of functions found, headed by main, or NULL at EOF.
 */
-TFunc* luaI_undump1(FILE* D)
+TFunc* luaI_undump1(ZIO* Z)
 {
- while (1)
+ int c=zgetc(Z);
+ if (c==ID_CHUNK)
  {
-  int c=getc(D);
-  if (c==ID_CHUNK)
-  {
-   LoadChunk(D);
-   return Main;
-  }
-  else if (c==EOF)
-   return NULL;
-  else
-   lua_error("not a lua binary file");
+  LoadChunk(Z);
+  return Main;
  }
+ else if (c!=EOZ)
+   lua_error("not a lua binary file");
+ return NULL;
 }
 
 /*
 ** load and run all chunks in a file
 */
-int luaI_undump(FILE* D)
+int luaI_undump(ZIO* Z)
 {
  TFunc* m;
- while ((m=luaI_undump1(D)))
+ while ((m=luaI_undump1(Z)))
  {
   int status=luaI_dorun(m);
   luaI_freefunc(m);

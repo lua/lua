@@ -2,14 +2,14 @@ $debug
 
 a = {}
 
-i=0
+local i=0
 while i<10 do
  a[i] = i*i
  i=i+1
 end
 
-r,v = next(a,nil)
+local r,v = next(a,nil)
 while r ~= nil do
- print ("array["..r.."] = "..v)
+ write ("array[",r,"] = ",v,"\n")
  r,v = next(a,r)
 end 

@@ -3,14 +3,12 @@
 ** thread and save bytecodes to file
 */
 
-char* rcs_dump="$Id: dump.c,v 1.17 1996/11/18 11:18:29 lhf Exp $";
+char* rcs_dump="$Id: dump.c,v 1.20 1997/06/19 14:56:04 lhf Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "luac.h"
-
-static TFunc* lastF=NULL;		/* list of functions seen in code */
 
 static int SawVar(int i, int at)
 {
@@ -34,7 +32,7 @@ static void ThreadCode(Byte* code, Byte* end)
  for (i=0; i<lua_nconstant; i++) StrLoc(i)=0;
  for (p=code; p!=end;)
  {
-	OpCode op=(OpCode)*p;
+	int op=*p;
 	int at=p-code+1;
 	switch (op)
 	{
@@ -89,6 +87,8 @@ static void ThreadCode(Byte* code, Byte* end)
 	case STORELIST0:
 	case ADJUST:
 	case RETCODE:
+	case VARARGS:
+	case STOREMAP:
 		p+=2;
 		break;
 	case PUSHWORD:
@@ -107,24 +107,17 @@ static void ThreadCode(Byte* code, Byte* end)
 	case PUSHFLOAT:
 		p+=5;			/* assumes sizeof(float)==4 */
 		break;
-	case PUSHSELF:
+	case PUSHFUNCTION:
+		p+=sizeof(TFunc*)+1;
+		break;
 	case PUSHSTRING:
+	case PUSHSELF:
 	{
 		Word w;
 		p++;
 		get_word(w,p);
 		w=SawStr(w,at);
 		memcpy(p-2,&w,sizeof(w));
-		break;
-	}
-	case PUSHFUNCTION:
-	{
-		TFunc* tf;
-		p++;
-		get_code(tf,p);
-		tf->marked=at;
-		tf->next=NULL;		/* TODO: remove? */
-		lastF=lastF->next=tf;
 		break;
 	}
 	case PUSHGLOBAL:
@@ -151,8 +144,8 @@ static void ThreadCode(Byte* code, Byte* end)
 		}
 		break;
 	}
-	default:
-		fprintf(stderr,"luac: cannot happen:  opcode=%d",*p);
+	default:			/* cannot happen */
+		fprintf(stderr,"luac: bad opcode %d at %d\n",*p,(int)(p-code));
 		exit(1);
 		break;
 	}
@@ -186,7 +179,7 @@ static void DumpString(char* s, FILE* D)
  int n=strlen(s)+1;
  if ((Word)n != n)
  {
-  fprintf(stderr,"luac: string too long: \"%.32s...\"\n",s);
+  fprintf(stderr,"luac: string too long (%d bytes): \"%.32s...\"\n",n,s);
   exit(1);
  }
  DumpWord(n,D);
@@ -220,7 +213,6 @@ static void DumpStrings(FILE* D)
 
 void DumpFunction(TFunc* tf, FILE* D)
 {
- lastF=tf;
  ThreadCode(tf->code,tf->code+tf->size);
  fputc(ID_FUN,D);
  DumpSize(tf->size,D);

@@ -1,5 +1,5 @@
 /*
-** $Id: inout.h,v 1.16 1996/05/28 21:07:32 roberto Exp $
+** $Id: inout.h,v 1.20 1997/06/19 18:04:34 roberto Exp $
 */
 
 
@@ -14,21 +14,12 @@ extern Word lua_linenumber;
 extern Word lua_debugline;
 extern char *lua_parsedfile;
 
-FILE *lua_openfile     (char *fn);
-void lua_closefile    (void);
-void lua_openstring   (char *s);
-void lua_closestring  (void);
+void luaI_setparsedfile (char *name);
 
-void    lua_internaldofile (void);
-void    lua_internaldostring (void);
-void    luaI_tostring   (void);
-void    luaI_print      (void);
-void    luaI_type       (void);
-void    lua_obj2number (void);
-void	luaI_error     (void);
-void    luaI_assert    (void);
-void	luaI_setglobal (void);
-void	luaI_getglobal (void);
-void	luaI_call	(void);
+void luaI_predefine (void);
+
+int lua_dobuffer (char *buff, int size);
+int lua_doFILE (FILE *f, int bin);
+
 
 #endif

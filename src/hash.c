@@ -3,14 +3,15 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.32 1996/11/18 13:48:44 roberto Exp $";
+char *rcs_hash="$Id: hash.c,v 2.43 1997/05/14 18:38:29 roberto Exp $";
 
 
-#include "mem.h"
+#include "luamem.h"
 #include "opcode.h"
 #include "hash.h"
 #include "table.h"
 #include "lua.h"
+#include "auxlib.h"
 
 
 #define nhash(t)	((t)->nhash)
@@ -24,13 +25,15 @@ char *rcs_hash="$Id: hash.c,v 2.32 1996/11/18 13:48:44 roberto Exp $";
 
 #define REHASH_LIMIT    0.70    /* avoid more than this % full */
 
+#define TagDefault LUA_T_ARRAY;
+
 
 static Hash *listhead = NULL;
 
 
 /* hash dimensions values */
 static Long dimensions[] = 
- {3L, 5L, 7L, 11L, 23L, 47L, 97L, 197L, 397L, 797L, 1597L, 3203L, 6421L,
+ {5L, 11L, 23L, 47L, 97L, 197L, 397L, 797L, 1597L, 3203L, 6421L,
   12853L, 25717L, 51437L, 102811L, 205619L, 411233L, 822433L,
   1644817L, 3289613L, 6579211L, 13158023L, MAX_INT};
 
@@ -46,16 +49,32 @@ int luaI_redimension (int nhash)
  return 0;  /* to avoid warnings */
 }
 
-static int hashindex (Hash *t, Object *ref)		/* hash function */
+
+int lua_equalObj (TObject *t1, TObject *t2)
+{
+  if (ttype(t1) != ttype(t2)) return 0;
+  switch (ttype(t1))
+  {
+    case LUA_T_NIL: return 1;
+    case LUA_T_NUMBER: return nvalue(t1) == nvalue(t2);
+    case LUA_T_STRING: case LUA_T_USERDATA: return svalue(t1) == svalue(t2);
+    case LUA_T_ARRAY: return avalue(t1) == avalue(t2);
+    case LUA_T_FUNCTION: return t1->value.tf == t2->value.tf;
+    case LUA_T_CFUNCTION: return fvalue(t1) == fvalue(t2);
+    default:
+     lua_error("internal error in `lua_equalObj'");
+     return 0; /* UNREACHEABLE */
+  }
+}
+
+
+static long int hashindex (TObject *ref)
 {
   long int h;
-  switch (tag(ref)) {
-    case LUA_T_NIL:
-      lua_error ("unexpected type to index table");
-      h = 0;  /* UNREACHEABLE */
+  switch (ttype(ref)) {
     case LUA_T_NUMBER:
       h = (long int)nvalue(ref); break;
-    case LUA_T_STRING:
+    case LUA_T_STRING: case LUA_T_USERDATA:
       h = tsvalue(ref)->hash; break;
     case LUA_T_FUNCTION:
       h = (IntPoint)ref->value.tf; break;
@@ -63,38 +82,29 @@ static int hashindex (Hash *t, Object *ref)		/* hash function */
       h = (IntPoint)fvalue(ref); break;
     case LUA_T_ARRAY:
       h = (IntPoint)avalue(ref); break;
-    default:  /* user data */
-      h = (IntPoint)uvalue(ref); break;
+    default:
+      lua_error ("unexpected type to index table");
+      h = 0;  /* UNREACHEABLE */
   }
   if (h < 0) h = -h;
-  return h%nhash(t);  /* make it a valid index */
+  return h;
 }
 
-int lua_equalObj (Object *t1, Object *t2)
+
+static int present (Hash *t, TObject *key)
 {
-  if (tag(t1) != tag(t2)) return 0;
-  switch (tag(t1))
-  {
-    case LUA_T_NIL: return 1;
-    case LUA_T_NUMBER: return nvalue(t1) == nvalue(t2);
-    case LUA_T_STRING: return svalue(t1) == svalue(t2);
-    case LUA_T_ARRAY: return avalue(t1) == avalue(t2);
-    case LUA_T_FUNCTION: return t1->value.tf == t2->value.tf;
-    case LUA_T_CFUNCTION: return fvalue(t1) == fvalue(t2);
-    default: return uvalue(t1) == uvalue(t2);
+  long int h = hashindex(key);
+  int tsize = nhash(t);
+  int h1 = h%tsize;
+  TObject *rf = ref(node(t, h1));
+  if (ttype(rf) != LUA_T_NIL && !lua_equalObj(key, rf)) {
+    int h2 = h%(tsize-2) + 1;
+    do {
+      h1 = (h1+h2)%tsize;
+      rf = ref(node(t, h1));
+    } while (ttype(rf) != LUA_T_NIL && !lua_equalObj(key, rf));
   }
-}
-
-static int present (Hash *t, Object *ref)
-{ 
- int h = hashindex(t, ref);
- while (tag(ref(node(t, h))) != LUA_T_NIL)
- {
-  if (lua_equalObj(ref, ref(node(t, h))))
-    return h;
-  h = (h+1) % nhash(t);
- }
- return h;
+  return h1;
 }
 
 
@@ -106,7 +116,7 @@ static Node *hashnodecreate (int nhash)
  int i;
  Node *v = newvector (nhash, Node);
  for (i=0; i<nhash; i++)
-   tag(ref(&v[i])) = LUA_T_NIL;
+   ttype(ref(&v[i])) = LUA_T_NIL;
  return v;
 }
 
@@ -121,6 +131,7 @@ static Hash *hashcreate (int nhash)
  nhash(t) = nhash;
  nuse(t) = 0;
  markarray(t) = 0;
+ t->htag = TagDefault;
  return t;
 }
 
@@ -146,7 +157,7 @@ void lua_hashmark (Hash *h)
   for (i=0; i<nhash(h); i++)
   {
    Node *n = node(h,i);
-   if (tag(ref(n)) != LUA_T_NIL)
+   if (ttype(ref(n)) != LUA_T_NIL)
    {
     lua_markobject(&n->ref);
     lua_markobject(&n->val);
@@ -156,49 +167,50 @@ void lua_hashmark (Hash *h)
 }
 
 
-static void call_fallbacks (void)
+void luaI_hashcallIM (Hash *l)
 {
-  Hash *curr_array;
-  Object t;
-  tag(&t) = LUA_T_ARRAY;
-  for (curr_array = listhead; curr_array; curr_array = curr_array->next)
-    if (markarray(curr_array) != 1)
-    {
-      avalue(&t) = curr_array;
-      luaI_gcFB(&t);
-    }
-  tag(&t) = LUA_T_NIL;
-  luaI_gcFB(&t);  /* end of list */
+  TObject t;
+  ttype(&t) = LUA_T_ARRAY;
+  for (; l; l=l->next) {
+    avalue(&t) = l;
+    luaI_gcIM(&t);
+  }
+}
+
+
+void luaI_hashfree (Hash *frees)
+{
+  while (frees) {
+    Hash *next = frees->next;
+    hashdelete(frees);
+    frees = next;
+  }
 }
 
  
-/*
-** Garbage collection to arrays
-** Delete all unmarked arrays.
-*/
-Long lua_hashcollector (void)
+Hash *luaI_hashcollector (long *acum)
 {
- Hash *curr_array = listhead, *prev = NULL;
- Long counter = 0;
- call_fallbacks();
- while (curr_array != NULL)
- {
-  Hash *next = curr_array->next;
-  if (markarray(curr_array) != 1)
-  {
-   if (prev == NULL) listhead = next;
-   else              prev->next = next;
-   hashdelete(curr_array);
-   ++counter;
+  Hash *curr_array = listhead, *prev = NULL, *frees = NULL;
+  long counter = 0;
+  while (curr_array != NULL) {
+    Hash *next = curr_array->next;
+    if (markarray(curr_array) != 1) {
+      if (prev == NULL)
+        listhead = next;
+      else
+        prev->next = next;
+      curr_array->next = frees;
+      frees = curr_array;
+      ++counter;
+    }
+    else {
+      markarray(curr_array) = 0;
+      prev = curr_array;
+    }
+    curr_array = next;
   }
-  else
-  {
-   markarray(curr_array) = 0;
-   prev = curr_array;
-  }
-  curr_array = next;
- }
- return counter;
+  *acum += counter;
+  return frees;
 }
 
 
@@ -220,32 +232,45 @@ Hash *lua_createarray (int nhash)
 
 
 /*
-** Re-hash
+** Rehash:
+** Check if table has deleted slots. It it has, it does not need to
+** grow, since rehash will reuse them.
 */
+static int emptyslots (Hash *t)
+{
+  int i;
+  for (i=nhash(t)-1; i>=0; i--) {
+    Node *n = node(t, i);
+    if (ttype(ref(n)) != LUA_T_NIL && ttype(val(n)) == LUA_T_NIL)
+      return 1;
+  }
+  return 0;
+}
+
 static void rehash (Hash *t)
 {
- int i;
- int   nold = nhash(t);
- Node *vold = nodevector(t);
- nhash(t) = luaI_redimension(nhash(t));
- nodevector(t) = hashnodecreate(nhash(t));
- for (i=0; i<nold; i++)
- {
-  Node *n = vold+i;
-  if (tag(ref(n)) != LUA_T_NIL && tag(val(n)) != LUA_T_NIL)
-   *node(t, present(t, ref(n))) = *n;  /* copy old node to new hahs */
- }
- luaI_free(vold);
+  int   nold = nhash(t);
+  Node *vold = nodevector(t);
+  int i;
+  if (!emptyslots(t))
+    nhash(t) = luaI_redimension(nhash(t));
+  nodevector(t) = hashnodecreate(nhash(t));
+  for (i=0; i<nold; i++) {
+    Node *n = vold+i;
+    if (ttype(ref(n)) != LUA_T_NIL && ttype(val(n)) != LUA_T_NIL)
+      *node(t, present(t, ref(n))) = *n;  /* copy old node to new hash */
+  }
+  luaI_free(vold);
 }
 
 /*
 ** If the hash node is present, return its pointer, otherwise return
 ** null.
 */
-Object *lua_hashget (Hash *t, Object *ref)
+TObject *lua_hashget (Hash *t, TObject *ref)
 {
  int h = present(t, ref);
- if (tag(ref(node(t, h))) != LUA_T_NIL) return val(node(t, h));
+ if (ttype(ref(node(t, h))) != LUA_T_NIL) return val(node(t, h));
  else return NULL;
 }
 
@@ -254,25 +279,19 @@ Object *lua_hashget (Hash *t, Object *ref)
 ** If the hash node is present, return its pointer, otherwise create a new
 ** node for the given reference and also return its pointer.
 */
-Object *lua_hashdefine (Hash *t, Object *ref)
+TObject *lua_hashdefine (Hash *t, TObject *ref)
 {
- int   h;
- Node *n;
- h = present(t, ref);
- n = node(t, h);
- if (tag(ref(n)) == LUA_T_NIL)
- {
-  nuse(t)++;
-  if ((float)nuse(t) > (float)nhash(t)*REHASH_LIMIT)
-  {
-   rehash(t);
-   h = present(t, ref);
-   n = node(t, h);
+  Node *n = node(t, present(t, ref));
+  if (ttype(ref(n)) == LUA_T_NIL) {
+    nuse(t)++;
+    if ((float)nuse(t) > (float)nhash(t)*REHASH_LIMIT) {
+      rehash(t);
+      n = node(t, present(t, ref));
+    }
+    *ref(n) = *ref;
+    ttype(val(n)) = LUA_T_NIL;
   }
-  *ref(n) = *ref;
-  tag(val(n)) = LUA_T_NIL;
- }
- return (val(n));
+  return (val(n));
 }
 
 
@@ -284,36 +303,30 @@ Object *lua_hashdefine (Hash *t, Object *ref)
 */
 static void hashnext (Hash *t, int i)
 {
- if (i >= nhash(t))
-  return;
- while (tag(ref(node(t,i))) == LUA_T_NIL || tag(val(node(t,i))) == LUA_T_NIL)
- {
-  if (++i >= nhash(t))
-   return;
- }
- luaI_pushobject(ref(node(t,i)));
- luaI_pushobject(val(node(t,i)));
+  Node *n;
+  int tsize = nhash(t);
+  if (i >= tsize)
+    return;
+  n = node(t, i);
+  while (ttype(ref(n)) == LUA_T_NIL || ttype(val(n)) == LUA_T_NIL) {
+    if (++i >= tsize)
+      return;
+    n = node(t, i);
+  }
+  luaI_pushobject(ref(node(t,i)));
+  luaI_pushobject(val(node(t,i)));
 }
 
 void lua_next (void)
 {
- Hash   *t;
- lua_Object o = lua_getparam(1);
- lua_Object r = lua_getparam(2);
- if (o == LUA_NOOBJECT || r == LUA_NOOBJECT)
-   lua_error ("too few arguments to function `next'");
- if (lua_getparam(3) != LUA_NOOBJECT)
-   lua_error ("too many arguments to function `next'");
- if (!lua_istable(o))
-   lua_error ("first argument of function `next' is not a table");
- t = avalue(luaI_Address(o));
- if (lua_isnil(r))
- {
-  hashnext(t, 0);
- }
- else
- {
-  int h = present (t, luaI_Address(r));
-  hashnext(t, h+1);
- }
+  Hash *t;
+  lua_Object o = lua_getparam(1);
+  lua_Object r = lua_getparam(2);
+  luaL_arg_check(lua_istable(o), 1, "table expected");
+  luaL_arg_check(r != LUA_NOOBJECT, 2, "value expected");
+  t = avalue(luaI_Address(o));
+  if (lua_isnil(r))
+    hashnext(t, 0);
+  else
+    hashnext(t, present(t, luaI_Address(r))+1);
 }

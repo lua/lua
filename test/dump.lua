@@ -1,17 +1,19 @@
 -- dump global environment
 
 function savevar (n,v)
- if v == nil then return end;
- if type(v) == "number" then print(n.."="..v) return end
- if type(v) == "string" then print(n.."='"..v.."'") return end
- if type(v) == "table" then
+ if v == nil then return end
+ if type(v)=="userdata" or type(v)=="function" then return end
+ -- if type(v)=="userdata" or type(v)=="function" then write("\t-- ") end
+ write(n,"=")
+ if type(v) == "string" then write(format("%q",v))
+ elseif type(v) == "table" then
    if v.__visited__ ~= nil then
-     print(n .. "=" .. v.__visited__);
+     write(v.__visited__)
    else
-    print(n.."={}")
-    v.__visited__ = n;
-    local r,f;
-    r,f = next(v,nil);
+    write("{}\n")
+    v.__visited__ = n
+    local r,f
+    r,f = next(v,nil)
     while r ~= nil do
       if r ~= "__visited__" then
         if type(r) == 'string' then
@@ -23,13 +25,15 @@ function savevar (n,v)
       r,f = next(v,r)
     end
    end
- end
+ else write(tostring(v)) end
+ write("\n")
 end
 
 function save ()
+ print("\n-- global environment")
  local n,v = nextvar(nil)
   while n ~= nil do 
-    savevar(n,v); 
+    savevar(n,v) 
     n,v = nextvar(n)
   end
 end

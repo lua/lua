@@ -1,10 +1,11 @@
-char *rcs_lex = "$Id: lex.c,v 2.39 1996/11/08 19:08:30 roberto Exp $";
+char *rcs_lex = "$Id: lex.c,v 3.5 1997/06/16 16:50:22 roberto Exp $";
 
 
 #include <ctype.h>
 #include <string.h>
 
-#include "mem.h"
+#include "auxlib.h"
+#include "luamem.h"
 #include "tree.h"
 #include "table.h"
 #include "lex.h"
@@ -12,33 +13,58 @@ char *rcs_lex = "$Id: lex.c,v 2.39 1996/11/08 19:08:30 roberto Exp $";
 #include "luadebug.h"
 #include "parser.h"
 
-#define MINBUFF 260
+#define MINBUFF 250
 
-#define next() (current = input())
+static int current;  /* look ahead character */
+static ZIO *lex_z;
+
+
+#define next() (current = zgetc(lex_z))
 #define save(x) (yytext[tokensize++] = (x))
 #define save_and_next()  (save(current), next())
 
 
-static int current;  /* look ahead character */
-static Input input;  /* input function */
+#define MAX_IFS	5
+
+/* "ifstate" keeps the state of each nested $if the lexical is dealing with. */
+
+static struct {
+  int elsepart;  /* true if its in the $else part */
+  int condition;  /* true if $if condition is true */
+  int skip;  /* true if part must be skiped */
+} ifstate[MAX_IFS];
+
+static int iflevel;  /* level of nested $if's */
 
 
-void lua_setinput (Input fn)
+void lua_setinput (ZIO *z)
 {
   current = '\n';
   lua_linenumber = 0;
-  input = fn;
+  iflevel = 0;
+  ifstate[0].skip = 0;
+  ifstate[0].elsepart = 1;  /* to avoid a free $else */
+  lex_z = z;
+}
+
+
+static void luaI_auxsyntaxerror (char *s)
+{
+  luaL_verror("%s;\n> at line %d in file %s",
+               s, lua_linenumber, lua_parsedfile);
+}
+
+static void luaI_auxsynterrbf (char *s, char *token)
+{
+  if (token[0] == 0)
+    token = "<eof>";
+  luaL_verror("%s;\n> last token read: \"%s\" at line %d in file %s",
+           s, token, lua_linenumber, lua_parsedfile);
 }
 
 void luaI_syntaxerror (char *s)
 {
-  char msg[256];
-  char *token = luaI_buffer(1);
-  if (token[0] == 0)
-    token = "<eof>";
-  sprintf (msg,"%s;\n> last token read: \"%s\" at line %d in file %s",
-           s, token, lua_linenumber, lua_parsedfile);
-  lua_error (msg);
+  luaI_auxsynterrbf(s, luaI_buffer(1));
 }
 
 
@@ -78,26 +104,122 @@ void luaI_addReserved (void)
   }
 }
 
-static int inclinenumber (int pragma_allowed)
+
+/*
+** Pragma handling
+*/
+
+#define PRAGMASIZE	20
+
+static void skipspace (void)
 {
-  ++lua_linenumber;
-  if (pragma_allowed && current == '$') {  /* is a pragma? */
-    char *buff = luaI_buffer(MINBUFF+1);
-    int i = 0;
-    next();  /* skip $ */
-    while (isalnum(current)) {
-      if (i >= MINBUFF) luaI_syntaxerror("pragma too long");
-      buff[i++] = current;
-      next();
-    }
-    buff[i] = 0;
-    if (strcmp(buff, "debug") == 0)
-      lua_debug = 1;
-    else if (strcmp(buff, "nodebug") == 0)
-      lua_debug = 0;
-    else luaI_syntaxerror("invalid pragma");
+  while (current == ' ' || current == '\t') next();
+}
+
+
+static int checkcond (char *buff)
+{
+  static char *opts[] = {"nil", "1"};
+  int i = luaI_findstring(buff, opts); 
+  if (i >= 0) return i;
+  else if (isalpha((unsigned char)buff[0]) || buff[0] == '_')
+    return luaI_globaldefined(buff);
+  else {
+    luaI_auxsynterrbf("invalid $if condition", buff);
+    return 0;  /* to avoid warnings */
   }
-  return lua_linenumber;
+}
+
+
+static void readname (char *buff)
+{
+  int i = 0;
+  skipspace();
+  while (isalnum((unsigned char)current) || current == '_') {
+    if (i >= PRAGMASIZE) {
+      buff[PRAGMASIZE] = 0;
+      luaI_auxsynterrbf("pragma too long", buff);
+    }
+    buff[i++] = current;
+    next();
+  }
+  buff[i] = 0;
+}
+
+
+static void inclinenumber (void);
+
+
+static void ifskip (void)
+{
+  while (ifstate[iflevel].skip) {
+    if (current == '\n')
+      inclinenumber();
+    else if (current == EOZ)
+      luaI_auxsyntaxerror("input ends inside a $if");
+    else next();
+  }
+}
+
+
+static void inclinenumber (void)
+{
+  static char *pragmas [] = 
+    {"debug", "nodebug", "endinput", "end", "ifnot", "if", "else", NULL};
+  next();  /* skip '\n' */
+  ++lua_linenumber;
+  if (current == '$') {  /* is a pragma? */
+    char buff[PRAGMASIZE+1];
+    int ifnot = 0;
+    int skip = ifstate[iflevel].skip;
+    next();  /* skip $ */
+    readname(buff);
+    switch (luaI_findstring(buff, pragmas)) {
+      case 0:  /* debug */
+        if (!skip) lua_debug = 1;
+        break;
+      case 1:  /* nodebug */
+        if (!skip) lua_debug = 0;
+        break;
+      case 2:  /* endinput */
+        if (!skip) {
+          current = EOZ;
+          iflevel = 0;  /* to allow $endinput inside a $if */
+        }
+        break;
+      case 3:  /* end */
+        if (iflevel-- == 0)
+          luaI_auxsyntaxerror("unmatched $endif");
+        break;
+      case 4:  /* ifnot */
+        ifnot = 1;
+        /* go through */
+      case 5:  /* if */
+        if (iflevel == MAX_IFS-1)
+          luaI_auxsyntaxerror("too many nested `$ifs'");
+        readname(buff);
+        iflevel++;
+        ifstate[iflevel].elsepart = 0;
+        ifstate[iflevel].condition = checkcond(buff) ? !ifnot : ifnot;
+        ifstate[iflevel].skip = skip || !ifstate[iflevel].condition;
+        break;
+      case 6:  /* else */
+        if (ifstate[iflevel].elsepart)
+          luaI_auxsyntaxerror("unmatched $else");
+        ifstate[iflevel].elsepart = 1;
+        ifstate[iflevel].skip =
+                    ifstate[iflevel-1].skip || ifstate[iflevel].condition;
+        break;
+      default:
+        luaI_auxsynterrbf("invalid pragma", buff);
+    }
+    skipspace();
+    if (current == '\n')  /* pragma must end with a '\n' ... */
+      inclinenumber();
+    else if (current != EOZ)  /* or eof */
+      luaI_auxsyntaxerror("invalid pragma format");
+    ifskip();
+  }
 }
 
 static int read_long_string (char *yytext, int buffsize)
@@ -110,7 +232,7 @@ static int read_long_string (char *yytext, int buffsize)
       yytext = luaI_buffer(buffsize *= 2);
     switch (current)
     {
-      case 0:
+      case EOZ:
         save(0);
         return WRONGTOKEN;
       case '[':
@@ -131,8 +253,8 @@ static int read_long_string (char *yytext, int buffsize)
         }
         continue;
       case '\n':
-        save_and_next();
-        inclinenumber(0);
+        save('\n');
+        inclinenumber();
         continue;
       default:
         save_and_next();
@@ -162,8 +284,8 @@ int luaY_lex (void)
     switch (current)
     {
       case '\n':
-        next();
-        linelasttoken = inclinenumber(1);
+        inclinenumber();
+        linelasttoken = lua_linenumber;
         continue;
 
       case ' ': case '\t': case '\r':  /* CR: to avoid problems with DOS */
@@ -173,7 +295,7 @@ int luaY_lex (void)
       case '-':
         save_and_next();
         if (current != '-') return '-';
-        do { next(); } while (current != '\n' && current != 0);
+        do { next(); } while (current != '\n' && current != EOZ);
         continue;
 
       case '[':
@@ -216,7 +338,7 @@ int luaY_lex (void)
             yytext = luaI_buffer(buffsize *= 2);
           switch (current)
           {
-            case 0:
+            case EOZ:
             case '\n':
               save(0);
               return WRONGTOKEN;
@@ -227,7 +349,7 @@ int luaY_lex (void)
                 case 'n': save('\n'); next(); break;
                 case 't': save('\t'); next(); break;
                 case 'r': save('\r'); next(); break;
-                case '\n': save_and_next(); inclinenumber(0); break;
+                case '\n': save('\n'); inclinenumber(); break;
                 default : save_and_next(); break;
               }
               break;
@@ -258,7 +380,9 @@ int luaY_lex (void)
       case '_':
       {
         TaggedString *ts;
-        do { save_and_next(); } while (isalnum(current) || current == '_');
+        do {
+          save_and_next();
+        } while (isalnum((unsigned char)current) || current == '_');
         save(0);
         ts = lua_createstring(yytext);
         if (ts->marked > 2)
@@ -280,7 +404,7 @@ int luaY_lex (void)
           }
           else return CONC;   /* .. */
         }
-        else if (!isdigit(current)) return '.';
+        else if (!isdigit((unsigned char)current)) return '.';
         /* current is a digit: goes through to number */
 	a=0.0;
         goto fraction;
@@ -291,7 +415,7 @@ int luaY_lex (void)
         do {
           a=10.0*a+(current-'0');
           save_and_next();
-        } while (isdigit(current));
+        } while (isdigit((unsigned char)current));
         if (current == '.') {
           save_and_next();
           if (current == '.')
@@ -300,7 +424,7 @@ int luaY_lex (void)
         }
       fraction:
 	{ double da=0.1;
-	  while (isdigit(current))
+	  while (isdigit((unsigned char)current))
 	  {
             a+=(current-'0')*da;
             da/=10.0;
@@ -314,11 +438,12 @@ int luaY_lex (void)
             save_and_next();
 	    neg=(current=='-');
             if (current == '+' || current == '-') save_and_next();
-            if (!isdigit(current)) { save(0); return WRONGTOKEN; }
+            if (!isdigit((unsigned char)current)) {
+              save(0); return WRONGTOKEN; }
             do {
               e=10.0*e+(current-'0');
               save_and_next();
-            } while (isdigit(current));
+            } while (isdigit((unsigned char)current));
 	    for (ea=neg?0.1:10.0; e>0; e>>=1)
 	    {
 	      if (e & 1) a*=ea;
@@ -330,11 +455,15 @@ int luaY_lex (void)
           return NUMBER;
         }
 
-      default: 		/* also end of program (0) */
-      {
+      case EOZ:
+        save(0);
+        if (iflevel > 0)
+          luaI_syntaxerror("missing $endif");
+        return 0;
+
+      default:
         save_and_next();
         return yytext[0];
-      }
     }
   }
 }

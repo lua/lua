@@ -2,7 +2,7 @@ $debug
 -- bisection method for solving non-linear equations
 
 function bisect(f,a,b,fa,fb)
-print(n.." a="..a.." fa="..fa.." b="..b.." fb="..fb)
+ write(n," a=",a," fa=",fa," b=",b," fb=",fb,"\n")
  local c=(a+b)/2
  if abs(a-b)<delta then return c end
  n=n+1
@@ -15,7 +15,7 @@ function solve(f,a,b)
  delta=1e-6	-- tolerance
  n=0
  local z=bisect(f,a,b,f(a),f(b))
- print(format("after %d steps, root is %.10g",n,z))
+ write(format("after %d steps, root is %.10g\n",n,z))
 end
 
 -- our function
