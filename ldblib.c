@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.23 2000/10/20 16:39:03 roberto Exp roberto $
+** $Id: ldblib.c,v 1.24 2000/10/24 19:12:06 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -110,8 +110,8 @@ static int setlocal (lua_State *L) {
 
 
 
-#define KEY_CALLHOOK	"dblib_callhook"
-#define KEY_LINEHOOK	"dblib_linehook"
+#define KEY_CALLHOOK	"lua.dblib.callhook"
+#define KEY_LINEHOOK	"lua.dblib.linehook"
 
 
 static void hookf (lua_State *L, const char *key) {
