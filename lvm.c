@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.281 2003/03/07 13:21:31 roberto Exp roberto $
+** $Id: lvm.c,v 1.282 2003/03/11 12:30:37 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -394,21 +394,15 @@ static void Arith (lua_State *L, StkId ra,
 #define dojump(pc, i)	((pc) += (i))
 
 
-unsigned int count = 0;
-
 StkId luaV_execute (lua_State *L) {
   LClosure *cl;
   TObject *k;
   const Instruction *pc;
-unsigned int ii, ic, ir, io;
-ii = count;
  callentry:  /* entry point when calling new functions */
-ic = count;
   L->ci->u.l.pc = &pc;
   if (L->hookmask & LUA_MASKCALL)
     luaD_callhook(L, LUA_HOOKCALL, -1);
  retentry:  /* entry point when returning to old functions */
-ir = count;
   lua_assert(L->ci->state == CI_SAVEDPC ||
              L->ci->state == (CI_SAVEDPC | CI_CALLING));
   L->ci->state = CI_HASFRAME;  /* activate frame */
@@ -419,7 +413,6 @@ ir = count;
   for (;;) {
     const Instruction i = *pc++;
     StkId base, ra;
-count++;
     if ((L->hookmask & (LUA_MASKLINE | LUA_MASKCOUNT)) &&
         (--L->hookcount == 0 || L->hookmask & LUA_MASKLINE)) {
       traceexec(L);
@@ -668,7 +661,6 @@ count++;
       case OP_RETURN: {
         CallInfo *ci = L->ci - 1;  /* previous function frame */
         int b = GETARG_B(i);
-io = count;
         if (b != 0) L->top = ra+b-1;
         lua_assert(L->ci->state & CI_HASFRAME);
         if (L->openupval) luaF_close(L, base);
