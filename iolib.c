@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.21 1995/02/06 19:36:13 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.22 1995/10/04 13:53:10 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -251,7 +251,7 @@ static void io_read (void)
    char f[80];
    char s[256];
    sprintf (f, "%%%ds", m);
-   if (fgets (s, m, in) == NULL)
+   if (fgets (s, m+1, in) == NULL)
    {
     lua_pushnil();
     return;
