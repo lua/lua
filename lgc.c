@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.114 2001/10/25 19:14:14 roberto Exp roberto $
+** $Id: lgc.c,v 1.115 2001/10/31 19:58:11 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -22,6 +22,7 @@
 
 typedef struct GCState {
   Table *tmark;  /* list of marked tables to be visited */
+  Table *toclear;  /* list of visited weak tables (to be cleared after GC) */
 } GCState;
 
 
@@ -65,10 +66,10 @@ static void markclosure (GCState *st, Closure *cl) {
       lua_assert(cl->l.nupvalues == cl->l.p->nupvalues);
       protomark(cl->l.p);
       for (i=0; i<cl->l.nupvalues; i++) {  /* mark its upvalues */
-        UpVal *u = cl->l.upvals[i].heap;
-        if (u && !u->marked) {
-          u->marked = 1;
-          markobject(st, &u->val);
+        TObject *u = cl->l.upvals[i];
+        if (isclosed(u)) {
+          ttype(u-1) = LUA_TNIL;  /* temporary value (to mark as visited) */
+          markobject(st, u);
         }
       }
     }
@@ -148,6 +149,10 @@ static void removekey (Node *n) {
 static void traversetable (GCState *st, Table *h) {
   int i;
   int mode = h->weakmode;
+  if (mode) {  /* weak table? must be cleared after GC... */
+    h->mark = st->toclear;  /* put in the appropriate list */
+    st->toclear = h;
+  }
   if (!(mode & LUA_WEAK_VALUE)) {
     i = sizearray(h);
     while (i--)
@@ -167,17 +172,15 @@ static void traversetable (GCState *st, Table *h) {
 }
 
 
-static void markall (lua_State *L) {
-  GCState st;
-  st.tmark = NULL;
-  marktagmethods(G(L), &st);  /* mark tag methods */
-  markstacks(L, &st); /* mark all stacks */
-  marktable(&st, G(L)->type2tag);
-  markobject(&st, &G(L)->registry);
-  while (st.tmark) {  /* mark tables */
-    Table *h = st.tmark;  /* get first table from list */
-    st.tmark = h->mark;  /* remove it from list */
-    traversetable(&st, h);
+static void markall (lua_State *L, GCState *st) {
+  marktagmethods(G(L), st);  /* mark tag methods */
+  markstacks(L, st); /* mark all stacks */
+  marktable(st, G(L)->type2tag);
+  markobject(st, &G(L)->registry);
+  while (st->tmark) {  /* mark tables */
+    Table *h = st->tmark;  /* get first table from list */
+    st->tmark = h->mark;  /* remove it from list */
+    traversetable(st, h);
   }
 }
 
@@ -198,30 +201,27 @@ static int hasmark (const TObject *o) {
 }
 
 
-static void cleardeadnodes (Table *h) {
-  int i;
-  i = sizearray(h);
-  while (i--) {
-    TObject *o = &h->array[i];
-    if (!hasmark(o))
-      setnilvalue(o);  /* remove value */
-  }
-  i = sizenode(h);
-  while (i--) {
-    Node *n = node(h, i);
-    if (!hasmark(val(n)) || !hasmark(key(n))) {
-      setnilvalue(val(n));  /* remove value ... */
-      removekey(n);  /* ... and key */
+/*
+** clear (set to nil) keys and values from weaktables that were collected
+*/
+static void cleartables (Table *h) {
+  for (; h; h = h->mark) {
+    int i;
+    lua_assert(h->weakmode);
+    i = sizearray(h);
+    while (i--) {
+      TObject *o = &h->array[i];
+      if (!hasmark(o))
+        setnilvalue(o);  /* remove value */
     }
-  }
-}
-
-
-static void cleartables (global_State *G) {
-  Table *h;
-  for (h = G->roottable; h; h = h->next) {
-    if (h->weakmode && ismarked(h))
-      cleardeadnodes(h);
+    i = sizenode(h);
+    while (i--) {
+      Node *n = node(h, i);
+      if (!hasmark(val(n)) || !hasmark(key(n))) {
+        setnilvalue(val(n));  /* remove value ... */
+        removekey(n);  /* ... and key */
+      }
+    }
   }
 }
 
@@ -284,16 +284,17 @@ static void collecttable (lua_State *L) {
 
 
 static void collectupval (lua_State *L) {
-  UpVal **v = &G(L)->rootupval;
-  UpVal *curr;
+  TObject **v = &G(L)->rootupval;
+  TObject *curr;
   while ((curr = *v) != NULL) {
-    if (curr->marked) {
-      curr->marked = 0;
-      v = &curr->next;
+    if (ttype(curr) == LUA_TNIL) {  /* was marked? */
+      ttype(curr) = LUA_HEAPUPVAL;  /* unmark */
+      v = &vvalue(curr);  /* next */
     }
     else {
-      *v = curr->next;
-      luaM_freelem(L, curr);
+      lua_assert(ttype(curr) == LUA_HEAPUPVAL);
+      *v = vvalue(curr);  /* next */
+      luaM_freearray(L, curr, 2, TObject);
     }
   }
 }
@@ -411,8 +412,11 @@ void luaC_collect (lua_State *L, int all) {
 
 
 void luaC_collectgarbage (lua_State *L) {
-  markall(L);
-  cleartables(G(L));
+  GCState st;
+  st.tmark = NULL;
+  st.toclear = NULL;
+  markall(L, &st);
+  cleartables(st.toclear);
   luaC_collect(L, 0);
   checkMbuffer(L);
   G(L)->GCthreshold = 2*G(L)->nblocks;  /* new threshold */

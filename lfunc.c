@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.47 2001/09/07 17:39:10 roberto Exp $
+** $Id: lfunc.c,v 1.48 2001/10/02 16:45:03 roberto Exp $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -20,7 +20,7 @@
                          cast(int, sizeof(TObject)*((n)-1)))
 
 #define sizeLclosure(n)	(cast(int, sizeof(LClosure)) + \
-                         cast(int, sizeof(LClosureEntry)*((n)-1)))
+                         cast(int, sizeof(TObject *)*((n)-1)))
 
 
 Closure *luaF_newCclosure (lua_State *L, int nelems) {
@@ -50,8 +50,8 @@ static StkId uppoint (LClosure *cl) {
   StkId lp = NULL;
   int i;
   for (i=0; i<cl->nupvalues; i++) {
-    if (cl->upvals[i].heap == NULL && (lp == NULL || cl->upvals[i].val > lp))
-        lp = cl->upvals[i].val;
+    if (!isclosed(cl->upvals[i]) && (lp == NULL || cl->upvals[i] > lp))
+      lp = cl->upvals[i];
   }
   return lp;
 }
@@ -77,17 +77,15 @@ static int closeCl (lua_State *L, LClosure *cl, StkId level) {
   int i;
   for  (i=0; i<cl->nupvalues; i++) {
     StkId var;
-    if (cl->upvals[i].heap == NULL && (var=cl->upvals[i].val) >= level) {
+    if (!isclosed(cl->upvals[i]) && (var=cl->upvals[i]) >= level) {
       if (ttype(var) != LUA_TUPVAL) {
-        UpVal *v = luaM_new(L, UpVal);
-        v->val = *var;
-        v->marked = 0;
-        v->next = G(L)->rootupval;
+        TObject *v = luaM_newvector(L, 2, TObject);
+        v[1] = *var;
+        setupvalue(v, G(L)->rootupval, LUA_HEAPUPVAL);
         G(L)->rootupval = v;
-        setupvalue(var, v);
+        setupvalue(var, &v[1], LUA_TUPVAL);
       }
-      cl->upvals[i].heap = vvalue(var);
-      cl->upvals[i].val = &vvalue(var)->val;
+      cl->upvals[i] = vvalue(var);
       got = 1;
     }
   }

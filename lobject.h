@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.114 2001/10/02 16:45:03 roberto Exp $
+** $Id: lobject.h,v 1.115 2001/10/25 19:14:14 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -31,8 +31,13 @@
 #define NUM_TAGS	6
 
 
-/* extra tag: used locally when moving an upvalue from the stack to the heap */
+/*
+** extra tags:
+** first is used locally when moving an upvalue from the stack to the heap;
+** second prefixes upvalues in the heap
+*/
 #define LUA_TUPVAL	6
+#define LUA_HEAPUPVAL	7
 
 
 typedef union {
@@ -40,7 +45,7 @@ typedef union {
   union Udata *u;
   union Closure *cl;
   struct Table *h;
-  struct UpVal *v;
+  struct lua_TObject *v;
   lua_Number n;		/* LUA_TNUMBER */
 } Value;
 
@@ -81,8 +86,8 @@ typedef struct lua_TObject {
 
 #define setnilvalue(obj) ((obj)->tt=LUA_TNIL)
 
-#define setupvalue(obj,x) \
-  { TObject *_o=(obj); _o->tt=LUA_TUPVAL; _o->value.v=(x); }
+#define setupvalue(obj,x,t) \
+  { TObject *_o=(obj); _o->tt=(t); _o->value.v=(x); }
 
 #define setobj(obj1,obj2) \
   { TObject *o1=(obj1); const TObject *o2=(obj2); \
@@ -165,13 +170,15 @@ typedef struct LocVar {
 
 
 /*
-** Upvalues in the heap
+** Upvalues in the heap. There is a small trick here: to allow a closure to
+** diferentiate between upvalues in the heap and in the stack, upvalues in
+** the heap always have another TObject before them (like those in the stack),
+** but those `prefix' objects have a tag that cannot happen in the stack.
+** Moreover, we use these extra `prexif' object to store GC-related
+** information.
 */
-typedef struct UpVal {
-  TObject val;
-  struct UpVal *next;
-  int marked;
-} UpVal;
+
+#define isclosed(u)	(ttype((u)-1) == LUA_HEAPUPVAL)
 
 
 /*
@@ -188,19 +195,15 @@ typedef struct CClosure {
 } CClosure;
 
 
-typedef struct LClosureEntry {
-  TObject *val;
-  UpVal *heap;  /* NULL when upvalue is still in the stack */
-} LClosureEntry;
-
 typedef struct LClosure {
   lu_byte isC;
   lu_byte nupvalues;
   lu_byte marked;
   union Closure *next;  /* first four fields must be equal to CClosure!! */
   struct Proto *p;
-  LClosureEntry upvals[1];
+  TObject *upvals[1];
 } LClosure;
+
 
 typedef union Closure {
   CClosure c;
@@ -209,7 +212,6 @@ typedef union Closure {
 
 
 #define iscfunction(o)	(ttype(o) == LUA_TFUNCTION && clvalue(o)->c.isC)
-
 
 
 

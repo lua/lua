@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.196 2001/10/25 19:14:14 roberto Exp roberto $
+** $Id: lvm.c,v 1.197 2001/10/31 19:58:11 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -391,8 +391,8 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
       }
       case OP_GETUPVAL: {
         int b = GETARG_B(i);
-        lua_assert(cl->upvals[b].heap || cl->upvals[b].val < base);
-        setobj(ra, cl->upvals[b].val);
+        lua_assert(isclosed(cl->upvals[b]) || cl->upvals[b] < base);
+        setobj(ra, cl->upvals[b]);
         break;
       }
       case OP_GETGLOBAL: {
@@ -411,8 +411,8 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
       }
       case OP_SETUPVAL: {
         int b = GETARG_B(i);
-        lua_assert(cl->upvals[b].heap || cl->upvals[b].val < base);
-        setobj(cl->upvals[b].val, ra);
+        lua_assert(isclosed(cl->upvals[b]) || cl->upvals[b] < base);
+        setobj(cl->upvals[b], ra);
         break;
       }
       case OP_SETTABLE: {
@@ -649,8 +649,7 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
             ncl->l.upvals[j] = cl->upvals[GETARG_B(*pc)];
           else {
             lua_assert(GET_OPCODE(*pc) == OP_MOVE);
-            ncl->l.upvals[j].heap = NULL;
-            ncl->l.upvals[j].val = base + GETARG_B(*pc);
+            ncl->l.upvals[j] = base + GETARG_B(*pc);
           }
         }
         luaF_LConlist(L, ncl);
