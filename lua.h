@@ -2,15 +2,15 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lua.h,v 3.37 1997/03/19 19:41:10 roberto Exp roberto $
+** $Id: lua.h,v 3.38 1997/03/31 20:59:09 roberto Exp roberto $
 */
 
 
 #ifndef lua_h
 #define lua_h
 
-#define LUA_VERSION	"Lua 2.?"
-#define LUA_COPYRIGHT	"Copyright (C) 1994-1996 TeCGraf"
+#define LUA_VERSION	"Lua 3.0 (alpha)"
+#define LUA_COPYRIGHT	"Copyright (C) 1994-1997 TeCGraf"
 #define LUA_AUTHORS 	"W. Celes, R. Ierusalimschy & L. H. de Figueiredo"
 
 
@@ -65,8 +65,8 @@ void           lua_pushobject       	(lua_Object object);
 
 lua_Object     lua_getglobal 		(char *name);
 lua_Object     lua_basicgetglobal	(char *name);
-void           lua_storeglobal		(char *name); /* In: value */
-void           lua_basicstoreglobal	(char *name); /* In: value */
+void           lua_setglobal		(char *name); /* In: value */
+void           lua_basicsetglobal	(char *name); /* In: value */
 
 void           lua_storesubscript	(void); /* In: table, index, value */
 void           lua_basicstoreindex	(void); /* In: table, index, value */
@@ -97,6 +97,7 @@ lua_Object     lua_createtable		(void);
 /* =============================================================== */
 /* for compatibility with old versions. Avoid using these macros */
 
+#define lua_storeglobal(n)	lua_setglobal(n)
 #define lua_type(o)		(lua_tag(o))
 
 #define lua_getuserdata(o)      (*(void **)lua_getbinarydata(o))

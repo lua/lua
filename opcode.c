@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.88 1997/03/31 14:17:09 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.89 1997/03/31 20:59:09 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -898,7 +898,7 @@ lua_Object lua_basicgetglobal (char *name)
 /*
 ** Store top of the stack at a global variable array field.
 */
-static void storeglobal (Word n)
+static void setglobal (Word n)
 {
   TObject *oldvalue = &lua_table[n].object;
   TObject *im = luaI_getimbyObj(oldvalue, IM_SETGLOBAL);
@@ -917,13 +917,13 @@ static void storeglobal (Word n)
 }
 
 
-void lua_storeglobal (char *name)
+void lua_setglobal (char *name)
 {
   adjustC(1);
-  storeglobal(luaI_findsymbolbyname(name));
+  setglobal(luaI_findsymbolbyname(name));
 }
 
-void lua_basicstoreglobal (char *name)
+void lua_basicsetglobal (char *name)
 {
  Word n = luaI_findsymbolbyname(name);
  adjustC(1);
@@ -1229,7 +1229,7 @@ static StkId lua_execute (Byte *pc, StkId base)
    {
     Word w;
     get_word(w,pc);
-    storeglobal(w);
+    setglobal(w);
    }
    break;
 

@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.50 1997/03/31 20:59:09 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.51 1997/04/01 17:31:42 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -190,7 +190,7 @@ static void luaI_setglobal (void)
   lua_Object value = lua_getparam(2);
   luaL_arg_check(value != LUA_NOOBJECT, "setglobal", 2, NULL);
   lua_pushobject(value);
-  lua_storeglobal(luaL_check_string(1, "setglobal"));
+  lua_setglobal(luaL_check_string(1, "setglobal"));
   lua_pushobject(value);  /* return given value */
 }
 
@@ -199,7 +199,7 @@ static void luaI_basicsetglobal (void)
   lua_Object value = lua_getparam(2);
   luaL_arg_check(value != LUA_NOOBJECT, "basicsetglobal", 2, NULL);
   lua_pushobject(value);
-  lua_basicstoreglobal(luaL_check_string(1, "basicsetglobal"));
+  lua_basicsetglobal(luaL_check_string(1, "basicsetglobal"));
   lua_pushobject(value);  /* return given value */
 }
 
