@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.35 2002/03/18 18:18:35 roberto Exp roberto $
+## $Id: makefile,v 1.36 2002/08/06 19:12:54 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -7,7 +7,7 @@
 
 #CONFIGURATION
 
-# define (undefine) POPEN if your system (does not) support piped I/O
+# define (undefine) USE_POPEN if your system (does not) support piped I/O
 #
 # define (undefine) _POSIX_SOURCE if your system is (not) POSIX compliant
 #
@@ -21,7 +21,7 @@ OPTIMIZE =  -O2 \
    -D'lua_number2int(i,d)=__asm__("fldl %1\nfistpl %0":"=m"(i):"m"(d))' \
   -fomit-frame-pointer
 
-CONFIG = -D_POSIX_SOURCE -DPOPEN $(DEBUG) $(OPTIMIZE)
+CONFIG = -D_POSIX_SOURCE -DUSE_POPEN $(DEBUG) $(OPTIMIZE)
 
 
 

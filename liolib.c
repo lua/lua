@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.14 2002/07/17 16:25:13 roberto Exp roberto $
+** $Id: liolib.c,v 2.15 2002/08/06 18:01:50 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -26,7 +26,7 @@
 */
 
 
-#ifndef POPEN
+#ifndef USE_POPEN
 #define pclose(f)    (-1)
 #endif
 
