@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.12 1998/03/06 16:54:42 roberto Exp roberto $
+** $Id: lstring.c,v 1.13 1998/06/19 16:14:09 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -39,9 +39,9 @@ void luaS_init (void)
 
 static unsigned long hash_s (char *s, long l)
 {
-  unsigned long h = 0;
+  unsigned long h = 0;  /* seed */
   while (l--)
-    h = ((h<<5)-h)^(unsigned char)*(s++);
+      h = h ^ ((h<<5)+(h>>2)+(unsigned char)*(s++));
   return h;
 }
 
