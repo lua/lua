@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.14 2000/10/24 19:19:15 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.15 2000/10/27 16:15:53 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -184,9 +184,12 @@ static int luaB_settagmethod (lua_State *L) {
                  "function or nil expected");
   if (strcmp(event, "gc") == 0)
     lua_error(L, "deprecated use: cannot set the `gc' tag method from Lua");
+  lua_gettagmethod(L, tag, event);
+  lua_pushvalue(L, 3);
   lua_settagmethod(L, tag, event);
   return 1;
 }
+
 
 static int luaB_gettagmethod (lua_State *L) {
   int tag = luaL_check_int(L, 1);

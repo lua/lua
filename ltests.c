@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.52 2000/10/26 12:47:05 roberto Exp roberto $
+** $Id: ltests.c,v 1.53 2000/10/30 16:29:59 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -322,8 +322,12 @@ static int doremote (lua_State *L) {
 }
 
 static int settagmethod (lua_State *L) {
+  int tag = luaL_check_int(L, 1);
+  const char *event = luaL_check_string(L, 2);
   luaL_checkany(L, 3);
-  lua_settagmethod(L, luaL_check_int(L, 1), luaL_check_string(L, 2));
+  lua_gettagmethod(L, tag, event);
+  lua_pushvalue(L, 3);
+  lua_settagmethod(L, tag, event);
   return 1;
 }
 

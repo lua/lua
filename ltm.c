@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.54 2000/10/05 13:00:17 roberto Exp roberto $
+** $Id: ltm.c,v 1.55 2000/10/20 16:39:03 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -141,7 +141,6 @@ LUA_API void lua_gettagmethod (lua_State *L, int t, const char *event) {
 
 
 LUA_API void lua_settagmethod (lua_State *L, int t, const char *event) {
-  Closure *oldtm;
   int e = luaI_checkevent(L, event, t);
   checktag(L, t);
   if (!luaT_validevent(t, e))
@@ -149,7 +148,6 @@ LUA_API void lua_settagmethod (lua_State *L, int t, const char *event) {
                 luaT_eventname[e], luaO_typenames[t],
                 (t == LUA_TTABLE || t == LUA_TUSERDATA) ?
                    " with default tag" : "");
-  oldtm = luaT_gettm(L, t, e);
   switch (ttype(L->top - 1)) {
     case LUA_TNIL:
       luaT_gettm(L, t, e) = NULL;
@@ -160,7 +158,6 @@ LUA_API void lua_settagmethod (lua_State *L, int t, const char *event) {
     default:
       lua_error(L, "tag method must be a function (or nil)");
   }
-  clvalue(L->top - 1) = oldtm;
-  ttype(L->top - 1) = (oldtm ? LUA_TFUNCTION : LUA_TNIL);
+  L->top--;
 }
 

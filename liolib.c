@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.89 2000/10/26 12:53:55 roberto Exp roberto $
+** $Id: liolib.c,v 1.90 2000/10/27 16:15:53 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -708,7 +708,6 @@ static void openwithcontrol (lua_State *L) {
   /* close files when collected */
   lua_pushcclosure(L, file_collect, 1);  /* pops `ctrl' from stack */
   lua_settagmethod(L, ctrl->iotag, "gc");
-  lua_pop(L, 1);  /* remove tag method returned by previous call */
 }
 
 
