@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.184 2003/12/03 20:03:07 roberto Exp roberto $
+** $Id: lgc.c,v 1.185 2003/12/04 17:22:42 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -38,6 +38,7 @@
 
 #define isgray(x)	(!isblack(x) && !iswhite(x))
 #define white2gray(x)	reset2bits((x)->gch.marked, WHITE0BIT, WHITE1BIT)
+#define black2gray(x)	resetbit((x)->gch.marked, BLACKBIT)
 
 #define stringmark(s)	reset2bits((s)->tsv.marked, WHITE0BIT, WHITE1BIT)
 
@@ -323,6 +324,9 @@ static l_mem propagatemarks (global_State *g, l_mem lim) {
       case LUA_TTHREAD: {
         lua_State *th = gcototh(o);
         g->gray = th->gclist;
+        th->gclist = g->grayagain;
+        g->grayagain = o;
+        black2gray(o);
         traversestack(g, th);
         break;
       }
@@ -335,6 +339,11 @@ static l_mem propagatemarks (global_State *g, l_mem lim) {
       case LUA_TUPVAL: {
         UpVal *uv = gcotouv(o);
         g->gray = uv->gclist;
+        if (uv->v != &uv->value) {  /* open? */
+          uv->gclist = g->grayagain;
+          g->grayagain = o;
+          black2gray(o);
+        }
         markvalue(g, &uv->value);
         break;
       }
@@ -553,6 +562,10 @@ static void markroot (lua_State *L) {
 
 static void atomic (lua_State *L) {
   global_State *g = G(L);
+  lua_assert(g->gray == NULL);
+  g->gray = g->grayagain;
+  g->grayagain = NULL;
+  propagatemarks(g, MAXLMEM);
   g->GCthreshold = luaC_separateudata(L);  /* separate userdata to be preserved */
   marktmu(g);  /* mark `preserved' userdata */
   propagatemarks(g, MAXLMEM);  /* remark, to propagate `preserveness' */
@@ -565,6 +578,7 @@ static void atomic (lua_State *L) {
   g->sweepgc = &g->rootgc->gch.next;
   g->sweepstrgc = 0;
   g->gcstate = GCSsweepstring;
+  g->grayagain = NULL;
 }
 
 

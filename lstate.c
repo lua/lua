@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.132 2003/12/03 20:03:07 roberto Exp roberto $
+** $Id: lstate.c,v 1.133 2003/12/04 17:22:42 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -172,6 +172,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->currentwhite = bitmask(WHITE0BIT);
   g->firstudata = NULL;
   g->gray = NULL;
+  g->grayagain = NULL;
   g->weak = NULL;
   g->tmudata = NULL;
   setnilvalue(gkey(g->dummynode));
