@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.154 2001/10/11 21:40:56 roberto Exp $
+** $Id: lapi.c,v 1.155 2001/10/17 21:12:57 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -466,7 +466,7 @@ LUA_API int lua_ref (lua_State *L,  int lock) {
     return LUA_REFNIL;
   }
   lua_rawgeti(L, LUA_REGISTRYINDEX, 0);  /* get first free element */
-  ref = lua_tonumber(L, -1);
+  ref = cast(int, lua_tonumber(L, -1));
   lua_pop(L, 1);  /* remove it from stack */
   if (ref != 0) {  /* some free element? */
     lua_rawgeti(L, LUA_REGISTRYINDEX, ref);  /* remove it from list */
