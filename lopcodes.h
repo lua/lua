@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.28 1999/02/25 19:13:56 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.29 1999/02/26 15:19:54 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -65,8 +65,8 @@ SETTABLEPOPDUP,/* -	v i t		v		t[i]=v		*/
 SETTABLE,/*	b	v a_b...a_1 i t	 a_b...a_1 i t	  t[i]=v	*/
 SETTABLEDUP,/*	b	v a_b...a_1 i t	 v a_b...a_1 i t  t[i]=v	*/
 
-SETLISTW,/*	w c	v_c...v_1 t	-		t[i+w*FPF]=v_i	*/
-SETLIST,/*	b c	v_c...v_1 t	-		t[i+b*FPF]=v_i	*/
+SETLISTW,/*	w c	v_c...v_1 t	t		t[i+w*FPF]=v_i	*/
+SETLIST,/*	b c	v_c...v_1 t	t		t[i+b*FPF]=v_i	*/
 
 SETMAP,/*	b	v_b k_b ...v_0 k_0 t	t	t[k_i]=v_i	*/
 
@@ -101,7 +101,7 @@ IFFUPJMP,/*	b	x		-		(x==nil)? PC-=b	*/
 CLOSUREW,/*	w c	v_c...v_1	closure(CNST[w], v_c...v_1)	*/
 CLOSURE,/*	b c	v_c...v_1	closure(CNST[b], v_c...v_1)	*/
 
-CALLFUNC,/*	b c	v_c...v_1 f	r_b...r_1	f(v1,...,v_c)	*/
+CALL,/*		b c	v_c...v_1 f	r_b...r_1	f(v1,...,v_c)	*/
 
 SETLINEW,/*	w	-		-		LINE=w		*/
 SETLINE,/*	b	-		-		LINE=b		*/
