@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.57 2003/12/01 16:33:30 roberto Exp roberto $
+** $Id: llimits.h,v 1.58 2004/04/30 20:13:38 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -61,11 +61,6 @@ typedef LUSER_ALIGNMENT_T L_Umaxalign;
 
 /* result of a `usual argument conversion' over lua_Number */
 typedef LUA_UACNUMBER l_uacNumber;
-
-
-#ifndef lua_assert
-#define lua_assert(c)		/* empty */
-#endif
 
 
 #ifndef check_exp

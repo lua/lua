@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.5 2004/06/02 13:24:43 roberto Exp roberto $
+** $Id: luaconf.h,v 1.6 2004/06/02 19:07:55 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -54,6 +54,9 @@
 
 /* first index for arrays */
 #define LUA_FIRSTINDEX		1
+
+/* assertions in Lua (mainly for internal debugging) */
+#define lua_assert(c)		/* empty */
 
 /* }====================================================== */
 
