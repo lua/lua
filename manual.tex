@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.12 1996/03/14 17:45:01 roberto Exp roberto $
+% $Id: manual.tex,v 1.13 1996/03/19 22:39:07 roberto Exp roberto $
 
 \documentstyle[A4,11pt,bnf]{article}
 
@@ -34,7 +34,7 @@ Waldemar Celes Filho
 \tecgraf\ --- Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1996/03/14 17:45:01 $}
+\date{\small \verb$Date: 1996/03/19 22:39:07 $}
 
 \maketitle
 
@@ -810,7 +810,7 @@ int            lua_isuserdata           (lua_Object object);
 \end{verbatim}
 All macros return 1 if the object is compatible with the given type,
 and 0 otherwise.
-\verb'lua_isnumber' accepts numbers and numerical strings,
+The function \verb'lua_isnumber' accepts numbers and numerical strings,
 \verb'lua_isstring' accepts strings and numbers (\see{coercion}),
 and \verb'lua_isfunction' accepts Lua and C functions.
 
@@ -1587,7 +1587,10 @@ this function fails and returns 0.
 The Lua interpreter offers two hooks for debug purposes:
 \begin{verbatim}
 typedef void (*lua_CHFunction) (lua_Function func, char *file, int line);
+extern lua_CHFunction lua_callhook;
+
 typedef void (*lua_LHFunction) (int line);
+extern lua_LHFunction lua_linehook;
 \end{verbatim}
 The first one is called whenever the interpreter enters or leaves a
 function.
@@ -1606,12 +1609,8 @@ Its only parameter is the line number
 This second hook is only called if the active function
 has been pre-compiled with debug information (\see{pragma}).
 
-To set these hooks, there are the functions:
-\begin{verbatim}
-lua_LHFunction lua_setlinehook (lua_LHFunction hook);
-lua_CHFunction lua_setcallhook (lua_CHFunction hook);
-\end{verbatim}
-Both return the previous hook.
+A hook is disabled when its value is NULL (0),
+which is the initial value of both hooks.
 
 
 \section{Some Examples}
