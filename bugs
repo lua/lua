@@ -235,3 +235,13 @@ Thu Oct 26 10:50:46 EDT 2000
 >> allocate new memory
 (by Mauro Vezzosi; since 4.0b)
 
+
+
+=================================================================
+--- Version 4.0
+
+** lparser.c
+Wed Nov 29 09:51:44 EDT 2000
+>> parser does not accept a `;' after a `return'
+(by lhf; since 4.0b)
+
