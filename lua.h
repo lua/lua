@@ -2,7 +2,7 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lua.h,v 3.24 1996/03/19 22:28:37 roberto Exp roberto $
+** $Id: lua.h,v 3.25 1996/03/21 21:30:29 roberto Exp roberto $
 */
 
 
@@ -80,17 +80,20 @@ lua_Object     lua_getsubscript         (void);
 
 int            lua_type 		(lua_Object object);
 
-int	       lua_lock			(void);
-lua_Object     lua_getlocked		(int ref);
-void	       lua_pushlocked		(int ref);
-void	       lua_unlock		(int ref);
+
+typedef int lua_Reference;
+
+lua_Reference  lua_ref			(int lock);
+lua_Object     lua_getref		(lua_Reference ref);
+void	       lua_pushref		(lua_Reference ref);
+void	       lua_unref		(lua_Reference ref);
 
 lua_Object     lua_createtable		(void);
 
 
 /* some useful macros */
 
-#define lua_lockobject(o)  (lua_pushobject(o), lua_lock())
+#define lua_refobject(o,l)	(lua_pushobject(o), lua_ref(l))
 
 #define lua_register(n,f)	(lua_pushcfunction(f), lua_storeglobal(n))
 
@@ -98,6 +101,12 @@ lua_Object     lua_createtable		(void);
 
 
 /* for compatibility with old versions. Avoid using these macros */
+
+#define lua_lockobject(o)  lua_refobject(o,1)
+#define	lua_lock() lua_ref(1)
+#define lua_getlocked lua_getref
+#define	lua_pushlocked lua_pushref
+#define	lua_unlock lua_unref
 
 #define lua_pushliteral(o)  lua_pushstring(o)
 

@@ -1,7 +1,7 @@
 /*
 ** mem.c
 ** memory manager for lua
-** $Id: mem.h,v 1.5 1996/03/21 16:31:32 roberto Exp roberto $
+** $Id: mem.h,v 1.6 1996/03/21 18:54:29 roberto Exp roberto $
 */
  
 #ifndef mem_h
@@ -18,7 +18,7 @@
 #define constantEM   "constant table overflow"
 #define stackEM   "stack size overflow"
 #define lexEM   "lex buffer overflow"
-#define lockEM   "lock table overflow"
+#define refEM   "reference table overflow"
 #define tableEM  "table overflow"
 #define memEM "not enough memory"
 

@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.14 1996/03/20 18:44:02 roberto Exp roberto $
+% $Id: manual.tex,v 1.15 1996/04/01 14:36:35 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -34,7 +34,7 @@ Waldemar Celes Filho
 \tecgraf\ --- Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1996/03/20 18:44:02 $}
+\date{\small \verb$Date: 1996/04/01 14:36:35 $}
 
 \maketitle
 
@@ -739,7 +739,7 @@ The API functions can be classified in the following categories:
 \item manipulating (reading and writing) Lua objects;
 \item calling Lua functions;
 \item C functions to be called by Lua;
-\item locking Lua Objects.
+\item references to Lua Objects.
 \end{enumerate}
 All API functions are declared in the file \verb'lua.h'.
 
@@ -1069,30 +1069,39 @@ many results.
 Section~\ref{exCFunction} presents an example of a CFunction.
 
 
-\subsection{Locking Lua Objects}
+\subsection{References to Lua Objects}
 
 As already noted, \verb'lua_Object's are volatile.
 If the C code needs to keep a \verb'lua_Object'
 outside block boundaries,
-it has to {\em lock} the object.
-The routines to manipulate locking are the following:
-\Deffunc{lua_lock}\Deffunc{lua_getlocked}
-\Deffunc{lua_pushlocked}\Deffunc{lua_unlock}
+it must create a \Def{reference} to the object.
+The routines to manipulate references are the following:
+\Deffunc{lua_ref}\Deffunc{lua_getref}
+\Deffunc{lua_pushref}\Deffunc{lua_unref}
 \begin{verbatim}
-int        lua_lock (void);
-lua_Object lua_getlocked  (int ref);
-void       lua_pushlocked (int ref);
-void       lua_unlock (int ref);
+typedef int lua_Reference;
+
+lua_Reference  lua_ref (int lock);
+lua_Object     lua_getref  (lua_Reference ref);
+void           lua_pushref (lua_Reference ref);
+void           lua_unref (lua_Reference ref);
 \end{verbatim}
-The function \verb'lua_lock' locks the object
-which is on the top of the stack,
-and returns a reference to it.
-Whenever the locked object is needed,
-a call to \verb'lua_getlocked'
+The function \verb'lua_ref' creates a reference
+to the object which is on the top of the stack,
+and returns this reference.
+If \verb'lock' is true, the object is {\em locked}:
+that means the object will not be garbage collected.
+Notice that an unlocked reference may be garbage collected.
+Whenever the referenced object is needed,
+a call to \verb'lua_getref'
 returns a handle to it,
-while \verb'lua_pushlocked' pushes the handle on the stack.
-When a locked object is no longer needed,
-it can be unlocked with a call to \verb'lua_unlock'.
+while \verb'lua_pushref' pushes the object on the stack.
+If the object has been collected,
+\verb'lua_getref' returns \verb'LUA_NOOBJECT',
+and \verb'lua_pushobject' issues an error.
+
+When a reference is no longer needed,
+it can be freed with a call to \verb'lua_unref'.
 
 
 
@@ -1839,12 +1848,14 @@ as illustrated in Figure~\ref{Cinher}.
 \begin{figure}
 \Line
 \begin{verbatim}
-int lockedParentName;  /* stores the lock index for the string "parent" */
-int lockedOldIndex;    /* previous fallback function */
+#include "lua.h"
+
+lua_Reference lockedParentName;  /* lock index for the string "parent" */
+lua_Reference lockedOldIndex;    /* previous fallback function */
 
 void callOldFallback (lua_Object table, lua_Object index)
 {
-  lua_Object oldIndex = lua_getlocked(lockedOldIndex);
+  lua_Object oldIndex = lua_getref(lockedOldIndex);
   lua_pushobject(table);
   lua_pushobject(index);
   lua_callfunction(oldIndex);
@@ -1861,7 +1872,7 @@ void Index (void)
     return;
   }
   lua_pushobject(table);
-  lua_pushlocked(lockedParentName);
+  lua_pushref(lockedParentName);
   parent = lua_getsubscript();
   if (lua_istable(parent))
   {
@@ -1880,9 +1891,9 @@ void Index (void)
 This code must be registered with:
 \begin{verbatim}
   lua_pushstring("parent");
-  lockedParentName = lua_lock();
+  lockedParentName = lua_ref(1);
   lua_pushobject(lua_setfallback("index", Index));
-  lockedOldIndex = lua_lock();
+  lockedOldIndex = lua_ref(1);
 \end{verbatim}
 Notice how the string \verb'"parent"' is kept
 locked in Lua for optimal performance.
@@ -1892,6 +1903,9 @@ There are many different ways to do object-oriented programming in Lua.
 This section presents one possible way to
 implement classes,
 using the inheritance mechanism presented above.
+{\em Please notice: the following examples only work
+with the index fallback redefined according to
+Section~\ref{exfallback}}.
 
 As one could expect, a good way to represent a class is
 as a table.
@@ -2079,9 +2093,12 @@ have been superseded by the new version of function \verb'date'.
 Function \verb'int2str' (from \verb'strlib') has been superseded by new
 function \verb'format', with parameter \verb'"%c"'.
 \item
+The lock mechanism has been superseded by the reference mechanism.
+However, \verb-lua.h- provides compatibility macros,
+so there is no need to change programs.
+\item
 API function \verb'lua_pushliteral' now is just a macro to
 \verb'lua_pushstring'.
-Programmers are encouraged not to use this macro.
 \end{itemize}
 
 \subsection*{Incompatibilities with \Index{version 2.1}}

@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.50 1996/03/21 16:31:32 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.51 1996/03/21 18:54:29 roberto Exp roberto $";
 
 #include "mem.h"
 #include "opcode.h"
@@ -170,6 +170,24 @@ int lua_markobject (Object *o)
  return 0;
 }
 
+/*
+* returns 0 if the object is going to be (garbage) collected
+*/
+int luaI_ismarked (Object *o)
+{
+  switch (o->tag)
+  {
+   case LUA_T_STRING:
+     return o->value.ts->marked;
+   case LUA_T_FUNCTION:
+    return o->value.tf->marked;
+   case LUA_T_ARRAY:
+    return o->value.a->mark;
+   default:  /* nil, number, cfunction, or user data */
+    return 1;
+  }
+}
+
 
 /*
 ** Garbage collection. 
@@ -182,6 +200,7 @@ Long luaI_collectgarbage (void)
   lua_travsymbol(lua_markobject); /* mark symbol table objects */
   luaI_travlock(lua_markobject); /* mark locked objects */
   luaI_travfallbacks(lua_markobject);  /* mark fallbacks */
+  luaI_invalidaterefs();
   recovered += lua_strcollector();
   recovered += lua_hashcollector();
   recovered += luaI_funccollector();

@@ -3,7 +3,7 @@
 ** Mathematics library to LUA
 */
 
-char *rcs_mathlib="$Id: mathlib.c,v 1.13 1995/11/10 17:54:31 roberto Exp roberto $";
+char *rcs_mathlib="$Id: mathlib.c,v 1.14 1996/02/09 17:21:27 roberto Exp roberto $";
 
 #include <stdlib.h>
 #include <math.h>
@@ -104,7 +104,7 @@ static void math_sqrt (void)
  lua_pushnumber (sqrt(d));
 }
 
-static int old_pow;
+static lua_Reference old_pow;
 
 static void math_pow (void)
 {
@@ -113,7 +113,7 @@ static void math_pow (void)
  lua_Object op = lua_getparam(3);
  if (!lua_isnumber(o1) || !lua_isnumber(o2) || *(lua_getstring(op)) != 'p')
  {
-   lua_Object old = lua_getlocked(old_pow);
+   lua_Object old = lua_getref(old_pow);
    lua_pushobject(o1);
    lua_pushobject(o2);
    lua_pushobject(op);
@@ -223,5 +223,5 @@ void mathlib_open (void)
  lua_register ("random",     math_random);
  lua_register ("randomseed", math_randomseed);
 
- old_pow = lua_lockobject(lua_setfallback("arith", math_pow));
+ old_pow = lua_refobject(lua_setfallback("arith", math_pow), 1);
 }

@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.65 1996/03/21 18:55:02 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.66 1996/03/22 19:12:15 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -717,27 +717,31 @@ void *lua_getuserdata (lua_Object object)
 }
 
 
-lua_Object lua_getlocked (int ref)
+lua_Object lua_getref (lua_Reference ref)
 {
- adjustC(0);
- *top = *luaI_getlocked(ref);
- incr_top;
- CBase++;  /* incorporate object in the stack */
- return Ref(top-1);
+  Object *o = luaI_getref(ref);
+  if (o == NULL)
+    return LUA_NOOBJECT;
+  adjustC(0);
+  luaI_pushobject(o);
+  CBase++;  /* incorporate object in the stack */
+  return Ref(top-1);
 }
 
 
-void lua_pushlocked (int ref)
+void lua_pushref (lua_Reference ref)
 {
- *top = *luaI_getlocked(ref);
- incr_top;
+  Object *o = luaI_getref(ref);
+  if (o == NULL)
+    lua_error("access to invalid (possibly garbage collected) reference");
+  luaI_pushobject(o);
 }
 
 
-int lua_lock (void)
+lua_Reference lua_ref (int lock)
 {
   adjustC(1);
-  return luaI_lock(--top);
+  return luaI_ref(--top, lock);
 }
 
 
@@ -812,17 +816,9 @@ void lua_pushcfunction (lua_CFunction fn)
 */
 void lua_pushusertag (void *u, int tag)
 {
- if (tag < LUA_T_USERDATA) return;
+ if (tag < LUA_T_USERDATA) 
+   lua_error("invalid tag in `lua_pushusertag'");
  tag(top) = tag; uvalue(top) = u;
- incr_top;
-}
-
-/*
-** Push a lua_Object to stack.
-*/
-void lua_pushobject (lua_Object o)
-{
- *top = *Address(o);
  incr_top;
 }
 
@@ -833,6 +829,16 @@ void luaI_pushobject (Object *o)
 {
  *top = *o;
  incr_top;
+}
+
+/*
+** Push a lua_Object on stack.
+*/
+void lua_pushobject (lua_Object o)
+{
+  if (o == LUA_NOOBJECT)
+    lua_error("attempt to push a NOOBJECT");
+  luaI_pushobject(Address(o));
 }
 
 int lua_type (lua_Object o)
