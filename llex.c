@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.13 1998/01/09 14:44:55 roberto Exp roberto $
+** $Id: llex.c,v 1.14 1998/01/19 20:18:02 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -126,7 +126,7 @@ static void ifskip (LexState *LS)
     if (LS->current == '\n')
       inclinenumber(LS);
     else if (LS->current == EOZ)
-      luaY_syntaxerror("input ends inside a $if", "");
+      luaY_error("input ends inside a $if");
     else next(LS);
   }
 }
@@ -218,8 +218,8 @@ static int read_long_string (LexState *LS, YYSTYPE *l)
   while (1) {
     switch (LS->current) {
       case EOZ:
-        save(0);
-        return WRONGTOKEN;
+        luaY_error("unfinished long string");
+        return 0;  /* to avoid warnings */
       case '[':
         save_and_next(LS);
         if (LS->current == '[') {
@@ -319,8 +319,8 @@ int luaY_lex (YYSTYPE *l)
           switch (LS->current) {
             case EOZ:
             case '\n':
-              save(0);
-              return WRONGTOKEN;
+              luaY_error("unfinished string");
+              return 0;  /* to avoid warnings */
             case '\\':
               next(LS);  /* do not save the '\' */
               switch (LS->current) {
@@ -328,7 +328,29 @@ int luaY_lex (YYSTYPE *l)
                 case 't': save('\t'); next(LS); break;
                 case 'r': save('\r'); next(LS); break;
                 case '\n': save('\n'); inclinenumber(LS); break;
-                default : save_and_next(LS); break;
+                case '\\': case '"': case '\'': {
+                  save(LS->current);
+                  next(LS);
+                  break;
+                }
+                default : {
+                  if (isdigit(LS->current)) {
+                    int c = 0;
+                    int i = 0;
+                    do {
+                      c = 10*c + (LS->current-'0');
+                      i++;
+                      next(LS);
+                    } while (i<3 && isdigit(LS->current));
+                    save(c);
+                  }
+                  else {
+                    save('\\');
+                    save(LS->current);
+                    luaY_error("invalid escape sequence");
+                  }
+                  break;
+                }
               }
               break;
             default:
@@ -363,13 +385,13 @@ int luaY_lex (YYSTYPE *l)
       case '5': case '6': case '7': case '8': case '9':
 	a=0.0;
         do {
-          a=10.0*a+(LS->current-'0');
+          a = 10.0*a + (LS->current-'0');
           save_and_next(LS);
         } while (isdigit(LS->current));
         if (LS->current == '.') {
           save_and_next(LS);
           if (LS->current == '.') {
-            save(0);
+            save('.');
             luaY_error(
               "ambiguous syntax (decimal point x string concatenation)");
           }
@@ -378,27 +400,27 @@ int luaY_lex (YYSTYPE *l)
 	{ double da=0.1;
 	  while (isdigit(LS->current))
 	  {
-            a+=(LS->current-'0')*da;
-            da/=10.0;
+            a += (LS->current-'0')*da;
+            da /= 10.0;
             save_and_next(LS);
           }
           if (toupper(LS->current) == 'E') {
-	    int e=0;
+	    int e = 0;
 	    int neg;
 	    double ea;
             save_and_next(LS);
-	    neg=(LS->current=='-');
+	    neg = (LS->current=='-');
             if (LS->current == '+' || LS->current == '-') save_and_next(LS);
-            if (!isdigit(LS->current)) {
-              save(0); return WRONGTOKEN; }
+            if (!isdigit(LS->current))
+              luaY_error("invalid numeral format");
             do {
-              e=10.0*e+(LS->current-'0');
+              e = 10.0*e + (LS->current-'0');
               save_and_next(LS);
             } while (isdigit(LS->current));
 	    for (ea=neg?0.1:10.0; e>0; e>>=1)
 	    {
-	      if (e & 1) a*=ea;
-	      ea*=ea;
+	      if (e & 1) a *= ea;
+	      ea *= ea;
 	    }
           }
           l->vReal = a;
@@ -406,9 +428,8 @@ int luaY_lex (YYSTYPE *l)
         }
 
       case EOZ:
-        save(0);
         if (LS->iflevel > 0)
-          luaY_syntaxerror("input ends inside a $if", "");
+          luaY_error("input ends inside a $if");
         return 0;
 
       default:
