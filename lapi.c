@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.158 2001/10/31 19:40:14 roberto Exp roberto $
+** $Id: lapi.c,v 1.159 2001/10/31 19:58:11 roberto Exp $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -608,19 +608,18 @@ LUA_API void lua_error (lua_State *L, const l_char *s) {
 
 LUA_API int lua_next (lua_State *L, int index) {
   StkId t;
-  int more;
   lua_lock(L);
   t = luaA_index(L, index);
   api_check(L, ttype(t) == LUA_TTABLE);
-  more = luaH_index(L, hvalue(t), luaA_index(L, -1));
-  more = (luaH_nexti(hvalue(t), more, L->top - 1) != -1);
-  if (more) {
+  index = luaH_index(L, hvalue(t), luaA_index(L, -1));
+  index = (luaH_nexti(hvalue(t), index, L->top - 1) != -1);
+  if (index) {
     api_incr_top(L);
   }
   else  /* no more elements */
     L->top -= 1;  /* remove key */
   lua_unlock(L);
-  return more;
+  return index;
 }
 
 
