@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.41 2003/04/30 20:24:38 roberto Exp roberto $
+** $Id: liolib.c,v 2.42 2003/05/14 19:03:43 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -37,15 +37,11 @@
 ** by default, posix systems get `popen'
 */
 #ifndef USE_POPEN
-#ifdef _POSIX_C_SOURCE
-#if _POSIX_C_SOURCE >= 2
+#if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 2
 #define USE_POPEN	1
-#endif
-#endif
-#endif
-
-#ifndef USE_POPEN
+#else
 #define USE_POPEN	0
+#endif
 #endif
 
 

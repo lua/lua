@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.53 2003/04/28 19:26:16 roberto Exp roberto $
+** $Id: llimits.h,v 1.54 2003/04/28 19:57:50 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -22,13 +22,11 @@
 /* avoid overflows in comparison */
 #if INT_MAX-20 < 32760
 #define	BITS_INT	16
-#else
-#if INT_MAX > 2147483640L
+#elif INT_MAX > 2147483640L
 /* machine has at least 32 bits */
 #define BITS_INT	32
 #else
 #error "you must define BITS_INT with number of bits in an integer"
-#endif
 #endif
 #endif
 
