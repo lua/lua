@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.24 1999/08/11 17:00:59 roberto Exp roberto $
+** $Id: lgc.c,v 1.25 1999/08/16 20:52:00 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -143,10 +143,10 @@ static GCnode *listcollect (GCnode *l) {
 }
 
 
-static void strmark (TaggedString *s) {
-  if (!s->head.marked)
-    s->head.marked = 1;
-}
+/*
+** mark a string; marks bigger than 1 cannot be changed.
+*/
+#define strmark(s)    {if ((s)->head.marked == 0) (s)->head.marked = 1;}
 
 
 static void protomark (TProtoFunc *f) {
@@ -154,7 +154,7 @@ static void protomark (TProtoFunc *f) {
     int i;
     f->head.marked = 1;
     strmark(f->source);
-    for (i=0; i<f->nconsts; i++)
+    for (i=f->nconsts-1; i>=0; i--)
       markobject(&f->consts[i]);
   }
 }
@@ -174,7 +174,7 @@ static void hashmark (Hash *h) {
   if (!h->head.marked) {
     int i;
     h->head.marked = 1;
-    for (i=0; i<nhash(h); i++) {
+    for (i=nhash(h)-1; i>=0; i--) {
       Node *n = node(h,i);
       if (ttype(ref(n)) != LUA_T_NIL) {
         markobject(&n->ref);
