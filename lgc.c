@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.154 2002/10/25 20:05:28 roberto Exp roberto $
+** $Id: lgc.c,v 1.155 2002/11/07 15:37:10 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -22,7 +22,9 @@
 
 typedef struct GCState {
   Table *tmark;  /* list of marked tables to be visited */
-  Table *toclear;  /* list of visited weak tables (to be cleared after GC) */
+  Table *wk;  /* list of visited key-weak tables (to be cleared after GC) */
+  Table *wv;  /* list of visited value-weak tables */
+  Table *wkv;  /* list of visited key-value weak tables */
   lua_State *L;
 } GCState;
 
@@ -198,10 +200,14 @@ static void traversetable (GCState *st, Table *h) {
   marktable(st, h->metatable);
   lua_assert(h->lsizenode || h->node == G(st->L)->dummynode);
   if (h->mode & (WEAKKEY | WEAKVALUE)) {  /* weak table? */
+    Table **weaklist;
     weakkey = h->mode & WEAKKEY;
     weakvalue = h->mode & WEAKVALUE;
-    h->gclist = st->toclear;  /* must be cleared after GC, ... */
-    st->toclear = h;  /* ... so put in the appropriate list */
+    weaklist = (weakkey && weakvalue) ? &st->wkv :
+                            (weakkey) ? &st->wk :
+                                        &st->wv;
+    h->gclist = *weaklist;  /* must be cleared after GC, ... */
+    *weaklist = h;  /* ... so put in the appropriate list */
   }
   if (!weakvalue) {
     i = sizearray(h);
@@ -241,14 +247,12 @@ static int valismarked (const TObject *o) {
 */
 static void cleartablekeys (Table *h) {
   for (; h; h = h->gclist) {
-    lua_assert(h->mode & (WEAKKEY | WEAKVALUE));
-    if ((h->mode & WEAKKEY)) {  /* table may have collected keys? */
-      int i = sizenode(h);
-      while (i--) {
-        Node *n = node(h, i);
-        if (!valismarked(key(n)))  /* key was collected? */
-          removekey(n);  /* remove entry from table */
-      }
+    int i = sizenode(h);
+    lua_assert(h->mode & WEAKKEY);
+    while (i--) {
+      Node *n = node(h, i);
+      if (!valismarked(key(n)))  /* key was collected? */
+        removekey(n);  /* remove entry from table */
     }
   }
 }
@@ -259,19 +263,18 @@ static void cleartablekeys (Table *h) {
 */
 static void cleartablevalues (Table *h) {
   for (; h; h = h->gclist) {
-    if ((h->mode & WEAKVALUE)) {  /* table may have collected values? */
-      int i = sizearray(h);
-      while (i--) {
-        TObject *o = &h->array[i];
-        if (!valismarked(o))  /* value was collected? */
-          setnilvalue(o);  /* remove value */
-      }
-      i = sizenode(h);
-      while (i--) {
-        Node *n = node(h, i);
-        if (!valismarked(val(n)))  /* value was collected? */
-          removekey(n);  /* remove entry from table */
-      }
+    int i = sizearray(h);
+    lua_assert(h->mode & WEAKVALUE);
+    while (i--) {
+      TObject *o = &h->array[i];
+      if (!valismarked(o))  /* value was collected? */
+        setnilvalue(o);  /* remove value */
+    }
+    i = sizenode(h);
+    while (i--) {
+      Node *n = node(h, i);
+      if (!valismarked(val(n)))  /* value was collected? */
+        removekey(n);  /* remove entry from table */
     }
   }
 }
@@ -398,22 +401,26 @@ static void markroot (GCState *st) {
 
 static void mark (lua_State *L) {
   GCState st;
-  Table *toclear;
+  Table *wkv;
   st.L = L;
   st.tmark = NULL;
-  st.toclear = NULL;
+  st.wkv = st.wk = st.wv = NULL;
   markroot(&st);
   propagatemarks(&st);  /* mark all reachable objects */
-  toclear = st.toclear;  /* weak tables; to be cleared */
-  st.toclear = NULL;
-  cleartablevalues(toclear);
+  cleartablevalues(st.wkv);
+  cleartablevalues(st.wv);
+  wkv = st.wkv;  /* keys must be cleared after preserving udata */
+  st.wkv = NULL;
+  st.wv = NULL;
   separateudata(L);  /* separate userdata to be preserved */
   marktmu(&st);  /* mark `preserved' userdata */
   propagatemarks(&st);  /* remark, to propagate `preserveness' */
-  cleartablekeys(toclear);
+  cleartablekeys(wkv);
   /* `propagatemarks' may reborne some weak tables; clear them too */
-  cleartablekeys(st.toclear);
-  cleartablevalues(st.toclear);
+  cleartablekeys(st.wk);
+  cleartablevalues(st.wv);
+  cleartablekeys(st.wkv);
+  cleartablevalues(st.wkv);
 }
 
 
