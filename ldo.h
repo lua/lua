@@ -23,7 +23,6 @@
 
 
 void luaD_lineHook (lua_State *L, int line, lua_Hook linehook);
-void luaD_callHook (lua_State *L, lua_Hook callhook, const char *event);
 StkId luaD_precall (lua_State *L, StkId func);
 void luaD_call (lua_State *L, StkId func, int nResults);
 void luaD_poscall (lua_State *L, int wanted, StkId firstResult);

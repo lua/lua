@@ -134,7 +134,7 @@ void luaD_lineHook (lua_State *L, int line, lua_Hook linehook) {
 }
 
 
-void luaD_callHook (lua_State *L, lua_Hook callhook, const char *event) {
+static void luaD_callHook (lua_State *L, lua_Hook callhook, const char *event) {
   if (L->allowhooks) {
     lua_Debug ar;
     ar.event = event;
