@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v $
+** $Id: loslib.c,v 1.1 2004/07/09 15:47:48 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -38,7 +38,7 @@ static int pushresult (lua_State *L, int i, const char *filename) {
 
 
 static int io_execute (lua_State *L) {
-  lua_pushinteger(L, system(luaL_checkstring(L, 1)));
+  lua_pushinteger(L, system(luaL_optstring(L, 1, NULL)));
   return 1;
 }
 
@@ -163,10 +163,10 @@ static int io_date (lua_State *L) {
 
 
 static int io_time (lua_State *L) {
+  time_t t;
   if (lua_isnoneornil(L, 1))  /* called without args? */
-    lua_pushnumber(L, time(NULL));  /* return current time */
+    t = time(NULL);  /* get current time */
   else {
-    time_t t;
     struct tm ts;
     luaL_checktype(L, 1, LUA_TTABLE);
     lua_settop(L, 1);  /* make sure table is at the top */
@@ -178,11 +178,11 @@ static int io_time (lua_State *L) {
     ts.tm_year = getfield(L, "year", -1) - 1900;
     ts.tm_isdst = getboolfield(L, "isdst");
     t = mktime(&ts);
-    if (t == (time_t)(-1))
-      lua_pushnil(L);
-    else
-      lua_pushnumber(L, t);
   }
+  if (t == (time_t)(-1))
+    lua_pushnil(L);
+  else
+    lua_pushnumber(L, t);
   return 1;
 }
 
