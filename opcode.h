@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.1 1994/11/02 20:30:53 roberto Exp roberto $
+** $Id: opcode.h,v 3.2 1994/11/04 10:47:49 roberto Exp $
 */
 
 #ifndef opcode_h
@@ -74,6 +74,8 @@ typedef enum
  EQOP,
  LTOP,
  LEOP,
+ GTOP,
+ GEOP,
  ADDOP,
  SUBOP,
  MULTOP,
@@ -159,5 +161,6 @@ char   *lua_lasttext   (void);		/* from "lex.c" module */
 int     yylex (void);		        /* from "lex.c" module */
 Byte   *lua_parse      (void); 		/* from "lua.stx" module */
 void    lua_travstack (void (*fn)(Object *));
+void    luaI_setfallback (void);
 
 #endif

@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.1 1994/11/02 20:30:53 roberto Exp $";
+char *rcs_luastx = "$Id: lua.stx,v 3.2 1994/11/03 22:32:42 roberto Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -464,10 +464,10 @@ expr1	 : expr { if ($1 == 0) code_byte(1); }
 expr :  '(' expr ')'  { $$ = $2; }
      |  expr1 EQ  expr1	{ code_byte(EQOP);   $$ = 1; }
      |	expr1 '<' expr1	{ code_byte(LTOP);   $$ = 1; }
-     |	expr1 '>' expr1	{ code_byte(LEOP); code_byte(NOTOP); $$ = 1; }
+     |	expr1 '>' expr1	{ code_byte(GTOP);   $$ = 1; }
      |	expr1 NE  expr1	{ code_byte(EQOP); code_byte(NOTOP); $$ = 1; }
      |	expr1 LE  expr1	{ code_byte(LEOP);   $$ = 1; }
-     |	expr1 GE  expr1	{ code_byte(LTOP); code_byte(NOTOP); $$ = 1; }
+     |	expr1 GE  expr1	{ code_byte(GEOP);   $$ = 1; }
      |	expr1 '+' expr1 { code_byte(ADDOP);  $$ = 1; }
      |	expr1 '-' expr1 { code_byte(SUBOP);  $$ = 1; }
      |	expr1 '*' expr1 { code_byte(MULTOP); $$ = 1; }
