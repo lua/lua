@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.82 2000/04/12 18:57:19 roberto Exp roberto $
+** $Id: lparser.c,v 1.83 2000/04/27 17:39:56 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -933,7 +933,7 @@ static void forstat (LexState *ls, int line) {
   block(ls);
   luaK_patchlist(fs, prep, luaK_getlabel(fs));
   luaK_patchlist(fs, luaK_code0(fs, OP_FORLOOP), blockinit);
-  check_END(ls, TK_WHILE, line);
+  check_END(ls, TK_FOR, line);
   leavebreak(fs, &bl);
   removelocalvars(ls, 3, fs->lastsetline);
 }
