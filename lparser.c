@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.12 2005/01/04 15:55:12 roberto Exp roberto $
+** $Id: lparser.c,v 2.13 2005/01/05 18:20:51 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -167,7 +167,7 @@ static int registerlocalvar (LexState *ls, TString *varname) {
   Proto *f = fs->f;
   int oldsize = f->sizelocvars;
   luaM_growvector(ls->L, f->locvars, fs->nlocvars, f->sizelocvars,
-                  LocVar, USHRT_MAX, "too many local variables");
+                  LocVar, SHRT_MAX, "too many local variables");
   while (oldsize < f->sizelocvars) f->locvars[oldsize++].varname = NULL;
   f->locvars[fs->nlocvars].varname = varname;
   luaC_objbarrier(ls->L, f, varname);
