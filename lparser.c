@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.212 2003/07/09 15:36:38 roberto Exp roberto $
+** $Id: lparser.c,v 1.213 2003/07/09 20:11:30 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -793,7 +793,7 @@ static const struct {
 ** subexpr -> (simplexep | unop subexpr) { binop subexpr }
 ** where `binop' is any binary operator with a priority higher than `limit'
 */
-static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
+static BinOpr subexpr (LexState *ls, expdesc *v, unsigned int limit) {
   BinOpr op;
   UnOpr uop;
   enterlevel(ls);
@@ -806,13 +806,13 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
   else simpleexp(ls, v);
   /* expand while operators have priorities higher than `limit' */
   op = getbinopr(ls->t.token);
-  while (op != OPR_NOBINOPR && cast(int, priority[op].left) > limit) {
+  while (op != OPR_NOBINOPR && priority[op].left > limit) {
     expdesc v2;
     BinOpr nextop;
     next(ls);
     luaK_infix(ls->fs, op, v);
     /* read sub-expression with higher priority */
-    nextop = subexpr(ls, &v2, cast(int, priority[op].right));
+    nextop = subexpr(ls, &v2, priority[op].right);
     luaK_posfix(ls->fs, op, v, &v2);
     op = nextop;
   }
@@ -822,7 +822,7 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
 
 
 static void expr (LexState *ls, expdesc *v) {
-  subexpr(ls, v, -1);
+  subexpr(ls, v, 0);
 }
 
 /* }==================================================================== */
