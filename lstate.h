@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.6 1997/12/17 20:48:58 roberto Exp roberto $
+** $Id: lstate.h,v 1.7 1998/01/09 14:57:43 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -57,8 +57,6 @@ typedef struct LState {
   struct IM *IMtable;  /* table for tag methods */
   int IMtable_size;  /* size of IMtable */
   int last_tag;  /* last used tag in IMtable */
-  struct FuncState *mainState, *currState;  /* point to local structs in yacc */
-  struct LexState *lexstate;  /* point to local struct in yacc */
   struct ref *refArray;  /* locked objects */
   int refSize;  /* size of refArray */
   unsigned long GCthreshold;

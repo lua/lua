@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.6 1997/12/17 20:48:58 roberto Exp roberto $
+** $Id: llex.h,v 1.7 1998/01/09 14:57:43 roberto Exp $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -9,6 +9,20 @@
 
 #include "lobject.h"
 #include "lzio.h"
+
+
+#define FIRST_RESERVED	260
+
+/* maximum length of a reserved word (+1 for terminal 0) */
+#define TOKEN_LEN	15
+
+enum RESERVED {
+  /* terminal symbols denoted by reserved words */
+  AND = FIRST_RESERVED,
+  DO, ELSE, ELSEIF, END, FUNCTION, IF, LOCAL, NIL, NOT, OR,
+  REPEAT, RETURN, THEN, UNTIL, WHILE,
+  /* other terminal symbols */
+  NAME, CONC, DOTS, EQ, GE, LE, NE, NUMBER, STRING, EOS};
 
 
 #define MAX_IFS 5
@@ -24,18 +38,25 @@ struct ifState {
 
 typedef struct LexState {
   int current;  /* look ahead character */
+  int token;  /* look ahead token */
+  struct FuncState *fs;  /* 'FuncState' is private for the parser */
+  union {
+    real r;
+    TaggedString *ts;
+  } seminfo;  /* semantics information */
   struct zio *lex_z;  /* input stream */
   int linenumber;  /* input line counter */
-  int linelasttoken;  /* line where last token was read */
-  int lastline;  /* last line wherein a SETLINE was generated */
   int iflevel;  /* level of nested $if's (for lexical analysis) */
   struct ifState ifstate[MAX_IFS];
 } LexState;
 
 
 void luaX_init (void);
-void luaX_setinput (ZIO *z);
-char *luaX_lasttoken (void);
+void luaX_setinput (LexState *LS, ZIO *z);
+int luaX_lex (LexState *LS);
+void luaX_syntaxerror (LexState *ls, char *s, char *token);
+void luaX_error (LexState *ls, char *s);
+void luaX_token2str (LexState *ls, int token, char *s);
 
 
 #endif
