@@ -1,7 +1,7 @@
 /*
 ** Module to control static tables
 ** TeCGraf - PUC-Rio
-** $Id: table.h,v 2.13 1995/10/26 14:21:56 roberto Exp roberto $
+** $Id: table.h,v 2.14 1996/01/22 14:15:13 roberto Exp roberto $
 */
 
 #ifndef table_h
@@ -9,6 +9,13 @@
 
 #include "tree.h"
 #include "opcode.h"
+
+typedef struct
+{
+ Object  object;
+ TreeNode *varname;
+} Symbol;
+
 
 extern Symbol *lua_table;
 extern TaggedString **lua_constant;

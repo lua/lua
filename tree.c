@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.13 1995/01/12 14:19:04 roberto Exp roberto $";
+char *rcs_tree="$Id: tree.c,v 1.14 1995/10/17 11:53:53 roberto Exp roberto $";
 
 
 #include <string.h>
@@ -102,22 +102,4 @@ Long lua_strcollector (void)
   return counter;
 }
 
-
-/*
-** Traverse the constant tree looking for a specific symbol number
-*/
-static TreeNode *nodebysymbol (TreeNode *root, Word symbol)
-{
-  TreeNode *t;
-  if (root == NULL) return NULL;
-  if (root->varindex == symbol) return root;
-  t = nodebysymbol(root->left, symbol);
-  if (t) return t;
-  return nodebysymbol(root->right, symbol);
-}
-
-TreeNode *luaI_nodebysymbol (Word symbol)
-{
-  return nodebysymbol(constant_root, symbol); 
-}
 

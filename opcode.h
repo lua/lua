@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.14 1995/10/25 13:05:51 roberto Exp roberto $
+** $Id: opcode.h,v 3.15 1995/12/21 16:14:04 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -94,10 +94,6 @@ typedef struct Object
  Value value;
 } Object;
 
-typedef struct
-{
- Object  object;
-} Symbol;
 
 /* Macros to access structure members */
 #define tag(o)		((o)->tag)

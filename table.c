@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.42 1996/01/23 18:39:45 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.43 1996/01/26 14:04:32 roberto Exp roberto $";
 
 /*#include <string.h>*/
 
@@ -101,6 +101,7 @@ Word luaI_findsymbol (TreeNode *t)
    lua_table = growvector(lua_table, lua_maxsymbol, Symbol);
   }
   t->varindex = lua_ntable;
+  lua_table[lua_ntable].varname = t;
   s_tag(lua_ntable) = LUA_T_NIL;
   lua_ntable++;
  }
@@ -155,7 +156,7 @@ static char *lua_travsymbol (int (*fn)(Object *))
  Word i;
  for (i=0; i<lua_ntable; i++)
   if (fn(&s_object(i)))
-    return luaI_nodebysymbol(i)->ts.str;
+    return lua_table[i].varname->ts.str;
  return NULL;
 }
 
@@ -234,7 +235,7 @@ static void lua_nextvar (void)
  }
  else
  {
-  TreeNode *t = luaI_nodebysymbol(next);
+  TreeNode *t = lua_table[next].varname;
   Object name;
   tag(&name) = LUA_T_STRING;
   tsvalue(&name) = &(t->ts);
