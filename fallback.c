@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.2 1994/11/08 19:56:39 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.3 1994/11/09 18:12:42 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,6 +12,46 @@ char *rcs_fallback="$Id: fallback.c,v 1.2 1994/11/08 19:56:39 roberto Exp robert
 #include "opcode.h"
 #include "inout.h"
 #include "lua.h"
+
+
+/*
+** Warning: This list must be in the same order as the #define's
+*/
+struct FB  luaI_fallBacks[] = {
+{"error", {LUA_T_CFUNCTION, luaI_errorFB}},
+{"index", {LUA_T_CFUNCTION, luaI_indexFB}},
+{"gettable", {LUA_T_CFUNCTION, luaI_gettableFB}},
+{"arith", {LUA_T_CFUNCTION, luaI_arithFB}},
+{"order", {LUA_T_CFUNCTION, luaI_orderFB}},
+{"concat", {LUA_T_CFUNCTION, luaI_concatFB}},
+{"unminus", {LUA_T_CFUNCTION, luaI_arithFB}},
+{"settable", {LUA_T_CFUNCTION, luaI_gettableFB}}
+};
+
+#define N_FB  (sizeof(luaI_fallBacks)/sizeof(struct FB))
+
+void luaI_setfallback (void)
+{
+  int i;
+  char *name = lua_getstring(lua_getparam(1));
+  lua_Object func = lua_getparam(2);
+  if (name == NULL || !(lua_isfunction(func) || lua_iscfunction(func)))
+  {
+    lua_pushnil();
+    return;
+  }
+  for (i=0; i<N_FB; i++)
+  {
+    if (strcmp(luaI_fallBacks[i].kind, name) == 0)
+    {
+      luaI_pushobject(&luaI_fallBacks[i].function);
+      luaI_fallBacks[i].function = *luaI_Address(func);
+      return;
+    }
+  }
+  /* name not found */
+  lua_pushnil();
+}
 
 
 void luaI_errorFB (void)

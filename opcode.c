@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.6 1994/11/08 19:56:39 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.7 1994/11/09 18:13:29 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,62 +50,10 @@ static int lua_execute (Byte *pc, int base);
 static void do_call (Object *func, int base, int nResults, int whereRes);
 
 
+
 Object *luaI_Address (lua_Object o)
 {
   return Address(o);
-}
-
-
-/*
-** Fallbacks
-*/
-
-static struct FB {
-  char *kind;
-  Object function;
-} fallBacks[] = {
-#define FB_ERROR  0
-{"error", {LUA_T_CFUNCTION, luaI_errorFB}},
-#define FB_INDEX  1
-{"index", {LUA_T_CFUNCTION, luaI_indexFB}},
-#define FB_GETTABLE  2
-{"gettable", {LUA_T_CFUNCTION, luaI_gettableFB}},
-#define FB_ARITH  3
-{"arith", {LUA_T_CFUNCTION, luaI_arithFB}},
-#define FB_ORDER  4
-{"order", {LUA_T_CFUNCTION, luaI_orderFB}},
-#define FB_CONCAT  5
-{"concat", {LUA_T_CFUNCTION, luaI_concatFB}},
-#define FB_UNMINUS  6
-{"unminus", {LUA_T_CFUNCTION, luaI_arithFB}},
-#define FB_SETTABLE  7
-{"settable", {LUA_T_CFUNCTION, luaI_gettableFB}}
-};
-
-#define N_FB  (sizeof(fallBacks)/sizeof(struct FB))
-
-
-void luaI_setfallback (void)
-{
-  int i;
-  char *name = lua_getstring(lua_getparam(1));
-  lua_Object func = lua_getparam(2);
-  if (name == NULL || !(lua_isfunction(func) || lua_iscfunction(func)))
-  {
-    lua_pushnil();
-    return;
-  }
-  for (i=0; i<N_FB; i++)
-  {
-    if (strcmp(fallBacks[i].kind, name) == 0)
-    {
-      luaI_pushobject(&fallBacks[i].function);
-      fallBacks[i].function = *Address(func);
-      return;
-    }
-  }
-  /* name not found */
-  lua_pushnil();
 }
 
 
@@ -116,7 +64,7 @@ void luaI_setfallback (void)
 static void lua_message (char *s)
 {
   lua_pushstring(s);
-  do_call(&fallBacks[FB_ERROR].function, (top-stack)-1, 0, (top-stack)-1);
+  do_call(&luaI_fallBacks[FB_ERROR].function, (top-stack)-1, 0, (top-stack)-1);
 }
 
 /*
@@ -311,12 +259,12 @@ static void do_call (Object *func, int base, int nResults, int whereRes)
 static void pushsubscript (void)
 {
   if (tag(top-2) != LUA_T_ARRAY)
-    do_call(&fallBacks[FB_GETTABLE].function, (top-stack)-2, 1, (top-stack)-2);
+    do_call(&luaI_fallBacks[FB_GETTABLE].function, (top-stack)-2, 1, (top-stack)-2);
   else 
   {
     Object *h = lua_hashget(avalue(top-2), top-1);
     if (h == NULL)
-      do_call(&fallBacks[FB_INDEX].function, (top-stack)-2, 1, (top-stack)-2);
+      do_call(&luaI_fallBacks[FB_INDEX].function, (top-stack)-2, 1, (top-stack)-2);
     else
     {
       --top;
@@ -332,7 +280,7 @@ static void pushsubscript (void)
 static void storesubscript (void)
 {
  if (tag(top-3) != LUA_T_ARRAY)
-   do_call(&fallBacks[FB_SETTABLE].function, (top-stack)-3, 0, (top-stack)-3);
+   do_call(&luaI_fallBacks[FB_SETTABLE].function, (top-stack)-3, 0, (top-stack)-3);
  else
  {
   Object *h = lua_hashdefine (avalue(top-3), top-2);
@@ -688,7 +636,7 @@ int lua_type (lua_Object o)
 static void call_arith (char *op)
 {
   lua_pushstring(op);
-  do_call(&fallBacks[FB_ARITH].function, (top-stack)-3, 1, (top-stack)-3);
+  do_call(&luaI_fallBacks[FB_ARITH].function, (top-stack)-3, 1, (top-stack)-3);
 }
 
 static void comparison (lua_Type tag_less, lua_Type tag_equal, 
@@ -702,7 +650,7 @@ static void comparison (lua_Type tag_less, lua_Type tag_equal,
   else if (tostring(l) || tostring(r))
   {
     lua_pushstring(op);
-    do_call(&fallBacks[FB_ORDER].function, (top-stack)-3, 1, (top-stack)-3);
+    do_call(&luaI_fallBacks[FB_ORDER].function, (top-stack)-3, 1, (top-stack)-3);
     return;
   }
   else
@@ -824,7 +772,7 @@ static int lua_execute (Byte *pc, int base)
       *(top) = *(top-2-n);
       *(top-1) = *(top-3-n);
       top += 2;
-      do_call(&fallBacks[FB_SETTABLE].function, (top-stack)-3, 0, (top-stack)-3);
+      do_call(&luaI_fallBacks[FB_SETTABLE].function, (top-stack)-3, 0, (top-stack)-3);
     }
     else
     {
@@ -1016,7 +964,7 @@ static int lua_execute (Byte *pc, int base)
     Object *l = top-2;
     Object *r = top-1;
     if (tostring(r) || tostring(l))
-      do_call(&fallBacks[FB_CONCAT].function, (top-stack)-2, 1, (top-stack)-2);
+      do_call(&luaI_fallBacks[FB_CONCAT].function, (top-stack)-2, 1, (top-stack)-2);
     else
     {
       svalue(l) = lua_createstring (lua_strconc(svalue(l),svalue(r)));
@@ -1027,7 +975,7 @@ static int lua_execute (Byte *pc, int base)
 
    case MINUSOP:
     if (tonumber(top-1))
-      do_call(&fallBacks[FB_UNMINUS].function, (top-stack)-1, 1, (top-stack)-1);
+      do_call(&luaI_fallBacks[FB_UNMINUS].function, (top-stack)-1, 1, (top-stack)-1);
     else
       nvalue(top-1) = - nvalue(top-1);
    break;
