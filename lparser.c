@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.208 2003/04/03 13:35:34 roberto Exp roberto $
+** $Id: lparser.c,v 1.209 2003/05/13 20:15:59 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -173,12 +173,6 @@ static void new_localvarstr (LexState *ls, const char *name, int n) {
 }
 
 
-static void create_local (LexState *ls, const char *name) {
-  new_localvarstr(ls, name, 0);
-  adjustlocalvars(ls, 1);
-}
-
-
 static int indexupvalue (FuncState *fs, TString *name, expdesc *v) {
   int i;
   Proto *f = fs->f;
@@ -267,14 +261,19 @@ static void adjust_assign (LexState *ls, int nvars, int nexps, expdesc *e) {
 }
 
 
-static void code_params (LexState *ls, int nparams, int dots) {
+static void code_params (LexState *ls, int nparams, TString *dots) {
   FuncState *fs = ls->fs;
+  Proto *f = fs->f;
   adjustlocalvars(ls, nparams);
   luaX_checklimit(ls, fs->nactvar, MAXPARAMS, "parameters");
-  fs->f->numparams = cast(lu_byte, fs->nactvar);
-  fs->f->is_vararg = cast(lu_byte, dots);
-  if (dots)
-    create_local(ls, "arg");
+  f->numparams = cast(lu_byte, fs->nactvar);
+  if (!dots)
+    f->is_vararg = 0;
+  else {
+    f->is_vararg = 1;
+    new_localvar(ls, dots, 0);
+    adjustlocalvars(ls, 1);
+  }
   luaK_reserveregs(fs, fs->nactvar);  /* reserve register for parameters */
 }
 
@@ -528,12 +527,17 @@ static void constructor (LexState *ls, expdesc *t) {
 static void parlist (LexState *ls) {
   /* parlist -> [ param { `,' param } ] */
   int nparams = 0;
-  int dots = 0;
+  TString *dots = NULL;
   if (ls->t.token != ')') {  /* is `parlist' not empty? */
     do {
       switch (ls->t.token) {
-        case TK_DOTS: dots = 1; next(ls); break;
         case TK_NAME: new_localvar(ls, str_checkname(ls), nparams++); break;
+        case TK_DOTS: {
+          next(ls);
+          dots = (testnext(ls, '=')) ? str_checkname(ls) :
+                                       luaS_new(ls->L, "arg");
+          break;
+        }
         default: luaX_syntaxerror(ls, "<name> or `...' expected");
       }
     } while (!dots && testnext(ls, ','));
@@ -548,8 +552,10 @@ static void body (LexState *ls, expdesc *e, int needself, int line) {
   open_func(ls, &new_fs);
   new_fs.f->lineDefined = line;
   check(ls, '(');
-  if (needself)
-    create_local(ls, "self");
+  if (needself) {
+    new_localvarstr(ls, "self", 0);
+    adjustlocalvars(ls, 1);
+  }
   parlist(ls);
   check(ls, ')');
   chunk(ls);
