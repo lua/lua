@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.33 1999/05/10 13:54:01 roberto Exp roberto $
+** $Id: lparser.c,v 1.34 1999/05/21 19:54:06 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -30,25 +30,27 @@
 #define JMPSIZE	2
 
 /* maximum number of local variables */
-#define MAXLOCALS 32
-#define SMAXLOCALS "32"
+#define MAXLOCALS 200
+#define SMAXLOCALS "200"
 
 
 /* maximum number of upvalues */
-#define MAXUPVALUES 16
-#define SMAXUPVALUES "16"
+#define MAXUPVALUES 32
+#define SMAXUPVALUES "32"
 
 
 /*
 ** Variable descriptor:
-** must include a "exp" option because LL(1) cannot distinguish
+** must include an "exp" option because LL(1) cannot distinguish
 ** between variables, upvalues and function calls on first sight.
-** VGLOBAL: info is constant index of global name
-** VLOCAL: info is stack index
-** VDOT: info is constant index of index name
-** VEXP: info is pc index of "nparam" of function call (or 0 if exp is closed)
 */
-typedef enum {VGLOBAL, VLOCAL, VDOT, VINDEXED, VEXP} varkind;
+typedef enum {
+  VGLOBAL,  /* info is constant index of global name */
+  VLOCAL,   /* info is stack index */
+  VDOT,     /* info is constant index of index name */
+  VINDEXED, /* no info (table and index are on the stack) */
+  VEXP      /* info is pc index of "nparam" of a call (or 0 if exp is closed) */
+} varkind;
 
 typedef struct vardesc {
   varkind k;
