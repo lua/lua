@@ -4,7 +4,7 @@
 ** Luiz Henrique de Figueiredo - 17 Aug 90
 */
 
-char *rcs_hash="$Id: hash.c,v 2.1 1994/04/20 22:07:57 celes Exp celes $";
+char *rcs_hash="$Id: hash.c,v 2.2 1994/07/19 21:27:18 celes Exp celes $";
 
 #include <string.h>
 #include <stdlib.h>
@@ -211,6 +211,21 @@ Hash *lua_createarray (int nhash)
  return new->array;
 }
 
+
+/*
+** If the hash node is present, return its pointer, otherwise return a
+** static nil object
+*/
+Object *lua_hashget (Hash *t, Object *ref)
+{
+ static Object nil_obj = {T_NIL, {NULL}};
+ Node *n;
+ int   h = head (t, ref);
+ if (h < 0) return NULL; 
+ n = present(t, ref, h);
+ if (n == NULL) return &nil_obj;
+ else           return &n->val;
+}
 
 /*
 ** If the hash node is present, return its pointer, otherwise create a new
