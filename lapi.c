@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.81 2000/05/24 13:54:49 roberto Exp roberto $
+** $Id: lapi.c,v 1.82 2000/05/26 19:17:57 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -144,7 +144,7 @@ void lua_rawset (lua_State *L) {
   luaA_checkCargs(L, 3);
   if (ttype(L->top-3) != TAG_TABLE)
     lua_error(L, "indexed expression not a table");
-  luaH_set(L, avalue(L->top-3), L->top-2, L->top-1);
+  *luaH_set(L, avalue(L->top-3), L->top-2) = *(L->top-1);
   L->top -= 3;
 }
 

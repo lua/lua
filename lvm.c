@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.111 2000/06/05 14:56:18 roberto Exp roberto $
+** $Id: lvm.c,v 1.112 2000/06/05 20:15:33 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -62,13 +62,6 @@ int luaV_tostring (lua_State *L, TObject *obj) {  /* LUA_NUMBER */
     ttype(obj) = TAG_STRING;
     return 0;
   }
-}
-
-
-void luaV_setn (lua_State *L, Hash *t, int val) {
-  TObject value;
-  ttype(&value) = TAG_NUMBER; nvalue(&value) = val;
-  luaH_setstr(L, t, luaS_new(L, "n"), &value);
 }
 
 
@@ -147,7 +140,7 @@ void luaV_settable (lua_State *L, StkId t, StkId top) {
   else {  /* object is a table... */
     im = luaT_getim(L, avalue(t)->htag, IM_SETTABLE);
     if (ttype(im) == TAG_NIL) {  /* and does not have a `settable' method */
-      luaH_set(L, avalue(t), t+1, top-1);
+      *luaH_set(L, avalue(t), t+1) = *(top-1);
       return;
     }
     /* else it has a `settable' method, go through to next command */
@@ -191,7 +184,7 @@ void luaV_setglobal (lua_State *L, TString *s, StkId top) {
       TObject key;
       ttype(&key) = TAG_STRING;
       tsvalue(&key) = s;
-      luaH_set(L, L->gt, &key, top-1);
+      *luaH_set(L, L->gt, &key) = *(top-1);
     }
   }
   else {
@@ -311,8 +304,9 @@ void luaV_pack (lua_State *L, StkId firstelem, int nvararg, TObject *tab) {
   htab = avalue(tab) = luaH_new(L, nvararg+1);  /* +1 for field `n' */
   ttype(tab) = TAG_TABLE;
   for (i=0; i<nvararg; i++)
-    luaH_setint(L, htab, i+1, firstelem+i);
-  luaV_setn(L, htab, nvararg);  /* store counter in field `n' */
+    *luaH_setint(L, htab, i+1) = *(firstelem+i);
+  /* store counter in field `n' */
+  luaH_setstrnum(L, htab, luaS_new(L, "n"), nvararg);
 }
 
 
@@ -476,7 +470,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         Hash *arr = avalue(top-n-1);
         L->top = top-n;  /* final value of `top' (in case of errors) */
         for (; n; n--)
-          luaH_setint(L, arr, n+aux, --top);
+          *luaH_setint(L, arr, n+aux) = *(--top);
         break;
       }
 
@@ -486,8 +480,8 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         Hash *arr = avalue(finaltop-1);
         L->top = finaltop;  /* final value of `top' (in case of errors) */
         for (; n; n--) {
-          luaH_set(L, arr, top-2, top-1);
           top-=2;
+          *luaH_set(L, arr, top) = *(top+1);
         }
         break;
       }

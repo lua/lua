@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.44 2000/06/05 20:07:53 roberto Exp roberto $
+** $Id: ltable.c,v 1.45 2000/06/05 20:15:33 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -193,12 +193,12 @@ static int numuse (const Hash *t) {
 static void rehash (lua_State *L, Hash *t) {
   int oldsize = t->size;
   Node *nold = t->node;
-  int newsize = numuse(t);
+  int nelems = numuse(t);
   int i;
-  LUA_ASSERT(L, newsize<=oldsize, "wrong count");
-  if (newsize >= oldsize-oldsize/4)  /* using more than 3/4? */
+  LUA_ASSERT(L, nelems<=oldsize, "wrong count");
+  if (nelems >= oldsize-oldsize/4)  /* using more than 3/4? */
     setnodevector(L, t, (lint32)oldsize*2);
-  else if (newsize <= oldsize/4 &&  /* less than 1/4? */
+  else if (nelems <= oldsize/4 &&  /* less than 1/4? */
            oldsize > MINPOWER2)
     setnodevector(L, t, oldsize/2);
   else
@@ -207,35 +207,28 @@ static void rehash (lua_State *L, Hash *t) {
   for (i=0; i<oldsize; i++) {
     Node *old = nold+i;
     if (ttype(&old->val) != TAG_NIL)
-       luaH_set(L, t, &old->key, &old->val);
+      *luaH_set(L, t, &old->key) = old->val;
   }
   luaM_free(L, nold);  /* free old array */
 }
 
 
 /*
-** sets a pair key-value in a hash table; first, check whether key is
+** inserts a key into a hash table; first, check whether key is
 ** already present; if not, check whether key's main position is free;
 ** if not, check whether colliding node is in its main position or not;
-** if it is not, move colliding node to an empty place and put new pair
+** if it is not, move colliding node to an empty place and put new key
 ** in its main position; otherwise (colliding node is in its main position),
-** new pair goes to an empty position.
-** Tricky point: the only place where an old element is moved is when
-** we move the colliding node to an empty place; nevertheless, its old
-** value is still in that position until we set the value for the new
-** pair; therefore, even when `val' points to an element of this table
-** (this happens when we use `luaH_move'), there is no problem.
+** new key goes to an empty position.
 */
-void luaH_set (lua_State *L, Hash *t, const TObject *key, const TObject *val) {
+TObject *luaH_set (lua_State *L, Hash *t, const TObject *key) {
   Node *mp = luaH_mainposition(t, key);
   Node *n = mp;
   if (!mp)
     lua_error(L, "unexpected type to index table");
   do {  /* check whether `key' is somewhere in the chain */
-    if (luaO_equalObj(key, &n->key)) {
-      n->val = *val;  /* update value */
-      return;  /* that's all */
-    }
+    if (luaO_equalObj(key, &n->key))
+      return &n->val;  /* that's all */
     else n = n->next;
   } while (n);
   /* `key' not found; must insert it */
@@ -243,7 +236,7 @@ void luaH_set (lua_State *L, Hash *t, const TObject *key, const TObject *val) {
     Node *othern;  /* main position of colliding node */
     n = t->firstfree;  /* get a free place */
     /* is colliding node out of its main position? (can only happens if
-       its position if after "firstfree") */
+       its position is after "firstfree") */
     if (mp > n && (othern=luaH_mainposition(t, &mp->key)) != mp) {
       /* yes; move colliding node into free position */
       while (othern->next != mp) othern = othern->next;  /* find previous */
@@ -259,30 +252,32 @@ void luaH_set (lua_State *L, Hash *t, const TObject *key, const TObject *val) {
     }
   }
   mp->key = *key;
-  mp->val = *val;
-  for (;;) {  /* check free places */
+  for (;;) {  /* correct `firstfree' */
     if (ttype(&t->firstfree->key) == TAG_NIL)
-      return;  /* OK; table still has a free place */
+      return &mp->val;  /* OK; table still has a free place */
     else if (t->firstfree == t->node) break;  /* cannot decrement from here */
     else (t->firstfree)--;
   }
   rehash(L, t);  /* no more free places */
+  return luaH_set(L, t, key);  /* `rehash' invalidates this insertion */
 }
 
 
-void luaH_setint (lua_State *L, Hash *t, int key, const TObject *val) {
+TObject *luaH_setint (lua_State *L, Hash *t, int key) {
   TObject index;
   ttype(&index) = TAG_NUMBER;
   nvalue(&index) = key;
-  luaH_set(L, t, &index, val);
+  return luaH_set(L, t, &index);
 }
 
 
-void luaH_setstr (lua_State *L, Hash *t, TString *key, const TObject *val) {
-  TObject index;
+void luaH_setstrnum (lua_State *L, Hash *t, TString *key, Number val) {
+  TObject *value, index;
   ttype(&index) = TAG_STRING;
   tsvalue(&index) = key;
-  luaH_set(L, t, &index, val);
+  value = luaH_set(L, t, &index);
+  ttype(value) = TAG_NUMBER;
+  nvalue(value) = val;
 }
 
 

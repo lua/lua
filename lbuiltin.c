@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.112 2000/06/02 19:08:56 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.113 2000/06/05 20:15:33 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -402,6 +402,13 @@ void luaB_getn (lua_State *L) {
 }
 
 
+/* auxiliar function */
+static void t_move (lua_State *L, Hash *t, int from, int to) {
+  TObject *p = luaH_setint(L, t, to);  /* may change following `get' */
+  *p = *luaH_getnum(t, from);
+}
+
+
 void luaB_tinsert (lua_State *L) {
   Hash *a = gettable(L, 1);
   lua_Object v = lua_getparam(L, 3);
@@ -413,10 +420,10 @@ void luaB_tinsert (lua_State *L) {
     v = luaL_nonnullarg(L, 2);
     pos = n+1;
   }
-  luaV_setn(L, a, n+1);  /* a.n = n+1 */
+  luaH_setstrnum(L, a, luaS_new(L, "n"), n+1);  /* a.n = n+1 */
   for (; n>=pos; n--)
-    luaH_move(L, a, n, n+1);  /* a[n+1] = a[n] */
-  luaH_setint(L, a, pos, v);  /* a[pos] = v */
+    t_move(L, a, n, n+1);  /* a[n+1] = a[n] */
+  *luaH_setint(L, a, pos) = *v;  /* a[pos] = v */
 }
 
 
@@ -427,9 +434,9 @@ void luaB_tremove (lua_State *L) {
   if (n <= 0) return;  /* table is "empty" */
   luaA_pushobject(L, luaH_getnum(a, pos));  /* result = a[pos] */
   for ( ;pos<n; pos++)
-    luaH_move(L, a, pos+1, pos);  /* a[pos] = a[pos+1] */
-  luaV_setn(L, a, n-1);  /* a.n = n-1 */
-  luaH_setint(L, a, n, &luaO_nilobject);  /* a[n] = nil */
+    t_move(L, a, pos+1, pos);  /* a[pos] = a[pos+1] */
+  luaH_setstrnum(L, a, luaS_new(L, "n"), n-1);  /* a.n = n-1 */
+  ttype(luaH_setint(L, a, n)) = TAG_NIL;  /* a[n] = nil */
 }
 
 
@@ -478,11 +485,12 @@ static void luaB_foreach (lua_State *L) {
 **  Addison-Wesley, 1993.)
 */
 
+
 static void swap (lua_State *L, Hash *a, int i, int j) {
   TObject temp;
   temp = *luaH_getnum(a, i);
-  luaH_move(L, a, j, i);
-  luaH_setint(L, a, j, &temp);
+  t_move(L, a, j, i);
+  *luaH_setint(L, a, j) = temp;
 }
 
 static int sort_comp (lua_State *L, lua_Object f, const TObject *a,
