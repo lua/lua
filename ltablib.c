@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.23 2004/04/30 20:13:38 roberto Exp roberto $
+** $Id: ltablib.c,v 1.24 2004/05/10 17:50:51 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -69,19 +69,19 @@ static int luaB_setn (lua_State *L) {
 
 static int luaB_tinsert (lua_State *L) {
   int v = lua_gettop(L);  /* number of arguments */
-  int n = aux_getn(L, 1) + 1;
+  int e = aux_getn(L, 1) + LUA_FIRSTINDEX;  /* first empty element */
   int pos;  /* where to insert new element */
   if (v == 2)  /* called with only 2 arguments */
-    pos = n;  /* insert new element at the end */
+    pos = e;  /* insert new element at the end */
   else {
     pos = luaL_checkint(L, 2);  /* 2nd argument is the position */
-    if (pos > n) n = pos;  /* `grow' array if necessary */
+    if (pos > e) e = pos;  /* `grow' array if necessary */
     v = 3;  /* function may be called with more than 3 args */
   }
-  luaL_setn(L, 1, n);  /* new size */
-  while (--n >= pos) {  /* move up elements */
-    lua_rawgeti(L, 1, n);
-    lua_rawseti(L, 1, n+1);  /* t[n+1] = t[n] */
+  luaL_setn(L, 1, e - LUA_FIRSTINDEX + 1);  /* new size */
+  while (--e >= pos) {  /* move up elements */
+    lua_rawgeti(L, 1, e);
+    lua_rawseti(L, 1, e+1);  /* t[e+1] = t[e] */
   }
   lua_pushvalue(L, v);
   lua_rawseti(L, 1, pos);  /* t[pos] = v */
@@ -90,17 +90,17 @@ static int luaB_tinsert (lua_State *L) {
 
 
 static int luaB_tremove (lua_State *L) {
-  int n = aux_getn(L, 1);
-  int pos = luaL_optint(L, 2, n);
-  if (n <= 0) return 0;  /* table is `empty' */
-  luaL_setn(L, 1, n-1);  /* t.n = n-1 */
+  int e = aux_getn(L, 1) + LUA_FIRSTINDEX - 1;
+  int pos = luaL_optint(L, 2, e);
+  if (e < LUA_FIRSTINDEX) return 0;  /* table is `empty' */
+  luaL_setn(L, 1, e - LUA_FIRSTINDEX);  /* t.n = n-1 */
   lua_rawgeti(L, 1, pos);  /* result = t[pos] */
-  for ( ;pos<n; pos++) {
+  for ( ;pos<e; pos++) {
     lua_rawgeti(L, 1, pos+1);
     lua_rawseti(L, 1, pos);  /* t[pos] = t[pos+1] */
   }
   lua_pushnil(L);
-  lua_rawseti(L, 1, n);  /* t[n] = nil */
+  lua_rawseti(L, 1, e);  /* t[e] = nil */
   return 1;
 }
 
