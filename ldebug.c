@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.6 2004/06/02 19:07:55 roberto Exp roberto $
+** $Id: ldebug.c,v 2.7 2004/06/29 18:49:02 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -357,7 +357,7 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
       }
       case OP_TFORLOOP: {
         checkreg(pt, a+5);  /* space for control variables */
-        if (reg >= a) last = pc;  /* affect all registers above base */
+        if (reg >= a+3) last = pc;  /* affect all regs above its call base */
         break;
       }
       case OP_TFORPREP:
@@ -491,7 +491,8 @@ static const char *getfuncname (CallInfo *ci, const char **name) {
     return NULL;  /* calling function is not Lua (or is unknown) */
   ci--;  /* calling function */
   i = ci_func(ci)->l.p->code[currentpc(ci)];
-  if (GET_OPCODE(i) == OP_CALL || GET_OPCODE(i) == OP_TAILCALL)
+  if (GET_OPCODE(i) == OP_CALL || GET_OPCODE(i) == OP_TAILCALL ||
+      GET_OPCODE(i) == OP_TFORLOOP)
     return getobjname(ci, GETARG_A(i), name);
   else
     return NULL;  /* no useful name can be found */
