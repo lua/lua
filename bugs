@@ -428,6 +428,7 @@ patch = [[
 ]],
 }
 
+
 Bug{
 what = [[`pc' address is invalidated when a coroutine is suspended]],
 example = [[
@@ -702,5 +703,43 @@ patch = [[
 ---
 >     if (!(1 <= n && n <= p->sizeupvalues)) return NULL;
 ]]
+}
+
+
+Bug{
+what = [[values holded in open upvalues of suspended threads may be
+incorrectly collected]],
+
+report = [[Spencer Schumann, 31/12/2004]],
+
+example = [[
+local thread_id = 0
+local threads = {}
+
+function fn(thread)
+    thread_id = thread_id + 1
+    threads[thread_id] = function()
+                             thread = nil
+                         end
+    coroutine.yield()
+end
+
+while true do
+    local thread = coroutine.create(fn)
+    coroutine.resume(thread, thread)
+end
+]],
+
+patch = [[
+* lgc.c:
+221,224c221,222
+<       if (!u->marked) {
+<         markobject(st, &u->value);
+<         u->marked = 1;
+<       }
+---
+>       markobject(st, u->v);
+>       u->marked = 1;
+]],
 }
 
