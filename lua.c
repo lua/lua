@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.65 2001/03/09 18:05:05 roberto Exp roberto $
+** $Id: lua.c,v 1.66 2001/03/26 14:31:49 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -308,7 +308,7 @@ static void getstacksize (int argc, l_char *argv[], struct Options *opt) {
 
 
 static void register_getargs (l_char *argv[]) {
-  lua_pushuserdata(L, argv);
+  lua_newuserdatabox(L, argv);
   lua_pushcclosure(L, l_getargs, 1);
   lua_setglobal(L, l_s("getargs"));
 }

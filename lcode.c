@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.68 2001/04/23 16:35:45 roberto Exp roberto $
+** $Id: lcode.c,v 1.69 2001/06/05 18:17:01 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -226,12 +226,12 @@ static int addk (FuncState *fs, TObject *k) {
 
 int luaK_stringk (FuncState *fs, TString *s) {
   Proto *f = fs->f;
-  int c = s->u.s.constindex;
+  int c = s->constindex;
   if (c >= fs->nk || ttype(&f->k[c]) != LUA_TSTRING || tsvalue(&f->k[c]) != s) {
     TObject o;
     setsvalue(&o, s);
     c = addk(fs, &o);
-    s->u.s.constindex = c;  /* hint for next time */
+    s->constindex = c;  /* hint for next time */
   }
   return c;
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 1.23 2001/02/09 20:22:29 roberto Exp roberto $
+** $Id: ltm.h,v 1.24 2001/02/23 17:17:25 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -53,7 +53,7 @@ typedef enum {
 
 struct TM {
   Closure *method[TM_N];
-  TString *collected;  /* list of garbage-collected udata with this tag */
+  Udata *collected;  /* list of garbage-collected udata with this tag */
   TString *name;  /* type name */
   int basictype;
 };

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.55 2001/03/07 18:09:25 roberto Exp roberto $
+** $Id: lstate.h,v 1.56 2001/04/17 17:35:54 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -53,8 +53,8 @@ typedef struct global_State {
   Proto *rootproto;  /* list of all prototypes */
   Closure *rootcl;  /* list of all closures */
   Hash *roottable;  /* list of all tables */
+  Udata *rootudata;   /* list of all userdata */
   stringtable strt;  /* hash table for strings */
-  stringtable udt;   /* hash table for udata */
   Hash *type2tag;  /* hash table from type names to tags */
   Hash *registry;  /* (strong) registry table */
   Hash *weakregistry;  /* weakregistry table */

@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.70 2001/03/02 17:27:50 roberto Exp roberto $
+** $Id: ltm.c,v 1.71 2001/03/26 14:31:49 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -127,7 +127,7 @@ LUA_API int lua_copytagmethods (lua_State *L, int tagto, int tagfrom) {
 int luaT_tag (const TObject *o) {
   int t = ttype(o);
   switch (t) {
-    case LUA_TUSERDATA: return tsvalue(o)->u.d.tag;
+    case LUA_TUSERDATA: return uvalue(o)->tag;
     case LUA_TTABLE:    return hvalue(o)->htag;
     default:            return t;
   }
@@ -140,7 +140,7 @@ const l_char *luaT_typename (global_State *G, const TObject *o) {
   TString *ts;
   switch (t) {
     case LUA_TUSERDATA:
-      tag = tsvalue(o)->u.d.tag;
+      tag = uvalue(o)->tag;
       break;
     case LUA_TTABLE:
       tag = hvalue(o)->htag;

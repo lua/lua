@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.102 2001/04/11 14:42:41 roberto Exp roberto $
+** $Id: lobject.h,v 1.103 2001/06/05 18:17:01 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -29,6 +29,7 @@
 
 typedef union {
   struct TString *ts;
+  struct Udata *u;
   struct Closure *cl;
   struct Hash *h;
   lua_Number n;		/* LUA_TNUMBER */
@@ -45,6 +46,7 @@ typedef struct lua_TObject {
 #define ttype(o)        ((o)->tt)
 #define nvalue(o)       ((o)->value.n)
 #define tsvalue(o)      ((o)->value.ts)
+#define uvalue(o)      ((o)->value.u)
 #define clvalue(o)      ((o)->value.cl)
 #define hvalue(o)       ((o)->value.h)
 
@@ -57,7 +59,7 @@ typedef struct lua_TObject {
   { TObject *_o=(obj); _o->tt=LUA_TSTRING; _o->value.ts=(x); }
 
 #define setuvalue(obj,x) \
-  { TObject *_o=(obj); _o->tt=LUA_TUSERDATA; _o->value.ts=(x); }
+  { TObject *_o=(obj); _o->tt=LUA_TUSERDATA; _o->value.u=(x); }
 
 #define setclvalue(obj,x) \
   { TObject *_o=(obj); _o->tt=LUA_TFUNCTION; _o->value.cl=(x); }
@@ -78,22 +80,14 @@ typedef TObject *StkId;  /* index to stack elements */
 /*
 ** String headers for string table
 */
-
 typedef struct TString {
-  union {
-    struct {  /* for strings */
-      lu_hash hash;
-      int constindex;  /* hint to reuse constants */
-    } s;
-    struct {  /* for userdata */
-      int tag;
-      void *value;
-    } d;
-  } u;
+  lu_hash hash;
+  int constindex;  /* hint to reuse constants */
   size_t len;
   int marked;
   struct TString *nexthash;  /* chain for hash table */
 } TString;
+
 
 
 /*
@@ -101,13 +95,23 @@ typedef struct TString {
 */
 union L_UTString {
   TString ts;
-  union L_Umaxalign dummy;  /* ensures maximum alignment for `local' udata */
+  union L_Umaxalign dummy;  /* ensures maximum alignment for strings */
 };
-
 
 
 #define getstr(ts)	((l_char *)((union L_UTString *)(ts) + 1))
 #define svalue(o)       getstr(tsvalue(o))
+
+
+
+typedef struct Udata {
+  int tag;
+  void *value;
+  size_t len;
+  int marked;
+  struct Udata *next;  /* chain for list of all udata */
+} Udata;
+
 
 
 /*

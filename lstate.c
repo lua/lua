@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.61 2001/03/26 14:31:49 roberto Exp roberto $
+** $Id: lstate.c,v 1.62 2001/04/17 17:35:54 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -49,14 +49,15 @@ static void f_luaopen (lua_State *L, void *ud) {
   }
   else {  /* create a new global state */
     L->G = luaM_new(L, global_State);
-    G(L)->strt.size = G(L)->udt.size = 0;
-    G(L)->strt.nuse = G(L)->udt.nuse = 0;
-    G(L)->strt.hash = G(L)->udt.hash = NULL;
+    G(L)->strt.size = 0;
+    G(L)->strt.nuse = 0;
+    G(L)->strt.hash = NULL;
     G(L)->Mbuffer = NULL;
     G(L)->Mbuffsize = 0;
     G(L)->rootproto = NULL;
     G(L)->rootcl = NULL;
     G(L)->roottable = NULL;
+    G(L)->rootudata = NULL;
     G(L)->TMtable = NULL;
     G(L)->sizeTM = 0;
     G(L)->ntag = 0;
@@ -67,7 +68,7 @@ static void f_luaopen (lua_State *L, void *ud) {
     G(L)->registry = luaH_new(L, 0);
     G(L)->weakregistry = luaH_new(L, 0);
     G(L)->weakregistry->weakmode = LUA_WEAK_VALUE;  /* make weakregistry weak */
-    luaS_init(L);
+    luaS_resize(L, MINPOWER2);
     luaX_init(L);
     luaT_init(L);
     G(L)->GCthreshold = 4*G(L)->nblocks;
@@ -115,6 +116,7 @@ static void close_state (lua_State *L, lua_State *OL) {
     lua_assert(G(L)->rootproto == NULL);
     lua_assert(G(L)->rootcl == NULL);
     lua_assert(G(L)->roottable == NULL);
+    lua_assert(G(L)->rootudata == NULL);
     luaS_freeall(L);
     luaM_freearray(L, G(L)->TMtable, G(L)->sizeTM, struct TM);
     luaM_freearray(L, G(L)->Mbuffer, G(L)->Mbuffsize, l_char);

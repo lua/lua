@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.98 2001/06/05 18:17:01 roberto Exp roberto $
+** $Id: lgc.c,v 1.99 2001/06/05 19:27:32 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -82,8 +82,11 @@ static void marktable (GCState *st, Hash *h) {
 
 static void markobject (GCState *st, TObject *o) {
   switch (ttype(o)) {
-    case LUA_TUSERDATA:  case LUA_TSTRING:
+    case LUA_TSTRING:
       strmark(tsvalue(o));
+      break;
+    case LUA_TUSERDATA:
+      uvalue(o)->marked = 1;
       break;
     case LUA_TFUNCTION:
       markclosure(st, clvalue(o));
@@ -190,8 +193,10 @@ static void markall (lua_State *L) {
 
 static int hasmark (const TObject *o) {
   switch (ttype(o)) {
-    case LUA_TSTRING: case LUA_TUSERDATA:
+    case LUA_TSTRING:
       return tsvalue(o)->marked;
+    case LUA_TUSERDATA:
+      return uvalue(o)->marked;
     case LUA_TTABLE:
       return ismarked(hvalue(o));
     case LUA_TFUNCTION:
@@ -275,9 +280,21 @@ static void collecttable (lua_State *L) {
 }
 
 
-static void checktab (lua_State *L, stringtable *tb) {
-  if (tb->nuse < (ls_nstr)(tb->size/4) && tb->size > MINPOWER2)
-    luaS_resize(L, tb, tb->size/2);  /* table is too big */
+static void collectudata (lua_State *L) {
+  Udata **p = &G(L)->rootudata;
+  Udata *next;
+  while ((next = *p) != NULL) {
+    if (next->marked) {
+      next->marked = 0;  /* unmark */
+      p = &next->next;
+    }
+    else {  /* collect */
+      int tag = next->tag;
+      *p = next->next;
+      next->next = G(L)->TMtable[tag].collected;  /* chain udata */
+      G(L)->TMtable[tag].collected = next;
+    }
+  }
 }
 
 
@@ -299,32 +316,11 @@ static void collectstrings (lua_State *L, int all) {
       }
     }
   }
-  checktab(L, &G(L)->strt);
+  if (G(L)->strt.nuse < (ls_nstr)(G(L)->strt.size/4) &&
+      G(L)->strt.size > MINPOWER2)
+    luaS_resize(L, G(L)->strt.size/2);  /* table is too big */
 }
 
-
-static void collectudata (lua_State *L, int all) {
-  int i;
-  for (i=0; i<G(L)->udt.size; i++) {  /* for each list */
-    TString **p = &G(L)->udt.hash[i];
-    TString *next;
-    while ((next = *p) != NULL) {
-      lua_assert(next->marked <= 1);
-      if (next->marked && !all) {  /* preserve? */
-        next->marked = 0;
-        p = &next->nexthash;
-      } 
-      else {  /* collect */
-        int tag = next->u.d.tag;
-        *p = next->nexthash;
-        next->nexthash = G(L)->TMtable[tag].collected;  /* chain udata */
-        G(L)->TMtable[tag].collected = next;
-        G(L)->udt.nuse--;
-      }
-    }
-  }
-  checktab(L, &G(L)->udt);
-}
 
 
 #define MINBUFFER	256
@@ -356,10 +352,10 @@ static void callgcTMudata (lua_State *L) {
   int tag;
   G(L)->GCthreshold = 2*G(L)->nblocks;  /* avoid GC during tag methods */
   for (tag=G(L)->ntag-1; tag>=0; tag--) {  /* for each tag (in reverse order) */
-    TString *udata;
+    Udata *udata;
     while ((udata = G(L)->TMtable[tag].collected) != NULL) {
       TObject obj;
-      G(L)->TMtable[tag].collected = udata->nexthash;  /* remove it from list */
+      G(L)->TMtable[tag].collected = udata->next;  /* remove it from list */
       setuvalue(&obj, udata);
       callgcTM(L, &obj);
       luaM_free(L, udata, sizeudata(udata->len));
@@ -370,7 +366,7 @@ static void callgcTMudata (lua_State *L) {
 
 void luaC_collect (lua_State *L, int all) {
   lua_lockgc(L);
-  collectudata(L, all);
+  collectudata(L);
   callgcTMudata(L);
   collectstrings(L, all);
   collecttable(L);

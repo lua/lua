@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.141 2001/04/23 16:35:45 roberto Exp roberto $
+** $Id: lapi.c,v 1.142 2001/06/05 18:17:01 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -284,8 +284,7 @@ LUA_API void *lua_touserdata (lua_State *L, int index) {
   void *p;
   lua_lock(L);
   o = luaA_indexAcceptable(L, index);
-  p = (o == NULL || ttype(o) != LUA_TUSERDATA) ? NULL :
-                                                    tsvalue(o)->u.d.value;
+  p = (o == NULL || ttype(o) != LUA_TUSERDATA) ? NULL : uvalue(o)->value;
   lua_unlock(L);
   return p;
 }
@@ -357,16 +356,6 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   api_checknelems(L, n);
   luaV_Cclosure(L, fn, n);
   lua_unlock(L);
-}
-
-
-LUA_API int lua_pushuserdata (lua_State *L, void *u) {
-  int isnew;
-  lua_lock(L);
-  isnew = luaS_createudata(L, u, L->top);
-  api_incr_top(L);
-  lua_unlock(L);
-  return isnew;
 }
 
 
@@ -673,7 +662,7 @@ LUA_API void lua_settag (lua_State *L, int tag) {
       hvalue(L->top-1)->htag = tag;
       break;
     case LUA_TUSERDATA:
-      tsvalue(L->top-1)->u.d.tag = tag;
+      uvalue(L->top-1)->tag = tag;
       break;
     default:
       luaO_verror(L, l_s("cannot change the tag of a %.20s"),
@@ -771,17 +760,31 @@ LUA_API void lua_concat (lua_State *L, int n) {
 }
 
 
+static Udata *pushnewudata (lua_State *L, size_t size) {
+  Udata *u = luaS_newudata(L, size);
+  setuvalue(L->top, u);
+  api_incr_top(L);
+  return uvalue(L->top-1);
+}
+
+
 LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
-  TString *ts;
+  Udata *u;
   void *p;
   lua_lock(L);
-  if (size == 0) size = 1;
-  ts = luaS_newudata(L, size, NULL);
-  setuvalue(L->top, ts);
-  api_incr_top(L);
-  p = ts->u.d.value;
+  u = pushnewudata(L, size);
+  p = u->value;
   lua_unlock(L);
   return p;
+}
+
+
+LUA_API void lua_newuserdatabox (lua_State *L, void *p) {
+  Udata *u;
+  lua_lock(L);
+  u = pushnewudata(L, 0);
+  u->value = p;
+  lua_unlock(L);
 }
 
 
@@ -806,6 +809,7 @@ LUA_API void  lua_setweakmode (lua_State *L, int mode) {
 
 
 
+#if 0
 /*
 ** deprecated function
 */
@@ -819,3 +823,4 @@ LUA_API void lua_pushusertag (lua_State *L, void *u, int tag) {
 }
   }
 }
+#endif

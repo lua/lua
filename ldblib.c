@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.35 2001/03/07 18:09:25 roberto Exp roberto $
+** $Id: ldblib.c,v 1.36 2001/03/26 14:31:49 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -111,15 +111,13 @@ static int setlocal (lua_State *L) {
 
 
 
-/* dummy variables (to define unique addresses) */
-static const l_char key1[] = l_s("ab");
-#define KEY_CALLHOOK	((void *)key1)
-#define KEY_LINEHOOK	((void *)(key1+1))
+#define KEY_CALLHOOK	l_s("luadblibCallhook")
+#define KEY_LINEHOOK	l_s("luadblibLinehook")
 
 
-static void hookf (lua_State *L, void *key) {
+static void hookf (lua_State *L, const l_char *key) {
   lua_getregistry(L);
-  lua_pushuserdata(L, key);
+  lua_pushstring(L, key);
   lua_gettable(L, -2);
   if (lua_isfunction(L, -1)) {
     lua_pushvalue(L, -3);  /* original argument (below table and function) */
@@ -143,7 +141,7 @@ static void linef (lua_State *L, lua_Debug *ar) {
 }
 
 
-static void sethook (lua_State *L, void *key, lua_Hook hook,
+static void sethook (lua_State *L, const l_char *key, lua_Hook hook,
                      lua_Hook (*sethookf)(lua_State * L, lua_Hook h)) {
   lua_settop(L, 1);
   if (lua_isnil(L, 1))
@@ -153,7 +151,7 @@ static void sethook (lua_State *L, void *key, lua_Hook hook,
   else
     luaL_argerror(L, 1, l_s("function expected"));
   lua_getregistry(L);
-  lua_pushuserdata(L, key);
+  lua_pushstring(L, key);
   lua_pushvalue(L, -1);  /* dup key */
   lua_gettable(L, -3);   /* get old value */
   lua_pushvalue(L, -2);  /* key (again) */

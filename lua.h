@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.96 2001/04/17 17:35:54 roberto Exp roberto $
+** $Id: lua.h,v 1.97 2001/04/23 16:35:45 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: info@lua.org
@@ -150,7 +150,6 @@ LUA_API void  lua_pushnumber (lua_State *L, lua_Number n);
 LUA_API void  lua_pushlstring (lua_State *L, const lua_char *s, size_t len);
 LUA_API void  lua_pushstring (lua_State *L, const lua_char *s);
 LUA_API void  lua_pushcclosure (lua_State *L, lua_CFunction fn, int n);
-LUA_API int   lua_pushuserdata (lua_State *L, void *u);
 
 
 /*
@@ -218,6 +217,7 @@ LUA_API int   lua_getn (lua_State *L, int index);
 LUA_API void  lua_concat (lua_State *L, int n);
 
 LUA_API void *lua_newuserdata (lua_State *L, size_t size);
+LUA_API void  lua_newuserdatabox (lua_State *L, void *u);
 
 LUA_API void  lua_setweakmode (lua_State *L, int mode);
 LUA_API int  lua_getweakmode (lua_State *L, int index);

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.80 2001/04/23 16:35:45 roberto Exp roberto $
+** $Id: ltests.c,v 1.81 2001/06/05 18:17:01 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -290,7 +290,7 @@ static int mem_query (lua_State *L) {
 static int hash_query (lua_State *L) {
   if (lua_isnull(L, 2)) {
     luaL_arg_check(L, lua_tag(L, 1) == LUA_TSTRING, 1, l_s("string expected"));
-    lua_pushnumber(L, tsvalue(luaA_index(L, 1))->u.s.hash);
+    lua_pushnumber(L, tsvalue(luaA_index(L, 1))->hash);
   }
   else {
     Hash *t;
@@ -339,8 +339,7 @@ static int table_query (lua_State *L) {
 
 
 static int string_query (lua_State *L) {
-  stringtable *tb = (*luaL_check_string(L, 1) == l_c('s')) ? &G(L)->strt :
-                                                        &G(L)->udt;
+  stringtable *tb = &G(L)->strt;
   int s = luaL_opt_int(L, 2, 0) - 1;
   if (s==-1) {
     lua_pushnumber(L ,tb->nuse);
@@ -390,19 +389,22 @@ static int unref (lua_State *L) {
 }
 
 static int newuserdata (lua_State *L) {
-  if (lua_isnumber(L, 2)) {
-    int tag = luaL_check_int(L, 2);
-    int res = lua_pushuserdata(L, (void *)luaL_check_int(L, 1));
-    if (tag) lua_settag(L, tag);
-    pushbool(L, res);
-    return 2;
-  }
-  else {
-    size_t size = luaL_check_int(L, 1);
-    l_char *p = (l_char *)lua_newuserdata(L, size);
-    while (size--) *p++ = l_c('\0');
-    return 1;
-  }
+  size_t size = luaL_check_int(L, 1);
+  l_char *p = (l_char *)lua_newuserdata(L, size);
+  while (size--) *p++ = l_c('\0');
+  return 1;
+}
+
+static int newuserdatabox (lua_State *L) {
+  lua_newuserdatabox(L, (void *)luaL_check_int(L, 1));
+  return 1;
+}
+
+static int settag (lua_State *L) {
+  luaL_checkany(L, 1);
+  lua_pushvalue(L, 1);  /* push value */
+  lua_settag(L, luaL_check_int(L, 2));
+  return 1;  /* return value */
 }
 
 static int udataval (lua_State *L) {
@@ -691,6 +693,8 @@ static const struct luaL_reg tests_funcs[] = {
   {l_s("d2s"), d2s},
   {l_s("s2d"), s2d},
   {l_s("newuserdata"), newuserdata},
+  {l_s("newuserdatabox"), newuserdatabox},
+  {l_s("settag"), settag},
   {l_s("udataval"), udataval},
   {l_s("newtag"), newtag},
   {l_s("doonnewstack"), doonnewstack},
