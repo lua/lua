@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.26 1997/01/23 16:17:53 roberto Exp roberto $
+% $Id: manual.tex,v 1.27 1997/02/21 15:19:37 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -35,7 +35,7 @@ Waldemar Celes
 \tecgraf\ --- Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1997/01/23 16:17:53 $}
+\date{\small \verb$Date: 1997/02/21 15:19:37 $}
 
 \maketitle
 
@@ -1718,10 +1718,12 @@ A character class followed by \verb'*' reads until a character that
 does not belong to the class, or end of file;
 since it can match a sequence of zero characteres, it never fails.%
 \footnote{
-Notice that this behaviour is different from regular pattern matching,
+Notice that the behavior of read patterns is different from
+the regular pattern matching behavior,
 where a \verb'*' expands to the maximum length {\em such that\/}
 the rest of the pattern does not fail.
-Therefore, there is no need for backtracking the reading.
+With the read pattern behavior 
+there is no need for backtracking the reading.
 }
 
 A pattern item may contain sub-patterns enclosed in curly brackets,
