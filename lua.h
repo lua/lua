@@ -2,14 +2,14 @@
 ** LUA - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
-** $Id: lua.h,v 4.7 1997/06/12 18:27:29 roberto Exp roberto $
+** $Id: lua.h,v 4.8 1997/06/16 19:48:18 roberto Exp roberto $
 */
 
 
 #ifndef lua_h
 #define lua_h
 
-#define LUA_VERSION	"Lua 3.0 (alpha)"
+#define LUA_VERSION	"Lua 3.0"
 #define LUA_COPYRIGHT	"Copyright (C) 1994-1997 TeCGraf"
 #define LUA_AUTHORS 	"W. Celes, R. Ierusalimschy & L. H. de Figueiredo"
 
@@ -52,6 +52,8 @@ int            lua_isfunction           (lua_Object object);
 float          lua_getnumber 		(lua_Object object);
 char          *lua_getstring 		(lua_Object object);
 lua_CFunction  lua_getcfunction 	(lua_Object object);
+void	      *lua_getuserdata		(lua_Object object);
+
 
 void 	       lua_pushnil 		(void);
 void           lua_pushnumber 		(float n);
@@ -98,6 +100,13 @@ long	       lua_collectgarbage	(long limit);
 #define lua_pushuserdata(u)     lua_pushusertag(u, 0)
 
 
+
+
+/* If your program has no compatibility problems, you can change
+** this to 0
+*/
+#if 1
+
 /* =============================================================== */
 /* for compatibility with old versions. Avoid using these macros/functions */
 
@@ -105,8 +114,6 @@ lua_Object     lua_setfallback		(char *event, lua_CFunction fallback);
 
 #define lua_storeglobal		lua_setglobal
 #define lua_type		lua_tag
-
-void	*lua_getuserdata	(lua_Object object);
 
 #define lua_lockobject(o)  lua_refobject(o,1)
 #define	lua_lock() lua_ref(1)
@@ -117,11 +124,13 @@ void	*lua_getuserdata	(lua_Object object);
 #define lua_pushliteral(o)  lua_pushstring(o)
 
 #define lua_getindexed(o,n) (lua_pushobject(o), lua_pushnumber(n), lua_gettable())
-#define lua_getfield(o,f)   (lua_pushobject(o), lua_pushliteral(f), lua_gettable())
+#define lua_getfield(o,f)   (lua_pushobject(o), lua_pushstring(f), lua_gettable())
 
 #define lua_copystring(o) (strdup(lua_getstring(o)))
 
 #define lua_getsubscript  lua_gettable
 #define lua_storesubscript  lua_settable
+
+#endif
 
 #endif
