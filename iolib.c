@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.2 1993/12/30 14:52:18 roberto Exp celes $";
+char *rcs_iolib="$Id: iolib.c,v 1.3 1994/03/28 15:14:02 celes Exp celes $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -179,7 +179,7 @@ static void io_appendto (void)
 static void io_read (void)
 {
  lua_Object o = lua_getparam (1);
- if (o == NULL)			/* free format */
+ if (o == NULL || !lua_isstring(o))	/* free format */
  {
   int c;
   char s[256];
@@ -187,19 +187,31 @@ static void io_read (void)
    ;
   if (c == '\"')
   {
-   if (fscanf (in, "%[^\"]\"", s) != 1)
+   int c, n=0;
+   while((c = fgetc(in)) != '\"')
    {
-    lua_pushnil ();
-    return;
+    if (c == EOF)
+    {
+     lua_pushnil ();
+     return;
+    }
+    s[n++] = c;
    }
+   s[n] = 0;
   }
   else if (c == '\'')
   {
-   if (fscanf (in, "%[^\']\'", s) != 1)
+   int c, n=0;
+   while((c = fgetc(in)) != '\'')
    {
-    lua_pushnil ();
-    return;
+    if (c == EOF)
+    {
+     lua_pushnil ();
+     return;
+    }
+    s[n++] = c;
    }
+   s[n] = 0;
   }
   else
   {
