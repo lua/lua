@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.h,v 1.24 2001/07/19 14:34:06 lhf Exp lhf $
+** $Id: lundump.h,v 1.26 2002/08/07 00:36:03 lhf Exp $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -10,7 +10,7 @@
 #include "lobject.h"
 #include "lzio.h"
 
-typedef size_t (*Writer)(const void* p, size_t size, size_t n, void* u);
+typedef int (*Writer)(const void* p, size_t size, void* u);
 
 /* load one chunk; from lundump.c */
 Proto* luaU_undump (lua_State* L, ZIO* Z);
