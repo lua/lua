@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.122 2002/03/07 18:15:10 roberto Exp roberto $
+** $Id: lua.h,v 1.123 2002/03/18 18:18:35 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: info@lua.org
@@ -152,7 +152,7 @@ LUA_API void  lua_gettable (lua_State *L, int index);
 LUA_API void  lua_rawget (lua_State *L, int index);
 LUA_API void  lua_rawgeti (lua_State *L, int index, int n);
 LUA_API void  lua_newtable (lua_State *L);
-LUA_API void  lua_getmetatable (lua_State *L, int objindex);
+LUA_API int   lua_getmetatable (lua_State *L, int objindex);
 
 
 /*

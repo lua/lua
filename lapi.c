@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.179 2002/03/20 12:51:29 roberto Exp roberto $
+** $Id: lapi.c,v 1.180 2002/03/26 20:46:10 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -400,9 +400,10 @@ LUA_API void lua_newtable (lua_State *L) {
 }
 
 
-LUA_API void lua_getmetatable (lua_State *L, int objindex) {
+LUA_API int lua_getmetatable (lua_State *L, int objindex) {
   StkId obj;
   Table *mt;
+  int res;
   lua_lock(L);
   obj = luaA_indexAcceptable(L, objindex);
   switch (ttype(obj)) {
@@ -415,12 +416,17 @@ LUA_API void lua_getmetatable (lua_State *L, int objindex) {
     default:
       mt = hvalue(defaultmeta(L));
   }
-  if (mt == hvalue(defaultmeta(L)))
+  if (mt == hvalue(defaultmeta(L))) {
     setnilvalue(L->top);
-  else
+    res = 0;
+  }
+  else {
     sethvalue(L->top, mt);
+    res = 1;
+  }
   api_incr_top(L);
   lua_unlock(L);
+  return res;
 }
 
 

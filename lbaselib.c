@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.59 2002/02/14 21:42:22 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.60 2002/03/20 12:54:08 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -120,11 +120,18 @@ static int luaB_error (lua_State *L) {
 
 
 static int luaB_metatable (lua_State *L) {
-  luaL_check_type(L, 1, LUA_TTABLE);
-  if (lua_isnone(L, 2))
-    lua_getmetatable(L, 1);
+  luaL_check_any(L, 1);
+  if (lua_isnone(L, 2)) {
+    if (lua_getmetatable(L, 1)) {
+      lua_pushliteral(L, "__metatable");
+      lua_rawget(L, -2);
+      if (lua_isnil(L, -1))
+        lua_pop(L, 1);
+    }
+  }
   else {
     int t = lua_type(L, 2);
+    luaL_check_type(L, 1, LUA_TTABLE);
     luaL_arg_check(L, t == LUA_TNIL || t == LUA_TTABLE, 2, "nil/table expected");
     lua_settop(L, 2);
     lua_setmetatable(L, 1);
