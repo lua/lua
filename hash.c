@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.28 1996/02/12 18:32:40 roberto Exp roberto $";
+char *rcs_hash="$Id: hash.c,v 2.29 1996/02/14 18:25:04 roberto Exp roberto $";
 
 
 #include "mem.h"
@@ -29,14 +29,15 @@ static Hash *listhead = NULL;
 
 
 /* hash dimensions values */
-static Word dimensions[] = 
- {3, 5, 7, 11, 23, 47, 97, 197, 397, 797, 1597, 3203, 6421,
-  12853, 25717, 51437, 65521, 0};  /* 65521 == last prime < MAX_WORD */
+static Long dimensions[] = 
+ {3L, 5L, 7L, 11L, 23L, 47L, 97L, 197L, 397L, 797L, 1597L, 3203L, 6421L,
+  12853L, 25717L, 51437L, 102811L, 205619L, 411233L, 822433L,
+  1644817L, 3289613L, 6579211L, 13158023L, MAX_INT};
 
-Word luaI_redimension (Word nhash)
+int luaI_redimension (int nhash)
 {
- Word i;
- for (i=0; dimensions[i]!=0; i++)
+ int i;
+ for (i=0; dimensions[i]<MAX_INT; i++)
  {
   if (dimensions[i] > nhash)
    return dimensions[i];
@@ -45,7 +46,7 @@ Word luaI_redimension (Word nhash)
  return 0;  /* to avoid warnings */
 }
 
-static Word hashindex (Hash *t, Object *ref)		/* hash function */
+static int hashindex (Hash *t, Object *ref)		/* hash function */
 {
  switch (tag(ref))
  {
@@ -53,9 +54,9 @@ static Word hashindex (Hash *t, Object *ref)		/* hash function */
    lua_error ("unexpected type to index table");
    return -1;  /* UNREACHEABLE */
   case LUA_T_NUMBER:
-   return (((Word)nvalue(ref))%nhash(t));
+   return (((int)nvalue(ref))%nhash(t));
   case LUA_T_STRING:
-   return (Word)((tsvalue(ref)->hash)%nhash(t));  /* make it a valid index */
+   return (int)((tsvalue(ref)->hash)%nhash(t));  /* make it a valid index */
   case LUA_T_FUNCTION:
    return (((IntPoint)ref->value.tf)%nhash(t));
   case LUA_T_CFUNCTION:
@@ -82,9 +83,9 @@ int lua_equalObj (Object *t1, Object *t2)
   }
 }
 
-static Word present (Hash *t, Object *ref)
+static int present (Hash *t, Object *ref)
 { 
- Word h = hashindex(t, ref);
+ int h = hashindex(t, ref);
  while (tag(ref(node(t, h))) != LUA_T_NIL)
  {
   if (lua_equalObj(ref, ref(node(t, h))))
@@ -98,9 +99,9 @@ static Word present (Hash *t, Object *ref)
 /*
 ** Alloc a vector node 
 */
-static Node *hashnodecreate (Word nhash)
+static Node *hashnodecreate (int nhash)
 {
- Word i;
+ int i;
  Node *v = newvector (nhash, Node);
  for (i=0; i<nhash; i++)
    tag(ref(&v[i])) = LUA_T_NIL;
@@ -110,10 +111,10 @@ static Node *hashnodecreate (Word nhash)
 /*
 ** Create a new hash. Return the hash pointer or NULL on error.
 */
-static Hash *hashcreate (Word nhash)
+static Hash *hashcreate (int nhash)
 {
  Hash *t = new(Hash);
- nhash = luaI_redimension((Word)((float)nhash/REHASH_LIMIT));
+ nhash = luaI_redimension((int)((float)nhash/REHASH_LIMIT));
  nodevector(t) = hashnodecreate(nhash);
  nhash(t) = nhash;
  nuse(t) = 0;
@@ -138,7 +139,7 @@ void lua_hashmark (Hash *h)
 {
  if (markarray(h) == 0)
  {
-  Word i;
+  int i;
   markarray(h) = 1;
   for (i=0; i<nhash(h); i++)
   {
@@ -205,7 +206,7 @@ Long lua_hashcollector (void)
 ** executes garbage collection if the number of arrays created
 ** exceed a pre-defined range.
 */
-Hash *lua_createarray (Word nhash)
+Hash *lua_createarray (int nhash)
 {
  Hash *array;
  lua_pack();
@@ -221,8 +222,8 @@ Hash *lua_createarray (Word nhash)
 */
 static void rehash (Hash *t)
 {
- Word i;
- Word   nold = nhash(t);
+ int i;
+ int   nold = nhash(t);
  Node *vold = nodevector(t);
  nhash(t) = luaI_redimension(nhash(t));
  nodevector(t) = hashnodecreate(nhash(t));
@@ -241,7 +242,7 @@ static void rehash (Hash *t)
 */
 Object *lua_hashget (Hash *t, Object *ref)
 {
- Word h = present(t, ref);
+ int h = present(t, ref);
  if (tag(ref(node(t, h))) != LUA_T_NIL) return val(node(t, h));
  else return NULL;
 }
@@ -253,7 +254,7 @@ Object *lua_hashget (Hash *t, Object *ref)
 */
 Object *lua_hashdefine (Hash *t, Object *ref)
 {
- Word   h;
+ int   h;
  Node *n;
  h = present(t, ref);
  n = node(t, h);
@@ -279,7 +280,7 @@ Object *lua_hashdefine (Hash *t, Object *ref)
 ** in the hash.
 ** This function pushs the element value and its reference to the stack.
 */
-static void hashnext (Hash *t, Word i)
+static void hashnext (Hash *t, int i)
 {
  if (i >= nhash(t))
  {
@@ -316,7 +317,7 @@ void lua_next (void)
  }
  else
  {
-  Word h = present (t, luaI_Address(r));
+  int h = present (t, luaI_Address(r));
   hashnext(t, h+1);
  }
 }
