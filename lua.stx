@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 2.11 1994/10/21 19:00:12 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 2.12 1994/11/01 18:25:20 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,7 +37,6 @@ static int     nlocalvar=0;	     /* number of local variables */
 #define MAXFIELDS FIELDS_PER_FLUSH*2
 static Word    fields[MAXFIELDS];     /* fieldnames to be flushed */
 static int     nfields=0;
-static int     ntemp;		     /* number of temporary var into stack */
 static int     err;		     /* flag to indicate error */
 
 /* Internal functions */
@@ -112,7 +111,6 @@ static void flush_record (int n)
   code_byte(n);
   for (i=0; i<n; i++)
     code_word(fields[--nfields]);
-  ntemp -= n;
 }
 
 static void flush_list (int m, int n)
@@ -132,27 +130,15 @@ static void flush_list (int m, int n)
    err = 1;
   }
   code_byte(n);
-  ntemp-=n;
-}
-
-static void incr_ntemp (void)
-{
- if (ntemp+nlocalvar+MAXVAR+1 < STACKGAP)
-  ntemp++;
- else
- {
-  lua_error ("stack overflow");
-  err = 1;
- }
 }
 
 static void add_nlocalvar (int n)
 {
- if (ntemp+nlocalvar+MAXVAR+n < STACKGAP)
+ if (MAX_TEMPS+nlocalvar+MAXVAR+n < STACKGAP)
   nlocalvar += n;
  else
  {
-  lua_error ("too many local variables or expression too complicate");
+  lua_error ("too many local variables");
   err = 1;
  }
 }
@@ -190,7 +176,6 @@ static void code_number (float f)
    code_byte(PUSHFLOAT);
    code_float(f);
   }
-  incr_ntemp();
 }
 
 static void init_function (void)
@@ -235,8 +220,8 @@ static void init_function (void)
 %token <vInt>   DEBUG
 
 %type <vLong> PrepJump
-%type <vInt>  expr, exprlist, exprlist1, varlist1, funcvalue
-%type <vInt>  fieldlist, localdeclist
+%type <vInt>  expr, exprlist, exprlist1, varlist1, funcParams, funcvalue
+%type <vInt>  fieldlist, localdeclist, decinit
 %type <vInt>  ffieldlist1
 %type <vInt>  lfieldlist1
 %type <vLong> var, singlevar
@@ -290,8 +275,8 @@ function     : FUNCTION NAME
                END 	 
 	       { 
                 if (lua_debug) code_byte(RESET); 
-	        code_byte(RETCODE); code_byte(nlocalvar);
-	        s_tag($<vWord>3) = T_FUNCTION;
+	        codereturn();
+	        s_tag($<vWord>3) = LUA_T_FUNCTION;
 	        s_bvalue($<vWord>3) = calloc (pc, sizeof(Byte));
 		if (s_bvalue($<vWord>3) == NULL)
 		{
@@ -330,7 +315,7 @@ method         : FUNCTION NAME { $<vWord>$ = lua_findsymbol($2); } ':' NAME
 	       {
 		Byte *b;
                 if (lua_debug) code_byte(RESET); 
-	        code_byte(RETCODE); code_byte(nlocalvar);
+	        codereturn();
 	        b = calloc (pc, sizeof(Byte));
 		if (b == NULL)
 		{
@@ -362,7 +347,6 @@ statlist : /* empty */
 	 ;
 
 stat	 : {
-            ntemp = 0; 
             if (lua_debug)
             {
              code_byte(SETLINE); code_word(lua_linenumber);
@@ -414,16 +398,18 @@ stat1  : IF expr1 THEN PrepJump block PrepJump elsepart END
        {
         {
          int i;
-         if ($3 == 0 || nvarbuffer != ntemp - $1 * 2)
-	  lua_codeadjust ($1 * 2 + nvarbuffer);
+         adjust_mult_assign(nvarbuffer, $3, $1 * 2 + nvarbuffer);
 	 for (i=nvarbuffer-1; i>=0; i--)
 	  lua_codestore (i);
 	 if ($1 > 1 || ($1 == 1 && varbuffer[0] != 0))
 	  lua_codeadjust (0);
 	}
        } 
-       | functioncall			{ lua_codeadjust (0); }
-       | LOCAL localdeclist decinit   { add_nlocalvar($2); lua_codeadjust (0); }
+       | functioncall			{ code_byte(0); }
+       | LOCAL localdeclist decinit   
+	{ add_nlocalvar($2);
+	  adjust_mult_assign($2, $3, 0);
+	 }
        ;
 
 elsepart : /* empty */
@@ -448,7 +434,7 @@ elsepart : /* empty */
          }   
          ;
      
-block    : {$<vInt>$ = nlocalvar;} statlist {ntemp = 0;} ret 
+block    : {$<vInt>$ = nlocalvar;} statlist ret 
          {
 	  if (nlocalvar != $<vInt>1)
 	  {
@@ -462,8 +448,9 @@ ret	: /* empty */
         | { if (lua_debug){code_byte(SETLINE);code_word(lua_linenumber);}}
           RETURN  exprlist sc 	
           { 
+           if ($3 < 0) code_byte(MULT_RET);
            if (lua_debug) code_byte(RESET); 
-           code_byte(RETCODE); code_byte(nlocalvar);
+           codereturn();
           }
 	;
 
@@ -474,22 +461,22 @@ PrepJump : /* empty */
 	  code_word (0);
          }
 	   
-expr1	 : expr { if ($1 == 0) {lua_codeadjust (ntemp+1); incr_ntemp();}}
+expr1	 : expr { if ($1 == 0) code_byte(1); }
 	 ;
 				
 expr :  '(' expr ')'  { $$ = $2; }
-     |  expr1 EQ  expr1	{ code_byte(EQOP);   $$ = 1; ntemp--;}
-     |	expr1 '<' expr1	{ code_byte(LTOP);   $$ = 1; ntemp--;}
-     |	expr1 '>' expr1	{ code_byte(LEOP); code_byte(NOTOP); $$ = 1; ntemp--;}
-     |	expr1 NE  expr1	{ code_byte(EQOP); code_byte(NOTOP); $$ = 1; ntemp--;}
-     |	expr1 LE  expr1	{ code_byte(LEOP);   $$ = 1; ntemp--;}
-     |	expr1 GE  expr1	{ code_byte(LTOP); code_byte(NOTOP); $$ = 1; ntemp--;}
-     |	expr1 '+' expr1 { code_byte(ADDOP);  $$ = 1; ntemp--;}
-     |	expr1 '-' expr1 { code_byte(SUBOP);  $$ = 1; ntemp--;}
-     |	expr1 '*' expr1 { code_byte(MULTOP); $$ = 1; ntemp--;}
-     |	expr1 '/' expr1 { code_byte(DIVOP);  $$ = 1; ntemp--;}
-     |	expr1 '^' expr1 { code_byte(POWOP);  $$ = 1; ntemp--;}
-     |	expr1 CONC expr1 { code_byte(CONCOP);  $$ = 1; ntemp--;}
+     |  expr1 EQ  expr1	{ code_byte(EQOP);   $$ = 1; }
+     |	expr1 '<' expr1	{ code_byte(LTOP);   $$ = 1; }
+     |	expr1 '>' expr1	{ code_byte(LEOP); code_byte(NOTOP); $$ = 1; }
+     |	expr1 NE  expr1	{ code_byte(EQOP); code_byte(NOTOP); $$ = 1; }
+     |	expr1 LE  expr1	{ code_byte(LEOP);   $$ = 1; }
+     |	expr1 GE  expr1	{ code_byte(LTOP); code_byte(NOTOP); $$ = 1; }
+     |	expr1 '+' expr1 { code_byte(ADDOP);  $$ = 1; }
+     |	expr1 '-' expr1 { code_byte(SUBOP);  $$ = 1; }
+     |	expr1 '*' expr1 { code_byte(MULTOP); $$ = 1; }
+     |	expr1 '/' expr1 { code_byte(DIVOP);  $$ = 1; }
+     |	expr1 '^' expr1 { code_byte(POWOP);  $$ = 1; }
+     |	expr1 CONC expr1 { code_byte(CONCOP);  $$ = 1; }
      |	'+' expr1 %prec UNARY	{ $$ = 1; }
      |	'-' expr1 %prec UNARY	{ code_byte(MINUSOP); $$ = 1;}
      | table { $$ = 1; }
@@ -500,9 +487,8 @@ expr :  '(' expr ')'  { $$ = $2; }
       code_byte(PUSHSTRING);
       code_word(lua_findconstant($1));
       $$ = 1;
-      incr_ntemp();
      }
-     |	NIL		{code_byte(PUSHNIL); $$ = 1; incr_ntemp();}
+     |	NIL		{code_byte(PUSHNIL); $$ = 1; }
      |  functioncall
      {
       $$ = 0;
@@ -512,13 +498,13 @@ expr :  '(' expr ')'  { $$ = $2; }
       }
      }
      |	NOT expr1	{ code_byte(NOTOP);  $$ = 1;}
-     |	expr1 AND PrepJump {code_byte(POP); ntemp--;} expr1
+     |	expr1 AND PrepJump {code_byte(POP); } expr1
      { 
       basepc[$3] = ONFJMP;
       code_word_at(basepc+$3+1, pc - ($3 + sizeof(Word)+1));
       $$ = 1;
      }
-     |	expr1 OR PrepJump {code_byte(POP); ntemp--;} expr1	
+     |	expr1 OR PrepJump {code_byte(POP); } expr1	
      { 
       basepc[$3] = ONTJMP;
       code_word_at(basepc+$3+1, pc - ($3 + sizeof(Word)+1));
@@ -537,33 +523,35 @@ table :
      }
          ;
 
-functioncall : funcvalue funcParams { code_byte(CALLFUNC); ntemp = $1-1; }
+functioncall : funcvalue funcParams
+	{ code_byte(CALLFUNC); code_byte($1+$2); }
 	     ;
-funcvalue    : varexp
-             {
-              $$ = ntemp; code_byte(PUSHMARK); incr_ntemp();
-             }
+
+funcvalue    : varexp { $$ = 0; }
 	     | varexp ':' NAME 
 	     { 
 	       code_byte(PUSHSTRING);
 	       code_word(lua_findconstant($3));
-	       incr_ntemp();
-	       $$ = ntemp-1; 
-               code_byte(PUSHMARKMET); 
-	       incr_ntemp();
+               code_byte(PUSHSELF); 
+               $$ = 1;
 	     }
 	     ;
+
 funcParams :	'(' exprlist ')'
-	|	table
+	{ if ($2<0) { code_byte(1); $$ = -$2; } else $$ = $2; }
+	|	table  { $$ = 1; }
 	;
-		
-exprlist  :	/* empty */		{ $$ = 1; }
+
+exprlist  :	/* empty */		{ $$ = 0; }
 	  |	exprlist1		{ $$ = $1; }
 	  ;
 		
-exprlist1 :	expr			{ $$ = $1; }
-	  |	exprlist1 ',' {if (!$1){lua_codeadjust (ntemp+1); incr_ntemp();}} 
-                 expr {$$ = $4;}
+exprlist1 :	expr	{ if ($1 == 0) $$ = -1; else $$ = 1; }
+	  |	exprlist1 ',' { if ($1 < 0) code_byte(1); } expr 
+	{
+          int r = $1 < 0 ? -$1 : $1;
+          $$ = ($4 == 0) ? -(r+1) : r+1;
+	}
 	  ;
 
 parlist  :	/* empty */
@@ -641,7 +629,7 @@ var	  :	singlevar { $$ = $1; }
 	  |	varexp '.' NAME
 	  {
 	   code_byte(PUSHSTRING);
-	   code_word(lua_findconstant($3)); incr_ntemp();
+	   code_word(lua_findconstant($3));
 	   $$ = 0;		/* indexed variable */
 	  }
 	  ;
@@ -668,8 +656,8 @@ localdeclist  : NAME {localvar[nlocalvar]=lua_findsymbol($1); $$ = 1;}
 	    }
 	  ;
 		
-decinit	  : /* empty */
-	  | '=' exprlist1
+decinit	  : /* empty */  { $$ = 0; }
+	  | '=' exprlist1 { $$ = $2; }
 	  ;
 	  
 setdebug  : DEBUG {lua_debug = $1;}
@@ -698,7 +686,6 @@ static void lua_pushvar (long number)
  {
   code_byte(PUSHGLOBAL);
   code_word(number-1);
-  incr_ntemp();
  }
  else if (number < 0)	/* local var */
  {
@@ -709,19 +696,50 @@ static void lua_pushvar (long number)
    code_byte(PUSHLOCAL);
    code_byte(number);
   }
-  incr_ntemp();
  }
  else
  {
   code_byte(PUSHINDEXED);
-  ntemp--;
  }
 }
 
 static void lua_codeadjust (int n)
 {
- code_byte(ADJUST);
- code_byte(n + nlocalvar);
+ if (n+nlocalvar == 0)
+   code_byte(ADJUST0);
+ else
+ {
+   code_byte(ADJUST);
+   code_byte(n+nlocalvar);
+ }
+}
+
+static void codereturn (void)
+{
+  if (nlocalvar == 0)
+    code_byte(RETCODE0);
+  else
+  {
+    code_byte(RETCODE);
+    code_byte(nlocalvar);
+  }
+}
+
+static void adjust_mult_assign (int vars, int exps, int temps)
+{
+  if (exps < 0) 
+  {
+    int r = vars - (-exps-1);
+    if (r >= 0)
+      code_byte(r);
+    else
+    {
+      code_byte(0);
+      lua_codeadjust(temps);
+    }
+  }
+  else if (vars != exps)
+    lua_codeadjust(temps);
 }
 
 static void lua_codestore (int i)
@@ -775,10 +793,9 @@ int yywrap (void)
 
 
 /*
-** Parse LUA code and execute global statement.
-** Return 0 on success or 1 on error.
+** Parse LUA code and returns global statements.
 */
-int lua_parse (void)
+Byte *lua_parse (void)
 {
  Byte *init = initcode = (Byte *) calloc(CODE_BLOCK, sizeof(Byte));
  maincode = 0; 
@@ -786,18 +803,17 @@ int lua_parse (void)
  if (init == NULL)
  {
   lua_error("not enough memory");
-  return 1;
+  return NULL;
  }
  err = 0;
- if (yyparse () || (err==1)) return 1;
- initcode[maincode++] = HALT;
+ if (yyparse () || (err==1)) return NULL;
+ initcode[maincode++] = RETCODE0;
  init = initcode;
 #if LISTING
- PrintCode(init,init+maincode);
+{ static void PrintCode (Byte *code, Byte *end);
+ PrintCode(init,init+maincode); }
 #endif
- if (lua_execute (init)) return 1;
- free(init);
- return 0;
+ return init;
 }
 
 
@@ -876,7 +892,6 @@ static void PrintCode (Byte *code, Byte *end)
 			}
    			break;
    case PUSHINDEXED:    printf ("%d    PUSHINDEXED\n", (p++)-code); break;
-   case PUSHMARK:       printf ("%d    PUSHMARK\n", (p++)-code); break;
    case STORELOCAL0: case STORELOCAL1: case STORELOCAL2: case STORELOCAL3:
    case STORELOCAL4: case STORELOCAL5: case STORELOCAL6: case STORELOCAL7:
    case STORELOCAL8: case STORELOCAL9:
@@ -896,6 +911,7 @@ static void PrintCode (Byte *code, Byte *end)
     			 printf ("%d    STOREGLOBAL   %d\n", n, c.w);
 			}
    			break;
+   case PUSHSELF: 	 printf ("%d    PUSHSELF\n", (p++)-code); break;
    case STOREINDEXED0:  printf ("%d    STOREINDEXED0\n", (p++)-code); break;
    case STOREINDEXED:   printf ("%d    STOREINDEXED   %d\n", p-code, *(++p));
     			p++;
@@ -912,6 +928,7 @@ static void PrintCode (Byte *code, Byte *end)
        printf("%d      STORERECORD  %d\n", p-code, *(++p));
        p += *p*sizeof(Word) + 1;
        break;
+   case ADJUST0: printf ("%d    ADJUST0\n", (p++)-code); break;
    case ADJUST:
     			printf ("%d    ADJUST   %d\n", p-code, *(++p));
     			p++;
@@ -922,7 +939,7 @@ static void PrintCode (Byte *code, Byte *end)
       int n = p-code;
       p++;
       get_word(c,p);
-      printf ("%d    CREATEARRAY\n", n, c.w);
+      printf ("%d    CREATEARRAY %d\n", n, c.w);
       break;
     }
    case EQOP:       	printf ("%d    EQOP\n", (p++)-code); break;
@@ -990,16 +1007,19 @@ static void PrintCode (Byte *code, Byte *end)
 			}
    			break;
    case POP:       	printf ("%d    POP\n", (p++)-code); break;
-   case CALLFUNC:	printf ("%d    CALLFUNC\n", (p++)-code); break;
+   case CALLFUNC:
+	printf ("%d    CALLFUNC %d %d\n", p-code, *(p+1), *(p+2));
+	p+=3;
+	break;
+   case RETCODE0: printf ("%d    RETCODE0\n", (p++)-code); break;
    case RETCODE:
     			printf ("%d    RETCODE   %d\n", p-code, *(++p));
     			p++;
    			break;
-   case HALT:		printf ("%d    HALT\n", (p++)-code); break;
    case SETFUNCTION:
                         {
 			 CodeCode c1;
-                         CodeWord c1;
+                         CodeWord c2;
                          int n = p-code;
                          p++;
                          get_code(c1,p);

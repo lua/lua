@@ -2,13 +2,29 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lua.h,v 1.4 1994/08/24 15:29:02 celes Exp roberto $
+** $Id: lua.h,v 1.5 1994/11/01 17:54:31 roberto Exp $
 */
 
 
 #ifndef lua_h
 #define lua_h
 
+/* Private Part */
+ 
+typedef enum
+{
+ LUA_T_MARK,
+ LUA_T_NIL,
+ LUA_T_NUMBER,
+ LUA_T_STRING,
+ LUA_T_ARRAY,
+ LUA_T_FUNCTION,
+ LUA_T_CFUNCTION,
+ LUA_T_USERDATA
+} Type;
+ 
+
+/* Public Part */
 
 typedef void (*lua_CFunction) (void);
 typedef struct Object *lua_Object;
@@ -19,8 +35,7 @@ void           lua_errorfunction    	(void (*fn) (char *s));
 void           lua_error		(char *s);
 int            lua_dofile 		(char *filename);
 int            lua_dostring 		(char *string);
-int            lua_call 		(char *functionname, int nparam);
-int            lua_callfunction		(lua_Object function, int nparam);
+int            lua_callfunction		(lua_Object function);
 
 lua_Object     lua_getparam 		(int number);
 float          lua_getnumber 		(lua_Object object);
@@ -32,8 +47,6 @@ void          *lua_gettable  	        (lua_Object object);
 lua_Object     lua_getfield         	(lua_Object object, char *field);
 lua_Object     lua_getindexed         	(lua_Object object, float index);
 lua_Object     lua_getglobal 		(char *name);
-
-lua_Object     lua_pop 			(void);
 
 int 	       lua_pushnil 		(void);
 int            lua_pushnumber 		(float n);
@@ -56,5 +69,11 @@ int            lua_istable          	(lua_Object object);
 int            lua_isfunction 		(lua_Object object);
 int            lua_iscfunction 		(lua_Object object);
 int            lua_isuserdata 		(lua_Object object);
+
+
+/* for lua 1.1 */
+
+#define lua_call(f)           lua_callfunction(lua_getglobal(f))
+
 
 #endif

@@ -1,10 +1,12 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 2.3 1994/08/05 19:31:09 celes Exp celes $
+** $Id: opcode.h,v 2.4 1994/10/17 19:00:40 celes Exp roberto $
 */
 
 #ifndef opcode_h
 #define opcode_h
+
+#include "lua.h"
 
 #ifndef STACKGAP
 #define STACKGAP	128
@@ -15,6 +17,8 @@
 #endif
 
 #define FIELDS_PER_FLUSH 40
+
+#define MAX_TEMPS	20
 
 typedef unsigned char  Byte;
 
@@ -54,8 +58,7 @@ typedef enum
  PUSHLOCAL,
  PUSHGLOBAL,
  PUSHINDEXED,
- PUSHMARK,
- PUSHMARKMET,
+ PUSHSELF,
  STORELOCAL0, STORELOCAL1, STORELOCAL2, STORELOCAL3, STORELOCAL4,
  STORELOCAL5, STORELOCAL6, STORELOCAL7, STORELOCAL8, STORELOCAL9,
  STORELOCAL,
@@ -65,6 +68,7 @@ typedef enum
  STORELIST0,
  STORELIST,
  STORERECORD,
+ ADJUST0,
  ADJUST,
  CREATEARRAY,
  EQOP,
@@ -86,34 +90,25 @@ typedef enum
  IFFUPJMP,
  POP,
  CALLFUNC,
+ RETCODE0,
  RETCODE,
- HALT,
  SETFUNCTION,
  SETLINE,
  RESET
 } OpCode;
 
-typedef enum
-{
- T_MARK,
- T_NIL,
- T_NUMBER,
- T_STRING,
- T_ARRAY,
- T_FUNCTION,
- T_CFUNCTION,
- T_USERDATA
-} Type; 
+#define MULT_RET	255
+
 
 typedef void (*Cfunction) (void);
 typedef int  (*Input) (void);
 
 typedef union
 {
- Cfunction 	 f;
- real    	 n;
- char      	*s;
- Byte      	*b;
+ Cfunction     f;
+ real          n;
+ char         *s;
+ Byte         *b;
  struct Hash    *a;
  void           *u;
 } Value;
@@ -157,18 +152,12 @@ typedef struct
 
 
 /* Exported functions */
-int     lua_execute   (Byte *pc);
-void    lua_markstack (void);
 char   *lua_strdup (char *l);
 
 void    lua_setinput   (Input fn);	/* from "lex.c" module */
 char   *lua_lasttext   (void);		/* from "lex.c" module */
-int     lua_parse      (void); 		/* from "lua.stx" module */
-void    lua_type       (void);
+Byte   *lua_parse      (void); 		/* from "lua.stx" module */
 void 	lua_obj2number (void);
-void 	lua_print      (void);
-void 	lua_internaldofile (void);
-void 	lua_internaldostring (void);
 void    lua_travstack (void (*fn)(Object *));
 
 #endif
