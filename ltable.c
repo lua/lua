@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.134 2003/04/28 19:26:16 roberto Exp roberto $
+** $Id: ltable.c,v 1.135 2003/08/26 12:04:13 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -15,10 +15,7 @@
 ** A main invariant of these tables is that, if an element is not
 ** in its main position (i.e. the `original' position that its hash gives
 ** to it), then the colliding element is in its own main position.
-** In other words, there are collisions only when two elements have the
-** same main position (i.e. the same hash values for that table size).
-** Because of that, the load factor of these tables can be 100% without
-** performance penalties.
+** Hence even when the load factor reaches 100%, performance remains good.
 */
 
 #include <string.h>
@@ -423,15 +420,14 @@ static TObject *newkey (lua_State *L, Table *t, const TObject *key) {
 ** generic search function
 */
 static const TObject *luaH_getany (Table *t, const TObject *key) {
-  if (ttisnil(key)) return &luaO_nilobject;
-  else {
+  if (!ttisnil(key)) {
     Node *n = luaH_mainposition(t, key);
     do {  /* check whether `key' is somewhere in the chain */
       if (luaO_rawequalObj(gkey(n), key)) return gval(n);  /* that's it */
       else n = n->next;
     } while (n);
-    return &luaO_nilobject;
   }
+  return &luaO_nilobject;
 }
 
 
