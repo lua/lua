@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.11 1997/11/27 15:59:44 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.12 1997/11/27 18:25:14 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -217,17 +217,10 @@ static void luaI_assert (void)
 }
 
 
-static void check_globalname (char *n)
-{
-  if (n[0] == '.')
-    luaL_verror("cannot change variable `%.50s' (starts with `.')", n);
-}
-
 static void setglobal (void)
 {
   char *n = luaL_check_string(1);
   lua_Object value = luaL_nonnullarg(2);
-  check_globalname(n);
   lua_pushobject(value);
   lua_setglobal(n);
   lua_pushobject(value);  /* return given value */
@@ -237,7 +230,6 @@ static void rawsetglobal (void)
 {
   char *n = luaL_check_string(1);
   lua_Object value = luaL_nonnullarg(2);
-  check_globalname(n);
   lua_pushobject(value);
   lua_rawsetglobal(n);
   lua_pushobject(value);  /* return given value */
