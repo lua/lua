@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.4 1994/08/09 11:24:45 celes Exp celes $";
+char *rcs_hash="$Id: hash.c,v 2.5 1994/08/17 15:03:11 celes Exp $";
 
 #include <string.h>
 #include <stdlib.h>
@@ -16,7 +16,7 @@ char *rcs_hash="$Id: hash.c,v 2.4 1994/08/09 11:24:45 celes Exp celes $";
 #include "table.h"
 #include "lua.h"
 
-#define streq(s1,s2)	(*(s1) == *(s2) && strcmp(s1,s2)==0)
+#define streq(s1,s2)	(s1 == s2 || (*(s1) == *(s2) && strcmp(s1,s2)==0))
 
 #define new(s)		((s *)malloc(sizeof(s)))
 #define newvector(n,s)	((s *)calloc(n,sizeof(s)))
