@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.174 2003/02/27 11:52:30 roberto Exp roberto $
+** $Id: lua.h,v 1.175 2003/03/18 12:31:39 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -258,8 +258,6 @@ LUA_API void  lua_concat (lua_State *L, int n);
 ** compatibility macros and functions
 */
 
-
-LUA_API int lua_pushupvalues (lua_State *L);
 
 #define lua_getregistry(L)	lua_pushvalue(L, LUA_REGISTRYINDEX)
 #define lua_setglobal(L,s)	\
