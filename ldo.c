@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.138 2001/07/16 20:24:48 roberto Exp $
+** $Id: ldo.c,v 1.140 2001/09/07 17:39:10 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -192,8 +192,10 @@ LUA_API int lua_call (lua_State *L, int nargs, int nresults) {
   func = L->top - (nargs+1);  /* function to be called */
   c.func = func; c.nresults = nresults;
   status = luaD_runprotected(L, f_call, &c);
-  if (status != 0)  /* an error occurred? */
+  if (status != 0) {  /* an error occurred? */
+    luaF_close(L, func);  /* close eventual pending closures */
     L->top = func;  /* remove parameters from the stack */
+  }
   lua_unlock(L);
   return status;
 }
@@ -344,7 +346,6 @@ int luaD_runprotected (lua_State *L, void (*f)(lua_State *, void *), void *ud) {
   if (setjmp(lj.b) == 0)
     (*f)(L, ud);
   else {  /* an error occurred: restore the state */
-    luaF_close(L, lj.top);  /* close eventual pending closures */
     L->ci = lj.ci;
     L->top = lj.top;
     L->allowhooks = lj.allowhooks;
