@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.18 2005/03/09 16:28:07 roberto Exp roberto $
+** $Id: ltable.c,v 2.19 2005/03/16 16:58:41 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -557,9 +557,8 @@ int luaH_getn (Table *t) {
   unsigned int j = t->sizearray;
   if (j > 0 && ttisnil(&t->array[j - 1])) {
     /* there is a boundary in the array part: (binary) search for it */
-    unsigned int i = 1;
-    if (ttisnil(&t->array[1 - 1])) return 0;
-    while (i < j - 1) {
+    unsigned int i = 0;
+    while (j - i > 1) {
       unsigned int m = (i+j)/2;
       if (ttisnil(&t->array[m - 1])) j = m;
       else i = m;
