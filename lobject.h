@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.92 2001/02/01 17:40:48 roberto Exp roberto $
+** $Id: lobject.h,v 1.93 2001/02/02 15:13:05 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -36,7 +36,10 @@
 
 
 typedef union {
-  void *v;
+  struct TString *ts;
+  struct Closure *cl;
+  struct Hash *h;
+  struct CallInfo *info;
   lua_Number n;		/* LUA_TNUMBER */
 } Value;
 
@@ -50,10 +53,10 @@ typedef struct lua_TObject {
 /* Macros to access values */
 #define ttype(o)        ((o)->tt)
 #define nvalue(o)       ((o)->value.n)
-#define tsvalue(o)      ((struct TString *)(o)->value.v)
-#define clvalue(o)      ((struct Closure *)(o)->value.v)
-#define hvalue(o)       ((struct Hash *)(o)->value.v)
-#define infovalue(o)	((struct CallInfo *)(o)->value.v)
+#define tsvalue(o)      ((o)->value.ts)
+#define clvalue(o)      ((o)->value.cl)
+#define hvalue(o)       ((o)->value.h)
+#define infovalue(o)	((o)->value.info)
 #define svalue(o)       (tsvalue(o)->str)
 
 
@@ -62,24 +65,19 @@ typedef struct lua_TObject {
   { TObject *_o=(obj); _o->tt=LUA_TNUMBER; _o->value.n=(x); }
 
 #define setsvalue(obj,x) \
-  { TObject *_o=(obj); struct TString *_v=(x); \
-    _o->tt=LUA_TSTRING; _o->value.v=_v; }
+  { TObject *_o=(obj); _o->tt=LUA_TSTRING; _o->value.ts=(x); }
 
 #define setuvalue(obj,x) \
-  { TObject *_o=(obj); struct TString *_v=(x); \
-    _o->tt=LUA_TUSERDATA; _o->value.v=_v; }
+  { TObject *_o=(obj); _o->tt=LUA_TUSERDATA; _o->value.ts=(x); }
 
 #define setclvalue(obj,x) \
-  { TObject *_o=(obj); struct Closure *_v=(x); \
-    _o->tt=LUA_TFUNCTION; _o->value.v=_v; }
+  { TObject *_o=(obj); _o->tt=LUA_TFUNCTION; _o->value.cl=(x); }
 
 #define sethvalue(obj,x) \
-  { TObject *_o=(obj); struct Hash *_v=(x); \
-    _o->tt=LUA_TTABLE; _o->value.v=_v; }
+  { TObject *_o=(obj); _o->tt=LUA_TTABLE; _o->value.h=(x); }
 
 #define setivalue(obj,x) \
-  { TObject *_o=(obj); struct CallInfo *_v=(x); \
-    _o->tt=LUA_TMARK; _o->value.v=_v; }
+  { TObject *_o=(obj); _o->tt=LUA_TMARK; _o->value.info=(x); }
 
 #define setnilvalue(obj) ((obj)->tt=LUA_TNIL)
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.85 2001/02/02 15:13:05 roberto Exp roberto $
+** $Id: lgc.c,v 1.86 2001/02/02 16:23:20 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -147,7 +147,7 @@ static void traversetable (GCState *st, Hash *h) {
     Node *n = node(h, i);
     if (ttype(val(n)) == LUA_TNIL) {
       if (ttype_key(n) != LUA_TNIL)
-        n->key_value.v = NULL;  /* dead key; remove it */
+        n->key_value.ts = NULL;  /* dead key; remove it */
     }
     else {
       lua_assert(ttype_key(n) != LUA_TNIL);
