@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.197 2004/12/13 12:15:11 roberto Exp roberto $
+** $Id: lua.h,v 1.198 2005/01/07 19:53:32 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -110,112 +110,112 @@ typedef LUA_INTEGER lua_Integer;
 /*
 ** state manipulation
 */
-LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud);
-LUA_API void       lua_close (lua_State *L);
-LUA_API lua_State *lua_newthread (lua_State *L);
+LUA_API lua_State *(lua_newstate) (lua_Alloc f, void *ud);
+LUA_API void       (lua_close) (lua_State *L);
+LUA_API lua_State *(lua_newthread) (lua_State *L);
 
-LUA_API lua_CFunction lua_atpanic (lua_State *L, lua_CFunction panicf);
+LUA_API lua_CFunction (lua_atpanic) (lua_State *L, lua_CFunction panicf);
 
 
 /*
 ** basic stack manipulation
 */
-LUA_API int   lua_gettop (lua_State *L);
-LUA_API void  lua_settop (lua_State *L, int idx);
-LUA_API void  lua_pushvalue (lua_State *L, int idx);
-LUA_API void  lua_remove (lua_State *L, int idx);
-LUA_API void  lua_insert (lua_State *L, int idx);
-LUA_API void  lua_replace (lua_State *L, int idx);
-LUA_API int   lua_checkstack (lua_State *L, int sz);
+LUA_API int   (lua_gettop) (lua_State *L);
+LUA_API void  (lua_settop) (lua_State *L, int idx);
+LUA_API void  (lua_pushvalue) (lua_State *L, int idx);
+LUA_API void  (lua_remove) (lua_State *L, int idx);
+LUA_API void  (lua_insert) (lua_State *L, int idx);
+LUA_API void  (lua_replace) (lua_State *L, int idx);
+LUA_API int   (lua_checkstack) (lua_State *L, int sz);
 
-LUA_API void  lua_xmove (lua_State *from, lua_State *to, int n);
+LUA_API void  (lua_xmove) (lua_State *from, lua_State *to, int n);
 
 
 /*
 ** access functions (stack -> C)
 */
 
-LUA_API int             lua_isnumber (lua_State *L, int idx);
-LUA_API int             lua_isstring (lua_State *L, int idx);
-LUA_API int             lua_iscfunction (lua_State *L, int idx);
-LUA_API int             lua_isuserdata (lua_State *L, int idx);
-LUA_API int             lua_type (lua_State *L, int idx);
-LUA_API const char     *lua_typename (lua_State *L, int tp);
+LUA_API int             (lua_isnumber) (lua_State *L, int idx);
+LUA_API int             (lua_isstring) (lua_State *L, int idx);
+LUA_API int             (lua_iscfunction) (lua_State *L, int idx);
+LUA_API int             (lua_isuserdata) (lua_State *L, int idx);
+LUA_API int             (lua_type) (lua_State *L, int idx);
+LUA_API const char     *(lua_typename) (lua_State *L, int tp);
 
-LUA_API int            lua_equal (lua_State *L, int idx1, int idx2);
-LUA_API int            lua_rawequal (lua_State *L, int idx1, int idx2);
-LUA_API int            lua_lessthan (lua_State *L, int idx1, int idx2);
+LUA_API int            (lua_equal) (lua_State *L, int idx1, int idx2);
+LUA_API int            (lua_rawequal) (lua_State *L, int idx1, int idx2);
+LUA_API int            (lua_lessthan) (lua_State *L, int idx1, int idx2);
 
-LUA_API lua_Number      lua_tonumber (lua_State *L, int idx);
-LUA_API lua_Integer     lua_tointeger (lua_State *L, int idx);
-LUA_API int             lua_toboolean (lua_State *L, int idx);
-LUA_API const char     *lua_tostring (lua_State *L, int idx);
-LUA_API size_t          lua_objsize (lua_State *L, int idx);
-LUA_API lua_CFunction   lua_tocfunction (lua_State *L, int idx);
-LUA_API void	       *lua_touserdata (lua_State *L, int idx);
-LUA_API lua_State      *lua_tothread (lua_State *L, int idx);
-LUA_API const void     *lua_topointer (lua_State *L, int idx);
+LUA_API lua_Number      (lua_tonumber) (lua_State *L, int idx);
+LUA_API lua_Integer     (lua_tointeger) (lua_State *L, int idx);
+LUA_API int             (lua_toboolean) (lua_State *L, int idx);
+LUA_API const char     *(lua_tostring) (lua_State *L, int idx);
+LUA_API size_t          (lua_objsize) (lua_State *L, int idx);
+LUA_API lua_CFunction   (lua_tocfunction) (lua_State *L, int idx);
+LUA_API void	       *(lua_touserdata) (lua_State *L, int idx);
+LUA_API lua_State      *(lua_tothread) (lua_State *L, int idx);
+LUA_API const void     *(lua_topointer) (lua_State *L, int idx);
 
 
 /*
 ** push functions (C -> stack)
 */
-LUA_API void  lua_pushnil (lua_State *L);
-LUA_API void  lua_pushnumber (lua_State *L, lua_Number n);
-LUA_API void  lua_pushinteger (lua_State *L, lua_Integer n);
-LUA_API void  lua_pushlstring (lua_State *L, const char *s, size_t l);
-LUA_API void  lua_pushstring (lua_State *L, const char *s);
-LUA_API const char *lua_pushvfstring (lua_State *L, const char *fmt,
-                                                    va_list argp);
-LUA_API const char *lua_pushfstring (lua_State *L, const char *fmt, ...);
-LUA_API void  lua_pushcclosure (lua_State *L, lua_CFunction fn, int n);
-LUA_API void  lua_pushboolean (lua_State *L, int b);
-LUA_API void  lua_pushlightuserdata (lua_State *L, void *p);
-LUA_API int   lua_pushthread (lua_State *L);
+LUA_API void  (lua_pushnil) (lua_State *L);
+LUA_API void  (lua_pushnumber) (lua_State *L, lua_Number n);
+LUA_API void  (lua_pushinteger) (lua_State *L, lua_Integer n);
+LUA_API void  (lua_pushlstring) (lua_State *L, const char *s, size_t l);
+LUA_API void  (lua_pushstring) (lua_State *L, const char *s);
+LUA_API const char *(lua_pushvfstring) (lua_State *L, const char *fmt,
+                                                      va_list argp);
+LUA_API const char *(lua_pushfstring) (lua_State *L, const char *fmt, ...);
+LUA_API void  (lua_pushcclosure) (lua_State *L, lua_CFunction fn, int n);
+LUA_API void  (lua_pushboolean) (lua_State *L, int b);
+LUA_API void  (lua_pushlightuserdata) (lua_State *L, void *p);
+LUA_API int   (lua_pushthread) (lua_State *L);
 
 
 /*
 ** get functions (Lua -> stack)
 */
-LUA_API void  lua_gettable (lua_State *L, int idx);
-LUA_API void  lua_getfield (lua_State *L, int idx, const char *k);
-LUA_API void  lua_rawget (lua_State *L, int idx);
-LUA_API void  lua_rawgeti (lua_State *L, int idx, int n);
-LUA_API void  lua_createtable (lua_State *L, int narr, int nrec);
-LUA_API void *lua_newuserdata (lua_State *L, size_t sz);
-LUA_API int   lua_getmetatable (lua_State *L, int objindex);
-LUA_API void  lua_getfenv (lua_State *L, int idx);
+LUA_API void  (lua_gettable) (lua_State *L, int idx);
+LUA_API void  (lua_getfield) (lua_State *L, int idx, const char *k);
+LUA_API void  (lua_rawget) (lua_State *L, int idx);
+LUA_API void  (lua_rawgeti) (lua_State *L, int idx, int n);
+LUA_API void  (lua_createtable) (lua_State *L, int narr, int nrec);
+LUA_API void *(lua_newuserdata) (lua_State *L, size_t sz);
+LUA_API int   (lua_getmetatable) (lua_State *L, int objindex);
+LUA_API void  (lua_getfenv) (lua_State *L, int idx);
 
 
 /*
 ** set functions (stack -> Lua)
 */
-LUA_API void  lua_settable (lua_State *L, int idx);
-LUA_API void  lua_setfield (lua_State *L, int idx, const char *k);
-LUA_API void  lua_rawset (lua_State *L, int idx);
-LUA_API void  lua_rawseti (lua_State *L, int idx, int n);
-LUA_API int   lua_setmetatable (lua_State *L, int objindex);
-LUA_API int   lua_setfenv (lua_State *L, int idx);
+LUA_API void  (lua_settable) (lua_State *L, int idx);
+LUA_API void  (lua_setfield) (lua_State *L, int idx, const char *k);
+LUA_API void  (lua_rawset) (lua_State *L, int idx);
+LUA_API void  (lua_rawseti) (lua_State *L, int idx, int n);
+LUA_API int   (lua_setmetatable) (lua_State *L, int objindex);
+LUA_API int   (lua_setfenv) (lua_State *L, int idx);
 
 
 /*
 ** `load' and `call' functions (load and run Lua code)
 */
-LUA_API void  lua_call (lua_State *L, int nargs, int nresults);
-LUA_API int   lua_pcall (lua_State *L, int nargs, int nresults, int errfunc);
-LUA_API int lua_cpcall (lua_State *L, lua_CFunction func, void *ud);
-LUA_API int   lua_load (lua_State *L, lua_Chunkreader reader, void *dt,
-                        const char *chunkname);
+LUA_API void  (lua_call) (lua_State *L, int nargs, int nresults);
+LUA_API int   (lua_pcall) (lua_State *L, int nargs, int nresults, int errfunc);
+LUA_API int (lua_cpcall) (lua_State *L, lua_CFunction func, void *ud);
+LUA_API int   (lua_load) (lua_State *L, lua_Chunkreader reader, void *dt,
+                                        const char *chunkname);
 
-LUA_API int lua_dump (lua_State *L, lua_Chunkwriter writer, void *data);
+LUA_API int (lua_dump) (lua_State *L, lua_Chunkwriter writer, void *data);
 
 
 /*
 ** coroutine functions
 */
-LUA_API int  lua_yield (lua_State *L, int nresults);
-LUA_API int  lua_resume (lua_State *L, int narg);
-LUA_API int  lua_status (lua_State *L);
+LUA_API int  (lua_yield) (lua_State *L, int nresults);
+LUA_API int  (lua_resume) (lua_State *L, int narg);
+LUA_API int  (lua_status) (lua_State *L);
 
 /*
 ** garbage-collection function and options
@@ -229,20 +229,20 @@ LUA_API int  lua_status (lua_State *L);
 #define LUA_GCSETPACE		5
 #define LUA_GCSETINCMODE	6
 
-LUA_API int lua_gc (lua_State *L, int what, int data);
+LUA_API int (lua_gc) (lua_State *L, int what, int data);
 
 
 /*
 ** miscellaneous functions
 */
 
-LUA_API int   lua_error (lua_State *L);
+LUA_API int   (lua_error) (lua_State *L);
 
-LUA_API int   lua_next (lua_State *L, int idx);
+LUA_API int   (lua_next) (lua_State *L, int idx);
 
-LUA_API void  lua_concat (lua_State *L, int n);
+LUA_API void  (lua_concat) (lua_State *L, int n);
 
-LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud);
+LUA_API lua_Alloc (lua_getallocf) (lua_State *L, void **ud);
 
 
 
