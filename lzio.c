@@ -1,5 +1,5 @@
 /*
-** $Id: lzio.c,v 1.16 2002/04/29 12:37:41 roberto Exp roberto $
+** $Id: lzio.c,v 1.17 2002/06/03 17:46:34 roberto Exp roberto $
 ** a generic input stream interface
 ** See Copyright Notice in lua.h
 */
@@ -21,6 +21,17 @@ int luaZ_fill (ZIO *z) {
   z->n = size - 1;
   z->p = buff;
   return *(z->p++);
+}
+
+
+int luaZ_lookahead (ZIO *z) {
+  if (z->n == 0) {
+    int c = luaZ_fill(z);
+    if (c == EOZ) return c;
+    z->n++;
+    z->p--;
+  }
+  return *z->p;
 }
 
 

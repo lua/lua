@@ -1,5 +1,5 @@
 /*
-** $Id: lzio.h,v 1.9 2002/04/29 12:37:41 roberto Exp roberto $
+** $Id: lzio.h,v 1.10 2002/06/03 17:46:34 roberto Exp roberto $
 ** Buffered streams
 ** See Copyright Notice in lua.h
 */
@@ -26,6 +26,7 @@ typedef struct zio ZIO;
 
 void luaZ_init (ZIO *z, lua_Getblock getblock, void *ud, const char *name);
 size_t luaZ_zread (ZIO* z, void* b, size_t n);	/* read next n bytes */
+int luaZ_lookahead (ZIO *z);
 
 
 /* --------- Private Part ------------------ */

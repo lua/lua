@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.h,v 1.23 2001/07/12 19:34:03 roberto Exp roberto $
+** $Id: lundump.h,v 1.24 2002/06/03 17:46:34 roberto Exp roberto $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -23,5 +23,8 @@ int luaU_endianness (void);
 /* a multiple of PI for testing native format */
 /* multiplying by 1E8 gives non-trivial integer values */
 #define	TEST_NUMBER	3.14159265358979323846E8
+
+/* binary files start with <esc>Lua */
+#define	LUA_SIGNATURE	"\033Lua"
 
 #endif

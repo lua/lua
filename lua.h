@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.134 2002/05/23 20:29:05 roberto Exp roberto $
+** $Id: lua.h,v 1.135 2002/06/03 17:46:34 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: info@lua.org
@@ -182,7 +182,7 @@ LUA_API void  lua_setmetatable (lua_State *L, int objindex);
 LUA_API void  lua_rawcall (lua_State *L, int nargs, int nresults);
 LUA_API int   lua_pcall (lua_State *L, int nargs, int nresults, int errf);
 LUA_API int   lua_load (lua_State *L, lua_Getblock getblock, void *ud,
-                        int binary, const char *chunkname);
+                        const char *chunkname);
 
 
 /*
@@ -290,9 +290,6 @@ LUA_API int lua_pushupvalues (lua_State *L);
 ** useful definitions for Lua kernel and libraries
 ** =======================================================================
 */
-
-/* binary files start with <esc>Lua */
-#define	LUA_SIGNATURE	"\033Lua"
 
 /* formats for Lua numbers */
 #ifndef LUA_NUMBER_SCAN

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.193 2002/05/27 20:35:40 roberto Exp roberto $
+** $Id: lapi.c,v 1.194 2002/06/03 17:46:34 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -564,13 +564,15 @@ LUA_API int lua_pcall (lua_State *L, int nargs, int nresults, int errf) {
 
 
 LUA_API int lua_load (lua_State *L, lua_Getblock getblock, void *ud,
-                      int binary, const char *chunkname) {
+                      const char *chunkname) {
   ZIO z;
   int status;
+  int c;
   lua_lock(L);
   if (!chunkname) chunkname = "?";
   luaZ_init(&z, getblock, ud, chunkname);
-  status = luaD_protectedparser(L, &z, binary);
+  c = luaZ_lookahead(&z);
+  status = luaD_protectedparser(L, &z, (c == LUA_SIGNATURE[0]));
   lua_unlock(L);
   return status;
 }
