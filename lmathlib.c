@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.59 2003/11/05 11:59:14 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.60 2004/04/30 20:13:38 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -23,56 +23,43 @@
 
 
 
-/*
-** If you want Lua to operate in degrees (instead of radians),
-** define USE_DEGREES
-*/
-#ifdef USE_DEGREES
-#define FROMRAD(a)	((a)/RADIANS_PER_DEGREE)
-#define TORAD(a)	((a)*RADIANS_PER_DEGREE)
-#else
-#define FROMRAD(a)	(a)
-#define TORAD(a)	(a)
-#endif
-
-
 static int math_abs (lua_State *L) {
   lua_pushnumber(L, fabs(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_sin (lua_State *L) {
-  lua_pushnumber(L, sin(TORAD(luaL_checknumber(L, 1))));
+  lua_pushnumber(L, sin(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_cos (lua_State *L) {
-  lua_pushnumber(L, cos(TORAD(luaL_checknumber(L, 1))));
+  lua_pushnumber(L, cos(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_tan (lua_State *L) {
-  lua_pushnumber(L, tan(TORAD(luaL_checknumber(L, 1))));
+  lua_pushnumber(L, tan(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_asin (lua_State *L) {
-  lua_pushnumber(L, FROMRAD(asin(luaL_checknumber(L, 1))));
+  lua_pushnumber(L, asin(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_acos (lua_State *L) {
-  lua_pushnumber(L, FROMRAD(acos(luaL_checknumber(L, 1))));
+  lua_pushnumber(L, acos(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_atan (lua_State *L) {
-  lua_pushnumber(L, FROMRAD(atan(luaL_checknumber(L, 1))));
+  lua_pushnumber(L, atan(luaL_checknumber(L, 1)));
   return 1;
 }
 
 static int math_atan2 (lua_State *L) {
-  lua_pushnumber(L, FROMRAD(atan2(luaL_checknumber(L, 1), luaL_checknumber(L, 2))));
+  lua_pushnumber(L, atan2(luaL_checknumber(L, 1), luaL_checknumber(L, 2)));
   return 1;
 }
 
