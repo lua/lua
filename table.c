@@ -3,9 +3,10 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.64 1997/03/31 14:02:58 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.65 1997/03/31 14:17:09 roberto Exp roberto $";
 
 #include "luamem.h"
+#include "auxlib.h"
 #include "opcode.h"
 #include "tree.h"
 #include "hash.h"
@@ -203,27 +204,17 @@ void lua_pack (void)
 */
 void luaI_nextvar (void)
 {
- Word next;
- lua_Object o = lua_getparam(1);
- if (o == LUA_NOOBJECT)
-   lua_error("too few arguments to function `nextvar'");
- if (lua_getparam(2) != LUA_NOOBJECT)
-   lua_error("too many arguments to function `nextvar'");
- if (lua_isnil(o))
-   next = 0;
- else if (!lua_isstring(o))
- {
-   lua_error("incorrect argument to function `nextvar'"); 
-   return;  /* to avoid warnings */
- }
- else
-   next = luaI_findsymbolbyname(lua_getstring(o)) + 1;
- while (next < lua_ntable && s_ttype(next) == LUA_T_NIL) next++;
- if (next < lua_ntable)
- {
-  lua_pushstring(lua_table[next].varname->str);
-  luaI_pushobject(&s_object(next));
- }
+  Word next;
+  if (lua_isnil(lua_getparam(1)))
+    next = 0;
+  else 
+    next = luaI_findsymbolbyname(luaL_check_string(1, "nextvar")) + 1;
+  while (next < lua_ntable && s_ttype(next) == LUA_T_NIL)
+    next++;
+  if (next < lua_ntable) {
+    lua_pushstring(lua_table[next].varname->str);
+    luaI_pushobject(&s_object(next));
+  }
 }
 
 

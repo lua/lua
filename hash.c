@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.38 1997/03/31 14:02:58 roberto Exp roberto $";
+char *rcs_hash="$Id: hash.c,v 2.39 1997/03/31 14:17:09 roberto Exp roberto $";
 
 
 #include "luamem.h"
@@ -11,6 +11,7 @@ char *rcs_hash="$Id: hash.c,v 2.38 1997/03/31 14:02:58 roberto Exp roberto $";
 #include "hash.h"
 #include "table.h"
 #include "lua.h"
+#include "auxlib.h"
 
 
 #define nhash(t)	((t)->nhash)
@@ -82,7 +83,7 @@ int lua_equalObj (TObject *t1, TObject *t2)
     case LUA_T_FUNCTION: return t1->value.tf == t2->value.tf;
     case LUA_T_CFUNCTION: return fvalue(t1) == fvalue(t2);
     default:
-     lua_error("internal error at `lua_equalObj'");
+     lua_error("internal error in `lua_equalObj'");
      return 0; /* UNREACHEABLE */
   }
 }
@@ -301,12 +302,8 @@ void lua_next (void)
  Hash   *t;
  lua_Object o = lua_getparam(1);
  lua_Object r = lua_getparam(2);
- if (o == LUA_NOOBJECT || r == LUA_NOOBJECT)
-   lua_error ("too few arguments to function `next'");
- if (lua_getparam(3) != LUA_NOOBJECT)
-   lua_error ("too many arguments to function `next'");
- if (!lua_istable(o))
-   lua_error ("first argument of function `next' is not a table");
+ luaL_arg_check(lua_istable(o), "next", 1, "table expected");
+ luaL_arg_check(r != LUA_NOOBJECT, "next", 2, "value expected");
  t = avalue(luaI_Address(o));
  if (lua_isnil(r))
  {
