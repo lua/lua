@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.10 1998/03/06 18:47:42 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.11 1998/03/09 18:28:08 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -101,6 +101,14 @@ static void str_ascii (void)
   lua_pushnumber((unsigned char)s[pos-1]);
 }
 
+static void str_int2str (void)
+{
+  int i = 0;
+  luaL_resetbuffer();
+  while (lua_getparam(++i) != LUA_NOOBJECT)
+    luaL_addchar((int)luaL_check_number(i));
+  closeandpush();
+}
 
 
 /*
@@ -113,6 +121,7 @@ static void str_ascii (void)
 
 struct Capture {
   int level;  /* total number of captures (finished or unfinished) */
+  char *src_end;  /* end ('\0') of source string */
   struct {
     char *init;
     int len;  /* -1 signals unfinished capture */
@@ -160,15 +169,16 @@ static char *bracket_end (char *p)
 static int matchclass (int c, int cl)
 {
   int res;
-  switch (tolower((unsigned char)cl)) {
-    case 'w' : res = isalnum((unsigned char)c); break;
-    case 'd' : res = isdigit((unsigned char)c); break;
-    case 's' : res = isspace((unsigned char)c); break;
-    case 'a' : res = isalpha((unsigned char)c); break;
-    case 'p' : res = ispunct((unsigned char)c); break;
-    case 'l' : res = islower((unsigned char)c); break;
-    case 'u' : res = isupper((unsigned char)c); break;
-    case 'c' : res = iscntrl((unsigned char)c); break;
+  switch (tolower(cl)) {
+    case 'a' : res = isalpha(c); break;
+    case 'c' : res = iscntrl(c); break;
+    case 'd' : res = isdigit(c); break;
+    case 'l' : res = islower(c); break;
+    case 'p' : res = ispunct(c); break;
+    case 's' : res = isspace(c); break;
+    case 'u' : res = isupper(c); break;
+    case 'w' : res = isalnum(c); break;
+    case 'z' : res = (c == '\0'); break;
     default: return (cl == c);
   }
   return (islower((unsigned char)cl) ? res : !res);
@@ -178,17 +188,17 @@ static int matchclass (int c, int cl)
 int luaI_singlematch (int c, char *p, char **ep)
 {
   switch (*p) {
-    case '.':
+    case '.':  /* matches any char */
       *ep = p+1;
       return 1;
-    case '\0':
+    case '\0':  /* end of pattern; matches nothing */
       *ep = p;
       return 0;
     case ESC:
       if (*(++p) == '\0')
         luaL_verror("incorrect pattern (ends with `%c')", ESC);
       *ep = p+1;
-      return matchclass(c, *p);
+      return matchclass(c, (unsigned char)*p);
     case '[': {
       char *end = bracket_end(p+1);
       int sig = *(p+1) == '^' ? (p++, 0) : 1;
@@ -196,29 +206,31 @@ int luaI_singlematch (int c, char *p, char **ep)
       *ep = end+1;
       while (++p < end) {
         if (*p == ESC) {
-          if (((p+1) < end) && matchclass(c, *++p)) return sig;
+          if (((p+1) < end) && matchclass(c, (unsigned char)*++p))
+            return sig;
         }
         else if ((*(p+1) == '-') && (p+2 < end)) {
           p+=2;
-          if (*(p-2) <= c && c <= *p) return sig;
+          if ((unsigned char)*(p-2) <= c && c <= (unsigned char)*p)
+            return sig;
         }
-        else if (*p == c) return sig;
+        else if ((unsigned char)*p == c) return sig;
       }
       return !sig;
     }
     default:
       *ep = p+1;
-      return (*p == c);
+      return ((unsigned char)*p == c);
   }
 }
 
 
-static char *matchbalance (char *s, int b, int e)
+static char *matchbalance (char *s, int b, int e, struct Capture *cap)
 {
   if (*s != b) return NULL;
   else {
     int cont = 1;
-    while (*(++s)) {
+    while (++s < cap->src_end) {
       if (*s == e) {
         if (--cont == 0) return s+1;
       }
@@ -235,9 +247,10 @@ static char *matchitem (char *s, char *p, struct Capture *cap, char **ep)
     p++;
     if (isdigit((unsigned char)*p)) {  /* capture */
       int l = check_cap(*p, cap);
+      int len = cap->capture[l].len;
       *ep = p+1;
-      if (strncmp(cap->capture[l].init, s, cap->capture[l].len) == 0)
-        return s+cap->capture[l].len;
+      if (cap->src_end-s >= len && memcmp(cap->capture[l].init, s, len) == 0)
+        return s+len;
       else return NULL;
     }
     else if (*p == 'b') {  /* balanced string */
@@ -245,12 +258,13 @@ static char *matchitem (char *s, char *p, struct Capture *cap, char **ep)
       if (*p == 0 || *(p+1) == 0)
         lua_error("unbalanced pattern");
       *ep = p+2;
-      return matchbalance(s, *p, *(p+1));
+      return matchbalance(s, *p, *(p+1), cap);
     }
     else p--;  /* and go through */
   }
   /* "luaI_singlematch" sets "ep" (so must be called even when *s == 0) */
-  return (luaI_singlematch(*s, p, ep) && *s) ? s+1 : NULL;
+  return (luaI_singlematch((unsigned char)*s, p, ep) && s<cap->src_end) ?
+                    s+1 : NULL;
 }
 
 
@@ -277,7 +291,7 @@ static char *match (char *s, char *p, struct Capture *cap)
       return res;
     }
     case '\0': case '$':  /* (possibly) end of pattern */
-      if (*p == 0 || (*(p+1) == 0 && *s == 0))
+      if (*p == 0 || (*(p+1) == 0 && s == cap->src_end))
         return s;
       /* else go through */
     default: {  /* it is a pattern item */
@@ -322,6 +336,7 @@ static void str_find (void)
   char *s = luaL_check_lstr(1, &l);
   char *p = luaL_check_string(2);
   long init = posrelat(luaL_opt_number(3, 1), l) - 1;
+  struct Capture cap;
   luaL_arg_check(0 <= init && init <= l, 3, "out of range");
   if (lua_getparam(4) != LUA_NOOBJECT ||
       strpbrk(p, SPECIALS) == NULL) {  /* no special caracters? */
@@ -334,8 +349,8 @@ static void str_find (void)
   else {
     int anchor = (*p == '^') ? (p++, 1) : 0;
     char *s1=s+init;
+    cap.src_end = s+l;
     do {
-      struct Capture cap;
       char *res;
       cap.level = 0;
       if ((res=match(s1, p, &cap)) != NULL) {
@@ -344,7 +359,7 @@ static void str_find (void)
         push_captures(&cap);
         return;
       }
-    } while (*s1++ && !anchor);
+    } while (s1++<cap.src_end && !anchor);
   }
 }
 
@@ -353,16 +368,23 @@ static void add_s (lua_Object newp, struct Capture *cap)
 {
   if (lua_isstring(newp)) {
     char *news = lua_getstring(newp);
-    while (*news) {
-      if (*news != ESC || !isdigit((unsigned char)*++news))
-        luaL_addchar(*news++);
+    int l = lua_strlen(newp);
+    int i;
+    for (i=0; i<l; i++) {
+      if (news[i] != ESC)
+        luaL_addchar(news[i]);
       else {
-        int l = check_cap(*news++, cap);
-        addnchar(cap->capture[l].init, cap->capture[l].len);
+        i++;  /* skip ESC */
+        if (!isdigit((unsigned char)news[i]))
+          luaL_addchar(news[i]);
+        else {
+          int level = check_cap(news[i], cap);
+          addnchar(cap->capture[level].init, cap->capture[level].len);
+        }
       }
     }
   }
-  else if (lua_isfunction(newp)) {
+  else {  /* is a function */
     lua_Object res;
     int status;
     int oldbuff;
@@ -380,25 +402,26 @@ static void add_s (lua_Object newp, struct Capture *cap)
     res = lua_getresult(1);
     if (lua_isstring(res))
       addnchar(lua_getstring(res), lua_strlen(res));
-    else
-      addnchar(NULL, 0);
     lua_endblock();
   }
-  else luaL_arg_check(0, 3, "string or function expected");
 }
 
 
 static void str_gsub (void)
 {
-  char *src = luaL_check_string(1);
+  long srcl;
+  char *src = luaL_check_lstr(1, &srcl);
   char *p = luaL_check_string(2);
   lua_Object newp = lua_getparam(3);
-  int max_s = (int)luaL_opt_number(4, strlen(src)+1);
+  int max_s = (int)luaL_opt_number(4, srcl+1);
   int anchor = (*p == '^') ? (p++, 1) : 0;
   int n = 0;
+  struct Capture cap;
+  luaL_arg_check(lua_isstring(newp) || lua_isfunction(newp), 3,
+                 "string or function expected");
   luaL_resetbuffer();
+  cap.src_end = src+srcl;
   while (n < max_s) {
-    struct Capture cap;
     char *e;
     cap.level = 0;
     e = match(src, p, &cap);
@@ -408,12 +431,12 @@ static void str_gsub (void)
     }
     if (e && e>src) /* non empty match? */
       src = e;  /* skip it */
-    else if (*src)
+    else if (src < cap.src_end)
       luaL_addchar(*src++);
     else break;
     if (anchor) break;
   }
-  addnchar(src, strlen(src));
+  addnchar(src, cap.src_end-src);
   closeandpush();
   lua_pushnumber(n);  /* number of substitutions */
 }
@@ -436,6 +459,8 @@ static void str_format (void)
 {
   int arg = 1;
   char *strfrmt = luaL_check_string(arg);
+  struct Capture cap;
+  cap.src_end = strfrmt+strlen(strfrmt)+1;
   luaL_resetbuffer();
   while (*strfrmt) {
     if (*strfrmt != '%')
@@ -444,7 +469,6 @@ static void str_format (void)
       luaL_addchar(*strfrmt++);  /* %% */
     else { /* format item */
       char form[MAX_FORMAT];      /* store the format ('%...') */
-      struct Capture cap;
       char *buff;
       char *initf = strfrmt;
       form[0] = '%';
@@ -492,6 +516,7 @@ static struct luaL_reg strlib[] = {
 {"strsub", str_sub},
 {"strlower", str_lower},
 {"strupper", str_upper},
+{"int2str", str_int2str},
 {"strrep", str_rep},
 {"ascii", str_ascii},
 {"format", str_format},

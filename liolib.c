@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.15 1998/03/06 16:54:42 roberto Exp roberto $
+** $Id: liolib.c,v 1.16 1998/03/06 18:47:42 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -209,7 +209,7 @@ static void io_read (void)
         m = 0;
       }
       else {
-        m = luaI_singlematch((char)c, p, &ep);
+        m = luaI_singlematch(c, p, &ep);
         if (m) {
           if (inskip == 0) luaL_addchar(c);
           c = NEED_OTHER;
