@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.153 2003/05/14 12:09:12 roberto Exp roberto $
+** $Id: ldebug.c,v 1.154 2003/07/10 11:59:06 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -30,14 +30,8 @@
 static const char *getfuncname (CallInfo *ci, const char **name);
 
 
-#define isLua(ci)	(!((ci)->state & CI_C))
-
-
 static int currentpc (CallInfo *ci) {
   if (!isLua(ci)) return -1;  /* function is not a Lua function? */
-  if (ci->state & CI_HASFRAME)  /* function has a frame? */
-    ci->u.l.savedpc = *ci->u.l.pc;  /* use `pc' from there */
-  /* function's pc is saved */
   return pcRel(ci->u.l.savedpc, ci_func(ci)->l.p);
 }
 
@@ -48,14 +42,6 @@ static int currentline (CallInfo *ci) {
     return -1;  /* only active lua functions have current-line information */
   else
     return getline(ci_func(ci)->l.p, pc);
-}
-
-
-void luaG_inithooks (lua_State *L) {
-  CallInfo *ci;
-  for (ci = L->ci; ci != L->base_ci; ci--)  /* update all `savedpc's */
-    currentpc(ci);
-  L->hookinit = 1;
 }
 
 
@@ -71,7 +57,6 @@ LUA_API int lua_sethook (lua_State *L, lua_Hook func, int mask, int count) {
   L->basehookcount = count;
   resethookcount(L);
   L->hookmask = cast(lu_byte, mask);
-  L->hookinit = 0;
   return 1;
 }
 
@@ -97,7 +82,7 @@ LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
   lua_lock(L);
   for (ci = L->ci; level > 0 && ci > L->base_ci; ci--) {
     level--;
-    if (!(ci->state & CI_C))  /* Lua function? */
+    if (f_isLua(ci))  /* Lua function? */
       level -= ci->u.l.tailcalls;  /* skip lost tail calls */
   }
   if (level > 0 || ci == L->base_ci) status = 0;  /* there is no such level */

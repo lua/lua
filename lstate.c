@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.122 2003/03/18 12:50:04 roberto Exp roberto $
+** $Id: lstate.c,v 1.123 2003/04/03 13:35:34 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -68,7 +68,6 @@ static void stack_init (lua_State *L1, lua_State *L) {
   L1->stack_last = L1->stack+(L1->stacksize - EXTRA_STACK)-1;
   L1->base_ci = luaM_newvector(L, BASIC_CI_SIZE, CallInfo);
   L1->ci = L1->base_ci;
-  L1->ci->state = CI_C;  /*  not a Lua function */
   setnilvalue(L1->top++);  /* `function' entry for this `ci' */
   L1->base = L1->ci->base = L1->top;
   L1->ci->top = L1->top + LUA_MINSTACK;
@@ -128,13 +127,14 @@ static void preinit_state (lua_State *L) {
   L->stacksize = 0;
   L->errorJmp = NULL;
   L->hook = NULL;
-  L->hookmask = L->hookinit = 0;
+  L->hookmask = 0;
   L->basehookcount = 0;
   L->allowhook = 1;
   resethookcount(L);
   L->openupval = NULL;
   L->size_ci = 0;
   L->nCcalls = 0;
+  L->isSuspended = 0;
   L->base_ci = L->ci = NULL;
   L->errfunc = 0;
   setnilvalue(gt(L));

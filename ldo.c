@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.218 2003/05/13 19:22:19 roberto Exp roberto $
+** $Id: ldo.c,v 1.219 2003/05/14 21:02:39 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -243,6 +243,7 @@ StkId luaD_precall (lua_State *L, StkId func) {
   cl = &clvalue(func)->l;
   if (!cl->isC) {  /* Lua function? prepare its call */
     CallInfo *ci;
+    StkId st;
     Proto *p = cl->p;
     if (p->is_vararg)  /* varargs? */
       adjust_varargs(L, p->numparams, func+1);
@@ -252,9 +253,8 @@ StkId luaD_precall (lua_State *L, StkId func) {
     ci->top = L->base + p->maxstacksize;
     ci->u.l.savedpc = p->code;  /* starting point */
     ci->u.l.tailcalls = 0;
-    ci->state = CI_SAVEDPC;
-    while (L->top < ci->top)
-      setnilvalue(L->top++);
+    for (st = L->top; st < ci->top; st++)
+      setnilvalue(st);
     L->top = ci->top;
     return NULL;
   }
@@ -265,7 +265,6 @@ StkId luaD_precall (lua_State *L, StkId func) {
     ci = ++L->ci;  /* now `enter' new function */
     L->base = L->ci->base = restorestack(L, funcr) + 1;
     ci->top = L->top + LUA_MINSTACK;
-    ci->state = CI_C;  /* a C function */
     if (L->hookmask & LUA_MASKCALL)
       luaD_callhook(L, LUA_HOOKCALL, -1);
     lua_unlock(L);
@@ -279,7 +278,7 @@ StkId luaD_precall (lua_State *L, StkId func) {
 static StkId callrethooks (lua_State *L, StkId firstResult) {
   ptrdiff_t fr = savestack(L, firstResult);  /* next call may change stack */
   luaD_callhook(L, LUA_HOOKRET, -1);
-  if (!(L->ci->state & CI_C)) {  /* Lua function? */
+  if (f_isLua(L->ci)) {  /* Lua function? */
     while (L->ci->u.l.tailcalls--)  /* call hook for eventual tail calls */
       luaD_callhook(L, LUA_HOOKTAILRET, -1);
   }
@@ -313,7 +312,6 @@ void luaD_poscall (lua_State *L, int wanted, StkId firstResult) {
 */ 
 void luaD_call (lua_State *L, StkId func, int nResults) {
   StkId firstResult;
-  lua_assert(!(L->ci->state & CI_CALLING));
   if (++L->nCcalls >= LUA_MAXCCALLS) {
     if (L->nCcalls == LUA_MAXCCALLS)
       luaG_runerror(L, "C stack overflow");
@@ -322,7 +320,7 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
   }
   firstResult = luaD_precall(L, func);
   if (firstResult == NULL)  /* is a Lua function? */
-    firstResult = luaV_execute(L);  /* call it */
+    firstResult = luaV_execute(L, 1);  /* call it */
   luaD_poscall(L, nResults, firstResult);
   L->nCcalls--;
   luaC_checkGC(L);
@@ -333,29 +331,28 @@ static void resume (lua_State *L, void *ud) {
   StkId firstResult;
   int nargs = *cast(int *, ud);
   CallInfo *ci = L->ci;
-  if (ci == L->base_ci) {  /* no activation record? */
-    if (nargs >= L->top - L->base)
-      luaG_runerror(L, "cannot resume dead coroutine");
-    luaD_precall(L, L->top - (nargs + 1));  /* start coroutine */
+  if (!L->isSuspended) {
+    if (ci == L->base_ci) {  /* no activation record? */
+      if (nargs >= L->top - L->base)
+        luaG_runerror(L, "cannot resume dead coroutine");
+      luaD_precall(L, L->top - (nargs + 1));  /* start coroutine */
+    }
+    else
+      luaG_runerror(L, "cannot resume non-suspended coroutine");
   }
-  else if (ci->state & CI_YIELD) {  /* inside a yield? */
-    if (ci->state & CI_C) {  /* `common' yield? */
+  else {  /* resumming from previous yield */
+    if (!f_isLua(ci)) {  /* `common' yield? */
       /* finish interrupted execution of `OP_CALL' */
       int nresults;
-      lua_assert((ci-1)->state & CI_SAVEDPC);
       lua_assert(GET_OPCODE(*((ci-1)->u.l.savedpc - 1)) == OP_CALL ||
                  GET_OPCODE(*((ci-1)->u.l.savedpc - 1)) == OP_TAILCALL);
       nresults = GETARG_C(*((ci-1)->u.l.savedpc - 1)) - 1;
       luaD_poscall(L, nresults, L->top - nargs);  /* complete it */
       if (nresults >= 0) L->top = L->ci->top;
-    }
-    else {  /* yielded inside a hook: just continue its execution */
-      ci->state &= ~CI_YIELD;
-    }
+    }  /* else yielded inside a hook: just continue its execution */
   }
-  else
-    luaG_runerror(L, "cannot resume non-suspended coroutine");
-  firstResult = luaV_execute(L);
+  L->isSuspended = 0;
+  firstResult = luaV_execute(L, L->ci - L->base_ci);
   if (firstResult != NULL)   /* return? */
     luaD_poscall(L, LUA_MULTRET, firstResult);  /* finalize this coroutine */
 }
@@ -388,9 +385,7 @@ LUA_API int lua_yield (lua_State *L, int nresults) {
   ci = L->ci;
   if (L->nCcalls > 0)
     luaG_runerror(L, "attempt to yield across metamethod/C-call boundary");
-  if (ci->state & CI_C) {  /* usual yield */
-    if ((ci-1)->state & CI_C)
-      luaG_runerror(L, "cannot yield a C function");
+  if (!f_isLua(ci)) {  /* usual yield */
     if (L->top - nresults > L->base) {  /* is there garbage in the stack? */
       int i;
       for (i=0; i<nresults; i++)  /* move down results */
@@ -398,7 +393,7 @@ LUA_API int lua_yield (lua_State *L, int nresults) {
       L->top = L->base + nresults;
     }
   } /* else it's an yield inside a hook: nothing to do */
-  ci->state |= CI_YIELD;
+  L->isSuspended = 1;
   lua_unlock(L);
   return -1;
 }

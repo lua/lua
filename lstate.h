@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.109 2003/02/27 11:52:30 roberto Exp roberto $
+** $Id: lstate.h,v 1.110 2003/04/28 19:26:16 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -75,11 +75,9 @@ typedef struct stringtable {
 typedef struct CallInfo {
   StkId base;  /* base for called function */
   StkId	top;  /* top for this function */
-  int state;  /* bit fields; see below */
   union {
     struct {  /* for Lua functions */
       const Instruction *savedpc;
-      const Instruction **pc;  /* points to `pc' variable in `luaV_execute' */
       int tailcalls;  /* number of tail calls lost under this entry */
     } l;
     struct {  /* for C functions */
@@ -89,20 +87,10 @@ typedef struct CallInfo {
 } CallInfo;
 
 
-/*
-** bit fields for `CallInfo.state'
-*/
-#define CI_C		(1<<0)  /* 1 if function is a C function */
-/* 1 if (Lua) function has an active `luaV_execute' running it */
-#define CI_HASFRAME	(1<<1)
-/* 1 if Lua function is calling another Lua function (and therefore its
-   `pc' is being used by the other, and therefore CI_SAVEDPC is 1 too) */
-#define CI_CALLING	(1<<2)
-#define CI_SAVEDPC	(1<<3)  /* 1 if `savedpc' is updated */
-#define CI_YIELD	(1<<4)  /* 1 if thread is suspended */
-
 
 #define ci_func(ci)	(clvalue((ci)->base - 1))
+#define f_isLua(ci)	(!ci_func(ci)->c.isC)
+#define isLua(ci)	(ttisfunction((ci)->base - 1) && f_isLua(ci))
 
 
 /*
@@ -143,7 +131,7 @@ struct lua_State {
   unsigned short nCcalls;  /* number of nested C calls */
   lu_byte hookmask;
   lu_byte allowhook;
-  lu_byte hookinit;
+  lu_byte isSuspended;
   int basehookcount;
   int hookcount;
   lua_Hook hook;
