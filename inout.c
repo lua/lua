@@ -4,7 +4,7 @@
 ** facilities.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.1 1994/07/19 21:27:18 celes Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.2 1994/08/17 22:22:44 roberto Exp celes $";
 
 #include <stdio.h>
 #include <string.h>
@@ -23,7 +23,7 @@ int lua_debugline;
 
 /* Internal variables */
 #ifndef MAXFUNCSTACK
-#define MAXFUNCSTACK 32
+#define MAXFUNCSTACK 64
 #endif
 static struct { int file; int function; } funcstack[MAXFUNCSTACK];
 static int nfuncstack=0;
