@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.90 1997/04/01 19:02:43 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.91 1997/04/02 17:44:18 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -987,6 +987,8 @@ void lua_pushbinarydata (void *buff, int size, int tag)
   if (buff == NULL)
     ttype(top) = LUA_T_NIL;
   else {
+    if (!luaI_userdatatag(tag))
+      lua_error("invalid tag for userdata");
     tsvalue(top) = luaI_createuserdata(buff, size, tag);
     ttype(top) = LUA_T_USERDATA;
   }
@@ -998,8 +1000,6 @@ void lua_pushbinarydata (void *buff, int size, int tag)
 */
 void lua_pushusertag (void *u, int tag)
 {
-  if (luaI_typetag(tag) != LUA_T_USERDATA)
-    lua_error("invalid tag in `lua_pushusertag'");
   lua_pushbinarydata(&u, sizeof(void *), tag);
 }
 

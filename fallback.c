@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.35 1997/03/31 14:17:09 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.36 1997/03/31 20:59:09 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -17,21 +17,6 @@ char *rcs_fallback="$Id: fallback.c,v 1.35 1997/03/31 14:17:09 roberto Exp rober
 #include "tree.h"
 #include "hash.h"
 
-
-static char *typenames[] = { /* ORDER LUA_T */
-  "userdata", "line", "cmark", "mark", "function",
-  "function", "table", "string", "number", "nil",
-  NULL
-};
-
-
-void luaI_type (void)
-{
-  lua_Object o = lua_getparam(1);
-  luaL_arg_check(o != LUA_NOOBJECT, "type", 1, "no argument");
-  lua_pushstring(typenames[-ttype(luaI_Address(o))]);
-  lua_pushnumber(lua_tag(o));
-}
 
 
 /* -------------------------------------------
@@ -136,7 +121,6 @@ static int luaI_checkevent (char *name, char *list[])
 
 
 static struct IM {
-  lua_Type tp;
   TObject int_method[IM_N];
 } *luaI_IMtable = NULL;
 
@@ -157,7 +141,7 @@ static char validevents[NUM_TYPES][IM_N] = { /* ORDER LUA_T, ORDER IM */
 };
 
 static int validevent (lua_Type t, int e)
-{
+{ /* ORDER LUA_T */
   return (t < LUA_T_NIL) ?  1 : validevents[-t][e];
 }
 
@@ -175,27 +159,19 @@ void luaI_initfallbacks (void)
     int i;
     IMtable_size = NUM_TYPES+10;
     luaI_IMtable = newvector(IMtable_size, struct IM);
-    for (i=LUA_T_NIL; i<=LUA_T_USERDATA; i++) {
-      luaI_IMtable[-i].tp = (lua_Type)i;
+    for (i=LUA_T_NIL; i<=LUA_T_USERDATA; i++)
       init_entry(i);
-    }
   }
 }
 
-int lua_newtag (char *t)
+int lua_newtag (void)
 {
-  int tp;
   --last_tag;
   if ((-last_tag) >= IMtable_size) {
     luaI_initfallbacks();
     IMtable_size = growvector(&luaI_IMtable, IMtable_size,
                               struct IM, memEM, MAX_INT);
   }
-  tp = -findstring(t, typenames);
-  if (tp == LUA_T_ARRAY || tp == LUA_T_USERDATA)
-    luaI_IMtable[-last_tag].tp = tp;
-  else
-    lua_error("invalid type for new tag");
   init_entry(last_tag);
   return last_tag;
 }
@@ -203,27 +179,28 @@ int lua_newtag (char *t)
 
 static void checktag (int tag)
 {
-  if (!(last_tag <= (tag) && (tag) <= 0))
+  if (!(last_tag <= tag && tag <= 0))
     lua_error("invalid tag");
 }
 
-lua_Type luaI_typetag (int tag)
+int luaI_userdatatag (int tag)
 {
-  if (tag >= 0) return LUA_T_USERDATA;
-  else {
-    checktag(tag);
-    return luaI_IMtable[-tag].tp;
-  }
+  return (tag >= 0 || (last_tag <= tag && tag < LUA_T_NIL));
 }
+
 
 void luaI_settag (int tag, TObject *o)
 {
-  if (ttype(o) != luaI_typetag(tag))
-    lua_error("Tag is not compatible with this type");
-  if (o->ttype == LUA_T_ARRAY)
-    o->value.a->htag = tag;
-  else  /* must be userdata */
-    o->value.ts->tag = tag;
+  switch (ttype(o)) {
+    case LUA_T_ARRAY:
+      o->value.a->htag = tag;
+      break;
+    case LUA_T_USERDATA:
+      o->value.ts->tag = tag;
+      break;
+    default:
+      lua_error("settag: cannot change tag of given object");
+  }
 }
 
 
