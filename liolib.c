@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.104 2001/02/06 16:01:29 roberto Exp roberto $
+** $Id: liolib.c,v 1.105 2001/02/09 16:25:50 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -130,7 +130,7 @@ static int closefile (lua_State *L, FILE *f) {
   if (f == stdin || f == stdout || f == stderr)
     return 1;
   else {
-    pushfile(L, f);
+    lua_pushuserdata(L, f);
     lua_settag(L, lua_type2tag(L, "ClosedFileHandle"));
     return (CLOSEFILE(L, f) == 0);
   }
