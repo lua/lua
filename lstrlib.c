@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.83 2002/06/05 17:24:04 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.84 2002/06/13 13:44:50 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -170,7 +170,7 @@ typedef struct MatchState {
 static int check_capture (MatchState *ms, int l) {
   l -= '1';
   if (l < 0 || l >= ms->level || ms->capture[l].len == CAP_UNFINISHED)
-    return luaL_verror(ms->L, "invalid capture index");
+    return luaL_error(ms->L, "invalid capture index");
   return l;
 }
 
@@ -179,7 +179,7 @@ static int capture_to_close (MatchState *ms) {
   int level = ms->level;
   for (level--; level>=0; level--)
     if (ms->capture[level].len == CAP_UNFINISHED) return level;
-  return luaL_verror(ms->L, "invalid pattern capture");
+  return luaL_error(ms->L, "invalid pattern capture");
 }
 
 
@@ -187,13 +187,13 @@ static const char *luaI_classend (MatchState *ms, const char *p) {
   switch (*p++) {
     case ESC:
       if (*p == '\0')
-        luaL_verror(ms->L, "malformed pattern (ends with `%')");
+        luaL_error(ms->L, "malformed pattern (ends with `%')");
       return p+1;
     case '[':
       if (*p == '^') p++;
       do {  /* look for a `]' */
         if (*p == '\0')
-          luaL_verror(ms->L, "malformed pattern (missing `]')");
+          luaL_error(ms->L, "malformed pattern (missing `]')");
         if (*(p++) == ESC && *p != '\0')
           p++;  /* skip escapes (e.g. `%]') */
       } while (*p != ']');
@@ -266,7 +266,7 @@ static const char *match (MatchState *ms, const char *s, const char *p);
 static const char *matchbalance (MatchState *ms, const char *s,
                                    const char *p) {
   if (*p == 0 || *(p+1) == 0)
-    luaL_verror(ms->L, "unbalanced pattern");
+    luaL_error(ms->L, "unbalanced pattern");
   if (*s != *p) return NULL;
   else {
     int b = *p;
@@ -315,7 +315,7 @@ static const char *start_capture (MatchState *ms, const char *s,
                                     const char *p, int what) {
   const char *res;
   int level = ms->level;
-  if (level >= MAX_CAPTURES) luaL_verror(ms->L, "too many captures");
+  if (level >= MAX_CAPTURES) luaL_error(ms->L, "too many captures");
   ms->capture[level].init = s;
   ms->capture[level].len = what;
   ms->level = level+1;
@@ -425,7 +425,7 @@ static const char *lmemfind (const char *s1, size_t l1,
 
 static void push_onecapture (MatchState *ms, int i) {
   int l = ms->capture[i].len;
-  if (l == CAP_UNFINISHED) luaL_verror(ms->L, "unfinished capture");
+  if (l == CAP_UNFINISHED) luaL_error(ms->L, "unfinished capture");
   if (l == CAP_POSITION)
     lua_pushnumber(ms->L, ms->capture[i].init - ms->src_init + 1);
   else
@@ -635,9 +635,9 @@ static const char *scanformat (lua_State *L, const char *strfrmt,
     if (isdigit(uchar(*p))) p++;  /* (2 digits at most) */
   }
   if (isdigit(uchar(*p)))
-    luaL_verror(L, "invalid format (width or precision too long)");
+    luaL_error(L, "invalid format (width or precision too long)");
   if (p-strfrmt+2 > MAX_FORMAT)  /* +2 to include `%' and the specifier */
-    luaL_verror(L, "invalid format (too long)");
+    luaL_error(L, "invalid format (too long)");
   form[0] = '%';
   strncpy(form+1, strfrmt, p-strfrmt+1);
   form[p-strfrmt+2] = 0;
@@ -662,7 +662,7 @@ static int str_format (lua_State *L) {
       char buff[MAX_ITEM];  /* to store the formatted item */
       int hasprecision = 0;
       if (isdigit(uchar(*strfrmt)) && *(strfrmt+1) == '$')
-        return luaL_verror(L, "obsolete `format' option (d$)");
+        return luaL_error(L, "obsolete `format' option (d$)");
       arg++;
       strfrmt = scanformat(L, strfrmt, form, &hasprecision);
       switch (*strfrmt++) {
@@ -695,7 +695,7 @@ static int str_format (lua_State *L) {
           }
         }
         default:  /* also treat cases `pnLlh' */
-          return luaL_verror(L, "invalid option in `format'");
+          return luaL_error(L, "invalid option in `format'");
       }
       luaL_addlstring(&b, buff, strlen(buff));
     }

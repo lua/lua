@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.9 2002/06/06 12:43:08 roberto Exp roberto $
+** $Id: liolib.c,v 2.10 2002/06/06 18:17:33 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -124,7 +124,7 @@ static int io_open (lua_State *L) {
 
 static int io_popen (lua_State *L) {
 #ifndef POPEN
-  luaL_verror(L, "`popen' not supported");
+  luaL_error(L, "`popen' not supported");
   return 0;
 #else
   FILE *f = popen(luaL_check_string(L, 1), luaL_opt_string(L, 2, "r"));
@@ -144,7 +144,7 @@ static FILE *getiofile (lua_State *L, const char *name) {
   lua_rawget(L, lua_upvalueindex(1));
   f = tofile(L, -1);
   if (f == NULL)
-    luaL_verror(L, "%s is closed", name);
+    luaL_error(L, "%s is closed", name);
   return f;
 }
 
@@ -267,7 +267,7 @@ static int g_read (lua_State *L, FILE *f, int first) {
       else {
         const char *p = lua_tostring(L, n);
         if (!p || p[0] != '*')
-          return luaL_verror(L, "invalid `read' option");
+          return luaL_error(L, "invalid `read' option");
         switch (p[1]) {
           case 'n':  /* number */
             success = read_number(L, f);
@@ -280,7 +280,7 @@ static int g_read (lua_State *L, FILE *f, int first) {
             success = 1; /* always success */
             break;
           case 'w':  /* word */
-            return luaL_verror(L, "obsolete option `*w'");
+            return luaL_error(L, "obsolete option `*w'");
           default:
             return luaL_argerror(L, n, "invalid format");
         }
@@ -439,7 +439,7 @@ static int io_rename (lua_State *L) {
 static int io_tmpname (lua_State *L) {
   char buff[L_tmpnam];
   if (tmpnam(buff) != buff)
-    return luaL_verror(L, "unable to generate a unique filename");
+    return luaL_error(L, "unable to generate a unique filename");
   lua_pushstring(L, buff);
   return 1;
 }
@@ -480,7 +480,7 @@ static int getfield (lua_State *L, const char *key, int d) {
     res = (int)(lua_tonumber(L, -1));
   else {
     if (d == -2)
-      return luaL_verror(L, "field `%s' missing in date table", key);
+      return luaL_error(L, "field `%s' missing in date table", key);
     res = d;
   }
   lua_pop(L, 1);
@@ -519,7 +519,7 @@ static int io_date (lua_State *L) {
     if (strftime(b, sizeof(b), s, stm))
       lua_pushstring(L, b);
     else
-      return luaL_verror(L, "invalid `date' format");
+      return luaL_error(L, "invalid `date' format");
   }
   return 1;
 }

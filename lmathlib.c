@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.45 2002/05/06 19:05:10 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.46 2002/06/05 17:24:04 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -187,7 +187,7 @@ static int math_random (lua_State *L) {
       lua_pushnumber(L, (int)(r*(u-l+1))+l);  /* integer between `l' and `u' */
       break;
     }
-    default: return luaL_verror(L, "wrong number of arguments");
+    default: return luaL_error(L, "wrong number of arguments");
   }
   return 1;
 }
