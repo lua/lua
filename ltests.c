@@ -277,7 +277,7 @@ static int table_query (lua_State *L) {
     }
     else
       lua_pushstring(L, "<undef>");
-    luaA_pushobject(L, &t->node[i].val);
+    luaA_pushobject(L, val(&t->node[i]));
     if (t->node[i].next)
       lua_pushnumber(L, t->node[i].next - t->node);
     else

@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.h,v 1.36 2001/08/31 19:46:07 roberto Exp $
+** $Id: ltable.h,v 1.37 2001/10/25 19:14:14 roberto Exp $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -10,9 +10,9 @@
 #include "lobject.h"
 
 
-#define node(_t,_i)	(&(_t)->node[_i])
-#define key(_n)		(&(_n)->key)
-#define val(_n)		(&(_n)->val)
+#define node(t,i)	(&(t)->node[i])
+#define key(n)		(&(n)->_key)
+#define val(n)		(&(n)->_val)
 
 #define settableval(p,v)	setobj(cast(TObject *, p), v)
 

@@ -172,8 +172,8 @@ static void numuse (const Table *t, int *narray, int *nhash) {
   /* count elements in hash part */
   i = sizenode(t);
   while (i--) {
-    if (ttype(&t->node[i].val) != LUA_TNIL) {
-      int k = arrayindex(&t->node[i].key);
+    if (ttype(val(&t->node[i])) != LUA_TNIL) {
+      int k = arrayindex(key(&t->node[i]));
       if (k >= 0)  /* is `key' an appropriate array index? */
         nums[luaO_log2(k-1)+1]++;  /* count as such */
       totaluse++;
