@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.5 1997/10/24 17:17:24 roberto Exp roberto $
+** $Id: ldo.c,v 1.6 1997/11/03 21:00:23 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "lbuiltin.h"
 #include "ldo.h"
 #include "lfunc.h"
 #include "lgc.h"
@@ -30,9 +29,7 @@
 #endif
 
 
-static TObject initial_stack;
-
-struct Stack luaD_stack = {&initial_stack, &initial_stack, &initial_stack};
+struct Stack luaD_stack;
 
 
 struct C_Lua_Stack luaD_Cstack = {0, 0, 0};
@@ -64,24 +61,21 @@ static void initCfunc (TObject *o, lua_CFunction f)
 
 
 #define STACK_EXTRA 	32
+#define INIT_STACK_SIZE	32
 
-static void initstack (int n)
+
+void luaD_init (void)
 {
-  int maxstack = STACK_EXTRA+n;
-  luaD_stack.stack = luaM_newvector(maxstack, TObject);
-  luaD_stack.last = luaD_stack.stack+(maxstack-1);
+  luaD_stack.stack = luaM_newvector(INIT_STACK_SIZE, TObject);
   luaD_stack.top = luaD_stack.stack;
-  *luaD_stack.stack = initial_stack;
-  luaB_predefine();
+  luaD_stack.last = luaD_stack.stack+(INIT_STACK_SIZE-1);
   initCfunc(&luaD_errorim, stderrorim);
 }
 
 
 void luaD_checkstack (int n)
 {
-  if (luaD_stack.stack == &initial_stack)
-    initstack(n);
-  else if (luaD_stack.last-luaD_stack.top <= n) {
+  if (luaD_stack.last-luaD_stack.top <= n) {
     static int limit = STACK_LIMIT;
     StkId top = luaD_stack.top-luaD_stack.stack;
     int stacksize = (luaD_stack.last-luaD_stack.stack)+1+STACK_EXTRA+n;

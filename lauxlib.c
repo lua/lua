@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.2 1997/09/26 15:02:26 roberto Exp roberto $
 ** Auxiliar functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -67,6 +67,7 @@ lua_Object luaL_nonnullarg (int numArg)
 void luaL_openlib (struct luaL_reg *l, int n)
 {
   int i;
+  lua_open();  /* make sure lua is already open */
   for (i=0; i<n; i++)
     lua_register(l[i].name, l[i].func);
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: ldo.h,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -47,6 +47,8 @@ extern TObject luaD_errorim;
 #define Address(lo)     ((lo)+luaD_stack.stack-1)
 #define Ref(st)         ((st)-luaD_stack.stack+1)
 
+
+void luaD_init (void);
 void luaD_adjusttop (StkId newtop);
 void luaD_openstack (int nelems);
 void luaD_lineHook (int line);

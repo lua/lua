@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: ltm.h,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -49,6 +49,7 @@ extern struct IM {
 extern char *luaT_eventname[];
 
 
+void luaT_init (void);
 void luaT_settag (int tag, TObject *o);
 void luaT_realtag (int tag);
 int luaT_efectivetag (TObject *o);

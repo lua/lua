@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.2 1997/09/23 14:12:44 roberto Exp roberto $
+** $Id: liolib.c,v 1.3 1997/10/30 20:29:09 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -372,6 +372,7 @@ static struct luaL_reg iolib[] = {
 
 void lua_iolibopen (void)
 {
+  luaL_openlib(iolib, (sizeof(iolib)/sizeof(iolib[0])));
   lua_tagio = lua_newtag();
   closedtag = lua_newtag();
   setfile(stdin, "_INPUT");
@@ -379,7 +380,6 @@ void lua_iolibopen (void)
   setfile(stdin, "_STDIN");
   setfile(stdout, "_STDOUT");
   setfile(stderr, "_STDERR");
-  luaL_openlib(iolib, (sizeof(iolib)/sizeof(iolib[0])));
   lua_pushcfunction(errorfb);
   lua_seterrormethod();
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.4 1997/10/24 17:17:24 roberto Exp roberto $
+** $Id: ltm.c,v 1.5 1997/11/03 20:45:23 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -13,53 +13,6 @@
 #include "lmem.h"
 #include "lobject.h"
 #include "ltm.h"
-
-static struct IM init_IM[NUM_TAGS] = {
-{{{LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}}},
-{{{LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}}},
-{{{LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}}},
-{{{LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}}},
-{{{LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}}},
-{{{LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}}},
-{{{LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}},
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}}}
-};
-
-
 
 
 char *luaT_eventname[] = {  /* ORDER IM */
@@ -78,11 +31,9 @@ static int luaI_checkevent (char *name, char *list[])
 }
 
 
-struct IM *luaT_IMtable = init_IM;
-
-static int IMtable_size = NUM_TAGS;
-
-static int last_tag = -(NUM_TAGS-1);
+struct IM *luaT_IMtable;
+static int IMtable_size;
+static int last_tag;
 
 
 /* events in LUA_T_NIL are all allowed, since this is used as a
@@ -98,6 +49,7 @@ static char validevents[NUM_TAGS][IM_N] = { /* ORDER LUA_T, ORDER IM */
 {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}   /* LUA_T_NIL */
 };
 
+
 static int validevent (lua_Type t, int e)
 { /* ORDER LUA_T */
   return (t < LUA_T_NIL) ?  1 : validevents[-t][e];
@@ -111,19 +63,24 @@ static void init_entry (int tag)
     ttype(luaT_getim(tag, i)) = LUA_T_NIL;
 }
 
+
+void luaT_init (void)
+{
+  int t;
+  IMtable_size = NUM_TAGS;
+  last_tag = -(NUM_TAGS-1);
+  luaT_IMtable = luaM_newvector(IMtable_size, struct IM);
+  for (t=last_tag; t<=0; t++)
+    init_entry(t);
+}
+
+
 int lua_newtag (void)
 {
   --last_tag;
-  if ((-last_tag) >= IMtable_size) {
-    if (luaT_IMtable == init_IM) {  /* fist time? */
-      IMtable_size *= 2;
-      luaT_IMtable = luaM_newvector(IMtable_size, struct IM);
-      memcpy(luaT_IMtable, init_IM, sizeof(init_IM));
-    }
-    else
-      IMtable_size = luaM_growvector(&luaT_IMtable, IMtable_size,
-                                struct IM, memEM, MAX_INT);
-  }
+  if ((-last_tag) >= IMtable_size)
+    IMtable_size = luaM_growvector(&luaT_IMtable, IMtable_size,
+                                   struct IM, memEM, MAX_INT);
   init_entry(last_tag);
   return last_tag;
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.2 1997/09/26 15:02:26 roberto Exp roberto $
+** $Id: lstring.c,v 1.3 1997/10/23 16:26:37 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -29,25 +29,21 @@ typedef struct {
 } stringtable;
 
 
-static stringtable string_root[NUM_HASHS] = {
-{0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL},
-{0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL},
-{0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL},
-{0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL},
-{0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL},
-{0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL},
-{0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL},
-{0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL},
-{0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL},
-{0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL},
-{0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL},
-{0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL}, {0, 0, NULL},
-{0, 0, NULL}
-};
+static stringtable string_root[NUM_HASHS];
 
 
 static TaggedString EMPTY = {{NULL, 2}, 0, 0L, {{LUA_T_NIL, {NULL}}}, {0}};
 
+
+void luaS_init (void)
+{
+  int i;
+  for (i=0; i<NUM_HASHS; i++) {
+    string_root[i].size = 0;
+    string_root[i].nuse = 0;
+    string_root[i].hash = NULL;
+  }
+}
 
 
 static unsigned long hash (char *s, int tag)

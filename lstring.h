@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
+** $Id: lstring.h,v 1.2 1997/09/26 15:02:26 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -12,6 +12,8 @@
 
 extern GCnode luaS_root;
 
+
+void luaS_init (void);
 TaggedString *luaS_createudata (void *udata, int tag);
 TaggedString *luaS_collector (void);
 void luaS_free (TaggedString *l);

@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.4 1997/10/23 16:28:48 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.5 1997/10/24 17:17:24 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -455,23 +455,11 @@ static struct luaL_reg int_funcs[] = {
 
 void luaB_predefine (void)
 {
-  int i;
-  TaggedString *ts;
-  TObject o;
   /* pre-register mem error messages, to avoid loop when error arises */
   luaS_newfixedstring(tableEM);
   luaS_newfixedstring(memEM);
-  for (i=0; i<INTFUNCSIZE; i++) {
-    ts = luaS_new(int_funcs[i].name);
-    fvalue(&o) = int_funcs[i].func;
-    ttype(&o) = LUA_T_CPROTO;
-    luaF_simpleclosure(&o);
-    luaS_rawsetglobal(ts, &o);
-  }
-  ts = luaS_new("_VERSION");
-  ttype(&o) = LUA_T_STRING;
-  tsvalue(&o) = luaS_new(LUA_VERSION);
-  luaS_rawsetglobal(ts, &o);
+  luaL_openlib(int_funcs, (sizeof(int_funcs)/sizeof(int_funcs[0])));
+  lua_pushstring(LUA_VERSION);
+  lua_setglobal("_VERSION");
 }
-
 

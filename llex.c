@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.2 1997/09/26 15:02:26 roberto Exp roberto $
+** $Id: llex.c,v 1.3 1997/10/13 22:10:45 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -30,7 +30,7 @@ int lua_debug=0;
 
 
 
-static void addReserved (void)
+void luaX_init (void)
 {
   static struct {
     char *name;
@@ -41,14 +41,10 @@ static void addReserved (void)
       {"nil", NIL}, {"not", NOT}, {"or", OR}, {"repeat", REPEAT},
       {"return", RETURN}, {"then", THEN}, {"until", UNTIL}, {"while", WHILE}
     };
-  static int firsttime = 1;
-  if (firsttime) {
-    int i;
-    firsttime = 0;
-    for (i=0; i<(sizeof(reserved)/sizeof(reserved[0])); i++) {
-      TaggedString *ts = luaS_new(reserved[i].name);
-      ts->head.marked = reserved[i].token;  /* reserved word  (always > 255) */
-    }
+  int i;
+  for (i=0; i<(sizeof(reserved)/sizeof(reserved[0])); i++) {
+    TaggedString *ts = luaS_new(reserved[i].name);
+    ts->head.marked = reserved[i].token;  /* reserved word  (always > 255) */
   }
 }
 
@@ -85,7 +81,6 @@ static void firstline (void)
 
 void luaX_setinput (ZIO *z)
 {
-  addReserved();
   current = '\n';
   luaX_linenumber = 0;
   iflevel = 0;

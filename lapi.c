@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.2 1997/09/26 15:02:26 roberto Exp roberto $
+** $Id: lapi.c,v 1.3 1997/10/24 17:17:24 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -10,9 +10,11 @@
 
 #include "lapi.h"
 #include "lauxlib.h"
+#include "lbuiltin.h"
 #include "ldo.h"
 #include "lfunc.h"
 #include "lgc.h"
+#include "llex.h"
 #include "lmem.h"
 #include "lobject.h"
 #include "lstring.h"
@@ -544,6 +546,17 @@ lua_Object lua_getref (int ref)
 }
 
 
+void lua_open (void)
+{
+  static int firsttime = 1;
+  if (!firsttime) return;
+  firsttime = 0;
+  luaS_init();
+  luaX_init();
+  luaT_init();
+  luaD_init();
+  luaB_predefine();
+}
 
 
 
