@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 2.6 1994/08/03 14:15:46 celes Exp celes $";
+char *rcs_luastx = "$Id: lua.stx,v 2.7 1994/08/05 19:31:09 celes Exp celes $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -232,21 +232,21 @@ static void init_function (void)
 %token LOCAL
 %token FUNCTION
 %token <vFloat> NUMBER
-%token <vWord>  STRING
+%token <pChar>  STRING
 %token <pChar>  NAME 
 %token <vInt>   DEBUG
 
 %type <vLong> PrepJump
-%type <vInt>  expr, exprlist, exprlist1, varlist1, typeconstructor
+%type <vInt>  expr, exprlist, exprlist1, varlist1
 %type <vInt>  fieldlist, localdeclist
-%type <vInt>  ffieldlist, ffieldlist1
-%type <vInt>  lfieldlist, lfieldlist1
+%type <vInt>  ffieldlist1
+%type <vInt>  lfieldlist1
 %type <vInt>  functionvalue
-%type <vLong> var, singlevar, objectname
+%type <vLong> var, singlevar
 
 
 %left AND OR
-%left '=' NE '>' '<' LE GE
+%left EQ NE '>' '<' LE GE
 %left CONC
 %left '+' '-'
 %left '*' '/'
@@ -425,7 +425,7 @@ stat1  : IF expr1 THEN PrepJump block PrepJump elsepart END
 	}
        } 
        | functioncall			{ lua_codeadjust (0); }
-       | typeconstructor                { lua_codeadjust (0); }
+       | constructor                    { lua_codeadjust (0); }
        | LOCAL localdeclist decinit   { add_nlocalvar($2); lua_codeadjust (0); }
        ;
 
@@ -481,7 +481,7 @@ expr1	 : expr { if ($1 == 0) {lua_codeadjust (ntemp+1); incr_ntemp();}}
 	 ;
 				
 expr :	'(' expr ')'    { $$ = $2; }
-     |	expr1 '=' expr1	{ code_byte(EQOP);   $$ = 1; ntemp--;}
+     |	expr1 EQ  expr1	{ code_byte(EQOP);   $$ = 1; ntemp--;}
      |	expr1 '<' expr1	{ code_byte(LTOP);   $$ = 1; ntemp--;}
      |	expr1 '>' expr1	{ code_byte(LEOP); code_byte(NOTOP); $$ = 1; ntemp--;}
      |	expr1 NE  expr1	{ code_byte(EQOP); code_byte(NOTOP); $$ = 1; ntemp--;}
@@ -494,18 +494,14 @@ expr :	'(' expr ')'    { $$ = $2; }
      |	expr1 CONC expr1 { code_byte(CONCOP);  $$ = 1; ntemp--;}
      |	'+' expr1 %prec UNARY	{ $$ = 1; }
      |	'-' expr1 %prec UNARY	{ code_byte(MINUSOP); $$ = 1;}
-     | typeconstructor { $$ = $1; }
-     |  '@' '(' dimension ')'
-     { 
-      code_byte(CREATEARRAY);
-      $$ = 1;
-     }
+     | constructor { $$ = 0; }
+     | table { $$ = 1; }
      |	var             { lua_pushvar ($1); $$ = 1;}
      |	NUMBER          { code_number($1); $$ = 1; }
      |	STRING
      {
       code_byte(PUSHSTRING);
-      code_word($1);
+      code_word(lua_findconstant($1));
       $$ = 1;
       incr_ntemp();
      }
@@ -533,48 +529,41 @@ expr :	'(' expr ')'    { $$ = $2; }
      }
      ;
 
-typeconstructor: '@'  
-     {
-      code_byte(PUSHWORD);
-      $<vLong>$ = pc; code_word(0);
-      incr_ntemp();
-      code_byte(CREATEARRAY);
-     }
-      objectname fieldlist 
-     {
-      code_word_at(basepc+$<vLong>2, $4);
-      if ($3 < 0)	/* there is no function to be called */
+constructor : '@' singlevar table
       {
-       $$ = 1;
-      }
-      else
-      {
-       lua_pushvar ($3+1);
+       lua_pushvar ($2);
        code_byte(PUSHMARK);
        incr_ntemp();
        code_byte(PUSHOBJECT);
        incr_ntemp();
        code_byte(CALLFUNC); 
        ntemp -= 4;
-       $$ = 0;
        if (lua_debug)
        {
         code_byte(SETLINE); code_word(lua_linenumber);
        }
       }
+	    ;
+table :
+     {
+      code_byte(PUSHWORD);
+      $<vLong>$ = pc; code_word(0);
+      incr_ntemp();
+      code_byte(CREATEARRAY);
+     }
+      '{' fieldlist '}'
+     {
+      code_word_at(basepc+$<vLong>1, $3);
      }
          ;
 
-dimension    : /* empty */	{ code_byte(PUSHNIL); incr_ntemp();}
-	     | expr1
-	     ;
-	     
 functioncall : functionvalue  
-	       {
-		code_byte(PUSHMARK); $<vInt>$ = ntemp; incr_ntemp();
-		if ($1 != 0) lua_pushvar($1);
-	       }
+             {
+              code_byte(PUSHMARK); $<vInt>$ = ntemp; incr_ntemp();
+              if ($1 != 0) lua_pushvar($1);
+             }
                '(' exprlist ')' { code_byte(CALLFUNC); ntemp = $<vInt>2-1;}
+	     ;
 
 functionvalue : var {lua_pushvar ($1); $$ = 0; } 
               | singlevar ':' NAME 
@@ -613,25 +602,20 @@ parlist1 :	NAME
 		}
 	  ;
 		
-objectname :	/* empty */ 	{$$=-1;}
-	   |	NAME		{$$=lua_findsymbol($1);}
-	   ;
-	   
-fieldlist  : '{' ffieldlist '}'  
-	      { 
-	       flush_record($2%FIELDS_PER_FLUSH); 
-	       $$ = $2;
-	      }
-           | '[' lfieldlist ']'  
-	      { 
-	       flush_list($2/FIELDS_PER_FLUSH, $2%FIELDS_PER_FLUSH);
-	       $$ = $2;
-     	      }
+fieldlist  : /* empty */ { $$ =  0; }
+	   | lfieldlist1 lastcomma
+  	     { $$ = $1; flush_list($1/FIELDS_PER_FLUSH, $1%FIELDS_PER_FLUSH); }
+	   | ffieldlist1 lastcomma
+	     { $$ = $1; flush_record($1%FIELDS_PER_FLUSH); }
+	   | lfieldlist1 ';' 
+	     { flush_list($1/FIELDS_PER_FLUSH, $1%FIELDS_PER_FLUSH); }
+	    ffieldlist1 lastcomma
+	     { $$ = $1+$4; flush_record($4%FIELDS_PER_FLUSH); }
 	   ;
 
-ffieldlist : /* empty */   { $$ = 0; }
-           | ffieldlist1   { $$ = $1; }
-           ;
+lastcomma  : /* empty */ 
+	   | ','
+	   ;
 
 ffieldlist1 : ffield			{$$=1;}
 	   | ffieldlist1 ',' ffield	
@@ -645,10 +629,6 @@ ffield      : NAME {$<vWord>$ = lua_findconstant($1);} '=' expr1
 	      { 
 	       push_field($<vWord>2);
 	      }
-           ;
-
-lfieldlist : /* empty */   { $$ = 0; }
-           | lfieldlist1   { $$ = $1; }
            ;
 
 lfieldlist1 : expr1  {$$=1;}
