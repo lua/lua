@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.93 2002/03/25 17:47:14 roberto Exp roberto $
+** $Id: lcode.c,v 1.94 2002/04/02 20:34:53 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -173,7 +173,7 @@ void luaK_concat (FuncState *fs, int *l1, int l2) {
 }
 
 
-void luaK_checkstack (FuncState *fs, int n) {
+static void luaK_checkstack (FuncState *fs, int n) {
   int newstack = fs->freereg + n;
   if (newstack > fs->f->maxstacksize) {
     if (newstack >= MAXSTACK)

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.167 2002/03/25 19:45:06 roberto Exp roberto $
+** $Id: ldo.c,v 1.168 2002/03/26 20:46:10 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -161,6 +161,7 @@ static void luaD_callHook (lua_State *L, lua_Hook callhook, const char *event) {
     ar.event = event;
     ar.i_ci = L->ci - L->base_ci;
     L->ci->pc = NULL;  /* function is not active */
+    L->ci->top = L->ci->base;  /* `top' may not have a valid value yet */ 
     dohook(L, &ar, callhook);
   }
 }
@@ -208,7 +209,7 @@ StkId luaD_precall (lua_State *L, StkId func) {
   LClosure *cl;
   if (++L->ci == L->end_ci) luaD_growCI(L);
   ci = L->ci;
-  ci->base = ci->top = func+1;  /* pre-init `top' in case of errors */
+  ci->base = func+1;
   ci->pc = NULL;
   if (ttype(func) != LUA_TFUNCTION) /* `func' is not a function? */
     func = tryfuncTM(L, func);  /* check the `function' tag method */

@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.14 2002/03/25 17:47:14 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.15 2002/04/09 19:47:44 roberto Exp roberto $
 ** extracted automatically from lopcodes.h by mkprint.lua
 ** DO NOT EDIT
 ** See Copyright Notice in lua.h
@@ -49,7 +49,7 @@ const char *const luaP_opnames[] = {
   "RETURN",
   "FORLOOP",
   "TFORLOOP",
-  "OP_TFORPREP",
+  "TFORPREP",
   "SETLIST",
   "SETLISTO",
   "CLOSE",
