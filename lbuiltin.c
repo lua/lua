@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.35 1998/11/13 16:39:18 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.36 1998/12/03 15:45:15 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -234,10 +234,11 @@ static void luaI_print (void) {
     luaD_calln(1, 1);
     if (ttype(L->stack.top-1) != LUA_T_STRING)
       lua_error("`tostring' must return a string to `print'");
-    printf("%.200s\t", svalue(L->stack.top-1));
+    if (i>2) fputs("\t", stdout);
+    fputs(svalue(L->stack.top-1), stdout);
     L->stack.top--;
   }
-  printf("\n");
+  fputs("\n", stdout);
 }
 
 
