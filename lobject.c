@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: lobject.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -64,5 +64,14 @@ int luaO_findstring (char *name, char *list[])
     if (strcmp(list[i], name) == 0)
       return i;
   return -1;  /* name not found */
+}
+
+
+void luaO_insertlist (GCnode *root, GCnode *node)
+{
+  ++luaO_nentities;
+  node->next = root->next;
+  root->next = node;
+  node->marked = 0;
 }
 

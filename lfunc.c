@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: lfunc.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** Lua Funcion auxiliar
 ** See Copyright Notice in lua.h
 */
@@ -11,26 +11,15 @@
 #include "lmem.h"
 
 
-TProtoFunc *luaF_root = NULL;
-Closure *luaF_rootcl = NULL;
+GCnode luaF_root = {NULL, 0};
+GCnode luaF_rootcl = {NULL, 0};
 
-
-static void luaI_insertfunction (TProtoFunc *f)
-{
-  ++luaO_nentities;
-  f->head.next = (GCnode *)luaF_root;
-  luaF_root = f;
-  f->head.marked = 0;
-}
 
 
 Closure *luaF_newclosure (int nelems)
 {
   Closure *c = (Closure *)luaM_malloc(sizeof(Closure)+nelems*sizeof(TObject));
-  ++luaO_nentities;
-  c->head.next = (GCnode *)luaF_rootcl;
-  luaF_rootcl = c;
-  c->head.marked = 0;
+  luaO_insertlist(&luaF_rootcl, (GCnode *)c);
   return c;
 }
 
@@ -45,7 +34,7 @@ TProtoFunc *luaF_newproto (void)
   f->nconsts = 0;
   f->nupvalues = 0;
   f->locvars = NULL;
-  luaI_insertfunction(f);
+  luaO_insertlist(&luaF_root, (GCnode *)f);
   return f;
 }
 

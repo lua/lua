@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: lfunc.h,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** Lua Function structures
 ** See Copyright Notice in lua.h
 */
@@ -11,8 +11,8 @@
 #include "lobject.h"
 
 
-extern TProtoFunc *luaF_root;
-extern Closure *luaF_rootcl;
+extern GCnode luaF_root;
+extern GCnode luaF_rootcl;
 
 
 TProtoFunc *luaF_newproto (void);

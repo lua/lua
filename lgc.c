@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
+** $Id: lgc.c,v 1.2 1997/09/26 15:02:26 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -137,29 +137,23 @@ static void strcallIM (TaggedString *l)
 
 
 
-static GCnode *listcollect (GCnode **root)
+static GCnode *listcollect (GCnode *l)
 {
-  GCnode *curr = *root, *prev = NULL, *frees = NULL;
-  while (curr) {
-    GCnode *next = curr->next;
-    if (!curr->marked) {
-      if (prev == NULL)
-        *root = next;
-      else
-        prev->next = next;
-      curr->next = frees;
-      frees = curr;
+  GCnode *frees = NULL;
+  while (l) {
+    GCnode *next = l->next;
+    l->marked = 0;
+    while (next && !next->marked) {
+      l->next = next->next;
+      next->next = frees;
+      frees = next;
+      next = l->next;
       --luaO_nentities;
     }
-    else {
-      curr->marked = 0;
-      prev = curr;
-    }
-    curr = next;
+    l = next;
   }
   return frees;
 }
-
 
 
 static void strmark (TaggedString *s)
@@ -280,9 +274,9 @@ long lua_collectgarbage (long limit)
   markall();
   invalidaterefs();
   freestr = luaS_collector();
-  freetable = (Hash *)listcollect((GCnode **)&luaH_root);
-  freefunc = (TProtoFunc *)listcollect((GCnode **)&luaF_root);
-  freeclos = (Closure *)listcollect((GCnode **)&luaF_rootcl);
+  freetable = (Hash *)listcollect(&luaH_root);
+  freefunc = (TProtoFunc *)listcollect(&luaF_root);
+  freeclos = (Closure *)listcollect(&luaF_rootcl);
   recovered = recovered-luaO_nentities;
 /*printf("==total %ld  coletados %ld\n", luaO_nentities+recovered, recovered);*/
   luaC_threshold = (limit == 0) ? 2*luaO_nentities : luaO_nentities+limit;

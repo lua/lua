@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.1 1997/08/14 20:19:10 roberto Exp roberto $
+** $Id: ltable.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,7 @@
 #define TagDefault LUA_T_ARRAY;
 
 
-Hash *luaH_root = NULL;
+GCnode luaH_root = {NULL, 0};
 
 
 
@@ -103,14 +103,6 @@ void luaH_free (Hash *frees)
 }
 
 
-static void inserttable (Hash *table)
-{
-  ++luaO_nentities;
-  table->head.next = (GCnode *)luaH_root;
-  luaH_root = table;
-  table->head.marked = 0;
-}
-
 Hash *luaH_new (int nhash)
 {
   Hash *t = luaM_new(Hash);
@@ -119,7 +111,7 @@ Hash *luaH_new (int nhash)
   nhash(t) = nhash;
   nuse(t) = 0;
   t->htag = TagDefault;
-  inserttable(t);
+  luaO_insertlist(&luaH_root, (GCnode *)t);
   return t;
 }
 
