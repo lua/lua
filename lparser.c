@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.213 2003/07/09 20:11:30 roberto Exp roberto $
+** $Id: lparser.c,v 1.214 2003/07/28 18:31:20 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -264,23 +264,6 @@ static void adjust_assign (LexState *ls, int nvars, int nexps, expdesc *e) {
 }
 
 
-static void code_params (LexState *ls, int nparams, TString *dots) {
-  FuncState *fs = ls->fs;
-  Proto *f = fs->f;
-  adjustlocalvars(ls, nparams);
-  luaX_checklimit(ls, fs->nactvar, MAXPARAMS, "parameters");
-  f->numparams = fs->nactvar;
-  if (!dots)
-    f->is_vararg = 0;
-  else {
-    f->is_vararg = 1;
-    new_localvar(ls, dots, 0);
-    adjustlocalvars(ls, 1);
-  }
-  luaK_reserveregs(fs, fs->nactvar);  /* reserve register for parameters */
-}
-
-
 static void enterblock (FuncState *fs, BlockCnt *bl, int isbreakable) {
   bl->breaklist = NO_JUMP;
   bl->isbreakable = isbreakable;
@@ -529,23 +512,35 @@ static void constructor (LexState *ls, expdesc *t) {
 
 static void parlist (LexState *ls) {
   /* parlist -> [ param { `,' param } ] */
+  FuncState *fs = ls->fs;
+  Proto *f = fs->f;
   int nparams = 0;
-  TString *dots = NULL;
+  f->is_vararg = 0;
   if (ls->t.token != ')') {  /* is `parlist' not empty? */
     do {
       switch (ls->t.token) {
-        case TK_NAME: new_localvar(ls, str_checkname(ls), nparams++); break;
-        case TK_DOTS: {
+        case TK_NAME: {  /* param -> NAME [ `=' `...' ] */
+          new_localvar(ls, str_checkname(ls), nparams++);
+          if (testnext(ls, '=')) {
+            check(ls, TK_DOTS);
+            f->is_vararg = 1;
+          }
+          break;
+        }
+        case TK_DOTS: {  /* param -> `...' */
           next(ls);
-          dots = (testnext(ls, '=')) ? str_checkname(ls) :
-                                       luaS_new(ls->L, "arg");
+          /* use `arg' as default name */
+          new_localvar(ls, luaS_new(ls->L, "arg"), nparams++);
+          f->is_vararg = 1;
           break;
         }
         default: luaX_syntaxerror(ls, "<name> or `...' expected");
       }
-    } while (!dots && testnext(ls, ','));
+    } while (!f->is_vararg && testnext(ls, ','));
   }
-  code_params(ls, nparams, dots);
+  adjustlocalvars(ls, nparams);
+  f->numparams = fs->nactvar - f->is_vararg;
+  luaK_reserveregs(fs, fs->nactvar);  /* reserve register for parameters */
 }
 
 
