@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.21 2005/03/09 16:28:07 roberto Exp roberto $
+** $Id: loadlib.c,v 1.22 2005/03/18 16:38:43 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -44,7 +44,7 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym);
 
 
 
-#if defined(LUA_USE_DLOPEN)
+#if defined(LUA_DL_DLOPEN)
 /*
 ** {========================================================================
 ** This is an implementation of loadlib based on the dlfcn interface.
@@ -78,7 +78,7 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 
 
 
-#elif defined(LUA_USE_DLL)
+#elif defined(LUA_DL_DLL)
 /*
 ** {======================================================================
 ** This is an implementation of loadlib for Windows using native functions.
@@ -93,7 +93,7 @@ static void pusherror (lua_State *L) {
   char buffer[128];
   if (FormatMessage(FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_SYSTEM,
       NULL, error, 0, buffer, sizeof(buffer), NULL))
-    lua_pushstring(L,buffer);
+    lua_pushstring(L, buffer);
   else
     lua_pushfstring(L, "system error %d\n", error);
 }
@@ -120,7 +120,7 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 
 
 
-#elif defined(LUA_USE_DYLD)
+#elif defined(LUA_DL_DYLD)
 /*
 ** {======================================================================
 ** Native Mac OS X / Darwin Implementation
@@ -212,6 +212,13 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 #define LIB_FAIL	"absent"
 
 
+#if defined(__ELF__) || defined(__sun) || defined(sgi) || defined(__hpux)
+#define DLMSG		"your system was not properly installed, " \
+                        "so it cannot run `loadlib'; check your installation"
+#else
+#define DLMSG		"`loadlib' not supported"
+#endif
+
 static void ll_unloadlib (void *lib) {
   (void)lib;  /* to avoid warnings */
 }
@@ -219,14 +226,14 @@ static void ll_unloadlib (void *lib) {
 
 static void *ll_load (lua_State *L, const char *path) {
   (void)path;  /* to avoid warnings */
-  lua_pushliteral(L,"`loadlib' not supported");
+  lua_pushliteral(L, DLMSG);
   return NULL;
 }
 
 
 static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
   (void)lib; (void)sym;  /* to avoid warnings */
-  lua_pushliteral(L,"`loadlib' not supported");
+  lua_pushliteral(L, DLMSG);
   return NULL;
 }
 
