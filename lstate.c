@@ -87,12 +87,12 @@ LUA_API lua_State *lua_newthread (lua_State *OL, int stacksize) {
     L->_G = NULL;
     L->stack = NULL;
     L->stacksize = 0;
-    L->ci = &L->basefunc;
-    L->basefunc.prev = NULL;
     L->errorJmp = NULL;
     L->callhook = NULL;
     L->linehook = NULL;
     L->openupval = NULL;
+    L->size_ci = 0;
+    L->base_ci = NULL;
     L->allowhooks = 1;
     L->next = L->previous = L;
     so.stacksize = stacksize;
@@ -130,6 +130,7 @@ static void close_state (lua_State *L, lua_State *OL) {
     luaM_freearray(L, G(L)->Mbuffer, G(L)->Mbuffsize, char);
     luaM_freelem(NULL, L->_G);
   }
+  luaM_freearray(OL, L->base_ci, L->size_ci, CallInfo);
   luaM_freearray(OL, L->stack, L->stacksize, TObject);
   luaM_freelem(OL, L);
 }

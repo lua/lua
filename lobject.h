@@ -248,20 +248,6 @@ typedef struct Table {
 #define sizenode(t)	(twoto((t)->lsizenode))
 #define sizearray(t)	((t)->sizearray)
 
-/*
-** informations about a call (for debugging)
-*/
-typedef struct CallInfo {
-  struct CallInfo *prev;  /* linked list */
-  StkId base;  /* base for called function */
-  const Instruction **pc;  /* current pc of called function */
-  int lastpc;  /* last pc traced */
-  int line;  /* current line */
-  int refi;  /* current index in `lineinfo' */
-} CallInfo;
-
-#define ci_func(ci)	(clvalue((ci)->base - 1))
-
 
 extern const TObject luaO_nilobject;
 

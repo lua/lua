@@ -363,8 +363,7 @@ static void do1gcTM (lua_State *L, Udata *udata) {
     setobj(top, tm);
     setuvalue(top+1, udata);
     L->top += 2;
-    luaD_call(L, top);
-    L->top = top;  /* restore top */
+    luaD_call(L, top, 0);
   }
 }
 

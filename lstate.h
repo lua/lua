@@ -70,6 +70,24 @@ typedef struct stringtable {
 
 
 /*
+** informations about a call
+*/
+typedef struct CallInfo {
+  StkId base;  /* base for called function */
+  const Instruction *savedpc;
+  lua_Hook linehook;
+  /* extra information for debugging */
+  const Instruction **pc;
+  int lastpc;  /* last pc traced */
+  int line;  /* current line */
+  int refi;  /* current index in `lineinfo' */
+} CallInfo;
+
+#define ci_func(ci)	(clvalue((ci)->base - 1))
+
+
+
+/*
 ** `global state', shared by all threads of this state
 */
 typedef struct global_State {
@@ -98,6 +116,9 @@ struct lua_State {
   StkId stack_last;  /* last free slot in the stack */
   StkId stack;  /* stack base */
   int stacksize;
+  CallInfo *end_ci;  /* points after end of ci array*/
+  CallInfo *base_ci;  /* array of CallInfo's */
+  int size_ci;  /* size of array `base_ci' */
   global_State *_G;
   lua_Hook callhook;
   lua_Hook linehook;
@@ -106,7 +127,6 @@ struct lua_State {
   UpVal *openupval;  /* list of open upvalues in this stack */
   lua_State *next;  /* circular double linked list of states */
   lua_State *previous;
-  CallInfo basefunc;
 };
 
 

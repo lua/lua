@@ -517,9 +517,7 @@ LUA_API void lua_rawcall (lua_State *L, int nargs, int nresults) {
   lua_lock(L);
   api_checknelems(L, nargs+1);
   func = L->top - (nargs+1);
-  luaD_call(L, func);
-  if (nresults != LUA_MULTRET)
-    luaD_adjusttop(L, func + nresults);
+  luaD_call(L, func, nresults);
   lua_unlock(L);
 }
 
