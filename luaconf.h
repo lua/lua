@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.18 2004/12/01 15:50:18 roberto Exp roberto $
+** $Id: luaconf.h,v 1.19 2004/12/01 15:52:54 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -272,6 +272,9 @@
 /* allows user-specific initialization on new threads */
 #define lua_userstateopen(L)	/* empty */
 
+
+/* initial GC parameters */
+#define STEPMUL		4
 
 #endif
 

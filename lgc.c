@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.16 2004/11/24 18:55:56 roberto Exp roberto $
+** $Id: lgc.c,v 2.17 2004/11/24 19:20:21 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -24,7 +24,6 @@
 
 
 #define GCSTEPSIZE	1000
-#define STEPMUL		2
 #define GCSWEEPMAX	10
 #define GCSWEEPCOST	30
 #define GCFINALIZECOST	100
@@ -65,7 +64,7 @@
 static void removeentry (Node *n) {
   setnilvalue(gval(n));  /* remove corresponding value ... */
   if (iscollectable(gkey(n)))
-    setttype(gkey(n), LUA_TNONE);  /* dead key; remove it */
+    setttype(gkey(n), LUA_TDEADKEY);  /* dead key; remove it */
 }
 
 
@@ -184,6 +183,7 @@ static int traversetable (global_State *g, Table *h) {
   i = sizenode(h);
   while (i--) {
     Node *n = gnode(h, i);
+    lua_assert(ttype(gkey(n)) != LUA_TDEADKEY || ttisnil(gval(n)));
     if (ttisnil(gval(n)))
       removeentry(n);  /* remove empty entries */
     else {
@@ -555,7 +555,7 @@ static void atomic (lua_State *L) {
   g->sweepgc = &g->rootgc;
   g->gcstate = GCSsweepstring;
   aux = g->gcgenerational;
-  g->gcgenerational = (g->estimate/2 <= g->prevestimate);
+  g->gcgenerational = g->incgc && (g->estimate/2 <= g->prevestimate);
   if (!aux)  /* last collection was full? */
     g->prevestimate = g->estimate;  /* keep estimate of last full collection */
   g->estimate = g->totalbytes - udsize;  /* first estimate */
@@ -587,6 +587,7 @@ static l_mem singlestep (lua_State *L) {
       sweepwholelist(L, &g->strt.hash[g->sweepstrgc++]);
       if (g->sweepstrgc >= g->strt.size)  /* nothing more to sweep? */
         g->gcstate = GCSsweep;  /* end sweep-string phase */
+      lua_assert(old >= g->totalbytes);
       g->estimate -= old - g->totalbytes;
       return GCSWEEPCOST;
     }
@@ -597,6 +598,7 @@ static l_mem singlestep (lua_State *L) {
         checkSizes(L);
         g->gcstate = GCSfinalize;  /* end sweep phase */
       }
+      lua_assert(old >= g->totalbytes);
       g->estimate -= old - g->totalbytes;
       return GCSWEEPMAX*GCSWEEPCOST;
     }
@@ -619,23 +621,18 @@ static l_mem singlestep (lua_State *L) {
 
 void luaC_step (lua_State *L) {
   global_State *g = G(L);
-  l_mem lim = (g->totalbytes - (g->GCthreshold - GCSTEPSIZE)) * STEPMUL;
-/*printf("step(%c): ", g->gcgenerational?'g':' ');*/
+  l_mem lim = (g->totalbytes - (g->GCthreshold - GCSTEPSIZE)) * g->stepmul;
   do {
-    /*printf("%c", "_pswf"[g->gcstate]);*/
     lim -= singlestep(L);
     if (g->gcstate == GCSpause)
       break;
-  } while (lim > 0);
-/*printf("\n");*/
-  if (g->gcstate != GCSpause)
+  } while (lim > 0 || !g->incgc);
+  if (g->incgc)
     g->GCthreshold = g->totalbytes + GCSTEPSIZE;  /* - lim/STEPMUL; */
   else {
-/*printf("---\n");*/
     lua_assert(g->totalbytes >= g->estimate);
+    lua_assert(g->gcstate == GCSpause);
     g->GCthreshold = 2*g->estimate;
-    if (g->GCthreshold < g->totalbytes + GCSTEPSIZE)
-      g->GCthreshold = g->totalbytes + GCSTEPSIZE;
   }
 }
 
@@ -660,19 +657,19 @@ void luaC_fullgc (lua_State *L) {
   }
   markroot(L);
   lua_assert(!g->gcgenerational);
-  while (g->gcstate != GCSfinalize) {
+  while (g->gcstate != GCSpause) {
     singlestep(L);
     g->gcgenerational = 0;  /* keep it in this mode */
   }
   g->GCthreshold = 2*g->estimate;
-  luaC_callGCTM(L);  /* call finalizers */
 }
 
 
 void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v) {
   global_State *g = G(L);
   lua_assert(isblack(o) && iswhite(v) && !isdead(g, v) && !isdead(g, o));
-  lua_assert(g->gcgenerational || g->gcstate != GCSfinalize);
+  lua_assert(g->gcgenerational ||
+             (g->gcstate != GCSfinalize && g->gcstate != GCSpause));
   lua_assert(ttype(&o->gch) != LUA_TTABLE);
   /* must keep invariant? */
   if (g->gcstate == GCSpropagate || g->gcgenerational)
@@ -685,7 +682,8 @@ void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v) {
 void luaC_barrierback (lua_State *L, GCObject *o, GCObject *v) {
   global_State *g = G(L);
   lua_assert(isblack(o) && iswhite(v) && !isdead(g, v) && !isdead(g, o));
-  lua_assert(g->gcgenerational || g->gcstate != GCSfinalize);
+  lua_assert(g->gcgenerational ||
+             (g->gcstate != GCSfinalize && g->gcstate != GCSpause));
   black2gray(o);  /* make table gray (again) */
   gco2h(o)->gclist = g->grayagain;
   g->grayagain = o;
