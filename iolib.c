@@ -3,12 +3,11 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.40 1996/03/19 22:28:37 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.41 1996/04/22 19:28:37 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <string.h>
 #include <time.h>
 #include <stdlib.h>
@@ -125,15 +124,12 @@ static void io_writeto (void)
 ** LUA interface:
 **			status = appendto (filename)
 ** where:
-**			status = 2 -> success (already exist)
-**			status = 1 -> success (new file)
+**			status = 1 -> success
 **			status = nil -> error
 */
 static void io_appendto (void)
 {
  char *s = lua_check_string(1, "appendto");
- struct stat st;
- int r = (stat(s, &st) == -1) ? 1 : 2;
  FILE *fp = fopen (s, "a");
  if (fp == NULL)
   lua_pushnil();
@@ -141,7 +137,7 @@ static void io_appendto (void)
  {
   if (out != stdout) fclose (out);
   out = fp;
-  lua_pushnumber (r);
+  lua_pushnumber(1);
  }
 }
 
