@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.48 2000/08/29 20:43:28 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.49 2000/08/31 13:30:22 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -481,7 +481,7 @@ static void add_s (lua_State *L, struct Capture *cap) {
     s = lua_tostring(L, -1);
     if (s)
       addnchar(L, lua_tostring(L, -1), lua_strlen(L, -1));
-    lua_settop(L, -1);  /* pop function result */
+    lua_pop(L, 1);  /* pop function result */
   }
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.47 2000/08/29 14:33:31 roberto Exp roberto $
+** $Id: lua.c,v 1.48 2000/08/31 14:28:17 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -87,7 +87,9 @@ static void laction (int i) {
 static int ldo (int (*f)(lua_State *l, const char *), const char *name) {
   int res;
   handler h = lreset();
+  int top = lua_gettop(L);
   res = f(L, name);  /* dostring | dofile */
+  lua_settop(L, top);  /* remove eventual results */
   signal(SIGINT, h);  /* restore old action */
   if (res == LUA_ERRMEM) {
     /* Lua gives no message in such case, so lua.c provides one */
@@ -177,9 +179,9 @@ static void manual_input (int version, int prompt) {
       const char *s;
       lua_getglobal(L, "_PROMPT");
       s = lua_tostring(L, -1);
-      lua_settop(L, -1);  /* remove global */
       if (!s) s = PROMPT;
       fputs(s, stdout);
+      lua_pop(L, 1);  /* remove global */
     }
     for(;;) {
       int c = getchar();

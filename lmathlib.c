@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.26 2000/08/09 19:16:57 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.27 2000/08/28 17:57:04 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -233,7 +233,7 @@ void lua_mathlibopen (lua_State *L) {
   lua_pushnumber(L, 0);  /* to get its tag */
   lua_pushcfunction(L, math_pow);
   lua_settagmethod(L, lua_tag(L, -2), "pow");
-  lua_settop(L, -1);  /* remove number */
+  lua_pop(L, 1);  /* remove number */
   lua_pushnumber(L, PI); lua_setglobal(L, "PI");
 }
 

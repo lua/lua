@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.62 2000/08/29 20:43:28 roberto Exp roberto $
+** $Id: lua.h,v 1.63 2000/08/31 14:08:27 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -62,6 +62,8 @@ void           lua_close (lua_State *L);
 int            lua_gettop (lua_State *L);
 void           lua_settop (lua_State *L, int index);
 void           lua_pushobject (lua_State *L, int index);
+void           lua_move (lua_State *L, int index);
+void           lua_insert (lua_State *L, int index);
 int            lua_stackspace (lua_State *L);
 
 
@@ -151,6 +153,8 @@ int            lua_next (lua_State *L);
 ** some useful macros
 ** ===============================================================
 */
+
+#define lua_pop(L,n)		lua_settop(L, -(n)-1)
 
 #define lua_register(L,n,f)	(lua_pushcfunction(L, f), lua_setglobal(L, n))
 #define lua_pushuserdata(L,u)	lua_pushusertag(L, u, 0)

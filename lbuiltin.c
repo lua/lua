@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.125 2000/08/31 14:08:27 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.126 2000/08/31 16:52:06 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -92,7 +92,7 @@ int luaB_print (lua_State *L) {
       lua_error(L, "`tostring' must return a string to `print'");
     if (i>1) fputs("\t", stdout);
     fputs(s, stdout);
-    lua_settop(L, -1);  /* pop result */
+    lua_pop(L, 1);  /* pop result */
   }
   fputs("\n", stdout);
   return 0;
@@ -201,7 +201,7 @@ int luaB_settagmethod (lua_State *L) {
   lua_pushnil(L);  /* to get its tag */
   if (strcmp(event, "gc") == 0 && tag != lua_tag(L, -1))
     lua_error(L, "deprecated use: cannot set the `gc' tag method from Lua");
-  lua_settop(L, -1);  /* remove the nil */
+  lua_pop(L, 1);  /* remove the nil */
   lua_settagmethod(L, tag, event);
   return 1;
 }
@@ -501,7 +501,7 @@ static int luaB_foreach (lua_State *L) {
     if (lua_call(L, 2, 1) != 0) lua_error(L, NULL);
     if (!lua_isnil(L, -1))
       return 1;
-    lua_settop(L, -2);  /* remove value and result */
+    lua_pop(L, 2);  /* remove value and result */
   }
 }
 

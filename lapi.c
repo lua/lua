@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.90 2000/08/29 20:43:28 roberto Exp roberto $
+** $Id: lapi.c,v 1.91 2000/08/31 14:08:27 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -65,7 +65,25 @@ void lua_settop (lua_State *L, int index) {
   if (index >= 0)
     luaD_adjusttop(L, L->Cbase, index);
   else
-    L->top += index;  /* index is negative */
+    L->top = L->top+index+1;  /* index is negative */
+}
+
+
+void lua_move (lua_State *L, int index) {
+  TObject *p = Index(L, index);
+  TObject temp = *p;
+  while (++p < L->top) *(p-1) = *p;
+  *(L->top-1) = temp;
+}
+
+
+void lua_insert (lua_State *L, int index) {
+  TObject temp = *(L->top-1);
+  TObject *p = Index(L, index);
+  TObject *q;
+  for (q = L->top-1; q>p; q--)
+    *q = *(q-1);
+  *p = temp;
 }
 
 
@@ -218,8 +236,7 @@ void lua_gettable (lua_State *L) {
 
 
 void lua_rawget (lua_State *L) {
-  if (ttype(L->top - 2) != TAG_TABLE)
-    lua_error(L, "indexed expression not a table");
+  LUA_ASSERT(ttype(L->top-2) == TAG_TABLE, "not a table");
   *(L->top - 2) = *luaH_get(L, hvalue(L->top - 2), L->top - 1);
   L->top--;
 }
@@ -278,8 +295,7 @@ void lua_settable (lua_State *L) {
 
 
 void lua_rawset (lua_State *L) {
-  if (ttype(L->top-3) != TAG_TABLE)
-    lua_error(L, "indexed expression not a table");
+  LUA_ASSERT(ttype(L->top-3) == TAG_TABLE, "not a table");
   *luaH_set(L, hvalue(L->top-3), L->top-2) = *(L->top-1);
   L->top -= 3;
 }
@@ -287,8 +303,7 @@ void lua_rawset (lua_State *L) {
 
 void lua_setglobals (lua_State *L) {
   TObject *newtable = --L->top;
-  if (ttype(newtable) != TAG_TABLE)
-    lua_error(L, "Lua API error - invalid value for global table");
+  LUA_ASSERT(ttype(newtable) == TAG_TABLE, "not a table");
   L->gt = hvalue(newtable);
 }
 
@@ -350,9 +365,7 @@ void lua_settag (lua_State *L, int tag) {
 
 void lua_unref (lua_State *L, int ref) {
   if (ref >= 0) {
-    if (ref >= L->refSize || L->refArray[ref].st >= 0)
-      lua_error(L, "Lua API error - "
-                   "invalid argument for function `lua_unref'");
+    LUA_ASSERT(ref < L->refSize && L->refArray[ref].st < 0, "invalid ref");
     L->refArray[ref].st = L->refFree;
     L->refFree = ref;
   }
@@ -362,8 +375,7 @@ void lua_unref (lua_State *L, int ref) {
 int lua_next (lua_State *L) {
   const TObject *t = Index(L, -2);
   Node *n;
-  if (ttype(t) != TAG_TABLE)
-    lua_error(L, "Lua API error - object is not a table in `lua_next'"); 
+  LUA_ASSERT(ttype(t) == TAG_TABLE, "object is not a table in `lua_next'");
   n = luaH_next(L, hvalue(t), Index(L, -1));
   if (n) {
     *(L->top-1) = *key(n);

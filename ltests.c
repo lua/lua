@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.37 2000/08/29 19:05:11 roberto Exp roberto $
+** $Id: ltests.c,v 1.38 2000/08/31 13:29:47 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -341,7 +341,7 @@ static int getnum (lua_State *L, const char **pc) {
   skip(pc);
   if (**pc == '.') {
     res = (int)lua_tonumber(L, -1);
-    lua_settop(L, -1);
+    lua_pop(L, 1);
     (*pc)++;
     return res;
   }
@@ -384,11 +384,20 @@ static int testC (lua_State *L) {
     else if EQ("settop") {
       lua_settop(L, getnum);
     }
+    else if EQ("pop") {
+      lua_pop(L, getnum);
+    }
     else if EQ("pushnum") {
       lua_pushnumber(L, getnum);
     }
     else if EQ("pushobject") {
       lua_pushobject(L, getnum);
+    }
+    else if EQ("move") {
+      lua_move(L, getnum);
+    }
+    else if EQ("insert") {
+      lua_insert(L, getnum);
     }
     else if EQ("next") {
       lua_next(L);
