@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.266 2002/11/21 15:16:04 roberto Exp roberto $
+** $Id: lvm.c,v 1.267 2002/11/21 15:46:44 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -552,7 +552,8 @@ StkId luaV_execute (lua_State *L) {
         int b = GETARG_B(i);
         int c = GETARG_C(i);
         luaV_concat(L, c-b+1, c);  /* may change `base' (and `ra') */
-        setobjs2s(XRA(i), base+b);
+        base = L->base;
+        setobjs2s(RA(i), base+b);
         luaC_checkGC(L);
         break;
       }
