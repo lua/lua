@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.17 1999/03/11 18:59:19 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.18 1999/08/16 20:52:00 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -35,11 +35,8 @@ void luaL_argerror (int numarg, const char *extramsg) {
   numarg -= lua_nups(f);
   if (funcname == NULL)
     funcname = "?";
-  if (extramsg == NULL)
-    luaL_verror("bad argument #%d to function `%.50s'", numarg, funcname);
-  else
-    luaL_verror("bad argument #%d to function `%.50s' (%.100s)",
-                    numarg, funcname, extramsg);
+  luaL_verror("bad argument #%d to function `%.50s' (%.100s)",
+              numarg, funcname, extramsg);
 }
 
 const char *luaL_check_lstr (int numArg, long *len) {
