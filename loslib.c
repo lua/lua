@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.1 2004/07/09 15:47:48 roberto Exp roberto $
+** $Id: loslib.c,v 1.2 2004/08/05 19:30:37 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -20,7 +20,7 @@
 #include "lualib.h"
 
 
-static int pushresult (lua_State *L, int i, const char *filename) {
+static int os_pushresult (lua_State *L, int i, const char *filename) {
   if (i) {
     lua_pushboolean(L, 1);
     return 1;
@@ -45,14 +45,14 @@ static int io_execute (lua_State *L) {
 
 static int io_remove (lua_State *L) {
   const char *filename = luaL_checkstring(L, 1);
-  return pushresult(L, remove(filename) == 0, filename);
+  return os_pushresult(L, remove(filename) == 0, filename);
 }
 
 
 static int io_rename (lua_State *L) {
   const char *fromname = luaL_checkstring(L, 1);
   const char *toname = luaL_checkstring(L, 2);
-  return pushresult(L, rename(fromname, toname) == 0, fromname);
+  return os_pushresult(L, rename(fromname, toname) == 0, fromname);
 }
 
 
