@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.15 1995/10/09 13:14:29 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.16 1995/10/17 11:52:38 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -48,10 +48,7 @@ void luaI_setfallback (void)
   char *name = lua_getstring(lua_getparam(1));
   lua_Object func = lua_getparam(2);
   if (name == NULL || !(lua_isfunction(func) || lua_iscfunction(func)))
-  {
-    lua_pushnil();
-    return;
-  }
+    lua_error("incorrect argument to function `setfallback'");
   for (i=0; i<N_FB; i++)
   {
     if (strcmp(luaI_fallBacks[i].kind, name) == 0)
@@ -62,7 +59,7 @@ void luaI_setfallback (void)
     }
   }
   /* name not found */
-  lua_pushnil();
+  lua_error("incorrect argument to function `setfallback'");
 }
 
 

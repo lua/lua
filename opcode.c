@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.44 1995/10/17 11:58:41 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.45 1995/10/17 14:12:45 roberto Exp $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -500,8 +500,10 @@ lua_Object lua_setfallback (char *name, lua_CFunction fallback)
   stack[CBase].value.f = luaI_setfallback;
   lua_pushstring(name);
   lua_pushcfunction(fallback);
-  do_protectedrun(1);
-  return (Ref(top-1));
+  if (do_protectedrun(1) == 0)
+    return (Ref(top-1));
+  else
+    return LUA_NOOBJECT;
 }
 
 
