@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.42 2000/09/29 12:42:13 roberto Exp roberto $
+** $Id: lstate.c,v 1.43 2000/10/05 13:00:17 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -89,7 +89,7 @@ lua_State *lua_open (int stacksize) {
     lua_close(L);
     return NULL;
   }
-  L->GCthreshold = L->nblocks*4;
+  L->GCthreshold = 2*L->nblocks;
   return L;
 }
 
