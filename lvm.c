@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.65 1999/11/04 17:22:26 roberto Exp roberto $
+** $Id: lvm.c,v 1.66 1999/11/22 13:12:07 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -325,11 +325,11 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf, StkId
         goto ret;
 
       case CALL: aux = *pc++;
-        luaD_calln(L, *pc++, aux);
+        luaD_call(L, (S->stack+base) + *pc++, aux);
         break;
 
       case TAILCALL: aux = *pc++;
-        luaD_calln(L, *pc++, MULT_RET);
+        luaD_call(L, (S->stack+base) + *pc++, MULT_RET);
         base += aux;
         goto ret;
 
@@ -603,11 +603,6 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf, StkId
       case LONGARG:  aux += *pc++;
         aux = highbyte(L, highbyte(L, aux));
         goto switchentry;  /* do not reset "aux" */
-
-      case CHECKSTACK: aux = *pc++;
-        LUA_ASSERT(L, (S->top-S->stack)-base == aux && S->last >= S->top,
-                   "wrong stack size");
-        break;
 
     }
   } ret:

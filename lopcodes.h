@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.32 1999/03/10 14:09:45 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.33 1999/06/17 17:04:03 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -20,12 +20,12 @@ typedef enum {
 ENDCODE,/*	-	-		(return)			*/
 RETCODE,/*	b	-		(return)			*/
 
-CALL,/*		b c	v_c...v_1 f	r_b...r_1	f(v1,...,v_c)	*/
+CALL,/*		b c	v_n-v_1 f(at c)	r_b-r_1		f(v1,...,v_n)	*/
 
-TAILCALL,/*	b c	v_c...v_1 f	(return)	f(v1,...,v_c)	*/
+TAILCALL,/*	b c	v_c-v_1 f	(return)	f(v1,...,v_c)	*/
 
-PUSHNIL,/*	b	-		nil_0...nil_b			*/
-POP,/*		b	a_b...a_1	-				*/
+PUSHNIL,/*	b	-		nil_0-nil_b			*/
+POP,/*		b	a_b-a_1		-				*/
 
 PUSHNUMBERW,/*	w	-		(float)w			*/
 PUSHNUMBER,/*	b	-		(float)b			*/
@@ -61,12 +61,12 @@ SETGLOBAL,/*	b	x		-		VAR[CNST[b]]=x	*/
 
 SETTABLEPOP,/*	-	v i t		-		t[i]=v		*/
 
-SETTABLE,/*	b	v a_b...a_1 i t	 a_b...a_1 i t	  t[i]=v	*/
+SETTABLE,/*	b	v a_b-a_1 i t	 a_b-a_1 i t	  t[i]=v	*/
 
-SETLISTW,/*	w c	v_c...v_1 t	t		t[i+w*FPF]=v_i	*/
-SETLIST,/*	b c	v_c...v_1 t	t		t[i+b*FPF]=v_i	*/
+SETLISTW,/*	w c	v_c-v_1 t	t		t[i+w*FPF]=v_i	*/
+SETLIST,/*	b c	v_c-v_1 t	t		t[i+b*FPF]=v_i	*/
 
-SETMAP,/*	b	v_b k_b ...v_0 k_0 t	t	t[k_i]=v_i	*/
+SETMAP,/*	b	v_b k_b - v_0 k_0 t	t	t[k_i]=v_i	*/
 
 NEQOP,/*	-	y x		(x~=y)? 1 : nil			*/
 EQOP,/*		-	y x		(x==y)? 1 : nil			*/
@@ -96,16 +96,14 @@ IFTUPJMP,/*	b	x		-		(x!=nil)? PC-=b	*/
 IFFUPJMPW,/*	w	x		-		(x==nil)? PC-=w	*/
 IFFUPJMP,/*	b	x		-		(x==nil)? PC-=b	*/
 
-CLOSUREW,/*	w c	v_c...v_1	closure(CNST[w], v_c...v_1)	*/
-CLOSURE,/*	b c	v_c...v_1	closure(CNST[b], v_c...v_1)	*/
+CLOSUREW,/*	w c	v_c-v_1		closure(CNST[w], v_c-v_1)	*/
+CLOSURE,/*	b c	v_c-v_1		closure(CNST[b], v_c-v_1)	*/
 
 SETLINEW,/*	w	-		-		LINE=w		*/
 SETLINE,/*	b	-		-		LINE=b		*/
 
 LONGARGW,/*	w	(add w*(1<<16) to arg of next instruction)	*/
-LONGARG,/*	b	(add b*(1<<16) to arg of next instruction)	*/
-
-CHECKSTACK /*	b  (assert #temporaries == b; only for internal debuging!) */
+LONGARG /*	b	(add b*(1<<16) to arg of next instruction)	*/
 
 } OpCode;
 

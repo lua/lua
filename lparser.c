@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.42 1999/11/04 17:23:12 roberto Exp roberto $
+** $Id: lparser.c,v 1.43 1999/11/22 13:12:07 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -426,12 +426,9 @@ static void close_exp (LexState *ls, int pc, int nresults) {
   if (pc > 0) {  /* expression is an open function call? */
     Byte *code = ls->fs->f->code;
     code[pc-1] = (Byte)nresults;  /* set nresults */
-    /* push results, pop params (at code[pc]) and function */
-    deltastack(ls, nresults-(code[pc]+1));
+    if (nresults != MULT_RET)
+      deltastack(ls, nresults);  /* push results */
   }
-#ifdef DEBUG
-  code_oparg(ls, CHECKSTACK, ls->fs->stacksize, 0);
-#endif
 }
 
 
@@ -1152,7 +1149,7 @@ static void var_or_func_tail (LexState *ls, vardesc *v) {
 
 static int funcparams (LexState *ls, int slf) {
   FuncState *fs = ls->fs;
-  int nparams = 1;  /* in cases STRING and constructor */
+  int slevel = fs->stacksize - slf - 1;  /* where is func in the stack */
   switch (ls->token) {
     case '(': {  /* funcparams -> '(' explist ')' */
       int line = ls->linenumber;
@@ -1160,8 +1157,7 @@ static int funcparams (LexState *ls, int slf) {
       next(ls);
       explist(ls, &e);
       check_match(ls, ')', '(', line);
-      close_exp(ls, e.pc, 1);
-      nparams = e.n;
+      close_exp(ls, e.pc, MULT_RET);  /* close 1 for old semantics */
       break;
     }
 
@@ -1180,7 +1176,8 @@ static int funcparams (LexState *ls, int slf) {
   }
   code_byte(ls, CALL);
   code_byte(ls, 0);  /* save space for nresult */
-  code_byte(ls, (Byte)(nparams+slf));
+  code_byte(ls, (Byte)slevel);
+  fs->stacksize = slevel;  /* call will remove func and params */
   return fs->pc-1;
 }
 
