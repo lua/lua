@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.122 2002/05/16 14:59:49 roberto Exp roberto $
+** $Id: ltests.c,v 1.123 2002/06/03 20:11:41 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -96,7 +96,10 @@ static void freeblock (void *block) {
 
 
 void *debug_realloc (void *block, size_t oldsize, size_t size) {
-  lua_assert((oldsize == 0) ? block == NULL : oldsize == *blocksize(block));
+  lua_assert((oldsize == 0) == (block == NULL));
+  lua_assert(oldsize == 0 || oldsize == *blocksize(block));
+  /* ISO does not specify what realloc(NULL, 0) does */
+  lua_assert(block != NULL || size > 0);
   if (size == 0) {
     freeblock(block);
     return NULL;
