@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.39 1996/03/14 15:55:18 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.40 1996/03/19 22:28:37 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -529,9 +529,8 @@ static void io_date (void)
 static void io_exit (void)
 {
  lua_Object o = lua_getparam(1);
- if (lua_isstring(o))
-  fprintf(stderr, "%s\n", lua_getstring(o));
- exit(1);
+ int code = lua_isnumber(o) ? (int)lua_getnumber(o) : 1;
+ exit(code);
 }
 
 /*
