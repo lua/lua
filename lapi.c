@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.73 2000/03/03 14:58:26 roberto Exp roberto $
+** $Id: lapi.c,v 1.74 2000/03/10 18:37:44 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -306,9 +306,9 @@ void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   luaC_checkGC(L);
 }
 
-void lua_pushusertag (lua_State *L, void *u, int tag) {
-  if (tag < 0 && tag != LUA_ANYTAG)
-    luaT_realtag(L, tag);  /* error if tag is not valid */
+void lua_pushusertag (lua_State *L, void *u, int tag) {  /* ORDER LUA_T */
+  if (tag != LUA_ANYTAG && tag != TAG_USERDATA && tag < NUM_TAGS)
+    luaL_verror(L, "invalid tag for a userdata (%d)", tag);
   tsvalue(L->top) = luaS_createudata(L, u, tag);
   ttype(L->top) = TAG_USERDATA;
   incr_top;
@@ -329,13 +329,12 @@ void lua_pushobject (lua_State *L, lua_Object o) {
 
 
 int lua_tag (lua_State *L, lua_Object o) {
-  UNUSED(L);
   if (o == LUA_NOOBJECT)
     return TAG_NIL;
   else if (ttype(o) == TAG_USERDATA)  /* to allow `old' tags (deprecated) */
     return o->value.ts->u.d.tag;
   else
-    return luaT_effectivetag(o);
+    return luaT_effectivetag(L, o);
 }
 
 

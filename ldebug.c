@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.10 2000/03/03 14:58:26 roberto Exp roberto $
+** $Id: ldebug.c,v 1.11 2000/03/10 18:37:44 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -33,7 +33,7 @@ static const lua_Type normtype[] = {  /* ORDER LUA_T */
 
 static void setnormalized (TObject *d, const TObject *s) {
   d->value = s->value;
-  d->ttype = normtype[-ttype(s)];
+  d->ttype = normtype[ttype(s)];
 }
 
 

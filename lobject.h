@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.51 2000/03/10 18:37:44 roberto Exp roberto $
+** $Id: lobject.h,v 1.52 2000/03/16 21:06:16 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -67,34 +67,32 @@ typedef unsigned long Instruction;
 */
 typedef enum {
   TAG_USERDATA  =  0, /* default tag for userdata */
-  TAG_NUMBER    = -1, /* fixed tag for numbers */
-  TAG_STRING    = -2, /* fixed tag for strings */
-  TAG_ARRAY     = -3, /* default tag for tables (or arrays) */
-  TAG_LPROTO    = -4, /* fixed tag for Lua functions */
-  TAG_CPROTO    = -5, /* fixed tag for C functions */
-  TAG_NIL       = -6, /* last "pre-defined" tag */
+  TAG_NUMBER,	/* fixed tag for numbers */
+  TAG_STRING,	/* fixed tag for strings */
+  TAG_ARRAY,	/* default tag for tables (or arrays) */
+  TAG_LPROTO,	/* fixed tag for Lua functions */
+  TAG_CPROTO,	/* fixed tag for C functions */
+  TAG_NIL,	/* last "pre-defined" tag */
 
-  TAG_LCLOSURE  = -7, /* Lua closure */
-  TAG_CCLOSURE  = -8, /* C closure */
+  TAG_LCLOSURE,	/* Lua closure */
+  TAG_CCLOSURE,	/* C closure */
 
-  TAG_LCLMARK   = -9 ,/* mark for Lua closures */
-  TAG_CCLMARK   = -10,/* mark for C closures */
-  TAG_LMARK     = -11,/* mark for Lua prototypes */
-  TAG_CMARK     = -12,/* mark for C prototypes */
+  TAG_LCLMARK,	/* mark for Lua closures */
+  TAG_CCLMARK,	/* mark for C closures */
+  TAG_LMARK,	/* mark for Lua prototypes */
+  TAG_CMARK,	/* mark for C prototypes */
 
-  TAG_LINE     = -13
+  TAG_LINE
 } lua_Type;
 
-#define NUM_TAGS	7	/* tags for values visible from Lua */
+/* tags for values visible from Lua == first user-created tag */
+#define NUM_TAGS	7
 
-
-#define LAST_REGULAR_TAG  TAG_CCLOSURE  /* after that, are all marks */
 
 /*
-** check whether `t' is a mark; ttypes are negative numbers, so the
-** comparisons look reversed.  (ORDER LUA_T)
+** check whether `t' is a mark
 */
-#define is_T_MARK(t)	(TAG_CMARK <= (t) && (t) <= TAG_LCLMARK)
+#define is_T_MARK(t)	(TAG_LCLMARK <= (t) && (t) <= TAG_CMARK)
 
 
 typedef union {
@@ -221,7 +219,7 @@ typedef struct Hash {
 extern const char *const luaO_typenames[];
 extern const TObject luaO_nilobject;
 
-#define luaO_typename(o)        luaO_typenames[-ttype(o)]
+#define luaO_typename(o)        luaO_typenames[ttype(o)]
 
 #define MINPOWER2	4	/* minimum size for "growing" vectors */
 

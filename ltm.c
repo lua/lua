@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.33 2000/03/03 14:58:26 roberto Exp roberto $
+** $Id: ltm.c,v 1.34 2000/03/10 18:37:44 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -19,12 +19,16 @@
 
 const char *const luaT_eventname[] = {  /* ORDER IM */
   "gettable", "settable", "index", "getglobal", "setglobal", "add", "sub",
-  "mul", "div", "pow", "unm", "lt", "concat", "gc", "function", NULL
+  "mul", "div", "pow", "unm", "lt", "concat", "gc", "function",
+  "le", "gt", "ge",  /* deprecated options!! */
+  NULL
 };
 
 
-static int luaI_checkevent (lua_State *L, const char *name, const char *const list[]) {
-  int e = luaL_findstring(name, list);
+static int luaI_checkevent (lua_State *L, const char *name) {
+  int e = luaL_findstring(name, luaT_eventname);
+  if (e >= IM_N)
+    luaL_verror(L, "event `%.50s' is deprecated", name);
   if (e < 0)
     luaL_verror(L, "`%.50s' is not a valid event name", name);
   return e;
@@ -46,12 +50,12 @@ static const char luaT_validevents[NUM_TAGS][IM_N] = {
 {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}   /* TAG_NIL */
 };
 
-int luaT_validevent (int t, int e) {  /* ORDER LUA_T */
+static int luaT_validevent (int t, int e) {  /* ORDER LUA_T */
 #ifdef LUA_COMPAT_GC
   if (t == TAG_ARRAY && e == IM_GC)
     return 1;  /* old versions allowed gc tag method for tables */
 #endif
-  return (t < TAG_NIL) ?  1 : luaT_validevents[-t][e];
+  return (t > TAG_NIL) ?  1 : luaT_validevents[t][e];
 }
 
 
@@ -64,28 +68,28 @@ static void init_entry (lua_State *L, int tag) {
 
 void luaT_init (lua_State *L) {
   int t;
-  L->last_tag = -(NUM_TAGS-1);
+  L->last_tag = NUM_TAGS-1;
   luaM_growvector(L, L->IMtable, 0, NUM_TAGS, struct IM, arrEM, MAX_INT);
-  for (t=L->last_tag; t<=0; t++)
+  for (t=0; t<=L->last_tag; t++)
     init_entry(L, t);
 }
 
 
 int lua_newtag (lua_State *L) {
-  --L->last_tag;
-  luaM_growvector(L, L->IMtable, -(L->last_tag), 1, struct IM, arrEM, MAX_INT);
+  ++L->last_tag;
+  luaM_growvector(L, L->IMtable, L->last_tag, 1, struct IM, arrEM, MAX_INT);
   init_entry(L, L->last_tag);
   return L->last_tag;
 }
 
 
 static void checktag (lua_State *L, int tag) {
-  if (!(L->last_tag <= tag && tag <= 0))
+  if (!(0 <= tag && tag <= L->last_tag))
     luaL_verror(L, "%d is not a valid tag", tag);
 }
 
 void luaT_realtag (lua_State *L, int tag) {
-  if (!(L->last_tag <= tag && tag < TAG_NIL))
+  if (!(NUM_TAGS <= tag && tag <= L->last_tag))
     luaL_verror(L, "tag %d was not created by `newtag'", tag);
 }
 
@@ -102,32 +106,27 @@ int lua_copytagmethods (lua_State *L, int tagto, int tagfrom) {
 }
 
 
-int luaT_effectivetag (const TObject *o) {
+int luaT_effectivetag (lua_State *L, const TObject *o) {
   static const int realtag[] = {  /* ORDER LUA_T */
     TAG_USERDATA, TAG_NUMBER, TAG_STRING, TAG_ARRAY,
     TAG_LPROTO, TAG_CPROTO, TAG_NIL,
     TAG_LPROTO, TAG_CPROTO,       /* TAG_LCLOSURE, TAG_CCLOSURE */
   };
-  int t;
+  lua_Type t;
   switch (t = ttype(o)) {
     case TAG_USERDATA: {
       int tag = o->value.ts->u.d.tag;
-      return (tag >= 0) ? TAG_USERDATA : tag;  /* deprecated test */
+      return (tag > L->last_tag) ? TAG_USERDATA : tag;  /* deprecated test */
     }
     case TAG_ARRAY:    return o->value.a->htag;
-    default:             return realtag[-t];
+    default:             return realtag[t];
   }
 }
 
 
 const TObject *luaT_gettagmethod (lua_State *L, int t, const char *event) {
   int e;
-#ifdef LUA_COMPAT_ORDER_TM
-  static const char *old_order[] = {"le", "gt", "ge", NULL};
-  if (luaL_findstring(event, old_order) >= 0)
-     return &luaO_nilobject;
-#endif
-  e = luaI_checkevent(L, event, luaT_eventname);
+  e = luaI_checkevent(L, event);
   checktag(L, t);
   if (luaT_validevent(t, e))
     return luaT_getim(L, t,e);
@@ -139,16 +138,11 @@ const TObject *luaT_gettagmethod (lua_State *L, int t, const char *event) {
 void luaT_settagmethod (lua_State *L, int t, const char *event, TObject *func) {
   TObject temp;
   int e;
-#ifdef LUA_COMPAT_ORDER_TM
-  static const char *old_order[] = {"le", "gt", "ge", NULL};
-  if (luaL_findstring(event, old_order) >= 0)
-     return;  /* do nothing for old operators */
-#endif
-  e = luaI_checkevent(L, event, luaT_eventname);
+  e = luaI_checkevent(L, event);
   checktag(L, t);
   if (!luaT_validevent(t, e))
     luaL_verror(L, "cannot change `%.20s' tag method for type `%.20s'%.20s",
-                luaT_eventname[e], luaO_typenames[-t],
+                luaT_eventname[e], luaO_typenames[t],
                 (t == TAG_ARRAY || t == TAG_USERDATA) ? " with default tag"
                                                           : "");
   temp = *func;
@@ -162,7 +156,7 @@ const char *luaT_travtagmethods (lua_State *L,
   int e;
   for (e=IM_GETTABLE; e<=IM_FUNCTION; e++) {
     int t;
-    for (t=0; t>=L->last_tag; t--)
+    for (t=0; t<=L->last_tag; t++)
       if (fn(L, luaT_getim(L, t,e)))
         return luaT_eventname[e];
   }

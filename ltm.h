@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 1.9 2000/02/22 18:12:46 roberto Exp roberto $
+** $Id: ltm.h,v 1.10 2000/03/03 14:58:26 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -40,19 +40,18 @@ struct IM {
 };
 
 
-#define luaT_getim(L,tag,event) (&L->IMtable[-(tag)].int_method[event])
-#define luaT_getimbyObj(L,o,e)  (luaT_getim(L, luaT_effectivetag(o),(e)))
+#define luaT_getim(L,tag,event) (&L->IMtable[tag].int_method[event])
+#define luaT_getimbyObj(L,o,e)  (luaT_getim(L, luaT_effectivetag(L, o),(e)))
 
 extern const char *const luaT_eventname[];
 
 
 void luaT_init (lua_State *L);
 void luaT_realtag (lua_State *L, int tag);
-int luaT_effectivetag (const TObject *o);
+int luaT_effectivetag (lua_State *L, const TObject *o);
 void luaT_settagmethod (lua_State *L, int t, const char *event, TObject *func);
 const TObject *luaT_gettagmethod (lua_State *L, int t, const char *event);
 const char *luaT_travtagmethods (lua_State *L, int (*fn)(lua_State *, TObject *));
 
-int luaT_validevent (int t, int e);
 
 #endif
