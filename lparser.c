@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.154 2001/08/27 15:16:28 roberto Exp $
+** $Id: lparser.c,v 1.156 2001/09/07 17:39:10 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -419,6 +419,8 @@ static void funcargs (LexState *ls, expdesc *f) {
   switch (ls->t.token) {
     case l_c('('): {  /* funcargs -> `(' [ explist1 ] `)' */
       int line = ls->linenumber;
+      if (line != ls->lastline)
+        luaK_error(ls, l_s("ambiguous syntax (function call x new statement)"));
       next(ls);
       if (ls->t.token == l_c(')'))  /* arg list is empty? */
         args.k = VVOID;
@@ -605,33 +607,10 @@ static void constructor (LexState *ls, expdesc *t) {
 ** =======================================================================
 */
 
-static void primaryexp (LexState *ls, expdesc *v) {
+
+static void prefixexp (LexState *ls, expdesc *v) {
+  /* prefixexp -> NAME | '(' expr ')' */
   switch (ls->t.token) {
-    case TK_NUMBER: {
-      init_exp(v, VNUMBER, 0);
-      v->u.n = ls->t.seminfo.r;
-      next(ls);  /* must use `seminfo' before `next' */
-      break;
-    }
-    case TK_STRING: {
-      codestring(ls, v, ls->t.seminfo.ts);
-      next(ls);  /* must use `seminfo' before `next' */
-      break;
-    }
-    case TK_NIL: {
-      init_exp(v, VNIL, 0);
-      next(ls);
-      break;
-    }
-    case l_c('{'): {  /* constructor */
-      constructor(ls, v);
-      break;
-    }
-    case TK_FUNCTION: {
-      next(ls);
-      body(ls, v, 0, ls->linenumber);
-      break;
-    }
     case l_c('('): {
       next(ls);
       expr(ls, v);
@@ -651,7 +630,6 @@ static void primaryexp (LexState *ls, expdesc *v) {
       next(ls);
       return;
     }
-
     default: {
       luaK_error(ls, l_s("unexpected symbol"));
       return;
@@ -660,11 +638,11 @@ static void primaryexp (LexState *ls, expdesc *v) {
 }
 
 
-static void simpleexp (LexState *ls, expdesc *v) {
-  /* simpleexp ->
-        primaryexp { `.' NAME | `[' exp `]' | `:' NAME funcargs | funcargs } */
+static void primaryexp (LexState *ls, expdesc *v) {
+  /* primaryexp ->
+        prefixexp { `.' NAME | `[' exp `]' | `:' NAME funcargs | funcargs } */
   FuncState *fs = ls->fs;
-  primaryexp(ls, v);
+  prefixexp(ls, v);
   for (;;) {
     switch (ls->t.token) {
       case l_c('.'): {  /* field */
@@ -691,10 +669,49 @@ static void simpleexp (LexState *ls, expdesc *v) {
         funcargs(ls, v);
         break;
       }
-      default: return;  /* should be follow... */
+      default: return;
     }
   }
 }
+
+
+static void simpleexp (LexState *ls, expdesc *v) {
+  /* simpleexp -> NUMBER | STRING | NIL | constructor | FUNCTION body
+               | primaryexp */
+  switch (ls->t.token) {
+    case TK_NUMBER: {
+      init_exp(v, VNUMBER, 0);
+      v->u.n = ls->t.seminfo.r;
+      next(ls);  /* must use `seminfo' before `next' */
+      break;
+    }
+    case TK_STRING: {
+      codestring(ls, v, ls->t.seminfo.ts);
+      next(ls);  /* must use `seminfo' before `next' */
+      break;
+    }
+    case TK_NIL: {
+      init_exp(v, VNIL, 0);
+      next(ls);
+      break;
+    }
+    case l_c('{'): {  /* constructor */
+      constructor(ls, v);
+      break;
+    }
+    case TK_FUNCTION: {
+      next(ls);
+      body(ls, v, 0, ls->linenumber);
+      break;
+    }
+    default: {
+      primaryexp(ls, v);
+      break;
+    }
+  }
+}
+
+
 
 
 static UnOpr getunopr (int op) {
@@ -846,12 +863,12 @@ static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
 static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
   expdesc e;
   check_condition(ls, VLOCAL <= lh->v.k && lh->v.k <= VINDEXED,
-                      l_s("syntax error!!"));
-  if (ls->t.token == l_c(',')) {  /* assignment -> `,' simpleexp assignment */
+                      l_s("syntax error!"));
+  if (ls->t.token == l_c(',')) {  /* assignment -> `,' primaryexp assignment */
     struct LHS_assign nv;
     nv.prev = lh;
     next(ls);
-    simpleexp(ls, &nv.v);
+    primaryexp(ls, &nv.v);
     if (nv.v.k == VLOCAL)
       check_conflict(ls, lh, &nv.v);
     assignment(ls, &nv, nvars+1);
@@ -1079,7 +1096,7 @@ static void exprstat (LexState *ls) {
   /* stat -> func | assignment */
   FuncState *fs = ls->fs;
   struct LHS_assign v;
-  simpleexp(ls, &v.v);
+  primaryexp(ls, &v.v);
   if (v.v.k == VCALL) {  /* stat -> func */
     luaK_setcallreturns(fs, &v.v, 0);  /* call statement uses no results */
   }
@@ -1155,11 +1172,7 @@ static int statement (LexState *ls) {
       return 0;
     }
     case TK_FUNCTION: {
-      lookahead(ls);
-      if (ls->lookahead.token == '(')
-        exprstat(ls);
-      else
-        funcstat(ls, line);  /* stat -> funcstat */
+      funcstat(ls, line);  /* stat -> funcstat */
       return 0;
     }
     case TK_LOCAL: {  /* stat -> localstat */
