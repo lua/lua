@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.26 1998/03/06 16:54:42 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.27 1998/03/09 21:49:52 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -131,53 +131,60 @@ static void internaldofile (void)
 }
 
 
-static char *to_string (lua_Object obj)
-{
+static void to_string (void) {
+  lua_Object obj = lua_getparam(1);
   char *buff = luaL_openspace(30);
   TObject *o = luaA_Address(obj);
   switch (ttype(o)) {
-    case LUA_T_NUMBER:  case LUA_T_STRING:
-      return lua_getstring(obj);
+    case LUA_T_NUMBER:
+      lua_pushstring(lua_getstring(obj));
+      return;
+    case LUA_T_STRING:
+      lua_pushobject(obj);
+      return;
     case LUA_T_ARRAY: {
       sprintf(buff, "table: %p", (void *)o->value.a);
-      return buff;
+      break;
     }
     case LUA_T_CLOSURE: {
       sprintf(buff, "function: %p", (void *)o->value.cl);
-      return buff;
+      break;
     }
     case LUA_T_PROTO: {
       sprintf(buff, "function: %p", (void *)o->value.tf);
-      return buff;
+      break;
     }
     case LUA_T_CPROTO: {
       sprintf(buff, "function: %p", (void *)o->value.f);
-      return buff;
+      break;
     }
     case LUA_T_USERDATA: {
       sprintf(buff, "userdata: %p", o->value.ts->u.d.v);
-      return buff;
+      break;
     }
     case LUA_T_NIL:
-      return "nil";
+      lua_pushstring("nil");
+      return;
     default:
       LUA_INTERNALERROR("invalid type");
-      return NULL;  /* to avoid warnings */
   }
-}
-
-static void bi_tostring (void)
-{
-  lua_pushstring(to_string(lua_getparam(1)));
+  lua_pushstring(buff);
 }
 
 
-static void luaI_print (void)
-{
-  int i = 1;
+static void luaI_print (void) {
+  TaggedString *ts = luaS_new("tostring");
   lua_Object obj;
-  while ((obj = lua_getparam(i++)) != LUA_NOOBJECT)
-    printf("%s\t", to_string(obj));
+  int i = 1;
+  while ((obj = lua_getparam(i++)) != LUA_NOOBJECT) {
+    luaA_pushobject(&ts->u.s.globalval);
+    lua_pushobject(obj);
+    luaD_call((L->stack.top-L->stack.stack)-1, 1);
+    if (ttype(L->stack.top-1) != LUA_T_STRING)
+      lua_error("`tostring' must return a string to `print'");
+    printf("%s\t", svalue(L->stack.top-1));
+    L->stack.top--;
+  }
   printf("\n");
 }
 
@@ -491,7 +498,7 @@ static struct luaL_reg int_funcs[] = {
   {"gettagmethod", gettagmethod},
   {"settag", settag},
   {"tonumber", tonumber},
-  {"tostring", bi_tostring},
+  {"tostring", to_string},
   {"tag", luatag},
   {"type", luaI_type}
 };
