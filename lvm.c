@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.133 2000/08/31 21:02:55 roberto Exp roberto $
+** $Id: lvm.c,v 1.134 2000/09/05 19:33:32 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -12,7 +12,6 @@
 #include "lua.h"
 
 #include "lapi.h"
-#include "lauxlib.h"
 #include "ldebug.h"
 #include "ldo.h"
 #include "lfunc.h"
@@ -300,7 +299,7 @@ void luaV_strconc (lua_State *L, int total, StkId top) {
         n++;
       }
       if (tl > MAX_SIZET) lua_error(L, "string size overflow");
-      buffer = luaL_openspace(L, tl);
+      buffer = luaO_openspace(L, tl);
       tl = 0;
       for (i=n; i>0; i--) {  /* concat all strings */
         size_t l = tsvalue(top-i)->u.s.len;

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.21 2000/08/29 20:43:28 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.22 2000/09/04 18:27:32 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -10,6 +10,7 @@
 
 
 #include <stddef.h>
+#include <stdio.h>
 
 #include "lua.h"
 
@@ -34,17 +35,7 @@ void luaL_checktype (lua_State *L, int narg, const char *tname);
 void luaL_verror (lua_State *L, const char *fmt, ...);
 int luaL_findstring (const char *name, const char *const list[]);
 void luaL_chunkid (char *out, const char *source, int len);
-void luaL_filesource (char *out, const char *filename, int len);
 
-
-char *luaL_openspace (lua_State *L, size_t size);
-void luaL_resetbuffer (lua_State *L);
-void luaL_addchar (lua_State *L, int c);
-size_t luaL_getsize (lua_State *L);
-void luaL_addsize (lua_State *L, size_t n);
-size_t luaL_newbuffer (lua_State *L, size_t size);
-void luaL_oldbuffer (lua_State *L, size_t old);
-char *luaL_buffer (lua_State *L);
 
 
 /*
@@ -64,5 +55,39 @@ char *luaL_buffer (lua_State *L);
 #define luaL_openl(L,a)		luaL_openlib(L, a, (sizeof(a)/sizeof(a[0])))
 
 
+/*
+** {======================================================
+** Generic Buffer manipulation
+** =======================================================
+*/
+
+
+#define LUAL_BUFFERSIZE	  BUFSIZ
+
+
+typedef struct luaL_Buffer {
+  char *p;			/* current position in buffer */
+  int level;
+  lua_State *L;
+  char buffer[LUAL_BUFFERSIZE];
+} luaL_Buffer;
+
+#define luaL_putchar(B,c) \
+  ((void)((B)->p < &(B)->buffer[LUAL_BUFFERSIZE] || luaL_prepbuffer(B)), \
+   (*(B)->p++ = (char)(c)))
+
+#define luaL_addsize(B,n)	((B)->p += (n))
+
+void luaL_buffinit (lua_State *L, luaL_Buffer *B);
+char *luaL_prepbuffer (luaL_Buffer *B);
+void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l);
+void luaL_addvalue (luaL_Buffer *B);
+void luaL_pushresult (luaL_Buffer *B);
+
+
+/* }====================================================== */
+
+
 #endif
+
 

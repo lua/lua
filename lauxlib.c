@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.32 2000/08/29 14:33:31 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.33 2000/08/29 20:43:28 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -140,8 +140,97 @@ void luaL_chunkid (char *out, const char *source, int len) {
 }
 
 
-void luaL_filesource (char *out, const char *filename, int len) {
-  if (filename == NULL) filename = "(stdin)";
-  sprintf(out, "@%.*s", len-2, filename);  /* -2 for '@' and '\0' */
+/*
+** {======================================================
+** Generic Buffer manipulation
+** =======================================================
+*/
+
+
+#define buffempty(B)	((B)->p == (B)->buffer)
+#define bufflen(B)	((B)->p - (B)->buffer)
+#define bufffree(B)	((size_t)(LUAL_BUFFERSIZE - bufflen(B)))
+
+#define LIMIT	(LUA_MINSTACK/2)
+
+
+static int emptybuffer (luaL_Buffer *B) {
+  size_t l = bufflen(B);
+  if (l == 0) return 0;  /* put nothing on stack */
+  else {
+    lua_pushlstring(B->L, B->buffer, l);
+    B->p = B->buffer;
+    B->level++;
+    return 1;
+  }
 }
 
+
+static void adjuststack (luaL_Buffer *B) {
+  if (B->level > 1) {
+    lua_State *L = B->L;
+    int toget = 1;  /* number of levels to concat */
+    size_t toplen = lua_strlen(L, -1);
+    do {
+      size_t l = lua_strlen(L, -(toget+1));
+      if (B->level - toget + 1 >= LIMIT || toplen > l) {
+        toplen += l;
+        toget++;
+      }
+      else break;
+    } while (toget < B->level);
+    if (toget >= 2) {
+      lua_concat(L, toget);
+      B->level = B->level - toget + 1;
+    }
+  }
+}
+
+
+char *luaL_prepbuffer (luaL_Buffer *B) {
+  if (emptybuffer(B))
+    adjuststack(B);
+  return B->buffer;
+}
+
+
+void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l) {
+  while (l--)
+    luaL_putchar(B, *s++);
+}
+
+
+void luaL_pushresult (luaL_Buffer *B) {
+  emptybuffer(B);
+  if (B->level == 0)
+    lua_pushlstring(B->L, NULL, 0);
+  else if (B->level > 1)
+    lua_concat(B->L, B->level);
+  B->level = 1;
+}
+
+
+void luaL_addvalue (luaL_Buffer *B) {
+  lua_State *L = B->L;
+  size_t vl = lua_strlen(L, -1);
+  if (vl <= bufffree(B)) {  /* fit into buffer? */
+    memcpy(B->p, lua_tostring(L, -1), vl);  /* put it there */
+    B->p += vl;
+    lua_pop(L, 1);  /* remove from stack */
+  }
+  else {
+    if (emptybuffer(B))
+      lua_insert(L, -2);  /* put buffer before new value */
+    B->level++;  /* add new value into B stack */
+    adjuststack(B);
+  }
+}
+
+
+void luaL_buffinit (lua_State *L, luaL_Buffer *B) {
+  B->L = L;
+  B->p = B->buffer;
+  B->level = 0;
+}
+
+/* }====================================================== */

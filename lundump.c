@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.29 2000/06/28 14:12:55 lhf Exp lhf $
+** $Id: lundump.c,v 1.27 2000/09/04 18:53:41 roberto Exp roberto $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -86,7 +86,7 @@ static TString* LoadString (lua_State* L, ZIO* Z, int swap)
   return NULL;
  else
  {
-  char* s=luaL_openspace(L,size);
+  char* s=luaO_openspace(L,size);
   LoadBlock(L,s,size,Z);
   return luaS_newlstr(L,s,size-1);	/* remove trailing '\0' */
  }

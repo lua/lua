@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.36 2000/08/08 20:42:07 roberto Exp roberto $
+** $Id: lstate.h,v 1.37 2000/08/28 17:57:04 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -61,9 +61,7 @@ struct lua_State {
   StkId Cbase;  /* base for current C function */
   struct lua_longjmp *errorJmp;  /* current error recover point */
   char *Mbuffer;  /* global buffer */
-  size_t Mbuffbase;  /* current first position of Mbuffer */
   size_t Mbuffsize;  /* size of Mbuffer */
-  size_t Mbuffnext;  /* next position to fill in Mbuffer */
   /* global state */
   Proto *rootproto;  /* list of all prototypes */
   Closure *rootcl;  /* list of all closures */

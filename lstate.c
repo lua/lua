@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.35 2000/08/31 13:30:39 roberto Exp roberto $
+** $Id: lstate.c,v 1.36 2000/09/05 19:33:32 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -35,9 +35,7 @@ lua_State *lua_newstate (int stacksize) {
   L->strt.hash = NULL;
   L->udt.hash = NULL;
   L->Mbuffer = NULL;
-  L->Mbuffbase = 0;
   L->Mbuffsize = 0;
-  L->Mbuffnext = 0;
   L->rootproto = NULL;
   L->rootcl = NULL;
   L->roottable = NULL;

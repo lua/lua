@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.76 2000/08/31 20:23:40 roberto Exp roberto $
+** $Id: liolib.c,v 1.77 2000/09/05 19:33:32 roberto Exp $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -263,7 +263,7 @@ static int read_pattern (lua_State *L, FILE *f, const char *p) {
         if (c == NEED_OTHER) c = getc(f);
         m = (c==EOF) ? 0 : luaI_singlematch(c, p, ep);
         if (m) {
-          if (!inskip) luaL_addchar(L, c);
+          if (!inskip) luaL_putchar(L, c);
           c = NEED_OTHER;
         }
         switch (*ep) {
@@ -274,7 +274,7 @@ static int read_pattern (lua_State *L, FILE *f, const char *p) {
             while (m) {  /* reads the same item until it fails */
               c = getc(f);
               m = (c==EOF) ? 0 : luaI_singlematch(c, p, ep);
-              if (m && !inskip) luaL_addchar(L, c);
+              if (m && !inskip) luaL_putchar(L, c);
             }
             /* go through to continue reading the pattern */
           case '?':  /* optional */
@@ -308,53 +308,74 @@ static int read_number (lua_State *L, FILE *f) {
 }
 
 
-static void read_word (lua_State *L, FILE *f) {
+static int read_word (lua_State *L, FILE *f) {
   int c;
+  luaL_Buffer b;
+  luaL_buffinit(L, &b);
   do { c = fgetc(f); } while (isspace(c));  /* skip spaces */
   while (c != EOF && !isspace(c)) {
-    luaL_addchar(L, c);
+    luaL_putchar(&b, c);
     c = fgetc(f);
   }
   ungetc(c, f);
+  luaL_pushresult(&b);  /* close buffer */
+  return (lua_strlen(L, 1) > 0);
 }
 
 
-#define HUNK_LINE	256
-#define HUNK_FILE	BUFSIZ
-
 static int read_line (lua_State *L, FILE *f) {
-  int n;
-  char *b;
+  int n = 0;
+  luaL_Buffer b;
+  luaL_buffinit(L, &b);
   for (;;) {
-    b = luaL_openspace(L, HUNK_LINE);
-    if (!fgets(b, HUNK_LINE, f)) return 0;  /* read fails */
-    n = strlen(b);
-    if (b[n-1] != '\n')
-      luaL_addsize(L, n); 
+    char *p = luaL_prepbuffer(&b);
+    if (!fgets(p, LUAL_BUFFERSIZE, f))  /* read fails? */
+      break;
+    n = strlen(p);
+    if (p[n-1] != '\n')
+      luaL_addsize(&b, n); 
     else {
-      luaL_addsize(L, n-1);  /* do not add the `\n' */
+      luaL_addsize(&b, n-1);  /* do not add the `\n' */
       break;
     }
   }
-  return 1;
+  luaL_pushresult(&b);  /* close buffer */
+  return (n > 0);  /* read something? */
 }
 
 
 static void read_file (lua_State *L, FILE *f) {
-  size_t n;
-  do {
-    char *b = luaL_openspace(L, HUNK_FILE);
-    n = fread(b, sizeof(char), HUNK_FILE, f);
-    luaL_addsize(L, n);
-  } while (n==HUNK_FILE);
+  size_t len = 0;
+  size_t size = BUFSIZ;
+  char *buffer = NULL;
+  for (;;) {
+    buffer = (char *)realloc(buffer, size);
+    if (buffer == NULL)
+      lua_error(L, "not enough memory to read a file");
+    len += fread(buffer+len, sizeof(char), size-len, f);
+    if (len < size) break;  /* did not read all it could */
+    size *= 2;
+  }
+  lua_pushlstring(L, buffer, len);
+  free(buffer);
 }
 
 
 static int read_chars (lua_State *L, FILE *f, size_t n) {
-  char *b = luaL_openspace(L, n);
-  size_t n1 = fread(b, sizeof(char), n, f);
-  luaL_addsize(L, n1);
-  return (n == n1);
+  char *buffer;
+  size_t n1;
+  char statbuff[BUFSIZ];
+  if (n <= BUFSIZ)
+    buffer = statbuff;
+  else {
+    buffer = (char  *)malloc(n);
+    if (buffer == NULL)
+      lua_error(L, "not enough memory to read a file");
+  }
+  n1 = fread(buffer, sizeof(char), n, f);
+  lua_pushlstring(L, buffer, n1);
+  if (buffer != statbuff) free(buffer);
+  return (n1 > 0 || n == 0);
 }
 
 
@@ -375,9 +396,7 @@ static int io_read (lua_State *L) {
   else
     luaL_checkstack(L, lastarg-firstarg+1, "too many arguments");
   for (n = firstarg; n<=lastarg; n++) {
-    size_t l;
     int success;
-    luaL_resetbuffer(L);
     if (lua_isnumber(L, n))
       success = read_chars(L, f, (size_t)lua_tonumber(L, n));
     else {
@@ -397,8 +416,7 @@ static int io_read (lua_State *L) {
             success = 1; /* always success */
             break;
           case 'w':  /* word */
-            read_word(L, f);
-            success = 0;  /* must read something to succeed */
+            success = read_word(L, f);
             break;
           default:
             luaL_argerror(L, n, "invalid format");
@@ -406,9 +424,10 @@ static int io_read (lua_State *L) {
         }
       }
     }
-    l = luaL_getsize(L);
-    if (!success && l==0) break;  /* read fails */
-    lua_pushlstring(L, luaL_buffer(L), l);
+    if (!success) {
+      lua_pop(L, 1);  /* remove last result */
+      break;  /* read fails */
+    }
   } endloop:
   return n - firstarg;
 }

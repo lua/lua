@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.50 2000/08/31 20:23:40 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.51 2000/09/05 19:33:32 roberto Exp $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -18,23 +18,11 @@
 
 
 
-static void addnchar (lua_State *L, const char *s, size_t n) {
-  char *b = luaL_openspace(L, n);
-  memcpy(b, s, n);
-  luaL_addsize(L, n);
-}
-
-
 static int str_len (lua_State *L) {
   size_t l;
   luaL_check_lstr(L, 1, &l);
   lua_pushnumber(L, l);
   return 1;
-}
-
-
-static void closeandpush (lua_State *L) {
-  lua_pushlstring(L, luaL_buffer(L), luaL_getsize(L));
 }
 
 
@@ -61,11 +49,12 @@ static int str_sub (lua_State *L) {
 static int str_lower (lua_State *L) {
   size_t l;
   size_t i;
+  luaL_Buffer b;
   const char *s = luaL_check_lstr(L, 1, &l);
-  luaL_resetbuffer(L);
+  luaL_buffinit(L, &b);
   for (i=0; i<l; i++)
-    luaL_addchar(L, tolower((unsigned char)(s[i])));
-  closeandpush(L);
+    luaL_putchar(&b, tolower((unsigned char)(s[i])));
+  luaL_pushresult(&b);
   return 1;
 }
 
@@ -73,22 +62,24 @@ static int str_lower (lua_State *L) {
 static int str_upper (lua_State *L) {
   size_t l;
   size_t i;
+  luaL_Buffer b;
   const char *s = luaL_check_lstr(L, 1, &l);
-  luaL_resetbuffer(L);
+  luaL_buffinit(L, &b);
   for (i=0; i<l; i++)
-    luaL_addchar(L, toupper((unsigned char)(s[i])));
-  closeandpush(L);
+    luaL_putchar(&b, toupper((unsigned char)(s[i])));
+  luaL_pushresult(&b);
   return 1;
 }
 
 static int str_rep (lua_State *L) {
   size_t l;
+  luaL_Buffer b;
   const char *s = luaL_check_lstr(L, 1, &l);
   int n = luaL_check_int(L, 2);
-  luaL_resetbuffer(L);
+  luaL_buffinit(L, &b);
   while (n-- > 0)
-    addnchar(L, s, l);
-  closeandpush(L);
+    luaL_addlstring(&b, s, l);
+  luaL_pushresult(&b);
   return 1;
 }
 
@@ -106,13 +97,14 @@ static int str_byte (lua_State *L) {
 static int str_char (lua_State *L) {
   int n = lua_gettop(L);  /* number of arguments */
   int i;
-  luaL_resetbuffer(L);
+  luaL_Buffer b;
+  luaL_buffinit(L, &b);
   for (i=1; i<=n; i++) {
     int c = luaL_check_int(L, i);
     luaL_arg_check(L, (unsigned char)c == c, i, "invalid value");
-    luaL_addchar(L, (unsigned char)c);
+    luaL_putchar(&b, (unsigned char)c);
   }
-  closeandpush(L);
+  luaL_pushresult(&b);
   return 1;
 }
 
@@ -445,43 +437,37 @@ static int str_find (lua_State *L) {
 }
 
 
-static void add_s (lua_State *L, struct Capture *cap) {
+static void add_s (lua_State *L, luaL_Buffer *b, struct Capture *cap) {
   if (lua_isstring(L, 3)) {
     const char *news = lua_tostring(L, 3);
     size_t l = lua_strlen(L, 3);
     size_t i;
     for (i=0; i<l; i++) {
       if (news[i] != ESC)
-        luaL_addchar(L, news[i]);
+        luaL_putchar(b, news[i]);
       else {
         i++;  /* skip ESC */
         if (!isdigit((unsigned char)news[i]))
-          luaL_addchar(L, news[i]);
+          luaL_putchar(b, news[i]);
         else {
           int level = check_capture(L, news[i], cap);
-          addnchar(L, cap->capture[level].init, cap->capture[level].len);
+          luaL_addlstring(b, cap->capture[level].init, cap->capture[level].len);
         }
       }
     }
   }
   else {  /* is a function */
     int status;
-    size_t oldbuff;
     int n;
-    const char *s;
     lua_pushvalue(L, 3);
     n = push_captures(L, cap);
-    /* function may use buffer, so save it and create a new one */
-    oldbuff = luaL_newbuffer(L, 0);
     status = lua_call(L, n, 1);
-    /* restore old buffer */
-    luaL_oldbuffer(L, oldbuff);
     if (status != 0)
-      lua_error(L, NULL);
-    s = lua_tostring(L, -1);
-    if (s)
-      addnchar(L, lua_tostring(L, -1), lua_strlen(L, -1));
-    lua_pop(L, 1);  /* pop function result */
+      lua_error(L, NULL);  /* propagate error */
+    if (lua_isstring(L, -1))
+      luaL_addvalue(b);  /* add return to accumulated result */
+    else
+      lua_pop(L, 1);  /* function result is not a string: pop it */
   }
 }
 
@@ -494,10 +480,11 @@ static int str_gsub (lua_State *L) {
   int anchor = (*p == '^') ? (p++, 1) : 0;
   int n = 0;
   struct Capture cap;
+  luaL_Buffer b;
   luaL_arg_check(L,
     lua_gettop(L) >= 3 && (lua_isstring(L, 3) || lua_isfunction(L, 3)),
     3, "string or function expected");
-  luaL_resetbuffer(L);
+  luaL_buffinit(L, &b);
   cap.src_end = src+srcl;
   while (n < max_s) {
     const char *e;
@@ -505,17 +492,17 @@ static int str_gsub (lua_State *L) {
     e = match(L, src, p, &cap);
     if (e) {
       n++;
-      add_s(L, &cap);
+      add_s(L, &b, &cap);
     }
     if (e && e>src) /* non empty match? */
       src = e;  /* skip it */
     else if (src < cap.src_end)
-      luaL_addchar(L, *src++);
+      luaL_putchar(&b, *src++);
     else break;
     if (anchor) break;
   }
-  addnchar(L, src, cap.src_end-src);
-  closeandpush(L);
+  luaL_addlstring(&b, src, cap.src_end-src);
+  luaL_pushresult(&b);
   lua_pushnumber(L, n);  /* number of substitutions */
   return 2;
 }
@@ -523,40 +510,43 @@ static int str_gsub (lua_State *L) {
 /* }====================================================== */
 
 
-static void luaI_addquoted (lua_State *L, int arg) {
+static void luaI_addquoted (lua_State *L, luaL_Buffer *b, int arg) {
   size_t l;
   const char *s = luaL_check_lstr(L, arg, &l);
-  luaL_addchar(L, '"');
+  luaL_putchar(b, '"');
   while (l--) {
     switch (*s) {
       case '"':  case '\\':  case '\n':
-        luaL_addchar(L, '\\');
-        luaL_addchar(L, *s);
+        luaL_putchar(b, '\\');
+        luaL_putchar(b, *s);
         break;
-      case '\0': addnchar(L, "\\000", 4); break;
-      default: luaL_addchar(L, *s);
+      case '\0': luaL_addlstring(b, "\\000", 4); break;
+      default: luaL_putchar(b, *s);
     }
     s++;
   }
-  luaL_addchar(L, '"');
+  luaL_putchar(b, '"');
 }
 
+/* maximum size of each formated item (> len(format('%99.99f', -1e308))) */
+#define MAX_ITEM	512
 /* maximum size of each format specification (such as '%-099.99d') */
-#define MAX_FORMAT 20  /* arbitrary limit */
+#define MAX_FORMAT	20
 
 static int str_format (lua_State *L) {
   int arg = 1;
   const char *strfrmt = luaL_check_string(L, arg);
-  luaL_resetbuffer(L);
+  luaL_Buffer b;
+  luaL_buffinit(L, &b);
   while (*strfrmt) {
     if (*strfrmt != '%')
-      luaL_addchar(L, *strfrmt++);
+      luaL_putchar(&b, *strfrmt++);
     else if (*++strfrmt == '%')
-      luaL_addchar(L, *strfrmt++);  /* %% */
+      luaL_putchar(&b, *strfrmt++);  /* %% */
     else { /* format item */
       struct Capture cap;
       char form[MAX_FORMAT];  /* to store the format ('%...') */
-      char *buff;  /* to store the formatted item */
+      char buff[MAX_ITEM];  /* to store the formatted item */
       const char *initf = strfrmt;
       form[0] = '%';
       if (isdigit((unsigned char)*initf) && *(initf+1) == '$') {
@@ -572,7 +562,6 @@ static int str_format (lua_State *L) {
         lua_error(L, "invalid format (width or precision too long)");
       strncpy(form+1, initf, strfrmt-initf+1); /* +1 to include conversion */
       form[strfrmt-initf+2] = 0;
-      buff = luaL_openspace(L, 512);  /* 512 > len(format('%99.99f', -1e308)) */
       switch (*strfrmt++) {
         case 'c':  case 'd':  case 'i':
           sprintf(buff, form, luaL_check_int(L, arg));
@@ -584,7 +573,7 @@ static int str_format (lua_State *L) {
           sprintf(buff, form, luaL_check_number(L, arg));
           break;
         case 'q':
-          luaI_addquoted(L, arg);
+          luaI_addquoted(L, &b, arg);
           continue;  /* skip the "addsize" at the end */
         case 's': {
           size_t l;
@@ -592,7 +581,8 @@ static int str_format (lua_State *L) {
           if (cap.capture[1].len == 0 && l >= 100) {
             /* no precision and string is too long to be formatted;
                keep original string */
-            addnchar(L, s, l);
+            lua_pushvalue(L, arg);
+            luaL_addvalue(&b);
             continue;  /* skip the "addsize" at the end */
           }
           else {
@@ -603,10 +593,10 @@ static int str_format (lua_State *L) {
         default:  /* also treat cases 'pnLlh' */
           lua_error(L, "invalid option in `format'");
       }
-      luaL_addsize(L, strlen(buff));
+      luaL_addlstring(&b, buff, strlen(buff));
     }
   }
-  closeandpush(L);  /* push the result */
+  luaL_pushresult(&b);
   return 1;
 }
 

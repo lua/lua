@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.63 2000/08/22 17:44:17 roberto Exp roberto $
+** $Id: lgc.c,v 1.64 2000/08/28 17:57:04 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -333,6 +333,8 @@ void luaC_collect (lua_State *L, int all) {
 }
 
 
+#define MINBUFFER	256
+
 long lua_collectgarbage (lua_State *L, long limit) {
   unsigned long recovered = L->nblocks;  /* to subtract `nblocks' after gc */
   markall(L);
@@ -340,8 +342,8 @@ long lua_collectgarbage (lua_State *L, long limit) {
   luaC_collect(L, 0);
   recovered = recovered - L->nblocks;
   L->GCthreshold = (limit == 0) ? 2*L->nblocks : L->nblocks+limit;
-  if (L->Mbuffsize > L->Mbuffnext*4) {  /* is buffer too big? */
-    L->Mbuffsize /= 2;  /* still larger than Mbuffnext*2 */
+  if (L->Mbuffsize > MINBUFFER*2) {  /* is buffer too big? */
+    L->Mbuffsize /= 2;  /* still larger than MINBUFFER */
     luaM_reallocvector(L, L->Mbuffer, L->Mbuffsize, char);
   }
   callgcTM(L, &luaO_nilobject);
