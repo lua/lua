@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.92 2000/11/23 13:49:35 roberto Exp roberto $
+** $Id: liolib.c,v 1.93 2000/12/04 18:33:40 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -228,12 +228,6 @@ static int io_appendto (lua_State *L) {
 ** READ
 ** =======================================================
 */
-
-
-
-
-#define read_pattern(L, f, p) (lua_error(L, "read patterns are deprecated"), 0)
-
 
 
 static int read_number (lua_State *L, FILE *f) {
@@ -481,18 +475,113 @@ static int io_clock (lua_State *L) {
 }
 
 
+/*
+** {======================================================
+** Time/Date operations
+** { year=%Y, month=%m, day=%d, hour=%H, min=%M, sec=%S,
+**   wday=%w+1, yday=%j, isdst=? }
+** =======================================================
+*/
+
+static void setfield (lua_State *L, const char *key, int value) {
+  lua_pushstring(L, key);
+  lua_pushnumber(L, value);
+  lua_rawset(L, -3);
+}
+
+
+static int getfield (lua_State *L, const char *key, int d) {
+  int res;
+  lua_pushstring(L, key);
+  lua_rawget(L, -2);
+  if (lua_isnumber(L, -1))
+    res = lua_tonumber(L, -1);
+  else {
+    if (d == -2)
+      luaL_verror(L, "field `%.20s' missing in date table", key);
+    res = d;
+  }
+  lua_pop(L, 1);
+  return res;
+}
+
+
+static void tm2table (lua_State *L, struct tm *stm) {
+  setfield(L, "sec", stm->tm_sec);
+  setfield(L, "min", stm->tm_min);
+  setfield(L, "hour", stm->tm_hour);
+  setfield(L, "day", stm->tm_mday);
+  setfield(L, "month", stm->tm_mon+1);
+  setfield(L, "year", stm->tm_year+1900);
+  setfield(L, "wday", stm->tm_wday+1);
+  setfield(L, "yday", stm->tm_yday+1);
+  setfield(L, "isdst", stm->tm_isdst);
+}
+
+
 static int io_date (lua_State *L) {
-  char b[256];
   const char *s = luaL_opt_string(L, 1, "%c");
+  time_t t = (time_t)luaL_opt_number(L, 2, -1);
   struct tm *stm;
-  time_t t;
-  time(&t); stm = localtime(&t);
-  if (strftime(b, sizeof(b), s, stm))
-    lua_pushstring(L, b);
+  if (t == (time_t)-1)  /* no time given? */
+    t = time(NULL);  /* use current time */
+  if (*s == '!') {  /* UTC? */
+    stm = gmtime(&t);
+    s++;  /* skip `!' */
+  }
   else
-    lua_error(L, "invalid `date' format");
+    stm = localtime(&t);
+  if (stm == NULL)  /* invalid date? */
+    lua_pushnil(L);
+  else if (strcmp(s, "*t") == 0) {
+    lua_newtable(L);
+    tm2table(L, stm);
+  }
+  else {
+    char b[256];
+    if (strftime(b, sizeof(b), s, stm))
+      lua_pushstring(L, b);
+    else
+      lua_error(L, "invalid `date' format");
+  }
   return 1;
 }
+
+
+static int io_time (lua_State *L) {
+  if (lua_isnull(L, 1))  /* called without args? */
+    lua_pushnumber(L, time(NULL));  /* return current time */
+  else {
+    time_t t;
+    struct tm ts;
+    luaL_checktype(L, 1, LUA_TTABLE);
+    lua_settop(L, 1);  /* make sure table is at the top */
+    ts.tm_sec = getfield(L, "sec", 0);
+    ts.tm_min = getfield(L, "min", 0);
+    ts.tm_hour = getfield(L, "hour", 12);
+    ts.tm_mday = getfield(L, "day", -2);
+    ts.tm_mon = getfield(L, "month", -2)-1;
+    ts.tm_year = getfield(L, "year", -2)-1900;
+    ts.tm_isdst = getfield(L, "isdst", -1);
+    t = mktime(&ts);
+    if (t == (time_t)-1)
+      lua_pushnil(L);
+    else {
+      tm2table(L, &ts);  /* copy back updated values */
+      lua_pushnumber(L, t);
+    }
+  }
+  return 1;
+}
+
+
+static int io_difftime (lua_State *L) {
+  lua_pushnumber(L, difftime((time_t)luaL_check_number(L, 1),
+                             (time_t)luaL_opt_number(L, 2, 0)));
+  return 1;
+}
+
+/* }====================================================== */
 
 
 static int io_setloc (lua_State *L) {
@@ -607,12 +696,14 @@ static const struct luaL_reg iolib[] = {
   {"clock",     io_clock},
   {"date",      io_date},
   {"debug",     io_debug},
+  {"difftime",  io_difftime},
   {"execute",   io_execute},
   {"exit",      io_exit},
   {"getenv",    io_getenv},
   {"remove",    io_remove},
   {"rename",    io_rename},
   {"setlocale", io_setloc},
+  {"time",      io_time},
   {"tmpname",   io_tmpname}
 };
 
