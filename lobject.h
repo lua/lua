@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.86 2001/01/18 15:59:09 roberto Exp roberto $
+** $Id: lobject.h,v 1.87 2001/01/19 13:20:30 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -212,10 +212,6 @@ typedef struct CallInfo {
 
 
 extern const TObject luaO_nilobject;
-extern const char *const luaO_typenames[];
-
-
-#define luaO_typename(o)	(luaO_typenames[ttype(o)])
 
 
 luint32 luaO_power2 (luint32 n);

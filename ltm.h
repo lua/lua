@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 1.20 2001/01/19 13:20:30 roberto Exp roberto $
+** $Id: ltm.h,v 1.21 2001/01/24 16:20:54 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -38,6 +38,7 @@ typedef enum {
 
 /*
 ** masks for allowable tag methods
+** (see `luaT_validevents')
 */
 #define HAS_TM_GETGLOBAL(L,t)	(1<<(t) & ((1<<LUA_TUSERDATA) | \
                                            (1<<LUA_TTABLE) | \
@@ -53,11 +54,15 @@ typedef enum {
 struct TM {
   Closure *method[TM_N];
   TString *collected;  /* list of garbage-collected udata with this tag */
+  TString *name;  /* type name */
+  int basictype;
 };
 
 
 #define luaT_gettm(G,tag,event) (G->TMtable[tag].method[event])
 #define luaT_gettmbyObj(G,o,e)  (luaT_gettm((G),luaT_tag(o),(e)))
+
+#define basictypename(G, t)	(G->TMtable[t].name->str)
 
 
 #define validtag(G,t) (NUM_TAGS <= (t) && (t) < G->ntag)
@@ -66,7 +71,8 @@ extern const char *const luaT_eventname[];
 
 
 void luaT_init (lua_State *L);
-void luaT_realtag (lua_State *L, int tag);
+int luaT_newtag (lua_State *L, const char *name, int basictype);
+const char *luaT_typename (global_State *G, const TObject *o);
 int luaT_tag (const TObject *o);
 int luaT_validevent (int t, int e);  /* used by compatibility module */
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.77 2001/01/19 13:20:30 roberto Exp roberto $
+** $Id: lgc.c,v 1.78 2001/01/22 18:01:38 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -108,11 +108,13 @@ static void marklock (global_State *G, GCState *st) {
 
 
 static void marktagmethods (global_State *G, GCState *st) {
-  int e;
-  for (e=0; e<TM_N; e++) {
-    int t;
-    for (t=0; t<G->ntag; t++) {
-      Closure *cl = luaT_gettm(G, t, e);
+  int t;
+  for (t=0; t<G->ntag; t++) {
+    struct TM *tm = &G->TMtable[t];
+    int e;
+    if (tm->name) strmark(tm->name);
+    for (e=0; e<TM_N; e++) {
+      Closure *cl = tm->method[e];
       if (cl) markclosure(st, cl);
     }
   }
@@ -126,6 +128,7 @@ static void markall (lua_State *L) {
   marktagmethods(G(L), &st);  /* mark tag methods */
   markstacks(L, &st); /* mark all stacks */
   marklock(G(L), &st); /* mark locked objects */
+  marktable(&st, G(L)->type2tag);
   for (;;) {  /* mark tables and closures */
     if (st.cmark) {
       int i;

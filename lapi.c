@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.118 2001/01/19 13:20:30 roberto Exp roberto $
+** $Id: lapi.c,v 1.119 2001/01/24 15:45:33 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -132,13 +132,24 @@ LUA_API int lua_type (lua_State *L, int index) {
   return i;
 }
 
+
 LUA_API const char *lua_typename (lua_State *L, int t) {
   const char *s;
   LUA_ENTRY;
-  UNUSED(L);
-  s = (t == LUA_TNONE) ? "no value" : luaO_typenames[t];
+  s = (t == LUA_TNONE) ? "no value" : basictypename(G(L), t);
   LUA_EXIT;
   return s;
+}
+
+
+LUA_API const char *lua_xtype (lua_State *L, int index) {
+  StkId o;
+  const char *type;
+  LUA_ENTRY;
+  o = luaA_indexAcceptable(L, index);
+  type = (o == NULL) ? "no value" : luaT_typename(G(L), o);
+  LUA_EXIT;
+  return type;
 }
 
 
@@ -553,9 +564,46 @@ LUA_API void lua_setgcthreshold (lua_State *L, int newthreshold) {
 ** miscellaneous functions
 */
 
-LUA_API void lua_settag (lua_State *L, int tag) {
+LUA_API int lua_newtype (lua_State *L, const char *name, int basictype) {
+  int tag;
   LUA_ENTRY;
-  luaT_realtag(L, tag);
+  if (basictype != LUA_TNONE &&
+      basictype != LUA_TTABLE &&
+      basictype != LUA_TUSERDATA)
+    luaO_verror(L, "invalid basic type (%d) for new type", basictype);
+  tag = luaT_newtag(L, name, basictype);
+  if (tag == LUA_TNONE)
+    luaO_verror(L, "type name '%.30s' already exists", name);
+  LUA_EXIT;
+  return tag;
+}
+
+
+LUA_API int lua_type2tag (lua_State *L, const char *name) {
+  int tag;
+  const TObject *v;
+  LUA_ENTRY;
+  v = luaH_getstr(G(L)->type2tag, luaS_new(L, name));
+  if (ttype(v) == LUA_TNIL)
+    tag = LUA_TNONE;
+  else {
+    lua_assert(ttype(v) == LUA_TNUMBER);
+    tag = nvalue(v);
+  }
+  LUA_EXIT;
+  return tag;
+}
+
+
+LUA_API void lua_settag (lua_State *L, int tag) {
+  int basictype;
+  LUA_ENTRY;
+  if (tag < 0 || tag >= G(L)->ntag)
+    luaO_verror(L, "%d is not a valid tag", tag);
+  basictype = G(L)->TMtable[tag].basictype;
+  if (basictype != LUA_TNONE && basictype != ttype(L->top-1))
+    luaO_verror(L, "tag %d can only be used for type '%.20s'", tag,
+                basictypename(G(L), basictype));
   switch (ttype(L->top-1)) {
     case LUA_TTABLE:
       hvalue(L->top-1)->htag = tag;
@@ -565,7 +613,7 @@ LUA_API void lua_settag (lua_State *L, int tag) {
       break;
     default:
       luaO_verror(L, "cannot change the tag of a %.20s",
-                  luaO_typename(L->top-1));
+                  luaT_typename(G(L), L->top-1));
   }
   LUA_EXIT;
 }

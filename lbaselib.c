@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.17 2000/11/06 13:45:18 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.18 2001/01/10 16:58:11 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -128,6 +128,26 @@ static int luaB_getglobal (lua_State *L) {
   return 1;
 }
 
+
+/* auxiliary function to get `tags' */
+static int gettag (lua_State *L, int narg) {
+  switch (lua_type(L, narg)) {
+    case LUA_TNUMBER:
+      return (int)lua_tonumber(L, narg);
+    case LUA_TSTRING: {
+      const char *name = lua_tostring(L, narg);
+      int tag = lua_type2tag(L, name);
+      if (tag == LUA_TNONE)
+        luaL_verror(L, "'%.30s' is not a valid type name", name);
+      return tag;
+    }
+    default:
+      luaL_argerror(L, narg, "tag or type name expected");
+      return 0;  /* to avoid warnings */
+  }
+}
+
+
 static int luaB_tag (lua_State *L) {
   luaL_checkany(L, 1);
   lua_pushnumber(L, lua_tag(L, 1));
@@ -137,18 +157,18 @@ static int luaB_tag (lua_State *L) {
 static int luaB_settag (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
   lua_pushvalue(L, 1);  /* push table */
-  lua_settag(L, luaL_check_int(L, 2));
+  lua_settag(L, gettag(L, 2));
   return 1;  /* return table */
 }
 
-static int luaB_newtag (lua_State *L) {
-  lua_pushnumber(L, lua_newtag(L));
+static int luaB_newtype (lua_State *L) {
+  const char *name = luaL_opt_string(L, 1, NULL);
+  lua_pushnumber(L, lua_newtype(L, name, LUA_TTABLE));
   return 1;
 }
 
 static int luaB_copytagmethods (lua_State *L) {
-  lua_pushnumber(L, lua_copytagmethods(L, luaL_check_int(L, 1),
-                                          luaL_check_int(L, 2)));
+  lua_pushnumber(L, lua_copytagmethods(L, gettag(L, 1), gettag(L, 2)));
   return 1;
 }
 
@@ -178,7 +198,7 @@ static int luaB_rawset (lua_State *L) {
 }
 
 static int luaB_settagmethod (lua_State *L) {
-  int tag = luaL_check_int(L, 1);
+  int tag = gettag(L, 1);
   const char *event = luaL_check_string(L, 2);
   luaL_arg_check(L, lua_isfunction(L, 3) || lua_isnil(L, 3), 3,
                  "function or nil expected");
@@ -192,7 +212,7 @@ static int luaB_settagmethod (lua_State *L) {
 
 
 static int luaB_gettagmethod (lua_State *L) {
-  int tag = luaL_check_int(L, 1);
+  int tag = gettag(L, 1);
   const char *event = luaL_check_string(L, 2);
   if (strcmp(event, "gc") == 0)
     lua_error(L, "deprecated use: cannot get the `gc' tag method from Lua");
@@ -217,6 +237,13 @@ static int luaB_collectgarbage (lua_State *L) {
 static int luaB_type (lua_State *L) {
   luaL_checkany(L, 1);
   lua_pushstring(L, lua_typename(L, lua_type(L, 1)));
+  return 1;
+}
+
+
+static int luaB_xtype (lua_State *L) {
+  luaL_checkany(L, 1);
+  lua_pushstring(L, lua_xtype(L, 1));
   return 1;
 }
 
@@ -619,13 +646,14 @@ static const struct luaL_reg base_funcs[] = {
   {"getglobal", luaB_getglobal},
   {"gettagmethod", luaB_gettagmethod},
   {"globals", luaB_globals},
-  {"newtag", luaB_newtag},
+  {"newtype", luaB_newtype},
+  {"newtag", luaB_newtype},  /* for compatibility 4.0 */
   {"next", luaB_next},
   {"print", luaB_print},
   {"rawget", luaB_rawget},
   {"rawset", luaB_rawset},
-  {"rawgettable", luaB_rawget},  /* for compatibility */
-  {"rawsettable", luaB_rawset},  /* for compatibility */
+  {"rawgettable", luaB_rawget},  /* for compatibility 3.2 */
+  {"rawsettable", luaB_rawset},  /* for compatibility 3.2 */
   {"setglobal", luaB_setglobal},
   {"settag", luaB_settag},
   {"settagmethod", luaB_settagmethod},
@@ -637,7 +665,8 @@ static const struct luaL_reg base_funcs[] = {
   {"getn", luaB_getn},
   {"sort", luaB_sort},
   {"tinsert", luaB_tinsert},
-  {"tremove", luaB_tremove}
+  {"tremove", luaB_tremove},
+  {"xtype", luaB_xtype},
 };
 
 

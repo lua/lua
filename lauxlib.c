@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.43 2000/10/30 13:07:48 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.44 2000/12/04 18:33:40 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -40,11 +40,15 @@ LUALIB_API void luaL_argerror (lua_State *L, int narg, const char *extramsg) {
 }
 
 
-static void type_error (lua_State *L, int narg, int t) {
-  char buff[50];
-  sprintf(buff, "%.8s expected, got %.8s", lua_typename(L, t),
-                                           lua_typename(L, lua_type(L, narg)));
+static void type_error (lua_State *L, int narg, const char *tname) {
+  char buff[80];
+  sprintf(buff, "%.25s expected, got %.25s", tname, lua_xtype(L, narg));
   luaL_argerror(L, narg, buff);
+}
+
+
+static void tag_error (lua_State *L, int narg, int tag) {
+  type_error(L, narg, lua_typename(L, tag)); 
 }
 
 
@@ -56,7 +60,7 @@ LUALIB_API void luaL_checkstack (lua_State *L, int space, const char *mes) {
 
 LUALIB_API void luaL_checktype(lua_State *L, int narg, int t) {
   if (lua_type(L, narg) != t)
-    type_error(L, narg, t);
+    tag_error(L, narg, t);
 }
 
 
@@ -66,9 +70,17 @@ LUALIB_API void luaL_checkany (lua_State *L, int narg) {
 }
 
 
+LUALIB_API void *luaL_check_userdata (lua_State *L, int narg,
+                                      const char *name) {
+  if (strcmp(lua_xtype(L, narg), name) != 0)
+    type_error(L, narg, name);
+  return lua_touserdata(L, narg);
+}
+
+
 LUALIB_API const char *luaL_check_lstr (lua_State *L, int narg, size_t *len) {
   const char *s = lua_tostring(L, narg);
-  if (!s) type_error(L, narg, LUA_TSTRING);
+  if (!s) tag_error(L, narg, LUA_TSTRING);
   if (len) *len = lua_strlen(L, narg);
   return s;
 }
@@ -87,7 +99,7 @@ LUALIB_API const char *luaL_opt_lstr (lua_State *L, int narg, const char *def, s
 LUALIB_API lua_Number luaL_check_number (lua_State *L, int narg) {
   lua_Number d = lua_tonumber(L, narg);
   if (d == 0 && !lua_isnumber(L, narg))  /* avoid extra test when d is not 0 */
-    type_error(L, narg, LUA_TNUMBER);
+    tag_error(L, narg, LUA_TNUMBER);
   return d;
 }
 

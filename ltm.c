@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.61 2001/01/19 13:20:30 roberto Exp roberto $
+** $Id: ltm.c,v 1.62 2001/01/24 15:45:33 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -14,6 +14,8 @@
 #include "lmem.h"
 #include "lobject.h"
 #include "lstate.h"
+#include "lstring.h"
+#include "ltable.h"
 #include "ltm.h"
 
 
@@ -65,32 +67,38 @@ int luaT_validevent (int t, int e) {  /* ORDER LUA_T */
 }
 
 
-static void init_entry (lua_State *L, int tag) {
+void luaT_init (lua_State *L) {
+  static const char *const typenames[NUM_TAGS] = {
+    "userdata", "nil", "number", "string", "table", "function"
+  };
   int i;
+  for (i=0; i<NUM_TAGS; i++)
+    luaT_newtag(L, typenames[i], i);
+}
+
+
+int luaT_newtag (lua_State *L, const char *name, int basictype) {
+  int tag;
+  int i;
+  TString *ts;
+  luaM_growvector(L, G(L)->TMtable, G(L)->ntag, G(L)->sizeTM, struct TM,
+                  MAX_INT, "tag table overflow");
+  tag = G(L)->ntag;
+  if (name == NULL)
+    ts = NULL;
+  else {
+    TObject *v;
+    ts = luaS_new(L, name);
+    v = luaH_setstr(L, G(L)->type2tag, ts);
+    if (ttype(v) != LUA_TNIL) return LUA_TNONE;  /* invalid name */
+    setnvalue(v, tag);
+  }
   for (i=0; i<TM_N; i++)
     luaT_gettm(G(L), tag, i) = NULL;
   G(L)->TMtable[tag].collected = NULL;
-}
-
-
-void luaT_init (lua_State *L) {
-  int t;
-  G(L)->TMtable = luaM_newvector(L, NUM_TAGS+2, struct TM);
-  G(L)->sizeTM = NUM_TAGS+2;
-  G(L)->ntag = NUM_TAGS;
-  for (t=0; t<G(L)->ntag; t++)
-    init_entry(L, t);
-}
-
-
-LUA_API int lua_newtag (lua_State *L) {
-  int tag;
-  LUA_ENTRY;
-  luaM_growvector(L, G(L)->TMtable, G(L)->ntag, G(L)->sizeTM, struct TM,
-                  MAX_INT, "tag table overflow");
-  init_entry(L, G(L)->ntag);
-  tag = G(L)->ntag++;
-  LUA_EXIT;
+  G(L)->TMtable[tag].name = ts;
+  G(L)->TMtable[tag].basictype = basictype;
+  G(L)->ntag++;
   return tag;
 }
 
@@ -98,11 +106,6 @@ LUA_API int lua_newtag (lua_State *L) {
 static void checktag (lua_State *L, int tag) {
   if (!(0 <= tag && tag < G(L)->ntag))
     luaO_verror(L, "%d is not a valid tag", tag);
-}
-
-void luaT_realtag (lua_State *L, int tag) {
-  if (!validtag(G(L), tag))
-    luaO_verror(L, "tag %d was not created by `newtag'", tag);
 }
 
 
@@ -130,6 +133,27 @@ int luaT_tag (const TObject *o) {
 }
 
 
+const char *luaT_typename (global_State *G, const TObject *o) {
+  int t = ttype(o);
+  int tag;
+  TString *ts;
+  switch (t) {
+    case LUA_TUSERDATA:
+      tag = tsvalue(o)->u.d.tag;
+      break;
+    case LUA_TTABLE:
+      tag = hvalue(o)->htag;
+      break;
+    default:
+      tag = t;
+  }
+  ts = G->TMtable[tag].name;
+  if (ts == NULL)
+    ts = G->TMtable[t].name;
+  return ts->str;
+}
+
+
 LUA_API void lua_gettagmethod (lua_State *L, int t, const char *event) {
   int e;
   LUA_ENTRY;
@@ -152,7 +176,7 @@ LUA_API void lua_settagmethod (lua_State *L, int t, const char *event) {
   checktag(L, t);
   if (!luaT_validevent(t, e))
     luaO_verror(L, "cannot change `%.20s' tag method for type `%.20s'%.20s",
-                luaT_eventname[e], luaO_typenames[t],
+                luaT_eventname[e], basictypename(G(L), t),
                 (t == LUA_TTABLE || t == LUA_TUSERDATA) ?
                    " with default tag" : "");
   switch (ttype(L->top - 1)) {

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.59 2001/01/19 13:20:30 roberto Exp roberto $
+** $Id: lobject.c,v 1.60 2001/01/24 15:45:33 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -20,12 +20,6 @@
 
 
 const TObject luaO_nilobject = {LUA_TNIL, {NULL}};
-
-
-const char *const luaO_typenames[] = {
-  "userdata", "nil", "number", "string", "table", "function"
-};
-
 
 
 /*

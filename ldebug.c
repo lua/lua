@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.54 2001/01/19 13:20:30 roberto Exp roberto $
+** $Id: ldebug.c,v 1.55 2001/01/24 15:45:33 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -466,7 +466,7 @@ static const char *getfuncname (lua_State *L, StkId f, const char **name) {
 void luaG_typeerror (lua_State *L, StkId o, const char *op) {
   const char *name;
   const char *kind = getobjname(L, o, &name);
-  const char *t = luaO_typename(o);
+  const char *t = luaT_typename(G(L), o);
   if (kind)
     luaO_verror(L, "attempt to %.30s %.20s `%.40s' (a %.10s value)",
                 op, kind, name, t);
@@ -483,8 +483,8 @@ void luaG_binerror (lua_State *L, StkId p1, int t, const char *op) {
 
 
 void luaG_ordererror (lua_State *L, StkId top) {
-  const char *t1 = luaO_typename(top-2);
-  const char *t2 = luaO_typename(top-1);
+  const char *t1 = luaT_typename(G(L), top-2);
+  const char *t2 = luaT_typename(G(L), top-1);
   if (t1[2] == t2[2])
     luaO_verror(L, "attempt to compare two %.10s values", t1);
   else

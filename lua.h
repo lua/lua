@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.82 2001/01/10 16:58:11 roberto Exp roberto $
+** $Id: lua.h,v 1.83 2001/01/22 18:01:38 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -102,6 +102,7 @@ LUA_API int   lua_stackspace (lua_State *L);
 
 LUA_API int            lua_type (lua_State *L, int index);
 LUA_API const char    *lua_typename (lua_State *L, int t);
+LUA_API const char    *lua_xtype (lua_State *L, int index);
 LUA_API int            lua_isnumber (lua_State *L, int index);
 LUA_API int            lua_isstring (lua_State *L, int index);
 LUA_API int            lua_iscfunction (lua_State *L, int index);
@@ -173,7 +174,8 @@ LUA_API void  lua_setgcthreshold (lua_State *L, int newthreshold);
 /*
 ** miscellaneous functions
 */
-LUA_API int   lua_newtag (lua_State *L);
+LUA_API int   lua_newtype (lua_State *L, const char *name, int basictype);
+LUA_API int   lua_type2tag (lua_State *L, const char *name);
 LUA_API int   lua_copytagmethods (lua_State *L, int tagto, int tagfrom);
 LUA_API void  lua_settag (lua_State *L, int tag);
 
@@ -211,6 +213,10 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size);
 #define lua_getregistry(L)	lua_getref(L, LUA_REFREGISTRY)
 
 #define lua_pushliteral(L, s)	lua_pushlstring(L, "" s, (sizeof(s))-1)
+
+
+
+#define lua_newtag(L)	lua_newtype(L, NULL, LUA_TNONE)
 
 #endif
 

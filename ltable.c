@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.65 2001/01/19 13:20:30 roberto Exp roberto $
+** $Id: ltable.c,v 1.66 2001/01/24 15:45:33 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -236,6 +236,7 @@ static TObject *newkey (lua_State *L, Hash *t, Node *mp, const TObject *key) {
       othern->next = n;  /* redo the chain with `n' in place of `mp' */
       *n = *mp;  /* copy colliding node into free pos. (mp->next also goes) */
       mp->next = NULL;  /* now `mp' is free */
+      setnilvalue(&mp->val);
     }
     else {  /* colliding node is in its own main position */
       /* new node will go into free position */
@@ -245,6 +246,7 @@ static TObject *newkey (lua_State *L, Hash *t, Node *mp, const TObject *key) {
     }
   }
   setobj(&mp->key, key);
+  lua_assert(ttype(&mp->val) == LUA_TNIL);
   for (;;) {  /* correct `firstfree' */
     if (ttype(&t->firstfree->key) == LUA_TNIL)
       return &mp->val;  /* OK; table still has a free place */
