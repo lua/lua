@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.280 2003/03/06 19:37:42 roberto Exp roberto $
+** $Id: lvm.c,v 1.281 2003/03/07 13:21:31 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -357,11 +357,10 @@ static void Arith (lua_State *L, StkId ra,
       case TM_MUL: setnvalue(ra, nvalue(b) * nvalue(c)); break;
       case TM_DIV: setnvalue(ra, nvalue(b) / nvalue(c)); break;
       case TM_POW: {
-        const TObject *f = luaH_getstr(hvalue(registry(L)),
-                                       G(L)->tmname[TM_POW]);
+        const TObject *f = luaH_getstr(hvalue(gt(L)), G(L)->tmname[TM_POW]);
         ptrdiff_t res = savestack(L, ra);
         if (!ttisfunction(f))
-          luaG_runerror(L, "`pow' (for `^' operator) is not a function");
+          luaG_runerror(L, "`__pow' (`^' operator) is not a function");
         callTMres(L, f, b, c);
         ra = restorestack(L, res);  /* previous call may change stack */
         setobjs2s(ra, L->top);

@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.54 2002/12/20 10:26:33 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.55 2003/03/11 12:24:34 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -240,7 +240,7 @@ LUALIB_API int luaopen_math (lua_State *L) {
   lua_settable(L, -3);
   lua_pushliteral(L, "__pow");
   lua_pushcfunction(L, math_pow);
-  lua_settable(L, LUA_REGISTRYINDEX);
+  lua_settable(L, LUA_GLOBALSINDEX);
   return 1;
 }
 
