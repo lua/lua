@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.h,v 1.6 1998/06/13 16:54:15 lhf Exp $
+** $Id: lundump.h,v 1.7 1998/06/25 15:50:09 lhf Exp $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -14,6 +14,7 @@ TProtoFunc* luaU_undump1(ZIO* Z);	/* load one chunk */
 
 #define	SIGNATURE	"Lua"
 #define	VERSION		0x31		/* last format change was in 3.1 */
+#define	VERSION0	0x31		/* last major  change was in 3.1 */
 
 #define IsMain(f)	(f->lineDefined==0)
 
@@ -46,12 +47,35 @@ TProtoFunc* luaU_undump1(ZIO* Z);	/* load one chunk */
 * dump and undump routines.
 */
 
-#define	ID_NUMBER	ID_REAL8
-
-#if 0
-#define	ID_NUMBER	ID_REAL4
-#define	ID_NUMBER	ID_INT4
+#ifndef ID_NUMBER
 #define	ID_NUMBER	ID_NATIVE
 #endif
 
+#if 0
+#define	ID_NUMBER	ID_INT4
+#define	ID_NUMBER	ID_REAL4
+#define	ID_NUMBER	ID_REAL8
+#define	ID_NUMBER	ID_NATIVE
+#endif
+
+#endif
+
+#if   ID_NUMBER==ID_REAL4
+	#define	DumpNumber	DumpFloat
+	#define	LoadNumber	LoadFloat
+	#define SIZEOF_NUMBER	4
+#elif ID_NUMBER==ID_REAL8
+	#define	DumpNumber	DumpDouble
+	#define	LoadNumber	LoadDouble
+	#define SIZEOF_NUMBER	8
+#elif ID_NUMBER==ID_INT4
+	#define	DumpNumber	DumpLong
+	#define	LoadNumber	LoadLong
+	#define SIZEOF_NUMBER	4
+#elif ID_NUMBER==ID_NATIVE
+	#define	DumpNumber	DumpNative
+	#define	LoadNumber	LoadNative
+	#define SIZEOF_NUMBER	sizeof(real)
+#else
+	#error	bad ID_NUMBER
 #endif

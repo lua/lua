@@ -1,11 +1,10 @@
 /*
-** $Id: lundump.c,v 1.9 1998/06/13 16:54:15 lhf Exp $
+** $Id: lundump.c,v 1.10 1998/06/25 15:50:09 lhf Exp $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
 
 #include <stdio.h>
-
 #include "lauxlib.h"
 #include "lfunc.h"
 #include "lmem.h"
@@ -13,21 +12,12 @@
 #include "lundump.h"
 
 #define	LoadBlock(b,size,Z)	ezread(Z,b,size)
-#define	LoadNative(t,D)		LoadBlock(&t,sizeof(t),D)
+#define	LoadNative(t,Z)		LoadBlock(&t,sizeof(t),Z)
 
-/* LUA_NUMBER */
-/* see comment in lundump.h */
-
-#if ID_NUMBER==ID_REAL4
-	#define	LoadNumber	LoadFloat
-#elif ID_NUMBER==ID_REAL8
-	#define	LoadNumber	LoadDouble
-#elif ID_NUMBER==ID_INT4
-	#define	LoadNumber	LoadLong
-#elif ID_NUMBER==ID_NATIVE
-	#define	LoadNumber	LoadNative
+#if ID_NUMBER==ID_NATIVE
+	#define doLoadNumber(f,Z)	LoadNative(f,Z)
 #else
-	#define	LoadNumber	LoadWhat
+	#define doLoadNumber(f,Z)	f=LoadNumber(Z)
 #endif
 
 static void unexpectedEOZ(ZIO* Z)
@@ -150,11 +140,7 @@ static void LoadConstants(TProtoFunc* tf, ZIO* Z)
   {
    case ID_NUM:
 	ttype(o)=LUA_T_NUMBER;
-#if ID_NUMBER==ID_NATIVE
-	LoadNative(nvalue(o),Z)
-#else
-	nvalue(o)=LoadNumber(Z);
-#endif
+	doLoadNumber(nvalue(o),Z);
 	break;
    case ID_STR:
 	ttype(o)=LUA_T_STRING;	
@@ -200,19 +186,19 @@ static void LoadHeader(ZIO* Z)
   luaL_verror(
 	"%s too new: version=0x%02x; expected at most 0x%02x",
 	zname(Z),version,VERSION);
- if (version<0x31)			/* major change in 3.1 */
+ if (version<VERSION0)			/* check last major change */
   luaL_verror(
 	"%s too old: version=0x%02x; expected at least 0x%02x",
-	zname(Z),version,0x31);
+	zname(Z),version,VERSION0);
  id=ezgetc(Z);				/* test number representation */
  sizeofR=ezgetc(Z);
  if (id!=ID_NUMBER || sizeofR!=sizeof(real))
  {
-  luaL_verror("unknown number representation in %s: "
-	"read 0x%02x %d; expected 0x%02x %d",
+  luaL_verror("unknown number signature in %s: "
+	"read 0x%02x%02x; expected 0x%02x%02x",
 	zname(Z),id,sizeofR,ID_NUMBER,sizeof(real));
  }
- f=LoadNumber(Z);
+ doLoadNumber(f,Z);
  if (f!=tf)
   luaL_verror("unknown number representation in %s: "
 	"read " NUMBER_FMT "; expected " NUMBER_FMT "",	/* LUA_NUMBER */
