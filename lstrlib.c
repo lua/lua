@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.89 2002/08/23 19:45:24 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.90 2002/11/14 15:41:38 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -112,6 +112,24 @@ static int str_char (lua_State *L) {
     luaL_argcheck(L, uchar(c) == c, i, "invalid value");
     luaL_putchar(&b, uchar(c));
   }
+  luaL_pushresult(&b);
+  return 1;
+}
+
+
+static int writer (lua_State *L, const void* b, size_t size, void* B) {
+  (void)L;
+  luaL_addlstring((luaL_Buffer*) B, (const char *)b, size);
+  return 1;
+}
+
+
+static int str_dump (lua_State *L) {
+  luaL_Buffer b;
+  luaL_checktype(L, 1, LUA_TFUNCTION);
+  luaL_buffinit(L,&b);
+  if (!lua_dump(L, writer, &b))
+    luaL_error(L, "unable to dump given function");
   luaL_pushresult(&b);
   return 1;
 }
@@ -730,6 +748,7 @@ static const luaL_reg strlib[] = {
   {"rep", str_rep},
   {"byte", str_byte},
   {"format", str_format},
+  {"dump", str_dump},
   {"find", str_find},
   {"gfind", gfind},
   {"gsub", str_gsub},
