@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.30 1994/12/28 12:55:47 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.31 1994/12/30 17:45:11 roberto Exp celes $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -96,22 +96,21 @@ static void lua_initstack (void)
 /*
 ** Check stack overflow and, if necessary, realloc vector
 */
-static void lua_checkstack (StkId n)
+#define lua_checkstack(n)  if ((Long)(n) > maxstack) checkstack(n)
+
+static void checkstack (StkId n)
 {
- if ((Long)n > maxstack)
- {
-  StkId t;
-  if (stack == NULL)
-    lua_initstack();
-  if (maxstack >= MAX_INT)
-    lua_error("stack size overflow");
-  t = top-stack;
-  maxstack *= 2;
-  if (maxstack >= MAX_INT)
-    maxstack = MAX_INT;
-  stack = growvector(stack, maxstack, Object);
-  top = stack + t;
- }
+ StkId t;
+ if (stack == NULL)
+   lua_initstack();
+ if (maxstack >= MAX_INT)
+   lua_error("stack size overflow");
+ t = top-stack;
+ maxstack *= 2;
+ if (maxstack >= MAX_INT)
+   maxstack = MAX_INT;
+ stack = growvector(stack, maxstack, Object);
+ top = stack + t;
 }
 
 
@@ -562,6 +561,14 @@ lua_Object lua_getlocked (int ref)
  top++;
  CBase++;  /* incorporate object in the stack */
  return Ref(top-1);
+}
+
+
+void lua_pushlocked (int ref)
+{
+ lua_checkstack(top-stack+1);
+ *top = *luaI_getlocked(ref);
+ top++;
 }
 
 
