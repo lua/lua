@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.158 2001/01/26 18:43:22 roberto Exp roberto $
+** $Id: lvm.c,v 1.159 2001/01/29 13:02:20 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -330,7 +330,7 @@ static void adjust_varargs (lua_State *L, StkId base, int nfixargs) {
 
 
 
-#define dojump(pc, i)	{ int d = GETARG_S(i); pc += d; }
+#define dojump(pc, i)	((pc) += GETARG_S(i))
 
 /*
 ** Executes the given Lua function. Parameters are between [base,top).
@@ -615,19 +615,15 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
       }
       case OP_FORPREP: {
+        int jmp = GETARG_S(i);
         if (tonumber(top-1))
           luaD_error(L, "`for' step must be a number");
         if (tonumber(top-2))
           luaD_error(L, "`for' limit must be a number");
         if (tonumber(top-3))
           luaD_error(L, "`for' initial value must be a number");
-        if (nvalue(top-1) > 0 ?
-            nvalue(top-3) > nvalue(top-2) :
-            nvalue(top-3) < nvalue(top-2)) {  /* `empty' loop? */
-          top -= 3;  /* remove control variables */
-          dojump(pc, i);  /* jump to loop end */
-        }
-        break;
+        pc += -jmp;  /* "jump" to loop end (delta is negated here) */
+        goto forloop;  /* do not increment index */
       }
       case OP_FORLOOP: {
         lua_assert(ttype(top-1) == LUA_TNUMBER);
@@ -635,6 +631,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         if (ttype(top-3) != LUA_TNUMBER)
           luaD_error(L, "`for' index must be a number");
         nvalue(top-3) += nvalue(top-1);  /* increment index */
+      forloop:
         if (nvalue(top-1) > 0 ?
             nvalue(top-3) > nvalue(top-2) :
             nvalue(top-3) < nvalue(top-2))
@@ -644,24 +641,15 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
       }
       case OP_LFORPREP: {
-        int n;
-        Hash *t;
+        int jmp = GETARG_S(i);
         if (ttype(top-1) != LUA_TTABLE)
           luaD_error(L, "`for' table must be a table");
-        t = hvalue(top-1);
-        n = luaH_nexti(t, -1);
-        if (n == -1) {  /* `empty' loop? */
-          top--;  /* remove table */
-          dojump(pc, i);  /* jump to loop end */
-        }
-        else {
-          Node *node = node(t, n);
-          top += 3;  /* index,key,value */
-          setnvalue(top-3, n);  /* index */
-          setobj(top-2, key(node));
-          setobj(top-1, val(node));
-        }
-        break;
+        top += 3;  /* index,key,value */
+        setnvalue(top-3, -1);  /* initial index */
+        setnilvalue(top-2);
+        setnilvalue(top-1);
+        pc += -jmp;  /* "jump" to loop end (delta is negated here) */
+        /* go through */
       }
       case OP_LFORLOOP: {
         Hash *t = hvalue(top-4);

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.57 2001/01/19 13:20:30 roberto Exp roberto $
+** $Id: lcode.c,v 1.58 2001/01/29 13:14:49 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -56,6 +56,17 @@ static void luaK_fixjump (FuncState *fs, int pc, int dest) {
       luaK_error(fs->ls, "control structure too long");
     SETARG_S(*jmp, offset);
   }
+}
+
+
+/*
+** prep-for instructions (OP_FORPREP & OP_LFORPREP) have a negated jump,
+** as they simulate the real jump...
+*/
+void luaK_fixfor (FuncState *fs, int pc, int dest) {
+  Instruction *jmp = &fs->f->code[pc];
+  int offset = dest-(pc+1);
+  SETARG_S(*jmp, -offset);
 }
 
 
