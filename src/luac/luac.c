@@ -1,37 +1,51 @@
 /*
-** luac.c
+** $Id: luac.c,v 1.10 1998/07/12 00:38:30 lhf Exp $
 ** lua compiler (saves bytecodes to files; also list binary files)
+** See Copyright Notice in lua.h
 */
-
-char* rcs_luac="$Id: luac.c,v 1.23 1997/06/20 20:34:04 lhf Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "luac.h"
-#include "lex.h"
-#include "zio.h"
+#include "lparser.h"
+#include "lzio.h"
+#include "luadebug.h"
 
-static void compile(char* filename);
-static void undump(char* filename);
+#define	OUTPUT	"luac.out"		/* default output file */
+
+extern void DumpChunk(TProtoFunc* Main, FILE* D);
+extern void PrintChunk(TProtoFunc* Main);
+extern void OptChunk(TProtoFunc* Main);
+
+static FILE* efopen(char* name, char* mode);
+static void doit(int undump, char* filename);
 
 static int listing=0;			/* list bytecodes? */
+static int debugging=0;			/* debug? */
 static int dumping=1;			/* dump bytecodes? */
 static int undumping=0;			/* undump bytecodes? */
+static int optimizing=0;		/* optimize? */
+static int parsing=0;			/* parse only? */
+static int verbose=0;			/* tell user what is done */
 static FILE* D;				/* output file */
 
 static void usage(void)
 {
- fprintf(stderr,
- "usage: luac [-c | -u] [-d] [-l] [-p] [-q] [-v] [-o output] file ...\n"
+ fprintf(stderr,"usage: "
+ "luac [-c | -u] [-D name] [-d] [-l] [-o output] [-O] [-p] [-q] [-v] [-V] [files]\n"
  " -c\tcompile (default)\n"
  " -u\tundump\n"
  " -d\tgenerate debugging information\n"
+ " -D\tpredefine symbol for conditional compilation\n"
  " -l\tlist (default for -u)\n"
- " -o\toutput file for -c (default \"luac.out\")\n"
+ " -o\toutput file for -c (default is \"" OUTPUT "\")\n"
+ " -O\toptimize\n"
  " -p\tparse only\n"
  " -q\tquiet (default for -c)\n"
  " -v\tshow version information\n"
+ " -V\tverbose\n"
+ " -\tcompile \"stdin\"\n"
  );
  exit(1);
 }
@@ -40,8 +54,9 @@ static void usage(void)
 
 int main(int argc, char* argv[])
 {
- char* d="luac.out";			/* default output file */
+ char* d=OUTPUT;			/* output file name */
  int i;
+ lua_open();
  for (i=1; i<argc; i++)
  {
   if (argv[i][0]!='-')			/* end of options */
@@ -53,14 +68,25 @@ int main(int argc, char* argv[])
    dumping=1;
    undumping=0;
   }
+  else if (IS("-D"))			/* $define */
+  {
+   TaggedString* s=luaS_new(argv[++i]);
+   s->u.s.globalval.ttype=LUA_T_NUMBER;
+   s->u.s.globalval.value.n=1;
+  }
   else if (IS("-d"))			/* debug */
-   lua_debug=1;
+   debugging=1;
   else if (IS("-l"))			/* list */
    listing=1;
   else if (IS("-o"))			/* output file */
    d=argv[++i];
-  else if (IS("-p"))			/* parse only (for timing purposes) */
+  else if (IS("-O"))			/* optimize */
+   optimizing=1; 
+  else if (IS("-p"))			/* parse only */
+  {
    dumping=0;
+   parsing=1;
+  }
   else if (IS("-q"))			/* quiet */
    listing=0;
   else if (IS("-u"))			/* undump */
@@ -71,120 +97,88 @@ int main(int argc, char* argv[])
   }
   else if (IS("-v"))			/* show version */
    printf("%s  %s\n(written by %s)\n\n",LUA_VERSION,LUA_COPYRIGHT,LUA_AUTHORS);
+  else if (IS("-V"))			/* verbose */
+   verbose=1;
   else					/* unknown option */
    usage();
  }
  --i;					/* fake new argv[0] */
  argc-=i;
  argv+=i;
- if (dumping)
+ if (dumping || parsing)
  {
   if (argc<2) usage();
-  for (i=1; i<argc; i++)		/* play safe with output file */
-   if (IS(d))
-   {
-    fprintf(stderr,"luac: will not overwrite input file \"%s\"\n",d);
-    exit(1);
-   }
-  D=fopen(d,"wb");			/* must open in binary mode */
-  if (D==NULL)
+  if (dumping)
   {
-   fprintf(stderr,"luac: cannot open ");
-   perror(d);
-   exit(1);
+   for (i=1; i<argc; i++)		/* play safe with output file */
+    if (IS(d)) luaL_verror("will not overwrite input file \"%s\"",d);
+   D=efopen(d,"wb");			/* must open in binary mode */
+#if ID_NUMBER==ID_NATIVE
+   if (verbose) fprintf(stderr,"luac: warning: "
+	"saving numbers in native format. file may not be portable.\n");
+#endif
   }
-  for (i=1; i<argc; i++) compile(IS("-")? NULL : argv[i]);
-  fclose(D);
+  for (i=1; i<argc; i++) doit(0,IS("-")? NULL : argv[i]);
+  if (dumping) fclose(D);
  }
  if (undumping)
  {
   if (argc<2)
-   undump("luac.out");
+   doit(1,OUTPUT);
   else
-   for (i=1; i<argc; i++) undump(IS("-")? NULL : argv[i]);
+   for (i=1; i<argc; i++) doit(1,IS("-")? NULL : argv[i]);
  }
  return 0;
 }
 
-static void do_dump(TFunc* Main)
-{
- TFunc* tf;
- LinkFunctions(Main);
- if (listing)
- {
-  for (tf=Main; tf!=NULL; tf=tf->next) PrintFunction(tf,Main);
- }
- if (dumping)
- {
-  DumpHeader(D);
-  for (tf=Main; tf!=NULL; tf=tf->next) DumpFunction(tf,D);
- }
- for (tf=Main; tf!=NULL; )
- {
-  TFunc* nf=tf->next;
-  luaI_freefunc(tf);
-  tf=nf;
- }
-}
-
 static void do_compile(ZIO* z)
 {
- TFunc* tf=new(TFunc);
- lua_setinput(z);
- luaI_initTFunc(tf);
- tf->fileName=lua_parsedfile;
- lua_parse(tf);
- do_dump(tf);
-}
-
-static void compile(char* filename)
-{
- FILE* f= (filename==NULL) ? stdin : fopen(filename, "r");
- if (f==NULL)
- {
-  fprintf(stderr,"luac: cannot open ");
-  perror(filename);
-  exit(1);
- }
- else
- {
-  ZIO z;
-  zFopen(&z,f);
-  luaI_setparsedfile(filename?filename:"(stdin)");
-  do_compile(&z);
-  fclose(f);
- }
+ TProtoFunc* Main;
+ if (optimizing) lua_debug=0;		/* set debugging before parsing */
+ if (debugging)  lua_debug=1;
+ Main=luaY_parser(z);
+ if (optimizing) OptChunk(Main);
+ if (listing) PrintChunk(Main);
+ if (dumping) DumpChunk(Main,D);
 }
 
 static void do_undump(ZIO* z)
 {
- TFunc* Main;
- while ((Main=luaI_undump1(z)))
+ while (1)
  {
-  if (listing)
-  {
-   TFunc* tf;
-   for (tf=Main; tf!=NULL; tf=tf->next)
-    PrintFunction(tf,Main);
-  }
-  luaI_freefunc(Main);			/* TODO: free others */
+  TProtoFunc* Main=luaU_undump1(z);
+  if (Main==NULL) break;
+  if (optimizing) OptChunk(Main);
+  if (listing) PrintChunk(Main);
  }
 }
 
-static void undump(char* filename)
+static void doit(int undump, char* filename)
 {
- FILE* f= (filename==NULL) ? stdin : fopen(filename, "rb");
- if (f==NULL)
+ FILE* f;
+ ZIO z;
+ if (filename==NULL)
  {
-  fprintf(stderr,"luac: cannot open ");
-  perror(filename);
-  exit(1);
+  f=stdin; filename="(stdin)";
  }
  else
  {
-  ZIO z;
-  zFopen(&z,f);
-  do_undump(&z);
-  fclose(f);
+  f=efopen(filename, undump ? "rb" : "r");
  }
+ zFopen(&z,f,filename);
+ if (verbose) fprintf(stderr,"%s\n",filename);
+ if (undump) do_undump(&z); else do_compile(&z);
+ if (f!=stdin) fclose(f);
+}
+
+static FILE* efopen(char* name, char* mode)
+{
+ FILE* f=fopen(name,mode);
+ if (f==NULL)
+ {
+  fprintf(stderr,"luac: cannot open %sput file ",mode[0]=='r' ? "in" : "out");
+  perror(name);
+  exit(1);
+ }
+ return f; 
 }

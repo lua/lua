@@ -4,5 +4,5 @@ all co clean klean:
 	cd include; make $@
 	cd src; make $@
 	cd src/luac; make $@
-	cd clients/lib; make $@
-	cd clients/lua; make $@
+	cd src/lib; make $@
+	cd src/lua; make $@

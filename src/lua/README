@@ -1,0 +1,20 @@
+This client is a sample lua interpreter.
+It can be used as a batch interpreter and interactively.
+Here are the options it understands:
+
+  -v       print version information
+  -d       turn debug on
+  -e stat  dostring `stat'
+  -q       interactive mode without prompt
+  -i       interactive mode with prompt
+  -        executes stdin as a file
+  a=b      sets global `a' with string `b' (no need to quote b)
+  name     dofile `name'
+
+If no options are given, then it reads and executes lines from stdin.
+In this case, each line must contain a complete statement.
+To span a statement across several lines, end each line with a backslash '\'.
+To change the prompt, set the global variable _PROMPT to whatever you want.
+
+This interpreter is good for using Lua as a standalone language.
+For a minimal interpreter, see etc/min.c.

@@ -1,38 +1,54 @@
 # configuration file for making Lua
 
-# you need an ANSI C compiler
+# == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT ======================
+
+# you need an ANSI C compiler. gcc is a popular one.
 CC= gcc
 WARN= -ansi -Wall
 
-# for SGI's with cc
+# on SGI's, cc is ANSI.
 #CC= cc
 #WARN= -ansi -fullwarn
 
-# in SunOs 4.1.x, uncomment the following line to avoid prototypes warnings
-# for standard functions:
-#EXTRA_INCS=  -I/usr/5include
+# if you need compatibility with version 2.5 or older, uncomment the line below.
+#COMPAT= -DLUA_COMPAT2_5
 
-# if you don't have popen() in your C library, comment the following line:
-POPEN= -DPOPEN
+# Lua uses double for numbers. To change this, uncomment one of the lines below.
+#NUMBER= -DLUA_NUM_TYPE=float
+#NUMBER= -DLUA_NUM_TYPE=long
 
-# if your C library is not POSIX compliant, comment the following line:
+# if you want support for pipes, uncomment the following line.
+#POPEN= -DPOPEN
+
+# if your C library is not POSIX compliant, comment the following line.
 POSIX= -D_POSIX_SOURCE
 
-# if you don't have strerror() in your C library, uncomment the following line:
-#NOSTRERROR= -DNOSTRERROR
+# if your C library does not have the newer ANSI functions memmove, strerror,
+# and locale support (e.g., in SunOs 4.1.x.), uncomment the following line.
+#OLD_ANSI= -DOLD_ANSI
 
-# if your system doesn't have (or need) ranlib, change "ranlib" to "true":
-RANLIB=ranlib
+# in SunOs 4.1.x, standard headers in /usr/include are not ANSI,
+# so uncomment the following line to avoid prototypes warnings.
+#EXTRA_INCS=  -I/usr/5include
 
-### NO NEED TO CHANGE ANYTHING BELOW THIS LINE ================================
+# if your system doesn't have (or need) ranlib, change "ranlib" to "true".
+# on some systems, "ar s" does it.
+RANLIB= ranlib
+#RANLIB= ar s
+#RANLIB= true
 
-VERSION= 3.0
+# this should work in all unix systems.
+AR= ar rcu
+
+# == END OF USER SETTINGS. DO NOT CHANGE ANYTHING BELOW THIS LINE ============
+
+VERSION= 3.1
 
 INC= $(LUA)/include
 LIB= $(LUA)/lib
 BIN= $(LUA)/bin
 
 INCS= -I$(INC) $(EXTRA_INCS)
-DEFS= $(EXTRA_DEFS)
+DEFS= $(COMPAT) $(NUMBER) $(OLD_ANSI) $(EXTRA_DEFS)
 
 CFLAGS= -O2 $(WARN) $(INCS) $(DEFS)

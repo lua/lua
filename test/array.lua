@@ -1,5 +1,3 @@
-$debug
-
 a = {}
 
 local i=0

@@ -1,6 +1,28 @@
-This is version 3.0.
+This is version 3.1.
 
-* Changes since version 2.5 (no versions between 2.5 and 3.0)
+* Changes from version 3.0 to 3.1
+  + NEW FEATURE: anonymous functions with closures (via "upvalues").
+  + new syntax:
+    - local variables in chunks.
+    - better scope control with DO block END.
+    - constructors can now be also written: { record-part; list-part }.
+    - more general syntax for function calls and lvalues, e.g.:
+      f(x).y=1
+      o:f(x,y):g(z)
+      f"string" is sugar for f("string")
+  + strings may now contain arbitrary binary data (e.g., embedded zeros).
+  + major code re-organization and clean-up; reduced module interdependecies.
+  + no arbitrary limits on the total number of constants and globals.
+  + support for multiple global contexts.
+  + better syntax error messages.
+  + new traversal functions "foreach" and "foreachvar".
+  + the default for numbers is now double.
+    changing it to use floats or longs is easy.
+  + complete debug information stored in pre-compiled chunks.
+  + sample interpreter now prompts user when run interactively, and also
+    handles control-C interruptions gracefully.
+
+* Changes from version 2.5 to 3.0
   + NEW CONCEPT: "tag methods".
     Tag methods replace fallbacks as the meta-mechanism for extending the
     semantics of Lua. Whereas fallbacks had a global nature, tag methods
@@ -14,14 +36,14 @@ This is version 3.0.
   + better type checking and error messages in the standard library.
   + luac can now also undump.
 
-* Changes since version 2.4
+* Changes from version 2.4 to 2.5
   + io and string libraries are now based on pattern matching;
     the old libraries are still available for compatibility
   + dofile and dostring can now return values (via return statement)
   + better support for 16- and 64-bit machines
   + expanded documentation, with more examples
 
-* Changes since version 2.2
+* Changes from version 2.2 to 2.4
   + external compiler creates portable binary files that can be loaded faster
   + interface for debugging and profiling
   + new "getglobal" fallback
@@ -30,12 +52,12 @@ This is version 3.0.
   + only one copy of each string is stored
   + expanded documentation, with more examples
 
-* Changes since version 2.1
+* Changes from version 2.1 to 2.2
   + functions now may be declared with any "lvalue" as a name
   + garbage collection of functions
   + support for pipes
 
-* Changes since version 1.1
+* Changes from version 1.1 to 2.1
   + object-oriented support
   + fallbacks
   + simplified syntax for tables

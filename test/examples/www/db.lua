@@ -40,7 +40,7 @@ staff{
   LOGIN="lhf",
   NAME="Luiz Henrique de Figueiredo",
   TITLE='D.Sc., <A HREF="http://www.impa.br">IMPA</A>, 1992',
-  POSITION='Visiting Research fellow at <A HREF="http://www.lncc.br">LNCC</A>; Consultant at |TECGRAF|',
+  POSITION='Associate Researcher at <A HREF="http://www.lncc.br">LNCC</A>; Consultant at |TECGRAF|',
   AREAS="Geometric modeling; Software tools",
   WWW="http://www2.lncc.br/~lhf/",
 }

@@ -1,72 +1,79 @@
-# makefile for lua distribution (main library)
+# makefile for lua basic library
 
 LUA= ..
 
 include $(LUA)/config
 
-OBJS=	auxlib.o\
-	fallback.o\
-	func.o\
-	hash.o\
-	inout.o\
-	lex.o\
-	luamem.o\
-	opcode.o\
-	parser.o\
-	table.o\
-	tree.o\
-	undump.o\
-	zio.o
+OBJS=	\
+	lapi.o \
+	lauxlib.o \
+	lbuffer.o \
+	lbuiltin.o \
+	ldo.o \
+	lfunc.o \
+	lgc.o \
+	llex.o \
+	lmem.o \
+	lobject.o \
+	lparser.o \
+	lstate.o \
+	lstring.o \
+	ltable.o \
+	ltm.o \
+	lundump.o \
+	lvm.o \
+	lzio.o
 
-SRCS=	auxlib.c\
-	auxlib.h\
-	fallback.c\
-	fallback.h\
-	func.c\
-	func.h\
-	hash.c\
-	hash.h\
-	inout.c\
-	inout.h\
-	lex.c\
-	lex.h\
-	luamem.c\
-	luamem.h\
-	opcode.c\
-	opcode.h\
-	parser.c\
-	parser.h\
-	table.c\
-	table.h\
-	tree.c\
-	tree.h\
-	types.h\
-	undump.c\
-	undump.h\
-	zio.c\
-	zio.h\
-	lua.stx
+SRCS=	\
+	lapi.c \
+	lauxlib.c \
+	lbuffer.c \
+	lbuiltin.c \
+	ldo.c \
+	lfunc.c \
+	lgc.c \
+	llex.c \
+	lmem.c \
+	lobject.c \
+	lparser.c \
+	lstate.c \
+	lstring.c \
+	ltable.c \
+	ltm.c \
+	lundump.c \
+	lvm.c \
+	lzio.c \
+	lapi.h \
+	lbuiltin.h \
+	ldo.h \
+	lfunc.h \
+	lgc.h \
+	llex.h \
+	lmem.h \
+	lobject.h \
+	lopcodes.h \
+	lparser.h \
+	lstate.h \
+	lstring.h \
+	ltable.h \
+	ltm.h \
+	lundump.h \
+	lvm.h \
+	lzio.h
 
-SLIB= $(LIB)/liblua.a
+T= $(LIB)/liblua.a
 
-all: $(SLIB)
+all: $T
 
-$(SLIB): $(OBJS)
-	ar rcu $@ $(OBJS)
+$T: $(OBJS)
+	$(AR) $@ $(OBJS)
 	$(RANLIB) $@
 
 clean:
-	rm -f $(OBJS) $(SLIB)
+	rm -f $(OBJS) $T
 
 co:
-	co -f -M $(SRCS)
-
-parser:
-	yacc -d lua.stx
-	rm -f parser.c parser.h
-	sed -e 's/yy/luaY_/g' y.tab.c > parser.c
-	sed -e 's/yy/luaY_/g' y.tab.h > parser.h
-	rm y.tab.c y.tab.h
+	co -q -f -M $(SRCS)
 
 klean:	clean
 	rm -f $(SRCS)

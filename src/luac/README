@@ -1,0 +1,25 @@
+luac translates Lua programs into binary files that can be loaded and executed
+with lua_dofile in C or with dofile in Lua.
+The main advantages of pre-compiling chunks are: faster loading,
+protecting source code from user changes, off-line syntax error detection.
+
+luac can also be used to learn about the Lua virtual machine.
+
+Here are the options it understands:
+
+ -c	compile (default)
+ -u	undump
+ -d	generate debugging information
+ -D	predefine symbol for conditional compilation
+ -l	list (default for -u)
+ -o	output file for -c (default is "luac.out")
+ -O	optimize
+ -p	parse only
+ -q	quiet (default for -c)
+ -v	show version information
+ -V	verbose
+ -	compile "stdin"
+
+Finally, luac is an example of how to use the internals of Lua (politely).
+Also, luac does not need the runtime code and stubs.c makes sure it is not
+linked into luac. This file also shows how to avoid linking the parser.

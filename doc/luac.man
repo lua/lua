@@ -1,0 +1,165 @@
+.\" $Id: luac.man,v 1.11 1998/07/01 14:51:45 lhf Exp $
+.TH LUAC 1 "01 July 1998"
+.SH NAME
+luac \- Lua compiler
+.SH SYNOPSIS
+.B luac
+[
+.B \-c
+|
+.B \-u
+] [
+.B \-d
+] [
+.B \-D
+.I name
+] [
+.B \-l
+] [
+.B \-o
+.I filename
+] [
+.B \-O
+] [
+.B \-p
+] [
+.B \-q
+] [
+.B \-v
+] [
+.B \-V
+]
+.IR sourcefile " ..."
+.SH DESCRIPTION
+.B luac
+is the Lua compiler.
+It translates programs written in the Lua programming language
+into binary files that can be loaded and executed with
+.B lua_dofile
+in C or with
+.B dofile
+in Lua.
+.LP
+The main advantages of pre-compiling chunks are:
+faster loading,
+protecting source code from user changes,
+off-line syntax error detection.
+The binary files created by
+.B luac
+are portable to all known architectures.
+.LP
+.B luac
+produces a single output file containing the bytecodes
+for all source files given.
+By default,
+the output file is named
+.BR luac.out ,
+but you can change this with the
+.B \-o
+option.
+.LP
+You can use
+.B "\-"
+to indicate
+.I stdin
+as a source file.
+.LP
+.B luac
+can also load and list binary files with the
+.B \-u
+option.
+.LP
+Binary files produced by differents runs of
+.B luac
+can be combined into one large file,
+using 
+.BR cat (1).
+The result is still a valid binary file,
+and can be loaded with a single call to
+.B lua_dofile
+or 
+.BR dofile .
+.LP
+.SH OPTIONS
+.TP
+.B \-c
+compile (this is the default).
+.TP
+.B \-u
+undump, i.e., load and list the given binary files.
+If no files are given, then luac undumps
+.BR luac.out .
+.TP
+.BI \-D " name"
+predefine symbol
+.I name
+for conditional compilation.
+By default,
+.B luac
+does
+.I not
+predefine any symbols,
+not even the built-in functions.
+.TP
+.B \-d
+turn debugging on.
+Individual chunks may
+still control the generation of debug information with
+$debug and $nodebug.
+If debugging is on, then listings show the names of the local variables.
+.TP
+.B \-l
+produce a listing of the compiled bytecode for Lua's virtual machine.
+This is the default when undumping.
+.TP
+.B \-O
+optimize code.
+Debug information is removed,
+duplicate constants are coalesced.
+.TP
+.BI \-o " filename"
+output to
+.IR filename ,
+instead of the default
+.BR luac.out .
+The output file cannot be a source file.
+.TP
+.B \-p
+parse sources files but does not generate any output file.
+Used mainly for syntax checking.
+.TP
+.B \-q
+quiet; produces no listing.
+This is the default when compiling.
+.TP
+.B \-v
+print version information.
+.TP
+.B \-V
+verbose;
+print the names of the source files as they are processed.
+.SH FILES
+.TP 15
+.B luac.out
+default output file
+.SH "SEE ALSO"
+.BR lua (1)
+.br
+.I "Reference Manual of the Programming Language Lua"
+.br
+http://www.tecgraf.puc-rio.br/lua/
+.br
+"Lua: an extensible extension language",
+.I Software: Practice & Experience
+.B 26
+#6 (1996) 635-652.
+.SH DIAGNOSTICS
+Error messages should be self explanatory.
+.SH BUGS
+Inherits any bugs from Lua,
+but Lua has no bugs...
+.SH AUTHORS
+L. H. de Figueiredo,
+R. Ierusalimschy and
+W. Celes
+.I (lua@tecgraf.puc-rio.br)

@@ -1,383 +1,233 @@
 /*
-** print.c
+** $Id: print.c,v 1.13 1998/07/12 00:17:37 lhf Exp $
 ** print bytecodes
+** See Copyright Notice in lua.h
 */
-
-char* rcs_print="$Id: print.c,v 1.17 1997/06/25 17:07:28 lhf Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include "luac.h"
-#include "print.h"
 
-void LinkFunctions(TFunc* m)
+#ifdef DEBUG
+void PrintConstant1(TProtoFunc* tf, int i)
 {
- static TFunc* lastF;			/* list of functions seen in code */
- Byte* code=m->code;
- Byte* end=code+m->size;
- Byte* p;
- if (IsMain(m)) lastF=m;
- for (p=code; p!=end;)
+ TObject* o=tf->consts+i;
+ printf("%6d ",i);
+ if (i<0 || i>=tf->nconsts)
+  printf("(bad constant #%d: max=%d)",i,tf->nconsts);
+ else
+  switch (ttype(o))
+  {
+   case LUA_T_NUMBER:
+	 printf("N " NUMBER_FMT "\n",nvalue(o));	/* LUA_NUMBER */
+	 break;
+   case LUA_T_STRING:
+	 printf("S %p\t\"%s\"\n",(void*)tsvalue(o),svalue(o));
+	 break;
+   case LUA_T_PROTO:
+	 printf("F %p\n",(void*)tfvalue(o));
+	 break;
+   default:				/* cannot happen */
+	 printf("? %d\n",ttype(o)); 
+   break;
+  }
+}
+
+static void PrintConstants(TProtoFunc* tf)
+{
+ int i,n=tf->nconsts;
+ printf("constants (%d):\n",n);
+ for (i=0; i<n; i++) PrintConstant1(tf,i);
+}
+#endif
+
+static void PrintConstant(TProtoFunc* tf, int i)
+{
+ if (i<0 || i>=tf->nconsts)
+  printf("(bad constant #%d: max=%d)",i,tf->nconsts);
+ else
  {
-	int op=*p;
-	int at=p-code+1;
-	switch (op)
-	{
-	case PUSHNIL:
-	case PUSH0:
-	case PUSH1:
-	case PUSH2:
-	case PUSHLOCAL0:
-	case PUSHLOCAL1:
-	case PUSHLOCAL2:
-	case PUSHLOCAL3:
-	case PUSHLOCAL4:
-	case PUSHLOCAL5:
-	case PUSHLOCAL6:
-	case PUSHLOCAL7:
-	case PUSHLOCAL8:
-	case PUSHLOCAL9:
-	case PUSHINDEXED:
-	case STORELOCAL0:
-	case STORELOCAL1:
-	case STORELOCAL2:
-	case STORELOCAL3:
-	case STORELOCAL4:
-	case STORELOCAL5:
-	case STORELOCAL6:
-	case STORELOCAL7:
-	case STORELOCAL8:
-	case STORELOCAL9:
-	case STOREINDEXED0:
-	case ADJUST0:
-	case EQOP:
-	case LTOP:
-	case LEOP:
-	case GTOP:
-	case GEOP:
-	case ADDOP:
-	case SUBOP:
-	case MULTOP:
-	case DIVOP:
-	case POWOP:
-	case CONCOP:
-	case MINUSOP:
-	case NOTOP:
-	case POP:
-	case RETCODE0:
-		p++;
-		break;
-	case PUSHBYTE:
-	case PUSHLOCAL:
-	case STORELOCAL:
-	case STOREINDEXED:
-	case STORELIST0:
-	case ADJUST:
-	case RETCODE:
-	case VARARGS:
-	case STOREMAP:
-		p+=2;
-		break;
-	case PUSHWORD:
-	case PUSHSTRING:
-	case PUSHGLOBAL:
-	case PUSHSELF:
-	case STOREGLOBAL:
-	case CREATEARRAY:
-	case ONTJMP:
-	case ONFJMP:
-	case JMP:
-	case UPJMP:
-	case IFFJMP:
-	case IFFUPJMP:
-	case CALLFUNC:
-	case SETLINE:
-	case STORELIST:
-		p+=3;
-		break;
-	case PUSHFLOAT:
-		p+=5;			/* assumes sizeof(float)==4 */
-		break;
-	case PUSHFUNCTION:
-	{
-		TFunc* tf;
-		p++;
-		get_code(tf,p);
-		tf->marked=at;
-		tf->next=NULL;		/* TODO: remove? */
-		lastF=lastF->next=tf;
-		break;
-	}
-	case STORERECORD:
-	{
-		int n=*++p;
-		p+=2*n+1;
-		break;
-	}
-	default:			/* cannot happen */
-		fprintf(stderr,"luac: bad opcode %d at %d\n",*p,(int)(p-code));
-		exit(1);
-		break;
-	}
+  TObject* o=tf->consts+i;
+  switch (ttype(o))
+  {
+   case LUA_T_NUMBER:
+	printf(NUMBER_FMT,nvalue(o));		/* LUA_NUMBER */
+	break;
+   case LUA_T_STRING:
+	printf("\"%s\"",svalue(o));
+	break;
+   case LUA_T_PROTO:
+	printf("function at %p",(void*)tfvalue(o));
+	break;
+   case LUA_T_NIL:
+	printf("(nil)");
+	break;
+   default:				/* cannot happen */
+	printf("(bad constant #%d: type=%d [%s])\n",i,ttype(o),luaO_typename(o));
+	break;
+  }
  }
 }
 
-#define LocStr(i)	luaI_getlocalname(tf,i+1,line)
+#define VarStr(i)       svalue(tf->consts+i)
 
-static void PrintCode(TFunc* tf)
+static void PrintCode(TProtoFunc* tf)
 {
  Byte* code=tf->code;
- Byte* end=code+tf->size;
- Byte* p;
+ Byte* p=code;
  int line=0;
- for (p=code; p!=end;)
+ while (1)
  {
-	int op=*p;
-	if (op>=NOPCODES)
+	Opcode OP;
+	int n=INFO(tf,p,&OP);
+	int op=OP.op;
+	int i=OP.arg;
+	printf("%6d  ",(int)(p-code));
 	{
-	 fprintf(stderr,"luac: bad opcode %d at %d\n",op,(int)(p-code));
-	 exit(1);
+	 Byte* q=p;
+	 int j=n;
+	 while (j--) printf("%02X",*q++);
 	}
-	printf("%6d\t%s",(int)(p-code),OpCodeName[op]);
-	switch (op)
+	printf("%*s%-13s",2*(5-n),"",OP.name);
+
+	if (n!=1 || op<0) printf("\t%d",i); else if (i>=0) printf("\t");
+
+	switch (OP.class)
 	{
-	case PUSHNIL:
-	case PUSH0:
-	case PUSH1:
-	case PUSH2:
-	case PUSHINDEXED:
-	case STOREINDEXED0:
-	case ADJUST0:
-	case EQOP:
-	case LTOP:
-	case LEOP:
-	case GTOP:
-	case GEOP:
-	case ADDOP:
-	case SUBOP:
-	case MULTOP:
-	case DIVOP:
-	case POWOP:
-	case CONCOP:
-	case MINUSOP:
-	case NOTOP:
-	case POP:
-	case RETCODE0:
-		p++;
+
+	case ENDCODE:
+		printf("\n");
+		return;
+
+	case CLOSURE:
+		printf(" %d",OP.arg2);
+	case PUSHCONSTANT:
+	case GETDOTTED:
+	case PUSHSELF:
+		printf("\t; ");
+		PrintConstant(tf,i);
 		break;
-	case PUSHLOCAL0:
-	case PUSHLOCAL1:
-	case PUSHLOCAL2:
-	case PUSHLOCAL3:
-	case PUSHLOCAL4:
-	case PUSHLOCAL5:
-	case PUSHLOCAL6:
-	case PUSHLOCAL7:
-	case PUSHLOCAL8:
-	case PUSHLOCAL9:
-	{
-		int i=op-PUSHLOCAL0;
-		if (tf->locvars) printf("\t\t; %s",LocStr(i));
-		p++;
-		break;
-	}
-	case STORELOCAL0:
-	case STORELOCAL1:
-	case STORELOCAL2:
-	case STORELOCAL3:
-	case STORELOCAL4:
-	case STORELOCAL5:
-	case STORELOCAL6:
-	case STORELOCAL7:
-	case STORELOCAL8:
-	case STORELOCAL9:
-	{
-		int i=op-STORELOCAL0;
-		if (tf->locvars) printf("\t\t; %s",LocStr(i));
-		p++;
-		break;
-	}
+
 	case PUSHLOCAL:
-	case STORELOCAL:
+	case SETLOCAL:
 	{
-		int i=*(p+1);
-		if (tf->locvars) printf("\t%d\t; %s",i,LocStr(i));
-		p+=2;
+		char* s=luaF_getlocalname(tf,i+1,line);
+		if (s) printf("\t; %s",s);
 		break;
 	}
-	case PUSHBYTE:
-	case STOREINDEXED:
-	case STORELIST0:
-	case ADJUST:
-	case RETCODE:
-	case VARARGS:
-	case STOREMAP:
-		printf("\t%d",*(p+1));
-		p+=2;
+
+	case GETGLOBAL:
+	case SETGLOBAL:
+		printf("\t; %s",VarStr(i));
 		break;
-	case PUSHWORD:
-	case CREATEARRAY:
+
+	case SETLIST:
+	case CALLFUNC:
+		if (n>=3) printf(" %d",OP.arg2);
+		break;
+
 	case SETLINE:
-	{
-		Word w;
-		p++;
-		get_word(w,p);
-		printf("\t%d",w);
-		if (op==SETLINE) line=w;
+		printf("\t; \"%s\":%d",fileName(tf),line=i);
 		break;
-	}
+
+/* suggested by Norman Ramsey <nr@cs.virginia.edu> */
+	case IFTUPJMP:
+	case IFFUPJMP:
+		i=-i;
 	case ONTJMP:
 	case ONFJMP:
 	case JMP:
 	case IFFJMP:
-	{		/* suggested by Norman Ramsey <nr@cs.virginia.edu> */
-		Word w;
-		p++;
-		get_word(w,p);
-		printf("\t%d\t\t; to %d",w,(int)(p-code)+w);
+		printf("\t; to %d",(int)(p-code)+i+n);
 		break;
-	}
-	case UPJMP:
-	case IFFUPJMP:
-	{		/* suggested by Norman Ramsey <nr@cs.virginia.edu> */
-		Word w;
-		p++;
-		get_word(w,p);
-		printf("\t%d\t\t; to %d",w,(int)(p-code)-w);
-		break;
-	}
-	case PUSHFLOAT:
-	{
-		float f;
-		p++;
-		get_float(f,p);
-		printf("\t%g",f);
-		break;
-	}
-	case PUSHSELF:
-	case PUSHSTRING:
-	{
-		Word w;
-		p++;
-		get_word(w,p);
-		printf("\t%d\t; \"%s\"",w,StrStr(w));
-		break;
-	}
-	case PUSHFUNCTION:
-	{
-		TFunc* tf;
-		p++;
-		get_code(tf,p);
-		printf("\t%p\t; \"%s\":%d",tf,tf->fileName,tf->lineDefined);
-		break;
-	}
-	case PUSHGLOBAL:
-	case STOREGLOBAL:
-	{
-		Word w;
-		p++;
-		get_word(w,p);
-		printf("\t%d\t; %s",w,VarStr(w));
-		break;
-	}
-	case STORELIST:
-	case CALLFUNC:
-		printf("\t%d %d",*(p+1),*(p+2));
-		p+=3;
-		break;
-	case STORERECORD:
-	{
-		int n=*++p;
-		printf("\t%d",n);
-		p++;
-		while (n--)
-		{
-			Word w;
-			printf("\n%6d\t      FIELD",(int)(p-code));
-			get_word(w,p);
-			printf("\t%d\t; \"%s\"",w,StrStr(w));
-		}
-		break;
-	}
-	default:
-		printf("\tcannot happen:  opcode=%d\n",*p);
-	 	fprintf(stderr,"luac: bad opcode %d at %d\n",op,(int)(p-code));
-		exit(1);
-		break;
+
 	}
 	printf("\n");
+	p+=n;
  }
 }
 
-#undef LocStr
-
-static void PrintLocals(LocVar* v, int n)
+static void PrintLocals(TProtoFunc* tf)
 {
- int i=0;
+ LocVar* v=tf->locvars;
+ int n,i=0;
  if (v==NULL || v->varname==NULL) return;
+ n=tf->code[1]; if (n>=ZEROVARARG) n-=ZEROVARARG;
+
+ printf("locals:");
  if (n>0)
  {
-  printf("parameters:");
-  for (i=0; i<n; v++,i++) printf(" %s[%d@%d]",v->varname->str,i,v->line);
-  printf("\n");
+  for (i=0; i<n; v++,i++) printf(" %s",v->varname->str);
  }
  if (v->varname!=NULL)
  {
-  printf("locals:");
   for (; v->line>=0; v++)
   {
    if (v->varname==NULL)
-#if 0
-    printf(" %s[%d@%d]","*",--i,v->line);
-#else
-    --i;
-#endif
+   {
+    printf(")"); --i;
+   }
    else
-    printf(" %s[%d@%d]",v->varname->str,i++,v->line);
+   {
+    printf(" (%s",v->varname->str); i++;
+   }
   }
-  printf("\n");
+  i-=n;
+  while (i--) printf(")");
+ }
+ printf("\n");
+}
+
+static void PrintHeader(TProtoFunc* tf, TProtoFunc* Main, int at)
+{
+ int size=CodeSize(tf);
+ if (IsMain(tf))
+  printf("\nmain of \"%s\" (%d bytes at %p)\n",fileName(tf),size,(void*)tf);
+ else if (Main)
+ {
+  printf("\nfunction defined at \"%s\":%d (%d bytes at %p); used at ",
+	fileName(tf),tf->lineDefined,size,(void*)tf);
+  if (IsMain(Main))
+   printf("main");
+  else
+   printf("%p",(void*)Main);
+  printf("+%d\n",at);
  }
 }
 
-void PrintFunction(TFunc* tf, TFunc* Main)
+static void PrintFunction(TProtoFunc* tf, TProtoFunc* Main, int at);
+
+static void PrintFunctions(TProtoFunc* Main)
 {
- int n=0;
- if (IsMain(tf))
-  printf("\nmain of \"%s\" (%d bytes at %p)\n",tf->fileName,tf->size,tf);
- else
+ Byte* code=Main->code;
+ Byte* p=code;
+ while (1)
  {
-  Byte* p;
-  p=tf->code;				/* get number of parameters */
-  while (*p==SETLINE) p+=3;
-  if (*p==ADJUST) n=p[1];
-  p=Main->code+tf->marked+sizeof(TFunc*);
-  printf("\nfunction ");
-  switch (*p)				/* try to get name */
+  Opcode OP;
+  int n=INFO(Main,p,&OP);
+  if (OP.class==ENDCODE) break;
+  if (OP.class==PUSHCONSTANT || OP.class==CLOSURE)
   {
-   case STOREGLOBAL:
-   {
-    Word w;
-    p++; get_word(w,p); printf("%s defined at ",VarStr(w));
-    break;
-   }
-   case STOREINDEXED0:			/* try method definition */
-   {
-    if (p[-11]==PUSHGLOBAL && p[-8]==PUSHSTRING)
-    {
-     Word w;
-     Byte* op=p;
-     int c=(tf->locvars && n>0 && strcmp(tf->locvars->varname->str,"self")==0)
-		? ':' : '.';
-     p=op-11; p++; get_word(w,p); printf("%s%c",VarStr(w),c);
-     p=op-8;  p++; get_word(w,p); printf("%s defined at ",StrStr(w));
-    }
-    break;
-   }
+   int i=OP.arg;
+   TObject* o=Main->consts+i;
+   if (ttype(o)==LUA_T_PROTO) PrintFunction(tfvalue(o),Main,(int)(p-code));
   }
-  printf("\"%s\":%d (%d bytes at %p); used at main+%d\n",
-	tf->fileName,tf->lineDefined,tf->size,tf,tf->marked);
+  p+=n;
  }
- PrintLocals(tf->locvars,n);
+}
+
+static void PrintFunction(TProtoFunc* tf, TProtoFunc* Main, int at)
+{
+ PrintHeader(tf,Main,at);
+ PrintLocals(tf);
  PrintCode(tf);
+#ifdef DEBUG
+ PrintConstants(tf);
+#endif
+ PrintFunctions(tf);
+}
+
+void PrintChunk(TProtoFunc* Main)
+{
+ PrintFunction(Main,0,0);
 }
