@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.31 1999/12/30 18:29:46 roberto Exp roberto $
+** $Id: lua.c,v 1.32 2000/01/19 16:50:14 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -87,10 +87,10 @@ static void print_version (void) {
 
 
 static void assign (char *arg) {
-  if (strlen(arg) >= 500)
+  char buffer[500];
+  if (strlen(arg) >= sizeof(buffer))
     fprintf(stderr, "lua: shell argument too long");
   else {
-    char buffer[500];
     char *eq = strchr(arg, '=');
     lua_pushstring(eq+1);
     strncpy(buffer, arg, eq-arg);
