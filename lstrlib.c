@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.92 2002/12/04 17:38:31 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.93 2002/12/20 10:26:33 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -98,7 +98,8 @@ static int str_byte (lua_State *L) {
   size_t l;
   const char *s = luaL_checklstring(L, 1, &l);
   sint32 pos = posrelat(luaL_optlong(L, 2, 1), l);
-  luaL_argcheck(L, 0 < pos && (size_t)(pos) <= l, 2,  "out of range");
+  if (pos <= 0 || (size_t)(pos) > l)  /* index out of range? */
+    return 0;  /* no answer */
   lua_pushnumber(L, uchar(s[pos-1]));
   return 1;
 }
