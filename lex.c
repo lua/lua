@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.40 1996/11/21 14:44:04 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.41 1996/11/22 13:08:02 roberto Exp roberto $";
 
 
 #include <ctype.h>
@@ -12,7 +12,7 @@ char *rcs_lex = "$Id: lex.c,v 2.40 1996/11/21 14:44:04 roberto Exp roberto $";
 #include "luadebug.h"
 #include "parser.h"
 
-#define MINBUFF 260
+#define MINBUFF 250
 
 #define next() (current = input())
 #define save(x) (yytext[tokensize++] = (x))
@@ -30,15 +30,20 @@ void lua_setinput (Input fn)
   input = fn;
 }
 
-void luaI_syntaxerror (char *s)
+static void luaI_auxsyntaxerror (char *s, char *token)
 {
   char msg[256];
-  char *token = luaI_buffer(1);
-  if (token[0] == 0)
-    token = "<eof>";
   sprintf (msg,"%s;\n> last token read: \"%s\" at line %d in file %s",
            s, token, lua_linenumber, lua_parsedfile);
   lua_error (msg);
+}
+
+void luaI_syntaxerror (char *s)
+{
+  char *token = luaI_buffer(1);
+  if (token[0] == 0)
+    token = "<eof>";
+  luaI_auxsyntaxerror(s, token);
 }
 
 
@@ -82,7 +87,7 @@ static int inclinenumber (int pragma_allowed)
 {
   ++lua_linenumber;
   if (pragma_allowed && current == '$') {  /* is a pragma? */
-    char *buff = luaI_buffer(MINBUFF+1);
+    char buff[MINBUFF+1];
     int i = 0;
     next();  /* skip $ */
     while (isalnum((unsigned char)current)) {
@@ -95,8 +100,7 @@ static int inclinenumber (int pragma_allowed)
       lua_debug = 1;
     else if (strcmp(buff, "nodebug") == 0)
       lua_debug = 0;
-    else luaI_syntaxerror("invalid pragma");
-    buff[1] = buff[2] = buff[3] = 0;  /* (re)set for next token */
+    else luaI_auxsyntaxerror("invalid pragma", buff);
   }
   return lua_linenumber;
 }
