@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.45 1997/06/19 17:45:28 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.46 1997/06/19 18:49:40 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -468,7 +468,7 @@ void luaI_addquoted (char *s)
 static void str_format (void)
 {
   int arg = 1;
-  char *strfrmt = luaL_check_string(arg++);
+  char *strfrmt = luaL_check_string(arg);
   luaI_emptybuff();  /* initialize */
   while (*strfrmt) {
     if (*strfrmt != '%')
@@ -478,29 +478,35 @@ static void str_format (void)
     else { /* format item */
       char form[MAX_FORMAT];      /* store the format ('%...') */
       char *buff;
-      char *initf = strfrmt-1;  /* -1 to include % */
-      strfrmt = match(strfrmt, "[-+ #]*(%d*)%.?(%d*)", 0);
+      char *initf = strfrmt;
+      form[0] = '%';
+      strfrmt = match(strfrmt, "%d?%$?[-+ #]*(%d*)%.?(%d*)", 0);
       if (capture[0].len > 3 || capture[1].len > 3)  /* < 1000? */
         lua_error("invalid format (width or precision too long)");
-      strncpy(form, initf, strfrmt-initf+1); /* +1 to include convertion */
-      form[strfrmt-initf+1] = 0;
+      if (isdigit((unsigned char)initf[0]) && initf[1] == '$') {
+        arg = initf[0] - '0';
+        initf += 2;  /* skip the 'n$' */
+      }
+      arg++;
+      strncpy(form+1, initf, strfrmt-initf+1); /* +1 to include convertion */
+      form[strfrmt-initf+2] = 0;
       buff = openspace(1000);  /* to store the formated value */
       switch (*strfrmt++) {
         case 'q':
-          luaI_addquoted(luaL_check_string(arg++));
+          luaI_addquoted(luaL_check_string(arg));
           continue;
         case 's': {
-          char *s = luaL_check_string(arg++);
+          char *s = luaL_check_string(arg);
           buff = openspace(strlen(s));
           sprintf(buff, form, s);
           break;
         }
         case 'c':  case 'd':  case 'i': case 'o':
         case 'u':  case 'x':  case 'X':
-          sprintf(buff, form, (int)luaL_check_number(arg++));
+          sprintf(buff, form, (int)luaL_check_number(arg));
           break;
         case 'e':  case 'E': case 'f': case 'g':
-          sprintf(buff, form, luaL_check_number(arg++));
+          sprintf(buff, form, luaL_check_number(arg));
           break;
         default:  /* also treat cases 'pnLlh' */
           lua_error("invalid format option in function `format'");

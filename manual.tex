@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 2.9 1997/07/01 17:41:34 roberto Exp roberto $
+% $Id: manual.tex,v 2.10 1997/07/02 17:09:48 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -38,7 +38,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1997/07/01 17:41:34 $}
+\date{\small \verb$Date: 1997/07/02 17:09:48 $}
 
 \maketitle
 
@@ -826,8 +826,8 @@ The function not only shows when a tag method is called,
 but also its arguments, its results and the default behavior.
 Please notice that the code shown here is only illustrative;
 the real behavior is hard coded in the interpreter,
-and it is much more efficient than this simulation. 
-All functions used in these descriptions 
+and it is much more efficient than this simulation.
+All functions used in these descriptions
 (\verb|rawgetglobal|, \verb|tonumber|, \verb|call|, etc)
 are described in \See{predefined}.
 
@@ -994,7 +994,7 @@ Notice: the function \verb|getglobal| is pre-defined in Lua \see{predefined}.
 
 \item[``setglobal'':]\index{setglobal event}
 called whenever Lua assigns to a global variable.
-This method cannot be set for numbers, strings, and tables and 
+This method cannot be set for numbers, strings, and tables and
 userdata with default tags.
 \begin{verbatim}
       function setglobal (varname, newvalue)
@@ -1280,7 +1280,7 @@ returns a reference to the object at the top of the C2lua stack,
 and pops it.
 
 As a general rule, all API functions pop from the stack
-all elements that they use. 
+all elements that they use.
 
 Because userdata are objects,
 the function \verb|lua_pushusertag| may create a new userdata.
@@ -1884,6 +1884,15 @@ will produce the string:
 "a string with \"quotes\" and \
  new line"
 \end{verbatim}
+
+Conversions can be applied to the n-th argument in the argument list,
+rather than the next unused argument.
+In this case, the conversion character \verb|%| is replaced
+by the sequence \verb|%d$|, where \verb|d| is a
+decimal digit in the range [1,9],
+giving the position of the argument in the argument list.
+For instance, the call \verb|format("%2$d -> %1$03d", 1, 34)| will
+result in \verb|"34 -> 001"|.
 
 The options \verb|c|, \verb|d|, \verb|E|, \verb|e|, \verb|f|,
 \verb|g| \verb|i|, \verb|o|, \verb|u|, \verb|X|, and \verb|x| all
