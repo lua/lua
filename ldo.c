@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.99 2000/10/02 14:47:43 roberto Exp roberto $
+** $Id: ldo.c,v 1.100 2000/10/02 20:10:55 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -112,7 +112,7 @@ void luaD_lineHook (lua_State *L, StkId func, int line, lua_Hook linehook) {
 }
 
 
-static void luaD_callHook (lua_State *L, StkId func, lua_Hook callhook,
+void luaD_callHook (lua_State *L, StkId func, lua_Hook callhook,
                     const char *event) {
   if (L->allowhooks) {
     lua_Debug ar;
@@ -124,6 +124,7 @@ static void luaD_callHook (lua_State *L, StkId func, lua_Hook callhook,
 
 
 static StkId callCclosure (lua_State *L, const struct Closure *cl, StkId base) {
+  lua_Hook callhook = L->callhook;
   int nup = cl->nupvalues;  /* number of upvalues */
   StkId old_Cbase = L->Cbase;
   int n;
@@ -131,7 +132,11 @@ static StkId callCclosure (lua_State *L, const struct Closure *cl, StkId base) {
   luaD_checkstack(L, nup+LUA_MINSTACK);  /* assures minimum stack size */
   for (n=0; n<nup; n++)  /* copy upvalues as extra arguments */
     *(L->top++) = cl->upvalue[n];
+  if (callhook)
+    luaD_callHook(L, base-1, callhook, "call");
   n = (*cl->f.c)(L);  /* do the actual call */
+  if (callhook)  /* same hook that was active at entry */
+    luaD_callHook(L, base-1, callhook, "return");
   L->Cbase = old_Cbase;  /* restore old C base */
   return L->top - n;  /* return index of first result */
 }
@@ -154,25 +159,21 @@ void luaD_callTM (lua_State *L, const TObject *f, int nParams, int nResults) {
 */ 
 void luaD_call (lua_State *L, StkId func, int nResults) {
   StkId firstResult;
-  lua_Hook callhook = L->callhook;
   retry:  /* for `function' tag method */
   switch (ttype(func)) {
     case TAG_LCLOSURE: {
       CallInfo ci;
       ci.func = clvalue(func);
-      ci.line = 0;
-      ttype(func) = TAG_LMARK;
       infovalue(func) = &ci;
-      if (callhook)
-        luaD_callHook(L, func, callhook, "call");
+      ttype(func) = TAG_LMARK;
       firstResult = luaV_execute(L, ci.func, func+1);
+      LUA_ASSERT(ttype(func) == TAG_LMARK, "invalid tag");
       break;
     }
     case TAG_CCLOSURE: {
       ttype(func) = TAG_CMARK;
-      if (callhook)
-        luaD_callHook(L, func, callhook, "call");
       firstResult = callCclosure(L, clvalue(func), func+1);
+      LUA_ASSERT(ttype(func) == TAG_CMARK, "invalid tag");
       break;
     }
     default: { /* `func' is not a function; check the `function' tag method */
@@ -184,8 +185,6 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
       goto retry;   /* retry the call */
     }
   }
-  if (callhook)  /* same hook that was active at entry */
-    luaD_callHook(L, func, callhook, "return");
   /* adjust the number of results */
   if (nResults == LUA_MULTRET)
     nResults = L->top - firstResult;

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.140 2000/10/03 14:03:21 roberto Exp roberto $
+** $Id: lvm.c,v 1.141 2000/10/03 14:27:44 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -69,7 +69,7 @@ static void traceexec (lua_State *L, StkId base, StkId top, lua_Hook linehook) {
   int *lineinfo = ci->func->f.l->lineinfo;
   int pc = (*ci->pc - 1) - ci->func->f.l->code;
   int newline;
-  if (ci->line == 0) {  /* first time? */
+  if (pc == 0) {  /* may be first time? */
     ci->line = 1;
     ci->refi = 0;
     ci->lastpc = pc+1;  /* make sure it will call linehook */
@@ -348,14 +348,18 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
   StkId top;  /* keep top local, for performance */
   const Instruction *pc = tf->code;
   TString **kstr = tf->kstr;
-  lua_Hook linehook = L->linehook;
+  lua_Hook callhook = L->callhook;
+  lua_Hook linehook;  /* set it only after calling eventual call hook */
   infovalue(base-1)->pc = &pc;
   luaD_checkstack(L, tf->maxstacksize+EXTRA_STACK);
   if (tf->is_vararg)  /* varargs? */
     adjust_varargs(L, base, tf->numparams);
   else
     luaD_adjusttop(L, base, tf->numparams);
+  if (callhook)
+    luaD_callHook(L, base-1, callhook, "call");
   top = L->top;
+  linehook = L->linehook;
   /* main loop of interpreter */
   for (;;) {
     const Instruction i = *pc++;
@@ -363,11 +367,13 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       traceexec(L, base, top, linehook);
     switch (GET_OPCODE(i)) {
       case OP_END: {
-        return L->top;  /* no results */
+        L->top = top;
+        goto endloop;
       }
       case OP_RETURN: {
         L->top = top;
-        return base+GETARG_U(i);
+        top = base+GETARG_U(i);
+        goto endloop;
       }
       case OP_CALL: {
         int nres = GETARG_B(i);
@@ -380,7 +386,8 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       case OP_TAILCALL: {
         L->top = top;
         luaD_call(L, base+GETARG_A(i), LUA_MULTRET);
-        return base+GETARG_B(i);
+        top = base+GETARG_B(i);
+        goto endloop;
       }
       case OP_PUSHNIL: {
         int n = GETARG_U(i);
@@ -700,5 +707,8 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
       }
     }
-  }
+  } endloop:
+  if (callhook)  /* same hook that was active at entry */
+    luaD_callHook(L, base-1, callhook, "return");
+  return top;
 }
