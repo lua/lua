@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.196 2002/10/16 20:40:58 roberto Exp roberto $
+** $Id: lparser.c,v 1.197 2002/11/22 13:59:04 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -25,6 +25,10 @@
 
 #define getlocvar(fs, i)	((fs)->f->locvars[(fs)->actvar[i]])
 
+
+#define enterlevel(ls)	if (++(ls)->nestlevel > LUA_MAXPARSERLEVEL) \
+		luaX_syntaxerror(ls, "too many syntax levels");
+#define leavelevel(ls)	((ls)->nestlevel--)
 
 
 /*
@@ -356,6 +360,7 @@ Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff) {
   struct LexState lexstate;
   struct FuncState funcstate;
   lexstate.buff = buff;
+  lexstate.nestlevel = 0;
   luaX_setinput(L, &lexstate, z, luaS_new(L, zname(z)));
   open_func(&lexstate, &funcstate);
   next(&lexstate);  /* read first token */
@@ -364,6 +369,7 @@ Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff) {
   close_func(&lexstate);
   lua_assert(funcstate.prev == NULL);
   lua_assert(funcstate.f->nupvalues == 0);
+  lua_assert(lexstate.nestlevel == 0);
   return funcstate.f;
 }
 
@@ -749,7 +755,9 @@ static const struct {
 */
 static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
   BinOpr op;
-  UnOpr uop = getunopr(ls->t.token);
+  UnOpr uop;
+  enterlevel(ls);
+  uop = getunopr(ls->t.token);
   if (uop != OPR_NOUNOPR) {
     next(ls);
     subexpr(ls, v, UNARY_PRIORITY);
@@ -768,6 +776,7 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
     luaK_posfix(ls->fs, op, v, &v2);
     op = nextop;
   }
+  leavelevel(ls);
   return op;  /* return first untreated operator */
 }
 
@@ -1299,11 +1308,13 @@ static void body (LexState *ls, expdesc *e, int needself, int line) {
 static void chunk (LexState *ls) {
   /* chunk -> { stat [`;'] } */
   int islast = 0;
+  enterlevel(ls);
   while (!islast && !block_follow(ls->t.token)) {
     islast = statement(ls);
     testnext(ls, ';');
     lua_assert(ls->fs->freereg >= ls->fs->nactvar);
     ls->fs->freereg = ls->fs->nactvar;  /* free registers */
   }
+  leavelevel(ls);
 }
 

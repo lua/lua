@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.46 2002/10/08 18:46:08 roberto Exp roberto $
+** $Id: llimits.h,v 1.47 2002/10/22 17:18:28 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -162,6 +162,12 @@ typedef unsigned long Instruction;
 /* minimum size for string buffer */
 #ifndef LUA_MINBUFFER
 #define LUA_MINBUFFER	32
+#endif
+
+
+/* maximum number of syntactical nested non-terminals */
+#ifndef LUA_MAXPARSERLEVEL
+#define LUA_MAXPARSERLEVEL	200
 #endif
 
 
