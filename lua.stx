@@ -1,6 +1,6 @@
 %{
 /*
-** $Id: lua.stx,v 1.30 1997/12/29 17:35:46 roberto Exp roberto $
+** $Id: lua.stx,v 1.31 1997/12/30 19:08:23 roberto Exp roberto $
 ** Syntax analizer and code generator
 ** See Copyright Notice in lua.h
 */
@@ -266,8 +266,8 @@ static int real_constant (real r)
 
 static void code_number (real f)
 {
-  Word i;
-  if (f >= 0 && f <= (real)MAX_WORD && (real)(i=(Word)f) == f)
+  int i;
+  if (f >= 0 && f <= (real)MAX_WORD && (real)(i=(int)f) == f)
     code_oparg(PUSHNUMBER, 3, i, 1);  /* f has an (short) integer value */
   else
     code_constant(real_constant(f));
