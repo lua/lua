@@ -1,6 +1,6 @@
 %{
 /*
-** $Id: lua.stx,v 1.22 1997/12/09 16:01:08 roberto Exp roberto $
+** $Id: lua.stx,v 1.23 1997/12/15 16:17:20 roberto Exp roberto $
 ** Syntax analizer and code generator
 ** See Copyright Notice in lua.h
 */
@@ -664,8 +664,7 @@ TProtoFunc *luaY_parser (ZIO *z, char *chunkname)
 					 counter */
 %type <vInt>  varlist1, funcParams, funcvalue
 %type <vInt>  fieldlist, localnamelist, decinit
-%type <vInt>  ffieldlist, ffieldlist1, semicolonpart
-%type <vInt>  lfieldlist, lfieldlist1
+%type <vInt>  ffieldlist1, lfieldlist1, ffieldlist, lfieldlist, part
 %type <vLong> var, funcname  /* vardesc */
 %type <pFunc> body
 
@@ -861,25 +860,35 @@ parlist  :  /* empty */ { code_args(0, 0); }
 	  | localnamelist ',' DOTS { code_args($1, 1); }
 	  ;
 		
-fieldlist  : lfieldlist
-  	     { flush_list($1/LFIELDS_PER_FLUSH, $1%LFIELDS_PER_FLUSH); }
-	     semicolonpart
-	     { $$ = $1+$3; }
-	   | ffieldlist1 lastcomma
-	     { $$ = $1; flush_record($1%RFIELDS_PER_FLUSH); }
-	   ;
+fieldlist :  part { $$ = abs($1); }
+	| part ';' part
+	{
+	  if ($1*$3 > 0)  /* repeated parts? */
+	    luaY_error("invalid constructor syntax");
+	  $$ = abs($1)+abs($3);
+	}
+	;
 
-semicolonpart : /* empty */ { $$ = 0; }
-	      | ';' ffieldlist { $$ = $2; flush_record($2%RFIELDS_PER_FLUSH); }
-	      ;
+part : /* empty */ { $$ = 0; }
+	| ffieldlist { $$ = $1; }
+	| lfieldlist { $$ = $1; }
+	;
 
-lastcomma  : /* empty */
-	   | ','
-	   ;
+lastcomma : /* empty */ | ',' ;
 
-ffieldlist  : /* empty */ { $$ = 0; }
-            | ffieldlist1 lastcomma { $$ = $1; }
-            ;
+ffieldlist : ffieldlist1 lastcomma
+	{
+	  flush_record($1%RFIELDS_PER_FLUSH);
+	  $$ = -$1;  /* negative signals a "record" part */
+	}
+	;
+
+lfieldlist : lfieldlist1 lastcomma
+	{
+	  flush_list($1/LFIELDS_PER_FLUSH, $1%LFIELDS_PER_FLUSH);
+	  $$ = $1;
+	}
+	;
 
 ffieldlist1 : ffield			{$$=1;}
 	   | ffieldlist1 ',' ffield	
@@ -895,10 +904,6 @@ ffield      : ffieldkey '=' expr1
 
 ffieldkey   : '[' expr1 ']'
 	    | NAME { code_string($1); }
-	    ;
-
-lfieldlist  : /* empty */ { $$ = 0; }
-	    | lfieldlist1 lastcomma { $$ = $1; }
 	    ;
 
 lfieldlist1 : expr1  {$$=1;}
