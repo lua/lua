@@ -12,7 +12,6 @@
 #include "lua.h"
 
 typedef struct lua_Debug lua_Debug;  /* activation record */
-typedef struct lua_Localvar lua_Localvar;
 
 typedef void (*lua_Hook) (lua_State *L, lua_Debug *ar);
 
