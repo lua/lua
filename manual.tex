@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.20 1996/11/01 17:02:10 roberto Exp roberto $
+% $Id: manual.tex,v 1.21 1996/11/01 18:02:53 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -28,7 +28,6 @@ Roberto Ierusalimschy\quad
 Luiz Henrique de Figueiredo\quad
 Waldemar Celes
 \vspace{1.0ex}\\
-%\small \tecgraf \ --- PUC-Rio\\
 \smallskip
 \small\tt lua@icad.puc-rio.br
 \vspace{2.0ex}\\
@@ -36,7 +35,7 @@ Waldemar Celes
 \tecgraf\ --- Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1996/11/01 17:02:10 $}
+\date{\small \verb$Date: 1996/11/01 18:02:53 $}
 
 \maketitle
 
@@ -969,6 +968,10 @@ A correct solution could be:
   lua_pushobject(index);               /* push index */
   result = lua_getsubscript();
 \end{verbatim}
+The functions \verb|lua_getnumber|, \verb|lua_getstring|,
+ \verb|lua_getuserdata|, and \verb|lua_getcfunction|,
+plus the family \verb|lua_is*|,
+are safe to be called without modifying the stack.
 
 \subsection{Calling Lua Functions}
 Functions defined in Lua by a chunk executed with
@@ -1309,8 +1312,9 @@ The only differences are that the options/modifiers
 and \verb'h' are not supported,
 and there is an extra option, \verb'q'.
 This option formats a string in a form suitable to be safely read
-back by the Lua interpreter.
-The string is written between double quotes,
+back by the Lua interpreter;
+that is,
+the string is written between double quotes,
 and all double quotes, returns and backslashes in the string
 are correctly escaped when written.
 For instance, the call
@@ -1328,18 +1332,19 @@ The options \verb'c', \verb'd', \verb'E', \verb'e', \verb'f',
 expect a number as argument,
 whereas \verb'q' and \verb's' expect a string.
 
-\subsubsection*{\ff{\tt gsub (s, from, to [, n])}}\Deffunc{gsub}
+\subsubsection*{\ff{\tt gsub (s, pat, repl [, n])}}\Deffunc{gsub}
 Returns a copy of \verb-s-,
-where all ocurrences of the pattern \verb-from- have been
-replaced by a replacement string specified by \verb-to-.
+where all ocurrences of the pattern \verb-pat- have been
+replaced by a replacement string specified by \verb-repl-.
 This function also returns, as a second value,
 the total number of substitutions made.
 
-If \verb-to- is a string, its value is used for replacement.
-Any sequence in \verb-to- of the form \verb-%n- with \verb-n- between 1 and 9
+If \verb-repl- is a string, its value is used for replacement.
+Any sequence in \verb-repl- of the form \verb-%n-
+with \verb-n- between 1 and 9
 stands for the value of the n-th captured substring.
 
-If \verb-to- is a function, this function is called every time a
+If \verb-repl- is a function, this function is called every time a
 match occurs, with all captured substrings as parameters.
 If the value returned by this function is a string,
 it is used as the replacement string;
@@ -1348,7 +1353,7 @@ otherwise, the replacement string is the empty string.
 An optional parameter \verb-n- limits 
 the maximum number of substitutions to occur.
 For instance, when \verb-n- is 1 only the first ocurrence of
-\verb-from- is replaced.
+\verb-pat- is replaced.
 
 As an example, in the following expression each ocurrence of the form
 \verb-$name$- calls the function \verb|getenv|,
@@ -1357,7 +1362,7 @@ passing \verb|name| as argument
 The value returned by \verb|getenv| will replace the pattern.
 Therefore, the whole expression:
 \begin{verbatim}
-  gsub('home = $HOME$, user = $USER$', "$(%w%w*)$", getenv)
+  gsub("home = $HOME$, user = $USER$", "$(%w%w*)$", getenv)
 \end{verbatim}
 may return the string:
 \begin{verbatim}
@@ -1366,7 +1371,8 @@ home = /home/roberto, user = roberto
 
 \subsubsection*{Patterns} \label{pm}
 
-A \Def{character class} is used to represent a set of characters.
+\paragraph{Character Class:}
+a \Def{character class} is used to represent a set of characters.
 The following combinations are allowed in describing a character class:
 \begin{description}
 \item[{\em x}] (where {\em x} is any character not in the list \verb'()%.[*?')
@@ -1403,7 +1409,8 @@ represents the complement of char-set,
 where char-set is interpreted as above.
 \end{description}
 
-A \Def{pattern item} may be a single character class,
+\paragraph{Pattern Item:}
+a \Def{pattern item} may be a single character class,
 or a character class followed by \verb'*' or by \verb'?'.
 A single character class matches any single character in the class.
 A character class followed by \verb'*' matches 0 or more repetitions
@@ -1411,10 +1418,11 @@ of characters in the class.
 A character class followed by \verb'?' matches 0 or one ocurrence
 of a character in the class.
 A pattern item may also has the form \verb'%n',
-for \verb-n- between 1 and 9.
-Such item matches a sub-string equal to the n-th captured string.
+for \verb-n- between 1 and 9;
+such item matches a sub-string equal to the n-th captured string.
 
-A \Def{pattern} is a sequence of pattern items.
+\paragraph{Pattern:}
+a \Def{pattern} is a sequence of pattern items.
 Any repetition item (\verb'*') inside a pattern will always
 match the longest possible sequence.
 A \verb'^' at the beginning of a pattern anchors the match at the
@@ -1426,7 +1434,7 @@ A pattern may contain sub-patterns enclosed in parentheses,
 that describe \Def{captures}.
 When a match succeeds, the sub-strings of the subject string
 that match captures are {\em captured} for future use.
-Captures are numbered according to their left delimiter.
+Captures are numbered according to their left parentheses.
 
 \subsection{Mathematical Functions} \label{mathlib}
 
@@ -1526,6 +1534,8 @@ this function does not erase any previous content of the file.
 If this function fails, it returns \nil,
 plus a string describing the error.
 
+Notice that function \verb|writeto| is available to close a file.
+
 \subsubsection*{\ff{\tt remove (filename)}}\Deffunc{remove}
 
 This function deletes the file with the given name.
@@ -1550,8 +1560,8 @@ according to a read pattern, that specifies how much to read;
 characters are read from the current input file until
 the read pattern fails or ends.
 The function \verb|read| returns a string with the characters read,
-or \nil\ if the result string would be empty {\em and\/}
-the read pattern fails.
+or \nil\ if the read pattern fails {\em and\/}
+the result string would be empty.
 When called without parameters,
 it uses a default pattern that reads the next line
 (see below).
@@ -1566,10 +1576,10 @@ from the input if it belongs to the class;
 it never fails.
 A character class followed by \verb'*' reads until a character that
 does not belong to the class, or end of file;
-it never fails.%
+since it can match a sequence of zero characteres, it never fails.%
 \footnote{
 Notice that this behaviour is different from regular pattern matching,
-where a \verb'*' expands to the maximum length {\em such that}
+where a \verb'*' expands to the maximum length {\em such that\/}
 the rest of the pattern does not fail.}
 
 A pattern item may contain sub-patterns enclosed in curly brackets,
