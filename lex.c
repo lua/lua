@@ -1,5 +1,8 @@
-char *rcs_lex = "$Id: lex.c,v 2.2 1994/08/05 19:27:41 celes Exp celes $";
+char *rcs_lex = "$Id: lex.c,v 2.3 1994/08/17 17:41:50 celes Exp celes $";
 /*$Log: lex.c,v $
+ * Revision 2.3  1994/08/17  17:41:50  celes
+ * Implementacao da macro 'lua_strcmp'
+ *
  * Revision 2.2  1994/08/05  19:27:41  celes
  * implementacao de dois buffer de 'yytext' para evitar bug
  * no look ahead do yacc
@@ -172,7 +175,9 @@ int yylex ()
                 case 'n': save('\n'); next(); break;
                 case 't': save('\t'); next(); break;
                 case 'r': save('\r'); next(); break;
-                default : save('\\'); break;
+                case '\'': save('\''); next(); break;
+                case '"': save('"'); next(); break;
+                default : save(current); next(); break;
               }
               break;
             default: 
