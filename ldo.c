@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.33 1999/02/22 13:51:44 roberto Exp roberto $
+** $Id: ldo.c,v 1.34 1999/02/22 14:17:24 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -265,9 +265,9 @@ static void do_callinc (int nResults)
 {
   StkId base = L->Cstack.base;
   luaD_call(base+1, nResults);
-  L->Cstack.lua2C = base;  /* position of the luaM_new results */
+  L->Cstack.lua2C = base;  /* position of the new results */
   L->Cstack.num = (L->stack.top-L->stack.stack) - base;  /* number of results */
-  L->Cstack.base = base + L->Cstack.num;  /* incorporate results on L->stack.stack */
+  L->Cstack.base = base + L->Cstack.num;  /* incorporate results on stack */
 }
 
 
