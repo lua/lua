@@ -1,5 +1,5 @@
 /*
-** $Id: luadebug.h,v 1.7 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: luadebug.h,v 1.8 1999/11/22 13:12:07 roberto Exp roberto $
 ** Debugging API
 ** See Copyright Notice in lua.h
 */
@@ -11,25 +11,44 @@
 
 #include "lua.h"
 
-typedef lua_Object lua_Function;
+typedef struct lua_Dbgactreg lua_Dbgactreg;  /* activation record */
+typedef struct lua_Dbglocvar lua_Dbglocvar;  /* local variable */
 
-typedef void (*lua_LHFunction) (lua_State *L, int line);
-typedef void (*lua_CHFunction) (lua_State *L, lua_Function func, const char *file, int line);
+typedef void (*lua_Dbghook) (lua_State *L, lua_Dbgactreg *ar);
 
-lua_Function lua_stackedfunction (lua_State *L, int level);
-void lua_funcinfo (lua_State *L, lua_Object func, const char **source, int *linedefined);
-int lua_currentline (lua_State *L, lua_Function func);
-const char *lua_getobjname (lua_State *L, lua_Object o, const char **name);
 
-lua_Object lua_getlocal (lua_State *L, lua_Function func, int local_number,
-                         const char **name);
-int lua_setlocal (lua_State *L, lua_Function func, int local_number);
+int lua_getstack (lua_State *L, int level, lua_Dbgactreg *ar);
+int lua_getinfo (lua_State *L, const char *what, lua_Dbgactreg *ar);
+int lua_getlocal (lua_State *L, const lua_Dbgactreg *ar, lua_Dbglocvar *v);
+int lua_setlocal (lua_State *L, const lua_Dbgactreg *ar, lua_Dbglocvar *v);
 
-int lua_nups (lua_State *L, lua_Function func);
-
-lua_LHFunction lua_setlinehook (lua_State *L, lua_LHFunction func);
-lua_CHFunction lua_setcallhook (lua_State *L, lua_CHFunction func);
 int lua_setdebug (lua_State *L, int debug);
+
+lua_Dbghook lua_setcallhook (lua_State *L, lua_Dbghook func);
+lua_Dbghook lua_setlinehook (lua_State *L, lua_Dbghook func);
+
+
+
+struct lua_Dbgactreg {
+  const char *event;     /* `call', `return' */
+  const char *source;    /* (S) */
+  int linedefined;       /* (S) */
+  const char *what;      /* (S) `Lua' function, `C' function, Lua `main' */
+  int currentline;       /* (l) */
+  const char *name;      /* (n) */
+  const char *namewhat;  /* (n) global, tag method, local, field */
+  int nups;              /* (u) number of upvalues */
+  lua_Object func;       /* (f) function being executed */
+  /* private part */
+  lua_Object _func;  /* active function */
+};
+
+
+struct lua_Dbglocvar {
+  int index;
+  const char *name;
+  lua_Object value;
+};
 
 
 #endif

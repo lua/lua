@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.29 1999/11/22 13:12:07 roberto Exp roberto $
+** $Id: ltm.c,v 1.30 1999/12/23 18:19:57 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -108,8 +108,6 @@ int luaT_effectivetag (const TObject *o) {
     LUA_T_USERDATA, LUA_T_NUMBER, LUA_T_STRING, LUA_T_ARRAY,
     LUA_T_LPROTO, LUA_T_CPROTO, LUA_T_NIL,
     LUA_T_LPROTO, LUA_T_CPROTO,       /* LUA_T_LCLOSURE, LUA_T_CCLOSURE */
-    LUA_T_LPROTO, LUA_T_CPROTO,       /* LUA_T_LCLMARK, LUA_T_CCLMARK */
-    LUA_T_LPROTO, LUA_T_CPROTO        /* LUA_T_LMARK, LUA_T_CMARK */
   };
   int t;
   switch (t = ttype(o)) {

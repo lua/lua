@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.54 1999/12/28 11:52:49 roberto Exp roberto $
+** $Id: liolib.c,v 1.55 1999/12/30 18:28:40 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -529,53 +529,49 @@ static void io_debug (lua_State *L) {
 static void errorfb (lua_State *L) {
   char buff[MAXMESSAGE];
   int level = 1;  /* skip level 0 (it's this function) */
-  lua_Object func;
+  lua_Dbgactreg ar;
+  lua_Object alertfunc = lua_rawgetglobal(L, "_ALERT");
   sprintf(buff, "error: %.200s\n", lua_getstring(L, lua_getparam(L, 1)));
-  while ((func = lua_stackedfunction(L, level++)) != LUA_NOOBJECT) {
-    const char *name;
-    int currentline;
-    const char *chunkname;
+  while (lua_getstack(L, level++, &ar)) {
     char buffchunk[MAXSRC];
-    int linedefined;
-    lua_funcinfo(L, func, &chunkname, &linedefined);
-    luaL_chunkid(buffchunk, chunkname, sizeof(buffchunk));
+    lua_getinfo(L, "Snl", &ar);
+    luaL_chunkid(buffchunk, ar.source, sizeof(buffchunk));
     if (level == 2) strcat(buff, "Active Stack:\n");
     strcat(buff, "  ");
     if (strlen(buff) > MAXMESSAGE-MESSAGESIZE) {
       strcat(buff, "...\n");
       break;  /* buffer is full */
     }
-    switch (*lua_getobjname(L, func, &name)) {
-      case 'g':  case 'l':
-        sprintf(buff+strlen(buff), "function `%.50s'", name);
+    switch (*ar.namewhat) {
+      case 'g':  case 'l':  /* global, local */
+        sprintf(buff+strlen(buff), "function `%.50s'", ar.name);
         break;
-      case 'f':
-        sprintf(buff+strlen(buff), "method `%.50s'", name);
+      case 'f':  /* field */
+        sprintf(buff+strlen(buff), "method `%.50s'", ar.name);
         break;
-      case 't':
-        sprintf(buff+strlen(buff), "`%.50s' tag method", name);
+      case 't':  /* tag method */
+        sprintf(buff+strlen(buff), "`%.50s' tag method", ar.name);
         break;
       default: {
-        if (linedefined == 0)
+        if (*ar.what == 'm')  /* main? */
           sprintf(buff+strlen(buff), "main of %.70s", buffchunk);
-        else if (linedefined < 0)
+        else if (*ar.what == 'C')  /* C function? */
           sprintf(buff+strlen(buff), "%.70s", buffchunk);
         else
           sprintf(buff+strlen(buff), "function <%d:%.70s>",
-                  linedefined, buffchunk);
-        chunkname = NULL;
+                  ar.linedefined, buffchunk);
+        ar.source = NULL;
       }
     }
-    if ((currentline = lua_currentline(L, func)) > 0)
-      sprintf(buff+strlen(buff), " at line %d", currentline);
-    if (chunkname)
+    if (ar.currentline > 0)
+      sprintf(buff+strlen(buff), " at line %d", ar.currentline);
+    if (ar.source)
       sprintf(buff+strlen(buff), " [%.70s]", buffchunk);
     strcat(buff, "\n");
   }
-  func = lua_rawgetglobal(L, "_ALERT");
-  if (lua_isfunction(L, func)) {  /* avoid error loop if _ALERT is not defined */
+  if (lua_isfunction(L, alertfunc)) {  /* avoid loop if _ALERT is not defined */
     lua_pushstring(L, buff);
-    lua_callfunction(L, func);
+    lua_callfunction(L, alertfunc);
   }
 }
 

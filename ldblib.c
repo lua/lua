@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.8 1999/11/22 17:39:51 roberto Exp roberto $
+** $Id: ldblib.c,v 1.9 1999/12/21 18:04:41 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -33,113 +33,73 @@ static void settabsi (lua_State *L, lua_Object t, const char *i, int v) {
 }
 
 
-static lua_Object getfuncinfo (lua_State *L, lua_Object func) {
-  lua_Object result = lua_createtable(L);
-  const char *str;
-  int line;
-  lua_funcinfo(L, func, &str, &line);
-  if (line == -1)  /* C function? */
-    settabss(L, result, "kind", "C");
-  else if (line == 0) {  /* "main"? */
-      settabss(L, result, "kind", "chunk");
-      settabss(L, result, "source", str);
-    }
-  else {  /* Lua function */
-    settabss(L, result, "kind", "Lua");
-    settabsi(L, result, "def_line", line);
-    settabss(L, result, "source", str);
-  }
-  if (line != 0) {  /* is it not a "main"? */
-    const char *kind = lua_getobjname(L, func, &str);
-    if (*kind) {
-      settabss(L, result, "name", str);
-      settabss(L, result, "where", kind);
-    }
-  }
-  return result;
+static void settabso (lua_State *L, lua_Object t, const char *i, lua_Object v) {
+  lua_pushobject(L, t);
+  lua_pushstring(L, i);
+  lua_pushobject(L, v);
+  lua_settable(L);
 }
 
 
 static void getstack (lua_State *L) {
-  lua_Object func = lua_stackedfunction(L, luaL_check_int(L, 1));
-  if (func == LUA_NOOBJECT)  /* level out of range? */
+  lua_Dbgactreg ar;
+  if (!lua_getstack(L, luaL_check_int(L, 1), &ar))  /* level out of range? */
     return;
   else {
-    lua_Object result = getfuncinfo(L, func);
-    int currline = lua_currentline(L, func);
-    if (currline > 0)
-      settabsi(L, result, "current", currline);
-    lua_pushobject(L, result);
-    lua_pushstring(L, "func");
-    lua_pushobject(L, func);
-    lua_settable(L);  /* result.func = func */
-    lua_pushobject(L, result);
-  }
-}
+    const char *options = luaL_check_string(L, 2);
+    lua_Object res = lua_createtable(L);
+    if (!lua_getinfo(L, options, &ar))
+      luaL_argerror(L, 2, "invalid option");
+    for ( ;*options; options++) {
+      switch (*options) {
+        case 'S':
+          settabss(L, res, "source", ar.source);
+          settabsi(L, res, "linedefined", ar.linedefined);
+          settabss(L, res, "what", ar.what);
+          break;
+        case 'l':
+          settabsi(L, res, "currentline", ar.currentline);
+          break;
+        case 'u':
+          settabsi(L, res, "nups", ar.nups);
+          break;
+        case 'n':
+          settabss(L, res, "name", ar.name);
+          settabss(L, res, "namewhat", ar.namewhat);
+          break;
+        case 'f':
+          settabso(L, res, "func", ar.func);
+          break;
 
-
-static void funcinfo (lua_State *L) {
-  lua_pushobject(L, getfuncinfo(L, luaL_functionarg(L, 1)));
-}
-
-
-static int findlocal (lua_State *L, lua_Object func, int arg) {
-  lua_Object v = lua_getparam(L, arg);
-  if (lua_isnumber(L, v))
-    return (int)lua_getnumber(L, v);
-  else {
-    const char *name = luaL_check_string(L, arg);
-    int i = 0;
-    int result = -1;
-    const char *vname;
-    while (lua_getlocal(L, func, ++i, &vname) != LUA_NOOBJECT) {
-      if (strcmp(name, vname) == 0)
-        result = i;  /* keep looping to get the last var with this name */
+      }
     }
-    if (result == -1)
-      luaL_verror(L, "no local variable `%.50s' at given level", name);
-    return result;
+    lua_pushobject(L, res);
   }
 }
-
+    
 
 static void getlocal (lua_State *L) {
-  lua_Object func = lua_stackedfunction(L, luaL_check_int(L, 1));
-  lua_Object val;
-  const char *name;
-  if (func == LUA_NOOBJECT)  /* level out of range? */
-    return;  /* return nil */
-  else if (lua_getparam(L, 2) != LUA_NOOBJECT) {  /* 2nd argument? */
-    if ((val = lua_getlocal(L, func, findlocal(L, func, 2), &name)) != LUA_NOOBJECT) {
-      lua_pushobject(L, val);
-      lua_pushstring(L, name);
-    }
-    /* else return nil */
-  }
-  else {  /* collect all locals in a table */
-    lua_Object result = lua_createtable(L);
-    int i;
-    for (i=1; ;i++) {
-      if ((val = lua_getlocal(L, func, i, &name)) == LUA_NOOBJECT)
-        break;
-      lua_pushobject(L, result);
-      lua_pushstring(L, name);
-      lua_pushobject(L, val);
-      lua_settable(L);  /* result[name] = value */
-    }
-    lua_pushobject(L, result);
+  lua_Dbgactreg ar;
+  lua_Dbglocvar lvar;
+  if (!lua_getstack(L, luaL_check_int(L, 1), &ar))  /* level out of range? */
+    luaL_argerror(L, 1, "level out of range");
+  lvar.index = luaL_check_int(L, 2);
+  if (lua_getlocal(L, &ar, &lvar)) {
+    lua_pushstring(L, lvar.name);
+    lua_pushobject(L, lvar.value);
   }
 }
 
 
 static void setlocal (lua_State *L) {
-  lua_Object func = lua_stackedfunction(L, luaL_check_int(L, 1));
-  int numvar;
-  luaL_arg_check(L, func != LUA_NOOBJECT, 1, "level out of range");
-  numvar = findlocal(L, func, 2);
-  lua_pushobject(L, luaL_nonnullarg(L, 3));
-  if (!lua_setlocal(L, func, numvar))
-    lua_error(L, "no such local variable");
+  lua_Dbgactreg ar;
+  lua_Dbglocvar lvar;
+  if (!lua_getstack(L, luaL_check_int(L, 1), &ar))  /* level out of range? */
+    luaL_argerror(L, 1, "level out of range");
+  lvar.index = luaL_check_int(L, 2);
+  lvar.value = luaL_nonnullarg(L, 3);
+  if (lua_setlocal(L, &ar, &lvar))
+    lua_pushstring(L, lvar.name);
 }
 
 
@@ -149,21 +109,17 @@ static int callhook = LUA_NOREF;  /* Lua reference to call hook function */
 
 
 
-static void linef (lua_State *L, int line) {
+static void linef (lua_State *L, lua_Dbgactreg *ar) {
   if (linehook != LUA_NOREF) {
-    lua_pushnumber(L, line);
+    lua_pushnumber(L, ar->currentline);
     lua_callfunction(L, lua_getref(L, linehook));
   }
 }
 
 
-static void callf (lua_State *L, lua_Function f, const char *file, int line) {
+static void callf (lua_State *L, lua_Dbgactreg *ar) {
   if (callhook != LUA_NOREF) {
-    if (f != LUA_NOOBJECT) {
-      lua_pushobject(L, f);
-      lua_pushstring(L, file);
-      lua_pushnumber(L, line);
-    }
+    lua_pushstring(L, ar->event);
     lua_callfunction(L, lua_getref(L, callhook));
   }
 }
@@ -200,7 +156,6 @@ static void setlinehook (lua_State *L) {
 
 
 static const struct luaL_reg dblib[] = {
-  {"funcinfo", funcinfo},
   {"getlocal", getlocal},
   {"getstack", getstack},
   {"setcallhook", setcallhook},

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.3 1999/12/27 17:33:22 roberto Exp roberto $
+** $Id: ltests.c,v 1.4 2000/01/13 16:30:47 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -229,10 +229,6 @@ static void testC (lua_State *L) {
     else if EQ("settagmethod") {
       int n = getreg(L, &pc);
       lua_settagmethod(L, (int)lua_getnumber(L, reg[n]), getname(&pc));
-    }
-    else if EQ("getfunc") {
-      int n = getreg(L, &pc);
-      reg[n] = lua_stackedfunction(L, getnum(&pc));
     }
     else if EQ("beginblock") {
       lua_beginblock(L);

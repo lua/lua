@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.67 1999/12/30 18:27:03 roberto Exp roberto $
+** $Id: lapi.c,v 1.68 2000/01/13 15:56:03 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -30,29 +30,12 @@ const char lua_ident[] = "$Lua: " LUA_VERSION " " LUA_COPYRIGHT " $\n"
 
 
 
-const lua_Type luaA_normtype[] = {  /* ORDER LUA_T */
-  LUA_T_USERDATA, LUA_T_NUMBER, LUA_T_STRING, LUA_T_ARRAY,
-  LUA_T_LPROTO, LUA_T_CPROTO, LUA_T_NIL,
-  LUA_T_LCLOSURE, LUA_T_CCLOSURE,
-  LUA_T_LCLOSURE, LUA_T_CCLOSURE,   /* LUA_T_LCLMARK, LUA_T_CCLMARK */
-  LUA_T_LPROTO, LUA_T_CPROTO        /* LUA_T_LMARK, LUA_T_CMARK */
-};
-
-
-void luaA_setnormalized (TObject *d, const TObject *s) {
-  d->value = s->value;
-  d->ttype = luaA_normalizedtype(s);
-}
-
 
 const TObject *luaA_protovalue (const TObject *o) {
-  switch (luaA_normalizedtype(o)) {
+  switch (ttype(o)) {
     case LUA_T_CCLOSURE:  case LUA_T_LCLOSURE:
       return protovalue(o);
     default:
-      LUA_ASSERT(L, luaA_normalizedtype(o) == LUA_T_LPROTO ||
-                    luaA_normalizedtype(o) == LUA_T_CPROTO,
-                    "invalid `function'");
       return o;
   }
 }
@@ -107,7 +90,7 @@ int lua_callfunction (lua_State *L, lua_Object function) {
     return 1;
   else {
     luaD_openstack(L, L->Cstack.base);
-    luaA_setnormalized(L->Cstack.base, function);
+    *L->Cstack.base = *function;
     return luaD_protectedrun(L);
   }
 }
@@ -248,12 +231,7 @@ int lua_equal(lua_State *L, lua_Object o1, lua_Object o2) {
   UNUSED(L);
   if (o1 == LUA_NOOBJECT || o2 == LUA_NOOBJECT)
     return (o1 == o2);
-  else {
-    TObject obj1, obj2;
-    luaA_setnormalized(&obj1, o1);
-    luaA_setnormalized(&obj2, o2);
-    return luaO_equalObj(&obj1, &obj2);
-  }
+  else return luaO_equalObj(o1, o2);
 }
 
 
@@ -344,7 +322,7 @@ void luaA_pushobject (lua_State *L, const TObject *o) {
 void lua_pushobject (lua_State *L, lua_Object o) {
   if (o == LUA_NOOBJECT)
     lua_error(L, "API error - attempt to push a NOOBJECT");
-  luaA_setnormalized(L->top, o);
+  *L->top = *o;
   incr_top;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.64 1999/12/30 18:40:57 roberto Exp roberto $
+** $Id: ldo.c,v 1.65 2000/01/13 15:56:03 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -55,8 +55,9 @@ void luaD_checkstack (lua_State *L, int n) {
       lua_error(L, "BAD STACK OVERFLOW! DATA CORRUPTED!!");
     }
     else {
+      lua_Dbgactreg dummy;
       L->stack_last += EXTRA_STACK;  /* to be used by error message */
-      if (lua_stackedfunction(L, L->stacksize/SLOTS_PER_F) == LUA_NOOBJECT) {
+      if (lua_getstack(L, L->stacksize/SLOTS_PER_F, &dummy) == 0) {
         /* too few funcs on stack: doesn't look like a recursion loop */
         lua_error(L, "Lua2C - C2Lua overflow");
       }
@@ -100,13 +101,17 @@ void luaD_openstack (lua_State *L, StkId pos) {
 }
 
 
-void luaD_lineHook (lua_State *L, int line) {
+void luaD_lineHook (lua_State *L, StkId func, int line) {
   if (L->allowhooks) {
+    lua_Dbgactreg ar;
     struct C_Lua_Stack oldCLS = L->Cstack;
     StkId old_top = L->Cstack.lua2C = L->Cstack.base = L->top;
     L->Cstack.num = 0;
+    ar._func = func;
+    ar.event = "line";
+    ar.currentline = line;
     L->allowhooks = 0;  /* cannot call hooks inside a hook */
-    (*L->linehook)(L, line);
+    (*L->linehook)(L, &ar);
     L->allowhooks = 1;
     L->top = old_top;
     L->Cstack = oldCLS;
@@ -114,29 +119,17 @@ void luaD_lineHook (lua_State *L, int line) {
 }
 
 
-void luaD_callHook (lua_State *L, StkId func, lua_CHFunction callhook,
-                    int isreturn) {
+void luaD_callHook (lua_State *L, StkId func, lua_Dbghook callhook,
+                    const char *event) {
   if (L->allowhooks) {
+    lua_Dbgactreg ar;
     struct C_Lua_Stack oldCLS = L->Cstack;
     StkId old_top = L->Cstack.lua2C = L->Cstack.base = L->top;
     L->Cstack.num = 0;
+    ar._func = func;
+    ar.event = event;
     L->allowhooks = 0;  /* cannot call hooks inside a hook */
-    if (isreturn)
-      callhook(L, LUA_NOOBJECT, "(return)", 0);
-    else {
-      switch (ttype(func)) {
-        case LUA_T_LPROTO:
-          callhook(L, func, tfvalue(func)->source->str,
-                            tfvalue(func)->lineDefined);
-          break;
-        case LUA_T_LCLOSURE:
-          callhook(L, func, tfvalue(protovalue(func))->source->str,
-                            tfvalue(protovalue(func))->lineDefined);
-          break;
-        default:
-          callhook(L, func, "(C)", -1);
-      }
-    }
+    callhook(L, &ar);
     L->allowhooks = 1;
     L->top = old_top;
     L->Cstack = oldCLS;
@@ -157,7 +150,7 @@ static StkId callC (lua_State *L, lua_CFunction f, StkId base) {
   L->Cstack.lua2C = base;
   L->Cstack.base = L->top;
   if (L->callhook)
-    luaD_callHook(L, base-1, L->callhook, 0);
+    luaD_callHook(L, base-1, L->callhook, "call");
   (*f)(L);  /* do the actual call */
   firstResult = L->Cstack.base;
   L->Cstack = oldCLS;
@@ -195,7 +188,7 @@ void luaD_callTM (lua_State *L, const TObject *f, int nParams, int nResults) {
 */ 
 void luaD_call (lua_State *L, StkId func, int nResults) {
   StkId firstResult;
-  lua_CHFunction callhook = L->callhook;
+  lua_Dbghook callhook = L->callhook;
   retry:  /* for `function' tag method */
   switch (ttype(func)) {
     case LUA_T_CPROTO:
@@ -228,7 +221,7 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
     }
   }
   if (callhook)  /* same hook that was active at entry */
-    luaD_callHook(L, NULL, callhook, 1);  /* `return' hook */
+    luaD_callHook(L, func, callhook, "return");
   /* adjust the number of results */
   if (nResults == MULT_RET)
     nResults = L->top - firstResult;

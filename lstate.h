@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.26 1999/12/21 18:04:41 roberto Exp roberto $
+** $Id: lstate.h,v 1.27 1999/12/27 17:33:22 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -76,8 +76,8 @@ struct lua_State {
   unsigned long GCthreshold;
   unsigned long nblocks;  /* number of `blocks' currently allocated */
   int debug;
-  lua_CHFunction callhook;
-  lua_LHFunction linehook;
+  lua_Dbghook callhook;
+  lua_Dbghook linehook;
   int allowhooks;
 };
 
