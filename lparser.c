@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.219 2003/09/29 16:41:35 roberto Exp roberto $
+** $Id: lparser.c,v 1.220 2003/10/03 16:04:24 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1172,6 +1172,8 @@ static void localfunc (LexState *ls) {
   adjustlocalvars(ls, 1);
   body(ls, &b, 0, ls->linenumber);
   luaK_storevar(fs, &v, &b);
+  /* debug information will only see the variable after this point! */
+  getlocvar(fs, fs->nactvar - 1).startpc = fs->pc;
 }
 
 

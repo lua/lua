@@ -561,11 +561,19 @@ local function d () end
 
 patch = [[
 * lparser.c:
-1145c1145,1146
+1143a1144
+>   FuncState *fs = ls->fs;
+1145c1146,1147
 <   init_exp(&v, VLOCAL, ls->fs->freereg++);
 ---
->   init_exp(&v, VLOCAL, ls->fs->freereg);
->   luaK_reserveregs(ls->fs, 1);
+>   init_exp(&v, VLOCAL, fs->freereg);
+>   luaK_reserveregs(fs, 1);
+1148c1150,1152
+<   luaK_storevar(ls->fs, &v, &b);
+---
+>   luaK_storevar(fs, &v, &b);
+>   /* debug information will only see the variable after this point! */
+>   getlocvar(fs, fs->nactvar - 1).startpc = fs->pc;
 ]],
 
 }
