@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.32 2000/08/10 19:50:47 roberto Exp roberto $
+** $Id: ldebug.c,v 1.33 2000/08/11 16:17:28 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -296,11 +296,15 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int stackpos) {
     const Instruction i = code[pc++];
     LUA_ASSERT(0 <= top && top <= pt->maxstacksize, "wrong stack");
     switch (GET_OPCODE(i)) {
-      case OP_RETURN:
-      case OP_TAILCALL:
-      case OP_END: {
-        LUA_INTERNALERROR("invalid symbolic run");
-        return CREATE_0(OP_END);  /* stop execution */
+      case OP_RETURN: {
+        LUA_ASSERT(top >= GETARG_U(i), "wrong stack");
+        top = GETARG_U(i);
+        break;
+      }
+      case OP_TAILCALL: {
+        LUA_ASSERT(top >= GETARG_A(i), "wrong stack");
+        top = GETARG_B(i);
+        break;
       }
       case OP_CALL: {
         int nresults = GETARG_B(i);
@@ -336,6 +340,18 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int stackpos) {
         stack[top++] = pc-1;
         break;
       }
+      case OP_JMPONT:
+      case OP_JMPONF: {
+        int newpc = pc + GETARG_S(i);
+        /* jump is forward and do not skip `lastpc'? */
+        if (pc < newpc && newpc <= lastpc) {
+          stack[top-1] = pc-1;  /* value comes from `and'/`or' */
+          pc = newpc;  /* do the jump */
+        }
+        else
+          top--;  /* do not jump; pop value */
+        break;
+      }
       default: {
         OpCode op = GET_OPCODE(i);
         LUA_ASSERT(luaK_opproperties[op].push != VD,
@@ -343,15 +359,6 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int stackpos) {
         top -= luaK_opproperties[op].pop;
         LUA_ASSERT(top >= 0, "wrong stack");
         top = pushpc(stack, pc, top, luaK_opproperties[op].push);
-        if (ISJUMP(op)) {
-          int newpc = pc + GETARG_S(i);
-          /* jump is forward and do not skip `lastpc'? */
-          if (pc < newpc && newpc <= lastpc) {
-            if (op == OP_JMPONT || op == OP_JMPONF)
-              stack[top++] = pc-1;  /* do not pop when jumping */
-            pc = newpc;  /* do the jump */
-          }
-        }
       }
     }
   }

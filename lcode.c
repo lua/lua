@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.46 2000/08/09 19:16:57 roberto Exp roberto $
+** $Id: lcode.c,v 1.47 2000/08/10 19:50:47 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -330,7 +330,8 @@ void luaK_tostack (LexState *ls, expdesc *v, int onlyone) {
           luaK_concat(fs, &v->u.l.t, fs->pc-1);  /* put `previous' in t. list */
         else {
           j = code_label(fs, OP_JMP, NO_JUMP);  /* to jump over both pushes */
-          luaK_deltastack(fs, -1);  /* next PUSHes may be skipped */
+          /* correct stack for compiler and simbolic execution */
+          luaK_adjuststack(fs, 1);
         }
         p_nil = code_label(fs, OP_PUSHNILJMP, 0);
         p_1 = code_label(fs, OP_PUSHINT, 1);
