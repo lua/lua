@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.h,v 1.6 1998/07/12 16:15:19 roberto Exp roberto $
+** $Id: ltable.h,v 1.7 1998/12/30 13:14:46 roberto Exp $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -22,6 +22,7 @@ TObject *luaH_set (Hash *t, TObject *ref);
 Node *luaH_next (Hash *t, TObject *r);
 void luaH_setint (Hash *t, int ref, TObject *val);
 TObject *luaH_getint (Hash *t, int ref);
+void luaH_move (Hash *t, int from, int to);
 
 
 #endif

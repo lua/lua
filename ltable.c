@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.15 1998/08/11 16:38:34 roberto Exp roberto $
+** $Id: ltable.c,v 1.16 1998/12/30 13:14:46 roberto Exp $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -223,3 +223,13 @@ TObject *luaH_getint (Hash *t, int ref) {
   return luaH_get(t, &index);
 }
 
+
+void luaH_move (Hash *t, int from, int to) {
+  TObject index;
+  TObject *toadd;
+  ttype(&index) = LUA_T_NUMBER;
+  nvalue(&index) = to;
+  toadd = luaH_set(t, &index);
+  nvalue(&index) = from;
+  *toadd = *luaH_get(t, &index);
+}
