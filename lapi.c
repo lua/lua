@@ -1,11 +1,10 @@
 /*
-** $Id: lapi.c,v 1.185 2002/04/22 14:40:50 roberto Exp roberto $
+** $Id: lapi.c,v 1.186 2002/05/01 20:48:12 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
 
 
-#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -30,6 +29,11 @@ const char lua_ident[] =
   "$Authors: " LUA_AUTHORS " $\n"
   "$URL: www.lua.org $\n";
 
+
+#ifndef lua_filerror
+#include <errno.h>
+#define lua_fileerror	(strerror(errno))
+#endif
 
 
 #ifndef api_check
@@ -543,15 +547,19 @@ LUA_API int lua_pcall (lua_State *L, int nargs, int nresults, int errf) {
 
 
 static int errfile (lua_State *L, const char *filename) {
-  char buff[150];
-  sprintf(buff, "cannot read file `%.80s' (%.40s)", filename, strerror(errno));
-  lua_pushstring(L, buff);
+  if (filename == NULL) filename = "stdin";
+  lua_pushliteral(L, "cannot read ");
+  lua_pushstring(L, filename);
+  lua_pushliteral(L, ": ");
+  lua_pushstring(L, lua_fileerror);
+  lua_concat(L, 4);
   return LUA_ERRFILE;
 }
 
 
 LUA_API int lua_loadfile (lua_State *L, const char *filename) {
   ZIO z;
+  const char *luafname;  /* name used by lua */ 
   int status;
   int bin;  /* flag for file mode */
   int nlevel;  /* level on the stack of filename */
@@ -571,8 +579,8 @@ LUA_API int lua_loadfile (lua_State *L, const char *filename) {
     lua_concat(L, 2);
   }
   nlevel = lua_gettop(L);
-  filename = lua_tostring(L, -1);  /* filename = `@'..filename */
-  luaZ_Fopen(&z, f, filename);
+  luafname = lua_tostring(L, -1);  /* luafname = `@'..filename */
+  luaZ_Fopen(&z, f, luafname);
   status = luaD_protectedparser(L, &z, bin);
   if (ferror(f))
     return errfile(L, filename);
