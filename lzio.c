@@ -1,5 +1,5 @@
 /*
-** $Id: lzio.c,v 1.18 2002/06/03 20:11:07 roberto Exp roberto $
+** $Id: lzio.c,v 1.19 2002/06/06 12:40:22 roberto Exp roberto $
 ** a generic input stream interface
 ** See Copyright Notice in lua.h
 */
@@ -45,7 +45,7 @@ void luaZ_init (ZIO *z, lua_Chunkreader reader, void *data, const char *name) {
 
 
 /* --------------------------------------------------------------- read --- */
-size_t luaZ_zread (ZIO *z, void *b, size_t n) {
+size_t luaZ_read (ZIO *z, void *b, size_t n) {
   while (n) {
     size_t m;
     if (z->n == 0) {

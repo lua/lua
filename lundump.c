@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.41 2002/06/06 13:22:56 lhf Exp lhf $
+** $Id: lundump.c,v 1.50 2002/06/17 13:51:01 roberto Exp roberto $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -41,7 +41,7 @@ static int ezgetc (lua_State* L, ZIO* Z)
 
 static void ezread (lua_State* L, ZIO* Z, void* b, int n)
 {
- int r=zread(Z,b,n);
+ int r=luaZ_read(Z,b,n);
  if (r!=0) unexpectedEOZ(L,Z);
 }
 
