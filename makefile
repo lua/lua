@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.37 2002/08/16 20:02:13 roberto Exp roberto $
+## $Id: makefile,v 1.38 2002/10/25 21:38:17 roberto Exp $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -16,13 +16,13 @@
 # you may need to adapat the code, too.
 
 
-# DEBUG = -g -DLUA_USER_H='"ltests.h"'
+# DEBUG = -g -DLUA_USER_H='"ltests.h"' # -DHARDSTACKTESTS  -DEXTERNMEMCHECK
 OPTIMIZE =  -O2 \
-   -D'lua_number2int(i,d)=__asm__("fldl %1\nfistpl %0":"=m"(i):"m"(d))' \
-  -fomit-frame-pointer
+#  -D'lua_number2int(i,d)=__asm__("fldl %1\nfistpl %0":"=m"(i):"m"(d))' \
+#  -fomit-frame-pointer
 
-CONFIG = -D_POSIX_SOURCE -DUSE_POPEN $(DEBUG) $(OPTIMIZE)
 
+CONFIG = -D_POSIX_SOURCE $(DEBUG) $(OPTIMIZE) # -DUSE_POPEN
 
 
 # Compilation parameters
