@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.119 2003/03/24 12:39:34 roberto Exp roberto $
+** $Id: llex.c,v 1.120 2003/05/15 12:20:24 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -24,6 +24,8 @@
 
 #define next(LS) (LS->current = zgetc(LS->z))
 
+
+#define nextIsNewline(LS)	(LS->current == '\n' || LS->current == '\r')
 
 
 /* ORDER RESERVED */
@@ -110,7 +112,11 @@ static void luaX_lexerror (LexState *ls, const char *s, int token) {
 
 
 static void inclinenumber (LexState *LS) {
-  next(LS);  /* skip `\n' */
+  int old = LS->current;
+  lua_assert(nextIsNewline(LS));
+  next(LS);  /* skip `\n' or `\r' */
+  if (nextIsNewline(LS) && LS->current != old)
+    next(LS);  /* skip `\n\r' or `\r\n' */
   ++LS->linenumber;
   luaX_checklimit(LS, LS->linenumber, MAX_INT, "lines in a chunk");
 }
@@ -209,7 +215,7 @@ static void read_long_string (LexState *LS, SemInfo *seminfo) {
   checkbuffer(LS, l);
   save(LS, '[', l);  /* save first `[' */
   save_and_next(LS, l);  /* pass the second `[' */
-  if (LS->current == '\n')  /* string starts with a newline? */
+  if (nextIsNewline(LS))  /* string starts with a newline? */
     inclinenumber(LS);  /* skip it */
   for (;;) {
     checkbuffer(LS, l);
@@ -235,6 +241,7 @@ static void read_long_string (LexState *LS, SemInfo *seminfo) {
         }
         continue;
       case '\n':
+      case '\r':
         save(LS, '\n', l);
         inclinenumber(LS);
         if (!seminfo) l = 0;  /* reset buffer to avoid wasting space */
@@ -262,6 +269,7 @@ static void read_string (LexState *LS, int del, SemInfo *seminfo) {
         luaX_lexerror(LS, "unfinished string", TK_EOS);
         break;  /* to avoid warnings */
       case '\n':
+      case '\r':
         save(LS, '\0', l);
         luaX_lexerror(LS, "unfinished string", TK_STRING);
         break;  /* to avoid warnings */
@@ -275,7 +283,8 @@ static void read_string (LexState *LS, int del, SemInfo *seminfo) {
           case 'r': save(LS, '\r', l); next(LS); break;
           case 't': save(LS, '\t', l); next(LS); break;
           case 'v': save(LS, '\v', l); next(LS); break;
-          case '\n': save(LS, '\n', l); inclinenumber(LS); break;
+          case '\n':  /* go through */
+          case '\r': save(LS, '\n', l); inclinenumber(LS); break;
           case EOZ: break;  /* will raise an error next loop */
           default: {
             if (!isdigit(LS->current))
@@ -310,7 +319,8 @@ int luaX_lex (LexState *LS, SemInfo *seminfo) {
   for (;;) {
     switch (LS->current) {
 
-      case '\n': {
+      case '\n':
+      case '\r': {
         inclinenumber(LS);
         continue;
       }
@@ -322,7 +332,7 @@ int luaX_lex (LexState *LS, SemInfo *seminfo) {
         if (LS->current == '[' && (next(LS), LS->current == '['))
           read_long_string(LS, NULL);  /* long comment */
         else  /* short comment */
-          while (LS->current != '\n' && LS->current != EOZ)
+          while (!nextIsNewline(LS) && LS->current != EOZ)
             next(LS);
         continue;
       }
@@ -380,6 +390,7 @@ int luaX_lex (LexState *LS, SemInfo *seminfo) {
       }
       default: {
         if (isspace(LS->current)) {
+          lua_assert(!nextIsNewline(LS));
           next(LS);
           continue;
         }
