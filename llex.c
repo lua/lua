@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.114 2002/10/09 13:00:08 roberto Exp roberto $
+** $Id: llex.c,v 1.115 2002/10/22 16:45:52 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -70,11 +70,11 @@ void luaX_syntaxerror (LexState *ls, const char *msg) {
   const char *lasttoken;
   switch (ls->t.token) {
     case TK_NAME:
-      lasttoken = luaO_pushfstring(ls->L, "%s", getstr(ls->t.seminfo.ts));
+      lasttoken = getstr(ls->t.seminfo.ts);
       break;
     case TK_STRING:
     case TK_NUMBER:
-      lasttoken = luaO_pushfstring(ls->L, "%s", luaZ_buffer(ls->buff));
+      lasttoken = luaZ_buffer(ls->buff);
       break;
     default:
       lasttoken = luaX_token2str(ls, ls->t.token);
