@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.86 2002/06/26 16:37:13 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.87 2002/06/26 19:28:44 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -111,7 +111,7 @@ static int luaB_setmetatable (lua_State *L) {
 
 static int luaB_getglobals (lua_State *L) {
   int level = luaL_opt_int(L, 1, 1);
-  luaL_arg_check(L, level >= 1, 2, "level must be positive");
+  luaL_arg_check(L, level >= 0, 2, "level must be non-negative");
   lua_getglobals(L, level);  /* value to be returned */
   return 1;
 }
