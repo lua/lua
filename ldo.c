@@ -1,11 +1,12 @@
 /*
-** $Id: ldo.c,v 1.54 1999/12/01 19:50:08 roberto Exp roberto $
+** $Id: ldo.c,v 1.55 1999/12/02 16:24:45 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
 
 
 #include <setjmp.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
