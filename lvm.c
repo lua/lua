@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.167 2001/02/09 18:07:47 roberto Exp roberto $
+** $Id: lvm.c,v 1.168 2001/02/09 20:22:29 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -134,24 +134,26 @@ static void callTM (lua_State *L, const char *fmt, ...) {
 */
 void luaV_gettable (lua_State *L, StkId t, TObject *key, StkId res) {
   Closure *tm;
-  int tg;
-  if (ttype(t) == LUA_TTABLE &&  /* `t' is a table? */
-      ((tg = hvalue(t)->htag) == LUA_TTABLE ||  /* with default tag? */
-        luaT_gettm(G(L), tg, TM_GETTABLE) == NULL)) { /* or no TM? */
-    const TObject *h = luaH_get(hvalue(t), key);  /* do a primitive get */
-    /* result is no nil or there is no `index' tag method? */
-    if (ttype(h) != LUA_TNIL || ((tm=luaT_gettm(G(L), tg, TM_INDEX)) == NULL)) {
-      setobj(res, h);
-      return;
+  if (ttype(t) == LUA_TTABLE) {  /* `t' is a table? */
+    int tg = hvalue(t)->htag;
+    if (tg == LUA_TTABLE ||  /* with default tag? */
+       (tm = luaT_gettm(G(L), tg, TM_GETTABLE)) == NULL) {  /* or no TM? */
+      const TObject *h = luaH_get(hvalue(t), key);  /* do a primitive get */
+      /* result is no nil or there is no `index' tag method? */
+      if (ttype(h) != LUA_TNIL ||  /* no nil? */
+         ((tm=luaT_gettm(G(L), tg, TM_INDEX)) == NULL)) {  /* or no index TM? */
+        setobj(res, h);  /* default get */
+        return;
+      }
     }
-    /* else will call `index' tag method */
+    /* else will call the tag method */
   }
-  else  /* try a `gettable' tag method */
+  else {  /* not a table; try a `gettable' tag method */
     tm = luaT_gettmbyObj(G(L), t, TM_GETTABLE);
-  if (tm == NULL)  /* no tag method? */
-    luaG_typeerror(L, t, "index");
-  else
-    callTM(L, "coor", tm, t, key, res);
+    if (tm == NULL)  /* no tag method? */
+      luaG_typeerror(L, t, "index");
+  }
+  callTM(L, "coor", tm, t, key, res);
 }
 
 
@@ -160,19 +162,22 @@ void luaV_gettable (lua_State *L, StkId t, TObject *key, StkId res) {
 ** Receives table at `t', key at `key' and value at `val'.
 */
 void luaV_settable (lua_State *L, StkId t, StkId key, StkId val) {
-  int tg;
-  if (ttype(t) == LUA_TTABLE &&  /* `t' is a table? */
-      ((tg = hvalue(t)->htag) == LUA_TTABLE ||  /* with default tag? */
-        luaT_gettm(G(L), tg, TM_SETTABLE) == NULL)) { /* or no TM? */
-    setobj(luaH_set(L, hvalue(t), key), val);  /* do a primitive set */
+  Closure *tm;
+  if (ttype(t) == LUA_TTABLE) {  /* `t' is a table? */
+    int tg = hvalue(t)->htag;
+    if (hvalue(t)->htag == LUA_TTABLE ||  /* with default tag? */
+        (tm = luaT_gettm(G(L), tg, TM_SETTABLE)) == NULL) { /* or no TM? */
+      setobj(luaH_set(L, hvalue(t), key), val);  /* do a primitive set */
+      return;
+    }
+    /* else will call the tag method */
   }
-  else {  /* try a `settable' tag method */
-    Closure *tm = luaT_gettmbyObj(G(L), t, TM_SETTABLE);
+  else {  /* not a table; try a `settable' tag method */
+    tm = luaT_gettmbyObj(G(L), t, TM_SETTABLE);
     if (tm == NULL)  /* no tag method? */
       luaG_typeerror(L, t, "index");
-    else
-      callTM(L, "cooo", tm, t, key, val);
   }
+  callTM(L, "cooo", tm, t, key, val);
 }
 
 
