@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.115 2002/12/06 17:05:15 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.116 2002/12/20 09:55:56 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -573,7 +573,14 @@ static int luaB_coresume (lua_State *L) {
 static int luaB_auxwrap (lua_State *L) {
   lua_State *co = lua_tothread(L, lua_upvalueindex(1));
   int r = auxresume(L, co, lua_gettop(L));
-  if (r < 0) lua_error(L);  /* propagate error */
+  if (r < 0) {
+    if (lua_isstring(L, -1)) {  /* error object is a string? */
+      luaL_where(L, 1);  /* add extra info */
+      lua_insert(L, -2);
+      lua_concat(L, 2);
+    }
+    lua_error(L);  /* propagate error */
+  }
   return r;
 }
 
