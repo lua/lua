@@ -53,8 +53,8 @@ static TString *newlstr (lua_State *L, const char *str, size_t l, lu_hash h) {
   ts->tsv.len = l;
   ts->tsv.hash = h;
   ts->tsv.marked = 0;
-  memcpy(getstr(ts), str, l*sizeof(char));
-  getstr(ts)[l] = '\0';  /* ending 0 */
+  memcpy(ts+1, str, l*sizeof(char));
+  ((char *)(ts+1))[l] = '\0';  /* ending 0 */
   tb = &G(L)->strt;
   h = lmod(h, tb->size);
   ts->tsv.nexthash = tb->hash[h];  /* chain new entry */
