@@ -1,4 +1,4 @@
-# $Id: makefile,v 1.1 1993/12/17 18:59:10 celes Exp roberto $
+# $Id: makefile,v 1.2 1993/12/22 20:55:06 roberto Exp roberto $
 # Compilation parameters
 CC = gcc
 CFLAGS = -I/usr/5include -Wall -DMAXCODE=4096 -DMAXCONSTANT=1024 -DMAXSYMBOL=1024 
@@ -8,8 +8,8 @@ ARFLAGS	= rvl
 
 # Aplication modules
 LUAMOD =	\
-	lex.yy	\
 	y.tab 	\
+	lex	\
 	opcode	\
 	hash	\
 	table	\
@@ -27,7 +27,7 @@ LIBOBJS	= $(LIBMOD:%=%.o)
 lua : lua.o lua.a lualib.a
 	$(CC) $(CFLAGS) -o $@ lua.c lua.a lualib.a -lm
 
-lua.a : lex.yy.c y.tab.c $(LUAOBJS)
+lua.a : y.tab.c $(LUAOBJS)
 	$(AR) $(ARFLAGS) $@  $?
 	ranlib lua.a
 
@@ -43,13 +43,13 @@ liblua.so.1.0 : lua.o
 %.o	: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-lex.yy.c : lua.lex
-	lex lua.lex
 
-y.tab.c : lua.stx
+y.tab.c : lua.stx exscript
 	yacc -d lua.stx ; ex y.tab.c <exscript
 
 
+exscript : RCS/exscript,v
+	co $@
 hash.c : RCS/hash.c,v
 	co $@
 hash.h : RCS/hash.h,v
@@ -64,7 +64,7 @@ lua.c : RCS/lua.c,v
 	co $@
 lua.h : RCS/lua.h,v
 	co $@
-lua.lex : RCS/lua.lex,v
+lex.c : RCS/lex.c,v
 	co $@
 lua.stx : RCS/lua.stx,v
 	co $@
