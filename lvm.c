@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.18 1997/12/17 20:48:58 roberto Exp roberto $
+** $Id: lvm.c,v 1.19 1997/12/23 19:24:19 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -363,7 +363,11 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base)
         aux = next_word(pc); goto pushself;
 
       case PUSHSELF:
-        aux = *pc++;
+        aux = *pc++; goto pushself;
+
+      case PUSHSELF0: case PUSHSELF1: case PUSHSELF2: case PUSHSELF3:
+      case PUSHSELF4: case PUSHSELF5: case PUSHSELF6: case PUSHSELF7:
+        aux -= PUSHSELF0;
       pushself: {
         TObject receiver = *(S->top-1);
         *S->top++ = consts[aux];

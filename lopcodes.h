@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.11 1997/10/24 17:17:24 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.12 1997/10/24 18:40:29 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -79,6 +79,14 @@ GETDOTTED7,/*	-	t		t[CONST[7]]  */
 GETDOTTEDW,/*	w	t		t[CONST[w]]  */
 
 PUSHSELF,/*	b	t		t t[CNST[b]]  */
+PUSHSELF0,/*	-	t		t t[CNST[0]]  */
+PUSHSELF1,/*	-	t		t t[CNST[1]]  */
+PUSHSELF2,/*	-	t		t t[CNST[2]]  */
+PUSHSELF3,/*	-	t		t t[CNST[3]]  */
+PUSHSELF4,/*	-	t		t t[CNST[4]]  */
+PUSHSELF5,/*	-	t		t t[CNST[5]]  */
+PUSHSELF6,/*	-	t		t t[CNST[6]]  */
+PUSHSELF7,/*	-	t		t t[CNST[7]]  */
 PUSHSELFW,/*	w	t		t t[CNST[w]]  */
 
 CREATEARRAY,/*	b	-		newarray(size = b)  */
