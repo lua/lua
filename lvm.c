@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.263 2002/11/18 15:24:11 roberto Exp roberto $
+** $Id: lvm.c,v 1.264 2002/11/19 08:50:56 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -34,15 +34,6 @@
 
 /* limit for table tag-method chains (to avoid loops) */
 #define MAXTAGLOOP	100
-
-
-static void luaV_checkGC (lua_State *L, StkId top) {
-  if (G(L)->nblocks >= G(L)->GCthreshold) {
-    L->top = top;  /* limit for active registers */
-    luaC_collectgarbage(L);
-    L->top = L->ci->top;  /* restore old top position */
-  }
-}
 
 
 const TObject *luaV_tonumber (const TObject *obj, TObject *n) {
@@ -476,7 +467,7 @@ StkId luaV_execute (lua_State *L) {
         int b = GETARG_B(i);
         if (b > 0) b = twoto(b-1);
         sethvalue(ra, luaH_new(L, b, GETARG_C(i)));
-        luaV_checkGC(L, ra+1);
+        luaC_checkGC(L);
         break;
       }
       case OP_SELF: {
@@ -561,7 +552,7 @@ StkId luaV_execute (lua_State *L) {
         int c = GETARG_C(i);
         luaV_concat(L, c-b+1, c);  /* may change `base' (and `ra') */
         setobjs2s(RA(i), base+b);
-        luaV_checkGC(L, base+c+1);
+        luaC_checkGC(L);
         break;
       }
       case OP_JMP: {
@@ -732,7 +723,7 @@ StkId luaV_execute (lua_State *L) {
           }
         }
         setclvalue(ra, ncl);
-        luaV_checkGC(L, L->top);
+        luaC_checkGC(L);
         break;
       }
     }
