@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.19 2005/03/18 18:55:09 roberto Exp roberto $
+** $Id: ldo.c,v 2.20 2005/03/28 17:17:53 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -197,6 +197,7 @@ static StkId adjust_varargs (lua_State *L, int nfixargs, int actual,
     for (; actual < nfixargs; ++actual)
       setnilvalue(L->top++);
   }
+#if LUA_COMPAT_VARARG
   if (style != NEWSTYLEVARARG) {  /* compatibility with old-style vararg */
     int nvar = actual - nfixargs;  /* number of extra arguments */
     luaC_checkGC(L);
@@ -207,6 +208,7 @@ static StkId adjust_varargs (lua_State *L, int nfixargs, int actual,
     setnvalue(luaH_setstr(L, htab, luaS_newliteral(L, "n")),
                                    cast(lua_Number, nvar));
   }
+#endif
   /* move fixed parameters to final position */
   fixed = L->top - actual;  /* first fixed argument */
   base = L->top;  /* final position of first argument */

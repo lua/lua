@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.38 2005/03/21 18:12:07 roberto Exp roberto $
+** $Id: luaconf.h,v 1.39 2005/03/29 14:30:16 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -229,11 +229,32 @@
 
 
 /*
-** CHANGE here (undefining both luaL_getn and luaL_setn) if you want
-** exact compatibility with the behavior of setn/getn in Lua 5.0.
+@@ LUA_COMPAT_GETN controls compatibility with old getn behavior.
+** CHANGE it to 1 if you want exact compatibility with the behavior of
+** setn/getn in Lua 5.0.
 */
-#define luaL_getn(L,i)		lua_objsize(L, i)
-#define luaL_setn(L,i,j)	((void)0)  /* no op! */
+#define LUA_COMPAT_GETN		0
+
+/*
+@@ LUA_COMPAT_PATH controls compatibility about LUA_PATH.
+** CHANGE it to 1 if you want `require' to look for global LUA_PATH
+** before checking package.path.
+*/
+#define LUA_COMPAT_PATH		0
+
+/*
+@@ LUA_COMPAT_LOADLIB controls compatibility about global loadlib.
+** CHANGE it to 1 if you want a global `loadlib' function (otherwise
+** the function is only available as `package.loadlib').
+*/
+#define LUA_COMPAT_LOADLIB	1
+
+/*
+@@ LUA_COMPAT_VARARG controls compatibility with old vararg feature.
+** CHANGE it to 1 if you want vararg functions that do not use `...'
+** to get an `arg' table with their extra arguments.
+*/
+#define LUA_COMPAT_VARARG	1
 
 
 /*
