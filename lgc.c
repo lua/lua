@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.13 1997/12/15 16:17:20 roberto Exp roberto $
+** $Id: lgc.c,v 1.14 1997/12/17 20:48:58 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -87,12 +87,12 @@ static int ismarked (TObject *o)
   switch (o->ttype) {
     case LUA_T_STRING: case LUA_T_USERDATA:
       return o->value.ts->head.marked;
+    case LUA_T_ARRAY:
+      return o->value.a->head.marked;
     case LUA_T_CLOSURE:
       return o->value.cl->head.marked;
     case LUA_T_PROTO:
       return o->value.tf->head.marked;
-    case LUA_T_ARRAY:
-      return o->value.a->head.marked;
 #ifdef DEBUG
     case LUA_T_LINE: case LUA_T_CLMARK:
     case LUA_T_CMARK: case LUA_T_PMARK:

@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.4 1997/12/15 17:58:49 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.5 1997/12/17 20:48:58 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -165,14 +165,14 @@ static int matchclass (int c, int cl)
   int res;
   if (c == 0) return 0;
   switch (tolower((unsigned char)cl)) {
-    case 'a' : res = isalpha((unsigned char)c); break;
-    case 'c' : res = iscntrl((unsigned char)c); break;
-    case 'd' : res = isdigit((unsigned char)c); break;
-    case 'l' : res = islower((unsigned char)c); break;
-    case 'p' : res = ispunct((unsigned char)c); break;
-    case 's' : res = isspace((unsigned char)c); break;
-    case 'u' : res = isupper((unsigned char)c); break;
     case 'w' : res = isalnum((unsigned char)c); break;
+    case 'd' : res = isdigit((unsigned char)c); break;
+    case 's' : res = isspace((unsigned char)c); break;
+    case 'a' : res = isalpha((unsigned char)c); break;
+    case 'p' : res = ispunct((unsigned char)c); break;
+    case 'l' : res = islower((unsigned char)c); break;
+    case 'u' : res = isupper((unsigned char)c); break;
+    case 'c' : res = iscntrl((unsigned char)c); break;
     default: return (cl == c);
   }
   return (islower((unsigned char)cl) ? res : !res);
@@ -182,12 +182,12 @@ static int matchclass (int c, int cl)
 int luaI_singlematch (int c, char *p, char **ep)
 {
   switch (*p) {
-    case '\0':
-      *ep = p;
-      return 0;
     case '.':
       *ep = p+1;
       return (c != 0);
+    case '\0':
+      *ep = p;
+      return 0;
     case ESC:
       if (*(++p) == '\0')
         luaL_verror("incorrect pattern (ends with `%c')", ESC);
@@ -294,6 +294,12 @@ static char *match (char *s, char *p, struct Capture *cap)
             return res;
           p=ep+1; goto init;  /* else return match(s, ep+1, cap); */
         }
+        case '?': {  /* optional */
+          char *res;
+          if (s1 && (res = match(s1, ep+1, cap)))
+            return res;
+          p=ep+1; goto init;  /* else return match(s, ep+1, cap); */
+        }
         case '-': {  /* repetition */
           char *res;
           if ((res = match(s, ep+1, cap)) != 0)
@@ -304,12 +310,6 @@ static char *match (char *s, char *p, struct Capture *cap)
           }
           else
             return NULL;
-        }
-        case '?': {  /* optional */
-          char *res;
-          if (s1 && (res = match(s1, ep+1, cap)))
-            return res;
-          p=ep+1; goto init;  /* else return match(s, ep+1, cap); */
         }
         default:
           if (s1) { s=s1; p=ep; goto init; }  /* return match(s1, ep, cap); */

@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.8 1997/12/09 13:35:19 roberto Exp roberto $
+** $Id: ltable.c,v 1.9 1997/12/15 16:17:20 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -36,8 +36,8 @@ static long int hashindex (TObject *ref)
     case LUA_T_STRING: case LUA_T_USERDATA:
       h = (IntPoint)tsvalue(ref);
       break;
-    case LUA_T_CLOSURE:
-      h = (IntPoint)clvalue(ref);
+    case LUA_T_ARRAY:
+      h = (IntPoint)avalue(ref);
       break;
     case LUA_T_PROTO:
       h = (IntPoint)tfvalue(ref);
@@ -45,8 +45,8 @@ static long int hashindex (TObject *ref)
     case LUA_T_CPROTO:
       h = (IntPoint)fvalue(ref);
       break;
-    case LUA_T_ARRAY:
-      h = (IntPoint)avalue(ref);
+    case LUA_T_CLOSURE:
+      h = (IntPoint)clvalue(ref);
       break;
     default:
       lua_error("unexpected type to index table");

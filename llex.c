@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.11 1997/12/17 20:48:58 roberto Exp roberto $
+** $Id: llex.c,v 1.12 1997/12/22 17:52:20 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -268,13 +268,14 @@ int luaY_lex (YYSTYPE *l)
   LS->linelasttoken = LS->linenumber;
   while (1) {
     switch (LS->current) {
-      case '\n':
-        inclinenumber(LS);
-        LS->linelasttoken = LS->linenumber;
-        continue;
 
       case ' ': case '\t': case '\r':  /* CR: to avoid problems with DOS */
         next(LS);
+        continue;
+
+      case '\n':
+        inclinenumber(LS);
+        LS->linelasttoken = LS->linenumber;
         continue;
 
       case '-':

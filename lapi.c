@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.17 1998/01/02 17:46:32 roberto Exp roberto $
+** $Id: lapi.c,v 1.18 1998/01/07 16:26:48 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -39,12 +39,12 @@ static int normalized_type (TObject *o)
 {
   int t = ttype(o);
   switch (t) {
-    case LUA_T_CLMARK:
-      return LUA_T_CLOSURE;
     case LUA_T_PMARK:
       return LUA_T_PROTO;
     case LUA_T_CMARK:
       return LUA_T_CPROTO;
+    case LUA_T_CLMARK:
+      return LUA_T_CLOSURE;
     default:
       return t;
   }
@@ -382,12 +382,12 @@ int lua_tag (lua_Object lo)
         return o->value.ts->u.d.tag;
       case LUA_T_ARRAY:
         return o->value.a->htag;
-      case LUA_T_CLOSURE: case LUA_T_CLMARK:
-        return o->value.cl->consts[0].ttype;
       case LUA_T_PMARK:
         return LUA_T_PROTO;
       case LUA_T_CMARK:
         return LUA_T_CPROTO;
+      case LUA_T_CLOSURE: case LUA_T_CLMARK:
+        return o->value.cl->consts[0].ttype;
 #ifdef DEBUG
       case LUA_T_LINE:
         lua_error("internal error");
