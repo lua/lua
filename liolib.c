@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.17 1998/03/24 20:14:25 roberto Exp roberto $
+** $Id: liolib.c,v 1.18 1998/05/20 22:21:35 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -180,60 +180,81 @@ static void io_appendto (void)
 
 #define NEED_OTHER (EOF-1)  /* just some flag different from EOF */
 
-static void io_read (void)
-{
+
+static void read_until (FILE *f, int lim) {
+  int l = 0;
+  int c;
+  for (c = getc(f); c != EOF && c != lim; c = getc(f)) {
+    luaL_addchar(c);
+    l++;
+  }
+  if (l > 0 || c == lim)  /* read anything? */
+    lua_pushlstring(luaL_buffer(), l);
+}
+
+static void io_read (void) {
   int arg = FIRSTARG;
   FILE *f = getfileparam(FINPUT, &arg);
-  int l;
-  char *p = luaL_opt_string(arg, "[^\n]*{\n}");
-  int inskip = 0;  /* to control {skips} */
-  int c = NEED_OTHER;
+  char *p = luaL_opt_string(arg, NULL);
   luaL_resetbuffer();
-  while (*p) {
-    if (*p == '{') {
-      inskip++;
-      p++;
-    }
-    else if (*p == '}') {
-      if (inskip == 0)
-        lua_error("unbalanced braces in read pattern");
-      inskip--;
-      p++;
-    }
-    else {
-      char *ep;  /* get what is next */
-      int m;  /* match result */
-      if (c == NEED_OTHER) c = getc(f);
-      if (c == EOF) {
-        luaI_singlematch(0, p, &ep);  /* to set "ep" */
-        m = 0;
-      }
-      else {
-        m = luaI_singlematch(c, p, &ep);
-        if (m) {
-          if (inskip == 0) luaL_addchar(c);
-          c = NEED_OTHER;
+  if (p == NULL)  /* default: read a line */
+    read_until(f, '\n');
+  else if (p[0] == '.' && p[1] == '*' && p[2] == 0)  /* p = ".*" */
+    read_until(f, EOF);
+  else {
+    int l = 0;  /* number of chars read in buffer */
+    int inskip = 0;  /* to control {skips} */
+    int c = NEED_OTHER;
+    while (*p) {
+      switch (*p) {
+        case '{':
+          inskip++;
+          p++;
+          continue;
+        case '}':
+          if (inskip == 0)
+            lua_error("unbalanced braces in read pattern");
+          inskip--;
+          p++;
+          continue;
+        default: {
+          char *ep;  /* get what is next */
+          int m;  /* match result */
+          if (c == NEED_OTHER) c = getc(f);
+          if (c == EOF) {
+            luaI_singlematch(0, p, &ep);  /* to set "ep" */
+            m = 0;
+          }
+          else {
+            m = luaI_singlematch(c, p, &ep);
+            if (m) {
+              if (inskip == 0) {
+                luaL_addchar(c);
+                l++;
+              }
+              c = NEED_OTHER;
+            }
+          }
+          switch (*ep) {
+            case '*':  /* repetition */
+              if (!m) p = ep+1;  /* else stay in (repeat) the same item */
+              continue;
+            case '?':  /* optional */
+              p = ep+1;  /* continues reading the pattern */
+              continue;
+            default:
+              if (m) p = ep;  /* continues reading the pattern */
+              else
+                goto break_while;   /* pattern fails */
+          }
         }
       }
-      switch (*ep) {
-        case '*':  /* repetition */
-          if (!m) p = ep+1;  /* else stay in (repeat) the same item */
-          break;
-        case '?':  /* optional */
-          p = ep+1;  /* continues reading the pattern */
-          break;
-        default:
-          if (m) p = ep;  /* continues reading the pattern */
-          else
-            goto break_while;   /* pattern fails */
-      }
-    }
-  } break_while:
-  if (c >= 0)  /* not EOF nor NEED_OTHER? */
-     ungetc(c, f);
-  l = luaL_getsize();
-  if (l > 0 || *p == 0)  /* read something or did not fail? */
-    lua_pushlstring(luaL_buffer(), l);
+    } break_while:
+    if (c >= 0)  /* not EOF nor NEED_OTHER? */
+       ungetc(c, f);
+    if (l > 0 || *p == 0)  /* read something or did not fail? */
+      lua_pushlstring(luaL_buffer(), l);
+  }
 }
 
 
