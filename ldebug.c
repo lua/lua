@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.138 2002/11/21 15:16:04 roberto Exp roberto $
+** $Id: ldebug.c,v 1.139 2002/11/25 17:47:13 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -91,10 +91,12 @@ LUA_API int lua_gethookcount (lua_State *L) {
 
 LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
   int status;
+  int ci;
   lua_lock(L);
-  if (L->ci - L->base_ci <= level) status = 0;  /* there is no such level */
+  ci = (L->ci - L->base_ci) - level;
+  if (ci <= 0) status = 0;  /* there is no such level */
   else {
-    ar->i_ci = (L->ci - L->base_ci) - level;
+    ar->i_ci = ci;
     status = 1;
   }
   lua_unlock(L);
