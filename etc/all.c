@@ -33,7 +33,6 @@
 #include "linit.c"
 #include "lmathlib.c"
 #include "loadlib.c"
-#define pushresult pushresult2
 #include "loslib.c"
 #include "lstrlib.c"
 #include "ltablib.c"

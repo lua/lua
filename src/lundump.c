@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.53 2004/09/01 21:22:34 lhf Exp $
+** $Id: lundump.c,v 1.54 2004/11/25 09:31:41 lhf Exp $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -177,14 +177,17 @@ static void LoadConstants (LoadState* S, Proto* f)
   int t=LoadByte(S);
   switch (t)
   {
+   case LUA_TNIL:
+   	setnilvalue(o);
+	break;
+   case LUA_TBOOLEAN:
+   	setbvalue(o,LoadByte(S));
+	break;
    case LUA_TNUMBER:
 	setnvalue(o,LoadNumber(S));
 	break;
    case LUA_TSTRING:
 	setsvalue2n(S->L,o,LoadString(S));
-	break;
-   case LUA_TNIL:
-   	setnilvalue(o);
 	break;
    default:
 	error(S,"bad constant type (%d)",t);
@@ -243,19 +246,15 @@ static void LoadHeader (LoadState* S)
  lua_Number x,tx=TEST_NUMBER;
  LoadSignature(S);
  version=LoadByte(S);
- if (version>VERSION)
-  error(S,"bad version (read %d.%d; expected at %s %d.%d)",
-	V(version),"most",V(VERSION));
- if (version<VERSION0)				/* check last major change */
-  error(S,"bad version (read %d.%d; expected at %s %d.%d)",
-	V(version),"least",V(VERSION0));
+ if (version!=VERSION)
+  error(S,"bad version (read %d.%d; expected %d.%d)",V(version),V(VERSION));
  S->swap=(luaU_endianness()!=LoadByte(S));	/* need to swap bytes? */
  TestSize(S,sizeof(int),"int");
  TestSize(S,sizeof(size_t),"size_t");
  TestSize(S,sizeof(Instruction),"instruction");
  TestSize(S,sizeof(lua_Number),"number");
  x=LoadNumber(S);
- if ((long)x!=(long)tx)		/* disregard errors in last bits of fraction */
+ if (x!=tx)
   error(S,"unknown number format");
 }
 

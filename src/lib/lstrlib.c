@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.106 2004/08/09 13:30:33 roberto Exp $
+** $Id: lstrlib.c,v 1.109 2004/12/01 15:46:06 roberto Exp $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -24,8 +24,6 @@
 #define uchar(c)        ((unsigned char)(c))
 
 
-typedef lua_Integer sint32;	/* a signed version for size_t */
-
 
 static int str_len (lua_State *L) {
   size_t l;
@@ -35,19 +33,19 @@ static int str_len (lua_State *L) {
 }
 
 
-static sint32 posrelat (sint32 pos, size_t len) {
+static ptrdiff_t posrelat (ptrdiff_t pos, size_t len) {
   /* relative string position: negative means back from end */
-  return (pos>=0) ? pos : (sint32)len+pos+1;
+  return (pos>=0) ? pos : (ptrdiff_t)len+pos+1;
 }
 
 
 static int str_sub (lua_State *L) {
   size_t l;
   const char *s = luaL_checklstring(L, 1, &l);
-  sint32 start = posrelat(luaL_checkinteger(L, 2), l);
-  sint32 end = posrelat(luaL_optinteger(L, 3, -1), l);
+  ptrdiff_t start = posrelat(luaL_checkinteger(L, 2), l);
+  ptrdiff_t end = posrelat(luaL_optinteger(L, 3, -1), l);
   if (start < 1) start = 1;
-  if (end > (sint32)l) end = (sint32)l;
+  if (end > (ptrdiff_t)l) end = (ptrdiff_t)l;
   if (start <= end)
     lua_pushlstring(L, s+start-1, end-start+1);
   else lua_pushliteral(L, "");
@@ -107,8 +105,8 @@ static int str_rep (lua_State *L) {
 static int str_byte (lua_State *L) {
   size_t l;
   const char *s = luaL_checklstring(L, 1, &l);
-  sint32 posi = posrelat(luaL_optinteger(L, 2, 1), l);
-  sint32 pose = posrelat(luaL_optinteger(L, 3, posi), l);
+  ptrdiff_t posi = posrelat(luaL_optinteger(L, 2, 1), l);
+  ptrdiff_t pose = posrelat(luaL_optinteger(L, 3, posi), l);
   int n, i;
   if (posi <= 0) posi = 1;
   if ((size_t)pose > l) pose = l;
@@ -173,7 +171,7 @@ typedef struct MatchState {
   int level;  /* total number of captures (finished or unfinished) */
   struct {
     const char *init;
-    sint32 len;
+    ptrdiff_t len;
   } capture[MAX_CAPTURES];
 } MatchState;
 
@@ -198,7 +196,7 @@ static int capture_to_close (MatchState *ms) {
 }
 
 
-static const char *luaI_classend (MatchState *ms, const char *p) {
+static const char *classend (MatchState *ms, const char *p) {
   switch (*p++) {
     case ESC: {
       if (*p == '\0')
@@ -250,7 +248,7 @@ static int matchbracketclass (int c, const char *p, const char *ec) {
   while (++p < ec) {
     if (*p == ESC) {
       p++;
-      if (match_class(c, *p))
+      if (match_class(c, uchar(*p)))
         return sig;
     }
     else if ((*(p+1) == '-') && (p+2 < ec)) {
@@ -264,10 +262,10 @@ static int matchbracketclass (int c, const char *p, const char *ec) {
 }
 
 
-static int luaI_singlematch (int c, const char *p, const char *ep) {
+static int singlematch (int c, const char *p, const char *ep) {
   switch (*p) {
     case '.': return 1;  /* matches any char */
-    case ESC: return match_class(c, *(p+1));
+    case ESC: return match_class(c, uchar(*(p+1)));
     case '[': return matchbracketclass(c, p, ep-1);
     default:  return (uchar(*p) == c);
   }
@@ -299,8 +297,8 @@ static const char *matchbalance (MatchState *ms, const char *s,
 
 static const char *max_expand (MatchState *ms, const char *s,
                                  const char *p, const char *ep) {
-  sint32 i = 0;  /* counts maximum expand for item */
-  while ((s+i)<ms->src_end && luaI_singlematch(uchar(*(s+i)), p, ep))
+  ptrdiff_t i = 0;  /* counts maximum expand for item */
+  while ((s+i)<ms->src_end && singlematch(uchar(*(s+i)), p, ep))
     i++;
   /* keeps trying to match with the maximum repetitions */
   while (i>=0) {
@@ -318,7 +316,7 @@ static const char *min_expand (MatchState *ms, const char *s,
     const char *res = match(ms, s, ep+1);
     if (res != NULL)
       return res;
-    else if (s<ms->src_end && luaI_singlematch(uchar(*s), p, ep))
+    else if (s<ms->src_end && singlematch(uchar(*s), p, ep))
       s++;  /* try with one more repetition */
     else return NULL;
   }
@@ -385,7 +383,7 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
           p += 2;
           if (*p != '[')
             luaL_error(ms->L, "missing `[' after `%%f' in pattern");
-          ep = luaI_classend(ms, p);  /* points to what is next */
+          ep = classend(ms, p);  /* points to what is next */
           previous = (s == ms->src_init) ? '\0' : *(s-1);
           if (matchbracketclass(uchar(previous), p, ep-1) ||
              !matchbracketclass(uchar(*s), p, ep-1)) return NULL;
@@ -393,7 +391,7 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
         }
         default: {
           if (isdigit(uchar(*(p+1)))) {  /* capture results (%0-%9)? */
-            s = match_capture(ms, s, *(p+1));
+            s = match_capture(ms, s, uchar(*(p+1)));
             if (s == NULL) return NULL;
             p+=2; goto init;  /* else return match(ms, s, p+2) */
           }
@@ -410,8 +408,8 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
       else goto dflt;
     }
     default: dflt: {  /* it is a pattern item */
-      const char *ep = luaI_classend(ms, p);  /* points to what is next */
-      int m = s<ms->src_end && luaI_singlematch(uchar(*s), p, ep);
+      const char *ep = classend(ms, p);  /* points to what is next */
+      int m = s<ms->src_end && singlematch(uchar(*s), p, ep);
       switch (*ep) {
         case '?': {  /* optional */
           const char *res;
@@ -490,9 +488,9 @@ static int str_find (lua_State *L) {
   size_t l1, l2;
   const char *s = luaL_checklstring(L, 1, &l1);
   const char *p = luaL_checklstring(L, 2, &l2);
-  sint32 init = posrelat(luaL_optinteger(L, 3, 1), l1) - 1;
+  ptrdiff_t init = posrelat(luaL_optinteger(L, 3, 1), l1) - 1;
   if (init < 0) init = 0;
-  else if ((size_t)(init) > l1) init = (sint32)l1;
+  else if ((size_t)(init) > l1) init = (ptrdiff_t)l1;
   if (lua_toboolean(L, 4) ||  /* explicit request? */
       strpbrk(p, SPECIALS) == NULL) {  /* or no special characters? */
     /* do a plain search */
@@ -642,7 +640,7 @@ static int str_gsub (lua_State *L) {
 #define MAX_FORMAT	20
 
 
-static void luaI_addquoted (lua_State *L, luaL_Buffer *b, int arg) {
+static void addquoted (lua_State *L, luaL_Buffer *b, int arg) {
   size_t l;
   const char *s = luaL_checklstring(L, arg, &l);
   luaL_putchar(b, '"');
@@ -726,7 +724,7 @@ static int str_format (lua_State *L) {
           break;
         }
         case 'q': {
-          luaI_addquoted(L, &b, arg);
+          addquoted(L, &b, arg);
           continue;  /* skip the `addsize' at the end */
         }
         case 's': {

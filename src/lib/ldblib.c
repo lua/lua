@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.87 2004/08/13 18:02:36 roberto Exp $
+** $Id: ldblib.c,v 1.89 2004/11/17 12:02:41 roberto Exp $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -261,7 +261,7 @@ static int debug (lua_State *L) {
     if (fgets(buffer, sizeof(buffer), stdin) == 0 ||
         strcmp(buffer, "cont\n") == 0)
       return 0;
-    if (luaL_loadbuffer(L, buffer, strlen(buffer), "=debug command") ||
+    if (luaL_loadbuffer(L, buffer, strlen(buffer), "=(debug command)") ||
         lua_pcall(L, 0, 0, 0)) {
       fputs(lua_tostring(L, -1), stderr);
       fputs("\n", stderr);
@@ -275,14 +275,15 @@ static int debug (lua_State *L) {
 #define LEVELS2	10	/* size of the second part of the stack */
 
 static int errorfb (lua_State *L) {
-  int level = 1;  /* skip level 0 (it's this function) */
+  int level = 0;
   int firstpart = 1;  /* still before eventual `...' */
   int arg;
   lua_State *L1 = getthread(L, &arg);
   lua_Debug ar;
+  if (L == L1) level++;  /* skip level 0 (it's this function) */
   if (lua_gettop(L) == arg)
     lua_pushliteral(L, "");
-  else if (!lua_isstring(L, arg+1)) return 1;  /* no string message */
+  else if (!lua_isstring(L, arg+1)) return 1;  /* message is not a string */
   else lua_pushliteral(L, "\n");
   lua_pushliteral(L, "stack traceback:");
   while (lua_getstack(L1, level++, &ar)) {

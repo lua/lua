@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.193 2004/09/15 20:39:42 roberto Exp $
+** $Id: lua.h,v 1.196 2004/12/06 17:53:42 roberto Exp $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -17,7 +17,7 @@
 #include "luaconf.h"
 
 
-#define LUA_VERSION	"Lua 5.1 (work2)"
+#define LUA_VERSION	"Lua 5.1 (work3)"
 #define LUA_COPYRIGHT	"Copyright (C) 1994-2004 Tecgraf, PUC-Rio"
 #define LUA_AUTHORS 	"R. Ierusalimschy, L. H. de Figueiredo & W. Celes"
 
@@ -79,6 +79,10 @@ typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 #define LUA_TFUNCTION	6
 #define LUA_TUSERDATA	7
 #define LUA_TTHREAD	8
+
+
+/* first index for arrays */
+#define LUA_FIRSTINDEX		1
 
 
 /* minimum Lua stack available to a C function */
@@ -216,11 +220,13 @@ LUA_API int  lua_threadstatus (lua_State *L);
 ** garbage-collection function and options
 */
 
-#define LUA_GCSTOP	0
-#define LUA_GCRESTART	1
-#define LUA_GCCOLLECT	2
-#define LUA_GCCOUNT	3
-#define LUA_GCSTEP	4
+#define LUA_GCSTOP		0
+#define LUA_GCRESTART		1
+#define LUA_GCCOLLECT		2
+#define LUA_GCCOUNT		3
+#define LUA_GCSTEP		4
+#define LUA_GCSETSTEPMUL	5
+#define LUA_GCSETINCMODE	6
 
 LUA_API int lua_gc (lua_State *L, int what, int data);
 
@@ -251,26 +257,26 @@ LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud);
 
 #define lua_newtable(L)		lua_createtable(L, 0, 0)
 
-#define lua_register(L,n,f) (lua_pushcfunction(L,f), lua_setglobal(L,n))
+#define lua_register(L,n,f) (lua_pushcfunction(L, (f)), lua_setglobal(L, (n)))
 
-#define lua_pushcfunction(L,f)	lua_pushcclosure(L, f, 0)
+#define lua_pushcfunction(L,f)	lua_pushcclosure(L, (f), 0)
 
-#define lua_strlen(L,i)		lua_objsize(L,i)
+#define lua_strlen(L,i)		lua_objsize(L, (i))
 
-#define lua_isfunction(L,n)	(lua_type(L,n) == LUA_TFUNCTION)
-#define lua_istable(L,n)	(lua_type(L,n) == LUA_TTABLE)
-#define lua_islightuserdata(L,n)	(lua_type(L,n) == LUA_TLIGHTUSERDATA)
-#define lua_isnil(L,n)		(lua_type(L,n) == LUA_TNIL)
-#define lua_isboolean(L,n)	(lua_type(L,n) == LUA_TBOOLEAN)
-#define lua_isthread(L,n)	(lua_type(L,n) == LUA_TTHREAD)
-#define lua_isnone(L,n)		(lua_type(L,n) == LUA_TNONE)
-#define lua_isnoneornil(L, n)	(lua_type(L,n) <= 0)
+#define lua_isfunction(L,n)	(lua_type(L, (n)) == LUA_TFUNCTION)
+#define lua_istable(L,n)	(lua_type(L, (n)) == LUA_TTABLE)
+#define lua_islightuserdata(L,n)	(lua_type(L, (n)) == LUA_TLIGHTUSERDATA)
+#define lua_isnil(L,n)		(lua_type(L, (n)) == LUA_TNIL)
+#define lua_isboolean(L,n)	(lua_type(L, (n)) == LUA_TBOOLEAN)
+#define lua_isthread(L,n)	(lua_type(L, (n)) == LUA_TTHREAD)
+#define lua_isnone(L,n)		(lua_type(L, (n)) == LUA_TNONE)
+#define lua_isnoneornil(L, n)	(lua_type(L, (n)) <= 0)
 
 #define lua_pushliteral(L, s)	\
 	lua_pushlstring(L, "" s, (sizeof(s)/sizeof(char))-1)
 
-#define lua_setglobal(L,s)	lua_setfield(L, LUA_GLOBALSINDEX, s)
-#define lua_getglobal(L,s)	lua_getfield(L, LUA_GLOBALSINDEX, s)
+#define lua_setglobal(L,s)	lua_setfield(L, LUA_GLOBALSINDEX, (s))
+#define lua_getglobal(L,s)	lua_getfield(L, LUA_GLOBALSINDEX, (s))
 
 
 

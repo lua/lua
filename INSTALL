@@ -32,7 +32,7 @@ This is Lua 5.1 (work).
 
 * If you have problems (and solutions!)
   -------------------------------------
-  If "make" fails, please let us know (lua@tecgraf.puc-rio.br).
+  If "make" fails, please let us know.
   If you make changes to "config" or to the Makefiles, please send them to us.
 
 * Shared libraries

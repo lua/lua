@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.158 2004/09/15 20:39:42 roberto Exp $
+** $Id: lbaselib.c,v 1.161 2004/12/06 17:53:42 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -181,10 +181,10 @@ static int luaB_gcinfo (lua_State *L) {
 
 
 static int luaB_collectgarbage (lua_State *L) {
-  static const char *const opts[] = {"stop", "restart", "collect", "count",
-                                     "step", NULL};
-  static const int optsnum[] = {LUA_GCSTOP, LUA_GCRESTART,
-                                LUA_GCCOLLECT, LUA_GCCOUNT, LUA_GCSTEP};
+  static const char *const opts[] = {"stop", "restart", "collect",
+    "count", "step", "setstepmul", "setincmode", NULL};
+  static const int optsnum[] = {LUA_GCSTOP, LUA_GCRESTART, LUA_GCCOLLECT,
+    LUA_GCCOUNT, LUA_GCSTEP, LUA_GCSETSTEPMUL, LUA_GCSETINCMODE};
   int o = luaL_findstring(luaL_optstring(L, 1, "collect"), opts);
   int ex = luaL_optint(L, 2, 0);
   luaL_argcheck(L, o >= 0, 1, "invalid option");
@@ -440,50 +440,6 @@ static int luaB_newproxy (lua_State *L) {
 }
 
 
-/*
-** {======================================================
-** `require' function
-** =======================================================
-*/
-
-
-static const char *getpath (lua_State *L) {
-  /* try first `LUA_PATH' for compatibility */
-  lua_getfield(L, LUA_GLOBALSINDEX, "LUA_PATH");
-  if (!lua_isstring(L, -1)) {
-    lua_pop(L, 1);
-    lua_getfield(L, LUA_GLOBALSINDEX, "_PATH");
-  }
-  if (!lua_isstring(L, -1))
-    luaL_error(L, "global _PATH must be a string");
-  return lua_tostring(L, -1);
-}
-
-
-static int luaB_require (lua_State *L) {
-  const char *name = luaL_checkstring(L, 1);
-  const char *fname;
-  lua_getfield(L, lua_upvalueindex(1), name);
-  if (lua_toboolean(L, -1))  /* is it there? */
-    return 1;  /* package is already loaded; return its result */
-  /* else must load it; first mark it as loaded */
-  lua_pushboolean(L, 1);
-  lua_setfield(L, lua_upvalueindex(1), name);  /* _LOADED[name] = true */
-  fname = luaL_searchpath(L, name, getpath(L));
-  if (fname == NULL || luaL_loadfile(L, fname) != 0)
-    return luaL_error(L, "error loading package `%s' (%s)", name,
-                         lua_tostring(L, -1));
-  lua_pushvalue(L, 1);  /* pass name as argument to module */
-  lua_call(L, 1, 1);  /* run loaded module */
-  if (!lua_isnil(L, -1))  /* nil return? */
-    lua_setfield(L, lua_upvalueindex(1), name);
-  lua_getfield(L, lua_upvalueindex(1), name);  /* return _LOADED[name] */
-  return 1;
-}
-
-/* }====================================================== */
-
-
 static const luaL_reg base_funcs[] = {
   {"error", luaB_error},
   {"getmetatable", luaB_getmetatable},
@@ -656,11 +612,10 @@ static void auxopen (lua_State *L, const char *name,
 
 
 static void base_open (lua_State *L) {
-  const char *path;
   lua_pushvalue(L, LUA_GLOBALSINDEX);
   luaL_openlib(L, NULL, base_funcs, 0);  /* open lib into global table */
   lua_pushliteral(L, LUA_VERSION);
-  lua_setfield(L, LUA_GLOBALSINDEX, "_VERSION");  /* set global _VERSION */
+  lua_setglobal(L, "_VERSION");  /* set global _VERSION */
   /* `ipairs' and `pairs' need auxliliary functions as upvalues */
   auxopen(L, "ipairs", luaB_ipairs, ipairsaux);
   auxopen(L, "pairs", luaB_pairs, luaB_next);
@@ -671,21 +626,16 @@ static void base_open (lua_State *L) {
   lua_pushliteral(L, "kv");
   lua_setfield(L, -2, "__mode");  /* metatable(w).__mode = "kv" */
   lua_pushcclosure(L, luaB_newproxy, 1);
-  lua_setfield(L, LUA_GLOBALSINDEX, "newproxy");  /* set global `newproxy' */
-  /* `require' needs a table to keep loaded chunks */
+  lua_setglobal(L, "newproxy");  /* set global `newproxy' */
+  /* create register._LOADED to track loaded modules */
   lua_newtable(L);
-  lua_pushvalue(L, -1);
-  lua_setglobal(L, "_LOADED");
-  lua_pushcclosure(L, luaB_require, 1);
-  lua_setfield(L, LUA_GLOBALSINDEX, "require");
+  lua_setfield(L, LUA_REGISTRYINDEX, "_LOADED");
+  /* create register._PRELOAD to allow pre-loaded modules */
+  lua_newtable(L);
+  lua_setfield(L, LUA_REGISTRYINDEX, "_PRELOAD");
   /* set global _G */
   lua_pushvalue(L, LUA_GLOBALSINDEX);
-  lua_setfield(L, LUA_GLOBALSINDEX, "_G");
-  /* set global _PATH */
-  path = getenv(LUA_PATH);
-  if (path == NULL) path = LUA_PATH_DEFAULT;
-  lua_pushstring(L, path);
-  lua_setfield(L, LUA_GLOBALSINDEX, "_PATH");
+  lua_setglobal(L, "_G");
 }
 
 

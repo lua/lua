@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.14 2004/09/15 20:39:42 roberto Exp $
+** $Id: lstate.c,v 2.18 2004/12/06 17:53:42 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -79,7 +79,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   Udata *u;  /* head of udata list */
   global_State *g = G(L);
   UNUSED(ud);
-  u = cast(Udata *, luaM_malloc(L, sizeudata(0)));
+  u = luaM_new(L, Udata);
   u->uv.len = 0;
   u->uv.metatable = NULL;
   g->firstudata = obj2gco(u);
@@ -155,7 +155,7 @@ void luaE_freethread (lua_State *L, lua_State *L1) {
   luaF_close(L1, L1->stack);  /* close all upvalues for this thread */
   lua_assert(L1->openupval == NULL);
   freestack(L, L1);
-  luaM_free(L, fromstate(L1), state_size(lua_State));
+  luaM_freemem(L, fromstate(L1), state_size(lua_State));
 }
 
 
@@ -191,8 +191,10 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->tmudata = NULL;
   setnilvalue(gkey(g->dummynode));
   setnilvalue(gval(g->dummynode));
-  g->dummynode->next = NULL;
+  gnext(g->dummynode) = NULL;
   g->totalbytes = sizeof(LG);
+  g->stepmul = STEPMUL;
+  g->incgc = 1;
   if (luaD_rawrunprotected(L, f_luaopen, NULL) != 0) {
     /* memory allocation error: free partial state */
     close_state(L);

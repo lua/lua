@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.14 2004/09/15 20:39:42 roberto Exp $
+** $Id: lvm.c,v 2.18 2004/12/03 20:35:33 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -214,7 +214,7 @@ static int call_orderTM (lua_State *L, const TValue *p1, const TValue *p2,
 }
 
 
-static int luaV_strcmp (const TString *ls, const TString *rs) {
+static int l_strcmp (const TString *ls, const TString *rs) {
   const char *l = getstr(ls);
   size_t ll = ls->tsv.len;
   const char *r = getstr(rs);
@@ -243,21 +243,21 @@ int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r) {
   else if (ttisnumber(l))
     return nvalue(l) < nvalue(r);
   else if (ttisstring(l))
-    return luaV_strcmp(rawtsvalue(l), rawtsvalue(r)) < 0;
+    return l_strcmp(rawtsvalue(l), rawtsvalue(r)) < 0;
   else if ((res = call_orderTM(L, l, r, TM_LT)) != -1)
     return res;
   return luaG_ordererror(L, l, r);
 }
 
 
-static int luaV_lessequal (lua_State *L, const TValue *l, const TValue *r) {
+static int lessequal (lua_State *L, const TValue *l, const TValue *r) {
   int res;
   if (ttype(l) != ttype(r))
     return luaG_ordererror(L, l, r);
   else if (ttisnumber(l))
     return nvalue(l) <= nvalue(r);
   else if (ttisstring(l))
-    return luaV_strcmp(rawtsvalue(l), rawtsvalue(r)) <= 0;
+    return l_strcmp(rawtsvalue(l), rawtsvalue(r)) <= 0;
   else if ((res = call_orderTM(L, l, r, TM_LE)) != -1)  /* first try `le' */
     return res;
   else if ((res = call_orderTM(L, r, l, TM_LT)) != -1)  /* else try `lt' */
@@ -303,15 +303,14 @@ void luaV_concat (lua_State *L, int total, int last) {
         luaG_concaterror(L, top-2, top-1);
     } else if (tsvalue(top-1)->len > 0) {  /* if len=0, do nothing */
       /* at least two string values; get as many as possible */
-      lu_mem tl = cast(lu_mem, tsvalue(top-1)->len) +
-                  cast(lu_mem, tsvalue(top-2)->len);
+      size_t tl = tsvalue(top-1)->len;
       char *buffer;
       int i;
-      while (n < total && tostring(L, top-n-1)) {  /* collect total length */
+      /* collect total length */
+      for (n = 1; n < total && tostring(L, top-n-1); n++) {
         size_t l = tsvalue(top-n-1)->len;
         if (l >= MAX_SIZET - tl) luaG_runerror(L, "string length overflow");
         tl += l;
-        n++;
       }
       buffer = luaZ_openspace(L, &G(L)->buff, tl);
       tl = 0;
@@ -462,7 +461,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
       }
       case OP_NEWTABLE: {
         int b = GETARG_B(i);
-        b = fb2int(b);
+        b = luaO_fb2int(b);
         sethvalue(L, ra, luaH_new(L, b, GETARG_C(i)));
         L->ci->savedpc = pc;
         luaC_checkGC(L);  /***/
@@ -569,7 +568,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
       }
       case OP_LE: {
         L->ci->savedpc = pc;
-        if (luaV_lessequal(L, RKB(i), RKC(i)) != GETARG_A(i)) pc++;  /***/
+        if (lessequal(L, RKB(i), RKC(i)) != GETARG_A(i)) pc++;  /***/
         else dojump(L, pc, GETARG_sBx(*pc) + 1);
         base = L->base;
         continue;
@@ -710,21 +709,19 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         dojump(L, pc, GETARG_sBx(i));
         continue;
       }
-      case OP_SETLIST:
-      case OP_SETLISTO: {
-        int bc = GETARG_Bx(i);
-        int n, last;
+      case OP_SETLIST: {
+        int n = GETARG_B(i);
+        int c = GETARG_C(i);
+        int last;
         Table *h;
         runtime_check(L, ttistable(ra));
         h = hvalue(ra);
-        if (GET_OPCODE(i) == OP_SETLIST)
-          n = (bc&(LFIELDS_PER_FLUSH-1)) + 1;
-        else {
+        if (n == 0) {
           n = L->top - ra - 1;
           L->top = L->ci->top;
         }
-        bc &= ~(LFIELDS_PER_FLUSH-1);  /* bc = bc - bc%FPF */
-        last = bc + n + LUA_FIRSTINDEX - 1;
+        if (c == 0) c = cast(int, *pc++);
+        last = ((c-1)*LFIELDS_PER_FLUSH) + n + LUA_FIRSTINDEX - 1;
         if (last > h->sizearray)  /* needs more space? */
           luaH_resize(L, h,  last, h->lsizenode);  /* pre-alloc it at once */
         for (; n > 0; n--) {

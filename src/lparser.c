@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.5 2004/05/31 18:51:50 roberto Exp $
+** $Id: lparser.c,v 2.10 2004/12/03 20:50:25 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -31,7 +31,7 @@
 
 #define getlocvar(fs, i)	((fs)->f->locvars[(fs)->actvar[i]])
 
-#define luaY_checklimit(fs,v,l,m)	if ((v)>(l)) luaY_errorlimit(fs,l,m)
+#define luaY_checklimit(fs,v,l,m)	if ((v)>(l)) errorlimit(fs,l,m)
 
 #define enterlevel(ls) if (++(ls)->nestlevel > LUA_MAXPARSERLEVEL) \
 	luaX_lexerror(ls, "chunk has too many syntax levels", 0)
@@ -90,7 +90,7 @@ static void error_expected (LexState *ls, int token) {
 }
 
 
-static void luaY_errorlimit (FuncState *fs, int limit, const char *what) {
+static void errorlimit (FuncState *fs, int limit, const char *what) {
   const char *msg = (fs->f->lineDefined == 0) ?
     luaO_pushfstring(fs->L, "main function has more than %d %s", limit, what) :
     luaO_pushfstring(fs->L, "function at line %d has more than %d %s",
@@ -133,7 +133,7 @@ static void check_match (LexState *ls, int what, int who, int where) {
 
 static TString *str_checkname (LexState *ls) {
   TString *ts;
-  check_condition(ls, (ls->t.token == TK_NAME), "<name> expected");
+  if (ls->t.token != TK_NAME) error_expected(ls, TK_NAME);
   ts = ls->t.seminfo.ts;
   next(ls);
   return ts;
@@ -157,7 +157,7 @@ static void checkname(LexState *ls, expdesc *e) {
 }
 
 
-static int luaI_registerlocalvar (LexState *ls, TString *varname) {
+static int registerlocalvar (LexState *ls, TString *varname) {
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
   int oldsize = f->sizelocvars;
@@ -177,8 +177,7 @@ static int luaI_registerlocalvar (LexState *ls, TString *varname) {
 static void new_localvar (LexState *ls, TString *name, int n) {
   FuncState *fs = ls->fs;
   luaY_checklimit(fs, fs->nactvar+n+1, MAXVARS, "local variables");
-  fs->actvar[fs->nactvar+n] = cast(unsigned short,
-                                   luaI_registerlocalvar(ls, name));
+  fs->actvar[fs->nactvar+n] = cast(unsigned short, registerlocalvar(ls, name));
 }
 
 
@@ -413,7 +412,7 @@ Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, const char *name) {
 /*============================================================*/
 
 
-static void luaY_field (LexState *ls, expdesc *v) {
+static void field (LexState *ls, expdesc *v) {
   /* field -> ['.' | ':'] NAME */
   FuncState *fs = ls->fs;
   expdesc key;
@@ -424,7 +423,7 @@ static void luaY_field (LexState *ls, expdesc *v) {
 }
 
 
-static void luaY_index (LexState *ls, expdesc *v) {
+static void yindex (LexState *ls, expdesc *v) {
   /* index -> '[' expr ']' */
   next(ls);  /* skip the '[' */
   expr(ls, v);
@@ -460,7 +459,7 @@ static void recfield (LexState *ls, struct ConsControl *cc) {
     checkname(ls, &key);
   }
   else  /* ls->t.token == '[' */
-    luaY_index(ls, &key);
+    yindex(ls, &key);
   check(ls, '=');
   luaK_exp2RK(fs, &key);
   expr(ls, &val);
@@ -475,9 +474,8 @@ static void closelistfield (FuncState *fs, struct ConsControl *cc) {
   luaK_exp2nextreg(fs, &cc->v);
   cc->v.k = VVOID;
   if (cc->tostore == LFIELDS_PER_FLUSH) {
-    luaK_codeABx(fs, OP_SETLIST, cc->t->info, cc->na-1);  /* flush */
+    luaK_setlist(fs, cc->t->info, cc->na, cc->tostore);  /* flush */
     cc->tostore = 0;  /* no more items pending */
-    fs->freereg = cc->t->info + 1;  /* free registers */
   }
 }
 
@@ -486,15 +484,14 @@ static void lastlistfield (FuncState *fs, struct ConsControl *cc) {
   if (cc->tostore == 0) return;
   if (hasmultret(cc->v.k)) {
     luaK_setmultret(fs, &cc->v);
-    luaK_codeABx(fs, OP_SETLISTO, cc->t->info, cc->na-1);
+    luaK_setlist(fs, cc->t->info, cc->na, LUA_MULTRET);
     cc->na--;  /* do not count last expression (unknown number of elements) */
   }
   else {
     if (cc->v.k != VVOID)
       luaK_exp2nextreg(fs, &cc->v);
-    luaK_codeABx(fs, OP_SETLIST, cc->t->info, cc->na-1);
+    luaK_setlist(fs, cc->t->info, cc->na, cc->tostore);
   }
-  fs->freereg = cc->t->info + 1;  /* free registers */
 }
 
 
@@ -703,13 +700,13 @@ static void primaryexp (LexState *ls, expdesc *v) {
   for (;;) {
     switch (ls->t.token) {
       case '.': {  /* field */
-        luaY_field(ls, v);
+        field(ls, v);
         break;
       }
       case '[': {  /* `[' exp1 `]' */
         expdesc key;
         luaK_exp2anyreg(fs, v);
-        luaY_index(ls, &key);
+        yindex(ls, &key);
         luaK_indexed(fs, v, &key);
         break;
       }
@@ -1213,10 +1210,10 @@ static int funcname (LexState *ls, expdesc *v) {
   int needself = 0;
   singlevar(ls, v, 1);
   while (ls->t.token == '.')
-    luaY_field(ls, v);
+    field(ls, v);
   if (ls->t.token == ':') {
     needself = 1;
-    luaY_field(ls, v);
+    field(ls, v);
   }
   return needself;
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.39 2004/05/31 18:51:50 roberto Exp $
+** $Id: lcode.h,v 1.40 2004/10/04 19:01:53 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -72,6 +72,7 @@ int luaK_getlabel (FuncState *fs);
 void luaK_prefix (FuncState *fs, UnOpr op, expdesc *v);
 void luaK_infix (FuncState *fs, BinOpr op, expdesc *v);
 void luaK_posfix (FuncState *fs, BinOpr op, expdesc *v1, expdesc *v2);
+void luaK_setlist (FuncState *fs, int base, int nelems, int tostore);
 
 
 #endif

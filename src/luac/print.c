@@ -1,5 +1,5 @@
 /*
-** $Id: print.c,v 1.48 2004/09/01 21:22:34 lhf Exp $
+** $Id: print.c,v 1.49 2004/11/25 09:31:41 lhf Exp $
 ** print bytecodes
 ** See Copyright Notice in lua.h
 */
@@ -33,7 +33,7 @@ static void PrintString(const Proto* f, int n)
    case '\r': printf("\\r"); break;
    case '\t': printf("\\t"); break;
    case '\v': printf("\\v"); break;
-   default:   printf(isprint(*s) ? "%c" : "\\%03d",*s);
+   default:   printf(isprint((unsigned char)*s) ? "%c" : "\\%03d",*s);
   }
  }
  putchar('"');
@@ -44,14 +44,17 @@ static void PrintConstant(const Proto* f, int i)
  const TValue* o=&f->k[i];
  switch (ttype(o))
  {
+  case LUA_TNIL:
+	printf("nil");
+	break;
+  case LUA_TBOOLEAN:
+	printf(bvalue(o) ? "true" : "false");
+	break;
   case LUA_TNUMBER:
 	printf(LUA_NUMBER_FMT,nvalue(o));
 	break;
   case LUA_TSTRING:
 	PrintString(f,i);
-	break;
-  case LUA_TNIL:
-	printf("nil");
 	break;
   default:				/* cannot happen */
 	printf("? type=%d",ttype(o));

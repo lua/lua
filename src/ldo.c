@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.10 2004/09/15 20:39:42 roberto Exp $
+** $Id: ldo.c,v 2.13 2004/12/03 20:35:33 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -70,7 +70,7 @@ static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
 void luaD_throw (lua_State *L, int errcode) {
   if (L->errorJmp) {
     L->errorJmp->status = errcode;
-    L_THROW(L->errorJmp);
+    L_THROW(L, L->errorJmp);
   }
   else {
     if (G(L)->panic) G(L)->panic(L);
@@ -84,7 +84,7 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
   lj.status = 0;
   lj.previous = L->errorJmp;  /* chain new error handler */
   L->errorJmp = &lj;
-  L_TRY(&lj,
+  L_TRY(L, &lj,
     (*f)(L, ud);
   );
   L->errorJmp = lj.previous;  /* restore old error handler */
@@ -147,7 +147,7 @@ void luaD_growstack (lua_State *L, int n) {
 }
 
 
-static CallInfo *luaD_growCI (lua_State *L) {
+static CallInfo *growCI (lua_State *L) {
   if (L->size_ci > LUA_MAXCALLS)  /* overflow while handling overflow? */
     luaD_throw(L, LUA_ERRERR);
   else {
@@ -238,7 +238,7 @@ static StkId tryfuncTM (lua_State *L, StkId func) {
 
 
 #define inc_ci(L) \
-  ((L->ci == L->end_ci) ? luaD_growCI(L) : \
+  ((L->ci == L->end_ci) ? growCI(L) : \
    (condhardstacktests(luaD_reallocCI(L, L->size_ci)), ++L->ci))
 
 
@@ -391,7 +391,6 @@ static int resume_error (lua_State *L, const char *msg) {
 
 LUA_API int lua_resume (lua_State *L, int nargs) {
   int status;
-  lu_byte old_allowhooks;
   lua_lock(L);
   lua_assert(L->errfunc == 0 && L->nCcalls == 0);
   if (L->status != LUA_YIELD) {
@@ -400,7 +399,6 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
     else if (L->ci != L->base_ci)
       return resume_error(L, "cannot resume non-suspended coroutine");
   }
-  old_allowhooks = L->allowhook;
   status = luaD_rawrunprotected(L, resume, &nargs);
   if (status != 0) {  /* error? */
     L->status = status;  /* mark thread as `dead' */

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.8 2004/09/01 13:47:31 roberto Exp $
+** $Id: ldebug.c,v 2.11 2004/12/03 20:35:33 roberto Exp $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -261,11 +261,11 @@ int luaG_checkopenop (Instruction i) {
   switch (GET_OPCODE(i)) {
     case OP_CALL:
     case OP_TAILCALL:
-    case OP_RETURN: {
+    case OP_RETURN:
+    case OP_SETLIST: {
       check(GETARG_B(i) == 0);
       return 1;
     }
-    case OP_SETLISTO: return 1;
     default: return 0;  /* invalid instruction after an open call */
   }
 }
@@ -284,7 +284,7 @@ static int checkArgMode (const Proto *pt, int r, enum OpArgMask mode) {
 }
 
 
-static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
+static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
   int pc;
   int last;  /* stores position of last instruction that changed `reg' */
   last = pt->sizecode-1;  /* points to final return (a `neutral' instruction) */
@@ -315,6 +315,11 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         if (getBMode(op) == OpArgR) {
           int dest = pc+1+b;
           check(0 <= dest && dest < pt->sizecode);
+          if (dest > 0) {
+            /* cannot jump to a setlist count */
+            const Instruction d = pt->code[dest-1];
+            check(!(GET_OPCODE(d) == OP_SETLIST && GETARG_C(d) == 0));
+          }
         }
         break;
       }
@@ -356,7 +361,8 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         break;
       }
       case OP_TFORLOOP: {
-        checkreg(pt, a+5);  /* space for control variables */
+        check(c >= 1);  /* at least one result (control variable) */
+        checkreg(pt, a+3+c);  /* space for results */
         if (reg >= a+3) last = pc;  /* affect all regs above its call base */
         break;
       }
@@ -392,7 +398,8 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         break;
       }
       case OP_SETLIST: {
-        checkreg(pt, a + (b&(LFIELDS_PER_FLUSH-1)) + 1);
+        if (b > 0) checkreg(pt, a + b);
+        if (c == 0) pc++;
         break;
       }
       case OP_CLOSURE: {
@@ -427,7 +434,7 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
 
 
 int luaG_checkcode (const Proto *pt) {
-  return (luaG_symbexec(pt, pt->sizecode, NO_REG) != 0);
+  return (symbexec(pt, pt->sizecode, NO_REG) != 0);
 }
 
 
@@ -447,7 +454,7 @@ static const char *getobjname (CallInfo *ci, int stackpos, const char **name) {
     *name = luaF_getlocalname(p, stackpos+1, pc);
     if (*name)  /* is a local? */
       return "local";
-    i = luaG_symbexec(p, pc, stackpos);  /* try symbolic execution */
+    i = symbexec(p, pc, stackpos);  /* try symbolic execution */
     lua_assert(pc != -1);
     switch (GET_OPCODE(i)) {
       case OP_GETGLOBAL: {

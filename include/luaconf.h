@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.12 2004/09/10 17:30:46 roberto Exp $
+** $Id: luaconf.h,v 1.20 2004/12/06 17:53:42 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -31,7 +31,11 @@
 */
 
 /* default path */
-#define LUA_PATH_DEFAULT	"?;?.lua"
+#define LUA_PATH_DEFAULT \
+   "./?.lua;/usr/local/share/lua/5.0/?.lua;/usr/local/share/lua/5.0/?/init.lua"
+#define LUA_CPATH_DEFAULT \
+   "./?.so;/usr/local/lib/lua/5.0/?.so;/usr/local/lib/lua/5.0/lib?.so"
+
 
 
 /* type of numbers in Lua */
@@ -42,8 +46,11 @@
 #define LUA_NUMBER_FMT		"%.14g"
 
 
-/* type for integer functions */
-#define LUA_INTEGER	long
+/*
+** type for integer functions
+** on most machines, `ptrdiff_t' gives a reasonable size for integers
+*/
+#define LUA_INTEGER	ptrdiff_t
 
 
 /* mark for all API functions */
@@ -55,9 +62,6 @@
 /* buffer size used by lauxlib buffer system */
 #define LUAL_BUFFERSIZE   BUFSIZ
 
-
-/* first index for arrays */
-#define LUA_FIRSTINDEX		1
 
 /* assertions in Lua (mainly for internal debugging) */
 #define lua_assert(c)		((void)0)
@@ -123,19 +127,45 @@
 #ifdef LUA_CORE
 
 /* LUA-C API assertions */
-#define api_check(L, o)		lua_assert(o)
+#define api_check(L,o)		lua_assert(o)
 
 
-/* an unsigned integer with at least 32 bits */
+/* number of bits in an `int' */
+/* avoid overflows in comparison */
+#if INT_MAX-20 < 32760
+#define LUA_BITSINT	16
+#elif INT_MAX > 2147483640L
+/* `int' has at least 32 bits */
+#define LUA_BITSINT	32
+#else
+#error "you must define LUA_BITSINT with number of bits in an integer"
+#endif
+
+
+/*
+** L_UINT32: unsigned integer with at least 32 bits
+** L_INT32: signed integer with at least 32 bits
+** LU_MEM: an unsigned integer big enough to count the total memory used by Lua
+** L_MEM: a signed integer big enough to count the total memory used by Lua
+*/
+#if LUA_BITSINT >= 32
+#define LUA_UINT32	unsigned int
+#define LUA_INT32	int
+#define LUA_MAXINT32	INT_MAX
+#define LU_MEM		size_t
+#define L_MEM		ptrdiff_t
+#else
+/* 16-bit ints */
 #define LUA_UINT32	unsigned long
-
-/* a signed integer with at least 32 bits */
 #define LUA_INT32	long
 #define LUA_MAXINT32	LONG_MAX
+#define LU_MEM		LUA_UINT32
+#define L_MEM		ptrdiff_t
+#endif
 
 
 /* maximum depth for calls (unsigned short) */
-#define LUA_MAXCALLS	4096
+#define LUA_MAXCALLS	10000
 
 /*
 ** maximum depth for C calls (unsigned short): Not too big, or may
@@ -160,7 +190,7 @@
 
 
 /* maximum number of upvalues per function */
-#define MAXUPVALUES		32	/* <MAXSTACK */
+#define MAXUPVALUES		60	/* <MAXSTACK */
 
 
 /* maximum size of expressions for optimizing `while' code */
@@ -170,7 +200,7 @@
 /* function to convert a lua_Number to int (with any rounding method) */
 #if defined(__GNUC__) && defined(__i386)
 #define lua_number2int(i,d)	__asm__ ("fistpl %0":"=m"(i):"t"(d):"st")
-#elif 0
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199900L)
 /* on machines compliant with C99, you can try `lrint' */
 #include <math.h>
 #define lua_number2int(i,d)	((i)=lrint(d))
@@ -179,7 +209,7 @@
 #endif
 
 /* function to convert a lua_Number to lua_Integer (with any rounding method) */
-#define lua_number2integer(i,n)		lua_number2int(i,n)
+#define lua_number2integer(i,n)		lua_number2int((i), (n))
 
 
 /* function to convert a lua_Number to a string */
@@ -195,17 +225,6 @@
 #define LUA_UACNUMBER	double
 
 
-/* number of bits in an `int' */
-/* avoid overflows in comparison */
-#if INT_MAX-20 < 32760
-#define LUA_BITSINT	16
-#elif INT_MAX > 2147483640L
-/* machine has at least 32 bits */
-#define LUA_BITSINT	32
-#else
-#error "you must define LUA_BITSINT with number of bits in an integer"
-#endif
-
 
 /* type to ensure maximum alignment */
 #define LUSER_ALIGNMENT_T	union { double u; void *s; long l; }
@@ -215,14 +234,14 @@
 #ifndef __cplusplus
 /* default handling with long jumps */
 #include <setjmp.h>
-#define L_THROW(c)	longjmp((c)->b, 1)
-#define L_TRY(c,a)	if (setjmp((c)->b) == 0) { a }
+#define L_THROW(L,c)	longjmp((c)->b, 1)
+#define L_TRY(L,c,a)	if (setjmp((c)->b) == 0) { a }
 #define l_jmpbuf	jmp_buf
 
 #else
 /* C++ exceptions */
-#define L_THROW(c)	throw(c)
-#define L_TRY(c,a)	try { a } catch(...) \
+#define L_THROW(L,c)	throw(c)
+#define L_TRY(L,c,a)	try { a } catch(...) \
 	{ if ((c)->status == 0) (c)->status = -1; }
 #define l_jmpbuf	int  /* dummy variable */
 #endif
@@ -251,8 +270,11 @@
 
 
 /* allows user-specific initialization on new threads */
-#define lua_userstateopen(l)	/* empty */
+#define lua_userstateopen(L)	/* empty */
 
+
+/* initial GC parameters */
+#define STEPMUL		4
 
 #endif
 
@@ -272,8 +294,19 @@
 
 /* `assert' options */
 
-/* environment variable that holds the search path for packages */
+/* environment variables that hold the search path for packages */
 #define LUA_PATH	"LUA_PATH"
+#define LUA_CPATH	"LUA_CPATH"
+
+/* prefix for open functions in C libraries */
+#if defined(__APPLE__) && defined(__MACH__)
+#define LUA_POF		"_luaopen_"
+#else
+#define LUA_POF		"luaopen_"
+#endif
+
+/* directory separator (for submodules) */
+#define LUA_DIRSEP	"/"
 
 /* separator of templates in a path */
 #define LUA_PATH_SEP	';'
@@ -288,13 +321,24 @@
 
 /*
 ** by default, gcc does not get `tmpname'
-*/ 
+*/
 #ifdef __GNUC__
 #define USE_TMPNAME	0
 #else
 #define USE_TMPNAME	1 
 #endif
 
+
+/*
+** Configuration for loadlib
+*/
+#if defined(__linux) || defined(sun) || defined(sgi) || defined(BSD)
+#define USE_DLOPEN
+#elif defined(_WIN32)
+#define USE_DLL
+#elif defined(__APPLE__) && defined(__MACH__)
+#define USE_DYLD
+#endif
 
 
 #endif

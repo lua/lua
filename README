@@ -29,9 +29,10 @@ See HISTORY for a summary of changes since the last released version.
 
 * Contacting the authors
   ----------------------
-  Send your comments, questions, and bug reports to lua@tecgraf.puc-rio.br.
+  Send your comments, questions, and bug reports to
+	lua-team AT tecgraf.puc-rio.br.
   For more information about the authors, see http://www.lua.org/authors.html .
-  For reporting bugs, try also the mailing list: lua-l@tecgraf.puc-rio.br.
+  For reporting bugs, try also the mailing list: lua@bazar2.conectiva.com.br .
   For more information about this list, including instructions on how to
   subscribe and access the archives, see http://www.lua.org/lua-l.html .
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.5 2004/05/31 18:51:50 roberto Exp $
+** $Id: lobject.h,v 2.8 2004/12/04 18:10:22 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -25,6 +25,7 @@
 */
 #define LUA_TPROTO	(NUM_TAGS+1)
 #define LUA_TUPVAL	(NUM_TAGS+2)
+#define LUA_TDEADKEY	(NUM_TAGS+3)
 
 
 /*
@@ -64,9 +65,11 @@ typedef union {
 /*
 ** Tagged Values
 */
+
+#define TValuefields	Value value; int tt
+
 typedef struct lua_TValue {
-  int tt;
-  Value value;
+  TValuefields;
 } TValue;
 
 
@@ -158,7 +161,7 @@ typedef struct lua_TValue {
 
 #define setobj(L,obj1,obj2) \
   { const TValue *o2=(obj2); TValue *o1=(obj1); \
-    o1->tt=o2->tt; o1->value = o2->value; \
+    o1->value = o2->value; o1->tt=o2->tt; \
     checkliveness(G(L),o1); }
 
 
@@ -308,10 +311,15 @@ typedef union Closure {
 ** Tables
 */
 
-typedef struct Node {
-  TValue i_key;
-  TValue i_val;
+typedef struct TKey {
+  TValuefields;
   struct Node *next;  /* for chaining */
+} TKey;
+
+
+typedef struct Node {
+  TValue i_val;
+  TKey i_key;
 } Node;
 
 
@@ -345,7 +353,7 @@ extern const TValue luaO_nilobject;
 
 int luaO_log2 (unsigned int x);
 int luaO_int2fb (unsigned int x);
-#define fb2int(x)	(((x) & 7) << ((x) >> 3))
+int luaO_fb2int (int x);
 
 int luaO_rawequalObj (const TValue *t1, const TValue *t2);
 int luaO_str2d (const char *s, lua_Number *result);

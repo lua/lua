@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.70 2004/07/09 18:23:17 roberto Exp $
+** $Id: lauxlib.h,v 1.73 2004/10/18 12:51:44 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -70,6 +70,12 @@ LUALIB_API int luaL_loadbuffer (lua_State *L, const char *buff, size_t sz,
 LUALIB_API lua_State *(luaL_newstate) (void);
 
 
+LUALIB_API const char *luaL_gsub (lua_State *L, const char *s, const char *p,
+                                     const char *r);
+LUALIB_API const char *luaL_getfield (lua_State *L, int idx, const char *fname);
+LUALIB_API const char *luaL_setfield (lua_State *L, int idx, const char *fname);
+
+
 
 /*
 ** ===============================================================
@@ -78,15 +84,15 @@ LUALIB_API lua_State *(luaL_newstate) (void);
 */
 
 #define luaL_argcheck(L, cond,numarg,extramsg)	\
-		((void)((cond) || luaL_argerror(L, numarg,extramsg)))
+		((void)((cond) || luaL_argerror(L, (numarg), (extramsg))))
 #define luaL_checkstring(L,n)	(luaL_checklstring(L, (n), NULL))
 #define luaL_optstring(L,n,d)	(luaL_optlstring(L, (n), (d), NULL))
-#define luaL_checkint(L,n)	((int)luaL_checkinteger(L, n))
-#define luaL_optint(L,n,d)	((int)luaL_optinteger(L, n,d))
-#define luaL_checklong(L,n)	((long)luaL_checkinteger(L, n))
-#define luaL_optlong(L,n,d)	((long)luaL_optinteger(L, n,d))
+#define luaL_checkint(L,n)	((int)luaL_checkinteger(L, (n)))
+#define luaL_optint(L,n,d)	((int)luaL_optinteger(L, (n), (d)))
+#define luaL_checklong(L,n)	((long)luaL_checkinteger(L, (n)))
+#define luaL_optlong(L,n,d)	((long)luaL_optinteger(L, (n), (d)))
 
-#define luaL_typename(L,i)	lua_typename(L,lua_type(L,(i)))
+#define luaL_typename(L,i)	lua_typename(L, lua_type(L,(i)))
 
 /*
 ** {======================================================
@@ -131,7 +137,7 @@ LUALIB_API void luaL_pushresult (luaL_Buffer *B);
 
 #define lua_unref(L,ref)        luaL_unref(L, LUA_REGISTRYINDEX, (ref))
 
-#define lua_getref(L,ref)       lua_rawgeti(L, LUA_REGISTRYINDEX, ref)
+#define lua_getref(L,ref)       lua_rawgeti(L, LUA_REGISTRYINDEX, (ref))
 
 
 #endif

@@ -43,5 +43,6 @@ int main(void)
  lua_register(L,"print",print);
  if (lua_load(L,getF,stdin,"=stdin") || lua_pcall(L,0,0,0))
   fprintf(stderr,"%s\n",lua_tostring(L,-1));
+ lua_close(L);
  return 0;
 }

@@ -14,8 +14,6 @@ all clean co klean:
 	cd src/luac; $(MAKE) $@
 	cd src/lua; $(MAKE) $@
 
-clean klean:	soclean
-
 # in case they were not created during unpacking
 all:	bin lib
 
@@ -37,27 +35,6 @@ install: all strip
 	$(INSTALL_DATA) include/*.h $(INSTALL_INC)
 	$(INSTALL_DATA) lib/*.a $(INSTALL_LIB)
 	$(INSTALL_DATA) doc/*.1 $(INSTALL_MAN)
-
-# shared libraries (for Linux)
-so:
-	ld -o lib/liblua.so.$V -shared src/*.o
-	ld -o lib/liblualib.so.$V -shared src/lib/*.o
-	cd lib; ln -fs liblua.so.$V liblua.so; ln -fs liblualib.so.$V liblualib.so
-
-# binaries using shared libraries
-sobin:
-	rm -f bin/lua*
-	cd src/lua; $(MAKE)
-	cd src/luac; $(MAKE)
-
-# install shared libraries
-soinstall:
-	$(INSTALL_EXEC) lib/*.so.* $(INSTALL_LIB)
-	cd $(INSTALL_LIB); ln -fs liblua.so.$V liblua.so; ln -fs liblualib.so.$V liblualib.so
-
-# clean shared libraries
-soclean:
-	rm -f lib/*.so* bin/lua*
 
 # echo config parameters
 echo:
@@ -98,7 +75,7 @@ lecho:
 	@make echo | grep = | sed -e 's/= /= "/' -e 's/$$/"/' #-e 's/""/nil/'
 	@echo "-- EOF"
 
-# (end of Makefile)
-
 newer:
 	@find . -newer MANIFEST -type f
+
+# (end of Makefile)
