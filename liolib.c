@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.52 1999/11/22 17:39:51 roberto Exp roberto $
+** $Id: liolib.c,v 1.53 1999/12/27 13:04:53 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -395,20 +395,17 @@ static void io_write (lua_State *L) {
   FILE *f = getfileparam(L, FOUTPUT, &arg);
   int status = 1;
   lua_Object o;
-  while ((o = lua_getparam(L, arg++)) != LUA_NOOBJECT) {
-    switch (lua_type(L, o)[2]) {
-      case 'r': {  /* stRing? */
-        long l = lua_strlen(L, o);
-        status = status &&
-                 ((long)fwrite(lua_getstring(L, o), sizeof(char), l, f) == l);
-        break;
-      }
-      case 'm': /* nuMber? */  /* LUA_NUMBER */
-        /* optimization: could be done exactly as for strings */
-        status = status && fprintf(f, "%.16g", lua_getnumber(L, o)) > 0;
-        break;
-      default: luaL_argerror(L, arg-1, "string expected");
+  while ((o = lua_getparam(L, arg)) != LUA_NOOBJECT) {
+    if (lua_type(L, o)[2] == 'm') {  /* nuMber? */  /* LUA_NUMBER */
+      /* optimization: could be done exactly as for strings */
+      status = status && fprintf(f, "%.16g", lua_getnumber(L, o)) > 0;
     }
+    else {
+      long l;
+      const char *s = luaL_check_lstr(L, arg, &l);
+      status = status && ((long)fwrite(s, sizeof(char), l, f) == l);
+    }
+    arg++;
   }
   pushresult(L, status);
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.22 1999/12/20 13:09:45 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.23 1999/12/27 17:33:22 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -30,69 +30,79 @@ int luaL_findstring (const char *name, const char *const list[]) {
   return -1;  /* name not found */
 }
 
-void luaL_argerror (lua_State *L, int numarg, const char *extramsg) {
+void luaL_argerror (lua_State *L, int narg, const char *extramsg) {
   lua_Function f = lua_stackedfunction(L, 0);
   const char *funcname;
   lua_getobjname(L, f, &funcname);
-  numarg -= lua_nups(L, f);
+  narg -= lua_nups(L, f);
   if (funcname == NULL)
     funcname = "?";
-  luaL_verror(L, "bad argument #%d to function `%.50s' (%.100s)",
-              numarg, funcname, extramsg);
+  luaL_verror(L, "bad argument #%d to `%.50s' (%.100s)",
+              narg, funcname, extramsg);
 }
 
-static const char *checkstr (lua_State *L, lua_Object o, int n, long *len) {
+
+static void type_error (lua_State *L, int narg, const char *typename,
+                        lua_Object o) {
+  char buff[100];
+  const char *otype = (o == LUA_NOOBJECT) ? "no value" : lua_type(L, o);
+  sprintf(buff, "%.10s expected, got %.10s", typename, otype);
+  luaL_argerror(L, narg, buff);
+}
+
+
+static const char *checkstr (lua_State *L, lua_Object o, int narg, long *len) {
   const char *s = lua_getstring(L, o);
-  luaL_arg_check(L, s, n, "string expected");
+  if (!s) type_error(L, narg, "string", o);
   if (len) *len = lua_strlen(L, o);
   return s;
 }
 
-const char *luaL_check_lstr (lua_State *L, int n, long *len) {
-  return checkstr(L, lua_getparam(L, n), n, len);
+const char *luaL_check_lstr (lua_State *L, int narg, long *len) {
+  return checkstr(L, lua_getparam(L, narg), narg, len);
 }
 
-const char *luaL_opt_lstr (lua_State *L, int n, const char *def, long *len) {
-  lua_Object o = lua_getparam(L, n);
+const char *luaL_opt_lstr (lua_State *L, int narg, const char *def, long *len) {
+  lua_Object o = lua_getparam(L, narg);
   if (o == LUA_NOOBJECT) {
     if (len) *len = def ? strlen(def) : 0;
     return def;
   }
-  else return checkstr(L, o, n, len);
+  else return checkstr(L, o, narg, len);
 }
 
-double luaL_check_number (lua_State *L, int n) {
-  lua_Object o = lua_getparam(L, n);
-  luaL_arg_check(L, lua_isnumber(L, o), n, "number expected");
+double luaL_check_number (lua_State *L, int narg) {
+  lua_Object o = lua_getparam(L, narg);
+  if (!lua_isnumber(L, o)) type_error(L, narg, "number", o);
   return lua_getnumber(L, o);
 }
 
 
-double luaL_opt_number (lua_State *L, int n, double def) {
-  lua_Object o = lua_getparam(L, n);
+double luaL_opt_number (lua_State *L, int narg, double def) {
+  lua_Object o = lua_getparam(L, narg);
   if (o == LUA_NOOBJECT) return def;
   else {
-    luaL_arg_check(L, lua_isnumber(L, o), n, "number expected");
+    if (!lua_isnumber(L, o)) type_error(L, narg, "number", o);
     return lua_getnumber(L, o);
   }
 }
 
 
-lua_Object luaL_tablearg (lua_State *L, int arg) {
-  lua_Object o = lua_getparam(L, arg);
-  luaL_arg_check(L, lua_istable(L, o), arg, "table expected");
+lua_Object luaL_tablearg (lua_State *L, int narg) {
+  lua_Object o = lua_getparam(L, narg);
+  if (!lua_istable(L, o)) type_error(L, narg, "table", o);
   return o;
 }
 
-lua_Object luaL_functionarg (lua_State *L, int arg) {
-  lua_Object o = lua_getparam(L, arg);
-  luaL_arg_check(L, lua_isfunction(L, o), arg, "function expected");
+lua_Object luaL_functionarg (lua_State *L, int narg) {
+  lua_Object o = lua_getparam(L, narg);
+  if (!lua_isfunction(L, o)) type_error(L, narg, "function", o);
   return o;
 }
 
-lua_Object luaL_nonnullarg (lua_State *L, int n) {
-  lua_Object o = lua_getparam(L, n);
-  luaL_arg_check(L, o != LUA_NOOBJECT, n, "value expected");
+lua_Object luaL_nonnullarg (lua_State *L, int narg) {
+  lua_Object o = lua_getparam(L, narg);
+  luaL_arg_check(L, o != LUA_NOOBJECT, narg, "value expected");
   return o;
 }
 
