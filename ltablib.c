@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.17 2002/12/04 17:38:31 roberto Exp roberto $
+** $Id: ltablib.c,v 1.18 2002/12/20 10:26:33 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -15,52 +15,7 @@
 #include "lualib.h"
 
 
-
-static int checkint (lua_State *L) {
-  int n = (int)lua_tonumber(L, -1);
-  if (n == 0 && !lua_isnumber(L, -1)) n = -1;
-  lua_pop(L, 1);
-  return n;
-}
-
-
-static void aux_setn (lua_State *L, int t, int n) {
-  lua_pushliteral(L, "n");
-  lua_rawget(L, t);
-  if (checkint(L) >= 0) {
-    lua_pushliteral(L, "n");  /* use it */
-    lua_pushnumber(L, n);
-    lua_rawset(L, t);
-  }
-  else {  /* use N */
-    lua_pushvalue(L, t);
-    lua_pushnumber(L, n);
-    lua_rawset(L, lua_upvalueindex(1));  /* N[t] = n */
-  }
-}
-
-
-static int aux_getn (lua_State *L, int t) {
-  int n;
-  luaL_checktype(L, t, LUA_TTABLE);
-  lua_pushliteral(L, "n");  /* try t.n */
-  lua_rawget(L, t);
-  if ((n = checkint(L)) >= 0) return n;
-  lua_pushvalue(L, t);  /* try N[t] */
-  lua_rawget(L, lua_upvalueindex(1));
-  if ((n = checkint(L)) >= 0) return n;
-  else {  /* must count elements */
-    n = 0;
-    for (;;) {
-      lua_rawgeti(L, t, ++n);
-      if (lua_isnil(L, -1)) break;
-      lua_pop(L, 1);
-    }
-    lua_pop(L, 1);
-    aux_setn(L, t, n - 1);
-    return n - 1;
-  }
-}
+#define aux_getn(L,n)	(luaL_checktype(L, n, LUA_TTABLE), luaL_getn(L, n))
 
 
 static int luaB_foreachi (lua_State *L) {
@@ -106,7 +61,7 @@ static int luaB_getn (lua_State *L) {
 
 static int luaB_setn (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
-  aux_setn(L, 1, luaL_checkint(L, 2));
+  luaL_setn(L, 1, luaL_checkint(L, 2));
   return 0;
 }
 
@@ -122,7 +77,7 @@ static int luaB_tinsert (lua_State *L) {
     if (pos > n) n = pos;  /* `grow' array if necessary */
     v = 3;  /* function may be called with more than 3 args */
   }
-  aux_setn(L, 1, n);  /* new size */
+  luaL_setn(L, 1, n);  /* new size */
   while (--n >= pos) {  /* move up elements */
     lua_rawgeti(L, 1, n);
     lua_rawseti(L, 1, n+1);  /* t[n+1] = t[n] */
@@ -137,7 +92,7 @@ static int luaB_tremove (lua_State *L) {
   int n = aux_getn(L, 1);
   int pos = luaL_optint(L, 2, n);
   if (n <= 0) return 0;  /* table is `empty' */
-  aux_setn(L, 1, n-1);  /* t.n = n-1 */
+  luaL_setn(L, 1, n-1);  /* t.n = n-1 */
   lua_rawgeti(L, 1, pos);  /* result = t[pos] */
   for ( ;pos<n; pos++) {
     lua_rawgeti(L, 1, pos+1);
@@ -156,7 +111,7 @@ static int str_concat (lua_State *L) {
   int i = luaL_optint(L, 3, 1);
   int n = luaL_optint(L, 4, 0);
   luaL_checktype(L, 1, LUA_TTABLE);
-  if (n == 0) n = aux_getn(L, 1);
+  if (n == 0) n = luaL_getn(L, 1);
   luaL_buffinit(L, &b);
   for (; i <= n; i++) {
     lua_rawgeti(L, 1, i);
@@ -289,13 +244,7 @@ static const luaL_reg tab_funcs[] = {
 
 
 LUALIB_API int lua_tablibopen (lua_State *L) {
-  lua_newtable(L);  /* create N (table to store num. elements in tables) */
-  lua_pushvalue(L, -1);  /* `N' will be its own metatable */
-  lua_setmetatable(L, -2);
-  lua_pushliteral(L, "__mode");
-  lua_pushliteral(L, "k");
-  lua_rawset(L, -3);  /* metatable(N).__mode = "k" */
-  luaL_openlib(L, LUA_TABLIBNAME, tab_funcs, 1);
+  luaL_openlib(L, LUA_TABLIBNAME, tab_funcs, 0);
   return 1;
 }
 

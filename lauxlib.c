@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.91 2002/12/04 17:38:31 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.92 2003/01/23 11:34:18 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -21,6 +21,13 @@
 #include "lua.h"
 
 #include "lauxlib.h"
+
+
+/* number of prereserved references (for internal use) */
+#define RESERVED_REFS	1
+
+/* reserved reference for array sizes */
+#define ARRAYSIZE_REF	1
 
 
 /*
@@ -197,6 +204,78 @@ LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
 
 /*
 ** {======================================================
+** getn-setn: size for arrays
+** =======================================================
+*/
+
+static int checkint (lua_State *L, int topop) {
+  int n = (int)lua_tonumber(L, -1);
+  if (n == 0 && !lua_isnumber(L, -1)) n = -1;
+  lua_pop(L, topop);
+  return n;
+}
+
+
+static void getsizes (lua_State *L) {
+  lua_rawgeti(L, LUA_REGISTRYINDEX, ARRAYSIZE_REF);
+  if (lua_isnil(L, -1)) {  /* no `size' table? */
+    lua_newtable(L);  /* create it */
+    lua_pushvalue(L, -1);  /* `size' will be its own metatable */
+    lua_setmetatable(L, -2);
+    lua_pushliteral(L, "__mode");
+    lua_pushliteral(L, "k");
+    lua_rawset(L, -3);  /* metatable(N).__mode = "k" */
+    lua_pushvalue(L, -1);
+    lua_rawseti(L, LUA_REGISTRYINDEX, ARRAYSIZE_REF);  /* store in register */
+  }
+}
+
+
+void luaL_setn (lua_State *L, int t, int n) {
+  lua_pushliteral(L, "n");
+  lua_rawget(L, t);
+  if (checkint(L, 1) >= 0) {  /* is there a numeric field `n'? */
+    lua_pushliteral(L, "n");  /* use it */
+    lua_pushnumber(L, n);
+    lua_rawset(L, t);
+  }
+  else {  /* use `sizes' */
+    getsizes(L);
+    lua_pushvalue(L, t);
+    lua_pushnumber(L, n);
+    lua_rawset(L, -3);  /* sizes[t] = n */
+    lua_pop(L, 1);  /* remove `sizes' */
+  }
+}
+
+
+int luaL_getn (lua_State *L, int t) {
+  int n;
+  lua_pushliteral(L, "n");  /* try t.n */
+  lua_rawget(L, t);
+  if ((n = checkint(L, 1)) >= 0) return n;
+  getsizes(L);  /* else try sizes[t] */
+  lua_pushvalue(L, t);
+  lua_rawget(L, -2);
+  if ((n = checkint(L, 2)) >= 0) return n;
+  else {  /* must count elements */
+    for (n = 1; ; n++) {
+      lua_rawgeti(L, t, n);
+      if (lua_isnil(L, -1)) break;
+      lua_pop(L, 1);
+    }
+    lua_pop(L, 1);
+    luaL_setn(L, t, n - 1);
+    return n - 1;
+  }
+}
+
+/* }====================================================== */
+
+
+
+/*
+** {======================================================
 ** Generic Buffer manipulation
 ** =======================================================
 */
@@ -308,8 +387,10 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
     lua_pushliteral(L, "n");
     lua_pushvalue(L, -1);
     lua_rawget(L, t);  /* get t.n */
-    ref = (int)lua_tonumber(L, -1) + 1;  /* ref = t.n + 1 */
+    ref = (int)lua_tonumber(L, -1);  /* ref = t.n */
     lua_pop(L, 1);  /* pop t.n */
+    if (ref == 0) ref = RESERVED_REFS;  /* skip reserved references */
+    ref++;  /* create new reference */
     lua_pushnumber(L, ref);
     lua_rawset(L, t);  /* t.n = t.n + 1 */
   }
