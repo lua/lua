@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.35 2000/08/04 19:38:35 roberto Exp roberto $
+** $Id: lmem.c,v 1.36 2000/08/09 19:16:57 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -15,15 +15,6 @@
 #include "lstate.h"
 
 
-/*
-** Real ISO (ANSI) systems do not need these tests;
-** but some systems (Sun OS) are not that ISO...
-*/
-#ifdef OLD_ANSI
-#define realloc(b,s)	((b) == NULL ? malloc(s) : (realloc)(b, s))
-#define free(b)		if (b) (free)(b)
-#endif
-
 
 
 #ifdef DEBUG
@@ -38,11 +29,8 @@
 #include <limits.h>
 #include <string.h>
 
-#undef realloc
-#undef malloc
-#undef free
 #define realloc(b, s)	debug_realloc(b, s)
-#define malloc(b)	debug_realloc(NULL, 0)
+#define malloc(b)	debug_realloc(NULL, b)
 #define free(b)		debug_realloc(b, 0)
 
 
@@ -117,6 +105,16 @@ static void *debug_realloc (void *block, size_t size) {
 /* }====================================================================== */
 #endif
 
+
+
+/*
+** Real ISO (ANSI) systems do not need these tests;
+** but some systems (Sun OS) are not that ISO...
+*/
+#ifdef OLD_ANSI
+#define realloc(b,s)	((b) == NULL ? malloc(s) : (realloc)(b, s))
+#define free(b)		if (b) (free)(b)
+#endif
 
 
 void *luaM_growaux (lua_State *L, void *block, size_t nelems,

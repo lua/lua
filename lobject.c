@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.52 2000/10/05 12:14:08 roberto Exp roberto $
+** $Id: lobject.c,v 1.53 2000/10/09 13:47:32 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -87,16 +87,14 @@ void luaO_verror (lua_State *L, const char *fmt, ...) {
 }
 
 
-#define EXTRALEN	sizeof(" string \"s...\" ")
-
 void luaO_chunkid (char *out, const char *source, int bufflen) {
   if (*source == '=')
-    sprintf(out, "%.*s", bufflen, source+1);  /* remove first char */
+    sprintf(out, "%.*s", bufflen-1, source+1);  /* remove first char */
   else {
-    bufflen -= EXTRALEN;
     if (*source == '@') {
       int l;
       source++;  /* skip the `@' */
+      bufflen -= sizeof("file `...%s'");
       l = strlen(source);
       if (l>bufflen) {
         source += (l-bufflen);  /* get last part of file name */
@@ -107,6 +105,7 @@ void luaO_chunkid (char *out, const char *source, int bufflen) {
     }
     else {
       int len = strcspn(source, "\n");  /* stop at first newline */
+      bufflen -= sizeof("string \"%.*s...\"");
       if (len > bufflen) len = bufflen;
       if (source[len] != '\0')  /* must truncate? */
         sprintf(out, "string \"%.*s...\"", len, source);
