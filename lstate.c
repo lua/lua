@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.58 2001/03/02 17:27:50 roberto Exp roberto $
+** $Id: lstate.c,v 1.59 2001/03/07 18:09:25 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -90,7 +90,7 @@ static void f_luaopen (lua_State *L, void *ud) {
 }
 
 
-LUA_API lua_State *lua_open (lua_State *OL, int stacksize) {
+LUA_API lua_State *lua_newthread (lua_State *OL, int stacksize) {
   struct Sopen so;
   lua_State *L;
   if (OL) lua_lock(OL);

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.74 2001/03/06 20:09:38 roberto Exp roberto $
+** $Id: ltests.c,v 1.75 2001/03/07 13:22:55 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -422,7 +422,7 @@ static int newtag (lua_State *L) {
 }
 
 static int doonnewstack (lua_State *L) {
-  lua_State *L1 = lua_open(L, luaL_check_int(L, 1));
+  lua_State *L1 = lua_newthread(L, luaL_check_int(L, 1));
   if (L1 == NULL) return 0;
   *((int **)L1) = &islocked;  /* initialize the lock */
   lua_dostring(L1, luaL_check_string(L, 2));
@@ -445,7 +445,7 @@ static int d2s (lua_State *L) {
 
 
 static int newstate (lua_State *L) {
-  lua_State *L1 = lua_open(NULL, luaL_check_int(L, 1));
+  lua_State *L1 = lua_open(luaL_check_int(L, 1));
   if (L1) {
     *((int **)L1) = &islocked;  /* initialize the lock */
     lua_pushnumber(L, (unsigned long)L1);

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.89 2001/02/23 17:17:25 roberto Exp roberto $
+** $Id: lua.h,v 1.90 2001/02/23 17:28:12 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -93,7 +93,7 @@ typedef char l_char;
 /*
 ** state manipulation
 */
-LUA_API lua_State *lua_open (lua_State *L, int stacksize);
+LUA_API lua_State *lua_newthread (lua_State *L, int stacksize);
 LUA_API void       lua_close (lua_State *L);
 
 
@@ -209,6 +209,8 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size);
 ** some useful macros
 ** ===============================================================
 */
+
+#define lua_open(n)		lua_newthread(NULL, (n))
 
 #define lua_pop(L,n)		lua_settop(L, -(n)-1)
 
