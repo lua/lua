@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.44 2000/10/06 19:28:47 roberto Exp roberto $
+** $Id: lstate.c,v 1.45 2000/10/20 16:39:03 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -47,16 +47,19 @@ static void f_luaopen (lua_State *L, void *ud) {
     stacksize = DEFAULT_STACK_SIZE;
   else
     stacksize += LUA_MINSTACK;
-  L->gt = luaH_new(L, 10);
+  L->gt = luaH_new(L, 10);  /* table of globals */
   luaD_init(L, stacksize);
   luaS_init(L);
   luaX_init(L);
   luaT_init(L);
+  lua_newtable(L);
+  lua_ref(L, 1);  /* create registry */
   lua_register(L, LUA_ERRORMESSAGE, errormessage);
 #ifdef DEBUG
   luaB_opentests(L);
   if (lua_state == NULL) lua_state = L;  /* keep first state to be opened */
 #endif
+  LUA_ASSERT(lua_gettop(L) == 0, "wrong API stack");
 }
 
 

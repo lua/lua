@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.74 2000/10/09 15:46:43 roberto Exp roberto $
+** $Id: lua.h,v 1.75 2000/10/20 16:39:03 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -29,11 +29,15 @@
 #define LUA_ERRORMESSAGE	"_ERRORMESSAGE"
 
 
+/* pre-defined references */
 #define LUA_NOREF	(-2)
 #define LUA_REFNIL	(-1)
+#define LUA_REFREGISTRY	0
 
+/* pre-defined tags */
 #define LUA_ANYTAG	(-1)
 #define LUA_NOTAG	(-2)
+
 
 #define LUA_MULTRET	(-1)
 
@@ -197,6 +201,8 @@ LUA_API void  lua_concat (lua_State *L, int n);
 #define lua_isuserdata(L,n)	(lua_type(L,n) == LUA_TUSERDATA)
 #define lua_isnil(L,n)		(lua_type(L,n) == LUA_TNIL)
 #define lua_isnull(L,n)		(lua_type(L,n) == LUA_TNONE)
+
+#define lua_getregistry(L)	lua_getref(L, LUA_REFREGISTRY)
 
 #endif
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.22 2000/10/02 20:10:55 roberto Exp roberto $
+** $Id: ldblib.c,v 1.23 2000/10/20 16:39:03 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -109,58 +109,61 @@ static int setlocal (lua_State *L) {
 }
 
 
-/*
-** because of these variables, this module is not reentrant, and should
-** not be used in multiple states
-*/
 
-static int linehook = LUA_NOREF;  /* Lua reference to line hook function */
-static int callhook = LUA_NOREF;  /* Lua reference to call hook function */
+#define KEY_CALLHOOK	"dblib_callhook"
+#define KEY_LINEHOOK	"dblib_linehook"
 
 
-
-static void linef (lua_State *L, lua_Debug *ar) {
-  if (linehook != LUA_NOREF) {
-    lua_getref(L, linehook);
-    lua_pushnumber(L, ar->currentline);
+static void hookf (lua_State *L, const char *key) {
+  lua_getregistry(L);
+  lua_pushstring(L, key);
+  lua_gettable(L, -2);
+  if (lua_isfunction(L, -1)) {
+    lua_pushvalue(L, 1);
     lua_call(L, 1, 0);
   }
+  else
+    lua_pop(L, 1);  /* pop result from gettable */
+  lua_pop(L, 1);  /* pop table */
 }
 
 
 static void callf (lua_State *L, lua_Debug *ar) {
-  if (callhook != LUA_NOREF) {
-    lua_getref(L, callhook);
-    lua_pushstring(L, ar->event);
-    lua_call(L, 1, 0);
-  }
+  lua_pushstring(L, ar->event);
+  hookf(L, KEY_CALLHOOK);
+}
+
+
+static void linef (lua_State *L, lua_Debug *ar) {
+  lua_pushnumber(L, ar->currentline);
+  hookf(L, KEY_LINEHOOK);
+}
+
+
+static void sethook (lua_State *L, const char *key, lua_Hook hook,
+                     lua_Hook (*sethookf)(lua_State * L, lua_Hook h)) {
+  lua_settop(L, 1);
+  lua_getregistry(L);
+  lua_pushstring(L, key);
+  if (lua_isnil(L, 1))
+    (*sethookf)(L, NULL);
+  else if (lua_isfunction(L, 1))
+    (*sethookf)(L, hook);
+  else
+    luaL_argerror(L, 1, "function expected");
+  lua_pushvalue(L, 1);
+  lua_settable(L, -3);
 }
 
 
 static int setcallhook (lua_State *L) {
-  lua_unref(L, callhook);
-  if (lua_isnull(L, 1)) {
-    callhook = LUA_NOREF;
-    lua_setcallhook(L, NULL);
-  }
-  else {
-    callhook = lua_ref(L, 1);
-    lua_setcallhook(L, callf);
-  }
+  sethook(L, KEY_CALLHOOK, callf, lua_setcallhook);
   return 0;
 }
 
 
 static int setlinehook (lua_State *L) {
-  lua_unref(L, linehook);
-  if (lua_isnull(L, 1)) {
-    linehook = LUA_NOREF;
-    lua_setlinehook(L, NULL);
-  }
-  else {
-    linehook = lua_ref(L, 1);
-    lua_setlinehook(L, linef);
-  }
+  sethook(L, KEY_LINEHOOK, linef, lua_setlinehook);
   return 0;
 }
 
