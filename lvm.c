@@ -1,14 +1,16 @@
 /*
-** $Id: lvm.c,v 1.279 2003/02/28 19:45:15 roberto Exp roberto $
+** $Id: lvm.c,v 1.280 2003/03/06 19:37:42 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
 
 
 #include <stdarg.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+/* needed only when `lua_number2str' uses `sprintf' */
+#include <stdio.h>
 
 #define lvm_c
 

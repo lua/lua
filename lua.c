@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.115 2003/01/29 10:27:07 roberto Exp roberto $
+** $Id: lua.c,v 1.116 2003/01/29 13:23:45 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -26,6 +26,9 @@
 #endif
 
 
+/*
+** definition of `isatty'
+*/
 #ifdef _POSIX_C_SOURCE
 #include <unistd.h>
 #else
