@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.9 1997/12/15 16:17:20 roberto Exp roberto $
+** $Id: ltable.c,v 1.10 1998/01/09 14:44:55 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -65,7 +65,8 @@ static int present (Hash *t, TObject *key)
   if (ttype(rf) != LUA_T_NIL && !luaO_equalObj(key, rf)) {
     int h2 = h%(tsize-2) + 1;
     do {
-      h1 = (h1+h2)%tsize;
+      h1 += h2;
+      if (h1 >= tsize) h1 -= tsize;
       rf = ref(node(t, h1));
     } while (ttype(rf) != LUA_T_NIL && !luaO_equalObj(key, rf));
   }
