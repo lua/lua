@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 1.5 1994/03/28 15:14:54 celes Exp celes $";
+char *rcs_luastx = "$Id: lua.stx,v 1.6 1994/04/13 21:37:20 celes Exp celes $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -96,7 +96,7 @@ static void flush_record (int n)
   code_byte(STORERECORD);
   code_byte(n);
   for (i=0; i<n; i++)
-    code_word(lua_findconstant(s_name(fields[--nfields])));
+    code_word(fields[--nfields]);
   ntemp -= n;
 }
 
@@ -179,6 +179,7 @@ static void code_number (float f)
  int   vInt;
  long  vLong;
  float vFloat;
+ char *pChar;
  Word  vWord;
  Byte *pByte;
 }
@@ -191,7 +192,8 @@ static void code_number (float f)
 %token RETURN
 %token LOCAL
 %token <vFloat> NUMBER
-%token <vWord>  FUNCTION NAME STRING
+%token <vWord>  FUNCTION STRING
+%token <pChar>   NAME 
 %token <vInt>   DEBUG
 
 %type <pByte> PrepJump
@@ -225,13 +227,19 @@ functionlist : /* empty */
 	     | functionlist setdebug
 	     ;
 	     
-function     : FUNCTION NAME {pc=basepc=code; nlocalvar=0;} '(' parlist ')' 
+function     : FUNCTION NAME 
+	       {
+		$<vWord>$ = lua_findsymbol($2); 
+		pc=basepc=code; 
+		nlocalvar=0;
+	       }
+	       '(' parlist ')' 
 	       {
 	        if (lua_debug)
 		{
 	         code_byte(SETFUNCTION); 
                  code_word(lua_nfile-1);
-		 code_word($2);
+		 code_word($<vWord>3);
 		}
 	        lua_codeadjust (0);
 	       }
@@ -240,9 +248,9 @@ function     : FUNCTION NAME {pc=basepc=code; nlocalvar=0;} '(' parlist ')'
 	       { 
                 if (lua_debug) code_byte(RESET); 
 	        code_byte(RETCODE); code_byte(nlocalvar);
-	        s_tag($2) = T_FUNCTION;
-	        s_bvalue($2) = calloc (pc-code, sizeof(Byte));
-	        memcpy (s_bvalue($2), code, (pc-code)*sizeof(Byte));
+	        s_tag($<vWord>3) = T_FUNCTION;
+	        s_bvalue($<vWord>3) = calloc (pc-code, sizeof(Byte));
+	        memcpy (s_bvalue($<vWord>3), code, (pc-code)*sizeof(Byte));
 #if LISTING
 PrintCode(code,pc,(Byte*)buffer);
 #endif
@@ -479,20 +487,32 @@ parlist  :	/* empty */
 	  |	parlist1
 	  ;
 		
-parlist1 :	NAME		  {localvar[nlocalvar]=$1; add_nlocalvar(1);}
-	  |	parlist1 ',' NAME {localvar[nlocalvar]=$3; add_nlocalvar(1);}
+parlist1 :	NAME		  
+		{
+		 localvar[nlocalvar]=lua_findsymbol($1); 
+		 add_nlocalvar(1);
+		}
+	  |	parlist1 ',' NAME 
+		{
+		 localvar[nlocalvar]=lua_findsymbol($3); 
+		 add_nlocalvar(1);
+		}
 	  ;
 		
 objectname :	/* empty */ 	{$$=-1;}
-	   |	NAME		{$$=$1;}
+	   |	NAME		{$$=lua_findsymbol($1);}
 	   ;
 	   
-fieldlist  : '{' ffieldlist '}'  { flush_record($2%FIELDS_PER_FLUSH); $$ = $2; }
+fieldlist  : '{' ffieldlist '}'  
+	      { 
+	       flush_record($2%FIELDS_PER_FLUSH); 
+	       $$ = $2;
+	      }
            | '[' lfieldlist ']'  
-		{ 
-		  flush_list($2/FIELDS_PER_FLUSH, $2%FIELDS_PER_FLUSH);
-		  $$ = $2;
-		}
+	      { 
+	       flush_list($2/FIELDS_PER_FLUSH, $2%FIELDS_PER_FLUSH);
+	       $$ = $2;
+     	      }
 	   ;
 
 ffieldlist : /* empty */   { $$ = 0; }
@@ -507,7 +527,10 @@ ffieldlist1 : ffield			{$$=1;}
 		}
 	   ; 
 
-ffield      : NAME '=' expr1 { push_field($1); }
+ffield      : NAME {$<vWord>$ = lua_findconstant($1);} '=' expr1 
+	      { 
+	       push_field($<vWord>2);
+	      }
            ;
 
 lfieldlist : /* empty */   { $$ = 0; }
@@ -537,10 +560,11 @@ varlist1  :	var
 	  ;
 		
 var	  :	NAME
-	  { 
-	   int local = lua_localname ($1);
+	  {
+	   Word s = lua_findsymbol($1);
+	   int local = lua_localname (s);
 	   if (local == -1)	/* global var */
-	    $$ = $1 + 1;		/* return positive value */
+	    $$ = s + 1;		/* return positive value */
            else
 	    $$ = -(local+1);		/* return negative value */
 	  }
@@ -552,13 +576,17 @@ var	  :	NAME
 	  |	var {lua_pushvar ($1);} '.' NAME
 	  {
 	   code_byte(PUSHSTRING);
-	   code_word(lua_findconstant (s_name($4))); incr_ntemp();
+	   code_word(lua_findconstant($4)); incr_ntemp();
 	   $$ = 0;		/* indexed variable */
 	  }
 	  ;
 		
-localdeclist	  : NAME {localvar[nlocalvar]=$1; $$ = 1;}
-     	  | localdeclist ',' NAME {localvar[nlocalvar+$1]=$3; $$ = $1+1;}
+localdeclist  : NAME {localvar[nlocalvar]=lua_findsymbol($1); $$ = 1;}
+     	  | localdeclist ',' NAME 
+	    {
+	     localvar[nlocalvar+$1]=lua_findsymbol($3); 
+	     $$ = $1+1;
+	    }
 	  ;
 		
 decinit	  : /* empty */
