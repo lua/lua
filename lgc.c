@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.107 2001/06/21 16:41:34 roberto Exp roberto $
+** $Id: lgc.c,v 1.108 2001/06/26 13:20:45 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -40,8 +40,8 @@ static void protomark (Proto *f) {
       if (ttype(f->k+i) == LUA_TSTRING)
         strmark(tsvalue(f->k+i));
     }
-    for (i=0; i<f->sizekproto; i++)
-      protomark(f->kproto[i]);
+    for (i=0; i<f->sizep; i++)
+      protomark(f->p[i]);
     for (i=0; i<f->sizelocvars; i++)  /* mark local-variable names */
       strmark(f->locvars[i].varname);
   }

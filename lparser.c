@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.149 2001/06/12 14:36:48 roberto Exp roberto $
+** $Id: lparser.c,v 1.150 2001/06/20 21:07:57 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -296,13 +296,13 @@ static void pushclosure (LexState *ls, FuncState *func, expdesc *v) {
   int reg = fs->freereg;
   for (i=0; i<func->f->nupvalues; i++)
     luaK_exp2nextreg(fs, &func->upvalues[i]);
-  luaM_growvector(ls->L, f->kproto, fs->nkproto, f->sizekproto, Proto *,
+  luaM_growvector(ls->L, f->p, fs->np, f->sizep, Proto *,
                   MAXARG_Bc, l_s("constant table overflow"));
-  f->kproto[fs->nkproto++] = func->f;
+  f->p[fs->np++] = func->f;
   fs->freereg = reg;  /* CLOSURE will consume those values */
   init_exp(v, VNONRELOC, reg);
   luaK_reserveregs(fs, 1);
-  luaK_codeABc(fs, OP_CLOSURE, v->u.i.info, fs->nkproto-1);
+  luaK_codeABc(fs, OP_CLOSURE, v->u.i.info, fs->np-1);
 }
 
 
@@ -318,7 +318,7 @@ static void open_func (LexState *ls, FuncState *fs) {
   fs->jlt = NO_JUMP;
   fs->freereg = 0;
   fs->nk = 0;
-  fs->nkproto = 0;
+  fs->np = 0;
   fs->nlineinfo = 0;
   fs->nlocvars = 0;
   fs->nactloc = 0;
@@ -343,8 +343,8 @@ static void close_func (LexState *ls) {
   f->sizecode = fs->pc;
   luaM_reallocvector(L, f->k, f->sizek, fs->nk, TObject);
   f->sizek = fs->nk;
-  luaM_reallocvector(L, f->kproto, f->sizekproto, fs->nkproto, Proto *);
-  f->sizekproto = fs->nkproto;
+  luaM_reallocvector(L, f->p, f->sizep, fs->np, Proto *);
+  f->sizep = fs->np;
   luaM_reallocvector(L, f->locvars, f->sizelocvars, fs->nlocvars, LocVar);
   f->sizelocvars = fs->nlocvars;
   luaM_reallocvector(L, f->lineinfo, f->sizelineinfo, fs->nlineinfo+1, int);

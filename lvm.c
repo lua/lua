@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.188 2001/06/26 13:20:45 roberto Exp roberto $
+** $Id: lvm.c,v 1.189 2001/06/28 14:48:44 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -644,7 +644,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
       }
       case OP_CLOSURE: {
-        Proto *p = tf->kproto[GETARG_Bc(i)];
+        Proto *p = tf->p[GETARG_Bc(i)];
         int nup = p->nupvalues;
         luaV_checkGC(L, ra+nup);
         L->top = ra+nup;

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.83 2001/06/15 20:36:57 roberto Exp roberto $
+** $Id: ldebug.c,v 1.84 2001/06/26 13:20:45 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -450,8 +450,8 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         break;
       }
       case OP_CLOSURE: {
-        check(b < pt->sizekproto);
-        checkreg(pt, a + pt->kproto[b]->nupvalues - 1);
+        check(b < pt->sizep);
+        checkreg(pt, a + pt->p[b]->nupvalues - 1);
         break;
       }
       default: break;

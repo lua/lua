@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.107 2001/06/26 13:20:45 roberto Exp roberto $
+** $Id: lobject.h,v 1.108 2001/06/28 14:48:44 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -124,8 +124,8 @@ typedef union Udata {
 typedef struct Proto {
   TObject *k;  /* constants used by the function */
   int sizek;  /* size of `k' */
-  struct Proto **kproto;  /* functions defined inside the function */
-  int sizekproto;  /* size of `kproto' */
+  struct Proto **p;  /* functions defined inside the function */
+  int sizep;  /* size of `p' */
   Instruction *code;
   int sizecode;
   short nupvalues;
