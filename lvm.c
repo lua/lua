@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.3 1997/09/19 21:17:52 roberto Exp roberto $
+** $Id: lvm.c,v 1.4 1997/09/22 20:53:20 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -22,9 +22,9 @@
 #include "lvm.h"
 
 
-#define get_prevword(pc)  (*(pc-2)+(*(pc-1)<<8))
-#define get_word(pc)  (pc+=2, get_prevword(pc))
-#define skip_word(pc) {pc+=2;}
+#define skip_word(pc)	(pc+=2)
+#define get_word(pc)	(*(pc)+(*((pc)+1)<<8))
+#define next_word(pc)   (pc+=2, get_word(pc-2))
 
 
 /* Extra stack to run a function: LUA_T_LINE(1), TM calls(2), ... */
@@ -300,7 +300,7 @@ StkId luaV_execute (Closure *cl, StkId base)
         aux = *pc++; goto pushnumber;
 
       case PUSHWORD:
-        aux = get_word(pc); goto pushnumber;
+        aux = next_word(pc); goto pushnumber;
 
       case PUSH0: case PUSH1: case PUSH2:
         aux -= PUSH0;
@@ -323,10 +323,16 @@ StkId luaV_execute (Closure *cl, StkId base)
         break;
 
       case GETGLOBAL:
-        aux = get_word(pc); goto getglobal;
+        aux = next_word(pc); goto getglobal;
 
       case GETGLOBALB:
-        aux = *pc++;
+        aux = *pc++; goto getglobal;
+
+      case GETGLOBAL0: case GETGLOBAL1: case GETGLOBAL2:
+      case GETGLOBAL3: case GETGLOBAL4: case GETGLOBAL5:
+      case GETGLOBAL6: case GETGLOBAL7: case GETGLOBAL8:
+      case GETGLOBAL9:
+        aux -= GETGLOBAL0;
       getglobal:
         luaV_getglobal(luaG_findsymbol(tsvalue(&consts[aux])));
         break;
@@ -336,7 +342,7 @@ StkId luaV_execute (Closure *cl, StkId base)
        break;
 
       case PUSHSELF:
-        aux = get_word(pc); goto pushself;
+        aux = next_word(pc); goto pushself;
 
       case PUSHSELFB:
         aux = *pc++;
@@ -349,10 +355,16 @@ StkId luaV_execute (Closure *cl, StkId base)
       }
 
       case PUSHCONSTANT:
-        aux = get_word(pc); goto pushconstant;
+        aux = next_word(pc); goto pushconstant;
 
       case PUSHCONSTANTB:
-        aux = *pc++;
+        aux = *pc++; goto pushconstant;
+
+      case PUSHCONSTANT0: case PUSHCONSTANT1: case PUSHCONSTANT2:
+      case PUSHCONSTANT3: case PUSHCONSTANT4: case PUSHCONSTANT5:
+      case PUSHCONSTANT6: case PUSHCONSTANT7: case PUSHCONSTANT8:
+      case PUSHCONSTANT9:
+        aux -= PUSHCONSTANT0;
       pushconstant:
         *luaD_stack.top++ = consts[aux];
         break;
@@ -360,8 +372,8 @@ StkId luaV_execute (Closure *cl, StkId base)
       case PUSHUPVALUE:
         aux = *pc++; goto pushupvalue;
 
-      case PUSHUPVALUE0:
-        aux = 0;
+      case PUSHUPVALUE0: case PUSHUPVALUE1:
+        aux -= PUSHUPVALUE0;
       pushupvalue:
         *luaD_stack.top++ = cl->consts[aux+1];
         break;
@@ -379,7 +391,7 @@ StkId luaV_execute (Closure *cl, StkId base)
         break;
 
       case SETGLOBAL:
-        aux = get_word(pc); goto setglobal;
+        aux = next_word(pc); goto setglobal;
 
       case SETGLOBALB:
         aux = *pc++;
@@ -442,7 +454,7 @@ StkId luaV_execute (Closure *cl, StkId base)
 
       case CREATEARRAY:
         luaC_checkGC();
-        avalue(luaD_stack.top) = luaH_new(get_word(pc));
+        avalue(luaD_stack.top) = luaH_new(next_word(pc));
         ttype(luaD_stack.top) = LUA_T_ARRAY;
         luaD_stack.top++;
         break;
@@ -554,45 +566,58 @@ StkId luaV_execute (Closure *cl, StkId base)
         break;
 
       case ONTJMP:
-        skip_word(pc);
         if (ttype(luaD_stack.top-1) != LUA_T_NIL)
-          pc += get_prevword(pc);
-        else
+          pc += *pc;
+        else {
+          pc++;
           luaD_stack.top--;
+        }
         break;
 
       case ONFJMP:
-        skip_word(pc);
         if (ttype(luaD_stack.top-1) == LUA_T_NIL)
-          pc += get_prevword(pc);
-        else
+          pc += *pc;
+        else {
+          pc++;
           luaD_stack.top--;
+        }
         break;
 
       case JMP:
-        skip_word(pc);
-        pc += get_prevword(pc);
+        pc += get_word(pc);
+        break;
+
+      case UPJMPB:
+        pc -= *pc;
         break;
 
       case UPJMP:
-        skip_word(pc);
-        pc -= get_prevword(pc);
+        pc -= get_word(pc);
         break;
 
       case IFFJMP:
-        skip_word(pc);
         if (ttype(--luaD_stack.top) == LUA_T_NIL)
-          pc += get_prevword(pc);
+          pc += get_word(pc);
+        else
+          skip_word(pc);
+        break;
+
+      case IFFUPJMPB:
+        if (ttype(--luaD_stack.top) == LUA_T_NIL)
+          pc -= *pc;
+        else
+          pc++;
         break;
 
       case IFFUPJMP:
-        skip_word(pc);
         if (ttype(--luaD_stack.top) == LUA_T_NIL)
-          pc -= get_prevword(pc);
+          pc -= get_word(pc);
+        else
+          skip_word(pc);
         break;
 
       case CLOSURE:
-        aux = get_word(pc); goto closure;
+        aux = next_word(pc); goto closure;
 
       case CLOSUREB:
         aux = *pc++;
@@ -617,7 +642,7 @@ StkId luaV_execute (Closure *cl, StkId base)
         return (base + ((aux==RETCODE) ? *pc : 0));
 
       case SETLINE: {
-        int line = get_word(pc);
+        int line = next_word(pc);
         if ((luaD_stack.stack+base-1)->ttype != LUA_T_LINE) {
           /* open space for LINE value */
           luaD_openstack((luaD_stack.top-luaD_stack.stack)-base);

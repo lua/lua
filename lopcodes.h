@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.3 1997/09/19 21:17:52 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.4 1997/09/22 20:53:20 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -29,10 +29,21 @@ PUSH2,/*		-		2.0  */
 PUSHBYTE,/*	b	-		(float)b  */
 PUSHWORD,/*	w	-		(float)w  */
 
+PUSHCONSTANT0,/*	-		CNST[0] */
+PUSHCONSTANT1,/*	-		CNST[1] */
+PUSHCONSTANT2,/*	-		CNST[2] */
+PUSHCONSTANT3,/*	-		CNST[3] */
+PUSHCONSTANT4,/*	-		CNST[4] */
+PUSHCONSTANT5,/*	-		CNST[5] */
+PUSHCONSTANT6,/*	-		CNST[6] */
+PUSHCONSTANT7,/*	-		CNST[7] */
+PUSHCONSTANT8,/*	-		CNST[8] */
+PUSHCONSTANT9,/*	-		CNST[9] */
 PUSHCONSTANTB,/*b	-		CNST[b] */
 PUSHCONSTANT,/* w	-		CNST[w] */
 
 PUSHUPVALUE0,
+PUSHUPVALUE1,
 PUSHUPVALUE,/*	b	-		Closure[b] */
 
 PUSHLOCAL0,/*		-		LOC[0]  */
@@ -47,6 +58,16 @@ PUSHLOCAL8,/*		-		LOC[8]  */
 PUSHLOCAL9,/*		-		LOC[9]  */
 PUSHLOCAL,/*	b	-		LOC[b]  */
 
+GETGLOBAL0,/*		-		VAR[CNST[0]]  */
+GETGLOBAL1,/*		-		VAR[CNST[1]]  */
+GETGLOBAL2,/*		-		VAR[CNST[2]]  */
+GETGLOBAL3,/*		-		VAR[CNST[3]]  */
+GETGLOBAL4,/*		-		VAR[CNST[4]]  */
+GETGLOBAL5,/*		-		VAR[CNST[5]]  */
+GETGLOBAL6,/*		-		VAR[CNST[6]]  */
+GETGLOBAL7,/*		-		VAR[CNST[7]]  */
+GETGLOBAL8,/*		-		VAR[CNST[8]]  */
+GETGLOBAL9,/*		-		VAR[CNST[9]]  */
 GETGLOBALB,/*	b 	-		VAR[CNST[b]]  */
 GETGLOBAL,/*	w	-		VAR[CNST[w]]  */
 
@@ -94,11 +115,14 @@ CONCOP,/*		y x		x..y  */
 MINUSOP,/*		x		-x  */
 NOTOP,/*		x		(x==nil)? 1 : nil  */
 
-ONTJMP,/*	w	x		(x!=nil)? x : -	(x!=nil)? PC+=w  */
-ONFJMP,/*	w	x		(x==nil)? x : -	(x==nil)? PC+=w  */
+/* NOTICE: all jumps are relative to the position following the opcode */
+ONTJMP,/*	b	x		(x!=nil)? x : -	(x!=nil)? PC+=b  */
+ONFJMP,/*	b	x		(x==nil)? x : -	(x==nil)? PC+=b  */
 JMP,/*		w	-		-		PC+=w  */
+UPJMPB,/*	b	-		-		PC-=b  */
 UPJMP,/*	w	-		-		PC-=w  */
 IFFJMP,/*	w	x		-		(x==nil)? PC+=w  */
+IFFUPJMPB,/*	b	x		-		(x==nil)? PC-=b  */
 IFFUPJMP,/*	w	x		-		(x==nil)? PC-=w  */
 
 CLOSUREB,/*	b	v_1...v_n	c(CNST[b]) */
