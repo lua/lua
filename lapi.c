@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.13 1997/12/11 14:48:46 roberto Exp roberto $
+** $Id: lapi.c,v 1.14 1997/12/15 16:17:20 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -121,6 +121,15 @@ lua_Object lua_lua2C (int number)
   /* Ref(L->stack.stack+(L->Cstack.lua2C+number-1)) ==
      L->stack.stack+(L->Cstack.lua2C+number-1)-L->stack.stack+1 == */
   return L->Cstack.lua2C+number;
+}
+
+
+lua_Object lua_upvalue (int n)
+{
+  TObject *f = L->stack.stack+L->Cstack.lua2C-1;
+  if (ttype(f) != LUA_T_CLMARK || n <= 0 || n > clvalue(f)->nelems)
+    return LUA_NOOBJECT;
+  return put_luaObject(&clvalue(f)->consts[n]);
 }
 
 

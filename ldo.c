@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.15 1997/12/15 16:17:20 roberto Exp roberto $
+** $Id: ldo.c,v 1.16 1997/12/17 20:57:20 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -140,22 +140,12 @@ void luaD_callHook (StkId base, TProtoFunc *tf, int isreturn)
 ** Cstack.num is the number of arguments; Cstack.lua2C points to the
 ** first argument. Returns an index to the first result from C.
 */
-static StkId callC (struct Closure *cl, lua_CFunction f, StkId base)
+static StkId callC (lua_CFunction f, StkId base)
 {
   struct C_Lua_Stack *CS = &L->Cstack;
   struct C_Lua_Stack oldCLS = *CS;
   StkId firstResult;
   int numarg = (L->stack.top-L->stack.stack) - base;
-  if (cl) {  /* are there upvalues? */
-    int i;
-    luaD_checkstack(cl->nelems);
-    for (i=1; i<=numarg; i++)  /* open space */
-      *(L->stack.top+cl->nelems-i) = *(L->stack.top-i);
-    /* copy upvalues to stack */
-    memcpy(L->stack.top-numarg, cl->consts+1, cl->nelems*sizeof(TObject));
-    L->stack.top += cl->nelems;
-    numarg += cl->nelems;
-  }
   CS->num = numarg;
   CS->lua2C = base;
   CS->base = base+numarg;  /* == top-stack */
@@ -192,7 +182,7 @@ void luaD_call (StkId base, int nResults)
   switch (ttype(func)) {
     case LUA_T_CPROTO:
       ttype(func) = LUA_T_CMARK;
-      firstResult = callC(NULL, fvalue(func), base);
+      firstResult = callC(fvalue(func), base);
       break;
     case LUA_T_PROTO:
       ttype(func) = LUA_T_PMARK;
@@ -203,7 +193,7 @@ void luaD_call (StkId base, int nResults)
       TObject *proto = &(c->consts[0]);
       ttype(func) = LUA_T_CLMARK;
       firstResult = (ttype(proto) == LUA_T_CPROTO) ?
-                       callC(c, fvalue(proto), base) :
+                       callC(fvalue(proto), base) :
                        luaV_execute(c, tfvalue(proto), base);
       break;
     }
