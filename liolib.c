@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.30 2003/01/17 15:27:28 roberto Exp roberto $
+** $Id: liolib.c,v 2.31 2003/02/11 15:24:52 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -40,7 +40,7 @@
 #endif
 
 
-#define FILEHANDLE		"FileHandle"
+#define FILEHANDLE		"FILE*"
 
 #define IO_INPUT		"_input"
 #define IO_OUTPUT		"_output"
