@@ -53,7 +53,12 @@
            (node(t, lmod(cast(lu_hash, cast(ls_hash, n)), sizenode(t))))
 #define hashstr(t,str)	 (node(t, lmod((str)->tsv.hash, sizenode(t))))
 #define hashboolean(t,p) (node(t, p))  /* `p' in [0,1] < minimum table size */
-#define hashpointer(t,p) (node(t, lmod(IntPoint(p), sizenode(t))))
+
+/*
+** for pointers, avoid modulus by power of 2, as they tend to have many
+** 2 factors.
+*/
+#define hashpointer(t,p) (node(t, (IntPoint(p) % (sizenode(t)-1))))
 
 
 /*
@@ -93,7 +98,7 @@ static int arrayindex (const TObject *key) {
 ** elements in the array part, then elements in the hash part. The
 ** beginning and end of a traversal are signalled by -1.
 */
-int luaH_index (lua_State *L, Table *t, const TObject *key) {
+static int luaH_index (lua_State *L, Table *t, const TObject *key) {
   int i;
   if (ttype(key) == LUA_TNIL) return -1;  /* first iteration */
   i = arrayindex(key);
@@ -111,22 +116,23 @@ int luaH_index (lua_State *L, Table *t, const TObject *key) {
 }
 
 
-int luaH_nexti (Table *t, int i, TObject *where) {
+int luaH_next (lua_State *L, Table *t, TObject *key) {
+  int i = luaH_index(L, t, key);  /* find original element */
   for (i++; i < t->sizearray; i++) {  /* try first array part */
     if (ttype(&t->array[i]) != LUA_TNIL) {  /* a non-nil value? */
-      setnvalue(where, i+1);
-      setobj(where+1, &t->array[i]);
-      return i;
+      setnvalue(key, i+1);
+      setobj(key+1, &t->array[i]);
+      return 1;
     }
   }
   for (i -= t->sizearray; i < sizenode(t); i++) {  /* then hash part */
     if (ttype(val(node(t, i))) != LUA_TNIL) {  /* a non-nil value? */
-      setobj(where, key(node(t, i)));
-      setobj(where+1, val(node(t, i)));
-      return i + t->sizearray;
+      setobj(key, key(node(t, i)));
+      setobj(key+1, val(node(t, i)));
+      return 1;
     }
   }
-  return -1;  /* no more elements */
+  return 0;  /* no more elements */
 }
 
 
