@@ -1,11 +1,10 @@
 /*
-** $Id: lvm.c,v 1.291 2003/12/09 16:56:11 roberto Exp roberto $
+** $Id: lvm.c,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
 
 
-#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 
