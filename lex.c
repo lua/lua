@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 3.7 1997/07/29 13:33:15 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 3.8 1997/07/30 22:00:50 roberto Exp roberto $";
 
 
 #include <ctype.h>
@@ -432,7 +432,7 @@ int luaY_lex (void)
 	      ea*=ea;
 	    }
           }
-          luaY_lval.vFloat = a;
+          luaY_lval.vReal = a;
           save(0);
           return NUMBER;
         }
