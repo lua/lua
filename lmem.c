@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.64 2004/04/30 20:13:38 roberto Exp roberto $
+** $Id: lmem.c,v 1.65 2004/08/30 13:44:44 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -43,10 +43,12 @@
 #define MINSIZEARRAY	4
 
 
-void *luaM_growaux (lua_State *L, void *block, int *size, int size_elems,
+void *luaM_growaux (lua_State *L, void *block, int *size, size_t size_elems,
                     int limit, const char *errormsg) {
   void *newblock;
   int newsize;
+  if (cast(size_t, limit) > MAX_SIZET/size_elems)
+    limit = cast(int, MAX_SIZET/size_elems);
   if (*size >= limit/2) {  /* cannot double it? */
     if (*size >= limit - MINSIZEARRAY)  /* try something smaller... */
       luaG_runerror(L, errormsg);
@@ -57,22 +59,25 @@ void *luaM_growaux (lua_State *L, void *block, int *size, int size_elems,
     if (newsize < MINSIZEARRAY)
       newsize = MINSIZEARRAY;  /* minimum size */
   }
-  newblock = luaM_realloc(L, block,
-                          cast(lu_mem, *size)*cast(lu_mem, size_elems),
-                          cast(lu_mem, newsize)*cast(lu_mem, size_elems));
+  newblock = luaM_reallocv(L, block, *size, newsize, size_elems);
   *size = newsize;  /* update only when everything else is OK */
   return newblock;
 }
 
 
+void *luaM_toobig (lua_State *L) {
+  luaG_runerror(L, "memory allocation error: block too big");
+  return NULL;  /* to avoid warnings */
+}
+
+
+
 /*
 ** generic allocation routine.
 */
-void *luaM_realloc (lua_State *L, void *block, lu_mem osize, lu_mem nsize) {
+void *luaM_realloc (lua_State *L, void *block, size_t osize, size_t nsize) {
   global_State *g = G(L);
   lua_assert((osize == 0) == (block == NULL));
-  if (nsize >= MAX_SIZET)
-    luaG_runerror(L, "memory allocation error: block too big");
   block = (*g->realloc)(g->ud, block, osize, nsize);
   if (block == NULL && nsize > 0)
     luaD_throw(L, LUA_ERRMEM);

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.14 2004/09/15 20:39:42 roberto Exp roberto $
+** $Id: lstate.c,v 2.15 2004/10/06 18:34:16 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -79,7 +79,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   Udata *u;  /* head of udata list */
   global_State *g = G(L);
   UNUSED(ud);
-  u = cast(Udata *, luaM_malloc(L, sizeudata(0)));
+  u = luaM_new(L, Udata);
   u->uv.len = 0;
   u->uv.metatable = NULL;
   g->firstudata = obj2gco(u);

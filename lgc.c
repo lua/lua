@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.13 2004/10/06 18:34:16 roberto Exp roberto $
+** $Id: lgc.c,v 2.14 2004/10/08 16:00:34 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -139,7 +139,7 @@ size_t luaC_separateudata (lua_State *L, int all) {
       p = &curr->gch.next;
     }
     else {  /* must call its gc method */
-      deadmem += sizeudata(gco2u(curr)->len);
+      deadmem += sizeudata(gco2u(curr));
       markfinalized(gco2u(curr));
       *p = curr->gch.next;
       curr->gch.next = NULL;  /* link `curr' at the end of `collected' list */
@@ -388,11 +388,11 @@ static void freeobj (lua_State *L, GCObject *o) {
     }
     case LUA_TSTRING: {
       G(L)->strt.nuse--;
-      luaM_free(L, o, sizestring(gco2ts(o)->len));
+      luaM_free(L, o, sizestring(gco2ts(o)));
       break;
     }
     case LUA_TUSERDATA: {
-      luaM_free(L, o, sizeudata(gco2u(o)->len));
+      luaM_free(L, o, sizeudata(gco2u(o)));
       break;
     }
     default: lua_assert(0);

@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.2 2004/04/30 20:13:38 roberto Exp roberto $
+** $Id: lstring.c,v 2.3 2004/08/24 20:12:06 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -49,8 +49,11 @@ void luaS_resize (lua_State *L, int newsize) {
 
 static TString *newlstr (lua_State *L, const char *str, size_t l,
                                        unsigned int h) {
-  TString *ts = cast(TString *, luaM_malloc(L, sizestring(l)));
+  TString *ts;
   stringtable *tb;
+  if (l+1 > (MAX_SIZET - sizeof(TString))/sizeof(char))
+    luaM_toobig(L);
+  ts = cast(TString *, luaM_malloc(L, (l+1)*sizeof(char)+sizeof(TString)));
   ts->tsv.len = l;
   ts->tsv.hash = h;
   ts->tsv.marked = luaC_white(G(L));
@@ -92,7 +95,9 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
 
 Udata *luaS_newudata (lua_State *L, size_t s) {
   Udata *u;
-  u = cast(Udata *, luaM_malloc(L, sizeudata(s)));
+  if (s > MAX_SIZET - sizeof(Udata))
+    luaM_toobig(L);
+  u = cast(Udata *, luaM_malloc(L, s + sizeof(Udata)));
   u->uv.marked = luaC_white(G(L));  /* is not finalized */
   u->uv.tt = LUA_TUSERDATA;
   u->uv.len = s;
