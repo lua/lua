@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.14 1997/12/15 16:17:20 roberto Exp roberto $
+** $Id: lapi.c,v 1.15 1997/12/18 18:32:39 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -60,7 +60,7 @@ static void set_normalized (TObject *d, TObject *s)
 
 static TObject *luaA_protovalue (TObject *o)
 {
-  return (ttype(o) == LUA_T_CLOSURE) ?  protovalue(o) : o;
+  return (normalized_type(o) == LUA_T_CLOSURE) ?  protovalue(o) : o;
 }
 
 
@@ -509,7 +509,7 @@ void lua_funcinfo (lua_Object func, char **filename, int *linedefined)
     lua_error("API - `funcinfo' called with a non-function value");
   else {
     TObject *f = luaA_protovalue(Address(func));
-    if (ttype(f) == LUA_T_PROTO) {
+    if (normalized_type(f) == LUA_T_PROTO) {
       *filename = tfvalue(f)->fileName->str;
       *linedefined = tfvalue(f)->lineDefined;
     }

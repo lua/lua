@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.10 1997/12/09 13:35:19 roberto Exp roberto $
+** $Id: llex.c,v 1.11 1997/12/17 20:48:58 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -50,8 +50,10 @@ void luaX_init (void)
 static void firstline (LexState *LS)
 {
   int c = zgetc(LS->lex_z);
-  if (c == '#')
+  if (c == '#') {
+    LS->linenumber++;
     while ((c=zgetc(LS->lex_z)) != '\n' && c != EOZ) /* skip first line */;
+  }
   zungetc(LS->lex_z);
 }
 
