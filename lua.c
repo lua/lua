@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.76 2002/02/14 21:47:50 roberto Exp roberto $
+** $Id: lua.c,v 1.77 2002/02/14 22:23:43 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -142,7 +142,7 @@ static int file_input (const char *name) {
   int result = ldo(lua_dofile, name, 1);
   if (result) {
     if (result == LUA_ERRFILE) {
-      fprintf(stderr, "%s%s\n", LUA_PROGNAME, luaL_errstr(result));
+      fprintf(stderr, "%s%s ", LUA_PROGNAME, luaL_errstr(result));
       perror(name);
     }
     return EXIT_FAILURE;
