@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.35 2000/03/29 20:19:20 roberto Exp roberto $
+** $Id: lobject.c,v 1.36 2000/03/31 16:28:45 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -32,7 +32,8 @@ unsigned long luaO_power2 (unsigned long n) {
 }
 
 
-int luaO_equalval (const TObject *t1, const TObject *t2) {
+int luaO_equalObj (const TObject *t1, const TObject *t2) {
+  if (ttype(t1) != ttype(t2)) return 0;
   switch (ttype(t1)) {
     case TAG_NUMBER:
       return nvalue(t1) == nvalue(t2);

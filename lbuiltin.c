@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.105 2000/04/14 17:44:20 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.106 2000/04/17 19:23:12 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -321,7 +321,7 @@ void luaB_call (lua_State *L) {
   /* push arg[1...n] */
   luaD_checkstack(L, narg);
   for (i=0; i<narg; i++)
-    *(L->top++) = *luaH_getint(L, arg, i+1);
+    *(L->top++) = *luaH_getnum(arg, i+1);
   status = lua_callfunction(L, f);
   if (err != LUA_NOOBJECT) {  /* restore old error method */
     lua_pushobject(L, err);
@@ -434,7 +434,7 @@ void luaB_foreachi (lua_State *L) {
   for (i=1; i<=n; i++) {
     *(L->top++) = *f;
     ttype(L->top) = TAG_NUMBER; nvalue(L->top++) = i;
-    *(L->top++) = *luaH_getint(L, t, i);
+    *(L->top++) = *luaH_getnum(t, i);
     luaD_call(L, L->top-3, 1);
     if (ttype(L->top-1) != TAG_NIL)
       return;
@@ -513,7 +513,7 @@ void luaB_tremove (lua_State *L) {
   int n = (int)getnarg(L, a);
   int pos = luaL_opt_int(L, 2, n);
   if (n <= 0) return;  /* table is "empty" */
-  luaA_pushobject(L, luaH_getint(L, a, pos));  /* result = a[pos] */
+  luaA_pushobject(L, luaH_getnum(a, pos));  /* result = a[pos] */
   for ( ;pos<n; pos++)
     luaH_move(L, a, pos+1, pos);  /* a[pos] = a[pos+1] */
   luaV_setn(L, a, n-1);  /* a.n = n-1 */
@@ -529,7 +529,7 @@ void luaB_tremove (lua_State *L) {
 
 static void swap (lua_State *L, Hash *a, int i, int j) {
   TObject temp;
-  temp = *luaH_getint(L, a, i);
+  temp = *luaH_getnum(a, i);
   luaH_move(L, a, j, i);
   luaH_setint(L, a, j, &temp);
 }
@@ -556,26 +556,26 @@ static void auxsort (lua_State *L, Hash *a, int l, int u, lua_Object f) {
   while (l < u) {  /* for tail recursion */
     int i, j;
     /* sort elements a[l], a[(l+u)/2] and a[u] */
-    if (sort_comp(L, f, luaH_getint(L, a, u), luaH_getint(L, a, l)))
+    if (sort_comp(L, f, luaH_getnum(a, u), luaH_getnum(a, l)))
       swap(L, a, l, u);  /* a[u]<a[l] */
     if (u-l == 1) break;  /* only 2 elements */
     i = (l+u)/2;
-    *P = *luaH_getint(L, a, i);  /* P = a[i] */
-    if (sort_comp(L, f, P, luaH_getint(L, a, l)))  /* a[i]<a[l]? */
+    *P = *luaH_getnum(a, i);  /* P = a[i] */
+    if (sort_comp(L, f, P, luaH_getnum(a, l)))  /* a[i]<a[l]? */
       swap(L, a, l, i);
-    else if (sort_comp(L, f, luaH_getint(L, a, u), P))  /* a[u]<a[i]? */
+    else if (sort_comp(L, f, luaH_getnum(a, u), P))  /* a[u]<a[i]? */
       swap(L, a, i, u);
     if (u-l == 2) break;  /* only 3 elements */
-    *P = *luaH_getint(L, a, i);  /* save pivot on stack (GC) */
+    *P = *luaH_getnum(a, i);  /* save pivot on stack (GC) */
     swap(L, a, i, u-1);  /* put median element as pivot (a[u-1]) */
     /* a[l] <= P == a[u-1] <= a[u], only needs to sort from l+1 to u-2 */
     i = l; j = u-1;
     for (;;) {  /* invariant: a[l..i] <= P <= a[j..u] */
       /* repeat i++ until a[i] >= P */
-      while (sort_comp(L, f, luaH_getint(L, a, ++i), P))
+      while (sort_comp(L, f, luaH_getnum(a, ++i), P))
         if (i>u) lua_error(L, "invalid order function for sorting");
       /* repeat j-- until a[j] <= P */
-      while (sort_comp(L, f, P, luaH_getint(L, a, --j)))
+      while (sort_comp(L, f, P, luaH_getnum(a, --j)))
         if (j<l) lua_error(L, "invalid order function for sorting");
       if (j<i) break;
       swap(L, a, i, j);

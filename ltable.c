@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.38 2000/03/29 20:19:20 roberto Exp roberto $
+** $Id: ltable.c,v 1.39 2000/03/31 16:28:45 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -60,11 +60,12 @@ Node *luaH_mainposition (const Hash *t, const TObject *key) {
   }
   LUA_ASSERT(L, h%(unsigned int)t->size == (h&((unsigned int)t->size-1)),
             "a&(x-1) == a%x, for x power of 2");
-  return &t->node[h&((unsigned int)t->size-1)];
+  return &t->node[h&(t->size-1)];
 }
 
 
-const TObject *luaH_get (lua_State *L, const Hash *t, const TObject *key) {
+static const TObject *luaH_getany (lua_State *L, const Hash *t,
+                                   const TObject *key) {
   Node *n = luaH_mainposition(t, key);
   if (!n)
     lua_error(L, "unexpected type to index table");
@@ -74,6 +75,39 @@ const TObject *luaH_get (lua_State *L, const Hash *t, const TObject *key) {
     n = n->next;
   } while (n);
   return &luaO_nilobject;  /* key not found */
+}
+
+
+/* specialized version for numbers */
+const TObject *luaH_getnum (const Hash *t, Number key) {
+  Node *n = &t->node[(unsigned long)(long)key&(t->size-1)];
+  do {
+    if (ttype(&n->key) == TAG_NUMBER && nvalue(&n->key) == key)
+      return &n->val;
+    n = n->next;
+  } while (n);
+  return &luaO_nilobject;  /* key not found */
+}
+
+
+/* specialized version for strings */
+static const TObject *luaH_getstr (const Hash *t, TString *key) {
+  Node *n = &t->node[key->hash&(t->size-1)];
+  do {
+    if (ttype(&n->key) == TAG_STRING && tsvalue(&n->key) == key)
+      return &n->val;
+    n = n->next;
+  } while (n);
+  return &luaO_nilobject;  /* key not found */
+}
+
+
+const TObject *luaH_get (lua_State *L, const Hash *t, const TObject *key) {
+  switch (ttype(key)) {
+    case TAG_NUMBER: return luaH_getnum(t, nvalue(key));
+    case TAG_STRING: return luaH_getstr(t, tsvalue(key));
+    default:         return luaH_getany(L, t, key);
+  }
 }
 
 
@@ -212,13 +246,5 @@ void luaH_setint (lua_State *L, Hash *t, int key, const TObject *val) {
   ttype(&index) = TAG_NUMBER;
   nvalue(&index) = key;
   luaH_set(L, t, &index, val);
-}
-
-
-const TObject *luaH_getint (lua_State *L, const Hash *t, int key) {
-  TObject index;
-  ttype(&index) = TAG_NUMBER;
-  nvalue(&index) = key;
-  return luaH_get(L, t, &index);
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.59 2000/03/31 16:28:45 roberto Exp roberto $
+** $Id: lobject.h,v 1.60 2000/04/10 19:20:24 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -180,8 +180,7 @@ extern const TObject luaO_nilobject;
 
 unsigned long luaO_power2 (unsigned long n);
 
-#define luaO_equalObj(t1,t2)  (ttype(t1) == ttype(t2) && luaO_equalval(t1,t2))
-int luaO_equalval (const TObject *t1, const TObject *t2);
+int luaO_equalObj (const TObject *t1, const TObject *t2);
 int luaO_redimension (lua_State *L, int oldsize);
 int luaO_str2d (const char *s, Number *result);
 
