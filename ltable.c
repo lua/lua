@@ -52,7 +52,7 @@
 #define hashnum(t,n)	\
            (node(t, lmod(cast(lu_hash, cast(ls_hash, n)), sizenode(t))))
 #define hashstr(t,str)	 (node(t, lmod((str)->tsv.hash, sizenode(t))))
-#define hashboolean(t,p) (node(t, lmod(p, sizenode(t))))
+#define hashboolean(t,p) (node(t, p))  /* `p' in [0,1] < minimum table size */
 #define hashpointer(t,p) (node(t, lmod(IntPoint(p), sizenode(t))))
 
 
@@ -192,7 +192,7 @@ static void numuse (const Table *t, int *narray, int *nhash) {
 
 
 /*
-** (log of) minimum size for hash part of a table
+** (log2 of) minimum size for hash part of a table
 */
 #define MINHASHSIZE	1
 
