@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.10 2004/05/31 19:41:52 roberto Exp roberto $
+** $Id: lapi.c,v 2.11 2004/06/04 15:30:53 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -697,10 +697,15 @@ LUA_API int lua_setfenv (lua_State *L, int idx) {
     { if (nres == LUA_MULTRET && L->top >= L->ci->top) L->ci->top = L->top; }
 
 
+#define checkresults(L,na,nr) \
+     api_check(L, (nr) == LUA_MULTRET || (L->ci->top - L->top >= (nr) - (na)))
+	
+
 LUA_API void lua_call (lua_State *L, int nargs, int nresults) {
   StkId func;
   lua_lock(L);
   api_checknelems(L, nargs+1);
+  checkresults(L, nargs, nresults);
   func = L->top - (nargs+1);
   luaD_call(L, func, nresults);
   adjustresults(L, nresults);
@@ -730,6 +735,8 @@ LUA_API int lua_pcall (lua_State *L, int nargs, int nresults, int errfunc) {
   int status;
   ptrdiff_t func;
   lua_lock(L);
+  api_checknelems(L, nargs+1);
+  checkresults(L, nargs, nresults);
   if (errfunc == 0)
     func = 0;
   else {
