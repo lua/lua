@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.74 2001/12/10 22:09:51 lhf Exp $
+** $Id: lua.c,v 1.76 2002/02/14 21:47:50 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -12,6 +12,7 @@
 
 #include "lua.h"
 
+#include "lauxlib.h"
 #include "luadebug.h"
 #include "lualib.h"
 
@@ -68,10 +69,8 @@ static void laction (int i) {
 
 /* Lua gives no message in such cases, so we provide one */
 static void report (int result) {
-  if (result == LUA_ERRMEM)
-    fprintf(stderr, LUA_PROGNAME "memory allocation error\n");
-  else if (result == LUA_ERRERR)
-    fprintf(stderr, LUA_PROGNAME "error in error message\n");
+  if (result == LUA_ERRMEM || result == LUA_ERRERR)
+    fprintf(stderr, "%s%s\n", LUA_PROGNAME, luaL_errstr(result));
 }
 
 
@@ -143,7 +142,7 @@ static int file_input (const char *name) {
   int result = ldo(lua_dofile, name, 1);
   if (result) {
     if (result == LUA_ERRFILE) {
-      fprintf(stderr, LUA_PROGNAME "cannot execute file ");
+      fprintf(stderr, "%s%s\n", LUA_PROGNAME, luaL_errstr(result));
       perror(name);
     }
     return EXIT_FAILURE;
