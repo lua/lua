@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.33 2000/08/14 17:46:07 roberto Exp roberto $
+** $Id: lstate.c,v 1.34 2000/08/28 17:57:04 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -49,7 +49,8 @@ lua_State *lua_newstate (int stacksize, int put_builtin) {
   L->errorJmp = &myErrorJmp;
   if (setjmp(myErrorJmp.b) == 0) {  /* to catch memory allocation errors */
     L->gt = luaH_new(L, 10);
-    luaD_init(L, (stacksize == 0) ? DEFAULT_STACK_SIZE : stacksize);
+    luaD_init(L, (stacksize == 0) ? DEFAULT_STACK_SIZE :
+                                    stacksize+LUA_MINSTACK);
     luaS_init(L);
     luaX_init(L);
     luaT_init(L);
