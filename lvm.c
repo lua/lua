@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.102 2000/04/13 16:51:01 roberto Exp roberto $
+** $Id: lvm.c,v 1.103 2000/04/14 17:45:25 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -334,10 +334,10 @@ static void adjust_varargs (lua_State *L, StkId base, int nfixargs) {
 ** Executes the given Lua function. Parameters are between [base,top).
 ** Returns n such that the the results are between [n,top).
 */
-StkId luaV_execute (lua_State *L, const Closure *cl, register StkId base) {
+StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
   const Proto *tf = cl->f.l;
-  register StkId top;  /* keep top local, for performance */
-  register const Instruction *pc = tf->code;
+  StkId top;  /* keep top local, for performance */
+  const Instruction *pc = tf->code;
   TString **kstr = tf->kstr;
   luaD_checkstack(L, tf->maxstacksize+EXTRA_STACK);
   if (tf->is_vararg) {  /* varargs? */
@@ -348,7 +348,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, register StkId base) {
     luaD_adjusttop(L, base, tf->numparams);
   top = L->top;
   for (;;) {
-    register Instruction i = *pc++;
+    Instruction i = *pc++;
     switch (GET_OPCODE(i)) {
 
       case OP_END:
