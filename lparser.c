@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.32 1999/05/06 14:41:41 roberto Exp roberto $
+** $Id: lparser.c,v 1.33 1999/05/10 13:54:01 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -530,7 +530,8 @@ static void func_onstack (LexState *ls, FuncState *func) {
   else {
     for (i=0; i<func->nupvalues; i++)
       lua_pushvar(ls, &func->upvalues[i]);
-    code_oparg(ls, CLOSURE, c, -func->nupvalues+1);
+    deltastack(ls, 1);  /* CLOSURE puts one extra element (before poping) */
+    code_oparg(ls, CLOSURE, c, -func->nupvalues);
     code_byte(fs, (Byte)func->nupvalues);
   }
 }
