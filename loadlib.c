@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.13 2004/12/22 17:43:27 roberto Exp roberto $
+** $Id: loadlib.c,v 1.14 2004/12/27 15:58:15 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 *
@@ -325,7 +325,7 @@ static const char *loadC (lua_State *L, const char *fname, const char *name) {
   funcname = luaL_gsub(L, name, ".", LUA_OFSEP);
   funcname = lua_pushfstring(L, "%s%s", POF, funcname);
   if (ll_loadfunc(L, fname, funcname) != 1)
-    luaL_error(L, "error loading package `%s' (%s)", name, lua_tostring(L, -1));
+    luaL_error(L, "error loading package `%s' (%s)", name, lua_tostring(L, -2));
   return NULL;  /* library loaded successfully */
 }
 
