@@ -276,49 +276,6 @@ static void errorfb (void)
 }
 
 
-/* --------------------------------------------
-* functions to manipulate userdata
-*/
-static void getbyte (void)
-{
-  lua_Object ud = lua_getparam(1);
-  int i = luaL_opt_number(2, -1);
-  luaL_arg_check(lua_isuserdata(ud), 1, "userdata expected");
-  if (i == -1)
-    lua_pushnumber(lua_getbindatasize(ud));
-  else {
-    i--;
-    if (0 <= i && i < lua_getbindatasize(ud))
-      lua_pushnumber(*(((char *)lua_getbindata(ud))+i));
-    else
-      lua_pushnil();
-  }
-}
-
-static void newuserdata (void)
-{
-  lua_Object t = lua_getparam(1);
-  int tag = luaL_opt_number(2, 0);
-  int i;
-  luaI_emptybuff();
-  luaL_arg_check(lua_istable(t), 1, "table expected");
-  for (i=0; ; i++) {
-    lua_Object o;
-    lua_beginblock();
-    lua_pushobject(t);
-    lua_pushnumber(i+1);
-    o = lua_rawgettable();
-    if (lua_isnil(o)) {
-      lua_endblock();
-      break;
-    }
-    luaL_arg_check(lua_isnumber(o), 1, "table values must be numbers");
-    luaI_addchar(lua_getnumber(o));
-    lua_endblock();
-  }
-  lua_pushbindata(luaI_addchar(0), i, tag);
-}
-
 
 static struct luaL_reg iolib[] = {
 {"readfrom", io_readfrom},
@@ -334,8 +291,6 @@ static struct luaL_reg iolib[] = {
 {"date",     io_date},
 {"exit",     io_exit},
 {"debug",    io_debug},
-{"getbyte",    getbyte},
-{"userdata",    newuserdata},
 {"print_stack", errorfb}
 };
 
