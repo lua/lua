@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.35 1996/02/09 19:35:23 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.36 1996/02/16 13:10:14 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -373,24 +373,15 @@ static int write_string (char *s, int just, int m)
 
 static int write_quoted (int just, int m)
 {
-  char *s = lua_check_string(1, "write");
+  char *s;
   luaI_addchar(0);
   luaI_addchar('"');
-  while (1)
+  for (s = lua_check_string(1, "write"); *s; s++)
   {
-    switch (*s)
-    {
-      case '"':  case '\\':  case '\n':
-        luaI_addchar('\\');
-        luaI_addchar(*s);
-        break;
-      case 0:
-        goto END_WHILE;
-      default:
-        luaI_addchar(*s);
-    }
-    s++;
-  } END_WHILE:
+    if (*s == '"' || *s == '\\' || *s == '\n')
+      luaI_addchar('\\');
+    luaI_addchar(*s);
+  }
   luaI_addchar('"');
   return write_string(luaI_addchar(0), just, m);
 }
