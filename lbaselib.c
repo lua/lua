@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.153 2004/07/09 16:01:38 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.154 2004/07/09 18:23:17 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -348,15 +348,17 @@ static int luaB_unpack (lua_State *L) {
 
 
 static int luaB_select (lua_State *L) {
-  int i = luaL_checkint(L, 1);
   int n = lua_gettop(L);
-  if (i < 0 || i >= n)  /* index out of range? */
-    return 0;
-  if (i == 0)
+  if (lua_type(L, 1) == LUA_TSTRING && *lua_tostring(L, 1) == '#') {
     lua_pushinteger(L, n-1);
-  else
-    lua_pushvalue(L, i+1);
-  return 1;
+    return 1;
+  }
+  else {
+    int i = luaL_checkint(L, 1);
+    if (i <= 0) i = 1;
+    else if (i >= n) i = n;
+    return n - i;
+  }
 }
 
 
