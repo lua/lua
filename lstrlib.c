@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.12 1998/03/24 20:14:25 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.13 1998/05/18 22:21:55 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -92,7 +92,7 @@ static void str_rep (void)
 }
 
 
-static void str_ascii (void)
+static void str_byte (void)
 {
   long l;
   char *s = luaL_check_lstr(1, &l);
@@ -101,12 +101,14 @@ static void str_ascii (void)
   lua_pushnumber((unsigned char)s[pos-1]);
 }
 
-static void str_int2str (void)
-{
+static void str_char (void) {
   int i = 0;
   luaL_resetbuffer();
-  while (lua_getparam(++i) != LUA_NOOBJECT)
-    luaL_addchar((int)luaL_check_number(i));
+  while (lua_getparam(++i) != LUA_NOOBJECT) {
+    double c = luaL_check_number(i);
+    luaL_arg_check((unsigned char)c == c, i, "invalid value");
+    luaL_addchar((int)c);
+  }
   closeandpush();
 }
 
@@ -518,9 +520,10 @@ static struct luaL_reg strlib[] = {
 {"strsub", str_sub},
 {"strlower", str_lower},
 {"strupper", str_upper},
-{"int2str", str_int2str},
+{"strchar", str_char},
 {"strrep", str_rep},
-{"ascii", str_ascii},
+{"ascii", str_byte},  /* for compatibility */
+{"strbyte", str_byte},
 {"format", str_format},
 {"strfind", str_find},
 {"gsub", str_gsub}
