@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.26 1996/01/22 18:39:37 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.27 1996/01/23 17:50:29 roberto Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,9 +56,12 @@ static int     nfields=0;
 
 static void yyerror (char *s)
 {
- static char msg[256];
- sprintf (msg,"%s near \"%s\" at line %d in file `%s'",
-          s, lua_lasttext (), lua_linenumber, lua_parsedfile);
+ char msg[256];
+ char *token = lua_lasttext();
+ if (token[0] == 0)
+   token = "<eof>";
+ sprintf (msg,"%s; last token read: \"%s\" at line %d in file `%s'",
+          s, token, lua_linenumber, lua_parsedfile);
  lua_error (msg);
 }
 
@@ -67,7 +70,7 @@ static void code_byte (Byte c)
  if (pc>maxcurr-2)  /* 1 byte free to code HALT of main code */
  {
   if (maxcurr >= MAX_INT)
-    lua_error("code size overflow");
+    yyerror("code size overflow");
   maxcurr *= 2;
   if (maxcurr >= MAX_INT)
     maxcurr = MAX_INT;
@@ -117,7 +120,7 @@ static void push_field (Word name)
   if (nfields < MAXFIELDS)
     fields[nfields++] = name;
   else
-   lua_error ("too many fields in nested constructors");
+   yyerror ("too many fields in nested constructors");
 }
 
 static void flush_record (int n)
@@ -142,7 +145,7 @@ static void flush_list (int m, int n)
     code_byte(m);
   }
   else
-   lua_error ("list constructor too long");
+   yyerror ("list constructor too long");
   code_byte(n);
 }
 
@@ -151,7 +154,7 @@ static void add_localvar (TreeNode *name)
  if (nlocalvar < MAXLOCALS)
   localvar[nlocalvar++] = name;
  else
-  lua_error ("too many local variables");
+  yyerror ("too many local variables");
 }
 
 static void store_localvar (TreeNode *name, int n)
@@ -159,7 +162,7 @@ static void store_localvar (TreeNode *name, int n)
  if (nlocalvar+n < MAXLOCALS)
   localvar[nlocalvar+n] = name;
  else
-  lua_error ("too many local variables");
+  yyerror ("too many local variables");
 }
 
 static void add_varbuffer (Long var)
@@ -167,7 +170,7 @@ static void add_varbuffer (Long var)
  if (nvarbuffer < MAXVAR)
   varbuffer[nvarbuffer++] = var;
  else
-  lua_error ("variable buffer overflow");
+  yyerror ("variable buffer overflow");
 }
 
 static void code_number (float f)
