@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.143 2002/11/14 15:41:38 roberto Exp roberto $
+** $Id: ltests.c,v 1.144 2002/11/14 16:59:16 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -56,15 +56,25 @@ static void setnameval (lua_State *L, const char *name, int val) {
 ** =======================================================================
 */
 
-
-/* ensures maximum alignment for HEADER */
-#define HEADER	(sizeof(L_Umaxalign))
-
-#define MARKSIZE	8
 #define MARK		0x55  /* 01010101 (a nice pattern) */
 
-
-#define blocksize(b)	(cast(size_t *, cast(char *, b) - HEADER))
+#ifndef EXTERNMEMCHECK
+/* full memory check */
+#define HEADER	(sizeof(L_Umaxalign)) /* ensures maximum alignment for HEADER */
+#define MARKSIZE	16  /* size of marks after each block */
+#define blockhead(b)	(cast(char *, b) - HEADER)
+#define setsize(newblock, size)	(*cast(size_t *, newblock) = size)
+#define checkblocksize(b, size) (size == (*cast(size_t *, blockhead(b))))
+#define fillmem(mem,size)	memset(mem, -MARK, size)
+#else
+/* external memory check: don't do it twice */
+#define HEADER		0
+#define MARKSIZE	0
+#define blockhead(b)	(b)
+#define setsize(newblock, size)	/* empty */
+#define checkblocksize(b,size)	(1)
+#define fillmem(mem,size)	/* empty */
+#endif
 
 unsigned long memdebug_numblocks = 0;
 unsigned long memdebug_total = 0;
@@ -72,9 +82,8 @@ unsigned long memdebug_maxmem = 0;
 unsigned long memdebug_memlimit = ULONG_MAX;
 
 
-static void *checkblock (void *block) {
-  size_t *b = blocksize(block);
-  size_t size = *b;
+static void *checkblock (void *block, size_t size) {
+  void *b = blockhead(block);
   int i;
   for (i=0;i<MARKSIZE;i++)
     lua_assert(*(cast(char *, b)+HEADER+size+i) == MARK+i); /* corrupted block? */
@@ -82,11 +91,11 @@ static void *checkblock (void *block) {
 }
 
 
-static void freeblock (void *block) {
+static void freeblock (void *block, size_t size) {
   if (block) {
-    size_t size = *blocksize(block);
-    block = checkblock(block);
-    memset(block, -1, size+HEADER+MARKSIZE);  /* erase block */
+    lua_assert(checkblocksize(block, size));
+    block = checkblock(block, size);
+    fillmem(block, size+HEADER+MARKSIZE);  /* erase block */
     free(block);  /* free original block */
     memdebug_numblocks--;
     memdebug_total -= size;
@@ -95,11 +104,11 @@ static void freeblock (void *block) {
 
 
 void *debug_realloc (void *block, size_t oldsize, size_t size) {
-  lua_assert(oldsize == 0 || oldsize == *blocksize(block));
+  lua_assert(oldsize == 0 || checkblocksize(block, oldsize));
   /* ISO does not specify what realloc(NULL, 0) does */
   lua_assert(block != NULL || size > 0);
   if (size == 0) {
-    freeblock(block);
+    freeblock(block, oldsize);
     return NULL;
   }
   else if (size > oldsize && memdebug_total+size-oldsize > memdebug_memlimit)
@@ -108,21 +117,21 @@ void *debug_realloc (void *block, size_t oldsize, size_t size) {
     void *newblock;
     int i;
     size_t realsize = HEADER+size+MARKSIZE;
+    size_t commonsize = (oldsize < size) ? oldsize : size;
     if (realsize < size) return NULL;  /* overflow! */
     newblock = malloc(realsize);  /* alloc a new block */
     if (newblock == NULL) return NULL;
-    if (oldsize > size) oldsize = size;
     if (block) {
-      memcpy(cast(char *, newblock)+HEADER, block, oldsize);
-      freeblock(block);  /* erase (and check) old copy */
+      memcpy(cast(char *, newblock)+HEADER, block, commonsize);
+      freeblock(block, oldsize);  /* erase (and check) old copy */
     }
     /* initialize new part of the block with something `weird' */
-    memset(cast(char *, newblock)+HEADER+oldsize, -MARK, size-oldsize);
+    fillmem(cast(char *, newblock)+HEADER+commonsize, size-commonsize);
     memdebug_total += size;
     if (memdebug_total > memdebug_maxmem)
       memdebug_maxmem = memdebug_total;
     memdebug_numblocks++;
-    *cast(size_t *, newblock) = size;
+    setsize(newblock, size);
     for (i=0;i<MARKSIZE;i++)
       *(cast(char *, newblock)+HEADER+size+i) = cast(char, MARK+i);
     return cast(char *, newblock)+HEADER;
@@ -681,6 +690,48 @@ static int testC (lua_State *L) {
 /* }====================================================== */
 
 
+/*
+** {======================================================
+** tests for yield inside hooks
+** =======================================================
+*/
+
+static void yieldf (lua_State *L, lua_Debug *ar) {
+  lua_yield(L, 0);
+}
+
+static int setyhook (lua_State *L) {
+  if (lua_isnoneornil(L, 1))
+    lua_sethook(L, NULL, 0);  /* turn off hooks */
+  else {
+    const char *smask = luaL_checkstring(L, 1);
+    unsigned long count = LUA_MASKCOUNT(luaL_optint(L, 2, 0));
+    if (strchr(smask, 'l')) count |= LUA_MASKLINE;
+    lua_sethook(L, yieldf, count);
+  }
+  return 0;
+}
+
+
+static int coresume (lua_State *L) {
+  int status;
+  lua_State *co = lua_tothread(L, 1);
+  luaL_argcheck(L, co, 1, "coroutine expected");
+  status = lua_resume(co, 0);
+  if (status != 0) {
+    lua_pushboolean(L, 0);
+    lua_insert(L, -2);
+    return 2;  /* return false + error message */
+  }
+  else {
+    lua_pushboolean(L, 1);
+    return 1;
+  }
+}
+
+/* }====================================================== */
+
+
 
 static const struct luaL_reg tests_funcs[] = {
   {"hash", hash_query},
@@ -709,6 +760,8 @@ static const struct luaL_reg tests_funcs[] = {
   {"doremote", doremote},
   {"log2", log2_aux},
   {"totalmem", mem_query},
+  {"resume", coresume},
+  {"setyhook", setyhook},
   {NULL, NULL}
 };
 
