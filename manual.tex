@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.10 1996/02/12 18:32:09 roberto Exp roberto $
+% $Id: manual.tex,v 1.11 1996/02/16 13:12:12 roberto Exp roberto $
 
 \documentstyle[A4,11pt,bnf]{article}
 
@@ -34,7 +34,7 @@ Waldemar Celes Filho
 \tecgraf\ --- Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1996/02/12 18:32:09 $}
+\date{\small \verb$Date: 1996/02/16 13:12:12 $}
 
 \maketitle
 
@@ -1269,12 +1269,19 @@ following the description given in its first argument (which must be a string).
 The format string follows the same rules as the \verb'printf' family of
 standard C functions.
 The only differencies are that the options/modifiers
- \verb'*', \verb'l', \verb'L', \verb'n', \verb'p',
- and \verb'h' are not supported.
-The options \verb'c',  \verb'd',  \verb'i', \verb'o', \verb'u', 
-\verb'x',  \verb'X', \verb'e',  \verb'E', \verb'f', and \verb'g' all
+\verb'*', \verb'l', \verb'L', \verb'n', \verb'p',
+and \verb'h' are not supported,
+and there is an extra option, \verb'q'.
+This option formats a string in a form suitable to be safely read
+back by the Lua interpreter.
+The string is written between double quotes,
+and all double quotes, returns and backslashes in the string
+are correctly escaped when written.
+
+The options \verb'c', \verb'd', \verb'E', \verb'e', \verb'f',
+\verb'g' \verb'i', \verb'o', \verb'u', \verb'X', and \verb'x' all
 expect a number argument,
-while \verb's' expects a string.
+while \verb'q' and \verb's' expects a string.
 
 
 \subsection{Mathematical Functions} \label{mathlib}
@@ -1359,6 +1366,15 @@ This function returns 2 if the file already exists,
 \subsubsection*{{\tt remove (filename)}}\Deffunc{remove}
 
 This function deletes the file with the given name.
+
+\subsubsection*{{\tt rename (name1, name2)}}\Deffunc{rename}
+
+This function renames file \verb'name1' to \verb'name2'.
+
+\subsubsection*{{\tt tmpname ()}}\Deffunc{tmpname}
+
+This function returns a string with a file name that can safely
+be used for a temporary file.
 
 \subsubsection*{{\tt read ([format])}}\Deffunc{read}
 
@@ -1698,6 +1714,28 @@ end
 \end{verbatim}
 
 
+\subsection{\Index{Variable number of arguments}}
+Lua does not provide any explicit mechanism to deal with
+variable number of arguments.
+However, one can use table constructors to simulate this mechanism.
+As an example, suppose a function to concatenate all its arguments.
+It could be written like 
+\begin{verbatim}
+function concat (o)
+  local i = 1
+  local s = ''
+  while o[i] do
+    s = s .. o[i]
+    i = i+1
+  end
+  return s
+end
+\end{verbatim}
+To call it, one uses a table constructor to join all arguments:
+\begin{verbatim}
+  x = concat{"hello ", "john", " and ", "mary"}
+\end{verbatim}
+
 \subsection{\Index{Persistence}}
 Because of its reflexive facilities,
 persistence in Lua can be achieved within the language.
@@ -1829,7 +1867,7 @@ void Index (void)
 \end{figure}
 This code must be registered with:
 \begin{verbatim}
-  lua_pushliteral("parent");
+  lua_pushstring("parent");
   lockedParentName = lua_lock();
   lua_pushobject(lua_setfallback("index", Index));
   lockedOldIndex = lua_lock();
