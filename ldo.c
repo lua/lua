@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.122 2001/02/02 16:23:20 roberto Exp roberto $
+** $Id: ldo.c,v 1.123 2001/02/07 18:13:49 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -240,7 +240,7 @@ static void f_parser (lua_State *L, void *ud) {
 
 static int protectedparser (lua_State *L, ZIO *z, int bin) {
   struct SParser p;
-  mem_int old_blocks;
+  lu_mem old_blocks;
   int status;
   LUA_LOCK(L);
   p.z = z; p.bin = bin;

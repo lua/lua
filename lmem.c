@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.45 2001/02/05 19:08:01 roberto Exp roberto $
+** $Id: lmem.c,v 1.46 2001/02/06 16:01:29 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -33,8 +33,8 @@ void *luaM_growaux (lua_State *L, void *block, int *size, int size_elems,
       newsize = limit;  /* still have at least MINPOWER2 free places */
     else luaD_error(L, errormsg);
   }
-  newblock = luaM_realloc(L, block, (luint32)(*size)*(luint32)size_elems,
-                                    (luint32)newsize*(luint32)size_elems);
+  newblock = luaM_realloc(L, block, (lu_mem)(*size)*(lu_mem)size_elems,
+                                    (lu_mem)newsize*(lu_mem)size_elems);
   *size = newsize;  /* update only when everything else is OK */
   return newblock;
 }
@@ -43,7 +43,7 @@ void *luaM_growaux (lua_State *L, void *block, int *size, int size_elems,
 /*
 ** generic allocation routine.
 */
-void *luaM_realloc (lua_State *L, void *block, luint32 oldsize, luint32 size) {
+void *luaM_realloc (lua_State *L, void *block, lu_mem oldsize, lu_mem size) {
   if (size == 0) {
     l_free(block, oldsize);  /* block may be NULL; that is OK for free */
     block = NULL;

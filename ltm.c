@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.65 2001/02/02 15:13:05 roberto Exp roberto $
+** $Id: ltm.c,v 1.66 2001/02/09 20:22:29 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -53,7 +53,7 @@ static int luaI_checkevent (lua_State *L, const char *name, int t) {
 *  'placeholder' for "default" fallbacks
 */
 /* ORDER LUA_T, ORDER TM */
-static const unsigned char luaT_validevents[NUM_TAGS][TM_N] = {
+static const lu_byte luaT_validevents[NUM_TAGS][TM_N] = {
   {1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* LUA_TUSERDATA */
   {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},  /* LUA_TNIL */
   {1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},  /* LUA_TNUMBER */

@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.74 2001/01/30 19:48:37 roberto Exp roberto $
+** $Id: ltable.c,v 1.75 2001/02/01 17:40:48 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -31,7 +31,7 @@
 #define TagDefault LUA_TTABLE
 
 
-#define hashnum(t,n)		(&t->node[lmod((luint32)(lint32)(n), t->size)])
+#define hashnum(t,n)		(&t->node[lmod((lu_hash)(ls_hash)(n), t->size)])
 #define hashstr(t,str)		(&t->node[lmod((str)->u.s.hash, t->size)])
 #define hashpointer(t,p)	(&t->node[lmod(IntPoint(p), t->size)])
 
@@ -81,12 +81,26 @@ int luaH_nexti (Hash *t, int i) {
 }
 
 
-static void setnodevector (lua_State *L, Hash *t, luint32 size) {
+#define check_grow(L, p, n) \
+	if ((p) >= MAX_INT/(n)) luaD_error(L, "table overflow");
+
+/*
+** returns smaller power of 2 larger than `n' (minimum is MINPOWER2) 
+*/
+static int power2 (lua_State *L, int n) {
+  int p = MINPOWER2;
+  while (p <= n) {
+    check_grow(L, p, 2);
+    p *= 2;
+  }
+  return p;
+}
+
+
+static void setnodevector (lua_State *L, Hash *t, int size) {
   int i;
-  if (size > MAX_INT)
-    luaD_error(L, "table overflow");
   t->node = luaM_newvector(L, size, Node);
-  for (i=0; i<(int)size; i++) {
+  for (i=0; i<size; i++) {
     t->node[i].next = NULL;
     t->node[i].key_tt = LUA_TNIL;
     setnilvalue(&t->node[i].val);
@@ -104,7 +118,7 @@ Hash *luaH_new (lua_State *L, int size) {
   t->mark = t;
   t->size = 0;
   t->node = NULL;
-  setnodevector(L, t, luaO_power2(size));
+  setnodevector(L, t, power2(L, size));
   return t;
 }
 
@@ -134,13 +148,15 @@ static void rehash (lua_State *L, Hash *t) {
   int nelems = numuse(t);
   int i;
   lua_assert(nelems<=oldsize);
-  if (nelems >= oldsize-oldsize/4)  /* using more than 3/4? */
-    setnodevector(L, t, (luint32)oldsize*2);
+  if (nelems >= oldsize-oldsize/4) {  /* using more than 3/4? */
+    check_grow(L, oldsize, 2);
+    setnodevector(L, t, oldsize*2);  /* grow array */
+  }
   else if (nelems <= oldsize/4 &&  /* less than 1/4? */
            oldsize > MINPOWER2)
-    setnodevector(L, t, oldsize/2);
+    setnodevector(L, t, oldsize/2);  /* shrink array */
   else
-    setnodevector(L, t, oldsize);
+    setnodevector(L, t, oldsize);  /* just rehash; keep the same size */
   for (i=0; i<oldsize; i++) {
     Node *old = nold+i;
     if (ttype(&old->val) != LUA_TNIL) {

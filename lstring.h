@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.28 2001/02/09 19:53:16 roberto Exp roberto $
+** $Id: lstring.h,v 1.29 2001/02/09 20:22:29 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -21,12 +21,14 @@
 #define RESERVEDMARK	3
 
 
-#define sizestring(l)	((luint32)sizeof(union L_UTString)+(l)+1)
+#define sizestring(l)	((lu_mem)sizeof(union L_UTString)+ \
+                         ((lu_mem)(l)+1)*sizeof(char))
 
-#define sizeudata(l)	((luint32)sizeof(union L_UTString)+(l))
+#define sizeudata(l)	((lu_mem)sizeof(union L_UTString)+(l))
 
 #define luaS_new(L, s)	(luaS_newlstr(L, s, strlen(s)))
-#define luaS_newliteral(L, s)	(luaS_newlstr(L, "" s, (sizeof(s))-1))
+#define luaS_newliteral(L, s)	(luaS_newlstr(L, "" s, \
+                                 (sizeof(s)/sizeof(char))-1))
 
 void luaS_init (lua_State *L);
 void luaS_resize (lua_State *L, stringtable *tb, int newsize);

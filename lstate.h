@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.49 2001/02/01 17:40:48 roberto Exp roberto $
+** $Id: lstate.h,v 1.50 2001/02/02 15:13:05 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -55,7 +55,7 @@ struct TM;  /* defined in ltm.h */
 
 typedef struct stringtable {
   int size;
-  luint32 nuse;  /* number of elements */
+  ls_nstr nuse;  /* number of elements */
   TString **hash;
 } stringtable;
 
@@ -79,8 +79,8 @@ typedef struct global_State {
   int nref;  /* first unused element in refArray */
   int sizeref;  /* size of refArray */
   int refFree;  /* list of free positions in refArray */
-  mem_int GCthreshold;
-  mem_int nblocks;  /* number of `bytes' currently allocated */
+  lu_mem GCthreshold;
+  lu_mem nblocks;  /* number of `bytes' currently allocated */
 } global_State;
 
 

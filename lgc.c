@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.87 2001/02/02 16:32:00 roberto Exp roberto $
+** $Id: lgc.c,v 1.88 2001/02/07 18:13:49 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -274,7 +274,7 @@ static void collecttable (lua_State *L) {
 
 
 static void checktab (lua_State *L, stringtable *tb) {
-  if (tb->nuse < (luint32)(tb->size/4) && tb->size > MINPOWER2)
+  if (tb->nuse < (ls_nstr)(tb->size/4) && tb->size > MINPOWER2)
     luaS_resize(L, tb, tb->size/2);  /* table is too big */
 }
 

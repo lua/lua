@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.18 2000/12/04 18:33:40 roberto Exp roberto $
+** $Id: lcode.h,v 1.19 2001/01/29 15:26:40 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -39,9 +39,9 @@ enum Mode {iO, iU, iS, iAB};  /* instruction format */
 #define VD	100	/* flag for variable delta */
 
 typedef struct OpProperties {
-  char mode;
-  unsigned char push;
-  unsigned char pop;
+  lu_byte mode;
+  lu_byte push;
+  lu_byte pop;
 } OpProperties;
 
 extern const OpProperties luaK_opproperties[];

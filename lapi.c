@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.129 2001/02/13 16:17:53 roberto Exp roberto $
+** $Id: lapi.c,v 1.130 2001/02/14 17:04:11 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -549,7 +549,7 @@ LUA_API void lua_rawcall (lua_State *L, int nargs, int nresults) {
 
 /* GC values are expressed in Kbytes: #bytes/2^10 */
 #define GCscale(x)		((int)((x)>>10))
-#define GCunscale(x)		((mem_int)(x)<<10)
+#define GCunscale(x)		((lu_mem)(x)<<10)
 
 LUA_API int lua_getgcthreshold (lua_State *L) {
   int threshold;

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.59 2001/02/06 18:18:58 roberto Exp roberto $
+** $Id: lua.c,v 1.60 2001/02/14 17:19:01 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -173,20 +173,24 @@ static int file_input (const char *argv) {
 #endif
 
 
-static void show_prompt (void) {
-  const char *s;
-  lua_getglobal(L, "_PROMPT");
-  s = lua_tostring(L, -1);
-  if (!s) s = PROMPT;
-  fputs(s, stdout);
-  lua_pop(L, 1);  /* remove global */
+static const char *get_prompt (int prompt) {
+  if (!prompt)
+    return "";
+  else {
+    const char *s;
+    lua_getglobal(L, "_PROMPT");
+    s = lua_tostring(L, -1);
+    if (!s) s = PROMPT;
+    lua_pop(L, 1);  /* remove global */
+    return s;
+  }
 }
 
 
 static void manual_input (int version, int prompt) {
   if (version) print_version();
   for (;;) {
-    if (prompt) show_prompt();
+    fputs(get_prompt(prompt), stdout);  /* show prompt */
     for(;;) {
       char buffer[MAXINPUT];
       size_t l;

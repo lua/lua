@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.168 2001/02/09 20:22:29 roberto Exp roberto $
+** $Id: lvm.c,v 1.169 2001/02/12 13:04:19 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -273,8 +273,7 @@ void luaV_strconc (lua_State *L, int total, StkId top) {
     }
     else if (tsvalue(top-1)->len > 0) {  /* if len=0, do nothing */
       /* at least two string values; get as many as possible */
-      luint32 tl = (luint32)tsvalue(top-1)->len + 
-                   (luint32)tsvalue(top-2)->len;
+      lu_mem tl = (lu_mem)tsvalue(top-1)->len + (lu_mem)tsvalue(top-2)->len;
       char *buffer;
       int i;
       while (n < total && !tostring(L, top-n-1)) {  /* collect total length */

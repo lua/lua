@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.63 2001/02/12 19:54:28 roberto Exp roberto $
+** $Id: ldebug.c,v 1.64 2001/02/16 17:58:27 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -347,7 +347,7 @@ static int precheck (const Proto *pt) {
 
 #define checkjump(pt,sl,top,pc)	if (!checkjump_aux(pt,sl,top,pc)) return 0;
 
-static int checkjump_aux (const Proto *pt, unsigned char *sl, int top, int pc) {
+static int checkjump_aux (const Proto *pt, lu_byte *sl, int top, int pc) {
   check(0 <= pc && pc < pt->sizecode);
   if (sl == NULL) return 1;  /* not full checking */
   if (sl[pc] == SL_EMPTY)
@@ -361,12 +361,12 @@ static int checkjump_aux (const Proto *pt, unsigned char *sl, int top, int pc) {
 static Instruction luaG_symbexec (lua_State *L, const Proto *pt,
                                   int lastpc, int stackpos) {
   int stack[MAXSTACK];  /* stores last instruction that changed a stack entry */
-  unsigned char *sl = NULL;
+  lu_byte *sl = NULL;
   int top;
   int pc;
   if (stackpos < 0) {  /* full check? */
     int i;
-    sl = (unsigned char *)luaO_openspace(L, pt->sizecode);
+    sl = (lu_byte *)luaO_openspace(L, pt->sizecode);
     for (i=0; i<pt->sizecode; i++)  /* initialize stack-level array */
       sl[i] = SL_EMPTY;
     check(precheck(pt));

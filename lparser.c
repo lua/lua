@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.133 2001/02/14 17:19:28 roberto Exp roberto $
+** $Id: lparser.c,v 1.134 2001/02/14 17:38:45 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -690,8 +690,8 @@ static BinOpr getbinopr (int op) {
 
 
 static const struct {
-  unsigned char left;  /* left priority for each binary operator */
-  unsigned char right; /* right priority */
+  lu_byte left;  /* left priority for each binary operator */
+  lu_byte right; /* right priority */
 } priority[] = {  /* ORDER OPR */
    {5, 5}, {5, 5}, {6, 6}, {6, 6},  /* arithmetic */
    {9, 8}, {4, 3},                  /* power and concat (right associative) */

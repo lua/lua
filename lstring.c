@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.57 2001/02/09 20:22:29 roberto Exp roberto $
+** $Id: lstring.c,v 1.58 2001/02/09 20:29:33 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -39,7 +39,7 @@ void luaS_resize (lua_State *L, stringtable *tb, int newsize) {
     TString *p = tb->hash[i];
     while (p) {  /* for each node in the list */
       TString *next = p->nexthash;  /* save next */
-      luint32 h = (tb == &G(L)->strt) ? p->u.s.hash : IntPoint(p->u.d.value);
+      lu_hash h = (tb == &G(L)->strt) ? p->u.s.hash : IntPoint(p->u.d.value);
       int h1 = lmod(h, newsize);  /* new position */
       lua_assert((int)(h%newsize) == lmod(h, newsize));
       p->nexthash = newhash[h1];  /* chain it in new position */
@@ -57,7 +57,7 @@ static void newentry (lua_State *L, stringtable *tb, TString *ts, int h) {
   ts->nexthash = tb->hash[h];  /* chain new entry */
   tb->hash[h] = ts;
   tb->nuse++;
-  if (tb->nuse > (luint32)tb->size && tb->size < MAX_INT/2)  /* too crowded? */
+  if (tb->nuse > (ls_nstr)tb->size && tb->size <= MAX_INT/2)  /* too crowded? */
     luaS_resize(L, tb, tb->size*2);
 }
 
@@ -65,7 +65,7 @@ static void newentry (lua_State *L, stringtable *tb, TString *ts, int h) {
 
 TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
   TString *ts;
-  luint32 h = l;  /* seed */
+  lu_hash h = l;  /* seed */
   size_t step = (l>>5)+1;  /* if string is too long, don't hash all its chars */
   size_t l1;
   for (l1=l; l1>=step; l1-=step)  /* compute hash */
@@ -81,7 +81,7 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
   ts->len = l;
   ts->u.s.hash = h;
   ts->u.s.constindex = 0;
-  memcpy(getstr(ts), str, l);
+  memcpy(getstr(ts), str, l*sizeof(char));
   getstr(ts)[l] = 0;  /* ending 0 */
   newentry(L, &G(L)->strt, ts, lmod(h, G(L)->strt.size));  /* insert it */
   return ts;

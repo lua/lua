@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.94 2001/02/02 16:32:00 roberto Exp roberto $
+** $Id: lobject.h,v 1.95 2001/02/09 20:22:29 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -93,7 +93,7 @@ typedef struct lua_TObject {
 typedef struct TString {
   union {
     struct {  /* for strings */
-      luint32 hash;
+      lu_hash hash;
       int constindex;  /* hint to reuse constants */
     } s;
     struct {  /* for userdata */
@@ -160,13 +160,13 @@ typedef struct LocVar {
 */
 typedef struct Closure {
   int isC;  /* 0 for Lua functions, 1 for C functions */
+  int nupvalues;
   union {
     lua_CFunction c;  /* C functions */
     struct Proto *l;  /* Lua functions */
   } f;
   struct Closure *next;
   struct Closure *mark;  /* marked closures (point to itself when not marked) */
-  int nupvalues;
   TObject upvalue[1];
 } Closure;
 
@@ -199,7 +199,8 @@ typedef struct Hash {
 
 
 /*
-** "module" operation (size is always a power of 2) */
+** "module" operation for hashing (size is always a power of 2)
+*/
 #define lmod(s,size)	((int)((s) & ((size)-1)))
 
 
@@ -218,7 +219,6 @@ typedef struct CallInfo {
 extern const TObject luaO_nilobject;
 
 
-luint32 luaO_power2 (luint32 n);
 char *luaO_openspace (lua_State *L, size_t n);
 
 int luaO_equalObj (const TObject *t1, const TObject *t2);

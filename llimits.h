@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.21 2000/12/04 18:33:40 roberto Exp roberto $
+** $Id: llimits.h,v 1.22 2001/02/09 16:24:44 roberto Exp roberto $
 ** Limits, basic types, and some other "installation-dependent" definitions
 ** See Copyright Notice in lua.h
 */
@@ -40,11 +40,27 @@
 
 
 
-typedef unsigned long luint32;  /* unsigned int with at least 32 bits */
-typedef long lint32;              /* signed int with at least 32 bits */
+/*
+** the following types define integer types for values that may not
+** fit in a "small int" (16 bits), but may waste space in a
+** "large long" (64 bits). The current definitions should work in
+** any machine, but may not be optimal.
+*/
+
+/* an unsigned integer to hold hash values */
+typedef unsigned int lu_hash;
+/* its signed equivalent */
+typedef int ls_hash;
 
 /* an unsigned integer big enough to count the total memory used by Lua */
-typedef unsigned long mem_int;
+typedef unsigned long lu_mem;
+
+/* an integer big enough to count the number of strings in use */
+typedef long ls_nstr;
+
+
+/* chars used as small naturals (so that `char' is reserved for characteres) */
+typedef unsigned char lu_byte;
 
 
 #define MAX_SIZET	((size_t)(~(size_t)0)-2)
@@ -53,10 +69,12 @@ typedef unsigned long mem_int;
 #define MAX_INT (INT_MAX-2)  /* maximum value of an int (-2 for safety) */
 
 /*
-** conversion of pointer to int (for hashing only)
+** conversion of pointer to integer
+** this is for hashing only; there is no problem if the integer
+** cannot hold the whole pointer value
 ** (the shift removes bits that are usually 0 because of alignment)
 */
-#define IntPoint(p)  (((luint32)(p)) >> 3)
+#define IntPoint(p)  ((((lu_hash)(p)) >> 4) ^ (lu_hash)(p))
 
 
 
@@ -71,7 +89,7 @@ typedef unsigned long mem_int;
 
 
 /* type to ensure maximum alignment */
-union L_Umaxalign { double d; char *s; long l; };
+union L_Umaxalign { double d; void *s; long l; };
 
 
 
@@ -81,7 +99,7 @@ union L_Umaxalign { double d; char *s; long l; };
 ** For a very small machine, you may change that to 2 bytes (and adjust
 ** the following limits accordingly)
 */
-typedef luint32 Instruction;
+typedef unsigned long Instruction;
 
 
 /*
