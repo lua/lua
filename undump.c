@@ -3,7 +3,7 @@
 ** load bytecodes from files
 */
 
-char* rcs_undump="$Id: undump.c,v 1.11 1996/03/08 21:44:12 lhf Exp lhf $";
+char* rcs_undump="$Id: undump.c,v 1.12 1996/03/11 22:01:46 lhf Exp lhf $";
 
 #include <stdio.h>
 #include <string.h>
@@ -217,7 +217,6 @@ static void LoadFunction(FILE* D)
   *p++=c.m.c1; *p++=c.m.c2; *p++=c.m.c3; *p++=c.m.c4;
   lastF=lastF->next=tf;
  }
- tf->marked=0;
  tf->code=LoadBlock(tf->size,D);
  if (swapword || swapfloat) FixCode(tf->code,tf->code+tf->size);
  while (1)					/* unthread */
