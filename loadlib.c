@@ -1,6 +1,6 @@
 /*
-** $Id: loadlib.c,v 1.1 2003/03/17 13:01:48 roberto Exp roberto $
-** Bare-bones dynamic library loader for Lua
+** $Id: loadlib.c,v 1.2 2003/03/18 12:25:01 roberto Exp roberto $
+** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 *
 * This  Lua library  exports a  single function,  called loadlib,  which is
@@ -17,12 +17,6 @@
 * "init", or  "absent" to identify  the error and is  meant to be  used for
 * making  decisions without  having to  look into  the first  string (whose
 * format is system-dependent).
-*
-* This bare-bones loadlib  function is supposed to be used  as a foundation
-* for  more sophisticated  dynamic library  loaders, possibly  still called
-* loadlib and probably written in Lua, that  will be smart enough to try to
-* find the library in different directories and also perhaps guess the name
-* of the init function.
 *
 * This module contains  an implementation of loadlib for  Unix systems that
 * have dlfcn, an implementation for Windows,  and a stub for other systems.
