@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.34 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.35 1999/10/25 13:35:44 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -373,26 +373,47 @@ static const char *match (const char *s, const char *p, struct Capture *cap) {
 }
 
 
+
+static const char *memfind (const char *s1, long l1, const char *s2, long l2) {
+  if (l2 == 0) return s1;  /* empty strings are everywhere ;-) */
+  else {
+    const char *init;  /* to search for a `*s2' inside `s1' */
+    l2--;  /* 1st char will be checked by `memchr' */
+    l1 = l1-l2;  /* `s2' cannot be found after that */
+    while (l1 > 0 && (init = memchr(s1, *s2, l1)) != NULL) {
+      init++;   /* 1st char is already checked */
+      if (memcmp(init, s2+1, l2) == 0)
+        return init-1;
+      else {  /* correct `l1' and `s1' to try again */
+        l1 -= init-s1;
+        s1 = init;
+      }
+    }
+    return NULL;  /* not found */
+  }
+}
+
+
 static void str_find (void) {
-  long l;
-  const char *s = luaL_check_lstr(1, &l);
-  const char *p = luaL_check_string(2);
-  long init = posrelat(luaL_opt_long(3, 1), l) - 1;
+  long l1, l2;
+  const char *s = luaL_check_lstr(1, &l1);
+  const char *p = luaL_check_lstr(2, &l2);
+  long init = posrelat(luaL_opt_long(3, 1), l1) - 1;
   struct Capture cap;
-  luaL_arg_check(0 <= init && init <= l, 3, "out of range");
+  luaL_arg_check(0 <= init && init <= l1, 3, "out of range");
   if (lua_getparam(4) != LUA_NOOBJECT ||
       strpbrk(p, SPECIALS) == NULL) {  /* no special characters? */
-    char *s2 = strstr(s+init, p);
+    const char *s2 = memfind(s+init, l1, p, l2);
     if (s2) {
       lua_pushnumber(s2-s+1);
-      lua_pushnumber(s2-s+strlen(p));
+      lua_pushnumber(s2-s+l2);
       return;
     }
   }
   else {
     int anchor = (*p == '^') ? (p++, 1) : 0;
     const char *s1=s+init;
-    cap.src_end = s+l;
+    cap.src_end = s+l1;
     do {
       const char *res;
       cap.level = 0;
@@ -404,7 +425,7 @@ static void str_find (void) {
       }
     } while (s1++<cap.src_end && !anchor);
   }
-  lua_pushnil();  /* if arrives here, it didn't find */
+  lua_pushnil();  /* not found */
 }
 
 
