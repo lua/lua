@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.134 2001/02/14 17:38:45 roberto Exp roberto $
+** $Id: lparser.c,v 1.135 2001/02/20 18:15:33 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -219,14 +219,14 @@ static void singlevar (LexState *ls, TString *n, expdesc *var) {
 static int indexupvalue (LexState *ls, expdesc *v) {
   FuncState *fs = ls->fs;
   int i;
-  for (i=0; i<fs->nupvalues; i++) {
+  for (i=0; i<fs->f->nupvalues; i++) {
     if (fs->upvalues[i].k == v->k && fs->upvalues[i].u.index == v->u.index)
       return i;
   }
   /* new one */
-  luaX_checklimit(ls, fs->nupvalues+1, MAXUPVALUES, "upvalues");
-  fs->upvalues[fs->nupvalues] = *v;
-  return fs->nupvalues++;
+  luaX_checklimit(ls, fs->f->nupvalues+1, MAXUPVALUES, "upvalues");
+  fs->upvalues[fs->f->nupvalues] = *v;
+  return fs->f->nupvalues++;
 }
 
 
@@ -297,12 +297,12 @@ static void pushclosure (LexState *ls, FuncState *func) {
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
   int i;
-  for (i=0; i<func->nupvalues; i++)
+  for (i=0; i<func->f->nupvalues; i++)
     luaK_tostack(ls, &func->upvalues[i], 1);
   luaM_growvector(ls->L, f->kproto, fs->nkproto, f->sizekproto, Proto *,
                   MAXARG_A, "constant table overflow");
   f->kproto[fs->nkproto++] = func->f;
-  luaK_code2(fs, OP_CLOSURE, fs->nkproto-1, func->nupvalues);
+  luaK_code2(fs, OP_CLOSURE, fs->nkproto-1, func->f->nupvalues);
 }
 
 
@@ -323,7 +323,6 @@ static void open_func (LexState *ls, FuncState *fs) {
   fs->nlineinfo = 0;
   fs->nlocvars = 0;
   fs->nactloc = 0;
-  fs->nupvalues = 0;
   fs->lastline = 0;
   fs->bl = NULL;
   f->code = NULL;
@@ -370,7 +369,7 @@ Proto *luaY_parser (lua_State *L, ZIO *z) {
   check_condition(&lexstate, (lexstate.t.token == TK_EOS), "<eof> expected");
   close_func(&lexstate);
   lua_assert(funcstate.prev == NULL);
-  lua_assert(funcstate.nupvalues == 0);
+  lua_assert(funcstate.f->nupvalues == 0);
   return funcstate.f;
 }
 

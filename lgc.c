@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.88 2001/02/07 18:13:49 roberto Exp roberto $
+** $Id: lgc.c,v 1.89 2001/02/20 18:15:33 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -62,8 +62,10 @@ static void protomark (Proto *f) {
 
 static void markclosure (GCState *st, Closure *cl) {
   if (!ismarked(cl)) {
-    if (!cl->isC)
+    if (!cl->isC) {
+      lua_assert(cl->nupvalues == cl->f.l->nupvalues);
       protomark(cl->f.l);
+    }
     cl->mark = st->cmark;  /* chain it for later traversal */
     st->cmark = cl;
   }

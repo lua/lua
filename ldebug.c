@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.64 2001/02/16 17:58:27 roberto Exp roberto $
+** $Id: ldebug.c,v 1.65 2001/02/20 18:15:33 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -433,7 +433,7 @@ static Instruction luaG_symbexec (lua_State *L, const Proto *pt,
         break;
       }
       case OP_PUSHUPVALUE: {
-        /* ?? */
+        check(arg1 < pt->nupvalues);
         break;
       }
       case OP_GETLOCAL:
@@ -462,7 +462,8 @@ static Instruction luaG_symbexec (lua_State *L, const Proto *pt,
         break;
       }
       case OP_CLOSURE: {
-        /* ?? */
+        check(arg1 < pt->sizekproto);
+        check(arg2 == pt->kproto[arg1]->nupvalues);
         pop = arg2;
         break;
       }
