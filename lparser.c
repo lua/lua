@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.185 2002/06/03 14:09:57 roberto Exp roberto $
+** $Id: lparser.c,v 1.186 2002/06/06 13:16:02 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -107,8 +107,11 @@ static void check_match (LexState *ls, int what, int who, int where) {
 
 
 static TString *str_checkname (LexState *ls) {
+  TString *ts;
   check_condition(ls, (ls->t.token == TK_NAME), "<name> expected");
-  return ls->t.seminfo.ts;
+  ts = ls->t.seminfo.ts;
+  next(ls);
+  return ts;
 }
 
 
@@ -126,7 +129,6 @@ static void codestring (LexState *ls, expdesc *e, TString *s) {
 
 static void checkname(LexState *ls, expdesc *e) {
   codestring(ls, e, str_checkname(ls));
-  next(ls);
 }
 
 
@@ -204,7 +206,7 @@ static void markupval (FuncState *fs, int level) {
 }
 
 
-static void singlevar (FuncState *fs, TString *n, expdesc *var, int base) {
+static void singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
   if (fs == NULL)  /* no more levels? */
     init_exp(var, VGLOBAL, NO_REG);  /* default is global variable */
   else {
@@ -215,7 +217,7 @@ static void singlevar (FuncState *fs, TString *n, expdesc *var, int base) {
         markupval(fs, v);  /* local will be used as an upval */
     }
     else {  /* not found at current level; try upper one */
-      singlevar(fs->prev, n, var, 0);
+      singlevaraux(fs->prev, n, var, 0);
       if (var->k == VGLOBAL) {
         if (base)
           var->info = luaK_stringK(fs, n);  /* info points to global name */
@@ -226,6 +228,11 @@ static void singlevar (FuncState *fs, TString *n, expdesc *var, int base) {
       }
     }
   }
+}
+
+
+static void singlevar (LexState *ls, expdesc *var, int base) {
+  singlevaraux(ls->fs, str_checkname(ls), var, base);
 }
 
 
@@ -597,15 +604,13 @@ static void prefixexp (LexState *ls, expdesc *v) {
       return;
     }
     case TK_NAME: {
-      singlevar(ls->fs, str_checkname(ls), v, 1);
-      next(ls);
+      singlevar(ls, v, 1);
       return;
     }
     case '%': {  /* for compatibility only */
       next(ls);  /* skip `%' */
-      singlevar(ls->fs, str_checkname(ls), v, 1);
+      singlevar(ls, v, 1);
       check_condition(ls, v->k == VUPVAL, "global upvalues are obsolete");
-      next(ls);
       return;
     }
     default: {
@@ -1018,10 +1023,8 @@ static void forlist (LexState *ls, TString *indexname) {
   new_localvarstr(ls, "(for generator)", nvars++);
   new_localvarstr(ls, "(for state)", nvars++);
   new_localvar(ls, indexname, nvars++);
-  while (testnext(ls, ',')) {
+  while (testnext(ls, ','))
     new_localvar(ls, str_checkname(ls), nvars++);
-    next(ls);
-  }
   check(ls, TK_IN);
   line = ls->linenumber;
   adjust_assign(ls, 3, explist1(ls, &e), &e);
@@ -1047,7 +1050,6 @@ static void forstat (LexState *ls, int line) {
   enterblock(fs, &bl, 1);
   next(ls);  /* skip `for' */
   varname = str_checkname(ls);  /* first variable name */
-  next(ls);  /* skip var name */
   switch (ls->t.token) {
     case '=': fornum(ls, varname, line); break;
     case ',': case TK_IN: forlist(ls, varname); break;
@@ -1099,7 +1101,6 @@ static void localstat (LexState *ls) {
   next(ls);  /* skip LOCAL */
   do {
     new_localvar(ls, str_checkname(ls), nvars++);
-    next(ls);  /* skip var name */
   } while (testnext(ls, ','));
   if (testnext(ls, '='))
     nexps = explist1(ls, &e);
@@ -1115,11 +1116,9 @@ static void localstat (LexState *ls) {
 static int funcname (LexState *ls, expdesc *v) {
   /* funcname -> NAME {field} [`:' NAME] */
   int needself = 0;
-  singlevar(ls->fs, str_checkname(ls), v, 1);
-  next(ls);  /* skip var name */
-  while (ls->t.token == '.') {
+  singlevar(ls, v, 1);
+  while (ls->t.token == '.')
     luaY_field(ls, v);
-  }
   if (ls->t.token == ':') {
     needself = 1;
     luaY_field(ls, v);
@@ -1261,11 +1260,10 @@ static void parlist (LexState *ls) {
   if (ls->t.token != ')') {  /* is `parlist' not empty? */
     do {
       switch (ls->t.token) {
-        case TK_DOTS: dots = 1; break;
+        case TK_DOTS: dots = 1; next(ls); break;
         case TK_NAME: new_localvar(ls, str_checkname(ls), nparams++); break;
         default: luaX_syntaxerror(ls, "<name> or `...' expected");
       }
-      next(ls);
     } while (!dots && testnext(ls, ','));
   }
   code_params(ls, nparams, dots);
