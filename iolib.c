@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.9 1994/09/12 19:24:31 celes Exp celes $";
+char *rcs_iolib="$Id: iolib.c,v 1.10 1994/10/07 22:47:05 celes Exp celes $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -320,7 +320,7 @@ static void io_read (void)
 static void io_readuntil (void)
 {
  int n=255,m=0;
- char c,d;
+ int c,d;
  char *s;
  lua_Object lo = lua_getparam(1);
  if (!lua_isstring(lo))
@@ -379,7 +379,7 @@ static char *buildformat (char *e, lua_Object o)
  char *string = &buffer[255];
  char *fstart=e, *fspace, *send;
  char t, j='r';
- int  m=0, n=0, l;
+ int  m=0, n=-1, l;
  while (isspace(*e)) e++;
  fspace = e;
  t = *e++;
