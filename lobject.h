@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.149 2002/10/22 17:18:28 roberto Exp roberto $
+** $Id: lobject.h,v 1.150 2002/10/25 20:05:28 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -30,19 +30,19 @@ typedef union GCObject GCObject;
 
 
 /*
-** Common header for all collectable objects
+** Common Header for all collectable objects (in macro form, to be
+** included in other objects)
 */
-typedef struct GCheader {
-  GCObject *next;  /* pointer to next object */
-  lu_byte tt;  /* object type */
-  lu_byte marked;  /* GC informations */
-} GCheader;
+#define CommonHeader	GCObject *next; lu_byte tt; lu_byte marked
 
 
 /*
-** common header in macro form, to be included in other objects
+** Common header in struct form
 */
-#define CommonHeader	GCObject *next; lu_byte tt; lu_byte marked
+typedef struct GCheader {
+  CommonHeader;
+} GCheader;
+
 
 
 
