@@ -1,7 +1,12 @@
-# $Id: makefile,v 1.12 1995/02/02 19:02:03 roberto Exp $
+# $Id: makefile,v 1.13 1995/10/04 19:19:46 roberto Exp roberto $
+
+#configuration
+
+# define (undefine) POPEN if your system (does not) support piped I/O
+CONFIG = -DPOPEN
 # Compilation parameters
 CC = gcc
-CFLAGS = -I/usr/5include -Wall -Wmissing-prototypes -Wshadow -ansi -O2
+CFLAGS = $(CONFIG) -I/usr/5include -Wall -Wmissing-prototypes -Wshadow -ansi -O2
 
 #CC = acc
 #CFLAGS = -fast -I/usr/5include
@@ -19,7 +24,8 @@ LUAMOD =	\
 	inout	\
 	tree    \
 	fallback\
-	mem
+	mem	\
+	func
 
 LIBMOD = 	\
 	iolib	\
@@ -61,18 +67,22 @@ clear	:
 	co $@
 
 
-fallback.o : fallback.c mem.h fallback.h opcode.h lua.h types.h tree.h inout.h 
-hash.o : hash.c mem.h opcode.h lua.h types.h tree.h hash.h inout.h table.h 
-inout.o : inout.c mem.h opcode.h lua.h types.h tree.h hash.h inout.h table.h 
-iolib.o : iolib.c mem.h lua.h lualib.h 
-lex.o : lex.c tree.h types.h table.h opcode.h lua.h inout.h parser.h ugly.h 
+fallback.o : fallback.c mem.h fallback.h opcode.h lua.h types.h tree.h func.h 
+func.o : func.c table.h tree.h types.h opcode.h lua.h func.h mem.h 
+hash.o : hash.c mem.h opcode.h lua.h types.h tree.h func.h hash.h table.h 
+inout.o : inout.c mem.h opcode.h lua.h types.h tree.h func.h hash.h inout.h \
+  table.h 
+iolib.o : iolib.c lua.h lualib.h 
+lex.o : lex.c mem.h tree.h types.h table.h opcode.h lua.h func.h inout.h parser.h \
+  ugly.h 
 lua.o : lua.c lua.h lualib.h 
 mathlib.o : mathlib.c lualib.h lua.h 
 mem.o : mem.c mem.h lua.h 
-opcode.o : opcode.c mem.h opcode.h lua.h types.h tree.h hash.h inout.h table.h \
-  fallback.h 
-strlib.o : strlib.c mem.h lua.h lualib.h 
-table.o : table.c mem.h opcode.h lua.h types.h tree.h hash.h inout.h table.h \
-  fallback.h 
-tree.o : tree.c mem.h lua.h tree.h types.h table.h opcode.h 
-parser.o : parser.c mem.h opcode.h lua.h types.h tree.h hash.h inout.h table.h 
+opcode.o : opcode.c mem.h opcode.h lua.h types.h tree.h func.h hash.h inout.h \
+  table.h fallback.h 
+parser.o : parser.c mem.h opcode.h lua.h types.h tree.h func.h hash.h inout.h \
+  table.h 
+strlib.o : strlib.c lua.h lualib.h 
+table.o : table.c mem.h opcode.h lua.h types.h tree.h func.h hash.h table.h \
+  inout.h fallback.h 
+tree.o : tree.c mem.h lua.h tree.h types.h table.h opcode.h func.h 
