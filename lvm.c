@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.157 2001/01/24 16:20:54 roberto Exp roberto $
+** $Id: lvm.c,v 1.158 2001/01/26 18:43:22 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -644,28 +644,36 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
       }
       case OP_LFORPREP: {
-        Node *node;
+        int n;
+        Hash *t;
         if (ttype(top-1) != LUA_TTABLE)
           luaD_error(L, "`for' table must be a table");
-        node = luaH_next(L, hvalue(top-1), &luaO_nilobject);
-        if (node == NULL) {  /* `empty' loop? */
+        t = hvalue(top-1);
+        n = luaH_nexti(t, -1);
+        if (n == -1) {  /* `empty' loop? */
           top--;  /* remove table */
           dojump(pc, i);  /* jump to loop end */
         }
         else {
-          top += 2;  /* index,value */
+          Node *node = node(t, n);
+          top += 3;  /* index,key,value */
+          setnvalue(top-3, n);  /* index */
           setobj(top-2, key(node));
           setobj(top-1, val(node));
         }
         break;
       }
       case OP_LFORLOOP: {
-        Node *node;
-        lua_assert(ttype(top-3) == LUA_TTABLE);
-        node = luaH_next(L, hvalue(top-3), top-2);
-        if (node == NULL)  /* end loop? */
-          top -= 3;  /* remove table, key, and value */
+        Hash *t = hvalue(top-4);
+        int n = (int)nvalue(top-3);
+        lua_assert(ttype(top-3) == LUA_TNUMBER);
+        lua_assert(ttype(top-4) == LUA_TTABLE);
+        n = luaH_nexti(t, n);
+        if (n == -1)  /* end loop? */
+          top -= 4;  /* remove table, index, key, and value */
         else {
+          Node *node = node(t, n);
+          setnvalue(top-3, n);  /* index */
           setobj(top-2, key(node));
           setobj(top-1, val(node));
           dojump(pc, i);  /* repeat loop */

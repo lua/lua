@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.56 2001/01/15 16:13:24 roberto Exp roberto $
+** $Id: lcode.c,v 1.57 2001/01/19 13:20:30 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -698,8 +698,8 @@ const OpProperties luaK_opproperties[NUM_OPCODES] = {
   {iO, 0, 0},	/* OP_PUSHNILJMP */
   {iS, 0, 0},	/* OP_FORPREP */
   {iS, 0, 3},	/* OP_FORLOOP */
-  {iS, 2, 0},	/* OP_LFORPREP */
-  {iS, 0, 3},	/* OP_LFORLOOP */
+  {iS, 3, 0},	/* OP_LFORPREP */
+  {iS, 0, 4},	/* OP_LFORLOOP */
   {iAB, VD, 0}	/* OP_CLOSURE */
 };
 

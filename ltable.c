@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.69 2001/01/26 14:16:35 roberto Exp roberto $
+** $Id: ltable.c,v 1.70 2001/01/26 15:58:50 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -69,6 +69,15 @@ Node *luaH_next (lua_State *L, Hash *t, const TObject *key) {
       return n;
   }
   return NULL;  /* no more elements */
+}
+
+
+int luaH_nexti (Hash *t, int i) {
+  for (i++; i<t->size; i++) {
+    if (ttype(val(node(t, i))) != LUA_TNIL)  /* a non-nil value? */
+      return i;
+  }
+  return -1;  /* no more elements */
 }
 
 
