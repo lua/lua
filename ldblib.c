@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.74 2002/12/04 17:38:31 roberto Exp roberto $
+** $Id: ldblib.c,v 1.75 2002/12/05 17:50:10 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -105,6 +105,30 @@ static int setlocal (lua_State *L) {
   luaL_checkany(L, 3);
   lua_pushstring(L, lua_setlocal(L, &ar, luaL_checkint(L, 2)));
   return 1;
+}
+
+
+static int auxupvalue (lua_State *L, int get) {
+  const char *name;
+  int n = luaL_checkint(L, 2);
+  luaL_checktype(L, 1, LUA_TFUNCTION);
+  if (lua_iscfunction(L, 1)) return 0;  /* cannot touch C upvalues from Lua */
+  name = get ? lua_getupvalue(L, 1, n) : lua_setupvalue(L, 1, n);
+  if (name == NULL) return 0;
+  lua_pushstring(L, name);
+  lua_insert(L, -(get+1));
+  return get + 1;
+}
+
+
+static int getupvalue (lua_State *L) {
+  return auxupvalue(L, 1);
+}
+
+
+static int setupvalue (lua_State *L) {
+  luaL_checkany(L, 3);
+  return auxupvalue(L, 0);
 }
 
 
@@ -253,8 +277,10 @@ static const luaL_reg dblib[] = {
   {"getlocal", getlocal},
   {"getinfo", getinfo},
   {"gethook", gethook},
+  {"getupvalue", getupvalue},
   {"sethook", sethook},
   {"setlocal", setlocal},
+  {"setupvalue", setupvalue},
   {"debug", debug},
   {"traceback", errorfb},
   {NULL, NULL}

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.225 2002/12/04 17:28:27 roberto Exp roberto $
+** $Id: lapi.c,v 1.226 2002/12/04 17:38:31 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -865,4 +865,50 @@ LUA_API int lua_pushupvalues (lua_State *L) {
   return n;
 }
 
+
+static const char *aux_upvalue (lua_State *L, int funcindex, int n,
+                                TObject **val) {
+  Closure *f;
+  StkId fi = luaA_index(L, funcindex);
+  if (!ttisfunction(fi)) return NULL;
+  f = clvalue(fi);
+  if (n > f->l.nupvalues) return NULL;
+  if (f->c.isC) {
+    *val = &f->c.upvalue[n-1];
+    return "";
+  }
+  else {
+    *val = f->l.upvals[n-1]->v;
+    return getstr(f->l.p->upvalues[n-1]);
+  }
+}
+
+
+LUA_API const char *lua_getupvalue (lua_State *L, int funcindex, int n) {
+  const char *name;
+  TObject *val;
+  lua_lock(L);
+  name = aux_upvalue(L, funcindex, n, &val);
+  if (name) {
+    setobj2s(L->top, val);
+    api_incr_top(L);
+  }
+  lua_unlock(L);
+  return name;
+}
+
+
+LUA_API const char *lua_setupvalue (lua_State *L, int funcindex, int n) {
+  const char *name;
+  TObject *val;
+  lua_lock(L);
+  api_checknelems(L, 1);
+  name = aux_upvalue(L, funcindex, n, &val);
+  if (name) {
+    L->top--;
+    setobj(val, L->top);  /* write barrier */
+  }
+  lua_unlock(L);
+  return name;
+}
 

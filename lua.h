@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.168 2002/11/26 12:53:29 roberto Exp roberto $
+** $Id: lua.h,v 1.169 2002/12/04 17:28:27 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -336,6 +336,8 @@ LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar);
 LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar);
 LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n);
 LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n);
+LUA_API const char *lua_getupvalue (lua_State *L, int funcindex, int n);
+LUA_API const char *lua_setupvalue (lua_State *L, int funcindex, int n);
 
 LUA_API int lua_sethook (lua_State *L, lua_Hook func, int mask, int count);
 LUA_API lua_Hook lua_gethook (lua_State *L);

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.147 2002/12/04 17:29:05 roberto Exp roberto $
+** $Id: ltests.c,v 1.148 2002/12/04 17:38:31 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -384,6 +384,24 @@ static int metatable (lua_State *L) {
   return 1;
 }
 
+
+static int upvalue (lua_State *L) {
+  int n = luaL_checkint(L, 2);
+  luaL_checktype(L, 1, LUA_TFUNCTION);
+  if (lua_isnone(L, 3)) {
+    const char *name = lua_getupvalue(L, 1, n);
+    if (name == NULL) return 0;
+    lua_pushstring(L, name);
+    return 2;
+  }
+  else {
+    const char *name = lua_setupvalue(L, 1, n);
+    lua_pushstring(L, name);
+    return 1;
+  }
+}
+
+
 static int newuserdata (lua_State *L) {
   size_t size = luaL_checkint(L, 1);
   char *p = cast(char *, lua_newuserdata(L, size));
@@ -754,6 +772,7 @@ static const struct luaL_reg tests_funcs[] = {
   {"d2s", d2s},
   {"s2d", s2d},
   {"metatable", metatable},
+  {"upvalue", upvalue},
   {"newuserdata", newuserdata},
   {"pushuserdata", pushuserdata},
   {"udataval", udataval},

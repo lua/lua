@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.165 2002/12/02 12:06:10 roberto Exp roberto $
+** $Id: lgc.c,v 1.166 2002/12/04 17:38:31 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -186,11 +186,13 @@ static void traversetable (GCState *st, Table *h) {
 static void traverseproto (GCState *st, Proto *f) {
   int i;
   stringmark(f->source);
-  for (i=0; i<f->sizek; i++) {
+  for (i=0; i<f->sizek; i++) {  /* mark literal strings */
     if (ttisstring(f->k+i))
       stringmark(tsvalue(f->k+i));
   }
-  for (i=0; i<f->sizep; i++)
+  for (i=0; i<f->nupvalues; i++)  /* mark upvalue names */
+    stringmark(f->upvalues[i]);
+  for (i=0; i<f->sizep; i++)  /* mark nested protos */
     markvalue(st, f->p[i]);
   for (i=0; i<f->sizelocvars; i++)  /* mark local-variable names */
     stringmark(f->locvars[i].varname);
