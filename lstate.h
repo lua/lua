@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.14 1999/02/04 17:47:59 roberto Exp roberto $
+** $Id: lstate.h,v 1.15 1999/02/25 15:17:01 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -71,7 +71,6 @@ struct lua_State {
   GCnode rootglobal;  /* list of strings with global values */
   stringtable *string_root;  /* array of hash tables for strings and udata */
   struct IM *IMtable;  /* table for tag methods */
-  int IMtable_size;  /* size of IMtable */
   int last_tag;  /* last used tag in IMtable */
   struct ref *refArray;  /* locked objects */
   int refSize;  /* size of refArray */
