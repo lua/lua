@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.62 1997/06/17 18:44:31 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.63 1997/06/18 20:35:49 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -38,7 +38,7 @@ char *luaI_typenames[] = { /* ORDER LUA_T */
 
 
 
-static void setparsedfile (char *name)
+void luaI_setparsedfile (char *name)
 {
   lua_parsedfile = luaI_createfixedstring(name)->str;
 }
@@ -47,7 +47,7 @@ static void setparsedfile (char *name)
 int lua_doFILE (FILE *f, int bin)
 {
   ZIO z;
-  luaz_Fopen(&z, f);
+  luaZ_Fopen(&z, f);
   if (bin)
     return luaI_undump(&z);
   else {
@@ -64,7 +64,7 @@ int lua_dofile (char *filename)
   FILE *f = (filename == NULL) ? stdin : fopen(filename, "r");
   if (f == NULL)
     return 2;
-  setparsedfile(filename?filename:"(stdin)");
+  luaI_setparsedfile(filename?filename:"(stdin)");
   c = fgetc(f);
   ungetc(c, f);
   if (c == ID_CHUNK) {
@@ -76,7 +76,8 @@ int lua_dofile (char *filename)
       while ((c=fgetc(f)) != '\n') /* skip first line */;
     status = lua_doFILE(f, 0);
   }
-  fclose(f);
+  if (f != stdin)
+    fclose(f);
   return status;
 }                      
 
@@ -89,10 +90,9 @@ int lua_dobuffer (char *buff, int size)
 {
   int status;
   ZIO z;
-  setparsedfile("(buffer)");
-  luaz_mopen(&z, buff, size);
+  luaI_setparsedfile("(buffer)");
+  luaZ_mopen(&z, buff, size);
   status = luaI_undump(&z);
-  zclose(&z);
   return status;
 }
 
@@ -107,11 +107,10 @@ int lua_dostring (char *str)
   sprintf(buff, "(dostring) >> %.20s", str);
   temp = strchr(buff, '\n');
   if (temp) *temp = 0;  /* end string after first line */
-  setparsedfile(buff);
-  luaz_sopen(&z, str);
+  luaI_setparsedfile(buff);
+  luaZ_sopen(&z, str);
   lua_setinput(&z);
   status = lua_domain();
-  zclose(&z);
   return status;
 }
 
