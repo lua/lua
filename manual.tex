@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 2.4 1997/06/19 18:49:40 roberto Exp roberto $
+% $Id: manual.tex,v 2.5 1997/06/20 19:28:16 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -38,7 +38,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1997/06/19 18:49:40 $}
+\date{\small \verb$Date: 1997/06/20 19:28:16 $}
 
 \maketitle
 
@@ -1034,7 +1034,7 @@ This method cannot be set for tables with default tag.
       function settable_event (table, index, value)
         local tm = gettagmethod(tag(table), "settable")
         if tm then
-          return tm(table, index, value)
+          tm(table, index, value)
         elseif type(table) ~= "table" then
           error("indexed expression not a table")
         else
@@ -1598,11 +1598,10 @@ If \verb|retmode| is absent,
 all results from \verb|func| are just returned by the call.
 If \verb|retmode| is equal to \verb|"pack"|,
 the results are {\em packed\/} in a single table.\index{packed results}
-That is, \verb|call| returns just one table.
-At index \verb|n|, the table has the total number of results
+That is, \verb|call| returns just one table;
+at index \verb|n|, the table has the total number of results
 from the call;
 the first result is at index 1, etc.
-
 For instance, the following calls produce the following results:
 \begin{verbatim}
 a = call(sin, {5})    --> a = 0.0871557 = sin(5)
@@ -1666,7 +1665,9 @@ semantically, there is no difference between a
 field not present in a table or a field with value \nil.
 Therefore, the function only considers fields with non \nil\ values.
 The order in which the indices are enumerated is not specified,
-{\em not even for numeric indices}.
+{\em not even for numeric indices}
+(to traverse a table in numeric order,
+use a counter).
 If the table is modified in any way during a traversal,
 the semantics of \verb|next| is undefined.
 
@@ -1904,7 +1905,7 @@ stands for the value of the n-th captured substring.
 
 If \verb|repl| is a function, then this function is called every time a
 match occurs, with the following arguments:
-If \verb|table| is present, the the first argument is this table
+If \verb|table| is present, then the first argument is this table
 and the second one is a match counter (1 for the first call).
 Independently of these two optional arguments,
 all captured substrings are passed as arguments,
@@ -2072,10 +2073,21 @@ range \Math{[0,1)}.
 
 \subsection{I/O Facilities} \label{libio}
 
-All input and output operations in Lua are done over two {\em current\/} files:
-one for reading and one for writing.
-Initially, the current input file is \verb|stdin|,
-and the current output file is \verb|stdout|.
+All input and output operations in Lua are done over two
+\Def{file handles}, one for reading and one for writing.
+These handles are stored in two Lua global variables,
+called \verb|_INPUT| and \verb|_OUTPUT|.
+The global variables
+\verb|_STDIN|, \verb|_STDOUT| and \verb|_STDERR|
+are initialized with file descriptors for
+\verb|stdin|, \verb|stdout| and \verb|stderr|.
+Initially, \verb|_INPUT=_STDIN| and \verb|_OUTPUT=_STDOUT|.
+\Deffunc{_INPUT}\Deffunc{_OUTPUT}
+\Deffunc{_STDIN}\Deffunc{_STDOUT}\Deffunc{_STDERR}
+
+A file handle is a userdata containing the file stream \verb|FILE*|,
+and with a distinctive tag created by the I/O library.
+
 
 Unless otherwise stated,
 all I/O functions return \nil\ on failure and
@@ -2083,18 +2095,16 @@ some value different from \nil\ on success.
 
 \subsubsection*{\ff {\tt readfrom (filename)}}\Deffunc{readfrom}
 
-This function may be called in three ways.
-When called with a file name,
-it opens the named file,
-sets it as the {\em current\/} input file,
-and returns a {\em handle\/} to the file
-(this handle is a userdata containing the file stream \verb|FILE*|).
+This function may be called in two ways.
+When called with a file name, it opens the named file,
+sets its handle as the value of \verb|_INPUT|,
+and returns this value.
 It does not close the current input file.
-When called with a file handle returned by a previous call,
-it restores the file as the current input.
+%When called with a file handle returned by a previous call,
+%it simply assigns it to \verb|_INPUT|.
 When called without parameters,
-it closes the current input file,
-and restores \verb|stdin| as the current input file.
+it closes the \verb|_INPUT| file,
+and restores \verb|stdin| as the value of \verb|_INPUT|.
 
 If this function fails, it returns \nil,
 plus a string describing the error.
@@ -2105,28 +2115,26 @@ plus a string describing the error.
 then a \Index{piped input} is open, via function \IndexVerb{popen}.
 Not all systems implement pipes.
 Moreover,
-the number of files that can be open at the same time is usually limited and
-depends on the system.
+the number of files that can be open at the same time is
+usually limited and depends on the system.
 \end{quotation}
 
 \subsubsection*{\ff {\tt writeto (filename)}}\Deffunc{writeto}
 
-This function may be called in three ways.
+This function may be called in two ways.
 When called with a file name,
 it opens the named file,
-sets it as the {\em current\/} output file,
-and returns a {\em handle\/} to the file
-(this handle is a user data containing the file stream \verb|FILE*|).
+sets its handle as the value of \verb|_OUTPUT|,
+and returns this value.
 It does not close the current output file.
 Notice that, if the file already exists,
 then it will be {\em completely erased\/} with this operation.
-When called with a file handle returned by a previous call,
-it restores the file as the current output.
+%When called with a file handle returned by a previous call,
+%it restores the file as the current output.
 When called without parameters,
-this function closes the current output file,
-and restores \verb|stdout| as the current output file.
+this function closes the \verb|_OUTPUT| file,
+and restores \verb|stdout| as the value of \verb|_OUTPUT|.
 \index{closing a file}
-%%LHF: nao tem como escrever em stderr, tem?
 
 If this function fails, it returns \nil,
 plus a string describing the error.
@@ -2137,16 +2145,14 @@ plus a string describing the error.
 then a \Index{piped output} is open, via function \IndexVerb{popen}.
 Not all systems implement pipes.
 Moreover,
-the number of files that can be open at the same time is usually limited and
-depends on the system.
+the number of files that can be open at the same time is
+usually limited and depends on the system.
 \end{quotation}
 
 \subsubsection*{\ff {\tt appendto (filename)}}\Deffunc{appendto}
 
 This function opens a file named \verb|filename| and sets it as the
-{\em current\/} output file.
-It returns the file handle,
-or \nil\ in case of error.
+value of \verb|_OUTPUT|.
 Unlike the \verb|writeto| operation,
 this function does not erase any previous content of the file.
 If this function fails, it returns \nil,
@@ -2174,7 +2180,7 @@ The file must be explicitly removed when no longer needed.
 
 \subsubsection*{\ff {\tt read ([readpattern])}}\Deffunc{read}
 
-This function reads the current input
+This function reads the file \verb|_INPUT|
 according to a read pattern, that specifies how much to read;
 characters are read from the current input file until
 the read pattern fails or ends.
@@ -2196,7 +2202,7 @@ from the input if it belongs to the class;
 it never fails.
 A character class followed by \verb|*| reads until a character that
 does not belong to the class, or end of file;
-since it can match a sequence of zero characteres, it never fails.%
+since it can match a sequence of zero characters, it never fails.%
 \footnote{
 Notice that the behavior of read patterns is different from
 the regular pattern matching behavior,
@@ -2220,6 +2226,7 @@ Following are some examples of read patterns and their meanings:
 This is the default pattern.
 \item \verb|"{%s*}%S%S*"| returns the next word
 (maximal sequence of non white-space characters),
+skipping spaces if necessary,
 or \nil\ on end of file.
 \item \verb|"{%s*}[+-]?%d%d*"| returns the next integer
 or \nil\ if the next characters do not conform to an integer format.
@@ -2228,10 +2235,10 @@ or \nil\ if the next characters do not conform to an integer format.
 \subsubsection*{\ff {\tt write (value1, ...)}}\Deffunc{write}
 
 This function writes the value of each of its arguments to the
-current output file.
+file \verb|_OUTPUT|.
 The arguments must be strings or numbers.
 To write other values,
-use \verb|tostring| before \verb|write|.
+use \verb|tostring| or \verb|format| before \verb|write|.
 If this function fails, it returns \nil,
 plus a string describing the error.
 

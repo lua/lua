@@ -10,8 +10,6 @@
 #include "lualib.h"
 
 
-FILE *lua_infile, *lua_outfile;
-
 int lua_tagio;
 
 
@@ -39,59 +37,80 @@ static void pushresult (int i)
 }
 
 
-static void closefile (FILE *f)
+
+static FILE *getfile (char *name)
 {
-  if (f == stdin || f == stdout)
-    return;
-  if (f == lua_infile)
-    lua_infile = stdin;
-  if (f == lua_outfile)
-    lua_outfile = stdout;
+  lua_Object f = lua_getglobal(name);
+  if (lua_tag(f) != lua_tagio)
+    luaL_verror("global variable %s is not a file handle", name);
+  return lua_getuserdata(f);
+}
+
+
+static void closefile (char *name)
+{
+  FILE *f = getfile(name);
+  if (f == stdin || f == stdout) return;
   if (pclose(f) == -1)
     fclose(f);
 }
 
 
+static void setfile (FILE *f, char *name)
+{
+  lua_pushusertag(f, lua_tagio);
+  lua_setglobal(name);
+}
+
+
+static void setreturn (FILE *f, char *name)
+{
+  setfile(f, name);
+  lua_pushusertag(f, lua_tagio);
+}
+
 
 static void io_readfrom (void)
 {
+  FILE *current;
   lua_Object f = lua_getparam(1);
-  if (f == LUA_NOOBJECT)
-    closefile(lua_infile);  /* restore standart input */
+  if (f == LUA_NOOBJECT) {
+    closefile("_INPUT");
+    current = stdin;
+  }
   else if (lua_tag(f) == lua_tagio)
-    lua_infile = lua_getuserdata(f);
+    current = lua_getuserdata(f);
   else {
     char *s = luaL_check_string(1);
-    FILE *fp = (*s == '|') ? popen(s+1, "r") : fopen(s, "r");
-    if (fp)
-      lua_infile = fp;
-    else {
+    current = (*s == '|') ? popen(s+1, "r") : fopen(s, "r");
+    if (current == NULL) {
       pushresult(0);
       return;
     }
   }
-  lua_pushusertag(lua_infile, lua_tagio);
+  setreturn(current, "_INPUT");
 }
 
 
 static void io_writeto (void)
 {
+  FILE *current;
   lua_Object f = lua_getparam(1);
-  if (f == LUA_NOOBJECT)
-    closefile(lua_outfile);  /* restore standart output */
+  if (f == LUA_NOOBJECT) {
+    closefile("_OUTPUT");
+    current = stdout;
+  }
   else if (lua_tag(f) == lua_tagio)
-    lua_outfile = lua_getuserdata(f);
+    current = lua_getuserdata(f);
   else {
     char *s = luaL_check_string(1);
-    FILE *fp = (*s == '|') ? popen(s+1,"w") : fopen(s,"w");
-    if (fp)
-      lua_outfile = fp;
-    else {
+    current = (*s == '|') ? popen(s+1,"w") : fopen(s,"w");
+    if (current == NULL) {
       pushresult(0);
       return;
     }
   }
-  lua_pushusertag(lua_outfile, lua_tagio);
+  setreturn(current, "_OUTPUT");
 }
 
 
@@ -99,10 +118,8 @@ static void io_appendto (void)
 {
   char *s = luaL_check_string(1);
   FILE *fp = fopen (s, "a");
-  if (fp != NULL) {
-    lua_outfile = fp;
-    lua_pushusertag(lua_outfile, lua_tagio);
-  }
+  if (fp != NULL)
+    setreturn(fp, "_OUTPUT");
   else
     pushresult(0);
 }
@@ -112,6 +129,7 @@ static void io_appendto (void)
 
 static void io_read (void)
 {
+  FILE *f = getfile("_INPUT");
   char *buff;
   char *p = luaL_opt_string(1, "[^\n]*{\n}");
   int inskip = 0;  /* to control {skips} */
@@ -131,7 +149,7 @@ static void io_read (void)
     else {
       char *ep = luaL_item_end(p);  /* get what is next */
       int m;  /* match result */
-      if (c == NEED_OTHER) c = getc(lua_infile);
+      if (c == NEED_OTHER) c = getc(f);
       m = (c == EOF) ? 0 : luaL_singlematch((char)c, p);
       if (m) {
         if (inskip == 0) luaI_addchar(c);
@@ -152,7 +170,7 @@ static void io_read (void)
     }
   } break_while:
   if (c >= 0)  /* not EOF nor NEED_OTHER? */
-     ungetc(c, lua_infile);
+     ungetc(c, f);
   buff = luaI_addchar(0);
   if (*buff != 0 || *p == 0)  /* read something or did not fail? */
     lua_pushstring(buff);
@@ -161,11 +179,12 @@ static void io_read (void)
 
 static void io_write (void)
 {
+  FILE *f = getfile("_OUTPUT");
   int arg = 1;
   int status = 1;
   char *s;
   while ((s = luaL_opt_string(arg++, NULL)) != NULL)
-    status = status && (fputs(s, lua_outfile) != EOF);
+    status = status && (fputs(s, f) != EOF);
   pushresult(status);
 }
 
@@ -300,7 +319,11 @@ static struct luaL_reg iolib[] = {
 void iolib_open (void)
 {
   lua_tagio = lua_newtag();
-  lua_infile=stdin; lua_outfile=stdout;
+  setfile(stdin, "_INPUT");
+  setfile(stdout, "_OUTPUT");
+  setfile(stdin, "_STDIN");
+  setfile(stdout, "_STDOUT");
+  setfile(stderr, "_STDERR");
   luaL_openlib(iolib, (sizeof(iolib)/sizeof(iolib[0])));
   lua_pushcfunction(errorfb);
   lua_seterrormethod();
