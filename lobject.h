@@ -27,8 +27,12 @@
 #endif
 
 
-/* tags for values visible from Lua == first user-created tag */
+/* tags for values visible from Lua */
 #define NUM_TAGS	6
+
+
+/* extra tag: used locally when moving an upvalue from the stack to the heap */
+#define LUA_TUPVAL	6
 
 
 typedef union {
@@ -36,6 +40,7 @@ typedef union {
   union Udata *u;
   struct Closure *cl;
   struct Hash *h;
+  struct UpVal *v;
   lua_Number n;		/* LUA_TNUMBER */
 } Value;
 
@@ -53,6 +58,7 @@ typedef struct lua_TObject {
 #define uvalue(o)      ((o)->value.u)
 #define clvalue(o)      ((o)->value.cl)
 #define hvalue(o)       ((o)->value.h)
+#define vvalue(o)	((o)->value.v)
 
 
 /* Macros to set values */
@@ -74,6 +80,9 @@ typedef struct lua_TObject {
   { TObject *_o=(obj); _o->tt=LUA_TTABLE; _o->value.h=(x); }
 
 #define setnilvalue(obj) ((obj)->tt=LUA_TNIL)
+
+#define setupvalue(obj,x) \
+  { TObject *_o=(obj); _o->tt=LUA_TUPVAL; _o->value.v=(x); }
 
 #define setobj(obj1,obj2) \
   { TObject *o1=(obj1); const TObject *o2=(obj2); \
@@ -154,24 +163,47 @@ typedef struct LocVar {
 } LocVar;
 
 
+
+/*
+** Upvalues in the heap
+*/
+typedef struct UpVal {
+  TObject val;
+  struct UpVal *next;
+  int marked;
+} UpVal;
+
+
 /*
 ** Closures
 */
 typedef struct Closure {
   int isC;  /* 0 for Lua functions, 1 for C functions */
   int nupvalues;
-  union {
-    lua_CFunction c;  /* C functions */
-    struct Proto *l;  /* Lua functions */
-  } f;
   struct Closure *next;
   struct Closure *mark;  /* marked closures (point to itself when not marked) */
-  TObject upvalue[1];
+  union {
+    struct {  /* C functions */
+      lua_CFunction f;
+      TObject upvalue[1];
+    } c;
+    struct {  /* Lua functions */
+      struct Proto *p;
+      ls_bitup isopen;  /* bitmap: bit==1 when upvals point to the stack */
+      TObject *upvals[1];  /* may point to the stack or to an UpVal */
+    } l;
+  } u;
 } Closure;
 
 
 #define iscfunction(o)	(ttype(o) == LUA_TFUNCTION && clvalue(o)->isC)
 
+
+
+
+/*
+** Hash Tables
+*/
 
 typedef struct Node {
   struct Node *next;  /* for chaining */

@@ -15,6 +15,7 @@
 
 #include "ldebug.h"
 #include "ldo.h"
+#include "lfunc.h"
 #include "lgc.h"
 #include "lmem.h"
 #include "lobject.h"
@@ -122,9 +123,9 @@ static StkId callCclosure (lua_State *L, const struct Closure *cl) {
   int n;
   luaD_checkstack(L, nup+LUA_MINSTACK);  /* ensure minimum stack size */
   for (n=0; n<nup; n++)  /* copy upvalues as extra arguments */
-    setobj(L->top++, &cl->upvalue[n]);
+    setobj(L->top++, &cl->u.c.upvalue[n]);
   lua_unlock(L);
-  n = (*cl->f.c)(L);  /* do the actual call */
+  n = (*cl->u.c.f)(L);  /* do the actual call */
   lua_lock(L);
   return L->top - n;  /* return index of first result */
 }
@@ -209,7 +210,12 @@ struct SParser {  /* data to `f_parser' */
 static void f_parser (lua_State *L, void *ud) {
   struct SParser *p = cast(struct SParser *, ud);
   Proto *tf = p->bin ? luaU_undump(L, p->z) : luaY_parser(L, p->z);
-  luaV_Lclosure(L, tf, 0);
+  Closure *cl = luaF_newLclosure(L, 0);
+  cl->u.l.p = tf;
+  luaF_LConlist(L, cl);
+  setclvalue(L->top, cl);
+  incr_top;
+  
 }
 
 
@@ -286,6 +292,9 @@ struct lua_longjmp {
   jmp_buf b;
   struct lua_longjmp *previous;
   volatile int status;  /* error code */
+  CallInfo *ci;  /* call info of active function that set protection */
+  StkId top;  /* top stack when protection was set */
+  int allowhooks;  /* `allowhook' state when protection was set */
 };
 
 
@@ -325,19 +334,20 @@ void luaD_breakrun (lua_State *L, int errcode) {
 
 
 int luaD_runprotected (lua_State *L, void (*f)(lua_State *, void *), void *ud) {
-  CallInfo *oldci = L->ci;
-  StkId oldtop = L->top;
   struct lua_longjmp lj;
-  int allowhooks = L->allowhooks;
+  lj.ci = L->ci;
+  lj.top = L->top;
+  lj.allowhooks = L->allowhooks;
   lj.status = 0;
   lj.previous = L->errorJmp;  /* chain new error handler */
   L->errorJmp = &lj;
   if (setjmp(lj.b) == 0)
     (*f)(L, ud);
   else {  /* an error occurred: restore the state */
-    L->allowhooks = allowhooks;
-    L->ci = oldci;
-    L->top = oldtop;
+    luaF_close(L, lj.top);  /* close eventual pending closures */
+    L->ci = lj.ci;
+    L->top = lj.top;
+    L->allowhooks = lj.allowhooks;
     restore_stack_limit(L);
   }
   L->errorJmp = lj.previous;  /* restore old error handler */

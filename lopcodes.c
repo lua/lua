@@ -20,10 +20,11 @@ const l_char *const luaP_opnames[] = {
   l_s("LOADK"),
   l_s("LOADINT"),
   l_s("LOADNIL"),
-  l_s("LOADUPVAL"),
+  l_s("GETUPVAL"),
   l_s("GETGLOBAL"),
   l_s("GETTABLE"),
   l_s("SETGLOBAL"),
+  l_s("SETUPVAL"),
   l_s("SETTABLE"),
   l_s("NEWTABLE"),
   l_s("SELF"),
@@ -54,6 +55,7 @@ const l_char *const luaP_opnames[] = {
   l_s("TFORLOOP"),
   l_s("SETLIST"),
   l_s("SETLISTO"),
+  l_s("CLOSE"),
   l_s("CLOSURE")
 };
 
@@ -69,10 +71,11 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0,0,0,0, 1,1,iABc)		/* OP_LOADK */
  ,opmode(0,0,0,0, 1,0,iAsBc)		/* OP_LOADINT */
  ,opmode(0,0,1,0, 1,0,iABC)		/* OP_LOADNIL */
- ,opmode(0,0,0,0, 1,0,iABc)		/* OP_LOADUPVAL */
+ ,opmode(0,0,0,0, 1,0,iABC)		/* OP_GETUPVAL */
  ,opmode(0,0,0,0, 1,1,iABc)		/* OP_GETGLOBAL */
  ,opmode(0,0,1,1, 1,0,iABC)		/* OP_GETTABLE */
  ,opmode(0,0,0,0, 0,1,iABc)		/* OP_SETGLOBAL */
+ ,opmode(0,0,0,0, 0,0,iABC)		/* OP_SETUPVAL */
  ,opmode(0,0,1,1, 0,0,iABC)		/* OP_SETTABLE */
  ,opmode(0,0,0,0, 1,0,iABc)		/* OP_NEWTABLE */
  ,opmode(0,0,1,1, 1,0,iABC)		/* OP_SELF */
@@ -103,6 +106,7 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0,0,0,0, 0,0,iAsBc)		/* OP_TFORLOOP */
  ,opmode(0,0,0,0, 0,0,iABc)		/* OP_SETLIST */
  ,opmode(0,0,0,0, 0,0,iABc)		/* OP_SETLISTO */
+ ,opmode(0,0,0,0, 0,0,iABC)		/* OP_CLOSE */
  ,opmode(0,0,0,0, 1,0,iABc)		/* OP_CLOSURE */
 };
 

@@ -273,6 +273,11 @@ void luaK_dischargevars (FuncState *fs, expdesc *e) {
       e->k = VNONRELOC;
       break;
     }
+    case VUPVAL: {
+      e->u.i.info = luaK_codeABC(fs, OP_GETUPVAL, 0, e->u.i.info, 0);
+      e->k = VRELOCABLE;
+      break;
+    }
     case VGLOBAL: {
       e->u.i.info = luaK_codeABc(fs, OP_GETGLOBAL, 0, e->u.i.info);
       e->k = VRELOCABLE;
@@ -435,6 +440,12 @@ void luaK_storevar (FuncState *fs, expdesc *var, expdesc *exp) {
     case VLOCAL: {
       freeexp(fs, exp);
       luaK_exp2reg(fs, exp, var->u.i.info);
+      break;
+    }
+    case VUPVAL: {
+      int e = luaK_exp2anyreg(fs, exp);
+      freereg(fs, e);
+      luaK_codeABC(fs, OP_SETUPVAL, e, var->u.i.info, 0);
       break;
     }
     case VGLOBAL: {

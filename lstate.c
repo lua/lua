@@ -58,6 +58,7 @@ static void f_luaopen (lua_State *L, void *ud) {
     G(L)->rootcl = NULL;
     G(L)->roottable = NULL;
     G(L)->rootudata = NULL;
+    G(L)->rootupval = NULL;
     G(L)->TMtable = NULL;
     G(L)->sizeTM = 0;
     G(L)->ntag = 0;
@@ -91,6 +92,7 @@ LUA_API lua_State *lua_newthread (lua_State *OL, int stacksize) {
     L->errorJmp = NULL;
     L->callhook = NULL;
     L->linehook = NULL;
+    L->opencl = NULL;
     L->allowhooks = 1;
     L->next = L->previous = L;
     so.stacksize = stacksize;
@@ -122,10 +124,10 @@ static void close_state (lua_State *L, lua_State *OL) {
     luaS_freeall(L);
     luaM_freearray(L, G(L)->TMtable, G(L)->sizeTM, struct TM);
     luaM_freearray(L, G(L)->Mbuffer, G(L)->Mbuffsize, l_char);
-    luaM_freelem(NULL, L->G, global_State);
+    luaM_freelem(NULL, L->G);
   }
   luaM_freearray(OL, L->stack, L->stacksize, TObject);
-  luaM_freelem(OL, L, lua_State);
+  luaM_freelem(OL, L);
 }
 
 LUA_API void lua_close (lua_State *L) {

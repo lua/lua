@@ -248,7 +248,7 @@ LUA_API size_t lua_strlen (lua_State *L, int index) {
 
 LUA_API lua_CFunction lua_tocfunction (lua_State *L, int index) {
   StkId o = luaA_indexAcceptable(L, index);
-  return (o == NULL || !iscfunction(o)) ? NULL : clvalue(o)->f.c;
+  return (o == NULL || !iscfunction(o)) ? NULL : clvalue(o)->u.c.f;
 }
 
 
@@ -310,9 +310,16 @@ LUA_API void lua_pushstring (lua_State *L, const l_char *s) {
 
 
 LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
+  Closure *cl;
   lua_lock(L);
   api_checknelems(L, n);
-  luaV_Cclosure(L, fn, n);
+  cl = luaF_newCclosure(L, n);
+  cl->u.c.f = fn;
+  L->top -= n;
+  while (n--)
+    setobj(&cl->u.c.upvalue[n], L->top+n);
+  setclvalue(L->top, cl);
+  incr_top;
   lua_unlock(L);
 }
 

@@ -7,6 +7,7 @@
 #define LUA_PRIVATE
 #include "lua.h"
 
+#include "ldebug.h"
 #include "ldo.h"
 #include "lfunc.h"
 #include "lgc.h"
@@ -45,15 +46,12 @@ static void protomark (Proto *f) {
     for (i=0; i<f->sizelocvars; i++)  /* mark local-variable names */
       strmark(f->locvars[i].varname);
   }
+  lua_assert(luaG_checkcode(f));
 }
 
 
 static void markclosure (GCState *st, Closure *cl) {
   if (!ismarked(cl)) {
-    if (!cl->isC) {
-      lua_assert(cl->nupvalues == cl->f.l->nupvalues);
-      protomark(cl->f.l);
-    }
     cl->mark = st->cmark;  /* chain it for later traversal */
     st->cmark = cl;
   }
@@ -84,7 +82,10 @@ static void markobject (GCState *st, TObject *o) {
       marktable(st, hvalue(o));
       break;
     }
-    default: break;  /* numbers, etc */
+    default: {
+      lua_assert(0 <= ttype(o) && ttype(o) <= LUA_TUPVAL);
+      break;
+    }
   }
 }
 
@@ -119,10 +120,26 @@ static void marktagmethods (global_State *G, GCState *st) {
 }
 
 
-static void traverseclosure (GCState *st, Closure *f) {
-  int i;
-  for (i=0; i<f->nupvalues; i++)  /* mark its upvalues */
-    markobject(st, &f->upvalue[i]);
+static void traverseclosure (GCState *st, Closure *cl) {
+  if (cl->isC) {
+    int i;
+    for (i=0; i<cl->nupvalues; i++)  /* mark its upvalues */
+      markobject(st, &cl->u.c.upvalue[i]);
+  }
+  else {
+    int i;
+    lua_assert(cl->nupvalues == cl->u.l.p->nupvalues);
+    protomark(cl->u.l.p);
+    for (i=0; i<cl->nupvalues; i++) {  /* mark its upvalues */
+      if (luaF_isclosed(cl, i)) {
+        UpVal *u = cast(UpVal *, cl->u.l.upvals[i]);
+        if (!u->marked) {
+          u->marked = 1;
+          markobject(st, &u->val);
+        }
+      }
+    }
+  }
 }
 
 
@@ -164,9 +181,9 @@ static void markall (lua_State *L) {
   marktable(&st, G(L)->weakregistry);
   for (;;) {  /* mark tables and closures */
     if (st.cmark) {
-      Closure *f = st.cmark;  /* get first closure from list */
-      st.cmark = f->mark;  /* remove it from list */
-      traverseclosure(&st, f);
+      Closure *cl = st.cmark;  /* get first closure from list */
+      st.cmark = cl->mark;  /* remove it from list */
+      traverseclosure(&st, cl);
     }
     else if (st.tmark) {
       Hash *h = st.tmark;  /* get first table from list */
@@ -232,8 +249,7 @@ static void collectproto (lua_State *L) {
 }
 
 
-static void collectclosure (lua_State *L) {
-  Closure **p = &G(L)->rootcl;
+static void collectclosure (lua_State *L, Closure **p) {
   Closure *curr;
   while ((curr = *p) != NULL) {
     if (ismarked(curr)) {
@@ -248,6 +264,16 @@ static void collectclosure (lua_State *L) {
 }
 
 
+static void collectclosures (lua_State *L) {
+  lua_State *L1 = L;
+  do {  /* for each thread */
+    collectclosure(L1, &L1->opencl);
+    L1 = L1->next;
+  } while (L1 != L);
+  collectclosure(L, &G(L)->rootcl);
+}
+
+
 static void collecttable (lua_State *L) {
   Hash **p = &G(L)->roottable;
   Hash *curr;
@@ -259,6 +285,22 @@ static void collecttable (lua_State *L) {
     else {
       *p = curr->next;
       luaH_free(L, curr);
+    }
+  }
+}
+
+
+static void collectupval (lua_State *L) {
+  UpVal **v = &G(L)->rootupval;
+  UpVal *curr;
+  while ((curr = *v) != NULL) {
+    if (curr->marked) {
+      curr->marked = 0;
+      v = &curr->next;
+    }
+    else {
+      *v = curr->next;
+      luaM_freelem(L, curr);
     }
   }
 }
@@ -370,7 +412,8 @@ void luaC_collect (lua_State *L, int all) {
   collectstrings(L, all);
   collecttable(L);
   collectproto(L);
-  collectclosure(L);
+  collectupval(L);
+  collectclosures(L);
 }
 
 

@@ -64,8 +64,8 @@ int luaV_tostring (lua_State *L, TObject *obj) {
 
 static void traceexec (lua_State *L, lua_Hook linehook) {
   CallInfo *ci = L->ci;
-  int *lineinfo = ci_func(ci)->f.l->lineinfo;
-  int pc = (*ci->pc - ci_func(ci)->f.l->code) - 1;
+  int *lineinfo = ci_func(ci)->u.l.p->lineinfo;
+  int pc = (*ci->pc - ci_func(ci)->u.l.p->code) - 1;
   int newline;
   if (pc == 0) {  /* may be first time? */
     ci->line = 1;
@@ -81,30 +81,6 @@ static void traceexec (lua_State *L, lua_Hook linehook) {
   ci->lastpc = pc;
 }
 
-
-static Closure *luaV_closure (lua_State *L, int nelems) {
-  Closure *c = luaF_newclosure(L, nelems);
-  L->top -= nelems;
-  while (nelems--)
-    setobj(&c->upvalue[nelems], L->top+nelems);
-  setclvalue(L->top, c);
-  incr_top;
-  return c;
-}
-
-
-void luaV_Cclosure (lua_State *L, lua_CFunction c, int nelems) {
-  Closure *cl = luaV_closure(L, nelems);
-  cl->f.c = c;
-  cl->isC = 1;
-}
-
-
-void luaV_Lclosure (lua_State *L, Proto *l, int nelems) {
-  Closure *cl = luaV_closure(L, nelems);
-  cl->f.l = l;
-  cl->isC = 0;
-}
 
 
 /* maximum stack used by a call to a tag method (func + args) */
@@ -376,7 +352,7 @@ static void adjust_varargs (lua_State *L, StkId base, int nfixargs) {
 ** Returns n such that the the results are between [n,top).
 */
 StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
-  const Proto *const tf = cl->f.l;
+  const Proto *const tf = cl->u.l.p;
   const Instruction *pc;
   lua_Hook linehook;
   if (tf->is_vararg)  /* varargs? */
@@ -406,15 +382,17 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         setnvalue(ra, (lua_Number)GETARG_sBc(i));
         break;
       }
-      case OP_LOADUPVAL: {
-        setobj(ra, cl->upvalue+GETARG_Bc(i));
-        break;
-      }
       case OP_LOADNIL: {
         TObject *rb = RB(i);
         do {
           setnilvalue(rb--);
         } while (rb >= ra);
+        break;
+      }
+      case OP_GETUPVAL: {
+        int b = GETARG_B(i);
+        lua_assert(luaF_isclosed(cl, b) || cl->u.l.upvals[b] < base);
+        setobj(ra, cl->u.l.upvals[b]);
         break;
       }
       case OP_GETGLOBAL: {
@@ -429,6 +407,12 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       case OP_SETGLOBAL: {
         lua_assert(ttype(KBc(i)) == LUA_TSTRING);
         luaV_setglobal(L, tsvalue(KBc(i)), ra);
+        break;
+      }
+      case OP_SETUPVAL: {
+        int b = GETARG_B(i);
+        lua_assert(luaF_isclosed(cl, b) || cl->u.l.upvals[b] < base);
+        setobj(cl->u.l.upvals[b], ra);
         break;
       }
       case OP_SETTABLE: {
@@ -646,13 +630,34 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
           luaH_setnum(L, h, bc+n, ra+n);
         break;
       }
+      case OP_CLOSE: {
+        luaF_close(L, ra);
+        break;
+      }
       case OP_CLOSURE: {
-        Proto *p = tf->p[GETARG_Bc(i)];
-        int nup = p->nupvalues;
-        luaV_checkGC(L, ra+nup);
-        L->top = ra+nup;
-        luaV_Lclosure(L, p, nup);
-        L->top = base + tf->maxstacksize;
+        Proto *p;
+        Closure *ncl;
+        int nup, j;
+        luaV_checkGC(L, L->top);
+        p = tf->p[GETARG_Bc(i)];
+        nup = p->nupvalues;
+        ncl = luaF_newLclosure(L, nup);
+        ncl->u.l.p = p;
+        for (j=0; j<nup; j++, pc++) {
+          if (GET_OPCODE(*pc) == OP_GETUPVAL) {
+            int n = GETARG_B(*pc);
+            if (!luaF_isclosed(cl, n))
+              luaF_openentry(ncl, j);
+            ncl->u.l.upvals[j] = cl->u.l.upvals[n];
+          }
+          else {
+            lua_assert(GET_OPCODE(*pc) == OP_MOVE);
+            luaF_openentry(ncl, j);
+            ncl->u.l.upvals[j] = base + GETARG_B(*pc);
+          }
+        }
+        luaF_LConlist(L, ncl);
+        setclvalue(ra, ncl);
         break;
       }
     }

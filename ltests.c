@@ -165,7 +165,7 @@ static int listcode (lua_State *L) {
   Proto *p;
   luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
                  1, l_s("Lua function expected"));
-  p = clvalue(luaA_index(L, 1))->f.l;
+  p = clvalue(luaA_index(L, 1))->u.l.p;
   lua_newtable(L);
   setnameval(L, l_s("maxstack"), p->maxstacksize);
   setnameval(L, l_s("numparams"), p->numparams);
@@ -184,7 +184,7 @@ static int listk (lua_State *L) {
   int i;
   luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
                  1, l_s("Lua function expected"));
-  p = clvalue(luaA_index(L, 1))->f.l;
+  p = clvalue(luaA_index(L, 1))->u.l.p;
   lua_newtable(L);
   for (i=0; i<p->sizek; i++) {
     lua_pushnumber(L, i+1);
@@ -202,7 +202,7 @@ static int listlocals (lua_State *L) {
   const l_char *name;
   luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
                  1, l_s("Lua function expected"));
-  p = clvalue(luaA_index(L, 1))->f.l;
+  p = clvalue(luaA_index(L, 1))->u.l.p;
   while ((name = luaF_getlocalname(p, ++i, pc)) != NULL)
     lua_pushstring(L, name);
   return i-1;

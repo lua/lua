@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.57 2001/06/06 18:00:19 roberto Exp roberto $
+** $Id: lstate.h,v 1.58 2001/06/15 19:16:41 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -56,10 +56,6 @@ typedef struct stringtable {
 typedef struct global_State {
   void *Mbuffer;  /* global buffer */
   size_t Mbuffsize;  /* size of Mbuffer */
-  Proto *rootproto;  /* list of all prototypes */
-  Closure *rootcl;  /* list of all closures */
-  Hash *roottable;  /* list of all tables */
-  Udata *rootudata;   /* list of all userdata */
   stringtable strt;  /* hash table for strings */
   Hash *type2tag;  /* hash table from type names to tags */
   Hash *registry;  /* (strong) registry table */
@@ -69,6 +65,11 @@ typedef struct global_State {
   int ntag;  /* number of tags in TMtable */
   lu_mem GCthreshold;
   lu_mem nblocks;  /* number of `bytes' currently allocated */
+  Proto *rootproto;  /* list of all prototypes */
+  Closure *rootcl;  /* list of all closed closures */
+  Hash *roottable;  /* list of all tables */
+  Udata *rootudata;   /* list of all userdata */
+  UpVal *rootupval;  /* list of all up values */
 } global_State;
 
 
@@ -88,6 +89,7 @@ struct lua_State {
   lua_Hook linehook;
   int allowhooks;
   struct lua_longjmp *errorJmp;  /* current error recover point */
+  Closure *opencl;  /* list of closures still pointing to this stack */
   lua_State *next;  /* circular double linked list of states */
   lua_State *previous;
   CallInfo basefunc;

@@ -131,12 +131,13 @@ OP_MOVE,/*	A B	R(A) := R(B)					*/
 OP_LOADK,/*	A Bc	R(A) := Kst(Bc)					*/
 OP_LOADINT,/*	A sBc	R(A) := (Number)sBc				*/
 OP_LOADNIL,/*	A B	R(A) := ... := R(B) := nil			*/
-OP_LOADUPVAL,/*	A Bc	R(A) := UpValue[Bc]				*/
+OP_GETUPVAL,/*	A B	R(A) := UpValue[B]				*/
 
 OP_GETGLOBAL,/*	A Bc	R(A) := Gbl[Kst(Bc)]				*/
 OP_GETTABLE,/*	A B C	R(A) := R(B)[R/K(C)]				*/
 
 OP_SETGLOBAL,/*	A Bc	Gbl[Kst(Bc)] := R(A)				*/
+OP_SETUPVAL,/*	A B	UpValue[B] := R(A)				*/
 OP_SETTABLE,/*	A B C	R(B)[R/K(C)] := R(A)				*/
 
 OP_NEWTABLE,/*	A Bc	R(A) := {} (size = Bc)				*/
@@ -180,6 +181,7 @@ OP_TFORLOOP,/*	A sBc							*/
 OP_SETLIST,/*	A Bc	R(A)[Bc-Bc%FPF+i] := R(A+i), 1 <= i <= Bc%FPF+1	*/
 OP_SETLISTO,/*	A Bc							*/
 
+OP_CLOSE,/*	A 	close all variables in the stack up to (>=) R(A)*/
 OP_CLOSURE /*	A Bc	R(A) := closure(KPROTO[Bc], R(A), ... ,R(A+n))	*/
 } OpCode;
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.86 2001/06/28 19:58:57 roberto Exp roberto $
+** $Id: ldebug.c,v 1.87 2001/07/03 17:01:34 roberto Exp $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -117,7 +117,7 @@ int luaG_getline (int *lineinfo, int pc, int refline, int *prefi) {
 static int currentpc (CallInfo *ci) {
   lua_assert(isLmark(ci));
   if (ci->pc)
-    return (*ci->pc - ci_func(ci)->f.l->code) - 1;
+    return (*ci->pc - ci_func(ci)->u.l.p->code) - 1;
   else
     return -1;  /* function is not active */
 }
@@ -127,7 +127,7 @@ static int currentline (CallInfo *ci) {
   if (!isLmark(ci))
     return -1;  /* only active lua functions have current-line information */
   else {
-    int *lineinfo = ci_func(ci)->f.l->lineinfo;
+    int *lineinfo = ci_func(ci)->u.l.p->lineinfo;
     return luaG_getline(lineinfo, currentpc(ci), 1, NULL);
   }
 }
@@ -135,7 +135,7 @@ static int currentline (CallInfo *ci) {
 
 
 static Proto *getluaproto (CallInfo *ci) {
-  return (isLmark(ci) ? ci_func(ci)->f.l : NULL);
+  return (isLmark(ci) ? ci_func(ci)->u.l.p : NULL);
 }
 
 
@@ -199,7 +199,7 @@ static void funcinfo (lua_State *L, lua_Debug *ar, StkId func) {
     ar->what = l_s("C");
   }
   else
-    infoLproto(ar, cl->f.l);
+    infoLproto(ar, cl->u.l.p);
   luaO_chunkid(ar->short_src, ar->source, LUA_IDSIZE);
   if (ar->linedefined == 0)
     ar->what = l_s("main");
@@ -323,14 +323,15 @@ static int precheck (const Proto *pt) {
 }
 
 
-static int checkopenop (Instruction i) {
-  OpCode op = GET_OPCODE(i);
-  switch (op) {
+static int checkopenop (const Proto *pt, int pc) {
+  Instruction i = pt->code[pc+1];
+  switch (GET_OPCODE(i)) {
     case OP_CALL:
     case OP_RETURN: {
       check(GETARG_B(i) == NO_REG);
       return 1;
     }
+    case OP_CLOSE: return checkopenop(pt, pc+1);
     case OP_SETLISTO: return 1;
     default: return 0;  /* invalid instruction after an open call */
   }
@@ -382,7 +383,8 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
           last = pc;  /* set registers from `a' to `b' */
         break;
       }
-      case OP_LOADUPVAL: {
+      case OP_GETUPVAL:
+      case OP_SETUPVAL: {
         check(b < pt->nupvalues);
         break;
       }
@@ -419,7 +421,7 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
           checkreg(pt, a+b);
         }
         if (c == NO_REG) {
-          check(checkopenop(pt->code[pc+1]));
+          check(checkopenop(pt, pc));
         }
         else if (c != 0)
           checkreg(pt, a+c-1);
@@ -452,7 +454,7 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
       }
       case OP_CLOSURE: {
         check(b < pt->sizep);
-        checkreg(pt, a + pt->p[b]->nupvalues - 1);
+        check(pc + pt->p[b]->nupvalues < pt->sizecode);
         break;
       }
       default: break;
@@ -472,7 +474,7 @@ int luaG_checkcode (const Proto *pt) {
 static const l_char *getobjname (lua_State *L, StkId obj, const l_char **name) {
   CallInfo *ci = ci_stack(L, obj);
   if (isLmark(ci)) {  /* an active Lua function? */
-    Proto *p = ci_func(ci)->f.l;
+    Proto *p = ci_func(ci)->u.l.p;
     int pc = currentpc(ci);
     int stackpos = obj - ci->base;
     Instruction i;
@@ -516,7 +518,7 @@ static const l_char *getfuncname (lua_State *L, CallInfo *ci,
   if (ci == &L->basefunc || !isLmark(ci))
     return NULL;  /* not an active Lua function */
   else {
-    Proto *p = ci_func(ci)->f.l;
+    Proto *p = ci_func(ci)->u.l.p;
     int pc = currentpc(ci);
     Instruction i;
     if (pc == -1) return NULL;  /* function is not activated */

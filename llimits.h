@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.30 2001/06/05 20:01:09 roberto Exp roberto $
+** $Id: llimits.h,v 1.31 2001/08/27 15:16:28 roberto Exp $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -50,6 +50,9 @@ typedef unsigned long lu_mem;
 
 /* an integer big enough to count the number of strings in use */
 typedef long ls_nstr;
+
+/* a bitmap with one bit for each upvalue used by a function */
+typedef unsigned long ls_bitup;
 
 
 /* chars used as small naturals (so that `char' is reserved for characteres) */
@@ -108,7 +111,7 @@ typedef unsigned long Instruction;
 
 /* maximum number of upvalues */
 #ifndef MAXUPVALUES
-#define MAXUPVALUES 32          /* arbitrary limit (<MAXSTACK) */
+#define MAXUPVALUES	(sizeof(ls_bitup)*CHAR_BIT)
 #endif
 
 
