@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.47 1999/02/08 18:54:19 roberto Exp roberto $
+** $Id: lvm.c,v 1.48 1999/02/09 15:58:45 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -359,8 +359,8 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         S->top++;
         break;
 
-      case PUSHNEGW: aux += highbyte(*pc++);
-      case PUSHNEG:  aux += *pc++;
+      case PUSHNUMBERNEGW: aux += highbyte(*pc++);
+      case PUSHNUMBERNEG:  aux += *pc++;
         ttype(S->top) = LUA_T_NUMBER;
         nvalue(S->top) = -aux;
         S->top++;

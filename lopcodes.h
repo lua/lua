@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.23 1999/02/08 18:54:19 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.24 1999/02/09 15:58:45 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -27,8 +27,8 @@ POPDUP,/*	b	v		v		TOP-=b  */
 PUSHNUMBERW,/*	w	-		(float)w */
 PUSHNUMBER,/*	b	-		(float)b */
 
-PUSHNEGW,/*	w	-		(float)-w */
-PUSHNEG,/*	b	-		(float)-b */
+PUSHNUMBERNEGW,/* w	-		(float)-w */
+PUSHNUMBERNEG,/* b	-		(float)-b */
 
 PUSHCONSTANTW,/*w	-		CNST[w] */
 PUSHCONSTANT,/*	b	-		CNST[b] */

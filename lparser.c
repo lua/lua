@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.18 1999/02/08 18:54:19 roberto Exp roberto $
+** $Id: lparser.c,v 1.19 1999/02/09 15:59:10 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -270,7 +270,7 @@ static void code_number (LexState *ls, real f) {
   real af = (f<0) ? -f : f;
   if (0 <= af && af <= (real)MAX_WORD && (int)af == af) {
     /* abs(f) has a short integer value */
-    code_oparg(ls, (f<0) ? PUSHNEG : PUSHNUMBER, (int)af, 1);
+    code_oparg(ls, (f<0) ? PUSHNUMBERNEG : PUSHNUMBER, (int)af, 1);
   }
   else
     code_constant(ls, real_constant(ls->fs, f));
