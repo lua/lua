@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.91 2002/06/18 17:12:05 roberto Exp roberto $
+** $Id: lua.c,v 1.92 2002/06/18 17:43:49 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -73,9 +73,14 @@ static void report (int status) {
         lua_remove(L, -2);  /* lease only traceback on stack */
     }
     lua_getglobal(L, "_ALERT");
-    lua_pushvalue(L, -2);
-    lua_pcall(L, 1, 0);
-    lua_pop(L, 1);
+    if (lua_isfunction(L, -1)) {
+      lua_pushvalue(L, -2);
+      lua_pcall(L, 1, 0);
+    }
+    else {
+      lua_pop(L, 1);
+      fprintf(stderr, "%s", lua_tostring(L, -1));
+    }
   }
 }
 
