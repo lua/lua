@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.35 1999/02/22 19:23:36 roberto Exp roberto $
+** $Id: ldo.c,v 1.36 1999/02/26 15:48:55 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -108,7 +108,7 @@ void luaD_callHook (StkId base, TProtoFunc *tf, int isreturn)
   else {
     TObject *f = L->stack.stack+base-1;
     if (tf)
-      (*L->callhook)(Ref(f), tf->fileName->str, tf->lineDefined);
+      (*L->callhook)(Ref(f), tf->source->str, tf->lineDefined);
     else
       (*L->callhook)(Ref(f), "(C)", -1);
   }
@@ -355,23 +355,27 @@ void luaD_gcIM (TObject *o)
 }
 
 
-int lua_dofile (char *filename)
-{
+#define	MAXFILENAME	200	/* maximum part of a file name kept */
+
+int lua_dofile (char *filename) {
   ZIO z;
   int status;
   int c;
   int bin;
+  char name[MAXFILENAME+2];  /* +2 for '@' and '\0' */
   FILE *f = (filename == NULL) ? stdin : fopen(filename, "r");
   if (f == NULL)
     return 2;
   if (filename == NULL)
-    filename = "(stdin)";
+    strcpy(name, "@stdin");
+  else
+    sprintf(name, "@%.*s", MAXFILENAME, filename);
   c = fgetc(f);
   ungetc(c, f);
   bin = (c == ID_CHUNK);
   if (bin)
     f = freopen(filename, "rb", f);  /* set binary mode */
-  luaZ_Fopen(&z, f, filename);
+  luaZ_Fopen(&z, f, name);
   status = do_main(&z, bin);
   if (f != stdin)
     fclose(f);
@@ -379,40 +383,15 @@ int lua_dofile (char *filename)
 }
 
 
-#define SIZE_PREF 20  /* size of string prefix to appear in error messages */
-#define SSIZE_PREF "20"
-
-
-static void build_name (char *str, char *name) {
-  if (str == NULL || *str == ID_CHUNK)
-    strcpy(name, "(buffer)");
-  else {
-    char *temp;
-    sprintf(name, "(dostring) >> \"%." SSIZE_PREF "s\"", str);
-    temp = strchr(name, '\n');
-    if (temp) {  /* end string after first line */
-     *temp = '"';
-     *(temp+1) = 0;
-    }
-  }
-}
-
-
 int lua_dostring (char *str) {
-  return lua_dobuffer(str, strlen(str), NULL);
+  return lua_dobuffer(str, strlen(str), str);
 }
 
 
 int lua_dobuffer (char *buff, int size, char *name) {
-  char newname[SIZE_PREF+25];
   ZIO z;
-  int status;
-  if (name==NULL) {
-    build_name(buff, newname);
-    name = newname;
-  }
+  if (!name) name = "?";
   luaZ_mopen(&z, buff, size, name);
-  status = do_main(&z, buff[0]==ID_CHUNK);
-  return status;
+  return do_main(&z, buff[0]==ID_CHUNK);
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.54 1999/02/23 14:57:28 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.55 1999/03/01 20:22:16 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -250,7 +250,7 @@ static void luaB_dostring (void) {
   char *s = luaL_check_lstr(1, &l);
   if (*s == ID_CHUNK)
     lua_error("`dostring' cannot run pre-compiled code");
-  if (lua_dobuffer(s, l, luaL_opt_string(2, NULL)) == 0)
+  if (lua_dobuffer(s, l, luaL_opt_string(2, s)) == 0)
     if (luaA_passresults() == 0)
       lua_pushuserdata(NULL);  /* at least one result to signal no errors */
 }

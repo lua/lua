@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.23 1999/02/12 19:23:02 roberto Exp roberto $
+% $Id: manual.tex,v 1.24 1999/02/25 19:13:56 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -41,7 +41,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{\small \verb$Date: 1999/02/12 19:23:02 $}
+%\date{\small \verb$Date: 1999/02/25 19:13:56 $}
 
 \maketitle
 
@@ -2926,12 +2926,16 @@ it accepts only a handle returned by
 
 Three other functions produce extra information about a function:
 \begin{verbatim}
-void lua_funcinfo (lua_Object func, char **filename, int *linedefined);
+void lua_funcinfo (lua_Object func, char **source, int *linedefined);
 int lua_currentline (lua_Function func);
 char *lua_getobjname (lua_Object o, char **name);
 \end{verbatim}
-\verb|lua_funcinfo| gives the file name and the line where the
-given function has been defined.
+\verb|lua_funcinfo| gives the source and the line where the
+given function has been defined:
+If the function was defined in a string,
+\verb|source| is that string;
+If the function was defined in a file,
+\verb|source| starts with a \verb|@| followed by the file name.
 If the ``function'' is in fact the main code of a chunk,
 then \verb|linedefined| is 0.
 If the function is a C function,

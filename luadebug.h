@@ -1,5 +1,5 @@
 /*
-** $Id: luadebug.h,v 1.4 1999/01/15 13:11:22 roberto Exp roberto $
+** $Id: luadebug.h,v 1.5 1999/02/04 17:47:59 roberto Exp roberto $
 ** Debugging API
 ** See Copyright Notice in lua.h
 */
@@ -17,7 +17,7 @@ typedef void (*lua_LHFunction) (int line);
 typedef void (*lua_CHFunction) (lua_Function func, char *file, int line);
 
 lua_Function lua_stackedfunction (int level);
-void lua_funcinfo (lua_Object func, char **filename, int *linedefined);
+void lua_funcinfo (lua_Object func, char **source, int *linedefined);
 int lua_currentline (lua_Function func);
 char *lua_getobjname (lua_Object o, char **name);
 

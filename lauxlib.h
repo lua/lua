@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.9 1998/06/19 16:14:09 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.10 1998/12/28 13:44:54 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -46,6 +46,6 @@ int luaL_newbuffer (int size);
 void luaL_oldbuffer (int old);
 char *luaL_buffer (void);
 int luaL_findstring (char *name, char *list[]);
-
+void luaL_chunkid (char *out, char *source, int len);
 
 #endif

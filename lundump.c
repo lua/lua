@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.5 1998/12/15 14:59:43 roberto Exp $
+** $Id: lundump.c,v 1.6 1998/12/27 20:23:22 roberto Exp roberto $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -161,7 +161,7 @@ static TProtoFunc* LoadFunction (ZIO* Z)
 {
  TProtoFunc* tf=luaF_newproto();
  tf->lineDefined=LoadWord(Z);
- tf->fileName=LoadTString(Z);
+ tf->source=LoadTString(Z);
  tf->code=LoadCode(Z);
  LoadLocals(tf,Z);
  LoadConstants(tf,Z);

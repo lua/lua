@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.25 1999/01/04 13:37:07 roberto Exp roberto $
+** $Id: lobject.h,v 1.26 1999/02/03 13:53:48 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -128,7 +128,7 @@ typedef struct TProtoFunc {
   int nconsts;
   Byte *code;  /* ends with opcode ENDCODE */
   int lineDefined;
-  TaggedString  *fileName;
+  TaggedString  *source;
   struct LocVar *locvars;  /* ends with line = -1 */
 } TProtoFunc;
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.3 1999/01/15 11:36:28 roberto Exp roberto $
+** $Id: ldblib.c,v 1.4 1999/02/04 17:47:59 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -33,24 +33,24 @@ static void settabsi (lua_Object t, char *i, int v) {
 
 static lua_Object getfuncinfo (lua_Object func) {
   lua_Object result = lua_createtable();
-  char *name;
+  char *str;
   int line;
-  lua_funcinfo(func, &name, &line);
+  lua_funcinfo(func, &str, &line);
   if (line == -1)  /* C function? */
     settabss(result, "kind", "C");
   else if (line == 0) {  /* "main"? */
       settabss(result, "kind", "chunk");
-      settabss(result, "name", name);
+      settabss(result, "source", str);
     }
   else {  /* Lua function */
     settabss(result, "kind", "Lua");
     settabsi(result, "def_line", line);
-    settabss(result, "def_chunk", name);
+    settabss(result, "source", str);
   }
   if (line != 0) {  /* is it not a "main"? */
-    char *kind = lua_getobjname(func, &name);
+    char *kind = lua_getobjname(func, &str);
     if (*kind) {
-      settabss(result, "name", name);
+      settabss(result, "name", str);
       settabss(result, "where", kind);
     }
   }

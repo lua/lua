@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.29 1999/02/25 15:17:01 roberto Exp roberto $
+** $Id: llex.c,v 1.30 1999/02/25 19:13:56 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -32,8 +32,7 @@ char *reserved [] = {"and", "do", "else", "elseif", "end", "function",
     "until", "while"};
 
 
-void luaX_init (void)
-{
+void luaX_init (void) {
   int i;
   for (i=0; i<(sizeof(reserved)/sizeof(reserved[0])); i++) {
     TaggedString *ts = luaS_new(reserved[i]);
@@ -42,11 +41,16 @@ void luaX_init (void)
 }
 
 
+#define MAXSRC          40
+
 void luaX_syntaxerror (LexState *ls, char *s, char *token) {
+  char buff[MAXSRC];
+  luaL_chunkid(buff, zname(ls->lex_z), MAXSRC);
   if (token[0] == '\0')
     token = "<eof>";
-  luaL_verror("%.100s;\n  last token read: `%.50s' at line %d in chunk `%.50s'",
-              s, token, ls->linenumber, zname(ls->lex_z));
+  luaL_verror("%.100s;\n  last token read: `%.50s' "
+              "at line %d from %.50s",
+              s, token, ls->linenumber, buff);
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.39 1999/02/25 19:13:56 roberto Exp roberto $
+** $Id: lapi.c,v 1.40 1999/03/01 17:49:04 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -594,18 +594,17 @@ int lua_setlocal (lua_Function func, int local_number)
 }
 
 
-void lua_funcinfo (lua_Object func, char **filename, int *linedefined)
-{
+void lua_funcinfo (lua_Object func, char **source, int *linedefined) {
   if (!lua_isfunction(func))
     lua_error("API - `funcinfo' called with a non-function value");
   else {
     TObject *f = luaA_protovalue(Address(func));
     if (normalized_type(f) == LUA_T_PROTO) {
-      *filename = tfvalue(f)->fileName->str;
+      *source = tfvalue(f)->source->str;
       *linedefined = tfvalue(f)->lineDefined;
     }
     else {
-      *filename = "(C)";
+      *source = "(C)";
       *linedefined = -1;
     }
   }

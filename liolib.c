@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.30 1999/02/05 15:22:43 roberto Exp roberto $
+** $Id: liolib.c,v 1.31 1999/02/22 14:17:24 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -455,6 +455,10 @@ static void io_debug (void) {
 #define MESSAGESIZE	150
 #define MAXMESSAGE	(MESSAGESIZE*10)
 
+
+#define MAXSRC		40
+
+
 static void errorfb (void) {
   char buff[MAXMESSAGE];
   int level = 1;  /* skip level 0 (it's this function) */
@@ -464,8 +468,10 @@ static void errorfb (void) {
     char *name;
     int currentline;
     char *chunkname;
+    char buffchunk[MAXSRC];
     int linedefined;
     lua_funcinfo(func, &chunkname, &linedefined);
+    luaL_chunkid(buffchunk, chunkname, MAXSRC);
     if (level == 2) strcat(buff, "Active Stack:\n");
     strcat(buff, "\t");
     if (strlen(buff) > MAXMESSAGE-MESSAGESIZE) {
@@ -474,26 +480,24 @@ static void errorfb (void) {
     }
     switch (*lua_getobjname(func, &name)) {
       case 'g':
-        sprintf(buff+strlen(buff), "function %.50s", name);
+        sprintf(buff+strlen(buff), "function `%.50s'", name);
         break;
       case 't':
         sprintf(buff+strlen(buff), "`%.50s' tag method", name);
         break;
       default: {
         if (linedefined == 0)
-          sprintf(buff+strlen(buff), "main of %.50s", chunkname);
-        else if (linedefined < 0)
-          sprintf(buff+strlen(buff), "%.50s", chunkname);
-        else
-          sprintf(buff+strlen(buff), "function (%.50s:%d)",
-                  chunkname, linedefined);
+          sprintf(buff+strlen(buff), "main of %.50s", buffchunk);
+        else if (linedefined > 0)
+          sprintf(buff+strlen(buff), "function <%d:%.50s>",
+                  linedefined, buffchunk);
         chunkname = NULL;
       }
     }
     if ((currentline = lua_currentline(func)) > 0)
       sprintf(buff+strlen(buff), " at line %d", currentline);
     if (chunkname)
-      sprintf(buff+strlen(buff), " [in chunk %.50s]", chunkname);
+      sprintf(buff+strlen(buff), " [in %.50s]", buffchunk);
     strcat(buff, "\n");
   }
   func = lua_rawgetglobal("_ALERT");

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.24 1999/02/25 19:13:56 roberto Exp roberto $
+** $Id: lparser.c,v 1.25 1999/02/26 15:48:55 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -534,7 +534,7 @@ static void func_onstack (LexState *ls, FuncState *func) {
 }
 
 
-static void init_state (LexState *ls, FuncState *fs, TaggedString *filename) {
+static void init_state (LexState *ls, FuncState *fs, TaggedString *source) {
   TProtoFunc *f = luaF_newproto();
   fs->prev = ls->fs;  /* linked list of funcstates */
   ls->fs = fs;
@@ -544,7 +544,7 @@ static void init_state (LexState *ls, FuncState *fs, TaggedString *filename) {
   fs->nupvalues = 0;
   fs->lastsetline = 0;
   fs->f = f;
-  f->fileName = filename;
+  f->source = source;
   fs->pc = 0;
   f->code = NULL;
   fs->nvars = (L->debug) ? 0 : -1;  /* flag no debug information? */
@@ -828,7 +828,7 @@ static int funcname (LexState *ls, vardesc *v) {
 static void body (LexState *ls, int needself, int line) {
   /* body ->  '(' parlist ')' chunk END */
   FuncState newfs;
-  init_state(ls, &newfs, ls->fs->f->fileName);
+  init_state(ls, &newfs, ls->fs->f->source);
   newfs.f->lineDefined = line;
   check(ls, '(');
   if (needself)
@@ -1140,7 +1140,7 @@ static int funcparams (LexState *ls, int slf) {
       luaX_error(ls, "function arguments expected");
       break;
   }
-  code_byte(fs, CALLFUNC);
+  code_byte(fs, CALL);
   code_byte(fs, 0);  /* save space for nresult */
   code_byte(fs, (Byte)(nparams+slf));
   return fs->pc-1;

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.13 1998/09/07 18:59:59 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.14 1999/02/25 19:13:56 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -34,7 +34,7 @@ void luaL_argerror (int numarg, char *extramsg) {
   lua_getobjname(f, &funcname);
   numarg -= lua_nups(f);
   if (funcname == NULL)
-    funcname = "(unknown)";
+    funcname = "?";
   if (extramsg == NULL)
     luaL_verror("bad argument #%d to function `%.50s'", numarg, funcname);
   else
@@ -109,5 +109,20 @@ void luaL_verror (char *fmt, ...)
   vsprintf(buff, fmt, argp);
   va_end(argp);
   lua_error(buff);
+}
+
+
+void luaL_chunkid (char *out, char *source, int len) {
+  len -= 13;  /* 13 = strlen("string ''...\0") */
+  if (*source == '@')
+    sprintf(out, "file `%.*s'", len, source+1);
+  else if (*source == '(')
+    strcpy(out, "(C code)");
+  else {
+    char *b = strchr(source , '\n');  /* stop string at first new line */
+    int lim = (b && (b-source)<len) ? b-source : len;
+    sprintf(out, "string `%.*s'", lim, source);
+    strcpy(out+lim+(13-5), "...'");  /* 5 = strlen("...'\0") */
+  }
 }
 
