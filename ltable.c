@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.110 2002/06/13 13:39:55 roberto Exp roberto $
+** $Id: ltable.c,v 1.111 2002/06/24 20:18:38 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -46,8 +46,11 @@
 #define toobig(x)	((((x)-1) >> MAXBITS) != 0)
 
 
+/* function to convert a lua_Number to int (with any rounding method) */
+#ifndef lua_number2int
+#define lua_number2int(i,n)	((i)=(int)(n))
+#endif
 
-#define TagDefault LUA_TTABLE
 
 
 #define hashnum(t,n)	\
@@ -68,8 +71,11 @@
 */
 Node *luaH_mainposition (const Table *t, const TObject *key) {
   switch (ttype(key)) {
-    case LUA_TNUMBER:
-      return hashnum(t, nvalue(key));
+    case LUA_TNUMBER: {
+      int ikey;
+      lua_number2int(ikey, nvalue(key));
+      return hashnum(t, ikey);
+    }
     case LUA_TSTRING:
       return hashstr(t, tsvalue(key));
     case LUA_TBOOLEAN:

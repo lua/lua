@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.143 2002/06/25 19:18:49 roberto Exp roberto $
+** $Id: lua.h,v 1.144 2002/06/26 19:28:44 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -299,12 +299,6 @@ LUA_API int lua_pushupvalues (lua_State *L);
 
 #ifndef LUA_NUMBER_FMT
 #define LUA_NUMBER_FMT		"%.16g"
-#endif
-
-
-/* function to convert a lua_Number to int (with any rounding method) */
-#ifndef lua_number2int
-#define lua_number2int(i,n)	((i)=(int)(n))
 #endif
 
 /* }====================================================================== */
