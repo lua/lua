@@ -1,6 +1,6 @@
 %{
 /*
-** $Id: lua.stx,v 1.18 1997/11/19 17:29:23 roberto Exp roberto $
+** $Id: lua.stx,v 1.19 1997/11/21 19:00:46 roberto Exp roberto $
 ** Syntax analizer and code generator
 ** See Copyright Notice in lua.h
 */
@@ -573,6 +573,7 @@ static void init_state (TaggedString *filename)
   else
     L->currState->maxvars = -1;  /* flag no debug information */
   code_byte(0);  /* to be filled with stacksize */
+  L->lexstate->lastline = 0;  /* invalidate it */
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.7 1997/11/19 17:35:47 roberto Exp roberto $
+** $Id: llex.c,v 1.8 1997/11/21 19:00:46 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -60,7 +60,6 @@ void luaX_setinput (ZIO *z)
   LexState *LS = L->lexstate;
   LS->current = '\n';
   LS->linelasttoken = 0;
-  LS->lastline = 0;
   LS->linenumber = 0;
   LS->iflevel = 0;
   LS->ifstate[0].skip = 0;
