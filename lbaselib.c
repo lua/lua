@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.156 2004/08/30 18:35:14 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.157 2004/09/03 13:16:48 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -523,9 +523,13 @@ static int auxresume (lua_State *L, lua_State *co, int narg) {
   int status;
   if (!lua_checkstack(co, narg))
     luaL_error(L, "too many arguments to resume");
+  if (lua_threadstatus(co) == 0 && lua_gettop(co) == 0) {
+    lua_pushliteral(L, "cannot resume dead coroutine");
+    return -1;  /* error flag */
+  }
   lua_xmove(L, co, narg);
   status = lua_resume(co, narg);
-  if (status == 0) {
+  if (status == 0 || status == LUA_YIELD) {
     int nres = lua_gettop(co);
     if (!lua_checkstack(L, nres))
       luaL_error(L, "too many results to resume");
@@ -599,13 +603,34 @@ static int luaB_costatus (lua_State *L) {
   luaL_argcheck(L, co, 1, "coroutine expected");
   if (L == co) lua_pushliteral(L, "running");
   else {
-    lua_Debug ar;
-    if (lua_getstack(co, 0, &ar) == 0 && lua_gettop(co) == 0)
-      lua_pushliteral(L, "dead");
-    else
-      lua_pushliteral(L, "suspended");
+    switch (lua_threadstatus(co)) {
+      case LUA_YIELD:
+        lua_pushliteral(L, "suspended");
+        break;
+      case 0: {
+        lua_Debug ar;
+        if (lua_getstack(co, 0, &ar) > 0)  /* does it have frames? */
+          lua_pushliteral(L, "normal");  /* it is running */
+        else if (lua_gettop(co) == 0)
+            lua_pushliteral(L, "dead");
+        else
+          lua_pushliteral(L, "suspended");  /* initial state */
+        break;  
+      }
+      default:  /* some error occured */
+        lua_pushliteral(L, "dead");
+        break;
+    }
   }
   return 1;
+}
+
+
+static int luaB_cocurrent (lua_State *L) {
+  if (lua_pushthread(L))
+    return 0;  /* main thread is not a coroutine */
+  else
+    return 1;
 }
 
 
@@ -615,6 +640,7 @@ static const luaL_reg co_funcs[] = {
   {"resume", luaB_coresume},
   {"yield", luaB_yield},
   {"status", luaB_costatus},
+  {"current", luaB_cocurrent},
   {NULL, NULL}
 };
 

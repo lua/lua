@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.12 2004/08/10 19:17:23 roberto Exp roberto $
+** $Id: lvm.c,v 2.13 2004/08/12 14:19:51 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -398,7 +398,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
     if ((L->hookmask & (LUA_MASKLINE | LUA_MASKCOUNT)) &&
         (--L->hookcount == 0 || L->hookmask & LUA_MASKLINE)) {
       traceexec(L, pc);  /***/
-      if (L->isSuspended) {  /* did hook yield? */
+      if (L->status == LUA_YIELD) {  /* did hook yield? */
         L->ci->savedpc = pc - 1;
         return NULL;
       }

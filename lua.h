@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.191 2004/06/02 17:37:03 roberto Exp roberto $
+** $Id: lua.h,v 1.192 2004/06/04 15:30:53 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -37,11 +37,12 @@
 #define lua_upvalueindex(i)	(LUA_GLOBALSINDEX-(i))
 
 
-/* error codes for `lua_pcall' */
-#define LUA_ERRRUN	1
-#define LUA_ERRSYNTAX	2
-#define LUA_ERRMEM	3
-#define LUA_ERRERR	4
+/* return codes for `lua_pcall', `lua_resume', and `lua_threadstatus' */
+#define LUA_YIELD	1
+#define LUA_ERRRUN	2
+#define LUA_ERRSYNTAX	3
+#define LUA_ERRMEM	4
+#define LUA_ERRERR	5
 
 
 typedef struct lua_State lua_State;
@@ -165,6 +166,7 @@ LUA_API const char *lua_pushfstring (lua_State *L, const char *fmt, ...);
 LUA_API void  lua_pushcclosure (lua_State *L, lua_CFunction fn, int n);
 LUA_API void  lua_pushboolean (lua_State *L, int b);
 LUA_API void  lua_pushlightuserdata (lua_State *L, void *p);
+LUA_API int   lua_pushthread (lua_State *L);
 
 
 /*
@@ -208,6 +210,7 @@ LUA_API int lua_dump (lua_State *L, lua_Chunkwriter writer, void *data);
 */
 LUA_API int  lua_yield (lua_State *L, int nresults);
 LUA_API int  lua_resume (lua_State *L, int narg);
+LUA_API int  lua_threadstatus (lua_State *L);
 
 /*
 ** garbage-collection function and options

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.8 2004/09/03 15:48:56 roberto Exp roberto $
+** $Id: ldo.c,v 2.9 2004/09/08 14:23:09 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -358,7 +358,7 @@ static void resume (lua_State *L, void *ud) {
   StkId firstResult;
   int nargs = *cast(int *, ud);
   CallInfo *ci = L->ci;
-  if (!L->isSuspended) {
+  if (L->status != LUA_YIELD) {
     lua_assert(ci == L->base_ci && nargs < L->top - L->base);
     luaD_precall(L, L->top - (nargs + 1), LUA_MULTRET);  /* start coroutine */
   }
@@ -372,10 +372,11 @@ static void resume (lua_State *L, void *ud) {
       if (nresults >= 0) L->top = L->ci->top;
     }  /* else yielded inside a hook: just continue its execution */
   }
-  L->isSuspended = 0;
+  L->status = 0;
   firstResult = luaV_execute(L, L->ci - L->base_ci);
-  if (firstResult != NULL)   /* return? */
+  if (firstResult != NULL) {   /* return? */
     luaD_poscall(L, LUA_MULTRET, firstResult);  /* finalize this coroutine */
+  }
 }
 
 
@@ -393,25 +394,20 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
   lu_byte old_allowhooks;
   lua_lock(L);
   lua_assert(L->errfunc == 0 && L->nCcalls == 0);
-  if (!L->isSuspended) {
-    if (L->ci == L->base_ci) {  /* no activation record? */
-      if (nargs >= L->top - L->base)
-        return resume_error(L, "cannot resume dead coroutine");
-    }
-    else
+  if (L->status != LUA_YIELD) {
+    if (L->status != 0)
+      return resume_error(L, "cannot resume dead coroutine");
+    else if (L->ci != L->base_ci)
       return resume_error(L, "cannot resume non-suspended coroutine");
   }
   old_allowhooks = L->allowhook;
   status = luaD_rawrunprotected(L, resume, &nargs);
   if (status != 0) {  /* error? */
-    L->ci = L->base_ci;  /* go back to initial level */
-    L->base = L->ci->base;
-    L->nCcalls = 0;
-    luaF_close(L, L->base);  /* close eventual pending closures */
-    seterrorobj(L, status, L->base);
-    L->allowhook = old_allowhooks;
-    restore_stack_limit(L);
+    L->status = status;  /* mark thread as `dead' */
+    seterrorobj(L, status, L->top);
   }
+  else
+    status = L->status;
   lua_unlock(L);
   return status;
 }
@@ -431,7 +427,7 @@ LUA_API int lua_yield (lua_State *L, int nresults) {
       L->top = L->base + nresults;
     }
   } /* else it's an yield inside a hook: nothing to do */
-  L->isSuspended = 1;
+  L->status = LUA_YIELD;
   lua_unlock(L);
   return -1;
 }

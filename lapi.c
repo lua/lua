@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.17 2004/08/17 17:45:45 roberto Exp roberto $
+** $Id: lapi.c,v 2.18 2004/08/30 13:44:44 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -97,6 +97,7 @@ LUA_API void lua_xmove (lua_State *from, lua_State *to, int n) {
   if (from == to) return;
   lua_lock(to);
   api_checknelems(from, n);
+  api_check(L, G(from) == G(to));
   from->top -= n;
   for (i = 0; i < n; i++) {
     setobj2s(to, to->top, from->top + i);
@@ -479,6 +480,15 @@ LUA_API void lua_pushlightuserdata (lua_State *L, void *p) {
 }
 
 
+LUA_API int lua_pushthread (lua_State *L) {
+  lua_lock(L);
+  setthvalue(L, L->top, L);
+  api_incr_top(L);
+  lua_unlock(L);
+  return (G(L)->mainthread == L);
+}
+
+
 
 /*
 ** get functions (Lua -> stack)
@@ -650,7 +660,7 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
     case LUA_TTABLE: {
       hvalue(obj)->metatable = mt;
       if (mt)
-        luaC_objbarrier(L, hvalue(obj), mt);
+        luaC_objbarriert(L, hvalue(obj), mt);
       break;
     }
     case LUA_TUSERDATA: {
@@ -813,6 +823,11 @@ LUA_API int lua_dump (lua_State *L, lua_Chunkwriter writer, void *data) {
     status = 0;
   lua_unlock(L);
   return status;
+}
+
+
+LUA_API int  lua_threadstatus (lua_State *L) {
+  return L->status;
 }
 
 
