@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.233 2003/03/14 18:59:21 roberto Exp roberto $
+** $Id: lapi.c,v 1.234 2003/04/03 13:35:34 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -370,6 +370,7 @@ LUA_API const void *lua_topointer (lua_State *L, int idx) {
     switch (ttype(o)) {
       case LUA_TTABLE: return hvalue(o);
       case LUA_TFUNCTION: return clvalue(o);
+      case LUA_TTHREAD: return thvalue(o);
       case LUA_TUSERDATA:
       case LUA_TLIGHTUSERDATA:
         return lua_touserdata(L, idx);
@@ -520,22 +521,22 @@ LUA_API void lua_newtable (lua_State *L) {
 
 
 LUA_API int lua_getmetatable (lua_State *L, int objindex) {
-  StkId obj;
-  Table *mt;
+  const TObject *obj;
+  Table *mt = NULL;
   int res;
   lua_lock(L);
   obj = luaA_indexAcceptable(L, objindex);
-  switch (ttype(obj)) {
-    case LUA_TTABLE:
-      mt = hvalue(obj)->metatable;
-      break;
-    case LUA_TUSERDATA:
-      mt = uvalue(obj)->uv.metatable;
-      break;
-    default:
-      mt = hvalue(defaultmeta(L));
+  if (obj != NULL) {
+    switch (ttype(obj)) {
+      case LUA_TTABLE:
+        mt = hvalue(obj)->metatable;
+        break;
+      case LUA_TUSERDATA:
+        mt = uvalue(obj)->uv.metatable;
+        break;
+    }
   }
-  if (mt == hvalue(defaultmeta(L)))
+  if (mt == NULL || mt == hvalue(defaultmeta(L)))
     res = 0;
   else {
     sethvalue(L->top, mt);
