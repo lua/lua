@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.80 2000/04/10 19:21:14 roberto Exp roberto $
+** $Id: lparser.c,v 1.81 2000/04/11 18:37:18 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -884,7 +884,7 @@ static void whilestat (LexState *ls, int line) {
   block(ls);
   luaK_patchlist(fs, luaK_jump(fs), while_init);
   luaK_patchlist(fs, v.u.l.f, luaK_getlabel(fs));
-  check_END(ls, TK_WHILE, line);
+  check_END(ls, TK_WHILE, line);  /* trace END when loop ends */
   leavebreak(fs, &bl);
 }
 
@@ -906,7 +906,40 @@ static void repeatstat (LexState *ls, int line) {
 }
 
 
-static void test_and_bock (LexState *ls, expdesc *v) {
+static void forstat (LexState *ls, int line) {
+  /* forstat -> FOR NAME '=' expr1 ',' expr1 [',' expr1] DO block END */
+  FuncState *fs = ls->fs;
+  int prep;
+  int blockinit;
+  Breaklabel bl;
+  enterbreak(fs, &bl);
+  setline_and_next(ls);  /* skip for */
+  store_localvar(ls, str_checkname(ls), 0);  /* control variable */
+  check(ls, '=');
+  exp1(ls);  /* initial value */
+  check(ls, ',');
+  exp1(ls);  /* limit */
+  if (optional(ls, ','))
+    exp1(ls);  /* optional step */
+  else
+    luaK_code1(fs, OP_PUSHINT, 1);  /* default step */
+  adjustlocalvars(ls, 1, 0);  /* init scope for control variable */
+  add_localvar(ls, " limit ");
+  add_localvar(ls, " step ");
+  prep = luaK_code0(fs, OP_FORPREP);
+  blockinit = luaK_getlabel(fs);
+  check(ls, TK_DO);
+  block(ls);
+  luaK_patchlist(fs, prep, luaK_getlabel(fs));
+  luaK_patchlist(fs, luaK_code0(fs, OP_FORLOOP), blockinit);
+  check_END(ls, TK_WHILE, line);
+  leavebreak(fs, &bl);
+  removelocalvars(ls, 3, fs->lastsetline);
+}
+
+
+static void test_and_block (LexState *ls, expdesc *v) {
+  /* test_and_block -> [IF | ELSEIF] cond THEN block */
   setline_and_next(ls);  /* skip IF or ELSEIF */
   expr(ls, v);  /* cond */
   luaK_goiftrue(ls->fs, v, 0);
@@ -921,11 +954,11 @@ static void ifstat (LexState *ls, int line) {
   FuncState *fs = ls->fs;
   expdesc v;
   int escapelist = NO_JUMP;
-  test_and_bock(ls, &v);  /* IF cond THEN block */
+  test_and_block(ls, &v);  /* IF cond THEN block */
   while (ls->token == TK_ELSEIF) {
     luaK_concat(fs, &escapelist, luaK_jump(fs));
     luaK_patchlist(fs, v.u.l.f, luaK_getlabel(fs));
-    test_and_bock(ls, &v);  /* ELSEIF cond THEN block */
+    test_and_block(ls, &v);  /* ELSEIF cond THEN block */
   }
   if (ls->token == TK_ELSE) {
     luaK_concat(fs, &escapelist, luaK_jump(fs));
@@ -1060,6 +1093,10 @@ static int stat (LexState *ls) {
       setline_and_next(ls);  /* skip DO */
       block(ls);
       check_END(ls, TK_DO, line);
+      return 1;
+
+    case TK_FOR:  /* stat -> forstat */
+      forstat(ls, line);
       return 1;
 
     case TK_REPEAT:  /* stat -> repeatstat */

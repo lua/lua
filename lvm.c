@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.99 2000/04/04 20:48:44 roberto Exp roberto $
+** $Id: lvm.c,v 1.100 2000/04/07 13:13:11 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -629,6 +629,34 @@ StkId luaV_execute (lua_State *L, const Closure *cl, register StkId base) {
         ttype(top++) = TAG_NIL;
         pc++;
         break;
+
+      case OP_FORPREP:
+        if (tonumber(top-1))
+          lua_error(L, "`for' step must be a number");
+        if (tonumber(top-2))
+          lua_error(L, "`for' limit must be a number");
+        if (tonumber(top-3))
+          lua_error(L, "`for' initial value must be a number");
+        nvalue(top-3) -= nvalue(top-1);  /* to be undone by first FORLOOP */
+        pc += GETARG_S(i);
+        break;
+
+      case OP_FORLOOP: {
+        Number step = nvalue(top-1);
+        Number limit = nvalue(top-2);
+        Number index;
+        LUA_ASSERT(L, ttype(top-1) == TAG_NUMBER, "invalid step");
+        LUA_ASSERT(L, ttype(top-2) == TAG_NUMBER, "invalid limit");
+        if (tonumber(top-3)) lua_error(L, "`for' index must be a number");
+        index = nvalue(top-3)+step;
+        if ((step>0) ? index<=limit : index>=limit) {
+          nvalue(top-3) = index;
+          pc += GETARG_S(i);
+        }
+        else  /* end of `for': remove control variables */
+          top -= 3;
+        break;
+      }
 
       case OP_CLOSURE:
         L->top = top;

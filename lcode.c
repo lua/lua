@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.22 2000/04/07 13:13:11 roberto Exp roberto $
+** $Id: lcode.c,v 1.23 2000/04/07 19:35:20 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -53,7 +53,6 @@ static void luaK_fixjump (FuncState *fs, int pc, int dest) {
     SETARG_S(*jmp, NO_JUMP);  /* point to itself to represent end of list */
   else {  /* jump is relative to position following jump instruction */
     int offset = dest-(pc+1);
-    LUA_ASSERT(L, offset != NO_JUMP, "cannot link to itself");
     if (abs(offset) > MAXARG_S)
       luaK_error(fs->ls, "control structure too long");
     SETARG_S(*jmp, offset);
@@ -434,7 +433,6 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
   mode = iP;
   switch (o) {
 
-    case OP_JMP: delta = 0; mode = iS; break;
     case OP_CLOSURE: delta = -arg2+1; mode = iAB; break;
     case OP_SETLINE: mode = iU; break;
     case OP_CALL: mode = iAB; break;
@@ -443,6 +441,10 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
     case OP_SETTABLE: delta = -arg2; mode = iAB; break;
     case OP_SETLIST: delta = -(arg2+1); mode = iAB; break;
     case OP_SETMAP: delta = -2*(arg1+1); mode = iU; break;
+    case OP_FORLOOP: delta = -3; arg1 = NO_JUMP; mode = iS; break;
+
+    case OP_FORPREP: arg1 = NO_JUMP;  /* go through */
+    case OP_JMP: mode = iS; break;
 
     case OP_END: case OP_PUSHNILJMP: case OP_NOT:
       mode = iO; break;
