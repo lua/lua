@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.7 1994/11/02 19:09:23 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.8 1994/11/02 20:29:09 roberto Exp roberto $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -233,21 +233,15 @@ char *lua_createstring (char *s)
 /*
 ** Add a file name at file table, checking overflow. This function also set
 ** the external variable "lua_filename" with the function filename set.
-** Return 0 on success or 1 on error.
+** Return 0 on success or error message on error.
 */
-int lua_addfile (char *fn)
+char *lua_addfile (char *fn)
 {
  if (lua_nfile >= MAXFILE-1)
- {
-  lua_error ("too many files");
-  return 1;
- }
+   return "too many files";
  if ((lua_file[lua_nfile++] = strdup (fn)) == NULL)
- {
-  lua_error ("not enough memory");
-  return 1;
- }
- return 0;
+   return "not enough memory";
+ return NULL;
 }
 
 /*

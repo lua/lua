@@ -1,7 +1,7 @@
 /*
 ** Module to control static tables
 ** TeCGraf - PUC-Rio
-** $Id: table.h,v 2.2 1994/07/19 21:27:18 celes Exp $
+** $Id: table.h,v 2.3 1994/10/17 19:03:23 celes Exp roberto $
 */
 
 #ifndef table_h
@@ -25,7 +25,7 @@ void  lua_travsymbol      (void (*fn)(Object *));
 void  lua_markobject      (Object *o);
 void  lua_pack            (void);
 char *lua_createstring    (char *s);
-int   lua_addfile         (char *fn);
+char *lua_addfile         (char *fn);
 int   lua_delfile 	  (void);
 char *lua_filename        (void);
 void  lua_nextvar         (void);
