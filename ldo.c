@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.17 1997/12/18 18:32:39 roberto Exp roberto $
+** $Id: ldo.c,v 1.18 1997/12/22 20:57:18 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -38,9 +38,7 @@
 
 static void stderrorim (void)
 {
-  lua_Object s = lua_getparam(1);
-  if (lua_isstring(s))
-    fprintf(stderr, "lua error: %s\n", lua_getstring(s));
+  fprintf(stderr, "lua error: %s\n", lua_getstring(lua_getparam(1)));
 }
 
 
