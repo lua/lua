@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: lmathlib.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** Lua standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -16,9 +16,23 @@
 #define PI          3.14159265358979323846
 #endif
 
-#define TODEGREE(a) ((a)*180.0/PI)
-#define TORAD(a)    ((a)*PI/180.0)
 
+static double torad = PI/180.0;
+
+#define FROMRAD(a) ((a)/torad)
+#define TORAD(a)    ((a)*torad)
+
+
+static void modeang (void)
+{
+  char *s = luaL_opt_string(1, "degree");
+  switch (*s) {
+    case 'd' : torad = PI/180.0; break;
+    case 'r' : torad = 1.0; break;
+    case 'g' : torad = PI/50.0; break;
+    default: luaL_arg_check(0, 1, "invalid mode");
+  }
+}
 
 
 static void math_abs (void)
@@ -45,22 +59,22 @@ static void math_tan (void)
 
 static void math_asin (void)
 {
-  lua_pushnumber(asin(TODEGREE(luaL_check_number(1))));
+  lua_pushnumber(FROMRAD(asin(luaL_check_number(1))));
 }
 
 static void math_acos (void)
 {
-  lua_pushnumber(acos(TODEGREE(luaL_check_number(1))));
+  lua_pushnumber(FROMRAD(acos(luaL_check_number(1))));
 }
 
 static void math_atan (void)
 {
-  lua_pushnumber(atan(TODEGREE(luaL_check_number(1))));
+  lua_pushnumber(FROMRAD(atan(luaL_check_number(1))));
 }
 
 static void math_atan2 (void)
 {
-  lua_pushnumber(TODEGREE(atan2(luaL_check_number(1), luaL_check_number(2))));
+  lua_pushnumber(FROMRAD(atan2(luaL_check_number(1), luaL_check_number(2))));
 }
 
 static void math_ceil (void)
@@ -159,6 +173,7 @@ static void math_randomseed (void)
 
 
 static struct luaL_reg mathlib[] = {
+{"modeang",   modeang},
 {"abs",   math_abs},
 {"sin",   math_sin},
 {"cos",   math_cos},
@@ -191,5 +206,6 @@ void lua_mathlibopen (void)
   lua_pushcfunction(math_pow);
   lua_pushnumber(0);  /* to get its tag */
   lua_settagmethod(lua_tag(lua_pop()), "pow");
+  lua_pushnumber(PI); lua_setglobal("PI");
 }
 
