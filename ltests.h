@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 1.16 2002/10/08 18:45:07 roberto Exp roberto $
+** $Id: ltests.h,v 1.17 2002/10/25 20:05:28 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -51,7 +51,7 @@ extern int islocked;
 
 int luaB_opentests (lua_State *L);
 
-#define lua_userinit(L) (luaB_opentests(L) + openstdlibs(L))
+#define LUA_EXTRALIBS { "tests", luaB_opentests },
 
 
 
