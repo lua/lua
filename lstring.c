@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.15 1998/08/10 21:36:32 roberto Exp roberto $
+** $Id: lstring.c,v 1.16 1999/01/04 13:37:29 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -51,8 +51,7 @@ static int newsize (stringtable *tb) {
   for (i=0; i<size; i++)
     if (tb->hash[i] != NULL && tb->hash[i] != &EMPTY)
       realuse++;
-  return luaO_redimension((realuse+1)*2+6);  /* +1 is the new element, +6 to
-                               ensure minimum size of 8 (for double hashing) */
+  return luaO_redimension((realuse+1)*2);  /* +1 is the new element */
 }
 
 
@@ -68,9 +67,10 @@ static void grow (stringtable *tb) {
     if (tb->hash[i] != NULL && tb->hash[i] != &EMPTY) {
       unsigned long h = tb->hash[i]->hash;
       int h1 = h%ns;
-      int h2 = 8-(h&7);
-      while (newhash[h1])
-        h1 = (h1+h2)%ns;
+      while (newhash[h1]) {
+        h1 += (h&(ns-2)) + 1;  /* double hashing */
+        if (h1 >= ns) h1 -= ns;
+      }
       newhash[h1] = tb->hash[i];
       tb->nuse++;
     }
@@ -113,18 +113,20 @@ static TaggedString *insert_s (char *str, long l, stringtable *tb) {
   int size = tb->size;
   int j = -1;
   int h1;
-  int h2 = 8-(h&7);  /* for double hashing */
   if ((long)tb->nuse*3 >= (long)size*2) {
     grow(tb);
     size = tb->size;
   }
-  for (h1 = h%size; (ts = tb->hash[h1]) != NULL; h1 = (h1+h2)%size) {
+  h1 = h%size;
+  while ((ts = tb->hash[h1]) != NULL) {
     if (ts == &EMPTY)
       j = h1;
     else if (ts->constindex >= 0 &&
              ts->u.s.len == l &&
              (memcmp(str, ts->str, l) == 0))
-      return ts;
+           return ts;
+    h1 += (h&(size-2)) + 1;  /* double hashing */
+    if (h1 >= size) h1 -= size;
   }
   /* not found */
   if (j != -1)  /* is there an EMPTY space? */
@@ -141,18 +143,20 @@ static TaggedString *insert_u (void *buff, int tag, stringtable *tb) {
   int size = tb->size;
   int j = -1;
   int h1;
-  int h2 = 8-(h&7);  /* for double hashing */
   if ((long)tb->nuse*3 >= (long)size*2) {
     grow(tb);
     size = tb->size;
   }
-  for (h1 = h%size; (ts = tb->hash[h1]) != NULL; h1 = (h1+h2)%size) {
+  h1 = h%size;
+  while ((ts = tb->hash[h1]) != NULL) {
     if (ts == &EMPTY)
       j = h1;
     else if (ts->constindex < 0 &&  /* is a udata? */
              (tag == ts->u.d.tag || tag == LUA_ANYTAG) &&
              buff == ts->u.d.v)
-      return ts;
+           return ts;
+    h1 += (h&(size-2)) + 1;  /* double hashing */
+    if (h1 >= size) h1 -= size;
   }
   /* not found */
   if (j != -1)  /* is there an EMPTY space? */
@@ -162,6 +166,7 @@ static TaggedString *insert_u (void *buff, int tag, stringtable *tb) {
   ts = tb->hash[h1] = newone_u(buff, tag, h);
   return ts;
 }
+
 
 TaggedString *luaS_createudata (void *udata, int tag) {
   return insert_u(udata, tag, &L->string_root[(unsigned)udata%NUM_HASHS]);
