@@ -1,7 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.22 2002/12/04 17:38:31 roberto Exp roberto $
-** extracted automatically from lopcodes.h by mkprint.lua
-** DO NOT EDIT
+** $Id: lopcodes.c,v 1.23 2003/05/13 20:15:59 roberto Exp roberto $
 ** See Copyright Notice in lua.h
 */
 
@@ -13,6 +11,8 @@
 #include "lobject.h"
 #include "lopcodes.h"
 
+
+/* ORDER OP */
 
 #ifdef LUA_OPNAMES
 
@@ -57,48 +57,45 @@ const char *const luaP_opnames[] = {
 
 #endif
 
-#define opmode(t,b,bk,ck,sa,k,m) (((t)<<OpModeT) | \
-   ((b)<<OpModeBreg) | ((bk)<<OpModeBrk) | ((ck)<<OpModeCrk) | \
-   ((sa)<<OpModesetA) | ((k)<<OpModeK) | (m))
-
+#define opmode(t,a,b,c,m) (((t)<<7) | ((a)<<6) | ((b)<<4) | ((c)<<2) | (m))
 
 const lu_byte luaP_opmodes[NUM_OPCODES] = {
-/*       T  B Bk Ck sA  K  mode			   opcode    */
-  opmode(0, 1, 0, 0, 1, 0, iABC)		/* OP_MOVE */
- ,opmode(0, 0, 0, 0, 1, 1, iABx)		/* OP_LOADK */
- ,opmode(0, 0, 0, 0, 1, 0, iABC)		/* OP_LOADBOOL */
- ,opmode(0, 1, 0, 0, 1, 0, iABC)		/* OP_LOADNIL */
- ,opmode(0, 0, 0, 0, 1, 0, iABC)		/* OP_GETUPVAL */
- ,opmode(0, 0, 0, 0, 1, 1, iABx)		/* OP_GETGLOBAL */
- ,opmode(0, 1, 0, 1, 1, 0, iABC)		/* OP_GETTABLE */
- ,opmode(0, 0, 0, 0, 0, 1, iABx)		/* OP_SETGLOBAL */
- ,opmode(0, 0, 0, 0, 0, 0, iABC)		/* OP_SETUPVAL */
- ,opmode(0, 0, 1, 1, 0, 0, iABC)		/* OP_SETTABLE */
- ,opmode(0, 0, 0, 0, 1, 0, iABC)		/* OP_NEWTABLE */
- ,opmode(0, 1, 0, 1, 1, 0, iABC)		/* OP_SELF */
- ,opmode(0, 0, 1, 1, 1, 0, iABC)		/* OP_ADD */
- ,opmode(0, 0, 1, 1, 1, 0, iABC)		/* OP_SUB */
- ,opmode(0, 0, 1, 1, 1, 0, iABC)		/* OP_MUL */
- ,opmode(0, 0, 1, 1, 1, 0, iABC)		/* OP_DIV */
- ,opmode(0, 0, 1, 1, 1, 0, iABC)		/* OP_POW */
- ,opmode(0, 1, 0, 0, 1, 0, iABC)		/* OP_UNM */
- ,opmode(0, 1, 0, 0, 1, 0, iABC)		/* OP_NOT */
- ,opmode(0, 1, 0, 1, 1, 0, iABC)		/* OP_CONCAT */
- ,opmode(0, 0, 0, 0, 0, 0, iAsBx)		/* OP_JMP */
- ,opmode(1, 0, 1, 1, 0, 0, iABC)		/* OP_EQ */
- ,opmode(1, 0, 1, 1, 0, 0, iABC)		/* OP_LT */
- ,opmode(1, 0, 1, 1, 0, 0, iABC)		/* OP_LE */
- ,opmode(1, 1, 0, 0, 1, 0, iABC)		/* OP_TEST */
- ,opmode(0, 0, 0, 0, 0, 0, iABC)		/* OP_CALL */
- ,opmode(0, 0, 0, 0, 0, 0, iABC)		/* OP_TAILCALL */
- ,opmode(0, 0, 0, 0, 0, 0, iABC)		/* OP_RETURN */
- ,opmode(0, 0, 0, 0, 0, 0, iAsBx)		/* OP_FORLOOP */
- ,opmode(0, 0, 0, 0, 0, 0, iAsBx)		/* OP_FORPREP */
- ,opmode(1, 0, 0, 0, 0, 0, iABC)		/* OP_TFORLOOP */
- ,opmode(0, 0, 0, 0, 0, 0, iAsBx)		/* OP_TFORPREP */
- ,opmode(0, 0, 0, 0, 0, 0, iABx)		/* OP_SETLIST */
- ,opmode(0, 0, 0, 0, 0, 0, iABx)		/* OP_SETLISTO */
- ,opmode(0, 0, 0, 0, 0, 0, iABC)		/* OP_CLOSE */
- ,opmode(0, 0, 0, 0, 1, 0, iABx)		/* OP_CLOSURE */
+/*       T  A    B       C     mode		   opcode	*/
+  opmode(0, 1, OpArgR, OpArgN, iABC) 		/* OP_MOVE */
+ ,opmode(0, 1, OpArgK, OpArgN, iABx)		/* OP_LOADK */
+ ,opmode(0, 1, OpArgU, OpArgU, iABC)		/* OP_LOADBOOL */
+ ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_LOADNIL */
+ ,opmode(0, 1, OpArgU, OpArgN, iABC)		/* OP_GETUPVAL */
+ ,opmode(0, 1, OpArgK, OpArgN, iABx)		/* OP_GETGLOBAL */
+ ,opmode(0, 1, OpArgR, OpArgK, iABC)		/* OP_GETTABLE */
+ ,opmode(0, 0, OpArgK, OpArgN, iABx)		/* OP_SETGLOBAL */
+ ,opmode(0, 0, OpArgU, OpArgN, iABC)		/* OP_SETUPVAL */
+ ,opmode(0, 0, OpArgK, OpArgK, iABC)		/* OP_SETTABLE */
+ ,opmode(0, 1, OpArgU, OpArgU, iABC)		/* OP_NEWTABLE */
+ ,opmode(0, 1, OpArgR, OpArgK, iABC)		/* OP_SELF */
+ ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_ADD */
+ ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_SUB */
+ ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_MUL */
+ ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_DIV */
+ ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_POW */
+ ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_UNM */
+ ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_NOT */
+ ,opmode(0, 1, OpArgR, OpArgR, iABC)		/* OP_CONCAT */
+ ,opmode(0, 0, OpArgR, OpArgN, iAsBx)		/* OP_JMP */
+ ,opmode(1, 0, OpArgK, OpArgK, iABC)		/* OP_EQ */
+ ,opmode(1, 0, OpArgK, OpArgK, iABC)		/* OP_LT */
+ ,opmode(1, 0, OpArgK, OpArgK, iABC)		/* OP_LE */
+ ,opmode(1, 1, OpArgR, OpArgU, iABC)		/* OP_TEST */
+ ,opmode(0, 1, OpArgU, OpArgU, iABC)		/* OP_CALL */
+ ,opmode(0, 1, OpArgU, OpArgU, iABC)		/* OP_TAILCALL */
+ ,opmode(0, 0, OpArgU, OpArgN, iABC)		/* OP_RETURN */
+ ,opmode(0, 1, OpArgR, OpArgN, iAsBx)		/* OP_FORLOOP */
+ ,opmode(0, 1, OpArgR, OpArgN, iAsBx)		/* OP_FORPREP */
+ ,opmode(1, 0, OpArgN, OpArgU, iABC)		/* OP_TFORLOOP */
+ ,opmode(0, 0, OpArgR, OpArgN, iAsBx)		/* OP_TFORPREP */
+ ,opmode(0, 0, OpArgU, OpArgN, iABx)		/* OP_SETLIST */
+ ,opmode(0, 0, OpArgU, OpArgN, iABx)		/* OP_SETLISTO */
+ ,opmode(0, 0, OpArgN, OpArgN, iABC)		/* OP_CLOSE */
+ ,opmode(0, 1, OpArgU, OpArgN, iABx)		/* OP_CLOSURE */
 };
 

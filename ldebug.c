@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.151 2003/04/28 13:31:06 roberto Exp roberto $
+** $Id: ldebug.c,v 1.152 2003/05/13 20:15:59 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -296,8 +296,16 @@ static int checkopenop (const Proto *pt, int pc) {
 }
 
 
-static int checkRK (const Proto *pt, int r) {
-  return (r < pt->maxstacksize || (r >= MAXSTACK && r-MAXSTACK < pt->sizek));
+static int checkArgMode (const Proto *pt, int r, enum OpArgMask mode) {
+  switch (mode) {
+    case OpArgN: check(r == 0); break;
+    case OpArgU: break;
+    case OpArgR: checkreg(pt, r); break;
+    case OpArgK: 
+      check(r < pt->maxstacksize || (r >= MAXSTACK && r-MAXSTACK < pt->sizek));
+      break;
+  }
+  return 1;
 }
 
 
@@ -317,29 +325,28 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
       case iABC: {
         b = GETARG_B(i);
         c = GETARG_C(i);
-        if (testOpMode(op, OpModeBreg)) {
-          checkreg(pt, b);
-        }
-        else if (testOpMode(op, OpModeBrk))
-          check(checkRK(pt, b));
-        if (testOpMode(op, OpModeCrk))
-          check(checkRK(pt, c));
+        check(checkArgMode(pt, b, getBMode(op)));
+        check(checkArgMode(pt, c, getCMode(op)));
         break;
       }
       case iABx: {
         b = GETARG_Bx(i);
-        if (testOpMode(op, OpModeK)) check(b < pt->sizek);
+        if (getBMode(op) == OpArgK) check(b < pt->sizek);
         break;
       }
       case iAsBx: {
         b = GETARG_sBx(i);
+        if (getBMode(op) == OpArgR) {
+          int dest = pc+1+b;
+          check(0 <= dest && dest < pt->sizecode);
+        }
         break;
       }
     }
-    if (testOpMode(op, OpModesetA)) {
+    if (testAMode(op)) {
       if (a == reg) last = pc;  /* change register `a' */
     }
-    if (testOpMode(op, OpModeT)) {
+    if (testTMode(op)) {
       check(pc+2 < pt->sizecode);  /* check skip */
       check(GET_OPCODE(pt->code[pc+1]) == OP_JMP);
     }
@@ -369,21 +376,21 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         break;
       }
       case OP_CONCAT: {
-        /* `c' is a register, and at least two operands */
-        check(c < MAXSTACK && b < c);
+        check(b < c);  /* at least two operands */
         break;
       }
-      case OP_TFORLOOP:
-        checkreg(pt, a+5);
+      case OP_TFORLOOP: {
+        checkreg(pt, a+5);  /* space for control variables */
         if (reg >= a) last = pc;  /* affect all registers above base */
-        /* go through */
+        break;
+      }
+      case OP_TFORPREP:
       case OP_FORLOOP:
       case OP_FORPREP:
-        checkreg(pt, a+2);
+        checkreg(pt, a+3);
         /* go through */
       case OP_JMP: {
         int dest = pc+1+b;
-	check(0 <= dest && dest < pt->sizecode);
         /* not full check and jump is forward and do not skip `lastpc'? */
         if (reg != NO_REG && pc < dest && dest <= lastpc)
           pc += b;  /* do the jump */

@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.102 2002/08/21 18:56:09 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.103 2003/05/13 20:15:59 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -206,22 +206,28 @@ OP_CLOSURE/*	A Bx	R(A) := closure(KPROTO[Bx], R(A), ... ,R(A+n))	*/
 
 
 /*
-** masks for instruction properties
+** masks for instruction properties. The format is:
+** bits 0-1: op mode
+** bits 2-3: C arg mode
+** bits 4-5: B arg mode
+** bit 6: instruction set register A
+** bit 7: operator is a test
 */  
-enum OpModeMask {
-  OpModeBreg = 2,       /* B is a register */
-  OpModeBrk,		/* B is a register/constant */
-  OpModeCrk,           /* C is a register/constant */
-  OpModesetA,           /* instruction set register A */
-  OpModeK,              /* Bx is a constant */
-  OpModeT		/* operator is a test */
-};
 
+enum OpArgMask {
+  OpArgN,  /* argument is not used */
+  OpArgU,  /* argument is used */
+  OpArgR,  /* argument is a register or a jump offset */
+  OpArgK   /* argument is a constant or register/constant */
+};
 
 extern const lu_byte luaP_opmodes[NUM_OPCODES];
 
-#define getOpMode(m)            (cast(enum OpMode, luaP_opmodes[m] & 3))
-#define testOpMode(m, b)        (luaP_opmodes[m] & (1 << (b)))
+#define getOpMode(m)	(cast(enum OpMode, luaP_opmodes[m] & 3))
+#define getBMode(m)	(cast(enum OpArgMask, (luaP_opmodes[m] >> 4) & 3))
+#define getCMode(m)	(cast(enum OpArgMask, (luaP_opmodes[m] >> 2) & 3))
+#define testAMode(m)	(luaP_opmodes[m] & (1 << 6))
+#define testTMode(m)	(luaP_opmodes[m] & (1 << 7))
 
 
 #ifdef LUA_OPNAMES

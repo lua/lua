@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.285 2003/05/05 18:39:57 roberto Exp roberto $
+** $Id: lvm.c,v 1.286 2003/05/13 20:15:59 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -361,11 +361,13 @@ static void Arith (lua_State *L, StkId ra,
 #define RA(i)	(base+GETARG_A(i))
 /* to be used after possible stack reallocation */
 #define XRA(i)	(L->base+GETARG_A(i))
-#define RB(i)	(base+GETARG_B(i))
-#define RKB(i)	((GETARG_B(i) < MAXSTACK) ? RB(i) : k+GETARG_B(i)-MAXSTACK)
-#define RC(i)	(base+GETARG_C(i))
-#define RKC(i)	((GETARG_C(i) < MAXSTACK) ? RC(i) : k+GETARG_C(i)-MAXSTACK)
-#define KBx(i)	(k+GETARG_Bx(i))
+#define RB(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgR, base+GETARG_B(i))
+#define RC(i)	check_exp(getCMode(GET_OPCODE(i)) == OpArgR, base+GETARG_C(i))
+#define RKB(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgK, \
+	(GETARG_B(i) < MAXSTACK) ? base+GETARG_B(i) : k+GETARG_B(i)-MAXSTACK)
+#define RKC(i)	check_exp(getCMode(GET_OPCODE(i)) == OpArgK, \
+	(GETARG_C(i) < MAXSTACK) ? base+GETARG_C(i) : k+GETARG_C(i)-MAXSTACK)
+#define KBx(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgK, k+GETARG_Bx(i))
 
 
 #define dojump(pc, i)	((pc) += (i))

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.116 2003/02/27 12:33:07 roberto Exp roberto $
+** $Id: lcode.c,v 1.117 2003/04/03 13:35:34 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -88,7 +88,7 @@ static int luaK_getjump (FuncState *fs, int pc) {
 
 static Instruction *getjumpcontrol (FuncState *fs, int pc) {
   Instruction *pi = &fs->f->code[pc];
-  if (pc >= 1 && testOpMode(GET_OPCODE(*(pi-1)), OpModeT))
+  if (pc >= 1 && testTMode(GET_OPCODE(*(pi-1))))
     return pi-1;
   else
     return pi;
@@ -462,8 +462,7 @@ void luaK_self (FuncState *fs, expdesc *e, expdesc *key) {
 
 static void invertjump (FuncState *fs, expdesc *e) {
   Instruction *pc = getjumpcontrol(fs, e->info);
-  lua_assert(testOpMode(GET_OPCODE(*pc), OpModeT) &&
-             GET_OPCODE(*pc) != OP_TEST);
+  lua_assert(testTMode(GET_OPCODE(*pc)) && GET_OPCODE(*pc) != OP_TEST);
   SETARG_A(*pc, !(GETARG_A(*pc)));
 }
 
@@ -703,12 +702,15 @@ int luaK_code (FuncState *fs, Instruction i, int line) {
 
 int luaK_codeABC (FuncState *fs, OpCode o, int a, int b, int c) {
   lua_assert(getOpMode(o) == iABC);
+  lua_assert(getBMode(o) != OpArgN || b == 0);
+  lua_assert(getCMode(o) != OpArgN || c == 0);
   return luaK_code(fs, CREATE_ABC(o, a, b, c), fs->ls->lastline);
 }
 
 
 int luaK_codeABx (FuncState *fs, OpCode o, int a, unsigned int bc) {
   lua_assert(getOpMode(o) == iABx || getOpMode(o) == iAsBx);
+  lua_assert(getCMode(o) == OpArgN);
   return luaK_code(fs, CREATE_ABx(o, a, bc), fs->ls->lastline);
 }
 
