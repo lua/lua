@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.11 2002/06/18 15:16:18 roberto Exp roberto $
+** $Id: liolib.c,v 2.12 2002/06/26 16:37:13 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -56,7 +56,7 @@ static int pushresult (lua_State *L, int i) {
 static FILE *tofile (lua_State *L, int findex) {
   FILE **f = (FILE **)lua_touserdata(L, findex);
   if (f && lua_getmetatable(L, findex) &&
-      lua_equal(L, -1, lua_upvalueindex(1))) {
+      lua_rawequal(L, -1, lua_upvalueindex(1))) {
     lua_pop(L, 1);
     return *f;
   }
@@ -471,6 +471,21 @@ static void setfield (lua_State *L, const char *key, int value) {
   lua_rawset(L, -3);
 }
 
+static void setboolfield (lua_State *L, const char *key, int value) {
+  lua_pushstring(L, key);
+  lua_pushboolean(L, value);
+  lua_rawset(L, -3);
+}
+
+static int getboolfield (lua_State *L, const char *key) {
+  int res;
+  lua_pushstring(L, key);
+  lua_gettable(L, -2);
+  res = lua_toboolean(L, -1);
+  lua_pop(L, 1);
+  return res;
+}
+
 
 static int getfield (lua_State *L, const char *key, int d) {
   int res;
@@ -512,7 +527,7 @@ static int io_date (lua_State *L) {
     setfield(L, "year", stm->tm_year+1900);
     setfield(L, "wday", stm->tm_wday+1);
     setfield(L, "yday", stm->tm_yday+1);
-    setfield(L, "isdst", stm->tm_isdst);
+    setboolfield(L, "isdst", stm->tm_isdst);
   }
   else {
     char b[256];
@@ -537,9 +552,9 @@ static int io_time (lua_State *L) {
     ts.tm_min = getfield(L, "min", 0);
     ts.tm_hour = getfield(L, "hour", 12);
     ts.tm_mday = getfield(L, "day", -2);
-    ts.tm_mon = getfield(L, "month", -2)-1;
-    ts.tm_year = getfield(L, "year", -2)-1900;
-    ts.tm_isdst = getfield(L, "isdst", -1);
+    ts.tm_mon = getfield(L, "month", -2) - 1;
+    ts.tm_year = getfield(L, "year", -2) - 1900;
+    ts.tm_isdst = getboolfield(L, "isdst");
     t = mktime(&ts);
     if (t == (time_t)(-1))
       lua_pushnil(L);
