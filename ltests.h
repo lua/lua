@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.3 2004/03/15 21:04:54 roberto Exp roberto $
+** $Id: ltests.h,v 2.4 2004/04/30 20:13:38 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -78,6 +78,7 @@ int l_main (int argc, char *argv[]);
 
 /* change some sizes to give some bugs a chance */
 
+#undef LUAL_BUFFERSIZE
 #define LUAL_BUFFERSIZE		27
 #define MINSTRTABSIZE		2
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.62 2003/10/07 20:13:41 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.63 2004/03/13 13:32:09 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -13,11 +13,6 @@
 #include <stdio.h>
 
 #include "lua.h"
-
-
-#ifndef LUALIB_API
-#define LUALIB_API	LUA_API
-#endif
 
 
 
@@ -92,10 +87,6 @@ LUALIB_API lua_State *(luaL_newstate) (void);
 ** =======================================================
 */
 
-
-#ifndef LUAL_BUFFERSIZE
-#define LUAL_BUFFERSIZE	  BUFSIZ
-#endif
 
 
 typedef struct luaL_Buffer {
