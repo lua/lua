@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.16 1998/03/06 16:54:42 roberto Exp roberto $
+** $Id: lua.h,v 1.17 1998/03/06 18:47:42 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -43,7 +43,7 @@
 #ifndef lua_h
 #define lua_h
 
-#define LUA_VERSION	"Lua 3.1 (alpha)"
+#define LUA_VERSION	"Lua 3.1"
 #define LUA_COPYRIGHT	"Copyright (C) 1994-1998 TeCGraf"
 #define LUA_AUTHORS 	"W. Celes, R. Ierusalimschy & L. H. de Figueiredo"
 

@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.9 1998/01/02 17:46:32 roberto Exp roberto $
+## $Id: makefile,v 1.10 1998/01/05 17:12:54 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -17,6 +17,8 @@
 #
 # define LUA_COMPAT2_5 if yous system does need to be compatible with
 # version 2.5 (or older)
+#
+#define LUA_NUM_TYPE if you need numbers to be different from double
 
 CONFIG = -DPOPEN -D_POSIX_SOURCE
 #CONFIG = -DLUA_COMPAT2_5 -DOLD_ANSI -DDEBUG
