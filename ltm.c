@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.3 1997/10/16 20:07:40 roberto Exp roberto $
+** $Id: ltm.c,v 1.4 1997/10/24 17:17:24 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -168,7 +168,7 @@ TObject *luaT_gettagmethod (int t, char *event)
   if (validevent(t, e))
     return luaT_getim(t,e);
   else
-    return luaT_getim(LUA_T_NUMBER, IM_ADD);  /* always nil */
+    return &luaO_nilobject;
 }
 
 

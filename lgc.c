@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.5 1997/10/23 16:26:37 roberto Exp roberto $
+** $Id: lgc.c,v 1.6 1997/10/24 17:17:24 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -66,9 +66,8 @@ void lua_unref (int ref)
 
 TObject* luaC_getref (int ref)
 {
-  static TObject nul = {LUA_T_NIL, {0}};
   if (ref == -1)
-    return &nul;
+    return &luaO_nilobject;
   if (ref >= 0 && ref < refSize &&
       (refArray[ref].status == LOCK || refArray[ref].status == HOLD))
     return &refArray[ref].o;
@@ -240,14 +239,6 @@ static int markobject (TObject *o)
 }
 
 
-static void call_nilIM (void)
-{ /* signals end of garbage collection */
-  TObject t;
-  ttype(&t) = LUA_T_NIL;
-  luaD_gcIM(&t);  /* end of list */
-}
-
-
 
 #define GARBAGE_BLOCK 150
 
@@ -279,7 +270,7 @@ long lua_collectgarbage (long limit)
   luaC_threshold *= 4;  /* to avoid GC during GC */
   hashcallIM(freetable);  /* GC tag methods for tables */
   strcallIM(freestr);  /* GC tag methods for userdata */
-  call_nilIM();  /* GC tag method for nil (signal end of GC) */
+  luaD_gcIM(&luaO_nilobject);  /* GC tag method for nil (signal end of GC) */
   luaH_free(freetable);
   luaS_free(freestr);
   luaF_freeproto(freefunc);
