@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: $";
+char *rcs_opcode="$Id: opcode.c,v 1.1 1993/12/17 18:41:19 celes Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -142,7 +142,8 @@ int lua_execute (Byte *pc)
  base = top;
  while (1)
  {
-  switch ((OpCode)*pc++)
+  OpCode opcode;
+  switch (opcode = (OpCode)*pc++)
   {
    case NOP: break;
    
@@ -169,16 +170,10 @@ int lua_execute (Byte *pc)
    }
    break;
    
-   case PUSHLOCAL0: *top++ = *(base + 0); break;
-   case PUSHLOCAL1: *top++ = *(base + 1); break;
-   case PUSHLOCAL2: *top++ = *(base + 2); break;
-   case PUSHLOCAL3: *top++ = *(base + 3); break;
-   case PUSHLOCAL4: *top++ = *(base + 4); break;
-   case PUSHLOCAL5: *top++ = *(base + 5); break;
-   case PUSHLOCAL6: *top++ = *(base + 6); break;
-   case PUSHLOCAL7: *top++ = *(base + 7); break;
-   case PUSHLOCAL8: *top++ = *(base + 8); break;
-   case PUSHLOCAL9: *top++ = *(base + 9); break;
+   case PUSHLOCAL0: case PUSHLOCAL1: case PUSHLOCAL2:
+   case PUSHLOCAL3: case PUSHLOCAL4: case PUSHLOCAL5:
+   case PUSHLOCAL6: case PUSHLOCAL7: case PUSHLOCAL8:
+   case PUSHLOCAL9: *top++ = *(base + (int)(opcode-PUSHLOCAL0)); break;
    
    case PUSHLOCAL: *top++ = *(base + (*pc++)); break;
    
@@ -204,16 +199,10 @@ int lua_execute (Byte *pc)
    
    case PUSHOBJECT: *top = *(top-3); top++; break;
    
-   case STORELOCAL0: *(base + 0) = *(--top); break;
-   case STORELOCAL1: *(base + 1) = *(--top); break;
-   case STORELOCAL2: *(base + 2) = *(--top); break;
-   case STORELOCAL3: *(base + 3) = *(--top); break;
-   case STORELOCAL4: *(base + 4) = *(--top); break;
-   case STORELOCAL5: *(base + 5) = *(--top); break;
-   case STORELOCAL6: *(base + 6) = *(--top); break;
-   case STORELOCAL7: *(base + 7) = *(--top); break;
-   case STORELOCAL8: *(base + 8) = *(--top); break;
-   case STORELOCAL9: *(base + 9) = *(--top); break;
+   case STORELOCAL0: case STORELOCAL1: case STORELOCAL2:
+   case STORELOCAL3: case STORELOCAL4: case STORELOCAL5:
+   case STORELOCAL6: case STORELOCAL7: case STORELOCAL8:
+   case STORELOCAL9: *(base + (int)(opcode-STORELOCAL0)) = *(--top); break;
     
    case STORELOCAL: *(base + (*pc++)) = *(--top); break;
    
@@ -248,28 +237,60 @@ int lua_execute (Byte *pc)
      if (h == NULL) return 1;
      *h = *(top-1);
     }
-    --top;
+    top--;
    }
    break;
    
-   case STOREFIELD:
-    if (tag(top-3) != T_ARRAY)
+   case STORELIST0:
+   case STORELIST:
+   {
+    int m, n;
+    Object *arr;
+    if (opcode == STORELIST0) m = 0;
+    else m = *(pc++) * FIELDS_PER_FLUSH;
+    n = *(pc++);
+    arr = top-n-1;
+    if (tag(arr) != T_ARRAY)
     {
      lua_reportbug ("internal error - table expected");
      return 1;
     }
-    *(lua_hashdefine (avalue(top-3), top-2)) = *(top-1);
-    top -= 2;
+    while (n)
+    {
+     tag(top) = T_NUMBER; nvalue(top) = n+m;
+     *(lua_hashdefine (avalue(arr), top)) = *(top-1);
+     top--;
+     n--;
+    }
+   }
+   break;
+   
+   case STORERECORD:
+   {
+    int n = *(pc++);
+    Object *arr = top-n-1;
+    if (tag(arr) != T_ARRAY)
+    {
+     lua_reportbug ("internal error - table expected");
+     return 1;
+    }
+    while (n)
+    {
+     int w = *((Word *)(pc));
+     pc += sizeof(Word);
+     tag(top) = T_STRING; svalue(top) = lua_constant[w];
+     *(lua_hashdefine (avalue(arr), top)) = *(top-1);
+     top--;
+     n--;
+    }
+   }
    break;
    
    case ADJUST:
    {
     Object *newtop = base + *(pc++);
-    if (top != newtop)
-    {
-     while (top < newtop) tag(top++) = T_NIL;
-     top = newtop;
-    }
+    while (top < newtop) tag(top++) = T_NIL;
+    top = newtop;  /* top could be bigger than newtop */
    }
    break;
    
