@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.137 2002/06/24 13:08:45 roberto Exp roberto $
+** $Id: lobject.h,v 1.138 2002/06/24 20:17:59 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -216,9 +216,6 @@ typedef struct Table {
   lu_byte lsizenode;  /* log2 of size of `node' array */
 } Table;
 
-
-/* unmarked tables are represented by pointing `mark' to themselves */
-#define ismarked(x)	((x)->mark != (x))
 
 
 /*

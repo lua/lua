@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 1.36 2002/06/24 20:17:59 roberto Exp roberto $
+** $Id: ltm.h,v 1.37 2002/06/25 19:17:22 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -9,6 +9,13 @@
 
 
 #include "lobject.h"
+
+
+/*
+** Important: garbage collection uses two extra bits of `Table.flags'
+** (after TM_MODE), so the maximum number of `fast tag methods' is six
+** (at least while `flags' is a byte).
+*/
 
 /*
 * WARNING: if you change the order of this enumeration,

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.138 2002/06/24 17:19:43 roberto Exp roberto $
+** $Id: lgc.c,v 1.139 2002/06/25 19:17:42 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -29,6 +29,17 @@ typedef struct GCState {
 
 /* mark a string; marks larger than 1 cannot be changed */
 #define strmark(s)    {if ((s)->tsv.marked == 0) (s)->tsv.marked = 1;}
+
+
+/* unmarked tables are represented by pointing `mark' to themselves */
+#define ismarked(x)	((x)->mark != (x))
+
+
+/* `Table.flag' bits to indicate whether table is key-weak and/or value-weak */
+#define KEYWEAKBIT	(TM_MODE+1)		/* ORDER TM */
+#define VALUEWEAKBIT	(TM_MODE+2)
+#define KEYWEAK         (1<<KEYWEAKBIT)
+#define VALUEWEAK       (1<<VALUEWEAKBIT)
 
 
 /* mark tricks for userdata */
@@ -202,8 +213,8 @@ static void separateudata (lua_State *L) {
 
 
 static void removekey (Node *n) {
-  lua_assert(ttype(val(n)) == LUA_TNIL);
-  if (ttype(key(n)) != LUA_TNIL && ttype(key(n)) != LUA_TNUMBER)
+  setnilvalue(val(n));  /* remove corresponding value ... */
+  if (ismarkable(key(n)))
     setttype(key(n), LUA_TNONE);  /* dead key; remove it */
 }
 
@@ -221,6 +232,8 @@ static void traversetable (GCState *st, Table *h) {
     st->toclear = h;  /* ...put in the appropriate list */
     weakkey = (strchr(svalue(mode), 'k') != NULL);
     weakvalue = (strchr(svalue(mode), 'v') != NULL);
+    h->flags &= ~(KEYWEAK | VALUEWEAK);  /* clear bits */
+    h->flags |= (weakkey << KEYWEAKBIT) | (weakvalue << VALUEWEAKBIT);
   }
   if (!weakvalue) {
     i = sizearray(h);
@@ -265,11 +278,33 @@ static int hasmark (const TObject *o) {
 
 
 /*
-** clear (set to nil) keys and values from weaktables that were collected
+** clear collected keys from weaktables
 */
-static void cleartables (Table *h) {
-  for (; h; h = h->mark) {
+static void cleartablekeys (GCState *st) {
+  Table *h;
+  for (h = st->toclear; h; h = h->mark) {
     int i;
+    if (!(h->flags & KEYWEAK)) continue;
+    lua_assert(strchr(svalue(fasttm(st->L, h->metatable, TM_MODE)), 'k'));
+    i = sizenode(h);
+    while (i--) {
+      Node *n = node(h, i);
+      if (!hasmark(key(n)))
+        removekey(n);  /* ... and key */
+    }
+  }
+}
+
+
+/*
+** clear collected values from weaktables
+*/
+static void cleartablevalues (GCState *st) {
+  Table *h;
+  for (h = st->toclear; h; h = h->mark) {
+    int i;
+    if (!(h->flags & VALUEWEAK)) continue;
+    lua_assert(strchr(svalue(fasttm(st->L, h->metatable, TM_MODE)), 'v'));
     i = sizearray(h);
     while (i--) {
       TObject *o = &h->array[i];
@@ -279,10 +314,8 @@ static void cleartables (Table *h) {
     i = sizenode(h);
     while (i--) {
       Node *n = node(h, i);
-      if (!hasmark(val(n)) || !hasmark(key(n))) {
-        setnilvalue(val(n));  /* remove value ... */
+      if (!hasmark(val(n)))
         removekey(n);  /* ... and key */
-      }
     }
   }
 }
@@ -458,10 +491,11 @@ void luaC_collectgarbage (lua_State *L) {
   st.toclear = NULL;
   markstacks(&st); /* mark all stacks */
   propagatemarks(&st);  /* mark all reachable objects */
-  cleartables(st.toclear);
+  cleartablevalues(&st);
   separateudata(L);  /* separate userdata to be preserved */
   marktmu(&st);  /* mark `preserved' userdata */
   propagatemarks(&st);  /* remark */
+  cleartablekeys(&st);
   luaC_collect(L, 0);
   checkMbuffer(L);
   G(L)->GCthreshold = 2*G(L)->nblocks;  /* new threshold */
