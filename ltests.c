@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.66 2001/02/09 20:22:29 roberto Exp roberto $
+** $Id: ltests.c,v 1.67 2001/02/09 20:29:33 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -224,6 +224,13 @@ static int listlocals (lua_State *L) {
 /* }====================================================== */
 
 
+static int pushbool (lua_State *L, int b) {
+  if (b) lua_pushnumber(L, 1);
+  else lua_pushnil(L);
+  return 1;
+}
+
+
 
 static int get_limits (lua_State *L) {
   lua_newtable(L);
@@ -352,7 +359,7 @@ static int newuserdata (lua_State *L) {
     int tag = luaL_check_int(L, 2);
     int res = lua_pushuserdata(L, (void *)luaL_check_int(L, 1));
     if (tag) lua_settag(L, tag);
-    lua_pushnumber(L, res);
+    pushbool(L, res);
     return 2;
   }
   else {
@@ -381,6 +388,18 @@ static int doonnewstack (lua_State *L) {
   lua_dostring(L1, luaL_check_string(L, 2));
   lua_pushnumber(L, 1);
   lua_close(L1);
+  return 1;
+}
+
+
+static int s2d (lua_State *L) {
+  lua_pushnumber(L, *(double *)luaL_check_string(L, 1));
+  return 1;
+}
+
+static int d2s (lua_State *L) {
+  double d = luaL_check_number(L, 1);
+  lua_pushlstring(L, (char *)&d, sizeof(d));
   return 1;
 }
 
@@ -443,12 +462,6 @@ static int settagmethod (lua_State *L) {
   lua_gettagmethod(L, tag, event);
   lua_pushvalue(L, 3);
   lua_settagmethod(L, tag, event);
-  return 1;
-}
-
-static int pushbool (lua_State *L, int b) {
-  if (b) lua_pushnumber(L, 1);
-  else lua_pushnil(L);
   return 1;
 }
 
@@ -540,7 +553,6 @@ static int testC (lua_State *L) {
     }
     else if EQ("tostring") {
       const char *s = lua_tostring(L, getnum);
-      lua_assert((unsigned long)s % 4 == 0);  /* check alignment */
       lua_pushstring(L, s);
     }
     else if EQ("tonumber") {
@@ -643,6 +655,8 @@ static const struct luaL_reg tests_funcs[] = {
   {"ref", tref},
   {"getref", getref},
   {"unref", unref},
+  {"d2s", d2s},
+  {"s2d", s2d},
   {"newuserdata", newuserdata},
   {"udataval", udataval},
   {"newtag", newtag},
