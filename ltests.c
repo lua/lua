@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.169 2003/11/19 12:21:57 roberto Exp roberto $
+** $Id: ltests.c,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -138,6 +138,188 @@ void *debug_realloc (void *ud, void *block, size_t oldsize, size_t size) {
 
 
 /* }====================================================================== */
+
+
+
+/*
+** {======================================================
+** Functions to check memory consistency
+** =======================================================
+*/
+
+static int testobjref1 (global_State *g, GCObject *f, GCObject *t) {
+  if (isdead(g,t)) return 0;
+  if (g->gcstate == GCSpropagate)
+    return !isblack(f) || !iswhite(t);
+  else if (g->gcstate == GCSfinalize)
+    return iswhite(f);
+  else
+    return 1;
+}
+
+
+static void printobj (global_State *g, GCObject *o) {
+int i = 0;
+GCObject *p;
+for (p = g->rootgc; p != o && p != NULL; p = p->gch.next) i++;
+if (p == NULL) i = -1;
+printf("%d:%s(%p)-%c",
+i, luaT_typenames[o->gch.tt], (void *)o,
+isdead(g,o)?'d':isblack(o)?'b':iswhite(o)?'w':'g');
+}
+
+
+static int testobjref (global_State *g, GCObject *f, GCObject *t) {
+  int r = testobjref1(g,f,t);
+if (!r) {
+printf("%d - ", g->gcstate);
+printobj(g, f);
+printf("\t-> ");
+printobj(g, t);
+printf("\n");
+}
+  return r;
+}
+
+#define checkobjref(g,f,t) lua_assert(testobjref(g,f,obj2gco(t)))
+
+#define checkvalref(g,f,t) lua_assert(!iscollectable(t) || \
+	((ttype(t) == (t)->value.gc->gch.tt) && testobjref(g,f,gcvalue(t))))
+
+
+
+static void checktable (global_State *g, Table *h) {
+  int i;
+  int weakkey = 0;
+  int weakvalue = 0;
+  const TValue *mode;
+  GCObject *hgc = obj2gco(h);
+  if (h->metatable)
+    checkobjref(g, hgc, h->metatable);
+  lua_assert(h->lsizenode || h->node == g->dummynode);
+  mode = gfasttm(g, h->metatable, TM_MODE);
+  if (mode && ttisstring(mode)) {  /* is there a weak mode? */
+    weakkey = (strchr(svalue(mode), 'k') != NULL);
+    weakvalue = (strchr(svalue(mode), 'v') != NULL);
+  }
+  i = h->sizearray;
+  while (i--)
+    checkvalref(g, hgc, &h->array[i]);
+  i = sizenode(h);
+  while (i--) {
+    Node *n = gnode(h, i);
+    if (!ttisnil(gval(n))) {
+      lua_assert(!ttisnil(gkey(n)));
+      checkvalref(g, hgc, gkey(n));
+      checkvalref(g, hgc, gval(n));
+    }
+  }
+}
+
+
+/*
+** All marks are conditional because a GC may happen while the
+** prototype is still being created
+*/
+static void checkproto (global_State *g, Proto *f) {
+  int i;
+  GCObject *fgc = obj2gco(f);
+  if (f->source) checkobjref(g, fgc, f->source);
+  for (i=0; i<f->sizek; i++) {
+    if (ttisstring(f->k+i))
+      checkobjref(g, fgc, rawtsvalue(f->k+i));
+  }
+  for (i=0; i<f->sizeupvalues; i++) {
+    if (f->upvalues[i])
+      checkobjref(g, fgc, f->upvalues[i]);
+  }
+  for (i=0; i<f->sizep; i++) {
+    if (f->p[i])
+      checkobjref(g, fgc, f->p[i]);
+  }
+  for (i=0; i<f->sizelocvars; i++) {
+    if (f->locvars[i].varname)
+      checkobjref(g, fgc, f->locvars[i].varname);
+  }
+}
+
+
+
+static void checkclosure (global_State *g, Closure *cl) {
+  GCObject *clgc = obj2gco(cl);
+  if (cl->c.isC) {
+    int i;
+    for (i=0; i<cl->c.nupvalues; i++)
+      checkvalref(g, clgc, &cl->c.upvalue[i]);
+  }
+  else {
+    int i;
+    lua_assert(cl->l.nupvalues == cl->l.p->nups);
+    checkobjref(g, clgc, hvalue(&cl->l.g));
+    checkobjref(g, clgc, cl->l.p);
+    for (i=0; i<cl->l.nupvalues; i++) {
+      lua_assert(cl->l.upvals[i]->tt == LUA_TUPVAL);
+      checkobjref(g, clgc, cl->l.upvals[i]);
+    }
+  }
+}
+
+
+static void checkstack (global_State *g, lua_State *L1) {
+  StkId o;
+  CallInfo *ci;
+  lua_assert(!isdead(g, obj2gco(L1)));
+  checkliveness(g, gt(L1));
+  for (ci = L1->base_ci; ci <= L1->ci; ci++)
+    lua_assert(ci->top <= L1->stack_last);
+  for (o = L1->stack; o < L1->top; o++)
+    checkliveness(g, o);
+}
+
+
+void luaC_checkall (lua_State *L) {
+  global_State *g = G(L);
+  GCObject *o;
+  checkstack(g, g->mainthread);
+  for (o = g->rootgc; o; o = o->gch.next) {
+    if (isdead(g, o))
+      lua_assert(g->gcstate == GCSsweepstring || g->gcstate == GCSsweep);
+    else {
+      switch (o->gch.tt) {
+        case LUA_TUPVAL: {
+          UpVal *uv = gco2uv(o);
+          lua_assert(uv->v == &uv->value);  /* must be closed */
+          checkvalref(g, o, uv->v);
+          break;
+        }
+        case LUA_TUSERDATA: {
+          Table *mt = gco2u(o)->metatable;
+          if (mt) checkobjref(g, o, mt);
+          break;
+        }
+        case LUA_TTABLE: {
+          checktable(g, gco2h(o));
+          break;
+        }
+        case LUA_TTHREAD: {
+          checkstack(g, gco2th(o));
+          break;
+        }
+        case LUA_TFUNCTION: {
+          checkclosure(g, gco2cl(o));
+          break;
+        }
+        case LUA_TPROTO: {
+          checkproto(g, gco2p(o));
+          break;
+        }
+        default: lua_assert(0);
+      }
+    }
+  }
+}
+
+/* }====================================================== */
 
 
 

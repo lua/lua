@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
+** $Id: lgc.h,v 2.2 2003/12/12 18:29:34 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -81,7 +81,7 @@
 	{ if (iswhite(obj2gco(o)) && isblack(obj2gco(p))) \
 		luaC_barrierf(L,obj2gco(p),obj2gco(o)); }
 
-size_t luaC_separateudata (lua_State *L);
+size_t luaC_separateudata (lua_State *L, int all);
 void luaC_callGCTM (lua_State *L);
 void luaC_sweepall (lua_State *L);
 void luaC_step (lua_State *L);

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
+** $Id: lstate.c,v 2.2 2003/12/12 18:29:34 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -200,7 +200,7 @@ LUA_API void lua_close (lua_State *L) {
   lua_lock(L);
   L = G(L)->mainthread;  /* only the main thread can be closed */
   luaF_close(L, L->stack);  /* close all upvalues for this thread */
-  luaC_separateudata(L);  /* separate udata that have GC metamethods */
+  luaC_separateudata(L, 1);  /* separate udata that have GC metamethods */
   L->errfunc = 0;  /* no error function during GC metamethods */
   do {  /* repeat until no more errors */
     L->ci = L->base_ci;

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 1.21 2003/10/02 20:31:17 roberto Exp roberto $
+** $Id: ltests.h,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -41,6 +41,8 @@ void *debug_realloc (void *ud, void *block, size_t osize, size_t nsize);
 #define luaL_newstate()	lua_newstate(debug_realloc, &memcontrol)
 #endif
 
+
+void luaC_checkall (lua_State *L);
 
 
 /* test for lock/unlock */

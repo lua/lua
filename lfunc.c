@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.74 2003/12/09 16:56:11 roberto Exp roberto $
+** $Id: lfunc.c,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -57,7 +57,7 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
   }
   uv = luaM_new(L, UpVal);  /* not found: create a new one */
   uv->tt = LUA_TUPVAL;
-  uv->marked = bitmask(FIXEDBIT);  /* open upvalues cannot be collected */
+  uv->marked = luaC_white(G(L));
   uv->v = level;  /* current value lives in the stack */
   uv->next = *pp;  /* chain it in the proper position */
   *pp = obj2gco(uv);
@@ -68,11 +68,16 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
 void luaF_close (lua_State *L, StkId level) {
   UpVal *uv;
   while ((uv = ngcotouv(L->openupval)) != NULL && uv->v >= level) {
+    lu_byte mark = uv->marked;
+    lua_assert(!isblack(obj2gco(uv)));
     setobj(L, &uv->value, uv->v);
     luaC_barrier(L, uv, uv->v);
     uv->v = &uv->value;  /* now current value lives here */
     L->openupval = uv->next;  /* remove from `open' list */
     luaC_link(L, obj2gco(uv), LUA_TUPVAL);
+    if (G(L)->gcstate == GCSpropagate)
+      uv->marked = mark;  /* preserve previous mark */
+    lua_assert(!isdead(G(L), obj2gco(uv)));
   }
 }
 
