@@ -743,3 +743,24 @@ patch = [[
 ]],
 }
 
+
+Bug{
+what = [[rawset/rawget do not ignore extra arguments]],
+
+report = [[Romulo Bahiense, 11/03/2005]],
+
+example = [[
+a = {}
+rawset(a, 1, 2, 3)
+print(a[1], a[2])    -- should be 2 and nil
+]],
+
+patch = [[
+* lbaselib.c:
+175a176
+>   lua_settop(L, 2);
+183a185
+>   lua_settop(L, 3);
+]],
+}
+
