@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.25 1995/10/25 13:05:51 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.26 1996/01/22 17:40:00 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,9 +54,9 @@ static int stringinput (void)
 
 /*
 ** Function to open a file to be input unit. 
-** Return 0 on success or error message on error.
+** Return 0 on success or 1 error.
 */
-char *lua_openfile (char *fn)
+int lua_openfile (char *fn)
 {
  lua_setinput (fileinput);
  if (fn == NULL)
@@ -67,14 +67,10 @@ char *lua_openfile (char *fn)
  else
    fp = fopen (fn, "r");
  if (fp == NULL)
- {
-   static char buff[255];
-   sprintf(buff, "unable to open file `%.200s'", fn);
-   return buff;
- }
+   return 1;
  lua_linenumber = 1;
  lua_parsedfile = lua_constcreate(fn)->ts.str;
- return NULL;
+ return 0;
 }
 
 /*
@@ -231,3 +227,28 @@ void luaI_error (void)
   lua_error(s);
 }
 
+void luaI_assert (void)
+{
+  lua_Object p = lua_getparam(1);
+  if (p == LUA_NOOBJECT || lua_isnil(p))
+    lua_error("assertion failed!");
+}
+
+void luaI_setglobal (void)
+{
+  lua_Object name = lua_getparam(1);
+  lua_Object value = lua_getparam(2);
+  if (!lua_isstring(name))
+    lua_error("incorrect argument to function `setglobal'");
+  lua_pushobject(value);
+  lua_storeglobal(lua_getstring(name));
+  lua_pushobject(value);  /* return given value */
+}
+
+void luaI_getglobal (void)
+{
+  lua_Object name = lua_getparam(1);
+  if (!lua_isstring(name))
+    lua_error("incorrect argument to function `getglobal'");
+  lua_pushobject(lua_getglobal(lua_getstring(name)));
+}
