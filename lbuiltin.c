@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.48 1999/01/26 15:38:01 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.49 1999/02/04 19:12:35 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -604,6 +604,11 @@ static void mem_query (void) {
 }
 
 
+static void query_strings (void) {
+  lua_pushnumber(L->string_root[luaL_check_int(1)].nuse);
+}
+
+
 static void countlist (void) {
   char *s = luaL_check_string(1);
   GCnode *l = (s[0]=='t') ? L->roottable.next : (s[0]=='c') ? L->rootcl.next :
@@ -677,6 +682,7 @@ static struct luaL_reg builtin_funcs[] = {
   {"testC", testC},
   {"totalmem", mem_query},
   {"count", countlist},
+  {"querystr", query_strings},
 #endif
   {"_ALERT", luaB_alert},
   {"_ERRORMESSAGE", error_message},
