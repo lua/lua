@@ -5,10 +5,9 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.33 1996/02/26 21:00:27 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.34 1996/03/15 13:13:13 roberto Exp roberto $";
 
 #include <stdio.h>
-#include <stdlib.h>
 
 #include "lex.h"
 #include "opcode.h"

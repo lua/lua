@@ -1,9 +1,8 @@
-char *rcs_lex = "$Id: lex.c,v 2.29 1996/02/26 22:35:51 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.30 1996/03/14 15:17:28 roberto Exp roberto $";
  
 
 #include <ctype.h>
 #include <string.h>
-#include <stdio.h>
 
 #include "mem.h"
 #include "tree.h"
