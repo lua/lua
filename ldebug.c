@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.33 2000/08/11 16:17:28 roberto Exp roberto $
+** $Id: ldebug.c,v 1.34 2000/08/14 17:46:27 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -253,7 +253,7 @@ int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
         break;
       }
       case 'n': {
-        ar->namewhat = getfuncname(L, func, &ar->name);
+        ar->namewhat = (isactive) ? getfuncname(L, func, &ar->name) : NULL;
         if (ar->namewhat == NULL)
           lua_getname(L, func, ar);
         break;
