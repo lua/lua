@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.21 2004/12/13 12:08:34 roberto Exp $
+** $Id: luaconf.h,v 1.21 2004/12/22 17:43:27 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -329,11 +329,7 @@ __inline int l_lrint (double flt)
 #define LUA_CPATH	"LUA_CPATH"
 
 /* prefix for open functions in C libraries */
-#if defined(__APPLE__) && defined(__MACH__)
-#define LUA_POF		"_luaopen_"
-#else
 #define LUA_POF		"luaopen_"
-#endif
 
 /* separator for open functions in C libraries */
 #define LUA_OFSEP	""
