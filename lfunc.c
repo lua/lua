@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.68 2003/10/02 19:21:09 roberto Exp roberto $
+** $Id: lfunc.c,v 1.69 2003/10/20 17:42:41 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -64,7 +64,7 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
   }
   v = luaM_new(L, UpVal);  /* not found: create a new one */
   v->tt = LUA_TUPVAL;
-  v->marked = 1;  /* open upvalues should not be collected */
+  v->marked = bitmask(BLACKBIT);  /* open upvalues should not be collected */
   v->v = level;  /* current value lives in the stack */
   v->next = *pp;  /* chain it in the proper position */
   *pp = valtogco(v);

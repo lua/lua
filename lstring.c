@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.78 2002/12/04 17:38:31 roberto Exp roberto $
+** $Id: lstring.c,v 1.79 2003/04/28 19:26:16 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -91,7 +91,7 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
 Udata *luaS_newudata (lua_State *L, size_t s) {
   Udata *u;
   u = cast(Udata *, luaM_malloc(L, sizeudata(s)));
-  u->uv.marked = (1<<1);  /* is not finalized */
+  u->uv.marked = 0;  /* is not finalized */
   u->uv.tt = LUA_TUSERDATA;
   u->uv.len = s;
   u->uv.metatable = hvalue(defaultmeta(L));

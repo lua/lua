@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.176 2003/07/29 19:25:37 roberto Exp roberto $
+** $Id: lgc.c,v 1.177 2003/08/27 21:01:44 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -29,45 +29,38 @@ typedef struct GCState {
 } GCState;
 
 
-/*
-** some userful bit tricks
-*/
-#define setbit(x,b)	((x) |= (1<<(b)))
-#define resetbit(x,b)	((x) &= cast(lu_byte, ~(1<<(b))))
-#define testbit(x,b)	((x) & (1<<(b)))
 
-#define unmark(x)	resetbit((x)->gch.marked, 0)
-#define ismarked(x)	((x)->gch.marked & ((1<<4)|1))
+#define unblack(x)	resetbit((x)->gch.marked, BLACKBIT)
+#define isblack(x)	testbit((x)->gch.marked, BLACKBIT)
+#define blacken(x)	setbit((x)->gch.marked, BLACKBIT)
 
-#define stringmark(s)	setbit((s)->tsv.marked, 0)
+#define stringmark(s)	setbit((s)->tsv.marked, BLACKBIT)
 
 
-#define isfinalized(u)		(!testbit((u)->uv.marked, 1))
-#define markfinalized(u)	resetbit((u)->uv.marked, 1)
+#define isfinalized(u)		testbit((u)->uv.marked, FINALIZEDBIT)
+#define markfinalized(u)	setbit((u)->uv.marked, FINALIZEDBIT)
 
 
-#define KEYWEAKBIT    1
-#define VALUEWEAKBIT  2
-#define KEYWEAK         (1<<KEYWEAKBIT)
-#define VALUEWEAK       (1<<VALUEWEAKBIT)
+#define KEYWEAK         bitmask(KEYWEAKBIT)
+#define VALUEWEAK       bitmask(VALUEWEAKBIT)
 
 
 
 #define markobject(st,o) { checkconsistency(o); \
-  if (iscollectable(o) && !ismarked(gcvalue(o))) reallymarkobject(st,gcvalue(o)); }
+  if (iscollectable(o) && !isblack(gcvalue(o))) reallymarkobject(st,gcvalue(o)); }
 
 #define condmarkobject(st,o,c) { checkconsistency(o); \
-  if (iscollectable(o) && !ismarked(gcvalue(o)) && (c)) \
+  if (iscollectable(o) && !isblack(gcvalue(o)) && (c)) \
     reallymarkobject(st,gcvalue(o)); }
 
-#define markvalue(st,t) { if (!ismarked(valtogco(t))) \
+#define markvalue(st,t) { if (!isblack(valtogco(t))) \
 		reallymarkobject(st, valtogco(t)); }
 
 
 
 static void reallymarkobject (GCState *st, GCObject *o) {
-  lua_assert(!ismarked(o));
-  setbit(o->gch.marked, 0);  /* mark object */
+  lua_assert(!isblack(o));
+  blacken(o);
   switch (o->gch.tt) {
     case LUA_TUSERDATA: {
       markvalue(st, gcotou(o)->uv.metatable);
@@ -101,7 +94,7 @@ static void reallymarkobject (GCState *st, GCObject *o) {
 static void marktmu (GCState *st) {
   GCObject *u;
   for (u = st->g->tmudata; u; u = u->gch.next) {
-    unmark(u);  /* may be marked, if left from previous GC */
+    unblack(u);  /* may be marked, if left from previous GC */
     reallymarkobject(st, u);
   }
 }
@@ -116,7 +109,7 @@ size_t luaC_separateudata (lua_State *L) {
   GCObject **lastcollected = &collected;
   while ((curr = *p) != NULL) {
     lua_assert(curr->gch.tt == LUA_TUSERDATA);
-    if (ismarked(curr) || isfinalized(gcotou(curr)))
+    if (isblack(curr) || isfinalized(gcotou(curr)))
       p = &curr->gch.next;  /* don't bother with them */
 
     else if (fasttm(L, gcotou(curr)->uv.metatable, TM_GC) == NULL) {
@@ -216,9 +209,9 @@ static void traverseclosure (GCState *st, Closure *cl) {
     markvalue(st, cl->l.p);
     for (i=0; i<cl->l.nupvalues; i++) {  /* mark its upvalues */
       UpVal *u = cl->l.upvals[i];
-      if (!u->marked) {
+      if (!isblack(valtogco(u))) {
+        blacken(valtogco(u));
         markobject(st, &u->value);
-        u->marked = 1;
       }
     }
   }
@@ -300,7 +293,7 @@ static int iscleared (const TObject *o, int iskey) {
     stringmark(tsvalue(o));  /* strings are `values', so are never weak */
     return 0;
   }
-  return !ismarked(gcvalue(o)) ||
+  return !isblack(gcvalue(o)) ||
     (ttisuserdata(o) && (!iskey && isfinalized(uvalue(o))));
 }
 
@@ -319,8 +312,9 @@ static void cleartable (GCObject *l) {
   while (l) {
     Table *h = gcotoh(l);
     int i = h->sizearray;
-    lua_assert(h->marked & (KEYWEAK | VALUEWEAK));
-    if (h->marked & VALUEWEAK) {
+    lua_assert(testbit(h->marked, VALUEWEAKBIT) ||
+               testbit(h->marked, KEYWEAKBIT));
+    if (testbit(h->marked, VALUEWEAKBIT)) {
       while (i--) {
         TObject *o = &h->array[i];
         if (iscleared(o, 0))  /* value was collected? */
@@ -363,12 +357,12 @@ static void freeobj (lua_State *L, GCObject *o) {
 }
 
 
-static int sweeplist (lua_State *L, GCObject **p, int limit) {
+static int sweeplist (lua_State *L, GCObject **p, int mask) {
   GCObject *curr;
   int count = 0;  /* number of collected items */
   while ((curr = *p) != NULL) {
-    if (curr->gch.marked > limit) {
-      unmark(curr);
+    if (curr->gch.marked & mask) {
+      unblack(curr);
       p = &curr->gch.next;
     }
     else {
@@ -381,10 +375,10 @@ static int sweeplist (lua_State *L, GCObject **p, int limit) {
 }
 
 
-static void sweepstrings (lua_State *L, int all) {
+static void sweepstrings (lua_State *L, int mask) {
   int i;
   for (i=0; i<G(L)->strt.size; i++) {  /* for each list */
-    G(L)->strt.nuse -= sweeplist(L, &G(L)->strt.hash[i], all);
+    G(L)->strt.nuse -= sweeplist(L, &G(L)->strt.hash[i], mask);
   }
 }
 
@@ -426,7 +420,7 @@ void luaC_callGCTM (lua_State *L) {
     udata->uv.next = G(L)->rootudata;  /* return it to `root' list */
     G(L)->rootudata = o;
     setuvalue(L->top - 1, udata);  /* keep a reference to it */
-    unmark(o);
+    unblack(o);
     do1gcTM(L, udata);
   }
   L->top--;
@@ -435,10 +429,10 @@ void luaC_callGCTM (lua_State *L) {
 
 
 void luaC_sweep (lua_State *L, int all) {
-  if (all) all = 256;  /* larger than any mark */
-  sweeplist(L, &G(L)->rootudata, all);
-  sweepstrings(L, all);
-  sweeplist(L, &G(L)->rootgc, all);
+  int mask = (all) ? 0 : (bitmask(BLACKBIT) | bitmask(FIXEDBIT));
+  sweeplist(L, &G(L)->rootudata, mask);
+  sweepstrings(L, mask);
+  sweeplist(L, &G(L)->rootgc, mask);
 }
 
 
