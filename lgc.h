@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 1.22 2003/11/17 19:50:05 roberto Exp roberto $
+** $Id: lgc.h,v 1.23 2003/11/18 14:55:11 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -14,10 +14,17 @@
 /*
  * ** some userful bit tricks
  * */
+#define resetbits(x,m)	((x) &= cast(lu_byte, ~(m)))
+#define setbits(x,m)	((x) |= (m))
+#define testbits(x,m)	((x) & (m))
 #define bitmask(b)	(1<<(b))
-#define setbit(x,b)	((x) |= bitmask(b))
-#define resetbit(x,b)	((x) &= cast(lu_byte, ~bitmask(b)))
-#define testbit(x,b)	((x) & bitmask(b))
+#define bit2mask(b1,b2)	(bitmask(b1) | bitmask(b2))
+#define setbit(x,b)	setbits(x, bitmask(b))
+#define resetbit(x,b)	resetbits(x, bitmask(b))
+#define testbit(x,b)	testbits(x, bitmask(b))
+#define set2bits(x,b1,b2)	setbits(x, (bit2mask(b1, b2)))
+#define reset2bits(x,b1,b2)	resetbits(x, (bit2mask(b1, b2)))
+#define test2bits(x,b1,b2)	testbits(x, (bit2mask(b1, b2)))
 
 
 

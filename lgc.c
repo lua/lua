@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.178 2003/11/17 19:50:05 roberto Exp roberto $
+** $Id: lgc.c,v 1.179 2003/11/18 14:55:11 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -23,9 +23,15 @@
 
 
 
-#define unblack(x)	resetbit((x)->gch.marked, BLACKBIT)
 #define isblack(x)	testbit((x)->gch.marked, BLACKBIT)
-#define blacken(x)	setbit((x)->gch.marked, BLACKBIT)
+#define gray2black(x)	((x)->gch.marked++)
+#define white2black(x)	setbit((x)->gch.marked, BLACKBIT)
+
+#define iswhite(x)	(!test2bits((x)->gch.marked, GRAYBIT, BLACKBIT))
+#define makewhite(x)	reset2bits((x)->gch.marked, GRAYBIT, BLACKBIT)
+
+#define isgray(x)	testbit((x)->gch.marked, GRAYBIT)
+#define white2gray(x)	setbit((x)->gch.marked, GRAYBIT)
 
 #define stringmark(s)	setbit((s)->tsv.marked, BLACKBIT)
 
@@ -39,55 +45,61 @@
 
 
 
-#define markobject(g,o) { checkconsistency(o); \
-  if (iscollectable(o) && !isblack(gcvalue(o))) reallymarkobject(g,gcvalue(o)); }
+#define markvalue(g,o) { checkconsistency(o); \
+  if (iscollectable(o) && iswhite(gcvalue(o))) reallymarkobject(g,gcvalue(o)); }
 
 #define condmarkobject(g,o,c) { checkconsistency(o); \
-  if (iscollectable(o) && !isblack(gcvalue(o)) && (c)) \
+  if (iscollectable(o) && iswhite(gcvalue(o)) && (c)) \
     reallymarkobject(g,gcvalue(o)); }
 
-#define markvalue(g,t) { if (!isblack(valtogco(t))) \
+#define markobject(g,t) { if (iswhite(valtogco(t))) \
 		reallymarkobject(g, valtogco(t)); }
 
 
 
 static void reallymarkobject (global_State *g, GCObject *o) {
-  lua_assert(!isblack(o));
-  blacken(o);
+  lua_assert(iswhite(o));
   switch (o->gch.tt) {
+    case LUA_TSTRING: {
+      white2black(o);  /* strings do not go to gray list */
+      return;
+    }
     case LUA_TUSERDATA: {
-      markvalue(g, gcotou(o)->uv.metatable);
-      break;
+      white2black(o);  /* userdata do not go to gray list */
+      markobject(g, gcotou(o)->uv.metatable);
+      return;
     }
     case LUA_TFUNCTION: {
       gcotocl(o)->c.gclist = g->gray;
-      g->gray = o;
       break;
     }
     case LUA_TTABLE: {
       gcotoh(o)->gclist = g->gray;
-      g->gray = o;
       break;
     }
     case LUA_TTHREAD: {
       gcototh(o)->gclist = g->gray;
-      g->gray = o;
       break;
     }
     case LUA_TPROTO: {
       gcotop(o)->gclist = g->gray;
-      g->gray = o;
       break;
     }
-    default: lua_assert(o->gch.tt == LUA_TSTRING);
+    case LUA_TUPVAL: {
+      gcotouv(o)->gclist = g->gray;
+      break;
+    }
+    default: lua_assert(0);
   }
+  g->gray = o;  /* finish list linking */
+  white2gray(o);
 }
 
 
 static void marktmu (global_State *g) {
   GCObject *u;
   for (u = g->tmudata; u; u = u->gch.next) {
-    unblack(u);  /* may be marked, if left from previous GC */
+    makewhite(u);  /* may be marked, if left from previous GC */
     reallymarkobject(g, u);
   }
 }
@@ -130,7 +142,7 @@ static void traversetable (global_State *g, Table *h) {
   int weakkey = 0;
   int weakvalue = 0;
   const TObject *mode;
-  markvalue(g, h->metatable);
+  markobject(g, h->metatable);
   lua_assert(h->lsizenode || h->node == g->dummynode);
   mode = gfasttm(g, h->metatable, TM_MODE);
   if (mode && ttisstring(mode)) {  /* is there a weak mode? */
@@ -148,7 +160,7 @@ static void traversetable (global_State *g, Table *h) {
   if (!weakvalue) {
     i = h->sizearray;
     while (i--)
-      markobject(g, &h->array[i]);
+      markvalue(g, &h->array[i]);
   }
   i = sizenode(h);
   while (i--) {
@@ -179,7 +191,7 @@ static void traverseproto (global_State *g, Proto *f) {
   }
   for (i=0; i<f->sizep; i++) {  /* mark nested protos */
     if (f->p[i])
-      markvalue(g, f->p[i]);
+      markobject(g, f->p[i]);
   }
   for (i=0; i<f->sizelocvars; i++) {  /* mark local-variable names */
     if (f->locvars[i].varname)
@@ -193,19 +205,15 @@ static void traverseclosure (global_State *g, Closure *cl) {
   if (cl->c.isC) {
     int i;
     for (i=0; i<cl->c.nupvalues; i++)  /* mark its upvalues */
-      markobject(g, &cl->c.upvalue[i]);
+      markvalue(g, &cl->c.upvalue[i]);
   }
   else {
     int i;
     lua_assert(cl->l.nupvalues == cl->l.p->nups);
-    markvalue(g, hvalue(&cl->l.g));
-    markvalue(g, cl->l.p);
+    markobject(g, hvalue(&cl->l.g));
+    markobject(g, cl->l.p);
     for (i=0; i<cl->l.nupvalues; i++) {  /* mark its upvalues */
-      UpVal *u = cl->l.upvals[i];
-      if (!isblack(valtogco(u))) {
-        blacken(valtogco(u));
-        markobject(g, &u->value);
-      }
+      markobject(g, cl->l.upvals[i]);
     }
   }
 }
@@ -226,14 +234,14 @@ static void checkstacksizes (lua_State *L, StkId max) {
 static void traversestack (global_State *g, lua_State *L1) {
   StkId o, lim;
   CallInfo *ci;
-  markobject(g, gt(L1));
+  markvalue(g, gt(L1));
   lim = L1->top;
   for (ci = L1->base_ci; ci <= L1->ci; ci++) {
     lua_assert(ci->top <= L1->stack_last);
     if (lim < ci->top) lim = ci->top;
   }
   for (o = L1->stack; o < L1->top; o++)
-    markobject(g, o);
+    markvalue(g, o);
   for (; o <= lim; o++)
     setnilvalue(o);
   checkstacksizes(L1, lim);
@@ -242,6 +250,8 @@ static void traversestack (global_State *g, lua_State *L1) {
 
 static void propagatemarks (global_State *g) {
   while (g->gray) {  /* traverse marked objects */
+    lua_assert(isgray(g->gray));
+    gray2black(g->gray);
     switch (g->gray->gch.tt) {
       case LUA_TTABLE: {
         Table *h = gcotoh(g->gray);
@@ -265,6 +275,12 @@ static void propagatemarks (global_State *g) {
         Proto *p = gcotop(g->gray);
         g->gray = p->gclist;
         traverseproto(g, p);
+        break;
+      }
+      case LUA_TUPVAL: {
+        UpVal *uv = gcotouv(g->gray);
+        g->gray = uv->gclist;
+        markvalue(g, &uv->value);
         break;
       }
       default: lua_assert(0);
@@ -354,8 +370,9 @@ static int sweeplist (lua_State *L, GCObject **p, int mask) {
   GCObject *curr;
   int count = 0;  /* number of collected items */
   while ((curr = *p) != NULL) {
+    lua_assert(!isgray(curr));
     if (curr->gch.marked & mask) {
-      unblack(curr);
+      makewhite(curr);
       p = &curr->gch.next;
     }
     else {
@@ -413,7 +430,7 @@ void luaC_callGCTM (lua_State *L) {
     udata->uv.next = G(L)->rootudata;  /* return it to `root' list */
     G(L)->rootudata = o;
     setuvalue(L->top - 1, udata);  /* keep a reference to it */
-    unblack(o);
+    makewhite(o);
     do1gcTM(L, udata);
   }
   L->top--;
@@ -422,7 +439,7 @@ void luaC_callGCTM (lua_State *L) {
 
 
 void luaC_sweep (lua_State *L, int all) {
-  int mask = (all) ? 0 : (bitmask(BLACKBIT) | bitmask(FIXEDBIT));
+  int mask = (all) ? 0 : bit2mask(BLACKBIT, FIXEDBIT);
   sweeplist(L, &G(L)->rootudata, mask);
   sweepstrings(L, mask);
   sweeplist(L, &G(L)->rootgc, mask);
@@ -431,11 +448,11 @@ void luaC_sweep (lua_State *L, int all) {
 
 /* mark root set */
 static void markroot (global_State *g, lua_State *L) {
-  markobject(g, defaultmeta(L));
-  markobject(g, registry(L));
+  markvalue(g, defaultmeta(L));
+  markvalue(g, registry(L));
   traversestack(g, g->mainthread);
   if (L != g->mainthread)  /* another thread is running? */
-    markvalue(g, L);  /* cannot collect it */
+    markobject(g, L);  /* cannot collect it */
 }
 
 
