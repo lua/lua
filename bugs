@@ -1,3 +1,4 @@
-- arquivo comecando com # fica com numero da linha defazado (inout.c 2.69)
-- LUA_COMPAT2_5 escrito errado em opcode.c (faltou o LUA_)
-- opcode.c
+** lua.stx / llex.c
+Tue Dec  2 10:45:48 EDT 1997
+>> BUG: "lastline" was not reset on function entry, so debug information
+>> started only in the 2nd line of a function.
