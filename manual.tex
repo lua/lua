@@ -1,4 +1,5 @@
-% $Id: manual.tex,v 1.59 2002/08/12 17:43:35 roberto Exp roberto $
+% $Id: manual.tex,v 1.60 2002/08/13 19:44:47 roberto Exp roberto $
+%{[(
 
 \documentclass[11pt,twoside,draft]{article}
 \usepackage{fullpage}
@@ -133,7 +134,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{{\small \tt\$Date: 2002/08/12 17:43:35 $ $}}
+%\date{{\small \tt\$Date: 2002/08/13 19:44:47 $ $}}
 
 \maketitle
 
@@ -574,7 +575,7 @@ may contain nested \verb|[[| $\ldots$ \verb|]]| pairs,
 and do not interpret escape sequences.
 For convenience,
 when the opening \verb|[[| is immediately followed by a newline,
-the newline is not included in the string.
+the newline is not included in the string.  % ]]
 That form is specially convenient for
 writing strings that contain program pieces or
 other quoted strings.
@@ -583,11 +584,11 @@ As an example, in a system using ASCII
 newline is coded as~10, and `\verb|1|' is coded as~49),
 the four literals below denote the same string:
 \begin{verbatim}
-       1)   "alo\n123\""
-       2)   '\97lo\10\04923"'
-       3)   [[alo
+      (1)   "alo\n123\""
+      (2)   '\97lo\10\04923"'
+      (3)   [[alo
             123"]]
-       4)   [[
+      (4)   [[
             alo
             123"]]
 \end{verbatim}
@@ -3575,7 +3576,7 @@ are interfaces to the simple random generator functions
 (No guarantees can be given for their statistical properties.)
 When called without arguments,
 \verb|math.random| returns a pseudo-random real number
-in the range \Math{[0,1)}.
+in the range \Math{[0,1)}.  %]
 When called with a number \Math{n},
 \verb|math.random| returns a pseudo-random integer in the range \Math{[1,n]}.
 When called with two arguments, \Math{l} and \Math{u},
@@ -4111,7 +4112,7 @@ Function calls written between parentheses result in exactly one value.
 
 \item
 A function call as the last expression in a list constructor
-(like \verb|{a,b,f()}}|) has all its return values inserted in the list.
+(like \verb|{a,b,f()}|) has all its return values inserted in the list.
 
 \item
 The precedence of \rwd{or} is smaller than the precedence of \rwd{and}.
@@ -4279,3 +4280,4 @@ enclosed in single quotes.
 \input{manual.id}
 
 \end{document}
+%)]}
