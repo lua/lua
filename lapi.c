@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.210 2002/08/07 14:24:24 roberto Exp roberto $
+** $Id: lapi.c,v 1.211 2002/08/08 20:08:41 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -208,6 +208,12 @@ LUA_API int lua_isnumber (lua_State *L, int index) {
 LUA_API int lua_isstring (lua_State *L, int index) {
   int t = lua_type(L, index);
   return (t == LUA_TSTRING || t == LUA_TNUMBER);
+}
+
+
+LUA_API int lua_isuserdata (lua_State *L, int index) {
+  const TObject *o = luaA_indexAcceptable(L, index);
+  return (o != NULL && (ttisuserdata(o) || ttislightuserdata(o)));
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.153 2002/08/06 18:54:18 roberto Exp roberto $
+** $Id: lua.h,v 1.154 2002/08/12 17:23:12 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -63,13 +63,13 @@ typedef const char * (*lua_Chunkreader) (lua_State *L, void *ud, size_t *size);
 #define LUA_TNONE	(-1)
 
 #define LUA_TNIL	0
-#define LUA_TNUMBER	1
-#define LUA_TSTRING	2
-#define LUA_TBOOLEAN	3
-#define LUA_TTABLE	4
-#define LUA_TFUNCTION	5
-#define LUA_TUSERDATA	6
-#define LUA_TLIGHTUSERDATA	7
+#define LUA_TBOOLEAN	1
+#define LUA_TLIGHTUSERDATA	2
+#define LUA_TNUMBER	3
+#define LUA_TSTRING	4
+#define LUA_TTABLE	5
+#define LUA_TFUNCTION	6
+#define LUA_TUSERDATA	7
 
 
 /* minimum Lua stack available to a C function */
@@ -127,6 +127,7 @@ LUA_API int   lua_checkstack (lua_State *L, int size);
 LUA_API int             lua_isnumber (lua_State *L, int index);
 LUA_API int             lua_isstring (lua_State *L, int index);
 LUA_API int             lua_iscfunction (lua_State *L, int index);
+LUA_API int             lua_isuserdata (lua_State *L, int index);
 LUA_API int             lua_type (lua_State *L, int index);
 LUA_API const char     *lua_typename (lua_State *L, int type);
 
@@ -240,7 +241,6 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size);
 
 #define lua_isfunction(L,n)	(lua_type(L,n) == LUA_TFUNCTION)
 #define lua_istable(L,n)	(lua_type(L,n) == LUA_TTABLE)
-#define lua_isuserdata(L,n)	(lua_type(L,n) >= LUA_TUSERDATA)
 #define lua_islightuserdata(L,n)	(lua_type(L,n) == LUA_TLIGHTUSERDATA)
 #define lua_isnil(L,n)		(lua_type(L,n) == LUA_TNIL)
 #define lua_isboolean(L,n)	(lua_type(L,n) == LUA_TBOOLEAN)

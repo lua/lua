@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.93 2002/08/07 19:22:39 roberto Exp roberto $
+** $Id: lstate.h,v 1.94 2002/08/12 17:23:12 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -75,7 +75,7 @@ struct lua_longjmp;  /* defined in ldo.c */
 
 
 typedef struct stringtable {
-  TString **hash;
+  GCObject **hash;
   ls_nstr nuse;  /* number of elements */
   int size;
 } stringtable;
@@ -121,12 +121,9 @@ typedef struct CallInfo {
 */
 typedef struct global_State {
   stringtable strt;  /* hash table for strings */
-  Proto *rootproto;  /* list of all prototypes */
-  Closure *rootcl;  /* list of all closures */
-  Table *roottable;  /* list of all tables */
-  UpVal *rootupval;  /* list of closed up values */
-  Udata *rootudata;   /* list of all userdata */
-  Udata *tmudata;  /* list of userdata to be GC */
+  GCObject *rootgc;  /* list of (almost) all collectable objects */
+  GCObject *rootudata;   /* (separated) list of all userdata */
+  GCObject *tmudata;  /* list of userdata to be GC */
   void *Mbuffer;  /* global buffer */
   size_t Mbuffsize;  /* size of Mbuffer */
   lu_mem GCthreshold;
@@ -154,7 +151,7 @@ struct lua_State {
   unsigned long hookmask;
   ls_count hookcount;
   lua_Hook hook;
-  UpVal *openupval;  /* list of open upvalues in this stack */
+  GCObject *openupval;  /* list of open upvalues in this stack */
   struct lua_longjmp *errorJmp;  /* current error recover point */
   ptrdiff_t errfunc;  /* current error handling function (stack index) */
   lua_State *next;  /* circular double linked list of states */

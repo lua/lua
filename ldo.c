@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.191 2002/08/07 19:22:39 roberto Exp roberto $
+** $Id: ldo.c,v 1.192 2002/08/07 20:55:00 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -101,10 +101,10 @@ static void restore_stack_limit (lua_State *L) {
 
 static void correctstack (lua_State *L, TObject *oldstack) {
   CallInfo *ci;
-  UpVal *up;
+  GCObject *up;
   L->top = (L->top - oldstack) + L->stack;
-  for (up = L->openupval; up != NULL; up = up->next)
-    up->v = (up->v - oldstack) + L->stack;
+  for (up = L->openupval; up != NULL; up = up->gch.next)
+    (&up->uv)->v = ((&up->uv)->v - oldstack) + L->stack;
   for (ci = L->base_ci; ci <= L->ci; ci++) {
     ci->base = (ci->base - oldstack) + L->stack;
     ci->top = (ci->top - oldstack) + L->stack;

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.142 2002/08/06 17:06:56 roberto Exp roberto $
+** $Id: lobject.h,v 1.143 2002/08/16 14:45:55 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -13,20 +13,42 @@
 
 
 /* tags for values visible from Lua */
-#define NUM_TAGS	LUA_TFUNCTION
+#define NUM_TAGS	LUA_TUSERDATA
 
 
+/*
+** Extra tags for non-values
+*/
+#define LUA_TPROTO	(NUM_TAGS+1)
+#define LUA_TUPVAL	(NUM_TAGS+2)
+
+
+/*
+** Common header for all collectable objects
+*/
+typedef struct GCheader {
+  union GCObject *next;  /* pointer to next object */
+  lu_byte tt;  /* object type */
+  lu_byte marked;  /* GC informations */
+} GCheader;
+
+
+
+
+/*
+** Union of all Lua values
+*/
 typedef union {
+  union GCObject *gc;
   void *p;
-  union TString *ts;
-  union Udata *u;
-  union Closure *cl;
-  struct Table *h;
   lua_Number n;
   int b;
 } Value;
 
 
+/*
+** Lua values (or `tagged objects')
+*/
 typedef struct lua_TObject {
   int tt;
   Value value;
@@ -47,10 +69,10 @@ typedef struct lua_TObject {
 #define ttype(o)	((o)->tt)
 #define pvalue(o)	check_exp(ttislightuserdata(o), (o)->value.p)
 #define nvalue(o)	check_exp(ttisnumber(o), (o)->value.n)
-#define tsvalue(o)	check_exp(ttisstring(o), (o)->value.ts)
-#define uvalue(o)	check_exp(ttisuserdata(o), (o)->value.u)
-#define clvalue(o)	check_exp(ttisfunction(o), (o)->value.cl)
-#define hvalue(o)	check_exp(ttistable(o), (o)->value.h)
+#define tsvalue(o)	check_exp(ttisstring(o), &(o)->value.gc->ts)
+#define uvalue(o)	check_exp(ttisuserdata(o), &(o)->value.gc->u)
+#define clvalue(o)	check_exp(ttisfunction(o), &(o)->value.gc->cl)
+#define hvalue(o)	check_exp(ttistable(o), &(o)->value.gc->h)
 #define bvalue(o)	check_exp(ttisboolean(o), (o)->value.b)
 
 #define l_isfalse(o)	(ttisnil(o) || (ttisboolean(o) && bvalue(o) == 0))
@@ -69,24 +91,41 @@ typedef struct lua_TObject {
   { TObject *i_o=(obj); i_o->tt=LUA_TBOOLEAN; i_o->value.b=(x); }
 
 #define setsvalue(obj,x) \
-  { TObject *i_o=(obj); i_o->tt=LUA_TSTRING; i_o->value.ts=(x); }
+  { TObject *i_o=(obj); i_o->tt=LUA_TSTRING; \
+    i_o->value.gc=cast(GCObject *, (x)); \
+    lua_assert(i_o->value.gc->gch.tt == LUA_TSTRING); }
 
 #define setuvalue(obj,x) \
-  { TObject *i_o=(obj); i_o->tt=LUA_TUSERDATA; i_o->value.u=(x); }
+  { TObject *i_o=(obj); i_o->tt=LUA_TUSERDATA; \
+    i_o->value.gc=cast(GCObject *, (x)); \
+    lua_assert(i_o->value.gc->gch.tt == LUA_TUSERDATA); }
 
 #define setclvalue(obj,x) \
-  { TObject *i_o=(obj); i_o->tt=LUA_TFUNCTION; i_o->value.cl=(x); }
+  { TObject *i_o=(obj); i_o->tt=LUA_TFUNCTION; \
+    i_o->value.gc=cast(GCObject *, (x)); \
+    lua_assert(i_o->value.gc->gch.tt == LUA_TFUNCTION); }
 
 #define sethvalue(obj,x) \
-  { TObject *i_o=(obj); i_o->tt=LUA_TTABLE; i_o->value.h=(x); }
+  { TObject *i_o=(obj); i_o->tt=LUA_TTABLE; \
+    i_o->value.gc=cast(GCObject *, (x)); \
+    lua_assert(i_o->value.gc->gch.tt == LUA_TTABLE); }
 
 #define setnilvalue(obj) ((obj)->tt=LUA_TNIL)
 
+
+#define checkconsistency(obj) \
+  lua_assert(!iscollectable(obj) || (ttype(obj) == (obj)->value.gc->gch.tt))
+
+
 #define setobj(obj1,obj2) \
   { const TObject *o2=(obj2); TObject *o1=(obj1); \
+    checkconsistency(o2); \
     o1->tt=o2->tt; o1->value = o2->value; }
 
 #define setttype(obj, tt) (ttype(obj) = (tt))
+
+
+#define iscollectable(o)	(ttype(o) >= LUA_TSTRING)
 
 
 
@@ -99,11 +138,12 @@ typedef TObject *StkId;  /* index to stack elements */
 typedef union TString {
   union L_Umaxalign dummy;  /* ensures maximum alignment for strings */
   struct {
+    union GCObject *next;  /* pointer to next object */
+    lu_byte tt;  /* object type */
+    lu_byte marked;  /* GC informations */
+    lu_byte reserved;
     lu_hash hash;
     size_t len;
-    union TString *nexthash;  /* chain for hash table */
-    lu_byte marked;
-    lu_byte reserved;
   } tsv;
 } TString;
 
@@ -116,10 +156,11 @@ typedef union TString {
 typedef union Udata {
   union L_Umaxalign dummy;  /* ensures maximum alignment for `local' udata */
   struct {
+    union GCObject *next;  /* pointer to next object */
+    lu_byte tt;  /* object type */
+    lu_byte marked;  /* GC informations */
     struct Table *metatable;
-    union Udata *next;  /* chain for list of all udata */
     size_t len;
-    lu_byte marked;
   } uv;
 } Udata;
 
@@ -130,10 +171,12 @@ typedef union Udata {
 ** Function Prototypes
 */
 typedef struct Proto {
+  union GCObject *next;  /* pointer to next object */
+  lu_byte tt;  /* object type */
+  lu_byte marked;  /* GC informations */
   TObject *k;  /* constants used by the function */
   Instruction *code;
   struct Proto **p;  /* functions defined inside the function */
-  struct Proto *next;
   int *lineinfo;  /* map from opcodes to source lines */
   struct LocVar *locvars;  /* information about local variables */
   TString  *source;
@@ -146,7 +189,6 @@ typedef struct Proto {
   lu_byte numparams;
   lu_byte is_vararg;
   lu_byte maxstacksize;
-  lu_byte marked;
 } Proto;
 
 
@@ -163,10 +205,11 @@ typedef struct LocVar {
 */
 
 typedef struct UpVal {
+  union GCObject *next;  /* pointer to next object */
+  lu_byte tt;  /* object type */
+  lu_byte marked;  /* GC informations */
   TObject *v;  /* points to stack or to its own value */
-  struct UpVal *next;
   TObject value;  /* the value (when closed) */
-  lu_byte marked;
 } UpVal;
 
 
@@ -175,20 +218,22 @@ typedef struct UpVal {
 */
 
 typedef struct CClosure {
+  union GCObject *next;  /* pointer to next object */
+  lu_byte tt;  /* object type */
+  lu_byte marked;  /* GC informations */
   lu_byte isC;  /* 0 for Lua functions, 1 for C functions */
   lu_byte nupvalues;
-  lu_byte marked;
-  union Closure *next;
   lua_CFunction f;
   TObject upvalue[1];
 } CClosure;
 
 
 typedef struct LClosure {
+  union GCObject *next;  /* pointer to next object */
+  lu_byte tt;  /* object type */
+  lu_byte marked;  /* GC informations */
   lu_byte isC;
-  lu_byte nupvalues;
-  lu_byte marked;
-  union Closure *next;  /* first four fields must be equal to CClosure!! */
+  lu_byte nupvalues;  /* first five fields must be equal to CClosure!! */
   struct Proto *p;
   TObject g;  /* global table for this closure */
   UpVal *upvals[1];
@@ -217,17 +262,18 @@ typedef struct Node {
 
 
 typedef struct Table {
+  union GCObject *next;  /* pointer to next object */
+  lu_byte tt;  /* object type */
+  lu_byte marked;  /* GC informations */
+  lu_byte flags;  /* 1<<p means tagmethod(p) is not present */ 
+  lu_byte mode;
+  lu_byte lsizenode;  /* log2 of size of `node' array */
   struct Table *metatable;
   TObject *array;  /* array part */
   Node *node;
   Node *firstfree;  /* this position is free; all positions after it are full */
-  struct Table *next;
   struct Table *gclist;
   int sizearray;  /* size of `array' array */
-  lu_byte flags;  /* 1<<p means tagmethod(p) is not present */ 
-  lu_byte lsizenode;  /* log2 of size of `node' array */
-  lu_byte mode;
-  lu_byte marked;
 } Table;
 
 /* bit masks for `mode' */
@@ -246,6 +292,19 @@ typedef struct Table {
 #define sizenode(t)	(twoto((t)->lsizenode))
 #define sizearray(t)	((t)->sizearray)
 
+
+/*
+** Union of all collectable objects
+*/
+typedef union GCObject {
+  GCheader gch;
+  union TString ts;
+  union Udata u;
+  union Closure cl;
+  struct Table h;
+  struct Proto p;
+  struct UpVal uv;
+} GCObject;
 
 
 extern const TObject luaO_nilobject;

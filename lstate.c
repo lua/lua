@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.103 2002/08/07 19:22:39 roberto Exp roberto $
+** $Id: lstate.c,v 1.104 2002/08/16 20:00:28 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -64,10 +64,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   G(L)->Mbuffer = NULL;
   G(L)->Mbuffsize = 0;
   G(L)->panic = &default_panic;
-  G(L)->rootproto = NULL;
-  G(L)->rootcl = NULL;
-  G(L)->roottable = NULL;
-  G(L)->rootupval = NULL;
+  G(L)->rootgc = NULL;
   G(L)->rootudata = NULL;
   G(L)->tmudata = NULL;
   setnilvalue(key(G(L)->dummynode));
@@ -76,7 +73,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   G(L)->nblocks = sizeof(lua_State) + sizeof(global_State);
   stack_init(L, L);  /* init stack */
   /* create default meta table with a dummy table, and then close the loop */
-  sethvalue(defaultmeta(L), NULL);
+  defaultmeta(L)->tt = LUA_TTABLE;
   sethvalue(defaultmeta(L), luaH_new(L, 0, 4));
   hvalue(defaultmeta(L))->metatable = hvalue(defaultmeta(L));
   sethvalue(gt(L), luaH_new(L, 0, 4));  /* table of globals */
@@ -160,11 +157,8 @@ static void close_state (lua_State *L) {
   luaF_close(L, L->stack);  /* close all upvalues for this thread */
   if (G(L)) {  /* close global state */
     luaC_sweep(L, 1);  /* collect all elements */
-    lua_assert(G(L)->rootproto == NULL);
+    lua_assert(G(L)->rootgc == NULL);
     lua_assert(G(L)->rootudata == NULL);
-    lua_assert(G(L)->rootcl == NULL);
-    lua_assert(G(L)->rootupval == NULL);
-    lua_assert(G(L)->roottable == NULL);
     luaS_freeall(L);
     luaM_freearray(L, G(L)->Mbuffer, G(L)->Mbuffsize, char);
     luaM_freelem(NULL, L->l_G);

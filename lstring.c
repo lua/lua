@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.74 2002/04/05 18:54:31 roberto Exp roberto $
+** $Id: lstring.c,v 1.75 2002/08/16 14:45:55 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -23,19 +23,19 @@ void luaS_freeall (lua_State *L) {
 
 
 void luaS_resize (lua_State *L, int newsize) {
-  TString **newhash = luaM_newvector(L, newsize, TString *);
+  GCObject **newhash = luaM_newvector(L, newsize, GCObject *);
   stringtable *tb = &G(L)->strt;
   int i;
   for (i=0; i<newsize; i++) newhash[i] = NULL;
   /* rehash */
   for (i=0; i<tb->size; i++) {
-    TString *p = tb->hash[i];
+    GCObject *p = tb->hash[i];
     while (p) {  /* for each node in the list */
-      TString *next = p->tsv.nexthash;  /* save next */
-      lu_hash h = p->tsv.hash;
+      GCObject *next = p->gch.next;  /* save next */
+      lu_hash h = (&p->ts)->tsv.hash;
       int h1 = lmod(h, newsize);  /* new position */
       lua_assert(cast(int, h%newsize) == lmod(h, newsize));
-      p->tsv.nexthash = newhash[h1];  /* chain it in new position */
+      p->gch.next = newhash[h1];  /* chain it */
       newhash[h1] = p;
       p = next;
     }
@@ -49,17 +49,17 @@ void luaS_resize (lua_State *L, int newsize) {
 static TString *newlstr (lua_State *L, const char *str, size_t l, lu_hash h) {
   TString *ts = cast(TString *, luaM_malloc(L, sizestring(l)));
   stringtable *tb;
-  ts->tsv.nexthash = NULL;
   ts->tsv.len = l;
   ts->tsv.hash = h;
   ts->tsv.marked = 0;
+  ts->tsv.tt = LUA_TSTRING;
   ts->tsv.reserved = 0;
   memcpy(ts+1, str, l*sizeof(char));
   ((char *)(ts+1))[l] = '\0';  /* ending 0 */
   tb = &G(L)->strt;
   h = lmod(h, tb->size);
-  ts->tsv.nexthash = tb->hash[h];  /* chain new entry */
-  tb->hash[h] = ts;
+  ts->tsv.next = tb->hash[h];  /* chain new entry */
+  tb->hash[h] = cast(GCObject *, ts);
   tb->nuse++;
   if (tb->nuse > cast(ls_nstr, tb->size) && tb->size <= MAX_INT/2)
     luaS_resize(L, tb->size*2);  /* too crowded */
@@ -68,7 +68,7 @@ static TString *newlstr (lua_State *L, const char *str, size_t l, lu_hash h) {
 
 
 TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
-  TString *ts;
+  GCObject *ts;
   lu_hash h = (lu_hash)l;  /* seed */
   size_t step = (l>>5)+1;  /* if string is too long, don't hash all its chars */
   size_t l1;
@@ -76,9 +76,9 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
     h = h ^ ((h<<5)+(h>>2)+(unsigned char)(str[l1-1]));
   for (ts = G(L)->strt.hash[lmod(h, G(L)->strt.size)];
        ts != NULL;
-       ts = ts->tsv.nexthash) {
-    if (ts->tsv.len == l && (memcmp(str, getstr(ts), l) == 0))
-      return ts;
+       ts = ts->gch.next) {
+    if ((&ts->ts)->tsv.len == l && (memcmp(str, getstr(&ts->ts), l) == 0))
+      return &ts->ts;
   }
   return newlstr(L, str, l, h);  /* not found */
 }
@@ -87,12 +87,13 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
 Udata *luaS_newudata (lua_State *L, size_t s) {
   Udata *u;
   u = cast(Udata *, luaM_malloc(L, sizeudata(s)));
-  u->uv.marked = 0;
+  u->uv.marked = (1<<1);  /* is not finalized */
+  u->uv.tt = LUA_TUSERDATA;
   u->uv.len = s;
   u->uv.metatable = hvalue(defaultmeta(L));
   /* chain it on udata list */
   u->uv.next = G(L)->rootudata;
-  G(L)->rootudata = u;
+  G(L)->rootudata = cast(GCObject *, u);
   return u;
 }
 

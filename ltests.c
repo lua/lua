@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.132 2002/08/06 15:32:22 roberto Exp roberto $
+** $Id: ltests.c,v 1.133 2002/08/06 18:01:50 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -324,10 +324,10 @@ static int string_query (lua_State *L) {
     return 2;
   }
   else if (s < tb->size) {
-    TString *ts;
+    GCObject *ts;
     int n = 0;
-    for (ts = tb->hash[s]; ts; ts = ts->tsv.nexthash) {
-      setsvalue(L->top, ts);
+    for (ts = tb->hash[s]; ts; ts = ts->gch.next) {
+      setsvalue(L->top, &ts->ts);
       incr_top(L);
       n++;
     }
