@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.2 2000/09/12 13:49:05 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.3 2000/09/12 18:41:43 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -534,31 +534,62 @@ static int luaB_sort (lua_State *L) {
 */
 
 
-/*
-** gives an explicit error in any attempt to call a deprecated function
-*/
-static int deprecated_func (lua_State *L) {
-  luaL_verror(L, "function `%.20s' is deprecated", luaL_check_string(L, -1));
-  return 0;  /* to avoid warnings */
-}
-
-
 #define num_deprecated	4
 
-static const char *const deprecated_names [num_deprecated] = {
-  "foreachvar", "nextvar", "rawgetglobal", "rawsetglobal"
+static const struct luaL_reg deprecated_names [num_deprecated] = {
+  {"foreachvar", luaB_foreach},
+  {"nextvar", luaB_next},
+  {"rawgetglobal", luaB_rawget},
+  {"rawsetglobal", luaB_rawset}
 };
+
+
+#ifdef LUA_DEPRECATETFUNCS
+
+/*
+** call corresponding function inserting `globals' as first argument
+*/
+static int deprecated_func (lua_State *L) {
+  lua_insert(L, 1);  /* upvalue is the function to be called */
+  lua_getglobals(L);
+  lua_insert(L, 2);  /* table of globals is 1o argument */
+  if (lua_call(L, lua_gettop(L)-1, LUA_MULTRET) != 0)
+    lua_error(L, NULL);
+  return lua_gettop(L);  /* return all results */
+}
 
 
 static void deprecated_funcs (lua_State *L) {
   int i;
   for (i=0; i<num_deprecated; i++) {
-    lua_pushstring(L, deprecated_names[i]);
+    lua_pushcfunction(L, deprecated_names[i].func);
     lua_pushcclosure(L, deprecated_func, 1);
-    lua_setglobal(L, deprecated_names[i]);
+    lua_setglobal(L, deprecated_names[i].name);
   }
 }
 
+
+#else
+
+/*
+** gives an explicit error in any attempt to call a deprecated function
+*/
+static int deprecated_func (lua_State *L) {
+  luaL_verror(L, "function `%.20s' is deprecated", lua_tostring(L, -1));
+  return 0;  /* to avoid warnings */
+}
+
+
+static void deprecated_funcs (lua_State *L) {
+  int i;
+  for (i=0; i<num_deprecated; i++) {
+    lua_pushstring(L, deprecated_names[i].name);
+    lua_pushcclosure(L, deprecated_func, 1);
+    lua_setglobal(L, deprecated_names[i].name);
+  }
+}
+
+#endif
 
 /* }====================================================== */
 
