@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.69 2000/03/13 20:37:16 roberto Exp roberto $
+** $Id: lparser.c,v 1.70 2000/03/15 20:50:33 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -126,7 +126,6 @@ static void check_debugline (LexState *ls) {
 static void check_match (LexState *ls, int what, int who, int where) {
   if (ls->token != what)
     error_unmatched(ls, what, who, where);
-  check_debugline(ls);  /* to `mark' the `what' */
   next(ls);
 }
 
@@ -824,43 +823,20 @@ static int assignment (LexState *ls, expdesc *v, int nvars) {
 }
 
 
-/* maximum size of a while condition */
-#ifndef MAX_WHILE_EXP
-#define MAX_WHILE_EXP 200	/* arbitrary limit */
-#endif
-
 static void whilestat (LexState *ls, int line) {
   /* whilestat -> WHILE exp1 DO block END */
-  Instruction buffer[MAX_WHILE_EXP];
   FuncState *fs = ls->fs;
   int while_init = luaK_getlabel(fs);
-  int loopentry;  /* point to jump to repeat the loop */
-  int cond_init;  /* init of condition, after the move */
-  int cond_size;
   expdesc v;
-  int i;
   next(ls);  /* skip WHILE */
   expr(ls, &v);  /* read condition */
-  luaK_goiffalse(fs, &v, 0);
-  cond_size = fs->pc - while_init;
-  /* save condition (to move it to after body) */
-  if (cond_size > MAX_WHILE_EXP)
-    luaK_error(ls, "while condition too complex");
-  for (i=0; i<cond_size; i++) buffer[i] = fs->f->code[while_init+i];
-  /* go back to state prior condition */
-  fs->pc = while_init;
-  luaK_S(fs, OP_JMP, 0, 0);  /* initial jump to condition */
+  luaK_goiftrue(fs, &v, 0);
   check(ls, TK_DO);
-  loopentry = luaK_getlabel(fs);
   block(ls);
+  luaK_fixjump(fs, luaK_S(fs, OP_JMP, 0, 0), while_init);
+  luaK_patchlist(fs, v.u.l.f, luaK_getlabel(fs));
+  check_debugline(ls);  /* trace `end' when loop finish */
   check_match(ls, TK_END, TK_WHILE, line);
-  cond_init = luaK_getlabel(fs);
-  luaK_fixjump(fs, while_init, cond_init);
-  /* correct `v' and  copy condition to new position */
-  if (v.u.l.t != NO_JUMP) v.u.l.t += cond_init-while_init;
-  for (i=0; i<cond_size; i++) luaK_code(fs, buffer[i], 0);
-  luaK_patchlist(fs, v.u.l.t, loopentry);
-  luaK_getlabel(fs);  /* mark possible jump to this point */
 }
 
 
@@ -869,6 +845,7 @@ static void repeatstat (LexState *ls, int line) {
   FuncState *fs = ls->fs;
   int repeat_init = luaK_getlabel(fs);
   expdesc v;
+  check_debugline(ls);  /* trace `repeat' when looping */
   next(ls);
   block(ls);
   check_match(ls, TK_UNTIL, TK_REPEAT, line);
@@ -936,8 +913,8 @@ static int funcstat (LexState *ls, int line) {
   expdesc v;
   if (ls->fs->prev)  /* inside other function? */
     return 0;
-  check_debugline(ls);
   next(ls);
+  check_debugline(ls);
   needself = funcname(ls, &v);
   body(ls, needself, line);
   luaK_storevar(ls, &v);
@@ -975,6 +952,7 @@ static void ifpart (LexState *ls, int line) {
   block(ls);  /* `then' part */
   luaK_S(fs, OP_JMP, 0, 0);  /* 2nd jump: over `else' part */
   elseinit = luaK_getlabel(fs);  /* address of 2nd jump == elseinit-1 */
+  check_debugline(ls);  /* trace `else' (or `elseif') */
   if (ls->token == TK_ELSEIF)
     ifpart(ls, line);
   else {
@@ -997,11 +975,11 @@ static int stat (LexState *ls) {
   int line = ls->linenumber;  /* may be needed for error messages */
   switch (ls->token) {
     case TK_IF:  /* stat -> IF ifpart END */
-      ifpart(ls, line);
+      ifpart(ls, line);  /* condition will set debug line */
       return 1;
 
     case TK_WHILE:  /* stat -> whilestat */
-      whilestat(ls, line);
+      whilestat(ls, line);  /* debug line only after 1st jump */
       return 1;
 
     case TK_DO: {  /* stat -> DO block END */
@@ -1026,8 +1004,8 @@ static int stat (LexState *ls) {
       namestat(ls);
       return 1;
 
-    case TK_RETURN: case ';': case TK_ELSE: case TK_ELSEIF:
-    case TK_END: case TK_UNTIL: case TK_EOS:  /* `stat' follow */
+    case TK_RETURN: case TK_END: case TK_UNTIL:
+    case ';': case TK_ELSE: case TK_ELSEIF: case TK_EOS:  /* `stat' follow */
       return 0;
 
     default:
@@ -1082,8 +1060,10 @@ static void body (LexState *ls, int needself, int line) {
   if (needself)
     add_localvar(ls, luaS_newfixed(ls->L, "self"));
   parlist(ls);
+  check_debugline(ls);  /* trace function header */
   check(ls, ')');
   chunk(ls);
+  check_debugline(ls);  /* trace `end' when finish */
   check_match(ls, TK_END, TK_FUNCTION, line);
   close_func(ls);
   func_onstack(ls, &new_fs);
