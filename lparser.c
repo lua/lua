@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.54 2000/01/12 16:24:39 roberto Exp roberto $
+** $Id: lparser.c,v 1.55 2000/01/25 13:57:18 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -119,11 +119,16 @@ static void exp1 (LexState *ls);
 
 
 
+static void luaY_error (LexState *ls, const char *msg) {
+  luaX_error(ls, msg, ls->token);
+}
+
+
 static void checklimit (LexState *ls, int val, int limit, const char *msg) {
   if (val > limit) {
     char buff[100];
     sprintf(buff, "too many %.50s (limit=%d)", msg, limit);
-    luaX_error(ls, buff);
+    luaY_error(ls, buff);
   }
 }
 
@@ -145,7 +150,7 @@ static void deltastack (LexState *ls, int delta) {
   fs->stacksize += delta;
   if (fs->stacksize > fs->maxstacksize) {
     if (fs->stacksize > MAX_BYTE)
-      luaX_error(ls, "function/expression too complex");
+      luaY_error(ls, "function/expression too complex");
     fs->maxstacksize = fs->stacksize;
   }
 }
@@ -160,7 +165,7 @@ static void code_oparg_at (LexState *ls, int pc, OpCode op,
     code[pc+1] = (Byte)arg;
   }
   else if (arg > MAX_ARG)
-    luaX_error(ls, "code too long");
+    luaY_error(ls, "code too long");
   else {  /* MAX_BYTE < arg < MAX_ARG */
     if (arg > MAX_WORD) {
       code[pc] = (Byte)LONGARG;
@@ -599,20 +604,6 @@ static void close_func (LexState *ls) {
 }
 
 
-
-static const int expfollow [] = {ELSE, ELSEIF, THEN, IF, WHILE, REPEAT,
-   DO, NAME, LOCAL, FUNCTION, END, UNTIL, RETURN, ')', ']', '}', ';',
-   EOS, ',',  0};
-
-
-static int is_in (int tok, const int *toks) {
-  const int *t;
-  for (t=toks; *t; t++)
-    if (*t == tok) return t-toks;
-  return -1;
-}
-
-
 static void next (LexState *ls) {
   ls->token = luaX_lex(ls);
 }
@@ -622,12 +613,12 @@ static void error_expected (LexState *ls, int token) {
   char buff[100], t[TOKEN_LEN];
   luaX_token2str(token, t);
   sprintf(buff, "`%.20s' expected", t);
-  luaX_error(ls, buff);
+  luaY_error(ls, buff);
 }
 
 
 static void error_unexpected (LexState *ls) {
-  luaX_error(ls, "unexpected token");
+  luaY_error(ls, "unexpected token");
 }
 
 
@@ -641,7 +632,7 @@ static void error_unmatched (LexState *ls, int what, int who, int where) {
     luaX_token2str(who, t_who);
     sprintf(buff, "`%.20s' expected (to close `%.20s' at line %d)",
             t_what, t_who, where);
-    luaX_error(ls, buff);
+    luaY_error(ls, buff);
   }
 }
 
@@ -661,7 +652,7 @@ static void check_match (LexState *ls, int what, int who, int where) {
 static int checkname (LexState *ls) {
   int sc;
   if (ls->token != NAME)
-    luaX_error(ls, "<name> expected");
+    luaY_error(ls, "<name> expected");
   sc = string_constant(ls, ls->fs, ls->seminfo.ts);
   next(ls);
   return sc;
@@ -691,7 +682,7 @@ TProtoFunc *luaY_parser (lua_State *L, ZIO *z) {
   next(&lexstate);  /* read first token */
   chunk(&lexstate);
   if (lexstate.token != EOS)
-    luaX_error(&lexstate, "<eof> expected");
+    luaY_error(&lexstate, "<eof> expected");
   close_func(&lexstate);
   return funcstate.f;
 }
@@ -782,7 +773,7 @@ static int funcparams (LexState *ls, int slf, vardesc *v) {
       break;
 
     default:
-      luaX_error(ls, "function arguments expected");
+      luaY_error(ls, "function arguments expected");
       break;
   }
   code_setname(ls, v);
@@ -871,7 +862,7 @@ static void recfield (LexState *ls) {
       check(ls, ']');
       break;
 
-    default: luaX_error(ls, "<name> or `[' expected");
+    default: luaY_error(ls, "<name> or `[' expected");
   }
   check(ls, '=');
   exp1(ls);
@@ -977,7 +968,7 @@ static void constructor (LexState *ls) {
     next(ls);
     constructor_part(ls, &other_cd);
     if (cd.k == other_cd.k)  /* repeated parts? */
-      luaX_error(ls, "invalid constructor syntax");
+      luaY_error(ls, "invalid constructor syntax");
     nelems += other_cd.n;
   }
   check_match(ls, '}', '{', line);
@@ -992,8 +983,8 @@ static void constructor (LexState *ls) {
 /*
 ** {======================================================================
 ** For parsing expressions, we use a classic stack with priorities.
-** Each binary operator is represented by its index in `binop' + FIRSTBIN
-** (EQ=2, NE=3, ... '^'=13). The unary NOT is 0 and UNMINUS is 1.
+** Each binary operator is represented by an index: EQ=2, NE=3, ... '^'=13.
+** The unary NOT is 0 and UNMINUS is 1.
 ** =======================================================================
 */
 
@@ -1008,8 +999,6 @@ static void constructor (LexState *ls) {
 */
 #define POW	13
 
-static const int binop [] = {EQ, NE, '>', '<', LE, GE, CONC,
-                             '+', '-', '*', '/', '^', 0};
 
 static const int priority [POW+1] =  {5, 5, 1, 1, 1, 1, 1, 1, 2, 3, 3, 4, 4, 6};
 
@@ -1024,10 +1013,31 @@ typedef struct stack_op {
 } stack_op;
 
 
+/*
+** returns the index of a binary operator
+*/
+static int binop (int op) {
+  switch (op) {
+    case EQ: return FIRSTBIN;
+    case  NE: return FIRSTBIN+1;
+    case  '>': return FIRSTBIN+2;
+    case  '<': return FIRSTBIN+3;
+    case  LE: return FIRSTBIN+4;
+    case  GE: return FIRSTBIN+5;
+    case  CONC: return FIRSTBIN+6;
+    case  '+': return FIRSTBIN+7;
+    case  '-': return FIRSTBIN+8;
+    case  '*': return FIRSTBIN+9;
+    case  '/': return FIRSTBIN+10;
+    case  '^': return FIRSTBIN+11;
+    default: return -1;
+  }
+}
+
 
 static void push (LexState *ls, stack_op *s, int op) {
   if (s->top >= MAXOPS)
-    luaX_error(ls, "expression too complex");
+    luaY_error(ls, "expression too complex");
   s->ops[s->top++] = op;
 }
 
@@ -1086,7 +1096,7 @@ static void simpleexp (LexState *ls, vardesc *v, stack_op *s) {
       return;
 
     default:
-      luaX_error(ls, "<expression> expected");
+      luaY_error(ls, "<expression> expected");
       return;
   }
   v->k = VEXP; v->info = 0;
@@ -1108,8 +1118,7 @@ static void arith_exp (LexState *ls, vardesc *v) {
   int op;
   s.top = 0;
   prefixexp(ls, v, &s);
-  while ((op = is_in(ls->token, binop)) >= 0) {
-    op += FIRSTBIN;
+  while ((op = binop(ls->token)) >= 0) {
     lua_pushvar(ls, v);
     /* '^' is right associative, so must 'simulate' a higher priority */
     pop_to(ls, &s, (op == POW)?priority[op]+1:priority[op]);
@@ -1129,8 +1138,6 @@ static void exp1 (LexState *ls) {
   vardesc v;
   expr(ls, &v);
   lua_pushvar(ls, &v);
-  if (is_in(ls->token, expfollow) < 0)
-    luaX_error(ls, "malformed expression");
 }
 
 
@@ -1180,7 +1187,7 @@ static int assignment (LexState *ls, vardesc *v, int nvars) {
     next(ls);
     var_or_func(ls, &nv);
     if (nv.k == VEXP)
-      luaX_error(ls, "syntax error");
+      luaY_error(ls, "syntax error");
     left = assignment(ls, &nv, nvars+1);
   }
   else {  /* assignment -> '=' explist1 */
@@ -1313,7 +1320,7 @@ static void namestat (LexState *ls) {
   var_or_func(ls, &v);
   if (v.k == VEXP) {  /* stat -> func */
     if (v.info == 0)  /* is just an upper value? */
-      luaX_error(ls, "syntax error");
+      luaY_error(ls, "syntax error");
     close_exp(ls, v.info, 0);
   }
   else {  /* stat -> ['%'] NAME assignment */
@@ -1410,14 +1417,14 @@ static void parlist (LexState *ls) {
           case NAME:  /* tailparlist -> NAME [',' tailparlist] */
             goto init;
 
-          default: luaX_error(ls, "<name> or `...' expected");
+          default: luaY_error(ls, "<name> or `...' expected");
         }
       }
       break;
 
     case ')': break;  /* parlist -> empty */
 
-    default: luaX_error(ls, "<name> or `...' expected");
+    default: luaY_error(ls, "<name> or `...' expected");
   }
   code_args(ls, nparams, dots);
 }

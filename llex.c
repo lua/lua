@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.47 1999/12/22 16:58:36 roberto Exp roberto $
+** $Id: llex.c,v 1.48 1999/12/30 12:40:29 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -33,7 +33,7 @@
 /* ORDER RESERVED */
 static const char *const reserved [] = {"and", "do", "else", "elseif", "end",
     "function", "if", "local", "nil", "not", "or", "repeat", "return", "then",
-    "until", "while"};
+    "until", "while", "", "..", "...", "==", ">=", "<=", "~=", "", "", ""};
 
 
 void luaX_init (lua_State *L) {
@@ -57,9 +57,15 @@ void luaX_syntaxerror (LexState *ls, const char *s, const char *token) {
 }
 
 
-void luaX_error (LexState *ls, const char *s) {
-  save(ls->L, '\0');
-  luaX_syntaxerror(ls, s, luaL_buffer(ls->L));
+void luaX_error (LexState *ls, const char *s, int token) {
+  char buff[TOKEN_LEN];
+  luaX_token2str(token, buff);
+  if (buff[0] == '\0') {
+    save(ls->L, '\0');
+    luaX_syntaxerror(ls, s, luaL_buffer(ls->L));
+  }
+  else
+    luaX_syntaxerror(ls, s, buff);
 }
 
 
@@ -156,7 +162,7 @@ static void ifskip (lua_State *L, LexState *LS) {
     if (LS->current == '\n')
       inclinenumber(L, LS);
     else if (LS->current == EOZ)
-      luaX_error(LS, "input ends inside a $if");
+      luaX_error(LS, "input ends inside a $if", EOS);
     else next(LS);
   }
 }
@@ -231,13 +237,13 @@ static void inclinenumber (lua_State *L, LexState *LS) {
 
 
 
-static int read_long_string (lua_State *L, LexState *LS) {
+static void read_long_string (lua_State *L, LexState *LS) {
   int cont = 0;
   for (;;) {
     switch (LS->current) {
       case EOZ:
-        luaX_error(LS, "unfinished long string");
-        return EOS;  /* to avoid warnings */
+        luaX_error(LS, "unfinished long string", STRING);
+        break;  /* to avoid warnings */
       case '[':
         save_and_next(L, LS);
         if (LS->current == '[') {
@@ -264,7 +270,52 @@ static int read_long_string (lua_State *L, LexState *LS) {
   save_and_next(L, LS);  /* skip the second ']' */
   LS->seminfo.ts = luaS_newlstr(L, L->Mbuffer+(L->Mbuffbase+2),
                           L->Mbuffnext-L->Mbuffbase-4);
-  return STRING;
+}
+
+
+static void read_string (lua_State *L, LexState *LS, int del) {
+  save_and_next(L, LS);
+  while (LS->current != del) {
+    switch (LS->current) {
+      case EOZ:  case '\n':
+        luaX_error(LS, "unfinished string", STRING);
+        break;  /* to avoid warnings */
+      case '\\':
+        next(LS);  /* do not save the '\' */
+        switch (LS->current) {
+          case 'a': save(L, '\a'); next(LS); break;
+          case 'b': save(L, '\b'); next(LS); break;
+          case 'f': save(L, '\f'); next(LS); break;
+          case 'n': save(L, '\n'); next(LS); break;
+          case 'r': save(L, '\r'); next(LS); break;
+          case 't': save(L, '\t'); next(LS); break;
+          case 'v': save(L, '\v'); next(LS); break;
+          case '\n': save(L, '\n'); inclinenumber(L, LS); break;
+          case '0': case '1': case '2': case '3': case '4':
+          case '5': case '6': case '7': case '8': case '9': {
+            int c = 0;
+            int i = 0;
+            do {
+              c = 10*c + (LS->current-'0');
+              next(LS);
+            } while (++i<3 && isdigit(LS->current));
+            if (c != (unsigned char)c)
+              luaX_error(LS, "escape sequence too large", STRING);
+            save(L, c);
+            break;
+          }
+          default:  /* handles \\, \", \', and \? */
+            save(L, LS->current);
+            next(LS);
+        }
+        break;
+      default:
+        save_and_next(L, LS);
+    }
+  }
+  save_and_next(L, LS);  /* skip delimiter */
+  LS->seminfo.ts = luaS_newlstr(L, L->Mbuffer+(L->Mbuffbase+1),
+                          L->Mbuffnext-L->Mbuffbase-2);
 }
 
 
@@ -283,10 +334,9 @@ int luaX_lex (LexState *LS) {
         continue;
 
       case '-':
-        save_and_next(L, LS);
+        next(LS);
         if (LS->current != '-') return '-';
         do { next(LS); } while (LS->current != '\n' && LS->current != EOZ);
-        luaL_resetbuffer(L);
         continue;
 
       case '[':
@@ -294,88 +344,41 @@ int luaX_lex (LexState *LS) {
         if (LS->current != '[') return '[';
         else {
           save_and_next(L, LS);  /* pass the second '[' */
-          return read_long_string(L, LS);
+          read_long_string(L, LS);
+          return STRING;
         }
 
       case '=':
-        save_and_next(L, LS);
+        next(LS);
         if (LS->current != '=') return '=';
-        else { save_and_next(L, LS); return EQ; }
+        else { next(LS); return EQ; }
 
       case '<':
-        save_and_next(L, LS);
+        next(LS);
         if (LS->current != '=') return '<';
-        else { save_and_next(L, LS); return LE; }
+        else { next(LS); return LE; }
 
       case '>':
-        save_and_next(L, LS);
+        next(LS);
         if (LS->current != '=') return '>';
-        else { save_and_next(L, LS); return GE; }
+        else { next(LS); return GE; }
 
       case '~':
-        save_and_next(L, LS);
+        next(LS);
         if (LS->current != '=') return '~';
-        else { save_and_next(L, LS); return NE; }
+        else { next(LS); return NE; }
 
       case '"':
-      case '\'': {
-        int del = LS->current;
-        save_and_next(L, LS);
-        while (LS->current != del) {
-          switch (LS->current) {
-            case EOZ:
-            case '\n':
-              luaX_error(LS, "unfinished string");
-              return EOS;  /* to avoid warnings */
-            case '\\':
-              next(LS);  /* do not save the '\' */
-              switch (LS->current) {
-                case 'a': save(L, '\a'); next(LS); break;
-                case 'b': save(L, '\b'); next(LS); break;
-                case 'f': save(L, '\f'); next(LS); break;
-                case 'n': save(L, '\n'); next(LS); break;
-                case 'r': save(L, '\r'); next(LS); break;
-                case 't': save(L, '\t'); next(LS); break;
-                case 'v': save(L, '\v'); next(LS); break;
-                case '\n': save(L, '\n'); inclinenumber(L, LS); break;
-                default : {
-                  if (isdigit(LS->current)) {
-                    int c = 0;
-                    int i = 0;
-                    do {
-                      c = 10*c + (LS->current-'0');
-                      next(LS);
-                    } while (++i<3 && isdigit(LS->current));
-                    if (c != (unsigned char)c)
-                      luaX_error(LS, "escape sequence too large");
-                    save(L, c);
-                  }
-                  else {  /* handles \, ", ', and ? */
-                    save(L, LS->current);
-                    next(LS);
-                  }
-                  break;
-                }
-              }
-              break;
-            default:
-              save_and_next(L, LS);
-          }
-        }
-        save_and_next(L, LS);  /* skip delimiter */
-        LS->seminfo.ts = luaS_newlstr(L, L->Mbuffer+(L->Mbuffbase+1),
-                                L->Mbuffnext-L->Mbuffbase-2);
+      case '\'':
+        read_string(L, LS, LS->current);
         return STRING;
-      }
 
       case '.':
         save_and_next(L, LS);
-        if (LS->current == '.')
-        {
-          save_and_next(L, LS);
-          if (LS->current == '.')
-          {
-            save_and_next(L, LS);
+        if (LS->current == '.') {
+          next(LS);
+          if (LS->current == '.') {
+            next(LS);
             return DOTS;   /* ... */
           }
           else return CONC;   /* .. */
@@ -392,14 +395,14 @@ int luaX_lex (LexState *LS) {
           save_and_next(L, LS);
           if (LS->current == '.') {
             save(L, '.');
-            luaX_error(LS, 
-              "ambiguous syntax (decimal point x string concatenation)");
+            luaX_error(LS, "ambiguous syntax"
+                       " (decimal point x string concatenation)", NUMBER);
           }
         }
       fraction:  /* LUA_NUMBER */
         while (isdigit(LS->current))
           save_and_next(L, LS);
-        if (toupper(LS->current) == 'E') {
+        if (LS->current == 'e' || LS->current == 'E') {
           save_and_next(L, LS);  /* read 'E' */
           if (LS->current == '+' || LS->current == '-')
             save_and_next(L, LS);  /* optional exponent sign */
@@ -408,23 +411,25 @@ int luaX_lex (LexState *LS) {
         }
         save(L, '\0');
         if (!luaO_str2d(L->Mbuffer+L->Mbuffbase, &LS->seminfo.r))
-          luaX_error(LS, "malformed number");
+          luaX_error(LS, "malformed number", NUMBER);
         return NUMBER;
 
       case EOZ:
         if (LS->iflevel > 0)
-          luaX_error(LS, "input ends inside a $if");
+          luaX_error(LS, "input ends inside a $if", EOS);
         return EOS;
 
+      case '_': goto tname;
+
       default:
-        if (LS->current != '_' && !isalpha(LS->current)) {
+        if (!isalpha(LS->current)) {
           int c = LS->current;
           if (iscntrl(c))
             luaX_invalidchar(LS, c);
-          save_and_next(L, LS);
+          next(LS);
           return c;
         }
-        else {  /* identifier or reserved word */
+        tname: {  /* identifier or reserved word */
           TaggedString *ts;
           do {
             save_and_next(L, LS);

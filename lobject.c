@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.28 1999/12/23 18:19:57 roberto Exp roberto $
+** $Id: lobject.c,v 1.29 1999/12/30 18:28:40 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -87,9 +87,9 @@ int luaO_str2d (const char *s, real *result) {  /* LUA_NUMBER */
   int point = 0;  /* number of decimal digits */
   int sig;
   while (isspace((unsigned char)*s)) s++;
-  sig = 1;
+  sig = 0;
   switch (*s) {
-    case '-': sig = -1;  /* go through */
+    case '-': sig = 1;  /* go through */
     case '+': s++;
   }
   if (! (isdigit((unsigned char)*s) ||
@@ -104,20 +104,21 @@ int luaO_str2d (const char *s, real *result) {  /* LUA_NUMBER */
       point++;
     }
   }
-  a *= sig;
-  if (toupper((unsigned char)*s) == 'E') {
+  if (sig) a = -a;
+  if (*s == 'e' || *s == 'E') {
     int e = 0;
     s++;
-    sig = 1;
+    sig = 0;
     switch (*s) {
-      case '-': sig = -1;  /* go through */
+      case '-': sig = 1;  /* go through */
       case '+': s++;
     }
     if (!isdigit((unsigned char)*s)) return 0;  /* no digit in the exponent? */
     do {
       e = 10*e + (*(s++)-'0');
     } while (isdigit((unsigned char)*s));
-    point -= sig*e;
+    if (sig) e = -e;
+    point -= e;
   }
   while (isspace((unsigned char)*s)) s++;
   if (*s != '\0') return 0;  /* invalid trailing characters? */
