@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.41 1996/04/22 19:28:37 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.42 1996/04/23 12:43:07 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -593,27 +593,27 @@ static void errorfb (void)
 }
 
 
-/*
-** Open io library
-*/
+static struct lua_reg iolib[] = {
+{"readfrom", io_readfrom},
+{"writeto",  io_writeto},
+{"appendto", io_appendto},
+{"read",     io_read},
+{"readuntil",io_readuntil},
+{"write",    io_write},
+{"execute",  io_execute},
+{"remove",   io_remove},
+{"rename",   io_rename},
+{"tmpname",   io_tmpname},
+{"ioerror",   io_errorno},
+{"getenv",   io_getenv},
+{"date",     io_date},
+{"exit",     io_exit},
+{"debug",    io_debug},
+{"print_stack", errorfb}
+};
+
 void iolib_open (void)
 {
- lua_register ("readfrom", io_readfrom);
- lua_register ("writeto",  io_writeto);
- lua_register ("appendto", io_appendto);
- lua_register ("read",     io_read);
- lua_register ("readuntil",io_readuntil);
- lua_register ("write",    io_write);
- lua_register ("execute",  io_execute);
- lua_register ("remove",   io_remove);
- lua_register ("rename",   io_rename);
- lua_register ("tmpname",   io_tmpname);
- lua_register ("ioerror",   io_errorno);
- lua_register ("getenv",   io_getenv);
- lua_register ("date",     io_date);
- lua_register ("exit",     io_exit);
- lua_register ("debug",    io_debug);
- lua_register ("print_stack", errorfb);
- lua_setfallback("error", errorfb);
+  luaI_openlib(iolib, (sizeof(iolib)/sizeof(iolib[0])));
+  lua_setfallback("error", errorfb);
 }
-

@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.21 1996/03/21 22:18:08 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.22 1996/03/22 17:57:24 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -249,16 +249,28 @@ static void str_format (void)
 }
 
 
+void luaI_openlib (struct lua_reg *l, int n)
+{
+  int i;
+  for (i=0; i<n; i++)
+    lua_register(l[i].name, l[i].func);
+}
+
+static struct lua_reg strlib[] = {
+{"strfind", str_find},
+{"strlen", str_len},
+{"strsub", str_sub},
+{"strlower", str_lower},
+{"strupper", str_upper},
+{"ascii", str_ascii},
+{"format",    str_format}
+};
+
+
 /*
 ** Open string library
 */
 void strlib_open (void)
 {
- lua_register ("strfind", str_find);
- lua_register ("strlen", str_len);
- lua_register ("strsub", str_sub);
- lua_register ("strlower", str_lower);
- lua_register ("strupper", str_upper);
- lua_register ("ascii", str_ascii);
- lua_register ("format",    str_format);
+  luaI_openlib(strlib, (sizeof(strlib)/sizeof(strlib[0])));
 }

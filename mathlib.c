@@ -3,7 +3,7 @@
 ** Mathematics library to LUA
 */
 
-char *rcs_mathlib="$Id: mathlib.c,v 1.15 1996/04/22 18:00:37 roberto Exp roberto $";
+char *rcs_mathlib="$Id: mathlib.c,v 1.16 1996/04/25 14:10:00 roberto Exp roberto $";
 
 #include <stdlib.h>
 #include <math.h>
@@ -195,33 +195,36 @@ static void math_randomseed (void)
 }
 
 
+static struct lua_reg mathlib[] = {
+{"abs",   math_abs},
+{"sin",   math_sin},
+{"cos",   math_cos},
+{"tan",   math_tan},
+{"asin",  math_asin},
+{"acos",  math_acos},
+{"atan",  math_atan},
+{"atan2",  math_atan2},
+{"ceil",  math_ceil},
+{"floor", math_floor},
+{"mod",   math_mod},
+{"sqrt",  math_sqrt},
+{"min",   math_min},
+{"max",   math_max},
+{"log",   math_log},
+{"log10", math_log10},
+{"exp",   math_exp},
+{"deg",   math_deg},
+{"rad",   math_rad},
+{"random",     math_random},
+{"randomseed", math_randomseed}
+};
 
 /*
 ** Open math library
 */
 void mathlib_open (void)
 {
- lua_register ("abs",   math_abs);
- lua_register ("sin",   math_sin);
- lua_register ("cos",   math_cos);
- lua_register ("tan",   math_tan);
- lua_register ("asin",  math_asin);
- lua_register ("acos",  math_acos);
- lua_register ("atan",  math_atan);
- lua_register ("atan2",  math_atan2);
- lua_register ("ceil",  math_ceil);
- lua_register ("floor", math_floor);
- lua_register ("mod",   math_mod);
- lua_register ("sqrt",  math_sqrt);
- lua_register ("min",   math_min);
- lua_register ("max",   math_max);
- lua_register ("log",   math_log);
- lua_register ("log10", math_log10);
- lua_register ("exp",   math_exp);
- lua_register ("deg",   math_deg);
- lua_register ("rad",   math_rad);
- lua_register ("random",     math_random);
- lua_register ("randomseed", math_randomseed);
-
- old_pow = lua_refobject(lua_setfallback("arith", math_pow), 1);
+  luaI_openlib(mathlib, (sizeof(mathlib)/sizeof(mathlib[0])));
+  old_pow = lua_refobject(lua_setfallback("arith", math_pow), 1);
 }
+
