@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.11 1997/10/24 17:17:24 roberto Exp roberto $
+** $Id: lvm.c,v 1.12 1997/10/24 18:40:29 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -277,7 +277,7 @@ StkId luaV_execute (Closure *cl, StkId base)
   Byte *pc = cl->consts[0].value.tf->code;
   TObject *consts = cl->consts[0].value.tf->consts;
   if (lua_callhook)
-    luaD_callHook(base, LUA_T_MARK, 0);
+    luaD_callHook(base, LUA_T_PROTO, 0);
   luaD_checkstack((*pc++)+EXTRA_STACK);
   while (1) {
     int aux;
@@ -671,7 +671,7 @@ StkId luaV_execute (Closure *cl, StkId base)
         /* goes through */
       case RETCODE:
         if (lua_callhook)
-          luaD_callHook(base, LUA_T_MARK, 1);
+          luaD_callHook(base, LUA_T_PROTO, 1);
         return (base + ((aux==RETCODE) ? *pc : 0));
 
       case SETLINEW:
