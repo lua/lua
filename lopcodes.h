@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.54 2000/04/04 20:48:44 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.55 2000/04/07 13:12:50 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -81,7 +81,7 @@
 /*
 ** K = U argument used as index to `kstr'
 ** J = S argument used as jump offset (relative to pc of next instruction)
-** L = U argument used as index of local variable
+** L = unsigned argument used as index of local variable
 ** N = U argument used as index to `knum'
 */
 
@@ -89,8 +89,8 @@ typedef enum {
 /*----------------------------------------------------------------------
 name		args	stack before	stack after	side effects
 ------------------------------------------------------------------------*/
-OP_END,/*	-	-		(return)			*/
-OP_RETURN,/*	U	-		(return)			*/
+OP_END,/*	-	-		(return)	no results	*/
+OP_RETURN,/*	U	v_n-v_x(at u)	(return)	returns v_x-v_n	*/
 
 OP_CALL,/*	A B	v_n-v_1 f(at a)	r_b-r_1		f(v1,...,v_n)	*/
 OP_TAILCALL,/*	A B	v_n-v_1 f(at a)	(return)	f(v1,...,v_n)	*/
@@ -100,29 +100,29 @@ OP_POP,/*	U	a_u-a_1		-				*/
 
 OP_PUSHINT,/*	S	-		(Number)s				*/
 OP_PUSHSTRING,/* K	-		KSTR[k]				*/
-OP_PUSHNUM,/*	N	-		KNUM[u]				*/
-OP_PUSHNEGNUM,/* N	-		-KNUM[u]			*/
+OP_PUSHNUM,/*	N	-		KNUM[n]				*/
+OP_PUSHNEGNUM,/* N	-		-KNUM[n]			*/
 
 OP_PUSHUPVALUE,/* U	-		Closure[u]			*/
 
-OP_GETLOCAL,/*	L	-		LOC[u]				*/
+OP_GETLOCAL,/*	L	-		LOC[l]				*/
 OP_GETGLOBAL,/*	K	-		VAR[KSTR[k]]			*/
 
 OP_GETTABLE,/*	-	i t		t[i]				*/
 OP_GETDOTTED,/*	K	t		t[KSTR[k]]			*/
-OP_GETINDEXED,/* L	t		t[LOC[U]]			*/
+OP_GETINDEXED,/* L	t		t[LOC[l]]			*/
 OP_PUSHSELF,/*	K	t		t t[KSTR[k]]			*/
 
 OP_CREATETABLE,/* U	-		newarray(size = u)		*/
 
-OP_SETLOCAL,/*	L B	v_b-v_1		-		LOC[L]=v_b	*/
+OP_SETLOCAL,/*	L B	v_b-v_1		-		LOC[l]=v_b	*/
 OP_SETGLOBAL,/*	K	x		-		VAR[KSTR[k]]=x	*/
-OP_SETTABLE,/*	A B	v a_a-a_1 i t	 a_x-a_1 i t	t[i]=v		*/
+OP_SETTABLE,/*	A B	v a_a-a_1 i t	(pops b values)	t[i]=v		*/
 
 OP_SETLIST,/*	A B	v_b-v_0 t	t		t[i+a*FPF]=v_i	*/
 OP_SETMAP,/*	U	v_u k_u - v_0 k_0 t	t	t[k_i]=v_i	*/
 
-OP_INCLOCAL,/*	sA L	-		-		LOC[L]+=sA	*/
+OP_INCLOCAL,/*	sA L	-		-		LOC[l]+=sA	*/
 OP_ADD,/*	-	y x		x+y				*/
 OP_ADDI,/*	S	x		x+s				*/
 OP_SUB,/*	-	y x		x-y				*/
@@ -140,9 +140,9 @@ OP_JMPLE,/*	J	y x		-		(x<y)? PC+=s	*/
 OP_JMPGT,/*	J	y x		-		(x>y)? PC+=s	*/
 OP_JMPGE,/*	J	y x		-		(x>=y)? PC+=s	*/
 
-OP_JMPT,/*	J	x		-		(x!=nil)? PC+=s	*/
+OP_JMPT,/*	J	x		-		(x~=nil)? PC+=s	*/
 OP_JMPF,/*	J	x		-		(x==nil)? PC+=s	*/
-OP_JMPONT,/*	J	x		(x!=nil)? x : -	(x!=nil)? PC+=s	*/
+OP_JMPONT,/*	J	x		(x~=nil)? x : -	(x~=nil)? PC+=s	*/
 OP_JMPONF,/*	J	x		(x==nil)? x : -	(x==nil)? PC+=s	*/
 OP_JMP,/*	J	-		-		PC+=s		*/
 
