@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.3 1997/11/03 21:11:44 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.4 1997/11/04 15:27:53 roberto Exp roberto $
 ** Lua standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -30,7 +30,7 @@ static double torad (void)
     case 'r' : return 1.0;
     case 'g' : return PI/50.0;
     default:
-      luaL_verror("invalid _TRIGMODE (`%s')", s);
+      luaL_verror("invalid _TRIGMODE (`%.50s')", s);
       return 0;  /* to avoid warnings */
   }
 }

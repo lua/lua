@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.4 1997/11/04 15:27:53 roberto Exp roberto $
+** $Id: lapi.c,v 1.5 1997/11/19 17:29:23 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -389,7 +389,7 @@ void lua_settag (int tag)
       (L->stack.top-1)->value.ts->u.d.tag = tag;
       break;
     default:
-      luaL_verror("cannot change the tag of a %s",
+      luaL_verror("cannot change the tag of a %.20s",
                   luaO_typenames[-ttype((L->stack.top-1))]);
   }
   L->stack.top--;
