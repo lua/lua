@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.64 1996/03/21 16:31:32 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.65 1996/03/21 18:55:02 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -24,6 +24,10 @@ char *rcs_opcode="$Id: opcode.c,v 3.64 1996/03/21 16:31:32 roberto Exp roberto $
 
 
 #define STACK_SIZE 	128
+
+#ifndef STACK_LIMIT
+#define STACK_LIMIT     6000
+#endif
 
 typedef int StkId;  /* index to stack elements */
 
@@ -93,7 +97,7 @@ static void growstack (void)
    lua_initstack();
  else
  {
-  static int limit = 10000;
+  static int limit = STACK_LIMIT;
   StkId t = top-stack;
   Long stacksize = stackLimit - stack;
   stacksize = growvector(&stack, stacksize, Object, stackEM, limit+100);
