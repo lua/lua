@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.23 1999/02/25 15:16:26 roberto Exp roberto $
+** $Id: lparser.c,v 1.24 1999/02/25 19:13:56 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -131,7 +131,7 @@ static void var_or_func_tail (LexState *ls, vardesc *v);
 
 
 static void check_pc (FuncState *fs, int n) {
-  fs->f->code = luaM_growvector(fs->f->code, fs->pc, n, Byte, codeEM, MAX_INT);
+  luaM_growvector(fs->f->code, fs->pc, n, Byte, codeEM, MAX_INT);
 }
 
 
@@ -216,8 +216,7 @@ static void code_constant (LexState *ls, int c) {
 
 static int next_constant (FuncState *fs) {
   TProtoFunc *f = fs->f;
-  f->consts = luaM_growvector(f->consts, f->nconsts, 1, TObject,
-                              constantEM, MAX_ARG);
+  luaM_growvector(f->consts, f->nconsts, 1, TObject, constantEM, MAX_ARG);
   return f->nconsts++;
 }
 
@@ -289,7 +288,7 @@ static void luaI_registerlocalvar (FuncState *fs, TaggedString *varname,
                                    int line) {
   if (fs->nvars != -1) {  /* debug information? */
     TProtoFunc *f = fs->f;
-    f->locvars = luaM_growvector(f->locvars, fs->nvars, 1, LocVar, "", MAX_INT);
+    luaM_growvector(f->locvars, fs->nvars, 1, LocVar, "", MAX_INT);
     f->locvars[fs->nvars].varname = varname;
     f->locvars[fs->nvars].line = line;
     fs->nvars++;
@@ -562,11 +561,11 @@ static void close_func (LexState *ls) {
   TProtoFunc *f = fs->f;
   code_opcode(ls, ENDCODE, 0);
   f->code[0] = (Byte)fs->maxstacksize;
-  f->code = luaM_reallocvector(f->code, fs->pc, Byte);
-  f->consts = luaM_reallocvector(f->consts, f->nconsts, TObject);
+  luaM_reallocvector(f->code, fs->pc, Byte);
+  luaM_reallocvector(f->consts, f->nconsts, TObject);
   if (fs->nvars != -1) {  /* debug information? */
     luaI_registerlocalvar(fs, NULL, -1);  /* flag end of vector */
-    f->locvars = luaM_reallocvector(f->locvars, fs->nvars, LocVar);
+    luaM_reallocvector(f->locvars, fs->nvars, LocVar);
   }
   ls->fs = fs->prev;
   L->stack.top--;  /* pop function */

@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.h,v 1.6 1998/12/15 14:59:43 roberto Exp roberto $
+** $Id: lmem.h,v 1.7 1999/02/25 15:16:26 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -16,6 +16,7 @@
 #define refEM   "reference table overflow"
 #define tableEM  "table overflow"
 #define memEM "not enough memory"
+#define arrEM	"internal array bigger than `int' limit"
 
 void *luaM_realloc (void *oldblock, unsigned long size);
 void *luaM_growaux (void *block, unsigned long nelems, int inc, int size,
@@ -25,9 +26,9 @@ void *luaM_growaux (void *block, unsigned long nelems, int inc, int size,
 #define luaM_malloc(t)	luaM_realloc(NULL, (t))
 #define luaM_new(t)          ((t *)luaM_malloc(sizeof(t)))
 #define luaM_newvector(n,t)  ((t *)luaM_malloc((n)*sizeof(t)))
-#define luaM_growvector(old,nelems,inc,t,e,l) \
-          ((t *)luaM_growaux(old,nelems,inc,sizeof(t),e,l))
-#define luaM_reallocvector(v,n,t) ((t *)luaM_realloc(v,(n)*sizeof(t)))
+#define luaM_growvector(v,nelems,inc,t,e,l) \
+          ((v)=(t *)luaM_growaux(v,nelems,inc,sizeof(t),e,l))
+#define luaM_reallocvector(v,n,t) ((v)=(t *)luaM_realloc(v,(n)*sizeof(t)))
 
 
 #ifdef DEBUG

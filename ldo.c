@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.34 1999/02/22 14:17:24 roberto Exp roberto $
+** $Id: ldo.c,v 1.35 1999/02/22 19:23:36 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -43,13 +43,12 @@ void luaD_init (void) {
 }
 
 
-void luaD_checkstack (int n)
-{
+void luaD_checkstack (int n) {
   struct Stack *S = &L->stack;
   if (S->last-S->top <= n) {
     StkId top = S->top-S->stack;
-    int stacksize = (S->last-S->stack)+1+STACK_UNIT+n;
-    S->stack = luaM_reallocvector(S->stack, stacksize, TObject);
+    int stacksize = (S->last-S->stack)+STACK_UNIT+n;
+    luaM_reallocvector(S->stack, stacksize, TObject);
     S->last = S->stack+(stacksize-1);
     S->top = S->stack + top;
     if (stacksize >= STACK_LIMIT) {  /* stack overflow? */
@@ -65,8 +64,7 @@ void luaD_checkstack (int n)
 /*
 ** Adjust stack. Set top to the given value, pushing NILs if needed.
 */
-void luaD_adjusttop (StkId newtop)
-{
+void luaD_adjusttop (StkId newtop) {
   int diff = newtop-(L->stack.top-L->stack.stack);
   if (diff <= 0)
     L->stack.top += diff;

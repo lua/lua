@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.20 1999/01/22 18:08:03 roberto Exp roberto $
+** $Id: lgc.c,v 1.21 1999/02/25 15:16:26 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -38,8 +38,7 @@ int luaC_ref (TObject *o, int lock) {
       if (L->refArray[ref].status == FREE)
         break;
     if (ref == L->refSize) {  /* no more empty spaces? */
-      L->refArray = luaM_growvector(L->refArray, L->refSize, 1, struct ref,
-                                    refEM, MAX_INT);
+      luaM_growvector(L->refArray, L->refSize, 1, struct ref, refEM, MAX_INT);
       L->refSize++;
     }
     L->refArray[ref].o = *o;

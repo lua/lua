@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.22 1999/02/25 15:16:26 roberto Exp roberto $
+** $Id: ltm.c,v 1.23 1999/02/25 19:13:56 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -59,8 +59,7 @@ static void init_entry (int tag) {
 void luaT_init (void) {
   int t;
   L->last_tag = -(NUM_TAGS-1);
-  L->IMtable = luaM_growvector(L->IMtable, 0, NUM_TAGS,
-                               struct IM, memEM, MAX_INT);
+  luaM_growvector(L->IMtable, 0, NUM_TAGS, struct IM, arrEM, MAX_INT);
   for (t=L->last_tag; t<=0; t++)
     init_entry(t);
 }
@@ -68,8 +67,7 @@ void luaT_init (void) {
 
 int lua_newtag (void) {
   --L->last_tag;
-  L->IMtable = luaM_growvector(L->IMtable, -(L->last_tag), 1,
-                               struct IM, memEM, MAX_INT);
+  luaM_growvector(L->IMtable, -(L->last_tag), 1, struct IM, arrEM, MAX_INT);
   init_entry(L->last_tag);
   return L->last_tag;
 }
