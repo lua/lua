@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.100 2002/10/22 19:41:08 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.101 2002/10/25 20:05:28 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -271,6 +271,25 @@ static int luaB_loadstring (lua_State *L) {
 }
 
 
+static int writer (lua_State *L, const void* b, size_t size, void* B) {
+  (void)L;
+  luaL_addlstring((luaL_Buffer*) B, b, size);
+  return 1;
+}
+
+
+static int luaB_stringdump (lua_State *L) {
+  luaL_Buffer b;
+  luaL_check_type(L, 1, LUA_TFUNCTION);
+  luaL_buffinit(L,&b);
+  if (!lua_dump(L, writer, &b))
+    luaL_error(L, "unable to dump given function");
+  luaL_pushresult(&b);
+  return 1;
+}
+
+
+
 static int luaB_loadfile (lua_State *L) {
   const char *fname = luaL_opt_string(L, 1, NULL);
   return passresults(L, luaL_loadfile(L, fname));
@@ -524,6 +543,7 @@ static const luaL_reg base_funcs[] = {
   {"collectgarbage", luaB_collectgarbage},
   {"gcinfo", luaB_gcinfo},
   {"loadfile", luaB_loadfile},
+  {"stringdump", luaB_stringdump},
   {"dofile", luaB_dofile},
   {"loadstring", luaB_loadstring},
   {"require", luaB_require},

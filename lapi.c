@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.213 2002/09/20 17:01:24 roberto Exp roberto $
+** $Id: lapi.c,v 1.214 2002/10/25 20:05:28 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -125,6 +125,7 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
   lua_userstateopen(L1);
   return L1;
 }
+
 
 
 /*
@@ -676,6 +677,23 @@ LUA_API int lua_load (lua_State *L, lua_Chunkreader reader, void *data,
   luaZ_init(&z, reader, data, chunkname);
   c = luaZ_lookahead(&z);
   status = luaD_protectedparser(L, &z, (c == LUA_SIGNATURE[0]));
+  lua_unlock(L);
+  return status;
+}
+
+
+LUA_API int lua_dump (lua_State *L, lua_Chunkwriter writer, void *data) {
+  int status;
+  TObject *o;
+  lua_lock(L);
+  api_checknelems(L, 1);
+  o = L->top - 1;
+  if (isLfunction(o) && clvalue(o)->l.nupvalues == 0) {
+    luaU_dump(L, clvalue(o)->l.p, writer, data);
+    status = 1;
+  }
+  else
+    status = 0;
   lua_unlock(L);
   return status;
 }
