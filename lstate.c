@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.21 2005/01/05 18:20:51 roberto Exp roberto $
+** $Id: lstate.c,v 2.22 2005/01/14 14:19:42 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -76,16 +76,8 @@ static void freestack (lua_State *L, lua_State *L1) {
 ** open parts that may cause memory-allocation errors
 */
 static void f_luaopen (lua_State *L, void *ud) {
-  Udata *u;  /* head of udata list */
   global_State *g = G(L);
   UNUSED(ud);
-  u = luaM_new(L, Udata);
-  u->uv.len = 0;
-  u->uv.metatable = NULL;
-  g->firstudata = obj2gco(u);
-  luaC_link(L, obj2gco(u), LUA_TUSERDATA);
-  setbit(u->uv.marked, FIXEDBIT);
-  setbit(L->marked, FIXEDBIT);
   stack_init(L, L);  /* init stack */
   sethvalue(L, gt(L), luaH_new(L, 0, 20));  /* table of globals */
   hvalue(gt(L))->metatable = luaH_new(L, 0, 0);  /* globals metatable */
@@ -100,8 +92,6 @@ static void f_luaopen (lua_State *L, void *ud) {
 
 static void preinit_state (lua_State *L, global_State *g) {
   L->l_G = g;
-  L->tt = LUA_TTHREAD;
-  L->marked = luaC_white(g);
   L->stack = NULL;
   L->stacksize = 0;
   L->errorJmp = NULL;
@@ -136,8 +126,7 @@ static void close_state (lua_State *L) {
 
 lua_State *luaE_newthread (lua_State *L) {
   lua_State *L1 = tostate(luaM_malloc(L, state_size(lua_State)));
-  L1->next = L->next;  /* link new thread after `L' */
-  L->next = obj2gco(L1);
+  luaC_link(L, obj2gco(L1), LUA_TTHREAD);
   preinit_state(L1, G(L));
   stack_init(L1, L);  /* init stack */
   setobj2n(L, gt(L1), gt(L));  /* share table of globals */
@@ -166,11 +155,15 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   L = tostate(l);
   g = &((LG *)L)->g;
   L->next = NULL;
-  g->currentwhite = bitmask(WHITE0BIT);
+  L->tt = LUA_TTHREAD;
+  L->marked = g->currentwhite = bitmask(WHITE0BIT);
+  setbit(L->marked, FIXEDBIT);
   preinit_state(L, g);
   g->realloc = f;
   g->ud = ud;
   g->mainthread = L;
+  g->uvhead.u.l.prev = &g->uvhead;
+  g->uvhead.u.l.next = &g->uvhead;
   g->GCthreshold = 0;  /* mark it as unfinished state */
   g->strt.size = 0;
   g->strt.nuse = 0;
@@ -182,7 +175,6 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->rootgc = obj2gco(L);
   g->sweepstrgc = 0;
   g->sweepgc = &g->rootgc;
-  g->firstudata = NULL;
   g->gray = NULL;
   g->grayagain = NULL;
   g->weak = NULL;

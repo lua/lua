@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.11 2005/01/05 18:20:51 roberto Exp roberto $
+** $Id: lstate.h,v 2.12 2005/01/14 14:19:42 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -72,7 +72,6 @@ typedef struct global_State {
   lu_byte currentwhite;
   lu_byte gcstate;  /* state of garbage collector */
   GCObject *rootgc;  /* list of all collectable objects */
-  GCObject *firstudata;   /* udata go to the end of `rootgc' */
   GCObject **sweepgc;  /* position of sweep in `rootgc' */
   int sweepstrgc;  /* position of sweep in `strt' */
   GCObject *gray;  /* list of gray objects */
@@ -89,6 +88,7 @@ typedef struct global_State {
   lua_CFunction panic;  /* to be called in unprotected errors */
   TValue _registry;
   struct lua_State *mainthread;
+  UpVal uvhead;  /* head of double-linked list of all open upvalues */
   TString *tmname[TM_N];  /* array with tag-method names */
 } global_State;
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.4 2004/11/19 15:52:40 roberto Exp roberto $
+** $Id: lstring.c,v 2.5 2004/11/24 19:16:03 roberto Exp $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -102,9 +102,9 @@ Udata *luaS_newudata (lua_State *L, size_t s) {
   u->uv.tt = LUA_TUSERDATA;
   u->uv.len = s;
   u->uv.metatable = NULL;
-  /* chain it on udata list */
-  u->uv.next = G(L)->firstudata->uv.next;
-  G(L)->firstudata->uv.next = obj2gco(u);
+  /* chain it on udata list (after main thread) */
+  u->uv.next = G(L)->mainthread->next;
+  G(L)->mainthread->next = obj2gco(u);
   return u;
 }
 

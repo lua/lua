@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.20 2005/01/05 18:20:51 roberto Exp roberto $
+** $Id: lgc.c,v 2.21 2005/01/14 14:19:42 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -83,10 +83,9 @@ static void reallymarkobject (global_State *g, GCObject *o) {
     }
     case LUA_TUPVAL: {
       UpVal *uv = gco2uv(o);
-      if (uv->v == &uv->value) {  /* closed? */
-        markvalue(g, uv->v);
-        gray2black(o);
-      }
+      markvalue(g, uv->v);
+      if (uv->v == &uv->u.value)  /* closed? */
+        gray2black(o);  /* open upvalues are never black */
       return;
     }
     case LUA_TFUNCTION: {
@@ -126,11 +125,11 @@ static void marktmu (global_State *g) {
 /* move `dead' udata that need finalization to list `tmudata' */
 size_t luaC_separateudata (lua_State *L, int all) {
   size_t deadmem = 0;
-  GCObject **p = &G(L)->firstudata;
+  GCObject **p = &G(L)->mainthread->next;
   GCObject *curr;
   GCObject *collected = NULL;  /* to collect udata with gc event */
   GCObject **lastcollected = &collected;
-  while ((curr = *p)->gch.tt == LUA_TUSERDATA) {
+  while ((curr = *p) != NULL) {
     if (!(iswhite(curr) || all) || isfinalized(gco2u(curr)))
       p = &curr->gch.next;  /* don't bother with them */
     else if (fasttm(L, gco2u(curr)->metatable, TM_GC) == NULL) {
@@ -146,7 +145,6 @@ size_t luaC_separateudata (lua_State *L, int all) {
       lastcollected = &curr->gch.next;
     }
   }
-  lua_assert(curr == obj2gco(G(L)->mainthread));
   /* insert collected udata with gc event into `tmudata' list */
   *lastcollected = G(L)->tmudata;
   G(L)->tmudata = collected;
@@ -380,7 +378,7 @@ static void freeobj (lua_State *L, GCObject *o) {
   switch (o->gch.tt) {
     case LUA_TPROTO: luaF_freeproto(L, gco2p(o)); break;
     case LUA_TFUNCTION: luaF_freeclosure(L, gco2cl(o)); break;
-    case LUA_TUPVAL: luaM_free(L, gco2uv(o)); break;
+    case LUA_TUPVAL: luaF_freeupval(L, gco2uv(o)); break;
     case LUA_TTABLE: luaH_free(L, gco2h(o)); break;
     case LUA_TTHREAD: {
       lua_assert(gco2th(o) != L && gco2th(o) != G(L)->mainthread);
@@ -461,8 +459,8 @@ static void GCTM (lua_State *L) {
   Udata *udata = rawgco2u(o);
   const TValue *tm;
   g->tmudata = udata->uv.next;  /* remove udata from `tmudata' */
-  udata->uv.next = g->firstudata->uv.next;  /* return it to `root' list */
-  g->firstudata->uv.next = o;
+  udata->uv.next = g->mainthread->next;  /* return it to `root' list */
+  g->mainthread->next = o;
   makewhite(g, o);
   tm = fasttm(L, udata->uv.metatable, TM_GC);
   if (tm != NULL) {
@@ -510,18 +508,11 @@ static void markroot (lua_State *L) {
 
 
 static void remarkupvals (global_State *g) {
-  GCObject *o;
-  for (o = obj2gco(g->mainthread); o; o = o->gch.next) {
-    lua_assert(!isblack(o));
-    if (iswhite(o)) {
-      GCObject *curr;
-      for (curr = gco2th(o)->openupval; curr != NULL; curr = curr->gch.next) {
-        if (isgray(curr)) {
-          UpVal *uv = gco2uv(curr);
-          markvalue(g, uv->v);
-        }
-      }
-    }
+  UpVal *uv;
+  for (uv = g->uvhead.u.l.next; uv != &g->uvhead; uv = uv->u.l.next) {
+    lua_assert(uv->u.l.next->u.l.prev == uv && uv->u.l.prev->u.l.next == uv);
+    if (isgray(obj2gco(uv)))
+      markvalue(g, uv->v);
   }
 }
 

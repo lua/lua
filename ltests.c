@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.16 2005/01/05 18:20:51 roberto Exp roberto $
+** $Id: ltests.c,v 2.17 2005/01/14 14:19:42 roberto Exp $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -299,7 +299,7 @@ printf(">>> %d  %s  %02x\n", g->gcstate, luaT_typenames[o->gch.tt], o->gch.marke
     switch (o->gch.tt) {
       case LUA_TUPVAL: {
         UpVal *uv = gco2uv(o);
-        lua_assert(uv->v == &uv->value);  /* must be closed */
+        lua_assert(uv->v == &uv->u.value);  /* must be closed */
         checkvalref(g, o, uv->v);
         break;
       }
@@ -334,14 +334,11 @@ int lua_checkmemory (lua_State *L) {
   global_State *g = G(L);
   GCObject *o;
   checkstack(g, g->mainthread);
-  for (o = g->rootgc; o->gch.tt != LUA_TUSERDATA; o = o->gch.next)
+  for (o = g->rootgc; o != obj2gco(g->mainthread); o = o->gch.next)
     checkobject(g, o);
-  lua_assert(o == g->firstudata);
-  for (; o->gch.tt != LUA_TTHREAD; o = o->gch.next)
-    checkobject(g, o);
-  lua_assert(o == obj2gco(g->mainthread));
-  for (; o; o = o->gch.next) {
-    lua_assert(o->gch.tt == LUA_TTHREAD);
+  checkobject(g, obj2gco(g->mainthread));
+  for (o = g->mainthread->next; o != NULL; o = o->gch.next) {
+    lua_assert(o->gch.tt == LUA_TUSERDATA);
     checkobject(g, o);
   }
   return 0;
