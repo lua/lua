@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.10 2004/11/18 19:53:49 roberto Exp roberto $
+** $Id: loadlib.c,v 1.11 2004/11/19 15:52:12 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 *
@@ -40,6 +40,7 @@
 
 #define ERR_OPEN	1
 #define ERR_FUNCTION	2
+#define ERR_ABSENT	3
 
 
 static void registerlib (lua_State *L, const void *lib);
@@ -176,13 +177,11 @@ static int loadlib (lua_State *L, const char *path, const char *init) {
 
 #define freelib(lib)	((void)lib)
 
-static int loadlib(lua_State *L)
+static int loadlib(lua_State *L, const char *path, const char *init)
 {
- registerlib(L, NULL);  /* to avoid warnings */
- lua_pushnil(L);
+ (void)path; (void)init; (void)&registerlib;  /* to avoid warnings */
  lua_pushliteral(L,"`loadlib' not supported");
- lua_pushliteral(L,"absent");
- return 3;
+ return ERR_ABSENT;
 }
 
 #endif
@@ -215,7 +214,8 @@ static int gctm (lua_State *L)
 }
 
 
-static int loadlib1 (lua_State *L) {
+static int ll_loadlib (lua_State *L) {
+ static const char *const errcodes[] = {NULL, "open", "init", "absent"};
  const char *path=luaL_checkstring(L,1);
  const char *init=luaL_checkstring(L,2);
  int res = loadlib(L,path,init);
@@ -224,7 +224,7 @@ static int loadlib1 (lua_State *L) {
  else {  /* error */
   lua_pushnil(L);
   lua_insert(L,-2);  /* insert nil before error message */
-  lua_pushstring(L, (res==ERR_OPEN)?"open":"init");
+  lua_pushstring(L, errcodes[res]);
   return 3;
  }
 }
@@ -267,7 +267,7 @@ static const char *loadC (lua_State *L, const char *fname, const char *name) {
     luaL_error(L, "global _CPATH must be a string");
   fname = luaL_searchpath(L, fname, path);
   if (fname == NULL) return path;  /* library not found in this path */
-  funcname = luaL_gsub(L, name, ".", "");
+  funcname = luaL_gsub(L, name, ".", LUA_OFSEP);
   funcname = lua_pushfstring(L, "%s%s", LUA_POF, funcname);
   if (loadlib(L, fname, funcname) != 0)
     luaL_error(L, "error loading package `%s' (%s)", name, lua_tostring(L, -1));
@@ -366,7 +366,7 @@ static int ll_module (lua_State *L) {
 
 
 static const luaL_reg ll_funcs[] = {
-  {"loadlib", loadlib1},
+  {"loadlib", ll_loadlib},
   {"require", ll_require},
   {"module", ll_module},
   {NULL, NULL}
