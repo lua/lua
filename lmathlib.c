@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.46 2002/06/05 17:24:04 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.47 2002/06/18 15:16:18 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -220,6 +220,7 @@ static const luaL_reg mathlib[] = {
   {"log10", math_log10},
   {"exp",   math_exp},
   {"deg",   math_deg},
+  {"pow",   math_pow},
   {"rad",   math_rad},
   {"random",     math_random},
   {"randomseed", math_randomseed},
@@ -236,9 +237,11 @@ LUALIB_API int lua_mathlibopen (lua_State *L) {
   luaL_openlib(L, mathlib, 0);
   lua_pushliteral(L, "pi");
   lua_pushnumber(L, PI);
-  lua_register(L, "pow", math_pow);
   lua_settable(L, -3);
   lua_settable(L, LUA_GLOBALSINDEX);
+  lua_pushliteral(L, "__pow");
+  lua_pushcfunction(L, math_pow);
+  lua_settable(L, LUA_REGISTRYINDEX);
   return 0;
 }
 
