@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.28 2000/09/11 17:38:42 roberto Exp roberto $
+** $Id: lundump.c,v 1.29 2000/06/28 14:12:55 lhf Exp lhf $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -43,7 +43,7 @@ static void ezread (lua_State* L, ZIO* Z, void* b, int n)
 
 static void LoadReverse (lua_State* L, void* b, size_t size, ZIO* Z)
 {
- unsigned char *p=(unsigned char *) b+size;
+ char *p=(char *) b+size;
  int n=size;
  while (n--) *p--=ezgetc(L,Z);
 }
@@ -221,17 +221,14 @@ static Proto* LoadChunk (lua_State* L, ZIO* Z)
 */
 Proto* luaU_undump (lua_State* L, ZIO* Z)
 {
+ Proto* tf=NULL;
  int c=zgetc(Z);
  if (c==ID_CHUNK)
-  return LoadChunk(L,Z);
- else if (c!=EOZ)
-  luaO_verror(L,"`%.255s' is not a precompiled Lua chunk",ZNAME(Z));
- return NULL;
-}
-
-Proto* luaU_undump1 (lua_State* L, ZIO* Z)
-{
- return luaU_undump(L,Z);
+  tf=LoadChunk(L,Z);
+ c=zgetc(Z);
+ if (c!=EOZ)
+  luaO_verror(L,"`%.255s' apparently contains more than one chunk",ZNAME(Z));
+ return tf;
 }
 
 /*

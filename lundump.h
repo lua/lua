@@ -12,7 +12,7 @@
 
 /* load one chunk */
 Proto* luaU_undump (lua_State* L, ZIO* Z);
-Proto* luaU_undump1 (lua_State* L, ZIO* Z);
+#define luaU_undump1 luaU_undump
 
 /* find byte order */
 int luaU_endianess (void);
