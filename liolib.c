@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.69 2000/08/09 19:16:57 roberto Exp roberto $
+** $Id: liolib.c,v 1.70 2000/08/14 19:10:14 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -51,39 +51,14 @@ int pclose(); */
 #define OUTFILE 1
 
 typedef struct IOCtrl {
-  FILE *file[2];  /* values of _INPUT and _OUTPUT */
+  int ref[2];  /* ref for strings _INPUT/_OUTPUT */
   int iotag;    /* tag for file handles */
   int closedtag;  /* tag for closed handles */
 } IOCtrl;
 
 
 
-static const char *const filenames[] = {"_INPUT", "_OUTPUT", NULL};
-
-
-static void atribTM (lua_State *L) {
-  IOCtrl *ctrl = (IOCtrl *)lua_getuserdata(L, lua_getparam(L, 1));
-  const char *varname = luaL_check_string(L, 2);
-  lua_Object newvalue = lua_getparam(L, 4);
-  int inout;
-  if ((inout = luaL_findstring(varname, filenames)) != -1) {
-    if (lua_tag(L, newvalue) != ctrl->iotag)
-      luaL_verror(L, "%.20s value must be a valid file handle",
-                     filenames[inout]);
-    ctrl->file[inout] = (FILE *)lua_getuserdata(L, newvalue);
-  }
-  /* set the actual variable */
-  lua_pushglobals(L);
-  lua_pushstring(L, varname);
-  lua_pushobject(L, newvalue);
-  lua_rawset(L);
-}
-
-
-static void ctrl_collect (lua_State *L) {
-  IOCtrl *ctrl = (IOCtrl *)lua_getuserdata(L, lua_getparam(L, 1));
-  free(ctrl);
-}
+static const char *const filenames[] = {"_INPUT", "_OUTPUT"};
 
 
 static void pushresult (lua_State *L, int i) {
@@ -105,10 +80,11 @@ static void pushresult (lua_State *L, int i) {
 
 
 static FILE *gethandle (lua_State *L, IOCtrl *ctrl, lua_Object f) {
-  if (lua_isuserdata(L, f)) {
+  void *p = lua_getuserdata(L, f);
+  if (p != NULL) {  /* is `f' a userdata ? */
     int ftag = lua_tag(L, f);
-    if (ftag == ctrl->iotag)
-      return (FILE *)lua_getuserdata(L, f);
+    if (ftag == ctrl->iotag)  /* does it have the correct tag? */
+      return (FILE *)p;
     else if (ftag == ctrl->closedtag)
       lua_error(L, "cannot access a closed file");
     /* else go through */
@@ -124,14 +100,15 @@ static FILE *getnonullfile (lua_State *L, IOCtrl *ctrl, int arg) {
 }
 
 
-static FILE *getfileparam (lua_State *L, IOCtrl *ctrl, int *arg, int inout) {
-  FILE *f = gethandle(L, ctrl, lua_getparam(L, *arg));
-  if (f) {
-    (*arg)++;
-    return f;
-  }
-  else
-    return ctrl->file[inout];
+static FILE *getfilebyref (lua_State *L, IOCtrl *ctrl, int inout) {
+  FILE *f;
+  lua_pushglobals(L);
+  lua_pushref(L, ctrl->ref[inout]);
+  f = gethandle(L, ctrl, lua_rawget(L));
+  if (f == NULL)
+    luaL_verror(L, "global variable `%.10s' is not a file handle",
+                filenames[inout]);
+  return f;
 }
 
 
@@ -142,11 +119,7 @@ static void setfilebyname (lua_State *L, IOCtrl *ctrl, FILE *f,
 }
 
 
-static void setfile (lua_State *L, IOCtrl *ctrl, FILE *f, int inout) {
-  ctrl->file[inout] = f;
-  lua_pushusertag(L, f, ctrl->iotag);
-  lua_setglobal(L, filenames[inout]);
-}
+#define setfile(L,ctrl,f,inout)	(setfilebyname(L,ctrl,f,filenames[inout]))
 
 
 static void setreturn (lua_State *L, IOCtrl *ctrl, FILE *f, int inout) {
@@ -163,10 +136,6 @@ static int closefile (lua_State *L, IOCtrl *ctrl, FILE *f) {
   if (f == stdin || f == stdout || f == stderr)
     return 1;
   else {
-    if (f == ctrl->file[INFILE])
-      setfile(L, ctrl, stdin, INFILE);
-    else if (f == ctrl->file[OUTFILE])
-      setfile(L, ctrl, stdout, OUTFILE);
     lua_pushusertag(L, f, ctrl->iotag);
     lua_settag(L, ctrl->closedtag);
     return (CLOSEFILE(L, f) == 0);
@@ -182,9 +151,17 @@ static void io_close (lua_State *L) {
 
 static void file_collect (lua_State *L) {
   IOCtrl *ctrl = (IOCtrl *)lua_getuserdata(L, lua_getparam(L, 1));
-  FILE *f = getnonullfile(L, ctrl, 2);
-  if (f != stdin && f != stdout && f != stderr)
-    CLOSEFILE(L, f);
+  if (ctrl == (IOCtrl *)lua_getuserdata(L, lua_getparam(L, 2))) {
+    /* collectig `ctrl' itself */
+    lua_unref(L, ctrl->ref[INFILE]);
+    lua_unref(L, ctrl->ref[OUTFILE]);
+    free(ctrl);
+  }
+  else {  /* collecting a file: Close it */
+    FILE *f = getnonullfile(L, ctrl, 2);
+    if (f != stdin && f != stdout && f != stderr)
+      CLOSEFILE(L, f);
+  }
 }
 
 
@@ -202,8 +179,8 @@ static void io_fromto (lua_State *L, int inout, const char *mode) {
   lua_Object f = lua_getparam(L, 2);
   FILE *current;
   if (f == LUA_NOOBJECT) {
-    pushresult(L, closefile(L, ctrl, ctrl->file[inout]));
-    return;
+    closefile(L, ctrl, getfilebyref(L, ctrl, inout));
+    current = (inout == 0) ? stdin : stdout;    
   }
   else if (lua_tag(L, f) == ctrl->iotag)  /* deprecated option */
     current = (FILE *)lua_getuserdata(L, f);
@@ -368,8 +345,11 @@ static int read_chars (lua_State *L, FILE *f, size_t n) {
 static void io_read (lua_State *L) {
   IOCtrl *ctrl = (IOCtrl *)lua_getuserdata(L, lua_getparam(L, 1));
   int arg = 2;
-  FILE *f = getfileparam(L, ctrl, &arg, INFILE);
-  lua_Object op = lua_getparam(L, arg);
+  lua_Object op;
+  FILE *f = gethandle(L, ctrl, lua_getparam(L, arg));
+  if (f) arg++;
+  else f = getfilebyref(L, ctrl, INFILE);  /* get _INPUT */
+  op = lua_getparam(L, arg);
   do {  /* repeat for each part */
     size_t l;
     int success;
@@ -414,9 +394,11 @@ static void io_read (lua_State *L) {
 static void io_write (lua_State *L) {
   IOCtrl *ctrl = (IOCtrl *)lua_getuserdata(L, lua_getparam(L, 1));
   int arg = 2;
-  FILE *f = getfileparam(L, ctrl, &arg, OUTFILE);
   int status = 1;
   lua_Object o;
+  FILE *f = gethandle(L, ctrl, lua_getparam(L, arg));
+  if (f) arg++;
+  else f = getfilebyref(L, ctrl, OUTFILE);  /* get _OUTPUT */
   while ((o = lua_getparam(L, arg)) != LUA_NOOBJECT) {
     if (lua_type(L, o)[2] == 'm') {  /* nuMber? */  /* LUA_NUMBER */
       /* optimization: could be done exactly as for strings */
@@ -641,27 +623,25 @@ static void openwithcontrol (lua_State *L) {
     lua_pushcclosure(L, iolibtag[i].func, 1);
     lua_setglobal(L, iolibtag[i].name);
   }
+  /* create references to variable names */
+  lua_pushstring(L, filenames[INFILE]);
+  ctrl->ref[INFILE] = lua_ref(L, 1);
+  lua_pushstring(L, filenames[OUTFILE]);
+  ctrl->ref[OUTFILE] = lua_ref(L, 1);
   /* predefined file handles */
-  ctrl->file[INFILE] = stdin;
   setfile(L, ctrl, stdin, INFILE);
-  ctrl->file[OUTFILE] = stdout;
   setfile(L, ctrl, stdout, OUTFILE);
   setfilebyname(L, ctrl, stdin, "_STDIN");
   setfilebyname(L, ctrl, stdout, "_STDOUT");
   setfilebyname(L, ctrl, stderr, "_STDERR");
-  /* change file when assigned */
-  lua_pushusertag(L, ctrl, ctrltag);
-  lua_pushcclosure(L, atribTM, 1); 
-  lua_settagmethod(L, ctrl->iotag, "setglobal");
   /* delete `ctrl' when collected */
   lua_pushusertag(L, ctrl, ctrltag);
-  lua_pushcclosure(L, ctrl_collect, 1); 
+  lua_pushcclosure(L, file_collect, 1); 
   lua_settagmethod(L, ctrltag, "gc");
   /* close files when collected */
-  lua_pushusertag(L, ctrl, ctrltag);
-  lua_pushcclosure(L, file_collect, 1); 
-  lua_settagmethod(L, ctrl->iotag, "gc");
+  lua_copytagmethods(L, ctrl->iotag, ctrltag);
 }
+
 
 void lua_iolibopen (lua_State *L) {
   luaL_openl(L, iolib);
