@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.200 2002/12/04 17:38:31 roberto Exp roberto $
+** $Id: lparser.c,v 1.201 2002/12/06 17:09:00 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1070,6 +1070,7 @@ static void forlist (LexState *ls, TString *indexname) {
   check(ls, TK_IN);
   line = ls->linenumber;
   adjust_assign(ls, nvars, explist1(ls, &e), &e);
+  luaK_checkstack(fs, 3);  /* extra space to call generator */
   luaK_codeAsBx(fs, OP_TFORPREP, base, NO_JUMP);
   forbody(ls, base, line, nvars, 0);
 }
