@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.17 1998/08/21 17:43:44 roberto Exp roberto $
+** $Id: ltm.c,v 1.18 1998/12/22 18:10:50 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -46,8 +46,7 @@ static char validevents[NUM_TAGS][IM_N] = { /* ORDER LUA_T, ORDER IM */
 };
 
 
-static int validevent (int t, int e)
-{ /* ORDER LUA_T */
+static int validevent (int t, int e) {  /* ORDER LUA_T */
   return (t < LUA_T_NIL) ?  1 : validevents[-t][e];
 }
 
@@ -157,10 +156,9 @@ void luaT_settagmethod (int t, char *event, TObject *func)
 }
 
 
-char *luaT_travtagmethods (int (*fn)(TObject *))
-{
+char *luaT_travtagmethods (int (*fn)(TObject *)) {  /* ORDER IM */
   int e;
-  for (e=IM_GETTABLE; e<=IM_FUNCTION; e++) {  /* ORDER IM */
+  for (e=IM_GETTABLE; e<=IM_FUNCTION; e++) {
     int t;
     for (t=0; t>=L->last_tag; t--)
       if (fn(luaT_getim(t,e)))

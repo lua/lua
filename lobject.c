@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.14 1998/12/27 20:25:20 roberto Exp roberto $
+** $Id: lobject.c,v 1.15 1999/01/04 13:37:07 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -90,7 +90,7 @@ static double expten (unsigned int e) {
 }
 
 
-double luaO_str2d (char *s) {
+double luaO_str2d (char *s) {  /* LUA_NUMBER */
   double a = 0.0;
   int point = 0;
   if (!isdigit((unsigned char)*s) && !isdigit((unsigned char)*(s+1)))
