@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.49 1999/10/14 17:53:35 roberto Exp roberto $
+** $Id: ldo.c,v 1.50 1999/10/14 19:46:57 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -219,7 +219,7 @@ void luaD_calln (int nArgs, int nResults) {
 
 
 static void message (const char *s) {
-  const TObject *em = &(luaS_new("_ERRORMESSAGE")->u.s.globalval);
+  const TObject *em = &(luaS_assertglobalbyname("_ERRORMESSAGE")->value);
   if (ttype(em) == LUA_T_PROTO || ttype(em) == LUA_T_CPROTO ||
       ttype(em) == LUA_T_CLOSURE) {
     *L->stack.top = *em;
@@ -237,7 +237,6 @@ void lua_error (const char *s) {
   if (L->errorJmp)
     longjmp(L->errorJmp->b, 1);
   else {
-    LUA_INTERNALERROR("exit!!");
     message("exit(1). Unable to recover.\n");
     exit(1);
   }

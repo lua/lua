@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.24 1999/10/14 19:13:31 roberto Exp roberto $
+** $Id: lstring.c,v 1.25 1999/10/19 13:33:22 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -87,7 +87,6 @@ static TaggedString *newone (long l, unsigned long h) {
                                        sizeof(TaggedString)+l*sizeof(char));
   ts->marked = 0;
   ts->nexthash = NULL;
-  ts->nextglobal = ts;  /* signal it is not in global list */
   ts->hash = h;
   return ts;
 }
@@ -97,7 +96,7 @@ static TaggedString *newone_s (const char *str, long l, unsigned long h) {
   TaggedString *ts = newone(l, h);
   memcpy(ts->str, str, l);
   ts->str[l] = 0;  /* ending 0 */
-  ts->u.s.globalval.ttype = LUA_T_NIL;  /* initialize global value */
+  ts->u.s.gv = NULL;  /* no global value */
   ts->u.s.len = l;
   ts->constindex = 0;
   L->nblocks += gcsizestring(l);
@@ -107,7 +106,7 @@ static TaggedString *newone_s (const char *str, long l, unsigned long h) {
 
 static TaggedString *newone_u (void *buff, int tag, unsigned long h) {
   TaggedString *ts = newone(0, h);
-  ts->u.d.v = buff;
+  ts->u.d.value = buff;
   ts->u.d.tag = (tag == LUA_ANYTAG) ? 0 : tag;
   ts->constindex = -1;  /* tag -> this is a userdata */
   L->nblocks++;
@@ -131,13 +130,15 @@ static void newentry (stringtable *tb, TaggedString *ts, int h) {
 }
 
 
-static TaggedString *insert_s (const char *str, long l,
-                               stringtable *tb, unsigned long h) {
+TaggedString *luaS_newlstr (const char *str, long l) {
+  unsigned long h = hash_s(str, l);
+  stringtable *tb = &L->string_root[h%NUM_HASHSTR];
   int h1 = h%tb->size;
   TaggedString *ts;
-  for (ts = tb->hash[h1]; ts; ts = ts->nexthash)
+  for (ts = tb->hash[h1]; ts; ts = ts->nexthash) {
     if (ts->u.s.len == l && (memcmp(str, ts->str, l) == 0))
       return ts;
+  }
   /* not found */
   ts = newone_s(str, l, h);  /* create new entry */
   newentry(tb, ts, h1);  /* insert it on table */
@@ -145,29 +146,21 @@ static TaggedString *insert_s (const char *str, long l,
 }
 
 
-static TaggedString *insert_u (void *buff, int tag, stringtable *tb) {
-  unsigned long h = (IntPoint)buff;
+TaggedString *luaS_createudata (void *udata, int tag) {
+  unsigned long h = (IntPoint)udata;
+  stringtable *tb = &L->string_root[(h%NUM_HASHUDATA)+NUM_HASHSTR];
   int h1 = h%tb->size;
   TaggedString *ts;
-  for (ts = tb->hash[h1]; ts; ts = ts->nexthash)
-    if ((tag == ts->u.d.tag || tag == LUA_ANYTAG) && buff == ts->u.d.v)
+  for (ts = tb->hash[h1]; ts; ts = ts->nexthash) {
+    if (udata == ts->u.d.value && (tag == ts->u.d.tag || tag == LUA_ANYTAG))
       return ts;
+  }
   /* not found */
-  ts = newone_u(buff, tag, h);
+  ts = newone_u(udata, tag, h);
   newentry(tb, ts, h1);
   return ts;
 }
 
-
-TaggedString *luaS_createudata (void *udata, int tag) {
-  int t = ((IntPoint)udata%NUM_HASHUDATA)+NUM_HASHSTR;
-  return insert_u(udata, tag, &L->string_root[t]);
-}
-
-TaggedString *luaS_newlstr (const char *str, long l) {
-  unsigned long h = hash_s(str, l);
-  return insert_s(str, l, &L->string_root[h%NUM_HASHSTR], h);
-}
 
 TaggedString *luaS_new (const char *str) {
   return luaS_newlstr(str, strlen(str));
@@ -181,23 +174,38 @@ TaggedString *luaS_newfixedstring (const char *str) {
 
 
 void luaS_free (TaggedString *t) {
-  L->nblocks -= (t->constindex == -1) ? 1 : gcsizestring(t->u.s.len);
+  if (t->constindex == -1)  /* is userdata? */
+    L->nblocks--;
+  else {  /* is string */
+    L->nblocks -= gcsizestring(t->u.s.len);
+    luaM_free(t->u.s.gv);
+  }
   luaM_free(t);
 }
 
 
-void luaS_rawsetglobal (TaggedString *ts, const TObject *newval) {
-  ts->u.s.globalval = *newval;
-  if (ts->nextglobal == ts) {  /* is not in list? */
-    ts->nextglobal = L->rootglobal;
-    L->rootglobal = ts;
+GlobalVar *luaS_assertglobal (TaggedString *ts) {
+  GlobalVar *gv = ts->u.s.gv;
+  if (!gv) {  /* no global value yet? */
+    gv = luaM_new(GlobalVar);
+    gv->value.ttype = LUA_T_NIL;  /* initial value */
+    gv->name = ts;
+    gv->next = L->rootglobal;  /* chain in global list */
+    L->rootglobal = gv; 
+    ts->u.s.gv = gv;
   }
+  return gv;
+}
+
+
+GlobalVar *luaS_assertglobalbyname (const char *name) {
+  return luaS_assertglobal(luaS_new(name));
 }
 
 
 int luaS_globaldefined (const char *name) {
   TaggedString *ts = luaS_new(name);
-  return ts->u.s.globalval.ttype != LUA_T_NIL;
+  return ts->u.s.gv && ts->u.s.gv->value.ttype != LUA_T_NIL;
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.28 1999/10/11 16:13:11 roberto Exp roberto $
+** $Id: lgc.c,v 1.29 1999/10/14 19:13:31 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -62,13 +62,13 @@ static void hashmark (Hash *h) {
 }
 
 
-static void globalmark (void) {
-  TaggedString *g;
-  for (g=L->rootglobal; g; g=g->nextglobal) {
-    LUA_ASSERT(g->constindex >= 0, "userdata in global list");
-    if (g->u.s.globalval.ttype != LUA_T_NIL) {
-      markobject(&g->u.s.globalval);
-      strmark(g);  /* cannot collect non nil global variables */
+static void travglobal (void) {
+  GlobalVar *gv;
+  for (gv=L->rootglobal; gv; gv=gv->next) {
+    LUA_ASSERT(gv->name->u.s.gv == gv, "inconsistent global name");
+    if (gv->value.ttype != LUA_T_NIL) {
+      strmark(gv->name);  /* cannot collect non nil global variables */
+      markobject(&gv->value);
     }
   }
 }
@@ -157,12 +157,16 @@ static void collecttable (void) {
 }
 
 
+/*
+** remove from the global list globals whose names will be collected
+** (the global itself is freed when its name is freed)
+*/
 static void clear_global_list (int limit) {
-  TaggedString **p = &L->rootglobal;
-  TaggedString *next;
+  GlobalVar **p = &L->rootglobal;
+  GlobalVar *next;
   while ((next = *p) != NULL) {
-    if (next->marked >= limit) p = &next->nextglobal;
-    else *p = next->nextglobal;
+    if (next->name->marked >= limit) p = &next->next;
+    else *p = next->next;
   }
 }
 
@@ -226,7 +230,7 @@ static void tableTM (void) {
 
 static void markall (void) {
   travstack(); /* mark stack objects */
-  globalmark();  /* mark global variable values and names */
+  travglobal();  /* mark global variable values and names */
   travlock(); /* mark locked objects */
   luaT_travtagmethods(markobject);  /* mark tag methods */
 }
@@ -239,8 +243,6 @@ void luaC_collect (int all) {
   collectstring(all?MAX_INT:1);
   collectproto();
   collectclosure();
-  if (!all)
-    luaD_gcIM(&luaO_nilobject);  /* GC tag method for nil (signal end of GC) */
 }
 
 
@@ -249,6 +251,7 @@ long lua_collectgarbage (long limit) {
   markall();
   luaR_invalidaterefs();
   luaC_collect(0);
+  luaD_gcIM(&luaO_nilobject);  /* GC tag method for nil (signal end of GC) */
   recovered = recovered - L->nblocks;
   L->GCthreshold = (limit == 0) ? 2*L->nblocks : L->nblocks+limit;
   return recovered;

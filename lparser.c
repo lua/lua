@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.40 1999/09/02 13:13:22 roberto Exp roberto $
+** $Id: lparser.c,v 1.41 1999/09/20 14:15:18 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -229,6 +229,13 @@ static void code_opcode (LexState *ls, OpCode op, int delta) {
 
 static void code_constant (LexState *ls, int c) {
   code_oparg(ls, PUSHCONSTANT, c, 1);
+}
+
+
+static void assertglobal (LexState *ls, int index) {
+  TObject *o = &ls->fs->f->consts[index];
+  LUA_ASSERT(ttype(o) == LUA_T_STRING, "global name is not a string");
+  luaS_assertglobal(tsvalue(o));
 }
 
 
@@ -478,6 +485,7 @@ static void lua_pushvar (LexState *ls, vardesc *var) {
       break;
     case VGLOBAL:
       code_oparg(ls, GETGLOBAL, var->info, 1);
+      assertglobal(ls, var->info);  /* make sure that there is a global */
       break;
     case VDOT:
       code_oparg(ls, GETDOTTED, var->info, 0);
@@ -501,6 +509,7 @@ static void storevar (LexState *ls, const vardesc *var) {
       break;
     case VGLOBAL:
       code_oparg(ls, SETGLOBAL, var->info, -1);
+      assertglobal(ls, var->info);  /* make sure that there is a global */
       break;
     case VINDEXED:
       code_opcode(ls, SETTABLEPOP, -3);

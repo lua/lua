@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.53 1999/10/11 16:13:11 roberto Exp roberto $
+** $Id: lapi.c,v 1.54 1999/10/14 19:13:31 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -57,18 +57,6 @@ static void set_normalized (TObject *d, const TObject *s) {
 
 static const TObject *luaA_protovalue (const TObject *o) {
   return (normalized_type(o) == LUA_T_CLOSURE) ?  protovalue(o) : o;
-}
-
-
-void luaA_packresults (void) {
-  luaV_pack(L->Cstack.lua2C, L->Cstack.num, L->stack.top);
-  incr_top;
-}
-
-
-int luaA_passresults (void) {
-  L->Cstack.base = L->Cstack.lua2C;  /* position of first result */
-  return L->Cstack.num;
 }
 
 
@@ -191,28 +179,28 @@ lua_Object lua_createtable (void) {
 
 lua_Object lua_getglobal (const char *name) {
   luaD_checkstack(2);  /* may need that to call T.M. */
-  luaV_getglobal(luaS_new(name));
+  luaV_getglobal(luaS_assertglobalbyname(name));
   return luaA_putObjectOnTop();
 }
 
 
 lua_Object lua_rawgetglobal (const char *name) {
-  TaggedString *ts = luaS_new(name);
-  return put_luaObject(&ts->u.s.globalval);
+  GlobalVar *gv = luaS_assertglobalbyname(name);
+  return put_luaObject(&gv->value);
 }
 
 
 void lua_setglobal (const char *name) {
   checkCparams(1);
   luaD_checkstack(2);  /* may need that to call T.M. */
-  luaV_setglobal(luaS_new(name));
+  luaV_setglobal(luaS_assertglobalbyname(name));
 }
 
 
 void lua_rawsetglobal (const char *name) {
-  TaggedString *ts = luaS_new(name);
+  GlobalVar *gv = luaS_assertglobalbyname(name);
   checkCparams(1);
-  luaS_rawsetglobal(ts, --L->stack.top);
+  gv->value = *(--L->stack.top);
 }
 
 
@@ -274,7 +262,7 @@ long lua_strlen (lua_Object object) {
 void *lua_getuserdata (lua_Object object) {
   if (object == LUA_NOOBJECT || ttype(Address(object)) != LUA_T_USERDATA)
     return NULL;
-  else return tsvalue(Address(object))->u.d.v;
+  else return tsvalue(Address(object))->u.d.value;
 }
 
 lua_CFunction lua_getcfunction (lua_Object object) {
@@ -388,31 +376,32 @@ void lua_settag (int tag) {
 }
 
 
-TaggedString *luaA_nextvar (TaggedString *g) {
-  if (g == NULL)
-    g = L->rootglobal;  /* first variable */
+GlobalVar *luaA_nextvar (TaggedString *ts) {
+  GlobalVar *gv;
+  if (ts == NULL)
+    gv = L->rootglobal;  /* first variable */
   else {
     /* check whether name is in global var list */
-    luaL_arg_check(g != g->nextglobal, 1, "variable name expected");
-    g = g->nextglobal;  /* get next */
+    luaL_arg_check(ts->u.s.gv, 1, "variable name expected");
+    gv = ts->u.s.gv->next;  /* get next */
   }
-  while (g && g->u.s.globalval.ttype == LUA_T_NIL)  /* skip globals with nil */
-    g = g->nextglobal;
-  if (g) {
-    ttype(L->stack.top) = LUA_T_STRING; tsvalue(L->stack.top) = g;
+  while (gv && gv->value.ttype == LUA_T_NIL)  /* skip globals with nil */
+    gv = gv->next;
+  if (gv) {
+    ttype(L->stack.top) = LUA_T_STRING; tsvalue(L->stack.top) = gv->name;
     incr_top;
-    luaA_pushobject(&g->u.s.globalval);
+    luaA_pushobject(&gv->value);
   }
-  return g;
+  return gv;
 }
 
 
 const char *lua_nextvar (const char *varname) {
-  TaggedString *g = (varname == NULL) ? NULL : luaS_new(varname);
-  g = luaA_nextvar(g);
-  if (g) {
+  TaggedString *ts = (varname == NULL) ? NULL : luaS_new(varname);
+  GlobalVar *gv = luaA_nextvar(ts);
+  if (gv) {
     top2LC(2);
-    return g->str;
+    return gv->name->str;
   }
   else {
     top2LC(0);
@@ -577,11 +566,11 @@ static int checkfunc (TObject *o) {
 
 const char *lua_getobjname (lua_Object o, const char **name) {
   /* try to find a name for given function */
-  TaggedString *g;
+  GlobalVar *g;
   set_normalized(L->stack.top, Address(o)); /* to be accessed by "checkfunc" */
-  for (g=L->rootglobal; g; g=g->nextglobal) {
-    if (checkfunc(&g->u.s.globalval)) {
-      *name = g->str;
+  for (g=L->rootglobal; g; g=g->next) {
+    if (checkfunc(&g->value)) {
+      *name = g->name->str;
       return "global";
     }
   }

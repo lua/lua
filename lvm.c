@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.63 1999/10/14 19:13:31 roberto Exp roberto $
+** $Id: lvm.c,v 1.64 1999/10/14 19:46:57 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -167,9 +167,9 @@ void luaV_rawsettable (const TObject *t) {
 }
 
 
-void luaV_getglobal (TaggedString *ts) {
+void luaV_getglobal (GlobalVar *gv) {
   /* WARNING: caller must assure stack space */
-  const TObject *value = &ts->u.s.globalval;
+  const TObject *value = &gv->value;
   switch (ttype(value)) {
     /* only userdata, tables and nil can have getglobal tag methods */
     case LUA_T_USERDATA: case LUA_T_ARRAY: case LUA_T_NIL: {
@@ -177,7 +177,7 @@ void luaV_getglobal (TaggedString *ts) {
       if (ttype(im) != LUA_T_NIL) {  /* is there a tag method? */
         struct Stack *S = &L->stack;
         ttype(S->top) = LUA_T_STRING;
-        tsvalue(S->top) = ts;
+        tsvalue(S->top) = gv->name;  /* global name */
         S->top++;
         *S->top++ = *value;
         luaD_callTM(im, 2, 1);
@@ -190,18 +190,18 @@ void luaV_getglobal (TaggedString *ts) {
 }
 
 
-void luaV_setglobal (TaggedString *ts) {
-  const TObject *oldvalue = &ts->u.s.globalval;
+void luaV_setglobal (GlobalVar *gv) {
+  const TObject *oldvalue = &gv->value;
   const TObject *im = luaT_getimbyObj(oldvalue, IM_SETGLOBAL);
   if (ttype(im) == LUA_T_NIL)  /* is there a tag method? */
-    luaS_rawsetglobal(ts, --L->stack.top);
+    gv->value = *(--L->stack.top);
   else {
     /* WARNING: caller must assure stack space */
     struct Stack *S = &L->stack;
     TObject newvalue;
     newvalue = *(S->top-1);
     ttype(S->top-1) = LUA_T_STRING;
-    tsvalue(S->top-1) = ts;
+    tsvalue(S->top-1) = gv->name;
     *S->top++ = *oldvalue;
     *S->top++ = newvalue;
     luaD_callTM(im, 3, 0);
@@ -370,7 +370,7 @@ StkId luaV_execute (const Closure *cl, const TProtoFunc *tf, StkId base) {
 
       case GETGLOBALW: aux += highbyte(*pc++);
       case GETGLOBAL:  aux += *pc++;
-        luaV_getglobal(tsvalue(&consts[aux]));
+        luaV_getglobal(tsvalue(&consts[aux])->u.s.gv);
         break;
 
       case GETTABLE:
@@ -407,7 +407,7 @@ StkId luaV_execute (const Closure *cl, const TProtoFunc *tf, StkId base) {
 
       case SETGLOBALW: aux += highbyte(*pc++);
       case SETGLOBAL:  aux += *pc++;
-        luaV_setglobal(tsvalue(&consts[aux]));
+        luaV_setglobal(tsvalue(&consts[aux])->u.s.gv);
         break;
 
       case SETTABLEPOP:

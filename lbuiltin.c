@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.68 1999/10/19 13:33:22 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.69 1999/10/26 10:53:40 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -35,10 +35,9 @@
 
 
 static void pushtagstring (TaggedString *s) {
-  TObject o;
-  o.ttype = LUA_T_STRING;
-  o.value.ts = s;
-  luaA_pushobject(&o);
+  ttype(L->stack.top) = LUA_T_STRING;
+  tsvalue(L->stack.top) = s;
+  incr_top;
 }
 
 
@@ -107,7 +106,7 @@ static void error_message (void) {
 
 
 /*
-** If your system does not support "stdout", just remove this function.
+** If your system does not support "stdout", you can just remove this function.
 ** If you need, you can define your own "print" function, following this
 ** model but changing "fputs" to put the strings at a proper place
 ** (a console window or a log file, for instance).
@@ -264,22 +263,29 @@ static void luaB_type (void) {
 ** =======================================================
 */
 
+
+static void passresults (void) {
+  L->Cstack.base = L->Cstack.lua2C;  /* position of first result */
+  if (L->Cstack.num == 0)
+    lua_pushuserdata(NULL);  /* at least one result to signal no errors */
+}
+
 static void luaB_dostring (void) {
   long l;
   const char *s = luaL_check_lstr(1, &l);
   if (*s == ID_CHUNK)
     lua_error("`dostring' cannot run pre-compiled code");
   if (lua_dobuffer(s, l, luaL_opt_string(2, s)) == 0)
-    if (luaA_passresults() == 0)
-      lua_pushuserdata(NULL);  /* at least one result to signal no errors */
+    passresults();
+  /* else return no value */
 }
 
 
 static void luaB_dofile (void) {
   const char *fname = luaL_opt_string(1, NULL);
   if (lua_dofile(fname) == 0)
-    if (luaA_passresults() == 0)
-      lua_pushuserdata(NULL);  /* at least one result to signal no errors */
+    passresults();
+  /* else return no value */
 }
 
 
@@ -312,10 +318,12 @@ static void luaB_call (void) {
       lua_error(NULL);
   }
   else {  /* no errors */
-    if (strchr(options, 'p'))
-      luaA_packresults();
+    if (strchr(options, 'p')) {  /* pack results? */
+      luaV_pack(L->Cstack.lua2C, L->Cstack.num, L->stack.top);
+      incr_top;
+    }
     else
-      luaA_passresults();
+      L->Cstack.base = L->Cstack.lua2C;  /* position of first result */
   }
 }
 
@@ -373,7 +381,7 @@ static void luaB_tostring (void) {
       sprintf(buff, "function: %p", (void *)o->value.f);
       break;
     case LUA_T_USERDATA:
-      sprintf(buff, "userdata: %p", o->value.ts->u.d.v);
+      sprintf(buff, "userdata: %p", o->value.ts->u.d.value);
       break;
     case LUA_T_NIL:
       lua_pushstring("nil");
@@ -449,23 +457,23 @@ static void luaB_foreach (void) {
 
 
 static void luaB_foreachvar (void) {
-  TaggedString *s;
+  GlobalVar *gv;
   TObject f;  /* see comment in 'foreachi' */
   f = *luaA_Address(luaL_functionarg(1));
   luaD_checkstack(4);  /* for extra var name, f, var name, and globalval */
-  for (s = L->rootglobal; s; s = s->nextglobal) {
-    if (s->u.s.globalval.ttype != LUA_T_NIL) {
-      pushtagstring(s);  /* keep (extra) s on stack to avoid GC */
+  for (gv = L->rootglobal; gv; gv = gv->next) {
+    if (gv->value.ttype != LUA_T_NIL) {
+      pushtagstring(gv->name);  /* keep (extra) name on stack to avoid GC */
       *(L->stack.top++) = f;
-      pushtagstring(s);
-      *(L->stack.top++) = s->u.s.globalval;
+      pushtagstring(gv->name);
+      *(L->stack.top++) = gv->value;
       luaD_calln(2, 1);
       if (ttype(L->stack.top-1) != LUA_T_NIL) {
         L->stack.top--;
-        *(L->stack.top-1) = *L->stack.top;  /* remove extra `s' */
+        *(L->stack.top-1) = *L->stack.top;  /* remove extra name */
         return;
       }
-      L->stack.top-=2;  /* remove result and extra `s' */
+      L->stack.top-=2;  /* remove result and extra name */
     }
   }
 }
@@ -507,7 +515,8 @@ static void luaB_tremove (void) {
 }
 
 
-/* {
+/*
+** {======================================================
 ** Quicksort
 */
 
@@ -593,11 +602,10 @@ static void luaB_sort (void) {
   lua_pushobject(t);
 }
 
-/* }}===================================================== */
+/* }====================================================== */
 
 
-/*
-** ====================================================== */
+/* }====================================================== */
 
 
 
@@ -605,6 +613,7 @@ static void luaB_sort (void) {
 /*
 ** {======================================================
 ** some DEBUG functions
+** (for internal debugging of the Lua implementation)
 ** =======================================================
 */
 

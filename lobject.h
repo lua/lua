@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.33 1999/10/14 19:13:31 roberto Exp roberto $
+** $Id: lobject.h,v 1.34 1999/10/19 13:33:22 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -87,25 +87,30 @@ typedef struct TObject {
 
 
 
+typedef struct GlobalVar {
+  TObject value;
+  struct GlobalVar *next;
+  struct TaggedString *name;
+} GlobalVar;
+
+
 /*
 ** String headers for string table
 */
-
 typedef struct TaggedString {
-  struct TaggedString *nexthash;  /* chain hash table */
-  struct TaggedString *nextglobal;  /* chain global variables */
-  unsigned long hash;
-  int constindex;  /* hint to reuse constants (= -1 if this is a userdata) */
   union {
-    struct {
-      TObject globalval;
-      long len;  /* if this is a string, here is its length */
+    struct {  /* for strings */
+      GlobalVar *gv;  /* eventual global value with this name */
+      long len;
     } s;
-    struct {
+    struct {  /* for userdata */
       int tag;
-      void *v;  /* if this is a userdata, here is its value */
+      void *value;
     } d;
   } u;
+  struct TaggedString *nexthash;  /* chain for hash table */
+  unsigned long hash;
+  int constindex;  /* hint to reuse constants (= -1 if this is a userdata) */
   unsigned char marked;
   char str[1];   /* \0 byte already reserved */
 } TaggedString;
