@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.h,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: ldo.h,v 1.40 2002/01/30 17:27:53 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -19,7 +19,12 @@
 #define incr_top(L) \
 	{if (L->top >= L->stack_last) luaD_growstack(L, 1); L->top++;}
 
-#define luaD_checkstack(L,n) if (L->stack_last-(n)<=L->top) luaD_growstack(L, n)
+#define luaD_checkstack(L,n)	\
+  if ((char *)L->stack_last - (char *)L->top <= (n)*(int)sizeof(TObject)) \
+    luaD_growstack(L, n)
+
+#define savestack(L,p)		((char *)(p) - (char *)L->stack)
+#define restorestack(L,n)	((TObject *)((char *)L->stack + (n)))
 
 
 void luaD_lineHook (lua_State *L, int line, lua_Hook linehook);

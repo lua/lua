@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.86 2002/03/07 18:14:29 roberto Exp roberto $
+** $Id: lstate.c,v 1.87 2002/03/11 12:45:00 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -33,7 +33,7 @@ static void stack_init (lua_State *L, lua_State *OL) {
   L->base_ci = luaM_newvector(OL, BASIC_CI_SIZE, CallInfo);
   L->ci = L->base_ci;
   L->ci->base = L->top;
-  L->ci->top = L->top;
+  L->ci->top = L->top + LUA_MINSTACK;
   L->ci->pc = NULL;
   L->size_ci = BASIC_CI_SIZE;
   L->end_ci = L->base_ci + L->size_ci;

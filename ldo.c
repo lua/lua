@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.163 2002/03/11 12:45:00 roberto Exp roberto $
+** $Id: ldo.c,v 1.164 2002/03/15 17:17:16 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -101,22 +101,24 @@ void luaD_growstack (lua_State *L, int n) {
 ** Open a hole inside the stack at `pos'
 */
 static void luaD_openstack (lua_State *L, StkId pos) {
-  int i = L->top-pos; 
-  while (i--) setobj(pos+i+1, pos+i);
+  StkId p;
+  for (p = L->top; p > pos; p--) setobj(p, p-1);
   incr_top(L);
 }
 
 
 static void dohook (lua_State *L, lua_Debug *ar, lua_Hook hook) {
-  L->ci->top = L->top;
+  ptrdiff_t top = savestack(L, L->top);
   luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
+  L->ci->top += LUA_MINSTACK;
   L->allowhooks = 0;  /* cannot call hooks inside a hook */
   lua_unlock(L);
   (*hook)(L, ar);
   lua_lock(L);
   lua_assert(L->allowhooks == 0);
   L->allowhooks = 1;
-  L->top = L->ci->top;
+  L->ci->top -= LUA_MINSTACK;
+  L->top = restorestack(L, top);
 }
 
 
@@ -218,8 +220,7 @@ StkId luaD_precall (lua_State *L, StkId func) {
     ci->savedpc = p->code;  /* starting point */
     if (p->is_vararg)  /* varargs? */
       adjust_varargs(L, p->numparams);
-    if (ci->base > L->stack_last - p->maxstacksize)
-      luaD_growstack(L, p->maxstacksize);
+    luaD_checkstack(L, p->maxstacksize);
     ci->line = 0;
     ci->top = ci->base + p->maxstacksize;
     while (L->top < ci->top)
@@ -245,9 +246,9 @@ StkId luaD_precall (lua_State *L, StkId func) {
 void luaD_poscall (lua_State *L, int wanted, StkId firstResult) { 
   StkId res;
   if (L->callhook) {
-    StkId stack = L->stack;  /* next call may change stack */
+    ptrdiff_t fr = savestack(L, firstResult);  /* next call may change stack */
     luaD_callHook(L, L->callhook, "return");
-    firstResult = (firstResult - stack) + L->stack;
+    firstResult = restorestack(L, fr);
   }
   res = L->ci->base - 1;  /* func == final position of 1st result */
   L->ci--;

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.219 2002/03/08 19:10:32 roberto Exp roberto $
+** $Id: lvm.c,v 1.220 2002/03/19 12:45:25 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -94,15 +94,14 @@ static void traceexec (lua_State *L, lua_Hook linehook) {
 
 static void callTMres (lua_State *L, const TObject *f,
                        const TObject *p1, const TObject *p2, TObject *result ) {
-  StkId stack = L->stack;
+  ptrdiff_t res = savestack(L, result);
   setobj(L->top, f);  /* push function */
   setobj(L->top+1, p1);  /* 1st argument */
   setobj(L->top+2, p2);  /* 2nd argument */
   luaD_checkstack(L, 3);  /* cannot check before (could invalidate p1, p2) */
   L->top += 3;
   luaD_call(L, L->top - 3, 1);
-  if (stack != L->stack)  /* stack changed? */
-    result = (result - stack) + L->stack;  /* correct pointer */
+  result = restorestack(L, res);  /* previous call may change stack */
   setobj(result, --L->top);  /* get result */
 }
 
