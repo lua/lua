@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.54 2002/09/16 19:49:45 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.55 2002/11/14 15:41:38 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -119,7 +119,7 @@ LUALIB_API int   lua_dostring (lua_State *L, const char *str);
 LUALIB_API int   lua_dobuffer (lua_State *L, const char *buff, size_t sz,
                                const char *n);
 
-/*
+
 #define luaL_check_lstr 	luaL_checklstring
 #define luaL_opt_lstr 	luaL_optlstring 
 #define luaL_check_number 	luaL_checknumber 
@@ -131,7 +131,7 @@ LUALIB_API int   lua_dobuffer (lua_State *L, const char *buff, size_t sz,
 #define luaL_check_long	luaL_checklong
 #define luaL_opt_int	luaL_optint
 #define luaL_opt_long	luaL_optlong
-*/
+
 
 #endif
 
