@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.103 2002/04/05 18:54:31 roberto Exp roberto $
+** $Id: ltable.c,v 1.104 2002/04/22 14:40:23 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -52,13 +52,13 @@
 #define hashnum(t,n)	\
            (node(t, lmod(cast(lu_hash, cast(ls_hash, n)), sizenode(t))))
 #define hashstr(t,str)	 (node(t, lmod((str)->tsv.hash, sizenode(t))))
-#define hashboolean(t,p) (node(t, p))  /* `p' in [0,1] < minimum table size */
+#define hashboolean(t,p) (node(t, lmod(p, sizenode(t))))
 
 /*
 ** for pointers, avoid modulus by power of 2, as they tend to have many
 ** 2 factors.
 */
-#define hashpointer(t,p) (node(t, (IntPoint(p) % (sizenode(t)-1))))
+#define hashpointer(t,p) (node(t, (IntPoint(p) % ((sizenode(t)-1)|1))))
 
 
 /*
@@ -200,12 +200,6 @@ static void numuse (const Table *t, int *narray, int *nhash) {
 }
 
 
-/*
-** (log2 of) minimum size for hash part of a table
-*/
-#define MINHASHSIZE	1
-
-
 static void setarrayvector (lua_State *L, Table *t, int size) {
   int i;
   luaM_reallocvector(L, t->array, t->sizearray, size, TObject);
@@ -217,16 +211,22 @@ static void setarrayvector (lua_State *L, Table *t, int size) {
 
 static void setnodevector (lua_State *L, Table *t, int lsize) {
   int i;
-  int size;
-  if (lsize < MINHASHSIZE) lsize = MINHASHSIZE;
-  else if (lsize > MAXBITS)
+  int size = twoto(lsize);
+  if (lsize > MAXBITS)
     luaD_runerror(L, "table overflow");
-  size = twoto(lsize);
-  t->node = luaM_newvector(L, size, Node);
-  for (i=0; i<size; i++) {
-    t->node[i].next = NULL;
-    setnilvalue(key(node(t, i)));
-    setnilvalue(val(node(t, i)));
+  if (lsize == 0) {  /* no elements to hash part? */
+    t->node = G(L)->dummynode;  /* use common `dummynode' */
+    lua_assert(ttype(key(t->node)) == LUA_TNIL);  /* assert invariants: */
+    lua_assert(ttype(val(t->node)) == LUA_TNIL);
+    lua_assert(t->node->next == NULL);  /* (`dummynode' must be empty) */
+  }
+  else {
+    t->node = luaM_newvector(L, size, Node);
+    for (i=0; i<size; i++) {
+      t->node[i].next = NULL;
+      setnilvalue(key(node(t, i)));
+      setnilvalue(val(node(t, i)));
+    }
   }
   t->lsizenode = cast(lu_byte, lsize);
   t->firstfree = node(t, size-1);  /* first free position to be used */
@@ -235,14 +235,22 @@ static void setnodevector (lua_State *L, Table *t, int lsize) {
 
 static void resize (lua_State *L, Table *t, int nasize, int nhsize) {
   int i;
-  int oldasize, oldhsize;
+  int oldasize = t->sizearray;
+  int oldhsize = t->lsizenode;
   Node *nold;
-  oldasize = t->sizearray;
+  Node temp[1];
+  if (oldhsize)
+    nold = t->node;  /* save old hash ... */
+  else {  /* old hash is `dummynode' */
+    lua_assert(t->node == G(L)->dummynode);
+    temp[0] = t->node[0];  /* copy it to `temp' (in case of errors) */
+    nold = temp;
+    setnilvalue(key(G(L)->dummynode));  /* restate invariant */
+    setnilvalue(val(G(L)->dummynode));
+  }
   if (nasize > oldasize)  /* should grow array part? */
     setarrayvector(L, t, nasize);
   /* create new hash part with appropriate size */
-  nold = t->node;  /* save old hash ... */
-  oldhsize = t->lsizenode;  /* ... and (log of) old size */
   setnodevector(L, t, nhsize);  
   /* re-insert elements */
   if (nasize < oldasize) {  /* array part must shrink? */
@@ -262,7 +270,8 @@ static void resize (lua_State *L, Table *t, int nasize, int nhsize) {
     if (ttype(val(old)) != LUA_TNIL)
       luaH_set(L, t, key(old), val(old));
   }
-  luaM_freearray(L, nold, twoto(oldhsize), Node);  /* free old array */
+  if (oldhsize)
+    luaM_freearray(L, nold, twoto(oldhsize), Node);  /* free old array */
 }
 
 
@@ -299,8 +308,7 @@ Table *luaH_new (lua_State *L, int narray, int lnhash) {
 
 
 void luaH_free (lua_State *L, Table *t) {
-  lua_assert(t->lsizenode > 0 || t->node == NULL);
-  if (t->lsizenode > 0)
+  if (t->lsizenode)
     luaM_freearray(L, t->node, sizenode(t), Node);
   luaM_freearray(L, t->array, t->sizearray, TObject);
   luaM_freelem(L, t);

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.133 2002/03/26 18:55:50 roberto Exp roberto $
+** $Id: lgc.c,v 1.134 2002/04/05 18:54:31 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -211,14 +211,13 @@ static void traversetable (GCState *st, Table *h) {
   int weakkey = 0;
   int weakvalue = 0;
   marktable(st, h->metatable);
+  lua_assert(h->lsizenode || h->node == G(st->L)->dummynode);
   mode = fasttm(st->L, h->metatable, TM_WEAKMODE);
-  if (mode) {  /* weak table? must be cleared after GC... */
-    h->mark = st->toclear;  /* put in the appropriate list */
-    st->toclear = h;
-    if (ttype(mode) == LUA_TSTRING) {
-      weakkey = (strchr(svalue(mode), 'k') != NULL);
-      weakvalue = (strchr(svalue(mode), 'v') != NULL);
-    }
+  if (mode && ttype(mode) == LUA_TSTRING) {  /* weak table? */
+    h->mark = st->toclear;  /* must be cleared after GC, ... */
+    st->toclear = h;  /* ...put in the appropriate list */
+    weakkey = (strchr(svalue(mode), 'k') != NULL);
+    weakvalue = (strchr(svalue(mode), 'v') != NULL);
   }
   if (!weakvalue) {
     i = sizearray(h);

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.89 2002/04/16 17:08:28 roberto Exp roberto $
+** $Id: lstate.c,v 1.90 2002/04/22 14:40:23 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -69,6 +69,9 @@ static void f_luaopen (lua_State *L, void *ud) {
   G(L)->rootupval = NULL;
   G(L)->rootudata = NULL;
   G(L)->tmudata = NULL;
+  setnilvalue(key(G(L)->dummynode));
+  setnilvalue(val(G(L)->dummynode));
+  G(L)->dummynode->next = NULL;
   G(L)->nblocks = sizeof(lua_State) + sizeof(global_State);
   stack_init(L, L);  /* init stack */
   /* create default meta table with a dummy table, and then close the loop */
