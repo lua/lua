@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.12 2000/04/07 13:12:50 roberto Exp roberto $
+** $Id: ltests.c,v 1.13 2000/04/12 18:57:19 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -98,12 +98,12 @@ static int printop (lua_State *L, Instruction i) {
     case OP_JMPLE: S("JMPLE"); break;
     case OP_JMPGT: S("JMPGT"); break;
     case OP_JMPGE: S("JMPGE"); break;
+    case OP_JMPT: S("JMPT"); break;
+    case OP_JMPF: S("JMPF"); break;
     case OP_JMPONT: S("JMPONT"); break;
     case OP_JMPONF: S("JMPONF"); break;
     case OP_JMP: S("JMP"); break;
     case OP_PUSHNILJMP: O("PUSHNILJMP"); break;
-    case OP_JMPT: S("JMPT"); break;
-    case OP_JMPF: S("JMPF"); break;
     case OP_FORPREP: S("OP_FORPREP"); break;
     case OP_FORLOOP: S("OP_FORLOOP"); break;
     case OP_CLOSURE: AB("CLOSURE"); break;
