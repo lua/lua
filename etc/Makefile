@@ -1,32 +1,36 @@
 # makefile for Lua etc
 
-LUA= ..
+TOP= ..
+LIB= $(TOP)/src
+INC= $(TOP)/src
+BIN= $(TOP)/src
+SRC= $(TOP)/src
+TST= $(TOP)/test
 
-include $(LUA)/config
+CC= gcc
+CFLAGS= -O2 -Wall $(MYCFLAGS)
+MYCFLAGS= -ansi -I$(INC)
+MYLDFLAGS= -Wl,-E
+MYLIBS= -lm -ldl
+RM= rm -f
 
-ALL= min noparser luab 1
+ALL= min noparser.o 1
 
 all:
 	@echo 'choose a target:' $(ALL)
 
-min:	min.c $(LIBLUA)
+min:	min.c
 	$(CC) $(CFLAGS) -o $@ $@.c -L$(LIB) -llua -llualib
 
-noparser: noparser.c
-	$(CC) $(CFLAGS) -I$(LUA)/src -o $@.o -c $@.c
-
-luab:	noparser
-	$(CC) -o $@ noparser.o $(LUA)/src/lua/lua.o -L$(LIB) -llua -llualib $(EXTRA_LIBS) $(DLLIB)
-	$(BIN)/luac $(LUA)/test/hello.lua
-	$@ luac.out
-	-$@ -e'a=1'
+noparser: noparser.o
+	$(CC) noparser.o $(SRC)/lua.o -L$(LIB) -llua -llualib $(MYLIBS)
+	$(BIN)/luac $(TST)/hello.lua
+	-./a.out luac.out
+	-./a.out -e'a=1'
 
 1:
-	$(CC) $(CFLAGS) -I../src -I../src/lib -I../src/lua all.c $(EXTRA_LIBS) $(DLLIB)
-	./a.out $(LUA)/test/hello.lua
-
-flat:
-	cd ..; mkdir flat; mv include/*.h src/*.[ch] src/*/*.[ch] flat
+	$(CC) $(CFLAGS) all.c $(MYLIBS)
+	./a.out $(TST)/hello.lua
 
 clean:
-	rm -f $(ALL) a.out core *.o luac.out
+	$(RM) $(ALL) a.out core core.* *.o luac.out

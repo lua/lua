@@ -6,38 +6,16 @@
 *
 *** Line editing and history:
 *   #define USE_READLINE to use the GNU readline library.
+*   Add "-lreadline -ltermcap" to MYLIBS.
 *
 *   To use another library for this, use the code below as a start.
 *   Make sure you #define lua_readline and lua_saveline accordingly.
+*
 *   If you do not #define lua_readline, you'll get a version based on fgets
 *   that uses a static buffer of size MAXINPUT.
-*
-*
-*** Static Lua libraries to be loaded at startup:
-*   #define lua_userinit(L) to a Lua function that loads libraries; typically
-*	#define lua_userinit(L)	openstdlibs(L);myinit(L)
-*   or
-*	#define lua_userinit(L)	myinit(L)
-*
-*   Another way is to add the prototypes of the init functions here and
-*   #define LUA_EXTRALIBS accordingly. For example,
-*	#define LUA_EXTRALIBS {"mylib","luaopen_mylib"},
-*   Note the ending comma!
-*
-*
-*** Prompts:
-*   The stand-alone Lua interpreter uses two prompts: PROMPT and PROMPT2.
-*   PROMPT is the primary prompt, shown when the intepreter is ready to receive
-*   a new statement. PROMPT2 is the secondary prompt, shown while a statement
-*   is being entered but is still incomplete.
-*
-*
-*** Program name:
-*   Error messages usually show argv[0] as a program name. In systems that do
-*   not give a valid string as argv[0], error messages show PROGNAME instead.
-*
-*
 */
+
+#define USE_READLINE
 
 #ifdef USE_READLINE
 /*

@@ -2,82 +2,69 @@ This is Lua 5.1 (work).
 
 * Installation
   ------------
-  Building Lua on a Unix system should be very easy:
+  Building Lua on a Unix system should be very easy: simply doing "make"
+  should work. This will build Lua in the src directory.
 
-	1. Read "config" and edit it to suit your platform and needs.
-	   We strongly recommend that you enable support for dynamic loading,
-	   if your platform allows it.
-	2. Do the same for include/luaconf.h.
-	3. Do "make".
-	4. If you want to install Lua in an "official" place in your system,
-	   then do "make install". The official place and the way to install
-	   files are defined in "config". You may have to be root to do this.
+  If you want to install Lua in an official place in your system, then
+  do "make install". The official place and the way to install files are
+  defined in Makefile. You must have the right permissions to install files.
+
+  If you want to install Lua locally, then do "make local". This will
+  create directories bin, include, lib, man and install Lua there as
+  follows:
+
+    bin:	lua luac
+    include:	lua.h luaconf.h lualib.h lauxlib.h
+    lib:	liblua.a liblualib.a
+    man/man1:	lua.1 luac.1
+
+  These are the only directories you need for development.
+
+  There are man pages for lua and luac, in both nroff and html, and a
+  reference manual in html in ./doc, some sample code in ./test, and some
+  useful stuff in ./etc. You don't need these directories for development.
 
   See below for instructions for Windows and other systems.
 
-* What you get
-  ------------
-  If "make" succeeds, you get:
-	* an interpreter in ./bin/lua and a compiler in ./bin/luac;
-	* libraries in ./lib;
-	* include files in ./include.
-  These are the only directories you need for development.
+* Customization
+  -------------
+  Three things can be customized by editing a file:
+    - Where and how to install Lua -- edit Makefile.
+    - How to build Lua -- edit src/Makefile.
+    - Lua features -- edit src/luaconf.h.
 
-  There are man pages for lua and luac, in both nroff and html; a reference
-  manual in html in ./doc, some sample code in ./test, and some useful stuff
-  in ./etc. You don't need these directories for development.
+  You don't actually need to edit the Makefiles because you may set the
+  relevant variables when invoking make.
 
-  See also the README files in the various subdirectories.
-  A convenient starting point is ./doc/readme.html.
-
-* If you have problems (and solutions!)
-  -------------------------------------
-  If "make" fails, please let us know.
-  If you make changes to "config" or to the Makefiles, please send them to us.
-
-* Shared libraries
-  ----------------
-  If you are running Linux, do "make so" after "make" succeeds.
-  This will create shared libraries in ./lib.
-  To install those shared libraries in an official place, do "make soinstall".
-
-  If you want the interpreter and the compiler to use shared libraries,
-  then do "make sobin" too. You may want to do this before "make install".
-
-  If you only want the shared libraries, you may want to add -fPIC to MYCFLAGS
-  in "config". Also, you may need to run "ldconfig" as root.
-
-  You may need to include ./lib in the LD_LIBRARY_PATH environment variable
-  to link programs that use the shared libraries if you don't put them in the
-  official places with "make install". (You may need to use the full path.)
-  Note also that by default these official places live under /usr/local but
-  /usr/local/lib may not be a place that is checked for shared libraries.
-  In Linux, the places checked are in /etc/ld.so.conf. Try also "man ld.so".
-
-  Building shared libraries on other systems is similar but details differ;
-  you may need to fix a few details in the top-level Makefile.
+  On the other hand, if you need to select some Lua features, you'll need
+  to edit src/luaconf.h. The edited file will be the one installed, and
+  will be used by any Lua clients that you build, to ensure consistency.
 
 * Installation on Windows and other systems
   -----------------------------------------
-  The instructions for building Lua on other systems depend on the particular
-  compiler you are using. The simplest way is to create a folder with all .c
-  and .h files, and then create projects for the core library, the standard
-  library, the interpreter, and the compiler, as follows:
+  The instructions for building Lua on other systems depend on the compiler
+  you use. You'll need to create projects (or whatever your compiler uses)
+  for building the core library, the standard library, the interpreter, and
+  the compiler, as follows:
 
   core lib:	lapi.c lcode.c ldebug.c ldo.c ldump.c lfunc.c lgc.c llex.c
                 lmem.c lobject.c lopcodes.c lparser.c lstate.c lstring.c
 		ltable.c ltm.c lundump.c lvm.c lzio.c
 
   standard lib:	lauxlib.c lbaselib.c ldblib.c liolib.c lmathlib.c loslib.c
-  		ltablib.c lstrlib.c loadlib.c
+  		ltablib.c lstrlib.c loadlib.c linit.c
 
   interpreter:	core lib, standard lib, lua.c
 
   compiler:	core lib, lauxlib.c luac.c print.c
 
-  Of course, to use Lua as a library, you'll have to know how to create
-  and use libraries with your compiler.
+  If all you want is to build the Lua interpreter, you may put all .c files
+  in a single project, except for luac.c and print.c.
 
-  Also, read "config" to see what can be customized at compilation time.
+  To use Lua as a library in your own programs, you'll need to know how to
+  create and use libraries with your compiler.
+
+  As mentioned above, you may edit luaconf.h to select some features before
+  building Lua.
 
 (end of INSTALL)

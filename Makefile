@@ -1,62 +1,61 @@
-# makefile for Lua hierarchy
+# makefile for installing Lua
 # see INSTALL for installation instructions
-# see config for customization instructions
+# see src/Makefile and src/luaconf.h for further customization
 
-LUA= .
+# == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT =======================
 
-include $(LUA)/config
+# Where to install. The installation starts in the src directory, so take
+# care if INSTALL_TOP is not an absolute path.
+#
+INSTALL_TOP= /usr/local
+INSTALL_BIN= $(INSTALL_TOP)/bin
+INSTALL_INC= $(INSTALL_TOP)/include
+INSTALL_LIB= $(INSTALL_TOP)/lib
+INSTALL_MAN= $(INSTALL_TOP)/man/man1
 
-# primary targets ("co" and "klean" are used for making the distribution)
-all clean co klean:
-	cd include; $(MAKE) $@
+# How to install. You may prefer "install" instead of "cp" if you have it.
+# To remove debug information from binaries, use "install -s" in INSTALL_EXEC.
+#
+INSTALL_EXEC= cp
+INSTALL_DATA= cp
+#INSTALL_EXEC= install -m 0755
+#INSTALL_DATA= install -m 0644
+
+# == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
+
+V= 5.1
+
+TO_BIN= lua luac
+TO_INC= lua.h luaconf.h lualib.h lauxlib.h
+TO_LIB= liblua.a liblualib.a
+TO_MAN= lua.1 luac.1
+
+all clean:
 	cd src; $(MAKE) $@
-	cd src/lib; $(MAKE) $@
-	cd src/luac; $(MAKE) $@
-	cd src/lua; $(MAKE) $@
 
-# in case they were not created during unpacking
-all:	bin lib
-
-bin lib:
-	mkdir -p $@
-
-# simple test to see Lua working
 test:	all
-	bin/lua test/hello.lua
+	src/lua test/hello.lua
 
-# remove debug information from binaries
-strip:
-	$(STRIP) bin/*
+install: all
+	cd src; mkdir -p $(INSTALL_BIN) $(INSTALL_INC) $(INSTALL_LIB) $(INSTALL_MAN)
+	cd src; $(INSTALL_EXEC) $(TO_BIN) $(INSTALL_BIN)
+	cd src; $(INSTALL_DATA) $(TO_INC) $(INSTALL_INC)
+	cd src; $(INSTALL_DATA) $(TO_LIB) $(INSTALL_LIB)
+	cd doc; $(INSTALL_DATA) $(TO_MAN) $(INSTALL_MAN)
 
-# official installation
-install: all strip
-	mkdir -p $(INSTALL_BIN) $(INSTALL_INC) $(INSTALL_LIB) $(INSTALL_MAN)
-	$(INSTALL_EXEC) bin/* $(INSTALL_BIN)
-	$(INSTALL_DATA) include/*.h $(INSTALL_INC)
-	$(INSTALL_DATA) lib/*.a $(INSTALL_LIB)
-	$(INSTALL_DATA) doc/*.1 $(INSTALL_MAN)
+local:
+	$(MAKE) install INSTALL_TOP=.. INSTALL_EXEC="cp -up" INSTALL_DATA="cp -up"
 
 # echo config parameters
 echo:
 	@echo ""
-	@echo "These are the parameters currently set in $(LUA)/config to build Lua $V:"
+	@echo "These are the parameters currently set in src/Makefile to build Lua $V:"
 	@echo ""
-	@echo "LOADLIB = $(LOADLIB)"
-	@echo "DLLIB = $(DLLIB)"
-	@echo "NUMBER = $(NUMBER)"
-	@echo "POPEN = $(POPEN)"
-	@echo "TMPNAM = $(TMPNAM)"
-	@echo "DEGREES = $(DEGREES)"
-	@echo "USERCONF = $(USERCONF)"
-	@echo "CC = $(CC)"
-	@echo "WARN = $(WARN)"
-	@echo "MYCFLAGS = $(MYCFLAGS)"
-	@echo "MYLDFLAGS = $(MYLDFLAGS)"
-	@echo "EXTRA_LIBS = $(EXTRA_LIBS)"
-	@echo "AR = $(AR)"
-	@echo "RANLIB = $(RANLIB)"
-	@echo "STRIP = $(STRIP)"
-	@echo "INSTALL_ROOT = $(INSTALL_ROOT)"
+	@cd src; $(MAKE) -s echo
+	@echo ""
+	@echo "These are the parameters currently set in Makefile to install Lua $V:"
+	@echo ""
+	@echo "INSTALL_TOP = $(INSTALL_TOP)"
 	@echo "INSTALL_BIN = $(INSTALL_BIN)"
 	@echo "INSTALL_INC = $(INSTALL_INC)"
 	@echo "INSTALL_LIB = $(INSTALL_LIB)"
@@ -64,17 +63,18 @@ echo:
 	@echo "INSTALL_EXEC = $(INSTALL_EXEC)"
 	@echo "INSTALL_DATA = $(INSTALL_DATA)"
 	@echo ""
-	@echo "Edit $(LUA)/config if needed to suit your platform and then run make."
+	@echo "See also src/luaconf.h ."
 	@echo ""
 
-# turn config into Lua code
+# echo config parameters as Lua code
 # uncomment the last sed expression if you want nil instead of empty strings
 lecho:
-	@echo "-- $(LUA)/config for Lua $V"
-	@echo "VERSION = '$(V)'"
-	@make echo | grep = | sed -e 's/= /= "/' -e 's/$$/"/' #-e 's/""/nil/'
+	@echo "-- installation parameters for Lua $V"
+	@echo "VERSION = '$V'"
+	@$(MAKE) echo | grep = | sed -e 's/= /= "/' -e 's/$$/"/' #-e 's/""/nil/'
 	@echo "-- EOF"
 
+# show what has changed since we unpacked
 newer:
 	@find . -newer MANIFEST -type f
 

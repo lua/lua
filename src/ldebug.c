@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.11 2004/12/03 20:35:33 roberto Exp $
+** $Id: ldebug.c,v 2.12 2004/12/20 15:50:00 roberto Exp $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -477,7 +477,7 @@ static const char *getobjname (CallInfo *ci, int stackpos, const char **name) {
       }
       case OP_GETUPVAL: {
         int u = GETARG_B(i);  /* upvalue index */
-        *name = getstr(p->upvalues[u]);
+        *name = p->upvalues ? getstr(p->upvalues[u]) : "?";
         return "upvalue";
       }
       case OP_SELF: {

@@ -1,5 +1,0 @@
-This is the Lua core.
-
-The standard Lua library are in lib/.
-The standalone interpreter is in lua/.
-The standalone compiler is in luac/.

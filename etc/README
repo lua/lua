@@ -5,6 +5,10 @@ all.c
 	Full Lua interpreter in a single file.
 	Do "make 1".
 
+lua.hpp
+	Lua header files for C++.
+	This keeps the C interface to Lua. But Lua also compiles as clean C++.
+
 lua.ico
 	A Lua icon for Windows (and web sites, as favicon.ico).
 	Drawn by hand by Markus Gritsch <gritsch@iue.tuwien.ac.at>.
@@ -15,8 +19,7 @@ min.c
 
 noparser.c
 	Linking with noparser.o avoids loading the parsing modules in lualib.a.
-	Do "make luab" to build a sample Lua intepreter that does not parse
-	Lua programs, only loads precompiled programs.
+	Do "make noparser" to see a demo.
 
 saconfig.c
 	Configuration for Lua interpreter.

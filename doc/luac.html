@@ -1,0 +1,144 @@
+<!-- luac.man,v 1.25 2002/12/13 11:45:12 lhf Exp -->
+<HTML>
+<HEAD>
+<TITLE>LUAC man page</TITLE>
+</HEAD>
+
+<BODY BGCOLOR="#FFFFFF">
+
+<H1>NAME</H1>
+luac - Lua compiler
+<H1>SYNOPSIS</H1>
+<B>luac</B>
+[
+<I>options</I>
+] [
+<I>filenames</I>
+]
+<H1>DESCRIPTION</H1>
+<B>luac</B>
+is the Lua compiler.
+It translates programs written in the Lua programming language
+into binary files that can be latter loaded and executed.
+<P>
+The main advantages of precompiling chunks are:
+faster loading,
+protecting source code from user changes,
+and
+off-line syntax checking.
+<P>
+Pre-compiling does not imply faster execution
+because in Lua chunks are always compiled into bytecodes before being executed.
+<B>luac</B>
+simply allows those bytecodes to be saved in a file for later execution.
+<P>
+<B>luac</B>
+produces a single output file containing the bytecodes
+for all source files given.
+By default,
+the output file is named
+<B>luac.out</B>,
+but you can change this with the
+<B>-o</B>
+option.
+<P>
+The binary files created by
+<B>luac</B>
+are portable to all architectures with the same word size.
+This means that
+binary files created on a 32-bit platform (such as Intel)
+can be read without change in another 32-bit platform (such as Sparc),
+even if the byte order (``endianness'') is different.
+On the other hand,
+binary files created on a 16-bit platform cannot be read in a 32-bit platform,
+nor vice-versa.
+<P>
+In the command line,
+you can mix
+text files containing Lua source and
+binary files containing precompiled chunks.
+This is useful to combine several precompiled chunks,
+even from different (but compatible) platforms,
+into a single precompiled chunk.
+<P>
+You can use
+<B>"-"</B>
+to indicate the standard input as a source file
+and
+<B>"--"</B>
+to signal the end of options
+(that is,
+all remaining arguments will be treated as files even if they start with
+<B>"-"</B>).
+<P>
+The internal format of the binary files produced by
+<B>luac</B>
+is likely to change when a new version of Lua is released.
+So,
+save the source files of all Lua programs that you precompile.
+<P>
+<H1>OPTIONS</H1>
+Options must be separate.
+<P>
+<B>-l</B>
+produce a listing of the compiled bytecode for Lua's virtual machine.
+Listing bytecodes is useful to learn about Lua's virtual machine.
+If no files are given, then
+<B>luac</B>
+loads
+<B>luac.out</B>
+and lists its contents.
+<P>
+<B>-o "</B><I>file"</I>
+output to
+<I>file</I>,
+instead of the default
+<B>luac.out</B>.
+The output file may be a source file because
+all files are loaded before the output file is written.
+Be careful not to overwrite precious files.
+<P>
+<B>-p</B>
+load files but do not generate any output file.
+Used mainly for syntax checking and for testing precompiled chunks:
+corrupted files will probably generate errors when loaded.
+Lua always performs a thorough integrity test on precompiled chunks.
+Bytecode that passes this test is completely safe,
+in the sense that it will not break the interpreter.
+However,
+there is no guarantee that such code does anything sensible.
+(None can be given, because the halting problem is unsolvable.)
+If no files are given, then
+<B>luac</B>
+loads
+<B>luac.out</B>
+and tests its contents.
+No messages are displayed if the file passes the integrity test.
+<P>
+<B>-s</B>
+strip debug information before writing the output file.
+This saves some space in very large chunks,
+but if errors occur when running these chunks,
+then the error messages may not contain the full information they usually do
+(line numbers and names of locals are lost).
+<P>
+<B>-v</B>
+show version information.
+<H1>FILES</H1>
+<P>
+<B>luac.out</B>
+default output file
+<H1>SEE ALSO</H1>
+<B>lua</B>(1)
+<BR>
+<A HREF="http://www.lua.org/">http://www.lua.org/</A>
+<H1>DIAGNOSTICS</H1>
+Error messages should be self explanatory.
+<H1>AUTHORS</H1>
+L. H. de Figueiredo,
+R. Ierusalimschy and
+W. Celes
+(<A HREF="mailto:lua-NO-SPAM-THANKS@tecgraf.puc-rio.br">lua AT tecgraf.puc-rio.br</A>)
+<!-- EOF -->
+</BODY>
+</HTML>
