@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.235 2003/04/07 14:36:08 roberto Exp roberto $
+** $Id: lapi.c,v 1.236 2003/04/28 19:58:06 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -485,7 +485,7 @@ LUA_API void lua_gettable (lua_State *L, int idx) {
   StkId t;
   lua_lock(L);
   t = luaA_index(L, idx);
-  setobj2s(L->top - 1, luaV_gettable(L, t, L->top - 1, 0));
+  luaV_gettable(L, t, L->top - 1, L->top - 1);
   lua_unlock(L);
 }
 

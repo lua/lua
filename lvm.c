@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.283 2003/03/31 13:00:25 roberto Exp roberto $
+** $Id: lvm.c,v 1.284 2003/04/03 13:35:34 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -96,14 +96,17 @@ static void traceexec (lua_State *L) {
 
 
 static void callTMres (lua_State *L, const TObject *f,
-                       const TObject *p1, const TObject *p2) {
+                       const TObject *p1, const TObject *p2, StkId res) {
+  ptrdiff_t result = savestack(L, res);
   setobj2s(L->top, f);  /* push function */
   setobj2s(L->top+1, p1);  /* 1st argument */
   setobj2s(L->top+2, p2);  /* 2nd argument */
   luaD_checkstack(L, 3);  /* cannot check before (could invalidate p1, p2) */
   L->top += 3;
   luaD_call(L, L->top - 3, 1);
-  L->top--;  /* result will be in L->top */
+  res = restorestack(L, result);
+  L->top--;
+  setobjs2s(res, L->top);
 }
 
 
@@ -120,56 +123,36 @@ static void callTM (lua_State *L, const TObject *f,
 }
 
 
-static const TObject *luaV_index (lua_State *L, const TObject *t,
-                                  TObject *key, int loop) {
-  const TObject *tm = fasttm(L, hvalue(t)->metatable, TM_INDEX);
-  if (tm == NULL) return &luaO_nilobject;  /* no TM */
-  if (ttisfunction(tm)) {
-    callTMres(L, tm, t, key);
-    return L->top;
+void luaV_gettable (lua_State *L, const TObject *t, TObject *key, StkId val) {
+  int loop;
+  for (loop = 0; loop < MAXTAGLOOP; loop++) {
+    const TObject *tm;
+    if (ttistable(t)) {  /* `t' is a table? */
+      Table *h = hvalue(t);
+      const TObject *res = luaH_get(h, key); /* do a primitive set */
+      if (!ttisnil(res) ||  /* result is no nil? */
+          (tm = fasttm(L, h->metatable, TM_INDEX)) == NULL) { /* or no TM? */
+        setobj2s(val, res);
+        return;
+      }
+      /* else will try the tag method */
+    }
+    else if (ttisnil(tm = luaT_gettmbyobj(L, t, TM_INDEX)))
+      luaG_typeerror(L, t, "index");
+    if (ttisfunction(tm)) {
+      callTMres(L, tm, t, key, val);
+      return;
+    }
+    t = tm;  /* else repeat with `tm' */ 
   }
-  else return luaV_gettable(L, tm, key, loop);
-}
-
-static const TObject *luaV_getnotable (lua_State *L, const TObject *t,
-                                       TObject *key, int loop) {
-  const TObject *tm = luaT_gettmbyobj(L, t, TM_INDEX);
-  if (ttisnil(tm))
-    luaG_typeerror(L, t, "index");
-  if (ttisfunction(tm)) {
-    callTMres(L, tm, t, key);
-    return L->top;
-  }
-  else return luaV_gettable(L, tm, key, loop);
-}
-
-
-/*
-** Function to index a table.
-** Receives the table at `t' and the key at `key'.
-** leaves the result at `res'.
-*/
-const TObject *luaV_gettable (lua_State *L, const TObject *t, TObject *key,
-                              int loop) {
-  if (loop > MAXTAGLOOP)
-    luaG_runerror(L, "loop in gettable");
-  if (ttistable(t)) {  /* `t' is a table? */
-    Table *h = hvalue(t);
-    const TObject *v = luaH_get(h, key);  /* do a primitive get */
-    if (!ttisnil(v)) return v;
-    else return luaV_index(L, t, key, loop+1);
-  }
-  else return luaV_getnotable(L, t, key, loop+1);
+  luaG_runerror(L, "loop in gettable");
 }
 
 
-/*
-** Receives table at `t', key at `key' and value at `val'.
-*/
 void luaV_settable (lua_State *L, const TObject *t, TObject *key, StkId val) {
-  const TObject *tm;
-  int loop = 0;
-  do {
+  int loop;
+  for (loop = 0; loop < MAXTAGLOOP; loop++) {
+    const TObject *tm;
     if (ttistable(t)) {  /* `t' is a table? */
       Table *h = hvalue(t);
       TObject *oldval = luaH_set(L, h, key); /* do a primitive set */
@@ -187,21 +170,18 @@ void luaV_settable (lua_State *L, const TObject *t, TObject *key, StkId val) {
       return;
     }
     t = tm;  /* else repeat with `tm' */ 
-  } while (++loop <= MAXTAGLOOP);
+  }
   luaG_runerror(L, "loop in settable");
 }
 
 
 static int call_binTM (lua_State *L, const TObject *p1, const TObject *p2,
                        StkId res, TMS event) {
-  ptrdiff_t result = savestack(L, res);
   const TObject *tm = luaT_gettmbyobj(L, p1, event);  /* try first operand */
   if (ttisnil(tm))
     tm = luaT_gettmbyobj(L, p2, event);  /* try second operand */
   if (!ttisfunction(tm)) return 0;
-  callTMres(L, tm, p1, p2);
-  res = restorestack(L, result);  /* previous call may change stack */
-  setobjs2s(res, L->top);
+  callTMres(L, tm, p1, p2, res);
   return 1;
 }
 
@@ -228,7 +208,7 @@ static int call_orderTM (lua_State *L, const TObject *p1, const TObject *p2,
   tm2 = luaT_gettmbyobj(L, p2, event);
   if (!luaO_rawequalObj(tm1, tm2))  /* different metamethods? */
     return -1;
-  callTMres(L, tm1, p1, p2);
+  callTMres(L, tm1, p1, p2, L->top);
   return !l_isfalse(L->top);
 }
 
@@ -307,7 +287,7 @@ int luaV_equalval (lua_State *L, const TObject *t1, const TObject *t2) {
     default: return gcvalue(t1) == gcvalue(t2);
   }
   if (tm == NULL) return 0;  /* no TM? */
-  callTMres(L, tm, t1, t2);  /* call TM */
+  callTMres(L, tm, t1, t2, L->top);  /* call TM */
   return !l_isfalse(L->top);
 }
 
@@ -358,12 +338,9 @@ static void Arith (lua_State *L, StkId ra,
       case TM_DIV: setnvalue(ra, nvalue(b) / nvalue(c)); break;
       case TM_POW: {
         const TObject *f = luaH_getstr(hvalue(gt(L)), G(L)->tmname[TM_POW]);
-        ptrdiff_t res = savestack(L, ra);
         if (!ttisfunction(f))
           luaG_runerror(L, "`__pow' (`^' operator) is not a function");
-        callTMres(L, f, b, c);
-        ra = restorestack(L, res);  /* previous call may change stack */
-        setobjs2s(ra, L->top);
+        callTMres(L, f, b, c, ra);
         break;
       }
       default: lua_assert(0); break;
@@ -459,25 +436,12 @@ StkId luaV_execute (lua_State *L) {
       }
       case OP_GETGLOBAL: {
         TObject *rb = KBx(i);
-        const TObject *v;
         lua_assert(ttisstring(rb) && ttistable(&cl->g));
-        v = luaH_getstr(hvalue(&cl->g), tsvalue(rb));
-        if (!ttisnil(v)) { setobj2s(ra, v); }
-        else
-          setobj2s(XRA(i), luaV_index(L, &cl->g, rb, 0));
+        luaV_gettable(L, &cl->g, rb, ra);
         break;
       }
       case OP_GETTABLE: {
-        StkId rb = RB(i);
-        TObject *rc = RKC(i);
-        if (ttistable(rb)) {
-          const TObject *v = luaH_get(hvalue(rb), rc);
-          if (!ttisnil(v)) { setobj2s(ra, v); }
-          else
-            setobj2s(XRA(i), luaV_index(L, rb, rc, 0));
-        }
-        else
-          setobj2s(XRA(i), luaV_getnotable(L, rb, rc, 0));
+        luaV_gettable(L, RB(i), RKC(i), ra);
         break;
       }
       case OP_SETGLOBAL: {
@@ -503,17 +467,8 @@ StkId luaV_execute (lua_State *L) {
       }
       case OP_SELF: {
         StkId rb = RB(i);
-        TObject *rc = RKC(i);
-        runtime_check(L, ttisstring(rc));
         setobjs2s(ra+1, rb);
-        if (ttistable(rb)) {
-          const TObject *v = luaH_getstr(hvalue(rb), tsvalue(rc));
-          if (!ttisnil(v)) { setobj2s(ra, v); }
-          else
-            setobj2s(XRA(i), luaV_index(L, rb, rc, 0));
-        }
-        else
-          setobj2s(XRA(i), luaV_getnotable(L, rb, rc, 0));
+        luaV_gettable(L, rb, RKC(i), ra);
         break;
       }
       case OP_ADD: {
