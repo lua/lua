@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.35 2003/03/11 12:24:34 roberto Exp roberto $
+** $Id: liolib.c,v 2.36 2003/03/14 19:00:16 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -231,13 +231,9 @@ static FILE *getiofile (lua_State *L, const char *name) {
 
 
 static int g_iofile (lua_State *L, const char *name, const char *mode) {
-  if (lua_isnoneornil(L, 1)) {
-    lua_pushstring(L, name);
-    lua_rawget(L, lua_upvalueindex(1));
-    return 1;
-  }
-  else {
+  if (!lua_isnoneornil(L, 1)) {
     const char *filename = lua_tostring(L, 1);
+    lua_pushstring(L, name);
     if (filename) {
       FILE **pf = newfile(L);
       *pf = fopen(filename, mode);
@@ -250,11 +246,12 @@ static int g_iofile (lua_State *L, const char *name, const char *mode) {
       tofile(L, 1);  /* check that it's a valid file handle */
       lua_pushvalue(L, 1);
     }
-    lua_pushstring(L, name);
-    lua_pushvalue(L, -2);
     lua_rawset(L, lua_upvalueindex(1));
-    return 1;
   }
+  /* return current value */
+  lua_pushstring(L, name);
+  lua_rawget(L, lua_upvalueindex(1));
+  return 1;
 }
 
 
