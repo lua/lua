@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.41 1999/06/23 13:48:39 roberto Exp roberto $
+** $Id: liolib.c,v 1.42 1999/07/22 19:35:50 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -46,11 +46,11 @@
 #ifdef POPEN
 FILE *popen();
 int pclose();
-#define CLOSEFILE(f)    {if (pclose(f) == -1) fclose(f);}
+#define CLOSEFILE(f)    ((pclose(f) == -1) ? fclose(f) : 0)
 #else
 /* no support for popen */
 #define popen(x,y) NULL  /* that is, popen always fails */
-#define CLOSEFILE(f)    {fclose(f);}
+#define CLOSEFILE(f)    (fclose(f))
 #endif
 
 
@@ -120,18 +120,20 @@ static FILE *getfileparam (char *name, int *arg) {
 }
 
 
-static void closefile (FILE *f) {
-  if (f != stdin && f != stdout) {
+static int closefile (FILE *f) {
+  if (f == stdin || f == stdout)
+    return 1;
+  else {
     int tag = gettag();
-    CLOSEFILE(f);
     lua_pushusertag(f, tag);
     lua_settag(CLOSEDTAG(tag));
+    return (CLOSEFILE(f) == 0);
   }
 }
 
 
 static void io_close (void) {
-  closefile(getnonullfile(FIRSTARG));
+  pushresult(closefile(getnonullfile(FIRSTARG)));
 }
 
 
@@ -171,8 +173,10 @@ static void io_readfrom (void) {
   FILE *current;
   lua_Object f = lua_getparam(FIRSTARG);
   if (f == LUA_NOOBJECT) {
-    closefile(getfilebyname(FINPUT));
-    current = stdin;
+    if (closefile(getfilebyname(FINPUT)))
+      current = stdin;
+    else
+      current = NULL;  /* to signal error */
   }
   else if (lua_tag(f) == gettag())  /* deprecated option */
     current = lua_getuserdata(f);
@@ -188,8 +192,10 @@ static void io_writeto (void) {
   FILE *current;
   lua_Object f = lua_getparam(FIRSTARG);
   if (f == LUA_NOOBJECT) {
-    closefile(getfilebyname(FOUTPUT));
-    current = stdout;
+    if (closefile(getfilebyname(FOUTPUT)))
+      current = stdout;
+    else
+      current = NULL;  /* to signal error */
   }
   else if (lua_tag(f) == gettag())  /* deprecated option */
     current = lua_getuserdata(f);
