@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.36 1999/02/26 15:48:55 roberto Exp roberto $
+** $Id: ldo.c,v 1.37 1999/03/04 21:17:26 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -367,7 +367,7 @@ int lua_dofile (char *filename) {
   if (f == NULL)
     return 2;
   if (filename == NULL)
-    strcpy(name, "@stdin");
+    strcpy(name, "@(stdin)");
   else
     sprintf(name, "@%.*s", MAXFILENAME, filename);
   c = fgetc(f);

@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.31 1999/02/22 14:17:24 roberto Exp roberto $
+** $Id: liolib.c,v 1.32 1999/03/04 21:17:26 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -488,7 +488,9 @@ static void errorfb (void) {
       default: {
         if (linedefined == 0)
           sprintf(buff+strlen(buff), "main of %.50s", buffchunk);
-        else if (linedefined > 0)
+        else if (linedefined < 0)
+          sprintf(buff+strlen(buff), "%.50s", buffchunk);
+        else
           sprintf(buff+strlen(buff), "function <%d:%.50s>",
                   linedefined, buffchunk);
         chunkname = NULL;
@@ -497,7 +499,7 @@ static void errorfb (void) {
     if ((currentline = lua_currentline(func)) > 0)
       sprintf(buff+strlen(buff), " at line %d", currentline);
     if (chunkname)
-      sprintf(buff+strlen(buff), " [in %.50s]", buffchunk);
+      sprintf(buff+strlen(buff), " [%.50s]", buffchunk);
     strcat(buff, "\n");
   }
   func = lua_rawgetglobal("_ALERT");
