@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.29 1999/10/14 19:13:31 roberto Exp roberto $
+** $Id: lgc.c,v 1.30 1999/11/04 17:22:26 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -8,6 +8,7 @@
 #include "ldo.h"
 #include "lfunc.h"
 #include "lgc.h"
+#include "lmem.h"
 #include "lobject.h"
 #include "lref.h"
 #include "lstate.h"
@@ -83,9 +84,10 @@ static void travstack (void) {
 
 static void travlock (void) {
   int i;
-  for (i=0; i<L->refSize; i++)
-    if (L->refArray[i].status == LOCK)
+  for (i=0; i<L->refSize; i++) {
+    if (L->refArray[i].st == LOCK)
       markobject(&L->refArray[i].o);
+  }
 }
 
 
@@ -254,6 +256,10 @@ long lua_collectgarbage (long limit) {
   luaD_gcIM(&luaO_nilobject);  /* GC tag method for nil (signal end of GC) */
   recovered = recovered - L->nblocks;
   L->GCthreshold = (limit == 0) ? 2*L->nblocks : L->nblocks+limit;
+  if (L->Mbuffsize > L->Mbuffnext*4) {  /* is buffer too big? */
+    L->Mbuffsize /= 2;  /* still larger than Mbuffnext*2 */
+    luaM_reallocvector(L->Mbuffer, L->Mbuffsize, char);
+  }
   return recovered;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lbuffer.c,v 1.8 1999/02/25 19:20:40 roberto Exp roberto $
+** $Id: lbuffer.c,v 1.9 1999/02/26 15:48:55 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -24,9 +24,8 @@
 
 static void Openspace (int size) {
   lua_State *l = L;  /* to optimize */
-  size += EXTRABUFF;
-  l->Mbuffsize = l->Mbuffnext+size;
-  luaM_growvector(l->Mbuffer, l->Mbuffnext, size, char, arrEM, MAX_INT);
+  l->Mbuffsize = (l->Mbuffnext+size+EXTRABUFF)*2;
+  luaM_reallocvector(l->Mbuffer, l->Mbuffsize, char);
 }
 
 
