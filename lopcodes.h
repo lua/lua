@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.6 1997/10/01 20:05:34 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.7 1997/10/06 14:51:11 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -9,9 +9,9 @@
 
 
 /*
-** NOTICE: variants of the same opcode (like PUSH0, PUSHBYTE, PUSHWORD) must
-** be consecutive: First, those with built-in parameters, then with byte
-** parameter and last with word parameter.
+** NOTICE: variants of the same opcode must be consecutive: First, those
+** with byte parameter, then with built-in parameters, and last with
+** word parameter.
 */
 
 
@@ -20,15 +20,16 @@ typedef enum {
 -----------------------------------------------------------------------------*/
 ENDCODE,/*	-	-		-  */
 
-PUSHNIL,/*	-	-		nil  */
-PUSHNILS,/*	b	-		nil_1...nil_b  */
+PUSHNIL,/*	b	-		nil_0...nil_b  */
+PUSHNIL0,/*	-	-		nil  */
 
-PUSH0,/*	-	-		0.0  */
-PUSH1,/*	-	-		1.0  */
-PUSH2,/*	-	-		2.0  */
-PUSHBYTE,/*	b	-		(float)b  */
-PUSHWORD,/*	w	-		(float)w  */
+PUSHNUMBER,/*	b	-		(float)b  */
+PUSHNUMBER0,/*	-	-		0.0  */
+PUSHNUMBER1,/*	-	-		1.0  */
+PUSHNUMBER2,/*	-	-		2.0  */
+PUSHNUMBERW,/*	w	-		(float)w  */
 
+PUSHCONSTANT,/*	b	-		CNST[b] */
 PUSHCONSTANT0,/*-	-		CNST[0] */
 PUSHCONSTANT1,/*-	-		CNST[1] */
 PUSHCONSTANT2,/*-	-		CNST[2] */
@@ -37,15 +38,13 @@ PUSHCONSTANT4,/*-	-		CNST[4] */
 PUSHCONSTANT5,/*-	-		CNST[5] */
 PUSHCONSTANT6,/*-	-		CNST[6] */
 PUSHCONSTANT7,/*-	-		CNST[7] */
-PUSHCONSTANT8,/*-	-		CNST[8] */
-PUSHCONSTANT9,/*-	-		CNST[9] */
-PUSHCONSTANTB,/*b	-		CNST[b] */
-PUSHCONSTANT,/* w	-		CNST[w] */
+PUSHCONSTANTW,/*w	-		CNST[w] */
 
+PUSHUPVALUE,/*	b	-		Closure[b] */
 PUSHUPVALUE0,/*	-	-		Closure[0] */
 PUSHUPVALUE1,/*	-	-		Closure[1] */
-PUSHUPVALUE,/*	b	-		Closure[b] */
 
+PUSHLOCAL,/*	b	-		LOC[b]  */
 PUSHLOCAL0,/*	-	-		LOC[0]  */
 PUSHLOCAL1,/*	-	-		LOC[1]  */
 PUSHLOCAL2,/*	-	-		LOC[2]  */
@@ -54,10 +53,8 @@ PUSHLOCAL4,/*	-	-		LOC[4]  */
 PUSHLOCAL5,/*	-	-		LOC[5]  */
 PUSHLOCAL6,/*	-	-		LOC[6]  */
 PUSHLOCAL7,/*	-	-		LOC[7]  */
-PUSHLOCAL8,/*	-	-		LOC[8]  */
-PUSHLOCAL9,/*	-	-		LOC[9]  */
-PUSHLOCAL,/*	b	-		LOC[b]  */
 
+GETGLOBAL,/*	b 	-		VAR[CNST[b]]  */
 GETGLOBAL0,/*	-	-		VAR[CNST[0]]  */
 GETGLOBAL1,/*	-	-		VAR[CNST[1]]  */
 GETGLOBAL2,/*	-	-		VAR[CNST[2]]  */
@@ -66,19 +63,19 @@ GETGLOBAL4,/*	-	-		VAR[CNST[4]]  */
 GETGLOBAL5,/*	-	-		VAR[CNST[5]]  */
 GETGLOBAL6,/*	-	-		VAR[CNST[6]]  */
 GETGLOBAL7,/*	-	-		VAR[CNST[7]]  */
-GETGLOBAL8,/*	-	-		VAR[CNST[8]]  */
-GETGLOBAL9,/*	-	-		VAR[CNST[9]]  */
-GETGLOBALB,/*	b 	-		VAR[CNST[b]]  */
-GETGLOBAL,/*	w	-		VAR[CNST[w]]  */
+GETGLOBALW,/*	w	-		VAR[CNST[w]]  */
 
 GETTABLE,/*	-	i t		t[i]  */
 
-PUSHSELFB,/*	b	t		t t[CNST[b]]  */
-PUSHSELF,/*	w	t		t t[CNST[w]]  */
+PUSHSELF,/*	b	t		t t[CNST[b]]  */
+PUSHSELFW,/*	w	t		t t[CNST[w]]  */
 
-CREATEARRAYB,/*	b	-		newarray(size = b)  */
-CREATEARRAY,/*	w	-		newarray(size = w)  */
+CREATEARRAY,/*	b	-		newarray(size = b)  */
+CREATEARRAY0,/*	-	-		newarray(size = 0)  */
+CREATEARRAY1,/*	-	-		newarray(size = 1)  */
+CREATEARRAYW,/*	w	-		newarray(size = w)  */
 
+SETLOCAL,/*	b	x		-		LOC[b]=x  */
 SETLOCAL0,/*	-	x		-		LOC[0]=x  */
 SETLOCAL1,/*	-	x		-		LOC[1]=x  */
 SETLOCAL2,/*	-	x		-		LOC[2]=x  */
@@ -87,19 +84,28 @@ SETLOCAL4,/*	-	x		-		LOC[4]=x  */
 SETLOCAL5,/*	-	x		-		LOC[5]=x  */
 SETLOCAL6,/*	-	x		-		LOC[6]=x  */
 SETLOCAL7,/*	-	x		-		LOC[7]=x  */
-SETLOCAL8,/*	-	x		-		LOC[8]=x  */
-SETLOCAL9,/*	-	x		-		LOC[9]=x  */
-SETLOCAL,/*	b	x		-		LOC[b]=x  */
 
-SETGLOBALB,/*	b	x		-		VAR[CNST[b]]=x  */
-SETGLOBAL,/*	w	x		-		VAR[CNST[w]]=x  */
+SETGLOBAL,/*	b	x		-		VAR[CNST[b]]=x  */
+SETGLOBAL0,/*	-	x		-		VAR[CNST[0]]=x  */
+SETGLOBAL1,/*	-	x		-		VAR[CNST[1]]=x  */
+SETGLOBAL2,/*	-	x		-		VAR[CNST[2]]=x  */
+SETGLOBAL3,/*	-	x		-		VAR[CNST[3]]=x  */
+SETGLOBAL4,/*	-	x		-		VAR[CNST[4]]=x  */
+SETGLOBAL5,/*	-	x		-		VAR[CNST[5]]=x  */
+SETGLOBAL6,/*	-	x		-		VAR[CNST[6]]=x  */
+SETGLOBAL7,/*	-	x		-		VAR[CNST[7]]=x  */
+SETGLOBALW,/*	w	x		-		VAR[CNST[w]]=x  */
 
 SETTABLE0,/*	-	v i t		-		t[i]=v  */
+
 SETTABLE,/*	b	v a_b...a_1 i t	a_b...a_1 i t	t[i]=v  */
 
-SETLIST0,/*	b	v_b...v_1 t	-		t[i]=v_i  */
 SETLIST,/*	b c	v_b...v_1 t	-		t[i+c*FPF]=v_i  */
-SETMAP,/*	b	v_b k_b ...v_1 k_1 t	t	t[k_i]=v_i  */
+SETLIST0,/*	b	v_b...v_1 t	-		t[i]=v_i  */
+SETLISTW,/*	w c	v_b...v_1 t	-		t[i+c*FPF]=v_i  */
+
+SETMAP,/*	b	v_b k_b ...v_0 k_0 t	t	t[k_i]=v_i  */
+SETMAP0,/*	-	v_0 k_0 t		t	t[k_0]=v_0  */
 
 EQOP,/*		-	y x		(x==y)? 1 : nil  */
 NEQOP,/*	-	y x		(x~=y)? 1 : nil  */
@@ -117,25 +123,34 @@ MINUSOP,/*	-	x		-x  */
 NOTOP,/*	-	x		(x==nil)? 1 : nil  */
 
 ONTJMP,/*	b	x		(x!=nil)? x : -	(x!=nil)? PC+=b  */
+ONTJMPW,/*	w	x		(x!=nil)? x : -	(x!=nil)? PC+=w  */
 ONFJMP,/*	b	x		(x==nil)? x : -	(x==nil)? PC+=b  */
-JMPB,/*		b	-		-		PC+=b  */
-JMP,/*		w	-		-		PC+=w  */
-IFFJMPB,/*	b	x		-		(x==nil)? PC+=b  */
-IFFJMP,/*	w	x		-		(x==nil)? PC+=w  */
-IFTUPJMPB,/*	b	x		-		(x!=nil)? PC-=b  */
-IFTUPJMP,/*	w	x		-		(x!=nil)? PC-=w  */
-IFFUPJMPB,/*	b	x		-		(x==nil)? PC-=b  */
-IFFUPJMP,/*	w	x		-		(x==nil)? PC-=w  */
+ONFJMPW,/*	w	x		(x==nil)? x : -	(x==nil)? PC+=w  */
+JMP,/*		b	-		-		PC+=b  */
+JMPW,/*		w	-		-		PC+=w  */
+IFFJMP,/*	b	x		-		(x==nil)? PC+=b  */
+IFFJMPW,/*	w	x		-		(x==nil)? PC+=w  */
+IFTUPJMP,/*	b	x		-		(x!=nil)? PC-=b  */
+IFTUPJMPW,/*	w	x		-		(x!=nil)? PC-=w  */
+IFFUPJMP,/*	b	x		-		(x==nil)? PC-=b  */
+IFFUPJMPW,/*	w	x		-		(x==nil)? PC-=w  */
 
-CLOSUREB,/*	b	v_1...v_n	c(CNST[b]) */
-CLOSURE,/*	w	v_1...v_n	c(CNST[w]) */
+CLOSURE,/*	b	v_1...v_n	c(CNST[b]) */
+CLOSUREW,/*	w	v_1...v_n	c(CNST[w]) */
 
-CALLFUNC,/*	b c	v_b...v_1 f	r_c...r_1	f(v1,...,v_b)  */
+CALLFUNC,/*	b c	v_c...v_1 f	r_b...r_1	f(v1,...,v_c)  */
+CALLFUNC0,/*	b	v_b...v_1 f	-		f(v1,...,v_b)  */
+CALLFUNC1,/*	b	v_b...v_1 f	r_1		f(v1,...,v_b)  */
+
 RETCODE,/*	b	-		-  */
-SETLINE,/*	w	-		-		LINE=w  */
-POP1,/*		-	-		-		TOP-=1  */
-POP2,/*		-	-		-		TOP-=2  */
-POPS,/*		b	-		-		TOP-=b  */
+
+SETLINE,/*	b	-		-		LINE=b  */
+SETLINEW,/*	w	-		-		LINE=w  */
+
+POP,/*		b	-		-		TOP-=(b+1)  */
+POP0,/*		-	-		-		TOP-=1  */
+POP1,/*		-	-		-		TOP-=2  */
+
 ARGS,/*		b	-		-		TOP=BASE+b  */
 VARARGS/*	b	v_x...v_1	{v_1...v_x;n=x}	TOP=BASE+b+1  */
 } OpCode;
