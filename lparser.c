@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.10 1999/01/29 13:48:58 roberto Exp roberto $
+** $Id: lparser.c,v 1.11 1999/02/01 18:52:05 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -847,7 +847,10 @@ static void ifpart (LexState *ls, int isexp, int line) {
   next(ls);  /* skip IF or ELSEIF */
   c = cond(ls);
   check(ls, THEN);
-  if (isexp) exp1(ls);
+  if (isexp) {
+    exp1(ls);
+    deltastack(ls, -1); /* only then xor else part will stay on the stack */
+  }
   else block(ls);
   e = SaveWord(ls);
   if (ls->token == ELSEIF)
