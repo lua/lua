@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.172 2002/03/21 20:32:22 roberto Exp roberto $
+** $Id: lparser.c,v 1.173 2002/03/25 17:47:14 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -342,6 +342,7 @@ static void leaveblock (FuncState *fs) {
     luaK_codeABC(fs, OP_CLOSE, bl->nactloc, 0, 0);
   lua_assert(bl->nactloc == fs->nactloc);
   lua_assert(bl->nactvar == fs->nactvar);
+  fs->freereg = fs->nactloc;  /* free registers */
   fs->defaultglob = bl->defaultglob;
   luaK_patchtohere(fs, bl->breaklist);
 }
