@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.10 2004/09/15 20:39:42 roberto Exp roberto $
+** $Id: ldo.c,v 2.11 2004/09/22 12:37:52 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -70,7 +70,7 @@ static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
 void luaD_throw (lua_State *L, int errcode) {
   if (L->errorJmp) {
     L->errorJmp->status = errcode;
-    L_THROW(L->errorJmp);
+    L_THROW(L, L->errorJmp);
   }
   else {
     if (G(L)->panic) G(L)->panic(L);
@@ -84,7 +84,7 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
   lj.status = 0;
   lj.previous = L->errorJmp;  /* chain new error handler */
   L->errorJmp = &lj;
-  L_TRY(&lj,
+  L_TRY(L, &lj,
     (*f)(L, ud);
   );
   L->errorJmp = lj.previous;  /* restore old error handler */

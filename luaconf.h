@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.17 2004/11/24 18:55:56 roberto Exp roberto $
+** $Id: luaconf.h,v 1.18 2004/12/01 15:50:18 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -234,14 +234,14 @@
 #ifndef __cplusplus
 /* default handling with long jumps */
 #include <setjmp.h>
-#define L_THROW(c)	longjmp((c)->b, 1)
-#define L_TRY(c,a)	if (setjmp((c)->b) == 0) { a }
+#define L_THROW(L,c)	longjmp((c)->b, 1)
+#define L_TRY(L,c,a)	if (setjmp((c)->b) == 0) { a }
 #define l_jmpbuf	jmp_buf
 
 #else
 /* C++ exceptions */
-#define L_THROW(c)	throw(c)
-#define L_TRY(c,a)	try { a } catch(...) \
+#define L_THROW(L,c)	throw(c)
+#define L_TRY(L,c,a)	try { a } catch(...) \
 	{ if ((c)->status == 0) (c)->status = -1; }
 #define l_jmpbuf	int  /* dummy variable */
 #endif
