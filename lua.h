@@ -2,7 +2,7 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lua.h,v 3.10 1994/11/17 21:27:30 roberto Exp roberto $
+** $Id: lua.h,v 3.11 1994/11/18 19:46:21 roberto Stab roberto $
 */
 
 
@@ -51,6 +51,7 @@ void          *lua_getuserdata  	(lua_Object object);
 int 	       lua_pushnil 		(void);
 int            lua_pushnumber 		(float n);
 int            lua_pushstring 		(char *s);
+int            lua_pushliteral 		(char *s);
 int            lua_pushcfunction	(lua_CFunction fn);
 int            lua_pushusertag     	(void *u, int tag);
 int            lua_pushobject       	(lua_Object object);
@@ -70,14 +71,11 @@ void	       lua_unlock		(int ref);
 lua_Object     lua_createtable		(int initSize);
 
 
-/* for lua 1.1 */
+/* some useful macros */
 
 #define lua_lockobject(o)  (lua_pushobject(o), lua_lock())
 
 #define lua_register(n,f)	(lua_pushcfunction(f), lua_storeglobal(n))
-
-#define lua_getindexed(o,n) (lua_pushobject(o), lua_pushnumber(n), lua_getsubscript())
-#define lua_getfield(o,f)   (lua_pushobject(o), lua_pushstring(f), lua_getsubscript())
 
 #define lua_pushuserdata(u)     lua_pushusertag(u, LUA_T_USERDATA)
 
@@ -88,5 +86,11 @@ lua_Object     lua_createtable		(int initSize);
 #define lua_isfunction(_)       (lua_type(_)==LUA_T_FUNCTION)
 #define lua_iscfunction(_)      (lua_type(_)==LUA_T_CFUNCTION)
 #define lua_isuserdata(_)       (lua_type(_)>=LUA_T_USERDATA)
+
+
+/* for lua 1.1 compatibility. Avoid using these macros */
+
+#define lua_getindexed(o,n) (lua_pushobject(o), lua_pushnumber(n), lua_getsubscript())
+#define lua_getfield(o,f)   (lua_pushobject(o), lua_pushstring(f), lua_getsubscript())
 
 #endif

@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.23 1994/11/30 21:20:37 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.24 1994/12/06 14:27:18 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -638,6 +638,19 @@ int lua_pushstring (char *s)
 {
  lua_checkstack(top-stack+1);
  tsvalue(top) = lua_createstring(s);
+ tag(top) = LUA_T_STRING;
+ top++;
+ return 0;
+}
+
+/*
+** Push an object (tag=string) on stack and register it on the constant table.
+   Return 0 on success or 1 on error.
+*/
+int lua_pushliteral (char *s)
+{
+ lua_checkstack(top-stack+1);
+ tsvalue(top) = lua_constant[luaI_findconstant(lua_constcreate(s))];
  tag(top) = LUA_T_STRING;
  top++;
  return 0;

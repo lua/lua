@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.12 1994/11/21 21:41:09 roberto Exp $";
+char *rcs_inout="$Id: inout.c,v 2.13 1994/11/23 14:32:00 roberto Stab $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -240,25 +240,25 @@ void luaI_type (void)
   switch (lua_type(o))
   {
     case LUA_T_NIL :
-      lua_pushstring("nil");
+      lua_pushliteral("nil");
       break;
     case LUA_T_NUMBER :
-      lua_pushstring("number");
+      lua_pushliteral("number");
       break;
     case LUA_T_STRING :
-      lua_pushstring("string");
+      lua_pushliteral("string");
       break;
     case LUA_T_ARRAY :
-      lua_pushstring("table");
+      lua_pushliteral("table");
       break;
     case LUA_T_FUNCTION :
-      lua_pushstring("function");
+      lua_pushliteral("function");
       break;
     case LUA_T_CFUNCTION :
-      lua_pushstring("cfunction");
+      lua_pushliteral("cfunction");
       break;
     default :
-      lua_pushstring("userdata");
+      lua_pushliteral("userdata");
       break;
   }
 }
