@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.6 2004/04/30 20:13:38 roberto Exp roberto $
+** $Id: loadlib.c,v 1.7 2004/10/07 17:27:20 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 *
@@ -33,11 +33,10 @@
 #include "lualib.h"
 
 
-#undef LOADLIB
+static void registerlib (lua_State *L, const void *lib);
 
 
-#ifdef USE_DLOPEN
-#define LOADLIB
+#if defined(USE_DLOPEN)
 /*
 * This is an implementation of loadlib based on the dlfcn interface.
 * The dlfcn interface is available in Linux, SunOS, Solaris, IRIX, FreeBSD,
@@ -46,6 +45,8 @@
 */
 
 #include <dlfcn.h>
+
+#define freelib		dlclose
 
 static int loadlib(lua_State *L)
 {
@@ -57,8 +58,8 @@ static int loadlib(lua_State *L)
   lua_CFunction f=(lua_CFunction) dlsym(lib,init);
   if (f!=NULL)
   {
-   lua_pushlightuserdata(L,lib);
-   lua_pushcclosure(L,f,1);
+   registerlib(L, lib);
+   lua_pushcfunction(L,f);
    return 1;
   }
  }
@@ -70,29 +71,16 @@ static int loadlib(lua_State *L)
  return 3;
 }
 
-#endif
 
 
-
-/*
-** In Windows, default is to use dll; otherwise, default is not to use dll
-*/
-#ifndef USE_DLL
-#ifdef _WIN32
-#define USE_DLL	1
-#else
-#define USE_DLL	0
-#endif
-#endif
-
-
-#if USE_DLL
-#define LOADLIB
+#elif defined(USE_DLL)
 /*
 * This is an implementation of loadlib for Windows using native functions.
 */
 
 #include <windows.h>
+
+#define freelib(lib)	FreeLibrary((HINSTANCE)lib)
 
 static void pusherror(lua_State *L)
 {
@@ -115,8 +103,8 @@ static int loadlib(lua_State *L)
   lua_CFunction f=(lua_CFunction) GetProcAddress(lib,init);
   if (f!=NULL)
   {
-   lua_pushlightuserdata(L,lib);
-   lua_pushcclosure(L,f,1);
+   registerlib(L, lib);
+   lua_pushcfunction(L,f);
    return 1;
   }
  }
@@ -127,19 +115,28 @@ static int loadlib(lua_State *L)
  return 3;
 }
 
-#endif
+
 
 /* Native Mac OS X / Darwin Implementation */
-#ifdef USE_DYLD
-#define LOADLIB
+#elif defined(USE_DYLD)
 
 #include <mach-o/dyld.h>
 
+
+/* Mach cannot unload images (?) */
+#define freelib(lib)	((void)lib)
+
+static void pusherror (lua_State *L)
+{
+ const char *err_str;
+ const char *err_file;
+ NSLinkEditErrors err;
+ int err_num;
+ NSLinkEditError(&err, &err_num, &err_file, &err_str);
+ lua_pushstring(L, err_str);
+}
+
 static int loadlib (lua_State *L) {
-  const char * err_str;
-  const char * err_file;
-  NSLinkEditErrors err;
-  int err_num;
   const char *path=luaL_checkstring(L,1);
   const char *init=luaL_checkstring(L,2);
   const struct mach_header *lib;
@@ -150,7 +147,6 @@ static int loadlib (lua_State *L) {
     lua_pushstring(L,"absent");
     return 3;
   }
-
   lib = NSAddImage(path, NSADDIMAGE_OPTION_RETURN_ON_ERROR);
   if(lib != NULL) {
     NSSymbol init_sym = NSLookupSymbolInImage(lib, init,
@@ -158,49 +154,70 @@ static int loadlib (lua_State *L) {
                               NSLOOKUPSYMBOLINIMAGE_OPTION_RETURN_ON_ERROR);
     if(init_sym != NULL) {
       lua_CFunction f = (lua_CFunction)NSAddressOfSymbol(init_sym);
-      lua_pushlightuserdata(L,(void *)lib);
-      lua_pushcclosure(L,f,1);
+      registerlib(L, lib);
+      lua_pushcfunction(L,f);
       return 1;
     }
   }
   /* else an error ocurred */
-  NSLinkEditError(&err, &err_num, &err_file, &err_str);
   lua_pushnil(L);
-  lua_pushstring(L, err_str);
+  pusherror(L);
   lua_pushstring(L, (lib != NULL) ? "init" : "open");
   /* Can't unload image */
   return 3;
 }
 
-#endif
 
 
-
-#ifndef LOADLIB
+#else
 /* Fallback for other systems */
 
-/*
-** Those systems support dlopen, so they should have defined USE_DLOPEN.
-** The default (no)implementation gives them a special error message.
-*/
-#if defined(linux) || defined(sun) || defined(sgi) || defined(BSD) || defined(_WIN32)
-#define LOADLIB	"`loadlib' not installed (check your Lua configuration)"
-#else
-#define LOADLIB	"`loadlib' not supported"
-#endif
 
+#define freelib(lib)	((void)lib)
 
 static int loadlib(lua_State *L)
 {
+ registerlib(L, NULL);  /* to avoid warnings */
  lua_pushnil(L);
- lua_pushliteral(L,LOADLIB);
+ lua_pushliteral(L,"`loadlib' not supported");
  lua_pushliteral(L,"absent");
  return 3;
 }
+
 #endif
+
+
+/*
+** common code for all implementations: put a library into the registry
+** so that, when Lua closes its state, the library's __gc metamethod
+** will be called to unload the library.
+*/
+static void registerlib (lua_State *L, const void *lib)
+{
+ const void **plib = (const void **)lua_newuserdata(L, sizeof(const void *));
+ *plib = lib;
+  luaL_getmetatable(L, "_LOADLIB");
+  lua_setmetatable(L, -2);
+  lua_pushboolean(L, 1);
+  lua_settable(L, LUA_REGISTRYINDEX);  /* registry[lib] = true */
+}
+
+/*
+** __gc tag method: calls library's `freelib' function with the lib
+** handle
+*/
+static int gctm (lua_State *L)
+{
+ void *lib = *(void **)luaL_checkudata(L, 1, "_LOADLIB");
+ freelib(lib);
+ return 0;
+}
 
 LUALIB_API int luaopen_loadlib (lua_State *L)
 {
+ luaL_newmetatable(L, "_LOADLIB");
+ lua_pushcfunction(L, gctm);
+ lua_setfield(L, -2, "__gc");
  lua_register(L,"loadlib",loadlib);
  return 0;
 }
@@ -222,9 +239,6 @@ LUALIB_API int luaopen_loadlib (lua_State *L)
 *
 * Macintosh, Windows
 * http://www.stat.umn.edu/~luke/xls/projects/dlbasics/dlbasics.html
-*
-* Mac OS X/Darwin
-* http://www.opendarwin.org/projects/dlcompat/
 *
 * GLIB has wrapper code for BeOS, OS2, Unix and Windows
 * http://cvs.gnome.org/lxr/source/glib/gmodule/
