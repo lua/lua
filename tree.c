@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.23 1997/03/31 14:02:58 roberto Exp roberto $";
+char *rcs_tree="$Id: tree.c,v 1.24 1997/03/31 14:17:09 roberto Exp roberto $";
 
 
 #include <string.h>
@@ -40,9 +40,22 @@ static unsigned long hash (char *buff, long size)
   return h;
 }
 
+
+static void luaI_inittree (void)
+{
+  int i;
+  for (i=0; i<NUM_HASHS; i++) {
+    string_root[i].size = 0;
+    string_root[i].nuse = 0;
+    string_root[i].hash = NULL;
+  }
+}
+
+
 static void initialize (void)
 {
   initialized = 1;
+  luaI_inittree();
   luaI_addReserved();
   luaI_initsymbol();
   luaI_initconstant();
@@ -60,8 +73,7 @@ static void grow (stringtable *tb)
   /* rehash */
   tb->nuse = 0;
   for (i=0; i<tb->size; i++)
-    if (tb->hash[i] != NULL && tb->hash[i] != &EMPTY)
-    {
+    if (tb->hash[i] != NULL && tb->hash[i] != &EMPTY) {
       int h = tb->hash[i]->hash%newsize;
       while (newhash[h])
         h = (h+1)%newsize;
