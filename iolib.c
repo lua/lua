@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.17 1994/12/13 15:55:41 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.17 1994/12/13 15:55:41 roberto Exp $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -29,7 +29,7 @@ static FILE *in=stdin, *out=stdout;
 static void io_readfrom (void)
 {
  lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT)			/* restore standart input */
+ if (o == NULL)			/* restore standart input */
  {
   if (in != stdin)
   {
@@ -74,7 +74,7 @@ static void io_readfrom (void)
 static void io_writeto (void)
 {
  lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT)			/* restore standart output */
+ if (o == NULL)			/* restore standart output */
  {
   if (out != stdout)
   {
@@ -120,7 +120,7 @@ static void io_writeto (void)
 static void io_appendto (void)
 {
  lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT)			/* restore standart output */
+ if (o == NULL)			/* restore standart output */
  {
   if (out != stdout)
   {
@@ -177,7 +177,7 @@ static void io_appendto (void)
 static void io_read (void)
 {
  lua_Object o = lua_getparam (1);
- if (!lua_isstring(o))	/* free format */
+ if (o == NULL || !lua_isstring(o))	/* free format */
  {
   int c;
   char s[256];
@@ -383,7 +383,8 @@ static char *buildformat (char *e, lua_Object o)
   m = m*10 + (*e++ - '0');
  if (*e == '.') e++;	/* skip point */
  while (isdigit(*e))
-  n = n*10 + (*e++ - '0');
+  if (n < 0) n = (*e++ - '0');
+  else       n = n*10 + (*e++ - '0');
 
  sprintf(f,"%%");
  if (j == '<' || j == '|') sprintf(strchr(f,0),"-");
@@ -442,12 +443,12 @@ static void io_write (void)
 {
  lua_Object o1 = lua_getparam (1);
  lua_Object o2 = lua_getparam (2);
- if (o1 == LUA_NOOBJECT)			/* new line */
+ if (o1 == NULL)			/* new line */
  {
   fprintf (out, "\n");
   lua_pushnumber(1);
  }
- else if (o2 == LUA_NOOBJECT)   		/* free format */
+ else if (o2 == NULL)   		/* free format */
  {
   int status=0;
   if (lua_isnumber(o1))
@@ -475,7 +476,7 @@ static void io_write (void)
 static void io_execute (void)
 {
  lua_Object o = lua_getparam (1);
- if (!lua_isstring (o))
+ if (o == NULL || !lua_isstring (o))
  {
   lua_error ("incorrect argument to function 'execute`");
   lua_pushnumber (0);
@@ -495,7 +496,7 @@ static void io_execute (void)
 static void io_remove  (void)
 {
  lua_Object o = lua_getparam (1);
- if (!lua_isstring (o))
+ if (o == NULL || !lua_isstring (o))
  {
   lua_error ("incorrect argument to function 'execute`");
   lua_pushnumber (0);
