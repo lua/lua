@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.14 2000/08/29 14:48:16 roberto Exp roberto $
+** $Id: llimits.h,v 1.15 2000/09/29 12:42:13 roberto Exp roberto $
 ** Limits, basic types, and some other "installation-dependent" definitions
 ** See Copyright Notice in lua.h
 */
@@ -40,6 +40,13 @@
 #endif
 
 typedef LUA_NUM_TYPE Number;
+
+/* function to convert a Number to a string */
+#define lua_number2str(s,n)	sprintf((s), "%.16g", (n))
+
+/* function to convert a string to a Number */
+#define lua_str2number(s,p)	strtod((s), (p))
+
 
 
 typedef unsigned long lint32;  /* unsigned int with at least 32 bits */
