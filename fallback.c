@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 2.5 1997/04/24 22:59:57 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 2.6 1997/06/09 17:28:14 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -238,7 +238,14 @@ void luaI_settagmethod (void)
 }
 
 
-static TObject errorim = {LUA_T_NIL, {NULL}};
+static void stderrorim (void)
+{
+  lua_Object s = lua_getparam(1);
+  if (lua_isstring(s))
+    fprintf(stderr, "lua: %s\n", lua_getstring(s));
+}
+
+static TObject errorim = {LUA_T_CFUNCTION, {stderrorim}};
 
 
 TObject *luaI_geterrorim (void)
