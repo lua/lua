@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.206 2003/02/18 16:02:56 roberto Exp roberto $
+** $Id: lparser.c,v 1.207 2003/02/28 17:19:47 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -961,7 +961,7 @@ static void cond (LexState *ls, expdesc *v) {
 static void whilestat (LexState *ls, int line) {
   /* whilestat -> WHILE cond DO block END */
   Instruction codeexp[MAXEXPWHILE + EXTRAEXP];
-  int lineexp = 0;
+  int lineexp;
   int i;
   int sizeexp;
   FuncState *fs = ls->fs;

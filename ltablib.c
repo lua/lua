@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.19 2003/01/27 13:46:16 roberto Exp roberto $
+** $Id: ltablib.c,v 1.20 2003/03/11 12:24:34 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -24,7 +24,7 @@ static int luaB_foreachi (lua_State *L) {
   luaL_checktype(L, 2, LUA_TFUNCTION);
   for (i=1; i<=n; i++) {
     lua_pushvalue(L, 2);  /* function */
-    lua_pushnumber(L, i);  /* 1st argument */
+    lua_pushnumber(L, (lua_Number)i);  /* 1st argument */
     lua_rawgeti(L, 1, i);  /* 2nd argument */
     lua_call(L, 2, 1);
     if (!lua_isnil(L, -1))
@@ -54,7 +54,7 @@ static int luaB_foreach (lua_State *L) {
 
 
 static int luaB_getn (lua_State *L) {
-  lua_pushnumber(L, aux_getn(L, 1));
+  lua_pushnumber(L, (lua_Number)aux_getn(L, 1));
   return 1;
 }
 

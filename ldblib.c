@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.78 2003/02/27 11:52:30 roberto Exp roberto $
+** $Id: ldblib.c,v 1.79 2003/03/11 12:24:34 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -27,7 +27,7 @@ static void settabss (lua_State *L, const char *i, const char *v) {
 
 static void settabsi (lua_State *L, const char *i, int v) {
   lua_pushstring(L, i);
-  lua_pushnumber(L, v);
+  lua_pushnumber(L, (lua_Number)v);
   lua_rawset(L, -3);
 }
 
@@ -143,7 +143,8 @@ static void hookf (lua_State *L, lua_Debug *ar) {
   lua_rawget(L, LUA_REGISTRYINDEX);
   if (lua_isfunction(L, -1)) {
     lua_pushstring(L, hooknames[(int)ar->event]);
-    if (ar->currentline >= 0) lua_pushnumber(L, ar->currentline);
+    if (ar->currentline >= 0)
+      lua_pushnumber(L, (lua_Number)ar->currentline);
     else lua_pushnil(L);
     lua_assert(lua_getinfo(L, "lS", ar));
     lua_call(L, 2, 0);
@@ -202,7 +203,7 @@ static int gethook (lua_State *L) {
     lua_rawget(L, LUA_REGISTRYINDEX);   /* get hook */
   }
   lua_pushstring(L, unmakemask(mask, buff));
-  lua_pushnumber(L, lua_gethookcount(L));
+  lua_pushnumber(L, (lua_Number)lua_gethookcount(L));
   return 3;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.128 2003/03/11 18:17:43 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.129 2003/03/19 21:14:34 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -66,7 +66,7 @@ static int luaB_tonumber (lua_State *L) {
     if (s1 != s2) {  /* at least one valid digit? */
       while (isspace((unsigned char)(*s2))) s2++;  /* skip trailing spaces */
       if (*s2 == '\0') {  /* no invalid trailing characters? */
-        lua_pushnumber(L, n);
+        lua_pushnumber(L, (lua_Number)n);
         return 1;
       }
     }
@@ -187,8 +187,8 @@ static int luaB_rawset (lua_State *L) {
 
 
 static int luaB_gcinfo (lua_State *L) {
-  lua_pushnumber(L, lua_getgccount(L));
-  lua_pushnumber(L, lua_getgcthreshold(L));
+  lua_pushnumber(L, (lua_Number)lua_getgccount(L));
+  lua_pushnumber(L, (lua_Number)lua_getgcthreshold(L));
   return 2;
 }
 

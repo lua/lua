@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.97 2003/03/18 18:48:31 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.98 2003/04/01 17:52:31 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -278,13 +278,13 @@ void luaL_setn (lua_State *L, int t, int n) {
   lua_rawget(L, t);
   if (checkint(L, 1) >= 0) {  /* is there a numeric field `n'? */
     lua_pushliteral(L, "n");  /* use it */
-    lua_pushnumber(L, n);
+    lua_pushnumber(L, (lua_Number)n);
     lua_rawset(L, t);
   }
   else {  /* use `sizes' */
     getsizes(L);
     lua_pushvalue(L, t);
-    lua_pushnumber(L, n);
+    lua_pushnumber(L, (lua_Number)n);
     lua_rawset(L, -3);  /* sizes[t] = n */
     lua_pop(L, 1);  /* remove `sizes' */
   }
@@ -438,7 +438,7 @@ LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
   if (ref >= 0) {
     lua_rawgeti(L, t, FREELIST_REF);
     lua_rawseti(L, t, ref);  /* t[ref] = t[FREELIST_REF] */
-    lua_pushnumber(L, ref);
+    lua_pushnumber(L, (lua_Number)ref);
     lua_rawseti(L, t, FREELIST_REF);  /* t[FREELIST_REF] = ref */
   }
 }

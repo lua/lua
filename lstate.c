@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.121 2003/02/28 19:45:15 roberto Exp roberto $
+** $Id: lstate.c,v 1.122 2003/03/18 12:50:04 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -100,7 +100,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   setnilvalue(defaultmeta(L));
   setnilvalue(registry(L));
   luaZ_initbuffer(L, &g->buff);
-  g->panic = &default_panic;
+  g->panic = default_panic;
   g->rootgc = NULL;
   g->rootudata = NULL;
   g->tmudata = NULL;

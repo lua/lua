@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.232 2003/02/27 12:33:07 roberto Exp roberto $
+** $Id: lapi.c,v 1.233 2003/03/14 18:59:21 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -681,7 +681,7 @@ LUA_API int lua_pcall (lua_State *L, int nargs, int nresults, int errfunc) {
   func = (errfunc == 0) ? 0 : savestack(L, luaA_index(L, errfunc));
   c.func = L->top - (nargs+1);  /* function to be called */
   c.nresults = nresults;
-  status = luaD_pcall(L, &f_call, &c, savestack(L, c.func), func);
+  status = luaD_pcall(L, f_call, &c, savestack(L, c.func), func);
   lua_unlock(L);
   return status;
 }
@@ -715,7 +715,7 @@ LUA_API int lua_cpcall (lua_State *L, lua_CFunction func, void *ud) {
   lua_lock(L);
   c.func = func;
   c.ud = ud;
-  status = luaD_pcall(L, &f_Ccall, &c, savestack(L, L->top), 0);
+  status = luaD_pcall(L, f_Ccall, &c, savestack(L, L->top), 0);
   lua_unlock(L);
   return status;
 }

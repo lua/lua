@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.115 2002/12/11 12:34:22 roberto Exp roberto $
+** $Id: lcode.c,v 1.116 2003/02/27 12:33:07 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -217,7 +217,7 @@ static int addk (FuncState *fs, TObject *k, TObject *v) {
     luaM_growvector(fs->L, f->k, fs->nk, f->sizek, TObject,
                     MAXARG_Bx, "constant table overflow");
     setobj2n(&f->k[fs->nk], v);
-    setnvalue(luaH_set(fs->L, fs->h, k), fs->nk);
+    setnvalue(luaH_set(fs->L, fs->h, k), cast(lua_Number, fs->nk));
     return fs->nk++;
   }
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.58 2003/02/11 15:32:31 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.59 2003/03/18 12:25:32 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -76,8 +76,8 @@ LUALIB_API int luaL_loadbuffer (lua_State *L, const char *buff, size_t sz,
 #define luaL_optstring(L,n,d)	(luaL_optlstring(L, (n), (d), NULL))
 #define luaL_checkint(L,n)	((int)luaL_checknumber(L, n))
 #define luaL_checklong(L,n)	((long)luaL_checknumber(L, n))
-#define luaL_optint(L,n,d)	((int)luaL_optnumber(L, n,d))
-#define luaL_optlong(L,n,d)	((long)luaL_optnumber(L, n,d))
+#define luaL_optint(L,n,d)	((int)luaL_optnumber(L, n,(lua_Number)(d)))
+#define luaL_optlong(L,n,d)	((long)luaL_optnumber(L, n,(lua_Number)(d)))
 
 
 /*

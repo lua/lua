@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.215 2003/02/28 15:42:08 roberto Exp roberto $
+** $Id: ldo.c,v 1.216 2003/02/28 19:45:15 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -196,7 +196,7 @@ static void adjust_varargs (lua_State *L, int nfixargs, StkId base) {
     setobj2n(luaH_setnum(L, htab, i+1), L->top - actual + i);
   /* store counter in field `n' */
   setsvalue(&nname, luaS_newliteral(L, "n"));
-  setnvalue(luaH_set(L, htab, &nname), actual);
+  setnvalue(luaH_set(L, htab, &nname), cast(lua_Number, actual));
   L->top -= actual;  /* remove extra elements from the stack */
   sethvalue(L->top, htab);
   incr_top(L);
@@ -251,10 +251,8 @@ StkId luaD_precall (lua_State *L, StkId func) {
     L->base = L->ci->base = restorestack(L, funcr) + 1;
     ci->top = L->top + LUA_MINSTACK;
     ci->state = CI_C;  /* a C function */
-    if (L->hookmask & LUA_MASKCALL) {
+    if (L->hookmask & LUA_MASKCALL)
       luaD_callhook(L, LUA_HOOKCALL, -1);
-      ci = L->ci;  /* previous call may reallocate `ci' */
-    }
     lua_unlock(L);
 #ifdef LUA_COMPATUPVALUES
     lua_pushupvalues(L);

@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.130 2003/03/20 20:26:33 roberto Exp roberto $
+** $Id: ltable.c,v 1.131 2003/03/24 14:18:42 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -154,7 +154,7 @@ int luaH_next (lua_State *L, Table *t, StkId key) {
   int i = luaH_index(L, t, key);  /* find original element */
   for (i++; i < t->sizearray; i++) {  /* try first array part */
     if (!ttisnil(&t->array[i])) {  /* a non-nil value? */
-      setnvalue(key, i+1);
+      setnvalue(key, cast(lua_Number, i+1));
       setobj2s(key+1, &t->array[i]);
       return 1;
     }
@@ -502,7 +502,7 @@ TObject *luaH_setnum (lua_State *L, Table *t, int key) {
     return cast(TObject *, p);
   else {
     TObject k;
-    setnvalue(&k, key);
+    setnvalue(&k, cast(lua_Number, key));
     return newkey(L, t, &k);
   }
 }

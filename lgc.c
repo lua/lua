@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.169 2003/02/11 10:46:24 roberto Exp roberto $
+** $Id: lgc.c,v 1.170 2003/03/18 12:50:04 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -158,7 +158,8 @@ static void traversetable (GCState *st, Table *h) {
     if (weakkey || weakvalue) {  /* is really weak? */
       GCObject **weaklist;
       h->marked &= ~(KEYWEAK | VALUEWEAK);  /* clear bits */
-      h->marked |= (weakkey << KEYWEAKBIT) | (weakvalue << VALUEWEAKBIT);
+      h->marked |= cast(lu_byte, (weakkey << KEYWEAKBIT) |
+                                 (weakvalue << VALUEWEAKBIT));
       weaklist = (weakkey && weakvalue) ? &st->wkv :
                               (weakkey) ? &st->wk :
                                           &st->wv;

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.282 2003/03/11 12:30:37 roberto Exp roberto $
+** $Id: lvm.c,v 1.283 2003/03/31 13:00:25 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -286,7 +286,7 @@ static int luaV_lessequal (lua_State *L, const TObject *l, const TObject *r) {
 
 
 int luaV_equalval (lua_State *L, const TObject *t1, const TObject *t2) {
-  const TObject *tm = NULL;
+  const TObject *tm;
   lua_assert(ttype(t1) == ttype(t2));
   switch (ttype(t1)) {
     case LUA_TNIL: return 1;

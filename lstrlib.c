@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.96 2003/03/14 18:59:53 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.97 2003/03/19 21:16:12 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -31,7 +31,7 @@ typedef long sint32;	/* a signed version for size_t */
 static int str_len (lua_State *L) {
   size_t l;
   luaL_checklstring(L, 1, &l);
-  lua_pushnumber(L, l);
+  lua_pushnumber(L, (lua_Number)l);
   return 1;
 }
 
@@ -48,7 +48,7 @@ static int str_sub (lua_State *L) {
   sint32 start = posrelat(luaL_checklong(L, 2), l);
   sint32 end = posrelat(luaL_optlong(L, 3, -1), l);
   if (start < 1) start = 1;
-  if (end > (sint32)l) end = l;
+  if (end > (sint32)l) end = (sint32)l;
   if (start <= end)
     lua_pushlstring(L, s+start-1, end-start+1);
   else lua_pushliteral(L, "");
@@ -452,7 +452,7 @@ static void push_onecapture (MatchState *ms, int i) {
   int l = ms->capture[i].len;
   if (l == CAP_UNFINISHED) luaL_error(ms->L, "unfinished capture");
   if (l == CAP_POSITION)
-    lua_pushnumber(ms->L, ms->capture[i].init - ms->src_init + 1);
+    lua_pushnumber(ms->L, (lua_Number)(ms->capture[i].init - ms->src_init + 1));
   else
     lua_pushlstring(ms->L, ms->capture[i].init, l);
 }
@@ -479,14 +479,14 @@ static int str_find (lua_State *L) {
   const char *p = luaL_checklstring(L, 2, &l2);
   sint32 init = posrelat(luaL_optlong(L, 3, 1), l1) - 1;
   if (init < 0) init = 0;
-  else if ((size_t)(init) > l1) init = l1;
+  else if ((size_t)(init) > l1) init = (sint32)l1;
   if (lua_toboolean(L, 4) ||  /* explicit request? */
       strpbrk(p, SPECIALS) == NULL) {  /* or no special characters? */
     /* do a plain search */
     const char *s2 = lmemfind(s+init, l1-init, p, l2);
     if (s2) {
-      lua_pushnumber(L, s2-s+1);
-      lua_pushnumber(L, s2-s+l2);
+      lua_pushnumber(L, (lua_Number)(s2-s+1));
+      lua_pushnumber(L, (lua_Number)(s2-s+l2));
       return 2;
     }
   }
@@ -501,8 +501,8 @@ static int str_find (lua_State *L) {
       const char *res;
       ms.level = 0;
       if ((res=match(&ms, s1, p)) != NULL) {
-        lua_pushnumber(L, s1-s+1);  /* start */
-        lua_pushnumber(L, res-s);   /* end */
+        lua_pushnumber(L, (lua_Number)(s1-s+1));  /* start */
+        lua_pushnumber(L, (lua_Number)(res-s));   /* end */
         return push_captures(&ms, NULL, 0) + 2;
       }
     } while (s1++<ms.src_end && !anchor);
@@ -529,7 +529,7 @@ static int gfind_aux (lua_State *L) {
     if ((e = match(&ms, src, p)) != NULL) {
       int newstart = e-s;
       if (e == src) newstart++;  /* empty match? go at least one position */
-      lua_pushnumber(L, newstart);
+      lua_pushnumber(L, (lua_Number)newstart);
       lua_replace(L, lua_upvalueindex(3));
       return push_captures(&ms, src, e);
     }
@@ -616,7 +616,7 @@ static int str_gsub (lua_State *L) {
   }
   luaL_addlstring(&b, src, ms.src_end-src);
   luaL_pushresult(&b);
-  lua_pushnumber(L, n);  /* number of substitutions */
+  lua_pushnumber(L, (lua_Number)n);  /* number of substitutions */
   return 2;
 }
 
