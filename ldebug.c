@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.146 2003/02/27 11:52:30 roberto Exp roberto $
+** $Id: ldebug.c,v 1.147 2003/02/27 12:32:30 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -158,7 +158,7 @@ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
 }
 
 
-static void funcinfo (lua_State *L, lua_Debug *ar, StkId func) {
+static void funcinfo (lua_Debug *ar, StkId func) {
   Closure *cl = clvalue(func);
   if (cl->c.isC) {
     ar->source = "=[C]";
@@ -203,7 +203,7 @@ static int getinfo (lua_State *L, const char *what, lua_Debug *ar,
   for (; *what; what++) {
     switch (*what) {
       case 'S': {
-        funcinfo(L, ar, f);
+        funcinfo(ar, f);
         break;
       }
       case 'l': {
