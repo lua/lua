@@ -1,7 +1,7 @@
 /*
 * zio.h
 * a generic input stream interface
-* $Id: zio.h,v 1.2 1997/06/18 20:30:52 roberto Exp roberto $
+* $Id: zio.h,v 1.3 1997/06/18 21:39:56 roberto Exp roberto $
 */
 
 #ifndef zio_h
@@ -12,12 +12,12 @@
 
 
 /* For Lua only */
-#define zFopen	luaz_Fopen
-#define zfopen	luaz_fopen
-#define zpopen	luaz_popen
-#define zsopen	luaz_sopen
-#define zmopen	luaz_mopen
-#define zread	luaz_read
+#define zFopen	luaZ_Fopen
+#define zfopen	luaZ_fopen
+#define zpopen	luaZ_popen
+#define zsopen	luaZ_sopen
+#define zmopen	luaZ_mopen
+#define zread	luaZ_read
 
 #define EOZ	(-1)			/* end of stream */
 
