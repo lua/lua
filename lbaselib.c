@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.127 2003/03/11 12:24:34 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.128 2003/03/11 18:17:43 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -132,7 +132,7 @@ static void getfunc (lua_State *L) {
 
 static int aux_getfenv (lua_State *L) {
   lua_getfenv(L, -1);
-  lua_pushliteral(L, "__globals");
+  lua_pushliteral(L, "__fenv");
   lua_rawget(L, -2);
   return !lua_isnil(L, -1);
 }
@@ -140,7 +140,7 @@ static int aux_getfenv (lua_State *L) {
 
 static int luaB_getfenv (lua_State *L) {
   getfunc(L);
-  if (!aux_getfenv(L))  /* __globals not defined? */
+  if (!aux_getfenv(L))  /* __fenv not defined? */
     lua_pop(L, 1);  /* remove it, to return real environment */
   return 1;
 }
@@ -149,15 +149,15 @@ static int luaB_getfenv (lua_State *L) {
 static int luaB_setfenv (lua_State *L) {
   luaL_checktype(L, 2, LUA_TTABLE);
   getfunc(L);
-  if (aux_getfenv(L))  /* __globals defined? */
-    luaL_error(L, "cannot change a protected global table");
+  if (aux_getfenv(L))  /* __fenv defined? */
+    luaL_error(L, "`setfenv' cannot change a protected environment");
   else
-    lua_pop(L, 2);  /* remove __globals and real environment table */
+    lua_pop(L, 2);  /* remove __fenv and real environment table */
   lua_pushvalue(L, 2);
   if (lua_isnumber(L, 1) && lua_tonumber(L, 1) == 0)
     lua_replace(L, LUA_GLOBALSINDEX);
   else if (lua_setfenv(L, -2) == 0)
-    luaL_error(L, "cannot change environment of given function");
+    luaL_error(L, "`setfenv' cannot change environment of given function");
   return 0;
 }
 
@@ -495,7 +495,8 @@ static int luaB_require (lua_State *L) {
                             lua_tostring(L, 1), getpath(L));
     }
     default: {
-      return luaL_error(L, "error loading package\n%s", lua_tostring(L, -1));
+      return luaL_error(L, "error loading package `%s' (%s)",
+                           lua_tostring(L, 1), lua_tostring(L, -1));
     }
   }
 }
