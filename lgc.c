@@ -1,10 +1,9 @@
 /*
-** $Id: lgc.c,v 1.115 2001/10/31 19:58:11 roberto Exp $
+** $Id: lgc.c,v 1.116 2001/11/06 21:41:53 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
 
-#define LUA_PRIVATE
 #include "lua.h"
 
 #include "ldebug.h"
@@ -352,7 +351,7 @@ static void collectstrings (lua_State *L, int all) {
 static void checkMbuffer (lua_State *L) {
   if (G(L)->Mbuffsize > MINBUFFER*2) {  /* is buffer too big? */
     size_t newsize = G(L)->Mbuffsize/2;  /* still larger than MINBUFFER */
-    luaM_reallocvector(L, G(L)->Mbuffer, G(L)->Mbuffsize, newsize, l_char);
+    luaM_reallocvector(L, G(L)->Mbuffer, G(L)->Mbuffsize, newsize, char);
     G(L)->Mbuffsize = newsize;
   }
 }

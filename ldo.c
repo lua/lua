@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.143 2001/10/17 21:12:57 roberto Exp $
+** $Id: ldo.c,v 1.144 2001/11/27 20:56:47 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define LUA_PRIVATE
 #include "lua.h"
 
 #include "ldebug.h"
@@ -58,7 +57,7 @@ void luaD_stackerror (lua_State *L) {
   else {
     L->stack_last += EXTRA_STACK;  /* to be used by error message */
     lua_assert(L->stack_last == L->stack+L->stacksize-1);
-    luaD_error(L, l_s("stack overflow"));
+    luaD_error(L, "stack overflow");
   }
 }
 
@@ -99,7 +98,7 @@ static void dohook (lua_State *L, lua_Debug *ar, lua_Hook hook) {
 void luaD_lineHook (lua_State *L, int line, lua_Hook linehook) {
   if (L->allowhooks) {
     lua_Debug ar;
-    ar.event = l_s("line");
+    ar.event = "line";
     ar._ci = L->ci;
     ar.currentline = line;
     dohook(L, &ar, linehook);
@@ -108,7 +107,7 @@ void luaD_lineHook (lua_State *L, int line, lua_Hook linehook) {
 
 
 static void luaD_callHook (lua_State *L, lua_Hook callhook,
-                           const l_char *event) {
+                           const char *event) {
   if (L->allowhooks) {
     lua_Debug ar;
     ar.event = event;
@@ -146,7 +145,7 @@ void luaD_call (lua_State *L, StkId func) {
     /* `func' is not a function; check the `function' tag method */
     Closure *tm = luaT_gettmbyObj(G(L), func, TM_FUNCTION);
     if (tm == NULL)
-      luaG_typeerror(L, func, l_s("call"));
+      luaG_typeerror(L, func, "call");
     luaD_openstack(L, func);
     setclvalue(func, tm);  /* tag method is the new function to be called */
   }
@@ -155,12 +154,12 @@ void luaD_call (lua_State *L, StkId func) {
   ci.base = func+1;
   callhook = L->callhook;
   if (callhook)
-    luaD_callHook(L, callhook, l_s("call"));
+    luaD_callHook(L, callhook, "call");
   firstResult = (clvalue(func)->c.isC ?
                         callCclosure(L, &clvalue(func)->c) :
                         luaV_execute(L, &clvalue(func)->l, func+1));
   if (callhook)  /* same hook that was active at entry */
-    luaD_callHook(L, callhook, l_s("return"));
+    luaD_callHook(L, callhook, "return");
   L->ci = ci.prev;  /* unchain callinfo */
   /* move results to `func' (to erase parameters and function) */
   while (firstResult < L->top)
@@ -245,21 +244,21 @@ static int protectedparser (lua_State *L, ZIO *z, int bin) {
 }
 
 
-LUA_API int lua_loadfile (lua_State *L, const l_char *filename) {
+LUA_API int lua_loadfile (lua_State *L, const char *filename) {
   ZIO z;
   int status;
   int bin;  /* flag for file mode */
   int nlevel;  /* level on the stack of filename */
-  FILE *f = (filename == NULL) ? stdin : fopen(filename, l_s("r"));
+  FILE *f = (filename == NULL) ? stdin : fopen(filename, "r");
   if (f == NULL) return LUA_ERRFILE;  /* unable to open file */
   bin = (ungetc(getc(f), f) == LUA_SIGNATURE[0]);
   if (bin && f != stdin) {
     fclose(f);
-    f = fopen(filename, l_s("rb"));  /* reopen in binary mode */
+    f = fopen(filename, "rb");  /* reopen in binary mode */
     if (f == NULL) return LUA_ERRFILE;  /* unable to reopen file */
   }
-  lua_pushliteral(L, l_s("@"));
-  lua_pushstring(L, (filename == NULL) ? l_s("(stdin)") : filename);
+  lua_pushliteral(L, "@");
+  lua_pushstring(L, (filename == NULL) ? "(stdin)" : filename);
   lua_concat(L, 2);
   nlevel = lua_gettop(L);
   filename = lua_tostring(L, -1);  /* filename = `@'..filename */
@@ -272,11 +271,11 @@ LUA_API int lua_loadfile (lua_State *L, const l_char *filename) {
 }
 
 
-LUA_API int lua_loadbuffer (lua_State *L, const l_char *buff, size_t size,
-                          const l_char *name) {
+LUA_API int lua_loadbuffer (lua_State *L, const char *buff, size_t size,
+                          const char *name) {
   ZIO z;
   int status;
-  if (!name) name = l_s("?");
+  if (!name) name = "?";
   luaZ_mopen(&z, buff, size, name);
   status = protectedparser(L, &z, buff[0]==LUA_SIGNATURE[0]);
   return status;
@@ -301,9 +300,9 @@ struct lua_longjmp {
 };
 
 
-static void message (lua_State *L, const l_char *s) {
+static void message (lua_State *L, const char *s) {
   StkId top = L->top;
-  luaV_getglobal(L, luaS_newliteral(L, l_s(LUA_ERRORMESSAGE)), top);
+  luaV_getglobal(L, luaS_newliteral(L, LUA_ERRORMESSAGE), top);
   if (ttype(top) == LUA_TFUNCTION) {
     incr_top;
     setsvalue(top+1, luaS_new(L, s));
@@ -317,7 +316,7 @@ static void message (lua_State *L, const l_char *s) {
 /*
 ** Reports an error, and jumps up to the available recovery label
 */
-void luaD_error (lua_State *L, const l_char *s) {
+void luaD_error (lua_State *L, const char *s) {
   if (s) message(L, s);
   luaD_breakrun(L, LUA_ERRRUN);
 }
@@ -330,7 +329,7 @@ void luaD_breakrun (lua_State *L, int errcode) {
   }
   else {
     if (errcode != LUA_ERRMEM)
-      message(L, l_s("unable to recover; exiting\n"));
+      message(L, "unable to recover; exiting\n");
     exit(EXIT_FAILURE);
   }
 }

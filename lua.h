@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.106 2001/10/31 19:40:14 roberto Exp roberto $
+** $Id: lua.h,v 1.107 2001/10/31 19:58:11 roberto Exp $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: info@lua.org
@@ -91,12 +91,6 @@ typedef int (*lua_CFunction) (lua_State *L);
 #endif
 typedef LUA_NUMBER lua_Number;
 
-/* Lua character type */
-#ifndef L_CHAR
-#define L_CHAR	char
-#endif
-typedef L_CHAR lua_char;
-
 
 /* mark for all API functions */
 #ifndef LUA_API
@@ -126,7 +120,7 @@ LUA_API int   lua_stackspace (lua_State *L);
 ** access functions (stack -> C)
 */
 
-LUA_API const lua_char *lua_type (lua_State *L, int index);
+LUA_API const char *lua_type (lua_State *L, int index);
 LUA_API int             lua_isnumber (lua_State *L, int index);
 LUA_API int             lua_isstring (lua_State *L, int index);
 LUA_API int             lua_iscfunction (lua_State *L, int index);
@@ -137,7 +131,7 @@ LUA_API int            lua_equal (lua_State *L, int index1, int index2);
 LUA_API int            lua_lessthan (lua_State *L, int index1, int index2);
 
 LUA_API lua_Number      lua_tonumber (lua_State *L, int index);
-LUA_API const lua_char *lua_tostring (lua_State *L, int index);
+LUA_API const char *lua_tostring (lua_State *L, int index);
 LUA_API size_t          lua_strlen (lua_State *L, int index);
 LUA_API lua_CFunction   lua_tocfunction (lua_State *L, int index);
 LUA_API void	       *lua_touserdata (lua_State *L, int index);
@@ -149,19 +143,19 @@ LUA_API const void     *lua_topointer (lua_State *L, int index);
 */
 LUA_API void  lua_pushnil (lua_State *L);
 LUA_API void  lua_pushnumber (lua_State *L, lua_Number n);
-LUA_API void  lua_pushlstring (lua_State *L, const lua_char *s, size_t len);
-LUA_API void  lua_pushstring (lua_State *L, const lua_char *s);
+LUA_API void  lua_pushlstring (lua_State *L, const char *s, size_t len);
+LUA_API void  lua_pushstring (lua_State *L, const char *s);
 LUA_API void  lua_pushcclosure (lua_State *L, lua_CFunction fn, int n);
 
 
 /*
 ** get functions (Lua -> stack)
 */
-LUA_API void  lua_getglobal (lua_State *L, const lua_char *name);
+LUA_API void  lua_getglobal (lua_State *L, const char *name);
 LUA_API void  lua_gettable (lua_State *L, int index);
 LUA_API void  lua_rawget (lua_State *L, int index);
 LUA_API void  lua_rawgeti (lua_State *L, int index, int n);
-LUA_API void  lua_gettagmethod (lua_State *L, int tag, const lua_char *event);
+LUA_API void  lua_gettagmethod (lua_State *L, int tag, const char *event);
 LUA_API void  lua_newtable (lua_State *L);
 LUA_API void  lua_getweakregistry (lua_State *L);
 
@@ -169,12 +163,12 @@ LUA_API void  lua_getweakregistry (lua_State *L);
 /*
 ** set functions (stack -> Lua)
 */
-LUA_API void  lua_setglobal (lua_State *L, const lua_char *name);
+LUA_API void  lua_setglobal (lua_State *L, const char *name);
 LUA_API void  lua_settable (lua_State *L, int index);
 LUA_API void  lua_rawset (lua_State *L, int index);
 LUA_API void  lua_rawseti (lua_State *L, int index, int n);
 LUA_API void  lua_setglobals (lua_State *L);
-LUA_API void  lua_settagmethod (lua_State *L, int tag, const lua_char *event);
+LUA_API void  lua_settagmethod (lua_State *L, int tag, const char *event);
 
 
 /*
@@ -182,13 +176,13 @@ LUA_API void  lua_settagmethod (lua_State *L, int tag, const lua_char *event);
 */
 LUA_API int   lua_call (lua_State *L, int nargs, int nresults);
 LUA_API void  lua_rawcall (lua_State *L, int nargs, int nresults);
-LUA_API int   lua_loadfile (lua_State *L, const lua_char *filename);
-LUA_API int   lua_dofile (lua_State *L, const lua_char *filename);
-LUA_API int   lua_dostring (lua_State *L, const lua_char *str);
-LUA_API int   lua_loadbuffer (lua_State *L, const lua_char *buff, size_t size,
-                            const lua_char *name);
-LUA_API int   lua_dobuffer (lua_State *L, const lua_char *buff, size_t size,
-                            const lua_char *name);
+LUA_API int   lua_loadfile (lua_State *L, const char *filename);
+LUA_API int   lua_dofile (lua_State *L, const char *filename);
+LUA_API int   lua_dostring (lua_State *L, const char *str);
+LUA_API int   lua_loadbuffer (lua_State *L, const char *buff, size_t size,
+                            const char *name);
+LUA_API int   lua_dobuffer (lua_State *L, const char *buff, size_t size,
+                            const char *name);
 
 /*
 ** Garbage-collection functions
@@ -200,13 +194,13 @@ LUA_API void  lua_setgcthreshold (lua_State *L, int newthreshold);
 /*
 ** miscellaneous functions
 */
-LUA_API int   lua_newtype (lua_State *L, const lua_char *name, int basictype);
+LUA_API int   lua_newtype (lua_State *L, const char *name, int basictype);
 LUA_API void  lua_settag (lua_State *L, int tag);
 
-LUA_API int             lua_name2tag (lua_State *L, const lua_char *name);
-LUA_API const lua_char *lua_tag2name (lua_State *L, int tag);
+LUA_API int             lua_name2tag (lua_State *L, const char *name);
+LUA_API const char *lua_tag2name (lua_State *L, int tag);
 
-LUA_API void  lua_error (lua_State *L, const lua_char *s);
+LUA_API void  lua_error (lua_State *L, const char *s);
 
 LUA_API int   lua_next (lua_State *L, int index);
 LUA_API int   lua_getn (lua_State *L, int index);
@@ -240,8 +234,8 @@ LUA_API int   lua_getweakmode (lua_State *L, int index);
 #define lua_isnil(L,n)		(lua_rawtag(L,n) == LUA_TNIL)
 #define lua_isnull(L,n)		(lua_rawtag(L,n) == LUA_TNONE)
 
-#define lua_pushliteral(L, s)	lua_pushlstring(L, s, \
-                                                (sizeof(s)/sizeof(lua_char))-1)
+#define lua_pushliteral(L, s)	lua_pushlstring(L, "" s, \
+                                                (sizeof(s)/sizeof(char))-1)
 
 #define lua_getregistry(L)	lua_pushvalue(L, LUA_REGISTRYINDEX);
 #define lua_getglobals(L)	lua_pushvalue(L, LUA_GLOBALSINDEX);
@@ -264,7 +258,7 @@ LUA_API void lua_pushupvalues (lua_State *L);
 #define LUA_REFNIL	(-1)
 
 #define lua_ref(L,lock)	((lock) ? luaL_ref(L, LUA_REGISTRYINDEX) : \
-		(lua_error(L, l_s("unlocked references are obsolete")), 0))
+		(lua_error(L, "unlocked references are obsolete"), 0))
 
 #define lua_unref(L,ref)	luaL_unref(L, LUA_REGISTRYINDEX, (ref))
 
@@ -277,43 +271,21 @@ LUA_API void lua_pushupvalues (lua_State *L);
 /*
 ** {======================================================================
 ** useful definitions for Lua kernel and libraries
+** =======================================================================
 */
-#ifdef LUA_PRIVATE
 
-#define l_char	lua_char
-
-/* macro to control type of literal strings */
-#ifndef l_s
-#define l_s(x)  x
-#endif
-
-/* macro to control type of literal chars */
-#ifndef l_c
-#define l_c(x)  x
-#endif
-
-/* macro to `unsign' a character */
-#ifndef uchar
-#define uchar(c)        ((unsigned char)(c))
-#endif
-
-/* integer type to hold the result of fgetc */
-#ifndef l_charint
-#define l_charint	int
-#endif
-
-/*
-** formats for Lua numbers
-*/
+/* formats for Lua numbers */
 #ifndef LUA_NUMBER_SCAN
 #define LUA_NUMBER_SCAN		"%lf"
 #endif
+
 #ifndef LUA_NUMBER_FMT
 #define LUA_NUMBER_FMT		"%.16g"
 #endif
+
 /* function to convert a lua_Number to a string */
 #ifndef lua_number2str
-#define lua_number2str(s,n)     sprintf((s), l_s(LUA_NUMBER_FMT), (n))
+#define lua_number2str(s,n)     sprintf((s), LUA_NUMBER_FMT, (n))
 #endif
 
 /* function to convert a string to a lua_Number */
@@ -321,7 +293,6 @@ LUA_API void lua_pushupvalues (lua_State *L);
 #define lua_str2number(s,p)     strtod((s), (p))
 #endif
 
-#endif
 /* }====================================================================== */
 
 

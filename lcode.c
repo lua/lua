@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.79 2001/08/27 15:16:28 roberto Exp roberto $
+** $Id: lcode.c,v 1.82 2001/09/07 17:39:10 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -7,7 +7,6 @@
 
 #include <stdlib.h>
 
-#define LUA_PRIVATE
 #include "lua.h"
 
 #include "lcode.h"
@@ -27,7 +26,7 @@
 
 
 
-void luaK_error (LexState *ls, const l_char *msg) {
+void luaK_error (LexState *ls, const char *msg) {
   luaX_error(ls, msg, ls->t.token);
 }
 
@@ -83,7 +82,7 @@ static void luaK_fixjump (FuncState *fs, int pc, int dest) {
   else {  /* jump is relative to position following jump instruction */
     int offset = dest-(pc+1);
     if (abs(offset) > MAXARG_sBc)
-      luaK_error(fs->ls, l_s("control structure too long"));
+      luaK_error(fs->ls, "control structure too long");
     SETARG_sBc(*jmp, offset);
   }
 }
@@ -202,7 +201,7 @@ void luaK_reserveregs (FuncState *fs, int n) {
   fs->freereg += n;
   if (fs->freereg > fs->f->maxstacksize) {
     if (fs->freereg >= MAXSTACK)
-      luaK_error(fs->ls, l_s("function or expression too complex"));
+      luaK_error(fs->ls, "function or expression too complex");
     fs->f->maxstacksize = cast(short, fs->freereg);
   }
 }
@@ -232,7 +231,7 @@ static int addk (FuncState *fs, TObject *k) {
     TObject o;
     Proto *f = fs->f;
     luaM_growvector(fs->L, f->k, fs->nk, f->sizek, TObject,
-                    MAXARG_Bc, l_s("constant table overflow"));
+                    MAXARG_Bc, "constant table overflow");
     setobj(&f->k[fs->nk], k);
     setnvalue(&o, fs->nk);
     luaH_set(fs->L, fs->h, k, &o);
@@ -771,11 +770,11 @@ static void codelineinfo (FuncState *fs) {
   if (ls->lastline > fs->lastline) {
     if (ls->lastline > fs->lastline+1) {
       luaM_growvector(fs->L, f->lineinfo, fs->nlineinfo, f->sizelineinfo, int,
-                      MAX_INT, l_s("line info overflow"));
+                      MAX_INT, "line info overflow");
       f->lineinfo[fs->nlineinfo++] = -(ls->lastline - (fs->lastline+1));
     }
     luaM_growvector(fs->L, f->lineinfo, fs->nlineinfo, f->sizelineinfo, int,
-                    MAX_INT, l_s("line info overflow"));
+                    MAX_INT, "line info overflow");
     f->lineinfo[fs->nlineinfo++] = fs->pc;
     fs->lastline = ls->lastline;
   }
@@ -788,7 +787,7 @@ static int luaK_code (FuncState *fs, Instruction i) {
   f = fs->f;
   /* put new instruction in code array */
   luaM_growvector(fs->L, f->code, fs->pc, f->sizecode, Instruction,
-                  MAX_INT, l_s("code size overflow"));
+                  MAX_INT, "code size overflow");
   f->code[fs->pc] = i;
 /*printf("free: %d  ", fs->freereg); printopcode(f, fs->pc);*/
   return fs->pc++;

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.70 2001/03/26 14:31:49 roberto Exp $
+** $Id: lobject.c,v 1.71 2001/10/25 19:14:14 roberto Exp $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define LUA_PRIVATE
 #include "lua.h"
 
 #include "ldo.h"
@@ -73,12 +72,12 @@ void *luaO_openspaceaux (lua_State *L, size_t n) {
 }
 
 
-int luaO_str2d (const l_char *s, lua_Number *result) {
-  l_char *endptr;
+int luaO_str2d (const char *s, lua_Number *result) {
+  char *endptr;
   lua_Number res = lua_str2number(s, &endptr);
   if (endptr == s) return 0;  /* no conversion */
-  while (isspace(uchar(*endptr))) endptr++;
-  if (*endptr != l_c('\0')) return 0;  /* invalid trailing characters? */
+  while (isspace((unsigned char)(*endptr))) endptr++;
+  if (*endptr != '\0') return 0;  /* invalid trailing characters? */
   *result = res;
   return 1;
 }
@@ -88,9 +87,9 @@ int luaO_str2d (const l_char *s, lua_Number *result) {
 #define MAX_VERROR	280
 
 /* this function needs to handle only '%d' and '%.XXs' formats */
-void luaO_verror (lua_State *L, const l_char *fmt, ...) {
+void luaO_verror (lua_State *L, const char *fmt, ...) {
   va_list argp;
-  l_char buff[MAX_VERROR];  /* to hold formatted message */
+  char buff[MAX_VERROR];  /* to hold formatted message */
   va_start(argp, fmt);
   vsprintf(buff, fmt, argp);
   va_end(argp);
@@ -98,36 +97,36 @@ void luaO_verror (lua_State *L, const l_char *fmt, ...) {
 }
 
 
-void luaO_chunkid (l_char *out, const l_char *source, int bufflen) {
-  if (*source == l_c('=')) {
+void luaO_chunkid (char *out, const char *source, int bufflen) {
+  if (*source == '=') {
     strncpy(out, source+1, bufflen);  /* remove first char */
-    out[bufflen-1] = l_c('\0');  /* ensures null termination */
+    out[bufflen-1] = '\0';  /* ensures null termination */
   }
   else {
-    if (*source == l_c('@')) {
+    if (*source == '@') {
       int l;
       source++;  /* skip the `@' */
-      bufflen -= sizeof(l_s("file `...%s'"));
+      bufflen -= sizeof("file `...%s'");
       l = strlen(source);
       if (l>bufflen) {
         source += (l-bufflen);  /* get last part of file name */
-        sprintf(out, l_s("file `...%.99s'"), source);
+        sprintf(out, "file `...%.99s'", source);
       }
       else
-        sprintf(out, l_s("file `%.99s'"), source);
+        sprintf(out, "file `%.99s'", source);
     }
     else {
-      int len = strcspn(source, l_s("\n"));  /* stop at first newline */
-      bufflen -= sizeof(l_s("string \"%.*s...\""));
+      int len = strcspn(source, "\n");  /* stop at first newline */
+      bufflen -= sizeof("string \"%.*s...\"");
       if (len > bufflen) len = bufflen;
-      if (source[len] != l_c('\0')) {  /* must truncate? */
-        strcpy(out, l_s("string \""));
+      if (source[len] != '\0') {  /* must truncate? */
+        strcpy(out, "string \"");
         out += strlen(out);
         strncpy(out, source, len);
-        strcpy(out+len, l_s("...\""));
+        strcpy(out+len, "...\"");
       }
       else
-        sprintf(out, l_s("string \"%.99s\""), source);
+        sprintf(out, "string \"%.99s\"", source);
     }
   }
 }

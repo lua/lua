@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.95 2001/10/26 17:33:30 roberto Exp $
+** $Id: ltests.c,v 1.96 2001/11/06 21:41:43 roberto Exp $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -12,7 +12,6 @@
 #include <string.h>
 
 
-#define LUA_PRIVATE
 #include "lua.h"
 
 #include "lapi.h"
@@ -43,7 +42,7 @@ int islocked = 0;
 
 
 
-static void setnameval (lua_State *L, const l_char *name, int val) {
+static void setnameval (lua_State *L, const char *name, int val) {
   lua_pushstring(L, name);
   lua_pushnumber(L, val);
   lua_settable(L, -3);
@@ -139,21 +138,21 @@ void *debug_realloc (void *block, size_t oldsize, size_t size) {
 */
 
 
-static l_char *buildop (Proto *p, int pc, l_char *buff) {
+static char *buildop (Proto *p, int pc, char *buff) {
   Instruction i = p->code[pc];
   OpCode o = GET_OPCODE(i);
-  const l_char *name = luaP_opnames[o];
-  sprintf(buff, l_s("%4d - "), pc);
+  const char *name = luaP_opnames[o];
+  sprintf(buff, "%4d - ", pc);
   switch (getOpMode(o)) {  
     case iABC:
-      sprintf(buff+strlen(buff), l_s("%-12s%4d %4d %4d"), name,
+      sprintf(buff+strlen(buff), "%-12s%4d %4d %4d", name,
               GETARG_A(i), GETARG_B(i), GETARG_C(i));
       break;
     case iABc:
-      sprintf(buff+strlen(buff), l_s("%-12s%4d %4d"), name, GETARG_A(i), GETARG_Bc(i));
+      sprintf(buff+strlen(buff), "%-12s%4d %4d", name, GETARG_A(i), GETARG_Bc(i));
       break;
     case iAsBc:
-      sprintf(buff+strlen(buff), l_s("%-12s%4d %4d"), name, GETARG_A(i), GETARG_sBc(i));
+      sprintf(buff+strlen(buff), "%-12s%4d %4d", name, GETARG_A(i), GETARG_sBc(i));
       break;
   }
   return buff;
@@ -164,13 +163,13 @@ static int listcode (lua_State *L) {
   int pc;
   Proto *p;
   luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
-                 1, l_s("Lua function expected"));
+                 1, "Lua function expected");
   p = clvalue(luaA_index(L, 1))->l.p;
   lua_newtable(L);
-  setnameval(L, l_s("maxstack"), p->maxstacksize);
-  setnameval(L, l_s("numparams"), p->numparams);
+  setnameval(L, "maxstack", p->maxstacksize);
+  setnameval(L, "numparams", p->numparams);
   for (pc=0; pc<p->sizecode; pc++) {
-    l_char buff[100];
+    char buff[100];
     lua_pushnumber(L, pc+1);
     lua_pushstring(L, buildop(p, pc, buff));
     lua_settable(L, -3);
@@ -183,7 +182,7 @@ static int listk (lua_State *L) {
   Proto *p;
   int i;
   luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
-                 1, l_s("Lua function expected"));
+                 1, "Lua function expected");
   p = clvalue(luaA_index(L, 1))->l.p;
   lua_newtable(L);
   for (i=0; i<p->sizek; i++) {
@@ -199,9 +198,9 @@ static int listlocals (lua_State *L) {
   Proto *p;
   int pc = luaL_check_int(L, 2) - 1;
   int i = 0;
-  const l_char *name;
+  const char *name;
   luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
-                 1, l_s("Lua function expected"));
+                 1, "Lua function expected");
   p = clvalue(luaA_index(L, 1))->l.p;
   while ((name = luaF_getlocalname(p, ++i, pc)) != NULL)
     lua_pushstring(L, name);
@@ -215,12 +214,12 @@ static int listlocals (lua_State *L) {
 
 static int get_limits (lua_State *L) {
   lua_newtable(L);
-  setnameval(L, l_s("BITS_INT"), BITS_INT);
-  setnameval(L, l_s("LFPF"), LFIELDS_PER_FLUSH);
-  setnameval(L, l_s("MAXLOCALS"), MAXLOCALS);
-  setnameval(L, l_s("MAXPARAMS"), MAXPARAMS);
-  setnameval(L, l_s("MAXSTACK"), MAXSTACK);
-  setnameval(L, l_s("MAXUPVALUES"), MAXUPVALUES);
+  setnameval(L, "BITS_INT", BITS_INT);
+  setnameval(L, "LFPF", LFIELDS_PER_FLUSH);
+  setnameval(L, "MAXLOCALS", MAXLOCALS);
+  setnameval(L, "MAXPARAMS", MAXPARAMS);
+  setnameval(L, "MAXSTACK", MAXSTACK);
+  setnameval(L, "MAXUPVALUES", MAXUPVALUES);
   return 1;
 }
 
@@ -241,7 +240,7 @@ static int mem_query (lua_State *L) {
 
 static int hash_query (lua_State *L) {
   if (lua_isnull(L, 2)) {
-    luaL_arg_check(L, lua_tag(L, 1) == LUA_TSTRING, 1, l_s("string expected"));
+    luaL_arg_check(L, lua_tag(L, 1) == LUA_TSTRING, 1, "string expected");
     lua_pushnumber(L, tsvalue(luaA_index(L, 1))->tsv.hash);
   }
   else {
@@ -336,8 +335,8 @@ static int unref (lua_State *L) {
 
 static int newuserdata (lua_State *L) {
   size_t size = luaL_check_int(L, 1);
-  l_char *p = cast(l_char *, lua_newuserdata(L, size));
-  while (size--) *p++ = l_c('\0');
+  char *p = cast(char *, lua_newuserdata(L, size));
+  while (size--) *p++ = '\0';
   return 1;
 }
 
@@ -383,7 +382,7 @@ static int s2d (lua_State *L) {
 
 static int d2s (lua_State *L) {
   double d = luaL_check_number(L, 1);
-  lua_pushlstring(L, cast(l_char *, &d), sizeof(d));
+  lua_pushlstring(L, cast(char *, &d), sizeof(d));
   return 1;
 }
 
@@ -418,7 +417,7 @@ static int closestate (lua_State *L) {
 
 static int doremote (lua_State *L) {
   lua_State *L1;
-  const l_char *code = luaL_check_string(L, 2);
+  const char *code = luaL_check_string(L, 2);
   int status;
   L1 = cast(lua_State *, cast(unsigned long, luaL_check_number(L, 1)));
   status = lua_dostring(L1, code);
@@ -438,7 +437,7 @@ static int doremote (lua_State *L) {
 
 static int settagmethod (lua_State *L) {
   int tag = luaL_check_int(L, 1);
-  const l_char *event = luaL_check_string(L, 2);
+  const char *event = luaL_check_string(L, 2);
   luaL_check_any(L, 3);
   lua_gettagmethod(L, tag, event);
   lua_pushvalue(L, 3);
@@ -460,36 +459,36 @@ static int log2_aux (lua_State *L) {
 ** =======================================================
 */
 
-static const l_char *const delimits = l_s(" \t\n,;");
+static const char *const delimits = " \t\n,;";
 
-static void skip (const l_char **pc) {
-  while (**pc != l_c('\0') && strchr(delimits, **pc)) (*pc)++;
+static void skip (const char **pc) {
+  while (**pc != '\0' && strchr(delimits, **pc)) (*pc)++;
 }
 
-static int getnum_aux (lua_State *L, const l_char **pc) {
+static int getnum_aux (lua_State *L, const char **pc) {
   int res = 0;
   int sig = 1;
   skip(pc);
-  if (**pc == l_c('.')) {
+  if (**pc == '.') {
     res = cast(int, lua_tonumber(L, -1));
     lua_pop(L, 1);
     (*pc)++;
     return res;
   }
-  else if (**pc == l_c('-')) {
+  else if (**pc == '-') {
     sig = -1;
     (*pc)++;
   }
-  while (isdigit(cast(int, **pc))) res = res*10 + (*(*pc)++) - l_c('0');
+  while (isdigit(cast(int, **pc))) res = res*10 + (*(*pc)++) - '0';
   return sig*res;
 }
   
-static const l_char *getname_aux (l_char *buff, const l_char **pc) {
+static const char *getname_aux (char *buff, const char **pc) {
   int i = 0;
   skip(pc);
-  while (**pc != l_c('\0') && !strchr(delimits, **pc))
+  while (**pc != '\0' && !strchr(delimits, **pc))
     buff[i++] = *(*pc)++;
-  buff[i] = l_c('\0');
+  buff[i] = '\0';
   return buff;
 }
 
@@ -501,134 +500,134 @@ static const l_char *getname_aux (l_char *buff, const l_char **pc) {
 
 
 static int testC (lua_State *L) {
-  l_char buff[30];
-  const l_char *pc = luaL_check_string(L, 1);
+  char buff[30];
+  const char *pc = luaL_check_string(L, 1);
   for (;;) {
-    const l_char *inst = getname;
-    if EQ(l_s("")) return 0;
-    else if EQ(l_s("isnumber")) {
+    const char *inst = getname;
+    if EQ("") return 0;
+    else if EQ("isnumber") {
       lua_pushnumber(L, lua_isnumber(L, getnum));
     }
-    else if EQ(l_s("isstring")) {
+    else if EQ("isstring") {
       lua_pushnumber(L, lua_isstring(L, getnum));
     }
-    else if EQ(l_s("istable")) {
+    else if EQ("istable") {
       lua_pushnumber(L, lua_istable(L, getnum));
     }
-    else if EQ(l_s("iscfunction")) {
+    else if EQ("iscfunction") {
       lua_pushnumber(L, lua_iscfunction(L, getnum));
     }
-    else if EQ(l_s("isfunction")) {
+    else if EQ("isfunction") {
       lua_pushnumber(L, lua_isfunction(L, getnum));
     }
-    else if EQ(l_s("isuserdata")) {
+    else if EQ("isuserdata") {
       lua_pushnumber(L, lua_isuserdata(L, getnum));
     }
-    else if EQ(l_s("isnil")) {
+    else if EQ("isnil") {
       lua_pushnumber(L, lua_isnil(L, getnum));
     }
-    else if EQ(l_s("isnull")) {
+    else if EQ("isnull") {
       lua_pushnumber(L, lua_isnull(L, getnum));
     }
-    else if EQ(l_s("tonumber")) {
+    else if EQ("tonumber") {
       lua_pushnumber(L, lua_tonumber(L, getnum));
     }
-    else if EQ(l_s("tostring")) {
-      const l_char *s = lua_tostring(L, getnum);
+    else if EQ("tostring") {
+      const char *s = lua_tostring(L, getnum);
       lua_pushstring(L, s);
     }
-    else if EQ(l_s("tonumber")) {
+    else if EQ("tonumber") {
       lua_pushnumber(L, lua_tonumber(L, getnum));
     }
-    else if EQ(l_s("strlen")) {
+    else if EQ("strlen") {
       lua_pushnumber(L, lua_strlen(L, getnum));
     }
-    else if EQ(l_s("tocfunction")) {
+    else if EQ("tocfunction") {
       lua_pushcfunction(L, lua_tocfunction(L, getnum));
     }
-    else if EQ(l_s("return")) {
+    else if EQ("return") {
       return getnum;
     }
-    else if EQ(l_s("gettop")) {
+    else if EQ("gettop") {
       lua_pushnumber(L, lua_gettop(L));
     }
-    else if EQ(l_s("settop")) {
+    else if EQ("settop") {
       lua_settop(L, getnum);
     }
-    else if EQ(l_s("pop")) {
+    else if EQ("pop") {
       lua_pop(L, getnum);
     }
-    else if EQ(l_s("pushnum")) {
+    else if EQ("pushnum") {
       lua_pushnumber(L, getnum);
     }
-    else if EQ(l_s("pushvalue")) {
+    else if EQ("pushvalue") {
       lua_pushvalue(L, getnum);
     }
-    else if EQ(l_s("pushcclosure")) {
+    else if EQ("pushcclosure") {
       lua_pushcclosure(L, testC, getnum);
     }
-    else if EQ(l_s("pushupvalues")) {
+    else if EQ("pushupvalues") {
       lua_pushupvalues(L);
     }
-    else if EQ(l_s("remove")) {
+    else if EQ("remove") {
       lua_remove(L, getnum);
     }
-    else if EQ(l_s("insert")) {
+    else if EQ("insert") {
       lua_insert(L, getnum);
     }
-    else if EQ(l_s("gettable")) {
+    else if EQ("gettable") {
       lua_gettable(L, getnum);
     }
-    else if EQ(l_s("settable")) {
+    else if EQ("settable") {
       lua_settable(L, getnum);
     }
-    else if EQ(l_s("next")) {
+    else if EQ("next") {
       lua_next(L, -2);
     }
-    else if EQ(l_s("concat")) {
+    else if EQ("concat") {
       lua_concat(L, getnum);
     }
-    else if EQ(l_s("lessthan")) {
+    else if EQ("lessthan") {
       int a = getnum;
       if (lua_lessthan(L, a, getnum))
         lua_pushnumber(L, 1);
       else
         lua_pushnil(L);
     }
-    else if EQ(l_s("equal")) {
+    else if EQ("equal") {
       int a = getnum;
       if (lua_equal(L, a, getnum))
         lua_pushnumber(L, 1);
       else
         lua_pushnil(L);
     }
-    else if EQ(l_s("rawcall")) {
+    else if EQ("rawcall") {
       int narg = getnum;
       int nres = getnum;
       lua_rawcall(L, narg, nres);
     }
-    else if EQ(l_s("call")) {
+    else if EQ("call") {
       int narg = getnum;
       int nres = getnum;
       lua_call(L, narg, nres);
     }
-    else if EQ(l_s("dostring")) {
+    else if EQ("dostring") {
       lua_dostring(L, luaL_check_string(L, getnum));
     }
-    else if EQ(l_s("settagmethod")) {
+    else if EQ("settagmethod") {
       int tag = getnum;
-      const l_char *event = getname;
+      const char *event = getname;
       lua_settagmethod(L, tag, event);
     }
-    else if EQ(l_s("gettagmethod")) {
+    else if EQ("gettagmethod") {
       int tag = getnum;
-      const l_char *event = getname;
+      const char *event = getname;
       lua_gettagmethod(L, tag, event);
     }
-    else if EQ(l_s("type")) {
+    else if EQ("type") {
       lua_pushstring(L, lua_type(L, getnum));
     }
-    else luaL_verror(L, l_s("unknown instruction %.30s"), buff);
+    else luaL_verror(L, "unknown instruction %.30s", buff);
   }
   return 0;
 }
@@ -638,32 +637,32 @@ static int testC (lua_State *L) {
 
 
 static const struct luaL_reg tests_funcs[] = {
-  {l_s("hash"), hash_query},
-  {l_s("limits"), get_limits},
-  {l_s("listcode"), listcode},
-  {l_s("listk"), listk},
-  {l_s("listlocals"), listlocals},
-  {l_s("loadlib"), loadlib},
-  {l_s("querystr"), string_query},
-  {l_s("querytab"), table_query},
-  {l_s("testC"), testC},
-  {l_s("ref"), tref},
-  {l_s("getref"), getref},
-  {l_s("unref"), unref},
-  {l_s("d2s"), d2s},
-  {l_s("s2d"), s2d},
-  {l_s("newuserdata"), newuserdata},
-  {l_s("newuserdatabox"), newuserdatabox},
-  {l_s("settag"), settag},
-  {l_s("udataval"), udataval},
-  {l_s("newtag"), newtag},
-  {l_s("doonnewstack"), doonnewstack},
-  {l_s("newstate"), newstate},
-  {l_s("closestate"), closestate},
-  {l_s("doremote"), doremote},
-  {l_s("settagmethod"), settagmethod},
-  {l_s("log2"), log2_aux},
-  {l_s("totalmem"), mem_query}
+  {"hash", hash_query},
+  {"limits", get_limits},
+  {"listcode", listcode},
+  {"listk", listk},
+  {"listlocals", listlocals},
+  {"loadlib", loadlib},
+  {"querystr", string_query},
+  {"querytab", table_query},
+  {"testC", testC},
+  {"ref", tref},
+  {"getref", getref},
+  {"unref", unref},
+  {"d2s", d2s},
+  {"s2d", s2d},
+  {"newuserdata", newuserdata},
+  {"newuserdatabox", newuserdatabox},
+  {"settag", settag},
+  {"udataval", udataval},
+  {"newtag", newtag},
+  {"doonnewstack", doonnewstack},
+  {"newstate", newstate},
+  {"closestate", closestate},
+  {"doremote", doremote},
+  {"settagmethod", settagmethod},
+  {"log2", log2_aux},
+  {"totalmem", mem_query}
 };
 
 
@@ -677,7 +676,7 @@ void luaB_opentests (lua_State *L) {
   lua_setglobals(L);
   luaL_openl(L, tests_funcs);  /* open functions inside new table */
   lua_setglobals(L);  /* restore old table of globals */
-  lua_setglobal(L, l_s("T"));  /* set new table as global T */
+  lua_setglobal(L, "T");  /* set new table as global T */
 }
 
 #endif

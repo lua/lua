@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.197 2001/10/31 19:58:11 roberto Exp $
+** $Id: lvm.c,v 1.198 2001/11/06 21:41:53 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define LUA_PRIVATE
 #include "lua.h"
 
 #include "lapi.h"
@@ -54,7 +53,7 @@ int luaV_tostring (lua_State *L, TObject *obj) {
   if (ttype(obj) != LUA_TNUMBER)
     return 1;
   else {
-    l_char s[32];  /* 16 digits, sign, point and \0  (+ some extra...) */
+    char s[32];  /* 16 digits, sign, point and \0  (+ some extra...) */
     lua_number2str(s, nvalue(obj));  /* convert `s' to number */
     setsvalue(obj, luaS_new(L, s));
     return 0;
@@ -86,7 +85,7 @@ static void traceexec (lua_State *L, lua_Hook linehook) {
 /* maximum stack used by a call to a tag method (func + args) */
 #define MAXSTACK_TM	4
 
-static StkId callTM (lua_State *L, Closure *f, const l_char *fmt, ...) {
+static StkId callTM (lua_State *L, Closure *f, const char *fmt, ...) {
   va_list argp;
   StkId base = L->top;
   lua_assert(strlen(fmt)+1 <= MAXSTACK_TM);
@@ -95,11 +94,11 @@ static StkId callTM (lua_State *L, Closure *f, const l_char *fmt, ...) {
   setclvalue(L->top, f);  /* push function */
   L->top++;
   while (*fmt) {
-    if (*fmt++ == l_c('o')) {
+    if (*fmt++ == 'o') {
         setobj(L->top, va_arg(argp, TObject *));
     }
     else {
-      lua_assert(*(fmt-1) == l_c('s'));
+      lua_assert(*(fmt-1) == 's');
       setsvalue(L->top, va_arg(argp, TString *));
     }
     L->top++;
@@ -146,9 +145,9 @@ void luaV_gettable (lua_State *L, StkId t, TObject *key, StkId res) {
   } else {  /* not a table; try a `gettable' tag method */
     tm = luaT_gettmbyObj(G(L), t, TM_GETTABLE);
     if (tm == NULL)  /* no tag method? */
-      luaG_typeerror(L, t, l_s("index"));
+      luaG_typeerror(L, t, "index");
   }
-  setTMresult(L, res, callTM(L, tm, l_s("oo"), t, key));
+  setTMresult(L, res, callTM(L, tm, "oo", t, key));
 }
 
 
@@ -169,9 +168,9 @@ void luaV_settable (lua_State *L, StkId t, TObject *key, StkId val) {
   } else {  /* not a table; try a `settable' tag method */
     tm = luaT_gettmbyObj(G(L), t, TM_SETTABLE);
     if (tm == NULL)  /* no tag method? */
-      luaG_typeerror(L, t, l_s("index"));
+      luaG_typeerror(L, t, "index");
   }
-  setTM(L, callTM(L, tm, l_s("ooo"), t, key, val));
+  setTM(L, callTM(L, tm, "ooo", t, key, val));
 }
 
 
@@ -183,7 +182,7 @@ void luaV_getglobal (lua_State *L, TString *name, StkId res) {
     setobj(res, value);  /* default behavior */
   }
   else
-    setTMresult(L, res, callTM(L, tm, l_s("so"), name, value));
+    setTMresult(L, res, callTM(L, tm, "so", name, value));
 }
 
 
@@ -198,7 +197,7 @@ void luaV_setglobal (lua_State *L, TString *name, StkId val) {
       settableval(oldvalue, val);  /* warning: tricky optimization! */
   }
   else
-    setTM(L, callTM(L, tm, l_s("soo"), name, oldvalue, val));
+    setTM(L, callTM(L, tm, "soo", name, oldvalue, val));
 }
 
 
@@ -213,7 +212,7 @@ static int call_binTM (lua_State *L, const TObject *p1, const TObject *p2,
         return 0;  /* no tag method */
     }
   }
-  setTMresult(L, res, callTM(L, tm, l_s("oo"), p1, p2));
+  setTMresult(L, res, callTM(L, tm, "oo", p1, p2));
   return 1;
 }
 
@@ -226,9 +225,9 @@ static void call_arith (lua_State *L, StkId p1, TObject *p2,
 
 
 static int luaV_strlessthan (const TString *ls, const TString *rs) {
-  const l_char *l = getstr(ls);
+  const char *l = getstr(ls);
   size_t ll = ls->tsv.len;
-  const l_char *r = getstr(rs);
+  const char *r = getstr(rs);
   size_t lr = rs->tsv.len;
   for (;;) {
     int temp = strcoll(l, r);
@@ -271,14 +270,14 @@ void luaV_strconc (lua_State *L, int total, StkId top) {
       /* at least two string values; get as many as possible */
       lu_mem tl = cast(lu_mem, tsvalue(top-1)->tsv.len) +
                   cast(lu_mem, tsvalue(top-2)->tsv.len);
-      l_char *buffer;
+      char *buffer;
       int i;
       while (n < total && !tostring(L, top-n-1)) {  /* collect total length */
         tl += tsvalue(top-n-1)->tsv.len;
         n++;
       }
-      if (tl > MAX_SIZET) luaD_error(L, l_s("string size overflow"));
-      buffer = luaO_openspace(L, tl, l_char);
+      if (tl > MAX_SIZET) luaD_error(L, "string size overflow");
+      buffer = luaO_openspace(L, tl, char);
       tl = 0;
       for (i=n; i>0; i--) {  /* concat all strings */
         size_t l = tsvalue(top-i)->tsv.len;
@@ -301,7 +300,7 @@ static void luaV_pack (lua_State *L, StkId firstelem) {
     luaH_setnum(L, htab, i+1, firstelem+i);
   /* store counter in field `n' */
   setnvalue(&n, i);
-  luaH_setstr(L, htab, luaS_newliteral(L, l_s("n")), &n);
+  luaH_setstr(L, htab, luaS_newliteral(L, "n"), &n);
   L->top = firstelem;  /* remove elements from the stack */
   sethvalue(L->top, htab);
   incr_top;
@@ -567,11 +566,11 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
       }
       case OP_FORPREP: {
         if (luaV_tonumber(ra, ra) == NULL)
-          luaD_error(L, l_s("`for' initial value must be a number"));
+          luaD_error(L, "`for' initial value must be a number");
         if (luaV_tonumber(ra+1, ra+1) == NULL)
-          luaD_error(L, l_s("`for' limit must be a number"));
+          luaD_error(L, "`for' limit must be a number");
         if (luaV_tonumber(ra+2, ra+2) == NULL)
-          luaD_error(L, l_s("`for' step must be a number"));
+          luaD_error(L, "`for' step must be a number");
         /* decrement index (to be incremented) */
         chgnvalue(ra, nvalue(ra) - nvalue(ra+2));
         pc += -GETARG_sBc(i);  /* `jump' to loop end (delta is negated here) */
@@ -583,7 +582,7 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
         runtime_check(L, ttype(ra+1) == LUA_TNUMBER &&
                          ttype(ra+2) == LUA_TNUMBER);
         if (ttype(ra) != LUA_TNUMBER)
-          luaD_error(L, l_s("`for' index must be a number"));
+          luaD_error(L, "`for' index must be a number");
         chgnvalue(ra+1, nvalue(ra+1) - 1);  /* decrement counter */
         if (nvalue(ra+1) >= 0) {
           chgnvalue(ra, nvalue(ra) + nvalue(ra+2));  /* increment index */
@@ -593,7 +592,7 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
       }
       case OP_TFORPREP: {
         if (ttype(ra) != LUA_TTABLE)
-          luaD_error(L, l_s("`for' table must be a table"));
+          luaD_error(L, "`for' table must be a table");
         setnvalue(ra+1, -1);  /* initial index */
         setnilvalue(ra+2);
         setnilvalue(ra+3);

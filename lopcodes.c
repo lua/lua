@@ -1,12 +1,11 @@
 /*
-** $Id: lopcodes.c,v 1.5 2001/09/07 17:39:10 roberto Exp $
+** $Id: lopcodes.c,v 1.6 2001/10/25 19:14:14 roberto Exp $
 ** extracted automatically from lopcodes.h by mkprint.lua
 ** DO NOT EDIT
 ** See Copyright Notice in lua.h
 */
 
 
-#define LUA_PRIVATE
 #include "lua.h"
 
 #include "lobject.h"
@@ -15,48 +14,48 @@
 
 #ifdef LUA_OPNAMES
 
-const l_char *const luaP_opnames[] = {
-  l_s("MOVE"),
-  l_s("LOADK"),
-  l_s("LOADINT"),
-  l_s("LOADNIL"),
-  l_s("GETUPVAL"),
-  l_s("GETGLOBAL"),
-  l_s("GETTABLE"),
-  l_s("SETGLOBAL"),
-  l_s("SETUPVAL"),
-  l_s("SETTABLE"),
-  l_s("NEWTABLE"),
-  l_s("SELF"),
-  l_s("ADD"),
-  l_s("SUB"),
-  l_s("MUL"),
-  l_s("DIV"),
-  l_s("POW"),
-  l_s("UNM"),
-  l_s("NOT"),
-  l_s("CONCAT"),
-  l_s("JMP"),
-  l_s("CJMP"),
-  l_s("TESTEQ"),
-  l_s("TESTNE"),
-  l_s("TESTLT"),
-  l_s("TESTLE"),
-  l_s("TESTGT"),
-  l_s("TESTGE"),
-  l_s("TESTT"),
-  l_s("TESTF"),
-  l_s("NILJMP"),
-  l_s("CALL"),
-  l_s("RETURN"),
-  l_s("FORPREP"),
-  l_s("FORLOOP"),
-  l_s("TFORPREP"),
-  l_s("TFORLOOP"),
-  l_s("SETLIST"),
-  l_s("SETLISTO"),
-  l_s("CLOSE"),
-  l_s("CLOSURE")
+const char *const luaP_opnames[] = {
+  "MOVE",
+  "LOADK",
+  "LOADINT",
+  "LOADNIL",
+  "GETUPVAL",
+  "GETGLOBAL",
+  "GETTABLE",
+  "SETGLOBAL",
+  "SETUPVAL",
+  "SETTABLE",
+  "NEWTABLE",
+  "SELF",
+  "ADD",
+  "SUB",
+  "MUL",
+  "DIV",
+  "POW",
+  "UNM",
+  "NOT",
+  "CONCAT",
+  "JMP",
+  "CJMP",
+  "TESTEQ",
+  "TESTNE",
+  "TESTLT",
+  "TESTLE",
+  "TESTGT",
+  "TESTGE",
+  "TESTT",
+  "TESTF",
+  "NILJMP",
+  "CALL",
+  "RETURN",
+  "FORPREP",
+  "FORLOOP",
+  "TFORPREP",
+  "TFORLOOP",
+  "SETLIST",
+  "SETLISTO",
+  "CLOSE",
+  "CLOSURE"
 };
 
 #endif

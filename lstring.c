@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.66 2001/08/27 15:16:28 roberto Exp $
+** $Id: lstring.c,v 1.67 2001/08/31 19:46:07 roberto Exp $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -7,7 +7,6 @@
 
 #include <string.h>
 
-#define LUA_PRIVATE
 #include "lua.h"
 
 #include "lmem.h"
@@ -47,15 +46,15 @@ void luaS_resize (lua_State *L, int newsize) {
 }
 
 
-static TString *newlstr (lua_State *L, const l_char *str, size_t l, lu_hash h) {
+static TString *newlstr (lua_State *L, const char *str, size_t l, lu_hash h) {
   TString *ts = cast(TString *, luaM_malloc(L, sizestring(l)));
   stringtable *tb;
   ts->tsv.nexthash = NULL;
   ts->tsv.len = l;
   ts->tsv.hash = h;
   ts->tsv.marked = 0;
-  memcpy(getstr(ts), str, l*sizeof(l_char));
-  getstr(ts)[l] = l_c('\0');  /* ending 0 */
+  memcpy(getstr(ts), str, l*sizeof(char));
+  getstr(ts)[l] = '\0';  /* ending 0 */
   tb = &G(L)->strt;
   h = lmod(h, tb->size);
   ts->tsv.nexthash = tb->hash[h];  /* chain new entry */
@@ -67,13 +66,13 @@ static TString *newlstr (lua_State *L, const l_char *str, size_t l, lu_hash h) {
 }
 
 
-TString *luaS_newlstr (lua_State *L, const l_char *str, size_t l) {
+TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
   TString *ts;
   lu_hash h = l;  /* seed */
   size_t step = (l>>5)+1;  /* if string is too long, don't hash all its chars */
   size_t l1;
   for (l1=l; l1>=step; l1-=step)  /* compute hash */
-    h = h ^ ((h<<5)+(h>>2)+uchar(str[l1-1]));
+    h = h ^ ((h<<5)+(h>>2)+(unsigned char)(str[l1-1]));
   for (ts = G(L)->strt.hash[lmod(h, G(L)->strt.size)];
        ts != NULL;
        ts = ts->tsv.nexthash) {

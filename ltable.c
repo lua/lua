@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.87 2001/10/25 19:14:14 roberto Exp $
+** $Id: ltable.c,v 1.88 2001/11/16 16:29:51 roberto Exp $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,6 @@
 
 
 
-#define LUA_PRIVATE
 #include "lua.h"
 
 #include "ldo.h"
@@ -101,7 +100,7 @@ int luaH_index (lua_State *L, Table *t, const TObject *key) {
   else {
     const TObject *v = luaH_get(t, key);
     if (v == &luaO_nilobject)
-      luaD_error(L, l_s("invalid key for `next'"));
+      luaD_error(L, "invalid key for `next'");
     i = cast(int, (cast(const lu_byte *, v) -
                    cast(const lu_byte *, val(node(t, 0)))) / sizeof(Node));
     return i + t->sizearray;  /* hash elements are numbered after array ones */
@@ -193,7 +192,7 @@ static void numuse (const Table *t, int *narray, int *nhash) {
 static void setarrayvector (lua_State *L, Table *t, int size) {
   int i;
   if (size > twoto(MAXBITS))
-    luaD_error(L, l_s("table overflow"));
+    luaD_error(L, "table overflow");
   luaM_reallocvector(L, t->array, t->sizearray, size, TObject);
   for (i=t->sizearray; i<size; i++)
      setnilvalue(&t->array[i]);
@@ -206,7 +205,7 @@ static void setnodevector (lua_State *L, Table *t, int lsize) {
   int size;
   if (lsize < MINHASHSIZE) lsize = MINHASHSIZE;
   else if (lsize > MAXBITS)
-    luaD_error(L, l_s("table overflow"));
+    luaD_error(L, "table overflow");
   size = twoto(lsize);
   t->node = luaM_newvector(L, size, Node);
   for (i=0; i<size; i++) {
@@ -417,7 +416,7 @@ void luaH_set (lua_State *L, Table *t, const TObject *key, const TObject *val) {
     settableval(p, val);
   }
   else {
-    if (ttype(key) == LUA_TNIL) luaD_error(L, l_s("table index is nil"));
+    if (ttype(key) == LUA_TNIL) luaD_error(L, "table index is nil");
     newkey(L, t, key, val);
   }
 }

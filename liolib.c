@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.123 2001/10/02 16:41:36 roberto Exp $
+** $Id: liolib.c,v 1.124 2001/10/26 17:33:30 roberto Exp $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -10,7 +10,6 @@
 #include <string.h>
 #include <time.h>
 
-#define LUA_PRIVATE
 #include "lua.h"
 
 #include "lauxlib.h"
@@ -40,12 +39,12 @@ int pclose(); */
 #define OUTFILE 1
 #define NOFILE	2
 
-#define FILEHANDLE		l_s("FileHandle")
-#define CLOSEDFILEHANDLE	l_s("ClosedFileHandle")
+#define FILEHANDLE		"FileHandle"
+#define CLOSEDFILEHANDLE	"ClosedFileHandle"
 
 
-static const l_char *const filenames[] = {l_s("_INPUT"), l_s("_OUTPUT")};
-static const l_char *const basicfiles[] = {l_s("_STDIN"), l_s("_STDOUT")};
+static const char *const filenames[] = {"_INPUT", "_OUTPUT"};
+static const char *const basicfiles[] = {"_STDIN", "_STDOUT"};
 
 
 static int pushresult (lua_State *L, int i) {
@@ -77,16 +76,16 @@ static FILE *getopthandle (lua_State *L, int inout) {
   if (p != NULL) {  /* is it a userdata ? */
     if (!checkfile(L, 1)) {  /* not a valid file handle? */
       if (strcmp(lua_type(L, 1), CLOSEDFILEHANDLE) == 0)
-        luaL_argerror(L, 1, l_s("file is closed"));
+        luaL_argerror(L, 1, "file is closed");
       else
-        luaL_argerror(L, 1, l_s("(invalid value)"));
+        luaL_argerror(L, 1, "(invalid value)");
     }
     lua_pushvalue(L, 1); lua_remove(L, 1);  /* move it to stack top */
   }
   else {  /* try global value */
     lua_getglobal(L, filenames[inout]);
     if (!checkfile(L,-1))
-      luaL_verror(L, l_s("global variable `%.10s' is not a valid file handle"),
+      luaL_verror(L, "global variable `%.10s' is not a valid file handle",
                   filenames[inout]);
     p = (FILE *)(lua_touserdata(L, -1));
   }
@@ -100,7 +99,7 @@ static void newfile (lua_State *L, FILE *f) {
 }
 
 
-static void newfilewithname (lua_State *L, FILE *f, const l_char *name) {
+static void newfilewithname (lua_State *L, FILE *f, const char *name) {
   newfile(L, f);
   lua_setglobal(L, name);
 }
@@ -158,7 +157,7 @@ static int io_tmpfile (lua_State *L) {
 
 
 
-static int io_fromto (lua_State *L, int inout, const l_char *mode) {
+static int io_fromto (lua_State *L, int inout, const char *mode) {
   FILE *current;
   if (lua_isnull(L, 1)) {
     getopthandle(L, inout);
@@ -166,25 +165,25 @@ static int io_fromto (lua_State *L, int inout, const l_char *mode) {
     return io_close(L);
   }
   else {
-    const l_char *s = luaL_check_string(L, 1);
-    current = (*s == l_c('|')) ? popen(s+1, mode) : fopen(s, mode);
+    const char *s = luaL_check_string(L, 1);
+    current = (*s == '|') ? popen(s+1, mode) : fopen(s, mode);
     return setnewfile(L, current, inout);
   }
 }
 
 
 static int io_readfrom (lua_State *L) {
-  return io_fromto(L, INFILE, l_s("r"));
+  return io_fromto(L, INFILE, "r");
 }
 
 
 static int io_writeto (lua_State *L) {
-  return io_fromto(L, OUTFILE, l_s("w"));
+  return io_fromto(L, OUTFILE, "w");
 }
 
 
 static int io_appendto (lua_State *L) {
-  FILE *current = fopen(luaL_check_string(L, 1), l_s("a"));
+  FILE *current = fopen(luaL_check_string(L, 1), "a");
   return setnewfile(L, current, OUTFILE);
 }
 
@@ -208,7 +207,7 @@ static int io_appendto (lua_State *L) {
 **  Addison-Wesley, 1993.)
 */
 
-static void prep_read_until (int next[], const l_char *p, int pl) {
+static void prep_read_until (int next[], const char *p, int pl) {
   int i = 0;
   int j = -1;
   next[0] = -1;
@@ -221,8 +220,8 @@ static void prep_read_until (int next[], const l_char *p, int pl) {
 }
 
 
-static int read_until (lua_State *L, FILE *f, const l_char *p, int pl) {
-  l_charint c;
+static int read_until (lua_State *L, FILE *f, const char *p, int pl) {
+  int c;
   int j;
   int next[LUA_MAXUNTIL+1];
   luaL_Buffer b;
@@ -255,7 +254,7 @@ static int read_until (lua_State *L, FILE *f, const l_char *p, int pl) {
 
 static int read_number (lua_State *L, FILE *f) {
   lua_Number d;
-  if (fscanf(f, l_s(LUA_NUMBER_SCAN), &d) == 1) {
+  if (fscanf(f, LUA_NUMBER_SCAN, &d) == 1) {
     lua_pushnumber(L, d);
     return 1;
   }
@@ -264,7 +263,7 @@ static int read_number (lua_State *L, FILE *f) {
 
 
 static int test_eof (lua_State *L, FILE *f) {
-  l_charint c = getc(f);
+  int c = getc(f);
   ungetc(c, f);
   lua_pushlstring(L, NULL, 0);
   return (c != EOF);
@@ -278,9 +277,9 @@ static int read_chars (lua_State *L, FILE *f, size_t n) {
   luaL_buffinit(L, &b);
   rlen = LUAL_BUFFERSIZE;  /* try to read that much each time */
   do {
-    l_char *p = luaL_prepbuffer(&b);
+    char *p = luaL_prepbuffer(&b);
     if (rlen > n) rlen = n;  /* cannot read more than asked */
-    nr = fread(p, sizeof(l_char), rlen, f);
+    nr = fread(p, sizeof(char), rlen, f);
     luaL_addsize(&b, nr);
     n -= nr;  /* still have to read `n' chars */
   } while (n > 0 && nr == rlen);  /* until end of count or eof */
@@ -295,11 +294,11 @@ static int io_read (lua_State *L) {
   int success;
   int n;
   if (nargs == 0) {  /* no arguments? */
-    success = read_until(L, f, l_s("\n"), 1);  /* read until \n (a line) */
+    success = read_until(L, f, "\n", 1);  /* read until \n (a line) */
     n = 2;  /* will return n-1 results */
   }
   else {  /* ensure stack space for all results and for auxlib's buffer */
-    luaL_check_stack(L, nargs+LUA_MINSTACK, l_s("too many arguments"));
+    luaL_check_stack(L, nargs+LUA_MINSTACK, "too many arguments");
     success = 1;
     for (n = 1; n<=nargs && success; n++) {
       if (lua_rawtag(L, n) == LUA_TNUMBER) {
@@ -307,32 +306,32 @@ static int io_read (lua_State *L) {
         success = (l == 0) ? test_eof(L, f) : read_chars(L, f, l);
       }
       else {
-        const l_char *p = lua_tostring(L, n);
-        if (!p || p[0] != l_c('*'))
-          lua_error(L, l_s("invalid `read' option"));
+        const char *p = lua_tostring(L, n);
+        if (!p || p[0] != '*')
+          lua_error(L, "invalid `read' option");
         switch (p[1]) {
-          case l_c('n'):  /* number */
+          case 'n':  /* number */
             success = read_number(L, f);
             break;
-          case l_c('l'):  /* line */
-            success = read_until(L, f, l_s("\n"), 1);  /* read until \n */
+          case 'l':  /* line */
+            success = read_until(L, f, "\n", 1);  /* read until \n */
             break;
-          case l_c('a'):  /* file */
+          case 'a':  /* file */
             read_chars(L, f, ~((size_t)0));  /* read MAX_SIZE_T chars */
             success = 1; /* always success */
             break;
-          case l_c('w'):  /* word */
-            lua_error(L, l_s("obsolete option `*w'"));
+          case 'w':  /* word */
+            lua_error(L, "obsolete option `*w'");
             break;
-          case l_c('u'): {  /* read until */
+          case 'u': {  /* read until */
             size_t pl = lua_strlen(L, n) - 2;
             luaL_arg_check(L, 0 < pl && pl <= LUA_MAXUNTIL, n,
-                              l_s("invalid read-until length"));
+                              "invalid read-until length");
             success = read_until(L, f, p+2, (int)(pl));
             break;
           }
           default:
-            luaL_argerror(L, n, l_s("invalid format"));
+            luaL_argerror(L, n, "invalid format");
             success = 0;  /* to avoid warnings */
         }
       }
@@ -357,12 +356,12 @@ static int io_write (lua_State *L) {
     if (lua_rawtag(L, arg) == LUA_TNUMBER) {
       /* optimization: could be done exactly as for strings */
       status = status &&
-          fprintf(f, l_s(LUA_NUMBER_FMT), lua_tonumber(L, arg)) > 0;
+          fprintf(f, LUA_NUMBER_FMT, lua_tonumber(L, arg)) > 0;
     }
     else {
       size_t l;
-      const l_char *s = luaL_check_lstr(L, arg, &l);
-      status = status && (fwrite(s, sizeof(l_char), l, f) == l);
+      const char *s = luaL_check_lstr(L, arg, &l);
+      status = status && (fwrite(s, sizeof(char), l, f) == l);
     }
   }
   pushresult(L, status);
@@ -372,11 +371,11 @@ static int io_write (lua_State *L) {
 
 static int io_seek (lua_State *L) {
   static const int mode[] = {SEEK_SET, SEEK_CUR, SEEK_END};
-  static const l_char *const modenames[] = {l_s("set"), l_s("cur"), l_s("end"), NULL};
+  static const char *const modenames[] = {"set", "cur", "end", NULL};
   FILE *f = (FILE *)(luaL_check_userdata(L, 1, FILEHANDLE));
-  int op = luaL_findstring(luaL_opt_string(L, 2, l_s("cur")), modenames);
+  int op = luaL_findstring(luaL_opt_string(L, 2, "cur"), modenames);
   long offset = luaL_opt_long(L, 3, 0);
-  luaL_arg_check(L, op != -1, 2, l_s("invalid mode"));
+  luaL_arg_check(L, op != -1, 2, "invalid mode");
   op = fseek(f, offset, mode[op]);
   if (op)
     return pushresult(L, 0);  /* error */
@@ -420,9 +419,9 @@ static int io_rename (lua_State *L) {
 
 
 static int io_tmpname (lua_State *L) {
-  l_char buff[L_tmpnam];
+  char buff[L_tmpnam];
   if (tmpnam(buff) != buff)
-    lua_error(L, l_s("unable to generate a unique filename"));
+    lua_error(L, "unable to generate a unique filename");
   lua_pushstring(L, buff);
   return 1;
 }
@@ -449,14 +448,14 @@ static int io_clock (lua_State *L) {
 ** =======================================================
 */
 
-static void setfield (lua_State *L, const l_char *key, int value) {
+static void setfield (lua_State *L, const char *key, int value) {
   lua_pushstring(L, key);
   lua_pushnumber(L, value);
   lua_rawset(L, -3);
 }
 
 
-static int getfield (lua_State *L, const l_char *key, int d) {
+static int getfield (lua_State *L, const char *key, int d) {
   int res;
   lua_pushstring(L, key);
   lua_rawget(L, -2);
@@ -464,7 +463,7 @@ static int getfield (lua_State *L, const l_char *key, int d) {
     res = (int)(lua_tonumber(L, -1));
   else {
     if (d == -2)
-      luaL_verror(L, l_s("field `%.20s' missing in date table"), key);
+      luaL_verror(L, "field `%.20s' missing in date table", key);
     res = d;
   }
   lua_pop(L, 1);
@@ -473,12 +472,12 @@ static int getfield (lua_State *L, const l_char *key, int d) {
 
 
 static int io_date (lua_State *L) {
-  const l_char *s = luaL_opt_string(L, 1, l_s("%c"));
+  const char *s = luaL_opt_string(L, 1, "%c");
   time_t t = (time_t)(luaL_opt_number(L, 2, -1));
   struct tm *stm;
   if (t == (time_t)(-1))  /* no time given? */
     t = time(NULL);  /* use current time */
-  if (*s == l_c('!')) {  /* UTC? */
+  if (*s == '!') {  /* UTC? */
     stm = gmtime(&t);
     s++;  /* skip `!' */
   }
@@ -486,24 +485,24 @@ static int io_date (lua_State *L) {
     stm = localtime(&t);
   if (stm == NULL)  /* invalid date? */
     lua_pushnil(L);
-  else if (strcmp(s, l_s("*t")) == 0) {
+  else if (strcmp(s, "*t") == 0) {
     lua_newtable(L);
-    setfield(L, l_s("sec"), stm->tm_sec);
-    setfield(L, l_s("min"), stm->tm_min);
-    setfield(L, l_s("hour"), stm->tm_hour);
-    setfield(L, l_s("day"), stm->tm_mday);
-    setfield(L, l_s("month"), stm->tm_mon+1);
-    setfield(L, l_s("year"), stm->tm_year+1900);
-    setfield(L, l_s("wday"), stm->tm_wday+1);
-    setfield(L, l_s("yday"), stm->tm_yday+1);
-    setfield(L, l_s("isdst"), stm->tm_isdst);
+    setfield(L, "sec", stm->tm_sec);
+    setfield(L, "min", stm->tm_min);
+    setfield(L, "hour", stm->tm_hour);
+    setfield(L, "day", stm->tm_mday);
+    setfield(L, "month", stm->tm_mon+1);
+    setfield(L, "year", stm->tm_year+1900);
+    setfield(L, "wday", stm->tm_wday+1);
+    setfield(L, "yday", stm->tm_yday+1);
+    setfield(L, "isdst", stm->tm_isdst);
   }
   else {
-    l_char b[256];
+    char b[256];
     if (strftime(b, sizeof(b), s, stm))
       lua_pushstring(L, b);
     else
-      lua_error(L, l_s("invalid `date' format"));
+      lua_error(L, "invalid `date' format");
   }
   return 1;
 }
@@ -517,13 +516,13 @@ static int io_time (lua_State *L) {
     struct tm ts;
     luaL_check_rawtype(L, 1, LUA_TTABLE);
     lua_settop(L, 1);  /* make sure table is at the top */
-    ts.tm_sec = getfield(L, l_s("sec"), 0);
-    ts.tm_min = getfield(L, l_s("min"), 0);
-    ts.tm_hour = getfield(L, l_s("hour"), 12);
-    ts.tm_mday = getfield(L, l_s("day"), -2);
-    ts.tm_mon = getfield(L, l_s("month"), -2)-1;
-    ts.tm_year = getfield(L, l_s("year"), -2)-1900;
-    ts.tm_isdst = getfield(L, l_s("isdst"), -1);
+    ts.tm_sec = getfield(L, "sec", 0);
+    ts.tm_min = getfield(L, "min", 0);
+    ts.tm_hour = getfield(L, "hour", 12);
+    ts.tm_mday = getfield(L, "day", -2);
+    ts.tm_mon = getfield(L, "month", -2)-1;
+    ts.tm_year = getfield(L, "year", -2)-1900;
+    ts.tm_isdst = getfield(L, "isdst", -1);
     t = mktime(&ts);
     if (t == (time_t)(-1))
       lua_pushnil(L);
@@ -546,10 +545,10 @@ static int io_difftime (lua_State *L) {
 static int io_setloc (lua_State *L) {
   static const int cat[] = {LC_ALL, LC_COLLATE, LC_CTYPE, LC_MONETARY,
                       LC_NUMERIC, LC_TIME};
-  static const l_char *const catnames[] = {l_s("all"), l_s("collate"), l_s("ctype"), l_s("monetary"),
-     l_s("numeric"), l_s("time"), NULL};
-  int op = luaL_findstring(luaL_opt_string(L, 2, l_s("all")), catnames);
-  luaL_arg_check(L, op != -1, 2, l_s("invalid option"));
+  static const char *const catnames[] = {"all", "collate", "ctype", "monetary",
+     "numeric", "time", NULL};
+  int op = luaL_findstring(luaL_opt_string(L, 2, "all"), catnames);
+  luaL_arg_check(L, op != -1, 2, "invalid option");
   lua_pushstring(L, setlocale(cat[op], luaL_check_string(L, 1)));
   return 1;
 }
@@ -566,10 +565,10 @@ static int io_exit (lua_State *L) {
 
 static int io_debug (lua_State *L) {
   for (;;) {
-    l_char buffer[250];
-    fprintf(stderr, l_s("lua_debug> "));
+    char buffer[250];
+    fprintf(stderr, "lua_debug> ");
     if (fgets(buffer, sizeof(buffer), stdin) == 0 ||
-        strcmp(buffer, l_s("cont\n")) == 0)
+        strcmp(buffer, "cont\n") == 0)
       return 0;
     lua_dostring(L, buffer);
     lua_settop(L, 0);  /* remove eventual returns */
@@ -586,61 +585,61 @@ static int errorfb (lua_State *L) {
   lua_Debug ar;
   luaL_Buffer b;
   luaL_buffinit(L, &b);
-  luaL_addstring(&b, l_s("error: "));
+  luaL_addstring(&b, "error: ");
   luaL_addstring(&b, luaL_check_string(L, 1));
-  luaL_addstring(&b, l_s("\n"));
+  luaL_addstring(&b, "\n");
   while (lua_getstack(L, level++, &ar)) {
-    l_char buff[120];  /* enough to fit following `sprintf's */
+    char buff[120];  /* enough to fit following `sprintf's */
     if (level == 2)
-      luaL_addstring(&b, l_s("stack traceback:\n"));
+      luaL_addstring(&b, "stack traceback:\n");
     else if (level > LEVELS1 && firstpart) {
       /* no more than `LEVELS2' more levels? */
       if (!lua_getstack(L, level+LEVELS2, &ar))
         level--;  /* keep going */
       else {
-        luaL_addstring(&b, l_s("       ...\n"));  /* too many levels */
+        luaL_addstring(&b, "       ...\n");  /* too many levels */
         while (lua_getstack(L, level+LEVELS2, &ar))  /* find last levels */
           level++;
       }
       firstpart = 0;
       continue;
     }
-    sprintf(buff, l_s("%4d:  "), level-1);
+    sprintf(buff, "%4d:  ", level-1);
     luaL_addstring(&b, buff);
-    lua_getinfo(L, l_s("Snl"), &ar);
+    lua_getinfo(L, "Snl", &ar);
     switch (*ar.namewhat) {
-      case l_c('g'):  case l_c('l'):  /* global, local */
-        sprintf(buff, l_s("function `%.50s'"), ar.name);
+      case 'g':  case 'l':  /* global, local */
+        sprintf(buff, "function `%.50s'", ar.name);
         break;
-      case l_c('f'):  /* field */
-        sprintf(buff, l_s("method `%.50s'"), ar.name);
+      case 'f':  /* field */
+        sprintf(buff, "method `%.50s'", ar.name);
         break;
-      case l_c('t'):  /* tag method */
-        sprintf(buff, l_s("`%.50s' tag method"), ar.name);
+      case 't':  /* tag method */
+        sprintf(buff, "`%.50s' tag method", ar.name);
         break;
       default: {
-        if (*ar.what == l_c('m'))  /* main? */
-          sprintf(buff, l_s("main of %.70s"), ar.short_src);
-        else if (*ar.what == l_c('C'))  /* C function? */
-          sprintf(buff, l_s("%.70s"), ar.short_src);
+        if (*ar.what == 'm')  /* main? */
+          sprintf(buff, "main of %.70s", ar.short_src);
+        else if (*ar.what == 'C')  /* C function? */
+          sprintf(buff, "%.70s", ar.short_src);
         else
-          sprintf(buff, l_s("function <%d:%.70s>"), ar.linedefined, ar.short_src);
+          sprintf(buff, "function <%d:%.70s>", ar.linedefined, ar.short_src);
         ar.source = NULL;  /* do not print source again */
       }
     }
     luaL_addstring(&b, buff);
     if (ar.currentline > 0) {
-      sprintf(buff, l_s(" at line %d"), ar.currentline);
+      sprintf(buff, " at line %d", ar.currentline);
       luaL_addstring(&b, buff);
     }
     if (ar.source) {
-      sprintf(buff, l_s(" [%.70s]"), ar.short_src);
+      sprintf(buff, " [%.70s]", ar.short_src);
       luaL_addstring(&b, buff);
     }
-    luaL_addstring(&b, l_s("\n"));
+    luaL_addstring(&b, "\n");
   }
   luaL_pushresult(&b);
-  lua_getglobal(L, l_s(LUA_ALERT));
+  lua_getglobal(L, LUA_ALERT);
   if (lua_isfunction(L, -1)) {  /* avoid loop if _ALERT is not defined */
     lua_pushvalue(L, -2);  /* error message */
     lua_rawcall(L, 1, 0);
@@ -651,29 +650,29 @@ static int errorfb (lua_State *L) {
 
 
 static const luaL_reg iolib[] = {
-  {l_s("appendto"),  io_appendto},
-  {l_s("clock"),     io_clock},
-  {l_s("closefile"), io_close},
-  {l_s("date"),      io_date},
-  {l_s("debug"),     io_debug},
-  {l_s("difftime"),  io_difftime},
-  {l_s("execute"),   io_execute},
-  {l_s("exit"),      io_exit},
-  {l_s("flush"),     io_flush},
-  {l_s("getenv"),    io_getenv},
-  {l_s("openfile"),  io_open},
-  {l_s("read"),      io_read},
-  {l_s("readfrom"),  io_readfrom},
-  {l_s("remove"),    io_remove},
-  {l_s("rename"),    io_rename},
-  {l_s("seek"),      io_seek},
-  {l_s("setlocale"), io_setloc},
-  {l_s("time"),      io_time},
-  {l_s("tmpfile"),   io_tmpfile},
-  {l_s("tmpname"),   io_tmpname},
-  {l_s("write"),     io_write},
-  {l_s("writeto"),   io_writeto},
-  {l_s(LUA_ERRORMESSAGE), errorfb}
+  {"appendto",  io_appendto},
+  {"clock",     io_clock},
+  {"closefile", io_close},
+  {"date",      io_date},
+  {"debug",     io_debug},
+  {"difftime",  io_difftime},
+  {"execute",   io_execute},
+  {"exit",      io_exit},
+  {"flush",     io_flush},
+  {"getenv",    io_getenv},
+  {"openfile",  io_open},
+  {"read",      io_read},
+  {"readfrom",  io_readfrom},
+  {"remove",    io_remove},
+  {"rename",    io_rename},
+  {"seek",      io_seek},
+  {"setlocale", io_setloc},
+  {"time",      io_time},
+  {"tmpfile",   io_tmpfile},
+  {"tmpname",   io_tmpname},
+  {"write",     io_write},
+  {"writeto",   io_writeto},
+  {LUA_ERRORMESSAGE, errorfb}
 };
 
 
@@ -684,12 +683,12 @@ LUALIB_API int lua_iolibopen (lua_State *L) {
   /* predefined file handles */
   newfilewithname(L, stdin, basicfiles[INFILE]);
   newfilewithname(L, stdout, basicfiles[OUTFILE]);
-  newfilewithname(L, stderr, l_s("_STDERR"));
+  newfilewithname(L, stderr, "_STDERR");
   resetfile(L, INFILE);
   resetfile(L, OUTFILE);
   /* close files when collected */
   lua_pushcfunction(L, file_collect);
-  lua_settagmethod(L, iotag, l_s("gc"));
+  lua_settagmethod(L, iotag, "gc");
   return 0;
 }
 

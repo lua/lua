@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.37 2001/03/06 20:09:38 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.38 2001/03/26 14:31:49 roberto Exp $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <math.h>
 
-#define LUA_PRIVATE
 #include "lua.h"
 
 #include "lauxlib.h"
@@ -177,18 +176,18 @@ static int math_random (lua_State *L) {
     }
     case 1: {  /* only upper limit */
       int u = luaL_check_int(L, 1);
-      luaL_arg_check(L, 1<=u, 1, l_s("interval is empty"));
+      luaL_arg_check(L, 1<=u, 1, "interval is empty");
       lua_pushnumber(L, (int)(r*u)+1);  /* integer between 1 and `u' */
       break;
     }
     case 2: {  /* lower and upper limits */
       int l = luaL_check_int(L, 1);
       int u = luaL_check_int(L, 2);
-      luaL_arg_check(L, l<=u, 2, l_s("interval is empty"));
+      luaL_arg_check(L, l<=u, 2, "interval is empty");
       lua_pushnumber(L, (int)(r*(u-l+1))+l);  /* integer between `l' and `u' */
       break;
     }
-    default: lua_error(L, l_s("wrong number of arguments"));
+    default: lua_error(L, "wrong number of arguments");
   }
   return 1;
 }
@@ -201,29 +200,29 @@ static int math_randomseed (lua_State *L) {
 
 
 static const luaL_reg mathlib[] = {
-{l_s("abs"),   math_abs},
-{l_s("sin"),   math_sin},
-{l_s("cos"),   math_cos},
-{l_s("tan"),   math_tan},
-{l_s("asin"),  math_asin},
-{l_s("acos"),  math_acos},
-{l_s("atan"),  math_atan},
-{l_s("atan2"), math_atan2},
-{l_s("ceil"),  math_ceil},
-{l_s("floor"), math_floor},
-{l_s("mod"),   math_mod},
-{l_s("frexp"), math_frexp},
-{l_s("ldexp"), math_ldexp},
-{l_s("sqrt"),  math_sqrt},
-{l_s("min"),   math_min},
-{l_s("max"),   math_max},
-{l_s("log"),   math_log},
-{l_s("log10"), math_log10},
-{l_s("exp"),   math_exp},
-{l_s("deg"),   math_deg},
-{l_s("rad"),   math_rad},
-{l_s("random"),     math_random},
-{l_s("randomseed"), math_randomseed}
+{"abs",   math_abs},
+{"sin",   math_sin},
+{"cos",   math_cos},
+{"tan",   math_tan},
+{"asin",  math_asin},
+{"acos",  math_acos},
+{"atan",  math_atan},
+{"atan2", math_atan2},
+{"ceil",  math_ceil},
+{"floor", math_floor},
+{"mod",   math_mod},
+{"frexp", math_frexp},
+{"ldexp", math_ldexp},
+{"sqrt",  math_sqrt},
+{"min",   math_min},
+{"max",   math_max},
+{"log",   math_log},
+{"log10", math_log10},
+{"exp",   math_exp},
+{"deg",   math_deg},
+{"rad",   math_rad},
+{"random",     math_random},
+{"randomseed", math_randomseed}
 };
 
 /*
@@ -232,9 +231,9 @@ static const luaL_reg mathlib[] = {
 LUALIB_API int lua_mathlibopen (lua_State *L) {
   luaL_openl(L, mathlib);
   lua_pushcfunction(L, math_pow);
-  lua_settagmethod(L, LUA_TNUMBER, l_s("pow"));
+  lua_settagmethod(L, LUA_TNUMBER, "pow");
   lua_pushnumber(L, PI);
-  lua_setglobal(L, l_s("PI"));
+  lua_setglobal(L, "PI");
   return 0;
 }
 

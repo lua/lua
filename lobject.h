@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.115 2001/10/25 19:14:14 roberto Exp $
+** $Id: lobject.h,v 1.116 2001/11/06 21:41:53 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -114,7 +114,7 @@ typedef union TString {
 } TString;
 
 
-#define getstr(ts)	cast(l_char *, (ts) + 1)
+#define getstr(ts)	cast(char *, (ts) + 1)
 #define svalue(o)       getstr(tsvalue(o))
 
 
@@ -277,10 +277,10 @@ int luaO_log2 (unsigned int x);
 void *luaO_openspaceaux (lua_State *L, size_t n);
 
 int luaO_equalObj (const TObject *t1, const TObject *t2);
-int luaO_str2d (const l_char *s, lua_Number *result);
+int luaO_str2d (const char *s, lua_Number *result);
 
-void luaO_verror (lua_State *L, const l_char *fmt, ...);
-void luaO_chunkid (l_char *out, const l_char *source, int len);
+void luaO_verror (lua_State *L, const char *fmt, ...);
+void luaO_chunkid (char *out, const char *source, int len);
 
 
 #endif

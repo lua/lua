@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.38 2001/08/31 19:46:07 roberto Exp $
+** $Id: llex.h,v 1.39 2001/11/16 16:29:10 roberto Exp $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -14,7 +14,7 @@
 #define FIRST_RESERVED	257
 
 /* maximum length of a reserved word */
-#define TOKEN_LEN	(sizeof(l_s("function"))/sizeof(l_char))
+#define TOKEN_LEN	(sizeof("function")/sizeof(char))
 
 
 /*
@@ -49,7 +49,7 @@ typedef struct Token {
 
 
 typedef struct LexState {
-  l_charint current;  /* current character */
+  int current;  /* current character (charint) */
   Token t;  /* current token */
   Token lookahead;  /* look ahead token */
   struct FuncState *fs;  /* `FuncState' is private to the parser */
@@ -64,9 +64,9 @@ typedef struct LexState {
 void luaX_init (lua_State *L);
 void luaX_setinput (lua_State *L, LexState *LS, ZIO *z, TString *source);
 int luaX_lex (LexState *LS, SemInfo *seminfo);
-void luaX_checklimit (LexState *ls, int val, int limit, const l_char *msg);
-void luaX_error (LexState *ls, const l_char *s, int token);
-void luaX_token2str (int token, l_char *s);
+void luaX_checklimit (LexState *ls, int val, int limit, const char *msg);
+void luaX_error (LexState *ls, const char *s, int token);
+void luaX_token2str (int token, char *s);
 
 
 #endif

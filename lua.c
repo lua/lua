@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.71 2001/10/17 21:12:57 roberto Exp $
+** $Id: lua.c,v 1.72 2001/11/27 20:56:47 roberto Exp $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define LUA_PRIVATE
 #include "lua.h"
 
 #include "luadebug.h"
@@ -25,12 +24,12 @@ static int isatty (int x) { return x==0; }  /* assume stdin is a tty */
 
 
 #ifndef LUA_PROGNAME
-#define LUA_PROGNAME	l_s("lua: ")
+#define LUA_PROGNAME	"lua: "
 #endif
 
 
 #ifndef PROMPT
-#define PROMPT		l_s("> ")
+#define PROMPT		"> "
 #endif
 
 
@@ -62,7 +61,7 @@ static void lstop (void) {
   lua_setlinehook(L, old_linehook);
   lua_setcallhook(L, old_callhook);
   lreset();
-  lua_error(L, l_s("interrupted!"));
+  lua_error(L, "interrupted!");
 }
 
 
@@ -75,7 +74,7 @@ static void laction (int i) {
 }
 
 
-static int ldo (int (*f)(lua_State *l, const l_char *), const l_char *name,
+static int ldo (int (*f)(lua_State *l, const char *), const char *name,
                 int clear) {
   int res;
   handler h = lreset();
@@ -86,45 +85,45 @@ static int ldo (int (*f)(lua_State *l, const l_char *), const l_char *name,
     lua_settop(L, top);  /* remove eventual results */
   /* Lua gives no message in such cases, so lua.c provides one */
   if (res == LUA_ERRMEM) {
-    fprintf(stderr, LUA_PROGNAME l_s("memory allocation error\n"));
+    fprintf(stderr, LUA_PROGNAME "memory allocation error\n");
   }
   else if (res == LUA_ERRERR)
-    fprintf(stderr, LUA_PROGNAME l_s("error in error message\n"));
+    fprintf(stderr, LUA_PROGNAME "error in error message\n");
   return res;
 }
 
 
 static void print_message (void) {
   fprintf(stderr,
-  l_s("usage: lua [options].  Available options are:\n")
-  l_s("  -        execute stdin as a file\n")
-  l_s("  -c       close Lua when exiting\n")
-  l_s("  -e stat  execute string `stat'\n")
-  l_s("  -f name  execute file `name' with remaining arguments in table `arg'\n")
-  l_s("  -i       enter interactive mode with prompt\n")
-  l_s("  -q       enter interactive mode without prompt\n")
-  l_s("  -sNUM    set stack size to NUM (must be the first option)\n")
-  l_s("  -v       print version information\n")
-  l_s("  a=b      set global `a' to string `b'\n")
-  l_s("  name     execute file `name'\n")
+  "usage: lua [options].  Available options are:\n"
+  "  -        execute stdin as a file\n"
+  "  -c       close Lua when exiting\n"
+  "  -e stat  execute string `stat'\n"
+  "  -f name  execute file `name' with remaining arguments in table `arg'\n"
+  "  -i       enter interactive mode with prompt\n"
+  "  -q       enter interactive mode without prompt\n"
+  "  -sNUM    set stack size to NUM (must be the first option)\n"
+  "  -v       print version information\n"
+  "  a=b      set global `a' to string `b'\n"
+  "  name     execute file `name'\n"
 );
 }
 
 
 static void print_version (void) {
-  printf(l_s("%.80s  %.80s\n"), l_s(LUA_VERSION), l_s(LUA_COPYRIGHT));
+  printf("%.80s  %.80s\n", LUA_VERSION, LUA_COPYRIGHT);
 }
 
 
-static void assign (l_char *arg) {
-  l_char *eq = strchr(arg, l_c('='));
-  *eq = l_c('\0');  /* spilt `arg' in two strings (name & value) */
+static void assign (char *arg) {
+  char *eq = strchr(arg, '=');
+  *eq = '\0';  /* spilt `arg' in two strings (name & value) */
   lua_pushstring(L, eq+1);
   lua_setglobal(L, arg);
 }
 
 
-static void getargs (l_char *argv[]) {
+static void getargs (char *argv[]) {
   int i;
   lua_newtable(L);
   for (i=0; argv[i]; i++) {
@@ -134,24 +133,24 @@ static void getargs (l_char *argv[]) {
     lua_settable(L, -3);
   }
   /* arg.n = maximum index in table `arg' */
-  lua_pushliteral(L, l_s("n"));
+  lua_pushliteral(L, "n");
   lua_pushnumber(L, i-1);
   lua_settable(L, -3);
 }
 
 
 static int l_getargs (lua_State *l) {
-  l_char **argv = (l_char **)lua_touserdata(l, lua_upvalueindex(1));
+  char **argv = (char **)lua_touserdata(l, lua_upvalueindex(1));
   getargs(argv);
   return 1;
 }
 
 
-static int file_input (const l_char *argv) {
+static int file_input (const char *argv) {
   int result = ldo(lua_dofile, argv, 1);
   if (result) {
     if (result == LUA_ERRFILE) {
-      fprintf(stderr, LUA_PROGNAME l_s("cannot execute file "));
+      fprintf(stderr, LUA_PROGNAME "cannot execute file ");
       perror(argv);
     }
     return EXIT_FAILURE;
@@ -167,12 +166,12 @@ static int file_input (const l_char *argv) {
 #endif
 
 
-static const l_char *get_prompt (int prompt) {
+static const char *get_prompt (int prompt) {
   if (!prompt)
-    return l_s("");
+    return "";
   else {
-    const l_char *s;
-    lua_getglobal(L, l_s("_PROMPT"));
+    const char *s;
+    lua_getglobal(L, "_PROMPT");
     s = lua_tostring(L, -1);
     if (!s) s = PROMPT;
     lua_pop(L, 1);  /* remove global */
@@ -188,20 +187,20 @@ static void manual_input (int version, int prompt) {
     int toprint = 0;
     fputs(get_prompt(prompt), stdout);  /* show prompt */
     for(;;) {
-      l_char buffer[MAXINPUT];
+      char buffer[MAXINPUT];
       size_t l;
       if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
-        printf(l_s("\n"));
+        printf("\n");
         return;
       }
-      if (firstline && buffer[0] == l_c('=')) {
-        buffer[0] = l_c(' ');
-        lua_pushstring(L, l_s("return"));
+      if (firstline && buffer[0] == '=') {
+        buffer[0] = ' ';
+        lua_pushstring(L, "return");
         toprint = 1;
       }
       l = strlen(buffer);
-      if (buffer[l-1] == l_c('\n') && buffer[l-2] == l_c('\\')) {
-        buffer[l-2] = l_c('\n');
+      if (buffer[l-1] == '\n' && buffer[l-2] == '\\') {
+        buffer[l-2] = '\n';
         lua_pushlstring(L, buffer, l-1);
       }
       else {
@@ -214,7 +213,7 @@ static void manual_input (int version, int prompt) {
     ldo(lua_dostring, lua_tostring(L, 1), 0);
     lua_remove(L, 1);  /* remove ran string */
     if (toprint && lua_gettop(L) > 0) {  /* any result to print? */
-      lua_getglobal(L, l_s("print"));
+      lua_getglobal(L, "print");
       lua_insert(L, 1);
       lua_call(L, lua_gettop(L)-1, 0);
     }
@@ -224,7 +223,7 @@ static void manual_input (int version, int prompt) {
 }
 
 
-static int handle_argv (l_char *argv[], int *toclose) {
+static int handle_argv (char *argv[], int *toclose) {
   if (*argv == NULL) {  /* no more arguments? */
     if (isatty(0)) {
       manual_input(1, 1);
@@ -235,8 +234,8 @@ static int handle_argv (l_char *argv[], int *toclose) {
   else {  /* other arguments; loop over them */
     int i;
     for (i = 0; argv[i] != NULL; i++) {
-      if (argv[i][0] != l_c('-')) {  /* not an option? */
-        if (strchr(argv[i], l_c('=')))
+      if (argv[i][0] != '-') {  /* not an option? */
+        if (strchr(argv[i], '='))
           assign(argv[i]);
         else
           if (file_input(argv[i]) != EXIT_SUCCESS)
@@ -247,49 +246,49 @@ static int handle_argv (l_char *argv[], int *toclose) {
             ldo(lua_dofile, NULL, 1);  /* executes stdin as a file */
             break;
           }
-          case l_c('i'): {
+          case 'i': {
             manual_input(0, 1);
             break;
           }
-          case l_c('q'): {
+          case 'q': {
             manual_input(0, 0);
             break;
           }
-          case l_c('c'): {
+          case 'c': {
             *toclose = 1;
             break;
           }
-          case l_c('v'): {
+          case 'v': {
             print_version();
             break;
           }
-          case l_c('e'): {
+          case 'e': {
             i++;
             if (argv[i] == NULL) {
               print_message();
               return EXIT_FAILURE;
             }
             if (ldo(lua_dostring, argv[i], 1) != 0) {
-              fprintf(stderr, LUA_PROGNAME l_s("error running argument `%.99s'\n"),
+              fprintf(stderr, LUA_PROGNAME "error running argument `%.99s'\n",
                       argv[i]);
               return EXIT_FAILURE;
             }
             break;
           }
-          case l_c('f'): {
+          case 'f': {
             i++;
             if (argv[i] == NULL) {
               print_message();
               return EXIT_FAILURE;
             }
             getargs(argv+i);  /* collect remaining arguments */
-            lua_setglobal(L, l_s("arg"));
+            lua_setglobal(L, "arg");
             return file_input(argv[i]);  /* stop scanning arguments */
           }
-          case l_c('s'): {
+          case 's': {
             if (i == 0) break;  /* option already handled */
             fprintf(stderr,
-               LUA_PROGNAME l_s("stack size (`-s') must be the first option\n"));
+               LUA_PROGNAME "stack size (`-s') must be the first option\n");
             return EXIT_FAILURE;
           }
           default: {
@@ -303,12 +302,12 @@ static int handle_argv (l_char *argv[], int *toclose) {
 }
 
 
-static int getstacksize (int argc, l_char *argv[]) {
+static int getstacksize (int argc, char *argv[]) {
   int stacksize = 0;
-  if (argc >= 2 && argv[1][0] == l_c('-') && argv[1][1] == l_c('s')) {
+  if (argc >= 2 && argv[1][0] == '-' && argv[1][1] == 's') {
     stacksize = strtol(&argv[1][2], NULL, 10);
     if (stacksize <= 0) {
-      fprintf(stderr, LUA_PROGNAME l_s("invalid stack size ('%.20s')\n"),
+      fprintf(stderr, LUA_PROGNAME "invalid stack size ('%.20s')\n",
               &argv[1][2]);
       exit(EXIT_FAILURE);
     }
@@ -317,10 +316,10 @@ static int getstacksize (int argc, l_char *argv[]) {
 }
 
 
-static void register_getargs (l_char *argv[]) {
+static void register_getargs (char *argv[]) {
   lua_newuserdatabox(L, argv);
   lua_pushcclosure(L, l_getargs, 1);
-  lua_setglobal(L, l_s("getargs"));
+  lua_setglobal(L, "getargs");
 }
 
 
@@ -333,7 +332,7 @@ static void openstdlibs (lua_State *l) {
 }
 
 
-int main (int argc, l_char *argv[]) {
+int main (int argc, char *argv[]) {
   int status;
   int toclose = 0;
   L = lua_open(getstacksize(argc, argv));  /* create state */
