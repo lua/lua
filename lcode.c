@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.19 2000/04/04 20:48:44 roberto Exp roberto $
+** $Id: lcode.c,v 1.20 2000/04/05 17:51:58 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -171,7 +171,12 @@ static void luaK_neq (FuncState *fs) {
 
 
 int luaK_jump (FuncState *fs) {
-  return luaK_S(fs, OP_JMP, NO_JUMP, 0);
+  int j = luaK_S(fs, OP_JMP, NO_JUMP, 0);
+  if (j == fs->lasttarget) {  /* possible jumps to this jump? */
+    luaK_concat(fs, &j, fs->jlt);  /* keep them on hold */
+    fs->jlt = NO_JUMP;
+  }
+  return j;
 }
 
 
@@ -220,11 +225,17 @@ static int luaK_getjump (FuncState *fs, int pc) {
 
 
 /*
+** discharge list of jumps to last target.
 ** returns current `pc' and marks it as a jump target (to avoid wrong
 ** optimizations with consecutive instructions not in the same basic block).
 */
 int luaK_getlabel (FuncState *fs) {
-  fs->lasttarget = fs->pc;
+  if (fs->pc != fs->lasttarget) {
+    int lasttarget = fs->lasttarget;
+    fs->lasttarget = fs->pc;
+    luaK_patchlist(fs, fs->jlt, lasttarget);  /* discharge old list `jlt' */
+    fs->jlt = NO_JUMP;  /* nobody jumps to this new label (till now) */
+  }
   return fs->pc;
 }
 
@@ -394,7 +405,10 @@ static void luaK_patchlistaux (FuncState *fs, int list, int target,
 
 
 void luaK_patchlist (FuncState *fs, int list, int target) {
-  luaK_patchlistaux(fs, list, target, OP_END, 0);
+  if (target == fs->lasttarget)  /* same target that list `jlt'? */
+    luaK_concat(fs, &fs->jlt, list);  /* delay fixing */
+  else
+    luaK_patchlistaux(fs, list, target, OP_END, 0);
 }
 
 

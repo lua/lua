@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.75 2000/04/03 13:44:55 roberto Exp roberto $
+** $Id: lparser.c,v 1.76 2000/04/05 17:51:58 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -71,20 +71,6 @@ static void error_unexpected (LexState *ls) {
 }
 
 
-static void error_unmatched (LexState *ls, int what, int who, int where) {
-  if (where == ls->linenumber)
-    error_expected(ls, what);
-  else {
-    char buff[100];
-    char t_what[TOKEN_LEN], t_who[TOKEN_LEN];
-    luaX_token2str(what, t_what);
-    luaX_token2str(who, t_who);
-    sprintf(buff, "`%.20s' expected (to close `%.20s' at line %d)",
-            t_what, t_who, where);
-    luaK_error(ls, buff);
-  }
-}
-
 static void check (LexState *ls, int c) {
   if (ls->token != c)
     error_expected(ls, c);
@@ -121,8 +107,19 @@ static int optional (LexState *ls, int c) {
 
 
 static void check_match (LexState *ls, int what, int who, int where) {
-  if (ls->token != what)
-    error_unmatched(ls, what, who, where);
+  if (ls->token != what) {
+    if (where == ls->linenumber)
+      error_expected(ls, what);
+    else {
+      char buff[100];
+      char t_what[TOKEN_LEN], t_who[TOKEN_LEN];
+      luaX_token2str(what, t_what);
+      luaX_token2str(who, t_who);
+      sprintf(buff, "`%.20s' expected (to close `%.20s' at line %d)",
+              t_what, t_who, where);
+      luaK_error(ls, buff);
+    }
+  }
   next(ls);
 }
 
@@ -363,6 +360,7 @@ static void init_state (LexState *ls, FuncState *fs, TString *source) {
   f->source = source;
   fs->pc = 0;
   fs->lasttarget = 0;
+  fs->jlt = NO_JUMP;
   f->code = NULL;
   f->maxstacksize = 0;
   f->numparams = 0;  /* default for main chunk */
@@ -376,6 +374,7 @@ static void close_func (LexState *ls) {
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
   luaK_0(fs, OP_END, 0);
+  luaK_getlabel(fs);  /* close eventual list of pending jumps */
   luaM_reallocvector(L, f->code, fs->pc, Instruction);
   luaM_reallocvector(L, f->kstr, f->nkstr, TString *);
   luaM_reallocvector(L, f->knum, f->nknum, Number);
@@ -1114,7 +1113,8 @@ static void ret (LexState *ls) {
       Breaklabel *bl = fs->bl;
       int currentlevel = fs->stacklevel;
       if (bl == NULL)
-        luaK_error(ls, "no breakable structure to break");
+        luaK_error(ls, "break not inside while or repeat loop");
+
       setline_and_next(ls);  /* skip BREAK */
       luaK_adjuststack(fs, currentlevel - bl->stacklevel);
       luaK_concat(fs, &bl->breaklist, luaK_jump(fs));
