@@ -3,7 +3,7 @@
 ** Mathematics library to LUA
 */
 
-char *rcs_mathlib="$Id: mathlib.c,v 1.14 1996/02/09 17:21:27 roberto Exp roberto $";
+char *rcs_mathlib="$Id: mathlib.c,v 1.15 1996/04/22 18:00:37 roberto Exp roberto $";
 
 #include <stdlib.h>
 #include <math.h>
@@ -104,7 +104,7 @@ static void math_sqrt (void)
  lua_pushnumber (sqrt(d));
 }
 
-static lua_Reference old_pow;
+static int old_pow;
 
 static void math_pow (void)
 {

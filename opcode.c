@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.66 1996/03/22 19:12:15 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.67 1996/04/22 18:00:37 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -717,7 +717,7 @@ void *lua_getuserdata (lua_Object object)
 }
 
 
-lua_Object lua_getref (lua_Reference ref)
+lua_Object lua_getref (int ref)
 {
   Object *o = luaI_getref(ref);
   if (o == NULL)
@@ -729,7 +729,7 @@ lua_Object lua_getref (lua_Reference ref)
 }
 
 
-void lua_pushref (lua_Reference ref)
+void lua_pushref (int ref)
 {
   Object *o = luaI_getref(ref);
   if (o == NULL)
@@ -738,7 +738,7 @@ void lua_pushref (lua_Reference ref)
 }
 
 
-lua_Reference lua_ref (int lock)
+int lua_ref (int lock)
 {
   adjustC(1);
   return luaI_ref(--top, lock);

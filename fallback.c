@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.23 1996/03/21 16:31:32 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.24 1996/04/22 18:00:37 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -122,7 +122,7 @@ static struct ref {
 } *refArray = NULL;
 static int refSize = 0;
 
-lua_Reference luaI_ref (Object *object, int lock)
+int luaI_ref (Object *object, int lock)
 {
   int i;
   int oldSize;
@@ -144,14 +144,14 @@ lua_Reference luaI_ref (Object *object, int lock)
 }
 
 
-void lua_unref (lua_Reference ref)
+void lua_unref (int ref)
 {
   if (ref >= 0 && ref < refSize)
     refArray[ref].status = FREE;
 }
 
 
-Object *luaI_getref (lua_Reference ref)
+Object *luaI_getref (int ref)
 {
   static Object nul = {LUA_T_NIL, {0}};
   if (ref == -1)
