@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.16 1996/01/26 12:11:28 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.18 1996/02/12 18:32:40 roberto Exp $";
 
 #include <string.h>
 #include <stdio.h>
@@ -125,10 +125,10 @@ static void str_sub (void)
   lua_pushliteral("");
  else
  {
-  char temp = s[end];
-  s[end] = 0;
-  lua_pushstring (&s[start-1]);
-  s[end] = temp;
+   luaI_addchar(0);
+   while (start <= end) 
+     luaI_addchar(s[start++ - 1]);
+   lua_pushstring (luaI_addchar(0));
  }
 }
 
