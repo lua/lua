@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.24 2004/05/10 17:50:51 roberto Exp roberto $
+** $Id: ltablib.c,v 1.25 2004/05/10 18:06:14 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -63,7 +63,8 @@ static int luaB_getn (lua_State *L) {
 static int luaB_setn (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
   luaL_setn(L, 1, luaL_checkint(L, 2));
-  return 0;
+  lua_pushvalue(L, 1);
+  return 1;
 }
 
 
