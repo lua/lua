@@ -356,32 +356,30 @@ static void checkMbuffer (lua_State *L) {
 }
 
 
-static void callgcTM (lua_State *L, Udata *udata) {
+static void do1gcTM (lua_State *L, Udata *udata) {
   const TObject *tm = fasttm(L, udata->uv.eventtable, TM_GC);
-  if (tm != NULL && ttype(tm) == LUA_TFUNCTION) {
-    int oldah = L->allowhooks;
+  if (tm != NULL) {
     StkId top = L->top;
-    L->allowhooks = 0;  /* stop debug hooks during GC tag methods */
     setobj(top, tm);
     setuvalue(top+1, udata);
     L->top += 2;
     luaD_call(L, top);
     L->top = top;  /* restore top */
-    L->allowhooks = oldah;  /* restore hooks */
   }
 }
 
 
-static void callgcTMudata (lua_State *L) {
+static void unprotectedcallGCTM (lua_State *L, void *pu) {
   luaD_checkstack(L, 3);
   L->top++;  /* reserve space to keep udata while runs its gc method */
   while (G(L)->tmudata != NULL) {
     Udata *udata = G(L)->tmudata;
     G(L)->tmudata = udata->uv.next;  /* remove udata from list */
+    *(Udata **)pu = udata;  /* keep a reference to it (in case of errors) */
+    setuvalue(L->top - 1, udata);  /* and on stack (in case of recursive GC) */
     udata->uv.next = G(L)->rootudata;  /* resurect it */
     G(L)->rootudata = udata;
-    setuvalue(L->top - 1, udata);
-    callgcTM(L, udata);
+    do1gcTM(L, udata);
     /* mark udata as finalized (default event table) */
     uvalue(L->top-1)->uv.eventtable = hvalue(defaultet(L));
   }
@@ -389,11 +387,26 @@ static void callgcTMudata (lua_State *L) {
 }
 
 
+static void callGCTM (lua_State *L) {
+  int oldah = L->allowhooks;
+  L->allowhooks = 0;  /* stop debug hooks during GC tag methods */
+  while (G(L)->tmudata != NULL) {
+    Udata *udata;
+    if (luaD_runprotected(L, unprotectedcallGCTM, &udata) != 0) {
+      /* `udata' generated an error during its gc */
+      /* mark it as finalized (default event table) */
+      udata->uv.eventtable = hvalue(defaultet(L));
+    }
+  }
+  L->allowhooks = oldah;  /* restore hooks */
+}
+
+
 void luaC_callallgcTM (lua_State *L) {
   lua_assert(G(L)->tmudata == NULL);
   G(L)->tmudata = G(L)->rootudata;  /* all udata must be collected */
   G(L)->rootudata = NULL;
-  callgcTMudata(L);  /* call their GC tag methods */
+  callGCTM(L);  /* call their GC tag methods */
 }
 
 
@@ -416,6 +429,6 @@ void luaC_collectgarbage (lua_State *L) {
   luaC_collect(L, 0);
   checkMbuffer(L);
   G(L)->GCthreshold = 2*G(L)->nblocks;  /* new threshold */
-  callgcTMudata(L);
+  callGCTM(L);
 }
 
