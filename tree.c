@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.26 1997/05/14 18:38:29 roberto Exp roberto $";
+char *rcs_tree="$Id: tree.c,v 1.27 1997/06/09 17:28:14 roberto Exp roberto $";
 
 
 #include <string.h>
@@ -39,9 +39,8 @@ static unsigned long hash (char *s, int tag)
   if (tag != LUA_T_STRING)
     h = (unsigned long)s;
   else {
-    long size = strlen(s);
     h = 0;
-    while (size--)
+    while (*s)
       h = ((h<<5)-h)^(unsigned char)*(s++);
   }
   return h;
