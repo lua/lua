@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 2.7 1997/06/27 18:39:34 roberto Exp roberto $
+% $Id: manual.tex,v 2.8 1997/06/27 22:38:49 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -6,14 +6,15 @@
 \newcommand{\See}[1]{Section~\ref{#1}}
 \newcommand{\see}[1]{(see \See{#1})}
 \newcommand{\M}[1]{\emph{#1}}
+\newcommand{\T}[1]{{\tt #1}}
 \newcommand{\Math}[1]{$#1$}
 \newcommand{\nil}{{\bf nil}}
 \newcommand{\Line}{\rule{\linewidth}{.5mm}}
 \def\tecgraf{{\sf TeC\kern-.21em\lower.7ex\hbox{Graf}}}
 
 \newcommand{\Index}[1]{#1\index{#1}}
-\newcommand{\IndexVerb}[1]{{\tt #1}\index{#1}}
-\newcommand{\Def}[1]{{\em #1}\index{#1}}
+\newcommand{\IndexVerb}[1]{\T{#1}\index{#1}}
+\newcommand{\Def}[1]{\emph{#1}\index{#1}}
 \newcommand{\Deffunc}[1]{\index{#1}}
 
 \newcommand{\ff}{$\bullet$\ }
@@ -38,7 +39,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1997/06/27 18:39:34 $}
+\date{\small \verb$Date: 1997/06/27 22:38:49 $}
 
 \maketitle
 
@@ -127,8 +128,8 @@ L.~H.~de Figueiredo.
 
 Lua is implemented as a library, written in C.
 Being an extension language, Lua has no notion of a ``main'' program:
-it only works {\em embedded\/} in a host client,
-called the {\em embedding\/} program.
+it only works \emph{embedded} in a host client,
+called the \emph{embedding} program.
 This host program can invoke functions to execute a piece of
 code in Lua, can write and read Lua variables,
 and can register C functions to be called by Lua code.
@@ -167,9 +168,9 @@ this default can be changed \see{tag-method}.
 
 The unit of execution of Lua is called a \Def{chunk}.
 The syntax%
-\footnote{As usual, \rep{{\em a}} means 0 or more {\em a\/}'s,
-\opt{{\em a}} means an optional {\em a} and \oneormore{{\em a}} means
-one or more {\em a\/}'s.}
+\footnote{As usual, \rep{\emph{a}} means 0 or more \emph{a}'s,
+\opt{\emph{a}} means an optional \emph{a} and \oneormore{\emph{a}} means
+one or more \emph{a}'s.}
 for chunks is:
 \begin{Produc}
 \produc{chunk}{\rep{stat \Or function} \opt{ret}}
@@ -203,10 +204,10 @@ Besides a type, all values also have a \Index{tag}.
 
 There are six \Index{basic types} in Lua: \Def{nil}, \Def{number},
 \Def{string}, \Def{function}, \Def{userdata}, and \Def{table}.
-{\em Nil\/} is the type of the value \nil,
+\emph{Nil} is the type of the value \nil,
 whose main property is to be different from any other value.
-{\em Number\/} represents real (floating-point) numbers,
-while {\em string\/} has the usual meaning.
+\emph{Number} represents real (floating-point) numbers,
+while \emph{string} has the usual meaning.
 The function \verb|type| returns a string describing the type
 of a given value \see{pdf-type}.
 
@@ -222,15 +223,15 @@ all Lua functions have the same tag,
 and all C functions have the same tag,
 which is different from the tag of a Lua function.
 
-The type {\em userdata\/} is provided to allow
+The type \emph{userdata} is provided to allow
 arbitrary \Index{C pointers} to be stored in Lua variables.
 It corresponds to a \verb|void*| and has no pre-defined operations in Lua,
 besides assignment and equality test.
-However, by using {\em tag methods},
-the programmer may define operations for {\em userdata\/} values
+However, by using \emph{tag methods},
+the programmer may define operations for \emph{userdata} values
 \see{tag-method}.
 
-The type {\em table\/} implements \Index{associative arrays},
+The type \emph{table} implements \Index{associative arrays},
 that is, \Index{arrays} that can be indexed not only with numbers,
 but with any value (except \nil).
 Therefore, this type may be used not only to represent ordinary arrays,
@@ -245,8 +246,8 @@ The form \verb|t:f(x)| is syntactic sugar for \verb|t.f(t,x)|,
 which calls the method \verb|f| from the table \verb|t| passing
 itself as the first parameter \see{func-def}.
 
-It is important to notice that tables are {\em objects}, and not values.
-Variables cannot contain tables, only {\em references\/} to them.
+It is important to notice that tables are \emph{objects}, and not values.
+Variables cannot contain tables, only \emph{references} to them.
 Assignment, parameter passing and returns always manipulate references
 to tables, and do not imply any kind of copy.
 Moreover, tables must be explicitly created before used
@@ -322,16 +323,16 @@ Examples of valid numerical constants are:
 All lines that start with a \verb|$| are handled by a pre-processor.
 The \verb|$| can be followed by any of the following directives:
 \begin{description}
-\item[{\tt debug}] --- turn on some debugging facilities \see{pragma}.
-\item[{\tt nodebug}] --- turn off some debugging facilities \see{pragma}.
+\item[\T{debug}] --- turn on some debugging facilities \see{pragma}.
+\item[\T{nodebug}] --- turn off some debugging facilities \see{pragma}.
 \item[{\tt if \M{cond}}] --- starts a conditional part.
 If \M{cond} is false, then this part is skipped by the lexical analyzer.
 \item[{\tt ifnot \M{cond}}] --- starts a conditional part.
 If \M{cond} is true, then this part is skipped by the lexical analyzer.
-\item[{\tt end}] --- ends a conditional part.
-\item[{\tt else}] --- starts an ``else'' conditional part,
+\item[\T{end}] --- ends a conditional part.
+\item[\T{else}] --- starts an ``else'' conditional part,
 switching the ``skip'' status.
-\item[{\tt endinput}] --- ends the lexical parse of the file.
+\item[\T{endinput}] --- ends the lexical parse of the file.
 \end{description}
 
 Directives can be freely nested.
@@ -340,8 +341,8 @@ in that case, even the matching \verb|$end| is not parsed.
 
 A \M{cond} part may be:
 \begin{description}
-\item[{\tt nil}] --- always false.
-\item[{\tt 1}] --- always true.
+\item[\T{nil}] --- always false.
+\item[\T{1}] --- always true.
 \item[\M{name}] --- true if the value of the
 global variable \M{name} is different from \nil.
 Notice that \M{name} is evaluated before the chunk starts its execution.
@@ -369,7 +370,7 @@ Functions in Lua can return many values.
 Because there are no type declarations,
 the system does not know how many values a function will return,
 or how many parameters it needs.
-Therefore, sometimes, a list of values must be {\em adjusted\/}, at run time,
+Therefore, sometimes, a list of values must be \emph{adjusted}, at run time,
 to a given length.
 If there are more values than are needed, then the last values are thrown away.
 If there are more needs than values, then the list is extended with as
@@ -416,7 +417,7 @@ Therefore, it can be used to exchange two values, as in
    x, y = y, x
 \end{verbatim}
 The two lists may have different lengths.
-Before the assignment, the list of values is {\em adjusted\/} to
+Before the assignment, the list of values is \emph{adjusted} to
 the length of the list of variables \see{adjust}.
 
 A single name can denote a global or a local variable,
@@ -440,7 +441,7 @@ an assignment \verb|t[i] = val| is equivalent to
 \verb|settable_event(t, i, val)|.
 See \See{tag-method} for a description of these functions%
 \footnote{Function \verb|setglobal| is pre-defined in Lua.
-Function {\tt settable\_event} is used only for explanation purposes.}.
+Function \T{settable\_event} is used only for explanatory purposes.}.
 
 The syntax \verb|var.NAME| is just syntactic sugar for
 \verb|var["NAME"]|:
@@ -452,7 +453,7 @@ The syntax \verb|var.NAME| is just syntactic sugar for
 The \Index{condition expression} of a control structure may return any value.
 All values different from \nil\ are considered true;
 only \nil\ is considered false.
-{\tt if}'s, {\tt while}'s and {\tt repeat}'s have the usual meaning.
+\T{if}'s, \T{while}'s and \T{repeat}'s have the usual meaning.
 
 \index{while-do}\index{repeat-until}\index{if-then-else}
 \begin{Produc}
@@ -463,7 +464,7 @@ only \nil\ is considered false.
 \produc{elseif}{\rwd{elseif} exp1 \rwd{then} block}
 \end{Produc}
 
-A {\tt return} is used to return values from a function or a chunk.
+A \T{return} is used to return values from a function or a chunk.
 \label{return}
 Because they may return more than one value,
 the syntax for a \Index{return statement} is:
@@ -516,7 +517,7 @@ an access to an indexed variable \verb|t[i]| is equivalent to
 a call \verb|gettable_event(t, i)|.
 See \See{tag-method} for a description of these functions%
 \footnote{Function \verb|getglobal| is pre-defined in Lua.
-Function {\tt gettable\_event} is used only for explanation purposes.}.
+Function \T{gettable\_event} is used only for explanatory purposes.}.
 
 The non-terminal \M{exp1} is used to indicate that the values
 returned by an expression must be adjusted to one single value:
@@ -554,7 +555,7 @@ Tables, userdata and functions are compared by reference,
 that is, two tables are considered equal only if they are the same table.
 The operator \verb|~=| is exactly the negation of equality (\verb|==|).
 Note that the conversion rules of Section~\ref{coercion}
-{\em do not\/} apply to equality comparisons.
+\emph{do not} apply to equality comparisons.
 Thus, \verb|"0"==0| evaluates to false.
 
 The other operators work as follows.
@@ -620,7 +621,7 @@ The general syntax for constructors is:
 \produc{ffieldlist}{\opt{ffieldlist1}}
 \end{Produc}
 
-The form {\em lfieldlist1\/} is used to initialize lists.
+The form \emph{lfieldlist1} is used to initialize lists.
 \begin{Produc}
 \produc{lfieldlist1}{exp \rep{\ter{,} exp} \opt{\ter{,}}}
 \end{Produc}%
@@ -639,7 +640,7 @@ is essentially equivalent to:
    a = temp
 \end{verbatim}
 
-The form {\em ffieldlist1\/} initializes other fields in a table:
+The form \emph{ffieldlist1} initializes other fields in a table:
 \begin{Produc}
 \produc{ffieldlist1}{ffield \rep{\ter{,} ffield} \opt{\ter{,}}}
 \produc{ffield}{\ter{[} exp \ter{]} \ter {=} exp \Or name \ter{=} exp}
@@ -666,7 +667,7 @@ A \Index{function call} has the following syntax:
 \produc{functioncall}{var realParams}
 \end{Produc}%
 Here, \M{var} can be any variable (global, local, indexed, etc).
-If its value has type {\em function\/},
+If its value has type \emph{function},
 then this function is called.
 Otherwise, the ``function'' tag method is called,
 having as first parameter the value of \M{var},
@@ -721,7 +722,7 @@ The syntax for function definition is:
 When Lua pre-compiles a chunk,
 all its function bodies are pre-compiled, too.
 Then, when Lua ``executes'' the function definition,
-its body is stored, with type {\em function},
+its body is stored, with type \emph{function},
 into the variable \verb|var|.
 It is in this sense that
 a function definition is an assignment to a global variable.
@@ -1200,17 +1201,17 @@ there is no guarantee that such pointer will be valid after the block ends
 (see below).
 
 \verb|lua_getcfunction| converts a \verb|lua_Object| to a C function.
-This \verb|lua_Object| must have type {\em CFunction\/};
+This \verb|lua_Object| must have type \emph{CFunction};
 otherwise, the function returns 0 (the \verb|NULL| pointer).
 The type \verb|lua_CFunction| is explained in Section~\ref{LuacallC}.
 
 \verb|lua_getuserdata| converts a \verb|lua_Object| to \verb|void*|.
-This \verb|lua_Object| must have type {\em userdata\/};
+This \verb|lua_Object| must have type \emph{userdata};
 otherwise, the function returns 0 (the \verb|NULL| pointer).
 
 Because Lua has automatic memory management and garbage collection,
 a \verb|lua_Object| has a limited scope,
-and is only valid inside the {\em block\/} where it was created.
+and is only valid inside the \emph{block} where it was created.
 A C function called from Lua is a block,
 and its parameters are valid only until its end.
 It is good programming practice to convert Lua objects to C values
@@ -1352,7 +1353,7 @@ lua_Object     lua_getglobal            (char *varname);
 As in Lua, this function may trigger a tag method.
 To read the real value of any global variable,
 without invoking any tag method,
-this function has a {\em raw\/} version:
+this function has a \emph{raw} version:
 \Deffunc{lua_rawgetglobal}
 \begin{verbatim}
 lua_Object     lua_rawgetglobal         (char *varname);
@@ -1367,7 +1368,7 @@ void           lua_setglobal            (char *varname);
 As in Lua, this function may trigger a tag method.
 To set the real value of any global variable,
 without invoking any tag method,
-this function has a {\em raw\/} version:
+this function has a \emph{raw} version:
 \Deffunc{lua_rawgetglobal}
 \begin{verbatim}
 void           lua_rawsetglobal         (char *varname);
@@ -1384,7 +1385,7 @@ and returns the contents of the table at that index.
 As in Lua, this operation may trigger a tag method.
 To get the real value of any table index,
 without invoking any tag method,
-this function has a {\em raw\/} version:
+this function has a \emph{raw} version:
 \Deffunc{lua_rawgetglobal}
 \begin{verbatim}
 lua_Object     lua_rawgettable          (void);
@@ -1401,7 +1402,7 @@ void           lua_settable             (void);
 Again, the tag method for ``settable'' may be called.
 To set the real value of any table index,
 without invoking any tag method,
-this function has a {\em raw\/} version:
+this function has a \emph{raw} version:
 \Deffunc{lua_rawsettable}
 \begin{verbatim}
 void           lua_rawsettable          (void);
@@ -1543,7 +1544,7 @@ void           lua_unref (int ref);
 The function \verb|lua_ref| creates a reference
 to the object that is on the top of the stack,
 and returns this reference.
-If \verb|lock| is true, the object is {\em locked\/}:
+If \verb|lock| is true, the object is \emph{locked}:
 this means the object will not be garbage collected.
 Notice that an unlocked reference may be garbage collected.
 Whenever the referenced object is needed,
@@ -1584,7 +1585,7 @@ declared in \verb|lualib.h|.
 
 \subsection{Predefined Functions} \label{predefined}
 
-\subsubsection*{\ff {\tt call (func, arg, [retmode])}}\Deffunc{call}
+\subsubsection*{\ff \T{call (func, arg, [retmode])}}\Deffunc{call}
 This function calls function \verb|func| with
 the arguments given by the table \verb|arg|.
 The call is equivalent to
@@ -1597,7 +1598,7 @@ then Lua stops getting arguments at the first nil value.
 If \verb|retmode| is absent,
 all results from \verb|func| are just returned by the call.
 If \verb|retmode| is equal to \verb|"pack"|,
-the results are {\em packed\/} in a single table.\index{packed results}
+the results are \emph{packed} in a single table.\index{packed results}
 That is, \verb|call| returns just one table;
 at index \verb|n|, the table has the total number of results
 from the call;
@@ -1610,7 +1611,7 @@ t = {x=1}
 a = call(next, {t,nil;n=2}, "pack")  --> a={"x", 1; n=2}
 \end{verbatim}
 
-\subsubsection*{\ff {\tt collectgarbage ([limit])}}\Deffunc{collectgarbage}
+\subsubsection*{\ff \T{collectgarbage ([limit])}}\Deffunc{collectgarbage}
 Forces a garbage collection cycle.
 Returns the number of objects collected.
 An optional argument, \verb|limit|, is a number that
@@ -1621,7 +1622,7 @@ this limit.
 \verb|collectgarbage| is equivalent to
 the API function \verb|lua_collectgarbage|.
 
-\subsubsection*{\ff {\tt dofile (filename)}}\Deffunc{dofile}
+\subsubsection*{\ff \T{dofile (filename)}}\Deffunc{dofile}
 This function receives a file name,
 opens it, and executes its contents as a Lua chunk,
 or as pre-compiled chunks.
@@ -1634,7 +1635,7 @@ or a non \nil\ value if the chunk returns no values.
 It issues an error when called with a non string argument.
 \verb|dofile| is equivalent to the API function \verb|lua_dofile|.
 
-\subsubsection*{\ff {\tt dostring (string [, errmethod])}}\Deffunc{dostring}
+\subsubsection*{\ff \T{dostring (string [, errmethod])}}\Deffunc{dostring}
 This function executes a given string as a Lua chunk.
 If there is any error executing the string, it returns \nil.
 Otherwise, it returns the values returned by the chunk,
@@ -1644,11 +1645,11 @@ while \verb|string| runs.
 As a particular case, if \verb|errmethod| is \nil,
 no error messages will be issued during the execution of the string.
 
-\subsubsection*{\ff {\tt newtag ()}}\Deffunc{newtag}\label{pdf-newtag}
+\subsubsection*{\ff \T{newtag ()}}\Deffunc{newtag}\label{pdf-newtag}
 Returns a new tag.
 \verb|newtag| is equivalent to the API function \verb|lua_newtag|.
 
-\subsubsection*{\ff {\tt next (table, index)}}\Deffunc{next}
+\subsubsection*{\ff \T{next (table, index)}}\Deffunc{next}
 This function allows a program to traverse all fields of a table.
 Its first argument is a table and its second argument
 is an index in this table.
@@ -1665,7 +1666,7 @@ semantically, there is no difference between a
 field not present in a table or a field with value \nil.
 Therefore, the function only considers fields with non \nil\ values.
 The order in which the indices are enumerated is not specified,
-{\em not even for numeric indices}
+\emph{not even for numeric indices}
 (to traverse a table in numeric order,
 use a counter).
 If the table is modified in any way during a traversal,
@@ -1673,7 +1674,7 @@ the semantics of \verb|next| is undefined.
 
 This function cannot be written with the standard API.
 
-\subsubsection*{\ff {\tt nextvar (name)}}\Deffunc{nextvar}
+\subsubsection*{\ff \T{nextvar (name)}}\Deffunc{nextvar}
 This function is similar to the function \verb|next|,
 but iterates over the global variables.
 Its single argument is the name of a global variable,
@@ -1686,11 +1687,11 @@ otherwise the semantics of \verb|nextvar| is undefined.
 
 This function cannot be written with the standard API.
 
-\subsubsection*{\ff {\tt tostring (e)}}\Deffunc{tostring}
+\subsubsection*{\ff \T{tostring (e)}}\Deffunc{tostring}
 This function receives an argument of any type and
 converts it to a string in a reasonable format.
 
-\subsubsection*{\ff {\tt print (e1, e2, ...)}}\Deffunc{print}
+\subsubsection*{\ff \T{print (e1, e2, ...)}}\Deffunc{print}
 This function receives any number of arguments,
 and prints their values in a reasonable format.
 Each value is printed in a new line.
@@ -1699,14 +1700,14 @@ but as a quick way to show a value,
 for instance for error messages or debugging.
 See Section~\ref{libio} for functions for formatted output.
 
-\subsubsection*{\ff {\tt tonumber (e)}}\Deffunc{tonumber}
+\subsubsection*{\ff \T{tonumber (e)}}\Deffunc{tonumber}
 This function receives one argument,
 and tries to convert it to a number.
 If the argument is already a number or a string convertible
 to a number \see{coercion}, then it returns that number;
 otherwise, it returns \nil.
 
-\subsubsection*{\ff {\tt type (v)}}\Deffunc{type}\label{pdf-type}
+\subsubsection*{\ff \T{type (v)}}\Deffunc{type}\label{pdf-type}
 This function allows Lua to test the type of a value.
 It receives one argument, and returns its type, coded as a string.
 The possible results of this function are
@@ -1718,79 +1719,79 @@ The possible results of this function are
 and \verb|"userdata"|.
 \verb|type| is equivalent to the API function \verb|lua_type|.
 
-\subsubsection*{\ff {\tt tag (v)}}\Deffunc{tag}
+\subsubsection*{\ff \T{tag (v)}}\Deffunc{tag}
 This function allows Lua to test the tag of a value \see{TypesSec}.
 It receives one argument, and returns its tag (a number).
 \verb|tag| is equivalent to the API function \verb|lua_tag|.
 
-\subsubsection*{\ff {\tt settag (t, tag)}}\Deffunc{settag}
+\subsubsection*{\ff \T{settag (t, tag)}}\Deffunc{settag}
 This function sets the tag of a given table \see{TypesSec}.
 \verb|tag| must be a value created with \verb|newtag|
 \see{pdf-newtag}.
 For security reasons,
 it is impossible to change the tag of a userdata from Lua.
 
-\subsubsection*{\ff {\tt assert (v)}}\Deffunc{assert}
-This function issues an {\em ``assertion failed!''} error
+\subsubsection*{\ff \T{assert (v)}}\Deffunc{assert}
+This function issues an \emph{``assertion failed!''} error
 when its argument is \nil.
 
-\subsubsection*{\ff {\tt error (message)}}\Deffunc{error}\label{pdf-error}
+\subsubsection*{\ff \T{error (message)}}\Deffunc{error}\label{pdf-error}
 This function issues an error message and terminates
 the last called function from the library
 (\verb|lua_dofile|, \verb|lua_dostring|, or \verb|lua_callfunction|).
 It never returns.
 \verb|error| is equivalent to the API function \verb|lua_error|.
 
-\subsubsection*{\ff {\tt rawgettable (table, index)}}\Deffunc{rawgettable}
+\subsubsection*{\ff \T{rawgettable (table, index)}}\Deffunc{rawgettable}
 Gets the real value of \verb|table[index]|,
 without invoking any tag method.
 \verb|table| must be a table,
 and \verb|index| is any value different from \nil.
 
-\subsubsection*{\ff {\tt rawsettable (table, index, value)}}\Deffunc{rawsettable}
+\subsubsection*{\ff \T{rawsettable (table, index, value)}}\Deffunc{rawsettable}
 Sets the real value \verb|table[index]=value|,
 without invoking any tag method.
 \verb|table| must be a table,
 \verb|index| is any value different from \nil,
 and \verb|value| is any Lua value.
 
-\subsubsection*{\ff {\tt rawsetglobal (name, value)}}\Deffunc{rawsetglobal}
+\subsubsection*{\ff \T{rawsetglobal (name, value)}}\Deffunc{rawsetglobal}
 This function assigns the given value to a global variable.
 The string \verb|name| does not need to be a syntactically valid variable name.
 Therefore, this function can set global variables with strange names like
 \verb|"m v 1"| or \verb|34|.
 It returns the value of its second argument.
 
-\subsubsection*{\ff {\tt setglobal (name, value)}}\Deffunc{setglobal}
+\subsubsection*{\ff \T{setglobal (name, value)}}\Deffunc{setglobal}
 This function assigns the given value to a global variable,
 or calls a tag method.
 Its full semantics is explained in \See{tag-method}.
 
-\subsubsection*{\ff {\tt rawgetglobal (name)}}\Deffunc{rawgetglobal}
+\subsubsection*{\ff \T{rawgetglobal (name)}}\Deffunc{rawgetglobal}
 This function retrieves the value of a global variable.
 The string \verb|name| does not need to be a
 syntactically valid variable name.
 
-\subsubsection*{\ff {\tt getglobal (name)}}\Deffunc{getglobal}
+\subsubsection*{\ff \T{getglobal (name)}}\Deffunc{getglobal}
 This function retrieves the value of a global variable,
 or calls a tag method.
 Its full semantics is explained in \See{tag-method}.
 
-\subsubsection*{\ff {\tt seterrormethod (newmethod)}}
+\subsubsection*{\ff \T{seterrormethod (newmethod)}}
 \label{pdf-seterrormethod}
 Sets the error handler \see{error}.
 \verb|newmethod| must be a function or \nil,
 in which case the error handler does nothing.
 Returns the old error handler.
 
-\subsubsection*{\ff {\tt settagmethod (tag, event, newmethod)}}
+\subsubsection*{\ff \T{settagmethod (tag, event, newmethod)}}
 \Deffunc{settagmethod}
 This function sets a new tag method to the given pair \M{<tag, event>}.
 It returns the old method.
 If \verb|newmethod| is \nil,
 it restores the default behavior for the given event.
 
-\subsubsection*{\ff {\tt gettagmethod (tag, event)}}
+\subsubsection*{\ff \T{gettagmethod (tag, event)}}
 \Deffunc{gettagmethod}
 This function returns the current tag method
 for a given pair \M{<tag, event>}.
@@ -1802,9 +1803,9 @@ such as finding and extracting substrings and pattern matching.
 When indexing a string, the first character is at position~1,
 not~0, as in C.
 
-\subsubsection*{\ff {\tt strfind (str, pattern [, init [, plain]])}}
+\subsubsection*{\ff \T{strfind (str, pattern [, init [, plain]])}}
 \Deffunc{strfind}
-This function looks for the first {\em match\/} of
+This function looks for the first \emph{match} of
 \verb|pattern| in \verb|str|.
 If it finds one, then it returns the indices on \verb|str|
 where this occurrence starts and ends;
@@ -1818,10 +1819,10 @@ turns off the pattern matching facilities,
 so the function does a plain ``find substring'' operation,
 with no characters in \verb|pattern| being considered ``magic''.
 
-\subsubsection*{\ff {\tt strlen (s)}}\Deffunc{strlen}
+\subsubsection*{\ff \T{strlen (s)}}\Deffunc{strlen}
 Receives a string and returns its length.
 
-\subsubsection*{\ff {\tt strsub (s, i [, j])}}\Deffunc{strsub}
+\subsubsection*{\ff \T{strsub (s, i [, j])}}\Deffunc{strsub}
 Returns another string, which is a substring of \verb|s|,
 starting at \verb|i|  and running until \verb|j|.
 If \verb|i| or \verb|j| are negative,
@@ -1837,25 +1838,25 @@ with length \verb|j|,
 and the call \verb|strsub(s, -i)| returns a suffix of \verb|s|
 with length \verb|i|.
 
-\subsubsection*{\ff {\tt strlower (s)}}\Deffunc{strlower}
+\subsubsection*{\ff \T{strlower (s)}}\Deffunc{strlower}
 Receives a string and returns a copy of that string with all
 upper case letters changed to lower case.
 All other characters are left unchanged.
 
-\subsubsection*{\ff {\tt strupper (s)}}\Deffunc{strupper}
+\subsubsection*{\ff \T{strupper (s)}}\Deffunc{strupper}
 Receives a string and returns a copy of that string with all
 lower case letters changed to upper case.
 All other characters are left unchanged.
 
-\subsubsection*{\ff {\tt strrep (s, n)}}\Deffunc{strrep}
+\subsubsection*{\ff \T{strrep (s, n)}}\Deffunc{strrep}
 Returns a string which is the concatenation of \verb|n| copies of
 the string \verb|s|.
 
-\subsubsection*{\ff {\tt ascii (s [, i])}}\Deffunc{ascii}
+\subsubsection*{\ff \T{ascii (s [, i])}}\Deffunc{ascii}
 Returns the ASCII code of the character \verb|s[i]|.
 If \verb|i| is absent, then it is assumed to be 1.
 
-\subsubsection*{\ff {\tt format (formatstring, e1, e2, \ldots)}}\Deffunc{format}
+\subsubsection*{\ff \T{format (formatstring, e1, e2, \ldots)}}\Deffunc{format}
 \label{format}
 This function returns a formated version of its variable number of arguments
 following the description given in its first argument (which must be a string).
@@ -1890,7 +1891,7 @@ the appropriate format string.
 For example, \verb|"%*g"| can be simulated with
 \verb|"%"..width.."g"|.
 
-\subsubsection*{\ff {\tt gsub (s, pat, repl [, table] [, n])}}
+\subsubsection*{\ff \T{gsub (s, pat, repl [, table] [, n])}}
 \Deffunc{gsub}
 Returns a copy of \verb|s|,
 where all occurrences of the pattern \verb|pat| have been
@@ -1951,25 +1952,25 @@ See some examples below:
 a \Def{character class} is used to represent a set of characters.
 The following combinations are allowed in describing a character class:
 \begin{description}
-\item[{\em x}] (where {\em x} is any character not in the list \verb|()%.[*-?|)
---- represents the character {\em x} itself.
-\item[{\tt .}] --- represents all characters.
-\item[{\tt \%a}] --- represents all letters.
-\item[{\tt \%A}] --- represents all non letter characters.
-\item[{\tt \%d}] --- represents all digits.
-\item[{\tt \%D}] --- represents all non digits.
-\item[{\tt \%l}] --- represents all lower case letters.
-\item[{\tt \%L}] --- represents all non lower case letter characters.
-\item[{\tt \%s}] --- represents all space characters.
-\item[{\tt \%S}] --- represents all non space characters.
-\item[{\tt \%u}] --- represents all upper case letters.
-\item[{\tt \%U}] --- represents all non upper case letter characters.
-\item[{\tt \%w}] --- represents all alphanumeric characters.
-\item[{\tt \%W}] --- represents all non alphanumeric characters.
+\item[\emph{x}] (where \emph{x} is any character not in the list \verb|()%.[*-?|)
+--- represents the character \emph{x} itself.
+\item[\T{.}] --- represents all characters.
+\item[\T{\%a}] --- represents all letters.
+\item[\T{\%A}] --- represents all non letter characters.
+\item[\T{\%d}] --- represents all digits.
+\item[\T{\%D}] --- represents all non digits.
+\item[\T{\%l}] --- represents all lower case letters.
+\item[\T{\%L}] --- represents all non lower case letter characters.
+\item[\T{\%s}] --- represents all space characters.
+\item[\T{\%S}] --- represents all non space characters.
+\item[\T{\%u}] --- represents all upper case letters.
+\item[\T{\%U}] --- represents all non upper case letter characters.
+\item[\T{\%w}] --- represents all alphanumeric characters.
+\item[\T{\%W}] --- represents all non alphanumeric characters.
 \item[{\tt \%\M{x}}] (where \M{x} is any non alphanumeric character)  ---
 represents the character \M{x}.
 This is the standard way to escape the magic characters \verb|()%.[*-?|.
-\item[{\tt [char-set]}] ---
+\item[\T{[char-set]}] ---
 Represents the class which is the union of all
 characters in char-set.
 To include a \verb|]| in char-set, it must be the first character.
@@ -1978,7 +1979,7 @@ separating the end characters of the range with a \verb|-|;
 e.g., \verb|A-Z| specifies the upper case characters.
 If \verb|-| appears as the first or last character of char-set,
 then it represents itself.
-All classes \verb|%|{\em x} described above can also be used as
+All classes \verb|%|\emph{x} described above can also be used as
 components in a char-set.
 All other characters in char-set represent themselves.
 \item[{\tt [\^{ }char-set]}] ---
@@ -2011,7 +2012,7 @@ such item matches a sub-string equal to the n-th captured string
 \item
 {\tt \%b\M{xy}}, where \M{x} and \M{y} are two distinct characters;
 such item matches strings that start with \M{x}, end with \M{y},
-and where the \M{x} and \M{y} are {\em balanced}.
+and where the \M{x} and \M{y} are \emph{balanced}.
 That means that, if one reads the string from left to write,
 counting plus 1 for an \M{x} and minus 1 for a \M{y},
 the ending \M{y} is the first where the count reaches 0.
@@ -2030,7 +2031,7 @@ end of the subject string.
 a pattern may contain sub-patterns enclosed in parentheses,
 that describe \Def{captures}.
 When a match succeeds, the sub-strings of the subject string
-that match captures are stored ({\em captured\/}) for future use.
+that match captures are stored (\emph{captured}) for future use.
 Captures are numbered according to their left parentheses.
 For instance, in the pattern \verb|"(a*(.)%w(%s*))"|,
 the part of the string matching \verb|"a*(.)%w(%s*)"| is
@@ -2057,7 +2058,7 @@ max min  mod  sin  sqrt  tan  random randomseed
 Most of them
 are only interfaces to the homonymous functions in the C library,
 except that, for the trigonometric functions,
-all angles are expressed in {\em degrees}, not radians.
+all angles are expressed in \emph{degrees}, not radians.
 
 The function \verb|max| returns the maximum
 value of its numeric arguments.
@@ -2093,7 +2094,7 @@ Unless otherwise stated,
 all I/O functions return \nil\ on failure and
 some value different from \nil\ on success.
 
-\subsubsection*{\ff {\tt readfrom (filename)}}\Deffunc{readfrom}
+\subsubsection*{\ff \T{readfrom (filename)}}\Deffunc{readfrom}
 
 This function may be called in two ways.
 When called with a file name, it opens the named file,
@@ -2111,7 +2112,7 @@ plus a string describing the error.
 
 \begin{quotation}
 \noindent
-{\em System dependent\/}: if \verb|filename| starts with a \verb-|-,
+\emph{System dependent}: if \verb|filename| starts with a \verb-|-,
 then a \Index{piped input} is open, via function \IndexVerb{popen}.
 Not all systems implement pipes.
 Moreover,
@@ -2119,7 +2120,7 @@ the number of files that can be open at the same time is
 usually limited and depends on the system.
 \end{quotation}
 
-\subsubsection*{\ff {\tt writeto (filename)}}\Deffunc{writeto}
+\subsubsection*{\ff \T{writeto (filename)}}\Deffunc{writeto}
 
 This function may be called in two ways.
 When called with a file name,
@@ -2128,7 +2129,7 @@ sets its handle as the value of \verb|_OUTPUT|,
 and returns this value.
 It does not close the current output file.
 Notice that, if the file already exists,
-then it will be {\em completely erased\/} with this operation.
+then it will be \emph{completely erased} with this operation.
 %When called with a file handle returned by a previous call,
 %it restores the file as the current output.
 When called without parameters,
@@ -2141,7 +2142,7 @@ plus a string describing the error.
 
 \begin{quotation}
 \noindent
-{\em System dependent\/}: if \verb|filename| starts with a \verb-|-,
+\emph{System dependent}: if \verb|filename| starts with a \verb-|-,
 then a \Index{piped output} is open, via function \IndexVerb{popen}.
 Not all systems implement pipes.
 Moreover,
@@ -2149,7 +2150,7 @@ the number of files that can be open at the same time is
 usually limited and depends on the system.
 \end{quotation}
 
-\subsubsection*{\ff {\tt appendto (filename)}}\Deffunc{appendto}
+\subsubsection*{\ff \T{appendto (filename)}}\Deffunc{appendto}
 
 This function opens a file named \verb|filename| and sets it as the
 value of \verb|_OUTPUT|.
@@ -2160,25 +2161,25 @@ plus a string describing the error.
 
 Notice that function \verb|writeto| is available to close an output file.
 
-\subsubsection*{\ff {\tt remove (filename)}}\Deffunc{remove}
+\subsubsection*{\ff \T{remove (filename)}}\Deffunc{remove}
 
 This function deletes the file with the given name.
 If this function fails, it returns \nil,
 plus a string describing the error.
 
-\subsubsection*{\ff {\tt rename (name1, name2)}}\Deffunc{rename}
+\subsubsection*{\ff \T{rename (name1, name2)}}\Deffunc{rename}
 
 This function renames file named \verb|name1| to \verb|name2|.
 If this function fails, it returns \nil,
 plus a string describing the error.
 
-\subsubsection*{\ff {\tt tmpname ()}}\Deffunc{tmpname}
+\subsubsection*{\ff \T{tmpname ()}}\Deffunc{tmpname}
 
 This function returns a string with a file name that can safely
 be used for a temporary file.
 The file must be explicitly removed when no longer needed.
 
-\subsubsection*{\ff {\tt read ([readpattern])}}\Deffunc{read}
+\subsubsection*{\ff \T{read ([readpattern])}}\Deffunc{read}
 
 This function reads the file \verb|_INPUT|
 according to a read pattern, that specifies how much to read;
@@ -2186,7 +2187,7 @@ characters are read from the current input file until
 the read pattern fails or ends.
 The function \verb|read| returns a string with the characters read,
 even if the pattern succeeds only partially,
-or \nil\ if the read pattern fails {\em and\/}
+or \nil\ if the read pattern fails \emph{and}
 the result string would be empty.
 When called without parameters,
 it uses a default pattern that reads the next line
@@ -2206,7 +2207,7 @@ since it can match a sequence of zero characters, it never fails.%
 \footnote{
 Notice that the behavior of read patterns is different from
 the regular pattern matching behavior,
-where a \verb|*| expands to the maximum length {\em such that\/}
+where a \verb|*| expands to the maximum length \emph{such that}
 the rest of the pattern does not fail.
 With the read pattern behavior
 there is no need for backtracking the reading.
@@ -2232,7 +2233,7 @@ or \nil\ on end of file.
 or \nil\ if the next characters do not conform to an integer format.
 \end{itemize}
 
-\subsubsection*{\ff {\tt write (value1, ...)}}\Deffunc{write}
+\subsubsection*{\ff \T{write (value1, ...)}}\Deffunc{write}
 
 This function writes the value of each of its arguments to the
 file \verb|_OUTPUT|.
@@ -2242,7 +2243,7 @@ use \verb|tostring| or \verb|format| before \verb|write|.
 If this function fails, it returns \nil,
 plus a string describing the error.
 
-\subsubsection*{\ff {\tt date ([format])}}\Deffunc{date}
+\subsubsection*{\ff \T{date ([format])}}\Deffunc{date}
 
 This function returns a string containing date and time
 formatted according to the given string \verb|format|,
@@ -2251,19 +2252,19 @@ When called without arguments,
 it returns a reasonable date and time representation that depends on
 the host system.
 
-\subsubsection*{\ff {\tt exit ([code])}}\Deffunc{exit}
+\subsubsection*{\ff \T{exit ([code])}}\Deffunc{exit}
 
 This function calls the C function \verb|exit|,
 with an optional \verb|code|,
 to terminate the program.
 The default value for \verb|code| is 1.
 
-\subsubsection*{\ff {\tt getenv (varname)}}\Deffunc{getenv}
+\subsubsection*{\ff \T{getenv (varname)}}\Deffunc{getenv}
 
 Returns the value of the environment variable \verb|varname|,
 or \nil\ if the variable is not defined.
 
-\subsubsection*{\ff {\tt execute (command)}}\Deffunc{execute}
+\subsubsection*{\ff \T{execute (command)}}\Deffunc{execute}
 
 This function is equivalent to the C function \verb|system|.
 It passes \verb|command| to be executed by an operating system shell.
@@ -2274,7 +2275,7 @@ It returns an error code, which is system-dependent.
 
 Lua has no built-in debugging facilities.
 Instead, it offers a special interface,
-by means of functions and {\em hooks},
+by means of functions and \emph{hooks},
 which allows the construction of different
 kinds of debuggers, profilers, and other tools
 that need ``inside information'' from the interpreter.
@@ -2287,7 +2288,7 @@ is
 \begin{verbatim}
 lua_Function lua_stackedfunction (int level);
 \end{verbatim}
-It returns a handle (\verb|lua_Function|) to the {\em activation record\/}
+It returns a handle (\verb|lua_Function|) to the \emph{activation record}
 of the function executing at a given level.
 Level~0 is the current running function,
 while level \Math{n+1} is the function that has called level \Math{n}.
@@ -2409,12 +2410,12 @@ called simply \verb|lua|,
 is provided with the standard distribution.
 This program can be called with any sequence of the following arguments:
 \begin{description}
-\item[{\tt -v}] prints version information.
-\item[{\tt -}] runs interactively, accepting commands from standard input
+\item[\T{-v}] prints version information.
+\item[\T{-}] runs interactively, accepting commands from standard input
 until an \verb|EOF|.
-\item[{\tt -e stat}] executes \verb|stat| as a Lua chunk.
-\item[{\tt var=exp}] executes \verb|var=exp| as a Lua chunk.
-\item[{\tt filename}] executes file \verb|filename| as a Lua chunk.
+\item[\T{-e stat}] executes \verb|stat| as a Lua chunk.
+\item[\T{var=exp}] executes \verb|var=exp| as a Lua chunk.
+\item[\T{filename}] executes file \verb|filename| as a Lua chunk.
 \end{description}
 All arguments are handled in order.
 For instance, an invocation like
@@ -2431,7 +2432,7 @@ For instance, a call like
 \begin{verbatim}
 $ lua a="name" prog.lua
 \end{verbatim}
-will {\em not\/} set \verb|a| to the string \verb|"name"|.
+will \emph{not} set \verb|a| to the string \verb|"name"|.
 Instead, the quotes will be handled by the shell,
 lua will get only \verb|a=name| to run,
 and \verb|a| will finish with \nil,
@@ -2448,7 +2449,7 @@ jointly with \tecgraf, used extensively early versions of
 this system and gave valuable comments.
 The authors would also like to thank Carlos Henrique Levy,
 who found the name of the game.
-Lua means {\em moon\/} in Portuguese.
+Lua means \emph{moon} in Portuguese.
 
 
 
@@ -2494,7 +2495,7 @@ The incompatibilities between the new and the old libraries are:
 \item The format facility of function \verb|write| has been supersed by
 function \verb|format|;
 therefore this facility has been dropped.
-\item Function \verb|read| now uses {\em read patterns\/} to specify
+\item Function \verb|read| now uses \emph{read patterns} to specify
 what to read;
 this is incompatible with the old format options.
 \item Function \verb|strfind| now accepts patterns,
@@ -2529,7 +2530,7 @@ The function \verb|type| now returns the string \verb|"function"|
 both for C and Lua functions.
 Because Lua functions and C functions are compatible,
 this behavior is usually more useful.
-When needed, the second result of function {\tt type} may be used
+When needed, the second result of function \T{type} may be used
 to distinguish between Lua and C functions.
 \item
 A function definition only assigns the function value to the
@@ -2550,7 +2551,7 @@ constructor (formerly \verb|@{...}|) now are both coded like
 When the construction involves a function call,
 like in \verb|@func{...}|,
 the new syntax does not use the \verb|@|.
-More important, {\em a construction function must now
+More important, \emph{a construction function must now
 explicitly return the constructed table}.
 \item
 The function \verb|lua_call| no longer has the parameter \verb|nparam|.
@@ -2569,7 +2570,7 @@ int lua_storesubscript (void);
 with the parameters explicitly pushed on the stack.
 \item
 The functionality of the function \verb|lua_errorfunction| has been
-replaced by the {\em fallback\/} mechanism \see{error}.
+replaced by the \emph{fallback} mechanism \see{error}.
 \item
 When calling a function from the Lua library,
 parameters passed through the stack
