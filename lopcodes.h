@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.94 2002/04/09 19:47:44 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.95 2002/04/24 20:07:46 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -81,19 +81,19 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 
 #define GETARG_A(i)	(cast(int, (i)>>POS_A))
 #define SETARG_A(i,u)	((i) = (((i)&MASK0(SIZE_A,POS_A)) | \
-                               (cast(Instruction, u)<<POS_A)))
+		((cast(Instruction, u)<<POS_A)&MASK1(SIZE_A,POS_A))))
 
 #define GETARG_B(i)	(cast(int, ((i)>>POS_B) & MASK1(SIZE_B,0)))
 #define SETARG_B(i,b)	((i) = (((i)&MASK0(SIZE_B,POS_B)) | \
-                               (cast(Instruction, b)<<POS_B)))
+		((cast(Instruction, b)<<POS_B)&MASK1(SIZE_B,POS_B))))
 
 #define GETARG_C(i)	(cast(int, ((i)>>POS_C) & MASK1(SIZE_C,0)))
 #define SETARG_C(i,b)	((i) = (((i)&MASK0(SIZE_C,POS_C)) | \
-                               (cast(Instruction, b)<<POS_C)))
+		((cast(Instruction, b)<<POS_C)&MASK1(SIZE_C,POS_C))))
 
 #define GETARG_Bx(i)	(cast(int, ((i)>>POS_Bx) & MASK1(SIZE_Bx,0)))
 #define SETARG_Bx(i,b)	((i) = (((i)&MASK0(SIZE_Bx,POS_Bx)) | \
-                               (cast(Instruction, b)<<POS_Bx)))
+		((cast(Instruction, b)<<POS_Bx)&MASK1(SIZE_Bx,POS_Bx))))
 
 #define GETARG_sBx(i)	(GETARG_Bx(i)-MAXARG_sBx)
 #define SETARG_sBx(i,b)	SETARG_Bx((i),cast(unsigned int, (b)+MAXARG_sBx))
@@ -157,19 +157,14 @@ OP_CONCAT,/*	A B C	R(A) := R(B).. ... ..R(C)			*/
 
 OP_JMP,/*	sBx	PC += sBx					*/
 
-OP_TESTEQ,/*	A C	if not (R(A) == R/K(C)) then pc++		*/
-OP_TESTNE,/*	A C	if not (R(A) ~= R/K(C)) then pc++		*/
-OP_TESTLT,/*	A C	if not (R(A) < R/K(C)) then pc++		*/
-OP_TESTLE,/*	A C	if not (R(A) <= R/K(C)) then pc++		*/
-OP_TESTGT,/*	A C	if not (R(A) > R/K(C)) then pc++		*/
-OP_TESTGE,/*	A C	if not (R(A) >= R/K(C)) then pc++		*/
+OP_EQ,/*	A B C	if ((R(A) == R/K(C)) ~= B) then pc++		*/
+OP_CMP,/*	A B C	if not (R(A) <B> R/K(C)) then pc++  (see note)	*/
 
-OP_TESTT,/*	A B	if (R(B)) then R(A) := R(B) else pc++		*/ 
-OP_TESTF,/*	A B	if not (R(B)) then R(A) := R(B) else pc++	*/ 
+OP_TEST,/*	A B C	if (R(C) <=> B) then R(A) := R(C) else pc++	*/ 
 
 OP_CALL,/*	A B C	R(A), ... ,R(A+C-2) := R(A)(R(A+1), ... ,R(A+B-1)) */
 OP_TAILCALL,/*	A B	return R(A)(R(A+1), ... ,R(A+B-1))		*/
-OP_RETURN,/*	A B	return R(A), ... ,R(A+B-2)	(see (3))	*/
+OP_RETURN,/*	A B	return R(A), ... ,R(A+B-2)	(see note)	*/
 
 OP_FORLOOP,/*	A sBx	R(A)+=R(A+2); if R(A) <?= R(A+1) then PC+= sBx	*/
 
@@ -196,8 +191,9 @@ OP_CLOSURE/*	A Bx	R(A) := closure(KPROTO[Bx], R(A), ... ,R(A+n))	*/
       next open instruction (OP_CALL, OP_RETURN, OP_SETLIST) may use `top'.
 
   (2) In OP_RETURN, if (B == 0) then return up to `top'
-===========================================================================*/
 
+  (3) For comparisons, B specifies what conditions the test should accept.
+===========================================================================*/
 
 
 /*

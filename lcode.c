@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.96 2002/04/22 14:37:09 roberto Exp roberto $
+** $Id: lcode.c,v 1.97 2002/04/24 20:07:46 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -107,16 +107,21 @@ static Instruction *getjumpcontrol (FuncState *fs, int pc) {
 }
 
 
-static int need_value (FuncState *fs, int list, OpCode op) {
-  /* check whether list has any jump different from `op' */
-  for (; list != NO_JUMP; list = luaK_getjump(fs, list))
-    if (GET_OPCODE(*getjumpcontrol(fs, list)) != op) return 1;
+/*
+** check whether list has any jump that do not produce a value
+** (or produce an inverted value)
+*/
+static int need_value (FuncState *fs, int list, int cond) {
+  for (; list != NO_JUMP; list = luaK_getjump(fs, list)) {
+    Instruction i = *getjumpcontrol(fs, list);
+    if (GET_OPCODE(i) != OP_TEST || GETARG_B(i) != cond) return 1;
+  }
   return 0;  /* not found */
 }
 
 
 static void patchtestreg (Instruction *i, int reg) {
-  if (reg == NO_REG) reg = GETARG_B(*i);
+  if (reg == NO_REG) reg = GETARG_C(*i);
   SETARG_A(*i, reg);
 }
 
@@ -126,20 +131,20 @@ static void luaK_patchlistaux (FuncState *fs, int list,
   while (list != NO_JUMP) {
     int next = luaK_getjump(fs, list);
     Instruction *i = getjumpcontrol(fs, list);
-    switch (GET_OPCODE(*i)) {
-      case OP_TESTT: {
+    if (GET_OPCODE(*i) != OP_TEST) {
+      lua_assert(dtarget != NO_JUMP);
+      luaK_fixjump(fs, list, dtarget);  /* jump to default target */
+    }
+    else {
+      if (GETARG_B(*i)) {
+        lua_assert(ttarget != NO_JUMP);
         patchtestreg(i, treg);
         luaK_fixjump(fs, list, ttarget);
-        break;
       }
-      case OP_TESTF: {
+      else {
+        lua_assert(ftarget != NO_JUMP);
         patchtestreg(i, freg);
         luaK_fixjump(fs, list, ftarget);
-        break;
-      }
-      default: {
-        luaK_fixjump(fs, list, dtarget);  /* jump to default target */
-        break;
       }
     }
     list = next;
@@ -342,9 +347,8 @@ static void luaK_exp2reg (FuncState *fs, expdesc *e, int reg) {
     int final;  /* position after whole expression */
     int p_f = NO_JUMP;  /* position of an eventual PUSH false */
     int p_t = NO_JUMP;  /* position of an eventual PUSH true */
-    if (e->k == VJMP || need_value(fs, e->f, OP_TESTF) ||
-                        need_value(fs, e->t, OP_TESTT)) {
-      /* expression needs values */
+    if (e->k == VJMP || need_value(fs, e->t, 1)
+                     || need_value(fs, e->f, 0)) {
       if (e->k != VJMP) {
         luaK_getlabel(fs);  /* these instruction may be jump target */
         luaK_codeAsBx(fs, OP_JMP, 0, 2);  /* to jump over both pushes */
@@ -463,40 +467,36 @@ void luaK_self (FuncState *fs, expdesc *e, expdesc *key) {
 }
 
 
-static OpCode invertoperator (OpCode op) {
-  switch (op) {
-    case OP_TESTNE: return OP_TESTEQ;
-    case OP_TESTEQ: return OP_TESTNE;
-    case OP_TESTLT: return OP_TESTGE;
-    case OP_TESTLE: return OP_TESTGT;
-    case OP_TESTGT: return OP_TESTLE;
-    case OP_TESTGE: return OP_TESTLT;
-    case OP_TESTT: return OP_TESTF;
-    case OP_TESTF: return OP_TESTT;
-    default: lua_assert(0); return op;  /* invalid jump instruction */
-  }
-}
-
-
 static void invertjump (FuncState *fs, expdesc *e) {
   Instruction *pc = getjumpcontrol(fs, e->info);
-  SET_OPCODE(*pc, invertoperator(GET_OPCODE(*pc)));
+  OpCode op = GET_OPCODE(*pc);
+  switch (op) {
+    case OP_EQ: {
+      SETARG_B(*pc, !(GETARG_B(*pc)));
+      return;
+    }
+    case OP_CMP: {
+      SETARG_B(*pc, ~(GETARG_B(*pc)));
+      return;
+    }
+    default: lua_assert(0);  /* invalid jump instruction */
+  }
+  SET_OPCODE(*pc, op);
 }
 
 
-static int jumponcond (FuncState *fs, expdesc *e, OpCode op) {
+static int jumponcond (FuncState *fs, expdesc *e, int cond) {
   if (e->k == VRELOCABLE) {
     Instruction ie = getcode(fs, e);
     if (GET_OPCODE(ie) == OP_NOT) {
-      op = invertoperator(op);
       fs->pc--;  /* remove previous OP_NOT */
-      return luaK_condjump(fs, op, NO_REG, GETARG_B(ie), 0);
+      return luaK_condjump(fs, OP_TEST, NO_REG, !cond ,GETARG_B(ie));
     }
     /* else go through */
   }
   discharge2anyreg(fs, e);
   freeexp(fs, e);
-  return luaK_condjump(fs, op, NO_REG, e->info, 0);
+  return luaK_condjump(fs, OP_TEST, NO_REG, cond, e->info);
 }
 
 
@@ -518,7 +518,7 @@ void luaK_goiftrue (FuncState *fs, expdesc *e) {
       break;
     }
     default: {
-      pc = jumponcond(fs, e, OP_TESTF);
+      pc = jumponcond(fs, e, 0);
       break;
     }
   }
@@ -545,7 +545,7 @@ static void luaK_goiffalse (FuncState *fs, expdesc *e) {
       break;
     }
     default: {
-      pc = jumponcond(fs, e, OP_TESTT);
+      pc = jumponcond(fs, e, 1);
       break;
     }
   }
@@ -639,23 +639,46 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
 
 
 
-/* opcode for each binary operator */
-static const OpCode codes[] = {  /* ORDER OPR */
-  OP_ADD, OP_SUB, OP_MUL, OP_DIV,
-  OP_POW, OP_CONCAT,
-  OP_TESTNE, OP_TESTEQ,
-  OP_TESTLT, OP_TESTLE, OP_TESTGT, OP_TESTGE
+static const OpCode cmp_masks[] = {  /* ORDER OPR */
+  CMP_LT, (CMP_LT | CMP_EQ), CMP_GT, (CMP_GT | CMP_EQ)
 };
 
 
-/* `inverted' opcode for each binary operator */
-/* ( -1 means operator has no inverse) */
-static const OpCode invcodes[] = {  /* ORDER OPR */
-  OP_ADD, (OpCode)-1, OP_MUL, (OpCode)-1,
-  (OpCode)-1, (OpCode)-1,
-  OP_TESTNE, OP_TESTEQ,
-  OP_TESTGT, OP_TESTGE, OP_TESTLT, OP_TESTLE
-};
+static void codebinop (FuncState *fs, expdesc *res, BinOpr op,
+                       int o1, int o2, int ic) {
+  switch (op) {
+    case OPR_SUB:
+    case OPR_DIV:
+    case OPR_POW:
+      lua_assert(!ic);
+      /* go through */
+    case OPR_ADD:
+    case OPR_MULT: {
+      OpCode opc = cast(OpCode, (op - OPR_ADD) + OP_ADD);
+      res->info = luaK_codeABC(fs, opc, 0, o1, o2);
+      res->k = VRELOCABLE;
+      break;
+    }
+    case OPR_NE:
+    case OPR_EQ: {
+      res->info = luaK_condjump(fs, OP_EQ, o1, (op == OPR_EQ), o2);
+      res->k = VJMP;
+      break;
+    }
+    case OPR_LT:
+    case OPR_LE:
+    case OPR_GT:
+    case OPR_GE: {
+      int mask = cmp_masks[op - OPR_LT];
+      if (ic)  /* operands were interchanged? */
+        mask ^= (CMP_LT | CMP_GT);  /*  correct condition */
+      res->info = luaK_condjump(fs, OP_CMP, o1, mask, o2);
+      res->k = VJMP;
+      break;
+    }
+    default: lua_assert(0);
+  }
+}
 
 
 void luaK_posfix (FuncState *fs, BinOpr op, expdesc *e1, expdesc *e2) {
@@ -693,27 +716,20 @@ void luaK_posfix (FuncState *fs, BinOpr op, expdesc *e1, expdesc *e2) {
     }
     default: {
       int o1, o2;
-      OpCode opc;
+      int ic;  /* interchange flag */
       if (e1->k != VK) {  /* not a constant operator? */
         o1 = e1->info;
         o2 = luaK_exp2RK(fs, e2);  /* maybe other operator is constant... */
-        opc = codes[op];
+        ic = 0;
       }
-      else {  /* invert operands */
+      else {  /* interchange operands */
         o2 = luaK_exp2RK(fs, e1);  /* constant must be 2nd operand */
         o1 = luaK_exp2anyreg(fs, e2);  /* other operator must be in register */
-        opc = invcodes[op];  /* use inverted operator */
+        ic = 1;
       }
       freeexp(fs, e2);
       freeexp(fs, e1);
-      if (op < OPR_NE) {  /* ORDER OPR */
-        e1->info = luaK_codeABC(fs, opc, 0, o1, o2);
-        e1->k = VRELOCABLE;
-      }
-      else {  /* jump */
-        e1->info = luaK_condjump(fs, opc, o1, 0, o2);
-        e1->k = VJMP;
-      }
+      codebinop(fs, e1, op, o1, o2, ic);
     }
   }
 }

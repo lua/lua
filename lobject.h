@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.128 2002/03/25 17:47:14 roberto Exp roberto $
+** $Id: lobject.h,v 1.129 2002/04/05 18:54:31 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -228,6 +228,15 @@ typedef struct Table {
 #define twoto(x)	(1<<(x))
 #define sizenode(t)	(twoto((t)->lsizenode))
 #define sizearray(t)	((t)->sizearray)
+
+
+/*
+** masks for comparison results
+*/
+#define CMP_EQ	1
+#define CMP_LT	2
+#define CMP_GT	4
+#define CMP_N	8	/* not comparable values (e.g. NaN) */
 
 
 extern const TObject luaO_nilobject;

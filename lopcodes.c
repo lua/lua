@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.16 2002/04/10 18:05:08 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.17 2002/04/24 20:07:46 roberto Exp roberto $
 ** extracted automatically from lopcodes.h by mkprint.lua
 ** DO NOT EDIT
 ** See Copyright Notice in lua.h
@@ -36,14 +36,9 @@ const char *const luaP_opnames[] = {
   "NOT",
   "CONCAT",
   "JMP",
-  "TESTEQ",
-  "TESTNE",
-  "TESTLT",
-  "TESTLE",
-  "TESTGT",
-  "TESTGE",
-  "TESTT",
-  "TESTF",
+  "EQ",
+  "CMP",
+  "TEST",
   "CALL",
   "TAILCALL",
   "RETURN",
@@ -86,14 +81,9 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0,0,1,0, 1,0,iABC)		/* OP_NOT */
  ,opmode(0,0,1,1, 1,0,iABC)		/* OP_CONCAT */
  ,opmode(0,0,0,0, 0,0,iAsBx)		/* OP_JMP */
- ,opmode(1,0,0,1, 0,0,iABC)		/* OP_TESTEQ */
- ,opmode(1,0,0,1, 0,0,iABC)		/* OP_TESTNE */
- ,opmode(1,0,0,1, 0,0,iABC)		/* OP_TESTLT */
- ,opmode(1,0,0,1, 0,0,iABC)		/* OP_TESTLE */
- ,opmode(1,0,0,1, 0,0,iABC)		/* OP_TESTGT */
- ,opmode(1,0,0,1, 0,0,iABC)		/* OP_TESTGE */
- ,opmode(1,0,1,0, 1,0,iABC)		/* OP_TESTT */
- ,opmode(1,0,1,0, 1,0,iABC)		/* OP_TESTF */
+ ,opmode(1,0,0,1, 0,0,iABC)		/* OP_EQ */
+ ,opmode(1,0,0,1, 0,0,iABC)		/* OP_CMP */
+ ,opmode(1,0,0,1, 1,0,iABC)		/* OP_TEST */
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_CALL */
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_TAILCALL */
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_RETURN */
