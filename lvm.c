@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.151 2001/01/10 18:56:11 roberto Exp roberto $
+** $Id: lvm.c,v 1.152 2001/01/11 18:59:32 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -360,10 +360,6 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
     if (linehook)
       traceexec(L, base, top, linehook);
     switch (GET_OPCODE(i)) {
-      case OP_END: {
-        L->top = top;
-        return top;
-      }
       case OP_RETURN: {
         L->top = top;
         return base+GETARG_U(i);

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.122 2001/01/10 16:40:56 roberto Exp roberto $
+** $Id: lparser.c,v 1.123 2001/01/10 17:41:50 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -335,7 +335,7 @@ static void close_func (LexState *ls) {
   lua_State *L = ls->L;
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
-  luaK_code0(fs, OP_END);
+  luaK_code1(fs, OP_RETURN, ls->fs->nactloc);  /* final return */
   luaK_getlabel(fs);  /* close eventual list of pending jumps */
   removelocalvars(ls, fs->nactloc);
   luaM_reallocvector(L, f->code, f->sizecode, fs->pc, Instruction);

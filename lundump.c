@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.36 2000/12/28 12:55:41 roberto Exp roberto $
+** $Id: lundump.c,v 1.37 2000/12/28 12:59:41 roberto Exp roberto $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -108,7 +108,6 @@ static void LoadCode (lua_State* L, Proto* tf, ZIO* Z, int swap)
  tf->code=luaM_newvector(L,size,Instruction);
  tf->sizecode=size;
  LoadVector(L,tf->code,size,sizeof(*tf->code),Z,swap);
- if (tf->code[size-1]!=OP_END) luaO_verror(L,"bad code in `%.99s'",ZNAME(Z));
 }
 
 static void LoadLocals (lua_State* L, Proto* tf, ZIO* Z, int swap)

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.54 2000/12/26 18:46:09 roberto Exp roberto $
+** $Id: lcode.c,v 1.55 2000/12/28 12:55:41 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -32,7 +32,7 @@ static Instruction previous_instruction (FuncState *fs) {
   if (fs->pc > fs->lasttarget)  /* no jumps to current position? */
     return fs->f->code[fs->pc-1];  /* returns previous instruction */
   else
-    return CREATE_0(OP_END);  /* no optimizations after an `END' */
+    return CREATE_0(-1);  /* no optimizations after an invalid instruction */
 }
 
 
@@ -206,7 +206,7 @@ static OpCode invertjump (OpCode op) {
     case OP_JMPF: case OP_JMPONF:  return OP_JMPT;
     default:
       LUA_INTERNALERROR("invalid jump instruction");
-      return OP_END;  /* to avoid warnings */
+      return OP_JMP;  /* to avoid warnings */
   }
 }
 
@@ -236,7 +236,7 @@ void luaK_patchlist (FuncState *fs, int list, int target) {
   if (target == fs->lasttarget)  /* same target that list `jlt'? */
     luaK_concat(fs, &fs->jlt, list);  /* delay fixing */
   else
-    luaK_patchlistaux(fs, list, target, OP_END, 0);
+    luaK_patchlistaux(fs, list, target, OP_ADD, 0);
 }
 
 
@@ -653,7 +653,6 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
 
 
 const OpProperties luaK_opproperties[NUM_OPCODES] = {
-  {iO, 0, 0},	/* OP_END */
   {iU, 0, 0},	/* OP_RETURN */
   {iAB, 0, 0},	/* OP_CALL */
   {iAB, 0, 0},	/* OP_TAILCALL */

@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.68 2000/10/24 16:05:59 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.69 2000/12/04 18:33:40 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -82,7 +82,6 @@ typedef enum {
 /*----------------------------------------------------------------------
 name		args	stack before	stack after	side effects
 ------------------------------------------------------------------------*/
-OP_END,/*	-	-		(return)	no results	*/
 OP_RETURN,/*	U	v_n-v_x(at u)	(return)	returns v_x-v_n	*/
 
 OP_CALL,/*	A B	v_n-v_1 f(at a)	r_b-r_1		f(v1,...,v_n)	*/

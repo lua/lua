@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.54 2000/10/31 13:10:24 roberto Exp roberto $
+** $Id: ltests.c,v 1.55 2000/12/28 12:55:41 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -53,7 +53,7 @@ static void setnameval (lua_State *L, const char *name, int val) {
 
 
 static const char *const instrname[NUM_OPCODES] = {
-  "END", "RETURN", "CALL", "TAILCALL", "PUSHNIL", "POP", "PUSHINT", 
+  "RETURN", "CALL", "TAILCALL", "PUSHNIL", "POP", "PUSHINT", 
   "PUSHSTRING", "PUSHNUM", "PUSHNEGNUM", "PUSHUPVALUE", "GETLOCAL", 
   "GETGLOBAL", "GETTABLE", "GETDOTTED", "GETINDEXED", "PUSHSELF", 
   "CREATETABLE", "SETLOCAL", "SETGLOBAL", "SETTABLE", "SETLIST", "SETMAP", 
@@ -64,7 +64,7 @@ static const char *const instrname[NUM_OPCODES] = {
 };
 
 
-static int pushop (lua_State *L, Proto *p, int pc) {
+static void pushop (lua_State *L, Proto *p, int pc) {
   char buff[100];
   Instruction i = p->code[pc];
   OpCode o = GET_OPCODE(i);
@@ -85,26 +85,23 @@ static int pushop (lua_State *L, Proto *p, int pc) {
       break;
   }
   lua_pushstring(L, buff);
-  return (o != OP_END);
 }
 
 
 static int listcode (lua_State *L) {
   int pc;
   Proto *p;
-  int res;
   luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
                  1, "Lua function expected");
   p = clvalue(luaA_index(L, 1))->f.l;
   lua_newtable(L);
   setnameval(L, "maxstack", p->maxstacksize);
   setnameval(L, "numparams", p->numparams);
-  pc = 0;
-  do {
+  for (pc=0; pc<p->sizecode; pc++) {
     lua_pushnumber(L, pc+1);
-    res = pushop(L, p, pc++);
+    pushop(L, p, pc);
     lua_settable(L, -3);
-  } while (res);
+  }
   return 1;
 }
 
