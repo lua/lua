@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.37 1995/10/26 14:21:56 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.38 1995/11/03 15:30:50 roberto Exp roberto $";
 
 /*#include <string.h>*/
 
@@ -270,7 +270,7 @@ static int checkfunc (Object *o)
 }
 
 
-char *getobjname (lua_Object o, char **name)
+char *lua_getobjname (lua_Object o, char **name)
 { /* try to find a name for given function */
   functofind = luaI_Address(o);
   if ((*name = luaI_travfallbacks(checkfunc)) != NULL)
