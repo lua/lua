@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.102 2000/06/30 14:35:17 roberto Exp roberto $
+** $Id: lparser.c,v 1.103 2000/08/08 18:26:05 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -154,13 +154,11 @@ static int checkname (LexState *ls) {
 
 static void luaI_registerlocalvar (LexState *ls, TString *varname, int pc) {
   FuncState *fs = ls->fs;
-  if (fs->debug) {
-    Proto *f = fs->f;
-    luaM_growvector(ls->L, f->locvars, fs->nvars, 1, LocVar, "", MAX_INT);
-    f->locvars[fs->nvars].varname = varname;
-    f->locvars[fs->nvars].pc = pc;
-    fs->nvars++;
-  }
+  Proto *f = fs->f;
+  luaM_growvector(ls->L, f->locvars, fs->nvars, 1, LocVar, "", MAX_INT);
+  f->locvars[fs->nvars].varname = varname;
+  f->locvars[fs->nvars].pc = pc;
+  fs->nvars++;
 }
 
 
@@ -350,10 +348,8 @@ static void close_func (LexState *ls) {
   luaM_reallocvector(L, f->kproto, f->nkproto, Proto *);
   luaI_registerlocalvar(ls, NULL, -1);  /* flag end of vector */
   luaM_reallocvector(L, f->locvars, fs->nvars, LocVar);
-  if (fs->debug) {
-    luaM_reallocvector(L, f->lineinfo, fs->nlineinfo+1, int);
-    f->lineinfo[fs->nlineinfo] = MAX_INT;  /* end flag */
-  }
+  luaM_reallocvector(L, f->lineinfo, fs->nlineinfo+1, int);
+  f->lineinfo[fs->nlineinfo] = MAX_INT;  /* end flag */
   ls->fs = fs->prev;
   LUA_ASSERT(fs->bl == NULL, "wrong list end");
 }
@@ -365,7 +361,6 @@ Proto *luaY_parser (lua_State *L, ZIO *z) {
   luaX_setinput(L, &lexstate, z, luaS_new(L, zname(z)));
   open_func(&lexstate, &funcstate);
   next(&lexstate);  /* read first token */
-  funcstate.debug = L->debug;  /* previous `next' may scan a pragma */
   chunk(&lexstate);
   check_condition(&lexstate, (lexstate.t.token == TK_EOS), "<eof> expected");
   close_func(&lexstate);
@@ -1091,7 +1086,6 @@ static void body (LexState *ls, int needself, int line) {
   FuncState new_fs;
   open_func(ls, &new_fs);
   new_fs.f->lineDefined = line;
-  new_fs.debug = ls->L->debug;
   check(ls, '(');
   if (needself) {
     new_localvarstr(ls, "self", 0);

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.120 2000/06/30 14:35:17 roberto Exp roberto $
+** $Id: lvm.c,v 1.121 2000/08/08 18:26:05 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -71,19 +71,17 @@ static void traceexec (lua_State *L, StkId base, StkId top, lua_Hook linehook) {
   CallInfo *ci = infovalue(base-1);
   int *lineinfo = ci->func->f.l->lineinfo;
   int pc = (*ci->pc - 1) - ci->func->f.l->code;
-  if (lineinfo) {
-    int newline;
-    if (ci->line == 0) {  /* first time? */
-      ci->line = 1;
-      ci->refi = 0;
-    }
-    newline = luaG_getline(lineinfo, pc, ci->line, &ci->refi);
-    /* calls linehook when enters a new line or jumps back (loop) */
-    if (newline != ci->line || pc <= ci->lastpc) {
-      ci->line = newline;
-      L->top = top;
-      luaD_lineHook(L, base-2, newline, linehook);
-    }
+  int newline;
+  if (ci->line == 0) {  /* first time? */
+    ci->line = 1;
+    ci->refi = 0;
+  }
+  newline = luaG_getline(lineinfo, pc, ci->line, &ci->refi);
+  /* calls linehook when enters a new line or jumps back (loop) */
+  if (newline != ci->line || pc <= ci->lastpc) {
+    ci->line = newline;
+    L->top = top;
+    luaD_lineHook(L, base-2, newline, linehook);
   }
   ci->lastpc = pc;
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.20 2000/06/28 20:20:36 roberto Exp roberto $
+** $Id: lparser.h,v 1.21 2000/08/08 18:26:05 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -47,7 +47,6 @@ typedef struct FuncState {
   int stacklevel;  /* number of values on activation register */
   int nlocalvar;  /* number of active local variables */
   int nupvalues;  /* number of upvalues */
-  int debug;  /* flag for debug information */
   int nvars;  /* number of entries in f->locvars */
   int lastline;  /* line where last `lineinfo' was generated */
   int nlineinfo;  /* index of next `lineinfo' to be generated */

@@ -1,5 +1,5 @@
 /*
-** $Id: luadebug.h,v 1.9 2000/01/19 12:00:45 roberto Exp roberto $
+** $Id: luadebug.h,v 1.10 2000/03/30 17:19:48 roberto Exp roberto $
 ** Debugging API
 ** See Copyright Notice in lua.h
 */
@@ -21,8 +21,6 @@ int lua_getstack (lua_State *L, int level, lua_Debug *ar);
 int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar);
 int lua_getlocal (lua_State *L, const lua_Debug *ar, lua_Localvar *v);
 int lua_setlocal (lua_State *L, const lua_Debug *ar, lua_Localvar *v);
-
-int lua_setdebug (lua_State *L, int debug);
 
 lua_Hook lua_setcallhook (lua_State *L, lua_Hook func);
 lua_Hook lua_setlinehook (lua_State *L, lua_Hook func);

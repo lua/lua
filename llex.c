@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.64 2000/06/19 18:05:14 roberto Exp roberto $
+** $Id: llex.c,v 1.65 2000/06/21 18:13:56 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -120,10 +120,7 @@ static void checkpragma (lua_State *L, LexState *LS) {
   if (LS->current == '$') {  /* is a pragma? */
     switch (luaL_findstring(readname(L, LS)+1, pragmas)) {
       case 0:  /* debug */
-        L->debug = 1;
-        break;
       case 1:  /* nodebug */
-        L->debug = 0;
         break;
       default:
         luaX_error(LS, "unknown pragma", TK_STRING);

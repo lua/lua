@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.34 2000/05/24 13:54:49 roberto Exp roberto $
+** $Id: lstate.h,v 1.35 2000/08/07 18:39:16 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -79,7 +79,6 @@ struct lua_State {
   int refFree;  /* list of free positions in refArray */
   unsigned long GCthreshold;
   unsigned long nblocks;  /* number of `blocks' currently allocated */
-  int debug;
   lua_Hook callhook;
   lua_Hook linehook;
   int allowhooks;

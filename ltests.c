@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.30 2000/08/04 19:38:35 roberto Exp roberto $
+** $Id: ltests.c,v 1.31 2000/08/08 18:26:05 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -69,11 +69,7 @@ static int pushop (Proto *p, int pc) {
   Instruction i = p->code[pc];
   OpCode o = GET_OPCODE(i);
   const char *name = instrname[o];
-  int *lineinfo = p->lineinfo;
-  if (lineinfo)
-    sprintf(buff, "%5d - ", luaG_getline(lineinfo, pc, 1, NULL));
-  else
-    strcpy(buff, "         ");
+  sprintf(buff, "%5d - ", luaG_getline(p->lineinfo, pc, 1, NULL));
   switch ((enum Mode)luaK_opproperties[o].mode) {  
     case iO:
       sprintf(buff+8, "%s", name);

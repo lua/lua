@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.28 2000/08/07 20:21:34 roberto Exp roberto $
+** $Id: ldebug.c,v 1.29 2000/08/08 18:26:05 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -54,13 +54,6 @@ lua_Hook lua_setlinehook (lua_State *L, lua_Hook func) {
   lua_Hook oldhook = L->linehook;
   L->linehook = func;
   return oldhook;
-}
-
-
-int lua_setdebug (lua_State *L, int debug) {
-  int old = L->debug;
-  L->debug = debug;
-  return old;
 }
 
 
@@ -140,9 +133,7 @@ static int lua_currentline (StkId f) {
   else {
     CallInfo *ci = infovalue(f);
     int *lineinfo = ci->func->f.l->lineinfo;
-    if (!lineinfo) return -1;  /* no static debug information */
-    else
-      return luaG_getline(lineinfo, lua_currentpc(f), 1, NULL);
+    return luaG_getline(lineinfo, lua_currentpc(f), 1, NULL);
   }
 }
 
@@ -382,7 +373,8 @@ static const char *getname (lua_State *L, StkId obj, const char **name) {
       }
       case OP_GETLOCAL: {
         *name = luaF_getlocalname(p, GETARG_U(i)+1, pc);
-        return (*name) ? "local" : NULL;
+        LUA_ASSERT(*name, "local must exist");
+        return "local";
       }
       case OP_PUSHSELF:
       case OP_GETDOTTED: {
@@ -418,3 +410,4 @@ void luaG_callerror (lua_State *L, StkId func) {
 void luaG_indexerror (lua_State *L, StkId t) {
   call_index_error(L, t, "index", "table");
 }
+
