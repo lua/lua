@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.62 2002/03/20 12:54:08 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.63 2002/03/27 15:30:41 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -116,20 +116,41 @@ LUALIB_API lua_Number luaL_opt_number (lua_State *L, int narg, lua_Number def) {
 }
 
 
-LUALIB_API void luaL_openlib (lua_State *L, const luaL_reg *l) {
-  for (; l->name; l++) {
-    lua_pushstring(L, l->name);
-    lua_pushcfunction(L, l->func);
-    lua_settable(L, -3);
+LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event) {
+  if (!lua_getmetatable(L, obj))  /* no metatable? */
+    return 0;
+  lua_pushstring(L, event);
+  lua_rawget(L, -2);
+  if (lua_isnil(L, -1)) {
+    lua_pop(L, 2);  /* remove metatable and metafield */
+    return 0;
   }
+  lua_pushvalue(L, obj);
+  lua_rawcall(L, 1, 1);
+  return 1;
+}
+
+
+LUALIB_API void luaL_openlib (lua_State *L, const luaL_reg *l, int nup) {
+  for (; l->name; l++) {
+    int i;
+    lua_pushstring(L, l->name);
+    for (i=0; i<nup; i++)  /* copy upvalues to the top */
+      lua_pushvalue(L, -(nup+1));
+    lua_pushcclosure(L, l->func, nup);
+    lua_settable(L, -(nup+3));
+  }
+  lua_pop(L, nup);
 }
 
 
 LUALIB_API void luaL_opennamedlib (lua_State *L, const char *libname,
-                                   const luaL_reg *l) {
+                                   const luaL_reg *l, int nup) {
   lua_pushstring(L, libname);
+  lua_insert(L, -(nup+1));
   lua_newtable(L);
-  luaL_openlib(L, l);
+  lua_insert(L, -(nup+1));
+  luaL_openlib(L, l, nup);
   lua_settable(L, LUA_GLOBALSINDEX);
 }
 
