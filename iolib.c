@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.33 1996/02/05 21:32:19 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.34 1996/02/09 19:02:30 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -380,13 +380,9 @@ static int write_quoted (int just, int m)
   {
     switch (*s)
     {
-      case '"':  case '\\':
+      case '"':  case '\\':  case '\n':
         luaI_addchar('\\');
         luaI_addchar(*s);
-        break;
-      case '\n':
-        luaI_addchar('\\');
-        luaI_addchar('n');
         break;
       case 0:
         goto END_WHILE;
