@@ -143,7 +143,7 @@ void luaD_call (lua_State *L, StkId func) {
   if (ttype(func) != LUA_TFUNCTION) {
     /* `func' is not a function; check the `function' tag method */
     const TObject *tm = luaT_gettmbyobj(L, func, TM_CALL);
-    if (tm == NULL || ttype(tm) != LUA_TFUNCTION)
+    if (ttype(tm) != LUA_TFUNCTION)
       luaG_typeerror(L, func, "call");
     luaD_openstack(L, func);
     setobj(func, tm);  /* tag method is the new function to be called */

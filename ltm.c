@@ -39,6 +39,10 @@ void luaT_init (lua_State *L) {
 }
 
 
+/*
+** function to be used with macro "fasttm": optimized for absence of
+** tag methods
+*/
 const TObject *luaT_gettm (Table *events, TMS event, TString *ename) {
   const TObject *tm = luaH_getstr(events, ename);
   if (ttype(tm) == LUA_TNIL) {  /* no tag method? */
@@ -50,13 +54,14 @@ const TObject *luaT_gettm (Table *events, TMS event, TString *ename) {
 
 
 const TObject *luaT_gettmbyobj (lua_State *L, const TObject *o, TMS event) {
+  TString *ename = G(L)->tmname[event];
   switch (ttype(o)) {
     case LUA_TTABLE:
-      return fasttm(L, hvalue(o)->eventtable, event);
+      return luaH_getstr(hvalue(o)->eventtable, ename);
     case LUA_TUSERDATA:
-      return fasttm(L, uvalue(o)->uv.eventtable, event);
+      return luaH_getstr(uvalue(o)->uv.eventtable, ename);
     default:
-      return NULL;
+      return &luaO_nilobject;
   }
 }
 

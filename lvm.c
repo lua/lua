@@ -113,7 +113,7 @@ static void callTM (lua_State *L, const TObject *f,
 
 /*
 ** Function to index a table.
-** Receives the table at `t' and the key at the `key'.
+** Receives the table at `t' and the key at `key'.
 ** leaves the result at `res'.
 */
 void luaV_gettable (lua_State *L, StkId t, TObject *key, StkId res) {
@@ -132,13 +132,11 @@ void luaV_gettable (lua_State *L, StkId t, TObject *key, StkId res) {
     }
     /* else will call the tag method */
   } else {  /* not a table; try a `gettable' tag method */
-    if (ttype(t) != LUA_TUSERDATA ||
-        (tm = fasttm(L, uvalue(t)->uv.eventtable, TM_GETTABLE)) == NULL) {
+    if (ttype(tm = luaT_gettmbyobj(L, t, TM_GETTABLE)) == LUA_TNIL) {
       luaG_typeerror(L, t, "index");
       return;  /* to avoid warnings */
     }
   }
-  lua_assert(tm != NULL);
   if (ttype(tm) == LUA_TFUNCTION)
     callTM(L, tm, t, key, NULL, res);
   else {
@@ -163,13 +161,11 @@ void luaV_settable (lua_State *L, StkId t, TObject *key, StkId val) {
     }
     /* else will call the tag method */
   } else {  /* not a table; try a `settable' tag method */
-    if (ttype(t) != LUA_TUSERDATA ||
-        (tm = fasttm(L, uvalue(t)->uv.eventtable, TM_SETTABLE)) == NULL) {
+    if (ttype(tm = luaT_gettmbyobj(L, t, TM_SETTABLE)) == LUA_TNIL) {
       luaG_typeerror(L, t, "index");
       return;  /* to avoid warnings */
     }
   }
-  lua_assert(tm != NULL);
   if (ttype(tm) == LUA_TFUNCTION)
     callTM(L, tm, t, key, val, NULL);
   else {
@@ -182,15 +178,10 @@ void luaV_settable (lua_State *L, StkId t, TObject *key, StkId val) {
 static int call_binTM (lua_State *L, const TObject *p1, const TObject *p2,
                        TObject *res, TMS event) {
   const TObject *tm = luaT_gettmbyobj(L, p1, event);  /* try first operand */
-  if (tm == NULL) {
+  if (ttype(tm) == LUA_TNIL)
     tm = luaT_gettmbyobj(L, p2, event);  /* try second operand */
-    if (tm == NULL) {
-      tm = fasttm(L, hvalue(gt(L)), event);
-      if (tm == NULL) return 0;  /* no tag method */
-    }
-  }
   if (ttype(tm) != LUA_TFUNCTION) return 0;
-    callTM(L, tm, p1, p2, NULL, res);
+  callTM(L, tm, p1, p2, NULL, res);
   return 1;
 }
 
@@ -294,6 +285,24 @@ static void adjust_varargs (lua_State *L, StkId base, int nfixargs) {
     luaD_adjusttop(L, firstvar);
   }
   luaV_pack(L, firstvar);
+}
+
+
+static void powOp (lua_State *L, StkId ra, StkId rb, StkId rc) {
+  const TObject *b = rb;
+  const TObject *c = rc;
+  TObject tempb, tempc;
+  if ((b = luaV_tonumber(b, &tempb)) != NULL &&
+      (c = luaV_tonumber(c, &tempc)) != NULL) {
+    TObject o, f;
+    setsvalue(&o, luaS_newliteral(L, "pow"));
+    luaV_gettable(L, gt(L), &o, &f);
+    if (ttype(&f) != LUA_TFUNCTION)
+      luaD_error(L, "`pow' (for `^' operator) is not a function");
+    callTM(L, &f, b, c, NULL, ra);
+  }
+  else
+    call_arith(L, rb, rc, ra, TM_POW);
 }
 
 
@@ -425,7 +434,7 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
         break;
       }
       case OP_POW: {
-        call_arith(L, RB(i), RKC(i), ra, TM_POW);
+        powOp(L, ra, RB(i), RKC(i));
         break;
       }
       case OP_UNM: {
