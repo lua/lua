@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.96 2002/09/19 13:03:53 roberto Exp roberto $
+** $Id: lstate.h,v 1.97 2002/10/08 18:46:08 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -48,21 +48,14 @@
 struct lua_longjmp;  /* defined in ldo.c */
 
 
-
-/*
-** array of `global' objects
-*/
-
-#define NUMGLOBS	3
-
 /* default meta table (both for tables and udata) */
-#define defaultmeta(L)	(L->globs)
+#define defaultmeta(L)	(&G(L)->_defaultmeta)
 
 /* table of globals */
-#define gt(L)	(L->globs + 1)
+#define gt(L)	(&L->_gt)
 
 /* registry */
-#define registry(L)	(L->globs + 2)
+#define registry(L)	(&G(L)->_registry)
 
 
 /* extra stack space to handle TM calls and some other extras */
@@ -129,6 +122,8 @@ typedef struct global_State {
   lu_mem GCthreshold;
   lu_mem nblocks;  /* number of `bytes' currently allocated */
   lua_CFunction panic;  /* to be called in unprotected errors */
+  TObject _registry;
+  TObject _defaultmeta;
   Node dummynode[1];  /* common node array for all empty tables */
   TString *tmname[TM_N];  /* array with tag-method names */
 } global_State;
@@ -151,12 +146,12 @@ struct lua_State {
   unsigned long hookmask;
   ls_count hookcount;
   lua_Hook hook;
+  TObject _gt;  /* table of globals */
   GCObject *openupval;  /* list of open upvalues in this stack */
   struct lua_longjmp *errorJmp;  /* current error recover point */
   ptrdiff_t errfunc;  /* current error handling function (stack index) */
   lua_State *next;  /* circular double linked list of states */
   lua_State *previous;
-  TObject globs[NUMGLOBS];  /* registry, table of globals, etc. */
 };
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.105 2002/08/30 19:09:21 roberto Exp roberto $
+** $Id: lstate.c,v 1.106 2002/10/08 18:46:08 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -25,7 +25,7 @@ static void close_state (lua_State *L);
 
 
 /*
-** you can change this function through the official API
+** you can change this function through the official API:
 ** call `lua_setpanicf'
 */
 static int default_panic (lua_State *L) {
@@ -61,6 +61,8 @@ static void f_luaopen (lua_State *L, void *ud) {
   G(L)->strt.size = 0;
   G(L)->strt.nuse = 0;
   G(L)->strt.hash = NULL;
+  setnilvalue(defaultmeta(L));
+  setnilvalue(registry(L));
   luaZ_initbuffer(L, &G(L)->buff);
   G(L)->panic = &default_panic;
   G(L)->rootgc = NULL;
@@ -97,9 +99,7 @@ static void preinit_state (lua_State *L) {
   L->size_ci = 0;
   L->base_ci = L->ci = NULL;
   L->errfunc = 0;
-  setnilvalue(defaultmeta(L));
   setnilvalue(gt(L));
-  setnilvalue(registry(L));
 }
 
 
@@ -114,9 +114,7 @@ LUA_API lua_State *lua_newthread (lua_State *OL) {
   OL->next = L;
   L->previous = OL;
   stack_init(L, OL);  /* init stack */
-  setobj(defaultmeta(L), defaultmeta(OL));  /* share default meta table */
   setobj(gt(L), gt(OL));  /* share table of globals */
-  setobj(registry(L), registry(OL));  /* share registry */
   lua_unlock(OL);
   lua_userstateopen(L);
   return L;

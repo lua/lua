@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.151 2002/09/19 19:54:22 roberto Exp roberto $
+** $Id: lgc.c,v 1.152 2002/10/08 18:46:08 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -34,7 +34,6 @@ typedef struct GCState {
 #define resetbit(x,b)	((x) &= cast(lu_byte, ~(1<<(b))))
 #define testbit(x,b)	((x) & (1<<(b)))
 
-#define mark(x)		setbit((x)->gch.marked, 0)
 #define unmark(x)	resetbit((x)->gch.marked, 0)
 #define ismarked(x)	((x)->gch.marked & ((1<<4)|1))
 
@@ -101,7 +100,7 @@ static void markclosure (GCState *st, Closure *cl) {
 
 
 static void reallymarkobject (GCState *st, GCObject *o) {
-  mark(o);
+  setbit(o->gch.marked, 0);  /* mark object */
   switch (o->gch.tt) {
     case LUA_TFUNCTION: {
       markclosure(st, &o->cl);
@@ -135,15 +134,13 @@ static void traversestacks (GCState *st) {
   do {  /* for each thread */
     StkId o, lim;
     CallInfo *ci;
-    if (ttisnil(defaultmeta(L1))) {  /* incomplete state? */
+    if (ttisnil(gt(L1))) {  /* incomplete state? */
       lua_assert(L1 != st->L);
       L1 = L1->next;
       luaE_closethread(st->L, L1->previous);  /* collect it */
       continue;
     }
-    markobject(st, defaultmeta(L1));
     markobject(st, gt(L1));
-    markobject(st, registry(L1));
     for (o=L1->stack; o<L1->top; o++)
       markobject(st, o);
     lim = o;
@@ -156,6 +153,8 @@ static void traversestacks (GCState *st) {
     lua_assert(L1->previous->next == L1 && L1->next->previous == L1);
     L1 = L1->next;
   } while (L1 != st->L);
+  markobject(st, defaultmeta(L1));
+  markobject(st, registry(L1));
 }
 
 
@@ -342,6 +341,7 @@ static void checkSizes (lua_State *L) {
     size_t newsize = luaZ_sizebuffer(&G(L)->buff) / 2;
     luaZ_resizebuffer(L, &G(L)->buff, newsize);
   }
+  G(L)->GCthreshold = 2*G(L)->nblocks;  /* new threshold */
 }
 
 
@@ -389,7 +389,7 @@ void luaC_sweep (lua_State *L, int all) {
 }
 
 
-void luaC_collectgarbage (lua_State *L) {
+static void mark (lua_State *L) {
   GCState st;
   Table *toclear;
   st.L = L;
@@ -407,9 +407,13 @@ void luaC_collectgarbage (lua_State *L) {
   /* `propagatemarks' may reborne some weak tables; clear them too */
   cleartablekeys(st.toclear);
   cleartablevalues(st.toclear);
+}
+
+
+void luaC_collectgarbage (lua_State *L) {
+  mark(L);
   luaC_sweep(L, 0);
   checkSizes(L);
-  G(L)->GCthreshold = 2*G(L)->nblocks;  /* new threshold */
   callGCTM(L);
 }
 
