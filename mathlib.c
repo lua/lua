@@ -3,7 +3,7 @@
 ** Mathematics library to LUA
 */
 
-char *rcs_mathlib="$Id: mathlib.c,v 1.17 1996/04/30 21:13:55 roberto Exp roberto $";
+char *rcs_mathlib="$Id: mathlib.c,v 1.18 1996/08/01 14:55:33 roberto Exp roberto $";
 
 #include <stdlib.h>
 #include <math.h>
@@ -19,7 +19,7 @@ char *rcs_mathlib="$Id: mathlib.c,v 1.17 1996/04/30 21:13:55 roberto Exp roberto
 
 static void math_abs (void)
 {
- double d = lua_check_number(1, "abs"); 
+ double d = luaL_check_number(1, "abs"); 
  if (d < 0) d = -d;
  lua_pushnumber (d);
 }
@@ -27,7 +27,7 @@ static void math_abs (void)
 
 static void math_sin (void)
 {
- double d = lua_check_number(1, "sin");
+ double d = luaL_check_number(1, "sin");
  lua_pushnumber (sin(TORAD(d)));
 }
 
@@ -35,7 +35,7 @@ static void math_sin (void)
 
 static void math_cos (void)
 {
- double d = lua_check_number(1, "cos");
+ double d = luaL_check_number(1, "cos");
  lua_pushnumber (cos(TORAD(d)));
 }
 
@@ -43,64 +43,64 @@ static void math_cos (void)
 
 static void math_tan (void)
 {
- double d = lua_check_number(1, "tan");
+ double d = luaL_check_number(1, "tan");
  lua_pushnumber (tan(TORAD(d)));
 }
 
 
 static void math_asin (void)
 {
- double d = lua_check_number(1, "asin");
+ double d = luaL_check_number(1, "asin");
  lua_pushnumber (TODEGREE(asin(d)));
 }
 
 
 static void math_acos (void)
 {
- double d = lua_check_number(1, "acos");
+ double d = luaL_check_number(1, "acos");
  lua_pushnumber (TODEGREE(acos(d)));
 }
 
 
 static void math_atan (void)
 {
- double d = lua_check_number(1, "atan");
+ double d = luaL_check_number(1, "atan");
  lua_pushnumber (TODEGREE(atan(d)));
 }
 
 
 static void math_atan2 (void)
 {
- double d1 = lua_check_number(1, "atan2");
- double d2 = lua_check_number(2, "atan2");
+ double d1 = luaL_check_number(1, "atan2");
+ double d2 = luaL_check_number(2, "atan2");
  lua_pushnumber (TODEGREE(atan2(d1, d2)));
 }
 
 
 static void math_ceil (void)
 {
- double d = lua_check_number(1, "ceil");
+ double d = luaL_check_number(1, "ceil");
  lua_pushnumber (ceil(d));
 }
 
 
 static void math_floor (void)
 {
- double d = lua_check_number(1, "floor");
+ double d = luaL_check_number(1, "floor");
  lua_pushnumber (floor(d));
 }
 
 static void math_mod (void)
 {
-  float x = lua_check_number(1, "mod");
-  float y = lua_check_number(2, "mod");
+  float x = luaL_check_number(1, "mod");
+  float y = luaL_check_number(2, "mod");
   lua_pushnumber(fmod(x, y));
 }
 
 
 static void math_sqrt (void)
 {
- double d = lua_check_number(1, "sqrt");
+ double d = luaL_check_number(1, "sqrt");
  lua_pushnumber (sqrt(d));
 }
 
@@ -131,10 +131,10 @@ static void math_pow (void)
 static void math_min (void)
 {
  int i=1;
- double dmin = lua_check_number(i, "min");
+ double dmin = luaL_check_number(i, "min");
  while (lua_getparam(++i) != LUA_NOOBJECT)
  {
-  double d = lua_check_number(i, "min");
+  double d = luaL_check_number(i, "min");
   if (d < dmin) dmin = d;
  }
  lua_pushnumber (dmin);
@@ -143,10 +143,10 @@ static void math_min (void)
 static void math_max (void)
 {
  int i=1;
- double dmax = lua_check_number(i, "max");
+ double dmax = luaL_check_number(i, "max");
  while (lua_getparam(++i) != LUA_NOOBJECT)
  {
-  double d = lua_check_number(i, "max");
+  double d = luaL_check_number(i, "max");
   if (d > dmax) dmax = d;
  }
  lua_pushnumber (dmax);
@@ -154,33 +154,33 @@ static void math_max (void)
 
 static void math_log (void)
 {
- double d = lua_check_number(1, "log");
+ double d = luaL_check_number(1, "log");
  lua_pushnumber (log(d));
 }
 
 
 static void math_log10 (void)
 {
- double d = lua_check_number(1, "log10");
+ double d = luaL_check_number(1, "log10");
  lua_pushnumber (log10(d));
 }
 
 
 static void math_exp (void)
 {
- double d = lua_check_number(1, "exp");
+ double d = luaL_check_number(1, "exp");
  lua_pushnumber (exp(d));
 }
 
 static void math_deg (void)
 {
- float d = lua_check_number(1, "deg");
+ float d = luaL_check_number(1, "deg");
  lua_pushnumber (d*180./PI);
 }
 
 static void math_rad (void)
 {
- float d = lua_check_number(1, "rad");
+ float d = luaL_check_number(1, "rad");
  lua_pushnumber (d/180.*PI);
 }
 
@@ -191,7 +191,7 @@ static void math_random (void)
 
 static void math_randomseed (void)
 {
-  srand(lua_check_number(1, "randomseed"));
+  srand(luaL_check_number(1, "randomseed"));
 }
 
 

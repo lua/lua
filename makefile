@@ -1,4 +1,4 @@
-# $Id: makefile,v 1.27 1996/11/06 20:48:03 roberto Exp roberto $
+# $Id: makefile,v 1.28 1997/03/05 13:37:04 roberto Exp roberto $
 
 #configuration
 
@@ -30,7 +30,8 @@ LUAOBJS = \
 	fallback.o \
 	mem.o \
 	func.o \
-	undump.o
+	undump.o \
+	auxlib.o
 
 LIBOBJS = 	\
 	iolib.o \
@@ -75,6 +76,7 @@ clear	:
 	co $@
 
 
+auxlib.o: auxlib.c lua.h
 fallback.o: fallback.c mem.h fallback.h lua.h opcode.h types.h tree.h \
  func.h table.h hash.h
 func.o: func.c luadebug.h lua.h table.h tree.h types.h opcode.h func.h \
@@ -97,6 +99,6 @@ strlib.o: strlib.c lua.h lualib.h
 table.o: table.c mem.h opcode.h lua.h types.h tree.h func.h hash.h \
  table.h inout.h fallback.h luadebug.h
 tree.o: tree.c mem.h lua.h tree.h types.h lex.h hash.h opcode.h func.h \
- table.h
+ table.h fallback.h
 undump.o: undump.c opcode.h lua.h types.h tree.h func.h mem.h table.h \
  undump.h

@@ -2,7 +2,7 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lua.h,v 3.34 1997/02/20 15:51:14 roberto Exp roberto $
+** $Id: lua.h,v 3.35 1997/02/26 17:38:41 roberto Unstable roberto $
 */
 
 
@@ -80,6 +80,7 @@ void	       lua_unref		(int ref);
 lua_Object     lua_createtable		(void);
 
 
+/* =============================================================== */
 /* some useful macros */
 
 #define lua_refobject(o,l)	(lua_pushobject(o), lua_ref(l))
@@ -89,7 +90,17 @@ lua_Object     lua_createtable		(void);
 #define lua_pushuserdata(u)     lua_pushusertag(u, 0)
 
 
+/* =============================================================== */
+/* Auxiliar functions for libraries */
 
+void luaL_arg_check(int cond, char *funcname, int numarg, char *extramsg);
+char *luaL_check_string (int numArg, char *funcname);
+char *luaL_opt_string (int numArg, char *def, char *funcname);
+double luaL_check_number (int numArg, char *funcname);
+double luaL_opt_number (int numArg, double def, char *funcname);
+
+
+/* =============================================================== */
 /* for compatibility with old versions. Avoid using these macros */
 
 #define lua_type(o)		(lua_tag(o))

@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.44 1997/02/26 17:38:41 roberto Unstable roberto $";
+char *rcs_inout="$Id: inout.c,v 2.45 1997/03/11 18:44:28 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -101,32 +101,6 @@ void lua_closestring (void)
 }
 
 
-static void check_arg (int cond, char *func)
-{
-  if (!cond)
-  {
-    char buff[100];
-    sprintf(buff, "incorrect argument to function `%s'", func);
-    lua_error(buff);
-  }
-}
-
-static char *check_string (int numArg, char *funcname)
-{
-  lua_Object o = lua_getparam(numArg);
-  check_arg(lua_isstring(o), funcname);
-  return lua_getstring(o);
-}
-
-static int check_number (int numArg, char *funcname)
-{
-  lua_Object o = lua_getparam(numArg);
-  check_arg(lua_isnumber(o), funcname);
-  return (int)lua_getnumber(o);
-}
-
-
-
 static int passresults (void)
 {
   int arg = 0;
@@ -141,7 +115,7 @@ static int passresults (void)
 */
 static void lua_internaldostring (void)
 {
-  if (lua_dostring(check_string(1, "dostring")) == 0)
+  if (lua_dostring(luaL_check_string(1, "dostring")) == 0)
     if (passresults() == 0)
       lua_pushuserdata(NULL);  /* at least one result to signal no errors */
 }
@@ -151,13 +125,7 @@ static void lua_internaldostring (void)
 */
 static void lua_internaldofile (void)
 {
- lua_Object obj = lua_getparam (1);
- char *fname = NULL;
- if (lua_isstring(obj))
-   fname = lua_getstring(obj);
- else if (obj != LUA_NOOBJECT)
-   lua_error("invalid argument to function `dofile'");
- /* else fname = NULL */
+ char *fname = luaL_opt_string(1, NULL, "dofile");
  if (lua_dofile(fname) == 0)
     if (passresults() == 0)
       lua_pushuserdata(NULL);  /* at least one result to signal no errors */
@@ -247,15 +215,15 @@ static void luaI_assert (void)
 static void luaI_setglobal (void)
 {
   lua_Object value = lua_getparam(2);
-  check_arg(value != LUA_NOOBJECT, "setglobal");
+  luaL_arg_check(value != LUA_NOOBJECT, "setglobal", 2, NULL);
   lua_pushobject(value);
-  lua_storeglobal(check_string(1, "setglobal"));
+  lua_storeglobal(luaL_check_string(1, "setglobal"));
   lua_pushobject(value);  /* return given value */
 }
 
 static void luaI_getglobal (void)
 {
-  lua_pushobject(lua_getglobal(check_string(1, "getglobal")));
+  lua_pushobject(lua_getglobal(luaL_check_string(1, "getglobal")));
 }
 
 #define MAXPARAMS	256
@@ -265,8 +233,8 @@ static void luaI_call (void)
   lua_Object arg = lua_getparam(2);
   lua_Object temp, params[MAXPARAMS];
   int narg, i;
-  check_arg(lua_istable(arg), "call");
-  check_arg(lua_isfunction(f), "call");
+  luaL_arg_check(lua_isfunction(f), "call", 1, "function expected");
+  luaL_arg_check(lua_istable(arg), "call", 2, "table expected");
   /* narg = arg.n */
   lua_pushobject(arg);
   lua_pushstring("n");
@@ -296,21 +264,22 @@ static void luaI_call (void)
 static void luaIl_settag (void)
 {
   lua_Object o = lua_getparam(1);
-  check_arg(o != LUA_NOOBJECT, "settag");
+  luaL_arg_check(o != LUA_NOOBJECT, "settag", 1, NULL);
   lua_pushobject(o);
-  lua_settag(check_number(2, "settag"));
+  lua_settag(luaL_check_number(2, "settag"));
 }
 
 static void luaIl_newtag (void)
 {
-  lua_pushnumber(lua_newtag(check_string(1, "newtag")));
+  lua_pushnumber(lua_newtag(luaL_check_string(1, "newtag")));
 }
 
 static void basicindex (void)
 {
   lua_Object t = lua_getparam(1);
   lua_Object i = lua_getparam(2);
-  check_arg(t != LUA_NOOBJECT && i != LUA_NOOBJECT, "basicindex");
+  luaL_arg_check(t != LUA_NOOBJECT, "basicindex", 1, NULL);
+  luaL_arg_check(i != LUA_NOOBJECT, "basicindex", 2, NULL);
   lua_pushobject(t);
   lua_pushobject(i);
   lua_pushobject(lua_basicindex());
@@ -321,8 +290,8 @@ static void basicstoreindex (void)
   lua_Object t = lua_getparam(1);
   lua_Object i = lua_getparam(2);
   lua_Object v = lua_getparam(3);
-  check_arg(t != LUA_NOOBJECT && i != LUA_NOOBJECT && v != LUA_NOOBJECT,
-            "basicindex");
+  luaL_arg_check(t != LUA_NOOBJECT && i != LUA_NOOBJECT && v != LUA_NOOBJECT,
+            "basicindex", 0, NULL);
   lua_pushobject(t);
   lua_pushobject(i);
   lua_pushobject(v);

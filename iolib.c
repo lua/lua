@@ -58,7 +58,7 @@ static void io_readfrom (void)
   else if (lua_isuserdata(f))
     lua_infile = lua_getuserdata(f);
   else {
-    char *s = lua_check_string(1, "readfrom");
+    char *s = luaL_check_string(1, "readfrom");
     FILE *fp = (*s == '|') ? popen(s+1, "r") : fopen(s, "r");
     if (fp)
       lua_infile = fp;
@@ -79,7 +79,7 @@ static void io_writeto (void)
   else if (lua_isuserdata(f))
     lua_outfile = lua_getuserdata(f);
   else {
-    char *s = lua_check_string(1, "writeto");
+    char *s = luaL_check_string(1, "writeto");
     FILE *fp = (*s == '|') ? popen(s+1,"w") : fopen(s,"w");
     if (fp)
       lua_outfile = fp;
@@ -94,7 +94,7 @@ static void io_writeto (void)
 
 static void io_appendto (void)
 {
-  char *s = lua_check_string(1, "appendto");
+  char *s = luaL_check_string(1, "appendto");
   FILE *fp = fopen (s, "a");
   if (fp != NULL) {
     lua_outfile = fp;
@@ -110,7 +110,7 @@ static void io_appendto (void)
 static void io_read (void)
 {
   char *buff;
-  char *p = lua_opt_string(1, "[^\n]*{\n}", "read");
+  char *p = luaL_opt_string(1, "[^\n]*{\n}", "read");
   int inskip = 0;  /* to control {skips} */
   int c = NEED_OTHER;
   luaI_addchar(0);
@@ -161,7 +161,7 @@ static void io_write (void)
   int arg = 1;
   int status = 1;
   char *s;
-  while ((s = lua_opt_string(arg++, NULL, "write")) != NULL)
+  while ((s = luaL_opt_string(arg++, NULL, "write")) != NULL)
     status = status && (fputs(s, lua_outfile) != EOF);
   pushresult(status);
 }
@@ -169,20 +169,20 @@ static void io_write (void)
 
 static void io_execute (void)
 {
-  lua_pushnumber(system(lua_check_string(1, "execute")));
+  lua_pushnumber(system(luaL_check_string(1, "execute")));
 }
 
 
 static void io_remove  (void)
 {
-  pushresult(remove(lua_check_string(1, "remove")) == 0);
+  pushresult(remove(luaL_check_string(1, "remove")) == 0);
 }
 
 
 static void io_rename (void)
 {
-  pushresult(rename(lua_check_string(1, "rename"),
-                    lua_check_string(2, "rename")) == 0);
+  pushresult(rename(luaL_check_string(1, "rename"),
+                    luaL_check_string(2, "rename")) == 0);
 }
 
 
@@ -195,7 +195,7 @@ static void io_tmpname (void)
 
 static void io_getenv (void)
 {
-  lua_pushstring(getenv(lua_check_string(1, "getenv"))); /* if NULL push nil */
+  lua_pushstring(getenv(luaL_check_string(1, "getenv"))); /* if NULL push nil */
 }
 
 
@@ -203,7 +203,7 @@ static void io_date (void)
 {
   time_t t;
   struct tm *tm;
-  char *s = lua_opt_string(1, "%c", "date");
+  char *s = luaL_opt_string(1, "%c", "date");
   char b[BUFSIZ];
   time(&t); tm = localtime(&t);
   if (strftime(b,sizeof(b),s,tm))
@@ -269,7 +269,7 @@ static void lua_printstack (FILE *f)
 
 static void errorfb (void)
 {
-  char *s = lua_opt_string(1, "(no messsage)", NULL);
+  char *s = luaL_opt_string(1, "(no messsage)", NULL);
   fprintf(stderr, "lua: %s\n", s);
   lua_printstack(stderr);
 }
