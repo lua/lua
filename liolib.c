@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.32 2003/02/11 15:31:50 roberto Exp roberto $
+** $Id: liolib.c,v 2.33 2003/02/27 12:39:05 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -24,11 +24,11 @@
 /*
 ** by default, gcc does not get `tmpname'
 */
-#ifndef LUA_USETMPNAME
+#ifndef USE_TMPNAME
 #ifdef __GNUC__
-#define LUA_USETMPNAME	0
+#define USE_TMPNAME	0
 #else
-#define LUA_USETMPNAME	1
+#define USE_TMPNAME	1
 #endif
 #endif
 
@@ -569,7 +569,7 @@ static int io_rename (lua_State *L) {
 
 
 static int io_tmpname (lua_State *L) {
-#if !LUA_USETMPNAME
+#if !USE_TMPNAME
   luaL_error(L, "`tmpname' not supported");
   return 0;
 #else
