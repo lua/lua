@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.29 2002/12/20 10:26:33 roberto Exp roberto $
+** $Id: liolib.c,v 2.30 2003/01/17 15:27:28 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -499,6 +499,8 @@ static const luaL_reg flib[] = {
   {"seek", f_seek},
   {"write", f_write},
   {"close", io_close},
+  {"__gc", io_gc},
+  {"__tostring", io_tostring},
   {NULL, NULL}
 };
 
@@ -506,15 +508,6 @@ static const luaL_reg flib[] = {
 static void createmeta (lua_State *L) {
   lua_pushliteral(L, FILEHANDLE);
   lua_newtable(L);  /* push new metatable for file handles */
-  /* close files when collected */
-  lua_pushliteral(L, "__gc");
-  lua_pushvalue(L, -2);  /* push metatable (will be upvalue for `gc' method) */
-  lua_pushcclosure(L, io_gc, 1);
-  lua_rawset(L, -3);  /* metatable.__gc = io_gc */
-  lua_pushliteral(L, "__tostring");
-  lua_pushvalue(L, -2);  /* push metatable */
-  lua_pushcclosure(L, io_tostring, 1);
-  lua_rawset(L, -3);
   /* file methods */
   lua_pushliteral(L, "__index");
   lua_pushvalue(L, -2);  /* push metatable */
