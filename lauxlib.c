@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.41 2000/10/27 16:15:53 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.42 2000/10/30 12:38:50 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -41,10 +41,9 @@ LUALIB_API void luaL_argerror (lua_State *L, int narg, const char *extramsg) {
 
 
 static void type_error (lua_State *L, int narg, int t) {
-  char buff[100];
-  int tt = lua_type(L, narg);
-  const char *rt = (tt == LUA_TNONE) ? "no value" : lua_typename(L, tt);
-  sprintf(buff, "%.10s expected, got %.10s", lua_typename(L, t), rt);
+  char buff[50];
+  sprintf(buff, "%.8s expected, got %.8s", lua_typename(L, t),
+                                           lua_typename(L, lua_type(L, narg)));
   luaL_argerror(L, narg, buff);
 }
 
