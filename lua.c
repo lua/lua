@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.116 2003/01/29 13:23:45 roberto Exp roberto $
+** $Id: lua.c,v 1.117 2003/03/07 13:21:31 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -67,12 +67,12 @@ static const char *progname = PROGNAME;
 
 
 static const luaL_reg lualibs[] = {
-  {"baselib", lua_baselibopen},
-  {"tablib", lua_tablibopen},
-  {"iolib", lua_iolibopen},
-  {"strlib", lua_strlibopen},
-  {"mathlib", lua_mathlibopen},
-  {"dblib", lua_dblibopen},
+  {"base", luaopen_base},
+  {"table", luaopen_table},
+  {"io", luaopen_io},
+  {"string", luaopen_string},
+  {"math", luaopen_math},
+  {"debug", luaopen_debug},
   /* add your libraries here */
   LUA_EXTRALIBS
   {NULL, NULL}
@@ -372,7 +372,7 @@ static int handle_argv (char *argv[], int *interactive) {
 
 static void openstdlibs (lua_State *l) {
   const luaL_reg *lib = lualibs;
-  for (; lib->name; lib++) {
+  for (; lib->func; lib++) {
     lib->func(l);  /* open library */
     lua_settop(l, 0);  /* discard any results */
   }

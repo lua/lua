@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.125 2003/03/06 19:36:16 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.126 2003/03/11 12:08:13 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -668,7 +668,7 @@ static void base_open (lua_State *L) {
 }
 
 
-LUALIB_API int lua_baselibopen (lua_State *L) {
+LUALIB_API int luaopen_base (lua_State *L) {
   base_open(L);
   luaL_openlib(L, LUA_COLIBNAME, co_funcs, 0);
   lua_newtable(L);

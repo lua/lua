@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.153 2003/02/18 16:02:56 roberto Exp roberto $
+** $Id: ltests.c,v 1.154 2003/02/27 12:33:07 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -460,12 +460,12 @@ static int newstate (lua_State *L) {
 
 static int loadlib (lua_State *L) {
   static const luaL_reg libs[] = {
-    {"mathlibopen", lua_mathlibopen},
-    {"strlibopen", lua_strlibopen},
-    {"iolibopen", lua_iolibopen},
-    {"tablibopen", lua_tablibopen},
-    {"dblibopen", lua_dblibopen},
-    {"baselibopen", lua_baselibopen},
+    {"mathlibopen", luaopen_math},
+    {"strlibopen", luaopen_string},
+    {"iolibopen", luaopen_io},
+    {"tablibopen", luaopen_table},
+    {"dblibopen", luaopen_debug},
+    {"baselibopen", luaopen_base},
     {NULL, NULL}
   };
   lua_State *L1 = cast(lua_State *,

@@ -1,5 +1,5 @@
 /*
-** $Id: lualib.h,v 1.24 2002/06/18 17:42:52 roberto Exp roberto $
+** $Id: lualib.h,v 1.25 2002/07/09 18:49:13 roberto Exp roberto $
 ** Lua standard libraries
 ** See Copyright Notice in lua.h
 */
@@ -17,28 +17,37 @@
 
 
 #define LUA_COLIBNAME	"coroutine"
-LUALIB_API int lua_baselibopen (lua_State *L);
+LUALIB_API int luaopen_base (lua_State *L);
 
 #define LUA_TABLIBNAME	"table"
-LUALIB_API int lua_tablibopen (lua_State *L);
+LUALIB_API int luaopen_table (lua_State *L);
 
 #define LUA_IOLIBNAME	"io"
 #define LUA_OSLIBNAME	"os"
-LUALIB_API int lua_iolibopen (lua_State *L);
+LUALIB_API int luaopen_io (lua_State *L);
 
 #define LUA_STRLIBNAME	"string"
-LUALIB_API int lua_strlibopen (lua_State *L);
+LUALIB_API int luaopen_string (lua_State *L);
 
 #define LUA_MATHLIBNAME	"math"
-LUALIB_API int lua_mathlibopen (lua_State *L);
+LUALIB_API int luaopen_math (lua_State *L);
 
 #define LUA_DBLIBNAME	"debug"
-LUALIB_API int lua_dblibopen (lua_State *L);
+LUALIB_API int luaopen_debug (lua_State *L);
 
 
 /* to help testing the libraries */
 #ifndef lua_assert
 #define lua_assert(c)		/* empty */
 #endif
+
+
+/* compatibility code */
+#define lua_baselibopen	luaopen_base
+#define lua_tablibopen	luaopen_table
+#define lua_iolibopen	luaopen_io
+#define lua_strlibopen	luaopen_string
+#define lua_mathlibopen	luaopen_math
+#define lua_dblibopen	luaopen_debug
 
 #endif

@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.33 2003/02/27 12:39:05 roberto Exp roberto $
+** $Id: liolib.c,v 2.34 2003/03/06 19:36:44 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -749,7 +749,7 @@ static const luaL_reg syslib[] = {
 
 
 
-LUALIB_API int lua_iolibopen (lua_State *L) {
+LUALIB_API int luaopen_io (lua_State *L) {
   createmeta(L);
   luaL_openlib(L, LUA_OSLIBNAME, syslib, 0);
   lua_pushliteral(L, FILEHANDLE);

@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.93 2002/12/20 10:26:33 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.94 2003/02/12 09:10:41 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -762,7 +762,7 @@ static const luaL_reg strlib[] = {
 /*
 ** Open string library
 */
-LUALIB_API int lua_strlibopen (lua_State *L) {
+LUALIB_API int luaopen_string (lua_State *L) {
   luaL_openlib(L, LUA_STRLIBNAME, strlib, 0);
   return 1;
 }
