@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.27 1998/03/25 18:52:29 roberto Exp roberto $
+** $Id: lvm.c,v 1.28 1998/03/30 13:57:23 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -592,7 +592,7 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base)
       }
 
       case POWOP:
-        call_arith(IM_POW);
+        call_binTM(IM_POW, "undefined operation");
         break;
 
       case CONCOP: {
