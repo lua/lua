@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.117 2003/03/07 13:21:31 roberto Exp roberto $
+** $Id: lua.c,v 1.118 2003/03/11 12:24:34 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -73,6 +73,7 @@ static const luaL_reg lualibs[] = {
   {"string", luaopen_string},
   {"math", luaopen_math},
   {"debug", luaopen_debug},
+  {"loadlib", luaopen_loadlib},
   /* add your libraries here */
   LUA_EXTRALIBS
   {NULL, NULL}
