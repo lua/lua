@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.160 2002/11/21 14:17:15 roberto Exp roberto $
+** $Id: lgc.c,v 1.161 2002/11/21 15:46:20 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -224,9 +224,11 @@ static void checkstacksizes (lua_State *L, StkId max) {
   int used = L->ci - L->base_ci;  /* number of `ci' in use */
   if (4*used < L->size_ci && 2*BASIC_CI_SIZE < L->size_ci)
     luaD_reallocCI(L, L->size_ci/2);  /* still big enough... */
+  else condhardstacktests(luaD_reallocCI(L, L->size_ci));
   used = max - L->stack;  /* part of stack in use */
   if (4*used < L->stacksize && 2*(BASIC_STACK_SIZE+EXTRA_STACK) < L->stacksize)
     luaD_reallocstack(L, L->stacksize/2);  /* still big enough... */
+  else condhardstacktests(luaD_reallocstack(L, L->stacksize));
 }
 
 
