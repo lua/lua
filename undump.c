@@ -3,7 +3,7 @@
 ** load bytecodes from files
 */
 
-char* rcs_undump="$Id: undump.c,v 1.8 1996/03/06 01:41:18 lhf Exp lhf $";
+char* rcs_undump="$Id: undump.c,v 1.9 1996/03/06 16:01:08 lhf Exp lhf $";
 
 #include <stdio.h>
 #include <string.h>
@@ -43,7 +43,7 @@ static int LoadWord(FILE* D)
  fread(&w,sizeof(w),1,D);
  if (swapword)
  {
-  Byte* p=&w;
+  Byte* p=&w;					/* TODO: need union? */
   Byte t;
   t=p[0]; p[0]=p[1]; p[1]=t;
  }
@@ -55,6 +55,15 @@ static char* LoadBlock(int size, FILE* D)
  char* b=luaI_malloc(size);
  fread(b,size,1,D);
  return b;
+}
+
+static int LoadSize(FILE* D)
+{
+ Word hi=LoadWord(D);
+ Word lo=LoadWord(D);
+ int s=(hi<<16)|lo;
+ if ((Word)s != s) panic("code too long");
+ return s;
 }
 
 static char* LoadString(FILE* D)
@@ -70,7 +79,7 @@ static void LoadFunction(FILE* D)
  TFunc* tf=new(TFunc);
  tf->next=NULL;
  tf->locvars=NULL;
- tf->size=LoadWord(D);				/* TODO: Long? */
+ tf->size=LoadSize(D);
  tf->lineDefined=LoadWord(D);
  if (IsMain(tf))				/* new main */
  {
@@ -141,7 +150,7 @@ static void LoadHeader(FILE* D)			/* TODO: error handling */
  fread(&f,sizeof(f),1,D);		/* a float for testing byte ordering */
  if (f!=tf)
  {
-  swapfloat=1;
+  swapfloat=1;					/* TODO: only one test? */
   if (f!=tf) warn("different float representation");
  }
 }
