@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
+** $Id: llex.c,v 2.2 2004/03/12 19:53:56 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -9,6 +9,7 @@
 #include <string.h>
 
 #define llex_c
+#define LUA_CORE
 
 #include "lua.h"
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.99 2003/06/10 12:36:26 roberto Exp roberto $
+** $Id: lobject.c,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -10,6 +10,7 @@
 #include <string.h>
 
 #define lobject_c
+#define LUA_CORE
 
 #include "lua.h"
 
@@ -20,11 +21,6 @@
 #include "lstring.h"
 #include "lvm.h"
 
-
-/* function to convert a string to a lua_Number */
-#ifndef lua_str2number
-#define lua_str2number(s,p)     strtod((s), (p))
-#endif
 
 
 const TValue luaO_nilobject = {LUA_TNIL, {NULL}};

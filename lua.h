@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.187 2004/03/09 17:34:35 roberto Exp roberto $
+** $Id: lua.h,v 1.188 2004/03/24 13:55:46 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -12,6 +12,9 @@
 
 #include <stdarg.h>
 #include <stddef.h>
+
+
+#include "luaconf.h"
 
 
 #define LUA_VERSION	"Lua 5.1 (work)"
@@ -91,25 +94,12 @@ typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 
 
 /* type of numbers in Lua */
-#ifndef LUA_NUMBER
-typedef double lua_Number;
-#else
 typedef LUA_NUMBER lua_Number;
-#endif
 
 
 /* type for integer functions */
-#ifndef LUA_INTEGER
-typedef long lua_Integer;
-#else
 typedef LUA_INTEGER lua_Integer;
-#endif
 
-
-/* mark for all API functions */
-#ifndef LUA_API
-#define LUA_API		extern
-#endif
 
 
 /*
@@ -310,22 +300,6 @@ LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud);
 
 
 
-/*
-** {======================================================================
-** useful definitions for Lua kernel and libraries
-** =======================================================================
-*/
-
-/* formats for Lua numbers */
-#ifndef LUA_NUMBER_SCAN
-#define LUA_NUMBER_SCAN		"%lf"
-#endif
-
-#ifndef LUA_NUMBER_FMT
-#define LUA_NUMBER_FMT		"%.14g"
-#endif
-
-/* }====================================================================== */
 
 
 /*

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.3 2004/03/15 21:04:54 roberto Exp roberto $
+** $Id: ltests.c,v 2.4 2004/03/23 17:07:53 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -12,6 +12,7 @@
 #include <string.h>
 
 #define ltests_c
+#define LUA_CORE
 
 #include "lua.h"
 
@@ -443,7 +444,7 @@ static int listlocals (lua_State *L) {
 
 static int get_limits (lua_State *L) {
   lua_createtable(L, 0, 5);
-  setnameval(L, "BITS_INT", BITS_INT);
+  setnameval(L, "BITS_INT", LUA_BITSINT);
   setnameval(L, "LFPF", LFIELDS_PER_FLUSH);
   setnameval(L, "MAXVARS", MAXVARS);
   setnameval(L, "MAXSTACK", MAXSTACK);
@@ -961,7 +962,7 @@ static int testC (lua_State *L) {
       lua_pop(L, 1);
     }
     else if EQ("throw") {
-#ifdef _cplusplus
+#ifdef __cplusplus
 static struct X { int x; } x;
       throw x;
 #else

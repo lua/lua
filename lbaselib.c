@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.140 2004/03/09 17:34:35 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.141 2004/03/26 13:25:17 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -12,6 +12,7 @@
 #include <string.h>
 
 #define lbaselib_c
+#define LUA_LIB
 
 #include "lua.h"
 
@@ -235,28 +236,29 @@ static int luaB_next (lua_State *L) {
 
 static int luaB_pairs (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
-  lua_getglobal(L, "next");  /* return generator, */
+  lua_pushvalue(L, lua_upvalueindex(1));  /* return generator, */
   lua_pushvalue(L, 1);  /* state, */
   lua_pushnil(L);  /* and initial value */
   return 3;
 }
 
 
-static int luaB_ipairs (lua_State *L) {
-  int i = (int)lua_tointeger(L, 2);
+static int ipairsaux (lua_State *L) {
+  int i = luaL_checkint(L, 2);
   luaL_checktype(L, 1, LUA_TTABLE);
-  if (i == 0 && lua_isnone(L, 2)) {  /* `for' start? */
-    lua_getglobal(L, "ipairs");  /* return generator, */
-    lua_pushvalue(L, 1);  /* state, */
-    lua_pushinteger(L, 0);  /* and initial value */
-    return 3;
-  }
-  else {  /* `for' step */
-    i++;  /* next value */
-    lua_pushinteger(L, i);
-    lua_rawgeti(L, 1, i);
-    return (lua_isnil(L, -1)) ? 0 : 2;
-  }
+  i++;  /* next value */
+  lua_pushinteger(L, i);
+  lua_rawgeti(L, 1, i);
+  return (lua_isnil(L, -1)) ? 0 : 2;
+}
+
+
+static int luaB_ipairs (lua_State *L) {
+  luaL_checktype(L, 1, LUA_TTABLE);
+  lua_pushvalue(L, lua_upvalueindex(1));  /* return generator, */
+  lua_pushvalue(L, 1);  /* state, */
+  lua_pushinteger(L, 0);  /* and initial value */
+  return 3;
 }
 
 
@@ -458,25 +460,6 @@ static int luaB_newproxy (lua_State *L) {
 */
 
 
-/* name of global that holds table with loaded packages */
-#define REQTAB		"_LOADED"
-
-/* name of global that holds the search path for packages */
-#define LUA_PATH	"LUA_PATH"
-
-#ifndef LUA_PATH_SEP
-#define LUA_PATH_SEP	';'
-#endif
-
-#ifndef LUA_PATH_MARK
-#define LUA_PATH_MARK	'?'
-#endif
-
-#ifndef LUA_PATH_DEFAULT
-#define LUA_PATH_DEFAULT	"?;?.lua"
-#endif
-
-
 static const char *getpath (lua_State *L) {
   const char *path;
   lua_getglobal(L, LUA_PATH);  /* try global variable */
@@ -576,8 +559,6 @@ static const luaL_reg base_funcs[] = {
   {"getfenv", luaB_getfenv},
   {"setfenv", luaB_setfenv},
   {"next", luaB_next},
-  {"ipairs", luaB_ipairs},
-  {"pairs", luaB_pairs},
   {"print", luaB_print},
   {"tonumber", luaB_tonumber},
   {"tostring", luaB_tostring},
@@ -708,12 +689,22 @@ static const luaL_reg co_funcs[] = {
 /* }====================================================== */
 
 
+static void auxopen (lua_State *L, const char *name,
+                     lua_CFunction f, lua_CFunction u) {
+  lua_pushcfunction(L, u);
+  lua_pushcclosure(L, f, 1);
+  lua_setfield(L, -2, name);
+}
+
 
 static void base_open (lua_State *L) {
   lua_pushvalue(L, LUA_GLOBALSINDEX);
   luaL_openlib(L, NULL, base_funcs, 0);  /* open lib into global table */
   lua_pushliteral(L, LUA_VERSION);
   lua_setfield(L, -2, "_VERSION");  /* set global _VERSION */
+  /* `ipairs' and `pairs' need auxiliary functions as upvalues */
+  auxopen(L, "ipairs", luaB_ipairs, ipairsaux);
+  auxopen(L, "pairs", luaB_pairs, luaB_next);
   /* `newproxy' needs a weaktable as upvalue */
   lua_newtable(L);  /* new table `w' */
   lua_pushvalue(L, -1);  /* `w' will be its own metatable */

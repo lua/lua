@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.5 2004/03/15 21:04:33 roberto Exp roberto $
+** $Id: lgc.c,v 2.6 2004/03/23 12:57:12 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -7,6 +7,7 @@
 #include <string.h>
 
 #define lgc_c
+#define LUA_CORE
 
 #include "lua.h"
 

@@ -1,15 +1,15 @@
 /*
-** $Id: ldo.c,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
+** $Id: ldo.c,v 2.2 2004/03/23 17:02:58 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
 
 
-#include <setjmp.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define ldo_c
+#define LUA_CORE
 
 #include "lua.h"
 
@@ -34,29 +34,15 @@
 
 /*
 ** {======================================================
-** Error-recovery functions (based on long jumps)
+** Error-recovery functions
 ** =======================================================
 */
-
-
-#ifndef LUA_USEEXCEPTIONS
-
-#define L_THROW(c)	longjmp((c)->b, 1)
-#define L_TRY(c,a)	if (setjmp((c)->b) == 0) { a }
-
-#else
-
-#define L_THROW(c)	throw(c)
-#define L_TRY(c,a)	try { a } catch(...) \
-				{ if ((c)->status == 0) (c)->status = -1; }
-
-#endif
 
 
 /* chain list of long jump buffers */
 struct lua_longjmp {
   struct lua_longjmp *previous;
-  jmp_buf b;
+  l_jmpbuf b;
   volatile int status;  /* error code */
 };
 

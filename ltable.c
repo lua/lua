@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
+** $Id: ltable.c,v 2.2 2004/03/26 14:02:41 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -21,6 +21,7 @@
 #include <string.h>
 
 #define ltable_c
+#define LUA_CORE
 
 #include "lua.h"
 
@@ -36,18 +37,13 @@
 /*
 ** max size of array part is 2^MAXBITS
 */
-#if BITS_INT > 26
+#if LUA_BITSINT > 26
 #define MAXBITS		24
 #else
-#define MAXBITS		(BITS_INT-2)
+#define MAXBITS		(LUA_BITSINT-2)
 #endif
 
 #define MAXASIZE	(1 << MAXBITS)
-
-/* function to convert a lua_Number to int (with any rounding method) */
-#ifndef lua_number2int
-#define lua_number2int(i,n)	((i)=(int)(n))
-#endif
 
 
 #define hashpow2(t,n)      (gnode(t, lmod((n), sizenode(t))))
@@ -348,26 +344,6 @@ void luaH_free (lua_State *L, Table *t) {
   luaM_freelem(L, t);
 }
 
-
-#if 0
-/*
-** try to remove an element from a hash table; cannot move any element
-** (because gc can call `remove' during a table traversal)
-*/
-void luaH_remove (Table *t, Node *e) {
-  Node *mp = luaH_mainposition(t, gkey(e));
-  if (e != mp) {  /* element not in its main position? */
-    while (mp->next != e) mp = mp->next;  /* find previous */
-    mp->next = e->next;  /* remove `e' from its list */
-  }
-  else {
-    if (e->next != NULL) ??
-  }
-  lua_assert(ttisnil(gval(node)));
-  setnilvalue(gkey(e));  /* clear node `e' */
-  e->next = NULL;
-}
-#endif
 
 
 /*

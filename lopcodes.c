@@ -1,10 +1,11 @@
 /*
-** $Id: lopcodes.c,v 1.24 2003/05/14 12:09:12 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.25 2003/05/14 21:09:53 roberto Exp roberto $
 ** See Copyright Notice in lua.h
 */
 
 
 #define lopcodes_c
+#define LUA_CORE
 
 #include "lua.h"
 

@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.48 2003/10/10 12:57:55 roberto Exp roberto $
+** $Id: liolib.c,v 2.49 2003/10/10 13:29:28 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -13,36 +13,12 @@
 #include <time.h>
 
 #define liolib_c
+#define LUA_LIB
 
 #include "lua.h"
 
 #include "lauxlib.h"
 #include "lualib.h"
-
-
-
-/*
-** by default, gcc does not get `tmpname'
-*/
-#ifndef USE_TMPNAME
-#ifdef __GNUC__
-#define USE_TMPNAME	0
-#else
-#define USE_TMPNAME	1
-#endif
-#endif
-
-
-/*
-** by default, posix systems get `popen'
-*/
-#ifndef USE_POPEN
-#if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 2
-#define USE_POPEN	1
-#else
-#define USE_POPEN	0
-#endif
-#endif
 
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.5 2004/03/23 17:07:34 roberto Exp roberto $
+** $Id: lapi.c,v 2.6 2004/04/05 14:43:17 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -10,6 +10,7 @@
 #include <string.h>
 
 #define lapi_c
+#define LUA_CORE
 
 #include "lua.h"
 
@@ -28,11 +29,6 @@
 #include "lvm.h"
 
 
-/* function to convert a lua_Number to lua_Integer (with any rounding method) */
-#ifndef lua_number2integer
-#define lua_number2integer(i,n)     ((i)=(lua_Integer)(n))
-#endif
-
 
 const char lua_ident[] =
   "$Lua: " LUA_VERSION " " LUA_COPYRIGHT " $\n"
@@ -40,10 +36,6 @@ const char lua_ident[] =
   "$URL: www.lua.org $\n";
 
 
-
-#ifndef api_check
-#define api_check(L, o)		lua_assert(o)
-#endif
 
 #define api_checknelems(L, n)	api_check(L, (n) <= (L->top - L->base))
 
@@ -87,7 +79,7 @@ void luaA_pushobject (lua_State *L, const TValue *o) {
 LUA_API int lua_checkstack (lua_State *L, int size) {
   int res;
   lua_lock(L);
-  if ((L->top - L->base + size) > LUA_MAXCSTACK)
+  if ((L->top - L->base + size) > MAXCSTACK)
     res = 0;  /* stack overflow */
   else {
     luaD_checkstack(L, size);

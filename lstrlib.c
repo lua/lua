@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.100 2003/10/07 20:13:41 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.101 2004/01/02 11:54:14 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -12,6 +12,7 @@
 #include <string.h>
 
 #define lstrlib_c
+#define LUA_LIB
 
 #include "lua.h"
 
@@ -20,9 +21,7 @@
 
 
 /* macro to `unsign' a character */
-#ifndef uchar
 #define uchar(c)        ((unsigned char)(c))
-#endif
 
 
 typedef lua_Integer sint32;	/* a signed version for size_t */
@@ -155,10 +154,6 @@ static int str_dump (lua_State *L) {
 ** PATTERN MATCHING
 ** =======================================================
 */
-
-#ifndef MAX_CAPTURES
-#define MAX_CAPTURES 32  /* arbitrary limit */
-#endif
 
 
 #define CAP_UNFINISHED	(-1)

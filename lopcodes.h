@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.105 2003/05/14 21:09:53 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.106 2003/05/15 19:46:03 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -50,9 +50,9 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 /*
 ** limits for opcode arguments.
 ** we use (signed) int to manipulate most arguments,
-** so they must fit in BITS_INT-1 bits (-1 for sign)
+** so they must fit in LUA_BITSINT-1 bits (-1 for sign)
 */
-#if SIZE_Bx < BITS_INT-1
+#if SIZE_Bx < LUA_BITSINT-1
 #define MAXARG_Bx        ((1<<SIZE_Bx)-1)
 #define MAXARG_sBx        (MAXARG_Bx>>1)         /* `sBx' is signed */
 #else

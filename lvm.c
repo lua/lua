@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.2 2004/03/16 12:31:40 roberto Exp roberto $
+** $Id: lvm.c,v 2.3 2004/03/26 14:02:41 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -8,10 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* needed only when `lua_number2str' uses `sprintf' */
-#include <stdio.h>
-
 #define lvm_c
+#define LUA_CORE
 
 #include "lua.h"
 
@@ -27,12 +25,6 @@
 #include "ltm.h"
 #include "lvm.h"
 
-
-
-/* function to convert a lua_Number to a string */
-#ifndef lua_number2str
-#define lua_number2str(s,n)     sprintf((s), LUA_NUMBER_FMT, (n))
-#endif
 
 
 /* limit for table tag-method chains (to avoid loops) */

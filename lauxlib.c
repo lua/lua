@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.109 2004/02/18 13:40:03 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.110 2004/03/23 16:38:43 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -18,6 +18,7 @@
 */
 
 #define lauxlib_c
+#define LUA_LIB
 
 #include "lua.h"
 
@@ -288,7 +289,7 @@ static void getsizes (lua_State *L) {
 }
 
 
-void luaL_setn (lua_State *L, int t, int n) {
+LUALIB_API void luaL_setn (lua_State *L, int t, int n) {
   t = abs_index(L, t);
   getsizes(L);
   lua_pushvalue(L, t);
@@ -298,7 +299,7 @@ void luaL_setn (lua_State *L, int t, int n) {
 }
 
 
-int luaL_getn (lua_State *L, int t) {
+LUALIB_API int luaL_getn (lua_State *L, int t) {
   int n;
   t = abs_index(L, t);
   getsizes(L);  /* try sizes[t] */

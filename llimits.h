@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.56 2003/07/29 19:26:34 roberto Exp roberto $
+** $Id: llimits.h,v 1.57 2003/12/01 16:33:30 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -15,47 +15,8 @@
 #include "lua.h"
 
 
-/*
-** try to find number of bits in an integer
-*/
-#ifndef BITS_INT
-/* avoid overflows in comparison */
-#if INT_MAX-20 < 32760
-#define	BITS_INT	16
-#elif INT_MAX > 2147483640L
-/* machine has at least 32 bits */
-#define BITS_INT	32
-#else
-#error "you must define BITS_INT with number of bits in an integer"
-#endif
-#endif
-
-
-/*
-** the following types define integer types for values that may not
-** fit in a `small int' (16 bits), but may waste space in a
-** `large long' (64 bits). The current definitions should work in
-** any machine, but may not be optimal.
-*/
-
-
-/*
-** an unsigned integer with at least 32 bits
-*/
-#ifndef LUA_UINT32
-#define LUA_UINT32	unsigned long
-#endif
 
 typedef LUA_UINT32 lu_int32;
-
-
-/*
-** a signed integer with at least 32 bits
-*/
-#ifndef LUA_INT32
-#define LUA_INT32	long
-#define LUA_MAXINT32	LONG_MAX
-#endif
 
 typedef LUA_INT32 l_int32;
 
@@ -95,19 +56,11 @@ typedef unsigned char lu_byte;
 
 
 /* type to ensure maximum alignment */
-#ifndef LUSER_ALIGNMENT_T
-typedef union { double u; void *s; long l; } L_Umaxalign;
-#else
 typedef LUSER_ALIGNMENT_T L_Umaxalign;
-#endif
 
 
-/* result of `usual argument conversion' over lua_Number */
-#ifndef LUA_UACNUMBER
-typedef double l_uacNumber;
-#else
+/* result of a `usual argument conversion' over lua_Number */
 typedef LUA_UACNUMBER l_uacNumber;
-#endif
 
 
 #ifndef lua_assert
@@ -138,42 +91,10 @@ typedef LUA_UACNUMBER l_uacNumber;
 typedef lu_int32 Instruction;
 
 
-/* maximum depth for calls (unsigned short) */
-#ifndef LUA_MAXCALLS
-#define LUA_MAXCALLS        4096
-#endif
-
-
-/*
-** maximum depth for C calls (unsigned short): Not too big, or may
-** overflow the C stack...
-*/
-
-#ifndef LUA_MAXCCALLS
-#define LUA_MAXCCALLS        200
-#endif
-
-
-/* maximum size for the virtual stack of a C function */
-#ifndef LUA_MAXCSTACK
-#define LUA_MAXCSTACK        2048
-#endif
-
 
 /* maximum stack for a Lua function */
 #define MAXSTACK	250
 
-
-/* maximum number of variables declared in a function */
-#ifndef MAXVARS
-#define MAXVARS 200           /* <MAXSTACK */
-#endif
-
-
-/* maximum number of upvalues per function */
-#ifndef MAXUPVALUES
-#define MAXUPVALUES	32	/* <MAXSTACK */
-#endif
 
 
 /* minimum size for the string table (must be power of 2) */
@@ -185,15 +106,6 @@ typedef lu_int32 Instruction;
 /* minimum size for string buffer */
 #ifndef LUA_MINBUFFER
 #define LUA_MINBUFFER	32
-#endif
-
-
-/*
-** maximum number of syntactical nested non-terminals: Not too big,
-** or may overflow the C stack...
-*/
-#ifndef LUA_MAXPARSERLEVEL
-#define LUA_MAXPARSERLEVEL	200
 #endif
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.123 2003/05/07 16:02:16 roberto Exp roberto $
+** $Id: lua.c,v 1.124 2003/10/23 18:06:22 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -26,39 +26,6 @@
 #endif
 
 
-/*
-** definition of `isatty'
-*/
-#ifdef _POSIX_C_SOURCE
-#include <unistd.h>
-#define stdin_is_tty()	isatty(0)
-#else
-#define stdin_is_tty()	1  /* assume stdin is a tty */
-#endif
-
-
-
-#ifndef PROMPT
-#define PROMPT		"> "
-#endif
-
-
-#ifndef PROMPT2
-#define PROMPT2		">> "
-#endif
-
-#ifndef PROGNAME
-#define PROGNAME	"lua"
-#endif
-
-#ifndef lua_userinit
-#define lua_userinit(L)		openstdlibs(L)
-#endif
-
-
-#ifndef LUA_EXTRALIBS
-#define LUA_EXTRALIBS	/* empty */
-#endif
 
 
 static lua_State *L = NULL;
@@ -187,14 +154,6 @@ static int load_file (const char *name) {
 }
 
 
-/*
-** this macro can be used by some `history' system to save lines
-** read in manual input
-*/
-#ifndef lua_saveline
-#define lua_saveline(L,line)	/* empty */
-#endif
-
 
 /*
 ** this macro defines a function to show the prompt and reads the
@@ -291,8 +250,11 @@ static void manual_input (void) {
 }
 
 
+#define clearinteractive(i)	(*i &= 2)
+
 static int handle_argv (char *argv[], int *interactive) {
-  if (argv[1] == NULL) {  /* no more arguments? */
+  if (argv[1] == NULL) {  /* no arguments? */
+    *interactive = 0;
     if (stdin_is_tty()) {
       print_version();
       manual_input();
@@ -314,19 +276,22 @@ static int handle_argv (char *argv[], int *interactive) {
           goto endloop;  /* stop handling arguments */
         }
         case '\0': {
+          clearinteractive(interactive);
           file_input(NULL);  /* executes stdin as a file */
           break;
         }
         case 'i': {
-          *interactive = 1;
+          *interactive = 2;  /* force interactive mode after arguments */
           break;
         }
         case 'v': {
+          clearinteractive(interactive);
           print_version();
           break;
         }
         case 'e': {
           const char *chunk = argv[i] + 2;
+          clearinteractive(interactive);
           if (*chunk == '\0') chunk = argv[++i];
           if (chunk == NULL) {
             print_usage();
@@ -356,6 +321,7 @@ static int handle_argv (char *argv[], int *interactive) {
           break;
         }
         default: {
+          clearinteractive(interactive);
           print_usage();
           return 1;
         }
@@ -364,6 +330,7 @@ static int handle_argv (char *argv[], int *interactive) {
     if (argv[i] != NULL) {
       const char *filename = argv[i];
       getargs(argv, i);  /* collect arguments */
+      clearinteractive(interactive);
       lua_setglobal(L, "arg");
       return file_input(filename);  /* stop scanning arguments */
     }
@@ -401,7 +368,7 @@ struct Smain {
 static int pmain (lua_State *l) {
   struct Smain *s = (struct Smain *)lua_touserdata(l, 1);
   int status;
-  int interactive = 0;
+  int interactive = 1;
   if (s->argv[0] && s->argv[0][0]) progname = s->argv[0];
   L = l;
   lua_userinit(l);  /* open libraries */

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.2 2004/03/12 19:53:56 roberto Exp roberto $
+** $Id: lparser.c,v 2.3 2004/03/26 14:02:41 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -8,6 +8,7 @@
 #include <string.h>
 
 #define lparser_c
+#define LUA_CORE
 
 #include "lua.h"
 
@@ -977,12 +978,6 @@ static int cond (LexState *ls) {
 ** after its body (and thus avoiding one jump in the loop).
 */
 
-/*
-** maximum size of expressions for optimizing `while' code
-*/
-#ifndef MAXEXPWHILE
-#define MAXEXPWHILE	100
-#endif
 
 /*
 ** the call `luaK_goiffalse' may grow the size of an expression by

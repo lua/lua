@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.62 2003/10/02 20:31:17 roberto Exp roberto $
+** $Id: lmem.c,v 1.63 2003/11/27 18:18:37 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -8,6 +8,7 @@
 #include <stddef.h>
 
 #define lmem_c
+#define LUA_CORE
 
 #include "lua.h"
 
