@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.h,v 1.2 2000/06/28 20:20:36 roberto Exp roberto $
+** $Id: ldebug.h,v 1.3 2000/08/08 18:26:05 roberto Exp roberto $
 ** Auxiliary functions from Debug Interface module
 ** See Copyright Notice in lua.h
 */
@@ -12,8 +12,8 @@
 #include "luadebug.h"
 
 
-void luaG_callerror (lua_State *L, StkId func);
-void luaG_indexerror (lua_State *L, StkId t);
+void luaG_typeerror (lua_State *L, StkId o, const char *op);
+void luaG_binerror (lua_State *L, StkId p1, lua_Type t, const char *op);
 int luaG_getline (int *lineinfo, int pc, int refline, int *refi);
 
 

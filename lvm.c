@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.123 2000/08/09 14:49:41 roberto Exp roberto $
+** $Id: lvm.c,v 1.124 2000/08/09 19:16:57 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -121,7 +121,7 @@ void luaV_gettable (lua_State *L, StkId top) {
     im = luaT_getimbyObj(L, table, IM_GETTABLE);
     if (ttype(im) == TAG_NIL) {
       L->top = top;
-      luaG_indexerror(L, table);
+      luaG_typeerror(L, table, "index");
     }
   }
   else {  /* object is a table... */
@@ -156,7 +156,7 @@ void luaV_settable (lua_State *L, StkId t, StkId top) {
     L->top = top;
     im = luaT_getimbyObj(L, t, IM_SETTABLE);
     if (ttype(im) == TAG_NIL)
-      luaG_indexerror(L, t);
+      luaG_typeerror(L, t, "index");
   }
   else {  /* object is a table... */
     im = luaT_getim(L, hvalue(t)->htag, IM_SETTABLE);
@@ -223,7 +223,7 @@ void luaV_setglobal (lua_State *L, TString *s, StkId top) {
 }
 
 
-static void call_binTM (lua_State *L, StkId top, IMS event, const char *msg) {
+static int call_binTM (lua_State *L, StkId top, IMS event) {
   /* try first operand */
   const TObject *im = luaT_getimbyObj(L, top-2, event);
   L->top = top;
@@ -232,16 +232,18 @@ static void call_binTM (lua_State *L, StkId top, IMS event, const char *msg) {
     if (ttype(im) == TAG_NIL) {
       im = luaT_getim(L, 0, event);  /* try a `global' method */
       if (ttype(im) == TAG_NIL)
-        lua_error(L, msg);
+        return 0;  /* error */
     }
   }
   lua_pushstring(L, luaT_eventname[event]);
   luaD_callTM(L, im, 3, 1);
+  return 1;
 }
 
 
 static void call_arith (lua_State *L, StkId top, IMS event) {
-  call_binTM(L, top, event, "unexpected type in arithmetic operation");
+  if (!call_binTM(L, top, event))
+    luaG_binerror(L, top-2, TAG_NUMBER, "perform arithmetic on");
 }
 
 
@@ -276,7 +278,8 @@ int luaV_lessthan (lua_State *L, const TObject *l, const TObject *r, StkId top) 
     luaD_checkstack(L, 2);
     *top++ = *l;
     *top++ = *r;
-    call_binTM(L, top, IM_LT, "unexpected type in comparison");
+    if (!call_binTM(L, top, IM_LT))
+      lua_error(L, "unexpected type in comparison");
     L->top--;
     return (ttype(L->top) != TAG_NIL);
   }
@@ -286,8 +289,10 @@ int luaV_lessthan (lua_State *L, const TObject *l, const TObject *r, StkId top) 
 static void strconc (lua_State *L, int total, StkId top) {
   do {
     int n = 2;  /* number of elements handled in this pass (at least 2) */
-    if (tostring(L, top-2) || tostring(L, top-1))
-      call_binTM(L, top, IM_CONCAT, "unexpected type for concatenation");
+    if (tostring(L, top-2) || tostring(L, top-1)) {
+      if (!call_binTM(L, top, IM_CONCAT))
+        luaG_binerror(L, top-2, TAG_STRING, "concat");
+    }
     else if (tsvalue(top-1)->u.s.len > 0) {  /* if len=0, do nothing */
       /* at least two string values; get as many as possible */
       lint32 tl = (lint32)tsvalue(top-1)->u.s.len + 
@@ -508,7 +513,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       }
 
       case OP_ADD:
-        if (tonumber(top-1) || tonumber(top-2))
+        if (tonumber(top-2) || tonumber(top-1))
           call_arith(L, top, IM_ADD);
         else
           nvalue(top-2) += nvalue(top-1);
@@ -526,7 +531,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
 
       case OP_SUB:
-        if (tonumber(top-1) || tonumber(top-2))
+        if (tonumber(top-2) || tonumber(top-1))
           call_arith(L, top, IM_SUB);
         else
           nvalue(top-2) -= nvalue(top-1);
@@ -534,7 +539,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
 
       case OP_MULT:
-        if (tonumber(top-1) || tonumber(top-2))
+        if (tonumber(top-2) || tonumber(top-1))
           call_arith(L, top, IM_MUL);
         else
           nvalue(top-2) *= nvalue(top-1);
@@ -542,7 +547,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
 
       case OP_DIV:
-        if (tonumber(top-1) || tonumber(top-2))
+        if (tonumber(top-2) || tonumber(top-1))
           call_arith(L, top, IM_DIV);
         else
           nvalue(top-2) /= nvalue(top-1);
@@ -550,7 +555,8 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
 
       case OP_POW:
-        call_binTM(L, top, IM_POW, "undefined operation");
+        if (!call_binTM(L, top, IM_POW))
+          lua_error(L, "undefined operation");
         top--;
         break;
 
