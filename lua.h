@@ -2,7 +2,7 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: $
+** $Id: lua.h,v 1.1 1993/12/17 18:41:19 celes Exp celes $
 */
 
 
@@ -20,6 +20,7 @@ void           lua_error		(char *s);
 int            lua_dofile 		(char *filename);
 int            lua_dostring 		(char *string);
 int            lua_call 		(char *functionname, int nparam);
+int            lua_callfunction		(lua_Object function, int nparam);
 
 lua_Object     lua_getparam 		(int number);
 float          lua_getnumber 		(lua_Object object);
@@ -48,6 +49,7 @@ int            lua_isnil 		(lua_Object object);
 int            lua_isnumber 		(lua_Object object);
 int            lua_isstring 		(lua_Object object);
 int            lua_istable          	(lua_Object object);
+int            lua_isfunction 		(lua_Object object);
 int            lua_iscfunction 		(lua_Object object);
 int            lua_isuserdata 		(lua_Object object);
 

@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 2.1 1994/04/20 22:07:57 celes Exp celes $";
+char *rcs_opcode="$Id: opcode.c,v 2.2 1994/07/19 21:27:18 celes Exp celes $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,7 +26,7 @@ char *rcs_opcode="$Id: opcode.c,v 2.1 1994/04/20 22:07:57 celes Exp celes $";
 
 #define STACK_BUFFER (STACKGAP+128)
 
-static Word    maxstack;
+static Long    maxstack;
 static Object *stack=NULL;
 static Object *top, *base;
 
@@ -684,6 +684,22 @@ int lua_call (char *functionname, int nparam)
 }
 
 /*
+** Execute the given lua function. Return 0 on success or 1 on error.
+*/
+int lua_callfunction (Object *function, int nparam)
+{
+ static Byte startcode[] = {CALLFUNC, HALT};
+ int i; 
+ if (tag(function) != T_FUNCTION) return 1;
+ for (i=1; i<=nparam; i++)
+  *(top-i+2) = *(top-i);
+ top += 2;
+ tag(top-nparam-1) = T_MARK;
+ *(top-nparam-2) = *function;
+ return (lua_execute (startcode));
+}
+
+/*
 ** Get a parameter, returning the object handle or NULL on error.
 ** 'number' must be 1 to get the first parameter.
 */
@@ -953,6 +969,14 @@ int lua_istable (Object *object)
  return (object != NULL && tag(object) == T_ARRAY);
 }
 
+/*
+** Given an object handle, return if it is a lua function.
+*/
+int lua_isfunction (Object *object)
+{
+ return (object != NULL && tag(object) == T_FUNCTION);
+}
+ 
 /*
 ** Given an object handle, return if it is a cfunction one.
 */

@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.1 1994/04/20 22:07:57 celes Exp celes $";
+char *rcs_table="$Id: table.c,v 2.2 1994/07/19 21:27:18 celes Exp celes $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -23,11 +23,11 @@ char *rcs_table="$Id: table.c,v 2.1 1994/04/20 22:07:57 celes Exp celes $";
 
 Symbol *lua_table;
 static Word lua_ntable = 0;
-static Word lua_maxsymbol = 0;
+static Long lua_maxsymbol = 0;
 
 char **lua_constant;
 static Word lua_nconstant = 0;
-static Word lua_maxconstant = 0;
+static Long lua_maxconstant = 0;
 
 
 

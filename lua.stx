@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 2.4 1994/04/20 16:22:21 celes Exp celes $";
+char *rcs_luastx = "$Id: lua.stx,v 2.5 1994/07/19 21:27:18 celes Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -113,9 +113,15 @@ static void flush_list (int m, int n)
   if (m == 0)
     code_byte(STORELIST0); 
   else
+  if (m < 255)
   {
     code_byte(STORELIST);
     code_byte(m);
+  }
+  else
+  {
+   lua_error ("list constructor too long");
+   err = 1;
   }
   code_byte(n);
   ntemp-=n;
@@ -459,14 +465,14 @@ expr :	'(' expr ')'    { $$ = $2; }
 
 typeconstructor: '@'  
      {
-      code_byte(PUSHBYTE);
-      $<vLong>$ = pc; code_byte(0);
+      code_byte(PUSHWORD);
+      $<vLong>$ = pc; code_word(0);
       incr_ntemp();
       code_byte(CREATEARRAY);
      }
       objectname fieldlist 
      {
-      basepc[$<vLong>2] = $4; 
+      code_word_at(basepc+$<vLong>2, $4);
       if ($3 < 0)	/* there is no function to be called */
       {
        $$ = 1;
