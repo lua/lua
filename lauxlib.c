@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.105 2003/10/07 20:13:41 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.106 2003/10/10 12:57:55 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -291,30 +291,23 @@ static void getsizes (lua_State *L) {
 
 void luaL_setn (lua_State *L, int t, int n) {
   t = abs_index(L, t);
-  lua_getfield(L, t, "n");
-  if (checkint(L, 1) >= 0) {  /* is there a numeric field `n'? */
-    lua_pushinteger(L, n);
-    lua_setfield(L, t, "n");
-  }
-  else {  /* use `sizes' */
-    getsizes(L);
-    lua_pushvalue(L, t);
-    lua_pushinteger(L, n);
-    lua_rawset(L, -3);  /* sizes[t] = n */
-    lua_pop(L, 1);  /* remove `sizes' */
-  }
+  getsizes(L);
+  lua_pushvalue(L, t);
+  lua_pushinteger(L, n);
+  lua_rawset(L, -3);  /* sizes[t] = n */
+  lua_pop(L, 1);  /* remove `sizes' */
 }
 
 
 int luaL_getn (lua_State *L, int t) {
   int n;
   t = abs_index(L, t);
-  lua_getfield(L, t, "n");  /* try t.n */
-  if ((n = checkint(L, 1)) >= 0) return n;
-  getsizes(L);  /* else try sizes[t] */
+  getsizes(L);  /* try sizes[t] */
   lua_pushvalue(L, t);
   lua_rawget(L, -2);
   if ((n = checkint(L, 2)) >= 0) return n;
+  lua_getfield(L, t, "n");  /* else try t.n */
+  if ((n = checkint(L, 1)) >= 0) return n;
   for (n = 1; ; n++) {  /* else must count elements */
     lua_rawgeti(L, t, n);
     if (lua_isnil(L, -1)) break;
