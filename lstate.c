@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.124 2003/07/16 20:49:02 roberto Exp roberto $
+** $Id: lstate.c,v 1.125 2003/07/16 20:51:47 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -34,10 +34,19 @@ union UEXTRASPACE {L_Umaxalign a; LUA_USERSTATE b;};
 #endif
 
 
+/*
+** Main thread combines a thread state and the global state
+*/
+typedef struct LG {
+  lua_State l;
+  global_State g;
+} LG;
+  
 
 
-static lua_State *mallocstate (lua_State *L) {
-  lu_byte *block = (lu_byte *)luaM_malloc(L, sizeof(lua_State) + EXTRASPACE);
+
+static lua_State *mallocstate (lua_State *L, size_t size) {
+  lu_byte *block = (lu_byte *)luaM_malloc(L, size + EXTRASPACE);
   if (block == NULL) return NULL;
   else {
     block += EXTRASPACE;
@@ -46,9 +55,9 @@ static lua_State *mallocstate (lua_State *L) {
 }
 
 
-static void freestate (lua_State *L, lua_State *L1) {
+static void freestate (lua_State *L, lua_State *L1, size_t size) {
   luaM_free(L, cast(lu_byte *, L1) - EXTRASPACE,
-               sizeof(lua_State) + EXTRASPACE);
+               size + EXTRASPACE);
 }
 
 
@@ -77,27 +86,7 @@ static void freestack (lua_State *L, lua_State *L1) {
 ** open parts that may cause memory-allocation errors
 */
 static void f_luaopen (lua_State *L, void *ud) {
-  /* create a new global state */
-  global_State *g = luaM_new(NULL, global_State);
   UNUSED(ud);
-  if (g == NULL) luaD_throw(L, LUA_ERRMEM);
-  L->l_G = g;
-  g->mainthread = L;
-  g->GCthreshold = 0;  /* mark it as unfinished state */
-  g->strt.size = 0;
-  g->strt.nuse = 0;
-  g->strt.hash = NULL;
-  setnilvalue(defaultmeta(L));
-  setnilvalue(registry(L));
-  luaZ_initbuffer(L, &g->buff);
-  g->panic = NULL;
-  g->rootgc = NULL;
-  g->rootudata = NULL;
-  g->tmudata = NULL;
-  setnilvalue(gkey(g->dummynode));
-  setnilvalue(gval(g->dummynode));
-  g->dummynode->next = NULL;
-  g->nblocks = sizeof(lua_State) + sizeof(global_State);
   stack_init(L, L);  /* init stack */
   /* create default meta table with a dummy table, and then close the loop */
   defaultmeta(L)->tt = LUA_TTABLE;
@@ -109,7 +98,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   luaT_init(L);
   luaX_init(L);
   luaS_fix(luaS_newliteral(L, MEMERRMSG));
-  g->GCthreshold = 4*G(L)->nblocks;
+  G(L)->GCthreshold = 4*G(L)->nblocks;
 }
 
 
@@ -134,24 +123,19 @@ static void preinit_state (lua_State *L) {
 
 static void close_state (lua_State *L) {
   luaF_close(L, L->stack);  /* close all upvalues for this thread */
-  if (G(L)) {  /* close global state */
-    luaC_sweep(L, 1);  /* collect all elements */
-    lua_assert(G(L)->rootgc == NULL);
-    lua_assert(G(L)->rootudata == NULL);
-    luaS_freeall(L);
-    luaZ_freebuffer(L, &G(L)->buff);
-  }
+  luaC_sweep(L, 1);  /* collect all elements */
+  lua_assert(G(L)->rootgc == NULL);
+  lua_assert(G(L)->rootudata == NULL);
+  luaS_freeall(L);
+  luaZ_freebuffer(L, &G(L)->buff);
   freestack(L, L);
-  if (G(L)) {
-    lua_assert(G(L)->nblocks == sizeof(lua_State) + sizeof(global_State));
-    luaM_freelem(NULL, G(L));
-  }
-  freestate(NULL, L);
+  lua_assert(G(L)->nblocks == sizeof(LG));
+  freestate(NULL, L, sizeof(LG));
 }
 
 
 lua_State *luaE_newthread (lua_State *L) {
-  lua_State *L1 = mallocstate(L);
+  lua_State *L1 = mallocstate(L, sizeof(lua_State));
   luaC_link(L, valtogco(L1), LUA_TTHREAD);
   preinit_state(L1);
   L1->l_G = L->l_G;
@@ -165,23 +149,40 @@ void luaE_freethread (lua_State *L, lua_State *L1) {
   luaF_close(L1, L1->stack);  /* close all upvalues for this thread */
   lua_assert(L1->openupval == NULL);
   freestack(L, L1);
-  freestate(L, L1);
+  freestate(L, L1, sizeof(lua_State));
 }
 
 
 LUA_API lua_State *lua_open (void) {
-  lua_State *L = mallocstate(NULL);
-  if (L) {  /* allocation OK? */
-    L->tt = LUA_TTHREAD;
-    L->marked = 0;
-    L->next = L->gclist = NULL;
-    preinit_state(L);
-    L->l_G = NULL;
-    if (luaD_rawrunprotected(L, f_luaopen, NULL) != 0) {
-      /* memory allocation error: free partial state */
-      close_state(L);
-      L = NULL;
-    }
+  lua_State *L = mallocstate(NULL, sizeof(LG));
+  global_State *g;
+  if (L == NULL) return NULL;
+  g = &((LG *)L)->g;
+  L->tt = LUA_TTHREAD;
+  L->marked = 0;
+  L->next = L->gclist = NULL;
+  preinit_state(L);
+  L->l_G = g;
+  g->mainthread = L;
+  g->GCthreshold = 0;  /* mark it as unfinished state */
+  g->strt.size = 0;
+  g->strt.nuse = 0;
+  g->strt.hash = NULL;
+  setnilvalue(defaultmeta(L));
+  setnilvalue(registry(L));
+  luaZ_initbuffer(L, &g->buff);
+  g->panic = NULL;
+  g->rootgc = NULL;
+  g->rootudata = NULL;
+  g->tmudata = NULL;
+  setnilvalue(gkey(g->dummynode));
+  setnilvalue(gval(g->dummynode));
+  g->dummynode->next = NULL;
+  g->nblocks = sizeof(LG);
+  if (luaD_rawrunprotected(L, f_luaopen, NULL) != 0) {
+    /* memory allocation error: free partial state */
+    close_state(L);
+    L = NULL;
   }
   lua_userstateopen(L);
   return L;
