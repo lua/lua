@@ -73,8 +73,9 @@ struct lua_longjmp;  /* defined in ldo.c */
 
 #define BASIC_STACK_SIZE        (2*LUA_MINSTACK)
 
-#define DEFAULT_MAXSTACK        12000
-
+#ifndef LUA_MAXSTACK
+#define LUA_MAXSTACK        14000
+#endif
 
 
 
@@ -141,7 +142,6 @@ struct lua_State {
   lua_State *next;  /* circular double linked list of states */
   lua_State *previous;
   int stacksize;
-  int maxstacksize;
   int size_ci;  /* size of array `base_ci' */
   int allowhooks;
   lua_Hook callhook;

@@ -57,12 +57,12 @@ typedef int (*lua_CFunction) (lua_State *L);
 */
 #define LUA_TNONE	(-1)
 
-#define LUA_TUSERDATA	0
-#define LUA_TNIL	1
-#define LUA_TNUMBER	2
+#define LUA_TNIL	0
+#define LUA_TNUMBER	1
+#define LUA_TSTRING	2
 #define LUA_TBOOLEAN	3
-#define LUA_TSTRING	4
-#define LUA_TTABLE	5
+#define LUA_TTABLE	4
+#define LUA_TUSERDATA	5
 #define LUA_TFUNCTION	6
 
 
@@ -94,9 +94,9 @@ typedef LUA_NUMBER lua_Number;
 /*
 ** state manipulation
 */
-LUA_API lua_State *lua_open (int stacksize);
+LUA_API lua_State *lua_open (void);
 LUA_API void       lua_close (lua_State *L);
-LUA_API lua_State *lua_newthread (lua_State *L, int stacksize);
+LUA_API lua_State *lua_newthread (lua_State *L);
 LUA_API void       lua_closethread (lua_State *L, lua_State *thread);
 
 

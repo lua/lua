@@ -21,22 +21,12 @@
 
 
 
-struct Sopen {
-  lua_State *L;
-  int stacksize;
-};
-
 
 static void close_state (lua_State *L);
 
 
-static void stack_init (lua_State *L, lua_State *OL, int maxstacksize) {
-  if (maxstacksize == 0)
-    maxstacksize = DEFAULT_MAXSTACK;
-  else
-    maxstacksize += 2*LUA_MINSTACK;
+static void stack_init (lua_State *L, lua_State *OL) {
   L->stack = luaM_newvector(OL, BASIC_STACK_SIZE, TObject);
-  L->maxstacksize = maxstacksize;
   L->stacksize = BASIC_STACK_SIZE;
   L->top = L->stack + RESERVED_STACK_PREFIX;
   L->stack_last = L->stack+(BASIC_STACK_SIZE-EXTRA_STACK)-1;
@@ -53,7 +43,7 @@ static void stack_init (lua_State *L, lua_State *OL, int maxstacksize) {
 ** open parts that may cause memory-allocation errors
 */
 static void f_luaopen (lua_State *L, void *ud) {
-  struct Sopen *so = cast(struct Sopen *, ud);
+  UNUSED(ud);
   /* create a new global state */
   L->_G = luaM_new(L, global_State);
   G(L)->strt.size = 0;
@@ -68,7 +58,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   G(L)->rootudata = NULL;
   G(L)->tmudata = NULL;
   G(L)->nblocks = sizeof(lua_State) + sizeof(global_State);
-  stack_init(L, L, so->stacksize);  /* init stack */
+  stack_init(L, L);  /* init stack */
   /* create default meta table with a dummy table, and then close the loop */
   sethvalue(defaultmeta(L), NULL);
   sethvalue(defaultmeta(L), luaH_new(L, 0, 4));
@@ -85,7 +75,6 @@ static void f_luaopen (lua_State *L, void *ud) {
 static void preinit_state (lua_State *L) {
   L->stack = NULL;
   L->stacksize = 0;
-  L->maxstacksize = 1;
   L->errorJmp = NULL;
   L->callhook = NULL;
   L->linehook = NULL;
@@ -96,7 +85,7 @@ static void preinit_state (lua_State *L) {
 }
 
 
-LUA_API lua_State *lua_newthread (lua_State *OL, int stacksize) {
+LUA_API lua_State *lua_newthread (lua_State *OL) {
   lua_State *L;
   lua_lock(OL);
   L = luaM_new(OL, lua_State);
@@ -106,7 +95,7 @@ LUA_API lua_State *lua_newthread (lua_State *OL, int stacksize) {
   L->next = OL->next;
   OL->next = L;
   L->previous = OL;
-  stack_init(L, OL, stacksize);  /* init stack */
+  stack_init(L, OL);  /* init stack */
   setobj(defaultmeta(L), defaultmeta(OL));  /* share default meta table */
   setobj(gt(L), gt(OL));  /* share table of globals */
   setobj(registry(L), registry(OL));  /* share registry */
@@ -116,17 +105,14 @@ LUA_API lua_State *lua_newthread (lua_State *OL, int stacksize) {
 }
 
 
-LUA_API lua_State *lua_open (int stacksize) {
-  struct Sopen so;
+LUA_API lua_State *lua_open (void) {
   lua_State *L;
   L = luaM_new(NULL, lua_State);
   if (L) {  /* allocation OK? */
     preinit_state(L);
     L->_G = NULL;
     L->next = L->previous = L;
-    so.stacksize = stacksize;
-    so.L = NULL;
-    if (luaD_runprotected(L, f_luaopen, &so) != 0) {
+    if (luaD_runprotected(L, f_luaopen, NULL) != 0) {
       /* memory allocation error: free partial state */
       close_state(L);
       L = NULL;

@@ -434,7 +434,7 @@ static int luaB_coroutine (lua_State *L) {
   int n = lua_gettop(L);
   luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1), 1,
     "Lua function expected");
-  NL = lua_newthread(L, 0);
+  NL = lua_newthread(L);
   if (NL == NULL) lua_error(L, "unable to create new thread");
   /* move function and arguments from L to NL */
   for (i=0; i<n; i++) {

@@ -378,9 +378,9 @@ static int udataval (lua_State *L) {
 
 
 static int doonnewstack (lua_State *L) {
-  lua_State *L1 = lua_newthread(L, luaL_check_int(L, 1));
-  lua_dostring(L1, luaL_check_string(L, 2));
-  lua_pushnumber(L, 1);
+  lua_State *L1 = lua_newthread(L);
+  int status = lua_dostring(L1, luaL_check_string(L, 1));
+  lua_pushnumber(L, status);
   lua_closethread(L, L1);
   return 1;
 }
@@ -399,7 +399,7 @@ static int d2s (lua_State *L) {
 
 
 static int newstate (lua_State *L) {
-  lua_State *L1 = lua_open(luaL_check_int(L, 1));
+  lua_State *L1 = lua_open();
   if (L1) {
     *cast(int **, L1) = &islocked;  /* initialize the lock */
     lua_pushnumber(L, (unsigned long)L1);

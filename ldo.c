@@ -71,26 +71,26 @@ void luaD_reallocstack (lua_State *L, int newsize) {
 
 
 static void restore_stack_limit (lua_State *L) {
-  if (L->stacksize > L->maxstacksize) {  /* there was an overflow? */
+  if (L->stacksize > LUA_MAXSTACK) {  /* there was an overflow? */
     int inuse = (L->top - L->stack);
-    if (inuse + MAXSTACK < L->maxstacksize)  /* can `undo' overflow? */
-      luaD_reallocstack(L, L->maxstacksize);
+    if (inuse + MAXSTACK < LUA_MAXSTACK)  /* can `undo' overflow? */
+      luaD_reallocstack(L, LUA_MAXSTACK);
   }
 }
 
 
 void luaD_growstack (lua_State *L, int n) {
-  if (L->stacksize > L->maxstacksize) {  /* overflow while handling overflow? */
+  if (L->stacksize > LUA_MAXSTACK) {  /* overflow while handling overflow? */
     luaD_breakrun(L, LUA_ERRERR);  /* break run without error message */
   }
   else {
-    if (n <= L->stacksize && 2*L->stacksize < L->maxstacksize)  /* can double? */
+    if (n <= L->stacksize && 2*L->stacksize < LUA_MAXSTACK)  /* can double? */
       luaD_reallocstack(L, 2*L->stacksize);
-   else if (L->stacksize+n <= L->maxstacksize)  /* no overflow? */
-      luaD_reallocstack(L, L->maxstacksize);
+   else if (L->stacksize+n <= LUA_MAXSTACK)  /* no overflow? */
+      luaD_reallocstack(L, LUA_MAXSTACK);
    else {
       /* resize to maximum + some extra space to handle error */
-      luaD_reallocstack(L, L->maxstacksize+4*LUA_MINSTACK);
+      luaD_reallocstack(L, LUA_MAXSTACK+4*LUA_MINSTACK);
       luaD_error(L, "stack overflow");
     }
   }
@@ -428,9 +428,13 @@ LUA_API int lua_loadfile (lua_State *L, const char *filename) {
     f = fopen(filename, "rb");  /* reopen in binary mode */
     if (f == NULL) return LUA_ERRFILE;  /* unable to reopen file */
   }
-  lua_pushliteral(L, "@");
-  lua_pushstring(L, (filename == NULL) ? "=stdin" : filename);
-  lua_concat(L, 2);
+  if (filename == NULL)
+    lua_pushstring(L, "=stdin");
+  else {
+    lua_pushliteral(L, "@");
+    lua_pushstring(L, filename);
+    lua_concat(L, 2);
+  }
   nlevel = lua_gettop(L);
   filename = lua_tostring(L, -1);  /* filename = `@'..filename */
   luaZ_Fopen(&z, f, filename);
