@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.10 1994/11/01 17:54:31 roberto Exp roberto $";
+char *rcs_hash="$Id: hash.c,v 2.11 1994/11/02 20:29:09 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdlib.h>
@@ -78,7 +78,7 @@ static int hashindex (Hash *t, Object *ref)		/* hash function */
    return (((int)uvalue(ref))%nhash(t));
   default:
    lua_reportbug ("unexpected type to index table");
-   return -1;
+   return -1;  /* UNREACHEABLE */
  }
 }
 
@@ -96,7 +96,6 @@ static int equalObj (Object *t1, Object *t2)
 static int present (Hash *t, Object *ref)
 { 
  int h = hashindex(t, ref);
- if (h < 0) return h;
  while (tag(ref(node(t, h))) != LUA_T_NIL)
  {
   if (equalObj(ref, ref(node(t, h))))
@@ -115,12 +114,9 @@ static Node *hashnodecreate (int nhash)
  int i;
  Node *v = newvector (nhash, Node);
  if (v == NULL)
- {
-  lua_error ("not enough memory");
-  return NULL;
- }
+   lua_error ("not enough memory");
  for (i=0; i<nhash; i++)
-  tag(ref(&v[i])) = LUA_T_NIL;
+   tag(ref(&v[i])) = LUA_T_NIL;
  return v;
 }
 
@@ -131,16 +127,12 @@ static Hash *hashcreate (int nhash)
 {
  Hash *t = new (Hash);
  if (t == NULL)
- {
-  lua_error ("not enough memory");
-  return NULL;
- }
+   lua_error ("not enough memory");
  nhash = redimension((int)((float)nhash/REHASH_LIMIT));
  
  nodevector(t) = hashnodecreate(nhash);
  if (nodevector(t) == NULL)
-  return NULL;
- 
+   lua_error ("not enough memory");
  nhash(t) = nhash;
  nuse(t) = 0;
  markarray(t) = 0;
@@ -214,15 +206,8 @@ void lua_hashcollector (void)
 Hash *lua_createarray (int nhash)
 {
  Hash *array = hashcreate(nhash);
- if (array == NULL)
- {
-  lua_error ("not enough memory");
-  return NULL;
- }
-
  if (lua_nentity == lua_block)
-  lua_pack(); 
-
+   lua_pack(); 
  lua_nentity++;
  array->next = listhead;
  listhead = array;
@@ -259,14 +244,9 @@ Object *lua_hashget (Hash *t, Object *ref)
  static int count = 1000;
  static Object nil_obj = {LUA_T_NIL, {NULL}};
  int h = present(t, ref);
- if (h < 0) return &nil_obj; 
  if (tag(ref(node(t, h))) != LUA_T_NIL) return val(node(t, h));
  if (--count == 0) 
- {
-  lua_reportbug ("hierarchy too deep (maybe there is an inheritance loop)");
-  return &nil_obj;
- }
-
+   lua_reportbug ("hierarchy too deep (maybe there is an inheritance loop)");
  { /* check "parent" or "godparent" field */
   Hash *p;
   Object parent;
@@ -274,7 +254,7 @@ Object *lua_hashget (Hash *t, Object *ref)
   tag(&parent) = LUA_T_STRING; svalue(&parent) = "parent";
   tag(&godparent) = LUA_T_STRING; svalue(&godparent) = "godparent";
 
-  h = present(t, &parent); /* assert(h >= 0); */
+  h = present(t, &parent);
   p = tag(ref(node(t, h))) != LUA_T_NIL && tag(val(node(t, h))) == LUA_T_ARRAY ?
       avalue(val(node(t, h))) : NULL;
   if (p != NULL)
@@ -283,7 +263,7 @@ Object *lua_hashget (Hash *t, Object *ref)
    if (tag(r) != LUA_T_NIL) { count++; return r; }
   }
 
-  h = present(t, &godparent); /* assert(h >= 0); */
+  h = present(t, &godparent);
   p = tag(ref(node(t, h))) != LUA_T_NIL && tag(val(node(t, h))) == LUA_T_ARRAY ?
       avalue(val(node(t, h))) : NULL;
   if (p != NULL)
@@ -299,14 +279,12 @@ Object *lua_hashget (Hash *t, Object *ref)
 /*
 ** If the hash node is present, return its pointer, otherwise create a new
 ** node for the given reference and also return its pointer.
-** On error, return NULL.
 */
 Object *lua_hashdefine (Hash *t, Object *ref)
 {
  int   h;
  Node *n;
  h = present(t, ref);
- if (h < 0) return NULL; 
  n = node(t, h);
  if (tag(ref(n)) == LUA_T_NIL)
  {
@@ -355,12 +333,11 @@ void lua_next (void)
  Object *o = lua_getparam (1);
  Object *r = lua_getparam (2);
  if (o == NULL || r == NULL)
- { lua_error ("too few arguments to function `next'"); return; }
+   lua_error ("too few arguments to function `next'");
  if (lua_getparam (3) != NULL)
- { lua_error ("too many arguments to function `next'"); return; }
+   lua_error ("too many arguments to function `next'");
  if (tag(o) != LUA_T_ARRAY)
- { lua_error ("first argument of function `next' is not a table"); return; }
-
+   lua_error ("first argument of function `next' is not a table");
  t = avalue(o);
  if (tag(r) == LUA_T_NIL)
  {
@@ -369,9 +346,6 @@ void lua_next (void)
  else
  {
   int h = present (t, r);
-  if (h >= 0)
-   hashnext(t, h+1);
-  else
-   lua_error ("error in function 'next': reference not found");
+  hashnext(t, h+1);
  }
 }
