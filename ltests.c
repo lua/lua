@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
+** $Id: ltests.c,v 2.2 2004/02/16 19:09:52 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -36,12 +36,15 @@
 #ifdef LUA_DEBUG
 
 
+int Trick = 0;
+
+
 static lua_State *lua_state = NULL;
 
 int islocked = 0;
 
 
-#define func_at(L,k)	(L->ci->base+(k) - 1)
+#define obj_at(L,k)	(L->ci->base+(k) - 1)
 
 
 static void setnameval (lua_State *L, const char *name, int val) {
@@ -159,25 +162,24 @@ static int testobjref1 (global_State *g, GCObject *f, GCObject *t) {
 
 
 static void printobj (global_State *g, GCObject *o) {
-int i = 0;
-GCObject *p;
-for (p = g->rootgc; p != o && p != NULL; p = p->gch.next) i++;
-if (p == NULL) i = -1;
-printf("%d:%s(%p)-%c",
-i, luaT_typenames[o->gch.tt], (void *)o,
-isdead(g,o)?'d':isblack(o)?'b':iswhite(o)?'w':'g');
+  int i = 0;
+  GCObject *p;
+  for (p = g->rootgc; p != o && p != NULL; p = p->gch.next) i++;
+  if (p == NULL) i = -1;
+  printf("%d:%s(%p)-%c(%02X)", i, luaT_typenames[o->gch.tt], (void *)o,
+           isdead(g,o)?'d':isblack(o)?'b':iswhite(o)?'w':'g', o->gch.marked);
 }
 
 
 static int testobjref (global_State *g, GCObject *f, GCObject *t) {
   int r = testobjref1(g,f,t);
-if (!r) {
-printf("%d - ", g->gcstate);
-printobj(g, f);
-printf("\t-> ");
-printobj(g, t);
-printf("\n");
-}
+  if (!r) {
+    printf("%d(%02X) - ", g->gcstate, g->currentwhite);
+    printobj(g, f);
+    printf("\t-> ");
+    printobj(g, t);
+    printf("\n");
+  }
   return r;
 }
 
@@ -258,8 +260,10 @@ static void checkclosure (global_State *g, Closure *cl) {
     checkobjref(g, clgc, hvalue(&cl->l.g));
     checkobjref(g, clgc, cl->l.p);
     for (i=0; i<cl->l.nupvalues; i++) {
-      lua_assert(cl->l.upvals[i]->tt == LUA_TUPVAL);
-      checkobjref(g, clgc, cl->l.upvals[i]);
+      if (cl->l.upvals[i]) {
+        lua_assert(cl->l.upvals[i]->tt == LUA_TUPVAL);
+        checkobjref(g, clgc, cl->l.upvals[i]);
+      }
     }
   }
 }
@@ -270,53 +274,74 @@ static void checkstack (global_State *g, lua_State *L1) {
   CallInfo *ci;
   lua_assert(!isdead(g, obj2gco(L1)));
   checkliveness(g, gt(L1));
-  for (ci = L1->base_ci; ci <= L1->ci; ci++)
-    lua_assert(ci->top <= L1->stack_last);
-  for (o = L1->stack; o < L1->top; o++)
-    checkliveness(g, o);
+  if (L1->base_ci) {
+    for (ci = L1->base_ci; ci <= L1->ci; ci++)
+      lua_assert(ci->top <= L1->stack_last);
+  }
+  else lua_assert(L1->size_ci == 0);
+  if (L1->stack) {
+    for (o = L1->stack; o < L1->top; o++)
+      checkliveness(g, o);
+  }
+  else lua_assert(L1->stacksize == 0);
 }
 
 
-void luaC_checkall (lua_State *L) {
+static void checkobject (global_State *g, GCObject *o) {
+  if (isdead(g, o))
+    lua_assert(g->gcstate == GCSsweepstring || g->gcstate == GCSsweep);
+  else {
+    if (g->gcstate == GCSfinalize)
+      lua_assert(iswhite(o));
+    switch (o->gch.tt) {
+      case LUA_TUPVAL: {
+        UpVal *uv = gco2uv(o);
+        lua_assert(uv->v == &uv->value);  /* must be closed */
+        checkvalref(g, o, uv->v);
+        break;
+      }
+      case LUA_TUSERDATA: {
+        Table *mt = gco2u(o)->metatable;
+        if (mt) checkobjref(g, o, mt);
+        break;
+      }
+      case LUA_TTABLE: {
+        checktable(g, gco2h(o));
+        break;
+      }
+      case LUA_TTHREAD: {
+        checkstack(g, gco2th(o));
+        break;
+      }
+      case LUA_TFUNCTION: {
+        checkclosure(g, gco2cl(o));
+        break;
+      }
+      case LUA_TPROTO: {
+        checkproto(g, gco2p(o));
+        break;
+      }
+      default: lua_assert(0);
+    }
+  }
+}
+
+
+int lua_checkmemory (lua_State *L) {
   global_State *g = G(L);
   GCObject *o;
   checkstack(g, g->mainthread);
-  for (o = g->rootgc; o; o = o->gch.next) {
-    if (isdead(g, o))
-      lua_assert(g->gcstate == GCSsweepstring || g->gcstate == GCSsweep);
-    else {
-      switch (o->gch.tt) {
-        case LUA_TUPVAL: {
-          UpVal *uv = gco2uv(o);
-          lua_assert(uv->v == &uv->value);  /* must be closed */
-          checkvalref(g, o, uv->v);
-          break;
-        }
-        case LUA_TUSERDATA: {
-          Table *mt = gco2u(o)->metatable;
-          if (mt) checkobjref(g, o, mt);
-          break;
-        }
-        case LUA_TTABLE: {
-          checktable(g, gco2h(o));
-          break;
-        }
-        case LUA_TTHREAD: {
-          checkstack(g, gco2th(o));
-          break;
-        }
-        case LUA_TFUNCTION: {
-          checkclosure(g, gco2cl(o));
-          break;
-        }
-        case LUA_TPROTO: {
-          checkproto(g, gco2p(o));
-          break;
-        }
-        default: lua_assert(0);
-      }
-    }
+  for (o = g->rootgc; o->gch.tt != LUA_TUSERDATA; o = o->gch.next)
+    checkobject(g, o);
+  lua_assert(o == g->firstudata);
+  for (; o->gch.tt != LUA_TTHREAD; o = o->gch.next)
+    checkobject(g, o);
+  lua_assert(o == obj2gco(g->mainthread));
+  for (; o; o = o->gch.next) {
+    lua_assert(o->gch.tt == LUA_TTHREAD);
+    checkobject(g, o);
   }
+  return 0;
 }
 
 /* }====================================================== */
@@ -369,7 +394,7 @@ static int listcode (lua_State *L) {
   Proto *p;
   luaL_argcheck(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
                  1, "Lua function expected");
-  p = clvalue(func_at(L, 1))->l.p;
+  p = clvalue(obj_at(L, 1))->l.p;
   lua_newtable(L);
   setnameval(L, "maxstack", p->maxstacksize);
   setnameval(L, "numparams", p->numparams);
@@ -388,7 +413,7 @@ static int listk (lua_State *L) {
   int i;
   luaL_argcheck(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
                  1, "Lua function expected");
-  p = clvalue(func_at(L, 1))->l.p;
+  p = clvalue(obj_at(L, 1))->l.p;
   lua_createtable(L, p->sizek, 0);
   for (i=0; i<p->sizek; i++) {
     luaA_pushobject(L, p->k+i);
@@ -405,7 +430,7 @@ static int listlocals (lua_State *L) {
   const char *name;
   luaL_argcheck(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
                  1, "Lua function expected");
-  p = clvalue(func_at(L, 1))->l.p;
+  p = clvalue(obj_at(L, 1))->l.p;
   while ((name = luaF_getlocalname(p, ++i, pc)) != NULL)
     lua_pushstring(L, name);
   return i-1;
@@ -428,12 +453,6 @@ static int get_limits (lua_State *L) {
 }
 
 
-static int setgcthreshold (lua_State *L) {
-  lua_setgcthreshold(L, luaL_checkint(L, 1));
-  return 0;
-}
-
-
 static int mem_query (lua_State *L) {
   if (lua_isnone(L, 1)) {
     lua_pushinteger(L, memcontrol.total);
@@ -448,16 +467,52 @@ static int mem_query (lua_State *L) {
 }
 
 
+static int settrick (lua_State *L) {
+  Trick = lua_tointeger(L, 1);
+  return 0;
+}
+
+
+/*static int set_gcstate (lua_State *L) {
+  static const char *const state[] = {"propagate", "sweep", "finalize"};
+  return 0;
+}*/
+
+
+static int get_gccolor (lua_State *L) {
+  TValue *o;
+  luaL_checkany(L, 1);
+  o = obj_at(L, 1);
+  if (!iscollectable(o))
+    lua_pushstring(L, "no collectable");
+  else
+    lua_pushstring(L, iswhite(gcvalue(o)) ? "white" :
+                      isblack(gcvalue(o)) ? "black" : "grey");
+  return 1;
+}
+
+
+static int gcstate (lua_State *L) {
+  switch(G(L)->gcstate) {
+    case GCSpropagate: lua_pushstring(L, "propagate"); break;
+    case GCSsweepstring: lua_pushstring(L, "sweep strings"); break;
+    case GCSsweep: lua_pushstring(L, "sweep"); break;
+    case GCSfinalize: lua_pushstring(L, "finalize"); break;
+  }
+  return 1;
+}
+
+
 static int hash_query (lua_State *L) {
   if (lua_isnone(L, 2)) {
     luaL_argcheck(L, lua_type(L, 1) == LUA_TSTRING, 1, "string expected");
-    lua_pushinteger(L, tsvalue(func_at(L, 1))->hash);
+    lua_pushinteger(L, tsvalue(obj_at(L, 1))->hash);
   }
   else {
-    TValue *o = func_at(L, 1);
+    TValue *o = obj_at(L, 1);
     Table *t;
     luaL_checktype(L, 2, LUA_TTABLE);
-    t = hvalue(func_at(L, 2));
+    t = hvalue(obj_at(L, 2));
     lua_pushinteger(L, luaH_mainposition(t, o) - t->node);
   }
   return 1;
@@ -479,7 +534,7 @@ static int table_query (lua_State *L) {
   const Table *t;
   int i = luaL_optint(L, 2, -1);
   luaL_checktype(L, 1, LUA_TTABLE);
-  t = hvalue(func_at(L, 1));
+  t = hvalue(obj_at(L, 1));
   if (i == -1) {
     lua_pushinteger(L, t->sizearray);
     lua_pushinteger(L, sizenode(t));
@@ -979,6 +1034,10 @@ static const struct luaL_reg tests_funcs[] = {
   {"querytab", table_query},
   {"doit", test_do},
   {"testC", testC},
+  {"checkmemory", lua_checkmemory},
+  {"gccolor", get_gccolor},
+  {"gcstate", gcstate},
+  {"trick", settrick},
   {"ref", tref},
   {"getref", getref},
   {"unref", unref},
@@ -995,7 +1054,6 @@ static const struct luaL_reg tests_funcs[] = {
   {"doremote", doremote},
   {"log2", log2_aux},
   {"int2fb", int2fb_aux},
-  {"setgcthreshold", setgcthreshold},
   {"totalmem", mem_query},
   {"resume", coresume},
   {"setyhook", setyhook},
