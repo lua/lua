@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.35 2000/09/11 20:29:27 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.36 2000/09/12 13:48:22 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -66,38 +66,36 @@ void luaL_checktype(lua_State *L, int narg, const char *tname) {
 }
 
 
-static const char *checkstr (lua_State *L, int narg, size_t *len) {
+const char *luaL_check_lstr (lua_State *L, int narg, size_t *len) {
   const char *s = lua_tostring(L, narg);
   if (!s) type_error(L, narg, "string");
   if (len) *len = lua_strlen(L, narg);
   return s;
 }
 
-const char *luaL_check_lstr (lua_State *L, int narg, size_t *len) {
-  return checkstr(L, narg, len);
-}
 
 const char *luaL_opt_lstr (lua_State *L, int narg, const char *def,
                            size_t *len) {
   if (lua_isnull(L, narg)) {
-    if (len) *len = def ? strlen(def) : 0;
+    if (len)
+      *len = (def ? strlen(def) : 0);
     return def;
   }
-  else return checkstr(L, narg, len);
+  else return luaL_check_lstr(L, narg, len);
 }
 
+
 double luaL_check_number (lua_State *L, int narg) {
-  if (!lua_isnumber(L, narg)) type_error(L, narg, "number");
-  return lua_tonumber(L, narg);
+  double d = lua_tonumber(L, narg);
+  if (d == 0 && !lua_isnumber(L, narg))  /* avoid extra test when d is not 0 */
+    type_error(L, narg, "number");
+  return d;
 }
 
 
 double luaL_opt_number (lua_State *L, int narg, double def) {
   if (lua_isnull(L, narg)) return def;
-  else {
-    if (!lua_isnumber(L, narg)) type_error(L, narg, "number");
-    return lua_tonumber(L, narg);
-  }
+  else return luaL_check_number(L, narg);
 }
 
 
