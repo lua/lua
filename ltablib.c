@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.22 2003/10/07 20:13:41 roberto Exp roberto $
+** $Id: ltablib.c,v 1.23 2004/04/30 20:13:38 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,7 @@ static int luaB_foreachi (lua_State *L) {
   int i;
   int n = aux_getn(L, 1);
   luaL_checktype(L, 2, LUA_TFUNCTION);
-  for (i=1; i<=n; i++) {
+  for (i=LUA_FIRSTINDEX; i < n+LUA_FIRSTINDEX; i++) {
     lua_pushvalue(L, 2);  /* function */
     lua_pushinteger(L, i);  /* 1st argument */
     lua_rawgeti(L, 1, i);  /* 2nd argument */
@@ -109,16 +109,17 @@ static int str_concat (lua_State *L) {
   luaL_Buffer b;
   size_t lsep;
   const char *sep = luaL_optlstring(L, 2, "", &lsep);
-  int i = luaL_optint(L, 3, 1);
-  int n = luaL_optint(L, 4, 0);
+  int i = luaL_optint(L, 3, LUA_FIRSTINDEX);
+  int last = luaL_optint(L, 4, -2);
   luaL_checktype(L, 1, LUA_TTABLE);
-  if (n == 0) n = luaL_getn(L, 1);
+  if (last == -2)
+    last = luaL_getn(L, 1) + LUA_FIRSTINDEX - 1;
   luaL_buffinit(L, &b);
-  for (; i <= n; i++) {
+  for (; i <= last; i++) {
     lua_rawgeti(L, 1, i);
     luaL_argcheck(L, lua_isstring(L, -1), 1, "table contains non-strings");
     luaL_addvalue(&b);
-    if (i != n)
+    if (i != last)
       luaL_addlstring(&b, sep, lsep);
   }
   luaL_pushresult(&b);
@@ -224,7 +225,7 @@ static int luaB_sort (lua_State *L) {
   if (!lua_isnoneornil(L, 2))  /* is there a 2nd argument? */
     luaL_checktype(L, 2, LUA_TFUNCTION);
   lua_settop(L, 2);  /* make sure there is two arguments */
-  auxsort(L, 1, n);
+  auxsort(L, LUA_FIRSTINDEX, n + LUA_FIRSTINDEX - 1);
   return 0;
 }
 

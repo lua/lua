@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.2 2004/03/23 17:02:58 roberto Exp roberto $
+** $Id: ldo.c,v 2.3 2004/04/30 20:13:38 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -193,7 +193,7 @@ static void adjust_varargs (lua_State *L, int nfixargs, StkId base) {
   actual -= nfixargs;  /* number of extra arguments */
   htab = luaH_new(L, actual, 1);  /* create `arg' table */
   for (i=0; i<actual; i++)  /* put extra arguments into `arg' table */
-    setobj2n(L, luaH_setnum(L, htab, i+1), L->top - actual + i);
+    setobj2n(L, luaH_setnum(L, htab, i+LUA_FIRSTINDEX), L->top - actual + i);
   /* store counter in field `n' */
   setnvalue(luaH_setstr(L, htab, luaS_newliteral(L, "n")),
                                  cast(lua_Number, actual));

@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.141 2004/03/26 13:25:17 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.142 2004/04/30 20:13:38 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -257,7 +257,7 @@ static int luaB_ipairs (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
   lua_pushvalue(L, lua_upvalueindex(1));  /* return generator, */
   lua_pushvalue(L, 1);  /* state, */
-  lua_pushinteger(L, 0);  /* and initial value */
+  lua_pushinteger(L, LUA_FIRSTINDEX - 1);  /* and initial value */
   return 3;
 }
 
@@ -347,11 +347,12 @@ static int luaB_assert (lua_State *L) {
 
 
 static int luaB_unpack (lua_State *L) {
-  int i = luaL_optint(L, 2, 1);
+  int i = luaL_optint(L, 2, LUA_FIRSTINDEX);
   int e = luaL_optint(L, 3, -1);
   int n;
   luaL_checktype(L, 1, LUA_TTABLE);
-  if (e == -1) e = luaL_getn(L, 1);
+  if (e == -1)
+    e = luaL_getn(L, 1) + LUA_FIRSTINDEX - 1;
   n = e - i + 1;  /* number of elements */
   if (n <= 0) return 0;  /* empty range */
   luaL_checkstack(L, n, "table too big to unpack");

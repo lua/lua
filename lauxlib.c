@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.110 2004/03/23 16:38:43 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.111 2004/04/30 20:13:38 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -308,13 +308,13 @@ LUALIB_API int luaL_getn (lua_State *L, int t) {
   if ((n = checkint(L, 2)) >= 0) return n;
   lua_getfield(L, t, "n");  /* else try t.n */
   if ((n = checkint(L, 1)) >= 0) return n;
-  for (n = 1; ; n++) {  /* else must count elements */
+  for (n = LUA_FIRSTINDEX; ; n++) {  /* else must count elements */
     lua_rawgeti(L, t, n);
     if (lua_isnil(L, -1)) break;
     lua_pop(L, 1);
   }
   lua_pop(L, 1);
-  return n - 1;
+  return n - LUA_FIRSTINDEX;
 }
 
 /* }====================================================== */
