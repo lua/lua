@@ -1,5 +1,5 @@
 /*
-** $Id: ldump.c,v 1.3 2003/01/27 15:52:57 roberto Exp roberto $
+** $Id: ldump.c,v 1.4 2003/02/11 23:52:12 lhf Exp $
 ** save bytecodes
 ** See Copyright Notice in lua.h
 */
@@ -90,9 +90,9 @@ static void DumpLines(const Proto* f, DumpState* D)
 
 static void DumpUpvalues(const Proto* f, DumpState* D)
 {
-  int i,n=f->sizeupvalues;
-  DumpInt(n,D);
-  for (i=0; i<n; i++) DumpString(f->upvalues[i],D);
+ int i,n=f->sizeupvalues;
+ DumpInt(n,D);
+ for (i=0; i<n; i++) DumpString(f->upvalues[i],D);
 }
 
 static void DumpFunction(const Proto* f, const TString* p, DumpState* D);
@@ -167,3 +167,4 @@ void luaU_dump (lua_State* L, const Proto* Main, lua_Chunkwriter w, void* data)
  DumpHeader(&D);
  DumpFunction(Main,NULL,&D);
 }
+
