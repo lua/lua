@@ -1,12 +1,13 @@
 %{
 /*
-** $Id: lua.stx,v 1.15 1997/10/28 17:26:53 roberto Exp roberto $
+** $Id: lua.stx,v 1.16 1997/10/30 18:47:19 roberto Exp roberto $
 ** Syntax analizer and code generator
 ** See Copyright Notice in lua.h
 */
 
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "lauxlib.h"
 #include "ldo.h"

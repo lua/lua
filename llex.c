@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.3 1997/10/13 22:10:45 roberto Exp roberto $
+** $Id: llex.c,v 1.4 1997/11/04 15:27:53 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -110,7 +110,7 @@ static void skipspace (void)
 
 static int checkcond (char *buff)
 {
-  static char *opts[] = {"nil", "1"};
+  static char *opts[] = {"nil", "1", NULL};
   int i = luaO_findstring(buff, opts);
   if (i >= 0) return i;
   else if (isalpha((unsigned char)buff[0]) || buff[0] == '_')
