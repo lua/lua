@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.98 2002/07/08 18:21:33 roberto Exp roberto $
+** $Id: lstate.c,v 1.99 2002/07/16 14:26:56 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -35,17 +35,19 @@ static int default_panic (lua_State *L) {
 
 
 static void stack_init (lua_State *L, lua_State *OL) {
-  L->stack = luaM_newvector(OL, BASIC_STACK_SIZE, TObject);
-  L->stacksize = BASIC_STACK_SIZE;
+  L->stack = luaM_newvector(OL, BASIC_STACK_SIZE + EXTRA_STACK, TObject);
+  L->stacksize = BASIC_STACK_SIZE + EXTRA_STACK;
   L->top = L->stack;
-  L->stack_last = L->stack+(BASIC_STACK_SIZE-EXTRA_STACK)-1;
+  L->stack_last = L->stack+(L->stacksize - EXTRA_STACK)-1;
   L->base_ci = luaM_newvector(OL, BASIC_CI_SIZE, CallInfo);
   L->ci = L->base_ci;
-  L->ci->savedpc = NULL;
+  L->ci->pc = NULL;  /*  not a Lua function */
   L->ci->base = L->top;
   L->ci->top = L->top + LUA_MINSTACK;
   L->size_ci = BASIC_CI_SIZE;
   L->end_ci = L->base_ci + L->size_ci;
+  L->toreset = luaM_newvector(OL, 2, Protection);
+  L->size_toreset = 2;
 }
 
 
@@ -98,7 +100,12 @@ static void preinit_state (lua_State *L) {
   resethookcount(L);
   L->openupval = NULL;
   L->size_ci = 0;
-  L->base_ci = NULL;
+  L->base_ci = L->ci = NULL;
+  L->toreset = NULL;
+  L->size_toreset = L->number_toreset = 0;
+  setnilvalue(defaultmeta(L));
+  setnilvalue(gt(L));
+  setnilvalue(registry(L));
 }
 
 
@@ -124,13 +131,12 @@ LUA_API lua_State *lua_newthread (lua_State *OL) {
 
 LUA_API lua_State *lua_open (void) {
   lua_State *L;
-  TObject dummy[2];
   L = luaM_new(NULL, lua_State);
   if (L) {  /* allocation OK? */
     preinit_state(L);
     L->l_G = NULL;
     L->next = L->previous = L;
-    if (luaD_runprotected(L, f_luaopen, dummy) != 0) {
+    if (luaD_rawrunprotected(L, f_luaopen, NULL) != 0) {
       /* memory allocation error: free partial state */
       close_state(L);
       L = NULL;
@@ -147,6 +153,7 @@ void luaE_closethread (lua_State *OL, lua_State *L) {
   L->previous->next = L->next;
   L->next->previous = L->previous;
   luaM_freearray(OL, L->base_ci, L->size_ci, CallInfo);
+  luaM_freearray(OL, L->toreset, L->size_toreset, Protection);
   luaM_freearray(OL, L->stack, L->stacksize, TObject);
   luaM_freelem(OL, L);
 }

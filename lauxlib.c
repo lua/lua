@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.77 2002/06/26 19:28:44 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.78 2002/07/01 19:23:58 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -394,21 +394,20 @@ LUALIB_API int luaL_loadbuffer (lua_State *L, const char *buff, size_t size,
 
 static void callalert (lua_State *L, int status) {
   if (status != 0) {
-    int top;
-    if (status == LUA_ERRRUN)
-      lua_concat(L, 2);  /* concat error message and traceback */
-    top = lua_gettop(L);
     lua_getglobal(L, "_ALERT");
     lua_insert(L, -2);
-    lua_pcall(L, 1, 0);
-    lua_settop(L, top-1);
+    lua_call(L, 1, 0);
+    lua_pop(L, 1);
   }
 }
 
 
 static int aux_do (lua_State *L, int status) {
-  if (status == 0)  /* parse OK? */
+  if (status == 0) {  /* parse OK? */
     status = lua_pcall(L, 0, LUA_MULTRET);  /* call main */
+    if (status != 0)
+      lua_pcallreset(L);
+  }
   callalert(L, status);
   return status;
 }

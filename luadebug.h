@@ -1,5 +1,5 @@
 /*
-** $Id: luadebug.h,v 1.29 2002/07/08 18:21:33 roberto Exp roberto $
+** $Id: luadebug.h,v 1.30 2002/07/08 20:22:08 roberto Exp $
 ** Debugging API
 ** See Copyright Notice in lua.h
 */
@@ -46,7 +46,6 @@ struct lua_Debug {
   const char *what;	/* (S) `Lua' function, `C' function, Lua `main' */
   const char *source;	/* (S) */
   int currentline;	/* (l) */
-  int isprotected;	/* (c) function was called in protected mode */
   int nups;		/* (u) number of upvalues */
   int linedefined;	/* (S) */
   char short_src[LUA_IDSIZE]; /* (S) */

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.88 2002/07/08 20:22:08 roberto Exp roberto $
+** $Id: lstate.h,v 1.89 2002/07/16 14:26:56 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -65,7 +65,7 @@ struct lua_longjmp;  /* defined in ldo.c */
 #define registry(L)	(L->globs + 2)
 
 
-/* space to handle TM calls and other temporary overflows */
+/* extra stack space to handle TM calls and some other extras */
 #define EXTRA_STACK   5
 
 
@@ -88,10 +88,10 @@ typedef struct stringtable {
 typedef struct CallInfo {
   StkId base;  /* base for called function */
   StkId	top;  /* top for this function */
-  const Instruction *savedpc;  /* NULL means not a Lua function */
+  const Instruction **pc;  /* points to `pc' variable in `luaV_execute' */
   union {
     struct {  /* for Lua functions */
-      const Instruction **pc;  /* points to `pc' variable in `luaV_execute' */
+      const Instruction *savedpc;
       StkId *pb;  /* points to `base' variable in `luaV_execute' */
     } l;
     struct {  /* for C functions */
@@ -101,7 +101,15 @@ typedef struct CallInfo {
 } CallInfo;
 
 
-#define isLua(ci)	((ci)->savedpc != NULL)
+/*
+** informations about a `protection' (error recovery points)
+*/
+typedef struct Protection {
+  ptrdiff_t ci;
+  ptrdiff_t top;
+  int allowhooks;
+} Protection;
+
 
 #define ci_func(ci)	(clvalue((ci)->base - 1))
 
@@ -133,22 +141,25 @@ typedef struct global_State {
 struct lua_State {
   LUA_USERSTATE
   StkId top;  /* first free slot in the stack */
+  global_State *l_G;
   CallInfo *ci;  /* call info for current function */
   StkId stack_last;  /* last free slot in the stack */
   StkId stack;  /* stack base */
+  int stacksize;
   CallInfo *end_ci;  /* points after end of ci array*/
   CallInfo *base_ci;  /* array of CallInfo's */
-  global_State *l_G;
+  int size_ci;  /* size of array `base_ci' */
   int hookmask;
   ls_count hookcount;
   lua_Hook hook;
-  TObject globs[NUMGLOBS];  /* registry, table of globals, etc. */
-  struct lua_longjmp *errorJmp;  /* current error recover point */
   UpVal *openupval;  /* list of open upvalues in this stack */
+  struct lua_longjmp *errorJmp;  /* current error recover point */
+  Protection *toreset;  /* array of pending pcall resets */
+  int number_toreset;
+  int size_toreset;
   lua_State *next;  /* circular double linked list of states */
   lua_State *previous;
-  int stacksize;
-  int size_ci;  /* size of array `base_ci' */
+  TObject globs[NUMGLOBS];  /* registry, table of globals, etc. */
 };
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.63 2002/07/08 20:22:08 roberto Exp roberto $
+** $Id: ldblib.c,v 1.64 2002/07/17 16:25:13 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -194,15 +194,11 @@ static int debug (lua_State *L) {
 static int errorfb (lua_State *L) {
   int level = 1;  /* skip level 0 (it's this function) */
   int firstpart = 1;  /* still before eventual `...' */
-  int alllevels = 1;
-  const char *msg = lua_tostring(L, 1);
   lua_Debug ar;
-  lua_settop(L, 0);
-  if (msg) {
-    alllevels = 0;
-    if (!strstr(msg, "stack traceback:\n"))
-      lua_pushliteral(L, "stack traceback:\n");
-  }
+  if (lua_gettop(L) == 0)
+    lua_pushliteral(L, "");
+  else if (!lua_isstring(L, 1)) return 1;  /* no string message */
+  lua_pushliteral(L, "stack traceback:\n");
   while (lua_getstack(L, level++, &ar)) {
     if (level > LEVELS1 && firstpart) {
       /* no more than `LEVELS2' more levels? */
@@ -217,7 +213,7 @@ static int errorfb (lua_State *L) {
       continue;
     }
     lua_pushliteral(L, "\t");
-    lua_getinfo(L, "Snlc", &ar);
+    lua_getinfo(L, "Snl", &ar);
     lua_pushfstring(L, "%s:", ar.short_src);
     if (ar.currentline > 0)
       lua_pushfstring(L, "%d:", ar.currentline);
@@ -240,7 +236,6 @@ static int errorfb (lua_State *L) {
     }
     lua_pushliteral(L, "\n");
     lua_concat(L, lua_gettop(L));
-    if (!alllevels && ar.isprotected) break;
   }
   lua_concat(L, lua_gettop(L));
   return 1;
@@ -261,9 +256,9 @@ static const luaL_reg dblib[] = {
 
 LUALIB_API int lua_dblibopen (lua_State *L) {
   luaL_opennamedlib(L, LUA_DBLIBNAME, dblib, 0);
-  lua_pushliteral(L, LUA_TRACEBACK);
+  lua_pushliteral(L, "_TRACEBACK");
   lua_pushcfunction(L, errorfb);
-  lua_settable(L, LUA_REGISTRYINDEX);
+  lua_settable(L, LUA_GLOBALSINDEX);
   return 0;
 }
 
