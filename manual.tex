@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 2.3 1997/06/19 18:03:04 roberto Exp roberto $
+% $Id: manual.tex,v 2.4 1997/06/19 18:49:40 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -38,7 +38,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1997/06/19 18:03:04 $}
+\date{\small \verb$Date: 1997/06/19 18:49:40 $}
 
 \maketitle
 
@@ -973,6 +973,8 @@ See event \verb|"gettable"| for its semantics.
 
 \item[``getglobal'':]\index{getglobal event}
 called whenever Lua accesses a global variable.
+This method can only be set for \nil\ and for tags
+created by \verb|newtag|.
 \begin{verbatim}
       function getglobal (varname)
         local value = rawgetglobal(varname)
@@ -988,6 +990,8 @@ Notice: the function \verb|getglobal| is pre-defined in Lua \see{predefined}.
 
 \item[``setglobal'':]\index{setglobal event}
 called whenever Lua assigns to a global variable.
+This method cannot be set for numbers, strings, and tables and 
+userdata with default tags.
 \begin{verbatim}
       function setglobal (varname, newvalue)
         local oldvalue = rawgetglobal(varname)
@@ -1003,6 +1007,7 @@ Notice: the function \verb|setglobal| is pre-defined in Lua \see{predefined}.
 
 \item[``gettable'':]\index{gettable event}
 called whenever Lua accesses an indexed variable.
+This method cannot be set for tables with default tag.
 \begin{verbatim}
       function gettable_event (table, index)
         local tm = gettagmethod(tag(table), "gettable")
@@ -1024,6 +1029,7 @@ called whenever Lua accesses an indexed variable.
 
 \item[``settable'':]\index{settable event}
 called when Lua assigns to an indexed variable.
+This method cannot be set for tables with default tag.
 \begin{verbatim}
       function settable_event (table, index, value)
         local tm = gettagmethod(tag(table), "settable")
@@ -1063,6 +1069,8 @@ called when Lua tries to call a non function value.
 
 \item[``gc'':]\index{gc event}
 called when Lua is garbage collecting an object.
+This method cannot be set for strings, numbers, functions,
+and userdata with default tag.
 For each object to be collected,
 Lua does the equivalent of the following function:
 \begin{verbatim}
@@ -1092,20 +1100,22 @@ is terminated returning an error condition.
 
 The only argument to the error method is a string
 describing the error.
-The standard I/O library redefines this method,
-using the debug facilities \see{debugI},
-in order to print some extra information,
-like the call stack.
-To provide more information about errors,
-Lua programs should include the compilation pragma \verb|$debug|.
-\index{debug pragma}\label{pragma}
-When an error occurs in a program compiled with this option,
-the error routine is able to print the number of the lines where the calls
-(and the error) were made.
+The default method prints this message in \verb|stderr|.
 If needed, it is possible to change the error method with the
 function \verb|seterrormethod|,
 which gets the new error handler as its only parameter
 \see{pdf-seterrormethod}.
+The standard I/O library uses this facility to redefine the error method,
+using the debug facilities \see{debugI},
+in order to print some extra information,
+like the call stack.
+
+To provide more information about errors,
+Lua programs should include the compilation pragma \verb|$debug|.
+\index{debug pragma}\label{pragma}
+When an error occurs in a program compiled with this option,
+the I/O error routine is able to print the number of the
+lines where the calls (and the error) were made.
 
 Lua code can explicitly generate an error by calling the built-in
 function \verb|error| \see{pdf-error}.
@@ -1430,13 +1440,14 @@ pops all elements from the C2lua stack.
 The following example shows how a C program may do the
 equivalent to the Lua code:
 \begin{verbatim}
-      a = f(t.x, 4)
+      a = f("how", t.x, 4)
 \end{verbatim}
 \begin{verbatim}
+  lua_pushstring("how");                               /* 1st argument */
   lua_pushobject(lua_getglobal("t"));      /* push value of global 't' */
   lua_pushstring("x");                          /* push the string 'x' */
   lua_pushobject(lua_gettable());     /* push result of t.x (= t['x']) */
-  lua_pushnumber(4);                                   /* 2nd argument */
+  lua_pushnumber(4);                                   /* 3th argument */
   lua_callfunction(lua_getglobal("f"));           /* call Lua function */
   lua_pushobject(lua_getresult(1));   /* push first result of the call */
   lua_setglobal("a");                      /* sets global variable 'a' */
@@ -1928,8 +1939,8 @@ See some examples below:
   --> x="apple and orange and lime"
 
   t = {}
-  gsub("first second word", "(%w%w*)", rawsettable, t)
-  --> t={"first", "second", "word"}
+  dummy, t.n = gsub("first second word", "(%w%w*)", rawsettable, t)
+  --> t={"first", "second", "word"; n=3}
 \end{verbatim}
 
 
@@ -2443,13 +2454,34 @@ the previous public versions of Lua,
 some differences had to be introduced.
 Here is a list of all these incompatibilities.
 
+\subsection*{Incompatibilities with \Index{version 2.5}}
+\begin{itemize}
+\item
+The whole fallback mechanism has been replaced by tag methods.
+Nevertheless, the function \verb|setfallback| has been rewritten in
+a way that uses tag methods to fully emulate the old behavior
+of fallbacks.
+\item
+Tags now must be created with the function \verb|newtag|.
+Nevertheless, old user defined tags are still accepted
+(user defined tags must be positive;
+\verb|newtag| uses negative numbers).
+Tag methods cannot be set for such user defined tags,
+and fallbacks do not affect tags created by \verb|newtag|.
+\item
+Lua 2.5 accepts mixed comparisons of strings and numbers,
+like \verb|2<"12"|, giving weird results.
+Now this is an error.
+\item
+Character \verb|"-"| (hyphen) now is ``magic'' in pattern matching.
+\item
+Some API functions have been rewritten as macros.
+\end{itemize}
+
 \subsection*{Incompatibilities with \Index{version 2.4}}
 The whole I/O facilities have been rewritten.
 We strongly encourage programmers to adapt their code
 to this new version.
-However, we are keeping the old version of the libraries
-in the distribution,
-to allow a smooth transition.
 The incompatibilities between the new and the old libraries are:
 \begin{itemize}
 \item The format facility of function \verb|write| has been supersed by
@@ -2548,9 +2580,5 @@ Special care should be taken with macros like
 
 
 \end{document}
-
-
-
-
 
 
