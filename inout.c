@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.46 1997/03/17 17:01:10 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.47 1997/03/19 19:41:10 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -160,34 +160,6 @@ static void luaI_print (void)
     printf("%s\n", tostring(obj));
 }
 
-/*
-** Internal function: return an object type.
-*/
-static void luaI_type (void)
-{
-  lua_Object o = lua_getparam(1);
-  int t = lua_tag(o);
-  char *s;
-  if (t == LUA_T_NUMBER)
-    s = "number";
-  else if (lua_isstring(o))
-    s = "string";
-  else if (lua_istable(o))
-    s = "table";
-  else if (lua_isnil(o))
-    s = "nil";
-  else if (lua_isfunction(o))
-    s = "function";
-  else if (lua_isuserdata(o))
-    s = "userdata";
-  else {
-    lua_error("no parameter to function 'type'");
-    return; /* to avoid warnings */
-  }
-  lua_pushliteral(s);
-  lua_pushnumber(t);
-}
- 
 /*
 ** Internal function: convert an object to a number
 */
