@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.96 2002/02/08 22:40:27 roberto Exp roberto $
+** $Id: llex.c,v 1.97 2002/03/04 15:27:14 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -135,20 +135,20 @@ void luaX_setinput (lua_State *L, LexState *LS, ZIO *z, TString *source) {
 /* use Mbuffer to store names, literal strings and numbers */
 
 #define EXTRABUFF	128
-#define checkbuffer(L, n, len)	\
-    if (((len)+(n))*sizeof(char) > G(L)->Mbuffsize) \
-      luaO_openspace(L, (len)+(n)+EXTRABUFF, char)
+#define checkbuffer(L, len)	\
+    if (((len)+10)*sizeof(char) > G(L)->Mbuffsize) \
+      luaO_openspace(L, (len)+EXTRABUFF, char)
 
-#define save(L, c, l)	(cast(char *, G(L)->Mbuffer)[l++] = (char)c)
+#define save(L, c, l)	(cast(char *, G(L)->Mbuffer)[l++] = cast(char, c))
 #define save_and_next(L, LS, l)  (save(L, LS->current, l), next(LS))
 
 
 static size_t readname (LexState *LS) {
   lua_State *L = LS->L;
   size_t l = 0;
-  checkbuffer(L, 10, l);
+  checkbuffer(L, l);
   do {
-    checkbuffer(L, 10, l);
+    checkbuffer(L, l);
     save_and_next(L, LS, l);
   } while (isalnum(LS->current) || LS->current == '_');
   save(L, '\0', l);
@@ -160,10 +160,10 @@ static size_t readname (LexState *LS) {
 static void read_number (LexState *LS, int comma, SemInfo *seminfo) {
   lua_State *L = LS->L;
   size_t l = 0;
-  checkbuffer(L, 10, l);
+  checkbuffer(L, l);
   if (comma) save(L, '.', l);
   while (isdigit(LS->current)) {
-    checkbuffer(L, 10, l);
+    checkbuffer(L, l);
     save_and_next(L, LS, l);
   }
   if (LS->current == '.') {
@@ -177,7 +177,7 @@ static void read_number (LexState *LS, int comma, SemInfo *seminfo) {
     }
   }
   while (isdigit(LS->current)) {
-    checkbuffer(L, 10, l);
+    checkbuffer(L, l);
     save_and_next(L, LS, l);
   }
   if (LS->current == 'e' || LS->current == 'E') {
@@ -185,7 +185,7 @@ static void read_number (LexState *LS, int comma, SemInfo *seminfo) {
     if (LS->current == '+' || LS->current == '-')
       save_and_next(L, LS, l);  /* optional exponent sign */
     while (isdigit(LS->current)) {
-      checkbuffer(L, 10, l);
+      checkbuffer(L, l);
       save_and_next(L, LS, l);
     }
   }
@@ -199,13 +199,13 @@ static void read_long_string (LexState *LS, SemInfo *seminfo) {
   lua_State *L = LS->L;
   int cont = 0;
   size_t l = 0;
-  checkbuffer(L, 10, l);
+  checkbuffer(L, l);
   save(L, '[', l);  /* save first `[' */
   save_and_next(L, LS, l);  /* pass the second `[' */
   if (LS->current == '\n')  /* string starts with a newline? */
     inclinenumber(LS);  /* skip it */
   for (;;) {
-    checkbuffer(L, 10, l);
+    checkbuffer(L, l);
     switch (LS->current) {
       case EOZ:
         save(L, '\0', l);
@@ -229,6 +229,7 @@ static void read_long_string (LexState *LS, SemInfo *seminfo) {
       case '\n':
         save(L, '\n', l);
         inclinenumber(LS);
+        if (!seminfo) l = 0;  /* reset buffer to avoid wasting space */
         continue;
       default:
         save_and_next(L, LS, l);
@@ -236,17 +237,18 @@ static void read_long_string (LexState *LS, SemInfo *seminfo) {
   } endloop:
   save_and_next(L, LS, l);  /* skip the second `]' */
   save(L, '\0', l);
-  seminfo->ts = luaS_newlstr(L, cast(char *, G(L)->Mbuffer)+2, l-5);
+  if (seminfo)
+    seminfo->ts = luaS_newlstr(L, cast(char *, G(L)->Mbuffer)+2, l-5);
 }
 
 
 static void read_string (LexState *LS, int del, SemInfo *seminfo) {
   lua_State *L = LS->L;
   size_t l = 0;
-  checkbuffer(L, 10, l);
+  checkbuffer(L, l);
   save_and_next(L, LS, l);
   while (LS->current != del) {
-    checkbuffer(L, 10, l);
+    checkbuffer(L, l);
     switch (LS->current) {
       case EOZ:  case '\n':
         save(L, '\0', l);
@@ -308,7 +310,13 @@ int luaX_lex (LexState *LS, SemInfo *seminfo) {
       case '-':
         next(LS);
         if (LS->current != '-') return '-';
-        do { next(LS); } while (LS->current != '\n' && LS->current != EOZ);
+        /* else is a comment */
+        next(LS);
+        if (LS->current == '[' && (next(LS), LS->current == '['))
+          read_long_string(LS, NULL);  /* long comment */
+        else  /* short comment */
+          while (LS->current != '\n' && LS->current != EOZ)
+            next(LS);
         continue;
 
       case '[':
