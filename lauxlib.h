@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.60 2003/04/03 13:35:34 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.61 2003/10/02 20:31:17 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -39,6 +39,10 @@ LUALIB_API const char *luaL_optlstring (lua_State *L, int numArg,
 LUALIB_API lua_Number luaL_checknumber (lua_State *L, int numArg);
 LUALIB_API lua_Number luaL_optnumber (lua_State *L, int nArg, lua_Number def);
 
+LUALIB_API lua_Integer luaL_checkinteger (lua_State *L, int numArg);
+LUALIB_API lua_Integer luaL_optinteger (lua_State *L, int nArg,
+                                        lua_Integer def);
+
 LUALIB_API void luaL_checkstack (lua_State *L, int sz, const char *msg);
 LUALIB_API void luaL_checktype (lua_State *L, int narg, int t);
 LUALIB_API void luaL_checkany (lua_State *L, int narg);
@@ -76,10 +80,10 @@ LUALIB_API lua_State *(luaL_newstate) (void);
                                                luaL_argerror(L, numarg,extramsg)
 #define luaL_checkstring(L,n)	(luaL_checklstring(L, (n), NULL))
 #define luaL_optstring(L,n,d)	(luaL_optlstring(L, (n), (d), NULL))
-#define luaL_checkint(L,n)	((int)luaL_checknumber(L, n))
-#define luaL_checklong(L,n)	((long)luaL_checknumber(L, n))
-#define luaL_optint(L,n,d)	((int)luaL_optnumber(L, n,(lua_Number)(d)))
-#define luaL_optlong(L,n,d)	((long)luaL_optnumber(L, n,(lua_Number)(d)))
+#define luaL_checkint(L,n)	((int)luaL_checkinteger(L, n))
+#define luaL_optint(L,n,d)	((int)luaL_optinteger(L, n,d))
+#define luaL_checklong(L,n)	((long)luaL_checkinteger(L, n))
+#define luaL_optlong(L,n,d)	((long)luaL_optinteger(L, n,d))
 
 
 /*
@@ -127,19 +131,6 @@ LUALIB_API int   lua_dofile (lua_State *L, const char *filename);
 LUALIB_API int   lua_dostring (lua_State *L, const char *str);
 LUALIB_API int   lua_dobuffer (lua_State *L, const char *buff, size_t sz,
                                const char *n);
-
-
-#define luaL_check_lstr 	luaL_checklstring
-#define luaL_opt_lstr 	luaL_optlstring 
-#define luaL_check_number 	luaL_checknumber 
-#define luaL_opt_number	luaL_optnumber
-#define luaL_arg_check	luaL_argcheck
-#define luaL_check_string	luaL_checkstring
-#define luaL_opt_string	luaL_optstring
-#define luaL_check_int	luaL_checkint
-#define luaL_check_long	luaL_checklong
-#define luaL_opt_int	luaL_optint
-#define luaL_opt_long	luaL_optlong
 
 
 #endif

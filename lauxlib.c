@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.103 2003/10/01 16:50:53 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.104 2003/10/02 20:31:17 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -197,6 +197,21 @@ LUALIB_API lua_Number luaL_optnumber (lua_State *L, int narg, lua_Number def) {
 }
 
 
+LUALIB_API lua_Integer luaL_checkinteger (lua_State *L, int narg) {
+  lua_Integer d = lua_tointeger(L, narg);
+  if (d == 0 && !lua_isnumber(L, narg))  /* avoid extra test when d is not 0 */
+    tag_error(L, narg, LUA_TNUMBER);
+  return d;
+}
+
+
+LUALIB_API lua_Integer luaL_optinteger (lua_State *L, int narg,
+                                        lua_Integer def) {
+  if (lua_isnoneornil(L, narg)) return def;
+  else return luaL_checkinteger(L, narg);
+}
+
+
 LUALIB_API int luaL_getmetafield (lua_State *L, int obj, const char *event) {
   if (!lua_getmetatable(L, obj))  /* no metatable? */
     return 0;
@@ -257,7 +272,7 @@ LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
 */
 
 static int checkint (lua_State *L, int topop) {
-  int n = (int)lua_tonumber(L, -1);
+  int n = (int)lua_tointeger(L, -1);
   if (n == 0 && !lua_isnumber(L, -1)) n = -1;
   lua_pop(L, topop);
   return n;
@@ -286,13 +301,13 @@ void luaL_setn (lua_State *L, int t, int n) {
   lua_rawget(L, t);
   if (checkint(L, 1) >= 0) {  /* is there a numeric field `n'? */
     lua_pushliteral(L, "n");  /* use it */
-    lua_pushnumber(L, (lua_Number)n);
+    lua_pushinteger(L, n);
     lua_rawset(L, t);
   }
   else {  /* use `sizes' */
     getsizes(L);
     lua_pushvalue(L, t);
-    lua_pushnumber(L, (lua_Number)n);
+    lua_pushinteger(L, n);
     lua_rawset(L, -3);  /* sizes[t] = n */
     lua_pop(L, 1);  /* remove `sizes' */
   }
@@ -425,7 +440,7 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
     return LUA_REFNIL;  /* `nil' has a unique fixed reference */
   }
   lua_rawgeti(L, t, FREELIST_REF);  /* get first free element */
-  ref = (int)lua_tonumber(L, -1);  /* ref = t[FREELIST_REF] */
+  ref = (int)lua_tointeger(L, -1);  /* ref = t[FREELIST_REF] */
   lua_pop(L, 1);  /* remove it from stack */
   if (ref != 0) {  /* any free element? */
     lua_rawgeti(L, t, ref);  /* remove it from list */
@@ -448,7 +463,7 @@ LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
     t = abs_index(L, t);
     lua_rawgeti(L, t, FREELIST_REF);
     lua_rawseti(L, t, ref);  /* t[ref] = t[FREELIST_REF] */
-    lua_pushnumber(L, (lua_Number)ref);
+    lua_pushinteger(L, ref);
     lua_rawseti(L, t, FREELIST_REF);  /* t[FREELIST_REF] = ref */
   }
 }

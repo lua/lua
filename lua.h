@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.178 2003/07/07 13:30:57 roberto Exp roberto $
+** $Id: lua.h,v 1.179 2003/10/02 20:31:17 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -98,6 +98,14 @@ typedef LUA_NUMBER lua_Number;
 #endif
 
 
+/* type for integer functions */
+#ifndef LUA_INTEGER
+typedef long lua_Integer;
+#else
+typedef LUA_INTEGER lua_Integer;
+#endif
+
+
 /* mark for all API functions */
 #ifndef LUA_API
 #define LUA_API		extern
@@ -144,6 +152,7 @@ LUA_API int            lua_rawequal (lua_State *L, int idx1, int idx2);
 LUA_API int            lua_lessthan (lua_State *L, int idx1, int idx2);
 
 LUA_API lua_Number      lua_tonumber (lua_State *L, int idx);
+LUA_API lua_Integer     lua_tointeger (lua_State *L, int idx);
 LUA_API int             lua_toboolean (lua_State *L, int idx);
 LUA_API const char     *lua_tostring (lua_State *L, int idx);
 LUA_API size_t          lua_strlen (lua_State *L, int idx);
@@ -158,6 +167,7 @@ LUA_API const void     *lua_topointer (lua_State *L, int idx);
 */
 LUA_API void  lua_pushnil (lua_State *L);
 LUA_API void  lua_pushnumber (lua_State *L, lua_Number n);
+LUA_API void  lua_pushinteger (lua_State *L, lua_Integer n);
 LUA_API void  lua_pushlstring (lua_State *L, const char *s, size_t l);
 LUA_API void  lua_pushstring (lua_State *L, const char *s);
 LUA_API const char *lua_pushvfstring (lua_State *L, const char *fmt,

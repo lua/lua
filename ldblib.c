@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.80 2003/04/03 13:35:34 roberto Exp roberto $
+** $Id: ldblib.c,v 1.81 2003/07/07 13:37:08 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -27,7 +27,7 @@ static void settabss (lua_State *L, const char *i, const char *v) {
 
 static void settabsi (lua_State *L, const char *i, int v) {
   lua_pushstring(L, i);
-  lua_pushnumber(L, (lua_Number)v);
+  lua_pushinteger(L, v);
   lua_rawset(L, -3);
 }
 
@@ -50,7 +50,7 @@ static int getinfo (lua_State *L) {
   lua_State *L1 = getthread(L, &arg);
   const char *options = luaL_optstring(L, arg+2, "flnSu");
   if (lua_isnumber(L, arg+1)) {
-    if (!lua_getstack(L1, (int)(lua_tonumber(L, arg+1)), &ar)) {
+    if (!lua_getstack(L1, (int)lua_tointeger(L, arg+1), &ar)) {
       lua_pushnil(L);  /* level out of range */
       return 1;
     }
@@ -171,7 +171,7 @@ static void hookf (lua_State *L, lua_Debug *ar) {
   if (lua_isfunction(L, -1)) {
     lua_pushstring(L, hooknames[(int)ar->event]);
     if (ar->currentline >= 0)
-      lua_pushnumber(L, (lua_Number)ar->currentline);
+      lua_pushinteger(L, ar->currentline);
     else lua_pushnil(L);
     lua_assert(lua_getinfo(L, "lS", ar));
     lua_call(L, 2, 0);
@@ -251,7 +251,7 @@ static int gethook (lua_State *L) {
     lua_xmove(L1, L, 1);
   }
   lua_pushstring(L, unmakemask(mask, buff));
-  lua_pushnumber(L, (lua_Number)lua_gethookcount(L1));
+  lua_pushinteger(L, lua_gethookcount(L1));
   return 3;
 }
 

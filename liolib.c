@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.45 2003/07/09 12:08:43 roberto Exp roberto $
+** $Id: liolib.c,v 2.46 2003/08/25 19:49:47 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -76,7 +76,7 @@ static int pushresult (lua_State *L, int i, const char *filename) {
       lua_pushfstring(L, "%s: %s", filename, strerror(errno));
     else
       lua_pushfstring(L, "%s", strerror(errno));
-    lua_pushnumber(L, errno);
+    lua_pushinteger(L, errno);
     return 3;
   }
 }
@@ -346,7 +346,7 @@ static int g_read (lua_State *L, FILE *f, int first) {
     success = 1;
     for (n = first; nargs-- && success; n++) {
       if (lua_type(L, n) == LUA_TNUMBER) {
-        size_t l = (size_t)lua_tonumber(L, n);
+        size_t l = (size_t)lua_tointeger(L, n);
         success = (l == 0) ? test_eof(L, f) : read_chars(L, f, l);
       }
       else {
@@ -441,13 +441,13 @@ static int f_seek (lua_State *L) {
   static const char *const modenames[] = {"set", "cur", "end", NULL};
   FILE *f = tofile(L, 1);
   int op = luaL_findstring(luaL_optstring(L, 2, "cur"), modenames);
-  long offset = luaL_optlong(L, 3, 0);
+  lua_Integer offset = luaL_optinteger(L, 3, 0);
   luaL_argcheck(L, op != -1, 2, "invalid mode");
   op = fseek(f, offset, mode[op]);
   if (op)
     return pushresult(L, 0, NULL);  /* error */
   else {
-    lua_pushnumber(L, ftell(f));
+    lua_pushinteger(L, ftell(f));
     return 1;
   }
 }
@@ -528,7 +528,7 @@ static void createmeta (lua_State *L) {
 */
 
 static int io_execute (lua_State *L) {
-  lua_pushnumber(L, system(luaL_checkstring(L, 1)));
+  lua_pushinteger(L, system(luaL_checkstring(L, 1)));
   return 1;
 }
 
@@ -582,7 +582,7 @@ static int io_clock (lua_State *L) {
 
 static void setfield (lua_State *L, const char *key, int value) {
   lua_pushstring(L, key);
-  lua_pushnumber(L, value);
+  lua_pushinteger(L, value);
   lua_rawset(L, -3);
 }
 
@@ -607,9 +607,9 @@ static int getfield (lua_State *L, const char *key, int d) {
   lua_pushstring(L, key);
   lua_gettable(L, -2);
   if (lua_isnumber(L, -1))
-    res = (int)(lua_tonumber(L, -1));
+    res = (int)lua_tointeger(L, -1);
   else {
-    if (d == -2)
+    if (d < 0)
       return luaL_error(L, "field `%s' missing in date table", key);
     res = d;
   }
@@ -665,9 +665,9 @@ static int io_time (lua_State *L) {
     ts.tm_sec = getfield(L, "sec", 0);
     ts.tm_min = getfield(L, "min", 0);
     ts.tm_hour = getfield(L, "hour", 12);
-    ts.tm_mday = getfield(L, "day", -2);
-    ts.tm_mon = getfield(L, "month", -2) - 1;
-    ts.tm_year = getfield(L, "year", -2) - 1900;
+    ts.tm_mday = getfield(L, "day", -1);
+    ts.tm_mon = getfield(L, "month", -1) - 1;
+    ts.tm_year = getfield(L, "year", -1) - 1900;
     ts.tm_isdst = getboolfield(L, "isdst");
     t = mktime(&ts);
     if (t == (time_t)(-1))

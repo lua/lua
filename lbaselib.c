@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.132 2003/08/25 19:49:47 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.133 2003/08/27 21:02:08 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -187,8 +187,8 @@ static int luaB_rawset (lua_State *L) {
 
 
 static int luaB_gcinfo (lua_State *L) {
-  lua_pushnumber(L, (lua_Number)lua_getgccount(L));
-  lua_pushnumber(L, (lua_Number)lua_getgcthreshold(L));
+  lua_pushinteger(L, lua_getgccount(L));
+  lua_pushinteger(L, lua_getgcthreshold(L));
   return 2;
 }
 
@@ -229,19 +229,19 @@ static int luaB_pairs (lua_State *L) {
 
 
 static int luaB_ipairs (lua_State *L) {
-  lua_Number i = lua_tonumber(L, 2);
+  int i = (int)lua_tointeger(L, 2);
   luaL_checktype(L, 1, LUA_TTABLE);
   if (i == 0 && lua_isnone(L, 2)) {  /* `for' start? */
     lua_pushliteral(L, "ipairs");
     lua_rawget(L, LUA_GLOBALSINDEX);  /* return generator, */
     lua_pushvalue(L, 1);  /* state, */
-    lua_pushnumber(L, 0);  /* and initial value */
+    lua_pushinteger(L, 0);  /* and initial value */
     return 3;
   }
   else {  /* `for' step */
     i++;  /* next value */
-    lua_pushnumber(L, i);
-    lua_rawgeti(L, 1, (int)i);
+    lua_pushinteger(L, i);
+    lua_rawgeti(L, 1, i);
     return (lua_isnil(L, -1)) ? 0 : 2;
   }
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.163 2003/07/29 19:26:34 roberto Exp roberto $
+** $Id: ltests.c,v 1.164 2003/10/02 20:31:17 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -36,9 +36,6 @@
 #ifdef LUA_DEBUG
 
 
-#define lua_pushintegral(L,i)	lua_pushnumber(L, cast(lua_Number, (i)))
-
-
 static lua_State *lua_state = NULL;
 
 int islocked = 0;
@@ -49,7 +46,7 @@ int islocked = 0;
 
 static void setnameval (lua_State *L, const char *name, int val) {
   lua_pushstring(L, name);
-  lua_pushintegral(L, val);
+  lua_pushinteger(L, val);
   lua_settable(L, -3);
 }
 
@@ -196,7 +193,7 @@ static int listcode (lua_State *L) {
   setnameval(L, "numparams", p->numparams);
   for (pc=0; pc<p->sizecode; pc++) {
     char buff[100];
-    lua_pushintegral(L, pc+1);
+    lua_pushinteger(L, pc+1);
     lua_pushstring(L, buildop(p, pc, buff));
     lua_settable(L, -3);
   }
@@ -212,7 +209,7 @@ static int listk (lua_State *L) {
   p = clvalue(func_at(L, 1))->l.p;
   lua_newtable(L);
   for (i=0; i<p->sizek; i++) {
-    lua_pushintegral(L, i+1);
+    lua_pushinteger(L, i+1);
     luaA_pushobject(L, p->k+i);
     lua_settable(L, -3);
   }
@@ -257,9 +254,9 @@ static int setgcthreshold (lua_State *L) {
 
 static int mem_query (lua_State *L) {
   if (lua_isnone(L, 1)) {
-    lua_pushintegral(L, memcontrol.total);
-    lua_pushintegral(L, memcontrol.numblocks);
-    lua_pushintegral(L, memcontrol.maxmem);
+    lua_pushinteger(L, memcontrol.total);
+    lua_pushinteger(L, memcontrol.numblocks);
+    lua_pushinteger(L, memcontrol.maxmem);
     return 3;
   }
   else {
@@ -272,14 +269,14 @@ static int mem_query (lua_State *L) {
 static int hash_query (lua_State *L) {
   if (lua_isnone(L, 2)) {
     luaL_argcheck(L, lua_type(L, 1) == LUA_TSTRING, 1, "string expected");
-    lua_pushintegral(L, tsvalue(func_at(L, 1))->tsv.hash);
+    lua_pushinteger(L, tsvalue(func_at(L, 1))->tsv.hash);
   }
   else {
     TObject *o = func_at(L, 1);
     Table *t;
     luaL_checktype(L, 2, LUA_TTABLE);
     t = hvalue(func_at(L, 2));
-    lua_pushintegral(L, luaH_mainposition(t, o) - t->node);
+    lua_pushinteger(L, luaH_mainposition(t, o) - t->node);
   }
   return 1;
 }
@@ -287,11 +284,11 @@ static int hash_query (lua_State *L) {
 
 static int stacklevel (lua_State *L) {
   unsigned long a = 0;
-  lua_pushintegral(L, (int)(L->top - L->stack));
-  lua_pushintegral(L, (int)(L->stack_last - L->stack));
-  lua_pushintegral(L, (int)(L->ci - L->base_ci));
-  lua_pushintegral(L, (int)(L->end_ci - L->base_ci));
-  lua_pushintegral(L, (unsigned long)&a);
+  lua_pushinteger(L, (L->top - L->stack));
+  lua_pushinteger(L, (L->stack_last - L->stack));
+  lua_pushinteger(L, (L->ci - L->base_ci));
+  lua_pushinteger(L, (L->end_ci - L->base_ci));
+  lua_pushinteger(L, (unsigned long)&a);
   return 5;
 }
 
@@ -302,12 +299,12 @@ static int table_query (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
   t = hvalue(func_at(L, 1));
   if (i == -1) {
-    lua_pushintegral(L, t->sizearray);
-    lua_pushintegral(L, sizenode(t));
-    lua_pushintegral(L, t->firstfree - t->node);
+    lua_pushinteger(L, t->sizearray);
+    lua_pushinteger(L, sizenode(t));
+    lua_pushinteger(L, t->firstfree - t->node);
   }
   else if (i < t->sizearray) {
-    lua_pushintegral(L, i);
+    lua_pushinteger(L, i);
     luaA_pushobject(L, &t->array[i]);
     lua_pushnil(L); 
   }
@@ -321,7 +318,7 @@ static int table_query (lua_State *L) {
       lua_pushliteral(L, "<undef>");
     luaA_pushobject(L, gval(gnode(t, i)));
     if (t->node[i].next)
-      lua_pushintegral(L, t->node[i].next - t->node);
+      lua_pushinteger(L, t->node[i].next - t->node);
     else
       lua_pushnil(L);
   }
@@ -333,8 +330,8 @@ static int string_query (lua_State *L) {
   stringtable *tb = &G(L)->strt;
   int s = luaL_optint(L, 2, 0) - 1;
   if (s==-1) {
-    lua_pushintegral(L ,tb->nuse);
-    lua_pushintegral(L ,tb->size);
+    lua_pushinteger(L ,tb->nuse);
+    lua_pushinteger(L ,tb->size);
     return 2;
   }
   else if (s < tb->size) {
@@ -356,7 +353,7 @@ static int tref (lua_State *L) {
   int lock = luaL_optint(L, 2, 1);
   luaL_checkany(L, 1);
   lua_pushvalue(L, 1);
-  lua_pushintegral(L, lua_ref(L, lock));
+  lua_pushinteger(L, lua_ref(L, lock));
   assert(lua_gettop(L) == level+1);  /* +1 for result */
   return 1;
 }
@@ -422,7 +419,7 @@ static int pushuserdata (lua_State *L) {
 
 
 static int udataval (lua_State *L) {
-  lua_pushintegral(L, cast(int, lua_touserdata(L, 1)));
+  lua_pushinteger(L, cast(long, lua_touserdata(L, 1)));
   return 1;
 }
 
@@ -434,7 +431,7 @@ static int doonnewstack (lua_State *L) {
   int status = luaL_loadbuffer(L1, s, l, s);
   if (status == 0)
     status = lua_pcall(L1, 0, 0, 0);
-  lua_pushintegral(L, status);
+  lua_pushinteger(L, status);
   return 1;
 }
 
@@ -455,7 +452,7 @@ static int newstate (lua_State *L) {
   lua_State *L1 = lua_open();
   if (L1) {
     lua_userstateopen(L1);  /* init lock */
-    lua_pushintegral(L, (unsigned long)L1);
+    lua_pushinteger(L, (unsigned long)L1);
   }
   else
     lua_pushnil(L);
@@ -498,7 +495,7 @@ static int doremote (lua_State *L) {
     status = lua_pcall(L1, 0, LUA_MULTRET, 0);
   if (status != 0) {
     lua_pushnil(L);
-    lua_pushintegral(L, status);
+    lua_pushinteger(L, status);
     lua_pushstring(L, lua_tostring(L1, -1));
     return 3;
   }
@@ -513,14 +510,14 @@ static int doremote (lua_State *L) {
 
 
 static int log2_aux (lua_State *L) {
-  lua_pushintegral(L, luaO_log2(luaL_checkint(L, 1)));
+  lua_pushinteger(L, luaO_log2(luaL_checkint(L, 1)));
   return 1;
 }
 
 static int int2fb_aux (lua_State *L) {
   int b = luaO_int2fb(luaL_checkint(L, 1));
-  lua_pushintegral(L, b);
-  lua_pushintegral(L, fb2int(b));
+  lua_pushinteger(L, b);
+  lua_pushinteger(L, fb2int(b));
   return 2;
 }
 
@@ -590,31 +587,31 @@ static int testC (lua_State *L) {
     const char *inst = getname;
     if EQ("") return 0;
     else if EQ("isnumber") {
-      lua_pushintegral(L, lua_isnumber(L, getnum));
+      lua_pushinteger(L, lua_isnumber(L, getnum));
     }
     else if EQ("isstring") {
-      lua_pushintegral(L, lua_isstring(L, getnum));
+      lua_pushinteger(L, lua_isstring(L, getnum));
     }
     else if EQ("istable") {
-      lua_pushintegral(L, lua_istable(L, getnum));
+      lua_pushinteger(L, lua_istable(L, getnum));
     }
     else if EQ("iscfunction") {
-      lua_pushintegral(L, lua_iscfunction(L, getnum));
+      lua_pushinteger(L, lua_iscfunction(L, getnum));
     }
     else if EQ("isfunction") {
-      lua_pushintegral(L, lua_isfunction(L, getnum));
+      lua_pushinteger(L, lua_isfunction(L, getnum));
     }
     else if EQ("isuserdata") {
-      lua_pushintegral(L, lua_isuserdata(L, getnum));
+      lua_pushinteger(L, lua_isuserdata(L, getnum));
     }
     else if EQ("isudataval") {
-      lua_pushintegral(L, lua_islightuserdata(L, getnum));
+      lua_pushinteger(L, lua_islightuserdata(L, getnum));
     }
     else if EQ("isnil") {
-      lua_pushintegral(L, lua_isnil(L, getnum));
+      lua_pushinteger(L, lua_isnil(L, getnum));
     }
     else if EQ("isnull") {
-      lua_pushintegral(L, lua_isnone(L, getnum));
+      lua_pushinteger(L, lua_isnone(L, getnum));
     }
     else if EQ("tonumber") {
       lua_pushnumber(L, lua_tonumber(L, getnum));
@@ -624,7 +621,7 @@ static int testC (lua_State *L) {
       lua_pushstring(L, s);
     }
     else if EQ("strlen") {
-      lua_pushintegral(L, lua_strlen(L, getnum));
+      lua_pushinteger(L, lua_strlen(L, getnum));
     }
     else if EQ("tocfunction") {
       lua_pushcfunction(L, lua_tocfunction(L, getnum));
@@ -633,7 +630,7 @@ static int testC (lua_State *L) {
       return getnum;
     }
     else if EQ("gettop") {
-      lua_pushintegral(L, lua_gettop(L));
+      lua_pushinteger(L, lua_gettop(L));
     }
     else if EQ("settop") {
       lua_settop(L, getnum);
@@ -642,7 +639,7 @@ static int testC (lua_State *L) {
       lua_pop(L, getnum);
     }
     else if EQ("pushnum") {
-      lua_pushintegral(L, getnum);
+      lua_pushinteger(L, getnum);
     }
     else if EQ("pushnil") {
       lua_pushnil(L);
@@ -651,7 +648,7 @@ static int testC (lua_State *L) {
       lua_pushboolean(L, getnum);
     }
     else if EQ("tobool") {
-      lua_pushintegral(L, lua_toboolean(L, getnum));
+      lua_pushinteger(L, lua_toboolean(L, getnum));
     }
     else if EQ("pushvalue") {
       lua_pushvalue(L, getnum);
@@ -718,7 +715,7 @@ static int testC (lua_State *L) {
     }
     else if EQ("getn") {
       int i = getnum;
-      lua_pushintegral(L, luaL_getn(L, i));
+      lua_pushinteger(L, luaL_getn(L, i));
     }
     else if EQ("setn") {
       int i = getnum;

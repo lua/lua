@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.243 2003/08/25 20:00:50 roberto Exp roberto $
+** $Id: lapi.c,v 1.244 2003/08/27 21:01:44 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -25,6 +25,12 @@
 #include "ltm.h"
 #include "lundump.h"
 #include "lvm.h"
+
+
+/* function to convert a lua_Number to lua_Integer (with any rounding method) */
+#ifndef lua_number2integer
+#define lua_number2integer(i,n)     ((i)=(lua_Integer)(n))
+#endif
 
 
 const char lua_ident[] =
@@ -289,6 +295,19 @@ LUA_API lua_Number lua_tonumber (lua_State *L, int idx) {
 }
 
 
+LUA_API lua_Integer lua_tointeger (lua_State *L, int idx) {
+  TObject n;
+  const TObject *o = luaA_index(L, idx);
+  if (tonumber(o, &n)) {
+    lua_Integer res;
+    lua_number2integer(res, nvalue(o));
+    return res;
+  }
+  else
+    return 0;
+}
+
+
 LUA_API int lua_toboolean (lua_State *L, int idx) {
   const TObject *o = luaA_index(L, idx);
   return !l_isfalse(o);
@@ -377,6 +396,14 @@ LUA_API void lua_pushnil (lua_State *L) {
 LUA_API void lua_pushnumber (lua_State *L, lua_Number n) {
   lua_lock(L);
   setnvalue(L->top, n);
+  api_incr_top(L);
+  lua_unlock(L);
+}
+
+
+LUA_API void lua_pushinteger (lua_State *L, lua_Integer n) {
+  lua_lock(L);
+  setnvalue(L->top, cast(lua_Number, n));
   api_incr_top(L);
   lua_unlock(L);
 }
