@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.50 1999/12/23 18:19:57 roberto Exp roberto $
+** $Id: lparser.c,v 1.51 1999/12/29 16:31:15 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -1455,9 +1455,10 @@ static void body (LexState *ls, int needself, int line) {
 
 static void ret (LexState *ls) {
   /* ret -> [RETURN explist sc] */
-  if (optional(ls, RETURN)) {
+  if (ls->token == RETURN) {
     listdesc e;
     check_debugline(ls);
+    next(ls);
     explist(ls, &e); 
     if (e.pc > 0) {  /* expression is an open function call? */
       Byte *code = ls->fs->f->code;
