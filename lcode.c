@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.4 2004/06/29 18:49:02 roberto Exp roberto $
+** $Id: lcode.c,v 2.5 2004/07/16 13:30:53 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -223,7 +223,7 @@ static int addk (FuncState *fs, TValue *k, TValue *v) {
                     MAXARG_Bx, "constant table overflow");
     while (oldsize < f->sizek) setnilvalue(&f->k[oldsize++]);
     setobj(L, &f->k[fs->nk], v);
-    luaC_barrier(L, f, v);
+    luaC_barriert(L, f, v);
     return fs->nk++;
   }
 }
