@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.11 1999/10/14 19:13:31 roberto Exp roberto $
+** $Id: lstring.h,v 1.12 1999/11/04 17:22:26 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -14,7 +14,7 @@
 
 #define NUM_HASHSTR     31  /* a prime not in array `dimensions' */
 #define NUM_HASHUDATA   31  /* idem */
-#define NUM_HASHS  (NUM_HASHSTR+NUM_HASHUDATA)
+#define NUM_HASHS (NUM_HASHSTR+NUM_HASHUDATA)
 
 
 /*
@@ -25,17 +25,17 @@
 #define RESERVEDMARK	3
 
 
-void luaS_init (void);
-void luaS_grow (stringtable *tb);
-TaggedString *luaS_createudata (void *udata, int tag);
-void luaS_freeall (void);
-void luaS_free (TaggedString *ts);
-TaggedString *luaS_newlstr (const char *str, long l);
-TaggedString *luaS_new (const char *str);
-TaggedString *luaS_newfixedstring (const char *str);
-GlobalVar *luaS_assertglobal (TaggedString *ts);
-GlobalVar *luaS_assertglobalbyname (const char *name);
-int luaS_globaldefined (const char *name);
+void luaS_init (lua_State *L);
+void luaS_grow (lua_State *L, stringtable *tb);
+TaggedString *luaS_createudata (lua_State *L, void *udata, int tag);
+void luaS_freeall (lua_State *L);
+void luaS_free (lua_State *L, TaggedString *ts);
+TaggedString *luaS_newlstr (lua_State *L, const char *str, long l);
+TaggedString *luaS_new (lua_State *L, const char *str);
+TaggedString *luaS_newfixedstring (lua_State *L, const char *str);
+GlobalVar *luaS_assertglobal (lua_State *L, TaggedString *ts);
+GlobalVar *luaS_assertglobalbyname (lua_State *L, const char *name);
+int luaS_globaldefined (lua_State *L, const char *name);
 
 
 #endif

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.21 1999/11/04 17:22:26 roberto Exp roberto $
+** $Id: lstate.h,v 1.22 1999/11/10 15:39:35 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -79,7 +79,7 @@ struct lua_State {
 };
 
 
-#define L	lua_state
+
 
 
 #endif

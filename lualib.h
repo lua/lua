@@ -1,5 +1,5 @@
 /*
-** $Id: lualib.h,v 1.6 1999/05/05 19:23:11 roberto Exp roberto $
+** $Id: lualib.h,v 1.7 1999/08/16 20:52:00 roberto Exp roberto $
 ** Lua standard libraries
 ** See Copyright Notice in lua.h
 */
@@ -10,27 +10,36 @@
 
 #include "lua.h"
 
-void lua_iolibopen   (void);
-void lua_strlibopen  (void);
-void lua_mathlibopen (void);
-void lua_dblibopen   (void);
+void lua_iolibopen (lua_State *L);
+void lua_strlibopen (lua_State *L);
+void lua_mathlibopen (lua_State *L);
+void lua_dblibopen (lua_State *L);
 
 
-void lua_userinit (void);
+void lua_userinit (lua_State *L);
 
 
-/* To keep compatibility with old versions */
+/* 
+** ===============================================================
+** Macros for single-state use
+** ===============================================================
+*/
 
-#define iolib_open	lua_iolibopen
-#define strlib_open	lua_strlibopen
-#define mathlib_open	lua_mathlibopen
+#ifndef LUA_REENTRANT
+
+#define lua_iolibopen()		(lua_iolibopen)(lua_state)
+#define lua_strlibopen()	(lua_strlibopen)(lua_state)
+#define lua_mathlibopen()	(lua_mathlibopen)(lua_state)
+#define lua_dblibopen()		(lua_dblibopen)(lua_state)
+#define lua_userinit()		(lua_userinit)(lua_state)
+
+#endif
 
 
 
 /* Auxiliary functions (private) */
 
-const char *luaI_classend (const char *p);
+const char *luaI_classend (lua_State *L, const char *p);
 int luaI_singlematch (int c, const char *p, const char *ep);
 
 #endif
-

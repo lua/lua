@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.35 1999/11/04 17:22:26 roberto Exp roberto $
+** $Id: lobject.h,v 1.36 1999/11/10 15:39:35 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -18,11 +18,11 @@
 #undef NDEBUG
 #endif
 #include <assert.h>
-#define LUA_INTERNALERROR(s)	assert(0)
-#define LUA_ASSERT(c,s)		assert(c)
+#define LUA_INTERNALERROR(L,s)	assert(0)
+#define LUA_ASSERT(L,c,s)	assert(c)
 #else
-#define LUA_INTERNALERROR(s)	/* empty */
-#define LUA_ASSERT(c,s)		/* empty */
+#define LUA_INTERNALERROR(L,s)	/* empty */
+#define LUA_ASSERT(L,c,s)		/* empty */
 #endif
 
 
@@ -41,11 +41,11 @@ typedef LUA_NUM_TYPE real;
 typedef unsigned char  Byte;  /* unsigned 8 bits */
 
 
-#define MAX_INT   (INT_MAX-2)  /* maximum value of an int (-2 for safety) */
+#define MAX_INT (INT_MAX-2)  /* maximum value of an int (-2 for safety) */
 
 
 /* convertion of pointer to int (for hashing only) */
-#define IntPoint(p)	((unsigned int)(p))
+#define IntPoint(L, p)	((unsigned int)(p))
 
 
 /*
@@ -53,7 +53,7 @@ typedef unsigned char  Byte;  /* unsigned 8 bits */
 ** objects count 1, and each 32 bytes of `raw' memory count 1; we add
 ** 2 to the total as a minimum (and also to count the overhead of malloc)
 */
-#define numblocks(o,b)	((o)+(b)/32+2)
+#define numblocks(L, o,b)	((o)+(b)/32+2)
 
 
 /*
@@ -195,7 +195,7 @@ typedef struct Hash {
 extern const char *const luaO_typenames[];
 
 
-#define luaO_typename(o)        luaO_typenames[-ttype(o)]
+#define luaO_typename(L, o)        luaO_typenames[-ttype(o)]
 
 
 extern const TObject luaO_nilobject;
@@ -204,7 +204,7 @@ extern const TObject luaO_nilobject;
 #define luaO_equalObj(t1,t2)	((ttype(t1) != ttype(t2)) ? 0 \
                                       : luaO_equalval(t1,t2))
 int luaO_equalval (const TObject *t1, const TObject *t2);
-int luaO_redimension (int oldsize);
+int luaO_redimension (lua_State *L, int oldsize);
 int luaO_str2d (const char *s, real *result);
 
 #ifdef OLD_ANSI

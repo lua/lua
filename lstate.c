@@ -1,9 +1,11 @@
 /*
-** $Id: lstate.c,v 1.15 1999/10/14 17:53:35 roberto Exp roberto $
+** $Id: lstate.c,v 1.16 1999/11/10 15:39:35 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
 
+
+#define LUA_REENTRANT
 
 #include "lbuiltin.h"
 #include "ldo.h"
@@ -19,9 +21,8 @@
 lua_State *lua_state = NULL;
 
 
-void lua_open (void) {
-  if (lua_state) return;
-  lua_state = luaM_new(lua_State);
+lua_State *lua_newstate (void) {
+  lua_State *L = luaM_new(NULL, lua_State);
   L->Cstack.base = 0;
   L->Cstack.lua2C = 0;
   L->Cstack.num = 0;
@@ -45,31 +46,32 @@ void lua_open (void) {
   L->refFree = NONEXT;
   L->nblocks = 0;
   L->GCthreshold = MAX_INT;  /* to avoid GC during pre-definitions */
-  luaD_init();
-  luaS_init();
-  luaX_init();
-  luaT_init();
-  luaB_predefine();
+  luaD_init(L);
+  luaS_init(L);
+  luaX_init(L);
+  luaT_init(L);
+  luaB_predefine(L);
+  return L;
   L->GCthreshold = L->nblocks*4;
 }
 
 
-void lua_close (void) {
-  luaC_collect(1);  /* collect all elements */
-  LUA_ASSERT(L->rootproto == NULL, "list should be empty");
-  LUA_ASSERT(L->rootcl == NULL, "list should be empty");
-  LUA_ASSERT(L->rootglobal == NULL, "list should be empty");
-  LUA_ASSERT(L->roottable == NULL, "list should be empty");
-  luaS_freeall();
-  luaM_free(L->stack.stack);
-  luaM_free(L->IMtable);
-  luaM_free(L->refArray);
-  luaM_free(L->Mbuffer);
-  luaM_free(L->Cblocks);
-  LUA_ASSERT(L->nblocks == 0, "wrong count for nblocks");
-  luaM_free(L);
-  LUA_ASSERT(numblocks == 0, "memory leak!");
-  LUA_ASSERT(totalmem == 0,"memory leak!");
+void lua_close (lua_State *L) {
+  luaC_collect(L, 1);  /* collect all elements */
+  LUA_ASSERT(L, L->rootproto == NULL, "list should be empty");
+  LUA_ASSERT(L, L->rootcl == NULL, "list should be empty");
+  LUA_ASSERT(L, L->rootglobal == NULL, "list should be empty");
+  LUA_ASSERT(L, L->roottable == NULL, "list should be empty");
+  luaS_freeall(L);
+  luaM_free(L, L->stack.stack);
+  luaM_free(L, L->IMtable);
+  luaM_free(L, L->refArray);
+  luaM_free(L, L->Mbuffer);
+  luaM_free(L, L->Cblocks);
+  LUA_ASSERT(L, L->nblocks == 0, "wrong count for nblocks");
+  luaM_free(L, L);
+  LUA_ASSERT(L, numblocks == 0, "memory leak!");
+  LUA_ASSERT(L, totalmem == 0,"memory leak!");
   L = NULL;
 }
 

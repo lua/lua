@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.25 1999/11/12 13:54:44 roberto Exp roberto $
+** $Id: lua.c,v 1.26 1999/11/16 12:50:48 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -21,7 +21,6 @@
 static int isatty (int x) { return x==0; }  /* assume stdin is a tty */
 #endif
 
-
 typedef void (*handler)(int);  /* type for signal actions */
 
 static void laction (int i);
@@ -37,8 +36,8 @@ static handler lreset (void) {
 
 
 static void lstop (void) {
-  lua_setlinehook(old_linehook);
-  lua_setcallhook(old_callhook);
+  lua_setlinehook(lua_state, old_linehook);
+  lua_setcallhook(lua_state, old_callhook);
   lreset();
   lua_error("interrupted!");
 }
@@ -48,15 +47,15 @@ static void laction (int i) {
   (void)i;  /* to avoid warnings */
   signal(SIGINT, SIG_DFL); /* if another SIGINT happens before lstop,
                               terminate process (default action) */
-  old_linehook = lua_setlinehook((lua_LHFunction)lstop);
-  old_callhook = lua_setcallhook((lua_CHFunction)lstop);
+  old_linehook = lua_setlinehook(lua_state, (lua_LHFunction)lstop);
+  old_callhook = lua_setcallhook(lua_state, (lua_CHFunction)lstop);
 }
 
 
-static int ldo (int (*f)(const char *), const char *name) {
+static int ldo (int (*f)(lua_State *L, const char *), const char *name) {
   int res;
   handler h = lreset();
-  res = f(name);  /* dostring | dofile */
+  res = f(lua_state, name);  /* dostring | dofile */
   signal(SIGINT, h);  /* restore old action */
   return res;
 }
@@ -172,7 +171,7 @@ int main (int argc, char *argv[]) {
           manual_input(0);
           break;
         case 'd':
-          lua_setdebug(1);
+          lua_setdebug(lua_state, 1);
           break;
         case 'v':
           printf("%s  %s\n(written by %s)\n",

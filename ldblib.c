@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.5 1999/03/04 21:17:26 roberto Exp roberto $
+** $Id: ldblib.c,v 1.6 1999/08/16 20:52:00 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define LUA_REENTRANT
+
 #include "lauxlib.h"
 #include "lua.h"
 #include "luadebug.h"
@@ -15,129 +17,129 @@
 
 
 
-static void settabss (lua_Object t, const char *i, const char *v) {
-  lua_pushobject(t);
-  lua_pushstring(i);
-  lua_pushstring(v);
-  lua_settable();
+static void settabss (lua_State *L, lua_Object t, const char *i, const char *v) {
+  lua_pushobject(L, t);
+  lua_pushstring(L, i);
+  lua_pushstring(L, v);
+  lua_settable(L);
 }
 
 
-static void settabsi (lua_Object t, const char *i, int v) {
-  lua_pushobject(t);
-  lua_pushstring(i);
-  lua_pushnumber(v);
-  lua_settable();
+static void settabsi (lua_State *L, lua_Object t, const char *i, int v) {
+  lua_pushobject(L, t);
+  lua_pushstring(L, i);
+  lua_pushnumber(L, v);
+  lua_settable(L);
 }
 
 
-static lua_Object getfuncinfo (lua_Object func) {
-  lua_Object result = lua_createtable();
+static lua_Object getfuncinfo (lua_State *L, lua_Object func) {
+  lua_Object result = lua_createtable(L);
   const char *str;
   int line;
-  lua_funcinfo(func, &str, &line);
+  lua_funcinfo(L, func, &str, &line);
   if (line == -1)  /* C function? */
-    settabss(result, "kind", "C");
+    settabss(L, result, "kind", "C");
   else if (line == 0) {  /* "main"? */
-      settabss(result, "kind", "chunk");
-      settabss(result, "source", str);
+      settabss(L, result, "kind", "chunk");
+      settabss(L, result, "source", str);
     }
   else {  /* Lua function */
-    settabss(result, "kind", "Lua");
-    settabsi(result, "def_line", line);
-    settabss(result, "source", str);
+    settabss(L, result, "kind", "Lua");
+    settabsi(L, result, "def_line", line);
+    settabss(L, result, "source", str);
   }
   if (line != 0) {  /* is it not a "main"? */
-    const char *kind = lua_getobjname(func, &str);
+    const char *kind = lua_getobjname(L, func, &str);
     if (*kind) {
-      settabss(result, "name", str);
-      settabss(result, "where", kind);
+      settabss(L, result, "name", str);
+      settabss(L, result, "where", kind);
     }
   }
   return result;
 }
 
 
-static void getstack (void) {
-  lua_Object func = lua_stackedfunction(luaL_check_int(1));
+static void getstack (lua_State *L) {
+  lua_Object func = lua_stackedfunction(L, luaL_check_int(L, 1));
   if (func == LUA_NOOBJECT)  /* level out of range? */
     return;
   else {
-    lua_Object result = getfuncinfo(func);
-    int currline = lua_currentline(func);
+    lua_Object result = getfuncinfo(L, func);
+    int currline = lua_currentline(L, func);
     if (currline > 0)
-      settabsi(result, "current", currline);
-    lua_pushobject(result);
-    lua_pushstring("func");
-    lua_pushobject(func);
-    lua_settable();  /* result.func = func */
-    lua_pushobject(result);
+      settabsi(L, result, "current", currline);
+    lua_pushobject(L, result);
+    lua_pushstring(L, "func");
+    lua_pushobject(L, func);
+    lua_settable(L);  /* result.func = func */
+    lua_pushobject(L, result);
   }
 }
 
 
-static void funcinfo (void) {
-  lua_pushobject(getfuncinfo(luaL_functionarg(1)));
+static void funcinfo (lua_State *L) {
+  lua_pushobject(L, getfuncinfo(L, luaL_functionarg(L, 1)));
 }
 
 
-static int findlocal (lua_Object func, int arg) {
-  lua_Object v = lua_getparam(arg);
-  if (lua_isnumber(v))
-    return (int)lua_getnumber(v);
+static int findlocal (lua_State *L, lua_Object func, int arg) {
+  lua_Object v = lua_getparam(L, arg);
+  if (lua_isnumber(L, v))
+    return (int)lua_getnumber(L, v);
   else {
-    const char *name = luaL_check_string(arg);
+    const char *name = luaL_check_string(L, arg);
     int i = 0;
     int result = -1;
     const char *vname;
-    while (lua_getlocal(func, ++i, &vname) != LUA_NOOBJECT) {
+    while (lua_getlocal(L, func, ++i, &vname) != LUA_NOOBJECT) {
       if (strcmp(name, vname) == 0)
         result = i;  /* keep looping to get the last var with this name */
     }
     if (result == -1)
-      luaL_verror("no local variable `%.50s' at given level", name);
+      luaL_verror(L, "no local variable `%.50s' at given level", name);
     return result;
   }
 }
 
 
-static void getlocal (void) {
-  lua_Object func = lua_stackedfunction(luaL_check_int(1));
+static void getlocal (lua_State *L) {
+  lua_Object func = lua_stackedfunction(L, luaL_check_int(L, 1));
   lua_Object val;
   const char *name;
   if (func == LUA_NOOBJECT)  /* level out of range? */
     return;  /* return nil */
-  else if (lua_getparam(2) != LUA_NOOBJECT) {  /* 2nd argument? */
-    if ((val = lua_getlocal(func, findlocal(func, 2), &name)) != LUA_NOOBJECT) {
-      lua_pushobject(val);
-      lua_pushstring(name);
+  else if (lua_getparam(L, 2) != LUA_NOOBJECT) {  /* 2nd argument? */
+    if ((val = lua_getlocal(L, func, findlocal(L, func, 2), &name)) != LUA_NOOBJECT) {
+      lua_pushobject(L, val);
+      lua_pushstring(L, name);
     }
     /* else return nil */
   }
   else {  /* collect all locals in a table */
-    lua_Object result = lua_createtable();
+    lua_Object result = lua_createtable(L);
     int i;
     for (i=1; ;i++) {
-      if ((val = lua_getlocal(func, i, &name)) == LUA_NOOBJECT)
+      if ((val = lua_getlocal(L, func, i, &name)) == LUA_NOOBJECT)
         break;
-      lua_pushobject(result);
-      lua_pushstring(name);
-      lua_pushobject(val);
-      lua_settable();  /* result[name] = value */
+      lua_pushobject(L, result);
+      lua_pushstring(L, name);
+      lua_pushobject(L, val);
+      lua_settable(L);  /* result[name] = value */
     }
-    lua_pushobject(result);
+    lua_pushobject(L, result);
   }
 }
 
 
-static void setlocal (void) {
-  lua_Object func = lua_stackedfunction(luaL_check_int(1));
+static void setlocal (lua_State *L) {
+  lua_Object func = lua_stackedfunction(L, luaL_check_int(L, 1));
   int numvar;
-  luaL_arg_check(func != LUA_NOOBJECT, 1, "level out of range");
-  numvar = findlocal(func, 2);
-  lua_pushobject(luaL_nonnullarg(3));
-  if (!lua_setlocal(func, numvar))
-    lua_error("no such local variable");
+  luaL_arg_check(L, func != LUA_NOOBJECT, 1, "level out of range");
+  numvar = findlocal(L, func, 2);
+  lua_pushobject(L, luaL_nonnullarg(L, 3));
+  if (!lua_setlocal(L, func, numvar))
+    lua_error(L, "no such local variable");
 }
 
 
@@ -146,57 +148,57 @@ static int linehook = -1;  /* Lua reference to line hook function */
 static int callhook = -1;  /* Lua reference to call hook function */
 
 
-static void dohook (int ref) {
-  lua_LHFunction oldlinehook = lua_setlinehook(NULL);
-  lua_CHFunction oldcallhook = lua_setcallhook(NULL);
-  lua_callfunction(lua_getref(ref));
-  lua_setlinehook(oldlinehook);
-  lua_setcallhook(oldcallhook);
+static void dohook (lua_State *L, int ref) {
+  lua_LHFunction oldlinehook = lua_setlinehook(L, NULL);
+  lua_CHFunction oldcallhook = lua_setcallhook(L, NULL);
+  lua_callfunction(L, lua_getref(L, ref));
+  lua_setlinehook(L, oldlinehook);
+  lua_setcallhook(L, oldcallhook);
 }
 
 
-static void linef (int line) {
-  lua_pushnumber(line);
-  dohook(linehook);
+static void linef (lua_State *L, int line) {
+  lua_pushnumber(L, line);
+  dohook(L, linehook);
 }
 
 
-static void callf (lua_Function func, const char *file, int line) {
+static void callf (lua_State *L, lua_Function func, const char *file, int line) {
   if (func != LUA_NOOBJECT) {
-    lua_pushobject(func);
-    lua_pushstring(file);
-    lua_pushnumber(line);
+    lua_pushobject(L, func);
+    lua_pushstring(L, file);
+    lua_pushnumber(L, line);
   }
-  dohook(callhook);
+  dohook(L, callhook);
 }
 
 
-static void setcallhook (void) {
-  lua_Object f = lua_getparam(1);
-  lua_unref(callhook);
+static void setcallhook (lua_State *L) {
+  lua_Object f = lua_getparam(L, 1);
+  lua_unref(L, callhook);
   if (f == LUA_NOOBJECT) {
     callhook = -1;
-    lua_setcallhook(NULL);
+    lua_setcallhook(L, NULL);
   }
   else {
-    lua_pushobject(f);
-    callhook = lua_ref(1);
-    lua_setcallhook(callf);
+    lua_pushobject(L, f);
+    callhook = lua_ref(L, 1);
+    lua_setcallhook(L, callf);
   }
 }
 
 
-static void setlinehook (void) {
-  lua_Object f = lua_getparam(1);
-  lua_unref(linehook);
+static void setlinehook (lua_State *L) {
+  lua_Object f = lua_getparam(L, 1);
+  lua_unref(L, linehook);
   if (f == LUA_NOOBJECT) {
     linehook = -1;
-    lua_setlinehook(NULL);
+    lua_setlinehook(L, NULL);
   }
   else {
-    lua_pushobject(f);
-    linehook = lua_ref(1);
-    lua_setlinehook(linef);
+    lua_pushobject(L, f);
+    linehook = lua_ref(L, 1);
+    lua_setlinehook(L, linef);
   }
 }
 
@@ -211,7 +213,7 @@ static const struct luaL_reg dblib[] = {
 };
 
 
-void lua_dblibopen (void) {
-  luaL_openlib(dblib, (sizeof(dblib)/sizeof(dblib[0])));
+void lua_dblibopen (lua_State *L) {
+  luaL_openlib(L, dblib, (sizeof(dblib)/sizeof(dblib[0])));
 }
 

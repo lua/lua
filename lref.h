@@ -1,5 +1,5 @@
 /*
-** $Id: lref.h,v 1.1 1999/10/04 17:50:24 roberto Exp roberto $
+** $Id: lref.h,v 1.2 1999/11/10 15:37:50 roberto Exp roberto $
 ** REF mechanism
 ** See Copyright Notice in lua.h
 */
@@ -22,9 +22,9 @@ struct ref {
 };
 
 
-int luaR_ref (const TObject *o, int lock);
-const TObject *luaR_getref (int ref);
-void luaR_invalidaterefs (void);
+int luaR_ref (lua_State *L, const TObject *o, int lock);
+const TObject *luaR_getref (lua_State *L, int ref);
+void luaR_invalidaterefs (lua_State *L);
 
 
 #endif

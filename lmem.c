@@ -1,11 +1,13 @@
 /*
-** $Id: lmem.c,v 1.18 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: lmem.c,v 1.19 1999/10/19 13:33:22 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
 
 
 #include <stdlib.h>
+
+#define LUA_REENTRANT
 
 #include "lmem.h"
 #include "lstate.h"
@@ -34,15 +36,15 @@ static unsigned long power2 (unsigned long n) {
 }
 
 
-void *luaM_growaux (void *block, unsigned long nelems, int inc, int size,
+void *luaM_growaux (lua_State *L, void *block, unsigned long nelems, int inc, int size,
                        const char *errormsg, unsigned long limit) {
   unsigned long newn = nelems+inc;
-  if (newn >= limit) lua_error(errormsg);
+  if (newn >= limit) lua_error(L, errormsg);
   if ((newn ^ nelems) <= nelems ||  /* still the same power of 2 limit? */
        (nelems > 0 && newn < MINSIZE))  /* or block already is MINSIZE? */
       return block;  /* do not need to reallocate */
   else  /* it crossed a power of 2 boundary; grow to next power */
-    return luaM_realloc(block, power2(newn)*size);
+    return luaM_realloc(L, block, power2(newn)*size);
 }
 
 
@@ -51,17 +53,17 @@ void *luaM_growaux (void *block, unsigned long nelems, int inc, int size,
 /*
 ** generic allocation routine.
 */
-void *luaM_realloc (void *block, unsigned long size) {
+void *luaM_realloc (lua_State *L, void *block, unsigned long size) {
   size_t s = (size_t)size;
   if (s != size)
-    lua_error("memory allocation error: block too big");
+    lua_error(L, "memory allocation error: block too big");
   if (size == 0) {
     free(block);  /* block may be NULL, that is OK for free */
     return NULL;
   }
   block = realloc(block, s);
   if (block == NULL)
-    lua_error(memEM);
+    lua_error(L, memEM);
   return block;
 }
 
@@ -90,7 +92,7 @@ static void *checkblock (void *block) {
   unsigned long size = *b;
   int i;
   for (i=0;i<MARKSIZE;i++)
-    LUA_ASSERT(*(((char *)b)+HEADER+size+i) == MARK+i, "corrupted block");
+    LUA_ASSERT(L, *(((char *)b)+HEADER+size+i) == MARK+i, "corrupted block");
   numblocks--;
   totalmem -= size;
   return b;
@@ -106,10 +108,10 @@ static void freeblock (void *block) {
 }
 
 
-void *luaM_realloc (void *block, unsigned long size) {
+void *luaM_realloc (lua_State *L, void *block, unsigned long size) {
   unsigned long realsize = HEADER+size+MARKSIZE;
   if (realsize != (size_t)realsize)
-    lua_error("memory allocation error: block too big");
+    lua_error(L, "memory allocation error: block too big");
   if (size == 0) {
     freeblock(block);
     return NULL;
@@ -124,7 +126,7 @@ void *luaM_realloc (void *block, unsigned long size) {
       freeblock(block);  /* erase (and check) old copy */
     }
     if (newblock == NULL)
-      lua_error(memEM);
+      lua_error(L, memEM);
     totalmem += size;
     numblocks++;
     *(unsigned long *)newblock = size;

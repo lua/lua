@@ -1,11 +1,13 @@
 /*
-** $Id: lobject.c,v 1.23 1999/09/08 20:45:18 roberto Exp roberto $
+** $Id: lobject.c,v 1.24 1999/10/04 17:51:04 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
 
 #include <ctype.h>
 #include <stdlib.h>
+
+#define LUA_REENTRANT
 
 #include "lobject.h"
 #include "lua.h"
@@ -28,13 +30,13 @@ static const long dimensions[] =
   1644817L, 3289613L, 6579211L, 13158023L, MAX_INT};
 
 
-int luaO_redimension (int oldsize) {
+int luaO_redimension (lua_State *L, int oldsize) {
   int i;
   for (i=0; dimensions[i]<MAX_INT; i++) {
     if (dimensions[i] > oldsize)
       return dimensions[i];
   }
-  lua_error("tableEM");
+  lua_error(L, "tableEM");
   return 0;  /* to avoid warnings */
 }
 
@@ -49,7 +51,7 @@ int luaO_equalval (const TObject *t1, const TObject *t2) {
     case LUA_T_CPROTO: return fvalue(t1)  == fvalue(t2);
     case LUA_T_CLOSURE: return t1->value.cl == t2->value.cl;
     default:
-     LUA_INTERNALERROR("invalid type");
+     LUA_INTERNALERROR(L, "invalid type");
      return 0; /* UNREACHABLE */
   }
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.18 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.19 1999/08/18 14:40:51 roberto Exp roberto $
 ** Lua standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -8,14 +8,16 @@
 #include <stdlib.h>
 #include <math.h>
 
+#define LUA_REENTRANT
+
 #include "lauxlib.h"
 #include "lua.h"
 #include "lualib.h"
 
 
 #undef PI
-#define PI	(3.14159265358979323846)
-#define RADIANS_PER_DEGREE	(PI/180.0)
+#define PI (3.14159265358979323846)
+#define RADIANS_PER_DEGREE (PI/180.0)
 
 
 
@@ -32,138 +34,138 @@
 #endif
 
 
-static void math_abs (void) {
-  lua_pushnumber(fabs(luaL_check_number(1)));
+static void math_abs (lua_State *L) {
+  lua_pushnumber(L, fabs(luaL_check_number(L, 1)));
 }
 
-static void math_sin (void) {
-  lua_pushnumber(sin(TORAD(luaL_check_number(1))));
+static void math_sin (lua_State *L) {
+  lua_pushnumber(L, sin(TORAD(luaL_check_number(L, 1))));
 }
 
-static void math_cos (void) {
-  lua_pushnumber(cos(TORAD(luaL_check_number(1))));
+static void math_cos (lua_State *L) {
+  lua_pushnumber(L, cos(TORAD(luaL_check_number(L, 1))));
 }
 
-static void math_tan (void) {
-  lua_pushnumber(tan(TORAD(luaL_check_number(1))));
+static void math_tan (lua_State *L) {
+  lua_pushnumber(L, tan(TORAD(luaL_check_number(L, 1))));
 }
 
-static void math_asin (void) {
-  lua_pushnumber(FROMRAD(asin(luaL_check_number(1))));
+static void math_asin (lua_State *L) {
+  lua_pushnumber(L, FROMRAD(asin(luaL_check_number(L, 1))));
 }
 
-static void math_acos (void) {
-  lua_pushnumber(FROMRAD(acos(luaL_check_number(1))));
+static void math_acos (lua_State *L) {
+  lua_pushnumber(L, FROMRAD(acos(luaL_check_number(L, 1))));
 }
 
-static void math_atan (void) {
-  lua_pushnumber(FROMRAD(atan(luaL_check_number(1))));
+static void math_atan (lua_State *L) {
+  lua_pushnumber(L, FROMRAD(atan(luaL_check_number(L, 1))));
 }
 
-static void math_atan2 (void) {
-  lua_pushnumber(FROMRAD(atan2(luaL_check_number(1), luaL_check_number(2))));
+static void math_atan2 (lua_State *L) {
+  lua_pushnumber(L, FROMRAD(atan2(luaL_check_number(L, 1), luaL_check_number(L, 2))));
 }
 
-static void math_ceil (void) {
-  lua_pushnumber(ceil(luaL_check_number(1)));
+static void math_ceil (lua_State *L) {
+  lua_pushnumber(L, ceil(luaL_check_number(L, 1)));
 }
 
-static void math_floor (void) {
-  lua_pushnumber(floor(luaL_check_number(1)));
+static void math_floor (lua_State *L) {
+  lua_pushnumber(L, floor(luaL_check_number(L, 1)));
 }
 
-static void math_mod (void) {
-  lua_pushnumber(fmod(luaL_check_number(1), luaL_check_number(2)));
+static void math_mod (lua_State *L) {
+  lua_pushnumber(L, fmod(luaL_check_number(L, 1), luaL_check_number(L, 2)));
 }
 
-static void math_sqrt (void) {
-  lua_pushnumber(sqrt(luaL_check_number(1)));
+static void math_sqrt (lua_State *L) {
+  lua_pushnumber(L, sqrt(luaL_check_number(L, 1)));
 }
 
-static void math_pow (void) {
-  lua_pushnumber(pow(luaL_check_number(1), luaL_check_number(2)));
+static void math_pow (lua_State *L) {
+  lua_pushnumber(L, pow(luaL_check_number(L, 1), luaL_check_number(L, 2)));
 }
 
-static void math_log (void) {
-  lua_pushnumber(log(luaL_check_number(1)));
+static void math_log (lua_State *L) {
+  lua_pushnumber(L, log(luaL_check_number(L, 1)));
 }
 
-static void math_log10 (void) {
-  lua_pushnumber(log10(luaL_check_number(1)));
+static void math_log10 (lua_State *L) {
+  lua_pushnumber(L, log10(luaL_check_number(L, 1)));
 }
 
-static void math_exp (void) {
-  lua_pushnumber(exp(luaL_check_number(1)));
+static void math_exp (lua_State *L) {
+  lua_pushnumber(L, exp(luaL_check_number(L, 1)));
 }
 
-static void math_deg (void) {
-  lua_pushnumber(luaL_check_number(1)/RADIANS_PER_DEGREE);
+static void math_deg (lua_State *L) {
+  lua_pushnumber(L, luaL_check_number(L, 1)/RADIANS_PER_DEGREE);
 }
 
-static void math_rad (void) {
-  lua_pushnumber(luaL_check_number(1)*RADIANS_PER_DEGREE);
+static void math_rad (lua_State *L) {
+  lua_pushnumber(L, luaL_check_number(L, 1)*RADIANS_PER_DEGREE);
 }
 
-static void math_frexp (void) {
+static void math_frexp (lua_State *L) {
   int e;
-  lua_pushnumber(frexp(luaL_check_number(1), &e));
-  lua_pushnumber(e);
+  lua_pushnumber(L, frexp(luaL_check_number(L, 1), &e));
+  lua_pushnumber(L, e);
 }
 
-static void math_ldexp (void) {
-  lua_pushnumber(ldexp(luaL_check_number(1), luaL_check_int(2)));
+static void math_ldexp (lua_State *L) {
+  lua_pushnumber(L, ldexp(luaL_check_number(L, 1), luaL_check_int(L, 2)));
 }
 
 
 
-static void math_min (void) {
+static void math_min (lua_State *L) {
   int i = 1;
-  double dmin = luaL_check_number(i);
-  while (lua_getparam(++i) != LUA_NOOBJECT) {
-    double d = luaL_check_number(i);
+  double dmin = luaL_check_number(L, i);
+  while (lua_getparam(L, ++i) != LUA_NOOBJECT) {
+    double d = luaL_check_number(L, i);
     if (d < dmin)
       dmin = d;
   }
-  lua_pushnumber(dmin);
+  lua_pushnumber(L, dmin);
 }
 
 
-static void math_max (void) {
+static void math_max (lua_State *L) {
   int i = 1;
-  double dmax = luaL_check_number(i);
-  while (lua_getparam(++i) != LUA_NOOBJECT) {
-    double d = luaL_check_number(i);
+  double dmax = luaL_check_number(L, i);
+  while (lua_getparam(L, ++i) != LUA_NOOBJECT) {
+    double d = luaL_check_number(L, i);
     if (d > dmax)
       dmax = d;
   }
-  lua_pushnumber(dmax);
+  lua_pushnumber(L, dmax);
 }
 
 
-static void math_random (void) {
+static void math_random (lua_State *L) {
   /* the '%' avoids the (rare) case of r==1, and is needed also because on
      some systems (SunOS!) "rand()" may return a value bigger than RAND_MAX */
   double r = (double)(rand()%RAND_MAX) / (double)RAND_MAX;
-  if (lua_getparam(1) == LUA_NOOBJECT)  /* no arguments? */
-    lua_pushnumber(r);  /* real between 0 & 1 */
+  if (lua_getparam(L, 1) == LUA_NOOBJECT)  /* no arguments? */
+    lua_pushnumber(L, r);  /* real between 0 & 1 */
   else {
     int l, u;  /* lower & upper limits */
-    if (lua_getparam(2) == LUA_NOOBJECT) {  /* only one argument? */
+    if (lua_getparam(L, 2) == LUA_NOOBJECT) {  /* only one argument? */
       l = 1;
-      u = luaL_check_int(1);
+      u = luaL_check_int(L, 1);
     }
     else {  /* two arguments */
-      l = luaL_check_int(1);
-      u = luaL_check_int(2);
+      l = luaL_check_int(L, 1);
+      u = luaL_check_int(L, 2);
     }
-    luaL_arg_check(l<=u, 1, "interval is empty");
-    lua_pushnumber((int)(r*(u-l+1))+l);  /* integer between l & u */
+    luaL_arg_check(L, l<=u, 1, "interval is empty");
+    lua_pushnumber(L, (int)(r*(u-l+1))+l);  /* integer between l & u */
   }
 }
 
 
-static void math_randomseed (void) {
-  srand(luaL_check_int(1));
+static void math_randomseed (lua_State *L) {
+  srand(luaL_check_int(L, 1));
 }
 
 
@@ -196,11 +198,11 @@ static const struct luaL_reg mathlib[] = {
 /*
 ** Open math library
 */
-void lua_mathlibopen (void) {
-  luaL_openlib(mathlib, (sizeof(mathlib)/sizeof(mathlib[0])));
-  lua_pushcfunction(math_pow);
-  lua_pushnumber(0);  /* to get its tag */
-  lua_settagmethod(lua_tag(lua_pop()), "pow");
-  lua_pushnumber(PI); lua_setglobal("PI");
+void lua_mathlibopen (lua_State *L) {
+  luaL_openlib(L, mathlib, (sizeof(mathlib)/sizeof(mathlib[0])));
+  lua_pushcfunction(L, math_pow);
+  lua_pushnumber(L, 0);  /* to get its tag */
+  lua_settagmethod(L, lua_tag(L, lua_pop(L)), "pow");
+  lua_pushnumber(L, PI); lua_setglobal(L, "PI");
 }
 

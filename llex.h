@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.13 1999/07/22 19:29:42 roberto Exp roberto $
+** $Id: llex.h,v 1.14 1999/08/16 20:52:00 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -47,6 +47,7 @@ typedef struct LexState {
   int current;  /* look ahead character */
   int token;  /* look ahead token */
   struct FuncState *fs;  /* 'FuncState' is private for the parser */
+  struct lua_State *L;
   union {
     real r;
     TaggedString *ts;
@@ -58,8 +59,8 @@ typedef struct LexState {
 } LexState;
 
 
-void luaX_init (void);
-void luaX_setinput (LexState *LS, ZIO *z);
+void luaX_init (lua_State *L);
+void luaX_setinput (lua_State *L, LexState *LS, ZIO *z);
 int luaX_lex (LexState *LS);
 void luaX_syntaxerror (LexState *ls, const char *s, const char *token);
 void luaX_error (LexState *ls, const char *s);

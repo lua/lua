@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.41 1999/09/20 14:15:18 roberto Exp roberto $
+** $Id: lparser.c,v 1.42 1999/11/04 17:23:12 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -147,14 +147,15 @@ static void checklimit (LexState *ls, int val, int limit, const char *msg) {
 }
 
 
-static void check_pc (FuncState *fs, int n) {
-  luaM_growvector(fs->f->code, fs->pc, n, Byte, codeEM, MAX_INT);
+static void check_pc (LexState *ls, int n) {
+  luaM_growvector(ls->L, ls->fs->f->code, ls->fs->pc, n,
+                  Byte, codeEM, MAX_INT);
 }
 
 
-static void code_byte (FuncState *fs, Byte c) {
-  check_pc(fs, 1);
-  fs->f->code[fs->pc++] = c;
+static void code_byte (LexState *ls, Byte c) {
+  check_pc(ls, 1);
+  ls->fs->f->code[ls->fs->pc++] = c;
 }
 
 
@@ -204,7 +205,7 @@ static int fix_opcode (LexState *ls, int pc, OpCode op, int arg) {
   if (tomove > 0) {  /* need to open space? */
     FuncState *fs = ls->fs;
     TProtoFunc *f = fs->f;
-    check_pc(fs, tomove);
+    check_pc(ls, tomove);
     luaO_memup(f->code+pc+tomove, f->code+pc, fs->pc-pc);
     fs->pc += tomove;
   }
@@ -215,7 +216,7 @@ static int fix_opcode (LexState *ls, int pc, OpCode op, int arg) {
 
 static void code_oparg (LexState *ls, OpCode op, int arg, int delta) {
   int size = codesize(arg);
-  check_pc(ls->fs, size);
+  check_pc(ls, size);
   code_oparg_at(ls, ls->fs->pc, op, arg, delta);
   ls->fs->pc += size;
 }
@@ -223,7 +224,7 @@ static void code_oparg (LexState *ls, OpCode op, int arg, int delta) {
 
 static void code_opcode (LexState *ls, OpCode op, int delta) {
   deltastack(ls, delta);
-  code_byte(ls->fs, (Byte)op);
+  code_byte(ls, (Byte)op);
 }
 
 
@@ -234,24 +235,24 @@ static void code_constant (LexState *ls, int c) {
 
 static void assertglobal (LexState *ls, int index) {
   TObject *o = &ls->fs->f->consts[index];
-  LUA_ASSERT(ttype(o) == LUA_T_STRING, "global name is not a string");
-  luaS_assertglobal(tsvalue(o));
+  LUA_ASSERT(ls->L, ttype(o) == LUA_T_STRING, "global name is not a string");
+  luaS_assertglobal(ls->L, tsvalue(o));
 }
 
 
-static int next_constant (FuncState *fs) {
-  TProtoFunc *f = fs->f;
-  luaM_growvector(f->consts, f->nconsts, 1, TObject, constantEM, MAX_ARG);
+static int next_constant (LexState *ls, TProtoFunc *f) {
+  luaM_growvector(ls->L, f->consts, f->nconsts, 1,
+                  TObject, constantEM, MAX_ARG);
   return f->nconsts++;
 }
 
 
-static int string_constant (FuncState *fs, TaggedString *s) {
+static int string_constant (LexState *ls, FuncState *fs, TaggedString *s) {
   TProtoFunc *f = fs->f;
   int c = s->constindex;
   if (!(c < f->nconsts &&
       ttype(&f->consts[c]) == LUA_T_STRING && tsvalue(&f->consts[c]) == s)) {
-    c = next_constant(fs);
+    c = next_constant(ls, f);
     ttype(&f->consts[c]) = LUA_T_STRING;
     tsvalue(&f->consts[c]) = s;
     s->constindex = c;  /* hint for next time */
@@ -261,23 +262,24 @@ static int string_constant (FuncState *fs, TaggedString *s) {
 
 
 static void code_string (LexState *ls, TaggedString *s) {
-  code_constant(ls, string_constant(ls->fs, s));
+  code_constant(ls, string_constant(ls, ls->fs, s));
 }
 
 
 #define LIM 20
-static int real_constant (FuncState *fs, real r) {
+static int real_constant (LexState *ls, real r) {
   /* check whether 'r' has appeared within the last LIM entries */
-  TObject *cnt = fs->f->consts;
-  int c = fs->f->nconsts;
+  TProtoFunc *f = ls->fs->f;
+  TObject *cnt = f->consts;
+  int c = f->nconsts;
   int lim = c < LIM ? 0 : c-LIM;
   while (--c >= lim) {
     if (ttype(&cnt[c]) == LUA_T_NUMBER && nvalue(&cnt[c]) == r)
       return c;
   }
   /* not found; create a new entry */
-  c = next_constant(fs);
-  cnt = fs->f->consts;  /* 'next_constant' may have reallocated this vector */
+  c = next_constant(ls, f);
+  cnt = f->consts;  /* 'next_constant' may reallocate this vector */
   ttype(&cnt[c]) = LUA_T_NUMBER;
   nvalue(&cnt[c]) = r;
   return c;
@@ -291,7 +293,7 @@ static void code_number (LexState *ls, real f) {
     code_oparg(ls, (f<0) ? PUSHNUMBERNEG : PUSHNUMBER, (int)af, 1);
   }
   else
-    code_constant(ls, real_constant(ls->fs, f));
+    code_constant(ls, real_constant(ls, f));
 }
 
 
@@ -304,16 +306,17 @@ static void flush_record (LexState *ls, int n) {
 static void flush_list (LexState *ls, int m, int n) {
   if (n > 0) {
     code_oparg(ls, SETLIST, m, -n);
-    code_byte(ls->fs, (Byte)n);
+    code_byte(ls, (Byte)n);
   }
 }
 
 
-static void luaI_registerlocalvar (FuncState *fs, TaggedString *varname,
+static void luaI_registerlocalvar (LexState *ls, TaggedString *varname,
                                    int line) {
+  FuncState *fs = ls->fs;
   if (fs->nvars != -1) {  /* debug information? */
     TProtoFunc *f = fs->f;
-    luaM_growvector(f->locvars, fs->nvars, 1, LocVar, "", MAX_INT);
+    luaM_growvector(ls->L, f->locvars, fs->nvars, 1, LocVar, "", MAX_INT);
     f->locvars[fs->nvars].varname = varname;
     f->locvars[fs->nvars].line = line;
     fs->nvars++;
@@ -321,8 +324,8 @@ static void luaI_registerlocalvar (FuncState *fs, TaggedString *varname,
 }
 
 
-static void luaI_unregisterlocalvar (FuncState *fs, int line) {
-  luaI_registerlocalvar(fs, NULL, line);
+static void luaI_unregisterlocalvar (LexState *ls, int line) {
+  luaI_registerlocalvar(ls, NULL, line);
 }
 
 
@@ -330,7 +333,7 @@ static void store_localvar (LexState *ls, TaggedString *name, int n) {
   FuncState *fs = ls->fs;
   checklimit(ls, fs->nlocalvar+n+1, MAXLOCALS, "local variables");
   fs->localvar[fs->nlocalvar+n] = name;
-  luaI_registerlocalvar(fs, name, ls->linenumber);
+  luaI_registerlocalvar(ls, name, ls->linenumber);
 }
 
 
@@ -371,7 +374,7 @@ static void singlevar (LexState *ls, TaggedString *n, vardesc *var, int prev) {
       if (aux_localname(level, n) >= 0)
         luaX_syntaxerror(ls, "cannot access a variable in outer scope", n->str);
     var->k = VGLOBAL;
-    var->info = string_constant(fs, n);
+    var->info = string_constant(ls, fs, n);
   }
 }
 
@@ -404,7 +407,7 @@ static void pushupvalue (LexState *ls, TaggedString *n) {
 
 
 static void check_debugline (LexState *ls) {
-  if (L->debug && ls->linenumber != ls->fs->lastsetline) {
+  if (ls->L->debug && ls->linenumber != ls->fs->lastsetline) {
     code_oparg(ls, SETLINE, ls->linenumber, 0);
     ls->fs->lastsetline = ls->linenumber;
   }
@@ -464,7 +467,7 @@ static void code_args (LexState *ls, int nparams, int dots) {
   else {
     fs->f->code[1] = (Byte)(nparams+ZEROVARARG);
     deltastack(ls, nparams+1);
-    add_localvar(ls, luaS_new("arg"));
+    add_localvar(ls, luaS_new(ls->L, "arg"));
   }
 }
 
@@ -515,7 +518,7 @@ static void storevar (LexState *ls, const vardesc *var) {
       code_opcode(ls, SETTABLEPOP, -3);
       break;
     default:
-      LUA_INTERNALERROR("invalid var kind to store");
+      LUA_INTERNALERROR(ls->L, "invalid var kind to store");
   }
 }
 
@@ -548,7 +551,7 @@ static void codeIf (LexState *ls, int thenAdd, int elseAdd) {
 static void func_onstack (LexState *ls, FuncState *func) {
   FuncState *fs = ls->fs;
   int i;
-  int c = next_constant(fs);
+  int c = next_constant(ls, fs->f);
   ttype(&fs->f->consts[c]) = LUA_T_PROTO;
   fs->f->consts[c].value.tf = func->f;
   if (func->nupvalues == 0)
@@ -558,13 +561,14 @@ static void func_onstack (LexState *ls, FuncState *func) {
       lua_pushvar(ls, &func->upvalues[i]);
     deltastack(ls, 1);  /* CLOSURE puts one extra element (before poping) */
     code_oparg(ls, CLOSURE, c, -func->nupvalues);
-    code_byte(fs, (Byte)func->nupvalues);
+    code_byte(ls, (Byte)func->nupvalues);
   }
 }
 
 
 static void init_state (LexState *ls, FuncState *fs, TaggedString *source) {
-  TProtoFunc *f = luaF_newproto();
+  lua_State *L = ls->L;
+  TProtoFunc *f = luaF_newproto(ls->L);
   fs->prev = ls->fs;  /* linked list of funcstates */
   ls->fs = fs;
   fs->stacksize = 0;
@@ -577,10 +581,11 @@ static void init_state (LexState *ls, FuncState *fs, TaggedString *source) {
   fs->pc = 0;
   f->code = NULL;
   fs->nvars = (L->debug) ? 0 : -1;  /* flag no debug information? */
-  code_byte(fs, 0);  /* to be filled with maxstacksize */
-  code_byte(fs, 0);  /* to be filled with arg information */
+  code_byte(ls, 0);  /* to be filled with maxstacksize */
+  code_byte(ls, 0);  /* to be filled with arg information */
   /* push function (to avoid GC) */
-  tfvalue(L->stack.top) = f; ttype(L->stack.top) = LUA_T_PROTO;
+  tfvalue(L->stack.top) = f;
+  ttype(L->stack.top) = LUA_T_PROTO;
   incr_top;
 }
 
@@ -590,14 +595,14 @@ static void close_func (LexState *ls) {
   TProtoFunc *f = fs->f;
   code_opcode(ls, ENDCODE, 0);
   f->code[0] = (Byte)fs->maxstacksize;
-  luaM_reallocvector(f->code, fs->pc, Byte);
-  luaM_reallocvector(f->consts, f->nconsts, TObject);
+  luaM_reallocvector(ls->L, f->code, fs->pc, Byte);
+  luaM_reallocvector(ls->L, f->consts, f->nconsts, TObject);
   if (fs->nvars != -1) {  /* debug information? */
-    luaI_registerlocalvar(fs, NULL, -1);  /* flag end of vector */
-    luaM_reallocvector(f->locvars, fs->nvars, LocVar);
+    luaI_registerlocalvar(ls, NULL, -1);  /* flag end of vector */
+    luaM_reallocvector(ls->L, f->locvars, fs->nvars, LocVar);
   }
   ls->fs = fs->prev;
-  L->stack.top--;  /* pop function */
+  ls->L->stack.top--;  /* pop function */
 }
 
 
@@ -664,7 +669,7 @@ static int checkname (LexState *ls) {
   int sc;
   if (ls->token != NAME)
     luaX_error(ls, "`NAME' expected");
-  sc = string_constant(ls->fs, ls->seminfo.ts);
+  sc = string_constant(ls, ls->fs, ls->seminfo.ts);
   next(ls);
   return sc;
 }
@@ -685,11 +690,11 @@ static int optional (LexState *ls, int c) {
 }
 
 
-TProtoFunc *luaY_parser (ZIO *z) {
+TProtoFunc *luaY_parser (lua_State *L, ZIO *z) {
   struct LexState lexstate;
   struct FuncState funcstate;
-  luaX_setinput(&lexstate, z);
-  init_state(&lexstate, &funcstate, luaS_new(zname(z)));
+  luaX_setinput(L, &lexstate, z);
+  init_state(&lexstate, &funcstate, luaS_new(L, zname(z)));
   next(&lexstate);  /* read first token */
   chunk(&lexstate);
   if (lexstate.token != EOS)
@@ -708,7 +713,7 @@ TProtoFunc *luaY_parser (ZIO *z) {
 static void chunk (LexState *ls) {
   /* chunk -> { stat [;] } ret */
   while (stat(ls)) {
-    LUA_ASSERT(ls->fs->stacksize == ls->fs->nlocalvar,
+    LUA_ASSERT(ls->L, ls->fs->stacksize == ls->fs->nlocalvar,
                "stack size != # local vars");
     optional(ls, ';');
   }
@@ -728,7 +733,7 @@ static void whilestat (LexState *ls, int line) {
   block(ls);
   check_match(ls, END, WHILE, line);
   cond_size = cond_end-while_init;
-  check_pc(fs, cond_size);
+  check_pc(ls, cond_size);
   memcpy(f->code+fs->pc, f->code+while_init, cond_size);
   luaO_memdown(f->code+while_init, f->code+cond_end, fs->pc-while_init);
   while_init += JMPSIZE + fix_jump(ls, while_init, JMP, fs->pc-cond_size);
@@ -841,7 +846,7 @@ static int stat (LexState *ls) {
 
 static int SaveWord (LexState *ls) {
   int res = ls->fs->pc;
-  check_pc(ls->fs, JMPSIZE);
+  check_pc(ls, JMPSIZE);
   ls->fs->pc += JMPSIZE;  /* open space */
   return res;
 }
@@ -864,7 +869,7 @@ static void block (LexState *ls) {
   chunk(ls);
   adjuststack(ls, fs->nlocalvar - nlocalvar);
   for (; fs->nlocalvar > nlocalvar; fs->nlocalvar--)
-    luaI_unregisterlocalvar(fs, fs->lastsetline);
+    luaI_unregisterlocalvar(ls, fs->lastsetline);
 }
 
 static int funcname (LexState *ls, vardesc *v) {
@@ -888,7 +893,7 @@ static void body (LexState *ls, int needself, int line) {
   newfs.f->lineDefined = line;
   check(ls, '(');
   if (needself)
-    add_localvar(ls, luaS_new("self"));
+    add_localvar(ls, luaS_new(ls->L, "self"));
   parlist(ls);
   check(ls, ')');
   chunk(ls);
@@ -1173,9 +1178,9 @@ static int funcparams (LexState *ls, int slf) {
       luaX_error(ls, "function arguments expected");
       break;
   }
-  code_byte(fs, CALL);
-  code_byte(fs, 0);  /* save space for nresult */
-  code_byte(fs, (Byte)(nparams+slf));
+  code_byte(ls, CALL);
+  code_byte(ls, 0);  /* save space for nresult */
+  code_byte(ls, (Byte)(nparams+slf));
   return fs->pc-1;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.13 1999/10/14 19:46:57 roberto Exp roberto $
+** $Id: lfunc.c,v 1.14 1999/11/10 15:39:35 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -7,28 +7,30 @@
 
 #include <stdlib.h>
 
+#define LUA_REENTRANT
+
 #include "lfunc.h"
 #include "lmem.h"
 #include "lstate.h"
 
-#define gcsizeproto(p)	numblocks(0, sizeof(TProtoFunc))
-#define gcsizeclosure(c) numblocks(c->nelems, sizeof(Closure))
+#define gcsizeproto(L, p)	numblocks(L, 0, sizeof(TProtoFunc))
+#define gcsizeclosure(L, c) numblocks(L, c->nelems, sizeof(Closure))
 
 
 
-Closure *luaF_newclosure (int nelems) {
-  Closure *c = (Closure *)luaM_malloc(sizeof(Closure)+nelems*sizeof(TObject));
+Closure *luaF_newclosure (lua_State *L, int nelems) {
+  Closure *c = (Closure *)luaM_malloc(L, sizeof(Closure)+nelems*sizeof(TObject));
   c->next = L->rootcl;
   L->rootcl = c;
   c->marked = 0;
   c->nelems = nelems;
-  L->nblocks += gcsizeclosure(c);
+  L->nblocks += gcsizeclosure(L, c);
   return c;
 }
 
 
-TProtoFunc *luaF_newproto (void) {
-  TProtoFunc *f = luaM_new(TProtoFunc);
+TProtoFunc *luaF_newproto (lua_State *L) {
+  TProtoFunc *f = luaM_new(L, TProtoFunc);
   f->code = NULL;
   f->lineDefined = 0;
   f->source = NULL;
@@ -38,23 +40,23 @@ TProtoFunc *luaF_newproto (void) {
   f->next = L->rootproto;
   L->rootproto = f;
   f->marked = 0;
-  L->nblocks += gcsizeproto(f);
+  L->nblocks += gcsizeproto(L, f);
   return f;
 }
 
 
-void luaF_freeproto (TProtoFunc *f) {
-  L->nblocks -= gcsizeproto(f);
-  luaM_free(f->code);
-  luaM_free(f->locvars);
-  luaM_free(f->consts);
-  luaM_free(f);
+void luaF_freeproto (lua_State *L, TProtoFunc *f) {
+  L->nblocks -= gcsizeproto(L, f);
+  luaM_free(L, f->code);
+  luaM_free(L, f->locvars);
+  luaM_free(L, f->consts);
+  luaM_free(L, f);
 }
 
 
-void luaF_freeclosure (Closure *c) {
-  L->nblocks -= gcsizeclosure(c);
-  luaM_free(c);
+void luaF_freeclosure (lua_State *L, Closure *c) {
+  L->nblocks -= gcsizeclosure(L, c);
+  luaM_free(L, c);
 }
 
 

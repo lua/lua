@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.28 1999/10/26 10:53:40 roberto Exp roberto $
+** $Id: ltable.c,v 1.29 1999/11/10 15:39:35 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -18,6 +18,8 @@
 */
 
 
+#define LUA_REENTRANT
+
 #include "lauxlib.h"
 #include "lmem.h"
 #include "lobject.h"
@@ -26,7 +28,7 @@
 #include "lua.h"
 
 
-#define gcsize(n)	numblocks(n*2, sizeof(Hash))
+#define gcsize(L, n)	numblocks(L, n*2, sizeof(Hash))
 
 
 
@@ -38,7 +40,7 @@
 ** returns the `main' position of an element in a table (that is, the index
 ** of its hash value)
 */
-Node *luaH_mainposition (const Hash *t, const TObject *key) {
+Node *luaH_mainposition (lua_State *L, const Hash *t, const TObject *key) {
   unsigned long h;
   switch (ttype(key)) {
     case LUA_T_NUMBER:
@@ -48,27 +50,27 @@ Node *luaH_mainposition (const Hash *t, const TObject *key) {
       h = tsvalue(key)->hash;
       break;
     case LUA_T_ARRAY:
-      h = IntPoint(avalue(key));
+      h = IntPoint(L, avalue(key));
       break;
     case LUA_T_PROTO:
-      h = IntPoint(tfvalue(key));
+      h = IntPoint(L, tfvalue(key));
       break;
     case LUA_T_CPROTO:
-      h = IntPoint(fvalue(key));
+      h = IntPoint(L, fvalue(key));
       break;
     case LUA_T_CLOSURE:
-      h = IntPoint(clvalue(key));
+      h = IntPoint(L, clvalue(key));
       break;
     default:
-      lua_error("unexpected type to index table");
+      lua_error(L, "unexpected type to index table");
       h = 0;  /* to avoid warnings */
   }
   return &t->node[h%(unsigned int)t->size];
 }
 
 
-const TObject *luaH_get (const Hash *t, const TObject *key) {
-  Node *n = luaH_mainposition(t, key);
+const TObject *luaH_get (lua_State *L, const Hash *t, const TObject *key) {
+  Node *n = luaH_mainposition(L, t, key);
   do {
     if (luaO_equalObj(key, &n->key))
       return &n->val;
@@ -78,16 +80,16 @@ const TObject *luaH_get (const Hash *t, const TObject *key) {
 }
 
 
-int luaH_pos (const Hash *t, const TObject *key) {
-  const TObject *v = luaH_get(t, key);
+int luaH_pos (lua_State *L, const Hash *t, const TObject *key) {
+  const TObject *v = luaH_get(L, t, key);
   return (v == &luaO_nilobject) ?  -1 :  /* key not found */
              ((const char *)v - (const char *)(&t->node[0].val))/sizeof(Node);
 }
 
 
 
-static Node *hashnodecreate (int nhash) {
-  Node *v = luaM_newvector(nhash, Node);
+static Node *hashnodecreate (lua_State *L, int nhash) {
+  Node *v = luaM_newvector(L, nhash, Node);
   int i;
   for (i=0; i<nhash; i++) {
     ttype(&v[i].key) = ttype(&v[i].val) = LUA_T_NIL;
@@ -97,17 +99,17 @@ static Node *hashnodecreate (int nhash) {
 }
 
 
-static void setnodevector (Hash *t, int size) {
-  t->node = hashnodecreate(size);
+static void setnodevector (lua_State *L, Hash *t, int size) {
+  t->node = hashnodecreate(L, size);
   t->size = size;
   t->firstfree = &t->node[size-1];  /* first free position to be used */
-  L->nblocks += gcsize(size);
+  L->nblocks += gcsize(L, size);
 }
 
 
-Hash *luaH_new (int size) {
-  Hash *t = luaM_new(Hash);
-  setnodevector(t, luaO_redimension(size+1));
+Hash *luaH_new (lua_State *L, int size) {
+  Hash *t = luaM_new(L, Hash);
+  setnodevector(L, t, luaO_redimension(L, size+1));
   t->htag = TagDefault;
   t->next = L->roottable;
   L->roottable = t;
@@ -116,14 +118,14 @@ Hash *luaH_new (int size) {
 }
 
 
-void luaH_free (Hash *t) {
-  L->nblocks -= gcsize(t->size);
-  luaM_free(t->node);
-  luaM_free(t);
+void luaH_free (lua_State *L, Hash *t) {
+  L->nblocks -= gcsize(L, t->size);
+  luaM_free(L, t->node);
+  luaM_free(L, t);
 }
 
 
-static int newsize (const Hash *t) {
+static int newsize (lua_State *L, const Hash *t) {
   Node *v = t->node;
   int size = t->size;
   int realuse = 0;
@@ -132,7 +134,7 @@ static int newsize (const Hash *t) {
     if (ttype(&v[i].val) != LUA_T_NIL)
       realuse++;
   }
-  return luaO_redimension(realuse*2);
+  return luaO_redimension(L, realuse*2);
 }
 
 
@@ -141,19 +143,19 @@ static int newsize (const Hash *t) {
 ** main position is free, to avoid needless collisions. In the second stage,
 ** we insert the other elements.
 */
-static void rehash (Hash *t) {
+static void rehash (lua_State *L, Hash *t) {
   int oldsize = t->size;
   Node *nold = t->node;
   int i;
-  L->nblocks -= gcsize(oldsize);
-  setnodevector(t, newsize(t));  /* create new array of nodes */
+  L->nblocks -= gcsize(L, oldsize);
+  setnodevector(L, t, newsize(L, t));  /* create new array of nodes */
   /* first loop; set only elements that can go in their main positions */
   for (i=0; i<oldsize; i++) {
     Node *old = nold+i;
     if (ttype(&old->val) == LUA_T_NIL)
       old->next = NULL;  /* `remove' it for next loop */
     else {
-      Node *mp = luaH_mainposition(t, &old->key);  /* new main position */
+      Node *mp = luaH_mainposition(L, t, &old->key);  /* new main position */
       if (ttype(&mp->key) == LUA_T_NIL) {  /* is it empty? */
         mp->key = old->key;  /* put element there */
         mp->val = old->val;
@@ -180,7 +182,7 @@ static void rehash (Hash *t) {
       } while (ttype(&t->firstfree->key) != LUA_T_NIL);
     }
   }
-  luaM_free(nold);  /* free old array */
+  luaM_free(L, nold);  /* free old array */
 }
 
 
@@ -197,8 +199,8 @@ static void rehash (Hash *t) {
 ** pair; therefore, even when `val' points to an element of this table
 ** (this happens when we use `luaH_move'), there is no problem.
 */
-void luaH_set (Hash *t, const TObject *key, const TObject *val) {
-  Node *mp = luaH_mainposition(t, key);
+void luaH_set (lua_State *L, Hash *t, const TObject *key, const TObject *val) {
+  Node *mp = luaH_mainposition(L, t, key);
   Node *n = mp;
   do {  /* check whether `key' is somewhere in the chain */
     if (luaO_equalObj(key, &n->key)) {
@@ -213,7 +215,7 @@ void luaH_set (Hash *t, const TObject *key, const TObject *val) {
     n = t->firstfree;  /* get a free place */
     /* is colliding node out of its main position? (can only happens if
        its position if after "firstfree") */
-    if (mp > n && (othern=luaH_mainposition(t, &mp->key)) != mp) {
+    if (mp > n && (othern=luaH_mainposition(L, t, &mp->key)) != mp) {
       /* yes; move colliding node into free position */
       while (othern->next != mp) othern = othern->next;  /* find previous */
       othern->next = n;  /* redo the chain with `n' in place of `mp' */
@@ -235,22 +237,22 @@ void luaH_set (Hash *t, const TObject *key, const TObject *val) {
     else if (t->firstfree == t->node) break;  /* cannot decrement from here */
     else (t->firstfree)--;
   }
-  rehash(t);  /* no more free places */
+  rehash(L, t);  /* no more free places */
 }
 
 
-void luaH_setint (Hash *t, int key, const TObject *val) {
+void luaH_setint (lua_State *L, Hash *t, int key, const TObject *val) {
   TObject index;
   ttype(&index) = LUA_T_NUMBER;
   nvalue(&index) = key;
-  luaH_set(t, &index, val);
+  luaH_set(L, t, &index, val);
 }
 
 
-const TObject *luaH_getint (const Hash *t, int key) {
+const TObject *luaH_getint (lua_State *L, const Hash *t, int key) {
   TObject index;
   ttype(&index) = LUA_T_NUMBER;
   nvalue(&index) = key;
-  return luaH_get(t, &index);
+  return luaH_get(L, t, &index);
 }
 
