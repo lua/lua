@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.49 2003/10/20 12:24:34 roberto Exp roberto $
+** $Id: llex.h,v 1.50 2004/03/12 19:53:56 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -34,6 +34,10 @@ enum RESERVED {
 
 /* number of reserved words */
 #define NUM_RESERVED	(cast(int, TK_WHILE-FIRST_RESERVED+1))
+
+
+/* array with token `names' */
+extern const char *const luaX_tokens [];
 
 
 typedef union {
