@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.195 2002/10/08 18:46:08 roberto Exp roberto $
+** $Id: lparser.c,v 1.196 2002/10/16 20:40:58 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -450,7 +450,7 @@ static void funcargs (LexState *ls, expdesc *f) {
     nparams = fs->freereg - (base+1);
   }
   init_exp(f, VCALL, luaK_codeABC(fs, OP_CALL, base, nparams+1, 2));
-  fs->f->lineinfo[f->info] = line;
+  luaK_fixline(fs, line);
   fs->freereg = base+1;  /* call remove function and arguments and leaves
                             (unless changed) one result */
 }
