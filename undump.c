@@ -3,7 +3,7 @@
 ** load bytecodes from files
 */
 
-char *rcs_undump="$Id: undump.c,v 1.4 1996/02/24 16:44:28 lhf Exp lhf $";
+char *rcs_undump="$Id: undump.c,v 1.5 1996/02/26 19:44:17 lhf Exp lhf $";
 
 #include <stdio.h>
 #include <string.h>
@@ -20,18 +20,17 @@ static void panic(char *s)			/* TODO: remove */
  exit(1);
 }
 
-static void Unthread(Byte *p, int i, int v)
+static void Unthread(Byte *code, int i, int v)
 {
  while (i!=0)
  {
   CodeWord c;
-  Byte *q=p+i;
-  get_word(c,q);
-  q=p+i;
+  Byte *p=code+i;
+  get_word(c,p);
   i=c.w;
   c.w=v;
-  q[0]=c.m.c1;
-  q[1]=c.m.c2;
+  p[-2]=c.m.c1;
+  p[-1]=c.m.c2;
  }
 }
 
@@ -60,22 +59,26 @@ static TFunc *lastF=NULL;
 static void LoadFunction(FILE *D)
 {
  TFunc *tf=new(TFunc);
- tf->size=LoadWord(D);				/* TODO: Long? */
- tf->marked=LoadWord(D);
- tf->lineDefined=LoadWord(D);
- tf->fileName=LoadString(D);			/* TODO: not needed if not main */
- tf->code=LoadBlock(tf->size,D);
  tf->next=NULL;
- if (tf->lineDefined==0)			/* new main */
+ tf->size=LoadWord(D);				/* TODO: Long? */
+ tf->lineDefined=LoadWord(D);
+ if (IsMain(tf))				/* new main */
+ {
+  tf->fileName=LoadString(D);
   Main=lastF=tf;
+ }
  else						/* fix PUSHFUNCTION */
  {
   CodeCode c;
-  Byte *p=Main->code+tf->marked;		/* TODO: tf->marked=? */
+  Byte *p;
+  tf->marked=LoadWord(D);
+  tf->fileName=Main->fileName;
+  p=Main->code+tf->marked;			/* TODO: tf->marked=? */
   c.tf=tf;
   *p++=c.m.c1; *p++=c.m.c2; *p++=c.m.c3; *p++=c.m.c4;
   lastF->next=tf; lastF=tf;
  }
+ tf->code=LoadBlock(tf->size,D);
  while (1)					/* unthread */
  {
   int c=getc(D);
