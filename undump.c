@@ -3,7 +3,7 @@
 ** load bytecodes from files
 */
 
-char *rcs_undump="$Id: undump.c,v 1.3 1996/02/24 03:46:57 lhf Exp lhf $";
+char *rcs_undump="$Id: undump.c,v 1.4 1996/02/24 16:44:28 lhf Exp lhf $";
 
 #include <stdio.h>
 #include <string.h>
@@ -60,10 +60,10 @@ static TFunc *lastF=NULL;
 static void LoadFunction(FILE *D)
 {
  TFunc *tf=new(TFunc);
- tf->size=LoadWord(D);
+ tf->size=LoadWord(D);				/* TODO: Long? */
  tf->marked=LoadWord(D);
  tf->lineDefined=LoadWord(D);
- tf->fileName=LoadString(D);
+ tf->fileName=LoadString(D);			/* TODO: not needed if not main */
  tf->code=LoadBlock(tf->size,D);
  tf->next=NULL;
  if (tf->lineDefined==0)			/* new main */
@@ -123,11 +123,13 @@ static void LoadChunk(FILE *D)
   int c=getc(D);
   if (c=='F') LoadFunction(D); else { ungetc(c,D); break; }
  }
+#if 1
  {						/* TODO: run Main? */
   TFunc *tf;
   for (tf=Main; tf!=NULL; tf=tf->next)
    PrintFunction(tf);
  }
+#endif
 }
 
 void luaI_undump(FILE *D)
@@ -143,6 +145,13 @@ void luaI_undump(FILE *D)
 
 int main(int argc, char* argv[])
 {
+ FILE *f=freopen("luac.out","rb",stdin);
+ if (f==NULL)
+ {
+  fprintf(stderr,"undump: cannot open ");
+  perror("luac.out");
+  exit(1);
+ }
  luaI_undump(stdin); 
  return 0;
 }
