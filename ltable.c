@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.105 2002/04/23 15:04:39 roberto Exp roberto $
+** $Id: ltable.c,v 1.106 2002/05/08 17:34:00 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -244,12 +244,13 @@ static void resize (lua_State *L, Table *t, int nasize, int nhsize) {
     nold = t->node;  /* save old hash ... */
   else {  /* old hash is `dummynode' */
     lua_assert(t->node == G(L)->dummynode);
-    temp[0] = t->node[0];  /* copy it to `temp' (in case of errors) */
+    temp[0] = t->node[0];  /* copy it to `temp' */
     nold = temp;
     setnilvalue(key(G(L)->dummynode));  /* restate invariant */
     setnilvalue(val(G(L)->dummynode));
+    lua_assert(G(L)->dummynode->next == NULL);
   }
-  if (nasize > oldasize)  /* should grow array part? */
+  if (nasize > oldasize)  /* array part must grow? */
     setarrayvector(L, t, nasize);
   /* create new hash part with appropriate size */
   setnodevector(L, t, nhsize);  
@@ -261,12 +262,11 @@ static void resize (lua_State *L, Table *t, int nasize, int nhsize) {
       if (ttype(&t->array[i]) != LUA_TNIL)
         luaH_setnum(L, t, i+1, &t->array[i]);
     }
-    /* shink array */
+    /* shrink array */
     luaM_reallocvector(L, t->array, oldasize, nasize, TObject);
   }
   /* re-insert elements in hash part */
-  i = twoto(oldhsize);
-  while (i--) {
+  for (i = twoto(oldhsize) - 1; i >= 0; i--) {
     Node *old = nold+i;
     if (ttype(val(old)) != LUA_TNIL)
       luaH_set(L, t, key(old), val(old));
@@ -279,7 +279,6 @@ static void resize (lua_State *L, Table *t, int nasize, int nhsize) {
 static void rehash (lua_State *L, Table *t) {
   int nasize, nhsize;
   numuse(t, &nasize, &nhsize);  /* compute new sizes for array and hash parts */
-  nhsize += nhsize/4;  /* allow some extra for growing nhsize */
   resize(L, t, nasize, luaO_log2(nhsize)+1);
 }
 
