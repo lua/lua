@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.46 2000/08/09 19:16:57 roberto Exp roberto $
+** $Id: ltm.c,v 1.47 2000/09/05 19:33:32 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -11,6 +11,7 @@
 #include "lua.h"
 
 #include "lauxlib.h"
+#include "ldo.h"
 #include "lmem.h"
 #include "lobject.h"
 #include "lstate.h"
@@ -127,7 +128,7 @@ void lua_gettagmethod (lua_State *L, int t, const char *event) {
     *L->top = *luaT_getim(L, t,e);
   else
     ttype(L->top) = TAG_NIL;
-  L->top++;
+  incr_top;
 }
 
 

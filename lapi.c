@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.93 2000/08/31 21:01:43 roberto Exp roberto $
+** $Id: lapi.c,v 1.94 2000/09/05 19:33:32 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -30,7 +30,7 @@ const char lua_ident[] = "$Lua: " LUA_VERSION " " LUA_COPYRIGHT " $\n"
 
 #define Index(L,i)	((i) >= 0 ? (L->Cbase+((i)-1)) : (L->top+(i)))
 
-#define api_incr_top(L)	(++L->top)
+#define api_incr_top(L)	incr_top
 
 
 
@@ -250,7 +250,8 @@ void lua_pushusertag (lua_State *L, void *u, int tag) {  /* ORDER LUA_T */
 void lua_getglobal (lua_State *L, const char *name) {
   StkId top = L->top;
   *top = *luaV_getglobal(L, luaS_new(L, name));
-  L->top = top+1;
+  L->top = top;
+  api_incr_top(L);
 }
 
 
