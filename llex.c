@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.76 2001/01/19 13:20:30 roberto Exp roberto $
+** $Id: llex.c,v 1.77 2001/02/09 20:22:29 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -36,7 +36,7 @@ void luaX_init (lua_State *L) {
   for (i=0; i<NUM_RESERVED; i++) {
     TString *ts = luaS_new(L, token2string[i]);
     lua_assert(strlen(token2string[i])+1 <= TOKEN_LEN);
-    ts->marked = (unsigned char)(RESERVEDMARK+i);  /* reserved word */
+    ts->marked = RESERVEDMARK+i;  /* reserved word */
   }
 }
 
@@ -255,7 +255,7 @@ static void read_string (LexState *LS, int del, SemInfo *seminfo) {
               c = 10*c + (LS->current-'0');
               next(LS);
             } while (++i<3 && isdigit(LS->current));
-            if (c != (unsigned char)c) {
+            if (c > UCHAR_MAX) {
               save(L, '\0', l);
               luaX_error(LS, "escape sequence too large", TK_STRING);
             }

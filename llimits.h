@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.22 2001/02/09 16:24:44 roberto Exp roberto $
+** $Id: llimits.h,v 1.23 2001/02/20 18:15:33 roberto Exp roberto $
 ** Limits, basic types, and some other "installation-dependent" definitions
 ** See Copyright Notice in lua.h
 */
@@ -32,11 +32,17 @@
 
 
 /* function to convert a lua_Number to a string */
+#ifndef NUMBER_FMT
 #define NUMBER_FMT	"%.16g"		/* LUA_NUMBER */
+#endif
+#ifndef lua_number2str
 #define lua_number2str(s,n)	sprintf((s), NUMBER_FMT, (n))
+#endif
 
 /* function to convert a string to a lua_Number */
+#ifndef lua_str2number
 #define lua_str2number(s,p)	strtod((s), (p))
+#endif
 
 
 
@@ -61,6 +67,10 @@ typedef long ls_nstr;
 
 /* chars used as small naturals (so that `char' is reserved for characteres) */
 typedef unsigned char lu_byte;
+
+
+/* macro to `unsign' a character */
+#define uchar(c)        ((unsigned char)(c))
 
 
 #define MAX_SIZET	((size_t)(~(size_t)0)-2)

@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.61 2001/01/10 16:58:11 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.62 2001/02/02 19:02:40 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -55,7 +55,7 @@ static int str_lower (lua_State *L) {
   const char *s = luaL_check_lstr(L, 1, &l);
   luaL_buffinit(L, &b);
   for (i=0; i<l; i++)
-    luaL_putchar(&b, tolower((unsigned char)(s[i])));
+    luaL_putchar(&b, tolower(uchar(s[i])));
   luaL_pushresult(&b);
   return 1;
 }
@@ -68,7 +68,7 @@ static int str_upper (lua_State *L) {
   const char *s = luaL_check_lstr(L, 1, &l);
   luaL_buffinit(L, &b);
   for (i=0; i<l; i++)
-    luaL_putchar(&b, toupper((unsigned char)(s[i])));
+    luaL_putchar(&b, toupper(uchar(s[i])));
   luaL_pushresult(&b);
   return 1;
 }
@@ -91,7 +91,7 @@ static int str_byte (lua_State *L) {
   const char *s = luaL_check_lstr(L, 1, &l);
   sint32 pos = posrelat(luaL_opt_long(L, 2, 1), l);
   luaL_arg_check(L, 0<pos && (size_t)pos<=l, 2,  "out of range");
-  lua_pushnumber(L, (unsigned char)s[pos-1]);
+  lua_pushnumber(L, uchar(s[pos-1]));
   return 1;
 }
 
@@ -103,8 +103,8 @@ static int str_char (lua_State *L) {
   luaL_buffinit(L, &b);
   for (i=1; i<=n; i++) {
     int c = luaL_check_int(L, i);
-    luaL_arg_check(L, (unsigned char)c == c, i, "invalid value");
-    luaL_putchar(&b, (unsigned char)c);
+    luaL_arg_check(L, uchar(c) == c, i, "invalid value");
+    luaL_putchar(&b, uchar(c));
   }
   luaL_pushresult(&b);
   return 1;
@@ -177,26 +177,26 @@ static const char *luaI_classend (MatchState *ms, const char *p) {
 }
 
 
-static int match_class (int c, int cl) {
+static int match_class (char c, char cl) {
   int res;
-  switch (tolower(cl)) {
-    case 'a' : res = isalpha(c); break;
-    case 'c' : res = iscntrl(c); break;
-    case 'd' : res = isdigit(c); break;
-    case 'l' : res = islower(c); break;
-    case 'p' : res = ispunct(c); break;
-    case 's' : res = isspace(c); break;
-    case 'u' : res = isupper(c); break;
-    case 'w' : res = isalnum(c); break;
-    case 'x' : res = isxdigit(c); break;
+  switch (tolower(uchar(cl))) {
+    case 'a' : res = isalpha(uchar(c)); break;
+    case 'c' : res = iscntrl(uchar(c)); break;
+    case 'd' : res = isdigit(uchar(c)); break;
+    case 'l' : res = islower(uchar(c)); break;
+    case 'p' : res = ispunct(uchar(c)); break;
+    case 's' : res = isspace(uchar(c)); break;
+    case 'u' : res = isupper(uchar(c)); break;
+    case 'w' : res = isalnum(uchar(c)); break;
+    case 'x' : res = isxdigit(uchar(c)); break;
     case 'z' : res = (c == '\0'); break;
     default: return (cl == c);
   }
-  return (islower(cl) ? res : !res);
+  return (islower(uchar(cl)) ? res : !res);
 }
 
 
-static int matchbracketclass (int c, const char *p, const char *endclass) {
+static int matchbracketclass (char c, const char *p, const char *endclass) {
   int sig = 1;
   if (*(p+1) == '^') {
     sig = 0;
@@ -205,30 +205,30 @@ static int matchbracketclass (int c, const char *p, const char *endclass) {
   while (++p < endclass) {
     if (*p == ESC) {
       p++;
-      if (match_class(c, (unsigned char)*p))
+      if (match_class(c, *p))
         return sig;
     }
     else if ((*(p+1) == '-') && (p+2 < endclass)) {
       p+=2;
-      if ((int)(unsigned char)*(p-2) <= c && c <= (int)(unsigned char)*p)
+      if (uchar(*(p-2)) <= uchar(c) && uchar(c) <= uchar(*p))
         return sig;
     }
-    else if ((int)(unsigned char)*p == c) return sig;
+    else if (*p == c) return sig;
   }
   return !sig;
 }
 
 
-static int luaI_singlematch (int c, const char *p, const char *ep) {
+static int luaI_singlematch (char c, const char *p, const char *ep) {
   switch (*p) {
     case '.':  /* matches any char */
       return 1;
     case ESC:
-      return match_class(c, (unsigned char)*(p+1));
+      return match_class(c, *(p+1));
     case '[':
       return matchbracketclass(c, p, ep-1);
     default:
-      return ((unsigned char)*p == c);
+      return (*p == c);
   }
 }
 
@@ -258,7 +258,7 @@ static const char *matchbalance (MatchState *ms, const char *s, const char *p) {
 static const char *max_expand (MatchState *ms, const char *s, const char *p,
                                const char *ep) {
   sint32 i = 0;  /* counts maximum expand for item */
-  while ((s+i)<ms->src_end && luaI_singlematch((unsigned char)*(s+i), p, ep))
+  while ((s+i)<ms->src_end && luaI_singlematch(*(s+i), p, ep))
     i++;
   /* keeps trying to match with the maximum repetitions */
   while (i>=0) {
@@ -276,7 +276,7 @@ static const char *min_expand (MatchState *ms, const char *s, const char *p,
     const char *res = match(ms, s, ep+1);
     if (res != NULL)
       return res;
-    else if (s<ms->src_end && luaI_singlematch((unsigned char)*s, p, ep))
+    else if (s<ms->src_end && luaI_singlematch(*s, p, ep))
       s++;  /* try with one more repetition */
     else return NULL;
   }
@@ -328,7 +328,7 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
     case ')':  /* end capture */
       return end_capture(ms, s, p+1);
     case ESC:  /* may be %[0-9] or %b */
-      if (isdigit((unsigned char)(*(p+1)))) {  /* capture? */
+      if (isdigit(uchar(*(p+1)))) {  /* capture? */
         s = match_capture(ms, s, *(p+1));
         if (s == NULL) return NULL;
         p+=2; goto init;  /* else return match(ms, s, p+2) */
@@ -347,7 +347,7 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
       else goto dflt;
     default: dflt: {  /* it is a pattern item */
       const char *ep = luaI_classend(ms, p);  /* points to what is next */
-      int m = s<ms->src_end && luaI_singlematch((unsigned char)*s, p, ep);
+      int m = s<ms->src_end && luaI_singlematch(*s, p, ep);
       switch (*ep) {
         case '?': {  /* optional */
           const char *res;
@@ -460,7 +460,7 @@ static void add_s (MatchState *ms, luaL_Buffer *b) {
         luaL_putchar(b, news[i]);
       else {
         i++;  /* skip ESC */
-        if (!isdigit((unsigned char)news[i]))
+        if (!isdigit(uchar(news[i])))
           luaL_putchar(b, news[i]);
         else {
           int level = check_capture(ms, news[i]);
@@ -552,15 +552,15 @@ static const char *scanformat (lua_State *L, const char *strfrmt, char *form,
                                int *hasprecision) {
   const char *p = strfrmt;
   while (strchr("-+ #0", *p)) p++;  /* skip flags */
-  if (isdigit((unsigned char)*p)) p++;  /* skip width */
-  if (isdigit((unsigned char)*p)) p++;  /* (2 digits at most) */
+  if (isdigit(uchar(*p))) p++;  /* skip width */
+  if (isdigit(uchar(*p))) p++;  /* (2 digits at most) */
   if (*p == '.') {
     p++;
     *hasprecision = 1;
-    if (isdigit((unsigned char)*p)) p++;  /* skip precision */
-    if (isdigit((unsigned char)*p)) p++;  /* (2 digits at most) */
+    if (isdigit(uchar(*p))) p++;  /* skip precision */
+    if (isdigit(uchar(*p))) p++;  /* (2 digits at most) */
   }
-  if (isdigit((unsigned char)*p))
+  if (isdigit(uchar(*p)))
     lua_error(L, "invalid format (width or precision too long)");
   if (p-strfrmt+2 > MAX_FORMAT)  /* +2 to include `%' and the specifier */
     lua_error(L, "invalid format (too long)");
@@ -585,7 +585,7 @@ static int str_format (lua_State *L) {
       char form[MAX_FORMAT];  /* to store the format (`%...') */
       char buff[MAX_ITEM];  /* to store the formatted item */
       int hasprecision = 0;
-      if (isdigit((unsigned char)*strfrmt) && *(strfrmt+1) == '$')
+      if (isdigit(uchar(*strfrmt)) && *(strfrmt+1) == '$')
         lua_error(L, "obsolete `format' option (d$)");
       arg++;
       strfrmt = scanformat(L, strfrmt, form, &hasprecision);

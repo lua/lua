@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.123 2001/02/07 18:13:49 roberto Exp roberto $
+** $Id: ldo.c,v 1.124 2001/02/20 18:15:33 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -265,12 +265,9 @@ static int parse_file (lua_State *L, const char *filename) {
   ZIO z;
   int status;
   int bin;  /* flag for file mode */
-  int c;    /* look ahead char */
   FILE *f = (filename == NULL) ? stdin : fopen(filename, "r");
   if (f == NULL) return LUA_ERRFILE;  /* unable to open file */
-  c = fgetc(f);
-  ungetc(c, f);
-  bin = (c == ID_CHUNK);
+  bin = (ungetc(fgetc(f), f) == ID_CHUNK);
   if (bin && f != stdin) {
     fclose(f);
     f = fopen(filename, "rb");  /* reopen in binary mode */
