@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.40 2002/03/01 01:48:42 lhf Exp lhf $
+** $Id: lundump.c,v 1.41 2002/06/06 13:22:56 lhf Exp lhf $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -150,19 +150,20 @@ static void LoadConstants (lua_State* L, Proto* f, ZIO* Z, int swap)
  for (i=0; i<n; i++)
  {
   TObject* o=&f->k[i];
-  ttype(o)=LoadByte(L,Z);
-  switch (ttype(o))
+  int t=LoadByte(L,Z);
+  switch (t)
   {
    case LUA_TNUMBER:
-	nvalue(o)=LoadNumber(L,Z,swap);
+	setnvalue(o,LoadNumber(L,Z,swap));
 	break;
    case LUA_TSTRING:
-	tsvalue(o)=LoadString(L,Z,swap);
+	setsvalue(o,LoadString(L,Z,swap));
 	break;
    case LUA_TNIL:
+   	setnilvalue(o);
 	break;
    default:
-	luaG_runerror(L,"bad constant type (%d) in %s",ttype(o),ZNAME(Z));
+	luaG_runerror(L,"bad constant type (%d) in %s",t,ZNAME(Z));
 	break;
   }
  }
