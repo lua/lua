@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.31 1999/01/15 13:11:22 roberto Exp roberto $
+** $Id: lapi.c,v 1.32 1999/01/26 15:31:17 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -498,8 +498,7 @@ int lua_currentline (lua_Function func)
 }
 
 
-lua_Object lua_getlocal (lua_Function func, int local_number, char **name)
-{
+lua_Object lua_getlocal (lua_Function func, int local_number, char **name) {
   /* check whether func is a Lua function */
   if (lua_tag(func) != LUA_T_PROTO)
     return LUA_NOOBJECT;
@@ -510,7 +509,7 @@ lua_Object lua_getlocal (lua_Function func, int local_number, char **name)
     if (*name) {
       /* if "*name", there must be a LUA_T_LINE */
       /* therefore, f+2 points to function base */
-      return Ref((f+2)+(local_number-1));
+      return put_luaObject((f+2)+(local_number-1));
     }
     else
       return LUA_NOOBJECT;
