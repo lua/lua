@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.139 2002/06/13 13:39:55 roberto Exp roberto $
+** $Id: lua.h,v 1.140 2002/06/13 13:44:50 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -29,6 +29,9 @@
 #define LUA_MULTRET	(-1)
 
 
+/* index for a traceback function in the registry */
+#define LUA_TRACEBACK	"_TRACEBACK"
+
 /*
 ** pseudo-indices
 */
@@ -43,6 +46,7 @@
 #define LUA_ERRSYNTAX	3
 #define LUA_ERRMEM	4
 #define LUA_ERRERR	5
+#define LUA_ERRTHROW	6
 
 
 typedef struct lua_State lua_State;
@@ -180,7 +184,7 @@ LUA_API void  lua_setmetatable (lua_State *L, int objindex);
 ** `load' and `call' functions (load and run Lua code)
 */
 LUA_API void  lua_upcall (lua_State *L, int nargs, int nresults);
-LUA_API int   lua_pcall (lua_State *L, int nargs, int nresults, int errf);
+LUA_API int   lua_pcall (lua_State *L, int nargs, int nresults);
 LUA_API int   lua_load (lua_State *L, lua_Chunkreader reader, void *data,
                         const char *chunkname);
 
@@ -203,7 +207,7 @@ LUA_API void  lua_setgcthreshold (lua_State *L, int newthreshold);
 ** miscellaneous functions
 */
 
-LUA_API int   lua_errorobj (lua_State *L);
+LUA_API int   lua_error (lua_State *L);
 
 LUA_API int   lua_next (lua_State *L, int index);
 LUA_API int   lua_getn (lua_State *L, int index);
@@ -219,8 +223,6 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size);
 ** some useful macros
 ** ===============================================================
 */
-
-#define lua_error(L,s)	(lua_pushstring(L, s), lua_errorobj(L))
 
 #define lua_newpointerbox(L,u) \
 	(*(void **)(lua_newuserdata(L, sizeof(void *))) = (u))
@@ -275,7 +277,7 @@ LUA_API int lua_pushupvalues (lua_State *L);
 #define LUA_REFNIL	(-1)
 
 #define lua_ref(L,lock)	((lock) ? luaL_ref(L, LUA_REGISTRYINDEX) : \
-		(lua_error(L, "unlocked references are obsolete"), 0))
+      (lua_pushstring(L, "unlocked references are obsolete"), lua_error(L), 0))
 
 #define lua_unref(L,ref)	luaL_unref(L, LUA_REGISTRYINDEX, (ref))
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.198 2002/06/13 13:39:55 roberto Exp roberto $
+** $Id: lapi.c,v 1.199 2002/06/13 13:44:50 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -565,12 +565,10 @@ LUA_API void lua_upcall (lua_State *L, int nargs, int nresults) {
 }
 
 
-LUA_API int lua_pcall (lua_State *L, int nargs, int nresults, int errf) {
+LUA_API int lua_pcall (lua_State *L, int nargs, int nresults) {
   int status;
-  const TObject *err;
   lua_lock(L);
-  err = (errf == 0) ? &luaO_nilobject : luaA_index(L, errf);
-  status = luaD_pcall(L, nargs, nresults, err);
+  status = luaD_pcall(L, nargs, nresults);
   lua_unlock(L);
   return status;
 }
@@ -631,10 +629,10 @@ LUA_API void lua_setgcthreshold (lua_State *L, int newthreshold) {
 */
 
 
-LUA_API int lua_errorobj (lua_State *L) {
+LUA_API int lua_error (lua_State *L) {
   lua_lock(L);
   api_checknelems(L, 1);
-  luaD_errorobj(L, L->top - 1, LUA_ERRRUN);
+  luaG_errormsg(L, 0);
   lua_unlock(L);
   return 0;  /* to avoid warnings */
 }

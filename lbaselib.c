@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.80 2002/06/13 13:39:55 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.81 2002/06/13 13:44:50 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -37,7 +37,7 @@ static int luaB_print (lua_State *L) {
     lua_upcall(L, 1, 1);
     s = lua_tostring(L, -1);  /* get result */
     if (s == NULL)
-      return luaL_verror(L, "`tostring' must return a string to `print'");
+      return luaL_error(L, "`tostring' must return a string to `print'");
     if (i>1) fputs("\t", stdout);
     fputs(s, stdout);
     lua_pop(L, 1);  /* pop result */
@@ -76,8 +76,8 @@ static int luaB_tonumber (lua_State *L) {
 
 
 static int luaB_error (lua_State *L) {
-  lua_settop(L, 1);
-  return lua_errorobj(L);
+  luaL_check_any(L, 1);
+  return lua_error(L);
 }
 
 
@@ -193,9 +193,10 @@ static int luaB_nexti (lua_State *L) {
 static int passresults (lua_State *L, int status) {
   if (status == 0) return 1;
   else {
+    int numres = (status == LUA_ERRRUN) ? 3 : 2;
     lua_pushnil(L);
-    lua_insert(L, -2);
-    return 2;
+    lua_insert(L, -numres);
+    return numres;
   }
 }
 
@@ -217,7 +218,7 @@ static int luaB_loadfile (lua_State *L) {
 static int luaB_assert (lua_State *L) {
   luaL_check_any(L, 1);
   if (!lua_toboolean(L, 1))
-    return luaL_verror(L, "%s", luaL_opt_string(L, 2, "assertion failed!"));
+    return luaL_error(L, "%s", luaL_opt_string(L, 2, "assertion failed!"));
   lua_settop(L, 1);
   return 1;
 }
@@ -234,25 +235,10 @@ static int luaB_unpack (lua_State *L) {
 }
 
 
-static int luaB_xpcall (lua_State *L) {
-  int status;
-  luaL_check_any(L, 1);
-  luaL_check_any(L, 2);
-  status = lua_pcall(L, lua_gettop(L) - 2, LUA_MULTRET, 1);
-  if (status != 0)
-    return passresults(L, status);
-  else {
-    lua_pushboolean(L, 1);
-    lua_replace(L, 1);
-    return lua_gettop(L);  /* return `true' + all results */
-  }
-}
-
-
 static int luaB_pcall (lua_State *L) {
   int status;
   luaL_check_any(L, 1);
-  status = lua_pcall(L, lua_gettop(L) - 1, LUA_MULTRET, 0);
+  status = lua_pcall(L, lua_gettop(L) - 1, LUA_MULTRET);
   if (status != 0)
     return passresults(L, status);
   else {
@@ -362,7 +348,7 @@ static int luaB_require (lua_State *L) {
   lua_pushvalue(L, 1);
   lua_setglobal(L, "_REQUIREDNAME");
   lua_getglobal(L, REQTAB);
-  if (!lua_istable(L, 2)) return luaL_verror(L, REQTAB " is not a table");
+  if (!lua_istable(L, 2)) return luaL_error(L, REQTAB " is not a table");
   path = getpath(L);
   lua_pushvalue(L, 1);  /* check package's name in book-keeping table */
   lua_gettable(L, 2);
@@ -385,11 +371,11 @@ static int luaB_require (lua_State *L) {
       return 0;
     }
     case LUA_ERRFILE: {  /* file not found */
-      return luaL_verror(L, "could not load package `%s' from path `%s'",
+      return luaL_error(L, "could not load package `%s' from path `%s'",
                             lua_tostring(L, 1), getpath(L));
     }
     default: {
-      return luaL_verror(L, "error loading package\n%s", lua_tostring(L, -1));
+      return luaL_error(L, "error loading package\n%s", lua_tostring(L, -1));
     }
   }
 }
@@ -413,7 +399,6 @@ static const luaL_reg base_funcs[] = {
   {"rawget", luaB_rawget},
   {"rawset", luaB_rawset},
   {"pcall", luaB_pcall},
-  {"xpcall", luaB_xpcall},
   {"collectgarbage", luaB_collectgarbage},
   {"gcinfo", luaB_gcinfo},
   {"loadfile", luaB_loadfile},
@@ -432,9 +417,18 @@ static const luaL_reg base_funcs[] = {
 
 static int luaB_resume (lua_State *L) {
   lua_State *co = (lua_State *)lua_getfrombox(L, lua_upvalueindex(1));
+  int status;
   lua_settop(L, 0);
-  if (lua_resume(L, co) != 0)
-    return lua_errorobj(L);
+  status = lua_resume(L, co);
+  if (status != 0) {
+    if (status == LUA_ERRRUN) {
+      if (lua_isstring(L, -1) && lua_isstring(L, -2))
+        lua_concat(L, 2);
+      else
+        lua_pop(L, 1);
+    }
+    return lua_error(L);
+  }
   return lua_gettop(L);
 }
 
@@ -455,7 +449,7 @@ static int luaB_coroutine (lua_State *L) {
   luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1), 1,
     "Lua function expected");
   NL = lua_newthread(L);
-  if (NL == NULL) return luaL_verror(L, "unable to create new thread");
+  if (NL == NULL) return luaL_error(L, "unable to create new thread");
   /* move function and arguments from L to NL */
   for (i=0; i<n; i++) {
     ref = lua_ref(L, 1);

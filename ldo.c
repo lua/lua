@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.178 2002/06/03 17:46:34 roberto Exp roberto $
+** $Id: ldo.c,v 1.179 2002/06/03 20:12:50 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -37,9 +37,15 @@ struct lua_longjmp {
   jmp_buf b;
   int allowhooks;  /* `allowhook' state when protection was set */
   volatile int status;  /* error code */
-  TObject *err;  /* error function -> message (start of `ud') */
+  TObject *err;  /* error messages (start of `ud') */
 };
 
+
+static void pusherrormsg (lua_State *L, int status, TObject *err) {
+  setobj(L->top++, &err[0]);
+  if (status == LUA_ERRRUN)
+    setobj(L->top++, &err[1]);
+}
 
 
 static void correctstack (lua_State *L, TObject *oldstack) {
@@ -109,7 +115,7 @@ void luaD_growstack (lua_State *L, int n) {
 static void luaD_growCI (lua_State *L) {
   L->ci--;
   if (L->size_ci > LUA_MAXCALLS)  /* overflow while handling overflow? */
-    luaD_error(L, "error in error handling", LUA_ERRERR);
+    luaD_throw(L, LUA_ERRERR);
   else {
     luaD_reallocCI(L, 2*L->size_ci);
     if (L->size_ci > LUA_MAXCALLS)
@@ -302,7 +308,7 @@ static void move_results (lua_State *L, TObject *from, TObject *to) {
 
 
 struct ResS {
-  TObject err;
+  TObject err[2];
   int numres;
 };
 
@@ -337,17 +343,11 @@ LUA_API int lua_resume (lua_State *L, lua_State *co) {
     luaG_runerror(L, "thread is dead - cannot be resumed");
   if (co->errorJmp != NULL)  /* ?? */
     luaG_runerror(L, "thread is active - cannot be resumed");
-  if (L->errorJmp) {
-    setobj(&ud.err, L->errorJmp->err);
-  }
-  else
-    setnilvalue(&ud.err);
-  status = luaD_runprotected(co, resume, &ud.err);
+  status = luaD_runprotected(co, resume, ud.err);
   if (status == 0)  
     move_results(L, co->top - ud.numres, co->top);
-  else {
-    setobj(L->top++, &ud.err);
-}
+  else
+    pusherrormsg(L, status, ud.err);
   lua_unlock(L);
   return status;
 }
@@ -369,7 +369,7 @@ LUA_API int lua_yield (lua_State *L, int nresults) {
 ** Execute a protected call.
 */
 struct CallS {  /* data to `f_call' */
-  TObject err;  /* error field... */
+  TObject err[2];
   StkId func;
   int nresults;
 };
@@ -381,17 +381,16 @@ static void f_call (lua_State *L, void *ud) {
 }
 
 
-int luaD_pcall (lua_State *L, int nargs, int nresults, const TObject *err) {
+int luaD_pcall (lua_State *L, int nargs, int nresults) {
   struct CallS c;
   int status;
   c.func = L->top - (nargs+1);  /* function to be called */
   c.nresults = nresults;
-  c.err = *err;
-  status = luaD_runprotected(L, &f_call, &c.err);
+  status = luaD_runprotected(L, &f_call, c.err);
   if (status != 0) {  /* an error occurred? */
     L->top -= nargs+1;  /* remove parameters and func from the stack */
     luaF_close(L, L->top);  /* close eventual pending closures */
-    setobj(L->top++, &c.err);
+    pusherrormsg(L, status, c.err);
   }
   return status;
 }
@@ -401,7 +400,7 @@ int luaD_pcall (lua_State *L, int nargs, int nresults, const TObject *err) {
 ** Execute a protected parser.
 */
 struct SParser {  /* data to `f_parser' */
-  TObject err;  /* error field... */
+  TObject err[2];
   ZIO *z;
   int bin;
 };
@@ -425,15 +424,14 @@ int luaD_protectedparser (lua_State *L, ZIO *z, int bin) {
   if (G(L)->nblocks + G(L)->nblocks/4 >= G(L)->GCthreshold)
     luaC_collectgarbage(L);
   old_blocks = G(L)->nblocks;
-  setnilvalue(&p.err);
-  status = luaD_runprotected(L, f_parser, &p.err);
+  status = luaD_runprotected(L, f_parser, p.err);
   if (status == 0) {
     /* add new memory to threshold (as it probably will stay) */
     lua_assert(G(L)->nblocks >= old_blocks);
     G(L)->GCthreshold += (G(L)->nblocks - old_blocks);
   }
   else
-    setobj(L->top++, &p.err);
+    pusherrormsg(L, status, p.err);
   return status;
 }
 
@@ -445,45 +443,40 @@ int luaD_protectedparser (lua_State *L, ZIO *z, int bin) {
 ** =======================================================
 */
 
-
-static void message (lua_State *L, const TObject *msg, int nofunc) {
-  TObject *m = L->errorJmp->err;
-  if (nofunc || ttype(m) != LUA_TFUNCTION) {  /* no error function? */
-    setobj(m, msg);  /* keep error message */
-  }
-  else {  /* call error function */
-    setobj(L->top, m);
-    setobj(L->top + 1, msg);
-    L->top += 2;
-    luaD_call(L, L->top - 2, 1);
-    setobj(m, L->top - 1);
+static void seterrorobj (lua_State *L, int errcode, TObject *m) {
+  switch (errcode) {
+    case LUA_ERRMEM: {
+      if (G(L) != NULL && G(L)->GCthreshold > 0)  /* state is OK? */
+        setsvalue(&m[0], luaS_new(L, MEMERRMSG));
+      break;
+    }
+    case LUA_ERRERR: {
+      setsvalue(&m[0], luaS_new(L, "error in error handling"));
+      break;
+    }
+    case LUA_ERRSYNTAX: {  /* message is on stack top */
+      setobj(&m[0], L->top - 1);
+      break;
+    }
+    case LUA_ERRRUN: {  /* traceback is on stack top */
+      setobj(&m[0], L->top - 2);
+      setobj(&m[1], L->top - 1);
+      break;
+    }
   }
 }
 
 
-/*
-** Reports an error, and jumps up to the available recovery label
-*/
-void luaD_errorobj (lua_State *L, const TObject *s, int errcode) {
+void luaD_throw (lua_State *L, int errcode) {
+  seterrorobj(L, errcode, L->errorJmp->err);
   if (L->errorJmp) {
     L->errorJmp->status = errcode;
-    message(L, s, (errcode >= LUA_ERRMEM));
     longjmp(L->errorJmp->b, 1);
   }
   else {
     G(L)->panic(L);
     exit(EXIT_FAILURE);
   }
-}
-
-
-void luaD_error (lua_State *L, const char *s, int errcode) {
-  TObject errobj;
-  if (errcode == LUA_ERRMEM && (G(L) == NULL || G(L)->GCthreshold == 0))
-    setnilvalue(&errobj);  /* error bulding state */
-  else
-    setsvalue(&errobj, luaS_new(L, s));
-  luaD_errorobj(L, &errobj, errcode);
 }
 
 

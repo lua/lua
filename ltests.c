@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.124 2002/06/11 16:23:47 roberto Exp roberto $
+** $Id: ltests.c,v 1.125 2002/06/13 13:44:50 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -338,6 +338,34 @@ static int string_query (lua_State *L) {
 }
 
 
+static int xpcall (lua_State *L) {
+  int status;
+  luaL_check_type(L, 1, LUA_TFUNCTION);
+  luaL_check_any(L, 2);
+  lua_pushliteral(L, LUA_TRACEBACK);
+  lua_gettable(L, LUA_REGISTRYINDEX);
+  lua_pushliteral(L, LUA_TRACEBACK);
+  lua_pushvalue(L, 1);
+  lua_settable(L, LUA_REGISTRYINDEX);
+  lua_replace(L, 1);
+  status = lua_pcall(L, lua_gettop(L) - 2, LUA_MULTRET);
+  lua_pushliteral(L, LUA_TRACEBACK);
+  lua_pushvalue(L, 1);
+  lua_settable(L, LUA_REGISTRYINDEX);
+  if (status != 0) {
+    int numres = (status == LUA_ERRRUN) ? 3 : 2;
+    lua_pushnil(L);
+    lua_insert(L, -numres);
+    return numres;
+  }
+  else {
+    lua_pushboolean(L, 1);
+    lua_insert(L, 2);
+    return lua_gettop(L) - 1;  /* return `true' + all results */
+  }
+}
+
+
 static int tref (lua_State *L) {
   int level = lua_gettop(L);
   int lock = luaL_opt_int(L, 2, 1);
@@ -402,7 +430,7 @@ static int doonnewstack (lua_State *L) {
   const char *s = luaL_check_lstr(L, 1, &l);
   int status = luaL_loadbuffer(L1, s, l, s);
   if (status == 0)
-    status = lua_pcall(L1, 0, 0, 0);
+    status = lua_pcall(L1, 0, 0);
   lua_pushnumber(L, status);
   lua_closethread(L, L1);
   return 1;
@@ -639,7 +667,7 @@ static int testC (lua_State *L) {
     else if EQ("call") {
       int narg = getnum;
       int nres = getnum;
-      lua_call(L, narg, nres);
+      lua_pcall(L, narg, nres);
     }
     else if EQ("loadstring") {
       size_t sl;
@@ -659,7 +687,7 @@ static int testC (lua_State *L) {
     else if EQ("type") {
       lua_pushstring(L, lua_typename(L, lua_type(L, getnum)));
     }
-    else luaL_verror(L, "unknown instruction %s", buff);
+    else luaL_error(L, "unknown instruction %s", buff);
   }
   return 0;
 }
@@ -677,6 +705,7 @@ static const struct luaL_reg tests_funcs[] = {
   {"loadlib", loadlib},
   {"stacklevel", stacklevel},
   {"querystr", string_query},
+  {"xpcall", xpcall},
   {"querytab", table_query},
   {"testC", testC},
   {"ref", tref},

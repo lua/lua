@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.73 2002/06/05 16:59:37 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.74 2002/06/13 13:44:50 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -40,13 +40,13 @@ LUALIB_API int luaL_argerror (lua_State *L, int narg, const char *extramsg) {
   if (strcmp(ar.namewhat, "method") == 0) {
     narg--;  /* do not count `self' */
     if (narg == 0)  /* error is in the self argument itself? */
-      return luaL_verror(L,
+      return luaL_error(L,
         "calling %s on bad self (perhaps using `:' instead of `.')",
         ar.name);
   }
   if (ar.name == NULL)
     ar.name = "?";
-  return luaL_verror(L, "bad argument #%d to `%s' (%s)",
+  return luaL_error(L, "bad argument #%d to `%s' (%s)",
                         narg, ar.name, extramsg);
 }
 
@@ -63,19 +63,12 @@ static void tag_error (lua_State *L, int narg, int tag) {
 }
 
 
-LUALIB_API int luaL_verror (lua_State *L, const char *fmt, ...) {
-  lua_Debug ar;
-  const char *msg;
+LUALIB_API int luaL_error (lua_State *L, const char *fmt, ...) {
   va_list argp;
   va_start(argp, fmt);
-  msg = lua_pushvfstring(L, fmt, argp);
+  lua_pushvfstring(L, fmt, argp);
   va_end(argp);
-  if (lua_getstack(L, 1, &ar)) {  /* check calling function */
-    lua_getinfo(L, "Snl", &ar);
-    if (ar.currentline > 0)
-      lua_pushfstring(L, "%s:%d: %s", ar.short_src, ar.currentline, msg);
-  }
-  return lua_errorobj(L);
+  return lua_error(L);
 }
 
 /* }====================================================== */
@@ -92,7 +85,7 @@ LUALIB_API int luaL_findstring (const char *name, const char *const list[]) {
 
 LUALIB_API void luaL_check_stack (lua_State *L, int space, const char *mes) {
   if (!lua_checkstack(L, space))
-    luaL_verror(L, "stack overflow (%s)", mes);
+    luaL_error(L, "stack overflow (%s)", mes);
 }
 
 
@@ -397,35 +390,21 @@ LUALIB_API int luaL_loadbuffer (lua_State *L, const char *buff, size_t size,
 
 static void callalert (lua_State *L, int status) {
   if (status != 0) {
-    int top = lua_gettop(L);
+    int top;
+    if (status == LUA_ERRRUN)
+      lua_concat(L, 2);  /* concat error message and traceback */
+    top = lua_gettop(L);
     lua_getglobal(L, "_ALERT");
     lua_insert(L, -2);
-    lua_pcall(L, 1, 0, 0);
+    lua_pcall(L, 1, 0);
     lua_settop(L, top-1);
   }
 }
 
 
-LUALIB_API int lua_call (lua_State *L, int nargs, int nresults) {
-  int status;
-  int errpos = lua_gettop(L) - nargs;
-  lua_getglobal(L, "_ERRORMESSAGE");
-  lua_insert(L, errpos);  /* put below function and args */
-  status = lua_pcall(L, nargs, nresults, errpos);
-  lua_remove(L, errpos);
-  callalert(L, status);
-  return status;
-}
-
-
 static int aux_do (lua_State *L, int status) {
-  if (status == 0) {  /* parse OK? */
-    int err = lua_gettop(L);
-    lua_getglobal(L, "_ERRORMESSAGE");
-    lua_insert(L, err);
-    status = lua_pcall(L, 0, LUA_MULTRET, err);  /* call main */
-    lua_remove(L, err);  /* remove error function */
-  }
+  if (status == 0)  /* parse OK? */
+    status = lua_pcall(L, 0, LUA_MULTRET);  /* call main */
   callalert(L, status);
   return status;
 }

@@ -1,11 +1,12 @@
 /*
-** $Id: ldebug.c,v 1.118 2002/06/06 18:17:33 roberto Exp roberto $
+** $Id: ldebug.c,v 1.119 2002/06/13 13:39:55 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
 
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "lua.h"
 
@@ -510,18 +511,42 @@ void luaG_ordererror (lua_State *L, const TObject *p1, const TObject *p2) {
 }
 
 
+static void addinfo (lua_State *L, int internal) {
+  CallInfo *ci = (internal) ? L->ci : L->ci - 1;
+  const char *msg = svalue(L->top - 1);
+  if (strchr(msg, '\n')) return;  /* message already `formatted' */
+  if (!isLmark(ci)) {  /* no Lua code? */
+    luaO_pushfstring(L, "%s\n", msg);  /* no extra info */
+  }
+  else {  /* add file:line information */
+    char buff[LUA_IDSIZE];
+    int line = currentline(L, ci);
+    luaO_chunkid(buff, getstr(getluaproto(ci)->source), LUA_IDSIZE);
+    luaO_pushfstring(L, "%s:%d: %s\n", buff, line, msg);
+  }
+}
+
+
+void luaG_errormsg (lua_State *L, int internal) {
+  const TObject *errfunc;
+  if (ttype(L->top - 1) == LUA_TSTRING)
+    addinfo(L, internal);
+  errfunc = luaH_getstr(hvalue(registry(L)), luaS_new(L, LUA_TRACEBACK));
+  if (ttype(errfunc) != LUA_TNIL) {  /* is there an error function? */
+    setobj(L->top, errfunc);  /* push function */
+    setobj(L->top + 1, L->top - 1);  /* push error message */
+    L->top += 2;
+    luaD_call(L, L->top - 2, 1);  /* call error function? */
+  }
+  luaD_throw(L, LUA_ERRRUN);
+}
+
+
 void luaG_runerror (lua_State *L, const char *fmt, ...) {
-  const char *msg;
   va_list argp;
   va_start(argp, fmt);
-  msg = luaO_pushvfstring(L, fmt, argp);
+  luaO_pushvfstring(L, fmt, argp);
   va_end(argp);
-  if (isLmark(L->ci)) {
-    char buff[LUA_IDSIZE];
-    int line = currentline(L, L->ci);
-    luaO_chunkid(buff, getstr(getluaproto(L->ci)->source), LUA_IDSIZE);
-    msg = luaO_pushfstring(L, "%s:%d: %s", buff, line, msg);
-  }
-  luaD_error(L, msg, LUA_ERRRUN);
+  luaG_errormsg(L, 1);
 }
 

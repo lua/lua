@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.95 2002/06/03 14:09:57 roberto Exp roberto $
+** $Id: lstate.c,v 1.96 2002/06/06 18:17:33 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -7,6 +7,7 @@
 
 #include "lua.h"
 
+#include "ldebug.h"
 #include "ldo.h"
 #include "lfunc.h"
 #include "lgc.h"
@@ -122,14 +123,13 @@ LUA_API lua_State *lua_newthread (lua_State *OL) {
 
 LUA_API lua_State *lua_open (void) {
   lua_State *L;
-  TObject dummy;
-  setnilvalue(&dummy);
+  TObject dummy[2];
   L = luaM_new(NULL, lua_State);
   if (L) {  /* allocation OK? */
     preinit_state(L);
     L->l_G = NULL;
     L->next = L->previous = L;
-    if (luaD_runprotected(L, f_luaopen, &dummy) != 0) {
+    if (luaD_runprotected(L, f_luaopen, dummy) != 0) {
       /* memory allocation error: free partial state */
       close_state(L);
       L = NULL;
@@ -169,8 +169,8 @@ static void close_state (lua_State *L) {
 
 
 LUA_API void lua_closethread (lua_State *L, lua_State *thread) {
-  if (L == thread) lua_error(L, "cannot close only thread of a state");
   lua_lock(L);
+  if (L == thread) luaG_runerror(L, "cannot close only thread of a state");
   luaE_closethread(L, thread);
   lua_unlock(L);
 }
