@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.4 2004/09/22 14:02:00 roberto Exp roberto $
+** $Id: llex.c,v 2.5 2004/11/24 19:16:03 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -26,12 +26,6 @@
 #define next(ls) (ls->current = zgetc(ls->z))
 
 
-#define save(ls,c)  { \
-  Mbuffer *b = ls->buff; \
-  if (b->n + 1 > b->buffsize) \
-    luaZ_resizebuffer(ls->L, b, ((b->buffsize*2) + LUA_MINBUFFER)); \
-  b->buffer[b->n++] = cast(char, c); }
-
 
 
 #define currIsNewline(ls)	(ls->current == '\n' || ls->current == '\r')
@@ -46,6 +40,22 @@ static const char *const token2string [] = {
     "..", "...", "==", ">=", "<=", "~=",
     "*number", "*string", "<eof>"
 };
+
+
+#define save_and_next(ls) (save(ls, ls->current), next(ls))
+
+
+static void save (LexState *ls, int c) {
+  Mbuffer *b = ls->buff;
+  if (b->n + 1 > b->buffsize) {
+    size_t newsize;
+    if (b->buffsize >= MAX_SIZET/2)
+      luaX_lexerror(ls, "lexical element too long", 0);
+    newsize = b->buffsize * 2;
+    luaZ_resizebuffer(ls->L, b, newsize);
+  }
+  b->buffer[b->n++] = cast(char, c);
+}
 
 
 void luaX_init (lua_State *L) {
@@ -130,6 +140,7 @@ void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, TString *source) {
   ls->linenumber = 1;
   ls->lastline = 1;
   ls->source = source;
+  luaZ_resizebuffer(ls->L, ls->buff, LUA_MINBUFFER);  /* initialize buffer */
   next(ls);  /* read first char */
 }
 
@@ -141,12 +152,6 @@ void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, TString *source) {
 ** =======================================================
 */
 
-
-
-static void save_and_next (LexState *ls) {
-  save(ls, ls->current);
-  next(ls);
-}
 
 
 

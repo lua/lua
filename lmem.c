@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.65 2004/08/30 13:44:44 roberto Exp roberto $
+** $Id: lmem.c,v 1.66 2004/11/19 15:52:40 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -43,16 +43,14 @@
 #define MINSIZEARRAY	4
 
 
-void *luaM_growaux (lua_State *L, void *block, int *size, size_t size_elems,
-                    int limit, const char *errormsg) {
+void *luaM_growaux_ (lua_State *L, void *block, int *size, size_t size_elems,
+                     int limit, const char *errormsg) {
   void *newblock;
   int newsize;
-  if (cast(size_t, limit) > MAX_SIZET/size_elems)
-    limit = cast(int, MAX_SIZET/size_elems);
   if (*size >= limit/2) {  /* cannot double it? */
-    if (*size >= limit - MINSIZEARRAY)  /* try something smaller... */
+    if (*size >= limit)  /* cannot grow even a little? */
       luaG_runerror(L, errormsg);
-    newsize = limit;  /* still have at least MINSIZEARRAY free places */
+    newsize = limit;  /* still have at least one free place */
   }
   else {
     newsize = (*size)*2;
@@ -75,7 +73,7 @@ void *luaM_toobig (lua_State *L) {
 /*
 ** generic allocation routine.
 */
-void *luaM_realloc (lua_State *L, void *block, size_t osize, size_t nsize) {
+void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
   global_State *g = G(L);
   lua_assert((osize == 0) == (block == NULL));
   block = (*g->realloc)(g->ud, block, osize, nsize);
