@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.48 1997/07/29 20:38:45 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.49 1997/07/30 22:00:50 roberto Exp roberto $";
 
 #include <stdlib.h>
 
@@ -49,8 +49,6 @@ static Long    varbuffer[MAXVAR];    /* variables in an assignment list;
 				it's long to store negative Word values */
 static int     nvarbuffer=0;	     /* number of variables at a list */
 
-
-#define MAXFIELDS FIELDS_PER_FLUSH*2
 
 int lua_debug = 0;
 
@@ -106,65 +104,75 @@ static void code_constant (int c)
 
 static int next_constant (void)
 {
-  if (currState->f->nconsts >= currState->maxconsts) {
+  TFunc *f = currState->f;
+  if (f->nconsts >= currState->maxconsts) {
     currState->maxconsts =
-      growvector(&currState->f->consts, currState->maxconsts,
-                 TObject, constantEM, MAX_WORD);
+      growvector(&f->consts, currState->maxconsts, TObject,
+                 constantEM, MAX_WORD);
   }
-  return currState->f->nconsts++;
+  return f->nconsts++;
 }
 
 
 static int string_constant (TaggedString *s)
 {
+  TFunc *f = currState->f;
   int c = s->u.s.constindex;
-  if (!(0 <= c && c < currState->f->nconsts &&
-      ttype(&currState->f->consts[c]) == LUA_T_STRING &&
-      tsvalue(&currState->f->consts[c]) == s)) {
+  if (!(0 <= c && c < f->nconsts &&
+      ttype(&f->consts[c]) == LUA_T_STRING && tsvalue(&f->consts[c]) == s)) {
     c = next_constant();
-    ttype(&currState->f->consts[c]) = LUA_T_STRING;
-    tsvalue(&currState->f->consts[c]) = s;
+    ttype(&f->consts[c]) = LUA_T_STRING;
+    tsvalue(&f->consts[c]) = s;
     s->u.s.constindex = c;  /* hint for next time */
-    luaI_releasestring(s);
   }
+  luaI_releasestring(s);
   return c;
 }
 
 
 static void code_string (TaggedString *s)
 {
-  int c = string_constant(s);
-  code_constant(c);
+  code_constant(string_constant(s));
 }
 
-static void code_float (real n)
+
+#define LIM 10
+static int real_constant (real r)
 {
-  int c = next_constant();
-  ttype(&currState->f->consts[c]) = LUA_T_NUMBER;
-  nvalue(&currState->f->consts[c]) = n;
-  code_constant(c);
+  /* check whether 'r' has appeared within the last LIM entries */
+  TObject *cnt = currState->f->consts;
+  int c = currState->f->nconsts;
+  int lim = c < LIM ? 0 : c-LIM;
+  while (--c >= lim) {
+    if (ttype(&cnt[c]) == LUA_T_NUMBER && nvalue(&cnt[c]) == r)
+      return c;
+  }
+  /* not found; create a new entry */
+  c = next_constant();
+  cnt = currState->f->consts;  /* 'next_constant' may reallocate this vector */
+  ttype(&cnt[c]) = LUA_T_NUMBER;
+  nvalue(&cnt[c]) = r;
+  return c;
 }
 
 
-static void code_number (float f)
+static void code_number (real f)
 { 
   Word i;
-  if (f >= 0 && f <= (float)MAX_WORD && (float)(i=(Word)f) == f) {
-   /* f has an (short) integer value */
-   if (i <= 2) code_byte(PUSH0 + i);
-   else if (i <= 255)
-   {
-    code_byte(PUSHBYTE);
-    code_byte(i);
-   }
-   else
-   {
-    code_byte(PUSHWORD);
-    code_word(i);
-   }
+  if (f >= 0 && f <= (real)MAX_WORD && (real)(i=(Word)f) == f) {
+    /* f has an (short) integer value */
+    if (i <= 2) code_byte(PUSH0 + i);
+    else if (i <= 255) {
+      code_byte(PUSHBYTE);
+      code_byte(i);
+    }
+    else {
+      code_byte(PUSHWORD);
+      code_word(i);
+    }
   }
   else
-    code_float(f);
+    code_constant(real_constant(f));
 }
 
 
@@ -483,7 +491,7 @@ void lua_parse (TFunc *tf)
 %union 
 {
  int   vInt;
- float vFloat;
+ real vReal;
  char *pChar;
  Long  vLong;
  TaggedString *pTStr;
@@ -498,7 +506,7 @@ void lua_parse (TFunc *tf)
 %token LOCAL
 %token FUNCTION
 %token DOTS
-%token <vFloat> NUMBER
+%token <vReal> NUMBER
 %token <pTStr>  NAME STRING
 
 %type <vLong> PrepJump
