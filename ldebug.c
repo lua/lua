@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.131 2002/08/08 20:08:41 roberto Exp roberto $
+** $Id: ldebug.c,v 1.132 2002/08/12 17:23:12 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -269,6 +269,11 @@ static int checkopenop (const Proto *pt, int pc) {
 }
 
 
+static int checkRK (const Proto *pt, int r) {
+  return (r < pt->maxstacksize || (r >= MAXSTACK && r-MAXSTACK < pt->sizek));
+}
+
+
 static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
   int pc;
   int last;  /* stores position of last instruction that changed `reg' */
@@ -285,11 +290,13 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
       case iABC: {
         b = GETARG_B(i);
         c = GETARG_C(i);
-        if (testOpMode(op, OpModeBreg))
+        if (testOpMode(op, OpModeBreg)) {
           checkreg(pt, b);
-        if (testOpMode(op, OpModeCreg))
-          check(c < pt->maxstacksize ||
-               (c >= MAXSTACK && c-MAXSTACK < pt->sizek));
+        }
+        else if (testOpMode(op, OpModeBrk))
+          check(checkRK(pt, b));
+        if (testOpMode(op, OpModeCrk))
+          check(checkRK(pt, c));
         break;
       }
       case iABx: {
@@ -496,7 +503,7 @@ void luaG_concaterror (lua_State *L, StkId p1, StkId p2) {
 }
 
 
-void luaG_aritherror (lua_State *L, StkId p1, const TObject *p2) {
+void luaG_aritherror (lua_State *L, const TObject *p1, const TObject *p2) {
   TObject temp;
   if (luaV_tonumber(p1, &temp) == NULL)
     p2 = p1;  /* first operand is wrong */

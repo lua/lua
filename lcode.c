@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.108 2002/06/13 13:39:55 roberto Exp $
+** $Id: lcode.c,v 1.109 2002/08/05 14:07:34 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -100,14 +100,14 @@ static Instruction *getjumpcontrol (FuncState *fs, int pc) {
 static int need_value (FuncState *fs, int list, int cond) {
   for (; list != NO_JUMP; list = luaK_getjump(fs, list)) {
     Instruction i = *getjumpcontrol(fs, list);
-    if (GET_OPCODE(i) != OP_TEST || GETARG_B(i) != cond) return 1;
+    if (GET_OPCODE(i) != OP_TEST || GETARG_C(i) != cond) return 1;
   }
   return 0;  /* not found */
 }
 
 
 static void patchtestreg (Instruction *i, int reg) {
-  if (reg == NO_REG) reg = GETARG_C(*i);
+  if (reg == NO_REG) reg = GETARG_B(*i);
   SETARG_A(*i, reg);
 }
 
@@ -122,7 +122,7 @@ static void luaK_patchlistaux (FuncState *fs, int list,
       luaK_fixjump(fs, list, dtarget);  /* jump to default target */
     }
     else {
-      if (GETARG_B(*i)) {
+      if (GETARG_C(*i)) {
         lua_assert(ttarget != NO_JUMP);
         patchtestreg(i, treg);
         luaK_fixjump(fs, list, ttarget);
@@ -409,7 +409,7 @@ int luaK_exp2RK (FuncState *fs, expdesc *e) {
     }
     default: break;
   }
-  /* not a constant in the right range: put in a register */
+  /* not a constant in the right range: put it in a register */
   return luaK_exp2anyreg(fs, e);
 }
 
@@ -432,8 +432,8 @@ void luaK_storevar (FuncState *fs, expdesc *var, expdesc *exp) {
       break;
     }
     case VINDEXED: {
-      int e = luaK_exp2anyreg(fs, exp);
-      luaK_codeABC(fs, OP_SETTABLE, e, var->info, var->aux);
+      int e = luaK_exp2RK(fs, exp);
+      luaK_codeABC(fs, OP_SETTABLE, var->info, var->aux, e);
       break;
     }
     default: {
@@ -460,8 +460,9 @@ void luaK_self (FuncState *fs, expdesc *e, expdesc *key) {
 
 static void invertjump (FuncState *fs, expdesc *e) {
   Instruction *pc = getjumpcontrol(fs, e->info);
-  lua_assert(testOpMode(GET_OPCODE(*pc), OpModeT));
-  SETARG_B(*pc, !(GETARG_B(*pc)));
+  lua_assert(testOpMode(GET_OPCODE(*pc), OpModeT) &&
+             GET_OPCODE(*pc) != OP_TEST);
+  SETARG_A(*pc, !(GETARG_A(*pc)));
 }
 
 
@@ -470,13 +471,13 @@ static int jumponcond (FuncState *fs, expdesc *e, int cond) {
     Instruction ie = getcode(fs, e);
     if (GET_OPCODE(ie) == OP_NOT) {
       fs->pc--;  /* remove previous OP_NOT */
-      return luaK_condjump(fs, OP_TEST, NO_REG, !cond ,GETARG_B(ie));
+      return luaK_condjump(fs, OP_TEST, NO_REG, GETARG_B(ie), !cond);
     }
     /* else go through */
   }
   discharge2anyreg(fs, e);
   freeexp(fs, e);
-  return luaK_condjump(fs, OP_TEST, NO_REG, cond, e->info);
+  return luaK_condjump(fs, OP_TEST, NO_REG, e->info, cond);
 }
 
 
@@ -605,11 +606,6 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
       luaK_exp2nextreg(fs, v);  /* operand must be on the `stack' */
       break;
     }
-    case OPR_SUB: case OPR_DIV: case OPR_POW: {
-      /* non-comutative operators */
-      luaK_exp2anyreg(fs, v);  /* first operand must be a register */
-      break;
-    }
     default: {
       luaK_exp2RK(fs, v);
       break;
@@ -619,13 +615,11 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
 
 
 static void codebinop (FuncState *fs, expdesc *res, BinOpr op,
-                       int o1, int o2, int ic) {
+                       int o1, int o2) {
   switch (op) {
     case OPR_SUB:
     case OPR_DIV:
     case OPR_POW:
-      lua_assert(!ic);
-      /* go through */
     case OPR_ADD:
     case OPR_MULT: {  /* ORDER OPR */
       OpCode opc = cast(OpCode, (op - OPR_ADD) + OP_ADD);
@@ -635,20 +629,21 @@ static void codebinop (FuncState *fs, expdesc *res, BinOpr op,
     }
     case OPR_NE:
     case OPR_EQ: {
-      res->info = luaK_condjump(fs, OP_EQ, o1, (op == OPR_EQ), o2);
+      res->info = luaK_condjump(fs, OP_EQ, (op == OPR_EQ), o1, o2);
       res->k = VJMP;
       break;
     }
-    case OPR_LT:
-    case OPR_LE:
     case OPR_GT:
     case OPR_GE: {  /* ORDER OPR */
-      OpCode opc;
-      int i = op - OPR_LT;
-      if (ic)  /* operands were interchanged? */
-        i = (i+2)&3;  /* correct operator */
-      opc = cast(OpCode, i + OP_LT);
-      res->info = luaK_condjump(fs, opc, o1, 1, o2);
+      int temp;
+      temp = o1; o1 = o2; o2 = temp;  /* o1 <==> o2 */
+      op -= 2;  /* GT -> LT, GE -> LE */
+      /* go through */
+    }
+    case OPR_LT:
+    case OPR_LE: {
+      OpCode opc = cast(OpCode, (op - OPR_LT) + OP_LT);
+      res->info = luaK_condjump(fs, opc, 1, o1, o2);
       res->k = VJMP;
       break;
     }
@@ -691,21 +686,11 @@ void luaK_posfix (FuncState *fs, BinOpr op, expdesc *e1, expdesc *e2) {
       break;
     }
     default: {
-      int o1, o2;
-      int ic;  /* interchange flag */
-      if (e1->k != VK) {  /* not a constant operator? */
-        o1 = e1->info;
-        o2 = luaK_exp2RK(fs, e2);  /* maybe other operator is constant... */
-        ic = 0;
-      }
-      else {  /* interchange operands */
-        o2 = luaK_exp2RK(fs, e1);  /* constant must be 2nd operand */
-        o1 = luaK_exp2anyreg(fs, e2);  /* other operator must be in register */
-        ic = 1;
-      }
+      int o1 = luaK_exp2RK(fs, e1);
+      int o2 = luaK_exp2RK(fs, e2);
       freeexp(fs, e2);
       freeexp(fs, e1);
-      codebinop(fs, e1, op, o1, o2, ic);
+      codebinop(fs, e1, op, o1, o2);
     }
   }
 }

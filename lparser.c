@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.190 2002/07/04 18:23:42 roberto Exp $
+** $Id: lparser.c,v 1.191 2002/08/05 17:35:45 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -324,7 +324,7 @@ static void open_func (LexState *ls, FuncState *fs) {
   fs->bl = NULL;
   f->code = NULL;
   f->source = ls->source;
-  f->maxstacksize = 1;  /* register 0 is always valid */
+  f->maxstacksize = 2;  /* registers 0/1 are always valid */
   f->numparams = 0;  /* default for main chunk */
   f->is_vararg = 0;  /* default for main chunk */
 }
@@ -489,8 +489,8 @@ static void recfield (LexState *ls, struct ConsControl *cc) {
   check(ls, '=');
   luaK_exp2RK(fs, &key);
   expr(ls, &val);
-  luaK_exp2anyreg(fs, &val);
-  luaK_codeABC(fs, OP_SETTABLE, val.info, cc->t->info, luaK_exp2RK(fs, &key));
+  luaK_codeABC(fs, OP_SETTABLE, cc->t->info, luaK_exp2RK(fs, &key),
+                                             luaK_exp2RK(fs, &val));
   fs->freereg = reg;  /* free registers */
 }
 
@@ -735,7 +735,7 @@ static const struct {
   lu_byte right; /* right priority */
 } priority[] = {  /* ORDER OPR */
    {6, 6}, {6, 6}, {7, 7}, {7, 7},  /* arithmetic */
-   {10, 9}, {5, 4},                  /* power and concat (right associative) */
+   {10, 9}, {5, 4},                 /* power and concat (right associative) */
    {3, 3}, {3, 3},                  /* equality */
    {3, 3}, {3, 3}, {3, 3}, {3, 3},  /* order */
    {2, 2}, {1, 1}                   /* logical (and/or) */

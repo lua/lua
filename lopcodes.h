@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.99 2002/06/12 14:51:31 roberto Exp $
+** $Id: lopcodes.h,v 1.100 2002/08/05 14:46:43 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -14,9 +14,9 @@
   We assume that instructions are unsigned numbers.
   All instructions have an opcode in the first 6 bits.
   Instructions can have the following fields:
-	`A' : 8 bits (25-32)
-	`B' : 8 bits (17-24)
-	`C' : 10 bits (7-16)
+	`A' : 8 bits
+	`B' : 9 bits
+	`C' : 9 bits
 	`Bx' : 18 bits (`B' and `C' together)
 	`sBx' : signed Bx
 
@@ -34,8 +34,8 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 /*
 ** size and position of opcode arguments.
 */
-#define SIZE_C		10
-#define SIZE_B		8
+#define SIZE_C		9
+#define SIZE_B		9
 #define SIZE_Bx		(SIZE_C + SIZE_B)
 #define SIZE_A		8
 
@@ -112,16 +112,15 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 
 
 /*
-** invalid registers that fits in 8 bits
+** invalid register that fits in 8 bits
 */
 #define NO_REG		MAXARG_A
-#define NO_REG1		(NO_REG+1)
 
 
 /*
 ** R(x) - register
 ** Kst(x) - constant (in constant table)
-** R/K(x) == if x < MAXSTACK then R(x) else Kst(x-MAXSTACK)
+** RK(x) == if x < MAXSTACK then R(x) else Kst(x-MAXSTACK)
 */
 
 typedef enum {
@@ -135,21 +134,21 @@ OP_LOADNIL,/*	A B	R(A) := ... := R(B) := nil			*/
 OP_GETUPVAL,/*	A B	R(A) := UpValue[B]				*/
 
 OP_GETGLOBAL,/*	A Bx	R(A) := Gbl[Kst(Bx)]				*/
-OP_GETTABLE,/*	A B C	R(A) := R(B)[R/K(C)]				*/
+OP_GETTABLE,/*	A B C	R(A) := R(B)[RK(C)]				*/
 
 OP_SETGLOBAL,/*	A Bx	Gbl[Kst(Bx)] := R(A)				*/
 OP_SETUPVAL,/*	A B	UpValue[B] := R(A)				*/
-OP_SETTABLE,/*	A B C	R(B)[R/K(C)] := R(A)				*/
+OP_SETTABLE,/*	A B C	R(A)[RK(B)] := RK(C)				*/
 
 OP_NEWTABLE,/*	A B C	R(A) := {} (size = B,C)				*/
 
-OP_SELF,/*	A B C	R(A+1) := R(B); R(A) := R(B)[R/K(C)]		*/
+OP_SELF,/*	A B C	R(A+1) := R(B); R(A) := R(B)[RK(C)]		*/
 
-OP_ADD,/*	A B C	R(A) := R(B) + R/K(C)				*/
-OP_SUB,/*	A B C	R(A) := R(B) - R/K(C)				*/
-OP_MUL,/*	A B C	R(A) := R(B) * R/K(C)				*/
-OP_DIV,/*	A B C	R(A) := R(B) / R/K(C)				*/
-OP_POW,/*	A B C	R(A) := R(B) ^ R/K(C)				*/
+OP_ADD,/*	A B C	R(A) := RK(B) + RK(C)				*/
+OP_SUB,/*	A B C	R(A) := RK(B) - RK(C)				*/
+OP_MUL,/*	A B C	R(A) := RK(B) * RK(C)				*/
+OP_DIV,/*	A B C	R(A) := RK(B) / RK(C)				*/
+OP_POW,/*	A B C	R(A) := RK(B) ^ RK(C)				*/
 OP_UNM,/*	A B	R(A) := -R(B)					*/
 OP_NOT,/*	A B	R(A) := not R(B)				*/
 
@@ -157,13 +156,11 @@ OP_CONCAT,/*	A B C	R(A) := R(B).. ... ..R(C)			*/
 
 OP_JMP,/*	sBx	PC += sBx					*/
 
-OP_EQ,/*	A B C	if ((R(A) == R/K(C)) ~= B) then pc++		*/
-OP_LT,/*	A B C	if ((R(A) <  R/K(C)) ~= B) then pc++  		*/
-OP_LE,/*	A B C	if ((R(A) <= R/K(C)) ~= B) then pc++  		*/
-OP_GT,/*	A B C	if ((R(A) >  R/K(C)) ~= B) then pc++  		*/
-OP_GE,/*	A B C	if ((R(A) >= R/K(C)) ~= B) then pc++  		*/
+OP_EQ,/*	A B C	if ((RK(B) == RK(C)) ~= A) then pc++		*/
+OP_LT,/*	A B C	if ((RK(B) <  RK(C)) ~= A) then pc++  		*/
+OP_LE,/*	A B C	if ((RK(B) <= RK(C)) ~= A) then pc++  		*/
 
-OP_TEST,/*	A B C	if (R(C) <=> B) then R(A) := R(C) else pc++	*/ 
+OP_TEST,/*	A B C	if (R(B) <=> C) then R(A) := R(B) else pc++	*/ 
 
 OP_CALL,/*	A B C	R(A), ... ,R(A+C-2) := R(A)(R(A+1), ... ,R(A+B-1)) */
 OP_TAILCALL,/*	A B C	return R(A)(R(A+1), ... ,R(A+B-1))		*/
@@ -207,11 +204,14 @@ OP_CLOSURE/*	A Bx	R(A) := closure(KPROTO[Bx], R(A), ... ,R(A+n))	*/
 */  
 enum OpModeMask {
   OpModeBreg = 2,       /* B is a register */
-  OpModeCreg,           /* C is a register/constant */
+  OpModeBrk,		/* B is a register/constant */
+  OpModeCrk,           /* C is a register/constant */
   OpModesetA,           /* instruction set register A */
   OpModeK,              /* Bx is a constant */
   OpModeT		/* operator is a test */
+  
 };
+
 
 extern const lu_byte luaP_opmodes[NUM_OPCODES];
 

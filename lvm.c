@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.251 2002/08/07 19:22:39 roberto Exp roberto $
+** $Id: lvm.c,v 1.252 2002/08/12 17:23:12 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -318,7 +318,8 @@ void luaV_concat (lua_State *L, int total, int last) {
 }
 
 
-static void Arith (lua_State *L, StkId ra, StkId rb, StkId rc, TMS op) {
+static void Arith (lua_State *L, StkId ra,
+                   const TObject *rb, const TObject *rc, TMS op) {
   TObject tempb, tempc;
   const TObject *b, *c;
   if ((b = luaV_tonumber(rb, &tempb)) != NULL &&
@@ -356,10 +357,9 @@ static void Arith (lua_State *L, StkId ra, StkId rb, StkId rc, TMS op) {
 
 #define RA(i)	(base+GETARG_A(i))
 #define RB(i)	(base+GETARG_B(i))
+#define RKB(i)	((GETARG_B(i) < MAXSTACK) ? RB(i) : k+GETARG_B(i)-MAXSTACK)
 #define RC(i)	(base+GETARG_C(i))
-#define RKC(i)	((GETARG_C(i) < MAXSTACK) ? \
-			base+GETARG_C(i) : \
-			k+GETARG_C(i)-MAXSTACK)
+#define RKC(i)	((GETARG_C(i) < MAXSTACK) ? RC(i) : k+GETARG_C(i)-MAXSTACK)
 #define KBx(i)	(k+GETARG_Bx(i))
 
 
@@ -423,7 +423,7 @@ StkId luaV_execute (lua_State *L) {
         break;
       }
       case OP_GETGLOBAL: {
-        StkId rb = KBx(i);
+        TObject *rb = KBx(i);
         const TObject *v;
         lua_assert(ttisstring(rb) && ttistable(&cl->g));
         v = luaH_getstr(hvalue(&cl->g), tsvalue(rb));
@@ -456,7 +456,7 @@ StkId luaV_execute (lua_State *L) {
         break;
       }
       case OP_SETTABLE: {
-        luaV_settable(L, RB(i), RKC(i), ra);
+        luaV_settable(L, ra, RKB(i), RKC(i));
         break;
       }
       case OP_NEWTABLE: {
@@ -482,8 +482,8 @@ StkId luaV_execute (lua_State *L) {
         break;
       }
       case OP_ADD: {
-        StkId rb = RB(i);
-        StkId rc = RKC(i);
+        TObject *rb = RKB(i);
+        TObject *rc = RKC(i);
         if (ttisnumber(rb) && ttisnumber(rc)) {
           setnvalue(ra, nvalue(rb) + nvalue(rc));
         }
@@ -492,8 +492,8 @@ StkId luaV_execute (lua_State *L) {
         break;
       }
       case OP_SUB: {
-        StkId rb = RB(i);
-        StkId rc = RKC(i);
+        TObject *rb = RKB(i);
+        TObject *rc = RKC(i);
         if (ttisnumber(rb) && ttisnumber(rc)) {
           setnvalue(ra, nvalue(rb) - nvalue(rc));
         }
@@ -502,8 +502,8 @@ StkId luaV_execute (lua_State *L) {
         break;
       }
       case OP_MUL: {
-        StkId rb = RB(i);
-        StkId rc = RKC(i);
+        TObject *rb = RKB(i);
+        TObject *rc = RKC(i);
         if (ttisnumber(rb) && ttisnumber(rc)) {
           setnvalue(ra, nvalue(rb) * nvalue(rc));
         }
@@ -512,8 +512,8 @@ StkId luaV_execute (lua_State *L) {
         break;
       }
       case OP_DIV: {
-        StkId rb = RB(i);
-        StkId rc = RKC(i);
+        TObject *rb = RKB(i);
+        TObject *rc = RKC(i);
         if (ttisnumber(rb) && ttisnumber(rc)) {
           setnvalue(ra, nvalue(rb) / nvalue(rc));
         }
@@ -522,7 +522,7 @@ StkId luaV_execute (lua_State *L) {
         break;
       }
       case OP_POW: {
-        Arith(L, ra, RB(i), RKC(i), TM_POW);
+        Arith(L, ra, RKB(i), RKC(i), TM_POW);
         break;
       }
       case OP_UNM: {
@@ -556,35 +556,25 @@ StkId luaV_execute (lua_State *L) {
         break;
       }
       case OP_EQ: {  /* skip next instruction if test fails */
-        if (equalobj(L, ra, RKC(i)) != GETARG_B(i)) pc++;
+        if (equalobj(L, RKB(i), RKC(i)) != GETARG_A(i)) pc++;
         else dojump(pc, GETARG_sBx(*pc) + 1);
         break;
       }
       case OP_LT: {
-        if (luaV_lessthan(L, ra, RKC(i)) != GETARG_B(i)) pc++;
+        if (luaV_lessthan(L, RKB(i), RKC(i)) != GETARG_A(i)) pc++;
         else dojump(pc, GETARG_sBx(*pc) + 1);
         break;
       }
       case OP_LE: {
-        if (luaV_lessequal(L, ra, RKC(i)) != GETARG_B(i)) pc++;
-        else dojump(pc, GETARG_sBx(*pc) + 1);
-        break;
-      }
-      case OP_GT: {
-        if (luaV_lessthan(L, RKC(i), ra) != GETARG_B(i)) pc++;
-        else dojump(pc, GETARG_sBx(*pc) + 1);
-        break;
-      }
-      case OP_GE: {
-        if (luaV_lessequal(L, RKC(i), ra) != GETARG_B(i)) pc++;
+        if (luaV_lessequal(L, RKB(i), RKC(i)) != GETARG_A(i)) pc++;
         else dojump(pc, GETARG_sBx(*pc) + 1);
         break;
       }
       case OP_TEST: {
-        StkId rc = RKC(i);
-        if (l_isfalse(rc) == GETARG_B(i)) pc++;
+        TObject *rb = RB(i);
+        if (l_isfalse(rb) == GETARG_C(i)) pc++;
         else {
-          setobj(ra, rc);
+          setobj(ra, rb);
           dojump(pc, GETARG_sBx(*pc) + 1);
         }
         break;
