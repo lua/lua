@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.100 2001/06/06 18:00:19 roberto Exp roberto $
+** $Id: lgc.c,v 1.101 2001/06/07 15:01:21 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -338,12 +338,14 @@ static void callgcTM (lua_State *L, const TObject *obj) {
   Closure *tm = luaT_gettmbyObj(G(L), obj, TM_GC);
   if (tm != NULL) {
     int oldah = L->allowhooks;
+    StkId top = L->top;
     L->allowhooks = 0;  /* stop debug hooks during GC tag methods */
     luaD_checkstack(L, 2);
-    setclvalue(L->top, tm);
-    setobj(L->top+1, obj);
+    setclvalue(top, tm);
+    setobj(top+1, obj);
     L->top += 2;
-    luaD_call(L, L->top-2, 0);
+    luaD_call(L, top);
+    L->top = top;  /* restore top */
     L->allowhooks = oldah;  /* restore hooks */
   }
 }

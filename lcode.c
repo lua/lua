@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.71 2001/06/07 15:01:21 roberto Exp roberto $
+** $Id: lcode.c,v 1.72 2001/06/08 12:29:27 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -261,10 +261,12 @@ static int number_constant (FuncState *fs, lua_Number r) {
 
 void luaK_setcallreturns (FuncState *fs, expdesc *e, int nresults) {
   if (e->k == VCALL) {  /* expression is an open function call? */
-    SETARG_C(getcode(fs, e), nresults);  /* set number of results */
+    int a = GETARG_A(getcode(fs, e));
+    int c = (nresults == LUA_MULTRET) ? NO_REG : a + nresults;
+    SETARG_C(getcode(fs, e), c);
     if (nresults == 1) {  /* `regular' expression? */
       e->k = VNONRELOC;
-      e->u.i.info = GETARG_A(getcode(fs, e));
+      e->u.i.info = a;
     }
   }
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.145 2001/06/07 14:44:51 roberto Exp roberto $
+** $Id: lparser.c,v 1.146 2001/06/08 12:29:27 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -424,7 +424,7 @@ static void funcargs (LexState *ls, expdesc *f) {
         args.k = VVOID;
       else {
         explist1(ls, &args);
-        luaK_setcallreturns(fs, &args, NO_REG);
+        luaK_setcallreturns(fs, &args, LUA_MULTRET);
       }
       check_match(ls, l_c(')'), l_c('('), line);
       break;
@@ -452,7 +452,7 @@ static void funcargs (LexState *ls, expdesc *f) {
       luaK_exp2nextreg(fs, &args);  /* close last argument */
     top = fs->freereg;
   }
-  init_exp(f, VCALL, luaK_codeABC(fs, OP_CALL, base, top, 1));
+  init_exp(f, VCALL, luaK_codeABC(fs, OP_CALL, base, top, base+1));
   fs->freereg = base+1;  /* call remove function and arguments and leaves
                             (unless changed) one result */
 }
@@ -530,7 +530,7 @@ static int listfields (LexState *ls, expdesc *t) {
     n++;
   }
   if (v.k == VCALL) {
-    luaK_setcallreturns(fs, &v, NO_REG);
+    luaK_setcallreturns(fs, &v, LUA_MULTRET);
     luaK_codeABc(fs, OP_SETLISTO, t->u.i.info, n-1);
   }
   else {
@@ -1098,7 +1098,7 @@ static void retstat (LexState *ls) {
   else {
     int n = explist1(ls, &e);  /* optional return values */
     if (e.k == VCALL) {
-      luaK_setcallreturns(fs, &e, NO_REG);
+      luaK_setcallreturns(fs, &e, LUA_MULTRET);
       first = fs->nactloc;
       last1 = NO_REG;  /* return all values */
     }

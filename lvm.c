@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.180 2001/06/05 19:27:32 roberto Exp roberto $
+** $Id: lvm.c,v 1.181 2001/06/08 12:29:27 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -106,33 +106,35 @@ void luaV_Lclosure (lua_State *L, Proto *l, int nelems) {
 }
 
 
-static void callTM (lua_State *L, const l_char *fmt, ...) {
+static void callTM (lua_State *L, Closure *f, const l_char *fmt, ...) {
   va_list argp;
   StkId base = L->top;
-  int has_result = 0;
+  StkId result = NULL;  /* result position */
   va_start(argp, fmt);
+  setclvalue(L->top, f);  /* push function */
+  incr_top;
+  if (*fmt == l_c('r')) {
+    fmt++;
+    result = va_arg(argp, TObject *);  /* result position */
+  }
   while (*fmt) {
-    switch (*fmt++) {
-      case l_c('c'):
-        setclvalue(L->top, va_arg(argp, Closure *));
-        break;
-      case l_c('o'):
+    if (*fmt++ == l_c('o')) {
         setobj(L->top, va_arg(argp, TObject *));
-        break;
-      case l_c('s'):
-        setsvalue(L->top, va_arg(argp, TString *));
-        break;
-      case l_c('r'):
-        has_result = 1;
-        continue;
+    }
+    else {
+      lua_assert(*(fmt-1) == l_c('s'));
+      setsvalue(L->top, va_arg(argp, TString *));
     }
     incr_top;
   }
-  luaD_call(L, base, has_result);
-  if (has_result) {
-    L->top--;
-    setobj(va_arg(argp, TObject *), L->top);
+  luaD_call(L, base);
+  if (result) {  /* need result? */
+    if (L->top == base)  /* are there valid results? */
+      setnilvalue(result);  /* function had no results */
+    else
+      setobj(result, base);  /* get first result */
   }
+  L->top = base;  /* restore top */
   va_end(argp);
 }
 
@@ -162,7 +164,7 @@ void luaV_gettable (lua_State *L, StkId t, TObject *key, StkId res) {
     if (tm == NULL)  /* no tag method? */
       luaG_typeerror(L, t, l_s("index"));
   }
-  callTM(L, l_s("coor"), tm, t, key, res);
+  callTM(L, tm, l_s("roo"), res, t, key);
 }
 
 
@@ -185,7 +187,7 @@ void luaV_settable (lua_State *L, StkId t, TObject *key, StkId val) {
     if (tm == NULL)  /* no tag method? */
       luaG_typeerror(L, t, l_s("index"));
   }
-  callTM(L, l_s("cooo"), tm, t, key, val);
+  callTM(L, tm, l_s("ooo"), t, key, val);
 }
 
 
@@ -196,7 +198,7 @@ void luaV_getglobal (lua_State *L, TString *name, StkId res) {
       (tm = luaT_gettmbyObj(G(L), value, TM_GETGLOBAL)) == NULL) {
     setobj(res, value);  /* default behavior */
   } else
-    callTM(L, l_s("csor"), tm, name, value, res);
+    callTM(L, tm, l_s("rso"), res, name, value);
 }
 
 
@@ -207,7 +209,7 @@ void luaV_setglobal (lua_State *L, TString *name, StkId val) {
      (tm = luaT_gettmbyObj(G(L), oldvalue, TM_SETGLOBAL)) == NULL) {
     setobj(oldvalue, val);  /* raw set */
   } else
-    callTM(L, l_s("csoo"), tm, name, oldvalue, val);
+    callTM(L, tm, l_s("soo"), name, oldvalue, val);
 }
 
 
@@ -224,7 +226,7 @@ static int call_binTM (lua_State *L, const TObject *p1, const TObject *p2,
     }
   }
   opname = luaS_new(L, luaT_eventname[event]);
-  callTM(L, l_s("coosr"), tm, p1, p2, opname, res);
+  callTM(L, tm, l_s("roos"), res, p1, p2, opname);
   return 1;
 }
 
@@ -320,9 +322,12 @@ static void luaV_pack (lua_State *L, StkId firstelem) {
 
 static void adjust_varargs (lua_State *L, StkId base, int nfixargs) {
   int nvararg = (L->top-base) - nfixargs;
-  if (nvararg < 0)
-    luaD_adjusttop(L, base, nfixargs);
-  luaV_pack(L, base+nfixargs);
+  StkId firstvar = base + nfixargs;  /* position of first vararg */
+  if (nvararg < 0) {
+    luaD_checkstack(L, -nvararg);
+    luaD_adjusttop(L, firstvar);
+  }
+  luaV_pack(L, firstvar);
 }
 
 
@@ -368,7 +373,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
     luaD_stackerror(L);
   while (L->top < base+tf->maxstacksize)
     setnilvalue(L->top++);
-  L->top = base+tf->maxstacksize;
+  L->top = base + tf->maxstacksize;
   pc = tf->code;
   L->ci->pc = &pc;
   linehook = L->linehook;
@@ -544,16 +549,15 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
       }
       case OP_CALL: {
-        int nres;
+        int c;
         int b = GETARG_B(i);
         if (b != NO_REG)
           L->top = base+b;
-        nres = GETARG_C(i);
-        if (nres == NO_REG) nres = LUA_MULTRET;
-        luaD_call(L, ra, nres);
-        if (nres != LUA_MULTRET) {
-          lua_assert(L->top == ra+nres);
-          L->top = base+tf->maxstacksize;
+        luaD_call(L, ra);
+        c = GETARG_C(i);
+        if (c != NO_REG) {
+          while (L->top < base+c) setnilvalue(L->top++);
+          L->top = base + tf->maxstacksize;
         }
         break;
       }
@@ -637,7 +641,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         luaV_checkGC(L, ra+nup);
         L->top = ra+nup;
         luaV_Lclosure(L, p, nup);
-        L->top = base+tf->maxstacksize;
+        L->top = base + tf->maxstacksize;
         break;
       }
     }

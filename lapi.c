@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.142 2001/06/05 18:17:01 roberto Exp roberto $
+** $Id: lapi.c,v 1.143 2001/06/06 18:00:19 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -95,11 +95,13 @@ LUA_API int lua_gettop (lua_State *L) {
 
 LUA_API void lua_settop (lua_State *L, int index) {
   lua_lock(L);
-  if (index >= 0)
-    luaD_adjusttop(L, L->ci->base, index);
+  if (index >= 0) {
+    api_check(L, index <= L->stack_last - L->ci->base);
+    luaD_adjusttop(L, L->ci->base+index);
+  }
   else {
     api_check(L, -(index+1) <= (L->top - L->ci->base));
-    L->top = L->top+index+1;  /* index is negative */
+    L->top += index+1;  /* `subtract' index (index is negative) */
   }
   lua_unlock(L);
 }
@@ -545,9 +547,13 @@ LUA_API int lua_ref (lua_State *L,  int lock) {
 */
 
 LUA_API void lua_rawcall (lua_State *L, int nargs, int nresults) {
+  StkId func;
   lua_lock(L);
   api_checknelems(L, nargs+1);
-  luaD_call(L, L->top-(nargs+1), nresults);
+  func = L->top - (nargs+1);
+  luaD_call(L, func);
+  if (nresults != LUA_MULTRET)
+    luaD_adjusttop(L, func + nresults);
   lua_unlock(L);
 }
 

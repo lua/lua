@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.79 2001/06/07 14:44:51 roberto Exp roberto $
+** $Id: ldebug.c,v 1.80 2001/06/08 12:29:27 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -421,7 +421,7 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         }
         check(b > a);
         checkreg(pt, b-1);
-        checkreg(pt, a+c-1);
+        checkreg(pt, c-1);
         if (reg >= a) last = pc;  /* affect all registers above base */
         break;
       }

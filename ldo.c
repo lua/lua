@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.134 2001/04/11 18:39:37 roberto Exp roberto $
+** $Id: ldo.c,v 1.135 2001/06/05 19:27:32 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -62,19 +62,12 @@ void luaD_stackerror (lua_State *L) {
 
 
 /*
-** Adjust stack. Set top to base+extra, pushing NILs if needed.
-** (we cannot add base+extra unless we are sure it fits in the stack;
-**  otherwise the result of such operation on pointers is undefined)
+** adjust top to new value; assume that new top is valid
 */
-void luaD_adjusttop (lua_State *L, StkId base, int extra) {
-  int diff = extra-(L->top-base);
-  if (diff <= 0)
-    L->top = base+extra;
-  else {
-    luaD_checkstack(L, diff);
-    while (diff--)
-      setnilvalue(L->top++);
-  }
+void luaD_adjusttop (lua_State *L, StkId newtop) {
+  while (L->top < newtop)
+    setnilvalue(L->top++);
+  L->top = newtop;  /* `newtop' could be lower than `top' */
 }
 
 
@@ -140,11 +133,10 @@ static StkId callCclosure (lua_State *L, const struct Closure *cl) {
 /*
 ** Call a function (C or Lua). The function to be called is at *func.
 ** The arguments are on the stack, right after the function.
-** When returns, the results are on the stack, starting at the original
+** When returns, all the results are on the stack, starting at the original
 ** function position.
-** The number of results is nResults, unless nResults=LUA_MULTRET.
 */ 
-void luaD_call (lua_State *L, StkId func, int nResults) {
+void luaD_call (lua_State *L, StkId func) {
   lua_Hook callhook;
   StkId firstResult;
   CallInfo ci;
@@ -168,20 +160,9 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
     luaD_callHook(L, callhook, l_s("return"));
   L->ci = ci.prev;  /* unchain callinfo */
   /* move results to `func' (to erase parameters and function) */
-  if (nResults == LUA_MULTRET) {
-    while (firstResult < L->top)  /* copy all results */
-      setobj(func++, firstResult++);
-    L->top = func;
-  }
-  else {  /* copy at most `nResults' */
-    for (; nResults > 0 && firstResult < L->top; nResults--)
-      setobj(func++, firstResult++);
-    L->top = func;
-    for (; nResults > 0; nResults--) {  /* if there are not enough results */
-      setnilvalue(L->top);  /* adjust the stack */
-      incr_top;  /* must check stack space */
-    }
-  }
+  while (firstResult < L->top)
+    setobj(func++, firstResult++);
+  L->top = func;
   luaC_checkGC(L);
 }
 
@@ -196,7 +177,9 @@ struct CallS {  /* data to `f_call' */
 
 static void f_call (lua_State *L, void *ud) {
   struct CallS *c = (struct CallS *)ud;
-  luaD_call(L, c->func, c->nresults);
+  luaD_call(L, c->func);
+  if (c->nresults != LUA_MULTRET)
+    luaD_adjusttop(L, c->func + c->nresults);
 }
 
 
@@ -307,12 +290,14 @@ struct lua_longjmp {
 
 
 static void message (lua_State *L, const l_char *s) {
-  luaV_getglobal(L, luaS_newliteral(L, l_s(LUA_ERRORMESSAGE)), L->top);
-  if (ttype(L->top) == LUA_TFUNCTION) {
+  StkId top = L->top;
+  luaV_getglobal(L, luaS_newliteral(L, l_s(LUA_ERRORMESSAGE)), top);
+  if (ttype(top) == LUA_TFUNCTION) {
     incr_top;
-    setsvalue(L->top, luaS_new(L, s));
+    setsvalue(top+1, luaS_new(L, s));
     incr_top;
-    luaD_call(L, L->top-2, 0);
+    luaD_call(L, top);
+    L->top = top;
   }
 }
 
