@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.122 2002/11/14 11:51:50 roberto Exp roberto $
+** $Id: ltable.c,v 1.123 2002/11/14 16:15:53 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -86,8 +86,6 @@ Node *luaH_mainposition (const Table *t, const TObject *key) {
     default:
       return hashpointer(t, gcvalue(key));
   }
-  lua_assert(0);
-  return 0;  /* to avoid warnings */
 }
 
 

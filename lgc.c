@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.162 2002/11/21 17:19:11 roberto Exp roberto $
+** $Id: lgc.c,v 1.163 2002/11/22 18:01:46 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -486,7 +486,7 @@ void luaC_collectgarbage (lua_State *L) {
 }
 
 
-void luaC_link (lua_State *L, GCObject *o, int tt) {
+void luaC_link (lua_State *L, GCObject *o, lu_byte tt) {
   o->gch.next = G(L)->rootgc;
   G(L)->rootgc = o;
   o->gch.marked = 0;
