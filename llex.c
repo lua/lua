@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.71 2000/09/27 17:41:58 roberto Exp roberto $
+** $Id: llex.c,v 1.72 2000/10/20 16:39:03 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -38,6 +38,7 @@ void luaX_init (lua_State *L) {
   int i;
   for (i=0; i<NUM_RESERVED; i++) {
     TString *ts = luaS_new(L, token2string[i]);
+    LUA_ASSERT(strlen(token2string[i])+1 <= TOKEN_LEN, "incorrect token_len");
     ts->marked = (unsigned char)(RESERVEDMARK+i);  /* reserved word */
   }
 }
@@ -48,8 +49,8 @@ void luaX_init (lua_State *L) {
 
 void luaX_checklimit (LexState *ls, int val, int limit, const char *msg) {
   if (val > limit) {
-    char buff[100];
-    sprintf(buff, "too many %.50s (limit=%d)", msg, limit);
+    char buff[90];
+    sprintf(buff, "too many %.40s (limit=%d)", msg, limit);
     luaX_error(ls, buff, ls->t.token);
   }
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.120 2000/12/26 18:46:09 roberto Exp roberto $
+** $Id: lparser.c,v 1.121 2000/12/28 12:55:41 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -71,9 +71,9 @@ static void lookahead (LexState *ls) {
 
 
 static void error_expected (LexState *ls, int token) {
-  char buff[100], t[TOKEN_LEN];
+  char buff[30], t[TOKEN_LEN];
   luaX_token2str(token, t);
-  sprintf(buff, "`%.20s' expected", t);
+  sprintf(buff, "`%.10s' expected", t);
   luaK_error(ls, buff);
 }
 
@@ -104,11 +104,11 @@ static void check_match (LexState *ls, int what, int who, int where) {
     if (where == ls->linenumber)
       error_expected(ls, what);
     else {
-      char buff[100];
+      char buff[70];
       char t_what[TOKEN_LEN], t_who[TOKEN_LEN];
       luaX_token2str(what, t_what);
       luaX_token2str(who, t_who);
-      sprintf(buff, "`%.20s' expected (to close `%.20s' at line %d)",
+      sprintf(buff, "`%.10s' expected (to close `%.10s' at line %d)",
               t_what, t_who, where);
       luaK_error(ls, buff);
     }
