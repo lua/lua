@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.57 1999/12/06 11:43:58 roberto Exp roberto $
+** $Id: ldo.c,v 1.58 1999/12/06 12:03:45 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -99,30 +99,43 @@ void luaD_openstack (lua_State *L, StkId pos) {
 
 
 void luaD_lineHook (lua_State *L, int line) {
-  struct C_Lua_Stack oldCLS = L->Cstack;
-  StkId old_top = L->Cstack.lua2C = L->Cstack.base = L->top;
-  L->Cstack.num = 0;
-  (*L->linehook)(L, line);
-  L->top = old_top;
-  L->Cstack = oldCLS;
+  if (L->allowhooks) {
+    struct C_Lua_Stack oldCLS = L->Cstack;
+    StkId old_top = L->Cstack.lua2C = L->Cstack.base = L->top;
+    L->Cstack.num = 0;
+    L->allowhooks = 0;  /* cannot call hooks inside a hook */
+    (*L->linehook)(L, line);
+    L->allowhooks = 1;
+    L->top = old_top;
+    L->Cstack = oldCLS;
+  }
 }
 
 
-void luaD_callHook (lua_State *L, StkId base, const TProtoFunc *tf,
-                    int isreturn) {
-  struct C_Lua_Stack oldCLS = L->Cstack;
-  StkId old_top = L->Cstack.lua2C = L->Cstack.base = L->top;
-  L->Cstack.num = 0;
-  if (isreturn)
-    (*L->callhook)(L, LUA_NOOBJECT, "(return)", 0);
-  else {
-    TObject *f = base-1;
-    if (tf)
-      v 1.3 1997/10/16, f, tf->source->str, tf->lineDefined);
-    else (*L->callhook)(L, f, "(C)", -1);
+static void luaD_callHook (lua_State *L, StkId func, lua_CHFunction callhook,
+                           int isreturn) {
+  if (L->allowhooks) {
+    struct C_Lua_Stack oldCLS = L->Cstack;
+    StkId old_top = L->Cstack.lua2C = L->Cstack.base = L->top;
+    L->Cstack.num = 0;
+    L->allowhooks = 0;  /* cannot call hooks inside a hook */
+    if (isreturn)
+      callhook(L, LUA_NOOBJECT, "(return)", 0);
+    else {
+      if (ttype(func) == LUA_T_PROTO)
+        callhook(L, func, tfvalue(func)->source->str,
+                          tfvalue(func)->lineDefined);
+      else if (ttype(func) == LUA_T_CLOSURE &&
+               ttype(clvalue(func)->consts) == LUA_T_PROTO)
+        callhook(L, func, tfvalue(protovalue(func))->source->str,
+                          tfvalue(protovalue(func))->lineDefined);
+      else
+        callhook(L, func, "(C)", -1);
+    }
+    L->allowhooks = 1;
+    L->top = old_top;
+    L->Cstack = oldCLS;
   }
-  L->top = old_top;
-  L->Cstack = oldCLS;
 }
 
 
@@ -138,11 +151,7 @@ static StkId callC (lua_State *L, lua_CFunction f, StkId base) {
   L->Cstack.num = numarg;
   L->Cstack.lua2C = base;
   L->Cstack.base = L->top;
-  if (L->callhook)
-    luaD_callHook(L, base, NULL, 0);
   (*f)(L);  /* do the actual call */
-  if (L->callhook)  /* test again: `func' may change callhook */
-    luaD_callHook(L, base, NULL, 1);
   firstResult = L->Cstack.base;
   L->Cstack = oldCLS;
   return firstResult;
@@ -179,6 +188,10 @@ void luaD_callTM (lua_State *L, const TObject *f, int nParams, int nResults) {
 */ 
 void luaD_call (lua_State *L, StkId func, int nResults) {
   StkId firstResult;
+  lua_CHFunction callhook = L->callhook;
+  if (callhook)
+    luaD_callHook(L, func, callhook, 0);
+  retry:  /* for `function' tag method */
   switch (ttype(func)) {
     case LUA_T_CPROTO:
       ttype(func) = LUA_T_CMARK;
@@ -197,15 +210,17 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
                        luaV_execute(L, c, tfvalue(proto), func+1);
       break;
     }
-    default: { /* `func' is not a function */
-      /* Check the tag method for invalid functions */
+    default: { /* `func' is not a function; check the `function' tag method */
       const TObject *im = luaT_getimbyObj(L, func, IM_FUNCTION);
       if (ttype(im) == LUA_T_NIL)
         lua_error(L, "call expression not a function");
-      luaD_callTM(L, im, L->top-func, nResults);
-      return;
+      luaD_openstack(L, func);
+      *func = *im;  /* tag method is the new function to be called */
+      goto retry;  /* retry the call (without calling callhook again) */
     }
   }
+  if (callhook)  /* same hook that was used at entry */
+    luaD_callHook(L, NULL, callhook, 1);  /* `return' hook */
   /* adjust the number of results */
   if (nResults == MULT_RET)
     nResults = L->top - firstResult;

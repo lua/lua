@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.7 1999/11/22 13:12:07 roberto Exp roberto $
+** $Id: ldblib.c,v 1.8 1999/11/22 17:39:51 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -144,32 +144,28 @@ static void setlocal (lua_State *L) {
 
 
 
-static int linehook = -1;  /* Lua reference to line hook function */
-static int callhook = -1;  /* Lua reference to call hook function */
+static int linehook = LUA_NOREF;  /* Lua reference to line hook function */
+static int callhook = LUA_NOREF;  /* Lua reference to call hook function */
 
-
-static void dohook (lua_State *L, int ref) {
-  lua_LHFunction oldlinehook = lua_setlinehook(L, NULL);
-  lua_CHFunction oldcallhook = lua_setcallhook(L, NULL);
-  lua_callfunction(L, lua_getref(L, ref));
-  lua_setlinehook(L, oldlinehook);
-  lua_setcallhook(L, oldcallhook);
-}
 
 
 static void linef (lua_State *L, int line) {
-  lua_pushnumber(L, line);
-  dohook(L, linehook);
+  if (linehook != LUA_NOREF) {
+    lua_pushnumber(L, line);
+    lua_callfunction(L, lua_getref(L, linehook));
+  }
 }
 
 
-static void callf (lua_State *L, lua_Function func, const char *file, int line) {
-  if (func != LUA_NOOBJECT) {
-    lua_pushobject(L, func);
-    lua_pushstring(L, file);
-    lua_pushnumber(L, line);
+static void callf (lua_State *L, lua_Function f, const char *file, int line) {
+  if (callhook != LUA_NOREF) {
+    if (f != LUA_NOOBJECT) {
+      lua_pushobject(L, f);
+      lua_pushstring(L, file);
+      lua_pushnumber(L, line);
+    }
+    lua_callfunction(L, lua_getref(L, callhook));
   }
-  dohook(L, callhook);
 }
 
 
@@ -177,7 +173,7 @@ static void setcallhook (lua_State *L) {
   lua_Object f = lua_getparam(L, 1);
   lua_unref(L, callhook);
   if (f == LUA_NOOBJECT) {
-    callhook = -1;
+    callhook = LUA_NOREF;
     lua_setcallhook(L, NULL);
   }
   else {
@@ -192,7 +188,7 @@ static void setlinehook (lua_State *L) {
   lua_Object f = lua_getparam(L, 1);
   lua_unref(L, linehook);
   if (f == LUA_NOOBJECT) {
-    linehook = -1;
+    linehook = LUA_NOREF;
     lua_setlinehook(L, NULL);
   }
   else {

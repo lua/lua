@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.72 1999/12/09 20:01:48 roberto Exp roberto $
+** $Id: lvm.c,v 1.73 1999/12/14 18:31:20 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -294,8 +294,6 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
   register StkId top;  /* keep top local, for performance */
   register const Byte *pc = tf->code;
   const TObject *consts = tf->consts;
-  if (L->callhook)
-    luaD_callHook(L, base, tf, 0);
   luaD_checkstack(L, (*pc++)+EXTRA_STACK);
   if (*pc < ZEROVARARG)
     luaD_adjusttop(L, base, *(pc++));
@@ -310,12 +308,11 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
     switch ((OpCode)*pc++) {
 
       case ENDCODE:
-        top = base;
-        goto ret;
+        return L->top;  /* no results */
 
       case RETCODE:
-        base += *pc++;
-        goto ret;
+        L->top = top;
+        return base+(*pc++);
 
       case CALL: aux = *pc++;
         L->top = top;
@@ -326,9 +323,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
       case TAILCALL: aux = *pc++;
         L->top = top;
         luaD_call(L, base+(*pc++), MULT_RET);
-        top = L->top;
-        base += aux;
-        goto ret;
+        return base+aux;
 
       case PUSHNIL: aux = *pc++;
         do {
@@ -608,9 +603,5 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
         goto switchentry;  /* do not reset "aux" */
 
     }
-  } ret:
-  L->top = top;
-  if (L->callhook)
-    luaD_callHook(L, 0, NULL, 1);
-  return base;
+  }
 }

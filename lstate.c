@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.21 1999/12/06 12:03:45 roberto Exp roberto $
+** $Id: lstate.c,v 1.22 1999/12/07 11:42:54 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -38,9 +38,6 @@ static lua_State *newstate_aux (int stacksize, int put_builtin) {
   L->Mbuffnext = 0;
   L->Cblocks = NULL;
   L->numCblocks = 0;
-  L->debug = 0;
-  L->callhook = NULL;
-  L->linehook = NULL;
   L->rootproto = NULL;
   L->rootcl = NULL;
   L->rootglobal = NULL;
@@ -51,6 +48,10 @@ static lua_State *newstate_aux (int stacksize, int put_builtin) {
   L->refFree = NONEXT;
   L->nblocks = 0;
   L->GCthreshold = MAX_INT;  /* to avoid GC during pre-definitions */
+  L->debug = 0;
+  L->callhook = NULL;
+  L->linehook = NULL;
+  L->allowhooks = 1;
   luaD_init(L, stacksize);
   luaS_init(L);
   luaX_init(L);

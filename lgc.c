@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.35 1999/12/01 19:50:08 roberto Exp roberto $
+** $Id: lgc.c,v 1.36 1999/12/14 18:31:20 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -240,12 +240,15 @@ static void markall (lua_State *L) {
 
 
 void luaC_collect (lua_State *L, int all) {
+  int oldah = L->allowhooks;
+  L->allowhooks = 0;  /* stop debug hooks during GC */
   L->GCthreshold *= 4;  /* to avoid GC during GC */
   tableTM(L);  /* call TM for tables (if LUA_COMPAT_GC) */
   collecttable(L);
   collectstring(L, all?MAX_INT:1);
   collectproto(L);
   collectclosure(L);
+  L->allowhooks = oldah;  /* restore hooks */
 }
 
 

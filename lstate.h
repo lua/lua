@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.24 1999/12/01 19:50:08 roberto Exp roberto $
+** $Id: lstate.h,v 1.25 1999/12/06 11:41:28 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -62,9 +62,6 @@ struct lua_State {
   int Mbuffnext;  /* next position to fill in Mbuffer */
   struct C_Lua_Stack *Cblocks;
   int numCblocks;  /* number of nested Cblocks */
-  int debug;
-  lua_CHFunction callhook;
-  lua_LHFunction linehook;
   /* global state */
   TProtoFunc *rootproto;  /* list of all prototypes */
   Closure *rootcl;  /* list of all closures */
@@ -78,6 +75,10 @@ struct lua_State {
   int refFree;  /* list of free positions in refArray */
   unsigned long GCthreshold;
   unsigned long nblocks;  /* number of 'blocks' currently allocated */
+  int debug;
+  lua_CHFunction callhook;
+  lua_LHFunction linehook;
+  int allowhooks;
 };
 
 
