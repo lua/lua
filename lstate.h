@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.84 2002/04/23 15:04:39 roberto Exp roberto $
+** $Id: lstate.h,v 1.85 2002/05/08 17:34:23 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -130,6 +130,8 @@ struct lua_State {
   CallInfo *end_ci;  /* points after end of ci array*/
   CallInfo *base_ci;  /* array of CallInfo's */
   global_State *l_G;
+  lua_Hook linehook;
+  lua_Hook callhook;
   TObject globs[NUMGLOBS];  /* registry, table of globals, etc. */
   struct lua_longjmp *errorJmp;  /* current error recover point */
   UpVal *openupval;  /* list of open upvalues in this stack */
@@ -138,8 +140,6 @@ struct lua_State {
   int stacksize;
   int size_ci;  /* size of array `base_ci' */
   int allowhooks;
-  lua_Hook callhook;
-  lua_Hook linehook;
 };
 
 
