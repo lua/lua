@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.177 2002/03/18 18:18:35 roberto Exp roberto $
+** $Id: lapi.c,v 1.178 2002/03/18 20:11:52 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,7 @@ const char lua_ident[] =
 
 #define api_checknelems(L, n)	api_check(L, (n) <= (L->top - L->ci->base))
 
-#define api_incr_top(L)   (api_check(L, L->top+1<L->stack_last), L->top++)
+#define api_incr_top(L)   (api_check(L, L->top<L->ci->top), L->top++)
 
 
 
@@ -85,12 +85,14 @@ void luaA_pushobject (lua_State *L, const TObject *o) {
 LUA_API int lua_checkstack (lua_State *L, int size) {
   int res;
   lua_lock(L);
-  if ((L->top - L->stack) + size >= LUA_MAXSTACK)
+  if ((L->top - L->stack) >= LUA_MAXSTACK - size)
     res = 0;  /* stack overflow */
-  luaD_checkstack(L, size);
-  if (L->ci->top < L->top + size)
-    L->ci->top = L->top + size;
-  res = 1;
+  else {
+    luaD_checkstack(L, size);
+    if (L->ci->top < L->top + size)
+      L->ci->top = L->top + size;
+    res = 1;
+  }
   lua_unlock(L);
   return res;
 }
