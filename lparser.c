@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.46 1999/12/07 11:36:16 roberto Exp roberto $
+** $Id: lparser.c,v 1.47 1999/12/14 18:42:57 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -333,23 +333,21 @@ static void store_localvar (LexState *ls, TaggedString *name, int n) {
   FuncState *fs = ls->fs;
   checklimit(ls, fs->nlocalvar+n+1, MAXLOCALS, "local variables");
   fs->localvar[fs->nlocalvar+n] = name;
-  luaI_registerlocalvar(ls, name, ls->linenumber);
+}
+
+
+static void adjustlocalvars (LexState *ls, int nvars, int line) {
+  FuncState *fs = ls->fs;
+  int i;
+  fs->nlocalvar += nvars;
+  for (i=fs->nlocalvar-nvars; i<fs->nlocalvar; i++)
+    luaI_registerlocalvar(ls, fs->localvar[i], line);
 }
 
 
 static void add_localvar (LexState *ls, TaggedString *name) {
   store_localvar(ls, name, 0);
-  ls->fs->nlocalvar++;
-}
-
-
-static void correctvarlines (LexState *ls, int nvars) {
-  FuncState *fs = ls->fs;
-  if (fs->nvars != -1) {  /* debug information? */
-    for (; nvars; nvars--) { /* correct line information */
-      fs->f->locvars[fs->nvars-nvars].line = fs->lastsetline; 
-    }
-  }
+  adjustlocalvars(ls, 1, 0);
 }
 
 
@@ -454,7 +452,7 @@ static void adjust_mult_assign (LexState *ls, int nvars, listdesc *d) {
 
 static void code_args (LexState *ls, int nparams, int dots) {
   FuncState *fs = ls->fs;
-  fs->nlocalvar += nparams;  /* `self' may already be there */
+  adjustlocalvars(ls, nparams, 0);
   checklimit(ls, fs->nlocalvar, MAXPARAMS, "parameters");
   nparams = fs->nlocalvar;
   if (!dots) {
@@ -760,8 +758,7 @@ static void localstat (LexState *ls) {
   next(ls);
   nvars = localnamelist(ls);
   decinit(ls, &d);
-  fs->nlocalvar += nvars;
-  correctvarlines(ls, nvars);  /* vars will be alive only after decinit */
+  adjustlocalvars(ls, nvars, fs->lastsetline);
   adjust_mult_assign(ls, nvars, &d);
 }
 
