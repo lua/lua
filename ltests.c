@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.85 2001/06/28 15:06:20 roberto Exp roberto $
+** $Id: ltests.c,v 1.86 2001/06/28 19:58:57 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -251,13 +251,11 @@ static int hash_query (lua_State *L) {
     lua_pushnumber(L, tsvalue(luaA_index(L, 1))->tsv.hash);
   }
   else {
-    Hash *t;
-    Node n;
     TObject *o = luaA_index(L, 1);
+    Hash *t;
     luaL_checktype(L, 2, LUA_TTABLE);
     t = hvalue(luaA_index(L, 2));
-    setobj(key(&n), o);
-    lua_pushnumber(L, luaH_mainposition(t, &n) - t->node);
+    lua_pushnumber(L, luaH_mainposition(t, o) - t->node);
   }
   return 1;
 }
