@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.138 2005/03/23 17:50:49 roberto Exp roberto $
+** $Id: lua.c,v 1.139 2005/03/29 16:47:48 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -48,7 +48,7 @@ static void print_usage (void) {
   "  -i       enter interactive mode after executing `script'\n"
   "  -l name  require library `name'\n"
   "  -v       show version information\n"
-  "  -w	      control access to undefined globals\n"
+  "  -w       trap access to undefined globals\n"
   "  --       stop handling options\n" ,
   progname);
 }

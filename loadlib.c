@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.23 2005/03/29 14:30:16 roberto Exp roberto $
+** $Id: loadlib.c,v 1.24 2005/03/29 16:20:48 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -213,8 +213,7 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 
 
 #if defined(__ELF__) || defined(__sun) || defined(sgi) || defined(__hpux)
-#define DLMSG		"your system was not properly installed, " \
-                        "so it cannot run `loadlib'; check your installation"
+#define DLMSG "`loadlib' not enabled; check your Lua installation"
 #else
 #define DLMSG		"`loadlib' not supported"
 #endif
