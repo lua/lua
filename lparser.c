@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.13 1999/02/02 17:57:49 roberto Exp roberto $
+** $Id: lparser.c,v 1.14 1999/02/02 19:41:17 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -99,6 +99,9 @@ typedef struct FuncState {
 } FuncState;
 
 
+/*
+** prototypes for non-terminal functions
+*/
 static int assignment (LexState *ls, vardesc *v, int nvars);
 static int cond (LexState *ls);
 static int funcname (LexState *ls, vardesc *v);
@@ -147,48 +150,61 @@ static void deltastack (LexState *ls, int delta) {
   FuncState *fs = ls->fs;
   fs->stacksize += delta;
   if (fs->stacksize > fs->maxstacksize) {
-    if (fs->stacksize > 255)
+    if (fs->stacksize > MAX_BYTE)
       luaX_error(ls, "function/expression too complex");
     fs->maxstacksize = fs->stacksize;
   }
 }
 
 
-static int code_oparg_at (LexState *ls, int pc, OpCode op, int arg, int delta) {
+static void code_oparg_at (LexState *ls, int pc, OpCode op,
+                           int arg, int delta) {
   Byte *code = ls->fs->f->code;
   deltastack(ls, delta);
-  if (arg <= 255) {
+  if (arg <= MAX_BYTE) {
     code[pc] = (Byte)op;
     code[pc+1] = (Byte)arg;
-    return 2;  /* code size (opcode + 1 byte) */
   }
   else if (arg <= MAX_WORD) {
-    code[pc] = (Byte)(op-1);
+    code[pc] = (Byte)(op-1);  /* opcode for word argument */
     code[pc+1] = (Byte)(arg>>8);
     code[pc+2] = (Byte)(arg&0xFF);
-    return 3;  /* code size (opcode + 1 word) */
   }
-  else luaX_error(ls, "code too long " MES_LIM("64K")
-                      " (try turning off debug mode)");
-  return 0;   /* to avoid warnings */
+  else if (arg <= MAX_ARG) {
+    code[pc] = (Byte)LONGARG;
+    code[pc+1] = (Byte)(arg>>16);
+    code_oparg_at(ls, pc+2, op, arg&0xFFFF, 0);
+  }
+  else luaX_error(ls, "code too long");
+}
+
+
+static int codesize (int arg) {
+  if      (arg <= MAX_BYTE) return 2;  /* opcode + 1 byte */
+  else if (arg <= MAX_WORD) return 3;  /* opcode + 1 word */
+  else return 2+codesize(arg&0xFFFF); /* LONGARG + 1 byte + original opcode */
 }
 
 
 static int fix_opcode (LexState *ls, int pc, OpCode op, int arg) {
-  FuncState *fs = ls->fs;
-  TProtoFunc *f = fs->f;
-  if (arg > 255) {  /* open space */
-    check_pc(fs, 1);
-    luaO_memup(f->code+pc+1, f->code+pc, fs->pc-pc);
-    fs->pc++;
+  int tomove = codesize(arg)-2;
+  if (tomove > 0) {  /* need to open space? */
+    FuncState *fs = ls->fs;
+    TProtoFunc *f = fs->f;
+    check_pc(fs, tomove);
+    luaO_memup(f->code+pc+tomove, f->code+pc, fs->pc-pc);
+    fs->pc += tomove;
   }
-  return code_oparg_at(ls, pc, op, arg, 0) - 2;
+  code_oparg_at(ls, pc, op, arg, 0);
+  return tomove;
 }
 
 
 static void code_oparg (LexState *ls, OpCode op, int arg, int delta) {
-  check_pc(ls->fs, 3);  /* maximum code size */
-  ls->fs->pc += code_oparg_at(ls, ls->fs->pc, op, arg, delta);
+  int size = codesize(arg);
+  check_pc(ls->fs, size);
+  code_oparg_at(ls, ls->fs->pc, op, arg, delta);
+  ls->fs->pc += size;
 }
 
 
@@ -205,10 +221,9 @@ static void code_constant (LexState *ls, int c) {
 
 static int next_constant (FuncState *fs) {
   TProtoFunc *f = fs->f;
-  if (f->nconsts >= fs->maxconsts) {
+  if (f->nconsts >= fs->maxconsts)
     fs->maxconsts = luaM_growvector(&f->consts, fs->maxconsts, TObject,
-                                    constantEM, MAX_WORD);
-  }
+                                    constantEM, MAX_ARG);
   return f->nconsts++;
 }
 
@@ -242,9 +257,9 @@ static int real_constant (FuncState *fs, real r) {
     if (ttype(&cnt[c]) == LUA_T_NUMBER && nvalue(&cnt[c]) == r)
       return c;
   }
-  /* not found; create a luaM_new entry */
+  /* not found; create a new entry */
   c = next_constant(fs);
-  cnt = fs->f->consts;  /* 'next_constant' may reallocate this vector */
+  cnt = fs->f->consts;  /* 'next_constant' may have reallocated this vector */
   ttype(&cnt[c]) = LUA_T_NUMBER;
   nvalue(&cnt[c]) = r;
   return c;
@@ -252,10 +267,9 @@ static int real_constant (FuncState *fs, real r) {
 
 
 static void code_number (LexState *ls, real f) {
-  int i;
-  if (0 <= f+NUMOFFSET && f+NUMOFFSET <= (real)MAX_WORD &&
-      (real)(i=(int)f) == f)  /* f+NUMOFFSET has a short integer value? */
-    code_oparg(ls, PUSHNUMBER, i+NUMOFFSET, 1);
+  if (-NUMOFFSET <= f && f <= (real)(MAX_WORD-NUMOFFSET) &&
+      (int)f == f)  /* f+NUMOFFSET has a short integer value? */
+    code_oparg(ls, PUSHNUMBER, (int)f+NUMOFFSET, 1);
   else
     code_constant(ls, real_constant(ls->fs, f));
 }
@@ -268,9 +282,10 @@ static void flush_record (LexState *ls, int n) {
 
 
 static void flush_list (LexState *ls, int m, int n) {
-  if (n == 0) return;
-  code_oparg(ls, SETLIST, m, -n);
-  code_byte(ls->fs, (Byte)n);
+  if (n > 0) {
+    code_oparg(ls, SETLIST, m, -n);
+    code_byte(ls->fs, (Byte)n);
+  }
 }
 
 
@@ -280,7 +295,7 @@ static void luaI_registerlocalvar (FuncState *fs, TaggedString *varname,
     TProtoFunc *f = fs->f;
     if (fs->nvars+1 > fs->maxvars)
       fs->maxvars = luaM_growvector(&f->locvars, fs->maxvars+1,
-                                    LocVar, "", MAX_WORD);
+                                    LocVar, "", MAX_INT);
     f->locvars[fs->nvars].varname = varname;
     f->locvars[fs->nvars].line = line;
     fs->nvars++;
@@ -295,10 +310,9 @@ static void luaI_unregisterlocalvar (FuncState *fs, int line) {
 
 static void store_localvar (LexState *ls, TaggedString *name, int n) {
   FuncState *fs = ls->fs;
-  if (fs->nlocalvar+n < MAXLOCALS)
-    fs->localvar[fs->nlocalvar+n] = name;
-  else
+  if (fs->nlocalvar+n >= MAXLOCALS)
     luaX_error(ls, "too many local variables " MES_LIM(SMAXLOCALS));
+  fs->localvar[fs->nlocalvar+n] = name;
   luaI_registerlocalvar(fs, name, ls->linenumber);
 }
 
@@ -320,13 +334,13 @@ static int aux_localname (FuncState *fs, TaggedString *n) {
 static void singlevar (LexState *ls, TaggedString *n, vardesc *var, int prev) {
   FuncState *fs = prev ? ls->fs->prev : ls->fs;
   int i = aux_localname(fs, n);
-  if (i >= 0) {  /* local value */
+  if (i >= 0) {  /* local value? */
     var->k = VLOCAL;
     var->info = i;
   }
-  else {  /* check shadowing */
+  else {
     FuncState *level = fs;
-    while ((level = level->prev) != NULL)
+    while ((level = level->prev) != NULL)  /* check shadowing */
       if (aux_localname(level, n) >= 0)
         luaX_syntaxerror(ls, "cannot access a variable in outer scope", n->str);
     var->k = VGLOBAL;
@@ -354,13 +368,11 @@ static int indexupvalue (LexState *ls, TaggedString *n) {
 
 
 static void pushupvalue (LexState *ls, TaggedString *n) {
-  int i;
   if (ls->fs->prev == NULL)
     luaX_syntaxerror(ls, "cannot access upvalue in main", n->str);
   if (aux_localname(ls->fs, n) >= 0)
     luaX_syntaxerror(ls, "cannot access an upvalue in current scope", n->str);
-  i = indexupvalue(ls, n);
-  code_oparg(ls, PUSHUPVALUE, i, 1);
+  code_oparg(ls, PUSHUPVALUE, indexupvalue(ls, n), 1);
 }
 
 
@@ -384,12 +396,10 @@ static void adjuststack (LexState *ls, int n) {
 static void close_exp (LexState *ls, int pc, int nresults) {
   if (pc > 0) {  /* expression is an open function call */
     Byte *code = ls->fs->f->code;
-    Byte nparams = code[pc];  /* save nparams */
-    pc += fix_opcode(ls, pc-2, CALLFUNC, nresults);
-    code[pc] = nparams;  /* restore nparams */
+    code[pc-1] = nresults;  /* set nresults */
     if (nresults != MULT_RET)
-      deltastack(ls, nresults);  /* "push" results */
-    deltastack(ls, -(nparams+1));  /* "pop" params and function */
+      deltastack(ls, nresults);  /* push results */
+    deltastack(ls, -(code[pc]+1));  /* pop params (at code[pc]) and function */
   }
 }
 
@@ -402,7 +412,7 @@ static void adjust_mult_assign (LexState *ls, int nvars, listdesc *d) {
   }
   else {  /* must correct function call */
     diff--;  /* do not count function call itself */
-    if (diff < 0) {  /* more variables than values */
+    if (diff <= 0) {  /* more variables than values? */
       /* function call must provide extra values */
       close_exp(ls, d->pc, -diff);
     }
@@ -493,15 +503,14 @@ static int fix_jump (LexState *ls, int pc, OpCode op, int n) {
 
 static void fix_upjmp (LexState *ls, OpCode op, int pos) {
   int delta = ls->fs->pc+JMPSIZE - pos;  /* jump is relative */
-  if (delta > 255) delta++;
-  code_oparg(ls, op, delta, 0);
+  code_oparg(ls, op, delta+(codesize(delta)-2), 0);
 }
 
 
 static void codeIf (LexState *ls, int thenAdd, int elseAdd) {
   FuncState *fs = ls->fs;
   int elseinit = elseAdd+JMPSIZE;
-  if (fs->pc == elseinit) {  /* no else part */
+  if (fs->pc == elseinit) {  /* no else part? */
     fs->pc -= JMPSIZE;
     elseinit = fs->pc;
   }
@@ -547,13 +556,12 @@ static void init_state (LexState *ls, FuncState *fs, TaggedString *filename) {
     fs->nvars = fs->maxvars = 0;
   else
     fs->maxvars = -1;  /* flag no debug information */
-  code_byte(fs, 0);  /* to be filled with stacksize */
+  code_byte(fs, 0);  /* to be filled with maxstacksize */
   code_byte(fs, 0);  /* to be filled with arg information */
   /* push function (to avoid GC) */
   tfvalue(L->stack.top) = f; ttype(L->stack.top) = LUA_T_PROTO;
   incr_top;
 }
-
 
 static void close_func (LexState *ls) {
   FuncState *fs = ls->fs;
@@ -575,13 +583,11 @@ static void close_func (LexState *ls) {
 static int expfollow [] = {ELSE, ELSEIF, THEN, IF, WHILE, REPEAT, DO, NAME,
    LOCAL, FUNCTION, END, UNTIL, RETURN, ')', ']', '}', ';', EOS, ',',  0};
 
+
 static int is_in (int tok, int *toks) {
-  int *t = toks;
-  while (*t) {
-    if (*t == tok)
-      return t-toks;
-    t++;
-  }
+  int *t;
+  for (t=toks; *t; t++)
+    if (*t == tok) return t-toks;
   return -1;
 }
 
@@ -642,9 +648,7 @@ static int checkname (LexState *ls) {
 
 
 static TaggedString *str_checkname (LexState *ls) {
-  /* call "checkname" to put string at constant table (to avoid GC) */
-  int i = checkname(ls);
-  return tsvalue(&ls->fs->f->consts[i]);
+  return tsvalue(&ls->fs->f->consts[checkname(ls)]);
 }
 
 
@@ -855,7 +859,7 @@ static void ifpart (LexState *ls, int isexp, int line) {
   check(ls, THEN);
   if (isexp) {
     exp1(ls);
-    deltastack(ls, -1); /* only then xor else part will stay on the stack */
+    deltastack(ls, -1);  /* only 'then' x-or 'else' will stay on the stack */
   }
   else block(ls);
   e = SaveWord(ls);
@@ -878,10 +882,9 @@ static void ifpart (LexState *ls, int isexp, int line) {
 
 static void ret (LexState *ls) {
   /* ret -> [RETURN explist sc] */
-  if (ls->token == RETURN) {
+  check_debugline(ls);
+  if (optional(ls, RETURN)) {
     listdesc e;
-    check_debugline(ls);
-    next(ls);
     explist(ls, &e);
     close_exp(ls, e.pc, MULT_RET);
     code_oparg(ls, RETCODE, ls->fs->nlocalvar, 0);
@@ -896,6 +899,9 @@ static void ret (LexState *ls) {
 ** Each binary operator is represented by its index in "binop" + FIRSTBIN
 ** (EQ=2, NE=3, ... '^'=13). The unary NOT is 0 and UNMINUS is 1.
 */
+
+#define INDNOT		0
+#define INDMINUS	1
 
 /* code of first binary operator */
 #define FIRSTBIN	2
@@ -913,10 +919,7 @@ static int priority [POW+1] =  {5, 5, 1, 1, 1, 1, 1, 1, 2, 3, 3, 4, 4, 6};
 static OpCode opcodes [POW+1] = {NOTOP, MINUSOP, EQOP, NEQOP, GTOP, LTOP,
   LEOP, GEOP, CONCOP, ADDOP, SUBOP, MULTOP, DIVOP, POWOP};
 
-#define INDNOT		0
-#define INDMINUS	1
-
-#define MAXOPS	20
+#define MAXOPS	20  /* op's stack size */
 
 typedef struct {
   int ops[MAXOPS];
@@ -934,16 +937,17 @@ static void exp1 (LexState *ls) {
 
 
 static void exp0 (LexState *ls, vardesc *v) {
+  /* exp0 -> exp2 {(AND | OR) exp2} */
   exp2(ls, v);
   while (ls->token == AND || ls->token == OR) {
-    int is_and = (ls->token == AND);
+    int op = (ls->token == AND) ? ONFJMP : ONTJMP;
     int pc;
     lua_pushvar(ls, v);
     next(ls);
     pc = SaveWordPop(ls);
     exp2(ls, v);
     lua_pushvar(ls, v);
-    fix_jump(ls, pc, (is_and?ONFJMP:ONTJMP), ls->fs->pc);
+    fix_jump(ls, pc, op, ls->fs->pc);
   }
 }
 
@@ -952,30 +956,22 @@ static void Gexp (LexState *ls, vardesc *v) {
   /* Gexp -> exp0 | var '=' exp1 */
   static OpCode codes[] = {SETLOCALDUP, SETGLOBALDUP, SETTABLEDUP};
   exp0(ls, v);
-  if (ls->token == '=' && v->k != VEXP) {  /* assignment expression? */
-    next(ls);  /* skip '=' */
+  if (v->k != VEXP && optional(ls, '=')) {  /* assignment expression? */
     unloaddot(ls, v);
     exp1(ls);
     genstorevar(ls, v, codes);
     deltastack(ls, 1);  /* DUP operations push an extra value */
-    v->k = VEXP; v->info = 0;
+    v->k = VEXP; v->info = 0;  /* this expression is closed now */
   }
 }
 
 
 static void push (LexState *ls, stack_op *s, int op) {
-  if (s->top == MAXOPS)
+  if (s->top >= MAXOPS)
     luaX_error(ls, "expression too complex");
   s->ops[s->top++] = op;
 }
 
-
-static void prefix (LexState *ls, stack_op *s) {
-  while (ls->token == NOT || ls->token == '-') {
-    push(ls, s, ls->token==NOT?INDNOT:INDMINUS);
-    next(ls);
-  }
-}
 
 static void pop_to (LexState *ls, stack_op *s, int prio) {
   int op;
@@ -991,10 +987,10 @@ static void simpleexp (LexState *ls, vardesc *v, stack_op *s) {
     case NUMBER: {  /* simpleexp -> NUMBER */
       real r = ls->seminfo.r;
       next(ls);
-      /* dirty trick: check whether is a -NUMBER not followed by "^" */
-      /* (because the priority of "^" is closer than "-"...)         */
+      /* dirty trick: check whether it is a -NUMBER not followed by '^' */
+      /* (because the priority of '^' is closer than '-'...)            */
       if (s->top > 0 && s->ops[s->top-1] == INDMINUS && ls->token != '^') {
-        s->top--;
+        s->top--;  /* remove '-' from stack */
         r = -r;
       }
       code_number(ls, r);
@@ -1002,7 +998,7 @@ static void simpleexp (LexState *ls, vardesc *v, stack_op *s) {
     }
 
     case STRING:  /* simpleexp -> STRING */
-      code_string(ls, ls->seminfo.ts);  /* must use before "next" */
+      code_string(ls, ls->seminfo.ts);  /* must use 'seminfo' before "next" */
       next(ls);
       break;
 
@@ -1042,12 +1038,21 @@ static void simpleexp (LexState *ls, vardesc *v, stack_op *s) {
 }
 
 
+static void prefixexp (LexState *ls, vardesc *v, stack_op *s) {
+  /* prefixexp -> {NOT | '-'} simpleexp */
+  while (ls->token == NOT || ls->token == '-') {
+    push(ls, s, (ls->token==NOT)?INDNOT:INDMINUS);
+    next(ls);
+  }
+  simpleexp(ls, v, s);
+}
+
+
 static void exp2 (LexState *ls, vardesc *v) {
   stack_op s;
   int op;
   s.top = 0;
-  prefix(ls, &s);
-  simpleexp(ls, v, &s);
+  prefixexp(ls, v, &s);
   while ((op = is_in(ls->token, binop)) >= 0) {
     op += FIRSTBIN;
     lua_pushvar(ls, v);
@@ -1055,8 +1060,7 @@ static void exp2 (LexState *ls, vardesc *v) {
     pop_to(ls, &s, (op == POW)?priority[op]+1:priority[op]);
     push(ls, &s, op);
     next(ls);
-    prefix(ls, &s);
-    simpleexp(ls, v, &s);
+    prefixexp(ls, v, &s);
     lua_pushvar(ls, v);
   }
   if (s.top > 0) {
@@ -1077,6 +1081,7 @@ static void var_or_func (LexState *ls, vardesc *v) {
     singlevar(ls, str_checkname(ls), v, 0);
   var_or_func_tail(ls, v);
 }
+
 
 static void var_or_func_tail (LexState *ls, vardesc *v) {
   for (;;) {
@@ -1117,13 +1122,14 @@ static void var_or_func_tail (LexState *ls, vardesc *v) {
 
 static int funcparams (LexState *ls, int slf) {
   FuncState *fs = ls->fs;
-  int nparams = 1;  /* default value */
+  int nparams = 1;  /* in cases STRING and constructor */
   switch (ls->token) {
     case '(': {  /* funcparams -> '(' explist ')' */
+      int line = ls->linenumber;
       listdesc e;
       next(ls);
       explist(ls, &e);
-      check(ls, ')');
+      check_match(ls, ')', '(', line);
       close_exp(ls, e.pc, 1);
       nparams = e.n;
       break;
@@ -1134,7 +1140,7 @@ static int funcparams (LexState *ls, int slf) {
       break;
 
     case STRING:  /* funcparams -> STRING */
-      code_string(ls, ls->seminfo.ts);  /* must use before "next" */
+      code_string(ls, ls->seminfo.ts);  /* must use 'seminfo' before "next" */
       next(ls);
       break;
 
@@ -1142,8 +1148,8 @@ static int funcparams (LexState *ls, int slf) {
       luaX_error(ls, "function arguments expected");
       break;
   }
-  code_byte(fs, 0);  /* save space for opcode */
-  code_byte(fs, 0);  /* and nresult */
+  code_byte(fs, CALLFUNC);
+  code_byte(fs, 0);  /* save space for nresult */
   code_byte(fs, (Byte)(nparams+slf));
   return fs->pc-1;
 }

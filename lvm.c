@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.42 1999/02/02 17:57:49 roberto Exp roberto $
+** $Id: lvm.c,v 1.43 1999/02/02 19:41:17 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -328,6 +328,7 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
   }
   for (;;) {
     register int aux = 0;
+    switchentry:
     switch ((OpCode)*pc++) {
 
       case ENDCODE: aux = 1;
@@ -348,14 +349,14 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         S->top -= (aux+1);
         break;
 
-      case PUSHNUMBERW: aux = highbyte(*pc++);
+      case PUSHNUMBERW: aux += highbyte(*pc++);
       case PUSHNUMBER:  aux += *pc++;
         ttype(S->top) = LUA_T_NUMBER;
         nvalue(S->top) = aux-NUMOFFSET;
         S->top++;
         break;
 
-      case PUSHCONSTANTW: aux = highbyte(*pc++);
+      case PUSHCONSTANTW: aux += highbyte(*pc++);
       case PUSHCONSTANT:  aux += *pc++;
         *S->top++ = consts[aux];
         break;
@@ -368,22 +369,22 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         *S->top++ = *((S->stack+base) + aux);
         break;
 
-      case GETGLOBALW: aux = highbyte(*pc++);
+      case GETGLOBALW: aux += highbyte(*pc++);
       case GETGLOBAL:  aux += *pc++;
         luaV_getglobal(tsvalue(&consts[aux]));
         break;
 
       case GETTABLE:
-       luaV_gettable();
-       break;
+        luaV_gettable();
+        break;
 
-      case GETDOTTEDW: aux = highbyte(*pc++);
+      case GETDOTTEDW: aux += highbyte(*pc++);
       case GETDOTTED:  aux += *pc++;
         *S->top++ = consts[aux];
         luaV_gettable();
         break;
 
-      case PUSHSELFW: aux = highbyte(*pc++);
+      case PUSHSELFW: aux += highbyte(*pc++);
       case PUSHSELF:  aux += *pc++; {
         TObject receiver = *(S->top-1);
         *S->top++ = consts[aux];
@@ -392,7 +393,7 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         break;
       }
 
-      case CREATEARRAYW: aux = highbyte(*pc++);
+      case CREATEARRAYW: aux += highbyte(*pc++);
       case CREATEARRAY:  aux += *pc++;
         luaC_checkGC();
         avalue(S->top) = luaH_new(aux);
@@ -408,12 +409,12 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         *((S->stack+base) + aux) = *(S->top-1);
         break;
 
-      case SETGLOBALW: aux = highbyte(*pc++);
+      case SETGLOBALW: aux += highbyte(*pc++);
       case SETGLOBAL:  aux += *pc++;
         luaV_setglobal(tsvalue(&consts[aux]));
         break;
 
-      case SETGLOBALDUPW: aux = highbyte(*pc++);
+      case SETGLOBALDUPW: aux += highbyte(*pc++);
       case SETGLOBALDUP:  aux += *pc++;
         *S->top = *(S->top-1);
         S->top++;
@@ -435,7 +436,7 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         luaV_settable(S->top-3-(*pc++), 1);
         break;
 
-      case SETLISTW: aux = highbyte(*pc++);
+      case SETLISTW: aux += highbyte(*pc++);
       case SETLIST:  aux += *pc++; {
         int n = *(pc++);
         TObject *arr = S->top-n-1;
@@ -561,34 +562,34 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         nvalue(S->top-1) = 1;
         break;
 
-      case ONTJMPW: aux = highbyte(*pc++);
+      case ONTJMPW: aux += highbyte(*pc++);
       case ONTJMP:  aux += *pc++;
         if (ttype(S->top-1) != LUA_T_NIL) pc += aux;
         else S->top--;
         break;
 
-      case ONFJMPW: aux = highbyte(*pc++);
+      case ONFJMPW: aux += highbyte(*pc++);
       case ONFJMP:  aux += *pc++;
         if (ttype(S->top-1) == LUA_T_NIL) pc += aux;
         else S->top--;
         break;
 
-      case JMPW: aux = highbyte(*pc++);
+      case JMPW: aux += highbyte(*pc++);
       case JMP:  aux += *pc++;
         pc += aux;
         break;
 
-      case IFFJMPW: aux = highbyte(*pc++);
+      case IFFJMPW: aux += highbyte(*pc++);
       case IFFJMP:  aux += *pc++;
         if (ttype(--S->top) == LUA_T_NIL) pc += aux;
         break;
 
-      case IFTUPJMPW: aux = highbyte(*pc++);
+      case IFTUPJMPW: aux += highbyte(*pc++);
       case IFTUPJMP:  aux += *pc++;
         if (ttype(--S->top) != LUA_T_NIL) pc -= aux;
         break;
 
-      case IFFUPJMPW: aux = highbyte(*pc++);
+      case IFFUPJMPW: aux += highbyte(*pc++);
       case IFFUPJMP:  aux += *pc++;
         if (ttype(--S->top) == LUA_T_NIL) pc -= aux;
         break;
@@ -605,7 +606,7 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         break;
       }
 
-      case SETLINEW: aux = highbyte(*pc++);
+      case SETLINEW: aux += highbyte(*pc++);
       case SETLINE:  aux += *pc++;
         if ((S->stack+base-1)->ttype != LUA_T_LINE) {
           /* open space for LINE value */
@@ -617,6 +618,10 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         if (lua_linehook)
           luaD_lineHook(aux);
         break;
+
+      case LONGARG:
+        aux = highbyte(highbyte(*pc++));
+        goto switchentry;  /* do not reset "aux" */
 
     }
   }

@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.19 1999/02/02 17:57:49 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.20 1999/02/02 19:41:17 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -7,8 +7,6 @@
 #ifndef lopcodes_h
 #define lopcodes_h
 
-
-#define NUMOFFSET	100
 
 /*
 ** NOTICE: variants of the same opcode must be consecutive: First, those
@@ -100,14 +98,38 @@ CLOSURE,/*	b c	v_c...v_1	closure(CNST[b], v_c...v_1) */
 CALLFUNC,/*	b c	v_c...v_1 f	r_b...r_1	f(v1,...,v_c)  */
 
 SETLINEW,/*	w	-		-		LINE=w  */
-SETLINE /*	b	-		-		LINE=b  */
+SETLINE,/*	b	-		-		LINE=b  */
+
+LONGARG /*	b	(add b*(1<<16) to arg of next instruction) */
 
 } OpCode;
 
 
+#define NUMOFFSET	100	/* offset for immediate numbers */
+
 #define RFIELDS_PER_FLUSH 32	/* records (SETMAP) */
-#define LFIELDS_PER_FLUSH 64    /* lists (SETLIST) */
+#define LFIELDS_PER_FLUSH 64    /* FPF - lists (SETLIST) */
 
 #define ZEROVARARG	64
+
+
+/* maximum value of an arg of 3 bytes; must fit in an "int" */
+#if MAX_INT < (1<<24)
+#define MAX_ARG	MAX_INT
+#else
+#define MAX_ARG	((1<<24)-1)
+#endif
+
+/* maximum value of a word of 2 bytes; cannot be bigger than MAX_ARG */
+#if MAX_ARG < (1<<16)
+#define MAX_WORD	MAX_ARG
+#else
+#define MAX_WORD	((1<<16)-1)
+#endif
+
+
+/* maximum value of a byte */
+#define MAX_BYTE	((1<<8)-1)
+
 
 #endif
