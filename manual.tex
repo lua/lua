@@ -1,13 +1,47 @@
-% $Id: manual.tex,v 1.66 2003/01/21 17:45:11 roberto Exp roberto $
+% $Id: manual.tex,v 2.1 2003/01/22 16:29:38 roberto Exp roberto $
 %{[(
 
 \documentclass[11pt,twoside]{article}
 \usepackage{fullpage}
-\usepackage{bnf}
+\usepackage{iso}
 \usepackage{graphicx}
 
-% no need for subscripts...
-\catcode`\_=12
+
+
+% Right arrow (internal use)
+\newcommand{\ra}{\(\rightarrow\)\ }
+
+% Terminal Simbols
+\newcommand{\ter}[1]{{\rm`{\tt#1}'}}
+%reserved words
+\newcommand{\rwd}[1]{{\bf\lowercase{#1}}}
+% empty production
+\newcommand{\emptyprod}{$\epsilon$ }
+
+% repetitions and optionals
+\newcommand{\rep}[1]{{\rm\{}\,#1\,{\rm\}}}
+\newcommand{\opt}[1]{{\rm [}\,#1\,{\,\rm]}}
+\newcommand{\oneormore}[1]{{\rm\{}#1{\/\rm\}$^+$}}
+ 
+\newcommand{\prg}[1]{{\it #1\/}}
+ 
+%productions: \produc{non-terminal}{rule}
+\newcommand{\produc}[2]{#1 & \ra & #2\index{grammar!#1}\\}
+ 
+%new line inside a production
+\newcommand{\NL}{\\  & &}
+%new line indented
+\newcommand{\NLI}{\NL\hspace{2ex}}
+
+% 'or'
+\newcommand{\Or}{$|$ }
+
+% 'or' in a new line
+\newcommand{\OrNL}{\\ & \Or & }
+
+%Environment for productions
+\newenvironment{Produc}{\vspace{0.8ex}\par\noindent\hspace{5ex}\it\begin{tabular}{rrl}}{\end{tabular}\vspace{0.8ex}\par\noindent}
+
 
 %\newcommand{\See}[1]{Section~\ref{#1}}
 \newcommand{\See}[1]{\S\ref{#1}}
@@ -43,13 +77,11 @@
 
 \newcommand{\Version}{5.0 (beta)}
 
-% changes to bnf.sty by LHF
-\renewcommand{\Or}{$|$ }
-\renewcommand{\rep}[1]{{\rm\{}\,#1\,{\rm\}}}
-\renewcommand{\opt}[1]{{\rm [}\,#1\,{\,\rm]}}
-\renewcommand{\ter}[1]{{\rm`{\tt#1}'}}
 \newcommand{\Nter}[1]{{\tt#1}}
 \newcommand{\NOTE}{\par\medskip\noindent\emph{NOTE}: }
+
+\newcommand{\At}{{\tt @}}   %{\verb|@|}
+\newcommand{\Nb}{~}
 
 \makeindex
 
@@ -139,7 +171,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{{\small \tt\$Date: 2003/01/21 17:45:11 $ $}}
+%\date{{\small \tt\$Date: 2003/01/22 16:29:38 $ $}}
 
 \maketitle
 
@@ -166,7 +198,7 @@ scripting,
 and
 rapid prototyping.
 
-This document describes version \Version\ of the Lua programming language
+This document describes version \Version{} of the Lua programming language
 and the Application Program Interface (API)
 that allows interaction between Lua programs and their host C~programs.
 \end{abstract}
@@ -174,27 +206,27 @@ that allows interaction between Lua programs and their host C~programs.
 \def\abstractname{Resumo}
 \begin{abstract}
 \noindent
-Lua \'e uma linguagem de programa\c{c}\~ao
+Lua é uma linguagem de programação
 poderosa e leve,
-projetada para estender aplica\c{c}\~oes.
-Lua tamb\'em \'e frequentemente usada como uma linguagem de prop\'osito geral.
-Lua combina programa\c{c}\~ao procedural
-(com sintaxe semelhante \`a de Pascal)
+projetada para estender aplicações.
+Lua também é frequentemente usada como uma linguagem de propósito geral.
+Lua combina programação procedural
+(com sintaxe semelhante à de Pascal)
 com
-poderosas constru\c{c}\~oes para descri\c{c}\~ao de dados,
-baseadas em tabelas associativas e sem\^antica extens\'\i vel.
-Lua \'e
+poderosas construções para descrição de dados,
+baseadas em tabelas associativas e semântica extensível.
+Lua é
 tipada dinamicamente,
 interpretada a partir de \emph{opcodes},
-e tem gerenciamento autom\'atico de mem\'oria com coleta de lixo.
-Essas caracter\'{\i}sticas fazem de Lua uma linguagem ideal para
-configura\c{c}\~ao,
-automa\c{c}\~ao (\emph{scripting})
-e prototipagem r\'apida.
+e tem gerenciamento automático de memória com coleta de lixo.
+Essas características fazem de Lua uma linguagem ideal para
+configuração,
+automação (\emph{scripting})
+e prototipagem rápida.
 
-Este documento descreve a vers\~ao \Version\ da linguagem de
-programa\c{c}\~ao Lua e a Interface de Programa\c{c}\~ao (API) que permite
-a intera\c{c}\~ao entre programas Lua e programas C~hospedeiros.
+Este documento descreve a versão \Version{} da linguagem de
+programação Lua e a Interface de Programação (API) que permite
+a interação entre programas Lua e programas C~hospedeiros.
 \end{abstract}
 
 \newpage
@@ -207,8 +239,17 @@ a intera\c{c}\~ao entre programas Lua e programas C~hospedeiros.
 \pagestyle{plain}
 \pagenumbering{arabic}
 
+\catcode`\_=12
+\catcode`\$=12
+\catcode`\#=12
+\catcode`\%=12
+\catcode`\^=12
+\catcode`\~=12
+\catcode`\&=12
 
-\C{------------------------------------------------------------------------------}
+
+
+\C{-------------------------------------------------------------------------}
 \section{Introduction}
 
 Lua is an extension programming language designed to support
@@ -223,8 +264,8 @@ it only works \emph{embedded} in a host client,
 called the \emph{embedding program} or simply the \emph{host}.
 This host program can invoke functions to execute a piece of Lua code,
 can write and read Lua variables,
-and can register C~functions to be called by Lua code.
-Through the use of C~functions, Lua can be augmented to cope with
+and can register C\Nb{}functions to be called by Lua code.
+Through the use of C\Nb{}functions, Lua can be augmented to cope with
 a wide range of different domains,
 thus creating customized programming languages sharing a syntactical framework.
 
@@ -241,32 +282,32 @@ see the papers below,
 which are available at Lua's web site.
 \begin{itemize}
 \item
-R.~Ierusalimschy, L.~H.~de Figueiredo, and W.~Celes.
+R.\Nb{}Ierusalimschy, L.\Nb{}H.\Nb{}de Figueiredo, and W.\Nb{}Celes.
 Lua\Em{}an extensible extension language.
-\emph{Software: Practice \& Experience} {\bf 26} \#6 (1996) 635\En{}652.
+\emph{Software: Practice & Experience} {\bf 26} #6 (1996) 635\En{}652.
 \item
-L.~H.~de Figueiredo, R.~Ierusalimschy, and W.~Celes.
+L.\Nb{}H.\Nb{}de Figueiredo, R.\Nb{}Ierusalimschy, and W.\Nb{}Celes.
 The design and implementation of a language for extending applications.
 \emph{Proceedings of XXI Brazilian Seminar on Software and Hardware} (1994) 273\En{}283.
 \item
-L.~H.~de Figueiredo, R.~Ierusalimschy, and W.~Celes.
+L.\Nb{}H.\Nb{}de Figueiredo, R.\Nb{}Ierusalimschy, and W.\Nb{}Celes.
 Lua: an extensible embedded language.
-\emph{Dr. Dobb's Journal} {\bf  21} \#12 (Dec 1996) 26\En{}33.
+\emph{Dr. Dobb's Journal} {\bf  21} #12 (Dec 1996) 26\En{}33.
 \item
-R.~Ierusalimschy, L.~H.~de Figueiredo, and W.~Celes.
+R.\Nb{}Ierusalimschy, L.\Nb{}H.\Nb{}de Figueiredo, and W.\Nb{}Celes.
 The evolution of an extension language: a history of Lua,
 \emph{Proceedings of V Brazilian Symposium on Programming Languages} (2001) B-14\En{}B-28.
 \end{itemize}
 
 Lua means \Q{moon} in Portuguese.
 
-\C{------------------------------------------------------------------------------}
+\C{-------------------------------------------------------------------------}
 \section{Lua Concepts}\label{concepts}
 
 This section describes the main concepts of Lua as a language.
 The syntax and semantics of Lua are described in \See{language}.
 The discussion below is not purely conceptual;
-it includes references to the C~API \see{API},
+it includes references to the C\Nb{}API \see{API},
 because Lua is designed to be embedded in host programs.
 It also includes references to the standard libraries \see{libraries}.
 
@@ -315,10 +356,10 @@ All values carry their own type.
 There are eight \Index{basic types} in Lua:
 \Def{nil}, \Def{boolean}, \Def{number},
 \Def{string}, \Def{function}, \Def{userdata}, \Def{thread}, and \Def{table}.
-\emph{Nil} is the type of the value \nil,
+\emph{Nil} is the type of the value \nil{},
 whose main property is to be different from any other value;
 usually it represents the absence of a useful value.
-\emph{Boolean} is the type of the values \False{} and \True.
+\emph{Boolean} is the type of the values \False{} and \True{}.
 In Lua, both \nil{} and \False{} make a condition false,
 and any other value makes it true.
 \emph{Number} represents real (double-precision floating-point) numbers.
@@ -347,7 +388,7 @@ However, by using \emph{metatables},
 the programmer can define operations for userdata values
 \see{metatable}.
 Userdata values cannot be created or modified in Lua,
-only through the C~API.
+only through the C\Nb{}API.
 This guarantees the integrity of data owned by the host program.
 
 The type \Def{thread} represents independent threads of execution,
@@ -357,10 +398,10 @@ and is subject to changes in the future.)
 
 The type \emph{table} implements \Index{associative arrays},
 that is, \Index{arrays} that can be indexed not only with numbers,
-but with any value (except \nil).
+but with any value (except \nil{}).
 Moreover,
 tables can be \emph{heterogeneous},
-that is, they can contain values of all types (except \nil).
+that is, they can contain values of all types (except \nil{}).
 Tables are the sole data structuring mechanism in Lua;
 they may be used to represent not only ordinary arrays,
 but also symbol tables, sets, records, graphs, trees, etc.
@@ -438,7 +479,7 @@ global variables
 and local variables.
 Variables are assumed to be global unless explicitly declared local
 \see{localvar}.
-Before the first assignment to a variable, its value is \nil.
+Before the first assignment to a variable, its value is \nil{}.
 
 All global variables live as fields in ordinary Lua tables.
 Usually, globals live in a table called \Index{table of globals}.
@@ -466,7 +507,7 @@ collecting all dead objects
 All objects in Lua are subject to automatic management:
 tables, userdata, functions, and strings.
 
-Using the C~API,
+Using the C\Nb{}API,
 you can set garbage-collector metamethods for userdata \see{metatable}.
 When it is about to free a userdata,
 Lua calls the metamethod associated with event \verb|gc| in the
@@ -485,7 +526,7 @@ which reclaims the memory of all dead objects.
 The byte counter is adjusted,
 and then the threshold is reset to twice the new value of the byte counter.
 
-Through the C~API, you can query those numbers,
+Through the C\Nb{}API, you can query those numbers,
 and change the threshold \see{GC-API}.
 Setting the threshold to zero actually forces an immediate
 garbage-collection cycle,
@@ -519,7 +560,7 @@ If \verb|__mode| contains \verb|v|,
 the values in the table are weak.
 
 
-\C{------------------------------------------------------------------------------}
+\C{-------------------------------------------------------------------------}
 \section{The Language}\label{language}
 
 This section describes the lexis, the syntax, and the semantics of Lua.
@@ -551,8 +592,8 @@ and cannot be used as identifiers:
 \end{verbatim}
 
 Lua is a case-sensitive language:
-\T{and} is a reserved word, but \T{And} and \T{\'and}
-(if the locale permits) are two different, valid identifiers.
+\T{and} is a reserved word, but \T{And} and \T{AND}
+are two different, valid identifiers.
 As a convention, identifiers starting with an underscore followed by
 uppercase letters (such as \verb|_VERSION|)
 are reserved for internal variables used by Lua.
@@ -588,9 +629,10 @@ where \emph{ddd} is a sequence of up to three \emph{decimal} digits.
 Strings in Lua may contain any 8-bit value, including embedded zeros,
 which can be specified as `\verb|\0|'.
 
-Literal strings can also be delimited by matching \verb|[[| $\ldots$ \verb|]]|.
+Literal strings can also be delimited by matching
+\verb|[[| \Math{\ldots} \verb|]]|.
 Literals in this bracketed form may run for several lines,
-may contain nested \verb|[[| $\ldots$ \verb|]]| pairs,
+may contain nested \verb|[[| \Math{\ldots} \verb|]]| pairs,
 and do not interpret escape sequences.
 For convenience,
 when the opening \verb|[[| is immediately followed by a newline,
@@ -599,8 +641,8 @@ That form is specially convenient for
 writing strings that contain program pieces or
 other quoted strings.
 As an example, in a system using ASCII
-(in which `\verb|a|' is coded as~97,
-newline is coded as~10, and `\verb|1|' is coded as~49),
+(in which `\verb|a|' is coded as\Nb{}97,
+newline is coded as\Nb{}10, and `\verb|1|' is coded as\Nb{}49),
 the four literals below denote the same string:
 \begin{verbatim}
       (1)   "alo\n123\""
@@ -627,7 +669,7 @@ that runs until the end of the line.
 Otherwise, it is a long comment,
 that runs until the corresponding \verb|]]|.
 Long comments may run for several lines,
-and may contain nested \verb|[[| $\ldots$ \verb|]]| pairs.
+and may contain nested \verb|[[| \Math{\ldots} \verb|]]| pairs.
 For convenience,
 the first line of a chunk is skipped if it starts with \verb|#|.
 This facility allows the use of Lua as a script interpreter
@@ -736,7 +778,7 @@ the list of variables.\index{adjustment}
 If there are more values than needed,
 the excess values are thrown away.
 If there are fewer values than needed,
-the list is extended with as many  \nil's as needed.
+the list is extended with as many  \nil{}'s as needed.
 If the list of expressions ends with a function call,
 then all values returned by that function call enter in the list of values,
 before the adjustment
@@ -854,7 +896,7 @@ before the loop starts.
 The names are here for explanatory purposes only.
 \item The behavior is \emph{undefined} if you assign to \verb|var| inside
 the block.
-\item If the third expression (the step) is absent, then a step of~1 is used.
+\item If the third expression (the step) is absent, then a step of\Nb{}1 is used.
 \item You can use \rwd{break} to exit a \rwd{for} loop.
 \item The loop variable \verb|var| is local to the statement;
 you cannot use its value after the \rwd{for} ends or is broken.
@@ -865,7 +907,7 @@ then assign it to another variable before breaking or exiting the loop.
 The generic \rwd{for} statement works over functions,
 called \Index{generators}.
 It calls its generator to produce a new value for each iteration,
-stopping when the new value is \nil.
+stopping when the new value is \nil{}.
 It has the following syntax:
 \begin{Produc}
 \produc{stat}{\rwd{for} \Nter{Name} \rep{\ter{,} \Nter{Name}} \rwd{in} explist1
@@ -921,7 +963,7 @@ The declaration may include an initial assignment:\IndexKW{local}
 \end{Produc}
 If present, an initial assignment has the same semantics
 of a multiple assignment \see{assignment}.
-Otherwise, all variables are initialized with \nil.
+Otherwise, all variables are initialized with \nil{}.
 
 A chunk is also a block \see{chunks},
 so local variables can be declared outside any explicit block.
@@ -981,10 +1023,10 @@ The \Index{relational operators} in Lua are
 \begin{verbatim}
        ==    ~=    <     >     <=    >=
 \end{verbatim}
-These operators always result in \False{} or \True.
+These operators always result in \False{} or \True{}.
 
 Equality (\verb|==|) first compares the type of its operands.
-If the types are different, then the result is \False.
+If the types are different, then the result is \False{}.
 Otherwise, the values of the operands are compared.
 Numbers and strings are compared in the usual way.
 Tables, userdata, and functions are compared \emph{by reference},
@@ -1024,13 +1066,13 @@ all logical operators consider both \False{} and \nil{} as false
 and anything else as true.
 \IndexKW{and}\IndexKW{or}\IndexKW{not}
 
-The operator \rwd{not} always return \False{} or \True.
+The operator \rwd{not} always return \False{} or \True{}.
 
 The conjunction operator \rwd{and} returns its first argument
-if its value is \False{} or \nil;
+if its value is \False{} or \nil{};
 otherwise, \rwd{and} returns its second argument.
 The disjunction operator \rwd{or} returns its first argument
-if it is different from \nil{} and \False;
+if it is different from \nil{} and \False{};
 otherwise, \rwd{or} returns its second argument.
 Both \rwd{and} and \rwd{or} use \Index{short-cut evaluation},
 that is,
@@ -1164,11 +1206,11 @@ Because a function can return any number of results
 \see{return},
 the number of results must be adjusted before they are used.
 If the function is called as a statement \see{funcstat},
-then its return list is adjusted to~0 elements,
+then its return list is adjusted to\Nb{}0 elements,
 thus discarding all returned values.
 If the function is called inside another expression,
 or in the middle of a list of expressions,
-then its return list is adjusted to~1 element,
+then its return list is adjusted to\Nb{}1 element,
 thus discarding all returned values but the first one.
 If the function is called as the last element of a list of expressions,
 then no adjustment is made
@@ -1277,8 +1319,8 @@ A vararg function does not adjust its argument list;
 instead, it collects all extra arguments into an implicit parameter,
 called \IndexLIB{arg}.
 The value of \verb|arg| is a table,
-with a field~\verb|n| whose value is the number of extra arguments,
-and with the extra arguments at positions 1,~2,~\ldots,~\verb|n|.
+with a field\Nb{}\verb|n| whose value is the number of extra arguments,
+and with the extra arguments at positions 1,\Nb{}2,\Nb{}\ldots,\Nb{}\verb|n|.
 
 As an example, consider the following definitions:
 \begin{verbatim}
@@ -1377,7 +1419,7 @@ while all of them share the same \verb|x|.
 \subsection{Error Handling} \label{error}
 
 Because Lua is an extension language,
-all Lua actions start from C~code in the host program
+all Lua actions start from C\Nb{}code in the host program
 calling a function from the Lua library \see{pcall}.
 Whenever an error occurs during Lua compilation or execution,
 control returns to C,
@@ -1689,7 +1731,7 @@ A coroutine can terminate its execution in two ways:
 Normally, when its main function returns
 (explicitly or implicitly, after the last instruction);
 and abnormally, if there is an unprotected error.
-In the first case, \verb|coroutine.resume| returns \True,
+In the first case, \verb|coroutine.resume| returns \True{},
 plus any values returned by the coroutine main function.
 In case of errors, \verb|coroutine.resume| returns \False{}
 plus an error message.
@@ -1700,7 +1742,7 @@ the corresponding \verb|coroutine.resume| returns immediately,
 even if the yield happens inside nested function calls
 (that is, not in the main function,
 but in a function directly or indirectly called by the main function).
-In the case of a yield, \verb|coroutine.resume| also returns \True,
+In the case of a yield, \verb|coroutine.resume| also returns \True{},
 plus any values passed to \verb|coroutine.yield|.
 The next time you resume the same coroutine,
 it continues its execution from the point where it yielded,
@@ -1759,12 +1801,12 @@ main    false   cannot resume dead coroutine
 
 
 
-\C{------------------------------------------------------------------------------}
+\C{-------------------------------------------------------------------------}
 \section{The Application Program Interface}\label{API}
 \index{C API}
 
 This section describes the API for Lua, that is,
-the set of C~functions available to the host program to communicate
+the set of C\Nb{}functions available to the host program to communicate
 with Lua.
 All API functions and related types and constants
 are declared in the header file \verb|lua.h|.
@@ -1816,7 +1858,7 @@ to avoid growing too large.
 \subsection{Threads}
 
 Lua offers partial support for multiple threads of execution.
-If you have a C~library that offers multi-threading, 
+If you have a C\Nb{}library that offers multi-threading, 
 then Lua can cooperate with it to implement the equivalent facility in Lua.
 Also, Lua implements its own coroutine system on top of threads.
 The following function creates a new \Q{thread} in Lua:
@@ -1846,7 +1888,7 @@ Instead, you must close the state itself.
 
 Lua uses a virtual \emph{stack} to pass values to and from C.
 Each element in this stack represents a Lua value
-(\nil, number, string, etc.).
+(\nil{}, number, string, etc.).
 
 Each C invocation has its own stack.
 Whenever Lua calls C, the called function gets a new stack,
@@ -1859,18 +1901,18 @@ For convenience,
 most query operations in the API do not follow a strict stack discipline.
 Instead, they can refer to any element in the stack by using an \emph{index}:
 A positive index represents an \emph{absolute} stack position
-(starting at~1);
+(starting at\Nb{}1);
 a negative index represents an \emph{offset} from the top of the stack.
 More specifically, if the stack has \M{n} elements,
-then index~1 represents the first element
+then index\Nb{}1 represents the first element
 (that is, the element that was pushed onto the stack first),
 and
-index~\M{n} represents the last element;
-index~\Math{-1} also represents the last element
+index\Nb{}\M{n} represents the last element;
+index\Nb{}\Math{-1} also represents the last element
 (that is, the element at the top),
 and index \Math{-n} represents the first element.
 We say that an index is \emph{valid}
-if it lies between~1 and the stack top
+if it lies between\Nb{}1 and the stack top
 (that is, if \verb|1 <= abs(index) <= top|).
 \index{stack index} \index{valid index}
 
@@ -1879,9 +1921,9 @@ At any time, you can get the index of the top element by calling
        int lua_gettop (lua_State *L);
 \end{verbatim}
 \DefAPI{lua_gettop}
-Because indices start at~1,
+Because indices start at\Nb{}1,
 the result of \verb|lua_gettop| is equal to the number of elements in the stack
-(and so 0~means an empty stack).
+(and so 0\Nb{}means an empty stack).
 
 When you interact with Lua API,
 \emph{you are responsible for controlling stack overflow}.
@@ -1918,7 +1960,7 @@ Note that 0 is never an acceptable index.
 Unless otherwise noted,
 any function that accepts valid indices can also be called with
 \Index{pseudo-indices},
-which represent some Lua values that are accessible to the C~code
+which represent some Lua values that are accessible to the C\Nb{}code
 but are not in the stack.
 Pseudo-indices are used to access the table of globals \see{globals},
 the registry, and the upvalues of a C function \see{c-closure}.
@@ -1939,7 +1981,7 @@ The API offers the following functions for basic stack manipulation:
 or 0,
 and sets the stack top to that index.
 If the new top is larger than the old one,
-then the new elements are filled with \nil.
+then the new elements are filled with \nil{}.
 If \verb|index| is 0, then all stack elements are removed.
 A useful macro defined in the \verb|lua.h| is
 \begin{verbatim}
@@ -2021,7 +2063,7 @@ The following function translates such constants to a type name:
 \end{verbatim}
 \DefAPI{lua_typename}
 
-The \verb|lua_is*| functions return~1 if the object is compatible
+The \verb|lua_is*| functions return\Nb{}1 if the object is compatible
 with the given type, and 0 otherwise.
 \verb|lua_isboolean| is an exception to this rule,
 and it succeeds only for boolean values
@@ -2030,9 +2072,9 @@ as any value has a boolean value).
 They always return 0 for a non-valid index.
 \verb|lua_isnumber| accepts numbers and numerical strings,
 \verb|lua_isstring| accepts strings and numbers \see{coercion},
-\verb|lua_isfunction| accepts both Lua functions and C~functions,
+\verb|lua_isfunction| accepts both Lua functions and C\Nb{}functions,
 and \verb|lua_isuserdata| accepts both full and light userdata.
-To distinguish between Lua functions and C~functions,
+To distinguish between Lua functions and C\Nb{}functions,
 you should use \verb|lua_iscfunction|.
 To distinguish between full and light userdata,
 you can use \verb|lua_islightuserdata|.
@@ -2050,7 +2092,7 @@ Both functions return 0 if any of the indices are non-valid.
 
 \subsection{Getting Values from the Stack}\label{lua-to}
 
-To translate a value in the stack to a specific C~type,
+To translate a value in the stack to a specific C\Nb{}type,
 you can use the following conversion functions:
 \begin{verbatim}
        int            lua_toboolean   (lua_State *L, int index);
@@ -2069,7 +2111,7 @@ they act as if the given value had an incorrect type.
 \verb|lua_toboolean| converts the Lua value at the given index
 to a C \Q{boolean} value (that is, 0 or 1).
 Like all tests in Lua, it returns 1 for any Lua value different from
-\False{} and \nil;
+\False{} and \nil{};
 otherwise it returns 0.
 It also returns 0 when called with a non-valid index.
 (If you want to accept only real boolean values,
@@ -2079,7 +2121,7 @@ use \verb|lua_isboolean| to test the type of the value.)
 to a number (by default, \verb|lua_Number| is \verb|double|).
 \DefAPI{lua_Number}
 The Lua value must be a number or a string convertible to number
-\see{coercion}; otherwise, \verb|lua_tonumber| returns~0.
+\see{coercion}; otherwise, \verb|lua_tonumber| returns\Nb{}0.
 
 \verb|lua_tostring| converts the Lua value at the given index to a string
 (\verb|const char*|).
@@ -2093,7 +2135,7 @@ when \verb|lua_tostring| is applied to keys.)
 \verb|lua_tostring| returns a fully aligned pointer
 to a string inside the Lua environment.
 This string always has a zero (\verb|'\0'|)
-after its last character (as in~C),
+after its last character (as in\Nb{}C),
 but may contain other zeros in its body.
 If you do not know whether a string may contain zeros,
 you can use \verb|lua_strlen| to get its actual length.
@@ -2103,8 +2145,8 @@ will be valid after the corresponding value is removed from the stack.
 If you need the string after the current function returns,
 then you should duplicate it (or put it into the registry \see{registry}).
 
-\verb|lua_tocfunction| converts a value in the stack to a C~function.
-This value must be a C~function;
+\verb|lua_tocfunction| converts a value in the stack to a C\Nb{}function.
+This value must be a C\Nb{}function;
 otherwise, \verb|lua_tocfunction| returns \verb|NULL|.
 The type \verb|lua_CFunction| is explained in \See{LuacallC}.
 
@@ -2114,7 +2156,7 @@ The type \verb|lua_CFunction| is explained in \See{LuacallC}.
 \subsection{Pushing Values onto the Stack}
 
 The API has the following functions to
-push C~values onto the stack:
+push C\Nb{}values onto the stack:
 \begin{verbatim}
        void lua_pushboolean   (lua_State *L, int b);
        void lua_pushnumber    (lua_State *L, lua_Number n);
@@ -2128,12 +2170,12 @@ push C~values onto the stack:
 \DefAPI{lua_pushnumber}\DefAPI{lua_pushlstring}\DefAPI{lua_pushstring}
 \DefAPI{lua_pushcfunction}\DefAPI{lua_pushlightuserdata}\DefAPI{lua_pushboolean}
 \DefAPI{lua_pushnil}\label{pushing}
-These functions receive a C~value,
+These functions receive a C\Nb{}value,
 convert it to a corresponding Lua value,
 and push the result onto the stack.
 In particular, \verb|lua_pushlstring| and \verb|lua_pushstring|
 make an internal copy of the given string.
-\verb|lua_pushstring| can only be used to push proper C~strings
+\verb|lua_pushstring| can only be used to push proper C\Nb{}strings
 (that is, strings that end with a zero and do not contain embedded zeros);
 otherwise, you should use the more general \verb|lua_pushlstring|,
 which accepts an explicit size.
@@ -2444,7 +2486,7 @@ removing this value from the stack.
 \subsection{Calling Functions}
 
 Functions defined in Lua
-and C~functions registered in Lua
+and C\Nb{}functions registered in Lua
 can be called from the host program.
 This is done using the following protocol:
 First, the function to be called is pushed onto the stack;
@@ -2471,7 +2513,7 @@ equivalent to this Lua code:
 \begin{verbatim}
        a = f("how", t.x, 14)
 \end{verbatim}
-Here it is in~C:
+Here it is in\Nb{}C:
 \begin{verbatim}
     lua_pushstring(L, "t");
     lua_gettable(L, LUA_GLOBALSINDEX);          /* global `t' (for later use) */
@@ -2548,7 +2590,7 @@ error while running the error handler function.
 
 >>>>
 \C{ TODO: mover essas 2 para algum lugar melhor.}
-Some special Lua functions have their own C~interfaces.
+Some special Lua functions have their own C\Nb{}interfaces.
 The host program can generate a Lua error calling the function
 \begin{verbatim}
        void lua_error (lua_State *L);
@@ -2557,7 +2599,7 @@ The host program can generate a Lua error calling the function
 The error message (which actually can be any type of object)
 is popped from the stack.
 This function never returns.
-If \verb|lua_error| is called from a C~function that
+If \verb|lua_error| is called from a C\Nb{}function that
 has been called from Lua,
 then the corresponding Lua execution terminates,
 as if an error had occurred inside Lua code.
@@ -2581,29 +2623,29 @@ Concatenation is done following the usual semantics of Lua
 
 \subsection{Defining C Functions} \label{LuacallC}
 
-Lua can be extended with functions written in~C.
+Lua can be extended with functions written in\Nb{}C.
 These functions must be of type \verb|lua_CFunction|,
 which is defined as
 \begin{verbatim}
        typedef int (*lua_CFunction) (lua_State *L);
 \end{verbatim}
 \DefAPI{lua_CFunction}
-A C~function receives a Lua environment and returns an integer,
+A C\Nb{}function receives a Lua environment and returns an integer,
 the number of values it has returned to Lua.
 
 In order to communicate properly with Lua,
-a C~function must follow the following protocol,
+a C\Nb{}function must follow the following protocol,
 which defines the way parameters and results are passed:
-A C~function receives its arguments from Lua in its stack,
+A C\Nb{}function receives its arguments from Lua in its stack,
 in direct order (the first argument is pushed first).
 So, when the function starts,
 its first argument (if any) is at index 1.
-To return values to Lua, a C~function just pushes them onto the stack,
+To return values to Lua, a C\Nb{}function just pushes them onto the stack,
 in direct order (the first result is pushed first),
 and returns the number of results.
 Any other value in the stack below the results will be properly
 discharged by Lua.
-Like a Lua function, a C~function called by Lua can also return
+Like a Lua function, a C\Nb{}function called by Lua can also return
 many results.
 
 As an example, the following function receives a variable number
@@ -2626,7 +2668,7 @@ of numerical arguments and returns their average and sum:
        }
 \end{verbatim}
 
-To register a C~function to Lua,
+To register a C\Nb{}function to Lua,
 there is the following convenience macro:
 \begin{verbatim}
        #define lua_register(L,n,f) \
@@ -2640,7 +2682,7 @@ there is the following convenience macro:
 which receives the name the function will have in Lua,
 and a pointer to the function.
 Thus,
-the C~function `\verb|foo|' above may be registered in Lua as `\verb|average|'
+the C\Nb{}function `\verb|foo|' above may be registered in Lua as `\verb|average|'
 by calling
 \begin{verbatim}
        lua_register(L, "average", foo);
@@ -2648,11 +2690,11 @@ by calling
 
 \subsection{Defining C Closures} \label{c-closure}
 
-When a C~function is created,
+When a C\Nb{}function is created,
 it is possible to associate some values with it,
-thus creating a \IndexEmph{C~closure};
+thus creating a \IndexEmph{C\Nb{}closure};
 these values are then accessible to the function whenever it is called.
-To associate values with a C~function,
+To associate values with a C\Nb{}function,
 first these values should be pushed onto the stack
 (when there are multiple values, the first value is pushed first).
 Then the function
@@ -2660,33 +2702,33 @@ Then the function
        void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n);
 \end{verbatim}
 \DefAPI{lua_pushcclosure}
-is used to push the C~function onto the stack,
+is used to push the C\Nb{}function onto the stack,
 with the argument \verb|n| telling how many values should be
 associated with the function
 (\verb|lua_pushcclosure| also pops these values from the stack);
 in fact, the macro \verb|lua_pushcfunction| is defined as
 \verb|lua_pushcclosure| with \verb|n| set to 0.
 
-Then, whenever the C~function is called,
+Then, whenever the C\Nb{}function is called,
 those values are located at specific pseudo-indices.
 Those pseudo-indices are produced by a macro \IndexAPI{lua_upvalueindex}.
 The first value associated with a function is at position
 \verb|lua_upvalueindex(1)|, and so on.
 
-For examples of C~functions and closures, see files
+For examples of C\Nb{}functions and closures, see files
 \verb|lbaselib.c|, \verb|liolib.c|, \verb|lmathlib.c|, and \verb|lstrlib.c|
 in the official Lua distribution.
 
 
 \subsubsection*{Registry} \label{registry}
 
-Lua provides a pre-defined table that can be used by any C~code to
+Lua provides a pre-defined table that can be used by any C\Nb{}code to
 store whatever Lua value it needs to store,
-especially if the C~code needs to keep that Lua value
-outside the life span of a C~function.
+especially if the C\Nb{}code needs to keep that Lua value
+outside the life span of a C\Nb{}function.
 This table is always located at pseudo-index
 \IndexAPI{LUA_REGISTRYINDEX}.
-Any C~library can store data into this table,
+Any C\Nb{}library can store data into this table,
 as long as it chooses keys different from other libraries.
 Typically, you should use as key a string containing your library name,
 or a light userdata with the address of a C object in your code.
@@ -2696,7 +2738,7 @@ implemented by the auxiliary library,
 and therefore should not be used by other purposes.
 
 
-\C{------------------------------------------------------------------------------}
+\C{-------------------------------------------------------------------------}
 \section{The Debug Interface} \label{debugI}
 
 Lua has no built-in debugging facilities.
@@ -2716,7 +2758,7 @@ The main function to get information about the interpreter stack is
 This function fills parts of a \verb|lua_Debug| structure with
 an identification of the \emph{activation record}
 of the function executing at a given level.
-Level~0 is the current running function,
+Level\Nb{}0 is the current running function,
 whereas level \Math{n+1} is the function that has called level \Math{n}.
 Usually, \verb|lua_getstack| returns 1;
 when called with a level greater than the stack depth,
@@ -2781,16 +2823,16 @@ The fields of \verb|lua_Debug| have the following meaning:
 If the function was defined in a string,
 then \verb|source| is that string;
 if the function was defined in a file,
-then \verb|source| starts with a \verb|@| followed by the file name.
+then \verb|source| starts with a \At{} followed by the file name.
 
-\item[short\_src]
+\item[short_src]
 A \Q{printable} version of \verb|source|, to be used in error messages.
 
 \item[linedefined]
 the line number where the definition of the function starts.
 
 \item[what] the string \verb|"Lua"| if this is a Lua function,
-\verb|"C"| if this is a C~function,
+\verb|"C"| if this is a C\Nb{}function,
 or \verb|"main"| if this is the main part of a chunk.
 
 \item[currentline]
@@ -2827,7 +2869,7 @@ Number of upvalues of the function.
 
 For the manipulation of local variables,
 \verb|luadebug.h| uses indices:
-The first parameter or local variable has index~1, and so on,
+The first parameter or local variable has index\Nb{}1, and so on,
 until the last active local variable.
 
 The following functions allow the manipulation of the
@@ -2936,11 +2978,11 @@ Therefore, if a hook calls Lua to execute a function or a chunk,
 that execution occurs without any calls to hooks.
 
 
-\C{------------------------------------------------------------------------------}
+\C{-------------------------------------------------------------------------}
 \section{Standard Libraries}\label{libraries}
 
 The standard libraries provide useful functions
-that are implemented directly through the standard C~API.
+that are implemented directly through the standard C\Nb{}API.
 Some of these functions provide essential services to the language
 (e.g. \verb|type| and \verb|getmetatable|);
 others provide access to \Q{outside} services (e.g. I/O);
@@ -2949,7 +2991,7 @@ but are quite useful or have critical performance to
 deserve an implementation in C (e.g. \verb|sort|).
 
 All libraries are implemented through the official C API,
-and are provided as separate C~modules.
+and are provided as separate C\Nb{}modules.
 Currently, Lua has the following standard libraries:
 \begin{itemize}
 \item basic library;
@@ -2965,7 +3007,7 @@ each library provides all its functions as fields of a global table
 or as methods of its objects.
 
 To have access to these libraries,
-the C~host program must call the functions
+the C\Nb{}host program must call the functions
 \verb|lua_baselibopen| (for the basic library),
 \verb|lua_strlibopen| (for the string library),
 \verb|lua_tablibopen| (for the table library),
@@ -2994,7 +3036,7 @@ The current content of this string is {\tt "Lua \Version"}.
 
 \subsubsection*{\ff \T{assert (v [, message])}}\DefLIB{assert}
 Issues an \emph{\Q{assertion failed!}} error
-when its argument \verb|v| is \nil{} or \False;
+when its argument \verb|v| is \nil{} or \False{};
 otherwise, returns this argument.
 This function is equivalent to the following Lua function:
 \begin{verbatim}
@@ -3048,7 +3090,7 @@ The default for \verb|function| is 1.
 \DefLIB{getmetatable}\label{pdf-getmetatable}
 
 Returns the metatable of the given object.
-If the object does not have a metatable, returns \nil.
+If the object does not have a metatable, returns \nil{}.
 
 \subsubsection*{\ff \T{gcinfo ()}}\DefLIB{gcinfo}
 Returns the number of Kbytes of dynamic memory Lua is using,
@@ -3097,12 +3139,12 @@ When called with \nil{} as its second argument,
 of the table and its associated value.
 When called with the last index,
 or with \nil{} in an empty table,
-\verb|next| returns \nil.
-If the second argument is absent, then it is interpreted as \nil.
+\verb|next| returns \nil{}.
+If the second argument is absent, then it is interpreted as \nil{}.
 
 Lua has no declaration of fields;
 semantically, there is no difference between a
-field not present in a table or a field with value \nil.
+field not present in a table or a field with value \nil{}.
 Therefore, \verb|next| only considers fields with non-\nil{} values.
 The order in which the indices are enumerated is not specified,
 \emph{even for numeric indices}.
@@ -3114,7 +3156,7 @@ the table during the traversal.
 
 \subsubsection*{\ff \T{pairs (t)}}\DefLIB{pairs}
 
-Returns the function \verb|next| and the table \verb|t| (plus a \nil),
+Returns the function \verb|next| and the table \verb|t| (plus a \nil{}),
 so that the construction
 \begin{verbatim}
        for k,v in pairs(t) do ... end
@@ -3147,13 +3189,13 @@ For formatted output, see \verb|format| \see{format}.
 Gets the real value of \verb|table[index]|,
 without invoking any metamethod.
 \verb|table| must be a table;
-\verb|index| is any value different from \nil.
+\verb|index| is any value different from \nil{}.
 
 \subsubsection*{\ff \T{rawset (table, index, value)}}\DefLIB{rawset}
 Sets the real value of \verb|table[index]| to \verb|value|,
 without invoking any metamethod.
 \verb|table| must be a table;
-\verb|index| is any value different from \nil;
+\verb|index| is any value different from \nil{};
 and \verb|value| is any Lua value.
 
 \subsubsection*{\ff \T{require (packagename)}}\DefLIB{require}
@@ -3205,18 +3247,18 @@ Level 1 is the function calling \verb|setglobals|.
 
 Sets the metatable for the given table.
 (You cannot change the metatable of a userdata from Lua.)
-If \verb|metatable| is \nil, removes the metatable of the given table.
+If \verb|metatable| is \nil{}, removes the metatable of the given table.
 
 \subsubsection*{\ff \T{tonumber (e [, base])}}\DefLIB{tonumber}
 Tries to convert its argument to a number.
 If the argument is already a number or a string convertible
 to a number, then \verb|tonumber| returns that number;
-otherwise, it returns \nil.
+otherwise, it returns \nil{}.
 
 An optional argument specifies the base to interpret the numeral.
 The base may be any integer between 2 and 36, inclusive.
-In bases above~10, the letter `A' (in either upper or lower case)
-represents~10, `B' represents~11, and so forth, with `Z' representing 35.
+In bases above\Nb{}10, the letter `A' (in either upper or lower case)
+represents\Nb{}10, `B' represents\Nb{}11, and so forth, with `Z' representing 35.
 In base 10 (the default), the number may have a decimal part,
 as well as an optional exponent part \see{coercion}.
 In other bases, only unsigned integers are accepted.
@@ -3230,7 +3272,7 @@ use \verb|format| \see{format}.
 \subsubsection*{\ff \T{type (v)}}\DefLIB{type}\label{pdf-type}
 Returns the type of its only argument, coded as a string.
 The possible results of this function are
-\verb|"nil"| (a string, not the value \nil),
+\verb|"nil"| (a string, not the value \nil{}),
 \verb|"number"|,
 \verb|"string"|,
 \verb|"table"|,
@@ -3246,13 +3288,13 @@ This function is equivalent to
 except that the above code can be valid only for a fixed \M{n}.
 The number \M{n} of returned values
 is either the value of \verb|list.n|, if it is a number,
-or one less the index of the first absent (\nil) value.
+or one less the index of the first absent (\nil{}) value.
 
 \subsection{String Manipulation}
 This library provides generic functions for string manipulation,
 such as finding and extracting substrings and pattern matching.
-When indexing a string in Lua, the first character is at position~1
-(not at~0, as in C).
+When indexing a string in Lua, the first character is at position\Nb{}1
+(not at\Nb{}0, as in C).
 Indices are allowed to be negative and are interpreted as indexing backwards,
 from the end of the string.
 Thus, the last character is at position \Math{-1}, and so on.
@@ -3262,7 +3304,7 @@ The string library provides all its functions inside the table
 
 \subsubsection*{\ff \T{string.byte (s [, i])}}\DefLIB{string.byte}
 Returns the internal numerical code of the \M{i}-th character of \verb|s|.
-If \verb|i| is absent, then it is assumed to be~1.
+If \verb|i| is absent, then it is assumed to be\Nb{}1.
 \verb|i| may be negative.
 
 \NOTE
@@ -3283,12 +3325,12 @@ Looks for the first \emph{match} of
 \verb|pattern| in the string \verb|s|.
 If it finds one, then \verb|find| returns the indices of \verb|s|
 where this occurrence starts and ends;
-otherwise, it returns \nil.
+otherwise, it returns \nil{}.
 If the pattern specifies captures (see \verb|string.gsub| below),
 the captured strings are returned as extra results.
 A third, optional numerical argument \verb|init| specifies
 where to start the search;
-its default value is~1, and may be negative.
+its default value is\Nb{}1, and may be negative.
 A value of \True{} as a fourth, optional argument \verb|plain|
 turns off the pattern matching facilities,
 so the function does a plain \Q{find substring} operation,
@@ -3334,7 +3376,7 @@ The definition of what is a lowercase letter depends on the current locale.
 Returns a formatted version of its variable number of arguments
 following the description given in its first argument (which must be a string).
 The format string follows the same rules as the \verb|printf| family of
-standard C~functions.
+standard C\Nb{}functions.
 The only differences are that the options/modifiers
 \verb|*|, \verb|l|, \verb|L|, \verb|n|, \verb|p|,
 and \verb|h| are not supported,
@@ -3459,17 +3501,17 @@ The following combinations are allowed in describing a character class:
 \verb|^$()%.[]*+-?|)
 \Em{} represents the character \emph{x} itself.
 \item[\T{.}] \Em{} (a dot) represents all characters.
-\item[\T{\%a}] \Em{} represents all letters.
-\item[\T{\%c}] \Em{} represents all control characters.
-\item[\T{\%d}] \Em{} represents all digits.
-\item[\T{\%l}] \Em{} represents all lowercase letters.
-\item[\T{\%p}] \Em{} represents all punctuation characters.
-\item[\T{\%s}] \Em{} represents all space characters.
-\item[\T{\%u}] \Em{} represents all uppercase letters.
-\item[\T{\%w}] \Em{} represents all alphanumeric characters.
-\item[\T{\%x}] \Em{} represents all hexadecimal digits.
-\item[\T{\%z}] \Em{} represents the character with representation 0.
-\item[\T{\%\M{x}}] (where \M{x} is any non-alphanumeric character)  \Em{}
+\item[\T{%a}] \Em{} represents all letters.
+\item[\T{%c}] \Em{} represents all control characters.
+\item[\T{%d}] \Em{} represents all digits.
+\item[\T{%l}] \Em{} represents all lowercase letters.
+\item[\T{%p}] \Em{} represents all punctuation characters.
+\item[\T{%s}] \Em{} represents all space characters.
+\item[\T{%u}] \Em{} represents all uppercase letters.
+\item[\T{%w}] \Em{} represents all alphanumeric characters.
+\item[\T{%x}] \Em{} represents all hexadecimal digits.
+\item[\T{%z}] \Em{} represents the character with representation 0.
+\item[\T{%\M{x}}] (where \M{x} is any non-alphanumeric character)  \Em{}
 represents the character \M{x}.
 This is the standard way to escape the magic characters.
 We recommend that any punctuation character (even the non magic)
@@ -3494,7 +3536,7 @@ The interaction between ranges and classes is not defined.
 Therefore, patterns like \verb|[%a-z]| or \verb|[a-%%]|
 have no meaning.
 
-\item[\T{[\^\null\M{set}]}] \Em{}
+\item[\T{[^\M{set}]}] \Em{}
 represents the complement of \M{set},
 where \M{set} is interpreted as above.
 \end{description}
@@ -3502,7 +3544,7 @@ For all classes represented by single letters (\verb|%a|, \verb|%c|, \ldots),
 the corresponding uppercase letter represents the complement of the class.
 For instance, \verb|%S| represents all non-space characters.
 
-The definitions of letter, space, etc.\ depend on the current locale.
+The definitions of letter, space, etc.{} depend on the current locale.
 In particular, the class \verb|[a-z]| may not be equivalent to \verb|%l|.
 The second form should be preferred for portability.
 
@@ -3529,12 +3571,12 @@ these repetition items will always match the \emph{shortest} possible sequence;
 a single character class followed by \verb|?|,
 which matches 0 or 1 occurrence of a character in the class;
 \item
-\T{\%\M{n}}, for \M{n} between 1 and 9;
+\T{%\M{n}}, for \M{n} between 1 and 9;
 such item matches a substring equal to the \M{n}-th captured string
 (see below);
 \item
-\T{\%b\M{xy}}, where \M{x} and \M{y} are two distinct characters;
-such item matches strings that start with~\M{x}, end with~\M{y},
+\T{%b\M{xy}}, where \M{x} and \M{y} are two distinct characters;
+such item matches strings that start with\Nb{}\M{x}, end with\Nb{}\M{y},
 and where the \M{x} and \M{y} are \emph{balanced}.
 This means that, if one reads the string from left to right,
 counting \Math{+1} for an \M{x} and \Math{-1} for a \M{y},
@@ -3560,9 +3602,9 @@ that match captures are stored (\emph{captured}) for future use.
 Captures are numbered according to their left parentheses.
 For instance, in the pattern \verb|"(a*(.)%w(%s*))"|,
 the part of the string matching \verb|"a*(.)%w(%s*)"| is
-stored as the first capture (and therefore has number~1);
-the character matching \verb|.| is captured with number~2,
-and the part matching \verb|%s*| has number~3.
+stored as the first capture (and therefore has number\Nb{}1);
+the character matching \verb|.| is captured with number\Nb{}2,
+and the part matching \verb|%s*| has number\Nb{}3.
 
 As a special case, the empty capture \verb|()| captures
 the current string position (a number).
@@ -3621,7 +3663,7 @@ numerical indices of \verb|table|.
 For each index, \verb|func| is called with the index and
 respective value as arguments.
 Indices are visited in sequential order,
-from~1 to \verb|n|,
+from\Nb{}1 to \verb|n|,
 where \verb|n| is the size of the table \see{getn}.
 If \verb|func| returns a non-\nil{} value,
 then the loop is broken, and this value is returned
@@ -3695,12 +3737,12 @@ so that subsequent calls to \verb|table.getn(table)| return \verb|n|.
 \subsection{Mathematical Functions} \label{mathlib}
 
 This library is an interface to most of the functions of the
-standard C~math library.
+standard C\Nb{}math library.
 (Some have slightly different names.)
 It provides all its functions inside the table \IndexLIB{math}.
 In addition,
 it registers a ??tag method for the binary exponentiation operator \verb|^|
-that returns \Math{x^y} when applied to numbers \verb|x| and \verb|y|.
+that returns \Math{x\sp{y}} when applied to numbers \verb|x| and \verb|y|.
 
 The library provides the following functions:
 \DefLIB{math.abs}\DefLIB{math.acos}\DefLIB{math.asin}\DefLIB{math.atan}
@@ -3721,7 +3763,7 @@ The library provides the following functions:
 \end{verbatim}
 plus a variable \IndexLIB{math.pi}.
 Most of them
-are only interfaces to the corresponding functions in the C~library.
+are only interfaces to the corresponding functions in the C\Nb{}library.
 All trigonometric functions work in radians.
 The functions \verb|math.deg| and \verb|math.rad| convert
 between radians and degrees.
@@ -3733,7 +3775,7 @@ Both can be used with 1, 2, or more arguments.
 
 The functions \verb|math.random| and \verb|math.randomseed|
 are interfaces to the simple random generator functions
-\verb|rand| and \verb|srand| that are provided by ANSI~C.
+\verb|rand| and \verb|srand| that are provided by ANSI\Nb{}C.
 (No guarantees can be given for their statistical properties.)
 When called without arguments,
 \verb|math.random| returns a pseudo-random real number
@@ -3833,7 +3875,7 @@ The \verb|mode| string can be any of the following:
 \end{description}
 The \verb|mode| string may also have a \verb|b| at the end,
 which is needed in some systems to open the file in binary mode.
-This string is exactly what is used in the standard~C function \verb|fopen|.
+This string is exactly what is used in the standard\Nb{}C function \verb|fopen|.
 
 \subsubsection*{\ff \T{io.output ([file])}}\DefLIB{io.output}
 
@@ -3916,7 +3958,7 @@ specified by the string \verb|whence|, as follows:
 \end{description}
 In case of success, function \verb|seek| returns the final file position,
 measured in bytes from the beginning of the file.
-If this function fails, it returns \nil,
+If this function fails, it returns \nil{},
 plus a string describing the error.
 
 The default value for \verb|whence| is \verb|"cur"|,
@@ -3935,7 +3977,7 @@ the filehandle \verb|file|.
 The arguments must be strings or numbers.
 To write other values,
 use \verb|tostring| or \verb|format| before \verb|write|.
-If this function fails, it returns \nil,
+If this function fails, it returns \nil{},
 plus a string describing the error.
 
 
@@ -3972,7 +4014,7 @@ and \verb|isdst| (daylight saving flag, a boolean).
 
 If format is not \verb|*t|,
 then \verb|date| returns the date as a string,
-formatted according with the same rules as the C~function \verb|strftime|.
+formatted according with the same rules as the C\Nb{}function \verb|strftime|.
 When called without arguments,
 \verb|date| returns a reasonable date and time representation that depends on
 the host system and on the current locale
@@ -3986,13 +4028,13 @@ this value is exactly \verb|t2|\Math{-}\verb|t1|.
 
 \subsubsection*{\ff \T{os.execute (command)}}\DefLIB{os.execute}
 
-This function is equivalent to the C~function \verb|system|.
+This function is equivalent to the C\Nb{}function \verb|system|.
 It passes \verb|command| to be executed by an operating system shell.
 It returns a status code, which is system-dependent.
 
 \subsubsection*{\ff \T{os.exit ([code])}}\DefLIB{os.exit}
 
-Calls the C~function \verb|exit|,
+Calls the C\Nb{}function \verb|exit|,
 with an optional \verb|code|,
 to terminate the host program.
 The default value for \verb|code| is the success code.
@@ -4005,18 +4047,18 @@ or \nil{} if the variable is not defined.
 \subsubsection*{\ff \T{os.remove (filename)}}\DefLIB{os.remove}
 
 Deletes the file with the given name.
-If this function fails, it returns \nil,
+If this function fails, it returns \nil{},
 plus a string describing the error.
 
 \subsubsection*{\ff \T{os.rename (name1, name2)}}\DefLIB{os.rename}
 
 Renames file named \verb|name1| to \verb|name2|.
-If this function fails, it returns \nil,
+If this function fails, it returns \nil{},
 plus a string describing the error.
 
 \subsubsection*{\ff \T{os.setlocale (locale [, category])}}\DefLIB{os.setlocale}
 
-This function is an interface to the C~function \verb|setlocale|.
+This function is an interface to the C\Nb{}function \verb|setlocale|.
 \verb|locale| is a string specifying a locale;
 \verb|category| is an optional string describing which category to change:
 \verb|"all"|, \verb|"collate"|, \verb|"ctype"|,
@@ -4047,7 +4089,7 @@ be used for a temporary file.
 The file must be explicitly opened before its use
 and removed when no longer needed.
 
-This function is equivalent to the \verb|tmpnam| C~function,
+This function is equivalent to the \verb|tmpnam| C\Nb{}function,
 and many people (and even some compilers!) advise against its use,
 because between the time you call this function
 and the time you open the file,
@@ -4083,7 +4125,7 @@ Level 0 is the current function (\verb|getinfo| itself);
 level 1 is the function that called \verb|getinfo|;
 and so on.
 If \verb|function| is a number larger than the number of active functions,
-then \verb|getinfo| returns \nil.
+then \verb|getinfo| returns \nil{}.
 
 The returned table contains all the fields returned by \verb|lua_getinfo|,
 with the string \verb|what| describing which fields to fill in.
@@ -4102,7 +4144,7 @@ about the \verb|print| function.
 
 This function returns the name and the value of the local variable
 with index \verb|local| of the function at level \verb|level| of the stack.
-(The first parameter or local variable has index~1, and so on,
+(The first parameter or local variable has index\Nb{}1, and so on,
 until the last active local variable.)
 The function returns \nil{} if there is no local
 variable with the given index,
@@ -4146,8 +4188,8 @@ it also gets as its second parameter the new line number.
 Inside a hook,
 you can call \verb|getinfo| with level 2 to get more information about
 the running function
-(level~0 is the \verb|getinfo| function,
-and level~1 is the hook function).
+(level\Nb{}0 is the \verb|getinfo| function,
+and level\Nb{}1 is the hook function).
 
 \subsubsection*{\ff \T{debug.gethook ()}}\DefLIB{debug.gethook}
 
@@ -4156,11 +4198,11 @@ the current hook function, the current hook mask,
 and the current hook count (as set by the \verb|debug.sethook| function).
 
 
-\C{------------------------------------------------------------------------------}
+\C{-------------------------------------------------------------------------}
 \section{\Index{Lua Stand-alone}} \label{lua-sa}
 
 Although Lua has been designed as an extension language,
-to be embedded in a host C~program,
+to be embedded in a host C\Nb{}program,
 it is also frequently used as a stand-alone language.
 An interpreter for Lua as a stand-alone language,
 called simply \verb|lua|,
@@ -4188,7 +4230,7 @@ and as \verb|lua -| otherwise.
 
 Before running any argument,
 the interpreter checks for an environment variable \IndexVerb{LUA_INIT}.
-If its format is \verb|@|\emph{filename},
+If its format is \At{}\emph{filename},
 then lua executes the file.
 Otherwise, lua executes the string itself.
 
@@ -4240,7 +4282,7 @@ Note the use of \verb|-i| to enter interactive mode; otherwise,
 the program would end just after the assignment to \verb|_PROMPT|.
 
 In Unix systems, Lua scripts can be made into executable programs
-by using \verb|chmod +x| and the~\verb|#!| form,
+by using \verb|chmod +x| and the\Nb{}\verb|#!| form,
 as in
 \begin{verbatim}
 #!/usr/local/bin/lua
@@ -4254,7 +4296,7 @@ then
 \end{verbatim}
 is a more portable solution.) 
 
-\C{------------------------------------------------------------------------------}
+\C{-------------------------------------------------------------------------}
 \section*{Acknowledgments}
 
 The Lua team is grateful to \tecgraf{} for its continued support to Lua.
@@ -4264,8 +4306,8 @@ At the risk of omitting several names,
 we also thank the following individuals for supporting,
 contributing to, and spreading the word about Lua:
 Alan Watson.
-Andr\'e Clinio,
-Andr\'e Costa,
+André Clinio,
+André Costa,
 Antonio Scuri,
 Bret Mogilefsky,
 Cameron Laird,
@@ -4293,7 +4335,7 @@ Reuben Thomas,
 Stephan Herrmann,
 Steve Dekorte,
 Thatcher Ulrich,
-Tom\'as Gorham,
+Tomás Gorham,
 Vincent Penquerc'h,
 Thank you!
 
@@ -4383,19 +4425,13 @@ Userdata!!
 
 The notation used here is the usual extended BNF,
 in which
-\rep{\emph{a}}~means 0 or more \emph{a}'s, and
-\opt{\emph{a}}~means an optional \emph{a}.
+\rep{\emph{a}}\Nb{}means 0 or more \emph{a}'s, and
+\opt{\emph{a}}\Nb{}means an optional \emph{a}.
 Non-terminals are shown in \emph{italics},
 keywords are shown in {\bf bold},
 and other terminal symbols are shown in {\tt typewriter} font,
 enclosed in single quotes.
 
-
-\renewenvironment{Produc}{\vspace{0.8ex}\par\noindent\hspace{3ex}\it\begin{tabular}{rrl}}{\end{tabular}\vspace{0.8ex}\par\noindent}
-
-\renewcommand{\OrNL}{\\ & \Or & }
-\C{\newcommand{\Nter}[1]{{\rm{\tt#1}}}}
-\C{\newcommand{\Nter}[1]{\ter{#1}}}
 
 \index{grammar}
 
@@ -4482,9 +4518,9 @@ enclosed in single quotes.
 \produc{field}{\ter{[} exp \ter{]} \ter{=} exp \Or name \ter{=} exp \Or exp}
 \produc{fieldsep}{\ter{,} \Or \ter{;}}
 
-\produc{binop}{\ter{+} \Or \ter{-} \Or \ter{*} \Or \ter{/} \Or \ter{\^{ }} \Or
-  \ter{..} \Or \ter{<} \Or \ter{<=} \Or \ter{>} \Or \ter{>=}
-  \Or \ter{==} \Or \ter{\~{ }=} \OrNL \rwd{and} \Or \rwd{or}}
+\produc{binop}{\ter{+} \Or \ter{-} \Or \ter{*} \Or \ter{/} \Or \ter{^} \Or
+  \ter{..} \OrNL \ter{<} \Or \ter{<=} \Or \ter{>} \Or \ter{>=}
+  \Or \ter{==} \Or \ter{~=} \OrNL \rwd{and} \Or \rwd{or}}
 
 \produc{unop}{\ter{-} \Or \rwd{not}}
 
