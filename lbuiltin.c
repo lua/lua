@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.100 2000/03/29 20:19:20 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.101 2000/04/03 13:20:33 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -156,7 +156,7 @@ void luaB_print (lua_State *L) {
 void luaB_tonumber (lua_State *L) {
   int base = luaL_opt_int(L, 2, 10);
   if (base == 10) {  /* standard conversion */
-    lua_Object o = lua_getparam(L, 1);
+    lua_Object o = luaL_nonnullarg(L, 1);
     if (lua_isnumber(L, o)) lua_pushnumber(L, lua_getnumber(L, o));
     else lua_pushnil(L);  /* not a number */
   }
@@ -201,7 +201,7 @@ void luaB_rawgetglobal (lua_State *L) {
 }
 
 void luaB_tag (lua_State *L) {
-  lua_pushnumber(L, lua_tag(L, lua_getparam(L, 1)));
+  lua_pushnumber(L, lua_tag(L, luaL_nonnullarg(L, 1)));
 }
 
 void luaB_settag (lua_State *L) {
@@ -342,9 +342,9 @@ void luaB_call (lua_State *L) {
 
 
 void luaB_nextvar (lua_State *L) {
-  lua_Object o = luaL_nonnullarg(L, 1);
+  lua_Object o = lua_getparam(L, 1);
   TString *name;
-  if (ttype(o) == TAG_NIL)
+  if (o == LUA_NOOBJECT || ttype(o) == TAG_NIL)
     name = NULL;
   else {
     luaL_arg_check(L, ttype(o) == TAG_STRING, 1, "variable name expected");
@@ -357,9 +357,9 @@ void luaB_nextvar (lua_State *L) {
 
 void luaB_next (lua_State *L) {
   const Hash *a = gettable(L, 1);
-  lua_Object k = luaL_nonnullarg(L, 2);
+  lua_Object k = lua_getparam(L, 2);
   int i;  /* `luaA_next' gets first element after `i' */
-  if (ttype(k) == TAG_NIL)
+  if (k == LUA_NOOBJECT || ttype(k) == TAG_NIL)
     i = 0;  /* get first */
   else {
     i = luaH_pos(L, a, k)+1;
@@ -414,8 +414,8 @@ void luaB_tostring (lua_State *L) {
 */
 
 void luaB_assert (lua_State *L) {
-  lua_Object p = lua_getparam(L, 1);
-  if (p == LUA_NOOBJECT || lua_isnil(L, p))
+  lua_Object p = luaL_nonnullarg(L, 1);
+  if (lua_isnil(L, p))
     luaL_verror(L, "assertion failed!  %.90s", luaL_opt_string(L, 2, ""));
 }
 
@@ -590,7 +590,6 @@ static void auxsort (lua_State *L, Hash *a, int l, int u, lua_Object f) {
 }
 
 void luaB_sort (lua_State *L) {
-  lua_Object t = lua_getparam(L, 1);
   Hash *a = gettable(L, 1);
   int n = (int)getnarg(L, a);
   lua_Object func = lua_getparam(L, 2);
@@ -598,7 +597,6 @@ void luaB_sort (lua_State *L) {
                  "function expected");
   luaD_checkstack(L, 4);  /* for pivot, f, a, b (sort_comp) */
   auxsort(L, a, 1, n, func);
-  lua_pushobject(L, t);
 }
 
 /* }====================================================== */
