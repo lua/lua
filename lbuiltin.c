@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.5 1997/10/24 17:17:24 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.6 1997/11/04 15:27:53 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -126,18 +126,11 @@ static void foreach (void)
 
 static void internaldostring (void)
 {
-  lua_Object err = lua_getparam(2);
-  if (err != LUA_NOOBJECT) {  /* set new error method */
-    lua_pushobject(err);
-    err = lua_seterrormethod();
-  }
+  if (lua_getparam(2) != LUA_NOOBJECT)
+    lua_error("invalid 2nd argument (probably obsolete code)");
   if (lua_dostring(luaL_check_string(1)) == 0)
     if (luaA_passresults() == 0)
       lua_pushuserdata(NULL);  /* at least one result to signal no errors */
-  if (err != LUA_NOOBJECT) {  /* restore old error method */
-    lua_pushobject(err);
-    lua_seterrormethod();
-  }
 }
 
 
@@ -259,32 +252,48 @@ static int getnarg (lua_Object table)
 {
   lua_Object temp;
   /* temp = table.n */
-  lua_pushobject(table); lua_pushstring("n"); temp = lua_gettable();
+  lua_pushobject(table); lua_pushstring("n"); temp = lua_rawgettable();
   return (lua_isnumber(temp) ? lua_getnumber(temp) : MAX_WORD);
 }
 
 static void luaI_call (void)
 {
-  lua_Object f = functionarg(1);
+  lua_Object f = luaL_nonnullarg(1);
   lua_Object arg = tablearg(2);
   char *options = luaL_opt_string(3, "");
+  lua_Object err = lua_getparam(4);
   int narg = getnarg(arg);
-  int i;
+  int i, status;
+  if (err != LUA_NOOBJECT) {  /* set new error method */
+    lua_pushobject(err);
+    err = lua_seterrormethod();
+  }
   /* push arg[1...n] */
   for (i=0; i<narg; i++) {
     lua_Object temp;
     /* temp = arg[i+1] */
-    lua_pushobject(arg); lua_pushnumber(i+1); temp = lua_gettable();
+    lua_pushobject(arg); lua_pushnumber(i+1); temp = lua_rawgettable();
     if (narg == MAX_WORD && lua_isnil(temp))
       break;
     lua_pushobject(temp);
   }
-  if (lua_callfunction(f))
-    lua_error(NULL);
-  else if (strchr(options, 'p'))
-    luaA_packresults();
-  else
-    luaA_passresults();
+  status = lua_callfunction(f);
+  if (err != LUA_NOOBJECT) {  /* restore old error method */
+    lua_pushobject(err);
+    lua_seterrormethod();
+  }
+  if (status != 0) {  /* error in call? */
+    if (strchr(options, 'x'))
+      return;  /* return nil to signal the error */
+    else
+      lua_error(NULL);
+  }
+  else { /* no errors */
+    if (strchr(options, 'p'))
+      luaA_packresults();
+    else
+      luaA_passresults();
+  }
 }
 
 
