@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.52 1999/12/29 18:07:10 roberto Exp roberto $
+** $Id: lparser.c,v 1.53 2000/01/10 17:34:38 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -114,7 +114,7 @@ typedef struct FuncState {
 static void body (LexState *ls, int needself, int line);
 static void chunk (LexState *ls);
 static void constructor (LexState *ls);
-static void exp (LexState *ls, vardesc *v);
+static void expr (LexState *ls, vardesc *v);
 static void exp1 (LexState *ls);
 
 
@@ -740,13 +740,13 @@ static int cond (LexState *ls) {
 
 static void explist1 (LexState *ls, listdesc *d) {
   vardesc v;
-  exp(ls, &v);
+  expr(ls, &v);
   d->n = 1;
   while (ls->token == ',') {
     d->n++;
     lua_pushvar(ls, &v);
     next(ls);
-    exp(ls, &v);
+    expr(ls, &v);
   }
   if (v.k == VEXP)
     d->pc = v.info;
@@ -935,7 +935,7 @@ static void constructor_part (LexState *ls, constdesc *cd) {
 
     case NAME: {
       vardesc v;
-      exp(ls, &v);
+      expr(ls, &v);
       if (ls->token == '=') {
         switch (v.k) {
           case VGLOBAL:
@@ -1088,9 +1088,9 @@ static void simpleexp (LexState *ls, vardesc *v, stack_op *s) {
       body(ls, 0, ls->linenumber);
       break;
 
-    case '(':  /* simpleexp -> '(' exp ')' */
+    case '(':  /* simpleexp -> '(' expr ')' */
       next(ls);
-      exp(ls, v);
+      expr(ls, v);
       check(ls, ')');
       return;
 
@@ -1140,15 +1140,15 @@ static void arith_exp (LexState *ls, vardesc *v) {
 
 static void exp1 (LexState *ls) {
   vardesc v;
-  exp(ls, &v);
+  expr(ls, &v);
   lua_pushvar(ls, &v);
   if (is_in(ls->token, expfollow) < 0)
     luaX_error(ls, "malformed expression");
 }
 
 
-static void exp (LexState *ls, vardesc *v) {
-  /* exp -> arith_exp {(AND | OR) arith_exp} */
+static void expr (LexState *ls, vardesc *v) {
+  /* expr -> arith_exp {(AND | OR) arith_exp} */
   arith_exp(ls, v);
   while (ls->token == AND || ls->token == OR) {
     OpCode op = (ls->token == AND) ? ONFJMP : ONTJMP;
