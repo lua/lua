@@ -1,12 +1,15 @@
 /*
-** $Id: lstate.c,v 1.18 1999/11/29 19:12:07 roberto Exp roberto $
+** $Id: lstate.c,v 1.19 1999/12/01 19:50:08 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
 
 
+#include <stdarg.h>
+
 #define LUA_REENTRANT
 
+#include "lauxlib.h"
 #include "lbuiltin.h"
 #include "ldo.h"
 #include "lgc.h"
@@ -18,10 +21,15 @@
 #include "ltm.h"
 
 
+#ifndef DEFAULT_STACK_SIZE
+#define DEFAULT_STACK_SIZE      1024
+#endif
+
+
 lua_State *lua_state = NULL;
 
 
-lua_State *lua_newstate (void) {
+static lua_State *newstate_aux (int stacksize, int put_builtin) {
   lua_State *L = luaM_new(NULL, lua_State);
   L->errorJmp = NULL;
   L->Mbuffer = NULL;
@@ -43,13 +51,39 @@ lua_State *lua_newstate (void) {
   L->refFree = NONEXT;
   L->nblocks = 0;
   L->GCthreshold = MAX_INT;  /* to avoid GC during pre-definitions */
-  luaD_init(L);
+  luaD_init(L, stacksize);
   luaS_init(L);
   luaX_init(L);
   luaT_init(L);
-  luaB_predefine(L);
+  if (put_builtin)
+    luaB_predefine(L);
   L->GCthreshold = L->nblocks*4;
   return L;
+}
+
+
+lua_State *lua_newstate (const char *s, ...) {
+  static const char *const ops[] = {"stack", "builtin", NULL};
+  va_list ap;
+  int stacksize = DEFAULT_STACK_SIZE;
+  int put_builtin = 1;
+  va_start(ap, s);
+  while (s) {
+    switch (luaL_findstring(s, ops)) {
+      case 0:  /* stack */
+        stacksize = va_arg(ap, int);
+        break;
+      case 1:  /* builtin */
+        put_builtin = va_arg(ap, int);
+        break;
+      default:  /* invalid argument */
+        va_end(ap);
+        return NULL;
+    }
+    s = va_arg(ap, const char *);
+  }
+  va_end(ap);
+  return newstate_aux(stacksize, put_builtin);
 }
 
 
@@ -66,9 +100,12 @@ void lua_close (lua_State *L) {
   luaM_free(L, L->Mbuffer);
   luaM_free(L, L->Cblocks);
   LUA_ASSERT(L, L->nblocks == 0, "wrong count for nblocks");
+  LUA_ASSERT(L, L != lua_state || L->Cstack.lua2C == L->stack, "bad stack");
+  LUA_ASSERT(L, L != lua_state || L->Cstack.base == L->stack, "bad stack");
   luaM_free(L, L);
-  LUA_ASSERT(L, numblocks == 0, "memory leak!");
-  LUA_ASSERT(L, totalmem == 0,"memory leak!");
-  L = NULL;
+  LUA_ASSERT(L, L != lua_state || numblocks == 0, "memory leak!");
+  LUA_ASSERT(L, L != lua_state || totalmem == 0,"memory leak!");
+  if (L == lua_state)
+    lua_state = NULL;
 }
 

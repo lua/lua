@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.h,v 1.12 1999/12/01 19:50:08 roberto Exp roberto $
+** $Id: ldo.h,v 1.13 1999/12/02 16:24:45 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,7 @@
 #define incr_top {if (L->top == L->stack_last) luaD_checkstack(L, 1); L->top++;}
 
 
-void luaD_init (lua_State *L);
+void luaD_init (lua_State *L, int stacksize);
 void luaD_adjusttop (lua_State *L, StkId base, int extra);
 void luaD_openstack (lua_State *L, StkId pos);
 void luaD_lineHook (lua_State *L, int line);

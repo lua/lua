@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.26 1999/11/16 12:50:48 roberto Exp roberto $
+** $Id: lua.c,v 1.27 1999/11/22 13:12:07 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -91,6 +91,7 @@ static void assign (char *arg) {
 
 
 static void getargs (int argc, char *argv[]) {
+  lua_beginblock(); {
   int i, j;
   lua_Object args = lua_createtable();
   lua_pushobject(args);
@@ -108,6 +109,7 @@ static void getargs (int argc, char *argv[]) {
   /* arg.nn = minimum index in table `arg' */
   lua_pushobject(args); lua_pushstring("nn");
   lua_pushnumber(-i); lua_settable();
+  } lua_endblock();
 }
 
 
@@ -146,7 +148,7 @@ static void manual_input (int prompt) {
 
 int main (int argc, char *argv[]) {
   int i;
-  lua_open();
+  lua_state = lua_newstate("stack", 1024, "builtin", 1, NULL);
   lua_pushstring("> "); lua_setglobal("_PROMPT");
   lua_userinit();
   getargs(argc, argv);

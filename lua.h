@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.41 1999/11/29 19:31:29 roberto Exp roberto $
+** $Id: lua.h,v 1.42 1999/12/02 16:24:45 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -30,7 +30,7 @@ typedef struct TObject *lua_Object;
 #define LUA_NOOBJECT	((lua_Object)0)
 
 
-lua_State     *lua_newstate (void);
+lua_State     *lua_newstate (const char *s, ...);
 void           lua_close (lua_State *L);
 
 lua_Object     lua_settagmethod (lua_State *L, int tag, const char *event);
@@ -156,7 +156,7 @@ lua_State     *lua_setstate (lua_State *st);
 
 extern lua_State *lua_state;
 
-#define lua_open()		((void)(lua_state?0:(lua_state=lua_newstate())))
+#define lua_open()	((void)(lua_state?0:(lua_state=lua_newstate(NULL))))
 
 #define lua_close()		(lua_close)(lua_state)
 #define lua_setstate(st)	(lua_setstate)(lua_state, st)
