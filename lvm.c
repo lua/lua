@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.127 2000/08/14 14:05:06 roberto Exp roberto $
+** $Id: lvm.c,v 1.128 2000/08/22 20:49:29 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -176,6 +176,7 @@ void luaV_getglobal (lua_State *L, TString *s, StkId top) {
   if (ttype(im) == TAG_NIL)  /* is there a tag method? */
     *top = *value;  /* default behavior */
   else {  /* tag method */
+    L->top = top;
     luaD_checkstack(L, 3);
     *top = *im;
     ttype(top+1) = TAG_STRING;
@@ -203,6 +204,7 @@ void luaV_setglobal (lua_State *L, TString *s, StkId top) {
     }
   }
   else {
+    L->top = top;
     luaD_checkstack(L, 3);
     *(top+2) = *(top-1);  /* new value */
     *(top+1) = *oldvalue;
