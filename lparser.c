@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.168 2002/03/08 19:10:32 roberto Exp roberto $
+** $Id: lparser.c,v 1.169 2002/03/14 18:01:52 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -341,7 +341,6 @@ static void leaveblock (FuncState *fs) {
   lua_assert(bl->nactloc == fs->nactloc);
   lua_assert(bl->nactvar == fs->nactvar);
   fs->defaultglob = bl->defaultglob;
-  fs->freereg = bl->nactloc;  /* free registers used by locals */
   luaK_patchtohere(fs, bl->breaklist);
 }
 
@@ -1202,20 +1201,23 @@ static void retstat (LexState *ls) {
   if (block_follow(ls->t.token) || ls->t.token == ';')
     first = nret = 0;  /* return no values */
   else {
-    explist1(ls, &e);  /* optional return values */
+    nret = explist1(ls, &e);  /* optional return values */
     if (e.k == VCALL) {
       luaK_setcallreturns(fs, &e, LUA_MULTRET);
       first = fs->nactloc;
       nret = LUA_MULTRET;  /* return all values */
     }
     else {
-      luaK_exp2nextreg(fs, &e);  /* values must go to the `stack' */
-      first = fs->nactloc;
-      nret = fs->freereg - first;  /* return all `active' values */
+      if (nret == 1)  /* only one single value? */
+        first = luaK_exp2anyreg(fs, &e);
+      else {
+        luaK_exp2nextreg(fs, &e);  /* values must go to the `stack' */
+        first = fs->nactloc;  /* return all `active' values */
+        lua_assert(nret == fs->freereg - first);
+      }
     }
   }
   luaK_codeABC(fs, OP_RETURN, first, nret+1, 0);
-  fs->freereg = fs->nactloc;  /* removes all temp values */
 }
 
 
