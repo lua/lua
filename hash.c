@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.14 1994/11/07 16:34:44 roberto Exp $";
+char *rcs_hash="$Id: hash.c,v 2.15 1994/11/10 17:36:54 roberto Exp $";
 
 #include <string.h>
 #include <stdlib.h>
@@ -82,13 +82,17 @@ static int hashindex (Hash *t, Object *ref)		/* hash function */
  }
 }
 
-static int equalObj (Object *t1, Object *t2)
+int lua_equalObj (Object *t1, Object *t2)
 {
   if (tag(t1) != tag(t2)) return 0;
   switch (tag(t1))
   {
+    case LUA_T_NIL: return 1;
     case LUA_T_NUMBER: return nvalue(t1) == nvalue(t2);
     case LUA_T_STRING: return streq(svalue(t1), svalue(t2));
+    case LUA_T_ARRAY: return avalue(t1) == avalue(t2);
+    case LUA_T_FUNCTION: return bvalue(t1) == bvalue(t2);
+    case LUA_T_CFUNCTION: return fvalue(t1) == fvalue(t2);
     default: return uvalue(t1) == uvalue(t2);
   }
 }
@@ -98,7 +102,7 @@ static int present (Hash *t, Object *ref)
  int h = hashindex(t, ref);
  while (tag(ref(node(t, h))) != LUA_T_NIL)
  {
-  if (equalObj(ref, ref(node(t, h))))
+  if (lua_equalObj(ref, ref(node(t, h))))
     return h;
   h = (h+1) % nhash(t);
  }
