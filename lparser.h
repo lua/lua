@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.7 2000/03/03 12:33:59 roberto Exp roberto $
+** $Id: lparser.h,v 1.8 2000/03/03 14:58:26 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -8,7 +8,6 @@
 #define lparser_h
 
 #include "lobject.h"
-#include "lopcodes.h"
 #include "lzio.h"
 
 
@@ -42,21 +41,18 @@
 #endif
 
 
-#if MAXLOCALS>MAXARG_U || MAXUPVALUES>MAXARG_B || MAXVARSLH>MAXARG_B || \
-    MAXPARAMS>MAXLOCALS || MAXSTACK>MAXARG_A || LFIELDS_PER_FLUSH>MAXARG_B
-#error invalid limits
-#endif
-
-
 
 /*
 ** Expression descriptor
 */
+
+#define NOJUMPS		0
+
 typedef enum {
   VGLOBAL,  /* info is constant index of global name */
   VLOCAL,   /* info is stack index */
-  VINDEXED, /* no info (table and index are on the stack) */
-  VEXP      /* info is pc index of exp main operator */
+  VINDEXED, /* info is info of the index expression */
+  VEXP      /* info is NOJUMPS if exp has no internal jumps */
 } expkind;
 
 typedef struct expdesc {
@@ -65,12 +61,22 @@ typedef struct expdesc {
 } expdesc;
 
 
+/*
+** Expression List descriptor:
+** tells number of expressions in the list,
+** and gives the `info' of last expression.
+*/
+typedef struct listdesc {
+  int n;
+  int info;  /* 0 if last expression has no internal jumps */
+} listdesc;
+
+
 /* state needed to generate code for a given function */
 typedef struct FuncState {
   TProtoFunc *f;  /* current function header */
   struct FuncState *prev;  /* enclosing function */
   int pc;  /* next position to code */
-  int last_pc;  /* last instruction coded (for optimizations) */
   int stacksize;  /* number of values on activation register */
   int nlocalvar;  /* number of active local variables */
   int nupvalues;  /* number of upvalues */

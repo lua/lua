@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.42 2000/03/02 12:32:53 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.43 2000/03/03 14:58:26 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -47,6 +47,11 @@
 #define SETARG_A(i,a)	(((i)&0x0000FFFFu) | ((Instruction)(a)<<16))
 #define SETARG_B(i,b)	(((i)&0xFFFF00FFu) | ((Instruction)(b)<<8))
 
+#define CREATE_0(o)	 ((Instruction)(o))
+#define CREATE_U(o,u)	 ((Instruction)(o) | (Instruction)(u)<<8)
+#define CREATE_S(o,s)	 ((Instruction)(o) | ((Instruction)(s)+EXCESS_S)<<8)
+#define CREATE_AB(o,a,b) ((Instruction)(o) | ((Instruction)(a)<<16) \
+                                           |  ((Instruction)(b)<<8))
 
 
 /*
