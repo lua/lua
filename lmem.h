@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.h,v 1.14 2000/05/24 13:54:49 roberto Exp roberto $
+** $Id: lmem.h,v 1.15 2000/08/07 18:39:16 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -30,7 +30,7 @@ void *luaM_growaux (lua_State *L, void *block, size_t nelems,
 	((v)=(t *)luaM_realloc(L, v,(n)*(lint32)sizeof(t)))
 
 
-#ifdef DEBUG
+#ifdef LUA_DEBUG
 extern unsigned long memdebug_numblocks;
 extern unsigned long memdebug_total;
 extern unsigned long memdebug_maxmem;

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.46 2000/10/24 19:12:06 roberto Exp roberto $
+** $Id: lstate.c,v 1.47 2000/10/26 12:47:05 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -19,7 +19,7 @@
 #include "ltm.h"
 
 
-#ifdef DEBUG
+#ifdef LUA_DEBUG
 static lua_State *lua_state = NULL;
 void luaB_opentests (lua_State *L);
 #endif
@@ -55,7 +55,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   lua_newtable(L);
   lua_ref(L, 1);  /* create registry */
   lua_register(L, LUA_ERRORMESSAGE, errormessage);
-#ifdef DEBUG
+#ifdef LUA_DEBUG
   luaB_opentests(L);
   if (lua_state == NULL) lua_state = L;  /* keep first state to be opened */
 #endif

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.51 2000/10/20 16:39:03 roberto Exp roberto $
+** $Id: ltests.c,v 1.52 2000/10/26 12:47:05 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -32,9 +32,9 @@ void luaB_opentests (lua_State *L);
 
 
 /*
-** The whole module only makes sense with DEBUG on
+** The whole module only makes sense with LUA_DEBUG on
 */
-#ifdef DEBUG
+#ifdef LUA_DEBUG
 
 
 
