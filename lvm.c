@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.142 2000/10/04 12:16:08 roberto Exp roberto $
+** $Id: lvm.c,v 1.143 2000/10/05 12:14:08 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -116,27 +116,27 @@ void luaV_Lclosure (lua_State *L, Proto *l, int nelems) {
 ** Receives the table at `t' and the key at top.
 */
 const TObject *luaV_gettable (lua_State *L, StkId t) {
-  const TObject *im;
+  Closure *tm;
   int tg;
   if (ttype(t) == LUA_TTABLE &&  /* `t' is a table? */
       ((tg = hvalue(t)->htag) == LUA_TTABLE ||  /* with default tag? */
-        ttype(luaT_getim(L, tg, IM_GETTABLE)) == LUA_TNIL)) { /* or no TM? */
+        luaT_gettm(L, tg, TM_GETTABLE) == NULL)) { /* or no TM? */
     /* do a primitive get */
     const TObject *h = luaH_get(L, hvalue(t), L->top-1);
     /* result is no nil or there is no `index' tag method? */
-    if (ttype(h) != LUA_TNIL ||
-        (ttype(im=luaT_getim(L, tg, IM_INDEX)) == LUA_TNIL))
+    if (ttype(h) != LUA_TNIL || ((tm=luaT_gettm(L, tg, TM_INDEX)) == NULL))
       return h;  /* return result */
     /* else call `index' tag method */
   }
   else {  /* try a `gettable' tag method */
-    im = luaT_getimbyObj(L, t, IM_GETTABLE);
+    tm = luaT_gettmbyObj(L, t, TM_GETTABLE);
   }
-  if (ttype(im) != LUA_TNIL) {  /* is there a tag method? */
+  if (tm != NULL) {  /* is there a tag method? */
     luaD_checkstack(L, 2);
     *(L->top+1) = *(L->top-1);  /* key */
     *L->top = *t;  /* table */
-    *(L->top-1) = *im;  /* tag method */
+    clvalue(L->top-1) = tm;  /* tag method */
+    ttype(L->top-1) = LUA_TFUNCTION;
     L->top += 2;
     luaD_call(L, L->top - 3, 1);
     return L->top - 1;  /* call result */
@@ -155,16 +155,17 @@ void luaV_settable (lua_State *L, StkId t, StkId key) {
   int tg;
   if (ttype(t) == LUA_TTABLE &&  /* `t' is a table? */
       ((tg = hvalue(t)->htag) == LUA_TTABLE ||  /* with default tag? */
-        ttype(luaT_getim(L, tg, IM_SETTABLE)) == LUA_TNIL)) /* or no TM? */
+        luaT_gettm(L, tg, TM_SETTABLE) == NULL)) /* or no TM? */
     *luaH_set(L, hvalue(t), key) = *(L->top-1);  /* do a primitive set */
   else {  /* try a `settable' tag method */
-    const TObject *im = luaT_getimbyObj(L, t, IM_SETTABLE);
-    if (ttype(im) != LUA_TNIL) {
+    Closure *tm = luaT_gettmbyObj(L, t, TM_SETTABLE);
+    if (tm != NULL) {
       luaD_checkstack(L, 3);
       *(L->top+2) = *(L->top-1);
       *(L->top+1) = *key;
       *(L->top) = *t;
-      *(L->top-1) = *im;
+      clvalue(L->top-1) = tm;
+      ttype(L->top-1) = LUA_TFUNCTION;
       L->top += 3;
       luaD_call(L, L->top - 4, 0);  /* call `settable' tag method */
     }
@@ -176,14 +177,15 @@ void luaV_settable (lua_State *L, StkId t, StkId key) {
 
 const TObject *luaV_getglobal (lua_State *L, TString *s) {
   const TObject *value = luaH_getstr(L->gt, s);
-  const TObject *im = luaT_getimbyObj(L, value, IM_GETGLOBAL);
-  if (ttype(im) == LUA_TNIL)  /* is there a tag method? */
+  Closure *tm = luaT_gettmbyObj(L, value, TM_GETGLOBAL);
+  if (tm == NULL)  /* is there a tag method? */
     return value;  /* default behavior */
   else {  /* tag method */
     luaD_checkstack(L, 3);
-    *L->top = *im;
-    ttype(L->top+1) = LUA_TSTRING;
+    clvalue(L->top) = tm;
+    ttype(L->top) = LUA_TFUNCTION;
     tsvalue(L->top+1) = s;  /* global name */
+    ttype(L->top+1) = LUA_TSTRING;
     *(L->top+2) = *value;
     L->top += 3;
     luaD_call(L, L->top - 3, 1);
@@ -194,8 +196,8 @@ const TObject *luaV_getglobal (lua_State *L, TString *s) {
 
 void luaV_setglobal (lua_State *L, TString *s) {
   const TObject *oldvalue = luaH_getstr(L->gt, s);
-  const TObject *im = luaT_getimbyObj(L, oldvalue, IM_SETGLOBAL);
-  if (ttype(im) == LUA_TNIL) {  /* is there a tag method? */
+  Closure *tm = luaT_gettmbyObj(L, oldvalue, TM_SETGLOBAL);
+  if (tm == NULL) {  /* is there a tag method? */
     if (oldvalue != &luaO_nilobject) {
       /* cast to remove `const' is OK, because `oldvalue' != luaO_nilobject */
       *(TObject *)oldvalue = *(L->top - 1);
@@ -213,32 +215,33 @@ void luaV_setglobal (lua_State *L, TString *s) {
     *(L->top+1) = *oldvalue;
     ttype(L->top) = LUA_TSTRING;
     tsvalue(L->top) = s;
-    *(L->top-1) = *im;
+    clvalue(L->top-1) = tm;
+    ttype(L->top-1) = LUA_TFUNCTION;
     L->top += 3;
     luaD_call(L, L->top - 4, 0);
   }
 }
 
 
-static int call_binTM (lua_State *L, StkId top, IMS event) {
+static int call_binTM (lua_State *L, StkId top, TMS event) {
   /* try first operand */
-  const TObject *im = luaT_getimbyObj(L, top-2, event);
+  Closure *tm = luaT_gettmbyObj(L, top-2, event);
   L->top = top;
-  if (ttype(im) == LUA_TNIL) {
-    im = luaT_getimbyObj(L, top-1, event);  /* try second operand */
-    if (ttype(im) == LUA_TNIL) {
-      im = luaT_getim(L, 0, event);  /* try a `global' method */
-      if (ttype(im) == LUA_TNIL)
+  if (tm == NULL) {
+    tm = luaT_gettmbyObj(L, top-1, event);  /* try second operand */
+    if (tm == NULL) {
+      tm = luaT_gettm(L, 0, event);  /* try a `global' method */
+      if (tm == NULL)
         return 0;  /* error */
     }
   }
   lua_pushstring(L, luaT_eventname[event]);
-  luaD_callTM(L, im, 3, 1);
+  luaD_callTM(L, tm, 3, 1);
   return 1;
 }
 
 
-static void call_arith (lua_State *L, StkId top, IMS event) {
+static void call_arith (lua_State *L, StkId top, TMS event) {
   if (!call_binTM(L, top, event))
     luaG_binerror(L, top-2, LUA_TNUMBER, "perform arithmetic on");
 }
@@ -275,7 +278,7 @@ int luaV_lessthan (lua_State *L, const TObject *l, const TObject *r, StkId top) 
     luaD_checkstack(L, 2);
     *top++ = *l;
     *top++ = *r;
-    if (!call_binTM(L, top, IM_LT))
+    if (!call_binTM(L, top, TM_LT))
       luaG_ordererror(L, top-2);
     L->top--;
     return (ttype(L->top) != LUA_TNIL);
@@ -287,7 +290,7 @@ void luaV_strconc (lua_State *L, int total, StkId top) {
   do {
     int n = 2;  /* number of elements handled in this pass (at least 2) */
     if (tostring(L, top-2) || tostring(L, top-1)) {
-      if (!call_binTM(L, top, IM_CONCAT))
+      if (!call_binTM(L, top, TM_CONCAT))
         luaG_binerror(L, top-2, LUA_TSTRING, "concat");
     }
     else if (tsvalue(top-1)->u.s.len > 0) {  /* if len=0, do nothing */
@@ -517,7 +520,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       }
       case OP_ADD: {
         if (tonumber(top-2) || tonumber(top-1))
-          call_arith(L, top, IM_ADD);
+          call_arith(L, top, TM_ADD);
         else
           nvalue(top-2) += nvalue(top-1);
         top--;
@@ -527,7 +530,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         if (tonumber(top-1)) {
           ttype(top) = LUA_TNUMBER;
           nvalue(top) = (Number)GETARG_S(i);
-          call_arith(L, top+1, IM_ADD);
+          call_arith(L, top+1, TM_ADD);
         }
         else
           nvalue(top-1) += (Number)GETARG_S(i);
@@ -535,7 +538,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       }
       case OP_SUB: {
         if (tonumber(top-2) || tonumber(top-1))
-          call_arith(L, top, IM_SUB);
+          call_arith(L, top, TM_SUB);
         else
           nvalue(top-2) -= nvalue(top-1);
         top--;
@@ -543,7 +546,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       }
       case OP_MULT: {
         if (tonumber(top-2) || tonumber(top-1))
-          call_arith(L, top, IM_MUL);
+          call_arith(L, top, TM_MUL);
         else
           nvalue(top-2) *= nvalue(top-1);
         top--;
@@ -551,14 +554,14 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       }
       case OP_DIV: {
         if (tonumber(top-2) || tonumber(top-1))
-          call_arith(L, top, IM_DIV);
+          call_arith(L, top, TM_DIV);
         else
           nvalue(top-2) /= nvalue(top-1);
         top--;
         break;
       }
       case OP_POW: {
-        if (!call_binTM(L, top, IM_POW))
+        if (!call_binTM(L, top, TM_POW))
           lua_error(L, "undefined operation");
         top--;
         break;
@@ -574,7 +577,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       case OP_MINUS: {
         if (tonumber(top-1)) {
           ttype(top) = LUA_TNIL;
-          call_arith(L, top+1, IM_UNM);
+          call_arith(L, top+1, TM_UNM);
         }
         else
           nvalue(top-1) = -nvalue(top-1);

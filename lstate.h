@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.39 2000/09/25 16:22:42 roberto Exp roberto $
+** $Id: lstate.h,v 1.40 2000/09/29 12:42:13 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -32,6 +32,7 @@ struct Ref {
 
 
 struct lua_longjmp;  /* defined in ldo.c */
+struct TM;  /* defined in ltm.h */
 
 
 typedef struct stringtable {
@@ -59,8 +60,8 @@ struct lua_State {
   stringtable strt;  /* hash table for strings */
   stringtable udt;   /* hash table for udata */
   Hash *gt;  /* table for globals */
-  struct IM *IMtable;  /* table for tag methods */
-  int last_tag;  /* last used tag in IMtable */
+  struct TM *TMtable;  /* table for tag methods */
+  int last_tag;  /* last used tag in TMtable */
   struct Ref *refArray;  /* locked objects */
   int refSize;  /* size of refArray */
   int refFree;  /* list of free positions in refArray */

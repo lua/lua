@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.43 2000/10/02 20:10:55 roberto Exp roberto $
+** $Id: ldebug.c,v 1.44 2000/10/05 12:14:08 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -203,12 +203,14 @@ static void lua_funcinfo (lua_State *L, lua_Debug *ar, StkId func) {
 
 
 static const char *travtagmethods (lua_State *L, const TObject *o) {
-  int e;
-  for (e=0; e<IM_N; e++) {
-    int t;
-    for (t=0; t<=L->last_tag; t++)
-      if (luaO_equalObj(o, luaT_getim(L, t,e)))
-        return luaT_eventname[e];
+  if (ttype(o) == LUA_TFUNCTION) {
+    int e;
+    for (e=0; e<TM_N; e++) {
+      int t;
+      for (t=0; t<=L->last_tag; t++)
+        if (clvalue(o) == luaT_gettm(L, t, e))
+          return luaT_eventname[e];
+    }
   }
   return NULL;
 }

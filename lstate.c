@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.41 2000/09/25 16:22:42 roberto Exp roberto $
+** $Id: lstate.c,v 1.42 2000/09/29 12:42:13 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -73,7 +73,7 @@ lua_State *lua_open (int stacksize) {
   L->rootproto = NULL;
   L->rootcl = NULL;
   L->roottable = NULL;
-  L->IMtable = NULL;
+  L->TMtable = NULL;
   L->last_tag = -1;
   L->refArray = NULL;
   L->refSize = 0;
@@ -103,8 +103,8 @@ void lua_close (lua_State *L) {
   if (L->stack)
     L->nblocks -= (L->stack_last - L->stack + 1)*sizeof(TObject);
   luaM_free(L, L->stack);
-  L->nblocks -= (L->last_tag+1)*sizeof(struct IM);
-  luaM_free(L, L->IMtable);
+  L->nblocks -= (L->last_tag+1)*sizeof(struct TM);
+  luaM_free(L, L->TMtable);
   L->nblocks -= (L->refSize)*sizeof(struct Ref);
   luaM_free(L, L->refArray);
   L->nblocks -= (L->Mbuffsize)*sizeof(char);

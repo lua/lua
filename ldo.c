@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.101 2000/10/04 12:16:08 roberto Exp roberto $
+** $Id: ldo.c,v 1.102 2000/10/05 12:14:08 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -142,10 +142,11 @@ static StkId callCclosure (lua_State *L, const struct Closure *cl, StkId base) {
 }
 
 
-void luaD_callTM (lua_State *L, const TObject *f, int nParams, int nResults) {
+void luaD_callTM (lua_State *L, Closure *f, int nParams, int nResults) {
   StkId base = L->top - nParams;
   luaD_openstack(L, base);
-  *base = *f;
+  clvalue(base) = f;
+  ttype(base) = LUA_TFUNCTION;
   luaD_call(L, base, nResults);
 }
 
@@ -163,12 +164,12 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
   Closure *cl;
   if (ttype(func) != LUA_TFUNCTION) {
     /* `func' is not a function; check the `function' tag method */
-    const TObject *im = luaT_getimbyObj(L, func, IM_FUNCTION);
-    if (ttype(im) == LUA_TNIL)
+    Closure *tm = luaT_gettmbyObj(L, func, TM_FUNCTION);
+    if (tm == NULL)
       luaG_typeerror(L, func, "call");
     luaD_openstack(L, func);
-    *func = *im;  /* tag method is the new function to be called */
-    LUA_ASSERT(ttype(func) == LUA_TFUNCTION, "invalid tag method");
+    clvalue(func) = tm;  /* tag method is the new function to be called */
+    ttype(func) = LUA_TFUNCTION;
   }
   cl = clvalue(func);
   ci.func = cl;

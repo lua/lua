@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.47 2000/10/02 20:10:55 roberto Exp roberto $
+** $Id: ltests.c,v 1.48 2000/10/05 12:14:08 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -437,6 +437,16 @@ static int testC (lua_State *L) {
     }
     else if EQ("dostring") {
       lua_dostring(L, luaL_check_string(L, getnum));
+    }
+    else if EQ("settagmethod") {
+      int tag = getnum;
+      const char *event = getname;
+      lua_settagmethod(L, tag, event);
+    }
+    else if EQ("gettagmethod") {
+      int tag = getnum;
+      const char *event = getname;
+      lua_gettagmethod(L, tag, event);
     }
     else if EQ("type") {
       lua_pushstring(L, lua_typename(L, lua_type(L, getnum)));

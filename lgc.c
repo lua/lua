@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.69 2000/10/02 14:47:43 roberto Exp roberto $
+** $Id: lgc.c,v 1.70 2000/10/05 12:14:08 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -63,22 +63,24 @@ static void marklock (lua_State *L, GCState *st) {
 }
 
 
-static void marktagmethods (lua_State *L, GCState *st) {
-  int e;
-  for (e=0; e<IM_N; e++) {
-    int t;
-    for (t=0; t<=L->last_tag; t++)
-      markobject(st, luaT_getim(L, t,e));
-  }
-}
-
-
 static void markclosure (GCState *st, Closure *cl) {
   if (!ismarked(cl)) {
     if (!cl->isC)
       protomark(cl->f.l);
     cl->mark = st->cmark;  /* chain it for later traversal */
     st->cmark = cl;
+  }
+}
+
+
+static void marktagmethods (lua_State *L, GCState *st) {
+  int e;
+  for (e=0; e<TM_N; e++) {
+    int t;
+    for (t=0; t<=L->last_tag; t++) {
+      Closure *cl = luaT_gettm(L, t, e);
+      if (cl) markclosure(st, cl);
+    }
   }
 }
 
@@ -269,8 +271,8 @@ static void collectudata (lua_State *L, int all) {
       else {  /* collect */
         int tag = next->u.d.tag;
         *p = next->nexthash;
-        next->nexthash = L->IMtable[tag].collected;  /* chain udata */
-        L->IMtable[tag].collected = next;
+        next->nexthash = L->TMtable[tag].collected;  /* chain udata */
+        L->TMtable[tag].collected = next;
         L->nblocks -= gcsizeudata;
         L->udt.nuse--;
       }
@@ -292,12 +294,13 @@ static void checkMbuffer (lua_State *L) {
 
 
 static void callgcTM (lua_State *L, const TObject *o) {
-  const TObject *im = luaT_getimbyObj(L, o, IM_GC);
-  if (ttype(im) != LUA_TNIL) {
+  Closure *tm = luaT_gettmbyObj(L, o, TM_GC);
+  if (tm != NULL) {
     int oldah = L->allowhooks;
     L->allowhooks = 0;  /* stop debug hooks during GC tag methods */
     luaD_checkstack(L, 2);
-    *(L->top) = *im;
+    clvalue(L->top) = tm;
+    ttype(L->top) = LUA_TFUNCTION;
     *(L->top+1) = *o;
     L->top += 2;
     luaD_call(L, L->top-2, 0);
@@ -313,8 +316,8 @@ static void callgcTMudata (lua_State *L) {
   L->GCthreshold = 2*L->nblocks;  /* avoid GC during tag methods */
   for (tag=L->last_tag; tag>=0; tag--) {  /* for each tag (in reverse order) */
     TString *udata;
-    while ((udata = L->IMtable[tag].collected) != NULL) {
-      L->IMtable[tag].collected = udata->nexthash;  /* remove it from list */
+    while ((udata = L->TMtable[tag].collected) != NULL) {
+      L->TMtable[tag].collected = udata->nexthash;  /* remove it from list */
       tsvalue(&o) = udata;
       callgcTM(L, &o);
       luaM_free(L, udata);
