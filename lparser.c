@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.34 1999/05/21 19:54:06 roberto Exp roberto $
+** $Id: lparser.c,v 1.35 1999/06/16 13:22:04 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -37,6 +37,11 @@
 /* maximum number of upvalues */
 #define MAXUPVALUES 32
 #define SMAXUPVALUES "32"
+
+
+/* maximum number of variables in the left side of an assignment */
+#define MAXVARSLH	100
+#define SMAXVARSLH	"100"
 
 
 /*
@@ -1221,6 +1226,9 @@ static void decinit (LexState *ls, listdesc *d) {
 
 static int assignment (LexState *ls, vardesc *v, int nvars) {
   int left = 0;
+  if (nvars > MAXVARSLH)
+    luaX_error(ls, "too many variables in a multiple assignment "
+                   MES_LIM(SMAXVARSLH));
   unloaddot(ls, v);
   if (ls->token == ',') {  /* assignment -> ',' NAME assignment */
     vardesc nv;

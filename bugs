@@ -88,11 +88,17 @@ Thu Mar  4 11:49:37 EST 1999
 ** lstrlib.c
 Fri Apr 30 11:10:20 EST 1999
 >> '$' at end of pattern was matching regular '$', too.
-(by anna)
+(by anna; since 2.5)
 
 ** lbuiltin.c
 Fri May 21 17:15:11 EST 1999
 >> foreach, foreachi, foreachvar points to function in stack when stack
 can be reallocated.
-(by tomas)
+(by tomas; since 3.2 beta)
+
+** lparser.c
+Wed Jun 16 10:32:46 EST 1999
+>> cannot assign to unlimited variables, because it causes overflow in
+the number of returns of a function.
+(since 3.1)
 
