@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.41 1999/03/11 18:59:19 roberto Exp roberto $
+** $Id: ldo.c,v 1.42 1999/05/10 13:54:01 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -35,6 +35,12 @@
 
 
 #define STACK_UNIT	128
+
+
+#ifdef DEBUG
+#undef STACK_UNIT
+#define STACK_UNIT	2
+#endif
 
 
 void luaD_init (void) {
@@ -80,16 +86,14 @@ void luaD_adjusttop (StkId newtop) {
 /*
 ** Open a hole below "nelems" from the L->stack.top.
 */
-void luaD_openstack (int nelems)
-{
+void luaD_openstack (int nelems) {
   luaO_memup(L->stack.top-nelems+1, L->stack.top-nelems,
              nelems*sizeof(TObject));
   incr_top;
 }
 
 
-void luaD_lineHook (int line)
-{
+void luaD_lineHook (int line) {
   struct C_Lua_Stack oldCLS = L->Cstack;
   StkId old_top = L->Cstack.lua2C = L->Cstack.base = L->stack.top-L->stack.stack;
   L->Cstack.num = 0;
@@ -99,8 +103,7 @@ void luaD_lineHook (int line)
 }
 
 
-void luaD_callHook (StkId base, TProtoFunc *tf, int isreturn)
-{
+void luaD_callHook (StkId base, TProtoFunc *tf, int isreturn) {
   struct C_Lua_Stack oldCLS = L->Cstack;
   StkId old_top = L->Cstack.lua2C = L->Cstack.base = L->stack.top-L->stack.stack;
   L->Cstack.num = 0;
