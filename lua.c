@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.29 1999/12/20 13:03:20 roberto Exp roberto $
+** $Id: lua.c,v 1.30 1999/12/21 17:34:23 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -67,16 +67,22 @@ static int ldo (int (*f)(lua_State *L, const char *), const char *name) {
 
 static void print_message (void) {
   fprintf(stderr,
-"Lua: command line options:\n"
-"  -v       print version information\n"
-"  -d       turn debug on\n"
-"  -e stat  dostring `stat'\n"
-"  -q       interactive mode without prompt\n"
-"  -i       interactive mode with prompt\n"
-"  -        execute stdin as a file\n"
-"  -f name  dofile `name' with following arguments in table `arg'\n"
-"  a=b      set global `a' with string `b'\n"
-"  name     dofile `name'\n\n");
+  "usage: lua [options].  Available options are:\n"
+  "  -        execute stdin as a file\n"
+  "  -d       turn debug on\n"
+  "  -e stat  execute string `stat'\n"
+  "  -f name  execute file `name' with remaining arguments in table `arg'\n"
+  "  -i       enter interactive mode with prompt\n"
+  "  -q       enter interactive mode without prompt\n"
+  "  -v       print version information\n"
+  "  a=b      set global `a' to string `b'\n"
+  "  name     execute file `name'\n"
+);
+}
+
+
+static void print_version (void) {
+  printf("%s  %s\n", LUA_VERSION, LUA_COPYRIGHT);
 }
 
 
@@ -166,7 +172,7 @@ int main (int argc, char *argv[]) {
   lua_userinit();
   if (argc < 2) {  /* no arguments? */
     if (isatty(0)) {
-      printf("%s  %s\n", LUA_VERSION, LUA_COPYRIGHT);
+      print_version();
       manual_input(1);
     }
     else
@@ -186,10 +192,13 @@ int main (int argc, char *argv[]) {
           break;
         case 'd':
           lua_setdebug(lua_state, 1);
+          if (i==argc-1) {  /* last argument? */
+            print_version();
+            manual_input(1);
+          }
           break;
         case 'v':
-          printf("%s  %s\n(written by %s)\n",
-                 LUA_VERSION, LUA_COPYRIGHT, LUA_AUTHORS);
+          print_version();
           break;
         case 'e':
           i++;
@@ -210,9 +219,7 @@ int main (int argc, char *argv[]) {
           }
           getargs(argc-i, argv+i);  /* collect following arguments */
           file_input(argv, i);
-          return 0;  /* stop running arguments */
-        case '-':
-          i = argc;  /* end loop */
+          i = argc;  /* stop running arguments */
           break;
         default:
           print_message();
