@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.156 2002/11/11 11:52:43 roberto Exp roberto $
+** $Id: lgc.c,v 1.157 2002/11/13 11:49:19 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -45,6 +45,13 @@ typedef struct GCState {
 
 #define isfinalized(u)		(!testbit((u)->uv.marked, 1))
 #define markfinalized(u)	resetbit((u)->uv.marked, 1)
+
+
+#define KEYWEAKBIT    1
+#define VALUEWEAKBIT  2
+#define KEYWEAK         (1<<KEYWEAKBIT)
+#define VALUEWEAK       (1<<VALUEWEAKBIT)
+
 
 
 #define markobject(st,o) { checkconsistency(o); \
@@ -140,17 +147,23 @@ static void traversetable (GCState *st, Table *h) {
   int i;
   int weakkey = 0;
   int weakvalue = 0;
+  const TObject *mode;
   markvalue(st, h->metatable);
   lua_assert(h->lsizenode || h->node == st->G->dummynode);
-  if (h->mode & (WEAKKEY | WEAKVALUE)) {  /* weak table? */
-    GCObject **weaklist;
-    weakkey = h->mode & WEAKKEY;
-    weakvalue = h->mode & WEAKVALUE;
-    weaklist = (weakkey && weakvalue) ? &st->wkv :
-                            (weakkey) ? &st->wk :
-                                        &st->wv;
-    h->gclist = *weaklist;  /* must be cleared after GC, ... */
-    *weaklist = valtogco(h);  /* ... so put in the appropriate list */
+  mode = gfasttm(st->G, h->metatable, TM_MODE);
+  if (mode && ttisstring(mode)) {  /* is there a weak mode? */
+    weakkey = (strchr(svalue(mode), 'k') != NULL);
+    weakvalue = (strchr(svalue(mode), 'v') != NULL);
+    if (weakkey || weakvalue) {  /* is really weak? */
+      GCObject **weaklist;
+      h->marked &= ~(KEYWEAK | VALUEWEAK);  /* clear bits */
+      h->marked |= (weakkey << KEYWEAKBIT) | (weakvalue << VALUEWEAKBIT);
+      weaklist = (weakkey && weakvalue) ? &st->wkv :
+                              (weakkey) ? &st->wk :
+                                          &st->wv;
+      h->gclist = *weaklist;  /* must be cleared after GC, ... */
+      *weaklist = valtogco(h);  /* ... so put in the appropriate list */
+    }
   }
   if (!weakvalue) {
     i = sizearray(h);
@@ -280,7 +293,7 @@ static void cleartablekeys (GCObject *l) {
   while (l) {
     Table *h = gcotoh(l);
     int i = sizenode(h);
-    lua_assert(h->mode & WEAKKEY);
+    lua_assert(h->marked & KEYWEAK);
     while (i--) {
       Node *n = node(h, i);
       if (!valismarked(key(n)))  /* key was collected? */
@@ -298,7 +311,7 @@ static void cleartablevalues (GCObject *l) {
   while (l) {
     Table *h = gcotoh(l);
     int i = sizearray(h);
-    lua_assert(h->mode & WEAKVALUE);
+    lua_assert(h->marked & VALUEWEAK);
     while (i--) {
       TObject *o = &h->array[i];
       if (!valismarked(o))  /* value was collected? */

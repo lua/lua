@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.162 2002/11/06 19:08:00 roberto Exp roberto $
+** $Id: lua.h,v 1.163 2002/11/07 15:39:23 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -174,7 +174,6 @@ LUA_API void  lua_rawget (lua_State *L, int idx);
 LUA_API void  lua_rawgeti (lua_State *L, int idx, int n);
 LUA_API void  lua_newtable (lua_State *L);
 LUA_API int   lua_getmetatable (lua_State *L, int objindex);
-LUA_API const char *lua_getmode (lua_State *L, int idx);
 LUA_API void  lua_getglobals (lua_State *L, int idx);
 
 
@@ -184,7 +183,6 @@ LUA_API void  lua_getglobals (lua_State *L, int idx);
 LUA_API void  lua_settable (lua_State *L, int idx);
 LUA_API void  lua_rawset (lua_State *L, int idx);
 LUA_API void  lua_rawseti (lua_State *L, int idx, int n);
-LUA_API void  lua_setmode (lua_State *L, int idx, const char *md);
 LUA_API int   lua_setmetatable (lua_State *L, int objindex);
 LUA_API int   lua_setglobals (lua_State *L, int idx);
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.13 2002/10/04 14:30:31 roberto Exp roberto $
+** $Id: ltablib.c,v 1.14 2002/10/23 19:08:23 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -288,7 +288,11 @@ static const luaL_reg tab_funcs[] = {
 
 LUALIB_API int lua_tablibopen (lua_State *L) {
   lua_newtable(L);  /* create N (table to store num. elements in tables) */
-  lua_setmode(L, -1, "k");  /* make it a weak table */
+  lua_pushvalue(L, -1);  /* `N' will be its own metatable */
+  lua_setmetatable(L, -2);
+  lua_pushliteral(L, "__mode");
+  lua_pushliteral(L, "k");
+  lua_rawset(L, -3);  /* metatable(N).__mode = "k" */
   luaL_opennamedlib(L, LUA_TABLIBNAME, tab_funcs, 1);
   return 0;
 }

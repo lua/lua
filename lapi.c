@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.217 2002/11/07 15:37:10 roberto Exp roberto $
+** $Id: lapi.c,v 1.218 2002/11/07 15:39:23 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -505,20 +505,6 @@ LUA_API void lua_newtable (lua_State *L) {
 }
 
 
-LUA_API const char *lua_getmode (lua_State *L, int index) {
-  static const char *const modes[] = {"", "k", "v", "kv"};
-  int mode = 0;
-  TObject *t;
-  lua_lock(L);
-  t = luaA_index(L, index);
-  api_check(L, ttistable(t));
-  if (hvalue(t)->mode & WEAKKEY) mode += 1;
-  if (hvalue(t)->mode & WEAKVALUE) mode += 2;
-  lua_unlock(L);
-  return modes[mode];
-}
-
-
 LUA_API int lua_getmetatable (lua_State *L, int objindex) {
   StkId obj;
   Table *mt;
@@ -596,17 +582,6 @@ LUA_API void lua_rawseti (lua_State *L, int index, int n) {
   lua_unlock(L);
 }
 
-
-LUA_API void lua_setmode (lua_State *L, int index, const char *mode) {
-  TObject *t;
-  lua_lock(L);
-  t = luaA_index(L, index);
-  api_check(L, ttistable(t));
-  hvalue(t)->mode &= ~(WEAKKEY | WEAKVALUE);  /* clear bits */
-  if (strchr(mode, 'k')) hvalue(t)->mode |= WEAKKEY;
-  if (strchr(mode, 'v')) hvalue(t)->mode |= WEAKVALUE;
-  lua_unlock(L);
-}
 
 LUA_API int lua_setmetatable (lua_State *L, int objindex) {
   TObject *obj, *mt;

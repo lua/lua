@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.102 2002/09/19 20:12:47 roberto Exp roberto $
+** $Id: ltm.c,v 1.103 2002/10/25 20:05:28 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -26,7 +26,7 @@ const char *const luaT_typenames[] = {
 void luaT_init (lua_State *L) {
   static const char *const luaT_eventname[] = {  /* ORDER TM */
     "__index", "__newindex",
-    "__gc", "__eq",
+    "__gc", "__mode", "__eq",
     "__add", "__sub", "__mul", "__div",
     "__pow", "__unm", "__lt", "__le",
     "__concat", "__call"
