@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.87 2000/10/20 16:39:03 roberto Exp roberto $
+** $Id: liolib.c,v 1.88 2000/10/26 12:47:05 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -345,9 +345,12 @@ static void read_file (lua_State *L, FILE *f) {
   size_t size = BUFSIZ;
   char *buffer = NULL;
   for (;;) {
-    buffer = (char *)realloc(buffer, size);
-    if (buffer == NULL)
+    char *newbuffer = (char *)realloc(buffer, size);
+    if (newbuffer == NULL) {
+      free(buffer);
       lua_error(L, "not enough memory to read a file");
+    }
+    buffer = newbuffer;
     len += fread(buffer+len, sizeof(char), size-len, f);
     if (len < size) break;  /* did not read all it could */
     size *= 2;
