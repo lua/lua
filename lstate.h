@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.43 2000/12/26 18:46:09 roberto Exp roberto $
+** $Id: lstate.h,v 1.44 2001/01/19 13:20:30 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -74,12 +74,14 @@ struct lua_State {
   StkId stack_last;  /* last free slot in the stack */
   int stacksize;
   StkId Cbase;  /* base for current C function */
-  struct lua_longjmp *errorJmp;  /* current error recover point */
   Hash *gt;  /* table for globals */
+  global_State *G;
   lua_Hook callhook;
   lua_Hook linehook;
   int allowhooks;
-  global_State *G;
+  struct lua_longjmp *errorJmp;  /* current error recover point */
+  lua_State *next;  /* circular double linked list of states */
+  lua_State *previous;
 };
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.57 2001/01/18 15:59:09 roberto Exp roberto $
+** $Id: ltests.c,v 1.58 2001/01/19 13:20:30 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -270,8 +270,19 @@ static int udataval (lua_State *L) {
   return 1;
 }
 
+
+static int doonnewstack (lua_State *L) {
+  lua_State *L1 = lua_open(L, luaL_check_int(L, 1));
+  if (L1 == NULL) return 0;
+  lua_dostring(L1, luaL_check_string(L, 2));
+  lua_pushnumber(L, 1);
+  lua_close(L1);
+  return 1;
+}
+
+
 static int newstate (lua_State *L) {
-  lua_State *L1 = lua_open(luaL_check_int(L, 1));
+  lua_State *L1 = lua_open(NULL, luaL_check_int(L, 1));
   if (L1)
     lua_pushuserdata(L, L1);
   else
@@ -518,6 +529,7 @@ static const struct luaL_reg tests_funcs[] = {
   {"unref", unref},
   {"newuserdata", newuserdata},
   {"udataval", udataval},
+  {"doonnewstack", doonnewstack},
   {"newstate", newstate},
   {"closestate", closestate},
   {"doremote", doremote},

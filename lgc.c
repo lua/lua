@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.76 2001/01/18 15:59:09 roberto Exp roberto $
+** $Id: lgc.c,v 1.77 2001/01/19 13:20:30 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -47,22 +47,6 @@ static void protomark (Proto *f) {
 }
 
 
-static void markstack (lua_State *L, GCState *st) {
-  StkId o;
-  for (o=L->stack; o<L->top; o++)
-    markobject(st, o);
-}
-
-
-static void marklock (global_State *G, GCState *st) {
-  int i;
-  for (i=0; i<G->nref; i++) {
-    if (G->refArray[i].st == LOCK)
-      markobject(st, &G->refArray[i].o);
-  }
-}
-
-
 static void markclosure (GCState *st, Closure *cl) {
   if (!ismarked(cl)) {
     if (!cl->isC)
@@ -73,14 +57,10 @@ static void markclosure (GCState *st, Closure *cl) {
 }
 
 
-static void marktagmethods (global_State *G, GCState *st) {
-  int e;
-  for (e=0; e<TM_N; e++) {
-    int t;
-    for (t=0; t<G->ntag; t++) {
-      Closure *cl = luaT_gettm(G, t, e);
-      if (cl) markclosure(st, cl);
-    }
+static void marktable (GCState *st, Hash *h) {
+  if (!ismarked(h)) {
+    h->mark = st->tmark;  /* chain it in list of marked */
+    st->tmark = h;
   }
 }
 
@@ -97,10 +77,7 @@ static void markobject (GCState *st, TObject *o) {
       markclosure(st, clvalue(o));
       break;
     case LUA_TTABLE: {
-      if (!ismarked(hvalue(o))) {
-        hvalue(o)->mark = st->tmark;  /* chain it in list of marked */
-        st->tmark = hvalue(o);
-      }
+      marktable(st, hvalue(o));
       break;
     }
     default: break;  /* numbers, etc */
@@ -108,13 +85,46 @@ static void markobject (GCState *st, TObject *o) {
 }
 
 
+static void markstacks (lua_State *L, GCState *st) {
+  lua_State *L1 = L;
+  do {  /* for each thread */
+    StkId o;
+    marktable(st, L1->gt);  /* mark table of globals */
+    for (o=L1->stack; o<L1->top; o++)
+      markobject(st, o);
+    lua_assert(L->previous->next == L && L->next->previous == L);
+    L1 = L1->next;
+  } while (L1 != L);
+}
+
+
+static void marklock (global_State *G, GCState *st) {
+  int i;
+  for (i=0; i<G->nref; i++) {
+    if (G->refArray[i].st == LOCK)
+      markobject(st, &G->refArray[i].o);
+  }
+}
+
+
+static void marktagmethods (global_State *G, GCState *st) {
+  int e;
+  for (e=0; e<TM_N; e++) {
+    int t;
+    for (t=0; t<G->ntag; t++) {
+      Closure *cl = luaT_gettm(G, t, e);
+      if (cl) markclosure(st, cl);
+    }
+  }
+}
+
+
 static void markall (lua_State *L) {
   GCState st;
   st.cmark = NULL;
-  st.tmark = L->gt;  /* put table of globals in mark list */
-  L->gt->mark = NULL;
+  st.tmark = NULL;
   marktagmethods(G(L), &st);  /* mark tag methods */
-  markstack(L, &st); /* mark stack objects */
+  markstacks(L, &st); /* mark all stacks */
   marklock(G(L), &st); /* mark locked objects */
   for (;;) {  /* mark tables and closures */
     if (st.cmark) {

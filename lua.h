@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.81 2000/12/22 16:58:41 roberto Exp roberto $
+** $Id: lua.h,v 1.82 2001/01/10 16:58:11 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -81,7 +81,7 @@ typedef int (*lua_CFunction) (lua_State *L);
 /*
 ** state manipulation
 */
-LUA_API lua_State *lua_open (int stacksize);
+LUA_API lua_State *lua_open (lua_State *L, int stacksize);
 LUA_API void       lua_close (lua_State *L);
 
 

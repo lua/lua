@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.50 2000/12/28 12:55:41 roberto Exp roberto $
+** $Id: lstate.c,v 1.51 2001/01/19 13:20:30 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -38,52 +38,70 @@ static int errormessage (lua_State *L) {
 }
 
 
+struct Sopen {
+  int stacksize;
+  lua_State *L;
+};
+
+
 /*
 ** open parts that may cause memory-allocation errors
 */
 static void f_luaopen (lua_State *L, void *ud) {
-  int stacksize = *(int *)ud;
-  if (stacksize == 0)
-    stacksize = DEFAULT_STACK_SIZE;
+  struct Sopen *so = (struct Sopen *)ud;
+  if (so->stacksize == 0)
+    so->stacksize = DEFAULT_STACK_SIZE;
   else
-    stacksize += LUA_MINSTACK;
-  L->G = luaM_new(L, global_State);
-  G(L)->strt.size = G(L)->udt.size = 0;
-  G(L)->strt.nuse = G(L)->udt.nuse = 0;
-  G(L)->strt.hash = G(L)->udt.hash = NULL;
-  G(L)->Mbuffer = NULL;
-  G(L)->Mbuffsize = 0;
-  G(L)->rootproto = NULL;
-  G(L)->rootcl = NULL;
-  G(L)->roottable = NULL;
-  G(L)->TMtable = NULL;
-  G(L)->sizeTM = 0;
-  G(L)->ntag = 0;
-  G(L)->refArray = NULL;
-  G(L)->nref = 0;
-  G(L)->sizeref = 0;
-  G(L)->refFree = NONEXT;
-  G(L)->nblocks = sizeof(lua_State) + sizeof(global_State);
-  G(L)->GCthreshold = MAX_INT;  /* to avoid GC during pre-definitions */
-  L->gt = luaH_new(L, 10);  /* table of globals */
-  luaD_init(L, stacksize);
-  luaS_init(L);
-  luaX_init(L);
-  luaT_init(L);
-  lua_newtable(L);
-  lua_ref(L, 1);  /* create registry */
-  lua_register(L, LUA_ERRORMESSAGE, errormessage);
+    so->stacksize += LUA_MINSTACK;
+  if (so->L != NULL) {  /* shared global state? */
+    L->G = G(so->L);
+    L->gt = so->L->gt;  /* share table of globals */
+    so->L->next->previous = L;  /* insert L into linked list */
+    L->next = so->L->next;
+    so->L->next = L;
+    L->previous = so->L;
+    luaD_init(L, so->stacksize);  /* init stack */
+  }
+  else {  /* create a new global state */
+    L->G = luaM_new(L, global_State);
+    G(L)->strt.size = G(L)->udt.size = 0;
+    G(L)->strt.nuse = G(L)->udt.nuse = 0;
+    G(L)->strt.hash = G(L)->udt.hash = NULL;
+    G(L)->Mbuffer = NULL;
+    G(L)->Mbuffsize = 0;
+    G(L)->rootproto = NULL;
+    G(L)->rootcl = NULL;
+    G(L)->roottable = NULL;
+    G(L)->TMtable = NULL;
+    G(L)->sizeTM = 0;
+    G(L)->ntag = 0;
+    G(L)->refArray = NULL;
+    G(L)->nref = 0;
+    G(L)->sizeref = 0;
+    G(L)->refFree = NONEXT;
+    G(L)->nblocks = sizeof(lua_State) + sizeof(global_State);
+    G(L)->GCthreshold = MAX_INT;  /* to avoid GC during pre-definitions */
+    luaD_init(L, so->stacksize);  /* init stack */
+    L->gt = luaH_new(L, 10);  /* table of globals */
+    luaS_init(L);
+    luaX_init(L);
+    luaT_init(L);
+    lua_newtable(L);
+    lua_ref(L, 1);  /* create registry */
+    lua_register(L, LUA_ERRORMESSAGE, errormessage);
 #ifdef LUA_DEBUG
-  luaB_opentests(L);
-  if (lua_state == NULL) lua_state = L;  /* keep first state to be opened */
-  lua_assert(lua_gettop(L) == 0);
+    luaB_opentests(L);
+    if (lua_state == NULL) lua_state = L;  /* keep first state to be opened */
+    lua_assert(lua_gettop(L) == 0);
 #endif
+    G(L)->GCthreshold = 2*G(L)->nblocks;
+  }
 }
 
 
-LUA_API lua_State *lua_open (int stacksize) {
-  lua_State *L;
-  L = luaM_new(NULL, lua_State);
+LUA_API lua_State *lua_open (lua_State *OL, int stacksize) {
+  struct Sopen so;
+  lua_State *L = luaM_new(OL, lua_State);
   if (L == NULL) return NULL;  /* memory allocation error */
   L->G = NULL;
   L->stack = NULL;
@@ -92,19 +110,28 @@ LUA_API lua_State *lua_open (int stacksize) {
   L->callhook = NULL;
   L->linehook = NULL;
   L->allowhooks = 1;
-  if (luaD_runprotected(L, f_luaopen, &stacksize) != 0) {
+  L->next = L->previous = L;
+  so.stacksize = stacksize;
+  so.L = OL;
+  if (luaD_runprotected(L, f_luaopen, &so) != 0) {
     /* memory allocation error: free partial state */
     lua_close(L);
     return NULL;
   }
-  G(L)->GCthreshold = 2*G(L)->nblocks;
   return L;
 }
 
 
 LUA_API void lua_close (lua_State *L) {
+  lua_State *L1 = L->next;  /* any surviving thread (if there is one) */
   lua_assert(L != lua_state || lua_gettop(L) == 0);
-  if (G(L)) {  /* close global state */
+  if (L1 == L) L1 = NULL;  /* no surviving threads */
+  if (L1 != NULL) {  /* are there other threads? */
+    lua_assert(L->previous != L);
+    L->previous->next = L->next;
+    L->next->previous = L->previous;
+  }
+  else if (G(L)) {  /* last thread; close global state */
     luaC_collect(L, 1);  /* collect all elements */
     lua_assert(G(L)->rootproto == NULL);
     lua_assert(G(L)->rootcl == NULL);
@@ -115,8 +142,8 @@ LUA_API void lua_close (lua_State *L) {
     luaM_freearray(L, G(L)->Mbuffer, G(L)->Mbuffsize, char);
     luaM_freelem(NULL, L->G, global_State);
   }
-  luaM_freearray(NULL, L->stack, L->stacksize, TObject);
-  luaM_freelem(NULL, L, lua_State);
+  luaM_freearray(L1, L->stack, L->stacksize, TObject);
+  luaM_freelem(L1, L, lua_State);
   lua_assert(L != lua_state || memdebug_numblocks == 0);
   lua_assert(L != lua_state || memdebug_total == 0);
 }
