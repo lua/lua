@@ -58,7 +58,7 @@ int luaO_equalObj (const TObject *t1, const TObject *t2) {
     case LUA_TNIL:
       return 1;
     case LUA_TBOOLEAN:
-      return bvalue(t1) == bvalue(t2);
+      return bvalue(t1) == bvalue(t2);  /* true must be 1 !! */
     default:  /* all other types are equal if pointers are equal */
       return tsvalue(t1) == tsvalue(t2);
   }
