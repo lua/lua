@@ -20,9 +20,8 @@
 
 
 static void aux_setn (lua_State *L, int t, int n) {
-  lua_pushliteral(L, "n");
   lua_pushnumber(L, n);
-  lua_settable(L, t);
+  lua_setstr(L, t, "n");
 }
 
 

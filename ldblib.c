@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.40 2001/10/26 17:33:30 roberto Exp $
+** $Id: ldblib.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -18,16 +18,14 @@
 
 
 static void settabss (lua_State *L, const char *i, const char *v) {
-  lua_pushstring(L, i);
   lua_pushstring(L, v);
-  lua_settable(L, -3);
+  lua_setstr(L, -2, i);
 }
 
 
 static void settabsi (lua_State *L, const char *i, int v) {
-  lua_pushstring(L, i);
   lua_pushnumber(L, v);
-  lua_settable(L, -3);
+  lua_setstr(L, -2, i);
 }
 
 
@@ -71,9 +69,8 @@ static int getinfo (lua_State *L) {
         settabss(L, "namewhat", ar.namewhat);
         break;
       case 'f':
-        lua_pushliteral(L, "func");
-        lua_pushvalue(L, -3);
-        lua_settable(L, -3);
+        lua_pushvalue(L, -2);
+        lua_setstr(L, -2, "func");
         break;
     }
   }
@@ -115,8 +112,7 @@ static int setlocal (lua_State *L) {
 
 
 static void hookf (lua_State *L, const char *key) {
-  lua_pushstring(L, key);
-  lua_gettable(L, LUA_REGISTRYINDEX);
+  lua_getstr(L, LUA_REGISTRYINDEX, key);
   if (lua_isfunction(L, -1)) {
     lua_pushvalue(L, -2);  /* original argument (below function) */
     lua_rawcall(L, 1, 0);
@@ -147,11 +143,9 @@ static void sethook (lua_State *L, const char *key, lua_Hook hook,
     (*sethookf)(L, hook);
   else
     luaL_argerror(L, 1, "function expected");
-  lua_pushstring(L, key);
-  lua_gettable(L, LUA_REGISTRYINDEX);   /* get old value */
-  lua_pushstring(L, key);
+  lua_getstr(L, LUA_REGISTRYINDEX, key);   /* get old value */
   lua_pushvalue(L, 1);
-  lua_settable(L, LUA_REGISTRYINDEX);  /* set new value */
+  lua_setstr(L, LUA_REGISTRYINDEX, key);  /* set new value */
 }
 
 

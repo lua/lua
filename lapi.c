@@ -329,11 +329,11 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
 */
 
 
-LUA_API void lua_getglobal (lua_State *L, const char *name) {
+LUA_API void lua_getstr (lua_State *L, int index, const char *name) {
   TObject o;
   lua_lock(L);
   setsvalue(&o, luaS_new(L, name));
-  luaV_gettable(L, gt(L), &o, L->top);
+  luaV_gettable(L, luaA_index(L, index), &o, L->top);
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -406,12 +406,12 @@ LUA_API void lua_geteventtable (lua_State *L, int objindex) {
 */
 
 
-LUA_API void lua_setglobal (lua_State *L, const char *name) {
+LUA_API void lua_setstr (lua_State *L, int index, const char *name) {
   TObject o;
   lua_lock(L);
   api_checknelems(L, 1);
   setsvalue(&o, luaS_new(L, name));
-  luaV_settable(L, gt(L), &o, L->top - 1);
+  luaV_settable(L, luaA_index(L, index), &o, L->top - 1);
   L->top--;  /* remove element from the top */
   lua_unlock(L);
 }
