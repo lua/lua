@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.166 2005/02/14 13:19:44 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.167 2005/02/18 12:40:02 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -283,6 +283,7 @@ static int luaB_loadfile (lua_State *L) {
 ** reserved slot inside the stack.
 */
 static const char *generic_reader (lua_State *L, void *ud, size_t *size) {
+  (void)ud;  /* to avoid warnings */
   luaL_checkstack(L, 2, "too many nested functions");
   lua_pushvalue(L, 1);  /* get function */
   lua_call(L, 0, 1);  /* call it */

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.26 2005/01/14 14:19:42 roberto Exp roberto $
+** $Id: lapi.c,v 2.27 2005/02/18 12:40:02 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -975,7 +975,7 @@ LUA_API void lua_concat (lua_State *L, int n) {
 
 LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud) {
   *ud = G(L)->ud;
-  return G(L)->realloc;
+  return G(L)->frealloc;
 }
 
 
@@ -993,7 +993,7 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
 
 
 
-static const char *aux_upvalue (lua_State *L, StkId fi, int n, TValue **val) {
+static const char *aux_upvalue (StkId fi, int n, TValue **val) {
   Closure *f;
   if (!ttisfunction(fi)) return NULL;
   f = clvalue(fi);
@@ -1015,7 +1015,7 @@ LUA_API const char *lua_getupvalue (lua_State *L, int funcindex, int n) {
   const char *name;
   TValue *val;
   lua_lock(L);
-  name = aux_upvalue(L, index2adr(L, funcindex), n, &val);
+  name = aux_upvalue(index2adr(L, funcindex), n, &val);
   if (name) {
     setobj2s(L, L->top, val);
     api_incr_top(L);
@@ -1032,7 +1032,7 @@ LUA_API const char *lua_setupvalue (lua_State *L, int funcindex, int n) {
   lua_lock(L);
   fi = index2adr(L, funcindex);
   api_checknelems(L, 1);
-  name = aux_upvalue(L, fi, n, &val);
+  name = aux_upvalue(fi, n, &val);
   if (name) {
     L->top--;
     setobj(L, val, L->top);

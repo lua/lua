@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.24 2005/02/18 12:40:02 roberto Exp roberto $
+** $Id: lvm.c,v 2.25 2005/02/18 12:50:08 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -113,7 +113,7 @@ StkId luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val,
     const TValue *tm;
     if (ttistable(t)) {  /* `t' is a table? */
       Table *h = hvalue(t);
-      const TValue *res = luaH_get(h, key); /* do a primitive set */
+      const TValue *res = luaH_get(h, key); /* do a primitive get */
       if (!ttisnil(res) ||  /* result is no nil? */
           (tm = fasttm(L, h->metatable, TM_INDEX)) == NULL) { /* or no TM? */
         setobj2s(L, val, res);

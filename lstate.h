@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.14 2005/02/11 20:03:35 roberto Exp roberto $
+** $Id: lstate.h,v 2.15 2005/02/18 12:40:02 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -67,8 +67,8 @@ typedef struct CallInfo {
 */
 typedef struct global_State {
   stringtable strt;  /* hash table for strings */
-  lua_Alloc realloc;  /* function to reallocate memory */
-  void *ud;         /* auxiliary data to `realloc' */
+  lua_Alloc frealloc;  /* function to reallocate memory */
+  void *ud;         /* auxiliary data to `frealloc' */
   lu_byte currentwhite;
   lu_byte gcstate;  /* state of garbage collector */
   GCObject *rootgc;  /* list of all collectable objects */

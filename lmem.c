@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.67 2004/12/01 15:46:18 roberto Exp roberto $
+** $Id: lmem.c,v 1.68 2005/01/14 14:21:16 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -22,19 +22,19 @@
 
 /*
 ** About the realloc function:
-** void * realloc (void *ud, void *ptr, size_t osize, size_t nsize);
+** void * frealloc (void *ud, void *ptr, size_t osize, size_t nsize);
 ** (`osize' is the old size, `nsize' is the new size)
 **
 ** Lua ensures that (ptr == NULL) iff (osize == 0).
 **
-** * realloc(ud, NULL, 0, x) creates a new block of size `x'
+** * frealloc(ud, NULL, 0, x) creates a new block of size `x'
 **
-** * realloc(ud, p, x, 0) frees the block `p'
-** (in this specific case, realloc must return NULL).
-** particularly, realloc(ud, NULL, 0, 0) does nothing
+** * frealloc(ud, p, x, 0) frees the block `p'
+** (in this specific case, frealloc must return NULL).
+** particularly, frealloc(ud, NULL, 0, 0) does nothing
 ** (which is equivalent to free(NULL) in ANSI C)
 **
-** realloc returns NULL if it cannot create or reallocate the area
+** frealloc returns NULL if it cannot create or reallocate the area
 ** (any reallocation to an equal or smaller size cannot fail!)
 */
 
@@ -76,7 +76,7 @@ void *luaM_toobig (lua_State *L) {
 void *luaM_realloc_ (lua_State *L, void *block, size_t osize, size_t nsize) {
   global_State *g = G(L);
   lua_assert((osize == 0) == (block == NULL));
-  block = (*g->realloc)(g->ud, block, osize, nsize);
+  block = (*g->frealloc)(g->ud, block, osize, nsize);
   if (block == NULL && nsize > 0)
     luaD_throw(L, LUA_ERRMEM);
   lua_assert((nsize == 0) == (block == NULL));

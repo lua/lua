@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.27 2005/01/10 18:33:37 roberto Exp roberto $
+** $Id: luaconf.h,v 1.28 2005/02/10 17:12:02 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -307,7 +307,7 @@ __inline int l_lrint (double flt)
 
 
 /* allows user-specific initialization on new threads */
-#define lua_userstateopen(L)	/* empty */
+#define lua_userstateopen(L)	((void)0)
 
 
 #endif
@@ -325,9 +325,6 @@ __inline int l_lrint (double flt)
 #ifdef LUA_LIB
 
 
-
-/* `assert' options */
-
 /* environment variables that hold the search path for packages */
 #define LUA_PATH	"LUA_PATH"
 #define LUA_CPATH	"LUA_CPATH"
@@ -336,7 +333,7 @@ __inline int l_lrint (double flt)
 #define LUA_POF		"luaopen_"
 
 /* separator for open functions in C libraries */
-#define LUA_OFSEP	""
+#define LUA_OFSEP	"_"
 
 /* directory separator (for submodules) */
 #if defined(_WIN32)

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.25 2005/02/14 13:19:50 roberto Exp roberto $
+** $Id: lgc.c,v 2.26 2005/02/18 12:40:02 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -36,14 +36,13 @@
    ((x)->gch.marked = ((x)->gch.marked & maskmarks) | luaC_white(g))
 
 #define white2gray(x)	reset2bits((x)->gch.marked, WHITE0BIT, WHITE1BIT)
-#define gray2black(x)	setbit((x)->gch.marked, BLACKBIT)
 #define black2gray(x)	resetbit((x)->gch.marked, BLACKBIT)
 
 #define stringmark(s)	reset2bits((s)->tsv.marked, WHITE0BIT, WHITE1BIT)
 
 
 #define isfinalized(u)		testbit((u)->marked, FINALIZEDBIT)
-#define markfinalized(u)	setbit((u)->marked, FINALIZEDBIT)
+#define markfinalized(u)	l_setbit((u)->marked, FINALIZEDBIT)
 
 
 #define KEYWEAK         bitmask(KEYWEAKBIT)
@@ -665,9 +664,9 @@ void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v) {
 }
 
 
-void luaC_barrierback (lua_State *L, GCObject *o, GCObject *v) {
+void luaC_barrierback (lua_State *L, GCObject *o) {
   global_State *g = G(L);
-  lua_assert(isblack(o) && iswhite(v) && !isdead(g, v) && !isdead(g, o));
+  lua_assert(isblack(o) && !isdead(g, o));
   lua_assert(g->gcstate != GCSfinalize && g->gcstate != GCSpause);
   black2gray(o);  /* make table gray (again) */
   gco2h(o)->gclist = g->grayagain;

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.127 2004/12/20 13:47:29 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.128 2005/02/10 17:12:02 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -704,6 +704,7 @@ static void *l_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
 
 
 static int panic (lua_State *L) {
+  (void)L;  /* to avoid warnings */
   fprintf(stderr, "PANIC: unprotected error during Lua-API call\n");
   return 0;
 }

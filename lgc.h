@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.10 2005/01/19 15:54:26 roberto Exp roberto $
+** $Id: lgc.h,v 2.11 2005/02/10 13:25:02 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -29,7 +29,7 @@
 #define testbits(x,m)	((x) & (m))
 #define bitmask(b)	(1<<(b))
 #define bit2mask(b1,b2)	(bitmask(b1) | bitmask(b2))
-#define setbit(x,b)	setbits(x, bitmask(b))
+#define l_setbit(x,b)	setbits(x, bitmask(b))
 #define resetbit(x,b)	resetbits(x, bitmask(b))
 #define testbit(x,b)	testbits(x, bitmask(b))
 #define set2bits(x,b1,b2)	setbits(x, (bit2mask(b1, b2)))
@@ -70,7 +70,7 @@
 #define isdead(g,v)	((v)->gch.marked & otherwhite(g) & WHITEBITS)
 
 #define changewhite(x)	((x)->gch.marked ^= WHITEBITS)
-#define gray2black(x)	setbit((x)->gch.marked, BLACKBIT)
+#define gray2black(x)	l_setbit((x)->gch.marked, BLACKBIT)
 
 #define valiswhite(x)	(iscollectable(x) && iswhite(gcvalue(x)))
 
@@ -85,7 +85,7 @@
 	luaC_barrierf(L,obj2gco(p),gcvalue(v)); }
 
 #define luaC_barriert(L,p,v) { if (valiswhite(v) && isblack(obj2gco(p)))  \
-	luaC_barrierback(L,obj2gco(p),gcvalue(v)); }
+	luaC_barrierback(L,obj2gco(p)); }
 
 #define luaC_objbarrier(L,p,o)  \
 	{ if (iswhite(obj2gco(o)) && isblack(obj2gco(p))) \
@@ -93,7 +93,7 @@
 
 #define luaC_objbarriert(L,p,o)  \
 	{ if (iswhite(obj2gco(o)) && isblack(obj2gco(p))) \
-		luaC_barrierback(L,obj2gco(p),obj2gco(o)); }
+		luaC_barrierback(L,obj2gco(p)); }
 
 size_t luaC_separateudata (lua_State *L, int all);
 void luaC_callGCTM (lua_State *L);
@@ -103,7 +103,7 @@ void luaC_fullgc (lua_State *L);
 void luaC_link (lua_State *L, GCObject *o, lu_byte tt);
 void luaC_linkupval (lua_State *L, UpVal *uv);
 void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v);
-void luaC_barrierback (lua_State *L, GCObject *o, GCObject *v);
+void luaC_barrierback (lua_State *L, GCObject *o);
 
 
 #endif
