@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 1.3 2001/02/06 16:01:29 roberto Exp roberto $
+** $Id: ltests.h,v 1.4 2001/02/06 18:18:58 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -16,6 +16,7 @@
 #undef NDEBUG
 #include <assert.h>
 #define lua_assert(c)           assert(c)
+#define api_check(L, o)		lua_assert(o)
 
 
 /* to avoid warnings, and to make sure value is really unused */
