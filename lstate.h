@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.110 2003/04/28 19:26:16 roberto Exp roberto $
+** $Id: lstate.h,v 1.111 2003/07/16 20:49:02 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -101,6 +101,8 @@ typedef struct global_State {
   GCObject *rootgc;  /* list of (almost) all collectable objects */
   GCObject *rootudata;   /* (separated) list of all userdata */
   GCObject *tmudata;  /* list of userdata to be GC */
+  lua_Alloc realloc;  /* function to reallocate memory */
+  void *ud;         /* auxiliary data to `realloc' */
   Mbuffer buff;  /* temporary buffer for string concatentation */
   lu_mem GCthreshold;
   lu_mem nblocks;  /* number of `bytes' currently allocated */

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.102 2003/05/16 18:59:08 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.103 2003/10/01 16:50:53 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 
@@ -556,6 +557,22 @@ LUALIB_API int luaL_loadbuffer (lua_State *L, const char *buff, size_t size,
 }
 
 /* }====================================================== */
+
+
+static void *l_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
+  (void)ud;
+  if (nsize == 0) {
+    free(ptr);
+    return NULL;
+  }
+  else 
+    return realloc(ptr, nsize);
+}
+
+
+LUALIB_API lua_State *luaL_newstate (void) {
+  return lua_newstate(l_alloc, NULL);
+}
 
 
 /*

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.177 2003/05/15 12:20:04 roberto Exp roberto $
+** $Id: lua.h,v 1.178 2003/07/07 13:30:57 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -57,6 +57,12 @@ typedef int (*lua_Chunkwriter) (lua_State *L, const void* p,
 
 
 /*
+** prototype for memory-allocation functions
+*/
+typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
+
+
+/*
 ** basic types
 */
 #define LUA_TNONE	(-1)
@@ -101,7 +107,7 @@ typedef LUA_NUMBER lua_Number;
 /*
 ** state manipulation
 */
-LUA_API lua_State *lua_open (void);
+LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud);
 LUA_API void       lua_close (lua_State *L);
 LUA_API lua_State *lua_newthread (lua_State *L);
 
@@ -261,6 +267,7 @@ LUA_API void  lua_concat (lua_State *L, int n);
 ** compatibility macros and functions
 */
 
+#define lua_open()	luaL_newstate()
 
 #define lua_getregistry(L)	lua_pushvalue(L, LUA_REGISTRYINDEX)
 #define lua_setglobal(L,s)	\

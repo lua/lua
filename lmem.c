@@ -1,11 +1,11 @@
 /*
-** $Id: lmem.c,v 1.60 2002/11/21 14:14:42 roberto Exp roberto $
+** $Id: lmem.c,v 1.61 2002/12/04 17:38:31 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
 
 
-#include <stdlib.h>
+#include <stddef.h>
 
 #define lmem_c
 
@@ -20,21 +20,23 @@
 
 
 /*
-** definition for realloc function. It must assure that l_realloc(NULL,
-** 0, x) allocates a new block (ANSI C assures that). (`os' is the old
-** block size; some allocators may use that.)
+** About the realloc function:
+** void * realloc (void *ud, void *ptr, size_t osize, size_t nsize);
+** (`osize' is the old size, `nsize' is the new size)
+**
+** Lua ensures that (ptr == NULL) iff (osize == 0).
+**
+** * realloc(ud, NULL, 0, x) creates a new block of size `x'
+**
+** * realloc(ud, p, x, 0) frees the block `p'
+** (in this specific case, realloc must return NULL).
+** particularly, realloc(ud, NULL, 0, 0) does nothing
+** (which is equivalent to free(NULL) in ANSI C)
+**
+** realloc returns NULL if it cannot create or reallocate the area
+** (any reallocation to an equal or smaller size cannot fail!)
 */
-#ifndef l_realloc
-#define l_realloc(b,os,s)	realloc(b,s)
-#endif
 
-/*
-** definition for free function. (`os' is the old block size; some
-** allocators may use that.)
-*/
-#ifndef l_free
-#define l_free(b,os)	free(b)
-#endif
 
 
 #define MINSIZEARRAY	4
@@ -62,30 +64,17 @@ void *luaM_growaux (lua_State *L, void *block, int *size, int size_elems,
 /*
 ** generic allocation routine.
 */
-void *luaM_realloc (lua_State *L, void *block, lu_mem oldsize, lu_mem size) {
-  lua_assert((oldsize == 0) == (block == NULL));
-  if (size == 0) {
-    if (block != NULL) {
-      l_free(block, oldsize);
-      block = NULL;
-    }
-    else return NULL;  /* avoid `nblocks' computations when oldsize==size==0 */
-  }
-  else if (size >= MAX_SIZET)
+void *luaM_realloc (lua_State *L, void *block, lu_mem osize, lu_mem nsize) {
+  global_State *g = G(L);
+  lua_assert((osize == 0) == (block == NULL));
+  if (nsize >= MAX_SIZET)
     luaG_runerror(L, "memory allocation error: block too big");
-  else {
-    block = l_realloc(block, oldsize, size);
-    if (block == NULL) {
-      if (L)
-        luaD_throw(L, LUA_ERRMEM);
-      else return NULL;  /* error before creating state! */
-    }
-  }
-  if (L) {
-    lua_assert(G(L) != NULL && G(L)->nblocks > 0);
-    G(L)->nblocks -= oldsize;
-    G(L)->nblocks += size;
-  }
+  block = (*g->realloc)(g->ud, block, osize, nsize);
+  if (block == NULL && nsize > 0)
+    luaD_throw(L, LUA_ERRMEM);
+  lua_assert((nsize == 0) == (block == NULL));
+  g->nblocks -= osize;
+  g->nblocks += nsize;
   return block;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 1.19 2002/11/19 17:42:32 roberto Exp roberto $
+** $Id: ltests.h,v 1.20 2002/12/04 17:29:05 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -27,16 +27,20 @@
 
 
 /* memory allocator control variables */
-extern unsigned long memdebug_numblocks;
-extern unsigned long memdebug_total;
-extern unsigned long memdebug_maxmem;
-extern unsigned long memdebug_memlimit;
+typedef struct Memcontrol {
+  unsigned long numblocks;
+  unsigned long total;
+  unsigned long maxmem;
+  unsigned long memlimit;
+} Memcontrol;
 
+extern Memcontrol memcontrol;
 
-#define l_realloc(b, os, s)	debug_realloc(b, os, s)
-#define l_free(b, os)		debug_realloc(b, os, 0)
+void *debug_realloc (void *ud, void *block, size_t osize, size_t nsize);
 
-void *debug_realloc (void *block, size_t oldsize, size_t size);
+#ifdef lua_c
+#define luaL_newstate()	lua_newstate(debug_realloc, &memcontrol)
+#endif
 
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.162 2003/07/09 12:08:43 roberto Exp roberto $
+** $Id: ltests.c,v 1.163 2003/07/29 19:26:34 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -80,10 +80,8 @@ static void setnameval (lua_State *L, const char *name, int val) {
 #define fillmem(mem,size)	/* empty */
 #endif
 
-unsigned long memdebug_numblocks = 0;
-unsigned long memdebug_total = 0;
-unsigned long memdebug_maxmem = 0;
-unsigned long memdebug_memlimit = ULONG_MAX;
+
+Memcontrol memcontrol = {0L, 0L, 0L, ULONG_MAX};
 
 
 static void *checkblock (void *block, size_t size) {
@@ -95,27 +93,26 @@ static void *checkblock (void *block, size_t size) {
 }
 
 
-static void freeblock (void *block, size_t size) {
+static void freeblock (Memcontrol *mc, void *block, size_t size) {
   if (block) {
     lua_assert(checkblocksize(block, size));
     block = checkblock(block, size);
     fillmem(block, size+HEADER+MARKSIZE);  /* erase block */
     free(block);  /* free original block */
-    memdebug_numblocks--;
-    memdebug_total -= size;
+    mc->numblocks--;
+    mc->total -= size;
   }
 }
 
 
-void *debug_realloc (void *block, size_t oldsize, size_t size) {
+void *debug_realloc (void *ud, void *block, size_t oldsize, size_t size) {
+  Memcontrol *mc = cast(Memcontrol *, ud);
   lua_assert(oldsize == 0 || checkblocksize(block, oldsize));
-  /* ISO does not specify what realloc(NULL, 0) does */
-  lua_assert(block != NULL || size > 0);
   if (size == 0) {
-    freeblock(block, oldsize);
+    freeblock(mc, block, oldsize);
     return NULL;
   }
-  else if (size > oldsize && memdebug_total+size-oldsize > memdebug_memlimit)
+  else if (size > oldsize && mc->total+size-oldsize > mc->memlimit)
     return NULL;  /* to test memory allocation errors */
   else {
     void *newblock;
@@ -127,14 +124,14 @@ void *debug_realloc (void *block, size_t oldsize, size_t size) {
     if (newblock == NULL) return NULL;
     if (block) {
       memcpy(cast(char *, newblock)+HEADER, block, commonsize);
-      freeblock(block, oldsize);  /* erase (and check) old copy */
+      freeblock(mc, block, oldsize);  /* erase (and check) old copy */
     }
     /* initialize new part of the block with something `weird' */
     fillmem(cast(char *, newblock)+HEADER+commonsize, size-commonsize);
-    memdebug_total += size;
-    if (memdebug_total > memdebug_maxmem)
-      memdebug_maxmem = memdebug_total;
-    memdebug_numblocks++;
+    mc->total += size;
+    if (mc->total > mc->maxmem)
+      mc->maxmem = mc->total;
+    mc->numblocks++;
     setsize(newblock, size);
     for (i=0;i<MARKSIZE;i++)
       *(cast(char *, newblock)+HEADER+size+i) = cast(char, MARK+i);
@@ -260,13 +257,13 @@ static int setgcthreshold (lua_State *L) {
 
 static int mem_query (lua_State *L) {
   if (lua_isnone(L, 1)) {
-    lua_pushintegral(L, memdebug_total);
-    lua_pushintegral(L, memdebug_numblocks);
-    lua_pushintegral(L, memdebug_maxmem);
+    lua_pushintegral(L, memcontrol.total);
+    lua_pushintegral(L, memcontrol.numblocks);
+    lua_pushintegral(L, memcontrol.maxmem);
     return 3;
   }
   else {
-    memdebug_memlimit = luaL_checkint(L, 1);
+    memcontrol.memlimit = luaL_checkint(L, 1);
     return 0;
   }
 }
@@ -830,8 +827,8 @@ static const struct luaL_reg tests_funcs[] = {
 static void fim (void) {
   if (!islocked)
     lua_close(lua_state);
-  lua_assert(memdebug_numblocks == 0);
-  lua_assert(memdebug_total == 0);
+  lua_assert(memcontrol.numblocks == 0);
+  lua_assert(memcontrol.total == 0);
 }
 
 
@@ -856,7 +853,7 @@ int luaB_opentests (lua_State *L) {
 int main (int argc, char *argv[]) {
   char *limit = getenv("MEMLIMIT");
   if (limit)
-    memdebug_memlimit = strtoul(limit, NULL, 10);
+    memcontrol.memlimit = strtoul(limit, NULL, 10);
   l_main(argc, argv);
   return 0;
 }
