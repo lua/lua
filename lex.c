@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.45 1997/04/01 21:23:20 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.46 1997/04/07 14:48:53 roberto Exp roberto $";
 
 
 #include <ctype.h>
@@ -22,6 +22,18 @@ char *rcs_lex = "$Id: lex.c,v 2.45 1997/04/01 21:23:20 roberto Exp roberto $";
 
 static int current;  /* look ahead character */
 static Input input;  /* input function */
+
+#define MAX_IFS	10
+
+/* "ifstate" keeps the state of each nested $if the lexical is
+** dealing with. The first bit indicates whether the $if condition
+** is false or true. The second bit indicates whether the lexical is
+** inside the "then" part (0) or the "else" part (2)
+*/
+static int ifstate[MAX_IFS];  /* 0 => then part - condition false */
+                              /* 1 => then part - condition true */
+                              /* 2 => else part - condition false */
+                              /* 3 => else part - condition true */
 static int iflevel;  /* level of nested $if's */
 
 
@@ -33,11 +45,15 @@ void lua_setinput (Input fn)
   input = fn;
 }
 
-static void luaI_auxsyntaxerror (char *s, char *token)
+
+static void luaI_auxsyntaxerror (char *s)
 {
-  if (token == NULL)
-    luaL_verror("%s;\n> at line %d in file %s",
-                 s, lua_linenumber, lua_parsedfile);
+  luaL_verror("%s;\n> at line %d in file %s",
+               s, lua_linenumber, lua_parsedfile);
+}
+
+static void luaI_auxsynterrbf (char *s, char *token)
+{
   if (token[0] == 0)
     token = "<eof>";
   luaL_verror("%s;\n> last token read: \"%s\" at line %d in file %s",
@@ -46,7 +62,7 @@ static void luaI_auxsyntaxerror (char *s, char *token)
 
 void luaI_syntaxerror (char *s)
 {
-  luaI_auxsyntaxerror(s, luaI_buffer(1));
+  luaI_auxsynterrbf(s, luaI_buffer(1));
 }
 
 
@@ -87,27 +103,74 @@ void luaI_addReserved (void)
 }
 
 
+/*
+** Pragma handling
+*/
+
+#define PRAGMASIZE	20
+
+static void skipspace (void)
+{
+  while (current == ' ' || current == '\t') next();
+}
+
+
+static int checkcond (char *buff)
+{
+  if (strcmp(buff, "nil") == 0)
+    return 0;
+  else if (strcmp(buff, "1") == 0)
+    return 1;
+  else if (isalpha((unsigned char)buff[0]))
+    return luaI_globaldefined(buff);
+  else {
+    luaI_auxsynterrbf("invalid $if condition", buff);
+    return 0;  /* to avoid warnings */
+  }
+}
+
+
 static void readname (char *buff)
 {
   int i = 0;
-  while (current == ' ') next();
+  skipspace();
   while (isalnum((unsigned char)current)) {
-    if (i >= MINBUFF) luaI_syntaxerror("pragma too long");
+    if (i >= PRAGMASIZE) {
+      buff[PRAGMASIZE] = 0;
+      luaI_auxsynterrbf("pragma too long", buff);
+    }
     buff[i++] = current;
     next();
   }
   buff[i] = 0;
-  if (!isalpha(buff[0]) || (current != 0 && !isspace(current)))
-    luaI_auxsyntaxerror("invalid pragma format", NULL);
 }
 
-static int inclinenumber (void)
+
+static void inclinenumber (void);
+
+
+static void ifskip (int thisiflevel)
 {
-  static char *pragmas [] = {"debug", "nodebug", "endif", "ifnil", "if", NULL};
-  int ifnil = 0;
+  while (iflevel > thisiflevel &&
+         (ifstate[thisiflevel] == 0 || ifstate[thisiflevel] == 3)) {
+    if (current == '\n')
+      inclinenumber();
+    else if (current == 0)
+      luaI_auxsyntaxerror("input ends inside a $if");
+    else next();
+  }
+}
+
+
+static void inclinenumber (void)
+{
+  static char *pragmas [] = 
+    {"debug", "nodebug", "end", "ifnot", "if", "else", NULL};
+  next();  /* skip '\n' */
   ++lua_linenumber;
   if (current == '$') {  /* is a pragma? */
-    char buff[MINBUFF+1];
+    char buff[PRAGMASIZE+1];
+    int ifnot = 0;
     next();  /* skip $ */
     readname(buff);
     switch (luaI_findstring(buff, pragmas)) {
@@ -117,34 +180,35 @@ static int inclinenumber (void)
       case 1:  /* nodebug */
         lua_debug = 0;
         break;
-      case 2:  /* endif */
+      case 2:  /* end */
         if (--iflevel < 0)
-          luaI_auxsyntaxerror("too many $endif's", NULL);
+          luaI_auxsyntaxerror("unmatched $endif");
         break;
-      case 3:  /* ifnil */
-        ifnil = 1;
+      case 3:  /* ifnot */
+        ifnot = 1;
         /* go through */
-      case 4: {  /* if */
-        int thisiflevel = iflevel++;
+      case 4:  /* if */
+        if (iflevel == MAX_IFS)
+          luaI_auxsyntaxerror("too many nested `$ifs'");
         readname(buff);
-        if ((ifnil && luaI_globaldefined(buff)) ||
-            (!ifnil && !luaI_globaldefined(buff))) {  /* skip the $if? */
-          do {
-            if (current == '\n') {
-              next();
-              inclinenumber();
-            }
-            else if (current == 0)
-              luaI_auxsyntaxerror("input ends inside a $if", NULL);
-            else next();
-          } while (iflevel > thisiflevel);
-        }
+        ifstate[iflevel++] = checkcond(buff) ? !ifnot : ifnot;
         break;
-      }
-      default: luaI_auxsyntaxerror("invalid pragma", buff);
+      case 5:  /* else */
+        if (iflevel <= 0 || (ifstate[iflevel-1] & 2))
+          luaI_auxsyntaxerror("unmatched $else");
+        ifstate[iflevel-1] = ifstate[iflevel-1] | 2;
+        break;
+      default:
+        luaI_auxsynterrbf("invalid pragma", buff);
     }
+    skipspace();
+    if (current == '\n')  /* pragma must end with a '\n' */
+      inclinenumber();
+    else if (current != 0)  /* or eof */
+      luaI_auxsyntaxerror("invalid pragma format");
+    if (iflevel > 0)
+      ifskip(iflevel-1);
   }
-  return lua_linenumber;
 }
 
 static int read_long_string (char *yytext, int buffsize)
@@ -178,7 +242,7 @@ static int read_long_string (char *yytext, int buffsize)
         }
         continue;
       case '\n':
-        save_and_next();
+        save('\n');
         inclinenumber();
         continue;
       default:
@@ -209,8 +273,8 @@ int luaY_lex (void)
     switch (current)
     {
       case '\n':
-        next();
-        linelasttoken = inclinenumber();
+        inclinenumber();
+        linelasttoken = lua_linenumber;
         continue;
 
       case ' ': case '\t': case '\r':  /* CR: to avoid problems with DOS */
@@ -274,7 +338,7 @@ int luaY_lex (void)
                 case 'n': save('\n'); next(); break;
                 case 't': save('\t'); next(); break;
                 case 'r': save('\r'); next(); break;
-                case '\n': save_and_next(); inclinenumber(); break;
+                case '\n': save('\n'); inclinenumber(); break;
                 default : save_and_next(); break;
               }
               break;
