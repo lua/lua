@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.99 2002/08/06 18:01:50 roberto Exp roberto $
+** $Id: lua.c,v 1.100 2002/08/07 20:54:17 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -91,7 +91,7 @@ static void report (int status) {
   const char *msg;
   if (status) {
     msg = lua_tostring(L, -1);
-    if (msg == NULL) msg = "(no message)";
+    if (msg == NULL) msg = "(error with no message)";
     l_message(progname, msg);
     lua_pop(L, 1);
   }
