@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.143 2001/06/05 18:17:01 roberto Exp roberto $
+** $Id: lparser.c,v 1.144 2001/06/05 19:27:32 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -1227,8 +1227,6 @@ static void chunk (LexState *ls) {
   while (!islast && !block_follow(ls->t.token)) {
     islast = statement(ls);
     optional(ls, l_c(';'));
-if (ls->fs->freereg < ls->fs->nactloc)
-printf(">>>>>>> %d  %d\n", ls->fs->freereg, ls->fs->nactloc);
     lua_assert(ls->fs->freereg >= ls->fs->nactloc);
     ls->fs->freereg = ls->fs->nactloc;  /* free registers */
   }

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.77 2001/06/05 18:17:01 roberto Exp roberto $
+** $Id: ldebug.c,v 1.78 2001/06/06 17:50:36 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -349,10 +349,6 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
     int a = GETARG_A(i);
     int b = 0;
     int c = 0;
-#undef check
-#define check(x)		if (!(x)) { \
-printf(">>>%d %d %d %d %d %d\n", op, a, b, c, pt->maxstacksize, pt->sizek); \
-return 0; }
     switch (getOpMode(op)) {
       case iABC: {
         b = GETARG_B(i);
