@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.93 2001/10/17 21:12:57 roberto Exp $
+** $Id: ltests.c,v 1.94 2001/10/25 19:14:14 roberto Exp $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -247,7 +247,7 @@ static int hash_query (lua_State *L) {
   else {
     TObject *o = luaA_index(L, 1);
     Table *t;
-    luaL_checktype(L, 2, LUA_TTABLE);
+    luaL_check_rawtype(L, 2, LUA_TTABLE);
     t = hvalue(luaA_index(L, 2));
     lua_pushnumber(L, luaH_mainposition(t, o) - t->node);
   }
@@ -258,7 +258,7 @@ static int hash_query (lua_State *L) {
 static int table_query (lua_State *L) {
   const Table *t;
   int i = luaL_opt_int(L, 2, -1);
-  luaL_checktype(L, 1, LUA_TTABLE);
+  luaL_check_rawtype(L, 1, LUA_TTABLE);
   t = hvalue(luaA_index(L, 1));
   if (i == -1) {
     lua_pushnumber(L, t->sizearray);
@@ -312,7 +312,7 @@ static int string_query (lua_State *L) {
 
 static int tref (lua_State *L) {
   int level = lua_gettop(L);
-  luaL_checkany(L, 1);
+  luaL_check_any(L, 1);
   lua_pushvalue(L, 1);
   lua_pushnumber(L, lua_ref(L, 1));
   assert(lua_gettop(L) == level+1);  /* +1 for result */
@@ -346,14 +346,14 @@ static int newuserdatabox (lua_State *L) {
 }
 
 static int settag (lua_State *L) {
-  luaL_checkany(L, 1);
+  luaL_check_any(L, 1);
   lua_pushvalue(L, 1);  /* push value */
   lua_settag(L, luaL_check_int(L, 2));
   return 1;  /* return value */
 }
 
 static int udataval (lua_State *L) {
-  luaL_checktype(L, 1, LUA_TUSERDATA);
+  luaL_check_rawtype(L, 1, LUA_TUSERDATA);
   lua_pushnumber(L, cast(int, lua_touserdata(L, 1)));
   return 1;
 }
@@ -438,7 +438,7 @@ static int doremote (lua_State *L) {
 static int settagmethod (lua_State *L) {
   int tag = luaL_check_int(L, 1);
   const l_char *event = luaL_check_string(L, 2);
-  luaL_checkany(L, 3);
+  luaL_check_any(L, 3);
   lua_gettagmethod(L, tag, event);
   lua_pushvalue(L, 3);
   lua_settagmethod(L, tag, event);

@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.71 2001/08/31 19:46:07 roberto Exp $
+** $Id: lstrlib.c,v 1.72 2001/10/16 17:41:43 roberto Exp $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -92,7 +92,7 @@ static int str_concat (lua_State *L) {
   size_t lsep;
   const char *sep = luaL_opt_lstr(L, 2, "", &lsep);
   int n, i;
-  luaL_checktype(L, 1, LUA_TTABLE);
+  luaL_check_rawtype(L, 1, LUA_TTABLE);
   luaL_buffinit(L, &b);
   n = lua_getn(L, 1);
   for (i=1; i<=n; i++) {
@@ -431,7 +431,7 @@ static void push_onecapture (MatchState *ms, int i) {
 
 static int push_captures (MatchState *ms) {
   int i;
-  luaL_checkstack(ms->L, ms->level, l_s("too many captures"));
+  luaL_check_stack(ms->L, ms->level, l_s("too many captures"));
   for (i=0; i<ms->level; i++)
     push_onecapture(ms, i);
   return ms->level;  /* number of strings pushed */

@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.38 2001/08/31 19:46:07 roberto Exp $
+** $Id: ldblib.c,v 1.39 2001/10/17 21:12:57 roberto Exp $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -104,7 +104,7 @@ static int setlocal (lua_State *L) {
   lua_Debug ar;
   if (!lua_getstack(L, luaL_check_int(L, 1), &ar))  /* level out of range? */
     luaL_argerror(L, 1, l_s("level out of range"));
-  luaL_checkany(L, 3);
+  luaL_check_any(L, 3);
   lua_pushstring(L, lua_setlocal(L, &ar, luaL_check_int(L, 2)));
   return 1;
 }

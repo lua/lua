@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.122 2001/08/31 19:46:07 roberto Exp $
+** $Id: liolib.c,v 1.123 2001/10/02 16:41:36 roberto Exp $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -254,7 +254,7 @@ static int read_until (lua_State *L, FILE *f, const l_char *p, int pl) {
 
 
 static int read_number (lua_State *L, FILE *f) {
-  double d;
+  lua_Number d;
   if (fscanf(f, l_s(LUA_NUMBER_SCAN), &d) == 1) {
     lua_pushnumber(L, d);
     return 1;
@@ -299,7 +299,7 @@ static int io_read (lua_State *L) {
     n = 2;  /* will return n-1 results */
   }
   else {  /* ensure stack space for all results and for auxlib's buffer */
-    luaL_checkstack(L, nargs+LUA_MINSTACK, l_s("too many arguments"));
+    luaL_check_stack(L, nargs+LUA_MINSTACK, l_s("too many arguments"));
     success = 1;
     for (n = 1; n<=nargs && success; n++) {
       if (lua_rawtag(L, n) == LUA_TNUMBER) {
@@ -515,7 +515,7 @@ static int io_time (lua_State *L) {
   else {
     time_t t;
     struct tm ts;
-    luaL_checktype(L, 1, LUA_TTABLE);
+    luaL_check_rawtype(L, 1, LUA_TTABLE);
     lua_settop(L, 1);  /* make sure table is at the top */
     ts.tm_sec = getfield(L, l_s("sec"), 0);
     ts.tm_min = getfield(L, l_s("min"), 0);

@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.43 2001/10/11 21:41:21 roberto Exp $
+** $Id: lbaselib.c,v 1.44 2001/10/17 21:12:57 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -42,7 +42,7 @@ static int luaB__ALERT (lua_State *L) {
 ** The library `liolib' redefines _ERRORMESSAGE for better error information.
 */
 static int luaB__ERRORMESSAGE (lua_State *L) {
-  luaL_checktype(L, 1, LUA_TSTRING);
+  luaL_check_rawtype(L, 1, LUA_TSTRING);
   lua_getglobal(L, l_s(LUA_ALERT));
   if (lua_isfunction(L, -1)) {  /* avoid error loop if _ALERT is not defined */
     lua_Debug ar;
@@ -95,7 +95,7 @@ static int luaB_print (lua_State *L) {
 static int luaB_tonumber (lua_State *L) {
   int base = luaL_opt_int(L, 2, 10);
   if (base == 10) {  /* standard conversion */
-    luaL_checkany(L, 1);
+    luaL_check_any(L, 1);
     if (lua_isnumber(L, 1)) {
       lua_pushnumber(L, lua_tonumber(L, 1));
       return 1;
@@ -126,7 +126,7 @@ static int luaB_error (lua_State *L) {
 }
 
 static int luaB_setglobal (lua_State *L) {
-  luaL_checkany(L, 2);
+  luaL_check_any(L, 2);
   lua_setglobal(L, luaL_check_string(L, 1));
   return 0;
 }
@@ -157,13 +157,13 @@ static int gettag (lua_State *L, int narg) {
 
 
 static int luaB_tag (lua_State *L) {
-  luaL_checkany(L, 1);
+  luaL_check_any(L, 1);
   lua_pushnumber(L, lua_tag(L, 1));
   return 1;
 }
 
 static int luaB_settype (lua_State *L) {
-  luaL_checktype(L, 1, LUA_TTABLE);
+  luaL_check_rawtype(L, 1, LUA_TTABLE);
   lua_pushvalue(L, 1);  /* push table */
   lua_settag(L, gettag(L, 2));
   return 1;  /* return table */
@@ -171,7 +171,7 @@ static int luaB_settype (lua_State *L) {
 
 static int luaB_weakmode (lua_State *L) {
   const l_char *mode = luaL_check_string(L, 2);
-  luaL_checktype(L, 1, LUA_TTABLE);
+  luaL_check_rawtype(L, 1, LUA_TTABLE);
   if (*mode == l_c('?')) {
     l_char buff[3];
     l_char *s = buff;
@@ -202,7 +202,7 @@ static int luaB_newtype (lua_State *L) {
 static int luaB_globals (lua_State *L) {
   lua_getglobals(L);  /* value to be returned */
   if (!lua_isnull(L, 1)) {
-    luaL_checktype(L, 1, LUA_TTABLE);
+    luaL_check_rawtype(L, 1, LUA_TTABLE);
     lua_pushvalue(L, 1);  /* new table of globals */
     lua_setglobals(L);
   }
@@ -210,16 +210,16 @@ static int luaB_globals (lua_State *L) {
 }
 
 static int luaB_rawget (lua_State *L) {
-  luaL_checktype(L, 1, LUA_TTABLE);
-  luaL_checkany(L, 2);
+  luaL_check_rawtype(L, 1, LUA_TTABLE);
+  luaL_check_any(L, 2);
   lua_rawget(L, -2);
   return 1;
 }
 
 static int luaB_rawset (lua_State *L) {
-  luaL_checktype(L, 1, LUA_TTABLE);
-  luaL_checkany(L, 2);
-  luaL_checkany(L, 3);
+  luaL_check_rawtype(L, 1, LUA_TTABLE);
+  luaL_check_any(L, 2);
+  luaL_check_any(L, 3);
   lua_rawset(L, -3);
   return 1;
 }
@@ -262,21 +262,21 @@ static int luaB_collectgarbage (lua_State *L) {
 
 
 static int luaB_type (lua_State *L) {
-  luaL_checkany(L, 1);
+  luaL_check_any(L, 1);
   lua_pushstring(L, lua_type(L, 1));
   return 1;
 }
 
 
 static int luaB_rawtype (lua_State *L) {
-  luaL_checkany(L, 1);
+  luaL_check_any(L, 1);
   lua_pushstring(L, lua_tag2name(L, lua_rawtag(L, 1)));
   return 1;
 }
 
 
 static int luaB_next (lua_State *L) {
-  luaL_checktype(L, 1, LUA_TTABLE);
+  luaL_check_rawtype(L, 1, LUA_TTABLE);
   lua_settop(L, 2);  /* create a 2nd argument if there isn't one */
   if (lua_next(L, 1))
     return 2;
@@ -394,9 +394,9 @@ static int luaB_require (lua_State *L) {
 
 static int aux_unpack (lua_State *L, int arg) {
   int n, i;
-  luaL_checktype(L, arg, LUA_TTABLE);
+  luaL_check_rawtype(L, arg, LUA_TTABLE);
   n = lua_getn(L, arg);
-  luaL_checkstack(L, n, l_s("table too big to unpack"));
+  luaL_check_stack(L, n, l_s("table too big to unpack"));
   for (i=1; i<=n; i++)  /* push arg[1...n] */
     lua_rawgeti(L, arg, i);
   return n;
@@ -479,8 +479,8 @@ static int luaB_tostring (lua_State *L) {
 
 static int luaB_foreachi (lua_State *L) {
   int n, i;
-  luaL_checktype(L, 1, LUA_TTABLE);
-  luaL_checktype(L, 2, LUA_TFUNCTION);
+  luaL_check_rawtype(L, 1, LUA_TTABLE);
+  luaL_check_rawtype(L, 2, LUA_TFUNCTION);
   n = lua_getn(L, 1);
   for (i=1; i<=n; i++) {
     lua_pushvalue(L, 2);  /* function */
@@ -496,8 +496,8 @@ static int luaB_foreachi (lua_State *L) {
 
 
 static int luaB_foreach (lua_State *L) {
-  luaL_checktype(L, 1, LUA_TTABLE);
-  luaL_checktype(L, 2, LUA_TFUNCTION);
+  luaL_check_rawtype(L, 1, LUA_TTABLE);
+  luaL_check_rawtype(L, 2, LUA_TFUNCTION);
   lua_pushnil(L);  /* first index */
   for (;;) {
     if (lua_next(L, 1) == 0)
@@ -514,16 +514,17 @@ static int luaB_foreach (lua_State *L) {
 
 
 static int luaB_assert (lua_State *L) {
-  luaL_checkany(L, 1);
+  luaL_check_any(L, 1);
   if (lua_isnil(L, 1))
-    luaL_verror(L, l_s("assertion failed!  %.90s"), luaL_opt_string(L, 2, l_s("")));
+    luaL_verror(L, l_s("assertion failed!  %.90s"),
+                   luaL_opt_string(L, 2, l_s("")));
   lua_settop(L, 1);
   return 1;
 }
 
 
 static int luaB_getn (lua_State *L) {
-  luaL_checktype(L, 1, LUA_TTABLE);
+  luaL_check_rawtype(L, 1, LUA_TTABLE);
   lua_pushnumber(L, lua_getn(L, 1));
   return 1;
 }
@@ -532,7 +533,7 @@ static int luaB_getn (lua_State *L) {
 static int luaB_tinsert (lua_State *L) {
   int v = lua_gettop(L);  /* number of arguments */
   int n, pos;
-  luaL_checktype(L, 1, LUA_TTABLE);
+  luaL_check_rawtype(L, 1, LUA_TTABLE);
   n = lua_getn(L, 1);
   if (v == 2)  /* called with only 2 arguments */
     pos = n+1;
@@ -553,7 +554,7 @@ static int luaB_tinsert (lua_State *L) {
 
 static int luaB_tremove (lua_State *L) {
   int pos, n;
-  luaL_checktype(L, 1, LUA_TTABLE);
+  luaL_check_rawtype(L, 1, LUA_TTABLE);
   n = lua_getn(L, 1);
   pos = luaL_opt_int(L, 2, n);
   if (n <= 0) return 0;  /* table is `empty' */
@@ -665,10 +666,10 @@ static void auxsort (lua_State *L, int l, int u) {
 
 static int luaB_sort (lua_State *L) {
   int n;
-  luaL_checktype(L, 1, LUA_TTABLE);
+  luaL_check_rawtype(L, 1, LUA_TTABLE);
   n = lua_getn(L, 1);
   if (!lua_isnull(L, 2))  /* is there a 2nd argument? */
-    luaL_checktype(L, 2, LUA_TFUNCTION);
+    luaL_check_rawtype(L, 2, LUA_TFUNCTION);
   lua_settop(L, 2);  /* make sure there is two arguments */
   auxsort(L, 1, n);
   return 0;
