@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.76 2002/06/03 20:11:41 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.77 2002/06/05 16:59:21 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -459,7 +459,7 @@ static const luaL_reg co_funcs[] = {
 
 
 static void co_open (lua_State *L) {
-  luaL_opennamedlib(L, "co", co_funcs, 0);
+  luaL_opennamedlib(L, LUA_COLIBNAME, co_funcs, 0);
   /* create metatable for coroutines */
   lua_pushliteral(L, "Coroutine");
   lua_newtable(L);

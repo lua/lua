@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.5 2002/05/06 19:05:10 roberto Exp roberto $
+** $Id: liolib.c,v 2.6 2002/06/05 16:59:37 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -594,12 +594,12 @@ static const luaL_reg syslib[] = {
 
 LUALIB_API int lua_iolibopen (lua_State *L) {
   createmeta(L);
-  luaL_opennamedlib(L, "os", syslib, 0);
+  luaL_opennamedlib(L, LUA_OSLIBNAME, syslib, 0);
   lua_pushliteral(L, FILEHANDLE);  /* S: FH */
   lua_rawget(L, LUA_REGISTRYINDEX);  /* S: mt */
   lua_pushvalue(L, -1);  /* S: mt mt */
-  luaL_opennamedlib(L, "io", iolib, 1);  /* S: mt */
-  lua_pushliteral(L, "io");  /* S: `io' mt */
+  luaL_opennamedlib(L, LUA_IOLIBNAME, iolib, 1);  /* S: mt */
+  lua_pushliteral(L, LUA_IOLIBNAME);  /* S: `io' mt */
   lua_gettable(L, LUA_GLOBALSINDEX);  /* S: io mt */
   /* put predefined file handles into `io' table */
   registerfile(L, stdin, "stdin", IO_INPUT);
