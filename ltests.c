@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: ltests.c,v 1.109 2002/02/14 21:42:22 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -561,8 +561,14 @@ static int testC (lua_State *L) {
     else if EQ("pushnum") {
       lua_pushnumber(L, getnum);
     }
+    else if EQ("pushnil") {
+      lua_pushnil(L);
+    }
     else if EQ("pushbool") {
       lua_pushboolean(L, getnum);
+    }
+    else if EQ("tobool") {
+      lua_pushnumber(L, lua_toboolean(L, getnum));
     }
     else if EQ("pushvalue") {
       lua_pushvalue(L, getnum);
