@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.126 2003/10/03 16:05:34 roberto Exp roberto $
+** $Id: llex.c,v 1.127 2003/10/03 16:07:44 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -69,20 +69,6 @@ void luaX_checklimit (LexState *ls, int val, int limit, const char *msg) {
 }
 
 
-void luaX_errorline (LexState *ls, const char *s, const char *token, int line) {
-  lua_State *L = ls->L;
-  char buff[MAXSRC];
-  luaO_chunkid(buff, getstr(ls->source), MAXSRC);
-  luaO_pushfstring(L, "%s:%d: %s near `%s'", buff, line, s, token); 
-  luaD_throw(L, LUA_ERRSYNTAX);
-}
-
-
-static void luaX_error (LexState *ls, const char *s, const char *token) {
-  luaX_errorline(ls, s, token, ls->linenumber);
-}
-
-
 const char *luaX_token2str (LexState *ls, int token) {
   if (token < FIRST_RESERVED) {
     lua_assert(token == (unsigned char)token);
@@ -108,7 +94,11 @@ static const char *txtToken (LexState *ls, int token) {
 
 
 static void luaX_lexerror (LexState *ls, const char *msg, int token) {
-    luaX_error(ls, msg, txtToken(ls, token));
+  char buff[MAXSRC];
+  luaO_chunkid(buff, getstr(ls->source), MAXSRC);
+  luaO_pushfstring(ls->L, "%s:%d: %s near `%s'",
+                          buff, ls->linenumber, msg, txtToken(ls, token)); 
+  luaD_throw(ls->L, LUA_ERRSYNTAX);
 }
 
 
