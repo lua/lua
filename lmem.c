@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.32 2000/05/31 16:53:30 roberto Exp roberto $
+** $Id: lmem.c,v 1.33 2000/06/12 13:52:05 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -47,7 +47,8 @@
 
 
 /* ensures maximum alignment for HEADER */
-#define HEADER	(sizeof(union { double d; char *s; long l; }))
+union L_U { double d; char *s; long l; };
+#define HEADER	(sizeof(union L_U))
 
 #define MARKSIZE	16
 #define MARK		0x55  /* 01010101 (a nice pattern) */

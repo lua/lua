@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.66 2000/05/30 19:00:31 roberto Exp roberto $
+** $Id: lobject.h,v 1.67 2000/06/08 18:27:13 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -46,9 +46,8 @@ typedef enum {
   TAG_NIL,	/* last "pre-defined" tag */
 
   TAG_LMARK,	/* mark for Lua closures */
-  TAG_CMARK,	/* mark for C closures */
+  TAG_CMARK	/* mark for C closures */
 
-  TAG_LINE
 } lua_Type;
 
 /* tags for values visible from Lua == first user-created tag */
@@ -63,10 +62,10 @@ typedef enum {
 
 typedef union {
   struct TString *ts;	/* TAG_STRING, TAG_USERDATA */
-  struct Closure *cl;	/* TAG_[CL]CLOSURE, TAG_[CL]MARK */
+  struct Closure *cl;	/* TAG_[CL]CLOSURE, TAG_CMARK */
   struct Hash *a;	/* TAG_TABLE */
+  struct CallInfo *i;	/* TAG_LMARK */
   Number n;		/* TAG_NUMBER */
-  int i;		/* TAG_LINE */
 } Value;
 
 
@@ -76,6 +75,7 @@ typedef union {
 #define tsvalue(o)      ((o)->value.ts)
 #define clvalue(o)      ((o)->value.cl)
 #define hvalue(o)       ((o)->value.a)
+#define infovalue(o)	((o)->value.i)
 #define svalue(o)       (tsvalue(o)->str)
 
 
@@ -119,8 +119,10 @@ typedef struct Proto {
   struct Proto **kproto;  /* functions defined inside the function */
   int nkproto;  /* size of `kproto' */
   Instruction *code;  /* ends with opcode ENDCODE */
+  int *lines;  /* source line that generated each opcode */
   int lineDefined;
   TString  *source;
+  int debug;  /* flag for debug information */
   int numparams;
   int is_vararg;
   int maxstacksize;
@@ -130,7 +132,7 @@ typedef struct Proto {
 
 typedef struct LocVar {
   TString *varname;           /* NULL signals end of scope */
-  int line;
+  int pc;
 } LocVar;
 
 
@@ -163,6 +165,16 @@ typedef struct Hash {
   struct Hash *next;
   int marked;
 } Hash;
+
+
+/*
+** informations about a call (for debugging)
+*/
+typedef struct CallInfo {
+  int pc;  /* current pc of called function */
+  int line;  /* current line */
+  struct Closure *func;  /* function being called */
+} CallInfo;
 
 
 extern const char *const luaO_typenames[];

@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.23 2000/05/30 19:00:31 roberto Exp roberto $
+** $Id: lfunc.c,v 1.24 2000/06/12 13:52:05 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -35,6 +35,7 @@ Closure *luaF_newclosure (lua_State *L, int nelems) {
 Proto *luaF_newproto (lua_State *L) {
   Proto *f = luaM_new(L, Proto);
   f->code = NULL;
+  f->lines = NULL;
   f->lineDefined = 0;
   f->source = NULL;
   f->kstr = NULL;
@@ -59,6 +60,7 @@ void luaF_freeproto (lua_State *L, Proto *f) {
   luaM_free(L, f->kstr);
   luaM_free(L, f->knum);
   luaM_free(L, f->kproto);
+  luaM_free(L, f->lines);
   luaM_free(L, f);
 }
 
@@ -73,14 +75,13 @@ void luaF_freeclosure (lua_State *L, Closure *c) {
 ** Look for n-th local variable at line `line' in function `func'.
 ** Returns NULL if not found.
 */
-const char *luaF_getlocalname (const Proto *func,
-                               int local_number, int line) {
+const char *luaF_getlocalname (const Proto *func, int local_number, int pc) {
   int count = 0;
   const char *varname = NULL;
   LocVar *lv = func->locvars;
   if (lv == NULL)
     return NULL;
-  for (; lv->line != -1 && lv->line < line; lv++) {
+  for (; lv->pc != -1 && lv->pc <= pc; lv++) {
     if (lv->varname) {  /* register */
       if (++count == local_number)
         varname = lv->varname->str;

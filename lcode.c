@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.37 2000/06/21 17:05:49 roberto Exp roberto $
+** $Id: lcode.c,v 1.38 2000/06/21 18:13:56 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -283,7 +283,6 @@ static void luaK_testgo (FuncState *fs, expdesc *v, int invert, OpCode jump) {
   prevpos = fs->pc-1;
   previous = &fs->f->code[prevpos];
   LUA_ASSERT(L, *previous==previous_instruction(fs), "no jump allowed here");
-  LUA_ASSERT(L, GET_OPCODE(*previous) != OP_SETLINE, "no setline allowed here");
   if (!ISJUMP(GET_OPCODE(*previous)))
     prevpos = luaK_code1(fs, jump, NO_JUMP);
   else {  /* last instruction is already a jump */
@@ -316,7 +315,6 @@ void luaK_tostack (LexState *ls, expdesc *v, int onlyone) {
   FuncState *fs = ls->fs;
   if (!discharge(fs, v)) {  /* `v' is an expression? */
     OpCode previous = GET_OPCODE(fs->f->code[fs->pc-1]);
-    LUA_ASSERT(L, previous != OP_SETLINE, "bad place to set line");
     if (!ISJUMP(previous) && v->u.l.f == NO_JUMP && v->u.l.t == NO_JUMP) {
       /* expression has no jumps */
       if (onlyone)
@@ -623,17 +621,15 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
     case iS: i = CREATE_S(o, arg1); break;
     case iAB: i = CREATE_AB(o, arg1, arg2); break;
   }
-  /* check space for new instruction plus eventual SETLINE */
-  luaM_growvector(fs->L, fs->f->code, fs->pc, 2, Instruction,
-                  "code size overflow", MAX_INT);
-  /* check the need for SETLINE */
-  if (fs->debug && fs->ls->lastline != fs->lastsetline) {
+  if (fs->f->debug) {
     LexState *ls = fs->ls;
     luaX_checklimit(ls, ls->lastline, MAXARG_U, "lines in a chunk");
-    fs->f->code[fs->pc++] = CREATE_U(OP_SETLINE, ls->lastline);
-    fs->lastsetline = ls->lastline;
+    luaM_growvector(fs->L, fs->f->lines, fs->pc, 1, int, "??", MAXARG_U);
+    fs->f->lines[fs->pc] = ls->lastline;
   }
   /* put new instruction in code array */
+  luaM_growvector(fs->L, fs->f->code, fs->pc, 1, Instruction,
+                  "code size overflow", MAX_INT);
   fs->f->code[fs->pc] = i;
   return fs->pc++;
 }
@@ -688,6 +684,5 @@ const struct OpProperties luaK_opproperties[NUM_OPCODES] = {
   {iS, -3},	/* OP_FORLOOP */
   {iS, 3},	/* OP_LFORPREP */
   {iS, -4},	/* OP_LFORLOOP */
-  {iAB, VD},	/* OP_CLOSURE */
-  {iU, 0}	/* OP_SETLINE */
+  {iAB, VD}	/* OP_CLOSURE */
 };

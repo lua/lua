@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.115 2000/06/12 13:52:05 roberto Exp roberto $
+** $Id: lvm.c,v 1.116 2000/06/19 18:04:41 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -63,6 +63,23 @@ int luaV_tostring (lua_State *L, TObject *obj) {  /* LUA_NUMBER */
     tsvalue(obj) = luaS_new(L, s);
     ttype(obj) = TAG_STRING;
     return 0;
+  }
+}
+
+
+static void traceexec (lua_State *L, StkId base, int pc) {
+  CallInfo *ci = infovalue(base-1);
+  int oldpc = ci->pc;
+  pc--;  /* pc has been already incremented */
+  ci->pc = pc;
+  if (L->linehook && ci->func->f.l->debug) {
+    int *lines = ci->func->f.l->lines;
+    LUA_ASSERT(L, lines, "must have debug information");
+    /* calls linehook when jumps back (a loop) or enters a new line */
+    if (pc <= oldpc || lines[pc] != ci->line) {
+      ci->line = lines[pc];
+      luaD_lineHook(L, base-2, lines[pc]);
+    }
   }
 }
 
@@ -226,13 +243,6 @@ static void call_arith (lua_State *L, StkId top, IMS event) {
 }
 
 
-static void addK (lua_State *L, StkId top, int k) {
-  ttype(top) = TAG_NUMBER;
-  nvalue(top) = (Number)k;
-  call_arith(L, top+1, IM_ADD);
-}
-
-
 static int luaV_strcomp (const TString *ls, const TString *rs) {
   const char *l = ls->str;
   size_t ll = ls->u.s.len;
@@ -338,6 +348,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
   StkId top;  /* keep top local, for performance */
   const Instruction *pc = tf->code;
   TString **kstr = tf->kstr;
+  int debug = tf->debug;
   luaD_checkstack(L, tf->maxstacksize+EXTRA_STACK);
   if (tf->is_vararg) {  /* varargs? */
     adjust_varargs(L, base, tf->numparams);
@@ -346,8 +357,13 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
   else
     luaD_adjusttop(L, base, tf->numparams);
   top = L->top;
+  /* main loop of interpreter */
   for (;;) {
     Instruction i = *pc++;
+    if (debug) {
+      L->top = top;
+      traceexec(L, base, pc - tf->code);
+    }
     switch (GET_OPCODE(i)) {
 
       case OP_END:
@@ -499,8 +515,11 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
 
       case OP_ADDI:
-        if (tonumber(top-1))
-          addK(L, top, GETARG_S(i));
+        if (tonumber(top-1)) {
+          ttype(top) = TAG_NUMBER;
+          nvalue(top) = (Number)GETARG_S(i);
+          call_arith(L, top+1, IM_ADD);
+        }
         else
           nvalue(top-1) += (Number)GETARG_S(i);
         break;
@@ -622,35 +641,44 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
           lua_error(L, "`for' limit must be a number");
         if (tonumber(top-3))
           lua_error(L, "`for' initial value must be a number");
-        /* number of steps */
-        nvalue(top-2) = (nvalue(top-2)-nvalue(top-3))/nvalue(top-1);
-        nvalue(top-3) -= nvalue(top-1);  /* to be undone by first FORLOOP */
-        pc += GETARG_S(i);
+        if (nvalue(top-1) > 0 ?
+            nvalue(top-3) > nvalue(top-2) :
+            nvalue(top-3) < nvalue(top-2)) {  /* `empty' loop? */
+          top -= 3;  /* remove control variables */
+          pc += GETARG_S(i)+1;  /* jump to loop end */
+        }
         break;
 
       case OP_FORLOOP: {
         LUA_ASSERT(L, ttype(top-1) == TAG_NUMBER, "invalid step");
-        LUA_ASSERT(L, ttype(top-2) == TAG_NUMBER, "invalid count");
-        if (nvalue(top-2) < 0)
+        LUA_ASSERT(L, ttype(top-2) == TAG_NUMBER, "invalid limit");
+        if (ttype(top-3) != TAG_NUMBER)
+          lua_error(L, "`for' index must be a number");
+        nvalue(top-3) += nvalue(top-1);  /* increment index */
+        if (nvalue(top-1) > 0 ?
+            nvalue(top-3) > nvalue(top-2) :
+            nvalue(top-3) < nvalue(top-2))
           top -= 3;  /* end loop: remove control variables */
-        else {
-          nvalue(top-2)--;  /* decrement count */
-          if (ttype(top-3) != TAG_NUMBER)
-            lua_error(L, "`for' index must be a number");
-          nvalue(top-3) += nvalue(top-1);  /* increment index */
-          pc += GETARG_S(i);
-        }
+        else
+          pc += GETARG_S(i);  /* repeat loop */
         break;
       }
 
       case OP_LFORPREP: {
         if (ttype(top-1) != TAG_TABLE)
           lua_error(L, "`for' table must be a table");
-        top += 3;  /* counter + index,value */
-        ttype(top-3) = TAG_NUMBER;
-        nvalue(top-3) = 0.0;  /* counter */
-        ttype(top-2) = ttype(top-1) = TAG_NIL;
-        pc += GETARG_S(i);
+        top++;  /* counter */
+        L->top = top;
+        ttype(top-1) = TAG_NUMBER;
+        nvalue(top-1) = (Number)luaA_next(L, hvalue(top-2), 0);  /* counter */
+        if (nvalue(top-1) == 0) {  /* `empty' loop? */
+          top -= 2;  /* remove table and counter */
+          pc += GETARG_S(i)+1;  /* jump to loop end */
+        }
+        else {
+          top += 2;  /* index,value */
+          LUA_ASSERT(L, top==L->top, "bad top");
+        }
         break;
       }
 
@@ -676,22 +704,6 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         luaV_Lclosure(L, tf->kproto[GETARG_A(i)], GETARG_B(i));
         top = L->top;
         luaC_checkGC(L);
-        break;
-
-      case OP_SETLINE:
-        if ((base-1)->ttype != TAG_LINE) {
-          /* open space for LINE value */
-          int n = top-base;
-          while (n--) base[n+1] = base[n];
-          base++;
-          top++;
-          (base-1)->ttype = TAG_LINE;
-        }
-        (base-1)->value.i = GETARG_U(i);
-        if (L->linehook) {
-          L->top = top;
-          luaD_lineHook(L, base-2, GETARG_U(i));
-        }
         break;
 
     }

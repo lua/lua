@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.21 2000/05/08 19:32:53 roberto Exp roberto $
+** $Id: lundump.c,v 1.22 2000/06/12 13:52:05 roberto Exp roberto $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -93,7 +93,7 @@ static TString* LoadString (lua_State* L, ZIO* Z)
 static void SwapCode (lua_State* L, Instruction* code, int size, ZIO* Z)
 {
  unsigned char* p;
- int c;
+ unsigned char c;
  if (sizeof(Instruction)==4)
   while (size--)
   {
@@ -138,10 +138,10 @@ static void LoadLocals (lua_State* L, Proto* tf, ZIO* Z)
  tf->locvars=luaM_newvector(L,n+1,LocVar);
  for (i=0; i<n; i++)
  {
-  tf->locvars[i].line=LoadInt(L,Z,"too many lines");
+  tf->locvars[i].pc=LoadInt(L,Z,"too many lines");
   tf->locvars[i].varname=LoadString(L,Z);
  }
- tf->locvars[i].line=-1;		/* flag end of vector */
+ tf->locvars[i].pc=-1;		/* flag end of vector */
  tf->locvars[i].varname=NULL;
 }
 

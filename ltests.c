@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.25 2000/06/12 13:52:05 roberto Exp roberto $
+** $Id: ltests.c,v 1.26 2000/06/21 17:05:49 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -58,7 +58,7 @@ static const char *const instrname[NUM_OPCODES] = {
   "ADD", "ADDI", "SUB", "MULT", "DIV", "POW", "CONCAT", "MINUS", "NOT", 
   "JMPNE", "JMPEQ", "JMPLT", "JMPLE", "JMPGT", "JMPGE", "JMPT", "JMPF", 
   "JMPONT", "JMPONF", "JMP", "PUSHNILJMP", "FORPREP", "FORLOOP", "LFORPREP", 
-  "LFORLOOP", "CLOSURE", "SETLINE"
+  "LFORLOOP", "CLOSURE"
 };
 
 

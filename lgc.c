@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.56 2000/06/08 17:48:31 roberto Exp roberto $
+** $Id: lgc.c,v 1.57 2000/06/12 13:52:05 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -41,7 +41,7 @@ static void protomark (lua_State *L, Proto *f) {
       protomark(L, f->kproto[i]);
     if (f->locvars) {  /* is there debug information? */
       LocVar *lv;
-      for (lv=f->locvars; lv->line != -1; lv++)  /* mark local-variable names */
+      for (lv=f->locvars; lv->pc != -1; lv++)  /* mark local-variable names */
         if (lv->varname) strmark(L, lv->varname);
     }
   }
@@ -99,9 +99,16 @@ static int markobject (lua_State *L, TObject *o) {
     case TAG_TABLE:
       tablemark(L, hvalue(o));
       break;
-    case TAG_LCLOSURE:  case TAG_LMARK:
+    case TAG_LCLOSURE:
       protomark(L, clvalue(o)->f.l);
-      /* go trhough */
+      closuremark(L, clvalue(o));
+      break;
+    case TAG_LMARK: {
+      Closure *cl = infovalue(o)->func;
+      protomark(L, cl->f.l);
+      closuremark(L, cl);
+      break;
+    }
     case TAG_CCLOSURE:  case TAG_CMARK:
       closuremark(L, clvalue(o));
       break;

@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.63 2000/06/05 14:56:18 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.64 2000/06/21 17:05:49 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -146,13 +146,11 @@ OP_FORLOOP,/*	J							*/
 OP_LFORPREP,/*	J							*/
 OP_LFORLOOP,/*	J							*/
 
-OP_CLOSURE,/*	A B	v_b-v_1		closure(KPROTO[a], v_1-v_b)	*/
-
-OP_SETLINE/*	U	-		-		LINE=u		*/
+OP_CLOSURE/*	A B	v_b-v_1		closure(KPROTO[a], v_1-v_b)	*/
 
 } OpCode;
 
-#define NUM_OPCODES	((int)OP_SETLINE+1)
+#define NUM_OPCODES	((int)OP_CLOSURE+1)
 
 
 #define ISJUMP(o)	(OP_JMPNE <= (o) && (o) <= OP_JMP)

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.97 2000/06/19 18:26:23 roberto Exp roberto $
+** $Id: lparser.c,v 1.98 2000/06/21 18:13:56 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -152,19 +152,19 @@ static int checkname (LexState *ls) {
 }
 
 
-static void luaI_registerlocalvar (LexState *ls, TString *varname, int line) {
+static void luaI_registerlocalvar (LexState *ls, TString *varname, int pc) {
   FuncState *fs = ls->fs;
-  if (fs->debug) {
+  if (fs->f->debug) {
     Proto *f = fs->f;
     luaM_growvector(ls->L, f->locvars, fs->nvars, 1, LocVar, "", MAX_INT);
     f->locvars[fs->nvars].varname = varname;
-    f->locvars[fs->nvars].line = line;
+    f->locvars[fs->nvars].pc = pc;
     fs->nvars++;
   }
 }
 
 
-static void store_localvar (LexState *ls, TString *name, int n) {
+static void new_localvar (LexState *ls, TString *name, int n) {
   FuncState *fs = ls->fs;
   luaX_checklimit(ls, fs->nlocalvar+n+1, MAXLOCALS, "local variables");
   fs->localvar[fs->nlocalvar+n] = name;
@@ -172,27 +172,27 @@ static void store_localvar (LexState *ls, TString *name, int n) {
 
 
 static void adjustlocalvars (LexState *ls, int nvars) {
-  int line = ls->fs->lastsetline;
   FuncState *fs = ls->fs;
   int i;
+  /* `pc' is first opcode where variable is already active */
   for (i=fs->nlocalvar; i<fs->nlocalvar+nvars; i++)
-    luaI_registerlocalvar(ls, fs->localvar[i], line);
+    luaI_registerlocalvar(ls, fs->localvar[i], fs->pc);
   fs->nlocalvar += nvars;
 }
 
 
 static void removelocalvars (LexState *ls, int nvars) {
-  int line = ls->fs->lastsetline;
+  FuncState *fs = ls->fs;
   int i;
+  /* `pc' is first opcode where variable is already dead */
   for (i=0;i<nvars;i++)
-    luaI_registerlocalvar(ls, NULL, line);
-  ls->fs->nlocalvar -= nvars;
+    luaI_registerlocalvar(ls, NULL, fs->pc);
+  fs->nlocalvar -= nvars;
 }
 
 
-static void add_localvar (LexState *ls, const char *name) {
-  store_localvar(ls, luaS_newfixed(ls->L, name), 0);
-  adjustlocalvars(ls, 1);
+static void new_localvarstr (LexState *ls, const char *name, int n) {
+  new_localvar(ls, luaS_newfixed(ls->L, name), n);
 }
 
 
@@ -277,8 +277,10 @@ static void code_params (LexState *ls, int nparams, int dots) {
   luaX_checklimit(ls, fs->nlocalvar, MAXPARAMS, "parameters");
   fs->f->numparams = fs->nlocalvar;  /* `self' could be there already */
   fs->f->is_vararg = dots;
-  if (dots)
-    add_localvar(ls, "arg");
+  if (dots) {
+    new_localvarstr(ls, "arg", 0);
+    adjustlocalvars(ls, 1);
+  }
   luaK_deltastack(fs, fs->nlocalvar);  /* count parameters in the stack */
 }
 
@@ -320,7 +322,6 @@ static void open_func (LexState *ls, FuncState *fs) {
   fs->stacklevel = 0;
   fs->nlocalvar = 0;
   fs->nupvalues = 0;
-  fs->lastsetline = 0;
   fs->bl = NULL;
   fs->f = f;
   f->source = ls->source;
@@ -358,7 +359,7 @@ Proto *luaY_parser (lua_State *L, ZIO *z) {
   luaX_setinput(L, &lexstate, z, luaS_new(L, zname(z)));
   open_func(&lexstate, &funcstate);
   next(&lexstate);  /* read first token */
-  funcstate.debug = L->debug;  /* previous `next' may scan a pragma */
+  funcstate.f->debug = L->debug;  /* previous `next' may scan a pragma */
   chunk(&lexstate);
   check_condition(&lexstate, (lexstate.t.token == TK_EOS), "<eof> expected");
   close_func(&lexstate);
@@ -821,22 +822,23 @@ static void repeatstat (LexState *ls, int line) {
 }
 
 
-static void forbody (LexState *ls, OpCode prepfor, OpCode loopfor) {
+static void forbody (LexState *ls, int nvar, OpCode prepfor, OpCode loopfor) {
   /* forbody -> DO block END */
   FuncState *fs = ls->fs;
   int prep = luaK_code1(fs, prepfor, NO_JUMP);
   int blockinit = luaK_getlabel(fs);
   check(ls, TK_DO);
+  adjustlocalvars(ls, nvar);  /* scope for control variables */
   block(ls);
   luaK_patchlist(fs, prep, luaK_getlabel(fs));
   luaK_patchlist(fs, luaK_code1(fs, loopfor, NO_JUMP), blockinit);
+  removelocalvars(ls, nvar);
 }
 
 
 static void fornum (LexState *ls, TString *varname) {
   /* fornum -> NAME = exp1,exp1[,exp1] forbody */
   FuncState *fs = ls->fs;
-  store_localvar(ls, varname, 0);
   check(ls, '=');
   exp1(ls);  /* initial value */
   check(ls, ',');
@@ -845,11 +847,10 @@ static void fornum (LexState *ls, TString *varname) {
     exp1(ls);  /* optional step */
   else
     luaK_code1(fs, OP_PUSHINT, 1);  /* default step */
-  adjustlocalvars(ls, 1);  /* scope for control variables */
-  add_localvar(ls, "*limit*");
-  add_localvar(ls, "*count*");
-  forbody(ls, OP_FORPREP, OP_FORLOOP);
-  removelocalvars(ls, 3);
+  new_localvar(ls, varname, 0);
+  new_localvarstr(ls, "*limit*", 1);
+  new_localvarstr(ls, "*step*", 2);
+  forbody(ls, 3, OP_FORPREP, OP_FORLOOP);
 }
 
 
@@ -864,13 +865,11 @@ static void forlist (LexState *ls, TString *indexname) {
        "`in' expected");
   next(ls);  /* skip `in' */
   exp1(ls);  /* table */
-  add_localvar(ls, "*table*");
-  add_localvar(ls, "*counter*");
-  store_localvar(ls, indexname, 0);
-  store_localvar(ls, valname, 1);
-  adjustlocalvars(ls, 2);  /* scope for control variable */
-  forbody(ls, OP_LFORPREP, OP_LFORLOOP);
-  removelocalvars(ls, 4);
+  new_localvarstr(ls, "*table*", 0);
+  new_localvarstr(ls, "*counter*", 1);
+  new_localvar(ls, indexname, 2);
+  new_localvar(ls, valname, 3);
+  forbody(ls, 4, OP_LFORPREP, OP_LFORLOOP);
 }
 
 
@@ -931,7 +930,7 @@ static void localstat (LexState *ls) {
   int nexps;
   do {
     next(ls);  /* skip LOCAL or ',' */
-    store_localvar(ls, str_checkname(ls), nvars++);
+    new_localvar(ls, str_checkname(ls), nvars++);
   } while (ls->t.token == ',');
   if (optional(ls, '='))
     nexps = explist1(ls);
@@ -1072,7 +1071,7 @@ static void parlist (LexState *ls) {
     do {
       switch (ls->t.token) {
         case TK_DOTS: next(ls); dots = 1; break;
-        case TK_NAME: store_localvar(ls, str_checkname(ls), nparams++); break;
+        case TK_NAME: new_localvar(ls, str_checkname(ls), nparams++); break;
         default: luaK_error(ls, "<name> or `...' expected");
       }
     } while (!dots && optional(ls, ','));
@@ -1086,10 +1085,12 @@ static void body (LexState *ls, int needself, int line) {
   FuncState new_fs;
   open_func(ls, &new_fs);
   new_fs.f->lineDefined = line;
-  new_fs.debug = ls->L->debug;
+  new_fs.f->debug = ls->L->debug;
   check(ls, '(');
-  if (needself)
-    add_localvar(ls, "self");
+  if (needself) {
+    new_localvarstr(ls, "self", 0);
+    adjustlocalvars(ls, 1);
+  }
   parlist(ls);
   check(ls, ')');
   chunk(ls);

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.22 2000/06/08 17:48:31 roberto Exp roberto $
+** $Id: ldebug.c,v 1.23 2000/06/12 13:52:05 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -23,22 +23,21 @@
 #include "luadebug.h"
 
 
-static const lua_Type normtype[] = {  /* ORDER LUA_T */
-  TAG_USERDATA, TAG_NUMBER, TAG_STRING, TAG_TABLE,
-  TAG_LCLOSURE, TAG_CCLOSURE, TAG_NIL,
-  TAG_LCLOSURE, TAG_CCLOSURE   /* TAG_LMARK, TAG_CMARK */
-};
-
 
 static void setnormalized (TObject *d, const TObject *s) {
-  d->value = s->value;
-  d->ttype = normtype[ttype(s)];
-}
-
-
-
-static int hasdebuginfo (lua_State *L, StkId f) {
-  return (f+1 < L->top && (f+1)->ttype == TAG_LINE);
+  switch (s->ttype) {
+    case TAG_CMARK: {
+      clvalue(d) = clvalue(s);
+      ttype(d) = TAG_CCLOSURE;
+      break;
+    }
+    case TAG_LMARK: {
+      clvalue(d) = infovalue(s)->func;
+      ttype(d) = TAG_LCLOSURE;
+      break;
+    }
+    default: *d = *s;
+  }
 }
 
 
@@ -88,22 +87,35 @@ int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
 
 static int lua_nups (StkId f) {
   switch (ttype(f)) {
-    case TAG_LCLOSURE:  case TAG_CCLOSURE:
-    case TAG_LMARK:   case TAG_CMARK:
+    case TAG_LCLOSURE:  case TAG_CCLOSURE: case TAG_CMARK:
       return clvalue(f)->nupvalues;
+    case TAG_LMARK:
+      return infovalue(f)->func->nupvalues;
     default:
       return 0;
   }
 }
 
 
-static int lua_currentline (lua_State *L, StkId f) {
-  return hasdebuginfo(L, f) ? (f+1)->value.i : -1;
+static int lua_currentline (StkId f) {
+  if (ttype(f) != TAG_LMARK)
+    return -1;  /* only active lua functions have current-line information */
+  else {
+    CallInfo *ci = infovalue(f);
+    int *lines = ci->func->f.l->lines;
+    if (!lines) return -1;  /* no static debug information */
+    else return lines[ci->pc];
+  }
+}
+
+
+static int lua_currentpc (StkId f) {
+  return infovalue(f)->pc;
 }
 
 
 static Proto *getluaproto (StkId f) {
-  return (ttype(f) == TAG_LMARK) ?  clvalue(f)->f.l : NULL;
+  return (ttype(f) == TAG_LMARK) ?  infovalue(f)->func->f.l : NULL;
 }
 
 
@@ -111,12 +123,9 @@ int lua_getlocal (lua_State *L, const lua_Debug *ar, lua_Localvar *v) {
   StkId f = ar->_func;
   Proto *fp = getluaproto(f);
   if (!fp) return 0;  /* `f' is not a Lua function? */
-  v->name = luaF_getlocalname(fp, v->index, lua_currentline(L, f));
+  v->name = luaF_getlocalname(fp, v->index, lua_currentpc(f));
   if (!v->name) return 0;
-  /* if `name', there must be a TAG_LINE */
-  /* therefore, f+2 points to function base */
-  LUA_ASSERT(L, ttype(f+1) == TAG_LINE, "");
-  v->value = luaA_putluaObject(L, (f+2)+(v->index-1));
+  v->value = luaA_putluaObject(L, (f+1)+(v->index-1));
   return 1;
 }
 
@@ -124,20 +133,25 @@ int lua_getlocal (lua_State *L, const lua_Debug *ar, lua_Localvar *v) {
 int lua_setlocal (lua_State *L, const lua_Debug *ar, lua_Localvar *v) {
   StkId f = ar->_func;
   Proto *fp = getluaproto(f);
+  UNUSED(L);
   if (!fp) return 0;  /* `f' is not a Lua function? */
-  v->name = luaF_getlocalname(fp, v->index, lua_currentline(L, f));
+  v->name = luaF_getlocalname(fp, v->index, lua_currentpc(f));
   if (!v->name || v->name[0] == '*') return 0;  /* `*' starts private locals */
-  LUA_ASSERT(L, ttype(f+1) == TAG_LINE, "");
-  *((f+2)+(v->index-1)) = *v->value;
+  *((f+1)+(v->index-1)) = *v->value;
   return 1;
 }
 
 
 static void lua_funcinfo (lua_Debug *ar, StkId func) {
   switch (ttype(func)) {
-    case TAG_LCLOSURE:  case TAG_LMARK:
+    case TAG_LCLOSURE:
       ar->source = clvalue(func)->f.l->source->str;
       ar->linedefined = clvalue(func)->f.l->lineDefined;
+      ar->what = "Lua";
+      break;
+    case TAG_LMARK:
+      ar->source = infovalue(func)->func->f.l->source->str;
+      ar->linedefined = infovalue(func)->func->f.l->lineDefined;
       ar->what = "Lua";
       break;
     case TAG_CCLOSURE:  case TAG_CMARK:
@@ -191,7 +205,7 @@ int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
         lua_funcinfo(ar, func);
         break;
       case 'l':
-        ar->currentline = lua_currentline(L, func);
+        ar->currentline = lua_currentline(func);
         break;
       case 'u':
         ar->nups = lua_nups(func);
