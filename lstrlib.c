@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.31 1999/05/14 12:24:04 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.32 1999/06/17 17:04:03 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -102,7 +102,7 @@ static void str_char (void) {
   int i = 0;
   luaL_resetbuffer();
   while (lua_getparam(++i) != LUA_NOOBJECT) {
-    double c = luaL_check_number(i);
+    int c = luaL_check_int(i);
     luaL_arg_check((unsigned char)c == c, i, "invalid value");
     luaL_addchar((unsigned char)c);
   }
@@ -166,14 +166,14 @@ static int capture_to_close (struct Capture *cap) {
 char *luaI_classend (char *p) {
   switch (*p++) {
     case ESC:
-      if (*p == '\0')
-        luaL_verror("incorrect pattern (ends with `%c')", ESC);
+      if (*p == '\0') lua_error("incorrect pattern (ends with `%')");
       return p+1;
     case '[':
       if (*p == '^') p++;
-      if (*p == ']') p++;
-      p = strchr(p, ']');
-      if (!p) lua_error("incorrect pattern (missing `]')");
+      do {  /* look for a ']' */
+        if (*p == '\0') lua_error("incorrect pattern (missing `]')");
+        if (*(p++) == ESC && *p != '\0') p++;  /* skip escapes (e.g. '%]') */
+      } while (*p != ']');
       return p+1;
     default:
       return p;
@@ -201,19 +201,19 @@ static int matchclass (int c, int cl) {
 
 
 
-static int matchbracketclass (int c, char *p, char *end) {
+static int matchbracketclass (int c, char *p, char *endclass) {
   int sig = 1;
   if (*(p+1) == '^') {
     sig = 0;
     p++;  /* skip the '^' */
   }
-  while (++p < end) {
+  while (++p < endclass) {
     if (*p == ESC) {
       p++;
-      if ((p < end) && matchclass(c, (unsigned char)*p))
+      if (matchclass(c, (unsigned char)*p))
         return sig;
     }
-    else if ((*(p+1) == '-') && (p+2 < end)) {
+    else if ((*(p+1) == '-') && (p+2 < endclass)) {
       p+=2;
       if ((int)(unsigned char)*(p-2) <= c && c <= (int)(unsigned char)*p)
         return sig;
