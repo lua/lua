@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.22 1994/11/23 14:31:11 roberto Stab roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.23 1994/11/30 21:20:37 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -803,7 +803,10 @@ static int lua_execute (Byte *pc, int base)
 
    case PUSHSELF:
    {
-     Object receiver = *(top-2);
+     Object receiver = *(top-1);
+     CodeWord code;
+     get_word(code,pc);
+     tag(top) = LUA_T_STRING; tsvalue(top++) = lua_constant[code.w];
      pushsubscript();
      *(top++) = receiver;
      break;

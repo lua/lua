@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.11 1994/11/23 14:39:52 roberto Stab roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.12 1994/11/25 19:24:57 roberto Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -418,9 +418,8 @@ functioncall : funcvalue funcParams
 funcvalue    : varexp { $$ = 0; }
 	     | varexp ':' NAME 
 	     { 
-	       code_byte(PUSHSTRING);
-	       code_word(luaI_findconstant($3));
                code_byte(PUSHSELF); 
+	       code_word(luaI_findconstant($3));
                $$ = 1;
 	     }
 	     ;
@@ -830,7 +829,15 @@ static void PrintCode (Byte *code, Byte *end)
     			 printf ("%d    STOREGLOBAL   %d\n", n, c.w);
 			}
    			break;
-   case PUSHSELF: 	 printf ("%d    PUSHSELF\n", (p++)-code); break;
+   case PUSHSELF:
+    			{
+			 CodeWord c;
+			 int n = p-code;
+			 p++;
+			 get_word(c,p);
+    			 printf ("%d    PUSHSELF   %d\n", n, c.w);
+			}
+			break;
    case STOREINDEXED0:  printf ("%d    STOREINDEXED0\n", (p++)-code); break;
    case STOREINDEXED:   printf ("%d    STOREINDEXED   %d\n", p-code, *(++p));
     			p++;
