@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.27 1999/11/10 15:39:35 roberto Exp roberto $
+** $Id: lstring.c,v 1.28 1999/11/22 13:12:07 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -22,23 +22,14 @@
 
 
 
-/*
-** to avoid hash tables with size = 0 (cannot hash with size=0), all
-** hash tables are initialized with this `array'. Elements are never
-** written here, because this table (with size=1) must grow to get an
-** element, and before it grows we replace it for a `real' table.
-**
-*/
-static TaggedString *init_hash[1] = {NULL};
-
-
 void luaS_init (lua_State *L) {
   int i;
   L->string_root = luaM_newvector(L, NUM_HASHS, stringtable);
   for (i=0; i<NUM_HASHS; i++) {
     L->string_root[i].size = 1;
     L->string_root[i].nuse = 0;
-    L->string_root[i].hash = init_hash;
+    L->string_root[i].hash = luaM_newvector(L, 1, TaggedString *);;
+    L->string_root[i].hash[0] = NULL;
   }
 }
 
@@ -47,11 +38,9 @@ void luaS_freeall (lua_State *L) {
   int i;
   for (i=0; i<NUM_HASHS; i++) {
     LUA_ASSERT(L, L->string_root[i].nuse==0, "non-empty string table");
-    if (L->string_root[i].hash != init_hash)
-      luaM_free(L, L->string_root[i].hash);
+    luaM_free(L, L->string_root[i].hash);
   }
   luaM_free(L, L->string_root);
-  LUA_ASSERT(L, init_hash[0] == NULL, "init_hash corrupted");
 }
 
 
@@ -64,7 +53,7 @@ static unsigned long hash_s (const char *s, long l) {
 
 
 void luaS_grow (lua_State *L, stringtable *tb) {
-  int ns = luaO_redimension(L, tb->nuse*2);  /* new size */
+  int ns = luaO_redimension(L, tb->nuse);  /* new size */
   TaggedString **newhash = luaM_newvector(L, ns, TaggedString *);
   int i;
   for (i=0; i<ns; i++) newhash[i] = NULL;
@@ -95,7 +84,8 @@ static TaggedString *newone (lua_State *L, long l, unsigned long h) {
 }
 
 
-static TaggedString *newone_s (lua_State *L, const char *str, long l, unsigned long h) {
+static TaggedString *newone_s (lua_State *L, const char *str,
+                               long l, unsigned long h) {
   TaggedString *ts = newone(L, l, h);
   memcpy(ts->str, str, l);
   ts->str[l] = 0;  /* ending 0 */
@@ -107,7 +97,8 @@ static TaggedString *newone_s (lua_State *L, const char *str, long l, unsigned l
 }
 
 
-static TaggedString *newone_u (lua_State *L, void *buff, int tag, unsigned long h) {
+static TaggedString *newone_u (lua_State *L, void *buff,
+                               int tag, unsigned long h) {
   TaggedString *ts = newone(L, 0, h);
   ts->u.d.value = buff;
   ts->u.d.tag = (tag == LUA_ANYTAG) ? 0 : tag;
@@ -118,18 +109,11 @@ static TaggedString *newone_u (lua_State *L, void *buff, int tag, unsigned long 
 
 
 static void newentry (lua_State *L, stringtable *tb, TaggedString *ts, int h) {
-  tb->nuse++;
-  if (tb->nuse >= tb->size) {  /* no more room? */
-    if (tb->hash == init_hash) {  /* cannot change init_hash */
-      LUA_ASSERT(L, h==0, "`init_hash' has size 1");
-      tb->hash = luaM_newvector(L, 1, TaggedString *);  /* so, `clone' it */
-      tb->hash[0] = NULL;
-    }
-    luaS_grow(L, tb);
-    h = ts->hash%tb->size;  /* new hash position */
-  }
   ts->nexthash = tb->hash[h];  /* chain new entry */
   tb->hash[h] = ts;
+  tb->nuse++;
+  if (tb->nuse > tb->size)  /* too crowded? */
+    luaS_grow(L, tb);
 }
 
 
