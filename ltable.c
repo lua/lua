@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.133 2003/04/28 13:31:46 roberto Exp roberto $
+** $Id: ltable.c,v 1.134 2003/04/28 19:26:16 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -507,6 +507,18 @@ TObject *luaH_setnum (lua_State *L, Table *t, int key) {
   else {
     TObject k;
     setnvalue(&k, cast(lua_Number, key));
+    return newkey(L, t, &k);
+  }
+}
+
+
+TObject *luaH_setstr (lua_State *L, Table *t, TString *key) {
+  const TObject *p = luaH_getstr(t, key);
+  if (p != &luaO_nilobject)
+    return cast(TObject *, p);
+  else {
+    TObject k;
+    setsvalue(&k, key);
     return newkey(L, t, &k);
   }
 }
