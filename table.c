@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.20 1994/11/17 13:58:57 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.21 1994/11/18 19:27:38 roberto Exp roberto $";
 
 #include <string.h>
 
@@ -37,6 +37,8 @@ int      		lua_nfile;
 #define MIN_GARBAGE_BLOCK 10
 
 static void lua_nextvar (void);
+static void setglobal (void);
+static void getglobal (void);
 
 /*
 ** Initialise symbol table with internal functions
@@ -48,6 +50,12 @@ static void lua_initsymbol (void)
  lua_table = newvector(lua_maxsymbol, Symbol);
  n = luaI_findsymbolbyname("next");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_next;
+ n = luaI_findsymbolbyname("dofile");
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_internaldofile;
+ n = luaI_findsymbolbyname("setglobal");
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = setglobal;
+ n = luaI_findsymbolbyname("getglobal");
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = getglobal;
  n = luaI_findsymbolbyname("nextvar");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_nextvar;
  n = luaI_findsymbolbyname("type"); 
@@ -56,8 +64,6 @@ static void lua_initsymbol (void)
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_obj2number;
  n = luaI_findsymbolbyname("print");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_print;
- n = luaI_findsymbolbyname("dofile");
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_internaldofile;
  n = luaI_findsymbolbyname("dostring");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_internaldostring;
  n = luaI_findsymbolbyname("setfallback");
@@ -219,14 +225,14 @@ static void lua_nextvar (void)
  TreeNode *next;
  lua_Object o = lua_getparam(1);
  if (o == 0)
-   lua_error ("too few arguments to function `nextvar'");
+   lua_reportbug("too few arguments to function `nextvar'");
  if (lua_getparam(2) != NULL)
-   lua_error ("too many arguments to function `nextvar'");
+   lua_reportbug("too many arguments to function `nextvar'");
  if (lua_isnil(o))
    varname = NULL;
  else if (!lua_isstring(o))
  {
-   lua_error ("incorrect argument to function `nextvar'"); 
+   lua_reportbug("incorrect argument to function `nextvar'"); 
    return;  /* to avoid warnings */
  }
  else
@@ -245,4 +251,24 @@ static void lua_nextvar (void)
   luaI_pushobject(&name);
   luaI_pushobject(&s_object(next->varindex));
  }
+}
+
+
+static void setglobal (void)
+{
+  lua_Object name = lua_getparam(1);
+  lua_Object value = lua_getparam(2);
+  if (!lua_isstring(name))
+    lua_reportbug("incorrect argument to function `setglobal'");
+  lua_pushobject(value);
+  lua_storeglobal(lua_getstring(name));
+}
+
+
+static void getglobal (void)
+{
+  lua_Object name = lua_getparam(1);
+  if (!lua_isstring(name))
+    lua_reportbug("incorrect argument to function `getglobal'");
+  lua_pushobject(lua_getglobal(lua_getstring(name)));
 }
