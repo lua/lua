@@ -1,5 +1,5 @@
 /*
-** $Id: inout.h,v 1.12 1996/01/26 14:05:28 roberto Exp roberto $
+** $Id: inout.h,v 1.13 1996/02/07 14:13:47 roberto Exp roberto $
 */
 
 
@@ -7,13 +7,14 @@
 #define inout_h
 
 #include "types.h"
+#include "stdio.h"
 
 
 extern Word lua_linenumber;
 extern Word lua_debugline;
 extern char *lua_parsedfile;
 
-int  lua_openfile     (char *fn);
+FILE *lua_openfile     (char *fn);
 void lua_closefile    (void);
 void lua_openstring   (char *s);
 void lua_closestring  (void);

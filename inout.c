@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.32 1996/02/14 18:25:04 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.33 1996/02/26 21:00:27 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,13 +16,7 @@ char *rcs_inout="$Id: inout.c,v 2.32 1996/02/14 18:25:04 roberto Exp roberto $";
 #include "table.h"
 #include "tree.h"
 #include "lua.h"
-
-
-#ifndef MAXFUNCSTACK
-#define MAXFUNCSTACK 100
-#endif
-
-#define MAXMESSAGE MAXFUNCSTACK*80
+#include "mem.h"
 
 
 /* Exported variables */
@@ -51,9 +45,9 @@ static int stringinput (void)
 
 /*
 ** Function to open a file to be input unit. 
-** Return 0 on success or 1 error.
+** Return the file.
 */
-int lua_openfile (char *fn)
+FILE *lua_openfile (char *fn)
 {
  lua_setinput (fileinput);
  if (fn == NULL)
@@ -64,10 +58,10 @@ int lua_openfile (char *fn)
  else
    fp = fopen (fn, "r");
  if (fp == NULL)
-   return 1;
+   return NULL;
  lua_linenumber = 1;
  lua_parsedfile = luaI_createfixedstring(fn)->str;
- return 0;
+ return fp;
 }
 
 /*
@@ -134,7 +128,7 @@ void lua_internaldofile (void)
 
 static char *tostring (lua_Object obj)
 {
-  static char buff[20];
+  char *buff = luaI_buffer(20);
   if (lua_isstring(obj))
     return lua_getstring(obj);
   if (lua_isnumber(obj))
