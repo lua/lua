@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.19 1999/02/04 17:47:59 roberto Exp roberto $
+** $Id: lua.c,v 1.20 1999/06/24 19:42:02 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -45,6 +45,8 @@ static void lstop (void) {
 
 
 static void laction (int i) {
+  signal(SIGINT, SIG_DFL); /* if another SIGINT happens before lstop,
+                              terminate process (default action) */
   old_linehook = lua_setlinehook((lua_LHFunction)lstop);
   old_callhook = lua_setcallhook((lua_CHFunction)lstop);
 }
