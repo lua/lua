@@ -2,7 +2,7 @@
 ** LUA - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
-** $Id: lua.h,v 4.4 1997/05/26 14:42:51 roberto Exp roberto $
+** $Id: lua.h,v 4.5 1997/06/06 20:54:40 roberto Exp roberto $
 */
 
 
@@ -15,6 +15,8 @@
 
 
 #define LUA_NOOBJECT  0
+
+#define LUA_ANYTAG    (-1)
 
 typedef void (*lua_CFunction) (void);
 typedef unsigned int lua_Object;
@@ -30,8 +32,6 @@ void           lua_error		(char *s);
 int            lua_dofile 		(char *filename); /* Out: returns */
 int            lua_dostring 		(char *string); /* Out: returns */
 int            lua_callfunction		(lua_Object f);
-					  /* In: parameters; Out: returns */
-int	       lua_call			(char *funcname);
 					  /* In: parameters; Out: returns */
 
 void	       lua_beginblock		(void);
@@ -52,16 +52,15 @@ int            lua_isfunction           (lua_Object object);
 float          lua_getnumber 		(lua_Object object);
 char          *lua_getstring 		(lua_Object object);
 lua_CFunction  lua_getcfunction 	(lua_Object object);
-void          *lua_getbindata		(lua_Object object);
-int            lua_getbindatasize	(lua_Object object);
 
 void 	       lua_pushnil 		(void);
 void           lua_pushnumber 		(float n);
 void           lua_pushstring 		(char *s);
 void           lua_pushcfunction	(lua_CFunction fn);
-void           lua_pushbindata		(void *buff, int size, int tag);
-void           lua_pushusertag     	(void *u, int tag);
+void           lua_pushusertag          (void *u, int tag);
 void           lua_pushobject       	(lua_Object object);
+
+lua_Object     lua_pop			(void);
 
 lua_Object     lua_getglobal 		(char *name);
 lua_Object     lua_rawgetglobal		(char *name);
@@ -82,6 +81,8 @@ void	       lua_unref		(int ref);
 
 lua_Object     lua_createtable		(void);
 
+lua_Object     lua_getudata		(void *u, int tag);
+
 
 long	       lua_collectgarbage	(long limit);
 
@@ -89,7 +90,9 @@ long	       lua_collectgarbage	(long limit);
 /* =============================================================== */
 /* some useful macros */
 
-#define lua_pushref(ref)	(lua_pushobject(lua_getref(ref)))
+#define lua_call(name)		lua_callfunction(lua_getglobal(name))
+
+#define lua_pushref(ref)	lua_pushobject(lua_getref(ref))
 
 #define lua_refobject(o,l)	(lua_pushobject(o), lua_ref(l))
 

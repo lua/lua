@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.25 1997/05/05 20:21:23 roberto Exp roberto $";
+char *rcs_tree="$Id: tree.c,v 1.26 1997/05/14 18:38:29 roberto Exp roberto $";
 
 
 #include <string.h>
@@ -29,15 +29,21 @@ static int initialized = 0;
 
 static stringtable string_root[NUM_HASHS];
 
-static TaggedString EMPTY = {LUA_T_STRING, NULL, 0, NOT_USED, NOT_USED,
+static TaggedString EMPTY = {LUA_T_STRING, NULL, {{NOT_USED, NOT_USED}},
                              0, 2, {0}};
 
 
-static unsigned long hash (char *buff, long size)
+static unsigned long hash (char *s, int tag)
 {
-  unsigned long h = 0;
-  while (size--)
-    h = ((h<<5)-h)^(unsigned char)*(buff++);
+  unsigned long h;
+  if (tag != LUA_T_STRING)
+    h = (unsigned long)s;
+  else {
+    long size = strlen(s);
+    h = 0;
+    while (size--)
+      h = ((h<<5)-h)^(unsigned char)*(s++);
+  }
   return h;
 }
 
@@ -86,10 +92,30 @@ static void grow (stringtable *tb)
   tb->hash = newhash;
 }
 
-static TaggedString *insert (char *buff, long size, int tag, stringtable *tb)
+
+static TaggedString *newone(char *buff, int tag, unsigned long h)
 {
   TaggedString *ts;
-  unsigned long h = hash(buff, size);
+  if (tag == LUA_T_STRING) {
+    ts = (TaggedString *)luaI_malloc(sizeof(TaggedString)+strlen(buff));
+    strcpy(ts->str, buff);
+    ts->u.s.varindex = ts->u.s.constindex = NOT_USED;
+    ts->tag = LUA_T_STRING;
+  }
+  else {
+    ts = (TaggedString *)luaI_malloc(sizeof(TaggedString));
+    ts->u.v = buff;
+    ts->tag = tag == LUA_ANYTAG ? 0 : tag;
+  }
+  ts->marked = 0;
+  ts->hash = h;
+  return ts;
+}
+
+static TaggedString *insert (char *buff, int tag, stringtable *tb)
+{
+  TaggedString *ts;
+  unsigned long h = hash(buff, tag);
   int i;
   int j = -1;
   if ((Long)tb->nuse*3 >= (Long)tb->size*2)
@@ -103,8 +129,9 @@ static TaggedString *insert (char *buff, long size, int tag, stringtable *tb)
   {
     if (ts == &EMPTY)
       j = i;
-    else if (ts->size == size && ts->tag == tag &&
-             memcmp(buff, ts->str, size) == 0)
+    else if ((ts->tag == LUA_T_STRING) ?
+              (tag == LUA_T_STRING && (strcmp(buff, ts->str) == 0)) :
+              ((tag == ts->tag || tag == LUA_ANYTAG) && buff == ts->u.v))
       return ts;
     i = (i+1)%tb->size;
   }
@@ -114,24 +141,18 @@ static TaggedString *insert (char *buff, long size, int tag, stringtable *tb)
     i = j;
   else
     tb->nuse++;
-  ts = tb->hash[i] = (TaggedString *)luaI_malloc(sizeof(TaggedString)+size-1);
-  memcpy(ts->str, buff, size);
-  ts->tag = tag;
-  ts->size = size;
-  ts->marked = 0;
-  ts->hash = h;
-  ts->varindex = ts->constindex = NOT_USED;
+  ts = tb->hash[i] = newone(buff, tag, h);
   return ts;
 }
 
-TaggedString *luaI_createuserdata (char *buff, long size, int tag)
+TaggedString *luaI_createudata (void *udata, int tag)
 {
-  return insert(buff, size, tag, &string_root[(unsigned)buff[0]%NUM_HASHS]);
+  return insert(udata, tag, &string_root[(unsigned)udata%NUM_HASHS]);
 }
 
 TaggedString *lua_createstring (char *str)
 {
-  return luaI_createuserdata(str, strlen(str)+1, LUA_T_STRING);
+  return insert(str, LUA_T_STRING, &string_root[(unsigned)str[0]%NUM_HASHS]);
 }
 
 

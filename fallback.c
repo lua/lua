@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 2.4 1997/04/07 14:48:53 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 2.5 1997/04/24 22:59:57 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -116,16 +116,20 @@ struct IM *luaI_IMtable = NULL;
 static int IMtable_size = 0;
 static int last_tag = LUA_T_NIL;  /* ORDER LUA_T */
 
+
+/* events in LUA_T_LINE are all allowed, since this is used as a
+*  'placeholder' for "default" fallbacks
+*/
 static char validevents[NUM_TYPES][IM_N] = { /* ORDER LUA_T, ORDER IM */
-{1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},  /* LUA_T_USERDATA */
-{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},  /* LUA_T_LINE */
+{1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* LUA_T_USERDATA */
+{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},  /* LUA_T_LINE */
 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},  /* LUA_T_CMARK */
 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},  /* LUA_T_MARK */
 {1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_CFUNCTION */
 {1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_FUNCTION */
 {0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},  /* LUA_T_ARRAY */
 {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_T_STRING */
-{1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1},  /* LUA_T_NUMBER */
+{1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1},  /* LUA_T_NUMBER */
 {0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0}   /* LUA_T_NIL */
 };
 
@@ -185,6 +189,9 @@ void luaI_settag (int tag, TObject *o)
   switch (ttype(o)) {
     case LUA_T_ARRAY:
       o->value.a->htag = tag;
+      break;
+    case LUA_T_USERDATA:
+      o->value.ts->tag = tag;
       break;
     default:
       luaL_verror("cannot change the tag of a %s", luaI_typenames[-ttype(o)]);
@@ -318,7 +325,7 @@ void luaI_setfallback (void)
       break;
     case 2: {  /* old arith fallback */
       int i;
-      oldfunc = *luaI_getim(LUA_T_USERDATA, IM_POW);
+      oldfunc = *luaI_getim(LUA_T_NUMBER, IM_POW);
       for (i=IM_ADD; i<=IM_UNM; i++)  /* ORDER IM */
         fillvalids(i, luaI_Address(func));
       replace = typeFB;
@@ -326,7 +333,7 @@ void luaI_setfallback (void)
     }
     case 3: {  /* old order fallback */
       int i;
-      oldfunc = *luaI_getim(LUA_T_USERDATA, IM_LT);
+      oldfunc = *luaI_getim(LUA_T_LINE, IM_LT);
       for (i=IM_LT; i<=IM_GE; i++)  /* ORDER IM */
         fillvalids(i, luaI_Address(func));
       replace = typeFB;
@@ -335,7 +342,7 @@ void luaI_setfallback (void)
     default: {
       int e;
       if ((e = luaI_findstring(name, luaI_eventname)) >= 0) {
-        oldfunc = *luaI_getim(LUA_T_USERDATA, e);
+        oldfunc = *luaI_getim(LUA_T_LINE, e);
         fillvalids(e, luaI_Address(func));
         replace = (e == IM_GC || e == IM_INDEX) ? nilFB : typeFB;
       }

@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.69 1997/05/14 18:38:29 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.70 1997/05/26 14:42:51 roberto Exp roberto $";
 
 #include "luamem.h"
 #include "auxlib.h"
@@ -59,17 +59,17 @@ void luaI_initconstant (void)
 */
 Word luaI_findsymbol (TaggedString *t)
 {
- if (t->varindex == NOT_USED)
+ if (t->u.s.varindex == NOT_USED)
  {
   if (lua_ntable == lua_maxsymbol)
     lua_maxsymbol = growvector(&lua_table, lua_maxsymbol, Symbol,
                       symbolEM, MAX_WORD);
-  t->varindex = lua_ntable;
+  t->u.s.varindex = lua_ntable;
   lua_table[lua_ntable].varname = t;
   s_ttype(lua_ntable) = LUA_T_NIL;
   lua_ntable++;
  }
- return t->varindex;
+ return t->u.s.varindex;
 }
 
 
@@ -85,16 +85,16 @@ Word luaI_findsymbolbyname (char *name)
 */
 Word luaI_findconstant (TaggedString *t)
 {
- if (t->constindex == NOT_USED)
+ if (t->u.s.constindex == NOT_USED)
  {
   if (lua_nconstant == lua_maxconstant)
     lua_maxconstant = growvector(&lua_constant, lua_maxconstant, TaggedString *,
                         constantEM, MAX_WORD);
-  t->constindex = lua_nconstant;
+  t->u.s.constindex = lua_nconstant;
   lua_constant[lua_nconstant] = t;
   lua_nconstant++;
  }
- return t->constindex;
+ return t->u.s.constindex;
 }
 
 
@@ -154,7 +154,7 @@ int luaI_ismarked (TObject *o)
 {
   switch (o->ttype)
   {
-   case LUA_T_STRING:
+   case LUA_T_STRING: case LUA_T_USERDATA:
      return o->value.ts->marked;
    case LUA_T_FUNCTION:
     return o->value.tf->marked;
@@ -196,6 +196,7 @@ long lua_collectgarbage (long limit)
   TaggedString *freestr;
   TFunc *freefunc;
   markall();
+  luaI_invalidaterefs();
   freetable = luaI_hashcollector(&recovered);
   freestr = luaI_strcollector(&recovered);
   freefunc = luaI_funccollector(&recovered);

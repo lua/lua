@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.58 1997/04/15 17:32:47 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.59 1997/05/26 14:42:51 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -103,6 +103,7 @@ void lua_closestring (void)
 }
 
 
+
 static int passresults (void)
 {
   int arg = 0;
@@ -110,6 +111,25 @@ static int passresults (void)
   while ((obj = lua_getresult(++arg)) != LUA_NOOBJECT)
     lua_pushobject(obj);
   return arg-1;
+}
+
+
+static void packresults (void)
+{
+  int arg = 0;
+  lua_Object obj;
+  lua_Object table = lua_createtable();
+  while ((obj = lua_getresult(++arg)) != LUA_NOOBJECT) {
+    lua_pushobject(table);
+    lua_pushnumber(arg);
+    lua_pushobject(obj);
+    lua_rawsettable();
+  }
+  lua_pushobject(table);
+  lua_pushstring("n");
+  lua_pushnumber(arg-1);
+  lua_rawsettable();
+  lua_pushobject(table);  /* final result */
 }
  
 /*
@@ -144,14 +164,8 @@ static char *tostring (lua_Object obj)
     case LUA_T_CFUNCTION: case LUA_T_NIL:
       return luaI_typenames[-ttype(o)];
     case LUA_T_USERDATA: {
-      char *buff = luaI_buffer(100);
-      int size = o->value.ts->size;
-      int i;
-      strcpy(buff, "userdata: ");
-      if (size > 10) size = 10;
-      for (i=0; i<size; i++)
-        sprintf(buff+strlen(buff), "%.2X",
-               (int)(unsigned char)o->value.ts->str[i]);
+      char *buff = luaI_buffer(30);
+      sprintf(buff, "userdata: %p", o->value.ts->u.v);
       return buff;
     }
     default: return "<unknown object>";
@@ -237,37 +251,37 @@ static void luatag (void)
   lua_pushnumber(lua_tag(lua_getparam(1)));
 }
 
-#define MAXPARAMS	256
+
+static int getnarg (lua_Object table)
+{
+  lua_Object temp;
+  /* temp = table.n */
+  lua_pushobject(table); lua_pushstring("n"); temp = lua_gettable();
+  return (lua_isnumber(temp) ? lua_getnumber(temp) : MAX_WORD);
+}
+
 static void luaI_call (void)
 {
   lua_Object f = lua_getparam(1);
   lua_Object arg = lua_getparam(2);
-  lua_Object temp, params[MAXPARAMS];
+  int withtable = (luaL_opt_string(3, NULL) != NULL);
   int narg, i;
   luaL_arg_check(lua_isfunction(f), 1, "function expected");
   luaL_arg_check(lua_istable(arg), 2, "table expected");
-  /* narg = arg.n */
-  lua_pushobject(arg);
-  lua_pushstring("n");
-  temp = lua_getsubscript();
-  narg = lua_isnumber(temp) ? lua_getnumber(temp) : MAXPARAMS+1;
-  /* read arg[1...n] */
+  narg = getnarg(arg);
+  /* push arg[1...n] */
   for (i=0; i<narg; i++) {
-    if (i>=MAXPARAMS)
-      lua_error("argument list too long in function `call'");
-    lua_pushobject(arg);
-    lua_pushnumber(i+1);
-    params[i] = lua_getsubscript();
-    if (narg == MAXPARAMS+1 && lua_isnil(params[i])) {
-      narg = i;
+    lua_Object temp;
+    /* temp = arg[i+1] */
+    lua_pushobject(arg); lua_pushnumber(i+1); temp = lua_gettable();
+    if (narg == MAX_WORD && lua_isnil(temp))
       break;
-    }
+    lua_pushobject(temp);
   }
-  /* push parameters and do the call */
-  for (i=0; i<narg; i++)
-    lua_pushobject(params[i]);
   if (lua_callfunction(f))
     lua_error(NULL);
+  else if (withtable)
+    packresults();
   else
     passresults();
 }

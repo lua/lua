@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 4.5 1997/05/26 14:23:55 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 4.6 1997/06/06 20:54:40 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -52,13 +52,13 @@ static TObject *top = &initial_stack;
 #define incr_top	if (++top >= stackLimit) growstack()
 
 struct C_Lua_Stack {
- StkId base;  /* when Lua calls C or C calls Lua, points to */
-              /* the first slot after the last parameter. */
- int num;     /* when Lua calls C, has the number of parameters; */
-              /* when C calls Lua, has the number of results. */
+  StkId base;  /* when Lua calls C or C calls Lua, points to */
+               /* the first slot after the last parameter. */
+  StkId lua2C; /* points to first element of "array" lua2C */
+  int num;     /* size of "array" lua2C */
 };
 
-static struct C_Lua_Stack CLS_current = {0, 0};
+static struct C_Lua_Stack CLS_current = {0, 0, 0};
 
 static  jmp_buf *errorJmp = NULL; /* current error recover point */
 
@@ -228,6 +228,13 @@ static lua_Object put_luaObjectonTop (void)
 }
 
 
+lua_Object lua_pop (void)
+{
+  checkCparams(1);
+  return put_luaObjectonTop();
+}
+
+
 
 /*
 ** call Line hook
@@ -235,7 +242,7 @@ static lua_Object put_luaObjectonTop (void)
 static void lineHook (int line)
 {
   struct C_Lua_Stack oldCLS = CLS_current;
-  StkId old_top = CLS_current.base = top-stack;
+  StkId old_top = CLS_current.lua2C = CLS_current.base = top-stack;
   CLS_current.num = 0;
   (*lua_linehook)(line);
   top = stack+old_top;
@@ -250,7 +257,7 @@ static void lineHook (int line)
 static void callHook (StkId base, lua_Type type, int isreturn)
 {
   struct C_Lua_Stack oldCLS = CLS_current;
-  StkId old_top = CLS_current.base = top-stack;
+  StkId old_top = CLS_current.lua2C = CLS_current.base = top-stack;
   CLS_current.num = 0;
   if (isreturn)
     (*lua_callhook)(LUA_NOOBJECT, "(return)", 0);
@@ -278,6 +285,7 @@ static StkId callC (lua_CFunction func, StkId base)
   StkId firstResult;
   CLS_current.num = (top-stack) - base;
   /* incorporate parameters on the stack */
+  CLS_current.lua2C = base;
   CLS_current.base = base+CLS_current.num;  /* == top-stack */
   if (lua_callhook)
     callHook(base, LUA_T_CMARK, 0);
@@ -518,7 +526,7 @@ int lua_setlocal (lua_Function func, int local_number)
 {
   TObject *f = Address(func);
   char *name = luaI_getlocalname(f->value.tf, local_number, lua_currentline(func));
-  adjustC(1);
+  checkCparams(1);
   --top;
   if (name)
   {
@@ -537,9 +545,11 @@ int lua_setlocal (lua_Function func, int local_number)
 */
 static void do_callinc (int nResults)
 {
-  do_call(CLS_current.base+1, nResults);
-  CLS_current.num = (top-stack) - CLS_current.base;  /* number of results */
-  CLS_current.base += CLS_current.num;  /* incorporate results on the stack */
+  StkId base = CLS_current.base;
+  do_call(base+1, nResults);
+  CLS_current.lua2C = base;  /* position of the new results */
+  CLS_current.num = (top-stack) - base;  /* number of results */
+  CLS_current.base = base + CLS_current.num;  /* incorporate results on stack */
 }
 
 static void do_unprotectedrun (lua_CFunction f, int nParams, int nResults)
@@ -625,15 +635,6 @@ int lua_callfunction (lua_Object function)
     stack[CLS_current.base] = *Address(function);
     return do_protectedrun (MULT_RET);
   }
-}
-
-
-int lua_call (char *funcname)
-{
- Word n = luaI_findsymbolbyname(funcname);
- open_stack((top-stack)-CLS_current.base);
- stack[CLS_current.base] = s_object(n);
- return do_protectedrun(MULT_RET);
 }
 
 
@@ -791,9 +792,9 @@ lua_Object lua_createtable (void)
 lua_Object lua_lua2C (int number)
 {
   if (number <= 0 || number > CLS_current.num) return LUA_NOOBJECT;
-  /* Ref(stack+(CLS_current.base-CLS_current.num+number-1)) ==
-     stack+(CLS_current.base-CLS_current.num+number-1)-stack+1 == */
-  return CLS_current.base-CLS_current.num+number;
+  /* Ref(stack+(CLS_current.lua2C+number-1)) ==
+     stack+(CLS_current.lua2C+number-1)-stack+1 == */
+  return CLS_current.lua2C+number;
 }
 
 int lua_isnil (lua_Object o)
@@ -850,32 +851,19 @@ real lua_getnumber (lua_Object object)
 */
 char *lua_getstring (lua_Object object)
 {
- if (object == LUA_NOOBJECT) return NULL;
- if (tostring (Address(object))) return NULL;
- else return (svalue(Address(object)));
+  if (object == LUA_NOOBJECT || tostring (Address(object)))
+    return NULL;
+  else return (svalue(Address(object)));
 }
 
-void *lua_getbindata (lua_Object object)
-{
-  if (object == LUA_NOOBJECT || ttype(Address(object)) != LUA_T_USERDATA)
-    return NULL;
-  else return svalue(Address(object));
-}
 
 void *lua_getuserdata (lua_Object object)
 {
-  void *add = lua_getbindata(object);
-  if (add == NULL) return NULL;
-  else return *(void **)add;
-}
-
-
-int lua_getbindatasize (lua_Object object)
-{
   if (object == LUA_NOOBJECT || ttype(Address(object)) != LUA_T_USERDATA)
-    return 0;
-  else return (Address(object))->value.ts->size;
+    return NULL;
+  else return tsvalue(Address(object))->u.v;
 }
+
 
 /*
 ** Given an object handle, return its cfuntion pointer. On error, return NULL.
@@ -1000,25 +988,14 @@ void lua_pushcfunction (lua_CFunction fn)
  incr_top;
 }
 
-void lua_pushbindata (void *buff, int size, int tag)
-{
-  if (buff == NULL)
-    ttype(top) = LUA_T_NIL;
-  else {
-    if (tag < 0)
-      luaI_realtag(tag);
-    tsvalue(top) = luaI_createuserdata(buff, size, tag);
-    ttype(top) = LUA_T_USERDATA;
-  }
-  incr_top;
-}
 
-/*
-** Push an object (ttype=userdata) to stack.
-*/
+
 void lua_pushusertag (void *u, int tag)
 {
-  lua_pushbindata(&u, sizeof(void *), tag);
+  if (tag < 0) luaI_realtag(tag);  /* error if tag is not valid */
+  tsvalue(top) = luaI_createudata(u, tag);
+  ttype(top) = LUA_T_USERDATA;
+  incr_top;
 }
 
 /*
