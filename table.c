@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.38 1995/11/03 15:30:50 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.39 1996/01/09 20:23:19 roberto Exp $";
 
 /*#include <string.h>*/
 
@@ -178,12 +178,9 @@ int lua_markobject (Object *o)
 ** Garbage collection. 
 ** Delete all unused strings and arrays.
 */
-void lua_pack (void)
+Long luaI_collectgarbage (void)
 {
-  static Long block = GARBAGE_BLOCK; /* when garbage collector will be called */
-  static Long nentity = 0;  /* counter of new entities (strings and arrays) */
   Long recovered = 0;
-  if (nentity++ < block) return;
   lua_travstack(lua_markobject); /* mark stack objects */
   lua_travsymbol(lua_markobject); /* mark symbol table objects */
   luaI_travlock(lua_markobject); /* mark locked objects */
@@ -191,6 +188,16 @@ void lua_pack (void)
   recovered += lua_strcollector();
   recovered += lua_hashcollector();
   recovered += luaI_funccollector();
+  return recovered;
+} 
+
+void lua_pack (void)
+{
+  static Long block = GARBAGE_BLOCK; /* when garbage collector will be called */
+  static Long nentity = 0;  /* counter of new entities (strings and arrays) */
+  Long recovered = 0;
+  if (nentity++ < block) return;
+  recovered = luaI_collectgarbage();
   nentity = 0;				/* reset counter */
   block=(16*block-7*recovered)/12;	/* adapt block size */
   if (block < MIN_GARBAGE_BLOCK) block = MIN_GARBAGE_BLOCK;
