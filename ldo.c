@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.91 2000/08/29 20:43:28 roberto Exp roberto $
+** $Id: ldo.c,v 1.92 2000/08/31 13:31:44 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -265,80 +265,77 @@ int lua_call (lua_State *L, int nargs, int nresults) {
 }
 
 
-/*
-** returns 0 = chunk loaded; >0 : error; -1 = no more chunks to load
-*/
 static int protectedparser (lua_State *L, ZIO *z, int bin) {
   struct lua_longjmp myErrorJmp;
+  unsigned long old_blocks;
+  luaC_checkGC(L);
+  old_blocks = L->nblocks;
   chain_longjmp(L, &myErrorJmp);
   if (setjmp(myErrorJmp.b) == 0) {
     Proto *tf = bin ? luaU_undump1(L, z) : luaY_parser(L, z);
-    if (tf == NULL)
-      myErrorJmp.status = -1;  /* `natural' end */
     luaV_Lclosure(L, tf, 0);
   }
   else {  /* an error occurred: correct error code */
     if (myErrorJmp.status == LUA_ERRRUN)
       myErrorJmp.status = LUA_ERRSYNTAX;
   }
+  /* add new memory to threshould (as it probably will stay) */
+  L->GCthreshold += (L->nblocks - old_blocks);
   return restore_longjmp(L, &myErrorJmp);  /* error code */
 }
 
 
-static int do_main (lua_State *L, ZIO *z, int bin) {
-  int status;
-  do {
-    unsigned long old_blocks;
-    luaC_checkGC(L);
-    old_blocks = L->nblocks;
-    status = protectedparser(L, z, bin);
-    if (status > 0) return status;  /* error */
-    else if (status < 0) return 0;  /* `natural' end */
-    else {
-      unsigned long newelems2 = 2*(L->nblocks-old_blocks);
-      L->GCthreshold += newelems2;
-      status = lua_call(L, 0, LUA_MULTRET);
-      L->GCthreshold -= newelems2;
-    }
-  } while (bin && status == 0);
-  return status;
-}
-
-
-int lua_dofile (lua_State *L, const char *filename) {
+static int parse_file (lua_State *L, const char *filename) {
   ZIO z;
+  char source[MAXFILENAME];
   int status;
   int bin;  /* flag for file mode */
   int c;    /* look ahead char */
-  char source[MAXFILENAME];
   FILE *f = (filename == NULL) ? stdin : fopen(filename, "r");
-  if (f == NULL) return 2;  /* unable to open file */
+  if (f == NULL) return LUA_ERRFILE;  /* unable to open file */
   luaL_filesource(source, filename, sizeof(source));
   c = fgetc(f);
   ungetc(c, f);
   bin = (c == ID_CHUNK);
   if (bin && f != stdin) {
     f = freopen(filename, "rb", f);  /* set binary mode */
-    if (f == NULL) return 2;  /* unable to reopen file */
+    if (f == NULL) return LUA_ERRFILE;  /* unable to reopen file */
   }
   luaZ_Fopen(&z, f, source);
-  status = do_main(L, &z, bin);
+  status = protectedparser(L, &z, bin);
   if (f != stdin)
     fclose(f);
   return status;
 }
 
 
-int lua_dostring (lua_State *L, const char *str) {
-  return lua_dobuffer(L, str, strlen(str), str);
+int lua_dofile (lua_State *L, const char *filename) {
+  int status = parse_file(L, filename);
+  if (status == 0)  /* parse OK? */
+    status = lua_call(L, 0, LUA_MULTRET);  /* call main */
+  return status;
+}
+
+
+static int parse_buffer (lua_State *L, const char *buff, size_t size,
+                         const char *name) {
+  ZIO z;
+  if (!name) name = "?";
+  luaZ_mopen(&z, buff, size, name);
+  return protectedparser(L, &z, buff[0]==ID_CHUNK);
 }
 
 
 int lua_dobuffer (lua_State *L, const char *buff, size_t size,
                   const char *name) {
-  ZIO z;
-  if (!name) name = "?";
-  luaZ_mopen(&z, buff, size, name);
-  return do_main(L, &z, buff[0]==ID_CHUNK);
+  int status = parse_buffer(L, buff, size, name);
+  if (status == 0)  /* parse OK? */
+    status = lua_call(L, 0, LUA_MULTRET);  /* call main */
+  return status;
+}
+
+
+int lua_dostring (lua_State *L, const char *str) {
+  return lua_dobuffer(L, str, strlen(str), str);
 }
 
