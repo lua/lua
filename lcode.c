@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.104 2002/05/14 17:52:22 roberto Exp roberto $
+** $Id: lcode.c,v 1.105 2002/05/27 20:35:40 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -630,7 +630,7 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
 
 
 
-static const OpCode cmp_masks[] = {  /* ORDER OPR */
+static const int cmp_masks[] = {  /* ORDER OPR */
   CMP_LT, (CMP_LT | CMP_EQ), CMP_GT, (CMP_GT | CMP_EQ)
 };
 
