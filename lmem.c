@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.29 2000/03/16 20:35:07 roberto Exp roberto $
+** $Id: lmem.c,v 1.30 2000/05/24 13:54:49 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -16,8 +16,8 @@
 
 
 /*
-** Number ANSI systems do not need these tests;
-** but some systems (Sun OS) are not that ANSI...
+** Real ISO (ANSI) systems do not need these tests;
+** but some systems (Sun OS) are not that ISO...
 */
 #ifdef OLD_ANSI
 #define realloc(b,s)	((b) == NULL ? malloc(s) : (realloc)(b, s))
@@ -37,7 +37,9 @@
 #include <assert.h>
 #include <string.h>
 
-
+#undef realloc
+#undef malloc
+#undef free
 #define realloc(b, s)	debug_realloc(b, s)
 #define malloc(b)	debug_realloc(NULL, 0)
 #define free(b)		debug_realloc(b, 0)
