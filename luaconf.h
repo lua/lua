@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.3 2004/05/10 17:50:51 roberto Exp roberto $
+** $Id: luaconf.h,v 1.4 2004/05/28 18:32:51 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -156,9 +156,13 @@
 
 /* function to convert a lua_Number to int (with any rounding method) */
 #if defined(__GNUC__) && defined(__i386)
-#define lua_number2int(i,d)	__asm__("fldl %1\nfistpl %0":"=m"(i):"m"(d))
+#define lua_number2int(i,d)	__asm__ ("fistpl %0":"=m"(i):"t"(d):"st")
+#elif 0
+/* on machines compliant with C99, you can try `lrint' */
+#include <math.h>
+#define lua_number2int(i,d)	((i)=lrint(d))
 #else
-#define lua_number2int(i,n)	((i)=(int)(n))
+#define lua_number2int(i,d)	((i)=(int)(d))
 #endif
 
 /* function to convert a lua_Number to lua_Integer (with any rounding method) */
