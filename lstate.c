@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.20 2005/01/04 15:55:12 roberto Exp roberto $
+** $Id: lstate.c,v 2.21 2005/01/05 18:20:51 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -95,7 +95,6 @@ static void f_luaopen (lua_State *L, void *ud) {
   luaX_init(L);
   luaS_fix(luaS_newliteral(L, MEMERRMSG));
   g->GCthreshold = 4*g->totalbytes;
-  g->prevestimate = g->estimate = g->totalbytes;
 }
 
 
@@ -180,7 +179,6 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   luaZ_initbuffer(L, &g->buff);
   g->panic = NULL;
   g->gcstate = GCSpause;
-  g->gcgenerational = 0;
   g->rootgc = obj2gco(L);
   g->sweepstrgc = 0;
   g->sweepgc = &g->rootgc;
@@ -190,8 +188,9 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->weak = NULL;
   g->tmudata = NULL;
   g->totalbytes = sizeof(LG);
-  g->gcpace = GCDIV;
-  g->incgc = 1;
+  g->gcpace = 200;  /* 200% (wait memory to double before next collection) */
+  g->gcstepmul = 200;  /* GC runs `twice the speed' of memory allocation */
+  g->gcdept = 0;
   if (luaD_rawrunprotected(L, f_luaopen, NULL) != 0) {
     /* memory allocation error: free partial state */
     close_state(L);

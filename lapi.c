@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.24 2005/01/04 15:55:12 roberto Exp roberto $
+** $Id: lapi.c,v 2.25 2005/01/07 19:53:32 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -872,9 +872,9 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
       g->gcpace = data;
       break;
     }
-    case LUA_GCSETINCMODE: {
-      res = g->incgc;
-      g->incgc = data;
+    case LUA_GCSETSTEPMUL: {
+      res = g->gcstepmul;
+      g->gcstepmul = data;
       break;
     }
     default: res = -1;  /* invalid option */

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.10 2004/12/13 12:15:11 roberto Exp roberto $
+** $Id: lstate.h,v 2.11 2005/01/05 18:20:51 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -71,7 +71,6 @@ typedef struct global_State {
   void *ud;         /* auxiliary data to `realloc' */
   lu_byte currentwhite;
   lu_byte gcstate;  /* state of garbage collector */
-  lu_byte gcgenerational;
   GCObject *rootgc;  /* list of all collectable objects */
   GCObject *firstudata;   /* udata go to the end of `rootgc' */
   GCObject **sweepgc;  /* position of sweep in `rootgc' */
@@ -84,9 +83,9 @@ typedef struct global_State {
   lu_mem GCthreshold;
   lu_mem totalbytes;  /* number of bytes currently allocated */
   lu_mem estimate;  /* an estimate of number of bytes actually in use */
-  lu_mem prevestimate;  /* previous estimate */
-  int gcpace;  /* relative `speed' of the GC */
-  int incgc;  /* 0 if GC is done non-incrementally */
+  lu_mem gcdept;  /* how much GC is `behind schedule' */
+  int gcpace;  /* size of pause between successive GCs */
+  int gcstepmul;  /* GC `granularity' */
   lua_CFunction panic;  /* to be called in unprotected errors */
   TValue _registry;
   struct lua_State *mainthread;

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.15 2004/11/01 15:06:50 roberto Exp roberto $
+** $Id: ltests.c,v 2.16 2005/01/05 18:20:51 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -153,9 +153,9 @@ void *debug_realloc (void *ud, void *block, size_t oldsize, size_t size) {
 
 static int testobjref1 (global_State *g, GCObject *f, GCObject *t) {
   if (isdead(g,t)) return 0;
-  if (g->gcstate == GCSpropagate || g->gcgenerational)
+  if (g->gcstate == GCSpropagate)
     return !isblack(f) || !iswhite(t);
-  else if (g->gcstate == GCSfinalize && !g->gcgenerational)
+  else if (g->gcstate == GCSfinalize)
     return iswhite(f);
   else
     return 1;
@@ -175,8 +175,7 @@ static void printobj (global_State *g, GCObject *o) {
 static int testobjref (global_State *g, GCObject *f, GCObject *t) {
   int r = testobjref1(g,f,t);
   if (!r) {
-    printf("%d(%02X) %c - ", g->gcstate, g->currentwhite,
-                             g->gcgenerational ? 'G' : ' ');
+    printf("%d(%02X) - ", g->gcstate, g->currentwhite);
     printobj(g, f);
     printf("\t-> ");
     printobj(g, t);
@@ -295,7 +294,7 @@ static void checkobject (global_State *g, GCObject *o) {
 printf(">>> %d  %s  %02x\n", g->gcstate, luaT_typenames[o->gch.tt], o->gch.marked);
 }
   else {
-    if (g->gcstate == GCSfinalize && !g->gcgenerational)
+    if (g->gcstate == GCSfinalize)
       lua_assert(iswhite(o));
     switch (o->gch.tt) {
       case LUA_TUPVAL: {
