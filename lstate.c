@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.107 2002/10/22 17:58:14 roberto Exp roberto $
+** $Id: lstate.c,v 1.108 2002/10/25 20:05:28 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -26,7 +26,7 @@
 #define EXTRASPACE	0
 #else
 union UEXTRASPACE {L_Umaxalign a; LUA_USERSTATE b;};
-#define EXTRASPACE (sizeof(UEXTRASPACE))
+#define EXTRASPACE (sizeof(union UEXTRASPACE))
 #endif
 
 
