@@ -1,4 +1,4 @@
-# $Id: makefile,v 1.13 1995/10/09 18:51:49 roberto Exp roberto $
+# $Id: makefile,v 1.14 1995/10/17 14:12:45 roberto Exp $
 
 #configuration
 
@@ -37,7 +37,7 @@ LUAOBJS	= $(LUAMOD:%=%.o)
 LIBOBJS	= $(LIBMOD:%=%.o)
 
 lua : lua.o lua.a lualib.a
-	$(CC) $(CFLAGS) -o $@ lua.c lua.a lualib.a -lm
+	$(CC) $(CFLAGS) -o $@ lua.o lua.a lualib.a -lm
 
 lua.a : parser.c $(LUAOBJS)
 	$(AR) $(ARFLAGS) $@  $?
