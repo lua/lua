@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: llex.c,v 1.96 2002/02/08 22:40:27 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -250,7 +250,8 @@ static void read_string (LexState *LS, int del, SemInfo *seminfo) {
     switch (LS->current) {
       case EOZ:  case '\n':
         save(L, '\0', l);
-        luaX_error(LS, "unfinished string", TK_EOS);
+        luaX_error(LS, "unfinished string",
+                       (LS->current == EOZ) ? TK_EOS : TK_STRING);
         break;  /* to avoid warnings */
       case '\\':
         next(LS);  /* do not save the `\' */
