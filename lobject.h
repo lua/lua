@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.26 1999/02/03 13:53:48 roberto Exp roberto $
+** $Id: lobject.h,v 1.27 1999/03/04 21:17:26 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -64,7 +64,6 @@ typedef enum {
   LUA_T_LINE     = -11
 } lua_Type;
 
-#define NUM_TYPES 11
 #define NUM_TAGS  7
 
 
