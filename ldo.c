@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.142 2001/10/02 16:45:03 roberto Exp $
+** $Id: ldo.c,v 1.143 2001/10/17 21:12:57 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -219,7 +219,6 @@ static void f_parser (lua_State *L, void *ud) {
   luaF_LConlist(L, cl);
   setclvalue(L->top, cl);
   incr_top;
-  
 }
 
 
@@ -287,7 +286,7 @@ LUA_API int lua_loadbuffer (lua_State *L, const l_char *buff, size_t size,
 
 /*
 ** {======================================================
-** Error-recover functions (based on long jumps)
+** Error-recovery functions (based on long jumps)
 ** =======================================================
 */
 
