@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.119 2003/02/13 16:07:37 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.120 2003/02/18 16:02:13 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -127,32 +127,32 @@ static void getfunc (lua_State *L) {
 }
 
 
-static int aux_getglobals (lua_State *L) {
-  lua_getglobals(L, -1);
+static int aux_getenvtable (lua_State *L) {
+  lua_getenvtable(L, -1);
   lua_pushliteral(L, "__globals");
   lua_rawget(L, -2);
   return !lua_isnil(L, -1);
 }
 
 
-static int luaB_getglobals (lua_State *L) {
+static int luaB_getenvtable (lua_State *L) {
   getfunc(L);
-  if (!aux_getglobals(L))  /* __globals not defined? */
-    lua_pop(L, 1);  /* remove it, to return real globals */
+  if (!aux_getenvtable(L))  /* __globals not defined? */
+    lua_pop(L, 1);  /* remove it, to return real environment */
   return 1;
 }
 
 
-static int luaB_setglobals (lua_State *L) {
+static int luaB_setenvtable (lua_State *L) {
   luaL_checktype(L, 2, LUA_TTABLE);
   getfunc(L);
-  if (aux_getglobals(L))  /* __globals defined? */
+  if (aux_getenvtable(L))  /* __globals defined? */
     luaL_error(L, "cannot change a protected global table");
   else
-    lua_pop(L, 2);  /* remove __globals and real global table */
+    lua_pop(L, 2);  /* remove __globals and real environment table */
   lua_pushvalue(L, 2);
-  if (lua_setglobals(L, -2) == 0)
-    luaL_error(L, "cannot change global table of given function");
+  if (lua_setenvtable(L, -2) == 0)
+    luaL_error(L, "cannot change environment of given function");
   return 0;
 }
 
@@ -247,8 +247,8 @@ static int load_aux (lua_State *L, int status) {
     lua_Debug ar;
     lua_getstack(L, 1, &ar);
     lua_getinfo(L, "f", &ar);  /* get calling function */
-    lua_getglobals(L, -1);  /* get its global table */
-    lua_setglobals(L, -3);  /* set it as the global table of the new chunk */
+    lua_getenvtable(L, -1);  /* get its environment */
+    lua_setenvtable(L, -3);  /* set it as the environment of the new chunk */
     lua_pop(L, 1);  /* remove calling function */
     return 1;
   }
@@ -494,8 +494,8 @@ static const luaL_reg base_funcs[] = {
   {"error", luaB_error},
   {"getmetatable", luaB_getmetatable},
   {"setmetatable", luaB_setmetatable},
-  {"getglobals", luaB_getglobals},
-  {"setglobals", luaB_setglobals},
+  {"getenvtable", luaB_getenvtable},
+  {"setenvtable", luaB_setenvtable},
   {"next", luaB_next},
   {"ipairs", luaB_ipairs},
   {"pairs", luaB_pairs},
