@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.27 2000/10/27 16:15:53 roberto Exp roberto $
+** $Id: ldblib.c,v 1.28 2000/11/06 13:19:08 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -145,28 +145,31 @@ static void linef (lua_State *L, lua_Debug *ar) {
 static void sethook (lua_State *L, void *key, lua_Hook hook,
                      lua_Hook (*sethookf)(lua_State * L, lua_Hook h)) {
   lua_settop(L, 1);
-  lua_getregistry(L);
-  lua_pushuserdata(L, key);
   if (lua_isnil(L, 1))
     (*sethookf)(L, NULL);
   else if (lua_isfunction(L, 1))
     (*sethookf)(L, hook);
   else
     luaL_argerror(L, 1, "function expected");
+  lua_getregistry(L);
+  lua_pushuserdata(L, key);
+  lua_pushvalue(L, -1);  /* dup key */
+  lua_gettable(L, -3);   /* get old value */
+  lua_pushvalue(L, -2);  /* key (again) */
   lua_pushvalue(L, 1);
-  lua_settable(L, -3);
+  lua_settable(L, -5);  /* set new value */
 }
 
 
 static int setcallhook (lua_State *L) {
   sethook(L, KEY_CALLHOOK, callf, lua_setcallhook);
-  return 0;
+  return 1;
 }
 
 
 static int setlinehook (lua_State *L) {
   sethook(L, KEY_LINEHOOK, linef, lua_setlinehook);
-  return 0;
+  return 1;
 }
 
 
