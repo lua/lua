@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.114 2000/12/28 12:55:41 roberto Exp roberto $
+** $Id: lapi.c,v 1.115 2001/01/10 17:41:50 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -267,7 +267,7 @@ LUA_API void lua_gettable (lua_State *L, int index) {
 LUA_API void lua_rawget (lua_State *L, int index) {
   StkId t = Index(L, index);
   LUA_ASSERT(ttype(t) == LUA_TTABLE, "table expected");
-  *(L->top - 1) = *luaH_get(L, hvalue(t), L->top - 1);
+  *(L->top - 1) = *luaH_get(hvalue(t), L->top - 1);
 }
 
 
@@ -338,7 +338,7 @@ LUA_API void lua_rawset (lua_State *L, int index) {
 LUA_API void lua_rawseti (lua_State *L, int index, int n) {
   StkId o = Index(L, index);
   LUA_ASSERT(ttype(o) == LUA_TTABLE, "table expected");
-  *luaH_setint(L, hvalue(o), n) = *(L->top-1);
+  *luaH_setnum(L, hvalue(o), n) = *(L->top-1);
   L->top--;
 }
 

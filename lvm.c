@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.149 2000/12/28 12:55:41 roberto Exp roberto $
+** $Id: lvm.c,v 1.150 2001/01/10 17:41:50 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -122,7 +122,7 @@ const TObject *luaV_gettable (lua_State *L, StkId t) {
       ((tg = hvalue(t)->htag) == LUA_TTABLE ||  /* with default tag? */
         luaT_gettm(L, tg, TM_GETTABLE) == NULL)) { /* or no TM? */
     /* do a primitive get */
-    const TObject *h = luaH_get(L, hvalue(t), L->top-1);
+    const TObject *h = luaH_get(hvalue(t), L->top-1);
     /* result is no nil or there is no `index' tag method? */
     if (ttype(h) != LUA_TNIL || ((tm=luaT_gettm(L, tg, TM_INDEX)) == NULL))
       return h;  /* return result */
@@ -195,21 +195,11 @@ const TObject *luaV_getglobal (lua_State *L, TString *s) {
 
 
 void luaV_setglobal (lua_State *L, TString *s) {
-  const TObject *oldvalue = luaH_getstr(L->gt, s);
+  TObject *oldvalue = luaH_setstr(L, L->gt, s);
   Closure *tm = luaT_gettmbyObj(L, oldvalue, TM_SETGLOBAL);
-  if (tm == NULL) {  /* is there a tag method? */
-    if (oldvalue != &luaO_nilobject) {
-      /* cast to remove `const' is OK, because `oldvalue' != luaO_nilobject */
-      *(TObject *)oldvalue = *(L->top - 1);
-    }
-    else {
-      TObject key;
-      ttype(&key) = LUA_TSTRING;
-      tsvalue(&key) = s;
-      *luaH_set(L, L->gt, &key) = *(L->top - 1);
-    }
-  }
-  else {
+  if (tm == NULL)  /* no tag methods? */
+    *oldvalue = *(L->top - 1);  /* raw set */
+  else {  /* call tag method */
     luaD_checkstack(L, 3);
     *(L->top+2) = *(L->top-1);  /* new value */
     *(L->top+1) = *oldvalue;
@@ -320,12 +310,15 @@ void luaV_strconc (lua_State *L, int total, StkId top) {
 
 
 static void luaV_pack (lua_State *L, StkId firstelem) {
+  TObject *nf;
   int i;
   Hash *htab = luaH_new(L, 0);
   for (i=0; firstelem+i<L->top; i++)
-    *luaH_setint(L, htab, i+1) = *(firstelem+i);
+    *luaH_setnum(L, htab, i+1) = *(firstelem+i);
   /* store counter in field `n' */
-  luaH_setstrnum(L, htab, luaS_newliteral(L, "n"), i);
+  nf = luaH_setstr(L, htab, luaS_newliteral(L, "n"));
+  ttype(nf) = LUA_TNUMBER;
+  nvalue(nf) = i;
   L->top = firstelem;  /* remove elements from the stack */
   ttype(L->top) = LUA_TTABLE;
   hvalue(L->top) = htab;
@@ -498,7 +491,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         Hash *arr = hvalue(top-n-1);
         L->top = top-n;  /* final value of `top' (in case of errors) */
         for (; n; n--)
-          *luaH_setint(L, arr, n+aux) = *(--top);
+          *luaH_setnum(L, arr, n+aux) = *(--top);
         break;
       }
       case OP_SETMAP: {

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.111 2000/12/28 12:55:41 roberto Exp roberto $
+** $Id: ldo.c,v 1.112 2001/01/10 16:58:11 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -332,7 +332,7 @@ struct lua_longjmp {
 
 
 static void message (lua_State *L, const char *s) {
-  const TObject *em = luaH_getglobal(L, LUA_ERRORMESSAGE);
+  const TObject *em = luaH_getstr(L->gt, luaS_newliteral(L, LUA_ERRORMESSAGE));
   if (ttype(em) == LUA_TFUNCTION) {
     *L->top = *em;
     incr_top;
