@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.143 2004/05/10 17:50:51 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.144 2004/05/31 18:50:30 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -129,18 +129,9 @@ static void getfunc (lua_State *L) {
 }
 
 
-static int aux_getfenv (lua_State *L) {
-  lua_getfenv(L, -1);
-  lua_pushliteral(L, "__fenv");
-  lua_rawget(L, -2);
-  return !lua_isnil(L, -1);
-}
-
-
 static int luaB_getfenv (lua_State *L) {
   getfunc(L);
-  if (!aux_getfenv(L))  /* __fenv not defined? */
-    lua_pop(L, 1);  /* remove it, to return real environment */
+  lua_getfenv(L, -1);
   return 1;
 }
 
@@ -148,10 +139,6 @@ static int luaB_getfenv (lua_State *L) {
 static int luaB_setfenv (lua_State *L) {
   luaL_checktype(L, 2, LUA_TTABLE);
   getfunc(L);
-  if (aux_getfenv(L))  /* __fenv defined? */
-    luaL_error(L, "`setfenv' cannot change a protected environment");
-  else
-    lua_pop(L, 2);  /* remove __fenv and real environment table */
   lua_pushvalue(L, 2);
   if (lua_isnumber(L, 1) && lua_tonumber(L, 1) == 0)
     lua_replace(L, LUA_GLOBALSINDEX);
