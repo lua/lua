@@ -165,8 +165,7 @@ static void LoadConstants (lua_State* L, Proto* f, ZIO* Z, int swap)
  n=LoadInt(L,Z,swap);
  f->p=luaM_newvector(L,n,Proto*);
  f->sizep=n;
- for (i=0; i<n; i++)
-  f->p[i]=LoadFunction(L,Z,swap);
+ for (i=0; i<n; i++) f->p[i]=LoadFunction(L,Z,swap);
 }
 
 static Proto* LoadFunction (lua_State* L, ZIO* Z, int swap)
@@ -190,7 +189,7 @@ static Proto* LoadFunction (lua_State* L, ZIO* Z, int swap)
 
 static void LoadSignature (lua_State* L, ZIO* Z)
 {
- const l_char* s=l_s(SIGNATURE);
+ const l_char* s=l_s(LUA_SIGNATURE);
  while (*s!=0 && ezgetc(L,Z)==*s)
   ++s;
  if (*s!=0) luaO_verror(L,l_s("bad signature in `%.99s'"),ZNAME(Z));
@@ -245,16 +244,11 @@ static Proto* LoadChunk (lua_State* L, ZIO* Z)
 
 /*
 ** load one chunk from a file or buffer
-** return main if ok and NULL at EOF
 */
 Proto* luaU_undump (lua_State* L, ZIO* Z)
 {
- Proto* f=NULL;
- int c=zgetc(Z);
- if (c==ID_CHUNK)
-  f=LoadChunk(L,Z);
- c=zgetc(Z);
- if (c!=EOZ)
+ Proto* f=LoadChunk(L,Z);
+ if (zgetc(Z)!=EOZ)
   luaO_verror(L,l_s("`%.99s' apparently contains more than one chunk"),ZNAME(Z));
  return f;
 }
