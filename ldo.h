@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.h,v 1.16 1999/12/30 18:28:40 roberto Exp roberto $
+** $Id: ldo.h,v 1.17 2000/01/19 12:00:45 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -10,10 +10,6 @@
 
 #include "lobject.h"
 #include "lstate.h"
-
-
-#define MULT_RET        255
-
 
 
 /*

@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.19 2000/03/03 14:58:26 roberto Exp roberto $
+** $Id: llex.h,v 1.20 2000/03/10 18:37:44 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -34,10 +34,6 @@ enum RESERVED {
 /* number of reserved words */
 #define NUM_RESERVED	((int)(TK_WHILE-FIRST_RESERVED+1))
 
-
-#ifndef MAX_IFS
-#define MAX_IFS 5  /* arbitrary limit */
-#endif
 
 /* `ifState' keeps the state of each nested $if the lexical is dealing with. */
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.52 2000/03/16 21:06:16 roberto Exp roberto $
+** $Id: lobject.h,v 1.53 2000/03/20 19:14:54 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -8,8 +8,7 @@
 #define lobject_h
 
 
-#include <limits.h>
-
+#include "llims.h"
 #include "lua.h"
 
 
@@ -25,39 +24,6 @@
 
 
 #define UNUSED(x)	(void)x		/* to avoid warnings */
-
-/*
-** Define the type `number' of Lua
-** GREP LUA_NUMBER to change that
-*/
-#ifndef LUA_NUM_TYPE
-#define LUA_NUM_TYPE double
-#endif
-
-typedef LUA_NUM_TYPE Number;
-
-
-/*
-** type for virtual-machine instructions
-** must be an unsigned with 4 bytes (see details in lopcodes.h)
-*/
-typedef unsigned long Instruction;
-
-
-#define MAX_INT (INT_MAX-2)  /* maximum value of an int (-2 for safety) */
-
-
-/* conversion of pointer to int (for hashing only) */
-/* (the shift removes bits that are usually 0 because of alignment) */
-#define IntPoint(L, p)	(((unsigned long)(p)) >> 3)
-
-
-/*
-** number of `blocks' for garbage collection: each reference to other
-** objects count 1, and each 32 bytes of `raw' memory count 1; we add
-** 2 to the total as a minimum (and also to count the overhead of malloc)
-*/
-#define numblocks(L, o,b)	((o)+((b)>>5)+2)
 
 
 /*
@@ -112,7 +78,6 @@ typedef struct TObject {
 } TObject;
 
 
-
 typedef struct GlobalVar {
   TObject value;
   struct GlobalVar *next;
@@ -140,8 +105,6 @@ typedef struct TString {
   unsigned char marked;
   char str[1];   /* \0 byte already reserved */
 } TString;
-
-
 
 
 /*
@@ -173,8 +136,6 @@ typedef struct LocVar {
 
 
 
-
-
 /* Macros to access structure members */
 #define ttype(o)        ((o)->ttype)
 #define nvalue(o)       ((o)->value.n)
@@ -199,7 +160,6 @@ typedef struct Closure {
 } Closure;
 
 
-
 typedef struct Node {
   TObject key;
   TObject val;
@@ -220,8 +180,6 @@ extern const char *const luaO_typenames[];
 extern const TObject luaO_nilobject;
 
 #define luaO_typename(o)        luaO_typenames[ttype(o)]
-
-#define MINPOWER2	4	/* minimum size for "growing" vectors */
 
 unsigned long luaO_power2 (unsigned long n);
 

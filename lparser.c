@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.71 2000/03/20 19:15:37 roberto Exp roberto $
+** $Id: lparser.c,v 1.72 2000/03/24 12:17:53 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -20,17 +20,6 @@
 #include "lparser.h"
 #include "lstate.h"
 #include "lstring.h"
-
-
-/*
-** check whether arbitrary limits fit into respective opcode types
-*/
-#if MAXLOCALS > MAXARG_U || MAXUPVALUES > MAXARG_B || MAXVARSLH > MAXARG_B || \
-    MAXPARAMS > MAXLOCALS || MAXSTACK > MAXARG_A || \
-    LFIELDS_PER_FLUSH > MAXARG_B || MULT_RET > MAXARG_B
-#error invalid limits
-#endif
-
 
 
 /*

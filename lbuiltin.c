@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.95 2000/03/09 00:19:22 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.96 2000/03/10 18:37:44 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -130,10 +130,6 @@ void luaB__ERRORMESSAGE (lua_State *L) {
 ** model but changing `fputs' to put the strings at a proper place
 ** (a console window or a log file, for instance).
 */
-#ifndef MAXPRINT
-#define MAXPRINT	40  /* arbitrary limit */
-#endif
-
 void luaB_print (lua_State *L) {
   lua_Object args[MAXPRINT];
   lua_Object obj;

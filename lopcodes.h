@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.49 2000/03/13 20:37:16 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.50 2000/03/16 18:03:09 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -7,36 +7,32 @@
 #ifndef lopcodes_h
 #define lopcodes_h
 
+#include "llims.h"
 
 
 /*===========================================================================
-  We assume that instructions are unsigned numbers with 4 bytes.
-  All instructions have an opcode in the 8 bits. Moreover,
+  We assume that instructions are unsigned numbers.
+  All instructions have an opcode in the first 6 bits. Moreover,
   an instruction can have 0, 1, or 2 arguments. There are 4 types of
   Instructions:
   type 0: no arguments
-  type 1: 1 unsigned argument in the higher 24 bits (called `U')
-  type 2: 1 signed argument in the higher 24 bits          (`S')
-  type 3: 1st unsigned argument in the higher 16 bits      (`A')
-          2nd unsigned argument in the middle 8 bits       (`B')
+  type 1: 1 unsigned argument in the higher bits (called `U')
+  type 2: 1 signed argument in the higher bits          (`S')
+  type 3: 1st unsigned argument in the higher bits      (`A')
+          2nd unsigned argument in the middle bits      (`B')
 
-  The signed argument is represented in excess 2^23; that is, the number
-  value is the usigned value minus 2^23.
+  The signed argument is represented in excess 2^K; that is, the number
+  value is the usigned value minus 2^K.
+
+  The size of each argument is defined in `llims.h'. The usual is an
+  instruction with 32 bits, U and S arguments with 26 bits (32-6), B
+  argument with 9 bits, and A argument with 17 bits (32-6-9). For small
+  instalations, the instruction size can be 16, so U and S have 10 bits,
+  and A and B have 5 bits each.
 ===========================================================================*/
 
-#define SIZE_INSTRUCTION	32
 
-#define SIZE_OP		8
-#define SIZE_U		(SIZE_INSTRUCTION-SIZE_OP)
-#define POS_U		SIZE_OP
-#define SIZE_S		(SIZE_INSTRUCTION-SIZE_OP)
-#define POS_S		SIZE_OP
-#define SIZE_B		8
-#define POS_B		SIZE_OP
-#define SIZE_A		(SIZE_INSTRUCTION-(SIZE_OP+SIZE_B))
-#define POS_A		(SIZE_OP+SIZE_B)
-
-#define EXCESS_S	(1<<(SIZE_S-1))		/* == 2^23 */
+#define EXCESS_S	(1<<(SIZE_S-1))		/* == 2^K */
 
 
 /* creates a mask with `n' 1 bits at position `p' */
@@ -48,11 +44,6 @@
 /*
 ** the following macros help to manipulate instructions
 */
-
-#define MAXARG_U	((1<<SIZE_U)-1)
-#define MAXARG_S	((1<<(SIZE_S-1))-1)  /* `S' is signed */
-#define MAXARG_A	((1<<SIZE_A)-1)
-#define MAXARG_B	((1<<SIZE_B)-1)
 
 #define GET_OPCODE(i)	((OpCode)((i)&MASK1(SIZE_OP,0)))
 #define GETARG_U(i)	((int)((i)>>POS_U))
@@ -155,31 +146,6 @@ OP_SETLINE/*	U	-		-		LINE=u		*/
 
 
 #define ISJUMP(o)	(OP_IFNEQJMP <= (o) && (o) <= OP_JMP)
-
-
-#define RFIELDS_PER_FLUSH 32	/* records (SETMAP) */
-#define LFIELDS_PER_FLUSH 64	/* FPF - lists (SETLIST) (<=MAXARG_B) */
-
-
-/* 
-** we use int to manipulte most arguments, so they must fit
-*/
-#if MAXARG_U > MAX_INT
-#undef MAXARG_U
-#define MAXARG_U	MAX_INT
-#endif
-#if MAXARG_S > MAX_INT
-#undef MAXARG_S
-#define MAXARG_S	MAX_INT
-#endif
-#if MAXARG_A > MAX_INT
-#undef MAXARG_A
-#define MAXARG_A	MAX_INT
-#endif
-#if MAXARG_B > MAX_INT
-#undef MAXARG_B
-#define MAXARG_B	MAX_INT
-#endif
 
 
 #endif

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.16 2000/03/20 19:15:37 roberto Exp roberto $
+** $Id: lcode.c,v 1.17 2000/03/24 12:18:30 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -211,10 +211,6 @@ void luaK_kstr (LexState *ls, int c) {
   luaK_U(ls->fs, OP_PUSHSTRING, c, 1);
 }
 
-
-#ifndef LOOKBACKNUMS
-#define LOOKBACKNUMS	20	/* arbitrary limit */
-#endif
 
 static int real_constant (FuncState *fs, Number r) {
   /* check whether `r' has appeared within the last LOOKBACKNUMS entries */
