@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
+** $Id: lparser.c,v 2.2 2004/03/12 19:53:56 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -483,6 +483,7 @@ static void lastlistfield (FuncState *fs, struct ConsControl *cc) {
   if (cc->v.k == VCALL) {
     luaK_setcallreturns(fs, &cc->v, LUA_MULTRET);
     luaK_codeABx(fs, OP_SETLISTO, cc->t->info, cc->na-1);
+    cc->na--;  /* do not count last expression (unknown number of elements) */
   }
   else {
     if (cc->v.k != VVOID)

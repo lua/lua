@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.138 2003/12/09 16:56:11 roberto Exp roberto $
+** $Id: ltable.c,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -270,7 +270,7 @@ static void setnodevector (lua_State *L, Table *t, int lsize) {
 }
 
 
-static void resize (lua_State *L, Table *t, int nasize, int nhsize) {
+void luaH_resize (lua_State *L, Table *t, int nasize, int nhsize) {
   int i;
   int oldasize = t->sizearray;
   int oldhsize = t->lsizenode;
@@ -315,7 +315,7 @@ static void resize (lua_State *L, Table *t, int nasize, int nhsize) {
 static void rehash (lua_State *L, Table *t) {
   int nasize, nhsize;
   numuse(t, &nasize, &nhsize);  /* compute new sizes for array and hash parts */
-  resize(L, t, nasize, luaO_log2(nhsize)+1);
+  luaH_resize(L, t, nasize, luaO_log2(nhsize)+1);
 }
 
 
