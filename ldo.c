@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.40 1999/03/10 14:23:07 roberto Exp roberto $
+** $Id: ldo.c,v 1.41 1999/03/11 18:59:19 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -123,22 +123,21 @@ void luaD_callHook (StkId base, TProtoFunc *tf, int isreturn)
 ** Cstack.num is the number of arguments; Cstack.lua2C points to the
 ** first argument. Returns an index to the first result from C.
 */
-static StkId callC (lua_CFunction f, StkId base)
-{
-  struct C_Lua_Stack *CS = &L->Cstack;
-  struct C_Lua_Stack oldCLS = *CS;
+static StkId callC (lua_CFunction f, StkId base) {
+  struct C_Lua_Stack *cls = &L->Cstack;
+  struct C_Lua_Stack oldCLS = *cls;
   StkId firstResult;
   int numarg = (L->stack.top-L->stack.stack) - base;
-  CS->num = numarg;
-  CS->lua2C = base;
-  CS->base = base+numarg;  /* == top-stack */
+  cls->num = numarg;
+  cls->lua2C = base;
+  cls->base = base+numarg;  /* == top-stack */
   if (L->callhook)
     luaD_callHook(base, NULL, 0);
   (*f)();  /* do the actual call */
   if (L->callhook)  /* func may have changed callhook */
     luaD_callHook(base, NULL, 1);
-  firstResult = CS->base;
-  *CS = oldCLS;
+  firstResult = cls->base;
+  *cls = oldCLS;
   return firstResult;
 }
 
@@ -249,7 +248,7 @@ static void message (char *s) {
 void lua_error (char *s) {
   if (s) message(s);
   if (L->errorJmp)
-    longjmp(*((jmp_buf *)L->errorJmp), 1);
+    longjmp(L->errorJmp->b, 1);
   else {
     message("exit(1). Unable to recover.\n");
     exit(1);
@@ -276,11 +275,11 @@ static void do_callinc (int nResults)
 */
 int luaD_protectedrun (int nResults) {
   volatile struct C_Lua_Stack oldCLS = L->Cstack;
-  jmp_buf myErrorJmp;
+  struct lua_longjmp myErrorJmp;
   volatile int status;
-  jmp_buf *volatile oldErr = L->errorJmp;
+  struct lua_longjmp *volatile oldErr = L->errorJmp;
   L->errorJmp = &myErrorJmp;
-  if (setjmp(myErrorJmp) == 0) {
+  if (setjmp(myErrorJmp.b) == 0) {
     do_callinc(nResults);
     status = 0;
   }
@@ -299,12 +298,12 @@ int luaD_protectedrun (int nResults) {
 */
 static int protectedparser (ZIO *z, int bin) {
   volatile struct C_Lua_Stack oldCLS = L->Cstack;
-  jmp_buf myErrorJmp;
+  struct lua_longjmp myErrorJmp;
   volatile int status;
   TProtoFunc *volatile tf;
-  jmp_buf *volatile oldErr = L->errorJmp;
+  struct lua_longjmp *volatile oldErr = L->errorJmp;
   L->errorJmp = &myErrorJmp;
-  if (setjmp(myErrorJmp) == 0) {
+  if (setjmp(myErrorJmp.b) == 0) {
     tf = bin ? luaU_undump1(z) : luaY_parser(z);
     status = 0;
   }

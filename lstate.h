@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.15 1999/02/25 15:17:01 roberto Exp roberto $
+** $Id: lstate.h,v 1.16 1999/04/13 19:30:51 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -21,6 +21,16 @@
 
 typedef int StkId;  /* index to stack elements */
 
+
+/*
+** "jmp_buf" may be an array, so it is better to make sure it has an
+** address (and not that it *is* an address...)
+*/
+struct lua_longjmp {
+  jmp_buf b;
+};
+
+
 struct Stack {
   TObject *top;
   TObject *stack;
@@ -35,7 +45,7 @@ struct C_Lua_Stack {
 };
 
 
-typedef struct {
+typedef struct stringtable {
   int size;
   int nuse;  /* number of elements (including EMPTYs) */
   TaggedString **hash;
@@ -54,7 +64,7 @@ struct lua_State {
   /* thread-specific state */
   struct Stack stack;  /* Lua stack */
   struct C_Lua_Stack Cstack;  /* C2lua struct */
-  jmp_buf *errorJmp;  /* current error recover point */
+  struct lua_longjmp *errorJmp;  /* current error recover point */
   char *Mbuffer;  /* global buffer */
   int Mbuffbase;  /* current first position of Mbuffer */
   int Mbuffsize;  /* size of Mbuffer */

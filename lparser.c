@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.31 1999/03/25 21:06:57 roberto Exp roberto $
+** $Id: lparser.c,v 1.32 1999/05/06 14:41:41 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -50,7 +50,7 @@
 */
 typedef enum {VGLOBAL, VLOCAL, VDOT, VINDEXED, VEXP} varkind;
 
-typedef struct {
+typedef struct vardesc {
   varkind k;
   int info;
 } vardesc;
@@ -62,7 +62,7 @@ typedef struct {
 ** and, if last expression is open (a function call),
 ** where is its pc index of "nparam"
 */
-typedef struct {
+typedef struct listdesc {
   int n;
   int pc;  /* 0 if last expression is closed */
 } listdesc;
@@ -74,7 +74,7 @@ typedef struct {
 ** it is a list constructor (k = 0) or a record constructor (k = 1)
 ** or empty (k = ';' or '}')
 */
-typedef struct {
+typedef struct constdesc {
   int n;
   int k;
 } constdesc;
@@ -911,7 +911,7 @@ static OpCode opcodes [POW+1] = {NOTOP, MINUSOP, EQOP, NEQOP, GTOP, LTOP,
 
 #define MAXOPS	20  /* op's stack size */
 
-typedef struct {
+typedef struct stack_op {
   int ops[MAXOPS];
   int top;
 } stack_op;
