@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.98 2000/06/21 18:13:56 roberto Exp roberto $
+** $Id: lparser.c,v 1.99 2000/06/26 19:28:31 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -936,8 +936,8 @@ static void localstat (LexState *ls) {
     nexps = explist1(ls);
   else
     nexps = 0;
-  adjustlocalvars(ls, nvars);
   adjust_mult_assign(ls, nvars, nexps);
+  adjustlocalvars(ls, nvars);
 }
 
 
