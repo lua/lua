@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.39 1997/03/31 14:17:09 roberto Exp roberto $";
+char *rcs_hash="$Id: hash.c,v 2.40 1997/04/04 15:35:37 roberto Exp roberto $";
 
 
 #include "luamem.h"
@@ -302,8 +302,8 @@ void lua_next (void)
  Hash   *t;
  lua_Object o = lua_getparam(1);
  lua_Object r = lua_getparam(2);
- luaL_arg_check(lua_istable(o), "next", 1, "table expected");
- luaL_arg_check(r != LUA_NOOBJECT, "next", 2, "value expected");
+ luaL_arg_check(lua_istable(o), 1, "table expected");
+ luaL_arg_check(r != LUA_NOOBJECT, 2, "value expected");
  t = avalue(luaI_Address(o));
  if (lua_isnil(r))
  {

@@ -1,14 +1,19 @@
-char *rcs_auxlib="$Id: auxlib.c,v 1.1 1997/03/17 17:02:29 roberto Exp roberto $";
+char *rcs_auxlib="$Id: auxlib.c,v 1.2 1997/03/18 15:30:50 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdarg.h>
 
 #include "lua.h"
 #include "auxlib.h"
+#include "luadebug.h"
 
 
-void luaL_arg_check(int cond, char *funcname, int numarg, char *extramsg)
+void luaL_arg_check(int cond, int numarg, char *extramsg)
 {
+  char *funcname;
+  lua_getobjname(lua_stackedfunction(0), &funcname);
+  if (funcname == NULL)
+    funcname = "???";
   if (!cond) {
     if (extramsg == NULL)
       luaL_verror("bad argument #%d to function `%s'", numarg, funcname);
@@ -18,31 +23,31 @@ void luaL_arg_check(int cond, char *funcname, int numarg, char *extramsg)
   }
 }
 
-char *luaL_check_string (int numArg, char *funcname)
+char *luaL_check_string (int numArg)
 {
   lua_Object o = lua_getparam(numArg);
-  luaL_arg_check(lua_isstring(o), funcname, numArg, "string expected");
+  luaL_arg_check(lua_isstring(o), numArg, "string expected");
   return lua_getstring(o);
 }
 
-char *luaL_opt_string (int numArg, char *def, char *funcname)
+char *luaL_opt_string (int numArg, char *def)
 {
   return (lua_getparam(numArg) == LUA_NOOBJECT) ? def :
-                              luaL_check_string(numArg, funcname);
+                              luaL_check_string(numArg);
 }
 
-double luaL_check_number (int numArg, char *funcname)
+double luaL_check_number (int numArg)
 {
   lua_Object o = lua_getparam(numArg);
-  luaL_arg_check(lua_isnumber(o), funcname, numArg, "number expected");
+  luaL_arg_check(lua_isnumber(o), numArg, "number expected");
   return lua_getnumber(o);
 }
 
 
-double luaL_opt_number (int numArg, double def, char *funcname)
+double luaL_opt_number (int numArg, double def)
 {
   return (lua_getparam(numArg) == LUA_NOOBJECT) ? def :
-                              luaL_check_number(numArg, funcname);
+                              luaL_check_number(numArg);
 }
 
 void luaL_openlib (struct luaL_reg *l, int n)

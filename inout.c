@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.54 1997/04/02 23:04:12 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.55 1997/04/04 22:24:51 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -122,7 +122,7 @@ static int passresults (void)
 */
 static void lua_internaldostring (void)
 {
-  if (lua_dostring(luaL_check_string(1, "dostring")) == 0)
+  if (lua_dostring(luaL_check_string(1)) == 0)
     if (passresults() == 0)
       lua_pushuserdata(NULL);  /* at least one result to signal no errors */
 }
@@ -132,7 +132,7 @@ static void lua_internaldostring (void)
 */
 static void lua_internaldofile (void)
 {
- char *fname = luaL_opt_string(1, NULL, "dofile");
+ char *fname = luaL_opt_string(1, NULL);
  if (lua_dofile(fname) == 0)
     if (passresults() == 0)
       lua_pushuserdata(NULL);  /* at least one result to signal no errors */
@@ -179,7 +179,7 @@ static void luaI_print (void)
 static void luaI_type (void)
 {
   lua_Object o = lua_getparam(1);
-  luaL_arg_check(o != LUA_NOOBJECT, "type", 1, "no argument");
+  luaL_arg_check(o != LUA_NOOBJECT, 1, "no argument");
   lua_pushstring(luaI_typenames[-ttype(luaI_Address(o))]);
   lua_pushnumber(lua_tag(o));
 }
@@ -212,29 +212,29 @@ static void luaI_assert (void)
 static void luaI_setglobal (void)
 {
   lua_Object value = lua_getparam(2);
-  luaL_arg_check(value != LUA_NOOBJECT, "setglobal", 2, NULL);
+  luaL_arg_check(value != LUA_NOOBJECT, 2, NULL);
   lua_pushobject(value);
-  lua_setglobal(luaL_check_string(1, "setglobal"));
+  lua_setglobal(luaL_check_string(1));
   lua_pushobject(value);  /* return given value */
 }
 
 static void luaI_rawsetglobal (void)
 {
   lua_Object value = lua_getparam(2);
-  luaL_arg_check(value != LUA_NOOBJECT, "rawsetglobal", 2, NULL);
+  luaL_arg_check(value != LUA_NOOBJECT, 2, NULL);
   lua_pushobject(value);
-  lua_rawsetglobal(luaL_check_string(1, "rawsetglobal"));
+  lua_rawsetglobal(luaL_check_string(1));
   lua_pushobject(value);  /* return given value */
 }
 
 static void luaI_getglobal (void)
 {
-  lua_pushobject(lua_getglobal(luaL_check_string(1, "getglobal")));
+  lua_pushobject(lua_getglobal(luaL_check_string(1)));
 }
 
 static void luaI_rawgetglobal (void)
 {
-  lua_pushobject(lua_rawgetglobal(luaL_check_string(1, "rawgetglobal")));
+  lua_pushobject(lua_rawgetglobal(luaL_check_string(1)));
 }
 
 static void luatag (void)
@@ -249,8 +249,8 @@ static void luaI_call (void)
   lua_Object arg = lua_getparam(2);
   lua_Object temp, params[MAXPARAMS];
   int narg, i;
-  luaL_arg_check(lua_isfunction(f), "call", 1, "function expected");
-  luaL_arg_check(lua_istable(arg), "call", 2, "table expected");
+  luaL_arg_check(lua_isfunction(f), 1, "function expected");
+  luaL_arg_check(lua_istable(arg), 2, "table expected");
   /* narg = arg.n */
   lua_pushobject(arg);
   lua_pushstring("n");
@@ -280,9 +280,9 @@ static void luaI_call (void)
 static void luaIl_settag (void)
 {
   lua_Object o = lua_getparam(1);
-  luaL_arg_check(o != LUA_NOOBJECT, "settag", 1, NULL);
+  luaL_arg_check(o != LUA_NOOBJECT, 1, NULL);
   lua_pushobject(o);
-  lua_settag(luaL_check_number(2, "settag"));
+  lua_settag(luaL_check_number(2));
 }
 
 static void luaIl_newtag (void)
@@ -294,8 +294,8 @@ static void rawgettable (void)
 {
   lua_Object t = lua_getparam(1);
   lua_Object i = lua_getparam(2);
-  luaL_arg_check(t != LUA_NOOBJECT, "rawgettable", 1, NULL);
-  luaL_arg_check(i != LUA_NOOBJECT, "rawgettable", 2, NULL);
+  luaL_arg_check(t != LUA_NOOBJECT, 1, NULL);
+  luaL_arg_check(i != LUA_NOOBJECT, 2, NULL);
   lua_pushobject(t);
   lua_pushobject(i);
   lua_pushobject(lua_rawgettable());
@@ -307,7 +307,7 @@ static void rawsettable (void)
   lua_Object i = lua_getparam(2);
   lua_Object v = lua_getparam(3);
   luaL_arg_check(t != LUA_NOOBJECT && i != LUA_NOOBJECT && v != LUA_NOOBJECT,
-            "rawsettable", 0, NULL);
+                 0, NULL);
   lua_pushobject(t);
   lua_pushobject(i);
   lua_pushobject(v);

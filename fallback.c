@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 2.1 1997/04/03 18:24:23 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 2.2 1997/04/04 22:24:51 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -227,8 +227,8 @@ TObject *luaI_getim (int tag, IMS event)
 
 void luaI_gettagmethod (void)
 {
-  int t = (int)luaL_check_number(1, "gettagmethod");
-  int e = luaI_checkevent(luaL_check_string(2, "gettagmethod"), luaI_eventname);
+  int t = (int)luaL_check_number(1);
+  int e = luaI_checkevent(luaL_check_string(2), luaI_eventname);
   checktag(t);
   if (validevent(t, e))
     luaI_pushobject(&luaI_IMtable[-t].int_method[e]);
@@ -237,14 +237,14 @@ void luaI_gettagmethod (void)
 
 void luaI_settagmethod (void)
 {
-  int t = (int)luaL_check_number(1, "settagmethod");
-  int e = luaI_checkevent(luaL_check_string(2, "settagmethod"), luaI_eventname);
+  int t = (int)luaL_check_number(1);
+  int e = luaI_checkevent(luaL_check_string(2), luaI_eventname);
   lua_Object func = lua_getparam(3);
   checktag(t);
   if (!validevent(t, e))
     luaL_verror("cannot change internal method `%s' for tag %d",
                 luaI_eventname[e], t);
-  luaL_arg_check(lua_isnil(func) || lua_isfunction(func), "settagmethod",
+  luaL_arg_check(lua_isnil(func) || lua_isfunction(func),
                  3, "function expected");
   luaI_pushobject(&luaI_IMtable[-t].int_method[e]);
   luaI_IMtable[-t].int_method[e] = *luaI_Address(func);
@@ -262,7 +262,7 @@ TObject *luaI_geterrorim (void)
 void luaI_seterrormethod (void)
 {
   lua_Object func = lua_getparam(1);
-  luaL_arg_check(lua_isnil(func) || lua_isfunction(func), "seterrormethod",
+  luaL_arg_check(lua_isnil(func) || lua_isfunction(func),
                  1, "function expected");
   luaI_pushobject(&errorim);
   errorim = *luaI_Address(func);
@@ -321,10 +321,10 @@ void luaI_setfallback (void)
   int e;
   TObject oldfunc;
   lua_CFunction replace;
-  char *name = luaL_check_string(1, "setfallback");
+  char *name = luaL_check_string(1);
   lua_Object func = lua_getparam(2);
   luaI_initfallbacks();
-  luaL_arg_check(lua_isfunction(func), "setfallback", 2, "function expected");
+  luaL_arg_check(lua_isfunction(func), 2, "function expected");
   if (strcmp(name, "error") == 0) {  /* old error fallback */
     oldfunc = errorim;
     errorim = *luaI_Address(func);

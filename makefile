@@ -1,4 +1,4 @@
-# $Id: makefile,v 1.31 1997/03/31 14:23:49 roberto Exp roberto $
+# $Id: makefile,v 1.32 1997/03/31 20:58:42 roberto Exp roberto $
 
 #configuration
 
@@ -83,7 +83,7 @@ fallback.o: fallback.c auxlib.h lua.h luamem.h fallback.h opcode.h \
 func.o: func.c luadebug.h lua.h table.h tree.h types.h opcode.h func.h \
  luamem.h
 hash.o: hash.c luamem.h opcode.h lua.h types.h tree.h func.h hash.h \
- table.h
+ table.h auxlib.h
 inout.o: inout.c auxlib.h lua.h lex.h opcode.h types.h tree.h func.h \
  inout.h table.h hash.h luamem.h fallback.h
 iolib.o: iolib.c lua.h auxlib.h luadebug.h lualib.h
@@ -93,12 +93,12 @@ lua.o: lua.c lua.h lualib.h
 luamem.o: luamem.c luamem.h lua.h
 mathlib.o: mathlib.c lualib.h lua.h auxlib.h
 opcode.o: opcode.c luadebug.h lua.h luamem.h opcode.h types.h tree.h \
- func.h hash.h inout.h table.h fallback.h undump.h
+ func.h hash.h inout.h table.h fallback.h undump.h auxlib.h
 parser.o: parser.c luadebug.h lua.h luamem.h lex.h opcode.h types.h \
  tree.h func.h hash.h inout.h table.h
 strlib.o: strlib.c lua.h auxlib.h lualib.h
-table.o: table.c luamem.h opcode.h lua.h types.h tree.h func.h hash.h \
- table.h inout.h fallback.h luadebug.h
+table.o: table.c luamem.h auxlib.h lua.h opcode.h types.h tree.h \
+ func.h hash.h table.h inout.h fallback.h luadebug.h
 tree.o: tree.c luamem.h lua.h tree.h types.h lex.h hash.h opcode.h \
  func.h table.h fallback.h
 undump.o: undump.c opcode.h lua.h types.h tree.h func.h luamem.h \

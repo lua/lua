@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.65 1997/03/31 14:17:09 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.66 1997/04/04 15:35:37 roberto Exp roberto $";
 
 #include "luamem.h"
 #include "auxlib.h"
@@ -208,7 +208,7 @@ void luaI_nextvar (void)
   if (lua_isnil(lua_getparam(1)))
     next = 0;
   else 
-    next = luaI_findsymbolbyname(luaL_check_string(1, "nextvar")) + 1;
+    next = luaI_findsymbolbyname(luaL_check_string(1)) + 1;
   while (next < lua_ntable && s_ttype(next) == LUA_T_NIL)
     next++;
   if (next < lua_ntable) {
