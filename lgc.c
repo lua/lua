@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.67 2000/09/25 14:52:10 roberto Exp roberto $
+** $Id: lgc.c,v 1.68 2000/09/29 12:42:13 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -235,18 +235,13 @@ static void checktab (lua_State *L, stringtable *tb) {
 }
 
 
-/*
-** collect all elements with `marked' <= `limit'.
-** with limit=0, that means all unmarked elements;
-** with limit=MAX_INT, that means all elements.
-*/
-static void collectstringtab (lua_State *L, int limit) {
+static void collectstrings (lua_State *L, int all) {
   int i;
   for (i=0; i<L->strt.size; i++) {  /* for each list */
     TString **p = &L->strt.hash[i];
     TString *next;
     while ((next = *p) != NULL) {
-      if ((int)next->marked > limit) {  /* preserve? */
+      if (next->marked && !all) {  /* preserve? */
         if (next->marked < FIXMARK)  /* does not change FIXMARKs */
           next->marked = 0;
         p = &next->nexthash;
@@ -263,14 +258,14 @@ static void collectstringtab (lua_State *L, int limit) {
 }
 
 
-static void collectudatatab (lua_State *L, int all) {
+static void collectudata (lua_State *L, int all) {
   int i;
   for (i=0; i<L->udt.size; i++) {  /* for each list */
     TString **p = &L->udt.hash[i];
     TString *next;
     while ((next = *p) != NULL) {
       LUA_ASSERT(next->marked <= 1, "udata cannot be fixed");
-      if ((int)next->marked > all) {  /* preserve? */
+      if (next->marked && !all) {  /* preserve? */
         next->marked = 0;
         p = &next->nexthash;
       } 
@@ -289,14 +284,28 @@ static void collectudatatab (lua_State *L, int all) {
 }
 
 
+#define MINBUFFER	256
+static void checkMbuffer (lua_State *L) {
+  if (L->Mbuffsize > MINBUFFER*2) {  /* is buffer too big? */
+    size_t newsize = L->Mbuffsize/2;  /* still larger than MINBUFFER */
+    L->nblocks += (newsize - L->Mbuffsize)*sizeof(char);
+    L->Mbuffsize = newsize;
+    luaM_reallocvector(L, L->Mbuffer, newsize, char);
+  }
+}
+
+
 static void callgcTM (lua_State *L, const TObject *o) {
   const TObject *im = luaT_getimbyObj(L, o, IM_GC);
   if (ttype(im) != TAG_NIL) {
+    int oldah = L->allowhooks;
+    L->allowhooks = 0;  /* stop debug hooks during GC tag methods */
     luaD_checkstack(L, 2);
     *(L->top) = *im;
     *(L->top+1) = *o;
     L->top += 2;
     luaD_call(L, L->top-2, 0);
+    L->allowhooks = oldah;  /* restore hooks */
   }
 }
 
@@ -305,56 +314,41 @@ static void callgcTMudata (lua_State *L) {
   int tag;
   TObject o;
   ttype(&o) = TAG_USERDATA;
-  for (tag=L->last_tag; tag>=0; tag--) {
-    TString *udata = L->IMtable[tag].collected;
-    L->IMtable[tag].collected = NULL;
-    while (udata) {
-      TString *next = udata->nexthash;
+  L->GCthreshold = 2*L->nblocks;  /* avoid GC during tag methods */
+  for (tag=L->last_tag; tag>=0; tag--) {  /* for each tag (in reverse order) */
+    TString *udata;
+    while ((udata = L->IMtable[tag].collected) != NULL) {
+      L->IMtable[tag].collected = udata->nexthash;  /* remove it from list */
       tsvalue(&o) = udata;
       callgcTM(L, &o);
       luaM_free(L, udata);
-      udata = next;
     }
   }
 }
 
 
 void luaC_collect (lua_State *L, int all) {
-  int oldah = L->allowhooks;
-  L->allowhooks = 0;  /* stop debug hooks during GC */
-  L->GCthreshold *= 4;  /* to avoid GC during GC */
-  collectudatatab(L, all);
+  collectudata(L, all);
   callgcTMudata(L);
-  collectstringtab(L, all?MAX_INT:0);
+  collectstrings(L, all);
   collecttable(L);
   collectproto(L);
   collectclosure(L);
-  L->allowhooks = oldah;  /* restore hooks */
 }
 
 
-#define MINBUFFER	256
-
-long lua_collectgarbage (lua_State *L, long limit) {
-  unsigned long recovered = L->nblocks;  /* to subtract `nblocks' after gc */
+static void luaC_collectgarbage (lua_State *L) {
   markall(L);
-  invalidaterefs(L);
+  invalidaterefs(L);  /* check unlocked references */
   luaC_collect(L, 0);
-  recovered = recovered - L->nblocks;
-  L->GCthreshold = (limit == 0) ? 2*L->nblocks : L->nblocks+limit;
-  if (L->Mbuffsize > MINBUFFER*2) {  /* is buffer too big? */
-    size_t diff = L->Mbuffsize/2;
-    L->Mbuffsize -= diff;  /* still larger than MINBUFFER */
-    L->nblocks -= diff*sizeof(char);
-    luaM_reallocvector(L, L->Mbuffer, L->Mbuffsize, char);
-  }
+  checkMbuffer(L);
+  L->GCthreshold = 2*L->nblocks;  /* set new threshold */
   callgcTM(L, &luaO_nilobject);
-  return recovered;
 }
 
 
 void luaC_checkGC (lua_State *L) {
   if (L->nblocks >= L->GCthreshold)
-    lua_collectgarbage(L, 0);
+    luaC_collectgarbage(L);
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.97 2000/09/25 16:22:42 roberto Exp roberto $
+** $Id: ldo.c,v 1.98 2000/09/29 12:42:13 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -197,6 +197,7 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
     nResults--;
   }
   L->top = func;
+  luaC_checkGC(L);
 }
 
 
@@ -366,12 +367,14 @@ int luaD_runprotected (lua_State *L, void (*f)(lua_State *, void *), void *ud) {
   StkId oldCbase = L->Cbase;
   StkId oldtop = L->top;
   struct lua_longjmp lj;
+  int allowhooks = L->allowhooks;
   lj.status = 0;
   lj.previous = L->errorJmp;  /* chain new error handler */
   L->errorJmp = &lj;
   if (setjmp(lj.b) == 0)
     (*f)(L, ud);
   else {  /* an error occurred: restore the state */
+    L->allowhooks = allowhooks;
     L->Cbase = oldCbase;
     L->top = oldtop;
     restore_stack_limit(L);

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.136 2000/09/20 17:57:08 roberto Exp roberto $
+** $Id: lvm.c,v 1.137 2000/09/25 14:48:42 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -351,10 +351,8 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
   lua_Hook linehook = L->linehook;
   infovalue(base-1)->pc = &pc;
   luaD_checkstack(L, tf->maxstacksize+EXTRA_STACK);
-  if (tf->is_vararg) {  /* varargs? */
+  if (tf->is_vararg)  /* varargs? */
     adjust_varargs(L, base, tf->numparams);
-    luaC_checkGC(L);
-  }
   else
     luaD_adjusttop(L, base, tf->numparams);
   top = L->top;

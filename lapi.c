@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.100 2000/09/27 12:51:39 roberto Exp roberto $
+** $Id: lapi.c,v 1.101 2000/09/29 12:42:13 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -155,7 +155,6 @@ double lua_tonumber (lua_State *L, int index) {
 }
 
 const char *lua_tostring (lua_State *L, int index) {
-  luaC_checkGC(L);  /* `tostring' may create a new string */
   access(L, index, (tostring(L, o) == 0), NULL, svalue(o));
 }
 
@@ -203,7 +202,6 @@ void lua_pushnumber (lua_State *L, double n) {
 
 
 void lua_pushlstring (lua_State *L, const char *s, size_t len) {
-  luaC_checkGC(L);
   tsvalue(L->top) = luaS_newlstr(L, s, len);
   ttype(L->top) = TAG_STRING;
   api_incr_top(L);
@@ -219,13 +217,11 @@ void lua_pushstring (lua_State *L, const char *s) {
 
 
 void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
-  luaC_checkGC(L);
   luaV_Cclosure(L, fn, n);
 }
 
 
 void lua_pushusertag (lua_State *L, void *u, int tag) {  /* ORDER LUA_T */
-  luaC_checkGC(L);
   if (tag != LUA_ANYTAG && tag != TAG_USERDATA && tag < NUM_TAGS)
     luaO_verror(L, "invalid tag for a userdata (%d)", tag);
   tsvalue(L->top) = luaS_createudata(L, u, tag);
@@ -292,7 +288,6 @@ int lua_getref (lua_State *L, int ref) {
 
 
 void lua_newtable (lua_State *L) {
-  luaC_checkGC(L);
   hvalue(L->top) = luaH_new(L, 0);
   ttype(L->top) = TAG_TABLE;
   api_incr_top(L);
@@ -377,6 +372,31 @@ void lua_rawcall (lua_State *L, int nargs, int nresults) {
 
 
 /*
+** Garbage-collection functions
+*/
+
+/* GC values are expressed in Kbytes: #bytes/2^10 */
+#define GCscale(x)		((int)((x)>>10))
+#define GCunscale(x)		((unsigned long)(x)<<10)
+
+int lua_getgcthreshold (lua_State *L) {
+  return GCscale(L->GCthreshold);
+}
+
+int lua_getgccount (lua_State *L) {
+  return GCscale(L->nblocks);
+}
+
+void lua_setgcthreshold (lua_State *L, int newthreshold) {
+  if (newthreshold > GCscale(ULONG_MAX))
+    L->GCthreshold = ULONG_MAX;
+  else
+    L->GCthreshold = GCunscale(newthreshold);
+  luaC_checkGC(L);
+}
+
+
+/*
 ** miscellaneous functions
 */
 
@@ -449,5 +469,6 @@ void lua_concat (lua_State *L, int n) {
   StkId top = L->top;
   luaV_strconc(L, n, top);
   L->top = top-(n-1);
+  luaC_checkGC(L);
 }
 

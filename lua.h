@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.69 2000/09/14 14:09:31 roberto Exp roberto $
+** $Id: lua.h,v 1.70 2000/09/18 19:39:18 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -134,6 +134,12 @@ int            lua_dostring (lua_State *L, const char *str);
 int            lua_dobuffer (lua_State *L, const char *buff, size_t size,
                              const char *name);
 
+/*
+** Garbage-collection functions
+*/
+int            lua_getgcthreshold (lua_State *L);
+int            lua_getgccount (lua_State *L);
+void           lua_setgcthreshold (lua_State *L, int newthreshold);
 
 /*
 ** miscellaneous functions
@@ -145,8 +151,6 @@ void           lua_settag (lua_State *L, int tag);
 void           lua_error (lua_State *L, const char *s);
 
 void	       lua_unref (lua_State *L, int ref);
-
-long	       lua_collectgarbage (lua_State *L, long limit);
 
 int            lua_next (lua_State *L, int index);
 int            lua_getn (lua_State *L, int index);

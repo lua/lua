@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.44 2000/09/25 16:22:42 roberto Exp roberto $
+** $Id: ltests.c,v 1.45 2000/09/29 12:42:13 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -166,8 +166,7 @@ static int mem_query (lua_State *L) {
     lua_pushnumber(L, memdebug_total);
     lua_pushnumber(L, memdebug_numblocks);
     lua_pushnumber(L, memdebug_maxmem);
-lua_pushnumber(L, L->nblocks);
-    return 4;
+    return 3;
   }
   else {
     memdebug_memlimit = luaL_check_int(L, 1);

@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.5 2000/09/14 14:09:31 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.6 2000/09/20 12:54:17 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -183,10 +183,8 @@ static int luaB_settagmethod (lua_State *L) {
   const char *event = luaL_check_string(L, 2);
   luaL_arg_check(L, lua_isfunction(L, 3) || lua_isnil(L, 3), 3,
                  "function or nil expected");
-  lua_pushnil(L);  /* to get its tag */
-  if (strcmp(event, "gc") == 0 && tag != lua_tag(L, -1))
+  if (strcmp(event, "gc") == 0)
     lua_error(L, "deprecated use: cannot set the `gc' tag method from Lua");
-  lua_pop(L, 1);  /* remove the nil */
   lua_settagmethod(L, tag, event);
   return 1;
 }
@@ -197,9 +195,16 @@ static int luaB_gettagmethod (lua_State *L) {
 }
 
 
+static int luaB_gcinfo (lua_State *L) {
+  lua_pushnumber(L, lua_getgccount(L));
+  lua_pushnumber(L, lua_getgcthreshold(L));
+  return 2;
+}
+
+
 static int luaB_collectgarbage (lua_State *L) {
-  lua_pushnumber(L, lua_collectgarbage(L, luaL_opt_int(L, 1, 0)));
-  return 1;
+  lua_setgcthreshold(L, luaL_opt_int(L, 1, 0));
+  return 0;
 }
 
 
@@ -601,6 +606,7 @@ static const struct luaL_reg base_funcs[] = {
   {"error", luaB_error},
   {"foreach", luaB_foreach},
   {"foreachi", luaB_foreachi},
+  {"gcinfo", luaB_gcinfo},
   {"getglobal", luaB_getglobal},
   {"gettagmethod", luaB_gettagmethod},
   {"globals", luaB_globals},
