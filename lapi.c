@@ -180,8 +180,8 @@ LUA_API int lua_iscfunction (lua_State *L, int index) {
 
 LUA_API int lua_isnumber (lua_State *L, int index) {
   TObject n;
-  TObject *o = luaA_indexAcceptable(L, index);
-  return (o != NULL && luaV_tonumber(o, &n));
+  const TObject *o = luaA_indexAcceptable(L, index);
+  return (o != NULL && tonumber(o, &n));
 }
 
 
@@ -222,7 +222,7 @@ LUA_API int lua_lessthan (lua_State *L, int index1, int index2) {
 LUA_API lua_Number lua_tonumber (lua_State *L, int index) {
   TObject n;
   const TObject *o = luaA_indexAcceptable(L, index);
-  if (o != NULL && (o = luaV_tonumber(o, &n)) != NULL)
+  if (o != NULL && tonumber(o, &n))
     return nvalue(o);
   else
     return 0;
@@ -247,7 +247,7 @@ LUA_API const char *lua_tostring (lua_State *L, int index) {
   else {
     const char *s;
     lua_lock(L);  /* `luaV_tostring' may create a new string */
-    s = (luaV_tostring(L, o) == 0) ? svalue(o) : NULL;
+    s = (luaV_tostring(L, o) ? svalue(o) : NULL);
     lua_unlock(L);
     return s;
   }
@@ -263,7 +263,7 @@ LUA_API size_t lua_strlen (lua_State *L, int index) {
   else {
     size_t l;
     lua_lock(L);  /* `luaV_tostring' may create a new string */
-    l = (luaV_tostring(L, o) == 0) ? tsvalue(o)->tsv.len : 0;
+    l = (luaV_tostring(L, o) ? tsvalue(o)->tsv.len : 0);
     lua_unlock(L);
     return l;
   }
@@ -350,7 +350,7 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
 
 LUA_API void lua_pushboolean (lua_State *L, int b) {
   lua_lock(L);
-  setbvalue(L->top, b);
+  setbvalue(L->top, (b != 0));  /* ensure that true is 1 */
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -360,16 +360,6 @@ LUA_API void lua_pushboolean (lua_State *L, int b) {
 /*
 ** get functions (Lua -> stack)
 */
-
-
-LUA_API void lua_getstr (lua_State *L, int index, const char *name) {
-  TObject o;
-  lua_lock(L);
-  setsvalue(&o, luaS_new(L, name));
-  luaV_gettable(L, luaA_index(L, index), &o, L->top);
-  api_incr_top(L);
-  lua_unlock(L);
-}
 
 
 LUA_API void lua_gettable (lua_State *L, int index) {
@@ -437,17 +427,6 @@ LUA_API void lua_getmetatable (lua_State *L, int objindex) {
 /*
 ** set functions (stack -> Lua)
 */
-
-
-LUA_API void lua_setstr (lua_State *L, int index, const char *name) {
-  TObject o;
-  lua_lock(L);
-  api_checknelems(L, 1);
-  setsvalue(&o, luaS_new(L, name));
-  luaV_settable(L, luaA_index(L, index), &o, L->top - 1);
-  L->top--;  /* remove element from the top */
-  lua_unlock(L);
-}
 
 
 LUA_API void lua_settable (lua_State *L, int index) {
