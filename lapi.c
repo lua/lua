@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.29 1998/12/03 15:45:15 roberto Exp roberto $
+** $Id: lapi.c,v 1.30 1998/12/30 17:26:49 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -425,8 +425,42 @@ void lua_settag (int tag)
 }
 
 
+
 /*
+** {======================================================
+** To manipulate the implementation global variables
 ** =======================================================
+*/
+
+lua_State *lua_setstate (lua_State *st) {
+  lua_State *old = lua_state;
+  lua_state = st;
+  return old;
+}
+
+lua_LHFunction lua_setlinehook (lua_LHFunction func) {
+  lua_LHFunction old = lua_linehook;
+  lua_linehook = func;
+  return old;
+}
+
+lua_CHFunction lua_setcallhook (lua_CHFunction func) {
+  lua_CHFunction old = lua_callhook;
+  lua_callhook = func;
+  return old;
+}
+
+int lua_setdebug (int debug) {
+  int old = lua_debug;
+  lua_debug = debug;
+  return old;
+}
+
+/* }====================================================== */
+
+
+/*
+** {======================================================
 ** Debug interface
 ** =======================================================
 */
@@ -541,8 +575,11 @@ char *lua_getobjname (lua_Object o, char **name)
   else return "";
 }
 
+/* }====================================================== */
+
+
 /*
-** =======================================================
+** {======================================================
 ** BLOCK mechanism
 ** =======================================================
 */
@@ -582,9 +619,11 @@ lua_Object lua_getref (int ref)
   return (o ? put_luaObject(o) : LUA_NOOBJECT);
 }
 
+/* }====================================================== */
+
 
 /*
-** =======================================================
+** {======================================================
 ** Derived functions
 ** =======================================================
 */
@@ -601,6 +640,8 @@ void (lua_pushuserdata) (void *u) { lua_pushuserdata(u); }
 void (lua_pushcfunction) (lua_CFunction f) { lua_pushcfunction(f); }
 
 int (lua_clonetag) (int t) { return lua_clonetag(t); }
+
+/* }====================================================== */
 
 
 

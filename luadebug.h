@@ -1,5 +1,5 @@
 /*
-** $Id: luadebug.h,v 1.2 1998/06/19 16:14:09 roberto Exp roberto $
+** $Id: luadebug.h,v 1.3 1998/09/07 18:59:59 roberto Exp roberto $
 ** Debugging API
 ** See Copyright Notice in lua.h
 */
@@ -29,6 +29,11 @@ int lua_nups (lua_Function func);
 extern lua_LHFunction lua_linehook;
 extern lua_CHFunction lua_callhook;
 extern int lua_debug;
+
+
+extern lua_LHFunction lua_setlinehook (lua_LHFunction func);
+extern lua_CHFunction lua_setcallhook (lua_CHFunction func);
+extern int lua_setdebug (int debug);
 
 
 #endif

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.5 1997/12/17 20:48:58 roberto Exp roberto $
+** $Id: lstate.c,v 1.6 1998/06/02 20:37:04 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -77,10 +77,4 @@ void lua_close (void)
 #endif
 }
 
-
-lua_State *lua_setstate (lua_State *st) {
-  lua_State *old = lua_state;
-  lua_state = st;
-  return old;
-}
 
