@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.64 2002/04/02 20:42:49 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.65 2002/04/04 20:25:55 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -25,7 +25,7 @@ LUALIB_API const char *luaL_errstr (int errcode) {
   static const char *const errstr[] = {
     "ok",
     "run-time error",
-    "cannot open file",
+    "cannot read file",
     "syntax error",
     "not enough memory",
     "error in error handling"
