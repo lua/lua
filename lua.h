@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.175 2003/03/18 12:31:39 roberto Exp roberto $
+** $Id: lua.h,v 1.176 2003/05/14 21:06:56 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -19,6 +19,8 @@
 #define LUA_AUTHORS 	"R. Ierusalimschy, L. H. de Figueiredo & W. Celes"
 
 
+/* mark for precompiled code (`<esc>Lua') */
+#define	LUA_SIGNATURE	"\033Lua"
 
 /* option for multiple returns in `lua_pcall' and `lua_call' */
 #define LUA_MULTRET	(-1)

@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.h,v 1.30 2003/04/07 20:34:20 lhf Exp $
+** $Id: lundump.h,v 1.31 2003/04/10 17:39:41 roberto Exp roberto $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,6 @@ void luaU_dump (lua_State* L, const Proto* Main, lua_Chunkwriter w, void* data);
 void luaU_print (const Proto* Main);
 
 /* definitions for headers of binary files */
-#define	LUA_SIGNATURE	"\033Lua"	/* binary files start with "<esc>Lua" */
 #define	VERSION		0x50		/* last format change was in 5.0 */
 #define	VERSION0	0x50		/* last major  change was in 5.0 */
 
