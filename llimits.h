@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.55 2003/05/14 21:01:53 roberto Exp roberto $
+** $Id: llimits.h,v 1.56 2003/07/29 19:26:34 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -50,10 +50,30 @@ typedef LUA_UINT32 lu_int32;
 
 
 /*
+** a signed integer with at least 32 bits
+*/
+#ifndef LUA_INT32
+#define LUA_INT32	long
+#define LUA_MAXINT32	LONG_MAX
+#endif
+
+typedef LUA_INT32 l_int32;
+
+
+/*
 ** an unsigned integer big enough to count the total memory used by Lua;
 ** it should be at least as large as `size_t'
 */
 typedef lu_int32 lu_mem;
+
+
+/*
+** a signed integer big enough to count the total memory used by Lua;
+** it should be at least as large as `size_t'
+*/
+typedef l_int32 l_mem;
+#define MAXLMEM	LUA_MAXINT32
+
 
 
 /* chars used as small naturals (so that `char' is reserved for characters) */

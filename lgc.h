@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 1.23 2003/11/18 14:55:11 roberto Exp roberto $
+** $Id: lgc.h,v 1.24 2003/11/19 19:41:57 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -9,6 +9,16 @@
 
 
 #include "lobject.h"
+
+
+/*
+** Possible states of the Garbage Collector
+*/
+#define GCSroot		0
+#define GCSpropagate	1
+#define GCSatomic	2
+#define GCSsweep	3
+#define GCSfinalize	4
 
 
 /*
@@ -53,7 +63,7 @@
 
 size_t luaC_separateudata (lua_State *L);
 void luaC_callGCTM (lua_State *L);
-void luaC_sweep (lua_State *L, int all);
+void luaC_sweepall (lua_State *L);
 void luaC_collectgarbage (lua_State *L);
 void luaC_link (lua_State *L, GCObject *o, lu_byte tt);
 
