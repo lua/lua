@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.42 2000/08/30 18:58:46 roberto Exp roberto $
+% $Id: manual.tex,v 1.43 2000/09/18 19:41:16 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -20,6 +20,8 @@
 \newcommand{\IndexEmph}[1]{\emph{#1}\index{#1}}
 \newcommand{\Def}[1]{\emph{#1}\index{#1}}
 \newcommand{\Deffunc}[1]{\index{#1}}
+
+\newcommand{\Tochange}[1]{(#1 may change in the final 4.0 version.)}
 
 \newcommand{\ff}{$\bullet$\ }
 
@@ -129,7 +131,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{{\small \tt\$Date: 2000/08/30 18:58:46 $ $}}
+\date{{\small \tt\$Date: 2000/09/18 19:41:16 $ $}}
 
 \maketitle
 
@@ -1522,7 +1524,7 @@ Lua does the equivalent of the following function:
 \end{verbatim}
 Moreover, at the end of a garbage collection cycle,
 Lua does the equivalent of the call \verb|gc_event(nil)|.
-(This may change in the final 4.0 version.)
+\Tochange{This}
 
 \end{description}
 
@@ -1827,6 +1829,7 @@ after that number of new objects have been created.
 If \verb|limit| is 0,
 then Lua uses an adaptive heuristic to set this limit.
 
+\Tochange{This function}
 
 \subsection{Userdata and Tags}\label{C-tags}
 
@@ -2251,7 +2254,6 @@ in the official Lua distribution.
 
 \subsection{References to Lua Objects}
 
-As noted in \See{GC}, Lua values are volatile.
 If the C~code needs to keep a Lua value
 outside the life span of a C~function,
 then it must create a \Def{reference} to the value.
@@ -2375,6 +2377,8 @@ If \verb|limit| is absent or equal to 0,
 then Lua uses an adaptive algorithm to set this limit.
 \verb|collectgarbage| is equivalent to
 the API function \verb|lua_collectgarbage|.
+
+\Tochange{This function}
 
 \subsubsection*{\ff \T{copytagmethods (tagto, tagfrom)}}
 \Deffunc{copytagmethods}
@@ -3387,7 +3391,7 @@ If the function was defined in a string,
 if the function was defined in a file,
 \verb|source| starts with a \verb|@| followed by the file name.
 
-\item[short_src]
+\item[short\_src]
 A ``printable'' version of \verb|source|, to be used in error messages.
 
 \item[linedefined]
