@@ -21,7 +21,6 @@ void luaI_initTFunc (TFunc *f)
 {
   f->next = NULL;
   f->marked = 0;
-  f->size = 0;
   f->code = NULL;
   f->lineDefined = 0;
   f->fileName = lua_parsedfile;

@@ -3,7 +3,7 @@
 ** load bytecodes from files
 */
 
-char* rcs_undump="$Id: undump.c,v 1.23 1997/06/16 16:50:22 roberto Exp roberto $";
+char* rcs_undump="$Id: undump.c,v 1.24 1997/06/17 18:19:17 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -192,10 +192,11 @@ static char* LoadNewString(ZIO* Z)
 
 static void LoadFunction(ZIO* Z)
 {
+ int size;
  TFunc* tf=new(TFunc);
  tf->next=NULL;
  tf->locvars=NULL;
- tf->size=LoadSize(Z);
+ size=LoadSize(Z);
  tf->lineDefined=LoadWord(Z);
  if (IsMain(tf))				/* new main */
  {
@@ -209,8 +210,8 @@ static void LoadFunction(ZIO* Z)
   memcpy(Main->code+tf->marked,&tf,sizeof(tf));
   lastF=lastF->next=tf;
  }
- tf->code=LoadBlock(tf->size,Z);
- if (swapword || swapfloat) FixCode(tf->code,tf->code+tf->size);
+ tf->code=LoadBlock(size,Z);
+ if (swapword || swapfloat) FixCode(tf->code,tf->code+size);
  while (1)					/* unthread */
  {
   int c=zgetc(Z);

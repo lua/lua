@@ -1,5 +1,5 @@
 /*
-** $Id: func.h,v 1.8 1996/03/14 15:54:20 roberto Exp roberto $
+** $Id: func.h,v 1.9 1997/05/14 18:38:29 roberto Exp roberto $
 */
 
 #ifndef func_h
@@ -23,7 +23,6 @@ typedef struct TFunc
 {
   struct TFunc	*next;
   int		marked;
-  int		size;
   Byte		*code;
   int		lineDefined;
   char		*fileName;
