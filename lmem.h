@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.h,v 1.28 2004/11/24 19:20:21 roberto Exp roberto $
+** $Id: lmem.h,v 1.29 2004/12/01 15:46:18 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -21,9 +21,9 @@ void *luaM_realloc_ (lua_State *L, void *block, size_t oldsize, size_t size);
 void *luaM_toobig (lua_State *L);
 
 #define luaM_reallocv(L,b,on,n,e) \
-  ((cast(unsigned int, (n)+1) <= MAX_SIZET/(e)) ?  /* +1 to avoid warnings */ \
-    luaM_realloc_(L, (b), (on)*(e), (n)*(e)) : \
-    luaM_toobig(L))
+	((cast(size_t, (n)+1) <= MAX_SIZET/(e)) ?  /* +1 to avoid warnings */ \
+		luaM_realloc_(L, (b), (on)*(e), (n)*(e)) : \
+		luaM_toobig(L))
 
 
 void *luaM_growaux_ (lua_State *L, void *block, int *size, size_t size_elem,
