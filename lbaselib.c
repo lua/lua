@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.138 2003/11/11 16:34:17 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.139 2003/12/09 16:55:43 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -186,14 +186,31 @@ static int luaB_rawset (lua_State *L) {
 
 static int luaB_gcinfo (lua_State *L) {
   lua_pushinteger(L, lua_getgccount(L));
-  lua_pushinteger(L, lua_getgcthreshold(L));
-  return 2;
+  return 1;
 }
 
 
 static int luaB_collectgarbage (lua_State *L) {
-  lua_setgcthreshold(L, luaL_optint(L, 1, 0));
-  return 0;
+  static const char *const opts[] = {"stop", "restart", "collect", "count",
+                                     NULL};
+  static const int optsnum[] = {LUA_GCSTOP, LUA_GCRESTART,
+                                LUA_GCCOLLECT, LUA_GCCOUNT};
+  int o;
+  int ex;
+#if 1
+  if (lua_isnumber(L, 1)) {
+    int v = lua_tointeger(L, 1);
+    lua_settop(L, 0);
+    if (v == 0) lua_pushstring(L, "collect");
+    else if (v >= 10000) lua_pushstring(L, "stop");
+    else lua_pushstring(L, "restart");
+  }
+#endif
+  o = luaL_findstring(luaL_optstring(L, 1, "collect"), opts);
+  ex = luaL_optint(L, 2, 0);
+  luaL_argcheck(L, o >= 0, 1, "invalid option");
+  lua_pushinteger(L, lua_gc(L, optsnum[o], ex));
+  return 1;
 }
 
 
@@ -311,10 +328,10 @@ static int luaB_load (lua_State *L) {
 
 static int luaB_dofile (lua_State *L) {
   const char *fname = luaL_optstring(L, 1, NULL);
-  int status = luaL_loadfile(L, fname);
-  if (status != 0) lua_error(L);
+  int n = lua_gettop(L);
+  if (luaL_loadfile(L, fname) != 0) lua_error(L);
   lua_call(L, 0, LUA_MULTRET);
-  return lua_gettop(L) - 1;
+  return lua_gettop(L) - n;
 }
 
 
@@ -710,6 +727,6 @@ LUALIB_API int luaopen_base (lua_State *L) {
   luaL_openlib(L, LUA_COLIBNAME, co_funcs, 0);
   lua_newtable(L);
   lua_setglobal(L, REQTAB);
-  return 0;
+  return 2;
 }
 

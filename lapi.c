@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.2 2004/01/15 12:40:26 roberto Exp roberto $
+** $Id: lapi.c,v 2.3 2004/02/20 16:01:05 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -807,39 +807,34 @@ LUA_API int lua_dump (lua_State *L, lua_Chunkwriter writer, void *data) {
 
 
 /*
-** Garbage-collection functions
+** Garbage-collection function
 */
 
-/* GC values are expressed in Kbytes: #bytes/2^10 */
-#define GCscale(x)		(cast(int, (x)>>10))
-#define GCunscale(x)		(cast(lu_mem, x)<<10)
-
-#define MAX_THRESHOLD	(cast(lu_mem, ~0) >> 10)
-
-LUA_API int lua_getgcthreshold (lua_State *L) {
-  int threshold;
-  lua_lock(L);
-  threshold = GCscale(G(L)->GCthreshold);
-  lua_unlock(L);
-  return threshold;
+LUA_API int lua_gc (lua_State *L, int what, int data) {
+  global_State *g = G(L);
+  switch (what) {
+    case LUA_GCSTOP: {
+      g->GCthreshold = MAXLMEM;
+      return 0;
+    }
+    case LUA_GCRESTART: {
+      g->GCthreshold = g->nblocks;
+      return 0;
+    }
+    case LUA_GCCOLLECT: {
+      lua_lock(L);
+      luaC_fullgc(L);
+      lua_unlock(L);
+      return 0;
+    }
+    case LUA_GCCOUNT: {
+      /* GC values are expressed in Kbytes: #bytes/2^10 */
+      return cast(int, g->nblocks >> 10);
+    }
+    default: return -1;  /* invalid option */
+  }
 }
 
-LUA_API int lua_getgccount (lua_State *L) {
-  int count;
-  lua_lock(L);
-  count = GCscale(G(L)->nblocks);
-  lua_unlock(L);
-  return count;
-}
-
-LUA_API void lua_setgcthreshold (lua_State *L, int newthreshold) {
-  lua_lock(L);
-  if (cast(lu_mem, newthreshold) > MAX_THRESHOLD)
-    newthreshold = cast(int, MAX_THRESHOLD);
-  G(L)->GCthreshold = GCunscale(newthreshold);
-  luaC_checkGC(L);
-  lua_unlock(L);
-}
 
 
 /*

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.185 2003/11/05 11:59:14 roberto Exp roberto $
+** $Id: lua.h,v 1.186 2003/12/10 11:04:54 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -221,11 +221,16 @@ LUA_API int  lua_yield (lua_State *L, int nresults);
 LUA_API int  lua_resume (lua_State *L, int narg);
 
 /*
-** garbage-collection functions
+** garbage-collection function and options
 */
-LUA_API int   lua_getgcthreshold (lua_State *L);
-LUA_API int   lua_getgccount (lua_State *L);
-LUA_API void  lua_setgcthreshold (lua_State *L, int newthreshold);
+
+#define LUA_GCSTOP	0
+#define LUA_GCRESTART	1
+#define LUA_GCCOLLECT	2
+#define LUA_GCCOUNT	3
+
+LUA_API int lua_gc (lua_State *L, int what, int data);
+
 
 /*
 ** miscellaneous functions
@@ -286,6 +291,8 @@ LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud);
 #define lua_open()	luaL_newstate()
 
 #define lua_getregistry(L)	lua_pushvalue(L, LUA_REGISTRYINDEX)
+
+#define lua_getgccount(L)	lua_gc(L, LUA_GCCOUNT, 0)
 
 
 /* compatibility with ref system */
