@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.148 2004/06/21 16:45:09 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.149 2004/06/21 20:05:29 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -262,9 +262,13 @@ static int luaB_loadstring (lua_State *L) {
 static int luaB_loadfile (lua_State *L) {
   const char *fname = luaL_optstring(L, 1, NULL);
   const char *path = luaL_optstring(L, 2, NULL);
-  int status = (path == NULL)
-               ? luaL_loadfile(L, fname)
-               : luaL_searchpath(L, fname, path, (luaL_Loader)luaL_loadfile, L);
+  int status;
+  if (path == NULL)
+    status = luaL_loadfile(L, fname);
+  else {
+    fname = luaL_searchpath(L, fname, path);
+    status = (fname) ? luaL_loadfile(L, fname) : 1;
+  }
   return load_aux(L, status);
 }
 
@@ -469,25 +473,28 @@ static const char *getpath (lua_State *L) {
 static int luaB_require (lua_State *L) {
   const char *name = luaL_checkstring(L, 1);
   const char *path = getpath(L);
+  const char *fname;
+  int loaded;
   lua_getglobal(L, REQTAB);
-  if (!lua_istable(L, -1))
+  loaded = lua_gettop(L);
+  if (!lua_istable(L, loaded))
     return luaL_error(L, "global `" REQTAB "' is not a table");
-  lua_getfield(L, -1, name);
+  lua_getfield(L, loaded, name);
   if (lua_toboolean(L, -1))  /* is it there? */
     return 1;  /* package is already loaded; return its result */
-  /* else must load it */
-  if (luaL_searchpath(L, name, path, (luaL_Loader)luaL_loadfile, L) != 0)
+  /* else must load it; first mark it as loaded */
+  lua_pushboolean(L, 1);
+  lua_setfield(L, loaded, name);  /* _LOADED[name] = true */
+  fname = luaL_searchpath(L, name, path);
+  if (fname == NULL || luaL_loadfile(L, fname) != 0)
     return luaL_error(L, "error loading package `%s' (%s)", name,
                          lua_tostring(L, -1));
   lua_pushvalue(L, 1);  /* pass name as argument to module */
   lua_call(L, 1, 1);  /* run loaded module */
-  if (lua_isnil(L, -1)) {  /* nil return? */
-    lua_pop(L, 1);  /* remove it */
-    lua_pushboolean(L, 1);  /* replace to true */
-  }
-  lua_pushvalue(L, -1);  /* duplicate result (to return it) */
-  lua_setfield(L, -4, name);  /* mark `name' as loaded */
-  return 1;  /* return value */
+  if (!lua_isnil(L, -1))  /* nil return? */
+    lua_setfield(L, loaded, name);
+  lua_getfield(L, loaded, name);  /* return _LOADED[name] */
+  return 1;
 }
 
 /* }====================================================== */
