@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.95 2001/03/26 14:31:49 roberto Exp roberto $
+** $Id: lgc.c,v 1.96 2001/04/11 14:42:41 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -111,15 +111,6 @@ static void markstacks (lua_State *L, GCState *st) {
 }
 
 
-static void marklock (global_State *G, GCState *st) {
-  int i;
-  for (i=0; i<G->nref; i++) {
-    if (G->refArray[i].st == LOCK)
-      markobject(st, &G->refArray[i].o);
-  }
-}
-
-
 static void marktagmethods (global_State *G, GCState *st) {
   int t;
   for (t=0; t<G->ntag; t++) {
@@ -176,8 +167,9 @@ static void markall (lua_State *L) {
   st.tmark = NULL;
   marktagmethods(G(L), &st);  /* mark tag methods */
   markstacks(L, &st); /* mark all stacks */
-  marklock(G(L), &st); /* mark locked objects */
   marktable(&st, G(L)->type2tag);
+  marktable(&st, G(L)->registry);
+  marktable(&st, G(L)->weakregistry);
   for (;;) {  /* mark tables and closures */
     if (st.cmark) {
       Closure *f = st.cmark;  /* get first closure from list */
@@ -205,26 +197,6 @@ static int hasmark (const TObject *o) {
     default:  /* number, nil */
       return 1;
   }
-}
-
-
-/* macro for internal debugging; check if a link of free refs is valid */
-#define VALIDLINK(L, st,n)      (NONEXT <= (st) && (st) < (n))
-
-static void invalidaterefs (global_State *G) {
-  int n = G->nref;
-  int i;
-  for (i=0; i<n; i++) {
-    struct Ref *r = &G->refArray[i];
-    if (r->st == HOLD && !hasmark(&r->o))
-      r->st = COLLECTED;
-    lua_assert((r->st == LOCK && hasmark(&r->o)) ||
-               (r->st == HOLD && hasmark(&r->o)) ||
-                r->st == COLLECTED ||
-                r->st == NONEXT ||
-               (r->st < n && VALIDLINK(L, G->refArray[r->st].st, n)));
-  }
-  lua_assert(VALIDLINK(L, G->refFree, n));
 }
 
 
@@ -408,7 +380,6 @@ void luaC_collect (lua_State *L, int all) {
 
 void luaC_collectgarbage (lua_State *L) {
   markall(L);
-  invalidaterefs(G(L));  /* check unlocked references */
   invalidatetables(G(L));
   luaC_collect(L, 0);
   checkMbuffer(L);

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.54 2001/03/02 17:27:50 roberto Exp roberto $
+** $Id: lstate.h,v 1.55 2001/03/07 18:09:25 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -32,20 +32,6 @@
 #endif
 
 
-/*
-** marks for Reference array
-*/
-#define NONEXT          -1      /* to end the free list */
-#define HOLD            -2
-#define COLLECTED       -3
-#define LOCK            -4
-
-
-struct Ref {
-  TObject o;
-  int st;  /* can be LOCK, HOLD, COLLECTED, or next (for free list) */
-};
-
 
 struct lua_longjmp;  /* defined in ldo.c */
 struct TM;  /* defined in ltm.h */
@@ -70,13 +56,11 @@ typedef struct global_State {
   stringtable strt;  /* hash table for strings */
   stringtable udt;   /* hash table for udata */
   Hash *type2tag;  /* hash table from type names to tags */
+  Hash *registry;  /* (strong) registry table */
+  Hash *weakregistry;  /* weakregistry table */
   struct TM *TMtable;  /* table for tag methods */
   int sizeTM;  /* size of TMtable */
   int ntag;  /* number of tags in TMtable */
-  struct Ref *refArray;  /* locked objects */
-  int nref;  /* first unused element in refArray */
-  int sizeref;  /* size of refArray */
-  int refFree;  /* list of free positions in refArray */
   lu_mem GCthreshold;
   lu_mem nblocks;  /* number of `bytes' currently allocated */
 } global_State;

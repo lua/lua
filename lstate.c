@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.60 2001/03/09 18:05:05 roberto Exp roberto $
+** $Id: lstate.c,v 1.61 2001/03/26 14:31:49 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -27,20 +27,6 @@ struct Sopen {
 
 
 static void close_state (lua_State *L, lua_State *OL);
-
-
-/*
-** initialize ref array and registry
-*/
-#define INIT_REFSIZE	4
-
-static void ref_init (lua_State *L) {
-  G(L)->refArray = luaM_newvector(L, INIT_REFSIZE, struct Ref);
-  G(L)->sizeref = INIT_REFSIZE;
-  sethvalue(&G(L)->refArray[0].o, luaH_new(L, 0));
-  G(L)->refArray[0].st = LOCK;
-  G(L)->nref = 1;
-}
 
 
 /*
@@ -74,18 +60,16 @@ static void f_luaopen (lua_State *L, void *ud) {
     G(L)->TMtable = NULL;
     G(L)->sizeTM = 0;
     G(L)->ntag = 0;
-    G(L)->refArray = NULL;
-    G(L)->nref = 0;
-    G(L)->sizeref = 0;
-    G(L)->refFree = NONEXT;
     G(L)->nblocks = sizeof(lua_State) + sizeof(global_State);
     luaD_init(L, so->stacksize);  /* init stack */
     L->gt = luaH_new(L, 10);  /* table of globals */
     G(L)->type2tag = luaH_new(L, 10);
+    G(L)->registry = luaH_new(L, 0);
+    G(L)->weakregistry = luaH_new(L, 0);
+    G(L)->weakregistry->weakmode = LUA_WEAK_VALUE;  /* make weakregistry weak */
     luaS_init(L);
     luaX_init(L);
     luaT_init(L);
-    ref_init(L);
     G(L)->GCthreshold = 4*G(L)->nblocks;
   }
 }
@@ -133,7 +117,6 @@ static void close_state (lua_State *L, lua_State *OL) {
     lua_assert(G(L)->roottable == NULL);
     luaS_freeall(L);
     luaM_freearray(L, G(L)->TMtable, G(L)->sizeTM, struct TM);
-    luaM_freearray(L, G(L)->refArray, G(L)->sizeref, struct Ref);
     luaM_freearray(L, G(L)->Mbuffer, G(L)->Mbuffsize, l_char);
     luaM_freelem(NULL, L->G, global_State);
   }

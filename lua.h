@@ -1,8 +1,8 @@
 /*
-** $Id: lua.h,v 1.94 2001/04/11 14:42:41 roberto Exp roberto $
+** $Id: lua.h,v 1.95 2001/04/11 18:39:37 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
-** e-mail: lua@tecgraf.puc-rio.br
+** e-mail: info@lua.org
 ** www: http://www.lua.org
 ** See Copyright Notice at the end of this file
 */
@@ -29,24 +29,20 @@
 /* pre-defined references */
 #define LUA_NOREF	(-2)
 #define LUA_REFNIL	(-1)
-#define LUA_REFREGISTRY	0
-
-/* pre-defined tags */
-#define LUA_NOTAG	(-2)
 
 
-/* option for multiple returns in lua_call */
+/* option for multiple returns in `lua_call' */
 #define LUA_MULTRET	(-1)
 
 
-/* error codes for lua_do* */
+/* error codes for `lua_do*' and the like */
 #define LUA_ERRRUN	1
 #define LUA_ERRFILE	2
 #define LUA_ERRSYNTAX	3
 #define LUA_ERRMEM	4
 #define LUA_ERRERR	5
 
-/* weak modes */
+/* weak-table modes */
 #define LUA_WEAK_KEY	1
 #define LUA_WEAK_VALUE	2
 
@@ -67,6 +63,11 @@ typedef int (*lua_CFunction) (lua_State *L);
 #define LUA_TTABLE	4
 #define LUA_TFUNCTION	5
 
+/*
+** an invalid `tag'
+*/
+#define LUA_NOTAG	(-2)
+
 
 
 /*
@@ -77,7 +78,7 @@ typedef int (*lua_CFunction) (lua_State *L);
 #endif
 
 
-/* minimum stack available for a C function */
+/* minimum Lua stack available to a C function */
 #define LUA_MINSTACK	20
 
 
@@ -163,6 +164,8 @@ LUA_API void  lua_getglobals (lua_State *L);
 LUA_API void  lua_gettagmethod (lua_State *L, int tag, const lua_char *event);
 LUA_API int   lua_getref (lua_State *L, int ref);
 LUA_API void  lua_newtable (lua_State *L);
+LUA_API void  lua_getregistry (lua_State *L);
+LUA_API void  lua_getweakregistry (lua_State *L);
 
 
 /*
@@ -240,8 +243,6 @@ LUA_API int  lua_getweakmode (lua_State *L, int index);
 #define lua_isuserdata(L,n)	(lua_type(L,n) == LUA_TUSERDATA)
 #define lua_isnil(L,n)		(lua_type(L,n) == LUA_TNIL)
 #define lua_isnull(L,n)		(lua_type(L,n) == LUA_TNONE)
-
-#define lua_getregistry(L)	lua_getref(L, LUA_REFREGISTRY)
 
 #define lua_pushliteral(L, s)	lua_pushlstring(L, s, \
                                                 (sizeof(s)/sizeof(lua_char))-1)
