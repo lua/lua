@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.53 1999/03/05 21:16:07 roberto Exp roberto $
+** $Id: lvm.c,v 1.54 1999/03/10 14:09:45 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -57,11 +57,14 @@ int luaV_tonumber (TObject *obj) {  /* LUA_NUMBER */
     char *e = svalue(obj);
     int sig = 1;
     while (isspace((unsigned char)*e)) e++;
-    if (*e == '+') e++;
-    else if (*e == '-') {
+    if (*e == '-') {
       e++;
       sig = -1;
     }
+    else if (*e == '+') e++;
+    /* no digit before or after decimal point? */
+    if (!isdigit((unsigned char)*e) && !isdigit((unsigned char)*(e+1)))
+      return 2;
     t = luaO_str2d(e);
     if (t<0) return 2;
     nvalue(obj) = (real)t*sig;

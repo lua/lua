@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.17 1999/02/12 19:23:02 roberto Exp roberto $
+** $Id: lobject.c,v 1.18 1999/02/26 15:48:30 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -93,25 +93,25 @@ static double expten (unsigned int e) {
 double luaO_str2d (char *s) {  /* LUA_NUMBER */
   double a = 0.0;
   int point = 0;
-  if (!isdigit((unsigned char)*s) && !isdigit((unsigned char)*(s+1)))
-    return -1;  /* no digit before or after decimal point */
   while (isdigit((unsigned char)*s)) {
     a = 10.0*a + (*(s++)-'0');
   }
-  if (*s == '.') s++;
-  while (isdigit((unsigned char)*s)) {
-    a = 10.0*a + (*(s++)-'0');
-    point++;
+  if (*s == '.') {
+    s++;
+    while (isdigit((unsigned char)*s)) {
+      a = 10.0*a + (*(s++)-'0');
+      point++;
+    }
   }
   if (toupper((unsigned char)*s) == 'E') {
     int e = 0;
     int sig = 1;
     s++;
-    if (*s == '+') s++;
-    else if (*s == '-') {
+    if (*s == '-') {
       s++;
       sig = -1;
     }
+    else if (*s == '+') s++;
     if (!isdigit((unsigned char)*s)) return -1;  /* no digit in the exponent? */
     do {
       e = 10*e + (*(s++)-'0');
