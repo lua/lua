@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.11 1996/02/16 13:12:12 roberto Exp roberto $
+% $Id: manual.tex,v 1.12 1996/03/14 17:45:01 roberto Exp roberto $
 
 \documentstyle[A4,11pt,bnf]{article}
 
@@ -13,7 +13,7 @@
 \newcommand{\Def}[1]{{\em #1}\index{#1}}
 \newcommand{\Deffunc}[1]{\index{#1}}
 
-\newcommand{\Version}{2.3}
+\newcommand{\Version}{2.4}
 
 \makeindex
 
@@ -34,7 +34,7 @@ Waldemar Celes Filho
 \tecgraf\ --- Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1996/02/16 13:12:12 $}
+\date{\small \verb$Date: 1996/03/14 17:45:01 $}
 
 \maketitle
 
@@ -137,7 +137,11 @@ of new functions%
 \footnote{Actually, a function definition is an
 assignment to a global variable; \see{TypesSec}.}.
 
-
+Chunks may be pre-compiled; see program \IndexVerb{luac} for details.
+Ascii files with chunk code and their binary pre-compiled forms
+are interchangeable.
+Lua automatically detects the file type and acts accordingly.
+\index{pre-compilation}
 
 \section{\Index{Types}} \label{TypesSec}
 
@@ -412,7 +416,7 @@ Otherwise, their values are compared.
 Numbers and strings are compared in the usual way.
 Tables, CFunctions, and functions are compared by reference,
 that is, two tables are considered equal only if they are the same table.
-The operator \verb'~=' is exactly the negation of equality (\verb'=').
+The operator \verb'~=' is exactly the negation of equality (\verb'==').
 
 The other operators work as follows.
 If both arguments are numbers, they are compared as such.
@@ -444,7 +448,7 @@ Otherwise, the fallback ``concat'' is called; \see{fallback}.
 from the lower to the higher priority:
 \begin{verbatim}
              and   or
-             <   >   <=  >=  ~=  =
+             <   >   <=  >=  ~=  ==
              ..
              +   -
              *   /
@@ -740,7 +744,7 @@ The API functions can be classified in the following categories:
 All API functions are declared in the file \verb'lua.h'.
 
 \subsection{Executing Lua Code}
-A host program can execute Lua programs written in a file or in a string,
+A host program can execute Lua chunks written in a file or in a string,
 using the following functions:
 \Deffunc{lua_dofile}\Deffunc{lua_dostring}
 \begin{verbatim}
@@ -751,6 +755,9 @@ Both functions return an error code:
 0, in case of success; non zero, in case of errors.
 The function \verb'lua_dofile', if called with argument NULL (0),
 executes the ``file'' {\tt stdin}.
+Function \verb'lua_dofile' is also able to execute pre-compiled chunks.
+It detects whether the file is text or not,
+and loads it accordingly (see program \IndexVerb{luac}).
 
 \subsection{Converting Values between C and Lua} \label{valuesCLua}
 Because Lua has no static type system,
@@ -788,19 +795,24 @@ the following function is available:
 \begin{verbatim}
 int            lua_type                 (lua_Object object);
 \end{verbatim}
-plus the following macros:
+plus the following macros and functions:
 \Deffunc{lua_isnil}\Deffunc{lua_isnumber}\Deffunc{lua_isstring}
 \Deffunc{lua_istable}\Deffunc{lua_iscfunction}\Deffunc{lua_isuserdata}
+\Deffunc{lua_isfunction}
 \begin{verbatim}
 int            lua_isnil                (lua_Object object);
 int            lua_isnumber             (lua_Object object);
 int            lua_isstring             (lua_Object object);
 int            lua_istable              (lua_Object object);
+int            lua_isfunction           (lua_Object object);
 int            lua_iscfunction          (lua_Object object);
 int            lua_isuserdata           (lua_Object object);
 \end{verbatim}
-All macros return 1 if the object has the given type,
+All macros return 1 if the object is compatible with the given type,
 and 0 otherwise.
+\verb'lua_isnumber' accepts numbers and numerical strings,
+\verb'lua_isstring' accepts strings and numbers (\see{coercion}),
+and \verb'lua_isfunction' accepts Lua and C functions.
 
 The function \verb'lua_type' can be used to distinguish between
 different kinds of user data; see below.
@@ -1113,7 +1125,8 @@ declared in \verb-lualib.h-.
 
 \subsubsection*{{\tt dofile (filename)}}\Deffunc{dofile}
 This function receives a file name,
-opens it and executes its contents as a Lua chunk.
+opens it and executes its contents as a Lua chunk,
+or as pre-compiled chunks.
 When called without arguments,
 it executes the contents of the standard input.
 It returns 1 if there are no errors, \nil\ otherwise.
