@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.73 2002/11/25 17:47:13 roberto Exp roberto $
+** $Id: ldblib.c,v 1.74 2002/12/04 17:38:31 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -155,7 +155,7 @@ static int sethook (lua_State *L) {
   }
   else {
     const char *smask = luaL_checkstring(L, 2);
-    lua_Number count = luaL_optnumber(L, 3, 0);
+    int count = luaL_optint(L, 3, 0);
     luaL_checktype(L, 1, LUA_TFUNCTION);
     lua_sethook(L, hookf, makemask(smask, count), count);
   }
