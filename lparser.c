@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.191 2002/08/05 17:35:45 roberto Exp roberto $
+** $Id: lparser.c,v 1.192 2002/08/20 20:03:05 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1137,6 +1137,7 @@ static void funcstat (LexState *ls, int line) {
   needself = funcname(ls, &v);
   body(ls, &b, needself, line);
   luaK_storevar(ls->fs, &v, &b);
+  luaK_fixline(ls->fs, line);  /* definition `happens' in the first line */
 }
 
 
