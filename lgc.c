@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.129 2002/03/05 16:22:54 roberto Exp roberto $
+** $Id: lgc.c,v 1.130 2002/03/07 18:14:29 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -27,7 +27,6 @@ typedef struct GCState {
 } GCState;
 
 
-
 /* mark a string; marks larger than 1 cannot be changed */
 #define strmark(s)    {if ((s)->tsv.marked == 0) (s)->tsv.marked = 1;}
 
@@ -36,6 +35,9 @@ typedef struct GCState {
 #define isudmarked(u)	(u->uv.len & 1)
 #define markud(u)	(u->uv.len |= 1)
 #define unmarkud(u)	(u->uv.len &= (~(size_t)1))
+
+#define isfinalized(u)		(u->uv.len & 2)
+#define markfinalized(u)	(u->uv.len |= 2)
 
 
 /* mark tricks for upvalues (assume that open upvalues are always marked) */
@@ -97,7 +99,14 @@ static void marktable (GCState *st, Table *h) {
   if (!ismarked(h)) {
     h->mark = st->tmark;  /* chain it for later traversal */
     st->tmark = h;
+    marktable(st, h->metatable);
   }
+}
+
+
+static void markudata (GCState *st, Udata *u) {
+  markud(u);
+  marktable(st, u->uv.metatable);
 }
 
 
@@ -108,7 +117,7 @@ static void reallymarkobject (GCState *st, TObject *o) {
       break;
     case LUA_TUSERDATA:
       if (!isudmarked(uvalue(o)))
-        markud(uvalue(o));
+        markudata(st, uvalue(o));
       break;
     case LUA_TFUNCTION:
       markclosure(st, clvalue(o));
@@ -156,12 +165,33 @@ static void markstacks (GCState *st) {
 }
 
 
-static void markudet (GCState *st) {
+static void marktmu (GCState *st) {
   Udata *u;
-  for (u = G(st->L)->rootudata; u; u = u->uv.next)
-    marktable(st, u->uv.metatable);
   for (u = G(st->L)->tmudata; u; u = u->uv.next)
-    marktable(st, u->uv.metatable);
+    markudata(st, u);
+}
+
+
+/* move `dead' udata that need finalization to list `tmudata' */
+static void separateudata (lua_State *L) {
+  Udata **p = &G(L)->rootudata;
+  Udata *curr;
+  Udata *collected = NULL;  /* to collect udata with gc event */
+  Udata **lastcollected = &collected;
+  while ((curr = *p) != NULL) {
+    if (isudmarked(curr) || isfinalized(curr) ||
+        (fasttm(L, curr->uv.metatable, TM_GC) == NULL))
+      p = &curr->uv.next;
+    else {  /* must call its gc method */
+      *p = curr->uv.next;
+      curr->uv.next = NULL;  /* link `curr' at the end of `collected' list */
+      *lastcollected = curr;
+      lastcollected = &curr->uv.next;
+    }
+  }
+  /* insert collected udata with gc event into `tmudata' list */
+  *lastcollected = G(L)->tmudata;
+  G(L)->tmudata = collected;
 }
 
 
@@ -208,7 +238,6 @@ static void markall (GCState *st) {
   lua_assert(hvalue(defaultmeta(st->L))->flags == cast(unsigned short, ~0));
                                                       /* table is unchanged */
   markstacks(st); /* mark all stacks */
-  markudet(st);  /* mark userdata's meta tables */
   while (st->tmark) {  /* traverse marked tables */
     Table *h = st->tmark;  /* get first table from list */
     st->tmark = h->mark;  /* remove it from list */
@@ -322,11 +351,10 @@ static void collecttable (lua_State *L) {
 }
 
 
+
 static void collectudata (lua_State *L) {
   Udata **p = &G(L)->rootudata;
   Udata *curr;
-  Udata *collected = NULL;  /* to collect udata with gc event */
-  Udata **lastcollected = &collected;
   while ((curr = *p) != NULL) {
     if (isudmarked(curr)) {
       unmarkud(curr);
@@ -334,18 +362,11 @@ static void collectudata (lua_State *L) {
     }
     else {
       *p = curr->uv.next;
-      if (fasttm(L, curr->uv.metatable, TM_GC) != NULL) {  /* gc event? */
-        curr->uv.next = NULL;  /* link `curr' at the end of `collected' list */
-        *lastcollected = curr;
-        lastcollected = &curr->uv.next;
-      }
-      else  /* no gc event; delete udata */
-        luaM_free(L, curr, sizeudata(curr->uv.len));
+      lua_assert(isfinalized(curr) ||
+                 fasttm(L, curr->uv.metatable, TM_GC) == NULL);
+      luaM_free(L, curr, sizeudata(curr->uv.len & (~(size_t)3)));
     }
   }
-  /* insert collected udata with gc event into `tmudata' list */
-  *lastcollected = G(L)->tmudata;
-  G(L)->tmudata = collected;
 }
 
 
@@ -395,44 +416,27 @@ static void do1gcTM (lua_State *L, Udata *udata) {
 }
 
 
-static void unprotectedcallGCTM (lua_State *L, void *pu) {
-  luaD_checkstack(L, 3);
-  L->top++;  /* reserve space to keep udata while runs its gc method */
-  while (G(L)->tmudata != NULL) {
-    Udata *udata = G(L)->tmudata;
-    G(L)->tmudata = udata->uv.next;  /* remove udata from list */
-    *(Udata **)pu = udata;  /* keep a reference to it (in case of errors) */
-    setuvalue(L->top - 1, udata);  /* and on stack (in case of recursive GC) */
-    udata->uv.next = G(L)->rootudata;  /* resurect it */
-    G(L)->rootudata = udata;
-    do1gcTM(L, udata);
-    /* mark udata as finalized (default meta table) */
-    uvalue(L->top-1)->uv.metatable = hvalue(defaultmeta(L));
-    unmarkud(uvalue(L->top-1));
-  }
-  L->top--;
-}
-
-
 static void callGCTM (lua_State *L) {
   int oldah = L->allowhooks;
   L->allowhooks = 0;  /* stop debug hooks during GC tag methods */
+  L->top++;  /* reserve space to keep udata while runs its gc method */
   while (G(L)->tmudata != NULL) {
-    Udata *udata;
-    if (luaD_runprotected(L, unprotectedcallGCTM, &udata) != 0) {
-      /* `udata' generated an error during its gc */
-      /* mark it as finalized (default meta table) */
-      udata->uv.metatable = hvalue(defaultmeta(L));
-    }
+    Udata *udata = G(L)->tmudata;
+    G(L)->tmudata = udata->uv.next;  /* remove udata from `tmudata' */
+    udata->uv.next = G(L)->rootudata;  /* return it to `root' list */
+    G(L)->rootudata = udata;
+    setuvalue(L->top - 1, udata);  /* keep a reference to it */
+    unmarkud(udata);
+    markfinalized(udata);
+    do1gcTM(L, udata);
   }
+  L->top--;
   L->allowhooks = oldah;  /* restore hooks */
 }
 
 
 void luaC_callallgcTM (lua_State *L) {
-  lua_assert(G(L)->tmudata == NULL);
-  G(L)->tmudata = G(L)->rootudata;  /* all udata must be collected */
-  G(L)->rootudata = NULL;
+  separateudata(L);
   callGCTM(L);  /* call their GC tag methods */
 }
 
@@ -452,7 +456,10 @@ void luaC_collectgarbage (lua_State *L) {
   st.L = L;
   st.tmark = NULL;
   st.toclear = NULL;
-  markall(&st);
+  markall(&st);  /* mark all reachable objects */
+  separateudata(L);  /* separate userdata to be preserved */
+  marktmu(&st);  /* mark `preserved' userdata */
+  markall(&st);  /* remark */
   cleartables(st.toclear);
   luaC_collect(L, 0);
   checkMbuffer(L);
