@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.31 2000/09/29 12:42:13 roberto Exp roberto $
+** $Id: lfunc.c,v 1.32 2000/10/10 19:52:58 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -14,7 +14,7 @@
 #include "lstate.h"
 
 
-#define sizeclosure(n)	(sizeof(Closure) + (lint32)sizeof(TObject)*((n)-1))
+#define sizeclosure(n)	((int)sizeof(Closure) + (int)sizeof(TObject)*((n)-1))
 
 
 Closure *luaF_newclosure (lua_State *L, int nelems) {
