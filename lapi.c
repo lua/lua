@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.70 2000/01/24 20:14:07 roberto Exp roberto $
+** $Id: lapi.c,v 1.71 2000/02/08 16:34:31 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -142,7 +142,6 @@ lua_Object lua_rawgettable (lua_State *L) {
 void lua_settable (lua_State *L) {
   StkId top;
   luaA_checkCparams(L, 3);
-  luaD_checkstack(L, 3);  /* may need that to call a tag method */
   top = L->top;
   luaV_settable(L, top-3, top);
   L->top = top-3;  /* pop table, index, and value */
@@ -165,7 +164,6 @@ lua_Object lua_createtable (lua_State *L) {
 
 
 lua_Object lua_getglobal (lua_State *L, const char *name) {
-  luaD_checkstack(L, 3);  /* may need that to call a tag method */
   luaV_getglobal(L, luaS_assertglobalbyname(L, name), L->top++);
   return luaA_putObjectOnTop(L);
 }
@@ -179,7 +177,6 @@ lua_Object lua_rawgetglobal (lua_State *L, const char *name) {
 
 void lua_setglobal (lua_State *L, const char *name) {
   luaA_checkCparams(L, 1);
-  luaD_checkstack(L, 3);  /* may need that to call a tag method */
   luaV_setglobal(L, luaS_assertglobalbyname(L, name), L->top--);
 }
 
