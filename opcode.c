@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 4.13 1997/06/19 18:03:04 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 4.14 1997/06/23 18:27:53 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -178,17 +178,18 @@ static int lua_tostring (TObject *obj)
 /*
 ** Adjust stack. Set top to the given value, pushing NILs if needed.
 */
-static void adjust_top (StkId newtop)
+static void adjust_top_aux (StkId newtop)
 {
-  if (newtop <= top-stack)  /* int arith, since newtop may be out of stack */
-    top = stack+newtop;
-  else {
-    TObject *nt;
-    lua_checkstack(stack+newtop);
-    nt = stack+newtop;  /* warning: previous call may change stack */
-    while (top < nt) ttype(top++) = LUA_T_NIL;
-  }
+  TObject *nt;
+  lua_checkstack(stack+newtop);
+  nt = stack+newtop;  /* warning: previous call may change stack */
+  while (top < nt) ttype(top++) = LUA_T_NIL;
 }
+
+
+#define adjust_top(newtop)  { if (newtop <= top-stack) \
+                                 top = stack+newtop; \
+                              else adjust_top_aux(newtop); }
 
 #define adjustC(nParams)	adjust_top(CLS_current.base+nParams)
 
@@ -1239,9 +1240,11 @@ static StkId lua_execute (Byte *pc, StkId base)
      adjust_top(base);
      break;
 
-   case ADJUST:
-     adjust_top(base + *(pc++));
+   case ADJUST: {
+     StkId newtop = base + *(pc++);
+     adjust_top(newtop);
      break;
+   }
 
    case VARARGS:
      adjust_varargs(base + *(pc++));
