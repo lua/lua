@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.97 2001/02/20 18:28:11 roberto Exp roberto $
+** $Id: lobject.h,v 1.98 2001/02/23 17:17:25 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -117,7 +117,7 @@ union L_UTString {
 
 
 
-#define getstr(ts)	((l_char *)(ts) + sizeof(union L_UTString))
+#define getstr(ts)	((l_char *)((lu_byte *)(ts) + sizeof(union L_UTString)))
 #define svalue(o)       getstr(tsvalue(o))
 
 
@@ -220,7 +220,8 @@ typedef struct CallInfo {
 extern const TObject luaO_nilobject;
 
 
-l_char *luaO_openspace (lua_State *L, size_t n);
+#define luaO_openspace(L,n,t)	((t *)luaO_openspaceaux(L,(n)*sizeof(t)))
+void *luaO_openspaceaux (lua_State *L, size_t n);
 
 int luaO_equalObj (const TObject *t1, const TObject *t2);
 int luaO_str2d (const l_char *s, lua_Number *result);
