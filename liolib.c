@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.39 2003/03/19 21:16:12 roberto Exp roberto $
+** $Id: liolib.c,v 2.40 2003/04/30 20:15:55 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -612,10 +612,9 @@ static int getfield (lua_State *L, const char *key, int d) {
 
 static int io_date (lua_State *L) {
   const char *s = luaL_optstring(L, 1, "%c");
-  time_t t = (time_t)(luaL_optnumber(L, 2, -1));
+  lua_Number n = luaL_optnumber(L, 2, -1);
+  time_t t = (n == -1) ? time(NULL) : (time_t)n;
   struct tm *stm;
-  if (t == (time_t)(-1))  /* no time given? */
-    t = time(NULL);  /* use current time */
   if (*s == '!') {  /* UTC? */
     stm = gmtime(&t);
     s++;  /* skip `!' */
