@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.110 2001/08/27 15:16:28 roberto Exp $
+** $Id: lobject.h,v 1.112 2001/09/07 17:39:10 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -178,8 +178,8 @@ typedef struct UpVal {
 ** Closures
 */
 typedef struct Closure {
-  int isC;  /* 0 for Lua functions, 1 for C functions */
-  int nupvalues;
+  short isC;  /* 0 for Lua functions, 1 for C functions */
+  short nupvalues;
   struct Closure *next;
   struct Closure *mark;  /* marked closures (point to itself when not marked) */
   union {

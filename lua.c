@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.68 2001/06/11 14:57:17 roberto Exp $
+** $Id: lua.c,v 1.69 2001/08/30 20:54:02 roberto Exp $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -196,7 +196,7 @@ static void manual_input (int version, int prompt) {
       }
       if (firstline && buffer[0] == l_c('=')) {
         buffer[0] = l_c(' ');
-        lua_pushstring(L, l_s("return "));
+        lua_pushstring(L, l_s("return"));
         toprint = 1;
       }
       l = strlen(buffer);
@@ -212,8 +212,8 @@ static void manual_input (int version, int prompt) {
     }
     lua_concat(L, lua_gettop(L));
     ldo(lua_dostring, lua_tostring(L, 1), 0);
-    if (toprint) {
-      lua_remove(L, 1);  /* remove ran string */
+    lua_remove(L, 1);  /* remove ran string */
+    if (toprint && lua_gettop(L) > 0) {  /* any result to print? */
       lua_getglobal(L, l_s("print"));
       lua_insert(L, 1);
       lua_call(L, lua_gettop(L)-1, 0);
