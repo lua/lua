@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.13 1995/10/09 12:49:21 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.14 1995/11/10 17:54:31 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -37,13 +37,30 @@ float lua_check_number (int numArg, char *funcname)
   return lua_getnumber(o);
 }
 
-static char *newstring (char *s)
+char *luaI_addchar (int c)
 {
-  char *ns = (char *)malloc(strlen(s)+1);
-  if (ns == 0)
-    lua_error("not enough memory for new string");
-  strcpy(ns, s);
-  return ns;
+  static char *buff = NULL;
+  static int max = 0;
+  static int n = 0;
+  if (n >= max)
+  {
+    if (max == 0)
+    {
+      max = 100;
+      buff = (char *)malloc(max);
+    }
+    else
+    {
+      max *= 2;
+      buff = (char *)realloc(buff, max);
+    }
+    if (buff == NULL)
+      lua_error("memory overflow");
+  }
+  buff[n++] = c;
+  if (c == 0)
+    n = 0;  /* prepare for next string */
+  return buff;
 }
 
 
@@ -108,30 +125,17 @@ static void str_sub (void)
 }
 
 /*
-** Convert a string according to given function.
-*/
-typedef int (*strfunc)(int s);
-static void str_apply (strfunc f, char *funcname)
-{
- char *s, *c;
- c = s = newstring(lua_check_string(1, funcname));
- while (*c != 0)
- {
-  *c = f(*c);
-  c++;
- }
- lua_pushstring(s);
- free(s);
-}
-
-/*
 ** Convert a string to lower case.
 ** LUA interface:
 **			lowercase = strlower (string)
 */
 static void str_lower (void)
 {
-  str_apply(tolower, "strlower");
+  char *s = lua_check_string(1, "strlower");
+  luaI_addchar(0);
+  while (*s)
+    luaI_addchar(tolower(*s++));
+  lua_pushstring(luaI_addchar(0));
 }
 
 
@@ -142,7 +146,11 @@ static void str_lower (void)
 */
 static void str_upper (void)
 {
-  str_apply(toupper, "strupper");
+  char *s = lua_check_string(1, "strupper");
+  luaI_addchar(0);
+  while (*s)
+    luaI_addchar(toupper(*s++));
+  lua_pushstring(luaI_addchar(0));
 }
 
 /*
@@ -162,20 +170,80 @@ static void str_ascii (void)
 /*
 ** converts one or more integers to chars in a string
 */
-#define maxparams 50
 static void str_int2str (void)
 {
-  char s[maxparams+1];
   int i = 0;
+  luaI_addchar(0);
   while (lua_getparam(++i) != LUA_NOOBJECT)
-  {
-    if (i > maxparams)
-      lua_error("too many parameters to function `int2str'");
-    s[i-1] = (int)lua_check_number(i, "int2str");
-  }
-  s[i-1] = 0;
-  lua_pushstring(s);
+    luaI_addchar((int)lua_check_number(i, "int2str"));
+  lua_pushstring(luaI_addchar(0));
 }
+
+
+#define MAX_CONVERTION 2000
+#define MAX_FORMAT 50
+
+static void io_format (void)
+{
+  int arg = 1;
+  char *strfrmt = lua_check_string(arg++, "format");
+  luaI_addchar(0);  /* initialize */
+  while (*strfrmt)
+  {
+    if (*strfrmt != '%')
+      luaI_addchar(*strfrmt++);
+    else if (*++strfrmt == '%')
+      luaI_addchar(*strfrmt++);  /* %% */
+    else
+    { /* format item */
+      char form[MAX_FORMAT];      /* store the format ('%...') */
+      char buff[MAX_CONVERTION];  /* store the formated value */
+      int size = 0;
+      int i = 0;
+      form[i++] = '%';
+      form[i] = *strfrmt++;
+      while (!isalpha(form[i]))
+      {
+        if (isdigit(form[i]))
+        {
+          size = size*10 + form[i]-'0';
+          if (size >= MAX_CONVERTION)
+            lua_error("format size/precision too long in function `format'");
+        }
+        else if (form[i] == '.')
+          size = 0;  /* re-start */
+        if (++i >= MAX_FORMAT)
+            lua_error("bad format in function `format'");
+        form[i] = *strfrmt++;
+      }
+      form[i+1] = 0;  /* ends string */
+      switch (form[i])
+      {
+        case 's':
+        {
+          char *s = lua_check_string(arg++, "format");
+          if (strlen(s) >= MAX_CONVERTION)
+            lua_error("string argument too long in function `format'");
+          sprintf(buff, form, s);
+          break;
+        }
+        case 'c':  case 'd':  case 'i': case 'o':
+        case 'u':  case 'x':  case 'X':
+          sprintf(buff, form, (int)lua_check_number(arg++, "format"));
+          break;
+        case 'e':  case 'E': case 'f': case 'g':
+          sprintf(buff, form, lua_check_number(arg++, "format"));
+          break;
+        default:  /* also treat cases 'pnLlh' */
+          lua_error("invalid format option in function `format'");
+      }
+      for (i=0; buff[i]; i++)  /* move formated value to result */
+        luaI_addchar(buff[i]);
+    }
+  }
+  lua_pushstring(luaI_addchar(0));  /* push the result */
+}
+
 
 /*
 ** Open string library
@@ -189,4 +257,5 @@ void strlib_open (void)
  lua_register ("strupper", str_upper);
  lua_register ("ascii", str_ascii);
  lua_register ("int2str", str_int2str);
+ lua_register ("format",    io_format);
 }
