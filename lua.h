@@ -2,7 +2,7 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lua.h,v 3.14 1994/12/28 12:55:47 roberto Exp celes $
+** $Id: lua.h,v 3.15 1995/01/18 20:15:05 celes Exp celes $
 */
 
 
@@ -67,6 +67,7 @@ int            lua_type 		(lua_Object object);
 
 int	       lua_lock			(void);
 lua_Object     lua_getlocked		(int ref);
+void	       lua_pushlocked		(int ref);
 void	       lua_unlock		(int ref);
 
 lua_Object     lua_createtable		(void);
