@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
+** $Id: lundump.c,v 2.2 2004/04/30 20:13:38 roberto Exp $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -178,6 +178,9 @@ static void LoadConstants (LoadState* S, Proto* f)
 	break;
    case LUA_TNIL:
    	setnilvalue(o);
+	break;
+   case LUA_TBOOLEAN:
+        setbvalue(o, LoadByte(S));
 	break;
    default:
 	luaG_runerror(L,"bad constant type (%d) in %s",t,S->name);
