@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.90 2002/07/04 17:58:02 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.91 2002/07/17 16:25:13 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -214,10 +214,9 @@ static int luaB_ipairs (lua_State *L) {
 static int passresults (lua_State *L, int status) {
   if (status == 0) return 1;
   else {
-    int numres = (status == LUA_ERRRUN) ? 3 : 2;
     lua_pushnil(L);
-    lua_insert(L, -numres);
-    return numres;
+    lua_insert(L, -2);
+    return 2;
   }
 }
 
@@ -278,13 +277,33 @@ static int luaB_pcall (lua_State *L) {
   int status;
   luaL_check_any(L, 1);
   status = lua_pcall(L, lua_gettop(L) - 1, LUA_MULTRET);
-  if (status != 0)
-    return passresults(L, status);
-  else {
-    lua_pushboolean(L, 1);
-    lua_insert(L, 1);
-    return lua_gettop(L);  /* return `true' + all results */
+  if (status)  /* error? */
+    lua_pcallreset(L);  /* reset error handler */
+  lua_pushboolean(L, (status == 0));
+  lua_insert(L, 1);
+  return lua_gettop(L);  /* return status + all results */
+}
+
+
+static int luaB_xpcall (lua_State *L) {
+  int status;
+  int ref;
+  luaL_check_any(L, 2);
+  lua_settop(L, 2);
+  ref = lua_ref(L, 1);  /* save error function */
+  status = lua_pcall(L, 0, LUA_MULTRET);
+  if (status) {  /* error? */
+    if (status == LUA_ERRRUN) { /* run-time error? */
+      lua_getref(L, ref);  /* get error function */
+      lua_pushvalue(L, -2);  /* error message */
+      lua_call(L, 1, 1);  /* call error function */
+    }
+    lua_pcallreset(L);  /* reset error handler */
   }
+  lua_unref(L, ref);  /* free reference */
+  lua_pushboolean(L, (status == 0));
+  lua_insert(L, 1);
+  return lua_gettop(L);  /* return status + all results */
 }
 
 
@@ -466,6 +485,7 @@ static const luaL_reg base_funcs[] = {
   {"rawget", luaB_rawget},
   {"rawset", luaB_rawset},
   {"pcall", luaB_pcall},
+  {"xpcall", luaB_xpcall},
   {"collectgarbage", luaB_collectgarbage},
   {"gcinfo", luaB_gcinfo},
   {"loadfile", luaB_loadfile},
@@ -488,15 +508,8 @@ static int luaB_resume (lua_State *L) {
   int status;
   lua_settop(L, 0);
   status = lua_resume(L, co);
-  if (status != 0) {
-    if (status == LUA_ERRRUN) {
-      if (lua_isstring(L, -1) && lua_isstring(L, -2))
-        lua_concat(L, 2);
-      else
-        lua_pop(L, 1);
-    }
+  if (status != 0)
     return lua_error(L);
-  }
   return lua_gettop(L);
 }
 
