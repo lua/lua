@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.111 2002/03/04 21:29:41 roberto Exp roberto $
+** $Id: ltests.c,v 1.112 2002/03/14 18:01:52 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -666,7 +666,8 @@ static const struct luaL_reg tests_funcs[] = {
   {"closestate", closestate},
   {"doremote", doremote},
   {"log2", log2_aux},
-  {"totalmem", mem_query}
+  {"totalmem", mem_query},
+  {NULL, NULL}
 };
 
 
@@ -681,14 +682,7 @@ static void fim (void) {
 void luaB_opentests (lua_State *L) {
   *cast(int **, L) = &islocked;  /* init lock */
   lua_state = L;  /* keep first state to be opened */
-  /* open lib in a new table */
-  lua_newtable(L);
-  lua_getglobals(L);
-  lua_pushvalue(L, -2);
-  lua_setglobals(L);
-  luaL_openl(L, tests_funcs);  /* open functions inside new table */
-  lua_setglobals(L);  /* restore old table of globals */
-  lua_setglobal(L, "T");  /* set new table as global T */
+  luaL_opennamedlib(L, "T", tests_funcs);
   atexit(fim);
 }
 

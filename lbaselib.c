@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: lbaselib.c,v 1.59 2002/02/14 21:42:22 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -18,12 +18,6 @@
 #include "lualib.h"
 
 
-
-static void aux_setn (lua_State *L, int t, int n) {
-  lua_pushliteral(L, "n");
-  lua_pushnumber(L, n);
-  lua_rawset(L, t);
-}
 
 
 /*
@@ -124,17 +118,6 @@ static int luaB_error (lua_State *L) {
   return 0;  /* to avoid warnings */
 }
 
-static int luaB_setglobal (lua_State *L) {
-  luaL_check_any(L, 2);
-  lua_setglobal(L, luaL_check_string(L, 1));
-  return 0;
-}
-
-static int luaB_getglobal (lua_State *L) {
-  lua_getglobal(L, luaL_check_string(L, 1));
-  return 1;
-}
-
 
 static int luaB_metatable (lua_State *L) {
   luaL_check_type(L, 1, LUA_TTABLE);
@@ -191,12 +174,7 @@ static int luaB_collectgarbage (lua_State *L) {
 
 static int luaB_type (lua_State *L) {
   luaL_check_any(L, 1);
-  if (lua_isnone(L, 2))
-    lua_pushstring(L, lua_typename(L, lua_type(L, 1)));
-  else {
-    lua_pushboolean(L,
-       (strcmp(lua_typename(L, lua_type(L, 1)), luaL_check_string(L, 2)) == 0));
-  }
+  lua_pushstring(L, lua_typename(L, lua_type(L, 1)));
   return 1;
 }
 
@@ -247,6 +225,7 @@ static int luaB_loadstring (lua_State *L) {
   const char *chunkname = luaL_opt_string(L, 2, s);
   return passresults(L, lua_loadbuffer(L, s, l, chunkname), oldtop);
 }
+
 
 static int luaB_dofile (lua_State *L) {
   int oldtop = lua_gettop(L);
@@ -411,6 +390,50 @@ static int luaB_tostring (lua_State *L) {
 }
 
 
+static const luaL_reg base_funcs[] = {
+  {LUA_ALERT, luaB__ALERT},
+  {LUA_ERRORMESSAGE, luaB__ERRORMESSAGE},
+  {"error", luaB_error},
+  {"metatable", luaB_metatable},
+  {"globals", luaB_globals},
+  {"next", luaB_next},
+  {"print", luaB_print},
+  {"tonumber", luaB_tonumber},
+  {"tostring", luaB_tostring},
+  {"type", luaB_type},
+  {"assert", luaB_assert},
+  {"unpack", luaB_unpack},
+  {"rawget", luaB_rawget},
+  {"rawset", luaB_rawset},
+  {"call", luaB_call},
+  {"collectgarbage", luaB_collectgarbage},
+  {"gcinfo", luaB_gcinfo},
+  {"loadfile", luaB_loadfile},
+  {"loadstring", luaB_loadstring},
+  {"dofile", luaB_dofile},
+  {"dostring", luaB_dostring},
+  {NULL, NULL}
+};
+
+
+static void base_open (lua_State *L) {
+  lua_pushliteral(L, "_G");
+  lua_pushvalue(L, LUA_GLOBALSINDEX);
+  luaL_openlib(L, base_funcs);  /* open lib into global table */
+  lua_pushliteral(L, "_VERSION");
+  lua_pushliteral(L, LUA_VERSION);
+  lua_settable(L, -3);  /* set global _VERSION */
+  lua_settable(L, -1);  /* set global _G */
+}
+
+
+/*
+** {======================================================
+** Coroutine library
+** =======================================================
+*/
+
+
 static int luaB_resume (lua_State *L) {
   lua_State *co = (lua_State *)lua_touserdata(L, lua_upvalueindex(1));
   if (lua_resume(L, co) != 0)
@@ -457,6 +480,26 @@ static int luaB_yield (lua_State *L) {
   return lua_yield(L, lua_gettop(L));
 }
 
+static const luaL_reg co_funcs[] = {
+  {"create", luaB_coroutine},
+  {"yield", luaB_yield},
+  {NULL, NULL}
+};
+
+
+static void co_open (lua_State *L) {
+  luaL_opennamedlib(L, "co", co_funcs);
+  /* create metatable for coroutines */
+  lua_pushliteral(L, "Coroutine");
+  lua_newtable(L);
+  lua_pushliteral(L, "__gc");
+  lua_pushcfunction(L, gc_coroutine);
+  lua_rawset(L, -3);
+  lua_rawset(L, LUA_REGISTRYINDEX);
+}
+
+/* }====================================================== */
+
 
 /*
 ** {======================================================
@@ -496,6 +539,13 @@ static int luaB_foreach (lua_State *L) {
       return 1;
     lua_pop(L, 2);  /* remove value and result */
   }
+}
+
+
+static void aux_setn (lua_State *L, int t, int n) {
+  lua_pushliteral(L, "n");
+  lua_pushnumber(L, n);
+  lua_rawset(L, t);
 }
 
 
@@ -653,61 +703,29 @@ static int luaB_sort (lua_State *L) {
 
 /* }====================================================== */
 
+
+static const luaL_reg array_funcs[] = {
+  {"foreach", luaB_foreach},
+  {"foreachi", luaB_foreachi},
+  {"getn", luaB_getn},
+  {"sort", luaB_sort},
+  {"insert", luaB_tinsert},
+  {"remove", luaB_tremove},
+  {NULL, NULL}
+};
+
 /* }====================================================== */
 
 
 
-static const luaL_reg base_funcs[] = {
-  {LUA_ALERT, luaB__ALERT},
-  {LUA_ERRORMESSAGE, luaB__ERRORMESSAGE},
-  {"call", luaB_call},
-  {"collectgarbage", luaB_collectgarbage},
-  {"coroutine", luaB_coroutine},
-  {"dofile", luaB_dofile},
-  {"dostring", luaB_dostring},
-  {"error", luaB_error},
-  {"metatable", luaB_metatable},
-  {"foreach", luaB_foreach},
-  {"foreachi", luaB_foreachi},
-  {"gcinfo", luaB_gcinfo},
-  {"getglobal", luaB_getglobal},  /* compatibility with 4.0 */
-  {"globals", luaB_globals},
-  {"loadfile", luaB_loadfile},
-  {"loadstring", luaB_loadstring},
-  {"next", luaB_next},
-  {"print", luaB_print},
-  {"rawget", luaB_rawget},
-  {"rawset", luaB_rawset},
-  {"setglobal", luaB_setglobal},  /* compatibility with 4.0 */
-  {"tonumber", luaB_tonumber},
-  {"tostring", luaB_tostring},
-  {"type", luaB_type},
-  {"assert", luaB_assert},
-  {"getn", luaB_getn},
-  {"sort", luaB_sort},
-  {"tinsert", luaB_tinsert},
-  {"tremove", luaB_tremove},
-  {"unpack", luaB_unpack},
-  {"yield", luaB_yield}
-};
-
-
-
 LUALIB_API int lua_baselibopen (lua_State *L) {
-  luaL_openl(L, base_funcs);
-  lua_pushliteral(L, LUA_VERSION);
-  lua_setglobal(L, "_VERSION");
+  base_open(L);
+  co_open(L);
+  luaL_opennamedlib(L, "A", array_funcs);
   /* `require' needs an empty table as upvalue */
   lua_newtable(L);
   lua_pushcclosure(L, luaB_require, 1);
   lua_setglobal(L, "require");
-  /* create metatable for coroutines */
-  lua_pushliteral(L, "Coroutine");
-  lua_newtable(L);
-  lua_pushliteral(L, "gc");
-  lua_pushcfunction(L, gc_coroutine);
-  lua_rawset(L, -3);
-  lua_rawset(L, LUA_REGISTRYINDEX);
   return 0;
 }
 

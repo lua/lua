@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.60 2002/02/14 21:41:53 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.61 2002/03/07 18:15:10 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -116,10 +116,21 @@ LUALIB_API lua_Number luaL_opt_number (lua_State *L, int narg, lua_Number def) {
 }
 
 
-LUALIB_API void luaL_openlib (lua_State *L, const luaL_reg *l, int n) {
-  int i;
-  for (i=0; i<n; i++)
-    lua_register(L, l[i].name, l[i].func);
+LUALIB_API void luaL_openlib (lua_State *L, const luaL_reg *l) {
+  for (; l->name; l++) {
+    lua_pushstring(L, l->name);
+    lua_pushcfunction(L, l->func);
+    lua_settable(L, -3);
+  }
+}
+
+
+LUALIB_API void luaL_opennamedlib (lua_State *L, const char *libname,
+                                   const luaL_reg *l) {
+  lua_pushstring(L, libname);
+  lua_newtable(L);
+  luaL_openlib(L, l);
+  lua_settable(L, LUA_GLOBALSINDEX);
 }
 
 

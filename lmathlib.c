@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: lmathlib.c,v 1.40 2001/12/05 20:15:18 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -200,39 +200,45 @@ static int math_randomseed (lua_State *L) {
 
 
 static const luaL_reg mathlib[] = {
-{"abs",   math_abs},
-{"sin",   math_sin},
-{"cos",   math_cos},
-{"tan",   math_tan},
-{"asin",  math_asin},
-{"acos",  math_acos},
-{"atan",  math_atan},
-{"atan2", math_atan2},
-{"ceil",  math_ceil},
-{"floor", math_floor},
-{"mod",   math_mod},
-{"frexp", math_frexp},
-{"ldexp", math_ldexp},
-{"sqrt",  math_sqrt},
-{"min",   math_min},
-{"max",   math_max},
-{"log",   math_log},
-{"log10", math_log10},
-{"exp",   math_exp},
-{"deg",   math_deg},
-{"pow",   math_pow},
-{"rad",   math_rad},
-{"random",     math_random},
-{"randomseed", math_randomseed}
+  {"abs",   math_abs},
+  {"sin",   math_sin},
+  {"cos",   math_cos},
+  {"tan",   math_tan},
+  {"asin",  math_asin},
+  {"acos",  math_acos},
+  {"atan",  math_atan},
+  {"atan2", math_atan2},
+  {"ceil",  math_ceil},
+  {"floor", math_floor},
+  {"mod",   math_mod},
+  {"frexp", math_frexp},
+  {"ldexp", math_ldexp},
+  {"sqrt",  math_sqrt},
+  {"min",   math_min},
+  {"max",   math_max},
+  {"log",   math_log},
+  {"log10", math_log10},
+  {"exp",   math_exp},
+  {"deg",   math_deg},
+  {"pow",   math_pow},
+  {"rad",   math_rad},
+  {"random",     math_random},
+  {"randomseed", math_randomseed},
+  {NULL, NULL}
 };
+
 
 /*
 ** Open math library
 */
 LUALIB_API int lua_mathlibopen (lua_State *L) {
-  luaL_openl(L, mathlib);
+  lua_pushliteral(L, "math");
+  lua_newtable(L);
+  luaL_openlib(L, mathlib);
+  lua_pushliteral(L, "pi");
   lua_pushnumber(L, PI);
-  lua_setglobal(L, "PI");
+  lua_settable(L, -3);
+  lua_settable(L, LUA_GLOBALSINDEX);
   return 0;
 }
 
