@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.238 2003/05/09 20:16:54 roberto Exp roberto $
+** $Id: lapi.c,v 1.239 2003/05/14 21:06:56 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -96,6 +96,7 @@ LUA_API int lua_checkstack (lua_State *L, int size) {
 
 LUA_API void lua_xmove (lua_State *from, lua_State *to, int n) {
   int i;
+  if (from == to) return;
   lua_lock(to);
   api_checknelems(from, n);
   from->top -= n;
