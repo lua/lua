@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.40 1997/04/04 15:35:37 roberto Exp roberto $";
+char *rcs_hash="$Id: hash.c,v 2.41 1997/04/06 14:08:08 roberto Exp roberto $";
 
 
 #include "luamem.h"
@@ -33,7 +33,7 @@ static Hash *listhead = NULL;
 
 /* hash dimensions values */
 static Long dimensions[] = 
- {3L, 5L, 7L, 11L, 23L, 47L, 97L, 197L, 397L, 797L, 1597L, 3203L, 6421L,
+ {5L, 11L, 23L, 47L, 97L, 197L, 397L, 797L, 1597L, 3203L, 6421L,
   12853L, 25717L, 51437L, 102811L, 205619L, 411233L, 822433L,
   1644817L, 3289613L, 6579211L, 13158023L, MAX_INT};
 
@@ -49,27 +49,6 @@ int luaI_redimension (int nhash)
  return 0;  /* to avoid warnings */
 }
 
-static int hashindex (Hash *t, TObject *ref)		/* hash function */
-{
-  long int h;
-  switch (ttype(ref)) {
-    case LUA_T_NUMBER:
-      h = (long int)nvalue(ref); break;
-    case LUA_T_STRING: case LUA_T_USERDATA:
-      h = tsvalue(ref)->hash; break;
-    case LUA_T_FUNCTION:
-      h = (IntPoint)ref->value.tf; break;
-    case LUA_T_CFUNCTION:
-      h = (IntPoint)fvalue(ref); break;
-    case LUA_T_ARRAY:
-      h = (IntPoint)avalue(ref); break;
-    default:
-      lua_error ("unexpected type to index table");
-      h = 0;  /* UNREACHEABLE */
-  }
-  if (h < 0) h = -h;
-  return h%nhash(t);  /* make it a valid index */
-}
 
 int lua_equalObj (TObject *t1, TObject *t2)
 {
@@ -88,16 +67,44 @@ int lua_equalObj (TObject *t1, TObject *t2)
   }
 }
 
-static int present (Hash *t, TObject *ref)
-{ 
- int h = hashindex(t, ref);
- while (ttype(ref(node(t, h))) != LUA_T_NIL)
- {
-  if (lua_equalObj(ref, ref(node(t, h))))
-    return h;
-  h = (h+1) % nhash(t);
- }
- return h;
+
+static long int hashindex (TObject *ref)
+{
+  long int h;
+  switch (ttype(ref)) {
+    case LUA_T_NUMBER:
+      h = (long int)nvalue(ref); break;
+    case LUA_T_STRING: case LUA_T_USERDATA:
+      h = tsvalue(ref)->hash; break;
+    case LUA_T_FUNCTION:
+      h = (IntPoint)ref->value.tf; break;
+    case LUA_T_CFUNCTION:
+      h = (IntPoint)fvalue(ref); break;
+    case LUA_T_ARRAY:
+      h = (IntPoint)avalue(ref); break;
+    default:
+      lua_error ("unexpected type to index table");
+      h = 0;  /* UNREACHEABLE */
+  }
+  if (h < 0) h = -h;
+  return h;
+}
+
+
+static int present (Hash *t, TObject *key)
+{
+  long int h = hashindex(key);
+  int tsize = nhash(t);
+  int h1 = h%tsize;
+  TObject *rf = ref(node(t, h1));
+  if (ttype(rf) != LUA_T_NIL && !lua_equalObj(key, rf)) {
+    int h2 = h%(tsize-2) + 1;
+    do {
+      h1 = (h1+h2)%tsize;
+      rf = ref(node(t, h1));
+    } while (ttype(rf) != LUA_T_NIL && !lua_equalObj(key, rf));
+  }
+  return h1;
 }
 
 
@@ -221,22 +228,35 @@ Hash *lua_createarray (int nhash)
 
 
 /*
-** Re-hash
+** Rehash:
+** Check if table has deleted slots. It it has, it does not need to
+** grow, since rehash will reuse them.
 */
+static int emptyslots (Hash *t)
+{
+  int i;
+  for (i=nhash(t)-1; i>=0; i--) {
+    Node *n = node(t, i);
+    if (ttype(ref(n)) != LUA_T_NIL && ttype(val(n)) == LUA_T_NIL)
+      return 1;
+  }
+  return 0;
+}
+
 static void rehash (Hash *t)
 {
- int i;
- int   nold = nhash(t);
- Node *vold = nodevector(t);
- nhash(t) = luaI_redimension(nhash(t));
- nodevector(t) = hashnodecreate(nhash(t));
- for (i=0; i<nold; i++)
- {
-  Node *n = vold+i;
-  if (ttype(ref(n)) != LUA_T_NIL && ttype(val(n)) != LUA_T_NIL)
-   *node(t, present(t, ref(n))) = *n;  /* copy old node to new hahs */
- }
- luaI_free(vold);
+  int   nold = nhash(t);
+  Node *vold = nodevector(t);
+  int i;
+  if (!emptyslots(t))
+    nhash(t) = luaI_redimension(nhash(t));
+  nodevector(t) = hashnodecreate(nhash(t));
+  for (i=0; i<nold; i++) {
+    Node *n = vold+i;
+    if (ttype(ref(n)) != LUA_T_NIL && ttype(val(n)) != LUA_T_NIL)
+      *node(t, present(t, ref(n))) = *n;  /* copy old node to new hash */
+  }
+  luaI_free(vold);
 }
 
 /*
@@ -257,23 +277,17 @@ TObject *lua_hashget (Hash *t, TObject *ref)
 */
 TObject *lua_hashdefine (Hash *t, TObject *ref)
 {
- int   h;
- Node *n;
- h = present(t, ref);
- n = node(t, h);
- if (ttype(ref(n)) == LUA_T_NIL)
- {
-  nuse(t)++;
-  if ((float)nuse(t) > (float)nhash(t)*REHASH_LIMIT)
-  {
-   rehash(t);
-   h = present(t, ref);
-   n = node(t, h);
+  Node *n = node(t, present(t, ref));
+  if (ttype(ref(n)) == LUA_T_NIL) {
+    nuse(t)++;
+    if ((float)nuse(t) > (float)nhash(t)*REHASH_LIMIT) {
+      rehash(t);
+      n = node(t, present(t, ref));
+    }
+    *ref(n) = *ref;
+    ttype(val(n)) = LUA_T_NIL;
   }
-  *ref(n) = *ref;
-  ttype(val(n)) = LUA_T_NIL;
- }
- return (val(n));
+  return (val(n));
 }
 
 
@@ -285,33 +299,30 @@ TObject *lua_hashdefine (Hash *t, TObject *ref)
 */
 static void hashnext (Hash *t, int i)
 {
- if (i >= nhash(t))
-  return;
- while (ttype(ref(node(t,i))) == LUA_T_NIL ||
-        ttype(val(node(t,i))) == LUA_T_NIL)
- {
-  if (++i >= nhash(t))
-   return;
- }
- luaI_pushobject(ref(node(t,i)));
- luaI_pushobject(val(node(t,i)));
+  Node *n;
+  int tsize = nhash(t);
+  if (i >= tsize)
+    return;
+  n = node(t, i);
+  while (ttype(ref(n)) == LUA_T_NIL || ttype(val(n)) == LUA_T_NIL) {
+    if (++i >= tsize)
+      return;
+    n = node(t, i);
+  }
+  luaI_pushobject(ref(node(t,i)));
+  luaI_pushobject(val(node(t,i)));
 }
 
 void lua_next (void)
 {
- Hash   *t;
- lua_Object o = lua_getparam(1);
- lua_Object r = lua_getparam(2);
- luaL_arg_check(lua_istable(o), 1, "table expected");
- luaL_arg_check(r != LUA_NOOBJECT, 2, "value expected");
- t = avalue(luaI_Address(o));
- if (lua_isnil(r))
- {
-  hashnext(t, 0);
- }
- else
- {
-  int h = present (t, luaI_Address(r));
-  hashnext(t, h+1);
- }
+  Hash *t;
+  lua_Object o = lua_getparam(1);
+  lua_Object r = lua_getparam(2);
+  luaL_arg_check(lua_istable(o), 1, "table expected");
+  luaL_arg_check(r != LUA_NOOBJECT, 2, "value expected");
+  t = avalue(luaI_Address(o));
+  if (lua_isnil(r))
+    hashnext(t, 0);
+  else
+    hashnext(t, present(t, luaI_Address(r))+1);
 }
