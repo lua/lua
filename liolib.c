@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.78 2000/09/11 17:38:42 roberto Exp roberto $
+** $Id: liolib.c,v 1.79 2000/09/11 20:29:27 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -590,30 +590,27 @@ static int errorfb (lua_State *L) {
   int level = 1;  /* skip level 0 (it's this function) */
   int firstpart = 1;  /* still before eventual `...' */
   lua_Debug ar;
-  lua_settop(L, 1);
-  luaL_checktype(L, 1, "string");
-  lua_pushstring(L, "error: ");
-  lua_insert(L, 1);
-  lua_pushstring(L, "\nstack traceback:\n");
-  lua_concat(L, 3);
+  luaL_Buffer b;
+  luaL_buffinit(L, &b);
+  luaL_addstring(&b, "error: ");
+  luaL_addstring(&b, luaL_check_string(L, 1));
+  luaL_addstring(&b, "\nstack traceback:\n");
   while (lua_getstack(L, level++, &ar)) {
     char buff[120];  /* enough to fit following `sprintf's */
-    int toconcat = 1;  /* number of strings in the stack to concat */
     if (level > LEVELS1 && firstpart) {
       /* no more than `LEVELS2' more levels? */
       if (!lua_getstack(L, level+LEVELS2, &ar))
         level--;  /* keep going */
       else {
-        lua_pushstring(L, "       ...\n");  /* too many levels */
-        lua_concat(L, 2);
+        luaL_addstring(&b, "       ...\n");  /* too many levels */
         while (lua_getstack(L, level+LEVELS2, &ar))  /* find last levels */
-        level++;
+          level++;
       }
       firstpart = 0;
       continue;
     }
     sprintf(buff, "%4d:  ", level-1);
-    lua_pushstring(L, buff); toconcat++;
+    luaL_addstring(&b, buff);
     lua_getinfo(L, "Snl", &ar);
     switch (*ar.namewhat) {
       case 'g':  case 'l':  /* global, local */
@@ -632,21 +629,21 @@ static int errorfb (lua_State *L) {
           sprintf(buff, "%.70s", ar.source_id);
         else
           sprintf(buff, "function <%d:%.70s>", ar.linedefined, ar.source_id);
-        ar.source = NULL;
+        ar.source = NULL;  /* do not print source again */
       }
     }
-    lua_pushstring(L, buff); toconcat++;
+    luaL_addstring(&b, buff);
     if (ar.currentline > 0) {
       sprintf(buff, " at line %d", ar.currentline);
-      lua_pushstring(L, buff); toconcat++;
+      luaL_addstring(&b, buff);
     }
     if (ar.source) {
       sprintf(buff, " [%.70s]", ar.source_id);
-      lua_pushstring(L, buff); toconcat++;
+      luaL_addstring(&b, buff);
     }
-    lua_pushstring(L, "\n"); toconcat++;
-    lua_concat(L, toconcat);
+    luaL_addstring(&b, "\n");
   }
+  luaL_pushresult(&b);
   lua_getglobals(L);
   lua_pushstring(L, LUA_ALERT);
   lua_rawget(L, -2);
