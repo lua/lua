@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.64 2000/06/21 17:05:49 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.65 2000/06/26 19:28:31 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -30,7 +30,7 @@
   The size of each argument is defined in `llimits.h'. The usual is an
   instruction with 32 bits, U arguments with 26 bits (32-6), B arguments
   with 9 bits, and A arguments with 17 bits (32-6-9). For small
-  instalations, the instruction size can be 16, so U has 10 bits,
+  installations, the instruction size can be 16, so U has 10 bits,
   and A and B have 5 bits each.
 ===========================================================================*/
 

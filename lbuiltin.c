@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.119 2000/08/09 19:16:57 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.120 2000/08/14 19:10:14 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -401,7 +401,7 @@ void luaB_getn (lua_State *L) {
 }
 
 
-/* auxiliar function */
+/* auxiliary function */
 static void t_move (lua_State *L, Hash *t, int from, int to) {
   TObject *p = luaH_setint(L, t, to);  /* may change following `get' */
   *p = *luaH_getnum(t, from);
@@ -613,16 +613,16 @@ static void deprecated_funcs (lua_State *L) {
 #else
 
 /*
-** gives an explicit error in any attempt to call an obsolet function
+** gives an explicit error in any attempt to call a deprecated function
 */
-static void obsolete_func (lua_State *L) {
-  luaL_verror(L, "function `%.20s' is obsolete", luaL_check_string(L, 1));
+static void deprecated_func (lua_State *L) {
+  luaL_verror(L, "function `%.20s' is deprecated", luaL_check_string(L, 1));
 }
 
 
 #define num_deprecated	6
 
-static const char *const obsolete_names [num_deprecated] = {
+static const char *const deprecated_names [num_deprecated] = {
   "foreachvar", "nextvar", "rawgetglobal",
   "rawgettable", "rawsetglobal", "rawsettable"
 };
@@ -631,9 +631,9 @@ static const char *const obsolete_names [num_deprecated] = {
 static void deprecated_funcs (lua_State *L) {
   int i;
   for (i=0; i<num_deprecated; i++) {
-    lua_pushstring(L, obsolete_names[i]);
-    lua_pushcclosure(L, obsolete_func, 1);
-    lua_setglobal(L, obsolete_names[i]);
+    lua_pushstring(L, deprecated_names[i]);
+    lua_pushcclosure(L, deprecated_func, 1);
+    lua_setglobal(L, deprecated_names[i]);
   }
 }
 

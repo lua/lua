@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.34 2000/08/14 17:46:27 roberto Exp roberto $
+** $Id: ldebug.c,v 1.35 2000/08/14 17:59:20 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -391,7 +391,7 @@ static const char *getobjname (lua_State *L, StkId obj, const char **name) {
         return "field";
       }
       default:
-        return NULL;  /* no usefull name found */
+        return NULL;  /* no useful name found */
     }
   }
 }
@@ -408,7 +408,7 @@ static const char *getfuncname (lua_State *L, StkId f, const char **name) {
       case OP_CALL: case OP_TAILCALL:
         return getobjname(L, (func+1)+GETARG_A(i), name);
       default:
-        return NULL;  /* no usefull name found */
+        return NULL;  /* no useful name found */
     }
   }
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.107 2000/08/09 19:16:57 roberto Exp roberto $
+** $Id: lparser.c,v 1.108 2000/08/14 17:46:27 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -1024,7 +1024,7 @@ static void breakstat (LexState *ls) {
   next(ls);  /* skip BREAK */
   luaK_adjuststack(fs, currentlevel - bl->stacklevel);
   luaK_concat(fs, &bl->breaklist, luaK_jump(fs));
-  /* correct stack for compiler and simbolic execution */
+  /* correct stack for compiler and symbolic execution */
   luaK_adjuststack(fs, bl->stacklevel - currentlevel);
 }
 
