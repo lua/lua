@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.61 2003/10/02 20:31:17 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.62 2003/10/07 20:13:41 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -76,8 +76,8 @@ LUALIB_API lua_State *(luaL_newstate) (void);
 ** ===============================================================
 */
 
-#define luaL_argcheck(L, cond,numarg,extramsg) if (!(cond)) \
-                                               luaL_argerror(L, numarg,extramsg)
+#define luaL_argcheck(L, cond,numarg,extramsg)	\
+		((void)((cond) || luaL_argerror(L, numarg,extramsg)))
 #define luaL_checkstring(L,n)	(luaL_checklstring(L, (n), NULL))
 #define luaL_optstring(L,n,d)	(luaL_optlstring(L, (n), (d), NULL))
 #define luaL_checkint(L,n)	((int)luaL_checkinteger(L, n))
