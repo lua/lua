@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.12 2000/03/15 20:50:33 roberto Exp roberto $
+** $Id: lcode.c,v 1.13 2000/03/16 18:03:09 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -22,130 +22,147 @@ void luaK_error (LexState *ls, const char *msg) {
 }
 
 
-/*
-** Returns the address of the previous instruction, for optimizations. 
-** If there is a jump target between this and the current instruction,
-** returns the address of a dummy instruction to avoid wrong optimizations.
-*/
-static Instruction *previous_instruction (FuncState *fs) {
-  if (fs->pc > fs->lasttarget)  /* no jumps to current position? */
-    return &fs->f->code[fs->pc-1];  /* returns previous instruction */
-  else {
-    static Instruction dummy = CREATE_0(OP_END);
-    return &dummy;  /* no optimizations after an `END' */
-  }
-}
-
-
-static int luaK_primitivecode (FuncState *fs, Instruction i) {
+int luaK_code (FuncState *fs, Instruction i, int delta) {
+  luaK_deltastack(fs, delta);
   luaM_growvector(fs->L, fs->f->code, fs->pc, 1, Instruction, codeEM, MAX_INT);
   fs->f->code[fs->pc] = i;
   return fs->pc++;
 }
 
+int luaK_0(FuncState *fs, OpCode o, int d) {
+  return luaK_code(fs, CREATE_0(o), d);
+}
+
+int luaK_U(FuncState *fs, OpCode o, int u, int d) {
+  return luaK_code(fs, CREATE_U(o,u), d);
+}
+
+int luaK_S(FuncState *fs, OpCode o, int s, int d) {
+  return luaK_code(fs, CREATE_S(o,s), d);
+}
+
+int luaK_AB(FuncState *fs, OpCode o, int a, int b, int d) {
+  return luaK_code(fs, CREATE_AB(o,a,b), d);
+}
+
+
+/*
+** Returns the the previous instruction, for optimizations. 
+** If there is a jump target between this and the current instruction,
+** returns a dummy instruction to avoid wrong optimizations.
+*/
+static Instruction previous_instruction (FuncState *fs) {
+  if (fs->pc > fs->lasttarget)  /* no jumps to current position? */
+    return fs->f->code[fs->pc-1];  /* returns previous instruction */
+  else
+    return CREATE_0(OP_END);  /* no optimizations after an `END' */
+}
+
+
+static Instruction prepare (FuncState *fs, Instruction i, int delta) {
+  Instruction previous = previous_instruction(fs);
+  luaK_code(fs, i, delta);
+  return previous;
+}
+
+
+static void setprevious (FuncState *fs, Instruction i) {
+  fs->pc--;  /* remove last instruction */
+  fs->f->code[fs->pc-1] = i;  /* change previous instruction */
+}
+
 
 static void luaK_minus (FuncState *fs) {
-  Instruction *previous = previous_instruction(fs);
-  switch(GET_OPCODE(*previous)) {
-    case OP_PUSHINT: SETARG_S(*previous, -GETARG_S(*previous)); return;
-    case OP_PUSHNUM: SET_OPCODE(*previous, OP_PUSHNEGNUM); return;
-    case OP_PUSHNEGNUM: SET_OPCODE(*previous, OP_PUSHNUM); return;
-    default: luaK_primitivecode(fs, CREATE_0(OP_MINUS));
+  Instruction previous = prepare(fs, CREATE_0(OP_MINUS), 0);
+  switch(GET_OPCODE(previous)) {
+    case OP_PUSHINT: SETARG_S(previous, -GETARG_S(previous)); break;
+    case OP_PUSHNUM: SET_OPCODE(previous, OP_PUSHNEGNUM); break;
+    case OP_PUSHNEGNUM: SET_OPCODE(previous, OP_PUSHNUM); break;
+    default: return;
   }
+  setprevious(fs, previous);
 }
 
 
 static void luaK_gettable (FuncState *fs) {
-  Instruction *previous = previous_instruction(fs);
-  luaK_deltastack(fs, -1);
-  switch(GET_OPCODE(*previous)) {
-    case OP_PUSHSTRING: SET_OPCODE(*previous, OP_GETDOTTED); break;
-    default: luaK_primitivecode(fs, CREATE_0(OP_GETTABLE));
+  Instruction previous = prepare(fs, CREATE_0(OP_GETTABLE), -1);
+  switch(GET_OPCODE(previous)) {
+    case OP_PUSHSTRING: SET_OPCODE(previous, OP_GETDOTTED); break;
+    default: return;
   }
+  setprevious(fs, previous);
 }
 
 
 static void luaK_add (FuncState *fs) {
-  Instruction *previous = previous_instruction(fs);
-  luaK_deltastack(fs, -1);
-  switch(GET_OPCODE(*previous)) {
-    case OP_PUSHINT: SET_OPCODE(*previous, OP_ADDI); break;
-    default: luaK_primitivecode(fs, CREATE_0(OP_ADD));
+  Instruction previous = prepare(fs, CREATE_0(OP_ADD), -1);
+  switch(GET_OPCODE(previous)) {
+    case OP_PUSHINT: SET_OPCODE(previous, OP_ADDI); break;
+    default: return;
   }
+  setprevious(fs, previous);
 }
 
 
 static void luaK_sub (FuncState *fs) {
-  Instruction *previous = previous_instruction(fs);
-  luaK_deltastack(fs, -1);
-  switch(GET_OPCODE(*previous)) {
+  Instruction previous = prepare(fs, CREATE_0(OP_SUB), -1);
+  switch(GET_OPCODE(previous)) {
     case OP_PUSHINT:
-      SET_OPCODE(*previous, OP_ADDI);
-      SETARG_S(*previous, -GETARG_S(*previous));
+      SET_OPCODE(previous, OP_ADDI);
+      SETARG_S(previous, -GETARG_S(previous));
       break;
-    default: luaK_primitivecode(fs, CREATE_0(OP_SUB));
+    default: return;
   }
+  setprevious(fs, previous);
 }
 
 
 static void luaK_conc (FuncState *fs) {
-  Instruction *previous = previous_instruction(fs);
-  luaK_deltastack(fs, -1);
-  switch(GET_OPCODE(*previous)) {
-    case OP_CONC: SETARG_U(*previous, GETARG_U(*previous)+1); break;
-    default: luaK_primitivecode(fs, CREATE_U(OP_CONC, 2));
+  Instruction previous = prepare(fs, CREATE_U(OP_CONC, 2), -1);
+  switch(GET_OPCODE(previous)) {
+    case OP_CONC: SETARG_U(previous, GETARG_U(previous)+1); break;
+    default: return;
   }
+  setprevious(fs, previous);
 }
 
 
 static void luaK_eq (FuncState *fs) {
-  Instruction *previous = previous_instruction(fs);
-  if (*previous == CREATE_U(OP_PUSHNIL, 1)) {
-    *previous = CREATE_0(OP_NOT);
-    luaK_deltastack(fs, -1);  /* undo effect of PUSHNIL */
+  Instruction previous = prepare(fs, CREATE_S(OP_IFEQJMP, 0), -2);
+  if (previous == CREATE_U(OP_PUSHNIL, 1)) {
+    setprevious(fs, CREATE_0(OP_NOT));
+    luaK_deltastack(fs, 1);  /* undo delta from `prepare' */
   }
-  else
-    luaK_S(fs, OP_IFEQJMP, 0, -2);
 }
 
 
 static void luaK_neq (FuncState *fs) {
-  Instruction *previous = previous_instruction(fs);
-  if (*previous == CREATE_U(OP_PUSHNIL, 1)) {
-    fs->pc--;  /* remove PUSHNIL */
-    luaK_deltastack(fs, -1);  /* undo effect of PUSHNIL */
-    luaK_getlabel(fs);  /* previous instruction could be a (closed) call */
+  Instruction previous = prepare(fs, CREATE_S(OP_IFNEQJMP, 0), -2);
+  if (previous == CREATE_U(OP_PUSHNIL, 1)) {
+    fs->pc -= 2;  /* remove PUSHNIL and IFNEQJMP */
+    luaK_deltastack(fs, 1);  /* undo delta from `prepare' */
   }
-  else
-    luaK_S(fs, OP_IFNEQJMP, 0, -2);
 }
 
 
 void luaK_retcode (FuncState *fs, int nlocals, int nexps) {
-  Instruction *previous = previous_instruction(fs);
-  if (nexps > 0 && GET_OPCODE(*previous) == OP_CALL) {
-    LUA_ASSERT(fs->L, GETARG_B(*previous) == MULT_RET, "call should be open");
-    SET_OPCODE(*previous, OP_TAILCALL);
-    SETARG_B(*previous, nlocals);
+  Instruction previous = prepare(fs, CREATE_U(OP_RETURN, nlocals), 0);
+  if (nexps > 0 && GET_OPCODE(previous) == OP_CALL) {
+    LUA_ASSERT(fs->L, GETARG_B(previous) == MULT_RET, "call should be open");
+    SET_OPCODE(previous, OP_TAILCALL);
+    SETARG_B(previous, nlocals);
+    setprevious(fs, previous);
   }
-  else
-    luaK_primitivecode(fs, CREATE_U(OP_RETURN, nlocals));
 }
 
 
 static void luaK_pushnil (FuncState *fs, int n) {
-  Instruction *previous = previous_instruction(fs);
-  luaK_deltastack(fs, n);
-  switch(GET_OPCODE(*previous)) {
-    case OP_PUSHNIL: SETARG_U(*previous, GETARG_U(*previous)+n); break;
-    default: luaK_primitivecode(fs, CREATE_U(OP_PUSHNIL, n));
+  Instruction previous = prepare(fs, CREATE_U(OP_PUSHNIL, n), n);
+  switch(GET_OPCODE(previous)) {
+    case OP_PUSHNIL: SETARG_U(previous, GETARG_U(previous)+n); break;
+    default: return;
   }
-}
-
-
-int luaK_code (FuncState *fs, Instruction i, int delta) {
-  luaK_deltastack(fs, delta);
-  return luaK_primitivecode(fs, i);
+  setprevious(fs, previous);
 }
 
 
@@ -232,21 +249,17 @@ void luaK_adjuststack (FuncState *fs, int n) {
 
 
 int luaK_lastisopen (FuncState *fs) {
-  /* check whether last instruction is an (open) function call */
-  Instruction *i = previous_instruction(fs);
-  if (GET_OPCODE(*i) == OP_CALL) {
-    LUA_ASSERT(fs->L, GETARG_B(*i) == MULT_RET, "call should be open");
+  /* check whether last instruction is an open function call */
+  Instruction i = previous_instruction(fs);
+  if (GET_OPCODE(i) == OP_CALL && GETARG_B(i) == MULT_RET)
     return 1;
-  }
   else return 0;
 }
 
 
 void luaK_setcallreturns (FuncState *fs, int nresults) {
-  Instruction *i = previous_instruction(fs);
-  if (GET_OPCODE(*i) == OP_CALL) {  /* expression is a function call? */
-    LUA_ASSERT(fs->L, GETARG_B(*i) == MULT_RET, "call should be open");
-    SETARG_B(*i, nresults);  /* set nresults */
+  if (luaK_lastisopen(fs)) {  /* expression is an open function call? */
+    SETARG_B(fs->f->code[fs->pc-1], nresults);  /* set number of results */
     luaK_deltastack(fs, nresults);  /* push results */
   }
 }
@@ -323,12 +336,9 @@ static OpCode invertjump (OpCode op) {
 
 
 static void luaK_jump (FuncState *fs, OpCode jump) {
-  Instruction *previous = previous_instruction(fs);
-  luaK_deltastack(fs, -1);
-  if (*previous == CREATE_0(OP_NOT))
-    *previous = CREATE_S(invertjump(jump), 0);
-  else
-    luaK_primitivecode(fs, CREATE_S(jump, 0));
+  Instruction previous = prepare(fs, CREATE_S(jump, 0), -1);
+  if (previous == CREATE_0(OP_NOT))
+    setprevious(fs, CREATE_S(invertjump(jump), 0));
 }
 
 

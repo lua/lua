@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.7 2000/03/13 20:37:16 roberto Exp roberto $
+** $Id: lcode.h,v 1.8 2000/03/15 20:50:33 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -13,13 +13,11 @@
 #include "lparser.h"
 
 
-#define luaK_0(ls,o,d)		luaK_code(ls, CREATE_0(o), d)
-#define luaK_U(ls,o,u,d)	luaK_code(ls, CREATE_U(o,u), d)
-#define luaK_S(ls,o,s,d)	luaK_code(ls, CREATE_S(o,s), d)
-#define luaK_AB(ls,o,a,b,d)	luaK_code(ls, CREATE_AB(o,a,b), d)
-
-
 void luaK_error (LexState *ls, const char *msg);
+int luaK_0(FuncState *fs, OpCode o, int d);
+int luaK_U(FuncState *fs, OpCode o, int u, int d);
+int luaK_S(FuncState *fs, OpCode o, int s, int d);
+int luaK_AB(FuncState *fs, OpCode o, int a, int b, int d);
 int luaK_code (FuncState *fs, Instruction i, int delta);
 void luaK_retcode (FuncState *fs, int nlocals, int nexps);
 void luaK_fixjump (FuncState *fs, int pc, int dest);
