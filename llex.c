@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.112 2002/09/19 13:03:53 roberto Exp roberto $
+** $Id: llex.c,v 1.113 2002/10/08 18:46:08 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -136,11 +136,16 @@ void luaX_setinput (lua_State *L, LexState *LS, ZIO *z, TString *source) {
 */
 
 
-/* use Mbuffer to store names, literal strings and numbers */
+/* use buffer to store names, literal strings and numbers */
 
+/* extra space to allocate when growing buffer */
 #define EXTRABUFF	32
+
+/* maximum number of chars that can be read without checking buffer size */
+#define MAXNOCHECK	5
+
 #define checkbuffer(LS, len)	\
-    if (((len)+3)*sizeof(char) > luaZ_sizebuffer((LS)->buff)) \
+    if (((len)+MAXNOCHECK)*sizeof(char) > luaZ_sizebuffer((LS)->buff)) \
       luaZ_openspace((LS)->L, (LS)->buff, (len)+EXTRABUFF)
 
 #define save(LS, c, l) \
