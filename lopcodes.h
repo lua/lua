@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.65 2000/06/26 19:28:31 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.66 2000/08/15 18:28:48 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -154,6 +154,15 @@ OP_CLOSURE/*	A B	v_b-v_1		closure(KPROTO[a], v_1-v_b)	*/
 
 
 #define ISJUMP(o)	(OP_JMPNE <= (o) && (o) <= OP_JMP)
+
+
+
+/* special code to fit a LUA_MULTRET inside an argB */
+#define MULT_RET        255	/* (<=MAXARG_B) */
+#if MULT_RET>MAXARG_B
+#undef MULT_RET
+#define MULT_RET	MAXARG_B
+#endif
 
 
 #endif

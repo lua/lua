@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.129 2000/08/22 20:53:30 roberto Exp roberto $
+** $Id: lvm.c,v 1.130 2000/08/29 14:41:56 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -368,14 +368,16 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         return base+GETARG_U(i);
       }
       case OP_CALL: {
+        int nres = GETARG_B(i);
+        if (nres == MULT_RET) nres = LUA_MULTRET;
         L->top = top;
-        luaD_call(L, base+GETARG_A(i), GETARG_B(i));
+        luaD_call(L, base+GETARG_A(i), nres);
         top = L->top;
         break;
       }
       case OP_TAILCALL: {
         L->top = top;
-        luaD_call(L, base+GETARG_A(i), MULT_RET);
+        luaD_call(L, base+GETARG_A(i), LUA_MULTRET);
         return base+GETARG_B(i);
       }
       case OP_PUSHNIL: {

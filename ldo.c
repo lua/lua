@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.86 2000/08/28 17:57:04 roberto Exp roberto $
+** $Id: ldo.c,v 1.87 2000/08/29 14:33:31 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -92,7 +92,7 @@ void luaD_adjusttop (lua_State *L, StkId base, int extra) {
 /*
 ** Open a hole inside the stack at `pos'
 */
-void luaD_openstack (lua_State *L, StkId pos) {
+static void luaD_openstack (lua_State *L, StkId pos) {
   int i = L->top-pos; 
   while (i--) pos[i+1] = pos[i];
   incr_top;
@@ -160,7 +160,7 @@ void luaD_callTM (lua_State *L, const TObject *f, int nParams, int nResults) {
 ** The arguments are on the stack, right after the function.
 ** When returns, the results are on the stack, starting at the original
 ** function position.
-** The number of results is nResults, unless nResults=MULT_RET.
+** The number of results is nResults, unless nResults=LUA_MULTRET.
 */ 
 void luaD_call (lua_State *L, StkId func, int nResults) {
   StkId firstResult;
@@ -197,7 +197,7 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
   if (callhook)  /* same hook that was active at entry */
     luaD_callHook(L, func, callhook, "return");
   /* adjust the number of results */
-  if (nResults == MULT_RET)
+  if (nResults == LUA_MULTRET)
     nResults = L->top - firstResult;
   else
     luaD_adjusttop(L, firstResult, nResults);
@@ -264,7 +264,6 @@ int lua_call (lua_State *L, int nargs, int nresults) {
   StkId func = L->top - (nargs+1);  /* function to be called */
   struct lua_longjmp myErrorJmp;
   chain_longjmp(L, &myErrorJmp);
-  if (nresults == LUA_MULTRET) nresults = MULT_RET;  /* internal code */
   if (setjmp(myErrorJmp.b) == 0) {
     luaD_call(L, func, nresults);
   }

@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.12 2000/08/15 18:28:48 roberto Exp roberto $
+** $Id: llimits.h,v 1.13 2000/08/28 17:57:04 roberto Exp roberto $
 ** Limits, basic types, and some other "installation-dependent" definitions
 ** See Copyright Notice in lua.h
 */
@@ -154,14 +154,6 @@ typedef unsigned long Instruction;
 #if MAXUPVALUES>MAXARG_B
 #undef MAXUPVALUES
 #define MAXUPVALUES	MAXARG_B
-#endif
-
-
-/* special code for multiple returns */
-#define MULT_RET        255	/* (<=MAXARG_B) */
-#if MULT_RET>MAXARG_B
-#undef MULT_RET
-#define MULT_RET	MAXARG_B
 #endif
 
 
