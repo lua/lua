@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.52 2000/09/25 16:15:52 roberto Exp roberto $
+** $Id: lua.c,v 1.53 2000/10/09 15:46:43 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -48,18 +48,14 @@ static lua_Hook old_linehook = NULL;
 static lua_Hook old_callhook = NULL;
 
 
-#ifdef USERINIT
-extern void USERINIT (void);
-#else
-#define USERINIT	userinit
 static void userinit (void) {
   lua_baselibopen(L);
   lua_iolibopen(L);
   lua_strlibopen(L);
   lua_mathlibopen(L);
   lua_dblibopen(L);
+  /* add your libraries here */
 }
-#endif
 
 
 static handler lreset (void) {
@@ -316,7 +312,7 @@ int main (int argc, char *argv[]) {
   opt.toclose = 0;
   getstacksize(argc, argv, &opt);  /* handle option `-s' */
   L = lua_open(opt.stacksize);  /* create state */
-  USERINIT();  /* open libraries */
+  userinit();  /* open libraries */
   register_getargs(argv);  /* create `getargs' function */
   status = handle_argv(argv+1, &opt);
   if (opt.toclose)
