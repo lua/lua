@@ -1,0 +1,26 @@
+* Installation
+  Installing Lua should be very easy:
+
+	1. Edit "config" to suit your platform, if at all necessary
+	2. Then, type "make"
+
+* What you get
+  If make succeeds, you get:
+	* a compiler and an interpreter in ./bin/lua;
+	* libraries in ./lib;
+	* include files in ./include.
+
+  There is a reference manual in ./doc, and tests and examples in ./test.
+  You don't need these directories for development.
+
+* If you have problems (and solutions!)
+  If make fails, please let us know (lua@icad.puc-rio.br).
+  If you make changes to "config", please send them to us.
+
+* Shared libraries
+  If you are running SunOs 4.x, type the following after "make" succeeds:
+	ld -o lib/liblua.so.2.4 src/*.o
+	ld -o lib/liblualib.so.2.4 clients/lib/*.o
+
+  For AIX, the OpenGL clone Mesa includes a script for making shared libraries.
+  For other systems, please let us know how!

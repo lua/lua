@@ -1,10 +1,12 @@
-# makefile for lua distribution
+# makefile for lua distribution (includes)
+
+LUA= ..
+
+include $(LUA)/config
 
 SRCS= lua.h lualib.h luadebug.h
 
 all:
-
-dynamic:
 
 clean:
 

@@ -1,3 +1,4 @@
+
 typedef union  
 {
  int   vInt;
@@ -6,9 +7,9 @@ typedef union
  Word  vWord;
  Long  vLong;
  TFunc *pFunc;
- TreeNode *pNode;
+ TaggedString *pTStr;
 } YYSTYPE;
-extern YYSTYPE yylval;
+extern YYSTYPE luaY_lval;
 # define WRONGTOKEN 257
 # define NIL 258
 # define IF 259

@@ -1,20 +1,17 @@
 # makefile for lua interpreter
 
-BIN= $(LUA)/bin
-INC= $(LUA)/include
-LIB= $(LUA)/lib
+LUA= ../..
 
-CC= gcc
-CFLAGS= $(INCS) $(DEFS) $(WARN) -O2
+include $(LUA)/config
 
-# in SunOs /usr/5include contains prototypes for standard lib
-INCS= -I/usr/5include -I$(INC)
-WARN= -Wall -Wmissing-prototypes -Wshadow -ansi
+EXTRA_DEFS= $(POSIX)
 
 OBJS= lua.o
 SRCS= lua.c
 
 T=$(BIN)/lua
+
+all: $T
 
 $T: $(OBJS)
 	$(CC) -o $@ $(OBJS) -L$(LIB) -llua -llualib -lm

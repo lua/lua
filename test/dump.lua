@@ -1,4 +1,4 @@
-
+-- dump global environment
 
 function savevar (n,v)
  if v == nil then return end;

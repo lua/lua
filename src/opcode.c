@@ -3,10 +3,9 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.50 1995/11/16 20:46:24 roberto Exp $";
+char *rcs_opcode="$Id: opcode.c,v 3.68 1996/04/25 14:10:00 roberto Exp $";
 
 #include <setjmp.h>
-#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -18,12 +17,17 @@ char *rcs_opcode="$Id: opcode.c,v 3.50 1995/11/16 20:46:24 roberto Exp $";
 #include "table.h"
 #include "lua.h"
 #include "fallback.h"
+#include "undump.h"
 
 #define tonumber(o) ((tag(o) != LUA_T_NUMBER) && (lua_tonumber(o) != 0))
 #define tostring(o) ((tag(o) != LUA_T_STRING) && (lua_tostring(o) != 0))
 
 
 #define STACK_SIZE 	128
+
+#ifndef STACK_LIMIT
+#define STACK_LIMIT     6000
+#endif
 
 typedef int StkId;  /* index to stack elements */
 
@@ -53,6 +57,11 @@ static int CnResults = 0; /* when Lua calls C, has the number of parameters; */
 static  jmp_buf *errorJmp = NULL; /* current error recover point */
 
 
+/* Hooks */
+lua_LHFunction lua_linehook = NULL;
+lua_CHFunction lua_callhook = NULL;
+
+
 static StkId lua_execute (Byte *pc, StkId base);
 static void do_call (StkId base, int nResults);
 
@@ -62,7 +71,6 @@ Object *luaI_Address (lua_Object o)
 {
   return Address(o);
 }
-
 
 
 /*
@@ -89,14 +97,17 @@ static void growstack (void)
    lua_initstack();
  else
  {
+  static int limit = STACK_LIMIT;
   StkId t = top-stack;
-  Long maxstack = stackLimit - stack;
-  maxstack *= 2;
-  stack = growvector(stack, maxstack, Object);
-  stackLimit = stack+maxstack;
+  Long stacksize = stackLimit - stack;
+  stacksize = growvector(&stack, stacksize, Object, stackEM, limit+100);
+  stackLimit = stack+stacksize;
   top = stack + t;
-  if (maxstack >= MAX_WORD/2)
-    lua_error("stack size overflow");
+  if (stacksize >= limit)
+  {
+    limit = stacksize;
+    lua_error(stackEM);
+  }
  }
 }
 
@@ -106,18 +117,9 @@ static void growstack (void)
 */
 static char *lua_strconc (char *l, char *r)
 {
- static char *buffer = NULL;
- static int buffer_size = 0;
- int nl = strlen(l);
- int n = nl+strlen(r)+1;
- if (n > buffer_size)
-  {
-   buffer_size = n;
-   if (buffer != NULL)
-     luaI_free(buffer);
-   buffer = newvector(buffer_size, char);
-  }
-  strcpy(buffer,l);
+  int nl = strlen(l);
+  char *buffer = luaI_buffer(nl+strlen(r)+1);
+  strcpy(buffer, l);
   strcpy(buffer+nl, r);
   return buffer;
 }
@@ -150,7 +152,7 @@ static int lua_tonumber (Object *obj)
 */
 static int lua_tostring (Object *obj)
 {
- static char s[256];
+ char s[256];
  if (tag(obj) != LUA_T_NUMBER)
    return 1;
  if ((int) nvalue(obj) == nvalue(obj))
@@ -158,8 +160,6 @@ static int lua_tostring (Object *obj)
  else
    sprintf (s, "%g", nvalue(obj));
  tsvalue(obj) = lua_createstring(s);
- if (tsvalue(obj) == NULL)
-  return 1;
  tag(obj) = LUA_T_STRING;
  return 0;
 }
@@ -193,6 +193,48 @@ static void open_stack (int nelems)
 
 
 /*
+** call Line hook
+*/
+static void lineHook (int line)
+{
+  StkId oldBase = CBase;
+  int oldCnResults = CnResults;
+  StkId old_top = CBase = top-stack;
+  CnResults = 0;
+  (*lua_linehook)(line);
+  top = stack+old_top;
+  CnResults = oldCnResults;
+  CBase = oldBase;
+}
+
+
+/*
+** Call hook
+** The function being called is in [stack+base-1]
+*/
+static void callHook (StkId base, lua_Type type, int isreturn)
+{
+  StkId oldBase = CBase;
+  int oldCnResults = CnResults;
+  StkId old_top = CBase = top-stack;
+  CnResults = 0;
+  if (isreturn)
+    (*lua_callhook)(LUA_NOOBJECT, "(return)", 0);
+  else
+  {
+    Object *f = stack+base-1;
+    if (type == LUA_T_MARK)
+      (*lua_callhook)(Ref(f), f->value.tf->fileName, f->value.tf->lineDefined);
+    else
+      (*lua_callhook)(Ref(f), "(C)", -1);
+  }
+  top = stack+old_top;
+  CnResults = oldCnResults;
+  CBase = oldBase;
+}
+
+
+/*
 ** Call a C function. CBase will point to the top of the stack,
 ** and CnResults is the number of parameters. Returns an index
 ** to the first result from C.
@@ -204,8 +246,12 @@ static StkId callC (lua_CFunction func, StkId base)
   StkId firstResult;
   CnResults = (top-stack) - base;
   /* incorporate parameters on the stack */
-  CBase = base+CnResults;
+  CBase = base+CnResults;  /* == top-stack */
+  if (lua_callhook)
+    callHook(base, LUA_T_CMARK, 0);
   (*func)();
+  if (lua_callhook)  /* func may have changed lua_callhook */
+    callHook(base, LUA_T_CMARK, 1);
   firstResult = CBase;
   CBase = oldBase;
   CnResults = oldCnResults;
@@ -303,6 +349,18 @@ static void storesubscript (void)
 }
 
 
+static void getglobal (Word n)
+{
+  *top = lua_table[n].object;
+  incr_top;
+  if (tag(top-1) == LUA_T_NIL)
+  { /* must call getglobal fallback */
+    tag(top-1) = LUA_T_STRING;
+    tsvalue(top-1) = lua_table[n].varname;
+    callFB(FB_GETGLOBAL);
+  }
+}
+
 /*
 ** Traverse all objects on stack
 */
@@ -340,7 +398,7 @@ void lua_error (char *s)
 }
 
 
-lua_Object lua_stackedfunction (int level)
+lua_Function lua_stackedfunction (int level)
 {
   Object *p = top;
   while (--p >= stack)
@@ -351,10 +409,42 @@ lua_Object lua_stackedfunction (int level)
 }
 
 
-int lua_currentline (lua_Object func)
+int lua_currentline (lua_Function func)
 {
   Object *f = Address(func);
   return (f+1 < top && (f+1)->tag == LUA_T_LINE) ? (f+1)->value.i : -1;
+}
+
+
+lua_Object lua_getlocal (lua_Function func, int local_number, char **name)
+{
+  Object *f = luaI_Address(func);
+  *name = luaI_getlocalname(f->value.tf, local_number, lua_currentline(func));
+  if (*name)
+  {
+    /* if "*name", there must be a LUA_T_LINE */
+    /* therefore, f+2 points to function base */
+    return Ref((f+2)+(local_number-1));
+  }
+  else
+    return LUA_NOOBJECT;
+}
+
+int lua_setlocal (lua_Function func, int local_number)
+{
+  Object *f = Address(func);
+  char *name = luaI_getlocalname(f->value.tf, local_number, lua_currentline(func));
+  adjustC(1);
+  --top;
+  if (name)
+  {
+    /* if "name", there must be a LUA_T_LINE */
+    /* therefore, f+2 points to function base */
+    *((f+2)+(local_number-1)) = *top;
+    return 1;
+  }
+  else
+    return 0;
 }
 
 
@@ -386,6 +476,16 @@ static int do_protectedrun (int nResults)
   return status;
 }
 
+int luaI_dorun (TFunc *tf)
+{
+  int status;
+  adjustC(1);  /* one slot for the pseudo-function */
+  stack[CBase].tag = LUA_T_FUNCTION;
+  stack[CBase].value.tf = tf;
+  status = do_protectedrun(0);
+  adjustC(0);
+  return status;
+}
 
 static int do_protectedmain (void)
 {
@@ -394,16 +494,12 @@ static int do_protectedmain (void)
   jmp_buf myErrorJmp;
   jmp_buf *oldErr = errorJmp;
   errorJmp = &myErrorJmp;
-  adjustC(1);  /* one slot for the pseudo-function */
-  stack[CBase].tag = LUA_T_FUNCTION;
-  stack[CBase].value.tf = &tf;
-  tf.lineDefined = 0;
+  luaI_initTFunc(&tf);
   tf.fileName = lua_parsedfile;
-  tf.code = NULL;
   if (setjmp(myErrorJmp) == 0)
   {
     lua_parse(&tf);
-    status = do_protectedrun(0);
+    status = luaI_dorun(&tf);
   }
   else
   {
@@ -411,8 +507,7 @@ static int do_protectedmain (void)
     adjustC(0);  /* erase extra slot */
   }
   errorJmp = oldErr;
-  if (tf.code)
-    luaI_free(tf.code);
+  luaI_free(tf.code);
   return status;
 }
 
@@ -449,13 +544,13 @@ int lua_call (char *funcname)
 int lua_dofile (char *filename)
 {
   int status;
-  char *message = lua_openfile (filename);
-  if (message)
-  {
-    lua_message(message);
+  int c;
+  FILE *f = lua_openfile(filename);
+  if (f == NULL)
     return 1;
-  }
-  status = do_protectedmain();
+  c = fgetc(f);
+  ungetc(c, f);
+  status = (c == ID_CHUNK) ? luaI_undump(f) : do_protectedmain();
   lua_closefile();
   return status;
 }
@@ -514,8 +609,9 @@ static StkId Cblocks[MAX_C_BLOCKS];
 */
 void lua_beginblock (void)
 {
-  if (numCblocks < MAX_C_BLOCKS)
-    Cblocks[numCblocks] = CBase;
+  if (numCblocks >= MAX_C_BLOCKS)
+    lua_error("`lua_beginblock': too many nested blocks");
+  Cblocks[numCblocks] = CBase;
   numCblocks++;
 }
 
@@ -525,11 +621,8 @@ void lua_beginblock (void)
 void lua_endblock (void)
 {
   --numCblocks;
-  if (numCblocks < MAX_C_BLOCKS)
-  {
-    CBase = Cblocks[numCblocks];
-    adjustC(0);
-  }
+  CBase = Cblocks[numCblocks];
+  adjustC(0);
 }
 
 /* 
@@ -564,6 +657,23 @@ lua_Object lua_getparam (int number)
  /* Ref(stack+(CBase-CnResults+number-1)) ==
     stack+(CBase-CnResults+number-1)-stack+1 == */
  return CBase-CnResults+number;
+}
+
+int lua_isnumber (lua_Object object)
+{
+  return (object != LUA_NOOBJECT) && (tonumber(Address(object)) == 0);
+}
+
+int lua_isstring (lua_Object object)
+{
+  int t = lua_type(object);
+  return (t == LUA_T_STRING) || (t == LUA_T_NUMBER);
+}
+
+int lua_isfunction (lua_Object object)
+{
+  int t = lua_type(object);
+  return (t == LUA_T_FUNCTION) || (t == LUA_T_CFUNCTION);
 }
 
 /*
@@ -607,27 +717,31 @@ void *lua_getuserdata (lua_Object object)
 }
 
 
-lua_Object lua_getlocked (int ref)
+lua_Object lua_getref (int ref)
 {
- adjustC(0);
- *top = *luaI_getlocked(ref);
- incr_top;
- CBase++;  /* incorporate object in the stack */
- return Ref(top-1);
+  Object *o = luaI_getref(ref);
+  if (o == NULL)
+    return LUA_NOOBJECT;
+  adjustC(0);
+  luaI_pushobject(o);
+  CBase++;  /* incorporate object in the stack */
+  return Ref(top-1);
 }
 
 
-void lua_pushlocked (int ref)
+void lua_pushref (int ref)
 {
- *top = *luaI_getlocked(ref);
- incr_top;
+  Object *o = luaI_getref(ref);
+  if (o == NULL)
+    lua_error("access to invalid (possibly garbage collected) reference");
+  luaI_pushobject(o);
 }
 
 
-int lua_lock (void)
+int lua_ref (int lock)
 {
   adjustC(1);
-  return luaI_lock(--top);
+  return luaI_ref(--top, lock);
 }
 
 
@@ -637,10 +751,8 @@ int lua_lock (void)
 */
 lua_Object lua_getglobal (char *name)
 {
- Word n = luaI_findsymbolbyname(name);
  adjustC(0);
- *top = s_object(n);
- incr_top;
+ getglobal(luaI_findsymbolbyname(name));
  CBase++;  /* incorporate object in the stack */
  return Ref(top-1);
 }
@@ -678,20 +790,17 @@ void lua_pushnumber (real n)
 */
 void lua_pushstring (char *s)
 {
- tsvalue(top) = lua_createstring(s);
- tag(top) = LUA_T_STRING;
- incr_top;
+  if (s == NULL)
+    tag(top) = LUA_T_NIL;
+  else
+  {
+    tsvalue(top) = lua_createstring(s);
+    tag(top) = LUA_T_STRING;
+  }
+  incr_top;
 }
-
-/*
-** Push an object (tag=string) on stack and register it on the constant table.
-*/
-void lua_pushliteral (char *s)
-{
- tsvalue(top) = lua_constant[luaI_findconstantbyname(s)];
- tag(top) = LUA_T_STRING;
- incr_top;
-}
+/*>>>>>>>>>#undef lua_pushliteral
+void lua_pushliteral(char *s) { lua_pushstring(s); }*/
 
 /*
 ** Push an object (tag=cfunction) to stack.
@@ -707,17 +816,9 @@ void lua_pushcfunction (lua_CFunction fn)
 */
 void lua_pushusertag (void *u, int tag)
 {
- if (tag < LUA_T_USERDATA) return;
+ if (tag < LUA_T_USERDATA) 
+   lua_error("invalid tag in `lua_pushusertag'");
  tag(top) = tag; uvalue(top) = u;
- incr_top;
-}
-
-/*
-** Push a lua_Object to stack.
-*/
-void lua_pushobject (lua_Object o)
-{
- *top = *Address(o);
  incr_top;
 }
 
@@ -728,6 +829,16 @@ void luaI_pushobject (Object *o)
 {
  *top = *o;
  incr_top;
+}
+
+/*
+** Push a lua_Object on stack.
+*/
+void lua_pushobject (lua_Object o)
+{
+  if (o == LUA_NOOBJECT)
+    lua_error("attempt to push a NOOBJECT");
+  luaI_pushobject(Address(o));
 }
 
 int lua_type (lua_Object o)
@@ -783,6 +894,8 @@ static void comparison (lua_Type tag_less, lua_Type tag_equal,
 */
 static StkId lua_execute (Byte *pc, StkId base)
 {
+  if (lua_callhook)
+    callHook (base, LUA_T_MARK, 0);
  while (1)
  {
   OpCode opcode;
@@ -849,8 +962,7 @@ static StkId lua_execute (Byte *pc, StkId base)
    {
     CodeWord code;
     get_word(code,pc);
-    *top = s_object(code.w);
-    incr_top;
+    getglobal(code.w);
    }
    break;
 
@@ -1143,10 +1255,10 @@ static StkId lua_execute (Byte *pc, StkId base)
    break;
 
    case RETCODE0:
-     return base;
-
    case RETCODE:
-     return base+*pc;
+     if (lua_callhook)
+       callHook (base, LUA_T_MARK, 1);
+     return (base + ((opcode==RETCODE0) ? 0 : *pc));
 
    case SETLINE:
    {
@@ -1160,6 +1272,8 @@ static StkId lua_execute (Byte *pc, StkId base)
       (stack+base-1)->tag = LUA_T_LINE;
     }
     (stack+base-1)->value.i = code.w;
+    if (lua_linehook)
+      lineHook (code.w);
     break;
    }
 
@@ -1168,5 +1282,4 @@ static StkId lua_execute (Byte *pc, StkId base)
   }
  }
 }
-
 

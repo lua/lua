@@ -1,0 +1,21 @@
+Current version is 2.4 (version 2.3 was never publicly released)
+
+* Changes since version 2.2
+  + external compiler creates portable binary files that can be loaded faster
+  + interface for debugging and profiling
+  + new "getglobal" fallback
+  + new functions for handling references to Lua objects
+  + new functions in standard lib
+  + only one copy of each string is stored
+  + expanded documentation, with more examples
+
+* Changes since version 2.1
+  + functions now may be declared with any "lvalue" as a name
+  + garbage collection of functions
+  + support for pipes
+
+* Changes since version 1.1
+  + object-oriented support
+  + fallbacks
+  + simplified syntax for tables
+  + many internal improvements

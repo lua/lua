@@ -1,7 +1,7 @@
 -- ps.lua
 -- lua interface to postscript
 -- Luiz Henrique de Figueiredo (lhf@csg.uwaterloo.ca)
--- 12 Nov 95
+-- 14 May 96
 
 PS={}
 
@@ -12,15 +12,11 @@ end
 -------------------------------------------------------------------- control --
 
 function PS.open(title)
- local d,m,y=date()
- local H,M,S=time()
- if d<10 then d="0"..d end
- if m<10 then m="0"..m end
  if title==nil then title="(no title)" end
  P("%!PS-Adobe-2.0 EPSF-1.2")
  P("%%Title: "..title)
- P("%%Creator: ps.lua from Lua 2.2")
- P("%%CreationDate: "..y..m..d.." "..H..":"..M..":"..S)
+ P("%%Creator: ps.lua from Lua 2.4")
+ P("%%CreationDate: "..date())
  P("%%Pages: (atend)")
  P("%%BoundingBox: (atend)")
  P("%%EndComments")

@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.17 1995/10/17 14:30:05 roberto Exp $";
+char *rcs_fallback="$Id: fallback.c,v 1.25 1996/04/25 14:10:00 roberto Exp $";
 
 #include <stdio.h>
 #include <string.h>
@@ -12,6 +12,7 @@ char *rcs_fallback="$Id: fallback.c,v 1.17 1995/10/17 14:30:05 roberto Exp $";
 #include "fallback.h"
 #include "opcode.h"
 #include "lua.h"
+#include "table.h"
 
 
 static void errorFB (void);
@@ -36,8 +37,10 @@ struct FB  luaI_fallBacks[] = {
 {"concat", {LUA_T_CFUNCTION, {concatFB}}, 2, 1},
 {"settable", {LUA_T_CFUNCTION, {gettableFB}}, 3, 0},
 {"gc", {LUA_T_CFUNCTION, {GDFB}}, 1, 0},
-{"function", {LUA_T_CFUNCTION, {funcFB}}, -1, -1}
+{"function", {LUA_T_CFUNCTION, {funcFB}}, -1, -1},
                                 /* no fixed number of params or results */
+{"getglobal", {LUA_T_CFUNCTION, {indexFB}}, 1, 1}
+                                /* same default behavior of index FB */
 };
 
 #define N_FB  (sizeof(luaI_fallBacks)/sizeof(struct FB))
@@ -47,7 +50,7 @@ void luaI_setfallback (void)
   int i;
   char *name = lua_getstring(lua_getparam(1));
   lua_Object func = lua_getparam(2);
-  if (name == NULL || !(lua_isfunction(func) || lua_iscfunction(func)))
+  if (name == NULL || !lua_isfunction(func))
     lua_error("incorrect argument to function `setfallback'");
   for (i=0; i<N_FB; i++)
   {
@@ -110,66 +113,77 @@ static void funcFB (void)
 
 
 /*
-** Lock routines
+** Reference routines
 */
 
-static Object *lockArray = NULL;
-static Word lockSize = 0;
+static struct ref {
+  Object o;
+  enum {LOCK, HOLD, FREE, COLLECTED} status;
+} *refArray = NULL;
+static int refSize = 0;
 
-int luaI_lock (Object *object)
+int luaI_ref (Object *object, int lock)
 {
-  Word i;
-  Word oldSize;
+  int i;
+  int oldSize;
   if (tag(object) == LUA_T_NIL)
-    return -1;
-  for (i=0; i<lockSize; i++)
-    if (tag(&lockArray[i]) == LUA_T_NIL)
-    {
-      lockArray[i] = *object;
-      return i;
-    }
+    return -1;   /* special ref for nil */
+  for (i=0; i<refSize; i++)
+    if (refArray[i].status == FREE)
+      goto found;
   /* no more empty spaces */
-  oldSize = lockSize;
-  if (lockArray == NULL)
-  {
-    lockSize = 10;
-    lockArray = newvector(lockSize, Object);
-  }
+  oldSize = refSize;
+  refSize = growvector(&refArray, refSize, struct ref, refEM, MAX_WORD);
+  for (i=oldSize; i<refSize; i++)
+    refArray[i].status = FREE;
+  i = oldSize;
+ found:
+  refArray[i].o = *object;
+  refArray[i].status = lock ? LOCK : HOLD;
+  return i;
+}
+
+
+void lua_unref (int ref)
+{
+  if (ref >= 0 && ref < refSize)
+    refArray[ref].status = FREE;
+}
+
+
+Object *luaI_getref (int ref)
+{
+  static Object nul = {LUA_T_NIL, {0}};
+  if (ref == -1)
+    return &nul;
+  if (ref >= 0 && ref < refSize &&
+      (refArray[ref].status == LOCK || refArray[ref].status == HOLD))
+    return &refArray[ref].o;
   else
-  {
-    lockSize = 3*oldSize/2 + 5;
-    lockArray = growvector(lockArray, lockSize, Object);
-  }
-  for (i=oldSize; i<lockSize; i++)
-    tag(&lockArray[i]) = LUA_T_NIL;
-  lockArray[oldSize] = *object;
-  return oldSize;
-}
-
-
-void lua_unlock (int ref)
-{
-  tag(&lockArray[ref]) = LUA_T_NIL;
-}
-
-
-Object *luaI_getlocked (int ref)
-{
-  return &lockArray[ref];
+    return NULL;
 }
 
 
 void luaI_travlock (int (*fn)(Object *))
 {
-  Word i;
-  for (i=0; i<lockSize; i++)
-    fn(&lockArray[i]);
+  int i;
+  for (i=0; i<refSize; i++)
+    if (refArray[i].status == LOCK)
+      fn(&refArray[i].o);
 }
 
 
+void luaI_invalidaterefs (void)
+{
+  int i;
+  for (i=0; i<refSize; i++)
+    if (refArray[i].status == HOLD && !luaI_ismarked(&refArray[i].o))
+      refArray[i].status = COLLECTED;
+}
+
 char *luaI_travfallbacks (int (*fn)(Object *))
 {
-  Word i;
+  int i;
   for (i=0; i<N_FB; i++)
     if (fn(&luaI_fallBacks[i].function))
       return luaI_fallBacks[i].kind;

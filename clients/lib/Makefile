@@ -1,17 +1,10 @@
 # makefile for lualib
 
-INC= $(LUA)/include
-LIB= $(LUA)/lib
+LUA= ../..
 
-# in SunOs /usr/5include contains prototypes for standard lib
-INCS= -I/usr/5include -I$(INC)
-WARN= -Wall -Wmissing-prototypes -Wshadow -ansi
+include $(LUA)/config
 
-# if your system does not have popen, remove -DPOPEN from the line below
-DEFS= -DPOPEN
-
-CC= gcc
-CFLAGS= $(INCS) $(DEFS) $(WARN) -O2
+EXTRA_DEFS= $(POPEN)
 
 OBJS= iolib.o mathlib.o strlib.o
 SRCS= iolib.c mathlib.c mathlib.h strlib.c strlib.h

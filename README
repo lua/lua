@@ -15,46 +15,20 @@
   + portable, written in ANSI C (runs in Unix, DOS, Windows, Mac, Cray, ...)
 
 * Availability
-  In Brazil:	ftp://ftp.icad.puc-rio.br/pub/lua/lua-2.2.tar.gz
-  In Canada:	ftp://csg.uwaterloo.ca/pub/lhf/lua/lua-2.2.tar.gz
+  The latest version of Lua is always available at the following locations:
+  In Brazil:	ftp://ftp.icad.puc-rio.br/pub/lua/lua.tar.gz
+  In Canada:	ftp://csg.uwaterloo.ca/pub/lhf/lua/lua.tar.gz
   Home page:	http://www.inf.puc-rio.br/~roberto/lua.html
+  The current version is 2.4.
 
 * Legal matters
   Lua is freely available for both academic and commercial purposes.
   Lua is not in the public domain; TeCGraf keeps its copyright.
   See COPYRIGHT.
 
-* Changes since version 2.1  (current version is 2.2)
-  + functions now may be declared with any "lvalue" as a name
-  + garbage collection of functions
-  + support for pipes
-
-* Changes since version 1.1
-  + object-oriented support
-  + fallbacks
-  + simplified syntax for tables
-  + many internal improvements
-
-* Installing
-  To make, simply type domake.
-  If make succeeds, you get an interpreter in ./bin/lua.
-  If make fails, please let me know.
-  The libraries are in ./lib.  The include files are in ./include.
-  You don't need the other directories for development.
-  There is a reference manual in ./doc, and tests and examples in ./test.
-  This distribution is biased towards SunOS 4 with gcc but it is simple to
-  change the Makefiles for other systems, if necessary.
-  If you are running SunOs, type also "domake dynamic" to build shared
-  libraries in ./lib.
-  If your system does not have "popen", then change ./clients/lib/Makefile.
+* Installation
+  See INSTALL.
 
 * Contacting the authors
-  Send your comments, bug reports and anything else to lhf@icad.puc-rio.br.
-  Please send me email if you download Lua so that we can know how far it goes.
-
---
-Luiz Henrique de Figueiredo                       email: lhf@icad.puc-rio.br
-TeCGraf-Grupo de Tecnologia em Computacao Grafica, Dep. Informatica, PUC-Rio
-Rua Marques de Sao Vicente 225                        voice: +55 21 529-9424
-22453-900 Rio de Janeiro, RJ, Brasil                    fax: +55 21 511-5645
---
+  Send your comments, bug reports and anything else to lua@icad.puc-rio.br.
+  Please send us email if you download Lua so that we can know how far it goes.
