@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.107 2002/04/09 19:47:44 roberto Exp roberto $
+** $Id: ldebug.c,v 1.108 2002/04/10 12:11:07 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -144,7 +144,7 @@ static void funcinfo (lua_State *L, lua_Debug *ar, StkId func) {
   if (ttype(func) == LUA_TFUNCTION)
     cl = clvalue(func);
   else {
-    luaD_error(L, "value for `lua_getinfo' is not a function");
+    luaD_runerror(L, "value for `lua_getinfo' is not a function");
     cl = NULL;  /* to avoid warnings */
   }
   if (cl->c.isC) {

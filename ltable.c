@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.102 2002/03/18 18:18:35 roberto Exp roberto $
+** $Id: ltable.c,v 1.103 2002/04/05 18:54:31 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -111,7 +111,7 @@ static int luaH_index (lua_State *L, Table *t, const TObject *key) {
   else {
     const TObject *v = luaH_get(t, key);
     if (v == &luaO_nilobject)
-      luaD_error(L, "invalid key for `next'");
+      luaD_runerror(L, "invalid key for `next'");
     i = cast(int, (cast(const lu_byte *, v) -
                    cast(const lu_byte *, val(node(t, 0)))) / sizeof(Node));
     return i + t->sizearray;  /* hash elements are numbered after array ones */
@@ -220,7 +220,7 @@ static void setnodevector (lua_State *L, Table *t, int lsize) {
   int size;
   if (lsize < MINHASHSIZE) lsize = MINHASHSIZE;
   else if (lsize > MAXBITS)
-    luaD_error(L, "table overflow");
+    luaD_runerror(L, "table overflow");
   size = twoto(lsize);
   t->node = luaM_newvector(L, size, Node);
   for (i=0; i<size; i++) {
@@ -441,7 +441,7 @@ void luaH_set (lua_State *L, Table *t, const TObject *key, const TObject *val) {
     settableval(p, val);
   }
   else {
-    if (ttype(key) == LUA_TNIL) luaD_error(L, "table index is nil");
+    if (ttype(key) == LUA_TNIL) luaD_runerror(L, "table index is nil");
     newkey(L, t, key, val);
   }
   t->flags = 0;

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.75 2002/02/07 17:25:12 roberto Exp roberto $
+** $Id: lobject.c,v 1.76 2002/04/05 18:54:31 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -97,7 +97,7 @@ void luaO_verror (lua_State *L, const char *fmt, ...) {
   va_start(argp, fmt);
   vsprintf(buff, fmt, argp);
   va_end(argp);
-  luaD_error(L, buff);
+  luaD_runerror(L, buff);
 }
 
 

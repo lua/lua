@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.67 2002/04/12 19:57:29 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.68 2002/04/15 20:54:41 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -280,7 +280,7 @@ static int aux_unpack (lua_State *L, int arg) {
   int n, i;
   luaL_check_type(L, arg, LUA_TTABLE);
   n = lua_getn(L, arg);
-  luaL_check_stack(L, n, "table too big to unpack");
+  luaL_check_stack(L, n+LUA_MINSTACK, "table too big to unpack");
   for (i=1; i<=n; i++)  /* push arg[1...n] */
     lua_rawgeti(L, arg, i);
   return n;
@@ -299,10 +299,10 @@ static int luaB_call (lua_State *L) {
   int status;
   int n;
   if (!lua_isnone(L, 4)) {  /* set new error method */
-    lua_getglobal(L, LUA_ERRORMESSAGE);
+    lua_getglobal(L, "_ERRORMESSAGE");
     err = lua_gettop(L);  /* get index */
     lua_pushvalue(L, 4);
-    lua_setglobal(L, LUA_ERRORMESSAGE);
+    lua_setglobal(L, "_ERRORMESSAGE");
   }
   oldtop = lua_gettop(L);  /* top before function-call preparation */
   /* push function */
@@ -311,7 +311,7 @@ static int luaB_call (lua_State *L) {
   status = lua_call(L, n, LUA_MULTRET);
   if (err != 0) {  /* restore old error method */
     lua_pushvalue(L, err);
-    lua_setglobal(L, LUA_ERRORMESSAGE);
+    lua_setglobal(L, "_ERRORMESSAGE");
   }
   if (status != 0) {  /* error in call? */
     if (strchr(options, 'x'))
@@ -460,7 +460,7 @@ static int luaB_require (lua_State *L) {
 
 static const luaL_reg base_funcs[] = {
   {LUA_ALERT, luaB__ALERT},
-  {LUA_ERRORMESSAGE, luaB__ERRORMESSAGE},
+  {"_ERRORMESSAGE", luaB__ERRORMESSAGE},
   {"error", luaB_error},
   {"metatable", luaB_metatable},
   {"globals", luaB_globals},

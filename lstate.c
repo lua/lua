@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.88 2002/03/20 12:52:32 roberto Exp roberto $
+** $Id: lstate.c,v 1.89 2002/04/16 17:08:28 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -124,7 +124,7 @@ LUA_API lua_State *lua_open (void) {
     preinit_state(L);
     L->l_G = NULL;
     L->next = L->previous = L;
-    if (luaD_runprotected(L, f_luaopen, NULL) != 0) {
+    if (luaD_runprotected(L, f_luaopen, &luaO_nilobject, NULL) != 0) {
       /* memory allocation error: free partial state */
       close_state(L);
       L = NULL;
