@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.51 1999/02/12 19:23:02 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.52 1999/02/22 14:17:24 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -517,16 +517,12 @@ static void luaB_nextvar (void) {
   TObject *o = luaA_Address(luaL_nonnullarg(1));
   TaggedString *g;
   if (ttype(o) == LUA_T_NIL)
-    g = (TaggedString *)L->rootglobal.next;  /* first variable */
+    g = NULL;
   else {
     luaL_arg_check(ttype(o) == LUA_T_STRING, 1, "variable name expected");
-    g = tsvalue(o);  /* find given variable name */
-    /* check whether name is in global var list */
-    luaL_arg_check((GCnode *)g != g->head.next, 1, "variable name expected");
-    g = (TaggedString *)g->head.next;  /* get next */
+    g = tsvalue(o);
   }
-  while (g && g->u.s.globalval.ttype == LUA_T_NIL)  /* skip globals with nil */
-    g = (TaggedString *)g->head.next;
+  g = luaA_nextvar(g);
   if (g) {
     pushtagstring(g);
     luaA_pushobject(&g->u.s.globalval);

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.35 1999/02/08 17:07:59 roberto Exp roberto $
+** $Id: lapi.c,v 1.36 1999/02/12 19:23:02 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -426,10 +426,36 @@ void lua_settag (int tag)
 }
 
 
+TaggedString *luaA_nextvar (TaggedString *g) {
+  if (g == NULL)
+    g = (TaggedString *)L->rootglobal.next;  /* first variable */
+  else {
+    /* check whether name is in global var list */
+    luaL_arg_check((GCnode *)g != g->head.next, 1, "variable name expected");
+    g = (TaggedString *)g->head.next;  /* get next */
+  }
+  while (g && g->u.s.globalval.ttype == LUA_T_NIL)  /* skip globals with nil */
+    g = (TaggedString *)g->head.next;
+  return g;
+}
+
+
+char *lua_nextvar (char *varname) {
+  TaggedString *g = (varname == NULL) ? NULL : luaS_new(varname);
+  g = luaA_nextvar(g);
+  if (g) {
+    luaA_pushobject(&g->u.s.globalval);
+    return g->str;
+  }
+  else
+    return NULL;
+}
+
+
 
 /*
 ** {======================================================
-** To manipulate the implementation global variables
+** To manipulate some state information
 ** =======================================================
 */
 
