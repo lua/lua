@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.118 2003/02/28 17:19:47 roberto Exp roberto $
+** $Id: llex.c,v 1.119 2003/03/24 12:39:34 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -125,11 +125,6 @@ void luaX_setinput (lua_State *L, LexState *LS, ZIO *z, TString *source) {
   LS->lastline = 1;
   LS->source = source;
   next(LS);  /* read first char */
-  if (LS->current == '#') {
-    do {  /* skip first line */
-      next(LS);
-    } while (LS->current != '\n' && LS->current != EOZ);
-  }
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.99 2003/04/03 13:35:34 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.100 2003/04/07 14:35:00 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -461,6 +461,7 @@ LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
 */
 
 typedef struct LoadF {
+  int extraline;
   FILE *f;
   char buff[LUAL_BUFFERSIZE];
 } LoadF;
@@ -469,6 +470,11 @@ typedef struct LoadF {
 static const char *getF (lua_State *L, void *ud, size_t *size) {
   LoadF *lf = (LoadF *)ud;
   (void)L;
+  if (lf->extraline) {
+    lf->extraline = 0;
+    *size = 1;
+    return "\n";
+  }
   if (feof(lf->f)) return NULL;
   *size = fread(lf->buff, 1, LUAL_BUFFERSIZE, lf->f);
   return (*size > 0) ? lf->buff : NULL;
@@ -488,6 +494,7 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
   int status, readstatus;
   int c;
   int fnameindex = lua_gettop(L) + 1;  /* index of filename on the stack */
+  lf.extraline = 0;
   if (filename == NULL) {
     lua_pushliteral(L, "=stdin");
     lf.f = stdin;
@@ -497,12 +504,21 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
     lf.f = fopen(filename, "r");
   }
   if (lf.f == NULL) return errfile(L, fnameindex);  /* unable to open file */
-  c = ungetc(getc(lf.f), lf.f);
-  if (!(isspace(c) || isprint(c)) && lf.f != stdin) {  /* binary file? */
+  c = getc(lf.f);
+  if (c == '#') {  /* Unix exec. file? */
+    lf.extraline = 1;
+    while ((c = getc(lf.f)) != EOF && c != '\n') ;  /* skip first line */
+    if (c == '\n') c = getc(lf.f);
+  }
+  if (c == LUA_SIGNATURE[0] && lf.f != stdin) {  /* binary file? */
     fclose(lf.f);
     lf.f = fopen(filename, "rb");  /* reopen in binary mode */
     if (lf.f == NULL) return errfile(L, fnameindex); /* unable to reopen file */
+    /* skip eventual `#!...' */
+   while ((c = getc(lf.f)) != EOF && c != LUA_SIGNATURE[0]) ;
+    lf.extraline = 0;
   }
+  ungetc(c, lf.f);
   status = lua_load(L, getF, &lf, lua_tostring(L, -1));
   readstatus = ferror(lf.f);
   if (lf.f != stdin) fclose(lf.f);  /* close file (even in case of errors) */
