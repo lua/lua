@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.117 2001/01/26 11:45:51 roberto Exp roberto $
+** $Id: ldo.c,v 1.118 2001/01/29 15:35:17 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -172,6 +172,7 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
     setclvalue(func, tm);  /* tag method is the new function to be called */
   }
   cl = clvalue(func);
+  ci.v.ttype = LUA_TMARK;
   ci.func = cl;
   setivalue(func, &ci);
   callhook = L->callhook;

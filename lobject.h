@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.89 2001/01/26 15:58:50 roberto Exp roberto $
+** $Id: lobject.h,v 1.90 2001/01/29 17:16:58 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -29,7 +29,7 @@
 #endif
 
 
-/* mark for closures active in the stack */
+/* ttype for closures active in the stack */
 #define LUA_TMARK	6
 
 
@@ -39,6 +39,14 @@
 
 /* check whether `t' is a mark */
 #define is_T_MARK(t)	(ttype(t) == LUA_TMARK)
+
+
+/*
+** tag at the start of all "boxed" Lua values
+*/
+typedef struct TValue {
+  char ttype;
+} TValue;
 
 
 typedef union {
@@ -87,7 +95,8 @@ typedef struct lua_TObject {
   { TObject *_o=(obj); struct CallInfo *_v=(x); \
     _o->tt=LUA_TMARK; _o->value.v=_v; }
 
-#define setnilvalue(obj) { (obj)->tt=LUA_TNIL; }
+#define setnilvalue(obj) \
+  { TObject *_o=(obj); _o->tt=LUA_TNIL; _o->value.v = (void *)&luaO_ttnil; }
 
 #define setobj(obj1,obj2) \
   { TObject *o1=(obj1); const TObject *o2=(obj2); \
@@ -107,6 +116,8 @@ typedef struct lua_TObject {
 #define TSPACK	((int)sizeof(int))
 
 typedef struct TString {
+  TValue v;
+  unsigned char marked;
   union {
     struct {  /* for strings */
       luint32 hash;
@@ -119,7 +130,6 @@ typedef struct TString {
   } u;
   size_t len;
   struct TString *nexthash;  /* chain for hash table */
-  int marked;
   char str[TSPACK];   /* variable length string!! must be the last field! */
 } TString;
 
@@ -128,6 +138,7 @@ typedef struct TString {
 ** Function Prototypes
 */
 typedef struct Proto {
+  TValue v;
   lua_Number *knum;  /* numbers used by the function */
   int sizeknum;  /* size of `knum' */
   struct TString **kstr;  /* strings used by the function */
@@ -162,14 +173,15 @@ typedef struct LocVar {
 ** Closures
 */
 typedef struct Closure {
+  TValue v;
+  char isC;  /* 0 for Lua functions, 1 for C functions */
+  short nupvalues;
   union {
     lua_CFunction c;  /* C functions */
     struct Proto *l;  /* Lua functions */
   } f;
   struct Closure *next;
   struct Closure *mark;  /* marked closures (point to itself when not marked) */
-  short isC;  /* 0 for Lua functions, 1 for C functions */
-  short nupvalues;
   TObject upvalue[1];
 } Closure;
 
@@ -186,6 +198,7 @@ typedef struct Node {
 
 
 typedef struct Hash {
+  TValue v;
   Node *node;
   int htag;
   int size;
@@ -210,6 +223,7 @@ typedef struct Hash {
 ** informations about a call (for debugging)
 */
 typedef struct CallInfo {
+  TValue v;
   struct Closure *func;  /* function being called */
   const Instruction **pc;  /* current pc of called function */
   int lastpc;  /* last pc traced */
@@ -218,6 +232,7 @@ typedef struct CallInfo {
 } CallInfo;
 
 
+extern const char luaO_ttnil;  /* "address" of the nil value */
 extern const TObject luaO_nilobject;
 
 

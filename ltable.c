@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.71 2001/01/29 13:02:20 roberto Exp roberto $
+** $Id: ltable.c,v 1.72 2001/01/29 17:16:58 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -98,6 +98,7 @@ static void setnodevector (lua_State *L, Hash *t, luint32 size) {
 
 Hash *luaH_new (lua_State *L, int size) {
   Hash *t = luaM_new(L, Hash);
+  t->v.ttype = LUA_TTABLE;
   t->htag = TagDefault;
   t->next = G(L)->roottable;
   G(L)->roottable = t;
