@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.96 2002/05/06 15:51:41 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.97 2002/05/13 13:09:00 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -216,10 +216,9 @@ extern const lu_byte luaP_opmodes[NUM_OPCODES];
 #define testOpMode(m, b)        (luaP_opmodes[m] & (1 << (b)))
 
 
-/*
-** opcode names (only included when compiled with LUA_OPNAMES)
-*/
-extern const char *const luaP_opnames[];
+#ifdef LUA_OPNAMES
+extern const char *const luaP_opnames[];  /* opcode names */
+#endif
 
 
 

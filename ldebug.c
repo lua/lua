@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.116 2002/05/15 18:57:44 roberto Exp roberto $
+** $Id: ldebug.c,v 1.117 2002/05/16 18:39:46 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -434,12 +434,10 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int stackpos,
       case OP_GETTABLE: {
         *name = kname(p, GETARG_C(i));
         return "field";
-        break;
       }
       case OP_SELF: {
         *name = kname(p, GETARG_C(i));
         return "method";
-        break;
       }
       default: break;
     }
@@ -475,11 +473,10 @@ static int isinstack (CallInfo *ci, const TObject *o) {
 
 
 void luaG_typeerror (lua_State *L, const TObject *o, const char *op) {
-  const char *name;
+  const char *name = NULL;
   const char *t = luaT_typenames[ttype(o)];
-  const char *kind = NULL;
-  if (isinstack(L->ci, o))
-    kind = getobjname(L, L->ci, o - L->ci->base, &name);
+  const char *kind = (isinstack(L->ci, o)) ?
+                         getobjname(L, L->ci, o - L->ci->base, &name) : NULL;
   if (kind)
     luaG_runerror(L, "attempt to %s %s `%s' (a %s value)",
                 op, kind, name, t);

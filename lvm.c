@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.234 2002/06/03 14:08:43 roberto Exp roberto $
+** $Id: lvm.c,v 1.235 2002/06/05 12:34:19 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -531,7 +531,6 @@ StkId luaV_execute (lua_State *L) {
           if (nresults >= 0) L->top = L->ci->top;
           goto retentry;
         }
-        break;
       }
       case OP_FORLOOP: {
         lua_Number step, index, limit;

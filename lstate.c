@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.94 2002/05/08 17:34:23 roberto Exp roberto $
+** $Id: lstate.c,v 1.95 2002/06/03 14:09:57 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -28,6 +28,7 @@ static void close_state (lua_State *L);
 ** call `lua_setpanicf'
 */
 static int default_panic (lua_State *L) {
+  UNUSED(L);
   return 0;
 }
 
