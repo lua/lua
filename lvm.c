@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.175 2001/03/07 18:09:25 roberto Exp roberto $
+** $Id: lvm.c,v 1.176 2001/03/07 18:16:22 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define LUA_PRIVATE
 #include "lua.h"
 
 #include "lapi.h"
@@ -39,7 +40,7 @@ int luaV_tonumber (TObject *obj) {
 }
 
 
-int luaV_tostring (lua_State *L, TObject *obj) {  /* LUA_NUMBER */
+int luaV_tostring (lua_State *L, TObject *obj) {
   if (ttype(obj) != LUA_TNUMBER)
     return 1;
   else {

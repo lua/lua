@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.66 2001/03/02 17:40:08 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.67 2001/03/06 20:09:38 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define LUA_PRIVATE
 #include "lua.h"
 
 #include "lauxlib.h"

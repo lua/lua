@@ -1,5 +1,5 @@
 /*
-** $Id: lzio.h,v 1.6 2000/05/24 13:54:49 roberto Exp roberto $
+** $Id: lzio.h,v 1.7 2000/10/20 16:36:32 roberto Exp roberto $
 ** Buffered streams
 ** See Copyright Notice in lua.h
 */
@@ -29,7 +29,6 @@ ZIO* zmopen (ZIO* z, const char* b, size_t size, const char *name); /* memory */
 size_t zread (ZIO* z, void* b, size_t n);	/* read next n bytes */
 
 #define zgetc(z)	(((z)->n--)>0 ? ((int)*(z)->p++): (z)->filbuf(z))
-#define zungetc(z)	(++(z)->n,--(z)->p)
 #define zname(z)	((z)->name)
 
 

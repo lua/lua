@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.29 2001/03/06 20:09:38 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.30 2001/03/07 12:43:52 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define LUA_PRIVATE
 #include "lua.h"
 
 #include "lauxlib.h"
@@ -42,7 +43,7 @@ static int luaB__ALERT (lua_State *L) {
 */
 static int luaB__ERRORMESSAGE (lua_State *L) {
   luaL_checktype(L, 1, LUA_TSTRING);
-  lua_getglobal(L, LUA_ALERT);
+  lua_getglobal(L, l_s(LUA_ALERT));
   if (lua_isfunction(L, -1)) {  /* avoid error loop if _ALERT is not defined */
     lua_Debug ar;
     lua_pushliteral(L, l_s("error: "));
@@ -303,6 +304,68 @@ static int luaB_dofile (lua_State *L) {
 }
 
 
+#define LUA_PATH	l_s("LUA_PATH")
+
+#define LUA_PATH_SEP	l_s(";")
+
+#ifndef LUA_PATH_DEFAULT
+#define LUA_PATH_DEFAULT	l_s("./")
+#endif
+
+static int luaB_require (lua_State *L) {
+  const l_char *path;
+  luaL_check_string(L, 1);
+  lua_settop(L, 1);
+  lua_getglobal(L, LUA_PATH);  /* get path */
+  if (lua_isstring(L, 2))  /* is LUA_PATH defined? */
+    path = lua_tostring(L, 2);
+  else {  /* LUA_PATH not defined */
+    lua_pop(L, 1);  /* pop old global value */
+    path = getenv(LUA_PATH);  /* try environment variable */
+    if (path == NULL) path = LUA_PATH_DEFAULT;  /* else use default */
+    lua_pushstring(L, path);
+    lua_pushvalue(L, -1);  /* duplicate to leave a copy on stack */
+    lua_setglobal(L, LUA_PATH);
+  }
+  lua_getregistry(L);
+  lua_pushliteral(L, LUA_PATH);
+  lua_gettable(L, 3);  /* get book-keeping table */
+  if (lua_isnil(L, 4)) {  /* no book-keeping table? */
+    lua_pop(L, 1);  /* pop the `nil' */
+    lua_newtable(L);  /* create book-keeping table */
+    lua_pushliteral(L, LUA_PATH);
+    lua_pushvalue(L, -2);  /* duplicate table to leave a copy on stack */
+    lua_settable(L, 3);  /* store book-keeping table in registry */
+  }
+  lua_pushvalue(L, 1);
+  lua_gettable(L, 4);  /* check package's name in book-keeping table */
+  if (!lua_isnil(L, -1))  /* is it there? */
+    return 0;  /* package is already loaded */
+  else {  /* must load it */
+    for (;;) {  /* traverse path */
+      int res;
+      int l = strcspn(path, LUA_PATH_SEP);  /* find separator */
+      lua_pushlstring(L, path, l);  /* directory name */
+      lua_pushvalue(L, 1);  /* package name */
+      lua_concat(L, 2);  /* concat directory with package name */
+      res = lua_dofile(L, lua_tostring(L, -1));  /* try to load it */
+      lua_settop(L, 4);  /* pop string and eventual results from dofile */
+      if (res == 0) break;  /* ok; file done */
+      else if (res != LUA_ERRFILE)
+        lua_error(L, NULL);  /* error running package; propagate it */
+      if (*(path+l) == l_c('\0'))  /* no more directories? */
+        luaL_verror(L, l_s("could not load package `%.20s' from path `%.200s'"),
+                    lua_tostring(L, 1), lua_tostring(L, 2));
+      path += l+1;  /* try next directory */
+    }
+  }
+  lua_pushvalue(L, 1);
+  lua_pushnumber(L, 1);
+  lua_settable(L, 4);  /* mark it as loaded */
+  return 0;
+}
+
+
 static int luaB_pack (lua_State *L) {
   int n = lua_gettop(L);
   lua_newtable(L);
@@ -337,10 +400,10 @@ static int luaB_call (lua_State *L) {
   int status;
   int n;
   if (!lua_isnull(L, 4)) {  /* set new error method */
-    lua_getglobal(L, LUA_ERRORMESSAGE);
+    lua_getglobal(L, l_s(LUA_ERRORMESSAGE));
     err = lua_gettop(L);  /* get index */
     lua_pushvalue(L, 4);
-    lua_setglobal(L, LUA_ERRORMESSAGE);
+    lua_setglobal(L, l_s(LUA_ERRORMESSAGE));
   }
   oldtop = lua_gettop(L);  /* top before function-call preparation */
   /* push function */
@@ -349,7 +412,7 @@ static int luaB_call (lua_State *L) {
   status = lua_call(L, n, LUA_MULTRET);
   if (err != 0) {  /* restore old error method */
     lua_pushvalue(L, err);
-    lua_setglobal(L, LUA_ERRORMESSAGE);
+    lua_setglobal(L, l_s(LUA_ERRORMESSAGE));
   }
   if (status != 0) {  /* error in call? */
     if (strchr(options, l_c('x')))
@@ -382,7 +445,8 @@ static int luaB_tostring (lua_State *L) {
     case LUA_TUSERDATA: {
       const l_char *t = lua_xtype(L, 1);
       if (strcmp(t, l_s("userdata")) == 0)
-        sprintf(buff, l_s("userdata(%d): %p"), lua_tag(L, 1), lua_touserdata(L, 1));
+        sprintf(buff, l_s("userdata(%d): %p"), lua_tag(L, 1),
+                lua_touserdata(L, 1));
       else
         sprintf(buff, l_s("%.40s: %p"), t, lua_touserdata(L, 1));
       break;
@@ -663,8 +727,8 @@ static void deprecated_funcs (lua_State *L) {
 /* }====================================================== */
 
 static const luaL_reg base_funcs[] = {
-  {LUA_ALERT, luaB__ALERT},
-  {LUA_ERRORMESSAGE, luaB__ERRORMESSAGE},
+  {l_s(LUA_ALERT), luaB__ALERT},
+  {l_s(LUA_ERRORMESSAGE), luaB__ERRORMESSAGE},
   {l_s("call"), luaB_call},
   {l_s("collectgarbage"), luaB_collectgarbage},
   {l_s("copytagmethods"), luaB_copytagmethods},
@@ -685,6 +749,7 @@ static const luaL_reg base_funcs[] = {
   {l_s("rawset"), luaB_rawset},
   {l_s("rawgettable"), luaB_rawget},  /* for compatibility 3.2 */
   {l_s("rawsettable"), luaB_rawset},  /* for compatibility 3.2 */
+  {l_s("require"), luaB_require},
   {l_s("setglobal"), luaB_setglobal},
   {l_s("settag"), luaB_settag},
   {l_s("settagmethod"), luaB_settagmethod},
@@ -706,7 +771,7 @@ static const luaL_reg base_funcs[] = {
 
 LUALIB_API int lua_baselibopen (lua_State *L) {
   luaL_openl(L, base_funcs);
-  lua_pushliteral(L, LUA_VERSION);
+  lua_pushliteral(L, l_s(LUA_VERSION));
   lua_setglobal(L, l_s("_VERSION"));
   deprecated_funcs(L);
   return 0;

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.68 2001/02/23 20:30:01 roberto Exp roberto $
+** $Id: lobject.c,v 1.69 2001/03/07 12:27:06 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define LUA_PRIVATE
 #include "lua.h"
 
 #include "ldo.h"
@@ -44,7 +45,7 @@ void *luaO_openspaceaux (lua_State *L, size_t n) {
 }
 
 
-int luaO_str2d (const l_char *s, lua_Number *result) {  /* LUA_NUMBER */
+int luaO_str2d (const l_char *s, lua_Number *result) {
   l_char *endptr;
   lua_Number res = lua_str2number(s, &endptr);
   if (endptr == s) return 0;  /* no conversion */

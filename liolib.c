@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.109 2001/02/23 17:28:12 roberto Exp roberto $
+** $Id: liolib.c,v 1.110 2001/03/06 20:09:38 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -11,6 +11,7 @@
 #include <string.h>
 #include <time.h>
 
+#define LUA_PRIVATE
 #include "lua.h"
 
 #include "lauxlib.h"
@@ -353,9 +354,10 @@ static int io_write (lua_State *L) {
   int arg;
   int status = 1;
   for (arg=1; arg<=nargs; arg++) {
-    if (lua_type(L, arg) == LUA_TNUMBER) {  /* LUA_NUMBER */
+    if (lua_type(L, arg) == LUA_TNUMBER) {
       /* optimization: could be done exactly as for strings */
-      status = status && fprintf(f, l_s("%.16g"), lua_tonumber(L, arg)) > 0;
+      status = status &&
+          fprintf(f, l_s(LUA_NUMBER_FMT), lua_tonumber(L, arg)) > 0;
     }
     else {
       size_t l;
@@ -638,7 +640,7 @@ static int errorfb (lua_State *L) {
     luaL_addstring(&b, l_s("\n"));
   }
   luaL_pushresult(&b);
-  lua_getglobal(L, LUA_ALERT);
+  lua_getglobal(L, l_s(LUA_ALERT));
   if (lua_isfunction(L, -1)) {  /* avoid loop if _ALERT is not defined */
     lua_pushvalue(L, -2);  /* error message */
     lua_rawcall(L, 1, 0);
@@ -671,7 +673,7 @@ static const luaL_reg iolib[] = {
   {l_s("tmpname"),   io_tmpname},
   {l_s("write"),     io_write},
   {l_s("writeto"),   io_writeto},
-  {LUA_ERRORMESSAGE, errorfb}
+  {l_s(LUA_ERRORMESSAGE), errorfb}
 };
 
 

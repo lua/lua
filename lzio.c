@@ -1,5 +1,5 @@
 /*
-** $Id: lzio.c,v 1.12 2000/05/24 13:54:49 roberto Exp roberto $
+** $Id: lzio.c,v 1.13 2000/06/12 13:52:05 roberto Exp roberto $
 ** a generic input stream interface
 ** See Copyright Notice in lua.h
 */
@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#define LUA_PRIVATE
 #include "lua.h"
 
 #include "lzio.h"
@@ -71,7 +72,10 @@ size_t zread (ZIO *z, void *b, size_t n) {
     if (z->n == 0) {
       if (z->filbuf(z) == EOZ)
         return n;  /* return number of missing bytes */
-      zungetc(z);  /* put result from `filbuf' in the buffer */
+      else {
+        ++z->n;  /* filbuf removed first byte; put back it */
+        --z->p;
+      }
     }
     m = (n <= z->n) ? n : z->n;  /* min. between n and z->n */
     memcpy(b, z->p, m);

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.64 2001/02/23 20:28:19 roberto Exp roberto $
+** $Id: lcode.c,v 1.65 2001/03/07 13:22:55 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -7,6 +7,7 @@
 
 #include <stdlib.h>
 
+#define LUA_PRIVATE
 #include "lua.h"
 
 #include "lcode.h"

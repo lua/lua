@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.60 2001/02/22 17:15:18 roberto Exp roberto $
+** $Id: lstring.c,v 1.61 2001/02/23 17:17:25 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -7,6 +7,7 @@
 
 #include <string.h>
 
+#define LUA_PRIVATE
 #include "lua.h"
 
 #include "lmem.h"

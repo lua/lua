@@ -1,9 +1,9 @@
 /*
-** $Id: lua.h,v 1.90 2001/02/23 17:28:12 roberto Exp roberto $
+** $Id: lua.h,v 1.91 2001/03/09 18:05:05 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
-** www: http://www.tecgraf.puc-rio.br/lua/
+** www: http://www.lua.org
 ** See Copyright Notice at the end of this file
 */
 
@@ -17,13 +17,13 @@
 
 
 
-#define LUA_VERSION	l_s("Lua 4.1 (work)")
-#define LUA_COPYRIGHT	l_s("Copyright (C) 1994-2000 TeCGraf, PUC-Rio")
-#define LUA_AUTHORS 	l_s("W. Celes, R. Ierusalimschy & L. H. de Figueiredo")
+#define LUA_VERSION	"Lua 4.1 (work)"
+#define LUA_COPYRIGHT	"Copyright (C) 1994-2001 TeCGraf, PUC-Rio"
+#define LUA_AUTHORS 	"W. Celes, R. Ierusalimschy & L. H. de Figueiredo"
 
 
 /* name of global variable with error handler */
-#define LUA_ERRORMESSAGE	l_s("_ERRORMESSAGE")
+#define LUA_ERRORMESSAGE	"_ERRORMESSAGE"
 
 
 /* pre-defined references */
@@ -77,17 +77,22 @@ typedef int (*lua_CFunction) (lua_State *L);
 
 
 /* Lua numerical type */
-typedef double lua_Number;
+#ifndef LUA_NUMBER
+#define LUA_NUMBER	double
+#endif
+typedef LUA_NUMBER lua_Number;
 
 /* Lua character type */
-typedef char l_char;
+#ifndef L_CHAR
+#define L_CHAR	char
+#endif
+typedef L_CHAR l_char;
 
 
 /* mark for all API functions */
 #ifndef LUA_API
 #define LUA_API		extern
 #endif
-
 
 
 /*
@@ -227,7 +232,7 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size);
 
 #define lua_getregistry(L)	lua_getref(L, LUA_REFREGISTRY)
 
-#define lua_pushliteral(L, s)	lua_pushlstring(L, l_s("") s, \
+#define lua_pushliteral(L, s)	lua_pushlstring(L, s, \
                                                 (sizeof(s)/sizeof(l_char))-1)
 
 
@@ -235,6 +240,50 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size);
 #define lua_newtag(L)	lua_newtype(L, NULL, LUA_TNONE)
 
 #endif
+
+
+
+/*
+** {======================================================================
+** useful definitions for Lua kernel and libraries
+*/
+#ifdef LUA_PRIVATE
+
+/* macro to control type of literal strings */
+#ifndef l_s
+#define l_s(x)  x
+#endif
+
+/* macro to control type of literal chars */
+#ifndef l_c
+#define l_c(x)  x
+#endif
+
+/* macro to `unsign' a character */
+#ifndef uchar
+#define uchar(c)        ((unsigned char)(c))
+#endif
+
+/* integer type to hold the result of fgetc */
+#ifndef l_charint
+#define l_charint	int
+#endif
+
+/* function to convert a lua_Number to a string */
+#ifndef LUA_NUMBER_FMT
+#define LUA_NUMBER_FMT      "%.16g"
+#endif
+#ifndef lua_number2str
+#define lua_number2str(s,n)     sprintf((s), l_s(LUA_NUMBER_FMT), (n))
+#endif
+
+/* function to convert a string to a lua_Number */
+#ifndef lua_str2number
+#define lua_str2number(s,p)     strtod((s), (p))
+#endif
+
+#endif
+/* }====================================================================== */
 
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.47 2001/02/14 17:04:11 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.48 2001/02/23 17:17:25 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -14,6 +14,7 @@
 ** With care, these functions can be used by other libraries.
 */
 
+#define LUA_PRIVATE
 #include "lua.h"
 
 #include "lauxlib.h"

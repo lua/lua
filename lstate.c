@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.59 2001/03/07 18:09:25 roberto Exp roberto $
+** $Id: lstate.c,v 1.60 2001/03/09 18:05:05 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 
+#define LUA_PRIVATE
 #include "lua.h"
 
 #include "ldo.h"

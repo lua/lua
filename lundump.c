@@ -1,11 +1,14 @@
 /*
-** $Id: lundump.c,v 1.38 2001/01/15 16:13:24 roberto Exp roberto $
+** $Id: lundump.c,v 1.39 2001/02/23 17:17:25 roberto Exp roberto $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
 
 #include <stdio.h>
 #include <string.h>
+
+#define LUA_PRIVATE
+#include "lua.h"
 
 #include "lfunc.h"
 #include "lmem.h"
@@ -96,7 +99,7 @@ static TString* LoadString (lua_State* L, ZIO* Z, int swap)
   return NULL;
  else
  {
-  l_char* s=luaO_openspace(L,size);
+  char* s=luaO_openspace(L,size,char);
   LoadBlock(L,s,size,Z,0);
   return luaS_newlstr(L,s,size-1);	/* remove trailing l_c('\0') */
  }
@@ -171,7 +174,7 @@ static Proto* LoadFunction (lua_State* L, ZIO* Z, int swap)
 
 static void LoadSignature (lua_State* L, ZIO* Z)
 {
- const l_char* s=SIGNATURE;
+ const l_char* s=l_s(SIGNATURE);
  while (*s!=0 && ezgetc(L,Z)==*s)
   ++s;
  if (*s!=0) luaO_verror(L,l_s("bad signature in `%.99s'"),ZNAME(Z));
@@ -213,7 +216,8 @@ static int LoadHeader (lua_State* L, ZIO* Z)
  f=LoadNumber(L,Z,swap);
  if ((long)f!=(long)tf)		/* disregard errors in last bit of fraction */
   luaO_verror(L,l_s("unknown number format in `%.99s':\n")
-      l_s("  read ") NUMBER_FMT l_s("; expected ") NUMBER_FMT, ZNAME(Z),f,tf);
+      l_s("  read ") l_s(LUA_NUMBER_FMT) l_s("; expected ") l_s(LUA_NUMBER_FMT),
+      ZNAME(Z),f,tf);
  return swap;
 }
 
