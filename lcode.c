@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.59 2001/01/29 15:26:40 roberto Exp roberto $
+** $Id: lcode.c,v 1.60 2001/02/07 18:13:49 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -100,7 +100,7 @@ void luaK_deltastack (FuncState *fs, int delta) {
   if (fs->stacklevel > fs->f->maxstacksize) {
     if (fs->stacklevel > MAXSTACK)
       luaK_error(fs->ls, "function or expression too complex");
-    fs->f->maxstacksize = fs->stacklevel;
+    fs->f->maxstacksize = (short)fs->stacklevel;
   }
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.128 2001/01/31 13:13:17 roberto Exp roberto $
+** $Id: lparser.c,v 1.129 2001/02/05 17:48:52 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -261,11 +261,11 @@ static void adjust_mult_assign (LexState *ls, int nvars, int nexps) {
 }
 
 
-static void code_params (LexState *ls, int nparams, int dots) {
+static void code_params (LexState *ls, int nparams, short dots) {
   FuncState *fs = ls->fs;
   adjustlocalvars(ls, nparams);
   luaX_checklimit(ls, fs->nactloc, MAXPARAMS, "parameters");
-  fs->f->numparams = fs->nactloc;  /* `self' could be there already */
+  fs->f->numparams = (short)fs->nactloc;  /* `self' could be there already */
   fs->f->is_vararg = dots;
   if (dots) {
     new_localvarstr(ls, "arg", 0);
@@ -1093,7 +1093,7 @@ static int stat (LexState *ls) {
 static void parlist (LexState *ls) {
   /* parlist -> [ param { ',' param } ] */
   int nparams = 0;
-  int dots = 0;
+  short dots = 0;
   if (ls->t.token != ')') {  /* is `parlist' not empty? */
     do {
       switch (ls->t.token) {
