@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 2.13 1997/09/16 19:01:10 roberto Exp $
+% $Id: manual.tex,v 1.1 1998/01/02 18:34:00 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -38,7 +38,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1997/09/16 19:01:10 $}
+\date{\small \verb$Date: 1998/01/02 18:34:00 $}
 
 \maketitle
 
@@ -486,7 +486,7 @@ function calls can be executed as statements:
 \produc{stat}{functioncall}
 \end{Produc}%
 In this case, returned values are thrown away.
-Function calls are explained in Section~\ref{functioncall}.
+Function calls are explained in \See{functioncall}.
 
 \subsubsection{Local Declarations} \label{localvar}
 \Index{Local variables} may be declared anywhere inside a block.
@@ -522,11 +522,11 @@ Basic expressions are:
 \end{Produc}%
 
 Numbers (numerical constants) and
-string literals are explained in Section~\ref{lexical};
-variables are explained in Section~\ref{assignment};
-upvalues are explained in Section~\ref{upvalue};
-function definitions (\M{function}) are explained in Section~\ref{func-def};
-function call are explained in Section~\ref{functioncall}.
+string literals are explained in \See{lexical};
+variables are explained in \See{assignment};
+upvalues are explained in \See{upvalue};
+function definitions (\M{function}) are explained in \See{func-def};
+function call are explained in \See{functioncall}.
 
 An access to a global variable \verb|x| is equivalent to a
 call \verb|getglobal('x')|;
@@ -549,7 +549,7 @@ the binary \verb|+| (addition),
 \verb|/| (division) and \verb|^| (exponentiation),
 and unary \verb|-| (negation).
 If the operands are numbers, or strings that can be converted to
-numbers, according to the rules given in Section~\ref{coercion},
+numbers, according to the rules given in \See{coercion},
 then all operations except exponentiation have the usual meaning.
 Otherwise, an appropriate tag method is called \see{tag-method}.
 An exponentiation always calls a tag method.
@@ -571,7 +571,7 @@ Numbers and strings are compared in the usual way.
 Tables, userdata and functions are compared by reference,
 that is, two tables are considered equal only if they are the same table.
 The operator \verb|~=| is exactly the negation of equality (\verb|==|).
-Note that the conversion rules of Section~\ref{coercion}
+Note that the conversion rules of \See{coercion}
 \emph{do not} apply to equality comparisons.
 Thus, \verb|"0"==0| evaluates to false.
 
@@ -602,7 +602,7 @@ the second operand is evaluated only when necessary.
 Lua offers a string \Index{concatenation} operator,
 denoted by ``\IndexVerb{..}''.
 If operands are strings or numbers, then they are converted to
-strings according to the rules in Section~\ref{coercion}.
+strings according to the rules in \See{coercion}.
 Otherwise, the ``concat'' tag method is called \see{tag-method}.
 
 \subsubsection{Precedence}
@@ -1313,7 +1313,7 @@ there is no guarantee that such pointer will be valid after the block ends
 \verb|lua_getcfunction| converts a \verb|lua_Object| to a C function.
 This \verb|lua_Object| must have type \emph{CFunction};
 otherwise, the function returns 0 (the \verb|NULL| pointer).
-The type \verb|lua_CFunction| is explained in Section~\ref{LuacallC}.
+The type \verb|lua_CFunction| is explained in \See{LuacallC}.
 
 \verb|lua_getuserdata| converts a \verb|lua_Object| to \verb|void*|.
 This \verb|lua_Object| must have type \emph{userdata};
@@ -1672,7 +1672,7 @@ For some examples, see files \verb|lstrlib.c|,
 
 \subsection{References to Lua Objects}
 
-As noted in Section~\ref{LuacallC}, \verb|lua_Object|s are volatile.
+As noted in \See{LuacallC}, \verb|lua_Object|s are volatile.
 If the C code needs to keep a \verb|lua_Object|
 outside block boundaries,
 then it must create a \Def{reference} to the object.
@@ -1893,7 +1893,7 @@ and prints their values in a reasonable format.
 This function is not intended for formatted output,
 but as a quick way to show a value,
 for instance for error messages or debugging.
-See Section~\ref{libio} for functions for formatted output.
+See \See{libio} for functions for formatted output.
 
 \subsubsection*{\ff \T{tonumber (e [, base])}}\Deffunc{tonumber}
 This function receives one argument,
@@ -2710,27 +2710,30 @@ Here is a list of all these incompatibilities.
 \subsection*{Incompatibilities with \Index{version 3.0}}
 \begin{itemize}
 
-\item The whole library must be explicitly openen before used.
+\item To support for multiple contexts,
+the whole library must be explicitly openen before used.
 However, all standard libraries check whether Lua is already opened,
 so any program that opens at least one standard library before using
 Lua API does not need to be corrected.
 
 \item Function \verb|dostring| does not accept an optional second argument,
 with a temporary error method.
-Now Function \verb|call| offers this facility.
+This facility is now provided by function \verb|call|.
 
-\item Function \verb|gsub| does not accept an optional fourth argument
+\item Function \verb|gsub| no longer accepts an optional fourth argument
 (a callback data, a table).
 Closures make this feature irrelevant.
 
 \item The syntax for function declaration is now more restricted;
 for instance, the old syntax \verb|function f[exp] (x) ... end| is not
 accepted in 3.1.
-Progams should use an explicit assignment instead.
+Progams should use an explicit assignment instead, like this:
+\verb|f[exp] = function (x) ... end|.
 
 \item Old pre-compiled code is obsolete, and must be re-compiled.
 
 \item The option \verb|a=b| in Lua stand-alone does not need extra quotes.
+Check \See{lua-sa} for details.
 
 \end{itemize}
 
