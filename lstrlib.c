@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.22 1998/12/28 13:44:54 roberto Exp $
+** $Id: lstrlib.c,v 1.24 1999/02/04 19:10:30 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -462,8 +462,6 @@ static void luaI_addquoted (int arg) {
 static void str_format (void) {
   int arg = 1;
   char *strfrmt = luaL_check_string(arg);
-  struct Capture cap;
-  cap.src_end = strfrmt+strlen(strfrmt)+1;
   luaL_resetbuffer();
   while (*strfrmt) {
     if (*strfrmt != '%')
@@ -471,33 +469,40 @@ static void str_format (void) {
     else if (*++strfrmt == '%')
       luaL_addchar(*strfrmt++);  /* %% */
     else { /* format item */
+      struct Capture cap;
       char form[MAX_FORMAT];      /* store the format ('%...') */
       char *buff;
       char *initf = strfrmt;
       form[0] = '%';
-      cap.level = 0;
       if (isdigit((unsigned char)initf[0]) && initf[1] == '$') {
         arg = initf[0] - '0';
         initf += 2;  /* skip the 'n$' */
       }
       arg++;
+      cap.src_end = strfrmt+strlen(strfrmt)+1;
+      cap.level = 0;
       strfrmt = match(initf, "[-+ #0]*(%d*)%.?(%d*)", &cap);
       if (cap.capture[0].len > 2 || cap.capture[1].len > 2 ||  /* < 100? */
           strfrmt-initf > MAX_FORMAT-2)
         lua_error("invalid format (width or precision too long)");
       strncpy(form+1, initf, strfrmt-initf+1); /* +1 to include conversion */
       form[strfrmt-initf+2] = 0;
-      /* to store the formatted value
-         (450 > size of format('%99.99f', -1e308) */
-      buff = luaL_openspace(450);
+      buff = luaL_openspace(450);  /* 450 > size of format('%99.99f', -1e308) */
       switch (*strfrmt++) {
         case 'q':
           luaI_addquoted(arg);
           continue;
         case 's': {
           char *s = luaL_check_string(arg);
-          buff = luaL_openspace(strlen(s));
-          sprintf(buff, form, s);
+          int l = strlen(s);
+          buff = luaL_openspace(l+1);
+          if (cap.capture[1].len == 0 && l >= 100) {
+            /* no precision and string is too big to be formated;
+               keep original string */
+            strcpy(buff, s);
+          }
+          else
+            sprintf(buff, form, s);
           break;
         }
         case 'c':  case 'd':  case 'i':

@@ -67,3 +67,6 @@ Wed Feb  3 14:40:21 EDT 1999
 >> getlocal cannot return the local itself, since lua_isstring and
 lua_isnumber can modify it.
 
+** lstrlib.c
+Thu Feb  4 17:08:50 EDT 1999
+>> format "%s" may break limit of "sprintf" on some machines.
