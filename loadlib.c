@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.2 2003/03/18 12:25:01 roberto Exp roberto $
+** $Id: loadlib.c,v 1.3 2003/04/02 13:09:14 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 *
@@ -30,17 +30,11 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
-#ifndef USE_LOADLIB
-#define USE_LOADLIB 1
-#endif
 
-#ifndef USE_DLOPEN
-#define USE_DLOPEN 0
-#endif
+#undef LOADLIB
 
-#if USE_LOADLIB
 
-#if defined(linux) || defined(sun) || defined(sgi) || defined(BSD) || USE_DLOPEN
+#ifdef USE_DLOPEN
 #define LOADLIB
 /*
 * This is an implementation of loadlib based on the dlfcn interface.
@@ -66,6 +60,7 @@ static int loadlib(lua_State *L)
    return 1;
   }
  }
+ /* else return appropriate error messages */
  lua_pushnil(L);
  lua_pushstring(L,dlerror());
  lua_pushstring(L,(lib!=NULL) ? "init" : "open");
@@ -73,7 +68,23 @@ static int loadlib(lua_State *L)
  return 3;
 }
 
-#elif defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+#endif
+
+
+
+/*
+** In Windows, default is to use dll; otherwise, default is not to use dll
+*/
+#ifndef USE_DLL
+#ifdef _WIN32
+#define USE_DLL	1
+#else
+#define USE_DLL	0
+#endif
+#endif
+
+
+#if USE_DLL
 #define LOADLIB
 /*
 * This is an implementation of loadlib for Windows using native functions.
@@ -114,21 +125,48 @@ static int loadlib(lua_State *L)
  return 3;
 }
 
-#else
-/*
-* write an implementation for your system  here and send it to us, together
-* with preprocessing symbols that identify your system.
-*/
 #endif
-#endif
+
+
 
 #ifndef LOADLIB
 /* Fallback for other systems */
 
+/*
+** Those systems support dlopen, so they should have defined USE_DLOPEN.
+** The default (no)implementation gives them a special error message.
+*/
+#ifdef linux
+#define LOADLIB
+#endif
+
+#ifdef sun
+#define LOADLIB
+#endif
+
+#ifdef sgi
+#define LOADLIB
+#endif
+
+#ifdef BSD
+#define LOADLIB
+#endif
+
+#ifdef _WIN32
+#define LOADLIB
+#endif
+
+#ifdef LOADLIB
+#undef LOADLIB
+#define LOADLIB	"`loadlib' not installed (check your Lua configuration)"
+#else
+#define LOADLIB	"`loadlib' not supported"
+#endif
+
 static int loadlib(lua_State *L)
 {
  lua_pushnil(L);
- lua_pushliteral(L,"`loadlib' not supported");
+ lua_pushliteral(L,LOADLIB);
  lua_pushliteral(L,"absent");
  return 3;
 }
@@ -141,9 +179,9 @@ LUALIB_API int luaopen_loadlib (lua_State *L)
 }
 
 /*
-* Here  are  some links  por  to  available  implementations of  dlfcn  and
-* interfaces to other native dynamic loaders  on top of which loadlib could
-* be implemented. Please send contributions and corrections to us.
+* Here are some links to available implementations of dlfcn and
+* interfaces to other native dynamic loaders on top of which loadlib
+* could be implemented. Please send contributions and corrections to us.
 *
 * AIX
 * Starting with AIX 4.2, dlfcn is included in the base OS.

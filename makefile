@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.39 2002/12/06 17:20:45 roberto Exp roberto $
+## $Id: makefile,v 1.40 2003/03/19 21:27:30 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -14,7 +14,7 @@ OPTIMIZE =  -O2 \
 #   -fomit-frame-pointer
 
 
-CONFIG = $(DEBUG) $(OPTIMIZE) -DLUA_COMPATUPSYNTAX -DUSE_TMPNAME
+CONFIG = $(DEBUG) $(OPTIMIZE) -DLUA_COMPATUPSYNTAX -DUSE_TMPNAME -DUSE_DLOPEN
 
 
 # Compilation parameters
