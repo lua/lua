@@ -56,7 +56,11 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
   UpVal *uv;
   while ((p = ngcotouv(*pp)) != NULL && p->v >= level) {
     lua_assert(p->v != &p->u.value);
-    if (p->v == level) return p;
+    if (p->v == level) {  /* found a corresponding upvalue? */
+      if (isdead(G(L), obj2gco(p)))  /* is it dead? */
+        changewhite(obj2gco(p));  /* ressurect it */
+      return p;
+    }
     pp = &p->next;
   }
   uv = luaM_new(L, UpVal);  /* not found: create a new one */
@@ -65,8 +69,6 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
   uv->v = level;  /* current value lives in the stack */
   uv->next = *pp;  /* chain it in the proper position */
   *pp = obj2gco(uv);
-  lua_assert(g->uvhead.u.l.next->u.l.prev == &g->uvhead &&
-             g->uvhead.u.l.prev->u.l.next == &g->uvhead);
   uv->u.l.prev = &g->uvhead;  /* double link it in `uvhead' list */
   uv->u.l.next = g->uvhead.u.l.next;
   uv->u.l.next->u.l.prev = uv;
@@ -102,6 +104,10 @@ void luaF_close (lua_State *L, StkId level) {
     else {
       unlinkupval(uv);
       setobj(L, &uv->u.value, uv->v);
+      if (isgray(o)) {
+        gray2black(o);  /* closed upvalues are never gray */
+        luaC_barrier(L, uv, uv->v);
+      }
       uv->v = &uv->u.value;  /* now current value lives here */
       luaC_linkupval(L, uv);  /* link upvalue into `gcroot' list */
     }

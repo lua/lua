@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.8 2004/08/30 13:44:44 roberto Exp roberto $
+** $Id: lgc.h,v 2.9 2004/09/15 20:38:15 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -66,6 +66,7 @@
 #define isdead(g,v)	((v)->gch.marked & otherwhite(g))
 
 #define changewhite(x)	((x)->gch.marked ^= bit2mask(WHITE0BIT, WHITE1BIT))
+#define gray2black(x)	setbit((x)->gch.marked, BLACKBIT)
 
 #define valiswhite(x)	(iscollectable(x) && iswhite(gcvalue(x)))
 

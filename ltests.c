@@ -272,7 +272,13 @@ static void checkclosure (global_State *g, Closure *cl) {
 static void checkstack (global_State *g, lua_State *L1) {
   StkId o;
   CallInfo *ci;
+  GCObject *uvo;
   lua_assert(!isdead(g, obj2gco(L1)));
+  for (uvo = L1->openupval; uvo != NULL; uvo = uvo->gch.next) {
+    UpVal *uv = gco2uv(uvo);
+    lua_assert(uv->v != &uv->u.value);  /* must be open */
+    lua_assert(!isblack(uvo));  /* open upvalues cannot be black */
+  }
   checkliveness(g, gt(L1));
   if (L1->base_ci) {
     for (ci = L1->base_ci; ci <= L1->ci; ci++)
@@ -300,6 +306,7 @@ printf(">>> %d  %s  %02x\n", g->gcstate, luaT_typenames[o->gch.tt], o->gch.marke
       case LUA_TUPVAL: {
         UpVal *uv = gco2uv(o);
         lua_assert(uv->v == &uv->u.value);  /* must be closed */
+        lua_assert(!isgray(o));  /* closed upvalues are never gray */
         checkvalref(g, o, uv->v);
         break;
       }
@@ -333,13 +340,19 @@ printf(">>> %d  %s  %02x\n", g->gcstate, luaT_typenames[o->gch.tt], o->gch.marke
 int lua_checkmemory (lua_State *L) {
   global_State *g = G(L);
   GCObject *o;
+  UpVal *uv;
   checkstack(g, g->mainthread);
   for (o = g->rootgc; o != obj2gco(g->mainthread); o = o->gch.next)
     checkobject(g, o);
-  checkobject(g, obj2gco(g->mainthread));
-  for (o = g->mainthread->next; o != NULL; o = o->gch.next) {
+  for (o = o->gch.next; o != NULL; o = o->gch.next) {
     lua_assert(o->gch.tt == LUA_TUSERDATA);
     checkobject(g, o);
+  }
+  for (uv = g->uvhead.u.l.next; uv != &g->uvhead; uv = uv->u.l.next) {
+    lua_assert(uv->u.l.next->u.l.prev == uv && uv->u.l.prev->u.l.next == uv);
+    lua_assert(uv->v != &uv->u.value);  /* must be open */
+    lua_assert(!isblack(obj2gco(uv)));  /* open upvalues are never black */
+    checkvalref(g, obj2gco(uv), uv->v);
   }
   return 0;
 }
