@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.14 1999/01/08 16:47:44 roberto Exp roberto $
+## $Id: makefile,v 1.15 1999/01/11 20:23:54 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -19,6 +19,7 @@
 # version 2.5 (or older)
 #
 # define LUA_NUM_TYPE if you need numbers to be different from double
+# (for instance, -DLUA_NUM_TYPE=float)
 
 CONFIG = -DPOPEN -D_POSIX_SOURCE
 #CONFIG = -DLUA_COMPAT2_5 -DOLD_ANSI -DDEBUG
@@ -103,7 +104,7 @@ lbuffer.o: lbuffer.c lauxlib.h lua.h lmem.h lstate.h lobject.h
 lbuiltin.o: lbuiltin.c lapi.h lua.h lobject.h lauxlib.h lbuiltin.h \
  ldo.h lstate.h lfunc.h lmem.h lstring.h ltable.h ltm.h lundump.h \
  lzio.h lvm.h
-ldblib.o: ldblib.c lauxlib.h lua.h luadebug.h
+ldblib.o: ldblib.c lauxlib.h lua.h luadebug.h lualib.h
 ldo.o: ldo.c ldo.h lobject.h lua.h lstate.h lfunc.h lgc.h lmem.h \
  lparser.h lzio.h lstring.h ltm.h luadebug.h lundump.h lvm.h
 lfunc.o: lfunc.c lfunc.h lobject.h lua.h lmem.h lstate.h
