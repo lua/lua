@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.119 2003/03/17 13:01:48 roberto Exp roberto $
+** $Id: lua.c,v 1.120 2003/03/19 21:15:18 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -310,6 +310,10 @@ static int handle_argv (char *argv[], int *interactive) {
       if (argv[i][0] != '-') break;  /* not an option? */
       switch (argv[i][1]) {  /* option */
         case '-': {  /* `--' */
+          if (argv[i][2] != '\0') {
+            print_usage();
+            return 1;
+          }
           i++;  /* skip this argument */
           goto endloop;  /* stop handling arguments */
         }
