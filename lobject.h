@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.24 1998/12/27 20:25:20 roberto Exp roberto $
+** $Id: lobject.h,v 1.25 1999/01/04 13:37:07 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -40,13 +40,6 @@ typedef unsigned char  Byte;  /* unsigned 8 bits */
 
 
 #define MAX_INT   (INT_MAX-2)  /* maximum value of an int (-2 for safety) */
-
-/* maximum value of a word of 2 bytes (-2 for safety); must fit in an "int" */
-#if MAX_INT < 65534
-#define MAX_WORD	MAX_INT
-#else
-#define MAX_WORD	65534
-#endif
 
 typedef unsigned int IntPoint; /* unsigned with same size as a pointer (for hashing) */
 
