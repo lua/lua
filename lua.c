@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.95 2002/07/09 18:19:44 roberto Exp roberto $
+** $Id: lua.c,v 1.96 2002/07/10 20:44:34 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -218,7 +218,6 @@ static int incomplete (int status) {
 
 static int load_string (void) {
   int status;
-  int moreinput = 1;
   lua_settop(L, 0);
   if (read_line(get_prompt(1)) == 0)  /* no input? */
     return -1;
@@ -228,10 +227,10 @@ static int load_string (void) {
   }
   for (;;) {  /* repeat until gets a complete line */
     status = luaL_loadbuffer(L, lua_tostring(L, 1), lua_strlen(L, 1), "=stdin");
-    if (!moreinput || !incomplete(status))  /* cannot try to add lines? */
-      break;
+    if (!incomplete(status)) break;  /* cannot try to add lines? */
     lua_pushliteral(L, "\n");  /* no; add line separator */
-    moreinput = read_line(get_prompt(0));
+    if (read_line(get_prompt(0)) == 0)  /* no more input? */
+      return -1;
     lua_concat(L, lua_gettop(L));  /* join lines and line separator */
   }
   save_line(lua_tostring(L, 1));
