@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.49 1997/03/31 14:17:09 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.50 1997/03/31 20:59:09 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -213,6 +213,11 @@ static void luaI_basicgetglobal (void)
   lua_pushobject(lua_basicgetglobal(luaL_check_string(1, "basicgetglobal")));
 }
 
+static void luatag (void)
+{
+  lua_pushnumber(lua_tag(lua_getparam(1)));
+}
+
 #define MAXPARAMS	256
 static void luaI_call (void)
 {
@@ -315,6 +320,7 @@ static struct {
   {"settag", luaIl_settag},
   {"tonumber", lua_obj2number},
   {"tostring", luaI_tostring},
+  {"tag", luatag},
   {"type", luaI_type}
 };
 
