@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.28 2001/02/23 17:28:12 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.29 2001/03/06 20:09:38 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -17,6 +17,13 @@
 #include "luadebug.h"
 #include "lualib.h"
 
+
+
+static void aux_setn (lua_State *L, int t, int n) {
+  lua_pushliteral(L, l_s("n"));
+  lua_pushnumber(L, n);
+  lua_settable(L, t);
+}
 
 
 /*
@@ -296,6 +303,17 @@ static int luaB_dofile (lua_State *L) {
 }
 
 
+static int luaB_pack (lua_State *L) {
+  int n = lua_gettop(L);
+  lua_newtable(L);
+  aux_setn(L, -3, n);
+  lua_insert(L, 1);
+  while (n)
+    lua_rawseti(L, 1, n--);
+  return 1;
+}
+
+
 static int aux_unpack (lua_State *L, int arg) {
   int n, i;
   luaL_checktype(L, arg, LUA_TTABLE);
@@ -304,6 +322,11 @@ static int aux_unpack (lua_State *L, int arg) {
   for (i=1; i<=n; i++)  /* push arg[1...n] */
     lua_rawgeti(L, arg, i);
   return n;
+}
+
+
+static int luaB_unpack (lua_State *L) {
+  return aux_unpack(L, 1);
 }
 
 
@@ -436,9 +459,7 @@ static int luaB_tinsert (lua_State *L) {
     pos = n+1;
   else
     pos = luaL_check_int(L, 2);  /* 2nd argument is the position */
-  lua_pushliteral(L, l_s("n"));
-  lua_pushnumber(L, n+1);
-  lua_rawset(L, 1);  /* t.n = n+1 */
+  aux_setn(L, 1, n+1);  /* t.n = n+1 */
   for (; n>=pos; n--) {
     lua_rawgeti(L, 1, n);
     lua_rawseti(L, 1, n+1);  /* t[n+1] = t[n] */
@@ -455,14 +476,12 @@ static int luaB_tremove (lua_State *L) {
   n = lua_getn(L, 1);
   pos = luaL_opt_int(L, 2, n);
   if (n <= 0) return 0;  /* table is `empty' */
+  aux_setn(L, 1, n-1);  /* t.n = n-1 */
   lua_rawgeti(L, 1, pos);  /* result = t[pos] */
   for ( ;pos<n; pos++) {
     lua_rawgeti(L, 1, pos+1);
     lua_rawseti(L, 1, pos);  /* a[pos] = a[pos+1] */
   }
-  lua_pushliteral(L, l_s("n"));
-  lua_pushnumber(L, n-1);
-  lua_rawset(L, 1);  /* t.n = n-1 */
   lua_pushnil(L);
   lua_rawseti(L, 1, n);  /* t[n] = nil */
   return 1;
@@ -678,6 +697,8 @@ static const luaL_reg base_funcs[] = {
   {l_s("sort"), luaB_sort},
   {l_s("tinsert"), luaB_tinsert},
   {l_s("tremove"), luaB_tremove},
+  {l_s("pack"), luaB_pack},
+  {l_s("unpack"), luaB_unpack},
   {l_s("xtype"), luaB_xtype},
 };
 
