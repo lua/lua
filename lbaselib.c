@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.69 2002/04/22 14:40:23 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.70 2002/05/01 20:40:42 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -72,7 +72,7 @@ static int luaB_print (lua_State *L) {
     lua_rawcall(L, 1, 1);
     s = lua_tostring(L, -1);  /* get result */
     if (s == NULL)
-      lua_error(L, "`tostring' must return a string to `print'");
+      luaL_verror(L, "`tostring' must return a string to `print'");
     if (i>1) fputs("\t", stdout);
     fputs(s, stdout);
     lua_pop(L, 1);  /* pop result */
@@ -372,7 +372,7 @@ static int luaB_require (lua_State *L) {
   lua_pushvalue(L, 1);
   lua_setglobal(L, "_REQUIREDNAME");
   lua_getglobal(L, REQTAB);
-  if (!lua_istable(L, 2)) lua_error(L, REQTAB " is not a table");
+  if (!lua_istable(L, 2)) luaL_verror(L, REQTAB " is not a table");
   path = getpath(L);
   lua_pushvalue(L, 1);  /* check package's name in book-keeping table */
   lua_gettable(L, 2);
@@ -399,7 +399,7 @@ static int luaB_require (lua_State *L) {
                   lua_tostring(L, 1), lua_tostring(L, 3));
     }
     default: {
-      lua_error(L, "error loading package");
+      luaL_verror(L, "error loading package");
       return 0;  /* to avoid warnings */
     }
   }
@@ -466,7 +466,7 @@ static int luaB_coroutine (lua_State *L) {
   luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1), 1,
     "Lua function expected");
   NL = lua_newthread(L);
-  if (NL == NULL) lua_error(L, "unable to create new thread");
+  if (NL == NULL) luaL_verror(L, "unable to create new thread");
   /* move function and arguments from L to NL */
   for (i=0; i<n; i++) {
     ref = lua_ref(L, 1);

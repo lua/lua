@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.1 2002/04/09 20:19:06 roberto Exp roberto $
+** $Id: ltablib.c,v 1.2 2002/04/12 19:57:29 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -171,12 +171,12 @@ static void auxsort (lua_State *L, int l, int u) {
     for (;;) {  /* invariant: a[l..i] <= P <= a[j..u] */
       /* repeat ++i until a[i] >= P */
       while (lua_rawgeti(L, 1, ++i), sort_comp(L, -1, -2)) {
-        if (i>u) lua_error(L, "invalid order function for sorting");
+        if (i>u) luaL_verror(L, "invalid order function for sorting");
         lua_pop(L, 1);  /* remove a[i] */
       }
       /* repeat --j until a[j] <= P */
       while (lua_rawgeti(L, 1, --j), sort_comp(L, -3, -1)) {
-        if (j<l) lua_error(L, "invalid order function for sorting");
+        if (j<l) luaL_verror(L, "invalid order function for sorting");
         lua_pop(L, 1);  /* remove a[j] */
       }
       if (j<i) {

@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.2 2002/04/05 18:54:31 roberto Exp roberto $
+** $Id: liolib.c,v 2.3 2002/04/12 19:56:25 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -118,7 +118,7 @@ static int io_open (lua_State *L) {
 
 static int io_popen (lua_State *L) {
 #ifndef POPEN
-  lua_error(L, "`popen' not supported");
+  luaL_verror(L, "`popen' not supported");
   return 0;
 #else
   FILE *f = popen(luaL_check_string(L, 1), luaL_opt_string(L, 2, "r"));
@@ -257,7 +257,7 @@ static int g_read (lua_State *L, FILE *f, int first) {
       else {
         const char *p = lua_tostring(L, n);
         if (!p || p[0] != '*')
-          lua_error(L, "invalid `read' option");
+          luaL_verror(L, "invalid `read' option");
         switch (p[1]) {
           case 'n':  /* number */
             success = read_number(L, f);
@@ -270,7 +270,7 @@ static int g_read (lua_State *L, FILE *f, int first) {
             success = 1; /* always success */
             break;
           case 'w':  /* word */
-            lua_error(L, "obsolete option `*w'");
+            luaL_verror(L, "obsolete option `*w'");
             break;
           default:
             luaL_argerror(L, n, "invalid format");
@@ -430,7 +430,7 @@ static int io_rename (lua_State *L) {
 static int io_tmpname (lua_State *L) {
   char buff[L_tmpnam];
   if (tmpnam(buff) != buff)
-    lua_error(L, "unable to generate a unique filename");
+    luaL_verror(L, "unable to generate a unique filename");
   lua_pushstring(L, buff);
   return 1;
 }
@@ -510,7 +510,7 @@ static int io_date (lua_State *L) {
     if (strftime(b, sizeof(b), s, stm))
       lua_pushstring(L, b);
     else
-      lua_error(L, "invalid `date' format");
+      luaL_verror(L, "invalid `date' format");
   }
   return 1;
 }
