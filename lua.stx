@@ -1,6 +1,6 @@
 %{
 /*
-** $Id: lua.stx,v 1.13 1997/10/24 17:17:24 roberto Exp roberto $
+** $Id: lua.stx,v 1.14 1997/10/24 18:40:29 roberto Exp roberto $
 ** Syntax analizer and code generator
 ** See Copyright Notice in lua.h
 */
@@ -131,7 +131,7 @@ static void deltastack (int delta)
   currState->stacksize += delta;
   if (currState->stacksize > currState->maxstacksize) {
     if (currState->stacksize > 255)
-      luaY_error("expression too complex");
+      luaY_error("function/expression too complex (limit 256)");
     currState->maxstacksize = currState->stacksize;
   }
 }
@@ -155,7 +155,7 @@ static int code_oparg_at (int pc, OpCode op, int builtin, int arg, int delta)
     currState->f->code[pc+2] = arg>>8;
     return 3;
   }
-  else luaY_error("construction too big - unable to compile");
+  else luaY_error("code too long (limit 64K)");
   return 0;   /* to avoid warnings */
 }
 
@@ -313,7 +313,7 @@ static void store_localvar (TaggedString *name, int n)
   if (currState->nlocalvar+n < MAXLOCALS)
     currState->localvar[currState->nlocalvar+n] = name;
   else
-    luaY_error("too many local variables");
+    luaY_error("too many local variables (limit 32)");
   luaI_registerlocalvar(name, luaX_linenumber);
 }
 
@@ -340,7 +340,7 @@ static vardesc var2store (vardesc var)
 static void add_varbuffer (vardesc var, int n)
 {
   if (n >= MAXVAR)
-    luaY_error("variable buffer overflow");
+    luaY_error("variable buffer overflow (limit 32)");
   currState->varbuffer[n] = var2store(var);
 }
 
@@ -378,7 +378,7 @@ static int indexupvalue (TaggedString *n)
   }
   /* new one */
   if (++(currState->nupvalues) > MAXUPVALUES)
-    luaY_error("too many upvalues in a single function");
+    luaY_error("too many upvalues in a single function (limit 16)");
   currState->upvalues[i] = v;  /* i = currState->nupvalues - 1 */
   return i;
 }
@@ -579,7 +579,7 @@ static void init_state (TaggedString *filename)
 static void init_func (void)
 {
   if (currState-mainState >= MAXSTATES-1)
-    luaY_error("too many nested functions");
+    luaY_error("too many nested functions (limit 6)");
   currState++;
   init_state(mainState->f->fileName);
   luaY_codedebugline(luaX_linenumber);
