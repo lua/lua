@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.23 2000/09/11 17:38:42 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.24 2000/09/11 20:29:27 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -80,6 +80,7 @@ typedef struct luaL_Buffer {
 void luaL_buffinit (lua_State *L, luaL_Buffer *B);
 char *luaL_prepbuffer (luaL_Buffer *B);
 void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l);
+void luaL_addstring (luaL_Buffer *B, const char *s);
 void luaL_addvalue (luaL_Buffer *B);
 void luaL_pushresult (luaL_Buffer *B);
 
