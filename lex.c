@@ -1,5 +1,9 @@
-char *rcs_lex = "$Id: lex.c,v 2.6 1994/09/26 16:21:52 celes Exp celes $";
+char *rcs_lex = "$Id: lex.c,v 2.7 1994/10/17 19:01:53 celes Exp celes $";
 /*$Log: lex.c,v $
+ * Revision 2.7  1994/10/17  19:01:53  celes
+ * new algorithm for reading floats.
+ * files end with EOF, instead of 0.
+ *
  * Revision 2.6  1994/09/26  16:21:52  celes
  * Mudancas para tornar lex.c um modulo independente dos outros
  * modulos de Lua
@@ -41,6 +45,7 @@ char *rcs_lex = "$Id: lex.c,v 2.6 1994/09/26 16:21:52 celes Exp celes $";
 #include "opcode.h"
 #include "inout.h"
 #include "y.tab.h"
+#include "ugly.h"
 
 #define lua_strcmp(a,b)	(a[0]<b[0]?(-1):(a[0]>b[0]?(1):strcmp(a,b)))
 
@@ -91,29 +96,6 @@ static struct
       {"until", UNTIL},
       {"while", WHILE} };
 
-enum
-{
- U_and=128,
- U_do,
- U_else,
- U_elseif,
- U_end,
- U_function,
- U_if,
- U_local,
- U_nil,
- U_not,
- U_or,
- U_repeat,
- U_return,
- U_then,
- U_until,
- U_while,
- U_le = '<'+128,
- U_ge = '>'+128,
- U_ne = '~'+128,
- U_sc = '.'+128
-};
 
 #define RESERVEDSIZE (sizeof(reserved)/sizeof(reserved[0]))
 
@@ -315,6 +297,7 @@ fraction:
       case U_then:	next(); return THEN;
       case U_until:	next(); return UNTIL;
       case U_while:	next(); return WHILE;
+      case U_eq:	next(); return EQ;
       case U_le:	next(); return LE;
       case U_ge:	next(); return GE;
       case U_ne:	next(); return NE;
