@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.65 2001/02/20 18:15:33 roberto Exp roberto $
+** $Id: ldebug.c,v 1.66 2001/02/20 18:28:11 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -351,7 +351,7 @@ static int checkjump_aux (const Proto *pt, lu_byte *sl, int top, int pc) {
   check(0 <= pc && pc < pt->sizecode);
   if (sl == NULL) return 1;  /* not full checking */
   if (sl[pc] == SL_EMPTY)
-    sl[pc] = top;
+    sl[pc] = (lu_byte)top;
   else
     check(sl[pc] == top);
   return 1;
@@ -375,7 +375,7 @@ static Instruction luaG_symbexec (lua_State *L, const Proto *pt,
   pc = 0;
   if (pt->is_vararg)  /* varargs? */
     top++;  /* `arg' */
-  if (sl) sl[0] = top;
+  if (sl) sl[0] = (lu_byte)top;
   while (pc < lastpc) {
     const Instruction i = pt->code[pc++];
     OpCode op = GET_OPCODE(i);
