@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.81 1997/02/20 15:51:14 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.82 1997/02/26 17:38:41 roberto Unstable roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -1184,7 +1184,7 @@ static StkId lua_execute (Byte *pc, StkId base)
    }
    break;
 
-   case STORERECORD:
+   case STORERECORD:  /* opcode obsolete: supersed by STOREMAP */
    {
     int n = *(pc++);
     Object *arr = top-n-1;
@@ -1197,6 +1197,16 @@ static StkId lua_execute (Byte *pc, StkId base)
      top--;
      n--;
     }
+   }
+   break;
+
+   case STOREMAP: {
+     int n = *(pc++);
+     Object *arr = top-(2*n)-1;
+     while (n--) {
+       *(lua_hashdefine (avalue(arr), top-2)) = *(top-1);
+       top-=2;
+     }
    }
    break;
 

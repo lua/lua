@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.25 1997/02/11 11:35:05 roberto Exp roberto $
+** $Id: opcode.h,v 3.26 1997/02/20 15:51:14 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -101,8 +101,8 @@ CALLFUNC,/*	n m	v_n...v_1 f	r_m...r_1	f(v1,...,v_n)  */
 RETCODE0,
 RETCODE,/*	b	-		-  */
 SETLINE,/*	w	-		-		LINE=w  */
-VARARGS/*	b	v_n...v_1	{v_1...v_n;n=n}  */
-
+VARARGS,/*	b	v_n...v_1	{v_1...v_n;n=n}  */
+STOREMAP/*	n	v_n k_n ...v_1 k_1 t	-	t[k_i]=v_i  */
 } OpCode;
 
 
