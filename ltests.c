@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.167 2003/10/20 12:25:23 roberto Exp roberto $
+** $Id: ltests.c,v 1.168 2003/11/05 11:59:14 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -354,21 +354,21 @@ static int tref (lua_State *L) {
   luaL_checkany(L, 1);
   lua_pushvalue(L, 1);
   lua_pushinteger(L, lua_ref(L, lock));
-  assert(lua_gettop(L) == level+1);  /* +1 for result */
+  lua_assert(lua_gettop(L) == level+1);  /* +1 for result */
   return 1;
 }
 
 static int getref (lua_State *L) {
   int level = lua_gettop(L);
   lua_getref(L, luaL_checkint(L, 1));
-  assert(lua_gettop(L) == level+1);
+  lua_assert(lua_gettop(L) == level+1);
   return 1;
 }
 
 static int unref (lua_State *L) {
   int level = lua_gettop(L);
   lua_unref(L, luaL_checkint(L, 1));
-  assert(lua_gettop(L) == level);
+  lua_assert(lua_gettop(L) == level);
   return 0;
 }
 

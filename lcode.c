@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.119 2003/08/27 20:58:52 roberto Exp $
+** $Id: lcode.c,v 1.119 2003/08/27 21:01:44 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -418,25 +418,25 @@ int luaK_exp2RK (FuncState *fs, expdesc *e) {
 }
 
 
-void luaK_storevar (FuncState *fs, expdesc *var, expdesc *exp) {
+void luaK_storevar (FuncState *fs, expdesc *var, expdesc *ex) {
   switch (var->k) {
     case VLOCAL: {
-      freeexp(fs, exp);
-      luaK_exp2reg(fs, exp, var->info);
+      freeexp(fs, ex);
+      luaK_exp2reg(fs, ex, var->info);
       return;
     }
     case VUPVAL: {
-      int e = luaK_exp2anyreg(fs, exp);
+      int e = luaK_exp2anyreg(fs, ex);
       luaK_codeABC(fs, OP_SETUPVAL, e, var->info, 0);
       break;
     }
     case VGLOBAL: {
-      int e = luaK_exp2anyreg(fs, exp);
+      int e = luaK_exp2anyreg(fs, ex);
       luaK_codeABx(fs, OP_SETGLOBAL, e, var->info);
       break;
     }
     case VINDEXED: {
-      int e = luaK_exp2RK(fs, exp);
+      int e = luaK_exp2RK(fs, ex);
       luaK_codeABC(fs, OP_SETTABLE, var->info, var->aux, e);
       break;
     }
@@ -445,7 +445,7 @@ void luaK_storevar (FuncState *fs, expdesc *var, expdesc *exp) {
       break;
     }
   }
-  freeexp(fs, exp);
+  freeexp(fs, ex);
 }
 
 
