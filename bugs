@@ -445,13 +445,13 @@ for i=1,10000000 do
 end
 ]],
 patch = [[
-*lgc.h:
+* lgc.h:
 18c18
 < void luaC_separateudata (lua_State *L);
 ---
 > size_t luaC_separateudata (lua_State *L);
 
-*lgc.c:
+* lgc.c:
 113c113,114
 < void luaC_separateudata (lua_State *L) {
 ---
@@ -489,4 +489,28 @@ patch = [[
 ---
 >   checkSizes(L, deadmem);
 ]]
+}
 
+Bug{
+what=[[IBM AS400 (OS400) has sizeof(void *)==16, and a `%p' may generate
+up to 60 characters in a `printf'. That causes a buffer overflow in
+`tostring'.]],
+
+report = [[David Burgess, 25/08/2003]],
+
+example = [[print{}; (in an AS400 machine)]],
+
+patch = [[
+* liolib.c:
+178c178
+<   char buff[32];
+---
+>   char buff[128];
+
+* lbaselib.c:
+327c327
+<   char buff[64];
+---
+>   char buff[128];
+]]
+}
