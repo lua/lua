@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.38 2002/10/25 21:38:17 roberto Exp $
+## $Id: makefile,v 1.39 2002/12/06 17:20:45 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -7,22 +7,14 @@
 
 #CONFIGURATION
 
-# define (undefine) USE_POPEN if your system (does not) support piped I/O
-#
-# define (undefine) _POSIX_SOURCE if your system is (not) POSIX compliant
-#
-# define LUA_NUM_TYPE if you need numbers to be different from double
-# (for instance, -DLUA_NUM_TYPE=float)
-# you may need to adapat the code, too.
-
-
-# DEBUG = -g -DLUA_USER_H='"ltests.h"' # -DHARDSTACKTESTS  -DEXTERNMEMCHECK
+# -DEXTERNMEMCHECK -DHARDSTACKTESTS
+# DEBUG = -g -DLUA_USER_H='"ltests.h"'
 OPTIMIZE =  -O2 \
-#  -D'lua_number2int(i,d)=__asm__("fldl %1\nfistpl %0":"=m"(i):"m"(d))' \
-#  -fomit-frame-pointer
+  -D'lua_number2int(i,d)=__asm__("fldl %1\nfistpl %0":"=m"(i):"m"(d))' \
+#   -fomit-frame-pointer
 
 
-CONFIG = -D_POSIX_SOURCE $(DEBUG) $(OPTIMIZE) # -DUSE_POPEN
+CONFIG = $(DEBUG) $(OPTIMIZE) -DLUA_COMPATUPSYNTAX -DUSE_TMPNAME
 
 
 # Compilation parameters
@@ -39,7 +31,7 @@ CWARNS = -Wall -pedantic \
 #	-Wtraditional \
 #	-Wcast-qual
 
-CFLAGS = $(CONFIG) $(CWARNS) -ansi
+CFLAGS = $(CONFIG) $(CWARNS)  # -ansi
 
 
 # To make early versions
@@ -80,11 +72,12 @@ LIBOBJS = 	\
 	lmathlib.o \
  	liolib.o \
 	lstrlib.o \
-	ldblib.o
+	ldblib.o \
+	loadlib.o
 
 
 lua : lua.o liblua.a liblualib.a
-	$(CC) $(CFLAGS) -o $@ lua.o -L. -llua -llualib -lm
+	$(CC) $(CFLAGS) -o $@ lua.o -Wl,-E -L. -llua -llualib -lm -ldl 
 
 liblua.a : $(LUAOBJS)
 	$(AR) $(ARFLAGS) $@  $?
@@ -137,6 +130,7 @@ lmem.o: lmem.c lua.h ldebug.h lstate.h lobject.h llimits.h ltm.h lzio.h \
   ldo.h lmem.h
 lobject.o: lobject.c lua.h ldo.h lobject.h llimits.h lstate.h ltm.h \
   lzio.h lmem.h lstring.h lvm.h
+loadlib.o: loadlib.c lua.h lauxlib.h lualib.h
 lopcodes.o: lopcodes.c lua.h lobject.h llimits.h lopcodes.h
 lparser.o: lparser.c lua.h lcode.h llex.h lobject.h llimits.h lzio.h \
   lopcodes.h lparser.h ltable.h ldebug.h lstate.h ltm.h lfunc.h lmem.h \
