@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.126 2002/08/05 14:51:21 roberto Exp roberto $
+** $Id: ldebug.c,v 1.127 2002/08/06 15:32:22 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -21,7 +21,6 @@
 #include "lstring.h"
 #include "ltable.h"
 #include "ltm.h"
-#include "luadebug.h"
 #include "lvm.h"
 
 

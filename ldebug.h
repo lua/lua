@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.h,v 1.26 2002/08/05 14:51:21 roberto Exp roberto $
+** $Id: ldebug.h,v 1.27 2002/08/06 15:32:22 roberto Exp roberto $
 ** Auxiliary functions from Debug Interface module
 ** See Copyright Notice in lua.h
 */
@@ -9,7 +9,6 @@
 
 
 #include "lstate.h"
-#include "luadebug.h"
 
 
 #define pcRel(pc, p)	(cast(int, (pc) - (p)->code) - 1)

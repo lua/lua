@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.97 2002/07/10 20:49:01 roberto Exp roberto $
+** $Id: lua.c,v 1.98 2002/08/06 15:32:22 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -13,7 +13,6 @@
 #include "lua.h"
 
 #include "lauxlib.h"
-#include "luadebug.h"
 #include "lualib.h"
 
 

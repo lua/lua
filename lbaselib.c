@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.93 2002/08/06 15:32:22 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.94 2002/08/06 17:06:56 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -14,7 +14,6 @@
 #include "lua.h"
 
 #include "lauxlib.h"
-#include "luadebug.h"
 #include "lualib.h"
 
 
