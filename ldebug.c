@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.105 2002/03/25 17:47:14 roberto Exp roberto $
+** $Id: ldebug.c,v 1.106 2002/04/04 17:21:31 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -347,8 +347,7 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         break;
       }
       case OP_TFORLOOP: {
-        checkreg(pt, a+c);
-        checkreg(pt, a+2);  /* at least 2 for table generators */
+        checkreg(pt, a+2+c);
         check(pc+2 < pt->sizecode);  /* check skip */
         break;
       }

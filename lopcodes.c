@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.13 2002/03/21 20:32:22 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.14 2002/03/25 17:47:14 roberto Exp roberto $
 ** extracted automatically from lopcodes.h by mkprint.lua
 ** DO NOT EDIT
 ** See Copyright Notice in lua.h
@@ -49,6 +49,7 @@ const char *const luaP_opnames[] = {
   "RETURN",
   "FORLOOP",
   "TFORLOOP",
+  "OP_TFORPREP",
   "SETLIST",
   "SETLISTO",
   "CLOSE",
@@ -98,6 +99,7 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_RETURN */
  ,opmode(0,0,0,0, 0,0,iAsBc)		/* OP_FORLOOP */
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_TFORLOOP */
+ ,opmode(0,0,0,0, 0,0,iABC)		/* OP_TFORPREP */
  ,opmode(0,0,0,0, 0,0,iABc)		/* OP_SETLIST */
  ,opmode(0,0,0,0, 0,0,iABc)		/* OP_SETLISTO */
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_CLOSE */

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.173 2002/03/25 17:47:14 roberto Exp roberto $
+** $Id: lparser.c,v 1.174 2002/04/02 20:34:15 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -331,6 +331,7 @@ static void enterblock (FuncState *fs, BlockCnt *bl, int isbreakable) {
   bl->upval = 0;
   bl->previous = fs->bl;
   fs->bl = bl;
+  lua_assert(fs->freereg == fs->nactloc);
 }
 
 
@@ -1028,24 +1029,25 @@ static void fornum (LexState *ls, TString *varname, int line) {
 
 
 static void forlist (LexState *ls, TString *indexname) {
-  /* forlist -> NAME {,NAME} IN exp1 DO body */
+  /* forlist -> NAME {,NAME} IN explist1 DO body */
   FuncState *fs = ls->fs;
+  expdesc e;
   int nvars = 0;
   int prep;
   int base = fs->freereg;
-  new_localvarstr(ls, "(for generator)", 0);
-  new_localvar(ls, indexname, ++nvars);
+  new_localvarstr(ls, "(for generator)", nvars++);
+  new_localvarstr(ls, "(for state)", nvars++);
+  new_localvar(ls, indexname, nvars++);
   while (optional(ls, ',')) {
-    new_localvar(ls, str_checkname(ls), ++nvars);
+    new_localvar(ls, str_checkname(ls), nvars++);
     next(ls);
   }
   check(ls, TK_IN);
-  exp1(ls);  /* table */
-  luaK_checkstack(fs, 2);  /* at least two slots, to traverse tables */
-  luaK_reserveregs(fs, nvars);  /* registers for vars */
-  luaK_codeABC(fs, OP_LOADNIL, base+1, base+nvars, 0);
-  adjustlocalvars(ls, nvars+1);  /* scope for control variables */
-  luaK_codeABC(fs, OP_TFORLOOP, base, 0, nvars);
+  adjust_assign(ls, 3, explist1(ls, &e), &e);
+  luaK_reserveregs(fs, nvars - 3);  /* registers for other variables */
+  luaK_codeABC(fs, OP_TFORPREP, base, 0, 0);
+  luaK_codeABC(fs, OP_TFORLOOP, base, 0, nvars - 3);
+  adjustlocalvars(ls, nvars);  /* scope for all variables */
   prep = luaK_jump(fs);
   check(ls, TK_DO);
   block(ls);
