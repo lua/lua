@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.113 2002/03/20 12:54:08 roberto Exp roberto $
+** $Id: ltests.c,v 1.114 2002/03/25 17:47:14 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -349,8 +349,10 @@ static int unref (lua_State *L) {
 
 static int metatable (lua_State *L) {
   luaL_check_any(L, 1);
-  if (lua_isnone(L, 2))
-    lua_getmetatable(L, 1);
+  if (lua_isnone(L, 2)) {
+    if (lua_getmetatable(L, 1) == 0)
+      lua_pushnil(L);
+  }
   else {
     lua_settop(L, 2);
     luaL_check_type(L, 2, LUA_TTABLE);
@@ -627,7 +629,8 @@ static int testC (lua_State *L) {
       lua_setmetatable(L, getnum);
     }
     else if EQ("getmetatable") {
-      lua_getmetatable(L, getnum);
+      if (lua_getmetatable(L, getnum) == 0)
+        lua_pushnil(L);
     }
     else if EQ("type") {
       lua_pushstring(L, lua_typename(L, lua_type(L, getnum)));
@@ -682,7 +685,7 @@ static void fim (void) {
 void luaB_opentests (lua_State *L) {
   *cast(int **, L) = &islocked;  /* init lock */
   lua_state = L;  /* keep first state to be opened */
-  luaL_opennamedlib(L, "T", tests_funcs);
+  luaL_opennamedlib(L, "T", tests_funcs, 0);
   atexit(fim);
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.28 2002/03/08 19:10:32 roberto Exp roberto $
+** $Id: lcode.h,v 1.29 2002/03/21 20:31:43 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -26,7 +26,8 @@
 typedef enum BinOpr {
   OPR_ADD, OPR_SUB, OPR_MULT, OPR_DIV, OPR_POW,
   OPR_CONCAT,
-  OPR_NE, OPR_EQ, OPR_LT, OPR_LE, OPR_GT, OPR_GE,
+  OPR_NE, OPR_EQ,
+  OPR_LT, OPR_LE, OPR_GT, OPR_GE,
   OPR_AND, OPR_OR,
   OPR_NOBINOPR
 } BinOpr;
