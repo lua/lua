@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.14 1999/03/01 17:49:13 roberto Exp roberto $
+** $Id: lmem.c,v 1.15 1999/05/11 14:18:40 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -83,6 +83,7 @@ void *luaM_growaux (void *block, unsigned long nelems, int inc, int size,
 
 
 #define HEADER	(sizeof(double))
+#define MARKSIZE	32
 
 #define MARK    55
 
@@ -93,8 +94,9 @@ unsigned long totalmem = 0;
 static void *checkblock (void *block) {
   unsigned long *b = (unsigned long *)((char *)block - HEADER);
   unsigned long size = *b;
-  LUA_ASSERT(*(((char *)b)+size+HEADER) == MARK, 
-             "corrupted block");
+  int i;
+  for (i=0;i<MARKSIZE;i++)
+    LUA_ASSERT(*(((char *)b)+size+HEADER+i) == MARK+i, "corrupted block");
   numblocks--;
   totalmem -= size;
   return b;
@@ -102,7 +104,7 @@ static void *checkblock (void *block) {
 
 
 void *luaM_realloc (void *block, unsigned long size) {
-  unsigned long realsize = HEADER+size+1;
+  unsigned long realsize = HEADER+size+MARKSIZE;
   if (realsize != (size_t)realsize)
     lua_error("memory allocation error: block too big");
   if (size == 0) {
@@ -122,7 +124,7 @@ void *luaM_realloc (void *block, unsigned long size) {
   totalmem += size;
   numblocks++;
   *(unsigned long *)block = size;
-  *(((char *)block)+size+HEADER) = MARK;
+  { int i; for (i=0;i<MARKSIZE;i++) *(((char *)block)+size+HEADER+i) = MARK+i; }
   return (unsigned long *)((char *)block+HEADER);
 }
 
