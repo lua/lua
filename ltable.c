@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: ltable.c,v 1.93 2001/12/11 22:48:44 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -97,7 +97,7 @@ int luaH_index (lua_State *L, Table *t, const TObject *key) {
   int i;
   if (ttype(key) == LUA_TNIL) return -1;  /* first iteration */
   i = arrayindex(key);
-  if (0 <= i && i < t->sizearray) {  /* is `key' inside array part? */
+  if (0 <= i && i <= t->sizearray) {  /* is `key' inside array part? */
     return i-1;  /* yes; that's the index (corrected to C) */
   }
   else {
