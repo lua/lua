@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.61 2000/03/30 17:19:48 roberto Exp roberto $
+** $Id: liolib.c,v 1.62 2000/04/24 21:05:11 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -537,7 +537,7 @@ static void errorfb (lua_State *L) {
   char buff[MAXMESSAGE];
   int level = 1;  /* skip level 0 (it's this function) */
   lua_Debug ar;
-  lua_Object alertfunc = lua_rawgetglobal(L, "_ALERT");
+  lua_Object alertfunc = lua_rawgetglobal(L, LUA_ALERT);
   sprintf(buff, "error: %.200s\n", lua_getstring(L, lua_getparam(L, 1)));
   while (lua_getstack(L, level++, &ar)) {
     char buffchunk[60];
@@ -585,7 +585,7 @@ static void errorfb (lua_State *L) {
 
 
 static const struct luaL_reg iolib[] = {
-  {"_ERRORMESSAGE", errorfb},
+  {LUA_ERRORMESSAGE, errorfb},
   {"clock",     io_clock},
   {"date",     io_date},
   {"debug",    io_debug},

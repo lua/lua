@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.107 2000/04/25 16:55:09 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.108 2000/05/08 19:32:53 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -106,7 +106,7 @@ void luaB__ALERT (lua_State *L) {
 ** The library `liolib' redefines _ERRORMESSAGE for better error information.
 */
 void luaB__ERRORMESSAGE (lua_State *L) {
-  lua_Object al = lua_rawgetglobal(L, "_ALERT");
+  lua_Object al = lua_rawgetglobal(L, LUA_ALERT);
   if (lua_isfunction(L, al)) {  /* avoid error loop if _ALERT is not defined */
     const char *s = luaL_check_string(L, 1);
     char *buff = luaL_openspace(L, strlen(s)+sizeof("error: \n"));
@@ -301,9 +301,9 @@ void luaB_call (lua_State *L) {
   int narg = (int)getnarg(L, arg);
   int i, status;
   if (err != LUA_NOOBJECT) {  /* set new error method */
-    lua_Object oldem = lua_getglobal(L, "_ERRORMESSAGE");
+    lua_Object oldem = lua_getglobal(L, LUA_ERRORMESSAGE);
     lua_pushobject(L, err);
-    lua_setglobal(L, "_ERRORMESSAGE");
+    lua_setglobal(L, LUA_ERRORMESSAGE);
     err = oldem;
   }
   /* push arg[1...n] */
@@ -313,7 +313,7 @@ void luaB_call (lua_State *L) {
   status = lua_callfunction(L, f);
   if (err != LUA_NOOBJECT) {  /* restore old error method */
     lua_pushobject(L, err);
-    lua_setglobal(L, "_ERRORMESSAGE");
+    lua_setglobal(L, LUA_ERRORMESSAGE);
   }
   if (status != 0) {  /* error in call? */
     if (strchr(options, 'x')) {
@@ -596,8 +596,8 @@ static void deprecated_funcs (lua_State *L) {
 /* }====================================================== */
 
 static const struct luaL_reg builtin_funcs[] = {
-  {"_ALERT", luaB__ALERT},
-  {"_ERRORMESSAGE", luaB__ERRORMESSAGE},
+  {LUA_ALERT, luaB__ALERT},
+  {LUA_ERRORMESSAGE, luaB__ERRORMESSAGE},
   {"call", luaB_call},
   {"collectgarbage", luaB_collectgarbage},
   {"copytagmethods", luaB_copytagmethods},

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.73 2000/04/14 18:12:35 roberto Exp roberto $
+** $Id: ldo.c,v 1.74 2000/05/08 19:32:53 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -223,7 +223,7 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
 
 
 static void message (lua_State *L, const char *s) {
-  const TObject *em = luaH_getglobal(L, "_ERRORMESSAGE");
+  const TObject *em = luaH_getglobal(L, LUA_ERRORMESSAGE);
   if (*luaO_typename(em) == 'f') {
     *L->top = *em;
     incr_top;
