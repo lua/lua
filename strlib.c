@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.1 1993/12/17 18:41:19 celes Exp celes $";
+char *rcs_strlib="$Id: strlib.c,v 1.2 1994/03/28 15:14:02 celes Exp celes $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -13,6 +13,7 @@ char *rcs_strlib="$Id: strlib.c,v 1.1 1993/12/17 18:41:19 celes Exp celes $";
 
 
 #include "lua.h"
+#include "lualib.h"
 
 /*
 ** Return the position of the first caracter of a substring into a string
