@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.240 2002/06/20 20:41:46 roberto Exp roberto $
+** $Id: lvm.c,v 1.241 2002/06/24 13:08:45 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -182,13 +182,6 @@ static int call_binTM (lua_State *L, const TObject *p1, const TObject *p2,
 }
 
 
-static void call_arith (lua_State *L, StkId p1, const TObject *p2,
-                        StkId res, TMS event) {
-  if (!call_binTM(L, p1, p2, res, event))
-    luaG_aritherror(L, p1, p2);
-}
-
-
 static int luaV_strcmp (const TString *ls, const TString *rs) {
   const char *l = getstr(ls);
   size_t ll = ls->tsv.len;
@@ -300,23 +293,32 @@ void luaV_concat (lua_State *L, int total, int last) {
 }
 
 
-static void powOp (lua_State *L, StkId ra, StkId rb, StkId rc) {
-  const TObject *b = rb;
-  const TObject *c = rc;
-  ptrdiff_t res = savestack(L, ra);
+static void Arith (lua_State *L, StkId ra, StkId rb, StkId rc, TMS op) {
   TObject tempb, tempc;
-  if (tonumber(b, &tempb) && tonumber(c, &tempc)) {
-    TObject f, o;
-    setsvalue(&o, luaS_newliteral(L, "pow"));
-    f = *luaV_gettable(L, gt(L), &o);
-    if (ttype(&f) != LUA_TFUNCTION)
-      luaG_runerror(L, "`pow' (for `^' operator) is not a function");
-    callTMres(L, &f, b, c);
-    ra = restorestack(L, res);  /* previous call may change stack */
-    setobj(ra, L->top);
+  const TObject *b, *c;
+  if ((b = luaV_tonumber(rb, &tempb)) != NULL &&
+      (c = luaV_tonumber(rc, &tempc)) != NULL) {
+    switch (op) {
+      case TM_ADD: setnvalue(ra, nvalue(b) + nvalue(c)); break;
+      case TM_SUB: setnvalue(ra, nvalue(b) - nvalue(c)); break;
+      case TM_MUL: setnvalue(ra, nvalue(b) * nvalue(c)); break;
+      case TM_DIV: setnvalue(ra, nvalue(b) / nvalue(c)); break;
+      case TM_POW: {
+        const TObject *f = luaH_getstr(hvalue(registry(L)),
+                                       G(L)->tmname[TM_POW]);
+        ptrdiff_t res = savestack(L, ra);
+        if (ttype(f) != LUA_TFUNCTION)
+          luaG_runerror(L, "`pow' (for `^' operator) is not a function");
+        callTMres(L, f, b, c);
+        ra = restorestack(L, res);  /* previous call may change stack */
+        setobj(ra, L->top);
+        break;
+      }
+      default: lua_assert(0); break;
+    }
   }
-  else
-    call_arith(L, rb, rc, ra, TM_POW);
+  else if (!call_binTM(L, rb, rc, ra, op))
+    luaG_aritherror(L, rb, rc);
 }
 
 
@@ -334,15 +336,6 @@ static void powOp (lua_State *L, StkId ra, StkId rb, StkId rc) {
 			base+GETARG_C(i) : \
 			k+GETARG_C(i)-MAXSTACK)
 #define KBx(i)	(k+GETARG_Bx(i))
-
-#define Arith(op, optm)	{ \
-  const TObject *b = RB(i); const TObject *c = RKC(i);		\
-  TObject tempb, tempc; \
-  if (tonumber(b, &tempb) && tonumber(c, &tempc)) { \
-    setnvalue(ra, nvalue(b) op nvalue(c));		\
-  } else		\
-    call_arith(L, RB(i), RKC(i), ra, optm); \
-}
 
 
 #define dojump(pc, i)	((pc) += (i))
@@ -435,34 +428,59 @@ StkId luaV_execute (lua_State *L) {
         break;
       }
       case OP_ADD: {
-        Arith( + , TM_ADD);
+        StkId rb = RB(i);
+        StkId rc = RKC(i);
+        if (ttype(rb) == LUA_TNUMBER && ttype(rc) == LUA_TNUMBER) {
+          setnvalue(ra, nvalue(rb) + nvalue(rc));
+        }
+        else
+          Arith(L, ra, rb, rc, TM_ADD);
         break;
       }
       case OP_SUB: {
-        Arith( - , TM_SUB);
+        StkId rb = RB(i);
+        StkId rc = RKC(i);
+        if (ttype(rb) == LUA_TNUMBER && ttype(rc) == LUA_TNUMBER) {
+          setnvalue(ra, nvalue(rb) - nvalue(rc));
+        }
+        else
+          Arith(L, ra, rb, rc, TM_SUB);
         break;
       }
       case OP_MUL: {
-        Arith( * , TM_MUL);
+        StkId rb = RB(i);
+        StkId rc = RKC(i);
+        if (ttype(rb) == LUA_TNUMBER && ttype(rc) == LUA_TNUMBER) {
+          setnvalue(ra, nvalue(rb) * nvalue(rc));
+        }
+        else
+          Arith(L, ra, rb, rc, TM_MUL);
         break;
       }
       case OP_DIV: {
-        Arith( / , TM_DIV);
+        StkId rb = RB(i);
+        StkId rc = RKC(i);
+        if (ttype(rb) == LUA_TNUMBER && ttype(rc) == LUA_TNUMBER) {
+          setnvalue(ra, nvalue(rb) / nvalue(rc));
+        }
+        else
+          Arith(L, ra, rb, rc, TM_DIV);
         break;
       }
       case OP_POW: {
-        powOp(L, ra, RB(i), RKC(i));
+        Arith(L, ra, RB(i), RKC(i), TM_POW);
         break;
       }
       case OP_UNM: {
         const TObject *rb = RB(i);
-        if (tonumber(rb, ra)) {
+        TObject temp;
+        if (tonumber(rb, &temp)) {
           setnvalue(ra, -nvalue(rb));
         }
         else {
-          TObject temp;
           setnilvalue(&temp);
-          call_arith(L, RB(i), &temp, ra, TM_UNM);
+          if (!call_binTM(L, RB(i), &temp, ra, TM_UNM))
+            luaG_aritherror(L, RB(i), &temp);
         }
         break;
       }
