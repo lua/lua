@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.88 2002/06/26 20:36:17 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.89 2002/07/01 19:23:58 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -571,11 +571,11 @@ static void base_open (lua_State *L) {
   /* `newproxy' needs a weaktable as upvalue */
   lua_pushliteral(L, "newproxy");
   lua_newtable(L);  /* new table `w' */
-  lua_newtable(L);  /* create `w's metatable */
+  lua_pushvalue(L, -1);  /* `w' will be its own metatable */
+  lua_setmetatable(L, -2);
   lua_pushliteral(L, "__mode");
   lua_pushliteral(L, "k");
   lua_rawset(L, -3);  /* metatable(w).__mode = "k" */
-  lua_setmetatable(L, -2);
   lua_pushcclosure(L, luaB_newproxy, 1);
   lua_rawset(L, -3);  /* set global `newproxy' */
   lua_rawset(L, -1);  /* set global _G */

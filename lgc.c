@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.139 2002/06/25 19:17:42 roberto Exp roberto $
+** $Id: lgc.c,v 1.140 2002/07/01 17:06:58 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -263,15 +263,16 @@ static void propagatemarks (GCState *st) {
 
 static int hasmark (const TObject *o) {
   switch (ttype(o)) {
-    case LUA_TSTRING:
-      return tsvalue(o)->tsv.marked;
     case LUA_TUSERDATA:
       return isudmarked(uvalue(o));
     case LUA_TTABLE:
       return ismarked(hvalue(o));
     case LUA_TFUNCTION:
       return clvalue(o)->c.marked;
-    default:  /* number, nil, boolean */
+    case LUA_TSTRING:
+      strmark(tsvalue(o));  /* strings are `values', so are never weak */
+      /* go through */
+    default:  /* number, nil, boolean, udataval */
       return 1;
   }
 }
