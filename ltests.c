@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.14 2004/10/06 18:34:16 roberto Exp $
+** $Id: ltests.c,v 2.15 2004/11/01 15:06:50 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -200,7 +200,6 @@ static void checktable (global_State *g, Table *h) {
   GCObject *hgc = obj2gco(h);
   if (h->metatable)
     checkobjref(g, hgc, h->metatable);
-  lua_assert(h->lsizenode || h->node == g->dummynode);
   mode = gfasttm(g, h->metatable, TM_MODE);
   if (mode && ttisstring(mode)) {  /* is there a weak mode? */
     weakkey = (strchr(svalue(mode), 'k') != NULL);
@@ -542,8 +541,8 @@ static int table_query (lua_State *L) {
   t = hvalue(obj_at(L, 1));
   if (i == -1) {
     lua_pushinteger(L, t->sizearray);
-    lua_pushinteger(L, sizenode(t));
-    lua_pushinteger(L, t->firstfree - t->node);
+    lua_pushinteger(L, t->node == &luaH_dummynode ? 0 : sizenode(t));
+    lua_pushinteger(L, t->lastfree - t->node);
   }
   else if (i < t->sizearray) {
     lua_pushinteger(L, i);

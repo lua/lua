@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.h,v 2.3 2004/10/06 18:34:16 roberto Exp roberto $
+** $Id: ltable.h,v 2.4 2005/01/04 15:55:12 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -17,6 +17,8 @@
 
 #define key2tval(n)	(cast(const TValue *, gkey(n)))
 
+
+extern const Node luaH_dummynode;
 
 const TValue *luaH_getnum (Table *t, int key);
 TValue *luaH_setnum (lua_State *L, Table *t, int key);

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.7 2004/11/01 15:06:50 roberto Exp roberto $
+** $Id: lobject.h,v 2.8 2004/12/04 18:10:22 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -330,7 +330,7 @@ typedef struct Table {
   struct Table *metatable;
   TValue *array;  /* array part */
   Node *node;
-  Node *firstfree;  /* this position is free; all positions after it are full */
+  Node *lastfree;  /* any free position is before this position */
   GCObject *gclist;
   int sizearray;  /* size of `array' array */
 } Table;
@@ -350,6 +350,8 @@ typedef struct Table {
 
 
 extern const TValue luaO_nilobject;
+
+#define ceillog2(x)	(luaO_log2((x)-1) + 1)
 
 int luaO_log2 (unsigned int x);
 int luaO_int2fb (unsigned int x);

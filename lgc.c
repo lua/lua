@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.18 2004/12/06 17:53:42 roberto Exp roberto $
+** $Id: lgc.c,v 2.19 2004/12/13 12:15:11 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -63,7 +63,7 @@
 
 
 static void removeentry (Node *n) {
-  setnilvalue(gval(n));  /* remove corresponding value ... */
+  lua_assert(ttisnil(gval(n)));
   if (iscollectable(gkey(n)))
     setttype(gkey(n), LUA_TDEADKEY);  /* dead key; remove it */
 }
@@ -162,7 +162,6 @@ static int traversetable (global_State *g, Table *h) {
   const TValue *mode;
   if (h->metatable)
     markobject(g, h->metatable);
-  lua_assert(h->lsizenode || h->node == g->dummynode);
   mode = gfasttm(g, h->metatable, TM_MODE);
   if (mode && ttisstring(mode)) {  /* is there a weak mode? */
     weakkey = (strchr(svalue(mode), 'k') != NULL);
@@ -368,8 +367,10 @@ static void cleartable (GCObject *l) {
     while (i--) {
       Node *n = gnode(h, i);
       if (!ttisnil(gval(n)) &&  /* non-empty entry? */
-          (iscleared(key2tval(n), 1) || iscleared(gval(n), 0)))
+          (iscleared(key2tval(n), 1) || iscleared(gval(n), 0))) {
+        setnilvalue(gval(n));  /* remove value ... */
         removeentry(n);  /* remove entry from table */
+      }
     }
     l = h->gclist;
   }

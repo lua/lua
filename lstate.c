@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.19 2004/12/13 12:15:11 roberto Exp $
+** $Id: lstate.c,v 2.20 2005/01/04 15:55:12 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -189,9 +189,6 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->grayagain = NULL;
   g->weak = NULL;
   g->tmudata = NULL;
-  setnilvalue(gkey(g->dummynode));
-  setnilvalue(gval(g->dummynode));
-  gnext(g->dummynode) = NULL;
   g->totalbytes = sizeof(LG);
   g->gcpace = GCDIV;
   g->incgc = 1;
