@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.40 1999/03/01 17:49:04 roberto Exp roberto $
+** $Id: lapi.c,v 1.41 1999/03/04 21:17:26 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -620,10 +620,10 @@ static int checkfunc (TObject *o)
 char *lua_getobjname (lua_Object o, char **name)
 { /* try to find a name for given function */
   set_normalized(L->stack.top, Address(o)); /* to be accessed by "checkfunc" */
-  if ((*name = luaT_travtagmethods(checkfunc)) != NULL)
-    return "tag-method";
-  else if ((*name = luaS_travsymbol(checkfunc)) != NULL)
+  if ((*name = luaS_travsymbol(checkfunc)) != NULL)
     return "global";
+  else if ((*name = luaT_travtagmethods(checkfunc)) != NULL)
+    return "tag-method";
   else return "";
 }
 
