@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.107 2000/05/22 18:44:46 roberto Exp roberto $
+** $Id: lvm.c,v 1.108 2000/05/24 13:54:49 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -282,7 +282,8 @@ static void strconc (lua_State *L, int total, StkId top) {
       call_binTM(L, top, IM_CONCAT, "unexpected type for concatenation");
     else if (tsvalue(top-1)->u.s.len > 0) {  /* if len=0, do nothing */
       /* at least two string values; get as many as possible */
-      lint32 tl = tsvalue(top-1)->u.s.len + tsvalue(top-2)->u.s.len;
+      lint32 tl = (lint32)tsvalue(top-1)->u.s.len + 
+                  (lint32)tsvalue(top-2)->u.s.len;
       char *buffer;
       int i;
       while (n < total && !tostring(L, top-n-1)) {  /* collect total length */
@@ -293,7 +294,7 @@ static void strconc (lua_State *L, int total, StkId top) {
       buffer = luaL_openspace(L, tl);
       tl = 0;
       for (i=n; i>0; i--) {  /* concat all strings */
-        lint32 l = tsvalue(top-i)->u.s.len;
+        size_t l = tsvalue(top-i)->u.s.len;
         memcpy(buffer+tl, tsvalue(top-i)->str, l);
         tl += l;
       }
