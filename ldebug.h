@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.h,v 1.22 2002/06/18 15:19:27 roberto Exp roberto $
+** $Id: ldebug.h,v 1.23 2002/06/24 15:07:21 roberto Exp roberto $
 ** Auxiliary functions from Debug Interface module
 ** See Copyright Notice in lua.h
 */
@@ -15,6 +15,13 @@
 #define pcRel(pc, p)	(cast(int, (pc) - (p)->code) - 1)
 
 #define getline(f,pc)	(((f)->lineinfo) ? (f)->lineinfo[pc] : 0)
+
+#define resethookcount(L) \
+	(L->hookcount = (1 << lua_getmaskcount(L->hookmask)) >> 1)
+
+#define setallowhook(L,cond)	((L->hookmask) = ((L->hookmask) & ~1) | (cond))
+#define allowhook(L)		((L->hookmask) & 1)
+
 
 void luaG_typeerror (lua_State *L, const TObject *o, const char *opname);
 void luaG_concaterror (lua_State *L, StkId p1, StkId p2);

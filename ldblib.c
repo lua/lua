@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.60 2002/06/18 17:42:52 roberto Exp roberto $
+** $Id: ldblib.c,v 1.61 2002/06/25 19:16:44 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -108,65 +108,70 @@ static int setlocal (lua_State *L) {
 
 
 
-static const char KEY_CALLHOOK = 'c';
-static const char KEY_LINEHOOK = 'l';
+static const char KEY_HOOK = 'h';
 
 
-static void hookf (lua_State *L, void *key) {
-  lua_pushudataval(L, key);
+static void hookf (lua_State *L, lua_Debug *ar) {
+  static const char *const hooknames[] = {"call", "return", "line", "count"};
+  lua_pushudataval(L, (void *)&KEY_HOOK);
   lua_rawget(L, LUA_REGISTRYINDEX);
   if (lua_isfunction(L, -1)) {
-    lua_pushvalue(L, -2);  /* original argument (below function) */
-    lua_call(L, 1, 0);
+    lua_pushstring(L, hooknames[(int)ar->event]);
+    if (ar->currentline >= 0) lua_pushnumber(L, ar->currentline);
+    else lua_pushnil(L);
+    lua_assert(lua_getinfo(L, "lS", ar));
+    lua_call(L, 2, 0);
   }
   else
     lua_pop(L, 1);  /* pop result from gettable */
 }
 
 
-static void callf (lua_State *L, lua_Debug *ar) {
-  lua_pushstring(L, ar->event);
-  lua_assert(lua_getinfo(L, "lS", ar) && ar->currentline == -1);
-  hookf(L, (void *)&KEY_CALLHOOK);
+static int makemask (const char *smask, int count) {
+  int mask = 0;
+  if (strchr(smask, 'c')) mask |= LUA_MASKCALL;
+  if (strchr(smask, 'r')) mask |= LUA_MASKRET;
+  if (strchr(smask, 'l')) mask |= LUA_MASKLINE;
+  return mask | lua_maskcount(count);
 }
 
 
-static void linef (lua_State *L, lua_Debug *ar) {
-  lua_pushnumber(L, ar->currentline);
-  lua_assert((ar->currentline = ar->linedefined = -1,
-                lua_getinfo(L, "lS", ar) &&
-                ar->currentline == lua_tonumber(L, -1) &&
-                ar->linedefined >= 0));
-  hookf(L, (void *)&KEY_LINEHOOK);
+static char *unmakemask (int mask, char *smask) {
+  int i = 0;
+  if (mask & LUA_MASKCALL) smask[i++] = 'c';
+  if (mask & LUA_MASKRET) smask[i++] = 'r';
+  if (mask & LUA_MASKLINE) smask[i++] = 'l';
+  smask[i] = '\0';
+  return smask;
 }
 
 
-static void sethook (lua_State *L, void *key, lua_Hook hook,
-                     lua_Hook (*sethookf)(lua_State * L, lua_Hook h)) {
-  lua_settop(L, 1);
-  if (lua_isnoneornil(L, 1))
-    (*sethookf)(L, NULL);
-  else if (lua_isfunction(L, 1))
-    (*sethookf)(L, hook);
-  else
-    luaL_argerror(L, 1, "function expected");
-  lua_pushudataval(L, key);
-  lua_rawget(L, LUA_REGISTRYINDEX);   /* get old value */
-  lua_pushudataval(L, key);
+static int sethook (lua_State *L) {
+  if (lua_isnoneornil(L, 1)) {
+    lua_settop(L, 1);
+    lua_sethook(L, NULL, 0);  /* turn off hooks */
+  }
+  else {
+    const char *smask = luaL_check_string(L, 2);
+    int count = luaL_opt_int(L, 3, 0);
+    luaL_check_type(L, 1, LUA_TFUNCTION);
+    lua_sethook(L, hookf, makemask(smask, count));
+  }
+  lua_pushudataval(L, (void *)&KEY_HOOK);
   lua_pushvalue(L, 1);
-  lua_rawset(L, LUA_REGISTRYINDEX);  /* set new value */
+  lua_rawset(L, LUA_REGISTRYINDEX);  /* set new hook */
+  return 0;
 }
 
 
-static int setcallhook (lua_State *L) {
-  sethook(L, (void *)&KEY_CALLHOOK, callf, lua_setcallhook);
-  return 1;
-}
-
-
-static int setlinehook (lua_State *L) {
-  sethook(L, (void *)&KEY_LINEHOOK, linef, lua_setlinehook);
-  return 1;
+static int gethook (lua_State *L) {
+  char buff[5];
+  int mask = lua_gethookmask(L);
+  lua_pushudataval(L, (void *)&KEY_HOOK);
+  lua_rawget(L, LUA_REGISTRYINDEX);   /* get hook */
+  lua_pushstring(L, unmakemask(mask, buff));
+  lua_pushnumber(L, lua_getmaskcount(mask));
+  return 3;
 }
 
 
@@ -245,8 +250,8 @@ static int errorfb (lua_State *L) {
 static const luaL_reg dblib[] = {
   {"getlocal", getlocal},
   {"getinfo", getinfo},
-  {"setcallhook", setcallhook},
-  {"setlinehook", setlinehook},
+  {"gethook", gethook},
+  {"sethook", sethook},
   {"setlocal", setlocal},
   {"debug", debug},
   {"traceback", errorfb},

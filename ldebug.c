@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.122 2002/06/20 20:39:44 roberto Exp roberto $
+** $Id: ldebug.c,v 1.123 2002/06/24 15:07:21 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -53,26 +53,31 @@ static int currentline (lua_State *L, CallInfo *ci) {
 }
 
 
-LUA_API lua_Hook lua_setcallhook (lua_State *L, lua_Hook func) {
-  lua_Hook oldhook;
-  lua_lock(L);
-  oldhook = L->callhook;
-  L->callhook = func;
-  lua_unlock(L);
-  return oldhook;
-}
-
-
-LUA_API lua_Hook lua_setlinehook (lua_State *L, lua_Hook func) {
+LUA_API int lua_sethook (lua_State *L, lua_Hook func, int mask) {
   CallInfo *ci;
-  lua_Hook oldhook;
+  int allow;
   lua_lock(L);
-  oldhook = L->linehook;
-  L->linehook = func;
+  allow = allowhook(L);
+  if (func == NULL) mask = 0;
+  else if (mask == 0) func = NULL;
+  L->hook = func;
+  L->hookmask = mask;
+  setallowhook(L, allow);
+  resethookcount(L);
   for (ci = L->base_ci; ci <= L->ci; ci++)
     currentpc(L, ci);  /* update `savedpc' */
   lua_unlock(L);
-  return oldhook;
+  return 1;
+}
+
+
+LUA_API lua_Hook lua_gethook (lua_State *L) {
+  return L->hook;
+}
+
+
+LUA_API int lua_gethookmask (lua_State *L) {
+  return L->hookmask;
 }
 
 
@@ -395,6 +400,10 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
   }
   return pt->code[last];
 }
+
+#undef check
+#undef checkjump
+#undef checkreg
 
 /* }====================================================== */
 

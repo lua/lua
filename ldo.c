@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.184 2002/06/26 16:37:23 roberto Exp roberto $
+** $Id: ldo.c,v 1.185 2002/07/04 12:29:32 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -135,40 +135,29 @@ static void luaD_openstack (lua_State *L, StkId pos) {
 }
 
 
-static void dohook (lua_State *L, lua_Debug *ar, lua_Hook hook) {
-  ptrdiff_t top = savestack(L, L->top);
-  ptrdiff_t ci_top = savestack(L, L->ci->top);
-  ar->i_ci = L->ci - L->base_ci;
-  luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
-  L->ci->top = L->top + LUA_MINSTACK;
-  L->allowhooks = 0;  /* cannot call hooks inside a hook */
-  lua_unlock(L);
-  (*hook)(L, ar);
-  lua_lock(L);
-  lua_assert(L->allowhooks == 0);
-  L->allowhooks = 1;
-  L->ci->top = restorestack(L, ci_top);
-  L->top = restorestack(L, top);
-}
-
-
-void luaD_lineHook (lua_State *L, int line) {
-  if (L->allowhooks) {
-    lua_Debug ar;
-    ar.event = "line";
-    ar.currentline = line;
-    dohook(L, &ar, L->linehook);
-  }
-}
-
-
-static void luaD_callHook (lua_State *L, lua_Hook callhook, const char *event) {
-  if (L->allowhooks) {
+void luaD_callhook (lua_State *L, lua_Hookevent event, int line) {
+  lua_Hook hook = L->hook;
+  if (hook && allowhook(L)) {
+    ptrdiff_t top = savestack(L, L->top);
+    ptrdiff_t ci_top = savestack(L, L->ci->top);
     lua_Debug ar;
     ar.event = event;
-    L->ci->pc = NULL;  /* function is not active */
-    L->ci->top = L->ci->base;  /* `top' may not have a valid value yet */ 
-    dohook(L, &ar, callhook);
+    ar.currentline = line;
+    ar.i_ci = L->ci - L->base_ci;
+    if (event <= LUA_HOOKRET) {  /* `call' or `return' event? */
+      L->ci->pc = NULL;  /* function is not active */
+      L->ci->top = L->ci->base;  /* `top' may not have a valid value yet */ 
+    }
+    luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
+    L->ci->top = L->top + LUA_MINSTACK;
+    setallowhook(L, 0);  /* cannot call hooks inside a hook */
+    lua_unlock(L);
+    (*hook)(L, &ar);
+    lua_lock(L);
+    lua_assert(!allowhook(L));
+    setallowhook(L, 1);
+    L->ci->top = restorestack(L, ci_top);
+    L->top = restorestack(L, top);
   }
 }
 
@@ -219,8 +208,8 @@ StkId luaD_precall (lua_State *L, StkId func) {
   if (ttype(func) != LUA_TFUNCTION) /* `func' is not a function? */
     func = tryfuncTM(L, func);  /* check the `function' tag method */
   cl = &clvalue(func)->l;
-  if (L->callhook) {
-    luaD_callHook(L, L->callhook, "call");
+  if (L->hookmask & LUA_MASKCALL) {
+    luaD_callhook(L, LUA_HOOKCALL, -1);
     ci = L->ci;  /* previous call may realocate `ci' */
   }
   if (!cl->isC) {  /* Lua function? prepare its call */
@@ -252,9 +241,9 @@ StkId luaD_precall (lua_State *L, StkId func) {
 
 void luaD_poscall (lua_State *L, int wanted, StkId firstResult) { 
   StkId res;
-  if (L->callhook) {
+  if (L->hookmask & LUA_MASKRET) {
     ptrdiff_t fr = savestack(L, firstResult);  /* next call may change stack */
-    luaD_callHook(L, L->callhook, "return");
+    luaD_callhook(L, LUA_HOOKRET, -1);
     firstResult = restorestack(L, fr);
   }
   res = L->ci->base - 1;  /* res == final position of 1st result */
@@ -483,7 +472,7 @@ int luaD_runprotected (lua_State *L, Pfunc f, TObject *ud) {
   struct lua_longjmp lj;
   lj.ci = L->ci;
   lj.top = L->top;
-  lj.allowhooks = L->allowhooks;
+  lj.allowhooks = allowhook(L);
   lj.status = 0;
   lj.err = ud;
   lj.previous = L->errorJmp;  /* chain new error handler */
@@ -493,7 +482,7 @@ int luaD_runprotected (lua_State *L, Pfunc f, TObject *ud) {
   else {  /* an error occurred */
     L->ci = lj.ci;  /* restore the state */
     L->top = lj.top;
-    L->allowhooks = lj.allowhooks;
+    setallowhook(L, lj.allowhooks);
     restore_stack_limit(L);
   }
   L->errorJmp = lj.previous;  /* restore old error handler */

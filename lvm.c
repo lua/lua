@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.243 2002/06/24 15:07:21 roberto Exp roberto $
+** $Id: lvm.c,v 1.244 2002/07/05 18:27:39 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -69,17 +69,28 @@ int luaV_tostring (lua_State *L, TObject *obj) {
 
 
 static void traceexec (lua_State *L) {
-  CallInfo *ci = L->ci;
-  Proto *p = ci_func(ci)->l.p;
-  int newline = getline(p, pcRel(*ci->pc, p));
-  if (pcRel(*ci->pc, p) == 0)  /* tracing may be starting now? */
-    ci->savedpc = *ci->pc;  /* initialize `savedpc' */
-  /* calls linehook when enters a new line or jumps back (loop) */
-  if (*ci->pc <= ci->savedpc || newline != getline(p, pcRel(ci->savedpc, p))) {
-    luaD_lineHook(L, newline);
-    ci = L->ci;  /* previous call may reallocate `ci' */
+  int mask = L->hookmask;
+  if (mask >= LUA_MASKCOUNT) {  /* instruction hook set? */
+    if (L->hookcount == 0) {
+      luaD_callhook(L, LUA_HOOKCOUNT, -1);
+      resethookcount(L);
+      return;
+    }
   }
-  ci->savedpc = *ci->pc;
+  if (mask & LUA_MASKLINE) {
+    CallInfo *ci = L->ci;
+    Proto *p = ci_func(ci)->l.p;
+    int newline = getline(p, pcRel(*ci->pc, p));
+    if (pcRel(*ci->pc, p) == 0)  /* tracing may be starting now? */
+      ci->savedpc = *ci->pc;  /* initialize `savedpc' */
+    /* calls linehook when enters a new line or jumps back (loop) */
+    if (*ci->pc <= ci->savedpc ||
+        newline != getline(p, pcRel(ci->savedpc, p))) {
+      luaD_callhook(L, LUA_HOOKLINE, newline);
+      ci = L->ci;  /* previous call may reallocate `ci' */
+    }
+    ci->savedpc = *ci->pc;
+  }
 }
 
 
@@ -370,8 +381,9 @@ StkId luaV_execute (lua_State *L) {
   for (;;) {
     const Instruction i = *pc++;
     StkId ra;
-    if (L->linehook)
-      traceexec(L);
+    if (L->hookmask >= LUA_MASKLINE &&
+        (--L->hookcount == 0 || L->hookmask & LUA_MASKLINE))
+        traceexec(L);
     ra = RA(i);
     lua_assert(L->top <= L->stack + L->stacksize && L->top >= L->ci->base);
     lua_assert(L->top == L->ci->top ||

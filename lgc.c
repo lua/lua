@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.140 2002/07/01 17:06:58 roberto Exp roberto $
+** $Id: lgc.c,v 1.141 2002/07/04 17:57:42 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -451,8 +451,8 @@ static void do1gcTM (lua_State *L, Udata *udata) {
 
 
 static void callGCTM (lua_State *L) {
-  int oldah = L->allowhooks;
-  L->allowhooks = 0;  /* stop debug hooks during GC tag methods */
+  int oldah = allowhook(L);
+  setallowhook(L, 0);  /* stop debug hooks during GC tag methods */
   L->top++;  /* reserve space to keep udata while runs its gc method */
   while (G(L)->tmudata != NULL) {
     Udata *udata = G(L)->tmudata;
@@ -465,7 +465,7 @@ static void callGCTM (lua_State *L) {
     do1gcTM(L, udata);
   }
   L->top--;
-  L->allowhooks = oldah;  /* restore hooks */
+  setallowhook(L, oldah);  /* restore hooks */
 }
 
 
