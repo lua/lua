@@ -1,4 +1,4 @@
-# $Id: makefile,v 1.19 1996/02/07 18:14:38 roberto Exp roberto $
+# $Id: makefile,v 1.20 1996/02/13 17:30:39 roberto Exp roberto $
 
 #configuration
 
@@ -36,7 +36,7 @@ LIBOBJS = 	\
 lua : lua.o lua.a lualib.a
 	$(CC) $(CFLAGS) -o $@ lua.o lua.a lualib.a -lm
 
-lua.a : parser.o $(LUAOBJS)
+lua.a : $(LUAOBJS)
 	$(AR) $(ARFLAGS) $@  $?
 	ranlib lua.a
 
