@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.129 2002/07/09 14:58:28 roberto Exp roberto $
+** $Id: ltests.c,v 1.130 2002/07/17 16:25:13 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -172,7 +172,7 @@ void luaI_printcode (Proto *pt, int size) {
     char buff[100];
     printf("%s\n", buildop(pt, pc, buff));
   }
-printf("-------\n");
+  printf("-------\n");
 }
 #endif
 
@@ -299,9 +299,9 @@ static int table_query (lua_State *L) {
     lua_pushnil(L); 
   }
   else if ((i -= t->sizearray) < sizenode(t)) {
-    if (ttype(val(node(t, i))) != LUA_TNIL ||
-        ttype(key(node(t, i))) == LUA_TNIL ||
-        ttype(key(node(t, i))) == LUA_TNUMBER) {
+    if (!ttisnil(val(node(t, i))) ||
+        ttisnil(key(node(t, i))) ||
+        ttisnumber(key(node(t, i)))) {
       luaA_pushobject(L, key(node(t, i)));
     }
     else
@@ -335,34 +335,6 @@ static int string_query (lua_State *L) {
     return n;
   }
   return 0;
-}
-
-
-static int xpcall (lua_State *L) {
-  int status;
-  luaL_check_type(L, 1, LUA_TFUNCTION);
-  luaL_check_any(L, 2);
-  lua_pushliteral(L, LUA_TRACEBACK);
-  lua_gettable(L, LUA_REGISTRYINDEX);
-  lua_pushliteral(L, LUA_TRACEBACK);
-  lua_pushvalue(L, 1);
-  lua_settable(L, LUA_REGISTRYINDEX);
-  lua_replace(L, 1);
-  status = lua_pcall(L, lua_gettop(L) - 2, LUA_MULTRET);
-  lua_pushliteral(L, LUA_TRACEBACK);
-  lua_pushvalue(L, 1);
-  lua_settable(L, LUA_REGISTRYINDEX);
-  if (status != 0) {
-    int numres = (status == LUA_ERRRUN) ? 3 : 2;
-    lua_pushnil(L);
-    lua_insert(L, -numres);
-    return numres;
-  }
-  else {
-    lua_pushboolean(L, 1);
-    lua_insert(L, 2);
-    return lua_gettop(L) - 1;  /* return `true' + all results */
-  }
 }
 
 
@@ -484,8 +456,10 @@ static int doremote (lua_State *L) {
   int status;
   lua_settop(L1, 0);
   status = luaL_loadbuffer(L1, code, lcode, code);
-  if (status == 0)
+  if (status == 0) {
     status = lua_pcall(L1, 0, LUA_MULTRET);
+    if (status != 0) lua_pcallreset(L1);
+  }
   if (status != 0) {
     lua_pushnil(L);
     lua_pushnumber(L, status);
@@ -711,7 +685,6 @@ static const struct luaL_reg tests_funcs[] = {
   {"loadlib", loadlib},
   {"stacklevel", stacklevel},
   {"querystr", string_query},
-  {"xpcall", xpcall},
   {"querytab", table_query},
   {"testC", testC},
   {"ref", tref},
