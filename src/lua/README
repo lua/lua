@@ -1,5 +1,6 @@
 This client is a sample lua interpreter.
-It can be used as a batch interpreter and interactively.
+It can be used as a batch interpreter and also interactively.
+
 Here are the options it understands:
 
   -v       print version information
@@ -11,10 +12,27 @@ Here are the options it understands:
   a=b      sets global `a' with string `b' (no need to quote b)
   name     dofile `name'
 
-If no options are given, then it reads and executes lines from stdin.
-In this case, each line must contain a complete statement.
+If no options are given, then it reads lines from stdin and executes them
+as they are read.  So, each line must contain a complete statement.
 To span a statement across several lines, end each line with a backslash '\'.
+
 To change the prompt, set the global variable _PROMPT to whatever you want.
+You can do after calling the interpreter or on the command line with
+	_PROMPT="lua: "
+for example.
+
+You must be careful when using quotes on the command line because they are
+usually handled by the shell.
 
 This interpreter is good for using Lua as a standalone language.
 For a minimal interpreter, see etc/min.c.
+
+If your application simply exports new functions to Lua (which is common),
+then you can use this interpreter unmodified: just define a function
+
+	void lua_userinit (void)
+
+in your code. In this function, you should do whatever initializations are
+need, typically exporting your functions to Lua.
+If you use this scheme, you must explicily open any standard libraries you need.
+See ../lib/linit.c

@@ -1,6 +1,6 @@
 /*
-** $Id: lparser.h,v 1.2 1997/12/22 20:57:18 roberto Exp $
-** Syntax analizer and code generator
+** $Id: lparser.h,v 1.3 1999/02/25 19:13:56 roberto Exp $
+** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
 

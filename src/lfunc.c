@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.9 1998/06/19 16:14:09 roberto Exp $
+** $Id: lfunc.c,v 1.10 1999/03/04 21:17:26 roberto Exp $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -31,7 +31,7 @@ TProtoFunc *luaF_newproto (void)
   TProtoFunc *f = luaM_new(TProtoFunc);
   f->code = NULL;
   f->lineDefined = 0;
-  f->fileName = NULL;
+  f->source = NULL;
   f->consts = NULL;
   f->nconsts = 0;
   f->locvars = NULL;

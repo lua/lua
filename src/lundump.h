@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.h,v 1.9 1998/07/12 00:17:37 lhf Exp $
+** $Id: lundump.h,v 1.15 1999/07/02 19:34:26 lhf Exp $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -10,69 +10,30 @@
 #include "lobject.h"
 #include "lzio.h"
 
-TProtoFunc* luaU_undump1(ZIO* Z);	/* load one chunk */
+TProtoFunc* luaU_undump1 (ZIO* Z);	/* load one chunk */
+void luaU_badconstant (char* s, int i, TObject* o, TProtoFunc* tf);
+					/* handle cases that cannot happen */
+double luaU_str2d (char* b, char* where);
+					/* convert number from text */
 
-#define	SIGNATURE	"Lua"
-#define	VERSION		0x31		/* last format change was in 3.1 */
-#define	VERSION0	0x31		/* last major  change was in 3.1 */
-#define ID_CHUNK	27		/* ESC */
+/* definitions for headers of binary files */
+#define	VERSION		0x32		/* last format change was in 3.2 */
+#define	VERSION0	0x32		/* last major  change was in 3.2 */
+#define ID_CHUNK	27		/* binary files start with ESC... */
+#define	SIGNATURE	"Lua"		/* ...followed by this signature */
 
-#define IsMain(f)	(f->lineDefined==0)
-#define luaO_typename(o)	luaO_typenames[-ttype(o)]
+/* formats for error messages */
+#define SOURCE		"<%s:%d>"
+#define IN		" in %p " SOURCE
+#define INLOC		tf,tf->source->str,tf->lineDefined
 
-/* number representation */
-#define ID_INT4		'l'		/* 4-byte integers */
-#define ID_REAL4	'f'		/* 4-byte reals */
-#define ID_REAL8	'd'		/* 8-byte reals */
-#define ID_NATIVE	'?'		/* whatever your machine uses */
+/* format for numbers in listings and error messages */
+#ifndef NUMBER_FMT
+#define NUMBER_FMT	"%.16g"		/* LUA_NUMBER */
+#endif
 
-/*
-* use a multiple of PI for testing number representation.
-* multiplying by 1E8 gives notrivial integer values.
-*/
+/* a multiple of PI for testing native format */
+/* multiplying by 1E8 gives non-trivial integer values */
 #define	TEST_NUMBER	3.14159265358979323846E8
 
-/* LUA_NUMBER
-* choose one below for the number representation in precompiled chunks.
-* the default is ID_REAL8 because the default for LUA_NUM_TYPE is double.
-* if your machine does not use IEEE 754, use ID_NATIVE.
-* the next version will support conversion to/from IEEE 754.
-*
-* if you change LUA_NUM_TYPE, make sure you set ID_NUMBER accordingly,
-* specially if sizeof(long)!=4.
-* for types other than the ones listed below, you'll have to write your own
-* dump and undump routines.
-*/
-
-#ifndef ID_NUMBER
-#define	ID_NUMBER	ID_REAL8
-#endif
-
-#if 0
-#define	ID_NUMBER	ID_INT4
-#define	ID_NUMBER	ID_REAL4
-#define	ID_NUMBER	ID_REAL8
-#define	ID_NUMBER	ID_NATIVE
-#endif
-
-#endif
-
-#if   ID_NUMBER==ID_REAL4
-	#define	DumpNumber	DumpFloat
-	#define	LoadNumber	LoadFloat
-	#define SIZEOF_NUMBER	4
-#elif ID_NUMBER==ID_REAL8
-	#define	DumpNumber	DumpDouble
-	#define	LoadNumber	LoadDouble
-	#define SIZEOF_NUMBER	8
-#elif ID_NUMBER==ID_INT4
-	#define	DumpNumber	DumpLong
-	#define	LoadNumber	LoadLong
-	#define SIZEOF_NUMBER	4
-#elif ID_NUMBER==ID_NATIVE
-	#define	DumpNumber	DumpNative
-	#define	LoadNumber	LoadNative
-	#define SIZEOF_NUMBER	sizeof(real)
-#else
-	#error	bad ID_NUMBER
 #endif

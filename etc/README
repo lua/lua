@@ -5,9 +5,9 @@ bin2c.c
 	run with lua_dobuffer.
 	This allows C programs to include all necessary Lua code, even in
 	precompiled form.
-	Even if code is include in source form, bin2c is useful because it
+	Even if the code is included in source form, bin2c is useful because it
 	avoids the hassle of having to quote special characters in C strings.
-	Example of usage: run bin2c file1 file2 ... > init.h. The in your C
+	Example of usage: Run bin2c file1 file2 ... > init.h. Then, in your C
 	program, just do #include "init.h" anywhere in the *body* of a
 	function. This will be equivalent to calling
 		lua_dofile("file1"); lua_dofile("file2"); ...
@@ -17,7 +17,8 @@ min.c
 
 setfallback.lua
 	An implementation of fallbacks on top of tag methods.
-	Useful if you have Lua code written for version 2.5 or earlier.
+	Useful if you have Lua code written for version 2.5 or earlier,
+	which uses setfallback.
 	If you have C code that uses lua_setfallback, then define LUA_COMPAT2_5
 	before building Lua (see config).
 

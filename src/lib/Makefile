@@ -7,8 +7,8 @@ include $(LUA)/config
 # actually only used in liolib.c
 EXTRA_DEFS= $(POPEN)
 
-OBJS= liolib.o lmathlib.o lstrlib.o
-SRCS= liolib.c lmathlib.c lstrlib.c
+OBJS= linit.o ldblib.o liolib.o lmathlib.o lstrlib.o
+SRCS= linit.c ldblib.c liolib.c lmathlib.c lstrlib.c
 
 T= $(LIB)/liblualib.a
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.14 1998/02/11 20:56:05 roberto Exp $
+** $Id: lua.c,v 1.21 1999/07/02 18:22:38 roberto Exp $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -15,12 +15,6 @@
 #include "lualib.h"
 
 
-#ifndef OLD_ANSI
-#include <locale.h>
-#else
-#define setlocale(a,b)  0
-#endif
-
 #ifdef _POSIX_SOURCE
 #include <unistd.h>
 #else
@@ -32,27 +26,33 @@ typedef void (*handler)(int);  /* type for signal actions */
 
 static void laction (int i);
 
-static handler lreset (void)
-{
-  lua_linehook = NULL;
-  lua_callhook = NULL;
+
+static lua_LHFunction old_linehook = NULL;
+static lua_CHFunction old_callhook = NULL;
+
+
+static handler lreset (void) {
   return signal(SIGINT, laction);
 }
 
-static void lstop (void)
-{
+
+static void lstop (void) {
+  lua_setlinehook(old_linehook);
+  lua_setcallhook(old_callhook);
   lreset();
   lua_error("interrupted!");
 }
 
-static void laction (int i)
-{
-  lua_linehook = (lua_LHFunction)lstop;
-  lua_callhook = (lua_CHFunction)lstop;
+
+static void laction (int i) {
+  signal(SIGINT, SIG_DFL); /* if another SIGINT happens before lstop,
+                              terminate process (default action) */
+  old_linehook = lua_setlinehook((lua_LHFunction)lstop);
+  old_callhook = lua_setcallhook((lua_CHFunction)lstop);
 }
 
-static int ldo (int (*f)(char *), char *name)
-{
+
+static int ldo (int (*f)(char *), char *name) {
   int res;
   handler h = lreset();
   res = f(name);  /* dostring | dofile */
@@ -61,8 +61,7 @@ static int ldo (int (*f)(char *), char *name)
 }
 
 
-static void print_message (void)
-{
+static void print_message (void) {
   fprintf(stderr,
 "Lua: command line options:\n"
 "  -v       print version information\n"
@@ -76,8 +75,7 @@ static void print_message (void)
 }
 
 
-static void assign (char *arg)
-{
+static void assign (char *arg) {
   if (strlen(arg) >= 500)
     fprintf(stderr, "lua: shell argument too long");
   else {
@@ -90,13 +88,11 @@ static void assign (char *arg)
   }
 }
 
-#define BUF_SIZE	512
 
-static void manual_input (int prompt)
-{
+static void manual_input (int prompt) {
   int cont = 1;
   while (cont) {
-    char buffer[BUF_SIZE];
+    char buffer[BUFSIZ];
     int i = 0;
     lua_beginblock();
     if (prompt)
@@ -112,13 +108,13 @@ static void manual_input (int prompt)
           buffer[i-1] = '\n';
         else break;
       }
-      else if (i >= BUF_SIZE-1) {
+      else if (i >= BUFSIZ-1) {
         fprintf(stderr, "lua: argument line too long\n");
         break;
       }
-      else buffer[i++] = c;
+      else buffer[i++] = (char)c;
     }
-    buffer[i] = 0;
+    buffer[i] = '\0';
     ldo(lua_dostring, buffer);
     lua_endblock();
   }
@@ -129,11 +125,9 @@ static void manual_input (int prompt)
 int main (int argc, char *argv[])
 {
   int i;
-  setlocale(LC_ALL, "");
-  lua_iolibopen();
-  lua_strlibopen();
-  lua_mathlibopen();
+  lua_open();
   lua_pushstring("> "); lua_setglobal("_PROMPT");
+  lua_userinit();
   if (argc < 2) {  /* no arguments? */
     if (isatty(0)) {
       printf("%s  %s\n", LUA_VERSION, LUA_COPYRIGHT);
@@ -155,7 +149,7 @@ int main (int argc, char *argv[])
           manual_input(0);
           break;
         case 'd':
-          lua_debug = 1;
+          lua_setdebug(1);
           break;
         case 'v':
           printf("%s  %s\n(written by %s)\n\n",

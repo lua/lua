@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.23 1998/06/18 16:51:53 roberto Exp $
+** $Id: lua.h,v 1.32 1999/05/11 20:29:19 roberto Exp $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -11,8 +11,8 @@
 #ifndef lua_h
 #define lua_h
 
-#define LUA_VERSION	"Lua 3.1"
-#define LUA_COPYRIGHT	"Copyright (C) 1994-1998 TeCGraf, PUC-Rio"
+#define LUA_VERSION	"Lua 3.2"
+#define LUA_COPYRIGHT	"Copyright (C) 1994-1999 TeCGraf, PUC-Rio"
 #define LUA_AUTHORS 	"W. Celes, R. Ierusalimschy & L. H. de Figueiredo"
 
 
@@ -20,11 +20,11 @@
 
 #define LUA_ANYTAG    (-1)
 
-typedef void (*lua_CFunction) (void);
-typedef unsigned int lua_Object;
-
 typedef struct lua_State lua_State;
 extern lua_State *lua_state;
+
+typedef void (*lua_CFunction) (void);
+typedef unsigned int lua_Object;
 
 void	       lua_open			(void);
 void           lua_close		(void);
@@ -32,7 +32,6 @@ lua_State      *lua_setstate		(lua_State *st);
 
 lua_Object     lua_settagmethod	(int tag, char *event); /* In: new method */
 lua_Object     lua_gettagmethod	(int tag, char *event);
-lua_Object     lua_seterrormethod (void);  /* In: new method */
 
 int            lua_newtag		(void);
 int            lua_copytagmethods	(int tagto, int tagfrom);
@@ -90,6 +89,9 @@ lua_Object     lua_rawgettable		(void); /* In: table, index */
 
 int            lua_tag			(lua_Object object);
 
+char          *lua_nextvar		(char *varname);  /* Out: value */
+int            lua_next			(lua_Object o, int i);
+						/* Out: ref, value */ 
 
 int            lua_ref			(int lock); /* In: value */
 lua_Object     lua_getref		(int ref);
@@ -101,29 +103,23 @@ long	       lua_collectgarbage	(long limit);
 
 
 /* =============================================================== */
-/* some useful macros/derived functions */
+/* some useful macros/functions */
 
-int     (lua_call) (char *name);
 #define lua_call(name)		lua_callfunction(lua_getglobal(name))
 
-void    (lua_pushref) (int ref);
 #define lua_pushref(ref)	lua_pushobject(lua_getref(ref))
 
-int     (lua_refobject) (lua_Object o, int l);
 #define lua_refobject(o,l)	(lua_pushobject(o), lua_ref(l))
 
-void    (lua_register) (char *n, lua_CFunction f);
 #define lua_register(n,f)	(lua_pushcfunction(f), lua_setglobal(n))
 
-void    (lua_pushuserdata) (void *u);
 #define lua_pushuserdata(u)     lua_pushusertag(u, 0)
 
-void    (lua_pushcfunction) (lua_CFunction f);
 #define lua_pushcfunction(f)	lua_pushcclosure(f, 0)
 
-int     (lua_clonetag) (int t);
 #define lua_clonetag(t)		lua_copytagmethods(lua_newtag(), (t))
 
+lua_Object     lua_seterrormethod (void);  /* In: new method */
 
 /* ==========================================================================
 ** for compatibility with old versions. Avoid using these macros/functions
@@ -162,7 +158,7 @@ lua_Object     lua_setfallback		(char *event, lua_CFunction fallback);
 
 
 /******************************************************************************
-* Copyright (c) 1994-1998 TeCGraf, PUC-Rio.  All rights reserved.
+* Copyright (c) 1994-1999 TeCGraf, PUC-Rio.  All rights reserved.
 * 
 * Permission is hereby granted, without written agreement and without license
 * or royalty fees, to use, copy, modify, and distribute this software and its
@@ -192,5 +188,6 @@ lua_Object     lua_setfallback		(char *event, lua_CFunction fallback);
 * The Lua language and this implementation have been entirely designed and
 * written by Waldemar Celes Filho, Roberto Ierusalimschy and
 * Luiz Henrique de Figueiredo at TeCGraf, PUC-Rio.
+*
 * This implementation contains no third-party code.
 ******************************************************************************/

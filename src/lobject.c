@@ -1,9 +1,10 @@
 /*
-** $Id: lobject.c,v 1.13 1998/06/19 16:14:09 roberto Exp $
+** $Id: lobject.c,v 1.19 1999/04/13 19:28:49 roberto Exp $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
 
+#include <ctype.h>
 #include <stdlib.h>
 
 #include "lobject.h"
@@ -34,14 +35,12 @@ int luaO_redimension (int oldsize)
     if (dimensions[i] > oldsize)
       return dimensions[i];
   }
-  lua_error("table overflow");
+  lua_error("tableEM");
   return 0;  /* to avoid warnings */
 }
 
 
-int luaO_equalObj (TObject *t1, TObject *t2)
-{
-  if (ttype(t1) != ttype(t2)) return 0;
+int luaO_equalval (TObject *t1, TObject *t2) {
   switch (ttype(t1)) {
     case LUA_T_NIL: return 1;
     case LUA_T_NUMBER: return nvalue(t1) == nvalue(t2);
@@ -64,20 +63,67 @@ void luaO_insertlist (GCnode *root, GCnode *node)
   node->marked = 0;
 }
 
+
 #ifdef OLD_ANSI
-void luaO_memup (void *dest, void *src, int size)
-{
-  char *d = dest;
-  char *s = src;
-  while (size--) d[size]=s[size];
+void luaO_memup (void *dest, void *src, int size) {
+  while (size--)
+    ((char *)dest)[size]=((char *)src)[size];
 }
 
-void luaO_memdown (void *dest, void *src, int size)
-{
-  char *d = dest;
-  char *s = src;
+void luaO_memdown (void *dest, void *src, int size) {
   int i;
-  for (i=0; i<size; i++) d[i]=s[i];
+  for (i=0; i<size; i++)
+    ((char *)dest)[i]=((char *)src)[i];
 }
 #endif
+
+
+
+static double expten (unsigned int e) {
+  double exp = 10.0;
+  double res = 1.0;
+  for (; e; e>>=1) {
+    if (e & 1) res *= exp;
+    exp *= exp;
+  }
+  return res;
+}
+
+
+double luaO_str2d (char *s) {  /* LUA_NUMBER */
+  double a = 0.0;
+  int point = 0;
+  while (isdigit((unsigned char)*s)) {
+    a = 10.0*a + (*(s++)-'0');
+  }
+  if (*s == '.') {
+    s++;
+    while (isdigit((unsigned char)*s)) {
+      a = 10.0*a + (*(s++)-'0');
+      point++;
+    }
+  }
+  if (toupper((unsigned char)*s) == 'E') {
+    int e = 0;
+    int sig = 1;
+    s++;
+    if (*s == '-') {
+      s++;
+      sig = -1;
+    }
+    else if (*s == '+') s++;
+    if (!isdigit((unsigned char)*s)) return -1;  /* no digit in the exponent? */
+    do {
+      e = 10*e + (*(s++)-'0');
+    } while (isdigit((unsigned char)*s));
+    point -= sig*e;
+  }
+  while (isspace((unsigned char)*s)) s++;
+  if (*s != '\0') return -1;  /* invalid trailing characters? */
+  if (point > 0)
+    a /= expten(point);
+  else if (point < 0)
+    a *= expten(-point);
+  return a;
+}
 

@@ -17,10 +17,10 @@ $T: $(OBJS) $(LIB)/liblua.a $(LIB)/liblualib.a
 	$(CC) -o $@ $(OBJS) -L$(LIB) -llua -llualib -lm
 
 $(LIB)/liblua.a:
-	cd ..; make
+	cd ..; $(MAKE)
 
 $(LIB)/liblualib.a:
-	cd ../lib; make
+	cd ../lib; $(MAKE)
 
 clean:
 	rm -f $(OBJS) $T
