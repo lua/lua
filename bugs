@@ -450,11 +450,17 @@ pcall(co)
 report = [[Nick Trout, 07/07/2003]],
 patch = [[
 * lvm.c:
-402d401
+402,403c402,403
 <   L->ci->u.l.pc = &pc;
-405a405
+<   if (L->hookmask & LUA_MASKCALL)
+---
+>   if (L->hookmask & LUA_MASKCALL) {
+>     L->ci->u.l.pc = &pc;
+404a405
+>   }
+405a407
 >   L->ci->u.l.pc = &pc;
-676,678c676
+676,678c678
 <           lua_assert(ci->u.l.pc == &pc &&
 <                      ttisfunction(ci->base - 1) &&
 <                      (ci->state & CI_SAVEDPC));
@@ -579,7 +585,7 @@ patch = [[
 }
 
 
-Bugs = {
+Bug{
 
 what = [[count hook may be called without being set]],
 
@@ -600,6 +606,30 @@ patch = [[
 <   if (mask > LUA_MASKLINE) {  /* instruction-hook set? */
 ---
 >   if (mask & LUA_MASKCOUNT) {  /* instruction-hook set? */
+]],
+
+}
+
+
+Bug{
+
+what = [[`dofile' eats one return value when called without arguments]],
+
+report = [[Frederico Abraham, 15/01/2004]],
+
+example = [[
+a,b = dofile()   --< here you enter `return 1,2,3 <eof>'
+print(a,b)   --> 2   3   (should be 1 and 2)
+]],
+
+patch = [[
+* lbaselib.c:
+313a314
+>   int n = lua_gettop(L);
+317c318
+<   return lua_gettop(L) - 1;
+---
+>   return lua_gettop(L) - n;
 ]],
 
 }
