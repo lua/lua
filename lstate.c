@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.64 2001/06/12 18:43:13 roberto Exp roberto $
+** $Id: lstate.c,v 1.65 2001/06/21 16:41:34 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -67,7 +67,8 @@ static void f_luaopen (lua_State *L, void *ud) {
     G(L)->type2tag = luaH_new(L, 10);
     G(L)->registry = luaH_new(L, 0);
     G(L)->weakregistry = luaH_new(L, 0);
-    G(L)->weakregistry->weakmode = LUA_WEAK_VALUE;  /* make weakregistry weak */
+    /* make weakregistry weak */
+    G(L)->weakregistry->weakmode = LUA_WEAK_KEY | LUA_WEAK_VALUE;
     luaS_resize(L, MINPOWER2);
     luaX_init(L);
     luaT_init(L);
