@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.30 1996/05/06 14:30:27 roberto Exp roberto $";
+char *rcs_hash="$Id: hash.c,v 2.31 1996/07/12 20:00:26 roberto Exp roberto $";
 
 
 #include "mem.h"
@@ -48,24 +48,26 @@ int luaI_redimension (int nhash)
 
 static int hashindex (Hash *t, Object *ref)		/* hash function */
 {
- switch (tag(ref))
- {
-  case LUA_T_NIL:
-   lua_error ("unexpected type to index table");
-   return -1;  /* UNREACHEABLE */
-  case LUA_T_NUMBER:
-   return (((int)nvalue(ref))%nhash(t));
-  case LUA_T_STRING:
-   return (int)((tsvalue(ref)->hash)%nhash(t));  /* make it a valid index */
-  case LUA_T_FUNCTION:
-   return (((IntPoint)ref->value.tf)%nhash(t));
-  case LUA_T_CFUNCTION:
-   return (((IntPoint)fvalue(ref))%nhash(t));
-  case LUA_T_ARRAY:
-   return (((IntPoint)avalue(ref))%nhash(t));
-  default:  /* user data */
-   return (((IntPoint)uvalue(ref))%nhash(t));
- }
+  long int h;
+  switch (tag(ref)) {
+    case LUA_T_NIL:
+      lua_error ("unexpected type to index table");
+      h = 0;  /* UNREACHEABLE */
+    case LUA_T_NUMBER:
+      h = (long int)nvalue(ref); break;
+    case LUA_T_STRING:
+      h = tsvalue(ref)->hash; break;
+    case LUA_T_FUNCTION:
+      h = (IntPoint)ref->value.tf; break;
+    case LUA_T_CFUNCTION:
+      h = (IntPoint)fvalue(ref); break;
+    case LUA_T_ARRAY:
+      h = (IntPoint)avalue(ref); break;
+    default:  /* user data */
+      h = (IntPoint)uvalue(ref); break;
+  }
+  if (h < 0) h = -h;
+  return h%nhash(t);  /* make it a valid index */
 }
 
 int lua_equalObj (Object *t1, Object *t2)
