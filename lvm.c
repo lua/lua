@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.262 2002/11/18 11:01:55 roberto Exp roberto $
+** $Id: lvm.c,v 1.263 2002/11/18 15:24:11 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -382,7 +382,8 @@ StkId luaV_execute (lua_State *L) {
   if (L->hookmask & LUA_MASKCALL)
     luaD_callhook(L, LUA_HOOKCALL, -1);
  retentry:  /* entry point when returning to old functions */
-  lua_assert(L->ci->state & CI_SAVEDPC);
+  lua_assert(L->ci->state == CI_SAVEDPC ||
+             L->ci->state == (CI_SAVEDPC | CI_CALLING));
   L->ci->state = CI_HASFRAME;  /* activate frame */
   pc = L->ci->u.l.savedpc;
   base = L->ci->base;
@@ -397,11 +398,12 @@ StkId luaV_execute (lua_State *L) {
       traceexec(L);
       if (L->ci->state & CI_YIELD) {  /* did hook yield? */
         L->ci->u.l.savedpc = pc - 1;
-        L->ci->state |= CI_SAVEDPC;
+        L->ci->state = CI_YIELD | CI_SAVEDPC;
         return NULL;
       }
     }
     /* warning!! several calls may realloc the stack and invalidate `ra' */
+    lua_assert((L->ci->state & CI_HASFRAME) && base == L->ci->base);
     ra = RA(i);
     lua_assert(L->top <= L->stack + L->stacksize && L->top >= L->ci->base);
     lua_assert(L->top == L->ci->top ||
@@ -600,8 +602,9 @@ StkId luaV_execute (lua_State *L) {
         firstResult = luaD_precall(L, ra);
         if (firstResult) {
           if (firstResult > L->top) {  /* yield? */
+            lua_assert(L->ci->state == (CI_C | CI_YIELD));
             (L->ci - 1)->u.l.savedpc = pc;
-            (L->ci - 1)->state |= CI_SAVEDPC;
+            (L->ci - 1)->state = CI_SAVEDPC;
             return NULL;
           }
           /* it was a C function (`precall' called it); adjust results */
@@ -623,7 +626,7 @@ StkId luaV_execute (lua_State *L) {
             lua_assert(L->ci->state & CI_SAVEDPC);
             (L->ci - 1)->u.l.savedpc = L->ci->u.l.savedpc;
             (L->ci - 1)->state = CI_SAVEDPC;
-            L->ci--;  /* remove previous frame */
+            L->ci--;  /* remove new frame */
           }
           goto callentry;
         }
