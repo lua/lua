@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.105 2002/06/18 15:19:27 roberto Exp roberto $
+** $Id: llex.c,v 1.106 2002/06/25 19:18:20 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -160,7 +160,7 @@ static size_t readname (LexState *LS) {
 
 
 /* LUA_NUMBER */
-static void read_number (LexState *LS, int comma, SemInfo *seminfo) {
+static void read_numeral (LexState *LS, int comma, SemInfo *seminfo) {
   lua_State *L = LS->L;
   size_t l = 0;
   checkbuffer(L, l);
@@ -367,7 +367,7 @@ int luaX_lex (LexState *LS, SemInfo *seminfo) {
         }
         else if (!isdigit(LS->current)) return '.';
         else {
-          read_number(LS, 1, seminfo);
+          read_numeral(LS, 1, seminfo);
           return TK_NUMBER;
         }
       }
@@ -380,7 +380,7 @@ int luaX_lex (LexState *LS, SemInfo *seminfo) {
           continue;
         }
         else if (isdigit(LS->current)) {
-          read_number(LS, 0, seminfo);
+          read_numeral(LS, 0, seminfo);
           return TK_NUMBER;
         }
         else if (isalpha(LS->current) || LS->current == '_') {
@@ -405,3 +405,4 @@ int luaX_lex (LexState *LS, SemInfo *seminfo) {
   }
 }
 
+#undef next
