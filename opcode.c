@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.8 1994/11/10 17:11:52 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.9 1994/11/10 17:36:54 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -101,7 +101,7 @@ static void lua_initstack (void)
 */
 static void lua_checkstack (Word n)
 {
- if (n > maxstack)
+ if ((Long)n > maxstack)
  {
   int t;
   if (stack == NULL)
@@ -186,16 +186,17 @@ static int lua_tostring (Object *obj)
 /*
 ** Adjust stack. Set top to the given value, pushing NILs if needed.
 */
-static void adjust_top (Object *newtop)
+static void adjust_top (int newtop)
 {
-  while (top < newtop) tag(top++) = LUA_T_NIL;
-  top = newtop;  /* top could be bigger than newtop */
+  Object *nt = stack+newtop;
+  while (top < nt) tag(top++) = LUA_T_NIL;
+  top = nt;  /* top could be bigger than newtop */
 }
 
 
 static void adjustC (int nParams)
 {
-  adjust_top(stack+CBase+nParams);
+  adjust_top(CBase+nParams);
 }
 
 
@@ -240,14 +241,15 @@ static void do_call (Object *func, int base, int nResults, int whereRes)
   }
   /* adjust the number of results */
   if (nResults != MULT_RET && top - (stack+firstResult) != nResults)
-    adjust_top(stack+firstResult+nResults);
+    adjust_top(firstResult+nResults);
   /* move results to the given position */
   if (firstResult != whereRes)
   {
-    int i = top - (stack+firstResult);  /* number of results */
-    top -= firstResult-whereRes;
-    while (i--)
+    int i;
+    nResults = top - (stack+firstResult);  /* actual number of results */
+    for (i=0; i<nResults; i++)
       *(stack+whereRes+i) = *(stack+firstResult+i);
+    top -= firstResult-whereRes;
   }
 }
 
@@ -830,11 +832,11 @@ static int lua_execute (Byte *pc, int base)
    break;
 
    case ADJUST0:
-     adjust_top((stack+base));
+     adjust_top(base);
      break;
 
    case ADJUST:
-     adjust_top((stack+base) + *(pc++));
+     adjust_top(base + *(pc++));
      break;
 
    case CREATEARRAY:
