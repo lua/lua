@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.7 1997/11/21 19:00:46 roberto Exp roberto $
+** $Id: lapi.c,v 1.8 1997/11/26 18:53:45 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -188,12 +188,6 @@ lua_Object lua_createtable (void)
   avalue(&o) = luaH_new(0);
   ttype(&o) = LUA_T_ARRAY;
   return put_luaObject(&o);
-}
-
-
-lua_Object lua_globalbag (void)
-{
-  return put_luaObject(&L->globalbag);
 }
 
 

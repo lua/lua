@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.2 1997/11/21 19:00:46 roberto Exp roberto $
+** $Id: lstate.h,v 1.3 1997/11/26 20:28:22 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -66,7 +66,6 @@ typedef struct LState {
   int refSize;  /* size of refArray */
   unsigned long GCthreshold;
   unsigned long nblocks;  /* number of 'blocks' currently allocated */
-  TObject globalbag;  /* table for generic use by C */
   char *Mbuffer;  /* global buffer, used by luaM_buffer */
   unsigned long Mbuffsize;  /* size of Mbuffer */
 } LState;

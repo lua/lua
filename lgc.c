@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.7 1997/11/03 20:45:23 roberto Exp roberto $
+** $Id: lgc.c,v 1.8 1997/11/19 17:29:23 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -241,7 +241,6 @@ static void markall (void)
   luaD_travstack(markobject); /* mark stack objects */
   globalmark();  /* mark global variable values and names */
   travlock(); /* mark locked objects */
-  markobject(&L->globalbag);  /* mark elements in global bag */
   luaT_travtagmethods(markobject);  /* mark fallbacks */
 }
 

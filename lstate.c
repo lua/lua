@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: lstate.c,v 1.1 1997/11/19 17:31:19 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -45,8 +45,6 @@ void lua_open (void)
   luaS_init();
   luaX_init();
   luaT_init();
-  L->globalbag.ttype = LUA_T_ARRAY;
-  L->globalbag.value.a = luaH_new(0);
   luaB_predefine();
 }
 
