@@ -3,7 +3,7 @@
 ** Mathematics library to LUA
 */
 
-char *rcs_mathlib="$Id: mathlib.c,v 1.2 1994/07/20 22:12:27 celes Exp celes $";
+char *rcs_mathlib="$Id: mathlib.c,v 1.3 1994/08/15 14:13:44 celes Exp celes $";
 
 #include <stdio.h>		/* NULL */
 #include <math.h>
@@ -252,6 +252,30 @@ static void math_exp (void)
  lua_pushnumber (exp(d));
 }
 
+static void math_deg (void)
+{
+ float d;
+ lua_Object o = lua_getparam (1);
+ if (o == NULL)
+ { lua_error ("too few arguments to function `deg'"); return; }
+ if (!lua_isnumber(o))
+ { lua_error ("incorrect arguments to function `deg'"); return; }
+ d = lua_getnumber(o);
+ lua_pushnumber (d*180./PI);
+}
+
+static void math_rad (void)
+{
+ float d;
+ lua_Object o = lua_getparam (1);
+ if (o == NULL)
+ { lua_error ("too few arguments to function `rad'"); return; }
+ if (!lua_isnumber(o))
+ { lua_error ("incorrect arguments to function `rad'"); return; }
+ d = lua_getnumber(o);
+ lua_pushnumber (d/180.*PI);
+}
+
 /*
 ** Open math library
 */
@@ -274,4 +298,6 @@ void mathlib_open (void)
  lua_register ("log",   math_log);
  lua_register ("log10", math_log10);
  lua_register ("exp",   math_exp);
+ lua_register ("deg",   math_deg);
+ lua_register ("rad",   math_rad);
 }
