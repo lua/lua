@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.71 2003/11/19 19:41:30 roberto Exp roberto $
+** $Id: lfunc.c,v 1.72 2003/11/24 18:50:36 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -71,7 +71,6 @@ void luaF_close (lua_State *L, StkId level) {
     setobj(&uv->value, uv->v);  /* save current value (write barrier) */
     uv->v = &uv->value;  /* now current value lives here */
     L->openupval = uv->next;  /* remove from `open' list */
-    resetbit(uv->marked, FIXEDBIT);  /* closed upvalues can be collected */
     luaC_link(L, valtogco(uv), LUA_TUPVAL);
   }
 }

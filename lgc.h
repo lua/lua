@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 1.24 2003/11/19 19:41:57 roberto Exp roberto $
+** $Id: lgc.h,v 1.25 2003/12/01 16:33:30 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -22,8 +22,8 @@
 
 
 /*
- * ** some userful bit tricks
- * */
+** some userful bit tricks
+*/
 #define resetbits(x,m)	((x) &= cast(lu_byte, ~(m)))
 #define setbits(x,m)	((x) |= (m))
 #define testbits(x,m)	((x) & (m))
@@ -48,13 +48,16 @@
 ** bit 4 - object is fixed (should not be collected)
 */
 
-#define GRAYBIT		0
-#define BLACKBIT	1
-#define FINALIZEDBIT	2
-#define KEYWEAKBIT	2
-#define VALUEWEAKBIT	3
-#define FIXEDBIT	4
+#define WHITE0BIT	0
+#define WHITE1BIT	1
+#define BLACKBIT	2
+#define FINALIZEDBIT	3
+#define KEYWEAKBIT	3
+#define VALUEWEAKBIT	4
+#define FIXEDBIT	5
 
+
+#define luaC_white(g)	cast(lu_byte, (g)->currentwhite)
 
 
 #define luaC_checkGC(L) { if (G(L)->nblocks >= G(L)->GCthreshold) \

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.182 2003/12/01 18:22:56 roberto Exp roberto $
+** $Id: lgc.c,v 1.183 2003/12/03 12:30:41 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -25,25 +25,26 @@
 #define GCSTEPSIZE	(20*sizeof(TObject))
 
 
+#define otherwhite(g)	(g->currentwhite ^ bit2mask(WHITE0BIT, WHITE1BIT))
 
 #define isblack(x)	testbit((x)->gch.marked, BLACKBIT)
-#define gray2black(x)	((x)->gch.marked++)
-#define white2black(x)	setbit((x)->gch.marked, BLACKBIT)
+#define gray2black(x)	setbit((x)->gch.marked, BLACKBIT)
 
-#define iswhite(x)	(!test2bits((x)->gch.marked, GRAYBIT, BLACKBIT))
-#define makewhite(x)	reset2bits((x)->gch.marked, GRAYBIT, BLACKBIT)
+#define iswhite(x)	test2bits((x)->gch.marked, WHITE0BIT, WHITE1BIT)
+#define maskmarks \
+	cast(lu_byte, ~(bitmask(BLACKBIT)|bit2mask(WHITE0BIT, WHITE1BIT)))
+#define makewhite(g,x)	\
+   ((x)->gch.marked = ((x)->gch.marked & maskmarks) | g->currentwhite)
 
-#define isgray(x)	testbit((x)->gch.marked, GRAYBIT)
-#define white2gray(x)	setbit((x)->gch.marked, GRAYBIT)
+#define isgray(x)	(!isblack(x) && !iswhite(x))
+#define white2gray(x)	reset2bits((x)->gch.marked, WHITE0BIT, WHITE1BIT)
 
-#define stringmark(s)	setbit((s)->tsv.marked, BLACKBIT)
+#define stringmark(s)	reset2bits((s)->tsv.marked, WHITE0BIT, WHITE1BIT)
 
 
 #define isfinalized(u)		testbit((u)->uv.marked, FINALIZEDBIT)
 #define markfinalized(u)	setbit((u)->uv.marked, FINALIZEDBIT)
 
-
-#define maskbf	bit2mask(BLACKBIT, FIXEDBIT)
 
 
 #define KEYWEAK         bitmask(KEYWEAKBIT)
@@ -108,14 +109,14 @@ static size_t objsize (GCObject *o) {
 
 static void reallymarkobject (global_State *g, GCObject *o) {
   lua_assert(iswhite(o));
+  lua_assert(!(o->gch.marked & otherwhite(g)));
+  white2gray(o);
   switch (o->gch.tt) {
     case LUA_TSTRING: {
-      white2black(o);  /* strings do not go to gray list */
       return;
     }
     case LUA_TUSERDATA: {
       Table *mt = gcotou(o)->uv.metatable;
-      white2black(o);  /* userdata do not go to gray list */
       if (mt) markobject(g, mt);
       return;
     }
@@ -142,14 +143,13 @@ static void reallymarkobject (global_State *g, GCObject *o) {
     default: lua_assert(0);
   }
   g->gray = o;  /* finish list linking */
-  white2gray(o);
 }
 
 
 static void marktmu (global_State *g) {
   GCObject *u;
   for (u = g->tmudata; u; u = u->gch.next) {
-    makewhite(u);  /* may be marked, if left from previous GC */
+    makewhite(g, u);  /* may be marked, if left from previous GC */
     reallymarkobject(g, u);
   }
 }
@@ -164,9 +164,8 @@ size_t luaC_separateudata (lua_State *L) {
   GCObject **lastcollected = &collected;
   while ((curr = *p) != NULL) {
     lua_assert(curr->gch.tt == LUA_TUSERDATA);
-    if (isblack(curr) || isfinalized(gcotou(curr)))
+    if (!iswhite(curr) || isfinalized(gcotou(curr)))
       p = &curr->gch.next;  /* don't bother with them */
-
     else if (fasttm(L, gcotou(curr)->uv.metatable, TM_GC) == NULL) {
       markfinalized(gcotou(curr));  /* don't need finalization */
       p = &curr->gch.next;
@@ -362,7 +361,7 @@ static int iscleared (const TObject *o, int iskey) {
     stringmark(tsvalue(o));  /* strings are `values', so are never weak */
     return 0;
   }
-  return !isblack(gcvalue(o)) ||
+  return iswhite(gcvalue(o)) ||
     (ttisuserdata(o) && (!iskey && isfinalized(uvalue(o))));
 }
 
@@ -426,16 +425,19 @@ static void freeobj (lua_State *L, GCObject *o) {
 }
 
 
-static GCObject **sweeplist (lua_State *L, GCObject **p, int mask,
+static GCObject **sweeplist (lua_State *L, GCObject **p, int all,
                              l_mem *plim) {
   GCObject *curr;
+  global_State *g = G(L);
   l_mem lim = *plim;
+  int white = otherwhite(g);
   while ((curr = *p) != NULL) {
-    lua_assert(!isgray(curr));
-    if (curr->gch.marked & mask) {
-      lim -= objsize(curr);
-      makewhite(curr);
+    int mark = curr->gch.marked;
+    lua_assert(all || !(mark & g->currentwhite));
+    if (!all && (!(mark & white) || testbit(mark, FIXEDBIT))) {
+      makewhite(g, curr);
       p = &curr->gch.next;
+      lim -= objsize(curr);
     }
     else {
       *p = curr->gch.next;
@@ -448,16 +450,18 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, int mask,
 }
 
 
-static void sweepstrings (lua_State *L, int mask) {
+static void sweepstrings (lua_State *L, int all) {
   int i;
   global_State *g = G(L);
+  int white = otherwhite(g);
   for (i = 0; i < g->strt.size; i++) {  /* for each list */
     GCObject *curr;
     GCObject **p = &G(L)->strt.hash[i];
     while ((curr = *p) != NULL) {
-      lua_assert(!isgray(curr) && curr->gch.tt == LUA_TSTRING);
-      if (curr->gch.marked & mask) {
-        makewhite(curr);
+      int mark = curr->gch.marked;
+      lua_assert(all || !(mark & g->currentwhite));
+      if (!all && (!(mark & white) || testbit(mark, FIXEDBIT))) {
+        makewhite(g, curr);
         p = &curr->gch.next;
       }
       else {
@@ -497,7 +501,7 @@ static void GCTM (lua_State *L) {
     g->tmudata = udata->uv.next;  /* remove udata from `tmudata' */
     udata->uv.next = g->firstudata->uv.next;  /* return it to `root' list */
     g->firstudata->uv.next = o;
-    makewhite(o);
+    makewhite(g, o);
     tm = fasttm(L, udata->uv.metatable, TM_GC);
     if (tm != NULL) {
       lu_byte oldah = L->allowhook;
@@ -523,8 +527,8 @@ void luaC_callGCTM (lua_State *L) {
 
 void luaC_sweepall (lua_State *L) {
   l_mem dummy = MAXLMEM;
-  sweepstrings(L, 0);
-  sweeplist(L, &G(L)->rootgc, 0, &dummy);
+  sweepstrings(L, 1);
+  sweeplist(L, &G(L)->rootgc, 1, &dummy);
 }
 
 
@@ -533,7 +537,7 @@ static void markroot (lua_State *L) {
   global_State *g = G(L);
   lua_assert(g->gray == NULL);
   g->weak = NULL;
-  makewhite(valtogco(g->mainthread));
+  makewhite(g, valtogco(g->mainthread));
   markobject(g, g->mainthread);
   markvalue(g, registry(L));
   markobject(g, g->firstudata);
@@ -548,11 +552,13 @@ static void atomic (lua_State *L) {
   marktmu(g);  /* mark `preserved' userdata */
   propagatemarks(g, MAXLMEM);  /* remark, to propagate `preserveness' */
   cleartable(g->weak);  /* remove collected objects from weak tables */
+  /* echange current white */
+  g->currentwhite = otherwhite(g);
   /* first element of root list will be used as temporary head for sweep
      phase, so it won't be seeped */
-  makewhite(g->rootgc);
+  makewhite(g, g->rootgc);
   g->sweepgc = &g->rootgc->gch.next;
-  sweepstrings(L, maskbf);
+  sweepstrings(L, 0);
   g->gcstate = GCSsweep;
 }
 
@@ -560,7 +566,7 @@ static void atomic (lua_State *L) {
 static void sweepstep (lua_State *L) {
   global_State *g = G(L);
   l_mem lim = GCSTEPSIZE;
-  g->sweepgc = sweeplist(L, g->sweepgc, maskbf, &lim);
+  g->sweepgc = sweeplist(L, g->sweepgc, 0, &lim);
   if (lim == GCSTEPSIZE) {  /* nothing more to sweep? */
     g->gcstate = GCSfinalize;  /* end sweep phase */
   }
@@ -587,9 +593,10 @@ void luaC_collectgarbage (lua_State *L) {
 
 
 void luaC_link (lua_State *L, GCObject *o, lu_byte tt) {
-  o->gch.next = G(L)->rootgc;
-  G(L)->rootgc = o;
-  o->gch.marked = 0;
+  global_State *g = G(L);
+  o->gch.next = g->rootgc;
+  g->rootgc = o;
+  o->gch.marked = luaC_white(g);
   o->gch.tt = tt;
 }
 
