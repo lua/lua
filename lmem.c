@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.22 1999/12/14 18:31:20 roberto Exp roberto $
+** $Id: lmem.c,v 1.23 1999/12/27 17:33:22 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -26,6 +26,86 @@
 
 
 
+#ifdef DEBUG
+/*
+** {======================================================================
+** Controled version for realloc.
+** =======================================================================
+*/
+
+
+#include <assert.h>
+#include <string.h>
+
+
+#define realloc(b, s)	debug_realloc(b, s)
+#define malloc(b)	debug_realloc(NULL, 0)
+#define free(b)		debug_realloc(b, 0)
+
+
+#define HEADER		(sizeof(double))  /* maximum alignment */
+#define MARKSIZE	16
+#define MARK		0x55  /* 01010101 (a nice pattern) */
+
+
+#define blocksize(b)	((unsigned long *)((char *)(b) - HEADER))
+
+unsigned long memdebug_numblocks = 0;
+unsigned long memdebug_total = 0;
+
+
+static void *checkblock (void *block) {
+  unsigned long *b = blocksize(block);
+  unsigned long size = *b;
+  int i;
+  for (i=0;i<MARKSIZE;i++)
+    assert(*(((char *)b)+HEADER+size+i) == MARK+i);  /* corrupted block? */
+  memdebug_numblocks--;
+  memdebug_total -= size;
+  return b;
+}
+
+
+static void freeblock (void *block) {
+  if (block) {
+    size_t size = *blocksize(block);
+    block = checkblock(block);
+    memset(block, -1, size+HEADER+MARKSIZE);  /* erase block */
+    (free)(block);  /* free original block */
+  }
+}
+
+
+static void *debug_realloc (void *block, size_t size) {
+  size_t realsize = HEADER+size+MARKSIZE;
+  if (size == 0) {
+    freeblock(block);
+    return NULL;
+  }
+  else {
+    char *newblock = (malloc)(realsize);  /* alloc a new block */
+    int i;
+    if (block) {
+      size_t oldsize = *blocksize(block);
+      if (oldsize > size) oldsize = size;
+      memcpy(newblock+HEADER, block, oldsize);
+      freeblock(block);  /* erase (and check) old copy */
+    }
+    if (newblock == NULL) return NULL;
+    memdebug_total += size;
+    memdebug_numblocks++;
+    *(unsigned long *)newblock = size;
+    for (i=0;i<MARKSIZE;i++)
+      *(newblock+HEADER+size+i) = (char)(MARK+i);
+    return newblock+HEADER;
+  }
+}
+
+
+/* }====================================================================== */
+#endif
+
+
 
 void *luaM_growaux (lua_State *L, void *block, unsigned long nelems,
                int inc, int size, const char *errormsg, unsigned long limit) {
@@ -38,8 +118,6 @@ void *luaM_growaux (lua_State *L, void *block, unsigned long nelems,
     return luaM_realloc(L, block, luaO_power2(newn)*size);
 }
 
-
-#ifndef DEBUG
 
 /*
 ** generic allocation routine.
@@ -59,73 +137,3 @@ void *luaM_realloc (lua_State *L, void *block, unsigned long size) {
 }
 
 
-
-#else
-/* DEBUG */
-
-#include <string.h>
-
-
-#define HEADER	(sizeof(double))
-#define MARKSIZE	16
-
-#define MARK    55
-
-
-#define blocksize(b)	((unsigned long *)((char *)(b) - HEADER))
-
-unsigned long numblocks = 0;
-unsigned long totalmem = 0;
-
-
-static void *checkblock (void *block) {
-  unsigned long *b = blocksize(block);
-  unsigned long size = *b;
-  int i;
-  for (i=0;i<MARKSIZE;i++)
-    LUA_ASSERT(L, *(((char *)b)+HEADER+size+i) == MARK+i, "corrupted block");
-  numblocks--;
-  totalmem -= size;
-  return b;
-}
-
-
-static void freeblock (void *block) {
-  if (block) {
-    memset(block, -1, *blocksize(block));  /* erase block */
-    block = checkblock(block);
-    free(block);
-  }
-}
-
-
-void *luaM_realloc (lua_State *L, void *block, unsigned long size) {
-  unsigned long realsize = HEADER+size+MARKSIZE;
-  if (realsize != (size_t)realsize)
-    lua_error(L, "memory allocation error: block too big");
-  if (size == 0) {
-    freeblock(block);
-    return NULL;
-  }
-  else {
-    char *newblock = malloc(realsize);
-    int i;
-    if (block) {
-      unsigned long oldsize = *blocksize(block);
-      if (oldsize > size) oldsize = size;
-      memcpy(newblock+HEADER, block, oldsize);
-      freeblock(block);  /* erase (and check) old copy */
-    }
-    if (newblock == NULL)
-      lua_error(L, memEM);
-    totalmem += size;
-    numblocks++;
-    *(unsigned long *)newblock = size;
-    for (i=0;i<MARKSIZE;i++)
-      *(newblock+HEADER+size+i) = (char)(MARK+i);
-    return newblock+HEADER;
-  }
-}
-
-
-#endif
