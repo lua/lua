@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.26 2000/05/08 19:32:53 roberto Exp roberto $
+** $Id: lstate.c,v 1.27 2000/06/12 13:52:05 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -88,22 +88,22 @@ lua_State *lua_newstate (const char *s, ...) {
 
 void lua_close (lua_State *L) {
   luaC_collect(L, 1);  /* collect all elements */
-  LUA_ASSERT(L, L->rootproto == NULL, "list should be empty");
-  LUA_ASSERT(L, L->rootcl == NULL, "list should be empty");
-  LUA_ASSERT(L, L->roottable == NULL, "list should be empty");
+  LUA_ASSERT(L->rootproto == NULL, "list should be empty");
+  LUA_ASSERT(L->rootcl == NULL, "list should be empty");
+  LUA_ASSERT(L->roottable == NULL, "list should be empty");
   luaS_freeall(L);
   luaM_free(L, L->stack);
   luaM_free(L, L->IMtable);
   luaM_free(L, L->refArray);
   luaM_free(L, L->Mbuffer);
   luaM_free(L, L->Cblocks);
-  LUA_ASSERT(L, L->numCblocks == 0, "Cblocks still open");
-  LUA_ASSERT(L, L->nblocks == 0, "wrong count for nblocks");
-  LUA_ASSERT(L, L->Cstack.base == L->top, "C2Lua not empty");
+  LUA_ASSERT(L->numCblocks == 0, "Cblocks still open");
+  LUA_ASSERT(L->nblocks == 0, "wrong count for nblocks");
+  LUA_ASSERT(L->Cstack.base == L->top, "C2Lua not empty");
   luaM_free(L, L);
   if (L == lua_state) {
-    LUA_ASSERT(L, memdebug_numblocks == 0, "memory leak!");
-    LUA_ASSERT(L, memdebug_total == 0,"memory leak!");
+    LUA_ASSERT(memdebug_numblocks == 0, "memory leak!");
+    LUA_ASSERT(memdebug_total == 0,"memory leak!");
     lua_state = NULL;
   }
 }

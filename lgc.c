@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.57 2000/06/12 13:52:05 roberto Exp roberto $
+** $Id: lgc.c,v 1.58 2000/06/26 19:28:31 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -206,7 +206,7 @@ static void collectudatatab (lua_State *L, int all) {
     TString **p = &L->udt.hash[i];
     TString *next;
     while ((next = *p) != NULL) {
-      LUA_ASSERT(L, next->marked <= 1, "udata cannot be fixed");
+      LUA_ASSERT(next->marked <= 1, "udata cannot be fixed");
       if (next->marked > all) {  /* preserve? */
         next->marked = 0;
         p = &next->nexthash;

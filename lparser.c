@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.100 2000/06/28 17:06:07 roberto Exp roberto $
+** $Id: lparser.c,v 1.101 2000/06/28 20:20:36 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -67,7 +67,7 @@ static void next (LexState *ls) {
 
 
 static void lookahead (LexState *ls) {
-  LUA_ASSERT(ls->L, ls->lookahead.token == TK_EOS, "two look-aheads");
+  LUA_ASSERT(ls->lookahead.token == TK_EOS, "two look-aheads");
   ls->lookahead.token = luaX_lex(ls);
 }
 
@@ -295,7 +295,7 @@ static void enterbreak (FuncState *fs, Breaklabel *bl) {
 
 static void leavebreak (FuncState *fs, Breaklabel *bl) {
   fs->bl = bl->previous;
-  LUA_ASSERT(fs->L, bl->stacklevel == fs->stacklevel, "wrong levels");
+  LUA_ASSERT(bl->stacklevel == fs->stacklevel, "wrong levels");
   luaK_patchlist(fs, bl->breaklist, luaK_getlabel(fs));
 }
 
@@ -349,7 +349,7 @@ static void close_func (LexState *ls) {
   luaI_registerlocalvar(ls, NULL, -1);  /* flag end of vector */
   luaM_reallocvector(L, f->locvars, fs->nvars, LocVar);
   ls->fs = fs->prev;
-  LUA_ASSERT(L, fs->bl == NULL, "wrong list end");
+  LUA_ASSERT(fs->bl == NULL, "wrong list end");
 }
 
 
@@ -363,8 +363,8 @@ Proto *luaY_parser (lua_State *L, ZIO *z) {
   chunk(&lexstate);
   check_condition(&lexstate, (lexstate.t.token == TK_EOS), "<eof> expected");
   close_func(&lexstate);
-  LUA_ASSERT(L, funcstate.prev == NULL, "wrong list end");
-  LUA_ASSERT(L, funcstate.nupvalues == 0, "no upvalues in main");
+  LUA_ASSERT(funcstate.prev == NULL, "wrong list end");
+  LUA_ASSERT(funcstate.nupvalues == 0, "no upvalues in main");
   return funcstate.f;
 }
 
@@ -1109,7 +1109,7 @@ static void chunk (LexState *ls) {
   while (!islast && !block_follow(ls->t.token)) {
     islast = stat(ls);
     optional(ls, ';');
-    LUA_ASSERT(ls->L, ls->fs->stacklevel == ls->fs->nlocalvar,
+    LUA_ASSERT(ls->fs->stacklevel == ls->fs->nlocalvar,
                "stack size != # local vars");
   }
 }

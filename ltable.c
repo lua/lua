@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.48 2000/06/12 13:52:05 roberto Exp roberto $
+** $Id: ltable.c,v 1.49 2000/06/28 17:03:56 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -63,7 +63,7 @@ Node *luaH_mainposition (const Hash *t, const TObject *key) {
     default:
       return NULL;  /* invalid key */
   }
-  LUA_ASSERT(L, h%(unsigned int)t->size == (h&((unsigned int)t->size-1)),
+  LUA_ASSERT(h%(unsigned int)t->size == (h&((unsigned int)t->size-1)),
             "a&(x-1) == a%x, for x power of 2");
   return &t->node[h&(t->size-1)];
 }
@@ -140,7 +140,7 @@ void luaH_remove (Hash *t, TObject *key) {
     }
     ttype(key) = TAG_NUMBER;
     nvalue(key) = n;
-    LUA_ASSERT(L, luaH_mainposition(t, key) == mp, "cannot change hash");
+    LUA_ASSERT(luaH_mainposition(t, key) == mp, "cannot change hash");
   }
 }
 
@@ -196,7 +196,7 @@ static void rehash (lua_State *L, Hash *t) {
   Node *nold = t->node;
   int nelems = numuse(t);
   int i;
-  LUA_ASSERT(L, nelems<=oldsize, "wrong count");
+  LUA_ASSERT(nelems<=oldsize, "wrong count");
   if (nelems >= oldsize-oldsize/4)  /* using more than 3/4? */
     setnodevector(L, t, (lint32)oldsize*2);
   else if (nelems <= oldsize/4 &&  /* less than 1/4? */

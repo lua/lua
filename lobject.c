@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.41 2000/06/12 13:52:05 roberto Exp roberto $
+** $Id: lobject.c,v 1.42 2000/06/26 19:28:31 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -45,7 +45,7 @@ int luaO_equalObj (const TObject *t1, const TObject *t2) {
     case TAG_CCLOSURE: case TAG_LCLOSURE:
       return clvalue(t1) == clvalue(t2);
     default:
-      LUA_ASSERT(L, ttype(t1) == TAG_NIL, "invalid type");
+      LUA_ASSERT(ttype(t1) == TAG_NIL, "invalid type");
       return 1; /* TAG_NIL */
   }
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.115 2000/06/08 17:48:31 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.116 2000/06/12 13:52:05 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -372,7 +372,7 @@ void luaB_tostring (lua_State *L) {
       lua_pushstring(L, "nil");
       return;
     default:
-      LUA_INTERNALERROR(L, "invalid type");
+      LUA_INTERNALERROR("invalid type");
   }
   lua_pushstring(L, buff);
 }

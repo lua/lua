@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.118 2000/06/27 19:00:36 roberto Exp roberto $
+** $Id: lvm.c,v 1.119 2000/06/28 20:20:36 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -384,7 +384,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
 
       case OP_PUSHNIL: {
         int n = GETARG_U(i);
-        LUA_ASSERT(L, n>0, "invalid argument");
+        LUA_ASSERT(n>0, "invalid argument");
         do {
           ttype(top++) = TAG_NIL;
         } while (--n > 0);
@@ -648,8 +648,8 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
 
       case OP_FORLOOP: {
-        LUA_ASSERT(L, ttype(top-1) == TAG_NUMBER, "invalid step");
-        LUA_ASSERT(L, ttype(top-2) == TAG_NUMBER, "invalid limit");
+        LUA_ASSERT(ttype(top-1) == TAG_NUMBER, "invalid step");
+        LUA_ASSERT(ttype(top-2) == TAG_NUMBER, "invalid limit");
         if (ttype(top-3) != TAG_NUMBER)
           lua_error(L, "`for' index must be a number");
         nvalue(top-3) += nvalue(top-1);  /* increment index */
@@ -675,7 +675,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         }
         else {
           top += 2;  /* index,value */
-          LUA_ASSERT(L, top==L->top, "bad top");
+          LUA_ASSERT(top==L->top, "bad top");
         }
         break;
       }
@@ -683,8 +683,8 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       case OP_LFORLOOP: {
         int n;
         top -= 2;  /* remove old index,value */
-        LUA_ASSERT(L, ttype(top-2) == TAG_TABLE, "invalid table");
-        LUA_ASSERT(L, ttype(top-1) == TAG_NUMBER, "invalid counter");
+        LUA_ASSERT(ttype(top-2) == TAG_TABLE, "invalid table");
+        LUA_ASSERT(ttype(top-1) == TAG_NUMBER, "invalid counter");
         L->top = top;
         n = luaA_next(L, hvalue(top-2), (int)nvalue(top-1));
         if (n == 0)  /* end loop? */

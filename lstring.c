@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.38 2000/06/12 13:52:05 roberto Exp roberto $
+** $Id: lstring.c,v 1.39 2000/06/15 17:01:12 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -28,9 +28,9 @@ void luaS_init (lua_State *L) {
 
 
 void luaS_freeall (lua_State *L) {
-  LUA_ASSERT(L, L->strt.nuse==0, "non-empty string table");
+  LUA_ASSERT(L->strt.nuse==0, "non-empty string table");
   luaM_free(L, L->strt.hash);
-  LUA_ASSERT(L, L->udt.nuse==0, "non-empty udata table");
+  LUA_ASSERT(L->udt.nuse==0, "non-empty udata table");
   luaM_free(L, L->udt.hash);
 }
 
@@ -55,7 +55,7 @@ void luaS_resize (lua_State *L, stringtable *tb, int newsize) {
       TString *next = p->nexthash;  /* save next */
       unsigned long h = (tb == &L->strt) ? p->u.s.hash : IntPoint(p->u.d.value);
       int h1 = h&(newsize-1);  /* new position */
-      LUA_ASSERT(L, h%newsize == (h&(newsize-1)),
+      LUA_ASSERT(h%newsize == (h&(newsize-1)),
                     "a&(x-1) == a%x, for x power of 2");
       p->nexthash = newhash[h1];  /* chain it in new position */
       newhash[h1] = p;

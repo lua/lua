@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.68 2000/06/26 19:28:31 roberto Exp roberto $
+** $Id: lobject.h,v 1.69 2000/06/28 20:20:36 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -15,11 +15,11 @@
 #ifdef DEBUG
 #undef NDEBUG
 #include <assert.h>
-#define LUA_INTERNALERROR(L,s)	assert(((void)s,0))
-#define LUA_ASSERT(L,c,s)	assert(((void)s,(c)))
+#define LUA_INTERNALERROR(s)	assert(((void)s,0))
+#define LUA_ASSERT(c,s)		assert(((void)s,(c)))
 #else
-#define LUA_INTERNALERROR(L,s)	/* empty */
-#define LUA_ASSERT(L,c,s)	/* empty */
+#define LUA_INTERNALERROR(s)	/* empty */
+#define LUA_ASSERT(c,s)		/* empty */
 #endif
 
 

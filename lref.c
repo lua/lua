@@ -1,5 +1,5 @@
 /*
-** $Id: lref.c,v 1.13 2000/06/08 17:48:31 roberto Exp roberto $
+** $Id: lref.c,v 1.14 2000/06/12 13:52:05 roberto Exp roberto $
 ** reference mechanism
 ** See Copyright Notice in lua.h
 */
@@ -106,12 +106,12 @@ void luaR_invalidaterefs (lua_State *L) {
     struct Ref *r = &L->refArray[i];
     if (r->st == HOLD && !ismarked(&r->o))
       r->st = COLLECTED;
-    LUA_ASSERT(L, (r->st == LOCK && ismarked(&r->o)) ||
+    LUA_ASSERT((r->st == LOCK && ismarked(&r->o)) ||
                 r->st == COLLECTED ||
                 r->st == NONEXT ||
                (r->st < n && VALIDLINK(L, L->refArray[r->st].st, n)),
                "inconsistent ref table");
   }
-  LUA_ASSERT(L, VALIDLINK(L, L->refFree, n), "inconsistent ref table");
+  LUA_ASSERT(VALIDLINK(L, L->refFree, n), "inconsistent ref table");
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.39 2000/06/26 19:28:31 roberto Exp roberto $
+** $Id: lcode.c,v 1.40 2000/06/28 20:20:36 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -191,7 +191,7 @@ void luaK_storevar (LexState *ls, const expdesc *var) {
       luaK_code2(fs, OP_SETTABLE, 3, 3);
       break;
     default:
-      LUA_INTERNALERROR(ls->L, "invalid var kind to store");
+      LUA_INTERNALERROR("invalid var kind to store");
   }
 }
 
@@ -207,7 +207,7 @@ static OpCode invertjump (OpCode op) {
     case OP_JMPT: case OP_JMPONT:  return OP_JMPF;
     case OP_JMPF: case OP_JMPONF:  return OP_JMPT;
     default:
-      LUA_INTERNALERROR(NULL, "invalid jump instruction");
+      LUA_INTERNALERROR("invalid jump instruction");
       return OP_END;  /* to avoid warnings */
   }
 }
@@ -282,7 +282,7 @@ static void luaK_testgo (FuncState *fs, expdesc *v, int invert, OpCode jump) {
   discharge1(fs, v);
   prevpos = fs->pc-1;
   previous = &fs->f->code[prevpos];
-  LUA_ASSERT(L, *previous==previous_instruction(fs), "no jump allowed here");
+  LUA_ASSERT(*previous==previous_instruction(fs), "no jump allowed here");
   if (!ISJUMP(GET_OPCODE(*previous)))
     prevpos = luaK_code1(fs, jump, NO_JUMP);
   else {  /* last instruction is already a jump */
@@ -382,13 +382,13 @@ void luaK_infix (LexState *ls, int op, expdesc *v) {
 void luaK_posfix (LexState *ls, int op, expdesc *v1, expdesc *v2) {
   FuncState *fs = ls->fs;
   if (op == TK_AND) {
-    LUA_ASSERT(ls->L, v1->u.l.t == NO_JUMP, "list must be closed");
+    LUA_ASSERT(v1->u.l.t == NO_JUMP, "list must be closed");
     discharge1(fs, v2);
     v1->u.l.t = v2->u.l.t;
     luaK_concat(fs, &v1->u.l.f, v2->u.l.f);
   }
   else if (op == TK_OR) {
-    LUA_ASSERT(ls->L, v1->u.l.f == NO_JUMP, "list must be closed");
+    LUA_ASSERT(v1->u.l.f == NO_JUMP, "list must be closed");
     discharge1(fs, v2);
     v1->u.l.f = v2->u.l.f;
     luaK_concat(fs, &v1->u.l.t, v2->u.l.t);
@@ -598,11 +598,11 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
     case OP_GETINDEXED:
     case OP_TAILCALL:
     case OP_ADDI: {
-      LUA_INTERNALERROR(L, "instruction used only for optimizations");
+      LUA_INTERNALERROR("instruction used only for optimizations");
       break;
     }
     default: {
-      LUA_ASSERT(L, delta != VD, "invalid delta");
+      LUA_ASSERT(delta != VD, "invalid delta");
       break;
     }
   }

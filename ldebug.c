@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.25 2000/06/28 20:20:36 roberto Exp roberto $
+** $Id: ldebug.c,v 1.26 2000/06/30 14:29:35 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -101,7 +101,7 @@ static int lua_nups (StkId f) {
 
 static int lua_currentpc (StkId f) {
   CallInfo *ci = infovalue(f);
-  LUA_ASSERT(L, ttype(f) == TAG_LMARK, "function has no pc");
+  LUA_ASSERT(ttype(f) == TAG_LMARK, "function has no pc");
   return (*ci->pc - 1) - ci->func->f.l->code;
 }
 
@@ -165,7 +165,7 @@ static void lua_funcinfo (lua_Debug *ar, StkId func) {
       ar->what = "C";
       break;
     default:
-      LUA_INTERNALERROR(L, "invalid `func' value");
+      LUA_INTERNALERROR("invalid `func' value");
   }
   if (ar->linedefined == 0)
     ar->what = "main";
@@ -245,24 +245,24 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int stackpos) {
     top++;  /* `arg' */
   while (pc < lastpc) {
     const Instruction i = code[pc++];
-    LUA_ASSERT(NULL, top <= pt->maxstacksize, "wrong stack");
+    LUA_ASSERT(top <= pt->maxstacksize, "wrong stack");
     switch (GET_OPCODE(i)) {
       case OP_RETURN: {
-        LUA_ASSERT(NULL, top >= GETARG_U(i), "wrong stack");
+        LUA_ASSERT(top >= GETARG_U(i), "wrong stack");
         top = GETARG_U(i);
         break;
       }
       case OP_CALL: {
         int nresults = GETARG_B(i);
         if (nresults == MULT_RET) nresults = 1;
-        LUA_ASSERT(NULL, top >= GETARG_A(i), "wrong stack");
+        LUA_ASSERT(top >= GETARG_A(i), "wrong stack");
         top = GETARG_A(i);
         while (nresults--)
           stack[top++] = pc-1;
         break;
       }
       case OP_TAILCALL: {
-        LUA_ASSERT(NULL, top >= GETARG_A(i), "wrong stack");
+        LUA_ASSERT(top >= GETARG_A(i), "wrong stack");
         top = GETARG_B(i);
         break;
       }
@@ -311,10 +311,10 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int stackpos) {
       }
       default: {
         int n;
-        LUA_ASSERT(NULL, luaK_opproperties[GET_OPCODE(i)].push != VD,
+        LUA_ASSERT(luaK_opproperties[GET_OPCODE(i)].push != VD,
                    "invalid opcode for default");
         top -= luaK_opproperties[GET_OPCODE(i)].pop;
-        LUA_ASSERT(NULL, top >= 0, "wrong stack");
+        LUA_ASSERT(top >= 0, "wrong stack");
         for (n=0; n<luaK_opproperties[GET_OPCODE(i)].push; n++)
           stack[top++] = pc-1;
       }
