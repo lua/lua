@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.28 1998/07/12 16:14:34 roberto Exp roberto $
+** $Id: ldo.c,v 1.29 1998/08/21 17:43:44 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -276,18 +276,17 @@ static void do_callinc (int nResults)
 ** Execute a protected call. Assumes that function is at L->Cstack.base and
 ** parameters are on top of it. Leave nResults on the stack.
 */
-int luaD_protectedrun (int nResults)
-{
-  jmp_buf myErrorJmp;
-  int status;
+int luaD_protectedrun (int nResults) {
   volatile struct C_Lua_Stack oldCLS = L->Cstack;
+  jmp_buf myErrorJmp;
+  volatile int status;
   jmp_buf *volatile oldErr = L->errorJmp;
   L->errorJmp = &myErrorJmp;
   if (setjmp(myErrorJmp) == 0) {
     do_callinc(nResults);
     status = 0;
   }
-  else { /* an error occurred: restore L->Cstack and L->stack.top */
+  else {  /* an error occurred: restore L->Cstack and L->stack.top */
     L->Cstack = oldCLS;
     L->stack.top = L->stack.stack+L->Cstack.base;
     status = 1;
@@ -300,18 +299,20 @@ int luaD_protectedrun (int nResults)
 /*
 ** returns 0 = chunk loaded; 1 = error; 2 = no more chunks to load
 */
-static int protectedparser (ZIO *z, int bin)
-{
+static int protectedparser (ZIO *z, int bin) {
+  volatile struct C_Lua_Stack oldCLS = L->Cstack;
+  jmp_buf myErrorJmp;
   volatile int status;
   TProtoFunc *volatile tf;
-  jmp_buf myErrorJmp;
   jmp_buf *volatile oldErr = L->errorJmp;
   L->errorJmp = &myErrorJmp;
   if (setjmp(myErrorJmp) == 0) {
     tf = bin ? luaU_undump1(z) : luaY_parser(z);
     status = 0;
   }
-  else {
+  else {  /* an error occurred: restore L->Cstack and L->stack.top */
+    L->Cstack = oldCLS;
+    L->stack.top = L->stack.stack+L->Cstack.base;
     tf = NULL;
     status = 1;
   }
@@ -326,8 +327,7 @@ static int protectedparser (ZIO *z, int bin)
 }
 
 
-static int do_main (ZIO *z, int bin)
-{
+static int do_main (ZIO *z, int bin) {
   int status;
   do {
     long old_blocks = (luaC_checkGC(), L->nblocks);

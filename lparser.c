@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.6 1998/12/23 14:06:57 roberto Exp roberto $
+** $Id: lparser.c,v 1.7 1998/12/28 13:44:54 roberto Exp $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -285,12 +285,14 @@ static void luaI_registerlocalvar (FuncState *fs, TaggedString *varname,
                                    int line) {
   if (fs->maxvars != -1) {  /* debug information? */
     TProtoFunc *f = fs->f;
-    if (fs->nvars >= fs->maxvars)
-      fs->maxvars = luaM_growvector(&f->locvars, fs->maxvars,
+    if (fs->nvars+2 > fs->maxvars)
+      fs->maxvars = luaM_growvector(&f->locvars, fs->maxvars+2,
                                     LocVar, "", MAX_WORD);
     f->locvars[fs->nvars].varname = varname;
     f->locvars[fs->nvars].line = line;
     fs->nvars++;
+    f->locvars[fs->nvars].line = -1;  /* flag end of vector */
+
   }
 }
 
@@ -541,6 +543,9 @@ static void init_state (LexState *ls, FuncState *fs, TaggedString *filename) {
     fs->maxvars = -1;  /* flag no debug information */
   code_byte(fs, 0);  /* to be filled with stacksize */
   code_byte(fs, 0);  /* to be filled with arg information */
+  /* push function (to avoid GC) */
+  tfvalue(L->stack.top) = f; ttype(L->stack.top) = LUA_T_PROTO;
+  incr_top;
 }
 
 
@@ -556,6 +561,7 @@ static void close_func (LexState *ls) {
     f->locvars = luaM_reallocvector(f->locvars, fs->nvars, LocVar);
   }
   ls->fs = fs->prev;
+  L->stack.top--;  /* pop function */
 }
 
 
@@ -619,13 +625,20 @@ static void check_match (LexState *ls, int what, int who, int where) {
   next(ls);
 }
 
-static TaggedString *checkname (LexState *ls) {
-  TaggedString *ts;
+static int checkname (LexState *ls) {
+  int sc;
   if (ls->token != NAME)
     luaX_error(ls, "`NAME' expected");
-  ts = ls->seminfo.ts;
+  sc = string_constant(ls->fs, ls->seminfo.ts);
   next(ls);
-  return ts;
+  return sc;
+}
+
+
+static TaggedString *str_checkname (LexState *ls) {
+  /* call "checkname" to put string at constant table (to avoid GC) */
+  int i = checkname(ls);
+  return tsvalue(&ls->fs->f->consts[i]);
 }
 
 
@@ -801,12 +814,12 @@ static void block (LexState *ls) {
 static int funcname (LexState *ls, vardesc *v) {
   /* funcname -> NAME [':' NAME | '.' NAME] */
   int needself = 0;
-  singlevar(ls, checkname(ls), v, 0);
+  singlevar(ls, str_checkname(ls), v, 0);
   if (ls->token == ':' || ls->token == '.') {
     needself = (ls->token == ':');
     next(ls);
     lua_pushvar(ls, v);
-    code_string(ls, checkname(ls));
+    code_constant(ls, checkname(ls));
     v->k = VINDEXED;
   }
   return needself;
@@ -980,7 +993,7 @@ static void simpleexp (LexState *ls, vardesc *v) {
       break;
 
     case STRING:  /* simpleexp -> STRING */
-      code_string(ls, ls->seminfo.ts);
+      code_string(ls, ls->seminfo.ts);  /* must use before "next" */
       next(ls);
       v->k = VEXP; v->info = 0;
       break;
@@ -1017,12 +1030,12 @@ static void simpleexp (LexState *ls, vardesc *v) {
 static void var_or_func (LexState *ls, vardesc *v) {
   /* var_or_func -> ['%'] NAME var_or_func_tail */
   if (optional(ls, '%')) {  /* upvalue? */
-    pushupvalue(ls, checkname(ls));
+    pushupvalue(ls, str_checkname(ls));
     v->k = VEXP;
     v->info = 0;  /* closed expression */
   }
   else  /* variable name */
-    singlevar(ls, checkname(ls), v, 0);
+    singlevar(ls, str_checkname(ls), v, 0);
   var_or_func_tail(ls, v);
 }
 
@@ -1033,7 +1046,7 @@ static void var_or_func_tail (LexState *ls, vardesc *v) {
         next(ls);
         lua_pushvar(ls, v);  /* 'v' must be on stack */
         v->k = VDOT;
-        v->info = string_constant(ls->fs, checkname(ls));
+        v->info = checkname(ls);
         break;
 
       case '[':  /* var_or_func_tail -> '[' exp1 ']' */
@@ -1047,7 +1060,7 @@ static void var_or_func_tail (LexState *ls, vardesc *v) {
       case ':':  /* var_or_func_tail -> ':' NAME funcparams */
         next(ls);
         lua_pushvar(ls, v);  /* 'v' must be on stack */
-        code_oparg(ls, PUSHSELF, 8, string_constant(ls->fs, checkname(ls)), 1);
+        code_oparg(ls, PUSHSELF, 8, checkname(ls), 1);
         v->k = VEXP;
         v->info = funcparams(ls, 1);
         break;
@@ -1082,7 +1095,7 @@ static int funcparams (LexState *ls, int slf) {
       break;
 
     case STRING:  /* funcparams -> STRING */
-      code_string(ls, ls->seminfo.ts);
+      code_string(ls, ls->seminfo.ts);  /* must use before "next" */
       next(ls);
       break;
 
@@ -1138,7 +1151,7 @@ static void parlist (LexState *ls) {
 
     case NAME:  /* parlist, tailparlist -> NAME [',' tailparlist] */
       init:
-      store_localvar(ls, checkname(ls), nparams++);
+      store_localvar(ls, str_checkname(ls), nparams++);
       if (ls->token == ',') {
         next(ls);
         switch (ls->token) {
@@ -1165,10 +1178,10 @@ static void parlist (LexState *ls) {
 static int localnamelist (LexState *ls) {
   /* localnamelist -> NAME {',' NAME} */
   int i = 1;
-  store_localvar(ls, checkname(ls), 0);
+  store_localvar(ls, str_checkname(ls), 0);
   while (ls->token == ',') {
     next(ls);
-    store_localvar(ls, checkname(ls), i++);
+    store_localvar(ls, str_checkname(ls), i++);
   }
   return i;
 }
@@ -1323,7 +1336,7 @@ static void recfield (LexState *ls) {
   /* recfield -> (NAME | '['exp1']') = exp1 */
   switch (ls->token) {
     case NAME:
-      code_string(ls, checkname(ls));
+      code_constant(ls, checkname(ls));
       break;
 
     case '[':
