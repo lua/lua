@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.14 2004/10/06 18:34:47 roberto Exp roberto $
+** $Id: luaconf.h,v 1.15 2004/10/18 18:07:31 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -31,7 +31,11 @@
 */
 
 /* default path */
-#define LUA_PATH_DEFAULT	"?;?.lua"
+#define LUA_PATH_DEFAULT \
+   "./?.lua;/usr/local/share/lua/5.0/?.lua;/usr/local/share/lua/5.0/?/init.lua"
+#define LUA_CPATH_DEFAULT \
+   "./?.so;/usr/local/lib/lua/5.0/?.so;/usr/local/lib/lua/5.0/lib?.so"
+
 
 
 /* type of numbers in Lua */
@@ -272,8 +276,16 @@
 
 /* `assert' options */
 
-/* environment variable that holds the search path for packages */
+/* environment variables that hold the search path for packages */
 #define LUA_PATH	"LUA_PATH"
+#define LUA_CPATH	"LUA_CPATH"
+
+/* prefix for open functions in C libraries */
+#if defined(__APPLE__) && defined(__MACH__)
+#define LUA_POF		"_luaopen_"
+#else
+#define LUA_POF		"luaopen_"
+#endif
 
 /* directory separator (for submodules) */
 #define LUA_DIRSEP	"/"

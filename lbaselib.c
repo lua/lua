@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.158 2004/09/15 20:39:42 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.159 2004/09/29 21:03:14 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -440,105 +440,6 @@ static int luaB_newproxy (lua_State *L) {
 }
 
 
-/*
-** {======================================================
-** `require' function
-** =======================================================
-*/
-
-
-static const char *getpath (lua_State *L) {
-  /* try first `LUA_PATH' for compatibility */
-  lua_getfield(L, LUA_GLOBALSINDEX, "LUA_PATH");
-  if (!lua_isstring(L, -1)) {
-    lua_pop(L, 1);
-    lua_getfield(L, LUA_GLOBALSINDEX, "_PATH");
-  }
-  if (!lua_isstring(L, -1))
-    luaL_error(L, "global _PATH must be a string");
-  return lua_tostring(L, -1);
-}
-
-
-static int luaB_require (lua_State *L) {
-  const char *name = luaL_checkstring(L, 1);
-  const char *fname;
-  lua_settop(L, 1);
-  lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
-  lua_getfield(L, 2, name);
-  if (lua_toboolean(L, -1))  /* is it there? */
-    return 1;  /* package is already loaded; return its result */
-  /* else must load it; first mark it as loaded */
-  lua_pushboolean(L, 1);
-  lua_setfield(L, 2, name);  /* _LOADED[name] = true */
-  fname = luaL_gsub(L, name, ".", LUA_DIRSEP);
-  fname = luaL_searchpath(L, fname, getpath(L));
-  if (fname == NULL || luaL_loadfile(L, fname) != 0)
-    return luaL_error(L, "error loading package `%s' (%s)", name,
-                         lua_tostring(L, -1));
-  lua_pushvalue(L, 1);  /* pass name as argument to module */
-  lua_call(L, 1, 1);  /* run loaded module */
-  if (!lua_isnil(L, -1))  /* nil return? */
-    lua_setfield(L, 2, name);
-  lua_getfield(L, 2, name);  /* return _LOADED[name] */
-  return 1;
-}
-
-
-static void setfenv (lua_State *L) {
-  lua_Debug ar;
-  lua_getstack(L, 1, &ar);
-  lua_getinfo(L, "f", &ar);
-  lua_pushvalue(L, -2);
-  lua_setfenv(L, -2);
-}
-
-
-static int luaB_module (lua_State *L) {
-  const char *modname = luaL_checkstring(L, 1);
-  const char *dot;
-  lua_settop(L, 1);
-  lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
-  /* try to find given table */
-  luaL_getfield(L, LUA_GLOBALSINDEX, modname);
-  if (lua_isnil(L, -1)) {  /* not found? */
-    lua_pop(L, 1);  /* remove previous result */
-    lua_newtable(L);  /* create it */
-    /* register it with given name */
-    lua_pushvalue(L, -1);
-    luaL_setfield(L, LUA_GLOBALSINDEX, modname);
-  }
-  else if (!lua_istable(L, -1))
-    return luaL_error(L, "name conflict for module `%s'", modname);
-  /* check whether table already has a _NAME field */
-  lua_getfield(L, -1, "_NAME");
-  if (!lua_isnil(L, -1))  /* is table an initialized module? */
-    lua_pop(L, 1);
-  else {  /* no; initialize it */
-    lua_pop(L, 1);
-    lua_newtable(L);  /* create new metatable */
-    lua_pushvalue(L, LUA_GLOBALSINDEX);
-    lua_setfield(L, -2, "__index");  /* mt.__index = _G */
-    lua_setmetatable(L, -2);
-    lua_pushstring(L, modname);
-    lua_setfield(L, -2, "_NAME");
-    dot = strrchr(modname, '.');  /* look for last dot in module name */
-    if (dot == NULL) dot = modname;
-    else dot++;
-    /* set _PACK as package name (full module name minus last part) */
-    lua_pushlstring(L, modname, dot - modname);
-    lua_setfield(L, -2, "_PACK");
-  }
-  lua_pushvalue(L, -1);
-  lua_setfield(L, 2, modname);  /* _LOADED[modname] = new table */
-  setfenv(L);
-  return 0;
-}
-
-
-/* }====================================================== */
-
-
 static const luaL_reg base_funcs[] = {
   {"error", luaB_error},
   {"getmetatable", luaB_getmetatable},
@@ -564,8 +465,6 @@ static const luaL_reg base_funcs[] = {
   {"dofile", luaB_dofile},
   {"loadstring", luaB_loadstring},
   {"load", luaB_load},
-  {"require", luaB_require},
-  {"module", luaB_module},
   {NULL, NULL}
 };
 
@@ -713,11 +612,10 @@ static void auxopen (lua_State *L, const char *name,
 
 
 static void base_open (lua_State *L) {
-  const char *path;
   lua_pushvalue(L, LUA_GLOBALSINDEX);
   luaL_openlib(L, NULL, base_funcs, 0);  /* open lib into global table */
   lua_pushliteral(L, LUA_VERSION);
-  lua_setfield(L, LUA_GLOBALSINDEX, "_VERSION");  /* set global _VERSION */
+  lua_setglobal(L, "_VERSION");  /* set global _VERSION */
   /* `ipairs' and `pairs' need auxiliary functions as upvalues */
   auxopen(L, "ipairs", luaB_ipairs, ipairsaux);
   auxopen(L, "pairs", luaB_pairs, luaB_next);
@@ -728,20 +626,16 @@ static void base_open (lua_State *L) {
   lua_pushliteral(L, "kv");
   lua_setfield(L, -2, "__mode");  /* metatable(w).__mode = "kv" */
   lua_pushcclosure(L, luaB_newproxy, 1);
-  lua_setfield(L, LUA_GLOBALSINDEX, "newproxy");  /* set global `newproxy' */
-  /* `require' needs a table to keep loaded chunks */
+  lua_setglobal(L, "newproxy");  /* set global `newproxy' */
+  /* create register._LOADED to track loaded modules */
   lua_newtable(L);
-  lua_pushvalue(L, -1);
-  lua_setglobal(L, "_LOADED");
   lua_setfield(L, LUA_REGISTRYINDEX, "_LOADED");
+  /* create register._PRELOAD to allow pre-loaded modules */
+  lua_newtable(L);
+  lua_setfield(L, LUA_REGISTRYINDEX, "_PRELOAD");
   /* set global _G */
   lua_pushvalue(L, LUA_GLOBALSINDEX);
-  lua_setfield(L, LUA_GLOBALSINDEX, "_G");
-  /* set global _PATH */
-  path = getenv(LUA_PATH);
-  if (path == NULL) path = LUA_PATH_DEFAULT;
-  lua_pushstring(L, path);
-  lua_setfield(L, LUA_GLOBALSINDEX, "_PATH");
+  lua_setglobal(L, "_G");
 }
 
 

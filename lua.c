@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.131 2004/08/26 14:19:55 roberto Exp roberto $
+** $Id: lua.c,v 1.132 2004/08/30 18:35:14 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -127,9 +127,9 @@ static int dostring (lua_State *L, const char *s, const char *name) {
 
 
 static int dolibrary (lua_State *L, const char *name) {
-  lua_getfield(L, LUA_GLOBALSINDEX, "_PATH");
+  luaL_getfield(L, LUA_GLOBALSINDEX, "package.path");
   if (!lua_isstring(L, -1)) {
-    l_message(progname, "global _PATH must be a string");
+    l_message(progname, "`package.path' must be a string");
     return 1;
   }
   name = luaL_searchpath(L, name, lua_tostring(L, -1));
@@ -295,7 +295,7 @@ static int handle_argv (lua_State *L, char *argv[], int *interactive) {
             print_usage();
             return 1;
           }
-          if (dostring(L, chunk, "=<command line>") != 0)
+          if (dostring(L, chunk, "=(command line)") != 0)
             return 1;
           break;
         }
