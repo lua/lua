@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.13 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.14 1999/11/22 13:12:07 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -22,12 +22,13 @@ struct luaL_reg {
 
 #define luaL_arg_check(L, cond,numarg,extramsg) if (!(cond)) \
                                                luaL_argerror(L, numarg,extramsg)
-#define luaL_check_string(L, n)	(luaL_check_lstr(L, (n), NULL))
-#define luaL_opt_string(L, n, d)	(luaL_opt_lstr(L, (n), (d), NULL))
-#define luaL_check_int(L, n)	((int)luaL_check_number(L, n))
-#define luaL_check_long(L, n)	((long)luaL_check_number(L, n))
-#define luaL_opt_int(L, n,d)	((int)luaL_opt_number(L, n,d))
-#define luaL_opt_long(L, n,d)	((long)luaL_opt_number(L, n,d))
+#define luaL_check_string(L,n)	(luaL_check_lstr(L, (n), NULL))
+#define luaL_opt_string(L,n,d)	(luaL_opt_lstr(L, (n), (d), NULL))
+#define luaL_check_int(L,n)	((int)luaL_check_number(L, n))
+#define luaL_check_long(L,n)	((long)luaL_check_number(L, n))
+#define luaL_opt_int(L,n,d)	((int)luaL_opt_number(L, n,d))
+#define luaL_opt_long(L,n,d)	((long)luaL_opt_number(L, n,d))
+#define luaL_openl(L,a)		luaL_openlib(L, a, (sizeof(a)/sizeof(a[0])))
 
 #else
 
@@ -39,6 +40,7 @@ struct luaL_reg {
 #define luaL_check_long(n)	((long)luaL_check_number(n))
 #define luaL_opt_int(n,d)	((int)luaL_opt_number(n,d))
 #define luaL_opt_long(n,d)	((long)luaL_opt_number(n,d))
+#define luaL_openl(a)		luaL_openlib(a, (sizeof(a)/sizeof(a[0])))
 
 #endif
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.73 1999/11/16 12:50:48 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.74 1999/11/22 13:12:07 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -810,7 +810,7 @@ void luaB_predefine (lua_State *L) {
   /* pre-register mem error messages, to avoid loop when error arises */
   luaS_newfixedstring(L, tableEM);
   luaS_newfixedstring(L, memEM);
-  luaL_openlib(L, builtin_funcs, (sizeof(builtin_funcs)/sizeof(builtin_funcs[0])));
+  luaL_openl(L, builtin_funcs);
   lua_pushstring(L, LUA_VERSION);
   lua_setglobal(L, "_VERSION");
 }

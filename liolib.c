@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.50 1999/11/09 17:59:35 roberto Exp roberto $
+** $Id: liolib.c,v 1.51 1999/11/22 13:12:07 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -632,8 +632,7 @@ static void openwithtags (lua_State *L) {
 }
 
 void lua_iolibopen (lua_State *L) {
-  /* register lib functions */
-  luaL_openlib(L, iolib, (sizeof(iolib)/sizeof(iolib[0])));
+  luaL_openl(L, iolib);
   openwithtags(L);
 }
 
