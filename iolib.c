@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.20 1995/02/02 18:54:58 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.21 1995/02/06 19:36:13 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -18,6 +18,32 @@ char *rcs_iolib="$Id: iolib.c,v 1.20 1995/02/02 18:54:58 roberto Exp roberto $";
 
 static FILE *in=stdin, *out=stdout;
 
+
+#ifndef POPEN
+#define popen(x,y) NULL  /* that is, popen always fails */
+#define pclose(x)  (-1)
+#endif
+
+static void closeread (void)
+{
+  if (in != stdin)
+  {
+    if (pclose(in) == -1)
+      fclose(in);
+    in = stdin;
+  }
+}
+
+static void closewrite (void)
+{
+  if (out != stdout)
+  {
+    if (pclose(out) == -1)
+      fclose(out);
+    out = stdout;
+  }
+}
+
 /*
 ** Open a file to read.
 ** LUA interface:
@@ -31,11 +57,7 @@ static void io_readfrom (void)
  lua_Object o = lua_getparam (1);
  if (o == LUA_NOOBJECT)			/* restore standart input */
  {
-  if (in != stdin)
-  {
-   fclose (in);
-   in = stdin;
-  }
+  closeread();
   lua_pushnumber (1);
  }
  else
@@ -47,14 +69,15 @@ static void io_readfrom (void)
   }
   else
   {
-   FILE *fp = fopen (lua_getstring(o),"r");
+   char *s = lua_getstring(o);
+   FILE *fp = (*s == '|') ? popen(s+1, "r") : fopen(s, "r");
    if (fp == NULL)
    {
     lua_pushnumber (0);
    }
    else
    {
-    if (in != stdin) fclose (in);
+    closeread();
     in = fp;
     lua_pushnumber (1);
    }
@@ -76,11 +99,7 @@ static void io_writeto (void)
  lua_Object o = lua_getparam (1);
  if (o == LUA_NOOBJECT)			/* restore standart output */
  {
-  if (out != stdout)
-  {
-   fclose (out);
-   out = stdout;
-  }
+  closewrite();
   lua_pushnumber (1);
  }
  else
@@ -92,14 +111,15 @@ static void io_writeto (void)
   }
   else
   {
-   FILE *fp = fopen (lua_getstring(o),"w");
+   char *s = lua_getstring(o);
+   FILE *fp = (*s == '|') ? popen(s+1,"w") : fopen(s,"w");
    if (fp == NULL)
    {
     lua_pushnumber (0);
    }
    else
    {
-    if (out != stdout) fclose (out);
+    closewrite();
     out = fp;
     lua_pushnumber (1);
    }
@@ -120,24 +140,13 @@ static void io_writeto (void)
 static void io_appendto (void)
 {
  lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT)			/* restore standart output */
+ if (!lua_isstring (o))
  {
-  if (out != stdout)
-  {
-   fclose (out);
-   out = stdout;
-  }
-  lua_pushnumber (1);
+   lua_error ("incorrect argument to function 'appendto`");
+   lua_pushnumber (0);
  }
  else
  {
-  if (!lua_isstring (o))
-  {
-   lua_error ("incorrect argument to function 'appendto`");
-   lua_pushnumber (0);
-  }
-  else
-  {
    int r;
    FILE *fp;
    struct stat st;
@@ -154,10 +163,8 @@ static void io_appendto (void)
     out = fp;
     lua_pushnumber (r);
    }
-  }
  }
 }
-
 
 
 /*
