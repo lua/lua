@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.8 1994/08/17 22:34:20 roberto Exp celes $";
+char *rcs_iolib="$Id: iolib.c,v 1.9 1994/09/12 19:24:31 celes Exp celes $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -315,6 +315,38 @@ static void io_read (void)
 
 
 /*
+** Read characters until a given one. The delimiter is not read.
+*/
+static void io_readuntil (void)
+{
+ int n=255,m=0;
+ char c,d;
+ char *s;
+ lua_Object lo = lua_getparam(1);
+ if (!lua_isstring(lo))
+  d = EOF; 
+ else
+  d = *lua_getstring(lo);
+ 
+ s = calloc(n+1, sizeof(char));
+ while((c = fgetc(in)) != EOF && c != d)
+ {
+  if (m==n)
+  {
+   n *= 2;
+   s = realloc(s, (n+1)*sizeof(char));
+  }
+  s[m++] = c;
+ }
+ if (c != EOF) ungetc(c,in);
+ s[m] = 0;
+ lua_pushstring(s);
+ free(s);
+}
+
+
+
+/*
 ** Write a variable. On error put 0 on stack, otherwise put 1.
 ** LUA interface:
 **			status = write (variable [,format])
@@ -360,8 +392,8 @@ static char *buildformat (char *e, lua_Object o)
 
  sprintf(f,"%%");
  if (j == '<' || j == '|') sprintf(strchr(f,0),"-");
- if (m != 0)   sprintf(strchr(f,0),"%d", m);
- if (n != 0)   sprintf(strchr(f,0),".%d", n);
+ if (m >  0)   sprintf(strchr(f,0),"%d", m);
+ if (n >= 0)   sprintf(strchr(f,0),".%d", n);
  switch (t)
  {
   case 'i': case 'I': t = 'd';
@@ -536,6 +568,7 @@ void iolib_open (void)
  lua_register ("writeto",  io_writeto);
  lua_register ("appendto", io_appendto);
  lua_register ("read",     io_read);
+ lua_register ("readuntil",io_readuntil);
  lua_register ("write",    io_write);
  lua_register ("execute",  io_execute);
  lua_register ("remove",   io_remove);
