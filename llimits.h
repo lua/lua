@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.37 2002/02/14 21:43:01 roberto Exp roberto $
+** $Id: llimits.h,v 1.38 2002/03/05 16:22:54 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -86,6 +86,12 @@ union L_Umaxalign { LUSER_ALIGNMENT_T u; void *s; long l; };
 typedef unsigned long Instruction;
 
 
+/* maximum size for the Lua stack */
+#ifndef LUA_MAXSTACK
+#define LUA_MAXSTACK        14000
+#endif
+
+
 /* maximum stack for a Lua function */
 #define MAXSTACK	250
 
@@ -108,9 +114,9 @@ typedef unsigned long Instruction;
 #endif
 
 
-/* minimum size for the string table */
+/* minimum size for the string table (must be power of 2) */
 #ifndef MINSTRTABSIZE
-#define MINSTRTABSIZE	20
+#define MINSTRTABSIZE	32
 #endif
 
 
