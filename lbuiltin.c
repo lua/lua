@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.33 1998/07/12 16:16:43 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.34 1998/08/21 17:43:44 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -33,6 +33,35 @@ static void pushstring (TaggedString *s)
   o.ttype = LUA_T_STRING;
   o.value.ts = s;
   luaA_pushobject(&o);
+}
+
+
+static int getsize (TObject *t) {
+  int max = 0;
+  int i;
+  Hash *h = avalue(t);
+  LUA_ASSERT(ttype(t) == LUA_T_ARRAY, "table expected");
+  for (i = 0; i<nhash(h); i++) {
+    Node *n = h->node+i;
+    if (ttype(ref(n)) == LUA_T_NUMBER && ttype(val(n)) != LUA_T_NIL &&
+                                         (int)nvalue(ref(n)) > max)
+      max = nvalue(ref(n));
+  }
+  return max;
+}
+
+
+static int getnarg (lua_Object table) {
+  lua_Object temp;
+  /* temp = table.n */
+  lua_pushobject(table); lua_pushstring("n"); temp = lua_rawgettable();
+  return (lua_isnumber(temp) ? lua_getnumber(temp) :
+                               getsize(luaA_Address(table)));
+}
+
+
+static void getn (void) {
+  lua_pushnumber(getnarg(luaL_tablearg(1)));
 }
 
 
@@ -109,6 +138,26 @@ static void foreach (void) {
         return;
       L->stack.top--;
     }
+  }
+}
+
+
+static void foreachi (void) {
+  lua_Object ot = luaL_tablearg(1);
+  Hash *t = avalue(luaA_Address(ot));
+  TObject f = *luaA_Address(luaL_functionarg(2));
+  int i;
+  int n = getnarg(ot);
+  luaD_checkstack(3);  /* for f, ref, and val */
+  for (i=1; i<=n; i++) {
+    *(L->stack.top++) = f;
+    ttype(L->stack.top) = LUA_T_NUMBER;
+    nvalue(L->stack.top++) = i;
+    *(L->stack.top++) = *luaH_getint(t, i);
+    luaD_calln(2, 1);
+    if (ttype(L->stack.top-1) != LUA_T_NIL)
+      return;
+    L->stack.top--;
   }
 }
 
@@ -281,29 +330,6 @@ static void luatag (void)
 }
 
 
-static int getsize (TObject *t) {
-  int max = 0;
-  int i;
-  Hash *h = avalue(t);
-  LUA_ASSERT(ttype(t) == LUA_T_ARRAY, "table expected");
-  for (i = 0; i<nhash(h); i++) {
-    Node *n = h->node+i;
-    if (ttype(ref(n)) == LUA_T_NUMBER && ttype(val(n)) != LUA_T_NIL &&
-                                         (int)nvalue(ref(n)) > max)
-      max = nvalue(ref(n));
-  }
-  return max;
-}
-
-
-static int getnarg (lua_Object table) {
-  lua_Object temp;
-  /* temp = table.n */
-  lua_pushobject(table); lua_pushstring("n"); temp = lua_rawgettable();
-  return (lua_isnumber(temp) ? lua_getnumber(temp) :
-                               getsize(luaA_Address(table)));
-}
-
 static void luaI_call (void) {
   lua_Object f = luaL_nonnullarg(1);
   lua_Object arg = luaL_tablearg(2);
@@ -440,6 +466,7 @@ static int sort_comp (TObject *f, TObject *a, TObject *b) {
 ** quicksort algorithm from "Programming Pearls", pg. 112
 */
 static void auxsort (Hash *a, int l, int u, TObject *f) {
+  init:
   if (u <= l) return;  /* 0 or 1 element */
   luaD_checkstack(4);  /* for pivot, f, a, b (sort_comp) */
   if (u-l == 1) {  /* only two elements? */
@@ -461,8 +488,14 @@ static void auxsort (Hash *a, int l, int u, TObject *f) {
     L->stack.top--;  /* remove pivot from stack */
     swap(a, l, m);
     /* a[l..m-1] < a[m] <= a[m+1..u] */
-    auxsort(a, l, m-1, f);
-    auxsort(a, m+1, u, f);
+    if (m-l < u-m) {  /* check which "half" is bigger */
+      auxsort(a, l, m-1, f);  /* call recursively the smaller one */
+      l = m+1; goto init;  /* auxsort(a, m+1, u, f); */
+    }
+    else {
+      auxsort(a, m+1, u, f);
+      u = m-1; goto init;  /* auxsort(a, l, m-1, f); */
+    }
   }
 }
 
@@ -471,13 +504,8 @@ static void luaB_sort (void) {
   int n = getnarg(t);
   Hash *a = avalue(luaA_Address(t));
   lua_Object func = lua_getparam(2);
-  TObject *f;
-  if (func == LUA_NOOBJECT)
-    f = NULL;
-  else {
-    luaL_arg_check(lua_isfunction(func), 2, "function expected");
-    f = luaA_Address(func);
-  }
+  TObject *f = luaA_Address(func);
+  luaL_arg_check(!f || lua_isfunction(func), 2, "function expected");
   auxsort(a, 1, n, f);
   lua_pushobject(t);
 }
@@ -583,7 +611,9 @@ static struct luaL_reg int_funcs[] = {
   {"error", luaI_error},
   {"_ERRORMESSAGE", error_message},
   {"foreach", foreach},
+  {"foreachi", foreachi},
   {"foreachvar", foreachvar},
+  {"getn", getn},
   {"getglobal", getglobal},
   {"newtag", newtag},
   {"next", next},
