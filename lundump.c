@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.4 1998/01/13 20:05:24 lhf Exp $
+** $Id: lundump.c,v 1.7 1998/03/05 15:45:08 lhf Exp lhf $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -11,15 +11,31 @@
 #include "lstring.h"
 #include "lundump.h"
 
-typedef struct {
- ZIO* Z;
- int SwapNumber;
- int LoadFloat;
-} Sundump;
+#define	LoadBlock(b,size,Z)	ezread(Z,b,size)
+#define	LoadNative(t,D)		LoadBlock(&t,sizeof(t),D)
+
+/* LUA_NUMBER */
+/* if you change the definition of real, make sure you set ID_NUMBER
+* accordingly lundump.h, specially if sizeof(long)!=4.
+* for types other than the ones listed below, you'll have to write your own
+* dump and undump routines.
+*/
+
+#if ID_NUMBER==ID_REAL4
+	#define	LoadNumber	LoadFloat
+#elif ID_NUMBER==ID_REAL8
+	#define	LoadNumber	LoadDouble
+#elif ID_NUMBER==ID_INT4
+	#define	LoadNumber	LoadLong
+#elif ID_NUMBER==ID_NATIVE
+	#define	LoadNumber	LoadNative
+#else
+	#define	LoadNumber	LoadWhat
+#endif
 
 static void unexpectedEOZ(ZIO* Z)
 {
- luaL_verror("unexpected end of binary file %s",Z->name);
+ luaL_verror("unexpected end of file in %s",zname(Z));
 }
 
 static int ezgetc(ZIO* Z)
@@ -29,91 +45,77 @@ static int ezgetc(ZIO* Z)
  return c;
 }
 
-static int ezread(ZIO* Z, void* b, int n)
+static void ezread(ZIO* Z, void* b, int n)
 {
  int r=zread(Z,b,n);
  if (r!=0) unexpectedEOZ(Z);
- return r;
 }
 
-static int LoadWord(ZIO* Z)
+static unsigned int LoadWord(ZIO* Z)
 {
- int hi=ezgetc(Z);
- int lo=ezgetc(Z);
+ unsigned int hi=ezgetc(Z);
+ unsigned int lo=ezgetc(Z);
  return (hi<<8)|lo;
 }
 
-static void* LoadBlock(int size, ZIO* Z)
+static unsigned long LoadLong(ZIO* Z)
 {
- void* b=luaM_malloc(size);
- ezread(Z,b,size);
+ unsigned long hi=LoadWord(Z);
+ unsigned long lo=LoadWord(Z);
+ return (hi<<16)|lo;
+}
+
+/* LUA_NUMBER */
+/* assumes sizeof(long)==4 and sizeof(float)==4 (IEEE) */
+static float LoadFloat(ZIO* Z)
+{
+ long l=LoadLong(Z);
+ float f=*(float*)&l;
+ return f;
+}
+
+/* LUA_NUMBER */
+/* assumes sizeof(long)==4 and sizeof(double)==8 (IEEE) */
+static double LoadDouble(ZIO* Z)
+{
+ long l[2];
+ double f;
+ int x=1;
+ if (*(char*)&x==1)			/* little-endian */
+ {
+  l[1]=LoadLong(Z);
+  l[0]=LoadLong(Z);
+ }
+ else					/* big-endian */
+ {
+  l[0]=LoadLong(Z);
+  l[1]=LoadLong(Z);
+ }
+ f=*(double*)l;
+ return f;
+}
+
+static Byte* LoadCode(ZIO* Z)
+{
+ long size=LoadLong(Z);
+ unsigned int s=size;
+ void* b;
+ if (s!=size) luaL_verror("code too long (%ld bytes) in %s",size,zname(Z));
+ b=luaM_malloc(size);
+ LoadBlock(b,size,Z);
  return b;
 }
 
-static int LoadSize(ZIO* Z)
-{
- int hi=LoadWord(Z);
- int lo=LoadWord(Z);
- int s=(hi<<16)|lo;
- if (hi!=0 && s==lo)
-  luaL_verror("code too long (%ld bytes)",(hi<<16)|(long)lo);
- return s;
-}
-
-static char* LoadString(ZIO* Z)
+static TaggedString* LoadTString(ZIO* Z)
 {
  int size=LoadWord(Z);
  if (size==0)
   return NULL;
  else
  {
-  char* b=luaL_openspace(size);
-  ezread(Z,b,size);
-  return b;
- }
-}
-
-static TaggedString* LoadTString(ZIO* Z)
-{
- char* s=LoadString(Z);
- return (s==NULL) ? NULL : luaS_new(s);
-}
-
-static void SwapFloat(float* f)
-{
- Byte* p=(Byte*)f;
- Byte* q=p+sizeof(float)-1;
- Byte t;
- t=*p; *p++=*q; *q--=t;
- t=*p; *p++=*q; *q--=t;
-}
-
-static void SwapDouble(double* f)
-{
- Byte* p=(Byte*)f;
- Byte* q=p+sizeof(double)-1;
- Byte t;
- t=*p; *p++=*q; *q--=t;
- t=*p; *p++=*q; *q--=t;
- t=*p; *p++=*q; *q--=t;
- t=*p; *p++=*q; *q--=t;
-}
-
-static real LoadNumber(Sundump* S)
-{
- if (S->LoadFloat)
- {
-  float f;
-  ezread(S->Z,&f,sizeof(f));
-  if (S->SwapNumber) SwapFloat(&f);
-  return f;
- }
- else
- {
-  double f;
-  ezread(S->Z,&f,sizeof(f));
-  if (S->SwapNumber) SwapDouble(&f);
-  return f;
+  char* s=luaL_openspace(size);
+  LoadBlock(s,size,Z);
+  return luaS_newlstr(s,size-1);
  }
 }
 
@@ -131,63 +133,51 @@ static void LoadLocals(TProtoFunc* tf, ZIO* Z)
  tf->locvars[i].varname=NULL;
 }
 
-static void LoadConstants(TProtoFunc* tf, Sundump* S)
+static TProtoFunc* LoadFunction(ZIO* Z);
+
+static void LoadConstants(TProtoFunc* tf, ZIO* Z)
 {
- int i,n=LoadWord(S->Z);
+ int i,n=LoadWord(Z);
  tf->nconsts=n;
  if (n==0) return;
  tf->consts=luaM_newvector(n,TObject);
  for (i=0; i<n; i++)
  {
   TObject* o=tf->consts+i;
-  int c=ezgetc(S->Z);
+  int c=ezgetc(Z);
   switch (c)
   {
    case ID_NUM:
 	ttype(o)=LUA_T_NUMBER;
-	nvalue(o)=LoadNumber(S);
+#if ID_NUMBER==ID_NATIVE
+	LoadNative(nvalue(o),Z)
+#else
+	nvalue(o)=LoadNumber(Z);
+#endif
 	break;
    case ID_STR:
 	ttype(o)=LUA_T_STRING;	
-	tsvalue(o)=LoadTString(S->Z);
+	tsvalue(o)=LoadTString(Z);
 	break;
    case ID_FUN:
 	ttype(o)=LUA_T_PROTO;
-	tfvalue(o)=NULL;
+	tfvalue(o)=LoadFunction(Z);
 	break;
-#ifdef DEBUG
-   default:				/* cannot happen */
-	luaL_verror("internal error in LoadConstants: "
-		"bad constant #%d type=%d ('%c')\n",i,c,c);
+   default:
+	luaL_verror("bad constant #%d in %s: type=%d ('%c')",i,zname(Z),c,c);
 	break;
-#endif
   }
  }
 }
 
-static TProtoFunc* LoadFunction(Sundump* S);
-
-static void LoadFunctions(TProtoFunc* tf, Sundump* S)
+static TProtoFunc* LoadFunction(ZIO* Z)
 {
- while (zgetc(S->Z)==ID_FUNCTION)
- {
-  int i=LoadWord(S->Z); 
-  TProtoFunc* t=LoadFunction(S);
-  TObject* o=tf->consts+i;
-  tfvalue(o)=t;
- }
-}
-
-static TProtoFunc* LoadFunction(Sundump* S)
-{
- ZIO* Z=S->Z;
  TProtoFunc* tf=luaF_newproto();
  tf->lineDefined=LoadWord(Z);
  tf->fileName=LoadTString(Z);
- tf->code=LoadBlock(LoadSize(Z),Z);
- LoadConstants(tf,S);
+ tf->code=LoadCode(Z);
  LoadLocals(tf,Z);
- LoadFunctions(tf,S);
+ LoadConstants(tf,Z);
  return tf;
 }
 
@@ -196,61 +186,42 @@ static void LoadSignature(ZIO* Z)
  char* s=SIGNATURE;
  while (*s!=0 && ezgetc(Z)==*s)
   ++s;
- if (*s!=0) luaL_verror("bad signature in binary file %s",Z->name);
+ if (*s!=0) luaL_verror("bad signature in %s",zname(Z));
 }
 
-static void LoadHeader(Sundump* S)
+static void LoadHeader(ZIO* Z)
 {
- ZIO* Z=S->Z;
- int version,sizeofR;
+ int version,id,sizeofR;
+ real f=-TEST_NUMBER,tf=TEST_NUMBER;
  LoadSignature(Z);
  version=ezgetc(Z);
  if (version>VERSION)
   luaL_verror(
-	"binary file %s too new: version=0x%02x; expected at most 0x%02x",
-	Z->name,version,VERSION);
+	"%s too new: version=0x%02x; expected at most 0x%02x",
+	zname(Z),version,VERSION);
  if (version<0x31)			/* major change in 3.1 */
   luaL_verror(
-	"binary file %s too old: version=0x%02x; expected at least 0x%02x",
-	Z->name,version,0x31);
- sizeofR=ezgetc(Z);			/* test float representation */
- if (sizeofR==sizeof(float))
+	"%s too old: version=0x%02x; expected at least 0x%02x",
+	zname(Z),version,0x31);
+ id=ezgetc(Z);				/* test number representation */
+ sizeofR=ezgetc(Z);
+ if (id!=ID_NUMBER || sizeofR!=sizeof(real))
  {
-  float f,tf=TEST_FLOAT;
-  ezread(Z,&f,sizeof(f));
-  if (f!=tf)
-  {
-   SwapFloat(&f);
-   if (f!=tf)
-    luaL_verror("unknown float representation in binary file %s",Z->name);
-   S->SwapNumber=1;
-  }
-  S->LoadFloat=1;
+  luaL_verror("unknown number representation in %s: "
+	"read 0x%02x %d; expected 0x%02x %d",
+	zname(Z),id,sizeofR,ID_NUMBER,sizeof(real));
  }
- else if (sizeofR==sizeof(double))
- {
-  double f,tf=TEST_FLOAT;
-  ezread(Z,&f,sizeof(f));
-  if (f!=tf)
-  {
-   SwapDouble(&f);
-   if (f!=tf)
-    luaL_verror("unknown float representation in binary file %s",Z->name);
-   S->SwapNumber=1;
-  }
-  S->LoadFloat=0;
- }
- else
-  luaL_verror(
-       "floats in binary file %s have %d bytes; "
-       "expected %d (float) or %d (double)",
-       Z->name,sizeofR,sizeof(float),sizeof(double));
+ f=LoadNumber(Z);
+ if (f!=tf)
+  luaL_verror("unknown number representation in %s: "
+	"read %g; expected %g",		/* LUA_NUMBER */
+	zname(Z),(double)f,(double)tf);
 }
 
-static TProtoFunc* LoadChunk(Sundump* S)
+static TProtoFunc* LoadChunk(ZIO* Z)
 {
- LoadHeader(S);
- return LoadFunction(S);
+ LoadHeader(Z);
+ return LoadFunction(Z);
 }
 
 /*
@@ -260,13 +231,9 @@ static TProtoFunc* LoadChunk(Sundump* S)
 TProtoFunc* luaU_undump1(ZIO* Z)
 {
  int c=zgetc(Z);
- Sundump S;
- S.Z=Z;
- S.SwapNumber=0;
- S.LoadFloat=1;
  if (c==ID_CHUNK)
-  return LoadChunk(&S);
+  return LoadChunk(Z);
  else if (c!=EOZ)
-  luaL_verror("%s is not a lua binary file",Z->name);
+  luaL_verror("%s is not a Lua binary file",zname(Z));
  return NULL;
 }
