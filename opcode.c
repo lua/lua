@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 4.1 1997/04/03 18:27:06 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 4.2 1997/04/04 22:24:51 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -554,7 +554,7 @@ int luaI_dorun (TFunc *tf)
   return status;
 }
 
-static int do_protectedmain (void)
+static int do_protectedmain (lua_CFunction closef)
 {
   TFunc tf;
   int status;
@@ -563,16 +563,17 @@ static int do_protectedmain (void)
   errorJmp = &myErrorJmp;
   luaI_initTFunc(&tf);
   tf.fileName = lua_parsedfile;
-  if (setjmp(myErrorJmp) == 0)
-  {
+  if (setjmp(myErrorJmp) == 0) {
     lua_parse(&tf);
-    status = luaI_dorun(&tf);
+    status = 0;
   }
-  else
-  {
-    status = 1;
+  else {
     adjustC(0);  /* erase extra slot */
+    status = 1;
   }
+  closef();
+  if (status == 0)
+    status = luaI_dorun(&tf);
   errorJmp = oldErr;
   luaI_free(tf.code);
   return status;
@@ -620,13 +621,13 @@ int lua_dofile (char *filename)
   if (c == ID_CHUNK) {
     f = freopen(filename, "rb", f);  /* set binary mode */
     status = luaI_undump(f);
+    lua_closefile();
   }
   else {
     if (c == '#')
       while ((c=fgetc(f)) != '\n') /* skip first line */;
-    status = do_protectedmain();
+    status = do_protectedmain(lua_closefile);
   }
-  lua_closefile();
   return status;
 }
 
@@ -640,8 +641,7 @@ int lua_dostring (char *str)
   if (str == NULL)
     return 1;
   lua_openstring(str);
-  status = do_protectedmain();
-  lua_closestring();
+  status = do_protectedmain(lua_closestring);
   return status;
 }
 

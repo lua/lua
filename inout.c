@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.56 1997/04/06 14:08:08 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.57 1997/04/06 14:14:27 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -68,8 +68,6 @@ FILE *lua_openfile (char *fn)
  }
  else
    fp = fopen (fn, "r");
- if (fp == NULL)
-   return NULL;
  lua_parsedfile = luaI_createfixedstring(fn)->str;
  return fp;
 }
@@ -79,11 +77,8 @@ FILE *lua_openfile (char *fn)
 */
 void lua_closefile (void)
 {
- if (fp != NULL && fp != stdin)
- {
-  fclose (fp);
-  fp = NULL;
- }
+ if (fp != stdin)
+   fclose(fp);
 }
 
 /*
