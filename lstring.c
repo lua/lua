@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.13 1998/06/19 16:14:09 roberto Exp roberto $
+** $Id: lstring.c,v 1.14 1998/07/27 17:06:17 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -45,8 +45,7 @@ static unsigned long hash_s (char *s, long l)
   return h;
 }
 
-static int newsize (stringtable *tb)
-{
+static int newsize (stringtable *tb) {
   int size = tb->size;
   int realuse = 0;
   int i;
@@ -54,10 +53,7 @@ static int newsize (stringtable *tb)
   for (i=0; i<size; i++)
     if (tb->hash[i] != NULL && tb->hash[i] != &EMPTY)
       realuse++;
-  if (2*(realuse+1) <= size)  /* +1 is the new element */
-    return size;  /* don't need to grow, just rehash to clear EMPTYs */
-  else
-    return luaO_redimension(size);
+  return luaO_redimension((realuse+1)*2);  /* +1 is the new element */
 }
 
 

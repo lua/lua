@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.12 1998/01/28 16:50:33 roberto Exp roberto $
+** $Id: ltable.c,v 1.13 1998/07/12 16:15:19 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -121,8 +121,7 @@ Hash *luaH_new (int nhash)
 }
 
 
-static int newsize (Hash *t)
-{
+static int newsize (Hash *t) {
   Node *v = t->node;
   int size = nhash(t);
   int realuse = 0;
@@ -131,10 +130,7 @@ static int newsize (Hash *t)
     if (ttype(ref(v+i)) != LUA_T_NIL && ttype(val(v+i)) != LUA_T_NIL)
       realuse++;
   }
-  if (2*(realuse+1) <= size)  /* +1 is the new element */
-    return size;  /* don't need to grow, just rehash */
-  else
-    return luaO_redimension(size);
+  return luaO_redimension((realuse+1)*2);  /* +1 is the new element */
 }
 
 static void rehash (Hash *t)
