@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.165 2001/02/06 16:01:29 roberto Exp roberto $
+** $Id: lvm.c,v 1.166 2001/02/07 18:13:49 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -101,7 +101,7 @@ static void callTM (lua_State *L, const char *fmt, ...) {
   StkId base = L->top;
   int has_result = 0;
   va_start(argp, fmt);
-  for (;;) {
+  while (*fmt) {
     switch (*fmt++) {
       case 'c':
         setclvalue(L->top, va_arg(argp, Closure *));
@@ -114,12 +114,10 @@ static void callTM (lua_State *L, const char *fmt, ...) {
         break;
       case 'r':
         has_result = 1;
-        /* go through */
-      default:
-        goto endloop;
+        continue;
     }
     incr_top;
-  } endloop:
+  }
   luaD_call(L, base, has_result);
   if (has_result) {
     L->top--;
@@ -140,18 +138,16 @@ void luaV_gettable (lua_State *L, StkId t, TObject *key, StkId res) {
   if (ttype(t) == LUA_TTABLE &&  /* `t' is a table? */
       ((tg = hvalue(t)->htag) == LUA_TTABLE ||  /* with default tag? */
         luaT_gettm(G(L), tg, TM_GETTABLE) == NULL)) { /* or no TM? */
-    /* do a primitive get */
-    const TObject *h = luaH_get(hvalue(t), key);
+    const TObject *h = luaH_get(hvalue(t), key);  /* do a primitive get */
     /* result is no nil or there is no `index' tag method? */
     if (ttype(h) != LUA_TNIL || ((tm=luaT_gettm(G(L), tg, TM_INDEX)) == NULL)) {
       setobj(res, h);
       return;
     }
-    /* else call `index' tag method */
+    /* else will call `index' tag method */
   }
-  else {  /* try a `gettable' tag method */
+  else  /* try a `gettable' tag method */
     tm = luaT_gettmbyObj(G(L), t, TM_GETTABLE);
-  }
   if (tm == NULL)  /* no tag method? */
     luaG_typeerror(L, t, "index");
   else
