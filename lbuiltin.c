@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.124 2000/08/29 14:41:56 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.125 2000/08/31 14:08:27 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -21,19 +21,8 @@
 
 #include "lua.h"
 
-#include "lapi.h"
 #include "lauxlib.h"
 #include "lbuiltin.h"
-#include "ldo.h"
-#include "lfunc.h"
-#include "lmem.h"
-#include "lobject.h"
-#include "lstate.h"
-#include "lstring.h"
-#include "ltable.h"
-#include "ltm.h"
-#include "lundump.h"
-#include "lvm.h"
 
 
 
@@ -43,40 +32,6 @@
 void luaB_opentests (lua_State *L);
 
 
-
-/*
-** {======================================================
-** Auxiliary functions
-** =======================================================
-*/
-
-static Number getsize (const Hash *h) {
-  Number max = 0;
-  int i = h->size;
-  Node *n = h->node;
-  while (i--) {
-    if (ttype(key(n)) == TAG_NUMBER && 
-        ttype(val(n)) != TAG_NIL &&
-        nvalue(key(n)) > max)
-      max = nvalue(key(n));
-    n++;
-  }
-  return max;
-}
-
-
-static Number getnarg (lua_State *L, const Hash *a) {
-  const TObject *value = luaH_getstr(a, luaS_new(L, "n"));  /* value = a.n */
-  return (ttype(value) == TAG_NUMBER) ? nvalue(value) : getsize(a);
-}
-
-
-static Hash *gettable (lua_State *L, int arg) {
-  luaL_checktype(L, arg, "table");
-  return hvalue(luaA_index(L, arg));
-}
-
-/* }====================================================== */
 
 
 /*
@@ -156,7 +111,7 @@ int luaB_tonumber (lua_State *L) {
   else {
     const char *s1 = luaL_check_string(L, 1);
     char *s2;
-    Number n;
+    unsigned long n;
     luaL_arg_check(L, 2 <= base && base <= 36, 2, "base out of range");
     n = strtoul(s1, &s2, base);
     if (s1 != s2) {  /* at least one valid digit? */
@@ -243,8 +198,10 @@ int luaB_settagmethod (lua_State *L) {
   const char *event = luaL_check_string(L, 2);
   luaL_arg_check(L, lua_isfunction(L, 3) || lua_isnil(L, 3), 3,
                  "function or nil expected");
-  if (strcmp(event, "gc") == 0 && tag != TAG_NIL)
+  lua_pushnil(L);  /* to get its tag */
+  if (strcmp(event, "gc") == 0 && tag != lua_tag(L, -1))
     lua_error(L, "deprecated use: cannot set the `gc' tag method from Lua");
+  lua_settop(L, -1);  /* remove the nil */
   lua_settagmethod(L, tag, event);
   return 1;
 }
@@ -279,16 +236,6 @@ int luaB_next (lua_State *L) {
   }
 }
 
-/* }====================================================== */
-
-
-/*
-** {======================================================
-** Functions that could use only the official API but
-** do not, for efficiency.
-** =======================================================
-*/
-
 
 static int passresults (lua_State *L, int status, int oldtop) {
   if (status == 0) {
@@ -311,7 +258,7 @@ int luaB_dostring (lua_State *L) {
   int oldtop = lua_gettop(L);
   size_t l;
   const char *s = luaL_check_lstr(L, 1, &l);
-  if (*s == ID_CHUNK)
+  if (*s == '\27')  /* binary files start with ESC... */
     lua_error(L, "`dostring' cannot run pre-compiled code");
   return passresults(L, lua_dobuffer(L, s, l, luaL_opt_string(L, 2, s)), oldtop);
 }
@@ -322,6 +269,63 @@ int luaB_dofile (lua_State *L) {
   const char *fname = luaL_opt_string(L, 1, NULL);
   return passresults(L, lua_dofile(L, fname), oldtop);
 }
+
+/* }====================================================== */
+
+
+/*
+** {======================================================
+** Functions that could use only the official API but
+** do not, for efficiency.
+** =======================================================
+*/
+
+#include "lapi.h"
+#include "ldo.h"
+#include "lmem.h"
+#include "lobject.h"
+#include "lstate.h"
+#include "lstring.h"
+#include "ltable.h"
+#include "ltm.h"
+#include "lvm.h"
+
+
+/*
+** {======================================================
+** Auxiliary functions
+** =======================================================
+*/
+
+static Number getsize (const Hash *h) {
+  Number max = 0;
+  int i = h->size;
+  Node *n = h->node;
+  while (i--) {
+    if (ttype(key(n)) == TAG_NUMBER && 
+        ttype(val(n)) != TAG_NIL &&
+        nvalue(key(n)) > max)
+      max = nvalue(key(n));
+    n++;
+  }
+  return max;
+}
+
+
+static Number getnarg (lua_State *L, const Hash *a) {
+  const TObject *value = luaH_getstr(a, luaS_new(L, "n"));  /* value = a.n */
+  return (ttype(value) == TAG_NUMBER) ? nvalue(value) : getsize(a);
+}
+
+
+static Hash *gettable (lua_State *L, int arg) {
+  luaL_checktype(L, arg, "table");
+  return hvalue(luaA_index(L, arg));
+}
+
+/* }====================================================== */
+
+
 
 
 int luaB_call (lua_State *L) {
@@ -387,8 +391,7 @@ int luaB_tostring (lua_State *L) {
       sprintf(buff, "function: %p", clvalue(o));
       break;
     case TAG_USERDATA:
-      sprintf(buff, "userdata(%d): %p", tsvalue(o)->u.d.tag,
-                                        tsvalue(o)->u.d.value);
+      sprintf(buff, "userdata(%d): %p", lua_tag(L, 1), lua_touserdata(L, 1));
       break;
     case TAG_NIL:
       lua_pushstring(L, "nil");
@@ -485,23 +488,23 @@ static int luaB_foreachi (lua_State *L) {
 
 
 static int luaB_foreach (lua_State *L) {
-  const Hash *a = gettable(L, 1);
-  int i;
+  luaL_checktype(L, 1, "table");
   luaL_checktype(L, 2, "function");
-  for (i=0; i<a->size; i++) {
-    const Node *nd = &(a->node[i]);
-    if (ttype(val(nd)) != TAG_NIL) {
-      lua_pushobject(L, 2);
-      *(L->top++) = *key(nd);
-      *(L->top++) = *val(nd);
-      luaD_call(L, L->top-3, 1);
-      if (ttype(L->top-1) != TAG_NIL)
-        return 1;
-      L->top--;  /* remove result */
-    }
+  lua_pushobject(L, 1);  /* put table at top */
+  lua_pushnil(L);  /* first index */
+  for (;;) {
+    if (lua_next(L) == 0)
+      return 0;
+    lua_pushobject(L, 2);  /* function */
+    lua_pushobject(L, -3);  /* key */
+    lua_pushobject(L, -3);  /* value */
+    if (lua_call(L, 2, 1) != 0) lua_error(L, NULL);
+    if (!lua_isnil(L, -1))
+      return 1;
+    lua_settop(L, -2);  /* remove value and result */
   }
-  return 0;
 }
+
 
 
 /*
