@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.49 2001/01/31 19:53:01 roberto Exp roberto $
+% $Id: manual.tex,v 1.50 2001/07/19 13:36:18 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage}
@@ -134,7 +134,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{{\small \tt\$Date: 2001/01/31 19:53:01 $ $}}
+\date{{\small \tt\$Date: 2001/07/19 13:36:18 $ $}}
 
 \maketitle
 
@@ -2205,18 +2205,18 @@ tables indexed by numbers only:
 \DefAPI{lua_rawseti}
 \DefAPI{lua_getn}
 
-\verb|lua_rawgeti| gets the value of the \M{n}-th element of the table
+\verb|lua_rawgeti| pushes the value of the \M{n}-th element of the table
 at stack position \verb|index|.
 
 \verb|lua_rawseti| sets the value of the \M{n}-th element of the table
-at stack position \verb|index| to the value at the top of the stack.
+at stack position \verb|index| to the value at the top of the stack,
+removing the value from the stack.
 
 \verb|lua_getn| returns the number of elements in the table
 at stack position \verb|index|.
 This number is the value of the table field \verb|n|,
 if it has a numeric value,
-or
-the largest numerical index with a non-nil value in the table.
+or the largest numerical index with a non-nil value in the table.
 
 \subsection{Calling Lua Functions}
 
