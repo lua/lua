@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.77 2002/02/14 21:47:29 roberto Exp roberto $
+** $Id: lstate.h,v 1.78 2002/03/07 18:11:51 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -132,7 +132,7 @@ struct lua_State {
   StkId stack;  /* stack base */
   CallInfo *end_ci;  /* points after end of ci array*/
   CallInfo *base_ci;  /* array of CallInfo's */
-  global_State *_G;
+  global_State *l_G;
   struct lua_longjmp *errorJmp;  /* current error recover point */
   UpVal *openupval;  /* list of open upvalues in this stack */
   lua_State *next;  /* circular double linked list of states */
@@ -145,7 +145,7 @@ struct lua_State {
 };
 
 
-#define G(L)	(L->_G)
+#define G(L)	(L->l_G)
 
 
 void luaE_closethread (lua_State *OL, lua_State *L);

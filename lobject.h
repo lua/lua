@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.124 2002/02/08 22:42:41 roberto Exp roberto $
+** $Id: lobject.h,v 1.125 2002/03/05 12:42:47 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -63,29 +63,29 @@ typedef struct lua_TObject {
 
 /* Macros to set values */
 #define setnvalue(obj,x) \
-  { TObject *_o=(obj); _o->tt=LUA_TNUMBER; _o->value.n=(x); }
+  { TObject *i_o=(obj); i_o->tt=LUA_TNUMBER; i_o->value.n=(x); }
 
 #define chgnvalue(obj,x)	((obj)->value.n=(x))
 
 #define setbvalue(obj,x) \
-  { TObject *_o=(obj); _o->tt=LUA_TBOOLEAN; _o->value.b=(x); }
+  { TObject *i_o=(obj); i_o->tt=LUA_TBOOLEAN; i_o->value.b=(x); }
 
 #define setsvalue(obj,x) \
-  { TObject *_o=(obj); _o->tt=LUA_TSTRING; _o->value.ts=(x); }
+  { TObject *i_o=(obj); i_o->tt=LUA_TSTRING; i_o->value.ts=(x); }
 
 #define setuvalue(obj,x) \
-  { TObject *_o=(obj); _o->tt=LUA_TUSERDATA; _o->value.u=(x); }
+  { TObject *i_o=(obj); i_o->tt=LUA_TUSERDATA; i_o->value.u=(x); }
 
 #define setclvalue(obj,x) \
-  { TObject *_o=(obj); _o->tt=LUA_TFUNCTION; _o->value.cl=(x); }
+  { TObject *i_o=(obj); i_o->tt=LUA_TFUNCTION; i_o->value.cl=(x); }
 
 #define sethvalue(obj,x) \
-  { TObject *_o=(obj); _o->tt=LUA_TTABLE; _o->value.h=(x); }
+  { TObject *i_o=(obj); i_o->tt=LUA_TTABLE; i_o->value.h=(x); }
 
 #define setnilvalue(obj) ((obj)->tt=LUA_TNIL)
 
 #define setupvalue(obj,x,t) \
-  { TObject *_o=(obj); _o->tt=(t); _o->value.v=(x); }
+  { TObject *i_o=(obj); i_o->tt=(t); i_o->value.v=(x); }
 
 #define setobj(obj1,obj2) \
   { TObject *o1=(obj1); const TObject *o2=(obj2); \
@@ -213,8 +213,8 @@ typedef union Closure {
 */
 
 typedef struct Node {
-  TObject _key;
-  TObject _val;
+  TObject i_key;
+  TObject i_val;
   struct Node *next;  /* for chaining */
 } Node;
 

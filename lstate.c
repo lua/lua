@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.85 2002/03/05 16:22:54 roberto Exp roberto $
+** $Id: lstate.c,v 1.86 2002/03/07 18:14:29 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -46,7 +46,7 @@ static void stack_init (lua_State *L, lua_State *OL) {
 static void f_luaopen (lua_State *L, void *ud) {
   UNUSED(ud);
   /* create a new global state */
-  L->_G = luaM_new(L, global_State);
+  L->l_G = luaM_new(L, global_State);
   G(L)->strt.size = 0;
   G(L)->strt.nuse = 0;
   G(L)->strt.hash = NULL;
@@ -91,7 +91,7 @@ LUA_API lua_State *lua_newthread (lua_State *OL) {
   lua_lock(OL);
   L = luaM_new(OL, lua_State);
   preinit_state(L);
-  L->_G = OL->_G;
+  L->l_G = OL->l_G;
   OL->next->previous = L;  /* insert L into linked list */
   L->next = OL->next;
   OL->next = L;
@@ -111,7 +111,7 @@ LUA_API lua_State *lua_open (void) {
   L = luaM_new(NULL, lua_State);
   if (L) {  /* allocation OK? */
     preinit_state(L);
-    L->_G = NULL;
+    L->l_G = NULL;
     L->next = L->previous = L;
     if (luaD_runprotected(L, f_luaopen, NULL) != 0) {
       /* memory allocation error: free partial state */
@@ -146,7 +146,7 @@ static void close_state (lua_State *L) {
     lua_assert(G(L)->roottable == NULL);
     luaS_freeall(L);
     luaM_freearray(L, G(L)->Mbuffer, G(L)->Mbuffsize, char);
-    luaM_freelem(NULL, L->_G);
+    luaM_freelem(NULL, L->l_G);
   }
   luaE_closethread(NULL, L);
 }

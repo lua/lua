@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.100 2002/02/05 22:39:12 roberto Exp $
+** $Id: ldebug.c,v 1.101 2002/03/08 19:10:32 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -59,7 +59,7 @@ LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
   lua_lock(L);
   if (L->ci - L->base_ci <= level) status = 0;  /* there is no such level */
   else {
-    ar->_ci = (L->ci - L->base_ci) - level;
+    ar->i_ci = (L->ci - L->base_ci) - level;
     status = 1;
   }
   lua_unlock(L);
@@ -129,7 +129,7 @@ LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
   Proto *fp;
   lua_lock(L);
   name = NULL;
-  ci = L->base_ci + ar->_ci;
+  ci = L->base_ci + ar->i_ci;
   fp = getluaproto(ci);
   if (fp) {  /* is a Lua function? */
     name = luaF_getlocalname(fp, n, currentpc(L, ci));
@@ -147,7 +147,7 @@ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
   Proto *fp;
   lua_lock(L);
   name = NULL;
-  ci = L->base_ci + ar->_ci;
+  ci = L->base_ci + ar->i_ci;
   fp = getluaproto(ci);
   L->top--;  /* pop new value */
   if (fp) {  /* is a Lua function? */
@@ -216,7 +216,7 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
   int status = 1;
   lua_lock(L);
   if (*what != '>') {  /* function is active? */
-    ci = L->base_ci + ar->_ci;
+    ci = L->base_ci + ar->i_ci;
     f = ci->base - 1;
   }
   else {

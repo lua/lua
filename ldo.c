@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.161 2002/03/07 18:14:29 roberto Exp roberto $
+** $Id: ldo.c,v 1.162 2002/03/08 19:11:03 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -124,7 +124,7 @@ void luaD_lineHook (lua_State *L, int line, lua_Hook linehook) {
   if (L->allowhooks) {
     lua_Debug ar;
     ar.event = "line";
-    ar._ci = L->ci - L->base_ci;
+    ar.i_ci = L->ci - L->base_ci;
     ar.currentline = line;
     dohook(L, &ar, linehook);
   }
@@ -135,7 +135,7 @@ static void luaD_callHook (lua_State *L, lua_Hook callhook, const char *event) {
   if (L->allowhooks) {
     lua_Debug ar;
     ar.event = event;
-    ar._ci = L->ci - L->base_ci;
+    ar.i_ci = L->ci - L->base_ci;
     L->ci->pc = NULL;  /* function is not active */
     dohook(L, &ar, callhook);
   }
