@@ -115,8 +115,14 @@ static void io_read (void)
   int c = NEED_OTHER;
   luaI_addchar(0);
   while (*p) {
-    if (*p == '{' || *p == '}') {
-      inskip = (*p == '{');
+    if (*p == '{') {
+      inskip++;
+      p++;
+    }
+    else if (*p == '}') {
+      if (inskip == 0)
+        lua_error("unbalanced `{...}' in read pattern");
+      inskip--;
       p++;
     }
     else {
@@ -125,7 +131,7 @@ static void io_read (void)
       if (c == NEED_OTHER) c = getc(lua_infile);
       m = (c == EOF) ? 0 : singlematch((char)c, p);
       if (m) {
-        if (!inskip) luaI_addchar(c);
+        if (inskip == 0) luaI_addchar(c);
         c = NEED_OTHER;
       }
       switch (*ep) {
