@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.39 1999/05/05 19:22:26 roberto Exp roberto $
+** $Id: liolib.c,v 1.40 1999/05/14 12:24:04 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -157,9 +157,13 @@ static void setfile (FILE *f, char *name, int tag) {
 
 
 static void setreturn (FILE *f, char *name) {
-  int tag = gettag();
-  setfile(f, name, tag);
-  lua_pushusertag(f, tag);
+  if (f == NULL)
+    pushresult(0);
+  else {
+    int tag = gettag();
+    setfile(f, name, tag);
+    lua_pushusertag(f, tag);
+  }
 }
 
 
@@ -175,10 +179,6 @@ static void io_readfrom (void) {
   else {
     char *s = luaL_check_string(FIRSTARG);
     current = (*s == '|') ? popen(s+1, "r") : fopen(s, "r");
-    if (current == NULL) {
-      pushresult(0);
-      return;
-    }
   }
   setreturn(current, FINPUT);
 }
@@ -196,21 +196,14 @@ static void io_writeto (void) {
   else {
     char *s = luaL_check_string(FIRSTARG);
     current = (*s == '|') ? popen(s+1,"w") : fopen(s, "w");
-    if (current == NULL) {
-      pushresult(0);
-      return;
-    }
   }
   setreturn(current, FOUTPUT);
 }
 
 
 static void io_appendto (void) {
-  FILE *fp = fopen(luaL_check_string(FIRSTARG), "a");
-  if (fp != NULL)
-    setreturn(fp, FOUTPUT);
-  else
-    pushresult(0);
+  FILE *current = fopen(luaL_check_string(FIRSTARG), "a");
+  setreturn(current, FOUTPUT);
 }
 
 
