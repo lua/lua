@@ -4,7 +4,7 @@
 ** facilities.
 */
 
-char *rcs_inout="$Id: inout.c,v 1.1 1993/12/17 18:41:19 celes Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 1.2 1993/12/22 21:15:16 roberto Exp celes $";
 
 #include <stdio.h>
 #include <string.h>
@@ -13,6 +13,7 @@ char *rcs_inout="$Id: inout.c,v 1.1 1993/12/17 18:41:19 celes Exp roberto $";
 #include "hash.h"
 #include "inout.h"
 #include "table.h"
+#include "tree.h"
 
 /* Exported variables */
 int lua_linenumber;
@@ -157,12 +158,12 @@ void lua_reportbug (char *s)
   {
    sprintf (strchr(msg,0), 
          "\n\tin statement begining at line %d in function \"%s\" of file \"%s\"",
-         lua_debugline, s_name(funcstack[nfuncstack-1].function),
+         lua_debugline, lua_varname(funcstack[nfuncstack-1].function),
   	 lua_file[funcstack[nfuncstack-1].file]);
    sprintf (strchr(msg,0), "\n\tactive stack\n");
    for (i=nfuncstack-1; i>=0; i--)
     sprintf (strchr(msg,0), "\t-> function \"%s\" of file \"%s\"\n", 
-                            s_name(funcstack[i].function),
+                            lua_varname(funcstack[i].function),
 			    lua_file[funcstack[i].file]);
   }
   else

@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 2.3 1994/04/19 19:06:15 celes Exp celes $";
+char *rcs_luastx = "$Id: lua.stx,v 2.4 1994/04/20 16:22:21 celes Exp celes $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,17 +16,17 @@ char *rcs_luastx = "$Id: lua.stx,v 2.3 1994/04/19 19:06:15 celes Exp celes $";
 
 #define LISTING 0
 
-#ifndef GAPCODE
-#define GAPCODE 50
+#ifndef CODE_BLOCK
+#define CODE_BLOCK 256
 #endif
-static Word   maxcode;
-static Word   maxmain;
-static Word   maxcurr ;
+static Long   maxcode;
+static Long   maxmain;
+static Long   maxcurr ;
 static Byte  *code = NULL;
 static Byte  *initcode;
 static Byte  *basepc;
-static Word   maincode;
-static Word   pc;
+static Long   maincode;
+static Long   pc;
 
 #define MAXVAR 32
 static long    varbuffer[MAXVAR];    /* variables in an assignment list;
@@ -48,7 +48,7 @@ static void code_byte (Byte c)
 {
  if (pc>maxcurr-2)  /* 1 byte free to code HALT of main code */
  {
-  maxcurr += GAPCODE;
+  maxcurr *= 2;
   basepc = (Byte *)realloc(basepc, maxcurr*sizeof(Byte));
   if (basepc == NULL)
   {
@@ -155,7 +155,8 @@ static void incr_nvarbuffer (void)
 }
 
 static void code_number (float f)
-{ Word i = (Word)f;
+{ 
+  Word i = (Word)f;
   if (f == (float)i)  /* f has an (short) integer value */
   {
    if (i <= 2) code_byte(PUSH0 + i);
@@ -184,10 +185,10 @@ static void code_number (float f)
 %union 
 {
  int   vInt;
- long  vLong;
  float vFloat;
  char *pChar;
  Word  vWord;
+ Long  vLong;
  Byte *pByte;
 }
 
@@ -203,7 +204,7 @@ static void code_number (float f)
 %token <pChar>   NAME 
 %token <vInt>   DEBUG
 
-%type <vWord> PrepJump
+%type <vLong> PrepJump
 %type <vInt>  expr, exprlist, exprlist1, varlist1, typeconstructor
 %type <vInt>  fieldlist, localdeclist
 %type <vInt>  ffieldlist, ffieldlist1
@@ -240,13 +241,13 @@ function     : FUNCTION NAME
 	       {
 		if (code == NULL)	/* first function */
 		{
-		 code = (Byte *) calloc(GAPCODE, sizeof(Byte));
+		 code = (Byte *) calloc(CODE_BLOCK, sizeof(Byte));
 		 if (code == NULL)
 		 {
 		  lua_error("not enough memory");
 		  err = 1;
 		 }
-		 maxcode = GAPCODE;
+		 maxcode = CODE_BLOCK;
 		}
 		pc=0; basepc=code; maxcurr=maxcode; 
 		nlocalvar=0;
@@ -301,7 +302,7 @@ sc	 : /* empty */ | ';' ;
 stat1  : IF expr1 THEN PrepJump block PrepJump elsepart END
        {
         {
-	 Word elseinit = $6+sizeof(Word)+1;
+	 Long elseinit = $6+sizeof(Word)+1;
 	 if (pc - elseinit == 0)		/* no else */
 	 {
 	  pc -= sizeof(Word)+1;
@@ -317,21 +318,21 @@ stat1  : IF expr1 THEN PrepJump block PrepJump elsepart END
 	}
        }
      
-       | WHILE {$<vWord>$=pc;} expr1 DO PrepJump block PrepJump END
+       | WHILE {$<vLong>$=pc;} expr1 DO PrepJump block PrepJump END
      	
        {
         basepc[$5] = IFFJMP;
 	code_word_at(basepc+$5+1, pc - ($5 + sizeof(Word)+1));
         
         basepc[$7] = UPJMP;
-	code_word_at(basepc+$7+1, pc - ($<vWord>2));
+	code_word_at(basepc+$7+1, pc - ($<vLong>2));
        }
      
-       | REPEAT {$<vWord>$=pc;} block UNTIL expr1 PrepJump
+       | REPEAT {$<vLong>$=pc;} block UNTIL expr1 PrepJump
      	
        {
         basepc[$6] = IFFUPJMP;
-	code_word_at(basepc+$6+1, pc - ($<vWord>2));
+	code_word_at(basepc+$6+1, pc - ($<vLong>2));
        }
 
 
@@ -357,7 +358,7 @@ elsepart : /* empty */
          | ELSEIF expr1 THEN PrepJump block PrepJump elsepart
          {
           {
-  	   Word elseinit = $6+sizeof(Word)+1;
+  	   Long elseinit = $6+sizeof(Word)+1;
   	   if (pc - elseinit == 0)		/* no else */
   	   {
   	    pc -= sizeof(Word)+1;
@@ -459,13 +460,13 @@ expr :	'(' expr ')'    { $$ = $2; }
 typeconstructor: '@'  
      {
       code_byte(PUSHBYTE);
-      $<vWord>$ = pc; code_byte(0);
+      $<vLong>$ = pc; code_byte(0);
       incr_ntemp();
       code_byte(CREATEARRAY);
      }
       objectname fieldlist 
      {
-      basepc[$<vWord>2] = $4; 
+      basepc[$<vLong>2] = $4; 
       if ($3 < 0)	/* there is no function to be called */
       {
        $$ = 1;
@@ -725,9 +726,9 @@ int yywrap (void)
 */
 int lua_parse (void)
 {
- Byte *init = initcode = (Byte *) calloc(GAPCODE, sizeof(Byte));
+ Byte *init = initcode = (Byte *) calloc(CODE_BLOCK, sizeof(Byte));
  maincode = 0; 
- maxmain = GAPCODE;
+ maxmain = CODE_BLOCK;
  if (init == NULL)
  {
   lua_error("not enough memory");

@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 1.4 1994/04/13 21:37:20 celes Exp celes $
+** $Id: opcode.h,v 2.1 1994/04/20 22:07:57 celes Exp celes $
 */
 
 #ifndef opcode_h
@@ -19,6 +19,8 @@
 typedef unsigned char  Byte;
 
 typedef unsigned short Word;
+
+typedef signed long  Long;
 
 typedef union
 {
@@ -116,7 +118,6 @@ typedef struct Object
 
 typedef struct
 {
- char   *name;
  Object  object;
 } Symbol;
 
@@ -130,7 +131,6 @@ typedef struct
 #define uvalue(o)	((o)->value.u)
 
 /* Macros to access symbol table */
-#define s_name(i)	(lua_table[i].name)
 #define s_object(i)	(lua_table[i].object)
 #define s_tag(i)	(tag(&s_object(i)))
 #define s_nvalue(i)	(nvalue(&s_object(i)))

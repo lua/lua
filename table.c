@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 1.5 1994/04/13 22:10:21 celes Exp celes $";
+char *rcs_table="$Id: table.c,v 2.1 1994/04/20 22:07:57 celes Exp celes $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -11,6 +11,7 @@ char *rcs_table="$Id: table.c,v 1.5 1994/04/13 22:10:21 celes Exp celes $";
 #include "mm.h"
 
 #include "opcode.h"
+#include "tree.h"
 #include "hash.h"
 #include "inout.h"
 #include "table.h"
@@ -18,144 +19,159 @@ char *rcs_table="$Id: table.c,v 1.5 1994/04/13 22:10:21 celes Exp celes $";
 
 #define streq(s1,s2)	(s1[0]==s2[0]&&strcmp(s1+1,s2+1)==0)
 
-#ifndef MAXSYMBOL
-#define MAXSYMBOL	512
-#endif
-static Symbol  		tablebuffer[MAXSYMBOL] = {
-                                    {"type",{T_CFUNCTION,{lua_type}}},
-                                    {"tonumber",{T_CFUNCTION,{lua_obj2number}}},
-                                    {"next",{T_CFUNCTION,{lua_next}}},
-                                    {"nextvar",{T_CFUNCTION,{lua_nextvar}}},
-                                    {"print",{T_CFUNCTION,{lua_print}}},
-                                    {"dofile",{T_CFUNCTION,{lua_internaldofile}}},
-                                    {"dostring",{T_CFUNCTION,{lua_internaldostring}}}
-                                                 };
-Symbol	       	       *lua_table=tablebuffer;
-Word   	 		lua_ntable=7;
+#define BUFFER_BLOCK 256
 
-struct List
-{
- Symbol *s;
- struct List *next;
-};
+Symbol *lua_table;
+static Word lua_ntable = 0;
+static Word lua_maxsymbol = 0;
 
-static struct List o6={ tablebuffer+6, 0};
-static struct List o5={ tablebuffer+5, &o6 };
-static struct List o4={ tablebuffer+4, &o5 };
-static struct List o3={ tablebuffer+3, &o4 };
-static struct List o2={ tablebuffer+2, &o3 };
-static struct List o1={ tablebuffer+1, &o2 };
-static struct List o0={ tablebuffer+0, &o1 };
-static struct List *searchlist=&o0;
+char **lua_constant;
+static Word lua_nconstant = 0;
+static Word lua_maxconstant = 0;
 
-#ifndef MAXCONSTANT
-#define MAXCONSTANT	256
-#endif
-/* pre-defined constants need garbage collection extra byte */ 
-static char tm[] = " mark";
-static char ti[] = " nil";
-static char tn[] = " number";
-static char ts[] = " string";
-static char tt[] = " table";
-static char tf[] = " function";
-static char tc[] = " cfunction";
-static char tu[] = " userdata";
-static char  	       *constantbuffer[MAXCONSTANT] = {tm+1, ti+1,
-						       tn+1, ts+1,
-						       tt+1, tf+1,
-						       tc+1, tu+1
-                                                      };
-char  	      	      **lua_constant = constantbuffer;
-Word    		lua_nconstant=T_USERDATA+1;
 
-#ifndef MAXSTRING
-#define MAXSTRING	512
-#endif
-static char 	       *stringbuffer[MAXSTRING];
-char  		      **lua_string = stringbuffer;
-Word    		lua_nstring=0;
 
 #define MAXFILE 	20
 char  		       *lua_file[MAXFILE];
 int      		lua_nfile;
 
-
-#define markstring(s)   (*((s)-1))
-
-
 /* Variables to controll garbage collection */
-Word lua_block=10; /* to check when garbage collector will be called */
+#define GARBAGE_BLOCK 256
+Word lua_block=GARBAGE_BLOCK; /* when garbage collector will be called */
 Word lua_nentity;   /* counter of new entities (strings and arrays) */
 
 
 /*
+** Initialise symbol table with internal functions
+*/
+static void lua_initsymbol (void)
+{
+ int n;
+ lua_maxsymbol = BUFFER_BLOCK;
+ lua_table = (Symbol *) calloc(lua_maxsymbol, sizeof(Symbol));
+ if (lua_table == NULL)
+ {
+  lua_error ("symbol table: not enough memory");
+  return;
+ }
+ n = lua_findsymbol("type"); 
+ s_tag(n) = T_CFUNCTION; s_fvalue(n) = lua_type;
+ n = lua_findsymbol("tonumber");
+ s_tag(n) = T_CFUNCTION; s_fvalue(n) = lua_obj2number;
+ n = lua_findsymbol("next");
+ s_tag(n) = T_CFUNCTION; s_fvalue(n) = lua_next;
+ n = lua_findsymbol("nextvar");
+ s_tag(n) = T_CFUNCTION; s_fvalue(n) = lua_nextvar;
+ n = lua_findsymbol("print");
+ s_tag(n) = T_CFUNCTION; s_fvalue(n) = lua_print;
+ n = lua_findsymbol("dofile");
+ s_tag(n) = T_CFUNCTION; s_fvalue(n) = lua_internaldofile;
+ n = lua_findsymbol("dostring");
+ s_tag(n) = T_CFUNCTION; s_fvalue(n) = lua_internaldostring;
+}
+
+
+/*
+** Initialise constant table with pre-defined constants
+*/
+void lua_initconstant (void)
+{
+ lua_maxconstant = BUFFER_BLOCK;
+ lua_constant = (char **) calloc(lua_maxconstant, sizeof(char *));
+ if (lua_constant == NULL)
+ {
+  lua_error ("constant table: not enough memory");
+  return;
+ }
+ lua_findconstant("mark");
+ lua_findconstant("nil");
+ lua_findconstant("number");
+ lua_findconstant("string");
+ lua_findconstant("table");
+ lua_findconstant("function");
+ lua_findconstant("cfunction");
+ lua_findconstant("userdata");
+}
+
+/*
 ** Given a name, search it at symbol table and return its index. If not
-** found, allocate at end of table, checking oveflow and return its index.
+** found, allocate it.
 ** On error, return -1.
 */
 int lua_findsymbol (char *s)
 {
- struct List *l, *p;
- for (p=NULL, l=searchlist; l!=NULL; p=l, l=l->next)
-  if (streq(s,l->s->name))
+ char *n; 
+ if (lua_table == NULL)
+  lua_initsymbol(); 
+ n = lua_varcreate(s);
+ if (n == NULL)
+ {
+  lua_error ("create symbol: not enough memory");
+  return -1;
+ }
+ if (indexstring(n) == UNMARKED_STRING)
+ {
+  if (lua_ntable == lua_maxsymbol)
   {
-   if (p!=NULL)
+   lua_maxsymbol *= 2;
+   if (lua_maxsymbol > MAX_WORD)
    {
-    p->next = l->next;
-    l->next = searchlist;
-    searchlist = l;
+    lua_error("symbol table overflow");
+    return -1;
    }
-   return (l->s-lua_table);
+   lua_table = (Symbol *)realloc(lua_table, lua_maxsymbol*sizeof(Symbol));
+   if (lua_table == NULL)
+   {
+    lua_error ("symbol table: not enough memory");
+    return -1;
+   }
   }
-
- if (lua_ntable >= MAXSYMBOL-1)
- {
-  lua_error ("symbol table overflow");
-  return -1;
+  indexstring(n) = lua_ntable;
+  s_tag(lua_ntable) = T_NIL;
+  lua_ntable++;
  }
- s_name(lua_ntable) = strdup(s);
- if (s_name(lua_ntable) == NULL)
- {
-  lua_error ("not enough memory");
-  return -1;
- }
- s_tag(lua_ntable) = T_NIL;
- p = malloc(sizeof(*p)); 
- p->s = lua_table+lua_ntable;
- p->next = searchlist;
- searchlist = p;
-
- return lua_ntable++;
+ return indexstring(n);
 }
 
+
 /*
-** Given a constant string, search it at constant table and return its index.
-** If not found, allocate at end of the table, checking oveflow and return 
-** its index.
-**
-** For each allocation, the function allocate a extra char to be used to
-** mark used string (it's necessary to deal with constant and string 
-** uniformily). The function store at the table the second position allocated,
-** that represents the beginning of the real string. On error, return -1.
-** 
+** Given a name, search it at constant table and return its index. If not
+** found, allocate it.
+** On error, return -1.
 */
 int lua_findconstant (char *s)
 {
- int i;
- for (i=0; i<lua_nconstant; i++)
-  if (streq(s,lua_constant[i]))
-   return i;
- if (lua_nconstant >= MAXCONSTANT-1)
+ char *n;
+ if (lua_constant == NULL)
+  lua_initconstant();
+ n = lua_constcreate(s);
+ if (n == NULL)
  {
-  lua_error ("lua: constant string table overflow"); 
+  lua_error ("create constant: not enough memory");
   return -1;
  }
+ if (indexstring(n) == UNMARKED_STRING)
  {
-  char *c = calloc(strlen(s)+2,sizeof(char));
-  c++;		/* create mark space */
-  lua_constant[lua_nconstant++] = strcpy(c,s);
+  if (lua_nconstant == lua_maxconstant)
+  {
+   lua_maxconstant *= 2;
+   if (lua_maxconstant > MAX_WORD)
+   {
+    lua_error("constant table overflow");
+    return -1;
+   }
+   lua_constant = (char**)realloc(lua_constant,lua_maxconstant*sizeof(char*));
+   if (lua_constant == NULL)
+   {
+    lua_error ("constant table: not enough memory");
+    return -1;
+   }
+  }
+  indexstring(n) = lua_nconstant;
+  lua_constant[lua_nconstant] = n;
+  lua_nconstant++;
  }
- return (lua_nconstant-1);
+ return indexstring(n);
 }
 
 
@@ -175,10 +191,10 @@ void lua_travsymbol (void (*fn)(Object *))
 */
 void lua_markobject (Object *o)
 {
- if (tag(o) == T_STRING)
-  markstring (svalue(o)) = 1;
+ if (tag(o) == T_STRING && indexstring(svalue(o)) == UNMARKED_STRING)
+  indexstring(svalue(o)) = MARKED_STRING;
  else if (tag(o) == T_ARRAY)
-   lua_hashmark (avalue(o));
+  lua_hashmark (avalue(o));
 }
 
 
@@ -194,62 +210,26 @@ void lua_pack (void)
  /* mark symbol table strings */
  lua_travsymbol(lua_markobject);
 
- lua_stringcollector();
+ lua_strcollector();
  lua_hashcollector();
 
  lua_nentity = 0;      /* reset counter */
 } 
 
-/*
-** Garbage collection to atrings.
-** Delete all unmarked strings
-*/
-void lua_stringcollector (void)
-{
- int i, j;
- for (i=j=0; i<lua_nstring; i++)
-  if (markstring(lua_string[i]) == 1)
-  {
-   lua_string[j++] = lua_string[i];
-   markstring(lua_string[i]) = 0;
-  }
-  else
-  {
-   free (lua_string[i]-1);
-  }
- lua_nstring = j;
-}
 
 /*
-** Allocate a new string at string table. The given string is already 
-** allocated with mark space and the function puts it at the end of the
-** table, checking overflow, and returns its own pointer, or NULL on error.
+** If the string isn't allocated, allocate a new string at string tree.
 */
 char *lua_createstring (char *s)
 {
- int i;
  if (s == NULL) return NULL;
  
- for (i=0; i<lua_nstring; i++)
-  if (streq(s,lua_string[i]))
-  {
-   free(s-1);
-   return lua_string[i];
-  }
-
- if (lua_nentity == lua_block || lua_nstring >= MAXSTRING-1)
- {
+ if (lua_nentity == lua_block)
   lua_pack ();
-  if (lua_nstring >= MAXSTRING-1)
-  {
-   lua_error ("string table overflow");
-   return NULL;
-  }
- } 
- lua_string[lua_nstring++] = s;
  lua_nentity++;
- return s;
+ return lua_strcreate(s);
 }
+
 
 /*
 ** Add a file name at file table, checking overflow. This function also set
@@ -293,7 +273,7 @@ char *lua_filename (void)
 */
 void lua_nextvar (void)
 {
- int index;
+ char *varname, *next;
  Object *o = lua_getparam (1);
  if (o == NULL)
  { lua_error ("too few arguments to function `nextvar'"); return; }
@@ -301,7 +281,7 @@ void lua_nextvar (void)
  { lua_error ("too many arguments to function `nextvar'"); return; }
  if (tag(o) == T_NIL)
  {
-  index = 0;
+  varname = 0;
  }
  else if (tag(o) != T_STRING) 
  { 
@@ -310,28 +290,20 @@ void lua_nextvar (void)
  }
  else
  {
-  for (index=0; index<lua_ntable; index++)
-   if (streq(s_name(index),svalue(o))) break;
-  if (index == lua_ntable) 
-  {
-   lua_error ("name not found in function `nextvar'");
-   return;
-  }
-  index++;
-  while (index < lua_ntable && tag(&s_object(index)) == T_NIL) index++;
-  
-  if (index == lua_ntable)
-  {
-   lua_pushnil();
-   lua_pushnil();
-   return;
-  }
+  varname = svalue(o);
  }
+ next = lua_varnext(varname);
+ if (next == NULL)
+ {
+  lua_pushnil();
+  lua_pushnil();
+ }
+ else
  {
   Object name;
   tag(&name) = T_STRING;
-  svalue(&name) = lua_createstring(lua_strdup(s_name(index)));
+  svalue(&name) = next;
   if (lua_pushobject (&name)) return;
-  if (lua_pushobject (&s_object(index))) return;
+  if (lua_pushobject (&s_object(indexstring(next)))) return;
  }
 }

@@ -4,7 +4,7 @@
 ** Luiz Henrique de Figueiredo - 17 Aug 90
 */
 
-char *rcs_hash="$Id: hash.c,v 1.2 1994/03/28 15:14:02 celes Exp celes $";
+char *rcs_hash="$Id: hash.c,v 2.1 1994/04/20 22:07:57 celes Exp celes $";
 
 #include <string.h>
 #include <stdlib.h>
@@ -31,9 +31,6 @@ char *rcs_hash="$Id: hash.c,v 1.2 1994/03/28 15:14:02 celes Exp celes $";
 #define ref_nvalue(n)	(nvalue(&(n)->ref))
 #define ref_svalue(n)	(svalue(&(n)->ref))
 
-#ifndef ARRAYBLOCK
-#define ARRAYBLOCK 50
-#endif
 
 typedef struct ArrayList
 {

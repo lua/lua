@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 1.4 1994/04/13 21:37:20 celes Exp celes $";
+char *rcs_opcode="$Id: opcode.c,v 2.1 1994/04/20 22:07:57 celes Exp celes $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,11 +23,55 @@ char *rcs_opcode="$Id: opcode.c,v 1.4 1994/04/13 21:37:20 celes Exp celes $";
 #define tonumber(o) ((tag(o) != T_NUMBER) && (lua_tonumber(o) != 0))
 #define tostring(o) ((tag(o) != T_STRING) && (lua_tostring(o) != 0))
 
-#ifndef MAXSTACK
-#define MAXSTACK 256
-#endif
-static Object stack[MAXSTACK] = {{T_MARK, {NULL}}};
-static Object *top=stack+1, *base=stack+1;
+
+#define STACK_BUFFER (STACKGAP+128)
+
+static Word    maxstack;
+static Object *stack=NULL;
+static Object *top, *base;
+
+
+/*
+** Init stack
+*/
+static int lua_initstack (void)
+{
+ maxstack = STACK_BUFFER;
+ stack = (Object *)calloc(maxstack, sizeof(Object));
+ if (stack == NULL)
+ {
+  lua_error("stack - not enough memory");
+  return 1;
+ }
+ tag(stack) = T_MARK;
+ top = base = stack+1;
+ return 0;
+}
+
+
+/*
+** Check stack overflow and, if necessary, realloc vector
+*/
+static int lua_checkstack (Word n)
+{
+ if (stack == NULL)
+  return lua_initstack();
+ if (n > maxstack)
+ {
+  Word t = top-stack;
+  Word b = base-stack;
+  maxstack *= 2;
+  stack = (Object *)realloc(stack, maxstack*sizeof(Object));
+  if (stack == NULL)
+  {
+   lua_error("stack - not enough memory");
+   return 1;
+  }
+  top = stack + t;
+  base = stack + b;
+ }
+ return 0;
+}
 
 
 /*
@@ -36,30 +80,14 @@ static Object *top=stack+1, *base=stack+1;
 */
 static char *lua_strconc (char *l, char *r)
 {
- char *s = calloc (strlen(l)+strlen(r)+2, sizeof(char));
- if (s == NULL)
+ static char buffer[1024];
+ int n = strlen(l)+strlen(r)+1;
+ if (n > 1024)
  {
-  lua_error ("not enough memory");
+  lua_error ("string too large");
   return NULL;
  }
- *s++ = 0; 			/* create mark space */
- return strcat(strcpy(s,l),r);
-}
-
-/*
-** Duplicate a string,  creating a mark space at the beginning.
-** Return the new string pointer.
-*/
-char *lua_strdup (char *l)
-{
- char *s = calloc (strlen(l)+2, sizeof(char));
- if (s == NULL)
- {
-  lua_error ("not enough memory");
-  return NULL;
- }
- *s++ = 0; 			/* create mark space */
- return strcpy(s,l);
+ return strcat(strcpy(buffer,l),r);
 }
 
 /*
@@ -127,7 +155,7 @@ static int lua_tostring (Object *obj)
   sprintf (s, "%d", (int) nvalue(obj));
  else
   sprintf (s, "%g", nvalue(obj));
- svalue(obj) = lua_createstring(lua_strdup(s));
+ svalue(obj) = lua_createstring(s);
  if (svalue(obj) == NULL)
   return 1;
  tag(obj) = T_STRING;
@@ -140,7 +168,12 @@ static int lua_tostring (Object *obj)
 */
 int lua_execute (Byte *pc)
 {
- Object *oldbase = base;
+ Word oldbase;
+
+ if (stack == NULL)
+  lua_initstack();
+
+ oldbase = base-stack;
  base = top;
  while (1)
  {
@@ -516,11 +549,8 @@ int lua_execute (Byte *pc)
      nvalue(b) = (base-stack);		/* store base value */
      base = b+1;
      pc = newpc;
-     if (MAXSTACK-(base-stack) < STACKGAP)
-     {
-      lua_error ("stack overflow");
+     if (lua_checkstack(STACKGAP+(base-stack)))
       return 1;
-     }
     }
     else if (tag(b-1) == T_CFUNCTION)
     {
@@ -569,7 +599,7 @@ int lua_execute (Byte *pc)
    break;
    
    case HALT:
-    base = oldbase;
+    base = stack+oldbase;
    return 0;		/* success */
    
    case SETFUNCTION:
@@ -726,7 +756,7 @@ Object *lua_getfield (Object *object, char *field)
  {
   Object ref;
   tag(&ref) = T_STRING;
-  svalue(&ref) = lua_createstring(lua_strdup(field));
+  svalue(&ref) = lua_createstring(field);
   return (lua_hashdefine(avalue(object), &ref));
  }
 }
@@ -774,12 +804,9 @@ Object *lua_pop (void)
 */
 int lua_pushnil (void)
 {
- if ((top-stack) >= MAXSTACK-1)
- {
-  lua_error ("stack overflow");
+ if (lua_checkstack(top-stack+1) == 1)
   return 1;
- }
- tag(top) = T_NIL;
+ tag(top++) = T_NIL;
  return 0;
 }
 
@@ -788,11 +815,8 @@ int lua_pushnil (void)
 */
 int lua_pushnumber (real n)
 {
- if ((top-stack) >= MAXSTACK-1)
- {
-  lua_error ("stack overflow");
+ if (lua_checkstack(top-stack+1) == 1)
   return 1;
- }
  tag(top) = T_NUMBER; nvalue(top++) = n;
  return 0;
 }
@@ -802,13 +826,10 @@ int lua_pushnumber (real n)
 */
 int lua_pushstring (char *s)
 {
- if ((top-stack) >= MAXSTACK-1)
- {
-  lua_error ("stack overflow");
+ if (lua_checkstack(top-stack+1) == 1)
   return 1;
- }
  tag(top) = T_STRING; 
- svalue(top++) = lua_createstring(lua_strdup(s));
+ svalue(top++) = lua_createstring(s);
  return 0;
 }
 
@@ -817,11 +838,8 @@ int lua_pushstring (char *s)
 */
 int lua_pushcfunction (lua_CFunction fn)
 {
- if ((top-stack) >= MAXSTACK-1)
- {
-  lua_error ("stack overflow");
+ if (lua_checkstack(top-stack+1) == 1)
   return 1;
- }
  tag(top) = T_CFUNCTION; fvalue(top++) = fn;
  return 0;
 }
@@ -831,11 +849,8 @@ int lua_pushcfunction (lua_CFunction fn)
 */
 int lua_pushuserdata (void *u)
 {
- if ((top-stack) >= MAXSTACK-1)
- {
-  lua_error ("stack overflow");
+ if (lua_checkstack(top-stack+1) == 1)
   return 1;
- }
  tag(top) = T_USERDATA; uvalue(top++) = u;
  return 0;
 }
@@ -845,11 +860,8 @@ int lua_pushuserdata (void *u)
 */
 int lua_pushobject (Object *o)
 {
- if ((top-stack) >= MAXSTACK-1)
- {
-  lua_error ("stack overflow");
+ if (lua_checkstack(top-stack+1) == 1)
   return 1;
- }
  *top++ = *o;
  return 0;
 }
@@ -878,7 +890,7 @@ int lua_storefield (lua_Object object, char *field)
  {
   Object ref, *h;
   tag(&ref) = T_STRING;
-  svalue(&ref) = lua_createstring(lua_strdup(field));
+  svalue(&ref) = lua_createstring(field);
   h = lua_hashdefine(avalue(object), &ref);
   if (h == NULL) return 1;
   if (tag(top-1) == T_MARK) return 1;
@@ -963,6 +975,9 @@ int lua_isuserdata (Object *object)
 void lua_type (void)
 {
  Object *o = lua_getparam(1);
+
+ if (lua_constant == NULL)
+  lua_initconstant();
  lua_pushstring (lua_constant[tag(o)]);
 }
 
@@ -981,7 +996,7 @@ void lua_obj2number (void)
 void lua_print (void)
 {
  int i=1;
- void *obj;
+ Object *obj;
  while ((obj=lua_getparam (i++)) != NULL)
  {
   if      (lua_isnumber(obj))    printf("%g\n",lua_getnumber (obj));
