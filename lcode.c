@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.18 2000/03/24 17:26:08 roberto Exp roberto $
+** $Id: lcode.c,v 1.19 2000/04/04 20:48:44 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -21,6 +21,18 @@
 
 void luaK_error (LexState *ls, const char *msg) {
   luaX_error(ls, msg, ls->token);
+}
+
+/*
+** Returns the the previous instruction, for optimizations. 
+** If there is a jump target between this and the current instruction,
+** returns a dummy instruction to avoid wrong optimizations.
+*/
+static Instruction previous_instruction (FuncState *fs) {
+  if (fs->pc > fs->lasttarget)  /* no jumps to current position? */
+    return fs->f->code[fs->pc-1];  /* returns previous instruction */
+  else
+    return CREATE_0(OP_END);  /* no optimizations after an `END' */
 }
 
 
@@ -45,19 +57,6 @@ int luaK_S(FuncState *fs, OpCode o, int s, int d) {
 
 int luaK_AB(FuncState *fs, OpCode o, int a, int b, int d) {
   return luaK_code(fs, CREATE_AB(o,a,b), d);
-}
-
-
-/*
-** Returns the the previous instruction, for optimizations. 
-** If there is a jump target between this and the current instruction,
-** returns a dummy instruction to avoid wrong optimizations.
-*/
-static Instruction previous_instruction (FuncState *fs) {
-  if (fs->pc > fs->lasttarget)  /* no jumps to current position? */
-    return fs->f->code[fs->pc-1];  /* returns previous instruction */
-  else
-    return CREATE_0(OP_END);  /* no optimizations after an `END' */
 }
 
 
@@ -154,7 +153,7 @@ static void luaK_setlocal (FuncState *fs, int l) {
 
 static void luaK_eq (FuncState *fs) {
   /* PUSHNIL 1; JMPEQ -> NOT  (a==nil) */
-  Instruction previous = prepare(fs, CREATE_S(OP_JMPEQ, 0), -2);
+  Instruction previous = prepare(fs, CREATE_S(OP_JMPEQ, NO_JUMP), -2);
   if (previous == CREATE_U(OP_PUSHNIL, 1)) {
     setprevious(fs, CREATE_0(OP_NOT));
     luaK_deltastack(fs, 1);  /* undo delta from `prepare' */
@@ -164,10 +163,15 @@ static void luaK_eq (FuncState *fs) {
 
 static void luaK_neq (FuncState *fs) {
   /* PUSHNIL 1; JMPNEQ -> JMPT   (a~=nil) */
-  Instruction previous = prepare(fs, CREATE_S(OP_JMPNEQ, 0), -2);
+  Instruction previous = prepare(fs, CREATE_S(OP_JMPNEQ, NO_JUMP), -2);
   if (previous == CREATE_U(OP_PUSHNIL, 1)) {
-    setprevious(fs, CREATE_S(OP_JMPT, 0));
+    setprevious(fs, CREATE_S(OP_JMPT, NO_JUMP));
   }
+}
+
+
+int luaK_jump (FuncState *fs) {
+  return luaK_S(fs, OP_JMP, NO_JUMP, 0);
 }
 
 
@@ -192,12 +196,13 @@ static void luaK_pushnil (FuncState *fs, int n) {
 }
 
 
-void luaK_fixjump (FuncState *fs, int pc, int dest) {
+static void luaK_fixjump (FuncState *fs, int pc, int dest) {
   Instruction *jmp = &fs->f->code[pc];
   if (dest == NO_JUMP)
-    SETARG_S(*jmp, 0);  /* absolute value to represent end of list */
+    SETARG_S(*jmp, NO_JUMP);  /* point to itself to represent end of list */
   else {  /* jump is relative to position following jump instruction */
     int offset = dest-(pc+1);
+    LUA_ASSERT(L, offset != NO_JUMP, "cannot link to itself");
     if (abs(offset) > MAXARG_S)
       luaK_error(fs->ls, "control structure too long");
     SETARG_S(*jmp, offset);
@@ -207,7 +212,7 @@ void luaK_fixjump (FuncState *fs, int pc, int dest) {
 
 static int luaK_getjump (FuncState *fs, int pc) {
   int offset = GETARG_S(fs->f->code[pc]);
-  if (offset == 0)
+  if (offset == NO_JUMP)  /* point to itself represents end of list */
     return NO_JUMP;  /* end of list */
   else
     return (pc+1)+offset;  /* turn offset into absolute position */
@@ -225,11 +230,11 @@ int luaK_getlabel (FuncState *fs) {
 
 
 void luaK_deltastack (FuncState *fs, int delta) {
-  fs->stacksize += delta;
-  if (delta > 0 && fs->stacksize > fs->f->maxstacksize) {
-    if (fs->stacksize > MAXSTACK)
+  fs->stacklevel += delta;
+  if (delta > 0 && fs->stacklevel > fs->f->maxstacksize) {
+    if (fs->stacklevel > MAXSTACK)
       luaK_error(fs->ls, "function or expression too complex");
-    fs->f->maxstacksize = fs->stacksize;
+    fs->f->maxstacksize = fs->stacklevel;
   }
 }
 
@@ -357,26 +362,13 @@ static OpCode invertjump (OpCode op) {
 }
 
 
-static void luaK_jump (FuncState *fs, OpCode jump) {
-  Instruction previous = prepare(fs, CREATE_S(jump, 0), -1);
+static void luaK_condjump (FuncState *fs, OpCode jump) {
+  Instruction previous = prepare(fs, CREATE_S(jump, NO_JUMP), -1);
   switch (GET_OPCODE(previous)) {
-    case OP_NOT: previous = CREATE_S(invertjump(jump), 0); break;
-    case OP_PUSHNIL:  /* optimize `repeat until nil' */
-      if (GETARG_U(previous) == 1 && jump == OP_JMPF) {
-        previous = CREATE_S(OP_JMP, 0);
-        break;
-      }
-      else return;  /* do not set previous */
+    case OP_NOT: previous = CREATE_S(invertjump(jump), NO_JUMP); break;
     default: return;
   }
   setprevious(fs, previous);
-}
-
-
-static void insert_last (FuncState *fs, int *list) {
-  int first = *list;
-  *list = fs->pc-1;  /* insert last instruction in the list */
-  luaK_fixjump(fs, *list, first);
 }
 
 
@@ -414,7 +406,7 @@ static int need_value (FuncState *fs, int list, OpCode hasvalue) {
 }
 
 
-static void concatlists (FuncState *fs, int *l1, int l2) {
+void luaK_concat (FuncState *fs, int *l1, int l2) {
   if (*l1 == NO_JUMP)
     *l1 = l2;
   else {
@@ -446,8 +438,8 @@ static void luaK_testgo (FuncState *fs, expdesc *v, int invert, OpCode jump) {
       SET_OPCODE(*previous, invertjump(GET_OPCODE(*previous)));
   }
   else
-    luaK_jump(fs, jump);
-  insert_last(fs, exitlist);
+    luaK_condjump(fs, jump);
+  luaK_concat(fs, exitlist, fs->pc-1);  /* insert last jump in `exitlist' */
   luaK_patchlist(fs, *golist, luaK_getlabel(fs));
   *golist = NO_JUMP;
 }
@@ -478,7 +470,7 @@ void luaK_tostack (LexState *ls, expdesc *v, int onlyone) {
       int p_1 = 0;  /* position of an eventual PUSHINT */
       int final;  /* position after whole expression */
       if (ISJUMP(previous)) {
-        insert_last(fs, &v->u.l.t);  /* put `previous' in true list */
+        luaK_concat(fs, &v->u.l.t, fs->pc-1);  /* put `previous' in true list */
         p_nil = luaK_0(fs, OP_PUSHNILJMP, 0);
         p_1 = luaK_S(fs, OP_PUSHINT, 1, 1);
       }
@@ -544,13 +536,13 @@ void luaK_posfix (LexState *ls, int op, expdesc *v1, expdesc *v2) {
     LUA_ASSERT(ls->L, v1->u.l.t == NO_JUMP, "list must be closed");
     discharge1(fs, v2);
     v1->u.l.t = v2->u.l.t;
-    concatlists(fs, &v1->u.l.f, v2->u.l.f);
+    luaK_concat(fs, &v1->u.l.f, v2->u.l.f);
   }
   else if (op == TK_OR) {
     LUA_ASSERT(ls->L, v1->u.l.f == NO_JUMP, "list must be closed");
     discharge1(fs, v2);
     v1->u.l.f = v2->u.l.f;
-    concatlists(fs, &v1->u.l.t, v2->u.l.t);
+    luaK_concat(fs, &v1->u.l.t, v2->u.l.t);
   }
   else {
     luaK_tostack(ls, v2, 1);  /* `v2' must be a value */
@@ -563,10 +555,10 @@ void luaK_posfix (LexState *ls, int op, expdesc *v1, expdesc *v2) {
       case TK_CONC: luaK_conc(fs); break;
       case TK_EQ: luaK_eq(fs); break;
       case TK_NE: luaK_neq(fs); break;
-      case '>': luaK_S(fs, OP_JMPGT, 0, -2); break;
-      case '<': luaK_S(fs, OP_JMPLT, 0, -2); break;
-      case TK_GE: luaK_S(fs, OP_JMPGE, 0, -2); break;
-      case TK_LE: luaK_S(fs, OP_JMPLE, 0, -2); break;
+      case '>': luaK_S(fs, OP_JMPGT, NO_JUMP, -2); break;
+      case '<': luaK_S(fs, OP_JMPLT, NO_JUMP, -2); break;
+      case TK_GE: luaK_S(fs, OP_JMPGE, NO_JUMP, -2); break;
+      case TK_LE: luaK_S(fs, OP_JMPLE, NO_JUMP, -2); break;
     }
   }
 }

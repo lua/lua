@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.53 2000/03/10 18:37:44 roberto Exp roberto $
+** $Id: llex.c,v 1.54 2000/03/24 17:26:08 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -31,7 +31,8 @@
 
 
 /* ORDER RESERVED */
-static const char *const token2string [] = {"and", "do", "else", "elseif", "end",
+static const char *const token2string [] = {
+    "and", "break", "do", "else", "elseif", "end",
     "function", "if", "local", "nil", "not", "or", "repeat", "return", "then",
     "until", "while", "", "..", "...", "==", ">=", "<=", "~=", "", "", "<eof>"};
 
