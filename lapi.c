@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.6 2004/04/05 14:43:17 roberto Exp roberto $
+** $Id: lapi.c,v 2.7 2004/04/30 20:13:38 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -691,7 +691,7 @@ LUA_API int lua_setfenv (lua_State *L, int idx) {
 */
 
 
-#define adjuststack(L,nres) \
+#define adjustresults(L,nres) \
     { if (nres == LUA_MULTRET && L->top >= L->ci->top) L->ci->top = L->top; }
 
 
@@ -701,7 +701,7 @@ LUA_API void lua_call (lua_State *L, int nargs, int nresults) {
   api_checknelems(L, nargs+1);
   func = L->top - (nargs+1);
   luaD_call(L, func, nresults);
-  adjuststack(L, nresults);
+  adjustresults(L, nresults);
   lua_unlock(L);
 }
 
@@ -738,7 +738,7 @@ LUA_API int lua_pcall (lua_State *L, int nargs, int nresults, int errfunc) {
   c.func = L->top - (nargs+1);  /* function to be called */
   c.nresults = nresults;
   status = luaD_pcall(L, f_call, &c, savestack(L, c.func), func);
-  adjuststack(L, nresults);
+  adjustresults(L, nresults);
   lua_unlock(L);
   return status;
 }
