@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.3 1998/01/07 16:26:48 roberto Exp roberto $
+% $Id: manual.tex,v 1.4 1998/01/08 17:15:49 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -38,7 +38,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1998/01/07 16:26:48 $}
+\date{\small \verb$Date: 1998/01/08 17:15:49 $}
 
 \maketitle
 
@@ -2715,13 +2715,13 @@ However, all standard libraries check whether Lua is already opened,
 so any program that opens at least one standard library before using
 Lua API does not need to be modified.
 
-\item Function \verb|dostring| does not accept an optional second argument,
+\item Function \verb|dostring| no longer accepts an optional second argument,
 with a temporary error method.
 This facility is now provided by function \verb|call|.
 
 \item Function \verb|gsub| no longer accepts an optional fourth argument
 (a callback data, a table).
-Closures make this feature irrelevant.
+Closures replace this feature with advantage.
 
 \item The syntax for function declaration is now more restricted;
 for instance, the old syntax \verb|function f[exp] (x) ... end| is not
@@ -2732,8 +2732,8 @@ programs should use an explicit assignment instead, like
 
 \item Old pre-compiled code is obsolete, and must be re-compiled.
 
-\item The option \verb|a=b| in Lua stand-alone does not need extra quotes.
-Check \See{lua-sa} for details.
+\item The option \verb|a=b| in Lua stand-alone now sets \verb|a| to the
+\M{string} \verb|b|, and not to the value of \verb|b|.
 
 \end{itemize}
 
