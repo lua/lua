@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.53 2000/01/10 17:34:38 roberto Exp roberto $
+** $Id: lparser.c,v 1.54 2000/01/12 16:24:39 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -209,33 +209,24 @@ static void code_opcode (LexState *ls, OpCode op, int delta) {
 }
 
 
-static void code_constant (LexState *ls, int c) {
-  code_oparg(ls, PUSHCONSTANT, c, 1);
+static void code_strcnst (LexState *ls, int c) {
+  code_oparg(ls, PUSHSTRCNST, c, 1);
 }
 
 
 static void assertglobal (LexState *ls, int index) {
-  TObject *o = &ls->fs->f->consts[index];
-  LUA_ASSERT(ls->L, ttype(o) == LUA_T_STRING, "global name is not a string");
-  luaS_assertglobal(ls->L, tsvalue(o));
-}
-
-
-static int next_constant (LexState *ls, TProtoFunc *f) {
-  luaM_growvector(ls->L, f->consts, f->nconsts, 1,
-                  TObject, constantEM, MAX_ARG);
-  return f->nconsts++;
+  luaS_assertglobal(ls->L, ls->fs->f->strcnst[index]);
 }
 
 
 static int string_constant (LexState *ls, FuncState *fs, TaggedString *s) {
   TProtoFunc *f = fs->f;
   int c = s->constindex;
-  if (!(c < f->nconsts &&
-      ttype(&f->consts[c]) == LUA_T_STRING && tsvalue(&f->consts[c]) == s)) {
-    c = next_constant(ls, f);
-    ttype(&f->consts[c]) = LUA_T_STRING;
-    tsvalue(&f->consts[c]) = s;
+  if (c >= f->nstrcnst || f->strcnst[c] != s) {
+    luaM_growvector(ls->L, f->strcnst, f->nstrcnst, 1,
+                    TaggedString *, constantEM, MAX_ARG);
+    c = f->nstrcnst++;
+    f->strcnst[c] = s;
     s->constindex = c;  /* hint for next time */
   }
   return c;
@@ -243,7 +234,7 @@ static int string_constant (LexState *ls, FuncState *fs, TaggedString *s) {
 
 
 static void code_string (LexState *ls, TaggedString *s) {
-  code_constant(ls, string_constant(ls, ls->fs, s));
+  code_strcnst(ls, string_constant(ls, ls->fs, s));
 }
 
 
@@ -251,18 +242,15 @@ static void code_string (LexState *ls, TaggedString *s) {
 static int real_constant (LexState *ls, real r) {
   /* check whether `r' has appeared within the last LIM entries */
   TProtoFunc *f = ls->fs->f;
-  TObject *cnt = f->consts;
-  int c = f->nconsts;
+  int c = f->nnumcnst;
   int lim = c < LIM ? 0 : c-LIM;
-  while (--c >= lim) {
-    if (ttype(&cnt[c]) == LUA_T_NUMBER && nvalue(&cnt[c]) == r)
-      return c;
-  }
+  while (--c >= lim)
+    if (f->numcnst[c] == r) return c;
   /* not found; create a new entry */
-  c = next_constant(ls, f);
-  cnt = f->consts;  /* `next_constant' may reallocate this vector */
-  ttype(&cnt[c]) = LUA_T_NUMBER;
-  nvalue(&cnt[c]) = r;
+  luaM_growvector(ls->L, f->numcnst, f->nnumcnst, 1,
+                  real, constantEM, MAX_ARG);
+  c = f->nnumcnst++;
+  f->numcnst[c] = r;
   return c;
 }
 
@@ -274,7 +262,7 @@ static void code_number (LexState *ls, real f) {
     code_oparg(ls, (f<0) ? PUSHNUMBERNEG : PUSHNUMBER, (int)af, 1);
   }
   else
-    code_constant(ls, real_constant(ls, f));
+    code_oparg(ls, PUSHNUMCNST, real_constant(ls, f), 1);
 }
 
 
@@ -476,7 +464,7 @@ static void code_args (LexState *ls, int nparams, int dots) {
 static void unloaddot (LexState *ls, vardesc *v) {
   /* dotted variables <a.x> must be stored as regular indexed vars <a["x"]> */
   if (v->k == VDOT) {
-    code_constant(ls, v->info);
+    code_strcnst(ls, v->info);
     v->k = VINDEXED;
   }
 }
@@ -556,19 +544,16 @@ static void codeIf (LexState *ls, int thenAdd, int elseAdd) {
 
 static void func_onstack (LexState *ls, FuncState *func) {
   FuncState *fs = ls->fs;
+  TProtoFunc *f = fs->f;
   int i;
-  int c = next_constant(ls, fs->f);
-  ttype(&fs->f->consts[c]) = LUA_T_LPROTO;
-  fs->f->consts[c].value.tf = func->f;
-  if (func->nupvalues == 0)
-    code_constant(ls, c);
-  else {
-    for (i=0; i<func->nupvalues; i++)
-      lua_pushvar(ls, &func->upvalues[i]);
-    deltastack(ls, 1);  /* CLOSURE puts one extra element (before poping) */
-    code_oparg(ls, CLOSURE, c, -func->nupvalues);
-    code_byte(ls, (Byte)func->nupvalues);
-  }
+  luaM_growvector(ls->L, f->protocnst, f->nprotocnst, 1,
+                  TProtoFunc *, constantEM, MAX_ARG);
+  f->protocnst[f->nprotocnst] = func->f;
+  for (i=0; i<func->nupvalues; i++)
+    lua_pushvar(ls, &func->upvalues[i]);
+  deltastack(ls, 1);  /* CLOSURE puts one extra element (before poping) */
+  code_oparg(ls, CLOSURE, f->nprotocnst++, -func->nupvalues);
+  code_byte(ls, (Byte)func->nupvalues);
 }
 
 
@@ -602,7 +587,9 @@ static void close_func (LexState *ls) {
   code_opcode(ls, ENDCODE, 0);
   f->code[0] = (Byte)fs->maxstacksize;
   luaM_reallocvector(ls->L, f->code, fs->pc, Byte);
-  luaM_reallocvector(ls->L, f->consts, f->nconsts, TObject);
+  luaM_reallocvector(ls->L, f->strcnst, f->nstrcnst, TaggedString *);
+  luaM_reallocvector(ls->L, f->numcnst, f->nnumcnst, real);
+  luaM_reallocvector(ls->L, f->protocnst, f->nprotocnst, TProtoFunc *);
   if (fs->nvars != -1) {  /* debug information? */
     luaI_registerlocalvar(ls, NULL, -1);  /* flag end of vector */
     luaM_reallocvector(ls->L, f->locvars, fs->nvars, LocVar);
@@ -683,7 +670,7 @@ static int checkname (LexState *ls) {
 
 static TaggedString *str_checkname (LexState *ls) {
   int i = checkname(ls);  /* this call may realloc `f->consts' */
-  return tsvalue(&ls->fs->f->consts[i]);
+  return ls->fs->f->strcnst[i];
 }
 
 
@@ -875,7 +862,7 @@ static void recfield (LexState *ls) {
   /* recfield -> (NAME | '['exp1']') = exp1 */
   switch (ls->token) {
     case NAME:
-      code_constant(ls, checkname(ls));
+      code_strcnst(ls, checkname(ls));
       break;
 
     case '[':
@@ -939,7 +926,7 @@ static void constructor_part (LexState *ls, constdesc *cd) {
       if (ls->token == '=') {
         switch (v.k) {
           case VGLOBAL:
-            code_constant(ls, v.info);
+            code_strcnst(ls, v.info);
             break;
           case VLOCAL:
             code_string(ls, ls->fs->localvar[v.info]);
@@ -1297,7 +1284,7 @@ static int funcname (LexState *ls, vardesc *v) {
     needself = (ls->token == ':');
     next(ls);
     lua_pushvar(ls, v);
-    code_constant(ls, checkname(ls));
+    code_strcnst(ls, checkname(ls));
     v->k = VINDEXED;
   }
   return needself;

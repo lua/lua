@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.42 1999/12/27 17:33:22 roberto Exp roberto $
+** $Id: lobject.h,v 1.43 1999/12/29 16:31:15 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -154,13 +154,18 @@ typedef struct TaggedString {
 typedef struct TProtoFunc {
   struct TProtoFunc *next;
   int marked;
-  struct TObject *consts;
-  int nconsts;
+  struct TaggedString **strcnst;
+  int nstrcnst;
+  real *numcnst;
+  int nnumcnst;
+  struct TProtoFunc **protocnst;
+  int nprotocnst;
   Byte *code;  /* ends with opcode ENDCODE */
   int lineDefined;
   TaggedString  *source;
   struct LocVar *locvars;  /* ends with line = -1 */
 } TProtoFunc;
+
 
 typedef struct LocVar {
   TaggedString *varname;           /* NULL signals end of scope */

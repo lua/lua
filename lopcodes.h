@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.35 1999/12/27 17:33:22 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.36 1999/12/29 16:31:15 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -33,8 +33,10 @@ PUSHNUMBER,/*	b	-		(float)b			*/
 PUSHNUMBERNEGW,/* w	-		(float)-w			*/
 PUSHNUMBERNEG,/* b	-		(float)-b			*/
 
-PUSHCONSTANTW,/*w	-		CNST[w]				*/
-PUSHCONSTANT,/*	b	-		CNST[b]				*/
+PUSHSTRCNSTW,/*	w	-		STRCNST[w]			*/
+PUSHSTRCNST,/*	b	-		STRCNST[b]			*/
+PUSHNUMCNSTW,/*	w	-		NUMCNST[w]			*/
+PUSHNUMCNST,/*	b	-		NUMCNST[b]			*/
 
 PUSHUPVALUE,/*	b	-		Closure[b]			*/
 
