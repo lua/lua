@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.16 1999/02/04 16:37:41 roberto Exp roberto $
+## $Id: makefile,v 1.18 1999/02/23 14:59:30 roberto Exp $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -21,10 +21,8 @@
 # define LUA_NUM_TYPE if you need numbers to be different from double
 # (for instance, -DLUA_NUM_TYPE=float)
 #
-# undefine EXTRALIB if you do not want builtin functions that can be
-# written in Lua (sort, tinsert, tremove, assert, foreach*)
 
-CONFIG = -DPOPEN -D_POSIX_SOURCE -DEXTRALIB
+CONFIG = -DPOPEN -D_POSIX_SOURCE
 #CONFIG = -DLUA_COMPAT2_5 -DOLD_ANSI -DDEBUG
 
 
@@ -100,37 +98,40 @@ clear	:
 	co $(CO_OPTIONS) $@
 
 
-lapi.o: lapi.c lapi.h lua.h lobject.h lauxlib.h ldo.h lstate.h lfunc.h \
- lgc.h lmem.h lstring.h ltable.h ltm.h luadebug.h lvm.h
+lapi.o: lapi.c lapi.h lua.h lobject.h lauxlib.h ldo.h lstate.h \
+ luadebug.h lfunc.h lgc.h lmem.h lstring.h ltable.h ltm.h lvm.h
 lauxlib.o: lauxlib.c lauxlib.h lua.h luadebug.h
-lbuffer.o: lbuffer.c lauxlib.h lua.h lmem.h lstate.h lobject.h
+lbuffer.o: lbuffer.c lauxlib.h lua.h lmem.h lstate.h lobject.h \
+ luadebug.h
 lbuiltin.o: lbuiltin.c lapi.h lua.h lobject.h lauxlib.h lbuiltin.h \
- ldo.h lstate.h lfunc.h lmem.h lstring.h ltable.h ltm.h lundump.h \
- lzio.h lvm.h
+ ldo.h lstate.h luadebug.h lfunc.h lmem.h lstring.h ltable.h ltm.h \
+ lundump.h lzio.h lvm.h
 ldblib.o: ldblib.c lauxlib.h lua.h luadebug.h lualib.h
-ldo.o: ldo.c ldo.h lobject.h lua.h lstate.h lfunc.h lgc.h lmem.h \
- lparser.h lzio.h lstring.h ltm.h luadebug.h lundump.h lvm.h
-lfunc.o: lfunc.c lfunc.h lobject.h lua.h lmem.h lstate.h
-lgc.o: lgc.c ldo.h lobject.h lua.h lstate.h lfunc.h lgc.h lmem.h \
- lstring.h ltable.h ltm.h
+ldo.o: ldo.c ldo.h lobject.h lua.h lstate.h luadebug.h lfunc.h lgc.h \
+ lmem.h lparser.h lzio.h lstring.h ltm.h lundump.h lvm.h
+lfunc.o: lfunc.c lfunc.h lobject.h lua.h lmem.h lstate.h luadebug.h
+lgc.o: lgc.c ldo.h lobject.h lua.h lstate.h luadebug.h lfunc.h lgc.h \
+ lmem.h lstring.h ltable.h ltm.h
 linit.o: linit.c lua.h lualib.h
 liolib.o: liolib.c lauxlib.h lua.h luadebug.h lualib.h
 llex.o: llex.c lauxlib.h lua.h llex.h lobject.h lzio.h lmem.h \
- lparser.h lstate.h lstring.h luadebug.h
+ lparser.h lstate.h luadebug.h lstring.h
 lmathlib.o: lmathlib.c lauxlib.h lua.h lualib.h
-lmem.o: lmem.c lmem.h lstate.h lobject.h lua.h
+lmem.o: lmem.c lmem.h lstate.h lobject.h lua.h luadebug.h
 lobject.o: lobject.c lobject.h lua.h
-lparser.o: lparser.c lauxlib.h lua.h ldo.h lobject.h lstate.h lfunc.h \
- llex.h lzio.h lmem.h lopcodes.h lparser.h lstring.h luadebug.h
-lstate.o: lstate.c lbuiltin.h ldo.h lobject.h lua.h lstate.h lfunc.h \
- lgc.h llex.h lzio.h lmem.h lstring.h ltable.h ltm.h
-lstring.o: lstring.c lmem.h lobject.h lua.h lstate.h lstring.h
+lparser.o: lparser.c lauxlib.h lua.h ldo.h lobject.h lstate.h \
+ luadebug.h lfunc.h llex.h lzio.h lmem.h lopcodes.h lparser.h \
+ lstring.h
+lstring.o: lstring.c lmem.h lobject.h lua.h lstate.h luadebug.h \
+ lstring.h
 lstrlib.o: lstrlib.c lauxlib.h lua.h lualib.h
-ltable.o: ltable.c lauxlib.h lua.h lmem.h lobject.h lstate.h ltable.h
-ltm.o: ltm.c lauxlib.h lua.h lmem.h lobject.h lstate.h ltm.h
+ltable.o: ltable.c lauxlib.h lua.h lmem.h lobject.h lstate.h \
+ luadebug.h ltable.h
+ltm.o: ltm.c lauxlib.h lua.h lmem.h lobject.h lstate.h luadebug.h \
+ ltm.h
 lua.o: lua.c lua.h luadebug.h lualib.h
 lundump.o: lundump.c lauxlib.h lua.h lfunc.h lobject.h lmem.h \
  lstring.h lundump.h lzio.h
-lvm.o: lvm.c lauxlib.h lua.h ldo.h lobject.h lstate.h lfunc.h lgc.h \
- lmem.h lopcodes.h lstring.h ltable.h ltm.h luadebug.h lvm.h
+lvm.o: lvm.c lauxlib.h lua.h ldo.h lobject.h lstate.h luadebug.h \
+ lfunc.h lgc.h lmem.h lopcodes.h lstring.h ltable.h ltm.h lvm.h
 lzio.o: lzio.c lzio.h
