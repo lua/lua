@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.30 1996/03/14 15:17:28 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.31 1996/03/19 16:50:24 roberto Exp roberto $";
  
 
 #include <ctype.h>
@@ -83,8 +83,7 @@ void luaI_addReserved (void)
 static void growtext (void)
 {
   int size = yytextLast - yytext;
-  textsize *= 2;
-  yytext = growvector(yytext, textsize, char);
+  textsize = growvector(&yytext, textsize, char, lexEM, MAX_WORD);
   yytextLast = yytext + size;
 }
 

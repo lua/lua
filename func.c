@@ -6,7 +6,6 @@
 #include "func.h"
 #include "opcode.h"
 
-#define LOCALVARINITSIZE 10
 
 static TFunc *function_root = NULL;
 static LocVar *currvars = NULL;
@@ -103,10 +102,8 @@ void lua_funcinfo (lua_Object func, char **filename, int *linedefined)
 void luaI_registerlocalvar (TaggedString *varname, int line)
 {
   if (numcurrvars >= maxcurrvars)
-  {
-    maxcurrvars = (maxcurrvars == 0) ? LOCALVARINITSIZE : maxcurrvars*2;
-    currvars = growvector(currvars, maxcurrvars, LocVar);
-  }
+    maxcurrvars = growvector(&currvars, maxcurrvars, LocVar,
+                    lockEM, MAX_WORD);
   currvars[numcurrvars].varname = varname;
   currvars[numcurrvars].line = line;
   numcurrvars++;

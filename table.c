@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.48 1996/02/26 21:00:27 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.49 1996/03/14 15:57:19 roberto Exp roberto $";
 
 #include "mem.h"
 #include "opcode.h"
@@ -33,7 +33,7 @@ static Long lua_maxconstant = 0;
 static void lua_nextvar (void);
 
 /*
-** Initialise symbol table with internal functions
+** Internal functions
 */
 static struct {
   char *name;
@@ -56,6 +56,7 @@ static struct {
 
 #define INTFUNCSIZE (sizeof(int_funcs)/sizeof(int_funcs[0]))
 
+
 void luaI_initsymbol (void)
 {
   int i;
@@ -74,8 +75,12 @@ void luaI_initsymbol (void)
 */
 void luaI_initconstant (void)
 {
+ int i;
  lua_maxconstant = BUFFER_BLOCK;
  lua_constant = newvector(lua_maxconstant, TaggedString *);
+ /* pre-register mem error messages, to avoid loop when error arises */
+ for (i=0; i<NUMERRMSG; i++)
+   luaI_findconstantbyname(luaI_memerrormsg[i]);
 }
 
 
@@ -88,14 +93,8 @@ Word luaI_findsymbol (TaggedString *t)
  if (t->varindex == NOT_USED)
  {
   if (lua_ntable == lua_maxsymbol)
-  {
-   if (lua_maxsymbol >= MAX_WORD)
-     lua_error("symbol table overflow");
-   lua_maxsymbol *= 2;
-   if (lua_maxsymbol >= MAX_WORD)
-     lua_maxsymbol = MAX_WORD; 
-   lua_table = growvector(lua_table, lua_maxsymbol, Symbol);
-  }
+    lua_maxsymbol = growvector(&lua_table, lua_maxsymbol, Symbol,
+                      symbolEM, MAX_WORD);
   t->varindex = lua_ntable;
   lua_table[lua_ntable].varname = t;
   s_tag(lua_ntable) = LUA_T_NIL;
@@ -120,14 +119,8 @@ Word luaI_findconstant (TaggedString *t)
  if (t->constindex == NOT_USED)
  {
   if (lua_nconstant == lua_maxconstant)
-  {
-   if (lua_maxconstant >= MAX_WORD)
-     lua_error("constant table overflow");
-   lua_maxconstant *= 2;
-   if (lua_maxconstant >= MAX_WORD)
-     lua_maxconstant = MAX_WORD;
-   lua_constant = growvector(lua_constant, lua_maxconstant, TaggedString *);
-  }
+    lua_maxconstant = growvector(&lua_constant, lua_maxconstant, TaggedString *,
+                        constantEM, MAX_WORD);
   t->constindex = lua_nconstant;
   lua_constant[lua_nconstant] = t;
   lua_nconstant++;

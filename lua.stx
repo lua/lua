@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.34 1996/02/26 21:00:27 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.35 1996/03/08 12:02:37 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,7 +31,7 @@ int yyparse (void);
 #endif
 static int   maxcode;
 static int   maxmain;
-static Long   maxcurr;  /* to allow maxcurr *= 2 without overflow */
+static int   maxcurr;
 static Byte  *funcCode = NULL;
 static Byte **initcode;
 static Byte  *basepc;
@@ -70,14 +70,7 @@ static void yyerror (char *s)
 static void code_byte (Byte c)
 {
  if (pc>maxcurr-2)  /* 1 byte free to code HALT of main code */
- {
-  if (maxcurr >= MAX_INT)
-    yyerror("code size overflow");
-  maxcurr *= 2;
-  if (maxcurr >= MAX_INT)
-    maxcurr = MAX_INT;
-  basepc = growvector(basepc, maxcurr, Byte);
- }
+   maxcurr = growvector(&basepc, maxcurr, Byte, codeEM, MAX_INT);
  basepc[pc++] = c;
 }
 

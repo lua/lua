@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_mem = "$Id: mem.c,v 1.8 1996/02/22 20:34:33 roberto Exp roberto $";
+char *rcs_mem = "$Id: mem.c,v 1.9 1996/03/14 15:55:49 roberto Exp roberto $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -12,6 +12,17 @@ char *rcs_mem = "$Id: mem.c,v 1.8 1996/02/22 20:34:33 roberto Exp roberto $";
 #include "mem.h"
 #include "lua.h"
 #include "table.h"
+
+
+char *luaI_memerrormsg[NUMERRMSG] = {
+  "code size overflow",
+  "symbol table overflow",
+  "constant table overflow",
+  "stack size overflow",
+  "lex buffer overflow",
+  "lock table overflow"
+};
+
 
 static void mem_error (void)
 {
@@ -51,6 +62,19 @@ void *luaI_realloc (void *oldblock, unsigned long size)
   if (block == NULL)
     mem_error();
   return block;
+}
+
+
+int luaI_growvector (void **block, unsigned long nelems, int size,
+                       enum memerrormsg errormsg, unsigned long limit)
+{
+  if (nelems >= limit)
+    lua_error(luaI_memerrormsg[errormsg]);
+  nelems = (nelems == 0) ? 20 : nelems*2;
+  if (nelems > limit)
+    nelems = limit;
+  *block = luaI_realloc(*block, nelems*size);
+  return (int) nelems;
 }
 
 
