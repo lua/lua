@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.11 1998/01/13 18:06:27 roberto Exp roberto $
+** $Id: ltable.c,v 1.12 1998/01/28 16:50:33 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -162,7 +162,7 @@ TObject *luaH_get (Hash *t, TObject *ref)
 {
  int h = present(t, ref);
  if (ttype(ref(node(t, h))) != LUA_T_NIL) return val(node(t, h));
- else return NULL;
+ else return &luaO_nilobject;
 }
 
 
@@ -214,3 +214,20 @@ Node *luaH_next (TObject *o, TObject *r)
     return hashnext(t, i+1);
   }
 }
+
+
+void luaH_setint (Hash *t, int ref, TObject *val) {
+  TObject index;
+  ttype(&index) = LUA_T_NUMBER;
+  nvalue(&index) = ref;
+  *(luaH_set(t, &index)) = *val;
+}
+
+
+TObject *luaH_getint (Hash *t, int ref) {
+  TObject index;
+  ttype(&index) = LUA_T_NUMBER;
+  nvalue(&index) = ref;
+  return luaH_get(t, &index);
+}
+
