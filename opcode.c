@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.76 1996/09/24 21:46:44 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.77 1996/11/18 13:48:44 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -399,11 +399,11 @@ void lua_error (char *s)
 
 lua_Function lua_stackedfunction (int level)
 {
-  Object *p = top;
-  while (--p >= stack)
-    if (p->tag == LUA_T_MARK || p->tag == LUA_T_CMARK)
+  StkId i;
+  for (i = (top-1)-stack; i>=0; i--)
+    if (stack[i].tag == LUA_T_MARK || stack[i].tag == LUA_T_CMARK)
       if (level-- == 0)
-        return Ref(p);
+        return Ref(stack+i);
   return LUA_NOOBJECT;
 }
 
