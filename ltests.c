@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.5 2004/04/30 20:13:38 roberto Exp roberto $
+** $Id: ltests.c,v 2.6 2004/05/10 17:50:51 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -1095,8 +1095,7 @@ int main (int argc, char *argv[]) {
   char *limit = getenv("MEMLIMIT");
   if (limit)
     memcontrol.memlimit = strtoul(limit, NULL, 10);
-  l_main(argc, argv);
-  return 0;
+  return l_main(argc, argv);
 }
 
 #endif
