@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.83 2001/06/15 20:36:57 roberto Exp roberto $
+** $Id: ltests.c,v 1.84 2001/06/26 13:20:45 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -177,6 +177,7 @@ static const l_char *const instrname[NUM_OPCODES] = {
   l_s("OP_LFORPREP"),
   l_s("OP_LFORLOOP"),
   l_s("OP_SETLIST"),
+  l_s("OP_SETLIST0"),
   l_s("OP_CLOSURE")
 };
 
