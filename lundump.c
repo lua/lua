@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.19 1999/04/15 12:30:03 lhf Exp lhf $
+** $Id: lundump.c,v 1.21 1999/07/02 19:34:26 lhf Exp $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -47,22 +47,33 @@ static unsigned long LoadLong (ZIO* Z)
  return (hi<<16)|lo;
 }
 
-static real LoadNumber (ZIO* Z)
+/*
+* convert number from text
+*/
+double luaU_str2d (char* b, char* where)
 {
-#ifdef LUAC_NATIVE
+ int negative=(b[0]=='-');
+ double x=luaO_str2d(b+negative);
+ if (x<0) luaL_verror("cannot convert number '%s' in %s",b,where);
+ return negative ? -x : x;
+}
+
+static real LoadNumber (ZIO* Z, int native)
+{
  real x;
- LoadBlock(&x,sizeof(x),Z);
- return x;
-#else
- char b[256];
- int size=ezgetc(Z);
- LoadBlock(b,size,Z);
- b[size]=0;
- if (b[0]=='-')
-  return -luaO_str2d(b+1);
+ if (native)
+ {
+  LoadBlock(&x,sizeof(x),Z);
+  return x;
+ }
  else
-  return  luaO_str2d(b);
-#endif
+ {
+  char b[256];
+  int size=ezgetc(Z);
+  LoadBlock(b,size,Z);
+  b[size]=0;
+  return luaU_str2d(b,zname(Z));
+ }
 }
 
 static int LoadInt (ZIO* Z, char* message)
@@ -112,9 +123,9 @@ static void LoadLocals (TProtoFunc* tf, ZIO* Z)
  tf->locvars[i].varname=NULL;
 }
 
-static TProtoFunc* LoadFunction (ZIO* Z);
+static TProtoFunc* LoadFunction (ZIO* Z, int native);
 
-static void LoadConstants (TProtoFunc* tf, ZIO* Z)
+static void LoadConstants (TProtoFunc* tf, ZIO* Z, int native)
 {
  int i,n=LoadInt(Z,"too many constants (%ld) in %s");
  tf->nconsts=n;
@@ -127,13 +138,13 @@ static void LoadConstants (TProtoFunc* tf, ZIO* Z)
   switch (ttype(o))
   {
    case LUA_T_NUMBER:
-	nvalue(o)=LoadNumber(Z);
+	nvalue(o)=LoadNumber(Z,native);
 	break;
    case LUA_T_STRING:
 	tsvalue(o)=LoadTString(Z);
 	break;
    case LUA_T_PROTO:
-	tfvalue(o)=LoadFunction(Z);
+	tfvalue(o)=LoadFunction(Z,native);
 	break;
    case LUA_T_NIL:
 	break;
@@ -144,7 +155,7 @@ static void LoadConstants (TProtoFunc* tf, ZIO* Z)
  }
 }
 
-static TProtoFunc* LoadFunction (ZIO* Z)
+static TProtoFunc* LoadFunction (ZIO* Z, int native)
 {
  TProtoFunc* tf=luaF_newproto();
  tf->lineDefined=LoadInt(Z,"lineDefined too large (%ld) in %s");
@@ -152,7 +163,7 @@ static TProtoFunc* LoadFunction (ZIO* Z)
  if (tf->source==NULL) tf->source=luaS_new(zname(Z));
  tf->code=LoadCode(Z);
  LoadLocals(tf,Z);
- LoadConstants(tf,Z);
+ LoadConstants(tf,Z,native);
  return tf;
 }
 
@@ -164,9 +175,10 @@ static void LoadSignature (ZIO* Z)
  if (*s!=0) luaL_verror("bad signature in %s",zname(Z));
 }
 
-static void LoadHeader (ZIO* Z)
+static int LoadHeader (ZIO* Z)
 {
  int version,sizeofR;
+ int native;
  LoadSignature(Z);
  version=ezgetc(Z);
  if (version>VERSION)
@@ -177,34 +189,29 @@ static void LoadHeader (ZIO* Z)
   luaL_verror(
 	"%s too old: version=0x%02x; expected at least 0x%02x",
 	zname(Z),version,VERSION0);
- sizeofR=ezgetc(Z);			/* test number representation */
-#ifdef LUAC_NATIVE
- if (sizeofR==0)
-  luaL_verror("cannot read numbers in %s: no support for decimal format",
-	zname(Z));
- if (sizeofR!=sizeof(real))
-  luaL_verror("unknown number size in %s: read %d; expected %d",
-	zname(Z),sizeofR,sizeof(real));
- else
+ sizeofR=ezgetc(Z);
+ native=(sizeofR!=0);
+ if (native)				/* test number representation */
  {
- real f=-TEST_NUMBER,tf=TEST_NUMBER;
- f=LoadNumber(Z);
- if ((long)f!=(long)tf)
-  luaL_verror("unknown number format in %s: "
-	"read " NUMBER_FMT "; expected " NUMBER_FMT,
-	zname(Z),f,tf);
+  if (sizeofR!=sizeof(real))
+   luaL_verror("unknown number size in %s: read %d; expected %d",
+	 zname(Z),sizeofR,sizeof(real));
+  else
+  {
+   real tf=TEST_NUMBER;
+   real f=LoadNumber(Z,native);
+   if ((long)f!=(long)tf)
+    luaL_verror("unknown number format in %s: "
+	  "read " NUMBER_FMT "; expected " NUMBER_FMT,
+	  zname(Z),f,tf);
+  }
  }
-#else
- if (sizeofR!=0)
-  luaL_verror("cannot read numbers in %s: no support for native format",
-	zname(Z));
-#endif
+ return native;
 }
 
 static TProtoFunc* LoadChunk (ZIO* Z)
 {
- LoadHeader(Z);
- return LoadFunction(Z);
+ return LoadFunction(Z,LoadHeader(Z));
 }
 
 /*

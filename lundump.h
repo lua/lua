@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.h,v 1.13 1999/03/29 16:16:18 lhf Exp lhf $
+** $Id: lundump.h,v 1.15 1999/07/02 19:34:26 lhf Exp $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -13,6 +13,8 @@
 TProtoFunc* luaU_undump1 (ZIO* Z);	/* load one chunk */
 void luaU_badconstant (char* s, int i, TObject* o, TProtoFunc* tf);
 					/* handle cases that cannot happen */
+double luaU_str2d (char* b, char* where);
+					/* convert number from text */
 
 /* definitions for headers of binary files */
 #define	VERSION		0x32		/* last format change was in 3.2 */
@@ -30,19 +32,8 @@ void luaU_badconstant (char* s, int i, TObject* o, TProtoFunc* tf);
 #define NUMBER_FMT	"%.16g"		/* LUA_NUMBER */
 #endif
 
-/* LUA_NUMBER
-* by default, numbers are stored in precompiled chunks as decimal strings.
-* this is completely portable and fast enough for most applications.
-* if you want to use this default, do nothing.
-* if you want additional speed at the expense of portability, move the line
-* below out of this comment.
-#define LUAC_NATIVE
-*/
-
-#ifdef LUAC_NATIVE
-/* a multiple of PI for testing number representation */
+/* a multiple of PI for testing native format */
 /* multiplying by 1E8 gives non-trivial integer values */
 #define	TEST_NUMBER	3.14159265358979323846E8
-#endif
 
 #endif
