@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.2 1997/09/26 15:02:26 roberto Exp roberto $
+** $Id: lobject.h,v 1.3 1997/09/26 16:46:20 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -110,7 +110,6 @@ typedef struct TProtoFunc {
   struct TObject *consts;
   int nconsts;
   struct LocVar *locvars;  /* ends with line = -1 */
-  int nupvalues;
 } TProtoFunc;
 
 typedef struct LocVar {
@@ -138,6 +137,7 @@ typedef struct LocVar {
 */
 typedef struct Closure {
   GCnode head;
+  int nelems;  /* not included the first one (always the prototype) */
   TObject consts[1];  /* at least one for prototype */
 } Closure;
 

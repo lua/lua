@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
+** $Id: ldo.c,v 1.2 1997/09/26 15:02:26 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -338,7 +338,7 @@ static int protectedparser (ZIO *z, char *chunkname, int bin)
   luaD_adjusttop(luaD_Cstack.base+1);  /* one slot for the pseudo-function */
   luaD_stack.stack[luaD_Cstack.base].ttype = LUA_T_PROTO;
   luaD_stack.stack[luaD_Cstack.base].value.tf = tf;
-  luaV_closure();
+  luaV_closure(0);
   return 0;
 }
 

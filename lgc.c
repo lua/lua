@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.2 1997/09/26 15:02:26 roberto Exp roberto $
+** $Id: lgc.c,v 1.3 1997/09/26 16:46:20 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -187,7 +187,7 @@ static void funcmark (Closure *f)
   if (!f->head.marked) {
     int i;
     f->head.marked = 1;
-    for (i=f->consts[0].value.tf->nupvalues; i>=0; i--)
+    for (i=f->nelems; i>=0; i--)
       markobject(&f->consts[i]);
   }
 }

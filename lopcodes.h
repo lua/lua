@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.7 1997/10/06 14:51:11 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.8 1997/10/13 22:12:04 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -135,8 +135,9 @@ IFTUPJMPW,/*	w	x		-		(x!=nil)? PC-=w  */
 IFFUPJMP,/*	b	x		-		(x==nil)? PC-=b  */
 IFFUPJMPW,/*	w	x		-		(x==nil)? PC-=w  */
 
-CLOSURE,/*	b	v_1...v_n	c(CNST[b]) */
-CLOSUREW,/*	w	v_1...v_n	c(CNST[w]) */
+CLOSURE,/*	b	v_b...v_1 prt	c(prt) */
+CLOSURE0,/*	b	prt		c(prt) */
+CLOSURE1,/*	b	v_1 prt		c(prt) */
 
 CALLFUNC,/*	b c	v_c...v_1 f	r_b...r_1	f(v1,...,v_c)  */
 CALLFUNC0,/*	b	v_b...v_1 f	-		f(v1,...,v_b)  */

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.8 1997/10/06 14:51:11 roberto Exp roberto $
+** $Id: lvm.c,v 1.9 1997/10/13 22:12:04 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -76,12 +76,11 @@ int luaV_tostring (TObject *obj)
 }
 
 
-void luaV_closure (void)
+void luaV_closure (int nelems)
 {
-  int nelems = (luaD_stack.top-1)->value.tf->nupvalues;
   Closure *c = luaF_newclosure(nelems);
-  c->consts[0] = *(luaD_stack.top-1);
-  memcpy(&c->consts[1], luaD_stack.top-(nelems+1), nelems*sizeof(TObject));
+  memcpy(c->consts, luaD_stack.top-(nelems+1), (nelems+1)*sizeof(TObject));
+  c->nelems = nelems;
   luaD_stack.top -= nelems;
   ttype(luaD_stack.top-1) = LUA_T_FUNCTION;
   (luaD_stack.top-1)->value.cl = c;
@@ -427,7 +426,7 @@ StkId luaV_execute (Closure *cl, StkId base)
         aux = 0; goto setmap;
 
       case SETMAP:
-        aux = *(pc++);
+        aux = *pc++;
       setmap: {
         TObject *arr = luaD_stack.top-(2*aux)-3;
         do {
@@ -447,12 +446,12 @@ StkId luaV_execute (Closure *cl, StkId base)
         break;
 
       case ARGS:
-        luaD_adjusttop(base + *(pc++));
+        luaD_adjusttop(base+(*pc++));
         break;
 
       case VARARGS:
         luaC_checkGC();
-        adjust_varargs(base + *(pc++));
+        adjust_varargs(base+(*pc++));
         break;
 
       case CREATEARRAYW:
@@ -632,14 +631,13 @@ StkId luaV_execute (Closure *cl, StkId base)
         if (ttype(--luaD_stack.top) == LUA_T_NIL) pc -= aux;
         break;
 
-      case CLOSUREW:
-        aux = next_word(pc); goto closure;
-
       case CLOSURE:
-        aux = *pc++;
+        aux = *pc++; goto closure;
+
+      case CLOSURE0: case CLOSURE1:
+        aux -= CLOSURE0;
       closure:
-        *luaD_stack.top++ = consts[aux];
-        luaV_closure();
+        luaV_closure(aux);
         luaC_checkGC();
         break;
 

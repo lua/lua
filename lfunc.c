@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
+** $Id: lfunc.c,v 1.2 1997/09/26 16:46:20 roberto Exp roberto $
 ** Lua Funcion auxiliar
 ** See Copyright Notice in lua.h
 */
@@ -32,7 +32,6 @@ TProtoFunc *luaF_newproto (void)
   f->fileName = NULL;
   f->consts = NULL;
   f->nconsts = 0;
-  f->nupvalues = 0;
   f->locvars = NULL;
   luaO_insertlist(&luaF_root, (GCnode *)f);
   return f;

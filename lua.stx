@@ -1,6 +1,6 @@
 %{
 /*
-** $Id: lua.stx,v 1.9 1997/10/13 22:12:04 roberto Exp roberto $
+** $Id: lua.stx,v 1.10 1997/10/15 20:16:00 roberto Exp roberto $
 ** Syntax analizer and code generator
 ** See Copyright Notice in lua.h
 */
@@ -57,6 +57,7 @@ typedef struct State {
   int stacksize;  /* number of values on activation register */
   int maxstacksize;  /* maximum number of values on activation register */
   int nlocalvar;  /* number of active local variables */
+  int nupvalues;  /* number of upvalues */
   int nvars;  /* number of entries in f->locvars */
   int maxcode;  /* size of f->code */
   int maxvars;  /* size of f->locvars (-1 if no debug information) */
@@ -347,14 +348,14 @@ static int indexupvalue (TaggedString *n)
 {
   vardesc v = singlevar(n, currState-1);
   int i;
-  for (i=0; i<currState->f->nupvalues; i++) {
+  for (i=0; i<currState->nupvalues; i++) {
     if (currState->upvalues[i] == v)
       return i;
   }
   /* new one */
-  if (++currState->f->nupvalues > MAXUPVALUES)
+  if (++currState->nupvalues > MAXUPVALUES)
     luaY_error("too many upvalues in a single function");
-  currState->upvalues[i] = v;  /* i = currState->f->nupvalues - 1 */
+  currState->upvalues[i] = v;  /* i = currState->nupvalues - 1 */
   return i;
 }
 
@@ -515,13 +516,14 @@ static void codereturn (void)
 static void func_onstack (TProtoFunc *f)
 {
   int i;
-  int nupvalues = (currState+1)->f->nupvalues;
+  int nupvalues = (currState+1)->nupvalues;
   int c = next_constant(currState);
   ttype(&currState->f->consts[c]) = LUA_T_PROTO;
   currState->f->consts[c].value.tf = (currState+1)->f;
+  code_constant(c);
   for (i=0; i<nupvalues; i++)
     lua_pushvar((currState+1)->upvalues[i]);
-  code_oparg(CLOSURE, 0, c, 1-nupvalues);
+  code_oparg(CLOSURE, 2, nupvalues, -nupvalues);
 }
 
 
@@ -531,6 +533,7 @@ static void init_state (TaggedString *filename)
   currState->stacksize = 0;
   currState->maxstacksize = 0;
   currState->nlocalvar = 0;
+  currState->nupvalues = 0;
   currState->f = f;
   f->fileName = filename;
   currState->pc = 0;
