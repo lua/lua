@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.52 1996/04/22 18:00:37 roberto Exp $";
+char *rcs_table="$Id: table.c,v 2.53 1996/04/29 18:53:53 roberto Exp roberto $";
 
 #include "mem.h"
 #include "opcode.h"
@@ -246,11 +246,7 @@ static void lua_nextvar (void)
  }
  else
  {
-  TaggedString *t = lua_table[next].varname;
-  Object name;
-  tag(&name) = LUA_T_STRING;
-  tsvalue(&name) = t;
-  luaI_pushobject(&name);
+  lua_pushstring(lua_table[next].varname->str);
   luaI_pushobject(&s_object(next));
  }
 }
