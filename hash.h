@@ -2,8 +2,7 @@
 ** hash.h
 ** hash manager for lua
 ** Luiz Henrique de Figueiredo - 17 Aug 90
-** Modified by Waldemar Celes Filho
-** 26 Apr 93
+** $Id: $
 */
 
 #ifndef hash_h
