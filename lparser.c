@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.84 2000/05/08 18:46:34 roberto Exp roberto $
+** $Id: lparser.c,v 1.85 2000/05/10 16:33:20 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -653,7 +653,7 @@ static void constructor_part (LexState *ls, Constdesc *cd) {
         cd->k = 1;  /* record */
       }
       else {
-        luaK_tostack(ls, &v, 0);
+        luaK_tostack(ls, &v, 1);
         cd->n = listfields(ls);
         cd->k = 0;  /* list */
       }
