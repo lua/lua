@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.50 1995/11/16 20:46:24 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.50 1995/11/16 20:46:24 roberto Exp $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -53,6 +53,11 @@ static int CnResults = 0; /* when Lua calls C, has the number of parameters; */
 static  jmp_buf *errorJmp = NULL; /* current error recover point */
 
 
+/* Hooks */
+static lua_LHFunction line_hook = NULL;
+static lua_CHFunction call_hook = NULL;
+
+
 static StkId lua_execute (Byte *pc, StkId base);
 static void do_call (StkId base, int nResults);
 
@@ -63,6 +68,23 @@ Object *luaI_Address (lua_Object o)
   return Address(o);
 }
 
+
+/*
+** Functions to change hook functions.
+*/
+lua_LHFunction lua_setlinehook (lua_LHFunction hook)
+{
+  lua_LHFunction temp = line_hook;
+  line_hook = hook;
+  return temp;
+}
+
+lua_CHFunction lua_setcallhook (lua_CHFunction hook)
+{
+  lua_CHFunction temp = call_hook;
+  call_hook = hook;
+  return temp;
+}
 
 
 /*
@@ -193,6 +215,48 @@ static void open_stack (int nelems)
 
 
 /*
+** call Line hook
+*/
+static void lineHook (int line)
+{
+  StkId oldBase = CBase;
+  int oldCnResults = CnResults;
+  StkId old_top = CBase = top-stack;
+  CnResults = 0;
+  (*line_hook)(line);
+  top = stack+old_top;
+  CnResults = oldCnResults;
+  CBase = oldBase;
+}
+
+
+/*
+** Call hook
+** The function being called is in [stack+base-1]
+*/
+static void callHook (StkId base, lua_Type type, int isreturn)
+{
+  StkId oldBase = CBase;
+  int oldCnResults = CnResults;
+  StkId old_top = CBase = top-stack;
+  CnResults = 0;
+  if (isreturn)
+    (*call_hook)(LUA_NOOBJECT, "(return)", 0);
+  else
+  {
+    Object *f = stack+base-1;
+    if (type == LUA_T_MARK)
+      (*call_hook)(Ref(f), f->value.tf->fileName, f->value.tf->lineDefined);
+    else
+      (*call_hook)(Ref(f), "(C)", -1);
+  }
+  top = stack+old_top;
+  CnResults = oldCnResults;
+  CBase = oldBase;
+}
+
+
+/*
 ** Call a C function. CBase will point to the top of the stack,
 ** and CnResults is the number of parameters. Returns an index
 ** to the first result from C.
@@ -204,8 +268,15 @@ static StkId callC (lua_CFunction func, StkId base)
   StkId firstResult;
   CnResults = (top-stack) - base;
   /* incorporate parameters on the stack */
-  CBase = base+CnResults;
-  (*func)();
+  CBase = base+CnResults;  /* == top-stack */
+  if (call_hook)
+  {
+    callHook (base, LUA_T_CMARK, 0);
+    (*func)();
+    callHook (base, LUA_T_CMARK, 1);
+  }
+  else
+    (*func)();
   firstResult = CBase;
   CBase = oldBase;
   CnResults = oldCnResults;
@@ -784,6 +855,8 @@ static void comparison (lua_Type tag_less, lua_Type tag_equal,
 */
 static StkId lua_execute (Byte *pc, StkId base)
 {
+  if (call_hook)
+    callHook (base, LUA_T_MARK, 0);
  while (1)
  {
   OpCode opcode;
@@ -1144,10 +1217,10 @@ static StkId lua_execute (Byte *pc, StkId base)
    break;
 
    case RETCODE0:
-     return base;
-
    case RETCODE:
-     return base+*pc;
+     if (call_hook)
+       callHook (base, LUA_T_MARK, 1);
+     return (base + ((opcode==RETCODE0) ? 0 : *pc));
 
    case SETLINE:
    {
@@ -1161,6 +1234,8 @@ static StkId lua_execute (Byte *pc, StkId base)
       (stack+base-1)->tag = LUA_T_LINE;
     }
     (stack+base-1)->value.i = code.w;
+    if (line_hook)
+      lineHook (code.w);
     break;
    }
 
@@ -1169,5 +1244,4 @@ static StkId lua_execute (Byte *pc, StkId base)
   }
  }
 }
-
 
