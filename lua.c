@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.27 1999/11/22 13:12:07 roberto Exp roberto $
+** $Id: lua.c,v 1.28 1999/12/06 11:41:28 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -14,6 +14,10 @@
 #include "luadebug.h"
 #include "lualib.h"
 
+
+#ifndef PROMPT
+#define PROMPT		"> "
+#endif
 
 #ifdef _POSIX_SOURCE
 #include <unistd.h>
@@ -119,8 +123,11 @@ static void manual_input (int prompt) {
     char buffer[BUFSIZ];
     int i = 0;
     lua_beginblock();
-    if (prompt)
-      printf("%s", lua_getstring(lua_getglobal("_PROMPT")));
+    if (prompt) {
+      const char *s = lua_getstring(lua_getglobal("_PROMPT"));
+      if (!s) s = PROMPT;
+      printf("%s", s);
+    }
     for(;;) {
       int c = getchar();
       if (c == EOF) {
@@ -149,7 +156,6 @@ static void manual_input (int prompt) {
 int main (int argc, char *argv[]) {
   int i;
   lua_state = lua_newstate("stack", 1024, "builtin", 1, NULL);
-  lua_pushstring("> "); lua_setglobal("_PROMPT");
   lua_userinit();
   getargs(argc, argv);
   if (argc < 2) {  /* no arguments? */
