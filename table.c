@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.5 1994/10/17 21:45:00 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.6 1994/10/18 18:34:47 roberto Exp $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -255,7 +255,7 @@ int lua_addfile (char *fn)
 */
 int lua_delfile (void)
 {
- lua_nfile--; 
+ free(lua_file[lua_nfile--]); 
  return 1;
 }
 
