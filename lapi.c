@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.24 1998/03/09 21:49:52 roberto Exp roberto $
+** $Id: lapi.c,v 1.25 1998/06/05 22:17:44 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -173,12 +173,8 @@ lua_Object lua_rawgettable (void)
   if (ttype(L->stack.top-2) != LUA_T_ARRAY)
     lua_error("indexed expression not a table in rawgettable");
   else {
-    TObject *h = luaH_get(avalue(L->stack.top-2), L->stack.top-1);
+    *(L->stack.top-2) = *luaH_get(avalue(L->stack.top-2), L->stack.top-1);
     --L->stack.top;
-    if (h != NULL)
-      *(L->stack.top-1) = *h;
-    else
-      ttype(L->stack.top-1) = LUA_T_NIL;
   }
   return put_luaObjectonTop();
 }
@@ -426,7 +422,7 @@ void lua_settag (int tag)
       break;
     default:
       luaL_verror("cannot change the tag of a %.20s",
-                  luaO_typenames[-ttype((L->stack.top-1))]);
+                  luaO_typename(L->stack.top-1));
   }
   L->stack.top--;
 }
