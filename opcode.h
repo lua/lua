@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.35 1997/07/03 22:06:06 roberto Exp $
+** $Id: opcode.h,v 3.35 1997/07/04 14:55:37 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -110,7 +110,8 @@ RETCODE0,
 RETCODE,/*	b	-		-  */
 SETLINE,/*	w	-		-		LINE=w  */
 VARARGS,/*	b	v_b...v_1	{v_1...v_b;n=b}  */
-STOREMAP/*	b	v_b k_b ...v_1 k_1 t	-	t[k_i]=v_i  */
+STOREMAP,/*	b	v_b k_b ...v_1 k_1 t	-	t[k_i]=v_i  */
+ENDCODE = 127
 } OpCode;
 
 
