@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.41 2000/08/04 19:38:35 roberto Exp roberto $
+** $Id: lstring.c,v 1.42 2000/08/09 19:16:57 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -19,6 +19,7 @@
 void luaS_init (lua_State *L) {
   L->strt.hash = luaM_newvector(L, 1, TString *);
   L->udt.hash = luaM_newvector(L, 1, TString *);
+  L->nblocks += 2*sizeof(TString *);
   L->strt.size = L->udt.size = 1;
   L->strt.nuse = L->udt.nuse = 0;
   L->strt.hash[0] = L->udt.hash[0] = NULL;
@@ -27,6 +28,7 @@ void luaS_init (lua_State *L) {
 
 void luaS_freeall (lua_State *L) {
   LUA_ASSERT(L->strt.nuse==0, "non-empty string table");
+  L->nblocks -= (L->strt.size + L->udt.size)*sizeof(TString *);
   luaM_free(L, L->strt.hash);
   LUA_ASSERT(L->udt.nuse==0, "non-empty udata table");
   luaM_free(L, L->udt.hash);
@@ -61,6 +63,7 @@ void luaS_resize (lua_State *L, stringtable *tb, int newsize) {
     }
   }
   luaM_free(L, tb->hash);
+  L->nblocks += (newsize - tb->size)*sizeof(TString *);
   tb->size = newsize;
   tb->hash = newhash;
 }
@@ -85,7 +88,7 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
       return ts;
   }
   /* not found */
-  ts = (TString *)luaM_malloc(L, sizeof(TString)+(lint32)l*sizeof(char));
+  ts = (TString *)luaM_malloc(L, sizestring(l));
   ts->marked = 0;
   ts->nexthash = NULL;
   ts->u.s.len = l;
@@ -93,7 +96,7 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
   ts->u.s.constindex = 0;
   memcpy(ts->str, str, l);
   ts->str[l] = 0;  /* ending 0 */
-  L->nblocks += gcsizestring(L, l);
+  L->nblocks += sizestring(l);
   newentry(L, &L->strt, ts, h1);  /* insert it on table */
   return ts;
 }

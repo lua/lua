@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.13 2000/08/28 17:57:04 roberto Exp roberto $
+** $Id: llimits.h,v 1.14 2000/08/29 14:48:16 roberto Exp roberto $
 ** Limits, basic types, and some other "installation-dependent" definitions
 ** See Copyright Notice in lua.h
 */
@@ -57,13 +57,6 @@ typedef unsigned long lint32;  /* unsigned int with at least 32 bits */
 #define IntPoint(p)  (((unsigned long)(p)) >> 3)
 
 
-/*
-** number of `blocks' for garbage collection: each reference to other
-** objects count 1, and each 32 bytes of `raw' memory count 1; we add
-** 2 to the total as a minimum (and also to count the overhead of malloc)
-*/
-#define numblocks(L, o,b)       ((o)+((b)>>5)+2)
-
 
 #define MINPOWER2       4       /* minimum size for "growing" vectors */
 
@@ -77,7 +70,7 @@ typedef unsigned long lint32;  /* unsigned int with at least 32 bits */
 
 /*
 ** type for virtual-machine instructions
-** must be an unsigned with 4 bytes (see details in lopcodes.h)
+** must be an unsigned with (at least) 4 bytes (see details in lopcodes.h)
 ** For a very small machine, you may change that to 2 bytes (and adjust
 ** the following limits accordingly)
 */

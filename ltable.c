@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.54 2000/08/31 14:08:27 roberto Exp roberto $
+** $Id: ltable.c,v 1.55 2000/09/11 20:29:27 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -27,7 +27,7 @@
 #include "ltable.h"
 
 
-#define gcsize(L, n)	numblocks(L, n*2, sizeof(Hash))
+#define gcsize(L, n)	(sizeof(Hash)+(n)*sizeof(Node))
 
 
 

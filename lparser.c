@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.112 2000/09/20 17:57:08 roberto Exp roberto $
+** $Id: lparser.c,v 1.113 2000/09/27 17:41:58 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -315,7 +315,6 @@ static void open_func (LexState *ls, FuncState *fs) {
   f->source = ls->source;
   fs->pc = 0;
   fs->lasttarget = 0;
-  fs->nlineinfo = 0;
   fs->lastline = 0;
   fs->jlt = NO_JUMP;
   f->code = NULL;
@@ -337,8 +336,9 @@ static void close_func (LexState *ls) {
   luaM_reallocvector(L, f->kproto, f->nkproto, Proto *);
   removelocalvars(ls, fs->nactloc);
   luaM_reallocvector(L, f->locvars, f->nlocvars, LocVar);
-  luaM_reallocvector(L, f->lineinfo, fs->nlineinfo+1, int);
-  f->lineinfo[fs->nlineinfo] = MAX_INT;  /* end flag */
+  luaM_reallocvector(L, f->lineinfo, f->nlineinfo+1, int);
+  f->lineinfo[f->nlineinfo] = MAX_INT;  /* end flag */
+  luaF_protook(L, f, fs->pc);  /* proto is ok now */
   ls->fs = fs->prev;
   LUA_ASSERT(fs->bl == NULL, "wrong list end");
 }

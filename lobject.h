@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.75 2000/09/11 17:38:42 roberto Exp roberto $
+** $Id: lobject.h,v 1.76 2000/09/11 20:29:27 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -116,14 +116,16 @@ typedef struct Proto {
   int nkstr;  /* size of `kstr' */
   struct Proto **kproto;  /* functions defined inside the function */
   int nkproto;  /* size of `kproto' */
-  Instruction *code;  /* ends with opcode ENDCODE */
-  int numparams;
-  int is_vararg;
-  int maxstacksize;
+  Instruction *code;
+  int ncode;  /* size of `code'; when 0 means an incomplete `Proto' */
+  short numparams;
+  short is_vararg;
+  short maxstacksize;
+  short marked;
   struct Proto *next;
-  int marked;
   /* debug information */
   int *lineinfo;  /* map from opcodes to source lines */
+  int nlineinfo;  /* size of `lineinfo' */
   int nlocvars;
   struct LocVar *locvars;  /* information about local variables */
   int lineDefined;

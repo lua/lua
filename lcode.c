@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.49 2000/08/15 13:18:28 roberto Exp roberto $
+** $Id: lcode.c,v 1.50 2000/08/31 14:08:27 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -420,13 +420,14 @@ void luaK_posfix (LexState *ls, BinOpr op, expdesc *v1, expdesc *v2) {
 
 
 static void codelineinfo (FuncState *fs) {
+  Proto *f = fs->f;
   LexState *ls = fs->ls;
   if (ls->lastline > fs->lastline) {
-    luaM_growvector(fs->L, fs->f->lineinfo, fs->nlineinfo, 2, int,
+    luaM_growvector(fs->L, f->lineinfo, f->nlineinfo, 2, int,
                     "line info overflow", MAX_INT);
     if (ls->lastline > fs->lastline+1)
-      fs->f->lineinfo[fs->nlineinfo++] = -(ls->lastline - (fs->lastline+1));
-    fs->f->lineinfo[fs->nlineinfo++] = fs->pc;
+      f->lineinfo[f->nlineinfo++] = -(ls->lastline - (fs->lastline+1));
+    f->lineinfo[f->nlineinfo++] = fs->pc;
     fs->lastline = ls->lastline;
   }
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.96 2000/09/12 13:47:39 roberto Exp roberto $
+** $Id: ldo.c,v 1.97 2000/09/25 16:22:42 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -33,6 +33,7 @@
 
 void luaD_init (lua_State *L, int stacksize) {
   L->stack = luaM_newvector(L, stacksize+EXTRA_STACK, TObject);
+  L->nblocks += stacksize*sizeof(TObject);
   L->stack_last = L->stack+(stacksize-1);
   L->stacksize = stacksize;
   L->Cbase = L->top = L->stack;
@@ -248,10 +249,12 @@ static int protectedparser (lua_State *L, ZIO *z, int bin) {
   luaC_checkGC(L);
   old_blocks = L->nblocks;
   status = luaD_runprotected(L, f_parser, &p);
-  if (status == LUA_ERRRUN)  /* an error occurred: correct error code */
+  if (status == 0) {
+    /* add new memory to threshould (as it probably will stay) */
+    L->GCthreshold += (L->nblocks - old_blocks);
+  }
+  else if (status == LUA_ERRRUN)  /* an error occurred: correct error code */
     status = LUA_ERRSYNTAX;
-  /* add new memory to threshould (as it probably will stay) */
-  L->GCthreshold += (L->nblocks - old_blocks);
   return status;
 }
 

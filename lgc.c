@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.66 2000/09/19 08:42:35 roberto Exp roberto $
+** $Id: lgc.c,v 1.67 2000/09/25 14:52:10 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -254,7 +254,7 @@ static void collectstringtab (lua_State *L, int limit) {
       else {  /* collect */
         *p = next->nexthash;
         L->strt.nuse--;
-        L->nblocks -= gcsizestring(L, next->u.s.len);
+        L->nblocks -= sizestring(next->u.s.len);
         luaM_free(L, next);
       }
     }
@@ -343,7 +343,9 @@ long lua_collectgarbage (lua_State *L, long limit) {
   recovered = recovered - L->nblocks;
   L->GCthreshold = (limit == 0) ? 2*L->nblocks : L->nblocks+limit;
   if (L->Mbuffsize > MINBUFFER*2) {  /* is buffer too big? */
-    L->Mbuffsize /= 2;  /* still larger than MINBUFFER */
+    size_t diff = L->Mbuffsize/2;
+    L->Mbuffsize -= diff;  /* still larger than MINBUFFER */
+    L->nblocks -= diff*sizeof(char);
     luaM_reallocvector(L, L->Mbuffer, L->Mbuffsize, char);
   }
   callgcTM(L, &luaO_nilobject);

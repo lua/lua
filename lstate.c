@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.40 2000/09/21 14:41:25 roberto Exp roberto $
+** $Id: lstate.c,v 1.41 2000/09/25 16:22:42 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -78,7 +78,7 @@ lua_State *lua_open (int stacksize) {
   L->refArray = NULL;
   L->refSize = 0;
   L->refFree = NONEXT;
-  L->nblocks = 0;
+  L->nblocks = sizeof(lua_State);
   L->GCthreshold = MAX_INT;  /* to avoid GC during pre-definitions */
   L->callhook = NULL;
   L->linehook = NULL;
@@ -100,11 +100,16 @@ void lua_close (lua_State *L) {
   LUA_ASSERT(L->rootcl == NULL, "list should be empty");
   LUA_ASSERT(L->roottable == NULL, "list should be empty");
   luaS_freeall(L);
+  if (L->stack)
+    L->nblocks -= (L->stack_last - L->stack + 1)*sizeof(TObject);
   luaM_free(L, L->stack);
+  L->nblocks -= (L->last_tag+1)*sizeof(struct IM);
   luaM_free(L, L->IMtable);
+  L->nblocks -= (L->refSize)*sizeof(struct Ref);
   luaM_free(L, L->refArray);
+  L->nblocks -= (L->Mbuffsize)*sizeof(char);
   luaM_free(L, L->Mbuffer);
-  LUA_ASSERT(L->nblocks == 0, "wrong count for nblocks");
+  LUA_ASSERT(L->nblocks == sizeof(lua_State), "wrong count for nblocks");
   luaM_free(L, L);
   LUA_ASSERT(L != lua_state || memdebug_numblocks == 0, "memory leak!");
   LUA_ASSERT(L != lua_state || memdebug_total == 0,"memory leak!");

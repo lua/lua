@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.47 2000/09/11 20:29:27 roberto Exp roberto $
+** $Id: lobject.c,v 1.48 2000/09/12 13:47:39 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -18,7 +18,7 @@
 
 
 /*
-** you can use the fact that the 3rd letter or each name is always different
+** you can use the fact that the 3rd letter of each name is always different
 ** (e-m-r-b-n-l) to compare and switch these strings
 */
 const char *const luaO_typenames[] = { /* ORDER LUA_T */
@@ -61,6 +61,7 @@ int luaO_equalObj (const TObject *t1, const TObject *t2) {
 char *luaO_openspace (lua_State *L, size_t n) {
   if (n > L->Mbuffsize) {
     luaM_reallocvector(L, L->Mbuffer, n, char);
+    L->nblocks += (n - L->Mbuffsize)*sizeof(char);
     L->Mbuffsize = n;
   }
   return L->Mbuffer;
@@ -127,10 +128,10 @@ int luaO_str2d (const char *s, Number *result) {  /* LUA_NUMBER */
 }
 
 
-/* this function needs to handle only '%d' and '%.XXXs' formats */
+/* this function needs to handle only '%d' and '%.XXs' formats */
 void luaO_verror (lua_State *L, const char *fmt, ...) {
-  char buff[500];
   va_list argp;
+  char buff[600];  /* to hold formated message */
   va_start(argp, fmt);
   vsprintf(buff, fmt, argp);
   va_end(argp);
