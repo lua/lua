@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.12 2004/09/10 17:30:46 roberto Exp roberto $
+** $Id: luaconf.h,v 1.13 2004/09/29 21:03:42 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -135,7 +135,7 @@
 
 
 /* maximum depth for calls (unsigned short) */
-#define LUA_MAXCALLS	4096
+#define LUA_MAXCALLS	10000
 
 /*
 ** maximum depth for C calls (unsigned short): Not too big, or may
