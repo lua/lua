@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.175 2002/04/09 19:47:44 roberto Exp roberto $
+** $Id: lparser.c,v 1.176 2002/04/10 19:14:45 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -938,6 +938,7 @@ static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
         ls->fs->freereg -= nexps - nvars;  /* remove extra values */
     }
     else {
+      luaK_setcallreturns(ls->fs, &e, 1);  /* close last expression */
       luaK_storevar(ls->fs, &lh->v, &e);
       return;  /* avoid default */
     }
