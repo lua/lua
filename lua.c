@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.125 2004/04/30 20:13:38 roberto Exp roberto $
+** $Id: lua.c,v 1.126 2004/05/31 18:51:50 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -143,8 +143,7 @@ static int dostring (const char *s, const char *name) {
 
 
 static int load_file (const char *name) {
-  lua_pushliteral(L, "require");
-  lua_rawget(L, LUA_GLOBALSINDEX);
+  lua_getglobal(L, "require");
   if (!lua_isfunction(L, -1)) {  /* no `require' defined? */
     lua_pop(L, 1);
     return file_input(name);
