@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.46 1995/10/17 14:30:05 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.47 1995/10/25 13:05:51 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -355,15 +355,11 @@ lua_Object lua_stackedfunction (int level)
 }
 
 
-void lua_funcinfo (lua_Object func, char **filename, char **funcname,
-                    char **objname, int *line)
+int lua_currentline (lua_Object func)
 {
   Object *f = Address(func);
-  luaI_funcInfo(f, filename, funcname, objname, line);
-  *line = (f+1 < top && (f+1)->tag == LUA_T_LINE) ?
-          (f+1)->value.i : -1;
+  return (f+1 < top && (f+1)->tag == LUA_T_LINE) ? (f+1)->value.i : -1;
 }
-
 
 
 /*
@@ -406,7 +402,6 @@ static int do_protectedmain (void)
   stack[CBase].tag = LUA_T_FUNCTION;
   stack[CBase].value.tf = &tf;
   tf.lineDefined = 0;
-  tf.name1 = tf.name2 = NULL;
   tf.fileName = lua_parsedfile;
   tf.code = NULL;
   if (setjmp(myErrorJmp) == 0)

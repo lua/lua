@@ -1,7 +1,10 @@
 #include <stdio.h>
+
+#include "luadebug.h"
 #include "table.h"
 #include "mem.h"
 #include "func.h"
+#include "opcode.h"
 
 static TFunc *function_root = NULL;
 
@@ -57,3 +60,20 @@ Long luaI_funccollector (void)
   }
   return counter;
 }
+
+
+void lua_funcinfo (lua_Object func, char **filename, int *linedefined)
+{
+  Object *f = luaI_Address(func);
+  if (f->tag == LUA_T_MARK || f->tag == LUA_T_FUNCTION)
+  {
+    *filename = f->value.tf->fileName;
+    *linedefined = f->value.tf->lineDefined;
+  }
+  else if (f->tag == LUA_T_CMARK || f->tag == LUA_T_CFUNCTION)
+  {
+    *filename = "(C)";
+    *linedefined = -1;
+  }
+}
+

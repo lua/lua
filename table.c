@@ -3,9 +3,9 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.35 1995/10/17 11:58:41 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.36 1995/10/23 13:53:48 roberto Exp roberto $";
 
-#include <string.h>
+/*#include <string.h>*/
 
 #include "mem.h"
 #include "opcode.h"
@@ -15,6 +15,7 @@ char *rcs_table="$Id: table.c,v 2.35 1995/10/17 11:58:41 roberto Exp roberto $";
 #include "inout.h"
 #include "lua.h"
 #include "fallback.h"
+#include "luadebug.h"
 
 
 #define BUFFER_BLOCK 256
@@ -254,39 +255,28 @@ static void getglobal (void)
 }
 
 
-static lua_CFunction cfunc = NULL;
+static Object *functofind;
 static int checkfunc (Object *o)
 {
-  return ((o->tag == LUA_T_CMARK || o->tag == LUA_T_CFUNCTION) &&
-           o->value.f == cfunc);
+  if (o->tag == LUA_T_FUNCTION)
+    return
+       ((functofind->tag == LUA_T_FUNCTION || functofind->tag == LUA_T_MARK)
+            && (functofind->value.tf == o->value.tf));
+  if (o->tag == LUA_T_CFUNCTION)
+    return
+       ((functofind->tag == LUA_T_CFUNCTION || functofind->tag == LUA_T_CMARK)
+            && (functofind->value.f == o->value.f));
+  return 0;
 }
 
 
-void luaI_funcInfo (struct Object *func, char **filename, char **funcname,
-                    char **objname, int *linedefined)
-{
-  if (func->tag == LUA_T_MARK || func->tag == LUA_T_FUNCTION)
-  {
-    TFunc *f = func->value.tf;
-    *filename = f->fileName;
-    *funcname = f->name1;
-    *objname = f->name2;
-    *linedefined = f->lineDefined;
-  }
-  else if (func->tag == LUA_T_CMARK || func->tag == LUA_T_CFUNCTION)
-  {
-    /* temporario: */
-    cfunc = func->value.f;
-    *filename = "(C)";
-    *linedefined = 0;
-    *funcname = lua_travsymbol(checkfunc);
-    if (*funcname)
-      *objname = 0;
-    else
-    {
-      *funcname = luaI_travfallbacks(checkfunc);
-      *objname = "(FB)";
-    }
-  }
+char *getobjname (lua_Object o, char **name)
+{ /* try to find a name for given function */
+  functofind = luaI_Address(o);
+  if ((*name = lua_travsymbol(checkfunc)) != NULL)
+    return "global";
+  else if ((*name = luaI_travfallbacks(checkfunc)) != NULL)
+    return "fallback";
+  else return "";
 }
 

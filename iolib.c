@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.24 1995/10/17 14:12:45 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.25 1995/10/23 13:53:48 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -612,20 +612,33 @@ static void print_message (void)
   fprintf(stderr, "Active Stack:\n");
   while ((func = lua_stackedfunction(level++)) != LUA_NOOBJECT)
   {
-    char *filename; char *funcname;
-    char *objname; int linedefined;
-    lua_funcinfo(func, &filename, &funcname, &objname, &linedefined);
-    if (objname == NULL)
-      if (funcname)
-        fprintf(stderr, "\t%s", funcname);
-      else
+    char *name;
+    int currentline;
+    fprintf(stderr, "\t");
+    switch (*getobjname(func, &name))
+    {
+      case 'g':
+        fprintf(stderr, "function %s", name);
+        break;
+      case 'f':
+        fprintf(stderr, "fallback %s", name);
+        break;
+      default:
       {
-        fprintf(stderr, "\tmain of %s\n", filename);
-        continue;
+        char *filename;
+        int linedefined;
+        lua_funcinfo(func, &filename, &linedefined);
+        if (linedefined == 0)
+          fprintf(stderr, "main of %s", filename);
+        else if (linedefined < 0)
+          fprintf(stderr, "%s", filename);
+        else
+          fprintf(stderr, "function (%s:%d)", filename, linedefined);
       }
-    else
-      fprintf(stderr, "\t%s:%s", objname, funcname);
-    fprintf(stderr, "\t(defined in %s)\n", filename);
+    }
+    if ((currentline = lua_currentline(func)) > 0)
+      fprintf(stderr, "  at line %d", currentline);
+    fprintf(stderr, "\n");
   }
 }
 
