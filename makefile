@@ -1,4 +1,4 @@
-# $Id: makefile,v 1.9 1994/11/23 20:15:04 roberto Exp roberto $
+# $Id: makefile,v 1.10 1994/12/23 20:47:59 roberto Exp celes $
 # Compilation parameters
 CC = gcc
 CFLAGS = -I/usr/5include -Wall -Wmissing-prototypes -Wshadow -ansi -O2
@@ -11,7 +11,7 @@ ARFLAGS	= rvl
 
 # Aplication modules
 LUAMOD =	\
-	y.tab 	\
+	parser 	\
 	lex	\
 	opcode	\
 	hash	\
@@ -33,7 +33,7 @@ LIBOBJS	= $(LIBMOD:%=%.o)
 lua : lua.o lua.a lualib.a
 	$(CC) $(CFLAGS) -o $@ lua.c lua.a lualib.a -lm
 
-lua.a : y.tab.c $(LUAOBJS)
+lua.a : parser.c $(LUAOBJS)
 	$(AR) $(ARFLAGS) $@  $?
 	ranlib lua.a
 
@@ -48,13 +48,13 @@ liblua.so.1.0 : lua.o
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 
-y.tab.c : lua.stx exscript
-	yacc -d lua.stx ; ex y.tab.c <exscript
+parser.c : lua.stx exscript
+	yacc -d lua.stx ; mv -f y.tab.c parser.c ; mv -f y.tab.h parser.h ; ex parser.c <exscript
 
 clear	:
 	rcsclean
 	rm -f *.o
-	rm -f y.tab.c y.tab.h
+	rm -f parser.c parser.h
 	co lua.h lualib.h
 
 % : RCS/%,v
@@ -65,7 +65,7 @@ fallback.o : fallback.c mem.h fallback.h opcode.h lua.h types.h tree.h inout.h
 hash.o : hash.c mem.h opcode.h lua.h types.h tree.h hash.h inout.h table.h 
 inout.o : inout.c mem.h opcode.h lua.h types.h tree.h hash.h inout.h table.h 
 iolib.o : iolib.c mem.h lua.h lualib.h 
-lex.o : lex.c tree.h types.h table.h opcode.h lua.h inout.h y.tab.h ugly.h 
+lex.o : lex.c tree.h types.h table.h opcode.h lua.h inout.h parser.h ugly.h 
 lua.o : lua.c lua.h lualib.h 
 mathlib.o : mathlib.c lualib.h lua.h 
 mem.o : mem.c mem.h lua.h 
@@ -75,4 +75,4 @@ strlib.o : strlib.c mem.h lua.h lualib.h
 table.o : table.c mem.h opcode.h lua.h types.h tree.h hash.h inout.h table.h \
   fallback.h 
 tree.o : tree.c mem.h lua.h tree.h types.h table.h opcode.h 
-y.tab.o : y.tab.c mem.h opcode.h lua.h types.h tree.h hash.h inout.h table.h 
+parser.o : parser.c mem.h opcode.h lua.h types.h tree.h hash.h inout.h table.h 

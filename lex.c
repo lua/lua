@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.12 1994/11/22 16:13:45 roberto Stab $";
+char *rcs_lex = "$Id: lex.c,v 2.13 1994/12/20 21:20:36 roberto Exp celes $";
  
 
 #include <ctype.h>
@@ -11,7 +11,7 @@ char *rcs_lex = "$Id: lex.c,v 2.12 1994/11/22 16:13:45 roberto Stab $";
 #include "table.h"
 #include "opcode.h"
 #include "inout.h"
-#include "y.tab.h"
+#include "parser.h"
 #include "ugly.h"
 
 #define lua_strcmp(a,b)	(a[0]<b[0]?(-1):(a[0]>b[0]?(1):strcmp(a,b)))
