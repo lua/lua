@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.111 2003/07/16 20:49:02 roberto Exp roberto $
+** $Id: lstate.h,v 1.112 2003/10/02 20:31:17 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -100,6 +100,8 @@ typedef struct global_State {
   stringtable strt;  /* hash table for strings */
   GCObject *rootgc;  /* list of (almost) all collectable objects */
   GCObject *rootudata;   /* (separated) list of all userdata */
+  GCObject *gray;  /* list of gray objects */
+  GCObject *weak;  /* list of weak tables (to be cleared) */
   GCObject *tmudata;  /* list of userdata to be GC */
   lua_Alloc realloc;  /* function to reallocate memory */
   void *ud;         /* auxiliary data to `realloc' */

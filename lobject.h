@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.160 2003/04/28 19:26:16 roberto Exp roberto $
+** $Id: lobject.h,v 1.161 2003/08/27 21:01:44 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -252,6 +252,7 @@ typedef struct LocVar {
 
 typedef struct UpVal {
   CommonHeader;
+  GCObject *gclist;
   TObject *v;  /* points to stack or to its own value */
   TObject value;  /* the value (when closed) */
 } UpVal;

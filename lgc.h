@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 1.21 2003/07/29 19:25:37 roberto Exp roberto $
+** $Id: lgc.h,v 1.22 2003/11/17 19:50:05 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -23,15 +23,15 @@
 
 /*
 ** Layout for bit use in `marked' field:
-** bit 0 - object is white (not used yet)
+** bit 0 - object is gray
 ** bit 1 - object is black
 ** bit 2 - For userdata: is finalized;
            for tables: has weak keys
 ** bit 3 - for tables: has weak values
-** bit 4 - for strings: is fixed (should not be collected)
+** bit 4 - object is fixed (should not be collected)
 */
 
-#define WHITEBIT	0
+#define GRAYBIT		0
 #define BLACKBIT	1
 #define FINALIZEDBIT	2
 #define KEYWEAKBIT	2
