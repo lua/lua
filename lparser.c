@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.184 2002/05/16 18:39:46 roberto Exp roberto $
+** $Id: lparser.c,v 1.185 2002/06/03 14:09:57 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -83,7 +83,7 @@ static void check (LexState *ls, int c) {
 #define check_condition(ls,c,msg)	{ if (!(c)) luaX_syntaxerror(ls, msg); }
 
 
-static int optional (LexState *ls, int c) {
+static int testnext (LexState *ls, int c) {
   if (ls->t.token == c) {
     next(ls);
     return 1;
@@ -539,7 +539,7 @@ static void constructor (LexState *ls, expdesc *t) {
   check(ls, '{');
   for (;;) {
     lua_assert(cc.v.k == VVOID || cc.tostore > 0);
-    optional(ls, ';');  /* compatibility only */
+    testnext(ls, ';');  /* compatibility only */
     if (ls->t.token == '}') break;
     closelistfield(fs, &cc);
     switch(ls->t.token) {
@@ -988,7 +988,7 @@ static void fornum (LexState *ls, TString *varname, int line) {
   exp1(ls);  /* initial value */
   check(ls, ',');
   exp1(ls);  /* limit */
-  if (optional(ls, ','))
+  if (testnext(ls, ','))
     exp1(ls);  /* optional step */
   else {  /* default step = 1 */
     luaK_codeABx(fs, OP_LOADK, fs->freereg, luaK_numberK(fs, 1));
@@ -1018,7 +1018,7 @@ static void forlist (LexState *ls, TString *indexname) {
   new_localvarstr(ls, "(for generator)", nvars++);
   new_localvarstr(ls, "(for state)", nvars++);
   new_localvar(ls, indexname, nvars++);
-  while (optional(ls, ',')) {
+  while (testnext(ls, ',')) {
     new_localvar(ls, str_checkname(ls), nvars++);
     next(ls);
   }
@@ -1096,12 +1096,12 @@ static void localstat (LexState *ls) {
   int nvars = 0;
   int nexps;
   expdesc e;
+  next(ls);  /* skip LOCAL */
   do {
-    next(ls);  /* skip LOCAL or `,' */
     new_localvar(ls, str_checkname(ls), nvars++);
     next(ls);  /* skip var name */
-  } while (ls->t.token == ',');
-  if (optional(ls, '='))
+  } while (testnext(ls, ','));
+  if (testnext(ls, '='))
     nexps = explist1(ls, &e);
   else {
     e.k = VVOID;
@@ -1266,7 +1266,7 @@ static void parlist (LexState *ls) {
         default: luaX_syntaxerror(ls, "<name> or `...' expected");
       }
       next(ls);
-    } while (!dots && optional(ls, ','));
+    } while (!dots && testnext(ls, ','));
   }
   code_params(ls, nparams, dots);
 }
@@ -1297,7 +1297,7 @@ static void chunk (LexState *ls) {
   int islast = 0;
   while (!islast && !block_follow(ls->t.token)) {
     islast = statement(ls);
-    optional(ls, ';');
+    testnext(ls, ';');
     lua_assert(ls->fs->freereg >= ls->fs->nactvar);
     ls->fs->freereg = ls->fs->nactvar;  /* free registers */
   }
