@@ -2,7 +2,7 @@
 ** LUA - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
-** $Id: lua.h,v 4.1 1997/04/03 18:26:08 roberto Exp roberto $
+** $Id: lua.h,v 4.2 1997/04/04 22:24:51 roberto Exp roberto $
 */
 
 
@@ -99,8 +99,8 @@ lua_Object     lua_createtable		(void);
 
 lua_Object     lua_setfallback		(char *event, lua_CFunction fallback);
 
-#define lua_storeglobal(n)	lua_setglobal(n)
-#define lua_type(o)		(lua_tag(o))
+#define lua_storeglobal		lua_setglobal
+#define lua_type		lua_tag
 
 void	*lua_getuserdata	(lua_Object object);
 
@@ -118,4 +118,6 @@ void	*lua_getuserdata	(lua_Object object);
 #define lua_copystring(o) (strdup(lua_getstring(o)))
 
 #define lua_getsubscript  lua_gettable
+#define lua_storesubscript  lua_settable
+
 #endif
