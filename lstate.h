@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.12 1998/08/21 17:43:44 roberto Exp roberto $
+** $Id: lstate.h,v 1.13 1998/08/30 18:28:58 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -11,6 +11,7 @@
 
 #include "lobject.h"
 #include "lua.h"
+#include "luadebug.h"
 
 
 #define MAX_C_BLOCKS 10
@@ -60,6 +61,9 @@ struct lua_State {
   int Mbuffnext;  /* next position to fill in Mbuffer */
   struct C_Lua_Stack Cblocks[MAX_C_BLOCKS];
   int numCblocks;  /* number of nested Cblocks */
+  int debug;
+  lua_CHFunction callhook;
+  lua_LHFunction linehook;
   /* global state */
   GCnode rootproto;  /* list of all prototypes */
   GCnode rootcl;  /* list of all closures */
@@ -80,3 +84,4 @@ struct lua_State {
 
 
 #endif
+

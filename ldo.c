@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.29 1998/08/21 17:43:44 roberto Exp $
+** $Id: ldo.c,v 1.30 1999/01/15 11:38:33 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -94,7 +94,7 @@ void luaD_lineHook (int line)
   struct C_Lua_Stack oldCLS = L->Cstack;
   StkId old_top = L->Cstack.lua2C = L->Cstack.base = L->stack.top-L->stack.stack;
   L->Cstack.num = 0;
-  (*lua_linehook)(line);
+  (*L->linehook)(line);
   L->stack.top = L->stack.stack+old_top;
   L->Cstack = oldCLS;
 }
@@ -106,13 +106,13 @@ void luaD_callHook (StkId base, TProtoFunc *tf, int isreturn)
   StkId old_top = L->Cstack.lua2C = L->Cstack.base = L->stack.top-L->stack.stack;
   L->Cstack.num = 0;
   if (isreturn)
-    (*lua_callhook)(LUA_NOOBJECT, "(return)", 0);
+    (*L->callhook)(LUA_NOOBJECT, "(return)", 0);
   else {
     TObject *f = L->stack.stack+base-1;
     if (tf)
-      (*lua_callhook)(Ref(f), tf->fileName->str, tf->lineDefined);
+      (*L->callhook)(Ref(f), tf->fileName->str, tf->lineDefined);
     else
-      (*lua_callhook)(Ref(f), "(C)", -1);
+      (*L->callhook)(Ref(f), "(C)", -1);
   }
   L->stack.top = L->stack.stack+old_top;
   L->Cstack = oldCLS;
@@ -133,10 +133,10 @@ static StkId callC (lua_CFunction f, StkId base)
   CS->num = numarg;
   CS->lua2C = base;
   CS->base = base+numarg;  /* == top-stack */
-  if (lua_callhook)
+  if (L->callhook)
     luaD_callHook(base, NULL, 0);
   (*f)();  /* do the actual call */
-  if (lua_callhook)  /* func may have changed lua_callhook */
+  if (L->callhook)  /* func may have changed lua_callhook */
     luaD_callHook(base, NULL, 1);
   firstResult = CS->base;
   *CS = oldCLS;

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.6 1998/06/02 20:37:04 roberto Exp roberto $
+** $Id: lstate.c,v 1.7 1999/01/15 13:11:22 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -29,6 +29,9 @@ void lua_open (void)
   L->Cstack.lua2C = 0;
   L->Cstack.num = 0;
   L->errorJmp = NULL;
+  L->debug = 0;
+  L->callhook = NULL;
+  L->linehook = NULL;
   L->rootproto.next = NULL;
   L->rootproto.marked = 0;
   L->rootcl.next = NULL;

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.17 1999/01/08 16:47:44 roberto Exp roberto $
+** $Id: lua.c,v 1.18 1999/01/26 11:50:58 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -43,18 +43,16 @@ static handler lreset (void) {
 
 
 static void lstop (void) {
-  lua_linehook = old_linehook;
-  lua_callhook = old_callhook;
+  lua_setlinehook(old_linehook);
+  lua_setcallhook(old_callhook);
   lreset();
   lua_error("interrupted!");
 }
 
 
 static void laction (int i) {
-  old_linehook = lua_linehook;
-  old_callhook = lua_callhook;
-  lua_linehook = (lua_LHFunction)lstop;
-  lua_callhook = (lua_CHFunction)lstop;
+  old_linehook = lua_setlinehook((lua_LHFunction)lstop);
+  old_callhook = lua_setcallhook((lua_CHFunction)lstop);
 }
 
 
@@ -156,7 +154,7 @@ int main (int argc, char *argv[])
           manual_input(0);
           break;
         case 'd':
-          lua_debug = 1;
+          lua_setdebug(1);
           break;
         case 'v':
           printf("%s  %s\n(written by %s)\n\n",

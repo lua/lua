@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.14 1999/02/02 19:41:17 roberto Exp roberto $
+** $Id: lparser.c,v 1.15 1999/02/04 16:36:16 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -378,7 +378,7 @@ static void pushupvalue (LexState *ls, TaggedString *n) {
 
 
 static void check_debugline (LexState *ls) {
-  if (lua_debug && ls->linenumber != ls->fs->lastsetline) {
+  if (L->debug && ls->linenumber != ls->fs->lastsetline) {
     code_oparg(ls, SETLINE, ls->linenumber, 0);
     ls->fs->lastsetline = ls->linenumber;
   }
@@ -552,7 +552,7 @@ static void init_state (LexState *ls, FuncState *fs, TaggedString *filename) {
   fs->maxcode = 0;
   f->code = NULL;
   fs->maxconsts = 0;
-  if (lua_debug)
+  if (L->debug)
     fs->nvars = fs->maxvars = 0;
   else
     fs->maxvars = -1;  /* flag no debug information */

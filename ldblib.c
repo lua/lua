@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.2 1999/01/11 18:57:35 roberto Exp roberto $
+** $Id: ldblib.c,v 1.3 1999/01/15 11:36:28 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -147,12 +147,11 @@ static int callhook = -1;  /* Lua reference to call hook function */
 
 
 static void dohook (int ref) {
-  lua_LHFunction oldlinehook = lua_linehook;  /* save old hooks */
-  lua_CHFunction oldcallhook = lua_callhook;
-  lua_linehook = NULL; lua_callhook = NULL;  /* to avoid recusive calls */
+  lua_LHFunction oldlinehook = lua_setlinehook(NULL);
+  lua_CHFunction oldcallhook = lua_setcallhook(NULL);
   lua_callfunction(lua_getref(ref));
-  lua_linehook = oldlinehook;  /* restore old hooks */
-  lua_callhook = oldcallhook;
+  lua_setlinehook(oldlinehook);
+  lua_setcallhook(oldcallhook);
 }
 
 
@@ -177,12 +176,12 @@ static void setcallhook (void) {
   lua_unref(callhook);
   if (f == LUA_NOOBJECT) {
     callhook = -1;
-    lua_callhook = NULL;
+    lua_setcallhook(NULL);
   }
   else {
     lua_pushobject(f);
     callhook = lua_ref(1);
-    lua_callhook = callf;
+    lua_setcallhook(callf);
   }
 }
 
@@ -192,12 +191,12 @@ static void setlinehook (void) {
   lua_unref(linehook);
   if (f == LUA_NOOBJECT) {
     linehook = -1;
-    lua_linehook = NULL;
+    lua_setlinehook(NULL);
   }
   else {
     lua_pushobject(f);
     linehook = lua_ref(1);
-    lua_linehook = linef;
+    lua_setlinehook(linef);
   }
 }
 

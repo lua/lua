@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.32 1999/01/26 15:31:17 roberto Exp roberto $
+** $Id: lapi.c,v 1.33 1999/02/03 16:42:42 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -439,20 +439,20 @@ lua_State *lua_setstate (lua_State *st) {
 }
 
 lua_LHFunction lua_setlinehook (lua_LHFunction func) {
-  lua_LHFunction old = lua_linehook;
-  lua_linehook = func;
+  lua_LHFunction old = L->linehook;
+  L->linehook = func;
   return old;
 }
 
 lua_CHFunction lua_setcallhook (lua_CHFunction func) {
-  lua_CHFunction old = lua_callhook;
-  lua_callhook = func;
+  lua_CHFunction old = L->callhook;
+  L->callhook = func;
   return old;
 }
 
 int lua_setdebug (int debug) {
-  int old = lua_debug;
-  lua_debug = debug;
+  int old = L->debug;
+  L->debug = debug;
   return old;
 }
 

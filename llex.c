@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.26 1998/12/27 20:25:20 roberto Exp roberto $
+** $Id: llex.c,v 1.27 1998/12/28 13:44:54 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -18,9 +18,6 @@
 #include "luadebug.h"
 #include "lzio.h"
 
-
-
-int lua_debug=0;
 
 
 #define next(LS) (LS->current = zgetc(LS->lex_z))
@@ -174,10 +171,10 @@ static void inclinenumber (LexState *LS)
     readname(LS, buff);
     switch (luaL_findstring(buff, pragmas)) {
       case 0:  /* debug */
-        if (!skip) lua_debug = 1;
+        if (!skip) L->debug = 1;
         break;
       case 1:  /* nodebug */
-        if (!skip) lua_debug = 0;
+        if (!skip) L->debug = 0;
         break;
       case 2:  /* endinput */
         if (!skip) {
