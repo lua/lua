@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.60 2001/10/02 16:43:29 roberto Exp $
+** $Id: lstate.h,v 1.61 2001/10/17 21:12:57 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -57,7 +57,7 @@ typedef struct global_State {
   void *Mbuffer;  /* global buffer */
   size_t Mbuffsize;  /* size of Mbuffer */
   stringtable strt;  /* hash table for strings */
-  Hash *type2tag;  /* hash table from type names to tags */
+  Table *type2tag;  /* hash table from type names to tags */
   TObject registry;  /* registry table */
   struct TM *TMtable;  /* table for tag methods */
   int sizeTM;  /* size of TMtable */
@@ -66,7 +66,7 @@ typedef struct global_State {
   lu_mem nblocks;  /* number of `bytes' currently allocated */
   Proto *rootproto;  /* list of all prototypes */
   Closure *rootcl;  /* list of all C closures and closed Lua closures */
-  Hash *roottable;  /* list of all tables */
+  Table *roottable;  /* list of all tables */
   Udata *rootudata;   /* list of all userdata */
   UpVal *rootupval;  /* list of all up values */
 } global_State;
@@ -80,7 +80,7 @@ struct lua_State {
   StkId top;  /* first free slot in the stack */
   CallInfo *ci;  /* call info for current function */
   StkId stack_last;  /* last free slot in the stack */
-  Hash *gt;  /* table for globals */
+  Table *gt;  /* table for globals */
   global_State *G;
   StkId stack;  /* stack base */
   int stacksize;
