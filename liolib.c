@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.21 1998/06/18 17:04:28 roberto Exp roberto $
+** $Id: liolib.c,v 1.22 1998/08/21 17:43:44 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -76,7 +76,7 @@ static int ishandler (lua_Object f)
   else return 0;
 }
 
-static FILE *getfile (char *name)
+static FILE *getfilebyname (char *name)
 {
   lua_Object f = lua_getglobal(name);
   if (!ishandler(f))
@@ -85,21 +85,26 @@ static FILE *getfile (char *name)
 }
 
 
-static FILE *getfileparam (char *name, int *arg)
-{
-  lua_Object f = lua_getparam(*arg);
-  if (ishandler(f)) {
+static FILE *getfile (int arg) {
+  lua_Object f = lua_getparam(arg);
+  return (ishandler(f)) ? lua_getuserdata(f) : NULL;
+}
+
+
+static FILE *getfileparam (char *name, int *arg) {
+  FILE *f = getfile(*arg);
+  if (f) {
     (*arg)++;
-    return lua_getuserdata(f);
+    return f;
   }
   else
-    return getfile(name);
+    return getfilebyname(name);
 }
 
 
 static void closefile (char *name)
 {
-  FILE *f = getfile(name);
+  FILE *f = getfilebyname(name);
   if (f == stdin || f == stdout) return;
   if (pclose(f) == -1)
     fclose(f);
@@ -271,6 +276,30 @@ static void io_write (void)
 }
 
 
+static void io_seek (void) {
+  static int mode[] = {SEEK_SET, SEEK_CUR, SEEK_END};
+  static char *modenames[] = {"set", "cur", "end", NULL};
+  FILE *f = getfile(FIRSTARG-1+1);
+  int op = luaL_findstring(luaL_opt_string(FIRSTARG-1+2, "cur"), modenames);
+  long offset = luaL_opt_number(FIRSTARG-1+3, 0);
+  luaL_arg_check(f, 1, "invalid file handler");
+  luaL_arg_check(op != -1, 2, "invalid mode");
+  op = fseek(f, offset, mode[op]);
+  if (op)
+    pushresult(0);  /* error */
+  else
+    lua_pushnumber(ftell(f));
+}
+
+
+static void io_flush (void) {
+  FILE *f = getfile(FIRSTARG);
+  luaL_arg_check(f || lua_getparam(FIRSTARG) == LUA_NOOBJECT, 1,
+                 "invalid file handler");
+  pushresult(fflush(f) == 0);
+}
+
+
 static void io_execute (void)
 {
   lua_pushnumber(system(luaL_check_string(1)));
@@ -420,7 +449,9 @@ static struct luaL_reg iolibtag[] = {
   {"readfrom", io_readfrom},
   {"writeto",  io_writeto},
   {"appendto", io_appendto},
+  {"flush",     io_flush},
   {"read",     io_read},
+  {"seek",     io_seek},
   {"write",    io_write}
 };
 

@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.17 1998/06/29 18:09:28 roberto Exp roberto $
+% $Id: manual.tex,v 1.18 1998/08/21 17:43:44 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -41,7 +41,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{\small \verb$Date: 1998/06/29 18:09:28 $}
+%\date{\small \verb$Date: 1998/08/21 17:43:44 $}
 
 \maketitle
 
@@ -1879,7 +1879,7 @@ and \verb|lua_iolibopen|, declared in \verb|lualib.h|.
 
 \subsubsection*{\ff \T{call (func, arg [, mode [, errhandler]])}}\Deffunc{call}
 \label{pdf-call}
-This function calls function \verb|func| with
+Calls function \verb|func| with
 the arguments given by the table \verb|arg|.
 The call is equivalent to
 \begin{verbatim}
@@ -1932,7 +1932,7 @@ this limit.
 the API function \verb|lua_collectgarbage|.
 
 \subsubsection*{\ff \T{dofile (filename)}}\Deffunc{dofile}
-This function receives a file name,
+Receives a file name,
 opens the file, and executes the file contents as a Lua chunk,
 or as pre-compiled chunks.
 When called without arguments,
@@ -1945,7 +1945,7 @@ It issues an error when called with a non string argument.
 \verb|dofile| is equivalent to the API function \verb|lua_dofile|.
 
 \subsubsection*{\ff \T{dostring (string [, chunkname])}}\Deffunc{dostring}
-This function executes a given string as a Lua chunk.
+Executes a given string as a Lua chunk.
 If there is any error executing the string,
 \verb|dostring| returns \nil.
 Otherwise, it returns the values returned by the chunk,
@@ -1960,7 +1960,7 @@ Returns a new tag.
 \verb|newtag| is equivalent to the API function \verb|lua_newtag|.
 
 \subsubsection*{\ff \T{next (table, index)}}\Deffunc{next}
-This function allows a program to traverse all fields of a table.
+Allows a program to traverse all fields of a table.
 Its first argument is a table and its second argument
 is an index in this table.
 It returns the next index of the table and the
@@ -2038,13 +2038,13 @@ end
 \end{verbatim}
 
 \subsubsection*{\ff \T{tostring (e)}}\Deffunc{tostring}
-This function receives an argument of any type and
+Receives an argument of any type and
 converts it to a string in a reasonable format.
 For complete control on how numbers are converted,
 use function \verb|format|.
 
 \subsubsection*{\ff \T{print (e1, e2, ...)}}\Deffunc{print}
-This function receives any number of arguments,
+Receives any number of arguments,
 and prints their values using the strings returned by \verb|tostring|.
 This function is not intended for formatted output,
 but only as a quick way to show a value,
@@ -2052,14 +2052,14 @@ for instance for debugging.
 See \See{libio} for functions for formatted output.
 
 \subsubsection*{\ff \T{_ALERT (message)}}\Deffunc{alert}\label{alert}
-This function prints its only string argument to \IndexVerb{stderr}.
+Prints its only string argument to \IndexVerb{stderr}.
 All error messages in Lua are printed through this function.
 Therefore, a program may redefine it
 to change the way such messages are shown
 (for instance, for systems without \verb|stderr|).
 
 \subsubsection*{\ff \T{tonumber (e [, base])}}\Deffunc{tonumber}
-This function receives one argument,
+Receives one argument,
 and tries to convert it to a number.
 If the argument is already a number or a string convertible
 to a number, then \verb|tonumber| returns that number;
@@ -2075,7 +2075,7 @@ as well as an optional exponent part \see{coercion}.
 In other bases, only integers are accepted.
 
 \subsubsection*{\ff \T{type (v)}}\Deffunc{type}\label{pdf-type}
-This function allows Lua to test the type of a value.
+Allows Lua to test the type of a value.
 It receives one argument, and returns its type, coded as a string.
 The possible results of this function are
 \verb|"nil"| (a string, not the value \nil),
@@ -2086,12 +2086,12 @@ The possible results of this function are
 and \verb|"userdata"|.
 
 \subsubsection*{\ff \T{tag (v)}}\Deffunc{tag}
-This function allows Lua to test the tag of a value \see{TypesSec}.
+Allows Lua to test the tag of a value \see{TypesSec}.
 It receives one argument, and returns its tag (a number).
 \verb|tag| is equivalent to the API function \verb|lua_tag|.
 
 \subsubsection*{\ff \T{settag (t, tag)}}\Deffunc{settag}
-This function sets the tag of a given table \see{TypesSec}.
+Sets the tag of a given table \see{TypesSec}.
 \verb|tag| must be a value created with \verb|newtag|
 \see{pdf-newtag}.
 It returns the value of its first argument (the table).
@@ -2100,7 +2100,7 @@ it is impossible to change the tag of a userdata from Lua.
 
 
 \subsubsection*{\ff \T{assert (v [, message])}}\Deffunc{assert}
-This function issues an \emph{``assertion failed!''} error
+Issues an \emph{``assertion failed!''} error
 when its argument is \nil.
 This function is equivalent to the following Lua function:
 \begin{verbatim}
@@ -2113,7 +2113,7 @@ end
 \end{verbatim}
 
 \subsubsection*{\ff \T{error (message)}}\Deffunc{error}\label{pdf-error}
-This function calls the error handler and then terminates
+Calls the error handler and then terminates
 the last protected function called
 (in~C: \verb|lua_dofile|, \verb|lua_dostring|,
 \verb|lua_dobuffer|, or \verb|lua_callfunction|;
@@ -2136,7 +2136,7 @@ without invoking any tag method.
 and \verb|value| is any Lua value.
 
 \subsubsection*{\ff \T{rawsetglobal (name, value)}}\Deffunc{rawsetglobal}
-This function assigns the given value to a global variable.
+Assigns the given value to a global variable.
 The string \verb|name| does not need to be a
 syntactically valid variable name.
 Therefore,
@@ -2145,7 +2145,7 @@ this function can set global variables with strange names like
 Function \verb|rawsetglobal| returns the value of its second argument.
 
 \subsubsection*{\ff \T{setglobal (name, value)}}\Deffunc{setglobal}
-This function assigns the given value to a global variable,
+Assigns the given value to a global variable,
 or calls a tag method.
 Its full semantics is explained in \See{tag-method}.
 The string \verb|name| does not need to be a
@@ -2153,12 +2153,12 @@ syntactically valid variable name.
 Function \verb|setglobal| returns the value of its second argument.
 
 \subsubsection*{\ff \T{rawgetglobal (name)}}\Deffunc{rawgetglobal}
-This function retrieves the value of a global variable.
+Retrieves the value of a global variable.
 The string \verb|name| does not need to be a
 syntactically valid variable name.
 
 \subsubsection*{\ff \T{getglobal (name)}}\Deffunc{getglobal}
-This function retrieves the value of a global variable,
+Retrieves the value of a global variable,
 or calls a tag method.
 Its full semantics is explained in \See{tag-method}.
 The string \verb|name| does not need to be a
@@ -2166,19 +2166,19 @@ syntactically valid variable name.
 
 \subsubsection*{\ff \T{settagmethod (tag, event, newmethod)}}
 \Deffunc{settagmethod}
-This function sets a new tag method to the given pair \M{(tag, event)}.
+Sets a new tag method to the given pair \M{(tag, event)}.
 It returns the old method.
 If \verb|newmethod| is \nil,
 \verb|settagmethod| restores the default behavior for the given event.
 
 \subsubsection*{\ff \T{gettagmethod (tag, event)}}
 \Deffunc{gettagmethod}
-This function returns the current tag method
+Returns the current tag method
 for a given pair \M{(tag, event)}.
 
 \subsubsection*{\ff \T{copytagmethods (tagto, tagfrom)}}
 \Deffunc{copytagmethods}
-This function copies all tag methods from one tag to another;
+Copies all tag methods from one tag to another;
 it returns \verb|tagto|.
 
 
@@ -2190,7 +2190,7 @@ When indexing a string, the first character is at position~1
 
 \subsubsection*{\ff \T{strfind (str, pattern [, init [, plain]])}}
 \Deffunc{strfind}
-This function looks for the first \emph{match} of
+Looks for the first \emph{match} of
 \verb|pattern| in \verb|str|.
 If it finds one, then it returns the indices on \verb|str|
 where this occurrence starts and ends;
@@ -2265,7 +2265,7 @@ Note that numerical codes are not necessarily portable across platforms.
 
 \subsubsection*{\ff \T{format (formatstring, e1, e2, \ldots)}}\Deffunc{format}
 \label{format}
-This function returns a formatted version of its variable number of arguments
+Returns a formatted version of its variable number of arguments
 following the description given in its first argument (which must be a string).
 The format string follows the same rules as the \verb|printf| family of
 standard C functions.
@@ -2579,7 +2579,7 @@ usually limited and depends on the system.
 
 \subsubsection*{\ff \T{appendto (filename)}}\Deffunc{appendto}
 
-This function opens a file named \verb|filename| and sets it as the
+Opens a file named \verb|filename| and sets it as the
 value of \verb|_OUTPUT|.
 Unlike the \verb|writeto| operation,
 this function does not erase any previous content of the file.
@@ -2591,26 +2591,58 @@ available to close an output file opened by \verb|appendto|.
 
 \subsubsection*{\ff \T{remove (filename)}}\Deffunc{remove}
 
-This function deletes the file with the given name.
+Deletes the file with the given name.
 If this function fails, it returns \nil,
 plus a string describing the error.
 
 \subsubsection*{\ff \T{rename (name1, name2)}}\Deffunc{rename}
 
-This function renames file named \verb|name1| to \verb|name2|.
+Renames file named \verb|name1| to \verb|name2|.
 If this function fails, it returns \nil,
 plus a string describing the error.
 
+\subsubsection*{\ff \T{flush ([filehandle])}}\Deffunc{flush}
+
+Saves any written data to the given file.
+If \verb|filehandle| is not specified,
+flushes all open files.
+If this function fails, it returns \nil,
+plus a string describing the error.
+
+\subsubsection*{\ff \T{seek (filehandle [, whence] [, offset])}}\Deffunc{seek}
+
+Sets the file position, measured in bytes from the beginning of the file,
+to the position given by \verb|offset| plus a base
+specified by the string \verb|whence|, as follows:
+\begin{description}
+\item[\tt "set"] base is position 0 (beginning of the file);
+\item[\tt "cur"] base is current position;
+\item[\tt "end"] base is end of file;
+\end{description}
+In case of success, function \verb|seek| returns the final file position,
+measured in bytes from the beginning of the file.
+If the call fails, it returns \nil,
+plus a string describing the error.
+
+The default value for \verb|whence| is \verb|"cur"|,
+and for \verb|offset| is 0.
+Therefore, the call \verb|seek(file)| returns the current
+file position, without changing it;
+the call \verb|seek(file, "set")| sets the position to the
+beginning of the file (and returns 0);
+and the call \verb|seek(file, "end")| sets the position to the
+end of the file, and returns its size.
+
 \subsubsection*{\ff \T{tmpname ()}}\Deffunc{tmpname}
 
-This function returns a string with a file name that can safely
+Returns a string with a file name that can safely
 be used for a temporary file.
 The file must be explicitly removed when no longer needed.
 
 \subsubsection*{\ff \T{read ([filehandle] [readpattern])}}\Deffunc{read}
 
-This function reads the file \verb|_INPUT|,
-or from \verb|filehandle| if this argument is given,
+Reads file \verb|_INPUT|,
+or \verb|filehandle| if this argument is given,
 according to a read pattern, which specifies how much to read;
 characters are read from the input file until
 the read pattern fails or ends.
@@ -2662,9 +2694,9 @@ or \nil\ if the next characters do not conform to an integer format.
 
 \subsubsection*{\ff \T{write ([filehandle, ] value1, ...)}}\Deffunc{write}
 
-This function writes the value of each of its arguments to the
+Writes the value of each of its arguments to
 file \verb|_OUTPUT|,
-or to \verb|filehandle| if this argument is given,
+or to \verb|filehandle| if this argument is given.
 The arguments must be strings or numbers.
 To write other values,
 use \verb|tostring| or \verb|format| before \verb|write|.
@@ -2673,7 +2705,7 @@ plus a string describing the error.
 
 \subsubsection*{\ff \T{date ([format])}}\Deffunc{date}
 
-This function returns a string containing date and time
+Returns a string containing date and time
 formatted according to the given string \verb|format|,
 following the same rules of the ANSI C function \verb|strftime|.
 When called without arguments,
@@ -2682,12 +2714,12 @@ the host system and the locale.
 
 \subsubsection*{\ff \T{clock ()}}\Deffunc{clock}
 
-This function returns an approximation of the amount of CPU time
+Returns an approximation of the amount of CPU time
 used by the program, in seconds.
 
 \subsubsection*{\ff \T{exit ([code])}}\Deffunc{exit}
 
-This function calls the C function \verb|exit|,
+Calls the C function \verb|exit|,
 with an optional \verb|code|,
 to terminate the program.
 The default value for \verb|code| is 1.
