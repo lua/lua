@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.13 2000/03/16 18:03:09 roberto Exp roberto $
+** $Id: lcode.c,v 1.14 2000/03/17 13:09:46 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -337,8 +337,23 @@ static OpCode invertjump (OpCode op) {
 
 static void luaK_jump (FuncState *fs, OpCode jump) {
   Instruction previous = prepare(fs, CREATE_S(jump, 0), -1);
-  if (previous == CREATE_0(OP_NOT))
-    setprevious(fs, CREATE_S(invertjump(jump), 0));
+  switch (GET_OPCODE(previous)) {
+    case OP_NOT: previous = CREATE_S(invertjump(jump), 0); break;
+    case OP_PUSHINT:
+      if (jump == OP_IFTJMP) {
+        previous = CREATE_S(OP_JMP, 0);
+        break;
+      }
+      else return;  /* do not set previous */
+    case OP_PUSHNIL:
+      if (jump == OP_IFFJMP) {
+        previous = CREATE_S(OP_JMP, 0);
+        break;
+      }
+      else return;  /* do not set previous */
+    default: return;
+  }
+  setprevious(fs, previous);
 }
 
 
