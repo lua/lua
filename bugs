@@ -259,3 +259,8 @@ Thu Feb  1 11:55:45 EDT 2001
 Fri Feb  2 14:06:40 EDT 2001
 >> «while 1 dostring[[print('hello\n')]] end» never reclaims memory
 (by Andrew Paton; since 4.0b)
+
+** lbaselib.c
+Tue Feb  6 11:57:13 EDT 2001
+>> ESC (which starts precompiled code) in C is \33, not \27
+(by Edgar Toernig and lhf; since 4.0b)

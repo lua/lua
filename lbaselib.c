@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.20 2001/01/31 19:53:01 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.21 2001/02/02 19:02:40 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -284,7 +284,7 @@ static int luaB_dostring (lua_State *L) {
   int oldtop = lua_gettop(L);
   size_t l;
   const char *s = luaL_check_lstr(L, 1, &l);
-  if (*s == '\27')  /* binary files start with ESC... */
+  if (*s == '\33')  /* binary files start with ESC... */
     lua_error(L, "`dostring' cannot run pre-compiled code");
   return passresults(L, lua_dobuffer(L, s, l, luaL_opt_string(L, 2, s)), oldtop);
 }
