@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.3 2004/02/20 16:01:05 roberto Exp roberto $
+** $Id: lapi.c,v 2.4 2004/03/09 17:34:35 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -68,11 +68,10 @@ static TValue *luaA_index (lua_State *L, int idx) {
     case LUA_REGISTRYINDEX: return registry(L);
     case LUA_GLOBALSINDEX: return gt(L);
     default: {
-      TValue *func = (L->base - 1);
+      Closure *func = curr_func(L);
       idx = LUA_GLOBALSINDEX - idx;
-      lua_assert(iscfunction(func));
-      return (idx <= clvalue(func)->c.nupvalues)
-                ? &clvalue(func)->c.upvalue[idx-1]
+      return (idx <= func->c.nupvalues)
+                ? &func->c.upvalue[idx-1]
                 : cast(TValue *, &luaO_nilobject);
     }
   }
@@ -194,7 +193,9 @@ LUA_API void lua_replace (lua_State *L, int idx) {
   api_checknelems(L, 1);
   o = luaA_index(L, idx);
   api_checkvalidindex(L, o);
-  setobj(L, o, L->top - 1);  /* write barrier???? */
+  setobj(L, o, L->top - 1);
+  if (idx < LUA_GLOBALSINDEX)  /* function upvalue? */
+    luaC_barrier(L, curr_func(L), L->top - 1);
   L->top--;
   lua_unlock(L);
 }
