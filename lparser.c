@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.211 2003/05/14 21:02:39 roberto Exp roberto $
+** $Id: lparser.c,v 1.212 2003/07/09 15:36:38 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -139,7 +139,7 @@ static int luaI_registerlocalvar (LexState *ls, TString *varname) {
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
   luaM_growvector(ls->L, f->locvars, fs->nlocvars, f->sizelocvars,
-                  LocVar, MAX_INT, "");
+                  LocVar, USHRT_MAX, "too many local variables");
   f->locvars[fs->nlocvars].varname = varname;
   return fs->nlocvars++;
 }
@@ -148,7 +148,8 @@ static int luaI_registerlocalvar (LexState *ls, TString *varname) {
 static void new_localvar (LexState *ls, TString *name, int n) {
   FuncState *fs = ls->fs;
   luaX_checklimit(ls, fs->nactvar+n+1, MAXVARS, "local variables");
-  fs->actvar[fs->nactvar+n] = luaI_registerlocalvar(ls, name);
+  fs->actvar[fs->nactvar+n] = cast(unsigned short,
+                                   luaI_registerlocalvar(ls, name));
 }
 
 
@@ -187,8 +188,9 @@ static int indexupvalue (FuncState *fs, TString *name, expdesc *v) {
   luaM_growvector(fs->L, fs->f->upvalues, f->nups, fs->f->sizeupvalues,
                   TString *, MAX_INT, "");
   fs->f->upvalues[f->nups] = name;
-  fs->upvalues[f->nups].k = v->k;
-  fs->upvalues[f->nups].info = v->info;
+  lua_assert(v->k == VLOCAL || v->k == VUPVAL);
+  fs->upvalues[f->nups].k = cast(lu_byte, v->k);
+  fs->upvalues[f->nups].info = cast(lu_byte, v->info);
   return f->nups++;
 }
 
