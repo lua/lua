@@ -669,3 +669,24 @@ patch = [[
 ]]
 }
 
+
+Bug{
+what = [[lua_getupvalue and setupvalue do not check for index too small]],
+
+report = [[Mike Pall, ?/2004]],
+
+example = [[debug.getupvalue(function() end, 0)]],
+
+patch = [[
+* lapi.c
+941c941
+<     if (n > f->c.nupvalues) return NULL;
+---
+>     if (!(1 <= n && n <= f->c.nupvalues)) return NULL;
+947c947
+<     if (n > p->sizeupvalues) return NULL;
+---
+>     if (!(1 <= n && n <= p->sizeupvalues)) return NULL;
+]]
+}
+
