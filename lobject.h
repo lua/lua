@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.101 2001/03/07 18:09:25 roberto Exp roberto $
+** $Id: lobject.h,v 1.102 2001/04/11 14:42:41 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -114,10 +114,8 @@ union L_UTString {
 ** Function Prototypes
 */
 typedef struct Proto {
-  lua_Number *knum;  /* numbers used by the function */
-  int sizeknum;  /* size of `knum' */
-  struct TString **kstr;  /* strings used by the function */
-  int sizekstr;  /* size of `kstr' */
+  TObject *k;  /* constants used by the function */
+  int sizek;  /* size of `k' */
   struct Proto **kproto;  /* functions defined inside the function */
   int sizekproto;  /* size of `kproto' */
   Instruction *code;

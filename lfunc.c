@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.42 2001/02/23 17:17:25 roberto Exp roberto $
+** $Id: lfunc.c,v 1.43 2001/03/26 14:31:49 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -30,10 +30,8 @@ Closure *luaF_newclosure (lua_State *L, int nelems) {
 
 Proto *luaF_newproto (lua_State *L) {
   Proto *f = luaM_new(L, Proto);
-  f->knum = NULL;
-  f->sizeknum = 0;
-  f->kstr = NULL;
-  f->sizekstr = 0;
+  f->k = NULL;
+  f->sizek = 0;
   f->kproto = NULL;
   f->sizekproto = 0;
   f->code = NULL;
@@ -58,8 +56,7 @@ Proto *luaF_newproto (lua_State *L) {
 void luaF_freeproto (lua_State *L, Proto *f) {
   luaM_freearray(L, f->code, f->sizecode, Instruction);
   luaM_freearray(L, f->locvars, f->sizelocvars, struct LocVar);
-  luaM_freearray(L, f->kstr, f->sizekstr, TString *);
-  luaM_freearray(L, f->knum, f->sizeknum, lua_Number);
+  luaM_freearray(L, f->k, f->sizek, TObject);
   luaM_freearray(L, f->kproto, f->sizekproto, Proto *);
   luaM_freearray(L, f->lineinfo, f->sizelineinfo, int);
   luaM_freelem(L, f, Proto);

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.79 2001/04/17 17:35:54 roberto Exp roberto $
+** $Id: ltests.c,v 1.80 2001/04/23 16:35:45 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -140,77 +140,65 @@ void *debug_realloc (void *block, size_t oldsize, size_t size) {
 
 
 static const l_char *const instrname[NUM_OPCODES] = {
-  l_s("RETURN"),
-  l_s("CALL"),
-  l_s("PUSHNIL"),
-  l_s("POP"),
-  l_s("PUSHINT"),
-  l_s("PUSHSTRING"),
-  l_s("PUSHNUM"),
-  l_s("PUSHNEGNUM"),
-  l_s("PUSHUPVALUE"),
-  l_s("GETLOCAL"),
-  l_s("GETGLOBAL"),
-  l_s("GETTABLE"),
-  l_s("GETDOTTED"),
-  l_s("GETINDEXED"),
-  l_s("PUSHSELF"),
-  l_s("CREATETABLE"),
-  l_s("SETLOCAL"),
-  l_s("SETGLOBAL"),
-  l_s("SETTABLE"),
-  l_s("SETLIST"),
-  l_s("SETMAP"),
-  l_s("ADD"),
-  l_s("ADDI"),
-  l_s("SUB"),
-  l_s("MULT"),
-  l_s("DIV"),
-  l_s("POW"),
-  l_s("CONCAT"),
-  l_s("MINUS"),
-  l_s("NOT"),
-  l_s("JMPNE"),
-  l_s("JMPEQ"),
-  l_s("JMPLT"),
-  l_s("JMPLE"),
-  l_s("JMPGT"),
-  l_s("JMPGE"),
-  l_s("JMPT"),
-  l_s("JMPF"),
-  l_s("JMPONT"),
-  l_s("JMPONF"),
-  l_s("JMP"),
-  l_s("PUSHNILJMP"),
-  l_s("FORPREP"),
-  l_s("FORLOOP"),
-  l_s("LFORPREP"),
-  l_s("LFORLOOP"),
-  l_s("CLOSURE")
+  l_s("OP_MOVE"),
+  l_s("OP_LOADK"),
+  l_s("OP_LOADINT"),
+  l_s("OP_LOADNIL"),
+  l_s("OP_LOADUPVAL"),
+  l_s("OP_GETGLOBAL"),
+  l_s("OP_GETTABLE"),
+  l_s("OP_SETGLOBAL"),
+  l_s("OP_SETTABLE"),
+  l_s("OP_NEWTABLE"),
+  l_s("OP_SELF"),
+  l_s("OP_ADD"),
+  l_s("OP_SUB"),
+  l_s("OP_MUL"),
+  l_s("OP_DIV"),
+  l_s("OP_POW"),
+  l_s("OP_UNM"),
+  l_s("OP_NOT"),
+  l_s("OP_CONCAT"),
+  l_s("OP_JMP"),
+  l_s("OP_CJMP"),
+  l_s("OP_TESTEQ"),
+  l_s("OP_TESTNE"),
+  l_s("OP_TESTLT"),
+  l_s("OP_TESTLE"),
+  l_s("OP_TESTGT"),
+  l_s("OP_TESTGE"),
+  l_s("OP_TESTT"),
+  l_s("OP_TESTF"),
+  l_s("OP_NILJMP"),
+  l_s("OP_CALL"),
+  l_s("OP_RETURN"),
+  l_s("OP_FORPREP"),
+  l_s("OP_FORLOOP"),
+  l_s("OP_LFORPREP"),
+  l_s("OP_LFORLOOP"),
+  l_s("OP_SETLIST"),
+  l_s("OP_CLOSURE")
 };
 
 
-static void pushop (lua_State *L, Proto *p, int pc) {
-  l_char buff[100];
+static l_char *buildop (Proto *p, int pc, l_char *buff) {
   Instruction i = p->code[pc];
   OpCode o = GET_OPCODE(i);
   const l_char *name = instrname[o];
-  sprintf(buff, l_s("%5d - "), luaG_getline(p->lineinfo, pc, 1, NULL));
-  switch ((enum Mode)luaK_opproperties[o].mode) {  
-    case iO:
-      sprintf(buff+8, l_s("%-12s"), name);
+  sprintf(buff, l_s("%4d - "), pc);
+  switch (getOpMode(o)) {  
+    case iABC:
+      sprintf(buff+strlen(buff), l_s("%-12s%4d %4d %4d"), name,
+              GETARG_A(i), GETARG_B(i), GETARG_C(i));
       break;
-    case iU:
-      sprintf(buff+8, l_s("%-12s%4u"), name, GETARG_U(i));
+    case iABc:
+      sprintf(buff+strlen(buff), l_s("%-12s%4d %4d"), name, GETARG_A(i), GETARG_Bc(i));
       break;
-    case iS:
-      sprintf(buff+8, l_s("%-12s%4d"), name, GETARG_S(i));
-      break;
-    case iAB:
-      sprintf(buff+8, l_s("%-12s%4d %4d"), name, GETARG_A(i), GETARG_B(i));
+    case iAsBc:
+      sprintf(buff+strlen(buff), l_s("%-12s%4d %4d"), name, GETARG_A(i), GETARG_sBc(i));
       break;
   }
-  lua_pushstring(L, buff);
+  return buff;
 }
 
 
@@ -224,24 +212,25 @@ static int listcode (lua_State *L) {
   setnameval(L, l_s("maxstack"), p->maxstacksize);
   setnameval(L, l_s("numparams"), p->numparams);
   for (pc=0; pc<p->sizecode; pc++) {
+    l_char buff[100];
     lua_pushnumber(L, pc+1);
-    pushop(L, p, pc);
+    lua_pushstring(L, buildop(p, pc, buff));
     lua_settable(L, -3);
   }
   return 1;
 }
 
 
-static int liststrings (lua_State *L) {
+static int listk (lua_State *L) {
   Proto *p;
   int i;
   luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
                  1, l_s("Lua function expected"));
   p = clvalue(luaA_index(L, 1))->f.l;
   lua_newtable(L);
-  for (i=0; i<p->sizekstr; i++) {
+  for (i=0; i<p->sizek; i++) {
     lua_pushnumber(L, i+1);
-    lua_pushstring(L, getstr(p->kstr[i]));
+    luaA_pushobject(L, p->k+i);
     lua_settable(L, -3);
   }
   return 1;
@@ -276,20 +265,10 @@ static int get_limits (lua_State *L) {
   lua_newtable(L);
   setnameval(L, l_s("BITS_INT"), BITS_INT);
   setnameval(L, l_s("LFPF"), LFIELDS_PER_FLUSH);
-  setnameval(L, l_s("MAXARG_A"), MAXARG_A);
-  setnameval(L, l_s("MAXARG_B"), MAXARG_B);
-  setnameval(L, l_s("MAXARG_S"), MAXARG_S);
-  setnameval(L, l_s("MAXARG_U"), MAXARG_U);
   setnameval(L, l_s("MAXLOCALS"), MAXLOCALS);
   setnameval(L, l_s("MAXPARAMS"), MAXPARAMS);
   setnameval(L, l_s("MAXSTACK"), MAXSTACK);
   setnameval(L, l_s("MAXUPVALUES"), MAXUPVALUES);
-  setnameval(L, l_s("MAXVARSLH"), MAXVARSLH);
-  setnameval(L, l_s("RFPF"), RFIELDS_PER_FLUSH);
-  setnameval(L, l_s("SIZE_A"), SIZE_A);
-  setnameval(L, l_s("SIZE_B"), SIZE_B);
-  setnameval(L, l_s("SIZE_OP"), SIZE_OP);
-  setnameval(L, l_s("SIZE_U"), SIZE_U);
   return 1;
 }
 
@@ -700,7 +679,7 @@ static const struct luaL_reg tests_funcs[] = {
   {l_s("hash"), hash_query},
   {l_s("limits"), get_limits},
   {l_s("listcode"), listcode},
-  {l_s("liststrings"), liststrings},
+  {l_s("listk"), listk},
   {l_s("listlocals"), listlocals},
   {l_s("loadlib"), loadlib},
   {l_s("querystr"), string_query},

@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.71 2001/03/07 13:22:55 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.72 2001/04/06 18:25:00 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -12,29 +12,55 @@
 
 /*===========================================================================
   We assume that instructions are unsigned numbers.
-  All instructions have an opcode in the first 6 bits. Moreover,
-  an instruction can have 0, 1, or 2 arguments. Instructions can
-  have the following types:
-  type 0: no arguments
-  type 1: 1 unsigned argument in the higher bits (called `U')
-  type 2: 1 signed argument in the higher bits          (`S')
-  type 3: 1st unsigned argument in the higher bits      (`A')
-          2nd unsigned argument in the middle bits      (`B')
+  All instructions have an opcode in the first 6 bits.
+  Instructions can have the following fields:
+	`A' : 8 bits (25-32)
+	`B' : 8 bits (17-24)
+	`C' : 10 bits (7-16)
+	`Bc' : 18 bits (`B' and `C' together)
+	`sBc' : signed Bc
 
   A signed argument is represented in excess K; that is, the number
   value is the unsigned value minus K. K is exactly the maximum value
   for that argument (so that -max is represented by 0, and +max is
   represented by 2*max), which is half the maximum for the corresponding
   unsigned argument.
-
-  The size of each argument is defined in `llimits.h'. The usual is an
-  instruction with 32 bits, U arguments with 26 bits (32-6), B arguments
-  with 9 bits, and A arguments with 17 bits (32-6-9). For small
-  installations, the instruction size can be 16, so U has 10 bits,
-  and A and B have 5 bits each.
 ===========================================================================*/
 
 
+/*
+** size and position of opcode arguments.
+*/
+#define SIZE_C		10
+#define SIZE_B		8
+#define SIZE_Bc		(SIZE_C + SIZE_B)
+#define SIZE_A		8
+
+#define SIZE_OP		6
+
+#define POS_C		SIZE_OP
+#define POS_B		(POS_C + SIZE_C)
+#define POS_Bc		POS_C
+#define POS_A		(POS_B + SIZE_B)
+
+
+/*
+** limits for opcode arguments.
+** we use (signed) int to manipulate most arguments,
+** so they must fit in BITS_INT-1 bits (-1 for sign)
+*/
+#if SIZE_Bc < BITS_INT-1
+#define MAXARG_Bc        ((1<<SIZE_Bc)-1)
+#define MAXARG_sBc        (MAXARG_Bc>>1)         /* `sBc' is signed */
+#else
+#define MAXARG_Bc        MAX_INT
+#define MAXARG_sBc        MAX_INT
+#endif
+
+
+#define MAXARG_A        ((1<<SIZE_A)-1)
+#define MAXARG_B        ((1<<SIZE_B)-1)
+#define MAXARG_C        ((1<<SIZE_C)-1)
 
 
 /* creates a mask with `n' 1 bits at position `p' */
@@ -47,120 +73,129 @@
 ** the following macros help to manipulate instructions
 */
 
-#define CREATE_0(o)	 ((Instruction)(o))
 #define GET_OPCODE(i)	((OpCode)((i)&MASK1(SIZE_OP,0)))
-#define SET_OPCODE(i,o)	((i) = (((i)&MASK0(SIZE_OP,0)) | (Instruction)(o)))
+#define SET_OPCODE(i,o)	(((i)&MASK0(SIZE_OP,0)) | (Instruction)(o))
 
-#define CREATE_U(o,u)	 ((Instruction)(o) | ((Instruction)(u)<<POS_U))
-#define GETARG_U(i)	((int)((i)>>POS_U))
-#define SETARG_U(i,u)	((i) = (((i)&MASK0(SIZE_U,POS_U)) | \
-                               ((Instruction)(u)<<POS_U)))
-
-#define CREATE_S(o,s)	CREATE_U((o),(s)+MAXARG_S)
-#define GETARG_S(i)	(GETARG_U(i)-MAXARG_S)
-#define SETARG_S(i,s)	SETARG_U((i),(s)+MAXARG_S)
-
-
-#define CREATE_AB(o,a,b) ((Instruction)(o) | ((Instruction)(a)<<POS_A) \
-                                           |  ((Instruction)(b)<<POS_B))
 #define GETARG_A(i)	((int)((i)>>POS_A))
-#define SETARG_A(i,a)	((i) = (((i)&MASK0(SIZE_A,POS_A)) | \
-                               ((Instruction)(a)<<POS_A)))
+#define SETARG_A(i,u)	((i) = (((i)&MASK0(SIZE_A,POS_A)) | \
+                               ((Instruction)(u)<<POS_A)))
+
 #define GETARG_B(i)	((int)(((i)>>POS_B) & MASK1(SIZE_B,0)))
 #define SETARG_B(i,b)	((i) = (((i)&MASK0(SIZE_B,POS_B)) | \
                                ((Instruction)(b)<<POS_B)))
 
+#define GETARG_C(i)	((int)(((i)>>POS_C) & MASK1(SIZE_C,0)))
+#define SETARG_C(i,b)	((i) = (((i)&MASK0(SIZE_C,POS_C)) | \
+                               ((Instruction)(b)<<POS_C)))
+
+#define GETARG_Bc(i)	((int)(((i)>>POS_Bc) & MASK1(SIZE_Bc,0)))
+#define SETARG_Bc(i,b)	((i) = (((i)&MASK0(SIZE_Bc,POS_Bc)) | \
+                               ((Instruction)(b)<<POS_Bc)))
+
+#define GETARG_sBc(i)	(GETARG_Bc(i)-MAXARG_sBc)
+#define SETARG_sBc(i,b)	SETARG_Bc((i),(b)+MAXARG_sBc)
+
+
+#define CREATE_ABC(o,a,b,c)	((Instruction)(o) \
+			| ((Instruction)(a)<<POS_A) \
+			| ((Instruction)(b)<<POS_B) \
+			| ((Instruction)(c)<<POS_C))
+
+#define CREATE_ABc(o,a,bc)	((Instruction)(o) \
+			| ((Instruction)(a)<<POS_A) \
+			| ((Instruction)(bc)<<POS_Bc))
+
+
+
 
 /*
-** K = U argument used as index to `kstr'
-** J = S argument used as jump offset (relative to pc of next instruction)
-** L = unsigned argument used as index of local variable
-** N = U argument used as index to `knum'
+** an invalid register that fits in 8 bits
+*/
+#define NO_REG		MAXARG_A
+
+
+/*
+** R(x) - register
+** Kst(x) - constant (in constant table)
+** R/K(x) == if x < MAXSTACK then R(x) else Kst(x-MAXSTACK)
 */
 
 typedef enum {
 /*----------------------------------------------------------------------
-name		args	stack before	stack after	side effects
+name		args	description
 ------------------------------------------------------------------------*/
-OP_RETURN,/*	U	v_n-v_x(at u)	(return)	returns v_x-v_n	*/
+OP_MOVE,/*	A B	R(A) := R(B)					*/
+OP_LOADK,/*	A Bc	R(A) := Kst(Bc)					*/
+OP_LOADINT,/*	A sBc	R(A) := (Number)sBc				*/
+OP_LOADNIL,/*	A B	R(A) := ... := R(B) := nil			*/
+OP_LOADUPVAL,/*	A Bc	R(A) := UpValue[Bc]				*/
 
-OP_CALL,/*	A B	v_n-v_1 f(at a)	r_b-r_1		f(v1,...,v_n)	*/
+OP_GETGLOBAL,/*	A Bc	R(A) := Gbl[Kst(Bc)]				*/
+OP_GETTABLE,/*	A B C	R(A) := R(B)[R/K(C)]				*/
 
-OP_PUSHNIL,/*	U	-		nil_1-nil_u			*/
-OP_POP,/*	U	a_u-a_1		-				*/
+OP_SETGLOBAL,/*	A Bc	Gbl[Kst(Bc)] := R(A)				*/
+OP_SETTABLE,/*	A B C	R(B)[R/K(C)] := R(A)				*/
 
-OP_PUSHINT,/*	S	-		(lua_Number)s			*/
-OP_PUSHSTRING,/* K	-		KSTR[k]				*/
-OP_PUSHNUM,/*	N	-		KNUM[n]				*/
-OP_PUSHNEGNUM,/* N	-		-KNUM[n]			*/
+OP_NEWTABLE,/*	A Bc	R(A) := {} (size = Bc)				*/
 
-OP_PUSHUPVALUE,/* U	-		Closure[u]			*/
+OP_SELF,/*	A B C	R(A+1) := R(B); R(A) := R(B)[R/K(C)]		*/
 
-OP_GETLOCAL,/*	L	-		LOC[l]				*/
-OP_GETGLOBAL,/*	K	-		VAR[KSTR[k]]			*/
+OP_ADD,/*	A B C	R(A) := R(B) + R/K(C)				*/
+OP_SUB,/*	A B C	R(A) := R(B) - R/K(C)				*/
+OP_MUL,/*	A B C	R(A) := R(B) * R/K(C)				*/
+OP_DIV,/*	A B C	R(A) := R(B) / R/K(C)				*/
+OP_POW,/*	A B C	R(A) := R(B) ^ R/K(C)				*/
+OP_UNM,/*	A B	R(A) := -R(B)					*/
+OP_NOT,/*	A B	R(A) := not R(B)				*/
 
-OP_GETTABLE,/*	-	i t		t[i]				*/
-OP_GETDOTTED,/*	K	t		t[KSTR[k]]			*/
-OP_GETINDEXED,/* L	t		t[LOC[l]]			*/
-OP_PUSHSELF,/*	K	t		t t[KSTR[k]]			*/
+OP_CONCAT,/*	A B C	R(A) := R(B).. ... ..R(C)			*/
 
-OP_CREATETABLE,/* U	-		newarray(size = u)		*/
+OP_JMP,/*	sBc	PC += sBc					*/
+OP_CJMP,/*	sBc	if test then PC += sBc		(see (1))	*/
 
-OP_SETLOCAL,/*	L	x		-		LOC[l]=x	*/
-OP_SETGLOBAL,/*	K	x		-		VAR[KSTR[k]]=x	*/
-OP_SETTABLE,/*	A B	v a_a-a_1 i t	(pops b values)	t[i]=v		*/
+OP_TESTEQ,/*	B C	test := (R(B) == R/K(C))			*/
+OP_TESTNE,/*	B C	test := (R(B) ~= R/K(C))			*/
+OP_TESTLT,/*	B C	test := (R(B) < R/K(C))				*/
+OP_TESTLE,/*	B C	test := (R(B) <= R/K(C))			*/
+OP_TESTGT,/*	B C	test := (R(B) > R/K(C))				*/
+OP_TESTGE,/*	B C	test := (R(B) >= R/K(C))			*/
 
-OP_SETLIST,/*	A B	v_n-v_1 v_b	v_b		v_b[i+a*FPF]=v_i */
-OP_SETMAP,/*	U	v_n k_n - v_1 k_1 v_u	v_u	v_u[k_i]=v_i	*/
+OP_TESTT,/*	A B	test := R(B); if (test) R(A) := R(B)		*/
+OP_TESTF,/*	A B	test := not R(B); if (test) R(A) := nil		*/
 
-OP_ADD,/*	-	y x		x+y				*/
-OP_ADDI,/*	S	x		x+s				*/
-OP_SUB,/*	-	y x		x-y				*/
-OP_MULT,/*	-	y x		x*y				*/
-OP_DIV,/*	-	y x		x/y				*/
-OP_POW,/*	-	y x		x^y				*/
-OP_CONCAT,/*	U	v_u-v_1		v1..-..v_u			*/
-OP_MINUS,/*	-	x		-x				*/
-OP_NOT,/*	-	x		(x==nil)? 1 : nil		*/
+OP_NILJMP,/*	A	R(A) := nil; PC++;				*/
 
-OP_JMPNE,/*	J	y x		-		(x~=y)? PC+=s	*/
-OP_JMPEQ,/*	J	y x		-		(x==y)? PC+=s	*/
-OP_JMPLT,/*	J	y x		-		(x<y)? PC+=s	*/
-OP_JMPLE,/*	J	y x		-		(x<y)? PC+=s	*/
-OP_JMPGT,/*	J	y x		-		(x>y)? PC+=s	*/
-OP_JMPGE,/*	J	y x		-		(x>=y)? PC+=s	*/
+OP_CALL,/*	A B C	R(A), ... ,R(A+C-1) := R(A)(R(A+1), ... ,R(B-1))*/
+OP_RETURN,/*	A B	return R(A), ... ,R(B-1)	(see (3))	*/
 
-OP_JMPT,/*	J	x		-		(x~=nil)? PC+=s	*/
-OP_JMPF,/*	J	x		-		(x==nil)? PC+=s	*/
-OP_JMPONT,/*	J	x		(x~=nil)? x : -	(x~=nil)? PC+=s	*/
-OP_JMPONF,/*	J	x		(x==nil)? x : -	(x==nil)? PC+=s	*/
-OP_JMP,/*	J	-		-		PC+=s		*/
+OP_FORPREP,/*	A sBc							*/
+OP_FORLOOP,/*	A sBc							*/
 
-OP_PUSHNILJMP,/* -	-		nil		PC++;		*/
+OP_TFORPREP,/*	A sBc							*/
+OP_TFORLOOP,/*	A sBc							*/
 
-OP_FORPREP,/*	J							*/
-OP_FORLOOP,/*	J							*/
+OP_SETLIST,/*	A Bc	R(A)[Bc-Bc%FPF+i] := R(A+i), 1 <= i <= Bc%FPF+1	*/
+OP_SETLISTO,/*	A Bc							*/
 
-OP_LFORPREP,/*	J							*/
-OP_LFORLOOP,/*	J							*/
-
-OP_CLOSURE/*	A B	v_b-v_1		closure(KPROTO[a], v_1-v_b)	*/
-
+OP_CLOSURE /*	A Bc	R(A) := closure(KPROTO[Bc], R(A), ... ,R(A+n))	*/
 } OpCode;
+
 
 #define NUM_OPCODES	((int)OP_CLOSURE+1)
 
 
-#define ISJUMP(o)	(OP_JMPNE <= (o) && (o) <= OP_JMP)
 
+/*===========================================================================
+  Notes:
+  (1) In the current implementation there is no `test' variable;
+      instructions OP_TEST* and OP_CJMP must always occur together.
 
+  (2) In OP_CALL, if (B == NO_REG) then B = top. C is the number of returns,
+      and can be NO_REG. OP_CALL always set "top" to last_result+1, so
+      next open instruction (OP_CALL, OP_RETURN, OP_SETLIST) may use "top".
 
-/* special code to fit a LUA_MULTRET inside an argB */
-#define MULT_RET        255	/* (<=MAXARG_B) */
-#if MULT_RET>MAXARG_B
-#undef MULT_RET
-#define MULT_RET	MAXARG_B
-#endif
+  (3) In OP_RETURN, if (B == NO_REG) then B = top.
+===========================================================================*/
 
 
 #endif

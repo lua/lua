@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.29 2000/12/28 12:55:41 roberto Exp roberto $
+** $Id: lparser.h,v 1.30 2001/02/20 18:28:11 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -16,23 +16,30 @@
 */
 
 typedef enum {
-  VGLOBAL,
-  VLOCAL,
-  VINDEXED,
-  VEXP
+  VVOID,	/* no value */
+  VNIL,
+  VNUMBER,	/* n = value */
+  VK,		/* info = index of constant in `k' */
+  VGLOBAL,	/* info = index of global name in `k' */
+  VLOCAL,	/* info = local register */
+  VINDEXED,	/* info = table register; aux = index register (or `k') */
+  VRELOCABLE,	/* info = instruction pc */
+  VNONRELOC,	/* info = result register */
+  VJMP,		/* info = result register */
+  VCALL		/* info = result register */
 } expkind;
 
 typedef struct expdesc {
   expkind k;
   union {
-    int index;  /* VGLOBAL: `kstr' index of global name; VLOCAL: stack index */
     struct {
-      int t;  /* patch list of `exit when true' */
-      int f;  /* patch list of `exit when false' */
-    } l;
+      int info, aux;
+    } i;
+    lua_Number n;
   } u;
+  int t;  /* patch list of `exit when true' */
+  int f;  /* patch list of `exit when false' */
 } expdesc;
-
 
 
 /* state needed to generate code for a given function */
@@ -44,10 +51,9 @@ typedef struct FuncState {
   int pc;  /* next position to code (equivalent to `ncode') */
   int lasttarget;   /* `pc' of last `jump target' */
   int jlt;  /* list of jumps to `lasttarget' */
-  int stacklevel;  /* number of values on activation register */
-  int nkstr;  /* number of elements in `kstr' */
+  int freereg;  /* first free register */
+  int nk;  /* number of elements in `k' */
   int nkproto;  /* number of elements in `kproto' */
-  int nknum;  /* number of elements in `knum' */
   int nlineinfo;  /* number of elements in `lineinfo' */
   int nlocvars;  /* number of elements in `locvars' */
   int nactloc;  /* number of active local variables */

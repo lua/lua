@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.140 2001/04/17 17:35:54 roberto Exp roberto $
+** $Id: lapi.c,v 1.141 2001/04/23 16:35:45 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -184,9 +184,10 @@ LUA_API int lua_iscfunction (lua_State *L, int index) {
 LUA_API int lua_isnumber (lua_State *L, int index) {
   TObject *o;
   int i;
+  TObject n;
   lua_lock(L);
   o = luaA_indexAcceptable(L, index);
-  i = (o == NULL) ? 0 : (tonumber(o) == 0);
+  i = (o != NULL && (ttype(o) == LUA_TNUMBER || luaV_tonumber(o, &n)));
   lua_unlock(L);
   return i;
 }
@@ -234,13 +235,18 @@ LUA_API int lua_lessthan (lua_State *L, int index1, int index2) {
 
 
 LUA_API lua_Number lua_tonumber (lua_State *L, int index) {
-  StkId o;
-  lua_Number n;
+  const TObject *o;
+  TObject n;
+  lua_Number res;
   lua_lock(L);
   o = luaA_indexAcceptable(L, index);
-  n = (o == NULL || tonumber(o)) ? 0 : nvalue(o);
+  if (o != NULL &&
+      (ttype(o) == LUA_TNUMBER || (o = luaV_tonumber(o, &n)) != NULL))
+    res = nvalue(o);
+  else
+    res = 0;
   lua_unlock(L);
-  return n;
+  return res;
 }
 
 LUA_API const l_char *lua_tostring (lua_State *L, int index) {
