@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.41 1999/12/23 18:19:57 roberto Exp roberto $
+** $Id: lobject.h,v 1.42 1999/12/27 17:33:22 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -72,16 +72,25 @@ typedef enum {
   LUA_T_LPROTO   = -4,  /* fixed tag for Lua functions */
   LUA_T_CPROTO   = -5,  /* fixed tag for C functions */
   LUA_T_NIL      = -6,  /* last "pre-defined" tag */
+
   LUA_T_LCLOSURE  = -7, /* Lua closure */
   LUA_T_CCLOSURE  = -8, /* C closure */
+
   LUA_T_LCLMARK   = -9 ,/* mark for Lua closures */
   LUA_T_CCLMARK   = -10,/* mark for C closures */
   LUA_T_LMARK    = -11, /* mark for Lua prototypes */
   LUA_T_CMARK    = -12, /* mark for C prototypes */
-  LUA_T_LINE     = -13
+
+  LUA_T_LINE     = -13,
+  LUA_T_NGLOBAL  = -14,
+  LUA_T_NLOCAL   = -15,
+  LUA_T_NDOT     = -16
 } lua_Type;
 
-#define NUM_TAGS  7
+#define NUM_TAGS	7	/* tags for values visible from Lua */
+
+
+#define LAST_REGULAR_TAG  LUA_T_CCLOSURE  /* after that, are all marks */
 
 /*
 ** chech whether `t' is a mark; ttypes are negative numbers, so the
@@ -91,13 +100,13 @@ typedef enum {
 
 
 typedef union {
-  lua_CFunction f;  /* LUA_T_CPROTO, LUA_T_CMARK */
-  real n;  /* LUA_T_NUMBER */
-  struct TaggedString *ts;  /* LUA_T_STRING, LUA_T_USERDATA */
-  struct TProtoFunc *tf;  /* LUA_T_LPROTO, LUA_T_LMARK */
-  struct Closure *cl;  /* LUA_T_[CL]CLOSURE, LUA_T_[CL]CLMARK */
-  struct Hash *a;  /* LUA_T_ARRAY */
-  int i;  /* LUA_T_LINE */
+  lua_CFunction f;              /* LUA_T_CPROTO, LUA_T_CMARK */
+  real n;                       /* LUA_T_NUMBER */
+  struct TaggedString *ts;      /* LUA_T_STRING, LUA_T_USERDATA */
+  struct TProtoFunc *tf;        /* LUA_T_LPROTO, LUA_T_LMARK */
+  struct Closure *cl;           /* LUA_T_[CL]CLOSURE, LUA_T_[CL]CLMARK */
+  struct Hash *a;               /* LUA_T_ARRAY */
+  int i;                        /* LUA_T_LINE */
 } Value;
 
 

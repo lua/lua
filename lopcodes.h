@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.34 1999/11/25 18:59:43 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.35 1999/12/27 17:33:22 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -101,6 +101,9 @@ CLOSURE,/*	b c	v_c-v_1		closure(CNST[b], v_c-v_1)	*/
 
 SETLINEW,/*	w	-		-		LINE=w		*/
 SETLINE,/*	b	-		-		LINE=b		*/
+
+SETNAMEW,/*	w c	-		-		NAME=CNST[w],c	*/
+SETNAME,/*	b c	-		-		NAME=CNST[b],c	*/
 
 LONGARGW,/*	w	(add w*(1<<16) to arg of next instruction)	*/
 LONGARG /*	b	(add b*(1<<16) to arg of next instruction)	*/

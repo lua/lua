@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.60 1999/12/23 18:19:57 roberto Exp roberto $
+** $Id: ldo.c,v 1.61 1999/12/27 17:33:22 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -13,6 +13,7 @@
 #define LUA_REENTRANT
 
 #include "lauxlib.h"
+#include "ldebug.h"
 #include "ldo.h"
 #include "lgc.h"
 #include "lmem.h"
@@ -220,7 +221,7 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
     default: { /* `func' is not a function; check the `function' tag method */
       const TObject *im = luaT_getimbyObj(L, func, IM_FUNCTION);
       if (ttype(im) == LUA_T_NIL)
-        lua_error(L, "call expression not a function");
+        luaG_callerror(L, func);
       luaD_openstack(L, func);
       *func = *im;  /* tag method is the new function to be called */
       goto retry;  /* retry the call (without calling callhook again) */

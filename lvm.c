@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.75 1999/12/23 18:19:57 roberto Exp roberto $
+** $Id: lvm.c,v 1.76 1999/12/27 17:33:22 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -12,6 +12,7 @@
 #define LUA_REENTRANT
 
 #include "lauxlib.h"
+#include "ldebug.h"
 #include "ldo.h"
 #include "lfunc.h"
 #include "lgc.h"
@@ -33,7 +34,7 @@
 
 
 /* Extra stack size to run a function: LUA_T_LINE(1), TM calls(2), ... */
-#define	EXTRA_STACK	5
+#define	EXTRA_STACK	6
 
 
 
@@ -105,7 +106,7 @@ void luaV_gettable (lua_State *L) {
   if (ttype(table) != LUA_T_ARRAY) {  /* not a table, get gettable method */
     im = luaT_getimbyObj(L, table, IM_GETTABLE);
     if (ttype(im) == LUA_T_NIL)
-      lua_error(L, "indexed expression not a table");
+      luaG_indexerror(L, table);
   }
   else {  /* object is a table... */
     int tg = table->value.a->htag;
@@ -138,7 +139,7 @@ void luaV_settable (lua_State *L, StkId t) {
   if (ttype(t) != LUA_T_ARRAY) {  /* not a table, get `settable' method */
     im = luaT_getimbyObj(L, t, IM_SETTABLE);
     if (ttype(im) == LUA_T_NIL)
-      lua_error(L, "indexed expression not a table");
+      luaG_indexerror(L, t);
   }
   else {  /* object is a table... */
     im = luaT_getim(L, avalue(t)->htag, IM_SETTABLE);
@@ -587,17 +588,28 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
 
       case SETLINEW: aux += highbyte(L, *pc++);
       case SETLINE:  aux += *pc++;
-        L->top = top;
-        if ((base-1)->ttype != LUA_T_LINE) {
-          /* open space for LINE value */
-          luaD_openstack(L, base);
-          base->ttype = LUA_T_LINE;
-          base++;
-          top++;
+        if ((base-2)->ttype != LUA_T_LINE) {
+          /* open space for LINE and NAME values */
+          int i = top-base;
+          while (i--) base[i+2] = base[i];
+          base += 2;
+          top += 2;
+          (base-1)->ttype = LUA_T_NIL;  /* initial value for NAME */
+          (base-2)->ttype = LUA_T_LINE;
         }
-        (base-1)->value.i = aux;
-        if (L->linehook)
+        (base-2)->value.i = aux;
+        if (L->linehook) {
+          L->top = top;
           luaD_lineHook(L, aux);
+        }
+        break;
+
+      case SETNAMEW: aux += highbyte(L, *pc++);
+      case SETNAME:  aux += *pc++;
+        if ((base-2)->ttype == LUA_T_LINE) {  /* function has debug info? */
+          (base-1)->ttype = -(*pc++);
+          (base-1)->value.i = aux;
+        }
         break;
 
       case LONGARGW: aux += highbyte(L, *pc++);
