@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.57 1996/02/12 18:32:40 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.58 1996/02/22 20:34:33 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -784,9 +784,14 @@ void lua_pushnumber (real n)
 */
 void lua_pushstring (char *s)
 {
- tsvalue(top) = lua_createstring(s);
- tag(top) = LUA_T_STRING;
- incr_top;
+  if (s == NULL)
+    tag(top) = LUA_T_NIL;
+  else
+  {
+    tsvalue(top) = lua_createstring(s);
+    tag(top) = LUA_T_STRING;
+  }
+  incr_top;
 }
 
 /*
