@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.30 2004/12/02 12:59:10 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.31 2005/03/08 18:00:16 roberto Exp roberto $
 ** See Copyright Notice in lua.h
 */
 
@@ -36,6 +36,7 @@ const char *const luaP_opnames[NUM_OPCODES+1] = {
   "POW",
   "UNM",
   "NOT",
+  "SIZ",
   "CONCAT",
   "JMP",
   "EQ",
@@ -81,6 +82,7 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_POW */
  ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_UNM */
  ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_NOT */
+ ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_SIZ */
  ,opmode(0, 1, OpArgR, OpArgR, iABC)		/* OP_CONCAT */
  ,opmode(0, 0, OpArgR, OpArgN, iAsBx)		/* OP_JMP */
  ,opmode(1, 0, OpArgK, OpArgK, iABC)		/* OP_EQ */

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.31 2005/03/08 20:10:05 roberto Exp roberto $
+** $Id: lvm.c,v 2.32 2005/03/09 16:28:07 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -560,6 +560,21 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
       case OP_NOT: {
         int res = l_isfalse(RB(i));  /* next assignment may change this value */
         setbvalue(ra, res);
+        continue;
+      }
+      case OP_SIZ: {
+        const TValue *rb = RB(i);
+        switch (ttype(rb)) {
+          case LUA_TTABLE:
+            setnvalue(ra, cast(lua_Number, luaH_getn(hvalue(rb))));
+            break;
+          case LUA_TSTRING:
+            setnvalue(ra, cast(lua_Number, tsvalue(rb)->len));
+            break;
+          default:  /* no metamethod?? */
+            L->ci->savedpc = pc;
+            luaG_typeerror(L, rb, "get the size of");
+        }
         continue;
       }
       case OP_CONCAT: {

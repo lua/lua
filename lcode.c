@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.10 2005/03/08 20:10:05 roberto Exp roberto $
+** $Id: lcode.c,v 2.11 2005/03/09 16:28:07 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -603,19 +603,32 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
 
 
 void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e) {
-  if (op == OPR_MINUS) {
-    luaK_exp2val(fs, e);
-    if (e->k == VK && ttisnumber(&fs->f->k[e->info]))
-      e->info = luaK_numberK(fs, luai_numunm(nvalue(&fs->f->k[e->info])));
-    else {
+  switch (op) {
+    case OPR_MINUS: {
+      luaK_exp2val(fs, e);
+      if (e->k == VK && ttisnumber(&fs->f->k[e->info]))
+        e->info = luaK_numberK(fs, luai_numunm(nvalue(&fs->f->k[e->info])));
+      else {
+        luaK_exp2anyreg(fs, e);
+        freeexp(fs, e);
+        e->info = luaK_codeABC(fs, OP_UNM, 0, e->info, 0);
+        e->k = VRELOCABLE;
+      }
+      break;
+    }
+    case OPR_NOT: {
+      codenot(fs, e);
+      break;
+    }
+    case OPR_SIZE: {
       luaK_exp2anyreg(fs, e);
       freeexp(fs, e);
-      e->info = luaK_codeABC(fs, OP_UNM, 0, e->info, 0);
+      e->info = luaK_codeABC(fs, OP_SIZ, 0, e->info, 0);
       e->k = VRELOCABLE;
+      break;
     }
+    default: lua_assert(0);
   }
-  else  /* op == NOT */
-    codenot(fs, e);
 }
 
 
