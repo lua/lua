@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.2 1997/10/24 17:44:22 roberto Exp roberto $
 ** Lua standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -17,20 +17,21 @@
 #endif
 
 
-static double torad = PI/180.0;
 
-#define FROMRAD(a) ((a)/torad)
-#define TORAD(a)    ((a)*torad)
+#define FROMRAD(a) ((a)/torad())
+#define TORAD(a)    ((a)*torad())
 
 
-static void modeang (void)
+static double torad (void)
 {
-  char *s = luaL_opt_string(1, "degree");
+  char *s = lua_getstring(lua_getglobal("_TRIGMODE"));
   switch (*s) {
-    case 'd' : torad = PI/180.0; break;
-    case 'r' : torad = 1.0; break;
-    case 'g' : torad = PI/50.0; break;
-    default: luaL_arg_check(0, 1, "invalid mode");
+    case 'd' : return PI/180.0;
+    case 'r' : return 1.0;
+    case 'g' : return PI/50.0;
+    default:
+      luaL_verror("invalid _TRIGMODE (`%s')", s);
+      return 0;  /* to avoid warnings */
   }
 }
 
@@ -173,7 +174,6 @@ static void math_randomseed (void)
 
 
 static struct luaL_reg mathlib[] = {
-{"modeang",   modeang},
 {"abs",   math_abs},
 {"sin",   math_sin},
 {"cos",   math_cos},
@@ -202,6 +202,7 @@ static struct luaL_reg mathlib[] = {
 */
 void lua_mathlibopen (void)
 {
+  lua_pushstring("deg"); lua_setglobal("_TRIGMODE");
   luaL_openlib(mathlib, (sizeof(mathlib)/sizeof(mathlib[0])));
   lua_pushcfunction(math_pow);
   lua_pushnumber(0);  /* to get its tag */
