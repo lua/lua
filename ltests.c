@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.159 2003/04/28 19:58:06 roberto Exp roberto $
+** $Id: ltests.c,v 1.160 2003/05/13 19:22:19 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -662,9 +662,6 @@ static int testC (lua_State *L) {
     }
     else if EQ("pushcclosure") {
       lua_pushcclosure(L, testC, getnum);
-    }
-    else if EQ("pushupvalues") {
-      lua_pushupvalues(L);
     }
     else if EQ("remove") {
       lua_remove(L, getnum);
