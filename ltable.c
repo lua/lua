@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.40 2000/04/25 16:55:09 roberto Exp roberto $
+** $Id: ltable.c,v 1.41 2000/05/08 19:32:53 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -122,20 +122,13 @@ int luaH_pos (lua_State *L, const Hash *t, const TObject *key) {
 }
 
 
-
-static Node *hashnodecreate (lua_State *L, int nhash) {
-  Node *v = luaM_newvector(L, nhash, Node);
-  int i;
-  for (i=0; i<nhash; i++) {
-    ttype(&v[i].key) = ttype(&v[i].val) = TAG_NIL;
-    v[i].next = NULL;
-  }
-  return v;
-}
-
-
 static void setnodevector (lua_State *L, Hash *t, int size) {
-  t->node = hashnodecreate(L, size);
+  int i;
+  t->node = luaM_newvector(L, size, Node);
+  for (i=0; i<size; i++) {
+    ttype(&t->node[i].key) = ttype(&t->node[i].val) = TAG_NIL;
+    t->node[i].next = NULL;
+  }
   t->size = size;
   t->firstfree = &t->node[size-1];  /* first free position to be used */
   L->nblocks += gcsize(L, size);

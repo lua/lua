@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.48 2000/05/08 19:32:53 roberto Exp roberto $
+** $Id: lgc.c,v 1.49 2000/05/10 16:33:20 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -62,7 +62,7 @@ static void closuremark (lua_State *L, Closure *f) {
 }
 
 
-static void hashmark (lua_State *L, Hash *h) {
+static void tablemark (lua_State *L, Hash *h) {
   if (!h->marked) {
     int i;
     h->marked = 1;
@@ -99,7 +99,7 @@ static int markobject (lua_State *L, TObject *o) {
       strmark(L, tsvalue(o));
       break;
     case TAG_TABLE:
-      hashmark(L, avalue(o));
+      tablemark(L, avalue(o));
       break;
     case TAG_LCLOSURE:  case TAG_LMARK:
       protomark(L, clvalue(o)->f.l);
@@ -206,7 +206,7 @@ static void collectstring (lua_State *L, int limit) {
 
 static void markall (lua_State *L) {
   travstack(L); /* mark stack objects */
-  hashmark(L, L->gt);  /* mark global variable values and names */
+  tablemark(L, L->gt);  /* mark global variable values and names */
   travlock(L); /* mark locked objects */
   luaT_travtagmethods(L, markobject);  /* mark tag methods */
 }
