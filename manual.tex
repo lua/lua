@@ -1,6 +1,7 @@
-% $Id: manual.tex,v 1.11 1998/05/27 19:09:39 roberto Exp roberto $
+% $Id: manual.tex,v 1.12 1998/06/02 20:37:04 roberto Exp roberto $
 
-\documentstyle[fullpage,11pt,bnf]{article}
+\documentclass[11pt]{article}
+\usepackage{fullpage,bnf}
 
 \newcommand{\See}[1]{Section~\ref{#1}}
 \newcommand{\see}[1]{(see \See{#1})}
@@ -38,7 +39,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1998/05/27 19:09:39 $}
+%\date{\small \verb$Date: 1998/06/02 20:37:04 $}
 
 \maketitle
 
@@ -101,42 +102,42 @@ a intera\c{c}\~ao entre programas Lua e programas C hospedeiros.
 \end{quotation}
 
 
-\vfill
+\newpage
 \begin{quotation}
 \noindent
 \footnotesize
-Copyright \copyright\ 1994--1998 TeCGraf, PUC-Rio.
-Written by Waldemar Celes Filho,
-Roberto Ierusalimschy,
-and Luiz Henrique de Figueiredo.
-All rights reserved.
-%
-Permission is hereby granted, without written agreement and without license or
-royalty fees, to use, copy, modify, and distribute this software and its
-documentation for any purpose, subject to the following conditions:
-%
-The above copyright notice and this permission notice shall appear in all
-copies or substantial portions of this software.
-%
-The name ``Lua'' cannot be used for any modified form
-of this software that does not originate from the authors.
-Nevertheless, the name ``Lua'' may and should be
-used to designate the language implemented and described in this package,
-even if embedded in any other system, as long as its syntax and semantics
-remain unchanged.
-%
-The authors specifically disclaim any warranties, including,
-but not limited to, the implied warranties of merchantability
-and fitness for a particular purpose.
-The software provided hereunder is on an ``as is'' basis, and the
+Copyright \copyright\ 1994--1998 TeCGraf, PUC-Rio.  All rights reserved.
+
+Permission is hereby granted, without written agreement and without license
+or royalty fees, to use, copy, modify, and distribute this software and its
+documentation for any purpose, including commercial applications, subject to
+the following conditions:
+\begin{itemize}
+\item The above copyright notice and this permission notice shall appear in all
+   copies or substantial portions of this software.
+
+\item The origin of this software must not be misrepresented; you must not
+   claim that you wrote the original software. If you use this software in a
+   product, an acknowledgment in the product documentation would be greatly
+   appreciated (but it is not required).
+
+\item Altered source versions must be plainly marked as such, and must not be
+   misrepresented as being the original software.
+\end{itemize}
+The authors specifically disclaim any warranties, including, but not limited
+to, the implied warranties of merchantability and fitness for a particular
+purpose.  The software provided hereunder is on an "as is" basis, and the
 authors have no obligation to provide maintenance, support, updates,
-enhancements, or modifications.
-In no event shall TeCGraf, PUC-Rio, or the
-authors be liable to any party for direct, indirect, special, incidental, or
-consequential damages arising out of the use of this software and its
-documentation.
+enhancements, or modifications.  In no event shall TeCGraf, PUC-Rio, or the
+authors be held liable to any party for direct, indirect, special,
+incidental, or consequential damages arising out of the use of this software
+and its documentation.
+
+The Lua language and this implementation have been entirely designed and
+written by Waldemar Celes Filho, Roberto Ierusalimschy and
+Luiz Henrique de Figueiredo at TeCGraf, PUC-Rio.
+This implementation contains no third-party code.
 \end{quotation}
-\vfill
 
 \newpage
 
@@ -349,6 +350,7 @@ A character in a string may also be specified by its numerical value,
 through the escape sequence \verb|'\ddd'|,
 where \verb|ddd| is a sequence of up to three \emph{decimal} digits.
 Strings in Lua may contain any 8-bit value, including 0.
+
 Literal strings can also be delimited by matching \verb|[[ ... ]]|.
 Literals in this bracketed form may run for several lines,
 may contain nested \verb|[[ ... ]]| pairs,
@@ -2286,7 +2288,7 @@ the appropriate format string.
 For example, \verb|"%*g"| can be simulated with
 \verb|"%"..width.."g"|.
 
-\emph{Function \verb|format| can only be used with strings that do not
+\emph{Function \T{format} can only be used with strings that do not
 contain zeros.}
 
 \subsubsection*{\ff \T{gsub (s, pat, repl [, n])}}
@@ -2885,7 +2887,8 @@ Here is a list of all these incompatibilities.
 \begin{itemize}
 
 \item To support multiple contexts,
-Lua 3.1 must be explicitly opened before used.
+Lua 3.1 must be explicitly opened before used,
+with function \verb|lua_open|.
 However, all standard libraries check whether Lua is already opened,
 so any program that opens at least one standard library before calling
 Lua does not need to be modified.
