@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.31 1996/10/31 20:18:05 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.32 1996/11/07 20:26:19 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -238,7 +238,7 @@ static int matchclass (int c, int cl)
 
 int singlematch (int c, char *p)
 {
-  if (c <= 0) return 0;  /* \0, EOF or other strange flags */
+  if (c == 0) return 0;
   switch (*p) {
     case '.': return 1;
     case ESC: return matchclass(c, *(p+1));
@@ -300,6 +300,21 @@ static int capture_to_close (int level)
   return 0;  /* to avoid warnings */
 }
 
+static char *matchbalance (char *s, int b, int e)
+{
+  if (*s != b) return NULL;
+  else {
+    int cont = 1;
+    while (*(++s)) {
+      if (*s == e) {
+        if (--cont == 0) return s+1;
+      }
+      else if (*s == b) cont++;
+    }
+  }
+  return NULL;  /* string ends out of balance */
+}
+
 static char *match (char *s, char *p, int level)
 {
   init: /* using goto's to optimize tail recursion */
@@ -317,16 +332,25 @@ static char *match (char *s, char *p, int level)
         capture[l].len = -1;  /* undo capture */
       return res;
     }
-    case ESC:  /* possibly a capture (if followed by a digit) */
-      if (!isdigit(*(p+1))) goto dflt;
-      else {
+    case ESC:
+      if (isdigit(*(p+1))) {  /* capture */
         int l = check_cap(*(p+1), level);
         if (strncmp(capture[l].init, s, capture[l].len) == 0) {
           /* return match(p+2, s+capture[l].len, level); */
           p+=2; s+=capture[l].len; goto init;
         }
         else return NULL;
-     }
+      }
+      else if (*(p+1) == 'b') {  /* balanced string */
+        if (*(p+2) == 0 || *(p+3) == 0)
+          lua_error("bad balanced pattern specification");
+        s = matchbalance(s, *(p+2), *(p+3));
+        if (s == NULL) return NULL;
+        else {  /* return match(p+4, s, level); */
+          p+=4; goto init;
+        }
+      }
+      else goto dflt;
     case '\0': case '$':  /* (possibly) end of pattern */
       if (*p == 0 || (*(p+1) == 0 && *s == 0)) {
         num_captures = level;
