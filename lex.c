@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.15 1995/07/06 17:47:08 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.16 1995/09/15 20:48:26 roberto Exp $";
  
 
 #include <ctype.h>
@@ -161,6 +161,7 @@ int yylex (void)
        return 0;
       case '\n': lua_linenumber++;
       case ' ':
+      case '\r':  /* CR: to avoid problems with DOS/Windows */
       case '\t':
         next();
         continue;
