@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.264 2002/11/19 08:50:56 roberto Exp roberto $
+** $Id: lvm.c,v 1.265 2002/11/21 14:18:01 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -283,7 +283,7 @@ int luaV_equalval (lua_State *L, const TObject *t1, const TObject *t2) {
 
 void luaV_concat (lua_State *L, int total, int last) {
   do {
-    StkId top = L->ci->base + last + 1;
+    StkId top = L->base + last + 1;
     int n = 2;  /* number of elements handled in this pass (at least 2) */
     if (!tostring(L, top-2) || !tostring(L, top-1)) {
       if (!call_binTM(L, top-2, top-1, top-2, TM_CONCAT))
@@ -377,7 +377,7 @@ StkId luaV_execute (lua_State *L) {
              L->ci->state == (CI_SAVEDPC | CI_CALLING));
   L->ci->state = CI_HASFRAME;  /* activate frame */
   pc = L->ci->u.l.savedpc;
-  base = L->ci->base;
+  base = L->base;
   cl = &clvalue(base - 1)->l;
   k = cl->p->k;
   /* main loop of interpreter */
@@ -394,9 +394,10 @@ StkId luaV_execute (lua_State *L) {
       }
     }
     /* warning!! several calls may realloc the stack and invalidate `ra' */
-    lua_assert((L->ci->state & CI_HASFRAME) && base == L->ci->base);
     ra = RA(i);
-    lua_assert(L->top <= L->stack + L->stacksize && L->top >= L->ci->base);
+    lua_assert(L->ci->state & CI_HASFRAME);
+    lua_assert(base == L->base && base == L->ci->base);
+    lua_assert(L->top <= L->stack + L->stacksize && L->top >= base);
     lua_assert(L->top == L->ci->top ||
          GET_OPCODE(i) == OP_CALL ||   GET_OPCODE(i) == OP_TAILCALL ||
          GET_OPCODE(i) == OP_RETURN || GET_OPCODE(i) == OP_SETLISTO);
@@ -618,6 +619,7 @@ StkId luaV_execute (lua_State *L) {
             (L->ci - 1)->u.l.savedpc = L->ci->u.l.savedpc;
             (L->ci - 1)->state = CI_SAVEDPC;
             L->ci--;  /* remove new frame */
+            L->base = L->ci->base;
           }
           goto callentry;
         }

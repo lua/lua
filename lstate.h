@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.102 2002/11/18 11:01:55 roberto Exp roberto $
+** $Id: lstate.h,v 1.103 2002/11/18 15:23:43 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -131,6 +131,7 @@ typedef struct global_State {
 struct lua_State {
   CommonHeader;
   StkId top;  /* first free slot in the stack */
+  StkId base;  /* base of current function */
   global_State *l_G;
   CallInfo *ci;  /* call info for current function */
   StkId stack_last;  /* last free slot in the stack */

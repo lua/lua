@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.203 2002/11/18 15:24:11 roberto Exp roberto $
+** $Id: ldo.c,v 1.204 2002/11/18 18:45:38 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -115,6 +115,7 @@ static void correctstack (lua_State *L, TObject *oldstack) {
     }
     ci->base = newbase;
   }
+  L->base = L->ci->base;
 }
 
 
@@ -230,8 +231,8 @@ StkId luaD_precall (lua_State *L, StkId func) {
       adjust_varargs(L, p->numparams, func+1);
     luaD_checkstack(L, p->maxstacksize);
     ci = ++L->ci;  /* now `enter' new function */
-    ci->base = restorestack(L, funcr) + 1;
-    ci->top = ci->base + p->maxstacksize;
+    L->base = L->ci->base = restorestack(L, funcr) + 1;
+    ci->top = L->base + p->maxstacksize;
     ci->u.l.savedpc = p->code;  /* starting point */
     ci->state = CI_SAVEDPC;
     while (L->top < ci->top)
@@ -244,7 +245,7 @@ StkId luaD_precall (lua_State *L, StkId func) {
     int n;
     luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
     ci = ++L->ci;  /* now `enter' new function */
-    ci->base = restorestack(L, funcr) + 1;
+    L->base = L->ci->base = restorestack(L, funcr) + 1;
     ci->top = L->top + LUA_MINSTACK;
     ci->state = CI_C;  /* a C function */
     if (L->hookmask & LUA_MASKCALL) {
@@ -255,7 +256,7 @@ StkId luaD_precall (lua_State *L, StkId func) {
 #ifdef LUA_COMPATUPVALUES
     lua_pushupvalues(L);
 #endif
-    n = (*clvalue(ci->base-1)->c.f)(L);  /* do the actual call */
+    n = (*clvalue(L->base - 1)->c.f)(L);  /* do the actual call */
     lua_lock(L);
     return L->top - n;
   }
@@ -269,8 +270,9 @@ void luaD_poscall (lua_State *L, int wanted, StkId firstResult) {
     luaD_callhook(L, LUA_HOOKRET, -1);
     firstResult = restorestack(L, fr);
   }
-  res = L->ci->base - 1;  /* res == final position of 1st result */
+  res = L->base - 1;  /* res == final position of 1st result */
   L->ci--;
+  L->base = L->ci->base;  /* restore base */
   /* move results to correct place */
   while (wanted != 0 && firstResult < L->top) {
     setobjs2s(res++, firstResult++);
@@ -307,7 +309,7 @@ static void resume (lua_State *L, void *ud) {
   int nargs = *cast(int *, ud);
   CallInfo *ci = L->ci;
   if (ci == L->base_ci) {  /* no activation record? */
-    if (nargs >= L->top - L->ci->base)
+    if (nargs >= L->top - L->base)
       luaG_runerror(L, "cannot resume dead coroutine");
     luaD_precall(L, L->top - (nargs + 1));  /* start coroutine */
   }
@@ -343,8 +345,9 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
   status = luaD_rawrunprotected(L, resume, &nargs);
   if (status != 0) {  /* error? */
     L->ci = L->base_ci;  /* go back to initial level */
-    luaF_close(L, L->ci->base);  /* close eventual pending closures */
-    seterrorobj(L, status, L->ci->base);
+    L->base = L->ci->base;
+    luaF_close(L, L->base);  /* close eventual pending closures */
+    seterrorobj(L, status, L->base);
     L->allowhook = old_allowhooks;
     restore_stack_limit(L);
   }
@@ -360,11 +363,11 @@ LUA_API int lua_yield (lua_State *L, int nresults) {
   if (ci->state & CI_C) {  /* usual yield */
     if ((ci-1)->state & CI_C)
       luaG_runerror(L, "cannot yield a C function");
-    if (L->top - nresults > ci->base) {  /* is there garbage in the stack? */
+    if (L->top - nresults > L->base) {  /* is there garbage in the stack? */
       int i;
       for (i=0; i<nresults; i++)  /* move down results */
-        setobjs2s(ci->base + i, L->top - nresults + i);
-      L->top = ci->base + nresults;
+        setobjs2s(L->base + i, L->top - nresults + i);
+      L->top = L->base + nresults;
     }
   }
   /* else it's an yield inside a hook: nothing to do */
@@ -405,6 +408,7 @@ int luaD_pcall (lua_State *L, int nargs, int nresults, ptrdiff_t errfunc) {
     luaF_close(L, oldtop);  /* close eventual pending closures */
     seterrorobj(L, status, oldtop);
     L->ci = restoreci(L, old_ci);
+    L->base = L->ci->base;
     L->allowhook = old_allowhooks;
     restore_stack_limit(L);
   }

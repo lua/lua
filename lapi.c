@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.220 2002/11/14 16:15:53 roberto Exp roberto $
+** $Id: lapi.c,v 1.221 2002/11/21 14:16:52 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -36,7 +36,7 @@ const char lua_ident[] =
 #define api_check(L, o)		/*{ assert(o); }*/
 #endif
 
-#define api_checknelems(L, n)	api_check(L, (n) <= (L->top - L->ci->base))
+#define api_checknelems(L, n)	api_check(L, (n) <= (L->top - L->base))
 
 #define api_incr_top(L)   {api_check(L, L->top < L->ci->top); L->top++;}
 
@@ -45,14 +45,14 @@ const char lua_ident[] =
 
 static TObject *negindex (lua_State *L, int index) {
   if (index > LUA_REGISTRYINDEX) {
-    api_check(L, index != 0 && -index <= L->top - L->ci->base);
+    api_check(L, index != 0 && -index <= L->top - L->base);
     return L->top+index;
   }
   else switch (index) {  /* pseudo-indices */
     case LUA_REGISTRYINDEX: return registry(L);
     case LUA_GLOBALSINDEX: return gt(L);
     default: {
-      TObject *func = (L->ci->base - 1);
+      TObject *func = (L->base - 1);
       index = LUA_GLOBALSINDEX - index;
       api_check(L, iscfunction(func) && index <= clvalue(func)->c.nupvalues);
       return &clvalue(func)->c.upvalue[index-1];
@@ -63,8 +63,8 @@ static TObject *negindex (lua_State *L, int index) {
 
 static TObject *luaA_index (lua_State *L, int index) {
   if (index > 0) {
-    api_check(L, index <= L->top - L->ci->base);
-    return L->ci->base + index - 1;
+    api_check(L, index <= L->top - L->base);
+    return L->base + index - 1;
   }
   else
     return negindex(L, index);
@@ -73,8 +73,8 @@ static TObject *luaA_index (lua_State *L, int index) {
 
 static TObject *luaA_indexAcceptable (lua_State *L, int index) {
   if (index > 0) {
-    TObject *o = L->ci->base+(index-1);
-    api_check(L, index <= L->stack_last - L->ci->base);
+    TObject *o = L->base+(index-1);
+    api_check(L, index <= L->stack_last - L->base);
     if (o >= L->top) return NULL;
     else return o;
   }
@@ -92,7 +92,7 @@ void luaA_pushobject (lua_State *L, const TObject *o) {
 LUA_API int lua_checkstack (lua_State *L, int size) {
   int res;
   lua_lock(L);
-  if ((L->top - L->ci->base + size) > LUA_MAXCSTACK)
+  if ((L->top - L->base + size) > LUA_MAXCSTACK)
     res = 0;  /* stack overflow */
   else {
     luaD_checkstack(L, size);
@@ -148,20 +148,20 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
 
 
 LUA_API int lua_gettop (lua_State *L) {
-  return (L->top - L->ci->base);
+  return (L->top - L->base);
 }
 
 
 LUA_API void lua_settop (lua_State *L, int index) {
   lua_lock(L);
   if (index >= 0) {
-    api_check(L, index <= L->stack_last - L->ci->base);
-    while (L->top < L->ci->base + index)
+    api_check(L, index <= L->stack_last - L->base);
+    while (L->top < L->base + index)
       setnilvalue(L->top++);
-    L->top = L->ci->base + index;
+    L->top = L->base + index;
   }
   else {
-    api_check(L, -(index+1) <= (L->top - L->ci->base));
+    api_check(L, -(index+1) <= (L->top - L->base));
     L->top += index+1;  /* `subtract' index (index is negative) */
   }
   lua_unlock(L);
@@ -763,7 +763,7 @@ LUA_API void lua_concat (lua_State *L, int n) {
   luaC_checkGC(L);
   api_checknelems(L, n);
   if (n >= 2) {
-    luaV_concat(L, n, L->top - L->ci->base - 1);
+    luaV_concat(L, n, L->top - L->base - 1);
     L->top -= (n-1);
   }
   else if (n == 0) {  /* push empty string */
@@ -791,8 +791,8 @@ LUA_API int lua_pushupvalues (lua_State *L) {
   Closure *func;
   int n, i;
   lua_lock(L);
-  api_check(L, iscfunction(L->ci->base - 1));
-  func = clvalue(L->ci->base - 1);
+  api_check(L, iscfunction(L->base - 1));
+  func = clvalue(L->base - 1);
   n = func->c.nupvalues;
   luaD_checkstack(L, n + LUA_MINSTACK);
   for (i=0; i<n; i++) {
