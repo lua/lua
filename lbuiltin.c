@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.96 2000/03/10 18:37:44 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.97 2000/03/24 17:26:08 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -239,10 +239,8 @@ void luaB_settagmethod (lua_State *L) {
   lua_Object nf = luaL_nonnullarg(L, 3);
   luaL_arg_check(L, lua_isnil(L, nf) || lua_isfunction(L, nf), 3,
                  "function or nil expected");
-#ifndef LUA_COMPAT_GC
   if (strcmp(event, "gc") == 0 && tag != TAG_NIL)
-    lua_error(L, "cannot set this `gc' tag method from Lua");
-#endif
+    lua_error(L, "deprecated use: cannot set the `gc' tag method from Lua");
   lua_pushobject(L, nf);
   lua_pushobject(L, lua_settagmethod(L, tag, event));
 }

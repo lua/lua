@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.41 2000/01/28 16:53:00 roberto Exp roberto $
+** $Id: lgc.c,v 1.42 2000/03/10 18:37:44 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -216,24 +216,6 @@ static void collectstring (lua_State *L, int limit) {
 }
 
 
-#ifdef LUA_COMPAT_GC
-static void tableTM (lua_State *L) {
-  Hash *p;
-  TObject o;
-  ttype(&o) = TAG_ARRAY;
-  for (p = L->roottable; p; p = p->next) {
-    if (!p->marked) {
-      avalue(&o) = p;
-      luaD_gcIM(L, &o);
-    }
-  }
-}
-#else
-#define tableTM(L)	/* do nothing */
-#endif
-
-
-
 static void markall (lua_State *L) {
   travstack(L); /* mark stack objects */
   travglobal(L);  /* mark global variable values and names */
@@ -246,7 +228,6 @@ void luaC_collect (lua_State *L, int all) {
   int oldah = L->allowhooks;
   L->allowhooks = 0;  /* stop debug hooks during GC */
   L->GCthreshold *= 4;  /* to avoid GC during GC */
-  tableTM(L);  /* call TM for tables (if LUA_COMPAT_GC) */
   collecttable(L);
   collectstring(L, all?MAX_INT:1);
   collectproto(L);

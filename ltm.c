@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.34 2000/03/10 18:37:44 roberto Exp roberto $
+** $Id: ltm.c,v 1.35 2000/03/20 19:14:54 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -25,10 +25,12 @@ const char *const luaT_eventname[] = {  /* ORDER IM */
 };
 
 
-static int luaI_checkevent (lua_State *L, const char *name) {
+static int luaI_checkevent (lua_State *L, const char *name, int t) {
   int e = luaL_findstring(name, luaT_eventname);
   if (e >= IM_N)
     luaL_verror(L, "event `%.50s' is deprecated", name);
+  if (e == IM_GC && t == TAG_ARRAY)
+    luaL_verror(L, "event `gc' for tables is deprecated");
   if (e < 0)
     luaL_verror(L, "`%.50s' is not a valid event name", name);
   return e;
@@ -41,20 +43,16 @@ static int luaI_checkevent (lua_State *L, const char *name) {
 */
 /* ORDER LUA_T, ORDER IM */
 static const char luaT_validevents[NUM_TAGS][IM_N] = {
-{1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* TAG_USERDATA */
-{1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},  /* TAG_NUMBER */
-{1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},  /* TAG_STRING */
-{0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* TAG_ARRAY */
-{1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* TAG_LPROTO */
-{1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* TAG_CPROTO */
-{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}   /* TAG_NIL */
+  {1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* TAG_USERDATA */
+  {1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},  /* TAG_NUMBER */
+  {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},  /* TAG_STRING */
+  {0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* TAG_ARRAY */
+  {1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* TAG_LPROTO */
+  {1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* TAG_CPROTO */
+  {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}   /* TAG_NIL */
 };
 
 static int luaT_validevent (int t, int e) {  /* ORDER LUA_T */
-#ifdef LUA_COMPAT_GC
-  if (t == TAG_ARRAY && e == IM_GC)
-    return 1;  /* old versions allowed gc tag method for tables */
-#endif
   return (t > TAG_NIL) ?  1 : luaT_validevents[t][e];
 }
 
@@ -126,7 +124,7 @@ int luaT_effectivetag (lua_State *L, const TObject *o) {
 
 const TObject *luaT_gettagmethod (lua_State *L, int t, const char *event) {
   int e;
-  e = luaI_checkevent(L, event);
+  e = luaI_checkevent(L, event, t);
   checktag(L, t);
   if (luaT_validevent(t, e))
     return luaT_getim(L, t,e);
@@ -138,7 +136,7 @@ const TObject *luaT_gettagmethod (lua_State *L, int t, const char *event) {
 void luaT_settagmethod (lua_State *L, int t, const char *event, TObject *func) {
   TObject temp;
   int e;
-  e = luaI_checkevent(L, event);
+  e = luaI_checkevent(L, event, t);
   checktag(L, t);
   if (!luaT_validevent(t, e))
     luaL_verror(L, "cannot change `%.20s' tag method for type `%.20s'%.20s",
