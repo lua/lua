@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.4 2004/03/09 17:34:35 roberto Exp roberto $
+** $Id: lapi.c,v 2.5 2004/03/23 17:07:34 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -56,7 +56,7 @@ const char lua_ident[] =
 static TValue *luaA_index (lua_State *L, int idx) {
   if (idx > 0) {
     TValue *o = L->base + (idx - 1);
-    api_check(L, idx <= L->stack_last - L->base);
+    api_check(L, idx <= L->ci->top - L->base);
     if (o >= L->top) return cast(TValue *, &luaO_nilobject);
     else return o;
   }
@@ -698,12 +698,18 @@ LUA_API int lua_setfenv (lua_State *L, int idx) {
 ** `load' and `call' functions (run Lua code)
 */
 
+
+#define adjuststack(L,nres) \
+    { if (nres == LUA_MULTRET && L->top >= L->ci->top) L->ci->top = L->top; }
+
+
 LUA_API void lua_call (lua_State *L, int nargs, int nresults) {
   StkId func;
   lua_lock(L);
   api_checknelems(L, nargs+1);
   func = L->top - (nargs+1);
   luaD_call(L, func, nresults);
+  adjuststack(L, nresults);
   lua_unlock(L);
 }
 
@@ -740,6 +746,7 @@ LUA_API int lua_pcall (lua_State *L, int nargs, int nresults, int errfunc) {
   c.func = L->top - (nargs+1);  /* function to be called */
   c.nresults = nresults;
   status = luaD_pcall(L, f_call, &c, savestack(L, c.func), func);
+  adjuststack(L, nresults);
   lua_unlock(L);
   return status;
 }
