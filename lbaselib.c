@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.120 2003/02/18 16:02:13 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.121 2003/02/18 16:13:15 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -454,8 +454,8 @@ static int luaB_require (lua_State *L) {
   path = getpath(L);
   lua_pushvalue(L, 1);  /* check package's name in book-keeping table */
   lua_rawget(L, 2);
-  if (!lua_isnil(L, -1))  /* is it there? */
-    return 0;  /* package is already loaded */
+  if (lua_toboolean(L, -1))  /* is it there? */
+    return 1;  /* package is already loaded; return its result */
   else {  /* must load it */
     while (status == LUA_ERRFILE) {
       lua_settop(L, 3);  /* reset stack position */
@@ -470,12 +470,17 @@ static int luaB_require (lua_State *L) {
       lua_insert(L, -2);  /* put it below function */
       lua_pushvalue(L, 1);
       lua_setglobal(L, "_REQUIREDNAME");  /* set new name */
-      lua_call(L, 0, 0);  /* run loaded module */
+      lua_call(L, 0, 1);  /* run loaded module */
+      lua_insert(L, -2);  /* put result below previous name */
       lua_setglobal(L, "_REQUIREDNAME");  /* reset to previous name */
+      if (lua_isnil(L, -1)) {  /* no/nil return? */
+        lua_pushboolean(L, 1);
+        lua_replace(L, -2);  /* replace to true */
+      }
       lua_pushvalue(L, 1);
-      lua_pushboolean(L, 1);
+      lua_pushvalue(L, -2);
       lua_rawset(L, 2);  /* mark it as loaded */
-      return 0;
+      return 1;  /* return value */
     }
     case LUA_ERRFILE: {  /* file not found */
       return luaL_error(L, "could not load package `%s' from path `%s'",
