@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.34 2000/08/15 20:14:27 roberto Exp roberto $
+** $Id: ltests.c,v 1.35 2000/08/28 17:57:04 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -324,18 +324,14 @@ static int testC (lua_State *L) {
     else if EQ("newtable") {
       lua_newtable(L);
     }
-    else if EQ("closure") {
-      lua_CFunction f;
-      lua_getglobal(L, getname);
-      f = lua_tocfunction(L, -1);
-      lua_settop(L, -1);
-      lua_pushcclosure(L, f, getnum);
-    }
     else if EQ("pushobject") {
       lua_pushobject(L, getnum);
     }
     else if EQ("getglobal") {
       lua_getglobal(L, getname);
+    }
+    else if EQ("getglobals") {
+      lua_getglobals(L);
     }
     else if EQ("ref") {
       reg[getreg] = lua_ref(L, 0);
@@ -379,6 +375,30 @@ static int testC (lua_State *L) {
     }
     else if EQ("type") {
       lua_pushstring(L, lua_type(L, getnum));
+    }
+    else if EQ("isnil") {
+      lua_pushnumber(L, lua_isnil(L, getnum));
+    }
+    else if EQ("isnull") {
+      lua_pushnumber(L, lua_isnull(L, getnum));
+    }
+    else if EQ("isnumber") {
+      lua_pushnumber(L, lua_isnumber(L, getnum));
+    }
+    else if EQ("isstring") {
+      lua_pushnumber(L, lua_isstring(L, getnum));
+    }
+    else if EQ("istable") {
+      lua_pushnumber(L, lua_istable(L, getnum));
+    }
+    else if EQ("isfunction") {
+      lua_pushnumber(L, lua_isfunction(L, getnum));
+    }
+    else if EQ("iscfunction") {
+      lua_pushnumber(L, lua_iscfunction(L, getnum));
+    }
+    else if EQ("isuserdata") {
+      lua_pushnumber(L, lua_isuserdata(L, getnum));
     }
     else if EQ("equal") {
       int n1 = getreg;
@@ -425,7 +445,7 @@ static int testC (lua_State *L) {
       }
       else {
         int i = 0;
-        while (!lua_isnull(L, ++i))
+        while (!lua_isnull(L1, ++i))
           lua_pushstring(L, lua_tostring(L1, i));
       }
     }
