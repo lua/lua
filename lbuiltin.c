@@ -1,11 +1,12 @@
 /*
-** $Id: lbuiltin.c,v 1.2 1997/09/26 15:02:26 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.3 1997/10/18 16:33:36 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
 
 
 #include <stdio.h>
+#include <string.h>
 
 #include "lapi.h"
 #include "lauxlib.h"
@@ -68,15 +69,23 @@ static void nextvar (void)
 
 static void foreachvar (void)
 {
-  TObject *f = luaA_Address(functionarg(1));
+  TObject f = *luaA_Address(functionarg(1));
   GCnode *g;
+  StkId name = luaD_Cstack.base++;  /* place to keep var name (to avoid GC) */
+  ttype(luaD_stack.stack+name) = LUA_T_NIL;
+  luaD_stack.top++;
   for (g = luaS_root.next; g; g = g->next) {
     TaggedString *s = (TaggedString *)g;
     if (s->u.globalval.ttype != LUA_T_NIL) {
-      luaA_pushobject(f);
+      ttype(luaD_stack.stack+name) = LUA_T_STRING;
+      tsvalue(luaD_stack.stack+name) = s;  /* keep s on stack to avoid GC */
+      luaA_pushobject(&f);
       pushstring(s);
       luaA_pushobject(&s->u.globalval);
-      luaD_call((luaD_stack.top-luaD_stack.stack)-2, 0);
+      luaD_call((luaD_stack.top-luaD_stack.stack)-2, 1);
+      if (ttype(luaD_stack.top-1) != LUA_T_NIL)
+        return;
+      luaD_stack.top--;
     }
   }
 }
@@ -96,16 +105,19 @@ static void next (void)
 
 static void foreach (void)
 {
-  TObject *t = luaA_Address(tablearg(1));
-  TObject *f = luaA_Address(functionarg(2));
-  Node *nd = avalue(t)->node;
+  TObject t = *luaA_Address(tablearg(1));
+  TObject f = *luaA_Address(functionarg(2));
   int i;
-  for (i=0; i<avalue(t)->nhash; (i++, nd++)) {
+  for (i=0; i<avalue(&t)->nhash; i++) {
+    Node *nd = &(avalue(&t)->node[i]);
     if (ttype(ref(nd)) != LUA_T_NIL && ttype(val(nd)) != LUA_T_NIL) {
-      luaA_pushobject(f);
+      luaA_pushobject(&f);
       luaA_pushobject(ref(nd));
       luaA_pushobject(val(nd));
-      luaD_call((luaD_stack.top-luaD_stack.stack)-2, 0);
+      luaD_call((luaD_stack.top-luaD_stack.stack)-2, 1);
+      if (ttype(luaD_stack.top-1) != LUA_T_NIL)
+        return;
+      luaD_stack.top--;
     }
   }
 }
@@ -258,7 +270,7 @@ static void luaI_call (void)
 {
   lua_Object f = functionarg(1);
   lua_Object arg = tablearg(2);
-  int pack = (strcmp(luaL_opt_string(3, ""), "pack") == 0);
+  char *options = luaL_opt_string(3, "");
   int narg = getnarg(arg);
   int i;
   /* push arg[1...n] */
@@ -272,7 +284,7 @@ static void luaI_call (void)
   }
   if (lua_callfunction(f))
     lua_error(NULL);
-  else if (pack)
+  else if (strchr(options, 'p'))
     luaA_packresults();
   else
     luaA_passresults();
