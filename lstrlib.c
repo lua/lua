@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.67 2001/03/06 20:09:38 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.68 2001/03/26 14:31:49 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -580,10 +580,12 @@ static const l_char *scanformat (lua_State *L, const l_char *strfrmt,
 
 static int str_format (lua_State *L) {
   int arg = 1;
-  const l_char *strfrmt = luaL_check_string(L, arg);
+  size_t sfl;
+  const l_char *strfrmt = luaL_check_lstr(L, arg, &sfl);
+  const l_char *strfrmt_end = strfrmt+sfl;
   luaL_Buffer b;
   luaL_buffinit(L, &b);
-  while (*strfrmt) {
+  while (strfrmt < strfrmt_end) {
     if (*strfrmt != l_c('%'))
       luaL_putchar(&b, *strfrmt++);
     else if (*++strfrmt == l_c('%'))
