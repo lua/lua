@@ -329,3 +329,8 @@ Fri Feb 28 14:20:33 EST 2003
 >> GC metamethod calls could mess C/Lua stack syncronization
 (by Roberto; since 5.0b)
 
+** lzio.h/zlio.c
+Thu Mar 20 11:40:12 EST 2003
+>> zio mixes a 255 as first char in a buffer with EOZ
+(by lhf; since 5.0a)
+
