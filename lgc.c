@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.131 2002/03/20 18:37:28 roberto Exp roberto $
+** $Id: lgc.c,v 1.132 2002/03/20 18:54:29 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -155,8 +155,10 @@ static void markstacks (GCState *st) {
     for (o=L1->stack; o<L1->top; o++)
       markobject(st, o);
     lim = o;
-    for (ci = L1->base_ci; ci <= L1->ci; ci++)
+    for (ci = L1->base_ci; ci <= L1->ci; ci++) {
+      lua_assert(ci->top <= L1->stack_last);
       if (lim < ci->top) lim = ci->top;
+    }
     for (; o<=lim; o++) setnilvalue(o);
     checkstacksizes(L1, lim);
     lua_assert(L1->previous->next == L1 && L1->next->previous == L1);
