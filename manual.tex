@@ -1,9 +1,9 @@
-% $Id: manual.tex,v 1.24 1996/11/14 17:45:37 roberto Exp roberto $
+% $Id: manual.tex,v 1.25 1996/11/18 14:27:42 roberto Exp $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
 \newcommand{\rw}[1]{{\bf #1}}
-\newcommand{\see}[1]{see Section~\ref{#1}}
+\newcommand{\see}[1]{(see Section~\ref{#1})}
 \newcommand{\nil}{{\bf nil}}
 \newcommand{\Line}{\rule{\linewidth}{.5mm}}
 \def\tecgraf{{\sf TeC\kern-.21em\lower.7ex\hbox{Graf}}}
@@ -35,7 +35,7 @@ Waldemar Celes
 \tecgraf\ --- Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1996/11/14 17:45:37 $}
+\date{\small \verb$Date: 1996/11/18 14:27:42 $}
 
 \maketitle
 
@@ -66,25 +66,64 @@ ca\-racte\-r\'{\i}sticas do sistema.
 \end{quotation}
 
 
+\vfill
+\begin{quotation}
+\noindent
+\small
+Copyright (c) 1994--1996 TeCGraf, PUC-Rio.  Written by Waldemar Celes Filho,
+Roberto Ierusalimschy, Luiz Henrique de Figueiredo.  All rights reserved.
+%
+Permission is hereby granted, without written agreement and without license or
+royalty fees, to use, copy, modify, and distribute this software and its
+documentation for any purpose, subject to the following conditions:
+%
+The above copyright notice and this permission notice shall appear in all
+copies or substantial portions of this software.
+%
+The name "Lua" cannot be used for any modified form of this software that does
+not originate from the authors.  Nevertheless, the name "Lua" may and should be
+used to designate the language implemented and described in this package,
+even if embedded in any other system, as long as its syntax and semantics
+remain unchanged.
+%
+The authors specifically disclaim any warranties, including, but not limited
+to, the implied warranties of merchantability and fitness for a particular
+purpose.  The software provided hereunder is on an "as is" basis, and the
+authors have no obligation to provide maintenance, support, updates,
+enhancements, or modifications.  In no event shall TeCGraf, PUC-Rio, or the
+authors be liable to any party for direct, indirect, special, incidental, or
+consequential damages arising out of the use of this software and its
+documentation.
+\end{quotation}
+\vfill
+
+\thispagestyle{empty}
+\setcounter{page}{0}
+\newpage
+
+
 \section{Introduction}
 
 Lua is an extension programming language designed to support
 general procedural programming features with data description
 facilities.
-It is intended to be used as a configuration language for any
+It is intended to be used as a
+light-weight, but powerful, configuration language for any
 program that needs one.
 Lua has been designed and implemented by
-W.~Celes, L.~H.~de Figueiredo and R.~Ierusalimschy.
+W.~Celes,
+R.~Ierusalimschy and
+L.~H.~de Figueiredo.
 
 Lua is implemented as a library, written in C.
 Being an extension language, Lua has no notion of a ``main'' program:
-it only works {\em embedded} in a host client,
-called the {\em embedding} program.
+it only works {\em embedded\/} in a host client,
+called the {\em embedding\/} program.
 This host program can invoke functions to execute a piece of
 code in Lua, can write and read Lua variables,
 and can register C functions to be called by Lua code.
 Through the use of C functions, Lua can be augmented to cope with
-rather different domains,
+many, completely different domains,
 thus creating customized programming languages sharing a syntactical framework.
 
 Lua is free-distribution software,
@@ -111,7 +150,7 @@ using functions in the library that implements Lua.
 
 \Index{Global variables} do not need declaration.
 Any variable is assumed to be global unless explicitly declared local
-(\see{localvar}).
+\see{localvar}.
 Before the first assignment, the value of a global variable is \nil.
 
 The unit of execution of Lua is called a \Def{chunk}.
@@ -125,7 +164,7 @@ for chunks is:
 \end{Produc}%
 A chunk may contain statements and function definitions,
 and may be in a file or in a string inside the host program.
-A chunk may optionally ends with a return statement (\see{return}).
+A chunk may optionally end with a \verb|return| statement \see{return}.
 When a chunk is executed, first all its functions and statements are compiled,
 then the statements are executed in sequential order.
 All modifications a chunk effects on the global environment persist
@@ -133,7 +172,7 @@ after its end.
 Those include modifications to global variables and definitions
 of new functions%
 \footnote{Actually, a function definition is an
-assignment to a global variable; \see{TypesSec}.}.
+assignment to a global variable \see{TypesSec}.}.
 
 Chunks may be pre-compiled; see program \IndexVerb{luac} for details.
 Text files with chunks and their binary pre-compiled forms
@@ -151,10 +190,10 @@ Therefore, there are no type definitions in the language.
 There are seven \Index{basic types} in Lua: \Def{nil}, \Def{number},
 \Def{string}, \Def{function}, \Def{CFunction}, \Def{userdata},
 and \Def{table}.
-{\em Nil} is the type of the value \nil,
+{\em Nil\/} is the type of the value \nil,
 whose main property is to be different from any other value.
-{\em Number} represents real (floating point) numbers,
-while {\em string} has the usual meaning.
+{\em Number\/} represents real (floating point) numbers,
+while {\em string\/} has the usual meaning.
 
 Functions are considered first-class values in Lua.
 This means that functions can be stored in variables,
@@ -162,16 +201,16 @@ passed as arguments to other functions and returned as results.
 When a function is defined in Lua, its body is compiled and stored
 in a given variable.
 Lua can call (and manipulate) functions written in Lua and
-functions written in C; the latter have type {\em CFunction\/}.
+functions written in C; the latter have type {\em CFunction}.
 
-The type {\em userdata} is provided to allow
+The type {\em userdata\/} is provided to allow
 arbitrary \Index{C pointers} to be stored in Lua variables.
 It corresponds to \verb'void*' and has no pre-defined operations in Lua,
 besides assignment and equality test.
 However, by using fallbacks, the programmer may define operations
-for {\em userdata} values; \see{fallback}.
+for {\em userdata\/} values; \see{fallback}.
 
-The type {\em table} implements \Index{associative arrays},
+The type {\em table\/} implements \Index{associative arrays},
 that is, \Index{arrays} that can be indexed not only with numbers,
 but with any value (except \nil).
 Therefore, this type may be used not only to represent ordinary arrays,
@@ -186,12 +225,12 @@ The form \verb't:f(x)' is syntactic sugar for \verb't.f(t,x)',
 which calls the method \verb'f' from the table \verb't' passing
 itself as the first parameter.
 
-It is important to notice that tables are objects, and not values.
-Variables cannot contain tables, only references to them.
+It is important to notice that tables are {\em objects}, and not values.
+Variables cannot contain tables, only {\em references\/} to them.
 Assignment, parameter passing and returns always manipulate references
 to tables, and do not imply any kind of copy.
 Moreover, tables must be explicitly created before used
-(\see{tableconstructor}).
+\see{tableconstructor}.
 
 
 
@@ -227,13 +266,15 @@ Literal strings can also be delimited by matching \verb'[[ ... ]]'.
 Literals in this bracketed form may run for several lines,
 may contain nested \verb'[[ ... ]]' pairs,
 and do not interpret escape sequences.
+This form is specially convenient for
+handling text that has quoted strings in it.
 
 \Index{Comments} start anywhere outside a string with a
 double hyphen (\verb'--') and run until the end of the line.
 Moreover, if the first line of a chunk file starts with \verb'#',
 this line is skipped%
 \footnote{This facility allows the use of Lua as a script interpreter
-in Unix systems.}.
+in Unix systems \see{lua-sa}.}.
 
 \Index{Numerical constants} may be written with an optional decimal part,
 and an optional decimal exponent.
@@ -245,7 +286,7 @@ Examples of valid numerical constants are:
 
 \subsection{\Index{Coercion}} \label{coercion}
 
-Lua provides some automatic conversions.
+Lua provides some automatic conversions between values.
 Any arithmetic operation applied to a string tries to convert
 that string to a number, following the usual rules.
 Conversely, whenever a number is used when a string is expected,
@@ -254,7 +295,8 @@ if the number is an integer, it is written without exponent or decimal point;
 otherwise, it is formatted following the \verb'%g'
 conversion specification of the \verb'printf' function in the
 standard C library.
-
+For complete control on how numbers are converted to strings,
+use the \verb|format| function \see{format}.
 
 
 \subsection{\Index{Adjustment}} \label{adjust}
@@ -273,15 +315,16 @@ Adjustment occurs in multiple assignment and function calls.
 
 \subsection{Statements}
 
-Lua supports an almost conventional set of \Index{statements}.
+Lua supports an almost conventional set of \Index{statements},
+similar to those in Pascal or C.
 The conventional commands include
 assignment, control structures and procedure calls.
 Non-conventional commands include table constructors
-(Section~\ref{tableconstructor}),
-and local variable declarations (Section~\ref{localvar}).
+\see{tableconstructor},
+and local variable declarations \see{localvar}.
 
 \subsubsection{Blocks}
-A \Index{block} is a list of statements, which is executed sequentially.
+A \Index{block} is a list of statements, which are executed sequentially.
 Any statement can be optionally followed by a semicolon:
 \begin{Produc}
 \produc{block}{\rep{stat sc} \opt{ret}}
@@ -307,8 +350,8 @@ Therefore, it can be used to exchange two values, as in
 \begin{verbatim}
    x, y = y, x
 \end{verbatim}
-Before the assignment, the list of values is {\em adjusted} to
-the length of the list of variables (\see{adjust}).
+Before the assignment, the list of values is {\em adjusted\/} to
+the length of the list of variables \see{adjust}.
 
 A single name can denote a global or a local variable,
 or a formal parameter:
@@ -321,21 +364,21 @@ Square brackets are used to index a table:
 \end{Produc}%
 If \verb'var' results in a table value,
 the field indexed by the expression value gets the assigned value.
-Otherwise, the fallback {\em settable} is called,
+Otherwise, the fallback {\em settable\/} is called,
 with three parameters: the value of \verb'var',
 the value of expression, and the value being assigned to it;
 \see{fallback}.
 
 The syntax \verb'var.NAME' is just syntactic sugar for
-\verb'var["NAME"]'.
+\verb'var["NAME"]':
 \begin{Produc}
 \produc{var}{var \ter{.} name}
 \end{Produc}%
 
 \subsubsection{Control Structures}
-The \Index{condition expression} of a control structure can return any value.
+The \Index{condition expression} of a control structure may return any value.
 All values different from \nil\ are considered true;
-\nil\ is considered false.
+only \nil\ is considered false.
 {\tt if}'s, {\tt while}'s and {\tt repeat}'s have the usual meaning.
 
 \index{while-do}\index{repeat-until}\index{if-then-else}
@@ -361,11 +404,11 @@ function calls can be executed as statements:
 \begin{Produc}
 \produc{stat}{functioncall}
 \end{Produc}%
-Eventual returned values are thrown away.
-Function calls are explained in Section \ref{functioncall}.
+In this case, returned values are thrown away.
+Function calls are explained in Section~\ref{functioncall}.
 
 \subsubsection{Local Declarations} \label{localvar}
-\Index{Local variables} can be declared anywhere inside a block.
+\Index{Local variables} may be declared anywhere inside a block.
 Their scope begins after the declaration and lasts until the
 end of the block.
 The declaration may include an initial assignment:
@@ -397,16 +440,19 @@ Variables are explained in Section~\ref{assignment}.
 \subsubsection{Arithmetic Operators}
 Lua supports the usual \Index{arithmetic operators}.
 These operators are the binary
-\verb'+', \verb'-', \verb'*', \verb'/' and \verb'^' (exponentiation),
-and the unary \verb'-'.
+\verb'+' (addition),
+\verb'-' (subtraction),
+\verb'*' (multiplication),
+\verb'/' (division) and \verb'^' (exponentiation),
+and the unary \verb'-' (negation).
 If the operands are numbers, or strings that can be converted to
-numbers, according to the rules given in Section \ref{coercion},
-then all operations but exponentiation have the usual meaning.
-Otherwise, the fallback ``arith'' is called (\see{fallback}).
+numbers, according to the rules given in Section~\ref{coercion},
+then all operations except exponentiation have the usual meaning.
+Otherwise, the fallback ``arith'' is called \see{fallback}.
 An exponentiation always calls this fallback.
 The standard mathematical library redefines this fallback,
 giving the expected meaning to \Index{exponentiation}
-(\see{mathlib}).
+\see{mathlib}.
 
 \subsubsection{Relational Operators}
 Lua provides the following \Index{relational operators}:
@@ -423,12 +469,18 @@ Numbers and strings are compared in the usual way.
 Tables, CFunctions, and functions are compared by reference,
 that is, two tables are considered equal only if they are the same table.
 The operator \verb'~=' is exactly the negation of equality (\verb'==').
+Note that the conversion rules of Section~\ref{coercion}
+do not apply to equality comparisons.
+Thus, \verb|"0"==0| evaluates to false.
 
 The other operators work as follows.
 If both arguments are numbers, then they are compared as such.
 Otherwise, if both arguments can be converted to strings,
 their values are compared using lexicographical order.
-Otherwise, the ``order'' fallback is called (\see{fallback}).
+Otherwise, the ``order'' fallback is called \see{fallback}.
+%Note that the conversion rules of Section~\ref{coercion}
+%do apply to order operators.
+%Thus, \verb|"2">"12"| evaluates to true.
 
 \subsubsection{Logical Operators}
 Like control structures, all logical operators
@@ -451,8 +503,8 @@ the second operand is evaluated only if necessary.
 Lua offers a string \Index{concatenation} operator,
 denoted by ``\IndexVerb{..}''.
 If operands are strings or numbers, then they are converted to
-strings according to the rules in Section \ref{coercion}.
-Otherwise, the fallback ``concat'' is called (\see{fallback}).
+strings according to the rules in Section~\ref{coercion}.
+Otherwise, the fallback ``concat'' is called \see{fallback}.
 
 \subsubsection{Precedence}
 \Index{Operator precedence} follows the table below,
@@ -484,17 +536,17 @@ The general syntax for constructors is:
 \produc{ffieldlist}{\opt{ffieldlist1}}
 \end{Produc}
 
-The form {\em lfieldlist1} is used to initialize lists.
+The form {\em lfieldlist1\/} is used to initialize lists.
 \begin{Produc}
 \produc{lfieldlist1}{exp \rep{\ter{,} exp} \opt{\ter{,}}}
 \end{Produc}%
-The expressions in the list are assigned to consecutive numerical indexes,
+The expressions in the list are assigned to consecutive numerical indices,
 starting with 1.
 For example:
 \begin{verbatim}
    a = {"v1", "v2", 34}
 \end{verbatim}
-is roughly equivalent to:
+is essentialy equivalent to:
 \begin{verbatim}
    temp = {}
    temp[1] = "v1"
@@ -512,7 +564,7 @@ For example:
 \begin{verbatim}
    a = {x = 1, y = 3}
 \end{verbatim}
-is roughly equivalent to:
+is essentialy equivalent to:
 \begin{verbatim}
    temp = {}
    temp.x = 1    -- or temp["x"] = 1
@@ -527,7 +579,7 @@ A \Index{function call} has the following syntax:
 \produc{functioncall}{var realParams}
 \end{Produc}%
 Here, \verb'var' can be any variable (global, local, indexed, etc).
-If its value has type {\em function\/} or {\em CFunction\/},
+If its value has type {\em function\/} or {\em CFunction},
 then this function is called.
 Otherwise, the ``function'' fallback is called,
 having as first parameter the value of \verb'var',
@@ -552,20 +604,23 @@ except that \verb'var' is evaluated only once.
 \end{Produc}%
 All argument expressions are evaluated before the call;
 then the list of \Index{arguments} is adjusted to
-the length of the list of parameters (\see{adjust});
+the length of the list of parameters \see{adjust};
 finally, this list is assigned to the formal parameters.
 A call of the form \verb'f{...}' is syntactic sugar for
 \verb'f({...})', that is,
 the parameter list is a single new table.
 
 Because a function can return any number of results
-(\see{return}),
+\see{return},
 the number of results must be adjusted before used.
-If the function is called as a statement (\see{funcstat}),
-its return list is adjusted to 0.
+If the function is called as a statement \see{funcstat},
+its return list is adjusted to 0,
+thus discarding all returned values.
 If the function is called in a place that needs a single value
 (syntactically denoted by the non-terminal \verb'exp1'),
-then its return list is adjusted to 1.
+then its return list is adjusted to 1,
+thus discarding all returned values,
+except the first one.
 If the function is called in a place that can hold many values
 (syntactically denoted by the non-terminal \verb'exp'),
 then no adjustment is made.
@@ -585,6 +640,8 @@ all its function bodies are pre-compiled, too.
 Then, when Lua ``executes'' the function definition,
 its body is stored, with type {\em function},
 into the variable \verb'var'.
+It is in this sense that
+a function definition is an assignment to a global variable.
 
 Parameters act as local variables,
 initialized with the argument values.
@@ -592,7 +649,7 @@ initialized with the argument values.
 \produc{parlist1}{name \rep{\ter{,} name}}
 \end{Produc}
 
-Results are returned using the \verb'return' statement (\see{return}).
+Results are returned using the \verb'return' statement \see{return}.
 If control reaches the end of a function without a return instruction,
 then the function returns with no results.
 
@@ -631,9 +688,9 @@ identified by the given strings:
 \begin{description}
 \item[``arith'':]\index{arithmetic fallback}
 called when an arithmetic operation is applied to non numerical operands,
-or when the binary \verb'^' operation is called.
+or when the binary \verb'^' operation (exponentiation) is called.
 It receives three arguments:
-the two operands (the second one is nil when the operation is unary minus)
+the two operands (the second one is \nil\ when the operation is unary minus)
 and one of the following strings describing the offended operator:
 \begin{verbatim}
   add  sub  mul  div  pow  unm
@@ -661,20 +718,20 @@ called when Lua tries to retrieve the value of an index
 not present in a table.
 It receives as arguments the table and the index.
 Its return value is the final result of the indexing operation.
-The default handler returns nil.
+The default handler returns \nil.
 \item[``getglobal'':]\index{index getglobal}
 called when Lua tries to retrieve the value of a global variable
-which has a nil value (or which has not been initialized).
+which has a \nil\ value (or which has not been initialized).
 It receives as argument the name of the variable.
 Its return value is the final result of the expression.
-The default handler returns nil.
+The default handler returns \nil.
 \item[``gettable'':]\index{gettable fallback}
 called when Lua tries to index a non table value.
 It receives as arguments the non table value and the index.
 Its return value is the final result of the indexing operation.
 The default handler issues an error.
 \item[``settable'':]\index{settable fallback}
-called when Lua tries to assign indexed a non table value.
+called when Lua tries to assign to an index in a non table value.
 It receives as arguments the non table value,
 the index, and the assigned value.
 The default handler issues an error.
@@ -687,7 +744,8 @@ The default handler issues an error.
 \item[``gc'':]
 called during garbage collection.
 It receives as argument the table being collected.
-After each run of the collector this function is called with argument nil.
+After each run of the collector this function is called with argument \nil,
+to signal the completion of the garbage collection.
 Because this function operates during garbage collection,
 it must be used with great care,
 and programmers should avoid the creation of new objects
@@ -696,7 +754,8 @@ The default handler does nothing.
 \item[``error'':]\index{error fallback}
 called when an error occurs.
 It receives as argument a string describing the error.
-The default handler prints the message on the standard error output.
+The default handler prints the message on the standard error output
+(\verb|stderr|).
 \end{description}
 
 The function \IndexVerb{setfallback} is used to change a fallback handler.
@@ -704,7 +763,7 @@ Its first argument is the name of a fallback condition,
 and the second argument is the new function to be called.
 It returns the old handler function for the given fallback.
 
-Section \ref{exfallback} shows an example of the use of fallbacks.
+Section~\ref{exfallback} shows an example of the use of fallbacks.
 
 
 \subsection{Error Handling} \label{error}
@@ -712,7 +771,7 @@ Section \ref{exfallback} shows an example of the use of fallbacks.
 Because Lua is an extension language,
 all Lua actions start from C code calling a function from the Lua library.
 Whenever an error occurs during Lua compilation or execution,
-an ``error'' fallback function is called,
+the ``error'' fallback function is called,
 and then the corresponding function from the library
 (\verb'lua_dofile', \verb'lua_dostring',
 \verb'lua_call', or \verb'lua_callfunction')
@@ -721,21 +780,21 @@ is terminated returning an error condition.
 The only argument to the ``error'' fallback function is a string
 describing the error.
 The standard I/O library redefines this fallback,
-using the debug facilities (\see{debugI}),
+using the debug facilities \see{debugI},
 in order to print some extra information,
 like the call stack.
-For more information about an error,
-the Lua program can include the compilation pragma \verb'$debug'.
+To provide more information about errors,
+Lua programs can include the compilation pragma \verb'$debug'.
 \index{debug pragma}\label{pragma}
 This pragma must be written in a line by itself.
 When an error occurs in a program compiled with this option,
-the error routine is able to print also the lines where the calls
+the error routine is able to print the number of the lines where the calls
 (and the error) were made.
 If needed, it is possible to change the ``error'' fallback handler
-(\see{fallback}).
+\see{fallback}.
 
 Lua code can explicitly generate an error by calling the built-in
-function \verb'error' (\see{pdf-error}).
+function \verb'error' \see{pdf-error}.
 
 
 \section{The Application Program Interface}
@@ -750,12 +809,13 @@ The API functions can be classified in the following categories:
 \item manipulating (reading and writing) Lua objects;
 \item calling Lua functions;
 \item C functions to be called by Lua;
-\item references to Lua Objects.
+\item manipulating references to Lua Objects.
 \end{enumerate}
-All API functions are declared in the header file \verb'lua.h'.
+All API functions and related types and constants
+are declared in the header file \verb'lua.h'.
 
 \subsection{Executing Lua Code}
-A host program can execute Lua chunks written in a file or in a string,
+A host program can execute Lua chunks written in a file or in a string
 using the following functions:
 \Deffunc{lua_dofile}\Deffunc{lua_dostring}
 \begin{verbatim}
@@ -766,8 +826,8 @@ Both functions return an error code:
 0, in case of success; non zero, in case of errors.
 More specifically, \verb'lua_dofile' returns 2 if for any reason
 it could not open the file.
-The function \verb'lua_dofile', if called with argument \verb'NULL' (0),
-executes the {\tt stdin} stream.
+The function \verb'lua_dofile', if called with argument \verb'NULL',
+executes the \verb|stdin| stream.
 Function \verb'lua_dofile' is also able to execute pre-compiled chunks.
 It automatically detects whether the file is text or binary,
 and loads it accordingly (see program \IndexVerb{luac}).
@@ -779,14 +839,14 @@ all values passed between Lua and C have type
 which works like an abstract type in C that can hold any Lua value.
 Values of type \verb'lua_Object' have no meaning outside Lua;
 for instance,
-the comparisson of two \verb"lua_Object's" is of no significance.
+the comparisson of two \verb"lua_Object's" is undefined.
 
 Because Lua has automatic memory management and garbage collection,
 a \verb'lua_Object' has a limited scope,
 and is only valid inside the {\em block\/} where it was created.
 A C function called from Lua is a block,
 and its parameters are valid only until its end.
-A good programming practice is to convert Lua objects to C values
+It is good programming practice to convert Lua objects to C values
 as soon as they are available,
 and never to store \verb'lua_Object's in C global variables.
 
@@ -801,6 +861,7 @@ void           lua_endblock             (void);
 \end{verbatim}
 After the end of the block,
 all \verb'lua_Object''s created inside it are released.
+The use of explicit nested blocks is encouraged.
 
 To check the type of a \verb'lua_Object',
 the following function is available:
@@ -824,7 +885,8 @@ int            lua_isuserdata           (lua_Object object);
 All macros return 1 if the object is compatible with the given type,
 and 0 otherwise.
 The function \verb'lua_isnumber' accepts numbers and numerical strings,
-\verb'lua_isstring' accepts strings and numbers (\see{coercion}),
+whereas
+\verb'lua_isstring' accepts strings and numbers \see{coercion},
 and \verb'lua_isfunction' accepts Lua and C functions.
 The function \verb'lua_type' can be used to distinguish between
 different kinds of user data.
@@ -839,13 +901,13 @@ char          *lua_getstring            (lua_Object object);
 lua_CFunction  lua_getcfunction         (lua_Object object);
 void          *lua_getuserdata          (lua_Object object);
 \end{verbatim}
-\verb'lua_getnumber' converts a \verb'lua_Object' to a float.
+\verb'lua_getnumber' converts a \verb'lua_Object' to a floating-point number.
 This \verb'lua_Object' must be a number or a string convertible to number
-(\see{coercion}); otherwise, the function returns 0.
+\see{coercion}; otherwise, the function returns 0.
 
 \verb'lua_getstring' converts a \verb'lua_Object' to a string (\verb'char *').
 This \verb'lua_Object' must be a string or a number;
-otherwise, the function returns 0 (the null pointer).
+otherwise, the function returns 0 (the \verb|NULL| pointer).
 This function does not create a new string, but returns a pointer to
 a string inside the Lua environment.
 Because Lua has garbage collection, there is no guarantee that such
@@ -853,12 +915,12 @@ pointer will be valid after the block ends.
 
 \verb'lua_getcfunction' converts a \verb'lua_Object' to a C function.
 This \verb'lua_Object' must have type {\em CFunction\/};
-otherwise, the function returns 0 (the null pointer).
+otherwise, the function returns 0 (the \verb|NULL| pointer).
 The type \verb'lua_CFunction' is explained in Section~\ref{LuacallC}.
 
 \verb'lua_getuserdata' converts a \verb'lua_Object' to \verb'void*'.
 This \verb'lua_Object' must have type {\em userdata\/};
-otherwise, the function returns 0 (the null pointer).
+otherwise, the function returns 0 (the \verb|NULL| pointer).
 
 The reverse process, that is, passing a specific C value to Lua,
 is done by using the following functions:
@@ -882,7 +944,7 @@ where it can be assigned to a Lua variable,
 passed as parameter to a Lua function, etc. \label{pushing}
 
 User data can have different tags,
-whose semantics are defined by the host program.
+whose semantics are only known to the host program.
 Any positive integer can be used to tag a user datum.
 When a user datum is retrieved,
 the function \verb'lua_type' can be used to get its tag.
@@ -927,29 +989,31 @@ or the index is not present in the table,
 the corresponding fallback is called.
 
 To store a value in an index,
-the program must push onto the stack the table, the index,
-and the value,
+the program must push the table, the index, and the value onto the stack,
 and then call the function:
 \Deffunc{lua_storesubscript}
 \begin{verbatim}
 void lua_storesubscript (void);
 \end{verbatim}
-Again, the corresponding fallback is called if needed.
+Again, the ``settable'' fallback is called if a non-table value is used.
 
 Finally, the function
 \Deffunc{lua_createtable}
 \begin{verbatim}
 lua_Object     lua_createtable          (void);
 \end{verbatim}
-creates and returns a new table.
+creates and returns a new, empty table.
 
-{\em Please Notice:\/}
+\begin{quotation}
+\noindent
+{\em Please note\/}:
 Most functions from the Lua library receive parameters through Lua's stack.
 Because other functions also use this stack,
 it is important that these
 parameters be pushed just before the corresponding call,
 without intermediate calls to the Lua library.
-For instance, suppose the user wants the value of \verb'a[i]'.
+For instance, suppose the user wants the value of \verb'a[i]',
+where \verb'a' and \verb'i' are global Lua variables.
 A simplistic solution would be:
 \begin{verbatim}
   /* Warning: WRONG CODE */
@@ -958,7 +1022,8 @@ A simplistic solution would be:
   lua_pushobject(lua_getglobal("i"));  /* push index */
   result = lua_getsubscript();
 \end{verbatim}
-However, the call \verb'lua_getglobal("i")' modifies the stack,
+This code is incorrect because
+the call \verb'lua_getglobal("i")' modifies the stack,
 and invalidates the previous pushed value.
 A correct solution could be:
 \begin{verbatim}
@@ -968,17 +1033,18 @@ A correct solution could be:
   lua_pushobject(index);               /* push index */
   result = lua_getsubscript();
 \end{verbatim}
-The functions \verb|lua_getnumber|, \verb|lua_getstring|,
- \verb|lua_getuserdata|, and \verb|lua_getcfunction|,
+The functions {\em lua\_getnumber}, {\em lua\_getstring},
+{\em lua\_getuserdata}, and {\em lua\_getcfunction},
 plus the family \verb|lua_is*|,
 are safe to be called without modifying the stack.
+\end{quotation}
 
 \subsection{Calling Lua Functions}
 Functions defined in Lua by a chunk executed with
 \verb'dofile' or \verb'dostring' can be called from the host program.
 This is done using the following protocol:
 first, the arguments to the function are pushed onto the Lua stack
-(\see{pushing}), in direct order, i.e., the first argument is pushed first.
+\see{pushing}, in direct order, i.e., the first argument is pushed first.
 Again, it is important to emphasize that, during this phase,
 no other Lua function can be called.
 
@@ -1012,20 +1078,21 @@ void lua_error (char *message);
 \end{verbatim}
 This function never returns.
 If the C function has been called from Lua,
-the corresponding Lua execution terminates,
+then the corresponding Lua execution terminates,
 as if an error had occurred inside Lua code.
-Otherwise, the whole program terminates.
+Otherwise, the whole program terminates with a call to \verb|exit(1)|.
+%%LHF: proponho lua_error(char* m, int rc), gerando exit(rc)
 
 Fallbacks can be changed with:
 \Deffunc{lua_setfallback}
 \begin{verbatim}
 lua_Object lua_setfallback (char *name, lua_CFunction fallback);
 \end{verbatim}
-The first parameter is the fallback name,
-and the second a CFunction to be used as the new fallback.
+The first parameter is the fallback name \see{fallback},
+and the second is a CFunction to be used as the new fallback.
 This function returns a \verb'lua_Object',
 which is the old fallback value,
-or \nil\ on fail (invalid fallback name).
+or \nil\ on failure (invalid fallback name).
 This old value can be used for chaining fallbacks.
 
 An example of C code calling a Lua function is shown in
@@ -1066,9 +1133,11 @@ this function returns
 \verb'LUA_NOOBJECT'\Deffunc{LUA_NOOBJECT}.
 In this way, it is possible to write functions that work with
 a variable number of parameters.
+The funcion \verb|lua_getparam| can be called in any order,
+and many times for the same index.
 
 To return values, a C function just pushes them onto the stack,
-in direct order (\see{valuesCLua}).
+in direct order \see{valuesCLua}.
 Like a Lua function, a C function called by Lua can also return
 many results.
 
@@ -1093,8 +1162,8 @@ void           lua_unref (int ref);
 The function \verb'lua_ref' creates a reference
 to the object that is on the top of the stack,
 and returns this reference.
-If \verb'lock' is true, the object is {\em locked}:
-that means the object will not be garbage collected.
+If \verb'lock' is true, the object is {\em locked\/}:
+this means the object will not be garbage collected.
 Notice that an unlocked reference may be garbage collected.
 Whenever the referenced object is needed,
 a call to \verb'lua_getref'
@@ -1112,7 +1181,7 @@ it can be freed with a call to \verb'lua_unref'.
 \section{Predefined Functions and Libraries}
 
 The set of \Index{predefined functions} in Lua is small but powerful.
-Most of them provide features that allows some degree of
+Most of them provide features that allow some degree of
 \Index{reflexivity} in the language.
 Some of these features cannot be simulated with the rest of the
 Language nor with the standard Lua API.
@@ -1121,11 +1190,11 @@ Others are just convenient interfaces to common API functions.
 The libraries, on the other hand, provide useful routines
 that are implemented directly through the standard API.
 Therefore, they are not necessary to the language,
-and are provided as separated C modules.
+and are provided as separate C modules.
 Currently there are three standard libraries:
 \begin{itemize}
 \item string manipulation;
-\item mathematical functions (sin, cos, etc);
+\item mathematical functions (sin, log, etc);
 \item input and output (plus some system facilities).
 \end{itemize}
 In order to have access to these libraries,
@@ -1146,12 +1215,14 @@ If there is any error executing the file, it returns \nil.
 Otherwise, it returns the values returned by the chunk,
 or a non \nil\ value if the chunk returns no values.
 It issues an error when called with a non string argument.
+\verb|dofile| is simply an interface to \verb|lua_dofile|.
 
 \subsubsection*{\ff{\tt dostring (string)}}\Deffunc{dostring}
 This function executes a given string as a Lua chunk.
 If there is any error executing the string, it returns \nil.
 Otherwise, it returns the values returned by the chunk,
 or a non \nil\ value if the chunk returns no values.
+\verb|dostring| is simply an interface to \verb|lua_dostring|.
 
 \subsubsection*{\ff{\tt next (table, index)}}\Deffunc{next}
 This function allows a program to traverse all fields of a table.
@@ -1164,15 +1235,16 @@ the function returns the first index
 of the table (and its associated value).
 When called with the last index, or with \nil\ in an empty table,
 it returns \nil.
+This function cannot be written with the standard API.
 
 In Lua there is no declaration of fields;
 semantically, there is no difference between a
 field not present in a table or a field with value \nil.
-Therefore, the function only considers fields with non nil values.
-The order the indices are enumerated is not specified,
+Therefore, the function only considers fields with non \nil\ values.
+The order in which the indices are enumerated is not specified,
 {\em even for numeric indices}.
 
-See Section \ref{exnext} for an example of the use of this function.
+See Section~\ref{exnext} for an example of the use of this function.
 
 \subsubsection*{\ff{\tt nextvar (name)}}\Deffunc{nextvar}
 This function is similar to the function \verb'next',
@@ -1182,7 +1254,8 @@ or \nil\ to get a first name.
 Similarly to \verb'next', it returns the name of another variable
 and its value,
 or \nil\ if there are no more variables.
-See Section \ref{exnext} for an example of the use of this function.
+See Section~\ref{exnext} for an example of the use of this function.
+This function cannot be written with the standard API.
 
 \subsubsection*{\ff{\tt tostring (e)}}\Deffunc{tostring}
 This function receives an argument of any type and
@@ -1201,7 +1274,7 @@ See Section~\ref{libio} for functions for formatted output.
 This function receives one argument,
 and tries to convert it to a number.
 If the argument is already a number or a string convertible
-to a number (\see{coercion}), then it returns that number;
+to a number \see{coercion}, then it returns that number;
 otherwise, it returns \nil.
 
 \subsubsection*{\ff{\tt type (v)}}\Deffunc{type}
@@ -1221,6 +1294,8 @@ This tag can be used to distinguish between user
 data with different tags,
 and between C functions and Lua functions.
 
+\verb|type| is simply an interface to \verb|lua_type|.
+
 \subsubsection*{\ff{\tt assert (v)}}\Deffunc{assert}
 This function issues an {\em ``assertion failed!''} error
 when its argument is \nil.
@@ -1230,6 +1305,7 @@ This function issues an error message and terminates
 the last called function from the library
 (\verb'lua_dofile', \verb'lua_dostring', \ldots).
 It never returns.
+\verb|error| is simply an interface to \verb|lua_error|.
 
 \subsubsection*{\ff{\tt setglobal (name, value)}}\Deffunc{setglobal}
 This function assigns the given value to a global variable.
@@ -1237,6 +1313,7 @@ The string \verb'name' does not need to be a syntactically valid variable name.
 Therefore, this function can set global variables with strange names like
 \verb|`m v 1'| or \verb'34'.
 It returns the value of its second argument.
+\verb|setglobal| is simply an interface to \verb|lua_storeglobal|.
 
 \subsubsection*{\ff{\tt getglobal (name)}}\Deffunc{getglobal}
 This function retrieves the value of a global variable.
@@ -1246,20 +1323,22 @@ The string \verb'name' does not need to be a syntactically valid variable name.
 \Deffunc{setfallback}
 This function sets a new fallback function to the given fallback.
 It returns the old fallback function.
+\verb|setfallback| is simply an interface to \verb|lua_setfallback|.
 
 \subsection{String Manipulation}
 This library provides generic functions for string manipulation,
 such as finding and extracting substrings and pattern matching.
-When indexing a string, the first character has position 1.
-See Page~\pageref{pm} for an explanation about patterns,
+When indexing a string, the first character is at position 1,
+not 0, as in C.
+See page~\pageref{pm} for an explanation about patterns,
 and Section~\ref{exstring} for some examples on string manipulation
 in Lua.
 
 \subsubsection*{\ff{\tt strfind (str, pattern [, init [, plain]])}}
 \Deffunc{strfind}
-This function looks for the first {\em match} of
+This function looks for the first {\em match\/} of
 \verb-pattern- in \verb-str-.
-If it finds one, it returns the indexes on \verb-str-
+If it finds one, then it returns the indices on \verb-str-
 where this occurence starts and ends;
 otherwise, it returns \nil.
 If the pattern specifies captures,
@@ -1298,7 +1377,7 @@ Returns a string which is the concatenation of \verb-n- copies of
 the string \verb-s-.
 
 \subsubsection*{\ff{\tt ascii (s [, i])}}\Deffunc{ascii}
-Returns the ascii code of the character \verb's[i]'.
+Returns the ASCII code of the character \verb's[i]'.
 If \verb'i' is absent, then it is assumed to be 1.
 
 \subsubsection*{\ff{\tt format (formatstring, e1, e2, \ldots)}}\Deffunc{format}
@@ -1331,6 +1410,10 @@ The options \verb'c', \verb'd', \verb'E', \verb'e', \verb'f',
 \verb'g' \verb'i', \verb'o', \verb'u', \verb'X', and \verb'x' all
 expect a number as argument,
 whereas \verb'q' and \verb's' expect a string.
+Note that the \verb'*' modifier can be simulated by building
+the appropriate format string.
+For example, \verb|"%*g"| can be simulated with
+\verb|"%"..width.."g"|.
 
 \subsubsection*{\ff{\tt gsub (s, pat, repl [, n])}}\Deffunc{gsub}
 Returns a copy of \verb-s-,
@@ -1339,15 +1422,16 @@ replaced by a replacement string specified by \verb-repl-.
 This function also returns, as a second value,
 the total number of substitutions made.
 
-If \verb-repl- is a string, its value is used for replacement.
+If \verb-repl- is a string, then its value is used for replacement.
 Any sequence in \verb-repl- of the form \verb-%n-
 with \verb-n- between 1 and 9
 stands for the value of the n-th captured substring.
 
-If \verb-repl- is a function, this function is called every time a
-match occurs, with all captured substrings as parameters.
+If \verb-repl- is a function, then this function is called every time a
+match occurs, with all captured substrings as parameters
+(see below).
 If the value returned by this function is a string,
-it is used as the replacement string;
+then it is used as the replacement string;
 otherwise, the replacement string is the empty string.
 
 An optional parameter \verb-n- limits 
@@ -1356,13 +1440,13 @@ For instance, when \verb-n- is 1 only the first occurrence of
 \verb-pat- is replaced.
 
 As an example, in the following expression each occurrence of the form
-\verb-$name$- calls the function \verb|getenv|,
+\verb-$name- calls the function \verb|getenv|,
 passing \verb|name| as argument
 (because only this part of the pattern is captured).
 The value returned by \verb|getenv| will replace the pattern.
 Therefore, the whole expression:
 \begin{verbatim}
-  gsub("home = $HOME$, user = $USER$", "$(%w%w*)$", getenv)
+  gsub("home = $HOME, user = $USER", "$(%w%w*)", getenv)
 \end{verbatim}
 may return the string:
 \begin{verbatim}
@@ -1392,6 +1476,7 @@ The following combinations are allowed in describing a character class:
 \item[{\tt \%W}] --- represents all non alphanumeric characters.
 \item[{\tt \%\em x}] (where {\em x} is any non alphanumeric character)  ---
 represents the character {\em x}.
+This is the standard way to escape the magic characters \verb'()%.[*?'.
 \item[{\tt [char-set]}] --- 
 Represents the class which is the union of all
 characters in char-set.
@@ -1419,7 +1504,8 @@ A character class followed by \verb'?' matches 0 or one occurrence
 of a character in the class.
 A pattern item may also has the form \verb'%n',
 for \verb-n- between 1 and 9;
-such item matches a sub-string equal to the n-th captured string.
+such item matches a sub-string equal to the n-th captured string
+(see below).
 
 \paragraph{Pattern:}
 a \Def{pattern} is a sequence of pattern items.
@@ -1433,14 +1519,18 @@ end of the subject string.
 A pattern may contain sub-patterns enclosed in parentheses,
 that describe \Def{captures}.
 When a match succeeds, the sub-strings of the subject string
-that match captures are {\em captured} for future use.
+that match captures are {\em captured\/} for future use.
 Captures are numbered according to their left parentheses.
+For instance, in the pattern \verb|"(a*(.)%w(%s*))"|,
+the capture \verb|"(a*(.)%w(%s*))"| has number 1
+(and therefore is the first capture),
+\verb|(.)| has number 2, and \verb|(%s*)| has number 3.
 
 \subsection{Mathematical Functions} \label{mathlib}
 
 This library is an interface to some functions of the standard C math library.
-Moreover, it registers a fallback for the binary operator \verb'^' which,
-when applied to numbers \verb'x^y', returns $x^y$.
+In addition, it registers a fallback for the binary operator \verb'^' that,
+returns $x^y$ when applied to numbers \verb'x^y'.
 
 The library provides the following functions:
 \Deffunc{abs}\Deffunc{acos}\Deffunc{asin}\Deffunc{atan}
@@ -1450,12 +1540,12 @@ The library provides the following functions:
 \Deffunc{random}\Deffunc{randomseed}
 \begin{verbatim}
 abs acos asin atan atan2 ceil cos floor log log10
-max min  mod  sin  sqrt tan random randomseed
+max min  mod  sin  sqrt  tan  random randomseed
 \end{verbatim}
 Most of them
 are only interfaces to the homonymous functions in the C library,
 except that, for the trigonometric functions,
-all angles are expressed in degrees, not radians.
+all angles are expressed in {\em degrees}, not radians.
 
 The function \verb'max' returns the maximum
 value of its numeric arguments.
@@ -1471,7 +1561,7 @@ $[0,1)$.
 
 \subsection{I/O Facilities} \label{libio}
 
-All I/O operations in Lua are done over two {\em current} files:
+All input and outpu operations in Lua are done over two {\em current\/} files:
 one for reading and one for writing.
 Initially, the current input file is \verb'stdin',
 and the current output file is \verb'stdout'.
@@ -1485,9 +1575,10 @@ some value different from \nil\ on success.
 This function may be called in three ways.
 When called with a file name,
 it opens the named file,
-sets it as the {\em current} input file,
-and returns a {\em handle} to the file
-(this handle is a user data containing the file stream \verb|FILE *|).
+sets it as the {\em current\/} input file,
+and returns a {\em handle\/} to the file
+(this handle is a user data containing the file stream \verb|FILE*|).
+It does not close the current input file.
 When called with a file handle, returned by a previous call,
 it restores the file as the current input.
 When called without parameters,
@@ -1497,36 +1588,52 @@ and restores \verb'stdin' as the current input file.
 If this function fails, it returns \nil,
 plus a string describing the error.
 
-{\em System dependent:} if \verb'filename' starts with a \verb'|',
+\begin{quotation}
+\noindent
+{\em System dependent\/}: if \verb'filename' starts with a \verb'|',
 then a \Index{piped input} is open, via function \IndexVerb{popen}.
+Not all systems implement pipes.
+Moreover,
+the number of files that can be open at the same time is usually limited and
+depends on the system.
+\end{quotation}
 
 \subsubsection*{\ff{\tt writeto (filename)}}\Deffunc{writeto}
 
 This function may be called in three ways.
 When called with a file name,
 it opens the named file,
-sets it as the {\em current} output file,
-and returns a {\em handle} to the file
-(this handle is a user data containing the file stream \verb|FILE *|).
+sets it as the {\em current\/} output file,
+and returns a {\em handle\/} to the file
+(this handle is a user data containing the file stream \verb|FILE*|).
+It does not close the current output file.
 Notice that, if the file already exists,
-it will be {\em completely erased} with this operation.
+it will be {\em completely erased\/} with this operation.
 When called with a file handle, returned by a previous call,
 it restores the file as the current output.
 When called without parameters,
 this function closes the current output file,
 and restores \verb'stdout' as the current output file.
 \index{closing a file}
+%%LHF: nao tem como escrever em stderr, tem?
 
 If this function fails, it returns \nil,
 plus a string describing the error.
 
-{\em System dependent:} if \verb'filename' starts with a \verb'|',
+\begin{quotation}
+\noindent
+{\em System dependent\/}: if \verb'filename' starts with a \verb'|',
 then a \Index{piped output} is open, via function \IndexVerb{popen}.
+Not all systems implement pipes.
+Moreover,
+the number of files that can be open at the same time is usually limited and
+depends on the system.
+\end{quotation}
 
 \subsubsection*{\ff{\tt appendto (filename)}}\Deffunc{appendto}
 
 This function opens a file named \verb'filename' and sets it as the
-{\em current} output file.
+{\em current\/} output file.
 It returns the file handle,
 or \nil\ in case of error.
 Unlike the \verb'writeto' operation,
@@ -1534,7 +1641,7 @@ this function does not erase any previous content of the file.
 If this function fails, it returns \nil,
 plus a string describing the error.
 
-Notice that function \verb|writeto| is available to close a file.
+Notice that function \verb|writeto| is available to close an output file.
 
 \subsubsection*{\ff{\tt remove (filename)}}\Deffunc{remove}
 
@@ -1544,7 +1651,7 @@ plus a string describing the error.
 
 \subsubsection*{\ff{\tt rename (name1, name2)}}\Deffunc{rename}
 
-This function renames file \verb'name1' to \verb'name2'.
+This function renames file named \verb'name1' to \verb'name2'.
 If this function fails, it returns \nil,
 plus a string describing the error.
 
@@ -1560,6 +1667,7 @@ according to a read pattern, that specifies how much to read;
 characters are read from the current input file until
 the read pattern fails or ends.
 The function \verb|read| returns a string with the characters read,
+even if the pattern succeeds only partially,
 or \nil\ if the read pattern fails {\em and\/}
 the result string would be empty.
 When called without parameters,
@@ -1580,7 +1688,9 @@ since it can match a sequence of zero characteres, it never fails.%
 \footnote{
 Notice that this behaviour is different from regular pattern matching,
 where a \verb'*' expands to the maximum length {\em such that\/}
-the rest of the pattern does not fail.}
+the rest of the pattern does not fail.
+Therefore, there is no need for backtracking the reading.
+}
 
 A pattern item may contain sub-patterns enclosed in curly brackets,
 that describe \Def{skips}.
@@ -1606,6 +1716,8 @@ or \nil\ if the next characters do not conform to an integer format.
 This function writes the value of each of its arguments to the
 current output file.
 The arguments must be strings or numbers.
+To write other values,
+use \verb|tostring| before \verb|write|.
 If this function fails, it returns \nil,
 plus a string describing the error.
 
@@ -1615,13 +1727,15 @@ This function returns a string containing date and time
 formatted according to the given string \verb'format',
 following the same rules of the ANSI C function \verb'strftime'.
 When called without arguments,
-it returns a reasonable date and time representation.
+it returns a reasonable date and time representation that depends on
+the host system.
 
 \subsubsection*{\ff{\tt exit ([code])}}\Deffunc{exit}
 
 This function calls the C function \verb-exit-,
 with an optional \verb-code-,
 to terminate the program.
+The default value for \verb-code- is 1.
 
 \subsubsection*{\ff{\tt getenv (varname)}}\Deffunc{getenv}
 
@@ -1631,13 +1745,13 @@ or \nil\ if the variable is not defined.
 \subsubsection*{\ff{\tt execute (command)}}\Deffunc{execute}
 
 This function is equivalent to the C function \verb|system|.
-It passes \verb|command| to be executed by an Operating System Shell.
-It returns an error code, which is implementation-defined.
+It passes \verb|command| to be executed by an operating system shell.
+It returns an error code, which is system-dependent.
 
 
 \section{The Debugger Interface} \label{debugI}
 
-Lua has no built-in debugger facilities.
+Lua has no built-in debugging facilities.
 Instead, it offers a special interface,
 by means of functions and {\em hooks},
 which allows the construction of different
@@ -1663,7 +1777,8 @@ The type \verb'lua_Function' is just another name
 to \verb'lua_Object'.
 Although, in this library,
 a \verb'lua_Function' can be used wherever a \verb'lua_Object' is required,
-a parameter \verb'lua_Function' accepts only a handle returned by
+when a parameter has type \verb'lua_Function'
+it accepts only a handle returned by
 \verb'lua_stackedfunction'.
 
 Three other functions produce extra information about a function:
@@ -1681,14 +1796,14 @@ then \verb'linedefined' is -1, and \verb'filename' is \verb'"(C)"'.
 
 The function \verb'lua_currentline' gives the current line where
 a given function is executing.
-It only works if the function has been pre-compiled with debug
-information (\see{pragma}).
+It only works if the function has been compiled with debug
+information \see{pragma}.
 When no line information is available, it returns -1.
 
 Function \verb'lua_getobjname' tries to find a reasonable name for
 a given function.
 Because functions in Lua are first class values,
-they do not have a fixed name.
+they do not have a fixed name:
 Some functions may be the value of many global variables,
 while others may be stored only in a table field.
 Function \verb'lua_getobjname' first checks whether the given
@@ -1697,7 +1812,7 @@ If so, it returns the string \verb'"fallback"',
 and \verb'name' is set to point to the fallback name.
 Otherwise, if the given function is the value of a global variable,
 then \verb'lua_getobjname' returns the string \verb'"global"',
-while \verb'name' points to the variable name.
+and \verb'name' points to the variable name.
 If the given function is neither a fallback nor a global variable,
 then \verb'lua_getobjname' returns the empty string,
 and \verb'name' is set to \verb'NULL'.
@@ -1706,13 +1821,13 @@ and \verb'name' is set to \verb'NULL'.
 
 The following functions allow the manipulation of the
 local variables of a given activation record.
-They only work if the function has been pre-compiled with debug
-information (\see{pragma}).
+They only work if the function has been compiled with debug
+information \see{pragma}.
 \begin{verbatim}
 lua_Object lua_getlocal (lua_Function func, int local_number, char **name);
 int lua_setlocal (lua_Function func, int local_number);
 \end{verbatim}
-The first one returns the value of a local variable,
+\verb|lua_getlocal| returns the value of a local variable,
 and sets \verb'name' to point to the variable name.
 \verb'local_number' is an index for local variables.
 The first parameter has index 1, and so on, until the
@@ -1721,10 +1836,12 @@ When called with a \verb'local_number' greater than the
 number of active local variables,
 or if the activation record has no debug information,
 \verb'lua_getlocal' returns \verb'LUA_NOOBJECT'.
+Formal parameters are the first local variables.
 
 The function \verb'lua_setlocal' sets the local variable
+%%LHF: please, lua_setglobal!
 \verb'local_number' to the value previously pushed on the stack
-(\see{valuesCLua}).
+\see{valuesCLua}.
 If the function succeeds, then it returns 1.
 If \verb'local_number' is greater than the number
 of active local variables,
@@ -1756,9 +1873,9 @@ Its only parameter is the line number
 (the same information which is provided by the call
 \verb'lua_currentline(lua_stackedfunction(0))').
 This second hook is only called if the active function
-has been pre-compiled with debug information (\see{pragma}).
+has been compiled with debug information \see{pragma}.
 
-A hook is disabled when its value is NULL (0),
+A hook is disabled when its value is \verb|NULL|,
 which is the initial value of both hooks.
 
 
@@ -2008,8 +2125,7 @@ void Index (void)
   {
     lua_pushobject(parent);
     lua_pushobject(index);
-    /* return result from getsubscript */
-    lua_pushobject(lua_getsubscript());
+    lua_pushobject(lua_getsubscript()); /* return result from getsubscript */
   }
   else
     callOldFallback(table, index);
@@ -2033,7 +2149,7 @@ There are many different ways to do object-oriented programming in Lua.
 This section presents one possible way to
 implement classes,
 using the inheritance mechanism presented above.
-{\em Please notice: the following examples only work
+{\em Please note: the following examples only work
 with the index fallback redefined according to
 Section~\ref{exfallback}}.
 
@@ -2194,7 +2310,7 @@ void remove_blanks (char *s)
 \end{verbatim}
 
 
-\section{\Index{Lua Stand-alone}}
+\section{\Index{Lua Stand-alone}} \label{lua-sa}
 
 Although Lua has been designed as an extension language,
 the language can also be used as a stand-alone interpreter.
@@ -2210,7 +2326,7 @@ until an \verb|EOF|.
 \item[{\tt var=exp}] executes \verb|var=exp| as a Lua chunk.
 \item[{\tt filename}] executes file \verb|filename| as a Lua chunk.
 \end{description}
-All arguments are handle in order.
+All arguments are handled in order.
 For instance, an invocation like
 \begin{verbatim}
 $ lua - a=1 prog.lua
@@ -2225,10 +2341,11 @@ For instance, a call like
 \begin{verbatim}
 $ lua a="name" prog.lua
 \end{verbatim}
-will {\em not} set \verb|a| to the string \verb|"name"|.
+will {\em not\/} set \verb|a| to the string \verb|"name"|.
 Instead, the quotes will be handled by the shell,
 lua will get only \verb'a=name' to run,
-and \verb'a' will finish with \nil.
+and \verb'a' will finish with \nil,
+because the global variable \verb|name| has not been initialized.
 Instead, one should write
 \begin{verbatim}
 $ lua 'a="name"' prog.lua
@@ -2241,7 +2358,7 @@ jointly with \tecgraf, used extensively early versions of
 this system and gave valuable comments.
 The authors would also like to thank Carlos Henrique Levy,
 who found the name of the game.
-Lua means {\em moon} in Portuguese.
+Lua means {\em moon\/} in Portuguese.
 
 
 
@@ -2256,7 +2373,7 @@ Here is a list of all these incompatibilities.
 
 \subsection*{Incompatibilities with \Index{version 2.4}}
 The whole I/O facilities have been rewritten.
-We strongly encourage programmers to addapt their code
+We strongly encourage programmers to adapt their code
 to this new version.
 However, we are keeping the old version of the libraries
 in the distribution,
@@ -2266,12 +2383,12 @@ The incompatibilities between the new and the old libraries are:
 \item The format facility of function \verb'write' has been supersed by
 function \verb'format';
 therefore this facility has been dropped.
-\item Function \verb'read' now uses {\em read patterns} to specify
+\item Function \verb'read' now uses {\em read patterns\/} to specify
 what to read;
 this is incompatible with the old format options.
 \item Function \verb'strfind' now accepts patterns,
 so it may have a different behavior when the pattern includes
-special characteres.
+special characters.
 \end{itemize}
 
 \subsection*{Incompatibilities with \Index{version 2.2}}
@@ -2341,7 +2458,7 @@ int lua_storesubscript (void);
 with the parameters explicitly pushed on the stack.
 \item
 The functionality of the function \verb'lua_errorfunction' has been
-replaced by the {\em fallback} mechanism (\see{error}).
+replaced by the {\em fallback\/} mechanism \see{error}.
 \item
 When calling a function from the Lua library,
 parameters passed through the stack
