@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.88 2000/08/28 17:57:04 roberto Exp roberto $
+** $Id: lapi.c,v 1.89 2000/08/29 14:52:27 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -43,6 +43,10 @@ TObject *luaA_index (lua_State *L, int index) {
 void luaA_pushobject (lua_State *L, const TObject *o) {
   *L->top = *o;
   incr_top;
+}
+
+int lua_stackspace (lua_State *L) {
+  return (L->stack_last - L->top);
 }
 
 

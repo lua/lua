@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.46 2000/08/09 19:16:57 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.47 2000/08/28 17:57:04 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -400,6 +400,7 @@ static const char *lmemfind (const char *s1, size_t l1,
 
 static int push_captures (lua_State *L, struct Capture *cap) {
   int i;
+  luaL_checkstack(L, cap->level, "too many captures");
   for (i=0; i<cap->level; i++) {
     int l = cap->capture[i].len;
     if (l == -1) lua_error(L, "unfinished capture");

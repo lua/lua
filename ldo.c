@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.89 2000/08/29 14:57:23 roberto Exp roberto $
+** $Id: ldo.c,v 1.90 2000/08/29 19:01:34 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -53,14 +53,8 @@ void luaD_checkstack (lua_State *L, int n) {
       lua_error(L, "BAD STACK OVERFLOW! DATA CORRUPTED!");
     }
     else {
-      lua_Debug dummy;
       L->stack_last += EXTRA_STACK;  /* to be used by error message */
-      if (lua_getstack(L, L->stacksize/SLOTS_PER_F, &dummy) == 0) {
-        /* too few funcs on stack: doesn't look like a recursion loop */
-        lua_error(L, "Lua2C - C2Lua overflow");
-      }
-      else
-        lua_error(L, "stack overflow; possible recursion loop");
+      lua_error(L, "stack overflow");
     }
   }
 }
@@ -140,7 +134,7 @@ static StkId callCclosure (lua_State *L, const struct Closure *cl, StkId base) {
   StkId old_Cbase = L->Cbase;
   int n;
   L->Cbase = base;       /* new base for C function */
-  luaD_checkstack(L, nup);
+  luaD_checkstack(L, nup+LUA_MINSTACK);  /* assures minimum stack size */
   for (n=0; n<nup; n++)  /* copy upvalues as extra arguments */
     *(L->top++) = cl->upvalue[n];
   n = (*cl->f.c)(L);  /* do the actual call */

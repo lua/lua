@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.31 2000/08/28 17:57:04 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.32 2000/08/29 14:33:31 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -46,6 +46,12 @@ static void type_error (lua_State *L, int narg, const char *type_name) {
   if (*rt == 'N') rt = "no value";
   sprintf(buff, "%.10s expected, got %.10s", type_name, rt);
   luaL_argerror(L, narg, buff);
+}
+
+
+void luaL_checkstack (lua_State *L, int space, const char *mes) {
+  if (space > lua_stackspace(L))
+    luaL_verror(L, "stack overflow (%.30s)", mes);
 }
 
 
