@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.203 2002/12/19 11:11:55 roberto Exp roberto $
+** $Id: lparser.c,v 1.204 2003/02/11 10:46:24 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -644,12 +644,14 @@ static void prefixexp (LexState *ls, expdesc *v) {
       singlevar(ls, v, 1);
       return;
     }
+#ifdef LUA_COMPATUPSYNTAX
     case '%': {  /* for compatibility only */
       next(ls);  /* skip `%' */
       singlevar(ls, v, 1);
       check_condition(ls, v->k == VUPVAL, "global upvalues are obsolete");
       return;
     }
+#endif
     default: {
       luaX_syntaxerror(ls, "unexpected symbol");
       return;
