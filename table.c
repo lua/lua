@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.18 1994/11/16 16:03:48 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.19 1994/11/16 17:39:16 roberto Exp $";
 
 #include <string.h>
 
@@ -33,12 +33,8 @@ static Long lua_maxconstant = 0;
 char  		       *lua_file[MAXFILE];
 int      		lua_nfile;
 
-/* Variables to controll garbage collection */
 #define GARBAGE_BLOCK 256
-Word lua_block=GARBAGE_BLOCK; /* when garbage collector will be called */
-Word lua_nentity;   /* counter of new entities (strings and arrays) */
-Word lua_recovered;   /* counter of recovered entities (strings and arrays) */
-
+#define MIN_GARBAGE_BLOCK 10
 
 static void lua_nextvar (void);
 
@@ -168,22 +164,18 @@ void lua_markobject (Object *o)
 */
 void lua_pack (void)
 {
- /* mark stack objects */
- lua_travstack(lua_markobject);
- 
- /* mark symbol table objects */
- lua_travsymbol(lua_markobject);
-
- /* mark locked objects */
- luaI_travlock(lua_markobject);
-
- lua_recovered=0; 
-
- lua_strcollector();
- lua_hashcollector();
-
- lua_nentity = 0;				/* reset counter */
- lua_block=2*lua_block-3*lua_recovered/2U;	/* adapt block size */
+  static int block = GARBAGE_BLOCK; /* when garbage collector will be called */
+  static int nentity = 0;   /* counter of new entities (strings and arrays) */
+  int recovered = 0;
+  if (nentity++ < block) return;
+  lua_travstack(lua_markobject); /* mark stack objects */
+  lua_travsymbol(lua_markobject); /* mark symbol table objects */
+  luaI_travlock(lua_markobject); /* mark locked objects */
+  recovered += lua_strcollector();
+  recovered += lua_hashcollector();
+  nentity = 0;				/* reset counter */
+  block=2*block-3*recovered/2;	/* adapt block size */
+  if (block < MIN_GARBAGE_BLOCK) block = MIN_GARBAGE_BLOCK;
 } 
 
 

@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.6 1994/11/16 17:38:08 roberto Exp roberto $";
+char *rcs_tree="$Id: tree.c,v 1.7 1994/11/16 18:09:11 roberto Exp roberto $";
 
 
 #include <string.h>
@@ -55,14 +55,13 @@ static TreeNode *tree_create (TreeNode **node, char *str)
 
 char *lua_strcreate (char *str) 
 {
-  StringNode *newString = (StringNode *)luaI_malloc(sizeof(StringNode)+
-                                                strlen(str));
+  StringNode *newString;
+  lua_pack();
+  newString = (StringNode *)luaI_malloc(sizeof(StringNode)+strlen(str));
   newString->mark = UNMARKED_STRING;
   strcpy(newString->str, str);
   newString->next = string_root;
   string_root = newString;
-  if (lua_nentity == lua_block) lua_pack ();
-  lua_nentity++;
   return newString->str;
 }
 
@@ -77,9 +76,10 @@ TreeNode *lua_constcreate (char *str)
 ** Garbage collection function.
 ** This function traverse the string list freeing unindexed strings
 */
-void lua_strcollector (void)
+int lua_strcollector (void)
 {
   StringNode *curr = string_root, *prev = NULL;
+  int counter = 0;
   while (curr)
   {
     StringNode *next = curr->next;
@@ -88,7 +88,7 @@ void lua_strcollector (void)
       if (prev == NULL) string_root = next;
       else prev->next = next;
       luaI_free(curr);
-      ++lua_recovered;
+      ++counter;
     }
     else
     {
@@ -97,6 +97,7 @@ void lua_strcollector (void)
     }
     curr = next;
   }
+  return counter;
 }
 
 /*

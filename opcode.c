@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.12 1994/11/16 16:03:48 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.13 1994/11/16 17:38:08 roberto Exp $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -454,8 +454,8 @@ int lua_storesubscript (void)
 lua_Object lua_createTable (int initSize)
 {
   adjustC(0);
-  tag(top) = LUA_T_ARRAY;
   avalue(top) = lua_createarray(initSize);
+  tag(top) = LUA_T_ARRAY;
   top++;
   CBase++;  /* incorporate object in the stack */
   return Ref(top-1);
@@ -585,8 +585,9 @@ int lua_pushnumber (real n)
 int lua_pushstring (char *s)
 {
  lua_checkstack(top-stack+1);
+ svalue(top) = lua_createstring(s);
  tag(top) = LUA_T_STRING;
- svalue(top++) = lua_createstring(s);
+ top++;
  return 0;
 }
 
@@ -843,8 +844,8 @@ static int lua_execute (Byte *pc, int base)
    {
     CodeWord size;
     get_word(size,pc);
-    tag(top) = LUA_T_ARRAY;
     avalue(top) = lua_createarray(size.w);
+    tag(top) = LUA_T_ARRAY;
     top++;
    }
    break;

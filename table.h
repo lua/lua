@@ -1,7 +1,7 @@
 /*
 ** Module to control static tables
 ** TeCGraf - PUC-Rio
-** $Id: table.h,v 2.5 1994/11/14 21:40:14 roberto Exp roberto $
+** $Id: table.h,v 2.6 1994/11/16 16:03:48 roberto Exp roberto $
 */
 
 #ifndef table_h
@@ -14,10 +14,6 @@ extern char  **lua_constant;
 
 extern char   *lua_file[];
 extern int     lua_nfile;
-
-extern Word    lua_block;
-extern Word    lua_nentity;
-extern Word    lua_recovered;
 
 
 void  lua_initconstant (void);

@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.16 1994/11/14 18:41:15 roberto Exp roberto $";
+char *rcs_hash="$Id: hash.c,v 2.17 1994/11/16 17:38:08 roberto Exp roberto $";
 
 #include "mem.h"
 #include "opcode.h"
@@ -183,9 +183,10 @@ static void call_fallbacks (void)
 ** Garbage collection to arrays
 ** Delete all unmarked arrays.
 */
-void lua_hashcollector (void)
+int lua_hashcollector (void)
 {
  Hash *curr_array = listhead, *prev = NULL;
+ int counter = 0;
  call_fallbacks();
  while (curr_array != NULL)
  {
@@ -195,7 +196,7 @@ void lua_hashcollector (void)
    if (prev == NULL) listhead = next;
    else              prev->next = next;
    hashdelete(curr_array);
-   ++lua_recovered;
+   ++counter;
   }
   else
   {
@@ -204,6 +205,7 @@ void lua_hashcollector (void)
   }
   curr_array = next;
  }
+ return counter;
 }
 
 
@@ -215,10 +217,9 @@ void lua_hashcollector (void)
 */
 Hash *lua_createarray (int nhash)
 {
- Hash *array = hashcreate(nhash);
- if (lua_nentity == lua_block)
-   lua_pack(); 
- lua_nentity++;
+ Hash *array;
+ lua_pack();
+ array = hashcreate(nhash);
  array->next = listhead;
  listhead = array;
  return array;
