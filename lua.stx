@@ -1,11 +1,12 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.5 1994/11/13 14:54:18 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.6 1994/11/14 21:40:14 roberto Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "mem.h"
 #include "opcode.h"
 #include "hash.h"
 #include "inout.h"
@@ -14,7 +15,7 @@ char *rcs_luastx = "$Id: lua.stx,v 3.5 1994/11/13 14:54:18 roberto Exp roberto $
 #include "lua.h"
 
 #ifndef LISTING
-#define LISTING 0
+#define LISTING 1
 #endif
 
 #ifndef CODE_BLOCK
@@ -49,9 +50,7 @@ static void code_byte (Byte c)
  if (pc>maxcurr-2)  /* 1 byte free to code HALT of main code */
  {
   maxcurr *= 2;
-  basepc = (Byte *)realloc(basepc, maxcurr*sizeof(Byte));
-  if (basepc == NULL)
-   lua_error ("not enough memory");
+  basepc = growvector(basepc, maxcurr, Byte);
  }
  basepc[pc++] = c;
 }
@@ -271,10 +270,8 @@ method         : FUNCTION NAME ':' NAME
 body :  '(' parlist ')' block END
 	{
           codereturn();
-	  $$ = calloc (pc, sizeof(Byte));
-	  if ($$ == NULL)
-	    lua_error("not enough memory");
-	  memcpy ($$, basepc, pc*sizeof(Byte));
+	  $$ = newvector(pc, Byte);
+	  memcpy($$, basepc, pc*sizeof(Byte));
 	  funcCode = basepc; maxcode=maxcurr;
 	}
 		;
@@ -283,48 +280,28 @@ statlist : /* empty */
 	 | statlist stat sc
 	 ;
 
-stat	 : { codedebugline(); } stat1 ;
-		
 sc	 : /* empty */ | ';' ;
 
-cond	: { codedebugline(); } expr1 ;
+stat  : { codedebugline(); } stat1 ;
 
-stat1  : IF cond THEN PrepJump block PrepJump elsepart END
-       {
-        {
-	 Long elseinit = $6+sizeof(Word)+1;
-	 if (pc - elseinit == 0)		/* no else */
-	 {
-	  pc -= sizeof(Word)+1;
-	  elseinit = pc;
-	 }
-	 else
-	 {
-	  basepc[$6] = JMP;
-	  code_word_at(basepc+$6+1, pc - elseinit);
-	 }
-	 basepc[$4] = IFFJMP;
-	 code_word_at(basepc+$4+1,elseinit-($4+sizeof(Word)+1));
-	}
-       }
-     
-       | WHILE {$<vLong>$=pc;} cond DO PrepJump block PrepJump END
-     	
+cond  : { codedebugline(); } expr1 ;
+
+stat1  : IF expr1 THEN PrepJump block PrepJump elsepart END
+	{ codeIf($4, $6); }
+
+       | WHILE {$<vLong>$=pc;} expr1 DO PrepJump block PrepJump END
        {
         basepc[$5] = IFFJMP;
 	code_word_at(basepc+$5+1, pc - ($5 + sizeof(Word)+1));
-        
         basepc[$7] = UPJMP;
 	code_word_at(basepc+$7+1, pc - ($<vLong>2));
        }
      
-       | REPEAT {$<vLong>$=pc;} block UNTIL expr1 PrepJump
-     	
+       | REPEAT {$<vLong>$=pc;} block UNTIL cond PrepJump
        {
         basepc[$6] = IFFUPJMP;
 	code_word_at(basepc+$6+1, pc - ($<vLong>2));
        }
-
 
        | varlist1 '=' exprlist1
        {
@@ -338,7 +315,7 @@ stat1  : IF cond THEN PrepJump block PrepJump elsepart END
 	}
        } 
        | functioncall	{ code_byte(0); }
-       | LOCAL localdeclist decinit   
+       | LOCAL localdeclist decinit
 	{ add_nlocalvar($2);
 	  adjust_mult_assign($2, $3, 0);
 	 }
@@ -346,24 +323,8 @@ stat1  : IF cond THEN PrepJump block PrepJump elsepart END
 
 elsepart : /* empty */
 	 | ELSE block
-         | ELSEIF expr1 THEN PrepJump block PrepJump elsepart
-         {
-          {
-  	   Long elseinit = $6+sizeof(Word)+1;
-  	   if (pc - elseinit == 0)		/* no else */
-  	   {
-  	    pc -= sizeof(Word)+1;
-	    elseinit = pc;
-	   }
-	   else
-	   {
-	    basepc[$6] = JMP;
-	    code_word_at(basepc+$6+1, pc - elseinit);
-	   }
-	   basepc[$4] = IFFJMP;
-	   code_word_at(basepc+$4+1, elseinit - ($4 + sizeof(Word)+1));
-	  }  
-         }   
+         | ELSEIF cond THEN PrepJump block PrepJump elsepart
+	{ codeIf($4, $6); }
          ;
      
 block    : {$<vInt>$ = nlocalvar;} statlist ret 
@@ -377,9 +338,8 @@ block    : {$<vInt>$ = nlocalvar;} statlist ret
          ;
 
 ret	: /* empty */
-        | { codedebugline(); }
-          RETURN  exprlist sc 	
-          { 
+        | RETURN { codedebugline(); } exprlist sc
+          {
            if ($3 < 0) code_byte(MULT_RET);
            codereturn();
           }
@@ -642,9 +602,7 @@ static void init_function (TreeNode *func)
 {
  if (funcCode == NULL)	/* first function */
  {
-  funcCode = (Byte *) calloc(CODE_BLOCK, sizeof(Byte));
-  if (funcCode == NULL)
-   lua_error("not enough memory");
+  funcCode = newvector(CODE_BLOCK, Byte);
   maxcode = CODE_BLOCK;
  }
  pc=0; basepc=funcCode; maxcurr=maxcode; 
@@ -730,6 +688,20 @@ static void lua_codestore (int i)
  }
 }
 
+static void codeIf (Long thenAdd, Long elseAdd)
+{
+  Long elseinit = elseAdd+sizeof(Word)+1;
+  if (pc == elseinit)		/* no else */
+    pc -= sizeof(Word)+1;
+  else
+  {
+    basepc[elseAdd] = JMP;
+    code_word_at(basepc+elseAdd+1, pc-elseinit);
+  }
+  basepc[thenAdd] = IFFJMP;
+  code_word_at(basepc+thenAdd+1,elseinit-(thenAdd+sizeof(Word)+1));
+}
+
 void yyerror (char *s)
 {
  static char msg[256];
@@ -750,14 +722,13 @@ int yywrap (void)
 void lua_parse (Byte **code)
 {
  initcode = code;
- *initcode = (Byte *) calloc(CODE_BLOCK, sizeof(Byte));
+ *initcode = newvector(CODE_BLOCK, Byte);
  maincode = 0; 
  maxmain = CODE_BLOCK;
- if (*initcode == NULL) lua_error("not enough memory");
  if (yyparse ()) lua_error("parse error");
  (*initcode)[maincode++] = RETCODE0;
 #if LISTING
-{ static void PrintCode (Byte *code, Byte *end);
+{ static void PrintCode (Byte *c, Byte *end);
  PrintCode(*initcode,*initcode+maincode); }
 #endif
 }
