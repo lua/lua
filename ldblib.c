@@ -18,14 +18,16 @@
 
 
 static void settabss (lua_State *L, const char *i, const char *v) {
+  lua_pushstring(L, i);
   lua_pushstring(L, v);
-  lua_setstr(L, -2, i);
+  lua_rawset(L, -3);
 }
 
 
 static void settabsi (lua_State *L, const char *i, int v) {
+  lua_pushstring(L, i);
   lua_pushnumber(L, v);
-  lua_setstr(L, -2, i);
+  lua_rawset(L, -3);
 }
 
 
@@ -69,8 +71,9 @@ static int getinfo (lua_State *L) {
         settabss(L, "namewhat", ar.namewhat);
         break;
       case 'f':
-        lua_pushvalue(L, -2);
-        lua_setstr(L, -2, "func");
+        lua_pushliteral(L, "func");
+        lua_pushvalue(L, -3);
+        lua_rawset(L, -3);
         break;
     }
   }
@@ -112,7 +115,8 @@ static int setlocal (lua_State *L) {
 
 
 static void hookf (lua_State *L, const char *key) {
-  lua_getstr(L, LUA_REGISTRYINDEX, key);
+  lua_pushstring(L, key);
+  lua_rawget(L, LUA_REGISTRYINDEX);
   if (lua_isfunction(L, -1)) {
     lua_pushvalue(L, -2);  /* original argument (below function) */
     lua_rawcall(L, 1, 0);
@@ -143,9 +147,11 @@ static void sethook (lua_State *L, const char *key, lua_Hook hook,
     (*sethookf)(L, hook);
   else
     luaL_argerror(L, 1, "function expected");
-  lua_getstr(L, LUA_REGISTRYINDEX, key);   /* get old value */
+  lua_pushstring(L, key);
+  lua_rawget(L, LUA_REGISTRYINDEX);   /* get old value */
+  lua_pushstring(L, key);
   lua_pushvalue(L, 1);
-  lua_setstr(L, LUA_REGISTRYINDEX, key);  /* set new value */
+  lua_rawset(L, LUA_REGISTRYINDEX);  /* set new value */
 }
 
 

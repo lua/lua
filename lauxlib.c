@@ -240,8 +240,9 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
   }
   else {  /* no free elements */
     ref = lua_getn(L, t) + 1;  /* use next `n' */
+    lua_pushliteral(L, "n");
     lua_pushnumber(L, ref);
-    lua_setstr(L, t, "n");  /* n = n+1 */
+    lua_rawset(L, t);  /* n = n+1 */
   }
   lua_rawseti(L, t, ref);
   return ref;

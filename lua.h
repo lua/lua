@@ -149,7 +149,6 @@ LUA_API void  lua_pushboolean (lua_State *L, int b);
 /*
 ** get functions (Lua -> stack)
 */
-LUA_API void  lua_getstr (lua_State *L, int index, const char *name);
 LUA_API void  lua_gettable (lua_State *L, int index);
 LUA_API void  lua_rawget (lua_State *L, int index);
 LUA_API void  lua_rawgeti (lua_State *L, int index, int n);
@@ -160,7 +159,6 @@ LUA_API void  lua_getmetatable (lua_State *L, int objindex);
 /*
 ** set functions (stack -> Lua)
 */
-LUA_API void  lua_setstr (lua_State *L, int index, const char *name);
 LUA_API void  lua_settable (lua_State *L, int index);
 LUA_API void  lua_rawset (lua_State *L, int index);
 LUA_API void  lua_rawseti (lua_State *L, int index, int n);
@@ -232,19 +230,21 @@ LUA_API void  lua_newuserdatabox (lua_State *L, void *u);
 #define lua_pushliteral(L, s)	lua_pushlstring(L, "" s, \
                                                 (sizeof(s)/sizeof(char))-1)
 
-#define lua_getregistry(L)	lua_pushvalue(L, LUA_REGISTRYINDEX)
-#define lua_getglobals(L)	lua_pushvalue(L, LUA_GLOBALSINDEX)
-#define lua_setglobals(L)	lua_replace(L, LUA_GLOBALSINDEX)
-#define lua_getglobal(L,s)	lua_getstr(L, LUA_GLOBALSINDEX, s)
-#define lua_setglobal(L,s)	lua_setstr(L, LUA_GLOBALSINDEX, s)
-
-
 
 /*
 ** compatibility macros and functions
 */
 
 LUA_API int lua_pushupvalues (lua_State *L);
+
+#define lua_getregistry(L)	lua_pushvalue(L, LUA_REGISTRYINDEX)
+#define lua_getglobals(L)	lua_pushvalue(L, LUA_GLOBALSINDEX)
+#define lua_setglobals(L)	lua_replace(L, LUA_GLOBALSINDEX)
+#define lua_setglobal(L,s)	\
+   (lua_pushstring(L, s), lua_insert(L, -2), lua_settable(L, LUA_GLOBALSINDEX))
+
+#define lua_getglobal(L,s)	\
+		(lua_pushstring(L, s), lua_gettable(L, LUA_GLOBALSINDEX))
 
 #define lua_isnull	lua_isnone
 

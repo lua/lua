@@ -20,8 +20,9 @@
 
 
 static void aux_setn (lua_State *L, int t, int n) {
+  lua_pushliteral(L, "n");
   lua_pushnumber(L, n);
-  lua_setstr(L, t, "n");
+  lua_rawset(L, t);
 }
 
 
@@ -444,7 +445,8 @@ static int luaB_coroutine (lua_State *L) {
   }
   lua_cobegin(NL, n-1);
   lua_newuserdatabox(L, NL);
-  lua_getstr(L, LUA_REGISTRYINDEX, "Coroutine");
+  lua_pushliteral(L, "Coroutine");
+  lua_rawget(L, LUA_REGISTRYINDEX);
   lua_setmetatable(L, -2);
   lua_pushcclosure(L, luaB_resume, 1);
   return 1;
@@ -700,10 +702,12 @@ LUALIB_API int lua_baselibopen (lua_State *L) {
   lua_pushcclosure(L, luaB_require, 1);
   lua_setglobal(L, "require");
   /* create metatable for coroutines */
+  lua_pushliteral(L, "Coroutine");
   lua_newtable(L);
+  lua_pushliteral(L, "gc");
   lua_pushcfunction(L, gc_coroutine);
-  lua_setstr(L, -2, "gc");
-  lua_setstr(L, LUA_REGISTRYINDEX, "Coroutine");
+  lua_rawset(L, -3);
+  lua_rawset(L, LUA_REGISTRYINDEX);
   return 0;
 }
 

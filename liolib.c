@@ -73,7 +73,8 @@ static int pushresult (lua_State *L, int i) {
 static int checkfile (lua_State *L, int findex, const char *tname) {
   int res;
   lua_getmetatable(L, findex);
-  lua_getstr(L, LUA_REGISTRYINDEX, tname);
+  lua_pushstring(L, tname);
+  lua_rawget(L, LUA_REGISTRYINDEX);
   res = lua_equal(L, -1, -2);
   lua_pop(L, 2);
   return res;
@@ -111,7 +112,8 @@ static FILE *getopthandle (lua_State *L, int inout) {
 
 static void newfile (lua_State *L, FILE *f) {
   lua_newuserdatabox(L, f);
-  lua_getstr(L, LUA_REGISTRYINDEX, FILEHANDLE);
+  lua_pushliteral(L, FILEHANDLE);
+  lua_rawget(L, LUA_REGISTRYINDEX);
   lua_setmetatable(L, -2);
 }
 
@@ -147,7 +149,8 @@ static int io_close (lua_State *L) {
   int status = 1;
   if (f != stdin && f != stdout && f != stderr) {
     lua_settop(L, 1);  /* make sure file is on top */
-    lua_getstr(L, LUA_REGISTRYINDEX, CLOSEDFILEHANDLE);
+    lua_pushliteral(L, CLOSEDFILEHANDLE);
+    lua_rawget(L, LUA_REGISTRYINDEX);
     lua_setmetatable(L, 1);
     status = (CLOSEFILE(L, f) == 0);
   }
@@ -467,14 +470,16 @@ static int io_clock (lua_State *L) {
 */
 
 static void setfield (lua_State *L, const char *key, int value) {
+  lua_pushstring(L, key);
   lua_pushnumber(L, value);
-  lua_setstr(L, -2, key);
+  lua_rawset(L, -3);
 }
 
 
 static int getfield (lua_State *L, const char *key, int d) {
   int res;
-  lua_getstr(L, -1, key);
+  lua_pushstring(L, key);
+  lua_gettable(L, -2);
   if (lua_isnumber(L, -1))
     res = (int)(lua_tonumber(L, -1));
   else {
@@ -693,15 +698,18 @@ static const luaL_reg iolib[] = {
 
 
 LUALIB_API int lua_iolibopen (lua_State *L) {
+  lua_pushliteral(L, FILEHANDLE);
   lua_newtable(L);  /* meta table for FILEHANDLE */
   /* close files when collected */
+  lua_pushliteral(L, "gc");
   lua_pushcfunction(L, file_collect);
-  lua_setstr(L, -2, "gc");
+  lua_rawset(L, -3);
   /* put new metatable into registry */
-  lua_setstr(L, LUA_REGISTRYINDEX, FILEHANDLE);
+  lua_rawset(L, LUA_REGISTRYINDEX);
   /* meta table for CLOSEDFILEHANDLE */
+  lua_pushliteral(L, CLOSEDFILEHANDLE);
   lua_newtable(L);
-  lua_setstr(L, LUA_REGISTRYINDEX, CLOSEDFILEHANDLE);
+  lua_rawset(L, LUA_REGISTRYINDEX);
   luaL_openl(L, iolib);
   /* predefined file handles */
   newfilewithname(L, stdin, basicfiles[INFILE]);
