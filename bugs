@@ -383,9 +383,11 @@ patch = [[
 > }
 > 
 > 
-355a363,366
->   if (L->ci == L->base_ci && nargs >= L->top - L->base)
+355a363,368
+>   if (L->ci == L->base_ci) {
+>     if (nargs >= L->top - L->base)
 >       return resume_error(L, "cannot resume dead coroutine");
+>   }
 >   else if (!(L->ci->state & CI_YIELD))  /* not inside a yield? */
 >     return resume_error(L, "cannot resume non-suspended coroutine");
 ]],
@@ -568,3 +570,28 @@ patch = [[
 
 }
 
+
+Bugs = {
+
+what = [[count hook may be called without being set]],
+
+report = [[Andreas Stenius, 06/10/2003]],
+
+example = [[
+set your hooks with
+
+  lua_sethook(L, my_hook, LUA_MASKLINE | LUA_MASKRET, 1);
+
+(It is weird to use a count > 0 without setting the count hook,
+but it is not wrong.)
+]],
+
+patch = [[
+* lvm.c:
+69c69
+<   if (mask > LUA_MASKLINE) {  /* instruction-hook set? */
+---
+>   if (mask & LUA_MASKCOUNT) {  /* instruction-hook set? */
+]],
+
+}
