@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.87 2001/01/19 13:20:30 roberto Exp roberto $
+** $Id: lobject.h,v 1.88 2001/01/25 16:45:36 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -197,6 +197,11 @@ typedef struct Hash {
 ** themselves
 */
 #define ismarked(x)	((x)->mark != (x))
+
+
+/*
+** "module" operation (size is always a power of 2) */
+#define lmod(s,size)	((int)((s) & ((size)-1)))
 
 
 /*

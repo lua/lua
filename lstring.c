@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.50 2001/01/11 18:59:20 roberto Exp roberto $
+** $Id: lstring.c,v 1.51 2001/01/19 13:20:30 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -14,8 +14,6 @@
 #include "lstate.h"
 #include "lstring.h"
 
-
-#define lmod(s,size)	((int)((s) & ((size)-1)))
 
 
 void luaS_init (lua_State *L) {

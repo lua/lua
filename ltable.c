@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.68 2001/01/26 13:18:00 roberto Exp roberto $
+** $Id: ltable.c,v 1.69 2001/01/26 14:16:35 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -31,9 +31,9 @@
 #define TagDefault LUA_TTABLE
 
 
-#define hashnum(t,n)		(&t->node[(luint32)(lint32)(n)&(t->size-1)])
-#define hashstr(t,str)		(&t->node[(str)->u.s.hash&(t->size-1)])
-#define hashpointer(t,p)	(&t->node[IntPoint(p)&(t->size-1)])
+#define hashnum(t,n)		(&t->node[lmod((luint32)(lint32)(n), t->size)])
+#define hashstr(t,str)		(&t->node[lmod((str)->u.s.hash, t->size)])
+#define hashpointer(t,p)	(&t->node[lmod(IntPoint(p), t->size)])
 
 
 /*
