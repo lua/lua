@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.131 2003/03/24 14:18:42 roberto Exp roberto $
+** $Id: ltable.c,v 1.132 2003/04/03 13:35:34 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -45,9 +45,7 @@
 #define MAXBITS		(BITS_INT-2)
 #endif
 
-/* check whether `x' < 2^MAXBITS */
-#define toobig(x)	((((x)-1) >> MAXBITS) != 0)
-
+#define MAXASIZE	(1 << MAXBITS)
 
 /* function to convert a lua_Number to int (with any rounding method) */
 #ifndef lua_number2int
@@ -116,11 +114,13 @@ Node *luaH_mainposition (const Table *t, const TObject *key) {
 ** returns the index for `key' if `key' is an appropriate key to live in
 ** the array part of the table, -1 otherwise.
 */
-static int arrayindex (const TObject *key) {
+static int arrayindex (const TObject *key, lua_Number lim) {
   if (ttisnumber(key)) {
+    lua_Number n = nvalue(key);
     int k;
-    lua_number2int(k, (nvalue(key)));
-    if (cast(lua_Number, k) == nvalue(key) && k >= 1 && !toobig(k))
+    if (n <= 0 || n > lim) return -1;  /* out of range? */
+    lua_number2int(k, n);
+    if (cast(lua_Number, k) == nvalue(key))
       return k;
   }
   return -1;  /* `key' did not match some condition */
@@ -135,8 +135,8 @@ static int arrayindex (const TObject *key) {
 static int luaH_index (lua_State *L, Table *t, StkId key) {
   int i;
   if (ttisnil(key)) return -1;  /* first iteration */
-  i = arrayindex(key);
-  if (0 <= i && i <= t->sizearray) {  /* is `key' inside array part? */
+  i = arrayindex(key, t->sizearray);
+  if (0 <= i) {  /* is `key' inside array part? */
     return i-1;  /* yes; that's the index (corrected to C) */
   }
   else {
@@ -202,6 +202,7 @@ static void numuse (const Table *t, int *narray, int *nhash) {
   int nums[MAXBITS+1];
   int i, lg;
   int totaluse = 0;
+  lua_Number sizelimit;  /* an upper bound for the array size */
   /* count elements in array part */
   for (i=0, lg=0; lg<=MAXBITS; lg++) {  /* for each slice [2^(lg-1) to 2^lg) */
     int ttlg = twoto(lg);  /* 2^lg */
@@ -221,10 +222,13 @@ static void numuse (const Table *t, int *narray, int *nhash) {
   *narray = totaluse;  /* all previous uses were in array part */
   /* count elements in hash part */
   i = sizenode(t);
+  /* array part cannot be larger than twice the maximum number of elements */
+  sizelimit = cast(lua_Number, totaluse + i) * 2;
+  if (sizelimit >= MAXASIZE) sizelimit = MAXASIZE;
   while (i--) {
     Node *n = &t->node[i];
     if (!ttisnil(gval(n))) {
-      int k = arrayindex(gkey(n));
+      int k = arrayindex(gkey(n), sizelimit);
       if (k >= 0) {  /* is `key' an appropriate array index? */
         nums[luaO_log2(k-1)+1]++;  /* count as such */
         (*narray)++;
