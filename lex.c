@@ -1,5 +1,8 @@
-char *rcs_lex = "$Id: lex.c,v 1.2 1993/12/22 21:39:15 celes Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 1.3 1993/12/28 16:42:29 roberto Exp celes $";
 /*$Log: lex.c,v $
+ * Revision 1.3  1993/12/28  16:42:29  roberto
+ * "include"s de string.h e stdlib.h para evitar warnings
+ *
  * Revision 1.2  1993/12/22  21:39:15  celes
  * Tratamento do token $debug e $nodebug
  *
@@ -187,7 +190,7 @@ int yylex ()
         *yytextLast = 0;
         res = findReserved(yytext);
         if (res) return res;
-        yylval.vWord = lua_findsymbol(yytext);
+        yylval.pChar = yytext;
         return NAME;
       }
    
