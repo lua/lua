@@ -1,17 +1,35 @@
+/*
+** $Id: $
+** Standard I/O (and system) library
+** See Copyright Notice in lua.h
+*/
+
+
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
 #include <stdlib.h>
 #include <errno.h>
 
-#include "lualoc.h"
+#include "lauxlib.h"
 #include "lua.h"
-#include "auxlib.h"
 #include "luadebug.h"
 #include "lualib.h"
 
 
-int lua_tagio;
+#ifndef OLD_ANSI
+#include <locale.h>
+#else
+#define	strcoll(a,b)	strcmp(a,b)
+#define setlocale(a,b)	0
+#define LC_ALL		0
+#define LC_COLLATE	0
+#define LC_CTYPE	0
+#define LC_MONETARY	0
+#define LC_NUMERIC	0
+#define LC_TIME		0
+#define strerror(e)	"O.S. is unable to define the error"
+#endif
 
 
 #ifdef POPEN
@@ -21,6 +39,9 @@ int pclose();
 #define popen(x,y) NULL  /* that is, popen always fails */
 #define pclose(x)  (-1)
 #endif
+
+
+int lua_tagio;
 
 
 static void pushresult (int i)
@@ -144,10 +165,10 @@ static void io_read (void)
       p++;
     }
     else {
-      char *ep = luaL_item_end(p);  /* get what is next */
+      char *ep;  /* get what is next */
       int m;  /* match result */
       if (c == NEED_OTHER) c = getc(f);
-      m = (c == EOF) ? 0 : luaL_singlematch((char)c, p);
+      m = luaI_singlematch((c == EOF) ? 0 : (char)c, p, &ep);
       if (m) {
         if (inskip == 0) luaI_addchar(c);
         c = NEED_OTHER;
@@ -214,7 +235,7 @@ static void io_tmpname (void)
 
 static void io_getenv (void)
 {
-  lua_pushstring(getenv(luaL_check_string(1))); /* if NULL push nil */
+  lua_pushstring(getenv(luaL_check_string(1)));  /* if NULL push nil */
 }
 
 
@@ -240,7 +261,7 @@ static void setloc (void)
   luaL_arg_check(0 <= op && op <= 5, 2, "invalid option");
   lua_pushstring(setlocale(cat[op], luaL_check_string(1)));
 }
- 
+
 
 static void io_exit (void)
 {
@@ -324,7 +345,7 @@ static struct luaL_reg iolib[] = {
 {"print_stack", errorfb}
 };
 
-void iolib_open (void)
+void lua_iolibopen (void)
 {
   lua_tagio = lua_newtag();
   setfile(stdin, "_INPUT");
