@@ -4,7 +4,7 @@
 ** facilities.
 */
 
-char *rcs_inout="$Id: $";
+char *rcs_inout="$Id: inout.c,v 1.1 1993/12/17 18:41:19 celes Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -48,28 +48,12 @@ static int fileinput (void)
 }
 
 /*
-** Function to unget the next character from to input file
-*/
-static void fileunput (int c)
-{
- ungetc (c, fp);
-}
-
-/*
 ** Function to get the next character from the input string
 */
 static int stringinput (void)
 {
  st++;
  return (*(st-1));
-}
-
-/*
-** Function to unget the next character from to input string
-*/
-static void stringunput (int c)
-{
- st--;
 }
 
 /*
@@ -80,7 +64,6 @@ int lua_openfile (char *fn)
 {
  lua_linenumber = 1;
  lua_setinput (fileinput);
- lua_setunput (fileunput);
  fp = fopen (fn, "r");
  if (fp == NULL) return 1;
  if (lua_addfile (fn)) return 1;
@@ -107,7 +90,6 @@ int lua_openstring (char *s)
 {
  lua_linenumber = 1;
  lua_setinput (stringinput);
- lua_setunput (stringunput);
  st = s;
  {
   char sn[64];

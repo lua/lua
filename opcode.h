@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: $
+** $Id: opcode.h,v 1.1 1993/12/17 18:41:19 celes Exp roberto $
 */
 
 #ifndef opcode_h
@@ -82,7 +82,6 @@ typedef enum
 
 typedef void (*Cfunction) (void);
 typedef int  (*Input) (void);
-typedef void (*Unput) (int );
 
 typedef union
 {
@@ -132,9 +131,8 @@ int     lua_execute   (Byte *pc);
 void    lua_markstack (void);
 char   *lua_strdup (char *l);
 
-void    lua_setinput   (Input fn);	/* from "lua.lex" module */
-void    lua_setunput   (Unput fn);	/* from "lua.lex" module */
-char   *lua_lasttext   (void);		/* from "lua.lex" module */
+void    lua_setinput   (Input fn);	/* from "lex.c" module */
+char   *lua_lasttext   (void);		/* from "lex.c" module */
 int     lua_parse      (void); 		/* from "lua.stx" module */
 void    lua_type       (void);
 void 	lua_obj2number (void);
