@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 2.7 1997/06/16 18:43:19 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 2.8 1997/06/17 17:27:07 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -281,7 +281,7 @@ char *luaI_travfallbacks (int (*fn)(TObject *))
 * ===================================================================
 * compatibility with old fallback system
 */
-
+#if	LUA_COMPAT2_5
 
 static void errorFB (void)
 {
@@ -309,6 +309,7 @@ static void fillvalids (IMS e, TObject *func)
     if (validevent(t, e))
       *luaI_getim(t, e) = *func;
 }
+
 
 void luaI_setfallback (void)
 {
@@ -364,4 +365,4 @@ void luaI_setfallback (void)
   else
     lua_pushcfunction(replace);
 }
- 
+#endif 

@@ -1,4 +1,4 @@
-# $Id: makefile,v 1.34 1997/06/11 18:57:00 roberto Exp roberto $
+# $Id: makefile,v 1.35 1997/06/16 16:50:22 roberto Exp roberto $
 
 #configuration
 
@@ -6,6 +6,8 @@
 # define (undefine) _POSIX_SOURCE if your system is (not) POSIX compliant
 #define (undefine) NOSTRERROR if your system does NOT have function "strerror"
 # (although this is ANSI, SunOS does not comply; so, add "-DNOSTRERROR" on SunOS)
+# define LUA_COMPAT2_5=0 if yous system does not need to be compatible with
+# version 2.5 (or older)
 CONFIG = -DPOPEN -D_POSIX_SOURCE
 # Compilation parameters
 CC = gcc

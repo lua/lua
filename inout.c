@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.65 1997/06/19 18:49:40 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.66 1997/06/20 19:19:09 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -377,7 +377,9 @@ static struct {
   {"rawsetglobal", luaI_rawsetglobal},
   {"rawsettable", rawsettable},
   {"seterrormethod", luaI_seterrormethod},
+#if LUA_COMPAT2_5
   {"setfallback", luaI_setfallback},
+#endif
   {"setglobal", luaI_setglobal},
   {"settagmethod", luaI_settagmethod},
   {"gettagmethod", luaI_gettagmethod},

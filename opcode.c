@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 4.12 1997/06/19 17:46:12 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 4.13 1997/06/19 18:03:04 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -325,7 +325,7 @@ static void do_call (StkId base, int nResults)
     firstResult = lua_execute(func->value.tf->code, base);
   }
   else { /* func is not a function */
-    /* Check the fallback for invalid functions */
+    /* Check the tag method for invalid functions */
     TObject *im = luaI_getimbyObj(func, IM_FUNCTION);
     if (ttype(im) == LUA_T_NIL)
       lua_error("call expression not a function");
@@ -634,17 +634,6 @@ int lua_callfunction (lua_Object function)
   }
 }
 
-
-/*
-** API: set a function as a fallback
-*/
-lua_Object lua_setfallback (char *name, lua_CFunction fallback)
-{
-  lua_pushstring(name);
-  lua_pushcfunction(fallback);
-  do_unprotectedrun(luaI_setfallback, 2, 1);
-  return put_luaObjectonTop();
-}
 
 lua_Object lua_gettagmethod (int tag, char *event)
 {
@@ -1471,3 +1460,16 @@ static StkId lua_execute (Byte *pc, StkId base)
  }
 }
 
+
+#if COMPAT2_5
+/*
+** API: set a function as a fallback
+*/
+lua_Object lua_setfallback (char *name, lua_CFunction fallback)
+{
+  lua_pushstring(name);
+  lua_pushcfunction(fallback);
+  do_unprotectedrun(luaI_setfallback, 2, 1);
+  return put_luaObjectonTop();
+}
+#endif
