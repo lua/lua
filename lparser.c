@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.174 2002/04/02 20:34:15 roberto Exp roberto $
+** $Id: lparser.c,v 1.175 2002/04/09 19:47:44 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -475,9 +475,9 @@ static void funcargs (LexState *ls, expdesc *f) {
   FuncState *fs = ls->fs;
   expdesc args;
   int base, nparams;
+  int line = ls->linenumber;
   switch (ls->t.token) {
     case '(': {  /* funcargs -> `(' [ explist1 ] `)' */
-      int line = ls->linenumber;
       if (line != ls->lastline)
         luaK_error(ls, "ambiguous syntax (function call x new statement)");
       next(ls);
@@ -514,6 +514,7 @@ static void funcargs (LexState *ls, expdesc *f) {
     nparams = fs->freereg - (base+1);
   }
   init_exp(f, VCALL, luaK_codeABC(fs, OP_CALL, base, nparams+1, 2));
+  fs->f->lineinfo[f->info] = line;
   fs->freereg = base+1;  /* call remove function and arguments and leaves
                             (unless changed) one result */
 }
