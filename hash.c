@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.21 1994/12/16 15:55:04 roberto Exp roberto $";
+char *rcs_hash="$Id: hash.c,v 2.22 1994/12/20 21:20:36 roberto Exp roberto $";
 
 #include "mem.h"
 #include "opcode.h"
@@ -185,10 +185,10 @@ static void call_fallbacks (void)
 ** Garbage collection to arrays
 ** Delete all unmarked arrays.
 */
-Word lua_hashcollector (void)
+Long lua_hashcollector (void)
 {
  Hash *curr_array = listhead, *prev = NULL;
- Word counter = 0;
+ Long counter = 0;
  call_fallbacks();
  while (curr_array != NULL)
  {

@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.24 1994/12/16 15:55:04 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.25 1994/12/20 21:20:36 roberto Exp roberto $";
 
 #include <string.h>
 
@@ -173,9 +173,9 @@ void lua_markobject (Object *o)
 */
 void lua_pack (void)
 {
-  static Word block = GARBAGE_BLOCK; /* when garbage collector will be called */
-  static Word nentity = 0;  /* counter of new entities (strings and arrays) */
-  Word recovered = 0;
+  static Long block = GARBAGE_BLOCK; /* when garbage collector will be called */
+  static Long nentity = 0;  /* counter of new entities (strings and arrays) */
+  Long recovered = 0;
   if (nentity++ < block) return;
   lua_travstack(lua_markobject); /* mark stack objects */
   lua_travsymbol(lua_markobject); /* mark symbol table objects */
