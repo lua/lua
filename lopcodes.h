@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.106 2003/05/15 19:46:03 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.107 2004/04/30 20:13:38 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -41,10 +41,10 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 
 #define SIZE_OP		6
 
-#define POS_C		SIZE_OP
+#define POS_C		(POS_A + SIZE_A)
 #define POS_B		(POS_C + SIZE_C)
 #define POS_Bx		POS_C
-#define POS_A		(POS_B + SIZE_B)
+#define POS_A		SIZE_OP
 
 
 /*
@@ -79,7 +79,7 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 #define GET_OPCODE(i)	(cast(OpCode, (i)&MASK1(SIZE_OP,0)))
 #define SET_OPCODE(i,o)	((i) = (((i)&MASK0(SIZE_OP,0)) | cast(Instruction, o)))
 
-#define GETARG_A(i)	(cast(int, (i)>>POS_A))
+#define GETARG_A(i)	(cast(int, (i)>>POS_A) & MASK1(SIZE_A,0))
 #define SETARG_A(i,u)	((i) = (((i)&MASK0(SIZE_A,POS_A)) | \
 		((cast(Instruction, u)<<POS_A)&MASK1(SIZE_A,POS_A))))
 
