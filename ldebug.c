@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.156 2003/10/02 19:21:09 roberto Exp roberto $
+** $Id: ldebug.c,v 1.157 2003/10/20 18:42:28 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -136,7 +136,7 @@ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
     if (!name || name[0] == '(')  /* `(' starts private locals */
       name = NULL;
     else
-      setobjs2s(ci->base+(n-1), L->top);
+      setobjs2s(L, ci->base+(n-1), L->top);
   }
   lua_unlock(L);
   return name;
@@ -196,7 +196,7 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
         break;
       }
       case 'f': {
-        setobj2s(L->top, f);
+        setobj2s(L, L->top, f);
         break;
       }
       default: status = 0;  /* invalid option */
@@ -484,7 +484,7 @@ static const char *getfuncname (CallInfo *ci, const char **name) {
 
 
 /* only ANSI way to check whether a pointer points to an array */
-static int isinstack (CallInfo *ci, const TObject *o) {
+static int isinstack (CallInfo *ci, const TValue *o) {
   StkId p;
   for (p = ci->base; p < ci->top; p++)
     if (o == p) return 1;
@@ -492,7 +492,7 @@ static int isinstack (CallInfo *ci, const TObject *o) {
 }
 
 
-void luaG_typeerror (lua_State *L, const TObject *o, const char *op) {
+void luaG_typeerror (lua_State *L, const TValue *o, const char *op) {
   const char *name = NULL;
   const char *t = luaT_typenames[ttype(o)];
   const char *kind = (isinstack(L->ci, o)) ?
@@ -512,15 +512,15 @@ void luaG_concaterror (lua_State *L, StkId p1, StkId p2) {
 }
 
 
-void luaG_aritherror (lua_State *L, const TObject *p1, const TObject *p2) {
-  TObject temp;
+void luaG_aritherror (lua_State *L, const TValue *p1, const TValue *p2) {
+  TValue temp;
   if (luaV_tonumber(p1, &temp) == NULL)
     p2 = p1;  /* first operand is wrong */
   luaG_typeerror(L, p2, "perform arithmetic on");
 }
 
 
-int luaG_ordererror (lua_State *L, const TObject *p1, const TObject *p2) {
+int luaG_ordererror (lua_State *L, const TValue *p1, const TValue *p2) {
   const char *t1 = luaT_typenames[ttype(p1)];
   const char *t2 = luaT_typenames[ttype(p2)];
   if (t1[2] == t2[2])
@@ -546,8 +546,8 @@ void luaG_errormsg (lua_State *L) {
   if (L->errfunc != 0) {  /* is there an error handling function? */
     StkId errfunc = restorestack(L, L->errfunc);
     if (!ttisfunction(errfunc)) luaD_throw(L, LUA_ERRERR);
-    setobjs2s(L->top, L->top - 1);  /* move argument */
-    setobjs2s(L->top - 1, errfunc);  /* push function */
+    setobjs2s(L, L->top, L->top - 1);  /* move argument */
+    setobjs2s(L, L->top - 1, errfunc);  /* push function */
     incr_top(L);
     luaD_call(L, L->top - 2, 1);  /* call it */
   }

@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.h,v 1.22 2003/10/20 17:42:41 roberto Exp roberto $
+** $Id: lfunc.h,v 1.23 2003/11/24 18:50:36 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -12,15 +12,15 @@
 
 
 #define sizeCclosure(n)	(cast(int, sizeof(CClosure)) + \
-                         cast(int, sizeof(TObject)*((n)-1)))
+                         cast(int, sizeof(TValue)*((n)-1)))
 
 #define sizeLclosure(n)	(cast(int, sizeof(LClosure)) + \
-                         cast(int, sizeof(TObject *)*((n)-1)))
+                         cast(int, sizeof(TValue *)*((n)-1)))
 
 
 Proto *luaF_newproto (lua_State *L);
 Closure *luaF_newCclosure (lua_State *L, int nelems);
-Closure *luaF_newLclosure (lua_State *L, int nelems, TObject *e);
+Closure *luaF_newLclosure (lua_State *L, int nelems, TValue *e);
 UpVal *luaF_newupval (lua_State *L);
 UpVal *luaF_findupval (lua_State *L, StkId level);
 void luaF_close (lua_State *L, StkId level);

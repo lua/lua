@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.84 2003/12/04 17:22:42 roberto Exp roberto $
+** $Id: lstring.c,v 1.85 2003/12/09 16:56:11 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -37,7 +37,7 @@ void luaS_resize (lua_State *L, int newsize) {
     GCObject *p = tb->hash[i];
     while (p) {  /* for each node in the list */
       GCObject *next = p->gch.next;  /* save next */
-      unsigned int h = gcotots(p)->tsv.hash;
+      unsigned int h = gco2ts(p)->hash;
       int h1 = lmod(h, newsize);  /* new position */
       lua_assert(cast(int, h%newsize) == lmod(h, newsize));
       p->gch.next = newhash[h1];  /* chain it */
@@ -65,7 +65,7 @@ static TString *newlstr (lua_State *L, const char *str, size_t l,
   tb = &G(L)->strt;
   h = lmod(h, tb->size);
   ts->tsv.next = tb->hash[h];  /* chain new entry */
-  tb->hash[h] = valtogco(ts);
+  tb->hash[h] = obj2gco(ts);
   tb->nuse++;
   if (tb->nuse > cast(lu_int32, tb->size) && tb->size <= MAX_INT/2)
     luaS_resize(L, tb->size*2);  /* too crowded */
@@ -83,7 +83,7 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
   for (o = G(L)->strt.hash[lmod(h, G(L)->strt.size)];
        o != NULL;
        o = o->gch.next) {
-    TString *ts = gcotots(o);
+    TString *ts = rawgco2ts(o);
     if (ts->tsv.len == l && (memcmp(str, getstr(ts), l) == 0)) {
       /* string may be dead */
       if (isdead(G(L), o)) changewhite(o);
@@ -103,7 +103,7 @@ Udata *luaS_newudata (lua_State *L, size_t s) {
   u->uv.metatable = NULL;
   /* chain it on udata list */
   u->uv.next = G(L)->firstudata->uv.next;
-  G(L)->firstudata->uv.next = valtogco(u);
+  G(L)->firstudata->uv.next = obj2gco(u);
   return u;
 }
 

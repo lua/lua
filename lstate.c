@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.133 2003/12/04 17:22:42 roberto Exp roberto $
+** $Id: lstate.c,v 1.134 2003/12/04 18:52:23 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -50,7 +50,7 @@ typedef struct LG {
 
 
 static void stack_init (lua_State *L1, lua_State *L) {
-  L1->stack = luaM_newvector(L, BASIC_STACK_SIZE + EXTRA_STACK, TObject);
+  L1->stack = luaM_newvector(L, BASIC_STACK_SIZE + EXTRA_STACK, TValue);
   L1->stacksize = BASIC_STACK_SIZE + EXTRA_STACK;
   L1->top = L1->stack;
   L1->stack_last = L1->stack+(L1->stacksize - EXTRA_STACK)-1;
@@ -66,7 +66,7 @@ static void stack_init (lua_State *L1, lua_State *L) {
 
 static void freestack (lua_State *L, lua_State *L1) {
   luaM_freearray(L, L1->base_ci, L1->size_ci, CallInfo);
-  luaM_freearray(L, L1->stack, L1->stacksize, TObject);
+  luaM_freearray(L, L1->stack, L1->stacksize, TValue);
 }
 
 
@@ -79,12 +79,12 @@ static void f_luaopen (lua_State *L, void *ud) {
   u = cast(Udata *, luaM_malloc(L, sizeudata(0)));
   u->uv.len = 0;
   u->uv.metatable = NULL;
-  G(L)->firstudata = valtogco(u);
-  luaC_link(L, valtogco(u), LUA_TUSERDATA);
+  G(L)->firstudata = obj2gco(u);
+  luaC_link(L, obj2gco(u), LUA_TUSERDATA);
   setbit(u->uv.marked, FIXEDBIT);
   stack_init(L, L);  /* init stack */
-  sethvalue(gt(L), luaH_new(L, 0, 4));  /* table of globals */
-  sethvalue(registry(L), luaH_new(L, 4, 4));  /* registry */
+  sethvalue(L, gt(L), luaH_new(L, 0, 4));  /* table of globals */
+  sethvalue(L, registry(L), luaH_new(L, 4, 4));  /* registry */
   luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
   luaT_init(L);
   luaX_init(L);
@@ -127,11 +127,12 @@ static void close_state (lua_State *L) {
 
 lua_State *luaE_newthread (lua_State *L) {
   lua_State *L1 = tostate(luaM_malloc(L, state_size(lua_State)));
-  luaC_link(L, valtogco(L1), LUA_TTHREAD);
+  luaC_link(L, obj2gco(L1), LUA_TTHREAD);
   preinit_state(L1);
   L1->l_G = L->l_G;
   stack_init(L1, L);  /* init stack */
-  setobj2n(gt(L1), gt(L));  /* share table of globals */
+  setobj2n(L, gt(L1), gt(L));  /* share table of globals */
+  lua_assert(iswhite(obj2gco(L1)));
   return L1;
 }
 

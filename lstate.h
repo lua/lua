@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.118 2003/12/04 17:22:42 roberto Exp roberto $
+** $Id: lstate.h,v 1.119 2003/12/04 18:52:23 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -111,7 +111,7 @@ typedef struct global_State {
   lu_mem GCthreshold;
   lu_mem nblocks;  /* number of `bytes' currently allocated */
   lua_CFunction panic;  /* to be called in unprotected errors */
-  TObject _registry;
+  TValue _registry;
   struct lua_State *mainthread;
   Node dummynode[1];  /* common node array for all empty tables */
   TString *tmname[TM_N];  /* array with tag-method names */
@@ -140,7 +140,7 @@ struct lua_State {
   int basehookcount;
   int hookcount;
   lua_Hook hook;
-  TObject _gt;  /* table of globals */
+  TValue _gt;  /* table of globals */
   GCObject *openupval;  /* list of open upvalues in this stack */
   GCObject *gclist;
   struct lua_longjmp *errorJmp;  /* current error recover point */
@@ -167,18 +167,20 @@ union GCObject {
 
 
 /* macros to convert a GCObject into a specific value */
-#define gcotots(o)	check_exp((o)->gch.tt == LUA_TSTRING, &((o)->ts))
-#define gcotou(o)	check_exp((o)->gch.tt == LUA_TUSERDATA, &((o)->u))
-#define gcotocl(o)	check_exp((o)->gch.tt == LUA_TFUNCTION, &((o)->cl))
-#define gcotoh(o)	check_exp((o)->gch.tt == LUA_TTABLE, &((o)->h))
-#define gcotop(o)	check_exp((o)->gch.tt == LUA_TPROTO, &((o)->p))
-#define gcotouv(o)	check_exp((o)->gch.tt == LUA_TUPVAL, &((o)->uv))
+#define rawgco2ts(o)	check_exp((o)->gch.tt == LUA_TSTRING, &((o)->ts))
+#define gco2ts(o)	(&rawgco2ts(o)->tsv)
+#define rawgco2u(o)	check_exp((o)->gch.tt == LUA_TUSERDATA, &((o)->u))
+#define gco2u(o)	(&rawgco2u(o)->uv)
+#define gco2cl(o)	check_exp((o)->gch.tt == LUA_TFUNCTION, &((o)->cl))
+#define gco2h(o)	check_exp((o)->gch.tt == LUA_TTABLE, &((o)->h))
+#define gco2p(o)	check_exp((o)->gch.tt == LUA_TPROTO, &((o)->p))
+#define gco2uv(o)	check_exp((o)->gch.tt == LUA_TUPVAL, &((o)->uv))
 #define ngcotouv(o) \
 	check_exp((o) == NULL || (o)->gch.tt == LUA_TUPVAL, &((o)->uv))
-#define gcototh(o)	check_exp((o)->gch.tt == LUA_TTHREAD, &((o)->th))
+#define gco2th(o)	check_exp((o)->gch.tt == LUA_TTHREAD, &((o)->th))
 
-/* macro to convert any value into a GCObject */
-#define valtogco(v)	(cast(GCObject *, (v)))
+/* macro to convert any Lua object into a GCObject */
+#define obj2gco(v)	(cast(GCObject *, (v)))
 
 
 lua_State *luaE_newthread (lua_State *L);

@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.137 2003/12/01 18:22:56 roberto Exp roberto $
+** $Id: ltable.c,v 1.138 2003/12/09 16:56:11 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -91,12 +91,12 @@ static Node *hashnum (const Table *t, lua_Number n) {
 ** returns the `main' position of an element in a table (that is, the index
 ** of its hash value)
 */
-Node *luaH_mainposition (const Table *t, const TObject *key) {
+Node *luaH_mainposition (const Table *t, const TValue *key) {
   switch (ttype(key)) {
     case LUA_TNUMBER:
       return hashnum(t, nvalue(key));
     case LUA_TSTRING:
-      return hashstr(t, tsvalue(key));
+      return hashstr(t, rawtsvalue(key));
     case LUA_TBOOLEAN:
       return hashboolean(t, bvalue(key));
     case LUA_TLIGHTUSERDATA:
@@ -111,7 +111,7 @@ Node *luaH_mainposition (const Table *t, const TObject *key) {
 ** returns the index for `key' if `key' is an appropriate key to live in
 ** the array part of the table, -1 otherwise.
 */
-static int arrayindex (const TObject *key, lua_Number lim) {
+static int arrayindex (const TValue *key, lua_Number lim) {
   if (ttisnumber(key)) {
     lua_Number n = nvalue(key);
     int k;
@@ -137,7 +137,7 @@ static int luaH_index (lua_State *L, Table *t, StkId key) {
     return i-1;  /* yes; that's the index (corrected to C) */
   }
   else {
-    const TObject *v = luaH_get(t, key);
+    const TValue *v = luaH_get(t, key);
     if (v == &luaO_nilobject)
       luaG_runerror(L, "invalid key for `next'");
     i = cast(int, (cast(const lu_byte *, v) -
@@ -152,14 +152,14 @@ int luaH_next (lua_State *L, Table *t, StkId key) {
   for (i++; i < t->sizearray; i++) {  /* try first array part */
     if (!ttisnil(&t->array[i])) {  /* a non-nil value? */
       setnvalue(key, cast(lua_Number, i+1));
-      setobj2s(key+1, &t->array[i]);
+      setobj2s(L, key+1, &t->array[i]);
       return 1;
     }
   }
   for (i -= t->sizearray; i < sizenode(t); i++) {  /* then hash part */
     if (!ttisnil(gval(gnode(t, i)))) {  /* a non-nil value? */
-      setobj2s(key, gkey(gnode(t, i)));
-      setobj2s(key+1, gval(gnode(t, i)));
+      setobj2s(L, key, gkey(gnode(t, i)));
+      setobj2s(L, key+1, gval(gnode(t, i)));
       return 1;
     }
   }
@@ -239,7 +239,7 @@ static void numuse (const Table *t, int *narray, int *nhash) {
 
 static void setarrayvector (lua_State *L, Table *t, int size) {
   int i;
-  luaM_reallocvector(L, t->array, t->sizearray, size, TObject);
+  luaM_reallocvector(L, t->array, t->sizearray, size, TValue);
   for (i=t->sizearray; i<size; i++)
      setnilvalue(&t->array[i]);
   t->sizearray = size;
@@ -296,16 +296,16 @@ static void resize (lua_State *L, Table *t, int nasize, int nhsize) {
     /* re-insert elements from vanishing slice */
     for (i=nasize; i<oldasize; i++) {
       if (!ttisnil(&t->array[i]))
-        setobjt2t(luaH_setnum(L, t, i+1), &t->array[i]);
+        setobjt2t(L, luaH_setnum(L, t, i+1), &t->array[i]);
     }
     /* shrink array */
-    luaM_reallocvector(L, t->array, oldasize, nasize, TObject);
+    luaM_reallocvector(L, t->array, oldasize, nasize, TValue);
   }
   /* re-insert elements in hash part */
   for (i = twoto(oldhsize) - 1; i >= 0; i--) {
     Node *old = nold+i;
     if (!ttisnil(gval(old)))
-      setobjt2t(luaH_set(L, t, gkey(old)), gval(old));
+      setobjt2t(L, luaH_set(L, t, gkey(old)), gval(old));
   }
   if (oldhsize)
     luaM_freearray(L, nold, twoto(oldhsize), Node);  /* free old array */
@@ -327,7 +327,7 @@ static void rehash (lua_State *L, Table *t) {
 
 Table *luaH_new (lua_State *L, int narray, int lnhash) {
   Table *t = luaM_new(L, Table);
-  luaC_link(L, valtogco(t), LUA_TTABLE);
+  luaC_link(L, obj2gco(t), LUA_TTABLE);
   t->metatable = NULL;
   t->flags = cast(lu_byte, ~0);
   /* temporary values (kept only if some malloc fails) */
@@ -344,7 +344,7 @@ Table *luaH_new (lua_State *L, int narray, int lnhash) {
 void luaH_free (lua_State *L, Table *t) {
   if (t->lsizenode)
     luaM_freearray(L, t->node, sizenode(t), Node);
-  luaM_freearray(L, t->array, t->sizearray, TObject);
+  luaM_freearray(L, t->array, t->sizearray, TValue);
   luaM_freelem(L, t);
 }
 
@@ -377,8 +377,8 @@ void luaH_remove (Table *t, Node *e) {
 ** put new key in its main position; otherwise (colliding node is in its main 
 ** position), new key goes to an empty position. 
 */
-static TObject *newkey (lua_State *L, Table *t, const TObject *key) {
-  TObject *val;
+static TValue *newkey (lua_State *L, Table *t, const TValue *key) {
+  TValue *val;
   Node *mp = luaH_mainposition(t, key);
   if (!ttisnil(gval(mp))) {  /* main position is not free? */
     Node *othern = luaH_mainposition(t, gkey(mp));  /* `mp' of colliding node */
@@ -398,7 +398,7 @@ static TObject *newkey (lua_State *L, Table *t, const TObject *key) {
       mp = n;
     }
   }
-  setobj2t(gkey(mp), key);
+  setobj2t(L, gkey(mp), key);
   luaC_barrier(L, t, key);
   lua_assert(ttisnil(gval(mp)));
   for (;;) {  /* correct `firstfree' */
@@ -410,7 +410,7 @@ static TObject *newkey (lua_State *L, Table *t, const TObject *key) {
   /* no more free places; must create one */
   setbvalue(gval(mp), 0);  /* avoid new key being removed */
   rehash(L, t);  /* grow table */
-  val = cast(TObject *, luaH_get(t, key));  /* get new position */
+  val = cast(TValue *, luaH_get(t, key));  /* get new position */
   lua_assert(ttisboolean(val));
   setnilvalue(val);
   return val;
@@ -420,7 +420,7 @@ static TObject *newkey (lua_State *L, Table *t, const TObject *key) {
 /*
 ** generic search function
 */
-static const TObject *luaH_getany (Table *t, const TObject *key) {
+static const TValue *luaH_getany (Table *t, const TValue *key) {
   if (!ttisnil(key)) {
     Node *n = luaH_mainposition(t, key);
     do {  /* check whether `key' is somewhere in the chain */
@@ -435,7 +435,7 @@ static const TObject *luaH_getany (Table *t, const TObject *key) {
 /*
 ** search function for integers
 */
-const TObject *luaH_getnum (Table *t, int key) {
+const TValue *luaH_getnum (Table *t, int key) {
   if (1 <= key && key <= t->sizearray)
     return &t->array[key-1];
   else {
@@ -454,10 +454,10 @@ const TObject *luaH_getnum (Table *t, int key) {
 /*
 ** search function for strings
 */
-const TObject *luaH_getstr (Table *t, TString *key) {
+const TValue *luaH_getstr (Table *t, TString *key) {
   Node *n = hashstr(t, key);
   do {  /* check whether `key' is somewhere in the chain */
-    if (ttisstring(gkey(n)) && tsvalue(gkey(n)) == key)
+    if (ttisstring(gkey(n)) && rawtsvalue(gkey(n)) == key)
       return gval(n);  /* that's it */
     else n = n->next;
   } while (n);
@@ -468,9 +468,9 @@ const TObject *luaH_getstr (Table *t, TString *key) {
 /*
 ** main search function
 */
-const TObject *luaH_get (Table *t, const TObject *key) {
+const TValue *luaH_get (Table *t, const TValue *key) {
   switch (ttype(key)) {
-    case LUA_TSTRING: return luaH_getstr(t, tsvalue(key));
+    case LUA_TSTRING: return luaH_getstr(t, rawtsvalue(key));
     case LUA_TNUMBER: {
       int k;
       lua_number2int(k, (nvalue(key)));
@@ -483,11 +483,11 @@ const TObject *luaH_get (Table *t, const TObject *key) {
 }
 
 
-TObject *luaH_set (lua_State *L, Table *t, const TObject *key) {
-  const TObject *p = luaH_get(t, key);
+TValue *luaH_set (lua_State *L, Table *t, const TValue *key) {
+  const TValue *p = luaH_get(t, key);
   t->flags = 0;
   if (p != &luaO_nilobject)
-    return cast(TObject *, p);
+    return cast(TValue *, p);
   else {
     if (ttisnil(key)) luaG_runerror(L, "table index is nil");
     else if (ttisnumber(key) && nvalue(key) != nvalue(key))
@@ -497,25 +497,25 @@ TObject *luaH_set (lua_State *L, Table *t, const TObject *key) {
 }
 
 
-TObject *luaH_setnum (lua_State *L, Table *t, int key) {
-  const TObject *p = luaH_getnum(t, key);
+TValue *luaH_setnum (lua_State *L, Table *t, int key) {
+  const TValue *p = luaH_getnum(t, key);
   if (p != &luaO_nilobject)
-    return cast(TObject *, p);
+    return cast(TValue *, p);
   else {
-    TObject k;
+    TValue k;
     setnvalue(&k, cast(lua_Number, key));
     return newkey(L, t, &k);
   }
 }
 
 
-TObject *luaH_setstr (lua_State *L, Table *t, TString *key) {
-  const TObject *p = luaH_getstr(t, key);
+TValue *luaH_setstr (lua_State *L, Table *t, TString *key) {
+  const TValue *p = luaH_getstr(t, key);
   if (p != &luaO_nilobject)
-    return cast(TObject *, p);
+    return cast(TValue *, p);
   else {
-    TObject k;
-    setsvalue(&k, key);
+    TValue k;
+    setsvalue(L, &k, key);
     return newkey(L, t, &k);
   }
 }

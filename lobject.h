@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.161 2003/08/27 21:01:44 roberto Exp roberto $
+** $Id: lobject.h,v 1.162 2003/11/18 14:55:11 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -58,12 +58,12 @@ typedef union {
 
 
 /*
-** Lua values (or `tagged objects')
+** Tagged Values
 */
-typedef struct lua_TObject {
+typedef struct lua_TValue {
   int tt;
   Value value;
-} TObject;
+} TValue;
 
 
 /* Macros to test type */
@@ -82,8 +82,10 @@ typedef struct lua_TObject {
 #define gcvalue(o)	check_exp(iscollectable(o), (o)->value.gc)
 #define pvalue(o)	check_exp(ttislightuserdata(o), (o)->value.p)
 #define nvalue(o)	check_exp(ttisnumber(o), (o)->value.n)
-#define tsvalue(o)	check_exp(ttisstring(o), &(o)->value.gc->ts)
-#define uvalue(o)	check_exp(ttisuserdata(o), &(o)->value.gc->u)
+#define rawtsvalue(o)	check_exp(ttisstring(o), &(o)->value.gc->ts)
+#define tsvalue(o)	(&rawtsvalue(o)->tsv)
+#define rawuvalue(o)	check_exp(ttisuserdata(o), &(o)->value.gc->u)
+#define uvalue(o)	(&rawuvalue(o)->uv)
 #define clvalue(o)	check_exp(ttisfunction(o), &(o)->value.gc->cl)
 #define hvalue(o)	check_exp(ttistable(o), &(o)->value.gc->h)
 #define bvalue(o)	check_exp(ttisboolean(o), (o)->value.b)
@@ -91,64 +93,69 @@ typedef struct lua_TObject {
 
 #define l_isfalse(o)	(ttisnil(o) || (ttisboolean(o) && bvalue(o) == 0))
 
-/* Macros to set values */
-#define setnilvalue(obj) ((obj)->tt=LUA_TNIL)
-
-#define setnvalue(obj,x) \
-  { TObject *i_o=(obj); i_o->value.n=(x); i_o->tt=LUA_TNUMBER; }
-
-#define chgnvalue(obj,x) \
-	check_exp(ttype(obj)==LUA_TNUMBER, (obj)->value.n=(x))
-
-#define setpvalue(obj,x) \
-  { TObject *i_o=(obj); i_o->value.p=(x); i_o->tt=LUA_TLIGHTUSERDATA; }
-
-#define setbvalue(obj,x) \
-  { TObject *i_o=(obj); i_o->value.b=(x); i_o->tt=LUA_TBOOLEAN; }
-
-#define setsvalue(obj,x) \
-  { TObject *i_o=(obj); \
-    i_o->value.gc=cast(GCObject *, (x)); i_o->tt=LUA_TSTRING; \
-    lua_assert(i_o->value.gc->gch.tt == LUA_TSTRING); }
-
-#define setuvalue(obj,x) \
-  { TObject *i_o=(obj); \
-    i_o->value.gc=cast(GCObject *, (x)); i_o->tt=LUA_TUSERDATA; \
-    lua_assert(i_o->value.gc->gch.tt == LUA_TUSERDATA); }
-
-#define setthvalue(obj,x) \
-  { TObject *i_o=(obj); \
-    i_o->value.gc=cast(GCObject *, (x)); i_o->tt=LUA_TTHREAD; \
-    lua_assert(i_o->value.gc->gch.tt == LUA_TTHREAD); }
-
-#define setclvalue(obj,x) \
-  { TObject *i_o=(obj); \
-    i_o->value.gc=cast(GCObject *, (x)); i_o->tt=LUA_TFUNCTION; \
-    lua_assert(i_o->value.gc->gch.tt == LUA_TFUNCTION); }
-
-#define sethvalue(obj,x) \
-  { TObject *i_o=(obj); \
-    i_o->value.gc=cast(GCObject *, (x)); i_o->tt=LUA_TTABLE; \
-    lua_assert(i_o->value.gc->gch.tt == LUA_TTABLE); }
-
-#define setptvalue(obj,x) \
-  { TObject *i_o=(obj); \
-    i_o->value.gc=cast(GCObject *, (x)); i_o->tt=LUA_TPROTO; \
-    lua_assert(i_o->value.gc->gch.tt == LUA_TPROTO); }
-
-
-
 /*
 ** for internal debug only
 */
 #define checkconsistency(obj) \
   lua_assert(!iscollectable(obj) || (ttype(obj) == (obj)->value.gc->gch.tt))
 
+#define checkliveness(L,obj) \
+  lua_assert(!iscollectable(obj) || \
+  ((ttype(obj) == (obj)->value.gc->gch.tt) && !isdead(G(L), (obj)->value.gc)))
 
-#define setobj(obj1,obj2) \
-  { const TObject *o2=(obj2); TObject *o1=(obj1); \
-    checkconsistency(o2); \
-    o1->tt=o2->tt; o1->value = o2->value; }
+
+/* Macros to set values */
+#define setnilvalue(obj) ((obj)->tt=LUA_TNIL)
+
+#define setnvalue(obj,x) \
+  { TValue *i_o=(obj); i_o->value.n=(x); i_o->tt=LUA_TNUMBER; }
+
+#define chgnvalue(obj,x) \
+	check_exp(ttype(obj)==LUA_TNUMBER, (obj)->value.n=(x))
+
+#define setpvalue(obj,x) \
+  { TValue *i_o=(obj); i_o->value.p=(x); i_o->tt=LUA_TLIGHTUSERDATA; }
+
+#define setbvalue(obj,x) \
+  { TValue *i_o=(obj); i_o->value.b=(x); i_o->tt=LUA_TBOOLEAN; }
+
+#define setsvalue(L,obj,x) \
+  { TValue *i_o=(obj); \
+    i_o->value.gc=cast(GCObject *, (x)); i_o->tt=LUA_TSTRING; \
+    checkliveness(L,i_o); }
+
+#define setuvalue(L,obj,x) \
+  { TValue *i_o=(obj); \
+    i_o->value.gc=cast(GCObject *, (x)); i_o->tt=LUA_TUSERDATA; \
+    checkliveness(L,i_o); }
+
+#define setthvalue(L,obj,x) \
+  { TValue *i_o=(obj); \
+    i_o->value.gc=cast(GCObject *, (x)); i_o->tt=LUA_TTHREAD; \
+    checkliveness(L,i_o); }
+
+#define setclvalue(L,obj,x) \
+  { TValue *i_o=(obj); \
+    i_o->value.gc=cast(GCObject *, (x)); i_o->tt=LUA_TFUNCTION; \
+    checkliveness(L,i_o); }
+
+#define sethvalue(L,obj,x) \
+  { TValue *i_o=(obj); \
+    i_o->value.gc=cast(GCObject *, (x)); i_o->tt=LUA_TTABLE; \
+    checkliveness(L,i_o); }
+
+#define setptvalue(L,obj,x) \
+  { TValue *i_o=(obj); \
+    i_o->value.gc=cast(GCObject *, (x)); i_o->tt=LUA_TPROTO; \
+    checkliveness(L,i_o); }
+
+
+
+
+#define setobj(L,obj1,obj2) \
+  { const TValue *o2=(obj2); TValue *o1=(obj1); \
+    o1->tt=o2->tt; o1->value = o2->value; \
+    checkliveness(L,o1); }
 
 
 /*
@@ -177,7 +184,7 @@ typedef struct lua_TObject {
 
 
 
-typedef TObject *StkId;  /* index to stack elements */
+typedef TValue *StkId;  /* index to stack elements */
 
 
 /*
@@ -216,7 +223,7 @@ typedef union Udata {
 */
 typedef struct Proto {
   CommonHeader;
-  TObject *k;  /* constants used by the function */
+  TValue *k;  /* constants used by the function */
   Instruction *code;
   struct Proto **p;  /* functions defined inside the function */
   int *lineinfo;  /* map from opcodes to source lines */
@@ -253,8 +260,8 @@ typedef struct LocVar {
 typedef struct UpVal {
   CommonHeader;
   GCObject *gclist;
-  TObject *v;  /* points to stack or to its own value */
-  TObject value;  /* the value (when closed) */
+  TValue *v;  /* points to stack or to its own value */
+  TValue value;  /* the value (when closed) */
 } UpVal;
 
 
@@ -268,14 +275,14 @@ typedef struct UpVal {
 typedef struct CClosure {
   ClosureHeader;
   lua_CFunction f;
-  TObject upvalue[1];
+  TValue upvalue[1];
 } CClosure;
 
 
 typedef struct LClosure {
   ClosureHeader;
   struct Proto *p;
-  TObject g;  /* global table for this closure */
+  TValue g;  /* global table for this closure */
   UpVal *upvals[1];
 } LClosure;
 
@@ -295,8 +302,8 @@ typedef union Closure {
 */
 
 typedef struct Node {
-  TObject i_key;
-  TObject i_val;
+  TValue i_key;
+  TValue i_val;
   struct Node *next;  /* for chaining */
 } Node;
 
@@ -306,7 +313,7 @@ typedef struct Table {
   lu_byte flags;  /* 1<<p means tagmethod(p) is not present */ 
   lu_byte lsizenode;  /* log2 of size of `node' array */
   struct Table *metatable;
-  TObject *array;  /* array part */
+  TValue *array;  /* array part */
   Node *node;
   Node *firstfree;  /* this position is free; all positions after it are full */
   GCObject *gclist;
@@ -327,13 +334,13 @@ typedef struct Table {
 
 
 
-extern const TObject luaO_nilobject;
+extern const TValue luaO_nilobject;
 
 int luaO_log2 (unsigned int x);
 int luaO_int2fb (unsigned int x);
 #define fb2int(x)	(((x) & 7) << ((x) >> 3))
 
-int luaO_rawequalObj (const TObject *t1, const TObject *t2);
+int luaO_rawequalObj (const TValue *t1, const TValue *t2);
 int luaO_str2d (const char *s, lua_Number *result);
 
 const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp);

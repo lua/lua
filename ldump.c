@@ -1,5 +1,5 @@
 /*
-** $Id: ldump.c,v 1.4 2003/02/11 23:52:12 lhf Exp lhf $
+** $Id: ldump.c,v 1.6 2003/08/15 13:48:53 roberto Exp roberto $
 ** save bytecodes
 ** See Copyright Notice in lua.h
 */
@@ -104,7 +104,7 @@ static void DumpConstants(const Proto* f, DumpState* D)
  DumpInt(n=f->sizek,D);
  for (i=0; i<n; i++)
  {
-  const TObject* o=&f->k[i];
+  const TValue* o=&f->k[i];
   DumpByte(ttype(o),D);
   switch (ttype(o))
   {
@@ -112,7 +112,7 @@ static void DumpConstants(const Proto* f, DumpState* D)
 	DumpNumber(nvalue(o),D);
 	break;
    case LUA_TSTRING:
-	DumpString(tsvalue(o),D);
+	DumpString(rawtsvalue(o),D);
 	break;
    case LUA_TNIL:
 	break;

@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.h,v 1.44 2003/03/18 12:50:04 roberto Exp roberto $
+** $Id: ltable.h,v 1.45 2003/08/26 12:04:13 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -15,18 +15,18 @@
 #define gval(n)		(&(n)->i_val)
 
 
-const TObject *luaH_getnum (Table *t, int key);
-TObject *luaH_setnum (lua_State *L, Table *t, int key);
-const TObject *luaH_getstr (Table *t, TString *key);
-TObject *luaH_setstr (lua_State *L, Table *t, TString *key);
-const TObject *luaH_get (Table *t, const TObject *key);
-TObject *luaH_set (lua_State *L, Table *t, const TObject *key);
+const TValue *luaH_getnum (Table *t, int key);
+TValue *luaH_setnum (lua_State *L, Table *t, int key);
+const TValue *luaH_getstr (Table *t, TString *key);
+TValue *luaH_setstr (lua_State *L, Table *t, TString *key);
+const TValue *luaH_get (Table *t, const TValue *key);
+TValue *luaH_set (lua_State *L, Table *t, const TValue *key);
 Table *luaH_new (lua_State *L, int narray, int lnhash);
 void luaH_free (lua_State *L, Table *t);
 int luaH_next (lua_State *L, Table *t, StkId key);
 
 /* exported only for debugging */
-Node *luaH_mainposition (const Table *t, const TObject *key);
+Node *luaH_mainposition (const Table *t, const TValue *key);
 
 
 #endif

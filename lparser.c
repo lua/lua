@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.221 2003/10/09 17:56:23 roberto Exp roberto $
+** $Id: lparser.c,v 1.222 2003/12/09 16:56:11 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -340,9 +340,9 @@ static void open_func (LexState *ls, FuncState *fs) {
   f->maxstacksize = 2;  /* registers 0/1 are always valid */
   fs->h = luaH_new(L, 0, 0);
   /* anchor table of constants and prototype (to avoid being collected) */
-  sethvalue2s(L->top, fs->h);
+  sethvalue2s(L, L->top, fs->h);
   incr_top(L);
-  setptvalue2s(L->top, f);
+  setptvalue2s(L, L->top, f);
   incr_top(L);
 }
 
@@ -357,7 +357,7 @@ static void close_func (LexState *ls) {
   f->sizecode = fs->pc;
   luaM_reallocvector(L, f->lineinfo, f->sizelineinfo, fs->pc, int);
   f->sizelineinfo = fs->pc;
-  luaM_reallocvector(L, f->k, f->sizek, fs->nk, TObject);
+  luaM_reallocvector(L, f->k, f->sizek, fs->nk, TValue);
   f->sizek = fs->nk;
   luaM_reallocvector(L, f->p, f->sizep, fs->np, Proto *);
   f->sizep = fs->np;

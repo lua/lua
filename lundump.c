@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.63 2003/08/25 19:51:54 roberto Exp roberto $
+** $Id: lundump.c,v 1.64 2003/08/27 21:01:44 roberto Exp roberto $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -158,13 +158,14 @@ static Proto* LoadFunction (LoadState* S, TString* p);
 static void LoadConstants (LoadState* S, Proto* f)
 {
  int i,n;
+ lua_State *L=S->L;
  n=LoadInt(S);
- f->k=luaM_newvector(S->L,n,TObject);
+ f->k=luaM_newvector(L,n,TValue);
  f->sizek=n;
  for (i=0; i<n; i++) setnilvalue(&f->k[i]);
  for (i=0; i<n; i++)
  {
-  TObject* o=&f->k[i];
+  TValue* o=&f->k[i];
   int t=LoadByte(S);
   switch (t)
   {
@@ -172,18 +173,18 @@ static void LoadConstants (LoadState* S, Proto* f)
 	setnvalue(o,LoadNumber(S));
 	break;
    case LUA_TSTRING:
-	setsvalue2n(o,LoadString(S));
+	setsvalue2n(L, o,LoadString(S));
 	break;
    case LUA_TNIL:
    	setnilvalue(o);
 	break;
    default:
-	luaG_runerror(S->L,"bad constant type (%d) in %s",t,S->name);
+	luaG_runerror(L,"bad constant type (%d) in %s",t,S->name);
 	break;
   }
  }
  n=LoadInt(S);
- f->p=luaM_newvector(S->L,n,Proto*);
+ f->p=luaM_newvector(L,n,Proto*);
  f->sizep=n;
  for (i=0; i<n; i++) f->p[i]=NULL;
  for (i=0; i<n; i++) f->p[i]=LoadFunction(S,f->source);
@@ -191,9 +192,10 @@ static void LoadConstants (LoadState* S, Proto* f)
 
 static Proto* LoadFunction (LoadState* S, TString* p)
 {
- Proto* f=luaF_newproto(S->L);
- setptvalue2s(S->L->top, f);
- incr_top(S->L);
+ lua_State *L=S->L;
+ Proto* f=luaF_newproto(L);
+ setptvalue2s(L, L->top, f);
+ incr_top(L);
  f->source=LoadString(S); if (f->source==NULL) f->source=p;
  f->lineDefined=LoadInt(S);
  f->nups=LoadByte(S);
@@ -206,9 +208,9 @@ static Proto* LoadFunction (LoadState* S, TString* p)
  LoadConstants(S,f);
  LoadCode(S,f);
 #ifndef TRUST_BINARIES
- if (!luaG_checkcode(f)) luaG_runerror(S->L,"bad code in %s",S->name);
+ if (!luaG_checkcode(f)) luaG_runerror(L,"bad code in %s",S->name);
 #endif
- S->L->top--;
+ L->top--;
  return f;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.228 2003/10/20 17:42:41 roberto Exp roberto $
+** $Id: ldo.c,v 1.229 2003/11/11 16:34:17 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -64,16 +64,16 @@ struct lua_longjmp {
 static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
   switch (errcode) {
     case LUA_ERRMEM: {
-      setsvalue2s(oldtop, luaS_newliteral(L, MEMERRMSG));
+      setsvalue2s(L, oldtop, luaS_newliteral(L, MEMERRMSG));
       break;
     }
     case LUA_ERRERR: {
-      setsvalue2s(oldtop, luaS_newliteral(L, "error in error handling"));
+      setsvalue2s(L, oldtop, luaS_newliteral(L, "error in error handling"));
       break;
     }
     case LUA_ERRSYNTAX:
     case LUA_ERRRUN: {
-      setobjs2s(oldtop, L->top - 1);  /* error message on current top */
+      setobjs2s(L, oldtop, L->top - 1);  /* error message on current top */
       break;
     }
   }
@@ -118,12 +118,12 @@ static void restore_stack_limit (lua_State *L) {
 /* }====================================================== */
 
 
-static void correctstack (lua_State *L, TObject *oldstack) {
+static void correctstack (lua_State *L, TValue *oldstack) {
   CallInfo *ci;
   GCObject *up;
   L->top = (L->top - oldstack) + L->stack;
   for (up = L->openupval; up != NULL; up = up->gch.next)
-    gcotouv(up)->v = (gcotouv(up)->v - oldstack) + L->stack;
+    gco2uv(up)->v = (gco2uv(up)->v - oldstack) + L->stack;
   for (ci = L->base_ci; ci <= L->ci; ci++) {
     ci->top = (ci->top - oldstack) + L->stack;
     ci->base = (ci->base - oldstack) + L->stack;
@@ -133,8 +133,8 @@ static void correctstack (lua_State *L, TObject *oldstack) {
 
 
 void luaD_reallocstack (lua_State *L, int newsize) {
-  TObject *oldstack = L->stack;
-  luaM_reallocvector(L, L->stack, L->stacksize, newsize, TObject);
+  TValue *oldstack = L->stack;
+  luaM_reallocvector(L, L->stack, L->stacksize, newsize, TValue);
   L->stacksize = newsize;
   L->stack_last = L->stack+newsize-1-EXTRA_STACK;
   correctstack(L, oldstack);
@@ -207,27 +207,28 @@ static void adjust_varargs (lua_State *L, int nfixargs, StkId base) {
   actual -= nfixargs;  /* number of extra arguments */
   htab = luaH_new(L, actual, 1);  /* create `arg' table */
   for (i=0; i<actual; i++)  /* put extra arguments into `arg' table */
-    setobj2n(luaH_setnum(L, htab, i+1), L->top - actual + i);
+    setobj2n(L, luaH_setnum(L, htab, i+1), L->top - actual + i);
   /* store counter in field `n' */
   setnvalue(luaH_setstr(L, htab, luaS_newliteral(L, "n")),
                                  cast(lua_Number, actual));
   L->top -= actual;  /* remove extra elements from the stack */
-  sethvalue(L->top, htab);
+  sethvalue(L, L->top, htab);
+  lua_assert(iswhite(obj2gco(htab)));
   incr_top(L);
 }
 
 
 static StkId tryfuncTM (lua_State *L, StkId func) {
-  const TObject *tm = luaT_gettmbyobj(L, func, TM_CALL);
+  const TValue *tm = luaT_gettmbyobj(L, func, TM_CALL);
   StkId p;
   ptrdiff_t funcr = savestack(L, func);
   if (!ttisfunction(tm))
     luaG_typeerror(L, func, "call");
   /* Open a hole inside the stack at `func' */
-  for (p = L->top; p > func; p--) setobjs2s(p, p-1);
+  for (p = L->top; p > func; p--) setobjs2s(L, p, p-1);
   incr_top(L);
   func = restorestack(L, funcr);  /* previous call may change stack */
-  setobj2s(func, tm);  /* tag method is the new function to be called */
+  setobj2s(L, func, tm);  /* tag method is the new function to be called */
   return func;
 }
 
@@ -294,7 +295,7 @@ void luaD_poscall (lua_State *L, int wanted, StkId firstResult) {
   L->base = L->ci->base;  /* restore base */
   /* move results to correct place */
   while (wanted != 0 && firstResult < L->top) {
-    setobjs2s(res++, firstResult++);
+    setobjs2s(L, res++, firstResult++);
     wanted--;
   }
   while (wanted-- > 0)
@@ -354,7 +355,7 @@ static void resume (lua_State *L, void *ud) {
 
 static int resume_error (lua_State *L, const char *msg) {
   L->top = L->ci->base;
-  setsvalue2s(L->top, luaS_new(L, msg));
+  setsvalue2s(L, L->top, luaS_new(L, msg));
   incr_top(L);
   lua_unlock(L);
   return LUA_ERRRUN;
@@ -400,7 +401,7 @@ LUA_API int lua_yield (lua_State *L, int nresults) {
     if (L->top - nresults > L->base) {  /* is there garbage in the stack? */
       int i;
       for (i=0; i<nresults; i++)  /* move down results */
-        setobjs2s(L->base + i, L->top - nresults + i);
+        setobjs2s(L, L->base + i, L->top - nresults + i);
       L->top = L->base + nresults;
     }
   } /* else it's an yield inside a hook: nothing to do */
@@ -457,7 +458,7 @@ static void f_parser (lua_State *L, void *ud) {
   cl->l.p = tf;
   for (i = 0; i < tf->nups; i++)  /* initialize eventual upvalues */
     cl->l.upvals[i] = luaF_newupval(L);
-  setclvalue(L->top, cl);
+  setclvalue(L, L->top, cl);
   incr_top(L);
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 1.27 2003/12/04 17:22:42 roberto Exp roberto $
+** $Id: lgc.h,v 1.28 2003/12/09 16:56:11 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -76,12 +76,12 @@
 	luaC_step(L); }
 
 
-#define luaC_barrier(L,p,v) { if (valiswhite(v) && isblack(valtogco(p)))  \
-	luaC_barrierf(L,valtogco(p),gcvalue(v)); }
+#define luaC_barrier(L,p,v) { if (valiswhite(v) && isblack(obj2gco(p)))  \
+	luaC_barrierf(L,obj2gco(p),gcvalue(v)); }
 
 #define luaC_objbarrier(L,p,o)  \
-	{ if (iswhite(valtogco(o)) && isblack(valtogco(p))) \
-		luaC_barrierf(L,valtogco(p),valtogco(o)); }
+	{ if (iswhite(obj2gco(o)) && isblack(obj2gco(p))) \
+		luaC_barrierf(L,obj2gco(p),obj2gco(o)); }
 
 size_t luaC_separateudata (lua_State *L);
 void luaC_callGCTM (lua_State *L);

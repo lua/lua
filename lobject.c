@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.98 2003/04/28 13:30:14 roberto Exp roberto $
+** $Id: lobject.c,v 1.99 2003/06/10 12:36:26 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -27,7 +27,7 @@
 #endif
 
 
-const TObject luaO_nilobject = {LUA_TNIL, {NULL}};
+const TValue luaO_nilobject = {LUA_TNIL, {NULL}};
 
 
 /*
@@ -62,7 +62,7 @@ int luaO_log2 (unsigned int x) {
 }
 
 
-int luaO_rawequalObj (const TObject *t1, const TObject *t2) {
+int luaO_rawequalObj (const TValue *t1, const TValue *t2) {
   if (ttype(t1) != ttype(t2)) return 0;
   else switch (ttype(t1)) {
     case LUA_TNIL:
@@ -93,7 +93,7 @@ int luaO_str2d (const char *s, lua_Number *result) {
 
 
 static void pushstr (lua_State *L, const char *str) {
-  setsvalue2s(L->top, luaS_new(L, str));
+  setsvalue2s(L, L->top, luaS_new(L, str));
   incr_top(L);
 }
 
@@ -105,7 +105,7 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
   for (;;) {
     const char *e = strchr(fmt, '%');
     if (e == NULL) break;
-    setsvalue2s(L->top, luaS_newlstr(L, fmt, e-fmt));
+    setsvalue2s(L, L->top, luaS_newlstr(L, fmt, e-fmt));
     incr_top(L);
     switch (*(e+1)) {
       case 's':

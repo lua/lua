@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.168 2003/11/05 11:59:14 roberto Exp roberto $
+** $Id: ltests.c,v 1.169 2003/11/19 12:21:57 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -269,10 +269,10 @@ static int mem_query (lua_State *L) {
 static int hash_query (lua_State *L) {
   if (lua_isnone(L, 2)) {
     luaL_argcheck(L, lua_type(L, 1) == LUA_TSTRING, 1, "string expected");
-    lua_pushinteger(L, tsvalue(func_at(L, 1))->tsv.hash);
+    lua_pushinteger(L, tsvalue(func_at(L, 1))->hash);
   }
   else {
-    TObject *o = func_at(L, 1);
+    TValue *o = func_at(L, 1);
     Table *t;
     luaL_checktype(L, 2, LUA_TTABLE);
     t = hvalue(func_at(L, 2));
@@ -338,7 +338,7 @@ static int string_query (lua_State *L) {
     GCObject *ts;
     int n = 0;
     for (ts = tb->hash[s]; ts; ts = ts->gch.next) {
-      setsvalue2s(L->top, gcotots(ts));
+      setsvalue2s(L, L->top, gco2ts(ts));
       incr_top(L);
       n++;
     }
