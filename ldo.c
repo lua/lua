@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.201 2002/11/14 16:15:53 roberto Exp roberto $
+** $Id: ldo.c,v 1.202 2002/11/18 11:01:55 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -308,15 +308,20 @@ static void resume (lua_State *L, void *ud) {
       luaG_runerror(L, "cannot resume dead coroutine");
     luaD_precall(L, L->top - (nargs + 1));  /* start coroutine */
   }
-  else if (ci->state && CI_YIELD) {  /* inside a yield? */
-    /* finish interrupted execution of `OP_CALL' */
-    int nresults;
-    lua_assert((ci-1)->state & CI_SAVEDPC);
-    lua_assert(GET_OPCODE(*((ci-1)->u.l.savedpc - 1)) == OP_CALL ||
-               GET_OPCODE(*((ci-1)->u.l.savedpc - 1)) == OP_TAILCALL);
-    nresults = GETARG_C(*((ci-1)->u.l.savedpc - 1)) - 1;
-    luaD_poscall(L, nresults, L->top - nargs);  /* complete it */
-    if (nresults >= 0) L->top = L->ci->top;
+  else if (ci->state & CI_YIELD) {  /* inside a yield? */
+    if (ci->state & CI_C) {  /* `common' yield? */
+      /* finish interrupted execution of `OP_CALL' */
+      int nresults;
+      lua_assert((ci-1)->state & CI_SAVEDPC);
+      lua_assert(GET_OPCODE(*((ci-1)->u.l.savedpc - 1)) == OP_CALL ||
+                 GET_OPCODE(*((ci-1)->u.l.savedpc - 1)) == OP_TAILCALL);
+      nresults = GETARG_C(*((ci-1)->u.l.savedpc - 1)) - 1;
+      luaD_poscall(L, nresults, L->top - nargs);  /* complete it */
+      if (nresults >= 0) L->top = L->ci->top;
+    }
+    else {  /* yielded inside a hook: just continue its execution */
+      ci->state &= ~CI_YIELD;
+    }
   }
   else
     luaG_runerror(L, "cannot resume non-suspended coroutine");
@@ -349,15 +354,18 @@ LUA_API int lua_yield (lua_State *L, int nresults) {
   CallInfo *ci;
   lua_lock(L);
   ci = L->ci;
-  if ((ci-1)->state & CI_C)
-    luaG_runerror(L, "cannot yield a C function");
-  lua_assert(ci->state & CI_C);  /* current function is not Lua */
-  if (L->top - nresults > ci->base) {  /* is there garbage in the stack? */
-    int i;
-    for (i=0; i<nresults; i++)  /* move down results */
-      setobjs2s(ci->base + i, L->top - nresults + i);
-    L->top = ci->base + nresults;
+  if (ci->state & CI_C) {  /* usual yield */
+    if ((ci-1)->state & CI_C)
+      luaG_runerror(L, "cannot yield a C function");
+    if (L->top - nresults > ci->base) {  /* is there garbage in the stack? */
+      int i;
+      for (i=0; i<nresults; i++)  /* move down results */
+        setobjs2s(ci->base + i, L->top - nresults + i);
+      L->top = ci->base + nresults;
+    }
   }
+  /* else it's an yield inside a hook: nothing to do */
+  ci->state |= CI_YIELD;
   lua_unlock(L);
   return -1;
 }

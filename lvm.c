@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.261 2002/11/14 16:15:53 roberto Exp roberto $
+** $Id: lvm.c,v 1.262 2002/11/18 11:01:55 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -393,8 +393,14 @@ StkId luaV_execute (lua_State *L) {
     const Instruction i = *pc++;
     StkId ra;
     if (L->hookmask >= LUA_MASKLINE &&
-        (--L->hookcount == 0 || L->hookmask & LUA_MASKLINE))
+        (--L->hookcount == 0 || L->hookmask & LUA_MASKLINE)) {
       traceexec(L);
+      if (L->ci->state & CI_YIELD) {  /* did hook yield? */
+        L->ci->u.l.savedpc = pc - 1;
+        L->ci->state |= CI_SAVEDPC;
+        return NULL;
+      }
+    }
     /* warning!! several calls may realloc the stack and invalidate `ra' */
     ra = RA(i);
     lua_assert(L->top <= L->stack + L->stacksize && L->top >= L->ci->base);
@@ -595,8 +601,7 @@ StkId luaV_execute (lua_State *L) {
         if (firstResult) {
           if (firstResult > L->top) {  /* yield? */
             (L->ci - 1)->u.l.savedpc = pc;
-            (L->ci - 1)->state = CI_SAVEDPC;
-            L->ci->state |= CI_YIELD;
+            (L->ci - 1)->state |= CI_SAVEDPC;
             return NULL;
           }
           /* it was a C function (`precall' called it); adjust results */
