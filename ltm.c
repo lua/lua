@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.18 1998/12/22 18:10:50 roberto Exp roberto $
+** $Id: ltm.c,v 1.19 1999/01/13 19:08:10 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -22,8 +22,7 @@ char *luaT_eventname[] = {  /* ORDER IM */
 };
 
 
-static int luaI_checkevent (char *name, char *list[])
-{
+static int luaI_checkevent (char *name, char *list[]) {
   int e = luaL_findstring(name, list);
   if (e < 0)
     luaL_verror("`%.50s' is not a valid event name", name);
@@ -35,7 +34,7 @@ static int luaI_checkevent (char *name, char *list[])
 /* events in LUA_T_NIL are all allowed, since this is used as a
 *  'placeholder' for "default" fallbacks
 */
-static char validevents[NUM_TAGS][IM_N] = { /* ORDER LUA_T, ORDER IM */
+static char luaT_validevents[NUM_TAGS][IM_N] = { /* ORDER LUA_T, ORDER IM */
 {1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* LUA_T_USERDATA */
 {1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_T_NUMBER */
 {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_T_STRING */
@@ -45,22 +44,19 @@ static char validevents[NUM_TAGS][IM_N] = { /* ORDER LUA_T, ORDER IM */
 {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}   /* LUA_T_NIL */
 };
 
-
-static int validevent (int t, int e) {  /* ORDER LUA_T */
-  return (t < LUA_T_NIL) ?  1 : validevents[-t][e];
+static int luaT_validevent (int t, int e) {  /* ORDER LUA_T */
+  return (t < LUA_T_NIL) ?  1 : luaT_validevents[-t][e];
 }
 
 
-static void init_entry (int tag)
-{
+static void init_entry (int tag) {
   int i;
   for (i=0; i<IM_N; i++)
     ttype(luaT_getim(tag, i)) = LUA_T_NIL;
 }
 
 
-void luaT_init (void)
-{
+void luaT_init (void) {
   int t;
   L->IMtable_size = NUM_TAGS*2;
   L->last_tag = -(NUM_TAGS-1);
@@ -70,8 +66,7 @@ void luaT_init (void)
 }
 
 
-int lua_newtag (void)
-{
+int lua_newtag (void) {
   --L->last_tag;
   if ((-L->last_tag) >= L->IMtable_size)
     L->IMtable_size = luaM_growvector(&L->IMtable, L->IMtable_size,
@@ -81,34 +76,30 @@ int lua_newtag (void)
 }
 
 
-static void checktag (int tag)
-{
+static void checktag (int tag) {
   if (!(L->last_tag <= tag && tag <= 0))
     luaL_verror("%d is not a valid tag", tag);
 }
 
-void luaT_realtag (int tag)
-{
+void luaT_realtag (int tag) {
   if (!(L->last_tag <= tag && tag < LUA_T_NIL))
     luaL_verror("tag %d is not result of `newtag'", tag);
 }
 
 
-int lua_copytagmethods (int tagto, int tagfrom)
-{
+int lua_copytagmethods (int tagto, int tagfrom) {
   int e;
   checktag(tagto);
   checktag(tagfrom);
   for (e=0; e<IM_N; e++) {
-    if (validevent(tagto, e))
+    if (luaT_validevent(tagto, e))
       *luaT_getim(tagto, e) = *luaT_getim(tagfrom, e);
   }
   return tagto;
 }
 
 
-int luaT_efectivetag (TObject *o)
-{
+int luaT_effectivetag (TObject *o) {
   int t;
   switch (t = ttype(o)) {
     case LUA_T_ARRAY:
@@ -130,23 +121,21 @@ int luaT_efectivetag (TObject *o)
 }
 
 
-TObject *luaT_gettagmethod (int t, char *event)
-{
+TObject *luaT_gettagmethod (int t, char *event) {
   int e = luaI_checkevent(event, luaT_eventname);
   checktag(t);
-  if (validevent(t, e))
+  if (luaT_validevent(t, e))
     return luaT_getim(t,e);
   else
     return &luaO_nilobject;
 }
 
 
-void luaT_settagmethod (int t, char *event, TObject *func)
-{
+void luaT_settagmethod (int t, char *event, TObject *func) {
   TObject temp = *func;
   int e = luaI_checkevent(event, luaT_eventname);
   checktag(t);
-  if (!validevent(t, e))
+  if (!luaT_validevent(t, e))
     luaL_verror("cannot change tag method `%.20s' for type `%.20s'%.20s",
                 luaT_eventname[e], luaO_typenames[-t],
                 (t == LUA_T_ARRAY || t == LUA_T_USERDATA) ? " with default tag"
@@ -189,23 +178,20 @@ static void errorFB (void)
 static void nilFB (void) { }
 
 
-static void typeFB (void)
-{
+static void typeFB (void) {
   lua_error("unexpected type");
 }
 
 
-static void fillvalids (IMS e, TObject *func)
-{
+static void fillvalids (IMS e, TObject *func) {
   int t;
   for (t=LUA_T_NIL; t<=LUA_T_USERDATA; t++)
-    if (validevent(t, e))
+    if (luaT_validevent(t, e))
       *luaT_getim(t, e) = *func;
 }
 
 
-void luaT_setfallback (void)
-{
+void luaT_setfallback (void) {
   static char *oldnames [] = {"error", "getglobal", "arith", "order", NULL};
   TObject oldfunc;
   lua_CFunction replace;
