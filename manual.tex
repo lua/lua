@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 2.11 1997/07/04 22:35:38 roberto Exp roberto $
+% $Id: manual.tex,v 2.12 1997/07/30 22:15:18 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -18,7 +18,7 @@
 
 \newcommand{\ff}{$\bullet$\ }
 
-\newcommand{\Version}{3.0}
+\newcommand{\Version}{3.1}
 
 \makeindex
 
@@ -38,7 +38,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1997/07/04 22:35:38 $}
+\date{\small \verb$Date: 1997/07/30 22:15:18 $}
 
 \maketitle
 
@@ -1893,9 +1893,10 @@ decimal digit in the range [1,9],
 giving the position of the argument in the argument list.
 For instance, the call \verb|format("%2$d -> %1$03d", 1, 34)| will
 result in \verb|"34 -> 001"|.
+The same argument can be used in more than one convertion.
 
 The options \verb|c|, \verb|d|, \verb|E|, \verb|e|, \verb|f|,
-\verb|g| \verb|i|, \verb|o|, \verb|u|, \verb|X|, and \verb|x| all
+\verb|g|, \verb|G|, \verb|i|, \verb|o|, \verb|u|, \verb|X|, and \verb|x| all
 expect a number as argument,
 whereas \verb|q| and \verb|s| expect a string.
 Note that the \verb|*| modifier can be simulated by building
