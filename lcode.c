@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.43 2000/08/08 18:26:05 roberto Exp roberto $
+** $Id: lcode.c,v 1.44 2000/08/08 20:42:07 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -348,9 +348,9 @@ void luaK_tostack (LexState *ls, expdesc *v, int onlyone) {
 }
 
 
-void luaK_prefix (LexState *ls, int op, expdesc *v) {
+void luaK_prefix (LexState *ls, UnOpr op, expdesc *v) {
   FuncState *fs = ls->fs;
-  if (op == '-') {
+  if (op == OPR_MINUS) {
     luaK_tostack(ls, v, 1);
     luaK_code0(fs, OP_MINUS);
   }
@@ -368,46 +368,54 @@ void luaK_prefix (LexState *ls, int op, expdesc *v) {
 }
 
 
-void luaK_infix (LexState *ls, int op, expdesc *v) {
+void luaK_infix (LexState *ls, BinOpr op, expdesc *v) {
   FuncState *fs = ls->fs;
-  if (op == TK_AND)
-    luaK_goiftrue(fs, v, 1);
-  else if (op == TK_OR)
-    luaK_goiffalse(fs, v, 1);
-  else
-    luaK_tostack(ls, v, 1);  /* all other binary operators need a value */
+  switch (op) {
+    case OPR_AND:
+      luaK_goiftrue(fs, v, 1);
+      break;
+    case OPR_OR:
+      luaK_goiffalse(fs, v, 1);
+      break;
+    default:
+      luaK_tostack(ls, v, 1);  /* all other binary operators need a value */
+  }
 }
 
 
-void luaK_posfix (LexState *ls, int op, expdesc *v1, expdesc *v2) {
+
+static const struct {
+  OpCode opcode;  /* opcode for each binary operator */
+  int arg;        /* default argument for the opcode */
+} codes[] = {  /* ORDER OPR */
+      {OP_ADD, 0}, {OP_SUB, 0}, {OP_MULT, 0}, {OP_DIV, 0},
+      {OP_POW, 0}, {OP_CONCAT, 2},
+      {OP_JMPNE, NO_JUMP}, {OP_JMPEQ, NO_JUMP},
+      {OP_JMPLT, NO_JUMP}, {OP_JMPLE, NO_JUMP},
+      {OP_JMPGT, NO_JUMP}, {OP_JMPGE, NO_JUMP}
+};
+
+
+void luaK_posfix (LexState *ls, BinOpr op, expdesc *v1, expdesc *v2) {
   FuncState *fs = ls->fs;
-  if (op == TK_AND) {
-    LUA_ASSERT(v1->u.l.t == NO_JUMP, "list must be closed");
-    discharge1(fs, v2);
-    v1->u.l.t = v2->u.l.t;
-    luaK_concat(fs, &v1->u.l.f, v2->u.l.f);
-  }
-  else if (op == TK_OR) {
-    LUA_ASSERT(v1->u.l.f == NO_JUMP, "list must be closed");
-    discharge1(fs, v2);
-    v1->u.l.f = v2->u.l.f;
-    luaK_concat(fs, &v1->u.l.t, v2->u.l.t);
-  }
-  else {
-    luaK_tostack(ls, v2, 1);  /* `v2' must be a value */
-    switch (op) {
-      case '+': luaK_code0(fs, OP_ADD); break;
-      case '-': luaK_code0(fs, OP_SUB); break;
-      case '*': luaK_code0(fs, OP_MULT); break;
-      case '/': luaK_code0(fs, OP_DIV); break;
-      case '^': luaK_code0(fs, OP_POW); break;
-      case TK_CONCAT: luaK_code1(fs, OP_CONCAT, 2); break;
-      case TK_EQ: luaK_code1(fs, OP_JMPEQ, NO_JUMP); break;
-      case TK_NE: luaK_code1(fs, OP_JMPNE, NO_JUMP); break;
-      case '>': luaK_code1(fs, OP_JMPGT, NO_JUMP); break;
-      case '<': luaK_code1(fs, OP_JMPLT, NO_JUMP); break;
-      case TK_GE: luaK_code1(fs, OP_JMPGE, NO_JUMP); break;
-      case TK_LE: luaK_code1(fs, OP_JMPLE, NO_JUMP); break;
+  switch (op) {
+    case OPR_AND: {
+      LUA_ASSERT(v1->u.l.t == NO_JUMP, "list must be closed");
+      discharge1(fs, v2);
+      v1->u.l.t = v2->u.l.t;
+      luaK_concat(fs, &v1->u.l.f, v2->u.l.f);
+      break;
+    }
+    case OPR_OR: {
+      LUA_ASSERT(v1->u.l.f == NO_JUMP, "list must be closed");
+      discharge1(fs, v2);
+      v1->u.l.f = v2->u.l.f;
+      luaK_concat(fs, &v1->u.l.t, v2->u.l.t);
+      break;
+    }
+    default: {
+      luaK_tostack(ls, v2, 1);  /* `v2' must be a value */
+      luaK_code1(fs, codes[op].opcode, codes[op].arg);
     }
   }
 }

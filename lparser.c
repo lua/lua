@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.104 2000/08/08 20:42:07 roberto Exp roberto $
+** $Id: lparser.c,v 1.105 2000/08/08 20:48:55 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -670,55 +670,76 @@ static void exp1 (LexState *ls) {
 }
 
 
-/*
-** gets priorities of an operator. Returns the priority to the left, and
-** sets `rp' to the priority to the right.
-*/
-static int get_priority (int op, int *rp) {
+static UnOpr getunopr (int op) {
   switch (op) {
-
-    case  '^': *rp = 8; return 9;  /* right associative */
-
-#define UNARY_PRIORITY	7
-
-    case  '*': case  '/': *rp = 6; return 6;
-
-    case  '+': case  '-': *rp = 5; return 5;
-
-    case  TK_CONCAT: *rp = 3; return 4;  /* right associative (?) */
-
-    case TK_EQ: case  TK_NE: case  '>': case  '<': case  TK_LE: case  TK_GE:
-      *rp = 2; return 2;
-
-    case TK_AND: case TK_OR: *rp = 1; return 1;
-
-    default: *rp = -1; return -1;
+    case TK_NOT: return OPR_NOT;
+    case '-': return OPR_MINUS;
+    default: return OPR_NOUNOPR;
   }
 }
 
 
+static BinOpr getbinopr (int op) {
+  switch (op) {
+    case '+': return OPR_ADD;
+    case '-': return OPR_SUB;
+    case '*': return OPR_MULT;
+    case '/': return OPR_DIV;
+    case '^': return OPR_POW;
+    case TK_CONCAT: return OPR_CONCAT;
+    case TK_NE: return OPR_NE;
+    case TK_EQ: return OPR_EQ;
+    case '<': return OPR_LT;
+    case TK_LE: return OPR_LE;
+    case '>': return OPR_GT;
+    case TK_GE: return OPR_GE;
+    case TK_AND: return OPR_AND;
+    case TK_OR: return OPR_OR;
+    default: return OPR_NOBINOPR;
+  }
+}
+
+
+static const struct {
+  char left;  /* left priority for each binary operator */
+  char right; /* right priority */
+} priority[] = {  /* ORDER OPR */
+   {5, 5}, {5, 5}, {6, 6}, {6, 6},  /* arithmetic */
+   {9, 8}, {4, 3},                  /* power and concat (right associative) */
+   {2, 2}, {2, 2},                  /* equality */
+   {2, 2}, {2, 2}, {2, 2}, {2, 2},  /* order */
+   {1, 1}, {1, 1}                   /* logical */
+};
+
+#define UNARY_PRIORITY	7  /* priority for unary operators */
+
+
 /*
-** subexpr -> (simplexep | (NOT | '-') subexpr) { binop subexpr }
+** subexpr -> (simplexep | unop subexpr) { binop subexpr }
 ** where `binop' is any binary operator with a priority higher than `limit'
 */
-static void subexpr (LexState *ls, expdesc *v, int limit) {
-  int rp;
-  if (ls->t.token == '-' || ls->t.token == TK_NOT) {
-    int op = ls->t.token;  /* operator */
+static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
+  BinOpr op;
+  UnOpr uop = getunopr(ls->t.token);
+  if (uop != OPR_NOUNOPR) {
     next(ls);
     subexpr(ls, v, UNARY_PRIORITY);
-    luaK_prefix(ls, op, v);
+    luaK_prefix(ls, uop, v);
   }
   else simpleexp(ls, v);
   /* expand while operators have priorities higher than `limit' */
-  while (get_priority(ls->t.token, &rp) > limit) {
+  op = getbinopr(ls->t.token);
+  while (op != OPR_NOBINOPR && priority[op].left > limit) {
     expdesc v2;
-    int op = ls->t.token;  /* current operator (with priority == `rp') */
+    BinOpr nextop;
     next(ls);
     luaK_infix(ls, op, v);
-    subexpr(ls, &v2, rp);  /* read sub-expression with priority > `rp' */
+    /* read sub-expression with higher priority */
+    nextop = subexpr(ls, &v2, priority[op].right);
     luaK_posfix(ls, op, v, &v2);
+    op = nextop;
   }
+  return op;  /* return first untreated operator */
 }
 
 
