@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.13 1994/12/20 21:20:36 roberto Exp celes $";
+char *rcs_lex = "$Id: lex.c,v 2.14 1994/12/27 20:50:38 celes Exp $";
  
 
 #include <ctype.h>
@@ -21,7 +21,7 @@ char *rcs_lex = "$Id: lex.c,v 2.13 1994/12/20 21:20:36 roberto Exp celes $";
 #define save_and_next()  { save(current); next(); }
 
 static int current;
-static char yytext[256];
+static char yytext[3000];
 static char *yytextLast;
 
 static Input input;
@@ -85,6 +85,40 @@ static int findReserved (char *name)
 }
 
 
+static int read_long_string (void)
+{
+  int cont = 0;
+  while (1)
+  {
+    switch (current)
+    {
+      case EOF:
+      case 0:
+        return WRONGTOKEN;
+      case '[':
+        save_and_next();
+        if (current == '[')
+        {
+          cont++;
+          save_and_next();
+        }
+        continue; 
+      case ']':
+        save_and_next();
+        if (current == ']')
+        {
+          if (cont == 0) return STRING;
+          cont--;
+          save_and_next();
+        }
+        continue; 
+      default:
+        save_and_next();
+    }
+  }
+}
+
+
 int yylex (void)
 {
   float a;
@@ -127,6 +161,20 @@ int yylex (void)
         if (current != '-') return '-';
         do { next(); } while (current != '\n' && current != 0);
         continue;
+
+      case '[':
+        save_and_next();
+        if (current != '[') return '[';
+        else
+        {
+          save_and_next();  /* pass the second '[' */
+          if (read_long_string() == WRONGTOKEN)
+            return WRONGTOKEN;
+          save_and_next();  /* pass the second ']' */
+          *(yytextLast-2) = 0;  /* erases ']]' */
+          yylval.vWord = luaI_findconstant(lua_constcreate(yytext+2));
+          return STRING;
+        }
 
       case '=':
         save_and_next();
