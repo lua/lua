@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.10 2002/06/06 18:17:33 roberto Exp roberto $
+** $Id: liolib.c,v 2.11 2002/06/18 15:16:18 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -519,7 +519,7 @@ static int io_date (lua_State *L) {
     if (strftime(b, sizeof(b), s, stm))
       lua_pushstring(L, b);
     else
-      return luaL_error(L, "invalid `date' format");
+      return luaL_error(L, "`date' format too long");
   }
   return 1;
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.187 2002/06/06 13:52:37 roberto Exp roberto $
+** $Id: lparser.c,v 1.188 2002/06/06 17:29:53 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -927,7 +927,7 @@ static void whilestat (LexState *ls, int line) {
   fs->jpc = NO_JUMP;
   sizeexp = fs->pc - expinit;  /* size of expression code */
   if (sizeexp > MAXEXPWHILE) 
-    luaX_syntaxerror(ls, "while condition too complex");
+    luaX_syntaxerror(ls, "`while' condition too complex");
   for (i = 0; i < sizeexp; i++)  /* save `exp' code */
     codeexp[i] = fs->f->code[expinit + i];
   fs->pc = expinit;  /* remove `exp' code */

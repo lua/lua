@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.84 2002/06/24 17:23:16 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.85 2002/06/25 19:19:33 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -357,7 +357,7 @@ static int luaB_newproxy (lua_State *L) {
 #endif
 
 #ifndef LUA_PATH_DEFAULT
-#define LUA_PATH_DEFAULT	"?.lua"
+#define LUA_PATH_DEFAULT	"?;?.lua"
 #endif
 
 
@@ -403,7 +403,7 @@ static int luaB_require (lua_State *L) {
   lua_pushvalue(L, 1);
   lua_setglobal(L, "_REQUIREDNAME");
   lua_getglobal(L, REQTAB);
-  if (!lua_istable(L, 2)) return luaL_error(L, REQTAB " is not a table");
+  if (!lua_istable(L, 2)) return luaL_error(L, "`" REQTAB "' is not a table");
   path = getpath(L);
   lua_pushvalue(L, 1);  /* check package's name in book-keeping table */
   lua_rawget(L, 2);

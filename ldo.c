@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.182 2002/06/18 17:42:52 roberto Exp roberto $
+** $Id: ldo.c,v 1.183 2002/06/20 20:41:46 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -283,7 +283,7 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
     firstResult = luaV_execute(L);  /* call it */
     if (firstResult == NULL) {
       luaD_poscall(L, 0, L->top);
-      luaG_runerror(L, "attempt to `yield' across tag-method/C-call boundary");
+      luaG_runerror(L, "attempt to yield across tag-method/C-call boundary");
     }
   }
   luaD_poscall(L, nResults, firstResult);
@@ -357,7 +357,7 @@ LUA_API int lua_yield (lua_State *L, int nresults) {
   lua_lock(L);
   ci = L->ci;
   if (ci_func(ci-1)->c.isC)
-    luaG_runerror(L, "cannot `yield' a C function");
+    luaG_runerror(L, "cannot yield a C function");
   ci->yield_results = nresults;
   lua_unlock(L);
   return -1;

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.201 2002/06/20 20:41:46 roberto Exp roberto $
+** $Id: lapi.c,v 1.202 2002/06/24 13:08:45 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -426,7 +426,7 @@ LUA_API void lua_gettable (lua_State *L, int index) {
   const TObject *v;
   lua_lock(L);
   t = luaA_index(L, index);
-  v = luaV_gettable(L, t, L->top-1);
+  v = luaV_gettable(L, t, L->top-1, 0);
   setobj(L->top - 1, v);
   lua_unlock(L);
 }
@@ -597,7 +597,7 @@ LUA_API int lua_setglobals (lua_State *L, int level) {
 ** `load' and `call' functions (run Lua code)
 */
 
-LUA_API void lua_upcall (lua_State *L, int nargs, int nresults) {
+LUA_API void lua_call (lua_State *L, int nargs, int nresults) {
   StkId func;
   lua_lock(L);
   api_checknelems(L, nargs+1);
