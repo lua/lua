@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.17 2002/08/21 14:57:48 roberto Exp roberto $
+** $Id: liolib.c,v 2.18 2002/09/17 20:35:54 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -440,21 +440,20 @@ static const luaL_reg flib[] = {
 
 
 static void createmeta (lua_State *L) {
-  lua_pushliteral(L, FILEHANDLE);  /* S: FH */
-  lua_newtable(L);  /* S: mt FH */
+  lua_pushliteral(L, FILEHANDLE);
+  lua_newtable(L);  /* push new metatable for file handles */
   /* close files when collected */
-  lua_pushliteral(L, "__gc");  /* S: `gc' mt FH */
-  lua_pushvalue(L, -2);  /* S: mt `gc' mt FH */
-  lua_pushcclosure(L, io_gc, 1);  /* S: close `gc' mt FH */
-  lua_rawset(L, -3);  /* S: mt FH */
+  lua_pushliteral(L, "__gc");
+  lua_pushvalue(L, -2);  /* push metatable (will be upvalue for `gc' method) */
+  lua_pushcclosure(L, io_gc, 1);
+  lua_rawset(L, -3);  /* metatable.__gc = io_gc */
   /* file methods */
-  lua_pushliteral(L, "__gettable");  /* S: `gettable' mt FH */
-  lua_pushvalue(L, -2);  /* S: mt `gettable' mt FH */
-  lua_rawset(L, -3);  /* S: mt FH */
-  lua_pushvalue(L, -1);  /* S: mt mt FH */
-  luaL_openlib(L, flib, 1);  /* S: mt FH */
-  /* put new metatable into registry */
-  lua_rawset(L, LUA_REGISTRYINDEX);  /* S: empty */
+  lua_pushliteral(L, "__index");
+  lua_pushvalue(L, -2);  /* push metatable */
+  lua_rawset(L, -3);  /* metatable.__index = metatable */
+  lua_pushvalue(L, -1);  /* push metatable (will be upvalue for library) */
+  luaL_openlib(L, flib, 1);
+  lua_rawset(L, LUA_REGISTRYINDEX);  /* registry.FILEHANDLE = metatable */
 }
 
 /* }====================================================== */

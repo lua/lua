@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.254 2002/08/21 18:56:19 roberto Exp roberto $
+** $Id: lvm.c,v 1.255 2002/09/19 13:03:53 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -134,7 +134,7 @@ static const TObject *luaV_index (lua_State *L, const TObject *t,
 
 static const TObject *luaV_getnotable (lua_State *L, const TObject *t,
                                        TObject *key, int loop) {
-  const TObject *tm = luaT_gettmbyobj(L, t, TM_GETTABLE);
+  const TObject *tm = luaT_gettmbyobj(L, t, TM_INDEX);
   if (ttisnil(tm))
     luaG_typeerror(L, t, "index");
   if (ttisfunction(tm)) {
@@ -181,7 +181,7 @@ void luaV_settable (lua_State *L, const TObject *t, TObject *key, StkId val) {
       }
       /* else will try the tag method */
     }
-    else if (ttisnil(tm = luaT_gettmbyobj(L, t, TM_SETTABLE)))
+    else if (ttisnil(tm = luaT_gettmbyobj(L, t, TM_NEWINDEX)))
       luaG_typeerror(L, t, "index");
     if (ttisfunction(tm)) {
       callTM(L, tm, t, key, val);
