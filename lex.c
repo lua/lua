@@ -1,5 +1,8 @@
-char *rcs_lex = "$Id: lex.c,v 2.3 1994/08/17 17:41:50 celes Exp celes $";
+char *rcs_lex = "$Id: lex.c,v 2.4 1994/09/05 19:14:40 celes Exp lhf $";
 /*$Log: lex.c,v $
+ * Revision 2.4  1994/09/05  19:14:40  celes
+ * escapes \' e \" em strings; correcao do escape \\
+ *
  * Revision 2.3  1994/08/17  17:41:50  celes
  * Implementacao da macro 'lua_strcmp'
  *
@@ -33,7 +36,7 @@ char *rcs_lex = "$Id: lex.c,v 2.3 1994/08/17 17:41:50 celes Exp celes $";
 #include "table.h"
 #include "y.tab.h"
 
-#define lua_strcmp(a,b)	(a[0]<b[0]?(-1):(a[0]>b[0]?(1):strcmp(a,b))) 
+#define lua_strcmp(a,b)	(a[0]<b[0]?(-1):(a[0]>b[0]?(1):strcmp(a,b)))
 
 #define next() { current = input(); }
 #define save(x) { *yytextLast++ = (x); }
@@ -60,7 +63,7 @@ char *lua_lasttext (void)
 
 
 /* The reserved words must be listed in lexicographic order */
-static struct 
+static struct
   {
     char *name;
     int token;
@@ -81,6 +84,30 @@ static struct
       {"then", THEN},
       {"until", UNTIL},
       {"while", WHILE} };
+
+enum
+{
+ U_and=128,
+ U_do,
+ U_else,
+ U_elseif,
+ U_end,
+ U_function,
+ U_if,
+ U_local,
+ U_nil,
+ U_not,
+ U_or,
+ U_repeat,
+ U_return,
+ U_then,
+ U_until,
+ U_while,
+ U_le = '<'+128,
+ U_ge = '>'+128,
+ U_ne = '~'+128,
+ U_sc = '.'+128
+};
 
 #define RESERVEDSIZE (sizeof(reserved)/sizeof(reserved[0]))
 
@@ -134,23 +161,23 @@ int yylex ()
 	  return DEBUG;
         }
 	return WRONGTOKEN;
-  
+
       case '-':
         save_and_next();
         if (current != '-') return '-';
         do { next(); } while (current != '\n' && current != 0);
         continue;
-  
+
       case '<':
         save_and_next();
         if (current != '=') return '<';
         else { save_and_next(); return LE; }
-  
+
       case '>':
         save_and_next();
         if (current != '=') return '>';
         else { save_and_next(); return GE; }
-  
+
       case '~':
         save_and_next();
         if (current != '=') return '~';
@@ -161,12 +188,12 @@ int yylex ()
       {
         int del = current;
         next();  /* skip the delimiter */
-        while (current != del) 
+        while (current != del)
         {
           switch (current)
           {
-            case 0: 
-            case '\n': 
+            case 0:
+            case '\n':
               return WRONGTOKEN;
             case '\\':
               next();  /* do not save the '\' */
@@ -180,7 +207,7 @@ int yylex ()
                 default : save(current); next(); break;
               }
               break;
-            default: 
+            default:
               save_and_next();
           }
         }
@@ -212,12 +239,12 @@ int yylex ()
         yylval.pChar = yytext[currentText];
         return NAME;
       }
-   
+
       case '.':
         save_and_next();
-        if (current == '.') 
-        { 
-          save_and_next(); 
+        if (current == '.')
+        {
+          save_and_next();
           return CONC;
         }
         else if (!isdigit(current)) return '.';
@@ -226,7 +253,7 @@ int yylex ()
 
       case '0': case '1': case '2': case '3': case '4':
       case '5': case '6': case '7': case '8': case '9':
-      
+
         do { save_and_next(); } while (isdigit(current));
         if (current == '.') save_and_next();
 fraction: while (isdigit(current)) save_and_next();
@@ -241,12 +268,32 @@ fraction: while (isdigit(current)) save_and_next();
         yylval.vFloat = atof(yytext[currentText]);
         return NUMBER;
 
+      case U_and:	return AND;
+      case U_do:	return DO;
+      case U_else:	return ELSE;
+      case U_elseif:	return ELSEIF;
+      case U_end:	return END;
+      case U_function:	return FUNCTION;
+      case U_if:	return IF;
+      case U_local:	return LOCAL;
+      case U_nil:	return NIL;
+      case U_not:	return NOT;
+      case U_or:	return OR;
+      case U_repeat:	return REPEAT;
+      case U_return:	return RETURN;
+      case U_then:	return THEN;
+      case U_until:	return UNTIL;
+      case U_while:	return WHILE;
+      case U_le:	return LE;
+      case U_ge:	return GE;
+      case U_ne:	return NE;
+      case U_sc:	return CONC;
+
       default: 		/* also end of file */
       {
         save_and_next();
-        return yytext[currentText][0];      
+        return yytext[currentText][0];
       }
     }
   }
 }
-        
