@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 2.3 1994/08/03 14:15:46 celes Exp celes $";
+char *rcs_opcode="$Id: opcode.c,v 2.4 1994/08/05 19:31:09 celes Exp celes $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -236,17 +236,10 @@ int lua_execute (Byte *pc)
    break;
    
    case PUSHINDEXED:
-    --top;
-    if (tag(top-1) != T_ARRAY)
-    {
-     lua_reportbug ("indexed expression not a table");
-     return 1;
-    }
-    {
-     Object *h = lua_hashget (avalue(top-1), top);
-     if (h == NULL) return 1;
-     *(top-1) = *h;
-    }
+   {
+    int s = lua_pushsubscript();
+    if (s == 1) return 1;
+   }
    break;
    
    case PUSHMARK: tag(top++) = T_MARK; break;
@@ -269,17 +262,10 @@ int lua_execute (Byte *pc)
    break;
 
    case STOREINDEXED0:
-    if (tag(top-3) != T_ARRAY)
-    {
-     lua_reportbug ("indexed expression not a table");
-     return 1;
-    }
-    {
-     Object *h = lua_hashdefine (avalue(top-3), top-2);
-     if (h == NULL) return 1;
-     *h = *(top-1);
-    }
-    top -= 3;
+   {
+    int s = lua_storesubscript();
+    if (s == 1) return 1;
+   }
    break;
    
    case STOREINDEXED:
@@ -641,6 +627,46 @@ int lua_execute (Byte *pc)
 
 
 /*
+** Function to indexed the values on the top
+*/
+int lua_pushsubscript (void)
+{
+ --top;
+ if (tag(top-1) != T_ARRAY)
+ {
+  lua_reportbug ("indexed expression not a table");
+  return 1;
+ }
+ {
+  Object *h = lua_hashget (avalue(top-1), top);
+  if (h == NULL) return 1;
+  *(top-1) = *h;
+ }
+ return 0;
+}
+
+
+/*
+** Function to store indexed based on values at the top
+*/
+int lua_storesubscript (void)
+{
+ if (tag(top-3) != T_ARRAY)
+ {
+  lua_reportbug ("indexed expression not a table");
+  return 1;
+ }
+ {
+  Object *h = lua_hashdefine (avalue(top-3), top-2);
+  if (h == NULL) return 1;
+  *h = *(top-1);
+ }
+ top -= 3;
+ return 0;
+}
+
+
+/*
 ** Traverse all objects on stack
 */
 void lua_travstack (void (*fn)(Object *))
@@ -768,6 +794,16 @@ void *lua_getuserdata (Object *object)
 }
 
 /*
+** Given an object handle, return its table. On error, return NULL.
+*/
+void *lua_gettable (Object *object)
+{
+ if (object == NULL) return NULL;
+ if (tag(object) != T_ARRAY) return NULL;
+ else                        return (avalue(object));
+}
+
+/*
 ** Given an object handle and a field name, return its field object.
 ** On error, return NULL.
 */
@@ -880,6 +916,17 @@ int lua_pushuserdata (void *u)
 }
 
 /*
+** Push an object (tag=userdata) to stack. Return 0 on success or 1 on error.
+*/
+int lua_pushtable (void *t)
+{
+ if (lua_checkstack(top-stack+1) == 1)
+  return 1;
+ tag(top) = T_ARRAY; avalue(top++) = t;
+ return 0;
+}
+
+/*
 ** Push an object to stack.
 */
 int lua_pushobject (Object *o)
@@ -902,6 +949,7 @@ int lua_storeglobal (char *name)
  s_object(n) = *(--top);
  return 0;
 }
+
 
 /*
 ** Store top of the stack at an array field. Return 1 on error, 0 on success.
