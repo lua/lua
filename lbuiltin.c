@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.45 1999/01/04 17:34:49 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.46 1999/01/22 18:46:11 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -348,7 +348,7 @@ static void luaB_foreach (void) {
   luaD_checkstack(3);  /* for f, ref, and val */
   for (i=0; i<a->nhash; i++) {
     Node *nd = &(a->node[i]);
-    if (ttype(ref(nd)) != LUA_T_NIL && ttype(val(nd)) != LUA_T_NIL) {
+    if (ttype(val(nd)) != LUA_T_NIL) {
       *(L->stack.top++) = *f;
       *(L->stack.top++) = *ref(nd);
       *(L->stack.top++) = *val(nd);
