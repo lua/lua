@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.67 2000/09/11 19:42:57 roberto Exp roberto $
+** $Id: lua.h,v 1.68 2000/09/12 13:46:59 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -128,6 +128,7 @@ int            lua_ref (lua_State *L, int lock);
 ** "do" functions (run Lua code)
 */
 int            lua_call (lua_State *L, int nargs, int nresults);
+void           lua_rawcall (lua_State *L, int nargs, int nresults);
 int            lua_dofile (lua_State *L, const char *filename);
 int            lua_dostring (lua_State *L, const char *str);
 int            lua_dobuffer (lua_State *L, const char *buff, size_t size,

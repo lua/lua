@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.82 2000/09/12 18:41:55 roberto Exp roberto $
+** $Id: liolib.c,v 1.83 2000/09/13 20:12:14 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -654,7 +654,7 @@ static int errorfb (lua_State *L) {
   lua_getglobal(L, LUA_ALERT);
   if (lua_isfunction(L, -1)) {  /* avoid loop if _ALERT is not defined */
     lua_pushvalue(L, -2);  /* error message */
-    lua_call(L, 1, 0);
+    lua_rawcall(L, 1, 0);
   }
   return 0;
 }

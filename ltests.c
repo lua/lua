@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.40 2000/09/05 19:33:32 roberto Exp roberto $
+** $Id: ltests.c,v 1.41 2000/09/11 19:42:57 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -25,6 +25,7 @@
 #include "lstring.h"
 #include "ltable.h"
 #include "luadebug.h"
+#include "lualib.h"
 
 
 void luaB_opentests (lua_State *L);
@@ -275,6 +276,19 @@ static int newstate (lua_State *L) {
   return 1;
 }
 
+static int loadlib (lua_State *L) {
+  lua_State *L1 = (lua_State *)lua_touserdata(L, 1);
+  switch (*luaL_check_string(L, 2)) {
+    case 'm': lua_mathlibopen(L1); break;
+    case 's': lua_strlibopen(L1); break;
+    case 'i': lua_iolibopen(L1); break;
+    case 'd': lua_dblibopen(L1); break;
+    case 'b': lua_baselibopen(L1); break;
+    default: luaL_argerror(L, 2, "invalid option");
+  }
+  return 0;
+}
+
 static int closestate (lua_State *L) {
   luaL_checktype(L, 1, "userdata");
   lua_close((lua_State *)lua_touserdata(L, 1));
@@ -405,7 +419,7 @@ static int testC (lua_State *L) {
     else if EQ("call") {
       int narg = getnum;
       int nres = getnum;
-      if (lua_call(L, narg, nres)) lua_error(L, NULL);
+      lua_rawcall(L, narg, nres);
     }
     else if EQ("type") {
       lua_pushstring(L, lua_type(L, getnum));
@@ -425,6 +439,7 @@ static const struct luaL_reg tests_funcs[] = {
   {"listcode", listcode},
   {"liststrings", liststrings},
   {"listlocals", listlocals},
+  {"loadlib", loadlib},
   {"querystr", string_query},
   {"querytab", table_query},
   {"testC", testC},

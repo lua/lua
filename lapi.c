@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.96 2000/09/11 20:29:27 roberto Exp roberto $
+** $Id: lapi.c,v 1.97 2000/09/12 13:47:46 roberto Exp $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -365,6 +365,15 @@ int lua_ref (lua_State *L,  int lock) {
   return ref;
 }
 
+
+/*
+** "do" functions (run Lua code)
+** (most of them are in ldo.c)
+*/
+
+void lua_rawcall (lua_State *L, int nargs, int nresults) {
+  luaD_call(L, L->top-(nargs+1), nresults);
+}
 
 
 /*

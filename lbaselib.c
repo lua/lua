@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.3 2000/09/12 18:41:43 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.4 2000/09/13 19:52:39 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -51,7 +51,7 @@ static int luaB__ERRORMESSAGE (lua_State *L) {
     }
     lua_pushstring(L, "\n");
     lua_concat(L, 3);
-    lua_call(L, 1, 0);
+    lua_rawcall(L, 1, 0);
   }
   return 0;
 }
@@ -71,8 +71,7 @@ static int luaB_print (lua_State *L) {
     const char *s;
     lua_pushvalue(L, -1);  /* function to be called */
     lua_pushvalue(L, i);   /* value to print */
-    if (lua_call(L, 1, 1) != 0)
-      lua_error(L, NULL);
+    lua_rawcall(L, 1, 1);
     s = lua_tostring(L, -1);  /* get result */
     if (s == NULL)
       lua_error(L, "`tostring' must return a string to `print'");
@@ -335,8 +334,7 @@ static int luaB_foreachi (lua_State *L) {
     lua_pushvalue(L, 2);  /* function */
     lua_pushnumber(L, i);  /* 1st argument */
     lua_rawgeti(L, 1, i);  /* 2nd argument */
-    if (lua_call(L, 2, 1) != 0)
-      lua_error(L, NULL);
+    lua_rawcall(L, 2, 1);
     if (!lua_isnil(L, -1))
       return 1;
     lua_pop(L, 1);  /* remove nil result */
@@ -355,7 +353,7 @@ static int luaB_foreach (lua_State *L) {
     lua_pushvalue(L, 2);  /* function */
     lua_pushvalue(L, -3);  /* key */
     lua_pushvalue(L, -3);  /* value */
-    if (lua_call(L, 2, 1) != 0) lua_error(L, NULL);
+    lua_rawcall(L, 2, 1);
     if (!lua_isnil(L, -1))
       return 1;
     lua_pop(L, 2);  /* remove value and result */
@@ -450,7 +448,7 @@ static int sort_comp (lua_State *L, int n, int r) {
       lua_pushvalue(L, -2);  /* pivot */
       lua_rawgeti(L, 1, n);   /* a[n] */
     }
-    if (lua_call(L, 2, 1) != 0) lua_error(L, NULL);
+    lua_rawcall(L, 2, 1);
     res = !lua_isnil(L, -1);
   }
   else {  /* a < b? */
@@ -553,8 +551,7 @@ static int deprecated_func (lua_State *L) {
   lua_insert(L, 1);  /* upvalue is the function to be called */
   lua_getglobals(L);
   lua_insert(L, 2);  /* table of globals is 1o argument */
-  if (lua_call(L, lua_gettop(L)-1, LUA_MULTRET) != 0)
-    lua_error(L, NULL);
+  lua_rawcall(L, lua_gettop(L)-1, LUA_MULTRET);
   return lua_gettop(L);  /* return all results */
 }
 
