@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.166 2002/11/25 17:47:13 roberto Exp roberto $
+** $Id: lua.h,v 1.167 2002/11/25 17:50:14 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -10,18 +10,13 @@
 #ifndef lua_h
 #define lua_h
 
-
-/* definition of `va_list' */
 #include <stdarg.h>
-
-/* definition of `size_t' */
 #include <stddef.h>
 
 
-
-#define LUA_VERSION	"Lua 5.0 (alpha)"
+#define LUA_VERSION	"Lua 5.0 (beta)"
 #define LUA_COPYRIGHT	"Copyright (C) 1994-2002 Tecgraf, PUC-Rio"
-#define LUA_AUTHORS 	"W. Celes, R. Ierusalimschy & L. H. de Figueiredo"
+#define LUA_AUTHORS 	"R. Ierusalimschy, L. H. de Figueiredo & W. Celes"
 
 
 
@@ -43,7 +38,6 @@
 #define LUA_ERRSYNTAX	3
 #define LUA_ERRMEM	4
 #define LUA_ERRERR	5
-#define LUA_ERRTHROW	6
 
 
 typedef struct lua_State lua_State;
@@ -88,7 +82,7 @@ typedef int (*lua_Chunkwriter) (lua_State *L, const void* p,
 #endif
 
 
-/* type of Numbers in Lua */
+/* type of numbers in Lua */
 #ifndef LUA_NUMBER
 typedef double lua_Number;
 #else
@@ -205,7 +199,7 @@ LUA_API int  lua_yield (lua_State *L, int nresults);
 LUA_API int  lua_resume (lua_State *L, int narg);
 
 /*
-** Garbage-collection functions
+** garbage-collection functions
 */
 LUA_API int   lua_getgcthreshold (lua_State *L);
 LUA_API int   lua_getgccount (lua_State *L);
@@ -273,8 +267,6 @@ LUA_API int lua_pushupvalues (lua_State *L);
 
 #define lua_getglobal(L,s)	\
 		(lua_pushstring(L, s), lua_gettable(L, LUA_GLOBALSINDEX))
-
-#define lua_isnull	lua_isnone
 
 
 /* compatibility with ref system */
