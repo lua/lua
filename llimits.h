@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.39 2002/03/07 18:11:51 roberto Exp roberto $
+** $Id: llimits.h,v 1.40 2002/03/14 18:01:52 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -76,6 +76,21 @@ typedef unsigned char lu_byte;
 #define LUSER_ALIGNMENT_T	double
 #endif
 union L_Umaxalign { LUSER_ALIGNMENT_T u; void *s; long l; };
+
+
+#ifndef lua_assert
+#define lua_assert(c)		/* empty */
+#endif
+
+
+#ifndef UNUSED
+#define UNUSED(x)	((void)(x))	/* to avoid warnings */
+#endif
+
+
+#ifndef cast
+#define cast(t, exp)	((t)(exp))
+#endif
 
 
 

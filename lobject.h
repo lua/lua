@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.125 2002/03/05 12:42:47 roberto Exp roberto $
+** $Id: lobject.h,v 1.126 2002/03/11 12:45:00 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -10,21 +10,6 @@
 
 #include "llimits.h"
 #include "lua.h"
-
-
-#ifndef lua_assert
-#define lua_assert(c)		/* empty */
-#endif
-
-
-#ifndef UNUSED
-#define UNUSED(x)	((void)(x))	/* to avoid warnings */
-#endif
-
-
-#ifndef cast
-#define cast(t, exp)	((t)(exp))
-#endif
 
 
 /* tags for values visible from Lua */
