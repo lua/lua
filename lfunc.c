@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
+** $Id: lfunc.c,v 2.2 2004/02/16 19:09:52 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -34,6 +34,7 @@ Closure *luaF_newLclosure (lua_State *L, int nelems, TValue *e) {
   c->l.isC = 0;
   c->l.g = *e;
   c->l.nupvalues = cast(lu_byte, nelems);
+  while (nelems--) c->l.upvals[nelems] = NULL;
   return c;
 }
 
@@ -67,17 +68,18 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
 
 void luaF_close (lua_State *L, StkId level) {
   UpVal *uv;
+  global_State *g = G(L);
   while ((uv = ngcotouv(L->openupval)) != NULL && uv->v >= level) {
-    lu_byte mark = uv->marked;
-    lua_assert(!isblack(obj2gco(uv)));
-    setobj(L, &uv->value, uv->v);
-    luaC_barrier(L, uv, uv->v);
-    uv->v = &uv->value;  /* now current value lives here */
+    GCObject *o = obj2gco(uv);
+    lua_assert(!isblack(o));
     L->openupval = uv->next;  /* remove from `open' list */
-    luaC_link(L, obj2gco(uv), LUA_TUPVAL);
-    if (G(L)->gcstate == GCSpropagate)
-      uv->marked = mark;  /* preserve previous mark */
-    lua_assert(!isdead(G(L), obj2gco(uv)));
+    if (isdead(g, o))
+      luaM_freelem(L, uv);  /* free upvalue */
+    else {
+      setobj(L, &uv->value, uv->v);
+      uv->v = &uv->value;  /* now current value lives here */
+      luaC_linkupval(L, uv);  /* link upvalue into `gcroot' list */
+    }
   }
 }
 

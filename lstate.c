@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.2 2003/12/12 18:29:34 roberto Exp roberto $
+** $Id: lstate.c,v 2.3 2004/02/16 19:09:52 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -93,7 +93,10 @@ static void f_luaopen (lua_State *L, void *ud) {
 }
 
 
-static void preinit_state (lua_State *L) {
+static void preinit_state (lua_State *L, global_State *g) {
+  L->l_G = g;
+  L->tt = LUA_TTHREAD;
+  L->marked = luaC_white(g);
   L->stack = NULL;
   L->stacksize = 0;
   L->errorJmp = NULL;
@@ -116,7 +119,7 @@ static void close_state (lua_State *L) {
   global_State *g = G(L);
   luaF_close(L, L->stack);  /* close all upvalues for this thread */
   luaC_sweepall(L);  /* collect all elements */
-  lua_assert(g->rootgc == NULL);
+  lua_assert(g->rootgc == obj2gco(L));
   luaS_freeall(L);
   luaZ_freebuffer(L, &g->buff);
   freestack(L, L);
@@ -127,9 +130,9 @@ static void close_state (lua_State *L) {
 
 lua_State *luaE_newthread (lua_State *L) {
   lua_State *L1 = tostate(luaM_malloc(L, state_size(lua_State)));
-  luaC_link(L, obj2gco(L1), LUA_TTHREAD);
-  preinit_state(L1);
-  L1->l_G = L->l_G;
+  L1->next = L->next;  /* link new thread after `L' */
+  L->next = obj2gco(L1);
+  preinit_state(L1, G(L));
   stack_init(L1, L);  /* init stack */
   setobj2n(L, gt(L1), gt(L));  /* share table of globals */
   lua_assert(iswhite(obj2gco(L1)));
@@ -152,11 +155,9 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   if (l == NULL) return NULL;
   L = tostate(l);
   g = &((LG *)L)->g;
-  L->tt = LUA_TTHREAD;
-  L->marked = 0;
-  L->next = L->gclist = NULL;
-  preinit_state(L);
-  L->l_G = g;
+  L->next = NULL;
+  g->currentwhite = bitmask(WHITE0BIT);
+  preinit_state(L, g);
   g->realloc = f;
   g->ud = ud;
   g->mainthread = L;
@@ -168,9 +169,9 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   luaZ_initbuffer(L, &g->buff);
   g->panic = NULL;
   g->gcstate = GCSfinalize;
-  g->rootgc = NULL;
+  g->rootgc = obj2gco(L);
   g->sweepstrgc = 0;
-  g->currentwhite = bitmask(WHITE0BIT);
+  g->sweepgc = &g->rootgc;
   g->firstudata = NULL;
   g->gray = NULL;
   g->grayagain = NULL;

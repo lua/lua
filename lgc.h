@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.3 2004/02/16 19:09:52 roberto Exp roberto $
+** $Id: lgc.h,v 2.4 2004/03/09 17:34:35 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -58,7 +58,7 @@
 
 #define iswhite(x)      test2bits((x)->gch.marked, WHITE0BIT, WHITE1BIT)
 #define isblack(x)      testbit((x)->gch.marked, BLACKBIT)
-
+#define isgray(x)	(!isblack(x) && !iswhite(x))
 
 #define otherwhite(g)	(g->currentwhite ^ bit2mask(WHITE0BIT, WHITE1BIT))
 #define isdead(g,v)	((v)->gch.marked & otherwhite(g))
@@ -87,6 +87,7 @@ void luaC_sweepall (lua_State *L);
 void luaC_step (lua_State *L);
 void luaC_fullgc (lua_State *L);
 void luaC_link (lua_State *L, GCObject *o, lu_byte tt);
+void luaC_linkupval (lua_State *L, UpVal *uv);
 void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v);
 
 
