@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.18 1999/02/23 15:01:29 roberto Exp roberto $
+## $Id: makefile,v 1.19 1999/02/24 21:31:03 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -28,7 +28,7 @@ CONFIG = -DPOPEN -D_POSIX_SOURCE
 
 # Compilation parameters
 CC = gcc
-CWARNS = -Wall -Wmissing-prototypes -Wshadow -pedantic -Wpointer-arith -Wcast-align -Waggregate-return
+CWARNS = -Wall -Wmissing-prototypes -Wshadow -pedantic -Wpointer-arith -Wcast-align -Waggregate-return -Wwrite-strings -Wcast-qual -Wstrict-prototypes -Wmissing-declarations -Wnested-externs
 CFLAGS = $(CONFIG) $(CWARNS) -ansi -O2
 
 
