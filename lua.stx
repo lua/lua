@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 1.2 1993/12/22 21:19:23 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 1.3 1993/12/28 16:42:29 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,6 +12,8 @@ char *rcs_luastx = "$Id: lua.stx,v 1.2 1993/12/22 21:19:23 roberto Exp roberto $
 #include "table.h"
 #include "lua.h"
 
+#define LISTING 0
+
 #ifndef ALIGNMENT
 #define ALIGNMENT	(sizeof(void *))
 #endif
@@ -19,7 +21,7 @@ char *rcs_luastx = "$Id: lua.stx,v 1.2 1993/12/22 21:19:23 roberto Exp roberto $
 #ifndef MAXCODE
 #define MAXCODE 1024
 #endif
-static long   buffer[MAXCODE];
+static long   buffer[MAXCODE*sizeof(Byte)/sizeof(long)];
 static Byte  *code = (Byte *)buffer;
 static long   mainbuffer[MAXCODE];
 static Byte  *maincode = (Byte *)mainbuffer;
@@ -27,16 +29,20 @@ static Byte  *basepc;
 static Byte  *pc;
 
 #define MAXVAR 32
-static long    varbuffer[MAXVAR];
-static Byte    nvarbuffer=0;	     /* number of variables at a list */
+static long    varbuffer[MAXVAR];    /* variables in an assignment list;
+				it's long to store negative Word values */
+static int     nvarbuffer=0;	     /* number of variables at a list */
 
-static Word    localvar[STACKGAP];
-static Byte    nlocalvar=0;	     /* number of local variables */
+static Word    localvar[STACKGAP];   /* store local variable names */
+static int     nlocalvar=0;	     /* number of local variables */
+
+#define MAXFIELDS FIELDS_PER_FLUSH*2
+static Word    fields[MAXFIELDS];     /* fieldnames to be flushed */
+static int     nfields=0;
 static int     ntemp;		     /* number of temporary var into stack */
 static int     err;		     /* flag to indicate error */
 
 /* Internal functions */
-#define align(n)  align_n(sizeof(n))
 
 static void code_byte (Byte c)
 {
@@ -46,6 +52,14 @@ static void code_byte (Byte c)
   err = 1;
  }
  *pc++ = c;
+}
+
+#define align(t,n)  align_n(sizeof(t),n)
+static void align_n (unsigned size, int gap)
+{
+ if (size > ALIGNMENT) size = ALIGNMENT;
+ while (((pc+gap-code)%size) != 0)	/* +gap to include BYTECODEs */
+  code_byte (NOP);
 }
 
 static void code_word (Word n)
@@ -68,6 +82,43 @@ static void code_float (float n)
  }
  *((float *)pc) = n;
  pc += sizeof(float);
+}
+
+static void push_field (Word name)
+{
+  if (nfields < STACKGAP-1)
+    fields[nfields++] = name;
+  else
+  {
+   lua_error ("too many fields in a constructor");
+   err = 1;
+  }
+}
+
+static void flush_record (int n)
+{
+  int i;
+  if (n == 0) return;
+  align(Word,2);  /* two bytes before the actual word */
+  code_byte(STORERECORD);
+  code_byte(n);
+  for (i=0; i<n; i++)
+    code_word(lua_findconstant(s_name(fields[--nfields])));
+  ntemp -= n;
+}
+
+static void flush_list (int m, int n)
+{
+  if (n == 0) return;
+  if (m == 0)
+    code_byte(STORELIST0); 
+  else
+  {
+    code_byte(STORELIST);
+    code_byte(m);
+  }
+  code_byte(n);
+  ntemp-=n;
 }
 
 static void incr_ntemp (void)
@@ -103,13 +154,6 @@ static void incr_nvarbuffer (void)
  }
 }
 
-static void align_n (unsigned size)
-{
- if (size > ALIGNMENT) size = ALIGNMENT;
- while (((pc+1-code)%size) != 0)	/* +1 to include BYTECODE */
-  code_byte (NOP);
-}
-
 static void code_number (float f)
 { Word i = (Word)f;
   if (f == (float)i)  /* f has an (short) integer value */
@@ -122,14 +166,14 @@ static void code_number (float f)
    }
    else
    {
-    align(Word);
+    align(Word,1);
     code_byte(PUSHWORD);
     code_word(i);
    }
   }
   else
   {
-   align(float);
+   align(float,1);
    code_byte(PUSHFLOAT);
    code_float(f);
   }
@@ -179,7 +223,13 @@ static void code_number (float f)
 
 
 functionlist : /* empty */
-	     | functionlist {pc=basepc=maincode; nlocalvar=0;} stat sc {maincode=pc;}
+	     | functionlist { pc=basepc=maincode; nlocalvar=0;} stat sc 
+		{
+		  maincode=pc;
+#if LISTING
+ PrintCode(basepc,maincode);
+#endif
+		}
 	     | functionlist function
 	     | functionlist setdebug
 	     ;
@@ -188,7 +238,7 @@ function     : FUNCTION NAME {pc=basepc=code; nlocalvar=0;} '(' parlist ')'
 	       {
 	        if (lua_debug)
 		{
-		 align(Word);
+		 align(Word,1);
 	         code_byte(SETFUNCTION); 
                  code_word($1);
 		 code_word($2);
@@ -203,6 +253,9 @@ function     : FUNCTION NAME {pc=basepc=code; nlocalvar=0;} '(' parlist ')'
 	        s_tag($2) = T_FUNCTION;
 	        s_bvalue($2) = calloc (pc-code, sizeof(Byte));
 	        memcpy (s_bvalue($2), code, (pc-code)*sizeof(Byte));
+#if LISTING
+PrintCode(code,pc);
+#endif
 	       }
 	       ;
 
@@ -214,7 +267,7 @@ stat	 : {
             ntemp = 0; 
             if (lua_debug)
             {
-             align(Word); code_byte(SETLINE); code_word(lua_linenumber);
+             align(Word,1); code_byte(SETLINE); code_word(lua_linenumber);
             }
 	   }
 	   stat1
@@ -311,7 +364,7 @@ block    : {$<vInt>$ = nlocalvar;} statlist {ntemp = 0;} ret
          ;
 
 ret	: /* empty */
-        | { if (lua_debug){align(Word);code_byte(SETLINE);code_word(lua_linenumber);}}
+        | { if (lua_debug){align(Word,1);code_byte(SETLINE);code_word(lua_linenumber);}}
           RETURN  exprlist sc 	
           { 
            if (lua_debug) code_byte(RESET); 
@@ -321,7 +374,7 @@ ret	: /* empty */
 
 PrepJump : /* empty */
 	 { 
-          align(Word); 
+          align(Word,1); 
 	  $$ = pc;
 	  code_byte(0);		/* open space */
 	  code_word (0);
@@ -354,7 +407,7 @@ expr :	'(' expr ')'    { $$ = $2; }
      |	NUMBER          { code_number($1); $$ = 1; }
      |	STRING
      {
-      align(Word);
+      align(Word,1);
       code_byte(PUSHSTRING);
       code_word($1);
       $$ = 1;
@@ -366,7 +419,7 @@ expr :	'(' expr ')'    { $$ = $2; }
       $$ = 0;
       if (lua_debug)
       {
-       align(Word); code_byte(SETLINE); code_word(lua_linenumber);
+       align(Word,1); code_byte(SETLINE); code_word(lua_linenumber);
       }
      }
      |	NOT expr1	{ code_byte(NOTOP);  $$ = 1;}
@@ -410,7 +463,7 @@ typeconstructor: '@'
        $$ = 0;
        if (lua_debug)
        {
-        align(Word); code_byte(SETLINE); code_word(lua_linenumber);
+        align(Word,1); code_byte(SETLINE); code_word(lua_linenumber);
        }
       }
      }
@@ -447,8 +500,12 @@ objectname :	/* empty */ 	{$$=-1;}
 	   |	NAME		{$$=$1;}
 	   ;
 	   
-fieldlist  : '{' ffieldlist '}'  { $$ = $2; }
-           | '[' lfieldlist ']'  { $$ = $2; }
+fieldlist  : '{' ffieldlist '}'  { flush_record($2%FIELDS_PER_FLUSH); $$ = $2; }
+           | '[' lfieldlist ']'  
+		{ 
+		  flush_list($2/FIELDS_PER_FLUSH, $2%FIELDS_PER_FLUSH);
+		  $$ = $2;
+		}
 	   ;
 
 ffieldlist : /* empty */   { $$ = 0; }
@@ -456,39 +513,29 @@ ffieldlist : /* empty */   { $$ = 0; }
            ;
 
 ffieldlist1 : ffield			{$$=1;}
-	   | ffieldlist1 ',' ffield	{$$=$1+1;}
+	   | ffieldlist1 ',' ffield	
+		{
+		  $$=$1+1;
+		  if ($$%FIELDS_PER_FLUSH == 0) flush_record(FIELDS_PER_FLUSH);
+		}
 	   ; 
 
-ffield      : NAME 
-           {
-            align(Word); 
-            code_byte(PUSHSTRING);
-	    code_word(lua_findconstant (s_name($1)));
-            incr_ntemp();
-	   }
-            '=' expr1
-	   {
-	    code_byte(STOREFIELD);
-	    ntemp-=2;
-	   }
+ffield      : NAME '=' expr1 { push_field($1); }
            ;
 
 lfieldlist : /* empty */   { $$ = 0; }
            | lfieldlist1   { $$ = $1; }
            ;
 
-lfieldlist1 : { code_number(1); } lfield  {$$=1;}
-	    | lfieldlist1 ',' { code_number($1+1); } lfield
-              {$$=$1+1;}
+lfieldlist1 : expr1  {$$=1;}
+	    | lfieldlist1 ',' expr1
+		{
+		  $$=$1+1;
+		  if ($$%FIELDS_PER_FLUSH == 0) 
+		    flush_list($$/FIELDS_PER_FLUSH - 1, FIELDS_PER_FLUSH);
+		}
             ;
 
-lfield      : expr1
-	   {
-	    code_byte(STOREFIELD);
-	    ntemp-=2;
-	   }
-           ;
-		
 varlist1  :	var			
 	  {
 	   nvarbuffer = 0; 
@@ -517,7 +564,7 @@ var	  :	NAME
 	  }
 	  |	var {lua_pushvar ($1);} '.' NAME
 	  {
-	   align(Word);
+	   align(Word,1);
 	   code_byte(PUSHSTRING);
 	   code_word(lua_findconstant (s_name($4))); incr_ntemp();
 	   $$ = 0;		/* indexed variable */
@@ -556,7 +603,7 @@ static void lua_pushvar (long number)
 { 
  if (number > 0)	/* global var */
  {
-  align(Word);
+  align(Word,1);
   code_byte(PUSHGLOBAL);
   code_word(number-1);
   incr_ntemp();
@@ -589,7 +636,7 @@ static void lua_codestore (int i)
 {
  if (varbuffer[i] > 0)		/* global var */
  {
-  align(Word);
+  align(Word,1);
   code_byte(STOREGLOBAL);
   code_word(varbuffer[i]-1);
  }
@@ -652,13 +699,12 @@ int lua_parse (void)
 }
 
 
-#if 0
+#if LISTING
 
-static void PrintCode (void)
+static void PrintCode (Byte *p, Byte *end)
 {
- Byte *p = code;
  printf ("\n\nCODE\n");
- while (p != pc)
+ while (p != end)
  {
   switch ((OpCode)*p)
   {
@@ -707,7 +753,7 @@ static void PrintCode (void)
     			p++;
    			break;
    case STORELOCAL:
-    			printf ("%d    STORELOCAK   %d\n", p-code, *(++p));
+    			printf ("%d    STORELOCAL   %d\n", p-code, *(++p));
     			p++;
    			break;
    case STOREGLOBAL:
@@ -718,7 +764,18 @@ static void PrintCode (void)
    case STOREINDEXED:   printf ("%d    STOREINDEXED   %d\n", p-code, *(++p));
     			p++;
    			break;
-   case STOREFIELD:     printf ("%d    STOREFIELD\n", (p++)-code); break;
+   case STORELIST0:
+	printf("%d      STORELIST0  %d\n", p-code, *(++p));
+        p++;
+        break;
+   case STORELIST:
+	printf("%d      STORELIST  %d %d\n", p-code, *(p+1), *(p+2));
+        p+=3;
+        break;
+   case STORERECORD:
+       printf("%d      STORERECORD  %d\n", p-code, *(++p));
+       p += *p*sizeof(Word) + 1;
+       break;
    case ADJUST:
     			printf ("%d    ADJUST   %d\n", p-code, *(++p));
     			p++;
