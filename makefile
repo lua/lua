@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
+## $Id: makefile,v 2.2 2004/04/30 20:13:38 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -8,13 +8,13 @@
 #CONFIGURATION
 
 # -DEXTERNMEMCHECK -DHARDSTACKTESTS
-DEBUG = -g -DLUA_USER_H='"ltests.h"'
+# DEBUG = -g -DLUA_USER_H='"ltests.h"'
 OPTIMIZE =  -O2 \
-#   -fomit-frame-pointer
+#   -fomit-frame-pointer  -pg
 
 
 # -DUSE_TMPNAME??
-CONFIG = $(DEBUG) $(OPTIMIZE) -DLUA_COMPATUPSYNTAX -DUSE_DLOPEN
+CONFIG = $(DEBUG) $(OPTIMIZE)
 
 
 # Compilation parameters
@@ -71,13 +71,15 @@ LIBOBJS = 	\
         ltablib.o \
 	lmathlib.o \
  	liolib.o \
+	linit.o \
+	loslib.o \
 	lstrlib.o \
 	ldblib.o \
 	loadlib.o
 
 
 lua : lua.o liblua.a liblualib.a
-	$(CC) $(CFLAGS) -o $@ lua.o -Wl,-E -L. -llua -llualib -lm -ldl 
+	$(CC) $(CFLAGS) -o $@ lua.o -Wl,-E -L. -llua -llualib -lm -ldl
 
 liblua.a : $(LUAOBJS)
 	$(AR) $(ARFLAGS) $@  $?
