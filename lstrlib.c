@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.43 2000/05/24 13:54:49 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.44 2000/06/12 13:52:05 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -380,8 +380,10 @@ static const char *match (lua_State *L, const char *s, const char *p,
 
 
 
-static const char *memfind (const char *s1, long l1, const char *s2, long l2) {
-  if (l2 == 0) return s1;  /* empty strings are everywhere ;-) */
+static const char *lmemfind (const char *s1, size_t l1,
+                             const char *s2, size_t l2) {
+  if (l2 == 0) return s1;  /* empty strings are everywhere */
+  else if (l2 > l1) return NULL;  /* avoids a negative `l1' */
   else {
     const char *init;  /* to search for a `*s2' inside `s1' */
     l2--;  /* 1st char will be checked by `memchr' */
@@ -409,7 +411,7 @@ static void str_find (lua_State *L) {
   luaL_arg_check(L, 0 <= init && (size_t)init <= l1, 3, "out of range");
   if (lua_getparam(L, 4) != LUA_NOOBJECT ||
       strpbrk(p, SPECIALS) == NULL) {  /* no special characters? */
-    const char *s2 = memfind(s+init, l1-init, p, l2);
+    const char *s2 = lmemfind(s+init, l1-init, p, l2);
     if (s2) {
       lua_pushnumber(L, s2-s+1);
       lua_pushnumber(L, s2-s+l2);
