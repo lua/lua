@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.h,v 1.19 2000/04/24 17:32:29 lhf Exp $
+** $Id: lundump.h,v 1.19 2000/04/24 17:32:29 lhf Exp lhf $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -11,10 +11,11 @@
 #include "lzio.h"
 
 /* load one chunk */
+Proto* luaU_undump (lua_State* L, ZIO* Z);
 Proto* luaU_undump1 (lua_State* L, ZIO* Z);
 
-/* convert number from text */
-double luaU_str2d (lua_State* L, const char* b, const char* where);
+/* find byte order */
+int luaU_endianess (void);
 
 /* definitions for headers of binary files */
 #define	VERSION		0x40		/* last format change was in 4.0 */
@@ -36,8 +37,5 @@ double luaU_str2d (lua_State* L, const char* b, const char* where);
 /* a multiple of PI for testing native format */
 /* multiplying by 1E8 gives non-trivial integer values */
 #define	TEST_NUMBER	3.14159265358979323846E8
-
-/* something for testing byte order in instructions */
-#define	TEST_CODE	0x01020304
 
 #endif
