@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.34 1996/02/09 19:02:30 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.35 1996/02/09 19:35:23 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -520,7 +520,7 @@ static void io_date (void)
  if (strftime(b,sizeof(b),s,tm))
   lua_pushstring(b);
  else
-  lua_error("`date' format too long");
+  lua_error("invalid `date' format");
 }
  
 /*
