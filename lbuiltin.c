@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.81 1999/12/03 18:02:54 roberto Exp $
+** $Id: lbuiltin.c,v 1.82 1999/12/06 11:42:18 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -624,7 +624,7 @@ static void hash_query (lua_State *L) {
   }
   else {
     const Hash *t = avalue(luaL_tablearg(L, 2));
-    lua_pushnumber(L, luaH_mainposition(L, t, o) - t->node);
+    lua_pushnumber(L, luaH_mainposition(t, o) - t->node);
   }
 }
 
