@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.110 2000/08/22 17:44:17 roberto Exp roberto $
+** $Id: lparser.c,v 1.111 2000/08/31 14:08:27 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -841,8 +841,8 @@ static void forbody (LexState *ls, int nvar, OpCode prepfor, OpCode loopfor) {
   check(ls, TK_DO);
   adjustlocalvars(ls, nvar);  /* scope for control variables */
   block(ls);
-  luaK_patchlist(fs, prep, luaK_getlabel(fs));
   luaK_patchlist(fs, luaK_code1(fs, loopfor, NO_JUMP), blockinit);
+  luaK_patchlist(fs, prep, luaK_getlabel(fs));
   removelocalvars(ls, nvar);
 }
 

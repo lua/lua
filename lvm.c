@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.134 2000/09/05 19:33:32 roberto Exp roberto $
+** $Id: lvm.c,v 1.135 2000/09/11 17:38:42 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -336,6 +336,9 @@ static void adjust_varargs (lua_State *L, StkId base, int nfixargs) {
 }
 
 
+
+#define dojump(pc, i)	{ int d = GETARG_S(i); pc += d; }
+
 /*
 ** Executes the given Lua function. Parameters are between [base,top).
 ** Returns n such that the the results are between [n,top).
@@ -578,54 +581,54 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       }
       case OP_JMPNE: {
         top -= 2;
-        if (!luaO_equalObj(top, top+1)) pc += GETARG_S(i);
+        if (!luaO_equalObj(top, top+1)) dojump(pc, i);
         break;
       }
       case OP_JMPEQ: {
         top -= 2;
-        if (luaO_equalObj(top, top+1)) pc += GETARG_S(i);
+        if (luaO_equalObj(top, top+1)) dojump(pc, i);
         break;
       }
       case OP_JMPLT: {
         top -= 2;
-        if (luaV_lessthan(L, top, top+1, top+2)) pc += GETARG_S(i);
+        if (luaV_lessthan(L, top, top+1, top+2)) dojump(pc, i);
         break;
       }
       case OP_JMPLE: {  /* a <= b  ===  !(b<a) */
         top -= 2;
-        if (!luaV_lessthan(L, top+1, top, top+2)) pc += GETARG_S(i);
+        if (!luaV_lessthan(L, top+1, top, top+2)) dojump(pc, i);
         break;
       }
       case OP_JMPGT: {  /* a > b  ===  (b<a) */
         top -= 2;
-        if (luaV_lessthan(L, top+1, top, top+2)) pc += GETARG_S(i);
+        if (luaV_lessthan(L, top+1, top, top+2)) dojump(pc, i);
         break;
       }
       case OP_JMPGE: {  /* a >= b  ===  !(a<b) */
         top -= 2;
-        if (!luaV_lessthan(L, top, top+1, top+2)) pc += GETARG_S(i);
+        if (!luaV_lessthan(L, top, top+1, top+2)) dojump(pc, i);
         break;
       }
       case OP_JMPT: {
-        if (ttype(--top) != TAG_NIL) pc += GETARG_S(i);
+        if (ttype(--top) != TAG_NIL) dojump(pc, i);
         break;
       }
       case OP_JMPF: {
-        if (ttype(--top) == TAG_NIL) pc += GETARG_S(i);
+        if (ttype(--top) == TAG_NIL) dojump(pc, i);
         break;
       }
       case OP_JMPONT: {
-        if (ttype(top-1) != TAG_NIL) pc += GETARG_S(i);
-        else top--;
+        if (ttype(top-1) == TAG_NIL) top--;
+        else dojump(pc, i);
         break;
       }
       case OP_JMPONF: {
-        if (ttype(top-1) == TAG_NIL) pc += GETARG_S(i);
-        else top--;
+        if (ttype(top-1) != TAG_NIL) top--;
+        else dojump(pc, i);
         break;
       }
       case OP_JMP: {
-        pc += GETARG_S(i);
+        dojump(pc, i);
         break;
       }
       case OP_PUSHNILJMP: {
@@ -644,7 +647,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
             nvalue(top-3) > nvalue(top-2) :
             nvalue(top-3) < nvalue(top-2)) {  /* `empty' loop? */
           top -= 3;  /* remove control variables */
-          pc += GETARG_S(i)+1;  /* jump to loop end */
+          dojump(pc, i);  /* jump to loop end */
         }
         break;
       }
@@ -659,7 +662,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
             nvalue(top-3) < nvalue(top-2))
           top -= 3;  /* end loop: remove control variables */
         else
-          pc += GETARG_S(i);  /* repeat loop */
+          dojump(pc, i);  /* repeat loop */
         break;
       }
       case OP_LFORPREP: {
@@ -669,7 +672,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         node = luaH_next(L, hvalue(top-1), &luaO_nilobject);
         if (node == NULL) {  /* `empty' loop? */
           top--;  /* remove table */
-          pc += GETARG_S(i)+1;  /* jump to loop end */
+          dojump(pc, i);  /* jump to loop end */
         }
         else {
           top += 2;  /* index,value */
@@ -687,7 +690,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         else {
           *(top-2) = *key(node);
           *(top-1) = *val(node);
-          pc += GETARG_S(i);  /* repeat loop */
+          dojump(pc, i);  /* repeat loop */
         }
         break;
       }
