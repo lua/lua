@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.22 1998/07/12 16:11:55 roberto Exp roberto $
+** $Id: lobject.h,v 1.23 1998/12/01 19:09:47 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -30,7 +30,6 @@
 */
 #ifndef LUA_NUM_TYPE
 #define LUA_NUM_TYPE double
-#define NUMBER_FMT  "%g"
 #endif
 
 
@@ -197,6 +196,7 @@ extern TObject luaO_nilobject;
 int luaO_equalObj (TObject *t1, TObject *t2);
 int luaO_redimension (int oldsize);
 void luaO_insertlist (GCnode *root, GCnode *node);
+double luaO_str2d (char *s);
 
 #ifdef OLD_ANSI
 void luaO_memup (void *dest, void *src, int size);

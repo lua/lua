@@ -1,9 +1,10 @@
 /*
-** $Id: lobject.c,v 1.12 1998/06/18 16:57:03 roberto Exp roberto $
+** $Id: lobject.c,v 1.13 1998/06/19 16:14:09 roberto Exp $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
 
+#include <ctype.h>
 #include <stdlib.h>
 
 #include "lobject.h"
@@ -64,20 +65,67 @@ void luaO_insertlist (GCnode *root, GCnode *node)
   node->marked = 0;
 }
 
+
 #ifdef OLD_ANSI
-void luaO_memup (void *dest, void *src, int size)
-{
-  char *d = dest;
-  char *s = src;
-  while (size--) d[size]=s[size];
+void luaO_memup (void *dest, void *src, int size) {
+  while (size--)
+    ((char *)dest)[size]=((char *)src)[size];
 }
 
-void luaO_memdown (void *dest, void *src, int size)
-{
-  char *d = dest;
-  char *s = src;
+void luaO_memdown (void *dest, void *src, int size) {
   int i;
-  for (i=0; i<size; i++) d[i]=s[i];
+  for (i=0; i<size; i++)
+    ((char *)dest)[i]=((char *)src)[i];
 }
 #endif
+
+
+
+static double expten (unsigned int e) {
+  double exp = 10.0;
+  double res = 1.0;
+  for (; e; e>>=1) {
+    if (e & 1) res *= exp;
+    exp *= exp;
+  }
+  return res;
+}
+
+
+double luaO_str2d (char *s) {
+  double a = 0.0;
+  int point = 0;
+  if (!isdigit((unsigned char)*s) && !isdigit((unsigned char)*(s+1)))
+    return -1;  /* no digit before or after decimal point */
+  while (isdigit((unsigned char)*s)) {
+    a = 10.0*a + (*(s++)-'0');
+  }
+  if (*s == '.') s++;
+  while (isdigit((unsigned char)*s)) {
+    a = 10.0*a + (*(s++)-'0');
+    point++;
+  }
+  if (toupper((unsigned char)*s) == 'E') {
+    int e = 0;
+    int sig = 1;
+    s++;
+    if (*s == '+') s++;
+    else if (*s == '-') {
+      s++;
+      sig = -1;
+    }
+    if (!isdigit((unsigned char)*s)) return -1;  /* no digit in expoent part? */
+    do {
+      e = 10*e + (*(s++)-'0');
+    } while (isdigit((unsigned char)*s));
+    point -= sig*e;
+  }
+  while (isspace((unsigned char)*s)) s++;
+  if (*s != '\0') return -1;  /* invalid trailing characters? */
+  if (point > 0)
+    a /= expten(point);
+  else if (point < 0)
+    a *= expten(-point);
+  return a;
+}
 

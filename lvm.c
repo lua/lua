@@ -1,11 +1,12 @@
 /*
-** $Id: lvm.c,v 1.32 1998/12/03 15:45:15 roberto Exp roberto $
+** $Id: lvm.c,v 1.33 1998/12/24 14:57:23 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
 
 
 #include <ctype.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,6 +16,7 @@
 #include "lfunc.h"
 #include "lgc.h"
 #include "lmem.h"
+#include "lobject.h"
 #include "lopcodes.h"
 #include "lstate.h"
 #include "lstring.h"
@@ -26,7 +28,6 @@
 
 #ifdef OLD_ANSI
 #define strcoll(a,b)	strcmp(a,b)
-double strtod();
 #endif
 
 
@@ -40,11 +41,10 @@ double strtod();
 
 
 
-static TaggedString *strconc (TaggedString *l, TaggedString *r)
-{
-  size_t nl = l->u.s.len;
-  size_t nr = r->u.s.len;
-  char *buffer = luaL_openspace(nl+nr+1);
+static TaggedString *strconc (TaggedString *l, TaggedString *r) {
+  long nl = l->u.s.len;
+  long nr = r->u.s.len;
+  char *buffer = luaL_openspace(nl+nr);
   memcpy(buffer, l->str, nl);
   memcpy(buffer+nl, r->str, nr);
   return luaS_newlstr(buffer, nl+nr);
@@ -56,29 +56,36 @@ int luaV_tonumber (TObject *obj) {
   if (ttype(obj) != LUA_T_STRING)
     return 1;
   else {
-    char *e;
-    double t = strtod(svalue(obj), &e);
-    while (isspace(*e)) e++;
-    if (*e != '\0') return 2;
-    nvalue(obj) = (real)t;
+    double t;
+    char *e = svalue(obj);
+    int sig = 1;
+    while (isspace((unsigned char)*e)) e++;
+    if (*e == '+') e++;
+    else if (*e == '-') {
+      e++;
+      sig = -1;
+    }
+    t = luaO_str2d(e);
+    if (t<0) return 2;
+    nvalue(obj) = (real)t*sig;
     ttype(obj) = LUA_T_NUMBER;
     return 0;
   }
 }
 
 
-int luaV_tostring (TObject *obj)
-{ /* LUA_NUMBER */
+int luaV_tostring (TObject *obj) {
+  /* LUA_NUMBER */
   if (ttype(obj) != LUA_T_NUMBER)
     return 1;
   else {
     char s[60];
     real f = nvalue(obj);
-    int i;
-    if ((real)(-MAX_INT) <= f && f <= (real)MAX_INT && (real)(i=(int)f) == f)
-      sprintf (s, "%d", i);
+    long i;
+    if ((real)LONG_MIN <= f && f <= (real)LONG_MAX && (real)(i=(long)f) == f)
+      sprintf(s, "%ld", i);
     else
-      sprintf (s, NUMBER_FMT, nvalue(obj));
+      sprintf(s, "%g", (double)nvalue(obj));
     tsvalue(obj) = luaS_new(s);
     ttype(obj) = LUA_T_STRING;
     return 0;
