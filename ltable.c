@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.16 1998/12/30 13:14:46 roberto Exp $
+** $Id: ltable.c,v 1.17 1999/01/04 12:54:33 roberto Exp $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -24,8 +24,7 @@
 
 
 
-static long int hashindex (TObject *ref)
-{
+static long int hashindex (TObject *ref) {
   long int h;
   switch (ttype(ref)) {
     case LUA_T_NUMBER:
@@ -54,54 +53,43 @@ static long int hashindex (TObject *ref)
 }
 
 
-static int present (Hash *t, TObject *key)
-{
+static Node *present (Hash *t, TObject *key) {
   int tsize = nhash(t);
   long int h = hashindex(key);
   int h1 = h%tsize;
-  TObject *rf = ref(node(t, h1));
-  if (ttype(rf) != LUA_T_NIL && !luaO_equalObj(key, rf)) {
+  Node *n = node(t, h1);
+  /* keep looking until an entry with "ref" equal to key or nil */
+  if ((ttype(ref(n)) == ttype(key) ? !luaO_equalval(key, ref(n))
+                                   : ttype(ref(n)) != LUA_T_NIL)) {
     int h2 = h%(tsize-2) + 1;
     do {
       h1 += h2;
       if (h1 >= tsize) h1 -= tsize;
-      rf = ref(node(t, h1));
-    } while (ttype(rf) != LUA_T_NIL && !luaO_equalObj(key, rf));
+      n = node(t, h1);
+    } while ((ttype(ref(n)) == ttype(key) ? !luaO_equalval(key, ref(n))
+                                          : ttype(ref(n)) != LUA_T_NIL));
   }
-  return h1;
+  return n;
 }
 
 
-/*
-** Alloc a vector node
-*/
-static Node *hashnodecreate (int nhash)
-{
+void luaH_free (Hash *frees) {
+  while (frees) {
+    Hash *next = (Hash *)frees->head.next;
+    L->nblocks -= gcsize(frees->nhash);
+    luaM_free(nodevector(frees));
+    luaM_free(frees);
+    frees = next;
+  }
+}
+
+
+static Node *hashnodecreate (int nhash) {
   Node *v = luaM_newvector(nhash, Node);
   int i;
   for (i=0; i<nhash; i++)
     ttype(ref(&v[i])) = LUA_T_NIL;
   return v;
-}
-
-/*
-** Delete a hash
-*/
-static void hashdelete (Hash *t)
-{
-  luaM_free(nodevector(t));
-  luaM_free(t);
-}
-
-
-void luaH_free (Hash *frees)
-{
-  while (frees) {
-    Hash *next = (Hash *)frees->head.next;
-    L->nblocks -= gcsize(frees->nhash);
-    hashdelete(frees);
-    frees = next;
-  }
 }
 
 
@@ -130,6 +118,7 @@ static int newsize (Hash *t) {
   return luaO_redimension((realuse+1)*2);  /* +1 is the new element */
 }
 
+
 static void rehash (Hash *t) {
   int nold = nhash(t);
   Node *vold = nodevector(t);
@@ -141,7 +130,7 @@ static void rehash (Hash *t) {
   for (i=0; i<nold; i++) {
     Node *n = vold+i;
     if (ttype(ref(n)) != LUA_T_NIL && ttype(val(n)) != LUA_T_NIL) {
-      *node(t, present(t, ref(n))) = *n;  /* copy old node to luaM_new hash */
+      *present(t, ref(n)) = *n;  /* copy old node to new hash */
       nuse(t)++;
     }
   }
@@ -149,29 +138,28 @@ static void rehash (Hash *t) {
   luaM_free(vold);
 }
 
+
 /*
 ** If the hash node is present, return its pointer, otherwise return
 ** null.
 */
-TObject *luaH_get (Hash *t, TObject *ref)
-{
- int h = present(t, ref);
- if (ttype(ref(node(t, h))) != LUA_T_NIL) return val(node(t, h));
+TObject *luaH_get (Hash *t, TObject *ref) {
+ Node *n = present(t, ref);
+ if (ttype(ref(n)) != LUA_T_NIL) return val(n);
  else return &luaO_nilobject;
 }
 
 
 /*
-** If the hash node is present, return its pointer, otherwise create a luaM_new
+** If the hash node is present, return its pointer, otherwise create a new
 ** node for the given reference and also return its pointer.
 */
-TObject *luaH_set (Hash *t, TObject *ref)
-{
-  Node *n = node(t, present(t, ref));
+TObject *luaH_set (Hash *t, TObject *ref) {
+  Node *n = present(t, ref);
   if (ttype(ref(n)) == LUA_T_NIL) {
     if ((long)nuse(t)*3L > (long)nhash(t)*2L) {
       rehash(t);
-      n = node(t, present(t, ref));
+      n = present(t, ref);
     }
     nuse(t)++;
     *ref(n) = *ref;
@@ -192,18 +180,17 @@ static Node *hashnext (Hash *t, int i) {
       return NULL;
     n = node(t, i);
   }
-  return node(t, i);
+  return n;
 }
 
 Node *luaH_next (Hash *t, TObject *r) {
   if (ttype(r) == LUA_T_NIL)
     return hashnext(t, 0);
   else {
-    int i = present(t, r);
-    Node *n = node(t, i);
+    Node *n = present(t, r);
     luaL_arg_check(ttype(ref(n))!=LUA_T_NIL && ttype(val(n))!=LUA_T_NIL,
                    2, "key not found");
-    return hashnext(t, i+1);
+    return hashnext(t, (n-(t->node))+1);
   }
 }
 
