@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.11 1999/02/25 15:16:26 roberto Exp roberto $
+** $Id: lmem.c,v 1.12 1999/02/25 21:07:26 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -13,9 +13,8 @@
 
 
 /*
-** real ANSI systems do not need some of these tests,
-** since realloc(NULL, s)==malloc(s).
-** But some systems (Sun OS) are not that ANSI...
+** real ANSI systems do not need these tests;
+** but some systems (Sun OS) are not that ANSI...
 */
 #ifdef OLD_ANSI
 #define realloc(b,s)	((b) == NULL ? malloc(s) : (realloc)(b, s))
@@ -24,6 +23,10 @@
 
 
 #define MINSIZE	16	/* minimum size for "growing" vectors */
+
+
+
+#ifndef DEBUG
 
 
 static unsigned long power2 (unsigned long n) {
@@ -44,14 +47,10 @@ void *luaM_growaux (void *block, unsigned long nelems, int inc, int size,
       newn = limit;
     return luaM_realloc(block, newn*size);
   }
-  else {
-    LUA_ASSERT(power2(nelems) == power2(newn), "bad arithmetic");
+  else
     return block;
-  }
 }
 
-
-#ifndef DEBUG
 
 /*
 ** generic allocation routine.
@@ -76,6 +75,15 @@ void *luaM_realloc (void *block, unsigned long size) {
 /* DEBUG */
 
 #include <string.h>
+
+
+void *luaM_growaux (void *block, unsigned long nelems, int inc, int size,
+                       char *errormsg, unsigned long limit) {
+  unsigned long newn = nelems+inc;
+  if (newn >= limit)
+    lua_error(errormsg);
+  return luaM_realloc(block, newn*size);
+}
 
 
 #define HEADER	(sizeof(double))
