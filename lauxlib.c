@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.86 2002/09/16 19:49:45 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.87 2002/10/04 14:31:40 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -345,38 +345,42 @@ static const char *getF (lua_State *L, void *ud, size_t *size) {
 }
 
 
-static int errfile (lua_State *L, const char *filename) {
-  if (filename == NULL) filename = "stdin";
+static int errfile (lua_State *L, int fnameindex) {
+  const char *filename = lua_tostring(L, fnameindex) + 1;
   lua_pushfstring(L, "cannot read %s: %s", filename, strerror(errno));
+  lua_remove(L, fnameindex);
   return LUA_ERRFILE;
 }
 
 
 LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
   LoadF lf;
-  int status;
+  int status, readstatus;
   int c;
-  int old_top = lua_gettop(L);
-  lf.f = (filename == NULL) ? stdin : fopen(filename, "r");
-  if (lf.f == NULL) return errfile(L, filename);  /* unable to open file */
+  int fnameindex = lua_gettop(L) + 1;  /* index of filename on the stack */
+  if (filename == NULL) {
+    lua_pushliteral(L, "=stdin");
+    lf.f = stdin;
+  }
+  else {
+    lua_pushfstring(L, "@%s", filename);
+    lf.f = fopen(filename, "r");
+  }
+  if (lf.f == NULL) return errfile(L, fnameindex);  /* unable to open file */
   c = ungetc(getc(lf.f), lf.f);
   if (!(isspace(c) || isprint(c)) && lf.f != stdin) {  /* binary file? */
     fclose(lf.f);
     lf.f = fopen(filename, "rb");  /* reopen in binary mode */
-    if (lf.f == NULL) return errfile(L, filename);  /* unable to reopen file */
+    if (lf.f == NULL) return errfile(L, fnameindex); /* unable to reopen file */
   }
-  if (filename == NULL)
-    lua_pushliteral(L, "=stdin");
-  else
-    lua_pushfstring(L, "@%s", filename);
   status = lua_load(L, getF, &lf, lua_tostring(L, -1));
-  lua_remove(L, old_top+1);  /* remove filename from stack */
-  if (ferror(lf.f)) {
-    lua_settop(L, old_top);  /* ignore results from `lua_load' */
-    return errfile(L, filename);
+  readstatus = ferror(lf.f);
+  if (lf.f != stdin) fclose(lf.f);  /* close file (even in case of errors) */
+  if (readstatus) {
+    lua_settop(L, fnameindex);  /* ignore results from `lua_load' */
+    return errfile(L, fnameindex);
   }
-  if (lf.f != stdin)
-    fclose(lf.f);
+  lua_remove(L, fnameindex);
   return status;
 }
 

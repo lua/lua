@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.19 2002/09/19 20:12:47 roberto Exp roberto $
+** $Id: liolib.c,v 2.20 2002/10/11 20:40:32 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -68,34 +68,31 @@ static FILE *tofile (lua_State *L, int findex) {
 }
 
 
-static void newfile (lua_State *L, FILE *f) {
-  lua_boxpointer(L, f);
+/*
+** When creating file handles, always creates a `closed' file handle
+** before opening the actual file; so, if there is a memory error, the
+** file is not left opened.
+*/
+static FILE **newfile (lua_State *L) {
+  FILE **pf = (FILE **)lua_newuserdata(L, sizeof(FILE *));
+  *pf = NULL;  /* file handle is currently `closed' */
   lua_pushliteral(L, FILEHANDLE);
   lua_rawget(L, LUA_REGISTRYINDEX);
   lua_setmetatable(L, -2);
+  return pf;
 }
 
 
 static void registerfile (lua_State *L, FILE *f, const char *name,
                                                  const char *impname) {
   lua_pushstring(L, name);
-  newfile(L, f);
+  *newfile(L) = f;
   if (impname) {
     lua_pushstring(L, impname);
     lua_pushvalue(L, -2);
     lua_settable(L, -6);
   }
   lua_settable(L, -3);
-}
-
-
-static int setnewfile (lua_State *L, FILE *f) {
-  if (f == NULL)
-    return pushresult(L, 0);
-  else {
-    newfile(L, f);
-    return 1;
-  }
 }
 
 
@@ -126,8 +123,11 @@ static int io_gc (lua_State *L) {
 
 
 static int io_open (lua_State *L) {
-  FILE *f = fopen(luaL_check_string(L, 1), luaL_opt_string(L, 2, "r"));
-  return setnewfile(L, f);
+  const char *filename = luaL_check_string(L, 1);
+  const char *mode = luaL_opt_string(L, 2, "r");
+  FILE **pf = newfile(L);
+  *pf = fopen(filename, mode);
+  return (*pf == NULL) ? pushresult(L, 0) : 1;
 }
 
 
@@ -136,14 +136,19 @@ static int io_popen (lua_State *L) {
   luaL_error(L, "`popen' not supported");
   return 0;
 #else
-  FILE *f = popen(luaL_check_string(L, 1), luaL_opt_string(L, 2, "r"));
-  return setnewfile(L, f);
+  const char *filename = luaL_check_string(L, 1);
+  const char *mode = luaL_opt_string(L, 2, "r");
+  FILE **pf = newfile(L);
+  *pf = popen(filename, mode);
+  return (*pf == NULL) ? pushresult(L, 0) : 1;
 #endif
 }
 
 
 static int io_tmpfile (lua_State *L) {
-  return setnewfile(L, tmpfile());
+  FILE **pf = newfile(L);
+  *pf = tmpfile();
+  return (*pf == NULL) ? pushresult(L, 0) : 1;
 }
 
 
@@ -168,9 +173,9 @@ static int g_iofile (lua_State *L, const char *name, const char *mode) {
     const char *filename = lua_tostring(L, 1);
     lua_pushstring(L, name);
     if (filename) {
-      FILE *f = fopen(filename, mode);
-      luaL_arg_check(L, f, 1,  strerror(errno));
-      newfile(L, f);
+      FILE **pf = newfile(L);
+      *pf = fopen(filename, mode);
+      luaL_arg_check(L, *pf, 1,  strerror(errno));
     }
     else {
       tofile(L, 1);  /* check that it's a valid file handle */
@@ -218,9 +223,10 @@ static int io_lines (lua_State *L) {
     return f_lines(L);
   }
   else {
-    FILE *f = fopen(luaL_check_string(L, 1), "r");
-    luaL_arg_check(L, f, 1,  strerror(errno));
-    newfile(L, f);
+    const char *filename = luaL_check_string(L, 1);
+    FILE **pf = newfile(L);
+    *pf = fopen(filename, "r");
+    luaL_arg_check(L, *pf, 1,  strerror(errno));
     aux_lines(L, lua_gettop(L), 1);
     return 1;
   }
