@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_mem = "$Id: mem.c,v 1.5 1995/02/06 19:34:03 roberto Exp roberto $";
+char *rcs_mem = "$Id: mem.c,v 1.6 1996/01/22 14:15:13 roberto Exp roberto $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -20,7 +20,7 @@ static void mem_error (void)
     lua_error("not enough memory");
   else
   { /* if there is no garbage then must exit */
-    printf(stderr, "lua error: memory overflow - unable to recover\n");
+    fprintf(stderr, "lua error: memory overflow - unable to recover\n");
     exit(1);
   }
 }
