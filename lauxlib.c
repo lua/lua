@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.114 2004/06/02 13:50:46 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.115 2004/06/02 19:06:14 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -243,6 +243,8 @@ LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
     if (lua_isnil(L, -1)) {  /* no? */
       lua_pop(L, 1);
       lua_newtable(L);  /* create it */
+      if (lua_getmetatable(L, LUA_GLOBALSINDEX))
+        lua_setmetatable(L, -2);  /* share metatable with global table */
       lua_pushvalue(L, -1);
       /* register it with given name */
       lua_setglobal(L, libname);

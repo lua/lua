@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.126 2004/05/31 18:51:50 roberto Exp roberto $
+** $Id: lua.c,v 1.127 2004/06/16 20:22:43 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -251,6 +251,14 @@ static void manual_input (void) {
 }
 
 
+static int checkvar (lua_State *l) {
+  const char *name = lua_tostring(l, 2);
+  if (name)
+    luaL_error(l, "attempt to access undefined variable `%s'", name);
+  return 0;
+}
+
+
 #define clearinteractive(i)	(*i &= 2)
 
 static int handle_argv (char *argv[], int *interactive) {
@@ -290,6 +298,13 @@ static int handle_argv (char *argv[], int *interactive) {
           print_version();
           break;
         }
+        case 'w': {
+          if (lua_getmetatable(L, LUA_GLOBALSINDEX)) {
+            lua_pushcfunction(L, checkvar);
+            lua_setfield(L, -2, "__index");
+          }
+          break;
+        }
         case 'e': {
           const char *chunk = argv[i] + 2;
           clearinteractive(interactive);
@@ -311,14 +326,6 @@ static int handle_argv (char *argv[], int *interactive) {
           }
           if (load_file(filename))
             return 1;  /* stop if file fails */
-          break;
-        }
-        case 'c': {
-          l_message(progname, "option `-c' is deprecated");
-          break;
-        }
-        case 's': {
-          l_message(progname, "option `-s' is deprecated");
           break;
         }
         default: {
