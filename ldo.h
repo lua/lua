@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.h,v 1.51 2002/08/07 14:35:55 roberto Exp roberto $
+** $Id: ldo.h,v 1.52 2002/09/02 20:00:41 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -13,16 +13,12 @@
 #include "lzio.h"
 
 
-/*
-** macro to increment stack top.
-** There must be always an empty slot at the L->stack.top
-*/
-#define incr_top(L) \
-	{if (L->top >= L->stack_last) luaD_growstack(L, 1); L->top++;}
 
 #define luaD_checkstack(L,n)	\
   if ((char *)L->stack_last - (char *)L->top <= (n)*(int)sizeof(TObject)) \
     luaD_growstack(L, n)
+
+#define incr_top(L) {luaD_checkstack(L,1); L->top++;}
 
 #define savestack(L,p)		((char *)(p) - (char *)L->stack)
 #define restorestack(L,n)	((TObject *)((char *)L->stack + (n)))
