@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.130 2003/04/03 13:35:34 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.131 2003/05/16 18:59:08 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -324,7 +324,9 @@ static int luaB_xpcall (lua_State *L) {
 
 
 static int luaB_tostring (lua_State *L) {
-  char buff[64];
+  char buff[4*sizeof(void *) + 2];  /* enough space for a `%p' */
+  const char *tn = "";
+  const void *p = NULL;
   luaL_checkany(L, 1);
   if (luaL_callmeta(L, 1, "__tostring"))  /* is there a metafield? */
     return 1;  /* use its value */
@@ -338,24 +340,29 @@ static int luaB_tostring (lua_State *L) {
     case LUA_TBOOLEAN:
       lua_pushstring(L, (lua_toboolean(L, 1) ? "true" : "false"));
       return 1;
-    case LUA_TTABLE:
-      sprintf(buff, "table: %p", lua_topointer(L, 1));
-      break;
-    case LUA_TFUNCTION:
-      sprintf(buff, "function: %p", lua_topointer(L, 1));
-      break;
-    case LUA_TUSERDATA:
-    case LUA_TLIGHTUSERDATA:
-      sprintf(buff, "userdata: %p", lua_touserdata(L, 1));
-      break;
-    case LUA_TTHREAD:
-      sprintf(buff, "thread: %p", (void *)lua_tothread(L, 1));
-      break;
     case LUA_TNIL:
       lua_pushliteral(L, "nil");
       return 1;
+    case LUA_TTABLE:
+      p = lua_topointer(L, 1);
+      tn = "table";
+      break;
+    case LUA_TFUNCTION:
+      p = lua_topointer(L, 1);
+      tn = "function";
+      break;
+    case LUA_TUSERDATA:
+    case LUA_TLIGHTUSERDATA:
+      p = lua_touserdata(L, 1);
+      tn = "userdata";
+      break;
+    case LUA_TTHREAD:
+      p = lua_tothread(L, 1);
+      tn = "thread";
+      break;
   }
-  lua_pushstring(L, buff);
+  sprintf(buff, "%p", p);
+  lua_pushfstring(L, "%s: %s", tn, buff);
   return 1;
 }
 
