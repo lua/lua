@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.16 1994/11/17 19:43:34 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.17 1994/11/17 21:23:43 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -436,21 +436,33 @@ lua_Object lua_getsubscript (void)
     return 0;
 }
 
+
+#define MAX_C_BLOCKS 10
+
+static int numCblocks = 0;
+static int Cblocks[MAX_C_BLOCKS];
+
 /*
 ** API: starts a new block
 */
-int lua_beginblock (void)
+void lua_beginblock (void)
 {
-  return CBase;
+  if (numCblocks < MAX_C_BLOCKS)
+    Cblocks[numCblocks] = CBase;
+  numCblocks++;
 }
 
 /*
 ** API: ends a block
 */
-void lua_endblock (int block)
+void lua_endblock (void)
 {
-  CBase = block;
-  adjustC(0);
+  --numCblocks;
+  if (numCblocks < MAX_C_BLOCKS)
+  {
+    CBase = Cblocks[numCblocks];
+    adjustC(0);
+  }
 }
 
 /* 
@@ -468,7 +480,7 @@ int lua_storesubscript (void)
 /*
 ** API: creates a new table
 */
-lua_Object lua_createTable (int initSize)
+lua_Object lua_createtable (int initSize)
 {
   adjustC(0);
   avalue(top) = lua_createarray(initSize);
@@ -549,6 +561,14 @@ lua_Object lua_getlocked (int ref)
  CBase++;  /* incorporate object in the stack */
  return Ref(top-1);
 }
+
+
+int lua_lock (void)
+{
+  adjustC(1);
+  return luaI_lock(--top);
+}
+
 
 /*
 ** Get a global object. Return the object handle or NULL on error.
