@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.86 2002/06/25 19:16:44 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.87 2002/06/26 19:28:08 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -166,11 +166,12 @@ static int capture_to_close (MatchState *ms) {
 
 static const char *luaI_classend (MatchState *ms, const char *p) {
   switch (*p++) {
-    case ESC:
+    case ESC: {
       if (*p == '\0')
         luaL_error(ms->L, "malformed pattern (ends with `%')");
       return p+1;
-    case '[':
+    }
+    case '[': {
       if (*p == '^') p++;
       do {  /* look for a `]' */
         if (*p == '\0')
@@ -179,8 +180,10 @@ static const char *luaI_classend (MatchState *ms, const char *p) {
           p++;  /* skip escapes (e.g. `%]') */
       } while (*p != ']');
       return p+1;
-    default:
+    }
+    default: {
       return p;
+    }
   }
 }
 
@@ -229,14 +232,10 @@ static int matchbracketclass (int c, const char *p, const char *ec) {
 
 static int luaI_singlematch (int c, const char *p, const char *ep) {
   switch (*p) {
-    case '.':  /* matches any char */
-      return 1;
-    case ESC:
-      return match_class(c, *(p+1));
-    case '[':
-      return matchbracketclass(c, p, ep-1);
-    default:
-      return (uchar(*p) == c);
+    case '.': return 1;  /* matches any char */
+    case ESC: return match_class(c, *(p+1));
+    case '[': return matchbracketclass(c, p, ep-1);
+    default:  return (uchar(*p) == c);
   }
 }
 
@@ -331,14 +330,16 @@ static const char *match_capture (MatchState *ms, const char *s, int l) {
 static const char *match (MatchState *ms, const char *s, const char *p) {
   init: /* using goto's to optimize tail recursion */
   switch (*p) {
-    case '(':  /* start capture */
+    case '(': {  /* start capture */
       if (*(p+1) == ')')  /* position capture? */
         return start_capture(ms, s, p+2, CAP_POSITION);
       else
         return start_capture(ms, s, p+1, CAP_UNFINISHED);
-    case ')':  /* end capture */
+    }
+    case ')': {  /* end capture */
       return end_capture(ms, s, p+1);
-    case ESC:  /* may be %[0-9] or %b */
+    }
+    case ESC: {  /* may be %[0-9] or %b */
       if (isdigit(uchar(*(p+1)))) {  /* capture? */
         s = match_capture(ms, s, *(p+1));
         if (s == NULL) return NULL;
@@ -350,12 +351,15 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
         p+=4; goto init;  /* else return match(ms, s, p+4); */
       }
       else goto dflt;  /* case default */
-    case '\0':  /* end of pattern */
+    }
+    case '\0': {  /* end of pattern */
       return s;  /* match succeeded */
-    case '$':
+    }
+    case '$': {
       if (*(p+1) == '\0')  /* is the `$' the last char in pattern? */
         return (s == ms->src_end) ? s : NULL;  /* check end of string */
       else goto dflt;
+    }
     default: dflt: {  /* it is a pattern item */
       const char *ep = luaI_classend(ms, p);  /* points to what is next */
       int m = s<ms->src_end && luaI_singlematch(uchar(*s), p, ep);
@@ -366,15 +370,19 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
             return res;
           p=ep+1; goto init;  /* else return match(ms, s, ep+1); */
         }
-        case '*':  /* 0 or more repetitions */
+        case '*': {  /* 0 or more repetitions */
           return max_expand(ms, s, p, ep);
-        case '+':  /* 1 or more repetitions */
+        }
+        case '+': {  /* 1 or more repetitions */
           return (m ? max_expand(ms, s+1, p, ep) : NULL);
-        case '-':  /* 0 or more repetitions (minimum) */
+        }
+        case '-': {  /* 0 or more repetitions (minimum) */
           return min_expand(ms, s, p, ep);
-        default:
+        }
+        default: {
           if (!m) return NULL;
           s++; p=ep; goto init;  /* else return match(ms, s+1, ep); */
+        }
       }
     }
   }
@@ -590,12 +598,19 @@ static void luaI_addquoted (lua_State *L, luaL_Buffer *b, int arg) {
   luaL_putchar(b, '"');
   while (l--) {
     switch (*s) {
-      case '"':  case '\\':  case '\n':
+      case '"': case '\\': case '\n': {
         luaL_putchar(b, '\\');
         luaL_putchar(b, *s);
         break;
-      case '\0': luaL_addlstring(b, "\\000", 4); break;
-      default: luaL_putchar(b, *s);
+      }
+      case '\0': {
+        luaL_addlstring(b, "\\000", 4);
+        break;
+      }
+      default: {
+        luaL_putchar(b, *s);
+        break;
+      }
     }
     s++;
   }
@@ -647,19 +662,23 @@ static int str_format (lua_State *L) {
       arg++;
       strfrmt = scanformat(L, strfrmt, form, &hasprecision);
       switch (*strfrmt++) {
-        case 'c':  case 'd':  case 'i':
+        case 'c':  case 'd':  case 'i': {
           sprintf(buff, form, luaL_check_int(L, arg));
           break;
-        case 'o':  case 'u':  case 'x':  case 'X':
+        }
+        case 'o':  case 'u':  case 'x':  case 'X': {
           sprintf(buff, form, (unsigned int)(luaL_check_number(L, arg)));
           break;
+        }
         case 'e':  case 'E': case 'f':
-        case 'g': case 'G':
+        case 'g': case 'G': {
           sprintf(buff, form, luaL_check_number(L, arg));
           break;
-        case 'q':
+        }
+        case 'q': {
           luaI_addquoted(L, &b, arg);
           continue;  /* skip the `addsize' at the end */
+        }
         case 's': {
           size_t l;
           const char *s = luaL_check_lstr(L, arg, &l);
@@ -675,8 +694,9 @@ static int str_format (lua_State *L) {
             break;
           }
         }
-        default:  /* also treat cases `pnLlh' */
+        default: {  /* also treat cases `pnLlh' */
           return luaL_error(L, "invalid option in `format'");
+        }
       }
       luaL_addlstring(&b, buff, strlen(buff));
     }
