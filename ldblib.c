@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.43 2002/02/07 17:24:32 roberto Exp roberto $
+** $Id: ldblib.c,v 1.44 2002/03/20 12:54:08 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -141,7 +141,7 @@ static void linef (lua_State *L, lua_Debug *ar) {
 static void sethook (lua_State *L, const char *key, lua_Hook hook,
                      lua_Hook (*sethookf)(lua_State * L, lua_Hook h)) {
   lua_settop(L, 1);
-  if (lua_isnil(L, 1))
+  if (lua_isnoneornil(L, 1))
     (*sethookf)(L, NULL);
   else if (lua_isfunction(L, 1))
     (*sethookf)(L, hook);

@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.60 2002/03/20 12:54:08 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.61 2002/03/27 12:49:53 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -620,7 +620,7 @@ static void set2 (lua_State *L, int i, int j) {
 
 static int sort_comp (lua_State *L, int a, int b) {
   /* WARNING: the caller (auxsort) must ensure stack space */
-  if (!lua_isnil(L, 2)) {  /* function? */
+  if (!lua_isnoneornil(L, 2)) {  /* function? */
     int res;
     lua_pushvalue(L, 2);
     lua_pushvalue(L, a-1);  /* -1 to compensate function */

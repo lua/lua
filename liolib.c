@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.131 2002/02/08 22:39:56 roberto Exp roberto $
+** $Id: liolib.c,v 1.132 2002/03/20 12:54:08 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -406,7 +406,7 @@ static int io_seek (lua_State *L) {
 
 
 static int io_flush (lua_State *L) {
-  FILE *f = (lua_isnone(L, 1)) ? (FILE *)(NULL) :
+  FILE *f = (lua_isnoneornil(L, 1)) ? (FILE *)(NULL) :
                                  (FILE *)(luaL_check_userdata(L, 1, FILEHANDLE));
   return pushresult(L, fflush(f) == 0);
 }
@@ -541,7 +541,7 @@ static int io_date (lua_State *L) {
 
 
 static int io_time (lua_State *L) {
-  if (lua_isnone(L, 1))  /* called without args? */
+  if (lua_isnoneornil(L, 1))  /* called without args? */
     lua_pushnumber(L, time(NULL));  /* return current time */
   else {
     time_t t;
@@ -581,8 +581,7 @@ static int io_setloc (lua_State *L) {
      "numeric", "time", NULL};
   const char *l = lua_tostring(L, 1);
   int op = luaL_findstring(luaL_opt_string(L, 2, "all"), catnames);
-  luaL_arg_check(L, l || lua_isnil(L, 1) || lua_isnone(L, 1), 1,
-                 "string expected");
+  luaL_arg_check(L, l || lua_isnoneornil(L, 1), 1, "string expected");
   luaL_arg_check(L, op != -1, 2, "invalid option");
   lua_pushstring(L, setlocale(cat[op], l));
   return 1;

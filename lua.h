@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.123 2002/03/18 18:18:35 roberto Exp roberto $
+** $Id: lua.h,v 1.124 2002/03/27 12:49:53 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: info@lua.org
@@ -229,6 +229,7 @@ LUA_API void  lua_newuserdatabox (lua_State *L, void *u);
 #define lua_isnil(L,n)		(lua_type(L,n) == LUA_TNIL)
 #define lua_isboolean(L,n)	(lua_type(L,n) == LUA_TBOOLEAN)
 #define lua_isnone(L,n)		(lua_type(L,n) == LUA_TNONE)
+#define lua_isnoneornil(L, n)	(lua_type(L,n) <= 0)
 
 #define lua_pushliteral(L, s)	lua_pushlstring(L, "" s, \
                                                 (sizeof(s)/sizeof(char))-1)
