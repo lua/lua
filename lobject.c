@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.19 1999/04/13 19:28:49 roberto Exp roberto $
+** $Id: lobject.c,v 1.20 1999/08/16 20:52:00 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -88,40 +88,53 @@ static double expten (unsigned int e) {
 }
 
 
-double luaO_str2d (const char *s) {  /* LUA_NUMBER */
+int luaO_str2d (const char *s, real *result) {  /* LUA_NUMBER */
   double a = 0.0;
-  int point = 0;
+  int point = 0;  /* number of decimal digits */
+  int sig = 1;
+  int valid = 0;  /* check whether number has at least one valid digit */
+  while (isspace((unsigned char)*s)) s++;
+  if (*s == '-') {
+    s++;
+    sig = -1;
+  }
+  else if (*s == '+') s++;
   while (isdigit((unsigned char)*s)) {
     a = 10.0*a + (*(s++)-'0');
+    valid = 1;
   }
   if (*s == '.') {
     s++;
     while (isdigit((unsigned char)*s)) {
       a = 10.0*a + (*(s++)-'0');
       point++;
+      valid = 1;
     }
   }
+  if (!valid) return 0;
+  a *= sig;
   if (toupper((unsigned char)*s) == 'E') {
     int e = 0;
-    int sig = 1;
+    sig = 1;
     s++;
     if (*s == '-') {
       s++;
       sig = -1;
     }
     else if (*s == '+') s++;
-    if (!isdigit((unsigned char)*s)) return -1;  /* no digit in the exponent? */
+    if (!isdigit((unsigned char)*s)) return 0;  /* no digit in the exponent? */
     do {
       e = 10*e + (*(s++)-'0');
     } while (isdigit((unsigned char)*s));
     point -= sig*e;
   }
   while (isspace((unsigned char)*s)) s++;
-  if (*s != '\0') return -1;  /* invalid trailing characters? */
+  if (*s != '\0') return 0;  /* invalid trailing characters? */
   if (point > 0)
     a /= expten(point);
   else if (point < 0)
     a *= expten(-point);
-  return a;
+  *result = a;
+  return 1;
 }
 
