@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.139 2000/10/02 20:10:55 roberto Exp roberto $
+** $Id: lvm.c,v 1.140 2000/10/03 14:03:21 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -174,7 +174,7 @@ void luaV_settable (lua_State *L, StkId t, StkId key) {
 
 const TObject *luaV_getglobal (lua_State *L, TString *s) {
   const TObject *value = luaH_getstr(L->gt, s);
-  TObject *im = luaT_getimbyObj(L, value, IM_GETGLOBAL);
+  const TObject *im = luaT_getimbyObj(L, value, IM_GETGLOBAL);
   if (ttype(im) == TAG_NIL)  /* is there a tag method? */
     return value;  /* default behavior */
   else {  /* tag method */

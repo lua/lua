@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.102 2000/10/02 14:47:43 roberto Exp roberto $
+** $Id: lapi.c,v 1.103 2000/10/02 20:10:55 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -141,10 +141,14 @@ int lua_isstring (lua_State *L, int index) {
   return (t == LUA_TSTRING || t == LUA_TNUMBER);
 }
 
+
+static int auxtag (const TObject *o) {
+return ((ttype(o) == TAG_USERDATA) ? tsvalue(o)->u.d.tag :
+        (ttype(o) == TAG_TABLE) ? hvalue(o)->htag : (int)ttype(o));
+}
+
 int lua_tag (lua_State *L, int index) {
-  btest(L, index, 
-   ((ttype(o) == TAG_USERDATA) ? tsvalue(o)->u.d.tag :
-                                 luaT_effectivetag(L, o)), LUA_NOTAG);
+  btest(L, index, auxtag(o), LUA_NOTAG);
 }
 
 int lua_equal (lua_State *L, int index1, int index2) {

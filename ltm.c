@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.50 2000/09/29 12:42:13 roberto Exp roberto $
+** $Id: ltm.c,v 1.51 2000/10/02 20:10:55 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -117,15 +117,20 @@ int lua_copytagmethods (lua_State *L, int tagto, int tagfrom) {
 }
 
 
-int luaT_effectivetag (lua_State *L, const TObject *o) {
+const TObject *luaT_gettagmethods (lua_State *L, const TObject *o) {
   lua_Tag t = ttype(o);
   switch (t) {
     case TAG_USERDATA: {
       int tag = tsvalue(o)->u.d.tag;
-      return (tag > L->last_tag) ? TAG_USERDATA : tag;  /* deprecated test */
+      if (tag > L->last_tag)
+        return L->IMtable[TAG_USERDATA].int_method;
+      else
+        return L->IMtable[tag].int_method;
     }
-    case TAG_TABLE: return hvalue(o)->htag;
-    default: return t;
+    case TAG_TABLE:
+      return L->IMtable[hvalue(o)->htag].int_method;
+    default:
+      return L->IMtable[(int)t].int_method;;
   }
 }
 
