@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.90 2002/03/08 19:10:32 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.91 2002/03/18 14:49:46 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -77,7 +77,7 @@ enum OpMode {iABC, iABc, iAsBc};  /* basic instruction format */
 */
 
 #define GET_OPCODE(i)	(cast(OpCode, (i)&MASK1(SIZE_OP,0)))
-#define SET_OPCODE(i,o)	(((i)&MASK0(SIZE_OP,0)) | cast(Instruction, o))
+#define SET_OPCODE(i,o)	((i) = (((i)&MASK0(SIZE_OP,0)) | cast(Instruction, o)))
 
 #define GETARG_A(i)	(cast(int, (i)>>POS_A))
 #define SETARG_A(i,u)	((i) = (((i)&MASK0(SIZE_A,POS_A)) | \
@@ -168,6 +168,7 @@ OP_TESTT,/*	A B	if (R(B)) then R(A) := R(B) else pc++		*/
 OP_TESTF,/*	A B	if not (R(B)) then R(A) := R(B) else pc++	*/ 
 
 OP_CALL,/*	A B C	R(A), ... ,R(A+C-2) := R(A)(R(A+1), ... ,R(A+B-1)) */
+OP_TAILCALL,/*	A B	return R(A)(R(A+1), ... ,R(A+B-1))		*/
 OP_RETURN,/*	A B	return R(A), ... ,R(A+B-2)	(see (3))	*/
 
 OP_FORLOOP,/*	A sBc	R(A)+=R(A+2); if R(A) <?= R(A+1) then PC+= sBc	*/

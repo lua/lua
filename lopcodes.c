@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.11 2002/02/05 22:39:12 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.12 2002/03/08 19:10:32 roberto Exp roberto $
 ** extracted automatically from lopcodes.h by mkprint.lua
 ** DO NOT EDIT
 ** See Copyright Notice in lua.h
@@ -45,6 +45,7 @@ const char *const luaP_opnames[] = {
   "TESTT",
   "TESTF",
   "CALL",
+  "TAILCALL",
   "RETURN",
   "FORLOOP",
   "TFORLOOP",
@@ -93,6 +94,7 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(1,0,1,0, 1,0,iABC)		/* OP_TESTT */
  ,opmode(1,0,1,0, 1,0,iABC)		/* OP_TESTF */
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_CALL */
+ ,opmode(0,0,0,0, 0,0,iABC)		/* OP_TAILCALL */
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_RETURN */
  ,opmode(0,1,0,0, 0,0,iAsBc)		/* OP_FORLOOP */
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_TFORLOOP */

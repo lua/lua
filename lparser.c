@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.170 2002/03/14 18:32:37 roberto Exp roberto $
+** $Id: lparser.c,v 1.171 2002/03/18 14:49:46 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1209,6 +1209,10 @@ static void retstat (LexState *ls) {
   else {
     nret = explist1(ls, &e);  /* optional return values */
     if (e.k == VCALL) {
+      if (nret == 1) {  /* tail call? */
+        SET_OPCODE(getcode(fs,&e), OP_TAILCALL);
+        return;
+      }
       luaK_setcallreturns(fs, &e, LUA_MULTRET);
       first = fs->nactloc;
       nret = LUA_MULTRET;  /* return all values */
