@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.134 2003/12/04 18:52:23 roberto Exp roberto $
+** $Id: lstate.c,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -167,7 +167,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   setnilvalue(registry(L));
   luaZ_initbuffer(L, &g->buff);
   g->panic = NULL;
-  g->gcstate = 0;
+  g->gcstate = GCSfinalize;
   g->rootgc = NULL;
   g->sweepstrgc = 0;
   g->currentwhite = bitmask(WHITE0BIT);

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 1.28 2003/12/09 16:56:11 roberto Exp roberto $
+** $Id: lgc.h,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -14,12 +14,10 @@
 /*
 ** Possible states of the Garbage Collector
 */
-#define GCSroot		0
-#define GCSpropagate	1
-#define GCSatomic	2
-#define GCSsweepstring	3
-#define GCSsweep	4
-#define GCSfinalize	5
+#define GCSpropagate	0
+#define GCSsweepstring	1
+#define GCSsweep	2
+#define GCSfinalize	3
 
 
 /*
