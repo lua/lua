@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.113 2002/10/08 18:46:08 roberto Exp roberto $
+** $Id: llex.c,v 1.114 2002/10/09 13:00:08 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -73,10 +73,8 @@ void luaX_syntaxerror (LexState *ls, const char *msg) {
       lasttoken = luaO_pushfstring(ls->L, "%s", getstr(ls->t.seminfo.ts));
       break;
     case TK_STRING:
-      lasttoken = luaO_pushfstring(ls->L, "\"%s\"", getstr(ls->t.seminfo.ts));
-      break;
     case TK_NUMBER:
-      lasttoken = luaO_pushfstring(ls->L, "%f", ls->t.seminfo.r);
+      lasttoken = luaO_pushfstring(ls->L, "%s", luaZ_buffer(ls->buff));
       break;
     default:
       lasttoken = luaX_token2str(ls, ls->t.token);
@@ -149,7 +147,7 @@ void luaX_setinput (lua_State *L, LexState *LS, ZIO *z, TString *source) {
       luaZ_openspace((LS)->L, (LS)->buff, (len)+EXTRABUFF)
 
 #define save(LS, c, l) \
-	(cast(char *, luaZ_buffer((LS)->buff))[l++] = cast(char, c))
+	(luaZ_buffer((LS)->buff)[l++] = cast(char, c))
 #define save_and_next(LS, l)  (save(LS, LS->current, l), next(LS))
 
 
@@ -198,7 +196,7 @@ static void read_numeral (LexState *LS, int comma, SemInfo *seminfo) {
     }
   }
   save(LS, '\0', l);
-  if (!luaO_str2d(cast(char *, luaZ_buffer(LS->buff)), &seminfo->r))
+  if (!luaO_str2d(luaZ_buffer(LS->buff), &seminfo->r))
     luaX_lexerror(LS, "malformed number", TK_NUMBER);
 }
 
