@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.61 2000/04/25 16:55:09 roberto Exp roberto $
+** $Id: lobject.h,v 1.62 2000/05/08 19:32:53 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -79,7 +79,7 @@ typedef union {
 #define avalue(o)       ((o)->value.a)
 
 
-typedef struct TObject {
+typedef struct lua_TObject {
   lua_Type ttype;
   Value value;
 } TObject;
