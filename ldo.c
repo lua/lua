@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.88 2000/08/29 14:48:16 roberto Exp roberto $
+** $Id: ldo.c,v 1.89 2000/08/29 14:57:23 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -109,6 +109,7 @@ void luaD_lineHook (lua_State *L, StkId func, int line, lua_Hook linehook) {
     ar.currentline = line;
     L->allowhooks = 0;  /* cannot call hooks inside a hook */
     (*linehook)(L, &ar);
+    LUA_ASSERT(L->allowhooks == 0, "invalid allow");
     L->allowhooks = 1;
     L->top = old_top;
     L->Cbase = old_Cbase;
@@ -126,6 +127,7 @@ static void luaD_callHook (lua_State *L, StkId func, lua_Hook callhook,
     ar.event = event;
     L->allowhooks = 0;  /* cannot call hooks inside a hook */
     (*callhook)(L, &ar);
+    LUA_ASSERT(L->allowhooks == 0, "invalid allow");
     L->allowhooks = 1;
     L->top = old_top;
     L->Cbase = old_Cbase;
