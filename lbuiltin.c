@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.30 1998/06/19 16:14:09 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.31 1998/06/19 18:47:06 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -54,6 +54,7 @@ static void nextvar (void)
     pushstring(g);
     luaA_pushobject(&g->u.s.globalval);
   }
+  else lua_pushnil();
 }
 
 
@@ -90,6 +91,7 @@ static void next (void)
     luaA_pushobject(&n->ref);
     luaA_pushobject(&n->val);
   }
+  else lua_pushnil();
 }
 
 
@@ -214,8 +216,8 @@ static void tonumber (void)
     luaL_arg_check(0 <= base && base <= 36, 2, "base out of range");
     n = strtol(s, &s, base);
     while (isspace(*s)) s++;  /* skip trailing spaces */
-    if (*s) return;  /* invalid format: return nil */
-    lua_pushnumber(n);
+    if (*s) lua_pushnil();  /* invalid format: return nil */
+    else lua_pushnumber(n);
   }
 }
 
@@ -303,8 +305,10 @@ static void luaI_call (void)
     lua_seterrormethod();
   }
   if (status != 0) {  /* error in call? */
-    if (strchr(options, 'x'))
+    if (strchr(options, 'x')) {
+      lua_pushnil();
       return;  /* return nil to signal the error */
+    }
     else
       lua_error(NULL);
   }
