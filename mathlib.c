@@ -3,7 +3,7 @@
 ** Mathematics library to LUA
 */
 
-char *rcs_mathlib="$Id: mathlib.c,v 1.1 1993/12/17 18:41:19 celes Exp celes $";
+char *rcs_mathlib="$Id: mathlib.c,v 1.2 1994/07/20 22:12:27 celes Exp celes $";
 
 #include <stdio.h>		/* NULL */
 #include <math.h>
@@ -214,6 +214,43 @@ static void math_max (void)
 }
 
 
+static void math_log (void)
+{
+ double d;
+ lua_Object o = lua_getparam (1);
+ if (o == NULL)
+ { lua_error ("too few arguments to function `log'"); return; }
+ if (!lua_isnumber(o))
+ { lua_error ("incorrect arguments to function `log'"); return; }
+ d = lua_getnumber(o);
+ lua_pushnumber (log(d));
+}
+
+
+static void math_log10 (void)
+{
+ double d;
+ lua_Object o = lua_getparam (1);
+ if (o == NULL)
+ { lua_error ("too few arguments to function `log10'"); return; }
+ if (!lua_isnumber(o))
+ { lua_error ("incorrect arguments to function `log10'"); return; }
+ d = lua_getnumber(o);
+ lua_pushnumber (log10(d));
+}
+
+
+static void math_exp (void)
+{
+ double d;
+ lua_Object o = lua_getparam (1);
+ if (o == NULL)
+ { lua_error ("too few arguments to function `exp'"); return; }
+ if (!lua_isnumber(o))
+ { lua_error ("incorrect arguments to function `exp'"); return; }
+ d = lua_getnumber(o);
+ lua_pushnumber (exp(d));
+}
 
 /*
 ** Open math library
@@ -234,4 +271,7 @@ void mathlib_open (void)
  lua_register ("pow",   math_pow);
  lua_register ("min",   math_min);
  lua_register ("max",   math_max);
+ lua_register ("log",   math_log);
+ lua_register ("log10", math_log10);
+ lua_register ("exp",   math_exp);
 }
