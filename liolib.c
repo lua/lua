@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.47 1999/10/11 16:06:01 roberto Exp roberto $
+** $Id: liolib.c,v 1.48 1999/10/19 13:33:22 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -500,7 +500,7 @@ static void setloc (void) {
 
 
 static void io_exit (void) {
-  exit(luaL_opt_int(1, EXIT_FAILURE));
+  exit(luaL_opt_int(1, EXIT_SUCCESS));
 }
 
 /* }====================================================== */
