@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.3 1996/01/30 12:55:10 roberto Exp roberto $
+% $Id: manual.tex,v 1.4 1996/01/30 15:24:49 roberto Exp roberto $
 
 \documentstyle[A4,11pt,bnf]{article}
 
@@ -32,7 +32,7 @@ Waldemar Celes Filho
 Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1996/01/30 12:55:10 $}
+\date{\small \verb$Date: 1996/01/30 15:24:49 $}
 
 \maketitle
 
@@ -70,9 +70,9 @@ general procedural programming features with data description
 facilities.
 It is supposed to be used as a configuration language for any
 program that needs one.
-Its main extensions are related to object-oriented facilities,
-and fallbacks,
-but it has some other minor contributions.
+%Its main extensions are related to object-oriented facilities,
+%and fallbacks,
+%but it has some other minor contributions.
 Lua has been designed and implemented by
 W.~Celes~F., L.~H.~de Figueiredo and R.~Ierusalimschy.
 
@@ -231,7 +231,7 @@ double hyphen (\verb'--') and run until the end of the line.
 and an optional decimal exponent.
 Examples of valid numerical constants are:
 \begin{verbatim}
-       4     4.     .4     4.57e-3     .3e12
+       4     4.0     0.4     4.57e-3     0.3e12
 \end{verbatim}
 
 
@@ -344,17 +344,14 @@ the syntax for a \Index{return statement} is:
 \produc{ret}{\rwd{return} explist}
 \end{Produc}
 
-\subsubsection{Expressions as Statements} \label{statexp}
-All expressions with possible side-effects can be
-executed as statements.
-These include function calls and table constructors:
+\subsubsection{Function Calls as Statements} \label{funcstat}
+Because of possible side-effects,
+function calls can be executed as statements.
 \begin{Produc}
 \produc{stat}{functioncall}
-\produc{stat}{tableconstructor}
 \end{Produc}%
 Eventual returned values are thrown away.
-Function calls are explained in Section \ref{functioncall};
-constructors are the subject of Section \ref{tableconstructor}.
+Function calls are explained in Section \ref{functioncall}.
 
 \subsubsection{Local Declarations} \label{localvar}
 \Index{Local variables} can be declared anywhere inside a block.
@@ -405,7 +402,8 @@ Lua offers  the following \Index{relational operators}:
 \begin{verbatim}
        <   >   <=  >=  ~=  ==
 \end{verbatim}
-All return \nil\ as false and 1 as true.
+All return \nil\ as false and a value different from \nil\
+(actually the number 1) as true.
 
 Equality first compares the types of its operands.
 If they are different, the result is \nil.
@@ -546,7 +544,7 @@ the parameter list is a single new table.
 Because a function can return any number of results
 (\see{return}),
 the number of results must be adjusted before used.
-If the function is called as an statement (\see{statexp}),
+If the function is called as a statement (\see{funcstat}),
 its return list is adjusted to 0.
 If the function is called in a place that needs a single value
 (syntactically denoted by the non-terminal \verb'exp1'),
@@ -601,7 +599,7 @@ end
 \end{verbatim}
 that is, the function gets an extra formal parameter called \verb'self'.
 Notice that
-the variable \verb'v' must be previously initialized with a table value.
+the variable \verb'v' must have been previously initialized with a table value.
 
 
 \subsection{Fallbacks} \label{fallback}
@@ -704,18 +702,17 @@ and then the corresponding function from the library
 is terminated returning an error condition.
 
 The only argument to the error fallback function is a string describing
-the error and some extra informations,
-like current line (when the error is at compilation)
-or current function (when the error is at execution).
+the error.
+The standard I/O library redefines this fallback,
+using the debug API, in order to print some extra informations,
+like the stack of calls.
 For more information about an error,
 the Lua program can include the compilation pragma \verb'$debug'.
 \index{debug pragma}
 This pragma must be written in a line by itself.
 When an error occurs in a program compiled with this option,
-the error message includes extra information showing the stack of calls.
-
-The standard error routine only prints the error message
-to \verb'stderr'.
+the error routine is able to print also the lines where the calls
+(and the error) were made.
 If needed, it is possible to change the error fallback routine;
 \see{fallback}.
 
@@ -758,6 +755,9 @@ Because Lua has no static type system,
 all values passed between Lua and C have type
 \verb'lua_Object'\Deffunc{lua_Object},
 which works like an abstract type in C that can hold any Lua value.
+Values of type \verb'lua_Object' have no meaning outside Lua;
+for instance,
+the comparisson of two \verb"lua_Object's" is of no significance.
 
 Lua has automatic memory management, and garbage collection.
 Because of that, a \verb'lua_Object' has a limited scope,
@@ -856,7 +856,7 @@ and leave the result on the top of the Lua stack,
 where it can be assigned to a Lua variable,
 passed as paramenter to a Lua function, etc (see below). \label{pushing}
 \verb'lua_pushliteral' is like \verb'lua_pushstring',
-but also puts the string in the Lua literal table.
+but also puts the string in the Lua literal table and merges duplications.
 This avoids the string to be garbage collected,
 and therefore has a better overall performance.
 As a rule, when the string to be pushed is a literal,
@@ -885,6 +885,9 @@ one can use the function:
 \begin{verbatim}
 lua_Object     lua_getglobal            (char *varname);
 \end{verbatim}
+As in Lua, if the value of the global is \nil,
+the \verb'"getglobal"' fallback is called.
+
 To store a value previously pushed onto the stack in a global variable,
 there is the function:
 \Deffunc{lua_storeglobal}
@@ -904,15 +907,15 @@ As in Lua, if the first object is not a table,
 or the index is not present in the table,
 the correspondent fallback is called.
 
-For compatibility with previous versions of the API,
-the following macros are supported:
-\Deffunc{lua_getindexed}\Deffunc{lua_getfield}
-\begin{verbatim}
-lua_Object     lua_getindexed           (lua_Object table, float index);
-lua_Object     lua_getfield             (lua_Object table, char *field);
-\end{verbatim}
-The first one is used for numeric indices,
-while the second can be used for any string index.
+%For compatibility with previous versions of the API,
+%the following macros are supported:
+%\Deffunc{lua_getindexed}\Deffunc{lua_getfield}
+%\begin{verbatim}
+%lua_Object     lua_getindexed           (lua_Object table, float index);
+%lua_Object     lua_getfield             (lua_Object table, char *field);
+%\end{verbatim}
+%The first one is used for numeric indices,
+%while the second can be used for any string index.
 
 To store a value in an index,
 the program must push onto the stack the table, the index,
@@ -1009,7 +1012,7 @@ The first parameter is the fallback name,
 and the second a CFunction to be used as the new fallback.
 This function returns a \verb'lua_Object',
 which is the old fallback value,
-or nil on fail (invalid fallback name).
+or \nil\ on fail (invalid fallback name).
 This old value can be used for chaining fallbacks.
 
 An example of C code calling a Lua function is shown in
@@ -1331,8 +1334,8 @@ then a \Index{piped input} is open, via function \IndexVerb{popen}.
 
 This function opens a file named \verb'filename' and sets it as the
 {\em current} output file.
-Notice that, if the file already exists, it is completely erased with this
-operation.
+Notice that, if the file already exists,
+it will be {\em completely erased} with this operation.
 When called without parameters,
 this function closes the current output file,
 and restores \verb'stdout' as the current output file.
@@ -1382,7 +1385,7 @@ Particularly, the format \verb'"s1"' reads a single character.
 \subsubsection*{{\tt readuntil (char)}}\Deffunc{readuntil}
 
 Reads the current input until the first ocurrence of the given character.
-When called with no parameters or with nil,
+When called with no parameters,
 reads until the end of the current input file.
 Returns the string read.
 The character itself is not read.
@@ -1452,6 +1455,49 @@ This section gives examples showing some features of Lua.
 It does not intend to cover the whole language,
 but only to illustrate some interesting uses of the system.
 
+
+\subsection{\Index{Data Structures}}
+Tables are a strong unifying data constructor.
+They directly implement a multitude of data types,
+like ordinary arrays, records, sets, bags, and lists.
+
+Arrays need no explanations.
+In Lua, it is conventional to start indices from 1,
+but this is only a convention.
+Arrays can be indexed by 0, negative numbers, or any other value (but \nil).
+Records are also trivially implemented by the syntactic sugar
+\verb'a.x'.
+
+The best way to implement a set is to use the indices of a table.
+The statement \verb's = {}' creates an empty set \verb's'. 
+The statement \verb's[x] = 1' inserts the value of \verb'x' into
+the set \verb's'.
+The expression \verb's[x]' is true if and only if
+\verb'x' belongs to \verb's'.
+Finally, the statement \verb's[x] = nil' erases \verb'x' from \verb's'.
+
+Bags can be implemented similarly to sets,
+but using the value associated to an element as its counter.
+So, to insert an element, 
+the following code is enough:
+\begin{verbatim}
+if s[x] then s[x] = s[x]+1
+else s[x] = 1 end
+\end{verbatim}
+and to remove an element:
+\begin{verbatim}
+if s[x] then s[x] = s[x]-1 end
+if s[x] == 0 then s[x] = nil end
+\end{verbatim}
+
+Lisp-like lists also have an easy implementation.
+The ``cons'' of two elements \verb'x' and \verb'y' can be
+created with the code \verb'l = {car=x, cdr=y}'.
+The expression \verb'l.car' extracts the header, 
+while \verb'l.cdr' extracts the tail.
+An alternative way is to create the list directly with \verb'l={x,y}',
+and then to extract the header with \verb'l[1]' and
+the tail with \verb'l[2]'.
 
 \subsection{The Functions {\tt next} and {\tt nextvar}} \label{exnext}
 \Deffunc{next}\Deffunc{nextvar}
@@ -1654,6 +1700,64 @@ This code must be registered with:
 Notice how the string \verb'"parent"' is kept
 locked in Lua for optimal performance.
 
+\subsection{\Index{Programming with Classes}}
+There are many different ways to do object-oriented programming in Lua.
+This section presents one possible way to
+implement classes,
+using the inheritance mechanism presented above.
+
+As one could expect, a good way to represent a class is
+as a table.
+This table will contain all instance methods of the class,
+plus eventual default values for instance variables.
+An instance of a class has its \verb'parent' field pointing to
+the class,
+and so it ``inherits'' all methods.
+
+For instance, a class \verb'Point' can be described as in
+Figure~\ref{Point}.
+Function \verb'create' helps the creation of new points,
+adding the parent field.
+Function \verb'move' is an example of an instance method.
+\begin{figure}
+\Line
+\begin{verbatim}
+Point = {x = 0, y = 0}
+
+function Point:create (o)
+  o.parent = self
+  return o
+end
+
+function Point:move (p)
+  self.x = self.x + p.x
+  self.y = self.y + p.y
+end
+
+...
+
+--
+-- creating points
+--
+p1 = Point:create{x = 10, y = 20}
+p2 = Point:create{x = 10}  -- y will be inherited until it is set
+
+--
+-- example of a method invocation
+--
+p1:move(p2)
+\end{verbatim}
+\caption{A Class Point.\label{Point}}
+\Line
+\end{figure}
+Finally, a subclass can be created as a new table,
+with the \verb'parent' field pointing to its superclass.
+It is interesting to notice how the use of \verb'self' in
+method \verb'create' allows this method to work properly even
+when inherited by a subclass.
+As usual, a subclass may overwrite any inherited method with
+its own version.
+
 \subsection{\Index{Modules}}
 Here we explain one possible way to simulate modules in Lua.
 The main idea is to use a table to store the module functions.
@@ -1673,7 +1777,10 @@ end
 Any code that needs this module has only to execute
 \verb'dofile("filename")', where \verb'filename' is the file
 where the module is written.
-After this, any function can be called with \verb'modulename.foo(...)'.
+After this, any function can be called with
+\begin{verbatim}
+modulename.foo(...)
+\end{verbatim}
 
 If a module function is going to be used many times,
 the program can give a local name to it.
