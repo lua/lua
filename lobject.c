@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.2 1997/09/26 16:46:20 roberto Exp roberto $
+** $Id: lobject.c,v 1.3 1997/10/16 20:07:40 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -17,7 +17,7 @@ char *luaO_typenames[] = { /* ORDER LUA_T */
 };
 
 
-long luaO_nentities = 0;
+unsigned long luaO_nblocks = 0;
 
 
 /* hash dimensions values */
@@ -68,7 +68,6 @@ int luaO_findstring (char *name, char *list[])
 
 void luaO_insertlist (GCnode *root, GCnode *node)
 {
-  ++luaO_nentities;
   node->next = root->next;
   root->next = node;
   node->marked = 0;

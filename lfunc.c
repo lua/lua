@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.2 1997/09/26 16:46:20 roberto Exp roberto $
+** $Id: lfunc.c,v 1.3 1997/10/16 10:59:34 roberto Exp roberto $
 ** Lua Funcion auxiliar
 ** See Copyright Notice in lua.h
 */
@@ -10,6 +10,8 @@
 #include "lfunc.h"
 #include "lmem.h"
 
+#define gcsizeproto(p)	5
+#define gcsizeclosure(c) 1
 
 GCnode luaF_root = {NULL, 0};
 GCnode luaF_rootcl = {NULL, 0};
@@ -20,6 +22,7 @@ Closure *luaF_newclosure (int nelems)
 {
   Closure *c = (Closure *)luaM_malloc(sizeof(Closure)+nelems*sizeof(TObject));
   luaO_insertlist(&luaF_rootcl, (GCnode *)c);
+  luaO_nblocks += gcsizeclosure(c);
   return c;
 }
 
@@ -34,6 +37,7 @@ TProtoFunc *luaF_newproto (void)
   f->nconsts = 0;
   f->locvars = NULL;
   luaO_insertlist(&luaF_root, (GCnode *)f);
+  luaO_nblocks += gcsizeproto(f);
   return f;
 }
 
@@ -52,6 +56,7 @@ void luaF_freeproto (TProtoFunc *l)
 {
   while (l) {
     TProtoFunc *next = (TProtoFunc *)l->head.next;
+    luaO_nblocks -= gcsizeproto(l);
     freefunc(l);
     l = next;
   }
@@ -62,6 +67,7 @@ void luaF_freeclosure (Closure *l)
 {
   while (l) {
     Closure *next = (Closure *)l->head.next;
+    luaO_nblocks -= gcsizeclosure(l);
     luaM_free(l);
     l = next;
   }

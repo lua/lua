@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: lgc.h,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -11,7 +11,7 @@
 #include "lobject.h"
 
 
-extern long luaC_threshold;
+extern unsigned long luaC_threshold;
 
 void luaC_checkGC (void);
 TObject* luaC_getref (int ref);

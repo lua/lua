@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.2 1997/09/26 15:02:26 roberto Exp roberto $
+** $Id: ldo.c,v 1.3 1997/10/16 10:59:34 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -140,7 +140,7 @@ void luaD_callHook (StkId base, lua_Type type, int isreturn)
 
 
 /*
-** Call a C function. luaD_Cstack.base will point to the luaD_stack.top of the luaD_stack.stack,
+** Call a C function. luaD_Cstack.base will point to the top of the stack,
 ** and luaD_Cstack.num is the number of parameters. Returns an index
 ** to the first result from C.
 */
@@ -151,7 +151,7 @@ static StkId callC (lua_CFunction func, StkId base)
   luaD_Cstack.num = (luaD_stack.top-luaD_stack.stack) - base;
   /* incorporate parameters on the luaD_stack.stack */
   luaD_Cstack.lua2C = base;
-  luaD_Cstack.base = base+luaD_Cstack.num;  /* == luaD_stack.top-luaD_stack.stack */
+  luaD_Cstack.base = base+luaD_Cstack.num;  /* == top-stack */
   if (lua_callhook)
     luaD_callHook(base, LUA_T_CMARK, 0);
   (*func)();
@@ -347,12 +347,12 @@ static int do_main (ZIO *z, char *chunkname, int bin)
 {
   int status;
   do {
-    long old_entities = (luaC_checkGC(), luaO_nentities);
+    long old_blocks = (luaC_checkGC(), luaO_nblocks);
     status = protectedparser(z, chunkname, bin);
     if (status == 1) return 1;  /* error */
     else if (status == 2) return 0;  /* 'natural' end */
     else {
-      long newelems2 = 2*(luaO_nentities-old_entities);
+      unsigned long newelems2 = 2*(luaO_nblocks-old_blocks);
       luaC_threshold += newelems2;
       status = luaD_protectedrun(MULT_RET);
       luaC_threshold -= newelems2;

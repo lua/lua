@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.3 1997/09/26 16:46:20 roberto Exp roberto $
+** $Id: lgc.c,v 1.4 1997/10/16 10:59:34 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -148,7 +148,6 @@ static GCnode *listcollect (GCnode *l)
       next->next = frees;
       frees = next;
       next = l->next;
-      --luaO_nentities;
     }
     l = next;
   }
@@ -252,7 +251,7 @@ static void call_nilIM (void)
 
 #define GARBAGE_BLOCK 150
 
-long luaC_threshold = GARBAGE_BLOCK;
+unsigned long luaC_threshold = GARBAGE_BLOCK;
 
 
 static void markall (void)
@@ -266,7 +265,7 @@ static void markall (void)
 
 long lua_collectgarbage (long limit)
 {
-  long recovered = luaO_nentities;  /* to subtract luaM_new value after gc */
+  unsigned long recovered = luaO_nblocks;  /* to subtract nblocks after gc */
   Hash *freetable;
   TaggedString *freestr;
   TProtoFunc *freefunc;
@@ -277,24 +276,25 @@ long lua_collectgarbage (long limit)
   freetable = (Hash *)listcollect(&luaH_root);
   freefunc = (TProtoFunc *)listcollect(&luaF_root);
   freeclos = (Closure *)listcollect(&luaF_rootcl);
-  recovered = recovered-luaO_nentities;
-/*printf("==total %ld  coletados %ld\n", luaO_nentities+recovered, recovered);*/
-  luaC_threshold = (limit == 0) ? 2*luaO_nentities : luaO_nentities+limit;
-  hashcallIM(freetable);
-  strcallIM(freestr);
-  call_nilIM();
+  luaC_threshold *= 4;  /* to avoid GC during GC */
+  hashcallIM(freetable);  /* GC tag methods for tables */
+  strcallIM(freestr);  /* GC tag methods for userdata */
+  call_nilIM();  /* GC tag method for nil (signal end of GC) */
   luaH_free(freetable);
   luaS_free(freestr);
   luaF_freeproto(freefunc);
   luaF_freeclosure(freeclos);
   luaM_clearbuffer();
+  recovered = recovered-luaO_nblocks;
+/*printf("==total %ld  coletados %ld\n", luaO_nblocks+recovered, recovered);*/
+  luaC_threshold = (limit == 0) ? 2*luaO_nblocks : luaO_nblocks+limit;
   return recovered;
 }
 
 
 void luaC_checkGC (void)
 {
-  if (luaO_nentities >= luaC_threshold)
+  if (luaO_nblocks >= luaC_threshold)
     lua_collectgarbage(0);
 }
 

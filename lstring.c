@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
+** $Id: lstring.c,v 1.2 1997/09/26 15:02:26 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -14,6 +14,9 @@
 
 
 #define NUM_HASHS  61
+
+
+#define gcsizestring(l)	(1+(l/64))
 
 
 GCnode luaS_root = {NULL, 0};  /* list of global variables */
@@ -89,16 +92,19 @@ static TaggedString *newone(char *buff, int tag, unsigned long h)
 {
   TaggedString *ts;
   if (tag == LUA_T_STRING) {
-    ts = (TaggedString *)luaM_malloc(sizeof(TaggedString)+strlen(buff));
+    long l = strlen(buff);
+    ts = (TaggedString *)luaM_malloc(sizeof(TaggedString)+l);
     strcpy(ts->str, buff);
     ts->u.globalval.ttype = LUA_T_NIL;  /* initialize global value */
     ts->constindex = 0;
+    luaO_nblocks += gcsizestring(l);
   }
   else {
     ts = (TaggedString *)luaM_malloc(sizeof(TaggedString));
     ts->u.d.v = buff;
     ts->u.d.tag = tag == LUA_ANYTAG ? 0 : tag;
     ts->constindex = -1;  /* tag -> this is a userdata */
+    luaO_nblocks++;
   }
   ts->head.marked = 0;
   ts->head.next = (GCnode *)ts;  /* signal it is in no list */
@@ -126,7 +132,6 @@ static TaggedString *insert (char *buff, int tag, stringtable *tb)
     i = (i+1)%tb->size;
   }
   /* not found */
-  ++luaO_nentities;
   if (j != -1)  /* is there an EMPTY space? */
     i = j;
   else
@@ -158,6 +163,7 @@ void luaS_free (TaggedString *l)
 {
   while (l) {
     TaggedString *next = (TaggedString *)l->head.next;
+    luaO_nblocks -= (l->constindex == -1) ? 1 : gcsizestring(strlen(l->str));
     luaM_free(l);
     l = next;
   }
@@ -196,7 +202,6 @@ TaggedString *luaS_collector (void)
         t->head.next = (GCnode *)frees;
         frees = t;
         tb->hash[j] = &EMPTY;
-        --luaO_nentities;
       }
     }
   }

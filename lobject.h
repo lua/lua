@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.4 1997/10/16 10:59:34 roberto Exp roberto $
+** $Id: lobject.h,v 1.5 1997/10/16 20:07:40 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -158,7 +158,12 @@ typedef struct Hash {
 } Hash;
 
 
-extern long luaO_nentities;
+/*
+** a gross estimation of number of memory "blocks" allocated
+** (a block is *roughly* 32 bytes)
+*/
+extern unsigned long luaO_nblocks;
+
 extern char *luaO_typenames[];
 
 int luaO_equalObj (TObject *t1, TObject *t2);

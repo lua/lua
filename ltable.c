@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.2 1997/09/26 16:46:20 roberto Exp roberto $
+** $Id: ltable.c,v 1.3 1997/10/18 16:29:15 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -12,6 +12,8 @@
 #include "ltable.h"
 #include "lua.h"
 
+
+#define gcsize(n)	(1+(n/16))
 
 #define nuse(t)		((t)->nuse)
 #define nodevector(t)	((t)->node)
@@ -75,11 +77,11 @@ static int present (Hash *t, TObject *key)
 */
 static Node *hashnodecreate (int nhash)
 {
- int i;
- Node *v = luaM_newvector (nhash, Node);
- for (i=0; i<nhash; i++)
-   ttype(ref(&v[i])) = LUA_T_NIL;
- return v;
+  Node *v = luaM_newvector(nhash, Node);
+  int i;
+  for (i=0; i<nhash; i++)
+    ttype(ref(&v[i])) = LUA_T_NIL;
+  return v;
 }
 
 /*
@@ -96,6 +98,7 @@ void luaH_free (Hash *frees)
 {
   while (frees) {
     Hash *next = (Hash *)frees->head.next;
+    luaO_nblocks -= gcsize(frees->nhash);
     hashdelete(frees);
     frees = next;
   }
@@ -111,6 +114,7 @@ Hash *luaH_new (int nhash)
   nuse(t) = 0;
   t->htag = TagDefault;
   luaO_insertlist(&luaH_root, (GCnode *)t);
+  luaO_nblocks += gcsize(nhash);
   return t;
 }
 
@@ -144,6 +148,7 @@ static void rehash (Hash *t)
     if (ttype(ref(n)) != LUA_T_NIL && ttype(val(n)) != LUA_T_NIL)
       *node(t, present(t, ref(n))) = *n;  /* copy old node to luaM_new hash */
   }
+  luaO_nblocks += gcsize(t->nhash)-gcsize(nold);
   luaM_free(vold);
 }
 
