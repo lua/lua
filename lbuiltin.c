@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.76 1999/11/26 18:53:03 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.77 1999/11/29 19:11:36 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -187,7 +187,7 @@ static void luaB_rawgetglobal (lua_State *L) {
   lua_pushobject(L, lua_rawgetglobal(L, luaL_check_string(L, 1)));
 }
 
-static void luaB_luatag (lua_State *L) {
+static void luaB_tag (lua_State *L) {
   lua_pushnumber(L, lua_tag(L, lua_getparam(L, 1)));
 }
 
@@ -789,7 +789,7 @@ static const struct luaL_reg builtin_funcs[] = {
   {"setglobal", luaB_setglobal},
   {"settag", luaB_settag},
   {"settagmethod", luaB_settagmethod},
-  {"tag", luaB_luatag},
+  {"tag", luaB_tag},
   {"tonumber", luaB_tonumber},
   {"tostring", luaB_tostring},
   {"type", luaB_type},

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.66 1999/11/22 13:12:07 roberto Exp roberto $
+** $Id: lvm.c,v 1.67 1999/11/25 18:59:43 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -37,7 +37,8 @@
 
 
 
-static TaggedString *strconc (lua_State *L, const TaggedString *l, const TaggedString *r) {
+static TaggedString *strconc (lua_State *L, const TaggedString *l,
+                                            const TaggedString *r) {
   long nl = l->u.s.len;
   long nr = r->u.s.len;
   char *buffer = luaL_openspace(L, nl+nr);
@@ -298,7 +299,8 @@ static void adjust_varargs (lua_State *L, StkId first_extra_arg) {
 ** [stack+base,top). Returns n such that the the results are between
 ** [stack+n,top).
 */
-StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf, StkId base) {
+StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
+                    StkId base) {
   struct Stack *S = &L->stack;  /* to optimize */
   register const Byte *pc = tf->code;
   const TObject *consts = tf->consts;
