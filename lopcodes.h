@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.74 2001/06/08 19:00:57 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.75 2001/06/11 14:56:42 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -26,6 +26,9 @@
   represented by 2*max), which is half the maximum for the corresponding
   unsigned argument.
 ===========================================================================*/
+
+
+enum OpMode {iABC, iABc, iAsBc};  /* basic instruction format */
 
 
 /*
@@ -196,6 +199,30 @@ OP_CLOSURE /*	A Bc	R(A) := closure(KPROTO[Bc], R(A), ... ,R(A+n))	*/
 
   (3) In OP_RETURN, if (B == NO_REG) then return up to `top'
 ===========================================================================*/
+
+
+
+/*
+** masks for instruction properties
+*/  
+enum OpModeMask {
+  OpModeBreg = 2,       /* B is a register */
+  OpModeCreg,           /* C is a register/constant */
+  OpModesetA,           /* instruction set register A */
+  OpModeK,              /* Bc is a constant */
+  OpModeT               /* operator is a test */
+};
+
+extern const lu_byte luaP_opmodes[];
+
+#define getOpMode(m)            ((enum OpMode)(luaP_opmodes[m] & 3))
+#define testOpMode(m, b)        (luaP_opmodes[m] & (1 << (b)))
+
+
+/*
+** opcode names (only included when compiled with LUA_OPNAMES)
+*/
+extern const l_char *const luaP_opnames[];
 
 
 #endif

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.84 2001/06/26 13:20:45 roberto Exp roberto $
+** $Id: ltests.c,v 1.85 2001/06/28 15:06:20 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -139,53 +139,10 @@ void *debug_realloc (void *block, size_t oldsize, size_t size) {
 */
 
 
-static const l_char *const instrname[NUM_OPCODES] = {
-  l_s("OP_MOVE"),
-  l_s("OP_LOADK"),
-  l_s("OP_LOADINT"),
-  l_s("OP_LOADNIL"),
-  l_s("OP_LOADUPVAL"),
-  l_s("OP_GETGLOBAL"),
-  l_s("OP_GETTABLE"),
-  l_s("OP_SETGLOBAL"),
-  l_s("OP_SETTABLE"),
-  l_s("OP_NEWTABLE"),
-  l_s("OP_SELF"),
-  l_s("OP_ADD"),
-  l_s("OP_SUB"),
-  l_s("OP_MUL"),
-  l_s("OP_DIV"),
-  l_s("OP_POW"),
-  l_s("OP_UNM"),
-  l_s("OP_NOT"),
-  l_s("OP_CONCAT"),
-  l_s("OP_JMP"),
-  l_s("OP_CJMP"),
-  l_s("OP_TESTEQ"),
-  l_s("OP_TESTNE"),
-  l_s("OP_TESTLT"),
-  l_s("OP_TESTLE"),
-  l_s("OP_TESTGT"),
-  l_s("OP_TESTGE"),
-  l_s("OP_TESTT"),
-  l_s("OP_TESTF"),
-  l_s("OP_NILJMP"),
-  l_s("OP_CALL"),
-  l_s("OP_RETURN"),
-  l_s("OP_FORPREP"),
-  l_s("OP_FORLOOP"),
-  l_s("OP_LFORPREP"),
-  l_s("OP_LFORLOOP"),
-  l_s("OP_SETLIST"),
-  l_s("OP_SETLIST0"),
-  l_s("OP_CLOSURE")
-};
-
-
 static l_char *buildop (Proto *p, int pc, l_char *buff) {
   Instruction i = p->code[pc];
   OpCode o = GET_OPCODE(i);
-  const l_char *name = instrname[o];
+  const l_char *name = luaP_opnames[o];
   sprintf(buff, l_s("%4d - "), pc);
   switch (getOpMode(o)) {  
     case iABC:

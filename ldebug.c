@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.84 2001/06/26 13:20:45 roberto Exp roberto $
+** $Id: ldebug.c,v 1.85 2001/06/28 14:57:17 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -563,52 +563,3 @@ void luaG_ordererror (lua_State *L, const TObject *p1, const TObject *p2) {
     luaO_verror(L, l_s("attempt to compare %.10s with %.10s"), t1, t2);
 }
 
-
-
-#define opmode(t,a,b,c,sa,k,m) (((t)<<OpModeT) | \
-   ((b)<<OpModeBreg) | ((c)<<OpModeCreg) | \
-   ((sa)<<OpModesetA) | ((k)<<OpModeK) | (m))
-
-
-const lu_byte luaG_opmodes[] = {
-/*       T J B C sA K mode		   opcode    */
-  opmode(0,0,1,0, 1,0,iABC),		/* OP_MOVE */
-  opmode(0,0,0,0, 1,1,iABc),		/* OP_LOADK */
-  opmode(0,0,0,0, 1,0,iAsBc),		/* OP_LOADINT */
-  opmode(0,0,1,0, 1,0,iABC),		/* OP_LOADNIL */
-  opmode(0,0,0,0, 1,0,iABc),		/* OP_LOADUPVAL */
-  opmode(0,0,0,0, 1,1,iABc),		/* OP_GETGLOBAL */
-  opmode(0,0,1,1, 1,0,iABC),		/* OP_GETTABLE */
-  opmode(0,0,0,0, 0,1,iABc),		/* OP_SETGLOBAL */
-  opmode(0,0,1,1, 0,0,iABC),		/* OP_SETTABLE */
-  opmode(0,0,0,0, 1,0,iABc),		/* OP_NEWTABLE */
-  opmode(0,0,1,1, 1,0,iABC),		/* OP_SELF */
-  opmode(0,0,1,1, 1,0,iABC),		/* OP_ADD */
-  opmode(0,0,1,1, 1,0,iABC),		/* OP_SUB */
-  opmode(0,0,1,1, 1,0,iABC),		/* OP_MUL */
-  opmode(0,0,1,1, 1,0,iABC),		/* OP_DIV */
-  opmode(0,0,1,1, 1,0,iABC),		/* OP_POW */
-  opmode(0,0,1,0, 1,0,iABC),		/* OP_UNM */
-  opmode(0,0,1,0, 1,0,iABC),		/* OP_NOT */
-  opmode(0,0,1,1, 1,0,iABC),		/* OP_CONCAT */
-  opmode(0,1,0,0, 0,0,iAsBc),		/* OP_JMP */
-  opmode(0,1,0,0, 0,0,iAsBc),		/* OP_CJMP */
-  opmode(1,0,0,1, 0,0,iABC),		/* OP_TESTEQ */
-  opmode(1,0,0,1, 0,0,iABC),		/* OP_TESTNE */
-  opmode(1,0,0,1, 0,0,iABC),		/* OP_TESTLT */
-  opmode(1,0,0,1, 0,0,iABC),		/* OP_TESTLE */
-  opmode(1,0,0,1, 0,0,iABC),		/* OP_TESTGT */
-  opmode(1,0,0,1, 0,0,iABC),		/* OP_TESTGE */
-  opmode(1,0,1,0, 1,0,iABC),		/* OP_TESTT */
-  opmode(1,0,1,0, 1,0,iABC),		/* OP_TESTF */
-  opmode(0,0,0,0, 1,0,iAsBc),		/* OP_NILJMP */
-  opmode(0,0,0,0, 0,0,iABC),		/* OP_CALL */
-  opmode(0,0,0,0, 0,0,iABC),		/* OP_RETURN */
-  opmode(0,0,0,0, 0,0,iAsBc),		/* OP_FORPREP */
-  opmode(0,0,0,0, 0,0,iAsBc),		/* OP_FORLOOP */
-  opmode(0,1,0,0, 0,0,iAsBc),		/* OP_TFORPREP */
-  opmode(0,1,0,0, 0,0,iAsBc),		/* OP_TFORLOOP */
-  opmode(0,0,0,0, 0,0,iABc),		/* OP_SETLIST */
-  opmode(0,0,0,0, 0,0,iABc),		/* OP_SETLIST0 */
-  opmode(0,0,0,0, 0,0,iABc)		/* OP_CLOSURE */
-};

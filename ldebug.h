@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.h,v 1.13 2001/06/06 17:50:36 roberto Exp roberto $
+** $Id: ldebug.h,v 1.14 2001/06/11 14:56:42 roberto Exp roberto $
 ** Auxiliary functions from Debug Interface module
 ** See Copyright Notice in lua.h
 */
@@ -10,25 +10,6 @@
 
 #include "lstate.h"
 #include "luadebug.h"
-
-
-enum OpMode {iABC, iABc, iAsBc};  /* basic instruction format */
-
-/*
-** masks for instruction properties
-*/
-enum OpModeMask {
-  OpModeBreg = 2,	/* B is a register */
-  OpModeCreg,		/* C is a register/constant */
-  OpModesetA,		/* instruction set register A */
-  OpModeK,		/* Bc is a constant */
-  OpModeT		/* operator is a test */
-};
-
-extern const lu_byte luaG_opmodes[];
-
-#define getOpMode(m)		((enum OpMode)(luaG_opmodes[m] & 3))
-#define testOpMode(m, b)	(luaG_opmodes[m] & (1 << (b)))
 
 
 void luaG_typeerror (lua_State *L, StkId o, const l_char *op);
