@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.89 2001/07/22 00:59:36 roberto Exp $
+** $Id: llex.c,v 1.91 2001/08/31 19:46:07 roberto Exp $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -58,22 +58,13 @@ void luaX_checklimit (LexState *ls, int val, int limit, const l_char *msg) {
 }
 
 
-void luaX_syntaxerror (LexState *ls, const l_char *s, const l_char *token) {
+static void luaX_syntaxerror (LexState *ls, const l_char *s,
+                              const l_char *token) {
   l_char buff[MAXSRC];
   luaO_chunkid(buff, getstr(ls->source), MAXSRC);
   luaO_verror(ls->L,
               l_s("%.99s;\n  last token read: `%.30s' at line %d in %.80s"),
               s, token, ls->linenumber, buff);
-}
-
-
-void luaX_error (LexState *ls, const l_char *s, int token) {
-  l_char buff[TOKEN_LEN];
-  luaX_token2str(token, buff);
-  if (buff[0] == l_c('\0'))
-    luaX_syntaxerror(ls, s, cast(l_char *, G(ls->L)->Mbuffer));
-  else
-    luaX_syntaxerror(ls, s, buff);
 }
 
 
@@ -85,6 +76,21 @@ void luaX_token2str (int token, l_char *s) {
   }
   else
     strcpy(s, token2string[token-FIRST_RESERVED]);
+}
+
+
+static l_char *token2str_all (LexState *ls, int token, l_char *s) {
+  luaX_token2str(token, s);
+  if (s[0] == l_c('\0'))
+    return cast(l_char *, G(ls->L)->Mbuffer);
+  else
+    return s;
+}
+
+
+void luaX_error (LexState *ls, const l_char *s, int token) {
+  l_char buff[TOKEN_LEN];
+  luaX_syntaxerror(ls, s, token2str_all(ls, token, buff));
 }
 
 
