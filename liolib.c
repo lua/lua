@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.83 2000/09/13 20:12:14 roberto Exp roberto $
+** $Id: liolib.c,v 1.84 2000/09/14 14:09:31 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -324,7 +324,7 @@ static int read_word (lua_State *L, FILE *f) {
   }
   ungetc(c, f);
   luaL_pushresult(&b);  /* close buffer */
-  return (lua_strlen(L, 1) > 0);
+  return (lua_strlen(L, -1) > 0);
 }
 
 

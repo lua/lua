@@ -198,3 +198,13 @@ Tue Aug 29 15:57:41 EST 2000
 >> gc tag method for nil could call line hook
 (by ry; since ?)
 
+
+
+=================================================================
+--- Version 4.0 Beta
+
+** liolib.c
+Fri Sep 22 15:12:37 EST 2000
+>> `read("*w")' should return nil at EOF
+(by roberto; since 4.0b)
+
