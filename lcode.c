@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.72 2001/06/08 12:29:27 roberto Exp roberto $
+** $Id: lcode.c,v 1.73 2001/06/08 19:00:57 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -69,8 +69,8 @@ int luaK_jump (FuncState *fs) {
 }
 
 
-static int luaK_condjump (FuncState *fs, OpCode op, int B, int C) {
-  luaK_codeABC(fs, op, NO_REG, B, C);
+static int luaK_condjump (FuncState *fs, OpCode op, int A, int B, int C) {
+  luaK_codeABC(fs, op, A, B, C);
   return luaK_codeAsBc(fs, OP_CJMP, 0, NO_JUMP);
 }
 
@@ -261,12 +261,11 @@ static int number_constant (FuncState *fs, lua_Number r) {
 
 void luaK_setcallreturns (FuncState *fs, expdesc *e, int nresults) {
   if (e->k == VCALL) {  /* expression is an open function call? */
-    int a = GETARG_A(getcode(fs, e));
-    int c = (nresults == LUA_MULTRET) ? NO_REG : a + nresults;
-    SETARG_C(getcode(fs, e), c);
+    if (nresults == LUA_MULTRET) nresults = NO_REG;
+    SETARG_C(getcode(fs, e), nresults);
     if (nresults == 1) {  /* `regular' expression? */
       e->k = VNONRELOC;
-      e->u.i.info = a;
+      e->u.i.info = GETARG_A(getcode(fs, e));
     }
   }
 }
@@ -499,13 +498,13 @@ static int jumponcond (FuncState *fs, expdesc *e, OpCode op) {
     if (GET_OPCODE(ie) == OP_NOT) {
       op = invertoperator(op);
       fs->pc--;  /* remove previous OP_NOT */
-      return luaK_condjump(fs, op, GETARG_B(ie), 0);
+      return luaK_condjump(fs, op, NO_REG, GETARG_B(ie), 0);
     }
     /* else go through */
   }
   discharge2anyreg(fs, e);
   freeexp(fs, e);
-  return luaK_condjump(fs, op, e->u.i.info, 0);
+  return luaK_condjump(fs, op, NO_REG, e->u.i.info, 0);
 }
 
 
@@ -748,7 +747,7 @@ void luaK_posfix (FuncState *fs, BinOpr op, expdesc *e1, expdesc *e2) {
         e1->k = VRELOCABLE;
       }
       else {  /* jump */
-        e1->u.i.info = luaK_condjump(fs, opc, o1, o2);
+        e1->u.i.info = luaK_condjump(fs, opc, o1, 0, o2);
         e1->k = VJMP;
       }
     }

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.80 2001/06/08 12:29:27 roberto Exp roberto $
+** $Id: ldebug.c,v 1.81 2001/06/08 19:00:57 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -349,6 +349,7 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
     int a = GETARG_A(i);
     int b = 0;
     int c = 0;
+    checkreg(pt, a);
     switch (getOpMode(op)) {
       case iABC: {
         b = GETARG_B(i);
@@ -370,7 +371,6 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         break;
       }
     }
-    if (testOpMode(op, OpModeAreg)) checkreg(pt, a);
     if (testOpMode(op, OpModesetA)) {
       if (a == reg) last = pc;  /* change register `a' */
     }
@@ -414,20 +414,20 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         break;
       }
       case OP_CALL: {
-        if (b == NO_REG) b = pt->maxstacksize;
+        if (b != NO_REG) {
+          checkreg(pt, a+b);
+        }
         if (c == NO_REG) {
           check(checkopenop(pt->code[pc+1]));
-          c = 1;
         }
-        check(b > a);
-        checkreg(pt, b-1);
-        checkreg(pt, c-1);
+        else if (c != 0)
+          checkreg(pt, a+c-1);
         if (reg >= a) last = pc;  /* affect all registers above base */
         break;
       }
       case OP_RETURN: {
-        if (b == NO_REG) b = pt->maxstacksize;
-        checkreg(pt, b-1);
+        if (b != NO_REG && b != 0)
+          checkreg(pt, a+b-1);
         break;
       }
       case OP_FORPREP:
@@ -566,49 +566,49 @@ void luaG_ordererror (lua_State *L, const TObject *p1, const TObject *p2) {
 
 
 #define opmode(t,a,b,c,sa,k,m) (((t)<<OpModeT) | \
-   ((a)<<OpModeAreg) | ((b)<<OpModeBreg) | ((c)<<OpModeCreg) | \
+   ((b)<<OpModeBreg) | ((c)<<OpModeCreg) | \
    ((sa)<<OpModesetA) | ((k)<<OpModeK) | (m))
 
 
 const lu_byte luaG_opmodes[] = {
-/*       T A B C sA K mode		   opcode    */
-  opmode(0,1,1,0, 1,0,iABC),		/* OP_MOVE */
-  opmode(0,1,0,0, 1,1,iABc),		/* OP_LOADK */
-  opmode(0,1,0,0, 1,0,iAsBc),		/* OP_LOADINT */
-  opmode(0,1,1,0, 1,0,iABC),		/* OP_LOADNIL */
-  opmode(0,1,0,0, 1,0,iABc),		/* OP_LOADUPVAL */
-  opmode(0,1,0,0, 1,1,iABc),		/* OP_GETGLOBAL */
-  opmode(0,1,1,1, 1,0,iABC),		/* OP_GETTABLE */
-  opmode(0,1,0,0, 0,1,iABc),		/* OP_SETGLOBAL */
-  opmode(0,1,1,1, 0,0,iABC),		/* OP_SETTABLE */
-  opmode(0,1,0,0, 1,0,iABc),		/* OP_NEWTABLE */
-  opmode(0,1,1,1, 1,0,iABC),		/* OP_SELF */
-  opmode(0,1,1,1, 1,0,iABC),		/* OP_ADD */
-  opmode(0,1,1,1, 1,0,iABC),		/* OP_SUB */
-  opmode(0,1,1,1, 1,0,iABC),		/* OP_MUL */
-  opmode(0,1,1,1, 1,0,iABC),		/* OP_DIV */
-  opmode(0,1,1,1, 1,0,iABC),		/* OP_POW */
-  opmode(0,1,1,0, 1,0,iABC),		/* OP_UNM */
-  opmode(0,1,1,0, 1,0,iABC),		/* OP_NOT */
-  opmode(0,1,1,1, 1,0,iABC),		/* OP_CONCAT */
-  opmode(0,0,0,0, 0,0,iAsBc),		/* OP_JMP */
-  opmode(0,0,0,0, 0,0,iAsBc),		/* OP_CJMP */
-  opmode(1,0,1,1, 0,0,iABC),		/* OP_TESTEQ */
-  opmode(1,0,1,1, 0,0,iABC),		/* OP_TESTNE */
-  opmode(1,0,1,1, 0,0,iABC),		/* OP_TESTLT */
-  opmode(1,0,1,1, 0,0,iABC),		/* OP_TESTLE */
-  opmode(1,0,1,1, 0,0,iABC),		/* OP_TESTGT */
-  opmode(1,0,1,1, 0,0,iABC),		/* OP_TESTGE */
-  opmode(1,1,1,0, 1,0,iABC),		/* OP_TESTT */
-  opmode(1,1,1,0, 1,0,iABC),		/* OP_TESTF */
-  opmode(0,1,0,0, 1,0,iAsBc),		/* OP_NILJMP */
-  opmode(0,1,0,0, 0,0,iABC),		/* OP_CALL */
-  opmode(0,1,0,0, 0,0,iABC),		/* OP_RETURN */
-  opmode(0,1,0,0, 0,0,iAsBc),		/* OP_FORPREP */
-  opmode(0,1,0,0, 0,0,iAsBc),		/* OP_FORLOOP */
+/*       T J B C sA K mode		   opcode    */
+  opmode(0,0,1,0, 1,0,iABC),		/* OP_MOVE */
+  opmode(0,0,0,0, 1,1,iABc),		/* OP_LOADK */
+  opmode(0,0,0,0, 1,0,iAsBc),		/* OP_LOADINT */
+  opmode(0,0,1,0, 1,0,iABC),		/* OP_LOADNIL */
+  opmode(0,0,0,0, 1,0,iABc),		/* OP_LOADUPVAL */
+  opmode(0,0,0,0, 1,1,iABc),		/* OP_GETGLOBAL */
+  opmode(0,0,1,1, 1,0,iABC),		/* OP_GETTABLE */
+  opmode(0,0,0,0, 0,1,iABc),		/* OP_SETGLOBAL */
+  opmode(0,0,1,1, 0,0,iABC),		/* OP_SETTABLE */
+  opmode(0,0,0,0, 1,0,iABc),		/* OP_NEWTABLE */
+  opmode(0,0,1,1, 1,0,iABC),		/* OP_SELF */
+  opmode(0,0,1,1, 1,0,iABC),		/* OP_ADD */
+  opmode(0,0,1,1, 1,0,iABC),		/* OP_SUB */
+  opmode(0,0,1,1, 1,0,iABC),		/* OP_MUL */
+  opmode(0,0,1,1, 1,0,iABC),		/* OP_DIV */
+  opmode(0,0,1,1, 1,0,iABC),		/* OP_POW */
+  opmode(0,0,1,0, 1,0,iABC),		/* OP_UNM */
+  opmode(0,0,1,0, 1,0,iABC),		/* OP_NOT */
+  opmode(0,0,1,1, 1,0,iABC),		/* OP_CONCAT */
+  opmode(0,1,0,0, 0,0,iAsBc),		/* OP_JMP */
+  opmode(0,1,0,0, 0,0,iAsBc),		/* OP_CJMP */
+  opmode(1,0,0,1, 0,0,iABC),		/* OP_TESTEQ */
+  opmode(1,0,0,1, 0,0,iABC),		/* OP_TESTNE */
+  opmode(1,0,0,1, 0,0,iABC),		/* OP_TESTLT */
+  opmode(1,0,0,1, 0,0,iABC),		/* OP_TESTLE */
+  opmode(1,0,0,1, 0,0,iABC),		/* OP_TESTGT */
+  opmode(1,0,0,1, 0,0,iABC),		/* OP_TESTGE */
+  opmode(1,0,1,0, 1,0,iABC),		/* OP_TESTT */
+  opmode(1,0,1,0, 1,0,iABC),		/* OP_TESTF */
+  opmode(0,0,0,0, 1,0,iAsBc),		/* OP_NILJMP */
+  opmode(0,0,0,0, 0,0,iABC),		/* OP_CALL */
+  opmode(0,0,0,0, 0,0,iABC),		/* OP_RETURN */
+  opmode(0,0,0,0, 0,0,iAsBc),		/* OP_FORPREP */
+  opmode(0,0,0,0, 0,0,iAsBc),		/* OP_FORLOOP */
   opmode(0,1,0,0, 0,0,iAsBc),		/* OP_TFORPREP */
   opmode(0,1,0,0, 0,0,iAsBc),		/* OP_TFORLOOP */
-  opmode(0,1,0,0, 0,0,iABc),		/* OP_SETLIST */
-  opmode(0,1,0,0, 0,0,iABc),		/* OP_SETLIST0 */
-  opmode(0,1,0,0, 0,0,iABc)		/* OP_CLOSURE */
+  opmode(0,0,0,0, 0,0,iABc),		/* OP_SETLIST */
+  opmode(0,0,0,0, 0,0,iABc),		/* OP_SETLIST0 */
+  opmode(0,0,0,0, 0,0,iABc)		/* OP_CLOSURE */
 };

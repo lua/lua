@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.73 2001/06/05 18:17:01 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.74 2001/06/08 19:00:57 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -153,20 +153,20 @@ OP_CONCAT,/*	A B C	R(A) := R(B).. ... ..R(C)			*/
 OP_JMP,/*	sBc	PC += sBc					*/
 OP_CJMP,/*	sBc	if test then PC += sBc		(see (1))	*/
 
-OP_TESTEQ,/*	B C	test := (R(B) == R/K(C))			*/
-OP_TESTNE,/*	B C	test := (R(B) ~= R/K(C))			*/
-OP_TESTLT,/*	B C	test := (R(B) < R/K(C))				*/
-OP_TESTLE,/*	B C	test := (R(B) <= R/K(C))			*/
-OP_TESTGT,/*	B C	test := (R(B) > R/K(C))				*/
-OP_TESTGE,/*	B C	test := (R(B) >= R/K(C))			*/
+OP_TESTEQ,/*	A C	test := (R(A) == R/K(C))			*/
+OP_TESTNE,/*	A C	test := (R(A) ~= R/K(C))			*/
+OP_TESTLT,/*	A C	test := (R(A) < R/K(C))				*/
+OP_TESTLE,/*	A C	test := (R(A) <= R/K(C))			*/
+OP_TESTGT,/*	A C	test := (R(A) > R/K(C))				*/
+OP_TESTGE,/*	A C	test := (R(A) >= R/K(C))			*/
 
 OP_TESTT,/*	A B	test := R(B); if (test) R(A) := R(B)		*/
 OP_TESTF,/*	A B	test := not R(B); if (test) R(A) := nil		*/
 
 OP_NILJMP,/*	A	R(A) := nil; PC++;				*/
 
-OP_CALL,/*	A B C	R(A), ... ,R(C-1) := R(A)(R(A+1), ... ,R(B-1))	*/
-OP_RETURN,/*	A B	return R(A), ... ,R(B-1)	(see (3))	*/
+OP_CALL,/*	A B C	R(A), ... ,R(A+C-1) := R(A)(R(A+1), ... ,R(A+B))*/
+OP_RETURN,/*	A B	return R(A), ... ,R(A+B-1)	(see (3))	*/
 
 OP_FORPREP,/*	A sBc							*/
 OP_FORLOOP,/*	A sBc							*/
@@ -191,10 +191,10 @@ OP_CLOSURE /*	A Bc	R(A) := closure(KPROTO[Bc], R(A), ... ,R(A+n))	*/
       instructions OP_TEST* and OP_CJMP must always occur together.
 
   (2) In OP_CALL, if (B == NO_REG) then B = top. C is the number of returns,
-      and can be NO_REG. OP_CALL always set "top" to last_result+1, so
-      next open instruction (OP_CALL, OP_RETURN, OP_SETLIST) may use "top".
+      and can be NO_REG. OP_CALL can set `top' to last_result+1, so
+      next open instruction (OP_CALL, OP_RETURN, OP_SETLIST) may use `top'.
 
-  (3) In OP_RETURN, if (B == NO_REG) then B = top.
+  (3) In OP_RETURN, if (B == NO_REG) then return up to `top'
 ===========================================================================*/
 
 

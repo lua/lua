@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.146 2001/06/08 12:29:27 roberto Exp roberto $
+** $Id: lparser.c,v 1.147 2001/06/08 19:00:57 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -415,7 +415,7 @@ static int explist1 (LexState *ls, expdesc *v) {
 static void funcargs (LexState *ls, expdesc *f) {
   FuncState *fs = ls->fs;
   expdesc args;
-  int base, top;
+  int base, nparams;
   switch (ls->t.token) {
     case l_c('('): {  /* funcargs -> `(' [ explist1 ] `)' */
       int line = ls->linenumber;
@@ -446,13 +446,13 @@ static void funcargs (LexState *ls, expdesc *f) {
   lua_assert(f->k == VNONRELOC);
   base = f->u.i.info;  /* base register for call */
   if (args.k == VCALL)
-    top = NO_REG;  /* open call */
+    nparams = NO_REG;  /* open call */
   else {
     if (args.k != VVOID)
       luaK_exp2nextreg(fs, &args);  /* close last argument */
-    top = fs->freereg;
+    nparams = fs->freereg - (base+1);
   }
-  init_exp(f, VCALL, luaK_codeABC(fs, OP_CALL, base, top, base+1));
+  init_exp(f, VCALL, luaK_codeABC(fs, OP_CALL, base, nparams, 1));
   fs->freereg = base+1;  /* call remove function and arguments and leaves
                             (unless changed) one result */
 }
@@ -1091,31 +1091,31 @@ static void retstat (LexState *ls) {
   /* stat -> RETURN explist */
   FuncState *fs = ls->fs;
   expdesc e;
-  int first, last1;  /* registers with returned values */
+  int first, nret;  /* registers with returned values */
   next(ls);  /* skip RETURN */
   if (block_follow(ls->t.token) || ls->t.token == l_c(';'))
-    first = last1 = 0;  /* return no values */
+    first = nret = 0;  /* return no values */
   else {
     int n = explist1(ls, &e);  /* optional return values */
     if (e.k == VCALL) {
       luaK_setcallreturns(fs, &e, LUA_MULTRET);
       first = fs->nactloc;
-      last1 = NO_REG;  /* return all values */
+      nret = NO_REG;  /* return all values */
     }
     else {
       if (n == 1) {  /* only one value? */
         luaK_exp2anyreg(fs, &e);
         first = e.u.i.info;
-        last1 = first+1;  /* return only this value */
+        nret = 1;  /* return only this value */
       }
       else {
         luaK_exp2nextreg(fs, &e);  /* values must go to the `stack' */
         first = fs->nactloc;
-        last1 = fs->freereg;  /* return all `active' values */
+        nret = fs->freereg - first;  /* return all `active' values */
       }
     }
   }
-  luaK_codeABC(fs, OP_RETURN, first, last1, 0);
+  luaK_codeABC(fs, OP_RETURN, first, nret, 0);
   fs->freereg = fs->nactloc;  /* removes all temp values */
 }
 

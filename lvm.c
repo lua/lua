@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.182 2001/06/08 19:00:57 roberto Exp roberto $
+** $Id: lvm.c,v 1.183 2001/06/08 19:20:02 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -488,37 +488,37 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       }
       case OP_TESTEQ: {
         lua_assert(GET_OPCODE(*pc) == OP_CJMP);
-        if (luaO_equalObj(RB(i), RKC(i))) dojump(pc, *pc);
+        if (luaO_equalObj(ra, RKC(i))) dojump(pc, *pc);
         pc++;
         break;
       }
       case OP_TESTNE: {
         lua_assert(GET_OPCODE(*pc) == OP_CJMP);
-        if (!luaO_equalObj(RB(i), RKC(i))) dojump(pc, *pc);
+        if (!luaO_equalObj(ra, RKC(i))) dojump(pc, *pc);
         pc++;
         break;
       }
       case OP_TESTLT: {
         lua_assert(GET_OPCODE(*pc) == OP_CJMP);
-        if (luaV_lessthan(L, RB(i), RKC(i))) dojump(pc, *pc);
+        if (luaV_lessthan(L, ra, RKC(i))) dojump(pc, *pc);
         pc++;
         break;
       }
       case OP_TESTLE: {  /* b <= c  ===  !(c<b) */
         lua_assert(GET_OPCODE(*pc) == OP_CJMP);
-        if (!luaV_lessthan(L, RKC(i), RB(i))) dojump(pc, *pc);
+        if (!luaV_lessthan(L, RKC(i), ra)) dojump(pc, *pc);
         pc++;
         break;
       }
       case OP_TESTGT: {  /* b > c  ===  (c<b) */
         lua_assert(GET_OPCODE(*pc) == OP_CJMP);
-        if (luaV_lessthan(L, RKC(i), RB(i))) dojump(pc, *pc);
+        if (luaV_lessthan(L, RKC(i), ra)) dojump(pc, *pc);
         pc++;
         break;
       }
       case OP_TESTGE: {  /* b >= c  === !(b<c) */
         lua_assert(GET_OPCODE(*pc) == OP_CJMP);
-        if (!luaV_lessthan(L, RB(i), RKC(i))) dojump(pc, *pc);
+        if (!luaV_lessthan(L, ra, RKC(i))) dojump(pc, *pc);
         pc++;
         break;
       }
@@ -550,11 +550,11 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         int c;
         int b = GETARG_B(i);
         if (b != NO_REG)
-          L->top = base+b;
+          L->top = ra+b+1;
         luaD_call(L, ra);
         c = GETARG_C(i);
         if (c != NO_REG) {
-          while (L->top < base+c) setnilvalue(L->top++);
+          while (L->top < ra+c) setnilvalue(L->top++);
           L->top = base + tf->maxstacksize;
         }
         break;
@@ -562,7 +562,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       case OP_RETURN: {
         int b = GETARG_B(i);
         if (b != NO_REG)
-          L->top = base+b;
+          L->top = ra+b;
         return ra;
       }
       case OP_FORPREP: {
@@ -578,10 +578,10 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         /* go through */
       }
       case OP_FORLOOP: {
-        if (ttype(ra) != LUA_TNUMBER)
-          luaD_error(L, l_s("`for' index must be a number"));
         runtime_check(L, ttype(ra+1) == LUA_TNUMBER &&
                          ttype(ra+2) == LUA_TNUMBER);
+        if (ttype(ra) != LUA_TNUMBER)
+          luaD_error(L, l_s("`for' index must be a number"));
         nvalue(ra) += nvalue(ra+2);  /* increment index */
         if (nvalue(ra+2) > 0 ?
             nvalue(ra) <= nvalue(ra+1) :

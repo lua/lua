@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.h,v 1.12 2001/06/05 18:17:01 roberto Exp roberto $
+** $Id: ldebug.h,v 1.13 2001/06/06 17:50:36 roberto Exp roberto $
 ** Auxiliary functions from Debug Interface module
 ** See Copyright Notice in lua.h
 */
@@ -18,8 +18,7 @@ enum OpMode {iABC, iABc, iAsBc};  /* basic instruction format */
 ** masks for instruction properties
 */
 enum OpModeMask {
-  OpModeAreg = 2,	/* A is a register */
-  OpModeBreg,		/* B is a register */
+  OpModeBreg = 2,	/* B is a register */
   OpModeCreg,		/* C is a register/constant */
   OpModesetA,		/* instruction set register A */
   OpModeK,		/* Bc is a constant */
