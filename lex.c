@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.27 1996/02/14 13:35:51 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.28 1996/02/14 19:11:09 roberto Exp roberto $";
  
 
 #include <ctype.h>
@@ -135,7 +135,7 @@ static int read_long_string (void)
 
 int luaY_lex (void)
 {
-  float a;
+  double a;
   static int linelasttoken = 0;
   if (lua_debug)
     luaI_codedebugline(linelasttoken);
@@ -297,22 +297,22 @@ int luaY_lex (void)
       case '0': case '1': case '2': case '3': case '4':
       case '5': case '6': case '7': case '8': case '9':
 	a=0.0;
-        do { a=10*a+current-'0'; save_and_next(); } while (isdigit(current));
+        do { a=10.0*a+(current-'0'); save_and_next(); } while (isdigit(current));
         if (current == '.') save_and_next();
 fraction:
-	{ float da=0.1;
+	{ double da=0.1;
 	  while (isdigit(current))
 	  {a+=(current-'0')*da; da/=10.0; save_and_next()};
           if (current == 'e' || current == 'E')
           {
 	    int e=0;
 	    int neg;
-	    float ea;
+	    double ea;
             save_and_next();
 	    neg=(current=='-');
             if (current == '+' || current == '-') save_and_next();
             if (!isdigit(current)) return WRONGTOKEN;
-            do { e=10*e+current-'0'; save_and_next(); } while (isdigit(current));
+            do { e=10.0*e+(current-'0'); save_and_next(); } while (isdigit(current));
 	    for (ea=neg?0.1:10.0; e>0; e>>=1) 
 	    {
 	      if (e & 1) a*=ea;
