@@ -6,6 +6,7 @@ Tue Dec  2 10:45:48 EDT 1997
 
 
 
+=================================================================
 --- Version 3.1 alpha
 
 ** lua.c
@@ -45,6 +46,7 @@ Mon May 18 19:20:00 EST 1998
 
 
 
+=================================================================
 --- Version 3.1
 
 ** liolib.c / lauxlib.c
@@ -84,6 +86,7 @@ Thu Mar  4 11:49:37 EST 1999
 
 
 
+=================================================================
 --- Version 3.2 (beta)
 
 ** lstrlib.c
@@ -105,6 +108,7 @@ the number of returns of a function.
 
 
 
+=================================================================
 --- Version 3.2
 
 ** lmathlib.c
@@ -152,4 +156,17 @@ Mon Apr  3 09:59:06 EST 2000
 Mon Apr  3 10:05:05 EST 2000
 >> tostring() without arguments gives seg. fault.
 (by Edgar Toernig; since 3.0)
+
+
+
+=================================================================
+--- Version 4.0 alpha
+
+Tested with full test suites (as locked in Mon Apr 24 14:23:11 EST 2000)
+in the following platforms:
+* Linux   - gcc, g++
+* AIX     - gcc
+* Solaris - gcc, cc
+* IRIX	  - cc, cc-purify
+* Windows - Visual C++ (.c e .cpp, warning level=4)
 
