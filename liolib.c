@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.33 1999/03/05 20:45:01 roberto Exp roberto $
+** $Id: liolib.c,v 1.34 1999/03/11 18:59:19 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -32,10 +32,8 @@
 #endif
 
 
-#define CLOSEDTAG	2
-#define IOTAG		1
+#define CLOSEDTAG(tag)	((tag)-1)
 
-#define FIRSTARG      3  /* 1st and 2nd are upvalues */
 
 #define FINPUT		"_INPUT"
 #define FOUTPUT		"_OUTPUT"
@@ -70,19 +68,22 @@ static void pushresult (int i) {
 ** =======================================================
 */
 
-static int gettag (int i) {
-  return (int)lua_getnumber(lua_getparam(i));
+static int gettag (void) {
+  lua_pushusertag(stdin, LUA_ANYTAG);
+  return lua_tag(lua_pop());  /* get the tag of stdin */
 }
 
 
 static int ishandler (lua_Object f) {
   if (lua_isuserdata(f)) {
-    if (lua_tag(f) == gettag(CLOSEDTAG))
+    int tag = gettag();
+    if (lua_tag(f) == CLOSEDTAG(tag))
       lua_error("cannot access a closed file");
-    return lua_tag(f) == gettag(IOTAG);
+    return lua_tag(f) == tag;
   }
   else return 0;
 }
+
 
 static FILE *getfilebyname (char *name) {
   lua_Object f = lua_getglobal(name);
@@ -98,6 +99,13 @@ static FILE *getfile (int arg) {
 }
 
 
+static FILE *getnonullfile (int arg) {
+  FILE *f = getfile(arg);
+  luaL_arg_check(f, arg, "invalid file handler");
+  return f;
+}
+
+
 static FILE *getfileparam (char *name, int *arg) {
   FILE *f = getfile(*arg);
   if (f) {
@@ -109,23 +117,26 @@ static FILE *getfileparam (char *name, int *arg) {
 }
 
 
-static void getmode (char mode, char *m) {
-  m[0] = mode;
-  if (*luaL_opt_string(FIRSTARG+1, "text") == 'b') {
-     m[1] = 'b';
-     m[2] = '\0';
+static void closefile (FILE *f) {
+  if (f != stdin && f != stdout) {
+    int tag = gettag();
+    if (pclose(f) == -1)
+      fclose(f);
+    lua_pushusertag(f, tag);
+    lua_settag(CLOSEDTAG(tag));
   }
-  else m[1] = '\0';
 }
 
 
-static void closefile (char *name) {
-  FILE *f = getfilebyname(name);
-  if (f == stdin || f == stdout) return;
-  if (pclose(f) == -1)
-    fclose(f);
-  lua_pushobject(lua_getglobal(name));
-  lua_settag(gettag(CLOSEDTAG));
+static void io_close (void) {
+  closefile(getnonullfile(1));
+}
+
+
+static void io_open (void) {
+  FILE *f = fopen(luaL_check_string(1), luaL_check_string(2));
+  if (f) lua_pushusertag(f, gettag());
+  else pushresult(0);
 }
 
 
@@ -136,7 +147,7 @@ static void setfile (FILE *f, char *name, int tag) {
 
 
 static void setreturn (FILE *f, char *name) {
-  int tag = gettag(IOTAG);
+  int tag = gettag();
   setfile(f, name, tag);
   lua_pushusertag(f, tag);
 }
@@ -144,18 +155,16 @@ static void setreturn (FILE *f, char *name) {
 
 static void io_readfrom (void) {
   FILE *current;
-  lua_Object f = lua_getparam(FIRSTARG);
+  lua_Object f = lua_getparam(1);
   if (f == LUA_NOOBJECT) {
-    closefile(FINPUT);
+    closefile(getfilebyname(FINPUT));
     current = stdin;
   }
-  else if (lua_tag(f) == gettag(IOTAG))
+  else if (lua_tag(f) == gettag())  /* deprecated option */
     current = lua_getuserdata(f);
   else {
-    char *s = luaL_check_string(FIRSTARG);
-    char m[MODESIZE];
-    getmode('r', m);
-    current = (*s == '|') ? popen(s+1, "r") : fopen(s, m);
+    char *s = luaL_check_string(1);
+    current = (*s == '|') ? popen(s+1, "r") : fopen(s, "r");
     if (current == NULL) {
       pushresult(0);
       return;
@@ -167,18 +176,16 @@ static void io_readfrom (void) {
 
 static void io_writeto (void) {
   FILE *current;
-  lua_Object f = lua_getparam(FIRSTARG);
+  lua_Object f = lua_getparam(1);
   if (f == LUA_NOOBJECT) {
-    closefile(FOUTPUT);
+    closefile(getfilebyname(FOUTPUT));
     current = stdout;
   }
-  else if (lua_tag(f) == gettag(IOTAG))
+  else if (lua_tag(f) == gettag())  /* deprecated option */
     current = lua_getuserdata(f);
   else {
-    char *s = luaL_check_string(FIRSTARG);
-    char m[MODESIZE];
-    getmode('w', m);
-    current = (*s == '|') ? popen(s+1,"w") : fopen(s, m);
+    char *s = luaL_check_string(1);
+    current = (*s == '|') ? popen(s+1,"w") : fopen(s, "w");
     if (current == NULL) {
       pushresult(0);
       return;
@@ -189,11 +196,7 @@ static void io_writeto (void) {
 
 
 static void io_appendto (void) {
-  char *s = luaL_check_string(FIRSTARG);
-  char m[MODESIZE];
-  FILE *fp;
-  getmode('a', m);
-  fp = fopen (s, m);
+  FILE *fp = fopen(luaL_check_string(1), "a");
   if (fp != NULL)
     setreturn(fp, FOUTPUT);
   else
@@ -298,7 +301,7 @@ static void read_file (FILE *f) {
 
 static void io_read (void) {
   static char *options[] = {"*n", "*l", "*a", ".*", "*w", NULL};
-  int arg = FIRSTARG;
+  int arg = 1;
   FILE *f = getfileparam(FINPUT, &arg);
   char *p = luaL_opt_string(arg++, "*l");
   do { /* repeat for each part */
@@ -332,7 +335,7 @@ static void io_read (void) {
 
 
 static void io_write (void) {
-  int arg = FIRSTARG;
+  int arg = 1;
   FILE *f = getfileparam(FOUTPUT, &arg);
   int status = 1;
   char *s;
@@ -346,11 +349,10 @@ static void io_write (void) {
 static void io_seek (void) {
   static int mode[] = {SEEK_SET, SEEK_CUR, SEEK_END};
   static char *modenames[] = {"set", "cur", "end", NULL};
-  FILE *f = getfile(FIRSTARG-1+1);
-  int op = luaL_findstring(luaL_opt_string(FIRSTARG-1+2, "cur"), modenames);
-  long offset = luaL_opt_long(FIRSTARG-1+3, 0);
-  luaL_arg_check(f, FIRSTARG-1+1, "invalid file handler");
-  luaL_arg_check(op != -1, FIRSTARG-1+2, "invalid mode");
+  FILE *f = getnonullfile(1);
+  int op = luaL_findstring(luaL_opt_string(2, "cur"), modenames);
+  long offset = luaL_opt_long(3, 0);
+  luaL_arg_check(op != -1, 2, "invalid mode");
   op = fseek(f, offset, mode[op]);
   if (op)
     pushresult(0);  /* error */
@@ -360,8 +362,8 @@ static void io_seek (void) {
 
 
 static void io_flush (void) {
-  FILE *f = getfile(FIRSTARG);
-  luaL_arg_check(f || lua_getparam(FIRSTARG) == LUA_NOOBJECT, FIRSTARG,
+  FILE *f = getfile(1);
+  luaL_arg_check(f || lua_getparam(1) == LUA_NOOBJECT, 1,
                  "invalid file handler");
   pushresult(fflush(f) == 0);
 }
@@ -444,8 +446,9 @@ static void io_debug (void) {
   for (;;) {
     char buffer[250];
     fprintf(stderr, "lua_debug> ");
-    if (fgets(buffer, sizeof(buffer), stdin) == 0) return;
-    if (strcmp(buffer, "cont\n") == 0) return;
+    if (fgets(buffer, sizeof(buffer), stdin) == 0 ||
+        strcmp(buffer, "cont\n") == 0)
+      return;
     lua_dostring(buffer);
   }
 }
@@ -512,49 +515,43 @@ static void errorfb (void) {
 
 
 static struct luaL_reg iolib[] = {
-  {"setlocale", setloc},
+  {"_ERRORMESSAGE", errorfb},
+  {"appendto", io_appendto},
+  {"clock",     io_clock},
+  {"closefile",   io_close},
+  {"date",     io_date},
+  {"debug",    io_debug},
   {"execute",  io_execute},
+  {"exit",     io_exit},
+  {"flush",     io_flush},
+  {"getenv",   io_getenv},
+  {"openfile",   io_open},
+  {"read",     io_read},
+  {"readfrom", io_readfrom},
   {"remove",   io_remove},
   {"rename",   io_rename},
-  {"tmpname",   io_tmpname},
-  {"getenv",   io_getenv},
-  {"date",     io_date},
-  {"clock",     io_clock},
-  {"exit",     io_exit},
-  {"debug",    io_debug},
-  {"_ERRORMESSAGE", errorfb}
-};
-
-static struct luaL_reg iolibtag[] = {
-  {"readfrom", io_readfrom},
-  {"writeto",  io_writeto},
-  {"appendto", io_appendto},
-  {"flush",     io_flush},
-  {"read",     io_read},
   {"seek",     io_seek},
-  {"write",    io_write}
+  {"setlocale", setloc},
+  {"tmpname",   io_tmpname},
+  {"write",    io_write},
+  {"writeto",  io_writeto}
 };
 
-static void openwithtags (void) {
+
+void lua_iolibopen (void) {
   int iotag = lua_newtag();
-  int closedtag = lua_newtag();
-  int i;
-  for (i=0; i<sizeof(iolibtag)/sizeof(iolibtag[0]); i++) {
-    /* put both tags as upvalues for these functions */
-    lua_pushnumber(iotag);
-    lua_pushnumber(closedtag);
-    lua_pushcclosure(iolibtag[i].func, 2);
-    lua_setglobal(iolibtag[i].name);
-  }
+  lua_newtag();  /* alloc CLOSEDTAG: assume that CLOSEDTAG = iotag-1 */
+  /* predefined file handles */
   setfile(stdin, FINPUT, iotag);
   setfile(stdout, FOUTPUT, iotag);
   setfile(stdin, "_STDIN", iotag);
   setfile(stdout, "_STDOUT", iotag);
   setfile(stderr, "_STDERR", iotag);
-}
-
-void lua_iolibopen (void) {
+  /* make sure stdin (with its tag) won't be collected */
+  lua_pushusertag(stdin, iotag); lua_ref(1);
+  /* close file when collected */
+  lua_pushcfunction(io_close); lua_settagmethod(iotag, "gc");
+  /* register lib functions */
   luaL_openlib(iolib, (sizeof(iolib)/sizeof(iolib[0])));
-  openwithtags();
 }
 
