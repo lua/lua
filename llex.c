@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.32 1999/03/05 20:45:01 roberto Exp roberto $
+** $Id: llex.c,v 1.33 1999/03/11 18:59:19 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -71,7 +71,7 @@ void luaX_token2str (int token, char *s) {
 
 static void luaX_invalidchar (LexState *ls, int c) {
   char buff[10];
-  sprintf(buff, "0x%X", c);
+  sprintf(buff, "0x%02X", c);
   luaX_syntaxerror(ls, "invalid control char", buff);
 }
 
