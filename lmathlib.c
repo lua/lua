@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.29 2000/10/20 16:39:03 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.30 2000/10/26 12:47:05 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -228,7 +228,7 @@ static const struct luaL_reg mathlib[] = {
 /*
 ** Open math library
 */
-LUA_API void lua_mathlibopen (lua_State *L) {
+LUALIB_API void lua_mathlibopen (lua_State *L) {
   luaL_openl(L, mathlib);
   lua_pushcfunction(L, math_pow);
   lua_settagmethod(L, LUA_TNUMBER, "pow");

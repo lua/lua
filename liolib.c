@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.88 2000/10/26 12:47:05 roberto Exp roberto $
+** $Id: liolib.c,v 1.89 2000/10/26 12:53:55 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -712,7 +712,7 @@ static void openwithcontrol (lua_State *L) {
 }
 
 
-LUA_API void lua_iolibopen (lua_State *L) {
+LUALIB_API void lua_iolibopen (lua_State *L) {
   luaL_openl(L, iolib);
   openwithcontrol(L);
 }

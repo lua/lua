@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.39 2000/10/05 12:14:08 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.40 2000/10/20 16:39:03 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -21,7 +21,7 @@
 
 
 
-LUA_API int luaL_findstring (const char *name, const char *const list[]) {
+LUALIB_API int luaL_findstring (const char *name, const char *const list[]) {
   int i;
   for (i=0; list[i]; i++)
     if (strcmp(list[i], name) == 0)
@@ -29,7 +29,7 @@ LUA_API int luaL_findstring (const char *name, const char *const list[]) {
   return -1;  /* name not found */
 }
 
-LUA_API void luaL_argerror (lua_State *L, int narg, const char *extramsg) {
+LUALIB_API void luaL_argerror (lua_State *L, int narg, const char *extramsg) {
   lua_Debug ar;
   lua_getstack(L, 0, &ar);
   lua_getinfo(L, "n", &ar);
@@ -49,25 +49,25 @@ static void type_error (lua_State *L, int narg, int t) {
 }
 
 
-LUA_API void luaL_checkstack (lua_State *L, int space, const char *mes) {
+LUALIB_API void luaL_checkstack (lua_State *L, int space, const char *mes) {
   if (space > lua_stackspace(L))
     luaL_verror(L, "stack overflow (%.30s)", mes);
 }
 
 
-LUA_API void luaL_checktype(lua_State *L, int narg, int t) {
+LUALIB_API void luaL_checktype(lua_State *L, int narg, int t) {
   if (lua_type(L, narg) != t)
     type_error(L, narg, t);
 }
 
 
-LUA_API void luaL_checkany (lua_State *L, int narg) {
+LUALIB_API void luaL_checkany (lua_State *L, int narg) {
   if (lua_type(L, narg) == LUA_TNONE)
     luaL_argerror(L, narg, "value expected");
 }
 
 
-LUA_API const char *luaL_check_lstr (lua_State *L, int narg, size_t *len) {
+LUALIB_API const char *luaL_check_lstr (lua_State *L, int narg, size_t *len) {
   const char *s = lua_tostring(L, narg);
   if (!s) type_error(L, narg, LUA_TSTRING);
   if (len) *len = lua_strlen(L, narg);
@@ -75,7 +75,7 @@ LUA_API const char *luaL_check_lstr (lua_State *L, int narg, size_t *len) {
 }
 
 
-LUA_API const char *luaL_opt_lstr (lua_State *L, int narg, const char *def,
+LUALIB_API const char *luaL_opt_lstr (lua_State *L, int narg, const char *def,
                            size_t *len) {
   if (lua_isnull(L, narg)) {
     if (len)
@@ -86,7 +86,7 @@ LUA_API const char *luaL_opt_lstr (lua_State *L, int narg, const char *def,
 }
 
 
-LUA_API double luaL_check_number (lua_State *L, int narg) {
+LUALIB_API double luaL_check_number (lua_State *L, int narg) {
   double d = lua_tonumber(L, narg);
   if (d == 0 && !lua_isnumber(L, narg))  /* avoid extra test when d is not 0 */
     type_error(L, narg, LUA_TNUMBER);
@@ -94,20 +94,20 @@ LUA_API double luaL_check_number (lua_State *L, int narg) {
 }
 
 
-LUA_API double luaL_opt_number (lua_State *L, int narg, double def) {
+LUALIB_API double luaL_opt_number (lua_State *L, int narg, double def) {
   if (lua_isnull(L, narg)) return def;
   else return luaL_check_number(L, narg);
 }
 
 
-LUA_API void luaL_openlib (lua_State *L, const struct luaL_reg *l, int n) {
+LUALIB_API void luaL_openlib (lua_State *L, const struct luaL_reg *l, int n) {
   int i;
   for (i=0; i<n; i++)
     lua_register(L, l[i].name, l[i].func);
 }
 
 
-LUA_API void luaL_verror (lua_State *L, const char *fmt, ...) {
+LUALIB_API void luaL_verror (lua_State *L, const char *fmt, ...) {
   char buff[500];
   va_list argp;
   va_start(argp, fmt);
@@ -164,25 +164,25 @@ static void adjuststack (luaL_Buffer *B) {
 }
 
 
-LUA_API char *luaL_prepbuffer (luaL_Buffer *B) {
+LUALIB_API char *luaL_prepbuffer (luaL_Buffer *B) {
   if (emptybuffer(B))
     adjuststack(B);
   return B->buffer;
 }
 
 
-LUA_API void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l) {
+LUALIB_API void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l) {
   while (l--)
     luaL_putchar(B, *s++);
 }
 
 
-LUA_API void luaL_addstring (luaL_Buffer *B, const char *s) {
+LUALIB_API void luaL_addstring (luaL_Buffer *B, const char *s) {
   luaL_addlstring(B, s, strlen(s));
 }
 
 
-LUA_API void luaL_pushresult (luaL_Buffer *B) {
+LUALIB_API void luaL_pushresult (luaL_Buffer *B) {
   emptybuffer(B);
   if (B->level == 0)
     lua_pushlstring(B->L, NULL, 0);
@@ -192,7 +192,7 @@ LUA_API void luaL_pushresult (luaL_Buffer *B) {
 }
 
 
-LUA_API void luaL_addvalue (luaL_Buffer *B) {
+LUALIB_API void luaL_addvalue (luaL_Buffer *B) {
   lua_State *L = B->L;
   size_t vl = lua_strlen(L, -1);
   if (vl <= bufffree(B)) {  /* fit into buffer? */
@@ -209,7 +209,7 @@ LUA_API void luaL_addvalue (luaL_Buffer *B) {
 }
 
 
-LUA_API void luaL_buffinit (lua_State *L, luaL_Buffer *B) {
+LUALIB_API void luaL_buffinit (lua_State *L, luaL_Buffer *B) {
   B->L = L;
   B->p = B->buffer;
   B->level = 0;

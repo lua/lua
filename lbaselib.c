@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.13 2000/10/20 16:57:42 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.14 2000/10/24 19:19:15 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -639,7 +639,7 @@ static const struct luaL_reg base_funcs[] = {
 
 
 
-LUA_API void lua_baselibopen (lua_State *L) {
+LUALIB_API void lua_baselibopen (lua_State *L) {
   luaL_openl(L, base_funcs);
   lua_pushstring(L, LUA_VERSION);
   lua_setglobal(L, "_VERSION");
