@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.6 1997/11/19 17:29:23 roberto Exp roberto $
+## $Id: makefile,v 1.7 1997/12/17 20:48:58 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -36,6 +36,7 @@ ARFLAGS	= rvl
 LUAOBJS = \
 	lapi.o \
 	lauxlib.o \
+	lbuffer.o \
 	lbuiltin.o \
 	ldo.o \
 	lfunc.o \
@@ -91,11 +92,10 @@ clear	:
 %.c : RCS/%.c,v
 	co $@
 
-
 lapi.o: lapi.c lapi.h lua.h lobject.h lauxlib.h ldo.h lstate.h lfunc.h \
  lgc.h lmem.h lstring.h ltable.h ltm.h luadebug.h lvm.h
-lauxlib.o: lauxlib.c lauxlib.h lua.h lmem.h lstate.h lobject.h \
- luadebug.h
+lauxlib.o: lauxlib.c lauxlib.h lua.h luadebug.h
+lbuffer.o: lbuffer.c lauxlib.h lua.h lmem.h lstate.h lobject.h
 lbuiltin.o: lbuiltin.c lapi.h lua.h lobject.h lauxlib.h lbuiltin.h \
  ldo.h lstate.h lfunc.h lmem.h lstring.h ltable.h ltm.h
 ldo.o: ldo.c ldo.h lobject.h lua.h lstate.h lfunc.h lgc.h lmem.h \
