@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.148 2003/03/18 12:24:38 roberto Exp roberto $
+** $Id: ldebug.c,v 1.149 2003/03/18 12:50:04 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -197,7 +197,7 @@ static void info_tailcall (lua_State *L, lua_Debug *ar) {
 }
 
 
-static int getinfo (lua_State *L, const char *what, lua_Debug *ar,
+static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
                     StkId f, CallInfo *ci) {
   int status = 1;
   for (; *what; what++) {
@@ -242,13 +242,13 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
     StkId f = L->top - 1;
     if (!ttisfunction(f))
       luaG_runerror(L, "value for `lua_getinfo' is not a function");
-    status = getinfo(L, what + 1, ar, f, NULL);
+    status = auxgetinfo(L, what + 1, ar, f, NULL);
     L->top--;  /* pop function */
   }
   else if (ar->i_ci != 0) {  /* no tail call? */
     CallInfo *ci = L->base_ci + ar->i_ci;
     lua_assert(ttisfunction(ci->base - 1));
-    status = getinfo(L, what, ar, ci->base - 1, ci);
+    status = auxgetinfo(L, what, ar, ci->base - 1, ci);
   }
   else
     info_tailcall(L, ar);
