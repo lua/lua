@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.18 2002/05/06 15:51:41 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.19 2002/05/13 13:09:00 roberto Exp roberto $
 ** extracted automatically from lopcodes.h by mkprint.lua
 ** DO NOT EDIT
 ** See Copyright Notice in lua.h
@@ -37,7 +37,10 @@ const char *const luaP_opnames[] = {
   "CONCAT",
   "JMP",
   "EQ",
-  "CMP",
+  "LT",
+  "LE",
+  "GT",
+  "GE",
   "TEST",
   "CALL",
   "TAILCALL",
@@ -82,7 +85,10 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0,0,1,1, 1,0,iABC)		/* OP_CONCAT */
  ,opmode(0,0,0,0, 0,0,iAsBx)		/* OP_JMP */
  ,opmode(1,0,0,1, 0,0,iABC)		/* OP_EQ */
- ,opmode(1,0,0,1, 0,0,iABC)		/* OP_CMP */
+ ,opmode(1,0,0,1, 0,0,iABC)		/* OP_LT */
+ ,opmode(1,0,0,1, 0,0,iABC)		/* OP_LE */
+ ,opmode(1,0,0,1, 0,0,iABC)		/* OP_GT */
+ ,opmode(1,0,0,1, 0,0,iABC)		/* OP_GE */
  ,opmode(1,0,0,1, 1,0,iABC)		/* OP_TEST */
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_CALL */
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_TAILCALL */

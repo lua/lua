@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 1.32 2002/05/20 19:51:06 roberto Exp roberto $
+** $Id: ltm.h,v 1.33 2002/05/27 20:35:40 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -20,7 +20,7 @@ typedef enum {
   TM_INDEX,
   TM_NEWINDEX,
   TM_GC,
-  TM_WEAKMODE,
+  TM_WEAKMODE,  /* last tag method with `fast' access */
   TM_ADD,
   TM_SUB,
   TM_MUL,
@@ -28,6 +28,7 @@ typedef enum {
   TM_POW,
   TM_UNM,
   TM_LT,
+  TM_LE,
   TM_CONCAT,
   TM_CALL,
   TM_N		/* number of elements in the enum */

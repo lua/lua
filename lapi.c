@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.195 2002/06/03 20:11:07 roberto Exp roberto $
+** $Id: lapi.c,v 1.196 2002/06/06 12:40:22 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -226,7 +226,7 @@ LUA_API int lua_lessthan (lua_State *L, int index1, int index2) {
   o1 = luaA_indexAcceptable(L, index1);
   o2 = luaA_indexAcceptable(L, index2);
   i = (o1 == NULL || o2 == NULL) ? 0  /* index out-of-range */
-                                 : luaV_cmp(L, o1, o2, CMP_LT);
+                                 : luaV_lessthan(L, o1, o2);
   lua_unlock(L);
   return i;
 }

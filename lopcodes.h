@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.97 2002/05/13 13:09:00 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.98 2002/06/06 18:17:33 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -158,7 +158,10 @@ OP_CONCAT,/*	A B C	R(A) := R(B).. ... ..R(C)			*/
 OP_JMP,/*	sBx	PC += sBx					*/
 
 OP_EQ,/*	A B C	if ((R(A) == R/K(C)) ~= B) then pc++		*/
-OP_CMP,/*	A B C	if not (R(A) <B> R/K(C)) then pc++  (see note)	*/
+OP_LT,/*	A B C	if ((R(A) <  R/K(C)) ~= B) then pc++  		*/
+OP_LE,/*	A B C	if ((R(A) <= R/K(C)) ~= B) then pc++  		*/
+OP_GT,/*	A B C	if ((R(A) >  R/K(C)) ~= B) then pc++  		*/
+OP_GE,/*	A B C	if ((R(A) >= R/K(C)) ~= B) then pc++  		*/
 
 OP_TEST,/*	A B C	if (R(C) <=> B) then R(A) := R(C) else pc++	*/ 
 

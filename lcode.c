@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.105 2002/05/27 20:35:40 roberto Exp roberto $
+** $Id: lcode.c,v 1.106 2002/06/03 12:59:26 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -460,19 +460,8 @@ void luaK_self (FuncState *fs, expdesc *e, expdesc *key) {
 
 static void invertjump (FuncState *fs, expdesc *e) {
   Instruction *pc = getjumpcontrol(fs, e->info);
-  OpCode op = GET_OPCODE(*pc);
-  switch (op) {
-    case OP_EQ: {
-      SETARG_B(*pc, !(GETARG_B(*pc)));
-      return;
-    }
-    case OP_CMP: {
-      SETARG_B(*pc, ~(GETARG_B(*pc)));
-      return;
-    }
-    default: lua_assert(0);  /* invalid jump instruction */
-  }
-  SET_OPCODE(*pc, op);
+  lua_assert(testOpMode(GET_OPCODE(*pc), OpModeT));
+  SETARG_B(*pc, !(GETARG_B(*pc)));
 }
 
 
@@ -629,12 +618,6 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
 }
 
 
-
-static const int cmp_masks[] = {  /* ORDER OPR */
-  CMP_LT, (CMP_LT | CMP_EQ), CMP_GT, (CMP_GT | CMP_EQ)
-};
-
-
 static void codebinop (FuncState *fs, expdesc *res, BinOpr op,
                        int o1, int o2, int ic) {
   switch (op) {
@@ -644,7 +627,7 @@ static void codebinop (FuncState *fs, expdesc *res, BinOpr op,
       lua_assert(!ic);
       /* go through */
     case OPR_ADD:
-    case OPR_MULT: {
+    case OPR_MULT: {  /* ORDER OPR */
       OpCode opc = cast(OpCode, (op - OPR_ADD) + OP_ADD);
       res->info = luaK_codeABC(fs, opc, 0, o1, o2);
       res->k = VRELOCABLE;
@@ -659,11 +642,13 @@ static void codebinop (FuncState *fs, expdesc *res, BinOpr op,
     case OPR_LT:
     case OPR_LE:
     case OPR_GT:
-    case OPR_GE: {
-      int mask = cmp_masks[op - OPR_LT];
+    case OPR_GE: {  /* ORDER OPR */
+      OpCode opc;
+      int i = op - OPR_LT;
       if (ic)  /* operands were interchanged? */
-        mask ^= (CMP_LT | CMP_GT);  /*  correct condition */
-      res->info = luaK_condjump(fs, OP_CMP, o1, mask, o2);
+        i = (i+2)&3;  /* correct operator */
+      opc = cast(OpCode, i + OP_LT);
+      res->info = luaK_condjump(fs, opc, o1, 1, o2);
       res->k = VJMP;
       break;
     }

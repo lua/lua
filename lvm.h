@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 1.39 2002/05/06 15:51:41 roberto Exp roberto $
+** $Id: lvm.h,v 1.40 2002/06/03 14:08:43 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -19,7 +19,7 @@
                          (((o) = luaV_tonumber(o,n)) != NULL))
 
 
-int luaV_cmp (lua_State *L, const TObject *l, const TObject *r, int cond);
+int luaV_lessthan (lua_State *L, const TObject *l, const TObject *r);
 const TObject *luaV_tonumber (const TObject *obj, TObject *n);
 int luaV_tostring (lua_State *L, TObject *obj);
 void luaV_gettable (lua_State *L, const TObject *t, TObject *key, StkId res);

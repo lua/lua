@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.235 2002/06/05 12:34:19 roberto Exp roberto $
+** $Id: lvm.c,v 1.236 2002/06/06 18:17:33 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -207,14 +207,13 @@ static int luaV_strcmp (const TString *ls, const TString *rs) {
   size_t lr = rs->tsv.len;
   for (;;) {
     int temp = strcoll(l, r);
-    if (temp < 0) return CMP_LT;
-    else if (temp > 0) return CMP_GT;
+    if (temp != 0) return temp;
     else {  /* strings are equal up to a `\0' */
       size_t len = strlen(l);  /* index of first `\0' in both strings */
       if (len == lr)  /* r is finished? */
-        return (len == ll) ? CMP_EQ : CMP_GT;  /* l is eq. or gt. than r */
+        return (len == ll) ? 0 : 1;
       else if (len == ll)  /* l is finished? */
-        return CMP_LT;  /* l is smaller than r (because r is not finished) */
+        return -1;  /* l is smaller than r (because r is not finished) */
       /* both strings longer than `len'; go on comparing (after the `\0') */
       len++;
       l += len; ll -= len; r += len; lr -= len;
@@ -223,24 +222,30 @@ static int luaV_strcmp (const TString *ls, const TString *rs) {
 }
 
 
-int luaV_cmp (lua_State *L, const TObject *l, const TObject *r, int cond) {
-  if (ttype(l) == LUA_TNUMBER && ttype(r) == LUA_TNUMBER) {
-    lua_Number n1 = nvalue(l);
-    lua_Number n2 = nvalue(r);
-    if (n1 < n2) return (cond & CMP_LT);
-    else if (n1 > n2) return (cond & CMP_GT);
-    else if (n1 == n2) return (cond & CMP_EQ);
-    else return (cond & CMP_N);
-  }
+int luaV_lessthan (lua_State *L, const TObject *l, const TObject *r) {
+  if (ttype(l) == LUA_TNUMBER && ttype(r) == LUA_TNUMBER)
+    return nvalue(l) < nvalue(r);
   else if (ttype(l) == LUA_TSTRING && ttype(r) == LUA_TSTRING)
-    return luaV_strcmp(tsvalue(l), tsvalue(r)) & cond;
+    return luaV_strcmp(tsvalue(l), tsvalue(r)) < 0;
   else {  /* try TM */
-    if (cond & CMP_EQ ? cond & CMP_LT : cond & CMP_GT) {  /* `<=' or `>' ? */
-      const TObject *temp = l; l = r; r = temp;  /* exchange terms */
-    }
     if (!call_binTM(L, l, r, L->top, TM_LT))
       luaG_ordererror(L, l, r);
-    return (cond & CMP_EQ) ? l_isfalse(L->top) : !l_isfalse(L->top);
+    return !l_isfalse(L->top);
+  }
+}
+
+
+static int luaV_lessequal (lua_State *L, const TObject *l, const TObject *r) {
+  if (ttype(l) == LUA_TNUMBER && ttype(r) == LUA_TNUMBER)
+    return nvalue(l) <= nvalue(r);
+  else if (ttype(l) == LUA_TSTRING && ttype(r) == LUA_TSTRING)
+    return luaV_strcmp(tsvalue(l), tsvalue(r)) <= 0;
+  else {  /* try TM */
+    if (call_binTM(L, l, r, L->top, TM_LE))  /* first try `le' */
+      return !l_isfalse(L->top);
+    else if (!call_binTM(L, r, l, L->top, TM_LT))  /* else try `lt' */
+      luaG_ordererror(L, l, r);
+    return l_isfalse(L->top);
   }
 }
 
@@ -463,8 +468,23 @@ StkId luaV_execute (lua_State *L) {
         else dojump(pc, GETARG_sBx(*pc) + 1);
         break;
       }
-      case OP_CMP: {
-        if (!(luaV_cmp(L, ra, RKC(i), GETARG_B(i)))) pc++;
+      case OP_LT: {
+        if (luaV_lessthan(L, ra, RKC(i)) != GETARG_B(i)) pc++;
+        else dojump(pc, GETARG_sBx(*pc) + 1);
+        break;
+      }
+      case OP_LE: {
+        if (luaV_lessequal(L, ra, RKC(i)) != GETARG_B(i)) pc++;
+        else dojump(pc, GETARG_sBx(*pc) + 1);
+        break;
+      }
+      case OP_GT: {
+        if (luaV_lessthan(L, RKC(i), ra) != GETARG_B(i)) pc++;
+        else dojump(pc, GETARG_sBx(*pc) + 1);
+        break;
+      }
+      case OP_GE: {
+        if (luaV_lessequal(L, RKC(i), ra) != GETARG_B(i)) pc++;
         else dojump(pc, GETARG_sBx(*pc) + 1);
         break;
       }
