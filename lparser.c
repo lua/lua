@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.26 1999/03/04 21:17:26 roberto Exp roberto $
+** $Id: lparser.c,v 1.27 1999/03/05 21:16:07 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -99,7 +99,7 @@ typedef struct FuncState {
 /*
 ** prototypes for non-terminal functions
 */
-static int assignment (LexState *ls, vardesc *v, int nvars, OpCode *codes);
+static int assignment (LexState *ls, vardesc *v, int nvars);
 static int cond (LexState *ls);
 static int funcname (LexState *ls, vardesc *v);
 static int funcparams (LexState *ls, int slf);
@@ -114,7 +114,6 @@ static void chunk (LexState *ls);
 static void constructor (LexState *ls);
 static void decinit (LexState *ls, listdesc *d);
 static void exp0 (LexState *ls, vardesc *v);
-static void Gexp (LexState *ls, vardesc *v);
 static void exp1 (LexState *ls);
 static void exp2 (LexState *ls, vardesc *v);
 static void explist (LexState *ls, listdesc *e);
@@ -467,22 +466,16 @@ static void lua_pushvar (LexState *ls, vardesc *var) {
 }
 
 
-/* to be used by "storevar" and assignment */
-static OpCode set_pop[] = {SETLOCAL, SETGLOBAL, SETTABLEPOP, SETTABLE};
-static OpCode set_dup[] = {SETLOCALDUP, SETGLOBALDUP, SETTABLEPOPDUP,
-                           SETTABLEDUP};
-
-
-static void storevar (LexState *ls, vardesc *var, OpCode *codes) {
+static void storevar (LexState *ls, vardesc *var) {
   switch (var->k) {
     case VLOCAL:
-      code_oparg(ls, codes[0], var->info, -1);
+      code_oparg(ls, SETLOCAL, var->info, -1);
       break;
     case VGLOBAL:
-      code_oparg(ls, codes[1], var->info, -1);
+      code_oparg(ls, SETGLOBAL, var->info, -1);
       break;
     case VINDEXED:
-      code_opcode(ls, codes[2], -3);
+      code_opcode(ls, SETTABLEPOP, -3);
       break;
     default:
       LUA_INTERNALERROR("invalid var kind to store");
@@ -739,7 +732,7 @@ static int stat (LexState *ls) {
       next(ls);
       needself = funcname(ls, &v);
       body(ls, needself, line);
-      storevar(ls, &v, set_pop);
+      storevar(ls, &v);
       return 1;
     }
 
@@ -765,7 +758,7 @@ static int stat (LexState *ls) {
         close_exp(ls, v.info, 0);
       }
       else {  /* stat -> ['%'] NAME assignment */
-        int left = assignment(ls, &v, 1, set_pop);
+        int left = assignment(ls, &v, 1);
         adjuststack(ls, left);  /* remove eventual 'garbage' left on stack */
       }
       return 1;
@@ -948,19 +941,6 @@ static void exp0 (LexState *ls, vardesc *v) {
 }
 
 
-static void Gexp (LexState *ls, vardesc *v) {
-  /* Gexp -> exp0 | assignment */
-  exp0(ls, v);
-  if (v->k != VEXP && (ls->token == '=' || ls->token == ',')) {
-    int left = assignment(ls, v, 1, set_dup);
-    deltastack(ls, 1);  /* DUP operations push an extra value */
-    if (left > 0)
-      code_oparg(ls, POPDUP, left, -left);
-    v->k = VEXP; v->info = 0;  /* this expression is closed now */
-  }
-}
-
-
 static void push (LexState *ls, stack_op *s, int op) {
   if (s->top >= MAXOPS)
     luaX_error(ls, "expression too complex");
@@ -1015,9 +995,9 @@ static void simpleexp (LexState *ls, vardesc *v, stack_op *s) {
       ifpart(ls, 1, ls->linenumber);
       break;
 
-    case '(':  /* simpleexp -> '(' Gexp ')' */
+    case '(':  /* simpleexp -> '(' exp0 ')' */
       next(ls);
-      Gexp(ls, v);
+      exp0(ls, v);
       check(ls, ')');
       return;
 
@@ -1239,7 +1219,7 @@ static void decinit (LexState *ls, listdesc *d) {
 }
 
 
-static int assignment (LexState *ls, vardesc *v, int nvars, OpCode *codes) {
+static int assignment (LexState *ls, vardesc *v, int nvars) {
   int left = 0;
   unloaddot(ls, v);
   if (ls->token == ',') {  /* assignment -> ',' NAME assignment */
@@ -1248,7 +1228,7 @@ static int assignment (LexState *ls, vardesc *v, int nvars, OpCode *codes) {
     var_or_func(ls, &nv);
     if (nv.k == VEXP)
       luaX_error(ls, "syntax error");
-    left = assignment(ls, &nv, nvars+1, set_pop);
+    left = assignment(ls, &nv, nvars+1);
   }
   else {  /* assignment -> '=' explist1 */
     listdesc d;
@@ -1258,14 +1238,15 @@ static int assignment (LexState *ls, vardesc *v, int nvars, OpCode *codes) {
   }
   if (v->k != VINDEXED || left+(nvars-1) == 0) {
     /* global/local var or indexed var without values in between */
-    storevar(ls, v, codes);
+    storevar(ls, v);
   }
   else {  /* indexed var with values in between*/
-    code_oparg(ls, codes[3], left+(nvars-1), -1);
-    left += 2;  /* table/index are not popped, because they aren't on top */
+    code_oparg(ls, SETTABLE, left+(nvars-1), -1);
+    left += 2;  /* table&index are not popped, because they aren't on top */
   }
   return left;
 }
+
 
 static void constructor (LexState *ls) {
   /* constructor -> '{' part [';' part] '}' */

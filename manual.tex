@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.24 1999/02/25 19:13:56 roberto Exp roberto $
+% $Id: manual.tex,v 1.25 1999/03/04 21:23:39 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -41,7 +41,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{\small \verb$Date: 1999/02/25 19:13:56 $}
+%\date{\small \verb$Date: 1999/03/04 21:23:39 $}
 
 \maketitle
 
@@ -696,14 +696,6 @@ An \Index{if expression} chooses an expression to evaluate
 according to its condition.
 Its final value is the value of the chosen expression.
 An absent else-part is equivalent to \verb|else nil|.
-
-\subsubsection{Assignment Expressions}
-\begin{Produc}
-\produc{exp}{\ter{(} varlist1 \ter{=} explist1 \ter{)}}
-\end{Produc}%
-An \Index{assignment expression} executes a multiple assignment,
-and results in the final value of its first right hand expression
-(that is, the value assigned to the first variable in the variable list).
 
 \subsubsection{Table Constructors} \label{tableconstructor}
 Table \Index{constructors} are expressions that create tables;
