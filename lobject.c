@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.97 2003/04/03 13:35:34 roberto Exp roberto $
+** $Id: lobject.c,v 1.98 2003/04/28 13:30:14 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -129,7 +129,14 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
       case '%':
         pushstr(L, "%");
         break;
-      default: lua_assert(0);
+      default: {
+        char buff[3];
+        buff[0] = '%';
+        buff[1] = *(e+1);
+        buff[2] = '\0';
+        pushstr(L, buff);
+        break;
+      }
     }
     n += 2;
     fmt = e+2;
