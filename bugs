@@ -298,6 +298,11 @@ Fri Aug 30 13:49:14 EST 2002
 >> userdata may not be cleared properly
 (by Roberto; since 5.0a)
 
+** lapi.c
+Thu Nov 21 11:00:00 EST 2002
+>> ULONG_MAX>>10 may not fit into an int
+(by Jeff Petkau; since 4.0)
+
 ** lparser.c
 Fri Dec  6 17:06:40 UTC 2002
 >> scope of generic for variables is not sound
