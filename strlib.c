@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.27 1996/08/09 13:14:11 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.28 1996/09/16 18:02:40 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -167,6 +167,16 @@ static void str_upper (void)
   luaI_addchar(0);
   while (*s)
     luaI_addchar(toupper(*s++));
+  lua_pushstring(luaI_addchar(0));
+}
+
+static void str_rep (void)
+{
+  char *s = lua_check_string(1, "strrep");
+  int n = (int)lua_check_number(2, "strrep");
+  luaI_addchar(0);
+  while (n-- > 0)
+    addstr(s);
   lua_pushstring(luaI_addchar(0));
 }
 
@@ -522,6 +532,7 @@ static struct lua_reg strlib[] = {
 {"strset", str_set},
 {"strlower", str_lower},
 {"strupper", str_upper},
+{"strrep", str_rep},
 {"ascii", str_ascii},
 {"format", str_format},
 {"strfind", str_find},
