@@ -1,5 +1,9 @@
-char *rcs_lex = "$Id: lex.c,v 2.5 1994/09/22 12:44:00 lhf Exp celes $";
+char *rcs_lex = "$Id: lex.c,v 2.6 1994/09/26 16:21:52 celes Exp celes $";
 /*$Log: lex.c,v $
+ * Revision 2.6  1994/09/26  16:21:52  celes
+ * Mudancas para tornar lex.c um modulo independente dos outros
+ * modulos de Lua
+ *
  * Revision 2.5  1994/09/22  12:44:00  lhf
  * added support for ugly tokens
  *
@@ -135,6 +139,7 @@ static int findReserved (char *name)
 
 int yylex ()
 {
+  float a;
   currentText = !currentText;
   while (1)
   {
@@ -144,6 +149,9 @@ int yylex ()
 #endif
     switch (current)
     {
+      case EOF:
+      case 0:
+       return 0;
       case '\n': lua_linenumber++;
       case ' ':
       case '\t':
@@ -202,6 +210,7 @@ int yylex ()
         {
           switch (current)
           {
+            case EOF:
             case 0:
             case '\n':
               return WRONGTOKEN;
@@ -259,25 +268,37 @@ int yylex ()
         }
         else if (!isdigit(current)) return '.';
         /* current is a digit: goes through to number */
+	a=0.0;
         goto fraction;
 
       case '0': case '1': case '2': case '3': case '4':
       case '5': case '6': case '7': case '8': case '9':
-
-        do { save_and_next(); } while (isdigit(current));
+	a=0.0;
+        do { a=10*a+current-'0'; save_and_next(); } while (isdigit(current));
         if (current == '.') save_and_next();
-fraction: while (isdigit(current)) save_and_next();
-        if (current == 'e' || current == 'E')
-        {
-          save_and_next();
-          if (current == '+' || current == '-') save_and_next();
-          if (!isdigit(current)) return WRONGTOKEN;
-          do { save_and_next(); } while (isdigit(current));
+fraction:
+	{ float da=0.1;
+	  while (isdigit(current))
+	  {a+=(current-'0')*da; da/=10.0; save_and_next()};
+          if (current == 'e' || current == 'E')
+          {
+	    int e=0;
+	    int neg;
+	    float ea;
+            save_and_next();
+	    neg=(current=='-');
+            if (current == '+' || current == '-') save_and_next();
+            if (!isdigit(current)) return WRONGTOKEN;
+            do { e=10*e+current-'0'; save_and_next(); } while (isdigit(current));
+	    for (ea=neg?0.1:10.0; e>0; e>>=1) 
+	    {
+	      if (e & 1) a*=ea;
+	      ea*=ea;
+	    }
+          }
+          yylval.vFloat = a;
+          return NUMBER;
         }
-        *yytextLast = 0;
-        yylval.vFloat = atof(yytext[currentText]);
-        return NUMBER;
-
       case U_and:	next(); return AND;
       case U_do:	next(); return DO;
       case U_else:	next(); return ELSE;
