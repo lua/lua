@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.107 2001/02/22 17:15:18 roberto Exp roberto $
+** $Id: liolib.c,v 1.108 2001/02/23 17:17:25 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -638,7 +638,7 @@ static int errorfb (lua_State *L) {
     luaL_addstring(&b, l_s("\n"));
   }
   luaL_pushresult(&b);
-  lua_getglobal(L, l_s(LUA_ALERT));
+  lua_getglobal(L, LUA_ALERT);
   if (lua_isfunction(L, -1)) {  /* avoid loop if _ALERT is not defined */
     lua_pushvalue(L, -2);  /* error message */
     lua_rawcall(L, 1, 0);
@@ -671,7 +671,7 @@ static const luaL_reg iolib[] = {
   {l_s("tmpname"),   io_tmpname},
   {l_s("write"),     io_write},
   {l_s("writeto"),   io_writeto},
-  {l_s(LUA_ERRORMESSAGE), errorfb}
+  {LUA_ERRORMESSAGE, errorfb}
 };
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.61 2001/02/20 18:15:33 roberto Exp roberto $
+** $Id: lua.c,v 1.62 2001/02/23 17:17:25 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -118,7 +118,7 @@ static void print_message (void) {
 
 
 static void print_version (void) {
-  printf(l_s("%.80s  %.80s\n"), l_s(LUA_VERSION), l_s(LUA_COPYRIGHT));
+  printf(l_s("%.80s  %.80s\n"), LUA_VERSION, LUA_COPYRIGHT);
 }
 
 

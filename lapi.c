@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.132 2001/02/22 18:59:59 roberto Exp roberto $
+** $Id: lapi.c,v 1.133 2001/02/23 17:17:25 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -22,8 +22,8 @@
 #include "lvm.h"
 
 
-const l_char lua_ident[] = l_s("$Lua: ") l_s(LUA_VERSION) l_s(" ")
-  l_s(LUA_COPYRIGHT) l_s(" $\n") l_s("$Authors: ") l_s(LUA_AUTHORS) l_s(" $");
+const l_char lua_ident[] = l_s("$Lua: ") LUA_VERSION l_s(" ")
+  LUA_COPYRIGHT l_s(" $\n") l_s("$Authors: ") LUA_AUTHORS l_s(" $");
 
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lualib.h,v 1.16 2001/02/22 17:15:18 roberto Exp roberto $
+** $Id: lualib.h,v 1.17 2001/02/23 17:17:25 roberto Exp roberto $
 ** Lua standard libraries
 ** See Copyright Notice in lua.h
 */
@@ -31,7 +31,9 @@ LUALIB_API void lua_dblibopen (lua_State *L);
 */
 
 /* macro to `unsign' a character */
+#ifndef uchar
 #define uchar(c)	((unsigned char)(c))
+#endif
 
 /* integer type to hold the result of fgetc */
 typedef int l_charint;

@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.26 2001/02/22 18:59:59 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.27 2001/02/23 17:17:25 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,7 @@ static int luaB__ALERT (lua_State *L) {
 */
 static int luaB__ERRORMESSAGE (lua_State *L) {
   luaL_checktype(L, 1, LUA_TSTRING);
-  lua_getglobal(L, l_s(LUA_ALERT));
+  lua_getglobal(L, LUA_ALERT);
   if (lua_isfunction(L, -1)) {  /* avoid error loop if _ALERT is not defined */
     lua_Debug ar;
     lua_pushliteral(L, l_s("error: "));
@@ -305,10 +305,10 @@ static int luaB_call (lua_State *L) {
   luaL_checktype(L, 2, LUA_TTABLE);
   n = lua_getn(L, 2);
   if (!lua_isnull(L, 4)) {  /* set new error method */
-    lua_getglobal(L, l_s(LUA_ERRORMESSAGE));
+    lua_getglobal(L, LUA_ERRORMESSAGE);
     err = lua_gettop(L);  /* get index */
     lua_pushvalue(L, 4);
-    lua_setglobal(L, l_s(LUA_ERRORMESSAGE));
+    lua_setglobal(L, LUA_ERRORMESSAGE);
   }
   oldtop = lua_gettop(L);  /* top before function-call preparation */
   /* push function */
@@ -319,7 +319,7 @@ static int luaB_call (lua_State *L) {
   status = lua_call(L, n, LUA_MULTRET);
   if (err != 0) {  /* restore old error method */
     lua_pushvalue(L, err);
-    lua_setglobal(L, l_s(LUA_ERRORMESSAGE));
+    lua_setglobal(L, LUA_ERRORMESSAGE);
   }
   if (status != 0) {  /* error in call? */
     if (strchr(options, l_c('x')))
@@ -637,8 +637,8 @@ static void deprecated_funcs (lua_State *L) {
 /* }====================================================== */
 
 static const luaL_reg base_funcs[] = {
-  {l_s(LUA_ALERT), luaB__ALERT},
-  {l_s(LUA_ERRORMESSAGE), luaB__ERRORMESSAGE},
+  {LUA_ALERT, luaB__ALERT},
+  {LUA_ERRORMESSAGE, luaB__ERRORMESSAGE},
   {l_s("call"), luaB_call},
   {l_s("collectgarbage"), luaB_collectgarbage},
   {l_s("copytagmethods"), luaB_copytagmethods},
@@ -678,7 +678,7 @@ static const luaL_reg base_funcs[] = {
 
 LUALIB_API void lua_baselibopen (lua_State *L) {
   luaL_openl(L, base_funcs);
-  lua_pushliteral(L, l_s(LUA_VERSION));
+  lua_pushliteral(L, LUA_VERSION);
   lua_setglobal(L, l_s("_VERSION"));
   deprecated_funcs(L);
 }

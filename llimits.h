@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.24 2001/02/22 17:15:18 roberto Exp roberto $
+** $Id: llimits.h,v 1.25 2001/02/23 17:17:25 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -80,7 +80,9 @@ typedef unsigned char lu_byte;
 
 
 /* macro to `unsign' a character */
-#define uchar(c)        ((unsigned char)(c))
+#ifndef uchar
+#define uchar(c)	((unsigned char)(c))
+#endif
 
 
 #define MAX_SIZET	((size_t)(~(size_t)0)-2)
