@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.h,v 1.24 2002/06/03 17:46:34 roberto Exp roberto $
+** $Id: lundump.h,v 1.24 2001/07/19 14:34:06 lhf Exp lhf $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -10,21 +10,27 @@
 #include "lobject.h"
 #include "lzio.h"
 
-/* load one chunk */
+typedef size_t (*Writer)(const void* p, size_t size, size_t n, void* u);
+
+/* load one chunk; from lundump.c */
 Proto* luaU_undump (lua_State* L, ZIO* Z);
 
-/* find byte order */
+/* find byte order; from lundump.c */
 int luaU_endianness (void);
 
+/* dump one chunk; from dump.c */
+void luaU_dump (const Proto* Main, Writer w, void* data);
+
+/* print one chunk; from print.c */
+void luaU_print (const Proto* Main);
+
 /* definitions for headers of binary files */
-#define	VERSION		0x41		/* last format change was in 4.1 */
-#define	VERSION0	0x41		/* last major  change was in 4.1 */
+#define	LUA_SIGNATURE	"\033Lua"	/* binary files start with <esc>Lua */
+#define	VERSION		0x50		/* last format change was in 5.0 */
+#define	VERSION0	0x50		/* last major  change was in 5.0 */
 
 /* a multiple of PI for testing native format */
 /* multiplying by 1E8 gives non-trivial integer values */
 #define	TEST_NUMBER	3.14159265358979323846E8
-
-/* binary files start with <esc>Lua */
-#define	LUA_SIGNATURE	"\033Lua"
 
 #endif
