@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 1.1 1993/12/17 18:41:19 celes Exp roberto $
+** $Id: opcode.h,v 1.2 1993/12/22 21:15:16 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -13,6 +13,8 @@
 #ifndef real
 #define real float
 #endif
+
+#define FIELDS_PER_FLUSH 40
 
 typedef unsigned char  Byte;
 
@@ -40,7 +42,9 @@ typedef enum
  STOREGLOBAL,
  STOREINDEXED0,
  STOREINDEXED,
- STOREFIELD,
+ STORELIST0,
+ STORELIST,
+ STORERECORD,
  ADJUST,
  CREATEARRAY,
  EQOP,
