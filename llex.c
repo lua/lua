@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.5 1997/11/07 15:09:49 roberto Exp roberto $
+** $Id: llex.c,v 1.6 1997/11/19 17:29:23 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -83,7 +83,8 @@ void luaX_setinput (ZIO *z)
 
 static void skipspace (LexState *LL)
 {
-  while (LL->current == ' ' || LL->current == '\t') next(LL);
+  while (LL->current == ' ' || LL->current == '\t' || LL->current == '\r')
+    next(LL);
 }
 
 
