@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.18 1998/03/20 14:18:18 roberto Exp roberto $
+** $Id: llex.c,v 1.19 1998/05/27 13:03:40 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -339,11 +339,6 @@ int luaX_lex (LexState *LS) {
                 case 't': save('\t'); next(LS); break;
                 case 'v': save('\v'); next(LS); break;
                 case '\n': save('\n'); inclinenumber(LS); break;
-                case '\\': case '"': case '\'': case '?': {
-                  save(LS->current);
-                  next(LS);
-                  break;
-                }
                 default : {
                   if (isdigit(LS->current)) {
                     int c = 0;
@@ -356,10 +351,9 @@ int luaX_lex (LexState *LS) {
                       luaX_error(LS, "escape sequence too large");
                     save(c);
                   }
-                  else {
-                    save('\\');
+                  else {  /* handles \, ", ', and ? */
                     save(LS->current);
-                    luaX_error(LS, "invalid escape sequence");
+                    next(LS);
                   }
                   break;
                 }
