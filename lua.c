@@ -3,12 +3,33 @@
 ** Linguagem para Usuarios de Aplicacao
 */
 
-char *rcs_lua="$Id: lua.c,v 1.1 1993/12/17 18:41:19 celes Stab roberto $";
+char *rcs_lua="$Id: lua.c,v 1.2 1994/11/28 17:12:49 roberto Exp celes $";
 
 #include <stdio.h>
 
 #include "lua.h"
 #include "lualib.h"
+
+static int lua_argc;
+static char **lua_argv;
+
+/*
+%F Allow Lua code to access argv strings.
+%i Receive from Lua the argument number (starting with 1).
+%o Return to Lua the argument, or nil if it does not exist.
+*/
+static void lua_getargv (void)
+{
+ lua_Object lo = lua_getparam(1);
+ if (!lua_isnumber(lo))
+  lua_pushnil();
+ else
+ {
+  int n = (int)lua_getnumber(lo);
+  if (n < 1 || n > lua_argc) lua_pushnil();
+  else                       lua_pushstring(lua_argv[n]);
+ }
+}
 
 
 int main (int argc, char *argv[])
@@ -18,6 +39,9 @@ int main (int argc, char *argv[])
  iolib_open ();
  strlib_open ();
  mathlib_open ();
+
+ lua_register("argv", lua_getargv);
+
  if (argc < 2)
  {
    char buffer[250];
@@ -25,8 +49,24 @@ int main (int argc, char *argv[])
      result = lua_dostring(buffer);
  }
  else
-   for (i=1; i<argc; i++)
+ {
+  for (i=1; i<argc; i++)
+  {
+   if (strcmp(argv[i], "--") == 0)
+   {
+    lua_argc = argc-i-1;
+    lua_argv = argv+i;
+    break;
+   }
+  }
+  for (i=1; i<argc; i++)
+  {
+   if (strcmp(argv[i], "--") == 0)
+    break;
+   else
     result = lua_dofile (argv[i]);
+  }
+ }
  return result;
 }
 
