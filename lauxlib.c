@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.15 1999/03/04 21:17:26 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.16 1999/03/10 14:19:41 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -128,8 +128,6 @@ void luaL_chunkid (char *out, char *source, int len) {
 
 
 void luaL_filesource (char *out, char *filename, int len) {
-  if (filename == NULL)
-    strcpy(out, "@(stdin)");
-  else
-    sprintf(out, "@%.*s", len-2, filename);  /* -2 for '@' and '\0' */
+  if (filename == NULL) filename = "(stdin)";
+  sprintf(out, "@%.*s", len-2, filename);  /* -2 for '@' and '\0' */
 }

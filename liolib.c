@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.32 1999/03/04 21:17:26 roberto Exp roberto $
+** $Id: liolib.c,v 1.33 1999/03/05 20:45:01 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -471,7 +471,7 @@ static void errorfb (void) {
     char buffchunk[MAXSRC];
     int linedefined;
     lua_funcinfo(func, &chunkname, &linedefined);
-    luaL_chunkid(buffchunk, chunkname, MAXSRC);
+    luaL_chunkid(buffchunk, chunkname, sizeof(buffchunk));
     if (level == 2) strcat(buff, "Active Stack:\n");
     strcat(buff, "\t");
     if (strlen(buff) > MAXMESSAGE-MESSAGESIZE) {

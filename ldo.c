@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.39 1999/03/10 14:19:41 roberto Exp roberto $
+** $Id: ldo.c,v 1.40 1999/03/10 14:23:07 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -356,7 +356,7 @@ void luaD_gcIM (TObject *o)
 }
 
 
-#define	MAXFILENAME	200	/* maximum part of a file name kept */
+#define	MAXFILENAME	260	/* maximum part of a file name kept */
 
 int lua_dofile (char *filename) {
   ZIO z;
@@ -372,7 +372,7 @@ int lua_dofile (char *filename) {
   bin = (c == ID_CHUNK);
   if (bin)
     f = freopen(filename, "rb", f);  /* set binary mode */
-  luaL_filesource(source, filename, MAXFILENAME);
+  luaL_filesource(source, filename, sizeof(source));
   luaZ_Fopen(&z, f, source);
   status = do_main(&z, bin);
   if (f != stdin)
