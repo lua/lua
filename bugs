@@ -33,3 +33,7 @@ Tue Jan 27 17:12:36 EDT 1998
 Wed Jan 28 14:48:12 EDT 1998
 >> tables can become full of "emptys" slots, and keep growing without limits.
 
+** lstrlib.c
+Mon Mar  9 15:26:09 EST 1998
+>> gsub('a', '(b?)%1*' ...) loops (because the capture is empty).
+

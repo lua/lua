@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.9 1998/03/06 16:54:42 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.10 1998/03/06 18:47:42 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -286,7 +286,7 @@ static char *match (char *s, char *p, struct Capture *cap)
       switch (*ep) {
         case '*': {  /* repetition */
           char *res;
-          if (s1 && (res = match(s1, p, cap)))
+          if (s1 && s1>s && (res = match(s1, p, cap)))
             return res;
           p=ep+1; goto init;  /* else return match(s, ep+1, cap); */
         }
@@ -300,7 +300,7 @@ static char *match (char *s, char *p, struct Capture *cap)
           char *res;
           if ((res = match(s, ep+1, cap)) != 0)
             return res;
-          else if (s1) {
+          else if (s1 && s1>s) {
             s = s1;
             goto init;  /* return match(s1, p, cap); */
           }
