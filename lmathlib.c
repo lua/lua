@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.49 2002/08/07 20:54:38 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.50 2002/08/14 20:07:43 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -22,9 +22,9 @@
 
 /*
 ** If you want Lua to operate in degrees (instead of radians),
-** define DEGREES
+** define USE_DEGREES
 */
-#ifdef DEGREES
+#ifdef USE_DEGREES
 #define FROMRAD(a)	((a)/RADIANS_PER_DEGREE)
 #define TORAD(a)	((a)*RADIANS_PER_DEGREE)
 #else
