@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.15 1999/05/11 14:18:40 roberto Exp roberto $
+** $Id: lmem.c,v 1.16 1999/05/20 20:43:06 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -26,8 +26,6 @@
 
 
 
-#ifndef DEBUG
-
 
 static unsigned long power2 (unsigned long n) {
   unsigned long p = MINSIZE;
@@ -47,6 +45,8 @@ void *luaM_growaux (void *block, unsigned long nelems, int inc, int size,
     return luaM_realloc(block, power2(newn)*size);
 }
 
+
+#ifndef DEBUG
 
 /*
 ** generic allocation routine.
@@ -73,33 +73,38 @@ void *luaM_realloc (void *block, unsigned long size) {
 #include <string.h>
 
 
-void *luaM_growaux (void *block, unsigned long nelems, int inc, int size,
-                       char *errormsg, unsigned long limit) {
-  unsigned long newn = nelems+inc;
-  if (newn >= limit)
-    lua_error(errormsg);
-  return luaM_realloc(block, newn*size);
-}
-
-
 #define HEADER	(sizeof(double))
-#define MARKSIZE	32
+#define MARKSIZE	16
 
 #define MARK    55
+
+
+#define blocksize(b)	((unsigned long *)((char *)(b) - HEADER))
 
 unsigned long numblocks = 0;
 unsigned long totalmem = 0;
 
 
 static void *checkblock (void *block) {
-  unsigned long *b = (unsigned long *)((char *)block - HEADER);
-  unsigned long size = *b;
-  int i;
-  for (i=0;i<MARKSIZE;i++)
-    LUA_ASSERT(*(((char *)b)+size+HEADER+i) == MARK+i, "corrupted block");
-  numblocks--;
-  totalmem -= size;
-  return b;
+  if (block == NULL)
+    return NULL;
+  else {
+    unsigned long *b = blocksize(block);
+    unsigned long size = *b;
+    int i;
+    for (i=0;i<MARKSIZE;i++)
+      LUA_ASSERT(*(((char *)b)+HEADER+size+i) == MARK+i, "corrupted block");
+    numblocks--;
+    totalmem -= size;
+    return b;
+  }
+}
+
+
+static void freeblock (void *block) {
+  if (block)
+    memset(block, -1, *blocksize(block));  /* erase block */
+  free(checkblock(block));
 }
 
 
@@ -108,24 +113,27 @@ void *luaM_realloc (void *block, unsigned long size) {
   if (realsize != (size_t)realsize)
     lua_error("memory allocation error: block too big");
   if (size == 0) {
-    if (block) {
-      unsigned long *b = (unsigned long *)((char *)block - HEADER);
-      memset(block, -1, *b);  /* erase block */
-      block = checkblock(block);
-    }
-    free(block);
+    freeblock(block);
     return NULL;
   }
-  if (block)
-    block = checkblock(block);
-  block = (unsigned long *)realloc(block, realsize);
-  if (block == NULL)
-    lua_error(memEM);
-  totalmem += size;
-  numblocks++;
-  *(unsigned long *)block = size;
-  { int i; for (i=0;i<MARKSIZE;i++) *(((char *)block)+size+HEADER+i) = MARK+i; }
-  return (unsigned long *)((char *)block+HEADER);
+  else {
+    char *newblock = malloc(realsize);
+    int i;
+    if (block) {
+      unsigned long oldsize = *blocksize(block);
+      if (oldsize > size) oldsize = size;
+      memcpy(newblock+HEADER, block, oldsize);
+      freeblock(block);  /* erase (and check) old copy */
+    }
+    if (newblock == NULL)
+      lua_error(memEM);
+    totalmem += size;
+    numblocks++;
+    *(unsigned long *)newblock = size;
+    for (i=0;i<MARKSIZE;i++)
+      *(newblock+HEADER+size+i) = MARK+i;
+    return newblock+HEADER;
+  }
 }
 
 
