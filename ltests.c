@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.10 2004/07/09 18:23:17 roberto Exp roberto $
+** $Id: ltests.c,v 2.11 2004/08/24 20:12:06 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -1029,6 +1029,44 @@ static int coresume (lua_State *L) {
 
 
 
+/*
+** {======================================================
+** tests auxlib functions
+** =======================================================
+*/
+
+static int auxgsub (lua_State *L) {
+  const char *s1 = luaL_checkstring(L, 1);
+  const char *s2 = luaL_checkstring(L, 2);
+  const char *s3 = luaL_checkstring(L, 3);
+  lua_settop(L, 3);
+  luaL_gsub(L, s1, s2, s3);
+  lua_assert(lua_gettop(L) == 4);
+  return 1;
+}
+
+
+static int auxgetf (lua_State *L) {
+  const char *s = luaL_checkstring(L, 1);
+  lua_settop(L, 2);
+  lua_pushstring(L, luaL_getfield(L, s));
+  lua_assert(lua_gettop(L) == 3);
+  return 2;
+}
+
+
+static int auxsetf (lua_State *L) {
+  const char *s = luaL_checkstring(L, 1);
+  lua_settop(L, 3);
+  lua_pushstring(L, luaL_setfield(L, s));
+  lua_assert(lua_gettop(L) == 2);
+  return 1;
+}
+
+/* }====================================================== */
+
+
+
 static const struct luaL_reg tests_funcs[] = {
   {"hash", hash_query},
   {"limits", get_limits},
@@ -1063,6 +1101,9 @@ static const struct luaL_reg tests_funcs[] = {
   {"totalmem", mem_query},
   {"resume", coresume},
   {"setyhook", setyhook},
+  {"gsub", auxgsub},
+  {"getfield", auxgetf},
+  {"setfield", auxsetf},
   {NULL, NULL}
 };
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.123 2004/08/30 18:35:14 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.124 2004/09/03 13:17:14 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -352,8 +352,8 @@ static const char *pushnexttemplate (lua_State *L, const char *path) {
 }
 
 
-static const char *luaL_gsub (lua_State *L, const char *s,
-                              const char *p, const char *r) {
+LUALIB_API const char *luaL_gsub (lua_State *L, const char *s, const char *p,
+                                                               const char *r) {
   const char *wild;
   int l = strlen(p);
   luaL_Buffer b;
@@ -389,6 +389,49 @@ LUALIB_API const char *luaL_searchpath (lua_State *L, const char *name,
     lua_pop(L, 1);  /* remove file name */ 
   }
 }
+
+
+LUALIB_API const char *luaL_getfield (lua_State *L, const char *fname) {
+  const char *e;
+  while ((e = strchr(fname, '.')) != NULL) {
+    lua_pushlstring(L, fname, e - fname);
+    lua_gettable(L, -2);
+    lua_remove(L, -2);  /* remove previous table */
+    fname = e + 1;
+    if (!lua_istable(L, -1)) return fname;
+  }
+  lua_getfield(L, -1, fname);  /* get last field */
+  lua_remove(L, -2);  /* remove previous table */
+  return NULL;
+}
+
+
+LUALIB_API const char *luaL_setfield (lua_State *L, const char *fname) {
+  const char *e;
+  lua_insert(L, -2);  /* move value to below table */
+  while ((e = strchr(fname, '.')) != NULL) {
+    lua_pushlstring(L, fname, e - fname);
+    lua_gettable(L, -2);
+    if (lua_isnil(L, -1)) {  /* no such field? */
+      lua_pop(L, 1);  /* remove this nil */
+      lua_newtable(L);  /* create a new table for field */
+      lua_pushlstring(L, fname, e - fname);
+      lua_pushvalue(L, -2);
+      lua_settable(L, -4);  /* set new table into field */
+    }
+    lua_remove(L, -2);  /* remove previous table */
+    fname = e + 1;
+    if (!lua_istable(L, -1)) {
+      lua_pop(L, 2);  /* remove table and value */
+      return fname;
+    }
+  }
+  lua_insert(L, -2);  /* move table to below value */
+  lua_setfield(L, -2, fname);  /* set last field */
+  lua_remove(L, -2);  /* remove table */
+  return NULL;
+}
+
 
 
 /*
