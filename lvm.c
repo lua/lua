@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.156 2001/01/24 15:45:33 roberto Exp roberto $
+** $Id: lvm.c,v 1.157 2001/01/24 16:20:54 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -309,10 +309,12 @@ void luaV_strconc (lua_State *L, int total, StkId top) {
 static void luaV_pack (lua_State *L, StkId firstelem) {
   int i;
   Hash *htab = luaH_new(L, 0);
+  TObject *n;
   for (i=0; firstelem+i<L->top; i++)
     setobj(luaH_setnum(L, htab, i+1), firstelem+i);
   /* store counter in field `n' */
-  setnvalue(luaH_setstr(L, htab, luaS_newliteral(L, "n")), i);
+  n = luaH_setstr(L, htab, luaS_newliteral(L, "n"));
+  setnvalue(n, i);
   L->top = firstelem;  /* remove elements from the stack */
   sethvalue(L->top, htab);
   incr_top;
@@ -383,19 +385,23 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
       }
       case OP_PUSHINT: {
-        setnvalue(top++, (lua_Number)GETARG_S(i));
+        setnvalue(top, (lua_Number)GETARG_S(i));
+        top++;
         break;
       }
       case OP_PUSHSTRING: {
-        setsvalue(top++, kstr[GETARG_U(i)]);
+        setsvalue(top, kstr[GETARG_U(i)]);
+        top++;
         break;
       }
       case OP_PUSHNUM: {
-        setnvalue(top++, tf->knum[GETARG_U(i)]);
+        setnvalue(top, tf->knum[GETARG_U(i)]);
+        top++;
         break;
       }
       case OP_PUSHNEGNUM: {
-        setnvalue(top++, -tf->knum[GETARG_U(i)]);
+        setnvalue(top, -tf->knum[GETARG_U(i)]);
+        top++;
         break;
       }
       case OP_PUSHUPVALUE: {
@@ -432,8 +438,8 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       case OP_PUSHSELF: {
         TObject receiver;
         setobj(&receiver, top-1);
-        setsvalue(top++, kstr[GETARG_U(i)]);
-        L->top = top;
+        setsvalue(top, kstr[GETARG_U(i)]);
+        L->top = ++top;
         setobj(top-2, luaV_gettable(L, top-2));
         setobj(top-1, &receiver);
         break;
@@ -441,7 +447,8 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       case OP_CREATETABLE: {
         L->top = top;
         luaC_checkGC(L);
-        sethvalue(top++, luaH_new(L, GETARG_U(i)));
+        sethvalue(top, luaH_new(L, GETARG_U(i)));
+        top++;
         break;
       }
       case OP_SETLOCAL: {
