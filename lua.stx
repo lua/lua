@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.7 1994/11/17 18:59:06 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.8 1994/11/17 19:09:46 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -237,9 +237,6 @@ function     : FUNCTION NAME
 		Word func = luaI_findsymbol($2);
 	        s_tag(func) = LUA_T_FUNCTION;
 	        s_bvalue(func) = $4;
-#if LISTING
-                PrintCode(funcCode,funcCode+pc);
-#endif
 	       }
 	       ;
 
@@ -251,9 +248,6 @@ method         : FUNCTION NAME ':' NAME
 	       }
 	       body
 	       {
-#if LISTING
-                PrintCode(funcCode,funcCode+pc);
-#endif
 	        /* assign function to table field */
 	        pc=maincode; basepc=*initcode; maxcurr=maxmain;
 	        nlocalvar=0;
@@ -273,6 +267,9 @@ body :  '(' parlist ')' block END
 	  $$ = newvector(pc, Byte);
 	  memcpy($$, basepc, pc*sizeof(Byte));
 	  funcCode = basepc; maxcode=maxcurr;
+#if LISTING
+                PrintCode(funcCode,funcCode+pc);
+#endif
 	}
 		;
 
@@ -692,7 +689,10 @@ static void codeIf (Long thenAdd, Long elseAdd)
 {
   Long elseinit = elseAdd+sizeof(Word)+1;
   if (pc == elseinit)		/* no else */
+  {
     pc -= sizeof(Word)+1;
+    elseinit = pc;
+  }
   else
   {
     basepc[elseAdd] = JMP;
