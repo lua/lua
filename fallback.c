@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.29 1997/03/19 21:12:34 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.30 1997/03/20 19:20:43 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -174,12 +174,14 @@ static void init_entry (int tag)
 
 void luaI_initfallbacks (void)
 {
-  int i;
-  IMtable_size = NUM_TYPES+10;
-  luaI_IMtable = newvector(IMtable_size, struct IM);
-  for (i=LUA_T_NIL; i<=LUA_T_USERDATA; i++) {
-    luaI_IMtable[-i].tp = (lua_Type)i;
-    init_entry(i);
+  if (luaI_IMtable == NULL) {
+    int i;
+    IMtable_size = NUM_TYPES+10;
+    luaI_IMtable = newvector(IMtable_size, struct IM);
+    for (i=LUA_T_NIL; i<=LUA_T_USERDATA; i++) {
+      luaI_IMtable[-i].tp = (lua_Type)i;
+      init_entry(i);
+    }
   }
 }
 
@@ -187,9 +189,11 @@ int lua_newtag (char *t)
 {
   int tp;
   --last_tag;
-  if ((-last_tag) >= IMtable_size)
+  if ((-last_tag) >= IMtable_size) {
+    luaI_initfallbacks();
     IMtable_size = growvector(&luaI_IMtable, IMtable_size,
                               struct IM, memEM, MAX_INT);
+  }
   tp = -findstring(t, typenames);
   if (tp == LUA_T_ARRAY || tp == LUA_T_USERDATA)
     luaI_IMtable[-last_tag].tp = tp;
