@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.19 1999/02/26 15:49:53 roberto Exp roberto $
+** $Id: lstring.c,v 1.20 1999/08/16 20:52:00 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -27,13 +27,24 @@ static TaggedString EMPTY = {{NULL, 2}, 0L, 0,
                             {{{LUA_T_NIL, {NULL}}, 0L}}, {0}};
 
 
+
+/*
+** to avoid hash tables with size = 0 (cannot hash with size=0), all
+** hash tables are initialized with this `array'. Elements are never
+** written here, because this table (with size=1) must grow to get an
+** element, and before it grows we replace it for a `real' table.
+**
+*/
+static TaggedString *init_hash[1] = {NULL};
+
+
 void luaS_init (void) {
   int i;
   L->string_root = luaM_newvector(NUM_HASHS, stringtable);
   for (i=0; i<NUM_HASHS; i++) {
-    L->string_root[i].size = 0;
+    L->string_root[i].size = 1;
     L->string_root[i].nuse = 0;
-    L->string_root[i].hash = NULL;
+    L->string_root[i].hash = init_hash;
   }
 }
 
@@ -45,15 +56,16 @@ static unsigned long hash_s (const char *s, long l) {
   return h;
 }
 
+
 static int newsize (stringtable *tb) {
-  int size = tb->size;
   int realuse = 0;
   int i;
   /* count how many entries are really in use */
-  for (i=0; i<size; i++)
+  for (i=0; i<tb->size; i++) {
     if (tb->hash[i] != NULL && tb->hash[i] != &EMPTY)
       realuse++;
-  return luaO_redimension((realuse+1)*2);  /* +1 is the new element */
+  }
+  return luaO_redimension(realuse*2);
 }
 
 
@@ -109,17 +121,28 @@ static TaggedString *newone_u (void *buff, int tag, unsigned long h) {
   return ts;
 }
 
+
+static void newentry (stringtable *tb, TaggedString *ts, int h1) {
+  tb->nuse++;
+  if ((long)tb->nuse*3 < (long)tb->size*2)  /* still have room? */
+    tb->hash[h1] = ts;
+  else {  /* must grow */
+    if (tb->hash == init_hash) {  /* cannot change init_hash */
+      LUA_ASSERT(h1==0, "`init_hash' has size 1");
+      tb->hash = luaM_newvector(1, TaggedString *);  /* so, `clone' it */
+    }
+    tb->hash[h1] = ts;
+    grow(tb);
+  }
+}
+
+
 static TaggedString *insert_s (const char *str, long l, stringtable *tb) {
   TaggedString *ts;
   unsigned long h = hash_s(str, l);
   int size = tb->size;
-  int j = -1;
-  int h1;
-  if ((long)tb->nuse*3 >= (long)size*2) {
-    grow(tb);
-    size = tb->size;
-  }
-  h1 = h%size;
+  int j = -1;  /* last empty place found (or -1) */
+  int h1 = h%size;
   while ((ts = tb->hash[h1]) != NULL) {
     if (ts == &EMPTY)
       j = h1;
@@ -129,11 +152,11 @@ static TaggedString *insert_s (const char *str, long l, stringtable *tb) {
     if (h1 >= size) h1 -= size;
   }
   /* not found */
+  ts = newone_s(str, l, h);  /* create new entry */
   if (j != -1)  /* is there an EMPTY space? */
-    h1 = j;
+    tb->hash[j] = ts;  /* use it for new element */
   else
-    tb->nuse++;
-  ts = tb->hash[h1] = newone_s(str, l, h);
+    newentry(tb, ts, h1);  /* no EMPTY places; must use a virgin one */
   return ts;
 }
 
@@ -143,37 +166,31 @@ static TaggedString *insert_u (void *buff, int tag, stringtable *tb) {
   unsigned long h = (unsigned long)buff;
   int size = tb->size;
   int j = -1;
-  int h1;
-  if ((long)tb->nuse*3 >= (long)size*2) {
-    grow(tb);
-    size = tb->size;
-  }
-  h1 = h%size;
+  int h1 = h%size;
   while ((ts = tb->hash[h1]) != NULL) {
     if (ts == &EMPTY)
       j = h1;
     else if ((tag == ts->u.d.tag || tag == LUA_ANYTAG) && buff == ts->u.d.v)
       return ts;
-    h1 += (h&(size-2)) + 1;  /* double hashing */
+    h1 += (h&(size-2)) + 1;
     if (h1 >= size) h1 -= size;
   }
-  /* not found */
-  if (j != -1)  /* is there an EMPTY space? */
-    h1 = j;
+  ts = newone_u(buff, tag, h);
+  if (j != -1)
+    tb->hash[j] = ts;
   else
-    tb->nuse++;
-  ts = tb->hash[h1] = newone_u(buff, tag, h);
+    newentry(tb, ts, h1);
   return ts;
 }
 
 
 TaggedString *luaS_createudata (void *udata, int tag) {
-  int t = ((unsigned)udata%NUM_HASHUDATA)+NUM_HASHSTR;
+  int t = ((unsigned int)udata%NUM_HASHUDATA)+NUM_HASHSTR;
   return insert_u(udata, tag, &L->string_root[t]);
 }
 
 TaggedString *luaS_newlstr (const char *str, long l) {
-  int t = (l==0) ? 0 : ((int)((unsigned char)str[0]*l))%NUM_HASHSTR;
+  int t = (l==0) ? 0 : ((int)((unsigned char)str[0]+l))%NUM_HASHSTR;
   return insert_s(str, l, &L->string_root[t]);
 }
 
@@ -264,10 +281,9 @@ void luaS_freeall (void) {
     int j;
     for (j=0; j<tb->size; j++) {
       TaggedString *t = tb->hash[j];
-      if (t == &EMPTY) continue;
-      luaM_free(t);
+      if (t != &EMPTY) luaM_free(t);
     }
-    luaM_free(tb->hash);
+    if (tb->hash != init_hash) luaM_free(tb->hash);
   }
   luaM_free(L->string_root);
 }
