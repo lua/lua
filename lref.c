@@ -1,5 +1,5 @@
 /*
-** $Id: lref.c,v 1.10 2000/03/27 20:10:21 roberto Exp roberto $
+** $Id: lref.c,v 1.11 2000/03/29 20:19:20 roberto Exp roberto $
 ** reference mechanism
 ** See Copyright Notice in lua.h
 */
@@ -25,7 +25,8 @@ int lua_ref (lua_State *L,  int lock) {
       L->refFree = L->refArray[ref].st;
     }
     else {  /* no more free places */
-      luaM_growvector(L, L->refArray, L->refSize, 1, struct Ref, refEM, MAX_INT);
+      luaM_growvector(L, L->refArray, L->refSize, 1, struct Ref,
+                      "reference table overflow", MAX_INT);
       ref = L->refSize++;
     }
     L->refArray[ref].o = *(L->top-1);

@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.5 2000/04/04 20:48:44 roberto Exp roberto $
+** $Id: llimits.h,v 1.6 2000/04/26 13:43:25 roberto Exp roberto $
 ** Limits, basic types, and some other "instalation-dependent" definitions
 ** See Copyright Notice in lua.h
 */
@@ -9,6 +9,7 @@
 
 
 #include <limits.h>
+#include <stddef.h>
 
 
 /*
@@ -21,6 +22,11 @@
 
 typedef LUA_NUM_TYPE Number;
 
+
+typedef unsigned long lint32;  /* unsigned int with at least 32 bits */
+
+
+#define MAX_SIZET	((size_t)(~0)-2)
 
 
 #define MAX_INT (INT_MAX-2)  /* maximum value of an int (-2 for safety) */

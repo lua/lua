@@ -1,5 +1,5 @@
 /*
-** $Id: lzio.h,v 1.4 1998/01/09 14:57:43 roberto Exp roberto $
+** $Id: lzio.h,v 1.5 1999/08/16 20:52:00 roberto Exp roberto $
 ** Buffered streams
 ** See Copyright Notice in lua.h
 */
@@ -24,11 +24,11 @@ typedef struct zio ZIO;
 
 ZIO* zFopen (ZIO* z, FILE* f, const char *name);	/* open FILEs */
 ZIO* zsopen (ZIO* z, const char* s, const char *name);	/* string */
-ZIO* zmopen (ZIO* z, const char* b, int size, const char *name);  /* memory */
+ZIO* zmopen (ZIO* z, const char* b, size_t size, const char *name); /* memory */
 
-int zread (ZIO* z, void* b, int n);	/* read next n bytes */
+size_t zread (ZIO* z, void* b, size_t n);	/* read next n bytes */
 
-#define zgetc(z)	(--(z)->n>=0 ? ((int)*(z)->p++): (z)->filbuf(z))
+#define zgetc(z)	(((z)->n--)>0 ? ((int)*(z)->p++): (z)->filbuf(z))
 #define zungetc(z)	(++(z)->n,--(z)->p)
 #define zname(z)	((z)->name)
 
@@ -38,7 +38,7 @@ int zread (ZIO* z, void* b, int n);	/* read next n bytes */
 #define ZBSIZE	256			/* buffer size */
 
 struct zio {
-  int n;				/* bytes still unread */
+  size_t n;				/* bytes still unread */
   const unsigned char* p;		/* current position in buffer */
   int (*filbuf)(ZIO* z);
   void* u;				/* additional data */

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.106 2000/05/15 19:48:04 roberto Exp roberto $
+** $Id: lvm.c,v 1.107 2000/05/22 18:44:46 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -187,7 +187,7 @@ void luaV_setglobal (lua_State *L, TString *s, StkId top) {
   const TObject *im = luaT_getimbyObj(L, oldvalue, IM_SETGLOBAL);
   if (ttype(im) == TAG_NIL) {  /* is there a tag method? */
     if (oldvalue != &luaO_nilobject)
-      *oldvalue = *(top-1);
+      *(TObject *)oldvalue = *(top-1);
     else {
       TObject key;
       ttype(&key) = TAG_STRING;
@@ -239,21 +239,22 @@ static void addK (lua_State *L, StkId top, int k) {
 
 static int luaV_strcomp (const TString *ls, const TString *rs) {
   const char *l = ls->str;
-  long ll = ls->u.s.len;
+  size_t ll = ls->u.s.len;
   const char *r = rs->str;
-  long lr = rs->u.s.len;
+  size_t lr = rs->u.s.len;
   for (;;) {
-    long temp = strcoll(l, r);
+    int temp = strcoll(l, r);
     if (temp != 0) return temp;
-    /* strings are equal up to a '\0' */
-    temp = strlen(l);  /* index of first '\0' in both strings */
-    if (temp == ll)  /* l is finished? */
-      return (temp == lr) ? 0 : -1;  /* l is equal or smaller than r */
-    else if (temp == lr)  /* r is finished? */
-      return 1;  /* l is greater than r (because l is not finished) */
-    /* both strings longer than temp; go on comparing (after the '\0') */
-    temp++;
-    l += temp; ll -= temp; r += temp; lr -= temp;
+    else {  /* strings are equal up to a '\0' */
+      size_t len = strlen(l);  /* index of first '\0' in both strings */
+      if (len == ll)  /* l is finished? */
+        return (len == lr) ? 0 : -1;  /* l is equal or smaller than r */
+      else if (len == lr)  /* r is finished? */
+        return 1;  /* l is greater than r (because l is not finished) */
+      /* both strings longer than `len'; go on comparing (after the '\0') */
+      len++;
+      l += len; ll -= len; r += len; lr -= len;
+    }
   }
 }
 
@@ -281,17 +282,18 @@ static void strconc (lua_State *L, int total, StkId top) {
       call_binTM(L, top, IM_CONCAT, "unexpected type for concatenation");
     else if (tsvalue(top-1)->u.s.len > 0) {  /* if len=0, do nothing */
       /* at least two string values; get as many as possible */
-      long tl = tsvalue(top-1)->u.s.len + tsvalue(top-2)->u.s.len;
+      lint32 tl = tsvalue(top-1)->u.s.len + tsvalue(top-2)->u.s.len;
       char *buffer;
       int i;
       while (n < total && !tostring(L, top-n-1)) {  /* collect total length */
         tl += tsvalue(top-n-1)->u.s.len;
         n++;
       }
+      if (tl > MAX_SIZET) lua_error(L, "string size overflow");
       buffer = luaL_openspace(L, tl);
       tl = 0;
       for (i=n; i>0; i--) {  /* concat all strings */
-        long l = tsvalue(top-i)->u.s.len;
+        lint32 l = tsvalue(top-i)->u.s.len;
         memcpy(buffer+tl, tsvalue(top-i)->str, l);
         tl += l;
       }

@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.57 2000/04/12 18:57:19 roberto Exp roberto $
+** $Id: llex.c,v 1.58 2000/05/08 19:32:53 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -48,6 +48,16 @@ void luaX_init (lua_State *L) {
 
 
 #define MAXSRC          80
+
+
+void luaX_checklimit (LexState *ls, int val, int limit, const char *msg) {
+  if (val > limit) {
+    char buff[100];
+    sprintf(buff, "too many %.50s (limit=%d)", msg, limit);
+    luaX_error(ls, buff, ls->token);
+  }
+}
+
 
 void luaX_syntaxerror (LexState *ls, const char *s, const char *token) {
   char buff[MAXSRC];
@@ -175,6 +185,7 @@ static void inclinenumber (lua_State *L, LexState *LS) {
     {"debug", "nodebug", "endinput", "end", "ifnot", "if", "else", NULL};
   next(LS);  /* skip '\n' */
   ++LS->linenumber;
+  luaX_checklimit(LS, LS->linenumber, MAX_INT, "lines in a chunk");
   if (LS->current == '$') {  /* is a pragma? */
     char buff[PRAGMASIZE+1];
     int ifnot = 0;

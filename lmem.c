@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.28 2000/03/10 18:37:44 roberto Exp roberto $
+** $Id: lmem.c,v 1.29 2000/03/16 20:35:07 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -88,6 +88,7 @@ static void *debug_realloc (void *block, size_t size) {
     size_t realsize = HEADER+size+MARKSIZE;
     char *newblock = (char *)(malloc)(realsize);  /* alloc a new block */
     int i;
+    if (realsize < size) return NULL;  /* overflow! */
     if (newblock == NULL) return NULL;
     if (block) {
       size_t oldsize = *blocksize(block);
@@ -111,10 +112,10 @@ static void *debug_realloc (void *block, size_t size) {
 
 
 
-void *luaM_growaux (lua_State *L, void *block, unsigned long nelems,
-               int inc, int size, const char *errormsg, unsigned long limit) {
-  unsigned long newn = nelems+inc;
-  if (newn >= limit) lua_error(L, errormsg);
+void *luaM_growaux (lua_State *L, void *block, size_t nelems,
+               int inc, size_t size, const char *errormsg, size_t limit) {
+  size_t newn = nelems+inc;
+  if (nelems >= limit-inc) lua_error(L, errormsg);
   if ((newn ^ nelems) <= nelems ||  /* still the same power-of-2 limit? */
        (nelems > 0 && newn < MINPOWER2))  /* or block already is MINPOWER2? */
       return block;  /* do not need to reallocate */
@@ -126,12 +127,12 @@ void *luaM_growaux (lua_State *L, void *block, unsigned long nelems,
 /*
 ** generic allocation routine.
 */
-void *luaM_realloc (lua_State *L, void *block, unsigned long size) {
+void *luaM_realloc (lua_State *L, void *block, lint32 size) {
   if (size == 0) {
     free(block);  /* block may be NULL; that is OK for free */
     return NULL;
   }
-  else if ((size_t)size != size)
+  else if (size >= MAX_SIZET)
     lua_error(L, "memory allocation error: block too big");
   block = realloc(block, size);
   if (block == NULL)

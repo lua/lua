@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.62 2000/04/24 21:05:11 roberto Exp roberto $
+** $Id: liolib.c,v 1.63 2000/05/09 14:50:16 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -322,19 +322,23 @@ static void read_word (lua_State *L, FILE *f) {
 static int read_line (lua_State *L, FILE *f) {
   int n;
   char *b;
-  do {
+  for (;;) {
     b = luaL_openspace(L, HUNK_LINE);
     if (!fgets(b, HUNK_LINE, f)) return 0;  /* read fails */
     n = strlen(b);
-    luaL_addsize(L, n); 
-  } while (b[n-1] != '\n');
-  luaL_addsize(L, -1);  /* remove '\n' */
+    if (b[n-1] != '\n')
+      luaL_addsize(L, n); 
+    else {
+      luaL_addsize(L, n-1);  /* do not add the `\n' */
+      break;
+    }
+  }
   return 1;
 }
 
 
 static void read_file (lua_State *L, FILE *f) {
-  int n;
+  size_t n;
   do {
     char *b = luaL_openspace(L, HUNK_FILE);
     n = fread(b, sizeof(char), HUNK_FILE, f);
@@ -343,9 +347,9 @@ static void read_file (lua_State *L, FILE *f) {
 }
 
 
-static int read_chars (lua_State *L, FILE *f, int n) {
+static int read_chars (lua_State *L, FILE *f, size_t n) {
   char *b = luaL_openspace(L, n);
-  int n1 = fread(b, sizeof(char), n, f);
+  size_t n1 = fread(b, sizeof(char), n, f);
   luaL_addsize(L, n1);
   return (n == n1);
 }
@@ -357,11 +361,11 @@ static void io_read (lua_State *L) {
   FILE *f = getfileparam(L, ctrl, &arg, INFILE);
   lua_Object op = lua_getparam(L, arg);
   do {  /* repeat for each part */
-    long l;
+    size_t l;
     int success;
     luaL_resetbuffer(L);
     if (lua_isnumber(L, op))
-      success = read_chars(L, f, (int)lua_getnumber(L, op));
+      success = read_chars(L, f, (size_t)lua_getnumber(L, op));
     else {
       const char *p = luaL_opt_string(L, arg, "*l");
       if (p[0] != '*')
@@ -409,9 +413,9 @@ static void io_write (lua_State *L) {
       status = status && fprintf(f, "%.16g", lua_getnumber(L, o)) > 0;
     }
     else {
-      long l;
+      size_t l;
       const char *s = luaL_check_lstr(L, arg, &l);
-      status = status && ((long)fwrite(s, sizeof(char), l, f) == l);
+      status = status && (fwrite(s, sizeof(char), l, f) == l);
     }
     arg++;
   }

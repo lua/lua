@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.74 2000/05/08 19:32:53 roberto Exp roberto $
+** $Id: ldo.c,v 1.75 2000/05/09 14:50:16 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -311,7 +311,9 @@ static int do_main (lua_State *L, ZIO *z, int bin) {
   int status;
   int debug = L->debug;  /* save debug status */
   do {
-    long old_blocks = (luaC_checkGC(L), L->nblocks);
+    unsigned long old_blocks;
+    luaC_checkGC(L);
+    old_blocks = L->nblocks;
     status = protectedparser(L, z, bin);
     if (status == 1) return 1;  /* error */
     else if (status == 2) return 0;  /* `natural' end */
@@ -358,7 +360,8 @@ int lua_dostring (lua_State *L, const char *str) {
 }
 
 
-int lua_dobuffer (lua_State *L, const char *buff, int size, const char *name) {
+int lua_dobuffer (lua_State *L, const char *buff, size_t size,
+                  const char *name) {
   ZIO z;
   if (!name) name = "?";
   luaZ_mopen(&z, buff, size, name);

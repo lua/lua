@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.32 2000/05/08 19:32:53 roberto Exp roberto $
+** $Id: lstate.h,v 1.33 2000/05/10 16:33:20 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -42,7 +42,7 @@ struct C_Lua_Stack {
 
 typedef struct stringtable {
   int size;
-  long nuse;  /* number of elements */
+  lint32 nuse;  /* number of elements */
   TString **hash;
 } stringtable;
 
@@ -57,9 +57,9 @@ struct lua_State {
   struct C_Lua_Stack Cstack;  /* C2lua struct */
   struct lua_longjmp *errorJmp;  /* current error recover point */
   char *Mbuffer;  /* global buffer */
-  int Mbuffbase;  /* current first position of Mbuffer */
-  int Mbuffsize;  /* size of Mbuffer */
-  int Mbuffnext;  /* next position to fill in Mbuffer */
+  size_t Mbuffbase;  /* current first position of Mbuffer */
+  size_t Mbuffsize;  /* size of Mbuffer */
+  size_t Mbuffnext;  /* next position to fill in Mbuffer */
   struct C_Lua_Stack *Cblocks;
   int numCblocks;  /* number of nested Cblocks */
   /* global state */

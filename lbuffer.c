@@ -1,5 +1,5 @@
 /*
-** $Id: lbuffer.c,v 1.11 1999/11/22 13:12:07 roberto Exp roberto $
+** $Id: lbuffer.c,v 1.12 2000/03/03 14:58:26 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -25,16 +25,17 @@
 #define EXTRABUFF	32
 
 
-#define openspace(L, size)  if (L->Mbuffnext+(size) > L->Mbuffsize) \
+#define openspace(L, size)  if ((size_t)(size) > L->Mbuffsize-L->Mbuffnext) \
                               Openspace(L, size)
 
-static void Openspace (lua_State *L, int size) {
-  L->Mbuffsize = (L->Mbuffnext+size+EXTRABUFF)*2;
-  luaM_reallocvector(L, L->Mbuffer, L->Mbuffsize, char);
+static void Openspace (lua_State *L, size_t size) {
+  lint32 newsize = ((lint32)L->Mbuffnext+size+EXTRABUFF)*2;
+  luaM_reallocvector(L, L->Mbuffer, newsize, char);
+  L->Mbuffsize = newsize;
 }
 
 
-char *luaL_openspace (lua_State *L, int size) {
+char *luaL_openspace (lua_State *L, size_t size) {
   openspace(L, size);
   return L->Mbuffer+L->Mbuffnext;
 }
@@ -51,23 +52,23 @@ void luaL_resetbuffer (lua_State *L) {
 }
 
 
-void luaL_addsize (lua_State *L, int n) {
+void luaL_addsize (lua_State *L, size_t n) {
   L->Mbuffnext += n;
 }
 
-int luaL_getsize (lua_State *L) {
+size_t luaL_getsize (lua_State *L) {
   return L->Mbuffnext-L->Mbuffbase;
 }
 
-int luaL_newbuffer (lua_State *L, int size) {
-  int old = L->Mbuffbase;
+size_t luaL_newbuffer (lua_State *L, size_t size) {
+  size_t old = L->Mbuffbase;
   openspace(L, size);
   L->Mbuffbase = L->Mbuffnext;
   return old;
 }
 
 
-void luaL_oldbuffer (lua_State *L, int old) {
+void luaL_oldbuffer (lua_State *L, size_t old) {
   L->Mbuffnext = L->Mbuffbase;
   L->Mbuffbase = old;
 }

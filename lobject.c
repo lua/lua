@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.37 2000/04/25 16:55:09 roberto Exp roberto $
+** $Id: lobject.c,v 1.38 2000/04/26 13:43:10 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -25,8 +25,8 @@ const TObject luaO_nilobject = {TAG_NIL, {NULL}};
 /*
 ** returns smaller power of 2 larger than `n' (minimum is MINPOWER2) 
 */
-unsigned long luaO_power2 (unsigned long n) {
-  unsigned long p = MINPOWER2;
+lint32 luaO_power2 (lint32 n) {
+  lint32 p = MINPOWER2;
   while (p<=n) p<<=1;
   return p;
 }

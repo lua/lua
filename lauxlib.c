@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.26 2000/02/08 16:34:31 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.27 2000/03/30 17:19:48 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -51,18 +51,20 @@ static void type_error (lua_State *L, int narg, const char *type_name,
 }
 
 
-static const char *checkstr (lua_State *L, lua_Object o, int narg, long *len) {
+static const char *checkstr (lua_State *L, lua_Object o, int narg,
+                             size_t *len) {
   const char *s = lua_getstring(L, o);
   if (!s) type_error(L, narg, "string", o);
   if (len) *len = lua_strlen(L, o);
   return s;
 }
 
-const char *luaL_check_lstr (lua_State *L, int narg, long *len) {
+const char *luaL_check_lstr (lua_State *L, int narg, size_t *len) {
   return checkstr(L, lua_getparam(L, narg), narg, len);
 }
 
-const char *luaL_opt_lstr (lua_State *L, int narg, const char *def, long *len) {
+const char *luaL_opt_lstr (lua_State *L, int narg, const char *def,
+                           size_t *len) {
   lua_Object o = lua_getparam(L, narg);
   if (o == LUA_NOOBJECT) {
     if (len) *len = def ? strlen(def) : 0;

@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.108 2000/05/08 19:32:53 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.109 2000/05/09 14:50:16 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -273,7 +273,7 @@ static void passresults (lua_State *L) {
 }
 
 void luaB_dostring (lua_State *L) {
-  long l;
+  size_t l;
   const char *s = luaL_check_lstr(L, 1, &l);
   if (*s == ID_CHUNK)
     lua_error(L, "`dostring' cannot run pre-compiled code");
@@ -633,7 +633,6 @@ static const struct luaL_reg builtin_funcs[] = {
 
 void luaB_predefine (lua_State *L) {
   /* pre-register mem error messages, to avoid loop when error arises */
-  luaS_newfixed(L, tableEM);
   luaS_newfixed(L, memEM);
   luaL_openl(L, builtin_funcs);
 #ifdef DEBUG

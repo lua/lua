@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.41 2000/05/08 19:32:53 roberto Exp roberto $
+** $Id: ltable.c,v 1.42 2000/05/11 18:57:19 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -122,10 +122,12 @@ int luaH_pos (lua_State *L, const Hash *t, const TObject *key) {
 }
 
 
-static void setnodevector (lua_State *L, Hash *t, int size) {
+static void setnodevector (lua_State *L, Hash *t, lint32 size) {
   int i;
+  if (size > MAX_INT)
+    lua_error(L, "table overflow");
   t->node = luaM_newvector(L, size, Node);
-  for (i=0; i<size; i++) {
+  for (i=0; i<(int)size; i++) {
     ttype(&t->node[i].key) = ttype(&t->node[i].val) = TAG_NIL;
     t->node[i].next = NULL;
   }
@@ -153,7 +155,7 @@ void luaH_free (lua_State *L, Hash *t) {
 }
 
 
-static int newsize (const Hash *t) {
+static int numuse (const Hash *t) {
   Node *v = t->node;
   int size = t->size;
   int realuse = 0;
@@ -162,16 +164,24 @@ static int newsize (const Hash *t) {
     if (ttype(&v[i].val) != TAG_NIL)
       realuse++;
   }
-  return luaO_power2(realuse+realuse/4+1);
+  return realuse;
 }
 
 
 static void rehash (lua_State *L, Hash *t) {
   int oldsize = t->size;
   Node *nold = t->node;
+  int newsize = numuse(t);
   int i;
+  LUA_ASSERT(L, newsize<=oldsize, "wrong count");
+  if (newsize >= oldsize-oldsize/4)  /* using more than 3/4? */
+    setnodevector(L, t, (lint32)oldsize*2);
+  else if (newsize <= oldsize/4 &&  /* less than 1/4? */
+           oldsize > MINPOWER2)
+    setnodevector(L, t, oldsize/2);
+  else
+    setnodevector(L, t, oldsize);
   L->nblocks -= gcsize(L, oldsize);
-  setnodevector(L, t, newsize(t));  /* create new array of nodes */
   for (i=0; i<oldsize; i++) {
     Node *old = nold+i;
     if (ttype(&old->val) != TAG_NIL)
@@ -249,3 +259,4 @@ void luaH_setint (lua_State *L, Hash *t, int key, const TObject *val) {
 const TObject *luaH_getglobal (lua_State *L, const char *name) {
   return luaH_getstr(L->gt, luaS_new(L, name));
 }
+

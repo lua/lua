@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.79 2000/05/08 19:32:53 roberto Exp roberto $
+** $Id: lapi.c,v 1.80 2000/05/08 20:49:05 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -250,7 +250,7 @@ const char *lua_getstring (lua_State *L, lua_Object obj) {
   else return (svalue(obj));
 }
 
-long lua_strlen (lua_State *L, lua_Object obj) {
+size_t lua_strlen (lua_State *L, lua_Object obj) {
   if (obj == LUA_NOOBJECT || tostring(L, obj))
     return 0L;
   else return (tsvalue(obj)->u.s.len);
@@ -281,7 +281,7 @@ void lua_pushnumber (lua_State *L, double n) {
   incr_top;
 }
 
-void lua_pushlstring (lua_State *L, const char *s, long len) {
+void lua_pushlstring (lua_State *L, const char *s, size_t len) {
   tsvalue(L->top) = luaS_newlstr(L, s, len);
   ttype(L->top) = TAG_STRING;
   incr_top;

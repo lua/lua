@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.63 2000/05/08 19:37:10 roberto Exp roberto $
+** $Id: lobject.h,v 1.64 2000/05/10 16:33:20 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -92,7 +92,7 @@ typedef struct TString {
   union {
     struct {  /* for strings */
       unsigned long hash;
-      long len;
+      size_t len;
       int constindex;  /* hint to reuse constants */
     } s;
     struct {  /* for userdata */
@@ -170,10 +170,9 @@ extern const TObject luaO_nilobject;
 
 #define luaO_typename(o)        luaO_typenames[ttype(o)]
 
-unsigned long luaO_power2 (unsigned long n);
+lint32 luaO_power2 (lint32 n);
 
 int luaO_equalObj (const TObject *t1, const TObject *t2);
-int luaO_redimension (lua_State *L, int oldsize);
 int luaO_str2d (const char *s, Number *result);
 
 

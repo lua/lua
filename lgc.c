@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.49 2000/05/10 16:33:20 roberto Exp roberto $
+** $Id: lgc.c,v 1.50 2000/05/11 18:57:19 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -193,7 +193,7 @@ static void collectstringtab (lua_State *L, int limit, stringtable *tb) {
       }
     }
   }
-  if (tb->nuse < (tb->size/4) && tb->size > 10)
+  if (tb->nuse < (lint32)(tb->size/4) && tb->size > 10)
     luaS_resize(L, tb, tb->size/2);  /* table is too big */
 }
 

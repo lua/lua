@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.37 2000/05/12 19:19:18 roberto Exp roberto $
+% $Id: manual.tex,v 1.38 2000/05/12 19:49:18 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -122,7 +122,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{{\small \tt\$Date: 2000/05/12 19:19:18 $ $}}
+\date{{\small \tt\$Date: 2000/05/12 19:49:18 $ $}}
 
 \maketitle
 
@@ -1695,7 +1695,7 @@ you can use the following conversion functions:
 \begin{verbatim}
 double         lua_getnumber    (lua_Object object);
 const char    *lua_getstring    (lua_Object object);
-long           lua_strlen       (lua_Object object);
+size_t         lua_strlen       (lua_Object object);
 lua_CFunction  lua_getcfunction (lua_Object object);
 void          *lua_getuserdata  (lua_Object object);
 \end{verbatim}
@@ -1765,7 +1765,7 @@ is done with the following functions:
 \Deffunc{lua_pushuserdata}\label{pushing}
 \begin{verbatim}
 void lua_pushnumber    (double n);
-void lua_pushlstring   (const char *s, long len);
+void lua_pushlstring   (const char *s, size_t len);
 void lua_pushstring    (const char *s);
 void lua_pushusertag   (void *u, int tag);
 void lua_pushnil       (void);
@@ -1864,7 +1864,7 @@ using the following functions:%
 \begin{verbatim}
 int lua_dofile   (const char *filename);
 int lua_dostring (const char *string);
-int lua_dobuffer (const char *buff, int size, const char *name);
+int lua_dobuffer (const char *buff, size_t size, const char *name);
 \end{verbatim}
 All these functions return an error code:
 0, in case of success; non zero, in case of errors.

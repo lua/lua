@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.87 2000/05/15 19:48:04 roberto Exp roberto $
+** $Id: lparser.c,v 1.88 2000/05/22 18:44:46 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -79,19 +79,10 @@ static void check (LexState *ls, int c) {
 }
 
 
-static void checklimit (LexState *ls, int val, int limit, const char *msg) {
-  if (val > limit) {
-    char buff[100];
-    sprintf(buff, "too many %.50s (limit=%d)", msg, limit);
-    luaK_error(ls, buff);
-  }
-}
-
-
 static void setline (LexState *ls) {
   FuncState *fs = ls->fs;
   if (ls->L->debug && ls->linenumber != fs->lastsetline) {
-    checklimit(ls, ls->linenumber, MAXARG_U, "lines in a chunk");
+    luaX_checklimit(ls, ls->linenumber, MAXARG_U, "lines in a chunk");
     luaK_code1(fs, OP_SETLINE, ls->linenumber);
     fs->lastsetline = ls->linenumber;
   }
@@ -142,7 +133,7 @@ static int string_constant (FuncState *fs, TString *s) {
   int c = s->u.s.constindex;
   if (c >= f->nkstr || f->kstr[c] != s) {
     luaM_growvector(fs->L, f->kstr, f->nkstr, 1, TString *,
-                    constantEM, MAXARG_U);
+                    "constant table overflow", MAXARG_U);
     c = f->nkstr++;
     f->kstr[c] = s;
     s->u.s.constindex = c;  /* hint for next time */
@@ -200,7 +191,7 @@ static void luaI_unregisterlocalvar (LexState *ls, int line) {
 
 static void store_localvar (LexState *ls, TString *name, int n) {
   FuncState *fs = ls->fs;
-  checklimit(ls, fs->nlocalvar+n+1, MAXLOCALS, "local variables");
+  luaX_checklimit(ls, fs->nlocalvar+n+1, MAXLOCALS, "local variables");
   fs->localvar[fs->nlocalvar+n] = name;
 }
 
@@ -266,7 +257,7 @@ static int indexupvalue (LexState *ls, TString *n) {
   }
   /* new one */
   ++(fs->nupvalues);
-  checklimit(ls, fs->nupvalues, MAXUPVALUES, "upvalues");
+  luaX_checklimit(ls, fs->nupvalues, MAXUPVALUES, "upvalues");
   fs->upvalues[i] = v;  /* i = fs->nupvalues - 1 */
   return i;
 }
@@ -306,7 +297,7 @@ static void adjust_mult_assign (LexState *ls, int nvars, int nexps) {
 static void code_args (LexState *ls, int nparams, int dots) {
   FuncState *fs = ls->fs;
   adjustlocalvars(ls, nparams);
-  checklimit(ls, fs->nlocalvar, MAXPARAMS, "parameters");
+  luaX_checklimit(ls, fs->nlocalvar, MAXPARAMS, "parameters");
   nparams = fs->nlocalvar;  /* `self' could be there already */
   fs->f->numparams = nparams;
   fs->f->is_vararg = dots;
@@ -369,7 +360,7 @@ static void func_onstack (LexState *ls, FuncState *func) {
   for (i=0; i<func->nupvalues; i++)
     luaK_tostack(ls, &func->upvalues[i], 1);
   luaM_growvector(ls->L, f->kproto, f->nkproto, 1, Proto *,
-                  constantEM, MAXARG_A);
+                  "constant table overflow", MAXARG_A);
   f->kproto[f->nkproto++] = func->f;
   luaK_code2(fs, OP_CLOSURE, f->nkproto-1, func->nupvalues);
 }
@@ -623,8 +614,8 @@ static int listfields (LexState *ls) {
       break;
     exp1(ls);
     n++;
-    checklimit(ls, n, MAXARG_A*LFIELDS_PER_FLUSH,
-               "items in a list initializer");
+    luaX_checklimit(ls, n/LFIELDS_PER_FLUSH, MAXARG_A,
+               "`item groups' in a list initializer");
     if (++mod_n == LFIELDS_PER_FLUSH) {
       luaK_code2(fs, OP_SETLIST, n/LFIELDS_PER_FLUSH - 1, LFIELDS_PER_FLUSH);
       mod_n = 0;
@@ -697,6 +688,7 @@ static void constructor (LexState *ls) {
   }
   check_match(ls, '}', '{', line);
   /* set initial table size */
+  luaX_checklimit(ls, nelems, MAXARG_U, "elements in a table constructor");
   SETARG_U(fs->f->code[pc], nelems);
 }
 
@@ -846,7 +838,7 @@ static void block (LexState *ls) {
 
 static int assignment (LexState *ls, expdesc *v, int nvars) {
   int left = 0;
-  checklimit(ls, nvars, MAXVARSLH, "variables in a multiple assignment");
+  luaX_checklimit(ls, nvars, MAXVARSLH, "variables in a multiple assignment");
   if (ls->token == ',') {  /* assignment -> ',' NAME assignment */
     expdesc nv;
     next(ls);

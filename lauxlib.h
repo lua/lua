@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.16 1999/12/03 11:26:23 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.17 1999/12/29 16:24:03 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -8,6 +8,8 @@
 #ifndef lauxlib_h
 #define lauxlib_h
 
+
+#include <stddef.h>
 
 #include "lua.h"
 
@@ -20,25 +22,27 @@ struct luaL_reg {
 
 void luaL_openlib (lua_State *L, const struct luaL_reg *l, int n);
 void luaL_argerror (lua_State *L, int numarg, const char *extramsg);
-const char *luaL_check_lstr (lua_State *L, int numArg, long *len);
-const char *luaL_opt_lstr (lua_State *L, int numArg, const char *def, long *len);
+const char *luaL_check_lstr (lua_State *L, int numArg, size_t *len);
+const char *luaL_opt_lstr (lua_State *L, int numArg, const char *def,
+                           size_t *len);
 double luaL_check_number (lua_State *L, int numArg);
 double luaL_opt_number (lua_State *L, int numArg, double def);
 lua_Object luaL_functionarg (lua_State *L, int arg);
 lua_Object luaL_tablearg (lua_State *L, int arg);
 lua_Object luaL_nonnullarg (lua_State *L, int numArg);
 void luaL_verror (lua_State *L, const char *fmt, ...);
-char *luaL_openspace (lua_State *L, int size);
-void luaL_resetbuffer (lua_State *L);
-void luaL_addchar (lua_State *L, int c);
-int luaL_getsize (lua_State *L);
-void luaL_addsize (lua_State *L, int n);
-int luaL_newbuffer (lua_State *L, int size);
-void luaL_oldbuffer (lua_State *L, int old);
-char *luaL_buffer (lua_State *L);
 int luaL_findstring (const char *name, const char *const list[]);
 void luaL_chunkid (char *out, const char *source, int len);
 void luaL_filesource (char *out, const char *filename, int len);
+
+char *luaL_openspace (lua_State *L, size_t size);
+void luaL_resetbuffer (lua_State *L);
+void luaL_addchar (lua_State *L, int c);
+size_t luaL_getsize (lua_State *L);
+void luaL_addsize (lua_State *L, size_t n);
+size_t luaL_newbuffer (lua_State *L, size_t size);
+void luaL_oldbuffer (lua_State *L, size_t old);
+char *luaL_buffer (lua_State *L);
 
 
 #ifdef LUA_REENTRANT

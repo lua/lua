@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.51 2000/05/09 14:50:16 roberto Exp roberto $
+** $Id: lua.h,v 1.52 2000/05/10 16:35:18 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -10,6 +10,11 @@
 
 #ifndef lua_h
 #define lua_h
+
+
+/* definition of `size_t' */
+#include <stddef.h>
+
 
 #define LUA_VERSION	"Lua 4.0 (alpha)"
 #define LUA_COPYRIGHT	"Copyright (C) 1994-2000 TeCGraf, PUC-Rio"
@@ -50,8 +55,8 @@ int            lua_dofile (lua_State *L, const char *filename);
                                                         /* Out: returns */
 int            lua_dostring (lua_State *L, const char *str);
                                                         /* Out: returns */
-int            lua_dobuffer (lua_State *L, const char *buff, int size,
-                                         const char *name); /* Out: returns */
+int            lua_dobuffer (lua_State *L, const char *buff, size_t size,
+                             const char *name);         /* Out: returns */
 int            lua_callfunction (lua_State *L, lua_Object f);
 					  /* In: parameters; Out: returns */
 
@@ -79,14 +84,14 @@ int            lua_equal (lua_State *L, lua_Object o1, lua_Object o2);
 
 double         lua_getnumber (lua_State *L, lua_Object obj);
 const char    *lua_getstring (lua_State *L, lua_Object obj);
-long           lua_strlen (lua_State *L, lua_Object obj);
+size_t         lua_strlen (lua_State *L, lua_Object obj);
 lua_CFunction  lua_getcfunction (lua_State *L, lua_Object obj);
 void	      *lua_getuserdata (lua_State *L, lua_Object obj);
 
 
 void 	       lua_pushnil (lua_State *L);
 void           lua_pushnumber (lua_State *L, double n);
-void           lua_pushlstring (lua_State *L, const char *s, long len);
+void           lua_pushlstring (lua_State *L, const char *s, size_t len);
 void           lua_pushstring (lua_State *L, const char *s);
 void           lua_pushcclosure (lua_State *L, lua_CFunction fn, int n);
 void           lua_pushusertag (lua_State *L, void *u, int tag);

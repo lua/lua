@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.30 2000/05/15 19:48:04 roberto Exp roberto $
+** $Id: lcode.c,v 1.31 2000/05/22 18:44:46 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -107,7 +107,8 @@ static int real_constant (FuncState *fs, Number r) {
   while (--c >= lim)
     if (f->knum[c] == r) return c;
   /* not found; create a new entry */
-  luaM_growvector(fs->L, f->knum, f->nknum, 1, Number, constantEM, MAXARG_U);
+  luaM_growvector(fs->L, f->knum, f->nknum, 1, Number,
+                  "constant table overflow", MAXARG_U);
   c = f->nknum++;
   f->knum[c] = r;
   return c;
@@ -567,7 +568,8 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
     case iAB: i = CREATE_AB(o, arg1, arg2); break;
   }
   /* actually create the new instruction */
-  luaM_growvector(fs->L, fs->f->code, fs->pc, 1, Instruction, codeEM, MAX_INT);
+  luaM_growvector(fs->L, fs->f->code, fs->pc, 1, Instruction,
+                  "code size overflow", MAX_INT);
   fs->f->code[fs->pc] = i;
   return fs->pc++;
 }
