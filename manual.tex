@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.27 1997/02/21 15:19:37 roberto Exp roberto $
+% $Id: manual.tex,v 1.29 1997/03/06 21:13:34 roberto Exp $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -35,7 +35,7 @@ Waldemar Celes
 \tecgraf\ --- Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1997/02/21 15:19:37 $}
+\date{\small \verb$Date: 1997/03/06 21:13:34 $}
 
 \maketitle
 
@@ -48,8 +48,6 @@ Lua is an extension programming language designed to be used
 as a configuration language for any program that needs one.
 This document describes version \Version\ of the Lua programming language and
 the API that allows interaction between Lua programs and their host C programs.
-The document also presents some examples of using the main
-features of the system.
 \end{abstract}
 
 \vspace{4ex}
@@ -64,8 +62,6 @@ uma.
 Este documento descreve a vers\~ao \Version\ da linguagem de
 programa\c{c}\~ao Lua e a Interface de Programa\c{c}\~ao (API) que permite
 a intera\c{c}\~ao entre programas Lua e programas C hospedeiros.
-O documento tamb\'em apresenta alguns exemplos de uso das principais
-ca\-racte\-r\'{\i}sticas do sistema.
 \end{quotation}
 
 
@@ -770,8 +766,6 @@ Its first argument is the name of a fallback condition,
 and the second argument is the new function to be called.
 It returns the old handler function for the given fallback.
 
-Section~\ref{exfallback} shows an example of the use of fallbacks.
-
 
 \subsection{Error Handling} \label{error}
 
@@ -811,8 +805,8 @@ the set of C functions available to the host program to communicate
 with the library.
 The API functions can be classified in the following categories:
 \begin{enumerate}
+\item exchanging values between C and Lua;
 \item executing Lua code;
-\item converting values between C and Lua;
 \item manipulating (reading and writing) Lua objects;
 \item calling Lua functions;
 \item C functions to be called by Lua;
@@ -821,25 +815,7 @@ The API functions can be classified in the following categories:
 All API functions and related types and constants
 are declared in the header file \verb'lua.h'.
 
-\subsection{Executing Lua Code}
-A host program can execute Lua chunks written in a file or in a string
-using the following functions:
-\Deffunc{lua_dofile}\Deffunc{lua_dostring}
-\begin{verbatim}
-int lua_dofile   (char *filename);
-int lua_dostring (char *string);
-\end{verbatim}
-Both functions return an error code:
-0, in case of success; non zero, in case of errors.
-More specifically, \verb'lua_dofile' returns 2 if for any reason
-it could not open the file.
-The function \verb'lua_dofile', if called with argument \verb'NULL',
-executes the \verb|stdin| stream.
-Function \verb'lua_dofile' is also able to execute pre-compiled chunks.
-It automatically detects whether the file is text or binary,
-and loads it accordingly (see program \IndexVerb{luac}).
-
-\subsection{Converting Values between C and Lua} \label{valuesCLua}
+\subsection{Exchanging Values between C and Lua} \label{valuesCLua}
 Because Lua has no static type system,
 all values passed between Lua and C have type
 \verb'lua_Object'\Deffunc{lua_Object},
@@ -848,35 +824,13 @@ Values of type \verb'lua_Object' have no meaning outside Lua;
 for instance,
 the comparisson of two \verb"lua_Object's" is undefined.
 
-Because Lua has automatic memory management and garbage collection,
-a \verb'lua_Object' has a limited scope,
-and is only valid inside the {\em block\/} where it was created.
-A C function called from Lua is a block,
-and its parameters are valid only until its end.
-It is good programming practice to convert Lua objects to C values
-as soon as they are available,
-and never to store \verb'lua_Object's in C global variables.
-
-When C code calls Lua repeatedly, as in a loop,
-objects returned by these calls accumulate,
-and may create a memory problem.
-To avoid this,
-nested blocks can be defined with the functions:
-\begin{verbatim}
-void           lua_beginblock           (void);
-void           lua_endblock             (void);
-\end{verbatim}
-After the end of the block,
-all \verb'lua_Object''s created inside it are released.
-The use of explicit nested blocks is encouraged.
-
 To check the type of a \verb'lua_Object',
 the following function is available:
 \Deffunc{lua_type}
 \begin{verbatim}
 int            lua_type                 (lua_Object object);
 \end{verbatim}
-plus the following macros and functions:
+plus the following functions:
 \Deffunc{lua_isnil}\Deffunc{lua_isnumber}\Deffunc{lua_isstring}
 \Deffunc{lua_istable}\Deffunc{lua_iscfunction}\Deffunc{lua_isuserdata}
 \Deffunc{lua_isfunction}
@@ -929,16 +883,53 @@ The type \verb'lua_CFunction' is explained in Section~\ref{LuacallC}.
 This \verb'lua_Object' must have type {\em userdata\/};
 otherwise, the function returns 0 (the \verb|NULL| pointer).
 
-The reverse process, that is, passing a specific C value to Lua,
+Because Lua has automatic memory management and garbage collection,
+a \verb'lua_Object' has a limited scope,
+and is only valid inside the {\em block\/} where it was created.
+A C function called from Lua is a block,
+and its parameters are valid only until its end.
+It is good programming practice to convert Lua objects to C values
+as soon as they are available,
+and never to store \verb'lua_Object's in C global variables.
+
+
+All comunication between Lua and C is done through two
+abstract data types, called \Def{lua2C} and \Def{C2lua}.
+The first one, as the name implies, is used to pass values
+from Lua to C: parameters when Lua calls C and results when C calls Lua.
+The structure C2lua is used in the reverse direction:
+parameters when C calls Lua and results when Lua calls C.
+Notice that the structure lua2C cannot be directly modified by C code,
+while the structure C2lua cannot be ``read'' by C code.
+
+The structure lua2C is an abstract array,
+which can be indexed with the function:
+\Deffunc{lua_lua2C}
+\begin{verbatim}
+lua_Object lua_lua2C (int number);
+\end{verbatim}
+where \verb'number' starts with 1.
+When called with a number larger than the array size,
+this function returns
+\verb'LUA_NOOBJECT'\Deffunc{LUA_NOOBJECT}.
+In this way, it is possible to write C functions that receive
+a variable number of parameters,
+and to call Lua functions that return a variable number of results.
+
+The second structure, C2lua, is a stack.
+Pushing elements into this stack
 is done by using the following functions:
 \Deffunc{lua_pushnumber}\Deffunc{lua_pushstring}
 \Deffunc{lua_pushcfunction}\Deffunc{lua_pushusertag}
-\Deffunc{lua_pushuserdata}
+\Deffunc{lua_pushnil}\Deffunc{lua_pushobject}
+\Deffunc{lua_pushuserdata}\label{pushing}
 \begin{verbatim}
 void           lua_pushnumber           (double n);
 void           lua_pushstring           (char *s);
 void           lua_pushcfunction        (lua_CFunction f);
 void           lua_pushusertag          (void *u, int tag);
+void           lua_pushnil              (void);
+void           lua_pushobject           (lua_Object object);
 \end{verbatim}
 plus the macro:
 \begin{verbatim}
@@ -946,9 +937,7 @@ void           lua_pushuserdata         (void *u);
 \end{verbatim}
 All of them receive a C value,
 convert it to a corresponding \verb'lua_Object',
-and leave the result on the top of the Lua stack,
-where it can be assigned to a Lua variable,
-passed as parameter to a Lua function, etc. \label{pushing}
+and leave the result on the top of C2lua.
 
 User data can have different tags,
 whose semantics are only known to the host program.
@@ -956,14 +945,51 @@ Any positive integer can be used to tag a user datum.
 When a user datum is retrieved,
 the function \verb'lua_type' can be used to get its tag.
 
-To complete the set,
-the value \nil\ or a \verb'lua_Object' can also be pushed onto the stack,
-with:
-\Deffunc{lua_pushnil}\Deffunc{lua_pushobject}
+{\em Please note:} most functions in the Lua API
+use the structures lua2C and C2lua,
+and therefore change their contents.
+Great care must be taken,
+specially when pushing a sequence of objects into C2lua,
+to avoid using those functions.
+The family of functions \verb|lua_get*|, \verb|lua_is*|,
+plus the function \verb|lua_lua2C|,
+are safe to be called without modifying these structures;
+the family \verb|lua_push*| does not modify lua2C.
+All other functions may change lua2C and C2lua,
+unless noticed otherwise.
+
+When C code calls Lua repeatedly, as in a loop,
+objects returned by these calls accumulate,
+and may create a memory problem.
+To avoid this,
+nested blocks can be defined with the functions:
 \begin{verbatim}
-void           lua_pushnil              (void);
-void           lua_pushobject           (lua_Object object);
+void           lua_beginblock           (void);
+void           lua_endblock             (void);
 \end{verbatim}
+After the end of the block,
+all \verb'lua_Object''s created inside it are released.
+The use of explicit nested blocks is strongly encouraged.
+
+\subsection{Executing Lua Code}
+A host program can execute Lua chunks written in a file or in a string
+using the following functions:
+\Deffunc{lua_dofile}\Deffunc{lua_dostring}
+\begin{verbatim}
+int lua_dofile   (char *filename);
+int lua_dostring (char *string);
+\end{verbatim}
+Both functions return an error code:
+0, in case of success; non zero, in case of errors.
+More specifically, \verb'lua_dofile' returns 2 if for any reason
+it could not open the file.
+The function \verb'lua_dofile', if called with argument \verb'NULL',
+executes the \verb|stdin| stream.
+Function \verb'lua_dofile' is also able to execute pre-compiled chunks.
+It automatically detects whether the file is text or binary,
+and loads it accordingly (see program \IndexVerb{luac}).
+These functions also return, in structure lua2C,
+any values eventually returned by the chunks.
 
 
 \subsection{Manipulating Lua Objects}
@@ -976,7 +1002,7 @@ lua_Object     lua_getglobal            (char *varname);
 As in Lua, if the value of the global is \nil,
 then the ``getglobal'' fallback is called.
 
-To store a value previously pushed onto the stack in a global variable,
+To store a value previously pushed onto C2lua in a global variable,
 there is the function:
 \Deffunc{lua_storeglobal}
 \begin{verbatim}
@@ -989,14 +1015,15 @@ The function
 \begin{verbatim}
 lua_Object     lua_getsubscript         (void);
 \end{verbatim}
-expects on the stack a table and an index,
+expects on the stack C2lua a table and an index,
 and returns the contents of the table at that index.
 As in Lua, if the first object is not a table,
 or the index is not present in the table,
 the corresponding fallback is called.
 
 To store a value in an index,
-the program must push the table, the index, and the value onto the stack,
+the program must push the table, the index,
+and the value onto C2lua,
 and then call the function:
 \Deffunc{lua_storesubscript}
 \begin{verbatim}
@@ -1011,10 +1038,8 @@ lua_Object     lua_createtable          (void);
 \end{verbatim}
 creates and returns a new, empty table.
 
-\begin{quotation}
-\noindent
-{\em Please note\/}:
-Most functions from the Lua library receive parameters through Lua's stack.
+As already noted,
+most functions from the Lua library receive parameters through C2lua.
 Because other functions also use this stack,
 it is important that these
 parameters be pushed just before the corresponding call,
@@ -1040,20 +1065,15 @@ A correct solution could be:
   lua_pushobject(index);               /* push index */
   result = lua_getsubscript();
 \end{verbatim}
-The functions {\em lua\_getnumber}, {\em lua\_getstring},
-{\em lua\_getuserdata}, and {\em lua\_getcfunction},
-plus the family \verb|lua_is*|,
-are safe to be called without modifying the stack.
-\end{quotation}
 
 \subsection{Calling Lua Functions}
 Functions defined in Lua by a chunk executed with
 \verb'dofile' or \verb'dostring' can be called from the host program.
 This is done using the following protocol:
-first, the arguments to the function are pushed onto the Lua stack
+first, the arguments to the function are pushed onto C2lua
 \see{pushing}, in direct order, i.e., the first argument is pushed first.
 Again, it is important to emphasize that, during this phase,
-no other Lua function can be called.
+most other Lua functions cannot be called.
 
 Then, the function is called using
 \Deffunc{lua_call}\Deffunc{lua_callfunction}
@@ -1066,15 +1086,22 @@ int            lua_callfunction         (lua_Object function);
 \end{verbatim}
 Both functions return an error code:
 0, in case of success; non zero, in case of errors.
-Finally, the returned values (a Lua function may return many values)
-can be retrieved with the macro
+Finally, the results (a Lua function may return many values)
+are returned in structure lua2C,
+and can be retrieved with the macro \verb|lua_getresult|,
 \Deffunc{lua_getresult}
+which is just another name to the function \verb|lua_lua2C|.
+
+The following example shows how a C program may call the
+\verb|strsub| function in Lua to extract a piece of a string:
 \begin{verbatim}
-lua_Object     lua_getresult             (int number);
+  /* assume that 's' and 'r' are strings (char *), 'i' and 'j' integers */
+  lua_pushstring(s);  /* 1st argument */
+  lua_pushnumber(i);  /* 2nd argument */
+  lua_pushnumber(j);  /* 3rd argument */
+  lua_call("strsub");  /* call Lua function */
+  r = lua_getstring(lua_getresult(1));  /* r = strsub(s, i, j) */
 \end{verbatim}
-where \verb'number' is the order of the result, starting with 1.
-When called with a number larger than the actual number of results,
-this function returns \verb'LUA_NOOBJECT'.
 
 Two special Lua functions have exclusive interfaces:
 \verb'error' and \verb'setfallback'.
@@ -1102,9 +1129,6 @@ which is the old fallback value,
 or \nil\ on failure (invalid fallback name).
 This old value can be used for chaining fallbacks.
 
-An example of C code calling a Lua function is shown in
-Section~\ref{exLuacall}.
-
 
 \subsection{C Functions} \label{LuacallC}
 To register a C function to Lua,
@@ -1129,27 +1153,48 @@ In order to communicate properly with Lua,
 a C function must follow a protocol,
 which defines the way parameters and results are passed.
 
-To access its arguments, a C function calls:
-\Deffunc{lua_getparam}
-\begin{verbatim}
-lua_Object     lua_getparam             (int number);
-\end{verbatim}
-where \verb'number' starts with 1 to get the first argument.
-When called with a number larger than the actual number of arguments,
-this function returns
-\verb'LUA_NOOBJECT'\Deffunc{LUA_NOOBJECT}.
-In this way, it is possible to write functions that work with
-a variable number of parameters.
-The funcion \verb|lua_getparam| can be called in any order,
-and many times for the same index.
-
-To return values, a C function just pushes them onto the stack,
+A C function receives its arguments in structure lua2C;
+to access them, it uses the macro \verb|lua_getparam|, \Deffunc{lua_getparam}
+again just another name to \verb|lua_lua2C|.
+To return values, a C function just pushes them onto the stack C2lua,
 in direct order \see{valuesCLua}.
 Like a Lua function, a C function called by Lua can also return
 many results.
 
-Section~\ref{exCFunction} presents an example of a CFunction.
+As an example,
+the code below shows a CFunction to compute the maximum of
+a variable number of arguments:
+\begin{verbatim}
+void math_max (void)
+{
+  int i=1;   /* argument count */
+  double d, dmax;
+  lua_Object o;
+  /* the function must get at least one argument */
+  if ((o = lua_getparam(i++)) == LUA_NOOBJECT)
+    lua_error("too few arguments to function `max'");
+  /* and this argument must be a number */
+  if (!lua_isnumber(o))
+    lua_error("incorrect argument to function `max'");
+  dmax = lua_getnumber(o);
+  /* loops until there is no more arguments */
+  while ((o = lua_getparam(i++)) != LUA_NOOBJECT) {
+    if (!lua_isnumber(o))
+      lua_error("incorrect argument to function `max'");
+    d = lua_getnumber(o);
+    if (d > dmax) dmax = d;
+  }
+  /* push the result to be returned */
+  lua_pushnumber(dmax);
+}
+\end{verbatim}
+To be available in Lua, this function must be registered:
+\begin{verbatim}
+lua_register ("max", math_max);
+\end{verbatim}
 
+For more examples, see files \verb|strlib.c|,
+\verb|iolib.c| and \verb|mathlib.c| in Lua distribution.
 
 \subsection{References to Lua Objects}
 
@@ -1182,6 +1227,10 @@ and \verb'lua_pushobject' issues an error.
 
 When a reference is no longer needed,
 it can be freed with a call to \verb'lua_unref'.
+
+The function \verb|lua_pushref| does not corrupt the
+structures lua2C and C2lua, and therefore is safe to
+be called when pushing parameters onto C2lua.
 
 
 
@@ -1252,7 +1301,6 @@ The order in which the indices are enumerated is not specified,
 If the table is modified in any way during a traversal,
 the semantics of \verb|next| is undefined.
 
-See Section~\ref{exnext} for an example of the use of this function.
 This function cannot be written with the standard API.
 
 \subsubsection*{\ff{\tt nextvar (name)}}\Deffunc{nextvar}
@@ -1266,7 +1314,6 @@ or \nil\ if there are no more variables.
 There can be no assignments to global variables during the traversal;
 otherwise the semantics of \verb|nextvar| is undefined.
 
-See Section~\ref{exnext} for an example of the use of this function.
 This function cannot be written with the standard API.
 
 \subsubsection*{\ff{\tt tostring (e)}}\Deffunc{tostring}
@@ -1342,9 +1389,6 @@ This library provides generic functions for string manipulation,
 such as finding and extracting substrings and pattern matching.
 When indexing a string, the first character is at position 1,
 not 0, as in C.
-See page~\pageref{pm} for an explanation about patterns,
-and Section~\ref{exstring} for some examples on string manipulation
-in Lua.
 
 \subsubsection*{\ff{\tt strfind (str, pattern [, init [, plain]])}}
 \Deffunc{strfind}
@@ -1385,7 +1429,7 @@ lower case letters changed to upper case.
 All other characters are left unchanged.
 
 \subsubsection*{\ff{\tt strrep (s, n)}}\Deffunc{strrep}
-Returns a string which is the concatenation of \verb-n- copies of 
+Returns a string which is the concatenation of \verb-n- copies of
 the string \verb-s-.
 
 \subsubsection*{\ff{\tt ascii (s [, i])}}\Deffunc{ascii}
@@ -1395,7 +1439,7 @@ If \verb'i' is absent, then it is assumed to be 1.
 \subsubsection*{\ff{\tt format (formatstring, e1, e2, \ldots)}}\Deffunc{format}
 \label{format}
 This function returns a formated version of its variable number of arguments
-following the description given in its first argument (which must be a string). 
+following the description given in its first argument (which must be a string).
 The format string follows the same rules as the \verb'printf' family of
 standard C functions.
 The only differences are that the options/modifiers
@@ -1446,7 +1490,7 @@ If the value returned by this function is a string,
 then it is used as the replacement string;
 otherwise, the replacement string is the empty string.
 
-An optional parameter \verb-n- limits 
+An optional parameter \verb-n- limits
 the maximum number of substitutions to occur.
 For instance, when \verb-n- is 1 only the first occurrence of
 \verb-pat- is replaced.
@@ -1460,7 +1504,7 @@ Therefore, the whole expression:
 \begin{verbatim}
   gsub("home = $HOME, user = $USER", "$(%w%w*)", getenv)
 \end{verbatim}
-may return the string:
+returns a string like:
 \begin{verbatim}
 home = /home/roberto, user = roberto
 \end{verbatim}
@@ -1489,7 +1533,7 @@ The following combinations are allowed in describing a character class:
 \item[{\tt \%\em x}] (where {\em x} is any non alphanumeric character)  ---
 represents the character {\em x}.
 This is the standard way to escape the magic characters \verb'()%.[*?'.
-\item[{\tt [char-set]}] --- 
+\item[{\tt [char-set]}] ---
 Represents the class which is the union of all
 characters in char-set.
 To include a \verb']' in char-set, it must be the first character.
@@ -1530,7 +1574,7 @@ such item matches a sub-string equal to the n-th captured string
 (see below);
 \item
 {\tt \%b$xy$}, where $x$ and $y$ are two distinct characters;
-such item mathes strings that start with $x$, end with $y$, 
+such item mathes strings that start with $x$, end with $y$,
 and where the $x$ and $y$ are {\em balanced}.
 That means that, if one reads the string from left to write,
 counting plus 1 for an $x$ and minus 1 for a $y$,
@@ -1722,7 +1766,7 @@ Notice that the behavior of read patterns is different from
 the regular pattern matching behavior,
 where a \verb'*' expands to the maximum length {\em such that\/}
 the rest of the pattern does not fail.
-With the read pattern behavior 
+With the read pattern behavior
 there is no need for backtracking the reading.
 }
 
@@ -1913,438 +1957,6 @@ A hook is disabled when its value is \verb|NULL|,
 which is the initial value of both hooks.
 
 
-\section{Some Examples}
-
-This section gives examples showing some features of Lua.
-It does not intend to cover the whole language,
-but only to illustrate some interesting uses of the system.
-
-
-\subsection{\Index{Data Structures}}
-Tables are a strong unifying data constructor.
-They directly implement a multitude of data types,
-like ordinary arrays, records, sets, bags, and lists.
-
-Arrays need no explanations.
-In Lua, it is conventional to start indices from 1,
-but this is only a convention.
-Arrays can be indexed by 0, negative numbers, or any other value (except \nil).
-Records are also trivially implemented by the syntactic sugar
-\verb'a.x'.
-
-The best way to implement a set is to store
-its elements as indices of a table.
-The statement \verb's = {}' creates an empty set \verb's'. 
-The statement \verb's[x] = 1' inserts the value of \verb'x' into
-the set \verb's'.
-The expression \verb's[x]' is true if and only if
-\verb'x' belongs to \verb's'.
-Finally, the statement \verb's[x] = nil' removes \verb'x' from \verb's'.
-
-Bags can be implemented similarly to sets,
-but using the value associated to an element as its counter.
-So, to insert an element, 
-the following code is enough:
-\begin{verbatim}
-if s[x] then s[x] = s[x]+1 else s[x] = 1 end
-\end{verbatim}
-and to remove an element:
-\begin{verbatim}
-if s[x] then s[x] = s[x]-1 end
-if s[x] == 0 then s[x] = nil end
-\end{verbatim}
-
-Lisp-like lists also have an easy implementation.
-The ``cons'' of two elements \verb'x' and \verb'y' can be
-created with the code \verb'l = {car=x, cdr=y}'.
-The expression \verb'l.car' extracts the header, 
-while \verb'l.cdr' extracts the tail.
-An alternative way is to create the list directly with \verb'l={x,y}',
-and then to extract the header with \verb'l[1]' and
-the tail with \verb'l[2]'.
-
-\subsection{The Functions {\tt next} and {\tt nextvar}} \label{exnext}
-\Deffunc{next}\Deffunc{nextvar}
-This example shows how to use the function \verb'next' to iterate
-over the fields of a table.
-Function \IndexVerb{clone} receives any table and returns a clone of it.
-\begin{verbatim}
-function clone (t)           -- t is a table
-  local new_t = {}           -- create a new table
-  local i, v = next(t, nil)  -- i is an index of t, v = t[i]
-  while i do
-    new_t[i] = v
-    i, v = next(t, i)        -- get next index
-  end
-  return new_t
-end
-\end{verbatim}
-
-The next example prints the names of all global variables
-in the system with non nil values.
-Notice that the traversal is made with local variables,
-to avoid changing a global variable:
-\begin{verbatim}
-function printGlobalVariables ()
-  local i, v = nextvar(nil)
-  while i do
-    print(i)
-    i, v = nextvar(i)
-  end
-end
-\end{verbatim}
-
-
-\subsection{String Manipulation} \label{exstring}
-
-The first example is a function to trim extra white-spaces at the beginning
-and end of a string.
-\begin{verbatim}
-function trim(s)
-  local _, i = strfind(s, '^ *')
-  local f, __ = strfind(s, ' *$')
-  return strsub(s, i+1, f-1)
-end
-\end{verbatim}
-
-The second example shows a function that eliminates all spaces
-of a string.
-\begin{verbatim}
-function remove_blanks (s)
-  return gsub(s, "%s%s*", "")
-end
-\end{verbatim}
-
-
-\subsection{\Index{Variable number of arguments}}
-Lua does not provide any explicit mechanism to deal with
-variable number of arguments in function calls.
-However, one can use table constructors to simulate this mechanism.
-As an example, suppose a function to concatenate all its arguments.
-It could be written like 
-\begin{verbatim}
-function concat (o)
-  local i = 1
-  local s = ''
-  while o[i] do
-    s = s .. o[i]
-    i = i+1
-  end
-  return s
-end
-\end{verbatim}
-To call it, one uses a table constructor to join all arguments:
-\begin{verbatim}
-  x = concat{"hello ", "john", " and ", "mary"}
-\end{verbatim}
-
-\subsection{\Index{Persistence}}
-Because of its reflexive facilities,
-persistence in Lua can be achieved within the language.
-This section shows some ways to store and retrieve values in Lua,
-using a text file written in the language itself as the storage media.
-
-To store a single value with a name,
-the following code is enough:
-\begin{verbatim}
-function store (name, value)
-  write(format('\n%s =', name))
-  write_value(value)
-end
-\end{verbatim}
-\begin{verbatim}
-function write_value (value)
-  local t = type(value)
-      if t == 'nil'    then write('nil')
-  elseif t == 'number' then write(value)
-  elseif t == 'string' then write(value, 'q')
-  end
-end
-\end{verbatim}
-In order to restore this value, a \verb'lua_dofile' suffices.
-
-Storing tables is a little more complex.
-Assuming that the table is a tree,
-and that all indices are identifiers
-(that is, the tables are being used as records),
-then its value can be written directly with table constructors.
-First, the function \verb'write_value' is changed to
-\begin{verbatim}
-function write_value (value)
-  local t = type(value)
-      if t == 'nil'    then write('nil')
-  elseif t == 'number' then write(value)
-  elseif t == 'string' then write(value, 'q')
-  elseif t == 'table'  then write_record(value)
-  end
-end
-\end{verbatim}
-The function \verb'write_record' is:
-\begin{verbatim}
-function write_record(t)
-  local i, v = next(t, nil)
-  write('{')  -- starts constructor
-  while i do
-    store(i, v)
-    write(', ')
-    i, v = next(t, i)
-  end
-  write('}')  -- closes constructor
-end
-\end{verbatim}
-
-
-\subsection{Inheritance} \label{exfallback}
-The fallback for absent indices can be used to implement many
-kinds of \Index{inheritance} in Lua.
-As an example,
-the following code implements single inheritance:
-\begin{verbatim}
-function Index (t,f)
-  if f == 'parent' then  -- to avoid loop
-    return OldIndex(t,f)
-  end
-  local p = t.parent
-  if type(p) == 'table' then
-    return p[f]
-  else
-    return OldIndex(t,f)
-  end
-end
-
-OldIndex = setfallback("index", Index)
-\end{verbatim}
-Whenever Lua attempts to access an absent field in a table,
-it calls the fallback function \verb'Index'.
-If the table has a field \verb'parent' with a table value,
-then Lua attempts to access the desired field in this parent object.
-This process is repeated ``upwards'' until a value
-for the field is found or the object has no parent.
-In the latter case, the previous fallback is called to supply a value
-for the field.
-
-When better performance is needed,
-the same fallback may be implemented in C,
-as illustrated in Figure~\ref{Cinher}.
-\begin{figure}
-\Line
-\begin{verbatim}
-#include "lua.h"
-
-int lockedParentName;  /* lock index for the string "parent" */
-int lockedOldIndex;    /* previous fallback function */
-
-void callOldFallback (lua_Object table, lua_Object index)
-{
-  lua_Object oldIndex = lua_getref(lockedOldIndex);
-  lua_pushobject(table);
-  lua_pushobject(index);
-  lua_callfunction(oldIndex);
-  if (lua_getresult(1) != LUA_NOOBJECT)
-    lua_pushobject(lua_getresult(1));  /* return result */
-}
-
-void Index (void)
-{
-  lua_Object table = lua_getparam(1);
-  lua_Object index = lua_getparam(2);
-  lua_Object parent;
-  if (lua_isstring(index) && strcmp(lua_getstring(index), "parent") == 0)
-  {
-    callOldFallback(table, index);
-    return;
-  }
-  lua_pushobject(table);
-  lua_pushref(lockedParentName);
-  parent = lua_getsubscript();
-  if (lua_istable(parent))
-  {
-    lua_pushobject(parent);
-    lua_pushobject(index);
-    lua_pushobject(lua_getsubscript()); /* return result from getsubscript */
-  }
-  else
-    callOldFallback(table, index);
-}
-\end{verbatim}
-\caption{Inheritance in C.\label{Cinher}}
-\Line
-\end{figure}
-This code must be registered with:
-\begin{verbatim}
-  lua_pushstring("parent");
-  lockedParentName = lua_ref(1);
-  lua_pushobject(lua_setfallback("index", Index));
-  lockedOldIndex = lua_ref(1);
-\end{verbatim}
-Notice how the string \verb'"parent"' is kept
-locked in Lua for optimal performance.
-
-\subsection{\Index{Programming with Classes}}
-There are many different ways to do object-oriented programming in Lua.
-This section presents one possible way to
-implement classes,
-using the inheritance mechanism presented above.
-{\em Please note: the following examples only work
-with the index fallback redefined according to
-Section~\ref{exfallback}}.
-
-As one could expect, a good way to represent a class is
-with a table.
-This table will contain all instance methods of the class,
-plus optional default values for instance variables.
-An instance of a class has its \verb'parent' field pointing to
-the class,
-and so it ``inherits'' all methods.
-
-For instance, a class \verb'Point' can be described as in
-Figure~\ref{Point}.
-Function \verb'create' helps the creation of new points,
-adding the parent field.
-Function \verb'move' is an example of an instance method.
-\begin{figure}
-\Line
-\begin{verbatim}
-Point = {x = 0, y = 0}
-
-function Point:create (o)
-  o.parent = self
-  return o
-end
-
-function Point:move (p)
-  self.x = self.x + p.x
-  self.y = self.y + p.y
-end
-
-...
-
---
--- creating points
---
-p1 = Point:create{x = 10, y = 20}
-p2 = Point:create{x = 10}  -- y will be inherited until it is set
-
---
--- example of a method invocation
---
-p1:move(p2)
-\end{verbatim}
-\caption{A Class {\tt Point}.\label{Point}}
-\Line
-\end{figure}
-Finally, a subclass can be created as a new table,
-with the \verb'parent' field pointing to its superclass.
-It is interesting to notice how the use of \verb'self' in
-method \verb'create' allows this method to work properly even
-when inherited by a subclass.
-As usual, a subclass may overwrite any inherited method with
-its own version.
-
-\subsection{\Index{Modules}}
-Here we explain one possible way to simulate modules in Lua.
-The main idea is to use a table to store the module functions.
-
-A module should be written as a separate chunk, starting with:
-\begin{verbatim}
-if modulename then return end  -- avoid loading twice the same module
-modulename = {}  -- create a table to represent the module
-\end{verbatim}
-After that, functions can be directly defined with the syntax
-\begin{verbatim}
-function modulename.foo (...)
-  ...
-end
-\end{verbatim}
-
-Any code that needs this module has only to execute
-\verb'dofile("filename")', where \verb'filename' is the file
-where the module is written.
-After this, any function can be called with
-\begin{verbatim}
-modulename.foo(...)
-\end{verbatim}
-
-If a module function is going to be used many times,
-the program can give a local name to it.
-Because functions are values, it is enough to write
-\begin{verbatim}
-localname = modulename.foo
-\end{verbatim}
-Finally, a module may be {\em opened},
-giving direct access to all its functions,
-as shown in the code in Figure~\ref{openmod}.
-\begin{figure}
-\Line
-\begin{verbatim}
-function open (mod)
-  local n, f = next(mod, nil)
-  while n do
-    setglobal(n, f)
-    n, f = next(mod, n)
-  end
-end
-\end{verbatim}
-\caption{Opening a module.\label{openmod}}
-\Line
-\end{figure}
-
-\subsection{A CFunction} \label{exCFunction}\index{functions in C}
-A CFunction to compute the maximum of a variable number of arguments
-is shown in Figure~\ref{Cmax}.
-\begin{figure}
-\Line
-\begin{verbatim}
-void math_max (void)
-{
- int i=1;   /* number of arguments */
- double d, dmax;
- lua_Object o;
- /* the function must get at least one argument */
- if ((o = lua_getparam(i++)) == LUA_NOOBJECT)
-   lua_error ("too few arguments to function `max'");
- /* and this argument must be a number */
- if (!lua_isnumber(o))
-   lua_error ("incorrect argument to function `max'");
- dmax = lua_getnumber (o);
- /* loops until there is no more arguments */
- while ((o = lua_getparam(i++)) != LUA_NOOBJECT)
- {
-  if (!lua_isnumber(o))
-    lua_error ("incorrect argument to function `max'");
-  d = lua_getnumber (o);
-  if (d > dmax) dmax = d;
- }
- /* push the result to be returned */
- lua_pushnumber (dmax);
-}
-\end{verbatim}
-\caption{C function {\tt math\_max}.\label{Cmax}}
-\Line
-\end{figure}
-After registered with
-\begin{verbatim}
-lua_register ("max", math_max);
-\end{verbatim}
-this function is available in Lua, as follows:
-\begin{verbatim}
-i = max(4, 5, 10, -34)  -- i receives 10
-\end{verbatim}
-
-
-\subsection{Calling Lua Functions} \label{exLuacall}
-
-This example illustrates how a C function can call the Lua function
-\verb'remove_blanks' presented in Section~\ref{exstring}.
-\begin{verbatim}
-void remove_blanks (char *s)
-{
-  lua_pushstring(s);  /* prepare parameter */
-  lua_call("remove_blanks");  /* call Lua function */
-  strcpy(s, lua_getstring(lua_getresult(1)));  /* copy result back to 's' */
-}
-\end{verbatim}
-
 
 \section{\Index{Lua Stand-alone}} \label{lua-sa}
 
@@ -2484,7 +2096,7 @@ The function \verb'lua_pop' is no longer available,
 since it could lead to strange behavior.
 In particular,
 to access results returned from a Lua function,
-the new macro \verb'lua_getresult' should be used.
+the new macro \verb|lua_getresult| should be used.
 \item
 The old functions \verb'lua_storefield' and \verb'lua_storeindexed'
 have been replaced by
