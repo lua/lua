@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.40 1995/10/04 14:20:26 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.41 1995/10/09 13:10:20 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -91,13 +91,11 @@ static void growstack (void)
  else
  {
   Long maxstack = stackLimit - stack;
-  if (maxstack >= MAX_INT)
-    lua_error("stack size overflow");
   maxstack *= 2;
-  if (maxstack >= MAX_INT)
-    maxstack = MAX_INT;
   stack = growvector(stack, maxstack, Object);
   stackLimit = stack+maxstack;
+  if (maxstack >= MAX_WORD/2)
+    lua_error("stack size overflow");
  }
  top = stack + t;
 }
