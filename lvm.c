@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.228 2002/05/02 13:06:20 roberto Exp roberto $
+** $Id: lvm.c,v 1.229 2002/05/06 15:51:41 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -449,16 +449,21 @@ StkId luaV_execute (lua_State *L) {
       }
       case OP_EQ: {  /* skip next instruction if test fails */
         if (luaO_equalObj(ra, RKC(i)) != GETARG_B(i)) pc++;
+        else dojump(pc, GETARG_sBx(*pc) + 1);
         break;
       }
       case OP_CMP: {
         if (!(luaV_cmp(L, ra, RKC(i), GETARG_B(i)))) pc++;
+        else dojump(pc, GETARG_sBx(*pc) + 1);
         break;
       }
       case OP_TEST: {
         StkId rc = RKC(i);
         if (l_isfalse(rc) == GETARG_B(i)) pc++;
-        else setobj(ra, rc);
+        else {
+          setobj(ra, rc);
+          dojump(pc, GETARG_sBx(*pc) + 1);
+        }
         break;
       }
       case OP_CALL: {
@@ -519,7 +524,6 @@ StkId luaV_execute (lua_State *L) {
       }
       case OP_FORLOOP: {
         lua_Number step, index, limit;
-        int j = GETARG_sBx(i);
         const TObject *plimit = ra+1;
         const TObject *pstep = ra+2;
         if (ttype(ra) != LUA_TNUMBER)
@@ -532,7 +536,7 @@ StkId luaV_execute (lua_State *L) {
         index = nvalue(ra) + step;  /* increment index */
         limit = nvalue(plimit);
         if (step > 0 ? index <= limit : index >= limit) {
-          dojump(pc, j);  /* jump back */
+          dojump(pc, GETARG_sBx(i));  /* jump back */
           chgnvalue(ra, index);  /* update index */
         }
         break;

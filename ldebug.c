@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.111 2002/05/02 13:06:20 roberto Exp roberto $
+** $Id: ldebug.c,v 1.112 2002/05/07 17:36:56 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -270,8 +270,7 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
   int pc;
   int last;  /* stores position of last instruction that changed `reg' */
   last = pt->sizecode-1;  /* points to final return (a `neutral' instruction) */
-  if (reg == NO_REG)  /* full check? */
-    check(precheck(pt));
+  check(precheck(pt));
   for (pc = 0; pc < lastpc; pc++) {
     const Instruction i = pt->code[pc];
     OpCode op = GET_OPCODE(i);
@@ -303,8 +302,10 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
     if (testOpMode(op, OpModesetA)) {
       if (a == reg) last = pc;  /* change register `a' */
     }
-    if (testOpMode(op, OpModeT))
+    if (testOpMode(op, OpModeT)) {
       check(pc+2 < pt->sizecode);  /* check skip */
+      check(GET_OPCODE(pt->code[pc+1]) == OP_JMP);
+    }
     switch (op) {
       case OP_LOADBOOL: {
         check(c == 0 || pc+2 < pt->sizecode);  /* check its jump */

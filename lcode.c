@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.98 2002/05/06 15:51:41 roberto Exp roberto $
+** $Id: lcode.c,v 1.99 2002/05/07 17:36:56 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -338,22 +338,19 @@ static void discharge2anyreg (FuncState *fs, expdesc *e) {
 
 static void luaK_exp2reg (FuncState *fs, expdesc *e, int reg) {
   discharge2reg(fs, e, reg);
-  if (e->k == VJMP || hasjumps(e)) {
+  if (e->k == VJMP)
+    luaK_concat(fs, &e->t, e->info);  /* put this jump in `t' list */
+  if (hasjumps(e)) {
     int final;  /* position after whole expression */
-    int p_f = NO_JUMP;  /* position of an eventual PUSH false */
-    int p_t = NO_JUMP;  /* position of an eventual PUSH true */
-    if (e->k == VJMP || need_value(fs, e->t, 1)
-                     || need_value(fs, e->f, 0)) {
+    int p_f = NO_JUMP;  /* position of an eventual LOAD false */
+    int p_t = NO_JUMP;  /* position of an eventual LOAD true */
+    if (need_value(fs, e->t, 1) || need_value(fs, e->f, 0)) {
       if (e->k != VJMP) {
-        luaK_getlabel(fs);  /* these instruction may be jump target */
+        luaK_getlabel(fs);  /* this instruction may be a jump target */
         luaK_codeAsBx(fs, OP_JMP, 0, 2);  /* to jump over both pushes */
       }
-      else {  /* last expression is a conditional (test + jump) */
-        fs->pc--;  /* remove its jump */
-        lua_assert(testOpMode(GET_OPCODE(fs->f->code[fs->pc - 1]), OpModeT));
-      }
-      p_t = code_label(fs, reg, 1, 1);
-      p_f = code_label(fs, reg, 0, 0);
+      p_f = code_label(fs, reg, 0, 1);
+      p_t = code_label(fs, reg, 1, 0);
     }
     final = luaK_getlabel(fs);
     luaK_patchlistaux(fs, e->f, p_f, NO_REG, final, reg, p_f);
