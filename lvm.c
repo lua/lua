@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.245 2002/07/08 18:21:33 roberto Exp roberto $
+** $Id: lvm.c,v 1.246 2002/07/08 20:22:08 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -80,16 +80,16 @@ static void traceexec (lua_State *L) {
   if (mask & LUA_MASKLINE) {
     CallInfo *ci = L->ci;
     Proto *p = ci_func(ci)->l.p;
-    int newline = getline(p, pcRel(*ci->pc, p));
-    if (pcRel(*ci->pc, p) == 0)  /* tracing may be starting now? */
-      ci->savedpc = *ci->pc;  /* initialize `savedpc' */
+    int newline = getline(p, pcRel(*ci->u.l.pc, p));
+    if (pcRel(*ci->u.l.pc, p) == 0)  /* tracing may be starting now? */
+      ci->savedpc = *ci->u.l.pc;  /* initialize `savedpc' */
     /* calls linehook when enters a new line or jumps back (loop) */
-    if (*ci->pc <= ci->savedpc ||
+    if (*ci->u.l.pc <= ci->savedpc ||
         newline != getline(p, pcRel(ci->savedpc, p))) {
       luaD_callhook(L, LUA_HOOKLINE, newline);
       ci = L->ci;  /* previous call may reallocate `ci' */
     }
-    ci->savedpc = *ci->pc;
+    ci->savedpc = *ci->u.l.pc;
   }
 }
 
@@ -370,9 +370,11 @@ StkId luaV_execute (lua_State *L) {
   TObject *k;
   const Instruction *pc;
  callentry:  /* entry point when calling new functions */
-  L->ci->pc = &pc;
-  L->ci->pb = &base;
+  L->ci->u.l.pc = &pc;
+  L->ci->u.l.pb = &base;
   pc = L->ci->savedpc;
+  if (L->hookmask & LUA_MASKCALL)
+    luaD_callhook(L, LUA_HOOKCALL, -1);
  retentry:  /* entry point when returning to old functions */
   base = L->ci->base;
   cl = &clvalue(base - 1)->l;
@@ -619,12 +621,13 @@ StkId luaV_execute (lua_State *L) {
         if (L->openupval) luaF_close(L, base);
         b = GETARG_B(i);
         if (b != 0) L->top = ra+b-1;
-        lua_assert(L->ci->pc == &pc);
+        lua_assert(L->ci->u.l.pc == &pc);
       }
       ret: {
         CallInfo *ci;
         ci = L->ci - 1;
-        if (ci->pc != &pc)  /* previous function was running `here'? */
+        /* previous function was running `here'? */
+        if (!isLua(ci) || ci->u.l.pc != &pc)
           return ra;  /* no: return */
         else {  /* yes: continue its execution */
           int nresults;

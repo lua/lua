@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.186 2002/07/08 18:21:33 roberto Exp roberto $
+** $Id: ldo.c,v 1.187 2002/07/09 18:19:19 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -60,10 +60,10 @@ static void correctstack (lua_State *L, TObject *oldstack) {
   for (ci = L->base_ci; ci <= L->ci; ci++) {
     ci->base = (ci->base - oldstack) + L->stack;
     ci->top = (ci->top - oldstack) + L->stack;
-    if (ci->pc) {  /* entry is of an active Lua function? */
-      if (ci->pc != (ci-1)->pc)
-        *ci->pb = (*ci->pb - oldstack) + L->stack;
-    }
+    if (isLua(ci) &&  /* is a Lua function... */
+        !(isLua(ci-1) &&  /* and next is not a Lua function... */
+         ci->u.l.pc == (ci-1)->u.l.pc))  /* sharing the same C frame? */
+      *ci->u.l.pb = (*ci->u.l.pb - oldstack) + L->stack;  /* correct frame */
   }
 }
 
@@ -134,10 +134,6 @@ void luaD_callhook (lua_State *L, lua_Hookevent event, int line) {
     ar.event = event;
     ar.currentline = line;
     ar.i_ci = L->ci - L->base_ci;
-    if (event <= LUA_HOOKRET) {  /* `call' or `return' event? */
-      L->ci->pc = NULL;  /* function is not active */
-      L->ci->top = L->ci->base;  /* `top' may not have a valid value yet */ 
-    }
     luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
     L->ci->top = L->top + LUA_MINSTACK;
     setallowhook(L, 0);  /* cannot call hooks inside a hook */
@@ -152,11 +148,11 @@ void luaD_callhook (lua_State *L, lua_Hookevent event, int line) {
 }
 
 
-static void adjust_varargs (lua_State *L, int nfixargs) {
+static void adjust_varargs (lua_State *L, int nfixargs, StkId base) {
   int i;
   Table *htab;
   TObject nname;
-  int actual = L->top - L->ci->base;  /* actual number of arguments */
+  int actual = L->top - base;  /* actual number of arguments */
   if (actual < nfixargs) {
     luaD_checkstack(L, nfixargs - actual);
     for (; actual < nfixargs; ++actual)
@@ -178,49 +174,52 @@ static void adjust_varargs (lua_State *L, int nfixargs) {
 static StkId tryfuncTM (lua_State *L, StkId func) {
   const TObject *tm = luaT_gettmbyobj(L, func, TM_CALL);
   StkId p;
-  if (ttype(tm) != LUA_TFUNCTION) {
-    L->ci--;  /* undo increment (no function here) */
+  ptrdiff_t funcr = savestack(L, func);
+  if (ttype(tm) != LUA_TFUNCTION)
     luaG_typeerror(L, func, "call");
-  }
   /* Open a hole inside the stack at `func' */
   for (p = L->top; p > func; p--) setobj(p, p-1);
   incr_top(L);
-  func = L->ci->base - 1;  /* previous call may change stack */
+  func = restorestack(L, funcr);  /* previous call may change stack */
   setobj(func, tm);  /* tag method is the new function to be called */
   return func;
 }
 
 
 StkId luaD_precall (lua_State *L, StkId func) {
-  CallInfo *ci;
   LClosure *cl;
-  if (++L->ci == L->end_ci) luaD_growCI(L);
-  ci = L->ci;
-  ci->base = func+1;
-  ci->pc = NULL;
+  ptrdiff_t funcr = savestack(L, func);
   if (ttype(func) != LUA_TFUNCTION) /* `func' is not a function? */
     func = tryfuncTM(L, func);  /* check the `function' tag method */
+  if (L->ci + 1 == L->end_ci) luaD_growCI(L);
   cl = &clvalue(func)->l;
-  if (L->hookmask & LUA_MASKCALL) {
-    luaD_callhook(L, LUA_HOOKCALL, -1);
-    ci = L->ci;  /* previous call may realocate `ci' */
-  }
   if (!cl->isC) {  /* Lua function? prepare its call */
+    CallInfo *ci;
     Proto *p = cl->p;
-    ci->savedpc = p->code;  /* starting point */
     if (p->is_vararg)  /* varargs? */
-      adjust_varargs(L, p->numparams);
+      adjust_varargs(L, p->numparams, func+1);
     luaD_checkstack(L, p->maxstacksize);
+    ci = ++L->ci;  /* now `enter' new function */
+    ci->base = restorestack(L, funcr) + 1;
     ci->top = ci->base + p->maxstacksize;
+    ci->savedpc = p->code;  /* starting point */
     while (L->top < ci->top)
       setnilvalue(L->top++);
     L->top = ci->top;
     return NULL;
   }
   else {  /* if is a C function, call it */
+    CallInfo *ci;
     int n;
     luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
+    ci = ++L->ci;  /* now `enter' new function */
+    ci->base = restorestack(L, funcr) + 1;
     ci->top = L->top + LUA_MINSTACK;
+    ci->savedpc = NULL;  /* not a Lua function */
+    if (L->hookmask & LUA_MASKCALL) {
+      luaD_callhook(L, LUA_HOOKCALL, -1);
+      ci = L->ci;  /* previous call may realocate `ci' */
+    }
     lua_unlock(L);
 #if LUA_COMPATUPVALUES
     lua_pushupvalues(L);
@@ -296,9 +295,10 @@ struct ResS {
 static void resume (lua_State *L, void *ud) {
   StkId firstResult;
   CallInfo *ci = L->ci;
-  if (ci->savedpc != ci_func(ci)->l.p->code) {  /* not first time? */
-    /* finish interupted execution of `OP_CALL' */
+  if (!isLua(ci)) {  /* not first time? */
+    /* finish interrupted execution of `OP_CALL' */
     int nresults;
+    lua_assert(isLua(ci - 1));
     lua_assert(GET_OPCODE(*((ci-1)->savedpc - 1)) == OP_CALL);
     nresults = GETARG_C(*((ci-1)->savedpc - 1)) - 1;
     luaD_poscall(L, nresults, L->top);  /* complete it */
@@ -306,7 +306,7 @@ static void resume (lua_State *L, void *ud) {
   }
   firstResult = luaV_execute(L);
   if (firstResult == NULL)   /* yield? */
-    cast(struct ResS *, ud)->numres = L->ci->yield_results;
+    cast(struct ResS *, ud)->numres = L->ci->u.c.yield_results;
   else {  /* return */
     cast(struct ResS *, ud)->numres = L->top - firstResult;
     luaD_poscall(L, LUA_MULTRET, firstResult);  /* finalize this coroutine */
@@ -338,9 +338,10 @@ LUA_API int lua_yield (lua_State *L, int nresults) {
   CallInfo *ci;
   lua_lock(L);
   ci = L->ci;
-  if (ci_func(ci-1)->c.isC)
+  if (!isLua(ci-1))
     luaG_runerror(L, "cannot yield a C function");
-  ci->yield_results = nresults;
+  lua_assert(!isLua(ci));
+  ci->u.c.yield_results = nresults;
   lua_unlock(L);
   return -1;
 }

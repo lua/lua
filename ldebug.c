@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.123 2002/06/24 15:07:21 roberto Exp roberto $
+** $Id: ldebug.c,v 1.124 2002/07/08 18:21:33 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -30,15 +30,11 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name);
 
 
 
-static int isLmark (CallInfo *ci) {
-  return (ttype(ci->base - 1) == LUA_TFUNCTION && !ci_func(ci)->c.isC);
-}
-
-
 static int currentpc (lua_State *L, CallInfo *ci) {
-  if (ci->pc == NULL) return -1;  /* function is not an active Lua function */
-  if (ci == L->ci || ci->pc != (ci+1)->pc)  /* no other function using `pc'? */
-    ci->savedpc = *ci->pc;  /* may not be saved; save it */
+  if (!isLua(ci)) return -1;  /* function is not a Lua function? */
+  /* next function is not using the same `pc'? (not a Lua->Lua call?) */
+  if (ci == L->ci || !isLua(ci+1) || ci->u.l.pc != (ci+1)->u.l.pc)
+    ci->savedpc = *ci->u.l.pc;  /* may not be saved; save it */
   /* function's pc is saved */
   return pcRel(ci->savedpc, ci_func(ci)->l.p);
 }
@@ -95,7 +91,7 @@ LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
 
 
 static Proto *getluaproto (CallInfo *ci) {
-  return (isLmark(ci) ? ci_func(ci)->l.p : NULL);
+  return (isLua(ci) ? ci_func(ci)->l.p : NULL);
 }
 
 
@@ -424,7 +420,7 @@ static const char *kname (Proto *p, int c) {
 
 static const char *getobjname (lua_State *L, CallInfo *ci, int stackpos,
                                const char **name) {
-  if (isLmark(ci)) {  /* an active Lua function? */
+  if (isLua(ci)) {  /* an active Lua function? */
     Proto *p = ci_func(ci)->l.p;
     int pc = currentpc(L, ci);
     Instruction i;
@@ -462,7 +458,7 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int stackpos,
 
 
 static Instruction getcurrentinstr (lua_State *L, CallInfo *ci) {
-  if (ci == L->base_ci || !isLmark(ci))
+  if (ci == L->base_ci || !isLua(ci))
     return (Instruction)(-1);  /* not an active Lua function */
   else
     return ci_func(ci)->l.p->code[currentpc(L, ci)];
@@ -531,7 +527,7 @@ static void addinfo (lua_State *L, int internal) {
   CallInfo *ci = L->ci;
   if (!internal && ci > L->base_ci) ci--;
   if (strchr(msg, '\n')) return;  /* message already `formatted' */
-  if (!isLmark(ci)) {  /* no Lua code? */
+  if (!isLua(ci)) {  /* no Lua code? */
     luaO_pushfstring(L, "%s\n", msg);  /* no extra info */
   }
   else {  /* add file:line information */

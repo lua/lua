@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.87 2002/07/08 18:21:33 roberto Exp roberto $
+** $Id: lstate.h,v 1.88 2002/07/08 20:22:08 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -87,12 +87,21 @@ typedef struct stringtable {
 */
 typedef struct CallInfo {
   StkId base;  /* base for called function */
-  const Instruction *savedpc;
-  StkId	top;  /* top for this function (when it's a Lua function) */
-  const Instruction **pc;  /* points to `pc' variable in `luaV_execute' */
-  StkId *pb;  /* points to `base' variable in `luaV_execute' */
-  int yield_results;
+  StkId	top;  /* top for this function */
+  const Instruction *savedpc;  /* NULL means not a Lua function */
+  union {
+    struct {  /* for Lua functions */
+      const Instruction **pc;  /* points to `pc' variable in `luaV_execute' */
+      StkId *pb;  /* points to `base' variable in `luaV_execute' */
+    } l;
+    struct {  /* for C functions */
+      int yield_results;
+    } c;
+  } u;
 } CallInfo;
+
+
+#define isLua(ci)	((ci)->savedpc != NULL)
 
 #define ci_func(ci)	(clvalue((ci)->base - 1))
 
