@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_mem = "$Id: $";
+char *rcs_mem = "$Id: mem.c,v 1.1 1994/11/16 17:38:08 roberto Exp $";
 
 #include <stdlib.h>
 
@@ -12,6 +12,7 @@ char *rcs_mem = "$Id: $";
 
 void luaI_free (void *block)
 {
+  *((int *)block) = -1;  /* to catch errors */
   free(block);
 }
 
