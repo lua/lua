@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.179 2001/06/05 18:17:01 roberto Exp roberto $
+** $Id: lvm.c,v 1.180 2001/06/05 19:27:32 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -346,9 +346,9 @@ static void adjust_varargs (lua_State *L, StkId base, int nfixargs) {
   TObject tempb, tempc; \
   if ((ttype(b) == LUA_TNUMBER || (b = luaV_tonumber(b, &tempb)) != NULL) && \
       (ttype(c) == LUA_TNUMBER || (c = luaV_tonumber(c, &tempc)) != NULL)) { \
-    setnvalue(RA(i), nvalue(b) op nvalue(c));		\
+    setnvalue(ra, nvalue(b) op nvalue(c));		\
   } else		\
-    call_arith(L, RB(i), RKC(i), RA(i), optm); \
+    call_arith(L, RB(i), RKC(i), ra, optm); \
 }
 
 
@@ -375,59 +375,57 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
   /* main loop of interpreter */
   for (;;) {
     const Instruction i = *pc++;
+    const StkId ra = RA(i);
     if (linehook)
       traceexec(L, linehook);
     switch (GET_OPCODE(i)) {
       case OP_MOVE: {
-        setobj(RA(i), RB(i));
+        setobj(ra, RB(i));
         break;
       }
       case OP_LOADK: {
-        setobj(RA(i), KBc(i));
+        setobj(ra, KBc(i));
         break;
       }
       case OP_LOADINT: {
-        setnvalue(RA(i), (lua_Number)GETARG_sBc(i));
+        setnvalue(ra, (lua_Number)GETARG_sBc(i));
         break;
       }
       case OP_LOADUPVAL: {
-        setobj(RA(i), cl->upvalue+GETARG_Bc(i));
+        setobj(ra, cl->upvalue+GETARG_Bc(i));
         break;
       }
       case OP_LOADNIL: {
-        TObject *ra = RA(i);
         TObject *rb = RB(i);
         do {
-          setnilvalue(ra++);
-        } while (ra <= rb);
+          setnilvalue(rb--);
+        } while (rb >= ra);
         break;
       }
       case OP_GETGLOBAL: {
         lua_assert(ttype(KBc(i)) == LUA_TSTRING);
-        luaV_getglobal(L, tsvalue(KBc(i)), RA(i));
+        luaV_getglobal(L, tsvalue(KBc(i)), ra);
         break;
       }
       case OP_GETTABLE: {
-        luaV_gettable(L, RB(i), RKC(i), RA(i));
+        luaV_gettable(L, RB(i), RKC(i), ra);
         break;
       }
       case OP_SETGLOBAL: {
         lua_assert(ttype(KBc(i)) == LUA_TSTRING);
-        luaV_setglobal(L, tsvalue(KBc(i)), RA(i));
+        luaV_setglobal(L, tsvalue(KBc(i)), ra);
         break;
       }
       case OP_SETTABLE: {
-        luaV_settable(L, RB(i), RKC(i), RA(i));
+        luaV_settable(L, RB(i), RKC(i), ra);
         break;
       }
       case OP_NEWTABLE: {
-        StkId ra = RA(i);
         sethvalue(ra, luaH_new(L, GETARG_Bc(i)));
         luaV_checkGC(L, ra+1);
         break;
       }
       case OP_SELF: {
-        StkId ra = RA(i);
         StkId rb = RB(i);
         setobj(ra+1, rb);
         luaV_gettable(L, rb, RKC(i), ra);
@@ -450,12 +448,11 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
       }
       case OP_POW: {
-        call_arith(L, RB(i), RKC(i), RA(i), TM_POW);
+        call_arith(L, RB(i), RKC(i), ra, TM_POW);
         break;
       }
       case OP_UNM: {
         const TObject *rb = RB(i);
-        StkId ra = RA(i);
         if (ttype(rb) == LUA_TNUMBER || (rb=luaV_tonumber(rb, ra)) != NULL) {
           setnvalue(ra, -nvalue(rb));
         }
@@ -468,9 +465,9 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       }
       case OP_NOT: {
         if (ttype(RB(i)) == LUA_TNIL) {
-          setnvalue(RA(i), 1);
+          setnvalue(ra, 1);
         } else {
-          setnilvalue(RA(i));
+          setnilvalue(ra);
         }
         break;
       }
@@ -478,7 +475,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         StkId top = RC(i)+1;
         StkId rb = RB(i);
         luaV_strconc(L, top-rb, top);
-        setobj(RA(i), rb);
+        setobj(ra, rb);
         break;
       }
       case OP_CJMP:
@@ -526,8 +523,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         StkId rb = RB(i);
         lua_assert(GET_OPCODE(*pc) == OP_CJMP);
         if (ttype(rb) != LUA_TNIL) {
-          int a = GETARG_A(i);
-          if (a != NO_REG) setobj(base+a, rb);
+          setobj(ra, rb);
           dojump(pc, *pc);
         }
         pc++;
@@ -536,15 +532,14 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       case OP_TESTF: {
         lua_assert(GET_OPCODE(*pc) == OP_CJMP);
         if (ttype(RB(i)) == LUA_TNIL) {
-          int a = GETARG_A(i);
-          if (a != NO_REG) setnilvalue(base+a);
+          setnilvalue(ra);
           dojump(pc, *pc);
         }
         pc++;
         break;
       }
       case OP_NILJMP: {
-        setnilvalue(RA(i));
+        setnilvalue(ra);
         pc++;
         break;
       }
@@ -555,9 +550,9 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
           L->top = base+b;
         nres = GETARG_C(i);
         if (nres == NO_REG) nres = LUA_MULTRET;
-        luaD_call(L, RA(i), nres);
+        luaD_call(L, ra, nres);
         if (nres != LUA_MULTRET) {
-          lua_assert(L->top == RA(i)+nres);
+          lua_assert(L->top == ra+nres);
           L->top = base+tf->maxstacksize;
         }
         break;
@@ -566,59 +561,55 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         int b = GETARG_B(i);
         if (b != NO_REG)
           L->top = base+b;
-        return RA(i);
+        return ra;
       }
       case OP_FORPREP: {
         int jmp = GETARG_sBc(i);
-        StkId breg = RA(i);
-        if (luaV_tonumber(breg, breg) == NULL)
+        if (luaV_tonumber(ra, ra) == NULL)
           luaD_error(L, l_s("`for' initial value must be a number"));
-        if (luaV_tonumber(breg+1, breg+1) == NULL)
+        if (luaV_tonumber(ra+1, ra+1) == NULL)
           luaD_error(L, l_s("`for' limit must be a number"));
-        if (luaV_tonumber(breg+2, breg+2) == NULL)
+        if (luaV_tonumber(ra+2, ra+2) == NULL)
           luaD_error(L, l_s("`for' step must be a number"));
         pc += -jmp;  /* `jump' to loop end (delta is negated here) */
-        nvalue(breg) -= nvalue(breg+2);/* decrement index (to be incremented) */
+        nvalue(ra) -= nvalue(ra+2);/* decrement index (to be incremented) */
         /* go through */
       }
       case OP_FORLOOP: {
-        StkId breg = RA(i);
-        if (ttype(breg) != LUA_TNUMBER)
+        if (ttype(ra) != LUA_TNUMBER)
           luaD_error(L, l_s("`for' index must be a number"));
-        runtime_check(L, ttype(breg+1) == LUA_TNUMBER &&
-                         ttype(breg+2) == LUA_TNUMBER);
-        nvalue(breg) += nvalue(breg+2);  /* increment index */
-        if (nvalue(breg+2) > 0 ?
-            nvalue(breg) <= nvalue(breg+1) :
-            nvalue(breg) >= nvalue(breg+1))
+        runtime_check(L, ttype(ra+1) == LUA_TNUMBER &&
+                         ttype(ra+2) == LUA_TNUMBER);
+        nvalue(ra) += nvalue(ra+2);  /* increment index */
+        if (nvalue(ra+2) > 0 ?
+            nvalue(ra) <= nvalue(ra+1) :
+            nvalue(ra) >= nvalue(ra+1))
           dojump(pc, i);  /* repeat loop */
         break;
       }
       case OP_TFORPREP: {
         int jmp = GETARG_sBc(i);
-        StkId breg = RA(i);
-        if (ttype(breg) != LUA_TTABLE)
+        if (ttype(ra) != LUA_TTABLE)
           luaD_error(L, l_s("`for' table must be a table"));
-        setnvalue(breg+1, -1);  /* initial index */
-        setnilvalue(breg+2);
-        setnilvalue(breg+3);
+        setnvalue(ra+1, -1);  /* initial index */
+        setnilvalue(ra+2);
+        setnilvalue(ra+3);
         pc += -jmp;  /* `jump' to loop end (delta is negated here) */
         /* go through */
       }
       case OP_TFORLOOP: {
-        StkId breg = RA(i);
         Hash *t;
         int n;
-        runtime_check(L, ttype(breg) == LUA_TTABLE);
-        runtime_check(L, ttype(breg+1) == LUA_TNUMBER);
-        t = hvalue(breg);
-        n = (int)nvalue(breg+1);
+        runtime_check(L, ttype(ra) == LUA_TTABLE);
+        runtime_check(L, ttype(ra+1) == LUA_TNUMBER);
+        t = hvalue(ra);
+        n = (int)nvalue(ra+1);
         n = luaH_nexti(t, n);
         if (n != -1) {  /* repeat loop? */
           Node *node = node(t, n);
-          setnvalue(breg+1, n);  /* index */
-          setkey2obj(breg+2, node);
-          setobj(breg+3, val(node));
+          setnvalue(ra+1, n);  /* index */
+          setkey2obj(ra+2, node);
+          setobj(ra+3, val(node));
           dojump(pc, i);  /* repeat loop */
         }
         break;
@@ -628,7 +619,6 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         int bc;
         int n;
         Hash *h;
-        StkId ra = RA(i);
         runtime_check(L, ttype(ra) == LUA_TTABLE);
         h = hvalue(ra);
         bc = GETARG_Bc(i);
@@ -644,7 +634,6 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       case OP_CLOSURE: {
         Proto *p = tf->kproto[GETARG_Bc(i)];
         int nup = p->nupvalues;
-        StkId ra = RA(i);
         luaV_checkGC(L, ra+nup);
         L->top = ra+nup;
         luaV_Lclosure(L, p, nup);

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.78 2001/06/06 17:50:36 roberto Exp roberto $
+** $Id: ldebug.c,v 1.79 2001/06/07 14:44:51 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -409,12 +409,6 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
           pc += b;  /* do the jump */
         break;
       }
-      case OP_TESTT:
-      case OP_TESTF: {
-        if (a != NO_REG)
-          checkreg(pt, a);
-        break;
-      }
       case OP_NILJMP: {
         check(pc+2 < pt->sizecode);  /* check its jump */
         break;
@@ -605,8 +599,8 @@ const lu_byte luaG_opmodes[] = {
   opmode(1,0,1,1, 0,0,iABC),		/* OP_TESTLE */
   opmode(1,0,1,1, 0,0,iABC),		/* OP_TESTGT */
   opmode(1,0,1,1, 0,0,iABC),		/* OP_TESTGE */
-  opmode(1,0,1,0, 1,0,iABC),		/* OP_TESTT */
-  opmode(1,0,1,0, 1,0,iABC),		/* OP_TESTF */
+  opmode(1,1,1,0, 1,0,iABC),		/* OP_TESTT */
+  opmode(1,1,1,0, 1,0,iABC),		/* OP_TESTF */
   opmode(0,1,0,0, 1,0,iAsBc),		/* OP_NILJMP */
   opmode(0,1,0,0, 0,0,iABC),		/* OP_CALL */
   opmode(0,1,0,0, 0,0,iABC),		/* OP_RETURN */

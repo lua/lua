@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.70 2001/06/06 18:00:19 roberto Exp roberto $
+** $Id: lcode.c,v 1.71 2001/06/07 15:01:21 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -144,6 +144,12 @@ static int need_value (FuncState *fs, int list, OpCode op) {
 }
 
 
+static void patchtestreg (Instruction *i, int reg) {
+  if (reg == NO_REG) reg = GETARG_B(*i);
+  SETARG_A(*i, reg);
+}
+
+
 static void luaK_patchlistaux (FuncState *fs, int list,
           int ttarget, int treg, int ftarget, int freg, int dtarget) {
   while (list != NO_JUMP) {
@@ -151,12 +157,12 @@ static void luaK_patchlistaux (FuncState *fs, int list,
     Instruction *i = getjumpcontrol(fs, list);
     switch (GET_OPCODE(*i)) {
       case OP_TESTT: {
-        SETARG_A(*i, treg);
+        patchtestreg(i, treg);
         luaK_fixjump(fs, list, ttarget);
         break;
       }
       case OP_TESTF: {
-        SETARG_A(*i, freg);
+        patchtestreg(i, freg);
         luaK_fixjump(fs, list, ftarget);
         break;
       }

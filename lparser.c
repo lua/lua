@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.144 2001/06/05 19:27:32 roberto Exp roberto $
+** $Id: lparser.c,v 1.145 2001/06/07 14:44:51 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -492,16 +492,20 @@ static void recfield (LexState *ls, expdesc *t) {
 }
 
 
+static int anotherfield (LexState *ls) {
+  if (ls->t.token != l_c(',')) return 0;
+  next(ls);  /* skip the comma */
+  return (ls->t.token != l_c(';') && ls->t.token != l_c('}'));
+}
+
+
 static int recfields (LexState *ls, expdesc *t) {
   /* recfields -> recfield { `,' recfield } [`,'] */
-  int n = 1;  /* at least one element */
-  recfield(ls, t);
-  while (ls->t.token == l_c(',')) {
-    next(ls);
-    if (ls->t.token == l_c(';') || ls->t.token == l_c('}')) break;
+  int n = 0;
+  do {  /* at least one element */
     recfield(ls, t);
     n++;
-  }
+  } while (anotherfield(ls));
   return n;
 }
 
@@ -514,13 +518,12 @@ static int listfields (LexState *ls, expdesc *t) {
   int reg;
   reg = fs->freereg;
   expr(ls, &v);
-  while (ls->t.token == l_c(',') &&
-         (next(ls), (ls->t.token != l_c(';') && ls->t.token != l_c('}')))) {
+  while (anotherfield(ls)) {
     luaK_exp2nextreg(fs, &v);
     luaX_checklimit(ls, n, MAXARG_Bc,
                     l_s("`item groups' in a list initializer"));
     if (n%LFIELDS_PER_FLUSH == 0) {
-      luaK_codeABc(fs, OP_SETLIST, t->u.i.info, n-1);
+      luaK_codeABc(fs, OP_SETLIST, t->u.i.info, n-1);  /* flush */
       fs->freereg = reg;  /* free registers */
     }
     expr(ls, &v);
