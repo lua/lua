@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.131 2003/05/16 18:59:08 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.132 2003/08/25 19:49:47 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -272,6 +272,47 @@ static int luaB_loadfile (lua_State *L) {
 }
 
 
+struct Aux_load {
+  int func;
+  int res;
+};
+
+
+static const char *generic_reader (lua_State *L, void *ud, size_t *size) {
+  struct Aux_load *al = (struct Aux_load *)ud;
+  luaL_unref(L, al->res, LUA_REGISTRYINDEX);
+  lua_getref(L, al->func);
+  lua_call(L, 0, 1);
+  if (lua_isnil(L, -1)) {
+    *size = 0;
+    return NULL;
+  }
+  else if (lua_isstring(L, -1)) {
+    const char *res = lua_tostring(L, -1);
+    *size = lua_strlen(L, -1);
+    al->res = luaL_ref(L, LUA_REGISTRYINDEX);
+    return res;
+  }
+  else luaL_error(L, "reader function must return a string");
+  return NULL;  /* to avoid warnings */
+}
+
+
+static int luaB_load (lua_State *L) {
+  struct Aux_load al;
+  int status;
+  const char *cname = luaL_optstring(L, 2, "= generic load");
+  luaL_checktype(L, 1, LUA_TFUNCTION);
+  lua_settop(L, 1);
+  al.func = luaL_ref(L, LUA_REGISTRYINDEX);
+  al.res = LUA_REFNIL;
+  status = lua_load(L, generic_reader, &al, cname);
+  luaL_unref(L, al.func, LUA_REGISTRYINDEX);
+  luaL_unref(L, al.res, LUA_REGISTRYINDEX);
+  return load_aux(L, status);
+}
+
+
 static int luaB_dofile (lua_State *L) {
   const char *fname = luaL_optstring(L, 1, NULL);
   int status = luaL_loadfile(L, fname);
@@ -536,6 +577,7 @@ static const luaL_reg base_funcs[] = {
   {"loadfile", luaB_loadfile},
   {"dofile", luaB_dofile},
   {"loadstring", luaB_loadstring},
+  {"load", luaB_load},
   {"require", luaB_require},
   {NULL, NULL}
 };
