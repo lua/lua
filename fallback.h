@@ -1,5 +1,5 @@
 /*
-** $Id: fallback.h,v 1.19 1997/03/31 20:59:09 roberto Exp roberto $
+** $Id: fallback.h,v 1.20 1997/04/02 22:52:42 roberto Exp roberto $
 */
  
 #ifndef fallback_h
@@ -52,6 +52,7 @@ TObject *luaI_getim (int tag, IMS event);
 TObject *luaI_geterrorim (void);
 int luaI_tag (TObject *o);
 void luaI_setintmethod (void);
+void luaI_getintmethod (void);
 void luaI_seterrormethod (void);
 void luaI_initfallbacks (void);
 

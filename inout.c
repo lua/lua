@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.52 1997/04/01 19:02:43 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.53 1997/04/02 22:53:35 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -342,6 +342,7 @@ static struct {
   {"setfallback", luaI_setfallback},
   {"setglobal", luaI_setglobal},
   {"setintmethod", luaI_setintmethod},
+  {"getintmethod", luaI_getintmethod},
   {"settag", luaIl_settag},
   {"tonumber", lua_obj2number},
   {"tostring", luaI_tostring},

@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.36 1997/03/31 20:59:09 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.37 1997/04/02 22:52:42 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -223,6 +223,16 @@ TObject *luaI_getim (int tag, IMS event)
 }
 
 
+void luaI_getintmethod (void)
+{
+  int t = (int)luaL_check_number(1, "getintmethod");
+  int e = luaI_checkevent(luaL_check_string(2, "getintmethod"), luaI_eventname);
+  checktag(t);
+  if (validevent(t, e))
+    luaI_pushobject(&luaI_IMtable[-t].int_method[e]);
+}
+
+
 void luaI_setintmethod (void)
 {
   int t = (int)luaL_check_number(1, "setintmethod");
@@ -233,7 +243,6 @@ void luaI_setintmethod (void)
     lua_error("cannot change this internal method");
   luaL_arg_check(lua_isnil(func) || lua_isfunction(func), "setintmethod",
                  3, "function expected");
-  luaI_pushobject(&luaI_IMtable[-t].int_method[e]);
   luaI_IMtable[-t].int_method[e] = *luaI_Address(func);
 }
 

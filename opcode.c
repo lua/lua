@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.91 1997/04/02 17:44:18 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.92 1997/04/02 22:52:42 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -654,6 +654,13 @@ lua_Object lua_setfallback (char *name, lua_CFunction fallback)
   lua_pushcfunction(fallback);
   do_unprotectedrun(luaI_setfallback, 2, 1);
   return (Ref(top-1));
+}
+
+void lua_getintmethod (int tag, char *event)
+{
+  lua_pushnumber(tag);
+  lua_pushstring(event);
+  do_unprotectedrun(luaI_getintmethod, 2, 1);
 }
 
 void lua_setintmethod (int tag, char *event, lua_CFunction method)

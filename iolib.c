@@ -288,9 +288,10 @@ static void getbyte (void)
     lua_pushnumber(lua_getbindatasize(ud));
   else {
     i--;
-    luaL_arg_check(0 <= i && i < lua_getbindatasize(ud), "getbyte", 2,
-                   "out of range");
-    lua_pushnumber(*(((char *)lua_getbinarydata(ud))+i));
+    if (0 <= i && i < lua_getbindatasize(ud))
+      lua_pushnumber(*(((char *)lua_getbinarydata(ud))+i));
+    else
+      lua_pushnil();
   }
 }
 
@@ -341,7 +342,7 @@ static struct luaL_reg iolib[] = {
 
 void iolib_open (void)
 {
-  lua_tagio = lua_newtag("userdata");
+  lua_tagio = lua_newtag();
   lua_infile=stdin; lua_outfile=stdout;
   luaL_openlib(iolib, (sizeof(iolib)/sizeof(iolib[0])));
   lua_seterrormethod(errorfb);

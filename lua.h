@@ -2,7 +2,7 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lua.h,v 3.40 1997/04/02 17:44:18 roberto Exp roberto $
+** $Id: lua.h,v 3.41 1997/04/02 22:52:42 roberto Exp roberto $
 */
 
 
@@ -21,6 +21,7 @@ typedef unsigned int lua_Object;
 
 lua_Object     lua_setfallback		(char *event, lua_CFunction fallback);
 void           lua_setintmethod	(int tag, char *event, lua_CFunction method);
+void           lua_getintmethod	(int tag, char *event);  /* out: method */
 void           lua_seterrormethod (lua_CFunction method);
 
 int            lua_newtag		(void);
