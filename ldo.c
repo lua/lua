@@ -36,7 +36,6 @@ struct lua_longjmp {
   struct lua_longjmp *previous;
   CallInfo *ci;  /* index of call info of active function that set protection */
   StkId top;  /* top stack when protection was set */
-  TObject *stack;  /* active stack for this entry */
   int allowhooks;  /* `allowhook' state when protection was set */
   volatile int status;  /* error code */
 };
@@ -47,10 +46,8 @@ static void correctstack (lua_State *L, TObject *oldstack) {
   CallInfo *ci;
   UpVal *up;
   L->top = (L->top - oldstack) + L->stack;
-  for (lj = L->errorJmp; lj && lj->stack == oldstack; lj = lj->previous) {
+  for (lj = L->errorJmp; lj != NULL; lj = lj->previous)
     lj->top = (lj->top - oldstack) + L->stack;
-    lj->stack = L->stack;
-  }
   for (up = L->openupval; up != NULL; up = up->next)
     up->v = (up->v - oldstack) + L->stack;
   for (ci = L->base_ci; ci <= L->ci; ci++) {
@@ -147,7 +144,7 @@ static void luaD_callHook (lua_State *L, lua_Hook callhook, const char *event) {
 
 static void correctCI (lua_State *L, CallInfo *oldci) {
   struct lua_longjmp *lj;
-  for (lj = L->errorJmp; lj && lj->stack == L->stack; lj = lj->previous) {
+  for (lj = L->errorJmp; lj != NULL; lj = lj->previous) {
     lj->ci = (lj->ci - oldci) + L->base_ci;
   }
 }
@@ -287,35 +284,51 @@ LUA_API void lua_cobegin (lua_State *L, int nargs) {
 }
 
 
-static void resume_results (lua_State *L, lua_State *from, int numresults) {
-  while (numresults) {
-    setobj(L->top, from->top - numresults);
-    numresults--;
+static void move_results (lua_State *L, TObject *from, TObject *to) {
+  while (from < to) {
+    setobj(L->top, from);
+    from++;
     incr_top(L);
   }
 }
 
 
-LUA_API void lua_resume (lua_State *L, lua_State *co) {
+static void resume (lua_State *L, void *numres) {
   StkId firstResult;
+  CallInfo *ci = L->ci;
+  if (ci->savedpc != ci_func(ci)->l.p->code) {  /* not first time? */
+    /* finish interupted execution of `OP_CALL' */
+    int nresults;
+    lua_assert(GET_OPCODE(*((ci-1)->savedpc - 1)) == OP_CALL);
+    nresults = GETARG_C(*((ci-1)->savedpc - 1)) - 1;
+    luaD_poscall(L, nresults, L->top);  /* complete it */
+    if (nresults >= 0) L->top = L->ci->top;
+  }
+  firstResult = luaV_execute(L);
+  if (firstResult == NULL)   /* yield? */
+    *(int *)numres = L->ci->yield_results;
+  else {  /* return */
+    *(int *)numres = L->top - firstResult;
+    luaD_poscall(L, LUA_MULTRET, firstResult);  /* finalize this coroutine */
+  }
+}
+
+
+LUA_API int lua_resume (lua_State *L, lua_State *co) {
+  CallInfo *ci;
+  int numres;
+  int status;
   lua_lock(L);
-  if (co->ci == co->base_ci)  /* no activation record? ?? */
+  ci = co->ci;
+  if (ci == co->base_ci)  /* no activation record? ?? */
     luaD_error(L, "thread is dead - cannot be resumed");
-  lua_assert(co->errorJmp == NULL);
-  co->errorJmp = L->errorJmp;
-  firstResult = luaV_execute(co);
-  if (firstResult != NULL) {  /* `return'? */
-    resume_results(L, co, co->top - firstResult);
-    luaD_poscall(co, 0, firstResult);  /* ends this coroutine */
-  }
-  else {  /* `yield' */
-    int nresults = GETARG_C(*((co->ci-1)->savedpc - 1)) - 1;
-    resume_results(L, co, co->ci->yield_results);
-    luaD_poscall(co, nresults, co->top);  /* complete it */
-    if (nresults >= 0) co->top = co->ci->top;
-  }
-  co->errorJmp = NULL;
+  if (co->errorJmp != NULL)  /* ?? */
+    luaD_error(L, "thread is active - cannot be resumed");
+  status = luaD_runprotected(co, resume, &numres);
+  if (status == 0)  
+    move_results(L, co->top - numres, co->top);
   lua_unlock(L);
+  return status;
 }
 
 
@@ -486,7 +499,6 @@ int luaD_runprotected (lua_State *L, void (*f)(lua_State *, void *), void *ud) {
   struct lua_longjmp lj;
   lj.ci = L->ci;
   lj.top = L->top;
-  lj.stack = L->stack;
   lj.allowhooks = L->allowhooks;
   lj.status = 0;
   lj.previous = L->errorJmp;  /* chain new error handler */
