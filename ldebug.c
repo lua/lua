@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.36 2000/08/15 18:28:48 roberto Exp roberto $
+** $Id: ldebug.c,v 1.37 2000/08/28 17:57:04 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -160,7 +160,6 @@ const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int localnum) {
   const char *name;
   StkId f = ar->_func;
   Proto *fp = getluaproto(f);
-  UNUSED(L);
   if (!fp) return NULL;  /* `f' is not a Lua function? */
   name = luaF_getlocalname(fp, localnum, lua_currentpc(f));
   if (!name || name[0] == '*') return NULL;  /* `*' starts private locals */
