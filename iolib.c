@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <errno.h>
 
+#include "lualoc.h"
 #include "lua.h"
 #include "auxlib.h"
 #include "luadebug.h"
@@ -28,7 +29,7 @@ static void pushresult (int i)
     lua_pushuserdata(NULL);
   else {
     lua_pushnil();
-#ifndef NOSTRERROR
+#ifndef OLD_ANSI
     lua_pushstring(strerror(errno));
 #else
     lua_pushstring("O.S. unable to define the error");
@@ -233,6 +234,16 @@ static void io_date (void)
   else
     lua_error("invalid `date' format");
 }
+
+
+static void setloc (void)
+{
+  static int cat[] = {LC_ALL, LC_COLLATE, LC_CTYPE, LC_MONETARY, LC_NUMERIC,
+                      LC_TIME};
+  int op = (int)luaL_opt_number(2, 0);
+  luaL_arg_check(0 <= op && op <= 5, 2, "invalid option");
+  lua_pushstring(setlocale(cat[op], luaL_check_string(1)));
+}
  
 
 static void io_exit (void)
@@ -300,6 +311,7 @@ static void errorfb (void)
 
 
 static struct luaL_reg iolib[] = {
+{"setlocale", setloc},
 {"readfrom", io_readfrom},
 {"writeto",  io_writeto},
 {"appendto", io_appendto},

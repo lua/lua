@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 3.4 1997/06/11 18:56:02 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 3.5 1997/06/16 16:50:22 roberto Exp roberto $";
 
 
 #include <ctype.h>
@@ -278,11 +278,9 @@ int luaY_lex (void)
   if (lua_debug)
     luaI_codedebugline(linelasttoken);
   linelasttoken = lua_linenumber;
-  while (1)
-  {
+  while (1) {
     int tokensize = 0;
-    switch (current)
-    {
+    switch (current) {
       case '\n':
         inclinenumber();
         linelasttoken = lua_linenumber;
@@ -365,33 +363,6 @@ int luaY_lex (void)
         return STRING;
       }
 
-      case 'a': case 'b': case 'c': case 'd': case 'e':
-      case 'f': case 'g': case 'h': case 'i': case 'j':
-      case 'k': case 'l': case 'm': case 'n': case 'o':
-      case 'p': case 'q': case 'r': case 's': case 't':
-      case 'u': case 'v': case 'w': case 'x': case 'y':
-      case 'z':
-      case 'A': case 'B': case 'C': case 'D': case 'E':
-      case 'F': case 'G': case 'H': case 'I': case 'J':
-      case 'K': case 'L': case 'M': case 'N': case 'O':
-      case 'P': case 'Q': case 'R': case 'S': case 'T':
-      case 'U': case 'V': case 'W': case 'X': case 'Y':
-      case 'Z':
-      case '_':
-      {
-        TaggedString *ts;
-        do {
-          save_and_next();
-        } while (isalnum((unsigned char)current) || current == '_');
-        save(0);
-        ts = lua_createstring(yytext);
-        if (ts->marked > 2)
-          return ts->marked;  /* reserved word */
-        luaY_lval.pTStr = ts;
-        ts->marked = 2;  /* avoid GC */
-        return NAME;
-      }
-
       case '.':
         save_and_next();
         if (current == '.')
@@ -462,8 +433,23 @@ int luaY_lex (void)
         return 0;
 
       default:
-        save_and_next();
-        return yytext[0];
+        if (current != '_' && !isalpha((unsigned char)current)) {
+          save_and_next();
+          return yytext[0];
+        }
+        else {  /* identifier or reserved word */
+          TaggedString *ts;
+          do {
+            save_and_next();
+          } while (isalnum((unsigned char)current) || current == '_');
+          save(0);
+          ts = lua_createstring(yytext);
+          if (ts->marked > 2)
+            return ts->marked;  /* reserved word */
+          luaY_lval.pTStr = ts;
+          ts->marked = 2;  /* avoid GC */
+          return NAME;
+        }
     }
   }
 }

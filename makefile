@@ -1,18 +1,25 @@
-# $Id: makefile,v 1.35 1997/06/16 16:50:22 roberto Exp roberto $
+# $Id: makefile,v 1.36 1997/06/23 18:27:53 roberto Exp roberto $
 
 #configuration
 
 # define (undefine) POPEN if your system (does not) support piped I/O
+#
 # define (undefine) _POSIX_SOURCE if your system is (not) POSIX compliant
-#define (undefine) NOSTRERROR if your system does NOT have function "strerror"
-# (although this is ANSI, SunOS does not comply; so, add "-DNOSTRERROR" on SunOS)
+#
+# define (undefine) OLD_ANSI if your system does NOT have some new ANSI
+#   facilities ("strerror" and "locale.h"). Although they are ANSI,
+#   SunOS does not comply; so, add "-DOLD_ANSI" on SunOS
+#
 # define LUA_COMPAT2_5=0 if yous system does not need to be compatible with
 # version 2.5 (or older)
+
 CONFIG = -DPOPEN -D_POSIX_SOURCE
+
+
 # Compilation parameters
 CC = gcc
 CWARNS = -Wall -Wmissing-prototypes -Wshadow -pedantic -Wpointer-arith -Wcast-align -Waggregate-return
-CFLAGS = $(CONFIG) $(CWARNS) -ansi -O2 -fomit-frame-pointer
+CFLAGS = $(CONFIG) $(CWARNS) -ansi -O2
 
 #CC = acc
 #CFLAGS = -fast -I/usr/5include
@@ -89,14 +96,14 @@ hash.o: hash.c luamem.h opcode.h lua.h types.h tree.h func.h hash.h \
  table.h auxlib.h
 inout.o: inout.c auxlib.h lua.h fallback.h opcode.h types.h tree.h \
  func.h hash.h inout.h lex.h zio.h luamem.h table.h undump.h
-iolib.o: iolib.c lua.h auxlib.h luadebug.h lualib.h
+iolib.o: iolib.c lua.h auxlib.h luadebug.h lualib.h lualoc.h
 lex.o: lex.c auxlib.h lua.h luamem.h tree.h types.h table.h opcode.h \
  func.h lex.h zio.h inout.h luadebug.h parser.h
-lua.o: lua.c lua.h auxlib.h lualib.h
+lua.o: lua.c lua.h auxlib.h lualib.h lualoc.h
 luamem.o: luamem.c luamem.h lua.h
 mathlib.o: mathlib.c lualib.h lua.h auxlib.h
 opcode.o: opcode.c luadebug.h lua.h luamem.h opcode.h types.h tree.h \
- func.h hash.h inout.h table.h fallback.h auxlib.h lex.h zio.h
+ func.h hash.h inout.h table.h fallback.h auxlib.h lex.h zio.h lualoc.h
 parser.o: parser.c luadebug.h lua.h luamem.h lex.h zio.h opcode.h \
  types.h tree.h func.h hash.h inout.h table.h
 strlib.o: strlib.c lua.h auxlib.h lualib.h

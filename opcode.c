@@ -3,13 +3,14 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 4.14 1997/06/23 18:27:53 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 4.15 1997/06/26 21:40:57 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
+#include "lualoc.h"
 #include "luadebug.h"
 #include "luamem.h"
 #include "opcode.h"
@@ -1027,7 +1028,7 @@ static void comparison (lua_Type ttype_less, lua_Type ttype_equal,
   if (ttype(l) == LUA_T_NUMBER && ttype(r) == LUA_T_NUMBER)
     result = (nvalue(l) < nvalue(r)) ? -1 : (nvalue(l) == nvalue(r)) ? 0 : 1;
   else if (ttype(l) == LUA_T_STRING && ttype(r) == LUA_T_STRING)
-    result = strcmp(svalue(l), svalue(r));
+    result = strcoll(svalue(l), svalue(r));
   else {
     call_binTM(op, "unexpected type at comparison");
     return;

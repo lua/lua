@@ -3,11 +3,12 @@
 ** Linguagem para Usuarios de Aplicacao
 */
 
-char *rcs_lua="$Id: lua.c,v 1.17 1997/06/18 21:20:45 roberto Exp roberto $";
+char *rcs_lua="$Id: lua.c,v 1.18 1997/06/19 18:55:40 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
 
+#include "lualoc.h"
 #include "lua.h"
 #include "auxlib.h"
 #include "lualib.h"
@@ -107,6 +108,7 @@ int main (int argc, char *argv[])
 {
   int i;
   int result = 0;
+  setlocale(LC_ALL, "");
   iolib_open ();
   strlib_open ();
   mathlib_open ();
