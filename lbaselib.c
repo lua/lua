@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.82 2002/06/18 15:19:27 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.83 2002/06/20 20:41:46 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -293,6 +293,25 @@ static int luaB_tostring (lua_State *L) {
 }
 
 
+static int luaB_newproxy (lua_State *L) {
+  void *u;
+  lua_pushnil(L);  /* default argument (if there is nothing at stack[1]) */
+  u = lua_newuserdata(L, sizeof(lua_CFunction));  /* create proxy */
+  *(lua_CFunction *)u = luaB_newproxy;  /* mark it as a proxy */
+  if (lua_toboolean(L, 1) == 0)
+    return 1;  /* no metatable */
+  else if ((u = lua_touserdata(L, 1)) != NULL) {
+    luaL_arg_check(L, *(lua_CFunction *)u == luaB_newproxy, 1, "invalid proxy");
+    lua_getmetatable(L, 1);  /* reuse metatable */
+  }
+  else {
+    luaL_check_type(L, 1, LUA_TBOOLEAN);
+    lua_newtable(L);  /* create a new metatable */
+  }
+  lua_setmetatable(L, -2);
+  return 1;
+}
+
 
 /*
 ** {======================================================
@@ -406,6 +425,7 @@ static const luaL_reg base_funcs[] = {
   {"tostring", luaB_tostring},
   {"type", luaB_type},
   {"assert", luaB_assert},
+  {"newproxy", luaB_newproxy},
   {"unpack", luaB_unpack},
   {"rawequal", luaB_rawequal},
   {"rawget", luaB_rawget},
