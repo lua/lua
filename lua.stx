@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: $";
+char *rcs_luastx = "$Id: lua.stx,v 1.1 1993/12/17 18:53:07 celes Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -150,6 +150,7 @@ static void code_number (float f)
 
 %start functionlist
 
+%token WRONGTOKEN
 %token NIL
 %token IF THEN ELSE ELSEIF WHILE DO REPEAT UNTIL END
 %token RETURN
