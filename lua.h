@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.83 2001/01/22 18:01:38 roberto Exp roberto $
+** $Id: lua.h,v 1.84 2001/01/25 16:45:36 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -15,11 +15,6 @@
 /* definition of `size_t' */
 #include <stddef.h>
 
-
-/* mark for all API functions */
-#ifndef LUA_API
-#define LUA_API		extern
-#endif
 
 
 #define LUA_VERSION	"Lua 4.1 (work)"
@@ -75,6 +70,21 @@ typedef int (*lua_CFunction) (lua_State *L);
 #define LUA_TSTRING	3
 #define LUA_TTABLE	4
 #define LUA_TFUNCTION	5
+
+
+/*
+** generic extra include file
+*/
+#ifdef LUA_USER_H
+#include LUA_USER_H
+#endif
+
+
+
+/* mark for all API functions */
+#ifndef LUA_API
+#define LUA_API		extern
+#endif
 
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.53 2001/01/24 15:45:33 roberto Exp roberto $
+** $Id: lstate.c,v 1.54 2001/01/25 16:45:36 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -91,7 +91,7 @@ static void f_luaopen (lua_State *L, void *ud) {
     luaX_init(L);
     luaT_init(L);
     G(L)->GCthreshold = 4*G(L)->nblocks;
-    LUA_EXIT;  /* temporary exit to use the API */
+    LUA_UNLOCK;  /* temporary exit to use the API */
     lua_newtable(L);
     lua_ref(L, 1);  /* create registry */
     lua_register(L, LUA_ERRORMESSAGE, errormessage);
@@ -100,7 +100,7 @@ static void f_luaopen (lua_State *L, void *ud) {
     if (lua_state == NULL) lua_state = L;  /* keep first state to be opened */
     lua_assert(lua_gettop(L) == 0);
 #endif
-    LUA_ENTRY;  /* go back inside */
+    LUA_LOCK;  /* go back inside */
   }
 }
 
@@ -108,7 +108,7 @@ static void f_luaopen (lua_State *L, void *ud) {
 LUA_API lua_State *lua_open (lua_State *OL, int stacksize) {
   struct Sopen so;
   lua_State *L;
-  LUA_ENTRY;
+  LUA_LOCK;
   L = luaM_new(OL, lua_State);
   if (L) {  /* allocation OK? */
     L->G = NULL;
@@ -127,7 +127,7 @@ LUA_API lua_State *lua_open (lua_State *OL, int stacksize) {
       L = NULL;
     }
   }
-  LUA_EXIT;
+  LUA_UNLOCK;
   return L;
 }
 
@@ -158,9 +158,9 @@ static void close_state (lua_State *L) {
 
 LUA_API void lua_close (lua_State *L) {
   lua_assert(L != lua_state || lua_gettop(L) == 0);
-  LUA_ENTRY;
+  LUA_LOCK;
   close_state(L);
-  LUA_EXIT;
+  LUA_UNLOCK;
   lua_assert(L != lua_state || memdebug_numblocks == 0);
   lua_assert(L != lua_state || memdebug_total == 0);
 }

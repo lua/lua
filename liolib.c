@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.99 2001/01/18 15:59:09 roberto Exp roberto $
+** $Id: liolib.c,v 1.100 2001/01/25 16:45:36 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -86,13 +86,14 @@ static int pushresult (lua_State *L, int i) {
 static FILE *getopthandle (lua_State *L, int inout) {
   FILE *p = (FILE *)lua_touserdata(L, 1);
   if (p != NULL) {  /* is it a userdata ? */
-    if (!checkfile(L,1)) {
+    if (!checkfile(L, 1)) {
       if (strcmp(lua_xtype(L, 1), "ClosedFileHandle") == 0)
         luaL_argerror(L, 1, "file is closed");
       else
         luaL_argerror(L, 1, "(invalid value)");
     }
-    lua_remove(L, 1);  /* remove it from stack */
+    /* move it to stack top */
+    lua_pushvalue(L, 1); lua_remove(L, 1);
   }
   else if (inout != NOFILE) {  /* try global value */
     lua_getglobal(L, filenames[inout]);
@@ -100,9 +101,8 @@ static FILE *getopthandle (lua_State *L, int inout) {
       luaL_verror(L, "global variable `%.10s' is not a valid file handle",
                   filenames[inout]);
     p = (FILE *)lua_touserdata(L, -1);
-    lua_pop(L, 1);  /* remove global value from stack */
   }
-  return p;
+  return p;  /* leave handle at stack top to avoid GC */
 }
 
 
@@ -295,7 +295,7 @@ static int read_chars (lua_State *L, FILE *f, size_t n) {
 
 static int io_read (lua_State *L) {
   FILE *f = getopthandle(L, INFILE);
-  int nargs = lua_gettop(L);
+  int nargs = lua_gettop(L)-1;
   int success;
   int n;
   if (nargs == 0) {  /* no arguments? */
@@ -347,7 +347,7 @@ static int io_read (lua_State *L) {
 
 static int io_write (lua_State *L) {
   FILE *f = getopthandle(L, OUTFILE);
-  int nargs = lua_gettop(L);
+  int nargs = lua_gettop(L)-1;
   int arg;
   int status = 1;
   for (arg=1; arg<=nargs; arg++) {

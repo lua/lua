@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.56 2001/01/10 16:58:11 roberto Exp roberto $
+** $Id: lua.c,v 1.57 2001/01/22 18:01:38 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -16,17 +16,27 @@
 #include "lualib.h"
 
 
-static lua_State *L = NULL;
+#ifdef _POSIX_SOURCE
+#include <unistd.h>
+#else
+static int isatty (int x) { return x==0; }  /* assume stdin is a tty */
+#endif
+
 
 
 #ifndef PROMPT
 #define PROMPT		"> "
 #endif
 
-#ifdef _POSIX_SOURCE
-#include <unistd.h>
-#else
-static int isatty (int x) { return x==0; }  /* assume stdin is a tty */
+
+#ifndef LUA_USERINIT
+#define LUA_USERINIT(L)	(lua_baselibopen(L), lua_iolibopen(L), \
+    lua_strlibopen(L), lua_mathlibopen(L), lua_dblibopen(L))
+#endif
+
+
+#ifndef LUA_USERFINI
+#define LUA_USERFINI
 #endif
 
 
@@ -39,6 +49,9 @@ struct Options {
 };
 
 
+static lua_State *L = NULL;
+
+
 typedef void (*handler)(int);  /* type for signal actions */
 
 static void laction (int i);
@@ -47,15 +60,6 @@ static void laction (int i);
 static lua_Hook old_linehook = NULL;
 static lua_Hook old_callhook = NULL;
 
-
-static void userinit (void) {
-  lua_baselibopen(L);
-  lua_iolibopen(L);
-  lua_strlibopen(L);
-  lua_mathlibopen(L);
-  lua_dblibopen(L);
-  /* add your libraries here */
-}
 
 
 static handler lreset (void) {
@@ -312,7 +316,7 @@ int main (int argc, char *argv[]) {
   opt.toclose = 0;
   getstacksize(argc, argv, &opt);  /* handle option `-s' */
   L = lua_open(NULL, opt.stacksize);  /* create state */
-  userinit();  /* open libraries */
+  LUA_USERINIT(L);  /* open libraries */
   register_getargs(argv);  /* create `getargs' function */
   status = handle_argv(argv+1, &opt);
   if (opt.toclose)
