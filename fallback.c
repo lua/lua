@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.31 1997/03/20 20:36:19 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.32 1997/03/21 18:37:28 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -28,6 +28,7 @@ static char *typenames[] = { /* ORDER LUA_T */
 void luaI_type (void)
 {
   lua_Object o = lua_getparam(1);
+  luaL_arg_check(o != LUA_NOOBJECT, "type", 1, "no argument");
   lua_pushstring(typenames[-ttype(luaI_Address(o))]);
   lua_pushnumber(lua_tag(o));
 }
@@ -125,15 +126,14 @@ static int findstring (char *name, char *list[])
   for (i=0; list[i]; i++)
     if (strcmp(list[i], name) == 0)
       return i;
-  /* name not found */
-  return -1;
+  return -1;  /* name not found */
 }
 
 static int luaI_checkevent (char *name, char *list[])
 {
   int e = findstring(name, list);
   if (e < 0)
-    lua_error("invalid event name");
+    luaL_verror("invalid event name `%s'", name);
   return e;
 }
 
@@ -144,7 +144,7 @@ static struct IM {
 } *luaI_IMtable = NULL;
 
 static int IMtable_size = 0;
-static int last_tag = LUA_T_NIL;
+static int last_tag = LUA_T_NIL;  /* ORDER LUA_T */
 
 static char validevents[NUM_TYPES][IM_N] = { /* ORDER LUA_T, ORDER IM */
 {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},  /* LUA_T_USERDATA */
@@ -204,12 +204,9 @@ int lua_newtag (char *t)
 }
 
 
-#define validtag(tag)  (last_tag <= (tag) && (tag) <= 0)
-
-
 static void checktag (int tag)
 {
-  if (!validtag(tag))
+  if (!(last_tag <= (tag) && (tag) <= 0))
     lua_error("invalid tag");
 }
 
@@ -232,6 +229,7 @@ void luaI_settag (int tag, Object *o)
     o->value.ts->tag = tag;
 }
 
+
 int luaI_tag (Object *o)
 {
   lua_Type t = ttype(o);
@@ -242,6 +240,7 @@ int luaI_tag (Object *o)
   else return t;
 }
 
+
 Object *luaI_getim (int tag, IMS event)
 {
   if (tag > LUA_T_USERDATA)
@@ -249,10 +248,6 @@ Object *luaI_getim (int tag, IMS event)
   return &luaI_IMtable[-tag].int_method[event];
 }
 
-Object *luaI_getimbyObj (Object *o, IMS event)
-{
-  return luaI_getim(luaI_tag(o), event);
-}
 
 void luaI_setintmethod (void)
 {
@@ -288,11 +283,18 @@ void luaI_setglobalmethod (void)
 }
 
 char *luaI_travfallbacks (int (*fn)(Object *))
-{ /* ??????????
-  int i;
-  for (i=0; i<N_FB; i++)
-    if (fn(&luaI_fallBacks[i].function))
-      return luaI_fallBacks[i].kind; */
+{
+  int e;
+  for (e=GIM_ERROR; e<=GIM_SETGLOBAL; e++) {  /* ORDER GIM */
+    if (fn(&gmethod[e]))
+      return geventname[e];
+  }
+  for (e=IM_GETTABLE; e<=IM_FUNCTION; e++) {  /* ORDER IM */
+    int t;
+    for (t=0; t>=last_tag; t--)
+      if (fn(&luaI_IMtable[-t].int_method[e]))
+        return luaI_eventname[e];
+  }
   return NULL;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: fallback.h,v 1.15 1997/03/19 19:41:10 roberto Exp roberto $
+** $Id: fallback.h,v 1.16 1997/03/20 19:20:43 roberto Exp roberto $
 */
  
 #ifndef fallback_h
@@ -59,8 +59,8 @@ void luaI_type (void);
 void luaI_settag (int tag, Object *o);
 lua_Type luaI_typetag (int tag);
 Object *luaI_getim (int tag, IMS event);
+#define luaI_getimbyObj(o,e)  (luaI_getim(luaI_tag(o),(e)))
 Object *luaI_getgim (IMGS event);
-Object *luaI_getimbyObj (Object *o, IMS event);
 int luaI_tag (Object *o);
 void luaI_setintmethod (void);
 void luaI_setglobalmethod (void);
