@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.29 1999/11/22 18:24:50 roberto Exp roberto $
+** $Id: lstring.c,v 1.30 1999/11/26 18:59:20 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -154,7 +154,7 @@ TaggedString *luaS_new (lua_State *L, const char *str) {
   return luaS_newlstr(L, str, strlen(str));
 }
 
-TaggedString *luaS_newfixedstring (lua_State *L, const char *str) {
+TaggedString *luaS_newfixed (lua_State *L, const char *str) {
   TaggedString *ts = luaS_new(L, str);
   if (ts->marked == 0) ts->marked = FIXMARK;  /* avoid GC */
   return ts;

@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.13 1999/11/22 13:12:07 roberto Exp roberto $
+** $Id: lstring.h,v 1.14 1999/11/26 18:59:20 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -32,7 +32,7 @@ void luaS_freeall (lua_State *L);
 void luaS_free (lua_State *L, TaggedString *ts);
 TaggedString *luaS_newlstr (lua_State *L, const char *str, long l);
 TaggedString *luaS_new (lua_State *L, const char *str);
-TaggedString *luaS_newfixedstring (lua_State *L, const char *str);
+TaggedString *luaS_newfixed (lua_State *L, const char *str);
 GlobalVar *luaS_assertglobal (lua_State *L, TaggedString *ts);
 GlobalVar *luaS_assertglobalbyname (lua_State *L, const char *name);
 int luaS_globaldefined (lua_State *L, const char *name);

@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.83 1999/12/07 12:05:34 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.84 1999/12/14 18:31:20 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -653,8 +653,8 @@ static const struct luaL_reg builtin_funcs[] = {
 
 void luaB_predefine (lua_State *L) {
   /* pre-register mem error messages, to avoid loop when error arises */
-  luaS_newfixedstring(L, tableEM);
-  luaS_newfixedstring(L, memEM);
+  luaS_newfixed(L, tableEM);
+  luaS_newfixed(L, memEM);
   luaL_openl(L, builtin_funcs);
   luaB_opentests(L);  /* internal test functions (when DEBUG is on) */
   lua_pushstring(L, LUA_VERSION);

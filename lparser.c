@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.45 1999/12/01 19:50:08 roberto Exp roberto $
+** $Id: lparser.c,v 1.46 1999/12/07 11:36:16 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -464,7 +464,7 @@ static void code_args (LexState *ls, int nparams, int dots) {
   else {
     fs->f->code[1] = (Byte)(nparams+ZEROVARARG);
     deltastack(ls, nparams+1);
-    add_localvar(ls, luaS_newfixedstring(ls->L, "arg"));
+    add_localvar(ls, luaS_newfixed(ls->L, "arg"));
   }
 }
 
@@ -890,7 +890,7 @@ static void body (LexState *ls, int needself, int line) {
   newfs.f->lineDefined = line;
   check(ls, '(');
   if (needself)
-    add_localvar(ls, luaS_newfixedstring(ls->L, "self"));
+    add_localvar(ls, luaS_newfixed(ls->L, "self"));
   parlist(ls);
   check(ls, ')');
   chunk(ls);
