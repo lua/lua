@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.1 1999/01/08 16:47:44 roberto Exp roberto $
+** $Id: ldblib.c,v 1.2 1999/01/11 18:57:35 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -67,6 +67,10 @@ static void getstack (void) {
     int currline = lua_currentline(func);
     if (currline > 0)
       settabsi(result, "current", currline);
+    lua_pushobject(result);
+    lua_pushstring("func");
+    lua_pushobject(func);
+    lua_settable();  /* result.func = func */
     lua_pushobject(result);
   }
 }
