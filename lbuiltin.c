@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.44 1999/01/04 12:55:09 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.45 1999/01/04 17:34:49 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -325,12 +325,12 @@ static void luaB_assert (void) {
 
 static void luaB_foreachi (void) {
   Hash *t = gethash(1);
-  TObject f = *luaA_Address(luaL_functionarg(2));
+  TObject *f = luaA_Address(luaL_functionarg(2));
   int i;
   int n = (int)getnarg(t);
   luaD_checkstack(3);  /* for f, ref, and val */
   for (i=1; i<=n; i++) {
-    *(L->stack.top++) = f;
+    *(L->stack.top++) = *f;
     ttype(L->stack.top) = LUA_T_NUMBER; nvalue(L->stack.top++) = i;
     *(L->stack.top++) = *luaH_getint(t, i);
     luaD_calln(2, 1);
@@ -343,13 +343,13 @@ static void luaB_foreachi (void) {
 
 static void luaB_foreach (void) {
   Hash *a = gethash(1);
-  TObject f = *luaA_Address(luaL_functionarg(2));
+  TObject *f = luaA_Address(luaL_functionarg(2));
   int i;
   luaD_checkstack(3);  /* for f, ref, and val */
   for (i=0; i<a->nhash; i++) {
     Node *nd = &(a->node[i]);
     if (ttype(ref(nd)) != LUA_T_NIL && ttype(val(nd)) != LUA_T_NIL) {
-      *(L->stack.top++) = f;
+      *(L->stack.top++) = *f;
       *(L->stack.top++) = *ref(nd);
       *(L->stack.top++) = *val(nd);
       luaD_calln(2, 1);
@@ -362,7 +362,7 @@ static void luaB_foreach (void) {
 
 
 static void luaB_foreachvar (void) {
-  TObject f = *luaA_Address(luaL_functionarg(1));
+  TObject *f = luaA_Address(luaL_functionarg(1));
   GCnode *g;
   StkId name = L->Cstack.base++;  /* place to keep var name (to avoid GC) */
   luaD_checkstack(4);  /* for var name, f, s, and globalvar */
@@ -373,7 +373,7 @@ static void luaB_foreachvar (void) {
     if (s->u.s.globalval.ttype != LUA_T_NIL) {
       ttype(L->stack.stack+name) = LUA_T_STRING;
       tsvalue(L->stack.stack+name) = s;  /* keep s on stack to avoid GC */
-      *(L->stack.top++) = f;
+      *(L->stack.top++) = *f;
       pushtagstring(s);
       *(L->stack.top++) = s->u.s.globalval;
       luaD_calln(2, 1);
@@ -407,12 +407,11 @@ static void luaB_tremove (void) {
   Hash *a = gethash(1);
   int n = (int)getnarg(a);
   int pos = luaL_opt_int(2, n);
-  TObject v = *luaH_getint(a, pos);
   if (n <= 0) return;  /* table is "empty" */
+  luaA_pushobject(luaH_getint(a, pos));  /* push result */
   luaV_setn(a, n-1);  /* decrement field "n" */
   for ( ;pos<n; pos++)
     luaH_move(a, pos+1, pos);
-  luaA_pushobject(&v);
 }
 
 
@@ -421,7 +420,8 @@ static void luaB_tremove (void) {
 */
 
 static void swap (Hash *a, int i, int j) {
-  TObject temp = *luaH_getint(a, i);
+  TObject temp;
+  temp = *luaH_getint(a, i);
   luaH_move(a, j, i);
   luaH_setint(a, j, &temp);
 }
