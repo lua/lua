@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.1 1997/08/14 19:47:57 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -446,7 +446,7 @@ static void str_gsub (void)
 }
 
 
-void luaI_addquoted (char *s)
+static void luaI_addquoted (char *s)
 {
   luaI_addchar('"');
   for (; *s; s++) {

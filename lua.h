@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.3 1997/11/04 15:27:53 roberto Exp roberto $
+** $Id: lua.h,v 1.4 1997/11/19 17:29:23 roberto Exp roberto $
 ** LUA - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -85,14 +85,14 @@ int            lua_isnumber             (lua_Object object);
 int            lua_isstring             (lua_Object object);
 int            lua_isfunction           (lua_Object object);
 
-float          lua_getnumber 		(lua_Object object);
+double         lua_getnumber 		(lua_Object object);
 char          *lua_getstring 		(lua_Object object);
 lua_CFunction  lua_getcfunction 	(lua_Object object);
 void	      *lua_getuserdata		(lua_Object object);
 
 
 void 	       lua_pushnil 		(void);
-void           lua_pushnumber 		(float n);
+void           lua_pushnumber 		(double n);
 void           lua_pushstring 		(char *s);
 void           lua_pushCclosure		(lua_CFunction fn, int n);
 void           lua_pushusertag          (void *u, int tag);

@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: lmem.h,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -38,7 +38,9 @@ int luaM_growaux (void **block, unsigned long nelems, int size,
 #define luaM_reallocvector(v,n,t) ((t *)luaM_realloc(v,(n)*sizeof(t)))
 
 
-void luaM_query (void);  /* only ifdef DEBUG */
+#ifdef DEBUG
+void luaM_query (void);
+#endif
 
 
 #endif

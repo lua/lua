@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.6 1997/11/19 18:16:33 roberto Exp roberto $
+** $Id: lapi.c,v 1.7 1997/11/21 19:00:46 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -267,7 +267,7 @@ int lua_isfunction (lua_Object o)
 }
 
 
-real lua_getnumber (lua_Object object)
+double lua_getnumber (lua_Object object)
 {
  if (object == LUA_NOOBJECT) return 0.0;
  if (tonumber(Address(object))) return 0.0;
@@ -302,7 +302,7 @@ void lua_pushnil (void)
   incr_top;
 }
 
-void lua_pushnumber (real n)
+void lua_pushnumber (double n)
 {
   ttype(L->stack.top) = LUA_T_NUMBER;
   nvalue(L->stack.top) = n;

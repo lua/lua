@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.2 1997/11/04 15:27:53 roberto Exp roberto $
+** $Id: llex.h,v 1.3 1997/11/19 17:29:23 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -38,9 +38,6 @@ typedef struct LexState {
   int linelasttoken;
   int lastline;
 } LexState;
-
-
-extern int luaX_linenumber;
 
 
 void luaX_init (void);

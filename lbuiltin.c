@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.7 1997/11/07 18:19:13 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.8 1997/11/19 17:29:23 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -152,11 +152,11 @@ static char *to_string (lua_Object obj)
     case LUA_T_NUMBER:  case LUA_T_STRING:
       return lua_getstring(obj);
     case LUA_T_ARRAY: {
-      sprintf(buff, "table: %p", o->value.a);
+      sprintf(buff, "table: %p", (void *)o->value.a);
       return buff;
     }
     case LUA_T_FUNCTION: {
-      sprintf(buff, "function: %p", o->value.cl);
+      sprintf(buff, "function: %p", (void *)o->value.cl);
       return buff;
     }
     case LUA_T_USERDATA: {
