@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.47 2000/11/14 18:46:09 roberto Exp roberto $
+% $Id: manual.tex,v 1.47 2000/12/28 17:25:45 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage}
@@ -134,7 +134,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{{\small \tt\$Date: 2000/11/14 18:46:09 $ $}}
+\date{{\small \tt\$Date: 2000/12/28 17:25:45 $ $}}
 
 \maketitle
 
@@ -1968,7 +1968,7 @@ and load it accordingly (see program \IndexVerb{luac}).
 \verb|lua_dostring| executes only source code,
 given in textual form.
 
-The third parameter to \verb|lua_dobuffer|
+The fourth parameter to \verb|lua_dobuffer|
 is the ``name of the chunk'',
 which is used in error messages and debug information.
 If \verb|name| is \verb|NULL|,
@@ -2170,7 +2170,7 @@ Here it is in~C:
     lua_pop(L, 1);                               /* remove `t' from the stack */
 \end{verbatim}
 Notice that the code above is ``balanced'':
-at its end ,the stack is back to its original configuration.
+at its end, the stack is back to its original configuration.
 This is considered good programming practice.
 
 \medskip
@@ -2317,7 +2317,9 @@ thus creating a \IndexEmph{C~closure};
 these values are passed to the function whenever it is called,
 as ordinary arguments.
 To associate upvalues to a C~function,
-first these values should be pushed onto the stack.
+first these values should be pushed onto the stack
+(when there are multiple upvalues,
+the first upvalue is pushed first).
 Then the function
 \begin{verbatim}
        void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n);
@@ -2634,7 +2636,8 @@ the table during the traversal.
 
 \subsubsection*{\ff \T{print (e1, e2, ...)}}\DefLIB{print}
 Receives any number of arguments,
-and prints their values using the strings returned by \verb|tostring|.
+and prints their values in \verb|stdout|,
+using the strings returned by \verb|tostring|.
 This function is not intended for formatted output,
 but only as a quick way to show a value,
 for instance for debugging.
@@ -3311,7 +3314,7 @@ or \nil\ on end of file.
 \subsubsection*{\ff \T{write ([filehandle, ] value1, ...)}}\DefLIB{write}
 
 Writes the value of each of its arguments to
-file \verb|_OUTPUT|,
+filehandle \verb|_OUTPUT|,
 or to \verb|filehandle| if this argument is given.
 The arguments must be strings or numbers.
 To write other values,
