@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.117 2003/02/10 10:21:31 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.118 2003/02/12 09:11:01 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -449,8 +449,6 @@ static int luaB_require (lua_State *L) {
   int status = LUA_ERRFILE;  /* not found (yet) */
   luaL_checkstring(L, 1);
   lua_settop(L, 1);
-  lua_pushvalue(L, 1);
-  lua_setglobal(L, "_REQUIREDNAME");
   lua_getglobal(L, REQTAB);
   if (!lua_istable(L, 2)) return luaL_error(L, "`" REQTAB "' is not a table");
   path = getpath(L);
@@ -468,7 +466,11 @@ static int luaB_require (lua_State *L) {
   }
   switch (status) {
     case 0: {
+      lua_pushvalue(L, 1);
+      lua_setglobal(L, "_REQUIREDNAME");
       lua_call(L, 0, 0);  /* run loaded module */
+      lua_pushnil(L);
+      lua_setglobal(L, "_REQUIREDNAME");  /* reset */
       lua_pushvalue(L, 1);
       lua_pushboolean(L, 1);
       lua_rawset(L, 2);  /* mark it as loaded */
