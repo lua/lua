@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.5 1997/12/17 20:48:58 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.6 1998/01/09 14:44:55 roberto Exp $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -109,11 +109,11 @@ static void str_ascii (void)
 #define MAX_CAPT 9
 
 struct Capture {
+  int level;  /* total number of captures (finished or unfinished) */
   struct {
     char *init;
     int len;  /* -1 signals unfinished capture */
   } capture[MAX_CAPT];
-  int level;  /* total number of captures (finished or unfinished) */
 };
 
 

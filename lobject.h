@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.12 1997/12/23 19:24:19 roberto Exp roberto $
+** $Id: lobject.h,v 1.13 1997/12/26 18:38:16 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -96,8 +96,8 @@ typedef struct TaggedString {
   union {
     TObject globalval;
     struct {
-      void *v;  /* if this is a userdata, here is its value */
       int tag;
+      void *v;  /* if this is a userdata, here is its value */
     } d;
   } u;
   char str[1];   /* \0 byte already reserved */
@@ -111,11 +111,11 @@ typedef struct TaggedString {
 */
 typedef struct TProtoFunc {
   GCnode head;
+  struct TObject *consts;
+  int nconsts;
   Byte *code;  /* ends with opcode ENDCODE */
   int lineDefined;
   TaggedString  *fileName;
-  struct TObject *consts;
-  int nconsts;
   struct LocVar *locvars;  /* ends with line = -1 */
 } TProtoFunc;
 
@@ -165,11 +165,6 @@ typedef struct Hash {
   int htag;
 } Hash;
 
-
-/*
-** a gross estimation of number of memory "blocks" allocated
-** (a block is *roughly* 32 bytes)
-*/
 
 extern char *luaO_typenames[];
 

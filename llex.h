@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.5 1997/12/02 12:43:44 roberto Exp roberto $
+** $Id: llex.h,v 1.6 1997/12/17 20:48:58 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -28,8 +28,8 @@ typedef struct LexState {
   int linenumber;  /* input line counter */
   int linelasttoken;  /* line where last token was read */
   int lastline;  /* last line wherein a SETLINE was generated */
-  struct ifState ifstate[MAX_IFS];
   int iflevel;  /* level of nested $if's (for lexical analysis) */
+  struct ifState ifstate[MAX_IFS];
 } LexState;
 
 

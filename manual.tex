@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.2 1998/01/06 19:17:31 roberto Exp roberto $
+% $Id: manual.tex,v 1.3 1998/01/07 16:26:48 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -38,7 +38,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1998/01/06 19:17:31 $}
+\date{\small \verb$Date: 1998/01/07 16:26:48 $}
 
 \maketitle
 
@@ -1658,9 +1658,9 @@ void           lua_pushCclosure         (lua_CFunction fn, int n);
 \end{verbatim}
 is used to put the C function on C2lua,
 with the argument \verb|n| telling how many upvalues must be
-associated with the function
-(notice that the macro \verb|lua_pushcfunction| is defined as
-\verb|lua_pushCclosure| with \verb|n| set to 0).
+associated with the function;
+in fact, the macro \verb|lua_pushcfunction| is defined as
+\verb|lua_pushCclosure| with \verb|n| set to 0.
 Then, any time the function is called,
 these upvalues are inserted as the first arguments to the function,
 before the actual arguments provided in the call.
@@ -1718,10 +1718,11 @@ Currently there are three standard libraries:
 \item mathematical functions (sin, log, etc);
 \item input and output (plus some system facilities).
 \end{itemize}
-In order to have access to these libraries,
+To have access to these libraries,
 the C host program must call the functions
-\verb|lua_strlibopen|, \verb|lua_mathlibopen|, and \verb|lua_iolibopen|,
-declared in \verb|lualib.h|.
+\verb|lua_strlibopen|, \verb|lua_mathlibopen|,
+and \verb|lua_iolibopen|, declared in \verb|lualib.h|.
+\Deffunc{lua_strlibopen}\Deffunc{lua_mathlibopen}\Deffunc{lua_iolibopen}.
 
 
 \subsection{Predefined Functions} \label{predefined}
@@ -2708,11 +2709,11 @@ Here is a list of all these incompatibilities.
 \subsection*{Incompatibilities with \Index{version 3.0}}
 \begin{itemize}
 
-\item To support for multiple contexts,
-the whole library must be explicitly opened before used.
+\item To support multiple contexts,
+Lua 3.1 must be explicitly opened before used.
 However, all standard libraries check whether Lua is already opened,
 so any program that opens at least one standard library before using
-Lua API does not need to be corrected.
+Lua API does not need to be modified.
 
 \item Function \verb|dostring| does not accept an optional second argument,
 with a temporary error method.
@@ -2725,7 +2726,8 @@ Closures make this feature irrelevant.
 \item The syntax for function declaration is now more restricted;
 for instance, the old syntax \verb|function f[exp] (x) ... end| is not
 accepted in 3.1.
-Programs should use an explicit assignment instead, like this:
+In these cases,
+programs should use an explicit assignment instead, like
 \verb|f[exp] = function (x) ... end|.
 
 \item Old pre-compiled code is obsolete, and must be re-compiled.

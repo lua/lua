@@ -1,5 +1,5 @@
 /*
-** $Id: lzio.h,v 1.2 1997/11/21 19:00:46 roberto Exp roberto $
+** $Id: lzio.h,v 1.3 1997/12/22 20:57:18 roberto Exp roberto $
 ** Buffered streams
 ** See Copyright Notice in lua.h
 */
@@ -42,8 +42,8 @@ struct zio {
  unsigned char* p;			/* current position in buffer */
  int (*filbuf)(ZIO* z);
  void* u;				/* additional data */
- unsigned char buffer[ZBSIZE];		/* buffer */
  char *name;
+ unsigned char buffer[ZBSIZE];		/* buffer */
 };
 
 
