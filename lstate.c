@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.3 2004/02/16 19:09:52 roberto Exp roberto $
+** $Id: lstate.c,v 2.4 2004/03/15 21:04:33 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -82,6 +82,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   G(L)->firstudata = obj2gco(u);
   luaC_link(L, obj2gco(u), LUA_TUSERDATA);
   setbit(u->uv.marked, FIXEDBIT);
+  setbit(L->marked, FIXEDBIT);
   stack_init(L, L);  /* init stack */
   sethvalue(L, gt(L), luaH_new(L, 0, 4));  /* table of globals */
   sethvalue(L, registry(L), luaH_new(L, 4, 4));  /* registry */

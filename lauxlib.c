@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.108 2003/11/05 11:59:14 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.109 2004/02/18 13:40:03 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -267,8 +267,7 @@ LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
 */
 
 static int checkint (lua_State *L, int topop) {
-  int n = (int)lua_tointeger(L, -1);
-  if (n == 0 && !lua_isnumber(L, -1)) n = -1;
+  int n = (lua_type(L, -1) == LUA_TNUMBER) ? lua_tointeger(L, -1) : -1;
   lua_pop(L, topop);
   return n;
 }
