@@ -449,8 +449,9 @@ static int str_find (lua_State *L) {
   const char *p = luaL_check_lstr(L, 2, &l2);
   sint32 init = posrelat(luaL_opt_long(L, 3, 1), l1) - 1;
   luaL_arg_check(L, 0 <= init && (size_t)(init) <= l1, 3, "out of range");
-  if (lua_gettop(L) > 3 ||  /* extra argument? */
+  if (lua_istrue(L, 4) ||  /* explicit request? */
       strpbrk(p, SPECIALS) == NULL) {  /* or no special characters? */
+    /* do a plain search */
     const char *s2 = lmemfind(s+init, l1-init, p, l2);
     if (s2) {
       lua_pushnumber(L, s2-s+1);
