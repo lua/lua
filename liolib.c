@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.114 2001/06/07 13:46:29 roberto Exp roberto $
+** $Id: liolib.c,v 1.115 2001/06/08 16:48:32 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -205,6 +205,62 @@ static int io_appendto (lua_State *L) {
 */
 
 
+#ifndef LUA_MAXUNTIL
+#define LUA_MAXUNTIL	100
+#endif
+
+
+/*
+** Knuth-Morris-Pratt algorithm for string searching
+** (based on `Algorithms in MODULA-3', Robert Sedgewick;
+**  Addison-Wesley, 1993.)
+*/
+
+static void prep_read_until (int next[], const l_char *p, int pl) {
+  int i = 0;
+  int j = -1;
+  next[0] = -1;
+  while (i < pl) {
+    if (j == -1 || p[i] == p[j]) {
+      i++; j++; next[i] = j;
+    }
+    else j = next[j];
+  }
+}
+
+
+static int read_until (lua_State *L, FILE *f, const l_char *p, int pl) {
+  l_charint c;
+  int j;
+  int next[LUA_MAXUNTIL+1];
+  luaL_Buffer b;
+  luaL_buffinit(L, &b);
+  prep_read_until(next, p, pl);
+  j = 0;
+  while ((c = fgetc(f)) != EOF) {
+  NoRead:
+    if (c == p[j]) {
+      j++;  /* go to next char in pattern */
+      if (j == pl) {  /* complete match? */
+        luaL_pushresult(&b);  /* close buffer */
+        return 1;  /* always success */
+      }
+    }
+    else if (j == 0)
+      luaL_putchar(&b, c);
+    else {  /* match fail */
+      luaL_addlstring(&b, p, j - next[j]);  /* put failed part on result */
+      j = next[j];  /* backtrack pattern index */
+      goto NoRead;  /* repeat without reading next char */
+    }
+  }
+  /* end of file without a match */
+  luaL_addlstring(&b, p, j);  /* put failed part on result */
+  luaL_pushresult(&b);  /* close buffer */
+  return (lua_strlen(L, -1) > 0);
+}
+
+
 static int read_number (lua_State *L, FILE *f) {
   double d;
   if (fscanf(f, l_s("%lf"), &d) == 1) {
@@ -215,105 +271,48 @@ static int read_number (lua_State *L, FILE *f) {
 }
 
 
-static int read_word (lua_State *L, FILE *f) {
-  l_charint c;
-  luaL_Buffer b;
-  luaL_buffinit(L, &b);
-  do { c = fgetc(f); } while (isspace(c));  /* skip spaces */
-  while (c != EOF && !isspace(c)) {
-    luaL_putchar(&b, c);
-    c = fgetc(f);
-  }
+static int test_eof (lua_State *L, FILE *f) {
+  l_charint c = fgetc(f);
   ungetc(c, f);
-  luaL_pushresult(&b);  /* close buffer */
-  return (lua_strlen(L, -1) > 0);
-}
-
-
-static int read_line (lua_State *L, FILE *f) {
-  int n = 0;
-  luaL_Buffer b;
-  luaL_buffinit(L, &b);
-  for (;;) {
-    l_char *p = luaL_prepbuffer(&b);
-    if (!fgets(p, LUAL_BUFFERSIZE, f))  /* read fails? */
-      break;
-    n = strlen(p);
-    if (p[n-1] != l_c('\n'))
-      luaL_addsize(&b, n); 
-    else {
-      luaL_addsize(&b, n-1);  /* do not add the `\n' */
-      break;
-    }
-  }
-  luaL_pushresult(&b);  /* close buffer */
-  return (n > 0);  /* read something? */
-}
-
-
-static void read_file (lua_State *L, FILE *f) {
-  size_t len = 0;
-  size_t size = LUAL_BUFFERSIZE;
-  size_t oldsize = 0;
-  l_char *buffer = NULL;
-  for (;;) {
-    l_char *newbuffer = (l_char *)l_realloc(buffer, oldsize, size);
-    if (newbuffer == NULL) {
-      l_free(buffer, oldsize);
-      lua_error(L, l_s("not enough memory to read a file"));
-    }
-    buffer = newbuffer;
-    len += fread(buffer+len, sizeof(l_char), size-len, f);
-    if (len < size) break;  /* did not read all it could */
-    oldsize = size;
-    size *= 2;
-  }
-  lua_pushlstring(L, buffer, len);
-  l_free(buffer, size);
+  lua_pushlstring(L, NULL, 0);
+  return (c != EOF);
 }
 
 
 static int read_chars (lua_State *L, FILE *f, size_t n) {
-  if (n == 0) {  /* test eof? */
-    l_charint c = fgetc(f);
-    ungetc(c, f);
-    lua_pushlstring(L, NULL, 0);
-    return (c != EOF);
-  }
-  else {
-    l_char *buffer;
-    size_t n1;
-    l_char statbuff[LUAL_BUFFERSIZE];
-    if (n <= LUAL_BUFFERSIZE)
-      buffer = statbuff;
-    else {
-      buffer = (l_char  *)l_malloc(n);
-      if (buffer == NULL)
-        lua_error(L, l_s("not enough memory to read a file"));
-    }
-    n1 = fread(buffer, sizeof(l_char), n, f);
-    lua_pushlstring(L, buffer, n1);
-    if (buffer != statbuff) l_free(buffer, n);
-    return (n1 > 0 || n == 0);
-  }
+  size_t rlen;
+  luaL_Buffer b;
+  luaL_buffinit(L, &b);
+  rlen = LUAL_BUFFERSIZE;
+  do {
+    l_char *p = luaL_prepbuffer(&b);
+    if (rlen > n) rlen = n;
+    rlen = fread(p, sizeof(l_char), rlen, f);
+    luaL_addsize(&b, rlen);
+    n -= rlen;
+  } while (n > 0 && rlen > 0);  /* until end of count or eof */
+  luaL_pushresult(&b);  /* close buffer */
+  return (n == 0 || lua_strlen(L, -1) > 0);
 }
 
 
 static int io_read (lua_State *L) {
   FILE *f = getopthandle(L, INFILE);
-  int nargs = lua_gettop(L)-1;
+  int nargs = lua_gettop(L) - 1;
   int success;
   int n;
   if (nargs == 0) {  /* no arguments? */
-    success = read_line(L, f);
+    success = read_until(L, f, l_s("\n"), 1);  /* read until \n (a line) */
     n = 2;  /* will return n-1 results */
   }
   else {  /* ensure stack space for all results and for auxlib's buffer */
     luaL_checkstack(L, nargs+LUA_MINSTACK, l_s("too many arguments"));
     success = 1;
     for (n = 1; n<=nargs && success; n++) {
-      if (lua_type(L, n) == LUA_TNUMBER)
-        success = read_chars(L, f, (size_t)lua_tonumber(L, n));
+      if (lua_type(L, n) == LUA_TNUMBER) {
+        size_t l = (size_t)lua_tonumber(L, n);
+        success = (l == 0) ? test_eof(L, f) : read_chars(L, f, l);
+      }
       else {
         const l_char *p = lua_tostring(L, n);
         if (!p || p[0] != l_c('*'))
@@ -323,15 +322,22 @@ static int io_read (lua_State *L) {
             success = read_number(L, f);
             break;
           case l_c('l'):  /* line */
-            success = read_line(L, f);
+            success = read_until(L, f, l_s("\n"), 1);  /* read until \n */
             break;
           case l_c('a'):  /* file */
-            read_file(L, f);
+            read_chars(L, f, ~((size_t)0));  /* read MAX_SIZE_T chars */
             success = 1; /* always success */
             break;
           case l_c('w'):  /* word */
-            success = read_word(L, f);
+            lua_error(L, "option `*w' is deprecated");
             break;
+          case l_c('u'): {  /* read until */
+            size_t pl = lua_strlen(L, n) - 2;
+            luaL_arg_check(L, 0 < pl && pl <= LUA_MAXUNTIL, n,
+                              l_s("invalid read-until length"));
+            success = read_until(L, f, p+2, (int)pl);
+            break;
+          }
           default:
             luaL_argerror(L, n, l_s("invalid format"));
             success = 0;  /* to avoid warnings */
