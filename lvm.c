@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.248 2002/07/17 16:25:13 roberto Exp $
+** $Id: lvm.c,v 1.249 2002/08/05 17:36:24 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -385,10 +385,12 @@ StkId luaV_execute (lua_State *L) {
   /* main loop of interpreter */
   for (;;) {
     const Instruction i = *pc++;
-    const StkId ra = RA(i);
+    StkId ra;
     if (L->hookmask >= LUA_MASKLINE &&
         (--L->hookcount == 0 || L->hookmask & LUA_MASKLINE))
       traceexec(L);
+    /* warning!! several calls may realloc the stack and invalidate `ra' */
+    ra = RA(i);
     lua_assert(L->top <= L->stack + L->stacksize && L->top >= L->ci->base);
     lua_assert(L->top == L->ci->top ||
          GET_OPCODE(i) == OP_CALL ||   GET_OPCODE(i) == OP_TAILCALL ||
@@ -544,7 +546,7 @@ StkId luaV_execute (lua_State *L) {
         int b = GETARG_B(i);
         int c = GETARG_C(i);
         luaV_concat(L, c-b+1, c);  /* may change `base' (and `ra') */
-        setobj(base+GETARG_A(i), base+b);
+        setobj(RA(i), base+b);
         luaV_checkGC(L, base+c+1);
         break;
       }
@@ -634,13 +636,13 @@ StkId luaV_execute (lua_State *L) {
           return ra;  /* no: return */
         else {  /* yes: continue its execution (go through) */
           int nresults;
-          lua_assert(ttisfunction(ci->base-1));
-          ci->pc = &pc;  /* function is active again */
-          pc = ci->u.l.savedpc;
-          lua_assert(GET_OPCODE(*(pc-1)) == OP_CALL);
-          nresults = GETARG_C(*(pc-1)) - 1;
+          lua_assert(ttisfunction(ci->base - 1));
+          lua_assert(GET_OPCODE(*(ci->u.l.savedpc - 1)) == OP_CALL);
+          nresults = GETARG_C(*(ci->u.l.savedpc - 1)) - 1;
           luaD_poscall(L, nresults, ra);
           if (nresults >= 0) L->top = L->ci->top;
+          L->ci->pc = &pc;  /* function is active again */
+          pc = L->ci->u.l.savedpc;
           goto retentry;
         }
       }
@@ -670,7 +672,7 @@ StkId luaV_execute (lua_State *L) {
         L->top = ra+5;
         luaD_call(L, ra+2, GETARG_C(i) + 1);
         L->top = L->ci->top;
-        if (ttisnil(ra+2)) pc++;  /* skip jump (break loop) */
+        if (ttisnil(RA(i)+2)) pc++;  /* skip jump (break loop) */
         else dojump(pc, GETARG_sBx(*pc) + 1);  /* else jump back */
         break;
       }

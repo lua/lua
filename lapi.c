@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.208 2002/08/06 17:06:56 roberto Exp roberto $
+** $Id: lapi.c,v 1.209 2002/08/06 18:54:18 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -747,15 +747,15 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
 
 
 LUA_API int lua_pushupvalues (lua_State *L) {
-  TObject *func;
+  Closure *func;
   int n, i;
   lua_lock(L);
-  func = (L->ci->base - 1);
-  api_check(L, iscfunction(func));
-  n = clvalue(func)->c.nupvalues;
+  api_check(L, iscfunction(L->ci->base - 1));
+  func = clvalue(L->ci->base - 1);
+  n = func->c.nupvalues;
   luaD_checkstack(L, n + LUA_MINSTACK);
   for (i=0; i<n; i++) {
-    setobj(L->top, &clvalue(func)->c.upvalue[i]);
+    setobj(L->top, &func->c.upvalue[i]);
     L->top++;
   }
   lua_unlock(L);
