@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.3 1994/11/06 15:35:04 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.4 1994/11/09 18:07:38 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +22,7 @@ char *rcs_luastx = "$Id: lua.stx,v 3.3 1994/11/06 15:35:04 roberto Exp roberto $
 static Long   maxcode;
 static Long   maxmain;
 static Long   maxcurr ;
-static Byte  *code = NULL;
+static Byte  *funcCode = NULL;
 static Byte **initcode;
 static Byte  *basepc;
 static Long   maincode;
@@ -166,10 +166,10 @@ static void code_number (float f)
 
 static void init_function (void)
 {
- if (code == NULL)	/* first function */
+ if (funcCode == NULL)	/* first function */
  {
-  code = (Byte *) calloc(CODE_BLOCK, sizeof(Byte));
-  if (code == NULL)
+  funcCode = (Byte *) calloc(CODE_BLOCK, sizeof(Byte));
+  if (funcCode == NULL)
    lua_error("not enough memory");
   maxcode = CODE_BLOCK;
  }
@@ -240,7 +240,7 @@ functionlist : /* empty */
 function     : FUNCTION NAME 
                {
 		init_function();
-		pc=0; basepc=code; maxcurr=maxcode; 
+		pc=0; basepc=funcCode; maxcurr=maxcode; 
 		nlocalvar=0;
 		$<vWord>$ = lua_findsymbol($2); 
 	       }
@@ -263,9 +263,9 @@ function     : FUNCTION NAME
 		if (s_bvalue($<vWord>3) == NULL)
 		  lua_error("not enough memory");
 	        memcpy (s_bvalue($<vWord>3), basepc, pc*sizeof(Byte));
-		code = basepc; maxcode=maxcurr;
+		funcCode = basepc; maxcode=maxcurr;
 #if LISTING
-                PrintCode(code,code+pc);
+                PrintCode(funcCode,funcCode+pc);
 #endif
 	       }
 	       ;
@@ -273,7 +273,7 @@ function     : FUNCTION NAME
 method         : FUNCTION NAME { $<vWord>$ = lua_findsymbol($2); } ':' NAME
 	       {
 		init_function();
-		pc=0; basepc=code; maxcurr=maxcode;
+		pc=0; basepc=funcCode; maxcurr=maxcode;
 		nlocalvar=0;
 	        localvar[nlocalvar]=lua_findsymbol("self"); /* self param. */
 	        add_nlocalvar(1);
@@ -298,9 +298,9 @@ method         : FUNCTION NAME { $<vWord>$ = lua_findsymbol($2); } ':' NAME
 		if (b == NULL)
 		  lua_error("not enough memory");
 	        memcpy (b, basepc, pc*sizeof(Byte));
-		code = basepc; maxcode=maxcurr;
+		funcCode = basepc; maxcode=maxcurr;
 #if LISTING
-                PrintCode(code,code+pc);
+                PrintCode(funcCode,funcCode+pc);
 #endif
 	        /* assign function to table field */
 	        pc=maincode; basepc=*initcode; maxcurr=maxmain;

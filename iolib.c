@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.13 1994/10/18 18:34:47 roberto Exp celes $";
+char *rcs_iolib="$Id: iolib.c,v 1.14 1994/10/19 17:02:20 celes Exp roberto $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -187,7 +187,7 @@ static void io_read (void)
    ;
   if (c == '\"')
   {
-   int c, n=0;
+   int n=0;
    while((c = fgetc(in)) != '\"')
    {
     if (c == EOF)
@@ -201,7 +201,7 @@ static void io_read (void)
   }
   else if (c == '\'')
   {
-   int c, n=0;
+   int n=0;
    while((c = fgetc(in)) != '\'')
    {
     if (c == EOF)
@@ -269,9 +269,9 @@ static void io_read (void)
     break;
     case 'f': case 'g': case 'e':
     {
-     float f;
-     sscanf (s, "%f", &f);
-     lua_pushnumber(f);
+     float fl;
+     sscanf (s, "%f", &fl);
+     lua_pushnumber(fl);
     }
     break;
     default: 
