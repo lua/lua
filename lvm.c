@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.137 2000/09/25 14:48:42 roberto Exp roberto $
+** $Id: lvm.c,v 1.138 2000/10/02 14:47:43 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -85,7 +85,7 @@ static void traceexec (lua_State *L, StkId base, StkId top, lua_Hook linehook) {
 }
 
 
-static Closure *luaV_closure (lua_State *L, lua_Type t, int nelems) {
+static Closure *luaV_closure (lua_State *L, lua_Tag t, int nelems) {
   Closure *c = luaF_newclosure(L, nelems);
   L->top -= nelems;
   while (nelems--)

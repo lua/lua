@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.49 2000/09/11 20:29:27 roberto Exp roberto $
+** $Id: ltm.c,v 1.50 2000/09/29 12:42:13 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -118,7 +118,7 @@ int lua_copytagmethods (lua_State *L, int tagto, int tagfrom) {
 
 
 int luaT_effectivetag (lua_State *L, const TObject *o) {
-  lua_Type t = ttype(o);
+  lua_Tag t = ttype(o);
   switch (t) {
     case TAG_USERDATA: {
       int tag = tsvalue(o)->u.d.tag;
@@ -151,7 +151,7 @@ void lua_settagmethod (lua_State *L, int t, const char *event) {
   checktag(L, t);
   if (!luaT_validevent(t, e))
     luaO_verror(L, "cannot change `%.20s' tag method for type `%.20s'%.20s",
-                luaT_eventname[e], luaO_typenames[t],
+                luaT_eventname[e], lua_typename(L, luaO_tag2type(t)),
                 (t == TAG_TABLE || t == TAG_USERDATA) ? " with default tag"
                                                           : "");
   temp = *(L->top - 1);

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.101 2000/09/29 12:42:13 roberto Exp roberto $
+** $Id: lapi.c,v 1.102 2000/10/02 14:47:43 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -116,8 +116,16 @@ void lua_pushvalue (lua_State *L, int index) {
   return ((test) ? (value) : (default)); }
 
 
-const char *lua_type (lua_State *L, int index) {
-  btest(L, index, luaO_typename(o), "NO VALUE");
+lua_Type lua_type (lua_State *L, int index) {
+  btest(L, index, luaO_type(o), LUA_NOVALUE);
+}
+
+const char *lua_typename (lua_State *L, lua_Type t) {
+  static const char *const names[] = {
+    "NO VALUE", "userdata", "number", "string", "table", "function", "nil"
+  };
+  UNUSED(L);
+  return names[(int)t];
 }
 
 int lua_iscfunction (lua_State *L, int index) {
@@ -126,6 +134,11 @@ int lua_iscfunction (lua_State *L, int index) {
 
 int lua_isnumber (lua_State *L, int index) {
   btest(L, index, (tonumber(Index(L, index)) == 0), 0);
+}
+
+int lua_isstring (lua_State *L, int index) {
+  lua_Type t = lua_type(L, index);
+  return (t == LUA_TSTRING || t == LUA_TNUMBER);
 }
 
 int lua_tag (lua_State *L, int index) {
@@ -411,7 +424,7 @@ void lua_settag (lua_State *L, int tag) {
       break;
     default:
       luaO_verror(L, "cannot change the tag of a %.20s",
-                  luaO_typename(L->top-1));
+                  luaO_typename(L, L->top-1));
   }
   L->top--;
 }

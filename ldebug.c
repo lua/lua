@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.41 2000/09/12 18:38:02 roberto Exp roberto $
+** $Id: ldebug.c,v 1.42 2000/09/18 19:39:49 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -433,7 +433,7 @@ static const char *getfuncname (lua_State *L, StkId f, const char **name) {
 void luaG_typeerror (lua_State *L, StkId o, const char *op) {
   const char *name;
   const char *kind = getobjname(L, o, &name);
-  const char *t = luaO_typename(o);
+  const char *t = luaO_typename(L, o);
   if (kind)
     luaO_verror(L, "attempt to %.30s %.20s `%.40s' (a %.10s value)",
                 op, kind, name, t);
@@ -442,7 +442,7 @@ void luaG_typeerror (lua_State *L, StkId o, const char *op) {
 }
 
 
-void luaG_binerror (lua_State *L, StkId p1, lua_Type t, const char *op) {
+void luaG_binerror (lua_State *L, StkId p1, lua_Tag t, const char *op) {
   if (ttype(p1) == t) p1++;
   LUA_ASSERT(ttype(p1) != t, "must be an error");
   luaG_typeerror(L, p1, op);
@@ -450,8 +450,8 @@ void luaG_binerror (lua_State *L, StkId p1, lua_Type t, const char *op) {
 
 
 void luaG_ordererror (lua_State *L, StkId top) {
-  const char *t1 = luaO_typename(top-2);
-  const char *t2 = luaO_typename(top-1);
+  const char *t1 = luaO_typename(L, top-2);
+  const char *t2 = luaO_typename(L, top-1);
   if (t1[2] == t2[2])
     luaO_verror(L, "attempt to compare two %.10s values", t1);
   else

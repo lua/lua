@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.45 2000/09/29 12:42:13 roberto Exp roberto $
+** $Id: ltests.c,v 1.46 2000/10/02 14:47:43 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -182,7 +182,7 @@ static int hash_query (lua_State *L) {
   }
   else {
     Hash *t;
-    luaL_checktype(L, 2, "table");
+    luaL_checktype(L, 2, LUA_TTABLE);
     t = hvalue(luaA_index(L, 2));
     lua_pushnumber(L, luaH_mainposition(t, luaA_index(L, 1)) - t->node);
   }
@@ -193,7 +193,7 @@ static int hash_query (lua_State *L) {
 static int table_query (lua_State *L) {
   const Hash *t;
   int i = luaL_opt_int(L, 2, -1);
-  luaL_checktype(L, 1, "table");
+  luaL_checktype(L, 1, LUA_TTABLE);
   t = hvalue(luaA_index(L, 1));
   if (i == -1) {
     lua_pushnumber(L, t->size);
@@ -238,7 +238,7 @@ static int string_query (lua_State *L) {
 
 
 static int tref (lua_State *L) {
-  luaL_checktype(L, 1, "any");
+  luaL_checkany(L, 1);
   lua_pushvalue(L, 1);
   lua_pushnumber(L, lua_ref(L, luaL_opt_int(L, 2, 1)));
   return 1;
@@ -262,7 +262,7 @@ static int newuserdata (lua_State *L) {
 }
 
 static int udataval (lua_State *L) {
-  luaL_checktype(L, 1, "userdata");
+  luaL_checktype(L, 1, LUA_TUSERDATA);
   lua_pushnumber(L, (int)lua_touserdata(L, 1));
   return 1;
 }
@@ -290,7 +290,7 @@ static int loadlib (lua_State *L) {
 }
 
 static int closestate (lua_State *L) {
-  luaL_checktype(L, 1, "userdata");
+  luaL_checktype(L, 1, LUA_TUSERDATA);
   lua_close((lua_State *)lua_touserdata(L, 1));
   return 0;
 }
@@ -299,7 +299,7 @@ static int doremote (lua_State *L) {
   lua_State *L1;
   const char *code = luaL_check_string(L, 2);
   int status;
-  luaL_checktype(L, 1, "userdata");
+  luaL_checktype(L, 1, LUA_TUSERDATA);
   L1 = (lua_State *)lua_touserdata(L, 1);
   status = lua_dostring(L1, code);
   if (status != 0) {
@@ -316,7 +316,7 @@ static int doremote (lua_State *L) {
 }
 
 static int settagmethod (lua_State *L) {
-  luaL_checktype(L, 3, "any");
+  luaL_checkany(L, 3);
   lua_settagmethod(L, luaL_check_int(L, 1), luaL_check_string(L, 2));
   return 1;
 }
@@ -436,7 +436,7 @@ static int testC (lua_State *L) {
       lua_dostring(L, luaL_check_string(L, getnum));
     }
     else if EQ("type") {
-      lua_pushstring(L, lua_type(L, getnum));
+      lua_pushstring(L, lua_typename(L, lua_type(L, getnum)));
     }
     else luaL_verror(L, "unknown instruction %.30s", buff);
   }

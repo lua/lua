@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.76 2000/09/11 20:29:27 roberto Exp roberto $
+** $Id: lobject.h,v 1.77 2000/09/29 12:42:13 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -48,7 +48,7 @@ typedef enum {
   TAG_LMARK,	/* mark for Lua closures */
   TAG_CMARK	/* mark for C closures */
 
-} lua_Type;
+} lua_Tag;
 
 /* tags for values visible from Lua == first user-created tag */
 #define NUM_TAGS	7
@@ -80,7 +80,7 @@ typedef union {
 
 
 typedef struct lua_TObject {
-  lua_Type ttype;
+  lua_Tag ttype;
   Value value;
 } TObject;
 
@@ -189,10 +189,12 @@ typedef struct CallInfo {
 } CallInfo;
 
 
-extern const char *const luaO_typenames[];
+extern const lua_Type luaO_typearr[];
 extern const TObject luaO_nilobject;
 
-#define luaO_typename(o)        luaO_typenames[ttype(o)]
+#define luaO_tag2type(t)	(luaO_typearr[(int)(t)])
+#define luaO_type(o)		(luaO_tag2type(ttype(o)))
+#define luaO_typename(L, o)	(lua_typename(L, luaO_type(o)))
 
 lint32 luaO_power2 (lint32 n);
 char *luaO_openspace (lua_State *L, size_t n);

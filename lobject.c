@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.48 2000/09/12 13:47:39 roberto Exp roberto $
+** $Id: lobject.c,v 1.49 2000/09/29 12:42:13 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -17,14 +17,12 @@
 #include "lstate.h"
 
 
-/*
-** you can use the fact that the 3rd letter of each name is always different
-** (e-m-r-b-n-l) to compare and switch these strings
-*/
-const char *const luaO_typenames[] = { /* ORDER LUA_T */
-    "userdata", "number", "string", "table", "function", "function", "nil",
-    "function", "function"
+
+const lua_Type luaO_typearr[] = { /* ORDER LUA_T */
+  LUA_TUSERDATA, LUA_TNUMBER, LUA_TSTRING, LUA_TTABLE,
+  LUA_TFUNCTION, LUA_TFUNCTION, LUA_TNIL
 };
+
 
 
 const TObject luaO_nilobject = {TAG_NIL, {NULL}};

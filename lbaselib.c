@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.6 2000/09/20 12:54:17 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.7 2000/10/02 14:47:43 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -34,7 +34,7 @@ static int luaB__ALERT (lua_State *L) {
 ** The library `liolib' redefines _ERRORMESSAGE for better error information.
 */
 static int luaB__ERRORMESSAGE (lua_State *L) {
-  luaL_checktype(L, 1, "string");
+  luaL_checktype(L, 1, LUA_TSTRING);
   lua_getglobal(L, LUA_ALERT);
   if (lua_isfunction(L, -1)) {  /* avoid error loop if _ALERT is not defined */
     lua_Debug ar;
@@ -87,7 +87,7 @@ static int luaB_print (lua_State *L) {
 static int luaB_tonumber (lua_State *L) {
   int base = luaL_opt_int(L, 2, 10);
   if (base == 10) {  /* standard conversion */
-    luaL_checktype(L, 1, "any");
+    luaL_checkany(L, 1);
     if (lua_isnumber(L, 1)) {
       lua_pushnumber(L, lua_tonumber(L, 1));
       return 1;
@@ -118,7 +118,7 @@ static int luaB_error (lua_State *L) {
 }
 
 static int luaB_setglobal (lua_State *L) {
-  luaL_checktype(L, 2, "any");
+  luaL_checkany(L, 2);
   lua_setglobal(L, luaL_check_string(L, 1));
   return 0;
 }
@@ -129,13 +129,13 @@ static int luaB_getglobal (lua_State *L) {
 }
 
 static int luaB_tag (lua_State *L) {
-  luaL_checktype(L, 1, "any");
+  luaL_checkany(L, 1);
   lua_pushnumber(L, lua_tag(L, 1));
   return 1;
 }
 
 static int luaB_settag (lua_State *L) {
-  luaL_checktype(L, 1, "table");
+  luaL_checktype(L, 1, LUA_TTABLE);
   lua_pushvalue(L, 1);  /* push table */
   lua_settag(L, luaL_check_int(L, 2));
   lua_pop(L, 1);  /* remove second argument */
@@ -156,7 +156,7 @@ static int luaB_copytagmethods (lua_State *L) {
 static int luaB_globals (lua_State *L) {
   lua_getglobals(L);  /* value to be returned */
   if (!lua_isnull(L, 1)) {
-    luaL_checktype(L, 1, "table");
+    luaL_checktype(L, 1, LUA_TTABLE);
     lua_pushvalue(L, 1);  /* new table of globals */
     lua_setglobals(L);
   }
@@ -164,16 +164,16 @@ static int luaB_globals (lua_State *L) {
 }
 
 static int luaB_rawget (lua_State *L) {
-  luaL_checktype(L, 1, "table");
-  luaL_checktype(L, 2, "any");
+  luaL_checktype(L, 1, LUA_TTABLE);
+  luaL_checkany(L, 2);
   lua_rawget(L, -2);
   return 1;
 }
 
 static int luaB_rawset (lua_State *L) {
-  luaL_checktype(L, 1, "table");
-  luaL_checktype(L, 2, "any");
-  luaL_checktype(L, 3, "any");
+  luaL_checktype(L, 1, LUA_TTABLE);
+  luaL_checkany(L, 2);
+  luaL_checkany(L, 3);
   lua_rawset(L, -3);
   return 1;
 }
@@ -209,14 +209,14 @@ static int luaB_collectgarbage (lua_State *L) {
 
 
 static int luaB_type (lua_State *L) {
-  luaL_checktype(L, 1, "any");
-  lua_pushstring(L, lua_type(L, 1));
+  luaL_checkany(L, 1);
+  lua_pushstring(L, lua_typename(L, lua_type(L, 1)));
   return 1;
 }
 
 
 static int luaB_next (lua_State *L) {
-  luaL_checktype(L, 1, "table");
+  luaL_checktype(L, 1, LUA_TTABLE);
   lua_settop(L, 2);  /* create a 2nd argument if there isn't one */
   if (lua_next(L, 1))
     return 2;
@@ -269,7 +269,7 @@ static int luaB_call (lua_State *L) {
   int err = 0;  /* index of old error method */
   int i, status;
   int n;
-  luaL_checktype(L, 2, "table");
+  luaL_checktype(L, 2, LUA_TTABLE);
   n = lua_getn(L, 2);
   if (!lua_isnull(L, 4)) {  /* set new error method */
     lua_getglobal(L, LUA_ERRORMESSAGE);
@@ -303,26 +303,26 @@ static int luaB_call (lua_State *L) {
 
 static int luaB_tostring (lua_State *L) {
   char buff[64];
-  switch (lua_type(L, 1)[2]) {
-    case 'm':  /* nuMber */
+  switch (lua_type(L, 1)) {
+    case LUA_TNUMBER:
       lua_pushstring(L, lua_tostring(L, 1));
       return 1;
-    case 'r':  /* stRing */
+    case LUA_TSTRING:
       lua_pushvalue(L, 1);
       return 1;
-    case 'b':  /* taBle */
+    case LUA_TTABLE:
       sprintf(buff, "table: %p", lua_topointer(L, 1));
       break;
-    case 'n':  /* fuNction */
+    case LUA_TFUNCTION:
       sprintf(buff, "function: %p", lua_topointer(L, 1));
       break;
-    case 'e':  /* usErdata */
+    case LUA_TUSERDATA:
       sprintf(buff, "userdata(%d): %p", lua_tag(L, 1), lua_touserdata(L, 1));
       break;
-    case 'l':  /* niL */
+    case LUA_TNIL:
       lua_pushstring(L, "nil");
       return 1;
-    default:
+    case LUA_NOVALUE:
       luaL_argerror(L, 1, "value expected");
   }
   lua_pushstring(L, buff);
@@ -332,8 +332,8 @@ static int luaB_tostring (lua_State *L) {
 
 static int luaB_foreachi (lua_State *L) {
   int n, i;
-  luaL_checktype(L, 1, "table");
-  luaL_checktype(L, 2, "function");
+  luaL_checktype(L, 1, LUA_TTABLE);
+  luaL_checktype(L, 2, LUA_TFUNCTION);
   n = lua_getn(L, 1);
   for (i=1; i<=n; i++) {
     lua_pushvalue(L, 2);  /* function */
@@ -349,8 +349,8 @@ static int luaB_foreachi (lua_State *L) {
 
 
 static int luaB_foreach (lua_State *L) {
-  luaL_checktype(L, 1, "table");
-  luaL_checktype(L, 2, "function");
+  luaL_checktype(L, 1, LUA_TTABLE);
+  luaL_checktype(L, 2, LUA_TFUNCTION);
   lua_pushnil(L);  /* first index */
   for (;;) {
     if (lua_next(L, 1) == 0)
@@ -367,7 +367,7 @@ static int luaB_foreach (lua_State *L) {
 
 
 static int luaB_assert (lua_State *L) {
-  luaL_checktype(L, 1, "any");
+  luaL_checkany(L, 1);
   if (lua_isnil(L, 1))
     luaL_verror(L, "assertion failed!  %.90s", luaL_opt_string(L, 2, ""));
   return 0;
@@ -375,7 +375,7 @@ static int luaB_assert (lua_State *L) {
 
 
 static int luaB_getn (lua_State *L) {
-  luaL_checktype(L, 1, "table");
+  luaL_checktype(L, 1, LUA_TTABLE);
   lua_pushnumber(L, lua_getn(L, 1));
   return 1;
 }
@@ -384,7 +384,7 @@ static int luaB_getn (lua_State *L) {
 static int luaB_tinsert (lua_State *L) {
   int v = lua_gettop(L);  /* last argument: to be inserted */
   int n, pos;
-  luaL_checktype(L, 1, "table");
+  luaL_checktype(L, 1, LUA_TTABLE);
   n = lua_getn(L, 1);
   if (v == 2)  /* called with only 2 arguments */
     pos = n+1;
@@ -405,7 +405,7 @@ static int luaB_tinsert (lua_State *L) {
 
 static int luaB_tremove (lua_State *L) {
   int pos, n;
-  luaL_checktype(L, 1, "table");
+  luaL_checktype(L, 1, LUA_TTABLE);
   n = lua_getn(L, 1);
   pos = luaL_opt_int(L, 2, n);
   if (n <= 0) return 0;  /* table is "empty" */
@@ -517,10 +517,10 @@ static void auxsort (lua_State *L, int l, int u) {
 
 static int luaB_sort (lua_State *L) {
   int n;
-  luaL_checktype(L, 1, "table");
+  luaL_checktype(L, 1, LUA_TTABLE);
   n = lua_getn(L, 1);
   if (!lua_isnull(L, 2))  /* is there a 2nd argument? */
-    luaL_checktype(L, 2, "function");
+    luaL_checktype(L, 2, LUA_TFUNCTION);
   lua_settop(L, 2);  /* make sure there is two arguments */
   auxsort(L, 1, n);
   return 0;

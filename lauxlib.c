@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.36 2000/09/12 13:48:22 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.37 2000/09/29 12:40:56 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -40,11 +40,11 @@ void luaL_argerror (lua_State *L, int narg, const char *extramsg) {
 }
 
 
-static void type_error (lua_State *L, int narg, const char *type_name) {
+static void type_error (lua_State *L, int narg, lua_Type t) {
   char buff[100];
-  const char *rt = lua_type(L, narg);
+  const char *rt = lua_typename(L, lua_type(L, narg));
   if (*rt == 'N') rt = "no value";
-  sprintf(buff, "%.10s expected, got %.10s", type_name, rt);
+  sprintf(buff, "%.10s expected, got %.10s", lua_typename(L, t), rt);
   luaL_argerror(L, narg, buff);
 }
 
@@ -55,20 +55,21 @@ void luaL_checkstack (lua_State *L, int space, const char *mes) {
 }
 
 
-/*
-** use the 3rd letter of type names for testing:
-** nuMber, niL, stRing, fuNction, usErdata, taBle, anY
-*/
-void luaL_checktype(lua_State *L, int narg, const char *tname) {
-  const char *rt = lua_type(L, narg);
-  if (!(*rt != 'N' && (tname[2] == 'y' || tname[2] == rt[2])))
-    type_error(L, narg, tname);
+void luaL_checktype(lua_State *L, int narg, lua_Type t) {
+  if (lua_type(L, narg) != t)
+    type_error(L, narg, t);
+}
+
+
+void luaL_checkany (lua_State *L, int narg) {
+  if (lua_type(L, narg) == LUA_NOVALUE)
+    luaL_argerror(L, narg, "value expected");
 }
 
 
 const char *luaL_check_lstr (lua_State *L, int narg, size_t *len) {
   const char *s = lua_tostring(L, narg);
-  if (!s) type_error(L, narg, "string");
+  if (!s) type_error(L, narg, LUA_TSTRING);
   if (len) *len = lua_strlen(L, narg);
   return s;
 }
@@ -88,7 +89,7 @@ const char *luaL_opt_lstr (lua_State *L, int narg, const char *def,
 double luaL_check_number (lua_State *L, int narg) {
   double d = lua_tonumber(L, narg);
   if (d == 0 && !lua_isnumber(L, narg))  /* avoid extra test when d is not 0 */
-    type_error(L, narg, "number");
+    type_error(L, narg, LUA_TNUMBER);
   return d;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.84 2000/09/14 14:09:31 roberto Exp roberto $
+** $Id: liolib.c,v 1.85 2000/09/22 18:14:06 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -449,7 +449,7 @@ static int io_write (lua_State *L) {
   if (f) arg++;
   else f = getfilebyref(L, ctrl, OUTFILE);  /* get _OUTPUT */
   for (; arg <=  lastarg; arg++) {
-    if (lua_type(L, arg)[2] == 'm') {  /* nuMber? */  /* LUA_NUMBER */
+    if (lua_type(L, arg) == LUA_TNUMBER) {  /* LUA_NUMBER */
       /* optimization: could be done exactly as for strings */
       status = status && fprintf(f, "%.16g", lua_tonumber(L, arg)) > 0;
     }
