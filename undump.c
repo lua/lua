@@ -3,7 +3,7 @@
 ** load bytecodes from files
 */
 
-char* rcs_undump="$Id: undump.c,v 1.16 1996/11/07 14:13:28 lhf Exp lhf $";
+char* rcs_undump="$Id: undump.c,v 1.17 1996/11/14 11:44:34 lhf Exp lhf $";
 
 #include <stdio.h>
 #include <string.h>
@@ -259,7 +259,7 @@ static void LoadHeader(FILE* D)			/* TODO: error handling */
   int oldsizeofF=getc(D);
   int oldsizeofP=getc(D);
   if (oldsizeofF!=4) lua_error("sizeof(float)!=4. not an IEEE machine?");
-  if (oldsizeofFP!=sizeof(TFunc*))		/* TODO: pack */
+  if (oldsizeofP!=sizeof(TFunc*))		/* TODO: pack */
    lua_error("different pointer sizes");
  }
  fread(&w,sizeof(w),1,D);			/* test word */
