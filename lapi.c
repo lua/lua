@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.128 2001/02/12 15:42:44 roberto Exp roberto $
+** $Id: lapi.c,v 1.129 2001/02/13 16:17:53 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -707,14 +707,18 @@ LUA_API int lua_getn (lua_State *L, int index) {
 
 
 LUA_API void lua_concat (lua_State *L, int n) {
-  StkId top;
   LUA_LOCK(L);
-  api_check(L, n >= 2);
   api_checknelems(L, n);
-  top = L->top;
-  luaV_strconc(L, n, top);
-  L->top = top-(n-1);
-  luaC_checkGC(L);
+  if (n >= 2) {
+    luaV_strconc(L, n, L->top);
+    L->top -= (n-1);
+    luaC_checkGC(L);
+  }
+  else if (n == 0) {  /* push null string */
+    setsvalue(L->top, luaS_newlstr(L, NULL, 0));
+    api_incr_top(L);
+  }
+  /* else n == 1; nothing to do */
   LUA_UNLOCK(L);
 }
 

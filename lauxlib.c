@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.45 2001/01/25 16:45:36 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.46 2001/02/02 19:02:40 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -166,10 +166,8 @@ static void adjuststack (luaL_Buffer *B) {
       }
       else break;
     } while (toget < B->level);
-    if (toget >= 2) {
-      lua_concat(L, toget);
-      B->level = B->level - toget + 1;
-    }
+    lua_concat(L, toget);
+    B->level = B->level - toget + 1;
   }
 }
 
@@ -194,10 +192,7 @@ LUALIB_API void luaL_addstring (luaL_Buffer *B, const char *s) {
 
 LUALIB_API void luaL_pushresult (luaL_Buffer *B) {
   emptybuffer(B);
-  if (B->level == 0)
-    lua_pushlstring(B->L, NULL, 0);
-  else if (B->level > 1)
-    lua_concat(B->L, B->level);
+  lua_concat(B->L, B->level);
   B->level = 1;
 }
 
