@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.56 2002/06/06 12:49:28 roberto Exp roberto $
+% $Id: manual.tex,v 1.57 2002/08/06 19:10:44 roberto Exp roberto $
 
 \documentclass[11pt,twoside,draft]{article}
 \usepackage{fullpage}
@@ -133,7 +133,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{{\small \tt\$Date: 2002/06/06 12:49:28 $ $}}
+%\date{{\small \tt\$Date: 2002/08/06 19:10:44 $ $}}
 
 \maketitle
 
@@ -251,6 +251,8 @@ The evolution of an extension language: a history of Lua,
 \emph{Proceedings of V Brazilian Symposium on Programming Languages} (2001) B-14--B-28.
 \end{itemize}
 
+Lua means ``moon'' in Portuguese.
+
 %------------------------------------------------------------------------------
 \section{Lua Concepts}\label{concepts}
 
@@ -293,6 +295,10 @@ Lua automatically detects the file type and acts accordingly.
 \index{pre-compilation}
 
 
+\subsection{Table of Globals} \label{global-table}
+
+????
+
 \subsection{\Index{Values and Types}} \label{TypesSec}
 
 Lua is a \emph{dynamically typed language}.
@@ -331,7 +337,7 @@ and has no pre-defined operations in Lua,
 except assignment and identity test.
 However, by using \emph{metatables},
 the programmer can define operations for userdata values
-\see{metatables}.
+\see{metatable}.
 Userdata values cannot be created or modified in Lua,
 only through the C~API.
 This guarantees the integrity of data owned by the host program.
@@ -966,7 +972,7 @@ Tables, userdata, and functions are compared \emph{by reference},
 that is,
 two tables are considered equal only if they are the \emph{same} table.
 
-??eq metamethod??
+%% TODO eq metamethod
 
 Every time you create a new table (or userdata, or function),
 this new value is different from any previously existing value.
@@ -1358,43 +1364,18 @@ while all of them share the same \verb|x|.
 
 \subsection{Error Handling} \label{error}
 
-%% TODO Must be rewritten!!!
-
 Because Lua is an extension language,
 all Lua actions start from C~code in the host program
-calling a function from the Lua library.
+calling a function from the Lua library \see{pcall}.
 Whenever an error occurs during Lua compilation or execution,
-the function \verb|_ERRORMESSAGE| is called \DefLIB{_ERRORMESSAGE}
-(provided it is different from \nil),
-and then the corresponding function from the library
-(\verb|lua_dofile|, \verb|lua_dostring|,
-\verb|lua_dobuffer|, or \verb|lua_call|)
-is terminated, returning an error condition.
-
-Memory allocation errors are an exception to the previous rule.
-When memory allocation fails, Lua may not be able to execute the
-\verb|_ERRORMESSAGE| function.
-So, for this kind of error, Lua does not call
-the \verb|_ERRORMESSAGE| function;
-instead, the corresponding function from the library
-returns immediately with a special error code (\verb|LUA_ERRMEM|).
-This and other error codes are defined in \verb|lua.h|
-\see{luado}.
-
-The only argument to \verb|_ERRORMESSAGE| is a string
-describing the error.
-The default definition for
-this function calls \verb|_ALERT|, \DefLIB{_ALERT}
-which prints the message to \verb|stderr| \see{alert}.
-The standard I/O library redefines \verb|_ERRORMESSAGE|
-and uses the debug interface \see{debugI}
-to print some extra information,
-such as a call-stack traceback.
+control returns to C,
+which can take appropriate measures
+(such as to print an error message).
 
 Lua code can explicitly generate an error by calling the
 function \verb|error| \see{pdf-error}.
-Lua code can ``catch'' an error using the function
-\verb|call| \see{pdf-call}.
+If you need to catch errors in Lua,
+you can use the \verb|pcall| function \see{pdf-pcall}.
 
 
 \subsection{Metatables} \label{metatable}
@@ -2161,14 +2142,32 @@ when applied on a non-userdata value, it returns \verb|NULL|.
 
 When Lua collects a full userdata,
 it calls its \verb|gc| metamethod, if any,
-and then it automatically frees its corresponding memory.
+and then it frees its corresponding memory.
 
 
 \subsection{Metatables}
 
-%% TODO
+The following functions allow you do manipulate the metatables
+of an object:
+\begin{verbatim}
+       int lua_getmetatable (lua_State *L, int objindex);
+       int lua_setmetatable (lua_State *L, int objindex);
+\end{verbatim}
+\DefAPI{lua_getmetatable}\DefAPI{lua_setmetatable}
+Both get at \verb|objindex| a valid index for an object.
+\verb|lua_getmetatable| pushes on the stack the metatable of that object;
+\verb|lua_setmetatable| sets the table on the top of the stack as the
+new metatable for that object (and pops the table).
+
+If the object does not have a metatable,
+\verb|lua_getmetatable| returns 0, and pushes nothing on the stack.
+\verb|lua_setmetatable| returns 0 when it cannot
+set the metatable of the given object
+(that is, when the object is not a userdata nor a table);
+even then it pops the table from the stack.
 
 \subsection{Loading Lua Chunks}
+
 You can load a Lua chunk with
 \begin{verbatim}
        typedef const char * (*lua_Chunkreader)
@@ -2183,9 +2182,10 @@ Everytime it needs another piece of the chunk,
 it calls the reader,
 passing along its \verb|data| parameter.
 The reader must return a pointer to a block of memory
-with the part of the chunk,
+with a new part of the chunk,
 and set \verb|size| to the block size.
 To signal the end of the chunk, the reader must return \verb|NULL|.
+The reader function may return pieces of any size greater than zero.
 
 In the current implementation,
 the reader function cannot call any Lua function;
@@ -2213,43 +2213,6 @@ See the auxiliar library (\verb|lauxlib|)
 for examples of how to use \verb|lua_load|,
 and for some ready-to-use functions to load chunks
 from files and from strings.
-
-
-\subsection{Executing Lua Chunks}\label{luado}
->>>>
-A host program can execute Lua chunks written in a file or in a string
-by using the following functions:
-\begin{verbatim}
-       int lua_dofile   (lua_State *L, const char *filename);
-       int lua_dostring (lua_State *L, const char *string);
-       int lua_dobuffer (lua_State *L, const char *buff,
-                         size_t size, const char *name);
-\end{verbatim}
-\DefAPI{lua_dofile}\DefAPI{lua_dostring}\DefAPI{lua_dobuffer}%
-These functions return
-0 in case of success, or one of the following error codes
-(defined in \verb|lua.h|)
-if they fail:
-\begin{itemize}
-\item \IndexAPI{LUA_ERRRUN} ---
-error while running the chunk.
-\item \IndexAPI{LUA_ERRSYNTAX} ---
-syntax error during pre-compilation.
-\item \IndexAPI{LUA_ERRMEM} ---
-memory allocation error.
-For such errors, Lua does not call \verb|_ERRORMESSAGE| \see{error}.
-\item \IndexAPI{LUA_ERRERR} ---
-error while running \verb|_ERRORMESSAGE|.
-For such errors, Lua does not call \verb|_ERRORMESSAGE| again, to avoid loops.
-\item \IndexAPI{LUA_ERRFILE} ---
-error opening the file (only for \verb|lua_dofile|).
-In this case,
-you may want to
-check \verb|errno|,
-call \verb|strerror|,
-or call \verb|perror| to tell the user what went wrong.
-\end{itemize}
-
 
 \subsection{Manipulating Tables}
 
@@ -2426,7 +2389,54 @@ to show all the details.
 Usually programmers use several macros and auxiliar functions that
 provide higher level access to Lua.)
 
-%% TODO: pcall
+
+\subsection{Protected Calls}\label{pcall}
+
+When you call a function with \verb|lua_call|,
+any error inside the called function is propagated upwards
+(with a \verb|longjmp|).
+If you need to handle errors,
+then you should use \verb|lua_pcall|:
+\begin{verbatim}
+       int lua_pcall (lua_State *L, int nargs, int nresults, int errfunc);
+\end{verbatim}
+Both \verb|nargs| and \verb|nresults| have the same meaning as
+in \verb|lua_call|.
+If there are no errors during the call,
+\verb|lua_pcall| behaves exactly like \verb|lua_call|.
+Like \verb|lua_call|,
+\verb|lua_pcall| always removes the function
+and its arguments from the stack.
+However, if there is any error,
+\verb|lua_pcall| catches it,
+pushes a single value at the stack (the error message),
+and returns an error code.
+
+If \verb|errfunc| is 0,
+then the error message returned is exactly the original error message.
+Otherwise, \verb|errfunc| gives the stack index for an
+\emph{error handler function}.
+(In the current implementation, that index cannot be a pseudo-index.)
+In case of runtime errors,
+that function will be called with the error message,
+and its return value will be the message returned by \verb|lua_pcall|.
+
+Typically, the error handler function is used to add more debug
+information to the error message, such as a stack traceback.
+Such information cannot be gathered after the return of \verb|lua_pcall|,
+since by then the stack has unwound.
+
+The \verb|lua_pcall| function returns 0 in case of success,
+or one of the following error codes
+(defined in \verb|lua.h|):
+\begin{itemize}
+\item \IndexAPI{LUA_ERRRUN} --- a runtime error.
+\item \IndexAPI{LUA_ERRMEM} --- memory allocation error.
+For such errors, Lua does not call the error handler function.
+\item \IndexAPI{LUA_ERRERR} ---
+error while running the error handler function.
+\end{itemize}
+
 
 \medskip
 
@@ -2494,8 +2504,10 @@ of numerical arguments and returns their average and sum:
          lua_Number sum = 0;
          int i;
          for (i = 1; i <= n; i++) {
-           if (!lua_isnumber(L, i))
-             lua_error(L, "incorrect argument to function `average'");
+           if (!lua_isnumber(L, i)) {
+             lua_pushstring(L, "incorrect argument to function `average'");
+             lua_error(L);
+           }
            sum += lua_tonumber(L, i);
          }
          lua_pushnumber(L, sum/n);        /* first result */
@@ -2565,8 +2577,8 @@ outside the life span of a C~function.
 This table is always located at pseudo-index
 \IndexAPI{LUA_REGISTRYINDEX}.
 Any C~library can store data into this table,
-as long as it chooses a key different from other libraries.
-Typically, you can use as key a string containing the library name,
+as long as it chooses keys different from other libraries.
+Typically, you should use as key a string containing your library name,
 or a light userdata with the address of a C object in your code.
 
 The integer keys in the registry are used by the reference mechanism,
@@ -2583,7 +2595,6 @@ by means of functions and \emph{hooks},
 which allows the construction of different
 kinds of debuggers, profilers, and other tools
 that need ``inside information'' from the interpreter.
-This interface is declared in \verb|luadebug.h|.
 
 \subsection{Stack and Function Information}
 
@@ -2683,15 +2694,10 @@ Because functions in Lua are first class values,
 they do not have a fixed name:
 Some functions may be the value of many global variables,
 while others may be stored only in a table field.
-The \verb|lua_getinfo| function checks whether the given
-function is a tag method or the value of a global variable.
-If the given function is a tag method,
-then \verb|name| points to the event name.
-%% TODO: mas qual o tag? Agora que temos tipos com nome, seria util saber
-%% o tipo de TM. Em particular para mensagens de erro.
-If the given function is the value of a global variable,
-then \verb|name| points to the variable name.
-If the given function is neither a tag method nor a global variable,
+The \verb|lua_getinfo| function checks how the function was
+called or whether it is the value of a global variable to
+find a suitable name.
+If it cannot find a name,
 then \verb|name| is set to \verb|NULL|.
 
 \item[namewhat]
@@ -2727,7 +2733,6 @@ given as argument to a hook \see{sub-hooks}.
 \verb|lua_getlocal| gets the index \verb|n| of a local variable,
 pushes its value onto the stack,
 and returns its name.
-%% TODO: why return name?
 \verb|lua_setlocal| assigns the value at the top of the stack
 to the variable and returns its name.
 Both functions return \verb|NULL| on failure,
@@ -2860,33 +2865,6 @@ This function is equivalent to the following Lua function:
        end
 \end{verbatim}
 
-??\subsubsection*{\ff \T{call (func, arg [, mode [, errhandler]])}}\DefLIB{call}
-\label{pdf-call}
-Calls function \verb|func| with
-the arguments given by the table \verb|arg|.
-The call is equivalent to
-\begin{verbatim}
-       func(arg[1], arg[2], ..., arg[n])
-\end{verbatim}
-where \verb|n| is the result of \verb|getn(arg)| \see{getn}.
-All results from \verb|func| are simply returned by \verb|call|.
-
-By default,
-if an error occurs during the call to \verb|func|,
-the error is propagated.
-If the string \verb|mode| contains \verb|"x"|,
-then the call is \emph{protected}.\index{protected calls}
-In this mode, function \verb|call| does not propagate an error,
-regardless of what happens during the call.
-Instead, it returns \nil{} to signal the error
-(besides calling the appropriated error handler).
-
-If \verb|errhandler| is provided,
-the error function \verb|_ERRORMESSAGE| is temporarily set to \verb|errhandler|,
-while \verb|func| runs.
-In particular, if \verb|errhandler| is \nil,
-no error messages will be issued during the execution of the called function.
-
 \subsubsection*{\ff \T{collectgarbage ([limit])}}\DefLIB{collectgarbage}
 
 Sets the garbage-collection threshold for the given limit
@@ -2935,6 +2913,16 @@ Returns the number of Kbytes of dynamic memory Lua is using,
 and (as a second result) the
 current garbage collector threshold (also in Kbytes).
 
+\subsubsection*{\ff \T{ipairs (t)}}\DefLIB{ipairs}
+
+Returns the table \verb|t| and a generator function
+so that the construction
+\begin{verbatim}
+       for i,v in ipairs(t) do ... end
+\end{verbatim}
+will iterate over the pairs \verb|1, t[1]|, \verb|2, t[2]|, \ldots,
+up to the first nil value of the table.
+
 \subsubsection*{\ff \T{loadfile (filename)}}\DefLIB{loadfile}
 Loads a file as a Lua chunk.
 If there is no errors, 
@@ -2981,6 +2969,24 @@ use a numerical \rwd{for} or the function \verb|ipairs|).
 
 The behavior of \verb|next| is \emph{undefined} if you change
 the table during the traversal.
+
+\subsubsection*{\ff \T{pairs (t)}}\DefLIB{pairs}
+
+Returns the table \verb|t| and the function \verb|next|,
+so that the construction
+\begin{verbatim}
+       for k,v in pairs(t) do ... end
+\end{verbatim}
+will iterate over all pairs of key--value of table \verb|t|.
+
+\subsubsection*{\ff \T{pcall (func, arg1, arg2, ...)}}\DefLIB{pcall}
+\label{pdf-pcall}
+Calls function \verb|func| with
+the given arguments in protected mode.
+Its first result is a boolean, true if the call succeeds without errors.
+In such case, \verb|pcall| also returns all results from the call,
+after this first result.
+In case of any error, \verb|pcall| returns false plus the error message.
 
 \subsubsection*{\ff \T{print (e1, e2, ...)}}\DefLIB{print}
 Receives any number of arguments,
@@ -3225,6 +3231,10 @@ For example, \verb|"%*g"| can be simulated with
 String values to be formatted with
 \verb|%s| cannot contain embedded zeros.
 
+\subsubsection*{\ff \T{string.gfind (s, pat)}}
+
+% TODO
+
 \subsubsection*{\ff \T{string.gsub (s, pat, repl [, n])}}
 \DefLIB{string.gsub}
 Returns a copy of \verb|s|
@@ -3410,7 +3420,8 @@ that value is assumed as its size.
 You can call the \verb|table.setn| function to explicitly set
 the size of a table.
 \item implicit size ---
-%% TODO
+Otherwise, the size of the object is one less the first integer index
+with a \nil{} value.
 \end{itemize}
 For more details, see the descriptions of the \verb|table.getn| and
 \verb|table.setn| functions.
@@ -3977,9 +3988,9 @@ The program name is stored in index 0,
 the first argument after the program goes to index 1,
 and so on.
 The field \verb|n| gets the number of arguments after the program name.
-Any argument before the program name
-(that is, the options plus the interpreter name)
-goes to negative indices.
+Any arguments before the program name
+(that is, the interpreter name plus the options)
+go to negative indices.
 For instance, in the call
 \begin{verbatim}
        $ lua -la.lua b.lua t1 t2
@@ -4020,26 +4031,50 @@ then a more portable solution is \verb|#!/usr/bin/env lua|.)
 %------------------------------------------------------------------------------
 \section*{Acknowledgments}
 
-%% TODO rever isso?
-
-The authors thank CENPES/PETROBRAS which,
-jointly with \tecgraf, used early versions of
-this system extensively and gave valuable comments.
-The authors also thank Carlos Henrique Levy,
-who found the name of the game.
-Lua means ``moon'' in Portuguese.
+The Lua team is grateful to \tecgraf{} for its continued support to Lua.
+We thank everyone at \tecgraf{},
+specially the head of the group, Marcelo Gattass.
+At the risk of omitting several names,
+we also thank the following individuals for supporting,
+contributing to, and spreading the word about Lua:
+Alan Watson,
+Andr\'e Clinio,
+Andr\'e Costa,
+Bret Mogilefsky,
+Cameron Laird,
+Carlos Cassino,
+Carlos Henrique Levy,
+Claudio Terra,
+David Jeske,
+Edgar Toernig,
+Erik Hougaard,
+Jim Mathies,
+John Belmonte,
+John Passaniti,
+John Roll,
+Jon Erickson,
+Jon Kleiser,
+Mark Ian Barlow,
+Nick Trout,
+Noemi Rodriguez,
+Norman Ramsey,
+Philippe Lhost,
+Renata Ratton,
+Renato Borges,
+Renato Cerqueira,
+Reuben Thomas,
+Stephan Herrmann,
+Steve Dekorte,
+Thatcher Ulrich,
+Tom\'as Gorham,
+Vincent Penquerc'h.
+Thank you!
 
 
 \appendix
 
 \section*{Incompatibilities with Previous Versions}
 \addcontentsline{toc}{section}{Incompatibilities with Previous Versions}
-
-We took a great care to avoid incompatibilities with
-the previous public versions of Lua,
-but some differences had to be introduced.
-Here is a list of all these incompatibilities.
-
 
 \subsection*{Incompatibilities with \Index{version 4.0}}
 
@@ -4067,6 +4102,14 @@ this newline is ignored.
 
 \subsubsection*{Changes in the Libraries}
 \begin{itemize}
+
+\item
+Most library functions now are defined inside tables.
+There is a compatibility script (\verb|compat.lua|) that
+redefine most of them as global names.
+
+\item
+\verb|dofile| do not handle errors, but simply propagate them.
 
 \item
 The \verb|read| option \verb|*w| is obsolete.
