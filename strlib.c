@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.18 1996/02/12 18:32:40 roberto Exp $";
+char *rcs_strlib="$Id: strlib.c,v 1.18 1996/02/12 18:34:44 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -175,6 +175,17 @@ static void str_ascii (void)
   lua_pushnumber(s[pos]);
 }
 
+void luaI_addquoted (char *s)
+{
+  luaI_addchar('"');
+  for (; *s; s++)
+  {
+    if (*s == '"' || *s == '\\' || *s == '\n')
+      luaI_addchar('\\');
+    luaI_addchar(*s);
+  }
+  luaI_addchar('"');
+}
 
 #define MAX_CONVERTION 2000
 #define MAX_FORMAT 50
@@ -215,6 +226,10 @@ static void str_format (void)
       form[i+1] = 0;  /* ends string */
       switch (form[i])
       {
+        case 'q':
+          luaI_addquoted(lua_check_string(arg++, "format"));
+          buff[0] = '\0';  /* addchar already done */
+          break;
         case 's':
         {
           char *s = lua_check_string(arg++, "format");
