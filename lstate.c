@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.31 2000/08/08 20:42:07 roberto Exp roberto $
+** $Id: lstate.c,v 1.32 2000/08/09 19:16:57 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -70,7 +70,9 @@ lua_State *lua_newstate (int stacksize, int put_builtin) {
 }
 
 
+#ifdef DEBUG
 extern lua_State *lua_state;
+#endif
 
 void lua_close (lua_State *L) {
   luaC_collect(L, 1);  /* collect all elements */
@@ -86,10 +88,7 @@ void lua_close (lua_State *L) {
   LUA_ASSERT(L->numCblocks == 0, "Cblocks still open");
   LUA_ASSERT(L->nblocks == 0, "wrong count for nblocks");
   luaM_free(L, L);
-  if (L == lua_state) {
-    LUA_ASSERT(memdebug_numblocks == 0, "memory leak!");
-    LUA_ASSERT(memdebug_total == 0,"memory leak!");
-    lua_state = NULL;
-  }
+  LUA_ASSERT(L != lua_state || memdebug_numblocks == 0, "memory leak!");
+  LUA_ASSERT(L != lua_state || memdebug_total == 0,"memory leak!");
 }
 
