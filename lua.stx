@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.23 1995/10/25 14:33:25 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.24 1995/10/26 14:21:56 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -156,8 +156,6 @@ static void add_localvar (Word name)
 
 static void store_localvar (Word name, int n)
 {
- if (*initcode == basepc)
-   yyerror("local variable outside function body");
  if (nlocalvar+n < MAXLOCALS)
   localvar[nlocalvar+n] = name;
  else
