@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.16 1998/06/24 13:33:00 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.17 1998/06/29 18:24:06 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -364,7 +364,7 @@ static void str_find (void)
       }
     } while (s1++<cap.src_end && !anchor);
   }
-  lua_pushnil();  /* if arives here, it didn't find */
+  lua_pushnil();  /* if arrives here, it didn't find */
 }
 
 
