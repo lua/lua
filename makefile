@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.30 2000/11/06 13:45:18 roberto Exp roberto $
+## $Id: makefile,v 1.31 2001/07/24 17:25:30 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -39,7 +39,7 @@ CWARNS = -Wall -W -pedantic \
 #	-Wcast-qual
 #	-Wtraditional
 
-CFLAGS = $(CONFIG) $(CWARNS) -ansi -O2
+CFLAGS = $(CONFIG) $(CWARNS) -ansi -O3 -fomit-frame-pointer
 
 
 # To make early versions
