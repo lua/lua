@@ -340,5 +340,5 @@ void iolib_open (void)
   lua_tagio = lua_newtag("userdata");
   lua_infile=stdin; lua_outfile=stdout;
   luaL_openlib(iolib, (sizeof(iolib)/sizeof(iolib[0])));
-  lua_setglobalmethod("error", errorfb);
+  lua_seterrormethod(errorfb);
 }

@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.87 1997/03/31 14:02:58 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.88 1997/03/31 14:17:09 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -391,16 +391,20 @@ static void storesubscript (TObject *t, int mode)
 
 static void getglobal (Word n)
 {
-  *top = lua_table[n].object;
-  incr_top;
-  if (ttype(top-1) == LUA_T_NIL) {  /* check i.m. */
-    TObject *im = luaI_getgim(GIM_GETGLOBAL);
-    if (ttype(im) != LUA_T_NIL) {
-      ttype(top-1) = LUA_T_STRING;
-      tsvalue(top-1) = lua_table[n].varname;
-      callIM(im, 1, 1);
-    }
+  TObject *value = &lua_table[n].object;
+  TObject *im = luaI_getimbyObj(value, IM_GETGLOBAL);
+  if (ttype(im) == LUA_T_NIL) {  /* default behavior */
+    *top = *value;
+    incr_top;
   }
+  else {
+    ttype(top) = LUA_T_STRING;
+    tsvalue(top) = lua_table[n].varname;
+    incr_top;
+    *top = *value;
+    incr_top;
+    callIM(im, 2, 1);
+    }
 }
 
 /*
@@ -420,7 +424,7 @@ void lua_travstack (int (*fn)(TObject *))
 
 static void lua_message (char *s)
 {
-  TObject *im = luaI_getgim(GIM_ERROR);
+  TObject *im = luaI_geterrorim();
   if (ttype(im) == LUA_T_NIL)
     fprintf(stderr, "lua: %s\n", s);
   else {
@@ -663,11 +667,10 @@ void lua_setintmethod (int tag, char *event, lua_CFunction method)
   do_unprotectedrun(luaI_setintmethod, 3, 0);
 }
 
-void lua_setglobalmethod (char *event, lua_CFunction method)
+void lua_seterrormethod (lua_CFunction method)
 {
-  lua_pushstring(event);
   lua_pushcfunction (method);
-  do_unprotectedrun(luaI_setglobalmethod, 3, 0);
+  do_unprotectedrun(luaI_seterrormethod, 1, 0);
 }
 
 
@@ -895,7 +898,32 @@ lua_Object lua_basicgetglobal (char *name)
 /*
 ** Store top of the stack at a global variable array field.
 */
+static void storeglobal (Word n)
+{
+  TObject *oldvalue = &lua_table[n].object;
+  TObject *im = luaI_getimbyObj(oldvalue, IM_SETGLOBAL);
+  if (ttype(im) == LUA_T_NIL)  /* default behavior */
+    s_object(n) = *(--top);
+  else {
+    TObject newvalue = *(top-1);
+    ttype(top-1) = LUA_T_STRING;
+    tsvalue(top-1) = lua_table[n].varname;
+    *top = *oldvalue;
+    incr_top;
+    *top = newvalue;
+    incr_top;
+    callIM(im, 3, 0);
+  }
+}
+
+
 void lua_storeglobal (char *name)
+{
+  adjustC(1);
+  storeglobal(luaI_findsymbolbyname(name));
+}
+
+void lua_basicstoreglobal (char *name)
 {
  Word n = luaI_findsymbolbyname(name);
  adjustC(1);
@@ -1201,7 +1229,7 @@ static StkId lua_execute (Byte *pc, StkId base)
    {
     Word w;
     get_word(w,pc);
-    s_object(w) = *(--top);
+    storeglobal(w);
    }
    break;
 

@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.48 1997/03/20 19:20:23 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.49 1997/03/31 14:17:09 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -194,9 +194,23 @@ static void luaI_setglobal (void)
   lua_pushobject(value);  /* return given value */
 }
 
+static void luaI_basicsetglobal (void)
+{
+  lua_Object value = lua_getparam(2);
+  luaL_arg_check(value != LUA_NOOBJECT, "basicsetglobal", 2, NULL);
+  lua_pushobject(value);
+  lua_basicstoreglobal(luaL_check_string(1, "basicsetglobal"));
+  lua_pushobject(value);  /* return given value */
+}
+
 static void luaI_getglobal (void)
 {
   lua_pushobject(lua_getglobal(luaL_check_string(1, "getglobal")));
+}
+
+static void luaI_basicgetglobal (void)
+{
+  lua_pushobject(lua_basicgetglobal(luaL_check_string(1, "basicgetglobal")));
 }
 
 #define MAXPARAMS	256
@@ -281,27 +295,29 @@ static struct {
   lua_CFunction func;
 } int_funcs[] = {
   {"assert", luaI_assert},
-  {"call", luaI_call},
+  {"basicgetglobal", luaI_basicgetglobal},
   {"basicindex", basicindex},
+  {"basicsetglobal", luaI_basicsetglobal},
   {"basicstoreindex", basicstoreindex},
-  {"settag", luaIl_settag},
+  {"call", luaI_call},
   {"dofile", lua_internaldofile},
   {"dostring", lua_internaldostring},
   {"error", luaI_error},
   {"getglobal", luaI_getglobal},
+  {"newtag", luaIl_newtag},
   {"next", lua_next},
   {"nextvar", luaI_nextvar},
-  {"newtag", luaIl_newtag},
   {"print", luaI_print},
+  {"seterrormethod", luaI_seterrormethod},
   {"setfallback", luaI_setfallback},
-  {"setintmethod", luaI_setintmethod},
-  {"setglobalmethod", luaI_setglobalmethod},
   {"setglobal", luaI_setglobal},
+  {"setintmethod", luaI_setintmethod},
+  {"settag", luaIl_settag},
   {"tonumber", lua_obj2number},
   {"tostring", luaI_tostring},
   {"type", luaI_type}
 };
- 
+
 #define INTFUNCSIZE (sizeof(int_funcs)/sizeof(int_funcs[0]))
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: fallback.h,v 1.17 1997/03/24 17:13:22 roberto Exp roberto $
+** $Id: fallback.h,v 1.18 1997/03/31 14:02:58 roberto Exp roberto $
 */
  
 #ifndef fallback_h
@@ -16,6 +16,8 @@ typedef enum {
   IM_GETTABLE = 0,
   IM_SETTABLE,
   IM_INDEX,
+  IM_GETGLOBAL,
+  IM_SETGLOBAL,
   IM_ADD,
   IM_SUB,
   IM_MUL,
@@ -31,22 +33,10 @@ typedef enum {
   IM_FUNCTION
 } IMS;
 
-#define IM_N 16
+#define IM_N 18
 
 extern char *luaI_eventname[];
 
-
-/*
-* WARNING: if you change the order of this enumeration,
-* grep "ORDER GIM"
-*/
-typedef enum {
-  GIM_ERROR = 0,
-  GIM_GETGLOBAL,
-  GIM_SETGLOBAL
-} IMGS;
-
-#define GIM_N 3
 
 void luaI_setfallback (void);
 int luaI_ref (TObject *object, int lock);
@@ -60,10 +50,10 @@ void luaI_settag (int tag, TObject *o);
 lua_Type luaI_typetag (int tag);
 TObject *luaI_getim (int tag, IMS event);
 #define luaI_getimbyObj(o,e)  (luaI_getim(luaI_tag(o),(e)))
-TObject *luaI_getgim (IMGS event);
+TObject *luaI_geterrorim (void);
 int luaI_tag (TObject *o);
 void luaI_setintmethod (void);
-void luaI_setglobalmethod (void);
+void luaI_seterrormethod (void);
 void luaI_initfallbacks (void);
 
 #endif

@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.34 1997/03/31 14:02:58 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.35 1997/03/31 14:17:09 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -109,16 +109,13 @@ void luaI_invalidaterefs (void)
 */
 
 char *luaI_eventname[] = {  /* ORDER IM */
-  "gettable", "settable", "index", "add", "sub", "mul", "div",
-  "pow", "unm", "lt", "le", "gt", "ge", "concat", "gc", "function",
+  "gettable", "settable", "index", "getglobal", "setglobal", "add",
+  "sub", "mul", "div", "pow", "unm", "lt", "le", "gt", "ge",
+  "concat", "gc", "function",
   NULL
 };
 
 
-static char *geventname[] = {  /* ORDER GIM */
-  "error", "getglobal", "setglobal",
-  NULL
-};
 
 static int findstring (char *name, char *list[])
 {
@@ -147,16 +144,16 @@ static int IMtable_size = 0;
 static int last_tag = LUA_T_NIL;  /* ORDER LUA_T */
 
 static char validevents[NUM_TYPES][IM_N] = { /* ORDER LUA_T, ORDER IM */
-{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},  /* LUA_T_USERDATA */
-{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},  /* LUA_T_LINE */
-{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},  /* LUA_T_CMARK */
-{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},  /* LUA_T_MARK */
-{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_CFUNCTION */
-{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_FUNCTION */
-{0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},  /* LUA_T_ARRAY */
-{1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_T_STRING */
-{1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1},  /* LUA_T_NUMBER */
-{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0}   /* LUA_T_NIL */
+{1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},  /* LUA_T_USERDATA */
+{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},  /* LUA_T_LINE */
+{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},  /* LUA_T_CMARK */
+{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},  /* LUA_T_MARK */
+{1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_CFUNCTION */
+{1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_FUNCTION */
+{0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},  /* LUA_T_ARRAY */
+{1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_T_STRING */
+{1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1},  /* LUA_T_NUMBER */
+{0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0}   /* LUA_T_NIL */
 };
 
 static int validevent (lua_Type t, int e)
@@ -263,32 +260,29 @@ void luaI_setintmethod (void)
   luaI_IMtable[-t].int_method[e] = *luaI_Address(func);
 }
 
-static TObject gmethod[GIM_N] = {
-  {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}
-};
 
-TObject *luaI_getgim (IMGS event)
+static TObject errorim = {LUA_T_NIL, {NULL}};
+
+
+TObject *luaI_geterrorim (void)
 {
-  return &gmethod[event];
+  return &errorim;
 }
 
-void luaI_setglobalmethod (void)
+void luaI_seterrormethod (void)
 {
-  int e = luaI_checkevent(luaL_check_string(1, "setintmethod"), geventname);
-  lua_Object func = lua_getparam(2);
-  luaL_arg_check(lua_isnil(func) || lua_isfunction(func), "setintmethod",
-                 2, "function expected");
-  luaI_pushobject(&gmethod[e]);
-  gmethod[e] = *luaI_Address(func);
+  lua_Object func = lua_getparam(1);
+  luaL_arg_check(lua_isnil(func) || lua_isfunction(func), "seterrormethod",
+                 1, "function expected");
+  luaI_pushobject(&errorim);
+  errorim = *luaI_Address(func);
 }
 
 char *luaI_travfallbacks (int (*fn)(TObject *))
 {
   int e;
-  for (e=GIM_ERROR; e<=GIM_SETGLOBAL; e++) {  /* ORDER GIM */
-    if (fn(&gmethod[e]))
-      return geventname[e];
-  }
+  if (fn(&errorim))
+    return "error";
   for (e=IM_GETTABLE; e<=IM_FUNCTION; e++) {  /* ORDER IM */
     int t;
     for (t=0; t>=last_tag; t--)
@@ -339,28 +333,33 @@ void luaI_setfallback (void)
   lua_CFunction replace;
   char *name = luaL_check_string(1, "setfallback");
   lua_Object func = lua_getparam(2);
+  luaI_initfallbacks();
   luaL_arg_check(lua_isfunction(func), "setfallback", 2, "function expected");
-  e = findstring(name, geventname);
-  if (e >= 0) {  /* global event */
-    oldfunc = gmethod[e];
-    gmethod[e] = *luaI_Address(func);
-    replace = (e == GIM_ERROR) ? errorFB : nilFB;
+  if (strcmp(name, "error") == 0) {  /* old error fallback */
+    oldfunc = errorim;
+    errorim = *luaI_Address(func);
+    replace = errorFB;
+  }
+  else if (strcmp(name, "getglobal") == 0) {  /* old getglobal fallback */
+    oldfunc = luaI_IMtable[-LUA_T_NIL].int_method[IM_GETGLOBAL];
+    luaI_IMtable[-LUA_T_NIL].int_method[IM_GETGLOBAL] = *luaI_Address(func);
+    replace = nilFB;
   }
   else if ((e = findstring(name, luaI_eventname)) >= 0) {
-    oldfunc = luaI_IMtable[LUA_T_USERDATA].int_method[e];
+    oldfunc = luaI_IMtable[-LUA_T_USERDATA].int_method[e];
     fillvalids(e, luaI_Address(func));
     replace = (e == IM_GC || e == IM_INDEX) ? nilFB : typeFB;
   }
   else if (strcmp(name, "arith") == 0) {  /* old arith fallback */
     int i;
-    oldfunc = luaI_IMtable[LUA_T_USERDATA].int_method[IM_POW];
+    oldfunc = luaI_IMtable[-LUA_T_USERDATA].int_method[IM_POW];
     for (i=IM_ADD; i<=IM_UNM; i++)  /* ORDER IM */
       fillvalids(i, luaI_Address(func));
     replace = typeFB;
   }
   else if (strcmp(name, "order") == 0) {  /* old order fallback */
     int i;
-    oldfunc = luaI_IMtable[LUA_T_USERDATA].int_method[IM_LT];
+    oldfunc = luaI_IMtable[-LUA_T_USERDATA].int_method[IM_LT];
     for (i=IM_LT; i<=IM_GE; i++)  /* ORDER IM */
       fillvalids(i, luaI_Address(func));
     replace = typeFB;
