@@ -1,28 +1,11 @@
 /*
-** $Id: loadlib.c,v 1.12 2004/12/13 12:14:21 roberto Exp roberto $
+** $Id: loadlib.c,v 1.13 2004/12/22 17:43:27 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 *
-* This Lua library exports a single function, called loadlib, which
-* is called from Lua as loadlib(lib,init), where lib is the full
-* name of the library to be loaded (including the complete path) and
-* init is the name of a function to be called after the library is
-* loaded. Typically, this function will register other functions, thus
-* making the complete library available to Lua.  The init function is
-* *not* automatically called by loadlib. Instead, loadlib returns the
-* init function as a Lua function that the client can call when it
-* thinks is appropriate. In the case of errors, loadlib returns nil and
-* two strings describing the error.  The first string is supplied by
-* the operating system; it should be informative and useful for error
-* messages. The second string is "open", "init", or "absent" to identify
-* the error and is meant to be used for making decisions without having
-* to look into the first string (whose format is system-dependent).
 * This module contains an implementation of loadlib for Unix systems
 * that have dlfcn, an implementation for Darwin (Mac OS X), an
-* implementation for Windows, and a stub for other systems.  See
-* the list at the end of this file for some links to available
-* implementations of dlfcn and interfaces to other native dynamic
-* loaders on top of which loadlib could be implemented.
+* implementation for Windows, and a stub for other systems.
 */
 
 
@@ -38,96 +21,106 @@
 #include "lualib.h"
 
 
-#define ERR_OPEN	1
-#define ERR_FUNCTION	2
-#define ERR_ABSENT	3
+#define LIBPREFIX	"LOADLIB: "
+
+#define POF		LUA_POF
+#define LIB_FAIL	"open"
 
 
-static void registerlib (lua_State *L, const void *lib);
+static void ll_unloadlib (void *lib);
+static void *ll_load (lua_State *L, const char *path);
+static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym);
+
 
 
 #if defined(USE_DLOPEN)
 /*
-* This is an implementation of loadlib based on the dlfcn interface.
-* The dlfcn interface is available in Linux, SunOS, Solaris, IRIX, FreeBSD,
-* NetBSD, AIX 4.2, HPUX 11, and  probably most other Unix flavors, at least
-* as an emulation layer on top of native functions.
+** {========================================================================
+** This is an implementation of loadlib based on the dlfcn interface.
+** The dlfcn interface is available in Linux, SunOS, Solaris, IRIX, FreeBSD,
+** NetBSD, AIX 4.2, HPUX 11, and  probably most other Unix flavors, at least
+** as an emulation layer on top of native functions.
+** =========================================================================
 */
 
 #include <dlfcn.h>
 
-#define freelib		dlclose
-
-static int loadlib(lua_State *L, const char *path, const char *init) {
-  void *lib=dlopen(path,RTLD_NOW);
-  if (lib != NULL) {
-    lua_CFunction f=(lua_CFunction) dlsym(lib,init);
-    if (f != NULL) {
-      registerlib(L, lib);
-      lua_pushcfunction(L,f);
-      return 0;
-     }
-    }
-    /* else return appropriate error message */
-    lua_pushstring(L,dlerror());
-    if (lib != NULL) {
-      dlclose(lib);
-      return ERR_FUNCTION;  /* error loading function */
-    }
-  else return ERR_OPEN;  /* error loading library */
+static void ll_unloadlib (void *lib) {
+  dlclose(lib);
 }
+
+
+static void *ll_load (lua_State *L, const char *path) {
+  void *lib = dlopen(path, RTLD_NOW);
+  if (lib == NULL) lua_pushstring(L, dlerror());
+  return lib;
+}
+
+
+static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
+  lua_CFunction f = (lua_CFunction)dlsym(lib, sym);
+  if (f == NULL) lua_pushstring(L, dlerror());
+  return f;
+}
+
+/* }====================================================== */
 
 
 
 #elif defined(USE_DLL)
 /*
-* This is an implementation of loadlib for Windows using native functions.
+** {======================================================================
+** This is an implementation of loadlib for Windows using native functions.
+** =======================================================================
 */
 
 #include <windows.h>
 
-#define freelib(lib)	FreeLibrary((HINSTANCE)lib)
 
-
-static void pusherror(lua_State *L) {
+static void pusherror (lua_State *L) {
   int error = GetLastError();
   char buffer[128];
   if (FormatMessage(FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_SYSTEM,
-      0, error, 0, buffer, sizeof(buffer), 0))
+      NULL, error, 0, buffer, sizeof(buffer), NULL))
     lua_pushstring(L,buffer);
   else
     lua_pushfstring(L, "system error %d\n", error);
 }
 
-
-static int loadlib (lua_State *L, const char *path, const char *init) {
-  HINSTANCE lib = LoadLibrary(path);
-  if (lib != NULL) {
-    lua_CFunction f = (lua_CFunction)GetProcAddress(lib, init);
-    if (f != NULL) {
-      registerlib(L, lib);
-      lua_pushcfunction(L, f);
-      return 0;
-    }
-  }
-  pusherror(L);
-  if (lib != NULL) {
-    FreeLibrary(lib);
-    return ERR_OPEN;
-  }
-  else return ERR_FUNCTION;
+static void ll_unloadlib (void *lib) {
+  FreeLibrary((HINSTANCE)lib);
 }
 
 
+static void *ll_load (lua_State *L, const char *path) {
+  HINSTANCE lib = LoadLibrary(path);
+  if (lib == NULL) pusherror(L);
+  return lib;
+}
 
-/* Native Mac OS X / Darwin Implementation */
+
+static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
+  lua_CFunction f = (lua_CFunction)GetProcAddress((HINSTANCE)lib, sym);
+  if (f == NULL) pusherror(L);
+  return f;
+}
+
+/* }====================================================== */
+
+
+
 #elif defined(USE_DYLD)
+/*
+** {======================================================================
+** Native Mac OS X / Darwin Implementation
+** =======================================================================
+*/
 
 #include <mach-o/dyld.h>
 
 
-/* Mach cannot unload images (?) */
-#define freelib(lib)	((void)lib)
+#undef POF
+#define POF	"_" LUA_POF
 
 
 static void pusherror (lua_State *L) {
@@ -140,86 +133,155 @@ static void pusherror (lua_State *L) {
 }
 
 
-static int loadlib (lua_State *L, const char *path, const char *init) {
-  const struct mach_header *lib;
+static const char *errorfromcode (NSObjectFileImageReturnCode ret) {
+  switch (ret) {
+    case NSObjectFileImageInappropriateFile:
+      return "file is not a bundle";
+    case NSObjectFileImageArch:
+      return "library is for wrong CPU type";
+    case NSObjectFileImageFormat:
+      return "bad format";
+    case NSObjectFileImageAccess:
+      return "cannot access file";
+    case NSObjectFileImageFailure:
+    default:
+      return "unable to load library";
+  }
+}
+
+
+static void ll_unloadlib (void *lib) {
+  NSUnLinkModule((NSModule)lib, NSUNLINKMODULE_OPTION_RESET_LAZY_REFERENCES);
+}
+
+
+static void *ll_load (lua_State *L, const char *path) {
+  NSObjectFileImage img;
+  NSObjectFileImageReturnCode ret;
   /* this would be a rare case, but prevents crashing if it happens */
   if(!_dyld_present()) {
-    lua_pushstring(L, "dyld not present.");
-    return ERR_OPEN;
+    lua_pushliteral(L, "dyld not present");
+    return NULL;
   }
-  lib = NSAddImage(path, NSADDIMAGE_OPTION_RETURN_ON_ERROR);
-  if(lib != NULL) {
-    NSSymbol init_sym = NSLookupSymbolInImage(lib, init,
-                              NSLOOKUPSYMBOLINIMAGE_OPTION_BIND |
-                              NSLOOKUPSYMBOLINIMAGE_OPTION_RETURN_ON_ERROR);
-    if(init_sym != NULL) {
-      lua_CFunction f = (lua_CFunction)NSAddressOfSymbol(init_sym);
-      registerlib(L, lib);
-      lua_pushcfunction(L, f);
-      return 0;
-    }
+  ret = NSCreateObjectFileImageFromFile(path, &img);
+  if (ret == NSObjectFileImageSuccess) {
+    NSModule mod = NSLinkModule(img, path, NSLINKMODULE_OPTION_PRIVATE |
+                       NSLINKMODULE_OPTION_RETURN_ON_ERROR);
+    NSDestroyObjectFileImage(img);
+    if (mod == NULL) pusherror(L);
+    return mod;
   }
-  /* else an error ocurred */
-  pusherror(L);
-  /* Can't unload image */
-  return (lib != NULL) ? ERR_FUNCTION : ERR_OPEN;
+  lua_pushstring(L, errorfromcode(ret));
+  return NULL;
 }
+
+
+static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
+  NSSymbol nss = NSLookupSymbolInModule((NSModule)lib, sym);
+  if (nss == NULL) {
+    lua_pushfstring(L, "symbol `%s' not found", sym);
+    return NULL;
+  }
+  return (lua_CFunction)NSAddressOfSymbol(nss);
+}
+
+/* }====================================================== */
 
 
 
 #else
-/* Fallback for other systems */
+/*
+** {======================================================
+** Fallback for other systems
+** =======================================================
+*/
+
+#undef LIB_FAIL
+#define LIB_FAIL	"absent"
 
 
-#define freelib(lib)	((void)lib)
-
-static int loadlib (lua_State *L, const char *path, const char *init) {
-  (void)path; (void)init; (void)&registerlib;  /* to avoid warnings */
-  lua_pushliteral(L,"`loadlib' not supported");
-  return ERR_ABSENT;
+static void ll_unloadlib (void *lib) {
+  (void)lib;  /* to avoid warnings */
 }
 
+
+static void *ll_load (lua_State *L, const char *path) {
+  (void)path;  /* to avoid warnings */
+  lua_pushliteral(L,"`loadlib' not supported");
+  return NULL;
+}
+
+
+static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
+  (void)lib; (void)sym;  /* to avoid warnings */
+  lua_pushliteral(L,"`loadlib' not supported");
+  return NULL;
+}
+
+/* }====================================================== */
 #endif
 
 
-/*
-** common code for all implementations: put a library into the registry
-** so that, when Lua closes its state, the library's __gc metamethod
-** will be called to unload the library.
-*/
-static void registerlib (lua_State *L, const void *lib) {
-  const void **plib = (const void **)lua_newuserdata(L, sizeof(const void *));
-  *plib = lib;
-   luaL_getmetatable(L, "_LOADLIB");
-   lua_setmetatable(L, -2);
-   lua_pushboolean(L, 1);
-   lua_settable(L, LUA_REGISTRYINDEX);  /* registry[lib] = true */
+
+static void **ll_register (lua_State *L, const char *path) {
+  void **plib;
+  lua_pushfstring(L, "%s%s", LIBPREFIX, path);
+  lua_gettable(L, LUA_REGISTRYINDEX);  /* check library in registry? */
+  if (!lua_isnil(L, -1))  /* is there an entry? */
+    plib = (void **)lua_touserdata(L, -1);
+  else {  /* no entry yet; create one */
+    lua_pop(L, 1);
+    plib = (void **)lua_newuserdata(L, sizeof(const void *));
+    *plib = NULL;
+    luaL_getmetatable(L, "_LOADLIB");
+    lua_setmetatable(L, -2);
+    lua_pushfstring(L, "%s%s", LIBPREFIX, path);
+    lua_pushvalue(L, -2);
+    lua_settable(L, LUA_REGISTRYINDEX);
+  }
+  return plib;
 }
 
+
 /*
-** __gc tag method: calls library's `freelib' function with the lib
+** __gc tag method: calls library's `ll_unloadlib' function with the lib
 ** handle
 */
 static int gctm (lua_State *L) {
-  void *lib = *(void **)luaL_checkudata(L, 1, "_LOADLIB");
-  freelib(lib);
+  void **lib = (void **)luaL_checkudata(L, 1, "_LOADLIB");
+  if (lib) {
+    if (*lib) ll_unloadlib(*lib);
+    *lib = NULL;  /* mark library as closed */
+  }
   return 0;
 }
 
 
+static int ll_loadfunc (lua_State *L, const char *path, const char *sym) {
+  const char *reason;
+  void **reg = ll_register(L, path);
+  if (*reg == NULL) *reg = ll_load(L, path);
+  if (*reg == NULL)
+    reason = LIB_FAIL;
+  else {
+    lua_CFunction f = ll_sym(L, *reg, sym);
+    if (f) {
+      lua_pushcfunction(L, f);
+      return 1;  /* return function */
+    }
+    reason = "init";
+  }
+  lua_pushnil(L);
+  lua_insert(L, -2);
+  lua_pushstring(L, reason);
+  return 3;  /* return nil, ll_error, reason */
+}
+
+
 static int ll_loadlib (lua_State *L) {
-  static const char *const errcodes[] = {NULL, "open", "init", "absent"};
   const char *path = luaL_checkstring(L, 1);
   const char *init = luaL_checkstring(L, 2);
-  int res = loadlib(L,path,init);
-  if (res == 0)  /* no error? */
-    return 1;  /* function is at stack top */
-  else {  /* error */
-    lua_pushnil(L);
-    lua_insert(L, -2);  /* insert nil before error message */
-    lua_pushstring(L, errcodes[res]);
-    return 3;
-  }
+  return ll_loadfunc(L, path, init);
 }
 
 
@@ -261,8 +323,8 @@ static const char *loadC (lua_State *L, const char *fname, const char *name) {
   fname = luaL_searchpath(L, fname, path);
   if (fname == NULL) return path;  /* library not found in this path */
   funcname = luaL_gsub(L, name, ".", LUA_OFSEP);
-  funcname = lua_pushfstring(L, "%s%s", LUA_POF, funcname);
-  if (loadlib(L, fname, funcname) != 0)
+  funcname = lua_pushfstring(L, "%s%s", POF, funcname);
+  if (ll_loadfunc(L, fname, funcname) != 1)
     luaL_error(L, "error loading package `%s' (%s)", name, lua_tostring(L, -1));
   return NULL;  /* library loaded successfully */
 }
@@ -400,25 +462,3 @@ LUALIB_API int luaopen_loadlib (lua_State *L) {
   return 1;
 }
 
-/*
-* Here are some links to available implementations of dlfcn and
-* interfaces to other native dynamic loaders on top of which loadlib
-* could be implemented. Please send contributions and corrections to us.
-*
-* AIX
-* Starting with AIX 4.2, dlfcn is included in the base OS.
-* There is also an emulation package available.
-* http://www.faqs.org/faqs/aix-faq/part4/section-21.html
-*
-* HPUX 
-* HPUX 11 has dlfcn. For HPUX 10 use shl_*.
-* http://www.geda.seul.org/mailinglist/geda-dev37/msg00094.html
-* http://www.stat.umn.edu/~luke/xls/projects/dlbasics/dlbasics.html
-*
-* Macintosh, Windows
-* http://www.stat.umn.edu/~luke/xls/projects/dlbasics/dlbasics.html
-*
-* GLIB has wrapper code for BeOS, OS2, Unix and Windows
-* http://cvs.gnome.org/lxr/source/glib/gmodule/
-*
-*/
