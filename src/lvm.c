@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.146 2000/10/26 12:47:05 roberto Exp $
+** $Id: lvm.c,v 1.146a 2000/10/26 12:47:05 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -79,7 +79,7 @@ static void traceexec (lua_State *L, StkId base, StkId top, lua_Hook linehook) {
   if (newline != ci->line || pc <= ci->lastpc) {
     ci->line = newline;
     L->top = top;
-    luaD_lineHook(L, base-2, newline, linehook);
+    luaD_lineHook(L, base-1, newline, linehook);
   }
   ci->lastpc = pc;
 }

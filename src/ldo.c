@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.109 2000/10/30 12:38:50 roberto Exp $
+** $Id: ldo.c,v 1.109a 2000/10/30 12:38:50 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -244,7 +244,9 @@ static int protectedparser (lua_State *L, ZIO *z, int bin) {
   unsigned long old_blocks;
   int status;
   p.z = z; p.bin = bin;
-  luaC_checkGC(L);
+  /* before parsing, give a (good) chance to GC */
+  if (L->nblocks/8 >= L->GCthreshold/10)
+    luaC_collectgarbage(L);
   old_blocks = L->nblocks;
   status = luaD_runprotected(L, f_parser, &p);
   if (status == 0) {
@@ -274,10 +276,11 @@ static int parse_file (lua_State *L, const char *filename) {
   lua_pushstring(L, "@");
   lua_pushstring(L, (filename == NULL) ? "(stdin)" : filename);
   lua_concat(L, 2);
-  filename = lua_tostring(L, -1);  /* filename = '@'..filename */
-  lua_pop(L, 1);  /* OK: there is no GC during parser */
+  c = lua_gettop(L);
+  filename = lua_tostring(L, c);  /* filename = '@'..filename */
   luaZ_Fopen(&z, f, filename);
   status = protectedparser(L, &z, bin);
+  lua_remove(L, c);  /* remove `filename' from the stack */
   if (f != stdin)
     fclose(f);
   return status;
