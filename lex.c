@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.46 1997/04/07 14:48:53 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 3.1 1997/04/12 15:01:49 roberto Exp roberto $";
 
 
 #include <ctype.h>
@@ -121,7 +121,7 @@ static int checkcond (char *buff)
     return 0;
   else if (strcmp(buff, "1") == 0)
     return 1;
-  else if (isalpha((unsigned char)buff[0]))
+  else if (isalpha((unsigned char)buff[0]) || buff[0] == '_')
     return luaI_globaldefined(buff);
   else {
     luaI_auxsynterrbf("invalid $if condition", buff);
@@ -134,7 +134,7 @@ static void readname (char *buff)
 {
   int i = 0;
   skipspace();
-  while (isalnum((unsigned char)current)) {
+  while (isalnum((unsigned char)current) || current == '_') {
     if (i >= PRAGMASIZE) {
       buff[PRAGMASIZE] = 0;
       luaI_auxsynterrbf("pragma too long", buff);
