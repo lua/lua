@@ -3,7 +3,7 @@
 ** load bytecodes from files
 */
 
-char* rcs_undump="$Id: undump.c,v 1.24 1997/06/17 18:19:17 roberto Exp roberto $";
+char* rcs_undump="$Id: undump.c,v 1.25 1997/07/29 19:44:02 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -67,7 +67,6 @@ static void FixCode(Byte* code, Byte* end)	/* swap words */
 	case CONCOP:
 	case MINUSOP:
 	case NOTOP:
-	case POP:
 	case RETCODE0:
 		p++;
 		break;
@@ -86,9 +85,6 @@ static void FixCode(Byte* code, Byte* end)	/* swap words */
 	case CALLFUNC:
 		p+=3;
 		break;
-	case PUSHFUNCTION:
-		p+=5;			/* TODO: use sizeof(TFunc*) or old? */
-		break;
 	case PUSHWORD:
 	case PUSHSELF:
 	case CREATEARRAY:
@@ -99,21 +95,12 @@ static void FixCode(Byte* code, Byte* end)	/* swap words */
 	case IFFJMP:
 	case IFFUPJMP:
 	case SETLINE:
-	case PUSHSTRING:
 	case PUSHGLOBAL:
 	case STOREGLOBAL:
 	{
 		Byte t;
 		t=p[1]; p[1]=p[2]; p[2]=t;
 		p+=3;
-		break;
-	}
-	case PUSHFLOAT:			/* assumes sizeof(float)==4 */
-	{
-		Byte t;
-		t=p[1]; p[1]=p[4]; p[4]=t;
-		t=p[2]; p[2]=p[3]; p[3]=t;
-		p+=5;
 		break;
 	}
 	case STORERECORD:
@@ -226,7 +213,7 @@ static void LoadFunction(ZIO* Z)
   {
    int i=LoadWord(Z);
    char* s=LoadString(Z);
-   int v=luaI_findconstantbyname(s);
+   int v; /*=luaI_findconstantbyname(s); ??????? */
    Unthread(tf->code,i,v);
   }
   else
@@ -324,7 +311,7 @@ int luaI_undump(ZIO* Z)
  while ((m=luaI_undump1(Z)))
  {
   int status=luaI_dorun(m);
-  luaI_freefunc(m);
+/*  luaI_freefunc(m); ???*/
   if (status!=0) return status;
  }
  return 0;

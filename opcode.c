@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 4.20 1997/07/30 22:00:50 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 4.21 1997/07/31 19:37:37 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -1384,6 +1384,7 @@ static StkId lua_execute (TFunc *func, StkId base)
     Word w;
     get_word(w,pc);
     if (ttype(top-1) != LUA_T_NIL) pc += w;
+    else top--;
    }
    break;
 
@@ -1392,6 +1393,7 @@ static StkId lua_execute (TFunc *func, StkId base)
     Word w;
     get_word(w,pc);
     if (ttype(top-1) == LUA_T_NIL) pc += w;
+    else top--;
    }
    break;
 
@@ -1428,8 +1430,6 @@ static StkId lua_execute (TFunc *func, StkId base)
     if (ttype(top) == LUA_T_NIL) pc -= w;
    }
    break;
-
-   case POP: --top; break;
 
    case CALLFUNC:
    {

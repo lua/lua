@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.36 1997/07/29 20:38:06 roberto Exp roberto $
+** $Id: opcode.h,v 3.37 1997/07/30 22:00:50 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -60,7 +60,7 @@ PUSHLOCAL9,/*		-		LOC[9]  */
 PUSHLOCAL,/*	b	-		LOC[b]  */
 PUSHGLOBAL,/*	w	-		VAR[w]  */
 PUSHINDEXED,/*		i t		t[i]  */
-PUSHSELF,/*	w	t		t t[STR[w]]  */
+PUSHSELF,/*	w	t		t t[CNST[w]]  */
 STORELOCAL0,/*		x		-		LOC[0]=x  */
 STORELOCAL1,/*		x		-		LOC[1]=x  */
 STORELOCAL2,/*		x		-		LOC[2]=x  */
@@ -78,7 +78,7 @@ STOREINDEXED,/*	b	v a_b...a_1 i t	a_b...a_1 i t	t[i]=v  */
 STORELIST0,/*	b	v_b...v_1 t	-		t[i]=v_i  */
 STORELIST,/*	b c	v_b...v_1 t	-		t[i+c*FPF]=v_i  */
 STORERECORD,/*	b
-		w_b...w_1 v_b...v_1 t	-		t[STR[w_i]]=v_i  */
+		w_b...w_1 v_b...v_1 t	-		t[CNST[w_i]]=v_i  */
 ADJUST0,/*		-		-		TOP=BASE  */
 ADJUST,/*	b	-		-		TOP=BASE+b  */
 CREATEARRAY,/*	w	-		newarray(size = w)  */
@@ -95,21 +95,20 @@ POWOP,/*		y x		x^y  */
 CONCOP,/*		y x		x..y  */
 MINUSOP,/*		x		-x  */
 NOTOP,/*		x		(x==nil)? 1 : nil  */
-ONTJMP,/*	w	x		-		(x!=nil)? PC+=w  */
-ONFJMP,/*	w	x		-		(x==nil)? PC+=w  */
+ONTJMP,/*	w	x		(x!=nil)? x : -	(x!=nil)? PC+=w  */
+ONFJMP,/*	w	x		(x==nil)? x : -	(x==nil)? PC+=w  */
 JMP,/*		w	-		-		PC+=w  */
 UPJMP,/*	w	-		-		PC-=w  */
 IFFJMP,/*	w	x		-		(x==nil)? PC+=w  */
 IFFUPJMP,/*	w	x		-		(x==nil)? PC-=w  */
-POP,/*			x		-  */
 CALLFUNC,/*	b c	v_b...v_1 f	r_c...r_1	f(v1,...,v_b)  */
 RETCODE0,
 RETCODE,/*	b	-		-  */
 SETLINE,/*	w	-		-		LINE=w  */
 VARARGS,/*	b	v_b...v_1	{v_1...v_b;n=b}  */
 STOREMAP,/*	b	v_b k_b ...v_1 k_1 t	-	t[k_i]=v_i  */
-PUSHCONSTANTB,/*b	-		const[b] */
-PUSHCONSTANT,/* w	-		const[w] */
+PUSHCONSTANTB,/*b	-		CNST[b] */
+PUSHCONSTANT,/* w	-		CNST[w] */
 ENDCODE = 127
 } OpCode;
 
