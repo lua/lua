@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.h,v 1.15 1999/10/26 10:53:40 roberto Exp roberto $
+** $Id: ltable.h,v 1.16 1999/11/22 13:12:07 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -10,9 +10,9 @@
 #include "lobject.h"
 
 
-#define node(L, t,i)       (&(t)->node[i])
-#define key(L, n)		(&(n)->key)
-#define val(L, n)		(&(n)->val)
+#define node(t,i)	(&(t)->node[i])
+#define key(n)		(&(n)->key)
+#define val(n)		(&(n)->val)
 
 #define luaH_move(L, t,from,to)	(luaH_setint(L, t, to, luaH_getint(L, t, from)))
 

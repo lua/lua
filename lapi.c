@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.56 1999/11/11 17:02:40 roberto Exp roberto $
+** $Id: lapi.c,v 1.57 1999/11/22 13:12:07 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -420,10 +420,10 @@ const char *lua_nextvar (lua_State *L, const char *varname) {
 int luaA_next (lua_State *L, const Hash *t, int i) {
   int tsize = t->size;
   for (; i<tsize; i++) {
-    Node *n = node(L, t, i);
-    if (ttype(val(L, n)) != LUA_T_NIL) {
-      luaA_pushobject(L, key(L, n));
-      luaA_pushobject(L, val(L, n));
+    Node *n = node(t, i);
+    if (ttype(val(n)) != LUA_T_NIL) {
+      luaA_pushobject(L, key(n));
+      luaA_pushobject(L, val(n));
       return i+1;  /* index to be used next time */
     }
   }

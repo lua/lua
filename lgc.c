@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.31 1999/11/10 15:40:46 roberto Exp roberto $
+** $Id: lgc.c,v 1.32 1999/11/22 13:12:07 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -54,8 +54,8 @@ static void hashmark (lua_State *L, Hash *h) {
     int i;
     h->marked = 1;
     for (i=h->size-1; i>=0; i--) {
-      Node *n = node(L, h,i);
-      if (ttype(key(L, n)) != LUA_T_NIL) {
+      Node *n = node(h,i);
+      if (ttype(key(n)) != LUA_T_NIL) {
         markobject(L, &n->key);
         markobject(L, &n->val);
       }
