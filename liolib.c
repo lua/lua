@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.43 1999/08/10 13:05:16 roberto Exp roberto $
+** $Id: liolib.c,v 1.44 1999/08/16 20:52:00 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -287,7 +287,7 @@ static int read_number (FILE *f) {
 }
 
 
-#define HUNK_LINE	1024
+#define HUNK_LINE	256
 #define HUNK_FILE	BUFSIZ
 
 static int read_line (FILE *f) {
@@ -358,7 +358,7 @@ static void io_write (void) {
   const char *s;
   long l;
   while ((s = luaL_opt_lstr(arg++, NULL, &l)) != NULL)
-    status = status && ((long)fwrite(s, 1, l, f) == l);
+    status = status && ((long)fwrite(s, sizeof(char), l, f) == l);
   pushresult(status);
 }
 
