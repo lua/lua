@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.180 2002/03/26 20:46:10 roberto Exp roberto $
+** $Id: lapi.c,v 1.181 2002/03/27 12:49:53 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -416,15 +416,13 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
     default:
       mt = hvalue(defaultmeta(L));
   }
-  if (mt == hvalue(defaultmeta(L))) {
-    setnilvalue(L->top);
+  if (mt == hvalue(defaultmeta(L)))
     res = 0;
-  }
   else {
     sethvalue(L->top, mt);
+    api_incr_top(L);
     res = 1;
   }
-  api_incr_top(L);
   lua_unlock(L);
   return res;
 }
