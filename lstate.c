@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.116 2002/11/22 17:16:52 roberto Exp roberto $
+** $Id: lstate.c,v 1.117 2002/12/04 17:38:31 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -182,6 +182,8 @@ LUA_API lua_State *lua_open (void) {
   lua_State *L = mallocstate(NULL);
   if (L) {  /* allocation OK? */
     L->tt = LUA_TTHREAD;
+    L->marked = 0;
+    L->next = L->gclist = NULL;
     preinit_state(L);
     L->l_G = NULL;
     if (luaD_rawrunprotected(L, f_luaopen, NULL) != 0) {
