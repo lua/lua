@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.176 2002/04/10 19:14:45 roberto Exp roberto $
+** $Id: lparser.c,v 1.177 2002/04/22 14:38:52 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -354,9 +354,9 @@ static void pushclosure (LexState *ls, FuncState *func, expdesc *v) {
   Proto *f = fs->f;
   int i;
   luaM_growvector(ls->L, f->p, fs->np, f->sizep, Proto *,
-                  MAXARG_Bc, "constant table overflow");
+                  MAXARG_Bx, "constant table overflow");
   f->p[fs->np++] = func->f;
-  init_exp(v, VRELOCABLE, luaK_codeABc(fs, OP_CLOSURE, 0, fs->np-1));
+  init_exp(v, VRELOCABLE, luaK_codeABx(fs, OP_CLOSURE, 0, fs->np-1));
   for (i=0; i<func->f->nupvalues; i++) {
     luaK_exp2nextreg(fs, &func->upvalues[i]);
     fs->freereg--;  /* CLOSURE will use these values */
@@ -563,7 +563,7 @@ static void closelistfield (FuncState *fs, struct ConsControl *cc) {
   luaK_exp2nextreg(fs, &cc->v);
   cc->v.k = VVOID;
   if (cc->tostore == LFIELDS_PER_FLUSH) {
-    luaK_codeABc(fs, OP_SETLIST, cc->t->info, cc->na-1);  /* flush */
+    luaK_codeABx(fs, OP_SETLIST, cc->t->info, cc->na-1);  /* flush */
     cc->tostore = 0;  /* no more items pending */
     fs->freereg = cc->t->info + 1;  /* free registers */
   }
@@ -574,12 +574,12 @@ static void lastlistfield (FuncState *fs, struct ConsControl *cc) {
   if (cc->tostore == 0) return;
   if (cc->v.k == VCALL) {
     luaK_setcallreturns(fs, &cc->v, LUA_MULTRET);
-    luaK_codeABc(fs, OP_SETLISTO, cc->t->info, cc->na-1);
+    luaK_codeABx(fs, OP_SETLISTO, cc->t->info, cc->na-1);
   }
   else {
     if (cc->v.k != VVOID)
       luaK_exp2nextreg(fs, &cc->v);
-    luaK_codeABc(fs, OP_SETLIST, cc->t->info, cc->na-1);
+    luaK_codeABx(fs, OP_SETLIST, cc->t->info, cc->na-1);
   }
   fs->freereg = cc->t->info + 1;  /* free registers */
 }
@@ -587,7 +587,7 @@ static void lastlistfield (FuncState *fs, struct ConsControl *cc) {
 
 static void listfield (LexState *ls, struct ConsControl *cc) {
   expr(ls, &cc->v);
-  luaX_checklimit(ls, cc->na, MAXARG_Bc, "items in a constructor");
+  luaX_checklimit(ls, cc->na, MAXARG_Bx, "items in a constructor");
   cc->na++;
   cc->tostore++;
 }
@@ -1014,7 +1014,7 @@ static void fornum (LexState *ls, TString *varname, int line) {
   if (optional(ls, ','))
     exp1(ls);  /* optional step */
   else {  /* default step = 1 */
-    luaK_codeABc(fs, OP_LOADK, fs->freereg, luaK_numberK(fs, 1));
+    luaK_codeABx(fs, OP_LOADK, fs->freereg, luaK_numberK(fs, 1));
     luaK_reserveregs(fs, 1);
   }
   adjustlocalvars(ls, 3);  /* scope for control variables */
@@ -1024,7 +1024,7 @@ static void fornum (LexState *ls, TString *varname, int line) {
   check(ls, TK_DO);
   block(ls);
   luaK_patchtohere(fs, prep-1);
-  endfor = luaK_codeAsBc(fs, OP_FORLOOP, base, NO_JUMP);
+  endfor = luaK_codeAsBx(fs, OP_FORLOOP, base, NO_JUMP);
   luaK_patchlist(fs, endfor, prep);
   fs->f->lineinfo[endfor] = line;  /* pretend that `OP_FOR' starts the loop */
 }

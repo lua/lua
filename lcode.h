@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.30 2002/04/02 20:34:53 roberto Exp roberto $
+** $Id: lcode.h,v 1.31 2002/04/09 18:49:30 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -39,10 +39,10 @@ typedef enum UnOpr { OPR_MINUS, OPR_NOT, OPR_NOUNOPR } UnOpr;
 
 #define getcode(fs,e)	((fs)->f->code[(e)->info])
 
-#define luaK_codeAsBc(fs,o,A,sBc)	luaK_codeABc(fs,o,A,(sBc)+MAXARG_sBc)
+#define luaK_codeAsBx(fs,o,A,sBx)	luaK_codeABx(fs,o,A,(sBx)+MAXARG_sBx)
 
 void luaK_error (LexState *ls, const char *msg);
-int luaK_codeABc (FuncState *fs, OpCode o, int A, unsigned int Bc);
+int luaK_codeABx (FuncState *fs, OpCode o, int A, unsigned int Bx);
 int luaK_codeABC (FuncState *fs, OpCode o, int A, int B, int C);
 void luaK_nil (FuncState *fs, int from, int n);
 void luaK_reserveregs (FuncState *fs, int n);

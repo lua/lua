@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.115 2002/04/02 20:43:08 roberto Exp roberto $
+** $Id: ltests.c,v 1.116 2002/04/05 18:54:31 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -151,11 +151,11 @@ static char *buildop (Proto *p, int pc, char *buff) {
       sprintf(buff+strlen(buff), "%-12s%4d %4d %4d", name,
               GETARG_A(i), GETARG_B(i), GETARG_C(i));
       break;
-    case iABc:
-      sprintf(buff+strlen(buff), "%-12s%4d %4d", name, GETARG_A(i), GETARG_Bc(i));
+    case iABx:
+      sprintf(buff+strlen(buff), "%-12s%4d %4d", name, GETARG_A(i), GETARG_Bx(i));
       break;
-    case iAsBc:
-      sprintf(buff+strlen(buff), "%-12s%4d %4d", name, GETARG_A(i), GETARG_sBc(i));
+    case iAsBx:
+      sprintf(buff+strlen(buff), "%-12s%4d %4d", name, GETARG_A(i), GETARG_sBx(i));
       break;
   }
   return buff;

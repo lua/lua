@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.93 2002/03/25 17:47:14 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.94 2002/04/09 19:47:44 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -17,8 +17,8 @@
 	`A' : 8 bits (25-32)
 	`B' : 8 bits (17-24)
 	`C' : 10 bits (7-16)
-	`Bc' : 18 bits (`B' and `C' together)
-	`sBc' : signed Bc
+	`Bx' : 18 bits (`B' and `C' together)
+	`sBx' : signed Bx
 
   A signed argument is represented in excess K; that is, the number
   value is the unsigned value minus K. K is exactly the maximum value
@@ -28,7 +28,7 @@
 ===========================================================================*/
 
 
-enum OpMode {iABC, iABc, iAsBc};  /* basic instruction format */
+enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 
 
 /*
@@ -36,14 +36,14 @@ enum OpMode {iABC, iABc, iAsBc};  /* basic instruction format */
 */
 #define SIZE_C		10
 #define SIZE_B		8
-#define SIZE_Bc		(SIZE_C + SIZE_B)
+#define SIZE_Bx		(SIZE_C + SIZE_B)
 #define SIZE_A		8
 
 #define SIZE_OP		6
 
 #define POS_C		SIZE_OP
 #define POS_B		(POS_C + SIZE_C)
-#define POS_Bc		POS_C
+#define POS_Bx		POS_C
 #define POS_A		(POS_B + SIZE_B)
 
 
@@ -52,12 +52,12 @@ enum OpMode {iABC, iABc, iAsBc};  /* basic instruction format */
 ** we use (signed) int to manipulate most arguments,
 ** so they must fit in BITS_INT-1 bits (-1 for sign)
 */
-#if SIZE_Bc < BITS_INT-1
-#define MAXARG_Bc        ((1<<SIZE_Bc)-1)
-#define MAXARG_sBc        (MAXARG_Bc>>1)         /* `sBc' is signed */
+#if SIZE_Bx < BITS_INT-1
+#define MAXARG_Bx        ((1<<SIZE_Bx)-1)
+#define MAXARG_sBx        (MAXARG_Bx>>1)         /* `sBx' is signed */
 #else
-#define MAXARG_Bc        MAX_INT
-#define MAXARG_sBc        MAX_INT
+#define MAXARG_Bx        MAX_INT
+#define MAXARG_sBx        MAX_INT
 #endif
 
 
@@ -91,12 +91,12 @@ enum OpMode {iABC, iABc, iAsBc};  /* basic instruction format */
 #define SETARG_C(i,b)	((i) = (((i)&MASK0(SIZE_C,POS_C)) | \
                                (cast(Instruction, b)<<POS_C)))
 
-#define GETARG_Bc(i)	(cast(int, ((i)>>POS_Bc) & MASK1(SIZE_Bc,0)))
-#define SETARG_Bc(i,b)	((i) = (((i)&MASK0(SIZE_Bc,POS_Bc)) | \
-                               (cast(Instruction, b)<<POS_Bc)))
+#define GETARG_Bx(i)	(cast(int, ((i)>>POS_Bx) & MASK1(SIZE_Bx,0)))
+#define SETARG_Bx(i,b)	((i) = (((i)&MASK0(SIZE_Bx,POS_Bx)) | \
+                               (cast(Instruction, b)<<POS_Bx)))
 
-#define GETARG_sBc(i)	(GETARG_Bc(i)-MAXARG_sBc)
-#define SETARG_sBc(i,b)	SETARG_Bc((i),cast(unsigned int, (b)+MAXARG_sBc))
+#define GETARG_sBx(i)	(GETARG_Bx(i)-MAXARG_sBx)
+#define SETARG_sBx(i,b)	SETARG_Bx((i),cast(unsigned int, (b)+MAXARG_sBx))
 
 
 #define CREATE_ABC(o,a,b,c)	(cast(Instruction, o) \
@@ -104,9 +104,9 @@ enum OpMode {iABC, iABc, iAsBc};  /* basic instruction format */
 			| (cast(Instruction, b)<<POS_B) \
 			| (cast(Instruction, c)<<POS_C))
 
-#define CREATE_ABc(o,a,bc)	(cast(Instruction, o) \
+#define CREATE_ABx(o,a,bc)	(cast(Instruction, o) \
 			| (cast(Instruction, a)<<POS_A) \
-			| (cast(Instruction, bc)<<POS_Bc))
+			| (cast(Instruction, bc)<<POS_Bx))
 
 
 
@@ -129,15 +129,15 @@ typedef enum {
 name		args	description
 ------------------------------------------------------------------------*/
 OP_MOVE,/*	A B	R(A) := R(B)					*/
-OP_LOADK,/*	A Bc	R(A) := Kst(Bc)					*/
+OP_LOADK,/*	A Bx	R(A) := Kst(Bx)					*/
 OP_LOADBOOL,/*	A B C	R(A) := (Bool)B; if (C) PC++			*/
 OP_LOADNIL,/*	A B	R(A) := ... := R(B) := nil			*/
 OP_GETUPVAL,/*	A B	R(A) := UpValue[B]				*/
 
-OP_GETGLOBAL,/*	A Bc	R(A) := Gbl[Kst(Bc)]				*/
+OP_GETGLOBAL,/*	A Bx	R(A) := Gbl[Kst(Bx)]				*/
 OP_GETTABLE,/*	A B C	R(A) := R(B)[R/K(C)]				*/
 
-OP_SETGLOBAL,/*	A Bc	Gbl[Kst(Bc)] := R(A)				*/
+OP_SETGLOBAL,/*	A Bx	Gbl[Kst(Bx)] := R(A)				*/
 OP_SETUPVAL,/*	A B	UpValue[B] := R(A)				*/
 OP_SETTABLE,/*	A B C	R(B)[R/K(C)] := R(A)				*/
 
@@ -155,7 +155,7 @@ OP_NOT,/*	A B	R(A) := not R(B)				*/
 
 OP_CONCAT,/*	A B C	R(A) := R(B).. ... ..R(C)			*/
 
-OP_JMP,/*	sBc	PC += sBc					*/
+OP_JMP,/*	sBx	PC += sBx					*/
 
 OP_TESTEQ,/*	A C	if not (R(A) == R/K(C)) then pc++		*/
 OP_TESTNE,/*	A C	if not (R(A) ~= R/K(C)) then pc++		*/
@@ -171,17 +171,17 @@ OP_CALL,/*	A B C	R(A), ... ,R(A+C-2) := R(A)(R(A+1), ... ,R(A+B-1)) */
 OP_TAILCALL,/*	A B	return R(A)(R(A+1), ... ,R(A+B-1))		*/
 OP_RETURN,/*	A B	return R(A), ... ,R(A+B-2)	(see (3))	*/
 
-OP_FORLOOP,/*	A sBc	R(A)+=R(A+2); if R(A) <?= R(A+1) then PC+= sBc	*/
+OP_FORLOOP,/*	A sBx	R(A)+=R(A+2); if R(A) <?= R(A+1) then PC+= sBx	*/
 
 OP_TFORLOOP,/*	A C	R(A+2), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2)); 
                         if R(A+2) ~= nil then pc++			*/
 OP_TFORPREP,/*	A	if type(R(A)) == table then R(A+1):=R(A), R(A):=next */
 
-OP_SETLIST,/*	A Bc	R(A)[Bc-Bc%FPF+i] := R(A+i), 1 <= i <= Bc%FPF+1	*/
-OP_SETLISTO,/*	A Bc							*/
+OP_SETLIST,/*	A Bx	R(A)[Bx-Bx%FPF+i] := R(A+i), 1 <= i <= Bx%FPF+1	*/
+OP_SETLISTO,/*	A Bx							*/
 
 OP_CLOSE,/*	A 	close all variables in the stack up to (>=) R(A)*/
-OP_CLOSURE/*	A Bc	R(A) := closure(KPROTO[Bc], R(A), ... ,R(A+n))	*/
+OP_CLOSURE/*	A Bx	R(A) := closure(KPROTO[Bx], R(A), ... ,R(A+n))	*/
 } OpCode;
 
 
@@ -207,7 +207,7 @@ enum OpModeMask {
   OpModeBreg = 2,       /* B is a register */
   OpModeCreg,           /* C is a register/constant */
   OpModesetA,           /* instruction set register A */
-  OpModeK,              /* Bc is a constant */
+  OpModeK,              /* Bx is a constant */
   OpModeT		/* operator is a test */
 };
 

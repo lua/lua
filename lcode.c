@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.95 2002/04/09 18:49:30 roberto Exp roberto $
+** $Id: lcode.c,v 1.96 2002/04/22 14:37:09 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -45,7 +45,7 @@ void luaK_nil (FuncState *fs, int from, int n) {
 
 
 int luaK_jump (FuncState *fs) {
-  int j = luaK_codeAsBc(fs, OP_JMP, 0, NO_JUMP);
+  int j = luaK_codeAsBx(fs, OP_JMP, 0, NO_JUMP);
   if (j == fs->lasttarget) {  /* possible jumps to this jump? */
     luaK_concat(fs, &j, fs->jlt);  /* keep them on hold */
     fs->jlt = NO_JUMP;
@@ -56,19 +56,19 @@ int luaK_jump (FuncState *fs) {
 
 static int luaK_condjump (FuncState *fs, OpCode op, int A, int B, int C) {
   luaK_codeABC(fs, op, A, B, C);
-  return luaK_codeAsBc(fs, OP_JMP, 0, NO_JUMP);
+  return luaK_codeAsBx(fs, OP_JMP, 0, NO_JUMP);
 }
 
 
 static void luaK_fixjump (FuncState *fs, int pc, int dest) {
   Instruction *jmp = &fs->f->code[pc];
   if (dest == NO_JUMP)
-    SETARG_sBc(*jmp, NO_JUMP);  /* point to itself to represent end of list */
+    SETARG_sBx(*jmp, NO_JUMP);  /* point to itself to represent end of list */
   else {  /* jump is relative to position following jump instruction */
     int offset = dest-(pc+1);
-    if (abs(offset) > MAXARG_sBc)
+    if (abs(offset) > MAXARG_sBx)
       luaK_error(fs->ls, "control structure too long");
-    SETARG_sBc(*jmp, offset);
+    SETARG_sBx(*jmp, offset);
   }
 }
 
@@ -90,7 +90,7 @@ int luaK_getlabel (FuncState *fs) {
 
 
 static int luaK_getjump (FuncState *fs, int pc) {
-  int offset = GETARG_sBc(fs->f->code[pc]);
+  int offset = GETARG_sBx(fs->f->code[pc]);
   if (offset == NO_JUMP)  /* point to itself represents end of list */
     return NO_JUMP;  /* end of list */
   else
@@ -213,7 +213,7 @@ static int addk (FuncState *fs, TObject *k, TObject *v) {
     TObject o;
     Proto *f = fs->f;
     luaM_growvector(fs->L, f->k, fs->nk, f->sizek, TObject,
-                    MAXARG_Bc, "constant table overflow");
+                    MAXARG_Bx, "constant table overflow");
     setobj(&f->k[fs->nk], v);
     setnvalue(&o, fs->nk);
     luaH_set(fs->L, fs->h, k, &o);
@@ -267,7 +267,7 @@ void luaK_dischargevars (FuncState *fs, expdesc *e) {
       break;
     }
     case VGLOBAL: {
-      e->info = luaK_codeABc(fs, OP_GETGLOBAL, 0, e->info);
+      e->info = luaK_codeABx(fs, OP_GETGLOBAL, 0, e->info);
       e->k = VRELOCABLE;
       break;
     }
@@ -305,7 +305,7 @@ static void discharge2reg (FuncState *fs, expdesc *e, int reg) {
       break;
     }
     case VK: {
-      luaK_codeABc(fs, OP_LOADK, reg, e->info);
+      luaK_codeABx(fs, OP_LOADK, reg, e->info);
       break;
     }
     case VRELOCABLE: {
@@ -347,7 +347,7 @@ static void luaK_exp2reg (FuncState *fs, expdesc *e, int reg) {
       /* expression needs values */
       if (e->k != VJMP) {
         luaK_getlabel(fs);  /* these instruction may be jump target */
-        luaK_codeAsBc(fs, OP_JMP, 0, 2);  /* to jump over both pushes */
+        luaK_codeAsBx(fs, OP_JMP, 0, 2);  /* to jump over both pushes */
       }
       else {  /* last expression is a conditional (test + jump) */
         fs->pc--;  /* remove its jump */
@@ -433,7 +433,7 @@ void luaK_storevar (FuncState *fs, expdesc *var, expdesc *exp) {
     }
     case VGLOBAL: {
       int e = luaK_exp2anyreg(fs, exp);
-      luaK_codeABc(fs, OP_SETGLOBAL, e, var->info);
+      luaK_codeABx(fs, OP_SETGLOBAL, e, var->info);
       break;
     }
     case VINDEXED: {
@@ -509,7 +509,7 @@ void luaK_goiftrue (FuncState *fs, expdesc *e) {
       break;
     }
     case VFALSE: {
-      pc = luaK_codeAsBc(fs, OP_JMP, 0, NO_JUMP);  /* always jump */
+      pc = luaK_codeAsBx(fs, OP_JMP, 0, NO_JUMP);  /* always jump */
       break;
     }
     case VJMP: {
@@ -537,7 +537,7 @@ static void luaK_goiffalse (FuncState *fs, expdesc *e) {
       break;
     }
     case VTRUE: {
-      pc = luaK_codeAsBc(fs, OP_JMP, 0, NO_JUMP);  /* always jump */
+      pc = luaK_codeAsBx(fs, OP_JMP, 0, NO_JUMP);  /* always jump */
       break;
     }
     case VJMP: {
@@ -739,8 +739,8 @@ int luaK_codeABC (FuncState *fs, OpCode o, int a, int b, int c) {
 }
 
 
-int luaK_codeABc (FuncState *fs, OpCode o, int a, unsigned int bc) {
-  lua_assert(getOpMode(o) == iABc || getOpMode(o) == iAsBc);
-  return luaK_code(fs, CREATE_ABc(o, a, bc));
+int luaK_codeABx (FuncState *fs, OpCode o, int a, unsigned int bc) {
+  lua_assert(getOpMode(o) == iABx || getOpMode(o) == iAsBx);
+  return luaK_code(fs, CREATE_ABx(o, a, bc));
 }
 

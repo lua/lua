@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.225 2002/04/10 12:11:07 roberto Exp roberto $
+** $Id: lvm.c,v 1.226 2002/04/22 14:40:23 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -287,7 +287,7 @@ static void powOp (lua_State *L, StkId ra, StkId rb, StkId rc) {
 #define RKC(i)	((GETARG_C(i) < MAXSTACK) ? \
 			base+GETARG_C(i) : \
 			k+GETARG_C(i)-MAXSTACK)
-#define KBc(i)	(k+GETARG_Bc(i))
+#define KBx(i)	(k+GETARG_Bx(i))
 
 #define Arith(op, optm)	{ \
   const TObject *b = RB(i); const TObject *c = RKC(i);		\
@@ -332,7 +332,7 @@ StkId luaV_execute (lua_State *L) {
         break;
       }
       case OP_LOADK: {
-        setobj(ra, KBc(i));
+        setobj(ra, KBx(i));
         break;
       }
       case OP_LOADBOOL: {
@@ -353,8 +353,8 @@ StkId luaV_execute (lua_State *L) {
         break;
       }
       case OP_GETGLOBAL: {
-        lua_assert(ttype(KBc(i)) == LUA_TSTRING);
-        luaV_gettable(L, gt(L), KBc(i), ra);
+        lua_assert(ttype(KBx(i)) == LUA_TSTRING);
+        luaV_gettable(L, gt(L), KBx(i), ra);
         break;
       }
       case OP_GETTABLE: {
@@ -362,8 +362,8 @@ StkId luaV_execute (lua_State *L) {
         break;
       }
       case OP_SETGLOBAL: {
-        lua_assert(ttype(KBc(i)) == LUA_TSTRING);
-        luaV_settable(L, gt(L), KBc(i), ra);
+        lua_assert(ttype(KBx(i)) == LUA_TSTRING);
+        luaV_settable(L, gt(L), KBx(i), ra);
         break;
       }
       case OP_SETUPVAL: {
@@ -434,7 +434,7 @@ StkId luaV_execute (lua_State *L) {
         break;
       }
       case OP_JMP: {
-        dojump(pc, GETARG_sBc(i));
+        dojump(pc, GETARG_sBx(i));
         break;
       }
       case OP_TESTEQ: {  /* skip next instruction if test fails */
@@ -531,7 +531,7 @@ StkId luaV_execute (lua_State *L) {
       }
       case OP_FORLOOP: {
         lua_Number step, index, limit;
-        int j = GETARG_sBc(i);
+        int j = GETARG_sBx(i);
         const TObject *plimit = ra+1;
         const TObject *pstep = ra+2;
         if (ttype(ra) != LUA_TNUMBER)
@@ -574,7 +574,7 @@ StkId luaV_execute (lua_State *L) {
         Table *h;
         runtime_check(L, ttype(ra) == LUA_TTABLE);
         h = hvalue(ra);
-        bc = GETARG_Bc(i);
+        bc = GETARG_Bx(i);
         if (GET_OPCODE(i) == OP_SETLIST)
           n = (bc&(LFIELDS_PER_FLUSH-1)) + 1;
         else {
@@ -594,7 +594,7 @@ StkId luaV_execute (lua_State *L) {
         Proto *p;
         Closure *ncl;
         int nup, j;
-        p = cl->p->p[GETARG_Bc(i)];
+        p = cl->p->p[GETARG_Bx(i)];
         nup = p->nupvalues;
         ncl = luaF_newLclosure(L, nup);
         ncl->l.p = p;

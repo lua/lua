@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.108 2002/04/10 12:11:07 roberto Exp roberto $
+** $Id: ldebug.c,v 1.109 2002/04/22 14:40:23 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -290,13 +290,13 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
                (c >= MAXSTACK && c-MAXSTACK < pt->sizek));
         break;
       }
-      case iABc: {
-        b = GETARG_Bc(i);
+      case iABx: {
+        b = GETARG_Bx(i);
         if (testOpMode(op, OpModeK)) check(b < pt->sizek);
         break;
       }
-      case iAsBc: {
-        b = GETARG_sBc(i);
+      case iAsBx: {
+        b = GETARG_sBx(i);
         break;
       }
     }
@@ -421,8 +421,8 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int stackpos,
     lua_assert(pc != -1);
     switch (GET_OPCODE(i)) {
       case OP_GETGLOBAL: {
-        lua_assert(ttype(&p->k[GETARG_Bc(i)]) == LUA_TSTRING);
-        *name = svalue(&p->k[GETARG_Bc(i)]);
+        lua_assert(ttype(&p->k[GETARG_Bx(i)]) == LUA_TSTRING);
+        *name = svalue(&p->k[GETARG_Bx(i)]);
         return "global";
       }
       case OP_MOVE: {
