@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.13 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: lstate.c,v 1.14 1999/10/04 17:51:04 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -53,6 +53,10 @@ void lua_open (void) {
 
 void lua_close (void) {
   luaC_collect(1);  /* collect all elements */
+  LUA_ASSERT(L->rootproto == NULL, "list should be empty");
+  LUA_ASSERT(L->rootcl == NULL, "list should be empty");
+  LUA_ASSERT(L->rootglobal == NULL, "list should be empty");
+  LUA_ASSERT(L->roottable == NULL, "list should be empty");
   luaS_freeall();
   luaM_free(L->stack.stack);
   luaM_free(L->IMtable);
@@ -61,11 +65,9 @@ void lua_close (void) {
   luaM_free(L->Cblocks);
   LUA_ASSERT(L->nblocks == 0, "wrong count for nblocks");
   luaM_free(L);
+  LUA_ASSERT(numblocks == 0, "memory leak!");
+  LUA_ASSERT(totalmem == 0,"memory leak!");
   L = NULL;
-#ifdef DEBUG
-  printf("total de blocos: %ld\n", numblocks);
-  printf("total de memoria: %ld\n", totalmem);
-#endif
 }
 
 

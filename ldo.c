@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.47 1999/09/06 15:24:46 roberto Exp roberto $
+** $Id: ldo.c,v 1.48 1999/10/04 17:51:04 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -236,6 +236,7 @@ void lua_error (const char *s) {
   if (L->errorJmp)
     longjmp(L->errorJmp->b, 1);
   else {
+    LUA_INTERNALERROR("exit!!");
     message("exit(1). Unable to recover.\n");
     exit(1);
   }
