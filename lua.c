@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
+** $Id: lua.c,v 1.2 1997/10/06 14:51:32 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -52,7 +52,7 @@ int main (int argc, char *argv[])
   lua_iolibopen();
   lua_strlibopen();
   lua_mathlibopen();
-  lua_pushstring("Lua> "); lua_setglobal("_PROMPT");
+  lua_pushstring("> "); lua_setglobal("_PROMPT");
   if (argc < 2) {
     printf("%s  %s\n", LUA_VERSION, LUA_COPYRIGHT);
     manual_input();
