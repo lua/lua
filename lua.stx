@@ -1,6 +1,6 @@
 %{
 /*
-** $Id: lua.stx,v 1.33 1998/01/12 13:35:37 roberto Exp roberto $
+** $Id: lua.stx,v 1.34 1998/02/11 20:56:46 roberto Exp roberto $
 ** Syntax analizer and code generator
 ** See Copyright Notice in lua.h
 */
@@ -679,6 +679,8 @@ chunk    : statlist ret ;
 
 statlist : /* empty */
 	 | statlist stat sc
+	 { LUA_ASSERT(L->currState->stacksize == L->currState->nlocalvar,
+		      "stack size != # local vars"); }
 	 ;
 
 sc	 : /* empty */ | ';' ;

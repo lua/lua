@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.12 1997/12/15 16:17:20 roberto Exp roberto $
+** $Id: ltm.c,v 1.13 1998/01/02 17:46:32 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -123,7 +123,7 @@ int luaT_efectivetag (TObject *o)
 #ifdef DEBUG
     case LUA_T_PMARK: case LUA_T_CMARK:
     case LUA_T_CLMARK: case LUA_T_LINE:
-      lua_error("internal error");
+      LUA_INTERNALERROR("invalid type");
 #endif
     default:
       return t;

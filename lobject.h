@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.16 1998/01/19 19:49:22 roberto Exp roberto $
+** $Id: lobject.h,v 1.17 1998/03/06 16:54:42 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -11,6 +11,17 @@
 #include <limits.h>
 
 #include "lua.h"
+
+
+#ifdef DEBUG
+#include "lauxlib.h"
+#define LUA_INTERNALERROR(s)	\
+	luaL_verror("INTERNAL ERROR - %s [%s:%d]",(s),__FILE__,__LINE__)
+#define LUA_ASSERT(c,s) { if (!(c)) LUA_INTERNALERROR(s); }
+#else
+#define LUA_INTERNALERROR(s)  /* empty */
+#define LUA_ASSERT(c,s)  /* empty */
+#endif
 
 
 /*

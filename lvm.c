@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.23 1998/01/14 13:49:15 roberto Exp roberto $
+** $Id: lvm.c,v 1.24 1998/03/06 16:54:42 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -728,7 +728,7 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base)
 
 #ifdef DEBUG
       default:
-        lua_error("internal error - opcode doesn't match");
+        LUA_INTERNALERROR("opcode doesn't match");
 #endif
     }
   }

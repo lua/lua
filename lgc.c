@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.16 1998/01/19 19:49:22 roberto Exp roberto $
+** $Id: lgc.c,v 1.17 1998/03/06 16:54:42 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -96,7 +96,7 @@ static int ismarked (TObject *o)
 #ifdef DEBUG
     case LUA_T_LINE: case LUA_T_CLMARK:
     case LUA_T_CMARK: case LUA_T_PMARK:
-      lua_error("internal error");
+      LUA_INTERNALERROR("invalid type");
 #endif
     default:  /* nil, number or cproto */
       return 1;
@@ -212,11 +212,13 @@ static void hashmark (Hash *h)
 static void globalmark (void)
 {
   TaggedString *g;
-  for (g=(TaggedString *)L->rootglobal.next; g; g=(TaggedString *)g->head.next)
+  for (g=(TaggedString *)L->rootglobal.next; g; g=(TaggedString *)g->head.next){
+    LUA_ASSERT(g->constindex >= 0, "userdata in global list");
     if (g->u.s.globalval.ttype != LUA_T_NIL) {
       markobject(&g->u.s.globalval);
       strmark(g);  /* cannot collect non nil global variables */
     }
+  }
 }
 
 

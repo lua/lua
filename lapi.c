@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.22 1998/03/06 16:54:42 roberto Exp roberto $
+** $Id: lapi.c,v 1.23 1998/03/06 18:47:42 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -404,7 +404,7 @@ int lua_tag (lua_Object lo)
         return o->value.cl->consts[0].ttype;
 #ifdef DEBUG
       case LUA_T_LINE:
-        lua_error("internal error");
+        LUA_INTERNALERROR("invalid type");
 #endif
       default:
         return t;

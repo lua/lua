@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.25 1998/02/12 19:27:10 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.26 1998/03/06 16:54:42 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -160,8 +160,8 @@ static char *to_string (lua_Object obj)
     }
     case LUA_T_NIL:
       return "nil";
-    default: 
-      lua_error("internal error");
+    default:
+      LUA_INTERNALERROR("invalid type");
       return NULL;  /* to avoid warnings */
   }
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.3 1997/12/01 20:30:44 roberto Exp roberto $
+** $Id: lmem.c,v 1.4 1997/12/17 20:48:58 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -57,7 +57,6 @@ void *luaM_realloc (void *block, unsigned long size)
 #else
 /* DEBUG */
 
-#include <assert.h>
 #include <string.h>
 
 
@@ -71,7 +70,8 @@ static void *checkblock (void *block)
 {
   unsigned long *b = (unsigned long *)block - 1;
   unsigned long size = *b;
-  assert(*(((char *)b)+size+sizeof(unsigned long)) == MARK);
+  LUA_ASSERT(*(((char *)b)+size+sizeof(unsigned long)) == MARK, 
+             "corrupted block");
   numblocks--;
   totalmem -= size;
   return b;
