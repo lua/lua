@@ -1,12 +1,11 @@
 /*
-** $Id: lobject.c,v 1.80 2002/05/15 18:57:44 roberto Exp roberto $
+** $Id: lobject.c,v 1.81 2002/05/16 18:39:46 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
 
 #include <ctype.h>
 #include <stdarg.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -135,7 +134,7 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
     fmt = e+2;
   }
   pushstr(L, fmt);
-  luaV_strconc(L, n+1, L->top - L->ci->base - 1);
+  luaV_concat(L, n+1, L->top - L->ci->base - 1);
   L->top -= n;
   return svalue(L->top - 1);
 }

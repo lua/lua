@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.232 2002/05/15 18:57:44 roberto Exp roberto $
+** $Id: lvm.c,v 1.233 2002/05/27 20:35:40 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -239,7 +239,7 @@ int luaV_cmp (lua_State *L, const TObject *l, const TObject *r, int cond) {
 }
 
 
-void luaV_strconc (lua_State *L, int total, int last) {
+void luaV_concat (lua_State *L, int total, int last) {
   do {
     StkId top = L->ci->base + last + 1;
     int n = 2;  /* number of elements handled in this pass (at least 2) */
@@ -443,7 +443,7 @@ StkId luaV_execute (lua_State *L) {
       case OP_CONCAT: {
         int b = GETARG_B(i);
         int c = GETARG_C(i);
-        luaV_strconc(L, c-b+1, c);  /* may change `base' (and `ra') */
+        luaV_concat(L, c-b+1, c);  /* may change `base' (and `ra') */
         setobj(base+GETARG_A(i), base+b);
         luaV_checkGC(L, base+c+1);
         break;

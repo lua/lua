@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 1.38 2002/03/19 12:45:25 roberto Exp roberto $
+** $Id: lvm.h,v 1.39 2002/05/06 15:51:41 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -25,6 +25,6 @@ int luaV_tostring (lua_State *L, TObject *obj);
 void luaV_gettable (lua_State *L, const TObject *t, TObject *key, StkId res);
 void luaV_settable (lua_State *L, const TObject *t, TObject *key, StkId val);
 StkId luaV_execute (lua_State *L);
-void luaV_strconc (lua_State *L, int total, int last);
+void luaV_concat (lua_State *L, int total, int last);
 
 #endif
