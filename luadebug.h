@@ -1,5 +1,5 @@
 /*
-** $Id: luadebug.h,v 1.15 2000/09/12 18:38:02 roberto Exp roberto $
+** $Id: luadebug.h,v 1.16 2000/10/20 16:39:03 roberto Exp roberto $
 ** Debugging API
 ** See Copyright Notice in lua.h
 */
@@ -19,10 +19,8 @@ typedef void (*lua_Hook) (lua_State *L, lua_Debug *ar);
 
 LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar);
 LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar);
-LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar,
-                                  int localnum);
-LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar,
-                                  int localnum);
+LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n);
+LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n);
 
 LUA_API lua_Hook lua_setcallhook (lua_State *L, lua_Hook func);
 LUA_API lua_Hook lua_setlinehook (lua_State *L, lua_Hook func);

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.76 2000/10/24 19:12:06 roberto Exp roberto $
+** $Id: lua.h,v 1.77 2000/10/26 12:47:05 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -16,16 +16,18 @@
 #include <stddef.h>
 
 
+/* mark for all API functions */
 #ifndef LUA_API
 #define LUA_API		extern
 #endif
 
 
-#define LUA_VERSION	"Lua 4.0 (beta)"
+#define LUA_VERSION	"Lua 4.0"
 #define LUA_COPYRIGHT	"Copyright (C) 1994-2000 TeCGraf, PUC-Rio"
 #define LUA_AUTHORS 	"W. Celes, R. Ierusalimschy & L. H. de Figueiredo"
 
 
+/* name of global variable with error handler */
 #define LUA_ERRORMESSAGE	"_ERRORMESSAGE"
 
 
@@ -39,9 +41,11 @@
 #define LUA_NOTAG	(-2)
 
 
+/* option for multiple returns in lua_call */
 #define LUA_MULTRET	(-1)
 
 
+/* minimum stack avaiable for a C function */
 #define LUA_MINSTACK	20
 
 
@@ -131,9 +135,7 @@ LUA_API void  lua_rawget (lua_State *L, int index);
 LUA_API void  lua_rawgeti (lua_State *L, int index, int n);
 LUA_API void  lua_getglobals (lua_State *L);
 LUA_API void  lua_gettagmethod (lua_State *L, int tag, const char *event);
-
 LUA_API int   lua_getref (lua_State *L, int ref);
-
 LUA_API void  lua_newtable (lua_State *L);
 
 
@@ -156,8 +158,7 @@ LUA_API int   lua_call (lua_State *L, int nargs, int nresults);
 LUA_API void  lua_rawcall (lua_State *L, int nargs, int nresults);
 LUA_API int   lua_dofile (lua_State *L, const char *filename);
 LUA_API int   lua_dostring (lua_State *L, const char *str);
-LUA_API int   lua_dobuffer (lua_State *L, const char *buff, size_t size,
-                            const char *name);
+LUA_API int   lua_dobuffer (lua_State *L, const char *buff, size_t size, const char *name);
 
 /*
 ** Garbage-collection functions

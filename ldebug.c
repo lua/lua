@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.48 2000/10/20 16:39:03 roberto Exp roberto $
+** $Id: ldebug.c,v 1.49 2000/10/27 11:39:52 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -148,29 +148,27 @@ static Proto *getluaproto (StkId f) {
 }
 
 
-LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar,
-                                  int localnum) {
+LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
   const char *name;
   StkId f = ar->_func;
   Proto *fp = getluaproto(f);
   if (!fp) return NULL;  /* `f' is not a Lua function? */
-  name = luaF_getlocalname(fp, localnum, currentpc(f));
+  name = luaF_getlocalname(fp, n, currentpc(f));
   if (!name) return NULL;
-  luaA_pushobject(L, (f+1)+(localnum-1));  /* push value */
+  luaA_pushobject(L, (f+1)+(n-1));  /* push value */
   return name;
 }
 
 
-LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar,
-                                  int localnum) {
+LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
   const char *name;
   StkId f = ar->_func;
   Proto *fp = getluaproto(f);
   L->top--;  /* pop new value */
   if (!fp) return NULL;  /* `f' is not a Lua function? */
-  name = luaF_getlocalname(fp, localnum, currentpc(f));
+  name = luaF_getlocalname(fp, n, currentpc(f));
   if (!name || name[0] == '(') return NULL;  /* `(' starts private locals */
-  *((f+1)+(localnum-1)) = *L->top;
+  *((f+1)+(n-1)) = *L->top;
   return name;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.40 2000/10/20 16:39:03 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.41 2000/10/27 16:15:53 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -75,8 +75,7 @@ LUALIB_API const char *luaL_check_lstr (lua_State *L, int narg, size_t *len) {
 }
 
 
-LUALIB_API const char *luaL_opt_lstr (lua_State *L, int narg, const char *def,
-                           size_t *len) {
+LUALIB_API const char *luaL_opt_lstr (lua_State *L, int narg, const char *def, size_t *len) {
   if (lua_isnull(L, narg)) {
     if (len)
       *len = (def ? strlen(def) : 0);
