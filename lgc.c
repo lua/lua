@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.104 2001/06/13 18:51:20 roberto Exp roberto $
+** $Id: lgc.c,v 1.105 2001/06/15 19:17:33 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -27,7 +27,7 @@ typedef struct GCState {
 
 
 /* mark a string; marks larger than 1 cannot be changed */
-#define strmark(s)    {if ((s)->marked == 0) (s)->marked = 1;}
+#define strmark(s)    {if ((s)->tsv.marked == 0) (s)->tsv.marked = 1;}
 
 
 
@@ -184,7 +184,7 @@ static void markall (lua_State *L) {
 static int hasmark (int tt, Value *v) {
   switch (tt) {
     case LUA_TSTRING:
-      return v->ts->marked;
+      return v->ts->tsv.marked;
     case LUA_TUSERDATA:
       return ismarkedudata(v->u);
     case LUA_TTABLE:
@@ -274,12 +274,12 @@ void luaC_collectudata (lua_State *L) {
   while ((curr = *p) != NULL) {
     if (ismarkedudata(curr)) {
       switchudatamark(curr);  /* unmark */
-      p = &curr->next;
+      p = &curr->uv.next;
     }
     else {  /* collect */
-      int tag = curr->tag;
-      *p = curr->next;
-      curr->next = G(L)->TMtable[tag].collected;  /* chain udata */
+      int tag = curr->uv.tag;
+      *p = curr->uv.next;
+      curr->uv.next = G(L)->TMtable[tag].collected;  /* chain udata */
       G(L)->TMtable[tag].collected = curr;
     }
   }
@@ -292,15 +292,15 @@ static void collectstrings (lua_State *L, int all) {
     TString **p = &G(L)->strt.hash[i];
     TString *curr;
     while ((curr = *p) != NULL) {
-      if (curr->marked && !all) {  /* preserve? */
-        if (curr->marked < FIXMARK)  /* does not change FIXMARKs */
-          curr->marked = 0;
-        p = &curr->nexthash;
+      if (curr->tsv.marked && !all) {  /* preserve? */
+        if (curr->tsv.marked < FIXMARK)  /* does not change FIXMARKs */
+          curr->tsv.marked = 0;
+        p = &curr->tsv.nexthash;
       } 
       else {  /* collect */
-        *p = curr->nexthash;
+        *p = curr->tsv.nexthash;
         G(L)->strt.nuse--;
-        luaM_free(L, curr, sizestring(curr->len));
+        luaM_free(L, curr, sizestring(curr->tsv.len));
       }
     }
   }
@@ -344,10 +344,10 @@ void luaC_callgcTMudata (lua_State *L) {
     Udata *udata;
     while ((udata = G(L)->TMtable[tag].collected) != NULL) {
       TObject obj;
-      G(L)->TMtable[tag].collected = udata->next;  /* remove it from list */
+      G(L)->TMtable[tag].collected = udata->uv.next;  /* remove it from list */
       setuvalue(&obj, udata);
       callgcTM(L, &obj);
-      luaM_free(L, udata, sizeudata(udata->len));
+      luaM_free(L, udata, sizeudata(udata->uv.len));
     }
   }
 }

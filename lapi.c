@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.144 2001/06/08 19:00:57 roberto Exp roberto $
+** $Id: lapi.c,v 1.145 2001/06/15 19:16:41 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -244,11 +244,11 @@ LUA_API size_t lua_strlen (lua_State *L, int index) {
   if (o == NULL)
     return 0;
   else if (ttype(o) == LUA_TSTRING)
-    return tsvalue(o)->len;
+    return tsvalue(o)->tsv.len;
   else {
     size_t l;
     lua_lock(L);  /* `luaV_tostring' may create a new string */
-    l = (luaV_tostring(L, o) == 0) ? tsvalue(o)->len : 0;
+    l = (luaV_tostring(L, o) == 0) ? tsvalue(o)->tsv.len : 0;
     lua_unlock(L);
     return l;
   }
@@ -263,7 +263,7 @@ LUA_API lua_CFunction lua_tocfunction (lua_State *L, int index) {
 
 LUA_API void *lua_touserdata (lua_State *L, int index) {
   StkId o = luaA_indexAcceptable(L, index);
-  return (o == NULL || ttype(o) != LUA_TUSERDATA) ? NULL : uvalue(o)->value;
+  return (o == NULL || ttype(o) != LUA_TUSERDATA) ? NULL : uvalue(o)->uv.value;
 }
 
 
@@ -633,7 +633,7 @@ LUA_API void lua_settag (lua_State *L, int tag) {
       hvalue(L->top-1)->htag = tag;
       break;
     case LUA_TUSERDATA:
-      uvalue(L->top-1)->tag = tag;
+      uvalue(L->top-1)->uv.tag = tag;
       break;
     default:
       luaO_verror(L, l_s("cannot change the tag of a %.20s"),
@@ -744,7 +744,7 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
   void *p;
   lua_lock(L);
   u = pushnewudata(L, size);
-  p = u->value;
+  p = u->uv.value;
   lua_unlock(L);
   return p;
 }
@@ -754,7 +754,7 @@ LUA_API void lua_newuserdatabox (lua_State *L, void *p) {
   Udata *u;
   lua_lock(L);
   u = pushnewudata(L, 0);
-  u->value = p;
+  u->uv.value = p;
   lua_unlock(L);
 }
 

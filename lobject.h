@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.104 2001/06/06 18:00:19 roberto Exp roberto $
+** $Id: lobject.h,v 1.105 2001/06/07 15:01:21 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -28,8 +28,8 @@
 
 
 typedef union {
-  struct TString *ts;
-  struct Udata *u;
+  union TString *ts;
+  union Udata *u;
   struct Closure *cl;
   struct Hash *h;
   lua_Number n;		/* LUA_TNUMBER */
@@ -80,40 +80,36 @@ typedef TObject *StkId;  /* index to stack elements */
 /*
 ** String headers for string table
 */
-typedef struct TString {
-  lu_hash hash;
-  size_t len;
-  unsigned short constindex;  /* hint to reuse constants */
-  short marked;
-  struct TString *nexthash;  /* chain for hash table */
+typedef union TString {
+  union L_Umaxalign dummy;  /* ensures maximum alignment for strings */
+  struct {
+    lu_hash hash;
+    size_t len;
+    unsigned short constindex;  /* hint to reuse constants */
+    short marked;
+    union TString *nexthash;  /* chain for hash table */
+  } tsv;
 } TString;
 
 
-
-/*
-** type equivalent to TString, but with maximum alignment requirements
-*/
-union L_UTString {
-  TString ts;
-  union L_Umaxalign dummy;  /* ensures maximum alignment for strings */
-};
-
-
-#define getstr(ts)	((l_char *)((union L_UTString *)(ts) + 1))
+#define getstr(ts)	((l_char *)((ts) + 1))
 #define svalue(o)       getstr(tsvalue(o))
 
 
 
-typedef struct Udata {
-  int tag;  /* negative means `marked' (only during GC) */
-  void *value;
-  size_t len;
-  struct Udata *next;  /* chain for list of all udata */
+typedef union Udata {
+  union L_Umaxalign dummy;  /* ensures maximum alignment for `local' udata */
+  struct {
+    int tag;  /* negative means `marked' (only during GC) */
+    void *value;
+    size_t len;
+    union Udata *next;  /* chain for list of all udata */
+  } uv;
 } Udata;
 
 
-#define switchudatamark(u)	((u)->tag = (-((u)->tag+1)))
-#define ismarkedudata(u)	((u)->tag < 0)
+#define switchudatamark(u)	((u)->uv.tag = (-((u)->uv.tag+1)))
+#define ismarkedudata(u)	((u)->uv.tag < 0)
 
 
 

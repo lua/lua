@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.63 2001/06/06 18:00:19 roberto Exp roberto $
+** $Id: lstring.c,v 1.64 2001/06/07 15:01:21 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -32,11 +32,11 @@ void luaS_resize (lua_State *L, int newsize) {
   for (i=0; i<tb->size; i++) {
     TString *p = tb->hash[i];
     while (p) {  /* for each node in the list */
-      TString *next = p->nexthash;  /* save next */
-      lu_hash h = p->hash;
+      TString *next = p->tsv.nexthash;  /* save next */
+      lu_hash h = p->tsv.hash;
       int h1 = lmod(h, newsize);  /* new position */
       lua_assert((int)(h%newsize) == lmod(h, newsize));
-      p->nexthash = newhash[h1];  /* chain it in new position */
+      p->tsv.nexthash = newhash[h1];  /* chain it in new position */
       newhash[h1] = p;
       p = next;
     }
@@ -50,16 +50,16 @@ void luaS_resize (lua_State *L, int newsize) {
 static TString *newlstr (lua_State *L, const l_char *str, size_t l, lu_hash h) {
   TString *ts = (TString *)luaM_malloc(L, sizestring(l));
   stringtable *tb;
-  ts->nexthash = NULL;
-  ts->len = l;
-  ts->hash = h;
-  ts->marked = 0;
-  ts->constindex = 0;
+  ts->tsv.nexthash = NULL;
+  ts->tsv.len = l;
+  ts->tsv.hash = h;
+  ts->tsv.marked = 0;
+  ts->tsv.constindex = 0;
   memcpy(getstr(ts), str, l*sizeof(l_char));
   getstr(ts)[l] = l_c('\0');  /* ending 0 */
   tb = &G(L)->strt;
   h = lmod(h, tb->size);
-  ts->nexthash = tb->hash[h];  /* chain new entry */
+  ts->tsv.nexthash = tb->hash[h];  /* chain new entry */
   tb->hash[h] = ts;
   tb->nuse++;
   if (tb->nuse > (ls_nstr)tb->size && tb->size <= MAX_INT/2)
@@ -75,8 +75,10 @@ TString *luaS_newlstr (lua_State *L, const l_char *str, size_t l) {
   size_t l1;
   for (l1=l; l1>=step; l1-=step)  /* compute hash */
     h = h ^ ((h<<5)+(h>>2)+uchar(str[l1-1]));
-  for (ts = G(L)->strt.hash[lmod(h, G(L)->strt.size)]; ts; ts = ts->nexthash) {
-    if (ts->len == l && (memcmp(str, getstr(ts), l) == 0))
+  for (ts = G(L)->strt.hash[lmod(h, G(L)->strt.size)];
+       ts != NULL;
+       ts = ts->tsv.nexthash) {
+    if (ts->tsv.len == l && (memcmp(str, getstr(ts), l) == 0))
       return ts;
   }
   return newlstr(L, str, l, h);  /* not found */
@@ -85,11 +87,11 @@ TString *luaS_newlstr (lua_State *L, const l_char *str, size_t l) {
 
 Udata *luaS_newudata (lua_State *L, size_t s) {
   Udata *u = (Udata *)luaM_malloc(L, sizeudata(s));
-  u->len = s;
-  u->tag = 0;
-  u->value = ((union L_UUdata *)(u) + 1);
+  u->uv.len = s;
+  u->uv.tag = 0;
+  u->uv.value = u + 1;
   /* chain it on udata list */
-  u->next = G(L)->rootudata;
+  u->uv.next = G(L)->rootudata;
   G(L)->rootudata = u;
   return u;
 }

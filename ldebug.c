@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.81 2001/06/08 19:00:57 roberto Exp roberto $
+** $Id: ldebug.c,v 1.82 2001/06/11 14:56:42 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -483,7 +483,7 @@ static const l_char *getobjname (lua_State *L, StkId obj, const l_char **name) {
     switch (GET_OPCODE(i)) {
       case OP_GETGLOBAL: {
         lua_assert(ttype(&p->k[GETARG_Bc(i)]) == LUA_TSTRING);
-        *name = getstr(tsvalue(&p->k[GETARG_Bc(i)]));
+        *name = svalue(&p->k[GETARG_Bc(i)]);
         return l_s("global");
       }
       case OP_MOVE: {
@@ -497,7 +497,7 @@ static const l_char *getobjname (lua_State *L, StkId obj, const l_char **name) {
       case OP_SELF: {
         int c = GETARG_C(i) - MAXSTACK;
         if (c >= 0 && ttype(&p->k[c]) == LUA_TSTRING) {
-          *name = getstr(tsvalue(&p->k[c]));
+          *name = svalue(&p->k[c]);
           return l_s("field");
         }
         break;

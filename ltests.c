@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.81 2001/06/05 18:17:01 roberto Exp roberto $
+** $Id: ltests.c,v 1.82 2001/06/06 18:00:19 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -290,7 +290,7 @@ static int mem_query (lua_State *L) {
 static int hash_query (lua_State *L) {
   if (lua_isnull(L, 2)) {
     luaL_arg_check(L, lua_tag(L, 1) == LUA_TSTRING, 1, l_s("string expected"));
-    lua_pushnumber(L, tsvalue(luaA_index(L, 1))->hash);
+    lua_pushnumber(L, tsvalue(luaA_index(L, 1))->tsv.hash);
   }
   else {
     Hash *t;
@@ -349,7 +349,7 @@ static int string_query (lua_State *L) {
   else if (s < tb->size) {
     TString *ts;
     int n = 0;
-    for (ts = tb->hash[s]; ts; ts = ts->nexthash) {
+    for (ts = tb->hash[s]; ts; ts = ts->tsv.nexthash) {
       setsvalue(L->top, ts);
       incr_top;
       n++;
