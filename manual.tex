@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.18 1998/08/21 17:43:44 roberto Exp roberto $
+% $Id: manual.tex,v 1.19 1998/08/24 20:14:56 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -41,7 +41,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{\small \verb$Date: 1998/08/21 17:43:44 $}
+%\date{\small \verb$Date: 1998/08/24 20:14:56 $}
 
 \maketitle
 
@@ -1883,10 +1883,9 @@ Calls function \verb|func| with
 the arguments given by the table \verb|arg|.
 The call is equivalent to
 \begin{verbatim}
-      func(arg[1], arg[2], ..., arg[arg.n])
+      func(arg[1], arg[2], ..., arg[n])
 \end{verbatim}
-If \verb|arg.n| is not defined,
-then Lua stops getting arguments at the first \nil\ value.
+where \verb|n| is the result of \verb|getn(arg)| \see{getn}.
 
 By default,
 all results from \verb|func| are just returned by the call.
@@ -1900,6 +1899,7 @@ For instance, the following calls produce the following results:
 \begin{verbatim}
 a = call(sin, {5})                --> a = 0.0871557 = sin(5)
 a = call(max, {1,4,5; n=2})       --> a = 4 (only 1 and 4 are arguments)
+a = call(max, {1,4,5; n=2}, "p")  --> a = {4; n=1}
 t = {x=1}
 a = call(next, {t,nil;n=2}, "p")  --> a={"x", 1; n=2}
 \end{verbatim}
@@ -1926,8 +1926,8 @@ Returns the number of objects collected.
 An optional argument, \verb|limit|, is a number that
 makes the next cycle occur only after that number of new
 objects have been created.
-If absent, Lua uses an adaptive algorithm to set
-this limit.
+If \verb|limit| is absent or equal to 0,
+Lua uses an adaptive algorithm to set this limit.
 \verb|collectgarbage| is equivalent to
 the API function \verb|lua_collectgarbage|.
 
@@ -1997,46 +1997,6 @@ otherwise the semantics of \verb|nextvar| is undefined.
 
 This function cannot be written with the standard API.
 
-\subsubsection*{\ff \T{foreach (table, function)}}\Deffunc{foreach}
-Executes the given \verb|function| over all elements of \verb|table|.
-For each element, the function is called with the index and
-respective value as arguments.
-If the function returns any non-\nil\ value,
-the loop is broken, and the value is returned
-as the final value of \verb|foreach|.
-
-This function could be defined in Lua:
-\begin{verbatim}
-function foreach (t, f)
-  local i, v = next(t, nil)
-  while i do
-    local res = f(i, v)
-    if res then return res end
-    i, v = next(t, i)
-  end
-end
-\end{verbatim}
-
-\subsubsection*{\ff \T{foreachvar (function)}}\Deffunc{foreachvar}
-Executes \verb|function| over all global variables.
-For each variable,
-the function is called with its name and its value as arguments.
-If the function returns any non-nil value,
-the loop is broken, and the value is returned
-as the final value of \verb|foreachvar|.
-
-This function could be defined in Lua:
-\begin{verbatim}
-function foreachvar (f)
-  local n, v = nextvar(nil)
-  while n do
-    local res = f(n, v)
-    if res then return res end
-    n, v = nextvar(n)
-  end
-end
-\end{verbatim}
-
 \subsubsection*{\ff \T{tostring (e)}}\Deffunc{tostring}
 Receives an argument of any type and
 converts it to a string in a reasonable format.
@@ -2104,12 +2064,12 @@ Issues an \emph{``assertion failed!''} error
 when its argument is \nil.
 This function is equivalent to the following Lua function:
 \begin{verbatim}
-function assert (v, m)
-  if not v then
-    m = m or ""
-    error("assertion failed!  " .. m)
-  end
-end
+      function assert (v, m)
+        if not v then
+          m = m or ""
+          error("assertion failed!  " .. m)
+        end
+      end
 \end{verbatim}
 
 \subsubsection*{\ff \T{error (message)}}\Deffunc{error}\label{pdf-error}
@@ -2180,6 +2140,136 @@ for a given pair \M{(tag, event)}.
 \Deffunc{copytagmethods}
 Copies all tag methods from one tag to another;
 it returns \verb|tagto|.
+
+\subsubsection*{\ff \T{getn (table)}}\Deffunc{getn}\label{getn}
+Returns the ``size'' of a table, when seen as a list.
+If the table has an \verb|n| field with a numeric value,
+this is its ``size''.
+Otherwise, the size is the largest numerical index with a non-nil
+value in the table.
+This function could be defined in Lua:
+\begin{verbatim}
+      function getn (t)
+        if type(t.n) == 'number' then return floor(t.n) end
+        local i = next(t, nil)
+        local max = 0
+        while i do
+          if type(i) == 'number' and i>max then max=i end
+          i = next(t, i)
+        end
+        return floor(max)
+      end
+\end{verbatim}
+
+
+\subsubsection*{\ff \T{foreach (table, function)}}\Deffunc{foreach}
+Executes the given \verb|function| over all elements of \verb|table|.
+For each element, the function is called with the index and
+respective value as arguments.
+If the function returns any non-\nil\ value,
+the loop is broken, and the value is returned
+as the final value of \verb|foreach|.
+
+This function could be defined in Lua:
+\begin{verbatim}
+      function foreach (t, f)
+        local i, v = next(t, nil)
+        while i do
+          local res = f(i, v)
+          if res then return res end
+          i, v = next(t, i)
+        end
+      end
+\end{verbatim}
+
+
+\subsubsection*{\ff \T{foreachi (table, function)}}\Deffunc{foreachi}
+Executes the given \verb|function| over the
+numerical indices of \verb|table|.
+For each index, the function is called with the index and
+respective value as arguments.
+Indices are visited in sequential order,
+from 1 to \verb|n|,
+where \verb|n| is the result of \verb|getn(table)| \see{getn}.
+If the function returns any non-\nil\ value,
+the loop is broken, and the value is returned
+as the final value of \verb|foreachi|.
+
+This function could be defined in Lua:
+\begin{verbatim}
+      function foreachi (t, f)
+        local i, n = 1, getn(t)
+        while i<=n do
+          local res = f(i, t[i])
+          if res then return res end
+          i = i+1
+        end
+      end
+\end{verbatim}
+
+\subsubsection*{\ff \T{foreachvar (function)}}\Deffunc{foreachvar}
+Executes \verb|function| over all global variables.
+For each variable,
+the function is called with its name and its value as arguments.
+If the function returns any non-nil value,
+the loop is broken, and the value is returned
+as the final value of \verb|foreachvar|.
+
+This function could be defined in Lua:
+\begin{verbatim}
+      function foreachvar (f)
+        local n, v = nextvar(nil)
+        while n do
+          local res = f(n, v)
+          if res then return res end
+          n, v = nextvar(n)
+        end
+      end
+\end{verbatim}
+
+\subsubsection*{\ff \T{sort (table [, comp])}}\Deffunc{sort}
+Sorts table elements in ascending order, \emph{in-place},
+from \verb|table[1]| to \verb|table[n]|,
+where \verb|n| is the result of \verb|getn(table)| \see{getn}.
+If \verb|comp| is given,
+it must be a function that compares two table elements,
+and returns true when the first is less than the second
+(that is, \verb|not comp(a[i+1], a[i])| will be true after the sort).
+If \verb|comp| is not given,
+the standard \verb|<| Lua operator is used instead.
+
+Function \verb|sort| returns the (sorted) table.
+
+This function could be defined in Lua:
+\begin{verbatim}
+      function aux_qsort (a, l, u, leq)
+        if l < u then
+          local m = floor((l+u)/2)  -- choose middle element as pivot
+          a[l], a[m] = a[m], a[l]   -- swap pivot to first position
+          local t = a[l]   -- pivot value
+          m = l
+          local i = l+1
+          while i <= u do
+            -- invariant: a[l+1..m] < t <= a[m+1..i-1]
+            if leq(a[i], t) then
+              m = m+1
+              a[m], a[i] = a[i], a[m]   -- swap
+            end
+            i = i+1
+          end
+          a[l], a[m] = a[m], a[l]   -- swap pivot to a valid place
+          -- a[l+1..m-1] < a[m] <= a[m+1..u]
+          aux_qsort(a, l, m-1, leq)
+          aux_qsort(a, m+1, u, leq)
+        end
+        return a   -- return the table
+      end
+
+      function sort (a, f)
+        f = f or function (a,b) return a<b end
+        return aux_qsort(a, 1, getn(a), f)
+      end                         
+\end{verbatim}
 
 
 \subsection{String Manipulation}
