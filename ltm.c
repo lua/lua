@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.63 2001/01/25 16:45:36 roberto Exp roberto $
+** $Id: ltm.c,v 1.64 2001/01/26 11:45:51 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -111,14 +111,14 @@ static void checktag (lua_State *L, int tag) {
 
 LUA_API int lua_copytagmethods (lua_State *L, int tagto, int tagfrom) {
   int e;
-  LUA_LOCK;
+  LUA_LOCK(L);
   checktag(L, tagto);
   checktag(L, tagfrom);
   for (e=0; e<TM_N; e++) {
     if (luaT_validevent(tagto, e))
       luaT_gettm(G(L), tagto, e) = luaT_gettm(G(L), tagfrom, e);
   }
-  LUA_UNLOCK;
+  LUA_UNLOCK(L);
   return tagto;
 }
 
@@ -156,7 +156,7 @@ const char *luaT_typename (global_State *G, const TObject *o) {
 
 LUA_API void lua_gettagmethod (lua_State *L, int t, const char *event) {
   int e;
-  LUA_LOCK;
+  LUA_LOCK(L);
   e = luaI_checkevent(L, event, t);
   checktag(L, t);
   if (luaT_validevent(t, e) && luaT_gettm(G(L), t, e)) {
@@ -165,13 +165,13 @@ LUA_API void lua_gettagmethod (lua_State *L, int t, const char *event) {
   else
     setnilvalue(L->top);
   incr_top;
-  LUA_UNLOCK;
+  LUA_UNLOCK(L);
 }
 
 
 LUA_API void lua_settagmethod (lua_State *L, int t, const char *event) {
   int e;
-  LUA_LOCK;
+  LUA_LOCK(L);
   e = luaI_checkevent(L, event, t);
   checktag(L, t);
   if (!luaT_validevent(t, e))
@@ -190,6 +190,6 @@ LUA_API void lua_settagmethod (lua_State *L, int t, const char *event) {
       luaD_error(L, "tag method must be a function (or nil)");
   }
   L->top--;
-  LUA_UNLOCK;
+  LUA_UNLOCK(L);
 }
 

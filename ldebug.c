@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.57 2001/01/26 11:45:51 roberto Exp roberto $
+** $Id: ldebug.c,v 1.58 2001/01/29 17:16:58 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -42,20 +42,20 @@ static int isLmark (StkId o) {
 
 LUA_API lua_Hook lua_setcallhook (lua_State *L, lua_Hook func) {
   lua_Hook oldhook;
-  LUA_LOCK;
+  LUA_LOCK(L);
   oldhook = L->callhook;
   L->callhook = func;
-  LUA_UNLOCK;
+  LUA_UNLOCK(L);
   return oldhook;
 }
 
 
 LUA_API lua_Hook lua_setlinehook (lua_State *L, lua_Hook func) {
   lua_Hook oldhook;
-  LUA_LOCK;
+  LUA_LOCK(L);
   oldhook = L->linehook;
   L->linehook = func;
-  LUA_UNLOCK;
+  LUA_UNLOCK(L);
   return oldhook;
 }
 
@@ -76,14 +76,14 @@ static StkId aux_stackedfunction (lua_State *L, int level, StkId top) {
 LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
   StkId f;
   int status;
-  LUA_LOCK;
+  LUA_LOCK(L);
   f = aux_stackedfunction(L, level, L->top);
   if (f == NULL) status = 0;  /* there is no such level */
   else {
     ar->_func = f;
     status = 1;
   }
-  LUA_UNLOCK;
+  LUA_UNLOCK(L);
   return status;
 }
 
@@ -162,7 +162,7 @@ LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
   const char *name;
   StkId f;
   Proto *fp;
-  LUA_LOCK;
+  LUA_LOCK(L);
   name = NULL;
   f = ar->_func;
   fp = getluaproto(f);
@@ -171,7 +171,7 @@ LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
     if (name)
       luaA_pushobject(L, (f+1)+(n-1));  /* push value */
   }
-  LUA_UNLOCK;
+  LUA_UNLOCK(L);
   return name;
 }
 
@@ -180,7 +180,7 @@ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
   const char *name;
   StkId f;
   Proto *fp;
-  LUA_LOCK;
+  LUA_LOCK(L);
   name = NULL;
   f = ar->_func;
   fp = getluaproto(f);
@@ -192,7 +192,7 @@ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
     else
       setobj((f+1)+(n-1), L->top);
   }
-  LUA_UNLOCK;
+  LUA_UNLOCK(L);
   return name;
 }
 
@@ -272,7 +272,7 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
   StkId func;
   int isactive;
   int status = 1;
-  LUA_LOCK;
+  LUA_LOCK(L);
   isactive = (*what != '>');
   if (isactive)
     func = ar->_func;
@@ -309,7 +309,7 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
     }
   }
   if (!isactive) L->top--;  /* pop function */
-  LUA_UNLOCK;
+  LUA_UNLOCK(L);
   return status;
 }
 

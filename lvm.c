@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.162 2001/02/01 16:03:38 roberto Exp roberto $
+** $Id: lvm.c,v 1.163 2001/02/01 17:39:55 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -159,7 +159,7 @@ void luaV_settable (lua_State *L, StkId t, StkId key, StkId top) {
   }
   else {  /* try a `settable' tag method */
     Closure *tm = luaT_gettmbyObj(G(L), t, TM_SETTABLE);
-    L->top = top;
+    lua_assert(L->top == top);
     if (tm == NULL)  /* no tag method? */
       luaG_typeerror(L, t, "index");
     else {
@@ -206,7 +206,7 @@ void luaV_setglobal (lua_State *L, TString *s, StkId top) {
     setobj(oldvalue, top-1);  /* raw set */
   }
   else {  /* call tag method */
-    L->top = top;
+    lua_assert(L->top == top);
     luaD_checkstack(L, 3);
     setobj(top+2, top-1);  /* new value */
     setobj(top+1, oldvalue);  /* old value */

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.60 2001/01/29 17:16:58 roberto Exp roberto $
+** $Id: ltests.c,v 1.61 2001/02/01 16:03:38 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -28,13 +28,15 @@
 #include "lualib.h"
 
 
-void luaB_opentests (lua_State *L);
-
 
 /*
 ** The whole module only makes sense with LUA_DEBUG on
 */
 #ifdef LUA_DEBUG
+
+lua_State *lua_state = NULL;
+
+int islocked = 0;
 
 
 
@@ -279,6 +281,7 @@ static int udataval (lua_State *L) {
 static int doonnewstack (lua_State *L) {
   lua_State *L1 = lua_open(L, luaL_check_int(L, 1));
   if (L1 == NULL) return 0;
+  *((int **)L1) = &islocked;  /* initialize the lock */
   lua_dostring(L1, luaL_check_string(L, 2));
   lua_pushnumber(L, 1);
   lua_close(L1);
@@ -288,8 +291,10 @@ static int doonnewstack (lua_State *L) {
 
 static int newstate (lua_State *L) {
   lua_State *L1 = lua_open(NULL, luaL_check_int(L, 1));
-  if (L1)
+  if (L1) {
+    *((int **)L1) = &islocked;  /* initialize the lock */
     lua_pushuserdata(L, L1);
+  }
   else
     lua_pushnil(L);
   return 1;
@@ -311,6 +316,7 @@ static int loadlib (lua_State *L) {
 static int closestate (lua_State *L) {
   luaL_checktype(L, 1, LUA_TUSERDATA);
   lua_close((lua_State *)lua_touserdata(L, 1));
+  LUA_UNLOCK(L);  /* close cannot unlock that */
   return 0;
 }
 
@@ -552,6 +558,9 @@ static const struct luaL_reg tests_funcs[] = {
 
 
 void luaB_opentests (lua_State *L) {
+  *((int **)L) = &islocked;  /* init lock */
+  lua_state = L;  /* keep first state to be opened */
+  /* open lib in a new table */
   lua_newtable(L);
   lua_getglobals(L);
   lua_pushvalue(L, -2);
@@ -559,6 +568,12 @@ void luaB_opentests (lua_State *L) {
   luaL_openl(L, tests_funcs);  /* open functions inside new table */
   lua_setglobals(L);  /* restore old table of globals */
   lua_setglobal(L, "T");  /* set new table as global T */
+  /* open other libraries */
+  lua_baselibopen(L);
+  lua_iolibopen(L);
+  lua_strlibopen(L);
+  lua_mathlibopen(L);
+  lua_dblibopen(L);
 }
 
 #endif

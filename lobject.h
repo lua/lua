@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.91 2001/01/29 19:34:02 roberto Exp roberto $
+** $Id: lobject.h,v 1.92 2001/02/01 17:40:48 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -12,19 +12,12 @@
 #include "lua.h"
 
 
-#ifdef LUA_DEBUG
-#undef NDEBUG
-#include <assert.h>
-#define lua_assert(c)		assert(c)
-#else
+#ifndef lua_assert
 #define lua_assert(c)		/* empty */
 #endif
 
 
-#ifdef LUA_DEBUG
-/* to avoid warnings, and make sure value is really unused */
-#define UNUSED(x)	(x=0, (void)(x))
-#else
+#ifndef UNUSED
 #define UNUSED(x)	((void)(x))	/* to avoid warnings */
 #endif
 
@@ -88,8 +81,7 @@ typedef struct lua_TObject {
   { TObject *_o=(obj); struct CallInfo *_v=(x); \
     _o->tt=LUA_TMARK; _o->value.v=_v; }
 
-#define setnilvalue(obj) \
-  { TObject *_o=(obj); _o->tt=LUA_TNIL; _o->value.v = (void *)&luaO_ttnil; }
+#define setnilvalue(obj) ((obj)->tt=LUA_TNIL)
 
 #define setobj(obj1,obj2) \
   { TObject *o1=(obj1); const TObject *o2=(obj2); \
@@ -220,7 +212,6 @@ typedef struct CallInfo {
 } CallInfo;
 
 
-extern const char luaO_ttnil;  /* "address" of the nil value */
 extern const TObject luaO_nilobject;
 
 

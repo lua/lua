@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.54 2001/01/25 16:45:36 roberto Exp roberto $
+** $Id: lstate.c,v 1.55 2001/01/26 11:45:51 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -19,33 +19,27 @@
 #include "ltm.h"
 
 
-#ifdef LUA_DEBUG
-static lua_State *lua_state = NULL;
-void luaB_opentests (lua_State *L);
-int islocked = 0;
-#endif
-
-
-/*
-** built-in implementation for ERRORMESSAGE. In a "correct" environment
-** ERRORMESSAGE should have an external definition, and so this function
-** would not be used.
-*/
-static int errormessage (lua_State *L) {
-  const char *s = lua_tostring(L, 1);
-  if (s == NULL) s = "(no message)";
-  fprintf(stderr, "error: %s\n", s);
-  return 0;
-}
-
-
 struct Sopen {
   int stacksize;
   lua_State *L;
 };
 
 
-static void close_state (lua_State *L);
+static void close_state (lua_State *L, lua_State *OL);
+
+
+/*
+** initialize ref array and registry
+*/
+#define INIT_REFSIZE	4
+
+static void ref_init (lua_State *L) {
+  G(L)->refArray = luaM_newvector(L, INIT_REFSIZE, struct Ref);
+  G(L)->sizeref = INIT_REFSIZE;
+  sethvalue(&G(L)->refArray[0].o, luaH_new(L, 0));
+  G(L)->refArray[0].st = LOCK;
+  G(L)->nref = 1;
+}
 
 
 /*
@@ -90,17 +84,8 @@ static void f_luaopen (lua_State *L, void *ud) {
     luaS_init(L);
     luaX_init(L);
     luaT_init(L);
+    ref_init(L);
     G(L)->GCthreshold = 4*G(L)->nblocks;
-    LUA_UNLOCK;  /* temporary exit to use the API */
-    lua_newtable(L);
-    lua_ref(L, 1);  /* create registry */
-    lua_register(L, LUA_ERRORMESSAGE, errormessage);
-#ifdef LUA_DEBUG
-    luaB_opentests(L);
-    if (lua_state == NULL) lua_state = L;  /* keep first state to be opened */
-    lua_assert(lua_gettop(L) == 0);
-#endif
-    LUA_LOCK;  /* go back inside */
   }
 }
 
@@ -108,7 +93,7 @@ static void f_luaopen (lua_State *L, void *ud) {
 LUA_API lua_State *lua_open (lua_State *OL, int stacksize) {
   struct Sopen so;
   lua_State *L;
-  LUA_LOCK;
+  if (OL) LUA_LOCK(OL);
   L = luaM_new(OL, lua_State);
   if (L) {  /* allocation OK? */
     L->G = NULL;
@@ -123,20 +108,17 @@ LUA_API lua_State *lua_open (lua_State *OL, int stacksize) {
     so.L = OL;
     if (luaD_runprotected(L, f_luaopen, &so) != 0) {
       /* memory allocation error: free partial state */
-      close_state(L);
+      close_state(L, OL);
       L = NULL;
     }
   }
-  LUA_UNLOCK;
+  if (OL) LUA_UNLOCK(OL);
   return L;
 }
 
 
-static void close_state (lua_State *L) {
-  lua_State *L1;
-  L1 = L->next;  /* any surviving thread (if there is one) */
-  if (L1 == L) L1 = NULL;  /* no surviving threads */
-  if (L1 != NULL) {  /* are there other threads? */
+static void close_state (lua_State *L, lua_State *OL) {
+  if (OL != NULL) {  /* are there other threads? */
     lua_assert(L->previous != L);
     L->previous->next = L->next;
     L->next->previous = L->previous;
@@ -152,15 +134,18 @@ static void close_state (lua_State *L) {
     luaM_freearray(L, G(L)->Mbuffer, G(L)->Mbuffsize, char);
     luaM_freelem(NULL, L->G, global_State);
   }
-  luaM_freearray(L1, L->stack, L->stacksize, TObject);
-  luaM_freelem(L1, L, lua_State);
+  luaM_freearray(OL, L->stack, L->stacksize, TObject);
+  luaM_freelem(OL, L, lua_State);
 }
 
 LUA_API void lua_close (lua_State *L) {
+  lua_State *OL;
   lua_assert(L != lua_state || lua_gettop(L) == 0);
-  LUA_LOCK;
-  close_state(L);
-  LUA_UNLOCK;
+  LUA_LOCK(L);
+  OL = L->next;  /* any surviving thread (if there is one) */
+  if (OL == L) OL = NULL;  /* no surviving threads */
+  close_state(L, OL);
+  if (OL) LUA_UNLOCK(OL);  /* cannot unlock over a freed state */
   lua_assert(L != lua_state || memdebug_numblocks == 0);
   lua_assert(L != lua_state || memdebug_total == 0);
 }
