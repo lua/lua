@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.57 2002/08/06 19:10:44 roberto Exp roberto $
+% $Id: manual.tex,v 1.58 2002/08/09 21:03:19 roberto Exp roberto $
 
 \documentclass[11pt,twoside,draft]{article}
 \usepackage{fullpage}
@@ -133,7 +133,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{{\small \tt\$Date: 2002/08/06 19:10:44 $ $}}
+%\date{{\small \tt\$Date: 2002/08/09 21:03:19 $ $}}
 
 \maketitle
 
@@ -2616,14 +2616,14 @@ The structure \verb|lua_Debug| is used to carry different pieces of
 information about an active function:
 \begin{verbatim}
       typedef struct lua_Debug {
-        const char *event;     /* "call", "return" */
-        int currentline;       /* (l) */
+        lua_Hookevent event;
         const char *name;      /* (n) */
         const char *namewhat;  /* (n) `global', `local', `field', `method' */
+        const char *what;      /* (S) `Lua' function, `C' function, Lua `main' */
+        const char *source;    /* (S) */
+        int currentline;       /* (l) */
         int nups;              /* (u) number of upvalues */
         int linedefined;       /* (S) */
-        const char *what;      /* (S) "Lua" function, "C" function, Lua "main" */
-        const char *source;    /* (S) */
         char short_src[LUA_IDSIZE]; /* (S) */
 
         /* private part */
@@ -2760,38 +2760,53 @@ local variables for a function at a given level of the stack:
 
 \subsection{Hooks}\label{sub-hooks}
 
-The Lua interpreter offers two hooks for debugging purposes:
-a \emph{call} hook and a \emph{line} hook.
-Both have type \verb|lua_Hook|, defined as follows:
+The Lua interpreter offers a mechanism of hooks:
+user-defined C functions that are called during the program execution.
+A hook may be called in four different events:
+a \emph{call} event, when Lua calls a function;
+a \emph{return} event, when Lua returns from a function;
+a \emph{line} event, when Lua starts executing a new line of code;
+and a \emph{count} event, that happens every ``count'' instructions.
+Lua identifies them with the following enumeration:
+\begin{verbatim}
+typedef enum lua_Hookevent {
+  LUA_HOOKCALL, LUA_HOOKRET, LUA_HOOKLINE, LUA_HOOKCOUNT
+} lua_Hookevent;
+\end{verbatim}
+
+A hook has type \verb|lua_Hook|, defined as follows:
 \begin{verbatim}
        typedef void (*lua_Hook) (lua_State *L, lua_Debug *ar);
 \end{verbatim}
 \DefAPI{lua_Hook}
-You can set the hooks with the following functions:
+You can set the hook with the following function:
 \begin{verbatim}
-       lua_Hook lua_setcallhook (lua_State *L, lua_Hook func);
-       lua_Hook lua_setlinehook (lua_State *L, lua_Hook func);
+       int lua_sethook (lua_State *L, lua_Hook func, unsigned long mask);
 \end{verbatim}
-\DefAPI{lua_setcallhook}\DefAPI{lua_setlinehook}
-A hook is disabled when its value is \verb|NULL|,
-which is the initial value of both hooks.
-The functions \verb|lua_setcallhook| and \verb|lua_setlinehook|
-set their corresponding hooks and return their previous values.
+\DefAPI{lua_sethook}
+\verb|func| is the hook,
+and \verb|mask| specifies at which events it will be called.
+It is formed by a disjunction of the constants
+\verb|LUA_MASKCALL|,
+\verb|LUA_MASKRET|,
+\verb|LUA_MASKLINE|,
+plus the macro \verb|LUA_MASKCOUNT(count)|.
+%TODO explicar melhor...
 
-The call hook is called whenever the
-interpreter enters or leaves a function.
-The \verb|event| field of \verb|ar| has the string \verb|"call"|
-or \verb|"return"|.
-This \verb|ar| can then be used in calls to \verb|lua_getinfo|,
-\verb|lua_getlocal|, and \verb|lua_setlocal|
-to get more information about the function and to manipulate its
-local variables.
+A hook is disabled with the mask zero.
 
-The line hook is called every time the interpreter changes
-the line of code it is executing.
-The \verb|event| field of \verb|ar| has the string \verb|"line"|,
-and the \verb|currentline| field has the new line number.
-Again, you can use this \verb|ar| in other calls to the debug API.
+You can get the current hook and the current mask with the next functions:
+\begin{verbatim}
+       lua_Hook lua_gethook (lua_State *L);
+       unsigned long lua_gethookmask (lua_State *L);
+\end{verbatim}
+\DefAPI{lua_gethook}\DefAPI{lua_gethookmask}
+You can get the count inside a mask with the macro \verb|lua_getmaskcount|.
+
+Whenever a hook is called, its \verb|ar| argument has its field
+\verb|event| set to the specific event that triggered the hook.
+Moreover, for line events, the field \verb|currentline| is also set.
+For the value of any other field, the hook must call \verb|lua_getinfo|.
 
 While Lua is running a hook, it disables other calls to hooks.
 Therefore, if a hook calls Lua to execute a function or a chunk,
@@ -4037,37 +4052,38 @@ specially the head of the group, Marcelo Gattass.
 At the risk of omitting several names,
 we also thank the following individuals for supporting,
 contributing to, and spreading the word about Lua:
-Alan Watson,
+Mark Ian Barlow,
+John Belmonte,
+Renato Borges,
+Carlos Cassino,
+Renato Cerqueira,
 Andr\'e Clinio,
 Andr\'e Costa,
-Bret Mogilefsky,
-Cameron Laird,
-Carlos Cassino,
-Carlos Henrique Levy,
-Claudio Terra,
-David Jeske,
-Edgar Toernig,
-Erik Hougaard,
-Jim Mathies,
-John Belmonte,
-John Passaniti,
-John Roll,
-Jon Erickson,
-Jon Kleiser,
-Mark Ian Barlow,
-Nick Trout,
-Noemi Rodriguez,
-Norman Ramsey,
-Philippe Lhost,
-Renata Ratton,
-Renato Borges,
-Renato Cerqueira,
-Reuben Thomas,
-Stephan Herrmann,
 Steve Dekorte,
-Thatcher Ulrich,
+Jon Erickson,
 Tom\'as Gorham,
-Vincent Penquerc'h.
+Stephan Herrmann,
+Erik Hougaard,
+David Jeske,
+Jon Kleiser,
+Cameron Laird,
+Carlos Henrique Levy,
+Philippe Lhost,
+Jim Mathies,
+Bret Mogilefsky,
+John Passaniti,
+Vincent Penquerc'h,
+Norman Ramsey,
+Renata Ratton,
+Noemi Rodriguez,
+John Roll,
+Antonio Scuri,
+Claudio Terra,
+Reuben Thomas,
+Edgar Toernig,
+Nick Trout,
+Thatcher Ulrich,
+Alan Watson.
 Thank you!
 
 
@@ -4087,6 +4103,9 @@ Function calls written between parentheses result in exactly one value.
 \item
 A function call as the last expression in a list constructor
 (like \verb|{a,b,f()}}|) has all its return values inserted in the list.
+
+\item
+The precedence of \rwd{or} is smaller than the precedence of \rwd{and}.
 
 \item
 \rwd{in} is a reserved word.
