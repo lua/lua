@@ -3,10 +3,11 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.19 1995/01/03 13:14:13 celes Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.20 1995/02/02 18:54:58 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
+#include <sys/types.h>
 #include <sys/stat.h>
 #include <string.h>
 #include <time.h>
