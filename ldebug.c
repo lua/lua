@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.5 2000/01/19 12:00:45 roberto Exp roberto $
+** $Id: ldebug.c,v 1.6 2000/01/25 13:57:18 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -94,7 +94,7 @@ static const char *luaG_getname (lua_State *L, const char **name, StkId top) {
     if (ttype(f) == LUA_T_LCLMARK)
       f = protovalue(f);
     LUA_ASSERT(L, ttype(f) == LUA_T_LMARK, "must be a Lua function");
-    *name = tfvalue(f)->strcnst[i]->str;
+    *name = tfvalue(f)->kstr[i]->str;
     return luaO_typename(f+2);
   }
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.39 1999/12/27 17:33:22 roberto Exp roberto $
+** $Id: lgc.c,v 1.40 2000/01/25 13:57:18 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -33,10 +33,10 @@ static void protomark (lua_State *L, TProtoFunc *f) {
     int i;
     f->marked = 1;
     strmark(L, f->source);
-    for (i=f->nstrcnst-1; i>=0; i--)
-      strmark(L, f->strcnst[i]);
-    for (i=f->nprotocnst-1; i>=0; i--)
-      protomark(L, f->protocnst[i]);
+    for (i=f->nkstr-1; i>=0; i--)
+      strmark(L, f->kstr[i]);
+    for (i=f->nkproto-1; i>=0; i--)
+      protomark(L, f->kproto[i]);
   }
 }
 

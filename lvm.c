@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.82 2000/01/24 20:14:07 roberto Exp roberto $
+** $Id: lvm.c,v 1.83 2000/01/25 13:57:18 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -314,7 +314,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
                     StkId base) {
   register StkId top;  /* keep top local, for performance */
   register const Byte *pc = tf->code;
-  TaggedString **strcnst = tf->strcnst;
+  TaggedString **kstr = tf->kstr;
   if (L->callhook)
     luaD_callHook(L, base-1, L->callhook, "call");
   luaD_checkstack(L, (*pc++)+EXTRA_STACK);
@@ -358,31 +358,31 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
         top -= aux;
         break;
 
-      case PUSHNUMBERW: aux += highbyte(L, *pc++);
-      case PUSHNUMBER:  aux += *pc++;
+      case PUSHINTW: aux += highbyte(L, *pc++);
+      case PUSHINT:  aux += *pc++;
         ttype(top) = LUA_T_NUMBER;
         nvalue(top) = aux;
         top++;
         break;
 
-      case PUSHNUMBERNEGW: aux += highbyte(L, *pc++);
-      case PUSHNUMBERNEG:  aux += *pc++;
+      case PUSHINTNEGW: aux += highbyte(L, *pc++);
+      case PUSHINTNEG:  aux += *pc++;
         ttype(top) = LUA_T_NUMBER;
         nvalue(top) = -aux;
         top++;
         break;
 
-      case PUSHSTRCNSTW: aux += highbyte(L, *pc++);
-      case PUSHSTRCNST:  aux += *pc++;
+      case PUSHSTRINGW: aux += highbyte(L, *pc++);
+      case PUSHSTRING:  aux += *pc++;
         ttype(top) = LUA_T_STRING;
-        tsvalue(top) = strcnst[aux];
+        tsvalue(top) = kstr[aux];
         top++;
         break;
 
-      case PUSHNUMCNSTW: aux += highbyte(L, *pc++);
-      case PUSHNUMCNST:  aux += *pc++;
+      case PUSHNUMBERW: aux += highbyte(L, *pc++);
+      case PUSHNUMBER:  aux += *pc++;
         ttype(top) = LUA_T_NUMBER;
-        nvalue(top) = tf->numcnst[aux];
+        nvalue(top) = tf->knum[aux];
         top++;
         break;
 
@@ -396,7 +396,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
 
       case GETGLOBALW: aux += highbyte(L, *pc++);
       case GETGLOBAL:  aux += *pc++;
-        luaV_getglobal(L, strcnst[aux]->u.s.gv, top);
+        luaV_getglobal(L, kstr[aux]->u.s.gv, top);
         top++;
         break;
 
@@ -408,7 +408,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
       case GETDOTTEDW: aux += highbyte(L, *pc++);
       case GETDOTTED:  aux += *pc++;
         ttype(top) = LUA_T_STRING;
-        tsvalue(top++) = strcnst[aux];
+        tsvalue(top++) = kstr[aux];
         luaV_gettable(L, top);
         top--;
         break;
@@ -418,7 +418,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
         TObject receiver;
         receiver = *(top-1);
         ttype(top) = LUA_T_STRING;
-        tsvalue(top++) = strcnst[aux];
+        tsvalue(top++) = kstr[aux];
         luaV_gettable(L, top);
         *(top-1) = receiver;
         break;
@@ -439,7 +439,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
 
       case SETGLOBALW: aux += highbyte(L, *pc++);
       case SETGLOBAL:  aux += *pc++;
-        luaV_setglobal(L, strcnst[aux]->u.s.gv, top);
+        luaV_setglobal(L, kstr[aux]->u.s.gv, top);
         top--;
         break;
 
@@ -632,7 +632,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
       case CLOSUREW: aux += highbyte(L, *pc++);
       case CLOSURE:  aux += *pc++;
         ttype(top) = LUA_T_LPROTO;
-        tfvalue(top) = tf->protocnst[aux];
+        tfvalue(top) = tf->kproto[aux];
         L->top = ++top;
         aux = *pc++;  /* number of upvalues */
         luaV_closure(L, aux);

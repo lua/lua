@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.36 1999/12/29 16:31:15 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.37 2000/01/25 13:57:18 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -27,16 +27,16 @@ TAILCALL,/*	b c	v_c-v_1 f	(return)	f(v1,...,v_c)	*/
 PUSHNIL,/*	b	-		nil_0-nil_b			*/
 POP,/*		b	a_b-a_1		-				*/
 
-PUSHNUMBERW,/*	w	-		(float)w			*/
-PUSHNUMBER,/*	b	-		(float)b			*/
+PUSHINTW,/*	w	-		(float)w			*/
+PUSHINT,/*	b	-		(float)b			*/
 
-PUSHNUMBERNEGW,/* w	-		(float)-w			*/
-PUSHNUMBERNEG,/* b	-		(float)-b			*/
+PUSHINTNEGW,/* w	-		(float)-w			*/
+PUSHINTNEG,/* b		-		(float)-b			*/
 
-PUSHSTRCNSTW,/*	w	-		STRCNST[w]			*/
-PUSHSTRCNST,/*	b	-		STRCNST[b]			*/
-PUSHNUMCNSTW,/*	w	-		NUMCNST[w]			*/
-PUSHNUMCNST,/*	b	-		NUMCNST[b]			*/
+PUSHSTRINGW,/*	w	-		KSTR[w]				*/
+PUSHSTRING,/*	b	-		KSTR[b]				*/
+PUSHNUMBERW,/*	w	-		KNUM[w]				*/
+PUSHNUMBER,/*	b	-		KNUM[b]				*/
 
 PUSHUPVALUE,/*	b	-		Closure[b]			*/
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.16 1999/12/27 17:33:22 roberto Exp roberto $
+** $Id: lfunc.c,v 1.17 2000/01/25 13:57:18 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -34,12 +34,12 @@ TProtoFunc *luaF_newproto (lua_State *L) {
   f->code = NULL;
   f->lineDefined = 0;
   f->source = NULL;
-  f->strcnst = NULL;
-  f->nstrcnst = 0;
-  f->numcnst = NULL;
-  f->nnumcnst = 0;
-  f->protocnst = NULL;
-  f->nprotocnst = 0;
+  f->kstr = NULL;
+  f->nkstr = 0;
+  f->knum = NULL;
+  f->nknum = 0;
+  f->kproto = NULL;
+  f->nkproto = 0;
   f->locvars = NULL;
   f->next = L->rootproto;
   L->rootproto = f;
@@ -53,9 +53,9 @@ void luaF_freeproto (lua_State *L, TProtoFunc *f) {
   L->nblocks -= gcsizeproto(L, f);
   luaM_free(L, f->code);
   luaM_free(L, f->locvars);
-  luaM_free(L, f->strcnst);
-  luaM_free(L, f->numcnst);
-  luaM_free(L, f->protocnst);
+  luaM_free(L, f->kstr);
+  luaM_free(L, f->knum);
+  luaM_free(L, f->kproto);
   luaM_free(L, f);
 }
 
