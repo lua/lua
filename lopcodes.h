@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.25 1999/02/09 18:01:55 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.26 1999/02/23 13:38:38 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -107,7 +107,9 @@ SETLINEW,/*	w	-		-		LINE=w  */
 SETLINE,/*	b	-		-		LINE=b  */
 
 LONGARGW,/*	w	(add w*(1<<16) to arg of next instruction) */
-LONGARG /*	b	(add b*(1<<16) to arg of next instruction) */
+LONGARG,/*	b	(add b*(1<<16) to arg of next instruction) */
+
+CHECKSTACK /*	b  (assert #temporaries == b; only for internal debuging!) */
 
 } OpCode;
 

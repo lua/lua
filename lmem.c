@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.8 1999/01/22 17:28:00 roberto Exp roberto $
+** $Id: lmem.c,v 1.9 1999/01/22 18:08:57 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -24,6 +24,8 @@
 
 
 
+#ifndef DEBUG
+
 int luaM_growaux (void **block, unsigned long nelems, int size,
                        char *errormsg, unsigned long limit) {
   if (nelems >= limit)
@@ -35,9 +37,6 @@ int luaM_growaux (void **block, unsigned long nelems, int size,
   return (int)nelems;
 }
 
-
-
-#ifndef DEBUG
 
 /*
 ** generic allocation routine.
@@ -62,6 +61,18 @@ void *luaM_realloc (void *block, unsigned long size) {
 /* DEBUG */
 
 #include <string.h>
+
+
+int luaM_growaux (void **block, unsigned long nelems, int size,
+                       char *errormsg, unsigned long limit) {
+  if (nelems >= limit)
+    lua_error(errormsg);
+  nelems = nelems+1;
+  if (nelems > limit)
+    nelems = limit;
+  *block = luaM_realloc(*block, nelems*size);
+  return (int)nelems;
+}
 
 
 #define HEADER	(sizeof(double))

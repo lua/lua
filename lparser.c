@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.20 1999/02/09 18:01:55 roberto Exp roberto $
+** $Id: lparser.c,v 1.21 1999/02/24 15:37:19 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -403,6 +403,10 @@ static void close_exp (LexState *ls, int pc, int nresults) {
       deltastack(ls, nresults);  /* push results */
     deltastack(ls, -(code[pc]+1));  /* pop params (at code[pc]) and function */
   }
+#ifdef DEBUG
+  if (nresults != MULT_RET)
+    code_oparg(ls, CHECKSTACK, ls->fs->stacksize, 0);
+#endif
 }
 
 
