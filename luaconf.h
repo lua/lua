@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.26 2005/01/10 18:17:39 roberto Exp roberto $
+** $Id: luaconf.h,v 1.27 2005/01/10 18:33:37 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -346,7 +346,7 @@ __inline int l_lrint (double flt)
 #endif
 
 /* separator of templates in a path */
-#define LUA_PATH_SEP	';'
+#define LUA_PATHSEP	';'
 
 /* wild char in each template */
 #define LUA_PATH_MARK	"?"
