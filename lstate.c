@@ -116,7 +116,8 @@ static void close_state (lua_State *L, lua_State *OL) {
     L->next->previous = L->previous;
   }
   else if (G(L)) {  /* last thread; close global state */
-    luaC_callallgcTM(L);  /* call GC tag methods for all udata */
+    if (G(L)->rootudata)  /* (avoid problems with incomplete states) */
+      luaC_callallgcTM(L);  /* call GC tag methods for all udata */
     luaC_collect(L, 1);  /* collect all elements */
     lua_assert(G(L)->rootproto == NULL);
     lua_assert(G(L)->rootudata == NULL);

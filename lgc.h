@@ -16,7 +16,7 @@
 
 
 void luaC_callallgcTM (lua_State *L);
-Udata *luaC_collect (lua_State *L, int all);
+void luaC_collect (lua_State *L, int all);
 void luaC_collectgarbage (lua_State *L);
 
 
