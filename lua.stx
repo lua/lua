@@ -1,11 +1,12 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.27 1996/01/23 17:50:29 roberto Exp $";
+char *rcs_luastx = "$Id: lua.stx,v 3.28 1996/02/05 13:26:01 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "luadebug.h"
 #include "mem.h"
 #include "opcode.h"
 #include "hash.h"
@@ -51,6 +52,7 @@ static int     nlocalvar=0;	     /* number of local variables */
 static Word    fields[MAXFIELDS];     /* fieldnames to be flushed */
 static int     nfields=0;
 
+int lua_debug = 0;
 
 /* Internal functions */
 
@@ -149,20 +151,20 @@ static void flush_list (int m, int n)
   code_byte(n);
 }
 
-static void add_localvar (TreeNode *name)
-{
- if (nlocalvar < MAXLOCALS)
-  localvar[nlocalvar++] = name;
- else
-  yyerror ("too many local variables");
-}
-
 static void store_localvar (TreeNode *name, int n)
 {
  if (nlocalvar+n < MAXLOCALS)
   localvar[nlocalvar+n] = name;
  else
   yyerror ("too many local variables");
+ if (lua_debug)
+   luaI_registerlocalvar(name, lua_linenumber);
+}
+
+static void add_localvar (TreeNode *name)
+{
+  store_localvar(name, 0);
+  nlocalvar++;
 }
 
 static void add_varbuffer (Long var)
@@ -391,7 +393,6 @@ static void codeIf (Long thenAdd, Long elseAdd)
 */
 void lua_parse (TFunc *tf)
 {
- lua_debug = 0;
  initcode = &(tf->code);
  *initcode = newvector(CODE_BLOCK, Byte);
  maincode = 0; 
@@ -492,11 +493,14 @@ body :  '(' parlist ')' block END
 	{
           codereturn();
 	  $$ = new(TFunc);
+          luaI_initTFunc($$);
 	  $$->size = pc;
 	  $$->code = newvector(pc, Byte);
 	  $$->fileName = lua_parsedfile;
 	  $$->lineDefined = $2;
 	  memcpy($$->code, basepc, pc*sizeof(Byte));
+          if (lua_debug)
+            luaI_closelocalvars($$);
 	  /* save func values */
 	  funcCode = basepc; maxcode=maxcurr;
 #if LISTING
@@ -557,7 +561,11 @@ block    : {$<vInt>$ = nlocalvar;} statlist ret
          {
 	  if (nlocalvar != $<vInt>1)
 	  {
-           nlocalvar = $<vInt>1;
+           if (lua_debug)
+             for (; nlocalvar > $<vInt>1; nlocalvar--)
+               luaI_unregisterlocalvar(lua_linenumber);
+           else
+             nlocalvar = $<vInt>1;
 	   lua_codeadjust (0);
 	  }
          }

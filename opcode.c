@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.53 1996/01/23 18:43:07 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.54 1996/01/30 15:25:23 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -441,6 +441,38 @@ int lua_currentline (lua_Object func)
 }
 
 
+lua_Object lua_getlocal (lua_Object func, int local_number, char **name)
+{
+  Object *f = luaI_Address(func);
+  *name = luaI_getlocalname(f->value.tf, local_number, lua_currentline(func));
+  if (*name)
+  {
+    /* if "*name", there must be a LUA_T_LINE */
+    /* therefore, f+2 points to function base */
+    return Ref((f+2)+(local_number-1));
+  }
+  else
+    return LUA_NOOBJECT;
+}
+
+int lua_setlocal (lua_Object func, int local_number)
+{
+  Object *f = Address(func);
+  char *name = luaI_getlocalname(f->value.tf, local_number, lua_currentline(func));
+  adjustC(1);
+  --top;
+  if (name)
+  {
+    /* if "name", there must be a LUA_T_LINE */
+    /* therefore, f+2 points to function base */
+    *((f+2)+(local_number-1)) = *top;
+    return 1;
+  }
+  else
+    return 0;
+}
+
+
 /*
 ** Execute a protected call. Assumes that function is at CBase and
 ** parameters are on top of it. Leave nResults on the stack. 
@@ -480,9 +512,8 @@ static int do_protectedmain (void)
   adjustC(1);  /* one slot for the pseudo-function */
   stack[CBase].tag = LUA_T_FUNCTION;
   stack[CBase].value.tf = &tf;
-  tf.lineDefined = 0;
+  luaI_initTFunc(&tf);
   tf.fileName = lua_parsedfile;
-  tf.code = NULL;
   if (setjmp(myErrorJmp) == 0)
   {
     lua_parse(&tf);

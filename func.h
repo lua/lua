@@ -4,8 +4,15 @@
 #include "types.h"
 #include "lua.h"
 
+typedef struct LocVar
+{
+  TreeNode  *varname;           /* NULL signals end of scope */
+  int       line;
+} LocVar;
+
+
 /*
-** Header para funcoes.
+** Function Headers
 */
 typedef struct TFunc
 {
@@ -15,10 +22,17 @@ typedef struct TFunc
   Byte		*code;
   int		lineDefined;
   char		*fileName;
+  LocVar        *locvars;
 } TFunc;
 
 Long luaI_funccollector (void);
 void luaI_insertfunction (TFunc *f);
 
+void luaI_initTFunc (TFunc *f);
+
+void luaI_registerlocalvar (TreeNode *varname, int line);
+void luaI_unregisterlocalvar (int line);
+void luaI_closelocalvars (TFunc *func);
+char *luaI_getlocalname (TFunc *func, int local_number, int line);
 
 #endif
