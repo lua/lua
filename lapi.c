@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.97 2000/09/12 13:47:46 roberto Exp $
+** $Id: lapi.c,v 1.98 2000/09/14 14:09:31 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -76,12 +76,11 @@ void lua_remove (lua_State *L, int index) {
 
 
 void lua_insert (lua_State *L, int index) {
-  TObject temp = *(L->top-1);
   StkId p = Index(L, index);
   StkId q;
-  for (q = L->top-1; q>p; q--)
+  for (q = L->top; q>p; q--)
     *q = *(q-1);
-  *p = temp;
+  *p = *L->top;
 }
 
 
@@ -249,16 +248,16 @@ void lua_getglobal (lua_State *L, const char *name) {
 }
 
 
-void lua_gettable (lua_State *L, int tableindex) {
-  StkId t = Index(L, tableindex);
+void lua_gettable (lua_State *L, int index) {
+  StkId t = Index(L, index);
   StkId top = L->top;
   *(top-1) = *luaV_gettable(L, t);
   L->top = top;  /* tag method may change top */
 }
 
 
-void lua_rawget (lua_State *L, int tableindex) {
-  StkId t = Index(L, tableindex);
+void lua_rawget (lua_State *L, int index) {
+  StkId t = Index(L, index);
   LUA_ASSERT(ttype(t) == TAG_TABLE, "table expected");
   *(L->top - 1) = *luaH_get(L, hvalue(t), L->top - 1);
 }
@@ -313,16 +312,16 @@ void lua_setglobal (lua_State *L, const char *name) {
 }
 
 
-void lua_settable (lua_State *L, int tableindex) {
-  StkId t = Index(L, tableindex);
+void lua_settable (lua_State *L, int index) {
+  StkId t = Index(L, index);
   StkId top = L->top;
   luaV_settable(L, t, top-2);
   L->top = top-2;  /* pop index and value */
 }
 
 
-void lua_rawset (lua_State *L, int tableindex) {
-  StkId t = Index(L, tableindex);
+void lua_rawset (lua_State *L, int index) {
+  StkId t = Index(L, index);
   LUA_ASSERT(ttype(t) == TAG_TABLE, "table expected");
   *luaH_set(L, hvalue(t), L->top-2) = *(L->top-1);
   L->top -= 2;
@@ -406,8 +405,8 @@ void lua_unref (lua_State *L, int ref) {
 }
 
 
-int lua_next (lua_State *L, int tableindex) {
-  StkId t = Index(L, tableindex);
+int lua_next (lua_State *L, int index) {
+  StkId t = Index(L, index);
   Node *n;
   LUA_ASSERT(ttype(t) == TAG_TABLE, "table expected");
   n = luaH_next(L, hvalue(t), Index(L, -1));
