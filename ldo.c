@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.7 2004/06/02 19:07:55 roberto Exp roberto $
+** $Id: ldo.c,v 2.8 2004/09/03 15:48:56 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -93,7 +93,7 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
 
 
 static void restore_stack_limit (lua_State *L) {
-  L->stack_last = L->stack+L->stacksize-1;
+  lua_assert(L->stack_last - L->stack == L->stacksize - EXTRA_STACK - 1);
   if (L->size_ci > LUA_MAXCALLS) {  /* there was an overflow? */
     int inuse = (L->ci - L->base_ci);
     if (inuse + 1 < LUA_MAXCALLS)  /* can `undo' overflow? */
@@ -121,9 +121,11 @@ static void correctstack (lua_State *L, TValue *oldstack) {
 
 void luaD_reallocstack (lua_State *L, int newsize) {
   TValue *oldstack = L->stack;
-  luaM_reallocvector(L, L->stack, L->stacksize, newsize, TValue);
-  L->stacksize = newsize;
-  L->stack_last = L->stack+newsize-1-EXTRA_STACK;
+  int realsize = newsize + 1 + EXTRA_STACK;
+  lua_assert(L->stack_last - L->stack == L->stacksize - EXTRA_STACK - 1);
+  luaM_reallocvector(L, L->stack, L->stacksize, realsize, TValue);
+  L->stacksize = realsize;
+  L->stack_last = L->stack+newsize;
   correctstack(L, oldstack);
 }
 
@@ -133,7 +135,7 @@ void luaD_reallocCI (lua_State *L, int newsize) {
   luaM_reallocvector(L, L->base_ci, L->size_ci, newsize, CallInfo);
   L->size_ci = cast(unsigned short, newsize);
   L->ci = (L->ci - oldci) + L->base_ci;
-  L->end_ci = L->base_ci + L->size_ci;
+  L->end_ci = L->base_ci + L->size_ci - 1;
 }
 
 
@@ -141,11 +143,11 @@ void luaD_growstack (lua_State *L, int n) {
   if (n <= L->stacksize)  /* double size is enough? */
     luaD_reallocstack(L, 2*L->stacksize);
   else
-    luaD_reallocstack(L, L->stacksize + n + EXTRA_STACK);
+    luaD_reallocstack(L, L->stacksize + n);
 }
 
 
-static void luaD_growCI (lua_State *L) {
+static CallInfo *luaD_growCI (lua_State *L) {
   if (L->size_ci > LUA_MAXCALLS)  /* overflow while handling overflow? */
     luaD_throw(L, LUA_ERRERR);
   else {
@@ -153,6 +155,7 @@ static void luaD_growCI (lua_State *L) {
     if (L->size_ci > LUA_MAXCALLS)
       luaG_runerror(L, "stack overflow");
   }
+  return ++L->ci;
 }
 
 
@@ -170,6 +173,7 @@ void luaD_callhook (lua_State *L, int event, int line) {
       ar.i_ci = L->ci - L->base_ci;
     luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
     L->ci->top = L->top + LUA_MINSTACK;
+    lua_assert(L->ci->top <= L->stack_last);
     L->allowhook = 0;  /* cannot call hooks inside a hook */
     lua_unlock(L);
     (*hook)(L, &ar);
@@ -232,14 +236,18 @@ static StkId tryfuncTM (lua_State *L, StkId func) {
 }
 
 
+
+#define inc_ci(L) \
+  ((L->ci == L->end_ci) ? luaD_growCI(L) : \
+   (condhardstacktests(luaD_reallocCI(L, L->size_ci)), ++L->ci))
+
+
 int luaD_precall (lua_State *L, StkId func, int nresults) {
   LClosure *cl;
   ptrdiff_t funcr;
   if (!ttisfunction(func)) /* `func' is not a function? */
     func = tryfuncTM(L, func);  /* check the `function' tag method */
   funcr = savestack(L, func);
-  if (L->ci + 1 == L->end_ci) luaD_growCI(L);
-  else condhardstacktests(luaD_reallocCI(L, L->size_ci));
   cl = &clvalue(func)->l;
   if (!cl->isC) {  /* Lua function? prepare its call */
     CallInfo *ci;
@@ -256,10 +264,11 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       func = restorestack(L, funcr);
       base = func + 1;
     }
-    ci = ++L->ci;  /* now `enter' new function */
+    ci = inc_ci(L);  /* now `enter' new function */
     ci->func = func;
     L->base = ci->base = base;
     ci->top = L->base + p->maxstacksize;
+    lua_assert(ci->top <= L->stack_last);
     ci->savedpc = p->code;  /* starting point */
     ci->tailcalls = 0;
     ci->nresults = nresults;
@@ -272,10 +281,11 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     CallInfo *ci;
     int n;
     luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
-    ci = ++L->ci;  /* now `enter' new function */
+    ci = inc_ci(L);  /* now `enter' new function */
     ci->func = restorestack(L, funcr);
     L->base = ci->base = ci->func + 1;
     ci->top = L->top + LUA_MINSTACK;
+    lua_assert(ci->top <= L->stack_last);
     if (L->hookmask & LUA_MASKCALL)
       luaD_callhook(L, LUA_HOOKCALL, -1);
     lua_unlock(L);

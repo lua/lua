@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.11 2004/08/24 20:12:06 roberto Exp roberto $
+** $Id: lstate.c,v 2.12 2004/08/30 13:44:44 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -62,7 +62,7 @@ static void stack_init (lua_State *L1, lua_State *L) {
   L1->base = L1->ci->base = L1->top;
   L1->ci->top = L1->top + LUA_MINSTACK;
   L1->size_ci = BASIC_CI_SIZE;
-  L1->end_ci = L1->base_ci + L1->size_ci;
+  L1->end_ci = L1->base_ci + L1->size_ci - 1;
 }
 
 

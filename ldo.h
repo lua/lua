@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.h,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
+** $Id: ldo.h,v 2.2 2004/05/14 19:25:09 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -17,7 +17,7 @@
 ** macro to control inclusion of some hard tests on stack reallocation
 */ 
 #ifndef HARDSTACKTESTS
-#define condhardstacktests(x)	{ /* empty */ }
+#define condhardstacktests(x)	((void)0)
 #else
 #define condhardstacktests(x)	x
 #endif
@@ -26,7 +26,7 @@
 #define luaD_checkstack(L,n)	\
   if ((char *)L->stack_last - (char *)L->top <= (n)*(int)sizeof(TValue)) \
     luaD_growstack(L, n); \
-  else condhardstacktests(luaD_reallocstack(L, L->stacksize));
+  else condhardstacktests(luaD_reallocstack(L, L->stacksize - EXTRA_STACK - 1));
 
 
 #define incr_top(L) {luaD_checkstack(L,1); L->top++;}
