@@ -1,69 +1,44 @@
 /*
-** $Id: lzio.c,v 1.15 2001/11/28 20:13:13 roberto Exp roberto $
+** $Id: lzio.c,v 1.16 2002/04/29 12:37:41 roberto Exp roberto $
 ** a generic input stream interface
 ** See Copyright Notice in lua.h
 */
 
 
-
-#include <stdio.h>
 #include <string.h>
 
 #include "lua.h"
 
+#include "llimits.h"
 #include "lzio.h"
 
 
 
-/* ----------------------------------------------------- memory buffers --- */
-
-static int zmfilbuf (ZIO* z) {
-  (void)z;  /* to avoid warnings */
-  return EOZ;
-}
-
-
-ZIO* zmopen (ZIO* z, const char* b, size_t size, const char *name) {
-  if (b==NULL) return NULL;
-  z->n = size;
-  z->p = (const unsigned char *)b;
-  z->filbuf = zmfilbuf;
-  z->u = NULL;
-  z->name = name;
-  return z;
-}
-
-
-/* -------------------------------------------------------------- FILEs --- */
-
-static int zffilbuf (ZIO* z) {
-  size_t n;
-  if (feof((FILE *)z->u)) return EOZ;
-  n = fread(z->buffer, 1, ZBSIZE, (FILE *)z->u);
-  if (n==0) return EOZ;
-  z->n = n-1;
-  z->p = z->buffer;
+int luaZ_fill (ZIO *z) {
+  size_t size;
+  const char *buff = z->getblock(z->ud, &size);
+  if (buff == NULL || size == 0) return EOZ;
+  z->n = size - 1;
+  z->p = buff;
   return *(z->p++);
 }
 
 
-ZIO* zFopen (ZIO* z, FILE* f, const char *name) {
-  if (f==NULL) return NULL;
-  z->n = 0;
-  z->p = z->buffer;
-  z->filbuf = zffilbuf;
-  z->u = f;
+void luaZ_init (ZIO *z, lua_Getblock getblock, void *ud, const char *name) {
+  z->getblock = getblock;
+  z->ud = ud;
   z->name = name;
-  return z;
+  z->n = 0;
+  z->p = NULL;
 }
 
 
 /* --------------------------------------------------------------- read --- */
-size_t zread (ZIO *z, void *b, size_t n) {
+size_t luaZ_zread (ZIO *z, void *b, size_t n) {
   while (n) {
     size_t m;
     if (z->n == 0) {
-      if (z->filbuf(z) == EOZ)
+      if (luaZ_fill(z) == EOZ)
         return n;  /* return number of missing bytes */
       else {
         ++z->n;  /* filbuf removed first byte; put back it */
@@ -79,3 +54,4 @@ size_t zread (ZIO *z, void *b, size_t n) {
   }
   return 0;
 }
+

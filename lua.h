@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.133 2002/05/16 18:39:46 roberto Exp roberto $
+** $Id: lua.h,v 1.134 2002/05/23 20:29:05 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: info@lua.org
@@ -50,6 +50,11 @@ typedef struct lua_State lua_State;
 
 typedef int (*lua_CFunction) (lua_State *L);
 
+
+/*
+** function for loading Lua code
+*/
+typedef const char * (*lua_Getblock) (void *ud, size_t *size);
 
 
 /*
@@ -176,9 +181,8 @@ LUA_API void  lua_setmetatable (lua_State *L, int objindex);
 */
 LUA_API void  lua_rawcall (lua_State *L, int nargs, int nresults);
 LUA_API int   lua_pcall (lua_State *L, int nargs, int nresults, int errf);
-LUA_API int   lua_loadfile (lua_State *L, const char *filename);
-LUA_API int   lua_loadbuffer (lua_State *L, const char *buff, size_t size,
-                              const char *name);
+LUA_API int   lua_load (lua_State *L, lua_Getblock getblock, void *ud,
+                        int binary, const char *chunkname);
 
 
 /*
@@ -249,11 +253,6 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size);
 ** compatibility macros and functions
 */
 
-LUA_API int   lua_call (lua_State *L, int nargs, int nresults);
-LUA_API int   lua_dofile (lua_State *L, const char *filename);
-LUA_API int   lua_dostring (lua_State *L, const char *str);
-LUA_API int   lua_dobuffer (lua_State *L, const char *buff, size_t size,
-                            const char *name);
 
 LUA_API int lua_pushupvalues (lua_State *L);
 
@@ -291,6 +290,9 @@ LUA_API int lua_pushupvalues (lua_State *L);
 ** useful definitions for Lua kernel and libraries
 ** =======================================================================
 */
+
+/* binary files start with <esc>Lua */
+#define	LUA_SIGNATURE	"\033Lua"
 
 /* formats for Lua numbers */
 #ifndef LUA_NUMBER_SCAN

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.176 2002/05/16 18:39:46 roberto Exp roberto $
+** $Id: ldo.c,v 1.177 2002/05/27 20:35:40 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -420,7 +420,6 @@ int luaD_protectedparser (lua_State *L, ZIO *z, int bin) {
   struct SParser p;
   lu_mem old_blocks;
   int status;
-  lua_lock(L);
   p.z = z; p.bin = bin;
   /* before parsing, give a (good) chance to GC */
   if (G(L)->nblocks + G(L)->nblocks/4 >= G(L)->GCthreshold)
@@ -437,7 +436,6 @@ int luaD_protectedparser (lua_State *L, ZIO *z, int bin) {
     setobj(L->top++, &p.err);
     lua_assert(status != LUA_ERRRUN);
   }
-  lua_unlock(L);
   return status;
 }
 
