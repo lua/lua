@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.36 2000/03/27 20:08:02 roberto Exp roberto $
+** $Id: ltm.c,v 1.37 2000/03/27 20:10:21 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -47,8 +47,8 @@ static const char luaT_validevents[NUM_TAGS][IM_N] = {
   {1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},  /* TAG_NUMBER */
   {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},  /* TAG_STRING */
   {0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* TAG_TABLE */
-  {1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* TAG_LPROTO */
-  {1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* TAG_CPROTO */
+  {1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* TAG_LCLOSURE */
+  {1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* TAG_CCLOSURE */
   {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}   /* TAG_NIL */
 };
 
@@ -105,19 +105,14 @@ int lua_copytagmethods (lua_State *L, int tagto, int tagfrom) {
 
 
 int luaT_effectivetag (lua_State *L, const TObject *o) {
-  static const int realtag[] = {  /* ORDER LUA_T */
-    TAG_USERDATA, TAG_NUMBER, TAG_STRING, TAG_TABLE,
-    TAG_LPROTO, TAG_CPROTO, TAG_NIL,
-    TAG_LPROTO, TAG_CPROTO,       /* TAG_LCLOSURE, TAG_CCLOSURE */
-  };
-  lua_Type t;
-  switch (t = ttype(o)) {
+  lua_Type t = ttype(o);
+  switch (t) {
     case TAG_USERDATA: {
       int tag = o->value.ts->u.d.tag;
       return (tag > L->last_tag) ? TAG_USERDATA : tag;  /* deprecated test */
     }
-    case TAG_TABLE:    return o->value.a->htag;
-    default:             return realtag[t];
+    case TAG_TABLE: return o->value.a->htag;
+    default: return t;
   }
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.33 2000/03/10 18:37:44 roberto Exp roberto $
+** $Id: lobject.c,v 1.34 2000/03/27 20:10:21 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -15,8 +15,7 @@
 
 const char *const luaO_typenames[] = { /* ORDER LUA_T */
     "userdata", "number", "string", "table", "function", "function", "nil",
-    "function", "function", "function", "function", "function", "function",
-    "line", NULL
+    "function", "function", "line"
 };
 
 
@@ -35,20 +34,16 @@ unsigned long luaO_power2 (unsigned long n) {
 
 int luaO_equalval (const TObject *t1, const TObject *t2) {
   switch (ttype(t1)) {
-    case TAG_NIL:
-      return 1;
     case TAG_NUMBER:
       return nvalue(t1) == nvalue(t2);
     case TAG_STRING: case TAG_USERDATA:
       return svalue(t1) == svalue(t2);
     case TAG_TABLE: 
       return avalue(t1) == avalue(t2);
-    case TAG_LPROTO:
-      return tfvalue(t1)  == tfvalue(t2);
-    case TAG_CPROTO:
-      return fvalue(t1)  == fvalue(t2);
     case TAG_CCLOSURE: case TAG_LCLOSURE:
-      return t1->value.cl == t2->value.cl;
+      return clvalue(t1) == clvalue(t2);
+    case TAG_NIL:
+      return 1;
     default:
      LUA_INTERNALERROR(L, "invalid type");
      return 0; /* UNREACHABLE */

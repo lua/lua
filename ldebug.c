@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.12 2000/03/20 19:14:54 roberto Exp roberto $
+** $Id: ldebug.c,v 1.13 2000/03/27 20:10:21 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -24,10 +24,8 @@
 
 static const lua_Type normtype[] = {  /* ORDER LUA_T */
   TAG_USERDATA, TAG_NUMBER, TAG_STRING, TAG_TABLE,
-  TAG_LPROTO, TAG_CPROTO, TAG_NIL,
-  TAG_LCLOSURE, TAG_CCLOSURE,
-  TAG_LCLOSURE, TAG_CCLOSURE,   /* TAG_LCLMARK, TAG_CCLMARK */
-  TAG_LPROTO, TAG_CPROTO        /* TAG_LMARK, TAG_CMARK */
+  TAG_LCLOSURE, TAG_CCLOSURE, TAG_NIL,
+  TAG_LCLOSURE, TAG_CCLOSURE   /* TAG_LCLMARK, TAG_CCLMARK */
 };
 
 
@@ -104,11 +102,7 @@ static int lua_currentline (lua_State *L, StkId f) {
 
 
 static Proto *getluaproto (StkId f) {
-  if (ttype(f) == TAG_LMARK)
-    return f->value.tf;
-  else if (ttype(f) == TAG_LCLMARK)
-    return protovalue(f)->value.tf;
-  else return NULL;
+  return (ttype(f) == TAG_LCLMARK) ?  clvalue(f)->f.l : NULL;
 }
 
 
@@ -141,20 +135,18 @@ int lua_setlocal (lua_State *L, const lua_Dbgactreg *ar, lua_Dbglocvar *v) {
 static void lua_funcinfo (lua_Dbgactreg *ar) {
   StkId func = ar->_func;
   switch (ttype(func)) {
-    case TAG_LPROTO:  case TAG_LMARK:
-      ar->source = tfvalue(func)->source->str;
-      ar->linedefined = tfvalue(func)->lineDefined;
-      ar->what = "Lua";
-      break;
     case TAG_LCLOSURE:  case TAG_LCLMARK:
-      ar->source = tfvalue(protovalue(func))->source->str;
-      ar->linedefined = tfvalue(protovalue(func))->lineDefined;
+      ar->source = clvalue(func)->f.l->source->str;
+      ar->linedefined = clvalue(func)->f.l->lineDefined;
       ar->what = "Lua";
       break;
-    default:
+    case TAG_CCLOSURE:  case TAG_CCLMARK:
       ar->source = "(C)";
       ar->linedefined = -1;
       ar->what = "C";
+      break;
+    default:
+      LUA_INTERNALERROR(L, "invalid `func' value");
   }
   if (ar->linedefined == 0)
     ar->what = "main";

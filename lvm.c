@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.96 2000/03/17 13:09:12 roberto Exp roberto $
+** $Id: lvm.c,v 1.97 2000/03/27 20:10:21 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -72,17 +72,27 @@ void luaV_setn (lua_State *L, Hash *t, int val) {
 }
 
 
-void luaV_closure (lua_State *L, int nelems) {
-  if (nelems > 0) {
-    Closure *c = luaF_newclosure(L, nelems);
-    c->consts[0] = *(L->top-1);
-    L->top -= nelems;
-    while (nelems--)
-      c->consts[nelems+1] = *(L->top-1+nelems);
-    ttype(L->top-1) = (ttype(&c->consts[0]) == TAG_CPROTO) ?
-                        TAG_CCLOSURE : TAG_LCLOSURE;
-    (L->top-1)->value.cl = c;
-  }
+static Closure *luaV_closure (lua_State *L, lua_Type t, int nelems) {
+  Closure *c = luaF_newclosure(L, nelems);
+  L->top -= nelems;
+  while (nelems--)
+    c->consts[nelems] = *(L->top+nelems);
+  ttype(L->top) = t;
+  clvalue(L->top) = c;
+  incr_top;
+  return c;
+}
+
+
+void luaV_Cclosure (lua_State *L, lua_CFunction c, int nelems) {
+  Closure *cl = luaV_closure(L, TAG_CCLOSURE, nelems);
+  cl->f.c = c;
+}
+
+
+void luaV_Lclosure (lua_State *L, Proto *l, int nelems) {
+  Closure *cl = luaV_closure(L, TAG_LCLOSURE, nelems);
+  cl->f.l = l;
 }
 
 
@@ -317,13 +327,11 @@ static void adjust_varargs (lua_State *L, StkId base, int nfixargs) {
 ** Executes the given Lua function. Parameters are between [base,top).
 ** Returns n such that the the results are between [n,top).
 */
-StkId luaV_execute (lua_State *L, const Closure *cl, const Proto *tf,
-                    register StkId base) {
+StkId luaV_execute (lua_State *L, const Closure *cl, register StkId base) {
+  const Proto *tf = cl->f.l;
   register StkId top;  /* keep top local, for performance */
   register const Instruction *pc = tf->code;
   TString **kstr = tf->kstr;
-  if (L->callhook)
-    luaD_callHook(L, base-1, L->callhook, "call");
   luaD_checkstack(L, tf->maxstacksize+EXTRA_STACK);
   if (tf->is_vararg) {  /* varargs? */
     adjust_varargs(L, base, tf->numparams);
@@ -392,7 +400,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const Proto *tf,
         break;
 
       case OP_PUSHUPVALUE:
-        *top++ = cl->consts[GETARG_U(i)+1];
+        *top++ = cl->consts[GETARG_U(i)];
         break;
 
       case OP_PUSHLOCAL:
@@ -604,11 +612,9 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const Proto *tf,
         break;
 
       case OP_CLOSURE:
-        ttype(top) = TAG_LPROTO;
-        tfvalue(top) = tf->kproto[GETARG_A(i)];
-        L->top = ++top;
-        luaV_closure(L, GETARG_B(i));
-        top -= GETARG_B(i);
+        L->top = top;
+        luaV_Lclosure(L, tf->kproto[GETARG_A(i)], GETARG_B(i));
+        top = L->top;
         luaC_checkGC(L);
         break;
 

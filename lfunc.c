@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.19 2000/03/03 14:58:26 roberto Exp roberto $
+** $Id: lfunc.c,v 1.20 2000/03/10 18:37:44 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -19,7 +19,8 @@
 
 
 Closure *luaF_newclosure (lua_State *L, int nelems) {
-  Closure *c = (Closure *)luaM_malloc(L, sizeof(Closure)+nelems*sizeof(TObject));
+  Closure *c = (Closure *)luaM_malloc(L, sizeof(Closure) +
+                                         sizeof(TObject)*(nelems-1));
   c->next = L->rootcl;
   L->rootcl = c;
   c->marked = 0;

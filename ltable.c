@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.36 2000/03/10 18:37:44 roberto Exp roberto $
+** $Id: ltable.c,v 1.37 2000/03/27 20:10:21 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -51,12 +51,6 @@ Node *luaH_mainposition (const Hash *t, const TObject *key) {
       break;
     case TAG_TABLE:
       h = IntPoint(L, avalue(key));
-      break;
-    case TAG_LPROTO:
-      h = IntPoint(L, tfvalue(key));
-      break;
-    case TAG_CPROTO:
-      h = IntPoint(L, fvalue(key));
       break;
     case TAG_LCLOSURE:  case TAG_CCLOSURE:
       h = IntPoint(L, clvalue(key));

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.68 2000/03/03 14:58:26 roberto Exp roberto $
+** $Id: ldo.c,v 1.69 2000/03/10 18:37:44 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -119,7 +119,7 @@ void luaD_lineHook (lua_State *L, StkId func, int line) {
 }
 
 
-void luaD_callHook (lua_State *L, StkId func, lua_Dbghook callhook,
+static void luaD_callHook (lua_State *L, StkId func, lua_Dbghook callhook,
                     const char *event) {
   if (L->allowhooks) {
     lua_Dbgactreg ar;
@@ -137,37 +137,28 @@ void luaD_callHook (lua_State *L, StkId func, lua_Dbghook callhook,
 }
 
 
-/*
-** Call a C function.
-** Cstack.num is the number of arguments; Cstack.lua2C points to the
-** first argument. Returns an index to the first result from C.
-*/
-static StkId callC (lua_State *L, lua_CFunction f, StkId base) {
+static StkId callCclosure (lua_State *L, const struct Closure *cl, StkId base) {
+  int nup = cl->nelems;  /* number of upvalues */
+  int numarg = L->top-base;
   struct C_Lua_Stack oldCLS = L->Cstack;
   StkId firstResult;
-  int numarg = L->top - base;
+  if (nup > 0) {
+    int n = numarg;
+    luaD_checkstack(L, nup);
+    /* open space for upvalues as extra arguments */
+    while (n--) *(base+nup+n) = *(base+n);
+    L->top += nup;
+    numarg += nup;
+    /* copy upvalues into stack */
+    while (nup--) *(base+nup) = cl->consts[nup];
+  }
   L->Cstack.num = numarg;
   L->Cstack.lua2C = base;
   L->Cstack.base = L->top;
-  if (L->callhook)
-    luaD_callHook(L, base-1, L->callhook, "call");
-  (*f)(L);  /* do the actual call */
+  (*cl->f.c)(L);  /* do the actual call */
   firstResult = L->Cstack.base;
   L->Cstack = oldCLS;
   return firstResult;
-}
-
-
-static StkId callCclosure (lua_State *L, const struct Closure *cl, StkId base) {
-  int nup = cl->nelems;  /* number of upvalues */
-  int n = L->top-base;   /* number of arguments (to move up) */
-  luaD_checkstack(L, nup);
-  /* open space for upvalues as extra arguments */
-  while (n--) *(base+nup+n) = *(base+n);
-  L->top += nup;
-  /* copy upvalues into stack */
-  while (nup--) *(base+nup) = cl->consts[nup+1];
-  return callC(L, fvalue(cl->consts), base);
 }
 
 
@@ -191,24 +182,18 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
   lua_Dbghook callhook = L->callhook;
   retry:  /* for `function' tag method */
   switch (ttype(func)) {
-    case TAG_CPROTO:
-      ttype(func) = TAG_CMARK;
-      firstResult = callC(L, fvalue(func), func+1);
-      break;
-    case TAG_LPROTO:
-      ttype(func) = TAG_LMARK;
-      firstResult = luaV_execute(L, NULL, tfvalue(func), func+1);
-      break;
     case TAG_LCLOSURE: {
-      Closure *c = clvalue(func);
       ttype(func) = TAG_LCLMARK;
-      firstResult = luaV_execute(L, c, tfvalue(c->consts), func+1);
+      if (callhook)
+        luaD_callHook(L, func, callhook, "call");
+      firstResult = luaV_execute(L, clvalue(func), func+1);
       break;
     }
     case TAG_CCLOSURE: {
-      Closure *c = clvalue(func);
       ttype(func) = TAG_CCLMARK;
-      firstResult = callCclosure(L, c, func+1);
+      if (callhook)
+        luaD_callHook(L, func, callhook, "call");
+      firstResult = callCclosure(L, clvalue(func), func+1);
       break;
     }
     default: { /* `func' is not a function; check the `function' tag method */
@@ -316,9 +301,7 @@ static int protectedparser (lua_State *L, ZIO *z, int bin) {
   L->errorJmp = oldErr;
   if (status) return 1;  /* error code */
   if (tf == NULL) return 2;  /* `natural' end */
-  L->top->ttype = TAG_LPROTO;  /* push new function on the stack */
-  L->top->value.tf = tf;
-  incr_top;
+  luaV_Lclosure(L, tf, 0);
   return 0;
 }
 

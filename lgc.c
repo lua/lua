@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.43 2000/03/27 20:08:02 roberto Exp roberto $
+** $Id: lgc.c,v 1.44 2000/03/27 20:10:21 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -43,9 +43,9 @@ static void protomark (lua_State *L, Proto *f) {
 
 static void closuremark (lua_State *L, Closure *f) {
   if (!f->marked) {
-    int i;
+    int i = f->nelems;
     f->marked = 1;
-    for (i=f->nelems; i>=0; i--)
+    while (i--)
       markobject(L, &f->consts[i]);
   }
 }
@@ -103,13 +103,12 @@ static int markobject (lua_State *L, TObject *o) {
       hashmark(L, avalue(o));
       break;
     case TAG_LCLOSURE:  case TAG_LCLMARK:
+      protomark(L, clvalue(o)->f.l);
+      /* go trhough */
     case TAG_CCLOSURE:  case TAG_CCLMARK:
-      closuremark(L, o->value.cl);
+      closuremark(L, clvalue(o));
       break;
-    case TAG_LPROTO: case TAG_LMARK:
-      protomark(L, o->value.tf);
-      break;
-    default: break;  /* numbers, cprotos, etc */
+    default: break;  /* numbers, etc */
   }
   return 0;
 }

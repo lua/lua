@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.55 2000/03/24 19:49:23 roberto Exp roberto $
+** $Id: lobject.h,v 1.56 2000/03/27 20:10:21 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,12 @@
 #endif
 
 
+#ifdef DEBUG
+/* to avoid warnings and make sure is is really unused */
+#define UNUSED(x)	(x=0, (void)x)
+#else
 #define UNUSED(x)	(void)x		/* to avoid warnings */
+#endif
 
 
 /*
@@ -36,17 +41,12 @@ typedef enum {
   TAG_NUMBER,	/* fixed tag for numbers */
   TAG_STRING,	/* fixed tag for strings */
   TAG_TABLE,	/* default tag for tables */
-  TAG_LPROTO,	/* fixed tag for Lua functions */
-  TAG_CPROTO,	/* fixed tag for C functions */
+  TAG_LCLOSURE,	/* fixed tag for Lua closures */
+  TAG_CCLOSURE,	/* fixed tag for C closures */
   TAG_NIL,	/* last "pre-defined" tag */
-
-  TAG_LCLOSURE,	/* Lua closure */
-  TAG_CCLOSURE,	/* C closure */
 
   TAG_LCLMARK,	/* mark for Lua closures */
   TAG_CCLMARK,	/* mark for C closures */
-  TAG_LMARK,	/* mark for Lua prototypes */
-  TAG_CMARK,	/* mark for C prototypes */
 
   TAG_LINE
 } lua_Type;
@@ -58,18 +58,25 @@ typedef enum {
 /*
 ** check whether `t' is a mark
 */
-#define is_T_MARK(t)	(TAG_LCLMARK <= (t) && (t) <= TAG_CMARK)
+#define is_T_MARK(t)	((t) == TAG_LCLMARK || (t) == TAG_CCLMARK)
 
 
 typedef union {
-  lua_CFunction f;              /* TAG_CPROTO, TAG_CMARK */
-  Number n;                       /* TAG_NUMBER */
-  struct TString *ts;      /* TAG_STRING, TAG_USERDATA */
-  struct Proto *tf;        /* TAG_LPROTO, TAG_LMARK */
-  struct Closure *cl;           /* TAG_[CL]CLOSURE, TAG_[CL]CLMARK */
-  struct Hash *a;               /* TAG_TABLE */
-  int i;                        /* TAG_LINE */
+  struct TString *ts;	/* TAG_STRING, TAG_USERDATA */
+  struct Closure *cl;	/* TAG_[CL]CLOSURE, TAG_[CL]CLMARK */
+  struct Hash *a;	/* TAG_TABLE */
+  Number n;		/* TAG_NUMBER */
+  int i;		/* TAG_LINE */
 } Value;
+
+
+/* Macros to access values */
+#define ttype(o)        ((o)->ttype)
+#define nvalue(o)       ((o)->value.n)
+#define svalue(o)       ((o)->value.ts->str)
+#define tsvalue(o)      ((o)->value.ts)
+#define clvalue(o)      ((o)->value.cl)
+#define avalue(o)       ((o)->value.a)
 
 
 typedef struct TObject {
@@ -135,28 +142,18 @@ typedef struct LocVar {
 } LocVar;
 
 
-
-/* Macros to access structure members */
-#define ttype(o)        ((o)->ttype)
-#define nvalue(o)       ((o)->value.n)
-#define svalue(o)       ((o)->value.ts->str)
-#define tsvalue(o)      ((o)->value.ts)
-#define clvalue(o)      ((o)->value.cl)
-#define avalue(o)       ((o)->value.a)
-#define fvalue(o)       ((o)->value.f)
-#define tfvalue(o)	((o)->value.tf)
-
-#define protovalue(o)	((o)->value.cl->consts)
-
-
 /*
 ** Closures
 */
 typedef struct Closure {
   struct Closure *next;
   int marked;
-  int nelems;  /* not including the first one (always the prototype) */
-  TObject consts[1];  /* at least one for prototype */
+  union {
+    lua_CFunction c;  /* C functions */
+    struct Proto *l;  /* Lua functions */
+  } f;
+  int nelems;
+  TObject consts[1];
 } Closure;
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lref.c,v 1.9 2000/03/10 18:37:44 roberto Exp roberto $
+** $Id: lref.c,v 1.10 2000/03/27 20:10:21 roberto Exp roberto $
 ** reference mechanism
 ** See Copyright Notice in lua.h
 */
@@ -88,9 +88,7 @@ static int ismarked (const TObject *o) {
       return o->value.a->marked;
     case TAG_LCLOSURE:  case TAG_CCLOSURE:
       return o->value.cl->marked;
-    case TAG_LPROTO:
-      return o->value.tf->marked;
-    default:  /* number or cproto */
+    default:  /* number */
       return 1;
   }
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.72 2000/03/24 12:17:53 roberto Exp roberto $
+** $Id: lparser.c,v 1.73 2000/03/24 17:26:08 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -345,10 +345,6 @@ static void init_state (LexState *ls, FuncState *fs, TString *source) {
   f->numparams = 0;  /* default for main chunk */
   f->is_vararg = 0;  /* default for main chunk */
   fs->nvars = (L->debug) ? 0 : -1;  /* flag no debug information? */
-  /* push function (to avoid GC) */
-  tfvalue(L->top) = f;
-  ttype(L->top) = TAG_LPROTO;
-  incr_top;
 }
 
 
@@ -366,7 +362,6 @@ static void close_func (LexState *ls) {
     luaM_reallocvector(L, f->locvars, fs->nvars, LocVar);
   }
   ls->fs = fs->prev;
-  L->top--;  /* pop function */
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.98 2000/03/27 20:08:02 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.99 2000/03/27 20:10:21 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -385,12 +385,6 @@ void luaB_tostring (lua_State *L) {
       break;
     case TAG_LCLOSURE:  case TAG_CCLOSURE:
       sprintf(buff, "function: %p", o->value.cl);
-      break;
-    case TAG_LPROTO:
-      sprintf(buff, "function: %p", o->value.tf);
-      break;
-    case TAG_CPROTO:
-      sprintf(buff, "function: %p", o->value.f);
       break;
     case TAG_USERDATA:
       sprintf(buff, "userdata: %p(%d)", o->value.ts->u.d.value,

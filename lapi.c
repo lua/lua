@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.75 2000/03/20 19:14:54 roberto Exp roberto $
+** $Id: lapi.c,v 1.76 2000/03/27 20:10:21 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -28,17 +28,6 @@
 const char lua_ident[] = "$Lua: " LUA_VERSION " " LUA_COPYRIGHT " $\n"
                                "$Authors: " LUA_AUTHORS " $";
 
-
-
-
-const TObject *luaA_protovalue (const TObject *o) {
-  switch (ttype(o)) {
-    case TAG_CCLOSURE:  case TAG_LCLOSURE:
-      return protovalue(o);
-    default:
-      return o;
-  }
-}
 
 
 void luaA_checkCargs (lua_State *L, int nargs) {
@@ -210,7 +199,8 @@ int lua_isuserdata (lua_State *L, lua_Object o) {
 }
 
 int lua_iscfunction (lua_State *L, lua_Object o) {
-  return (lua_tag(L, o) == TAG_CPROTO);
+  UNUSED(L);
+  return (o != LUA_NOOBJECT) && (ttype(o) == TAG_CCLOSURE);
 }
 
 int lua_isnumber (lua_State *L, lua_Object o) {
@@ -266,7 +256,7 @@ void *lua_getuserdata (lua_State *L, lua_Object obj) {
 lua_CFunction lua_getcfunction (lua_State *L, lua_Object obj) {
   if (!lua_iscfunction(L, obj))
     return NULL;
-  else return fvalue(luaA_protovalue(obj));
+  else return clvalue(obj)->f.c;
 }
 
 
@@ -299,10 +289,7 @@ void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   if (fn == NULL)
     lua_error(L, "Lua API error - attempt to push a NULL Cfunction");
   luaA_checkCargs(L, n);
-  ttype(L->top) = TAG_CPROTO;
-  fvalue(L->top) = fn;
-  incr_top;
-  luaV_closure(L, n);
+  luaV_Cclosure(L, fn, n);
   luaC_checkGC(L);
 }
 
