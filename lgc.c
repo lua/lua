@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.144 2002/08/05 14:50:39 roberto Exp roberto $
+** $Id: lgc.c,v 1.145 2002/08/06 17:06:56 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -27,27 +27,26 @@ typedef struct GCState {
 } GCState;
 
 
-/* mark a string; marks larger than 1 cannot be changed */
-#define strmark(s)    {if ((s)->tsv.marked == 0) (s)->tsv.marked = 1;}
+/*
+** some userful bit tricks
+*/
+#define setbit(x,b)	((x) |= (1<<(b)))
+#define resetbit(x,b)	((x) &= cast(lu_byte, ~(1<<(b))))
+#define testbit(x,b)	((x) & (1<<(b)))
 
 
-/* unmarked tables are represented by pointing `mark' to themselves */
-#define ismarked(x)	((x)->mark != (x))
+#define strmark(s)	setbit((s)->tsv.marked, 0)
+#define strunmark(s)	resetbit((s)->tsv.marked, 0)
 
 
 
 /* mark tricks for userdata */
-#define isudmarked(u)	(u->uv.len & 1)
-#define markud(u)	(u->uv.len |= 1)
-#define unmarkud(u)	(u->uv.len &= (~(size_t)1))
+#define isudmarked(u)	testbit(u->uv.marked, 0)
+#define markud(u)	setbit(u->uv.marked, 0)
+#define unmarkud(u)	resetbit(u->uv.marked, 0)
 
-#define isfinalized(u)		(u->uv.len & 2)
-#define markfinalized(u)	(u->uv.len |= 2)
-
-
-/* mark tricks for upvalues (assume that open upvalues are always marked) */
-#define isupvalmarked(uv)	((uv)->v != &(uv)->value)
-
+#define isfinalized(u)		testbit(u->uv.marked, 1)
+#define markfinalized(u)	setbit(u->uv.marked, 1)
 
 
 #define ismarkable(o)	(!((1 << ttype(o)) & \
@@ -78,8 +77,9 @@ static void protomark (Proto *f) {
 
 
 static void marktable (GCState *st, Table *h) {
-  if (!ismarked(h)) {
-    h->mark = st->tmark;  /* chain it for later traversal */
+  if (!h->marked) {
+    h->marked = 1;
+    h->gclist = st->tmark;  /* chain it for later traversal */
     st->tmark = h;
   }
 }
@@ -100,9 +100,9 @@ static void markclosure (GCState *st, Closure *cl) {
       protomark(cl->l.p);
       for (i=0; i<cl->l.nupvalues; i++) {  /* mark its upvalues */
         UpVal *u = cl->l.upvals[i];
-        if (!isupvalmarked(u)) {
+        if (!u->marked) {
           markobject(st, &u->value);
-          u->v = NULL;  /* mark it! */
+          u->marked = 1;
         }
       }
     }
@@ -222,7 +222,7 @@ static void traversetable (GCState *st, Table *h) {
   if (h->mode & (WEAKKEY | WEAKVALUE)) {  /* weak table? */
     weakkey = h->mode & WEAKKEY;
     weakvalue = h->mode & WEAKVALUE;
-    h->mark = st->toclear;  /* must be cleared after GC, ... */
+    h->gclist = st->toclear;  /* must be cleared after GC, ... */
     st->toclear = h;  /* ... so put in the appropriate list */
   }
   if (!weakvalue) {
@@ -245,7 +245,7 @@ static void traversetable (GCState *st, Table *h) {
 static void propagatemarks (GCState *st) {
   while (st->tmark) {  /* traverse marked tables */
     Table *h = st->tmark;  /* get first table from list */
-    st->tmark = h->mark;  /* remove it from list */
+    st->tmark = h->gclist;  /* remove it from list */
     traversetable(st, h);
   }
 }
@@ -256,7 +256,7 @@ static int hasmark (const TObject *o) {
     case LUA_TUSERDATA:
       return isudmarked(uvalue(o));
     case LUA_TTABLE:
-      return ismarked(hvalue(o));
+      return hvalue(o)->marked;
     case LUA_TFUNCTION:
       return clvalue(o)->c.marked;
     case LUA_TSTRING:
@@ -273,7 +273,7 @@ static int hasmark (const TObject *o) {
 */
 static void cleartablekeys (GCState *st) {
   Table *h;
-  for (h = st->toclear; h; h = h->mark) {
+  for (h = st->toclear; h; h = h->gclist) {
     lua_assert(h->mode & (WEAKKEY | WEAKVALUE));
     if ((h->mode & WEAKKEY)) {  /* table may have collected keys? */
       int i = sizenode(h);
@@ -292,7 +292,7 @@ static void cleartablekeys (GCState *st) {
 */
 static void cleartablevalues (GCState *st) {
   Table *h;
-  for (h = st->toclear; h; h = h->mark) {
+  for (h = st->toclear; h; h = h->gclist) {
     if ((h->mode & WEAKVALUE)) {  /* table may have collected values? */
       int i = sizearray(h);
       while (i--) {
@@ -347,9 +347,8 @@ static void collectupval (lua_State *L) {
   UpVal **v = &G(L)->rootupval;
   UpVal *curr;
   while ((curr = *v) != NULL) {
-    if (isupvalmarked(curr)) {
-      lua_assert(curr->v == NULL);
-      curr->v = &curr->value;  /* unmark */
+    if (curr->marked) {
+      curr->marked = 0;  /* unmark */
       v = &curr->next;  /* next */
     }
     else {
@@ -364,8 +363,8 @@ static void collecttable (lua_State *L) {
   Table **p = &G(L)->roottable;
   Table *curr;
   while ((curr = *p) != NULL) {
-    if (ismarked(curr)) {
-      curr->mark = curr;  /* unmark */
+    if (curr->marked) {
+      curr->marked = 0;
       p = &curr->next;
     }
     else {
@@ -387,7 +386,7 @@ static void collectudata (lua_State *L) {
     }
     else {
       *p = curr->uv.next;
-      luaM_free(L, curr, sizeudata(curr->uv.len & (~(size_t)3)));
+      luaM_free(L, curr, sizeudata(curr->uv.len));
     }
   }
 }
@@ -400,8 +399,7 @@ static void collectstrings (lua_State *L, int all) {
     TString *curr;
     while ((curr = *p) != NULL) {
       if (curr->tsv.marked && !all) {  /* preserve? */
-        if (curr->tsv.marked < FIXMARK)  /* does not change FIXMARKs */
-          curr->tsv.marked = 0;
+        strunmark(curr);
         p = &curr->tsv.nexthash;
       } 
       else {  /* collect */

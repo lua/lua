@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.141 2002/08/05 14:08:02 roberto Exp roberto $
+** $Id: lobject.h,v 1.142 2002/08/06 17:06:56 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -101,8 +101,9 @@ typedef union TString {
   struct {
     lu_hash hash;
     size_t len;
-    int marked;
     union TString *nexthash;  /* chain for hash table */
+    lu_byte marked;
+    lu_byte reserved;
   } tsv;
 } TString;
 
@@ -117,7 +118,8 @@ typedef union Udata {
   struct {
     struct Table *metatable;
     union Udata *next;  /* chain for list of all udata */
-    size_t len;  /* least 2 bits reserved for gc mark */
+    size_t len;
+    lu_byte marked;
   } uv;
 } Udata;
 
@@ -164,6 +166,7 @@ typedef struct UpVal {
   TObject *v;  /* points to stack or to its own value */
   struct UpVal *next;
   TObject value;  /* the value (when closed) */
+  lu_byte marked;
 } UpVal;
 
 
@@ -219,11 +222,12 @@ typedef struct Table {
   Node *node;
   Node *firstfree;  /* this position is free; all positions after it are full */
   struct Table *next;
-  struct Table *mark;  /* marked tables (point to itself when not marked) */
+  struct Table *gclist;
   int sizearray;  /* size of `array' array */
   lu_byte flags;  /* 1<<p means tagmethod(p) is not present */ 
   lu_byte lsizenode;  /* log2 of size of `node' array */
   lu_byte mode;
+  lu_byte marked;
 } Table;
 
 /* bit masks for `mode' */
