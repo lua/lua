@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.277 2003/02/27 11:52:30 roberto Exp roberto $
+** $Id: lvm.c,v 1.278 2003/02/27 12:33:07 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -393,15 +393,21 @@ static void Arith (lua_State *L, StkId ra,
 #define dojump(pc, i)	((pc) += (i))
 
 
+unsigned int count = 0;
+
 StkId luaV_execute (lua_State *L) {
   LClosure *cl;
   TObject *k;
   const Instruction *pc;
+unsigned int ii, ic, ir, io;
+ii = count;
  callentry:  /* entry point when calling new functions */
+ic = count;
   L->ci->u.l.pc = &pc;
   if (L->hookmask & LUA_MASKCALL)
     luaD_callhook(L, LUA_HOOKCALL, -1);
  retentry:  /* entry point when returning to old functions */
+ir = count;
   lua_assert(L->ci->state == CI_SAVEDPC ||
              L->ci->state == (CI_SAVEDPC | CI_CALLING));
   L->ci->state = CI_HASFRAME;  /* activate frame */
@@ -412,6 +418,7 @@ StkId luaV_execute (lua_State *L) {
   for (;;) {
     const Instruction i = *pc++;
     StkId base, ra;
+count++;
     if ((L->hookmask & (LUA_MASKLINE | LUA_MASKCOUNT)) &&
         (--L->hookcount == 0 || L->hookmask & LUA_MASKLINE)) {
       traceexec(L);
@@ -658,20 +665,24 @@ StkId luaV_execute (lua_State *L) {
         break;
       }
       case OP_RETURN: {
-        CallInfo *ci = L->ci - 1;
+        CallInfo *ci = L->ci - 1;  /* previous function frame */
         int b = GETARG_B(i);
+io = count;
         if (b != 0) L->top = ra+b-1;
         lua_assert(L->ci->state & CI_HASFRAME);
         if (L->openupval) luaF_close(L, base);
         L->ci->state = CI_SAVEDPC;  /* deactivate current function */
         L->ci->u.l.savedpc = pc;
         /* previous function was running `here'? */
-        if (!(ci->state & CI_CALLING))
+        if (!(ci->state & CI_CALLING)) {
+          lua_assert((ci->state & CI_C) || ci->u.l.pc != &pc);
           return ra;  /* no: return */
-        else {  /* yes: continue its execution (go through) */
+        }
+        else {  /* yes: continue its execution */
           int nresults;
-          lua_assert(ttisfunction(ci->base - 1));
-          lua_assert(ci->state & CI_SAVEDPC);
+          lua_assert(ci->u.l.pc == &pc &&
+                     ttisfunction(ci->base - 1) &&
+                     (ci->state & CI_SAVEDPC));
           lua_assert(GET_OPCODE(*(ci->u.l.savedpc - 1)) == OP_CALL);
           nresults = GETARG_C(*(ci->u.l.savedpc - 1)) - 1;
           luaD_poscall(L, nresults, ra);

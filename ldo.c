@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.214 2003/02/27 11:52:30 roberto Exp roberto $
+** $Id: ldo.c,v 1.215 2003/02/28 15:42:08 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -292,7 +292,6 @@ void luaD_poscall (lua_State *L, int wanted, StkId firstResult) {
   while (wanted-- > 0)
     setnilvalue(res++);
   L->top = res;
-  luaC_checkGC(L);
 }
 
 
@@ -304,9 +303,10 @@ void luaD_poscall (lua_State *L, int wanted, StkId firstResult) {
 */ 
 void luaD_call (lua_State *L, StkId func, int nResults) {
   StkId firstResult;
+  lua_assert(!(L->ci->state & CI_CALLING));
   if (++L->nCcalls >= LUA_MAXCCALLS) {
     if (L->nCcalls == LUA_MAXCCALLS)
-      luaG_runerror(L, "stack overflow");
+      luaG_runerror(L, "C stack overflow");
     else if (L->nCcalls >= (LUA_MAXCCALLS + (LUA_MAXCCALLS>>3)))
       luaD_throw(L, LUA_ERRERR);  /* error while handing stack error */
   }
@@ -315,6 +315,7 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
     firstResult = luaV_execute(L);  /* call it */
   luaD_poscall(L, nResults, firstResult);
   L->nCcalls--;
+  luaC_checkGC(L);
 }
 
 
@@ -428,10 +429,13 @@ struct SParser {  /* data to `f_parser' */
 };
 
 static void f_parser (lua_State *L, void *ud) {
-  struct SParser *p = cast(struct SParser *, ud);
-  Proto *tf = p->bin ? luaU_undump(L, p->z, &p->buff) :
-                       luaY_parser(L, p->z, &p->buff);
-  Closure *cl = luaF_newLclosure(L, 0, gt(L));
+  struct SParser *p;
+  Proto *tf;
+  Closure *cl;
+  luaC_checkGC(L);
+  p = cast(struct SParser *, ud);
+  tf = p->bin ? luaU_undump(L, p->z, &p->buff) : luaY_parser(L, p->z, &p->buff);
+  cl = luaF_newLclosure(L, 0, gt(L));
   cl->l.p = tf;
   setclvalue(L->top, cl);
   incr_top(L);

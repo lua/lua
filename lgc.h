@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 1.17 2002/11/25 12:38:47 roberto Exp roberto $
+** $Id: lgc.h,v 1.18 2003/02/10 17:32:50 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -11,8 +11,8 @@
 #include "lobject.h"
 
 
-#define luaC_checkGC(L) if (G(L)->nblocks >= G(L)->GCthreshold) \
-			  luaC_collectgarbage(L)
+#define luaC_checkGC(L) { lua_assert(!(L->ci->state & CI_CALLING)); \
+	if (G(L)->nblocks >= G(L)->GCthreshold) luaC_collectgarbage(L); }
 
 
 void luaC_separateudata (lua_State *L);

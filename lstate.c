@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.119 2003/02/10 17:32:50 roberto Exp roberto $
+** $Id: lstate.c,v 1.120 2003/02/13 16:07:57 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -206,9 +206,14 @@ static void callallgcTM (lua_State *L, void *ud) {
 LUA_API void lua_close (lua_State *L) {
   lua_lock(L);
   L = G(L)->mainthread;  /* only the main thread can be closed */
+  luaF_close(L, L->stack);  /* close all upvalues for this thread */
   luaC_separateudata(L);  /* separate udata that have GC metamethods */
-  /* repeat until no more errors */
-  while (luaD_rawrunprotected(L, callallgcTM, NULL) != 0) /* skip */;
+  L->errfunc = 0;  /* no error function during GC metamethods */
+  do {  /* repeat until no more errors */
+    L->ci = L->base_ci;
+    L->base = L->top = L->ci->base;
+    L->nCcalls = 0;
+  } while (luaD_rawrunprotected(L, callallgcTM, NULL) != 0);
   lua_assert(G(L)->tmudata == NULL);
   close_state(L);
 }

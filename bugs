@@ -324,3 +324,8 @@ Thu Jan 23 11:29:06 UTC 2003
 >> protected
 (by Benoit Germain; since 5.0a)
 
+** ldo.c (and others)
+Fri Feb 28 14:20:33 EST 2003
+>> GC metamethod calls could mess C/Lua stack syncronization
+(by Roberto; since 5.0b)
+
