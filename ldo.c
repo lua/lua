@@ -32,10 +32,10 @@
 
 /* chain list of long jump buffers */
 struct lua_longjmp {
-  jmp_buf b;
   struct lua_longjmp *previous;
   CallInfo *ci;  /* index of call info of active function that set protection */
   StkId top;  /* top stack when protection was set */
+  jmp_buf b;
   int allowhooks;  /* `allowhook' state when protection was set */
   volatile int status;  /* error code */
 };

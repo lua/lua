@@ -22,8 +22,8 @@
 
 
 struct Sopen {
-  int stacksize;
   lua_State *L;
+  int stacksize;
 };
 
 

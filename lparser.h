@@ -56,21 +56,21 @@ typedef struct expdesc {
 /* state needed to generate code for a given function */
 typedef struct FuncState {
   Proto *f;  /* current function header */
+  Table *h;  /* table to find (and reuse) elements in `k' */
   struct FuncState *prev;  /* enclosing function */
   struct LexState *ls;  /* lexical state */
   struct lua_State *L;  /* copy of the Lua state */
+  struct Breaklabel *bl;  /* chain of breakable blocks */
   int pc;  /* next position to code (equivalent to `ncode') */
   int lasttarget;   /* `pc' of last `jump target' */
   int jlt;  /* list of jumps to `lasttarget' */
   int freereg;  /* first free register */
   int nk;  /* number of elements in `k' */
-  Table *h;  /* table to find (and reuse) elements in `k' */
   int np;  /* number of elements in `p' */
   int nlineinfo;  /* number of elements in `lineinfo' */
   int nlocvars;  /* number of elements in `locvars' */
   int nactloc;  /* number of active local variables */
   int lastline;  /* line where last `lineinfo' was generated */
-  struct Breaklabel *bl;  /* chain of breakable blocks */
   expdesc upvalues[MAXUPVALUES];  /* upvalues */
   int actloc[MAXLOCALS];  /* local-variable stack (indices to locvars) */
   unsigned int wasup[words2bits(MAXLOCALS)];  /* bit array to mark whether a

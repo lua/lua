@@ -29,13 +29,13 @@ LUA_API lua_Hook lua_setlinehook (lua_State *L, lua_Hook func);
 
 struct lua_Debug {
   const char *event;     /* `call', `return' */
-  int currentline;       /* (l) */
   const char *name;      /* (n) */
   const char *namewhat;  /* (n) `global', `tag method', `local', `field' */
-  int nups;              /* (u) number of upvalues */
-  int linedefined;       /* (S) */
   const char *what;      /* (S) `Lua' function, `C' function, Lua `main' */
   const char *source;    /* (S) */
+  int currentline;       /* (l) */
+  int nups;              /* (u) number of upvalues */
+  int linedefined;       /* (S) */
   char short_src[LUA_IDSIZE]; /* (S) */
   /* private part */
   int _ci;  /* active function */

@@ -79,9 +79,9 @@ struct lua_longjmp;  /* defined in ldo.c */
 
 
 typedef struct stringtable {
-  int size;
-  ls_nstr nuse;  /* number of elements */
   TString **hash;
+  ls_nstr nuse;  /* number of elements */
+  int size;
 } stringtable;
 
 
@@ -109,17 +109,17 @@ typedef struct CallInfo {
 ** `global state', shared by all threads of this state
 */
 typedef struct global_State {
-  void *Mbuffer;  /* global buffer */
-  size_t Mbuffsize;  /* size of Mbuffer */
   stringtable strt;  /* hash table for strings */
-  lu_mem GCthreshold;
-  lu_mem nblocks;  /* number of `bytes' currently allocated */
   Proto *rootproto;  /* list of all prototypes */
   Closure *rootcl;  /* list of all closures */
   Table *roottable;  /* list of all tables */
   UpVal *rootupval;  /* list of closed up values */
   Udata *rootudata;   /* list of all userdata */
   Udata *tmudata;  /* list of userdata to be GC */
+  void *Mbuffer;  /* global buffer */
+  size_t Mbuffsize;  /* size of Mbuffer */
+  lu_mem GCthreshold;
+  lu_mem nblocks;  /* number of `bytes' currently allocated */
   TString *tmname[TM_N];  /* array with tag-method names */
 } global_State;
 
@@ -133,19 +133,19 @@ struct lua_State {
   CallInfo *ci;  /* call info for current function */
   StkId stack_last;  /* last free slot in the stack */
   StkId stack;  /* stack base */
-  int stacksize;
-  int maxstacksize;
   CallInfo *end_ci;  /* points after end of ci array*/
   CallInfo *base_ci;  /* array of CallInfo's */
-  int size_ci;  /* size of array `base_ci' */
   global_State *_G;
-  lua_Hook callhook;
-  lua_Hook linehook;
-  int allowhooks;
   struct lua_longjmp *errorJmp;  /* current error recover point */
   UpVal *openupval;  /* list of open upvalues in this stack */
   lua_State *next;  /* circular double linked list of states */
   lua_State *previous;
+  int stacksize;
+  int maxstacksize;
+  int size_ci;  /* size of array `base_ci' */
+  int allowhooks;
+  lua_Hook callhook;
+  lua_Hook linehook;
 };
 
 

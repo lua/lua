@@ -112,7 +112,7 @@ typedef union TString {
 } TString;
 
 
-#define getstr(ts)	cast(char *, (ts) + 1)
+#define getstr(ts)	cast(const char *, (ts) + 1)
 #define svalue(o)       getstr(tsvalue(o))
 
 
@@ -122,8 +122,8 @@ typedef union Udata {
   struct {
     struct Table *metatable;
     void *value;
-    size_t len;  /* least bit reserved for gc mark */
     union Udata *next;  /* chain for list of all udata */
+    size_t len;  /* least bit reserved for gc mark */
   } uv;
 } Udata;
 
@@ -135,24 +135,23 @@ typedef union Udata {
 */
 typedef struct Proto {
   TObject *k;  /* constants used by the function */
-  int sizek;  /* size of `k' */
-  struct Proto **p;  /* functions defined inside the function */
-  int sizep;  /* size of `p' */
   Instruction *code;
+  struct Proto **p;  /* functions defined inside the function */
+  struct Proto *next;
+  int *lineinfo;  /* map from opcodes to source lines */
+  struct LocVar *locvars;  /* information about local variables */
+  TString  *source;
+  int sizek;  /* size of `k' */
   int sizecode;
+  int sizep;  /* size of `p' */
+  int sizelineinfo;  /* size of `lineinfo' */
+  int sizelocvars;
+  int lineDefined;
   short nupvalues;
   short numparams;
   short is_vararg;
   short maxstacksize;
   short marked;
-  struct Proto *next;
-  /* debug information */
-  int *lineinfo;  /* map from opcodes to source lines */
-  int sizelineinfo;  /* size of `lineinfo' */
-  struct LocVar *locvars;  /* information about local variables */
-  int sizelocvars;
-  int lineDefined;
-  TString  *source;
 } Proto;
 
 
@@ -224,12 +223,12 @@ typedef struct Table {
   struct Table *metatable;
   TObject *array;  /* array part */
   Node *node;
-  int sizearray;  /* size of `array' array */
-  lu_byte lsizenode;  /* log2 of size of `node' array */
-  unsigned short flags;  /* 1<<p means tagmethod(p) is not present */ 
   Node *firstfree;  /* this position is free; all positions after it are full */
   struct Table *next;
   struct Table *mark;  /* marked tables (point to itself when not marked) */
+  int sizearray;  /* size of `array' array */
+  unsigned short flags;  /* 1<<p means tagmethod(p) is not present */ 
+  lu_byte lsizenode;  /* log2 of size of `node' array */
 } Table;
 
 
