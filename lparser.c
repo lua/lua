@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.7 2004/11/19 16:59:08 roberto Exp roberto $
+** $Id: lparser.c,v 2.8 2004/12/03 20:35:33 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -133,7 +133,7 @@ static void check_match (LexState *ls, int what, int who, int where) {
 
 static TString *str_checkname (LexState *ls) {
   TString *ts;
-  check_condition(ls, (ls->t.token == TK_NAME), "<name> expected");
+  if (ls->t.token != TK_NAME) error_expected(ls, TK_NAME);
   ts = ls->t.seminfo.ts;
   next(ls);
   return ts;
