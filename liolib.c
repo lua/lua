@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.103 2001/02/02 19:02:40 roberto Exp roberto $
+** $Id: liolib.c,v 1.104 2001/02/06 16:01:29 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -272,20 +272,28 @@ static void read_file (lua_State *L, FILE *f) {
 
 
 static int read_chars (lua_State *L, FILE *f, size_t n) {
-  char *buffer;
-  size_t n1;
-  char statbuff[LUAL_BUFFERSIZE];
-  if (n <= LUAL_BUFFERSIZE)
-    buffer = statbuff;
-  else {
-    buffer = (char  *)l_malloc(n);
-    if (buffer == NULL)
-      lua_error(L, "not enough memory to read a file");
+  if (n == 0) {  /* test eof? */
+    int c = fgetc(f);
+    ungetc(c, f);
+    lua_pushlstring(L, NULL, 0);
+    return (c != EOF);
   }
-  n1 = fread(buffer, sizeof(char), n, f);
-  lua_pushlstring(L, buffer, n1);
-  if (buffer != statbuff) l_free(buffer, n);
-  return (n1 > 0 || n == 0);
+  else {
+    char *buffer;
+    size_t n1;
+    char statbuff[LUAL_BUFFERSIZE];
+    if (n <= LUAL_BUFFERSIZE)
+      buffer = statbuff;
+    else {
+      buffer = (char  *)l_malloc(n);
+      if (buffer == NULL)
+        lua_error(L, "not enough memory to read a file");
+    }
+    n1 = fread(buffer, sizeof(char), n, f);
+    lua_pushlstring(L, buffer, n1);
+    if (buffer != statbuff) l_free(buffer, n);
+    return (n1 > 0 || n == 0);
+  }
 }
 
 
