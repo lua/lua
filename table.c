@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.9 1994/11/03 21:48:36 roberto Exp $";
+char *rcs_table="$Id: table.c,v 2.10 1994/11/03 22:33:40 roberto Exp roberto $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -53,20 +53,22 @@ static void lua_initsymbol (void)
   lua_error ("symbol table: not enough memory");
   return;
  }
- n = lua_findsymbol("type"); 
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_type;
- n = lua_findsymbol("tonumber");
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_obj2number;
  n = lua_findsymbol("next");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_next;
  n = lua_findsymbol("nextvar");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_nextvar;
+ n = lua_findsymbol("type"); 
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_type;
+ n = lua_findsymbol("tonumber");
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_obj2number;
  n = lua_findsymbol("print");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_print;
  n = lua_findsymbol("dofile");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_internaldofile;
  n = lua_findsymbol("dostring");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_internaldostring;
+ n = lua_findsymbol("setfallback");
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_setfallback;
 }
 
 
