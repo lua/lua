@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.275 2003/02/11 10:46:24 roberto Exp roberto $
+** $Id: lvm.c,v 1.276 2003/02/18 16:02:56 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -648,6 +648,7 @@ StkId luaV_execute (lua_State *L) {
             (L->ci - 1)->top = L->top = base+aux;  /* correct top */
             lua_assert(L->ci->state & CI_SAVEDPC);
             (L->ci - 1)->u.l.savedpc = L->ci->u.l.savedpc;
+            (L->ci - 1)->u.l.tailcalls++;  /* one more call lost */
             (L->ci - 1)->state = CI_SAVEDPC;
             L->ci--;  /* remove new frame */
             L->base = L->ci->base;

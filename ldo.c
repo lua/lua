@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.212 2003/01/23 11:31:38 roberto Exp roberto $
+** $Id: ldo.c,v 1.213 2003/02/13 16:08:47 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -28,6 +28,7 @@
 #include "lundump.h"
 #include "lvm.h"
 #include "lzio.h"
+
 
 
 
@@ -161,7 +162,10 @@ void luaD_callhook (lua_State *L, int event, int line) {
     lua_Debug ar;
     ar.event = event;
     ar.currentline = line;
-    ar.i_ci = L->ci - L->base_ci;
+    if (event == LUA_HOOKTAILRET)
+      ar.i_ci = 0;  /* tail call; no debug information about it */
+    else
+      ar.i_ci = L->ci - L->base_ci;
     luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
     L->ci->top = L->top + LUA_MINSTACK;
     L->allowhook = 0;  /* cannot call hooks inside a hook */
@@ -232,6 +236,7 @@ StkId luaD_precall (lua_State *L, StkId func) {
     L->base = L->ci->base = restorestack(L, funcr) + 1;
     ci->top = L->base + p->maxstacksize;
     ci->u.l.savedpc = p->code;  /* starting point */
+    ci->u.l.tailcalls = 0;
     ci->state = CI_SAVEDPC;
     while (L->top < ci->top)
       setnilvalue(L->top++);
@@ -261,13 +266,21 @@ StkId luaD_precall (lua_State *L, StkId func) {
 }
 
 
+static StkId callrethooks (lua_State *L, StkId firstResult) {
+  ptrdiff_t fr = savestack(L, firstResult);  /* next call may change stack */
+  luaD_callhook(L, LUA_HOOKRET, -1);
+  if (!(L->ci->state & CI_C)) {  /* Lua function? */
+    while (L->ci->u.l.tailcalls--)  /* call hook for eventual tail calls */
+      luaD_callhook(L, LUA_HOOKTAILRET, -1);
+  }
+  return restorestack(L, fr);
+}
+
+
 void luaD_poscall (lua_State *L, int wanted, StkId firstResult) { 
   StkId res;
-  if (L->hookmask & LUA_MASKRET) {
-    ptrdiff_t fr = savestack(L, firstResult);  /* next call may change stack */
-    luaD_callhook(L, LUA_HOOKRET, -1);
-    firstResult = restorestack(L, fr);
-  }
+  if (L->hookmask & LUA_MASKRET)
+    firstResult = callrethooks(L, firstResult);
   res = L->base - 1;  /* res == final position of 1st result */
   L->ci--;
   L->base = L->ci->base;  /* restore base */

@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.76 2002/12/19 11:11:55 roberto Exp roberto $
+** $Id: ldblib.c,v 1.77 2002/12/20 10:26:33 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -137,7 +137,8 @@ static const char KEY_HOOK = 'h';
 
 
 static void hookf (lua_State *L, lua_Debug *ar) {
-  static const char *const hooknames[] = {"call", "return", "line", "count"};
+  static const char *const hooknames[] =
+    {"call", "return", "line", "count", "tail return"};
   lua_pushlightuserdata(L, (void *)&KEY_HOOK);
   lua_rawget(L, LUA_REGISTRYINDEX);
   if (lua_isfunction(L, -1)) {
@@ -259,8 +260,8 @@ static int errorfb (lua_State *L) {
       default: {
         if (*ar.what == 'm')  /* main? */
           lua_pushfstring(L, " in main chunk");
-        else if (*ar.what == 'C')  /* C function? */
-          lua_pushfstring(L, "%s", ar.short_src);
+        else if (*ar.what == 'C' || *ar.what == 't')
+          lua_pushliteral(L, " ?");  /* C function or tail call */
         else
           lua_pushfstring(L, " in function <%s:%d>",
                              ar.short_src, ar.linedefined);

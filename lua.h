@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.172 2003/02/18 16:13:15 roberto Exp roberto $
+** $Id: lua.h,v 1.173 2003/02/24 16:54:20 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -317,6 +317,7 @@ LUA_API int lua_pushupvalues (lua_State *L);
 #define LUA_HOOKRET	1
 #define LUA_HOOKLINE	2
 #define LUA_HOOKCOUNT	3
+#define LUA_HOOKTAILRET 4
 
 
 /*
@@ -351,7 +352,7 @@ struct lua_Debug {
   int event;
   const char *name;	/* (n) */
   const char *namewhat;	/* (n) `global', `local', `field', `method' */
-  const char *what;	/* (S) `Lua' function, `C' function, Lua `main' */
+  const char *what;	/* (S) `Lua', `C', `main', `tail' */
   const char *source;	/* (S) */
   int currentline;	/* (l) */
   int nups;		/* (u) number of upvalues */
