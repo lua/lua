@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.62 1997/03/21 18:52:37 roberto Exp $";
+char *rcs_table="$Id: table.c,v 2.62 1997/03/21 21:39:57 roberto Exp roberto $";
 
 #include "mem.h"
 #include "opcode.h"
@@ -128,7 +128,8 @@ static char *lua_travsymbol (int (*fn)(Object *))
 */
 int lua_markobject (Object *o)
 {/* if already marked, does not change mark value */
- if (ttype(o) == LUA_T_STRING && !tsvalue(o)->marked)
+ if (ttype(o) == LUA_T_USERDATA ||
+     (ttype(o) == LUA_T_STRING && !tsvalue(o)->marked))
    tsvalue(o)->marked = 1;
  else if (ttype(o) == LUA_T_ARRAY)
    lua_hashmark (avalue(o));
