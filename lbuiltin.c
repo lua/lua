@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.56 1999/03/04 21:17:26 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.57 1999/05/24 17:53:49 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -470,10 +470,10 @@ static void luaB_tinsert (void) {
     v = luaL_nonnullarg(2);
     pos = n+1;
   }
-  luaV_setn(a, n+1);  /* increment field "n" */
+  luaV_setn(a, n+1);  /* a.n = n+1 */
   for ( ;n>=pos; n--)
-    luaH_move(a, n, n+1);
-  luaH_setint(a, pos, luaA_Address(v));
+    luaH_move(a, n, n+1);  /* a[n+1] = a[n] */
+  luaH_setint(a, pos, luaA_Address(v));  /* a[pos] = v */
 }
 
 
@@ -482,10 +482,11 @@ static void luaB_tremove (void) {
   int n = (int)getnarg(a);
   int pos = luaL_opt_int(2, n);
   if (n <= 0) return;  /* table is "empty" */
-  luaA_pushobject(luaH_getint(a, pos));  /* push result */
-  luaV_setn(a, n-1);  /* decrement field "n" */
+  luaA_pushobject(luaH_getint(a, pos));  /* result = a[pos] */
   for ( ;pos<n; pos++)
-    luaH_move(a, pos+1, pos);
+    luaH_move(a, pos+1, pos);  /* a[pos] = a[pos+1] */
+  luaV_setn(a, n-1);  /* a.n = n-1 */
+  luaH_setint(a, n, &luaO_nilobject);  /* a[n] = nil */
 }
 
 

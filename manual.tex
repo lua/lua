@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.31 1999/05/05 19:21:57 roberto Exp roberto $
+% $Id: manual.tex,v 1.32 1999/05/11 20:46:28 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -41,7 +41,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{{\small \tt\$Date: 1999/05/05 19:21:57 $ $}}
+\date{{\small \tt\$Date: 1999/05/11 20:46:28 $ $}}
 
 \maketitle
 
@@ -2281,11 +2281,12 @@ except that the table accesses are all raw (that is, without tag methods):
         pos = pos or n
         local value = t[pos]
         if n<=0 then return end
-        t.n = n-1
         while pos < n do
           t[pos] = t[pos+1]
           pos = pos+1
         end
+        t[n] = nil
+        t.n = n-1
         return value
       end
 \end{verbatim}
