@@ -3,7 +3,7 @@
 ** load bytecodes from files
 */
 
-char *rcs_undump="$Id: undump.c,v 1.7 1996/03/01 03:43:50 lhf Exp lhf $";
+char* rcs_undump="$Id: undump.c,v 1.8 1996/03/06 01:41:18 lhf Exp lhf $";
 
 #include <stdio.h>
 #include <string.h>
@@ -12,23 +12,23 @@ char *rcs_undump="$Id: undump.c,v 1.7 1996/03/01 03:43:50 lhf Exp lhf $";
 static int swapword=0;
 static int swapfloat=0;
 
-static void warn(char *s)			/* TODO: remove */
+static void warn(char* s)			/* TODO: remove */
 {
  fprintf(stderr,"undump: %s\n",s);
 }
 
-static void panic(char *s)			/* TODO: remove */
+static void panic(char* s)			/* TODO: remove */
 {
  warn(s);
  exit(1);
 }
 
-static void Unthread(Byte *code, int i, int v)
+static void Unthread(Byte* code, int i, int v)
 {
  while (i!=0)
  {
   CodeWord c;
-  Byte *p=code+i;
+  Byte* p=code+i;
   get_word(c,p);
   i=c.w;
   c.w=v;
@@ -37,38 +37,39 @@ static void Unthread(Byte *code, int i, int v)
  }
 }
 
-static int LoadWord(FILE *D)
+static int LoadWord(FILE* D)
 {
  Word w;
  fread(&w,sizeof(w),1,D);
  if (swapword)
  {
-  Byte *p=&w;
+  Byte* p=&w;
   Byte t;
   t=p[0]; p[0]=p[1]; p[1]=t;
  }
  return w;
 }
 
-static char* LoadBlock(int size, FILE *D)
+static char* LoadBlock(int size, FILE* D)
 {
- char *b=luaI_malloc(size);
+ char* b=luaI_malloc(size);
  fread(b,size,1,D);
  return b;
 }
 
-static char* LoadString(FILE *D)
+static char* LoadString(FILE* D)
 {
  return LoadBlock(LoadWord(D),D);
 }
 
-static TFunc *Main=NULL;
-static TFunc *lastF=NULL;
+static TFunc* Main=NULL;
+static TFunc* lastF=NULL;
 
-static void LoadFunction(FILE *D)
+static void LoadFunction(FILE* D)
 {
- TFunc *tf=new(TFunc);
+ TFunc* tf=new(TFunc);
  tf->next=NULL;
+ tf->locvars=NULL;
  tf->size=LoadWord(D);				/* TODO: Long? */
  tf->lineDefined=LoadWord(D);
  if (IsMain(tf))				/* new main */
@@ -79,7 +80,7 @@ static void LoadFunction(FILE *D)
  else						/* fix PUSHFUNCTION */
  {
   CodeCode c;
-  Byte *p;
+  Byte* p;
   tf->marked=LoadWord(D);
   tf->fileName=Main->fileName;
   p=Main->code+tf->marked;
@@ -98,29 +99,16 @@ static void LoadFunction(FILE *D)
   if (c==ID_VAR)				/* global var */
   {
    int i=LoadWord(D);
-   char *s=LoadString(D);
+   char* s=LoadString(D);
    int v=luaI_findsymbolbyname(s);		/* TODO: free s? */
    Unthread(tf->code,i,v);
   }
   else if (c==ID_STR)				/* constant string */
   {
    int i=LoadWord(D);
-   char *s=LoadString(D);
+   char* s=LoadString(D);
    int v=luaI_findconstantbyname(s);		/* TODO: free s? */
    Unthread(tf->code,i,v);
-  }
-  else if (c==ID_LOC)				/* local vars */
-  {
-   int n=LoadWord(D);
-   LocVar *v;
-   if (n==0) continue;
-   tf->locvars=v=newvector(n,LocVar);
-   while (n--)
-   {
-    LocLoc(v)=LoadWord(D);
-    LoadString(D);				/* TODO: how to save it? */
-    ++v;
-   }
   }
   else
   {
@@ -130,15 +118,15 @@ static void LoadFunction(FILE *D)
  }
 }
 
-static void LoadSignature(FILE *D)
+static void LoadSignature(FILE* D)
 {
- char *s=SIGNATURE;
+ char* s=SIGNATURE;
  while (*s!=0 && getc(D)==*s)
   ++s;
  if (*s!=0) panic("bad signature");
 }
 
-static void LoadHeader(FILE *D)			/* TODO: error handling */
+static void LoadHeader(FILE* D)			/* TODO: error handling */
 {
  Word w,tw=TEST_WORD;
  float f,tf=TEST_FLOAT;
@@ -158,7 +146,7 @@ static void LoadHeader(FILE *D)			/* TODO: error handling */
  }
 }
 
-static void LoadChunk(FILE *D)
+static void LoadChunk(FILE* D)
 {
  LoadHeader(D);
  while (1)
@@ -168,14 +156,14 @@ static void LoadChunk(FILE *D)
  }
 #if 1
  {						/* TODO: run Main? */
-  TFunc *tf;
+  TFunc* tf;
   for (tf=Main; tf!=NULL; tf=tf->next)
    PrintFunction(tf);
  }
 #endif
 }
 
-void luaI_undump(FILE *D)
+void luaI_undump(FILE* D)
 {
  while (1)
  {
@@ -192,7 +180,7 @@ void luaI_undump(FILE *D)
 int main(int argc, char* argv[])
 {
  char* fn=(argc>1)? argv[1] : "luac.out";
- FILE *f=freopen(fn,"rb",stdin);
+ FILE* f=freopen(fn,"rb",stdin);
  if (f==NULL)
  {
   fprintf(stderr,"undump: cannot open ");
