@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.9 1997/12/11 17:00:21 roberto Exp roberto $
+** $Id: lua.c,v 1.10 1997/12/19 18:34:23 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -25,16 +25,20 @@
 #define isatty(x)       (x==0)  /* assume stdin is a tty */
 #endif
 
-/* command line options:
-** -v      print version information (banner).
-** -d      debug on
-** -e      dostring on next arg
-** a=b     sets global 'a' with string 'b'
-** -q      interactive mode without prompt
-** -i      interactive mode with prompt
-** -       executes stdin as a file
-** name    dofile "name"
-*/
+
+static void print_message (void)
+{
+  fprintf(stderr,
+"Lua: command line options:\n"
+"  -v       print version information\n"
+"  -d       turn debug on\n"
+"  -e stat  dostring `stat'\n"
+"  -q       interactive mode without prompt\n"
+"  -i       interactive mode with prompt\n"
+"  -        executes stdin as a file\n"
+"  a=b      sets global `a' with string `b'\n"
+"  name     dofile `name'\n\n");
+}
 
 
 static void assign (char *arg)
@@ -104,22 +108,33 @@ int main (int argc, char *argv[])
       lua_dofile(NULL);  /* executes stdin as a file */
   }
   else for (i=1; i<argc; i++) {
-    if (strcmp(argv[i], "-") == 0)
-      lua_dofile(NULL);  /* executes stdin as a file */
-    else if (strcmp(argv[i], "-i") == 0)
-      manual_input(1);
-    else if (strcmp(argv[i], "-q") == 0)
-      manual_input(0);
-    else if (strcmp(argv[i], "-d") == 0)
-      lua_debug = 1;
-    else if (strcmp(argv[i], "-v") == 0)
-      printf("%s  %s\n(written by %s)\n\n",
-             LUA_VERSION, LUA_COPYRIGHT, LUA_AUTHORS);
-    else if (strcmp(argv[i], "-e") == 0) {
-      i++;
-      if (lua_dostring(argv[i]) != 0) {
-        fprintf(stderr, "lua: error running argument `%s'\n", argv[i]);
-        return 1;
+    if (argv[i][0] == '-') {  /* option? */
+      switch (argv[i][1]) {
+        case 0:
+          lua_dofile(NULL);  /* executes stdin as a file */
+          break;
+        case 'i':
+          manual_input(1);
+          break;
+        case 'q':
+          manual_input(0);
+          break;
+        case 'd':
+          lua_debug = 1;
+          break;
+        case 'v':
+          printf("%s  %s\n(written by %s)\n\n",
+                 LUA_VERSION, LUA_COPYRIGHT, LUA_AUTHORS);
+          break;
+        case 'e':
+          i++;
+          if (lua_dostring(argv[i]) != 0) {
+            fprintf(stderr, "lua: error running argument `%s'\n", argv[i]);
+            return 1;
+          }
+          break;
+        default:
+          print_message();
       }
     }
     else if (strchr(argv[i], '='))
