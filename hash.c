@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.3 1994/08/05 19:25:09 celes Exp celes $";
+char *rcs_hash="$Id: hash.c,v 2.4 1994/08/09 11:24:45 celes Exp celes $";
 
 #include <string.h>
 #include <stdlib.h>
@@ -95,7 +95,6 @@ static int present (Hash *t, Object *ref)
  if (h < 0) return h;
  while (tag(ref(node(t, h))) != T_NIL)
  {
-  NCOLISSIONS++;
   if (tag(ref) == T_NUMBER && tag(ref(node(t, h))) == T_NUMBER && 
       nvalue(ref) == nvalue(ref(node(t, h)))
      ) return h;
@@ -260,16 +259,30 @@ static void rehash (Hash *t)
 }
 
 /*
-** If the hash node is present, return its pointer, otherwise return a
-** static nil object
+** If the hash node is present, return its pointer, otherwise search
+** the node at parent table, recursively, if there is parent.
+** If no parent and the node is not present, return a static nil object.
 */
 Object *lua_hashget (Hash *t, Object *ref)
 {
  static Object nil_obj = {T_NIL, {NULL}};
- int h = present(t, ref);
- if (h < 0) return NULL; 
- if (tag(ref(node(t, h))) == T_NIL) return &nil_obj;
- else                               return val(node(t, h));
+ Object parent;
+ int count = 1000; 
+ tag(&parent) = T_STRING;
+ svalue(&parent) = "parent";
+ do
+ {
+  int h = present(t, ref);
+  if (h < 0) return NULL; 
+  if (tag(ref(node(t, h))) != T_NIL) return val(node(t, h));
+  
+  h = present(t, &parent); /* assert(p >= 0); */
+  t = tag(ref(node(t, h))) != T_NIL && tag(val(node(t, h))) == T_ARRAY ?
+      avalue(val(node(t, h))) : NULL;
+ } while (t != NULL && --count);
+ if (count == 0) 
+   lua_reportbug ("hierarchy too deep (maybe there is an inheritance loop)");
+ return &nil_obj;
 }
 
 /*
@@ -351,4 +364,3 @@ void lua_next (void)
    lua_error ("error in function 'next': reference not found");
  }
 }
-
