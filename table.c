@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.68 1997/04/07 14:48:53 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.69 1997/05/14 18:38:29 roberto Exp roberto $";
 
 #include "luamem.h"
 #include "auxlib.h"
@@ -29,7 +29,7 @@ Word lua_nconstant = 0;
 static Long lua_maxconstant = 0;
 
 
-#define GARBAGE_BLOCK 50
+#define GARBAGE_BLOCK 100
 
 
 void luaI_initsymbol (void)
@@ -189,7 +189,7 @@ static void markall (void)
 }
 
 
-static void lua_collectgarbage (void)
+long lua_collectgarbage (long limit)
 {
   long recovered = 0;
   Hash *freetable;
@@ -199,21 +199,22 @@ static void lua_collectgarbage (void)
   freetable = luaI_hashcollector(&recovered);
   freestr = luaI_strcollector(&recovered);
   freefunc = luaI_funccollector(&recovered);
-  gc_block = 2*(gc_block-recovered);
   gc_nentity -= recovered;
+  gc_block = (limit == 0) ? 2*(gc_block-recovered) : gc_nentity+limit;
   luaI_hashcallIM(freetable);
   luaI_strcallIM(freestr);
   call_nilIM();
   luaI_hashfree(freetable);
   luaI_strfree(freestr);
   luaI_funcfree(freefunc);
+  return recovered;
 } 
 
 
 void lua_pack (void)
 {
-  if (gc_nentity++ >= gc_block)
-    lua_collectgarbage();
+  if (++gc_nentity >= gc_block)
+    lua_collectgarbage(0);
 } 
 
 

@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.57 1997/04/06 14:14:27 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.58 1997/04/15 17:32:47 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -310,6 +310,11 @@ static void rawsettable (void)
 }
 
 
+static void luaI_collectgarbage (void)
+{
+  lua_pushnumber(lua_collectgarbage(luaL_opt_number(1, 0)));
+}
+
 
 /*
 ** Internal functions
@@ -320,6 +325,7 @@ static struct {
 } int_funcs[] = {
   {"assert", luaI_assert},
   {"call", luaI_call},
+  {"callgc", luaI_collectgarbage},
   {"dofile", lua_internaldofile},
   {"dostring", lua_internaldostring},
   {"error", luaI_error},
