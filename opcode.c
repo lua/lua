@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 4.17 1997/07/03 22:06:06 roberto Exp $";
+char *rcs_opcode="$Id: opcode.c,v 4.17 1997/07/04 14:55:37 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -1492,7 +1492,7 @@ static StkId lua_execute (Byte *pc, StkId base)
 }
 
 
-#if COMPAT2_5
+#if LUA_COMPAT2_5
 /*
 ** API: set a function as a fallback
 */
