@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.20 1998/06/11 18:21:37 roberto Exp roberto $
+** $Id: lobject.h,v 1.21 1998/06/18 16:57:03 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -191,6 +191,9 @@ typedef struct Hash {
 
 
 extern char *luaO_typenames[];
+
+#define luaO_typename(o)        luaO_typenames[-ttype(o)]
+
 
 extern TObject luaO_nilobject;
 
