@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.57 1999/05/21 19:41:49 roberto Exp roberto $
+** $Id: lvm.c,v 1.58 1999/06/22 20:37:23 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -53,7 +53,7 @@ int luaV_tonumber (TObject *obj) {  /* LUA_NUMBER */
   if (ttype(obj) != LUA_T_STRING)
     return 1;
   else {
-    double t;
+    real t;
     char *e = svalue(obj);
     int sig = 1;
     while (isspace((unsigned char)*e)) e++;
@@ -65,9 +65,9 @@ int luaV_tonumber (TObject *obj) {  /* LUA_NUMBER */
     /* no digit before or after decimal point? */
     if (!isdigit((unsigned char)*e) && !isdigit((unsigned char)*(e+1)))
       return 2;
-    t = luaO_str2d(e);
+    t = (real)luaO_str2d(e);
     if (t<0) return 2;
-    nvalue(obj) = (real)t*sig;
+    nvalue(obj) = t*sig;
     ttype(obj) = LUA_T_NUMBER;
     return 0;
   }
@@ -186,23 +186,24 @@ void luaV_rawsettable (TObject *t) {
 
 void luaV_getglobal (TaggedString *ts) {
   /* WARNING: caller must assure stack space */
-  /* only userdata, tables and nil can have getglobal tag methods */
-  static char valid_getglobals[] = {1, 0, 0, 1, 0, 0, 1, 0};  /* ORDER LUA_T */
   TObject *value = &ts->u.s.globalval;
-  if (valid_getglobals[-ttype(value)]) {
-    TObject *im = luaT_getimbyObj(value, IM_GETGLOBAL);
-    if (ttype(im) != LUA_T_NIL) {  /* is there a tag method? */
-      struct Stack *S = &L->stack;
-      ttype(S->top) = LUA_T_STRING;
-      tsvalue(S->top) = ts;
-      S->top++;
-      *S->top++ = *value;
-      luaD_callTM(im, 2, 1);
-      return;
+  switch (ttype(value)) {
+    /* only userdata, tables and nil can have getglobal tag methods */
+    case LUA_T_USERDATA: case LUA_T_ARRAY: case LUA_T_NIL: {
+      TObject *im = luaT_getimbyObj(value, IM_GETGLOBAL);
+      if (ttype(im) != LUA_T_NIL) {  /* is there a tag method? */
+        struct Stack *S = &L->stack;
+        ttype(S->top) = LUA_T_STRING;
+        tsvalue(S->top) = ts;
+        S->top++;
+        *S->top++ = *value;
+        luaD_callTM(im, 2, 1);
+        return;
+      }
+      /* else no tag method: go through to default behavior */
     }
-    /* else no tag method: go through to default behavior */
+    default: *L->stack.top++ = *value;  /* default behavior */
   }
-  *L->stack.top++ = *value;  /* default behavior */
 }
 
 
