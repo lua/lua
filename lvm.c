@@ -53,12 +53,12 @@ const TObject *luaV_tonumber (const TObject *obj, TObject *n) {
 
 int luaV_tostring (lua_State *L, TObject *obj) {
   if (ttype(obj) != LUA_TNUMBER)
-    return 1;
+    return 0;
   else {
     char s[32];  /* 16 digits, sign, point and \0  (+ some extra...) */
     lua_number2str(s, nvalue(obj));  /* convert `s' to number */
     setsvalue(obj, luaS_new(L, s));
-    return 0;
+    return 1;
   }
 }
 
@@ -141,7 +141,7 @@ void luaV_gettable (lua_State *L, StkId t, TObject *key, StkId res) {
         return;
       }
     }
-    /* else will call the tag method */
+    /* else will try the tag method */
   } else {  /* not a table; try a `gettable' tag method */
     if (ttype(tm = luaT_gettmbyobj(L, t, TM_GETTABLE)) == LUA_TNIL) {
       luaG_typeerror(L, t, "index");
@@ -171,7 +171,7 @@ void luaV_settable (lua_State *L, StkId t, TObject *key, StkId val) {
       luaH_set(L, hvalue(t), key, val);  /* do a primitive set */
       return;
     }
-    /* else will call the tag method */
+    /* else will try the tag method */
   } else {  /* not a table; try a `settable' tag method */
     if (ttype(tm = luaT_gettmbyobj(L, t, TM_SETTABLE)) == LUA_TNIL) {
       luaG_typeerror(L, t, "index");
@@ -245,7 +245,7 @@ void luaV_strconc (lua_State *L, int total, int last) {
   do {
     StkId top = L->ci->base + last + 1;
     int n = 2;  /* number of elements handled in this pass (at least 2) */
-    if (tostring(L, top-2) || tostring(L, top-1)) {
+    if (!tostring(L, top-2) || !tostring(L, top-1)) {
       if (!call_binTM(L, top-2, top-1, top-2, TM_CONCAT))
         luaG_concaterror(L, top-2, top-1);
     } else if (tsvalue(top-1)->tsv.len > 0) {  /* if len=0, do nothing */
@@ -254,7 +254,7 @@ void luaV_strconc (lua_State *L, int total, int last) {
                   cast(lu_mem, tsvalue(top-2)->tsv.len);
       char *buffer;
       int i;
-      while (n < total && !tostring(L, top-n-1)) {  /* collect total length */
+      while (n < total && tostring(L, top-n-1)) {  /* collect total length */
         tl += tsvalue(top-n-1)->tsv.len;
         n++;
       }
@@ -278,8 +278,7 @@ static void powOp (lua_State *L, StkId ra, StkId rb, StkId rc) {
   const TObject *b = rb;
   const TObject *c = rc;
   TObject tempb, tempc;
-  if ((b = luaV_tonumber(b, &tempb)) != NULL &&
-      (c = luaV_tonumber(c, &tempc)) != NULL) {
+  if (tonumber(b, &tempb) && tonumber(c, &tempc)) {
     TObject f, o;
     setsvalue(&o, luaS_newliteral(L, "pow"));
     luaV_gettable(L, gt(L), &o, &f);
@@ -310,8 +309,7 @@ static void powOp (lua_State *L, StkId ra, StkId rb, StkId rc) {
 #define Arith(op, optm)	{ \
   const TObject *b = RB(i); const TObject *c = RKC(i);		\
   TObject tempb, tempc; \
-  if ((b = luaV_tonumber(b, &tempb)) != NULL && \
-      (c = luaV_tonumber(c, &tempc)) != NULL) { \
+  if (tonumber(b, &tempb) && tonumber(c, &tempc)) { \
     setnvalue(ra, nvalue(b) op nvalue(c));		\
   } else		\
     call_arith(L, RB(i), RKC(i), ra, optm); \
@@ -432,7 +430,7 @@ StkId luaV_execute (lua_State *L) {
       }
       case OP_UNM: {
         const TObject *rb = RB(i);
-        if ((rb=luaV_tonumber(rb, ra)) != NULL) {
+        if (tonumber(rb, ra)) {
           setnvalue(ra, -nvalue(rb));
         }
         else {

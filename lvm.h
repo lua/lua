@@ -13,7 +13,9 @@
 #include "ltm.h"
 
 
-#define tostring(L,o) ((ttype(o) != LUA_TSTRING) && (luaV_tostring(L, o) != 0))
+#define tostring(L,o) ((ttype(o) == LUA_TSTRING) || (luaV_tostring(L, o)))
+
+#define tonumber(o,n)	(((o) = luaV_tonumber(o,n)) != NULL)
 
 
 const TObject *luaV_tonumber (const TObject *obj, TObject *n);
