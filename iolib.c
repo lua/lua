@@ -122,9 +122,10 @@ static void io_read (void)
     }
     else {
       char *ep = item_end(p);  /* get what is next */
-      int m;
+      int m;  /* match result */
       if (c == NEED_OTHER) c = getc(lua_infile);
-      if ((m = singlematch(c, p)) != 0) {
+      m = (c == EOF) ? 0 : singlematch((char)c, p);
+      if (m) {
         if (!inskip) luaI_addchar(c);
         c = NEED_OTHER;
       }
