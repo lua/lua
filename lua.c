@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.67 2001/06/06 18:00:19 roberto Exp roberto $
+** $Id: lua.c,v 1.68 2001/06/11 14:57:17 roberto Exp $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -24,6 +24,10 @@ static int isatty (int x) { return x==0; }  /* assume stdin is a tty */
 #endif
 
 
+#ifndef LUA_PROGNAME
+#define LUA_PROGNAME	l_s("lua: ")
+#endif
+
 
 #ifndef PROMPT
 #define PROMPT		l_s("> ")
@@ -34,15 +38,6 @@ static int isatty (int x) { return x==0; }  /* assume stdin is a tty */
 #define LUA_USERINIT(L)		openstdlibs(L)
 #endif
 
-
-
-/*
-** global options
-*/
-struct Options {
-  int toclose;
-  int stacksize;
-};
 
 
 static lua_State *L = NULL;
@@ -80,19 +75,21 @@ static void laction (int i) {
 }
 
 
-static int ldo (int (*f)(lua_State *l, const l_char *), const l_char *name) {
+static int ldo (int (*f)(lua_State *l, const l_char *), const l_char *name,
+                int clear) {
   int res;
   handler h = lreset();
   int top = lua_gettop(L);
   res = f(L, name);  /* dostring | dofile */
-  lua_settop(L, top);  /* remove eventual results */
+  if (clear)
+    lua_settop(L, top);  /* remove eventual results */
   signal(SIGINT, h);  /* restore old action */
   /* Lua gives no message in such cases, so lua.c provides one */
   if (res == LUA_ERRMEM) {
-    fprintf(stderr, l_s("lua: memory allocation error\n"));
+    fprintf(stderr, LUA_PROGNAME l_s("memory allocation error\n"));
   }
   else if (res == LUA_ERRERR)
-    fprintf(stderr, l_s("lua: error in error message\n"));
+    fprintf(stderr, LUA_PROGNAME l_s("error in error message\n"));
   return res;
 }
 
@@ -151,10 +148,10 @@ static int l_getargs (lua_State *l) {
 
 
 static int file_input (const l_char *argv) {
-  int result = ldo(lua_dofile, argv);
+  int result = ldo(lua_dofile, argv, 1);
   if (result) {
     if (result == LUA_ERRFILE) {
-      fprintf(stderr, l_s("lua: cannot execute file "));
+      fprintf(stderr, LUA_PROGNAME l_s("cannot execute file "));
       perror(argv);
     }
     return EXIT_FAILURE;
@@ -187,6 +184,8 @@ static const l_char *get_prompt (int prompt) {
 static void manual_input (int version, int prompt) {
   if (version) print_version();
   for (;;) {
+    int firstline = 1;
+    int toprint = 0;
     fputs(get_prompt(prompt), stdout);  /* show prompt */
     for(;;) {
       l_char buffer[MAXINPUT];
@@ -194,6 +193,11 @@ static void manual_input (int version, int prompt) {
       if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
         printf(l_s("\n"));
         return;
+      }
+      if (firstline && buffer[0] == l_c('=')) {
+        buffer[0] = l_c(' ');
+        lua_pushstring(L, l_s("return "));
+        toprint = 1;
       }
       l = strlen(buffer);
       if (buffer[l-1] == l_c('\n') && buffer[l-2] == l_c('\\')) {
@@ -204,22 +208,29 @@ static void manual_input (int version, int prompt) {
         lua_pushlstring(L, buffer, l);
         break;
       }
+      firstline = 0;
     }
     lua_concat(L, lua_gettop(L));
-    ldo(lua_dostring, lua_tostring(L, -1));
-    lua_settop(L, 0);  /* remove eventual results */
+    ldo(lua_dostring, lua_tostring(L, 1), 0);
+    if (toprint) {
+      lua_remove(L, 1);  /* remove ran string */
+      lua_getglobal(L, l_s("print"));
+      lua_insert(L, 1);
+      lua_call(L, lua_gettop(L)-1, 0);
+    }
+    else
+      lua_settop(L, 0);  /* remove eventual results */
   }
 }
 
 
-static int handle_argv (l_char *argv[], struct Options *opt) {
-  if (opt->stacksize > 0) argv++;  /* skip option `-s' (if present) */
+static int handle_argv (l_char *argv[], int *toclose) {
   if (*argv == NULL) {  /* no more arguments? */
     if (isatty(0)) {
       manual_input(1, 1);
     }
     else
-      ldo(lua_dofile, NULL);  /* executes stdin as a file */
+      ldo(lua_dofile, NULL, 1);  /* executes stdin as a file */
   }
   else {  /* other arguments; loop over them */
     int i;
@@ -233,7 +244,7 @@ static int handle_argv (l_char *argv[], struct Options *opt) {
         }
         else switch (argv[i][1]) {  /* option */
           case 0: {
-            ldo(lua_dofile, NULL);  /* executes stdin as a file */
+            ldo(lua_dofile, NULL, 1);  /* executes stdin as a file */
             break;
           }
           case l_c('i'): {
@@ -245,7 +256,7 @@ static int handle_argv (l_char *argv[], struct Options *opt) {
             break;
           }
           case l_c('c'): {
-            opt->toclose = 1;
+            *toclose = 1;
             break;
           }
           case l_c('v'): {
@@ -258,8 +269,9 @@ static int handle_argv (l_char *argv[], struct Options *opt) {
               print_message();
               return EXIT_FAILURE;
             }
-            if (ldo(lua_dostring, argv[i]) != 0) {
-              fprintf(stderr, l_s("lua: error running argument `%.99s'\n"), argv[i]);
+            if (ldo(lua_dostring, argv[i], 1) != 0) {
+              fprintf(stderr, LUA_PROGNAME l_s("error running argument `%.99s'\n"),
+                      argv[i]);
               return EXIT_FAILURE;
             }
             break;
@@ -275,7 +287,9 @@ static int handle_argv (l_char *argv[], struct Options *opt) {
             return file_input(argv[i]);  /* stop scanning arguments */
           }
           case l_c('s'): {
-            fprintf(stderr, l_s("lua: stack size (`-s') must be the first option\n"));
+            if (i == 0) break;  /* option already handled */
+            fprintf(stderr,
+               LUA_PROGNAME l_s("stack size (`-s') must be the first option\n"));
             return EXIT_FAILURE;
           }
           default: {
@@ -289,17 +303,17 @@ static int handle_argv (l_char *argv[], struct Options *opt) {
 }
 
 
-static void getstacksize (int argc, l_char *argv[], struct Options *opt) {
+static int getstacksize (int argc, l_char *argv[]) {
+  int stacksize = 0;
   if (argc >= 2 && argv[1][0] == l_c('-') && argv[1][1] == l_c('s')) {
-    int stacksize = strtol(&argv[1][2], NULL, 10);
+    stacksize = strtol(&argv[1][2], NULL, 10);
     if (stacksize <= 0) {
-      fprintf(stderr, l_s("lua: invalid stack size ('%.20s')\n"), &argv[1][2]);
+      fprintf(stderr, LUA_PROGNAME l_s("invalid stack size ('%.20s')\n"),
+              &argv[1][2]);
       exit(EXIT_FAILURE);
     }
-    opt->stacksize = stacksize;
   }
-  else
-    opt->stacksize = 0;  /* no stack size */
+  return stacksize;
 }
 
 
@@ -320,15 +334,13 @@ static void openstdlibs (lua_State *l) {
 
 
 int main (int argc, l_char *argv[]) {
-  struct Options opt;
   int status;
-  opt.toclose = 0;
-  getstacksize(argc, argv, &opt);  /* handle option `-s' */
-  L = lua_open(opt.stacksize);  /* create state */
+  int toclose = 0;
+  L = lua_open(getstacksize(argc, argv));  /* create state */
   LUA_USERINIT(L);  /* open libraries */
   register_getargs(argv);  /* create `getargs' function */
-  status = handle_argv(argv+1, &opt);
-  if (opt.toclose)
+  status = handle_argv(argv+1, &toclose);
+  if (toclose)
     lua_close(L);
   return status;
 }
