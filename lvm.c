@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.114 2000/06/08 17:48:31 roberto Exp roberto $
+** $Id: lvm.c,v 1.115 2000/06/12 13:52:05 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -180,8 +180,10 @@ void luaV_setglobal (lua_State *L, TString *s, StkId top) {
   const TObject *oldvalue = luaH_getstr(L->gt, s);
   const TObject *im = luaT_getimbyObj(L, oldvalue, IM_SETGLOBAL);
   if (ttype(im) == TAG_NIL) {  /* is there a tag method? */
-    if (oldvalue != &luaO_nilobject)
+    if (oldvalue != &luaO_nilobject) {
+      /* cast to remove `const' is OK, because `oldvalue' != luaO_nilobject */
       *(TObject *)oldvalue = *(top-1);
+    }
     else {
       TObject key;
       ttype(&key) = TAG_STRING;
