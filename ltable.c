@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.10 2004/11/24 19:20:21 roberto Exp roberto $
+** $Id: ltable.c,v 2.11 2004/12/03 20:50:25 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -122,7 +122,7 @@ static int arrayindex (const TValue *key) {
 /*
 ** returns the index of a `key' for table traversals. First goes all
 ** elements in the array part, then elements in the hash part. The
-** beginning and end of a traversal are signalled by -1.
+** beginning of a traversal is signalled by -1.
 */
 static int findindex (lua_State *L, Table *t, StkId key) {
   int i;
@@ -131,12 +131,20 @@ static int findindex (lua_State *L, Table *t, StkId key) {
   if (0 < i && i <= t->sizearray)  /* is `key' inside array part? */
     return i-1;  /* yes; that's the index (corrected to C) */
   else {
-    const TValue *v = luaH_get(t, key);
-    if (v == &luaO_nilobject)
-      luaG_runerror(L, "invalid key for `next'");
-    i = cast(int, (cast(const lu_byte *, v) -
-                   cast(const lu_byte *, gval(gnode(t, 0)))) / sizeof(Node));
-    return i + t->sizearray;  /* hash elements are numbered after array ones */
+    Node *n = luaH_mainposition(t, key);
+    do {  /* check whether `key' is somewhere in the chain */
+      /* key may be dead already, but it is ok to use it in `next' */
+      if (luaO_rawequalObj(key2tval(n), key) ||
+            (ttype(gkey(n)) == LUA_TDEADKEY && iscollectable(key) &&
+             gcvalue(gkey(n)) == gcvalue(key))) {
+        i = n - gnode(t, 0);  /* key index in hash table */
+        /* hash elements are numbered after array ones */
+        return i + t->sizearray;
+      }
+      else n = gnext(n);
+    } while (n);
+    luaG_runerror(L, "invalid key for `next'");  /* key not found */
+    return 0;  /* to avoid warnings */
   }
 }
 

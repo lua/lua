@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.6 2004/10/06 18:34:16 roberto Exp $
+** $Id: lobject.h,v 2.7 2004/11/01 15:06:50 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -25,6 +25,7 @@
 */
 #define LUA_TPROTO	(NUM_TAGS+1)
 #define LUA_TUPVAL	(NUM_TAGS+2)
+#define LUA_TDEADKEY	(NUM_TAGS+3)
 
 
 /*
