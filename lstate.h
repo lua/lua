@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.1 1997/11/19 17:30:36 roberto Exp roberto $
+** $Id: lstate.h,v 1.2 1997/11/21 19:00:46 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -47,7 +47,6 @@ struct ref {
 typedef struct LState {
   struct Stack stack;  /* Lua stack */
   struct C_Lua_Stack Cstack;  /* C2lua struct */
-  int stacklimit;  /* limit for stack overflow */
   void *errorJmp;  /* current error recover point */
   TObject errorim;  /* error tag method */
   struct C_Lua_Stack Cblocks[MAX_C_BLOCKS];

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.9 1997/11/19 17:29:23 roberto Exp roberto $
+** $Id: ldo.c,v 1.10 1997/11/21 19:00:46 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -58,7 +58,6 @@ static void initCfunc (TObject *o, lua_CFunction f)
 
 void luaD_init (void)
 {
-  L->stacklimit = STACK_LIMIT;
   L->stack.stack = luaM_newvector(INIT_STACK_SIZE, TObject);
   L->stack.top = L->stack.stack;
   L->stack.last = L->stack.stack+(INIT_STACK_SIZE-1);
@@ -71,16 +70,13 @@ void luaD_checkstack (int n)
   if (L->stack.last-L->stack.top <= n) {
     StkId top = L->stack.top-L->stack.stack;
     int stacksize = (L->stack.last-L->stack.stack)+1+STACK_EXTRA+n;
-    L->stack.stack = luaM_reallocvector(L->stack.stack, stacksize,TObject);
+    L->stack.stack = luaM_reallocvector(L->stack.stack, stacksize, TObject);
     L->stack.last = L->stack.stack+(stacksize-1);
     L->stack.top = L->stack.stack + top;
-    if (stacksize >= L->stacklimit) {
-      /* extra space to run error handler */
-      L->stacklimit = stacksize+STACK_EXTRA;
-      if (lua_stackedfunction(100) == LUA_NOOBJECT) {
-        /* less than 100 functions on the stack: cannot be recursive loop */
+    if (stacksize >= STACK_LIMIT) {
+      if (lua_stackedfunction(100) == LUA_NOOBJECT)
+        /* doesn't look like a recursive loop */
         lua_error("Lua2C - C2Lua overflow");
-      }
       else
         lua_error(stackEM);
     }
