@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.149 2004/06/21 20:05:29 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.150 2004/06/29 16:58:17 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -459,20 +459,8 @@ static int luaB_newproxy (lua_State *L) {
 */
 
 
-static const char *getpath (lua_State *L) {
-  const char *path;
-  lua_getglobal(L, LUA_PATH);  /* try global variable */
-  path = lua_tostring(L, -1);
-  if (path) return path;
-  path = getenv(LUA_PATH);  /* else try environment variable */
-  if (path) return path;
-  return LUA_PATH_DEFAULT;  /* else use default */
-}
-
-
 static int luaB_require (lua_State *L) {
   const char *name = luaL_checkstring(L, 1);
-  const char *path = getpath(L);
   const char *fname;
   int loaded;
   lua_getglobal(L, REQTAB);
@@ -485,7 +473,7 @@ static int luaB_require (lua_State *L) {
   /* else must load it; first mark it as loaded */
   lua_pushboolean(L, 1);
   lua_setfield(L, loaded, name);  /* _LOADED[name] = true */
-  fname = luaL_searchpath(L, name, path);
+  fname = luaL_searchpath(L, name, NULL);
   if (fname == NULL || luaL_loadfile(L, fname) != 0)
     return luaL_error(L, "error loading package `%s' (%s)", name,
                          lua_tostring(L, -1));

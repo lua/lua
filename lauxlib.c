@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.117 2004/06/21 20:05:29 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.118 2004/06/29 16:57:56 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -341,6 +341,15 @@ LUALIB_API int luaL_getn (lua_State *L, int t) {
 /* }====================================================== */
 
 
+static const char *getpath (lua_State *L) {
+  const char *path;
+  lua_getglobal(L, LUA_PATH);  /* try global variable */
+  path = lua_tostring(L, -1);
+  if (path) return path;
+  path = getenv(LUA_PATH);  /* else try environment variable */
+  if (path) return path;
+  return LUA_PATH_DEFAULT;  /* else use default */
+}
 
 
 static const char *pushnexttemplate (lua_State *L, const char *path) {
@@ -354,8 +363,8 @@ static const char *pushnexttemplate (lua_State *L, const char *path) {
 }
 
 
-static const char *gsub (lua_State *L, const char *s, const char *p,
-                                       const char *r) {
+static const char *luaL_gsub (lua_State *L, const char *s,
+                              const char *p, const char *r) {
   const char *wild;
   int l = strlen(p);
   luaL_Buffer b;
@@ -363,7 +372,7 @@ static const char *gsub (lua_State *L, const char *s, const char *p,
   while ((wild = strstr(s, p)) != NULL) {
     luaL_addlstring(&b, s, wild - s);  /* push prefix */
     luaL_addstring(&b, r);  /* push replacement in place of pattern */
-    s = wild + l;  /* continue after p */
+    s = wild + l;  /* continue after `p' */
   }
   luaL_addstring(&b, s);  /* push last suffix (`n' already includes this) */
   luaL_pushresult(&b);
@@ -375,17 +384,20 @@ LUALIB_API const char *luaL_searchpath (lua_State *L, const char *name,
                                                       const char *path) {
   FILE *f;
   const char *p = path;
+  if (p == NULL) p = getpath(L);
+  else lua_pushnil(L);  /* to balance item pushed by `getpath' */
   for (;;) {
     const char *fname;
     if ((p = pushnexttemplate(L, p)) == NULL) {
       lua_pushfstring(L, "no readable `%s' in path `%s'", name, path);
       return NULL;
     }
-    fname = gsub(L, lua_tostring(L, -1), LUA_PATH_MARK, name);
+    fname = luaL_gsub(L, lua_tostring(L, -1), LUA_PATH_MARK, name);
     lua_remove(L, -2);  /* remove path template */
     f = fopen(fname, "r");  /* try to read it */
     if (f) {
       fclose(f);
+      lua_remove(L, -2);  /* remove path */
       return fname;
     }
     lua_pop(L, 1);  /* remove file name */ 
