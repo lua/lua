@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.101 2002/05/10 17:02:32 roberto Exp roberto $
+** $Id: lcode.c,v 1.102 2002/05/10 19:22:11 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -75,12 +75,6 @@ int luaK_getlabel (FuncState *fs) {
 }
 
 
-void luaK_dischargejpc (FuncState *fs) {
-  luaK_patchlist(fs, fs->jpc, fs->pc);  /* discharge old list `jpc' */
-  fs->jpc = NO_JUMP;
-}
-
-
 static int luaK_getjump (FuncState *fs, int pc) {
   int offset = GETARG_sBx(fs->f->code[pc]);
   if (offset == NO_JUMP)  /* point to itself represents end of list */
@@ -144,9 +138,19 @@ static void luaK_patchlistaux (FuncState *fs, int list,
 }
 
 
+void luaK_dischargejpc (FuncState *fs) {
+  luaK_patchlistaux(fs, fs->jpc, fs->pc, NO_REG, fs->pc, NO_REG, fs->pc);
+  fs->jpc = NO_JUMP;
+}
+
+
 void luaK_patchlist (FuncState *fs, int list, int target) {
-  lua_assert(target <= fs->pc);
-  luaK_patchlistaux(fs, list, target, NO_REG, target, NO_REG, target);
+  if (target == fs->pc)
+    luaK_patchtohere(fs, list);
+  else {
+    lua_assert(target < fs->pc);
+    luaK_patchlistaux(fs, list, target, NO_REG, target, NO_REG, target);
+  }
 }
 
 
@@ -342,12 +346,12 @@ static void luaK_exp2reg (FuncState *fs, expdesc *e, int reg) {
     int p_f = NO_JUMP;  /* position of an eventual LOAD false */
     int p_t = NO_JUMP;  /* position of an eventual LOAD true */
     if (need_value(fs, e->t, 1) || need_value(fs, e->f, 0)) {
-      if (e->k != VJMP) {
-        luaK_getlabel(fs);  /* this instruction may be a jump target */
-        luaK_codeAsBx(fs, OP_JMP, 0, 2);  /* to jump over both pushes */
-      }
+      int fj = NO_JUMP;  /* first jump (over LOAD ops.) */
+      if (e->k != VJMP)
+        fj = luaK_jump(fs);
       p_f = code_label(fs, reg, 0, 1);
       p_t = code_label(fs, reg, 1, 0);
+      luaK_patchtohere(fs, fj);
     }
     final = luaK_getlabel(fs);
     luaK_patchlistaux(fs, e->f, p_f, NO_REG, final, reg, p_f);
@@ -721,6 +725,11 @@ void luaK_posfix (FuncState *fs, BinOpr op, expdesc *e1, expdesc *e2) {
       codebinop(fs, e1, op, o1, o2, ic);
     }
   }
+}
+
+
+void luaK_fixline (FuncState *fs, int line) {
+  fs->f->lineinfo[fs->pc - 1] = line;
 }
 
 
