@@ -270,3 +270,10 @@ Tue Jul 10 16:59:18 EST 2001
 >> error message for `%a' gave wrong line number
 (by Leonardo Constantino; since 4.0)
 
+** lbaselib.c
+Fri Dec 21 15:21:05 EDT 2001
+>> seg. fault when rawget/rawset get extra arguments
+(by Eric Mauger; since 4.0b)
+
+
+

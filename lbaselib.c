@@ -185,7 +185,7 @@ static int luaB_globals (lua_State *L) {
 static int luaB_rawget (lua_State *L) {
   luaL_check_type(L, 1, LUA_TTABLE);
   luaL_check_any(L, 2);
-  lua_rawget(L, -2);
+  lua_rawget(L, 1);
   return 1;
 }
 
@@ -193,7 +193,7 @@ static int luaB_rawset (lua_State *L) {
   luaL_check_type(L, 1, LUA_TTABLE);
   luaL_check_any(L, 2);
   luaL_check_any(L, 3);
-  lua_rawset(L, -3);
+  lua_rawset(L, 1);
   return 1;
 }
 
@@ -449,7 +449,7 @@ static int luaB_foreachi (lua_State *L) {
 static int luaB_foreach (lua_State *L) {
   luaL_check_type(L, 1, LUA_TTABLE);
   luaL_check_type(L, 2, LUA_TFUNCTION);
-  lua_pushnil(L);  /* first index */
+  lua_pushnil(L);  /* first key */
   for (;;) {
     if (lua_next(L, 1) == 0)
       return 0;
