@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.25 1995/10/26 17:02:50 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.26 1996/01/22 18:39:37 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,7 +44,7 @@ static Long    varbuffer[MAXVAR];    /* variables in an assignment list;
 static int     nvarbuffer=0;	     /* number of variables at a list */
 
 #define MAXLOCALS 32
-static Word    localvar[MAXLOCALS];  /* store local variable names */
+static TreeNode *localvar[MAXLOCALS];  /* store local variable names */
 static int     nlocalvar=0;	     /* number of local variables */
 
 #define MAXFIELDS FIELDS_PER_FLUSH*2
@@ -146,7 +146,7 @@ static void flush_list (int m, int n)
   code_byte(n);
 }
 
-static void add_localvar (Word name)
+static void add_localvar (TreeNode *name)
 {
  if (nlocalvar < MAXLOCALS)
   localvar[nlocalvar++] = name;
@@ -154,7 +154,7 @@ static void add_localvar (Word name)
   lua_error ("too many local variables");
 }
 
-static void store_localvar (Word name, int n)
+static void store_localvar (TreeNode *name, int n)
 {
  if (nlocalvar+n < MAXLOCALS)
   localvar[nlocalvar+n] = name;
@@ -197,7 +197,7 @@ static void code_number (float f)
 /*
 ** Search a local name and if find return its index. If do not find return -1
 */
-static int lua_localname (Word n)
+static int lua_localname (TreeNode *n)
 {
  int i;
  for (i=nlocalvar-1; i >= 0; i--)
@@ -481,7 +481,7 @@ funcname	: var { $$ =$1; init_func(); }
 	  code_word(luaI_findconstant($3));
 	  $$ = 0;  /* indexed variable */
 	  init_func();
-	  add_localvar(luaI_findsymbolbyname("self"));
+	  add_localvar(lua_constcreate("self"));
 	}
 		;
 
@@ -672,14 +672,8 @@ parlist  :	/* empty */ { lua_codeadjust(0); $$ = lua_linenumber; }
 	  |	parlist1    { lua_codeadjust(0); $$ = lua_linenumber; }
 	  ;
 		
-parlist1 :	NAME		  
-		{
-		 add_localvar(luaI_findsymbol($1));
-		}
-	  |	parlist1 ',' NAME 
-		{
-		 add_localvar(luaI_findsymbol($3));
-		}
+parlist1 :	NAME		  { add_localvar($1); }
+	  |	parlist1 ',' NAME { add_localvar($3); }
 	  ;
 		
 fieldlist  : lfieldlist
@@ -759,10 +753,9 @@ var	  :	singlevar { $$ = $1; }
 		
 singlevar :	NAME
 	  {
-	   Word s = luaI_findsymbol($1);
-	   int local = lua_localname (s);
+	   int local = lua_localname($1);
 	   if (local == -1)	/* global var */
-	    $$ = s + 1;		/* return positive value */
+	    $$ = luaI_findsymbol($1)+1;  /* return positive value */
            else
 	    $$ = -(local+1);		/* return negative value */
 	  }
@@ -771,10 +764,10 @@ singlevar :	NAME
 varexp	: var { lua_pushvar($1); }
 	;
 	  
-localdeclist  : NAME {store_localvar(luaI_findsymbol($1), 0); $$ = 1;}
+localdeclist  : NAME {store_localvar($1, 0); $$ = 1;}
      	  | localdeclist ',' NAME 
 	    {
-	     store_localvar(luaI_findsymbol($3), $1);
+	     store_localvar($3, $1);
 	     $$ = $1+1;
 	    }
 	  ;
