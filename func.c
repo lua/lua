@@ -43,7 +43,7 @@ void luaI_insertfunction (TFunc *f)
 /*
 ** Free function
 */
-static void freefunc (TFunc *f)
+void luaI_freefunc (TFunc *f)
 {
   luaI_free (f->code);
   luaI_free (f->locvars);
@@ -68,7 +68,7 @@ Long luaI_funccollector (void)
         function_root = next;
       else
         prev->next = next;
-      freefunc (curr);
+      luaI_freefunc (curr);
       ++counter;
     }
     else

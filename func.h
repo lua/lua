@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: func.h,v 1.7 1996/03/08 12:04:04 roberto Exp roberto $
 */
 
 #ifndef func_h
@@ -7,6 +7,7 @@
 
 #include "types.h"
 #include "lua.h"
+#include "tree.h"
 
 typedef struct LocVar
 {
@@ -33,6 +34,7 @@ Long luaI_funccollector (void);
 void luaI_insertfunction (TFunc *f);
 
 void luaI_initTFunc (TFunc *f);
+void luaI_freefunc (TFunc *f);
 
 void luaI_registerlocalvar (TaggedString *varname, int line);
 void luaI_unregisterlocalvar (int line);
