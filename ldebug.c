@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.3 2004/03/23 13:10:16 roberto Exp roberto $
+** $Id: ldebug.c,v 2.4 2004/04/30 20:13:38 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -221,8 +221,8 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
   }
   else if (ar->i_ci != 0) {  /* no tail call? */
     CallInfo *ci = L->base_ci + ar->i_ci;
-    lua_assert(ttisfunction(ci->base - 1));
-    status = auxgetinfo(L, what, ar, ci->base - 1, ci);
+    lua_assert(ttisfunction(ci->func));
+    status = auxgetinfo(L, what, ar, ci->func, ci);
   }
   else
     info_tailcall(L, ar);
@@ -403,6 +403,13 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
           OpCode op1 = GET_OPCODE(pt->code[pc+nup]);
           check(op1 == OP_GETUPVAL || op1 == OP_MOVE);
         }
+        break;
+      }
+      case OP_VARARG: {
+        check(pt->is_vararg & NEWSTYLEVARARG);
+        b--;
+        if (b == LUA_MULTRET) check(checkopenop(pt, pc));
+        checkreg(pt, a+b-1);
         break;
       }
       default: break;

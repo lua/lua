@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.107 2004/04/30 20:13:38 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.108 2004/05/17 12:34:00 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -79,7 +79,7 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 #define GET_OPCODE(i)	(cast(OpCode, (i)&MASK1(SIZE_OP,0)))
 #define SET_OPCODE(i,o)	((i) = (((i)&MASK0(SIZE_OP,0)) | cast(Instruction, o)))
 
-#define GETARG_A(i)	(cast(int, (i)>>POS_A) & MASK1(SIZE_A,0))
+#define GETARG_A(i)	(cast(int, ((i)>>POS_A) & MASK1(SIZE_A,0)))
 #define SETARG_A(i,u)	((i) = (((i)&MASK0(SIZE_A,POS_A)) | \
 		((cast(Instruction, u)<<POS_A)&MASK1(SIZE_A,POS_A))))
 
@@ -183,25 +183,30 @@ OP_SETLIST,/*	A Bx	R(A)[Bx-Bx%FPF+i] := R(A+i), 1 <= i <= Bx%FPF+1	*/
 OP_SETLISTO,/*	A Bx							*/
 
 OP_CLOSE,/*	A 	close all variables in the stack up to (>=) R(A)*/
-OP_CLOSURE/*	A Bx	R(A) := closure(KPROTO[Bx], R(A), ... ,R(A+n))	*/
+OP_CLOSURE,/*	A Bx	R(A) := closure(KPROTO[Bx], R(A), ... ,R(A+n))	*/
+
+OP_VARARG/*	A B	R(A), R(A+1), ..., R(A+B-1) = vararg		*/
 } OpCode;
 
 
-#define NUM_OPCODES	(cast(int, OP_CLOSURE+1))
+#define NUM_OPCODES	(cast(int, OP_VARARG+1))
 
 
 
 /*===========================================================================
   Notes:
-  (1) In OP_CALL, if (B == 0) then B = top. C is the number of returns - 1,
+  (*) In OP_CALL, if (B == 0) then B = top. C is the number of returns - 1,
       and can be 0: OP_CALL then sets `top' to last_result+1, so
       next open instruction (OP_CALL, OP_RETURN, OP_SETLIST) may use `top'.
 
-  (2) In OP_RETURN, if (B == 0) then return up to `top'
+  (*) In OP_VARARG, if (B == 0) then use actual number of varargs and
+      set top (like in OP_CALL).
 
-  (3) For comparisons, B specifies what conditions the test should accept.
+  (*) In OP_RETURN, if (B == 0) then return up to `top'
 
-  (4) All `skips' (pc++) assume that next instruction is a jump
+  (*) For comparisons, B specifies what conditions the test should accept.
+
+  (*) All `skips' (pc++) assume that next instruction is a jump
 ===========================================================================*/
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.3 2004/03/26 14:02:41 roberto Exp roberto $
+** $Id: lparser.c,v 2.4 2004/04/30 20:13:38 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -26,6 +26,8 @@
 
 
 
+
+#define hasmultret(k)		((k) == VCALL || (k) == VVARARG)
 
 #define getlocvar(fs, i)	((fs)->f->locvars[(fs)->actvar[i]])
 
@@ -272,11 +274,11 @@ static TString *singlevar (LexState *ls, expdesc *var, int base) {
 static void adjust_assign (LexState *ls, int nvars, int nexps, expdesc *e) {
   FuncState *fs = ls->fs;
   int extra = nvars - nexps;
-  if (e->k == VCALL) {
+  if (hasmultret(e->k)) {
     extra++;  /* includes call itself */
-    if (extra <= 0) extra = 0;
-    else luaK_reserveregs(fs, extra-1);
-    luaK_setcallreturns(fs, e, extra);  /* call provides the difference */
+    if (extra < 0) extra = 0;
+    luaK_setreturns(fs, e, extra);  /* last exp. provides the difference */
+    if (extra > 1) luaK_reserveregs(fs, extra-1);
   }
   else {
     if (e->k != VVOID) luaK_exp2nextreg(fs, e);  /* close last expression */
@@ -392,6 +394,7 @@ Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, const char *name) {
   lexstate.nestlevel = 0;
   luaX_setinput(L, &lexstate, z, luaS_new(L, name));
   open_func(&lexstate, &funcstate);
+  funcstate.f->is_vararg = NEWSTYLEVARARG;
   next(&lexstate);  /* read first token */
   chunk(&lexstate);
   check_condition(&lexstate, (lexstate.t.token == TK_EOS), "<eof> expected");
@@ -481,8 +484,8 @@ static void closelistfield (FuncState *fs, struct ConsControl *cc) {
 
 static void lastlistfield (FuncState *fs, struct ConsControl *cc) {
   if (cc->tostore == 0) return;
-  if (cc->v.k == VCALL) {
-    luaK_setcallreturns(fs, &cc->v, LUA_MULTRET);
+  if (hasmultret(cc->v.k)) {
+    luaK_setmultret(fs, &cc->v);
     luaK_codeABx(fs, OP_SETLISTO, cc->t->info, cc->na-1);
     cc->na--;  /* do not count last expression (unknown number of elements) */
   }
@@ -558,12 +561,8 @@ static void parlist (LexState *ls) {
   if (ls->t.token != ')') {  /* is `parlist' not empty? */
     do {
       switch (ls->t.token) {
-        case TK_NAME: {  /* param -> NAME [ `=' `...' ] */
+        case TK_NAME: {  /* param -> NAME */
           new_localvar(ls, str_checkname(ls), nparams++);
-          if (testnext(ls, '=')) {
-            check(ls, TK_DOTS);
-            f->is_vararg = 1;
-          }
           break;
         }
         case TK_DOTS: {  /* param -> `...' */
@@ -629,7 +628,7 @@ static void funcargs (LexState *ls, expdesc *f) {
         args.k = VVOID;
       else {
         explist1(ls, &args);
-        luaK_setcallreturns(fs, &args, LUA_MULTRET);
+        luaK_setmultret(fs, &args);
       }
       check_match(ls, ')', '(', line);
       break;
@@ -650,7 +649,7 @@ static void funcargs (LexState *ls, expdesc *f) {
   }
   lua_assert(f->k == VNONRELOC);
   base = f->info;  /* base register for call */
-  if (args.k == VCALL)
+  if (hasmultret(args.k))
     nparams = LUA_MULTRET;  /* open call */
   else {
     if (args.k != VVOID)
@@ -739,43 +738,47 @@ static void simpleexp (LexState *ls, expdesc *v) {
   switch (ls->t.token) {
     case TK_NUMBER: {
       init_exp(v, VK, luaK_numberK(ls->fs, ls->t.seminfo.r));
-      next(ls);  /* must use `seminfo' before `next' */
       break;
     }
     case TK_STRING: {
       codestring(ls, v, ls->t.seminfo.ts);
-      next(ls);  /* must use `seminfo' before `next' */
       break;
     }
     case TK_NIL: {
       init_exp(v, VNIL, 0);
-      next(ls);
       break;
     }
     case TK_TRUE: {
       init_exp(v, VTRUE, 0);
-      next(ls);
       break;
     }
     case TK_FALSE: {
       init_exp(v, VFALSE, 0);
-      next(ls);
+      break;
+    }
+    case TK_DOTS: {  /* vararg */
+      FuncState *fs = ls->fs;
+      check_condition(ls, fs->f->is_vararg,
+                      "cannot use `...' outside a vararg function");
+      fs->f->is_vararg = NEWSTYLEVARARG;
+      init_exp(v, VVARARG, luaK_codeABC(fs, OP_VARARG, 0, 1, 0));
       break;
     }
     case '{': {  /* constructor */
       constructor(ls, v);
-      break;
+      return;
     }
     case TK_FUNCTION: {
       next(ls);
       body(ls, v, 0, ls->linenumber);
-      break;
+      return;
     }
     default: {
       primaryexp(ls, v);
-      break;
+      return;
     }
   }
+  next(ls);
 }
 
 
@@ -952,7 +955,7 @@ static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
         ls->fs->freereg -= nexps - nvars;  /* remove extra values */
     }
     else {
-      luaK_setcallreturns(ls->fs, &e, 1);  /* close last expression */
+      luaK_setoneret(ls->fs, &e);  /* close last expression */
       luaK_storevar(ls->fs, &lh->v, &e);
       return;  /* avoid default */
     }
@@ -1236,9 +1239,8 @@ static void exprstat (LexState *ls) {
   FuncState *fs = ls->fs;
   struct LHS_assign v;
   primaryexp(ls, &v.v);
-  if (v.v.k == VCALL) {  /* stat -> func */
-    luaK_setcallreturns(fs, &v.v, 0);  /* call statement uses no results */
-  }
+  if (v.v.k == VCALL)  /* stat -> func */
+    SETARG_C(getcode(fs, &v.v), 1);  /* call statement uses no results */
   else {  /* stat -> assignment */
     v.prev = NULL;
     assignment(ls, &v, 1);
@@ -1256,9 +1258,9 @@ static void retstat (LexState *ls) {
     first = nret = 0;  /* return no values */
   else {
     nret = explist1(ls, &e);  /* optional return values */
-    if (e.k == VCALL) {
-      luaK_setcallreturns(fs, &e, LUA_MULTRET);
-      if (nret == 1) {  /* tail call? */
+    if (hasmultret(e.k)) {
+      luaK_setmultret(fs, &e);
+      if (e.k == VCALL && nret == 1) {  /* tail call? */
         SET_OPCODE(getcode(fs,&e), OP_TAILCALL);
         lua_assert(GETARG_A(getcode(fs,&e)) == fs->nactvar);
       }

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.49 2003/07/09 20:11:30 roberto Exp roberto $
+** $Id: lparser.h,v 1.50 2003/08/25 19:51:54 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -30,7 +30,8 @@ typedef enum {
   VJMP,		/* info = instruction pc */
   VRELOCABLE,	/* info = instruction pc */
   VNONRELOC,	/* info = result register */
-  VCALL		/* info = result register */
+  VCALL,	/* info = instruction pc */
+  VVARARG	/* info = instruction pc */
 } expkind;
 
 typedef struct expdesc {

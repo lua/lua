@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
+** $Id: lcode.c,v 2.2 2004/04/30 20:13:38 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -252,13 +252,26 @@ static int nil_constant (FuncState *fs) {
 }
 
 
-void luaK_setcallreturns (FuncState *fs, expdesc *e, int nresults) {
+void luaK_setreturns (FuncState *fs, expdesc *e, int nresults) {
   if (e->k == VCALL) {  /* expression is an open function call? */
     SETARG_C(getcode(fs, e), nresults+1);
-    if (nresults == 1) {  /* `regular' expression? */
-      e->k = VNONRELOC;
-      e->info = GETARG_A(getcode(fs, e));
-    }
+  }
+  else if (e->k == VVARARG) {
+    SETARG_B(getcode(fs, e), nresults+1);
+    SETARG_A(getcode(fs, e), fs->freereg);
+    luaK_reserveregs(fs, 1);
+  }
+}
+
+
+void luaK_setoneret (FuncState *fs, expdesc *e) {
+  if (e->k == VCALL) {  /* expression is an open function call? */
+    e->k = VNONRELOC;
+    e->info = GETARG_A(getcode(fs, e));
+  }
+  else if (e->k == VVARARG) {
+    SETARG_B(getcode(fs, e), 2);
+    e->k = VRELOCABLE;  /* can relocate its simple result */
   }
 }
 
@@ -286,8 +299,9 @@ void luaK_dischargevars (FuncState *fs, expdesc *e) {
       e->k = VRELOCABLE;
       break;
     }
+    case VVARARG:
     case VCALL: {
-      luaK_setcallreturns(fs, e, 1);
+      luaK_setoneret(fs, e);
       break;
     }
     default: break;  /* there is one value available (somewhere) */

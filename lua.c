@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.124 2003/10/23 18:06:22 roberto Exp roberto $
+** $Id: lua.c,v 1.125 2004/04/30 20:13:38 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -113,30 +113,32 @@ static void print_version (void) {
 }
 
 
-static void getargs (char *argv[], int n) {
-  int i;
+static int getargs (char *argv[], int n) {
+  int i, narg;
+  for (i=n+1; argv[i]; i++) {
+    luaL_checkstack(L, 1, "too many arguments to script");
+    lua_pushstring(L, argv[i]);
+  }
+  narg = i-(n+1);  /* number of arguments to the script (not to `lua.c') */
   lua_newtable(L);
   for (i=0; argv[i]; i++) {
     lua_pushnumber(L, i - n);
     lua_pushstring(L, argv[i]);
     lua_rawset(L, -3);
   }
-}
-
-
-static int docall (int status) {
-  if (status == 0) status = lcall(0, 1);
-  return report(status);
+  return narg;
 }
 
 
 static int file_input (const char *name) {
-  return docall(luaL_loadfile(L, name));
+  int status = luaL_loadfile(L, name) || lcall(0, 1);
+  return report(status);
 }
 
 
 static int dostring (const char *s, const char *name) {
-  return docall(luaL_loadbuffer(L, s, strlen(s), name));
+  int status = luaL_loadbuffer(L, s, strlen(s), name) || lcall(0, 1);
+  return report(status);
 }
 
 
@@ -329,10 +331,17 @@ static int handle_argv (char *argv[], int *interactive) {
     } endloop:
     if (argv[i] != NULL) {
       const char *filename = argv[i];
-      getargs(argv, i);  /* collect arguments */
-      clearinteractive(interactive);
+      int narg = getargs(argv, i);  /* collect arguments */
+      int status;
       lua_setglobal(L, "arg");
-      return file_input(filename);  /* stop scanning arguments */
+      clearinteractive(interactive);
+      status = luaL_loadfile(L, filename);
+      lua_insert(L, -(narg+1));
+      if (status == 0)
+        status = lcall(narg, 0);
+      else
+        lua_pop(L, narg);      
+      return report(status);
     }
   }
   return 0;

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.5 2004/05/10 17:50:51 roberto Exp roberto $
+** $Id: lvm.c,v 2.6 2004/05/14 19:25:09 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -387,8 +387,8 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
     luaD_callhook(L, LUA_HOOKCALL, -1);
  retentry:  /* entry point when returning to old functions */
   pc = L->ci->u.l.savedpc;
+  cl = &clvalue(L->ci->func)->l;
   base = L->base;
-  cl = &clvalue(base - 1)->l;
   k = cl->p->k;
   /* main loop of interpreter */
   for (;;) {
@@ -615,17 +615,19 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         pcr = luaD_precall(L, ra, LUA_MULTRET);
         if (pcr == PCRLUA) {
           /* tail call: put new frame in place of previous one */
+          CallInfo *ci = L->ci - 1;  /* previous frame */
           int aux;
-          base = (L->ci - 1)->base;  /* `luaD_precall' may change the stack */
-          ra = RA(i);
+          StkId func = ci->func;
+          StkId pfunc = (ci+1)->func;  /* previous function index */
+          base = ci->base = ci->func + ((ci+1)->base - pfunc);
+          L->base = base;
           if (L->openupval) luaF_close(L, base);
-          for (aux = 0; ra+aux < L->top; aux++)  /* move frame down */
-            setobjs2s(L, base+aux-1, ra+aux);
-          (L->ci - 1)->top = L->top = base+aux;  /* correct top */
-          (L->ci - 1)->u.l.savedpc = L->ci->u.l.savedpc;
-          (L->ci - 1)->u.l.tailcalls++;  /* one more call lost */
+          for (aux = 0; pfunc+aux < L->top; aux++)  /* move frame down */
+            setobjs2s(L, func+aux, pfunc+aux);
+          ci->top = L->top = base+aux;  /* correct top */
+          ci->u.l.savedpc = L->ci->u.l.savedpc;
+          ci->u.l.tailcalls++;  /* one more call lost */
           L->ci--;  /* remove new frame */
-          L->base = L->ci->base;
           goto callentry;
         }
         else if (pcr == PCRC) {
@@ -756,6 +758,21 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         L->ci->u.l.savedpc = pc;
         luaC_checkGC(L);  /***/
         base = L->base;
+        break;
+      }
+      case OP_VARARG: {
+        int b = GETARG_B(i) - 1;
+        int j;
+        CallInfo *ci = L->ci;
+        int n = ci->base - ci->func - cl->p->numparams - 1;
+        if (b == LUA_MULTRET) {
+          b = n;
+          L->top = ra + n;
+        }
+        for (j=0; j<b && j<n; j++)
+          setobjs2s(L, ra+j, ci->base - n + j);
+        for (; j<b; j++)
+          setnilvalue(ra+j);
         break;
       }
     }

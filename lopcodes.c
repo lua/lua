@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.25 2003/05/14 21:09:53 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.26 2004/04/30 20:13:38 roberto Exp roberto $
 ** See Copyright Notice in lua.h
 */
 
@@ -53,7 +53,8 @@ const char *const luaP_opnames[NUM_OPCODES] = {
   "SETLIST",
   "SETLISTO",
   "CLOSE",
-  "CLOSURE"
+  "CLOSURE",
+  "VARARG"
 };
 
 #endif
@@ -98,5 +99,6 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 0, OpArgU, OpArgN, iABx)		/* OP_SETLISTO */
  ,opmode(0, 0, OpArgN, OpArgN, iABC)		/* OP_CLOSE */
  ,opmode(0, 1, OpArgU, OpArgN, iABx)		/* OP_CLOSURE */
+ ,opmode(0, 1, OpArgU, OpArgN, iABC)		/* OP_VARARG */
 };
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.4 2004/05/10 17:50:51 roberto Exp roberto $
+** $Id: ldo.c,v 2.5 2004/05/14 19:25:09 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -113,6 +113,7 @@ static void correctstack (lua_State *L, TValue *oldstack) {
   for (ci = L->base_ci; ci <= L->ci; ci++) {
     ci->top = (ci->top - oldstack) + L->stack;
     ci->base = (ci->base - oldstack) + L->stack;
+    ci->func = (ci->func - oldstack) + L->stack;
   }
   L->base = L->ci->base;
 }
@@ -181,26 +182,37 @@ void luaD_callhook (lua_State *L, int event, int line) {
 }
 
 
-static void adjust_varargs (lua_State *L, int nfixargs, StkId base) {
+static StkId adjust_varargs (lua_State *L, int nfixargs, int actual,
+                             int style) {
   int i;
-  Table *htab;
-  int actual = L->top - base;  /* actual number of arguments */
+  Table *htab = NULL;
+  StkId base, fixed;
   if (actual < nfixargs) {
-    luaD_checkstack(L, nfixargs - actual);
     for (; actual < nfixargs; ++actual)
       setnilvalue(L->top++);
   }
-  actual -= nfixargs;  /* number of extra arguments */
-  htab = luaH_new(L, actual, 1);  /* create `arg' table */
-  for (i=0; i<actual; i++)  /* put extra arguments into `arg' table */
-    setobj2n(L, luaH_setnum(L, htab, i+LUA_FIRSTINDEX), L->top - actual + i);
-  /* store counter in field `n' */
-  setnvalue(luaH_setstr(L, htab, luaS_newliteral(L, "n")),
-                                 cast(lua_Number, actual));
-  L->top -= actual;  /* remove extra elements from the stack */
-  sethvalue(L, L->top, htab);
-  lua_assert(iswhite(obj2gco(htab)));
-  incr_top(L);
+  if (style != NEWSTYLEVARARG) {  /* compatibility with old-style vararg */
+    int nvar = actual - nfixargs;  /* number of extra arguments */
+    htab = luaH_new(L, nvar, 1);  /* create `arg' table */
+    for (i=0; i<nvar; i++)  /* put extra arguments into `arg' table */
+      setobj2n(L, luaH_setnum(L, htab, i+LUA_FIRSTINDEX), L->top - nvar + i);
+    /* store counter in field `n' */
+    setnvalue(luaH_setstr(L, htab, luaS_newliteral(L, "n")),
+                                   cast(lua_Number, nvar));
+  }
+  /* move fixed parameters to final position */
+  fixed = L->top - actual;  /* first fixed argument */
+  base = L->top;  /* final position of first argument */
+  for (i=0; i<nfixargs; i++) {
+    setobjs2s(L, L->top++, fixed+i);
+    setnilvalue(fixed+i);
+  }
+  /* add `arg' parameter */
+  if (htab) {
+    sethvalue(L, L->top++, htab);
+    lua_assert(iswhite(obj2gco(htab)));
+  }
+  return base;
 }
 
 
@@ -221,21 +233,28 @@ static StkId tryfuncTM (lua_State *L, StkId func) {
 
 int luaD_precall (lua_State *L, StkId func, int nresults) {
   LClosure *cl;
-  ptrdiff_t funcr = savestack(L, func);
+  ptrdiff_t funcr;
   if (!ttisfunction(func)) /* `func' is not a function? */
     func = tryfuncTM(L, func);  /* check the `function' tag method */
+  funcr = savestack(L, func);
   if (L->ci + 1 == L->end_ci) luaD_growCI(L);
   else condhardstacktests(luaD_reallocCI(L, L->size_ci));
   cl = &clvalue(func)->l;
   if (!cl->isC) {  /* Lua function? prepare its call */
     CallInfo *ci;
-    StkId st;
+    StkId st, base;
     Proto *p = cl->p;
-    if (p->is_vararg)  /* varargs? */
-      adjust_varargs(L, p->numparams, func+1);
     luaD_checkstack(L, p->maxstacksize);
+    func = restorestack(L, funcr);
+    if (p->is_vararg) {  /* varargs? */
+      int nargs = L->top - func - 1;
+      base = adjust_varargs(L, p->numparams, nargs, p->is_vararg);
+    }
+    else
+      base = func + 1;
     ci = ++L->ci;  /* now `enter' new function */
-    L->base = L->ci->base = restorestack(L, funcr) + 1;
+    ci->func = func;
+    L->base = ci->base = base;
     ci->top = L->base + p->maxstacksize;
     ci->u.l.savedpc = p->code;  /* starting point */
     ci->u.l.tailcalls = 0;
@@ -250,7 +269,8 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     int n;
     luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
     ci = ++L->ci;  /* now `enter' new function */
-    L->base = L->ci->base = restorestack(L, funcr) + 1;
+    ci->func = restorestack(L, funcr);
+    L->base = ci->base = ci->func + 1;
     ci->top = L->top + LUA_MINSTACK;
     if (L->hookmask & LUA_MASKCALL)
       luaD_callhook(L, LUA_HOOKCALL, -1);
@@ -284,7 +304,7 @@ void luaD_poscall (lua_State *L, int wanted, StkId firstResult) {
   StkId res;
   if (L->hookmask & LUA_MASKRET)
     firstResult = callrethooks(L, firstResult);
-  res = L->base - 1;  /* res == final position of 1st result */
+  res = L->ci->func;  /* res == final position of 1st result */
   L->ci--;
   L->base = L->ci->base;  /* restore base */
   /* move results to correct place */

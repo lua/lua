@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.2 2004/03/23 17:02:58 roberto Exp roberto $
+** $Id: lstate.h,v 2.3 2004/05/14 19:25:09 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -71,6 +71,7 @@ typedef struct stringtable {
 */
 typedef struct CallInfo {
   StkId base;  /* base for this function */
+  StkId func;  /* function index in the stack */
   StkId	top;  /* top for this function */
   int nresults;  /* expected number of results from this function */
   union {
@@ -86,10 +87,10 @@ typedef struct CallInfo {
 
 
 
-#define curr_func(L)	(clvalue(L->base - 1))
-#define ci_func(ci)	(clvalue((ci)->base - 1))
+#define curr_func(L)	(clvalue(L->ci->func))
+#define ci_func(ci)	(clvalue((ci)->func))
 #define f_isLua(ci)	(!ci_func(ci)->c.isC)
-#define isLua(ci)	(ttisfunction((ci)->base - 1) && f_isLua(ci))
+#define isLua(ci)	(ttisfunction((ci)->func) && f_isLua(ci))
 
 
 /*
