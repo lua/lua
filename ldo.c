@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.168 2002/03/26 20:46:10 roberto Exp roberto $
+** $Id: ldo.c,v 1.169 2002/04/10 12:10:54 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -447,6 +447,7 @@ LUA_API int lua_loadfile (lua_State *L, const char *filename) {
   filename = lua_tostring(L, -1);  /* filename = `@'..filename */
   luaZ_Fopen(&z, f, filename);
   status = protectedparser(L, &z, bin);
+  if (ferror(f)) status = LUA_ERRFILE;
   lua_remove(L, nlevel);  /* remove filename */
   if (f != stdin)
     fclose(f);
