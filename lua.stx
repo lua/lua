@@ -1,6 +1,6 @@
 %{
 /*
-** $Id: $
+** $Id: lua.stx,v 1.1 1997/09/16 19:33:21 roberto Exp roberto $
 ** Syntax analizer and code generator
 ** See Copyright Notice in lua.h
 */
@@ -111,6 +111,27 @@ static void code_opcode (OpCode op, int delta)
 }
 
 
+static void code_push (OpCode op)
+{
+  code_opcode(op, 1);
+}
+
+
+static void code_pop (OpCode op)
+{
+  code_opcode(op, -1);
+}
+
+/* binary operations get 2 arguments and leave one, so they pop one */
+#define code_binop(op)	code_pop(op)
+
+
+#define code_neutralop(op)	code_byte(op)
+
+/* unary operations get 1 argument and leave one, so they are neutral */
+#define code_unop(op)	code_neutralop(op)
+
+
 static void code_word_at (int pc, int n)
 {
   Word w = n;
@@ -129,11 +150,11 @@ static void code_word (int n)
 static void code_constant (int c)
 {
   if (c <= 255) {
-    code_opcode(PUSHCONSTANTB, 1);
+    code_push(PUSHCONSTANTB);
     code_byte(c);
   }
   else {
-    code_opcode(PUSHCONSTANT, 1);
+    code_push(PUSHCONSTANT);
     code_word(c);
   }
 }
@@ -197,13 +218,13 @@ static void code_number (real f)
   Word i;
   if (f >= 0 && f <= (real)MAX_WORD && (real)(i=(Word)f) == f) {
     /* f has an (short) integer value */
-    if (i <= 2) code_opcode(PUSH0 + i, 1);
+    if (i <= 2) code_push(PUSH0 + i);
     else if (i <= 255) {
-      code_opcode(PUSHBYTE, 1);
+      code_push(PUSHBYTE);
       code_byte(i);
     }
     else {
-      code_opcode(PUSHWORD, 1);
+      code_push(PUSHWORD);
       code_word(i);
     }
   }
@@ -324,9 +345,9 @@ static void pushupvalue (TaggedString *n)
     luaY_syntaxerror("cannot access an upvalue in current scope", n->str);
   i = indexupvalue(n);
   if (i == 0)
-    code_opcode(PUSHUPVALUE0, 1);
+    code_push(PUSHUPVALUE0);
   else {
-    code_opcode(PUSHUPVALUE, 1);
+    code_push(PUSHUPVALUE);
     code_byte(i);
   }
 }
@@ -336,7 +357,7 @@ void luaY_codedebugline (int line)
 {
   static int lastline = 0;
   if (lua_debug && line != lastline) {
-    code_opcode(SETLINE, 0);
+    code_neutralop(SETLINE);
     code_word(line);
     lastline = line;
   }
@@ -351,7 +372,7 @@ static void adjuststack (int n)
   }
   else if (n < 0) {
     if (n == -1)
-      code_opcode(PUSHNIL, 1);
+      code_push(PUSHNIL);
     else {
       code_opcode(PUSHNILS, -n);
       code_byte(-n);
@@ -406,20 +427,20 @@ static void code_args (int dots)
 static void lua_pushvar (vardesc number)
 {
   if (number > 0) {  /* global var */
-    code_opcode(PUSHGLOBAL, 1);
+    code_push(PUSHGLOBAL);
     code_word(number-1);
   }
   else if (number < 0) {  /* local var */
     number = (-number) - 1;
     if (number < 10)
-      code_opcode(PUSHLOCAL0 + number, 1);
+      code_push(PUSHLOCAL0 + number);
     else {
-      code_opcode(PUSHLOCAL, 1);
+      code_push(PUSHLOCAL);
       code_byte(number);
     }
   }
   else {
-    code_opcode(PUSHTABLE, -1);
+    code_pop(GETTABLE);
   }
 }
 
@@ -429,15 +450,15 @@ static void storevar (vardesc number)
   if (number == 0)  /* indexed var */
     code_opcode(SETTABLE0, -3);
   else if (number > 0) {  /* global var */
-    code_opcode(SETGLOBAL, -1);
+    code_pop(SETGLOBAL);
     code_word(number-1);
   }
   else {  /* number < 0 - local var */
     number = (-number) - 1;
     if (number < 10)
-      code_opcode(SETLOCAL0 + number, -1);
+      code_pop(SETLOCAL0 + number);
     else {
-      code_opcode(SETLOCAL, -1);
+      code_pop(SETLOCAL);
       code_byte(number);
     }
   }
@@ -453,7 +474,7 @@ static int lua_codestore (int i, int left)
     return left;
   }
   else {  /* indexed var with values in between*/
-    code_opcode(SETTABLE, -1);
+    code_pop(SETTABLE);
     code_byte(left+i);  /* number of elements between table/index and value */
     return left+2;  /* table/index are not poped, since they are not on top */
   }
@@ -485,7 +506,7 @@ static void code_shortcircuit (int pc, Byte jmp)
 
 static void codereturn (void)
 {
-  code_opcode(RETCODE, 0);
+  code_neutralop(RETCODE);
   code_byte(currState->nlocalvar);
   currState->stacksize = currState->nlocalvar;
 }
@@ -542,7 +563,7 @@ static void init_func (void)
 static TProtoFunc *close_func (void)
 {
   TProtoFunc *f = currState->f;
-  code_opcode(ENDCODE, 0);
+  code_neutralop(ENDCODE);
   f->code[0] = currState->maxstacksize;
   f->code = luaM_reallocvector(f->code, currState->pc, Byte);
   f->consts = luaM_reallocvector(f->consts, f->nconsts, TObject);
@@ -624,8 +645,7 @@ chunk    : statlist ret
          ;
 
 statlist : /* empty */
-	 | statlist stat sc { if (currState->stacksize != currState->nlocalvar)
-                             { luaY_error("contagem"); exit(1); }}
+	 | statlist stat sc
 	 ;
 
 sc	 : /* empty */ | ';' ;
@@ -707,7 +727,7 @@ ret	: /* empty */
 PrepJump : /* empty */
 	 {
 	   $$ = currState->pc;
-	   code_opcode(0, 0);  /* open space */
+	   code_byte(0);  /* open space */
 	   code_word(0);
          }
 	 ;
@@ -718,47 +738,35 @@ PrepJumpPop : PrepJump	{ $$ = $1; deltastack(-1);  /* pop condition */ }
 expr1	 : expr { adjust_functioncall($1, 1); }
 	 ;
 				
-expr :  '(' expr ')'  { $$ = $2; }
-     |  expr1 EQ  expr1	{ code_opcode(EQOP, -1);   $$ = 0; }
-     |	expr1 '<' expr1	{ code_opcode(LTOP, -1);   $$ = 0; }
-     |	expr1 '>' expr1	{ code_opcode(GTOP, -1);   $$ = 0; }
-     |	expr1 NE  expr1	{ code_opcode(NEQOP, -1);  $$ = 0; }
-     |	expr1 LE  expr1	{ code_opcode(LEOP, -1);   $$ = 0; }
-     |	expr1 GE  expr1	{ code_opcode(GEOP, -1);   $$ = 0; }
-     |	expr1 '+' expr1 { code_opcode(ADDOP, -1);  $$ = 0; }
-     |	expr1 '-' expr1 { code_opcode(SUBOP, -1);  $$ = 0; }
-     |	expr1 '*' expr1 { code_opcode(MULTOP, -1); $$ = 0; }
-     |	expr1 '/' expr1 { code_opcode(DIVOP, -1);  $$ = 0; }
-     |	expr1 '^' expr1 { code_opcode(POWOP, -1);  $$ = 0; }
-     |	expr1 CONC expr1 { code_opcode(CONCOP, -1);  $$ = 0; }
-     |	'-' expr1 %prec UNARY	{ code_opcode(MINUSOP, 0); $$ = 0;}
+expr :  '(' expr ')'     { $$ = $2; }
+     |  expr1 EQ  expr1	 { code_binop(EQOP);   $$ = 0; }
+     |	expr1 '<' expr1	 { code_binop(LTOP);   $$ = 0; }
+     |	expr1 '>' expr1	 { code_binop(GTOP);   $$ = 0; }
+     |	expr1 NE  expr1	 { code_binop(NEQOP);  $$ = 0; }
+     |	expr1 LE  expr1	 { code_binop(LEOP);   $$ = 0; }
+     |	expr1 GE  expr1	 { code_binop(GEOP);   $$ = 0; }
+     |	expr1 '+' expr1  { code_binop(ADDOP);  $$ = 0; }
+     |	expr1 '-' expr1  { code_binop(SUBOP);  $$ = 0; }
+     |	expr1 '*' expr1  { code_binop(MULTOP); $$ = 0; }
+     |	expr1 '/' expr1  { code_binop(DIVOP);  $$ = 0; }
+     |	expr1 '^' expr1  { code_binop(POWOP);  $$ = 0; }
+     |	expr1 CONC expr1 { code_binop(CONCOP);  $$ = 0; }
+     |	'-' expr1 %prec UNARY	{ code_unop(MINUSOP); $$ = 0;}
+     |	NOT expr1	 { code_unop(NOTOP);  $$ = 0;}
      | table { $$ = 0; }
-     |  varexp          { $$ = 0;}
-     |  NUMBER          { code_number($1); $$ = 0; }
-     |  STRING
-     {
-       code_string($1);
-       $$ = 0;
-     }
-     |	NIL		{code_opcode(PUSHNIL, 1); $$ = 0; }
-     |  functioncall    { $$ = $1; }
-     |	NOT expr1	{ code_opcode(NOTOP, 0);  $$ = 0;}
-     |	expr1 AND PrepJumpPop expr1
-     {
-       code_shortcircuit($3, ONFJMP);
-       $$ = 0;
-     }
-     |	expr1 OR PrepJumpPop expr1	
-     {
-       code_shortcircuit($3, ONTJMP);
-       $$ = 0;
-     }
+     |  varexp           { $$ = 0;}
+     |  NUMBER           { code_number($1); $$ = 0; }
+     |  STRING           { code_string($1); $$ = 0; }
+     |	NIL		 {code_push(PUSHNIL); $$ = 0; }
+     |  functioncall     { $$ = $1; }
+     |	expr1 AND PrepJumpPop expr1 { code_shortcircuit($3, ONFJMP); $$ = 0; }
+     |	expr1 OR PrepJumpPop expr1  { code_shortcircuit($3, ONTJMP); $$ = 0; }
      | FUNCTION { init_func(); } body { func_onstack($3); $$ = 0; }
      ;
 
 table :
      {
-      code_opcode(CREATEARRAY, 1);
+      code_push(CREATEARRAY);
       $<vInt>$ = currState->pc; code_word(0);
      }
       '{' fieldlist '}'
@@ -779,7 +787,7 @@ functioncall : funcvalue funcParams
 funcvalue    : varexp { $$ = 0; }
 	     | varexp ':' NAME
 	     {
-               code_opcode(PUSHSELF, 1);
+               code_push(PUSHSELF);
 	       code_word(string_constant($3));
                $$ = 1;
 	     }

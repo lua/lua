@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: lopcodes.h,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -36,7 +36,7 @@ PUSHLOCAL8,/*		-		LOC[8]  */
 PUSHLOCAL9,/*		-		LOC[9]  */
 PUSHLOCAL,/*	b	-		LOC[b]  */
 PUSHGLOBAL,/*	w	-		VAR[w]  */
-PUSHTABLE,/*		i t		t[i]  */
+GETTABLE,/*		i t		t[i]  */
 PUSHSELF,/*	w	t		t t[CNST[w]]  */
 CREATEARRAY,/*	w	-		newarray(size = w)  */
 

@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: lvm.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -22,7 +22,9 @@
 #include "lvm.h"
 
 
-#define get_word(w,pc)  {w=*pc+(*(pc+1)<<8); pc+=2;}
+#define get_prevword(pc)  (*(pc-2)+(*(pc-1)<<8))
+#define get_word(pc)  (pc+=2, get_prevword(pc))
+#define skip_word(pc) {pc+=2;}
 
 
 /* Extra stack to run a function: LUA_T_LINE(1), TM calls(2), ... */
@@ -159,15 +161,13 @@ void luaV_getglobal (Word n)
   TObject *value = &luaG_global[n].object;
   TObject *im = luaT_getimbyObj(value, IM_GETGLOBAL);
   if (ttype(im) == LUA_T_NIL) {  /* default behavior */
-    *luaD_stack.top = *value;
-    luaD_stack.top++;
+    *luaD_stack.top++ = *value;
   }
   else {
     ttype(luaD_stack.top) = LUA_T_STRING;
     tsvalue(luaD_stack.top) = luaG_global[n].varname;
     luaD_stack.top++;
-    *luaD_stack.top = *value;
-    luaD_stack.top++;
+    *luaD_stack.top++ = *value;
     luaD_callTM(im, 2, 1);
   }
 }
@@ -184,10 +184,8 @@ void luaV_setglobal (Word n)
     TObject newvalue = *(luaD_stack.top-1);
     ttype(luaD_stack.top-1) = LUA_T_STRING;
     tsvalue(luaD_stack.top-1) = luaG_global[n].varname;
-    *luaD_stack.top = *oldvalue;
-    luaD_stack.top++;
-    *luaD_stack.top = newvalue;
-    luaD_stack.top++;
+    *luaD_stack.top++ = *oldvalue;
+    *luaD_stack.top++ = newvalue;
     luaD_callTM(im, 3, 0);
   }
 }
@@ -266,8 +264,7 @@ static void adjust_varargs (StkId first_extra_arg)
   luaV_pack(first_extra_arg,
        (luaD_stack.top-luaD_stack.stack)-first_extra_arg, &arg);
   luaD_adjusttop(first_extra_arg);
-  *luaD_stack.top = arg;
-  luaD_stack.top++;
+  *luaD_stack.top++ = arg;
 }
 
 
@@ -289,8 +286,7 @@ StkId luaV_execute (Closure *cl, StkId base)
     switch (opcode = (OpCode)*pc++) {
 
       case PUSHNIL:
-        ttype(luaD_stack.top) = LUA_T_NIL;
-        luaD_stack.top++;
+        ttype(luaD_stack.top++) = LUA_T_NIL;
         break;
 
       case PUSHNILS: {
@@ -312,72 +308,55 @@ StkId luaV_execute (Closure *cl, StkId base)
         luaD_stack.top++;
         break;
 
-      case PUSHWORD: {
-        Word w;
-        get_word(w,pc);
+      case PUSHWORD:
         ttype(luaD_stack.top) = LUA_T_NUMBER;
-        nvalue(luaD_stack.top) = w;
+        nvalue(luaD_stack.top) = get_word(pc);
         luaD_stack.top++;
         break;
-      }
 
       case PUSHLOCAL0: case PUSHLOCAL1: case PUSHLOCAL2:
       case PUSHLOCAL3: case PUSHLOCAL4: case PUSHLOCAL5:
       case PUSHLOCAL6: case PUSHLOCAL7: case PUSHLOCAL8:
       case PUSHLOCAL9:
-        *luaD_stack.top = *((luaD_stack.stack+base) + (int)(opcode-PUSHLOCAL0));
-        luaD_stack.top++;
+        *luaD_stack.top++ =
+                  *((luaD_stack.stack+base) + (int)(opcode-PUSHLOCAL0));
         break;
 
       case PUSHLOCAL:
-        *luaD_stack.top = *((luaD_stack.stack+base) + (*pc++));
-        luaD_stack.top++;
+        *luaD_stack.top++ = *((luaD_stack.stack+base) + (*pc++));
         break;
 
-      case PUSHGLOBAL: {
-        Word w;
-        get_word(w,pc);
-        luaV_getglobal(w);
+      case PUSHGLOBAL:
+        luaV_getglobal(get_word(pc));
         break;
-      }
 
-      case PUSHTABLE:
+      case GETTABLE:
        luaV_gettable();
        break;
 
       case PUSHSELF: {
         TObject receiver = *(luaD_stack.top-1);
-        Word w;
-        get_word(w,pc);
-        *luaD_stack.top = func->consts[w];
-        luaD_stack.top++;
+        *luaD_stack.top++ = func->consts[get_word(pc)];
         luaV_gettable();
-        *luaD_stack.top = receiver;
-        luaD_stack.top++;
+        *luaD_stack.top++ = receiver;
         break;
       }
 
-      case PUSHCONSTANTB: {
-        *luaD_stack.top = func->consts[*pc++];
-        luaD_stack.top++;
+      case PUSHCONSTANTB:
+        *luaD_stack.top++ = func->consts[*pc++];
         break;
-      }
 
-      case PUSHCONSTANT: {
-        Word w;
-        get_word(w,pc);
-        *luaD_stack.top = func->consts[w];
-        luaD_stack.top++;
+      case PUSHCONSTANT:
+        *luaD_stack.top++ = func->consts[get_word(pc)];
         break;
-      }
 
       case PUSHUPVALUE0:
-      case PUSHUPVALUE: {
-        int i = (opcode == PUSHUPVALUE0) ? 0 : *pc++;
-        *luaD_stack.top = cl->consts[i+1];
-        luaD_stack.top++;
+        *luaD_stack.top++ = cl->consts[1];
         break;
-      }
+
+      case PUSHUPVALUE:
+        *luaD_stack.top++ = cl->consts[(*pc++)+1];
+        break;
 
       case SETLOCAL0: case SETLOCAL1: case SETLOCAL2:
       case SETLOCAL3: case SETLOCAL4: case SETLOCAL5:
@@ -390,36 +369,28 @@ StkId luaV_execute (Closure *cl, StkId base)
       case SETLOCAL:
         *((luaD_stack.stack+base) + (*pc++)) = *(--luaD_stack.top); break;
 
-      case SETGLOBAL: {
-        Word w;
-        get_word(w,pc);
-        luaV_setglobal(w);
+      case SETGLOBAL:
+        luaV_setglobal(get_word(pc));
         break;
-      }
 
       case SETTABLE0:
        luaV_settable(luaD_stack.top-3, 1);
        break;
 
-      case SETTABLE: {
-        int n = *pc++;
-        luaV_settable(luaD_stack.top-3-n, 2);
+      case SETTABLE:
+        luaV_settable(luaD_stack.top-3-(*pc++), 2);
         break;
-      }
 
       case SETLIST0:
       case SETLIST: {
-        int m, n;
-        TObject *arr;
-        if (opcode == SETLIST0) m = 0;
-        else m = *(pc++) * LFIELDS_PER_FLUSH;
-        n = *(pc++);
-        arr = luaD_stack.top-n-1;
-        while (n) {
-          ttype(luaD_stack.top) = LUA_T_NUMBER; nvalue(luaD_stack.top) = n+m;
+        int m = (opcode == SETLIST0) ? 0 : *(pc++) * LFIELDS_PER_FLUSH;
+        int n = *(pc++);
+        TObject *arr = luaD_stack.top-n-1;
+        for (; n; n--) {
+          ttype(luaD_stack.top) = LUA_T_NUMBER;
+          nvalue(luaD_stack.top) = n+m;
           *(luaH_set (avalue(arr), luaD_stack.top)) = *(luaD_stack.top-1);
           luaD_stack.top--;
-          n--;
         }
         break;
       }
@@ -447,19 +418,16 @@ StkId luaV_execute (Closure *cl, StkId base)
         adjust_varargs(base + *(pc++));
         break;
 
-      case CREATEARRAY: {
-        Word size;
+      case CREATEARRAY:
         luaC_checkGC();
-        get_word(size,pc);
-        avalue(luaD_stack.top) = luaH_new(size);
+        avalue(luaD_stack.top) = luaH_new(get_word(pc));
         ttype(luaD_stack.top) = LUA_T_ARRAY;
         luaD_stack.top++;
         break;
-      }
 
       case EQOP: case NEQOP: {
         int res = luaO_equalObj(luaD_stack.top-2, luaD_stack.top-1);
-        --luaD_stack.top;
+        luaD_stack.top--;
         if (opcode == NEQOP) res = !res;
         ttype(luaD_stack.top-1) = res ? LUA_T_NUMBER : LUA_T_NIL;
         nvalue(luaD_stack.top-1) = 1;
@@ -563,51 +531,43 @@ StkId luaV_execute (Closure *cl, StkId base)
         nvalue(luaD_stack.top-1) = 1;
         break;
 
-      case ONTJMP: {
-        Word w;
-        get_word(w,pc);
-        if (ttype(luaD_stack.top-1) != LUA_T_NIL) pc += w;
-        else luaD_stack.top--;
-      }
-      break;
-
-      case ONFJMP: {
-        Word w;
-        get_word(w,pc);
-        if (ttype(luaD_stack.top-1) == LUA_T_NIL) pc += w;
-        else luaD_stack.top--;
+      case ONTJMP:
+        skip_word(pc);
+        if (ttype(luaD_stack.top-1) != LUA_T_NIL)
+          pc += get_prevword(pc);
+        else
+          luaD_stack.top--;
         break;
-      }
 
-      case JMP: {
-        Word w;
-        get_word(w,pc);
-        pc += w;
+      case ONFJMP:
+        skip_word(pc);
+        if (ttype(luaD_stack.top-1) == LUA_T_NIL)
+          pc += get_prevword(pc);
+        else
+          luaD_stack.top--;
         break;
-      }
 
-      case UPJMP: {
-        Word w;
-        get_word(w,pc);
-        pc -= w;
+      case JMP:
+        skip_word(pc);
+        pc += get_prevword(pc);
         break;
-      }
 
-      case IFFJMP: {
-        Word w;
-        get_word(w,pc);
-        luaD_stack.top--;
-        if (ttype(luaD_stack.top) == LUA_T_NIL) pc += w;
+      case UPJMP:
+        skip_word(pc);
+        pc -= get_prevword(pc);
         break;
-      }
 
-      case IFFUPJMP: {
-        Word w;
-        get_word(w,pc);
-        luaD_stack.top--;
-        if (ttype(luaD_stack.top) == LUA_T_NIL) pc -= w;
+      case IFFJMP:
+        skip_word(pc);
+        if (ttype(--luaD_stack.top) == LUA_T_NIL)
+          pc += get_prevword(pc);
         break;
-      }
+
+      case IFFUPJMP:
+        skip_word(pc);
+        if (ttype(--luaD_stack.top) == LUA_T_NIL)
+          pc -= get_prevword(pc);
+        break;
 
       case CLOSURE:
         luaV_closure();
@@ -615,10 +575,8 @@ StkId luaV_execute (Closure *cl, StkId base)
         break;
 
       case CALLFUNC: {
-        int nParams = *pc++;
-        int nResults = *pc++;
-        StkId newBase = (luaD_stack.top-luaD_stack.stack)-nParams;
-        luaD_call(newBase, nResults);
+        StkId newBase = (luaD_stack.top-luaD_stack.stack)-(*pc++);
+        luaD_call(newBase, *pc++);
         break;
       }
 
@@ -631,8 +589,7 @@ StkId luaV_execute (Closure *cl, StkId base)
         return (base + ((opcode==RETCODE) ? *pc : 0));
 
       case SETLINE: {
-        Word line;
-        get_word(line,pc);
+        int line = get_word(pc);
         if ((luaD_stack.stack+base-1)->ttype != LUA_T_LINE) {
           /* open space for LINE value */
           luaD_openstack((luaD_stack.top-luaD_stack.stack)-base);
