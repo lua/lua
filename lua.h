@@ -2,7 +2,7 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lua.h,v 3.20 1995/10/31 16:41:53 roberto Exp roberto $
+** $Id: lua.h,v 3.21 1995/11/13 15:36:52 roberto Exp roberto $
 */
 
 
@@ -60,7 +60,6 @@ void          *lua_getuserdata  	(lua_Object object);
 void 	       lua_pushnil 		(void);
 void           lua_pushnumber 		(float n);
 void           lua_pushstring 		(char *s);
-void           lua_pushliteral 		(char *s);
 void           lua_pushcfunction	(lua_CFunction fn);
 void           lua_pushusertag     	(void *u, int tag);
 void           lua_pushobject       	(lua_Object object);
@@ -98,7 +97,9 @@ lua_Object     lua_createtable		(void);
 #define lua_isuserdata(_)       (lua_type(_)>=LUA_T_USERDATA)
 
 
-/* for lua 1.1 compatibility. Avoid using these macros */
+/* for compatibility with old versions. Avoid using these macros */
+
+#define lua_pushliteral(o)  lua_pushstring(o)
 
 #define lua_getindexed(o,n) (lua_pushobject(o), lua_pushnumber(n), lua_getsubscript())
 #define lua_getfield(o,f)   (lua_pushobject(o), lua_pushliteral(f), lua_getsubscript())

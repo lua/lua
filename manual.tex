@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.8 1996/02/09 17:21:27 roberto Exp roberto $
+% $Id: manual.tex,v 1.9 1996/02/09 19:02:30 roberto Exp roberto $
 
 \documentstyle[A4,11pt,bnf]{article}
 
@@ -32,7 +32,7 @@ Waldemar Celes Filho
 Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1996/02/09 17:21:27 $}
+\date{\small \verb$Date: 1996/02/09 19:02:30 $}
 
 \maketitle
 
@@ -836,13 +836,12 @@ otherwise, the function returns 0 (the null pointer).
 
 The reverse process, that is, passing a specific C value to Lua,
 is done by using the following functions:
-\Deffunc{lua_pushnumber}\Deffunc{lua_pushstring}\Deffunc{lua_pushliteral}
+\Deffunc{lua_pushnumber}\Deffunc{lua_pushstring}
 \Deffunc{lua_pushcfunction}\Deffunc{lua_pushusertag}
 \Deffunc{lua_pushuserdata}
 \begin{verbatim}
 void           lua_pushnumber           (double n);
 void           lua_pushstring           (char *s);
-void           lua_pushliteral          (char *s);
 void           lua_pushcfunction        (lua_CFunction f);
 void           lua_pushusertag          (void *u, int tag);
 \end{verbatim}
@@ -855,12 +854,6 @@ convert it to a correspondent \verb'lua_Object',
 and leave the result on the top of the Lua stack,
 where it can be assigned to a Lua variable,
 passed as paramenter to a Lua function, etc (see below). \label{pushing}
-\verb'lua_pushliteral' is like \verb'lua_pushstring',
-but also puts the string in the Lua literal table and merges duplications.
-This avoids the string to be garbage collected,
-and therefore has a better overall performance.
-As a rule, when the string to be pushed is a literal,
-\verb'lua_pushliteral' should be used.
 
 User data can have different tags,
 whose semantics are defined by the host program.
