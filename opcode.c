@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 4.17 1997/07/04 14:55:37 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 4.18 1997/07/29 13:35:06 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -538,6 +538,9 @@ int lua_currentline (lua_Function func)
 lua_Object lua_getlocal (lua_Function func, int local_number, char **name)
 {
   TObject *f = luaI_Address(func);
+  /* check whether func is a Lua function */
+  if (ttype(f) != LUA_T_MARK && ttype(f) != LUA_T_FUNCTION)
+    return LUA_NOOBJECT;
   *name = luaI_getlocalname(f->value.tf, local_number, lua_currentline(func));
   if (*name)
   {
