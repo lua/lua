@@ -1,7 +1,7 @@
-# $Id: makefile,v 1.4 1993/12/22 21:52:26 roberto Exp roberto $
+# $Id: makefile,v 1.5 1994/01/10 19:49:56 roberto Exp celes $
 # Compilation parameters
 CC = gcc
-CFLAGS = -I/usr/5include -Wall -O2 -DMAXCODE=4096 -DMAXCONSTANT=1024 -DMAXSYMBOL=1024 
+CFLAGS = -I/usr/5include -Wall -O2
 
 AR = ar
 ARFLAGS	= rvl
@@ -13,7 +13,8 @@ LUAMOD =	\
 	opcode	\
 	hash	\
 	table	\
-	inout
+	inout	\
+	tree
 
 LIBMOD = 	\
 	iolib	\
