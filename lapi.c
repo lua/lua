@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.95 2000/09/11 19:45:27 roberto Exp roberto $
+** $Id: lapi.c,v 1.96 2000/09/11 20:29:27 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -175,11 +175,6 @@ void *lua_touserdata (lua_State *L, int index) {
 const void *lua_topointer (lua_State *L, int index) {
   StkId o = Index(L, index);
   switch (ttype(o)) {
-    case TAG_NUMBER:  case TAG_NIL:
-      return NULL;
-    case TAG_STRING:
-    case TAG_USERDATA:
-      return tsvalue(o);
     case TAG_TABLE: 
       return hvalue(o);
     case TAG_CCLOSURE: case TAG_LCLOSURE:
