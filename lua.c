@@ -3,7 +3,7 @@
 ** Linguagem para Usuarios de Aplicacao
 */
 
-char *rcs_lua="$Id: lua.c,v 1.7 1995/10/31 17:05:35 roberto Exp roberto $";
+char *rcs_lua="$Id: lua.c,v 1.8 1996/03/12 13:14:52 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -41,7 +41,7 @@ static void lua_getargv (void)
 
 static void manual_input (void)
 {
-  if (isatty(fileno(stdin)))
+  if (isatty(0))
   {
    char buffer[250];
    while (fgets(buffer, sizeof(buffer), stdin) != 0)
