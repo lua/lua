@@ -3,7 +3,7 @@
 ** Linguagem para Usuarios de Aplicacao
 */
 
-char *rcs_lua="$Id: lua.c,v 1.10 1996/05/03 19:20:17 roberto Exp roberto $";
+char *rcs_lua="$Id: lua.c,v 1.12 1996/07/05 20:55:43 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -12,7 +12,7 @@ char *rcs_lua="$Id: lua.c,v 1.10 1996/05/03 19:20:17 roberto Exp roberto $";
 #include "lualib.h"
 
 
-#ifdef POSIX
+#ifdef _POSIX_SOURCE
 #include <unistd.h>
 #else
 #define isatty(x)       (x==0)  /* assume stdin is a tty */
