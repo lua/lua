@@ -1,6 +1,6 @@
 %{
 /*
-** $Id: lua.stx,v 1.11 1997/10/16 10:59:34 roberto Exp roberto $
+** $Id: lua.stx,v 1.12 1997/10/18 16:46:39 roberto Exp roberto $
 ** Syntax analizer and code generator
 ** See Copyright Notice in lua.h
 */
@@ -520,9 +520,9 @@ static void func_onstack (TProtoFunc *f)
   int c = next_constant(currState);
   ttype(&currState->f->consts[c]) = LUA_T_PROTO;
   currState->f->consts[c].value.tf = (currState+1)->f;
-  code_constant(c);
   for (i=0; i<nupvalues; i++)
     lua_pushvar((currState+1)->upvalues[i]);
+  code_constant(c);
   code_oparg(CLOSURE, 2, nupvalues, -nupvalues);
 }
 

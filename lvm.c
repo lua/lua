@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.9 1997/10/13 22:12:04 roberto Exp roberto $
+** $Id: lvm.c,v 1.10 1997/10/16 10:59:34 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -79,8 +79,8 @@ int luaV_tostring (TObject *obj)
 void luaV_closure (int nelems)
 {
   Closure *c = luaF_newclosure(nelems);
-  memcpy(c->consts, luaD_stack.top-(nelems+1), (nelems+1)*sizeof(TObject));
-  c->nelems = nelems;
+  c->consts[0] = *(luaD_stack.top-1);
+  memcpy(&c->consts[1], luaD_stack.top-(nelems+1), nelems*sizeof(TObject));
   luaD_stack.top -= nelems;
   ttype(luaD_stack.top-1) = LUA_T_FUNCTION;
   (luaD_stack.top-1)->value.cl = c;

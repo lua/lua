@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.3 1997/10/16 10:59:34 roberto Exp roberto $
+** $Id: ldo.c,v 1.4 1997/10/23 16:26:37 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -11,6 +11,7 @@
 
 #include "lbuiltin.h"
 #include "ldo.h"
+#include "lfunc.h"
 #include "lgc.h"
 #include "lmem.h"
 #include "lobject.h"
@@ -31,7 +32,7 @@
 
 static TObject initial_stack;
 
-struct Stack luaD_stack = {&initial_stack+1, &initial_stack, &initial_stack};
+struct Stack luaD_stack = {&initial_stack, &initial_stack, &initial_stack};
 
 
 struct C_Lua_Stack luaD_Cstack = {0, 0, 0};
@@ -40,6 +41,40 @@ static  jmp_buf *errorJmp = NULL; /* current error recover point */
 
 
 
+/*
+** Error messages
+*/
+
+static void auxerrorim (char *form)
+{
+  lua_Object s = lua_getparam(1);
+  if (lua_isstring(s))
+    fprintf(stderr, form, lua_getstring(s));
+}
+
+
+static void femergencyerror (void)
+{
+  auxerrorim("THERE WAS AN ERROR INSIDE AN ERROR METHOD:\n%s\n");
+}
+
+
+static void stderrorim (void)
+{
+  auxerrorim("lua: %s\n");
+}
+
+
+TObject luaD_errorim;
+static TObject emergencyerror;
+
+
+static void initCfunc (TObject *o, lua_CFunction f)
+{
+  ttype(o) = LUA_T_CPROTO;
+  fvalue(o) = f;
+  luaF_simpleclosure(o);
+}
 
 
 #define STACK_EXTRA 	32
@@ -50,8 +85,10 @@ static void initstack (int n)
   luaD_stack.stack = luaM_newvector(maxstack, TObject);
   luaD_stack.last = luaD_stack.stack+(maxstack-1);
   luaD_stack.top = luaD_stack.stack;
-  *(luaD_stack.top++) = initial_stack;
+  *luaD_stack.stack = initial_stack;
   luaB_predefine();
+  initCfunc(&luaD_errorim, stderrorim);
+  initCfunc(&emergencyerror, femergencyerror);
 }
 
 
@@ -77,7 +114,6 @@ void luaD_checkstack (int n)
     }
   }
 }
-
 
 
 /*
@@ -128,9 +164,9 @@ void luaD_callHook (StkId base, lua_Type type, int isreturn)
     (*lua_callhook)(LUA_NOOBJECT, "(return)", 0);
   else {
     TObject *f = luaD_stack.stack+base-1;
-    if (type == LUA_T_MARK)
-      (*lua_callhook)(Ref(f), f->value.tf->fileName->str,
-                      f->value.tf->lineDefined);
+    if (type == LUA_T_PROTO)
+      (*lua_callhook)(Ref(f), tfvalue(protovalue(f))->fileName->str,
+                              tfvalue(protovalue(f))->lineDefined);
     else
       (*lua_callhook)(Ref(f), "(C)", -1);
   }
@@ -153,10 +189,10 @@ static StkId callC (lua_CFunction func, StkId base)
   luaD_Cstack.lua2C = base;
   luaD_Cstack.base = base+luaD_Cstack.num;  /* == top-stack */
   if (lua_callhook)
-    luaD_callHook(base, LUA_T_CMARK, 0);
+    luaD_callHook(base, LUA_T_CPROTO, 0);
   (*func)();
   if (lua_callhook)  /* func may have changed lua_callhook */
-    luaD_callHook(base, LUA_T_CMARK, 1);
+    luaD_callHook(base, LUA_T_CPROTO, 1);
   firstResult = luaD_Cstack.base;
   luaD_Cstack = oldCLS;
   return firstResult;
@@ -182,13 +218,11 @@ void luaD_call (StkId base, int nResults)
   StkId firstResult;
   TObject *func = luaD_stack.stack+base-1;
   int i;
-  if (ttype(func) == LUA_T_CFUNCTION) {
-    ttype(func) = LUA_T_CMARK;
-    firstResult = callC(fvalue(func), base);
-  }
-  else if (ttype(func) == LUA_T_FUNCTION) {
+  if (ttype(func) == LUA_T_FUNCTION) {
+    TObject *proto = protovalue(func);
     ttype(func) = LUA_T_MARK;
-    firstResult = luaV_execute(func->value.cl, base);
+    firstResult = (ttype(proto) == LUA_T_CPROTO) ? callC(fvalue(proto), base)
+                                         : luaV_execute(func->value.cl, base);
   }
   else { /* func is not a function */
     /* Check the tag method for invalid functions */
@@ -222,39 +256,12 @@ void luaD_travstack (int (*fn)(TObject *))
 }
 
 
-/*
-** Error messages
-*/
-
-static void auxerrorim (char *form)
-{
-  lua_Object s = lua_getparam(1);
-  if (lua_isstring(s))
-    fprintf(stderr, form, lua_getstring(s));
-}
-
-
-static void emergencyerrorf (void)
-{
-  auxerrorim("THERE WAS AN ERROR INSIDE AN ERROR METHOD:\n%s\n");
-}
-
-
-static void stderrorim (void)
-{
-  auxerrorim("lua: %s\n");
-}
-
-
-TObject luaD_errorim = {LUA_T_CFUNCTION, {stderrorim}};
-
 
 static void message (char *s)
 {
   TObject im = luaD_errorim;
   if (ttype(&im) != LUA_T_NIL) {
-    luaD_errorim.ttype = LUA_T_CFUNCTION;
-    luaD_errorim.value.f = emergencyerrorf;
+    luaD_errorim = emergencyerror;
     lua_pushstring(s);
     luaD_callTM(&im, 1, 0);
     luaD_errorim = im;
@@ -291,7 +298,7 @@ static void do_callinc (int nResults)
 
 /*
 ** Execute a protected call. Assumes that function is at luaD_Cstack.base and
-** parameters are on luaD_stack.top of it. Leave nResults on the luaD_stack.stack.
+** parameters are on top of it. Leave nResults on the stack.
 */
 int luaD_protectedrun (int nResults)
 {

@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.2 1997/09/26 15:02:26 roberto Exp roberto $
+** $Id: ltm.c,v 1.3 1997/10/16 20:07:40 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -93,8 +93,8 @@ static char validevents[NUM_TAGS][IM_N] = { /* ORDER LUA_T, ORDER IM */
 {1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_T_NUMBER */
 {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_T_STRING */
 {0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},  /* LUA_T_ARRAY */
-{1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_FUNCTION */
-{1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_CFUNCTION */
+{1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_PROTO */
+{1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_CPROTO */
 {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}   /* LUA_T_NIL */
 };
 
@@ -145,14 +145,19 @@ void luaT_realtag (int tag)
 
 int luaT_efectivetag (TObject *o)
 {
-  lua_Type t = ttype(o);
-  if (t == LUA_T_USERDATA) {
-    int tag = o->value.ts->u.d.tag;
-    return (tag >= 0) ? LUA_T_USERDATA : tag;
+  int t;
+  switch (t = ttype(o)) {
+    case LUA_T_USERDATA: {
+      int tag = o->value.ts->u.d.tag;
+      return (tag >= 0) ? LUA_T_USERDATA : tag;
+    }
+    case LUA_T_ARRAY:
+      return o->value.a->htag;
+    case LUA_T_FUNCTION:  case LUA_T_MARK:
+      return o->value.cl->consts[0].ttype;
+    default:
+      return t;
   }
-  else if (t == LUA_T_ARRAY)
-    return o->value.a->htag;
-  else return t;
 }
 
 
@@ -163,7 +168,7 @@ TObject *luaT_gettagmethod (int t, char *event)
   if (validevent(t, e))
     return luaT_getim(t,e);
   else
-    return luaT_getim(LUA_T_CMARK, IM_GETTABLE);  /* always nil */
+    return luaT_getim(LUA_T_NUMBER, IM_ADD);  /* always nil */
 }
 
 

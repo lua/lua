@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.3 1997/10/16 10:59:34 roberto Exp roberto $
+** $Id: lfunc.c,v 1.4 1997/10/23 16:26:37 roberto Exp roberto $
 ** Lua Funcion auxiliar
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,17 @@ Closure *luaF_newclosure (int nelems)
   Closure *c = (Closure *)luaM_malloc(sizeof(Closure)+nelems*sizeof(TObject));
   luaO_insertlist(&luaF_rootcl, (GCnode *)c);
   luaO_nblocks += gcsizeclosure(c);
+  c->nelems = nelems;
   return c;
+}
+
+
+void luaF_simpleclosure (TObject *o)
+{
+  Closure *c = luaF_newclosure(0);
+  c->consts[0] = *o;
+  ttype(o) = LUA_T_FUNCTION;
+  clvalue(o) = c;
 }
 
 

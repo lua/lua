@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.5 1997/10/16 20:07:40 roberto Exp roberto $
+** $Id: lobject.h,v 1.6 1997/10/23 16:26:37 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -39,12 +39,11 @@ typedef enum {
   LUA_T_NUMBER   = -1,  /* fixed tag for numbers */
   LUA_T_STRING   = -2,  /* fixed tag for strings */
   LUA_T_ARRAY    = -3,  /* tag default for tables (or arrays) */
-  LUA_T_FUNCTION = -4,  /* fixed tag for functions */
-  LUA_T_CFUNCTION= -5,  /* fixed tag for Cfunctions */
+  LUA_T_PROTO    = -4,  /* fixed tag for functions */
+  LUA_T_CPROTO   = -5,  /* fixed tag for Cfunctions */
   LUA_T_NIL      = -6,  /* last "pre-defined" tag */
-  LUA_T_PROTO    = -7,
+  LUA_T_FUNCTION = -7,
   LUA_T_MARK     = -8,
-  LUA_T_CMARK    = -9,
   LUA_T_LINE     = -10
 } lua_Type;
 
@@ -53,7 +52,7 @@ typedef enum {
 
 
 typedef union {
-  lua_CFunction f;  /* LUA_T_CFUNCTION, LUA_T_CMARK */
+  lua_CFunction f;  /* LUA_T_CPROTO */
   real n;  /* LUA_T_NUMBER */
   struct TaggedString *ts;  /* LUA_T_STRING, LUA_T_USERDATA */
   struct TProtoFunc *tf;  /* LUA_T_PROTO */
@@ -132,6 +131,7 @@ typedef struct LocVar {
 #define fvalue(o)       ((o)->value.f)
 #define tfvalue(o)	((o)->value.tf)
 
+#define protovalue(o)	(&(o)->value.cl->consts[0])
 
 /*
 ** Closures

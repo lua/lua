@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.3 1997/10/18 16:29:15 roberto Exp roberto $
+** $Id: ltable.c,v 1.4 1997/10/23 16:26:37 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -40,9 +40,6 @@ static long int hashindex (TObject *ref)
       break;
     case LUA_T_FUNCTION:
       h = (IntPoint)clvalue(ref);
-      break;
-    case LUA_T_CFUNCTION:
-      h = (IntPoint)fvalue(ref);
       break;
     case LUA_T_ARRAY:
       h = (IntPoint)avalue(ref);

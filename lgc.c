@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.4 1997/10/16 10:59:34 roberto Exp roberto $
+** $Id: lgc.c,v 1.5 1997/10/23 16:26:37 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -97,7 +97,7 @@ static int ismarked (TObject *o)
       return o->value.tf->head.marked;
     case LUA_T_ARRAY:
       return o->value.a->head.marked;
-    default:  /* nil, number or cfunction */
+    default:  /* nil, number or cproto */
       return 1;
   }
 }
@@ -234,7 +234,7 @@ static int markobject (TObject *o)
     case LUA_T_PROTO:
       protomark(o->value.tf);
       break;
-    default: break;  /* numbers, cfunctions, etc */
+    default: break;  /* numbers, cprotos, etc */
   }
   return 0;
 }

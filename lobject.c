@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.3 1997/10/16 20:07:40 roberto Exp roberto $
+** $Id: lobject.c,v 1.4 1997/10/23 16:26:37 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -12,8 +12,8 @@
 
 
 char *luaO_typenames[] = { /* ORDER LUA_T */
-    "userdata", "number", "string", "table", "function", "function",
-    "nil", "prototype", "mark", "cmark", "line", NULL
+    "userdata", "number", "string", "table", "prototype", "cprototype",
+    "nil", "function", "mark", "cmark", "line", NULL
 };
 
 
@@ -48,7 +48,6 @@ int luaO_equalObj (TObject *t1, TObject *t2)
     case LUA_T_STRING: case LUA_T_USERDATA: return svalue(t1) == svalue(t2);
     case LUA_T_ARRAY: return avalue(t1) == avalue(t2);
     case LUA_T_FUNCTION: return t1->value.cl == t2->value.cl;
-    case LUA_T_CFUNCTION: return fvalue(t1) == fvalue(t2);
     default:
      lua_error("internal error in `lua_equalObj'");
      return 0; /* UNREACHEABLE */

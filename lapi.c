@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
+** $Id: lapi.c,v 1.2 1997/09/26 15:02:26 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -91,6 +91,18 @@ lua_Object lua_lua2C (int number)
   /* Ref(luaD_stack.stack+(luaD_Cstack.lua2C+number-1)) ==
      luaD_stack.stack+(luaD_Cstack.lua2C+number-1)-luaD_stack.stack+1 == */
   return luaD_Cstack.lua2C+number;
+}
+
+
+lua_Object lua_upvalue (int n)
+{
+  TObject *f = luaD_stack.stack+luaD_Cstack.lua2C-1;
+  if (ttype(f) != LUA_T_MARK || n <= 0 || n > clvalue(f)->nelems)
+    return LUA_NOOBJECT;
+if (ttype(protovalue(f)) != LUA_T_CPROTO) lua_error("BAD!!");
+  *luaD_stack.top = clvalue(f)->consts[n];
+  incr_top;
+  return put_luaObjectonTop();
 }
 
 
@@ -227,8 +239,7 @@ int lua_isuserdata (lua_Object o)
 
 int lua_iscfunction (lua_Object o)
 {
-  int t = lua_tag(o);
-  return (t == LUA_T_CMARK) || (t == LUA_T_CFUNCTION);
+  return (o != LUA_NOOBJECT) && (lua_tag(o) == LUA_T_CPROTO);
 }
 
 int lua_isnumber (lua_Object o)
@@ -244,9 +255,8 @@ int lua_isstring (lua_Object o)
 
 int lua_isfunction (lua_Object o)
 {
-  int t = lua_tag(o);
-  return (t == LUA_T_FUNCTION) || (t == LUA_T_CFUNCTION) ||
-         (t == LUA_T_MARK) || (t == LUA_T_CMARK);
+  return (o != LUA_NOOBJECT) && ((ttype(Address(o)) == LUA_T_FUNCTION) ||
+                                 (ttype(Address(o)) == LUA_T_MARK));
 }
 
 
@@ -273,10 +283,9 @@ void *lua_getuserdata (lua_Object object)
 
 lua_CFunction lua_getcfunction (lua_Object object)
 {
- if (object == LUA_NOOBJECT || ((ttype(Address(object)) != LUA_T_CFUNCTION) &&
-                                (ttype(Address(object)) != LUA_T_CMARK)))
-   return NULL;
- else return (fvalue(Address(object)));
+  if (!lua_iscfunction(object))
+    return NULL;
+  else return fvalue(protovalue(Address(object)));
 }
 
 
@@ -305,15 +314,19 @@ void lua_pushstring (char *s)
   luaC_checkGC();
 }
 
-void lua_pushcfunction (lua_CFunction fn)
+void lua_pushCclosure (lua_CFunction fn, int n)
 {
-  if (fn == NULL)
+  if (fn == NULL) {
     ttype(luaD_stack.top) = LUA_T_NIL;
-  else {
-    ttype(luaD_stack.top) = LUA_T_CFUNCTION;
-    fvalue(luaD_stack.top) = fn;
+    incr_top;
   }
-  incr_top;
+  else {
+    checkCparams(n);
+    ttype(luaD_stack.top) = LUA_T_CPROTO;
+    fvalue(luaD_stack.top) = fn;
+    incr_top;
+    luaV_closure(n);
+  }
 }
 
 void lua_pushusertag (void *u, int tag)
@@ -339,8 +352,6 @@ void lua_pushobject (lua_Object o)
   *luaD_stack.top = *Address(o);
   if (ttype(luaD_stack.top) == LUA_T_MARK)
     ttype(luaD_stack.top) = LUA_T_FUNCTION;
-  else if (ttype(luaD_stack.top) == LUA_T_CMARK)
-    ttype(luaD_stack.top) = LUA_T_CFUNCTION;
   incr_top;
 }
 
@@ -350,12 +361,11 @@ int lua_tag (lua_Object lo)
   if (lo == LUA_NOOBJECT) return LUA_T_NIL;
   else {
     TObject *o = Address(lo);
-    lua_Type t = ttype(o);
+    int t = luaT_efectivetag(o);
     if (t == LUA_T_USERDATA)
       return o->value.ts->u.d.tag;
-    else if (t == LUA_T_ARRAY)
-      return o->value.a->htag;
-    else return t;
+    else
+      return t;
   }
 }
 
@@ -395,7 +405,7 @@ lua_Function lua_stackedfunction (int level)
 {
   StkId i;
   for (i = (luaD_stack.top-1)-luaD_stack.stack; i>=0; i--)
-    if (luaD_stack.stack[i].ttype == LUA_T_MARK || luaD_stack.stack[i].ttype == LUA_T_CMARK)
+    if (luaD_stack.stack[i].ttype == LUA_T_MARK)
       if (level-- == 0)
         return Ref(luaD_stack.stack+i);
   return LUA_NOOBJECT;
@@ -413,24 +423,27 @@ lua_Object lua_getlocal (lua_Function func, int local_number, char **name)
 {
   TObject *f = luaA_Address(func);
   /* check whether func is a Lua function */
-  if (ttype(f) != LUA_T_MARK && ttype(f) != LUA_T_FUNCTION)
+  if (!(f->ttype == LUA_T_MARK || f->ttype == LUA_T_FUNCTION))
     return LUA_NOOBJECT;
-  *name = luaF_getlocalname(f->value.tf, local_number, lua_currentline(func));
-  if (*name) {
-    /* if "*name", there must be a LUA_T_LINE */
-    /* therefore, f+2 points to function base */
-    return Ref((f+2)+(local_number-1));
+  else {
+    TProtoFunc *fp = protovalue(f)->value.tf;
+    *name = luaF_getlocalname(fp, local_number, lua_currentline(func));
+    if (*name) {
+      /* if "*name", there must be a LUA_T_LINE */
+      /* therefore, f+2 points to function base */
+      return Ref((f+2)+(local_number-1));
+    }
+    else
+      return LUA_NOOBJECT;
   }
-  else
-    return LUA_NOOBJECT;
 }
 
 
 int lua_setlocal (lua_Function func, int local_number)
 {
   TObject *f = Address(func);
-  char *name = luaF_getlocalname(f->value.tf, local_number,
-                                 lua_currentline(func));
+  TProtoFunc *fp = protovalue(f)->value.tf;
+  char *name = luaF_getlocalname(fp, local_number, lua_currentline(func));
   checkCparams(1);
   --luaD_stack.top;
   if (name) {
@@ -447,16 +460,18 @@ int lua_setlocal (lua_Function func, int local_number)
 void lua_funcinfo (lua_Object func, char **filename, int *linedefined)
 {
   TObject *f = Address(func);
-  if (f->ttype == LUA_T_MARK || f->ttype == LUA_T_FUNCTION)
-  {
-    TProtoFunc *fp = f->value.cl->consts[0].value.tf;
-    *filename = fp->fileName->str;
-    *linedefined = fp->lineDefined;
-  }
-  else if (f->ttype == LUA_T_CMARK || f->ttype == LUA_T_CFUNCTION)
-  {
-    *filename = "(C)";
-    *linedefined = -1;
+  if (!(ttype(f) == LUA_T_MARK || ttype(f) == LUA_T_FUNCTION))
+    lua_error("API - `funcinfo' called with a non-function value");
+  else {
+    f = protovalue(f);
+    if (ttype(f) == LUA_T_PROTO) {
+      *filename = tfvalue(f)->fileName->str;
+      *linedefined = tfvalue(f)->lineDefined;
+    }
+    else {
+      *filename = "(C)";
+      *linedefined = -1;
+    }
   }
 }
 
@@ -464,17 +479,10 @@ void lua_funcinfo (lua_Object func, char **filename, int *linedefined)
 static TObject *functofind;
 static int checkfunc (TObject *o)
 {
-  if (o->ttype == LUA_T_FUNCTION)
-    return
-       ((functofind->ttype == LUA_T_FUNCTION ||
-         functofind->ttype == LUA_T_MARK) &&
-        (functofind->value.cl == o->value.cl));
-  else if (o->ttype == LUA_T_CFUNCTION)
-    return
-       ((functofind->ttype == LUA_T_CFUNCTION ||
-         functofind->ttype == LUA_T_CMARK) &&
-         (functofind->value.f == o->value.f));
-  else return 0;
+    return (o->ttype == LUA_T_FUNCTION) &&
+           ((functofind->ttype == LUA_T_FUNCTION) ||
+            (functofind->ttype == LUA_T_MARK)) &&
+           (functofind->value.cl == o->value.cl);
 }
 
 
@@ -548,8 +556,9 @@ static void do_unprotectedrun (lua_CFunction f, int nParams, int nResults)
 {
   StkId base = (luaD_stack.top-luaD_stack.stack)-nParams;
   luaD_openstack(nParams);
-  luaD_stack.stack[base].ttype = LUA_T_CFUNCTION;
+  luaD_stack.stack[base].ttype = LUA_T_CPROTO;
   luaD_stack.stack[base].value.f = f;
+  luaF_simpleclosure(luaD_stack.stack+base);
   luaD_call(base+1, nResults);
 }
 

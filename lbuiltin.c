@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.3 1997/10/18 16:33:36 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.4 1997/10/23 16:28:48 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -12,6 +12,7 @@
 #include "lauxlib.h"
 #include "lbuiltin.h"
 #include "ldo.h"
+#include "lfunc.h"
 #include "lmem.h"
 #include "lobject.h"
 #include "lstring.h"
@@ -162,10 +163,6 @@ static char *to_string (lua_Object obj)
     }
     case LUA_T_FUNCTION: {
       sprintf(buff, "function: %p", o->value.cl);
-      return buff;
-    }
-    case LUA_T_CFUNCTION: {
-      sprintf(buff, "cfunction: %p", o->value.f);
       return buff;
     }
     case LUA_T_USERDATA: {
@@ -382,6 +379,7 @@ static void testC (void)
         break;
 
       case 'c': reg[getnum(s)] = lua_createtable(); break;
+      case 'C': lua_pushCclosure(testC, getnum(s)); break;
       case 'P': reg[getnum(s)] = lua_pop(); break;
       case 'g': { int n=getnum(s); reg[n]=lua_getglobal(getname(s)); break; }
       case 'G': { int n = getnum(s);
@@ -401,6 +399,7 @@ static void testC (void)
       case 'I': reg[getnum(s)] = lua_rawgettable(); break;
       case 't': lua_settable(); break;
       case 'T': lua_rawsettable(); break;
+      case 'U': { int n=getnum(s); reg[n]=lua_upvalue(getnum(s)); break; }
       default: luaL_verror("unknown command in `testC': %c", *(s-1));
     }
   if (*s == 0) return;
@@ -462,10 +461,11 @@ void luaB_predefine (void)
   /* pre-register mem error messages, to avoid loop when error arises */
   luaS_newfixedstring(tableEM);
   luaS_newfixedstring(memEM);
-  o.ttype = LUA_T_CFUNCTION;
   for (i=0; i<INTFUNCSIZE; i++) {
     ts = luaS_new(int_funcs[i].name);
     fvalue(&o) = int_funcs[i].func;
+    ttype(&o) = LUA_T_CPROTO;
+    luaF_simpleclosure(&o);
     luaS_rawsetglobal(ts, &o);
   }
   ts = luaS_new("_VERSION");
