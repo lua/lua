@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.82 2003/10/07 20:13:41 roberto Exp roberto $
+** $Id: ldblib.c,v 1.83 2003/10/10 12:57:55 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -339,7 +339,7 @@ static const luaL_reg dblib[] = {
 LUALIB_API int luaopen_debug (lua_State *L) {
   luaL_openlib(L, LUA_DBLIBNAME, dblib, 0);
   lua_pushcfunction(L, errorfb);
-  lua_setfield(L, LUA_GLOBALSINDEX, "_TRACEBACK");
+  lua_setglobal(L, "_TRACEBACK");
   return 1;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.183 2003/10/20 12:25:23 roberto Exp roberto $
+** $Id: lua.h,v 1.184 2003/10/21 10:58:58 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -277,6 +277,9 @@ LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud);
 #define lua_pushliteral(L, s)	\
 	lua_pushlstring(L, "" s, (sizeof(s)/sizeof(char))-1)
 
+#define lua_setglobal(L,s)	lua_setfield(L, LUA_GLOBALSINDEX, s)
+#define lua_getglobal(L,s)	lua_getfield(L, LUA_GLOBALSINDEX, s)
+
 
 
 /*
@@ -286,8 +289,6 @@ LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud);
 #define lua_open()	luaL_newstate()
 
 #define lua_getregistry(L)	lua_pushvalue(L, LUA_REGISTRYINDEX)
-#define lua_setglobal(L,s)	lua_setfield(L, LUA_GLOBALSINDEX, s)
-#define lua_getglobal(L,s)	lua_getfield(L, LUA_GLOBALSINDEX, s)
 
 
 /* compatibility with ref system */
