@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.87 2000/08/14 19:10:14 roberto Exp roberto $
+** $Id: lapi.c,v 1.88 2000/08/28 17:57:04 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -116,7 +116,10 @@ int lua_tag (lua_State *L, int index) {
 }
 
 int lua_equal(lua_State *L, int index1, int index2) {
-  return luaO_equalObj(Index(L, index1), Index(L, index2));
+  StkId o1 = Index(L, index1);
+  StkId o2 = Index(L, index2);
+  if (o1 >= L->top || o2 >= L->top) return 0;  /* index out-of-range */
+  else return luaO_equalObj(o1, o2);
 }
 
 
