@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.121 2002/06/18 17:10:43 roberto Exp roberto $
+** $Id: ldebug.c,v 1.122 2002/06/20 20:39:44 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -506,13 +506,14 @@ void luaG_aritherror (lua_State *L, StkId p1, const TObject *p2) {
 }
 
 
-void luaG_ordererror (lua_State *L, const TObject *p1, const TObject *p2) {
+int luaG_ordererror (lua_State *L, const TObject *p1, const TObject *p2) {
   const char *t1 = luaT_typenames[ttype(p1)];
   const char *t2 = luaT_typenames[ttype(p2)];
   if (t1[2] == t2[2])
     luaG_runerror(L, "attempt to compare two %s values", t1);
   else
     luaG_runerror(L, "attempt to compare %s with %s", t1, t2);
+  return 0;
 }
 
 

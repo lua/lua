@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.241 2002/06/24 13:08:45 roberto Exp roberto $
+** $Id: lvm.c,v 1.242 2002/06/24 14:11:14 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -205,30 +205,30 @@ static int luaV_strcmp (const TString *ls, const TString *rs) {
 
 
 int luaV_lessthan (lua_State *L, const TObject *l, const TObject *r) {
-  if (ttype(l) == LUA_TNUMBER && ttype(r) == LUA_TNUMBER)
+  if (ttype(l) != ttype(r))
+    return luaG_ordererror(L, l, r);
+  else if (ttype(l) == LUA_TNUMBER)
     return nvalue(l) < nvalue(r);
-  else if (ttype(l) == LUA_TSTRING && ttype(r) == LUA_TSTRING)
+  else if (ttype(l) == LUA_TSTRING)
     return luaV_strcmp(tsvalue(l), tsvalue(r)) < 0;
-  else {  /* try TM */
-    if (!call_binTM(L, l, r, L->top, TM_LT))
-      luaG_ordererror(L, l, r);
+  else if (call_binTM(L, l, r, L->top, TM_LT))
     return !l_isfalse(L->top);
-  }
+  return luaG_ordererror(L, l, r);
 }
 
 
 static int luaV_lessequal (lua_State *L, const TObject *l, const TObject *r) {
-  if (ttype(l) == LUA_TNUMBER && ttype(r) == LUA_TNUMBER)
+  if (ttype(l) != ttype(r))
+    return luaG_ordererror(L, l, r);
+  else if (ttype(l) == LUA_TNUMBER)
     return nvalue(l) <= nvalue(r);
-  else if (ttype(l) == LUA_TSTRING && ttype(r) == LUA_TSTRING)
+  else if (ttype(l) == LUA_TSTRING)
     return luaV_strcmp(tsvalue(l), tsvalue(r)) <= 0;
-  else {  /* try TM */
-    if (call_binTM(L, l, r, L->top, TM_LE))  /* first try `le' */
-      return !l_isfalse(L->top);
-    else if (!call_binTM(L, r, l, L->top, TM_LT))  /* else try `lt' */
-      luaG_ordererror(L, l, r);
+  else if (call_binTM(L, l, r, L->top, TM_LE))  /* first try `le' */
+    return !l_isfalse(L->top);
+  else if (call_binTM(L, r, l, L->top, TM_LT))  /* else try `lt' */
     return l_isfalse(L->top);
-  }
+  return luaG_ordererror(L, l, r);
 }
 
 
