@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.11 2004/06/04 15:30:53 roberto Exp roberto $
+** $Id: lapi.c,v 2.12 2004/06/08 14:31:00 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -820,25 +820,26 @@ LUA_API int lua_dump (lua_State *L, lua_Chunkwriter writer, void *data) {
 */
 
 LUA_API int lua_gc (lua_State *L, int what, int data) {
-  global_State *g = G(L);
+  int res = 0;
+  global_State *g;
+  lua_lock(L);
+  g = G(L);
   switch (what) {
     case LUA_GCSTOP: {
       g->GCthreshold = MAXLMEM;
-      return 0;
+      break;
     }
     case LUA_GCRESTART: {
       g->GCthreshold = g->nblocks;
-      return 0;
+      break;
     }
     case LUA_GCCOLLECT: {
-      lua_lock(L);
       luaC_fullgc(L);
-      lua_unlock(L);
-      return 0;
+      break;
     }
     case LUA_GCCOUNT: {
       /* GC values are expressed in Kbytes: #bytes/2^10 */
-      return cast(int, g->nblocks >> 10);
+      res = cast(int, g->nblocks >> 10);
     }
     case LUA_GCSTEP: {
       lu_mem a = (cast(lu_mem, data) << 10);
@@ -847,10 +848,12 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
       else
         g->GCthreshold = 0;
       luaC_step(L);
-      return 0;
+      break;
     }
-    default: return -1;  /* invalid option */
+    default: res = -1;  /* invalid option */
   }
+  lua_unlock(L);
+  return res;
 }
 
 
