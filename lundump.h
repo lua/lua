@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.h,v 1.26 2002/08/07 00:36:03 lhf Exp $
+** $Id: lundump.h,v 1.27 2002/08/12 13:37:19 roberto Exp roberto $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -13,7 +13,7 @@
 typedef int (*Writer)(const void* p, size_t size, void* u);
 
 /* load one chunk; from lundump.c */
-Proto* luaU_undump (lua_State* L, ZIO* Z);
+Proto* luaU_undump (lua_State* L, ZIO* Z, Mbuffer *buff);
 
 /* find byte order; from lundump.c */
 int luaU_endianness (void);

@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.53 2002/09/19 13:03:53 roberto Exp roberto $
+** $Id: lundump.c,v 1.54 2002/10/08 18:46:08 roberto Exp roberto $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -19,6 +19,7 @@
 typedef struct {
  lua_State* L;
  ZIO* Z;
+ Mbuffer *buff;
  int swap;
  const char* name;
 } LoadState;
@@ -99,7 +100,7 @@ static TString* LoadString (LoadState* S)
   return NULL;
  else
  {
-  char* s=luaZ_openspace(S->L,&G(S->L)->buff,size);
+  char* s=luaZ_openspace(S->L,S->buff,size);
   ezread(S,s,size);
   return luaS_newlstr(S->L,s,size-1);	/* remove trailing '\0' */
  }
@@ -245,7 +246,7 @@ static Proto* LoadChunk (LoadState* S)
 /*
 ** load one chunk from a file or buffer
 */
-Proto* luaU_undump (lua_State* L, ZIO* Z)
+Proto* luaU_undump (lua_State* L, ZIO* Z, Mbuffer *buff)
 {
  LoadState S;
  Proto* f;
@@ -258,6 +259,7 @@ Proto* luaU_undump (lua_State* L, ZIO* Z)
   S.name=s;
  S.L=L;
  S.Z=Z;
+ S.buff=buff;
  f=LoadChunk(&S);
  if (zgetc(Z)!=EOZ)
   luaG_runerror(L,"%s apparently contains more than one chunk",S.name);
