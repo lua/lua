@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.36 2001/06/05 19:41:31 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.37 2001/06/06 18:00:19 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -690,71 +690,6 @@ static int luaB_sort (lua_State *L) {
 
 
 
-/*
-** {======================================================
-** Deprecated functions to manipulate global environment.
-** =======================================================
-*/
-
-
-#define num_deprecated	4
-
-static const luaL_reg deprecated_names [num_deprecated] = {
-  {l_s("foreachvar"), luaB_foreach},
-  {l_s("nextvar"), luaB_next},
-  {l_s("rawgetglobal"), luaB_rawget},
-  {l_s("rawsetglobal"), luaB_rawset}
-};
-
-
-#ifdef LUA_DEPRECATEDFUNCS
-
-/*
-** call corresponding function inserting `globals' as first argument
-*/
-static int deprecated_func (lua_State *L) {
-  lua_insert(L, 1);  /* upvalue is the function to be called */
-  lua_getglobals(L);
-  lua_insert(L, 2);  /* table of globals is 1o argument */
-  lua_rawcall(L, lua_gettop(L)-1, LUA_MULTRET);
-  return lua_gettop(L);  /* return all results */
-}
-
-
-static void deprecated_funcs (lua_State *L) {
-  int i;
-  for (i=0; i<num_deprecated; i++) {
-    lua_pushcfunction(L, deprecated_names[i].func);
-    lua_pushcclosure(L, deprecated_func, 1);
-    lua_setglobal(L, deprecated_names[i].name);
-  }
-}
-
-
-#else
-
-/*
-** gives an explicit error in any attempt to call a deprecated function
-*/
-static int deprecated_func (lua_State *L) {
-  luaL_verror(L, l_s("function `%.20s' is deprecated"), lua_tostring(L, -1));
-  return 0;  /* to avoid warnings */
-}
-
-
-static void deprecated_funcs (lua_State *L) {
-  int i;
-  for (i=0; i<num_deprecated; i++) {
-    lua_pushstring(L, deprecated_names[i].name);
-    lua_pushcclosure(L, deprecated_func, 1);
-    lua_setglobal(L, deprecated_names[i].name);
-  }
-}
-
-#endif
-
-/* }====================================================== */
-
 static const luaL_reg base_funcs[] = {
   {l_s(LUA_ALERT), luaB__ALERT},
   {l_s(LUA_ERRORMESSAGE), luaB__ERRORMESSAGE},
@@ -804,7 +739,6 @@ LUALIB_API int lua_baselibopen (lua_State *L) {
   luaL_openl(L, base_funcs);
   lua_pushliteral(L, l_s(LUA_VERSION));
   lua_setglobal(L, l_s("_VERSION"));
-  deprecated_funcs(L);
   return 0;
 }
 
