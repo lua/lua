@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.13 2000/03/27 20:10:21 roberto Exp roberto $
+** $Id: ldebug.c,v 1.14 2000/03/29 20:19:20 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -41,15 +41,15 @@ static int hasdebuginfo (lua_State *L, StkId f) {
 }
 
 
-lua_Dbghook lua_setcallhook (lua_State *L, lua_Dbghook func) {
-  lua_Dbghook oldhook = L->callhook;
+lua_Hook lua_setcallhook (lua_State *L, lua_Hook func) {
+  lua_Hook oldhook = L->callhook;
   L->callhook = func;
   return oldhook;
 }
 
 
-lua_Dbghook lua_setlinehook (lua_State *L, lua_Dbghook func) {
-  lua_Dbghook oldhook = L->linehook;
+lua_Hook lua_setlinehook (lua_State *L, lua_Hook func) {
+  lua_Hook oldhook = L->linehook;
   L->linehook = func;
   return oldhook;
 }
@@ -75,7 +75,7 @@ static StkId aux_stackedfunction (lua_State *L, int level, StkId top) {
 }
 
 
-int lua_getstack (lua_State *L, int level, lua_Dbgactreg *ar) {
+int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
   StkId f = aux_stackedfunction(L, level, L->top);
   if (f == NULL) return 0;  /* there is no such level */
   else {
@@ -106,7 +106,7 @@ static Proto *getluaproto (StkId f) {
 }
 
 
-int lua_getlocal (lua_State *L, const lua_Dbgactreg *ar, lua_Dbglocvar *v) {
+int lua_getlocal (lua_State *L, const lua_Debug *ar, lua_Localvar *v) {
   StkId f = ar->_func;
   Proto *fp = getluaproto(f);
   if (!fp) return 0;  /* `f' is not a Lua function? */
@@ -120,7 +120,7 @@ int lua_getlocal (lua_State *L, const lua_Dbgactreg *ar, lua_Dbglocvar *v) {
 }
 
 
-int lua_setlocal (lua_State *L, const lua_Dbgactreg *ar, lua_Dbglocvar *v) {
+int lua_setlocal (lua_State *L, const lua_Debug *ar, lua_Localvar *v) {
   StkId f = ar->_func;
   Proto *fp = getluaproto(f);
   if (!fp) return 0;  /* `f' is not a Lua function? */
@@ -132,7 +132,7 @@ int lua_setlocal (lua_State *L, const lua_Dbgactreg *ar, lua_Dbglocvar *v) {
 }
 
 
-static void lua_funcinfo (lua_Dbgactreg *ar) {
+static void lua_funcinfo (lua_Debug *ar) {
   StkId func = ar->_func;
   switch (ttype(func)) {
     case TAG_LCLOSURE:  case TAG_LCLMARK:
@@ -158,7 +158,7 @@ static int checkfunc (lua_State *L, TObject *o) {
 }
 
 
-static void lua_getobjname (lua_State *L, StkId f, lua_Dbgactreg *ar) {
+static void lua_getobjname (lua_State *L, StkId f, lua_Debug *ar) {
   GlobalVar *g;
   /* try to find a name for given function */
   setnormalized(L->top, f); /* to be used by `checkfunc' */
@@ -176,7 +176,7 @@ static void lua_getobjname (lua_State *L, StkId f, lua_Dbgactreg *ar) {
 }
 
 
-int lua_getinfo (lua_State *L, const char *what, lua_Dbgactreg *ar) {
+int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
   StkId func = ar->_func;
   LUA_ASSERT(L, is_T_MARK(ttype(func)), "invalid activation record");
   for (; *what; what++) {

@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.10 2000/01/19 12:00:45 roberto Exp roberto $
+** $Id: ldblib.c,v 1.11 2000/03/03 14:58:26 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -42,7 +42,7 @@ static void settabso (lua_State *L, lua_Object t, const char *i, lua_Object v) {
 
 
 static void getstack (lua_State *L) {
-  lua_Dbgactreg ar;
+  lua_Debug ar;
   if (!lua_getstack(L, luaL_check_int(L, 1), &ar))  /* level out of range? */
     return;
   else {
@@ -79,8 +79,8 @@ static void getstack (lua_State *L) {
     
 
 static void getlocal (lua_State *L) {
-  lua_Dbgactreg ar;
-  lua_Dbglocvar lvar;
+  lua_Debug ar;
+  lua_Localvar lvar;
   if (!lua_getstack(L, luaL_check_int(L, 1), &ar))  /* level out of range? */
     luaL_argerror(L, 1, "level out of range");
   lvar.index = luaL_check_int(L, 2);
@@ -92,8 +92,8 @@ static void getlocal (lua_State *L) {
 
 
 static void setlocal (lua_State *L) {
-  lua_Dbgactreg ar;
-  lua_Dbglocvar lvar;
+  lua_Debug ar;
+  lua_Localvar lvar;
   if (!lua_getstack(L, luaL_check_int(L, 1), &ar))  /* level out of range? */
     luaL_argerror(L, 1, "level out of range");
   lvar.index = luaL_check_int(L, 2);
@@ -113,7 +113,7 @@ static int callhook = LUA_NOREF;  /* Lua reference to call hook function */
 
 
 
-static void linef (lua_State *L, lua_Dbgactreg *ar) {
+static void linef (lua_State *L, lua_Debug *ar) {
   if (linehook != LUA_NOREF) {
     lua_pushnumber(L, ar->currentline);
     lua_callfunction(L, lua_getref(L, linehook));
@@ -121,7 +121,7 @@ static void linef (lua_State *L, lua_Dbgactreg *ar) {
 }
 
 
-static void callf (lua_State *L, lua_Dbgactreg *ar) {
+static void callf (lua_State *L, lua_Debug *ar) {
   if (callhook != LUA_NOREF) {
     lua_pushstring(L, ar->event);
     lua_callfunction(L, lua_getref(L, callhook));

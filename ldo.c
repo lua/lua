@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.69 2000/03/10 18:37:44 roberto Exp roberto $
+** $Id: ldo.c,v 1.70 2000/03/29 20:19:20 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -55,7 +55,7 @@ void luaD_checkstack (lua_State *L, int n) {
       lua_error(L, "BAD STACK OVERFLOW! DATA CORRUPTED!");
     }
     else {
-      lua_Dbgactreg dummy;
+      lua_Debug dummy;
       L->stack_last += EXTRA_STACK;  /* to be used by error message */
       if (lua_getstack(L, L->stacksize/SLOTS_PER_F, &dummy) == 0) {
         /* too few funcs on stack: doesn't look like a recursion loop */
@@ -103,7 +103,7 @@ void luaD_openstack (lua_State *L, StkId pos) {
 
 void luaD_lineHook (lua_State *L, StkId func, int line) {
   if (L->allowhooks) {
-    lua_Dbgactreg ar;
+    lua_Debug ar;
     struct C_Lua_Stack oldCLS = L->Cstack;
     StkId old_top = L->Cstack.lua2C = L->Cstack.base = L->top;
     L->Cstack.num = 0;
@@ -119,10 +119,10 @@ void luaD_lineHook (lua_State *L, StkId func, int line) {
 }
 
 
-static void luaD_callHook (lua_State *L, StkId func, lua_Dbghook callhook,
+static void luaD_callHook (lua_State *L, StkId func, lua_Hook callhook,
                     const char *event) {
   if (L->allowhooks) {
-    lua_Dbgactreg ar;
+    lua_Debug ar;
     struct C_Lua_Stack oldCLS = L->Cstack;
     StkId old_top = L->Cstack.lua2C = L->Cstack.base = L->top;
     L->Cstack.num = 0;
@@ -179,7 +179,7 @@ void luaD_callTM (lua_State *L, const TObject *f, int nParams, int nResults) {
 */ 
 void luaD_call (lua_State *L, StkId func, int nResults) {
   StkId firstResult;
-  lua_Dbghook callhook = L->callhook;
+  lua_Hook callhook = L->callhook;
   retry:  /* for `function' tag method */
   switch (ttype(func)) {
     case TAG_LCLOSURE: {

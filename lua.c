@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.34 2000/03/03 14:58:26 roberto Exp roberto $
+** $Id: lua.c,v 1.35 2000/03/20 20:27:32 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -30,8 +30,8 @@ typedef void (*handler)(int);  /* type for signal actions */
 static void laction (int i);
 
 
-static lua_Dbghook old_linehook = NULL;
-static lua_Dbghook old_callhook = NULL;
+static lua_Hook old_linehook = NULL;
+static lua_Hook old_callhook = NULL;
 
 
 static handler lreset (void) {
@@ -51,8 +51,8 @@ static void laction (int i) {
   (void)i;  /* to avoid warnings */
   signal(SIGINT, SIG_DFL); /* if another SIGINT happens before lstop,
                               terminate process (default action) */
-  old_linehook = lua_setlinehook(lua_state, (lua_Dbghook)lstop);
-  old_callhook = lua_setcallhook(lua_state, (lua_Dbghook)lstop);
+  old_linehook = lua_setlinehook(lua_state, (lua_Hook)lstop);
+  old_callhook = lua_setcallhook(lua_state, (lua_Hook)lstop);
 }
 
 
