@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.51 1999/02/24 17:55:51 roberto Exp roberto $
+** $Id: lvm.c,v 1.52 1999/03/04 21:15:50 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -329,13 +329,22 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
     switchentry:
     switch ((OpCode)*pc++) {
 
-      case ENDCODE: aux = 1;
+      case ENDCODE:
         S->top = S->stack + base;
-        /* goes through */
+        goto ret;
+        
       case RETCODE:
-        if (L->callhook)
-          luaD_callHook(base, NULL, 1);
-        return base + (aux ? 0 : *pc);
+        base += *pc++;
+        goto ret;
+
+      case CALL: aux = *pc++;
+        luaD_call((S->top-S->stack)-(*pc++), aux);
+        break;
+
+      case TAILCALL: aux = *pc++;
+        luaD_call((S->top-S->stack)-(*pc++), MULT_RET);
+        base += aux;
+        goto ret;
 
       case PUSHNIL: aux = *pc++;
         do {
@@ -619,12 +628,6 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         luaC_checkGC();
         break;
 
-      case CALL: aux = *pc++; {
-        StkId newBase = (S->top-S->stack)-(*pc++);
-        luaD_call(newBase, aux);
-        break;
-      }
-
       case SETLINEW: aux += highbyte(*pc++);
       case SETLINE:  aux += *pc++;
         if ((S->stack+base-1)->ttype != LUA_T_LINE) {
@@ -648,6 +651,9 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         break;
 
     }
-  }
+  } ret:
+  if (L->callhook)
+    luaD_callHook(0, NULL, 1);
+  return base;
 }
 

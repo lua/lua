@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.29 1999/02/26 15:19:54 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.30 1999/03/04 21:15:50 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -17,8 +17,12 @@
 typedef enum {
 /* name          parm    before          after           side effect
 -----------------------------------------------------------------------------*/
-ENDCODE,/*	-	-		-				*/
-RETCODE,/*	b	-		-				*/
+ENDCODE,/*	-	-		(return)			*/
+RETCODE,/*	b	-		(return)			*/
+
+CALL,/*		b c	v_c...v_1 f	r_b...r_1	f(v1,...,v_c)	*/
+
+TAILCALL,/*	b c	v_c...v_1 f	(return)	f(v1,...,v_c)	*/
 
 PUSHNIL,/*	b	-		nil_0...nil_b			*/
 POP,/*		b	a_b...a_1	-				*/
@@ -100,8 +104,6 @@ IFFUPJMP,/*	b	x		-		(x==nil)? PC-=b	*/
 
 CLOSUREW,/*	w c	v_c...v_1	closure(CNST[w], v_c...v_1)	*/
 CLOSURE,/*	b c	v_c...v_1	closure(CNST[b], v_c...v_1)	*/
-
-CALL,/*		b c	v_c...v_1 f	r_b...r_1	f(v1,...,v_c)	*/
 
 SETLINEW,/*	w	-		-		LINE=w		*/
 SETLINE,/*	b	-		-		LINE=b		*/

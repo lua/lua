@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.25 1999/02/26 15:48:55 roberto Exp roberto $
+** $Id: lparser.c,v 1.26 1999/03/04 21:17:26 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -387,16 +387,14 @@ static void adjuststack (LexState *ls, int n) {
 
 
 static void close_exp (LexState *ls, int pc, int nresults) {
-  if (pc > 0) {  /* expression is an open function call */
+  if (pc > 0) {  /* expression is an open function call? */
     Byte *code = ls->fs->f->code;
     code[pc-1] = (Byte)nresults;  /* set nresults */
-    if (nresults != MULT_RET)
-      deltastack(ls, nresults);  /* push results */
-    deltastack(ls, -(code[pc]+1));  /* pop params (at code[pc]) and function */
+    /* push results, pop params (at code[pc]) and function */
+    deltastack(ls, nresults-(code[pc]+1));
   }
 #ifdef DEBUG
-  if (nresults != MULT_RET)
-    code_oparg(ls, CHECKSTACK, ls->fs->stacksize, 0);
+  code_oparg(ls, CHECKSTACK, ls->fs->stacksize, 0);
 #endif
 }
 
@@ -878,9 +876,14 @@ static void ret (LexState *ls) {
   check_debugline(ls);
   if (optional(ls, RETURN)) {
     listdesc e;
-    explist(ls, &e);
-    close_exp(ls, e.pc, MULT_RET);
-    code_oparg(ls, RETCODE, ls->fs->nlocalvar, 0);
+    explist(ls, &e); 
+    if (e.pc > 0) {  /* expression is an open function call? */
+      Byte *code = ls->fs->f->code;
+      code[e.pc-2] = TAILCALL;  /* instead of a conventional CALL */
+      code[e.pc-1] = (Byte)ls->fs->nlocalvar;
+    }
+    else
+      code_oparg(ls, RETCODE, ls->fs->nlocalvar, 0);
     ls->fs->stacksize = ls->fs->nlocalvar;  /* removes all temp values */
     optional(ls, ';');
   }
