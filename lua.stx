@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 2.12 1994/11/01 18:25:20 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.1 1994/11/02 20:30:53 roberto Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -274,7 +274,6 @@ function     : FUNCTION NAME
                block
                END 	 
 	       { 
-                if (lua_debug) code_byte(RESET); 
 	        codereturn();
 	        s_tag($<vWord>3) = LUA_T_FUNCTION;
 	        s_bvalue($<vWord>3) = calloc (pc, sizeof(Byte));
@@ -314,7 +313,6 @@ method         : FUNCTION NAME { $<vWord>$ = lua_findsymbol($2); } ':' NAME
 	       END
 	       {
 		Byte *b;
-                if (lua_debug) code_byte(RESET); 
 	        codereturn();
 	        b = calloc (pc, sizeof(Byte));
 		if (b == NULL)
@@ -449,7 +447,6 @@ ret	: /* empty */
           RETURN  exprlist sc 	
           { 
            if ($3 < 0) code_byte(MULT_RET);
-           if (lua_debug) code_byte(RESET); 
            codereturn();
           }
 	;
@@ -716,6 +713,7 @@ static void lua_codeadjust (int n)
 
 static void codereturn (void)
 {
+  if (lua_debug) code_byte(RESET); 
   if (nlocalvar == 0)
     code_byte(RETCODE0);
   else
