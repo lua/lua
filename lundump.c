@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.8 1999/03/30 20:29:34 roberto Exp roberto $
+** $Id: lundump.c,v 1.18 1999/04/09 03:10:40 lhf Exp lhf $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -14,12 +14,11 @@
 #include "lundump.h"
 
 #define	LoadBlock(b,size,Z)	ezread(Z,b,size)
-#define	LoadNative(t,Z)		LoadBlock(&t,sizeof(t),Z)
 
-#if ID_NUMBER==ID_NATIVE
-	#define doLoadNumber(f,Z)	LoadNative(f,Z)
+#if LUAC_NATIVE
+	#define doLoadNumber(x,Z)	LoadBlock(&x,sizeof(x),Z)
 #else
-	#define doLoadNumber(f,Z)	f=LoadNumber(Z)
+	#define doLoadNumber(x,Z)	x=LoadNumber(Z)
 #endif
 
 static void unexpectedEOZ (ZIO* Z)
@@ -54,38 +53,17 @@ static unsigned long LoadLong (ZIO* Z)
  return (hi<<16)|lo;
 }
 
-#if ID_NUMBER==ID_REAL4			/* LUA_NUMBER */
-/* assumes sizeof(long)==4 and sizeof(float)==4 (IEEE) */
-static float LoadFloat (ZIO* Z)
+static real LoadNumber (ZIO* Z)
 {
- unsigned long l=LoadLong(Z);
- float f;
- memcpy(&f,&l,sizeof(f));
- return f;
+ char b[256];
+ int size=ezgetc(Z);
+ LoadBlock(b,size,Z);
+ b[size]=0;
+ if (b[0]=='-')
+  return -luaO_str2d(b+1);
+ else
+  return luaO_str2d(b);
 }
-#endif
-
-#if ID_NUMBER==ID_REAL8			/* LUA_NUMBER */
-/* assumes sizeof(long)==4 and sizeof(double)==8 (IEEE) */
-static double LoadDouble (ZIO* Z)
-{
- unsigned long l[2];
- double f;
- int x=1;
- if (*(char*)&x==1)			/* little-endian */
- {
-  l[1]=LoadLong(Z);
-  l[0]=LoadLong(Z);
- }
- else					/* big-endian */
- {
-  l[0]=LoadLong(Z);
-  l[1]=LoadLong(Z);
- }
- memcpy(&f,l,sizeof(f));
- return f;
-}
-#endif
 
 static int LoadInt (ZIO* Z, char* message)
 {
@@ -103,7 +81,7 @@ static Byte* LoadCode (ZIO* Z)
  Byte* b=luaM_malloc(size+PAD);
  LoadBlock(b,size,Z);
  if (b[size-1]!=ENDCODE) luaL_verror("bad code in %s",zname(Z));
- memset(b+size,ENDCODE,PAD);		/* pad for safety */
+ memset(b+size,ENDCODE,PAD);		/* pad code for safety */
  return b;
 }
 
@@ -188,9 +166,7 @@ static void LoadSignature (ZIO* Z)
 
 static void LoadHeader (ZIO* Z)
 {
- int version,id,sizeofR;
- real f=-TEST_NUMBER,tf=TEST_NUMBER;
- luaU_testnumber();
+ int version,sizeofR;
  LoadSignature(Z);
  version=ezgetc(Z);
  if (version>VERSION)
@@ -201,17 +177,30 @@ static void LoadHeader (ZIO* Z)
   luaL_verror(
 	"%s too old: version=0x%02x; expected at least 0x%02x",
 	zname(Z),version,VERSION0);
- id=ezgetc(Z);				/* test number representation */
- sizeofR=ezgetc(Z);
- if (id!=ID_NUMBER || sizeofR!=sizeof(real))
-  luaL_verror("unknown number signature in %s: "
-	"read 0x%02x%02x; expected 0x%02x%02x",
-	zname(Z),id,sizeofR,ID_NUMBER,sizeof(real));
+ sizeofR=ezgetc(Z);			/* test number representation */
+#if LUAC_NATIVE
+ if (sizeofR==0)
+  luaL_verror("cannot read numbers in %s: "
+	"support for decimal format not enabled",
+	zname(Z));
+ if (sizeofR!=sizeof(real))
+  luaL_verror("unknown number size in %s: read %d; expected %d",
+	zname(Z),sizeofR,sizeof(real));
+ else
+ {
+ real f=-TEST_NUMBER,tf=TEST_NUMBER;
  doLoadNumber(f,Z);
  if (f!=tf)
   luaL_verror("unknown number representation in %s: "
 	"read " NUMBER_FMT "; expected " NUMBER_FMT,
 	zname(Z),f,tf);
+ }
+#else
+ if (sizeofR!=0)
+  luaL_verror("cannot read numbers in %s: "
+	"support for native format not enabled",
+	zname(Z));
+#endif
 }
 
 static TProtoFunc* LoadChunk (ZIO* Z)
@@ -232,28 +221,6 @@ TProtoFunc* luaU_undump1 (ZIO* Z)
  else if (c!=EOZ)
   luaL_verror("%s is not a Lua binary file",zname(Z));
  return NULL;
-}
-
-/*
-** test number representation
-*/
-void luaU_testnumber (void)
-{
- if (sizeof(real)!=SIZEOF_NUMBER)
-  luaL_verror("numbers have %d bytes; expected %d. see lundump.h",
-	(int)sizeof(real),SIZEOF_NUMBER);
-#if ID_NUMBER==ID_REAL4 || ID_NUMBER==ID_REAL8
- if (sizeof(long)!=4)
-  luaL_verror("longs have %d bytes; expected %d. see lundump.h",
-	(int)sizeof(long),4);
-#endif
- {
-  real t=TEST_NUMBER;
-  TYPEOF_NUMBER v=TEST_NUMBER;
-  if (t!=v)
-   luaL_verror("unsupported number type; expected %d-byte " NAMEOF_NUMBER "."
-	" see config and lundump.h",SIZEOF_NUMBER);
- }
 }
 
 /*
