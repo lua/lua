@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 3.2 1997/04/14 15:30:29 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 3.4 1997/06/11 14:20:51 roberto Exp $";
 
 
 #include <ctype.h>
@@ -23,17 +23,17 @@ char *rcs_lex = "$Id: lex.c,v 3.2 1997/04/14 15:30:29 roberto Exp roberto $";
 static int current;  /* look ahead character */
 static Input input;  /* input function */
 
-#define MAX_IFS	10
 
-/* "ifstate" keeps the state of each nested $if the lexical is
-** dealing with. The first bit indicates whether the $if condition
-** is false or true. The second bit indicates whether the lexical is
-** inside the "then" part (0) or the "else" part (2)
-*/
-static int ifstate[MAX_IFS];  /* 0 => then part - condition false */
-                              /* 1 => then part - condition true */
-                              /* 2 => else part - condition false */
-                              /* 3 => else part - condition true */
+#define MAX_IFS	5
+
+/* "ifstate" keeps the state of each nested $if the lexical is dealing with. */
+
+static struct {
+  int elsepart;  /* true if its in the $else part */
+  int condition;  /* true if $if condition is true */
+  int skip;  /* true if part must be skiped */
+} ifstate[MAX_IFS];
+
 static int iflevel;  /* level of nested $if's */
 
 
@@ -42,6 +42,8 @@ void lua_setinput (Input fn)
   current = '\n';
   lua_linenumber = 0;
   iflevel = 0;
+  ifstate[0].skip = 0;
+  ifstate[0].elsepart = 1;  /* to avoid a free $else */
   input = fn;
 }
 
@@ -117,10 +119,9 @@ static void skipspace (void)
 
 static int checkcond (char *buff)
 {
-  if (strcmp(buff, "nil") == 0)
-    return 0;
-  else if (strcmp(buff, "1") == 0)
-    return 1;
+  static char *opts[] = {"nil", "1"};
+  int i = luaI_findstring(buff, opts); 
+  if (i >= 0) return i;
   else if (isalpha((unsigned char)buff[0]) || buff[0] == '_')
     return luaI_globaldefined(buff);
   else {
@@ -149,11 +150,9 @@ static void readname (char *buff)
 static void inclinenumber (void);
 
 
-static void ifskip (int thisiflevel)
+static void ifskip (void)
 {
-  if (thisiflevel < 0) return;
-  while (iflevel > thisiflevel &&
-         (ifstate[thisiflevel] == 0 || ifstate[thisiflevel] == 3)) {
+  while (ifstate[iflevel].skip) {
     if (current == '\n')
       inclinenumber();
     else if (current == 0)
@@ -166,51 +165,60 @@ static void ifskip (int thisiflevel)
 static void inclinenumber (void)
 {
   static char *pragmas [] = 
-    {"debug", "nodebug", "end", "ifnot", "if", "else", "endinput", NULL};
+    {"debug", "nodebug", "endinput", "end", "ifnot", "if", "else", NULL};
   next();  /* skip '\n' */
   ++lua_linenumber;
   if (current == '$') {  /* is a pragma? */
     char buff[PRAGMASIZE+1];
     int ifnot = 0;
+    int skip = ifstate[iflevel].skip;
     next();  /* skip $ */
     readname(buff);
     switch (luaI_findstring(buff, pragmas)) {
       case 0:  /* debug */
-        lua_debug = 1;
+        if (!skip) lua_debug = 1;
         break;
       case 1:  /* nodebug */
-        lua_debug = 0;
+        if (!skip) lua_debug = 0;
         break;
-      case 2:  /* end */
-        if (--iflevel < 0)
+      case 2:  /* endinput */
+        if (!skip) {
+          current = 0;
+          iflevel = 0;  /* to allow $endinput inside a $if */
+        }
+        break;
+      case 3:  /* end */
+        if (iflevel-- == 0)
           luaI_auxsyntaxerror("unmatched $endif");
         break;
-      case 3:  /* ifnot */
+      case 4:  /* ifnot */
         ifnot = 1;
         /* go through */
-      case 4:  /* if */
-        if (iflevel == MAX_IFS)
+      case 5:  /* if */
+        if (iflevel == MAX_IFS-1)
           luaI_auxsyntaxerror("too many nested `$ifs'");
         readname(buff);
-        ifstate[iflevel++] = checkcond(buff) ? !ifnot : ifnot;
+        iflevel++;
+        ifstate[iflevel].elsepart = 0;
+        ifstate[iflevel].condition = checkcond(buff) ? !ifnot : ifnot;
+        ifstate[iflevel].skip = skip || !ifstate[iflevel].condition;
         break;
-      case 5:  /* else */
-        if (iflevel <= 0 || (ifstate[iflevel-1] & 2))
+      case 6:  /* else */
+        if (ifstate[iflevel].elsepart)
           luaI_auxsyntaxerror("unmatched $else");
-        ifstate[iflevel-1] = ifstate[iflevel-1] | 2;
-        break;
-      case 6:  /* endinput */
-        current = 0;
+        ifstate[iflevel].elsepart = 1;
+        ifstate[iflevel].skip =
+                    ifstate[iflevel-1].skip || ifstate[iflevel].condition;
         break;
       default:
         luaI_auxsynterrbf("invalid pragma", buff);
     }
     skipspace();
-    if (current == '\n')  /* pragma must end with a '\n' */
+    if (current == '\n')  /* pragma must end with a '\n' ... */
       inclinenumber();
     else if (current != 0)  /* or eof */
       luaI_auxsyntaxerror("invalid pragma format");
-    ifskip(iflevel-1);
+    ifskip();
   }
 }
 
