@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.5 1994/11/16 17:38:08 roberto Stab $";
+char *rcs_strlib="$Id: strlib.c,v 1.6 1994/12/13 15:54:21 roberto Exp roberto $";
 
 #include <string.h>
 #include <ctype.h>
@@ -23,7 +23,7 @@ static void str_find (void)
  lua_Object o1 = lua_getparam (1);
  lua_Object o2 = lua_getparam (2);
  if (!lua_isstring(o1) || !lua_isstring(o2))
- { lua_error ("incorrect arguments to function `strfind'"); return; }
+   lua_error ("incorrect arguments to function `strfind'");
  s1 = lua_getstring(o1);
  s2 = lua_getstring(o2);
  f = strstr(s1,s2);
@@ -42,7 +42,7 @@ static void str_len (void)
 {
  lua_Object o = lua_getparam (1);
  if (!lua_isstring(o))
- { lua_error ("incorrect arguments to function `strlen'"); return; }
+   lua_error ("incorrect arguments to function `strlen'");
  lua_pushnumber(strlen(lua_getstring(o)));
 }
 
@@ -60,9 +60,9 @@ static void str_sub (void)
  lua_Object o2 = lua_getparam (2);
  lua_Object o3 = lua_getparam (3);
  if (!lua_isstring(o1) || !lua_isnumber(o2))
- { lua_error ("incorrect arguments to function `strsub'"); return; }
- if (o3 != NULL && !lua_isnumber(o3))
- { lua_error ("incorrect third argument to function `strsub'"); return; }
+   lua_error ("incorrect arguments to function `strsub'");
+ if (o3 != LUA_NOOBJECT && !lua_isnumber(o3))
+   lua_error ("incorrect third argument to function `strsub'");
  s = lua_copystring(o1);
  start = lua_getnumber (o2);
  end = o3 == NULL ? strlen(s) : lua_getnumber (o3);
@@ -86,7 +86,7 @@ static void str_lower (void)
  char *s, *c;
  lua_Object o = lua_getparam (1);
  if (!lua_isstring(o))
- { lua_error ("incorrect arguments to function `strlower'"); return; }
+   lua_error ("incorrect arguments to function `strlower'");
  c = s = strdup(lua_getstring(o));
  while (*c != 0)
  {
@@ -108,7 +108,7 @@ static void str_upper (void)
  char *s, *c;
  lua_Object o = lua_getparam (1);
  if (!lua_isstring(o))
- { lua_error ("incorrect arguments to function `strlower'"); return; }
+   lua_error ("incorrect arguments to function `strlower'");
  c = s = strdup(lua_getstring(o));
  while (*c != 0)
  {
