@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.8 1999/01/15 11:38:33 roberto Exp roberto $
+** $Id: lparser.c,v 1.9 1999/01/21 18:38:39 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -123,7 +123,6 @@ static void parlist (LexState *ls);
 static void part (LexState *ls, constdesc *cd);
 static void recfield (LexState *ls);
 static void ret (LexState *ls);
-static void simpleexp (LexState *ls, vardesc *v);
 static void statlist (LexState *ls);
 static void var_or_func (LexState *ls, vardesc *v);
 static void var_or_func_tail (LexState *ls, vardesc *v);
@@ -262,7 +261,7 @@ static int real_constant (FuncState *fs, real r) {
 
 static void code_number (LexState *ls, real f) {
   int i;
-  if (f >= 0 && f <= (real)MAX_WORD && (real)(i=(int)f) == f)
+  if (0 <= f && f <= (real)MAX_WORD && (real)(i=(int)f) == f)
     code_oparg(ls, PUSHNUMBER, 3, i, 1);  /* f has a short integer value */
   else
     code_constant(ls, real_constant(ls->fs, f));
@@ -900,6 +899,9 @@ static int priority [POW+1] =  {5, 5, 1, 1, 1, 1, 1, 1, 2, 3, 3, 4, 4, 6};
 static OpCode opcodes [POW+1] = {NOTOP, MINUSOP, EQOP, NEQOP, GTOP, LTOP,
   LEOP, GEOP, CONCOP, ADDOP, SUBOP, MULTOP, DIVOP, POWOP};
 
+#define INDNOT		0
+#define INDMINUS	1
+
 #define MAXOPS	20
 
 typedef struct {
@@ -941,7 +943,7 @@ static void push (LexState *ls, stack_op *s, int op) {
 
 static void prefix (LexState *ls, stack_op *s) {
   while (ls->token == NOT || ls->token == '-') {
-    push(ls, s, ls->token==NOT?0:1);
+    push(ls, s, ls->token==NOT?INDNOT:INDMINUS);
     next(ls);
   }
 }
@@ -954,12 +956,67 @@ static void pop_to (LexState *ls, stack_op *s, int prio) {
   }
 }
 
+static void simpleexp (LexState *ls, vardesc *v, stack_op *s) {
+  check_debugline(ls);
+  switch (ls->token) {
+    case NUMBER: {  /* simpleexp -> NUMBER */
+      real r = ls->seminfo.r;
+      next(ls);
+      /* dirty trick: check whether is a -NUMBER not followed by "^" */
+      /* (because the priority of "^" is closer than "-"...)         */
+      if (s->top > 0 && s->ops[s->top-1] == INDMINUS && ls->token != '^') {
+        s->top--;
+        r = -r;
+      }
+      code_number(ls, r);
+      break;
+    }
+
+    case STRING:  /* simpleexp -> STRING */
+      code_string(ls, ls->seminfo.ts);  /* must use before "next" */
+      next(ls);
+      break;
+
+    case NIL:  /* simpleexp -> NIL */
+      adjuststack(ls, -1);
+      next(ls);
+      break;
+
+    case '{':  /* simpleexp -> constructor */
+      constructor(ls);
+      break;
+
+    case FUNCTION: {  /* simpleexp -> FUNCTION body */
+      int line = ls->linenumber;
+      next(ls);
+      body(ls, 0, line);
+      break;
+    }
+
+    case '(':  /* simpleexp -> '(' exp0 ')' */
+      next(ls);
+      exp0(ls, v);
+      check(ls, ')');
+      return;
+
+    case NAME: case '%':
+      var_or_func(ls, v);
+      return;
+
+    default:
+      luaX_error(ls, "<expression> expected");
+      return;
+  }
+  v->k = VEXP; v->info = 0;
+}
+
+
 static void exp2 (LexState *ls, vardesc *v) {
   stack_op s;
   int op;
   s.top = 0;
   prefix(ls, &s);
-  simpleexp(ls, v);
+  simpleexp(ls, v, &s);
   while ((op = is_in(ls->token, binop)) >= 0) {
     op += FIRSTBIN;
     lua_pushvar(ls, v);
@@ -968,7 +1025,7 @@ static void exp2 (LexState *ls, vardesc *v) {
     push(ls, &s, op);
     next(ls);
     prefix(ls, &s);
-    simpleexp(ls, v);
+    simpleexp(ls, v, &s);
     lua_pushvar(ls, v);
   }
   if (s.top > 0) {
@@ -977,56 +1034,6 @@ static void exp2 (LexState *ls, vardesc *v) {
   }
 }
 
-
-static void simpleexp (LexState *ls, vardesc *v) {
-  check_debugline(ls);
-  switch (ls->token) {
-    case '(':  /* simpleexp -> '(' exp0 ')' */
-      next(ls);
-      exp0(ls, v);
-      check(ls, ')');
-      break;
-
-    case NUMBER:  /* simpleexp -> NUMBER */
-      code_number(ls, ls->seminfo.r);
-      next(ls);
-      v->k = VEXP; v->info = 0;
-      break;
-
-    case STRING:  /* simpleexp -> STRING */
-      code_string(ls, ls->seminfo.ts);  /* must use before "next" */
-      next(ls);
-      v->k = VEXP; v->info = 0;
-      break;
-
-    case NIL:  /* simpleexp -> NIL */
-      adjuststack(ls, -1);
-      next(ls);
-      v->k = VEXP; v->info = 0;
-      break;
-
-    case '{':  /* simpleexp -> constructor */
-      constructor(ls);
-      v->k = VEXP; v->info = 0;
-      break;
-
-    case FUNCTION: {  /* simpleexp -> FUNCTION body */
-      int line = ls->linenumber;
-      next(ls);
-      body(ls, 0, line);
-      v->k = VEXP; v->info = 0;
-      break;
-    }
-
-    case NAME: case '%':
-      var_or_func(ls, v);
-      break;
-
-    default:
-      luaX_error(ls, "<expression> expected");
-      break;
-  }
-}
 
 static void var_or_func (LexState *ls, vardesc *v) {
   /* var_or_func -> ['%'] NAME var_or_func_tail */
