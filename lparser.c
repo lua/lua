@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.197 2002/11/22 13:59:04 roberto Exp roberto $
+** $Id: lparser.c,v 1.198 2002/11/22 16:35:20 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -47,9 +47,7 @@ typedef struct BlockCnt {
 /*
 ** prototypes for recursive non-terminal functions
 */
-static void body (LexState *ls, expdesc *v, int needself, int line);
 static void chunk (LexState *ls);
-static void constructor (LexState *ls, expdesc *v);
 static void expr (LexState *ls, expdesc *v);
 
 
@@ -400,69 +398,6 @@ static void luaY_index (LexState *ls, expdesc *v) {
 }
 
 
-static int explist1 (LexState *ls, expdesc *v) {
-  /* explist1 -> expr { `,' expr } */
-  int n = 1;  /* at least one expression */
-  expr(ls, v);
-  while (testnext(ls, ',')) {
-    luaK_exp2nextreg(ls->fs, v);
-    expr(ls, v);
-    n++;
-  }
-  return n;
-}
-
-
-static void funcargs (LexState *ls, expdesc *f) {
-  FuncState *fs = ls->fs;
-  expdesc args;
-  int base, nparams;
-  int line = ls->linenumber;
-  switch (ls->t.token) {
-    case '(': {  /* funcargs -> `(' [ explist1 ] `)' */
-      if (line != ls->lastline)
-        luaX_syntaxerror(ls,"ambiguous syntax (function call x new statement)");
-      next(ls);
-      if (ls->t.token == ')')  /* arg list is empty? */
-        args.k = VVOID;
-      else {
-        explist1(ls, &args);
-        luaK_setcallreturns(fs, &args, LUA_MULTRET);
-      }
-      check_match(ls, ')', '(', line);
-      break;
-    }
-    case '{': {  /* funcargs -> constructor */
-      constructor(ls, &args);
-      break;
-    }
-    case TK_STRING: {  /* funcargs -> STRING */
-      codestring(ls, &args, ls->t.seminfo.ts);
-      next(ls);  /* must use `seminfo' before `next' */
-      break;
-    }
-    default: {
-      luaX_syntaxerror(ls, "function arguments expected");
-      return;
-    }
-  }
-  lua_assert(f->k == VNONRELOC);
-  base = f->info;  /* base register for call */
-  if (args.k == VCALL)
-    nparams = LUA_MULTRET;  /* open call */
-  else {
-    if (args.k != VVOID)
-      luaK_exp2nextreg(fs, &args);  /* close last argument */
-    nparams = fs->freereg - (base+1);
-  }
-  init_exp(f, VCALL, luaK_codeABC(fs, OP_CALL, base, nparams+1, 2));
-  luaK_fixline(fs, line);
-  fs->freereg = base+1;  /* call remove function and arguments and leaves
-                            (unless changed) one result */
-}
-
-
-
 /*
 ** {======================================================================
 ** Rules for Constructors
@@ -578,8 +513,104 @@ static void constructor (LexState *ls, expdesc *t) {
   SETARG_C(fs->f->code[pc], luaO_log2(cc.nh)+1);  /* set initial table size */
 }
 
-
 /* }====================================================================== */
+
+
+
+static void parlist (LexState *ls) {
+  /* parlist -> [ param { `,' param } ] */
+  int nparams = 0;
+  int dots = 0;
+  if (ls->t.token != ')') {  /* is `parlist' not empty? */
+    do {
+      switch (ls->t.token) {
+        case TK_DOTS: dots = 1; next(ls); break;
+        case TK_NAME: new_localvar(ls, str_checkname(ls), nparams++); break;
+        default: luaX_syntaxerror(ls, "<name> or `...' expected");
+      }
+    } while (!dots && testnext(ls, ','));
+  }
+  code_params(ls, nparams, dots);
+}
+
+
+static void body (LexState *ls, expdesc *e, int needself, int line) {
+  /* body ->  `(' parlist `)' chunk END */
+  FuncState new_fs;
+  open_func(ls, &new_fs);
+  new_fs.f->lineDefined = line;
+  check(ls, '(');
+  if (needself)
+    create_local(ls, "self");
+  parlist(ls);
+  check(ls, ')');
+  chunk(ls);
+  check_match(ls, TK_END, TK_FUNCTION, line);
+  close_func(ls);
+  pushclosure(ls, &new_fs, e);
+}
+
+
+static int explist1 (LexState *ls, expdesc *v) {
+  /* explist1 -> expr { `,' expr } */
+  int n = 1;  /* at least one expression */
+  expr(ls, v);
+  while (testnext(ls, ',')) {
+    luaK_exp2nextreg(ls->fs, v);
+    expr(ls, v);
+    n++;
+  }
+  return n;
+}
+
+
+static void funcargs (LexState *ls, expdesc *f) {
+  FuncState *fs = ls->fs;
+  expdesc args;
+  int base, nparams;
+  int line = ls->linenumber;
+  switch (ls->t.token) {
+    case '(': {  /* funcargs -> `(' [ explist1 ] `)' */
+      if (line != ls->lastline)
+        luaX_syntaxerror(ls,"ambiguous syntax (function call x new statement)");
+      next(ls);
+      if (ls->t.token == ')')  /* arg list is empty? */
+        args.k = VVOID;
+      else {
+        explist1(ls, &args);
+        luaK_setcallreturns(fs, &args, LUA_MULTRET);
+      }
+      check_match(ls, ')', '(', line);
+      break;
+    }
+    case '{': {  /* funcargs -> constructor */
+      constructor(ls, &args);
+      break;
+    }
+    case TK_STRING: {  /* funcargs -> STRING */
+      codestring(ls, &args, ls->t.seminfo.ts);
+      next(ls);  /* must use `seminfo' before `next' */
+      break;
+    }
+    default: {
+      luaX_syntaxerror(ls, "function arguments expected");
+      return;
+    }
+  }
+  lua_assert(f->k == VNONRELOC);
+  base = f->info;  /* base register for call */
+  if (args.k == VCALL)
+    nparams = LUA_MULTRET;  /* open call */
+  else {
+    if (args.k != VVOID)
+      luaK_exp2nextreg(fs, &args);  /* close last argument */
+    nparams = fs->freereg - (base+1);
+  }
+  init_exp(f, VCALL, luaK_codeABC(fs, OP_CALL, base, nparams+1, 2));
+  luaK_fixline(fs, line);
+  fs->freereg = base+1;  /* call remove function and arguments and leaves
+                            (unless changed) one result */
+}
 
 
 
@@ -703,8 +734,6 @@ static void simpleexp (LexState *ls, expdesc *v) {
 }
 
 
-
-
 static UnOpr getunopr (int op) {
   switch (op) {
     case TK_NOT: return OPR_NOT;
@@ -786,6 +815,7 @@ static void expr (LexState *ls, expdesc *v) {
 }
 
 /* }==================================================================== */
+
 
 
 /*
@@ -1268,43 +1298,6 @@ static int statement (LexState *ls) {
 }
 
 
-static void parlist (LexState *ls) {
-  /* parlist -> [ param { `,' param } ] */
-  int nparams = 0;
-  int dots = 0;
-  if (ls->t.token != ')') {  /* is `parlist' not empty? */
-    do {
-      switch (ls->t.token) {
-        case TK_DOTS: dots = 1; next(ls); break;
-        case TK_NAME: new_localvar(ls, str_checkname(ls), nparams++); break;
-        default: luaX_syntaxerror(ls, "<name> or `...' expected");
-      }
-    } while (!dots && testnext(ls, ','));
-  }
-  code_params(ls, nparams, dots);
-}
-
-
-static void body (LexState *ls, expdesc *e, int needself, int line) {
-  /* body ->  `(' parlist `)' chunk END */
-  FuncState new_fs;
-  open_func(ls, &new_fs);
-  new_fs.f->lineDefined = line;
-  check(ls, '(');
-  if (needself)
-    create_local(ls, "self");
-  parlist(ls);
-  check(ls, ')');
-  chunk(ls);
-  check_match(ls, TK_END, TK_FUNCTION, line);
-  close_func(ls);
-  pushclosure(ls, &new_fs, e);
-}
-
-
-/* }====================================================================== */
-
-
 static void chunk (LexState *ls) {
   /* chunk -> { stat [`;'] } */
   int islast = 0;
@@ -1318,3 +1311,4 @@ static void chunk (LexState *ls) {
   leavelevel(ls);
 }
 
+/* }====================================================================== */
