@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.128 2002/03/04 21:32:34 roberto Exp roberto $
+** $Id: lgc.c,v 1.129 2002/03/05 16:22:54 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -122,12 +122,12 @@ static void reallymarkobject (GCState *st, TObject *o) {
 }
 
 
-static void checkstacksizes (lua_State *L) {
+static void checkstacksizes (lua_State *L, StkId max) {
   int used = L->ci - L->base_ci;  /* number of `ci' in use */
   if (4*used < L->size_ci && 2*BASIC_CI_SIZE < L->size_ci)
     luaD_reallocCI(L, L->size_ci/2);  /* still big enough... */
-  used = L->top - L->stack;  /* part of stack in use */
-  if (2*(used+MAXSTACK) < L->stacksize && 2*BASIC_STACK_SIZE < L->stacksize)
+  used = max - L->stack;  /* part of stack in use */
+  if (4*used < L->stacksize && 2*BASIC_STACK_SIZE < L->stacksize)
     luaD_reallocstack(L, L->stacksize/2);  /* still big enough... */
 }
 
@@ -136,6 +136,7 @@ static void markstacks (GCState *st) {
   lua_State *L1 = st->L;
   do {  /* for each thread */
     StkId o, lim;
+    CallInfo *ci;
     if (L1->base_ci == NULL) {  /* incomplete state? */
       lua_assert(L1 != st->L);
       L1 = L1->next;
@@ -144,10 +145,11 @@ static void markstacks (GCState *st) {
     }
     for (o=L1->stack; o<L1->top; o++)
       markobject(st, o);
-    lim = (L1->stack_last - L1->ci->base > MAXSTACK) ? L1->ci->base+MAXSTACK
-                                                     : L1->stack_last;
+    lim = o;
+    for (ci = L1->base_ci; ci <= L1->ci; ci++)
+      if (lim < ci->top) lim = ci->top;
     for (; o<=lim; o++) setnilvalue(o);
-    checkstacksizes(L1);
+    checkstacksizes(L1, lim);
     lua_assert(L1->previous->next == L1 && L1->next->previous == L1);
     L1 = L1->next;
   } while (L1 != st->L);

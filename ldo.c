@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.154 2002/01/11 20:27:41 roberto Exp $
+** $Id: ldo.c,v 1.160 2002/02/14 21:40:13 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -86,7 +86,7 @@ void luaD_growstack (lua_State *L, int n) {
   else {
     if (n <= L->stacksize && 2*L->stacksize < LUA_MAXSTACK)  /* can double? */
       luaD_reallocstack(L, 2*L->stacksize);
-   else if (L->stacksize+n <= LUA_MAXSTACK)  /* no overflow? */
+   else if ((L->top - L->stack) + n <= LUA_MAXSTACK)  /* no overflow? */
       luaD_reallocstack(L, LUA_MAXSTACK);
    else {
       /* resize to maximum + some extra space to handle error */
@@ -108,7 +108,7 @@ static void luaD_openstack (lua_State *L, StkId pos) {
 
 
 static void dohook (lua_State *L, lua_Debug *ar, lua_Hook hook) {
-  L->ci->top = L->top;
+  StkId top = L->top;
   luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
   L->allowhooks = 0;  /* cannot call hooks inside a hook */
   lua_unlock(L);
@@ -116,7 +116,7 @@ static void dohook (lua_State *L, lua_Debug *ar, lua_Hook hook) {
   lua_lock(L);
   lua_assert(L->allowhooks == 0);
   L->allowhooks = 1;
-  L->top = L->ci->top;
+  L->top = top;
 }
 
 
@@ -137,6 +137,7 @@ static void luaD_callHook (lua_State *L, lua_Hook callhook, const char *event) {
     ar.event = event;
     ar._ci = L->ci - L->base_ci;
     L->ci->pc = NULL;  /* function is not active */
+    L->ci->top = L->top + LUA_MINSTACK;
     dohook(L, &ar, callhook);
   }
 }
@@ -186,6 +187,19 @@ static void adjust_varargs (lua_State *L, int nfixargs) {
 }
 
 
+static StkId tryfuncTM (lua_State *L, StkId func) {
+  const TObject *tm = luaT_gettmbyobj(L, func, TM_CALL);
+  if (ttype(tm) != LUA_TFUNCTION) {
+    L->ci--;  /* undo increment (no function here) */
+    luaG_typeerror(L, func, "call");
+  }
+  luaD_openstack(L, func);
+  func = L->ci->base - 1;  /* previous call may change stack */
+  setobj(func, tm);  /* tag method is the new function to be called */
+  return func;
+}
+
+
 StkId luaD_precall (lua_State *L, StkId func) {
   CallInfo *ci;
   LClosure *cl;
@@ -193,17 +207,8 @@ StkId luaD_precall (lua_State *L, StkId func) {
   ci = L->ci;
   ci->base = func+1;
   ci->pc = NULL;
-  if (ttype(func) != LUA_TFUNCTION) {
-    /* `func' is not a function; check the `function' tag method */
-    const TObject *tm = luaT_gettmbyobj(L, func, TM_CALL);
-    if (ttype(tm) != LUA_TFUNCTION) {
-      L->ci--;  /* undo increment (no function here) */
-      luaG_typeerror(L, func, "call");
-    }
-    luaD_openstack(L, func);
-    func = ci->base - 1;  /* previous call may change stack */
-    setobj(func, tm);  /* tag method is the new function to be called */
-  }
+  if (ttype(func) != LUA_TFUNCTION) /* `func' is not a function? */
+    func = tryfuncTM(L, func);  /* check the `function' tag method */
   cl = &clvalue(func)->l;
   if (L->callhook) {
     luaD_callHook(L, L->callhook, "call");
@@ -226,6 +231,7 @@ StkId luaD_precall (lua_State *L, StkId func) {
   else {  /* if is a C function, call it */
     int n;
     luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
+    ci->top = L->top + LUA_MINSTACK;
     lua_unlock(L);
 #if LUA_COMPATUPVALUES
     lua_pushupvalues(L);
