@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.13 1997/11/28 12:39:45 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.14 1997/12/01 20:30:44 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -21,21 +21,6 @@
 #include "ltm.h"
 #include "lua.h"
 
-
-
-static lua_Object tablearg (int arg)
-{
-  lua_Object o = lua_getparam(arg);
-  luaL_arg_check(lua_istable(o), arg, "table expected");
-  return o;
-}
-
-static lua_Object functionarg (int arg)
-{
-  lua_Object o = lua_getparam(arg);
-  luaL_arg_check(lua_isfunction(o), arg, "function expected");
-  return o;
-}
 
 
 static void pushstring (TaggedString *s)
@@ -71,7 +56,7 @@ static void nextvar (void)
 
 static void foreachvar (void)
 {
-  TObject f = *luaA_Address(functionarg(1));
+  TObject f = *luaA_Address(luaL_functionarg(1));
   GCnode *g;
   StkId name = L->Cstack.base++;  /* place to keep var name (to avoid GC) */
   ttype(L->stack.stack+name) = LUA_T_NIL;
@@ -95,7 +80,7 @@ static void foreachvar (void)
 
 static void next (void)
 {
-  lua_Object o = tablearg(1);
+  lua_Object o = luaL_tablearg(1);
   lua_Object r = luaL_nonnullarg(2);
   Node *n = luaH_next(luaA_Address(o), luaA_Address(r));
   if (n) {
@@ -107,8 +92,8 @@ static void next (void)
 
 static void foreach (void)
 {
-  TObject t = *luaA_Address(tablearg(1));
-  TObject f = *luaA_Address(functionarg(2));
+  TObject t = *luaA_Address(luaL_tablearg(1));
+  TObject f = *luaA_Address(luaL_functionarg(2));
   int i;
   for (i=0; i<avalue(&t)->nhash; i++) {
     Node *nd = &(avalue(&t)->node[i]);
@@ -165,7 +150,9 @@ static char *to_string (lua_Object obj)
     }
     case LUA_T_NIL:
       return "nil";
-    default: return "<unknown object>";
+    default: 
+      lua_error("internal error");
+      return NULL;  /* to avoid warnings */
   }
 }
 
@@ -203,9 +190,7 @@ static void lua_obj2number (void)
 
 static void luaI_error (void)
 {
-  char *s = lua_getstring(lua_getparam(1));
-  if (s == NULL) s = "(no message)";
-  lua_error(s);
+  lua_error(lua_getstring(lua_getparam(1)));
 }
 
 
@@ -262,7 +247,7 @@ static int getnarg (lua_Object table)
 static void luaI_call (void)
 {
   lua_Object f = luaL_nonnullarg(1);
-  lua_Object arg = tablearg(2);
+  lua_Object arg = luaL_tablearg(2);
   char *options = luaL_opt_string(3, "");
   lua_Object err = lua_getparam(4);
   int narg = getnarg(arg);
@@ -302,7 +287,7 @@ static void luaI_call (void)
 
 static void settag (void)
 {
-  lua_Object o = tablearg(1);
+  lua_Object o = luaL_tablearg(1);
   lua_pushobject(o);
   lua_settag(luaL_check_number(2));
 }
@@ -354,7 +339,7 @@ static void gettagmethod (void)
 
 static void seterrormethod (void)
 {
-  lua_Object nf = functionarg(1);
+  lua_Object nf = luaL_functionarg(1);
   lua_pushobject(nf);
   lua_pushobject(lua_seterrormethod());
 }

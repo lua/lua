@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.9 1997/11/27 15:59:25 roberto Exp roberto $
+** $Id: lgc.c,v 1.10 1997/12/01 20:31:25 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -268,7 +268,6 @@ long lua_collectgarbage (long limit)
   luaF_freeclosure(freeclos);
   luaM_clearbuffer();
   recovered = recovered-L->nblocks;
-/*printf("==total %ld  coletados %ld\n", L->nblocks+recovered, recovered);*/
   L->GCthreshold = (limit == 0) ? 2*L->nblocks : L->nblocks+limit;
   return recovered;
 }

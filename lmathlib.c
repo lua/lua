@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.5 1997/11/19 18:16:33 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.6 1997/11/28 12:39:22 roberto Exp roberto $
 ** Lua standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -12,28 +12,15 @@
 #include "lua.h"
 #include "lualib.h"
 
-#ifndef PI
+#ifdef M_PI
+#define PI                      M_PI
+#else
 #define PI          ((double)3.14159265358979323846)
 #endif
 
 
-
-#define FROMRAD(a) ((a)/torad())
-#define TORAD(a)    ((a)*torad())
-
-
-static double torad (void)
-{
-  char *s = luaL_opt_string(2, "d");
-  switch (*s) {
-    case 'd' : return PI/180.0;
-    case 'r' : return (double)1.0;
-    case 'g' : return PI/50.0;
-    default:
-      luaL_arg_check(0, 2, "invalid mode");
-      return 0;  /* to avoid warnings */
-  }
-}
+#define FROMRAD(a) ((a)*(180.0/PI))
+#define TORAD(a)    ((a)*(PI/180.0))
 
 
 static void math_abs (void)

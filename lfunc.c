@@ -1,6 +1,6 @@
 /*
-** $Id: lfunc.c,v 1.5 1997/10/24 17:17:24 roberto Exp roberto $
-** Lua Funcion auxiliar
+** $Id: lfunc.c,v 1.6 1997/11/19 17:29:23 roberto Exp roberto $
+** Auxiliar functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
 
@@ -11,8 +11,8 @@
 #include "lmem.h"
 #include "lstate.h"
 
-#define gcsizeproto(p)	5
-#define gcsizeclosure(c) 1
+#define gcsizeproto(p)	5  /* approximate "weight" for a prototype */
+#define gcsizeclosure(c) 1  /* approximate "weight" for a closure */
 
 
 
@@ -83,7 +83,7 @@ void luaF_freeclosure (Closure *l)
 
 
 /*
-** Look for n-esim local variable at line "line" in function "func".
+** Look for n-th local variable at line "line" in function "func".
 ** Returns NULL if not found.
 */
 char *luaF_getlocalname (TProtoFunc *func, int local_number, int line)

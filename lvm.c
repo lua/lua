@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.14 1997/11/19 17:29:23 roberto Exp roberto $
+** $Id: lvm.c,v 1.15 1997/11/21 19:00:46 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -213,7 +213,7 @@ static void call_binTM (IMS event, char *msg)
 
 static void call_arith (IMS event)
 {
-  call_binTM(event, "unexpected type at arithmetic operation");
+  call_binTM(event, "unexpected type in arithmetic operation");
 }
 
 
@@ -229,7 +229,7 @@ static void comparison (lua_Type ttype_less, lua_Type ttype_equal,
   else if (ttype(l) == LUA_T_STRING && ttype(r) == LUA_T_STRING)
     result = strcoll(svalue(l), svalue(r));
   else {
-    call_binTM(op, "unexpected type at comparison");
+    call_binTM(op, "unexpected type in comparison");
     return;
   }
   S->top--;

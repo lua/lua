@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.2 1997/11/26 18:53:45 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -283,7 +283,7 @@ static char *matchitem (char *s, char *p, int level, char **ep)
     else if (*p == 'b') {  /* balanced string */
       p++;
       if (*p == 0 || *(p+1) == 0)
-        lua_error("bad balanced pattern specification");
+        lua_error("unbalanced pattern");
       *ep = p+2;
       return matchbalance(s, *p, *(p+1));
     }
@@ -484,7 +484,7 @@ static void str_format (void)
       arg++;
       strncpy(form+1, initf, strfrmt-initf+1); /* +1 to include convertion */
       form[strfrmt-initf+2] = 0;
-      buff = openspace(1000);  /* to store the formated value */
+      buff = openspace(1000);  /* to store the formatted value */
       switch (*strfrmt++) {
         case 'q':
           luaI_addquoted(luaL_check_string(arg));
@@ -503,7 +503,7 @@ static void str_format (void)
           sprintf(buff, form, luaL_check_number(arg));
           break;
         default:  /* also treat cases 'pnLlh' */
-          lua_error("invalid format option in function `format'");
+          lua_error("invalid option in `format'");
       }
       lbuffer.size += strlen(buff);
     }

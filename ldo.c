@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.12 1997/11/26 20:44:52 roberto Exp roberto $
+** $Id: ldo.c,v 1.13 1997/11/27 18:25:14 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -381,6 +381,7 @@ int lua_dofile (char *filename)
 
 
 #define SIZE_PREF 20  /* size of string prefix to appear in error messages */
+#define SSIZE_PREF "20"
 
 
 int lua_dostring (char *str)
@@ -390,7 +391,7 @@ int lua_dostring (char *str)
   char *temp;
   ZIO z;
   if (str == NULL) return 1;
-  sprintf(buff, "(dostring) >> %.20s", str);
+  sprintf(buff, "(dostring) >> %." SSIZE_PREF "s", str);
   temp = strchr(buff, '\n');
   if (temp) *temp = 0;  /* end string after first line */
   luaZ_sopen(&z, str);

@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.6 1997/11/19 17:29:23 roberto Exp roberto $
+** $Id: ltable.c,v 1.7 1997/11/21 19:00:46 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -44,7 +44,7 @@ static long int hashindex (TObject *ref)
       break;
     default:
       lua_error("unexpected type to index table");
-      h = 0;  /* UNREACHEABLE */
+      h = 0;  /* to avoid warnings */
   }
   return (h >= 0 ? h : -(h+1));
 }

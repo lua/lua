@@ -1,6 +1,6 @@
 %{
 /*
-** $Id: lua.stx,v 1.19 1997/11/21 19:00:46 roberto Exp roberto $
+** $Id: lua.stx,v 1.20 1997/12/02 12:43:54 roberto Exp roberto $
 ** Syntax analizer and code generator
 ** See Copyright Notice in lua.h
 */
@@ -26,6 +26,10 @@
 int luaY_parse (void);
 
 
+#define AMES_LIM(x)		#x
+#define MES_LIM(x)	"(limit=" AMES_LIM(x) ")"
+
+
 /* size of a "normal" jump instruction: OpCode + 1 byte */
 #define JMPSIZE	2
 
@@ -42,6 +46,8 @@ int luaY_parse (void);
 
 /* maximum number of upvalues */
 #define MAXUPVALUES 16
+
+
 
 /*
 ** Variable descriptor:
@@ -132,7 +138,7 @@ static void deltastack (int delta)
   L->currState->stacksize += delta;
   if (L->currState->stacksize > L->currState->maxstacksize) {
     if (L->currState->stacksize > 255)
-      luaY_error("function/expression too complex (limit 256)");
+      luaY_error("function/expression too complex");
     L->currState->maxstacksize = L->currState->stacksize;
   }
 }
@@ -156,7 +162,7 @@ static int code_oparg_at (int pc, OpCode op, int builtin, int arg, int delta)
     L->currState->f->code[pc+2] = arg>>8;
     return 3;
   }
-  else luaY_error("code too long (limit 64K)");
+  else luaY_error("code too long " MES_LIM(64K));
   return 0;   /* to avoid warnings */
 }
 
@@ -314,7 +320,7 @@ static void store_localvar (TaggedString *name, int n)
   if (L->currState->nlocalvar+n < MAXLOCALS)
     L->currState->localvar[L->currState->nlocalvar+n] = name;
   else
-    luaY_error("too many local variables (limit 32)");
+    luaY_error("too many local variables " MES_LIM(MAXLOCALS));
   luaI_registerlocalvar(name, L->lexstate->linenumber);
 }
 
@@ -341,7 +347,7 @@ static vardesc var2store (vardesc var)
 static void add_varbuffer (vardesc var, int n)
 {
   if (n >= MAXVAR)
-    luaY_error("variable buffer overflow (limit 32)");
+    luaY_error("variable buffer overflow " MES_LIM(MAXVAR));
   L->currState->varbuffer[n] = var2store(var);
 }
 
@@ -379,7 +385,7 @@ static int indexupvalue (TaggedString *n)
   }
   /* new one */
   if (++(L->currState->nupvalues) > MAXUPVALUES)
-    luaY_error("too many upvalues in a single function (limit 16)");
+    luaY_error("too many upvalues in a single function " MES_LIM(MAXUPVALUES));
   L->currState->upvalues[i] = v;  /* i = L->currState->nupvalues - 1 */
   return i;
 }
@@ -493,7 +499,7 @@ static int lua_codestore (int i, int left)
   }
   else {  /* indexed var with values in between*/
     code_oparg(SETTABLE, 0, left+i, -1);
-    return left+2;  /* table/index are not poped, since they are not on top */
+    return left+2;  /* table/index are not popped, since they are not on top */
   }
 }
 
@@ -580,7 +586,7 @@ static void init_state (TaggedString *filename)
 static void init_func (void)
 {
   if (L->currState-L->mainState >= MAXSTATES-1)
-    luaY_error("too many nested functions (limit 6)");
+    luaY_error("too many nested functions " MES_LIM(MAXSTATES));
   L->currState++;
   init_state(L->mainState->f->fileName);
   luaY_codedebugline(L->lexstate->linenumber);
@@ -604,7 +610,7 @@ static TProtoFunc *close_func (void)
 
 
 /*
-** Parse LUA code.
+** Parse Lua code.
 */
 TProtoFunc *luaY_parser (ZIO *z, char *chunkname)
 {

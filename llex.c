@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.8 1997/11/21 19:00:46 roberto Exp roberto $
+** $Id: llex.c,v 1.9 1997/12/02 12:43:54 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -166,7 +166,7 @@ static void inclinenumber (LexState *LS)
         /* go through */
       case 5:  /* if */
         if (LS->iflevel == MAX_IFS-1)
-          luaY_syntaxerror("too many nested `$ifs'", "$if");
+          luaY_syntaxerror("too many nested $ifs", "$if");
         readname(LS, buff);
         LS->iflevel++;
         LS->ifstate[LS->iflevel].elsepart = 0;
@@ -181,7 +181,7 @@ static void inclinenumber (LexState *LS)
                                       LS->ifstate[LS->iflevel].condition;
         break;
       default:
-        luaY_syntaxerror("invalid pragma", buff);
+        luaY_syntaxerror("unknown pragma", buff);
     }
     skipspace(LS);
     if (LS->current == '\n')  /* pragma must end with a '\n' ... */
@@ -414,7 +414,7 @@ int luaY_lex (YYSTYPE *l)
       case EOZ:
         save(LS, 0);
         if (LS->iflevel > 0)
-          luaY_error("missing $endif");
+          luaY_syntaxerror("input ends inside a $if", "");
         return 0;
 
       default:

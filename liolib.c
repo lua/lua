@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.7 1997/11/27 15:59:44 roberto Exp roberto $
+** $Id: liolib.c,v 1.8 1997/11/28 12:40:37 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -28,7 +28,7 @@
 #define LC_MONETARY	0
 #define LC_NUMERIC	0
 #define LC_TIME		0
-#define strerror(e)	"O.S. is unable to define the error"
+#define strerror(e)	"(no error message provided by operating system)"
 #endif
 
 
@@ -72,7 +72,7 @@ static int ishandler (lua_Object f)
 {
   if (lua_isuserdata(f)) {
     if (lua_tag(f) == gettag(CLOSEDTAG))
-      lua_error("trying to access a closed file");
+      lua_error("cannot access a closed file");
     return lua_tag(f) == gettag(IOTAG);
   }
   else return 0;
@@ -82,7 +82,7 @@ static FILE *getfile (char *name)
 {
   lua_Object f = lua_getglobal(name);
   if (!ishandler(f))
-      luaL_verror("global variable %.50s is not a file handle", name);
+      luaL_verror("global variable `%.50s' is not a file handle", name);
   return lua_getuserdata(f);
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.2 1997/09/26 15:02:26 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.3 1997/11/21 19:00:46 roberto Exp roberto $
 ** Auxiliar functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -23,6 +23,8 @@ char *luaL_check_string (int numArg);
 char *luaL_opt_string (int numArg, char *def);
 double luaL_check_number (int numArg);
 double luaL_opt_number (int numArg, double def);
+lua_Object luaL_functionarg (int arg);
+lua_Object luaL_tablearg (int arg);
 lua_Object luaL_nonnullarg (int numArg);
 void luaL_verror (char *fmt, ...);
 

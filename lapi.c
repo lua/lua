@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.10 1997/11/27 18:25:14 roberto Exp roberto $
+** $Id: lapi.c,v 1.11 1997/11/28 16:56:05 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -142,7 +142,7 @@ lua_Object lua_rawgettable (void)
 {
   checkCparams(2);
   if (ttype(L->stack.top-2) != LUA_T_ARRAY)
-    lua_error("indexed expression not a table in raw gettable");
+    lua_error("indexed expression not a table in rawgettable");
   else {
     TObject *h = luaH_get(avalue(L->stack.top-2), L->stack.top-1);
     --L->stack.top;
@@ -490,7 +490,7 @@ char *lua_getobjname (lua_Object o, char **name)
 void lua_beginblock (void)
 {
   if (L->numCblocks >= MAX_C_BLOCKS)
-    lua_error("`lua_beginblock': too many nested blocks");
+    lua_error("too many nested blocks");
   L->Cblocks[L->numCblocks] = L->Cstack;
   L->numCblocks++;
 }

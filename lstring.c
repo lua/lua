@@ -1,6 +1,6 @@
 /*
-** $Id: lstring.c,v 1.6 1997/11/21 19:00:46 roberto Exp roberto $
-** String table (keep all strings handled by Lua)
+** $Id: lstring.c,v 1.7 1997/12/01 20:31:25 roberto Exp roberto $
+** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
 
@@ -17,7 +17,7 @@
 #define NUM_HASHS  61
 
 
-#define gcsizestring(l)	(1+(l/64))
+#define gcsizestring(l)	(1+(l/64))  /* "weight" for a string with length 'l' */
 
 
 

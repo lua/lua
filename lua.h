@@ -1,13 +1,15 @@
 /*
-** $Id: lua.h,v 1.7 1997/11/27 18:25:14 roberto Exp roberto $
+** $Id: lua.h,v 1.8 1997/12/01 20:31:25 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
+** www: http://www.tecgraf.puc-rio.br/lua/
 */
 
 /*********************************************************************
-* Copyright  © 1994-1996 TeCGraf, PUC-Rio.  Written by Waldemar Ce­
-* les Filho, Roberto Ierusalimschy and Luiz Henrique de Figueiredo.
+* Copyright  © 1994-1996 TeCGraf, PUC-Rio.
+* Written by Waldemar Celes Filho, Roberto Ierusalimschy and
+* Luiz Henrique de Figueiredo.
 * All rights reserved.
 * 
 * Permission is hereby granted, without written agreement and with­
