@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.68 2001/02/13 16:52:01 roberto Exp roberto $
+** $Id: ltests.c,v 1.69 2001/02/20 18:18:00 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -99,7 +99,7 @@ void *debug_realloc (void *block, size_t oldsize, size_t size) {
     freeblock(block);
     return NULL;
   }
-  else if (memdebug_total+size > memdebug_memlimit)
+  else if (memdebug_total+size-oldsize > memdebug_memlimit)
     return NULL;  /* to test memory allocation errors */
   else {
     char *newblock;
@@ -409,7 +409,7 @@ static int newstate (lua_State *L) {
   lua_State *L1 = lua_open(NULL, luaL_check_int(L, 1));
   if (L1) {
     *((int **)L1) = &islocked;  /* initialize the lock */
-    lua_pushuserdata(L, L1);
+    lua_pushnumber(L, (unsigned long)L1);
   }
   else
     lua_pushnil(L);
@@ -430,8 +430,8 @@ static int loadlib (lua_State *L) {
 }
 
 static int closestate (lua_State *L) {
-  luaL_checktype(L, 1, LUA_TUSERDATA);
-  lua_close((lua_State *)lua_touserdata(L, 1));
+  lua_State *L1 = (lua_State *)(unsigned long)luaL_check_number(L, 1);
+  lua_close(L1);
   LUA_UNLOCK(L);  /* close cannot unlock that */
   return 0;
 }
@@ -440,8 +440,7 @@ static int doremote (lua_State *L) {
   lua_State *L1;
   const char *code = luaL_check_string(L, 2);
   int status;
-  luaL_checktype(L, 1, LUA_TUSERDATA);
-  L1 = (lua_State *)lua_touserdata(L, 1);
+  L1 = (lua_State *)(unsigned long)luaL_check_number(L, 1);
   status = lua_dostring(L1, code);
   if (status != 0) {
     lua_pushnil(L);
