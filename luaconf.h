@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.15 2004/10/18 18:07:31 roberto Exp roberto $
+** $Id: luaconf.h,v 1.16 2004/11/18 19:53:49 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -46,8 +46,11 @@
 #define LUA_NUMBER_FMT		"%.14g"
 
 
-/* type for integer functions */
-#define LUA_INTEGER	long
+/*
+** type for integer functions
+** on most machines, `ptrdiff_t' gives a reasonable size for integers
+*/
+#define LUA_INTEGER	ptrdiff_t
 
 
 /* mark for all API functions */
@@ -130,12 +133,38 @@
 #define api_check(L,o)		lua_assert(o)
 
 
-/* an unsigned integer with at least 32 bits */
-#define LUA_UINT32	unsigned long
+/* number of bits in an `int' */
+/* avoid overflows in comparison */
+#if INT_MAX-20 < 32760
+#define LUA_BITSINT	16
+#elif INT_MAX > 2147483640L
+/* `int' has at least 32 bits */
+#define LUA_BITSINT	32
+#else
+#error "you must define LUA_BITSINT with number of bits in an integer"
+#endif
 
-/* a signed integer with at least 32 bits */
+
+/*
+** L_UINT32: unsigned integer with at least 32 bits
+** L_INT32: signed integer with at least 32 bits
+** LU_MEM: an unsigned integer big enough to count the total memory used by Lua
+** L_MEM: a signed integer big enough to count the total memory used by Lua
+*/
+#if LUA_BITSINT >= 32
+#define LUA_UINT32	unsigned int
+#define LUA_INT32	int
+#define LUA_MAXINT32	INT_MAX
+#define LU_MEM		size_t
+#define L_MEM		ptrdiff_t
+#else
+/* 16-bit ints */
+#define LUA_UINT32	unsigned long
 #define LUA_INT32	long
 #define LUA_MAXINT32	LONG_MAX
+#define LU_MEM		LUA_UINT32
+#define L_MEM		ptrdiff_t
+#endif
 
 
 /* maximum depth for calls (unsigned short) */
@@ -174,7 +203,7 @@
 /* function to convert a lua_Number to int (with any rounding method) */
 #if defined(__GNUC__) && defined(__i386)
 #define lua_number2int(i,d)	__asm__ ("fistpl %0":"=m"(i):"t"(d):"st")
-#elif 0
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199900L)
 /* on machines compliant with C99, you can try `lrint' */
 #include <math.h>
 #define lua_number2int(i,d)	((i)=lrint(d))
@@ -198,17 +227,6 @@
 /* result of a `usual argument conversion' over lua_Number */
 #define LUA_UACNUMBER	double
 
-
-/* number of bits in an `int' */
-/* avoid overflows in comparison */
-#if INT_MAX-20 < 32760
-#define LUA_BITSINT	16
-#elif INT_MAX > 2147483640L
-/* machine has at least 32 bits */
-#define LUA_BITSINT	32
-#else
-#error "you must define LUA_BITSINT with number of bits in an integer"
-#endif
 
 
 /* type to ensure maximum alignment */

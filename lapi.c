@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.18 2004/08/30 13:44:44 roberto Exp roberto $
+** $Id: lapi.c,v 2.19 2004/09/15 20:39:42 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -842,7 +842,7 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
   g = G(L);
   switch (what) {
     case LUA_GCSTOP: {
-      g->GCthreshold = MAXLMEM;
+      g->GCthreshold = MAX_LUMEM;
       break;
     }
     case LUA_GCRESTART: {

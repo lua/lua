@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.59 2004/06/23 15:57:29 roberto Exp roberto $
+** $Id: llimits.h,v 1.60 2004/09/10 17:30:46 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -18,22 +18,9 @@
 
 typedef LUA_UINT32 lu_int32;
 
-typedef LUA_INT32 l_int32;
+typedef LU_MEM lu_mem;
 
-
-/*
-** an unsigned integer big enough to count the total memory used by Lua;
-** it should be at least as large as `size_t'
-*/
-typedef lu_int32 lu_mem;
-
-
-/*
-** a signed integer big enough to count the total memory used by Lua;
-** it should be at least as large as `size_t'
-*/
-typedef l_int32 l_mem;
-#define MAXLMEM	LUA_MAXINT32
+typedef L_MEM l_mem;
 
 
 
@@ -43,6 +30,8 @@ typedef unsigned char lu_byte;
 
 #define MAX_SIZET	((size_t)(~(size_t)0)-2)
 
+#define MAX_LUMEM	((lu_mem)(~(lu_mem)0)-2)
+
 
 #define MAX_INT (INT_MAX-2)  /* maximum value of an int (-2 for safety) */
 
@@ -51,7 +40,7 @@ typedef unsigned char lu_byte;
 ** this is for hashing only; there is no problem if the integer
 ** cannot hold the whole pointer value
 */
-#define IntPoint(p)  ((unsigned int)(p))
+#define IntPoint(p)  ((unsigned int)(lu_mem)(p))
 
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.14 2004/10/08 16:00:34 roberto Exp roberto $
+** $Id: lgc.c,v 2.15 2004/11/19 15:52:40 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -555,7 +555,7 @@ static void atomic (lua_State *L) {
   g->sweepgc = &g->rootgc;
   g->gcstate = GCSsweepstring;
   aux = g->gcgenerational;
-  g->gcgenerational = (g->estimate <= 4*g->prevestimate/2);
+  g->gcgenerational = (g->estimate/2 <= g->prevestimate);
   if (!aux)  /* last collection was full? */
     g->prevestimate = g->estimate;  /* keep estimate of last full collection */
   g->estimate = g->totalbytes - udsize;  /* first estimate */
