@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.123 2003/08/28 14:38:46 roberto Exp roberto $
+** $Id: llex.c,v 1.124 2003/08/29 16:48:14 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -77,42 +77,37 @@ static void luaX_error (LexState *ls, const char *s, const char *token) {
 }
 
 
-void luaX_syntaxerror (LexState *ls, const char *msg) {
-  const char *lasttoken;
-  switch (ls->t.token) {
-    case TK_NAME:
-      lasttoken = getstr(ls->t.seminfo.ts);
-      break;
-    case TK_STRING:
-    case TK_NUMBER:
-      save(ls, '\0');
-      lasttoken = luaZ_buffer(ls->buff);
-      break;
-    default:
-      lasttoken = luaX_token2str(ls, ls->t.token);
-      break;
-  }
-  luaX_error(ls, msg, lasttoken);
-}
-
-
 const char *luaX_token2str (LexState *ls, int token) {
   if (token < FIRST_RESERVED) {
     lua_assert(token == (unsigned char)token);
-    return luaO_pushfstring(ls->L, "%c", token);
+    return (iscntrl(token)) ? luaO_pushfstring(ls->L, "char(%d)", token) :
+                              luaO_pushfstring(ls->L, "%c", token);
   }
   else
     return token2string[token-FIRST_RESERVED];
 }
 
 
-static void luaX_lexerror (LexState *ls, const char *s, int token) {
-  if (token == TK_EOS)
-    luaX_error(ls, s, luaX_token2str(ls, token));
-  else {
-    save(ls, '\0');
-    luaX_error(ls, s, luaZ_buffer(ls->buff));
+static const char *txtToken (LexState *ls, int token) {
+  switch (token) {
+    case TK_NAME:
+    case TK_STRING:
+    case TK_NUMBER:
+      save(ls, '\0');
+      return luaZ_buffer(ls->buff);
+    default:
+      return luaX_token2str(ls, token);
   }
+}
+
+
+static void luaX_lexerror (LexState *ls, const char *msg, int token) {
+    luaX_error(ls, msg, txtToken(ls, token));
+}
+
+
+void luaX_syntaxerror (LexState *ls, const char *msg) {
+  luaX_lexerror(ls, msg, ls->t.token);
 }
 
 
@@ -406,14 +401,13 @@ int luaX_lex (LexState *ls, SemInfo *seminfo) {
                                   luaZ_bufflen(ls->buff));
           if (ts->tsv.reserved > 0)  /* reserved word? */
             return ts->tsv.reserved - 1 + FIRST_RESERVED;
-          seminfo->ts = ts;
-          return TK_NAME;
+          else {
+            seminfo->ts = ts;
+            return TK_NAME;
+          }
         }
         else {
           int c = ls->current;
-          if (iscntrl(c))
-            luaX_error(ls, "invalid control char",
-                           luaO_pushfstring(ls->L, "char(%d)", c));
           next(ls);
           return c;  /* single-char tokens (+ - / ...) */
         }
