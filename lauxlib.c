@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.119 2004/07/01 14:26:28 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.120 2004/07/09 18:23:17 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -383,9 +383,10 @@ static const char *luaL_gsub (lua_State *L, const char *s,
 LUALIB_API const char *luaL_searchpath (lua_State *L, const char *name,
                                                       const char *path) {
   FILE *f;
-  const char *p = path;
-  if (p == NULL) p = getpath(L);
+  const char *p;
+  if (path == NULL) path = getpath(L);
   else lua_pushnil(L);  /* to balance item pushed by `getpath' */
+  p = path;
   for (;;) {
     const char *fname;
     if ((p = pushnexttemplate(L, p)) == NULL) {
