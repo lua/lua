@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.10 2000/03/10 18:37:44 roberto Exp roberto $
+** $Id: lcode.c,v 1.11 2000/03/13 20:37:16 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -37,7 +37,7 @@ static Instruction *previous_instruction (FuncState *fs) {
 }
 
 
-int luaK_primitivecode (FuncState *fs, Instruction i) {
+static int luaK_primitivecode (FuncState *fs, Instruction i) {
   luaM_growvector(fs->L, fs->f->code, fs->pc, 1, Instruction, codeEM, MAXARG_S);
   fs->f->code[fs->pc] = i;
   return fs->pc++;

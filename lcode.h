@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.6 2000/03/10 18:37:44 roberto Exp roberto $
+** $Id: lcode.h,v 1.7 2000/03/13 20:37:16 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -20,7 +20,6 @@
 
 
 void luaK_error (LexState *ls, const char *msg);
-int luaK_primitivecode (FuncState *fs, Instruction i);
 int luaK_code (FuncState *fs, Instruction i, int delta);
 void luaK_retcode (FuncState *fs, int nlocals, int nexps);
 void luaK_fixjump (FuncState *fs, int pc, int dest);

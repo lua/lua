@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.68 2000/03/10 18:37:44 roberto Exp roberto $
+** $Id: lparser.c,v 1.69 2000/03/13 20:37:16 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -858,7 +858,7 @@ static void whilestat (LexState *ls, int line) {
   luaK_fixjump(fs, while_init, cond_init);
   /* correct `v' and  copy condition to new position */
   if (v.u.l.t != NO_JUMP) v.u.l.t += cond_init-while_init;
-  for (i=0; i<cond_size; i++) luaK_primitivecode(fs, buffer[i]);
+  for (i=0; i<cond_size; i++) luaK_code(fs, buffer[i], 0);
   luaK_patchlist(fs, v.u.l.t, loopentry);
   luaK_getlabel(fs);  /* mark possible jump to this point */
 }
