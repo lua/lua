@@ -2,7 +2,7 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lua.h,v 1.5 1994/11/01 17:54:31 roberto Exp $
+** $Id: lua.h,v 3.1 1994/11/02 20:30:53 roberto Exp roberto $
 */
 
 
@@ -62,18 +62,22 @@ int            lua_storefield 		(lua_Object object, char *field);
 int            lua_storeindexed 	(lua_Object object, float index);
 int            lua_storesubscript	(void);
 
-int            lua_isnil 		(lua_Object object);
-int            lua_isnumber 		(lua_Object object);
-int            lua_isstring 		(lua_Object object);
-int            lua_istable          	(lua_Object object);
-int            lua_isfunction 		(lua_Object object);
-int            lua_iscfunction 		(lua_Object object);
-int            lua_isuserdata 		(lua_Object object);
+int            lua_type 		(lua_Object object);
 
 
 /* for lua 1.1 */
 
 #define lua_call(f)           lua_callfunction(lua_getglobal(f))
 
+#define         lua_getindexed(o,n)     (lua_pushnumber(n), lua_getIndex(o))
+#define         lua_getfield(o,f)       (lua_pushstring(f), lua_getIndex(o))
+
+#define lua_isnil(_)            (lua_type(_)==LUA_T_NIL)
+#define lua_isnumber(_)         (lua_type(_)==LUA_T_NUMBER)
+#define lua_isstring(_)         (lua_type(_)==LUA_T_STRING)
+#define lua_istable(_)          (lua_type(_)==LUA_T_ARRAY)
+#define lua_isfunction(_)       (lua_type(_)==LUA_T_FUNCTION)
+#define lua_iscfunction(_)      (lua_type(_)==LUA_T_CFUNCTION)
+#define lua_isuserdata(_)       (lua_type(_)>=LUA_T_USERDATA)
 
 #endif
