@@ -1,5 +1,5 @@
 /*
-** $Id: func.h,v 1.10 1997/07/29 19:44:02 roberto Exp roberto $
+** $Id: func.h,v 1.11 1997/07/29 20:38:45 roberto Exp roberto $
 */
 
 #ifndef func_h
@@ -25,16 +25,16 @@ typedef struct TFunc
   int		marked;
   Byte		*code;
   int		lineDefined;
-  char		*fileName;
+  TaggedString	*fileName;
+  struct TObject *consts;
+  int		nconsts;
   LocVar        *locvars;
 } TFunc;
 
 TFunc *luaI_funccollector (long *cont);
 void luaI_funcfree (TFunc *l);
-void luaI_insertfunction (TFunc *f);
-
+void luaI_funcmark (TFunc *f);
 void luaI_initTFunc (TFunc *f);
-void luaI_freefunc (TFunc *f);
 
 char *luaI_getlocalname (TFunc *func, int local_number, int line);
 

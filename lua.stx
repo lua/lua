@@ -1,10 +1,8 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.47 1997/06/19 17:46:12 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.48 1997/07/29 20:38:45 roberto Exp roberto $";
 
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "luadebug.h"
 #include "luamem.h"
@@ -40,6 +38,7 @@ struct State {
   int pc;  /* next position to code */
   TaggedString *localvar[MAXLOCALS];  /* store local variable names */
   int nlocalvar;  /* number of active local variables */
+  int maxconsts;  /* size of consts vector */
   int nvars;  /* total number of local variables (for debugging information) */
   int maxvars;  /* = -1 if no debug information */
 } stateMain, stateFunc, *currState;
@@ -69,40 +68,105 @@ static void check_space (int i)
                                      Byte, codeEM, MAX_INT);
 }
 
+
 static void code_byte (Byte c)
 {
   check_space(1);
   currState->f->code[currState->pc++] = c;
 }
 
-static void code_float (real n)
-{
-  check_space(sizeof(real));
-  memcpy(currState->f->code+currState->pc, &n, sizeof(real));
-  currState->pc += sizeof(real);
-}
-
-static void code_code (TFunc *tf)
-{
-  check_space(sizeof(TFunc *));
-  memcpy(currState->f->code+currState->pc, &tf, sizeof(TFunc *));
-  currState->pc += sizeof(TFunc *);
-}
 
 static void code_word_at (int pc, int n)
 {
   Word w = n;
   if (w != n)
     yyerror("block too big");
-  memcpy(currState->f->code+pc, &w, sizeof(Word));
+  currState->f->code[pc] = n&0xFF;
+  currState->f->code[pc+1] = n>>8;
 }
 
-static void code_word (Word n)
+static void code_word (int n)
 {
-  check_space(sizeof(Word));
-  memcpy(currState->f->code+currState->pc, &n, sizeof(Word));
-  currState->pc += sizeof(Word);
+  code_byte(n&0xFF);
+  code_byte(n>>8);
 }
+
+static void code_constant (int c)
+{
+  if (c <= 255) {
+    code_byte(PUSHCONSTANTB);
+    code_byte(c);
+  }
+  else {
+    code_byte(PUSHCONSTANT);
+    code_word(c);
+  }
+}
+
+
+static int next_constant (void)
+{
+  if (currState->f->nconsts >= currState->maxconsts) {
+    currState->maxconsts =
+      growvector(&currState->f->consts, currState->maxconsts,
+                 TObject, constantEM, MAX_WORD);
+  }
+  return currState->f->nconsts++;
+}
+
+
+static int string_constant (TaggedString *s)
+{
+  int c = s->u.s.constindex;
+  if (!(0 <= c && c < currState->f->nconsts &&
+      ttype(&currState->f->consts[c]) == LUA_T_STRING &&
+      tsvalue(&currState->f->consts[c]) == s)) {
+    c = next_constant();
+    ttype(&currState->f->consts[c]) = LUA_T_STRING;
+    tsvalue(&currState->f->consts[c]) = s;
+    s->u.s.constindex = c;  /* hint for next time */
+    luaI_releasestring(s);
+  }
+  return c;
+}
+
+
+static void code_string (TaggedString *s)
+{
+  int c = string_constant(s);
+  code_constant(c);
+}
+
+static void code_float (real n)
+{
+  int c = next_constant();
+  ttype(&currState->f->consts[c]) = LUA_T_NUMBER;
+  nvalue(&currState->f->consts[c]) = n;
+  code_constant(c);
+}
+
+
+static void code_number (float f)
+{ 
+  Word i;
+  if (f >= 0 && f <= (float)MAX_WORD && (float)(i=(Word)f) == f) {
+   /* f has an (short) integer value */
+   if (i <= 2) code_byte(PUSH0 + i);
+   else if (i <= 255)
+   {
+    code_byte(PUSHBYTE);
+    code_byte(i);
+   }
+   else
+   {
+    code_byte(PUSHWORD);
+    code_word(i);
+   }
+  }
+  else
+    code_float(f);
+}
+
 
 static void flush_record (int n)
 {
@@ -149,6 +213,7 @@ static void luaI_unregisterlocalvar (int line)
 
 static void store_localvar (TaggedString *name, int n)
 {
+  luaI_fixstring(name);  /* local var names cannot be GC */
   if (currState->nlocalvar+n < MAXLOCALS)
     currState->localvar[currState->nlocalvar+n] = name;
   else
@@ -170,40 +235,6 @@ static void add_varbuffer (Long var)
   yyerror ("variable buffer overflow");
 }
 
-static void code_string (Word w)
-{
-  code_byte(PUSHSTRING);
-  code_word(w);
-}
-
-static void code_constant (TaggedString *s)
-{
-  code_string(luaI_findconstant(s));
-}
-
-static void code_number (float f)
-{ 
-  Word i;
-  if (f >= 0 && f <= (float)MAX_WORD && (float)(i=(Word)f) == f) {
-   /* f has an (short) integer value */
-   if (i <= 2) code_byte(PUSH0 + i);
-   else if (i <= 255)
-   {
-    code_byte(PUSHBYTE);
-    code_byte(i);
-   }
-   else
-   {
-    code_byte(PUSHWORD);
-    code_word(i);
-   }
-  }
-  else
-  {
-   code_byte(PUSHFLOAT);
-   code_float(f);
-  }
-}
 
 /*
 ** Search a local name and if find return its index. If do not find return -1
@@ -256,55 +287,6 @@ static void lua_codeadjust (int n)
 }
 
 
-static void init_state (TFunc *f)
-{
-  luaI_initTFunc(f);
-  currState->nlocalvar = 0;
-  currState->f = f;
-  currState->pc = 0;
-  currState->codesize = CODE_BLOCK;
-  f->code = newvector(CODE_BLOCK, Byte);
-  if (lua_debug) {
-    currState->nvars = 0;
-    currState->maxvars = 0;
-  }
-  else
-    currState->maxvars = -1;  /* flag no debug information */
-}
-
-
-static void init_func (void)
-{
-  currState = &stateFunc;
-  init_state(new(TFunc));
-  luaI_codedebugline(lua_linenumber);
-}
-
-
-static void codereturn (void)
-{
-  if (currState->nlocalvar == 0)
-    code_byte(RETCODE0);
-  else
-  {
-    code_byte(RETCODE);
-    code_byte(currState->nlocalvar);
-  }
-}
-
-
-static void close_func (void)
-{
-  codereturn();
-  code_byte(ENDCODE);
-  currState->f->code = shrinkvector(currState->f->code, currState->pc, Byte);
-  if (currState->maxvars != -1) {  /* debug information? */
-    luaI_registerlocalvar(NULL, -1);  /* flag end of vector */
-    currState->f->locvars = shrinkvector(currState->f->locvars,
-                                    currState->nvars, LocVar);
-  }
-}
-
 
 void luaI_codedebugline (int line)
 {
@@ -350,7 +332,7 @@ static int close_parlist (int dots)
   else {
     code_byte(VARARGS);
     code_byte(currState->nlocalvar);
-    add_localvar(luaI_createfixedstring("arg"));
+    add_localvar(luaI_createstring("arg"));
   }
   return lua_linenumber;
 }
@@ -423,6 +405,65 @@ static void code_shortcircuit (int pc, Byte jmp)
 }
 
 
+static void init_state (TFunc *f)
+{
+  currState->nlocalvar = 0;
+  currState->f = f;
+  currState->pc = 0;
+  currState->codesize = CODE_BLOCK;
+  f->code = newvector(CODE_BLOCK, Byte);
+  currState->maxconsts = 0;
+  if (lua_debug) {
+    currState->nvars = 0;
+    currState->maxvars = 0;
+  }
+  else
+    currState->maxvars = -1;  /* flag no debug information */
+}
+
+
+static void init_func (Long v)
+{
+  TFunc *f = new(TFunc);
+  int c = next_constant();
+  ttype(&currState->f->consts[c]) = LUA_T_FUNCTION;
+  currState->f->consts[c].value.tf = f;
+  code_constant(c);
+  storesinglevar(v);
+  currState = &stateFunc;
+  luaI_initTFunc(f);
+  init_state(f);
+  luaI_codedebugline(lua_linenumber);
+}
+
+
+static void codereturn (void)
+{
+  if (currState->nlocalvar == 0)
+    code_byte(RETCODE0);
+  else
+  {
+    code_byte(RETCODE);
+    code_byte(currState->nlocalvar);
+  }
+}
+
+
+static void close_func (void)
+{
+  codereturn();
+  code_byte(ENDCODE);
+  currState->f->code = shrinkvector(currState->f->code, currState->pc, Byte);
+  currState->f->consts = shrinkvector(currState->f->consts,
+                                      currState->f->nconsts, TObject);
+  if (currState->maxvars != -1) {  /* debug information? */
+    luaI_registerlocalvar(NULL, -1);  /* flag end of vector */
+    currState->f->locvars = shrinkvector(currState->f->locvars,
+                                    currState->nvars, LocVar);
+  }
+}
+
+
 /*
 ** Parse LUA code.
 */
@@ -444,9 +485,7 @@ void lua_parse (TFunc *tf)
  int   vInt;
  float vFloat;
  char *pChar;
- Word  vWord;
  Long  vLong;
- TFunc *pFunc;
  TaggedString *pTStr;
 }
 
@@ -460,8 +499,7 @@ void lua_parse (TFunc *tf)
 %token FUNCTION
 %token DOTS
 %token <vFloat> NUMBER
-%token <vWord>  STRING
-%token <pTStr>  NAME 
+%token <pTStr>  NAME STRING
 
 %type <vLong> PrepJump
 %type <vLong> exprlist, exprlist1  /* if > 0, points to function return
@@ -473,8 +511,7 @@ void lua_parse (TFunc *tf)
 %type <vInt>  ffieldlist, ffieldlist1, semicolonpart
 %type <vInt>  lfieldlist, lfieldlist1
 %type <vInt>  parlist, parlist1, par
-%type <vLong> var, singlevar, funcname
-%type <pFunc> body
+%type <vLong> var, singlevar
 
 %left AND OR
 %left EQ NE '>' '<' LE GE
@@ -495,28 +532,21 @@ chunklist : /* empty */
 	  ;
 
 function     : FUNCTION funcname body 	 
-	       { 
-		code_byte(PUSHFUNCTION);
-		code_code($3);
-		storesinglevar($2);
-	       }
 	       ;
 
-funcname	: var { $$ =$1; init_func(); }
+funcname	: var { init_func($1); }
 		| varexp ':' NAME
 	{
-	  code_constant($3);
-	  $$ = 0;  /* indexed variable */
-	  init_func();
-	  add_localvar(luaI_createfixedstring("self"));
+	  code_string($3);
+	  init_func(0);  /* indexed variable */
+	  add_localvar(luaI_createstring("self"));
 	}
 		;
 
 body :  '(' parlist ')' block END
 	{
 	  close_func();
-          $$ = currState->f;
-	  $$->lineDefined = $2;
+	  currState->f->lineDefined = $2;
 	  currState = &stateMain;  /* change back to main code */
 	}
 		;
@@ -658,7 +688,7 @@ funcvalue    : varexp { $$ = 0; }
 	     | varexp ':' NAME 
 	     { 
                code_byte(PUSHSELF); 
-	       code_word(luaI_findconstant($3));
+	       code_word(string_constant($3));
                $$ = 1;
 	     }
 	     ;
@@ -735,7 +765,7 @@ ffield      : ffieldkey '=' expr1
            ;
 
 ffieldkey   : '[' expr1 ']'
-	    | NAME { code_constant($1); }
+	    | NAME { code_string($1); }
 	    ;
 
 lfieldlist  : /* empty */ { $$ = 0; }
@@ -771,7 +801,7 @@ var	  :	singlevar { $$ = $1; }
 	  }
 	  |	varexp '.' NAME
 	  {
-	    code_constant($3);
+	    code_string($3);
 	    $$ = 0;		/* indexed variable */
 	  }
 	  ;
@@ -783,6 +813,7 @@ singlevar :	NAME
 	    $$ = luaI_findsymbol($1)+1;  /* return positive value */
            else
 	    $$ = -(local+1);		/* return negative value */
+           luaI_fixstring($1);  /* cannot GC variable names */
 	  }
 	  ;
 

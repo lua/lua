@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 4.18 1997/07/29 13:35:06 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 4.19 1997/07/29 21:11:10 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -24,6 +24,9 @@ char *rcs_opcode="$Id: opcode.c,v 4.18 1997/07/29 13:35:06 roberto Exp roberto $
 
 #define tonumber(o) ((ttype(o) != LUA_T_NUMBER) && (lua_tonumber(o) != 0))
 #define tostring(o) ((ttype(o) != LUA_T_STRING) && (lua_tostring(o) != 0))
+
+
+#define get_word(w,pc)	{w=*pc+(*(pc+1)<<8); pc+=2;}
 
 
 #define STACK_SIZE 	128
@@ -69,7 +72,7 @@ lua_LHFunction lua_linehook = NULL;
 lua_CHFunction lua_callhook = NULL;
 
 
-static StkId lua_execute (Byte *pc, StkId base);
+static StkId lua_execute (TFunc *func, StkId base);
 static void do_call (StkId base, int nResults);
 
 
@@ -169,7 +172,7 @@ static int lua_tostring (TObject *obj)
       sprintf (s, "%d", i);
     else
       sprintf (s, "%g", nvalue(obj));
-    tsvalue(obj) = lua_createstring(s);
+    tsvalue(obj) = luaI_createstring(s);
     ttype(obj) = LUA_T_STRING;
     return 0;
   }
@@ -267,7 +270,8 @@ static void callHook (StkId base, lua_Type type, int isreturn)
   {
     TObject *f = stack+base-1;
     if (type == LUA_T_MARK)
-      (*lua_callhook)(Ref(f), f->value.tf->fileName, f->value.tf->lineDefined);
+      (*lua_callhook)(Ref(f), f->value.tf->fileName->str,
+                      f->value.tf->lineDefined);
     else
       (*lua_callhook)(Ref(f), "(C)", -1);
   }
@@ -324,7 +328,7 @@ static void do_call (StkId base, int nResults)
   }
   else if (ttype(func) == LUA_T_FUNCTION) {
     ttype(func) = LUA_T_MARK;
-    firstResult = lua_execute(func->value.tf->code, base);
+    firstResult = lua_execute(func->value.tf, base);
   }
   else { /* func is not a function */
     /* Check the tag method for invalid functions */
@@ -630,14 +634,17 @@ int luaI_dorun (TFunc *tf)
 
 int lua_domain (void)
 {
-  TFunc tf;
   int status;
+  TFunc *tf = new(TFunc);
   jmp_buf myErrorJmp;
   jmp_buf *oldErr = errorJmp;
   errorJmp = &myErrorJmp;
-  luaI_initTFunc(&tf);
+  luaI_initTFunc(tf);
+  adjustC(1);  /* one slot for the pseudo-function */
+  stack[CLS_current.base].ttype = LUA_T_FUNCTION;
+  stack[CLS_current.base].value.tf = tf;
   if (setjmp(myErrorJmp) == 0) {
-    lua_parse(&tf);
+    lua_parse(tf);
     status = 0;
   }
   else {
@@ -645,9 +652,8 @@ int lua_domain (void)
     status = 1;
   }
   if (status == 0)
-    status = luaI_dorun(&tf);
+    status = do_protectedrun(MULT_RET);
   errorJmp = oldErr;
-  luaI_free(tf.code);
   return status;
 }
 
@@ -952,7 +958,7 @@ void lua_pushstring (char *s)
     ttype(top) = LUA_T_NIL;
   else
   {
-    tsvalue(top) = lua_createstring(s);
+    tsvalue(top) = luaI_createstring(s);
     ttype(top) = LUA_T_STRING;
   }
   incr_top;
@@ -1088,7 +1094,7 @@ static void adjust_varargs (StkId first_extra_arg)
   /* store counter in field "n" */ {
     TObject index, extra;
     ttype(&index) = LUA_T_STRING;
-    tsvalue(&index) = lua_createstring("n");
+    tsvalue(&index) = luaI_createstring("n");
     ttype(&extra) = LUA_T_NUMBER;
     nvalue(&extra) = nvararg;
     *(lua_hashdefine(avalue(&arg), &index)) = extra;
@@ -1104,8 +1110,9 @@ static void adjust_varargs (StkId first_extra_arg)
 ** [stack+base,top). Returns n such that the the results are between
 ** [stack+n,top).
 */
-static StkId lua_execute (Byte *pc, StkId base)
+static StkId lua_execute (TFunc *func, StkId base)
 {
+  Byte *pc = func->code;
   if (lua_callhook)
     callHook (base, LUA_T_MARK, 0);
  while (1)
@@ -1129,35 +1136,6 @@ static StkId lua_execute (Byte *pc, StkId base)
     Word w;
     get_word(w,pc);
     ttype(top) = LUA_T_NUMBER; nvalue(top) = w;
-    incr_top;
-   }
-   break;
-
-   case PUSHFLOAT:
-   {
-    real num;
-    get_float(num,pc);
-    ttype(top) = LUA_T_NUMBER; nvalue(top) = num;
-    incr_top;
-   }
-   break;
-
-   case PUSHSTRING:
-   {
-    Word w;
-    get_word(w,pc);
-    ttype(top) = LUA_T_STRING; tsvalue(top) = lua_constant[w];
-    incr_top;
-   }
-   break;
-
-   case PUSHFUNCTION:
-   {
-    TFunc *f;
-    get_code(f,pc);
-    luaI_insertfunction(f);  /* may take part in GC */
-    top->ttype = LUA_T_FUNCTION;
-    top->value.tf = f;
     incr_top;
    }
    break;
@@ -1187,10 +1165,24 @@ static StkId lua_execute (Byte *pc, StkId base)
      TObject receiver = *(top-1);
      Word w;
      get_word(w,pc);
-     ttype(top) = LUA_T_STRING; tsvalue(top) = lua_constant[w];
+     *top = func->consts[w];
      incr_top;
      pushsubscript();
      *top = receiver;
+     incr_top;
+     break;
+   }
+
+   case PUSHCONSTANTB: {
+     *top = func->consts[*pc++];
+     incr_top;
+     break;
+   }
+
+   case PUSHCONSTANT: {
+     Word w;
+     get_word(w,pc);
+     *top = func->consts[w];
      incr_top;
      break;
    }
@@ -1234,22 +1226,6 @@ static StkId lua_execute (Byte *pc, StkId base)
     while (n)
     {
      ttype(top) = LUA_T_NUMBER; nvalue(top) = n+m;
-     *(lua_hashdefine (avalue(arr), top)) = *(top-1);
-     top--;
-     n--;
-    }
-   }
-   break;
-
-   case STORERECORD:  /* opcode obsolete: supersed by STOREMAP */
-   {
-    int n = *(pc++);
-    TObject *arr = top-n-1;
-    while (n)
-    {
-     Word w;
-     get_word(w,pc);
-     ttype(top) = LUA_T_STRING; tsvalue(top) = lua_constant[w];
      *(lua_hashdefine (avalue(arr), top)) = *(top-1);
      top--;
      n--;
@@ -1382,7 +1358,7 @@ static StkId lua_execute (Byte *pc, StkId base)
      if (tostring(l) || tostring(r))
        call_binTM(IM_CONCAT, "unexpected type for concatenation");
      else {
-       tsvalue(l) = lua_createstring(lua_strconc(svalue(l),svalue(r)));
+       tsvalue(l) = luaI_createstring(lua_strconc(svalue(l),svalue(r)));
        --top;
      }
    }

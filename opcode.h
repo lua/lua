@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.35 1997/07/04 14:55:37 roberto Exp roberto $
+** $Id: opcode.h,v 3.36 1997/07/29 20:38:06 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -47,9 +47,6 @@ PUSH1,/*		-		1.0  */
 PUSH2,/*		-		2.0  */
 PUSHBYTE,/*	b	-		(float)b  */
 PUSHWORD,/*	w	-		(float)w  */
-PUSHFLOAT,/*	f	-		f  */
-PUSHSTRING,/*	w	-		STR[w]  */
-PUSHFUNCTION,/*	p	-		FUN(p)  */
 PUSHLOCAL0,/*		-		LOC[0]  */
 PUSHLOCAL1,/*		-		LOC[1]  */
 PUSHLOCAL2,/*		-		LOC[2]  */
@@ -111,6 +108,8 @@ RETCODE,/*	b	-		-  */
 SETLINE,/*	w	-		-		LINE=w  */
 VARARGS,/*	b	v_b...v_1	{v_1...v_b;n=b}  */
 STOREMAP,/*	b	v_b k_b ...v_1 k_1 t	-	t[k_i]=v_i  */
+PUSHCONSTANTB,/*b	-		const[b] */
+PUSHCONSTANT,/* w	-		const[w] */
 ENDCODE = 127
 } OpCode;
 
@@ -152,11 +151,6 @@ typedef struct TObject
 #define s_avalue(i)	(avalue(&s_object(i)))
 #define s_fvalue(i)	(fvalue(&s_object(i)))
 #define s_uvalue(i)	(uvalue(&s_object(i)))
-
-#define get_word(code,pc) {memcpy(&code, pc, sizeof(Word)); pc+=sizeof(Word);}
-#define get_float(code,pc){memcpy(&code, pc, sizeof(real)); pc+=sizeof(real);}
-#define get_code(code,pc) {memcpy(&code, pc, sizeof(TFunc *)); \
-                           pc+=sizeof(TFunc *);}
 
 
 /* Exported functions */

@@ -11,6 +11,14 @@
 static TFunc *function_root = NULL;
 
 
+static void luaI_insertfunction (TFunc *f)
+{
+  lua_pack();
+  f->next = function_root;
+  function_root = f;
+  f->marked = 0;
+}
+
 /*
 ** Initialize TFunc struct
 */
@@ -21,29 +29,23 @@ void luaI_initTFunc (TFunc *f)
   f->code = NULL;
   f->lineDefined = 0;
   f->fileName = lua_parsedfile;
+  f->consts = NULL;
+  f->nconsts = 0;
   f->locvars = NULL;
+  luaI_insertfunction(f);
 }
 
-/*
-** Insert function in list for GC
-*/
-void luaI_insertfunction (TFunc *f)
-{
-  lua_pack();
-  f->next = function_root;
-  function_root = f;
-  f->marked = 0;
-}
 
 
 /*
 ** Free function
 */
-void luaI_freefunc (TFunc *f)
+static void luaI_freefunc (TFunc *f)
 {
-  luaI_free (f->code);
-  luaI_free (f->locvars);
-  luaI_free (f);
+  luaI_free(f->code);
+  luaI_free(f->locvars);
+  luaI_free(f->consts);
+  luaI_free(f);
 }
 
 
@@ -55,6 +57,20 @@ void luaI_funcfree (TFunc *l)
     l = next;
   }
 }
+
+
+void luaI_funcmark (TFunc *f)
+{
+  f->marked = 1;
+  if (!f->fileName->marked)
+    f->fileName->marked = 1;
+  if (f->consts) {
+    int i;
+    for (i=0; i<f->nconsts; i++)
+      lua_markobject(&f->consts[i]);
+  }
+}
+
 
 /*
 ** Garbage collection function.
@@ -92,7 +108,7 @@ void lua_funcinfo (lua_Object func, char **filename, int *linedefined)
   TObject *f = luaI_Address(func);
   if (f->ttype == LUA_T_MARK || f->ttype == LUA_T_FUNCTION)
   {
-    *filename = f->value.tf->fileName;
+    *filename = f->value.tf->fileName->str;
     *linedefined = f->value.tf->lineDefined;
   }
   else if (f->ttype == LUA_T_CMARK || f->ttype == LUA_T_CFUNCTION)

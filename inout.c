@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.70 1997/07/07 21:05:51 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.71 1997/07/29 13:33:15 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -27,7 +27,7 @@ char *rcs_inout="$Id: inout.c,v 2.70 1997/07/07 21:05:51 roberto Exp roberto $";
 
 /* Exported variables */
 Word lua_linenumber;
-char *lua_parsedfile;
+TaggedString *lua_parsedfile;
 
 
 char *luaI_typenames[] = { /* ORDER LUA_T */
@@ -40,7 +40,7 @@ char *luaI_typenames[] = { /* ORDER LUA_T */
 
 void luaI_setparsedfile (char *name)
 {
-  lua_parsedfile = luaI_createfixedstring(name)->str;
+  lua_parsedfile = luaI_createstring(name);
 }
 
 
@@ -399,7 +399,7 @@ void luaI_predefine (void)
     s_ttype(n) = LUA_T_CFUNCTION; s_fvalue(n) = int_funcs[i].func;
   }
   n = luaI_findsymbolbyname("_VERSION");
-  s_ttype(n) = LUA_T_STRING; s_tsvalue(n) = lua_createstring(LUA_VERSION);
+  s_ttype(n) = LUA_T_STRING; s_tsvalue(n) = luaI_createstring(LUA_VERSION);
 }
 
 

@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.72 1997/06/17 18:09:31 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.73 1997/07/07 16:44:26 roberto Exp roberto $";
 
 #include "luamem.h"
 #include "auxlib.h"
@@ -24,13 +24,16 @@ Symbol *lua_table = NULL;
 Word lua_ntable = 0;
 static Long lua_maxsymbol = 0;
 
-TaggedString **lua_constant = NULL;
-Word lua_nconstant = 0;
-static Long lua_maxconstant = 0;
-
 
 #define GARBAGE_BLOCK 100
 
+
+static TaggedString *luaI_createfixedstring (char *name)
+{
+  TaggedString *ts = luaI_createstring(name);
+  luaI_fixstring(ts);
+  return ts;
+}
 
 void luaI_initsymbol (void)
 {
@@ -40,16 +43,11 @@ void luaI_initsymbol (void)
 }
 
 
-/*
-** Initialise constant table with pre-defined constants
-*/
 void luaI_initconstant (void)
 {
- lua_maxconstant = BUFFER_BLOCK;
- lua_constant = newvector(lua_maxconstant, TaggedString *);
- /* pre-register mem error messages, to avoid loop when error arises */
- luaI_findconstantbyname(tableEM);
- luaI_findconstantbyname(memEM);
+  /* pre-register mem error messages, to avoid loop when error arises */
+  luaI_createfixedstring(tableEM);
+  luaI_createfixedstring(memEM);
 }
 
 
@@ -79,35 +77,25 @@ Word luaI_findsymbolbyname (char *name)
 }
 
 
-/*
-** Given a tree node, check it is has a correspondent constant index. If not,
-** allocate it.
-*/
-Word luaI_findconstant (TaggedString *t)
+void luaI_releasestring (TaggedString *t)
 {
- if (t->u.s.constindex == NOT_USED)
- {
-  if (lua_nconstant == lua_maxconstant)
-    lua_maxconstant = growvector(&lua_constant, lua_maxconstant, TaggedString *,
-                        constantEM, MAX_WORD);
-  t->u.s.constindex = lua_nconstant;
-  lua_constant[lua_nconstant] = t;
-  lua_nconstant++;
- }
- return t->u.s.constindex;
+  if (t->marked == 2)  /* string has temporary mark? */
+    t->marked = 0;
 }
 
 
-Word  luaI_findconstantbyname (char *name)
+void luaI_fixstring (TaggedString *t)
 {
-  return luaI_findconstant(luaI_createfixedstring(name));
+  if (t->marked < 3)
+    t->marked = 3;  /* avoid GC */
 }
 
-TaggedString *luaI_createfixedstring (char *name)
+
+TaggedString *luaI_createtempstring (char *name)
 {
-  TaggedString *ts = lua_createstring(name);
+  TaggedString *ts = luaI_createstring(name);
   if (!ts->marked)
-    ts->marked = 2;  /* avoid GC */
+    ts->marked = 2;  /* avoid (temporarily) GC */
   return ts;
 }
 
@@ -131,9 +119,6 @@ static char *lua_travsymbol (int (*fn)(TObject *))
 }
 
 
-/*
-** Mark an object if it is a string or a unmarked array.
-*/
 int lua_markobject (TObject *o)
 {/* if already marked, does not change mark value */
  if (ttype(o) == LUA_T_USERDATA ||
@@ -143,7 +128,7 @@ int lua_markobject (TObject *o)
    lua_hashmark (avalue(o));
  else if ((o->ttype == LUA_T_FUNCTION || o->ttype == LUA_T_MARK)
            && !o->value.tf->marked)
-   o->value.tf->marked = 1;
+   luaI_funcmark(o->value.tf);
  return 0;
 }
 
@@ -208,6 +193,7 @@ long lua_collectgarbage (long limit)
   luaI_hashfree(freetable);
   luaI_strfree(freestr);
   luaI_funcfree(freefunc);
+/*printf("total %d  coletados %d\n", (int)gc_nentity, (int)recovered);*/
   return recovered;
 } 
 

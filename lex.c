@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 3.6 1997/07/01 19:32:41 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 3.7 1997/07/29 13:33:15 roberto Exp roberto $";
 
 
 #include <ctype.h>
@@ -62,7 +62,7 @@ void lua_setinput (ZIO *z)
 static void luaI_auxsyntaxerror (char *s)
 {
   luaL_verror("%s;\n> at line %d in file %s",
-               s, lua_linenumber, lua_parsedfile);
+               s, lua_linenumber, lua_parsedfile->str);
 }
 
 static void luaI_auxsynterrbf (char *s, char *token)
@@ -70,7 +70,7 @@ static void luaI_auxsynterrbf (char *s, char *token)
   if (token[0] == 0)
     token = "<eof>";
   luaL_verror("%s;\n> last token read: \"%s\" at line %d in file %s",
-           s, token, lua_linenumber, lua_parsedfile);
+           s, token, lua_linenumber, lua_parsedfile->str);
 }
 
 void luaI_syntaxerror (char *s)
@@ -110,7 +110,7 @@ void luaI_addReserved (void)
   int i;
   for (i=0; i<RESERVEDSIZE; i++)
   {
-    TaggedString *ts = lua_createstring(reserved[i].name);
+    TaggedString *ts = luaI_createstring(reserved[i].name);
     ts->marked = reserved[i].token;  /* reserved word  (always > 255) */
   }
 }
@@ -273,7 +273,7 @@ static int read_long_string (char *yytext, int buffsize)
   } endloop:
   save_and_next();  /* pass the second ']' */
   yytext[tokensize-2] = 0;  /* erases ']]' */
-  luaY_lval.vWord = luaI_findconstantbyname(yytext+2);
+  luaY_lval.pTStr = luaI_createtempstring(yytext+2);
   yytext[tokensize-2] = ']';  /* restores ']]' */
   save(0);
   return STRING;
@@ -368,7 +368,7 @@ int luaY_lex (void)
         }
         next();  /* skip delimiter */
         save(0);
-        luaY_lval.vWord = luaI_findconstantbyname(yytext+1);
+        luaY_lval.pTStr = luaI_createtempstring(yytext+1);
         tokensize--;
         save(del); save(0);  /* restore delimiter */
         return STRING;
@@ -454,11 +454,10 @@ int luaY_lex (void)
             save_and_next();
           } while (isalnum((unsigned char)current) || current == '_');
           save(0);
-          ts = lua_createstring(yytext);
-          if (ts->marked > 2)
+          ts = luaI_createtempstring(yytext);
+          if (ts->marked > 255)
             return ts->marked;  /* reserved word */
           luaY_lval.pTStr = ts;
-          ts->marked = 2;  /* avoid GC */
           return NAME;
         }
     }

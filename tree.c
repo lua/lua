@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.27 1997/06/09 17:28:14 roberto Exp roberto $";
+char *rcs_tree="$Id: tree.c,v 1.28 1997/06/11 14:24:40 roberto Exp roberto $";
 
 
 #include <string.h>
@@ -149,7 +149,7 @@ TaggedString *luaI_createudata (void *udata, int tag)
   return insert(udata, tag, &string_root[(unsigned)udata%NUM_HASHS]);
 }
 
-TaggedString *lua_createstring (char *str)
+TaggedString *luaI_createstring (char *str)
 {
   return insert(str, LUA_T_STRING, &string_root[(unsigned)str[0]%NUM_HASHS]);
 }

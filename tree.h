@@ -1,7 +1,7 @@
 /*
 ** tree.h
 ** TecCGraf - PUC-Rio
-** $Id: tree.h,v 1.17 1997/05/14 18:38:29 roberto Exp roberto $
+** $Id: tree.h,v 1.18 1997/06/09 17:28:14 roberto Exp roberto $
 */
 
 #ifndef tree_h
@@ -19,7 +19,7 @@ typedef struct TaggedString
   union {
     struct {
       Word varindex;  /* != NOT_USED  if this is a symbol */
-      Word constindex;  /* != NOT_USED  if this is a constant */
+      Word constindex;  /* hint to reuse constant indexes */
     } s;
     void *v;  /* if this is a userdata, here is its value */
   } u;
@@ -29,7 +29,7 @@ typedef struct TaggedString
 } TaggedString;
  
 
-TaggedString *lua_createstring (char *str);
+TaggedString *luaI_createstring (char *str);
 TaggedString *luaI_createudata (void *udata, int tag);
 TaggedString *luaI_strcollector (long *cont);
 void luaI_strfree (TaggedString *l);
