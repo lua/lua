@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.9 2004/09/08 14:23:09 roberto Exp roberto $
+** $Id: ldo.c,v 2.10 2004/09/15 20:39:42 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -391,7 +391,6 @@ static int resume_error (lua_State *L, const char *msg) {
 
 LUA_API int lua_resume (lua_State *L, int nargs) {
   int status;
-  lu_byte old_allowhooks;
   lua_lock(L);
   lua_assert(L->errfunc == 0 && L->nCcalls == 0);
   if (L->status != LUA_YIELD) {
@@ -400,7 +399,6 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
     else if (L->ci != L->base_ci)
       return resume_error(L, "cannot resume non-suspended coroutine");
   }
-  old_allowhooks = L->allowhook;
   status = luaD_rawrunprotected(L, resume, &nargs);
   if (status != 0) {  /* error? */
     L->status = status;  /* mark thread as `dead' */
