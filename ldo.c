@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.162 2002/03/08 19:11:03 roberto Exp roberto $
+** $Id: ldo.c,v 1.163 2002/03/11 12:45:00 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -204,7 +204,7 @@ StkId luaD_precall (lua_State *L, StkId func) {
   LClosure *cl;
   if (++L->ci == L->end_ci) luaD_reallocCI(L, 2*L->size_ci);
   ci = L->ci;
-  ci->base = func+1;
+  ci->base = ci->top = func+1;  /* pre-init `top' in case of errors */
   ci->pc = NULL;
   if (ttype(func) != LUA_TFUNCTION) /* `func' is not a function? */
     func = tryfuncTM(L, func);  /* check the `function' tag method */
