@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.135 2002/04/23 15:04:39 roberto Exp roberto $
+** $Id: lgc.c,v 1.136 2002/05/08 17:34:23 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -72,6 +72,14 @@ static void protomark (Proto *f) {
 }
 
 
+static void marktable (GCState *st, Table *h) {
+  if (!ismarked(h)) {
+    h->mark = st->tmark;  /* chain it for later traversal */
+    st->tmark = h;
+  }
+}
+
+
 static void markclosure (GCState *st, Closure *cl) {
   if (!cl->c.marked) {
     cl->c.marked = 1;
@@ -83,6 +91,7 @@ static void markclosure (GCState *st, Closure *cl) {
     else {
       int i;
       lua_assert(cl->l.nupvalues == cl->l.p->nupvalues);
+      marktable(st, hvalue(&cl->l.g));
       protomark(cl->l.p);
       for (i=0; i<cl->l.nupvalues; i++) {  /* mark its upvalues */
         UpVal *u = cl->l.upvals[i];
@@ -92,14 +101,6 @@ static void markclosure (GCState *st, Closure *cl) {
         }
       }
     }
-  }
-}
-
-
-static void marktable (GCState *st, Table *h) {
-  if (!ismarked(h)) {
-    h->mark = st->tmark;  /* chain it for later traversal */
-    st->tmark = h;
   }
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.134 2002/06/12 14:56:22 roberto Exp roberto $
+** $Id: lobject.h,v 1.135 2002/06/13 13:39:55 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -178,6 +178,7 @@ typedef struct LClosure {
   lu_byte marked;
   union Closure *next;  /* first four fields must be equal to CClosure!! */
   struct Proto *p;
+  TObject g;  /* global table for this closure */
   UpVal *upvals[1];
 } LClosure;
 
@@ -189,7 +190,7 @@ typedef union Closure {
 
 
 #define iscfunction(o)	(ttype(o) == LUA_TFUNCTION && clvalue(o)->c.isC)
-
+#define isLfunction(o)	(ttype(o) == LUA_TFUNCTION && !clvalue(o)->c.isC)
 
 
 /*

@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.81 2002/06/13 13:44:50 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.82 2002/06/18 15:19:27 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -81,38 +81,48 @@ static int luaB_error (lua_State *L) {
 }
 
 
-static int luaB_metatable (lua_State *L) {
+static int luaB_getmetatable (lua_State *L) {
   luaL_check_any(L, 1);
-  if (lua_isnone(L, 2)) {
-    if (!lua_getmetatable(L, 1))
-      return 0;  /* no metatable */
-    else {
-      lua_pushliteral(L, "__metatable");
-      lua_rawget(L, -2);
-      if (lua_isnil(L, -1))
-        lua_pop(L, 1);
-    }
-  }
+  if (!lua_getmetatable(L, 1))
+    return 0;  /* no metatable */
   else {
-    int t = lua_type(L, 2);
-    luaL_check_type(L, 1, LUA_TTABLE);
-    luaL_arg_check(L, t == LUA_TNIL || t == LUA_TTABLE, 2,
-                      "nil or table expected");
-    lua_settop(L, 2);
-    lua_setmetatable(L, 1);
+    lua_pushliteral(L, "__metatable");
+    lua_rawget(L, -2);
+    if (lua_isnil(L, -1))
+      lua_pop(L, 1);
+    /* otherwise returns metatable.__metatable */
   }
   return 1;
 }
 
 
-static int luaB_globals (lua_State *L) {
-  lua_getglobals(L);  /* value to be returned */
-  if (!lua_isnoneornil(L, 1)) {
-    luaL_check_type(L, 1, LUA_TTABLE);
-    lua_pushvalue(L, 1);  /* new table of globals */
-    lua_setglobals(L);
-  }
+static int luaB_setmetatable (lua_State *L) {
+  int t = lua_type(L, 2);
+  luaL_check_type(L, 1, LUA_TTABLE);
+  luaL_arg_check(L, t == LUA_TNIL || t == LUA_TTABLE, 2,
+                    "nil or table expected");
+  lua_settop(L, 2);
+  lua_setmetatable(L, 1);
   return 1;
+}
+
+
+static int luaB_getglobals (lua_State *L) {
+  int level = luaL_opt_int(L, 1, 1);
+  luaL_arg_check(L, level >= 1, 2, "level must be positive");
+  lua_getglobals(L, level);  /* value to be returned */
+  return 1;
+}
+
+
+static int luaB_setglobals (lua_State *L) {
+  int level = luaL_opt_int(L, 2, 1);
+  luaL_arg_check(L, level >= 1, 2, "level must be positive");
+  luaL_check_type(L, 1, LUA_TTABLE);
+  lua_settop(L, 1);
+  if (lua_setglobals(L, level) == 0)
+    luaL_error(L, "cannot change global table at level %d", level);
+  return 0;
 }
 
 
@@ -385,8 +395,10 @@ static int luaB_require (lua_State *L) {
 
 static const luaL_reg base_funcs[] = {
   {"error", luaB_error},
-  {"metatable", luaB_metatable},
-  {"globals", luaB_globals},
+  {"getmetatable", luaB_getmetatable},
+  {"setmetatable", luaB_setmetatable},
+  {"getglobals", luaB_getglobals},
+  {"setglobals", luaB_setglobals},
   {"next", luaB_next},
   {"nexti", luaB_nexti},
   {"print", luaB_print},

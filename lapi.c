@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.199 2002/06/13 13:44:50 roberto Exp roberto $
+** $Id: lapi.c,v 1.200 2002/06/18 15:19:27 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -487,6 +487,29 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
 }
 
 
+static LClosure *getfunc (lua_State *L, int level) {
+  CallInfo *ci;
+  TObject *f;
+  if (L->ci - L->base_ci < level) ci = L->base_ci;
+  else ci = L->ci - level;
+  f = ci->base - 1;
+  if (isLfunction(f))
+    return &clvalue(f)->l;
+  else
+    return NULL;
+}
+
+
+LUA_API void lua_getglobals (lua_State *L, int level) {
+  LClosure *f;
+  lua_lock(L);
+  f = getfunc(L, level);
+  setobj(L->top, (f ? &f->g : gt(L)));
+  api_incr_top(L);
+  lua_unlock(L);
+}
+
+
 /*
 ** set functions (stack -> Lua)
 */
@@ -527,27 +550,44 @@ LUA_API void lua_rawseti (lua_State *L, int index, int n) {
 }
 
 
-LUA_API void lua_setmetatable (lua_State *L, int objindex) {
-  StkId obj, mt;
+LUA_API int lua_setmetatable (lua_State *L, int objindex) {
+  TObject *obj, *mt;
+  int res = 1;
   lua_lock(L);
   api_checknelems(L, 1);
   obj = luaA_index(L, objindex);
-  mt = --L->top;
-  if (ttype(mt) == LUA_TNIL)
-    mt = defaultmeta(L);
+  mt = (ttype(L->top - 1) != LUA_TNIL) ? L->top - 1 : defaultmeta(L);
   api_check(L, ttype(mt) == LUA_TTABLE);
   switch (ttype(obj)) {
-    case LUA_TTABLE:
+    case LUA_TTABLE: {
       hvalue(obj)->metatable = hvalue(mt);
       break;
-    case LUA_TUSERDATA:
+    }
+    case LUA_TUSERDATA: {
       uvalue(obj)->uv.metatable = hvalue(mt);
       break;
-    default:
-      luaG_runerror(L, "cannot change the meta table of a %s",
-                       luaT_typenames[ttype(obj)]);
+    }
+    default: {
+      res = 0;  /* cannot set */
+      break;
+    }
   }
+  L->top--;
   lua_unlock(L);
+  return res;
+}
+
+
+LUA_API int lua_setglobals (lua_State *L, int level) {
+  LClosure *f;
+  lua_lock(L);
+  api_checknelems(L, 1);
+  f = getfunc(L, level);
+  L->top--;
+  api_check(L, ttype(L->top) == LUA_TTABLE);
+  if (f) f->g = *(L->top);
+  lua_unlock(L);
+  return (f != NULL);
 }
 
 

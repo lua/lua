@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.140 2002/06/13 13:44:50 roberto Exp roberto $
+** $Id: lua.h,v 1.141 2002/06/18 15:19:27 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -169,6 +169,7 @@ LUA_API void  lua_rawget (lua_State *L, int index);
 LUA_API void  lua_rawgeti (lua_State *L, int index, int n);
 LUA_API void  lua_newtable (lua_State *L);
 LUA_API int   lua_getmetatable (lua_State *L, int objindex);
+LUA_API void  lua_getglobals (lua_State *L, int level);
 
 
 /*
@@ -177,7 +178,8 @@ LUA_API int   lua_getmetatable (lua_State *L, int objindex);
 LUA_API void  lua_settable (lua_State *L, int index);
 LUA_API void  lua_rawset (lua_State *L, int index);
 LUA_API void  lua_rawseti (lua_State *L, int index, int n);
-LUA_API void  lua_setmetatable (lua_State *L, int objindex);
+LUA_API int   lua_setmetatable (lua_State *L, int objindex);
+LUA_API int   lua_setglobals (lua_State *L, int level);
 
 
 /*
@@ -259,8 +261,6 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size);
 LUA_API int lua_pushupvalues (lua_State *L);
 
 #define lua_getregistry(L)	lua_pushvalue(L, LUA_REGISTRYINDEX)
-#define lua_getglobals(L)	lua_pushvalue(L, LUA_GLOBALSINDEX)
-#define lua_setglobals(L)	lua_replace(L, LUA_GLOBALSINDEX)
 #define lua_setglobal(L,s)	\
    (lua_pushstring(L, s), lua_insert(L, -2), lua_settable(L, LUA_GLOBALSINDEX))
 

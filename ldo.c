@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.181 2002/06/18 17:10:43 roberto Exp roberto $
+** $Id: ldo.c,v 1.182 2002/06/18 17:42:52 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -407,7 +407,7 @@ struct SParser {  /* data to `f_parser' */
 static void f_parser (lua_State *L, void *ud) {
   struct SParser *p = cast(struct SParser *, ud);
   Proto *tf = p->bin ? luaU_undump(L, p->z) : luaY_parser(L, p->z);
-  Closure *cl = luaF_newLclosure(L, 0);
+  Closure *cl = luaF_newLclosure(L, 0, gt(L));
   cl->l.p = tf;
   setclvalue(L->top, cl);
   incr_top(L);
@@ -467,8 +467,8 @@ static void seterrorobj (lua_State *L, int errcode, TObject *m) {
 
 
 void luaD_throw (lua_State *L, int errcode) {
-  seterrorobj(L, errcode, L->errorJmp->err);
   if (L->errorJmp) {
+    seterrorobj(L, errcode, L->errorJmp->err);
     L->errorJmp->status = errcode;
     longjmp(L->errorJmp->b, 1);
   }

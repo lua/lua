@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.h,v 1.17 2001/10/02 16:45:03 roberto Exp $
+** $Id: lfunc.h,v 1.19 2001/11/29 20:22:22 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -13,7 +13,7 @@
 
 Proto *luaF_newproto (lua_State *L);
 Closure *luaF_newCclosure (lua_State *L, int nelems);
-Closure *luaF_newLclosure (lua_State *L, int nelems);
+Closure *luaF_newLclosure (lua_State *L, int nelems, TObject *gt);
 UpVal *luaF_findupval (lua_State *L, StkId level);
 void luaF_close (lua_State *L, StkId level);
 void luaF_freeproto (lua_State *L, Proto *f);
