@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.8 1994/11/07 16:34:44 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.9 1994/11/08 20:06:15 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,13 +21,17 @@ char *rcs_inout="$Id: inout.c,v 2.8 1994/11/07 16:34:44 roberto Exp roberto $";
 /* Exported variables */
 int lua_linenumber;
 int lua_debug;
-int lua_debugline;
+int lua_debugline = 0;
 
 /* Internal variables */
 #ifndef MAXFUNCSTACK
 #define MAXFUNCSTACK 64
 #endif
-static struct { char *file; int function; } funcstack[MAXFUNCSTACK];
+static struct {
+  char *file;
+  int function;
+  int line;
+} funcstack[MAXFUNCSTACK];
 static int nfuncstack=0;
 
 static FILE *fp;
@@ -117,6 +121,7 @@ int lua_pushfunction (char *file, int function)
  }
  funcstack[nfuncstack].function = function;
  funcstack[nfuncstack].file = file;
+ funcstack[nfuncstack].line= lua_debugline;
  nfuncstack++;
  return 0;
 }
@@ -127,7 +132,8 @@ int lua_pushfunction (char *file, int function)
 */
 void lua_popfunction (void)
 {
- nfuncstack--;
+ --nfuncstack;
+ lua_debugline = funcstack[nfuncstack].line;
 }
 
 /*
@@ -269,6 +275,6 @@ void luaI_error (void)
 {
   char *s = lua_getstring(lua_getparam(1));
   if (s == NULL) s = "(no message)";
-  lua_error(s);
+  lua_reportbug(s);
 }
 
