@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.59 2000/11/24 17:39:56 roberto Exp roberto $
+** $Id: ltable.c,v 1.60 2000/12/04 18:33:40 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -167,10 +167,8 @@ static void setnodevector (lua_State *L, Hash *t, luint32 size) {
     ttype(&t->node[i].key) = ttype(&t->node[i].val) = LUA_TNIL;
     t->node[i].next = NULL;
   }
-  if ((int)size > t->size)  /* avoid "unsigned negative" values */
-    L->nblocks += gcsize(L, size) - gcsize(L, t->size);
-  else
-    L->nblocks -= gcsize(L, t->size) - gcsize(L, size);
+  L->nblocks -= gcsize(L, t->size);  /* old size */
+  L->nblocks += gcsize(L, size);  /* new size */
   t->size = size;
   t->firstfree = &t->node[size-1];  /* first free position to be used */
 }

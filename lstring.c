@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.45 2000/10/30 17:49:19 roberto Exp roberto $
+** $Id: lstring.c,v 1.46 2000/11/24 17:39:56 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -72,10 +72,8 @@ void luaS_resize (lua_State *L, stringtable *tb, int newsize) {
     }
   }
   luaM_free(L, tb->hash);
-  if (newsize > tb->size)  /* avoid "unsigned negative" values */
-    L->nblocks += (newsize - tb->size)*sizeof(TString *);
-  else
-    L->nblocks -= (tb->size - newsize)*sizeof(TString *);
+  L->nblocks -= tb->size*sizeof(TString *);
+  L->nblocks += newsize*sizeof(TString *);
   tb->size = newsize;
   tb->hash = newhash;
 }
