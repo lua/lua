@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.155 2002/11/14 16:16:21 roberto Exp roberto $
+** $Id: lobject.h,v 1.156 2002/12/19 11:11:55 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -216,7 +216,7 @@ typedef struct Proto {
   struct LocVar *locvars;  /* information about local variables */
   TString **upvalues;  /* upvalue names */
   TString  *source;
-  int nupvalues;  /* (also size of `upvals') */
+  int sizeupvalues;
   int sizek;  /* size of `k' */
   int sizecode;
   int sizelineinfo;
@@ -224,6 +224,7 @@ typedef struct Proto {
   int sizelocvars;
   int lineDefined;
   GCObject *gclist;
+  lu_byte nups;  /* number of upvalues */
   lu_byte numparams;
   lu_byte is_vararg;
   lu_byte maxstacksize;

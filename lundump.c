@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.47 2003/01/10 11:08:45 lhf Exp $
+** $Id: lundump.c,v 1.59 2003/01/27 15:52:57 roberto Exp roberto $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -140,21 +140,14 @@ static void LoadLines (LoadState* S, Proto* f)
 
 static void LoadUpvalues (LoadState* S, Proto* f)
 {
- int i,n,noname;
+ int i,n;
  n=LoadInt(S);
- noname=(n==0);
- if (!noname && n!=f->nupvalues) 
+ if (n!=0 && n!=f->nups) 
   luaG_runerror(S->L,"bad nupvalues in %s: read %d; expected %d",
-		S->name,n,f->nupvalues);
- n=f->nupvalues;
+		S->name,n,f->nups);
  f->upvalues=luaM_newvector(S->L,n,TString*);
- if (noname)
- {
-  TString* name=luaS_newliteral(S->L,"(no name)");
-  for (i=0; i<n; i++) f->upvalues[i]=name;
- }
- else
-  for (i=0; i<n; i++) f->upvalues[i]=LoadString(S);
+ f->sizeupvalues = n;
+ for (i=0; i<n; i++) f->upvalues[i]=LoadString(S);
 }
 
 static Proto* LoadFunction (LoadState* S, TString* p);
@@ -196,7 +189,7 @@ static Proto* LoadFunction (LoadState* S, TString* p)
  Proto* f=luaF_newproto(S->L);
  f->source=LoadString(S); if (f->source==NULL) f->source=p;
  f->lineDefined=LoadInt(S);
- f->nupvalues=LoadInt(S);
+ f->nups=LoadByte(S);
  f->numparams=LoadByte(S);
  f->is_vararg=LoadByte(S);
  f->maxstacksize=LoadByte(S);

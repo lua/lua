@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.202 2002/12/11 12:34:22 roberto Exp roberto $
+** $Id: lparser.c,v 1.203 2002/12/19 11:11:55 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -181,19 +181,20 @@ static void create_local (LexState *ls, const char *name) {
 
 static int indexupvalue (FuncState *fs, TString *name, expdesc *v) {
   int i;
-  for (i=0; i<fs->nu; i++) {
+  Proto *f = fs->f;
+  for (i=0; i<f->nups; i++) {
     if (fs->upvalues[i].k == v->k && fs->upvalues[i].info == v->info) {
       lua_assert(fs->f->upvalues[i] == name);
       return i;
     }
   }
   /* new one */
-  luaX_checklimit(fs->ls, fs->nu + 1, MAXUPVALUES, "upvalues");
-  luaM_growvector(fs->L, fs->f->upvalues, fs->nu, fs->f->nupvalues,
+  luaX_checklimit(fs->ls, f->nups + 1, MAXUPVALUES, "upvalues");
+  luaM_growvector(fs->L, fs->f->upvalues, f->nups, fs->f->sizeupvalues,
                   TString *, MAX_INT, "");
-  fs->f->upvalues[fs->nu] = name;
-  fs->upvalues[fs->nu] = *v;
-  return fs->nu++;
+  fs->f->upvalues[f->nups] = name;
+  fs->upvalues[f->nups] = *v;
+  return f->nups++;
 }
 
 
@@ -307,7 +308,7 @@ static void pushclosure (LexState *ls, FuncState *func, expdesc *v) {
                   MAXARG_Bx, "constant table overflow");
   f->p[fs->np++] = func->f;
   init_exp(v, VRELOCABLE, luaK_codeABx(fs, OP_CLOSURE, 0, fs->np-1));
-  for (i=0; i<func->nu; i++) {
+  for (i=0; i<func->f->nups; i++) {
     OpCode o = (func->upvalues[i].k == VLOCAL) ? OP_MOVE : OP_GETUPVAL;
     luaK_codeABC(fs, o, 0, func->upvalues[i].info, 0);
   }
@@ -326,17 +327,13 @@ static void open_func (LexState *ls, FuncState *fs) {
   fs->jpc = NO_JUMP;
   fs->freereg = 0;
   fs->nk = 0;
-  fs->nu = 0;
   fs->h = luaH_new(ls->L, 0, 0);
   fs->np = 0;
   fs->nlocvars = 0;
   fs->nactvar = 0;
   fs->bl = NULL;
-  f->code = NULL;
   f->source = ls->source;
   f->maxstacksize = 2;  /* registers 0/1 are always valid */
-  f->numparams = 0;  /* default for main chunk */
-  f->is_vararg = 0;  /* default for main chunk */
 }
 
 
@@ -356,8 +353,8 @@ static void close_func (LexState *ls) {
   f->sizep = fs->np;
   luaM_reallocvector(L, f->locvars, f->sizelocvars, fs->nlocvars, LocVar);
   f->sizelocvars = fs->nlocvars;
-  luaM_reallocvector(L, f->upvalues, f->nupvalues, fs->nu, TString *);
-  f->nupvalues = fs->nu;
+  luaM_reallocvector(L, f->upvalues, f->sizeupvalues, f->nups, TString *);
+  f->sizeupvalues = f->nups;
   lua_assert(luaG_checkcode(f));
   lua_assert(fs->bl == NULL);
   ls->fs = fs->prev;
@@ -376,7 +373,7 @@ Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff) {
   check_condition(&lexstate, (lexstate.t.token == TK_EOS), "<eof> expected");
   close_func(&lexstate);
   lua_assert(funcstate.prev == NULL);
-  lua_assert(funcstate.nu == 0);
+  lua_assert(funcstate.f->nups == 0);
   lua_assert(lexstate.nestlevel == 0);
   return funcstate.f;
 }

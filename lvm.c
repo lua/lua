@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.273 2002/12/11 12:34:22 roberto Exp roberto $
+** $Id: lvm.c,v 1.274 2003/01/27 15:12:52 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -754,7 +754,7 @@ StkId luaV_execute (lua_State *L) {
         Closure *ncl;
         int nup, j;
         p = cl->p->p[GETARG_Bx(i)];
-        nup = p->nupvalues;
+        nup = p->nups;
         ncl = luaF_newLclosure(L, nup, &cl->g);
         ncl->l.p = p;
         for (j=0; j<nup; j++, pc++) {

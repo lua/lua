@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.142 2002/12/06 17:15:35 roberto Exp roberto $
+** $Id: ldebug.c,v 1.143 2002/12/11 12:34:22 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -345,7 +345,7 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
       }
       case OP_GETUPVAL:
       case OP_SETUPVAL: {
-        check(b < pt->nupvalues);
+        check(b < pt->nups);
         break;
       }
       case OP_GETGLOBAL:
@@ -404,7 +404,7 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
       case OP_CLOSURE: {
         int nup;
         check(b < pt->sizep);
-        nup = pt->p[b]->nupvalues;
+        nup = pt->p[b]->nups;
         check(pc + nup < pt->sizecode);
         for (; nup>0; nup--) {
           OpCode op1 = GET_OPCODE(pt->code[pc+nup]);

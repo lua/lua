@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.167 2002/12/19 11:11:55 roberto Exp roberto $
+** $Id: lgc.c,v 1.168 2003/02/10 17:32:50 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -190,7 +190,7 @@ static void traverseproto (GCState *st, Proto *f) {
     if (ttisstring(f->k+i))
       stringmark(tsvalue(f->k+i));
   }
-  for (i=0; i<f->nupvalues; i++)  /* mark upvalue names */
+  for (i=0; i<f->sizeupvalues; i++)  /* mark upvalue names */
     stringmark(f->upvalues[i]);
   for (i=0; i<f->sizep; i++)  /* mark nested protos */
     markvalue(st, f->p[i]);
@@ -209,7 +209,7 @@ static void traverseclosure (GCState *st, Closure *cl) {
   }
   else {
     int i;
-    lua_assert(cl->l.nupvalues == cl->l.p->nupvalues);
+    lua_assert(cl->l.nupvalues == cl->l.p->nups);
     markvalue(st, hvalue(&cl->l.g));
     markvalue(st, cl->l.p);
     for (i=0; i<cl->l.nupvalues; i++) {  /* mark its upvalues */
