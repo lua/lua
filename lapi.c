@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.7 2004/04/30 20:13:38 roberto Exp roberto $
+** $Id: lapi.c,v 2.8 2004/05/11 16:52:08 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -488,7 +488,7 @@ LUA_API void lua_gettable (lua_State *L, int idx) {
   lua_lock(L);
   t = luaA_index(L, idx);
   api_checkvalidindex(L, t);
-  luaV_gettable(L, t, L->top - 1, L->top - 1);
+  luaV_gettable(L, t, L->top - 1, L->top - 1, NULL);
   lua_unlock(L);
 }
 
@@ -500,7 +500,7 @@ LUA_API void lua_getfield (lua_State *L, int idx, const char *k) {
   t = luaA_index(L, idx);
   api_checkvalidindex(L, t);
   setsvalue(L, &key, luaS_new(L, k));
-  luaV_gettable(L, t, &key, L->top);
+  luaV_gettable(L, t, &key, L->top, NULL);
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -584,7 +584,7 @@ LUA_API void lua_settable (lua_State *L, int idx) {
   api_checknelems(L, 2);
   t = luaA_index(L, idx);
   api_checkvalidindex(L, t);
-  luaV_settable(L, t, L->top - 2, L->top - 1);
+  luaV_settable(L, t, L->top - 2, L->top - 1, NULL);
   L->top -= 2;  /* pop index and value */
   lua_unlock(L);
 }
@@ -598,7 +598,7 @@ LUA_API void lua_setfield (lua_State *L, int idx, const char *k) {
   t = luaA_index(L, idx);
   api_checkvalidindex(L, t);
   setsvalue(L, &key, luaS_new(L, k));
-  luaV_settable(L, t, &key, L->top - 1);
+  luaV_settable(L, t, &key, L->top - 1, NULL);
   L->top--;  /* pop value */
   lua_unlock(L);
 }

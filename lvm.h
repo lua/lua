@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 1.49 2003/07/16 20:49:02 roberto Exp roberto $
+** $Id: lvm.h,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -26,8 +26,10 @@ int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r);
 int luaV_equalval (lua_State *L, const TValue *t1, const TValue *t2);
 const TValue *luaV_tonumber (const TValue *obj, TValue *n);
 int luaV_tostring (lua_State *L, StkId obj);
-void luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val);
-void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val);
+StkId luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val,
+                     const Instruction *pc);
+StkId luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val,
+                     const Instruction *pc);
 StkId luaV_execute (lua_State *L, int nexeccalls);
 void luaV_concat (lua_State *L, int total, int last);
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.3 2004/04/30 20:13:38 roberto Exp roberto $
+** $Id: ldo.c,v 2.4 2004/05/10 17:50:51 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -219,7 +219,7 @@ static StkId tryfuncTM (lua_State *L, StkId func) {
 }
 
 
-StkId luaD_precall (lua_State *L, StkId func) {
+int luaD_precall (lua_State *L, StkId func, int nresults) {
   LClosure *cl;
   ptrdiff_t funcr = savestack(L, func);
   if (!ttisfunction(func)) /* `func' is not a function? */
@@ -239,10 +239,11 @@ StkId luaD_precall (lua_State *L, StkId func) {
     ci->top = L->base + p->maxstacksize;
     ci->u.l.savedpc = p->code;  /* starting point */
     ci->u.l.tailcalls = 0;
+    ci->nresults = nresults;
     for (st = L->top; st < ci->top; st++)
       setnilvalue(st);
     L->top = ci->top;
-    return NULL;
+    return PCRLUA;
   }
   else {  /* if is a C function, call it */
     CallInfo *ci;
@@ -256,7 +257,14 @@ StkId luaD_precall (lua_State *L, StkId func) {
     lua_unlock(L);
     n = (*curr_func(L)->c.f)(L);  /* do the actual call */
     lua_lock(L);
-    return L->top - n;
+    if (n >= 0) {  /* no yielding? */
+      luaD_poscall(L, nresults, L->top - n);
+      return PCRC;
+    }
+    else {
+      ci->nresults = nresults;
+      return PCRYIELD;
+    }
   }
 }
 
@@ -297,17 +305,16 @@ void luaD_poscall (lua_State *L, int wanted, StkId firstResult) {
 ** function position.
 */ 
 void luaD_call (lua_State *L, StkId func, int nResults) {
-  StkId firstResult;
   if (++L->nCcalls >= LUA_MAXCCALLS) {
     if (L->nCcalls == LUA_MAXCCALLS)
       luaG_runerror(L, "C stack overflow");
     else if (L->nCcalls >= (LUA_MAXCCALLS + (LUA_MAXCCALLS>>3)))
       luaD_throw(L, LUA_ERRERR);  /* error while handing stack error */
   }
-  firstResult = luaD_precall(L, func);
-  if (firstResult == NULL)  /* is a Lua function? */
-    firstResult = luaV_execute(L, 1);  /* call it */
-  luaD_poscall(L, nResults, firstResult);
+  if (luaD_precall(L, func, nResults) == PCRLUA) {  /* is a Lua function? */
+    StkId firstResult = luaV_execute(L, 1);  /* call it */
+    luaD_poscall(L, nResults, firstResult);
+  }
   L->nCcalls--;
   luaC_checkGC(L);
 }
@@ -319,15 +326,14 @@ static void resume (lua_State *L, void *ud) {
   CallInfo *ci = L->ci;
   if (!L->isSuspended) {
     lua_assert(ci == L->base_ci && nargs < L->top - L->base);
-    luaD_precall(L, L->top - (nargs + 1));  /* start coroutine */
+    luaD_precall(L, L->top - (nargs + 1), LUA_MULTRET);  /* start coroutine */
   }
   else {  /* resuming from previous yield */
     if (!f_isLua(ci)) {  /* `common' yield? */
       /* finish interrupted execution of `OP_CALL' */
-      int nresults;
+      int nresults = ci->nresults;
       lua_assert(GET_OPCODE(*((ci-1)->u.l.savedpc - 1)) == OP_CALL ||
                  GET_OPCODE(*((ci-1)->u.l.savedpc - 1)) == OP_TAILCALL);
-      nresults = GETARG_C(*((ci-1)->u.l.savedpc - 1)) - 1;
       luaD_poscall(L, nresults, L->top - nargs);  /* complete it */
       if (nresults >= 0) L->top = L->ci->top;
     }  /* else yielded inside a hook: just continue its execution */
