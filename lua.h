@@ -2,7 +2,7 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lua.h,v 3.12 1994/12/13 15:54:21 roberto Exp roberto $
+** $Id: lua.h,v 3.13 1994/12/16 15:55:55 roberto Exp roberto $
 */
 
 
@@ -49,18 +49,18 @@ char          *lua_getstring 		(lua_Object object);
 lua_CFunction  lua_getcfunction 	(lua_Object object);
 void          *lua_getuserdata  	(lua_Object object);
 
-int 	       lua_pushnil 		(void);
-int            lua_pushnumber 		(float n);
-int            lua_pushstring 		(char *s);
-int            lua_pushliteral 		(char *s);
-int            lua_pushcfunction	(lua_CFunction fn);
-int            lua_pushusertag     	(void *u, int tag);
-int            lua_pushobject       	(lua_Object object);
+void 	       lua_pushnil 		(void);
+void           lua_pushnumber 		(float n);
+void           lua_pushstring 		(char *s);
+void           lua_pushliteral 		(char *s);
+void           lua_pushcfunction	(lua_CFunction fn);
+void           lua_pushusertag     	(void *u, int tag);
+void           lua_pushobject       	(lua_Object object);
 
 lua_Object     lua_getglobal 		(char *name);
-int            lua_storeglobal		(char *name);
+void           lua_storeglobal		(char *name);
 
-int            lua_storesubscript	(void);
+void           lua_storesubscript	(void);
 lua_Object     lua_getsubscript         (void);
 
 int            lua_type 		(lua_Object object);

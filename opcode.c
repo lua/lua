@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.28 1994/12/20 21:20:36 roberto Exp celes $";
+char *rcs_opcode="$Id: opcode.c,v 3.29 1994/12/27 20:53:15 celes Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -479,11 +479,10 @@ void lua_endblock (void)
 /* 
 ** API: receives on the stack the table, the index, and the new value.
 */
-int lua_storesubscript (void)
+void lua_storesubscript (void)
 {
   adjustC(3);
   storesubscript();
-  return 0;
 }
 
 /*
@@ -584,90 +583,80 @@ lua_Object lua_getglobal (char *name)
 
 /*
 ** Store top of the stack at a global variable array field.
-** Return 1 on error, 0 on success.
 */
-int lua_storeglobal (char *name)
+void lua_storeglobal (char *name)
 {
  Word n = luaI_findsymbolbyname(name);
  adjustC(1);
  s_object(n) = *(--top);
- return 0;
 }
 
 /*
 ** Push a nil object
 */
-int lua_pushnil (void)
+void lua_pushnil (void)
 {
  lua_checkstack(top-stack+1);
  tag(top++) = LUA_T_NIL;
- return 0;
 }
 
 /*
-** Push an object (tag=number) to stack. Return 0 on success or 1 on error.
+** Push an object (tag=number) to stack.
 */
-int lua_pushnumber (real n)
+void lua_pushnumber (real n)
 {
  lua_checkstack(top-stack+1);
  tag(top) = LUA_T_NUMBER; nvalue(top++) = n;
- return 0;
 }
 
 /*
-** Push an object (tag=string) to stack. Return 0 on success or 1 on error.
+** Push an object (tag=string) to stack.
 */
-int lua_pushstring (char *s)
+void lua_pushstring (char *s)
 {
  lua_checkstack(top-stack+1);
  tsvalue(top) = lua_createstring(s);
  tag(top) = LUA_T_STRING;
  top++;
- return 0;
 }
 
 /*
 ** Push an object (tag=string) on stack and register it on the constant table.
-   Return 0 on success or 1 on error.
 */
-int lua_pushliteral (char *s)
+void lua_pushliteral (char *s)
 {
  lua_checkstack(top-stack+1);
  tsvalue(top) = lua_constant[luaI_findconstant(lua_constcreate(s))];
  tag(top) = LUA_T_STRING;
  top++;
- return 0;
 }
 
 /*
-** Push an object (tag=cfunction) to stack. Return 0 on success or 1 on error.
+** Push an object (tag=cfunction) to stack.
 */
-int lua_pushcfunction (lua_CFunction fn)
+void lua_pushcfunction (lua_CFunction fn)
 {
  lua_checkstack(top-stack+1);
  tag(top) = LUA_T_CFUNCTION; fvalue(top++) = fn;
- return 0;
 }
 
 /*
-** Push an object (tag=userdata) to stack. Return 0 on success or 1 on error.
+** Push an object (tag=userdata) to stack.
 */
-int lua_pushusertag (void *u, int tag)
+void lua_pushusertag (void *u, int tag)
 {
+ if (tag < LUA_T_USERDATA) return;
  lua_checkstack(top-stack+1);
- if (tag < LUA_T_USERDATA) return 1;
  tag(top) = tag; uvalue(top++) = u;
- return 0;
 }
 
 /*
 ** Push a lua_Object to stack.
 */
-int lua_pushobject (lua_Object o)
+void lua_pushobject (lua_Object o)
 {
  lua_checkstack(top-stack+1);
  *top++ = *Address(o);
- return 0;
 }
 
 /*
@@ -681,7 +670,7 @@ void luaI_pushobject (Object *o)
 
 int lua_type (lua_Object o)
 {
-  if (o == 0)
+  if (o == LUA_NOOBJECT)
     return LUA_T_NIL;
   else
     return tag(Address(o));
