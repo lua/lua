@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.11 1994/11/14 21:40:14 roberto Exp $";
+char *rcs_lex = "$Id: lex.c,v 2.12 1994/11/22 16:13:45 roberto Stab $";
  
 
 #include <ctype.h>
@@ -195,7 +195,7 @@ int yylex (void)
       case 'Z':
       case '_':
       {
-        int res;
+        Word res;
         do { save_and_next(); } while (isalnum(current) || current == '_');
         *yytextLast = 0;
         res = findReserved(yytext);

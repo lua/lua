@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.26 1994/12/16 15:56:45 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.27 1994/12/16 16:08:34 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -24,6 +24,8 @@ char *rcs_opcode="$Id: opcode.c,v 3.26 1994/12/16 15:56:45 roberto Exp roberto $
 
 #define STACK_BUFFER (STACKGAP+128)
 
+typedef unsigned int StkId;  /* index to stack elements */
+
 static Long    maxstack = 0L;
 static Object *stack = NULL;
 static Object *top = NULL;
@@ -35,16 +37,16 @@ static Object *top = NULL;
 #define Ref(st)         ((st)-stack+1)
  
 
-static int CBase = 0;   /* when Lua calls C or C calls Lua, points to the */
-                        /* first slot after the last parameter. */
+static StkId CBase = 0;  /* when Lua calls C or C calls Lua, points to */
+                          /* the first slot after the last parameter. */
 static int CnResults = 0; /* when Lua calls C, has the number of parameters; */
                          /* when C calls Lua, has the number of results. */
 
 static  jmp_buf *errorJmp = NULL; /* current error recover point */
 
 
-static int lua_execute (Byte *pc, int base);
-static void do_call (Object *func, int base, int nResults, int whereRes);
+static StkId lua_execute (Byte *pc, StkId base);
+static void do_call (Object *func, StkId base, int nResults, StkId whereRes);
 
 
 
@@ -94,11 +96,11 @@ static void lua_initstack (void)
 /*
 ** Check stack overflow and, if necessary, realloc vector
 */
-static void lua_checkstack (Word n)
+static void lua_checkstack (StkId n)
 {
  if ((Long)n > maxstack)
  {
-  int t;
+  StkId t;
   if (stack == NULL)
     lua_initstack();
   t = top-stack;
@@ -176,7 +178,7 @@ static int lua_tostring (Object *obj)
 /*
 ** Adjust stack. Set top to the given value, pushing NILs if needed.
 */
-static void adjust_top (int newtop)
+static void adjust_top (StkId newtop)
 {
   Object *nt = stack+newtop;
   while (top < nt) tag(top++) = LUA_T_NIL;
@@ -195,11 +197,11 @@ static void adjustC (int nParams)
 ** and CnResults is the number of parameters. Returns an index
 ** to the first result from C.
 */
-static int callC (lua_CFunction func, int base)
+static StkId callC (lua_CFunction func, StkId base)
 {
-  int oldBase = CBase;
+  StkId oldBase = CBase;
   int oldCnResults = CnResults;
-  int firstResult;
+  StkId firstResult;
   CnResults = (top-stack) - base;
   /* incorporate parameters on the stack */
   CBase = base+CnResults;
@@ -213,9 +215,9 @@ static int callC (lua_CFunction func, int base)
 /*
 ** Call the fallback for invalid functions (see do_call)
 */
-static void call_funcFB (Object *func, int base, int nResults, int whereRes)
+static void call_funcFB (Object *func, StkId base, int nResults, StkId whereRes)
 {
-  int i;
+  StkId i;
   /* open space for first parameter (func) */
   for (i=top-stack; i>base; i--)
     stack[i] = stack[i-1];
@@ -231,9 +233,9 @@ static void call_funcFB (Object *func, int base, int nResults, int whereRes)
 ** between [stack+whereRes,top). The number of results is nResults, unless
 ** nResults=MULT_RET.
 */
-static void do_call (Object *func, int base, int nResults, int whereRes)
+static void do_call (Object *func, StkId base, int nResults, StkId whereRes)
 {
-  int firstResult;
+  StkId firstResult;
   if (tag(func) == LUA_T_CFUNCTION)
     firstResult = callC(fvalue(func), base);
   else if (tag(func) == LUA_T_FUNCTION)
@@ -315,7 +317,7 @@ static int do_protectedrun (Object *function, int nResults)
 {
   jmp_buf myErrorJmp;
   int status;
-  int oldCBase = CBase;
+  StkId oldCBase = CBase;
   jmp_buf *oldErr = errorJmp;
   errorJmp = &myErrorJmp;
   if (setjmp(myErrorJmp) == 0)
@@ -340,7 +342,7 @@ static int do_protectedmain (void)
 {
   Byte *code = NULL;
   int status;
-  int oldCBase = CBase;
+  StkId oldCBase = CBase;
   jmp_buf myErrorJmp;
   jmp_buf *oldErr = errorJmp;
   errorJmp = &myErrorJmp;
@@ -377,7 +379,7 @@ int lua_callfunction (lua_Object function)
 
 int lua_call (char *funcname)
 {
- int n = luaI_findsymbolbyname(funcname);
+ Word n = luaI_findsymbolbyname(funcname);
  return do_protectedrun(&s_object(n), MULT_RET);
 }
 
@@ -455,7 +457,7 @@ lua_Object lua_getsubscript (void)
 #define MAX_C_BLOCKS 10
 
 static int numCblocks = 0;
-static int Cblocks[MAX_C_BLOCKS];
+static StkId Cblocks[MAX_C_BLOCKS];
 
 /*
 ** API: starts a new block
@@ -580,7 +582,7 @@ int lua_lock (void)
 */
 lua_Object lua_getglobal (char *name)
 {
- int n = luaI_findsymbolbyname(name);
+ Word n = luaI_findsymbolbyname(name);
  adjustC(0);
  *top = s_object(n);
  top++;
@@ -594,8 +596,7 @@ lua_Object lua_getglobal (char *name)
 */
 int lua_storeglobal (char *name)
 {
- int n = luaI_findsymbolbyname(name);
- if (n < 0) return 1;
+ Word n = luaI_findsymbolbyname(name);
  adjustC(1);
  s_object(n) = *(--top);
  return 0;
@@ -736,7 +737,7 @@ static void comparison (lua_Type tag_less, lua_Type tag_equal,
 ** [stack+base,top). Returns n such that the the results are between
 ** [stack+n,top).
 */
-static int lua_execute (Byte *pc, int base)
+static StkId lua_execute (Byte *pc, StkId base)
 {
  lua_checkstack(STACKGAP+MAX_TEMPS+base);
  while (1)
@@ -1080,7 +1081,7 @@ static int lua_execute (Byte *pc, int base)
      int nParams = *(pc++);
      int nResults = *(pc++);
      Object *func = top-1-nParams; /* function is below parameters */
-     int newBase = (top-stack)-nParams;
+     StkId newBase = (top-stack)-nParams;
      do_call(func, newBase, nResults, newBase-1);
    }
    break;

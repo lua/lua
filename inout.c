@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.14 1994/12/13 15:54:21 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.15 1994/12/16 15:55:04 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,9 +20,9 @@ char *rcs_inout="$Id: inout.c,v 2.14 1994/12/13 15:54:21 roberto Exp roberto $";
 #include "lua.h"
 
 /* Exported variables */
-int lua_linenumber;
-int lua_debug;
-int lua_debugline = 0;
+Word lua_linenumber;
+Bool lua_debug;
+Word lua_debugline = 0;
 
 
 /* Internal variables */
@@ -34,12 +34,12 @@ int lua_debugline = 0;
 typedef struct FuncStackNode {
   struct FuncStackNode *next;
   char *file;
-  int function;
-  int line;
+  Word function;
+  Word line;
 } FuncStackNode;
  
 static FuncStackNode *funcStack = NULL;
-static int nfuncstack=0;
+static Word nfuncstack=0;
 
 static FILE *fp;
 static char *st;
@@ -119,7 +119,7 @@ void lua_closestring (void)
 ** Called to execute  SETFUNCTION opcode, this function pushs a function into
 ** function stack.
 */
-void lua_pushfunction (char *file, int function)
+void lua_pushfunction (char *file, Word function)
 {
  FuncStackNode *newNode;
  if (nfuncstack++ >= MAXFUNCSTACK)
@@ -165,8 +165,8 @@ void lua_reportbug (char *s)
    do
    {
      sprintf (strchr(msg,0),
-       "\t-> function \"%s\" at file \"%s\":%d\n", 
-                     lua_constant[func->function]->str, func->file, line);
+       "\t-> function \"%s\" at file \"%s\":%u\n", 
+              lua_constant[func->function]->str, func->file, line);
      line = func->line;
      func = func->next;
      lua_popfunction();
@@ -175,7 +175,7 @@ void lua_reportbug (char *s)
   else
   {
    sprintf (strchr(msg,0),
-         "\n\tin statement begining at line %d of file \"%s\"", 
+         "\n\tin statement begining at line %u of file \"%s\"", 
          lua_debugline, lua_filename());
   }
  }

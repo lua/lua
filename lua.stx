@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.12 1994/11/25 19:24:57 roberto Exp $";
+char *rcs_luastx = "$Id: lua.stx,v 3.13 1994/12/06 14:27:18 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,17 +29,17 @@ int yyparse (void);
 #ifndef CODE_BLOCK
 #define CODE_BLOCK 256
 #endif
-static Long   maxcode;
-static Long   maxmain;
-static Long   maxcurr ;
+static Word   maxcode;
+static Word   maxmain;
+static Long   maxcurr;  /* to allow maxcurr *= 2 without overflow */
 static Byte  *funcCode = NULL;
 static Byte **initcode;
 static Byte  *basepc;
-static Long   maincode;
-static Long   pc;
+static Word   maincode;
+static Word   pc;
 
 #define MAXVAR 32
-static long    varbuffer[MAXVAR];    /* variables in an assignment list;
+static Long    varbuffer[MAXVAR];    /* variables in an assignment list;
 				it's long to store negative Word values */
 static int     nvarbuffer=0;	     /* number of variables at a list */
 
@@ -57,7 +57,11 @@ static void code_byte (Byte c)
 {
  if (pc>maxcurr-2)  /* 1 byte free to code HALT of main code */
  {
+  if (maxcurr >= MAX_WORD)
+    lua_error("code size overflow");
   maxcurr *= 2;
+  if (maxcurr >= MAX_WORD)
+    maxcurr = MAX_WORD;
   basepc = growvector(basepc, maxcurr, Byte);
  }
  basepc[pc++] = c;
@@ -567,7 +571,7 @@ static int lua_localname (Word n)
 ** indexed by (number -1). If negative, push local indexed by ABS(number)-1.
 ** Otherwise, if zero, push indexed variable (record).
 */
-static void lua_pushvar (long number)
+static void lua_pushvar (Long number)
 { 
  if (number > 0)	/* global var */
  {

@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.23 1994/11/23 14:31:11 roberto Stab roberto $";
+char *rcs_table="$Id: table.c,v 2.24 1994/12/16 15:55:04 roberto Exp roberto $";
 
 #include <string.h>
 
@@ -16,8 +16,6 @@ char *rcs_table="$Id: table.c,v 2.23 1994/11/23 14:31:11 roberto Stab roberto $"
 #include "lua.h"
 #include "fallback.h"
 
-
-#define MAX_WORD  0xFFFD
 
 #define BUFFER_BLOCK 256
 
@@ -47,7 +45,7 @@ static void getglobal (void);
 */
 static void lua_initsymbol (void)
 {
- int n;
+ Word n;
  lua_maxsymbol = BUFFER_BLOCK;
  lua_table = newvector(lua_maxsymbol, Symbol);
  n = luaI_findsymbolbyname("next");
@@ -88,9 +86,8 @@ void lua_initconstant (void)
 /*
 ** Given a name, search it at symbol table and return its index. If not
 ** found, allocate it.
-** On error, return -1.
 */
-int luaI_findsymbol (TreeNode *t)
+Word luaI_findsymbol (TreeNode *t)
 {
  if (lua_table == NULL)
   lua_initsymbol(); 
@@ -98,9 +95,11 @@ int luaI_findsymbol (TreeNode *t)
  {
   if (lua_ntable == lua_maxsymbol)
   {
-   lua_maxsymbol *= 2;
-   if (lua_maxsymbol > MAX_WORD)
+   if (lua_maxsymbol >= MAX_WORD)
      lua_error("symbol table overflow");
+   lua_maxsymbol *= 2;
+   if (lua_maxsymbol >= MAX_WORD)
+     lua_maxsymbol = MAX_WORD; 
    lua_table = growvector(lua_table, lua_maxsymbol, Symbol);
   }
   t->varindex = lua_ntable;
@@ -111,7 +110,7 @@ int luaI_findsymbol (TreeNode *t)
 }
 
 
-int luaI_findsymbolbyname (char *name)
+Word luaI_findsymbolbyname (char *name)
 {
   return luaI_findsymbol(lua_constcreate(name));
 }
@@ -122,7 +121,7 @@ int luaI_findsymbolbyname (char *name)
 ** found, allocate it.
 ** On error, return -1.
 */
-int luaI_findconstant (TreeNode *t)
+Word luaI_findconstant (TreeNode *t)
 {
  if (lua_constant == NULL)
   lua_initconstant();
@@ -130,9 +129,11 @@ int luaI_findconstant (TreeNode *t)
  {
   if (lua_nconstant == lua_maxconstant)
   {
-   lua_maxconstant *= 2;
-   if (lua_maxconstant > MAX_WORD)
+   if (lua_maxconstant >= MAX_WORD)
      lua_error("constant table overflow");
+   lua_maxconstant *= 2;
+   if (lua_maxconstant >= MAX_WORD)
+     lua_maxconstant = MAX_WORD;
    lua_constant = growvector(lua_constant, lua_maxconstant, TaggedString *);
   }
   t->constindex = lua_nconstant;
@@ -172,9 +173,9 @@ void lua_markobject (Object *o)
 */
 void lua_pack (void)
 {
-  static int block = GARBAGE_BLOCK; /* when garbage collector will be called */
-  static int nentity = 0;   /* counter of new entities (strings and arrays) */
-  int recovered = 0;
+  static Word block = GARBAGE_BLOCK; /* when garbage collector will be called */
+  static Word nentity = 0;  /* counter of new entities (strings and arrays) */
+  Word recovered = 0;
   if (nentity++ < block) return;
   lua_travstack(lua_markobject); /* mark stack objects */
   lua_travsymbol(lua_markobject); /* mark symbol table objects */

@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.10 1994/11/23 14:31:11 roberto Stab roberto $";
+char *rcs_tree="$Id: tree.c,v 1.11 1994/11/25 19:27:03 roberto Exp roberto $";
 
 
 #include <string.h>
@@ -78,10 +78,10 @@ TreeNode *lua_constcreate (char *str)
 ** Garbage collection function.
 ** This function traverse the string list freeing unindexed strings
 */
-int lua_strcollector (void)
+Word lua_strcollector (void)
 {
   StringNode *curr = string_root, *prev = NULL;
-  int counter = 0;
+  Word counter = 0;
   while (curr)
   {
     StringNode *next = curr->next;

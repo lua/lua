@@ -1,12 +1,13 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.8 1994/11/10 17:36:54 roberto Exp roberto $
+** $Id: opcode.h,v 3.9 1994/11/23 14:31:11 roberto Stab $
 */
 
 #ifndef opcode_h
 #define opcode_h
 
 #include "lua.h"
+#include "types.h"
 #include "tree.h"
 
 #ifndef STACKGAP
@@ -21,29 +22,6 @@
 
 #define MAX_TEMPS	20
 
-typedef unsigned char  Byte;
-
-typedef unsigned short Word;
-
-typedef signed long  Long;
-
-typedef union
-{
- struct {char c1; char c2;} m;
- Word w;
-} CodeWord;
-
-typedef union
-{
- struct {char c1; char c2; char c3; char c4;} m;
- float f;
-} CodeFloat;
-
-typedef union
-{
- struct {char c1; char c2; char c3; char c4;} m;
- Byte *b;
-} CodeCode;
 
 typedef enum 
 { 
@@ -147,12 +125,29 @@ typedef struct
 #define s_fvalue(i)	(fvalue(&s_object(i)))
 #define s_uvalue(i)	(uvalue(&s_object(i)))
 
+typedef union
+{
+ struct {char c1; char c2;} m;
+ Word w;
+} CodeWord;
 #define get_word(code,pc)    {code.m.c1 = *pc++; code.m.c2 = *pc++;}
+
+typedef union
+{
+ struct {char c1; char c2; char c3; char c4;} m;
+ float f;
+} CodeFloat;
 #define get_float(code,pc)   {code.m.c1 = *pc++; code.m.c2 = *pc++;\
                               code.m.c3 = *pc++; code.m.c4 = *pc++;}
+
+typedef union
+{
+ struct {char c1; char c2; char c3; char c4;} m;
+ Byte *b;
+} CodeCode;
 #define get_code(code,pc)    {code.m.c1 = *pc++; code.m.c2 = *pc++;\
                               code.m.c3 = *pc++; code.m.c4 = *pc++;}
- 
+
 
 /* Exported functions */
 char   *lua_strdup (char *l);
