@@ -1,11 +1,16 @@
 /*
-** $Id: auxlib.h,v 1.2 1997/04/06 14:08:08 roberto Exp roberto $
+** $Id: $
+** Auxiliar functions for building Lua libraries
+** See Copyright Notice in lua.h
 */
+
 
 #ifndef auxlib_h
 #define auxlib_h
 
+
 #include "lua.h"
+
 
 struct luaL_reg {
   char *name;
@@ -19,12 +24,6 @@ char *luaL_opt_string (int numArg, char *def);
 double luaL_check_number (int numArg);
 double luaL_opt_number (int numArg, double def);
 void luaL_verror (char *fmt, ...);
-
-
-
-/* -- private part (only for Lua modules */
-
-int luaI_findstring (char *name, char *list[]);
 
 
 #endif

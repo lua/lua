@@ -1,23 +1,18 @@
-char *rcs_auxlib="$Id: auxlib.c,v 1.4 1997/04/07 14:48:53 roberto Exp roberto $";
+/*
+** $Id: $
+** Auxiliar functions for building Lua libraries
+** See Copyright Notice in lua.h
+*/
 
-#include <stdio.h>
+
 #include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
 
+#include "lauxlib.h"
 #include "lua.h"
-#include "auxlib.h"
 #include "luadebug.h"
 
-
-
-int luaI_findstring (char *name, char *list[])
-{
-  int i;
-  for (i=0; list[i]; i++)
-    if (strcmp(list[i], name) == 0)
-      return i;
-  return -1;  /* name not found */
-}
 
 
 void luaL_arg_check(int cond, int numarg, char *extramsg)
@@ -28,9 +23,9 @@ void luaL_arg_check(int cond, int numarg, char *extramsg)
     if (funcname == NULL)
       funcname = "???";
     if (extramsg == NULL)
-      luaL_verror("bad argument #%d to function `%s'", numarg, funcname);
+      luaL_verror("bad argument #%d to function `%.50s'", numarg, funcname);
     else
-      luaL_verror("bad argument #%d to function `%s' (%s)",
+      luaL_verror("bad argument #%d to function `%.50s' (%.100s)",
                       numarg, funcname, extramsg);
   }
 }
@@ -72,7 +67,7 @@ void luaL_openlib (struct luaL_reg *l, int n)
 
 void luaL_verror (char *fmt, ...)
 {
-  char buff[1000];
+  char buff[500];
   va_list argp;
   va_start(argp, fmt);
   vsprintf(buff, fmt, argp);
