@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.37 2000/08/28 17:57:04 roberto Exp roberto $
+** $Id: ldebug.c,v 1.38 2000/08/28 20:22:21 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -93,7 +93,10 @@ static int lua_nups (StkId f) {
 
 
 int luaG_getline (int *lineinfo, int pc, int refline, int *prefi) {
-  int refi = prefi ? *prefi : 0;
+  int refi;
+  if (lineinfo == NULL) return -1;  /* no line info */
+  else if (pc == -1) return refline;  /* function preamble */
+  refi = prefi ? *prefi : 0;
   if (lineinfo[refi] < 0)
     refline += -lineinfo[refi++]; 
   LUA_ASSERT(lineinfo[refi] >= 0, "invalid line info");
@@ -123,7 +126,7 @@ int luaG_getline (int *lineinfo, int pc, int refline, int *prefi) {
 static int lua_currentpc (StkId f) {
   CallInfo *ci = infovalue(f);
   LUA_ASSERT(ttype(f) == TAG_LMARK, "function has no pc");
-  return (*ci->pc - 1) - ci->func->f.l->code;
+  return (*ci->pc - ci->func->f.l->code) - 1;
 }
 
 
@@ -160,10 +163,11 @@ const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int localnum) {
   const char *name;
   StkId f = ar->_func;
   Proto *fp = getluaproto(f);
+  L->top--;  /* pop new value */
   if (!fp) return NULL;  /* `f' is not a Lua function? */
   name = luaF_getlocalname(fp, localnum, lua_currentpc(f));
   if (!name || name[0] == '*') return NULL;  /* `*' starts private locals */
-  *((f+1)+(localnum-1)) = *(--L->top);
+  *((f+1)+(localnum-1)) = *L->top;
   return name;
 }
 
@@ -376,6 +380,7 @@ static const char *getobjname (lua_State *L, StkId obj, const char **name) {
     int pc = lua_currentpc(func);
     int stackpos = obj - (func+1);  /* func+1 == function base */
     Instruction i = luaG_symbexec(p, pc, stackpos);
+    LUA_ASSERT(pc != -1, "function must be active");
     switch (GET_OPCODE(i)) {
       case OP_GETGLOBAL: {
         *name = p->kstr[GETARG_U(i)]->str;
@@ -404,7 +409,10 @@ static const char *getfuncname (lua_State *L, StkId f, const char **name) {
     return NULL;  /* not a Lua function */
   else {
     Proto *p = infovalue(func)->func->f.l;
-    Instruction i = p->code[lua_currentpc(func)];
+    int pc = lua_currentpc(func);
+    Instruction i;
+    if (pc == -1) return NULL;  /* function is not activated */
+    i = p->code[pc];
     switch (GET_OPCODE(i)) {
       case OP_CALL: case OP_TAILCALL:
         return getobjname(L, (func+1)+GETARG_A(i), name);
