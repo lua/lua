@@ -214,15 +214,15 @@ extern const lu_byte luaP_opmodes[NUM_OPCODES];
 
 
 /*
-** constant instructions
-*/
-
-extern const Instruction luaP_yieldop;
-
-/*
 ** opcode names (only included when compiled with LUA_OPNAMES)
 */
 extern const char *const luaP_opnames[];
+
+
+
+/* number of list items to accumulate before a SETLIST instruction */
+/* (must be a power of 2) */
+#define LFIELDS_PER_FLUSH	32
 
 
 #endif

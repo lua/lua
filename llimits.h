@@ -66,10 +66,8 @@ typedef unsigned char lu_byte;
 ** conversion of pointer to integer
 ** this is for hashing only; there is no problem if the integer
 ** cannot hold the whole pointer value
-** (the shift removes bits that are usually 0 because of alignment)
 */
-#define IntPoint(p)  ((((lu_hash)(p)) >> 4) ^ (lu_hash)(p))
-
+#define IntPoint(p)  ((lu_hash)(p))
 
 
 
@@ -108,11 +106,6 @@ typedef unsigned long Instruction;
 #ifndef MAXPARAMS
 #define MAXPARAMS 100           /* arbitrary limit (<MAXLOCALS) */
 #endif
-
-
-/* number of list items to accumulate before a SETLIST instruction */
-/* (must be a power of 2) */
-#define LFIELDS_PER_FLUSH	64
 
 
 
