@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.142 2002/07/08 18:21:33 roberto Exp roberto $
+** $Id: lgc.c,v 1.143 2002/07/17 16:25:13 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -71,7 +71,7 @@ static void protomark (Proto *f) {
     f->marked = 1;
     strmark(f->source);
     for (i=0; i<f->sizek; i++) {
-      if (ttype(f->k+i) == LUA_TSTRING)
+      if (ttisstring(f->k+i))
         strmark(tsvalue(f->k+i));
     }
     for (i=0; i<f->sizep; i++)
@@ -148,7 +148,7 @@ static void checkstacksizes (lua_State *L, StkId max) {
   if (4*used < L->size_ci && 2*BASIC_CI_SIZE < L->size_ci)
     luaD_reallocCI(L, L->size_ci/2);  /* still big enough... */
   used = max - L->stack;  /* part of stack in use */
-  if (4*used < L->stacksize && 2*BASIC_STACK_SIZE < L->stacksize)
+  if (4*used < L->stacksize && 2*(BASIC_STACK_SIZE+EXTRA_STACK) < L->stacksize)
     luaD_reallocstack(L, L->stacksize/2);  /* still big enough... */
 }
 
@@ -158,7 +158,7 @@ static void markstacks (GCState *st) {
   do {  /* for each thread */
     StkId o, lim;
     CallInfo *ci;
-    if (L1->base_ci == NULL) {  /* incomplete state? */
+    if (ttisnil(defaultmeta(L1))) {  /* incomplete state? */
       lua_assert(L1 != st->L);
       L1 = L1->next;
       luaE_closethread(st->L, L1->previous);  /* collect it */
@@ -227,7 +227,7 @@ static void traversetable (GCState *st, Table *h) {
   marktable(st, h->metatable);
   lua_assert(h->lsizenode || h->node == G(st->L)->dummynode);
   mode = fasttm(st->L, h->metatable, TM_MODE);
-  if (mode && ttype(mode) == LUA_TSTRING) {  /* weak table? */
+  if (mode && ttisstring(mode)) {  /* weak table? */
     h->mark = st->toclear;  /* must be cleared after GC, ... */
     st->toclear = h;  /* ...put in the appropriate list */
     weakkey = (strchr(svalue(mode), 'k') != NULL);
@@ -243,8 +243,8 @@ static void traversetable (GCState *st, Table *h) {
   i = sizenode(h);
   while (i--) {
     Node *n = node(h, i);
-    if (ttype(val(n)) != LUA_TNIL) {
-      lua_assert(ttype(key(n)) != LUA_TNIL);
+    if (!ttisnil(val(n))) {
+      lua_assert(!ttisnil(key(n)));
       if (!weakkey) markobject(st, key(n));
       if (!weakvalue) markobject(st, val(n));
     }

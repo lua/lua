@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.139 2002/07/01 17:06:58 roberto Exp roberto $
+** $Id: lobject.h,v 1.140 2002/07/17 16:25:13 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -33,18 +33,27 @@ typedef struct lua_TObject {
 } TObject;
 
 
+/* Macros to test type */
+#define ttisnil(o)	(ttype(o) == LUA_TNIL)
+#define ttisnumber(o)	(ttype(o) == LUA_TNUMBER)
+#define ttisstring(o)	(ttype(o) == LUA_TSTRING)
+#define ttistable(o)	(ttype(o) == LUA_TTABLE)
+#define ttisfunction(o)	(ttype(o) == LUA_TFUNCTION)
+#define ttisboolean(o)	(ttype(o) == LUA_TBOOLEAN)
+#define ttisuserdata(o)	(ttype(o) == LUA_TUSERDATA)
+#define ttislightuserdata(o)	(ttype(o) == LUA_TLIGHTUSERDATA)
+
 /* Macros to access values */
 #define ttype(o)	((o)->tt)
-#define pvalue(o)	check_exp(ttype(o)==LUA_TLIGHTUSERDATA, (o)->value.p)
-#define nvalue(o)	check_exp(ttype(o)==LUA_TNUMBER, (o)->value.n)
-#define tsvalue(o)	check_exp(ttype(o)==LUA_TSTRING, (o)->value.ts)
-#define uvalue(o)	check_exp(ttype(o)==LUA_TUSERDATA, (o)->value.u)
-#define clvalue(o)	check_exp(ttype(o)==LUA_TFUNCTION, (o)->value.cl)
-#define hvalue(o)	check_exp(ttype(o)==LUA_TTABLE, (o)->value.h)
-#define bvalue(o)	check_exp(ttype(o)==LUA_TBOOLEAN, (o)->value.b)
+#define pvalue(o)	check_exp(ttislightuserdata(o), (o)->value.p)
+#define nvalue(o)	check_exp(ttisnumber(o), (o)->value.n)
+#define tsvalue(o)	check_exp(ttisstring(o), (o)->value.ts)
+#define uvalue(o)	check_exp(ttisuserdata(o), (o)->value.u)
+#define clvalue(o)	check_exp(ttisfunction(o), (o)->value.cl)
+#define hvalue(o)	check_exp(ttistable(o), (o)->value.h)
+#define bvalue(o)	check_exp(ttisboolean(o), (o)->value.b)
 
-#define l_isfalse(o)	(ttype(o) == LUA_TNIL || \
-			(ttype(o) == LUA_TBOOLEAN && bvalue(o) == 0))
+#define l_isfalse(o)	(ttisnil(o) || (ttisboolean(o) && bvalue(o) == 0))
 
 /* Macros to set values */
 #define setnvalue(obj,x) \

@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.97 2002/06/25 19:17:22 roberto Exp roberto $
+** $Id: ltm.c,v 1.98 2002/07/17 16:25:13 roberto Exp $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -47,7 +47,7 @@ void luaT_init (lua_State *L) {
 const TObject *luaT_gettm (Table *events, TMS event, TString *ename) {
   const TObject *tm = luaH_getstr(events, ename);
   lua_assert(event <= TM_MODE);
-  if (ttype(tm) == LUA_TNIL) {  /* no tag method? */
+  if (ttisnil(tm)) {  /* no tag method? */
     events->flags |= (1u<<event);  /* cache this fact */
     return NULL;
   }

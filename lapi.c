@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.204 2002/06/26 19:28:44 roberto Exp roberto $
+** $Id: lapi.c,v 1.205 2002/07/17 16:25:13 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -266,7 +266,7 @@ LUA_API const char *lua_tostring (lua_State *L, int index) {
   StkId o = luaA_indexAcceptable(L, index);
   if (o == NULL)
     return NULL;
-  else if (ttype(o) == LUA_TSTRING)
+  else if (ttisstring(o))
     return svalue(o);
   else {
     const char *s;
@@ -282,7 +282,7 @@ LUA_API size_t lua_strlen (lua_State *L, int index) {
   StkId o = luaA_indexAcceptable(L, index);
   if (o == NULL)
     return 0;
-  else if (ttype(o) == LUA_TSTRING)
+  else if (ttisstring(o))
     return tsvalue(o)->tsv.len;
   else {
     size_t l;
@@ -439,7 +439,7 @@ LUA_API void lua_rawget (lua_State *L, int index) {
   StkId t;
   lua_lock(L);
   t = luaA_index(L, index);
-  api_check(L, ttype(t) == LUA_TTABLE);
+  api_check(L, ttistable(t));
   setobj(L->top - 1, luaH_get(hvalue(t), L->top - 1));
   lua_unlock(L);
 }
@@ -449,7 +449,7 @@ LUA_API void lua_rawgeti (lua_State *L, int index, int n) {
   StkId o;
   lua_lock(L);
   o = luaA_index(L, index);
-  api_check(L, ttype(o) == LUA_TTABLE);
+  api_check(L, ttistable(o));
   setobj(L->top, luaH_getnum(hvalue(o), n));
   api_incr_top(L);
   lua_unlock(L);
@@ -536,7 +536,7 @@ LUA_API void lua_rawset (lua_State *L, int index) {
   lua_lock(L);
   api_checknelems(L, 2);
   t = luaA_index(L, index);
-  api_check(L, ttype(t) == LUA_TTABLE);
+  api_check(L, ttistable(t));
   setobj(luaH_set(L, hvalue(t), L->top-2), L->top-1);
   L->top -= 2;
   lua_unlock(L);
@@ -548,7 +548,7 @@ LUA_API void lua_rawseti (lua_State *L, int index, int n) {
   lua_lock(L);
   api_checknelems(L, 1);
   o = luaA_index(L, index);
-  api_check(L, ttype(o) == LUA_TTABLE);
+  api_check(L, ttistable(o));
   setobj(luaH_setnum(L, hvalue(o), n), L->top-1);
   L->top--;
   lua_unlock(L);
@@ -561,8 +561,8 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
   lua_lock(L);
   api_checknelems(L, 1);
   obj = luaA_index(L, objindex);
-  mt = (ttype(L->top - 1) != LUA_TNIL) ? L->top - 1 : defaultmeta(L);
-  api_check(L, ttype(mt) == LUA_TTABLE);
+  mt = (!ttisnil(L->top - 1)) ? L->top - 1 : defaultmeta(L);
+  api_check(L, ttistable(mt));
   switch (ttype(obj)) {
     case LUA_TTABLE: {
       hvalue(obj)->metatable = hvalue(mt);
@@ -589,7 +589,7 @@ LUA_API int lua_setglobals (lua_State *L, int level) {
   api_checknelems(L, 1);
   f = getfunc(L, level);
   L->top--;
-  api_check(L, ttype(L->top) == LUA_TTABLE);
+  api_check(L, ttistable(L->top));
   if (f) f->g = *(L->top);
   lua_unlock(L);
   return (f != NULL);
@@ -616,6 +616,13 @@ LUA_API int lua_pcall (lua_State *L, int nargs, int nresults) {
   status = luaD_pcall(L, nargs, nresults);
   lua_unlock(L);
   return status;
+}
+
+
+LUA_API void lua_pcallreset (lua_State *L) {
+  lua_lock(L);
+  luaD_resetprotection(L);  /* reset error handler */
+  lua_unlock(L);
 }
 
 
@@ -688,7 +695,7 @@ LUA_API int lua_next (lua_State *L, int index) {
   int more;
   lua_lock(L);
   t = luaA_index(L, index);
-  api_check(L, ttype(t) == LUA_TTABLE);
+  api_check(L, ttistable(t));
   more = luaH_next(L, hvalue(t), L->top - 1);
   if (more) {
     api_incr_top(L);

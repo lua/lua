@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.107 2002/06/12 14:51:31 roberto Exp roberto $
+** $Id: lcode.c,v 1.108 2002/06/13 13:39:55 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -206,7 +206,7 @@ static void freeexp (FuncState *fs, expdesc *e) {
 
 static int addk (FuncState *fs, TObject *k, TObject *v) {
   const TObject *index = luaH_get(fs->h, k);
-  if (ttype(index) == LUA_TNUMBER) {
+  if (ttisnumber(index)) {
     lua_assert(luaO_rawequalObj(&fs->f->k[cast(int, nvalue(index))], v));
     return cast(int, nvalue(index));
   }
@@ -573,7 +573,7 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
 void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e) {
   if (op == OPR_MINUS) {
     luaK_exp2val(fs, e);
-    if (e->k == VK && ttype(&fs->f->k[e->info]) == LUA_TNUMBER)
+    if (e->k == VK && ttisnumber(&fs->f->k[e->info]))
       e->info = luaK_numberK(fs, -nvalue(&fs->f->k[e->info]));
     else {
       luaK_exp2anyreg(fs, e);
