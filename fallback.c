@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.30 1997/03/20 19:20:43 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.31 1997/03/20 20:36:19 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -351,7 +351,7 @@ void luaI_setfallback (void)
   }
   else if (strcmp(name, "arith") == 0) {  /* old arith fallback */
     int i;
-    oldfunc = luaI_IMtable[LUA_T_USERDATA].int_method[IM_ADD];
+    oldfunc = luaI_IMtable[LUA_T_USERDATA].int_method[IM_POW];
     for (i=IM_ADD; i<=IM_UNM; i++)  /* ORDER IM */
       fillvalids(i, luaI_Address(func));
     replace = typeFB;

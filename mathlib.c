@@ -3,7 +3,7 @@
 ** Mathematics library to LUA
 */
 
-char *rcs_mathlib="$Id: mathlib.c,v 1.19 1997/03/17 17:01:10 roberto Exp roberto $";
+char *rcs_mathlib="$Id: mathlib.c,v 1.20 1997/03/18 15:30:50 roberto Exp roberto $";
 
 #include <stdlib.h>
 #include <math.h>
@@ -105,28 +105,12 @@ static void math_sqrt (void)
  lua_pushnumber (sqrt(d));
 }
 
-static int old_pow;
 
 static void math_pow (void)
 {
- lua_Object o1 = lua_getparam (1);
- lua_Object o2 = lua_getparam (2);
- lua_Object op = lua_getparam(3);
- if (!lua_isnumber(o1) || !lua_isnumber(o2) || *(lua_getstring(op)) != 'p')
- {
-   lua_Object old = lua_getref(old_pow);
-   lua_pushobject(o1);
-   lua_pushobject(o2);
-   lua_pushobject(op);
-   if (lua_callfunction(old) != 0)
-     lua_error(NULL);
- }
- else
- {
-   double d1 = lua_getnumber(o1);
-   double d2 = lua_getnumber(o2);
-   lua_pushnumber (pow(d1,d2));
- }
+  double d1 = luaL_check_number(1, "exp");
+  double d2 = luaL_check_number(2, "exp");
+  lua_pushnumber(pow(d1,d2));
 }
 
 static void math_min (void)
@@ -226,6 +210,6 @@ static struct luaL_reg mathlib[] = {
 void mathlib_open (void)
 {
   luaL_openlib(mathlib, (sizeof(mathlib)/sizeof(mathlib[0])));
-  old_pow = lua_refobject(lua_setfallback("arith", math_pow), 1);
+  lua_setintmethod(0, "pow", math_pow);
 }
 
