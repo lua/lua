@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.123 2003/04/03 13:35:34 roberto Exp $
+** $Id: lstate.c,v 1.124 2003/07/16 20:49:02 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -34,15 +34,6 @@ union UEXTRASPACE {L_Umaxalign a; LUA_USERSTATE b;};
 #endif
 
 
-
-/*
-** you can change this function through the official API:
-** call `lua_setpanicf'
-*/
-static int default_panic (lua_State *L) {
-  UNUSED(L);
-  return 0;
-}
 
 
 static lua_State *mallocstate (lua_State *L) {
@@ -99,7 +90,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   setnilvalue(defaultmeta(L));
   setnilvalue(registry(L));
   luaZ_initbuffer(L, &g->buff);
-  g->panic = default_panic;
+  g->panic = NULL;
   g->rootgc = NULL;
   g->rootudata = NULL;
   g->tmudata = NULL;
