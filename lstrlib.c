@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.87 2002/06/26 19:28:08 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.88 2002/08/21 19:39:31 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -339,18 +339,33 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
     case ')': {  /* end capture */
       return end_capture(ms, s, p+1);
     }
-    case ESC: {  /* may be %[0-9] or %b */
-      if (isdigit(uchar(*(p+1)))) {  /* capture? */
-        s = match_capture(ms, s, *(p+1));
-        if (s == NULL) return NULL;
-        p+=2; goto init;  /* else return match(ms, s, p+2) */
+    case ESC: {
+      switch (*(p+1)) {
+        case 'b': {  /* balanced string? */
+          s = matchbalance(ms, s, p+2);
+          if (s == NULL) return NULL;
+          p+=4; goto init;  /* else return match(ms, s, p+4); */
+        }
+        case 'f': {  /* frontier? */
+          const char *ep; char previous;
+          p += 2;
+          if (*p != '[')
+            luaL_error(ms->L, "missing `[' after `%%f' in pattern");
+          ep = luaI_classend(ms, p);  /* points to what is next */
+          previous = (s == ms->src_init) ? '\0' : *(s-1);
+          if (matchbracketclass(uchar(previous), p, ep-1) ||
+             !matchbracketclass(uchar(*s), p, ep-1)) return NULL;
+          p=ep; goto init;  /* else return match(ms, s, ep); */
+        }
+        default: {
+          if (isdigit(uchar(*(p+1)))) {  /* capture results (%0-%9)? */
+            s = match_capture(ms, s, *(p+1));
+            if (s == NULL) return NULL;
+            p+=2; goto init;  /* else return match(ms, s, p+2) */
+          }
+          goto dflt;  /* case default */
+        }
       }
-      else if (*(p+1) == 'b') {  /* balanced string? */
-        s = matchbalance(ms, s, p+2);
-        if (s == NULL) return NULL;
-        p+=4; goto init;  /* else return match(ms, s, p+4); */
-      }
-      else goto dflt;  /* case default */
     }
     case '\0': {  /* end of pattern */
       return s;  /* match succeeded */
