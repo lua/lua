@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.45 2002/03/27 15:30:41 roberto Exp roberto $
+** $Id: ldblib.c,v 1.46 2002/04/02 20:41:59 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -110,12 +110,12 @@ static int setlocal (lua_State *L) {
 
 
 
-#define KEY_CALLHOOK	"luadblibCallhook"
-#define KEY_LINEHOOK	"luadblibLinehook"
+static const char KEY_CALLHOOK = 'c';
+static const char KEY_LINEHOOK = 'l';
 
 
-static void hookf (lua_State *L, const char *key) {
-  lua_pushstring(L, key);
+static void hookf (lua_State *L, void *key) {
+  lua_pushudataval(L, key);
   lua_rawget(L, LUA_REGISTRYINDEX);
   if (lua_isfunction(L, -1)) {
     lua_pushvalue(L, -2);  /* original argument (below function) */
@@ -128,17 +128,17 @@ static void hookf (lua_State *L, const char *key) {
 
 static void callf (lua_State *L, lua_Debug *ar) {
   lua_pushstring(L, ar->event);
-  hookf(L, KEY_CALLHOOK);
+  hookf(L, (void *)&KEY_CALLHOOK);
 }
 
 
 static void linef (lua_State *L, lua_Debug *ar) {
   lua_pushnumber(L, ar->currentline);
-  hookf(L, KEY_LINEHOOK);
+  hookf(L, (void *)&KEY_LINEHOOK);
 }
 
 
-static void sethook (lua_State *L, const char *key, lua_Hook hook,
+static void sethook (lua_State *L, void *key, lua_Hook hook,
                      lua_Hook (*sethookf)(lua_State * L, lua_Hook h)) {
   lua_settop(L, 1);
   if (lua_isnoneornil(L, 1))
@@ -147,22 +147,22 @@ static void sethook (lua_State *L, const char *key, lua_Hook hook,
     (*sethookf)(L, hook);
   else
     luaL_argerror(L, 1, "function expected");
-  lua_pushstring(L, key);
+  lua_pushudataval(L, key);
   lua_rawget(L, LUA_REGISTRYINDEX);   /* get old value */
-  lua_pushstring(L, key);
+  lua_pushudataval(L, key);
   lua_pushvalue(L, 1);
   lua_rawset(L, LUA_REGISTRYINDEX);  /* set new value */
 }
 
 
 static int setcallhook (lua_State *L) {
-  sethook(L, KEY_CALLHOOK, callf, lua_setcallhook);
+  sethook(L, (void *)&KEY_CALLHOOK, callf, lua_setcallhook);
   return 1;
 }
 
 
 static int setlinehook (lua_State *L) {
-  sethook(L, KEY_LINEHOOK, linef, lua_setlinehook);
+  sethook(L, (void *)&KEY_LINEHOOK, linef, lua_setlinehook);
   return 1;
 }
 
