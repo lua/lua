@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.17 2000/03/10 14:38:10 roberto Exp roberto $
+** $Id: lstring.h,v 1.18 2000/03/10 18:37:44 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -18,7 +18,7 @@
 
 
 /*
-** any taggedstring with mark>=FIXMARK is never collected.
+** any TString with mark>=FIXMARK is never collected.
 ** Marks>=RESERVEDMARK are used to identify reserved words.
 */
 #define FIXMARK		2
@@ -33,9 +33,6 @@ void luaS_free (lua_State *L, TString *ts);
 TString *luaS_newlstr (lua_State *L, const char *str, long l);
 TString *luaS_new (lua_State *L, const char *str);
 TString *luaS_newfixed (lua_State *L, const char *str);
-GlobalVar *luaS_assertglobal (lua_State *L, TString *ts);
-GlobalVar *luaS_assertglobalbyname (lua_State *L, const char *name);
-int luaS_globaldefined (lua_State *L, const char *name);
 
 
 #endif

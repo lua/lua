@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.33 2000/03/10 14:38:10 roberto Exp roberto $
+** $Id: lstring.c,v 1.34 2000/03/10 18:37:44 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -62,11 +62,13 @@ void luaS_resize (lua_State *L, stringtable *tb, int newsize) {
     TString *p = tb->hash[i];
     while (p) {  /* for each node in the list */
       TString *next = p->nexthash;  /* save next */
-      int h = p->hash&(newsize-1);  /* new position */
-      LUA_ASSERT(L, p->hash%newsize == (p->hash&(newsize-1)),
+      unsigned long h = (p->constindex == -1) ? IntPoint(p->u.d.value) :
+                                                p->u.s.hash;
+      int h1 = h&(newsize-1);  /* new position */
+      LUA_ASSERT(L, h%newsize == (h&(newsize-1)),
                     "a&(x-1) == a%x, for x power of 2");
-      p->nexthash = newhash[h];  /* chain it in new position */
-      newhash[h] = p;
+      p->nexthash = newhash[h1];  /* chain it in new position */
+      newhash[h1] = p;
       p = next;
     }
   }
@@ -76,32 +78,29 @@ void luaS_resize (lua_State *L, stringtable *tb, int newsize) {
 }
 
 
-static TString *newone (lua_State *L, long l, unsigned long h) {
-  TString *ts = (TString *)luaM_malloc(L, 
-                                       sizeof(TString)+l*sizeof(char));
+static TString *newone (lua_State *L, long l) {
+  TString *ts = (TString *)luaM_malloc(L, sizeof(TString)+l*sizeof(char));
   ts->marked = 0;
   ts->nexthash = NULL;
-  ts->hash = h;
   return ts;
 }
 
 
 static TString *newone_s (lua_State *L, const char *str,
                                long l, unsigned long h) {
-  TString *ts = newone(L, l, h);
+  TString *ts = newone(L, l);
   memcpy(ts->str, str, l);
   ts->str[l] = 0;  /* ending 0 */
-  ts->u.s.gv = NULL;  /* no global value */
   ts->u.s.len = l;
+  ts->u.s.hash = h;
   ts->constindex = 0;
   L->nblocks += gcsizestring(L, l);
   return ts;
 }
 
 
-static TString *newone_u (lua_State *L, void *buff,
-                               int tag, unsigned long h) {
-  TString *ts = newone(L, 0, h);
+static TString *newone_u (lua_State *L, void *buff, int tag) {
+  TString *ts = newone(L, 0);
   ts->u.d.value = buff;
   ts->u.d.tag = (tag == LUA_ANYTAG) ? 0 : tag;
   ts->constindex = -1;  /* tag -> this is a userdata */
@@ -141,7 +140,7 @@ TString *luaS_newlstr (lua_State *L, const char *str, long l) {
 ** so two '&' operations would be highly correlated
 */
 TString *luaS_createudata (lua_State *L, void *udata, int tag) {
-  unsigned long h = IntPoint(L, udata);
+  unsigned long h = IntPoint(udata);
   stringtable *tb = &L->string_root[(h%NUM_HASHUDATA)+NUM_HASHSTR];
   int h1 = h&(tb->size-1);
   TString *ts;
@@ -150,7 +149,7 @@ TString *luaS_createudata (lua_State *L, void *udata, int tag) {
       return ts;
   }
   /* not found */
-  ts = newone_u(L, udata, tag, h);
+  ts = newone_u(L, udata, tag);
   newentry(L, tb, ts, h1);
   return ts;
 }
@@ -168,38 +167,8 @@ TString *luaS_newfixed (lua_State *L, const char *str) {
 
 
 void luaS_free (lua_State *L, TString *t) {
-  if (t->constindex == -1)  /* is userdata? */
-    L->nblocks -= gcsizeudata;
-  else {  /* is string */
-    L->nblocks -= gcsizestring(L, t->u.s.len);
-    luaM_free(L, t->u.s.gv);
-  }
+  L->nblocks -= (t->constindex == -1) ? gcsizeudata :
+                                        gcsizestring(L, t->u.s.len);
   luaM_free(L, t);
 }
-
-
-GlobalVar *luaS_assertglobal (lua_State *L, TString *ts) {
-  GlobalVar *gv = ts->u.s.gv;
-  if (!gv) {  /* no global value yet? */
-    gv = luaM_new(L, GlobalVar);
-    gv->value.ttype = TAG_NIL;  /* initial value */
-    gv->name = ts;
-    gv->next = L->rootglobal;  /* chain in global list */
-    L->rootglobal = gv; 
-    ts->u.s.gv = gv;
-  }
-  return gv;
-}
-
-
-GlobalVar *luaS_assertglobalbyname (lua_State *L, const char *name) {
-  return luaS_assertglobal(L, luaS_new(L, name));
-}
-
-
-int luaS_globaldefined (lua_State *L, const char *name) {
-  TString *ts = luaS_new(L, name);
-  return ts->u.s.gv && ts->u.s.gv->value.ttype != TAG_NIL;
-}
-
 

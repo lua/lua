@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.103 2000/04/14 17:45:25 roberto Exp roberto $
+** $Id: lvm.c,v 1.104 2000/04/19 13:36:25 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -164,18 +164,8 @@ void luaV_settable (lua_State *L, StkId t, StkId top) {
 }
 
 
-void luaV_rawsettable (lua_State *L, StkId t) {
-  if (ttype(t) != TAG_TABLE)
-    lua_error(L, "indexed expression not a table");
-  else {
-    luaH_set(L, avalue(t), t+1, L->top-1);
-    L->top -= 3;
-  }
-}
-
-
-void luaV_getglobal (lua_State *L, GlobalVar *gv, StkId top) {
-  const TObject *value = &gv->value;
+void luaV_getglobal (lua_State *L, TString *s, StkId top) {
+  const TObject *value = luaH_getstr(L->gt, s);
   TObject *im = luaT_getimbyObj(L, value, IM_GETGLOBAL);
   if (ttype(im) == TAG_NIL)  /* is there a tag method? */
     *top = *value;  /* default behavior */
@@ -183,7 +173,7 @@ void luaV_getglobal (lua_State *L, GlobalVar *gv, StkId top) {
     luaD_checkstack(L, 3);
     *top = *im;
     ttype(top+1) = TAG_STRING;
-    tsvalue(top+1) = gv->name;  /* global name */
+    tsvalue(top+1) = s;  /* global name */
     *(top+2) = *value;
     L->top = top+3;
     luaD_call(L, top, 1);
@@ -191,17 +181,25 @@ void luaV_getglobal (lua_State *L, GlobalVar *gv, StkId top) {
 }
 
 
-void luaV_setglobal (lua_State *L, GlobalVar *gv, StkId top) {
-  const TObject *oldvalue = &gv->value;
+void luaV_setglobal (lua_State *L, TString *s, StkId top) {
+  const TObject *oldvalue = luaH_getstr(L->gt, s);
   const TObject *im = luaT_getimbyObj(L, oldvalue, IM_SETGLOBAL);
-  if (ttype(im) == TAG_NIL)  /* is there a tag method? */
-    gv->value = *(top-1);
+  if (ttype(im) == TAG_NIL) {  /* is there a tag method? */
+    if (oldvalue != &luaO_nilobject)
+      *oldvalue = *(top-1);
+    else {
+      TObject key;
+      ttype(&key) = TAG_STRING;
+      tsvalue(&key) = s;
+      luaH_set(L, L->gt, &key, top-1);
+    }
+  }
   else {
     luaD_checkstack(L, 3);
     *(top+2) = *(top-1);  /* new value */
     *(top+1) = *oldvalue;
     ttype(top) = TAG_STRING;
-    tsvalue(top) = gv->name;
+    tsvalue(top) = s;
     *(top-1) = *im;
     L->top = top+3;
     luaD_call(L, top-1, 0);
@@ -415,7 +413,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
 
       case OP_GETGLOBAL:
-        luaV_getglobal(L, kstr[GETARG_U(i)]->u.s.gv, top);
+        luaV_getglobal(L, kstr[GETARG_U(i)], top);
         top++;
         break;
 
@@ -460,7 +458,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
 
       case OP_SETGLOBAL:
-        luaV_setglobal(L, kstr[GETARG_U(i)]->u.s.gv, top);
+        luaV_setglobal(L, kstr[GETARG_U(i)], top);
         top--;
         break;
 

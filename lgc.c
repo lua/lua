@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.46 2000/03/30 20:55:50 roberto Exp roberto $
+** $Id: lgc.c,v 1.47 2000/04/14 18:12:35 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -72,18 +72,6 @@ static void hashmark (lua_State *L, Hash *h) {
         markobject(L, &n->key);
         markobject(L, &n->val);
       }
-    }
-  }
-}
-
-
-static void travglobal (lua_State *L) {
-  GlobalVar *gv;
-  for (gv=L->rootglobal; gv; gv=gv->next) {
-    LUA_ASSERT(L, gv->name->u.s.gv == gv, "inconsistent global name");
-    if (gv->value.ttype != TAG_NIL) {
-      strmark(L, gv->name);  /* cannot collect non nil global variables */
-      markobject(L, &gv->value);
     }
   }
 }
@@ -174,20 +162,6 @@ static void collecttable (lua_State *L) {
 
 
 /*
-** remove from the global list globals whose names will be collected
-** (the global itself is freed when its name is freed)
-*/
-static void clear_global_list (lua_State *L, int limit) {
-  GlobalVar **p = &L->rootglobal;
-  GlobalVar *next;
-  while ((next = *p) != NULL) {
-    if (next->name->marked >= limit) p = &next->next;
-    else *p = next->next;
-  }
-}
-
-
-/*
 ** collect all elements with `marked' < `limit'.
 ** with limit=1, that means all unmarked elements;
 ** with limit=MAX_INT, that means all elements.
@@ -196,7 +170,6 @@ static void collectstring (lua_State *L, int limit) {
   TObject o;  /* to call userdata `gc' tag method */
   int i;
   ttype(&o) = TAG_USERDATA;
-  clear_global_list(L, limit);
   for (i=0; i<NUM_HASHS; i++) {  /* for each hash table */
     stringtable *tb = &L->string_root[i];
     int j;
@@ -228,7 +201,7 @@ static void collectstring (lua_State *L, int limit) {
 
 static void markall (lua_State *L) {
   travstack(L); /* mark stack objects */
-  travglobal(L);  /* mark global variable values and names */
+  hashmark(L, L->gt);  /* mark global variable values and names */
   travlock(L); /* mark locked objects */
   luaT_travtagmethods(L, markobject);  /* mark tag methods */
 }

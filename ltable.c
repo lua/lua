@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.39 2000/03/31 16:28:45 roberto Exp roberto $
+** $Id: ltable.c,v 1.40 2000/04/25 16:55:09 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -24,6 +24,7 @@
 #include "lmem.h"
 #include "lobject.h"
 #include "lstate.h"
+#include "lstring.h"
 #include "ltable.h"
 #include "lua.h"
 
@@ -46,14 +47,17 @@ Node *luaH_mainposition (const Hash *t, const TObject *key) {
     case TAG_NUMBER:
       h = (unsigned long)(long)nvalue(key);
       break;
-    case TAG_STRING: case TAG_USERDATA:
-      h = tsvalue(key)->hash;
+    case TAG_STRING:
+      h = tsvalue(key)->u.s.hash;
+      break;
+    case TAG_USERDATA:
+      h = IntPoint(tsvalue(key));
       break;
     case TAG_TABLE:
-      h = IntPoint(L, avalue(key));
+      h = IntPoint(avalue(key));
       break;
     case TAG_LCLOSURE:  case TAG_CCLOSURE:
-      h = IntPoint(L, clvalue(key));
+      h = IntPoint(clvalue(key));
       break;
     default:
       return NULL;  /* invalid key */
@@ -91,8 +95,8 @@ const TObject *luaH_getnum (const Hash *t, Number key) {
 
 
 /* specialized version for strings */
-static const TObject *luaH_getstr (const Hash *t, TString *key) {
-  Node *n = &t->node[key->hash&(t->size-1)];
+const TObject *luaH_getstr (const Hash *t, TString *key) {
+  Node *n = &t->node[key->u.s.hash&(t->size-1)];
   do {
     if (ttype(&n->key) == TAG_STRING && tsvalue(&n->key) == key)
       return &n->val;
@@ -248,3 +252,7 @@ void luaH_setint (lua_State *L, Hash *t, int key, const TObject *val) {
   luaH_set(L, t, &index, val);
 }
 
+
+const TObject *luaH_getglobal (lua_State *L, const char *name) {
+  return luaH_getstr(L->gt, luaS_new(L, name));
+}

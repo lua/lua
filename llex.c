@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.56 2000/04/07 13:11:49 roberto Exp roberto $
+** $Id: llex.c,v 1.57 2000/04/12 18:57:19 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -18,6 +18,7 @@
 #include "lparser.h"
 #include "lstate.h"
 #include "lstring.h"
+#include "ltable.h"
 #include "luadebug.h"
 #include "lzio.h"
 
@@ -121,12 +122,18 @@ static void skipspace (LexState *LS) {
 }
 
 
+static int globaldefined (lua_State *L, const char *name) {
+  const TObject *value = luaH_getglobal(L, name);
+  return ttype(value) != TAG_NIL;
+}
+
+
 static int checkcond (lua_State *L, LexState *LS, const char *buff) {
   static const char *const opts[] = {"nil", "1", NULL};
   int i = luaL_findstring(buff, opts);
   if (i >= 0) return i;
   else if (isalpha((unsigned char)buff[0]) || buff[0] == '_')
-    return luaS_globaldefined(L, buff);
+    return globaldefined(L, buff);
   else {
     luaX_syntaxerror(LS, "invalid $if condition", buff);
     return 0;  /* to avoid warnings */

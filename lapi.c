@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.77 2000/03/29 20:19:20 roberto Exp roberto $
+** $Id: lapi.c,v 1.78 2000/04/17 19:23:12 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -62,6 +62,20 @@ static void top2LC (lua_State *L, int n) {
 lua_Object lua_pop (lua_State *L) {
   luaA_checkCargs(L, 1);
   return luaA_putObjectOnTop(L);
+}
+
+
+void lua_pushglobaltable (lua_State *L) {
+  avalue(L->top) = L->gt;
+  ttype(L->top) = TAG_TABLE;
+  incr_top;
+}
+
+
+void lua_setglobaltable (lua_State *L, lua_Object newtable) {
+  if (lua_type(L, newtable)[0] != 't')  /* type == "table"? */
+    lua_error(L, "Lua API error - invalid value for global table");
+  L->gt = avalue(newtable);
 }
 
 
@@ -131,7 +145,10 @@ void lua_settable (lua_State *L) {
 
 void lua_rawsettable (lua_State *L) {
   luaA_checkCargs(L, 3);
-  luaV_rawsettable(L, L->top-3);
+  if (ttype(L->top-3) != TAG_TABLE)
+    lua_error(L, "indexed expression not a table");
+  luaH_set(L, avalue(L->top-3), L->top-2, L->top-1);
+  L->top -= 3;
 }
 
 
@@ -145,27 +162,32 @@ lua_Object lua_createtable (lua_State *L) {
 
 
 lua_Object lua_getglobal (lua_State *L, const char *name) {
-  luaV_getglobal(L, luaS_assertglobalbyname(L, name), L->top++);
+  luaV_getglobal(L, luaS_new(L, name), L->top++);
   return luaA_putObjectOnTop(L);
-}
-
-
-lua_Object lua_rawgetglobal (lua_State *L, const char *name) {
-  GlobalVar *gv = luaS_assertglobalbyname(L, name);
-  return luaA_putluaObject(L, &gv->value);
 }
 
 
 void lua_setglobal (lua_State *L, const char *name) {
   luaA_checkCargs(L, 1);
-  luaV_setglobal(L, luaS_assertglobalbyname(L, name), L->top--);
+  luaV_setglobal(L, luaS_new(L, name), L->top--);
 }
 
 
+/* deprecated */
+lua_Object lua_rawgetglobal (lua_State *L, const char *name) {
+  lua_pushglobaltable(L);
+  lua_pushstring(L, name);
+  return lua_rawgettable(L);
+}
+
+
+/* deprecated */
 void lua_rawsetglobal (lua_State *L, const char *name) {
-  GlobalVar *gv = luaS_assertglobalbyname(L, name);
+  TObject key;
   luaA_checkCargs(L, 1);
-  gv->value = *(--L->top);
+  ttype(&key) = TAG_STRING;
+  tsvalue(&key) = luaS_new(L, name);
+  luaH_set(L, L->gt, &key, --L->top);
 }
 
 
@@ -331,40 +353,6 @@ void lua_settag (lua_State *L, int tag) {
                   luaO_typename(L->top-1));
   }
   L->top--;
-}
-
-
-GlobalVar *luaA_nextvar (lua_State *L, TString *ts) {
-  GlobalVar *gv;
-  if (ts == NULL)
-    gv = L->rootglobal;  /* first variable */
-  else {
-    /* check whether name is in global var list */
-    luaL_arg_check(L, ts->u.s.gv, 1, "variable name expected");
-    gv = ts->u.s.gv->next;  /* get next */
-  }
-  while (gv && gv->value.ttype == TAG_NIL)  /* skip globals with nil */
-    gv = gv->next;
-  if (gv) {
-    ttype(L->top) = TAG_STRING; tsvalue(L->top) = gv->name;
-    incr_top;
-    luaA_pushobject(L, &gv->value);
-  }
-  return gv;
-}
-
-
-const char *lua_nextvar (lua_State *L, const char *varname) {
-  TString *ts = (varname == NULL) ? NULL : luaS_new(L, varname);
-  GlobalVar *gv = luaA_nextvar(L, ts);
-  if (gv) {
-    top2LC(L, 2);
-    return gv->name->str;
-  }
-  else {
-    top2LC(L, 0);
-    return NULL;
-  }
 }
 
 

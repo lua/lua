@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.15 2000/03/30 17:19:48 roberto Exp roberto $
+** $Id: ldebug.c,v 1.16 2000/03/30 20:55:50 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -159,12 +159,13 @@ static int checkfunc (lua_State *L, TObject *o) {
 
 
 static void lua_getobjname (lua_State *L, StkId f, lua_Debug *ar) {
-  GlobalVar *g;
+  Hash *g = L->gt;
+  int i;
   /* try to find a name for given function */
   setnormalized(L->top, f); /* to be used by `checkfunc' */
-  for (g=L->rootglobal; g; g=g->next) {
-    if (checkfunc(L, &g->value)) {
-      ar->name = g->name->str;
+  for (i=0; i<=g->size; i++) {
+    if (checkfunc(L, val(node(g,i))) && ttype(key(node(g,i))) == TAG_STRING) {
+      ar->name = tsvalue(key(node(g,i)))->str;
       ar->namewhat = "global";
       return;
     }

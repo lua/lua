@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.106 2000/04/17 19:23:12 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.107 2000/04/25 16:55:09 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -50,13 +50,6 @@ void luaB_opentests (lua_State *L);
 ** Auxiliary functions
 ** =======================================================
 */
-
-
-static void pushtagstring (lua_State *L, TString *s) {
-  ttype(L->top) = TAG_STRING;
-  tsvalue(L->top) = s;
-  incr_top;
-}
 
 
 static Number getsize (const Hash *h) {
@@ -191,19 +184,8 @@ void luaB_setglobal (lua_State *L) {
   lua_setglobal(L, name);
 }
 
-void luaB_rawsetglobal (lua_State *L) {
-  const char *name = luaL_check_string(L, 1);
-  lua_Object value = luaL_nonnullarg(L, 2);
-  lua_pushobject(L, value);
-  lua_rawsetglobal(L, name);
-}
-
 void luaB_getglobal (lua_State *L) {
   lua_pushobject(L, lua_getglobal(L, luaL_check_string(L, 1)));
-}
-
-void luaB_rawgetglobal (lua_State *L) {
-  lua_pushobject(L, lua_rawgetglobal(L, luaL_check_string(L, 1)));
 }
 
 void luaB_tag (lua_State *L) {
@@ -224,6 +206,12 @@ void luaB_newtag (lua_State *L) {
 void luaB_copytagmethods (lua_State *L) {
   lua_pushnumber(L, lua_copytagmethods(L, luaL_check_int(L, 1),
                                           luaL_check_int(L, 2)));
+}
+
+void luaB_globals (lua_State *L) {
+  lua_pushglobaltable(L);
+  if (lua_getparam(L, 1) != LUA_NOOBJECT)
+    lua_setglobaltable(L, luaL_tablearg(L, 1));
 }
 
 void luaB_rawgettable (lua_State *L) {
@@ -346,20 +334,6 @@ void luaB_call (lua_State *L) {
 }
 
 
-void luaB_nextvar (lua_State *L) {
-  lua_Object o = lua_getparam(L, 1);
-  TString *name;
-  if (o == LUA_NOOBJECT || ttype(o) == TAG_NIL)
-    name = NULL;
-  else {
-    luaL_arg_check(L, ttype(o) == TAG_STRING, 1, "variable name expected");
-    name = tsvalue(o);
-  }
-  if (!luaA_nextvar(L, name))
-    lua_pushnil(L);
-}
-
-
 void luaB_next (lua_State *L) {
   const Hash *a = gettable(L, 1);
   lua_Object k = lua_getparam(L, 2);
@@ -458,28 +432,6 @@ void luaB_foreach (lua_State *L) {
       if (ttype(L->top-1) != TAG_NIL)
         return;
       L->top--;  /* remove result */
-    }
-  }
-}
-
-
-void luaB_foreachvar (lua_State *L) {
-  lua_Object f = luaL_functionarg(L, 1);
-  GlobalVar *gv;
-  luaD_checkstack(L, 4);  /* for extra var name, f, var name, and globalval */
-  for (gv = L->rootglobal; gv; gv = gv->next) {
-    if (gv->value.ttype != TAG_NIL) {
-      pushtagstring(L, gv->name);  /* keep (extra) name on stack to avoid GC */
-      *(L->top++) = *f;
-      pushtagstring(L, gv->name);
-      *(L->top++) = gv->value;
-      luaD_call(L, L->top-3, 1);
-      if (ttype(L->top-1) != TAG_NIL) {
-        *(L->top-2) = *(L->top-1);  /* remove extra name */
-        L->top--;
-        return;
-      }
-      L->top-=2;  /* remove result and extra name */
     }
   }
 }
@@ -610,6 +562,39 @@ void luaB_sort (lua_State *L) {
 /* }====================================================== */
 
 
+/*
+** {======================================================
+** Deprecated functions to manipulate global environment:
+** all of them can be simulated through table operations
+** over the global table.
+** =======================================================
+*/
+
+#define num_deprecated	4
+
+static const struct luaL_reg deprecated_global_funcs[num_deprecated] = {
+  {"foreachvar", luaB_foreach},
+  {"nextvar", luaB_next},
+  {"rawgetglobal", luaB_rawgettable},
+  {"rawsetglobal", luaB_rawsettable}
+};
+
+
+
+static void deprecated_funcs (lua_State *L) {
+  TObject gt;
+  int i;
+  ttype(&gt) = TAG_TABLE;
+  avalue(&gt) = L->gt;
+  for (i=0; i<num_deprecated; i++) {
+    lua_pushobject(L, &gt);
+    lua_pushcclosure(L, deprecated_global_funcs[i].func, 1);
+    lua_setglobal(L, deprecated_global_funcs[i].name);
+  }
+}
+
+/* }====================================================== */
+
 static const struct luaL_reg builtin_funcs[] = {
   {"_ALERT", luaB__ALERT},
   {"_ERRORMESSAGE", luaB__ERRORMESSAGE},
@@ -621,13 +606,11 @@ static const struct luaL_reg builtin_funcs[] = {
   {"error", luaB_error},
   {"getglobal", luaB_getglobal},
   {"gettagmethod", luaB_gettagmethod},
+  {"globals", luaB_globals},
   {"newtag", luaB_newtag},
   {"next", luaB_next},
-  {"nextvar", luaB_nextvar},
   {"print", luaB_print},
-  {"rawgetglobal", luaB_rawgetglobal},
   {"rawgettable", luaB_rawgettable},
-  {"rawsetglobal", luaB_rawsetglobal},
   {"rawsettable", luaB_rawsettable},
   {"setglobal", luaB_setglobal},
   {"settag", luaB_settag},
@@ -640,12 +623,12 @@ static const struct luaL_reg builtin_funcs[] = {
   {"assert", luaB_assert},
   {"foreach", luaB_foreach},
   {"foreachi", luaB_foreachi},
-  {"foreachvar", luaB_foreachvar},
   {"getn", luaB_getn},
   {"sort", luaB_sort},
   {"tinsert", luaB_tinsert},
   {"tremove", luaB_tremove}
 };
+
 
 
 void luaB_predefine (lua_State *L) {
@@ -658,5 +641,6 @@ void luaB_predefine (lua_State *L) {
 #endif
   lua_pushstring(L, LUA_VERSION);
   lua_setglobal(L, "_VERSION");
+  deprecated_funcs(L);
 }
 

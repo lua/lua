@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.15 2000/04/13 16:51:01 roberto Exp roberto $
+** $Id: ltests.c,v 1.16 2000/04/14 17:46:15 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -167,7 +167,7 @@ static void hash_query (lua_State *L) {
   lua_Object o = luaL_nonnullarg(L, 1);
   if (lua_getparam(L, 2) == LUA_NOOBJECT) {
     luaL_arg_check(L, ttype(o) == TAG_STRING, 1, "string expected");
-    lua_pushnumber(L, tsvalue(o)->hash);
+    lua_pushnumber(L, tsvalue(o)->u.s.hash);
   }
   else {
     const Hash *t = avalue(luaL_tablearg(L, 2));
@@ -333,9 +333,6 @@ static void testC (lua_State *L) {
     }
     else if EQ("type") {
       lua_pushstring(L, lua_type(L, reg[getreg(L, &pc)]));
-    }
-    else if EQ("nextvar") {
-      lua_pushstring(L, lua_nextvar(L, lua_getstring(L, reg[getreg(L, &pc)])));
     }
     else if EQ("next") {
       int n = getreg(L, &pc);

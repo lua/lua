@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.28 2000/04/24 19:32:58 lhf Exp $
+** $Id: lundump.c,v 1.20 2000/04/25 16:44:31 roberto Exp roberto $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -155,8 +155,7 @@ static void LoadConstants (lua_State* L, Proto* tf, ZIO* Z, int native)
   for (i=0; i<n; i++)
   {
    TString* s=LoadString(L,Z);
-   int isglobal=LoadByte(L,Z);
-   if (isglobal) luaS_assertglobal(L,s);
+   LoadByte(L,Z);
    tf->kstr[i]=s;
   }
  }

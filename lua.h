@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.47 2000/04/14 17:48:20 roberto Exp roberto $
+** $Id: lua.h,v 1.48 2000/04/17 19:23:12 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -54,6 +54,9 @@ int            lua_callfunction (lua_State *L, lua_Object f);
 void	       lua_beginblock (lua_State *L);
 void	       lua_endblock (lua_State *L);
 
+void           lua_pushglobaltable (lua_State *L);
+void           lua_setglobaltable (lua_State *L, lua_Object newtable);
+
 lua_Object     lua_lua2C (lua_State *L, int number);
 #define	       lua_getparam		lua_lua2C
 #define	       lua_getresult		lua_lua2C
@@ -88,8 +91,8 @@ void           lua_pushobject (lua_State *L, lua_Object obj);
 lua_Object     lua_pop (lua_State *L);
 
 lua_Object     lua_getglobal (lua_State *L, const char *name);
-lua_Object     lua_rawgetglobal (lua_State *L, const char *name);
 void           lua_setglobal (lua_State *L, const char *name); /* In: value */
+lua_Object     lua_rawgetglobal (lua_State *L, const char *name);
 void           lua_rawsetglobal (lua_State *L, const char *name);/* In: value */
 
 void           lua_settable (lua_State *L); /* In: table, index, value */
@@ -99,7 +102,6 @@ lua_Object     lua_rawgettable (lua_State *L); /* In: table, index */
 
 int            lua_tag (lua_State *L, lua_Object obj);
 
-const char    *lua_nextvar (lua_State *L, const char *varname); /* Out: value */
 int            lua_next (lua_State *L, lua_Object o, int i);
 						/* Out: ref, value */ 
 
@@ -167,6 +169,8 @@ extern lua_State *lua_state;
 #define lua_callfunction(f)	(lua_callfunction)(lua_state, f)
 #define lua_beginblock()	(lua_beginblock)(lua_state)
 #define lua_endblock()		(lua_endblock)(lua_state)
+#define lua_pushglobaltable()	(lua_pushglobaltable)(lua_state)
+#define lua_setglobaltable(t)	(lua_setglobaltable)(lua_state, t)
 #define lua_lua2C(number)	(lua_lua2C)(lua_state, number)
 #define lua_type(obj)		(lua_type)(lua_state, obj)
 #define lua_isnil(obj)		(lua_isnil)(lua_state, obj)
@@ -190,15 +194,14 @@ extern lua_State *lua_state;
 #define lua_pushobject(obj)	(lua_pushobject)(lua_state, obj)
 #define lua_pop()		(lua_pop)(lua_state)
 #define lua_getglobal(name)	(lua_getglobal)(lua_state, name)
-#define lua_rawgetglobal(name)	(lua_rawgetglobal)(lua_state, name)
 #define lua_setglobal(name)	(lua_setglobal)(lua_state, name)
+#define lua_rawgetglobal(name)	(lua_rawgetglobal)(lua_state, name)
 #define lua_rawsetglobal(name)	(lua_rawsetglobal)(lua_state, name)
 #define lua_settable()		(lua_settable)(lua_state)
 #define lua_rawsettable()	(lua_rawsettable)(lua_state)
 #define lua_gettable()		(lua_gettable)(lua_state)
 #define lua_rawgettable()	(lua_rawgettable)(lua_state)
 #define lua_tag(obj)		(lua_tag)(lua_state, obj)
-#define lua_nextvar(varname)	(lua_nextvar)(lua_state, varname)
 #define lua_next(o,i)		(lua_next)(lua_state, o,i)
 #define lua_ref(lock)		(lua_ref)(lua_state, lock)
 #define lua_getref(ref)		(lua_getref)(lua_state, ref)

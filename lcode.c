@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.27 2000/04/17 14:05:34 roberto Exp roberto $
+** $Id: lcode.c,v 1.28 2000/04/19 13:41:37 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -16,7 +16,6 @@
 #include "lobject.h"
 #include "lopcodes.h"
 #include "lparser.h"
-#include "lstring.h"
 
 
 void luaK_error (LexState *ls, const char *msg) {
@@ -148,11 +147,6 @@ void luaK_setcallreturns (FuncState *fs, int nresults) {
 }
 
 
-static void assertglobal (FuncState *fs, int index) {
-  luaS_assertglobal(fs->L, fs->f->kstr[index]);
-}
-
-
 static int discharge (FuncState *fs, expdesc *var) {
   switch (var->k) {
     case VLOCAL:
@@ -160,7 +154,6 @@ static int discharge (FuncState *fs, expdesc *var) {
       break;
     case VGLOBAL:
       luaK_code1(fs, OP_GETGLOBAL, var->u.index);
-      assertglobal(fs, var->u.index);  /* make sure that there is a global */
       break;
     case VINDEXED:
       luaK_code0(fs, OP_GETTABLE);
@@ -190,7 +183,6 @@ void luaK_storevar (LexState *ls, const expdesc *var) {
       break;
     case VGLOBAL:
       luaK_code1(fs, OP_SETGLOBAL, var->u.index);
-      assertglobal(fs, var->u.index);  /* make sure that there is a global */
       break;
     case VINDEXED:  /* table is at top-3; pop 3 elements after operation */
       luaK_code2(fs, OP_SETTABLE, 3, 3);

@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.h,v 1.6 2000/03/03 14:58:26 roberto Exp roberto $
+** $Id: lbuiltin.h,v 1.7 2000/04/17 19:23:12 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -20,17 +20,14 @@ void luaB_dostring (lua_State *L);
 void luaB_error (lua_State *L);
 void luaB_foreach (lua_State *L);
 void luaB_foreachi (lua_State *L);
-void luaB_foreachvar (lua_State *L);
 void luaB_getglobal (lua_State *L);
 void luaB_getn (lua_State *L);
 void luaB_gettagmethod (lua_State *L);
+void luaB_globals (lua_State *L);
 void luaB_newtag (lua_State *L);
 void luaB_next (lua_State *L);
-void luaB_nextvar (lua_State *L);
 void luaB_print (lua_State *L);
-void luaB_rawgetglobal (lua_State *L);
 void luaB_rawgettable (lua_State *L);
-void luaB_rawsetglobal (lua_State *L);
 void luaB_rawsettable (lua_State *L);
 void luaB_setglobal (lua_State *L);
 void luaB_settag (lua_State *L);

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.24 2000/01/13 16:30:47 roberto Exp roberto $
+** $Id: lstate.c,v 1.25 2000/03/31 16:28:45 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -18,6 +18,7 @@
 #include "lref.h"
 #include "lstate.h"
 #include "lstring.h"
+#include "ltable.h"
 #include "ltm.h"
 
 
@@ -35,7 +36,6 @@ static lua_State *newstate_aux (int stacksize, int put_builtin) {
   L->numCblocks = 0;
   L->rootproto = NULL;
   L->rootcl = NULL;
-  L->rootglobal = NULL;
   L->roottable = NULL;
   L->IMtable = NULL;
   L->refArray = NULL;
@@ -47,6 +47,7 @@ static lua_State *newstate_aux (int stacksize, int put_builtin) {
   L->callhook = NULL;
   L->linehook = NULL;
   L->allowhooks = 1;
+  L->gt = luaH_new(L, 10);
   luaD_init(L, stacksize);
   luaS_init(L);
   luaX_init(L);
@@ -87,7 +88,6 @@ void lua_close (lua_State *L) {
   luaC_collect(L, 1);  /* collect all elements */
   LUA_ASSERT(L, L->rootproto == NULL, "list should be empty");
   LUA_ASSERT(L, L->rootcl == NULL, "list should be empty");
-  LUA_ASSERT(L, L->rootglobal == NULL, "list should be empty");
   LUA_ASSERT(L, L->roottable == NULL, "list should be empty");
   luaS_freeall(L);
   luaM_free(L, L->stack);
