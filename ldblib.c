@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.66 2002/08/06 18:01:50 roberto Exp roberto $
+** $Id: ldblib.c,v 1.67 2002/08/12 17:23:12 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -155,7 +155,7 @@ static int sethook (lua_State *L) {
     lua_Number count = luaL_opt_number(L, 3, 0);
     luaL_check_type(L, 1, LUA_TFUNCTION);
     luaL_arg_check(L, count <= LUA_MAXCOUNT, 2, "count too large (>= 2^24)");
-    lua_sethook(L, hookf, makemask(smask, count));
+    lua_sethook(L, hookf, makemask(smask, (int)count));
   }
   lua_pushlightuserdata(L, (void *)&KEY_HOOK);
   lua_pushvalue(L, 1);
