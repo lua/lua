@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.3 2004/05/31 18:51:50 roberto Exp roberto $
+** $Id: lcode.c,v 2.4 2004/06/29 18:49:02 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -195,7 +195,7 @@ void luaK_reserveregs (FuncState *fs, int n) {
 
 
 static void freereg (FuncState *fs, int reg) {
-  if (reg >= fs->nactvar && reg < MAXSTACK) {
+  if (!ISK(reg) && reg >= fs->nactvar) {
     fs->freereg--;
     lua_assert(reg == fs->freereg);
   }
