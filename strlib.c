@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.25 1996/08/01 14:55:33 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.26 1996/08/05 20:55:24 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -178,20 +178,25 @@ static void str_ascii (void)
 #define ESC	'%'
 #define SPECIALS  "^$*?.([%"
 
+static char *bracket_end (char *p)
+{
+  return (*p == 0) ? NULL : strchr((*p=='^') ? p+2 : p+1, ']');
+}
+
 char *item_end (char *p)
 {
-  switch (*p) {
-    case '\0': return p;
+  switch (*p++) {
+    case '\0': return p-1;
     case ESC:
-      if (*(p+1) == 0) lua_error("incorrect pattern");
-      return p+2;
+      if (*p == 0) lua_error("incorrect pattern");
+      return p+1;
     case '[': {
-      char *end = (*(p+1) == 0) ? NULL : strchr(p+2, ']');
+      char *end = bracket_end(p);
       if (end == NULL) lua_error("incorrect pattern");
       return end+1;
     }
     default:
-      return p+1;
+      return p;
   }
 }
 
@@ -219,7 +224,7 @@ int singlematch (int c, char *p)
     case '.': return 1;
     case ESC: return matchclass(c, *(p+1));
     case '[': {
-      char *end = strchr(p+2, ']');
+      char *end = bracket_end(p+1);
       int sig = *(p+1) == '^' ? (p++, 0) : 1;
       while (++p < end) {
         if (*p == ESC) {
