@@ -208,3 +208,8 @@ Fri Sep 22 15:12:37 EST 2000
 >> `read("*w")' should return nil at EOF
 (by roberto; since 4.0b)
 
+** lvm.c
+Mon Sep 25 11:47:48 EST 2000
+>> lua_gettable does not get key from stack top
+(by Philip Yi; since 4.0b)
+

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.41 2000/09/11 19:42:57 roberto Exp roberto $
+** $Id: ltests.c,v 1.42 2000/09/14 14:09:31 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -409,6 +409,12 @@ static int testC (lua_State *L) {
     }
     else if EQ("insert") {
       lua_insert(L, getnum);
+    }
+    else if EQ("gettable") {
+      lua_gettable(L, getnum);
+    }
+    else if EQ("settable") {
+      lua_settable(L, getnum);
     }
     else if EQ("next") {
       lua_next(L, -2);

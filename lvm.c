@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.135 2000/09/11 17:38:42 roberto Exp roberto $
+** $Id: lvm.c,v 1.136 2000/09/20 17:57:08 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -120,7 +120,7 @@ const TObject *luaV_gettable (lua_State *L, StkId t) {
       ((tg = hvalue(t)->htag) == TAG_TABLE ||  /* with default tag? */
         ttype(luaT_getim(L, tg, IM_GETTABLE)) == TAG_NIL)) { /* or no TM? */
     /* do a primitive get */
-    const TObject *h = luaH_get(L, hvalue(t), t+1);
+    const TObject *h = luaH_get(L, hvalue(t), L->top-1);
     /* result is no nil or there is no `index' tag method? */
     if (ttype(h) != TAG_NIL ||
         (ttype(im=luaT_getim(L, tg, IM_INDEX)) == TAG_NIL))
