@@ -1,4 +1,4 @@
-# $Id: makefile,v 1.14 1995/10/17 14:12:45 roberto Exp $
+# $Id: makefile,v 1.15 1995/10/17 18:16:58 roberto Exp roberto $
 
 #configuration
 
@@ -15,31 +15,28 @@ AR = ar
 ARFLAGS	= rvl
 
 # Aplication modules
-LUAMOD =	\
-	parser 	\
-	lex	\
-	opcode	\
-	hash	\
-	table	\
-	inout	\
-	tree    \
-	fallback\
-	mem	\
-	func
+LUAOBJS = \
+	parser.o \
+	lex.o \
+	opcode.o \
+	hash.o \
+	table.o \
+	inout.o \
+	tree.o \
+	fallback.o \
+	mem.o \
+	func.o
 
-LIBMOD = 	\
-	iolib	\
-	strlib	\
-	mathlib
+LIBOBJS = 	\
+	iolib.o \
+	mathlib.o \
+	strlib.o
 
-LUAOBJS	= $(LUAMOD:%=%.o)
-
-LIBOBJS	= $(LIBMOD:%=%.o)
 
 lua : lua.o lua.a lualib.a
 	$(CC) $(CFLAGS) -o $@ lua.o lua.a lualib.a -lm
 
-lua.a : parser.c $(LUAOBJS)
+lua.a : parser.o $(LUAOBJS)
 	$(AR) $(ARFLAGS) $@  $?
 	ranlib lua.a
 
@@ -49,9 +46,6 @@ lualib.a : $(LIBOBJS)
 
 liblua.so.1.0 : lua.o
 	ld -o liblua.so.1.0 $(LUAOBJS)
-
-%.o	: %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
 
 
 parser.c : lua.stx
