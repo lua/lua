@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.41 2002/03/18 18:16:16 roberto Exp roberto $
+** $Id: llimits.h,v 1.42 2002/03/26 20:46:10 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -103,7 +103,7 @@ typedef unsigned long Instruction;
 
 /* maximum depth for calls */
 #ifndef LUA_MAXCALLS
-#define LUA_MAXCALLS        2048
+#define LUA_MAXCALLS        4096
 #endif
 
 
