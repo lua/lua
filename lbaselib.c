@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.12 2000/10/20 16:39:03 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.13 2000/10/20 16:57:42 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -138,8 +138,7 @@ static int luaB_settag (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
   lua_pushvalue(L, 1);  /* push table */
   lua_settag(L, luaL_check_int(L, 2));
-  lua_pop(L, 1);  /* remove second argument */
-  return 1;  /* return first argument */
+  return 1;  /* return table */
 }
 
 static int luaB_newtag (lua_State *L) {
