@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.25 1996/04/25 14:10:00 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.26 1997/02/26 17:38:41 roberto Unstable roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -132,7 +132,7 @@ int luaI_ref (Object *object, int lock)
 {
   int i;
   int oldSize;
-  if (tag(object) == LUA_T_NIL)
+  if (ttype(object) == LUA_T_NIL)
     return -1;   /* special ref for nil */
   for (i=0; i<refSize; i++)
     if (refArray[i].status == FREE)
@@ -223,7 +223,7 @@ int lua_newtag (char *t)
   else
     lua_error("invalid type for new tag");
   for (i=0; i<FB_N; i++)
-    luaI_IMtable[last_tag-BASE_TAG].int_method[i].tag = LUA_T_NIL;
+    luaI_IMtable[last_tag-BASE_TAG].int_method[i].ttype = LUA_T_NIL;
   return last_tag;
 }
 
@@ -241,9 +241,9 @@ static void checktag (int tag)
 void luaI_settag (int tag, Object *o)
 {
   checktag(tag);
-  if (tag(o) != luaI_IMtable[tag-BASE_TAG].tp)
+  if (ttype(o) != luaI_IMtable[tag-BASE_TAG].tp)
     lua_error("Tag is not compatible with this type");
-  if (o->tag == LUA_T_ARRAY)
+  if (o->ttype == LUA_T_ARRAY)
     o->value.a->htag = tag;
   else  /* must be userdata */
     o->value.ts->tag = tag;
@@ -251,7 +251,7 @@ void luaI_settag (int tag, Object *o)
 
 int luaI_tag (Object *o)
 {
-  lua_Type t = tag(o);
+  lua_Type t = ttype(o);
   if (t == LUA_T_USERDATA)
     return o->value.ts->tag;
   else if (t == LUA_T_ARRAY)
@@ -265,7 +265,7 @@ Object *luaI_getim (int tag, int event)
     return &luaI_fallBacks[event].function;
   else if (validtag(tag)) {
     Object *func = &luaI_IMtable[tag-BASE_TAG].int_method[event];
-    if (func->tag == LUA_T_NIL)
+    if (func->ttype == LUA_T_NIL)
       return NULL;
     else
       return func;

@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.26 1997/02/20 15:51:14 roberto Exp roberto $
+** $Id: opcode.h,v 3.27 1997/03/06 17:30:55 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -121,13 +121,13 @@ typedef union
 
 typedef struct Object
 {
- lua_Type  tag;
+ lua_Type ttype;
  Value value;
 } Object;
 
 
 /* Macros to access structure members */
-#define tag(o)		((o)->tag)
+#define ttype(o)	((o)->ttype)
 #define nvalue(o)	((o)->value.n)
 #define svalue(o)	((o)->value.ts->str)
 #define tsvalue(o)	((o)->value.ts)
@@ -136,7 +136,7 @@ typedef struct Object
 
 /* Macros to access symbol table */
 #define s_object(i)	(lua_table[i].object)
-#define s_tag(i)	(tag(&s_object(i)))
+#define s_ttype(i)	(ttype(&s_object(i)))
 #define s_nvalue(i)	(nvalue(&s_object(i)))
 #define s_svalue(i)	(svalue(&s_object(i)))
 #define s_tsvalue(i)	(tsvalue(&s_object(i)))

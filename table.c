@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.58 1996/11/01 12:47:45 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.59 1997/02/26 17:38:41 roberto Unstable roberto $";
 
 #include "mem.h"
 #include "opcode.h"
@@ -64,7 +64,7 @@ Word luaI_findsymbol (TaggedString *t)
                       symbolEM, MAX_WORD);
   t->varindex = lua_ntable;
   lua_table[lua_ntable].varname = t;
-  s_tag(lua_ntable) = LUA_T_NIL;
+  s_ttype(lua_ntable) = LUA_T_NIL;
   lua_ntable++;
  }
  return t->varindex;
@@ -128,11 +128,11 @@ static char *lua_travsymbol (int (*fn)(Object *))
 */
 int lua_markobject (Object *o)
 {/* if already marked, does not change mark value */
- if (tag(o) == LUA_T_STRING && !tsvalue(o)->marked)
+ if (ttype(o) == LUA_T_STRING && !tsvalue(o)->marked)
    tsvalue(o)->marked = 1;
- else if (tag(o) == LUA_T_ARRAY)
+ else if (ttype(o) == LUA_T_ARRAY)
    lua_hashmark (avalue(o));
- else if ((o->tag == LUA_T_FUNCTION || o->tag == LUA_T_MARK)
+ else if ((o->ttype == LUA_T_FUNCTION || o->ttype == LUA_T_MARK)
            && !o->value.tf->marked)
    o->value.tf->marked = 1;
  return 0;
@@ -143,7 +143,7 @@ int lua_markobject (Object *o)
 */
 int luaI_ismarked (Object *o)
 {
-  switch (o->tag)
+  switch (o->ttype)
   {
    case LUA_T_STRING:
      return o->value.ts->marked;
@@ -207,7 +207,7 @@ void luaI_nextvar (void)
  }
  else
    next = luaI_findsymbolbyname(lua_getstring(o)) + 1;
- while (next < lua_ntable && s_tag(next) == LUA_T_NIL) next++;
+ while (next < lua_ntable && s_ttype(next) == LUA_T_NIL) next++;
  if (next < lua_ntable)
  {
   lua_pushstring(lua_table[next].varname->str);
@@ -219,14 +219,15 @@ void luaI_nextvar (void)
 static Object *functofind;
 static int checkfunc (Object *o)
 {
-  if (o->tag == LUA_T_FUNCTION)
+  if (o->ttype == LUA_T_FUNCTION)
     return
-       ((functofind->tag == LUA_T_FUNCTION || functofind->tag == LUA_T_MARK)
+       ((functofind->ttype == LUA_T_FUNCTION || functofind->ttype == LUA_T_MARK)
             && (functofind->value.tf == o->value.tf));
-  if (o->tag == LUA_T_CFUNCTION)
+  if (o->ttype == LUA_T_CFUNCTION)
     return
-       ((functofind->tag == LUA_T_CFUNCTION || functofind->tag == LUA_T_CMARK)
-            && (functofind->value.f == o->value.f));
+       ((functofind->ttype == LUA_T_CFUNCTION ||
+         functofind->ttype == LUA_T_CMARK) &&
+         (functofind->value.f == o->value.f));
   return 0;
 }
 

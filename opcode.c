@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.82 1997/02/26 17:38:41 roberto Unstable roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.83 1997/03/06 17:30:55 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -20,8 +20,8 @@ char *rcs_opcode="$Id: opcode.c,v 3.82 1997/02/26 17:38:41 roberto Unstable robe
 #include "fallback.h"
 #include "undump.h"
 
-#define tonumber(o) ((tag(o) != LUA_T_NUMBER) && (lua_tonumber(o) != 0))
-#define tostring(o) ((tag(o) != LUA_T_STRING) && (lua_tostring(o) != 0))
+#define tonumber(o) ((ttype(o) != LUA_T_NUMBER) && (lua_tonumber(o) != 0))
+#define tostring(o) ((ttype(o) != LUA_T_STRING) && (lua_tostring(o) != 0))
 
 
 #define STACK_SIZE 	128
@@ -138,12 +138,12 @@ static int lua_tonumber (Object *obj)
 {
  float t;
  char c;
- if (tag(obj) != LUA_T_STRING)
+ if (ttype(obj) != LUA_T_STRING)
    return 1;
  else if (sscanf(svalue(obj), "%f %c",&t, &c) == 1)
  {
    nvalue(obj) = t;
-   tag(obj) = LUA_T_NUMBER;
+   ttype(obj) = LUA_T_NUMBER;
    return 0;
  }
  else
@@ -152,12 +152,12 @@ static int lua_tonumber (Object *obj)
 
 
 /*
-** Convert, if possible, to a string tag
+** Convert, if possible, to a string ttype
 ** Return 0 in success or not 0 on error.
 */
 static int lua_tostring (Object *obj)
 {
-  if (tag(obj) != LUA_T_NUMBER)
+  if (ttype(obj) != LUA_T_NUMBER)
     return 1;
   else {
     char s[60];
@@ -168,7 +168,7 @@ static int lua_tostring (Object *obj)
     else
       sprintf (s, "%g", nvalue(obj));
     tsvalue(obj) = lua_createstring(s);
-    tag(obj) = LUA_T_STRING;
+    ttype(obj) = LUA_T_STRING;
     return 0;
   }
 }
@@ -182,7 +182,7 @@ static void adjust_top (StkId newtop)
   Object *nt;
   lua_checkstack(stack+newtop);
   nt = stack+newtop;  /* warning: previous call may change stack */
-  while (top < nt) tag(top++) = LUA_T_NIL;
+  while (top < nt) ttype(top++) = LUA_T_NIL;
   top = nt;  /* top could be bigger than newtop */
 }
 
@@ -289,14 +289,14 @@ static void do_call (StkId base, int nResults)
   StkId firstResult;
   Object *func = stack+base-1;
   int i;
-  if (tag(func) == LUA_T_CFUNCTION)
+  if (ttype(func) == LUA_T_CFUNCTION)
   {
-    tag(func) = LUA_T_CMARK;
+    ttype(func) = LUA_T_CMARK;
     firstResult = callC(fvalue(func), base);
   }
-  else if (tag(func) == LUA_T_FUNCTION)
+  else if (ttype(func) == LUA_T_FUNCTION)
   {
-    tag(func) = LUA_T_MARK;
+    ttype(func) = LUA_T_MARK;
     firstResult = lua_execute(func->value.tf->code, base);
   }
   else
@@ -327,9 +327,9 @@ static void pushsubscript (void)
 {
   int tg = luaI_tag(top-2);
   Object *im = luaI_getim(tg, FB_GETTABLE);
-  if (tag(top-2) == LUA_T_ARRAY && im == NULL) {
+  if (ttype(top-2) == LUA_T_ARRAY && im == NULL) {
       Object *h = lua_hashget(avalue(top-2), top-1);
-      if (h != NULL && tag(h) != LUA_T_NIL) {
+      if (h != NULL && ttype(h) != LUA_T_NIL) {
         --top;
         *(top-1) = *h;
       }
@@ -338,7 +338,7 @@ static void pushsubscript (void)
         callIM(im, 2, 1);
       else {
         --top;
-        tag(top-1) = LUA_T_NIL;
+        ttype(top-1) = LUA_T_NIL;
       }
   }
   else {  /* object is not a table, and/or has a specific "gettable" method */
@@ -353,7 +353,7 @@ static void pushsubscript (void)
 lua_Object lua_basicindex (void)
 {
   adjustC(2);
-  if (tag(top-2) != LUA_T_ARRAY)
+  if (ttype(top-2) != LUA_T_ARRAY)
     lua_error("indexed expression not a table in basic indexing");
   else {
     Object *h = lua_hashget(avalue(top-2), top-1);
@@ -361,7 +361,7 @@ lua_Object lua_basicindex (void)
     if (h != NULL)
       *(top-1) = *h;
     else
-      tag(top-1) = LUA_T_NIL;
+      ttype(top-1) = LUA_T_NIL;
   }
   CLS_current.base++;  /* incorporate object in the stack */
   return (Ref(top-1));
@@ -377,7 +377,7 @@ lua_Object lua_basicindex (void)
 static void storesubscript (Object *t, int mode)
 {
   Object *im = (mode == 0) ? NULL : luaI_getim(luaI_tag(t), FB_SETTABLE);
-  if (tag(t) == LUA_T_ARRAY && im == NULL) {
+  if (ttype(t) == LUA_T_ARRAY && im == NULL) {
     Object *h = lua_hashdefine(avalue(t), t+1);
     *h = *(top-1);
     top -= (mode == 2) ? 1 : 3;
@@ -403,9 +403,9 @@ static void getglobal (Word n)
 {
   *top = lua_table[n].object;
   incr_top;
-  if (tag(top-1) == LUA_T_NIL)
+  if (ttype(top-1) == LUA_T_NIL)
   { /* must call getglobal fallback */
-    tag(top-1) = LUA_T_STRING;
+    ttype(top-1) = LUA_T_STRING;
     tsvalue(top-1) = lua_table[n].varname;
     callFB(FB_GETGLOBAL);
   }
@@ -452,7 +452,7 @@ lua_Function lua_stackedfunction (int level)
 {
   StkId i;
   for (i = (top-1)-stack; i>=0; i--)
-    if (stack[i].tag == LUA_T_MARK || stack[i].tag == LUA_T_CMARK)
+    if (stack[i].ttype == LUA_T_MARK || stack[i].ttype == LUA_T_CMARK)
       if (level-- == 0)
         return Ref(stack+i);
   return LUA_NOOBJECT;
@@ -462,7 +462,7 @@ lua_Function lua_stackedfunction (int level)
 int lua_currentline (lua_Function func)
 {
   Object *f = Address(func);
-  return (f+1 < top && (f+1)->tag == LUA_T_LINE) ? (f+1)->value.i : -1;
+  return (f+1 < top && (f+1)->ttype == LUA_T_LINE) ? (f+1)->value.i : -1;
 }
 
 
@@ -512,7 +512,7 @@ static void do_unprotectedrun (lua_CFunction f, int nParams, int nResults)
 {
   adjustC(nParams);
   open_stack((top-stack)-CLS_current.base);
-  stack[CLS_current.base].tag = LUA_T_CFUNCTION;
+  stack[CLS_current.base].ttype = LUA_T_CFUNCTION;
   stack[CLS_current.base].value.f = f;
   do_callinc(nResults);
 }
@@ -546,7 +546,7 @@ int luaI_dorun (TFunc *tf)
 {
   int status;
   adjustC(1);  /* one slot for the pseudo-function */
-  stack[CLS_current.base].tag = LUA_T_FUNCTION;
+  stack[CLS_current.base].ttype = LUA_T_FUNCTION;
   stack[CLS_current.base].value.tf = tf;
   status = do_protectedrun(MULT_RET);
   return status;
@@ -731,7 +731,7 @@ lua_Object lua_createtable (void)
 {
   adjustC(0);
   avalue(top) = lua_createarray(0);
-  tag(top) = LUA_T_ARRAY;
+  ttype(top) = LUA_T_ARRAY;
   incr_top;
   CLS_current.base++;  /* incorporate object in the stack */
   return Ref(top-1);
@@ -751,17 +751,17 @@ lua_Object lua_getparam (int number)
 
 int lua_isnil (lua_Object o)
 {
-  return (o!= LUA_NOOBJECT) && (tag(Address(o)) == LUA_T_NIL);
+  return (o!= LUA_NOOBJECT) && (ttype(Address(o)) == LUA_T_NIL);
 }
 
 int lua_istable (lua_Object o)
 {
-  return (o!= LUA_NOOBJECT) && (tag(Address(o)) == LUA_T_ARRAY);
+  return (o!= LUA_NOOBJECT) && (ttype(Address(o)) == LUA_T_ARRAY);
 }
 
 int lua_isuserdata (lua_Object o)
 {
-  return (o!= LUA_NOOBJECT) && (tag(Address(o)) == LUA_T_USERDATA);
+  return (o!= LUA_NOOBJECT) && (ttype(Address(o)) == LUA_T_USERDATA);
 }
 
 int lua_iscfunction (lua_Object o)
@@ -810,14 +810,14 @@ char *lua_getstring (lua_Object object)
 
 void *lua_getbinarydata (lua_Object object)
 {
-  if (object == LUA_NOOBJECT || tag(Address(object)) != LUA_T_USERDATA)
+  if (object == LUA_NOOBJECT || ttype(Address(object)) != LUA_T_USERDATA)
     lua_error("getbinarydata: object is not binary data");
   return svalue(Address(object));
 }
 
 int lua_getbindatasize (lua_Object object)
 {
-  if (object == LUA_NOOBJECT || tag(Address(object)) != LUA_T_USERDATA)
+  if (object == LUA_NOOBJECT || ttype(Address(object)) != LUA_T_USERDATA)
     return 0;
   else return (Address(object))->value.ts->size;
 }
@@ -827,8 +827,8 @@ int lua_getbindatasize (lua_Object object)
 */
 lua_CFunction lua_getcfunction (lua_Object object)
 {
- if (object == LUA_NOOBJECT || ((tag(Address(object)) != LUA_T_CFUNCTION) &&
-                                (tag(Address(object)) != LUA_T_CMARK)))
+ if (object == LUA_NOOBJECT || ((ttype(Address(object)) != LUA_T_CFUNCTION) &&
+                                (ttype(Address(object)) != LUA_T_CMARK)))
    return NULL;
  else return (fvalue(Address(object)));
 }
@@ -889,30 +889,30 @@ void lua_storeglobal (char *name)
 */
 void lua_pushnil (void)
 {
- tag(top) = LUA_T_NIL;
+ ttype(top) = LUA_T_NIL;
  incr_top;
 }
 
 /*
-** Push an object (tag=number) to stack.
+** Push an object (ttype=number) to stack.
 */
 void lua_pushnumber (real n)
 {
- tag(top) = LUA_T_NUMBER; nvalue(top) = n;
+ ttype(top) = LUA_T_NUMBER; nvalue(top) = n;
  incr_top;
 }
 
 /*
-** Push an object (tag=string) to stack.
+** Push an object (ttype=string) to stack.
 */
 void lua_pushstring (char *s)
 {
   if (s == NULL)
-    tag(top) = LUA_T_NIL;
+    ttype(top) = LUA_T_NIL;
   else
   {
     tsvalue(top) = lua_createstring(s);
-    tag(top) = LUA_T_STRING;
+    ttype(top) = LUA_T_STRING;
   }
   incr_top;
 }
@@ -920,27 +920,27 @@ void lua_pushstring (char *s)
 void lua_pushliteral(char *s) { lua_pushstring(s); }*/
 
 /*
-** Push an object (tag=cfunction) to stack.
+** Push an object (ttype=cfunction) to stack.
 */
 void lua_pushcfunction (lua_CFunction fn)
 {
- tag(top) = LUA_T_CFUNCTION; fvalue(top) = fn;
+ ttype(top) = LUA_T_CFUNCTION; fvalue(top) = fn;
  incr_top;
 }
 
 void lua_pushbinarydata (void *buff, int size, int tag)
 {
   if (buff == NULL)
-    tag(top) = LUA_T_NIL;
+    ttype(top) = LUA_T_NIL;
   else {
     tsvalue(top) = luaI_createuserdata(buff, size, tag);
-    tag(top) = LUA_T_USERDATA;
+    ttype(top) = LUA_T_USERDATA;
   }
   incr_top;
 }
 
 /*
-** Push an object (tag=userdata) to stack.
+** Push an object (ttype=userdata) to stack.
 */
 void lua_pushusertag (void *u, int tag)
 {
@@ -966,8 +966,8 @@ void lua_pushobject (lua_Object o)
   if (o == LUA_NOOBJECT)
     lua_error("attempt to push a NOOBJECT");
   *top = *Address(o);
-  if (tag(top) == LUA_T_MARK) tag(top) = LUA_T_FUNCTION;
-  else if (tag(top) == LUA_T_CMARK) tag(top) = LUA_T_CFUNCTION;
+  if (ttype(top) == LUA_T_MARK) ttype(top) = LUA_T_FUNCTION;
+  else if (ttype(top) == LUA_T_CMARK) ttype(top) = LUA_T_CFUNCTION;
   incr_top;
 }
 
@@ -991,13 +991,13 @@ static void call_arith (char *op)
   callFB(FB_ARITH);
 }
 
-static void comparison (lua_Type tag_less, lua_Type tag_equal, 
-                        lua_Type tag_great, char *op)
+static void comparison (lua_Type ttype_less, lua_Type ttype_equal, 
+                        lua_Type ttype_great, char *op)
 {
   Object *l = top-2;
   Object *r = top-1;
   int result;
-  if (tag(l) == LUA_T_NUMBER && tag(r) == LUA_T_NUMBER)
+  if (ttype(l) == LUA_T_NUMBER && ttype(r) == LUA_T_NUMBER)
     result = (nvalue(l) < nvalue(r)) ? -1 : (nvalue(l) == nvalue(r)) ? 0 : 1;
   else if (tostring(l) || tostring(r))
   {
@@ -1009,7 +1009,8 @@ static void comparison (lua_Type tag_less, lua_Type tag_equal,
     result = strcmp(svalue(l), svalue(r));
   top--;
   nvalue(top-1) = 1;
-  tag(top-1) = (result < 0) ? tag_less : (result == 0) ? tag_equal : tag_great;
+  ttype(top-1) = (result < 0) ? ttype_less :
+                                (result == 0) ? ttype_equal : ttype_great;
 }
 
 
@@ -1021,18 +1022,18 @@ static void adjust_varargs (StkId first_extra_arg)
   int i;
   if (nvararg < 0) nvararg = 0;
   avalue(&arg)  = lua_createarray(nvararg+1);  /* +1 for field 'n' */
-  tag(&arg) = LUA_T_ARRAY;
+  ttype(&arg) = LUA_T_ARRAY;
   for (i=0; i<nvararg; i++) {
     Object index;
-    tag(&index) = LUA_T_NUMBER;
+    ttype(&index) = LUA_T_NUMBER;
     nvalue(&index) = i+1;
     *(lua_hashdefine(avalue(&arg), &index)) = *(firstelem+i);
   }
   /* store counter in field "n" */ {
     Object index, extra;
-    tag(&index) = LUA_T_STRING;
+    ttype(&index) = LUA_T_STRING;
     tsvalue(&index) = lua_createstring("n");
-    tag(&extra) = LUA_T_NUMBER;
+    ttype(&extra) = LUA_T_NUMBER;
     nvalue(&extra) = nvararg;
     *(lua_hashdefine(avalue(&arg), &index)) = extra;
   }
@@ -1056,22 +1057,22 @@ static StkId lua_execute (Byte *pc, StkId base)
   OpCode opcode;
   switch (opcode = (OpCode)*pc++)
   {
-   case PUSHNIL: tag(top) = LUA_T_NIL; incr_top; break;
+   case PUSHNIL: ttype(top) = LUA_T_NIL; incr_top; break;
 
    case PUSH0: case PUSH1: case PUSH2:
-     tag(top) = LUA_T_NUMBER;
+     ttype(top) = LUA_T_NUMBER;
      nvalue(top) = opcode-PUSH0;
      incr_top;
      break;
 
    case PUSHBYTE: 
-     tag(top) = LUA_T_NUMBER; nvalue(top) = *pc++; incr_top; break;
+     ttype(top) = LUA_T_NUMBER; nvalue(top) = *pc++; incr_top; break;
 
    case PUSHWORD:
    {
     Word w;
     get_word(w,pc);
-    tag(top) = LUA_T_NUMBER; nvalue(top) = w;
+    ttype(top) = LUA_T_NUMBER; nvalue(top) = w;
     incr_top;
    }
    break;
@@ -1080,7 +1081,7 @@ static StkId lua_execute (Byte *pc, StkId base)
    {
     real num;
     get_float(num,pc);
-    tag(top) = LUA_T_NUMBER; nvalue(top) = num;
+    ttype(top) = LUA_T_NUMBER; nvalue(top) = num;
     incr_top;
    }
    break;
@@ -1089,7 +1090,7 @@ static StkId lua_execute (Byte *pc, StkId base)
    {
     Word w;
     get_word(w,pc);
-    tag(top) = LUA_T_STRING; tsvalue(top) = lua_constant[w];
+    ttype(top) = LUA_T_STRING; tsvalue(top) = lua_constant[w];
     incr_top;
    }
    break;
@@ -1099,7 +1100,7 @@ static StkId lua_execute (Byte *pc, StkId base)
     TFunc *f;
     get_code(f,pc);
     luaI_insertfunction(f);  /* may take part in GC */
-    top->tag = LUA_T_FUNCTION;
+    top->ttype = LUA_T_FUNCTION;
     top->value.tf = f;
     incr_top;
    }
@@ -1130,7 +1131,7 @@ static StkId lua_execute (Byte *pc, StkId base)
      Object receiver = *(top-1);
      Word w;
      get_word(w,pc);
-     tag(top) = LUA_T_STRING; tsvalue(top) = lua_constant[w];
+     ttype(top) = LUA_T_STRING; tsvalue(top) = lua_constant[w];
      incr_top;
      pushsubscript();
      *top = receiver;
@@ -1176,7 +1177,7 @@ static StkId lua_execute (Byte *pc, StkId base)
     arr = top-n-1;
     while (n)
     {
-     tag(top) = LUA_T_NUMBER; nvalue(top) = n+m;
+     ttype(top) = LUA_T_NUMBER; nvalue(top) = n+m;
      *(lua_hashdefine (avalue(arr), top)) = *(top-1);
      top--;
      n--;
@@ -1192,7 +1193,7 @@ static StkId lua_execute (Byte *pc, StkId base)
     {
      Word w;
      get_word(w,pc);
-     tag(top) = LUA_T_STRING; tsvalue(top) = lua_constant[w];
+     ttype(top) = LUA_T_STRING; tsvalue(top) = lua_constant[w];
      *(lua_hashdefine (avalue(arr), top)) = *(top-1);
      top--;
      n--;
@@ -1227,7 +1228,7 @@ static StkId lua_execute (Byte *pc, StkId base)
     Word size;
     get_word(size,pc);
     avalue(top) = lua_createarray(size);
-    tag(top) = LUA_T_ARRAY;
+    ttype(top) = LUA_T_ARRAY;
     incr_top;
    }
    break;
@@ -1236,7 +1237,7 @@ static StkId lua_execute (Byte *pc, StkId base)
    {
     int res = lua_equalObj(top-2, top-1);
     --top;
-    tag(top-1) = res ? LUA_T_NUMBER : LUA_T_NIL;
+    ttype(top-1) = res ? LUA_T_NUMBER : LUA_T_NIL;
     nvalue(top-1) = 1;
    }
    break;
@@ -1334,7 +1335,7 @@ static StkId lua_execute (Byte *pc, StkId base)
    case MINUSOP:
     if (tonumber(top-1))
     {
-      tag(top) = LUA_T_NIL;
+      ttype(top) = LUA_T_NIL;
       incr_top;
       call_arith("unm");
     }
@@ -1343,7 +1344,7 @@ static StkId lua_execute (Byte *pc, StkId base)
    break;
 
    case NOTOP:
-    tag(top-1) = (tag(top-1) == LUA_T_NIL) ? LUA_T_NUMBER : LUA_T_NIL;
+    ttype(top-1) = (ttype(top-1) == LUA_T_NIL) ? LUA_T_NUMBER : LUA_T_NIL;
     nvalue(top-1) = 1;
    break;
 
@@ -1351,7 +1352,7 @@ static StkId lua_execute (Byte *pc, StkId base)
    {
     Word w;
     get_word(w,pc);
-    if (tag(top-1) != LUA_T_NIL) pc += w;
+    if (ttype(top-1) != LUA_T_NIL) pc += w;
    }
    break;
 
@@ -1359,7 +1360,7 @@ static StkId lua_execute (Byte *pc, StkId base)
    {
     Word w;
     get_word(w,pc);
-    if (tag(top-1) == LUA_T_NIL) pc += w;
+    if (ttype(top-1) == LUA_T_NIL) pc += w;
    }
    break;
 
@@ -1384,7 +1385,7 @@ static StkId lua_execute (Byte *pc, StkId base)
     Word w;
     get_word(w,pc);
     top--;
-    if (tag(top) == LUA_T_NIL) pc += w;
+    if (ttype(top) == LUA_T_NIL) pc += w;
    }
    break;
 
@@ -1393,7 +1394,7 @@ static StkId lua_execute (Byte *pc, StkId base)
     Word w;
     get_word(w,pc);
     top--;
-    if (tag(top) == LUA_T_NIL) pc -= w;
+    if (ttype(top) == LUA_T_NIL) pc -= w;
    }
    break;
 
@@ -1418,12 +1419,12 @@ static StkId lua_execute (Byte *pc, StkId base)
    {
     Word line;
     get_word(line,pc);
-    if ((stack+base-1)->tag != LUA_T_LINE)
+    if ((stack+base-1)->ttype != LUA_T_LINE)
     {
       /* open space for LINE value */
       open_stack((top-stack)-base);
       base++;
-      (stack+base-1)->tag = LUA_T_LINE;
+      (stack+base-1)->ttype = LUA_T_LINE;
     }
     (stack+base-1)->value.i = line;
     if (lua_linehook)

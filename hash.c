@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.33 1997/02/11 11:35:05 roberto Exp roberto $";
+char *rcs_hash="$Id: hash.c,v 2.34 1997/02/26 17:38:41 roberto Unstable roberto $";
 
 
 #include "mem.h"
@@ -51,7 +51,7 @@ int luaI_redimension (int nhash)
 static int hashindex (Hash *t, Object *ref)		/* hash function */
 {
   long int h;
-  switch (tag(ref)) {
+  switch (ttype(ref)) {
     case LUA_T_NUMBER:
       h = (long int)nvalue(ref); break;
     case LUA_T_STRING: case LUA_T_USERDATA:
@@ -72,8 +72,8 @@ static int hashindex (Hash *t, Object *ref)		/* hash function */
 
 int lua_equalObj (Object *t1, Object *t2)
 {
-  if (tag(t1) != tag(t2)) return 0;
-  switch (tag(t1))
+  if (ttype(t1) != ttype(t2)) return 0;
+  switch (ttype(t1))
   {
     case LUA_T_NIL: return 1;
     case LUA_T_NUMBER: return nvalue(t1) == nvalue(t2);
@@ -90,7 +90,7 @@ int lua_equalObj (Object *t1, Object *t2)
 static int present (Hash *t, Object *ref)
 { 
  int h = hashindex(t, ref);
- while (tag(ref(node(t, h))) != LUA_T_NIL)
+ while (ttype(ref(node(t, h))) != LUA_T_NIL)
  {
   if (lua_equalObj(ref, ref(node(t, h))))
     return h;
@@ -108,7 +108,7 @@ static Node *hashnodecreate (int nhash)
  int i;
  Node *v = newvector (nhash, Node);
  for (i=0; i<nhash; i++)
-   tag(ref(&v[i])) = LUA_T_NIL;
+   ttype(ref(&v[i])) = LUA_T_NIL;
  return v;
 }
 
@@ -149,7 +149,7 @@ void lua_hashmark (Hash *h)
   for (i=0; i<nhash(h); i++)
   {
    Node *n = node(h,i);
-   if (tag(ref(n)) != LUA_T_NIL)
+   if (ttype(ref(n)) != LUA_T_NIL)
    {
     lua_markobject(&n->ref);
     lua_markobject(&n->val);
@@ -163,14 +163,14 @@ static void call_fallbacks (void)
 {
   Hash *curr_array;
   Object t;
-  tag(&t) = LUA_T_ARRAY;
+  ttype(&t) = LUA_T_ARRAY;
   for (curr_array = listhead; curr_array; curr_array = curr_array->next)
     if (markarray(curr_array) != 1)
     {
       avalue(&t) = curr_array;
       luaI_gcFB(&t);
     }
-  tag(&t) = LUA_T_NIL;
+  ttype(&t) = LUA_T_NIL;
   luaI_gcFB(&t);  /* end of list */
 }
 
@@ -235,7 +235,7 @@ static void rehash (Hash *t)
  for (i=0; i<nold; i++)
  {
   Node *n = vold+i;
-  if (tag(ref(n)) != LUA_T_NIL && tag(val(n)) != LUA_T_NIL)
+  if (ttype(ref(n)) != LUA_T_NIL && ttype(val(n)) != LUA_T_NIL)
    *node(t, present(t, ref(n))) = *n;  /* copy old node to new hahs */
  }
  luaI_free(vold);
@@ -248,7 +248,7 @@ static void rehash (Hash *t)
 Object *lua_hashget (Hash *t, Object *ref)
 {
  int h = present(t, ref);
- if (tag(ref(node(t, h))) != LUA_T_NIL) return val(node(t, h));
+ if (ttype(ref(node(t, h))) != LUA_T_NIL) return val(node(t, h));
  else return NULL;
 }
 
@@ -263,7 +263,7 @@ Object *lua_hashdefine (Hash *t, Object *ref)
  Node *n;
  h = present(t, ref);
  n = node(t, h);
- if (tag(ref(n)) == LUA_T_NIL)
+ if (ttype(ref(n)) == LUA_T_NIL)
  {
   nuse(t)++;
   if ((float)nuse(t) > (float)nhash(t)*REHASH_LIMIT)
@@ -273,7 +273,7 @@ Object *lua_hashdefine (Hash *t, Object *ref)
    n = node(t, h);
   }
   *ref(n) = *ref;
-  tag(val(n)) = LUA_T_NIL;
+  ttype(val(n)) = LUA_T_NIL;
  }
  return (val(n));
 }
@@ -289,7 +289,8 @@ static void hashnext (Hash *t, int i)
 {
  if (i >= nhash(t))
   return;
- while (tag(ref(node(t,i))) == LUA_T_NIL || tag(val(node(t,i))) == LUA_T_NIL)
+ while (ttype(ref(node(t,i))) == LUA_T_NIL ||
+        ttype(val(node(t,i))) == LUA_T_NIL)
  {
   if (++i >= nhash(t))
    return;

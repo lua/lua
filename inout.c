@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.43 1996/09/25 12:57:22 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.44 1997/02/26 17:38:41 roberto Unstable roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -368,10 +368,10 @@ void luaI_predefine (void)
   Word n;
   for (i=0; i<INTFUNCSIZE; i++) {
     n = luaI_findsymbolbyname(int_funcs[i].name);
-    s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = int_funcs[i].func;
+    s_ttype(n) = LUA_T_CFUNCTION; s_fvalue(n) = int_funcs[i].func;
   }
   n = luaI_findsymbolbyname("_VERSION_");
-  s_tag(n) = LUA_T_STRING; s_tsvalue(n) = lua_createstring(LUA_VERSION);
+  s_ttype(n) = LUA_T_STRING; s_tsvalue(n) = lua_createstring(LUA_VERSION);
 }
 
 

@@ -84,12 +84,12 @@ Long luaI_funccollector (void)
 void lua_funcinfo (lua_Object func, char **filename, int *linedefined)
 {
   Object *f = luaI_Address(func);
-  if (f->tag == LUA_T_MARK || f->tag == LUA_T_FUNCTION)
+  if (f->ttype == LUA_T_MARK || f->ttype == LUA_T_FUNCTION)
   {
     *filename = f->value.tf->fileName;
     *linedefined = f->value.tf->lineDefined;
   }
-  else if (f->tag == LUA_T_CMARK || f->tag == LUA_T_CFUNCTION)
+  else if (f->ttype == LUA_T_CMARK || f->ttype == LUA_T_CFUNCTION)
   {
     *filename = "(C)";
     *linedefined = -1;
