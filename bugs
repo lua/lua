@@ -102,3 +102,11 @@ Wed Jun 16 10:32:46 EST 1999
 the number of returns of a function.
 (since 3.1)
 
+
+
+--- Version 3.2
+
+** lmathlib.c
+Wed Aug 18 11:28:38 EST 1999
+>> random(0) and random(x,0) are wrong (0 is read as no argument!).
+(by Dave Bollinger; since 3.1)
