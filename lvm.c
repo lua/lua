@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.109 2000/05/25 19:02:21 roberto Exp roberto $
+** $Id: lvm.c,v 1.110 2000/05/30 19:00:31 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -483,13 +483,13 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
 
       case OP_SETMAP: {
         int n = GETARG_U(i);
-        StkId finaltop = top-2*(n+1);
+        StkId finaltop = top-2*n;
         Hash *arr = avalue(finaltop-1);
         L->top = finaltop;  /* final value of `top' (in case of errors) */
-        do {
+        for (; n; n--) {
           luaH_set(L, arr, top-2, top-1);
           top-=2;
-        } while (n--);
+        }
         break;
       }
 
@@ -625,23 +625,22 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
           lua_error(L, "`for' limit must be a number");
         if (tonumber(top-3))
           lua_error(L, "`for' initial value must be a number");
+        /* number of steps */
+        nvalue(top-2) = (nvalue(top-2)-nvalue(top-3))/nvalue(top-1);
         nvalue(top-3) -= nvalue(top-1);  /* to be undone by first FORLOOP */
         pc += GETARG_S(i);
         break;
 
       case OP_FORLOOP: {
-        Number step = nvalue(top-1);
-        Number limit = nvalue(top-2);
-        Number index;
         LUA_ASSERT(L, ttype(top-1) == TAG_NUMBER, "invalid step");
-        LUA_ASSERT(L, ttype(top-2) == TAG_NUMBER, "invalid limit");
-        if (ttype(top-3) != TAG_NUMBER)
-          lua_error(L, "`for' index must be a number");
-        index = nvalue(top-3)+step;
-        if ((step>0) ? index>limit : index<limit)
+        LUA_ASSERT(L, ttype(top-2) == TAG_NUMBER, "invalid count");
+        if (nvalue(top-2) < 0)
           top -= 3;  /* end loop: remove control variables */
         else {
-          nvalue(top-3) = index;
+          nvalue(top-2)--;  /* decrement count */
+          if (ttype(top-3) != TAG_NUMBER)
+            lua_error(L, "`for' index must be a number");
+          nvalue(top-3) += nvalue(top-1);  /* increment index */
           pc += GETARG_S(i);
         }
         break;

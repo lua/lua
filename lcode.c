@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.32 2000/05/24 13:54:49 roberto Exp roberto $
+** $Id: lcode.c,v 1.33 2000/05/24 18:04:17 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -69,16 +69,16 @@ static int luaK_getjump (FuncState *fs, int pc) {
 
 
 /*
-** discharge list of jumps to last target.
 ** returns current `pc' and marks it as a jump target (to avoid wrong
 ** optimizations with consecutive instructions not in the same basic block).
+** discharge list of jumps to last target.
 */
 int luaK_getlabel (FuncState *fs) {
   if (fs->pc != fs->lasttarget) {
     int lasttarget = fs->lasttarget;
     fs->lasttarget = fs->pc;
     luaK_patchlist(fs, fs->jlt, lasttarget);  /* discharge old list `jlt' */
-    fs->jlt = NO_JUMP;  /* nobody jumps to this new label (till now) */
+    fs->jlt = NO_JUMP;  /* nobody jumps to this new label (yet) */
   }
   return fs->pc;
 }
@@ -86,7 +86,7 @@ int luaK_getlabel (FuncState *fs) {
 
 void luaK_deltastack (FuncState *fs, int delta) {
   fs->stacklevel += delta;
-  if (delta > 0 && fs->stacklevel > fs->f->maxstacksize) {
+  if (fs->stacklevel > fs->f->maxstacksize) {
     if (fs->stacklevel > MAXSTACK)
       luaK_error(fs->ls, "function or expression too complex");
     fs->f->maxstacksize = fs->stacklevel;
@@ -99,7 +99,7 @@ void luaK_kstr (LexState *ls, int c) {
 }
 
 
-static int real_constant (FuncState *fs, Number r) {
+static int number_constant (FuncState *fs, Number r) {
   /* check whether `r' has appeared within the last LOOKBACKNUMS entries */
   Proto *f = fs->f;
   int c = f->nknum;
@@ -116,17 +116,17 @@ static int real_constant (FuncState *fs, Number r) {
 
 
 void luaK_number (FuncState *fs, Number f) {
-  if (f <= (Number)MAXARG_S && (int)f == f)
+  if (f <= (Number)MAXARG_S && (Number)(int)f == f)
     luaK_code1(fs, OP_PUSHINT, (int)f);  /* f has a short integer value */
   else
-    luaK_code1(fs, OP_PUSHNUM, real_constant(fs, f));
+    luaK_code1(fs, OP_PUSHNUM, number_constant(fs, f));
 }
 
 
 void luaK_adjuststack (FuncState *fs, int n) {
   if (n > 0)
     luaK_code1(fs, OP_POP, n);
-  else if (n < 0)
+  else
     luaK_code1(fs, OP_PUSHNIL, -n);
 }
 
@@ -170,7 +170,7 @@ static int discharge (FuncState *fs, expdesc *var) {
 
 static void discharge1 (FuncState *fs, expdesc *var) {
   discharge(fs, var);
- /* if it has jumps it is already discharged */
+ /* if it has jumps then it is already discharged */
   if (var->u.l.t == NO_JUMP && var->u.l.f  == NO_JUMP)
     luaK_setcallreturns(fs, 1);  /* call must return 1 value */
 }
@@ -275,12 +275,10 @@ static void luaK_testgo (FuncState *fs, expdesc *v, int invert, OpCode jump) {
   discharge1(fs, v);
   previous = &fs->f->code[fs->pc-1];
   LUA_ASSERT(L, GET_OPCODE(*previous) != OP_SETLINE, "bad place to set line");
-  if (ISJUMP(GET_OPCODE(*previous))) {
-    if (invert)
-      SET_OPCODE(*previous, invertjump(GET_OPCODE(*previous)));
-  }
-  else
+  if (!ISJUMP(GET_OPCODE(*previous)))
     luaK_code1(fs, jump, NO_JUMP);
+  else if (invert)
+    SET_OPCODE(*previous, invertjump(GET_OPCODE(*previous)));
   luaK_concat(fs, exitlist, fs->pc-1);  /* insert last jump in `exitlist' */
   luaK_patchlist(fs, *golist, luaK_getlabel(fs));
   *golist = NO_JUMP;
@@ -431,12 +429,17 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
       break;
 
     case OP_SETTABLE:
+      delta = -arg2;
+      break;
+
     case OP_SETLIST:
+      if (arg2 == 0) return NO_JUMP;  /* nothing to do */
       delta = -arg2;
       break;
 
     case OP_SETMAP:
-      delta = -2*(arg1+1);
+      if (arg1 == 0) return NO_JUMP;  /* nothing to do */
+      delta = -2*arg1;
       break;
 
     case OP_RETURN:
@@ -448,6 +451,7 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
       break;
 
     case OP_PUSHNIL:
+      if (arg1 == 0) return NO_JUMP;  /* nothing to do */
       delta = arg1;
       switch(GET_OPCODE(i)) {
         case OP_PUSHNIL: SETARG_U(i, GETARG_U(i)+arg1); optm = 1; break;
@@ -456,6 +460,7 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
       break;
 
     case OP_POP:
+      if (arg1 == 0) return NO_JUMP;  /* nothing to do */
       delta = -arg1;
       switch(GET_OPCODE(i)) {
         case OP_SETTABLE: SETARG_B(i, GETARG_B(i)+arg1); optm = 1; break;
@@ -561,13 +566,14 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
       fs->f->code[fs->pc-1] = i;  /* change previous instruction */
       return fs->pc-1;  /* do not generate new instruction */
   }
+  /* build new instruction */
   switch ((enum Mode)luaK_opproperties[o].mode) {
     case iO: i = CREATE_0(o); break;
     case iU: i = CREATE_U(o, arg1); break;
     case iS: i = CREATE_S(o, arg1); break;
     case iAB: i = CREATE_AB(o, arg1, arg2); break;
   }
-  /* actually create the new instruction */
+  /* put new instruction in code array */
   luaM_growvector(fs->L, fs->f->code, fs->pc, 1, Instruction,
                   "code size overflow", MAX_INT);
   fs->f->code[fs->pc] = i;

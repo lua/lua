@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.52 2000/05/30 18:54:49 roberto Exp roberto $
+** $Id: lgc.c,v 1.53 2000/05/30 19:00:31 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -34,10 +34,15 @@ static void protomark (lua_State *L, Proto *f) {
     int i;
     f->marked = 1;
     strmark(L, f->source);
-    for (i=f->nkstr-1; i>=0; i--)
+    for (i=0; i<f->nkstr; i++)
       strmark(L, f->kstr[i]);
-    for (i=f->nkproto-1; i>=0; i--)
+    for (i=0; i<f->nkproto; i++)
       protomark(L, f->kproto[i]);
+    if (f->locvars) {  /* is there debug information? */
+      LocVar *lv;
+      for (lv=f->locvars; lv->line != -1; lv++)  /* mark local-variable names */
+        if (lv->varname) strmark(L, lv->varname);
+    }
   }
 }
 
