@@ -336,7 +336,7 @@ static void powOp (lua_State *L, StkId ra, StkId rb, StkId rc) {
 
 /*
 ** Executes the given Lua function. Parameters are between [base,top).
-** Returns n such that the the results are between [n,top).
+** Returns n such that the results are between [n,top).
 */
 StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
   const Proto *const tf = cl->p;
