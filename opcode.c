@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.29 1994/12/27 20:53:15 celes Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.30 1994/12/28 12:55:47 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -24,7 +24,7 @@ char *rcs_opcode="$Id: opcode.c,v 3.29 1994/12/27 20:53:15 celes Exp roberto $";
 
 #define STACK_BUFFER (STACKGAP+128)
 
-typedef unsigned int StkId;  /* index to stack elements */
+typedef int StkId;  /* index to stack elements */
 
 static Long    maxstack = 0L;
 static Object *stack = NULL;
@@ -103,8 +103,12 @@ static void lua_checkstack (StkId n)
   StkId t;
   if (stack == NULL)
     lua_initstack();
+  if (maxstack >= MAX_INT)
+    lua_error("stack size overflow");
   t = top-stack;
   maxstack *= 2;
+  if (maxstack >= MAX_INT)
+    maxstack = MAX_INT;
   stack = growvector(stack, maxstack, Object);
   top = stack + t;
  }
