@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.17 1994/12/13 15:55:41 roberto Exp $";
+char *rcs_iolib="$Id: iolib.c,v 1.19 1995/01/03 13:14:13 celes Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -12,7 +12,6 @@ char *rcs_iolib="$Id: iolib.c,v 1.17 1994/12/13 15:55:41 roberto Exp $";
 #include <time.h>
 #include <stdlib.h>
 
-#include "mem.h"
 #include "lua.h"
 #include "lualib.h"
 
@@ -29,7 +28,7 @@ static FILE *in=stdin, *out=stdout;
 static void io_readfrom (void)
 {
  lua_Object o = lua_getparam (1);
- if (o == NULL)			/* restore standart input */
+ if (o == LUA_NOOBJECT)			/* restore standart input */
  {
   if (in != stdin)
   {
@@ -74,7 +73,7 @@ static void io_readfrom (void)
 static void io_writeto (void)
 {
  lua_Object o = lua_getparam (1);
- if (o == NULL)			/* restore standart output */
+ if (o == LUA_NOOBJECT)			/* restore standart output */
  {
   if (out != stdout)
   {
@@ -120,7 +119,7 @@ static void io_writeto (void)
 static void io_appendto (void)
 {
  lua_Object o = lua_getparam (1);
- if (o == NULL)			/* restore standart output */
+ if (o == LUA_NOOBJECT)			/* restore standart output */
  {
   if (out != stdout)
   {
@@ -177,7 +176,7 @@ static void io_appendto (void)
 static void io_read (void)
 {
  lua_Object o = lua_getparam (1);
- if (o == NULL || !lua_isstring(o))	/* free format */
+ if (o == LUA_NOOBJECT || !lua_isstring(o))	/* free format */
  {
   int c;
   char s[256];
@@ -323,20 +322,20 @@ static void io_readuntil (void)
  else
   d = *lua_getstring(lo);
  
- s = newvector(n+1, char);
+ s = (char *)malloc(n+1);
  while((c = fgetc(in)) != EOF && c != d)
  {
   if (m==n)
   {
    n *= 2;
-   s = growvector(s, n+1, char);
+   s = (char *)realloc(s, n+1);
   }
   s[m++] = c;
  }
  if (c != EOF) ungetc(c,in);
  s[m] = 0;
  lua_pushstring(s);
- luaI_free(s);
+ free(s);
 }
 
 
@@ -443,12 +442,12 @@ static void io_write (void)
 {
  lua_Object o1 = lua_getparam (1);
  lua_Object o2 = lua_getparam (2);
- if (o1 == NULL)			/* new line */
+ if (o1 == LUA_NOOBJECT)			/* new line */
  {
   fprintf (out, "\n");
   lua_pushnumber(1);
  }
- else if (o2 == NULL)   		/* free format */
+ else if (o2 == LUA_NOOBJECT)   		/* free format */
  {
   int status=0;
   if (lua_isnumber(o1))
@@ -476,7 +475,7 @@ static void io_write (void)
 static void io_execute (void)
 {
  lua_Object o = lua_getparam (1);
- if (o == NULL || !lua_isstring (o))
+ if (o == LUA_NOOBJECT || !lua_isstring (o))
  {
   lua_error ("incorrect argument to function 'execute`");
   lua_pushnumber (0);
@@ -496,7 +495,7 @@ static void io_execute (void)
 static void io_remove  (void)
 {
  lua_Object o = lua_getparam (1);
- if (o == NULL || !lua_isstring (o))
+ if (o == LUA_NOOBJECT || !lua_isstring (o))
  {
   lua_error ("incorrect argument to function 'execute`");
   lua_pushnumber (0);
