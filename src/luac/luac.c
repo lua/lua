@@ -1,9 +1,10 @@
 /*
-** $Id: luac.c,v 1.44a 2003/04/07 20:34:20 lhf Exp $
+** $Id: luac.c,v 1.47 2004/03/24 00:25:08 lhf Exp $
 ** Lua compiler (saves bytecodes to files; also list bytecodes)
 ** See Copyright Notice in lua.h
 */
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,6 +12,7 @@
 #include "lua.h"
 #include "lauxlib.h"
 
+#include "ldo.h"
 #include "lfunc.h"
 #include "lmem.h"
 #include "lobject.h"
@@ -18,21 +20,19 @@
 #include "lstring.h"
 #include "lundump.h"
 
-#ifndef LUA_DEBUG
-#define luaB_opentests(L)
-#endif
-
 #ifndef PROGNAME
-#define PROGNAME	"luac"		/* program name */
+#define PROGNAME	"luac"		/* default program name */
 #endif
 
+#ifndef OUTPUT
 #define	OUTPUT		"luac.out"	/* default output file */
+#endif
 
 static int listing=0;			/* list bytecodes? */
 static int dumping=1;			/* dump bytecodes? */
 static int stripping=0;			/* strip debug information? */
 static char Output[]={ OUTPUT };	/* default output file name */
-static const char* output=Output;	/* output file name */
+static const char* output=Output;	/* actual output file name */
 static const char* progname=PROGNAME;	/* actual program name */
 
 static void fatal(const char* message)
@@ -41,29 +41,30 @@ static void fatal(const char* message)
  exit(EXIT_FAILURE);
 }
 
-static void cannot(const char* name, const char* what, const char* mode)
+static void cannot(const char* what)
 {
- fprintf(stderr,"%s: cannot %s %sput file ",progname,what,mode);
- perror(name);
+ fprintf(stderr,"%s: cannot %s output file %s: %s\n",
+	progname,what,output,strerror(errno));
  exit(EXIT_FAILURE);
 }
 
-static void usage(const char* message, const char* arg)
+static void usage(const char* message)
 {
- if (message!=NULL)
- {
-  fprintf(stderr,"%s: ",progname); fprintf(stderr,message,arg); fprintf(stderr,"\n");
- }
+ if (*message=='-')
+  fprintf(stderr,"%s: unrecognized option `%s'\n",progname,message);
+ else
+  fprintf(stderr,"%s: %s\n",progname,message);
  fprintf(stderr,
- "usage: %s [options] [filenames].  Available options are:\n"
+ "usage: %s [options] [filenames].\n"
+ "Available options are:\n"
  "  -        process stdin\n"
  "  -l       list\n"
- "  -o name  output to file `name' (default is \"" OUTPUT "\")\n"
+ "  -o name  output to file `name' (default is \"%s\")\n"
  "  -p       parse only\n"
  "  -s       strip debug information\n"
  "  -v       show version information\n"
  "  --       stop handling options\n",
- progname);
+ progname,Output);
  exit(EXIT_FAILURE);
 }
 
@@ -89,7 +90,7 @@ static int doargs(int argc, char* argv[])
   else if (IS("-o"))			/* output file */
   {
    output=argv[++i];
-   if (output==NULL || *output==0) usage("`-o' needs argument",NULL);
+   if (output==NULL || *output==0) usage("`-o' needs argument");
   }
   else if (IS("-p"))			/* parse only */
    dumping=0;
@@ -101,7 +102,7 @@ static int doargs(int argc, char* argv[])
    if (argc==2) exit(EXIT_SUCCESS);
   }
   else					/* unknown option */
-   usage("unrecognized option `%s'",argv[i]);
+   usage(argv[i]);
  }
  if (i==argc && (listing || !dumping))
  {
@@ -125,6 +126,7 @@ static Proto* combine(lua_State* L, int n)
  {
   int i,pc=0;
   Proto* f=luaF_newproto(L);
+  setptvalue2s(L,L->top,f); incr_top(L);
   f->source=luaS_newliteral(L,"=(" PROGNAME ")");
   f->maxstacksize=1;
   f->p=luaM_newvector(L,n,Proto*);
@@ -142,23 +144,17 @@ static Proto* combine(lua_State* L, int n)
  }
 }
 
-static void strip(lua_State* L, Proto* f)
-{
- int i,n=f->sizep;
- luaM_freearray(L, f->lineinfo, f->sizelineinfo, int);
- luaM_freearray(L, f->locvars, f->sizelocvars, struct LocVar);
- luaM_freearray(L, f->upvalues, f->sizeupvalues, TString *);
- f->lineinfo=NULL; f->sizelineinfo=0;
- f->locvars=NULL;  f->sizelocvars=0;
- f->upvalues=NULL; f->sizeupvalues=0;
- f->source=luaS_newliteral(L,"=(none)");
- for (i=0; i<n; i++) strip(L,f->p[i]);
-}
-
 static int writer(lua_State* L, const void* p, size_t size, void* u)
 {
  UNUSED(L);
  return fwrite(p,size,1,(FILE*)u)==1;
+}
+
+static int panic(lua_State *L)
+{
+ UNUSED(L);
+ fatal("not enough memory!");
+ return 0;
 }
 
 int main(int argc, char* argv[])
@@ -167,9 +163,11 @@ int main(int argc, char* argv[])
  Proto* f;
  int i=doargs(argc,argv);
  argc-=i; argv+=i;
- if (argc<=0) usage("no input files given",NULL);
+ if (argc<=0) usage("no input files given");
  L=lua_open();
- luaB_opentests(L);
+ if (L==NULL) fatal("not enough memory for state");
+ lua_atpanic(L,panic);
+ if (!lua_checkstack(L,argc)) fatal("too many input files");
  for (i=0; i<argc; i++)
  {
   const char* filename=IS("-") ? NULL : argv[i];
@@ -180,14 +178,13 @@ int main(int argc, char* argv[])
  if (dumping)
  {
   FILE* D=fopen(output,"wb");
-  if (D==NULL) cannot(output,"open","out");
-  if (stripping) strip(L,f);
+  if (D==NULL) cannot("open");
   lua_lock(L);
-  luaU_dump(L,f,writer,D);
+  luaU_dump(L,f,writer,D,stripping);
   lua_unlock(L);
-  if (ferror(D)) cannot(output,"write","out");
-  fclose(D);
+  if (ferror(D)) cannot("write");
+  if (fclose(D)) cannot("close");
  }
  lua_close(L);
- return 0;
+ return EXIT_SUCCESS;
 }

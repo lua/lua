@@ -6,7 +6,7 @@ The main advantages of pre-compiling chunks are: faster loading, protecting
 source code from user changes, and off-line syntax error detection.
 luac can also be used to learn about the Lua virtual machine.
 
-Usage: /l/luac/luac [options] [filenames].  Available options are:
+Usage: luac [options] [filenames].  Available options are:
   -        process stdin
   -l       list
   -o name  output to file `name' (default is "luac.out")

@@ -17,10 +17,24 @@ void luaX_init (lua_State *L) {
   UNUSED(L);
 }
 
-Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff) {
+Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, const char *name) {
   UNUSED(z);
   UNUSED(buff);
   lua_pushstring(L,"parser not loaded");
   lua_error(L);
   return NULL;
 }
+
+/*
+* If you also want to avoid the dump module, ldump.o, enable the code below.
+*/
+#ifdef NODUMP
+#include "lundump.h"
+
+int luaU_dump (lua_State* L, const Proto* Main, lua_Chunkwriter w, void* data, int strip)
+{
+ return 0;
+ lua_pushstring(L,"dumper not loaded");
+ lua_error(L);
+}
+#endif

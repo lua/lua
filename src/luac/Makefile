@@ -12,8 +12,8 @@ T= $(BIN)/luac
 
 all:	$T
 
-$T:	$(OBJS) $(LIB)/liblua.a $(LIB)/liblualib.a
-	$(CC) -o $@ $(MYLDFLAGS) $(OBJS) -L$(LIB) -llua -llualib $(EXTRA_LIBS) $(DLLIB)
+$T:	$(OBJS) $(LIB)/liblua.a ../lib/lauxlib.o
+	$(CC) -o $@ $(MYLDFLAGS) $(OBJS) ../lib/lauxlib.o -L$(LIB) -llua $(EXTRA_LIBS)
 
 # print.c needs opcode names from lopcodes.c
 lopcodes.o:	../lopcodes.c ../lopcodes.h
@@ -22,8 +22,8 @@ lopcodes.o:	../lopcodes.c ../lopcodes.h
 $(LIB)/liblua.a:
 	cd ..; $(MAKE)
 
-$(LIB)/liblualib.a:
-	cd ../lib; $(MAKE)
+../lib/lauxlib.o:
+	cd ../lib; $(MAKE) lauxlib.o
 
 clean:
 	rm -f $(OBJS) $T

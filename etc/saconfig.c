@@ -1,10 +1,10 @@
-/* sa-config.c -- configuration for stand-alone Lua interpreter
+/* saconfig.c -- configuration for stand-alone Lua interpreter
 *
 * #define LUA_USERCONFIG to this file
 *
 * Here are the features that can be customized using #define:
 *
-*** Line edit and history:
+*** Line editing and history:
 *   #define USE_READLINE to use the GNU readline library.
 *
 *   To use another library for this, use the code below as a start.

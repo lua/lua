@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.97 2003/04/03 13:35:34 roberto Exp $
+** $Id: lobject.c,v 2.1 2003/12/10 12:13:36 roberto Exp $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -27,7 +27,7 @@
 #endif
 
 
-const TObject luaO_nilobject = {LUA_TNIL, {NULL}};
+const TValue luaO_nilobject = {LUA_TNIL, {NULL}};
 
 
 /*
@@ -45,33 +45,24 @@ int luaO_int2fb (unsigned int x) {
 
 
 int luaO_log2 (unsigned int x) {
-  static const lu_byte log_8[255] = {
-    0,
-    1,1,
-    2,2,2,2,
-    3,3,3,3,3,3,3,3,
-    4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
-    5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,
-    6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
+  static const lu_byte log_2[256] = {
+    0,1,2,2,3,3,3,3,4,4,4,4,4,4,4,4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,
     6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
     7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
     7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
-    7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
-    7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7
+    8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
+    8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
+    8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,
+    8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8
   };
-  if (x >= 0x00010000) {
-    if (x >= 0x01000000) return log_8[((x>>24) & 0xff) - 1]+24;
-    else return log_8[((x>>16) & 0xff) - 1]+16;
-  }
-  else {
-    if (x >= 0x00000100) return log_8[((x>>8) & 0xff) - 1]+8;
-    else if (x) return log_8[(x & 0xff) - 1];
-    return -1;  /* special `log' for 0 */
-  }
+  int l = -1;
+  while (x >= 256) { l += 8; x >>= 8; }
+  return l + log_2[x];
+
 }
 
 
-int luaO_rawequalObj (const TObject *t1, const TObject *t2) {
+int luaO_rawequalObj (const TValue *t1, const TValue *t2) {
   if (ttype(t1) != ttype(t2)) return 0;
   else switch (ttype(t1)) {
     case LUA_TNIL:
@@ -102,7 +93,7 @@ int luaO_str2d (const char *s, lua_Number *result) {
 
 
 static void pushstr (lua_State *L, const char *str) {
-  setsvalue2s(L->top, luaS_new(L, str));
+  setsvalue2s(L, L->top, luaS_new(L, str));
   incr_top(L);
 }
 
@@ -114,7 +105,7 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
   for (;;) {
     const char *e = strchr(fmt, '%');
     if (e == NULL) break;
-    setsvalue2s(L->top, luaS_newlstr(L, fmt, e-fmt));
+    setsvalue2s(L, L->top, luaS_newlstr(L, fmt, e-fmt));
     incr_top(L);
     switch (*(e+1)) {
       case 's':
@@ -138,7 +129,14 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
       case '%':
         pushstr(L, "%");
         break;
-      default: lua_assert(0);
+      default: {
+        char buff[3];
+        buff[0] = '%';
+        buff[1] = *(e+1);
+        buff[2] = '\0';
+        pushstr(L, buff);
+        break;
+      }
     }
     n += 2;
     fmt = e+2;

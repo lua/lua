@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.102 2002/08/21 18:56:09 roberto Exp $
+** $Id: lopcodes.h,v 1.106 2003/05/15 19:46:03 roberto Exp $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -134,7 +134,7 @@ name		args	description
 ------------------------------------------------------------------------*/
 OP_MOVE,/*	A B	R(A) := R(B)					*/
 OP_LOADK,/*	A Bx	R(A) := Kst(Bx)					*/
-OP_LOADBOOL,/*	A B C	R(A) := (Bool)B; if (C) PC++			*/
+OP_LOADBOOL,/*	A B C	R(A) := (Bool)B; if (C) pc++			*/
 OP_LOADNIL,/*	A B	R(A) := ... := R(B) := nil			*/
 OP_GETUPVAL,/*	A B	R(A) := UpValue[B]				*/
 
@@ -159,7 +159,7 @@ OP_NOT,/*	A B	R(A) := not R(B)				*/
 
 OP_CONCAT,/*	A B C	R(A) := R(B).. ... ..R(C)			*/
 
-OP_JMP,/*	sBx	PC += sBx					*/
+OP_JMP,/*	sBx	pc+=sBx					*/
 
 OP_EQ,/*	A B C	if ((RK(B) == RK(C)) ~= A) then pc++		*/
 OP_LT,/*	A B C	if ((RK(B) <  RK(C)) ~= A) then pc++  		*/
@@ -171,12 +171,13 @@ OP_CALL,/*	A B C	R(A), ... ,R(A+C-2) := R(A)(R(A+1), ... ,R(A+B-1)) */
 OP_TAILCALL,/*	A B C	return R(A)(R(A+1), ... ,R(A+B-1))		*/
 OP_RETURN,/*	A B	return R(A), ... ,R(A+B-2)	(see note)	*/
 
-OP_FORLOOP,/*	A sBx	R(A)+=R(A+2); if R(A) <?= R(A+1) then PC+= sBx	*/
+OP_FORLOOP,/*	A sBx	R(A)+=R(A+2); if R(A) <?= R(A+1) then pc+=sBx	*/
+OP_FORPREP,/*	A sBx	R(A)-=R(A+2); pc+=sBx				*/
 
 OP_TFORLOOP,/*	A C	R(A+2), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2)); 
                         if R(A+2) ~= nil then pc++			*/
 OP_TFORPREP,/*	A sBx	if type(R(A)) == table then R(A+1):=R(A), R(A):=next;
-			PC += sBx					*/
+			pc+=sBx					*/
 
 OP_SETLIST,/*	A Bx	R(A)[Bx-Bx%FPF+i] := R(A+i), 1 <= i <= Bx%FPF+1	*/
 OP_SETLISTO,/*	A Bx							*/
@@ -205,29 +206,31 @@ OP_CLOSURE/*	A Bx	R(A) := closure(KPROTO[Bx], R(A), ... ,R(A+n))	*/
 
 
 /*
-** masks for instruction properties
+** masks for instruction properties. The format is:
+** bits 0-1: op mode
+** bits 2-3: C arg mode
+** bits 4-5: B arg mode
+** bit 6: instruction set register A
+** bit 7: operator is a test
 */  
-enum OpModeMask {
-  OpModeBreg = 2,       /* B is a register */
-  OpModeBrk,		/* B is a register/constant */
-  OpModeCrk,           /* C is a register/constant */
-  OpModesetA,           /* instruction set register A */
-  OpModeK,              /* Bx is a constant */
-  OpModeT		/* operator is a test */
-  
-};
 
+enum OpArgMask {
+  OpArgN,  /* argument is not used */
+  OpArgU,  /* argument is used */
+  OpArgR,  /* argument is a register or a jump offset */
+  OpArgK   /* argument is a constant or register/constant */
+};
 
 extern const lu_byte luaP_opmodes[NUM_OPCODES];
 
-#define getOpMode(m)            (cast(enum OpMode, luaP_opmodes[m] & 3))
-#define testOpMode(m, b)        (luaP_opmodes[m] & (1 << (b)))
+#define getOpMode(m)	(cast(enum OpMode, luaP_opmodes[m] & 3))
+#define getBMode(m)	(cast(enum OpArgMask, (luaP_opmodes[m] >> 4) & 3))
+#define getCMode(m)	(cast(enum OpArgMask, (luaP_opmodes[m] >> 2) & 3))
+#define testAMode(m)	(luaP_opmodes[m] & (1 << 6))
+#define testTMode(m)	(luaP_opmodes[m] & (1 << 7))
 
 
-#ifdef LUA_OPNAMES
-extern const char *const luaP_opnames[];  /* opcode names */
-#endif
-
+extern const char *const luaP_opnames[NUM_OPCODES];  /* opcode names */
 
 
 /* number of list items to accumulate before a SETLIST instruction */

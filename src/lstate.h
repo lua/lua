@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.109 2003/02/27 11:52:30 roberto Exp $
+** $Id: lstate.h,v 2.2 2004/03/23 17:02:58 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -42,9 +42,6 @@
 struct lua_longjmp;  /* defined in ldo.c */
 
 
-/* default meta table (both for tables and udata) */
-#define defaultmeta(L)	(&G(L)->_defaultmeta)
-
 /* table of globals */
 #define gt(L)	(&L->_gt)
 
@@ -64,7 +61,7 @@ struct lua_longjmp;  /* defined in ldo.c */
 
 typedef struct stringtable {
   GCObject **hash;
-  ls_nstr nuse;  /* number of elements */
+  lu_int32 nuse;  /* number of elements */
   int size;
 } stringtable;
 
@@ -75,11 +72,9 @@ typedef struct stringtable {
 typedef struct CallInfo {
   StkId base;  /* base for called function */
   StkId	top;  /* top for this function */
-  int state;  /* bit fields; see below */
   union {
     struct {  /* for Lua functions */
       const Instruction *savedpc;
-      const Instruction **pc;  /* points to `pc' variable in `luaV_execute' */
       int tailcalls;  /* number of tail calls lost under this entry */
     } l;
     struct {  /* for C functions */
@@ -89,20 +84,11 @@ typedef struct CallInfo {
 } CallInfo;
 
 
-/*
-** bit fields for `CallInfo.state'
-*/
-#define CI_C		(1<<0)  /* 1 if function is a C function */
-/* 1 if (Lua) function has an active `luaV_execute' running it */
-#define CI_HASFRAME	(1<<1)
-/* 1 if Lua function is calling another Lua function (and therefore its
-   `pc' is being used by the other, and therefore CI_SAVEDPC is 1 too) */
-#define CI_CALLING	(1<<2)
-#define CI_SAVEDPC	(1<<3)  /* 1 if `savedpc' is updated */
-#define CI_YIELD	(1<<4)  /* 1 if thread is suspended */
 
-
+#define curr_func(L)	(clvalue(L->base - 1))
 #define ci_func(ci)	(clvalue((ci)->base - 1))
+#define f_isLua(ci)	(!ci_func(ci)->c.isC)
+#define isLua(ci)	(ttisfunction((ci)->base - 1) && f_isLua(ci))
 
 
 /*
@@ -110,15 +96,23 @@ typedef struct CallInfo {
 */
 typedef struct global_State {
   stringtable strt;  /* hash table for strings */
-  GCObject *rootgc;  /* list of (almost) all collectable objects */
-  GCObject *rootudata;   /* (separated) list of all userdata */
+  lua_Alloc realloc;  /* function to reallocate memory */
+  void *ud;         /* auxiliary data to `realloc' */
+  int currentwhite;
+  GCObject *rootgc;  /* list of all collectable objects */
+  GCObject *firstudata;   /* udata go to the end of `rootgc' */
+  GCObject **sweepgc;  /* position of sweep in `rootgc' */
+  int sweepstrgc;  /* position of sweep in `strt' */
+  GCObject *gray;  /* list of gray objects */
+  GCObject *grayagain;  /* list of objects to be traversed atomically */
+  GCObject *weak;  /* list of weak tables (to be cleared) */
   GCObject *tmudata;  /* list of userdata to be GC */
+  int gcstate;  /* state of garbage collector */
   Mbuffer buff;  /* temporary buffer for string concatentation */
   lu_mem GCthreshold;
   lu_mem nblocks;  /* number of `bytes' currently allocated */
   lua_CFunction panic;  /* to be called in unprotected errors */
-  TObject _registry;
-  TObject _defaultmeta;
+  TValue _registry;
   struct lua_State *mainthread;
   Node dummynode[1];  /* common node array for all empty tables */
   TString *tmname[TM_N];  /* array with tag-method names */
@@ -143,11 +137,11 @@ struct lua_State {
   unsigned short nCcalls;  /* number of nested C calls */
   lu_byte hookmask;
   lu_byte allowhook;
-  lu_byte hookinit;
+  lu_byte isSuspended;
   int basehookcount;
   int hookcount;
   lua_Hook hook;
-  TObject _gt;  /* table of globals */
+  TValue _gt;  /* table of globals */
   GCObject *openupval;  /* list of open upvalues in this stack */
   GCObject *gclist;
   struct lua_longjmp *errorJmp;  /* current error recover point */
@@ -174,18 +168,20 @@ union GCObject {
 
 
 /* macros to convert a GCObject into a specific value */
-#define gcotots(o)	check_exp((o)->gch.tt == LUA_TSTRING, &((o)->ts))
-#define gcotou(o)	check_exp((o)->gch.tt == LUA_TUSERDATA, &((o)->u))
-#define gcotocl(o)	check_exp((o)->gch.tt == LUA_TFUNCTION, &((o)->cl))
-#define gcotoh(o)	check_exp((o)->gch.tt == LUA_TTABLE, &((o)->h))
-#define gcotop(o)	check_exp((o)->gch.tt == LUA_TPROTO, &((o)->p))
-#define gcotouv(o)	check_exp((o)->gch.tt == LUA_TUPVAL, &((o)->uv))
+#define rawgco2ts(o)	check_exp((o)->gch.tt == LUA_TSTRING, &((o)->ts))
+#define gco2ts(o)	(&rawgco2ts(o)->tsv)
+#define rawgco2u(o)	check_exp((o)->gch.tt == LUA_TUSERDATA, &((o)->u))
+#define gco2u(o)	(&rawgco2u(o)->uv)
+#define gco2cl(o)	check_exp((o)->gch.tt == LUA_TFUNCTION, &((o)->cl))
+#define gco2h(o)	check_exp((o)->gch.tt == LUA_TTABLE, &((o)->h))
+#define gco2p(o)	check_exp((o)->gch.tt == LUA_TPROTO, &((o)->p))
+#define gco2uv(o)	check_exp((o)->gch.tt == LUA_TUPVAL, &((o)->uv))
 #define ngcotouv(o) \
 	check_exp((o) == NULL || (o)->gch.tt == LUA_TUPVAL, &((o)->uv))
-#define gcototh(o)	check_exp((o)->gch.tt == LUA_TTHREAD, &((o)->th))
+#define gco2th(o)	check_exp((o)->gch.tt == LUA_TTHREAD, &((o)->th))
 
-/* macro to convert any value into a GCObject */
-#define valtogco(v)	(cast(GCObject *, (v)))
+/* macro to convert any Lua object into a GCObject */
+#define obj2gco(v)	(cast(GCObject *, (v)))
 
 
 lua_State *luaE_newthread (lua_State *L);

@@ -7,15 +7,17 @@ LUA= .
 include $(LUA)/config
 
 # primary targets ("co" and "klean" are used for making the distribution)
-all clean co klean:	dirs
+all clean co klean:
 	cd include; $(MAKE) $@
 	cd src; $(MAKE) $@
 	cd src/lib; $(MAKE) $@
 	cd src/luac; $(MAKE) $@
 	cd src/lua; $(MAKE) $@
 
+clean klean:	soclean
+
 # in case they were not created during unpacking
-dirs:	bin lib
+all:	bin lib
 
 bin lib:
 	mkdir -p $@
@@ -44,7 +46,7 @@ so:
 
 # binaries using shared libraries
 sobin:
-	rm -f bin/*
+	rm -f bin/lua*
 	cd src/lua; $(MAKE)
 	cd src/luac; $(MAKE)
 
@@ -55,7 +57,7 @@ soinstall:
 
 # clean shared libraries
 soclean:
-	rm -f lib/*.so* bin/*
+	rm -f lib/*.so* bin/lua*
 
 # echo config parameters
 echo:
@@ -96,7 +98,7 @@ lecho:
 	@make echo | grep = | sed -e 's/= /= "/' -e 's/$$/"/' #-e 's/""/nil/'
 	@echo "-- EOF"
 
+# (end of Makefile)
+
 newer:
 	@find . -newer MANIFEST -type f
-
-# (end of Makefile)

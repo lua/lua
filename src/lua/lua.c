@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.122 2003/04/03 13:34:42 roberto Exp $
+** $Id: lua.c,v 1.124 2003/10/23 18:06:22 roberto Exp $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -117,10 +117,9 @@ static void l_message (const char *pname, const char *msg) {
 
 
 static int report (int status) {
-  const char *msg;
-  if (status) {
-    msg = lua_tostring(L, -1);
-    if (msg == NULL) msg = "(error with no message)";
+  if (status && !lua_isnil(L, -1)) {
+    const char *msg = lua_tostring(L, -1);
+    if (msg == NULL) msg = "(error object is not a string)";
     l_message(progname, msg);
     lua_pop(L, 1);
   }
@@ -155,10 +154,6 @@ static void getargs (char *argv[], int n) {
     lua_pushstring(L, argv[i]);
     lua_rawset(L, -3);
   }
-  /* arg.n = maximum index in table `arg' */
-  lua_pushliteral(L, "n");
-  lua_pushnumber(L, i-n-1);
-  lua_rawset(L, -3);
 }
 
 

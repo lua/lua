@@ -1,11 +1,11 @@
 /*
-** $Id: lfunc.c,v 1.67 2003/03/18 12:50:04 roberto Exp $
+** $Id: lfunc.c,v 2.3 2004/03/15 21:04:33 roberto Exp $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
 
 
-#include <stdlib.h>
+#include <stddef.h>
 
 #define lfunc_c
 
@@ -18,65 +18,75 @@
 #include "lstate.h"
 
 
-#define sizeCclosure(n)	(cast(int, sizeof(CClosure)) + \
-                         cast(int, sizeof(TObject)*((n)-1)))
-
-#define sizeLclosure(n)	(cast(int, sizeof(LClosure)) + \
-                         cast(int, sizeof(TObject *)*((n)-1)))
-
-
 
 Closure *luaF_newCclosure (lua_State *L, int nelems) {
   Closure *c = cast(Closure *, luaM_malloc(L, sizeCclosure(nelems)));
-  luaC_link(L, valtogco(c), LUA_TFUNCTION);
+  luaC_link(L, obj2gco(c), LUA_TFUNCTION);
   c->c.isC = 1;
   c->c.nupvalues = cast(lu_byte, nelems);
   return c;
 }
 
 
-Closure *luaF_newLclosure (lua_State *L, int nelems, TObject *e) {
+Closure *luaF_newLclosure (lua_State *L, int nelems, TValue *e) {
   Closure *c = cast(Closure *, luaM_malloc(L, sizeLclosure(nelems)));
-  luaC_link(L, valtogco(c), LUA_TFUNCTION);
+  luaC_link(L, obj2gco(c), LUA_TFUNCTION);
   c->l.isC = 0;
   c->l.g = *e;
   c->l.nupvalues = cast(lu_byte, nelems);
+  while (nelems--) c->l.upvals[nelems] = NULL;
   return c;
+}
+
+
+UpVal *luaF_newupval (lua_State *L) {
+  UpVal *uv = luaM_new(L, UpVal);
+  luaC_link(L, obj2gco(uv), LUA_TUPVAL);
+  uv->v = &uv->value;
+  setnilvalue(uv->v);
+  return uv;
 }
 
 
 UpVal *luaF_findupval (lua_State *L, StkId level) {
   GCObject **pp = &L->openupval;
   UpVal *p;
-  UpVal *v;
+  UpVal *uv;
   while ((p = ngcotouv(*pp)) != NULL && p->v >= level) {
     if (p->v == level) return p;
     pp = &p->next;
   }
-  v = luaM_new(L, UpVal);  /* not found: create a new one */
-  v->tt = LUA_TUPVAL;
-  v->marked = 1;  /* open upvalues should not be collected */
-  v->v = level;  /* current value lives in the stack */
-  v->next = *pp;  /* chain it in the proper position */
-  *pp = valtogco(v);
-  return v;
+  uv = luaM_new(L, UpVal);  /* not found: create a new one */
+  uv->tt = LUA_TUPVAL;
+  uv->marked = luaC_white(G(L));
+  uv->v = level;  /* current value lives in the stack */
+  uv->next = *pp;  /* chain it in the proper position */
+  *pp = obj2gco(uv);
+  return uv;
 }
 
 
 void luaF_close (lua_State *L, StkId level) {
-  UpVal *p;
-  while ((p = ngcotouv(L->openupval)) != NULL && p->v >= level) {
-    setobj(&p->value, p->v);  /* save current value (write barrier) */
-    p->v = &p->value;  /* now current value lives here */
-    L->openupval = p->next;  /* remove from `open' list */
-    luaC_link(L, valtogco(p), LUA_TUPVAL);
+  UpVal *uv;
+  global_State *g = G(L);
+  while ((uv = ngcotouv(L->openupval)) != NULL && uv->v >= level) {
+    GCObject *o = obj2gco(uv);
+    lua_assert(!isblack(o));
+    L->openupval = uv->next;  /* remove from `open' list */
+    if (isdead(g, o))
+      luaM_freelem(L, uv);  /* free upvalue */
+    else {
+      setobj(L, &uv->value, uv->v);
+      uv->v = &uv->value;  /* now current value lives here */
+      luaC_linkupval(L, uv);  /* link upvalue into `gcroot' list */
+    }
   }
 }
 
 
 Proto *luaF_newproto (lua_State *L) {
   Proto *f = luaM_new(L, Proto);
-  luaC_link(L, valtogco(f), LUA_TPROTO);
+  luaC_link(L, obj2gco(f), LUA_TPROTO);
   f->k = NULL;
   f->sizek = 0;
   f->p = NULL;
@@ -102,7 +112,7 @@ Proto *luaF_newproto (lua_State *L) {
 void luaF_freeproto (lua_State *L, Proto *f) {
   luaM_freearray(L, f->code, f->sizecode, Instruction);
   luaM_freearray(L, f->p, f->sizep, Proto *);
-  luaM_freearray(L, f->k, f->sizek, TObject);
+  luaM_freearray(L, f->k, f->sizek, TValue);
   luaM_freearray(L, f->lineinfo, f->sizelineinfo, int);
   luaM_freearray(L, f->locvars, f->sizelocvars, struct LocVar);
   luaM_freearray(L, f->upvalues, f->sizeupvalues, TString *);

@@ -2,7 +2,7 @@ This is lua, a sample Lua interpreter.
 It can be used as a batch interpreter and also interactively.
 There are man pages for it in both nroff and html in ../../doc.
 
-Usage: ./lua [options] [script [args]].  Available options are:
+Usage: lua [options] [script [args]].  Available options are:
   -        execute stdin as a file
   -e stat  execute string `stat'
   -i       enter interactive mode after executing `script'

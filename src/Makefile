@@ -20,7 +20,6 @@ OBJS=	\
 	lstate.o \
 	lstring.o \
 	ltable.o \
-	ltests.o \
 	ltm.o \
 	lundump.o \
 	lvm.o \
@@ -42,7 +41,6 @@ SRCS=	\
 	lstate.c \
 	lstring.c \
 	ltable.c \
-	ltests.c \
 	ltm.c \
 	lundump.c \
 	lvm.c \

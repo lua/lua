@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.175b 2003/03/18 12:31:39 roberto Exp $
+** $Id: lua.h,v 1.187 2004/03/09 17:34:35 roberto Exp $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -14,11 +14,13 @@
 #include <stddef.h>
 
 
-#define LUA_VERSION	"Lua 5.0.2"
+#define LUA_VERSION	"Lua 5.1 (work)"
 #define LUA_COPYRIGHT	"Copyright (C) 1994-2004 Tecgraf, PUC-Rio"
 #define LUA_AUTHORS 	"R. Ierusalimschy, L. H. de Figueiredo & W. Celes"
 
 
+/* mark for precompiled code (`<esc>Lua') */
+#define	LUA_SIGNATURE	"\033Lua"
 
 /* option for multiple returns in `lua_pcall' and `lua_call' */
 #define LUA_MULTRET	(-1)
@@ -52,6 +54,12 @@ typedef const char * (*lua_Chunkreader) (lua_State *L, void *ud, size_t *sz);
 
 typedef int (*lua_Chunkwriter) (lua_State *L, const void* p,
                                 size_t sz, void* ud);
+
+
+/*
+** prototype for memory-allocation functions
+*/
+typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 
 
 /*
@@ -90,6 +98,14 @@ typedef LUA_NUMBER lua_Number;
 #endif
 
 
+/* type for integer functions */
+#ifndef LUA_INTEGER
+typedef long lua_Integer;
+#else
+typedef LUA_INTEGER lua_Integer;
+#endif
+
+
 /* mark for all API functions */
 #ifndef LUA_API
 #define LUA_API		extern
@@ -99,7 +115,7 @@ typedef LUA_NUMBER lua_Number;
 /*
 ** state manipulation
 */
-LUA_API lua_State *lua_open (void);
+LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud);
 LUA_API void       lua_close (lua_State *L);
 LUA_API lua_State *lua_newthread (lua_State *L);
 
@@ -136,6 +152,7 @@ LUA_API int            lua_rawequal (lua_State *L, int idx1, int idx2);
 LUA_API int            lua_lessthan (lua_State *L, int idx1, int idx2);
 
 LUA_API lua_Number      lua_tonumber (lua_State *L, int idx);
+LUA_API lua_Integer     lua_tointeger (lua_State *L, int idx);
 LUA_API int             lua_toboolean (lua_State *L, int idx);
 LUA_API const char     *lua_tostring (lua_State *L, int idx);
 LUA_API size_t          lua_strlen (lua_State *L, int idx);
@@ -150,6 +167,7 @@ LUA_API const void     *lua_topointer (lua_State *L, int idx);
 */
 LUA_API void  lua_pushnil (lua_State *L);
 LUA_API void  lua_pushnumber (lua_State *L, lua_Number n);
+LUA_API void  lua_pushinteger (lua_State *L, lua_Integer n);
 LUA_API void  lua_pushlstring (lua_State *L, const char *s, size_t l);
 LUA_API void  lua_pushstring (lua_State *L, const char *s);
 LUA_API const char *lua_pushvfstring (lua_State *L, const char *fmt,
@@ -164,9 +182,10 @@ LUA_API void  lua_pushlightuserdata (lua_State *L, void *p);
 ** get functions (Lua -> stack)
 */
 LUA_API void  lua_gettable (lua_State *L, int idx);
+LUA_API void  lua_getfield (lua_State *L, int idx, const char *k);
 LUA_API void  lua_rawget (lua_State *L, int idx);
 LUA_API void  lua_rawgeti (lua_State *L, int idx, int n);
-LUA_API void  lua_newtable (lua_State *L);
+LUA_API void  lua_createtable (lua_State *L, int narr, int nrec);
 LUA_API void *lua_newuserdata (lua_State *L, size_t sz);
 LUA_API int   lua_getmetatable (lua_State *L, int objindex);
 LUA_API void  lua_getfenv (lua_State *L, int idx);
@@ -176,6 +195,7 @@ LUA_API void  lua_getfenv (lua_State *L, int idx);
 ** set functions (stack -> Lua)
 */
 LUA_API void  lua_settable (lua_State *L, int idx);
+LUA_API void  lua_setfield (lua_State *L, int idx, const char *k);
 LUA_API void  lua_rawset (lua_State *L, int idx);
 LUA_API void  lua_rawseti (lua_State *L, int idx, int n);
 LUA_API int   lua_setmetatable (lua_State *L, int objindex);
@@ -201,11 +221,16 @@ LUA_API int  lua_yield (lua_State *L, int nresults);
 LUA_API int  lua_resume (lua_State *L, int narg);
 
 /*
-** garbage-collection functions
+** garbage-collection function and options
 */
-LUA_API int   lua_getgcthreshold (lua_State *L);
-LUA_API int   lua_getgccount (lua_State *L);
-LUA_API void  lua_setgcthreshold (lua_State *L, int newthreshold);
+
+#define LUA_GCSTOP	0
+#define LUA_GCRESTART	1
+#define LUA_GCCOLLECT	2
+#define LUA_GCCOUNT	3
+
+LUA_API int lua_gc (lua_State *L, int what, int data);
+
 
 /*
 ** miscellaneous functions
@@ -218,6 +243,8 @@ LUA_API int   lua_error (lua_State *L);
 LUA_API int   lua_next (lua_State *L, int idx);
 
 LUA_API void  lua_concat (lua_State *L, int n);
+
+LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud);
 
 
 
@@ -234,10 +261,9 @@ LUA_API void  lua_concat (lua_State *L, int n);
 
 #define lua_pop(L,n)		lua_settop(L, -(n)-1)
 
-#define lua_register(L,n,f) \
-	(lua_pushstring(L, n), \
-	 lua_pushcfunction(L, f), \
-	 lua_settable(L, LUA_GLOBALSINDEX))
+#define lua_newtable(L)		lua_createtable(L, 0, 0)
+
+#define lua_register(L,n,f) (lua_pushcfunction(L,f), lua_setglobal(L,n))
 
 #define lua_pushcfunction(L,f)	lua_pushcclosure(L, f, 0)
 
@@ -246,11 +272,15 @@ LUA_API void  lua_concat (lua_State *L, int n);
 #define lua_islightuserdata(L,n)	(lua_type(L,n) == LUA_TLIGHTUSERDATA)
 #define lua_isnil(L,n)		(lua_type(L,n) == LUA_TNIL)
 #define lua_isboolean(L,n)	(lua_type(L,n) == LUA_TBOOLEAN)
+#define lua_isthread(L,n)	(lua_type(L,n) == LUA_TTHREAD)
 #define lua_isnone(L,n)		(lua_type(L,n) == LUA_TNONE)
 #define lua_isnoneornil(L, n)	(lua_type(L,n) <= 0)
 
 #define lua_pushliteral(L, s)	\
 	lua_pushlstring(L, "" s, (sizeof(s)/sizeof(char))-1)
+
+#define lua_setglobal(L,s)	lua_setfield(L, LUA_GLOBALSINDEX, s)
+#define lua_getglobal(L,s)	lua_getfield(L, LUA_GLOBALSINDEX, s)
 
 
 
@@ -258,15 +288,11 @@ LUA_API void  lua_concat (lua_State *L, int n);
 ** compatibility macros and functions
 */
 
-
-LUA_API int lua_pushupvalues (lua_State *L);
+#define lua_open()	luaL_newstate()
 
 #define lua_getregistry(L)	lua_pushvalue(L, LUA_REGISTRYINDEX)
-#define lua_setglobal(L,s)	\
-   (lua_pushstring(L, s), lua_insert(L, -2), lua_settable(L, LUA_GLOBALSINDEX))
 
-#define lua_getglobal(L,s)	\
-		(lua_pushstring(L, s), lua_gettable(L, LUA_GLOBALSINDEX))
+#define lua_getgccount(L)	lua_gc(L, LUA_GCCOUNT, 0)
 
 
 /* compatibility with ref system */

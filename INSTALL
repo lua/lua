@@ -49,12 +49,15 @@ This is Lua 5.0.
   You may need to include ./lib in the LD_LIBRARY_PATH environment variable
   to link programs that use the shared libraries if you don't put them in the
   official places with "make install". (You may need to use the full path.)
+  Note also that by default these official places live under /usr/local but
+  /usr/local/lib may not be a place that is checked for shared libraries.
+  In Linux, the places checked are in /etc/ld.so.conf. Try also "man ld.so".
 
   Building shared libraries in other systems is similar but details differ;
   you may need to fix a few details in the top-level Makefile.
 
 * Installation on Windows and other systems
-  -----------------------------------------------------
+  -----------------------------------------
   The instructions for building Lua on other systems machine depend on the
   particular compiler you are using. The simplest way is to create a folder
   with all .c and .h files, and then create projects for the core library,
@@ -62,14 +65,14 @@ This is Lua 5.0.
 
   core lib:	lapi.c lcode.c ldebug.c ldo.c ldump.c lfunc.c lgc.c llex.c
                 lmem.c lobject.c lopcodes.c lparser.c lstate.c lstring.c
-		ltable.c ltests.c ltm.c lundump.c lvm.c lzio.c
+		ltable.c ltm.c lundump.c lvm.c lzio.c
 
   standard lib:	lauxlib.c lbaselib.c ldblib.c liolib.c lmathlib.c ltablib.c
                 lstrlib.c loadlib.c
 
   interpreter:	core lib, standard lib, lua.c
 
-  compiler:	core lib, standard lib, luac.c print.c
+  compiler:	core lib, lauxlib.c luac.c print.c
 		and also lopcodes.c (with LUA_OPNAMES defined) from core.
 
   Of course, to use Lua as a library, you'll have to know how to create

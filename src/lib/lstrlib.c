@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.98 2003/04/03 13:35:34 roberto Exp $
+** $Id: lstrlib.c,v 1.101 2004/01/02 11:54:14 roberto Exp $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -25,13 +25,13 @@
 #endif
 
 
-typedef long sint32;	/* a signed version for size_t */
+typedef lua_Integer sint32;	/* a signed version for size_t */
 
 
 static int str_len (lua_State *L) {
   size_t l;
   luaL_checklstring(L, 1, &l);
-  lua_pushnumber(L, (lua_Number)l);
+  lua_pushinteger(L, l);
   return 1;
 }
 
@@ -45,13 +45,24 @@ static sint32 posrelat (sint32 pos, size_t len) {
 static int str_sub (lua_State *L) {
   size_t l;
   const char *s = luaL_checklstring(L, 1, &l);
-  sint32 start = posrelat(luaL_checklong(L, 2), l);
-  sint32 end = posrelat(luaL_optlong(L, 3, -1), l);
+  sint32 start = posrelat(luaL_checkinteger(L, 2), l);
+  sint32 end = posrelat(luaL_optinteger(L, 3, -1), l);
   if (start < 1) start = 1;
   if (end > (sint32)l) end = (sint32)l;
   if (start <= end)
     lua_pushlstring(L, s+start-1, end-start+1);
   else lua_pushliteral(L, "");
+  return 1;
+}
+
+
+static int str_reverse (lua_State *L) {
+  size_t l;
+  luaL_Buffer b;
+  const char *s = luaL_checklstring(L, 1, &l);
+  luaL_buffinit(L, &b);
+  while (l--) luaL_putchar(&b, s[l]);
+  luaL_pushresult(&b);
   return 1;
 }
 
@@ -97,10 +108,10 @@ static int str_rep (lua_State *L) {
 static int str_byte (lua_State *L) {
   size_t l;
   const char *s = luaL_checklstring(L, 1, &l);
-  sint32 pos = posrelat(luaL_optlong(L, 2, 1), l);
+  sint32 pos = posrelat(luaL_optinteger(L, 2, 1), l);
   if (pos <= 0 || (size_t)(pos) > l)  /* index out of range? */
     return 0;  /* no answer */
-  lua_pushnumber(L, uchar(s[pos-1]));
+  lua_pushinteger(L, uchar(s[pos-1]));
   return 1;
 }
 
@@ -189,7 +200,7 @@ static const char *luaI_classend (MatchState *ms, const char *p) {
   switch (*p++) {
     case ESC: {
       if (*p == '\0')
-        luaL_error(ms->L, "malformed pattern (ends with `%')");
+        luaL_error(ms->L, "malformed pattern (ends with `%%')");
       return p+1;
     }
     case '[': {
@@ -452,7 +463,7 @@ static void push_onecapture (MatchState *ms, int i) {
   int l = ms->capture[i].len;
   if (l == CAP_UNFINISHED) luaL_error(ms->L, "unfinished capture");
   if (l == CAP_POSITION)
-    lua_pushnumber(ms->L, (lua_Number)(ms->capture[i].init - ms->src_init + 1));
+    lua_pushinteger(ms->L, ms->capture[i].init - ms->src_init + 1);
   else
     lua_pushlstring(ms->L, ms->capture[i].init, l);
 }
@@ -477,7 +488,7 @@ static int str_find (lua_State *L) {
   size_t l1, l2;
   const char *s = luaL_checklstring(L, 1, &l1);
   const char *p = luaL_checklstring(L, 2, &l2);
-  sint32 init = posrelat(luaL_optlong(L, 3, 1), l1) - 1;
+  sint32 init = posrelat(luaL_optinteger(L, 3, 1), l1) - 1;
   if (init < 0) init = 0;
   else if ((size_t)(init) > l1) init = (sint32)l1;
   if (lua_toboolean(L, 4) ||  /* explicit request? */
@@ -485,8 +496,8 @@ static int str_find (lua_State *L) {
     /* do a plain search */
     const char *s2 = lmemfind(s+init, l1-init, p, l2);
     if (s2) {
-      lua_pushnumber(L, (lua_Number)(s2-s+1));
-      lua_pushnumber(L, (lua_Number)(s2-s+l2));
+      lua_pushinteger(L, s2-s+1);
+      lua_pushinteger(L, s2-s+l2);
       return 2;
     }
   }
@@ -501,8 +512,8 @@ static int str_find (lua_State *L) {
       const char *res;
       ms.level = 0;
       if ((res=match(&ms, s1, p)) != NULL) {
-        lua_pushnumber(L, (lua_Number)(s1-s+1));  /* start */
-        lua_pushnumber(L, (lua_Number)(res-s));   /* end */
+        lua_pushinteger(L, s1-s+1);  /* start */
+        lua_pushinteger(L, res-s);   /* end */
         return push_captures(&ms, NULL, 0) + 2;
       }
     } while (s1++<ms.src_end && !anchor);
@@ -521,7 +532,7 @@ static int gfind_aux (lua_State *L) {
   ms.L = L;
   ms.src_init = s;
   ms.src_end = s+ls;
-  for (src = s + (size_t)lua_tonumber(L, lua_upvalueindex(3));
+  for (src = s + (size_t)lua_tointeger(L, lua_upvalueindex(3));
        src <= ms.src_end;
        src++) {
     const char *e;
@@ -529,7 +540,7 @@ static int gfind_aux (lua_State *L) {
     if ((e = match(&ms, src, p)) != NULL) {
       int newstart = e-s;
       if (e == src) newstart++;  /* empty match? go at least one position */
-      lua_pushnumber(L, (lua_Number)newstart);
+      lua_pushinteger(L, newstart);
       lua_replace(L, lua_upvalueindex(3));
       return push_captures(&ms, src, e);
     }
@@ -542,7 +553,7 @@ static int gfind (lua_State *L) {
   luaL_checkstring(L, 1);
   luaL_checkstring(L, 2);
   lua_settop(L, 2);
-  lua_pushnumber(L, 0);
+  lua_pushinteger(L, 0);
   lua_pushcclosure(L, gfind_aux, 3);
   return 1;
 }
@@ -616,7 +627,7 @@ static int str_gsub (lua_State *L) {
   }
   luaL_addlstring(&b, src, ms.src_end-src);
   luaL_pushresult(&b);
-  lua_pushnumber(L, (lua_Number)n);  /* number of substitutions */
+  lua_pushinteger(L, n);  /* number of substitutions */
   return 2;
 }
 
@@ -671,7 +682,7 @@ static const char *scanformat (lua_State *L, const char *strfrmt,
     luaL_error(L, "invalid format (width or precision too long)");
   if (p-strfrmt+2 > MAX_FORMAT)  /* +2 to include `%' and the specifier */
     luaL_error(L, "invalid format (too long)");
-  form[0] = '%';
+  form[0] = ESC;
   strncpy(form+1, strfrmt, p-strfrmt+1);
   form[p-strfrmt+2] = 0;
   return p;
@@ -686,9 +697,9 @@ static int str_format (lua_State *L) {
   luaL_Buffer b;
   luaL_buffinit(L, &b);
   while (strfrmt < strfrmt_end) {
-    if (*strfrmt != '%')
+    if (*strfrmt != ESC)
       luaL_putchar(&b, *strfrmt++);
-    else if (*++strfrmt == '%')
+    else if (*++strfrmt == ESC)
       luaL_putchar(&b, *strfrmt++);  /* %% */
     else { /* format item */
       char form[MAX_FORMAT];  /* to store the format (`%...') */
@@ -746,6 +757,7 @@ static int str_format (lua_State *L) {
 static const luaL_reg strlib[] = {
   {"len", str_len},
   {"sub", str_sub},
+  {"reverse", str_reverse},
   {"lower", str_lower},
   {"upper", str_upper},
   {"char", str_char},

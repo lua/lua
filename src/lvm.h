@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 1.47 2002/11/14 16:16:21 roberto Exp $
+** $Id: lvm.h,v 2.1 2003/12/10 12:13:36 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -22,14 +22,13 @@
 	(ttype(o1) == ttype(o2) && luaV_equalval(L, o1, o2))
 
 
-int luaV_lessthan (lua_State *L, const TObject *l, const TObject *r);
-int luaV_equalval (lua_State *L, const TObject *t1, const TObject *t2);
-const TObject *luaV_tonumber (const TObject *obj, TObject *n);
+int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r);
+int luaV_equalval (lua_State *L, const TValue *t1, const TValue *t2);
+const TValue *luaV_tonumber (const TValue *obj, TValue *n);
 int luaV_tostring (lua_State *L, StkId obj);
-const TObject *luaV_gettable (lua_State *L, const TObject *t, TObject *key,
-                              int loop);
-void luaV_settable (lua_State *L, const TObject *t, TObject *key, StkId val);
-StkId luaV_execute (lua_State *L);
+void luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val);
+void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val);
+StkId luaV_execute (lua_State *L, int nexeccalls);
 void luaV_concat (lua_State *L, int total, int last);
 
 #endif

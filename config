@@ -13,17 +13,17 @@ USERCONF=
 
 # == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT =======================
 
-# --------------------------------------------------------------- Lua libraries
+# ------------------------------------------------------------- dynamic loading
 
 # Support for dynamically loading C libraries for Lua is a very important
 # feature, which we strongly recommend be enabled. By default, this support is
 # enabled on Windows systems (see below) but disabled on other systems because
 # it relies on system-dependent code that is not part of ANSI C. For more
-# information on dynamic loading, read the comments in src/lib/liolib.c .
+# information on dynamic loading, read the comments in src/lib/loadlib.c .
 #
 # To enable support for dynamic loading on Unix systems that support the dlfcn
 # interface (e.g., Linux, Solaris, IRIX, BSD, AIX, HPUX, and probably others),
-# uncomment the next two lines.
+# uncomment the next two lines. Also read the next paragraph.
 #
 #LOADLIB= -DUSE_DLOPEN=1
 #DLLIB= -ldl
@@ -40,6 +40,8 @@ USERCONF=
 #
 #LOADLIB= -DUSE_DLL=0
 
+# --------------------------------------------------------------- Lua libraries
+
 # The Lua IO library (src/lib/liolib.c) has support for pipes using popen and
 # pclose. This support is enabled by default on POSIX systems.
 # If your system is not POSIX but has popen and pclose, define USE_POPEN=1.
@@ -48,7 +50,7 @@ USERCONF=
 #POPEN= -DUSE_POPEN=1
 #POPEN= -DUSE_POPEN=0
 #
-# The form below will probably work in (some) Windows systems.
+# The form below will probably work on (some) Windows systems.
 #
 #POPEN= -DUSE_POPEN=1 -Dpopen=_popen -Dpclose=_pclose
 
@@ -97,11 +99,10 @@ EXTRA_LIBS= -lm
 # If you want to customize the stand-alone Lua interpreter, uncomment and
 # edit the following two lines; also edit etc/saconfig.c to suit your needs.
 # -DUSE_READLINE adds line editing and history to the interpreter. You need
-# to add -lreadline (and perhaps also -lhistory and -lcurses or -lncurses)
-# to EXTRA_LIBS.
+# to add -lreadline (and perhaps also -lhistory and -ltermcap) to EXTRA_LIBS.
 #
 #USERCONF=-DLUA_USERCONFIG='"$(LUA)/etc/saconfig.c"' -DUSE_READLINE
-#EXTRA_LIBS= -lm -ldl -lreadline # -lhistory -lcurses -lncurses
+#EXTRA_LIBS= -lm $(DLLIB) -lreadline # -lhistory -ltermcap -lcurses -lncurses
 
 # ------------------------------------------------------------------ C compiler
 
@@ -127,7 +128,7 @@ MYCFLAGS= -O2
 
 # ------------------------------------------------------------------ librarian
 
-# This should work in all Unix systems.
+# This should work on all Unix systems.
 #
 AR= ar rcu
 
@@ -140,7 +141,7 @@ RANLIB= ranlib
 
 # ------------------------------------------------------------------ stripper
 
-# This should work in all Unix systems, but you may want to add options.
+# This should work on all Unix systems, but you may want to add options.
 #
 STRIP= strip
 
@@ -164,7 +165,7 @@ INSTALL_DATA= cp
 
 # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
 
-V=5.0
+V= 5.0
 
 BIN= $(LUA)/bin
 INC= $(LUA)/include

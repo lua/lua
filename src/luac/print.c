@@ -1,12 +1,12 @@
 /*
-** $Id: print.c,v 1.44 2003/04/07 20:34:20 lhf Exp $
+** $Id: print.c,v 1.46 2004/03/24 00:25:08 lhf Exp $
 ** print bytecodes
 ** See Copyright Notice in lua.h
 */
 
 #include <stdio.h>
 
-#if 0
+#if 1
 #define DEBUG_PRINT
 #endif
 
@@ -46,7 +46,7 @@ static void PrintString(const Proto* f, int n)
 
 static void PrintConstant(const Proto* f, int i)
 {
- const TObject* o=&f->k[i];
+ const TValue* o=&f->k[i];
  switch (ttype(o))
  {
   case LUA_TNUMBER:
@@ -75,8 +75,8 @@ static void PrintCode(const Proto* f)
   int a=GETARG_A(i);
   int b=GETARG_B(i);
   int c=GETARG_C(i);
-  int bc=GETARG_Bx(i);
-  int sbc=GETARG_sBx(i);
+  int bx=GETARG_Bx(i);
+  int sbx=GETARG_sBx(i);
   int line=getline(f,pc);
 #if 0
   printf("%0*lX",Sizeof(i)*2,i);
@@ -86,14 +86,24 @@ static void PrintCode(const Proto* f)
   printf("%-9s\t",luaP_opnames[o]);
   switch (getOpMode(o))
   {
-   case iABC:	printf("%d %d %d",a,b,c); break;
-   case iABx:	printf("%d %d",a,bc); break;
-   case iAsBx:	printf("%d %d",a,sbc); break;
+   case iABC:
+    printf("%d",a);
+    if (getBMode(o)!=OpArgN) 
+    { if (b>=MAXSTACK) printf(" #%d",b-MAXSTACK); else printf(" %d",b); }
+    if (getCMode(o)!=OpArgN) 
+    { if (c>=MAXSTACK) printf(" #%d",c-MAXSTACK); else printf(" %d",c); }
+    break;
+   case iABx:
+    if (getBMode(o)==OpArgK) printf("%d #%d",a,bx); else printf("%d %d",a,bx);
+    break;
+   case iAsBx:
+    if (o==OP_JMP) printf("%d",sbx); else printf("%d %d",a,sbx);
+    break;
   }
   switch (o)
   {
    case OP_LOADK:
-    printf("\t; "); PrintConstant(f,bc);
+    printf("\t; "); PrintConstant(f,bx);
     break;
    case OP_GETUPVAL:
    case OP_SETUPVAL:
@@ -101,7 +111,7 @@ static void PrintCode(const Proto* f)
     break;
    case OP_GETGLOBAL:
    case OP_SETGLOBAL:
-    printf("\t; %s",svalue(&f->k[bc]));
+    printf("\t; %s",svalue(&f->k[bx]));
     break;
    case OP_GETTABLE:
    case OP_SELF:
@@ -121,16 +131,17 @@ static void PrintCode(const Proto* f)
      printf("\t; ");
      if (b>=MAXSTACK) PrintConstant(f,b-MAXSTACK); else printf("-");
      printf(" ");
-     if (c>=MAXSTACK) PrintConstant(f,c-MAXSTACK);
+     if (c>=MAXSTACK) PrintConstant(f,c-MAXSTACK); else printf("-");
     }
     break;
    case OP_JMP:
    case OP_FORLOOP:
+   case OP_FORPREP:
    case OP_TFORPREP:
-    printf("\t; to %d",sbc+pc+2);
+    printf("\t; to %d",sbx+pc+2);
     break;
    case OP_CLOSURE:
-    printf("\t; %p",VOID(f->p[bc]));
+    printf("\t; %p",VOID(f->p[bx]));
     break;
    default:
     break;
@@ -187,7 +198,7 @@ static void PrintLocals(const Proto* f)
  for (i=0; i<n; i++)
  {
   printf("\t%d\t%s\t%d\t%d\n",
-  i,getstr(f->locvars[i].varname),f->locvars[i].startpc,f->locvars[i].endpc);
+  i,getstr(f->locvars[i].varname),f->locvars[i].startpc+1,f->locvars[i].endpc+1);
  }
 }
 
