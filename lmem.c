@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.19 1999/10/19 13:33:22 roberto Exp roberto $
+** $Id: lmem.c,v 1.20 1999/11/22 13:12:07 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -10,6 +10,7 @@
 #define LUA_REENTRANT
 
 #include "lmem.h"
+#include "lobject.h"
 #include "lstate.h"
 #include "lua.h"
 
@@ -24,27 +25,17 @@
 #endif
 
 
-#define MINSIZE	8	/* minimum size for "growing" vectors */
 
 
-
-
-static unsigned long power2 (unsigned long n) {
-  unsigned long p = MINSIZE;
-  while (p<=n) p<<=1;
-  return p;
-}
-
-
-void *luaM_growaux (lua_State *L, void *block, unsigned long nelems, int inc, int size,
-                       const char *errormsg, unsigned long limit) {
+void *luaM_growaux (lua_State *L, void *block, unsigned long nelems,
+               int inc, int size, const char *errormsg, unsigned long limit) {
   unsigned long newn = nelems+inc;
   if (newn >= limit) lua_error(L, errormsg);
   if ((newn ^ nelems) <= nelems ||  /* still the same power of 2 limit? */
-       (nelems > 0 && newn < MINSIZE))  /* or block already is MINSIZE? */
+       (nelems > 0 && newn < MINPOWER2))  /* or block already is MINPOWER2? */
       return block;  /* do not need to reallocate */
   else  /* it crossed a power of 2 boundary; grow to next power */
-    return luaM_realloc(L, block, power2(newn)*size);
+    return luaM_realloc(L, block, luaO_power2(newn)*size);
 }
 
 
