@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.221 2002/11/21 14:16:52 roberto Exp roberto $
+** $Id: lapi.c,v 1.222 2002/11/21 15:16:04 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -697,7 +697,8 @@ LUA_API int lua_dump (lua_State *L, lua_Chunkwriter writer, void *data) {
 */
 
 /* GC values are expressed in Kbytes: #bytes/2^10 */
-#define GCscale(x)		(cast(int, (x)>>10))
+#define GCscalel(x)		((x)>>10)
+#define GCscale(x)		(cast(int, GCscalel(x)))
 #define GCunscale(x)		(cast(lu_mem, (x)<<10))
 
 LUA_API int lua_getgcthreshold (lua_State *L) {
@@ -718,7 +719,7 @@ LUA_API int lua_getgccount (lua_State *L) {
 
 LUA_API void lua_setgcthreshold (lua_State *L, int newthreshold) {
   lua_lock(L);
-  if (newthreshold > GCscale(ULONG_MAX))
+  if (cast(lu_mem, newthreshold) > GCscalel(ULONG_MAX))
     G(L)->GCthreshold = ULONG_MAX;
   else
     G(L)->GCthreshold = GCunscale(newthreshold);
