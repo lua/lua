@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.26 2005/03/18 18:02:04 roberto Exp roberto $
+** $Id: lstate.c,v 2.27 2005/03/18 18:55:45 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -170,8 +170,8 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->weak = NULL;
   g->tmudata = NULL;
   g->totalbytes = sizeof(LG);
-  g->gcpace = 200;  /* 200% (wait memory to double before next collection) */
-  g->gcstepmul = 200;  /* GC runs `twice the speed' of memory allocation */
+  g->gcpause = LUAI_GCPAUSE;
+  g->gcstepmul = LUAI_GCMUL;
   g->gcdept = 0;
   if (luaD_rawrunprotected(L, f_luaopen, NULL) != 0) {
     /* memory allocation error: free partial state */

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.29 2005/03/09 16:28:07 roberto Exp roberto $
+** $Id: lgc.c,v 2.30 2005/03/16 17:00:21 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -57,7 +57,7 @@
 		reallymarkobject(g, obj2gco(t)); }
 
 
-#define setthreshold(g)  (g->GCthreshold = (g->estimate/100) * g->gcpace)
+#define setthreshold(g)  (g->GCthreshold = (g->estimate/100) * g->gcpause)
 
 
 static void removeentry (Node *n) {
