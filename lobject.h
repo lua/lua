@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.8 1997/11/03 20:45:23 roberto Exp roberto $
+** $Id: lobject.h,v 1.9 1997/11/19 17:29:23 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -131,7 +131,7 @@ typedef struct LocVar {
 #define fvalue(o)       ((o)->value.f)
 #define tfvalue(o)	((o)->value.tf)
 
-#define protovalue(o)	(&(o)->value.cl->consts[0])
+#define protovalue(o)	((o)->value.cl->consts)
 
 /*
 ** Closures

@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.4 1997/11/04 15:27:53 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.5 1997/11/19 18:16:33 roberto Exp roberto $
 ** Lua standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -13,7 +13,7 @@
 #include "lualib.h"
 
 #ifndef PI
-#define PI          3.14159265358979323846
+#define PI          ((double)3.14159265358979323846)
 #endif
 
 
@@ -24,13 +24,13 @@
 
 static double torad (void)
 {
-  char *s = lua_getstring(lua_getglobal("_TRIGMODE"));
+  char *s = luaL_opt_string(2, "d");
   switch (*s) {
     case 'd' : return PI/180.0;
-    case 'r' : return 1.0;
+    case 'r' : return (double)1.0;
     case 'g' : return PI/50.0;
     default:
-      luaL_verror("invalid _TRIGMODE (`%.50s')", s);
+      luaL_arg_check(0, 2, "invalid mode");
       return 0;  /* to avoid warnings */
   }
 }
@@ -120,12 +120,12 @@ static void math_exp (void)
 
 static void math_deg (void)
 {
-  lua_pushnumber(luaL_check_number(1)*180./PI);
+  lua_pushnumber(luaL_check_number(1)*(180.0/PI));
 }
 
 static void math_rad (void)
 {
-  lua_pushnumber(luaL_check_number(1)/180.*PI);
+  lua_pushnumber(luaL_check_number(1)*(PI/180.0));
 }
 
 
