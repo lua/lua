@@ -1,4 +1,4 @@
-# $Id: makefile,v 1.32 1997/03/31 20:58:42 roberto Exp roberto $
+# $Id: makefile,v 1.33 1997/04/06 14:08:08 roberto Exp roberto $
 
 #configuration
 
@@ -89,7 +89,7 @@ inout.o: inout.c auxlib.h lua.h lex.h opcode.h types.h tree.h func.h \
 iolib.o: iolib.c lua.h auxlib.h luadebug.h lualib.h
 lex.o: lex.c auxlib.h lua.h luamem.h tree.h types.h table.h opcode.h \
  func.h lex.h inout.h luadebug.h parser.h
-lua.o: lua.c lua.h lualib.h
+lua.o: lua.c lua.h auxlib.h lualib.h
 luamem.o: luamem.c luamem.h lua.h
 mathlib.o: mathlib.c lualib.h lua.h auxlib.h
 opcode.o: opcode.c luadebug.h lua.h luamem.h opcode.h types.h tree.h \
