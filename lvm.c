@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.239 2002/06/14 17:21:32 roberto Exp roberto $
+** $Id: lvm.c,v 1.240 2002/06/20 20:41:46 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -84,16 +84,14 @@ static void traceexec (lua_State *L) {
 
 
 static void callTMres (lua_State *L, const TObject *f,
-                       const TObject *p1, const TObject *p2, TObject *result ) {
-  ptrdiff_t res = savestack(L, result);
+                       const TObject *p1, const TObject *p2) {
   setobj(L->top, f);  /* push function */
   setobj(L->top+1, p1);  /* 1st argument */
   setobj(L->top+2, p2);  /* 2nd argument */
   luaD_checkstack(L, 3);  /* cannot check before (could invalidate p1, p2) */
   L->top += 3;
   luaD_call(L, L->top - 3, 1);
-  result = restorestack(L, res);  /* previous call may change stack */
-  setobj(result, --L->top);  /* get result */
+  L->top--;  /* result will be in L->top */
 }
 
 
@@ -115,32 +113,29 @@ static void callTM (lua_State *L, const TObject *f,
 ** Receives the table at `t' and the key at `key'.
 ** leaves the result at `res'.
 */
-void luaV_gettable (lua_State *L, const TObject *t, TObject *key, StkId res) {
+const TObject *luaV_gettable (lua_State *L, const TObject *t, TObject *key) {
   const TObject *tm;
   int loop = 0;
   do {
     if (ttype(t) == LUA_TTABLE) {  /* `t' is a table? */
       Table *h = hvalue(t);
-      Table *et = h->metatable;
-      if ((tm = fasttm(L, et, TM_GETTABLE)) == NULL) {  /* no gettable TM? */
-        const TObject *v = luaH_get(h, key);  /* do a primitive get */
-        if (ttype(v) != LUA_TNIL ||  /* result is no nil ... */
-            (tm = fasttm(L, et, TM_INDEX)) == NULL) {  /* ... or no index TM? */
-          setobj(res, v);  /* default get */
-          return;
-        }
+      const TObject *v = luaH_get(h, key);  /* do a primitive get */
+      if (ttype(v) != LUA_TNIL ||  /* result is no nil? */
+          (tm = fasttm(L, h->metatable, TM_INDEX)) == NULL) {  /* or no TM? */
+        return v;
       }
       /* else will try the tag method */
     }
     else if (ttype(tm = luaT_gettmbyobj(L, t, TM_GETTABLE)) == LUA_TNIL)
       luaG_typeerror(L, t, "index");
     if (ttype(tm) == LUA_TFUNCTION) {
-      callTMres(L, tm, t, key, res);
-      return;
+      callTMres(L, tm, t, key);
+      return L->top;
     }
     t = tm;  /* else repeat access with `tm' */ 
   } while (++loop <= MAXTAGLOOP);
   luaG_runerror(L, "loop in gettable");
+  return NULL;  /* to avoid warnings */
 }
 
 
@@ -153,14 +148,11 @@ void luaV_settable (lua_State *L, const TObject *t, TObject *key, StkId val) {
   do {
     if (ttype(t) == LUA_TTABLE) {  /* `t' is a table? */
       Table *h = hvalue(t);
-      Table *et = h->metatable;
-      if ((tm = fasttm(L, et, TM_SETTABLE)) == NULL) {  /* no settable TM? */
-        TObject *oldval = luaH_set(L, h, key); /* do a primitive set */
-        if (ttype(oldval) != LUA_TNIL ||  /* result is no nil ... */
-            (tm = fasttm(L, et, TM_NEWINDEX)) == NULL) {  /* ... or no TM? */
-          setobj(oldval, val);
-          return;
-        }
+      TObject *oldval = luaH_set(L, h, key); /* do a primitive set */
+      if (ttype(oldval) != LUA_TNIL ||  /* result is no nil? */
+          (tm = fasttm(L, h->metatable, TM_NEWINDEX)) == NULL) { /* or no TM? */
+        setobj(oldval, val);
+        return;
       }
       /* else will try the tag method */
     }
@@ -178,11 +170,14 @@ void luaV_settable (lua_State *L, const TObject *t, TObject *key, StkId val) {
 
 static int call_binTM (lua_State *L, const TObject *p1, const TObject *p2,
                        TObject *res, TMS event) {
+  ptrdiff_t result = savestack(L, res);
   const TObject *tm = luaT_gettmbyobj(L, p1, event);  /* try first operand */
   if (ttype(tm) == LUA_TNIL)
     tm = luaT_gettmbyobj(L, p2, event);  /* try second operand */
   if (ttype(tm) != LUA_TFUNCTION) return 0;
-  callTMres(L, tm, p1, p2, res);
+  callTMres(L, tm, p1, p2);
+  res = restorestack(L, result);  /* previous call may change stack */
+  setobj(res, L->top);
   return 1;
 }
 
@@ -267,7 +262,7 @@ int luaV_equalval (lua_State *L, const TObject *t1, const TObject *t2) {
         return 0;  /* no TM */
       else break;  /* will try TM */
   }
-  callTMres(L, tm, t1, t2, L->top);  /* call TM */
+  callTMres(L, tm, t1, t2);  /* call TM */
   return !l_isfalse(L->top);
 }
 
@@ -308,14 +303,17 @@ void luaV_concat (lua_State *L, int total, int last) {
 static void powOp (lua_State *L, StkId ra, StkId rb, StkId rc) {
   const TObject *b = rb;
   const TObject *c = rc;
+  ptrdiff_t res = savestack(L, ra);
   TObject tempb, tempc;
   if (tonumber(b, &tempb) && tonumber(c, &tempc)) {
     TObject f, o;
     setsvalue(&o, luaS_newliteral(L, "pow"));
-    luaV_gettable(L, gt(L), &o, &f);
+    f = *luaV_gettable(L, gt(L), &o);
     if (ttype(&f) != LUA_TFUNCTION)
       luaG_runerror(L, "`pow' (for `^' operator) is not a function");
-    callTMres(L, &f, b, c, ra);
+    callTMres(L, &f, b, c);
+    ra = restorestack(L, res);  /* previous call may change stack */
+    setobj(ra, L->top);
   }
   else
     call_arith(L, rb, rc, ra, TM_POW);
@@ -402,11 +400,11 @@ StkId luaV_execute (lua_State *L) {
       }
       case OP_GETGLOBAL: {
         lua_assert(ttype(KBx(i)) == LUA_TSTRING && ttype(&cl->g) == LUA_TTABLE);
-        luaV_gettable(L, &cl->g, KBx(i), ra);
+        setobj(RA(i), luaV_gettable(L, &cl->g, KBx(i)));
         break;
       }
       case OP_GETTABLE: {
-        luaV_gettable(L, RB(i), RKC(i), ra);
+        setobj(RA(i), luaV_gettable(L, RB(i), RKC(i)));
         break;
       }
       case OP_SETGLOBAL: {
@@ -433,7 +431,7 @@ StkId luaV_execute (lua_State *L) {
       case OP_SELF: {
         StkId rb = RB(i);
         setobj(ra+1, rb);
-        luaV_gettable(L, rb, RKC(i), ra);
+        setobj(RA(i), luaV_gettable(L, rb, RKC(i)));
         break;
       }
       case OP_ADD: {
@@ -608,7 +606,7 @@ StkId luaV_execute (lua_State *L) {
         if (ttype(ra) == LUA_TTABLE) {
           setobj(ra+1, ra);
           setsvalue(ra, luaS_new(L, "next"));
-          luaV_gettable(L, gt(L), ra, ra);
+          setobj(RA(i), luaV_gettable(L, gt(L), ra));
         }
         dojump(pc, GETARG_sBx(i));
         break;
