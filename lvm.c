@@ -64,7 +64,7 @@ int luaV_tostring (lua_State *L, TObject *obj) {
 static void traceexec (lua_State *L, lua_Hook linehook) {
   CallInfo *ci = L->ci;
   int *lineinfo = ci_func(ci)->l.p->lineinfo;
-  int pc = (*ci->pc - ci_func(ci)->l.p->code) - 1;
+  int pc = (int)(*ci->pc - ci_func(ci)->l.p->code) - 1;
   int newline;
   if (pc == 0) {  /* may be first time? */
     ci->line = 1;
@@ -97,7 +97,7 @@ static void callTM (lua_State *L, const TObject *f,
     setobj(base+3, p3);  /* 3th argument */
     L->top++;
   }
-  luaD_call(L, base, (result ? 1 : 0));
+  luaD_call(L, base, 1);
   if (result) {  /* need a result? */
     setobj(result, base);  /* get it */
   }
@@ -326,6 +326,7 @@ StkId luaV_execute (lua_State *L) {
       traceexec(L, linehook);
     lua_assert(L->top == L->ci->top || GET_OPCODE(i) == OP_CALL ||
          GET_OPCODE(i) == OP_RETURN || GET_OPCODE(i) == OP_SETLISTO);
+    lua_assert(L->ci->savedpc == NULL);
     switch (GET_OPCODE(i)) {
       case OP_MOVE: {
         setobj(ra, RB(i));
