@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.95 2003/03/11 12:24:34 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.96 2003/03/14 18:59:53 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -695,7 +695,7 @@ static int str_format (lua_State *L) {
       char buff[MAX_ITEM];  /* to store the formatted item */
       int hasprecision = 0;
       if (isdigit(uchar(*strfrmt)) && *(strfrmt+1) == '$')
-        return luaL_error(L, "obsolete `format' option (d$)");
+        return luaL_error(L, "obsolete option (d$) to `format'");
       arg++;
       strfrmt = scanformat(L, strfrmt, form, &hasprecision);
       switch (*strfrmt++) {
@@ -732,7 +732,7 @@ static int str_format (lua_State *L) {
           }
         }
         default: {  /* also treat cases `pnLlh' */
-          return luaL_error(L, "invalid option in `format'");
+          return luaL_error(L, "invalid option to `format'");
         }
       }
       luaL_addlstring(&b, buff, strlen(buff));

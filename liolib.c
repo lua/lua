@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.37 2003/03/14 19:08:11 roberto Exp roberto $
+** $Id: liolib.c,v 2.38 2003/03/18 12:25:32 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -377,8 +377,7 @@ static int g_read (lua_State *L, FILE *f, int first) {
       }
       else {
         const char *p = lua_tostring(L, n);
-        if (!p || p[0] != '*')
-          return luaL_error(L, "invalid `read' option");
+        luaL_argcheck(L, p && p[0] == '*', n, "invalid option");
         switch (p[1]) {
           case 'n':  /* number */
             success = read_number(L, f);
@@ -391,7 +390,7 @@ static int g_read (lua_State *L, FILE *f, int first) {
             success = 1; /* always success */
             break;
           case 'w':  /* word */
-            return luaL_error(L, "obsolete option `*w'");
+            return luaL_error(L, "obsolete option `*w' to `read'");
           default:
             return luaL_argerror(L, n, "invalid format");
         }
@@ -563,7 +562,7 @@ static int io_tmpname (lua_State *L) {
 #else
   char buff[L_tmpnam];
   if (tmpnam(buff) != buff)
-    return luaL_error(L, "unable to generate a unique filename");
+    return luaL_error(L, "unable to generate a unique filename in `tmpname'");
   lua_pushstring(L, buff);
   return 1;
 #endif
