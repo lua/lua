@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.8 1997/12/11 14:48:46 roberto Exp roberto $
+** $Id: lua.c,v 1.9 1997/12/11 17:00:21 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -25,6 +25,17 @@
 #define isatty(x)       (x==0)  /* assume stdin is a tty */
 #endif
 
+/* command line options:
+** -v      print version information (banner).
+** -d      debug on
+** -e      dostring on next arg
+** a=b     sets global 'a' with string 'b'
+** -q      interactive mode without prompt
+** -i      interactive mode with prompt
+** -       executes stdin as a file
+** name    dofile "name"
+*/
+
 
 static void assign (char *arg)
 {
@@ -44,39 +55,35 @@ static void assign (char *arg)
 
 static void manual_input (int prompt)
 {
-  if (isatty(0)) {
-    int cont = 1;
-    while (cont) {
-      char buffer[BUF_SIZE];
-      int i = 0;
-      lua_beginblock();
-      if (prompt)
-        printf("%s", lua_getstring(lua_getglobal("_PROMPT")));
-      for(;;) {
-        int c = getchar();
-        if (c == EOF) {
-          cont = 0;
-          break;
-        }
-        else if (c == '\n') {
-          if (i>0 && buffer[i-1] == '\\')
-            buffer[i-1] = '\n';
-          else break;
-        }
-        else if (i >= BUF_SIZE-1) {
-          fprintf(stderr, "lua: argument line too long\n");
-          break;
-        }
-        else buffer[i++] = c;
+  int cont = 1;
+  while (cont) {
+    char buffer[BUF_SIZE];
+    int i = 0;
+    lua_beginblock();
+    if (prompt)
+      printf("%s", lua_getstring(lua_getglobal("_PROMPT")));
+    for(;;) {
+      int c = getchar();
+      if (c == EOF) {
+        cont = 0;
+        break;
       }
-      buffer[i] = 0;
-      lua_dostring(buffer);
-      lua_endblock();
+      else if (c == '\n') {
+        if (i>0 && buffer[i-1] == '\\')
+          buffer[i-1] = '\n';
+        else break;
+      }
+      else if (i >= BUF_SIZE-1) {
+        fprintf(stderr, "lua: argument line too long\n");
+        break;
+      }
+      else buffer[i++] = c;
     }
-    printf("\n");
+    buffer[i] = 0;
+    lua_dostring(buffer);
+    lua_endblock();
   }
-  else
-    lua_dofile(NULL);  /* executes stdin as a file */
+  printf("\n");
 }
 
 
@@ -88,12 +95,18 @@ int main (int argc, char *argv[])
   lua_strlibopen();
   lua_mathlibopen();
   lua_pushstring("> "); lua_setglobal("_PROMPT");
-  if (argc < 2) {
-    printf("%s  %s\n", LUA_VERSION, LUA_COPYRIGHT);
-    manual_input(1);
+  if (argc < 2) {  /* no arguments? */
+    if (isatty(0)) {
+      printf("%s  %s\n", LUA_VERSION, LUA_COPYRIGHT);
+      manual_input(1);
+    }
+    else
+      lua_dofile(NULL);  /* executes stdin as a file */
   }
   else for (i=1; i<argc; i++) {
     if (strcmp(argv[i], "-") == 0)
+      lua_dofile(NULL);  /* executes stdin as a file */
+    else if (strcmp(argv[i], "-i") == 0)
       manual_input(1);
     else if (strcmp(argv[i], "-q") == 0)
       manual_input(0);
