@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.49 2000/09/29 12:42:13 roberto Exp roberto $
+** $Id: lobject.c,v 1.50 2000/10/02 20:10:55 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -66,62 +66,13 @@ char *luaO_openspace (lua_State *L, size_t n) {
 }
 
 
-static double expten (unsigned int e) {
-  double exp = 10.0;
-  double res = 1.0;
-  for (; e; e>>=1) {
-    if (e & 1) res *= exp;
-    exp *= exp;
-  }
-  return res;
-}
-
-
 int luaO_str2d (const char *s, Number *result) {  /* LUA_NUMBER */
-  double a = 0.0;
-  int point = 0;  /* number of decimal digits */
-  int sig;
-  while (isspace((unsigned char)*s)) s++;
-  sig = 0;
-  switch (*s) {
-    case '-': sig = 1;  /* go through */
-    case '+': s++;
-  }
-  if (! (isdigit((unsigned char)*s) ||
-          (*s == '.' && isdigit((unsigned char)*(s+1)))))
-    return 0;  /* not (at least one digit before or after the point) */
-  while (isdigit((unsigned char)*s))
-    a = 10.0*a + (*(s++)-'0');
-  if (*s == '.') {
-    s++;
-    while (isdigit((unsigned char)*s)) {
-      a = 10.0*a + (*(s++)-'0');
-      point++;
-    }
-  }
-  if (sig) a = -a;
-  if (*s == 'e' || *s == 'E') {
-    int e = 0;
-    s++;
-    sig = 0;
-    switch (*s) {
-      case '-': sig = 1;  /* go through */
-      case '+': s++;
-    }
-    if (!isdigit((unsigned char)*s)) return 0;  /* no digit in the exponent? */
-    do {
-      e = 10*e + (*(s++)-'0');
-    } while (isdigit((unsigned char)*s));
-    if (sig) e = -e;
-    point -= e;
-  }
-  while (isspace((unsigned char)*s)) s++;
-  if (*s != '\0') return 0;  /* invalid trailing characters? */
-  if (point != 0) {
-    if (point > 0) a /= expten(point);
-    else           a *= expten(-point);
-  }
-  *result = a;
+  char *endptr;
+  Number res = lua_str2number(s, &endptr);
+  if (endptr == s) return 0;  /* no conversion */
+  while (isspace((unsigned char)*endptr)) endptr++;
+  if (*endptr != '\0') return 0;  /* invalid trailing characters? */
+  *result = res;
   return 1;
 }
 
