@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.63 2004/03/13 13:32:09 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.64 2004/05/03 12:28:43 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -111,17 +111,6 @@ LUALIB_API void luaL_pushresult (luaL_Buffer *B);
 
 
 /* }====================================================== */
-
-
-
-/*
-** Compatibility macros and functions
-*/
-
-LUALIB_API int   lua_dofile (lua_State *L, const char *filename);
-LUALIB_API int   lua_dostring (lua_State *L, const char *str);
-LUALIB_API int   lua_dobuffer (lua_State *L, const char *buff, size_t sz,
-                               const char *n);
 
 
 #endif
