@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.40 2000/09/11 20:29:27 roberto Exp roberto $
+** $Id: ldebug.c,v 1.41 2000/09/12 18:38:02 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -216,7 +216,7 @@ static const char *travtagmethods (lua_State *L, const TObject *o) {
 static const char *travglobals (lua_State *L, const TObject *o) {
   Hash *g = L->gt;
   int i;
-  for (i=0; i<=g->size; i++) {
+  for (i=0; i<g->size; i++) {
     if (luaO_equalObj(o, val(node(g, i))) &&
         ttype(key(node(g, i))) == TAG_STRING) 
       return tsvalue(key(node(g, i)))->str;
