@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.43 2003/05/14 21:01:53 roberto Exp roberto $
+** $Id: liolib.c,v 2.44 2003/07/07 13:32:52 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -732,13 +732,13 @@ LUALIB_API int luaopen_io (lua_State *L) {
   lua_pushvalue(L, -1);
   luaL_openlib(L, LUA_IOLIBNAME, iolib, 1);
   /* put predefined file handles into `io' table */
-  lua_pushstring(L, "stdin");
+  lua_pushliteral(L, "stdin");
   lua_rawgeti(L, 2, IO_INPUT);
   lua_rawset(L, 3);
-  lua_pushstring(L, "stdout");
+  lua_pushliteral(L, "stdout");
   lua_rawgeti(L, 2, IO_OUTPUT);
   lua_rawset(L, 3);
-  lua_pushstring(L, "stderr");
+  lua_pushliteral(L, "stderr");
   *newfile(L) = stderr;
   lua_rawset(L, 3);
   return 1;
