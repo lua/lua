@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: lparser.c,v 1.167 2002/02/14 21:46:58 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -247,12 +247,12 @@ static void adjust_assign (LexState *ls, int nvars, int nexps, expdesc *e) {
 }
 
 
-static void code_params (LexState *ls, int nparams, short dots) {
+static void code_params (LexState *ls, int nparams, int dots) {
   FuncState *fs = ls->fs;
   adjustlocalvars(ls, nparams);
   luaX_checklimit(ls, fs->nactloc, MAXPARAMS, "parameters");
-  fs->f->numparams = cast(short, fs->nactloc);  /* `self' could be there already */
-  fs->f->is_vararg = dots;
+  fs->f->numparams = cast(lu_byte, fs->nactloc);
+  fs->f->is_vararg = cast(lu_byte, dots);
   if (dots) {
     new_localvarstr(ls, "arg", 0);
     adjustlocalvars(ls, 1);
@@ -271,7 +271,7 @@ static void enterbreak (FuncState *fs, Breaklabel *bl) {
 
 static void leavebreak (FuncState *fs, Breaklabel *bl) {
   fs->bl = bl->previous;
-  luaK_patchlist(fs, bl->breaklist, luaK_getlabel(fs));
+  luaK_patchtohere(fs, bl->breaklist);
   lua_assert(bl->nactloc == fs->nactloc);
 }
 
@@ -471,8 +471,11 @@ static void recfield (LexState *ls, struct ConsControl *cc) {
   FuncState *fs = ls->fs;
   int reg = ls->fs->freereg;
   expdesc key, val;
-  if (ls->t.token == TK_NAME)
+  if (ls->t.token == TK_NAME) {
+    luaX_checklimit(ls, cc->nh, MAX_INT, "items in a constructor");
+    cc->nh++;
     checkname(ls, &key);
+  }
   else  /* ls->t.token == '[' */
     luaY_index(ls, &key);
   check(ls, '=');
@@ -481,8 +484,6 @@ static void recfield (LexState *ls, struct ConsControl *cc) {
   luaK_exp2anyreg(fs, &val);
   luaK_codeABC(fs, OP_SETTABLE, val.info, cc->t->info, luaK_exp2RK(fs, &key));
   fs->freereg = reg;  /* free registers */
-  luaX_checklimit(ls, cc->nh, MAX_INT, "items in a constructor");
-  cc->nh++;
 }
 
 
@@ -893,7 +894,7 @@ static void whilestat (LexState *ls, int line) {
   check(ls, TK_DO);
   block(ls);
   luaK_patchlist(fs, luaK_jump(fs), while_init);
-  luaK_patchlist(fs, v.f, luaK_getlabel(fs));
+  luaK_patchtohere(fs, v.f);
   check_match(ls, TK_END, TK_WHILE, line);
   leavebreak(fs, &bl);
 }
@@ -922,24 +923,11 @@ static void exp1 (LexState *ls) {
 }
 
 
-static void forbody (LexState *ls, OpCode loopfor) {
-  /* forbody -> DO block END */
-  FuncState *fs = ls->fs;
-  int basereg = fs->freereg - 3;
-  int prep = luaK_jump(fs);
-  int blockinit = luaK_getlabel(fs);
-  check(ls, TK_DO);
-  adjustlocalvars(ls, 3);  /* scope for control variables */
-  block(ls);
-  luaK_patchlist(fs, prep, luaK_getlabel(fs));
-  luaK_patchlist(fs, luaK_codeAsBc(fs, loopfor, basereg, NO_JUMP), blockinit);
-  removelocalvars(ls, 3, 1);
-}
-
-
 static void fornum (LexState *ls, TString *varname) {
-  /* fornum -> NAME = exp1,exp1[,exp1] forbody */
+  /* fornum -> NAME = exp1,exp1[,exp1] DO body */
   FuncState *fs = ls->fs;
+  int prep;
+  int base = fs->freereg;
   new_localvar(ls, varname, 0);
   new_localvarstr(ls, "(limit)", 1);
   new_localvarstr(ls, "(step)", 2);
@@ -954,26 +942,42 @@ static void fornum (LexState *ls, TString *varname) {
     luaK_reserveregs(fs, 1);
   }
   luaK_codeABC(fs, OP_SUB, fs->freereg - 3, fs->freereg - 3, fs->freereg - 1);
-  forbody(ls, OP_FORLOOP);
+  luaK_jump(fs);
+  prep = luaK_getlabel(fs);
+  check(ls, TK_DO);
+  adjustlocalvars(ls, 3);  /* scope for control variables */
+  block(ls);
+  luaK_patchtohere(fs, prep-1);
+  luaK_patchlist(fs, luaK_codeAsBc(fs, OP_FORLOOP, base, NO_JUMP), prep);
+  removelocalvars(ls, 3, 1);
 }
 
 
 static void forlist (LexState *ls, TString *indexname) {
-  /* forlist -> NAME,NAME IN exp1 forbody */
+  /* forlist -> NAME {,NAME} IN exp1 DO body */
   FuncState *fs = ls->fs;
+  int nvars = 0;
+  int prep;
+  int base = fs->freereg;
   new_localvarstr(ls, "(table)", 0);
-  new_localvar(ls, indexname, 1);
-  if (optional(ls, ',')) {
-    new_localvar(ls, str_checkname(ls), 2);
-    next(ls);  /* skip var name */
+  new_localvar(ls, indexname, ++nvars);
+  while (optional(ls, ',')) {
+    new_localvar(ls, str_checkname(ls), ++nvars);
+    next(ls);
   }
-  else
-    new_localvarstr(ls, "(val)", 2);
   check(ls, TK_IN);
   exp1(ls);  /* table */
-  luaK_reserveregs(fs, 2);  /* registers for index and val */
-  luaK_codeABC(fs, OP_LOADNIL, fs->freereg - 2, fs->freereg - 1, 0);
-  forbody(ls, OP_TFORLOOP);
+  luaK_checkstack(fs, 2);  /* at least two slots, to traverse tables */
+  luaK_reserveregs(fs, nvars);  /* registers for vars */
+  luaK_codeABC(fs, OP_LOADNIL, base+1, base+nvars, 0);
+  adjustlocalvars(ls, nvars+1);  /* scope for control variables */
+  luaK_codeABC(fs, OP_TFORLOOP, base, 0, nvars);
+  prep = luaK_jump(fs);
+  check(ls, TK_DO);
+  block(ls);
+  luaK_patchlist(fs, luaK_jump(fs), prep-1);
+  luaK_patchtohere(fs, prep);
+  removelocalvars(ls, nvars+1, 1);
 }
 
 
@@ -1013,18 +1017,18 @@ static void ifstat (LexState *ls, int line) {
   test_then_block(ls, &v);  /* IF cond THEN block */
   while (ls->t.token == TK_ELSEIF) {
     luaK_concat(fs, &escapelist, luaK_jump(fs));
-    luaK_patchlist(fs, v.f, luaK_getlabel(fs));
+    luaK_patchtohere(fs, v.f);
     test_then_block(ls, &v);  /* ELSEIF cond THEN block */
   }
   if (ls->t.token == TK_ELSE) {
     luaK_concat(fs, &escapelist, luaK_jump(fs));
-    luaK_patchlist(fs, v.f, luaK_getlabel(fs));
+    luaK_patchtohere(fs, v.f);
     next(ls);  /* skip ELSE */
     block(ls);  /* `else' part */
   }
   else
     luaK_concat(fs, &escapelist, v.f);
-  luaK_patchlist(fs, escapelist, luaK_getlabel(fs));
+  luaK_patchtohere(fs, escapelist);
   check_match(ls, TK_END, TK_IF, line);
 }
 
@@ -1182,7 +1186,7 @@ static int statement (LexState *ls) {
 static void parlist (LexState *ls) {
   /* parlist -> [ param { `,' param } ] */
   int nparams = 0;
-  short dots = 0;
+  int dots = 0;
   if (ls->t.token != ')') {  /* is `parlist' not empty? */
     do {
       switch (ls->t.token) {

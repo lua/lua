@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.8 2001/12/11 22:48:44 roberto Exp $
+** $Id: lopcodes.c,v 1.11 2002/02/05 22:39:12 roberto Exp roberto $
 ** extracted automatically from lopcodes.h by mkprint.lua
 ** DO NOT EDIT
 ** See Copyright Notice in lua.h
@@ -60,6 +60,7 @@ const char *const luaP_opnames[] = {
    ((b)<<OpModeBreg) | ((c)<<OpModeCreg) | \
    ((sa)<<OpModesetA) | ((k)<<OpModeK) | (x)<<OpModeNoTrace | (m))
 
+
 const lu_byte luaP_opmodes[NUM_OPCODES] = {
 /*       T n B C sA K mode		   opcode    */
   opmode(0,0,1,0, 1,0,iABC)		/* OP_MOVE */
@@ -94,7 +95,7 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_CALL */
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_RETURN */
  ,opmode(0,1,0,0, 0,0,iAsBc)		/* OP_FORLOOP */
- ,opmode(0,1,0,0, 0,0,iAsBc)		/* OP_TFORLOOP */
+ ,opmode(0,0,0,0, 0,0,iABC)		/* OP_TFORLOOP */
  ,opmode(0,0,0,0, 0,0,iABc)		/* OP_SETLIST */
  ,opmode(0,0,0,0, 0,0,iABc)		/* OP_SETLISTO */
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_CLOSE */

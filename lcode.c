@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.89 2002/02/05 22:39:12 roberto Exp roberto $
+** $Id: lcode.c,v 1.90 2002/03/05 12:42:47 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -158,6 +158,11 @@ void luaK_patchlist (FuncState *fs, int list, int target) {
 }
 
 
+void luaK_patchtohere (FuncState *fs, int list) {
+  luaK_patchlist(fs, list, luaK_getlabel(fs));
+}
+
+
 void luaK_concat (FuncState *fs, int *l1, int l2) {
   if (*l1 == NO_JUMP)
     *l1 = l2;
@@ -171,13 +176,19 @@ void luaK_concat (FuncState *fs, int *l1, int l2) {
 }
 
 
-void luaK_reserveregs (FuncState *fs, int n) {
-  fs->freereg += n;
-  if (fs->freereg > fs->f->maxstacksize) {
-    if (fs->freereg >= MAXSTACK)
+void luaK_checkstack (FuncState *fs, int n) {
+  int newstack = fs->freereg + n;
+  if (newstack > fs->f->maxstacksize) {
+    if (newstack >= MAXSTACK)
       luaK_error(fs->ls, "function or expression too complex");
-    fs->f->maxstacksize = cast(lu_byte, fs->freereg);
+    fs->f->maxstacksize = cast(lu_byte, newstack);
   }
+}
+
+
+void luaK_reserveregs (FuncState *fs, int n) {
+  luaK_checkstack(fs, n);
+  fs->freereg += n;
 }
 
 
@@ -533,7 +544,7 @@ void luaK_goiftrue (FuncState *fs, expdesc *e) {
     }
   }
   luaK_concat(fs, &e->f, pc);  /* insert last jump in `f' list */
-  luaK_patchlist(fs, e->t, luaK_getlabel(fs));
+  luaK_patchtohere(fs, e->t);
   e->t = NO_JUMP;
 }
 
@@ -560,7 +571,7 @@ static void luaK_goiffalse (FuncState *fs, expdesc *e) {
     }
   }
   luaK_concat(fs, &e->t, pc);  /* insert last jump in `t' list */
-  luaK_patchlist(fs, e->f, luaK_getlabel(fs));
+  luaK_patchtohere(fs, e->f);
   e->f = NO_JUMP;
 }
 

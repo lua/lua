@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.217 2002/03/04 15:40:04 roberto Exp roberto $
+** $Id: lvm.c,v 1.218 2002/03/04 21:33:09 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -560,24 +560,21 @@ StkId luaV_execute (lua_State *L) {
         break;
       }
       case OP_TFORLOOP: {
-        int j = GETARG_sBc(i);
-        int loop = 0;
-        pc += j;  /* jump back before tests (for error messages) */
         if (ttype(ra) == LUA_TTABLE) {
           Table *t = hvalue(ra);
-          loop = luaH_next(L, t, ra+1);
+          if (luaH_next(L, t, ra+1))
+            pc++;  /* skip jump (keep looping) */
         }
         else if (ttype(ra) == LUA_TFUNCTION) {
           setobj(ra+1, ra);
           L->top = ra+2;  /* no arguments */
-          luaD_call(L, ra+1, 2);
+          luaD_call(L, ra+1, GETARG_C(i));
           L->top = L->ci->top;
-          loop = (ttype(ra+1) != LUA_TNIL);
+          if (ttype(ra+1) != LUA_TNIL)
+            pc++;  /* skip jump (keep looping) */
         }
         else
           luaD_error(L, "`for' generator must be a table or function");
-        if (!loop)
-          pc -= j;  /* undo jump */
         break;
       }
       case OP_SETLIST:

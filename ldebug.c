@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.97 2002/01/09 22:02:47 roberto Exp $
+** $Id: ldebug.c,v 1.100 2002/02/05 22:39:12 roberto Exp $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -375,14 +375,21 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         check(c < MAXSTACK && b < c);
         break;
       }
-      case OP_JMP:
       case OP_FORLOOP:
-      case OP_TFORLOOP: {
+        checkreg(pt, a+2);
+        /* go through */
+      case OP_JMP: {
         int dest = pc+1+b;
 	check(0 <= dest && dest < pt->sizecode);
         /* not full check and jump is forward and do not skip `lastpc'? */
         if (reg != NO_REG && pc < dest && dest <= lastpc)
           pc += b;  /* do the jump */
+        break;
+      }
+      case OP_TFORLOOP: {
+        checkreg(pt, a+c);
+        checkreg(pt, a+2);  /* at least 2 for table generators */
+        check(pc+2 < pt->sizecode);  /* check skip */
         break;
       }
       case OP_CALL: {
@@ -408,8 +415,14 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         break;
       }
       case OP_CLOSURE: {
+        int nup;
         check(b < pt->sizep);
-        check(pc + pt->p[b]->nupvalues < pt->sizecode);
+        nup = pt->p[b]->nupvalues;
+        check(pc + nup < pt->sizecode);
+        for (; nup>0; nup--) {
+          OpCode op1 = GET_OPCODE(pt->code[pc+nup]);
+          check(op1 == OP_GETUPVAL || op1 == OP_MOVE);
+        }
         break;
       }
       default: break;
