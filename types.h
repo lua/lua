@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: types.h,v 1.1 1994/12/20 21:31:01 roberto Exp celes $
+** $Id: types.h,v 1.2 1994/12/27 20:41:47 celes Exp roberto $
 */
 
 #ifndef types_h
@@ -14,13 +14,16 @@
 
 typedef int Bool;  /* boolean values */
 
+#define Byte lua_Byte	/* some systems have Byte as a predefined type */
 typedef unsigned char  Byte;  /* unsigned 8 bits */
 
+#define Word lua_Word	/* some systems have Word as a predefined type */
 typedef unsigned short Word;  /* unsigned 16 bits */
 
 #define MAX_WORD  (USHRT_MAX-2)  /* maximum value of a word (-2 for safety) */
 #define MAX_INT   (INT_MAX-2)  /* maximum value of a int (-2 for safety) */
 
+#define Long lua_Long	/* some systems have Long as a predefined type */
 typedef signed long  Long;  /* 32 bits */
 
 typedef unsigned int IntPoint; /* unsigned with same size as a pointer (for hashing) */
