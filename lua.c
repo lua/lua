@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.41 2000/06/19 13:15:15 roberto Exp roberto $
+** $Id: lua.c,v 1.42 2000/06/30 19:17:08 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -62,6 +62,10 @@ static int ldo (int (*f)(lua_State *L, const char *), const char *name) {
   handler h = lreset();
   res = f(lua_state, name);  /* dostring | dofile */
   signal(SIGINT, h);  /* restore old action */
+  if (res == LUA_ERRMEM) {
+    /* Lua gives no message in such case, so lua.c provides one */
+    fprintf(stderr, "lua: memory allocation error\n");
+  }
   return res;
 }
 
@@ -121,7 +125,7 @@ static void l_getargs (void) {
 static void file_input (const char *argv) {
   int result = ldo(lua_dofile, argv);
   if (result) {
-    if (result == 2) {
+    if (result == LUA_ERRFILE) {
       fprintf(stderr, "lua: cannot execute file ");
       perror(argv);
     }

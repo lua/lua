@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.28 2000/06/28 17:06:07 roberto Exp roberto $
+** $Id: ltests.c,v 1.29 2000/06/30 19:17:08 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -169,9 +169,14 @@ static void get_limits (void) {
 
 
 static void mem_query (void) {
-  lua_pushnumber(memdebug_total);
-  lua_pushnumber(memdebug_numblocks);
-  lua_pushnumber(memdebug_maxmem);
+  lua_Object arg = lua_getparam(1);
+  if (arg == LUA_NOOBJECT) {
+    lua_pushnumber(memdebug_total);
+    lua_pushnumber(memdebug_numblocks);
+    lua_pushnumber(memdebug_maxmem);
+  }
+  else
+    memdebug_memlimit = luaL_check_int(1);
 }
 
 
@@ -375,7 +380,10 @@ static void testC (void) {
     else if EQ("newstate") {
       int stacksize = getnum(&pc);
       lua_State *L1 = lua_newstate(stacksize, getnum(&pc));
-      lua_pushuserdata(L1);
+      if (L1)
+        lua_pushuserdata(L1);
+      else
+        lua_pushnil();
     }
     else if EQ("closestate") {
       (lua_close)((lua_State *)lua_getuserdata(reg[getreg(&pc)]));
@@ -385,14 +393,20 @@ static void testC (void) {
       lua_Object str = reg[getreg(&pc)];
       lua_State *L1;
       lua_Object temp;
-      int i;
+      int status;
       if (!lua_isuserdata(ol1) || !lua_isstring(str))
         lua_error("bad arguments for `doremote'");
       L1 = (lua_State *)lua_getuserdata(ol1);
-      (lua_dostring)(L1, lua_getstring(str));
-      i = 1;
-      while ((temp = (lua_getresult)(L1, i++)) != LUA_NOOBJECT)
-        lua_pushstring((lua_getstring)(L1, temp));
+      status = (lua_dostring)(L1, lua_getstring(str));
+      if (status != 0) {
+        lua_pushnil();
+        lua_pushnumber(status);
+      }
+      else {
+        int i = 1;
+        while ((temp = (lua_getresult)(L1, i++)) != LUA_NOOBJECT)
+          lua_pushstring((lua_getstring)(L1, temp));
+      }
     }
 #if LUA_DEPRECATETFUNCS
     else if EQ("rawsetglobal") {

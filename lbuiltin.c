@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.116 2000/06/12 13:52:05 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.117 2000/06/30 14:35:17 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -365,8 +365,8 @@ void luaB_tostring (lua_State *L) {
       sprintf(buff, "function: %p", clvalue(o));
       break;
     case TAG_USERDATA:
-      sprintf(buff, "userdata: %p(%d)", tsvalue(o)->u.d.value,
-                                        tsvalue(o)->u.d.tag);
+      sprintf(buff, "userdata(%d): %p", tsvalue(o)->u.d.tag,
+                                        tsvalue(o)->u.d.value);
       break;
     case TAG_NIL:
       lua_pushstring(L, "nil");
@@ -680,8 +680,6 @@ static const struct luaL_reg builtin_funcs[] = {
 
 
 void luaB_predefine (lua_State *L) {
-  /* pre-register mem error messages, to avoid loop when error arises */
-  luaS_newfixed(L, memEM);
   luaL_openl(L, builtin_funcs);
 #ifdef DEBUG
   luaB_opentests(L);  /* internal test functions */

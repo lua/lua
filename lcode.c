@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.40 2000/06/28 20:20:36 roberto Exp roberto $
+** $Id: lcode.c,v 1.41 2000/06/30 14:35:17 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -620,8 +620,8 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
   }
   if (fs->debug) {
     LexState *ls = fs->ls;
-    luaX_checklimit(ls, ls->lastline, MAXARG_U, "lines in a chunk");
-    luaM_growvector(fs->L, fs->f->lines, fs->pc, 1, int, "??", MAXARG_U);
+    luaM_growvector(fs->L, fs->f->lines, fs->pc, 1, int,
+                    "code size overflow", MAX_INT);
     fs->f->lines[fs->pc] = ls->lastline;
   }
   /* put new instruction in code array */

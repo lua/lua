@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.80 2000/06/26 19:28:31 roberto Exp roberto $
+** $Id: ldo.c,v 1.81 2000/06/28 20:20:36 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -237,17 +237,41 @@ static void message (lua_State *L, const char *s) {
   }
 }
 
+
+void luaD_breakrun (lua_State *L, int errcode) {
+  if (L->errorJmp) {
+    L->errorJmp->status = errcode;
+    longjmp(L->errorJmp->b, 1);
+  }
+  else {
+    if (errcode != LUA_ERRMEM)
+      message(L, "unable to recover; exiting\n");
+    exit(1);
+  }
+}
+
 /*
 ** Reports an error, and jumps up to the available recovery label
 */
 void lua_error (lua_State *L, const char *s) {
   if (s) message(L, s);
-  if (L->errorJmp)
-    longjmp(L->errorJmp->b, 1);
-  else {
-    message(L, "unable to recover; exiting\n");
-    exit(1);
-  }
+  luaD_breakrun(L, LUA_ERRRUN);
+}
+
+
+static void chain_longjmp (lua_State *L, struct lua_longjmp *lj) {
+  lj->base = L->Cstack.base;
+  lj->numCblocks = L->numCblocks;
+  lj->previous = L->errorJmp;
+  L->errorJmp = lj;
+}
+
+
+static void restore_longjmp (lua_State *L, struct lua_longjmp *lj) {
+  L->Cstack.num = 0;  /* no results */
+  L->top = L->Cstack.base = L->Cstack.lua2C = lj->base;
+  L->numCblocks = lj->numCblocks;
+  L->errorJmp = lj->previous;
 }
 
 
@@ -257,58 +281,44 @@ void lua_error (lua_State *L, const char *s) {
 */
 int luaD_protectedrun (lua_State *L) {
   struct lua_longjmp myErrorJmp;
-  StkId base = L->Cstack.base;
-  int numCblocks = L->numCblocks;
-  int status;
-  struct lua_longjmp *volatile oldErr = L->errorJmp;
-  L->errorJmp = &myErrorJmp;
+  chain_longjmp(L, &myErrorJmp);
   if (setjmp(myErrorJmp.b) == 0) {
+    StkId base = L->Cstack.base;
     luaD_call(L, base, MULT_RET);
     L->Cstack.lua2C = base;  /* position of the new results */
     L->Cstack.num = L->top - base;
     L->Cstack.base = base + L->Cstack.num;  /* incorporate results on stack */
-    status = 0;
+    L->errorJmp = myErrorJmp.previous;
+    return 0;
   }
   else {  /* an error occurred: restore the stack */
-    L->Cstack.num = 0;  /* no results */
-    L->top = L->Cstack.base = L->Cstack.lua2C = base;
-    L->numCblocks = numCblocks;
+    restore_longjmp(L, &myErrorJmp);
     restore_stack_limit(L);
-    status = 1;
+    return myErrorJmp.status;
   }
-  L->errorJmp = oldErr;
-  return status;
 }
 
 
 /*
-** returns 0 = chunk loaded; 1 = error; 2 = no more chunks to load
+** returns 0 = chunk loaded; >0 : error; -1 = no more chunks to load
 */
 static int protectedparser (lua_State *L, ZIO *z, int bin) {
   struct lua_longjmp myErrorJmp;
-  StkId base = L->Cstack.base;
-  int numCblocks = L->numCblocks;
-  int status;
-  Proto *volatile tf;
-  struct lua_longjmp *volatile oldErr = L->errorJmp;
-  L->errorJmp = &myErrorJmp;
-  L->top = base;   /* clear C2Lua */
+  chain_longjmp(L, &myErrorJmp);
+  L->top = L->Cstack.base;   /* clear C2Lua */
   if (setjmp(myErrorJmp.b) == 0) {
-    tf = bin ? luaU_undump1(L, z) : luaY_parser(L, z);
-    status = 0;
+    Proto *tf = bin ? luaU_undump1(L, z) : luaY_parser(L, z);
+    L->errorJmp = myErrorJmp.previous;
+    if (tf == NULL) return -1;  /* `natural' end */
+    luaV_Lclosure(L, tf, 0);
+    return 0;
   }
-  else {  /* an error occurred: restore Cstack and top */
-    L->Cstack.num = 0;  /* no results */
-    L->top = L->Cstack.base = L->Cstack.lua2C = base;
-    L->numCblocks = numCblocks;
-    tf = NULL;
-    status = 1;
+  else {  /* an error occurred */
+    restore_longjmp(L, &myErrorJmp);
+    if (myErrorJmp.status == LUA_ERRRUN)
+      myErrorJmp.status = LUA_ERRSYNTAX;
+    return myErrorJmp.status;  /* error code */
   }
-  L->errorJmp = oldErr;
-  if (status) return 1;  /* error code */
-  if (tf == NULL) return 2;  /* `natural' end */
-  luaV_Lclosure(L, tf, 0);
-  return 0;
 }
 
 
@@ -320,8 +330,8 @@ static int do_main (lua_State *L, ZIO *z, int bin) {
     luaC_checkGC(L);
     old_blocks = L->nblocks;
     status = protectedparser(L, z, bin);
-    if (status == 1) return 1;  /* error */
-    else if (status == 2) return 0;  /* `natural' end */
+    if (status > 0) return status;  /* error */
+    else if (status < 0) return 0;  /* `natural' end */
     else {
       unsigned long newelems2 = 2*(L->nblocks-old_blocks);
       L->GCthreshold += newelems2;

@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.33 2000/06/12 13:52:05 roberto Exp roberto $
+** $Id: lmem.c,v 1.34 2000/06/26 19:28:31 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -11,6 +11,7 @@
 
 #include "lua.h"
 
+#include "ldo.h"
 #include "lmem.h"
 #include "lobject.h"
 #include "lstate.h"
@@ -36,6 +37,7 @@
 
 
 #include <assert.h>
+#include <limits.h>
 #include <string.h>
 
 #undef realloc
@@ -59,6 +61,7 @@ union L_U { double d; char *s; long l; };
 unsigned long memdebug_numblocks = 0;
 unsigned long memdebug_total = 0;
 unsigned long memdebug_maxmem = 0;
+unsigned long memdebug_memlimit = LONG_MAX;
 
 
 static void *checkblock (void *block) {
@@ -88,6 +91,8 @@ static void *debug_realloc (void *block, size_t size) {
     freeblock(block);
     return NULL;
   }
+  else if (memdebug_total+size > memdebug_memlimit)
+    return NULL;  /* to test memory allocation errors */
   else {
     size_t realsize = HEADER+size+MARKSIZE;
     char *newblock = (char *)(malloc)(realsize);  /* alloc a new block */
@@ -139,8 +144,11 @@ void *luaM_realloc (lua_State *L, void *block, lint32 size) {
   else if (size >= MAX_SIZET)
     lua_error(L, "memory allocation error: block too big");
   block = realloc(block, size);
-  if (block == NULL)
-    lua_error(L, memEM);
+  if (block == NULL) {
+    if (L)
+      luaD_breakrun(L, LUA_ERRMEM);  /* break run without error message */
+    else return NULL;  /* error before creating state! */
+  }
   return block;
 }
 

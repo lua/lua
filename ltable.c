@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.49 2000/06/28 17:03:56 roberto Exp roberto $
+** $Id: ltable.c,v 1.50 2000/06/30 14:35:17 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -154,19 +154,22 @@ static void setnodevector (lua_State *L, Hash *t, lint32 size) {
     ttype(&t->node[i].key) = ttype(&t->node[i].val) = TAG_NIL;
     t->node[i].next = NULL;
   }
+  L->nblocks += gcsize(L, size) - gcsize(L, t->size);
   t->size = size;
   t->firstfree = &t->node[size-1];  /* first free position to be used */
-  L->nblocks += gcsize(L, size);
 }
 
 
 Hash *luaH_new (lua_State *L, int size) {
   Hash *t = luaM_new(L, Hash);
-  setnodevector(L, t, luaO_power2(size));
   t->htag = TagDefault;
   t->next = L->roottable;
   L->roottable = t;
   t->marked = 0;
+  t->size = 0;
+  L->nblocks += gcsize(L, 0);
+  t->node = NULL;
+  setnodevector(L, t, luaO_power2(size));
   return t;
 }
 
@@ -204,7 +207,6 @@ static void rehash (lua_State *L, Hash *t) {
     setnodevector(L, t, oldsize/2);
   else
     setnodevector(L, t, oldsize);
-  L->nblocks -= gcsize(L, oldsize);
   for (i=0; i<oldsize; i++) {
     Node *old = nold+i;
     if (ttype(&old->val) != TAG_NIL)

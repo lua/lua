@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.39 2000/06/15 17:01:12 roberto Exp roberto $
+** $Id: lstring.c,v 1.40 2000/06/30 14:35:17 roberto Exp $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -19,10 +19,10 @@
 
 
 void luaS_init (lua_State *L) {
-  L->strt.size = L->udt.size = 1;
-  L->strt.nuse = L->udt.nuse = 0;
   L->strt.hash = luaM_newvector(L, 1, TString *);
   L->udt.hash = luaM_newvector(L, 1, TString *);
+  L->strt.size = L->udt.size = 1;
+  L->strt.nuse = L->udt.nuse = 0;
   L->strt.hash[0] = L->udt.hash[0] = NULL;
 }
 
