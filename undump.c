@@ -3,7 +3,7 @@
 ** load bytecodes from files
 */
 
-char *rcs_undump="$Id: undump.c,v 1.1 1996/02/23 19:04:38 lhf Exp lhf $";
+char *rcs_undump="$Id: undump.c,v 1.2 1996/02/23 22:00:26 lhf Exp lhf $";
 
 #include <stdio.h>
 #include <string.h>
@@ -69,7 +69,7 @@ static void LoadFunction(FILE *D)
  else						/* fix PUSHFUNCTION */
  {
   CodeCode c;
-  Byte *p=Main->code;
+  Byte *p=Main->code+tf->marked;		/* TODO: tf->marked=? */
   c.tf=tf;
   *p++=c.m.c1; *p++=c.m.c2; *p++=c.m.c3; *p++=c.m.c4;
  }
@@ -92,6 +92,7 @@ static void LoadFunction(FILE *D)
   }
   else
   {
+printf("tf=%p\n",tf);
 PrintFunction(tf);				/* TODO: remove */
    ungetc(c,D);
    return;
@@ -121,7 +122,7 @@ static void LoadChunk(FILE *D)
   int c=getc(D);
   if (c=='F') LoadFunction(D); else { ungetc(c,D); break; }
  }
- /* TODO: run Main */
+PrintFunction(Main);				/* TODO: run Main */
 }
 
 void Undump(FILE *D)
