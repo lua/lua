@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.6 2004/05/10 17:50:51 roberto Exp roberto $
+** $Id: ltests.c,v 2.7 2004/05/31 18:50:48 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -760,16 +760,6 @@ static int int2fb_aux (lua_State *L) {
 }
 
 
-static int test_do (lua_State *L) {
-  const char *p = luaL_checkstring(L, 1);
-  if (*p == '@')
-    lua_dofile(L, p+1);
-  else
-    lua_dostring(L, p);
-  return lua_gettop(L);
-}
-
-
 
 /*
 ** {======================================================
@@ -858,8 +848,8 @@ static int testC (lua_State *L) {
       const char *s = lua_tostring(L, getnum);
       lua_pushstring(L, s);
     }
-    else if EQ("strlen") {
-      lua_pushinteger(L, lua_strlen(L, getnum));
+    else if EQ("objsize") {
+      lua_pushinteger(L, lua_objsize(L, getnum));
     }
     else if EQ("tocfunction") {
       lua_pushcfunction(L, lua_tocfunction(L, getnum));
@@ -1033,7 +1023,6 @@ static const struct luaL_reg tests_funcs[] = {
   {"stacklevel", stacklevel},
   {"querystr", string_query},
   {"querytab", table_query},
-  {"doit", test_do},
   {"testC", testC},
   {"checkmemory", lua_checkmemory},
   {"gccolor", get_gccolor},

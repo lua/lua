@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.188 2004/03/24 13:55:46 roberto Exp roberto $
+** $Id: lua.h,v 1.189 2004/04/30 20:13:38 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -145,7 +145,7 @@ LUA_API lua_Number      lua_tonumber (lua_State *L, int idx);
 LUA_API lua_Integer     lua_tointeger (lua_State *L, int idx);
 LUA_API int             lua_toboolean (lua_State *L, int idx);
 LUA_API const char     *lua_tostring (lua_State *L, int idx);
-LUA_API size_t          lua_strlen (lua_State *L, int idx);
+LUA_API size_t          lua_objsize (lua_State *L, int idx);
 LUA_API lua_CFunction   lua_tocfunction (lua_State *L, int idx);
 LUA_API void	       *lua_touserdata (lua_State *L, int idx);
 LUA_API lua_State      *lua_tothread (lua_State *L, int idx);
@@ -244,11 +244,6 @@ LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud);
 ** ===============================================================
 */
 
-#define lua_boxpointer(L,u) \
-	(*(void **)(lua_newuserdata(L, sizeof(void *))) = (u))
-
-#define lua_unboxpointer(L,i)	(*(void **)(lua_touserdata(L, i)))
-
 #define lua_pop(L,n)		lua_settop(L, -(n)-1)
 
 #define lua_newtable(L)		lua_createtable(L, 0, 0)
@@ -256,6 +251,8 @@ LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud);
 #define lua_register(L,n,f) (lua_pushcfunction(L,f), lua_setglobal(L,n))
 
 #define lua_pushcfunction(L,f)	lua_pushcclosure(L, f, 0)
+
+#define lua_strlen(L,i)		lua_objsize(L,i)
 
 #define lua_isfunction(L,n)	(lua_type(L,n) == LUA_TFUNCTION)
 #define lua_istable(L,n)	(lua_type(L,n) == LUA_TTABLE)

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.8 2004/05/11 16:52:08 roberto Exp roberto $
+** $Id: lapi.c,v 2.9 2004/05/14 19:25:09 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -323,10 +323,12 @@ LUA_API const char *lua_tostring (lua_State *L, int idx) {
 }
 
 
-LUA_API size_t lua_strlen (lua_State *L, int idx) {
+LUA_API size_t lua_objsize (lua_State *L, int idx) {
   StkId o = luaA_index(L, idx);
   if (ttisstring(o))
     return tsvalue(o)->len;
+  else if (ttisuserdata(o))
+    return uvalue(o)->len;
   else {
     size_t l;
     lua_lock(L);  /* `luaV_tostring' may create a new string */
