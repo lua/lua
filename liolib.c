@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.14 1998/01/07 16:26:48 roberto Exp roberto $
+** $Id: liolib.c,v 1.15 1998/03/06 16:54:42 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -233,7 +233,7 @@ static void io_read (void)
      ungetc(c, f);
   l = luaL_getsize();
   if (l > 0 || *p == 0)  /* read something or did not fail? */
-    lua_pushlstr(luaL_buffer(), l);
+    lua_pushlstring(luaL_buffer(), l);
 }
 
 

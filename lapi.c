@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.21 1998/02/12 19:23:32 roberto Exp roberto $
+** $Id: lapi.c,v 1.22 1998/03/06 16:54:42 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -293,7 +293,7 @@ char *lua_getstring (lua_Object object)
   else return (svalue(Address(object)));
 }
 
-long lua_getstrlen (lua_Object object)
+long lua_strlen (lua_Object object)
 {
   luaC_checkGC();  /* "tostring" may create a new string */
   if (object == LUA_NOOBJECT || tostring(Address(object)))
@@ -329,7 +329,7 @@ void lua_pushnumber (double n)
   incr_top;
 }
 
-void lua_pushlstr (char *s, long len)
+void lua_pushlstring (char *s, long len)
 {
   tsvalue(L->stack.top) = luaS_newlstr(s, len);
   ttype(L->stack.top) = LUA_T_STRING;
@@ -342,7 +342,7 @@ void lua_pushstring (char *s)
   if (s == NULL)
     lua_pushnil();
   else
-    lua_pushlstr(s, strlen(s));
+    lua_pushlstring(s, strlen(s));
 }
 
 void lua_pushCclosure (lua_CFunction fn, int n)

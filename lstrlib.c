@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.8 1998/01/27 19:11:36 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.9 1998/03/06 16:54:42 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -34,7 +34,7 @@ static void str_len (void)
 
 static void closeandpush (void)
 {
-  lua_pushlstr(luaL_buffer(), luaL_getsize());
+  lua_pushlstring(luaL_buffer(), luaL_getsize());
 }
 
 
@@ -52,7 +52,7 @@ static void str_sub (void)
   long start = posrelat(luaL_check_number(2), l);
   long end = posrelat(luaL_opt_number(3, -1), l);
   if (1 <= start && start <= end && end <= l)
-    lua_pushlstr(s+start-1, end-start+1);
+    lua_pushlstring(s+start-1, end-start+1);
   else lua_pushstring("");
 }
 
@@ -128,7 +128,7 @@ static void push_captures (struct Capture *cap)
 {
   int i;
   for (i=0; i<cap->level; i++)
-    lua_pushlstr(cap->capture[i].init, cap->capture[i].len);
+    lua_pushlstring(cap->capture[i].init, cap->capture[i].len);
 }
 
 
@@ -379,7 +379,7 @@ static void add_s (lua_Object newp, struct Capture *cap)
     }
     res = lua_getresult(1);
     if (lua_isstring(res))
-      addnchar(lua_getstring(res), lua_getstrlen(res));
+      addnchar(lua_getstring(res), lua_strlen(res));
     else
       addnchar(NULL, 0);
     lua_endblock();

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.8 1998/01/09 15:09:53 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.9 1998/03/06 16:54:42 roberto Exp roberto $
 ** Auxiliar functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,7 @@ char *luaL_check_lstr (int numArg, long *len)
 {
   lua_Object o = lua_getparam(numArg);
   luaL_arg_check(lua_isstring(o), numArg, "string expected");
-  if (len) *len = lua_getstrlen(o);
+  if (len) *len = lua_strlen(o);
   return lua_getstring(o);
 }
 
