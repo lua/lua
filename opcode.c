@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.54 1996/01/30 15:25:23 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.55 1996/02/07 18:10:27 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -423,7 +423,7 @@ void lua_error (char *s)
 }
 
 
-lua_Object lua_stackedfunction (int level)
+lua_Function lua_stackedfunction (int level)
 {
   Object *p = top;
   while (--p >= stack)
@@ -434,14 +434,14 @@ lua_Object lua_stackedfunction (int level)
 }
 
 
-int lua_currentline (lua_Object func)
+int lua_currentline (lua_Function func)
 {
   Object *f = Address(func);
   return (f+1 < top && (f+1)->tag == LUA_T_LINE) ? (f+1)->value.i : -1;
 }
 
 
-lua_Object lua_getlocal (lua_Object func, int local_number, char **name)
+lua_Object lua_getlocal (lua_Function func, int local_number, char **name)
 {
   Object *f = luaI_Address(func);
   *name = luaI_getlocalname(f->value.tf, local_number, lua_currentline(func));
@@ -455,7 +455,7 @@ lua_Object lua_getlocal (lua_Object func, int local_number, char **name)
     return LUA_NOOBJECT;
 }
 
-int lua_setlocal (lua_Object func, int local_number)
+int lua_setlocal (lua_Function func, int local_number)
 {
   Object *f = Address(func);
   char *name = luaI_getlocalname(f->value.tf, local_number, lua_currentline(func));
