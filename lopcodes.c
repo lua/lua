@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.3 2001/08/27 15:14:57 roberto Exp $
+** $Id: lopcodes.c,v 1.5 2001/09/07 17:39:10 roberto Exp $
 ** extracted automatically from lopcodes.h by mkprint.lua
 ** DO NOT EDIT
 ** See Copyright Notice in lua.h
@@ -77,7 +77,7 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0,0,0,0, 0,1,iABc)		/* OP_SETGLOBAL */
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_SETUPVAL */
  ,opmode(0,0,1,1, 0,0,iABC)		/* OP_SETTABLE */
- ,opmode(0,0,0,0, 1,0,iABc)		/* OP_NEWTABLE */
+ ,opmode(0,0,0,0, 1,0,iABC)		/* OP_NEWTABLE */
  ,opmode(0,0,1,1, 1,0,iABC)		/* OP_SELF */
  ,opmode(0,0,1,1, 1,0,iABC)		/* OP_ADD */
  ,opmode(0,0,1,1, 1,0,iABC)		/* OP_SUB */

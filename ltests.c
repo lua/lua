@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.92 2001/10/02 16:45:03 roberto Exp $
+** $Id: ltests.c,v 1.93 2001/10/17 21:12:57 roberto Exp $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -211,12 +211,6 @@ static int listlocals (lua_State *L) {
 /* }====================================================== */
 
 
-static int pushbool (lua_State *L, int b) {
-  if (b) lua_pushnumber(L, 1);
-  else lua_pushnil(L);
-  return 1;
-}
-
 
 
 static int get_limits (lua_State *L) {
@@ -252,7 +246,7 @@ static int hash_query (lua_State *L) {
   }
   else {
     TObject *o = luaA_index(L, 1);
-    Hash *t;
+    Table *t;
     luaL_checktype(L, 2, LUA_TTABLE);
     t = hvalue(luaA_index(L, 2));
     lua_pushnumber(L, luaH_mainposition(t, o) - t->node);
@@ -262,16 +256,21 @@ static int hash_query (lua_State *L) {
 
 
 static int table_query (lua_State *L) {
-  const Hash *t;
+  const Table *t;
   int i = luaL_opt_int(L, 2, -1);
   luaL_checktype(L, 1, LUA_TTABLE);
   t = hvalue(luaA_index(L, 1));
   if (i == -1) {
-    lua_pushnumber(L, t->size);
+    lua_pushnumber(L, t->sizearray);
+    lua_pushnumber(L, sizenode(t));
     lua_pushnumber(L, t->firstfree - t->node);
-    return 2;
   }
-  else if (i < t->size) {
+  else if (i < t->sizearray) {
+    lua_pushnumber(L, i);
+    luaA_pushobject(L, &t->array[i]);
+    lua_pushnil(L); 
+  }
+  else if ((i -= t->sizearray) < sizenode(t)) {
     if (ttype(val(node(t, i))) != LUA_TNIL ||
         ttype(key(node(t, i))) == LUA_TNIL ||
         ttype(key(node(t, i))) == LUA_TNUMBER) {
@@ -280,14 +279,12 @@ static int table_query (lua_State *L) {
     else
       lua_pushstring(L, "<undef>");
     luaA_pushobject(L, &t->node[i].val);
-    if (t->node[i].next) {
+    if (t->node[i].next)
       lua_pushnumber(L, t->node[i].next - t->node);
-      return 3;
-    }
     else
-      return 2;
+      lua_pushnil(L);
   }
-  return 0;
+  return 3;
 }
 
 
@@ -448,11 +445,12 @@ static int settagmethod (lua_State *L) {
   return 1;
 }
 
-static int equal (lua_State *L) {
-  return pushbool(L, lua_equal(L, 1, 2));
+
+static int log2_aux (lua_State *L) {
+  lua_pushnumber(L, luaO_log2(luaL_check_int(L, 1)));
+  return 1;
 }
 
-  
 
 /*
 ** {======================================================
@@ -596,6 +594,13 @@ static int testC (lua_State *L) {
       else
         lua_pushnil(L);
     }
+    else if EQ(l_s("equal")) {
+      int a = getnum;
+      if (lua_equal(L, a, getnum))
+        lua_pushnumber(L, 1);
+      else
+        lua_pushnil(L);
+    }
     else if EQ(l_s("rawcall")) {
       int narg = getnum;
       int nres = getnum;
@@ -656,7 +661,7 @@ static const struct luaL_reg tests_funcs[] = {
   {l_s("closestate"), closestate},
   {l_s("doremote"), doremote},
   {l_s("settagmethod"), settagmethod},
-  {l_s("equal"), equal},
+  {l_s("log2"), log2_aux},
   {l_s("totalmem"), mem_query}
 };
 

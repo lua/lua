@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.155 2001/10/17 21:12:57 roberto Exp roberto $
+** $Id: lapi.c,v 1.156 2001/10/17 21:17:45 roberto Exp $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -391,7 +391,7 @@ LUA_API void lua_getglobals (lua_State *L) {
 
 LUA_API void lua_newtable (lua_State *L) {
   lua_lock(L);
-  sethvalue(L->top, luaH_new(L, 0));
+  sethvalue(L->top, luaH_new(L, 0, 0));
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -647,22 +647,17 @@ LUA_API void lua_unref (lua_State *L, int ref) {
 
 LUA_API int lua_next (lua_State *L, int index) {
   StkId t;
-  Node *n;
   int more;
   lua_lock(L);
   t = luaA_index(L, index);
   api_check(L, ttype(t) == LUA_TTABLE);
-  n = luaH_next(L, hvalue(t), luaA_index(L, -1));
-  if (n) {
-    setobj(L->top-1, key(n));
-    setobj(L->top, val(n));
+  more = luaH_index(L, hvalue(t), luaA_index(L, -1));
+  more = (luaH_nexti(hvalue(t), more, L->top - 1) != -1);
+  if (more) {
     api_incr_top(L);
-    more = 1;
   }
-  else {  /* no more elements */
+  else  /* no more elements */
     L->top -= 1;  /* remove key */
-    more = 0;
-  }
   lua_unlock(L);
   return more;
 }
@@ -679,9 +674,18 @@ LUA_API int lua_getn (lua_State *L, int index) {
   if (ttype(value) == LUA_TNUMBER)
     n = cast(int, nvalue(value));
   else {
+    Node *nd;
+    Table *a = hvalue(t);
     lua_Number max = 0;
-    int i = hvalue(t)->size;
-    Node *nd = hvalue(t)->node;
+    int i;
+    i = sizearray(a);
+    while (i--) {
+      if (ttype(&a->array[i]) != LUA_TNIL)
+        break;
+    }
+    max = i+1;
+    i = sizenode(a);
+    nd = a->node;
     while (i--) {
       if (ttype(key(nd)) == LUA_TNUMBER &&
           ttype(val(nd)) != LUA_TNIL &&
@@ -756,7 +760,7 @@ LUA_API int lua_getweakmode (lua_State *L, int index) {
 LUA_API void  lua_setweakmode (lua_State *L, int mode) {
   lua_lock(L);
   api_check(L, ttype(L->top-1) == LUA_TTABLE);
-  hvalue(L->top-1)->weakmode = mode;
+  hvalue(L->top-1)->weakmode = cast(lu_byte, mode);
   lua_unlock(L);
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.113 2001/09/25 17:08:46 roberto Exp $
+** $Id: lobject.h,v 1.114 2001/10/02 16:45:03 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -39,7 +39,7 @@ typedef union {
   union TString *ts;
   union Udata *u;
   union Closure *cl;
-  struct Hash *h;
+  struct Table *h;
   struct UpVal *v;
   lua_Number n;		/* LUA_TNUMBER */
 } Value;
@@ -214,7 +214,7 @@ typedef union Closure {
 
 
 /*
-** Hash Tables
+** Tables
 */
 
 typedef struct Node {
@@ -224,15 +224,17 @@ typedef struct Node {
 } Node;
 
 
-typedef struct Hash {
+typedef struct Table {
+  TObject *array;  /* array part */
   Node *node;
   int htag;
-  int size;
+  int sizearray;  /* size of `array' array */
+  lu_byte lsizenode;  /* log2 of size of `node' array */
+  lu_byte weakmode;
   Node *firstfree;  /* this position is free; all positions after it are full */
-  struct Hash *next;
-  struct Hash *mark;  /* marked tables (point to itself when not marked) */
-  int weakmode;
-} Hash;
+  struct Table *next;
+  struct Table *mark;  /* marked tables (point to itself when not marked) */
+} Table;
 
 
 /* unmarked tables are represented by pointing `mark' to themselves */
@@ -244,6 +246,10 @@ typedef struct Hash {
 */
 #define lmod(s,size)	(cast(int, (s) & ((size)-1)))
 
+
+#define twoto(x)	(1<<(x))
+#define sizenode(t)	(twoto((t)->lsizenode))
+#define sizearray(t)	((t)->sizearray)
 
 /*
 ** informations about a call (for debugging)
@@ -261,6 +267,8 @@ typedef struct CallInfo {
 
 
 extern const TObject luaO_nilobject;
+
+int luaO_log2 (unsigned int x);
 
 
 #define luaO_openspace(L,n,t)	cast(t *, luaO_openspaceaux(L,(n)*sizeof(t)))

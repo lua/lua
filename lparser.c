@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.157 2001/09/25 17:06:48 roberto Exp $
+** $Id: lparser.c,v 1.159 2001/10/02 16:41:36 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -30,7 +30,8 @@
 ** or empty (k = `;' or `}')
 */
 typedef struct Constdesc {
-  int n;
+  int narray;
+  int nhash;
   int k;
 } Constdesc;
 
@@ -315,7 +316,7 @@ static void open_func (LexState *ls, FuncState *fs) {
   fs->jlt = NO_JUMP;
   fs->freereg = 0;
   fs->nk = 0;
-  fs->h = luaH_new(ls->L, 0);
+  fs->h = luaH_new(ls->L, 0, 0);
   fs->np = 0;
   fs->nlineinfo = 0;
   fs->nlocvars = 0;
@@ -507,6 +508,7 @@ static int recfields (LexState *ls, expdesc *t) {
   int n = 0;
   do {  /* at least one element */
     recfield(ls, t);
+    luaX_checklimit(ls, n, MAX_INT, l_s("items in a constructor"));
     n++;
   } while (anotherfield(ls));
   return n;
@@ -523,8 +525,7 @@ static int listfields (LexState *ls, expdesc *t) {
   expr(ls, &v);
   while (anotherfield(ls)) {
     luaK_exp2nextreg(fs, &v);
-    luaX_checklimit(ls, n, MAXARG_Bc,
-                    l_s("`item groups' in a list initializer"));
+    luaX_checklimit(ls, n, MAXARG_Bc, l_s("items in a constructor"));
     if (n%LFIELDS_PER_FLUSH == 0) {
       luaK_codeABc(fs, OP_SETLIST, t->u.i.info, n-1);  /* flush */
       fs->freereg = reg;  /* free registers */
@@ -548,7 +549,7 @@ static int listfields (LexState *ls, expdesc *t) {
 static void constructor_part (LexState *ls, expdesc *t, Constdesc *cd) {
   switch (ls->t.token) {
     case l_c(';'): case l_c('}'): {  /* constructor_part -> empty */
-      cd->n = 0;
+      cd->narray = cd->nhash = 0;
       cd->k = ls->t.token;
       break;
     }
@@ -559,13 +560,15 @@ static void constructor_part (LexState *ls, expdesc *t, Constdesc *cd) {
       /* else go through to recfields */
     }
     case l_c('['): {  /* constructor_part -> recfields */
-      cd->n = recfields(ls, t);
+      cd->nhash = recfields(ls, t);
+      cd->narray = 0;
       cd->k = 1;  /* record */
       break;
     }
     default: {  /* constructor_part -> listfields */
     case_default:
-      cd->n = listfields(ls, t);
+      cd->narray = listfields(ls, t);
+      cd->nhash = 0;
       cd->k = 0;  /* list */
       break;
     }
@@ -577,24 +580,27 @@ static void constructor (LexState *ls, expdesc *t) {
   /* constructor -> `{' constructor_part [`;' constructor_part] `}' */
   FuncState *fs = ls->fs;
   int line = ls->linenumber;
-  int n;
+  int na, nh;
   int pc;
   Constdesc cd;
-  pc = luaK_codeABc(fs, OP_NEWTABLE, 0, 0);
+  pc = luaK_codeABC(fs, OP_NEWTABLE, 0, 0, 0);
   init_exp(t, VRELOCABLE, pc);
   luaK_exp2nextreg(ls->fs, t);  /* fix it at stack top (for gc) */
   check(ls, l_c('{'));
   constructor_part(ls, t, &cd);
-  n = cd.n;
+  na = cd.narray;
+  nh = cd.nhash;
   if (optional(ls, l_c(';'))) {
     Constdesc other_cd;
     constructor_part(ls, t, &other_cd);
-    check_condition(ls, (cd.k != other_cd.k), l_s("invalid constructor syntax"));
-    n += other_cd.n;
+    check_condition(ls,(cd.k != other_cd.k), l_s("invalid constructor syntax"));
+    na += other_cd.narray;
+    nh += other_cd.nhash;
   }
   check_match(ls, l_c('}'), l_c('{'), line);
-  luaX_checklimit(ls, n, MAXARG_Bc, l_s("elements in a table constructor"));
-  SETARG_Bc(fs->f->code[pc], n);  /* set initial table size */
+  if (na > 0)
+    SETARG_B(fs->f->code[pc], luaO_log2(na-1)+2);  /* set initial table size */
+  SETARG_C(fs->f->code[pc], luaO_log2(nh)+1);  /* set initial table size */
 }
 
 /* }====================================================================== */

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.112 2001/10/02 16:45:03 roberto Exp $
+** $Id: lgc.c,v 1.113 2001/10/17 21:12:57 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -21,7 +21,7 @@
 
 
 typedef struct GCState {
-  Hash *tmark;  /* list of marked tables to be visited */
+  Table *tmark;  /* list of marked tables to be visited */
 } GCState;
 
 
@@ -76,7 +76,7 @@ static void markclosure (GCState *st, Closure *cl) {
 }
 
 
-static void marktable (GCState *st, Hash *h) {
+static void marktable (GCState *st, Table *h) {
   if (!ismarked(h)) {
     h->mark = st->tmark;  /* chain it for later traversal */
     st->tmark = h;
@@ -145,18 +145,20 @@ static void removekey (Node *n) {
 }
 
 
-static void traversetable (GCState *st, Hash *h) {
+static void traversetable (GCState *st, Table *h) {
   int i;
   int mode = h->weakmode;
-  if (mode == (LUA_WEAK_KEY | LUA_WEAK_VALUE))
-    return;  /* avoid traversing if both keys and values are weak */
-  for (i=0; i<h->size; i++) {
+  if (!(mode & LUA_WEAK_VALUE)) {
+    i = sizearray(h);
+    while (i--)
+      markobject(st, &h->array[i]);
+  }
+  i = sizenode(h);
+  while (i--) {
     Node *n = node(h, i);
-    if (ttype(val(n)) == LUA_TNIL)
-      removekey(n);
-    else {
+    if (ttype(val(n)) != LUA_TNIL) {
       lua_assert(ttype(key(n)) != LUA_TNIL);
-      if (ttype(key(n)) != LUA_TNUMBER && !(mode & LUA_WEAK_KEY))
+      if (!(mode & LUA_WEAK_KEY))
         markobject(st, key(n));
       if (!(mode & LUA_WEAK_VALUE))
         markobject(st, val(n));
@@ -173,7 +175,7 @@ static void markall (lua_State *L) {
   marktable(&st, G(L)->type2tag);
   markobject(&st, &G(L)->registry);
   while (st.tmark) {  /* mark tables */
-    Hash *h = st.tmark;  /* get first table from list */
+    Table *h = st.tmark;  /* get first table from list */
     st.tmark = h->mark;  /* remove it from list */
     traversetable(&st, h);
   }
@@ -196,21 +198,27 @@ static int hasmark (const TObject *o) {
 }
 
 
-static void cleardeadnodes (Hash *h) {
+static void cleardeadnodes (Table *h) {
   int i;
-  for (i=0; i<h->size; i++) {
+  i = sizearray(h);
+  while (i--) {
+    TObject *o = &h->array[i];
+    if (!hasmark(o))
+      setnilvalue(o);  /* remove value */
+  }
+  i = sizenode(h);
+  while (i--) {
     Node *n = node(h, i);
-    if (ttype(val(n)) == LUA_TNIL) continue;  /* empty node */
     if (!hasmark(val(n)) || !hasmark(key(n))) {
-      setnilvalue(val(n));  /* remove value */
-      removekey(n);
+      setnilvalue(val(n));  /* remove value ... */
+      removekey(n);  /* ... and key */
     }
   }
 }
 
 
 static void cleartables (global_State *G) {
-  Hash *h;
+  Table *h;
   for (h = G->roottable; h; h = h->next) {
     if (h->weakmode && ismarked(h))
       cleardeadnodes(h);
@@ -260,8 +268,8 @@ static void collectclosures (lua_State *L) {
 
 
 static void collecttable (lua_State *L) {
-  Hash **p = &G(L)->roottable;
-  Hash *curr;
+  Table **p = &G(L)->roottable;
+  Table *curr;
   while ((curr = *p) != NULL) {
     if (ismarked(curr)) {
       curr->mark = curr;  /* unmark */
@@ -333,7 +341,7 @@ static void collectstrings (lua_State *L, int all) {
     }
   }
   if (G(L)->strt.nuse < cast(ls_nstr, G(L)->strt.size/4) &&
-      G(L)->strt.size > MINPOWER2)
+      G(L)->strt.size > 4)
     luaS_resize(L, G(L)->strt.size/2);  /* table is too big */
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.193 2001/09/07 17:39:10 roberto Exp $
+** $Id: lvm.c,v 1.195 2001/10/02 16:45:03 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -295,7 +295,7 @@ void luaV_strconc (lua_State *L, int total, StkId top) {
 
 static void luaV_pack (lua_State *L, StkId firstelem) {
   int i;
-  Hash *htab = luaH_new(L, 0);
+  Table *htab = luaH_new(L, 0, 0);
   TObject n;
   for (i=0; firstelem+i<L->top; i++)
     luaH_setnum(L, htab, i+1, firstelem+i);
@@ -420,7 +420,9 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
         break;
       }
       case OP_NEWTABLE: {
-        sethvalue(ra, luaH_new(L, GETARG_Bc(i)));
+        int b = GETARG_B(i);
+        if (b > 0) b = twoto(b-1);
+        sethvalue(ra, luaH_new(L, b, GETARG_C(i)));
         luaV_checkGC(L, ra+1);
         break;
       }
@@ -599,18 +601,15 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
         /* go through */
       }
       case OP_TFORLOOP: {
-        Hash *t;
+        Table *t;
         int n;
         runtime_check(L, ttype(ra) == LUA_TTABLE &&
                          ttype(ra+1) == LUA_TNUMBER);
         t = hvalue(ra);
         n = cast(int, nvalue(ra+1));
-        n = luaH_nexti(t, n);
+        n = luaH_nexti(t, n, ra+2);
         if (n != -1) {  /* repeat loop? */
-          Node *node = node(t, n);
           setnvalue(ra+1, n);  /* index */
-          setobj(ra+2, key(node));
-          setobj(ra+3, val(node));
           dojump(pc, i);  /* repeat loop */
         }
         break;
@@ -619,7 +618,7 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
       case OP_SETLISTO: {
         int bc;
         int n;
-        Hash *h;
+        Table *h;
         runtime_check(L, ttype(ra) == LUA_TTABLE);
         h = hvalue(ra);
         bc = GETARG_Bc(i);
