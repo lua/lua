@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 2.2 2004/04/30 20:13:38 roberto Exp roberto $
+## $Id: makefile,v 2.3 2004/09/01 13:49:20 roberto Exp $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -9,8 +9,8 @@
 
 # -DEXTERNMEMCHECK -DHARDSTACKTESTS
 # DEBUG = -g -DLUA_USER_H='"ltests.h"'
-OPTIMIZE =  -O2 \
-#   -fomit-frame-pointer  -pg
+OPTIMIZE =  -O2 -march=pentium \
+# -fomit-frame-pointer #-pg -malign-double
 
 
 # -DUSE_TMPNAME??
@@ -23,13 +23,15 @@ CWARNS = -Wall -pedantic \
 	-Waggregate-return \
 	-Wcast-align \
 	-Wmissing-prototypes \
-	-Wstrict-prototypes \
 	-Wnested-externs \
 	-Wpointer-arith \
 	-Wshadow \
+	-Wsign-compare \
+	-Wstrict-prototypes \
+	-Wundef \
 	-Wwrite-strings \
-#	-Wtraditional \
 #	-Wcast-qual
+
 
 CFLAGS = $(CONFIG) $(CWARNS)  # -ansi
 
@@ -126,6 +128,7 @@ lfunc.o: lfunc.c lua.h luaconf.h lfunc.h lobject.h llimits.h lgc.h lmem.h \
   lstate.h ltm.h lzio.h
 lgc.o: lgc.c lua.h luaconf.h ldebug.h lstate.h lobject.h llimits.h ltm.h \
   lzio.h lmem.h ldo.h lfunc.h lgc.h lstring.h ltable.h
+linit.o: linit.c lua.h luaconf.h lualib.h lauxlib.h
 liolib.o: liolib.c lua.h luaconf.h lauxlib.h lualib.h
 llex.o: llex.c lua.h luaconf.h ldo.h lobject.h llimits.h lstate.h ltm.h \
   lzio.h lmem.h llex.h lparser.h ltable.h lstring.h lgc.h
@@ -136,6 +139,7 @@ loadlib.o: loadlib.c lua.h luaconf.h lauxlib.h lualib.h
 lobject.o: lobject.c lua.h luaconf.h ldo.h lobject.h llimits.h lstate.h \
   ltm.h lzio.h lmem.h lstring.h lgc.h lvm.h
 lopcodes.o: lopcodes.c lua.h luaconf.h lobject.h llimits.h lopcodes.h
+loslib.o: loslib.c lua.h luaconf.h lauxlib.h lualib.h
 lparser.o: lparser.c lua.h luaconf.h lcode.h llex.h lobject.h llimits.h \
   lzio.h lmem.h lopcodes.h lparser.h ltable.h ldebug.h lstate.h ltm.h \
   ldo.h lfunc.h lstring.h lgc.h
