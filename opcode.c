@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 4.4 1997/04/24 22:59:57 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 4.5 1997/05/26 14:23:55 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -193,6 +193,13 @@ static void adjust_top (StkId newtop)
 #define adjustC(nParams)	adjust_top(CLS_current.base+nParams)
 
 
+static void checkCparams (int nParams)
+{
+  if (top-stack < CLS_current.base+nParams)
+    lua_error("API error - wrong number of arguments in C2lua stack");
+}
+
+
 /*
 ** Open a hole below "nelems" from the top.
 */
@@ -203,6 +210,23 @@ static void open_stack (int nelems)
     *(top-i) = *(top-i-1);
   incr_top;
 }
+
+
+static lua_Object put_luaObject (TObject *o)
+{
+  open_stack((top-stack)-CLS_current.base);
+  stack[CLS_current.base++] = *o;
+  return CLS_current.base;  /* this is +1 real position (see Ref) */
+}
+
+
+static lua_Object put_luaObjectonTop (void)
+{
+  open_stack((top-stack)-CLS_current.base);
+  stack[CLS_current.base++] = *(--top);
+  return CLS_current.base;  /* this is +1 real position (see Ref) */
+}
+
 
 
 /*
@@ -352,7 +376,7 @@ static void pushsubscript (void)
 
 lua_Object lua_rawgettable (void)
 {
-  adjustC(2);
+  checkCparams(2);
   if (ttype(top-2) != LUA_T_ARRAY)
     lua_error("indexed expression not a table in raw gettable");
   else {
@@ -363,8 +387,7 @@ lua_Object lua_rawgettable (void)
     else
       ttype(top-1) = LUA_T_NIL;
   }
-  CLS_current.base++;  /* incorporate object in the stack */
-  return (Ref(top-1));
+  return put_luaObjectonTop();
 }
 
 
@@ -697,10 +720,9 @@ void lua_seterrormethod (lua_CFunction method)
 */
 lua_Object lua_gettable (void)
 {
-  adjustC(2);
+  checkCparams(2);
   pushsubscript();
-  CLS_current.base++;  /* incorporate object in the stack */
-  return (Ref(top-1));
+  return put_luaObjectonTop();
 }
 
 
@@ -732,7 +754,7 @@ void lua_endblock (void)
 
 void lua_settag (int tag)
 {
-  adjustC(1);
+  checkCparams(1);
   luaI_settag(tag, --top);
 }
 
@@ -741,13 +763,13 @@ void lua_settag (int tag)
 */
 void lua_settable (void)
 {
-  adjustC(3);
+  checkCparams(3);
   storesubscript(top-3, 1);
 }
 
 void lua_rawsettable (void)
 {
-  adjustC(3);
+  checkCparams(3);
   storesubscript(top-3, 0);
 }
 
@@ -756,12 +778,10 @@ void lua_rawsettable (void)
 */
 lua_Object lua_createtable (void)
 {
-  adjustC(0);
-  avalue(top) = lua_createarray(0);
-  ttype(top) = LUA_T_ARRAY;
-  incr_top;
-  CLS_current.base++;  /* incorporate object in the stack */
-  return Ref(top-1);
+  TObject o;
+  avalue(&o) = lua_createarray(0);
+  ttype(&o) = LUA_T_ARRAY;
+  return put_luaObject(&o);
 }
 
 /*
@@ -770,10 +790,10 @@ lua_Object lua_createtable (void)
 */
 lua_Object lua_lua2C (int number)
 {
- if (number <= 0 || number > CLS_current.num) return LUA_NOOBJECT;
- /* Ref(stack+(CLS_current.base-CLS_current.num+number-1)) ==
-    stack+(CLS_current.base-CLS_current.num+number-1)-stack+1 == */
- return CLS_current.base-CLS_current.num+number;
+  if (number <= 0 || number > CLS_current.num) return LUA_NOOBJECT;
+  /* Ref(stack+(CLS_current.base-CLS_current.num+number-1)) ==
+     stack+(CLS_current.base-CLS_current.num+number-1)-stack+1 == */
+  return CLS_current.base-CLS_current.num+number;
 }
 
 int lua_isnil (lua_Object o)
@@ -874,25 +894,13 @@ lua_Object lua_getref (int ref)
   TObject *o = luaI_getref(ref);
   if (o == NULL)
     return LUA_NOOBJECT;
-  adjustC(0);
-  luaI_pushobject(o);
-  CLS_current.base++;  /* incorporate object in the stack */
-  return Ref(top-1);
-}
-
-
-void lua_pushref (int ref)
-{
-  TObject *o = luaI_getref(ref);
-  if (o == NULL)
-    lua_error("access to invalid reference (possibly garbage collected)");
-  luaI_pushobject(o);
+  return put_luaObject(o);
 }
 
 
 int lua_ref (int lock)
 {
-  adjustC(1);
+  checkCparams(1);
   return luaI_ref(--top, lock);
 }
 
@@ -903,20 +911,14 @@ int lua_ref (int lock)
 */
 lua_Object lua_getglobal (char *name)
 {
- adjustC(0);
- getglobal(luaI_findsymbolbyname(name));
- CLS_current.base++;  /* incorporate object in the stack */
- return Ref(top-1);
+  getglobal(luaI_findsymbolbyname(name));
+  return put_luaObjectonTop();
 }
 
 
 lua_Object lua_rawgetglobal (char *name)
 {
-  adjustC(0);
-  *top = lua_table[luaI_findsymbolbyname(name)].object;
-  incr_top;
-  CLS_current.base++;  /* incorporate object in the stack */
-  return Ref(top-1);
+  return put_luaObject(&lua_table[luaI_findsymbolbyname(name)].object);
 }
 
 
@@ -944,15 +946,15 @@ static void setglobal (Word n)
 
 void lua_setglobal (char *name)
 {
-  adjustC(1);
+  checkCparams(1);
   setglobal(luaI_findsymbolbyname(name));
 }
 
 void lua_rawsetglobal (char *name)
 {
- Word n = luaI_findsymbolbyname(name);
- adjustC(1);
- s_object(n) = *(--top);
+  Word n = luaI_findsymbolbyname(name);
+  checkCparams(1);
+  s_object(n) = *(--top);
 }
 
 /*
@@ -960,8 +962,8 @@ void lua_rawsetglobal (char *name)
 */
 void lua_pushnil (void)
 {
- ttype(top) = LUA_T_NIL;
- incr_top;
+  ttype(top) = LUA_T_NIL;
+  incr_top;
 }
 
 /*
@@ -987,8 +989,7 @@ void lua_pushstring (char *s)
   }
   incr_top;
 }
-/*>>>>>>>>>#undef lua_pushliteral
-void lua_pushliteral(char *s) { lua_pushstring(s); }*/
+
 
 /*
 ** Push an object (ttype=cfunction) to stack.
@@ -1035,7 +1036,7 @@ void luaI_pushobject (TObject *o)
 void lua_pushobject (lua_Object o)
 {
   if (o == LUA_NOOBJECT)
-    lua_error("attempt to push a NOOBJECT");
+    lua_error("API error - attempt to push a NOOBJECT");
   *top = *Address(o);
   if (ttype(top) == LUA_T_MARK) ttype(top) = LUA_T_FUNCTION;
   else if (ttype(top) == LUA_T_CMARK) ttype(top) = LUA_T_CFUNCTION;
