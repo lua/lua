@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.7 2004/10/07 17:27:20 roberto Exp roberto $
+** $Id: loadlib.c,v 1.8 2004/10/18 18:07:31 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 *
@@ -33,6 +33,10 @@
 #include "lualib.h"
 
 
+#define ERR_OPEN	1
+#define ERR_FUNCTION	2
+
+
 static void registerlib (lua_State *L, const void *lib);
 
 
@@ -48,10 +52,8 @@ static void registerlib (lua_State *L, const void *lib);
 
 #define freelib		dlclose
 
-static int loadlib(lua_State *L)
+static int loadlib(lua_State *L, const char *path, const char *init)
 {
- const char *path=luaL_checkstring(L,1);
- const char *init=luaL_checkstring(L,2);
  void *lib=dlopen(path,RTLD_NOW);
  if (lib!=NULL)
  {
@@ -60,15 +62,16 @@ static int loadlib(lua_State *L)
   {
    registerlib(L, lib);
    lua_pushcfunction(L,f);
-   return 1;
+   return 0;
   }
  }
- /* else return appropriate error messages */
- lua_pushnil(L);
+ /* else return appropriate error message */
  lua_pushstring(L,dlerror());
- lua_pushstring(L,(lib!=NULL) ? "init" : "open");
- if (lib!=NULL) dlclose(lib);
- return 3;
+ if (lib!=NULL) {
+   dlclose(lib);
+   return ERR_FUNCTION;  /* error loading function */
+ }
+ else return ERR_OPEN;  /* error loading library */
 }
 
 
@@ -93,10 +96,8 @@ static void pusherror(lua_State *L)
   lua_pushfstring(L,"system error %d\n",error);
 }
 
-static int loadlib(lua_State *L)
+static int loadlib(lua_State *L, const char *path, const char *init)
 {
- const char *path=luaL_checkstring(L,1);
- const char *init=luaL_checkstring(L,2);
  HINSTANCE lib=LoadLibrary(path);
  if (lib!=NULL)
  {
@@ -108,11 +109,12 @@ static int loadlib(lua_State *L)
    return 1;
   }
  }
- lua_pushnil(L);
  pusherror(L);
- lua_pushstring(L,(lib!=NULL) ? "init" : "open");
- if (lib!=NULL) FreeLibrary(lib);
- return 3;
+ if (lib!=NULL) {
+  FreeLibrary(lib);
+  return ERR_OPEN;
+ }
+ else return ERR_FUNCTION;
 }
 
 
@@ -136,16 +138,12 @@ static void pusherror (lua_State *L)
  lua_pushstring(L, err_str);
 }
 
-static int loadlib (lua_State *L) {
-  const char *path=luaL_checkstring(L,1);
-  const char *init=luaL_checkstring(L,2);
+static int loadlib (lua_State *L, const char *path, const char *init) {
   const struct mach_header *lib;
   /* this would be a rare case, but prevents crashing if it happens */
   if(!_dyld_present()) {
-    lua_pushnil(L);
     lua_pushstring(L,"dyld not present.");
-    lua_pushstring(L,"absent");
-    return 3;
+    return ERR_OPEN;
   }
   lib = NSAddImage(path, NSADDIMAGE_OPTION_RETURN_ON_ERROR);
   if(lib != NULL) {
@@ -156,15 +154,13 @@ static int loadlib (lua_State *L) {
       lua_CFunction f = (lua_CFunction)NSAddressOfSymbol(init_sym);
       registerlib(L, lib);
       lua_pushcfunction(L,f);
-      return 1;
+      return 0;
     }
   }
   /* else an error ocurred */
-  lua_pushnil(L);
   pusherror(L);
-  lua_pushstring(L, (lib != NULL) ? "init" : "open");
   /* Can't unload image */
-  return 3;
+  return (lib != NULL) ? ERR_FUNCTION : ERR_OPEN;
 }
 
 
@@ -213,12 +209,27 @@ static int gctm (lua_State *L)
  return 0;
 }
 
+
+static int loadlib1 (lua_State *L) {
+ const char *path=luaL_checkstring(L,1);
+ const char *init=luaL_checkstring(L,2);
+ int res = loadlib(L,path,init);
+ if (res == 0)  /* no error? */
+   return 1;  /* function is at stack top */
+ else {  /* error */
+  lua_pushnil(L);
+  lua_insert(L,-2);  /* insert nil before error message */
+  lua_pushstring(L, (res==ERR_OPEN)?"open":"init");
+  return 3;
+ }
+}
+
 LUALIB_API int luaopen_loadlib (lua_State *L)
 {
  luaL_newmetatable(L, "_LOADLIB");
  lua_pushcfunction(L, gctm);
  lua_setfield(L, -2, "__gc");
- lua_register(L,"loadlib",loadlib);
+ lua_register(L,"loadlib",loadlib1);
  return 0;
 }
 
