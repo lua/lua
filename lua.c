@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.92 2002/06/18 17:43:49 roberto Exp roberto $
+** $Id: lua.c,v 1.93 2002/06/20 20:40:09 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -312,11 +312,8 @@ static int handle_argv (char *argv[], int *toclose) {
               print_usage();
               return EXIT_FAILURE;
             }
-            if (dostring(chunk, "=prog. argument") != 0) {
-              fprintf(stderr, "%s: error running argument `%.99s'\n",
-                      progname, chunk);
+            if (dostring(chunk, "=command line") != 0)
               return EXIT_FAILURE;
-            }
             break;
           }
           case 'f': {
