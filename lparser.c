@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.103 2000/08/08 18:26:05 roberto Exp roberto $
+** $Id: lparser.c,v 1.104 2000/08/08 20:42:07 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -961,8 +961,6 @@ static void funcstat (LexState *ls, int line) {
   /* funcstat -> FUNCTION funcname body */
   int needself;
   expdesc v;
-  check_condition(ls, (ls->fs->prev == NULL),
-                  "cannot nest this kind of function declaration");
   next(ls);  /* skip FUNCTION */
   needself = funcname(ls, &v);
   body(ls, needself, line);
