@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.18 1996/03/01 16:54:00 roberto Exp $
+** $Id: opcode.h,v 3.19 1996/03/06 13:11:23 roberto Exp $
 */
 
 #ifndef opcode_h
@@ -138,5 +138,6 @@ void    lua_travstack (int (*fn)(Object *));
 Object *luaI_Address (lua_Object o);
 void	luaI_pushobject (Object *o);
 void    luaI_gcFB       (Object *o);
+int     luaI_dorun (TFunc *tf);
 
 #endif

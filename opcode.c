@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.58 1996/02/22 20:34:33 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.59 1996/03/04 14:46:35 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -18,6 +18,7 @@ char *rcs_opcode="$Id: opcode.c,v 3.58 1996/02/22 20:34:33 roberto Exp roberto $
 #include "table.h"
 #include "lua.h"
 #include "fallback.h"
+#include "undump.h"
 
 #define tonumber(o) ((tag(o) != LUA_T_NUMBER) && (lua_tonumber(o) != 0))
 #define tostring(o) ((tag(o) != LUA_T_STRING) && (lua_tostring(o) != 0))
@@ -128,17 +129,9 @@ static void growstack (void)
 */
 static char *lua_strconc (char *l, char *r)
 {
- static char *buffer = NULL;
- static int buffer_size = 0;
- int nl = strlen(l);
- int n = nl+strlen(r)+1;
- if (n > buffer_size)
-  {
-   buffer_size = n;
-   luaI_free(buffer);
-   buffer = newvector(buffer_size, char);
-  }
-  strcpy(buffer,l);
+  int nl = strlen(l);
+  char *buffer = luaI_buffer(nl+strlen(r)+1);
+  strcpy(buffer, l);
   strcpy(buffer+nl, r);
   return buffer;
 }
@@ -171,7 +164,7 @@ static int lua_tonumber (Object *obj)
 */
 static int lua_tostring (Object *obj)
 {
- static char s[256];
+ char s[256];
  if (tag(obj) != LUA_T_NUMBER)
    return 1;
  if ((int) nvalue(obj) == nvalue(obj))
@@ -179,8 +172,6 @@ static int lua_tostring (Object *obj)
  else
    sprintf (s, "%g", nvalue(obj));
  tsvalue(obj) = lua_createstring(s);
- if (tsvalue(obj) == NULL)
-  return 1;
  tag(obj) = LUA_T_STRING;
  return 0;
 }
@@ -500,6 +491,16 @@ static int do_protectedrun (int nResults)
   return status;
 }
 
+int luaI_dorun (TFunc *tf)
+{
+  int status;
+  adjustC(1);  /* one slot for the pseudo-function */
+  stack[CBase].tag = LUA_T_FUNCTION;
+  stack[CBase].value.tf = tf;
+  status = do_protectedrun(0);
+  adjustC(0);
+  return status;
+}
 
 static int do_protectedmain (void)
 {
@@ -508,15 +509,12 @@ static int do_protectedmain (void)
   jmp_buf myErrorJmp;
   jmp_buf *oldErr = errorJmp;
   errorJmp = &myErrorJmp;
-  adjustC(1);  /* one slot for the pseudo-function */
-  stack[CBase].tag = LUA_T_FUNCTION;
-  stack[CBase].value.tf = &tf;
   luaI_initTFunc(&tf);
   tf.fileName = lua_parsedfile;
   if (setjmp(myErrorJmp) == 0)
   {
     lua_parse(&tf);
-    status = do_protectedrun(0);
+    status = luaI_dorun(&tf);
   }
   else
   {
@@ -561,9 +559,13 @@ int lua_call (char *funcname)
 int lua_dofile (char *filename)
 {
   int status;
-  if (lua_openfile(filename))
+  int c;
+  FILE *f = lua_openfile(filename);
+  if (f == NULL)
     return 1;
-  status = do_protectedmain();
+  c = fgetc(f);
+  ungetc(c, f);
+  status = (c == ID_CHUNK) ? luaI_undump(f) : do_protectedmain();
   lua_closefile();
   return status;
 }
@@ -622,8 +624,9 @@ static StkId Cblocks[MAX_C_BLOCKS];
 */
 void lua_beginblock (void)
 {
-  if (numCblocks < MAX_C_BLOCKS)
-    Cblocks[numCblocks] = CBase;
+  if (numCblocks >= MAX_C_BLOCKS)
+    lua_error("`lua_beginblock': too many nested blocks");
+  Cblocks[numCblocks] = CBase;
   numCblocks++;
 }
 
@@ -633,11 +636,8 @@ void lua_beginblock (void)
 void lua_endblock (void)
 {
   --numCblocks;
-  if (numCblocks < MAX_C_BLOCKS)
-  {
-    CBase = Cblocks[numCblocks];
-    adjustC(0);
-  }
+  CBase = Cblocks[numCblocks];
+  adjustC(0);
 }
 
 /* 
@@ -793,6 +793,8 @@ void lua_pushstring (char *s)
   }
   incr_top;
 }
+/*>>>>>>>>>#undef lua_pushliteral
+void lua_pushliteral(char *s) { lua_pushstring(s); }*/
 
 /*
 ** Push an object (tag=cfunction) to stack.
