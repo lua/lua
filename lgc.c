@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.149 2002/09/02 19:54:49 roberto Exp roberto $
+** $Id: lgc.c,v 1.150 2002/09/05 19:57:40 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -249,9 +249,8 @@ static int valismarked (const TObject *o) {
 /*
 ** clear collected keys from weaktables
 */
-static void cleartablekeys (GCState *st) {
-  Table *h;
-  for (h = st->toclear; h; h = h->gclist) {
+static void cleartablekeys (Table *h) {
+  for (; h; h = h->gclist) {
     lua_assert(h->mode & (WEAKKEY | WEAKVALUE));
     if ((h->mode & WEAKKEY)) {  /* table may have collected keys? */
       int i = sizenode(h);
@@ -268,9 +267,8 @@ static void cleartablekeys (GCState *st) {
 /*
 ** clear collected values from weaktables
 */
-static void cleartablevalues (GCState *st) {
-  Table *h;
-  for (h = st->toclear; h; h = h->gclist) {
+static void cleartablevalues (Table *h) {
+  for (; h; h = h->gclist) {
     if ((h->mode & WEAKVALUE)) {  /* table may have collected values? */
       int i = sizearray(h);
       while (i--) {
@@ -395,17 +393,22 @@ void luaC_sweep (lua_State *L, int all) {
 
 void luaC_collectgarbage (lua_State *L) {
   GCState st;
+  Table *toclear;
   st.L = L;
   st.tmark = NULL;
   st.toclear = NULL;
   traversestacks(&st); /* mark all stacks */
   propagatemarks(&st);  /* mark all reachable objects */
-  cleartablevalues(&st);
+  toclear = st.toclear;  /* weak tables; to be cleared */
+  st.toclear = NULL;
+  cleartablevalues(toclear);
   separateudata(L);  /* separate userdata to be preserved */
   marktmu(&st);  /* mark `preserved' userdata */
   propagatemarks(&st);  /* remark, to propagate `preserveness' */
-  cleartablevalues(&st);  /* again, for eventual weak preserved tables */ 
-  cleartablekeys(&st);
+  cleartablekeys(toclear);
+  /* `propagatemarks' may reborne some weak tables; clear them too */
+  cleartablekeys(st.toclear);
+  cleartablevalues(st.toclear);
   luaC_sweep(L, 0);
   checkSizes(L);
   G(L)->GCthreshold = 2*G(L)->nblocks;  /* new threshold */
