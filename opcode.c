@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.5 1994/11/07 18:27:39 roberto Exp $";
+char *rcs_opcode="$Id: opcode.c,v 3.6 1994/11/08 19:56:39 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -286,7 +286,10 @@ static void do_call (Object *func, int base, int nResults, int whereRes)
   else if (tag(func) == LUA_T_FUNCTION)
     firstResult = lua_execute(bvalue(func), base);
   else
+  {
    lua_reportbug ("call expression not a function");
+   return;  /* to avoid warnings */
+  }
   /* adjust the number of results */
   if (nResults != MULT_RET && top - (stack+firstResult) != nResults)
     adjust_top(stack+firstResult+nResults);
@@ -356,7 +359,6 @@ void lua_travstack (void (*fn)(Object *))
 */
 static int do_protectedrun (Object *function, int nResults)
 {
-  Object f;
   jmp_buf myErrorJmp;
   int status;
   int oldCBase = CBase;
@@ -364,14 +366,6 @@ static int do_protectedrun (Object *function, int nResults)
   errorJmp = &myErrorJmp;
   if (setjmp(myErrorJmp) == 0)
   {
-    if (function == NULL)
-    {
-      tag(&f) = LUA_T_FUNCTION;
-      bvalue(&f) = lua_parse();
-      function = &f;
-    }
-    else
-      tag(&f) = LUA_T_NIL;
     do_call(function, CBase, nResults, CBase);
     CnResults = (top-stack) - CBase;  /* number of results */
     CBase += CnResults;  /* incorporate results on the stack */
@@ -383,11 +377,37 @@ static int do_protectedrun (Object *function, int nResults)
     top = stack+CBase;
     status = 1;
   }
-  if (tag(&f) == LUA_T_FUNCTION)
-    free(bvalue(&f));
   errorJmp = oldErr;
   return status;
 }
+
+
+static int do_protectedmain (void)
+{
+  Byte *code = NULL;
+  int status;
+  int oldCBase = CBase;
+  jmp_buf myErrorJmp;
+  jmp_buf *oldErr = errorJmp;
+  errorJmp = &myErrorJmp;
+  if (setjmp(myErrorJmp) == 0)
+  {
+    Object f;
+    lua_parse(&code);
+    tag(&f) = LUA_T_FUNCTION; bvalue(&f) = code;
+    do_call(&f, CBase, 0, CBase);
+    status = 0;
+  }
+  else
+    status = 1;
+  if (code)
+    free(code);
+  errorJmp = oldErr;
+  CBase = oldCBase;
+  top = stack+CBase;
+  return status;
+}
+
 
 /*
 ** Execute the given lua function. Return 0 on success or 1 on error.
@@ -398,6 +418,13 @@ int lua_callfunction (lua_Object function)
     return 1;
   else
     return do_protectedrun (Address(function), MULT_RET);
+}
+
+
+int lua_call (char *funcname)
+{
+ int n = lua_findsymbol(funcname);
+ return do_protectedrun(&s_object(n), MULT_RET);
 }
 
 
@@ -414,7 +441,7 @@ int lua_dofile (char *filename)
     lua_message(message);
     return 1;
   }
-  status = do_protectedrun(NULL, 0);
+  status = do_protectedmain();
   lua_closefile();
   return status;
 }
@@ -432,7 +459,7 @@ int lua_dostring (char *string)
     lua_message(message);
     return 1;
   }
-  status = do_protectedrun(NULL, 0);
+  status = do_protectedmain();
   lua_closestring();
   return status;
 }
@@ -694,7 +721,6 @@ static void comparison (lua_Type tag_less, lua_Type tag_equal,
 */
 static int lua_execute (Byte *pc, int base)
 {
- lua_debugline = 0;  /* reset debug flag */
  lua_checkstack(STACKGAP+MAX_TEMPS+base);
  while (1)
  {
