@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.169 2002/03/14 18:01:52 roberto Exp roberto $
+** $Id: lparser.c,v 1.170 2002/03/14 18:32:37 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -255,6 +255,8 @@ static int singlevar_aux (FuncState *fs, TString *n, expdesc *var, int nd) {
       int k = singlevar_aux(fs->prev, n, var, nd && fs->defaultglob == NO_REG);
       if (var->k == VGLOBAL) {
         if (k == VNIL && nd && fs->defaultglob != NO_REG) {
+          if (fs->defaultglob == NO_REG1)
+            luaK_error(fs->ls, "undeclared global");
           init_exp(var, VLOCAL, fs->defaultglob);
           k = VGLOBAL;  /* now there is a declaration */
         }
@@ -987,10 +989,13 @@ static void repeatstat (LexState *ls, int line) {
 }
 
 
-static void exp1 (LexState *ls) {
+static int exp1 (LexState *ls) {
   expdesc e;
+  int k;
   expr(ls, &e);
+  k = e.k;
   luaK_exp2nextreg(ls->fs, &e);
+  return k;
 }
 
 
@@ -1000,8 +1005,8 @@ static void fornum (LexState *ls, TString *varname) {
   int prep;
   int base = fs->freereg;
   new_localvar(ls, varname, 0);
-  new_localvarstr(ls, "(limit)", 1);
-  new_localvarstr(ls, "(step)", 2);
+  new_localvarstr(ls, "(for limit)", 1);
+  new_localvarstr(ls, "(for step)", 2);
   check(ls, '=');
   exp1(ls);  /* initial value */
   check(ls, ',');
@@ -1012,11 +1017,11 @@ static void fornum (LexState *ls, TString *varname) {
     luaK_codeABc(fs, OP_LOADK, fs->freereg, luaK_numberK(fs, 1));
     luaK_reserveregs(fs, 1);
   }
+  adjustlocalvars(ls, 3);  /* scope for control variables */
   luaK_codeABC(fs, OP_SUB, fs->freereg - 3, fs->freereg - 3, fs->freereg - 1);
   luaK_jump(fs);
   prep = luaK_getlabel(fs);
   check(ls, TK_DO);
-  adjustlocalvars(ls, 3);  /* scope for control variables */
   block(ls);
   luaK_patchtohere(fs, prep-1);
   luaK_patchlist(fs, luaK_codeAsBc(fs, OP_FORLOOP, base, NO_JUMP), prep);
@@ -1029,7 +1034,7 @@ static void forlist (LexState *ls, TString *indexname) {
   int nvars = 0;
   int prep;
   int base = fs->freereg;
-  new_localvarstr(ls, "(table)", 0);
+  new_localvarstr(ls, "(for generator)", 0);
   new_localvar(ls, indexname, ++nvars);
   while (optional(ls, ',')) {
     new_localvar(ls, str_checkname(ls), ++nvars);
@@ -1126,26 +1131,27 @@ static void localstat (LexState *ls) {
 static void globalstat (LexState *ls) {
   /* stat -> GLOBAL NAME {`,' NAME} [IN exp] | GLOBAL IN exp */
   FuncState *fs = ls->fs;
+  int nvars = 0;
   next(ls);  /* skip GLOBAL */
-  if (optional(ls, TK_IN)) {  /* default declaration? */
-    exp1(ls);
-    fs->defaultglob = fs->freereg - 1;
-    create_local(ls, "(global table)");
-  }
-  else {
-    int nvars = 0;
+  if (ls->t.token == TK_NAME) {
     do {
       vardesc *v = new_var(ls, nvars++);  
       v->i = luaK_stringK(ls->fs, str_checkname(ls));
       next(ls);  /* skip name */
     } while (optional(ls, ','));
-    if (!optional(ls, TK_IN))
-      adjustglobalvars(ls, nvars, NO_REG);  /* free globals */
-    else {
-      exp1(ls);
-      adjustglobalvars(ls, nvars, ls->fs->freereg - 1);
-      create_local(ls, "(global table)");
-    }
+  }
+  if (!optional(ls, TK_IN)) {  /* free globals? */
+    if (nvars == 0)  /* default - free is invalid */
+      error_expected(ls, TK_IN);
+    adjustglobalvars(ls, nvars, NO_REG);  /* mark globals as free */
+  }
+  else {
+    int baselocal = fs->freereg;
+    int k = exp1(ls);
+    if (nvars == 0)
+      fs->defaultglob = (k == VNIL) ? NO_REG1 : baselocal;
+    adjustglobalvars(ls, nvars, baselocal);
+    create_local(ls, "*");
   }
 }
 

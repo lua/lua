@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.89 2002/02/14 21:43:01 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.90 2002/03/08 19:10:32 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -112,9 +112,10 @@ enum OpMode {iABC, iABc, iAsBc};  /* basic instruction format */
 
 
 /*
-** an invalid register that fits in 8 bits
+** invalid registers that fits in 8 bits
 */
 #define NO_REG		MAXARG_A
+#define NO_REG1		(NO_REG+1)
 
 
 /*
