@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 1.6 1998/12/30 13:16:50 roberto Exp roberto $
+** $Id: lvm.h,v 1.7 1998/12/30 17:26:49 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -22,7 +22,7 @@ int luaV_tonumber (TObject *obj);
 int luaV_tostring (TObject *obj);
 void luaV_setn (Hash *t, int val);
 void luaV_gettable (void);
-void luaV_settable (TObject *t, int deep);
+void luaV_settable (TObject *t);
 void luaV_rawsettable (TObject *t);
 void luaV_getglobal (TaggedString *ts);
 void luaV_setglobal (TaggedString *ts);

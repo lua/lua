@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.44 1999/02/04 16:36:16 roberto Exp roberto $
+** $Id: lvm.c,v 1.45 1999/02/04 17:47:59 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -110,64 +110,62 @@ void luaV_closure (int nelems) {
 ** Receives the table at top-2 and the index at top-1.
 */
 void luaV_gettable (void) {
-  struct Stack *S = &L->stack;
+  TObject *table = L->stack.top-2;
   TObject *im;
-  if (ttype(S->top-2) != LUA_T_ARRAY)  /* not a table, get "gettable" method */
-    im = luaT_getimbyObj(S->top-2, IM_GETTABLE);
+  if (ttype(table) != LUA_T_ARRAY) {  /* not a table, get gettable method */
+    im = luaT_getimbyObj(table, IM_GETTABLE);
+    if (ttype(im) == LUA_T_NIL)
+      lua_error("indexed expression not a table");
+  }
   else {  /* object is a table... */
-    int tg = (S->top-2)->value.a->htag;
+    int tg = table->value.a->htag;
     im = luaT_getim(tg, IM_GETTABLE);
     if (ttype(im) == LUA_T_NIL) {  /* and does not have a "gettable" method */
-      TObject *h = luaH_get(avalue(S->top-2), S->top-1);
-      if (ttype(h) != LUA_T_NIL) {
-        --S->top;
-        *(S->top-1) = *h;
+      TObject *h = luaH_get(avalue(table), table+1);
+      if (ttype(h) == LUA_T_NIL &&
+          (ttype(im=luaT_getim(tg, IM_INDEX)) != LUA_T_NIL)) {
+        /* result is nil and there is an "index" tag method */
+        luaD_callTM(im, 2, 1);  /* calls it */
       }
-      else if (ttype(im=luaT_getim(tg, IM_INDEX)) != LUA_T_NIL)
-        luaD_callTM(im, 2, 1);
       else {
-        --S->top;
-        ttype(S->top-1) = LUA_T_NIL;
+        L->stack.top--;
+        *table = *h;  /* "push" result into table position */
       }
       return;
     }
     /* else it has a "gettable" method, go through to next command */
   }
   /* object is not a table, or it has a "gettable" method */
-  if (ttype(im) == LUA_T_NIL)
-    lua_error("indexed expression not a table");
   luaD_callTM(im, 2, 1);
 }
 
 
 /*
-** Function to store indexed based on values at the stack.top
-** deep = 1: "deep L->stack.stack" store (with tag methods)
+** Receives table at *t, index at *(t+1) and value at top.
 */
-void luaV_settable (TObject *t, int deep) {
+void luaV_settable (TObject *t) {
   struct Stack *S = &L->stack;
   TObject *im;
-  if (ttype(t) != LUA_T_ARRAY)  /* not a table, get "settable" method */
+  if (ttype(t) != LUA_T_ARRAY) {  /* not a table, get "settable" method */
     im = luaT_getimbyObj(t, IM_SETTABLE);
+    if (ttype(im) == LUA_T_NIL)
+      lua_error("indexed expression not a table");
+  }
   else {  /* object is a table... */
     im = luaT_getim(avalue(t)->htag, IM_SETTABLE);
     if (ttype(im) == LUA_T_NIL) {  /* and does not have a "settable" method */
       luaH_set(avalue(t), t+1, S->top-1);
-      /* if deep, pop only value; otherwise, pop table, index and value */
-      S->top -= (deep) ? 1 : 3;
+      S->top--;  /* pop value */
       return;
     }
     /* else it has a "settable" method, go through to next command */
   }
   /* object is not a table, or it has a "settable" method */
-  if (ttype(im) == LUA_T_NIL)
-    lua_error("indexed expression not a table");
-  if (deep) {  /* table and index were not on top; copy them */
-    *(S->top+1) = *(L->stack.top-1);
-    *(S->top) = *(t+1);
-    *(S->top-1) = *t;
-    S->top += 2;  /* WARNING: caller must assure stack space */
-  }
+  /* prepare arguments and call the tag method */
+  *(S->top+1) = *(L->stack.top-1);
+  *(S->top) = *(t+1);
+  *(S->top-1) = *t;
+  S->top += 2;  /* WARNING: caller must assure stack space */
   luaD_callTM(im, 3, 0);
 }
 
@@ -421,19 +419,21 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         luaV_setglobal(tsvalue(&consts[aux]));
         break;
 
-      case SETTABLE0:
-       luaV_settable(S->top-3, 0);
+      case SETTABLEPOP:
+       luaV_settable(S->top-3);
+       S->top -= 2;  /* pop table and index */
        break;
 
-      case SETTABLEDUP: {
+      case SETTABPPDUP: {
        TObject temp = *(S->top-1);
-       luaV_settable(S->top-3, 0);
-       *(S->top++) = temp;
+       luaV_settable(S->top-3);
+       S->top--;  /* pop index (temp goes into "table" position) */
+       *(S->top-1) = temp;
        break;
      }
 
       case SETTABLE:
-        luaV_settable(S->top-3-(*pc++), 1);
+        luaV_settable(S->top-3-(*pc++));
         break;
 
       case SETLISTW: aux += highbyte(*pc++);

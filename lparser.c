@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.15 1999/02/04 16:36:16 roberto Exp roberto $
+** $Id: lparser.c,v 1.16 1999/02/04 17:47:59 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -490,7 +490,7 @@ static void genstorevar (LexState *ls, vardesc *var, OpCode *codes) {
 
 
 static void storevar (LexState *ls, vardesc *var) {
-  static OpCode codes[] = {SETLOCAL, SETGLOBAL, SETTABLE0};
+  static OpCode codes[] = {SETLOCAL, SETGLOBAL, SETTABLEPOP};
   genstorevar(ls, var, codes);
 }
 
@@ -954,7 +954,7 @@ static void exp0 (LexState *ls, vardesc *v) {
 
 static void Gexp (LexState *ls, vardesc *v) {
   /* Gexp -> exp0 | var '=' exp1 */
-  static OpCode codes[] = {SETLOCALDUP, SETGLOBALDUP, SETTABLEDUP};
+  static OpCode codes[] = {SETLOCALDUP, SETGLOBALDUP, SETTABPPDUP};
   exp0(ls, v);
   if (v->k != VEXP && optional(ls, '=')) {  /* assignment expression? */
     unloaddot(ls, v);
