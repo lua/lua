@@ -1,5 +1,5 @@
 /*
-** $Id: auxlib.h,v 1.1 1997/03/18 15:30:50 roberto Exp $
+** $Id: auxlib.h,v 1.2 1997/04/06 14:08:08 roberto Exp roberto $
 */
 
 #ifndef auxlib_h
@@ -19,5 +19,12 @@ char *luaL_opt_string (int numArg, char *def);
 double luaL_check_number (int numArg);
 double luaL_opt_number (int numArg, double def);
 void luaL_verror (char *fmt, ...);
+
+
+
+/* -- private part (only for Lua modules */
+
+int luaI_findstring (char *name, char *list[]);
+
 
 #endif

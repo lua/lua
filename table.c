@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.66 1997/04/04 15:35:37 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.67 1997/04/06 14:08:08 roberto Exp roberto $";
 
 #include "luamem.h"
 #include "auxlib.h"
@@ -108,6 +108,12 @@ TaggedString *luaI_createfixedstring (char *name)
   if (!ts->marked)
     ts->marked = 2;  /* avoid GC */
   return ts;
+}
+
+
+int luaI_globaldefined (char *name)
+{
+  return ttype(&lua_table[luaI_findsymbolbyname(name)].object) != LUA_T_NIL;
 }
 
 

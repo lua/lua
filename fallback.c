@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 2.2 1997/04/04 22:24:51 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 2.3 1997/04/06 14:08:08 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -102,18 +102,9 @@ char *luaI_eventname[] = {  /* ORDER IM */
 
 
 
-static int findstring (char *name, char *list[])
-{
-  int i;
-  for (i=0; list[i]; i++)
-    if (strcmp(list[i], name) == 0)
-      return i;
-  return -1;  /* name not found */
-}
-
 static int luaI_checkevent (char *name, char *list[])
 {
-  int e = findstring(name, list);
+  int e = luaI_findstring(name, list);
   if (e < 0)
     luaL_verror("`%s' is not a valid event name", name);
   return e;
@@ -197,11 +188,8 @@ void luaI_settag (int tag, TObject *o)
     case LUA_T_ARRAY:
       o->value.a->htag = tag;
       break;
-    case LUA_T_USERDATA:
-      o->value.ts->tag = tag;
-      break;
     default:
-      luaL_verror("cannot change tag of a %s", luaI_typenames[-ttype(o)]);
+      luaL_verror("cannot change the tag of a %s", luaI_typenames[-ttype(o)]);
   }
 }
 
@@ -318,45 +306,52 @@ static void fillvalids (IMS e, TObject *func)
 
 void luaI_setfallback (void)
 {
-  int e;
+  static char *oldnames [] = {"error", "getglobal", "arith", "order", NULL};
   TObject oldfunc;
   lua_CFunction replace;
   char *name = luaL_check_string(1);
   lua_Object func = lua_getparam(2);
   luaI_initfallbacks();
   luaL_arg_check(lua_isfunction(func), 2, "function expected");
-  if (strcmp(name, "error") == 0) {  /* old error fallback */
-    oldfunc = errorim;
-    errorim = *luaI_Address(func);
-    replace = errorFB;
-  }
-  else if (strcmp(name, "getglobal") == 0) {  /* old getglobal fallback */
-    oldfunc = luaI_IMtable[-LUA_T_NIL].int_method[IM_GETGLOBAL];
-    luaI_IMtable[-LUA_T_NIL].int_method[IM_GETGLOBAL] = *luaI_Address(func);
-    replace = nilFB;
-  }
-  else if ((e = findstring(name, luaI_eventname)) >= 0) {
-    oldfunc = luaI_IMtable[-LUA_T_USERDATA].int_method[e];
-    fillvalids(e, luaI_Address(func));
-    replace = (e == IM_GC || e == IM_INDEX) ? nilFB : typeFB;
-  }
-  else if (strcmp(name, "arith") == 0) {  /* old arith fallback */
-    int i;
-    oldfunc = luaI_IMtable[-LUA_T_USERDATA].int_method[IM_POW];
-    for (i=IM_ADD; i<=IM_UNM; i++)  /* ORDER IM */
-      fillvalids(i, luaI_Address(func));
-    replace = typeFB;
-  }
-  else if (strcmp(name, "order") == 0) {  /* old order fallback */
-    int i;
-    oldfunc = luaI_IMtable[-LUA_T_USERDATA].int_method[IM_LT];
-    for (i=IM_LT; i<=IM_GE; i++)  /* ORDER IM */
-      fillvalids(i, luaI_Address(func));
-    replace = typeFB;
-  }
-  else {
-    luaL_verror("`%s' is not a valid fallback name", name);
-    replace = NULL;  /* to avoid warnings */
+  switch (luaI_findstring(name, oldnames)) {
+    case 0:  /* old error fallback */
+      oldfunc = errorim;
+      errorim = *luaI_Address(func);
+      replace = errorFB;
+      break;
+    case 1:  /* old getglobal fallback */
+      oldfunc = luaI_IMtable[-LUA_T_NIL].int_method[IM_GETGLOBAL];
+      luaI_IMtable[-LUA_T_NIL].int_method[IM_GETGLOBAL] = *luaI_Address(func);
+      replace = nilFB;
+      break;
+    case 2: {  /* old arith fallback */
+      int i;
+      oldfunc = luaI_IMtable[-LUA_T_USERDATA].int_method[IM_POW];
+      for (i=IM_ADD; i<=IM_UNM; i++)  /* ORDER IM */
+        fillvalids(i, luaI_Address(func));
+      replace = typeFB;
+      break;
+    }
+    case 3: {  /* old order fallback */
+      int i;
+      oldfunc = luaI_IMtable[-LUA_T_USERDATA].int_method[IM_LT];
+      for (i=IM_LT; i<=IM_GE; i++)  /* ORDER IM */
+        fillvalids(i, luaI_Address(func));
+      replace = typeFB;
+      break;
+    }
+    default: {
+      int e;
+      if ((e = luaI_findstring(name, luaI_eventname)) >= 0) {
+        oldfunc = luaI_IMtable[-LUA_T_USERDATA].int_method[e];
+        fillvalids(e, luaI_Address(func));
+        replace = (e == IM_GC || e == IM_INDEX) ? nilFB : typeFB;
+      }
+      else {
+        luaL_verror("`%s' is not a valid fallback name", name);
+        replace = NULL;  /* to avoid warnings */
+      }
+    }
   }
   if (oldfunc.ttype != LUA_T_NIL)
     luaI_pushobject(&oldfunc);
