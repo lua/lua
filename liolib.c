@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: liolib.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -42,6 +42,7 @@ int pclose();
 
 
 int lua_tagio;
+static int closedtag;
 
 
 static void pushresult (int i)
@@ -59,8 +60,12 @@ static void pushresult (int i)
 static FILE *getfile (char *name)
 {
   lua_Object f = lua_getglobal(name);
-  if (!lua_isuserdata(f) || lua_tag(f) != lua_tagio)
-    luaL_verror("global variable %s is not a file handle", name);
+  if (!lua_isuserdata(f) || lua_tag(f) != lua_tagio) {
+    if (lua_tag(f) == closedtag)
+      luaL_verror("file %s has been closed", name);
+    else
+      luaL_verror("global variable %s is not a file handle", name);
+  }
   return lua_getuserdata(f);
 }
 
@@ -71,6 +76,8 @@ static void closefile (char *name)
   if (f == stdin || f == stdout) return;
   if (pclose(f) == -1)
     fclose(f);
+  lua_pushobject(lua_getglobal(name));
+  lua_settag(closedtag);
 }
 
 
@@ -348,6 +355,7 @@ static struct luaL_reg iolib[] = {
 void lua_iolibopen (void)
 {
   lua_tagio = lua_newtag();
+  closedtag = lua_newtag();
   setfile(stdin, "_INPUT");
   setfile(stdout, "_OUTPUT");
   setfile(stdin, "_STDIN");
