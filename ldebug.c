@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.143 2002/12/11 12:34:22 roberto Exp roberto $
+** $Id: ldebug.c,v 1.144 2003/02/11 10:46:24 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -451,8 +451,9 @@ static const char *getobjname (CallInfo *ci, int stackpos, const char **name) {
     lua_assert(pc != -1);
     switch (GET_OPCODE(i)) {
       case OP_GETGLOBAL: {
-        lua_assert(ttisstring(&p->k[GETARG_Bx(i)]));
-        *name = svalue(&p->k[GETARG_Bx(i)]);
+        int g = GETARG_Bx(i);  /* global index */
+        lua_assert(ttisstring(&p->k[g]));
+        *name = svalue(&p->k[g]);
         return "global";
       }
       case OP_MOVE: {
@@ -463,11 +464,13 @@ static const char *getobjname (CallInfo *ci, int stackpos, const char **name) {
         break;
       }
       case OP_GETTABLE: {
-        *name = kname(p, GETARG_C(i));
+        int k = GETARG_C(i);  /* key index */
+        *name = kname(p, k);
         return "field";
       }
       case OP_SELF: {
-        *name = kname(p, GETARG_C(i));
+        int k = GETARG_C(i);  /* key index */
+        *name = kname(p, k);
         return "method";
       }
       default: break;
