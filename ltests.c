@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.125 2002/06/13 13:44:50 roberto Exp roberto $
+** $Id: ltests.c,v 1.126 2002/06/18 15:19:27 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -478,11 +478,14 @@ static int closestate (lua_State *L) {
 }
 
 static int doremote (lua_State *L) {
-  lua_State *L1;
-  const char *code = luaL_check_string(L, 2);
+  lua_State *L1 = cast(lua_State *,cast(unsigned long,luaL_check_number(L, 1)));
+  size_t lcode;
+  const char *code = luaL_check_lstr(L, 2, &lcode);
   int status;
-  L1 = cast(lua_State *, cast(unsigned long, luaL_check_number(L, 1)));
-  status = lua_dostring(L1, code);
+  lua_settop(L1, 0);
+  status = luaL_loadbuffer(L1, code, lcode, code);
+  if (status == 0)
+    status = lua_pcall(L1, 0, LUA_MULTRET);
   if (status != 0) {
     lua_pushnil(L);
     lua_pushnumber(L, status);
