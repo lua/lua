@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.3 1994/08/03 14:15:46 celes Exp $";
+char *rcs_table="$Id: table.c,v 2.4 1994/10/17 19:03:23 celes Exp roberto $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -215,8 +215,6 @@ void lua_pack (void)
 
  lua_strcollector();
  lua_hashcollector();
-
-printf("lua_pack: lua_block=%d lua_recovered=%d %%=%.2f\n",lua_block,lua_recovered,100.0*lua_recovered/lua_block);
 
  lua_nentity = 0;				/* reset counter */
  lua_block=2*lua_block-3*lua_recovered/2;	/* adapt block size */
