@@ -273,11 +273,9 @@ LUA_API int lua_loadfile (lua_State *L, const char *filename) {
 LUA_API int lua_loadbuffer (lua_State *L, const char *buff, size_t size,
                           const char *name) {
   ZIO z;
-  int status;
   if (!name) name = "?";
   luaZ_mopen(&z, buff, size, name);
-  status = protectedparser(L, &z, buff[0]==LUA_SIGNATURE[0]);
-  return status;
+  return protectedparser(L, &z, buff[0]==LUA_SIGNATURE[0]);
 }
 
 
@@ -330,7 +328,7 @@ void luaD_breakrun (lua_State *L, int errcode) {
     longjmp(L->errorJmp->b, 1);
   }
   else {
-    if (errcode != LUA_ERRMEM)
+    if (errcode != LUA_ERRMEM && errcode != LUA_ERRERR)
       message(L, "unable to recover; exiting\n");
     exit(EXIT_FAILURE);
   }
