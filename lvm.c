@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.48 1999/02/09 15:58:45 roberto Exp roberto $
+** $Id: lvm.c,v 1.49 1999/02/09 18:01:55 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -638,8 +638,9 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
           luaD_lineHook(aux);
         break;
 
-      case LONGARG:
-        aux = highbyte(highbyte(*pc++));
+      case LONGARGW: aux += highbyte(*pc++);
+      case LONGARG:  aux += *pc++;
+        aux = highbyte(highbyte(aux));
         goto switchentry;  /* do not reset "aux" */
 
     }
