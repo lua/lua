@@ -1,12 +1,11 @@
 /*
-** $Id: lvm.c,v 1.233 2002/05/27 20:35:40 roberto Exp roberto $
+** $Id: lvm.c,v 1.234 2002/06/03 14:08:43 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
 
 
 #include <stdarg.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -23,6 +22,13 @@
 #include "ltable.h"
 #include "ltm.h"
 #include "lvm.h"
+
+
+/* function to convert a lua_Number to a string */
+#ifndef lua_number2str
+#include <stdio.h>
+#define lua_number2str(s,n)     sprintf((s), LUA_NUMBER_FMT, (n))
+#endif
 
 
 /* limit for table tag-method chains (to avoid loops) */
