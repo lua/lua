@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.4 1997/12/17 20:48:58 roberto Exp roberto $
+** $Id: lmem.c,v 1.5 1998/03/09 21:49:52 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -83,7 +83,7 @@ void *luaM_realloc (void *block, unsigned long size)
   unsigned long realsize = sizeof(unsigned long)+size+sizeof(char);
   if (realsize != (size_t)realsize)
     lua_error("Allocation Error: Block too big");
-  if (size == 0) {  /* ANSI doen't need this, but some machines... */
+  if (size == 0) {  /* ANSI dosen't need this, but some machines... */
     if (block) {
       memset(block, -1, *((unsigned long *)block-1));  /* erase block */
       block = checkblock(block);

@@ -1,6 +1,6 @@
 /*
-** $Id: $
-** Debuging API
+** $Id: luadebug.h,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
+** Debugging API
 ** See Copyright Notice in lua.h
 */
 

@@ -1,6 +1,6 @@
 /*
-** $Id: lauxlib.c,v 1.10 1998/03/06 18:47:42 roberto Exp roberto $
-** Auxiliar functions for building Lua libraries
+** $Id: lauxlib.c,v 1.11 1998/06/18 16:57:03 roberto Exp roberto $
+** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
 
@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 
-/* Please Notice: This file uses only the oficial API of Lua
+/* Please Notice: This file uses only the official API of Lua
 ** Any function declared here could be written as an application
 ** function. With care, these functions can be used by other libraries.
 */

@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.11 1998/01/28 16:50:33 roberto Exp roberto $
+** $Id: lstring.c,v 1.12 1998/03/06 16:54:42 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -258,7 +258,7 @@ TaggedString *luaS_collectudata (void)
     for (j=0; j<tb->size; j++) {
       TaggedString *t = tb->hash[j];
       if (t == NULL || t == &EMPTY || t->constindex != -1)
-        continue;  /* get only user datas */
+        continue;  /* get only user data */
       t->head.next = (GCnode *)frees;
       frees = t;
       tb->hash[j] = &EMPTY;

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.8 1998/05/27 13:03:40 roberto Exp roberto $
+** $Id: lstate.h,v 1.9 1998/06/02 20:37:04 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -46,7 +46,7 @@ struct ref {
 
 
 struct lua_State {
-  /* trhead-specific state */
+  /* thread-specific state */
   struct Stack stack;  /* Lua stack */
   struct C_Lua_Stack Cstack;  /* C2lua struct */
   void *errorJmp;  /* current error recover point */

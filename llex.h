@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.7 1998/01/09 14:57:43 roberto Exp $
+** $Id: llex.h,v 1.8 1998/05/27 13:03:40 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -32,7 +32,7 @@ enum RESERVED {
 struct ifState {
   int elsepart;  /* true if its in the $else part */
   int condition;  /* true if $if condition is true */
-  int skip;  /* true if part must be skiped */
+  int skip;  /* true if part must be skipped */
 };
 
 

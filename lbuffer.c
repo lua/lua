@@ -1,6 +1,6 @@
 /*
-** $Id: lbuffer.c,v 1.2 1998/03/06 16:54:42 roberto Exp roberto $
-** Auxiliar functions for building Lua libraries
+** $Id: lbuffer.c,v 1.3 1998/06/02 20:37:04 roberto Exp roberto $
+** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
 
@@ -13,7 +13,7 @@
 
 
 /*-------------------------------------------------------
-**  Auxiliar buffer
+**  Auxiliary buffer
 -------------------------------------------------------*/
 
 #define BUFF_STEP	32

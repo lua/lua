@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.13 1998/05/18 22:21:55 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.14 1998/05/31 22:20:45 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -341,7 +341,7 @@ static void str_find (void)
   struct Capture cap;
   luaL_arg_check(0 <= init && init <= l, 3, "out of range");
   if (lua_getparam(4) != LUA_NOOBJECT ||
-      strpbrk(p, SPECIALS) == NULL) {  /* no special caracters? */
+      strpbrk(p, SPECIALS) == NULL) {  /* no special characters? */
     char *s2 = strstr(s+init, p);
     if (s2) {
       lua_pushnumber(s2-s+1);
@@ -483,7 +483,7 @@ static void str_format (void)
       strfrmt = match(initf, "[-+ #0]*(%d*)%.?(%d*)", &cap);
       if (cap.capture[0].len > 2 || cap.capture[1].len > 2)  /* < 100? */
         lua_error("invalid format (width or precision too long)");
-      strncpy(form+1, initf, strfrmt-initf+1); /* +1 to include convertion */
+      strncpy(form+1, initf, strfrmt-initf+1); /* +1 to include conversion */
       form[strfrmt-initf+2] = 0;
       buff = luaL_openspace(1000);  /* to store the formatted value */
       switch (*strfrmt++) {

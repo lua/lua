@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.8 1997/12/26 18:36:31 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.9 1998/05/27 19:09:39 roberto Exp roberto $
 ** Lua standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -155,7 +155,7 @@ static void math_max (void)
 
 static void math_random (void)
 {
-  /* the '%' is needed because on some sistems (SunOS!) "rand()" may */
+  /* the '%' is needed because on some systems (SunOS!) "rand()" may */
   /* return a value bigger than RAND_MAX... */
   double r = (double)(rand()%RAND_MAX) / (double)RAND_MAX;
   double l = luaL_opt_number(1, 0);

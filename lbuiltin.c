@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.28 1998/05/31 22:19:35 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.29 1998/06/05 22:17:44 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -200,7 +200,7 @@ static void luaI_type (void)
 static void tonumber (void)
 {
   int base = luaL_opt_number(2, 10);
-  if (base == 10) {  /* standard convertion */
+  if (base == 10) {  /* standard conversion */
     lua_Object o = lua_getparam(1);
     if (lua_isnumber(o))
       lua_pushnumber(lua_getnumber(o));
