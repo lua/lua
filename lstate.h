@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.56 2001/04/17 17:35:54 roberto Exp roberto $
+** $Id: lstate.h,v 1.57 2001/06/06 18:00:19 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -13,8 +13,14 @@
 
 
 /*
-** macros that control all entries and exits from Lua core machine
-** (mainly for thread syncronization)
+** macros for thread syncronization inside Lua core machine:
+** all accesses to the global state and to global objects are syncronized.
+** Because threads can read the stack of other threads
+** (when running garbage collection),
+** a thread must also syncronize any write-access to its own stack.
+** Unsyncronized accesses are allowed only when reading its own stack,
+** or when reading immutable fields from global objects
+** (such as string values and udata values). 
 */
 #ifndef lua_lock
 #define lua_lock(L)	((void) 0)

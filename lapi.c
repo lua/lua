@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.143 2001/06/06 18:00:19 roberto Exp roberto $
+** $Id: lapi.c,v 1.144 2001/06/08 19:00:57 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -70,11 +70,7 @@ void luaA_pushobject (lua_State *L, const TObject *o) {
 }
 
 LUA_API int lua_stackspace (lua_State *L) {
-  int i;
-  lua_lock(L);
-  i = (L->stack_last - L->top);
-  lua_unlock(L);
-  return i;
+  return (L->stack_last - L->top);
 }
 
 
@@ -85,11 +81,7 @@ LUA_API int lua_stackspace (lua_State *L) {
 
 
 LUA_API int lua_gettop (lua_State *L) {
-  int i;
-  lua_lock(L);
-  i = (L->top - L->ci->base);
-  lua_unlock(L);
-  return i;
+  return (L->top - L->ci->base);
 }
 
 
@@ -143,13 +135,8 @@ LUA_API void lua_pushvalue (lua_State *L, int index) {
 
 
 LUA_API int lua_type (lua_State *L, int index) {
-  StkId o;
-  int i;
-  lua_lock(L);
-  o = luaA_indexAcceptable(L, index);
-  i = (o == NULL) ? LUA_TNONE : ttype(o);
-  lua_unlock(L);
-  return i;
+  StkId o = luaA_indexAcceptable(L, index);
+  return (o == NULL) ? LUA_TNONE : ttype(o);
 }
 
 
@@ -174,25 +161,17 @@ LUA_API const l_char *lua_xtypename (lua_State *L, int index) {
 
 
 LUA_API int lua_iscfunction (lua_State *L, int index) {
-  StkId o;
-  int i;
-  lua_lock(L);
-  o = luaA_indexAcceptable(L, index);
-  i = (o == NULL) ? 0 : iscfunction(o);
-  lua_unlock(L);
-  return i;
+  StkId o = luaA_indexAcceptable(L, index);
+  return (o == NULL) ? 0 : iscfunction(o);
 }
 
+
 LUA_API int lua_isnumber (lua_State *L, int index) {
-  TObject *o;
-  int i;
   TObject n;
-  lua_lock(L);
-  o = luaA_indexAcceptable(L, index);
-  i = (o != NULL && (ttype(o) == LUA_TNUMBER || luaV_tonumber(o, &n)));
-  lua_unlock(L);
-  return i;
+  TObject *o = luaA_indexAcceptable(L, index);
+  return (o != NULL && (ttype(o) == LUA_TNUMBER || luaV_tonumber(o, &n)));
 }
+
 
 LUA_API int lua_isstring (lua_State *L, int index) {
   int t = lua_type(L, index);
@@ -203,29 +182,26 @@ LUA_API int lua_isstring (lua_State *L, int index) {
 LUA_API int lua_tag (lua_State *L, int index) {
   StkId o;
   int i;
-  lua_lock(L);
+  lua_lock(L);  /* other thread could be changing the tag */
   o = luaA_indexAcceptable(L, index);
   i = (o == NULL) ? LUA_NOTAG : luaT_tag(o);
   lua_unlock(L);
   return i;
 }
 
+
 LUA_API int lua_equal (lua_State *L, int index1, int index2) {
-  StkId o1, o2;
-  int i;
-  lua_lock(L);
-  o1 = luaA_indexAcceptable(L, index1);
-  o2 = luaA_indexAcceptable(L, index2);
-  i = (o1 == NULL || o2 == NULL) ? 0  /* index out-of-range */
+  StkId o1 = luaA_indexAcceptable(L, index1);
+  StkId o2 = luaA_indexAcceptable(L, index2);
+  return (o1 == NULL || o2 == NULL) ? 0  /* index out of range */
                                  : luaO_equalObj(o1, o2);
-  lua_unlock(L);
-  return i;
 }
+
 
 LUA_API int lua_lessthan (lua_State *L, int index1, int index2) {
   StkId o1, o2;
   int i;
-  lua_lock(L);
+  lua_lock(L);  /* may call tag method */
   o1 = luaA_indexAcceptable(L, index1);
   o2 = luaA_indexAcceptable(L, index2);
   i = (o1 == NULL || o2 == NULL) ? 0  /* index out-of-range */
@@ -237,81 +213,70 @@ LUA_API int lua_lessthan (lua_State *L, int index1, int index2) {
 
 
 LUA_API lua_Number lua_tonumber (lua_State *L, int index) {
-  const TObject *o;
   TObject n;
-  lua_Number res;
-  lua_lock(L);
-  o = luaA_indexAcceptable(L, index);
+  const TObject *o = luaA_indexAcceptable(L, index);
   if (o != NULL &&
       (ttype(o) == LUA_TNUMBER || (o = luaV_tonumber(o, &n)) != NULL))
-    res = nvalue(o);
+    return nvalue(o);
   else
-    res = 0;
-  lua_unlock(L);
-  return res;
+    return 0;
 }
+
 
 LUA_API const l_char *lua_tostring (lua_State *L, int index) {
-  StkId o;
-  const l_char *s;
-  lua_lock(L);
-  o = luaA_indexAcceptable(L, index);
-  s = (o == NULL || tostring(L, o)) ? NULL : svalue(o);
-  lua_unlock(L);
-  return s;
+  StkId o = luaA_indexAcceptable(L, index);
+  if (o == NULL)
+    return NULL;
+  else if (ttype(o) == LUA_TSTRING)
+    return svalue(o);
+  else {
+    const l_char *s;
+    lua_lock(L);  /* `luaV_tostring' may create a new string */
+    s = (luaV_tostring(L, o) == 0) ? svalue(o) : NULL;
+    lua_unlock(L);
+    return s;
+  }
 }
+
 
 LUA_API size_t lua_strlen (lua_State *L, int index) {
-  StkId o;
-  size_t l;
-  lua_lock(L);
-  o = luaA_indexAcceptable(L, index);
-  l = (o == NULL || tostring(L, o)) ? 0 : tsvalue(o)->len;
-  lua_unlock(L);
-  return l;
+  StkId o = luaA_indexAcceptable(L, index);
+  if (o == NULL)
+    return 0;
+  else if (ttype(o) == LUA_TSTRING)
+    return tsvalue(o)->len;
+  else {
+    size_t l;
+    lua_lock(L);  /* `luaV_tostring' may create a new string */
+    l = (luaV_tostring(L, o) == 0) ? tsvalue(o)->len : 0;
+    lua_unlock(L);
+    return l;
+  }
 }
+
 
 LUA_API lua_CFunction lua_tocfunction (lua_State *L, int index) {
-  StkId o;
-  lua_CFunction f;
-  lua_lock(L);
-  o = luaA_indexAcceptable(L, index);
-  f = (o == NULL || !iscfunction(o)) ? NULL : clvalue(o)->f.c;
-  lua_unlock(L);
-  return f;
+  StkId o = luaA_indexAcceptable(L, index);
+  return (o == NULL || !iscfunction(o)) ? NULL : clvalue(o)->f.c;
 }
+
 
 LUA_API void *lua_touserdata (lua_State *L, int index) {
-  StkId o;
-  void *p;
-  lua_lock(L);
-  o = luaA_indexAcceptable(L, index);
-  p = (o == NULL || ttype(o) != LUA_TUSERDATA) ? NULL : uvalue(o)->value;
-  lua_unlock(L);
-  return p;
+  StkId o = luaA_indexAcceptable(L, index);
+  return (o == NULL || ttype(o) != LUA_TUSERDATA) ? NULL : uvalue(o)->value;
 }
 
+
 LUA_API const void *lua_topointer (lua_State *L, int index) {
-  StkId o;
-  const void *p;
-  lua_lock(L);
-  o = luaA_indexAcceptable(L, index);
-  if (o == NULL) p = NULL;
+  StkId o = luaA_indexAcceptable(L, index);
+  if (o == NULL) return NULL;
   else {
     switch (ttype(o)) {
-      case LUA_TTABLE: 
-        p = hvalue(o);
-        break;
-      case LUA_TFUNCTION:
-        p = clvalue(o);
-        break;
-      default:
-        p = NULL;
-        break;
+      case LUA_TTABLE: return hvalue(o);
+      case LUA_TFUNCTION: return clvalue(o);
+      default: return NULL;
     }
   }
-  lua_unlock(L);
-  return p;
 }
 
 
@@ -813,20 +778,3 @@ LUA_API void  lua_setweakmode (lua_State *L, int mode) {
   lua_unlock(L);
 }
 
-
-
-#if 0
-/*
-** deprecated function
-*/
-LUA_API void lua_pushusertag (lua_State *L, void *u, int tag) {
-  /* ???????? */
-  if (lua_pushuserdata(L, u) || 1)  /* new udata? */
-    lua_settag(L, tag);  /* OK, no conflit */
-  else {
-    if (lua_tag(L, -1) != tag) {
-      lua_error(L, "conflicting tags for the same userdata");
-}
-  }
-}
-#endif
