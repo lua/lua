@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.163 2002/11/22 18:01:46 roberto Exp roberto $
+** $Id: lgc.c,v 1.164 2002/11/25 12:38:47 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -39,8 +39,7 @@ typedef struct GCState {
 #define unmark(x)	resetbit((x)->gch.marked, 0)
 #define ismarked(x)	((x)->gch.marked & ((1<<4)|1))
 
-#define strmark(s)	setbit((s)->tsv.marked, 0)
-#define strunmark(s)	resetbit((s)->tsv.marked, 0)
+#define stringmark(s)	setbit((s)->tsv.marked, 0)
 
 
 #define isfinalized(u)		(!testbit((u)->uv.marked, 1))
@@ -184,15 +183,15 @@ static void traversetable (GCState *st, Table *h) {
 
 static void traverseproto (GCState *st, Proto *f) {
   int i;
-  strmark(f->source);
+  stringmark(f->source);
   for (i=0; i<f->sizek; i++) {
     if (ttisstring(f->k+i))
-      strmark(tsvalue(f->k+i));
+      stringmark(tsvalue(f->k+i));
   }
   for (i=0; i<f->sizep; i++)
     markvalue(st, f->p[i]);
   for (i=0; i<f->sizelocvars; i++)  /* mark local-variable names */
-    strmark(f->locvars[i].varname);
+    stringmark(f->locvars[i].varname);
   lua_assert(luaG_checkcode(f));
 }
 
@@ -286,7 +285,7 @@ static void propagatemarks (GCState *st) {
 
 static int valismarked (const TObject *o) {
   if (ttisstring(o))
-    strmark(tsvalue(o));  /* strings are `values', so are never weak */
+    stringmark(tsvalue(o));  /* strings are `values', so are never weak */
   return !iscollectable(o) || testbit(o->value.gc->gch.marked, 0);
 }
 
