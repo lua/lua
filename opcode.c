@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.1 1994/11/02 20:30:53 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.2 1994/11/04 10:47:49 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,6 +19,7 @@ char *rcs_opcode="$Id: opcode.c,v 3.1 1994/11/02 20:30:53 roberto Exp roberto $"
 #include "inout.h"
 #include "table.h"
 #include "lua.h"
+#include "fallback.h"
 
 #define tonumber(o) ((tag(o) != LUA_T_NUMBER) && (lua_tonumber(o) != 0))
 #define tostring(o) ((tag(o) != LUA_T_STRING) && (lua_tostring(o) != 0))
@@ -26,9 +27,9 @@ char *rcs_opcode="$Id: opcode.c,v 3.1 1994/11/02 20:30:53 roberto Exp roberto $"
 
 #define STACK_BUFFER (STACKGAP+128)
 
-static Long    maxstack;
-static Object *stack=NULL;
-static Object *top;
+static Long    maxstack = 0L;
+static Object *stack = NULL;
+static Object *top = NULL;
 
 
 static int CBase = 0;   /* when Lua calls C or C calls Lua, points to the */
@@ -40,11 +41,69 @@ static  jmp_buf *errorJmp = NULL; /* current error recover point */
 
 
 static int lua_execute (Byte *pc, int base);
+static void do_call (Object *func, int base, int nResults, int whereRes);
 
+
+/*
+** Fallbacks
+*/
+
+static struct FB {
+  char *kind;
+  Object function;
+} fallBacks[] = {
+#define FB_ERROR  0
+{"error", {LUA_T_CFUNCTION, luaI_errorFB}},
+#define FB_INDEX  1
+{"index", {LUA_T_CFUNCTION, luaI_indexFB}},
+#define FB_GETTABLE  2
+{"gettable", {LUA_T_CFUNCTION, luaI_gettableFB}},
+#define FB_ARITH  3
+{"arith", {LUA_T_CFUNCTION, luaI_arithFB}},
+#define FB_ORDER  4
+{"order", {LUA_T_CFUNCTION, luaI_orderFB}},
+#define FB_CONCAT  5
+{"concat", {LUA_T_CFUNCTION, luaI_concatFB}},
+#define FB_UNMINUS  6
+{"unminus", {LUA_T_CFUNCTION, luaI_arithFB}},
+#define FB_SETTABLE  7
+{"settable", {LUA_T_CFUNCTION, luaI_gettableFB}}
+};
+
+#define N_FB  (sizeof(fallBacks)/sizeof(struct FB))
+
+
+void luaI_setfallback (void)
+{
+  int i;
+  char *name = lua_getstring(lua_getparam(1));
+  lua_Object func = lua_getparam(2);
+  if (name == NULL || !(lua_isfunction(func) || lua_iscfunction(func)))
+  {
+    lua_pushnil();
+    return;
+  }
+  for (i=0; i<N_FB; i++)
+  {
+    if (strcmp(fallBacks[i].kind, name) == 0)
+    {
+      lua_pushobject(&fallBacks[i].function);
+      fallBacks[i].function = *func;
+      return;
+    }
+  }
+  /* name not found */
+  lua_pushnil();
+}
+
+/*
+** Error messages
+*/
 
 static void lua_message (char *s)
 {
-  fprintf (stderr, "lua: %s\n", s);
+  lua_pushstring(s);
+  do_call(&fallBacks[FB_ERROR].function, (top-stack)-1, 0, (top-stack)-1);
 }
 
 /*
@@ -81,11 +140,12 @@ static void lua_initstack (void)
 */
 static void lua_checkstack (Word n)
 {
- if (stack == NULL)
-   lua_initstack();
  if (n > maxstack)
  {
-  int t = top-stack;
+  int t;
+  if (stack == NULL)
+    lua_initstack();
+  t = top-stack;
   maxstack *= 2;
   stack = (Object *)realloc(stack, maxstack*sizeof(Object));
   if (stack == NULL)
@@ -101,11 +161,22 @@ static void lua_checkstack (Word n)
 */
 static char *lua_strconc (char *l, char *r)
 {
- static char buffer[1024];
+ static char *buffer = NULL;
+ static int buffer_size = 0;
  int n = strlen(l)+strlen(r)+1;
- if (n > 1024)
-   lua_error ("string too large");
- return strcat(strcpy(buffer,l),r);
+ if (n > buffer_size)
+ {
+   buffer_size = n;
+   if (buffer != NULL)
+     free(buffer);
+   buffer = (char *)malloc(buffer_size);
+   if (buffer == NULL)
+   {
+     buffer_size = 0;
+     lua_error("concat - not enough memory");
+   }
+  }
+  return strcat(strcpy(buffer,l),r);
 }
 
 
@@ -138,11 +209,11 @@ static int lua_tostring (Object *obj)
 {
  static char s[256];
  if (tag(obj) != LUA_T_NUMBER)
-   lua_reportbug ("unexpected type at conversion to string");
+   return 1;
  if ((int) nvalue(obj) == nvalue(obj))
-  sprintf (s, "%d", (int) nvalue(obj));
+   sprintf (s, "%d", (int) nvalue(obj));
  else
-  sprintf (s, "%g", nvalue(obj));
+   sprintf (s, "%g", nvalue(obj));
  svalue(obj) = lua_createstring(s);
  if (svalue(obj) == NULL)
   return 1;
@@ -217,32 +288,35 @@ static void do_call (Object *func, int base, int nResults, int whereRes)
 */
 static void pushsubscript (void)
 {
-  Object *h;
   if (tag(top-2) != LUA_T_ARRAY)
-    lua_reportbug ("indexed expression not a table");
-  h = lua_hashget (avalue(top-2), top-1);
-  --top;
-  *(top-1) = *h;
+    do_call(&fallBacks[FB_GETTABLE].function, (top-stack)-2, 1, (top-stack)-2);
+  else 
+  {
+    Object *h = lua_hashget(avalue(top-2), top-1);
+    if (h == NULL)
+      do_call(&fallBacks[FB_INDEX].function, (top-stack)-2, 1, (top-stack)-2);
+    else
+    {
+      --top;
+      *(top-1) = *h;
+    }
+  }
 }
 
 
 /*
 ** Function to store indexed based on values at the top
 */
-int lua_storesubscript (void)
+static void storesubscript (void)
 {
  if (tag(top-3) != LUA_T_ARRAY)
- {
-  lua_reportbug ("indexed expression not a table");
-  return 1;
- }
+   do_call(&fallBacks[FB_SETTABLE].function, (top-stack)-3, 0, (top-stack)-3);
+ else
  {
   Object *h = lua_hashdefine (avalue(top-3), top-2);
-  if (h == NULL) return 1;
   *h = *(top-1);
+  top -= 3;
  }
- top -= 3;
- return 0;
 }
 
 
@@ -273,10 +347,12 @@ static int do_protectedrun (Object *function, int nResults)
   {
     if (function == NULL)
     {
+      tag(&f) = LUA_T_FUNCTION;
+      bvalue(&f) = lua_parse();
       function = &f;
-      tag(function) = LUA_T_FUNCTION;
-      bvalue(function) = lua_parse();
     }
+    else
+      tag(&f) = LUA_T_NIL;
     do_call(function, CBase, nResults, CBase);
     CnResults = (top-stack) - CBase;  /* number of results */
     CBase += CnResults;  /* incorporate results on the stack */
@@ -288,6 +364,8 @@ static int do_protectedrun (Object *function, int nResults)
     top = stack+CBase;
     status = 1;
   }
+  if (tag(&f) == LUA_T_FUNCTION)
+    free(bvalue(&f));
   errorJmp = oldErr;
   return status;
 }
@@ -402,16 +480,6 @@ void *lua_getuserdata (Object *object)
 }
 
 /*
-** Given an object handle, return its table. On error, return NULL.
-*/
-void *lua_gettable (Object *object)
-{
- if (object == NULL) return NULL;
- if (tag(object) != LUA_T_ARRAY) return NULL;
- else                        return (avalue(object));
-}
-
-/*
 ** Get a global object. Return the object handle or NULL on error.
 */
 Object *lua_getglobal (char *name)
@@ -469,16 +537,6 @@ int lua_pushuserdata (void *u)
 {
  lua_checkstack(top-stack+1);
  tag(top) = LUA_T_USERDATA; uvalue(top++) = u;
- return 0;
-}
-
-/*
-** Push an object (tag=userdata) to stack. Return 0 on success or 1 on error.
-*/
-int lua_pushtable (void *t)
-{
- lua_checkstack(top-stack+1);
- tag(top) = LUA_T_ARRAY; avalue(top++) = t;
  return 0;
 }
 
@@ -555,6 +613,35 @@ int lua_type (lua_Object o)
   else
     return tag(o);
 }
+
+
+static void call_arith (char *op)
+{
+  lua_pushstring(op);
+  do_call(&fallBacks[FB_ARITH].function, (top-stack)-3, 1, (top-stack)-3);
+}
+
+static void comparison (lua_Type tag_less, lua_Type tag_equal, 
+                        lua_Type tag_great, char *op)
+{
+  Object *l = top-2;
+  Object *r = top-1;
+  int result;
+  if (tag(l) == LUA_T_NUMBER && tag(r) == LUA_T_NUMBER)
+    result = (nvalue(l) < nvalue(r)) ? -1 : (nvalue(l) == nvalue(r)) ? 0 : 1;
+  else if (tostring(l) || tostring(r))
+  {
+    lua_pushstring(op);
+    do_call(&fallBacks[FB_ORDER].function, (top-stack)-3, 1, (top-stack)-3);
+    return;
+  }
+  else
+    result = strcmp(svalue(l), svalue(r));
+  top--;
+  nvalue(top-1) = 1;
+  tag(top-1) = (result < 0) ? tag_less : (result == 0) ? tag_equal : tag_great;
+}
+
 
 
 /*
@@ -656,23 +743,26 @@ static int lua_execute (Byte *pc, int base)
    break;
 
    case STOREINDEXED0:
-   {
-    int s = lua_storesubscript();
-    if (s == 1) return 1;
-   }
-   break;
+    storesubscript();
+    break;
 
    case STOREINDEXED:
    {
     int n = *pc++;
     if (tag(top-3-n) != LUA_T_ARRAY)
-      lua_reportbug ("indexed expression not a table");
+    {
+      *(top+1) = *(top-1);
+      *(top) = *(top-2-n);
+      *(top-1) = *(top-3-n);
+      top += 2;
+      do_call(&fallBacks[FB_SETTABLE].function, (top-stack)-3, 0, (top-stack)-3);
+    }
+    else
     {
      Object *h = lua_hashdefine (avalue(top-3-n), top-2-n);
-     if (h == NULL) return 1;
      *h = *(top-1);
+     top--;
     }
-    top--;
    }
    break;
 
@@ -766,48 +856,33 @@ static int lua_execute (Byte *pc, int base)
    }
    break;
 
-   case LTOP:
-   {
-    Object *l = top-2;
-    Object *r = top-1;
-    --top;
-    if (tag(l) == LUA_T_NUMBER && tag(r) == LUA_T_NUMBER)
-     tag(top-1) = (nvalue(l) < nvalue(r)) ? LUA_T_NUMBER : LUA_T_NIL;
-    else
-    {
-     if (tostring(l) || tostring(r))
-      return 1;
-     tag(top-1) = (strcmp (svalue(l), svalue(r)) < 0) ? LUA_T_NUMBER : LUA_T_NIL;
-    }
-    nvalue(top-1) = 1;
-   }
-   break;
+    case LTOP:
+      comparison(LUA_T_NUMBER, LUA_T_NIL, LUA_T_NIL, "<");
+      break;
 
    case LEOP:
-   {
-    Object *l = top-2;
-    Object *r = top-1;
-    --top;
-    if (tag(l) == LUA_T_NUMBER && tag(r) == LUA_T_NUMBER)
-     tag(top-1) = (nvalue(l) <= nvalue(r)) ? LUA_T_NUMBER : LUA_T_NIL;
-    else
-    {
-     if (tostring(l) || tostring(r))
-      return 1;
-     tag(top-1) = (strcmp (svalue(l), svalue(r)) <= 0) ? LUA_T_NUMBER : LUA_T_NIL;
-    }
-    nvalue(top-1) = 1;
-   }
-   break;
+      comparison(LUA_T_NUMBER, LUA_T_NUMBER, LUA_T_NIL, "<=");
+      break;
+
+   case GTOP:
+      comparison(LUA_T_NIL, LUA_T_NIL, LUA_T_NUMBER, ">");
+      break;
+
+   case GEOP:
+      comparison(LUA_T_NIL, LUA_T_NUMBER, LUA_T_NUMBER, ">=");
+      break;
 
    case ADDOP:
    {
     Object *l = top-2;
     Object *r = top-1;
     if (tonumber(r) || tonumber(l))
-     return 1;
-    nvalue(l) += nvalue(r);
-    --top;
+      call_arith("+");
+    else
+    {
+      nvalue(l) += nvalue(r);
+      --top;
+    }
    }
    break;
 
@@ -816,9 +891,12 @@ static int lua_execute (Byte *pc, int base)
     Object *l = top-2;
     Object *r = top-1;
     if (tonumber(r) || tonumber(l))
-     return 1;
-    nvalue(l) -= nvalue(r);
-    --top;
+      call_arith("-");
+    else
+    {
+      nvalue(l) -= nvalue(r);
+      --top;
+    }
    }
    break;
 
@@ -827,9 +905,12 @@ static int lua_execute (Byte *pc, int base)
     Object *l = top-2;
     Object *r = top-1;
     if (tonumber(r) || tonumber(l))
-     return 1;
-    nvalue(l) *= nvalue(r);
-    --top;
+      call_arith("*");
+    else
+    {
+      nvalue(l) *= nvalue(r);
+      --top;
+    }
    }
    break;
 
@@ -838,9 +919,12 @@ static int lua_execute (Byte *pc, int base)
     Object *l = top-2;
     Object *r = top-1;
     if (tonumber(r) || tonumber(l))
-     return 1;
-    nvalue(l) /= nvalue(r);
-    --top;
+      call_arith("/");
+    else
+    {
+      nvalue(l) /= nvalue(r);
+      --top;
+    }
    }
    break;
 
@@ -849,9 +933,12 @@ static int lua_execute (Byte *pc, int base)
     Object *l = top-2;
     Object *r = top-1;
     if (tonumber(r) || tonumber(l))
-     return 1;
-    nvalue(l) = pow(nvalue(l), nvalue(r));
-    --top;
+      call_arith("^");
+    else
+    {
+      nvalue(l) = pow(nvalue(l), nvalue(r));
+      --top;
+    }
    }
    break;
 
@@ -860,22 +947,24 @@ static int lua_execute (Byte *pc, int base)
     Object *l = top-2;
     Object *r = top-1;
     if (tostring(r) || tostring(l))
-     return 1;
-    svalue(l) = lua_createstring (lua_strconc(svalue(l),svalue(r)));
-    if (svalue(l) == NULL)
-     return 1;
-    --top;
+      do_call(&fallBacks[FB_CONCAT].function, (top-stack)-2, 1, (top-stack)-2);
+    else
+    {
+      svalue(l) = lua_createstring (lua_strconc(svalue(l),svalue(r)));
+      --top;
+    }
    }
    break;
 
    case MINUSOP:
     if (tonumber(top-1))
-     return 1;
-    nvalue(top-1) = - nvalue(top-1);
+      do_call(&fallBacks[FB_UNMINUS].function, (top-stack)-1, 1, (top-stack)-1);
+    else
+      nvalue(top-1) = - nvalue(top-1);
    break;
 
    case NOTOP:
-    tag(top-1) = tag(top-1) == LUA_T_NIL ? LUA_T_NUMBER : LUA_T_NIL;
+    tag(top-1) = (tag(top-1) == LUA_T_NIL) ? LUA_T_NUMBER : LUA_T_NIL;
    break;
 
    case ONTJMP:
@@ -952,8 +1041,7 @@ static int lua_execute (Byte *pc, int base)
     CodeWord func;
     get_code(file,pc);
     get_word(func,pc);
-    if (lua_pushfunction ((char *)file.b, func.w))
-     return 1;
+    lua_pushfunction ((char *)file.b, func.w);
    }
    break;
 
@@ -971,7 +1059,6 @@ static int lua_execute (Byte *pc, int base)
 
    default:
     lua_error ("internal error - opcode doesn't match");
-   return 1;
   }
  }
 }
