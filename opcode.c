@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 2.5 1994/08/17 15:02:03 celes Exp celes $";
+char *rcs_opcode="$Id: opcode.c,v 2.6 1994/09/08 16:51:49 celes Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -90,20 +90,26 @@ static char *lua_strconc (char *l, char *r)
  return strcat(strcpy(buffer,l),r);
 }
 
+static int ToReal (char* s, float* f)
+{
+ int n;
+ float t;
+ sscanf(s,"%f %n",&t,&n);
+ if (s[n]==0) { *f=t; return 1; } else return 0;
+}
+
 /*
-** Convert, if possible, to a number tag.
-** Return 0 in success or not 0 on error.
+** Convert, if possible, to a number object.
+** Return 0 if success, not 0 if error.
 */ 
 static int lua_tonumber (Object *obj)
 {
- char *ptr;
  if (tag(obj) != T_STRING)
  {
   lua_reportbug ("unexpected type at conversion to number");
   return 1;
  }
- nvalue(obj) = strtod(svalue(obj), &ptr);
- if (*ptr)
+ if (!ToReal(svalue(obj), &nvalue(obj)))
  {
   lua_reportbug ("string to number convertion failed");
   return 2;
@@ -113,7 +119,7 @@ static int lua_tonumber (Object *obj)
 }
 
 /*
-** Test if is possible to convert an object to a number one.
+** Test if is possible to convert an object to a number object.
 ** If possible, return the converted object, otherwise return nil object.
 */ 
 static Object *lua_convtonumber (Object *obj)
@@ -126,14 +132,11 @@ static Object *lua_convtonumber (Object *obj)
   return &cvt;
  }
   
- tag(&cvt) = T_NIL;
- if (tag(obj) == T_STRING)
- {
-  char *ptr;
-  nvalue(&cvt) = strtod(svalue(obj), &ptr);
-  if (*ptr == 0)
-   tag(&cvt) = T_NUMBER;
- }
+ if (tag(obj) == T_STRING && ToReal(svalue(obj), &nvalue(obj)))
+  tag(&cvt) = T_NUMBER;
+ else 
+  tag(&cvt) = T_NIL;
+
  return &cvt;
 }
 
