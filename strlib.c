@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.14 1995/11/10 17:54:31 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.15 1996/01/22 17:38:57 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -167,18 +167,6 @@ static void str_ascii (void)
   lua_pushnumber(s[pos]);
 }
 
-/*
-** converts one or more integers to chars in a string
-*/
-static void str_int2str (void)
-{
-  int i = 0;
-  luaI_addchar(0);
-  while (lua_getparam(++i) != LUA_NOOBJECT)
-    luaI_addchar((int)lua_check_number(i, "int2str"));
-  lua_pushstring(luaI_addchar(0));
-}
-
 
 #define MAX_CONVERTION 2000
 #define MAX_FORMAT 50
@@ -256,6 +244,5 @@ void strlib_open (void)
  lua_register ("strlower", str_lower);
  lua_register ("strupper", str_upper);
  lua_register ("ascii", str_ascii);
- lua_register ("int2str", str_int2str);
  lua_register ("format",    io_format);
 }
