@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.61 1997/06/16 16:50:22 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.62 1997/06/17 18:44:31 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -38,6 +38,25 @@ char *luaI_typenames[] = { /* ORDER LUA_T */
 
 
 
+static void setparsedfile (char *name)
+{
+  lua_parsedfile = luaI_createfixedstring(name)->str;
+}
+
+
+int lua_doFILE (FILE *f, int bin)
+{
+  ZIO z;
+  luaz_Fopen(&z, f);
+  if (bin)
+    return luaI_undump(&z);
+  else {
+    lua_setinput(&z);
+    return lua_domain();
+  }
+}                      
+
+
 int lua_dofile (char *filename)
 {
   int status;
@@ -45,26 +64,19 @@ int lua_dofile (char *filename)
   FILE *f = (filename == NULL) ? stdin : fopen(filename, "r");
   if (f == NULL)
     return 2;
-  lua_parsedfile = luaI_createfixedstring(filename?filename:"(stdin)")->str;
+  setparsedfile(filename?filename:"(stdin)");
   c = fgetc(f);
   ungetc(c, f);
   if (c == ID_CHUNK) {
-    ZIO z;
     f = freopen(filename, "rb", f);  /* set binary mode */
-    zFopen(&z, f);
-    lua_setinput(&z);
-    status = luaI_undump(&z);
-    zclose(&z);
+    status = lua_doFILE(f, 1);
   }
   else {
-    ZIO z;
     if (c == '#')
       while ((c=fgetc(f)) != '\n') /* skip first line */;
-    zFopen(&z, f);
-    lua_setinput(&z);
-    status = lua_domain();
-    zclose(&z);
+    status = lua_doFILE(f, 0);
   }
+  fclose(f);
   return status;
 }                      
 
@@ -72,16 +84,31 @@ int lua_dofile (char *filename)
 
 #define SIZE_PREF 20  /* size of string prefix to appear in error messages */
 
+
+int lua_dobuffer (char *buff, int size)
+{
+  int status;
+  ZIO z;
+  setparsedfile("(buffer)");
+  luaz_mopen(&z, buff, size);
+  status = luaI_undump(&z);
+  zclose(&z);
+  return status;
+}
+
+
 int lua_dostring (char *str)
 {
   int status;
   char buff[SIZE_PREF+25];
+  char *temp;
   ZIO z;
   if (str == NULL) return 1;
-  sprintf(buff, "(dostring) >> %.20s%s", str,
-          (strlen(str) > SIZE_PREF) ? "..." : "");
-  lua_parsedfile = luaI_createfixedstring(buff)->str;
-  zsopen(&z, str);
+  sprintf(buff, "(dostring) >> %.20s", str);
+  temp = strchr(buff, '\n');
+  if (temp) *temp = 0;  /* end string after first line */
+  setparsedfile(buff);
+  luaz_sopen(&z, str);
   lua_setinput(&z);
   status = lua_domain();
   zclose(&z);
@@ -251,7 +278,7 @@ static void luaI_call (void)
 {
   lua_Object f = lua_getparam(1);
   lua_Object arg = lua_getparam(2);
-  int withtable = (strcmp(luaL_opt_string(3, "plain"), "pack") == 0);
+  int withtable = (strcmp(luaL_opt_string(3, ""), "pack") == 0);
   int narg, i;
   luaL_arg_check(lua_isfunction(f), 1, "function expected");
   luaL_arg_check(lua_istable(arg), 2, "table expected");
@@ -326,7 +353,7 @@ static struct {
 } int_funcs[] = {
   {"assert", luaI_assert},
   {"call", luaI_call},
-  {"callgc", luaI_collectgarbage},
+  {"collectgarbage", luaI_collectgarbage},
   {"dofile", lua_internaldofile},
   {"dostring", lua_internaldostring},
   {"error", luaI_error},

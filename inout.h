@@ -1,5 +1,5 @@
 /*
-** $Id: inout.h,v 1.17 1997/02/26 17:38:41 roberto Unstable roberto $
+** $Id: inout.h,v 1.18 1997/06/16 16:50:22 roberto Exp roberto $
 */
 
 
@@ -20,5 +20,9 @@ void lua_openstring   (char *s);
 void lua_closestring  (void);
 
 void luaI_predefine (void);
+
+int lua_dobuffer (char *buff, int size);
+int lua_doFILE (FILE *f, int bin);
+
 
 #endif
