@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.31 2000/05/22 18:44:46 roberto Exp roberto $
+** $Id: lcode.c,v 1.32 2000/05/24 13:54:49 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -19,7 +19,7 @@
 
 
 void luaK_error (LexState *ls, const char *msg) {
-  luaX_error(ls, msg, ls->token);
+  luaX_error(ls, msg, ls->t.token);
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.58 2000/05/08 19:32:53 roberto Exp roberto $
+** $Id: llex.c,v 1.59 2000/05/24 13:54:49 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -54,7 +54,7 @@ void luaX_checklimit (LexState *ls, int val, int limit, const char *msg) {
   if (val > limit) {
     char buff[100];
     sprintf(buff, "too many %.50s (limit=%d)", msg, limit);
-    luaX_error(ls, buff, ls->token);
+    luaX_error(ls, buff, ls->t.token);
   }
 }
 
@@ -108,6 +108,7 @@ static void firstline (LexState *LS)
 void luaX_setinput (lua_State *L, LexState *LS, ZIO *z) {
   LS->L = L;
   LS->current = '\n';
+  LS->next.token = TK_EOS;  /* no next token */
   LS->linenumber = 0;
   LS->iflevel = 0;
   LS->ifstate[0].skip = 0;
@@ -281,7 +282,7 @@ static void read_long_string (lua_State *L, LexState *LS) {
     }
   } endloop:
   save_and_next(L, LS);  /* skip the second ']' */
-  LS->seminfo.ts = luaS_newlstr(L, L->Mbuffer+(L->Mbuffbase+2),
+  LS->t.seminfo.ts = luaS_newlstr(L, L->Mbuffer+(L->Mbuffbase+2),
                           L->Mbuffnext-L->Mbuffbase-4);
 }
 
@@ -327,7 +328,7 @@ static void read_string (lua_State *L, LexState *LS, int del) {
     }
   }
   save_and_next(L, LS);  /* skip delimiter */
-  LS->seminfo.ts = luaS_newlstr(L, L->Mbuffer+(L->Mbuffbase+1),
+  LS->t.seminfo.ts = luaS_newlstr(L, L->Mbuffer+(L->Mbuffbase+1),
                           L->Mbuffnext-L->Mbuffbase-2);
 }
 
@@ -426,7 +427,7 @@ int luaX_lex (LexState *LS) {
             save_and_next(L, LS);
         }
         save(L, '\0');
-        if (!luaO_str2d(L->Mbuffer+L->Mbuffbase, &LS->seminfo.r))
+        if (!luaO_str2d(L->Mbuffer+L->Mbuffbase, &LS->t.seminfo.r))
           luaX_error(LS, "malformed number", TK_NUMBER);
         return TK_NUMBER;
 
@@ -455,7 +456,7 @@ int luaX_lex (LexState *LS) {
           ts = luaS_new(L, L->Mbuffer+L->Mbuffbase);
           if (ts->marked >= RESERVEDMARK)  /* reserved word? */
             return ts->marked-RESERVEDMARK+FIRST_RESERVED;
-          LS->seminfo.ts = ts;
+          LS->t.seminfo.ts = ts;
           return TK_NAME;
         }
     }

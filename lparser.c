@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.88 2000/05/22 18:44:46 roberto Exp roberto $
+** $Id: lparser.c,v 1.89 2000/05/24 13:54:49 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -54,8 +54,20 @@ static void expr (LexState *ls, expdesc *v);
 static void exp1 (LexState *ls);
 
 
+
 static void next (LexState *ls) {
-  ls->token = luaX_lex(ls);
+  if (ls->next.token != TK_EOS) {  /* is there an `unget' token? */
+    ls->t = ls->next;  /* use this one */
+    ls->next.token = TK_EOS;  /* and discharge it */
+  }
+  else
+    ls->t.token = luaX_lex(ls);  /* read next token */
+}
+
+
+static void ungettoken (LexState *ls, Token *t) {
+  ls->next = ls->t;
+  ls->t = *t;
 }
 
 
@@ -73,7 +85,7 @@ static void error_unexpected (LexState *ls) {
 
 
 static void check (LexState *ls, int c) {
-  if (ls->token != c)
+  if (ls->t.token != c)
     error_expected(ls, c);
   next(ls);
 }
@@ -90,7 +102,7 @@ static void setline (LexState *ls) {
 
 
 static int optional (LexState *ls, int c) {
-  if (ls->token == c) {
+  if (ls->t.token == c) {
     next(ls);
     return 1;
   }
@@ -99,7 +111,7 @@ static int optional (LexState *ls, int c) {
 
 
 static void check_match (LexState *ls, int what, int who, int where) {
-  if (ls->token != what) {
+  if (ls->t.token != what) {
     if (where == ls->linenumber)
       error_expected(ls, what);
     else {
@@ -149,9 +161,9 @@ static void code_string (LexState *ls, TString *s) {
 
 static int checkname (LexState *ls) {
   int sc;
-  if (ls->token != TK_NAME)
+  if (ls->t.token != TK_NAME)
     luaK_error(ls, "<name> expected");
-  sc = string_constant(ls->fs, ls->seminfo.ts);
+  sc = string_constant(ls->fs, ls->t.seminfo.ts);
   next(ls);
   return sc;
 }
@@ -164,7 +176,7 @@ static TString *str_checkname (LexState *ls) {
 
 
 static TString *optionalname (LexState *ls) {
-  if (ls->token == TK_NAME)
+  if (ls->t.token == TK_NAME)
     return str_checkname(ls);
   else
     return NULL;
@@ -296,6 +308,7 @@ static void adjust_mult_assign (LexState *ls, int nvars, int nexps) {
 
 static void code_args (LexState *ls, int nparams, int dots) {
   FuncState *fs = ls->fs;
+  nparams -= dots;  /* do not count `...' as a parameter */
   adjustlocalvars(ls, nparams);
   luaX_checklimit(ls, fs->nlocalvar, MAXPARAMS, "parameters");
   nparams = fs->nlocalvar;  /* `self' could be there already */
@@ -306,19 +319,6 @@ static void code_args (LexState *ls, int nparams, int dots) {
   else {
     luaK_deltastack(fs, nparams+1);
     add_localvar(ls, "arg");
-  }
-}
-
-
-static int getvarname (LexState *ls, expdesc *var) {
-  switch (var->k) {
-    case VGLOBAL:
-      return var->u.index;
-    case VLOCAL:
-      return string_constant(ls->fs, ls->fs->localvar[var->u.index]);
-    default:
-      error_unexpected(ls);  /* there is no `var name' */
-      return 0;  /* to avoid warnings */
   }
 }
 
@@ -417,7 +417,7 @@ Proto *luaY_parser (lua_State *L, ZIO *z) {
   init_state(&lexstate, &funcstate, luaS_new(L, zname(z)));
   next(&lexstate);  /* read first token */
   chunk(&lexstate);
-  if (lexstate.token != TK_EOS)
+  if (lexstate.t.token != TK_EOS)
     luaK_error(&lexstate, "<eof> expected");
   close_func(&lexstate);
   LUA_ASSERT(L, funcstate.prev == NULL, "wrong list end");
@@ -436,7 +436,7 @@ static int explist1 (LexState *ls) {
   int n = 1;  /* at least one expression */
   expdesc v;
   expr(ls, &v);
-  while (ls->token == ',') {
+  while (ls->t.token == ',') {
     luaK_tostack(ls, &v, 1);  /* gets only 1 value from previous expression */
     next(ls);  /* skip comma */
     expr(ls, &v);
@@ -449,7 +449,7 @@ static int explist1 (LexState *ls) {
 
 static int explist (LexState *ls) {
   /* explist -> [ explist1 ] */
-  switch (ls->token) {
+  switch (ls->t.token) {
     case TK_NUMBER: case TK_STRING: case TK_NIL: case '{':
     case TK_FUNCTION: case '(': case TK_NAME: case '%': 
     case TK_NOT:  case '-':  /* first `expr' */
@@ -463,7 +463,7 @@ static int explist (LexState *ls) {
 static void funcargs (LexState *ls, int slf) {
   FuncState *fs = ls->fs;
   int slevel = fs->stacklevel - slf - 1;  /* where is func in the stack */
-  switch (ls->token) {
+  switch (ls->t.token) {
     case '(': {  /* funcargs -> '(' explist ')' */
       int line = ls->linenumber;
       int nargs;
@@ -478,19 +478,19 @@ static void funcargs (LexState *ls, int slf) {
 #endif
       break;
     }
-
-    case '{':  /* funcargs -> constructor */
+    case '{': {  /* funcargs -> constructor */
       constructor(ls);
       break;
-
-    case TK_STRING:  /* funcargs -> STRING */
-      code_string(ls, ls->seminfo.ts);  /* must use `seminfo' before `next' */
+    }
+    case TK_STRING: {  /* funcargs -> STRING */
+      code_string(ls, ls->t.seminfo.ts);  /* must use `seminfo' before `next' */
       next(ls);
       break;
-
-    default:
+    }
+    default: {
       luaK_error(ls, "function arguments expected");
       break;
+    }
   }
   fs->stacklevel = slevel;  /* call will remove function and arguments */
   luaK_code2(fs, OP_CALL, slevel, MULT_RET);
@@ -499,22 +499,22 @@ static void funcargs (LexState *ls, int slf) {
 
 static void var_or_func_tail (LexState *ls, expdesc *v) {
   for (;;) {
-    switch (ls->token) {
-      case '.':  /* var_or_func_tail -> '.' NAME */
+    switch (ls->t.token) {
+      case '.': {  /* var_or_func_tail -> '.' NAME */
         next(ls);
         luaK_tostack(ls, v, 1);  /* `v' must be on stack */
         luaK_kstr(ls, checkname(ls));
         v->k = VINDEXED;
         break;
-
-      case '[':  /* var_or_func_tail -> '[' exp1 ']' */
+      }
+      case '[': {  /* var_or_func_tail -> '[' exp1 ']' */
         next(ls);
         luaK_tostack(ls, v, 1);  /* `v' must be on stack */
         v->k = VINDEXED;
         exp1(ls);
         check(ls, ']');
         break;
-
+      }
       case ':': {  /* var_or_func_tail -> ':' NAME funcargs */
         int name;
         next(ls);
@@ -526,14 +526,13 @@ static void var_or_func_tail (LexState *ls, expdesc *v) {
         v->u.l.t = v->u.l.f = NO_JUMP;
         break;
       }
-
-      case '(': case TK_STRING: case '{':  /* var_or_func_tail -> funcargs */
+      case '(': case TK_STRING: case '{': {  /* var_or_func_tail -> funcargs */
         luaK_tostack(ls, v, 1);  /* `v' must be on stack */
         funcargs(ls, 0);
         v->k = VEXP;
         v->u.l.t = v->u.l.f = NO_JUMP;
         break;
-
+      }
       default: return;  /* should be follow... */
     }
   }
@@ -563,17 +562,17 @@ static void var_or_func (LexState *ls, expdesc *v) {
 
 static void recfield (LexState *ls) {
   /* recfield -> (NAME | '['exp1']') = exp1 */
-  switch (ls->token) {
-    case TK_NAME:
+  switch (ls->t.token) {
+    case TK_NAME: {
       luaK_kstr(ls, checkname(ls));
       break;
-
-    case '[':
+    }
+    case '[': {
       next(ls);
       exp1(ls);
       check(ls, ']');
       break;
-
+    }
     default: luaK_error(ls, "<name> or `[' expected");
   }
   check(ls, '=');
@@ -582,13 +581,14 @@ static void recfield (LexState *ls) {
 
 
 static int recfields (LexState *ls) {
-  /* recfields -> { ',' recfield } [','] */
+  /* recfields -> recfield { ',' recfield } [','] */
   FuncState *fs = ls->fs;
-  int n = 1;  /* one has been read before */
+  int n = 1;  /* at least one element */
   int mod_n = 1;  /* mod_n == n%RFIELDS_PER_FLUSH */
-  while (ls->token == ',') {
+  recfield(ls);
+  while (ls->t.token == ',') {
     next(ls);
-    if (ls->token == ';' || ls->token == '}')
+    if (ls->t.token == ';' || ls->t.token == '}')
       break;
     recfield(ls);
     n++;
@@ -604,13 +604,14 @@ static int recfields (LexState *ls) {
 
 
 static int listfields (LexState *ls) {
-  /* listfields -> { ',' exp1 } [','] */
+  /* listfields -> exp1 { ',' exp1 } [','] */
   FuncState *fs = ls->fs;
-  int n = 1;  /* one has been read before */
+  int n = 1;  /* at least one element */
   int mod_n = 1;  /* mod_n == n%LFIELDS_PER_FLUSH */
-  while (ls->token == ',') {
+  exp1(ls);
+  while (ls->t.token == ',') {
     next(ls);
-    if (ls->token == ';' || ls->token == '}')
+    if (ls->t.token == ';' || ls->t.token == '}')
       break;
     exp1(ls);
     n++;
@@ -629,41 +630,34 @@ static int listfields (LexState *ls) {
 
 
 static void constructor_part (LexState *ls, Constdesc *cd) {
-  switch (ls->token) {
-    case ';': case '}':  /* constructor_part -> empty */
+  switch (ls->t.token) {
+    case ';': case '}': {  /* constructor_part -> empty */
       cd->n = 0;
-      cd->k = ls->token;
-      return;
-
-    case TK_NAME: {
-      expdesc v;
-      expr(ls, &v);
-      if (ls->token == '=') {
-      luaK_kstr(ls, getvarname(ls, &v));
-      next(ls);  /* skip '=' */
-      exp1(ls);
-        cd->n = recfields(ls);
-        cd->k = 1;  /* record */
-      }
-      else {
-        luaK_tostack(ls, &v, 1);
-        cd->n = listfields(ls);
-        cd->k = 0;  /* list */
-      }
+      cd->k = ls->t.token;
       break;
     }
-
-    case '[':  /* constructor_part -> recfield recfields */
-      recfield(ls);
+    case TK_NAME: {  /* may be listfields or recfields */
+      Token current;
+      int nexttoken;  /* to get the look ahead */
+      current = ls->t;  /* save for `unget' */
+      next(ls);
+      nexttoken = ls->t.token;
+      ungettoken(ls, &current);
+      if (nexttoken != '=')  /* expression? */
+        goto case_default;
+      /* else go through to recfields */
+    }
+    case '[': {  /* constructor_part -> recfields */
       cd->n = recfields(ls);
       cd->k = 1;  /* record */
       break;
-
-    default:  /* constructor_part -> exp1 listfields */
-      exp1(ls);
+    }
+    default: {  /* constructor_part -> listfields */
+    case_default:
       cd->n = listfields(ls);
       cd->k = 0;  /* list */
       break;
+    }
   }
 }
 
@@ -678,7 +672,7 @@ static void constructor (LexState *ls) {
   check(ls, '{');
   constructor_part(ls, &cd);
   nelems = cd.n;
-  if (ls->token == ';') {
+  if (ls->t.token == ';') {
     Constdesc other_cd;
     next(ls);
     constructor_part(ls, &other_cd);
@@ -707,46 +701,46 @@ static void constructor (LexState *ls) {
 static void simpleexp (LexState *ls, expdesc *v) {
   FuncState *fs = ls->fs;
   setline(ls);
-  switch (ls->token) {
+  switch (ls->t.token) {
     case TK_NUMBER: {  /* simpleexp -> NUMBER */
-      Number r = ls->seminfo.r;
+      Number r = ls->t.seminfo.r;
       next(ls);
       luaK_number(fs, r);
       break;
     }
-
-    case TK_STRING:  /* simpleexp -> STRING */
-      code_string(ls, ls->seminfo.ts);  /* must use `seminfo' before `next' */
+    case TK_STRING: {  /* simpleexp -> STRING */
+      code_string(ls, ls->t.seminfo.ts);  /* must use `seminfo' before `next' */
       next(ls);
       break;
-
-    case TK_NIL:  /* simpleexp -> NIL */
+    }
+    case TK_NIL: {  /* simpleexp -> NIL */
       luaK_adjuststack(fs, -1);
       next(ls);
       break;
-
-    case '{':  /* simpleexp -> constructor */
+    }
+    case '{': {  /* simpleexp -> constructor */
       constructor(ls);
       break;
-
-    case TK_FUNCTION:  /* simpleexp -> FUNCTION body */
+    }
+    case TK_FUNCTION: {  /* simpleexp -> FUNCTION body */
       next(ls);
       body(ls, 0, ls->linenumber);
       break;
-
-    case '(':  /* simpleexp -> '(' expr ')' */
+    }
+    case '(': {  /* simpleexp -> '(' expr ')' */
       next(ls);
       expr(ls, v);
       check(ls, ')');
       return;
-
-    case TK_NAME: case '%':
+    }
+    case TK_NAME: case '%': {
       var_or_func(ls, v);
       return;
-
-    default:
+    }
+    default: {
       luaK_error(ls, "<expression> expected");
       return;
+    }
   }
   v->k = VEXP;
   v->u.l.t = v->u.l.f = NO_JUMP;
@@ -793,17 +787,17 @@ static int get_priority (int op, int *rp) {
 */
 static void subexpr (LexState *ls, expdesc *v, int limit) {
   int rp;
-  if (ls->token == '-' || ls->token == TK_NOT) {
-    int op = ls->token;  /* operator */
+  if (ls->t.token == '-' || ls->t.token == TK_NOT) {
+    int op = ls->t.token;  /* operator */
     next(ls);
     subexpr(ls, v, UNARY_PRIORITY);
     luaK_prefix(ls, op, v);
   }
   else simpleexp(ls, v);
   /* expand while operators have priorities higher than `limit' */
-  while (get_priority(ls->token, &rp) > limit) {
+  while (get_priority(ls->t.token, &rp) > limit) {
     expdesc v2;
-    int op = ls->token;  /* current operator (with priority == `rp') */
+    int op = ls->t.token;  /* current operator (with priority == `rp') */
     next(ls);
     luaK_infix(ls, op, v);
     subexpr(ls, &v2, rp);  /* read sub-expression with priority > `rp' */
@@ -839,7 +833,7 @@ static void block (LexState *ls) {
 static int assignment (LexState *ls, expdesc *v, int nvars) {
   int left = 0;
   luaX_checklimit(ls, nvars, MAXVARSLH, "variables in a multiple assignment");
-  if (ls->token == ',') {  /* assignment -> ',' NAME assignment */
+  if (ls->t.token == ',') {  /* assignment -> ',' NAME assignment */
     expdesc nv;
     next(ls);
     var_or_func(ls, &nv);
@@ -849,7 +843,7 @@ static int assignment (LexState *ls, expdesc *v, int nvars) {
   }
   else {  /* assignment -> '=' explist1 */
     int nexps;;
-    if (ls->token != '=')
+    if (ls->t.token != '=')
       error_unexpected(ls);
     next(ls);
     nexps = explist1(ls);
@@ -936,7 +930,7 @@ static void forlist (LexState *ls, TString *indexname) {
   check(ls, ',');
   valname = str_checkname(ls);
   /* next test is dirty, but avoids `in' being a reserved word */
-  if (ls->token != TK_NAME || ls->seminfo.ts != luaS_new(ls->L, "in"))
+  if (ls->t.token != TK_NAME || ls->t.seminfo.ts != luaS_new(ls->L, "in"))
     luaK_error(ls, "`in' expected");
   next(ls);  /* skip `in' */
   exp1(ls);  /* table */
@@ -959,7 +953,7 @@ static void forstat (LexState *ls, int line) {
   enterbreak(fs, &bl);
   setline_and_next(ls);  /* skip `for' */
   varname = str_checkname(ls);  /* first variable name */
-  switch (ls->token) {
+  switch (ls->t.token) {
     case '=': fornum(ls, varname); break;
     case ',': forlist(ls, varname); break;
     default: luaK_error(ls, "`=' or `,' expected");
@@ -986,12 +980,12 @@ static void ifstat (LexState *ls, int line) {
   expdesc v;
   int escapelist = NO_JUMP;
   test_and_block(ls, &v);  /* IF cond THEN block */
-  while (ls->token == TK_ELSEIF) {
+  while (ls->t.token == TK_ELSEIF) {
     luaK_concat(fs, &escapelist, luaK_jump(fs));
     luaK_patchlist(fs, v.u.l.f, luaK_getlabel(fs));
     test_and_block(ls, &v);  /* ELSEIF cond THEN block */
   }
-  if (ls->token == TK_ELSE) {
+  if (ls->t.token == TK_ELSE) {
     luaK_concat(fs, &escapelist, luaK_jump(fs));
     luaK_patchlist(fs, v.u.l.f, luaK_getlabel(fs));
     setline_and_next(ls);  /* skip ELSE */
@@ -1008,7 +1002,7 @@ static int localnamelist (LexState *ls) {
   /* localnamelist -> NAME {',' NAME} */
   int i = 1;
   store_localvar(ls, str_checkname(ls), 0);
-  while (ls->token == ',') {
+  while (ls->t.token == ',') {
     next(ls);
     store_localvar(ls, str_checkname(ls), i++);
   }
@@ -1018,7 +1012,7 @@ static int localnamelist (LexState *ls) {
 
 static int decinit (LexState *ls) {
   /* decinit -> ['=' explist1] */
-  if (ls->token == '=') {
+  if (ls->t.token == '=') {
     next(ls);
     return explist1(ls);
   }
@@ -1043,8 +1037,8 @@ static int funcname (LexState *ls, expdesc *v) {
   /* funcname -> NAME [':' NAME | '.' NAME] */
   int needself = 0;
   singlevar(ls, str_checkname(ls), v, 0);
-  if (ls->token == ':' || ls->token == '.') {
-    needself = (ls->token == ':');
+  if (ls->t.token == ':' || ls->t.token == '.') {
+    needself = (ls->t.token == ':');
     next(ls);
     luaK_tostack(ls, v, 1);
     luaK_kstr(ls, checkname(ls));
@@ -1110,86 +1104,87 @@ static void breakstat (LexState *ls) {
 
 static int stat (LexState *ls) {
   int line = ls->linenumber;  /* may be needed for error messages */
-  switch (ls->token) {
-    case TK_IF:  /* stat -> ifstat */
+  switch (ls->t.token) {
+    case TK_IF: {  /* stat -> ifstat */
       ifstat(ls, line);
       return 1;
-
-    case TK_WHILE:  /* stat -> whilestat */
+    }
+    case TK_WHILE: {  /* stat -> whilestat */
       whilestat(ls, line);
       return 1;
-
-    case TK_DO:  /* stat -> DO block END */
+    }
+    case TK_DO: {  /* stat -> DO block END */
       setline_and_next(ls);  /* skip DO */
       block(ls);
       check_END(ls, TK_DO, line);
       return 1;
-
-    case TK_FOR:  /* stat -> forstat */
+    }
+    case TK_FOR: {  /* stat -> forstat */
       forstat(ls, line);
       return 1;
-
-    case TK_REPEAT:  /* stat -> repeatstat */
+    }
+    case TK_REPEAT: {  /* stat -> repeatstat */
       repeatstat(ls, line);
       return 1;
-
-    case TK_FUNCTION:  /* stat -> funcstat */
+    }
+    case TK_FUNCTION: {  /* stat -> funcstat */
       funcstat(ls, line);
       return 1;
-
-    case TK_LOCAL:  /* stat -> localstat */
+    }
+    case TK_LOCAL: {  /* stat -> localstat */
       localstat(ls);
       return 1;
-
-    case TK_NAME: case '%':  /* stat -> namestat */
+    }
+    case TK_NAME: case '%': {  /* stat -> namestat */
       namestat(ls);
       return 1;
-
-    case TK_RETURN:  /* stat -> retstat */
+    }
+    case TK_RETURN: {  /* stat -> retstat */
       retstat(ls);
       return 2;  /* must be last statement */
-
-    case TK_BREAK:  /* stat -> breakstat */
+    }
+    case TK_BREAK: {  /* stat -> breakstat */
       breakstat(ls);
       return 2;  /* must be last statement */
-
-    default:
+    }
+    default: {
       return 0;  /* no statement */
+    }
+  }
+}
+
+
+static int param (LexState *ls, int n) {
+  /* param -> NAME | DOTS */
+  switch (ls->t.token) {
+    case TK_DOTS: {
+      next(ls);
+      return 1;
+    }
+    case TK_NAME: {
+      store_localvar(ls, str_checkname(ls), n);
+      return 0;
+    }
+    default: {
+      luaK_error(ls, "<name> or `...' expected");
+      return 0;  /* to avoid warnings */
+    }
   }
 }
 
 
 static void parlist (LexState *ls) {
+  /* parlist -> [ param { ',' param } ] */
   int nparams = 0;
   int dots = 0;
-  switch (ls->token) {
-    case TK_DOTS:  /* parlist -> DOTS */
+  if (ls->t.token != ')') {  /* is `parlist' not empty? */
+    dots = param(ls, nparams);
+    nparams++;
+    while (ls->t.token == ',' && !dots) {
       next(ls);
-      dots = 1;
-      break;
-
-    case TK_NAME:  /* parlist, tailparlist -> NAME [',' tailparlist] */
-      init:
-      store_localvar(ls, str_checkname(ls), nparams++);
-      if (ls->token == ',') {
-        next(ls);
-        switch (ls->token) {
-          case TK_DOTS:  /* tailparlist -> DOTS */
-            next(ls);
-            dots = 1;
-            break;
-
-          case TK_NAME:  /* tailparlist -> NAME [',' tailparlist] */
-            goto init;
-
-          default: luaK_error(ls, "<name> or `...' expected");
-        }
-      }
-      break;
-
-    case ')': break;  /* parlist -> empty */
-
-    default: luaK_error(ls, "<name> or `...' expected");
+      dots = param(ls, nparams);
+      nparams++;
+    }
   }
   code_args(ls, nparams, dots);
 }

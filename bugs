@@ -179,4 +179,12 @@ Tue May  2 15:27:58 EST 2000
 ** lparser.c
 Fri May 12 15:11:12 EST 2000
 >> first element in a list constructor is not adjusted to one value
+>> (e.g. «a = {gsub('a','a','')}»)
 (by Tomas; since 4.0a)
+
+** lparser.c
+Wed May 24 14:50:16 EST 2000
+>> record-constructor starting with an upvalue name gets an error
+>> (e.g. «local a; function f() x = {a=1} end»)
+(by Edgar Toernig; since 3.1)
+
