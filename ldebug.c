@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.61 2001/02/09 18:37:33 roberto Exp roberto $
+** $Id: ldebug.c,v 1.62 2001/02/09 20:22:29 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -316,49 +316,82 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
 
 /*
 ** {======================================================
-** Symbolic Execution
+** Symbolic Execution and code checker
 ** =======================================================
 */
 
 
-#define check(x)		if (!(x)) return 0;
+/*#define check(x)		if (!(x)) return 0;*/
+#define check(x)	assert(x)
 #define checkjump(pt, pc)	check(0 <= (pc) && (pc) < (pt)->sizecode)
 
-static Instruction luaG_symbexec (const Proto *pt, int lastpc, int stackpos) {
+
+static int checklineinfo (const Proto *pt) {
+  int *lineinfo = pt->lineinfo;
+  if (lineinfo == NULL) return 1;
+  check(pt->sizelineinfo >= 2 && lineinfo[pt->sizelineinfo-1] == MAX_INT);
+  if (*lineinfo < 0) lineinfo++;
+  check(*lineinfo == 0);
+  return 1;
+}
+
+
+static int precheck (const Proto *pt) {
+  check(checklineinfo(pt));
+  check(pt->maxstacksize <= MAXSTACK);
+  check(pt->numparams+pt->is_vararg <= pt->maxstacksize);
+  check(GET_OPCODE(pt->code[pt->sizecode-1]) == OP_RETURN);
+  return 1;
+}
+
+
+/* value for non-initialized entries in array stacklevel */
+#define SL_EMPTY	255
+
+#define checkstacklevel(sl,top,pc) \
+   if (sl) { if (sl[pc] == SL_EMPTY) sl[pc] = top; else check(sl[pc] == top); }
+
+
+static Instruction luaG_symbexec (const Proto *pt, int lastpc, int stackpos,
+  unsigned char *sl) {
   int stack[MAXSTACK];  /* stores last instruction that changed a stack entry */
   const Instruction *code = pt->code;
   int top = pt->numparams;
   int pc = 0;
   if (pt->is_vararg)  /* varargs? */
     top++;  /* `arg' */
-  check (top <= pt->maxstacksize && pt->maxstacksize <= MAXSTACK);
+  checkstacklevel(sl, top, pc);
   while (pc < lastpc) {
     const Instruction i = code[pc++];
     OpCode op = GET_OPCODE(i);
-    int push = (int)luaK_opproperties[op].push;
-    int pop = (int)luaK_opproperties[op].pop;
     int arg1 = 0;
     int arg2 = 0;
+    int push, pop;
+    check(op < NUM_OPCODES);
+    push = (int)luaK_opproperties[op].push;
+    pop = (int)luaK_opproperties[op].pop;
     switch ((enum Mode)luaK_opproperties[op].mode) {
       case iO: break;
-      case iU: arg1 = GETARG_U(i); break;
+      case iU: arg1 = GETARG_U(i); check(arg1 >= 0); break;
       case iS: arg1 = GETARG_S(i); break;
-      case iAB: arg1 = GETARG_A(i); arg2 = GETARG_B(i); break;
+      case iAB:
+        arg1 = GETARG_A(i); arg2 = GETARG_B(i); check(arg1 >= 0); break;
     }
-    check(0 <= top && top <= pt->maxstacksize);
     switch (op) {
       case OP_RETURN: {
+        check(arg1 <= top);
         pop = top-arg1;
         break;
       }
       case OP_CALL: {
         if (arg2 == MULT_RET) arg2 = 1;
+        check(arg1 < top);
         pop = top-arg1;
         push = arg2;
         break;
       }
       case OP_TAILCALL: {
-        check(arg1 <= top);
+        check(arg1 < top && arg2 <= top);
         pop = top-arg2;
         break;
       }
@@ -395,7 +428,7 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int stackpos) {
         break;
       }
       case OP_SETTABLE: {
-        check(2 <= arg1 && arg1 <= top);
+        check(3 <= arg1 && arg1 <= top);
         pop = arg2;
         break;
       }
@@ -425,21 +458,24 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int stackpos) {
       case OP_JMPGT:
       case OP_JMPGE:
       case OP_JMPT:
-      case OP_JMPF:
+      case OP_JMPF: {
+        checkjump(pt, pc+arg1);
+        check(pop <= top);
+        checkstacklevel(sl, top-pop, pc+arg1);
+        break;
+      }
       case OP_JMP:
       case OP_FORLOOP:
       case OP_LFORLOOP: {
         checkjump(pt, pc+arg1);
-        break;
-      }
-      case OP_PUSHNILJMP: {
-        checkjump(pt, pc+1);
+        checkstacklevel(sl, top, pc+arg1);
         break;
       }
       case OP_JMPONT:
       case OP_JMPONF: {
-        int newpc = pc + arg1;
+        int newpc = pc+arg1;
         checkjump(pt, newpc);
+        checkstacklevel(sl, top, newpc);
         /* jump is forward and do not skip `lastpc' and not full check? */
         if (pc < newpc && newpc <= lastpc && stackpos >= 0) {
           stack[top-1] = pc-1;  /* value comes from `and'/`or' */
@@ -448,14 +484,24 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int stackpos) {
         }
         break;
       }
+      case OP_PUSHNILJMP: {
+        check(GET_OPCODE(code[pc]) == OP_PUSHINT);  /* only valid sequence */
+        break;
+      }
       case OP_FORPREP: {
+        int newpc = pc-arg1;  /* jump is `negative' here */
         check(top >= 3);
-        checkjump(pt, pc-arg1);  /* jump is `negative' here */
+        checkjump(pt, newpc);
+        check(GET_OPCODE(code[newpc-1]) == OP_FORLOOP);
+        check(GETARG_S(code[newpc-1]) == arg1);
         break;
       }
       case OP_LFORPREP: {
+        int newpc = pc-arg1;  /* jump is `negative' here */
         check(top >= 1);
-        checkjump(pt, pc-arg1);  /* jump is `negative' here */
+        checkjump(pt, newpc);
+        check(GET_OPCODE(code[newpc-1]) == OP_LFORLOOP);
+        check(GETARG_S(code[newpc-1]) == arg1);
         break;
       }
       case OP_PUSHINT:
@@ -472,18 +518,21 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int stackpos) {
         break;
       }
     }
-    check(0 <= pop && 0 <= push);
-    check(0 <= top-pop && top+(push-pop) <= pt->maxstacksize);
     top -= pop;
+    check(0 <= top && top+push <= pt->maxstacksize);
     while (push--) stack[top++] = pc-1;
+    checkstacklevel(sl, top, pc);
   }
-  check(GET_OPCODE(code[pt->sizecode-1]) == OP_RETURN);
   return (stackpos >= 0) ? code[stack[stackpos]] : 1;
 }
 
 
-int luaG_checkcode (const Proto *pt) {
-  return luaG_symbexec(pt, pt->sizecode-1, -1);
+int luaG_checkcode (lua_State *L, const Proto *pt) {
+  unsigned char *sl = (unsigned char *)luaO_openspace(L, pt->sizecode);
+  int i;
+  for (i=0; i<pt->sizecode; i++)
+    sl[i] = SL_EMPTY;
+  return precheck(pt) && luaG_symbexec(pt, pt->sizecode-1, -1, sl);
 }
 
 
@@ -495,7 +544,7 @@ static const char *getobjname (lua_State *L, StkId obj, const char **name) {
     Proto *p = infovalue(func)->func->f.l;
     int pc = currentpc(func);
     int stackpos = obj - (func+1);  /* func+1 == function base */
-    Instruction i = luaG_symbexec(p, pc, stackpos);
+    Instruction i = luaG_symbexec(p, pc, stackpos, NULL);
     lua_assert(pc != -1);
     switch (GET_OPCODE(i)) {
       case OP_GETGLOBAL: {
