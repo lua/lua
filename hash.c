@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.6 1994/08/17 17:41:23 celes Exp celes $";
+char *rcs_hash="$Id: hash.c,v 2.7 1994/09/08 15:27:10 celes Exp celes $";
 
 #include <string.h>
 #include <stdlib.h>
@@ -33,19 +33,14 @@ char *rcs_hash="$Id: hash.c,v 2.6 1994/08/17 17:41:23 celes Exp celes $";
 #define REHASH_LIMIT	0.70	/* avoid more than this % full */
 
 
-typedef struct ArrayList
-{
- Hash *array;
- struct ArrayList *next;
-} ArrayList;
-
-static ArrayList *listhead = NULL;
+static Hash *listhead = NULL;
 
 
 
 /* hash dimensions values */
 static int dimensions[] = 
- {7, 11, 23, 47, 97, 197, 397, 797, 1597, 3203, 6421, 12853, 25717, 51437, 0};
+ {3, 5, 7, 11, 23, 47, 97, 197, 397, 797, 1597, 3203, 6421,
+  12853, 25717, 51437, 0};
 static int redimension (int nhash)
 {
  int i;
@@ -89,23 +84,27 @@ static int index (Hash *t, Object *ref)		/* hash function */
  }
 }
 
+static int equalObj (Object *t1, Object *t2)
+{
+  if (tag(t1) != tag(t2)) return 0;
+  switch (tag(t1))
+  {
+    case T_NUMBER: return nvalue(t1) == nvalue(t2);
+    case T_STRING: return streq(svalue(t1), svalue(t2));
+    default: return uvalue(t1) == uvalue(t2);
+  }
+}
+
 static int present (Hash *t, Object *ref)
 { 
  int h = index(t, ref);
  if (h < 0) return h;
  while (tag(ref(node(t, h))) != T_NIL)
  {
-  if (tag(ref) == T_NUMBER && tag(ref(node(t, h))) == T_NUMBER && 
-      nvalue(ref) == nvalue(ref(node(t, h)))
-     ) return h;
-  if (tag(ref) == T_STRING && tag(ref(node(t, h))) == T_STRING && 
-      streq(svalue(ref),svalue(ref(node(t, h))))
-     ) return h;
-  if (tag(ref) == tag(ref(node(t, h))) &&
-      uvalue(ref) == uvalue(ref(node(t, h)))	/* all others are pointers */
-     ) return h;
+  if (equalObj(ref, ref(node(t, h))))
+    return h;
   h = (h+1) % nhash(t);
- }  
+ }
  return h;
 }
 
@@ -138,7 +137,7 @@ static Hash *hashcreate (int nhash)
   lua_error ("not enough memory");
   return NULL;
  }
- nhash = redimension(nhash);
+ nhash = redimension((int)((float)nhash/REHASH_LIMIT));
  
  nodevector(t) = hashnodecreate(nhash);
  if (nodevector(t) == NULL)
@@ -187,43 +186,36 @@ void lua_hashmark (Hash *h)
 */
 void lua_hashcollector (void)
 {
- ArrayList *curr = listhead, *prev = NULL;
- while (curr != NULL)
+ Hash *curr_array = listhead, *prev = NULL;
+ while (curr_array != NULL)
  {
-  ArrayList *next = curr->next;
-  if (markarray(curr->array) != 1)
+  Hash *next = curr_array->next;
+  if (markarray(curr_array) != 1)
   {
    if (prev == NULL) listhead = next;
    else              prev->next = next;
-   hashdelete(curr->array);
-   free(curr);
+   hashdelete(curr_array);
   }
   else
   {
-   markarray(curr->array) = 0;
-   prev = curr;
+   markarray(curr_array) = 0;
+   prev = curr_array;
   }
-  curr = next;
+  curr_array = next;
  }
 }
 
 
 /*
 ** Create a new array
-** This function insert the new array at array list. It also
-** execute garbage collection if the number of array created
+** This function inserts the new array in the array list. It also
+** executes garbage collection if the number of arrays created
 ** exceed a pre-defined range.
 */
 Hash *lua_createarray (int nhash)
 {
- ArrayList *new = new(ArrayList);
- if (new == NULL)
- {
-  lua_error ("not enough memory");
-  return NULL;
- }
- new->array = hashcreate(nhash);
- if (new->array == NULL)
+ Hash *array = hashcreate(nhash);
+ if (array == NULL)
  {
   lua_error ("not enough memory");
   return NULL;
@@ -233,9 +225,9 @@ Hash *lua_createarray (int nhash)
   lua_pack(); 
 
  lua_nentity++;
- new->next = listhead;
- listhead = new;
- return new->array;
+ array->next = listhead;
+ listhead = array;
+ return array;
 }
 
 
@@ -268,7 +260,7 @@ Object *lua_hashget (Hash *t, Object *ref)
  static int count = 1000;
  static Object nil_obj = {T_NIL, {NULL}};
  int h = present(t, ref);
- if (h < 0) return NULL; 
+ if (h < 0) return &nil_obj; 
  if (tag(ref(node(t, h))) != T_NIL) return val(node(t, h));
  if (--count == 0) 
  {
@@ -276,11 +268,13 @@ Object *lua_hashget (Hash *t, Object *ref)
   return &nil_obj;
  }
 
- { /* check "parent" field */
+ { /* check "parent" or "godparent" field */
   Hash *p;
   Object parent;
-  tag(&parent) = T_STRING;
-  svalue(&parent) = "parent";
+  Object godparent;
+  tag(&parent) = T_STRING; svalue(&parent) = "parent";
+  tag(&godparent) = T_STRING; svalue(&godparent) = "godparent";
+
   h = present(t, &parent); /* assert(h >= 0); */
   p = tag(ref(node(t, h))) != T_NIL && tag(val(node(t, h))) == T_ARRAY ?
       avalue(val(node(t, h))) : NULL;
@@ -289,34 +283,14 @@ Object *lua_hashget (Hash *t, Object *ref)
    Object *r = lua_hashget(p, ref);
    if (tag(r) != T_NIL) { count++; return r; }
   }
- }
 
- { /* check "parents" field */
-  Hash *ps;
-  Object parents;
-  tag(&parents) = T_STRING;
-  svalue(&parents) = "parents";
-  h = present(t, &parents); /* assert(h >= 0); */
-  ps = tag(ref(node(t, h))) != T_NIL && tag(val(node(t, h))) == T_ARRAY ?
+  h = present(t, &godparent); /* assert(h >= 0); */
+  p = tag(ref(node(t, h))) != T_NIL && tag(val(node(t, h))) == T_ARRAY ?
       avalue(val(node(t, h))) : NULL;
-  if (ps != NULL)
+  if (p != NULL)
   {
-   Hash *p;
-   Object index;
-   tag(&index) = T_NUMBER;
-   nvalue(&index) = 1;
-   h = present(ps, &index);
-   p = tag(ref(node(ps, h))) != T_NIL && tag(val(node(ps, h))) == T_ARRAY ?
-       avalue(val(node(ps, h))) : NULL;
-   while (p != NULL)
-   {
-    Object *r = lua_hashget(p, ref);
-    if (tag(r) != T_NIL) { count++; return r; }
-    nvalue(&index)++;
-    h = present(ps, &index);
-    p = tag(ref(node(ps, h))) != T_NIL && tag(val(node(ps, h))) == T_ARRAY ? 
-	avalue(val(node(ps, h))) : NULL;
-   }
+   Object *r = lua_hashget(p, ref);
+   if (tag(r) != T_NIL) { count++; return r; }
   }
  }
  count++;
@@ -338,7 +312,7 @@ Object *lua_hashdefine (Hash *t, Object *ref)
  if (tag(ref(n)) == T_NIL)
  {
   nuse(t)++;
-  if (nuse(t) > nhash(t)*REHASH_LIMIT)
+  if ((float)nuse(t) > (float)nhash(t)*REHASH_LIMIT)
   {
    rehash(t);
    h = present(t, ref);
