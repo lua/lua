@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.205 2003/02/11 10:49:53 roberto Exp roberto $
+** $Id: lparser.c,v 1.206 2003/02/18 16:02:56 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -240,8 +240,10 @@ static void singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
 }
 
 
-static void singlevar (LexState *ls, expdesc *var, int base) {
-  singlevaraux(ls->fs, str_checkname(ls), var, base);
+static TString *singlevar (LexState *ls, expdesc *var, int base) {
+  TString *varname = str_checkname(ls);
+  singlevaraux(ls->fs, varname, var, base);
+  return varname;
 }
 
 
@@ -645,9 +647,13 @@ static void prefixexp (LexState *ls, expdesc *v) {
     }
 #ifdef LUA_COMPATUPSYNTAX
     case '%': {  /* for compatibility only */
+      TString *varname;
+      int line = ls->linenumber;
       next(ls);  /* skip `%' */
-      singlevar(ls, v, 1);
-      check_condition(ls, v->k == VUPVAL, "global upvalues are obsolete");
+      varname = singlevar(ls, v, 1);
+      if (v->k != VUPVAL)
+        luaX_errorline(ls, "global upvalues are obsolete",
+                           getstr(varname), line);
       return;
     }
 #endif
