@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.22 1998/06/19 18:47:06 roberto Exp roberto $
+** $Id: llex.c,v 1.23 1998/07/06 22:04:58 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -59,7 +59,7 @@ void luaX_error (LexState *ls, char *s) {
 }
 
 
-void luaX_token2str (LexState *ls, int token, char *s) {
+void luaX_token2str (int token, char *s) {
   if (token < 255) {
     s[0] = token;
     s[1] = 0;
