@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.116 2001/06/22 13:49:42 roberto Exp roberto $
+** $Id: liolib.c,v 1.117 2001/06/28 14:45:44 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -263,7 +263,7 @@ static int read_until (lua_State *L, FILE *f, const l_char *p, int pl) {
 
 static int read_number (lua_State *L, FILE *f) {
   double d;
-  if (fscanf(f, l_s(LUA_SCAN_NUMBER), &d) == 1) {
+  if (fscanf(f, l_s(LUA_NUMBER_SCAN), &d) == 1) {
     lua_pushnumber(L, d);
     return 1;
   }
@@ -280,17 +280,18 @@ static int test_eof (lua_State *L, FILE *f) {
 
 
 static int read_chars (lua_State *L, FILE *f, size_t n) {
-  size_t rlen;
+  size_t rlen;  /* how much to read */
+  size_t nr;  /* number of chars actually read */
   luaL_Buffer b;
   luaL_buffinit(L, &b);
-  rlen = LUAL_BUFFERSIZE;
+  rlen = LUAL_BUFFERSIZE;  /* try to read that much each time */
   do {
     l_char *p = luaL_prepbuffer(&b);
-    if (rlen > n) rlen = n;
-    rlen = fread(p, sizeof(l_char), rlen, f);
-    luaL_addsize(&b, rlen);
-    n -= rlen;
-  } while (n > 0 && rlen > 0);  /* until end of count or eof */
+    if (rlen > n) rlen = n;  /* cannot read more than asked */
+    nr = fread(p, sizeof(l_char), rlen, f);
+    luaL_addsize(&b, nr);
+    n -= nr;  /* still have to read `n' chars */
+  } while (n > 0 && nr == rlen);  /* until end of count or eof */
   luaL_pushresult(&b);  /* close buffer */
   return (n == 0 || lua_strlen(L, -1) > 0);
 }
