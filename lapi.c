@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.148 2001/07/12 18:11:58 roberto Exp roberto $
+** $Id: lapi.c,v 1.149 2001/07/22 00:59:36 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -443,7 +443,7 @@ LUA_API void lua_rawset (lua_State *L, int index) {
   api_checknelems(L, 2);
   t = luaA_index(L, index);
   api_check(L, ttype(t) == LUA_TTABLE);
-  setobj(luaH_set(L, hvalue(t), L->top-2), (L->top-1));
+  luaH_set(L, hvalue(t), L->top-2, L->top-1);
   L->top -= 2;
   lua_unlock(L);
 }
@@ -455,7 +455,7 @@ LUA_API void lua_rawseti (lua_State *L, int index, int n) {
   api_checknelems(L, 1);
   o = luaA_index(L, index);
   api_check(L, ttype(o) == LUA_TTABLE);
-  setobj(luaH_setnum(L, hvalue(o), n), (L->top-1));
+  luaH_setnum(L, hvalue(o), n, L->top-1);
   L->top--;
   lua_unlock(L);
 }

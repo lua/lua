@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.189 2001/06/28 14:48:44 roberto Exp roberto $
+** $Id: lvm.c,v 1.190 2001/06/28 14:57:17 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -186,7 +186,7 @@ void luaV_settable (lua_State *L, StkId t, TObject *key, StkId val) {
     int tg = hvalue(t)->htag;
     if (hvalue(t)->htag == LUA_TTABLE ||  /* with default tag? */
         (tm = luaT_gettm(G(L), tg, TM_SETTABLE)) == NULL) { /* or no TM? */
-      setobj(luaH_set(L, hvalue(t), key), val);  /* do a primitive set */
+      luaH_set(L, hvalue(t), key, val);  /* do a primitive set */
       return;
     }
     /* else will call the tag method */
@@ -212,11 +212,14 @@ void luaV_getglobal (lua_State *L, TString *name, StkId res) {
 
 
 void luaV_setglobal (lua_State *L, TString *name, StkId val) {
-  TObject *oldvalue = luaH_setstr(L, L->gt, name);
+  const TObject *oldvalue = luaH_getstr(L->gt, name);
   Closure *tm;
   if (!HAS_TM_SETGLOBAL(L, ttype(oldvalue)) ||  /* no tag methods? */
      (tm = luaT_gettmbyObj(G(L), oldvalue, TM_SETGLOBAL)) == NULL) {
-    setobj(oldvalue, val);  /* raw set */
+    if (oldvalue == &luaO_nilobject)
+      luaH_setstr(L, L->gt, name, val);  /* raw set */
+    else
+      settableval(oldvalue, val);  /* warning: tricky optimization! */
   }
   else
     setTM(L, callTM(L, tm, l_s("soo"), name, oldvalue, val));
@@ -317,12 +320,12 @@ void luaV_strconc (lua_State *L, int total, StkId top) {
 static void luaV_pack (lua_State *L, StkId firstelem) {
   int i;
   Hash *htab = luaH_new(L, 0);
-  TObject *n;
+  TObject n;
   for (i=0; firstelem+i<L->top; i++)
-    setobj(luaH_setnum(L, htab, i+1), firstelem+i);
+    luaH_setnum(L, htab, i+1, firstelem+i);
   /* store counter in field `n' */
-  n = luaH_setstr(L, htab, luaS_newliteral(L, l_s("n")));
-  setnvalue(n, i);
+  setnvalue(&n, i);
+  luaH_setstr(L, htab, luaS_newliteral(L, l_s("n")), &n);
   L->top = firstelem;  /* remove elements from the stack */
   sethvalue(L->top, htab);
   incr_top;
@@ -640,7 +643,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
           n = L->top - ra - 1;
         bc &= ~(LFIELDS_PER_FLUSH-1);  /* bc = bc - bc%FPF */
         for (; n > 0; n--)
-          setobj(luaH_setnum(L, h, bc+n), ra+n);
+          luaH_setnum(L, h, bc+n, ra+n);
         break;
       }
       case OP_CLOSURE: {

@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.82 2001/06/26 13:20:45 roberto Exp roberto $
+** $Id: ltable.c,v 1.83 2001/07/05 20:31:14 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -161,10 +161,8 @@ static void rehash (lua_State *L, Hash *t) {
     setnodevector(L, t, oldsize);  /* just rehash; keep the same size */
   for (i=0; i<oldsize; i++) {
     Node *old = nold+i;
-    if (ttype(val(old)) != LUA_TNIL) {
-      TObject *v = luaH_set(L, t, key(old));
-      setobj(v, val(old));
-    }
+    if (ttype(val(old)) != LUA_TNIL)
+      luaH_set(L, t, key(old), val(old));
   }
   luaM_freearray(L, nold, oldsize, Node);  /* free old array */
 }
@@ -206,7 +204,7 @@ static TObject *newkey (lua_State *L, Hash *t, const TObject *key) {
     else (t->firstfree)--;
   }
   rehash(L, t);  /* no more free places */
-  return luaH_set(L, t, key);  /* `rehash' invalidates this insertion */
+  return newkey(L, t, key);  /* `rehash' invalidates this insertion */
 }
 
 
@@ -271,32 +269,34 @@ const TObject *luaH_get (Hash *t, const TObject *key) {
 }
 
 
-TObject *luaH_set (lua_State *L, Hash *t, const TObject *key) {
+void luaH_set (lua_State *L, Hash *t, const TObject *key, const TObject *val) {
   const TObject *p = luaH_get(t, key);
-  if (p != &luaO_nilobject) return (TObject *)p;
-  else if (ttype(key) == LUA_TNIL) luaD_error(L, l_s("table index is nil"));
-  return newkey(L, t, key);
+  if (p == &luaO_nilobject) {
+    if (ttype(key) == LUA_TNIL) luaD_error(L, l_s("table index is nil"));
+    p = newkey(L, t, key);
+  }
+  settableval(p, val);
 }
 
 
-TObject *luaH_setstr (lua_State *L, Hash *t, TString *key) {
+void luaH_setstr (lua_State *L, Hash *t, TString *key, const TObject *val) {
   const TObject *p = luaH_getstr(t, key);
-  if (p != &luaO_nilobject) return (TObject *)p;
-  else {
+  if (p == &luaO_nilobject) {
     TObject k;
     setsvalue(&k, key);
-    return newkey(L, t, &k);
+    p = newkey(L, t, &k);
   }
+  settableval(p, val);
 }
 
 
-TObject *luaH_setnum (lua_State *L, Hash *t, int key) {
+void luaH_setnum (lua_State *L, Hash *t, int key, const TObject *val) {
   const TObject *p = luaH_getnum(t, key);
-  if (p != &luaO_nilobject) return (TObject *)p;
-  else {
+  if (p == &luaO_nilobject) {
     TObject k;
     setnvalue(&k, key);
-    return newkey(L, t, &k);
+    p = newkey(L, t, &k);
   }
+  settableval(p, val);
 }
 

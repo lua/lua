@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.75 2001/07/23 19:56:00 roberto Exp roberto $
+** $Id: ltm.c,v 1.76 2001/07/24 22:39:34 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -84,11 +84,13 @@ int luaT_newtag (lua_State *L, const l_char *name, int basictype) {
                   MAX_INT, l_s("tag table overflow"));
   tag = G(L)->ntag;
   if (name) {
-    TObject *v;
+    const TObject *v;
+    TObject otag;
     ts = luaS_new(L, name);
-    v = luaH_setstr(L, G(L)->type2tag, ts);
+    v = luaH_getstr(G(L)->type2tag, ts);
     if (ttype(v) == LUA_TNUMBER) return (int)nvalue(v);
-    setnvalue(v, tag);
+    setnvalue(&otag, tag);
+    luaH_setstr(L, G(L)->type2tag, ts, &otag);
   }
   for (i=0; i<TM_N; i++)
     luaT_gettm(G(L), tag, i) = NULL;
