@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.185 2001/06/15 19:17:17 roberto Exp roberto $
+** $Id: lvm.c,v 1.186 2001/06/15 20:36:57 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -224,7 +224,6 @@ void luaV_setglobal (lua_State *L, TString *name, StkId val) {
 
 static int call_binTM (lua_State *L, const TObject *p1, const TObject *p2,
                        TObject *res, TMS event) {
-  TString *opname;
   Closure *tm = luaT_gettmbyObj(G(L), p1, event);  /* try first operand */
   if (tm == NULL) {
     tm = luaT_gettmbyObj(G(L), p2, event);  /* try second operand */
@@ -234,8 +233,7 @@ static int call_binTM (lua_State *L, const TObject *p1, const TObject *p2,
         return 0;  /* no tag method */
     }
   }
-  opname = luaS_new(L, luaT_eventname[event]);
-  setTMresult(L, res, callTM(L, tm, l_s("oos"), p1, p2, opname));
+  setTMresult(L, res, callTM(L, tm, l_s("oo"), p1, p2));
   return 1;
 }
 
