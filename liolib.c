@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.28 1998/12/28 13:44:54 roberto Exp $
+** $Id: liolib.c,v 1.29 1999/01/04 12:41:12 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -40,6 +40,7 @@
 #define FINPUT		"_INPUT"
 #define FOUTPUT		"_OUTPUT"
 
+#define MODESIZE	3 /* string for file mode */
 
 #ifdef POPEN
 FILE *popen();
@@ -108,15 +109,13 @@ static FILE *getfileparam (char *name, int *arg) {
 }
 
 
-static char *getmode (char mode) {
-  static char m[3];
+static void getmode (char mode, char *m) {
   m[0] = mode;
   if (*luaL_opt_string(FIRSTARG+1, "text") == 'b') {
      m[1] = 'b';
      m[2] = '\0';
   }
   else m[1] = '\0';
-  return m;
 }
 
 
@@ -154,7 +153,9 @@ static void io_readfrom (void) {
     current = lua_getuserdata(f);
   else {
     char *s = luaL_check_string(FIRSTARG);
-    current = (*s == '|') ? popen(s+1, "r") : fopen(s, getmode('r'));
+    char m[MODESIZE];
+    getmode('r', m);
+    current = (*s == '|') ? popen(s+1, "r") : fopen(s, m);
     if (current == NULL) {
       pushresult(0);
       return;
@@ -175,7 +176,9 @@ static void io_writeto (void) {
     current = lua_getuserdata(f);
   else {
     char *s = luaL_check_string(FIRSTARG);
-    current = (*s == '|') ? popen(s+1,"w") : fopen(s,getmode('w'));
+    char m[MODESIZE];
+    getmode('w', m);
+    current = (*s == '|') ? popen(s+1,"w") : fopen(s, m);
     if (current == NULL) {
       pushresult(0);
       return;
@@ -187,7 +190,10 @@ static void io_writeto (void) {
 
 static void io_appendto (void) {
   char *s = luaL_check_string(FIRSTARG);
-  FILE *fp = fopen (s, getmode('a'));
+  char m[MODESIZE];
+  FILE *fp;
+  getmode('a', m);
+  fp = fopen (s, m);
   if (fp != NULL)
     setreturn(fp, FOUTPUT);
   else
