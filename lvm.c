@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.90 2000/03/03 14:58:26 roberto Exp roberto $
+** $Id: lvm.c,v 1.93 2000/03/09 13:57:37 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -360,6 +360,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
 
       case PUSHNIL: {
         int n = GETARG_U(i);
+        LUA_ASSERT(L, n>0, "invalid argument");
 		do {
           ttype(top++) = LUA_T_NIL;
 		} while (--n > 0);

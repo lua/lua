@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.31 1999/12/14 18:42:57 roberto Exp roberto $
+** $Id: lstring.c,v 1.32 2000/03/03 14:58:26 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -46,8 +46,9 @@ void luaS_freeall (lua_State *L) {
 
 static unsigned long hash_s (const char *s, long l) {
   unsigned long h = l;  /* seed */
-  while (l--)
-      h = h ^ ((h<<5)+(h>>2)+(unsigned char)*(s++));
+  long step = (l>>6)+1;  /* if string is too long, don't hash all its chars */
+  for (; l>0; l-=step)
+    h = h ^ ((h<<5)+(h>>2)+(unsigned char)*(s++));
   return h;
 }
 
@@ -120,7 +121,8 @@ static void newentry (lua_State *L, stringtable *tb, TaggedString *ts, int h) {
 
 TaggedString *luaS_newlstr (lua_State *L, const char *str, long l) {
   unsigned long h = hash_s(str, l);
-  stringtable *tb = &L->string_root[h%NUM_HASHSTR];
+  stringtable *tb = &L->string_root[(l==0) ? 0 :
+                         ((unsigned int)(str[0]+str[l-1]))&(NUM_HASHSTR-1)];
   int h1 = h&(tb->size-1);
   TaggedString *ts;
   for (ts = tb->hash[h1]; ts; ts = ts->nexthash) {
@@ -134,6 +136,10 @@ TaggedString *luaS_newlstr (lua_State *L, const char *str, long l) {
 }
 
 
+/*
+** uses '%' for one hashing with userdata because addresses are too regular,
+** so two '&' operations would be highly correlated
+*/
 TaggedString *luaS_createudata (lua_State *L, void *udata, int tag) {
   unsigned long h = IntPoint(L, udata);
   stringtable *tb = &L->string_root[(h%NUM_HASHUDATA)+NUM_HASHSTR];

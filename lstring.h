@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.15 1999/12/14 18:42:57 roberto Exp roberto $
+** $Id: lstring.h,v 1.16 2000/03/03 14:58:26 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -12,7 +12,7 @@
 #include "lstate.h"
 
 
-#define NUM_HASHSTR     31
+#define NUM_HASHSTR     32
 #define NUM_HASHUDATA   31
 #define NUM_HASHS (NUM_HASHSTR+NUM_HASHUDATA)
 
