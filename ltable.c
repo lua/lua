@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.123 2002/11/14 16:15:53 roberto Exp roberto $
+** $Id: ltable.c,v 1.124 2002/11/25 12:38:47 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -55,15 +55,15 @@
 
 
 #define hashnum(t,n)	\
-           (node(t, lmod(cast(lu_hash, cast(ls_hash, n)), sizenode(t))))
-#define hashstr(t,str)	 (node(t, lmod((str)->tsv.hash, sizenode(t))))
-#define hashboolean(t,p) (node(t, lmod(p, sizenode(t))))
+	(node(t, lmod(cast(lu_hash, cast(ls_hash, n)), sizenode(t))))
+#define hashstr(t,str)	(node(t, lmod((str)->tsv.hash, sizenode(t))))
+#define hashboolean(t,p)	(node(t, lmod(p, sizenode(t))))
 
 /*
 ** avoid modulus by power of 2 for pointers, as they tend to have many
 ** 2 factors.
 */
-#define hashpointer(t,p) (node(t, (IntPoint(p) % ((sizenode(t)-1)|1))))
+#define hashpointer(t,p)	(node(t, (IntPoint(p) % ((sizenode(t)-1)|1))))
 
 
 /*
