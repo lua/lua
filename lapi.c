@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.16 2004/08/12 17:02:51 roberto Exp roberto $
+** $Id: lapi.c,v 2.17 2004/08/17 17:45:45 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -831,7 +831,7 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
       break;
     }
     case LUA_GCRESTART: {
-      g->GCthreshold = g->nblocks;
+      g->GCthreshold = g->totalbytes;
       break;
     }
     case LUA_GCCOLLECT: {
@@ -840,13 +840,13 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
     }
     case LUA_GCCOUNT: {
       /* GC values are expressed in Kbytes: #bytes/2^10 */
-      res = cast(int, g->nblocks >> 10);
+      res = cast(int, g->totalbytes >> 10);
       break;
     }
     case LUA_GCSTEP: {
       lu_mem a = (cast(lu_mem, data) << 10);
-      if (a <= g->nblocks)
-        g->GCthreshold = g->nblocks - a;
+      if (a <= g->totalbytes)
+        g->GCthreshold = g->totalbytes - a;
       else
         g->GCthreshold = 0;
       luaC_step(L);

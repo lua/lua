@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.5 2004/06/02 19:07:55 roberto Exp roberto $
+** $Id: lstate.h,v 2.6 2004/08/24 20:12:06 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -82,7 +82,9 @@ typedef struct global_State {
   GCObject *tmudata;  /* list of userdata to be GC */
   Mbuffer buff;  /* temporary buffer for string concatentation */
   lu_mem GCthreshold;
-  lu_mem nblocks;  /* number of `bytes' currently allocated */
+  lu_mem totalbytes;  /* number of bytes currently allocated */
+  lu_mem estimate;  /* an estimate of number of bytes actually in use */
+  lu_mem prevestimate;  /* previous estimate */
   lua_CFunction panic;  /* to be called in unprotected errors */
   TValue _registry;
   struct lua_State *mainthread;

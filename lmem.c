@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.63 2003/11/27 18:18:37 roberto Exp roberto $
+** $Id: lmem.c,v 1.64 2004/04/30 20:13:38 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -77,8 +77,7 @@ void *luaM_realloc (lua_State *L, void *block, lu_mem osize, lu_mem nsize) {
   if (block == NULL && nsize > 0)
     luaD_throw(L, LUA_ERRMEM);
   lua_assert((nsize == 0) == (block == NULL));
-  g->nblocks -= osize;
-  g->nblocks += nsize;
+  g->totalbytes = (g->totalbytes - osize) + nsize;
   return block;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.6 2004/08/10 19:17:23 roberto Exp roberto $
+** $Id: lgc.h,v 2.7 2004/08/24 20:12:06 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -14,10 +14,11 @@
 /*
 ** Possible states of the Garbage Collector
 */
-#define GCSpropagate	0
-#define GCSsweepstring	1
-#define GCSsweep	2
-#define GCSfinalize	3
+#define GCSpause	0
+#define GCSpropagate	1
+#define GCSsweepstring	2
+#define GCSsweep	3
+#define GCSfinalize	4
 
 
 /*
@@ -71,7 +72,7 @@
 #define luaC_white(g)	cast(lu_byte, (g)->currentwhite)
 
 
-#define luaC_checkGC(L) { if (G(L)->nblocks >= G(L)->GCthreshold) \
+#define luaC_checkGC(L) { if (G(L)->totalbytes >= G(L)->GCthreshold) \
 	luaC_step(L); }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.10 2004/06/17 14:25:31 roberto Exp roberto $
+** $Id: lstate.c,v 2.11 2004/08/24 20:12:06 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -77,11 +77,12 @@ static void freestack (lua_State *L, lua_State *L1) {
 */
 static void f_luaopen (lua_State *L, void *ud) {
   Udata *u;  /* head of udata list */
+  global_State *g = G(L);
   UNUSED(ud);
   u = cast(Udata *, luaM_malloc(L, sizeudata(0)));
   u->uv.len = 0;
   u->uv.metatable = NULL;
-  G(L)->firstudata = obj2gco(u);
+  g->firstudata = obj2gco(u);
   luaC_link(L, obj2gco(u), LUA_TUSERDATA);
   setbit(u->uv.marked, FIXEDBIT);
   setbit(L->marked, FIXEDBIT);
@@ -93,7 +94,8 @@ static void f_luaopen (lua_State *L, void *ud) {
   luaT_init(L);
   luaX_init(L);
   luaS_fix(luaS_newliteral(L, MEMERRMSG));
-  G(L)->GCthreshold = 4*G(L)->nblocks;
+  g->GCthreshold = 4*g->totalbytes;
+  g->prevestimate = g->estimate = g->totalbytes;
 }
 
 
@@ -128,7 +130,7 @@ static void close_state (lua_State *L) {
   luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size, TString *);
   luaZ_freebuffer(L, &g->buff);
   freestack(L, L);
-  lua_assert(g->nblocks == sizeof(LG));
+  lua_assert(g->totalbytes == sizeof(LG));
   (*g->realloc)(g->ud, fromstate(L), state_size(LG), 0);
 }
 
@@ -177,7 +179,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   setnilvalue(registry(L));
   luaZ_initbuffer(L, &g->buff);
   g->panic = NULL;
-  g->gcstate = GCSfinalize;
+  g->gcstate = GCSpause;
   g->gcgenerational = 0;
   g->rootgc = obj2gco(L);
   g->sweepstrgc = 0;
@@ -190,7 +192,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   setnilvalue(gkey(g->dummynode));
   setnilvalue(gval(g->dummynode));
   g->dummynode->next = NULL;
-  g->nblocks = sizeof(LG);
+  g->totalbytes = sizeof(LG);
   if (luaD_rawrunprotected(L, f_luaopen, NULL) != 0) {
     /* memory allocation error: free partial state */
     close_state(L);
