@@ -1,12 +1,11 @@
 /*
-** $Id: liolib.c,v 1.66 2000/05/30 18:55:16 roberto Exp roberto $
+** $Id: liolib.c,v 1.67 2000/06/12 13:52:05 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
 
 
 #include <ctype.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,6 +21,7 @@
 
 
 #ifndef OLD_ANSI
+#include <errno.h>
 #include <locale.h>
 #else
 /* no support for locale and for strerror: fake them */
@@ -32,7 +32,8 @@
 #define LC_MONETARY	0
 #define LC_NUMERIC	0
 #define LC_TIME		0
-#define strerror(e)	"(no error message provided by operating system)"
+#define strerror(e)	"generic I/O error"
+#define errno		(-1)
 #endif
 
 
