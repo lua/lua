@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.46 2000/02/11 16:52:54 roberto Exp roberto $
+** $Id: lobject.h,v 1.47 2000/02/14 16:51:08 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -237,13 +237,5 @@ int luaO_equalval (const TObject *t1, const TObject *t2);
 int luaO_redimension (lua_State *L, int oldsize);
 int luaO_str2d (const char *s, real *result);
 
-#ifdef OLD_ANSI
-void luaO_memup (void *dest, void *src, int size);
-void luaO_memdown (void *dest, void *src, int size);
-#else
-#include <string.h>
-#define luaO_memup(d,s,n)	memmove(d,s,n)
-#define luaO_memdown(d,s,n)	memmove(d,s,n)
-#endif
 
 #endif

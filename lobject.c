@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.29 1999/12/30 18:28:40 roberto Exp roberto $
+** $Id: lobject.c,v 1.30 2000/01/25 18:44:21 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -54,21 +54,6 @@ int luaO_equalval (const TObject *t1, const TObject *t2) {
      return 0; /* UNREACHABLE */
   }
 }
-
-
-#ifdef OLD_ANSI
-void luaO_memup (void *dest, void *src, int size) {
-  while (size--)
-    ((char *)dest)[size]=((char *)src)[size];
-}
-
-void luaO_memdown (void *dest, void *src, int size) {
-  int i;
-  for (i=0; i<size; i++)
-    ((char *)dest)[i]=((char *)src)[i];
-}
-#endif
-
 
 
 static double expten (unsigned int e) {
