@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.7 1994/08/17 15:10:04 celes Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.8 1994/08/17 22:34:20 roberto Exp celes $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -345,7 +345,7 @@ static char *buildformat (char *e, lua_Object o)
  static char buffer[512];
  static char f[80];
  char *string = &buffer[255];
- char *fstart=e, *fspace;
+ char *fstart=e, *fspace, *send;
  char t, j='r';
  int  m=0, n=0, l;
  while (isspace(*e)) e++;
@@ -354,7 +354,7 @@ static char *buildformat (char *e, lua_Object o)
  if (*e == '<' || *e == '|' || *e == '>') j = *e++;
  while (isdigit(*e))
   m = m*10 + (*e++ - '0');
- e++;	/* skip point */
+ if (*e == '.') e++;	/* skip point */
  while (isdigit(*e))
   n = n*10 + (*e++ - '0');
 
@@ -383,6 +383,7 @@ static char *buildformat (char *e, lua_Object o)
   default: return "";
  }
  l = strlen(string);
+ send = string+l;
  if (m!=0 && l>m)
  {
   int i;
@@ -406,8 +407,8 @@ static char *buildformat (char *e, lua_Object o)
   fspace--;
   *string = *fspace; 
  }
- while (isspace(*e)) string[l++] = *e++;
- string[l] = 0;
+ while (isspace(*e)) *send++ = *e++;
+ *send = 0;
  return string;
 }
 static void io_write (void)
