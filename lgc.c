@@ -126,6 +126,12 @@ static void markstacks (GCState *st) {
   lua_State *L1 = st->L;
   do {  /* for each thread */
     StkId o, lim;
+    if (L1->base_ci == NULL) {  /* incomplete state? */
+      lua_assert(L1 != st->L);
+      L1 = L1->next;
+      luaE_closethread(st->L, L1->previous);  /* collect it */
+      continue;
+    }
     for (o=L1->stack; o<L1->top; o++)
       markobject(st, o);
     lim = (L1->stack_last - L1->ci->base > MAXSTACK) ? L1->ci->base+MAXSTACK

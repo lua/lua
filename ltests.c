@@ -36,7 +36,7 @@
 #ifdef LUA_DEBUG
 
 
-lua_State *lua_state = NULL;
+static lua_State *lua_state = NULL;
 
 int islocked = 0;
 
@@ -374,10 +374,9 @@ static int udataval (lua_State *L) {
 
 static int doonnewstack (lua_State *L) {
   lua_State *L1 = lua_newthread(L, luaL_check_int(L, 1));
-  if (L1 == NULL) return 0;
   lua_dostring(L1, luaL_check_string(L, 2));
   lua_pushnumber(L, 1);
-  lua_close(L1);
+  lua_closethread(L, L1);
   return 1;
 }
 
@@ -652,6 +651,14 @@ static const struct luaL_reg tests_funcs[] = {
 };
 
 
+static void fim (void) {
+  if (!islocked)
+    lua_close(lua_state);
+  lua_assert(memdebug_numblocks == 0);
+  lua_assert(memdebug_total == 0);
+}
+
+
 void luaB_opentests (lua_State *L) {
   *cast(int **, L) = &islocked;  /* init lock */
   lua_state = L;  /* keep first state to be opened */
@@ -663,6 +670,7 @@ void luaB_opentests (lua_State *L) {
   luaL_openl(L, tests_funcs);  /* open functions inside new table */
   lua_setglobals(L);  /* restore old table of globals */
   lua_setglobal(L, "T");  /* set new table as global T */
+  atexit(fim);
 }
 
 #endif

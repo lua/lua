@@ -94,8 +94,10 @@ typedef LUA_NUMBER lua_Number;
 /*
 ** state manipulation
 */
-LUA_API lua_State *lua_newthread (lua_State *L, int stacksize);
+LUA_API lua_State *lua_open (int stacksize);
 LUA_API void       lua_close (lua_State *L);
+LUA_API lua_State *lua_newthread (lua_State *L, int stacksize);
+LUA_API void       lua_closethread (lua_State *L, lua_State *thread);
 
 
 /*
@@ -214,8 +216,6 @@ LUA_API void  lua_newuserdatabox (lua_State *L, void *u);
 ** some useful macros
 ** ===============================================================
 */
-
-#define lua_open(n)		lua_newthread(NULL, (n))
 
 #define lua_pop(L,n)		lua_settop(L, -(n)-1)
 

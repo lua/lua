@@ -64,6 +64,9 @@ struct lua_longjmp;  /* defined in ldo.c */
 
 #define RESERVED_STACK_PREFIX	3
 
+/* space to handle stack overflow errors */
+#define EXTRA_STACK   (2*LUA_MINSTACK)
+
 
 
 typedef struct stringtable {
@@ -90,6 +93,7 @@ typedef struct CallInfo {
 
 #define ci_func(ci)	(clvalue((ci)->base - 1))
 
+#define yield_results	refi	/* reuse this field */
 
 
 /*
@@ -137,6 +141,8 @@ struct lua_State {
 
 #define G(L)	(L->_G)
 
+
+void luaE_closethread (lua_State *OL, lua_State *L);
 
 #endif
 

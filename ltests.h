@@ -48,9 +48,6 @@ extern int islocked;
 #define lua_unlock(L)   lua_assert(--(**cast(int **, L)) == 0)
 
 
-extern lua_State *lua_state;
-
-
 void luaB_opentests (lua_State *L);
 
 #define LUA_USERINIT(L) (luaB_opentests(L), openstdlibs(L))
