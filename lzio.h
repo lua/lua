@@ -1,11 +1,12 @@
 /*
-* zio.h
-* a generic input stream interface
-* $Id: zio.h,v 1.4 1997/06/19 18:55:28 roberto Exp roberto $
+** $Id: $
+** Buffered streams
+** See Copyright Notice in lua.h
 */
 
-#ifndef zio_h
-#define zio_h
+
+#ifndef lzio_h
+#define lzio_h
 
 #include <stdio.h>
 

@@ -1,13 +1,16 @@
 /*
-* zio.c
-* a generic input stream interface
-* $Id: zio.c,v 1.1 1997/06/16 16:50:22 roberto Exp roberto $
+** $Id: zio.c,v 1.2 1997/06/20 19:25:54 roberto Exp $
+** a generic input stream interface
+** See Copyright Notice in lua.h
 */
 
+
+
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include "zio.h"
+
+#include "lzio.h"
+
 
 
 /* ----------------------------------------------------- memory buffers --- */
