@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.31 1999/03/05 21:16:07 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.32 1999/03/10 14:09:45 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -113,7 +113,7 @@ CHECKSTACK /*	b  (assert #temporaries == b; only for internal debuging!) */
 #define RFIELDS_PER_FLUSH 32	/* records (SETMAP) */
 #define LFIELDS_PER_FLUSH 64    /* FPF - lists (SETLIST) */
 
-#define ZEROVARARG	64
+#define ZEROVARARG	128
 
 
 /* maximum value of an arg of 3 bytes; must fit in an "int" */

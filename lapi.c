@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.44 1999/05/11 20:08:20 roberto Exp roberto $
+** $Id: lapi.c,v 1.45 1999/05/14 12:24:20 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -632,7 +632,7 @@ char *lua_getobjname (lua_Object o, char **name)
 
 
 #ifndef	MAX_C_BLOCKS
-#define MAX_C_BLOCKS	1000
+#define MAX_C_BLOCKS	1000  /* arbitrary limit */
 #endif
 
 

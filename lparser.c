@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.35 1999/06/16 13:22:04 roberto Exp roberto $
+** $Id: lparser.c,v 1.36 1999/06/16 13:35:01 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -22,26 +22,32 @@
 #include "lzio.h"
 
 
-/* for limit numbers in error messages */
-#define MES_LIM(x)      "(limit=" x ")"
-
 
 /* size of a "normal" jump instruction: OpCode + 1 byte */
 #define JMPSIZE	2
 
 /* maximum number of local variables */
-#define MAXLOCALS 200
-#define SMAXLOCALS "200"
+#ifndef MAXLOCALS
+#define MAXLOCALS 200  /* arbitrary limit (<256) */
+#endif
 
 
 /* maximum number of upvalues */
-#define MAXUPVALUES 32
-#define SMAXUPVALUES "32"
+#ifndef MAXUPVALUES
+#define MAXUPVALUES 32  /* arbitrary limit (<256) */
+#endif
 
 
 /* maximum number of variables in the left side of an assignment */
-#define MAXVARSLH	100
-#define SMAXVARSLH	"100"
+#ifndef MAXVARSLH
+#define MAXVARSLH	100  /* arbitrary limit (<255) */
+#endif
+
+
+/* maximum number of parameters in a function */
+#ifndef MAXPARAMS
+#define MAXPARAMS	100  /* arbitrary limit (<ZEROVARARG) */
+#endif
 
 
 /*
@@ -134,6 +140,15 @@ static void statlist (LexState *ls);
 static void var_or_func (LexState *ls, vardesc *v);
 static void var_or_func_tail (LexState *ls, vardesc *v);
 
+
+
+static void checklimit (LexState *ls, int val, int limit, char *msg) {
+  if (val > limit) {
+    char buff[100];
+    sprintf(buff, "too many %s (limit=%d)", msg, limit);
+    luaX_error(ls, buff);
+  }
+}
 
 
 static void check_pc (FuncState *fs, int n) {
@@ -310,8 +325,7 @@ static void luaI_unregisterlocalvar (FuncState *fs, int line) {
 
 static void store_localvar (LexState *ls, TaggedString *name, int n) {
   FuncState *fs = ls->fs;
-  if (fs->nlocalvar+n >= MAXLOCALS)
-    luaX_error(ls, "too many local variables " MES_LIM(SMAXLOCALS));
+  checklimit(ls, fs->nlocalvar+n+1, MAXLOCALS, "local variables");
   fs->localvar[fs->nlocalvar+n] = name;
   luaI_registerlocalvar(fs, name, ls->linenumber);
 }
@@ -369,9 +383,8 @@ static int indexupvalue (LexState *ls, TaggedString *n) {
       return i;
   }
   /* new one */
-  if (++(fs->nupvalues) > MAXUPVALUES)
-    luaX_error(ls, "too many upvalues in a single function "
-                   MES_LIM(SMAXUPVALUES));
+  ++(fs->nupvalues);
+  checklimit(ls, fs->nupvalues, MAXUPVALUES, "upvalues");
   fs->upvalues[i] = v;  /* i = fs->nupvalues - 1 */
   return i;
 }
@@ -439,6 +452,7 @@ static void adjust_mult_assign (LexState *ls, int nvars, listdesc *d) {
 static void code_args (LexState *ls, int nparams, int dots) {
   FuncState *fs = ls->fs;
   fs->nlocalvar += nparams;  /* "self" may already be there */
+  checklimit(ls, fs->nlocalvar, MAXPARAMS, "parameters");
   nparams = fs->nlocalvar;
   if (!dots) {
     fs->f->code[1] = (Byte)nparams;  /* fill-in arg information */
@@ -917,7 +931,7 @@ static int priority [POW+1] =  {5, 5, 1, 1, 1, 1, 1, 1, 2, 3, 3, 4, 4, 6};
 static OpCode opcodes [POW+1] = {NOTOP, MINUSOP, EQOP, NEQOP, GTOP, LTOP,
   LEOP, GEOP, CONCOP, ADDOP, SUBOP, MULTOP, DIVOP, POWOP};
 
-#define MAXOPS	20  /* op's stack size */
+#define MAXOPS	20  /* op's stack size (arbitrary limit) */
 
 typedef struct stack_op {
   int ops[MAXOPS];
@@ -1226,9 +1240,7 @@ static void decinit (LexState *ls, listdesc *d) {
 
 static int assignment (LexState *ls, vardesc *v, int nvars) {
   int left = 0;
-  if (nvars > MAXVARSLH)
-    luaX_error(ls, "too many variables in a multiple assignment "
-                   MES_LIM(SMAXVARSLH));
+  checklimit(ls, nvars, MAXVARSLH, "variables in a multiple assignment");
   unloaddot(ls, v);
   if (ls->token == ',') {  /* assignment -> ',' NAME assignment */
     vardesc nv;

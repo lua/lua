@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.30 1999/05/05 19:22:26 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.31 1999/05/14 12:24:04 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -117,7 +117,10 @@ static void str_char (void) {
 ** =======================================================
 */
 
-#define MAX_CAPT 32
+#ifndef MAX_CAPT
+#define MAX_CAPT 32  /* arbitrary limit */
+#endif
+
 
 struct Capture {
   char *src_end;  /* end ('\0') of source string */
@@ -499,7 +502,7 @@ static void luaI_addquoted (int arg) {
 }
 
 /* maximum size of each format specification (such as '%-099.99d') */
-#define MAX_FORMAT 20
+#define MAX_FORMAT 20  /* arbitrary limit */
 
 static void str_format (void) {
   int arg = 1;

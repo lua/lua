@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.34 1999/03/25 21:05:05 roberto Exp roberto $
+** $Id: llex.c,v 1.35 1999/05/14 12:24:04 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -106,7 +106,9 @@ void luaX_setinput (LexState *LS, ZIO *z)
 ** =======================================================
 */
 
-#define PRAGMASIZE	80
+#ifndef PRAGMASIZE
+#define PRAGMASIZE	80  /* arbitrary limit */
+#endif
 
 static void skipspace (LexState *LS) {
   while (LS->current == ' ' || LS->current == '\t' || LS->current == '\r')

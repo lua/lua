@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.42 1999/05/10 13:54:01 roberto Exp roberto $
+** $Id: ldo.c,v 1.43 1999/05/24 17:53:03 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -29,7 +29,7 @@
 
 
 #ifndef STACK_LIMIT
-#define STACK_LIMIT     6000
+#define STACK_LIMIT     6000  /* arbitrary limit */
 #endif
 
 
