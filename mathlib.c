@@ -3,7 +3,7 @@
 ** Mathematics library to LUA
 */
 
-char *rcs_mathlib="$Id: mathlib.c,v 1.23 1997/04/06 14:08:08 roberto Exp roberto $";
+char *rcs_mathlib="$Id: mathlib.c,v 1.24 1997/06/09 17:30:10 roberto Exp roberto $";
 
 #include <stdlib.h>
 #include <math.h>
@@ -210,7 +210,8 @@ static struct luaL_reg mathlib[] = {
 void mathlib_open (void)
 {
   luaL_openlib(mathlib, (sizeof(mathlib)/sizeof(mathlib[0])));
+  lua_pushcfunction(math_pow);
   lua_pushnumber(0);  /* to get its tag */
-  lua_settagmethod(lua_tag(lua_pop()), "pow", math_pow);
+  lua_settagmethod(lua_tag(lua_pop()), "pow");
 }
 

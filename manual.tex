@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 2.1 1997/06/18 20:14:52 roberto Exp roberto $
+% $Id: manual.tex,v 2.2 1997/06/18 21:11:53 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -38,7 +38,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1997/06/18 20:14:52 $}
+\date{\small \verb$Date: 1997/06/18 21:11:53 $}
 
 \maketitle
 
@@ -1457,19 +1457,20 @@ Otherwise, the whole program terminates with a call to \verb|exit(1)|.
 The error handler method \see{error} can be changed with:
 \Deffunc{lua_seterrormethod}
 \begin{verbatim}
-lua_Object     lua_seterrormethod (lua_CFunction method);
+lua_Object     lua_seterrormethod (void);
 \end{verbatim}
-This function returns a \verb|lua_Object|,
-which is the old error method value.
+This function sets the object at the top of C2lua
+as the new error method,
+and returns the old error method value.
 
 Tag methods can be changed with:
 \Deffunc{lua_settagmethod}
 \begin{verbatim}
-lua_Object     lua_settagmethod (int tag, char *event, lua_CFunction method);
+lua_Object     lua_settagmethod (int tag, char *event);
 \end{verbatim}
 The first parameter is the tag,
-the second is the event name \see{tag-method},
-and the third is a CFunction to be used as the new method.
+the second is the event name \see{tag-method};
+the new method is pushed from C2lua.
 This function returns a \verb|lua_Object|,
 which is the old tag method value.
 To get just the current value of a tag method,

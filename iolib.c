@@ -302,5 +302,6 @@ void iolib_open (void)
   lua_tagio = lua_newtag();
   lua_infile=stdin; lua_outfile=stdout;
   luaL_openlib(iolib, (sizeof(iolib)/sizeof(iolib[0])));
-  lua_seterrormethod(errorfb);
+  lua_pushcfunction(errorfb);
+  lua_seterrormethod();
 }
