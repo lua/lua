@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.128 2001/02/23 17:17:25 roberto Exp roberto $
+** $Id: ldo.c,v 1.129 2001/02/23 17:28:12 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -94,9 +94,9 @@ static void dohook (lua_State *L, lua_Debug *ar, lua_Hook hook) {
   StkId old_top = L->Cbase = L->top;
   luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
   L->allowhooks = 0;  /* cannot call hooks inside a hook */
-  LUA_UNLOCK(L);
+  lua_unlock(L);
   (*hook)(L, ar);
-  LUA_LOCK(L);
+  lua_lock(L);
   lua_assert(L->allowhooks == 0);
   L->allowhooks = 1;
   L->top = old_top;
@@ -135,9 +135,9 @@ static StkId callCclosure (lua_State *L, const struct Closure *cl, StkId base) {
   luaD_checkstack(L, nup+LUA_MINSTACK);  /* ensure minimum stack size */
   for (n=0; n<nup; n++)  /* copy upvalues as extra arguments */
     setobj(L->top++, &cl->upvalue[n]);
-  LUA_UNLOCK(L);
+  lua_unlock(L);
   n = (*cl->f.c)(L);  /* do the actual call */
-  LUA_LOCK(L);
+  lua_lock(L);
   L->Cbase = old_Cbase;  /* restore old C base */
   return L->top - n;  /* return index of first result */
 }
@@ -212,13 +212,13 @@ LUA_API int lua_call (lua_State *L, int nargs, int nresults) {
   StkId func;
   struct CallS c;
   int status;
-  LUA_LOCK(L);
+  lua_lock(L);
   func = L->top - (nargs+1);  /* function to be called */
   c.func = func; c.nresults = nresults;
   status = luaD_runprotected(L, f_call, &c);
   if (status != 0)  /* an error occurred? */
     L->top = func;  /* remove parameters from the stack */
-  LUA_UNLOCK(L);
+  lua_unlock(L);
   return status;
 }
 
@@ -242,7 +242,7 @@ static int protectedparser (lua_State *L, ZIO *z, int bin) {
   struct SParser p;
   lu_mem old_blocks;
   int status;
-  LUA_LOCK(L);
+  lua_lock(L);
   p.z = z; p.bin = bin;
   /* before parsing, give a (good) chance to GC */
   if (G(L)->nblocks/8 >= G(L)->GCthreshold/10)
@@ -256,7 +256,7 @@ static int protectedparser (lua_State *L, ZIO *z, int bin) {
   }
   else if (status == LUA_ERRRUN)  /* an error occurred: correct error code */
     status = LUA_ERRSYNTAX;
-  LUA_UNLOCK(L);
+  lua_unlock(L);
   return status;
 }
 

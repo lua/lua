@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.56 2001/02/02 15:13:05 roberto Exp roberto $
+** $Id: lstate.c,v 1.57 2001/02/23 17:17:25 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -93,7 +93,7 @@ static void f_luaopen (lua_State *L, void *ud) {
 LUA_API lua_State *lua_open (lua_State *OL, int stacksize) {
   struct Sopen so;
   lua_State *L;
-  if (OL) LUA_LOCK(OL);
+  if (OL) lua_lock(OL);
   L = luaM_new(OL, lua_State);
   if (L) {  /* allocation OK? */
     L->G = NULL;
@@ -112,7 +112,7 @@ LUA_API lua_State *lua_open (lua_State *OL, int stacksize) {
       L = NULL;
     }
   }
-  if (OL) LUA_UNLOCK(OL);
+  if (OL) lua_unlock(OL);
   return L;
 }
 
@@ -141,11 +141,11 @@ static void close_state (lua_State *L, lua_State *OL) {
 LUA_API void lua_close (lua_State *L) {
   lua_State *OL;
   lua_assert(L != lua_state || lua_gettop(L) == 0);
-  LUA_LOCK(L);
+  lua_lock(L);
   OL = L->next;  /* any surviving thread (if there is one) */
   if (OL == L) OL = NULL;  /* no surviving threads */
   close_state(L, OL);
-  if (OL) LUA_UNLOCK(OL);  /* cannot unlock over a freed state */
+  if (OL) lua_unlock(OL);  /* cannot unlock over a freed state */
   lua_assert(L != lua_state || memdebug_numblocks == 0);
   lua_assert(L != lua_state || memdebug_total == 0);
 }

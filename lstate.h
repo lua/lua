@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.52 2001/02/23 17:17:25 roberto Exp roberto $
+** $Id: lstate.h,v 1.53 2001/02/23 20:30:01 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -16,12 +16,12 @@
 ** macros that control all entries and exits from Lua core machine
 ** (mainly for thread syncronization)
 */
-#ifndef LUA_LOCK
-#define LUA_LOCK(L)	((void) 0)
+#ifndef lua_lock
+#define lua_lock(L)	((void) 0)
 #endif
 
-#ifndef LUA_UNLOCK
-#define LUA_UNLOCK(L)	((void) 0)
+#ifndef lua_unlock
+#define lua_unlock(L)	((void) 0)
 #endif
 
 /*

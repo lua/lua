@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.71 2001/02/22 18:59:59 roberto Exp roberto $
+** $Id: ltests.c,v 1.72 2001/02/23 17:17:25 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -432,7 +432,7 @@ static int loadlib (lua_State *L) {
 static int closestate (lua_State *L) {
   lua_State *L1 = (lua_State *)(unsigned long)luaL_check_number(L, 1);
   lua_close(L1);
-  LUA_UNLOCK(L);  /* close cannot unlock that */
+  lua_unlock(L);  /* close cannot unlock that */
   return 0;
 }
 

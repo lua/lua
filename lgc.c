@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.91 2001/02/22 18:59:59 roberto Exp roberto $
+** $Id: lgc.c,v 1.92 2001/02/23 17:17:25 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -21,12 +21,12 @@
 ** optional lock for GC
 ** (when Lua calls GC tag methods it unlocks the regular lock)
 */
-#ifndef LUA_LOCKGC
-#define LUA_LOCKGC(L)		{
+#ifndef lua_lockgc
+#define lua_lockgc(L)		{
 #endif
 
-#ifndef LUA_UNLOCKGC
-#define LUA_UNLOCKGC(L)		}
+#ifndef lua_unlockgc
+#define lua_unlockgc(L)		}
 #endif
 
 
@@ -369,14 +369,14 @@ static void callgcTMudata (lua_State *L) {
 
 
 void luaC_collect (lua_State *L, int all) {
-  LUA_LOCKGC(L);
+  lua_lockgc(L);
   collectudata(L, all);
   callgcTMudata(L);
   collectstrings(L, all);
   collecttable(L);
   collectproto(L);
   collectclosure(L);
-  LUA_UNLOCKGC(L);
+  lua_unlockgc(L);
 }
 
 

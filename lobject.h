@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.98 2001/02/23 17:17:25 roberto Exp roberto $
+** $Id: lobject.h,v 1.99 2001/02/23 20:32:32 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -117,7 +117,7 @@ union L_UTString {
 
 
 
-#define getstr(ts)	((l_char *)((lu_byte *)(ts) + sizeof(union L_UTString)))
+#define getstr(ts)	((l_char *)((union L_UTString *)(ts) + 1))
 #define svalue(o)       getstr(tsvalue(o))
 
 
