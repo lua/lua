@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.4 2004/08/10 19:17:23 roberto Exp roberto $
+** $Id: ltable.c,v 2.5 2004/08/31 17:57:33 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -107,11 +107,10 @@ Node *luaH_mainposition (const Table *t, const TValue *key) {
 ** returns the index for `key' if `key' is an appropriate key to live in
 ** the array part of the table, -1 otherwise.
 */
-static int arrayindex (const TValue *key, lua_Number lim) {
+static int arrayindex (const TValue *key) {
   if (ttisnumber(key)) {
     lua_Number n = nvalue(key);
     int k;
-    if (n <= 0 || n > lim) return -1;  /* out of range? */
     lua_number2int(k, n);
     if (cast(lua_Number, k) == nvalue(key))
       return k;
@@ -128,10 +127,9 @@ static int arrayindex (const TValue *key, lua_Number lim) {
 static int luaH_index (lua_State *L, Table *t, StkId key) {
   int i;
   if (ttisnil(key)) return -1;  /* first iteration */
-  i = arrayindex(key, t->sizearray);
-  if (0 <= i) {  /* is `key' inside array part? */
+  i = arrayindex(key);
+  if (0 < i && i <= t->sizearray)  /* is `key' inside array part? */
     return i-1;  /* yes; that's the index (corrected to C) */
-  }
   else {
     const TValue *v = luaH_get(t, key);
     if (v == &luaO_nilobject)
@@ -195,7 +193,6 @@ static void numuse (const Table *t, int *narray, int *nhash) {
   int nums[MAXBITS+1];
   int i, lg;
   int totaluse = 0;
-  lua_Number sizelimit;  /* an upper bound for the array size */
   /* count elements in array part */
   for (i=0, lg=0; lg<=MAXBITS; lg++) {  /* for each slice [2^(lg-1) to 2^lg) */
     int ttlg = twoto(lg);  /* 2^lg */
@@ -215,14 +212,11 @@ static void numuse (const Table *t, int *narray, int *nhash) {
   *narray = totaluse;  /* all previous uses were in array part */
   /* count elements in hash part */
   i = sizenode(t);
-  /* array part cannot be larger than twice the maximum number of elements */
-  sizelimit = cast(lua_Number, totaluse + i) * 2;
-  if (sizelimit >= MAXASIZE) sizelimit = MAXASIZE;
   while (i--) {
     Node *n = &t->node[i];
     if (!ttisnil(gval(n))) {
-      int k = arrayindex(gkey(n), sizelimit);
-      if (k >= 0) {  /* is `key' an appropriate array index? */
+      int k = arrayindex(gkey(n));
+      if (0 < k && k <= MAXASIZE) {  /* is `key' an appropriate array index? */
         nums[luaO_log2(k-1)+1]++;  /* count as such */
         (*narray)++;
       }
@@ -397,7 +391,8 @@ static TValue *newkey (lua_State *L, Table *t, const TValue *key) {
 ** search function for integers
 */
 const TValue *luaH_getnum (Table *t, int key) {
-  if (1 <= key && key <= t->sizearray)
+  /* (1 <= key && key <= t->sizearray) */
+  if ((unsigned int)(key-1) < (unsigned int)t->sizearray)
     return &t->array[key-1];
   else {
     lua_Number nk = cast(lua_Number, key);
