@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.13 2004/09/29 21:03:42 roberto Exp roberto $
+** $Id: luaconf.h,v 1.14 2004/10/06 18:34:47 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -123,7 +123,7 @@
 #ifdef LUA_CORE
 
 /* LUA-C API assertions */
-#define api_check(L, o)		lua_assert(o)
+#define api_check(L,o)		lua_assert(o)
 
 
 /* an unsigned integer with at least 32 bits */
@@ -179,7 +179,7 @@
 #endif
 
 /* function to convert a lua_Number to lua_Integer (with any rounding method) */
-#define lua_number2integer(i,n)		lua_number2int(i,n)
+#define lua_number2integer(i,n)		lua_number2int((i), (n))
 
 
 /* function to convert a lua_Number to a string */
@@ -251,7 +251,7 @@
 
 
 /* allows user-specific initialization on new threads */
-#define lua_userstateopen(l)	/* empty */
+#define lua_userstateopen(L)	/* empty */
 
 
 #endif
@@ -291,13 +291,24 @@
 
 /*
 ** by default, gcc does not get `tmpname'
-*/ 
+*/
 #ifdef __GNUC__
 #define USE_TMPNAME	0
 #else
 #define USE_TMPNAME	1 
 #endif
 
+
+/*
+** Configuration for loadlib
+*/
+#if defined(__linux) || defined(sun) || defined(sgi) || defined(BSD)
+#define USE_DLOPEN
+#elif defined(_WIN32)
+#define USE_DLL
+#elif defined(__APPLE__) && defined(__MACH__)
+#define USE_DYLD
+#endif
 
 
 #endif
