@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.21 1998/06/18 16:57:03 roberto Exp roberto $
+** $Id: llex.c,v 1.22 1998/06/19 18:47:06 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -419,7 +419,7 @@ int luaX_lex (LexState *LS) {
             if (!isdigit(LS->current))
               luaX_error(LS, "invalid numeral format");
             do {
-              e = 10.0*e + (LS->current-'0');
+              e = 10*e + (LS->current-'0');
               save_and_next(LS);
             } while (isdigit(LS->current));
 	    for (ea=neg?0.1:10.0; e>0; e>>=1)
