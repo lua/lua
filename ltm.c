@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.101 2002/08/30 19:09:21 roberto Exp roberto $
+** $Id: ltm.c,v 1.102 2002/09/19 20:12:47 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -19,7 +19,7 @@
 
 const char *const luaT_typenames[] = {
   "nil", "boolean", "userdata", "number",
-  "string", "table", "function", "userdata"
+  "string", "table", "function", "userdata", "thread"
 };
 
 

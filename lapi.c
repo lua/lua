@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.212 2002/08/30 19:09:21 roberto Exp roberto $
+** $Id: lapi.c,v 1.213 2002/09/20 17:01:24 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -112,6 +112,18 @@ LUA_API lua_CFunction lua_atpanic (lua_State *L, lua_CFunction panicf) {
   G(L)->panic = panicf;
   lua_unlock(L);
   return old;
+}
+
+
+LUA_API lua_State *lua_newthread (lua_State *L) {
+  lua_State *L1;
+  lua_lock(L);
+  L1 = luaE_newthread(L);
+  setthvalue(L->top, L1);
+  api_incr_top(L);
+  lua_unlock(L);
+  lua_userstateopen(L1);
+  return L1;
 }
 
 
@@ -319,6 +331,12 @@ LUA_API void *lua_touserdata (lua_State *L, int index) {
     case LUA_TLIGHTUSERDATA: return pvalue(o);
     default: return NULL;
   }
+}
+
+
+LUA_API lua_State *lua_tothread (lua_State *L, int index) {
+  StkId o = luaA_indexAcceptable(L, index);
+  return (o == NULL || !ttisthread(o)) ? NULL : thvalue(o);
 }
 
 

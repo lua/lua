@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.97 2002/10/08 18:46:08 roberto Exp roberto $
+** $Id: lstate.h,v 1.98 2002/10/22 17:58:14 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -32,12 +32,6 @@
 #define lua_unlock(L)	((void) 0)
 #endif
 
-/*
-** macro to allow the inclusion of user information in Lua state
-*/
-#ifndef LUA_USERSTATE
-#define LUA_USERSTATE
-#endif
 
 #ifndef lua_userstateopen
 #define lua_userstateopen(l)
@@ -124,6 +118,7 @@ typedef struct global_State {
   lua_CFunction panic;  /* to be called in unprotected errors */
   TObject _registry;
   TObject _defaultmeta;
+  struct lua_State *mainthread;
   Node dummynode[1];  /* common node array for all empty tables */
   TString *tmname[TM_N];  /* array with tag-method names */
 } global_State;
@@ -133,7 +128,7 @@ typedef struct global_State {
 ** `per thread' state
 */
 struct lua_State {
-  LUA_USERSTATE
+  CommonHeader;
   StkId top;  /* first free slot in the stack */
   global_State *l_G;
   CallInfo *ci;  /* call info for current function */
@@ -150,15 +145,29 @@ struct lua_State {
   GCObject *openupval;  /* list of open upvalues in this stack */
   struct lua_longjmp *errorJmp;  /* current error recover point */
   ptrdiff_t errfunc;  /* current error handling function (stack index) */
-  lua_State *next;  /* circular double linked list of states */
-  lua_State *previous;
 };
 
 
 #define G(L)	(L->l_G)
 
 
-void luaE_closethread (lua_State *OL, lua_State *L);
+/*
+** Union of all collectable objects
+*/
+union GCObject {
+  GCheader gch;
+  union TString ts;
+  union Udata u;
+  union Closure cl;
+  struct Table h;
+  struct Proto p;
+  struct UpVal uv;
+  struct lua_State th;  /* thread */
+};
+
+
+lua_State *luaE_newthread (lua_State *L);
+void luaE_freethread (lua_State *L, lua_State *L1);
 
 #endif
 

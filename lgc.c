@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.152 2002/10/08 18:46:08 roberto Exp roberto $
+** $Id: lgc.c,v 1.153 2002/10/22 17:58:14 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -99,6 +99,32 @@ static void markclosure (GCState *st, Closure *cl) {
 }
 
 
+static void checkstacksizes (lua_State *L, StkId max) {
+  int used = L->ci - L->base_ci;  /* number of `ci' in use */
+  if (4*used < L->size_ci && 2*BASIC_CI_SIZE < L->size_ci)
+    luaD_reallocCI(L, L->size_ci/2);  /* still big enough... */
+  used = max - L->stack;  /* part of stack in use */
+  if (4*used < L->stacksize && 2*(BASIC_STACK_SIZE+EXTRA_STACK) < L->stacksize)
+    luaD_reallocstack(L, L->stacksize/2);  /* still big enough... */
+}
+
+
+static void markstack (GCState *st, lua_State *L1) {
+  StkId o, lim;
+  CallInfo *ci;
+  markobject(st, gt(L1));
+  for (o=L1->stack; o<L1->top; o++)
+    markobject(st, o);
+  lim = o;
+  for (ci = L1->base_ci; ci <= L1->ci; ci++) {
+    lua_assert(ci->top <= L1->stack_last);
+    if (lim < ci->top) lim = ci->top;
+  }
+  for (; o<=lim; o++) setnilvalue(o);
+  checkstacksizes(L1, lim);
+}
+
+
 static void reallymarkobject (GCState *st, GCObject *o) {
   setbit(o->gch.marked, 0);  /* mark object */
   switch (o->gch.tt) {
@@ -115,46 +141,11 @@ static void reallymarkobject (GCState *st, GCObject *o) {
       st->tmark = &o->h;
       break;
     }
+    case LUA_TTHREAD: {
+      markstack(st, &o->th);
+      break;
+    }
   }
-}
-
-
-static void checkstacksizes (lua_State *L, StkId max) {
-  int used = L->ci - L->base_ci;  /* number of `ci' in use */
-  if (4*used < L->size_ci && 2*BASIC_CI_SIZE < L->size_ci)
-    luaD_reallocCI(L, L->size_ci/2);  /* still big enough... */
-  used = max - L->stack;  /* part of stack in use */
-  if (4*used < L->stacksize && 2*(BASIC_STACK_SIZE+EXTRA_STACK) < L->stacksize)
-    luaD_reallocstack(L, L->stacksize/2);  /* still big enough... */
-}
-
-
-static void traversestacks (GCState *st) {
-  lua_State *L1 = st->L;
-  do {  /* for each thread */
-    StkId o, lim;
-    CallInfo *ci;
-    if (ttisnil(gt(L1))) {  /* incomplete state? */
-      lua_assert(L1 != st->L);
-      L1 = L1->next;
-      luaE_closethread(st->L, L1->previous);  /* collect it */
-      continue;
-    }
-    markobject(st, gt(L1));
-    for (o=L1->stack; o<L1->top; o++)
-      markobject(st, o);
-    lim = o;
-    for (ci = L1->base_ci; ci <= L1->ci; ci++) {
-      lua_assert(ci->top <= L1->stack_last);
-      if (lim < ci->top) lim = ci->top;
-    }
-    for (; o<=lim; o++) setnilvalue(o);
-    checkstacksizes(L1, lim);
-    lua_assert(L1->previous->next == L1 && L1->next->previous == L1);
-    L1 = L1->next;
-  } while (L1 != st->L);
-  markobject(st, defaultmeta(L1));
-  markobject(st, registry(L1));
 }
 
 
@@ -292,6 +283,11 @@ static void freeobj (lua_State *L, GCObject *o) {
     case LUA_TFUNCTION: luaF_freeclosure(L, &o->cl); break;
     case LUA_TUPVAL: luaM_freelem(L, &o->uv); break;
     case LUA_TTABLE: luaH_free(L, &o->h); break;
+    case LUA_TTHREAD: {
+      lua_assert(&o->th != L && &o->th != G(L)->mainthread);
+      luaE_freethread(L, &o->th);
+      break;
+    }
     case LUA_TSTRING: {
       luaM_free(L, o, sizestring((&o->ts)->tsv.len));
       break;
@@ -389,13 +385,24 @@ void luaC_sweep (lua_State *L, int all) {
 }
 
 
+/* mark root set */
+static void markroot (GCState *st) {
+  lua_State *L = st->L;
+  markobject(st, defaultmeta(L));
+  markobject(st, registry(L));
+  markstack(st, G(L)->mainthread);
+  if (L != G(L)->mainthread)  /* another thread is running? */
+    reallymarkobject(st, cast(GCObject *, L));  /* cannot collect it */
+}
+
+
 static void mark (lua_State *L) {
   GCState st;
   Table *toclear;
   st.L = L;
   st.tmark = NULL;
   st.toclear = NULL;
-  traversestacks(&st); /* mark all stacks */
+  markroot(&st);
   propagatemarks(&st);  /* mark all reachable objects */
   toclear = st.toclear;  /* weak tables; to be cleared */
   st.toclear = NULL;

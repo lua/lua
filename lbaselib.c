@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.99 2002/09/16 19:49:45 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.100 2002/10/22 19:41:08 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -362,6 +362,9 @@ static int luaB_tostring (lua_State *L) {
     case LUA_TLIGHTUSERDATA:
       sprintf(buff, "userdata: %p", lua_touserdata(L, 1));
       break;
+    case LUA_TTHREAD:
+      sprintf(buff, "thread: %p", (void *)lua_tothread(L, 1));
+      break;
     case LUA_TNIL:
       lua_pushliteral(L, "nil");
       return 1;
@@ -535,26 +538,40 @@ static const luaL_reg base_funcs[] = {
 */
 
 
-static int luaB_resume (lua_State *L) {
-  lua_State *co = (lua_State *)lua_unboxpointer(L, lua_upvalueindex(1));
+static int luaB_auxresume (lua_State *L, lua_State *co) {
   int status;
-  lua_settop(L, 0);
+  int oldtop = lua_gettop(L);
   status = lua_resume(L, co);
-  if (status != 0)
-    return lua_error(L);
-  return lua_gettop(L);
+  return (status != 0) ? -1 : lua_gettop(L) - oldtop;
 }
 
 
-
-static int gc_coroutine (lua_State *L) {
-  lua_State *co = (lua_State *)lua_unboxpointer(L, 1);
-  lua_closethread(L, co);
-  return 0;
+static int luaB_coresume (lua_State *L) {
+  lua_State *co = lua_tothread(L, 1);
+  int r;
+  luaL_arg_check(L, co, 1, "coroutine/thread expected");
+  r = luaB_auxresume(L, co);
+  if (r < 0) {
+    lua_pushboolean(L, 0);
+    lua_insert(L, -2);
+    return 2;  /* return false + error message */
+  }
+  else {
+    lua_pushboolean(L, 1);
+    lua_insert(L, -(r + 1));
+    return r + 1;  /* return true + `resume' returns */
+  }
 }
 
 
-static int luaB_coroutine (lua_State *L) {
+static int luaB_auxwrap (lua_State *L) {
+  int r = luaB_auxresume(L, lua_tothread(L, lua_upvalueindex(1)));
+  if (r < 0) lua_error(L);
+  return r;
+}
+
+
+static int luaB_cocreate (lua_State *L) {
   lua_State *NL;
   int ref;
   int i;
@@ -562,20 +579,21 @@ static int luaB_coroutine (lua_State *L) {
   luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1), 1,
     "Lua function expected");
   NL = lua_newthread(L);
-  if (NL == NULL) return luaL_error(L, "unable to create new thread");
   /* move function and arguments from L to NL */
-  for (i=0; i<n; i++) {
+  for (i = 1; i <= n; i++) {
+    lua_pushvalue(L, i);
     ref = lua_ref(L, 1);
     lua_getref(NL, ref);
-    lua_insert(NL, 1);
     lua_unref(L, ref);
   }
   lua_cobegin(NL, n-1);
-  lua_boxpointer(L, NL);
-  lua_pushliteral(L, "Coroutine");
-  lua_rawget(L, LUA_REGISTRYINDEX);
-  lua_setmetatable(L, -2);
-  lua_pushcclosure(L, luaB_resume, 1);
+  return 1;
+}
+
+
+static int luaB_cowrap (lua_State *L) {
+  luaB_cocreate(L);
+  lua_pushcclosure(L, luaB_auxwrap, 1);
   return 1;
 }
 
@@ -585,22 +603,12 @@ static int luaB_yield (lua_State *L) {
 }
 
 static const luaL_reg co_funcs[] = {
-  {"create", luaB_coroutine},
+  {"create", luaB_cocreate},
+  {"wrap", luaB_cowrap},
+  {"resume", luaB_coresume},
   {"yield", luaB_yield},
   {NULL, NULL}
 };
-
-
-static void co_open (lua_State *L) {
-  luaL_opennamedlib(L, LUA_COLIBNAME, co_funcs, 0);
-  /* create metatable for coroutines */
-  lua_pushliteral(L, "Coroutine");
-  lua_newtable(L);
-  lua_pushliteral(L, "__gc");
-  lua_pushcfunction(L, gc_coroutine);
-  lua_rawset(L, -3);
-  lua_rawset(L, LUA_REGISTRYINDEX);
-}
 
 /* }====================================================== */
 
@@ -625,7 +633,7 @@ static void base_open (lua_State *L) {
 
 LUALIB_API int lua_baselibopen (lua_State *L) {
   base_open(L);
-  co_open(L);
+  luaL_opennamedlib(L, LUA_COLIBNAME, co_funcs, 0);
   lua_newtable(L);
   lua_setglobal(L, REQTAB);
   return 0;

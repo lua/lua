@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.195 2002/10/08 18:46:08 roberto Exp roberto $
+** $Id: ldo.c,v 1.196 2002/10/09 13:42:01 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -343,16 +343,22 @@ LUA_API int lua_resume (lua_State *L, lua_State *co) {
   int status;
   lua_lock(L);
   ci = co->ci;
-  if (ci == co->base_ci)  /* no activation record? ?? */
-    luaG_runerror(L, "cannot resume dead thread");
-  if (co->errorJmp != NULL)  /* ?? */
-    luaG_runerror(L, "cannot resume active thread");
-  status = luaD_rawrunprotected(co, resume, &numres);
-  if (status == 0)  
-    move_results(L, co->top - numres, co->top);
+  if (ci == co->base_ci) {  /* no activation record? ?? */
+    luaO_pushfstring(L, "cannot resume dead thread");
+    status = LUA_ERRRUN;
+  }
+  else if (co->errorJmp != NULL) {  /* ?? */
+    luaO_pushfstring(L, "cannot resume active thread");
+    status = LUA_ERRRUN;
+  }
   else {
-    setobj(L->top++, co->top - 1);  /* move error message to other stack */
-    co->ci = co->base_ci;  /* `kill' thread */
+    status = luaD_rawrunprotected(co, resume, &numres);
+    if (status == 0)  
+      move_results(L, co->top - numres, co->top);
+    else {
+      setobj(L->top++, co->top - 1);  /* move error message to other stack */
+      co->ci = co->base_ci;  /* `kill' thread */
+    }
   }
   lua_unlock(L);
   return status;

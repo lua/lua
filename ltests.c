@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.136 2002/10/22 17:18:28 roberto Exp roberto $
+** $Id: ltests.c,v 1.137 2002/10/22 18:07:55 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -403,7 +403,6 @@ static int doonnewstack (lua_State *L) {
   if (status == 0)
     status = lua_pcall(L1, 0, 0, 0);
   lua_pushnumber(L, status);
-  lua_closethread(L, L1);
   return 1;
 }
 
@@ -423,7 +422,7 @@ static int d2s (lua_State *L) {
 static int newstate (lua_State *L) {
   lua_State *L1 = lua_open();
   if (L1) {
-    *cast(int **, L1) = &islocked;  /* initialize the lock */
+    lua_userstateopen(L1);  /* init lock */
     lua_pushnumber(L, (unsigned long)L1);
   }
   else
@@ -724,7 +723,7 @@ static void fim (void) {
 
 
 int luaB_opentests (lua_State *L) {
-  *cast(int **, L) = &islocked;  /* init lock */
+  lua_userstateopen(L);  /* init lock */
   lua_state = L;  /* keep first state to be opened */
   luaL_opennamedlib(L, "T", tests_funcs, 0);
   atexit(fim);

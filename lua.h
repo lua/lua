@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.158 2002/10/22 17:18:28 roberto Exp roberto $
+** $Id: lua.h,v 1.159 2002/10/22 17:21:25 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -70,6 +70,7 @@ typedef const char * (*lua_Chunkreader) (lua_State *L, void *ud, size_t *sz);
 #define LUA_TTABLE	5
 #define LUA_TFUNCTION	6
 #define LUA_TUSERDATA	7
+#define LUA_TTHREAD	8
 
 
 /* minimum Lua stack available to a C function */
@@ -104,7 +105,6 @@ typedef LUA_NUMBER lua_Number;
 LUA_API lua_State *lua_open (void);
 LUA_API void       lua_close (lua_State *L);
 LUA_API lua_State *lua_newthread (lua_State *L);
-LUA_API void       lua_closethread (lua_State *L, lua_State *t);
 
 LUA_API lua_CFunction lua_atpanic (lua_State *L, lua_CFunction panicf);
 
@@ -142,6 +142,7 @@ LUA_API const char     *lua_tostring (lua_State *L, int idx);
 LUA_API size_t          lua_strlen (lua_State *L, int idx);
 LUA_API lua_CFunction   lua_tocfunction (lua_State *L, int idx);
 LUA_API void	       *lua_touserdata (lua_State *L, int idx);
+LUA_API lua_State      *lua_tothread (lua_State *L, int idx);
 LUA_API const void     *lua_topointer (lua_State *L, int idx);
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.256 2002/09/19 20:12:47 roberto Exp roberto $
+** $Id: lvm.c,v 1.257 2002/10/08 18:46:08 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -263,22 +263,23 @@ int luaV_equalval (lua_State *L, const TObject *t1, const TObject *t2) {
   switch (ttype(t1)) {
     case LUA_TNIL: return 1;
     case LUA_TNUMBER: return nvalue(t1) == nvalue(t2);
-    case LUA_TSTRING: return tsvalue(t1) == tsvalue(t2);
     case LUA_TBOOLEAN: return bvalue(t1) == bvalue(t2);  /* true must be 1 !! */
     case LUA_TLIGHTUSERDATA: return pvalue(t1) == pvalue(t2);
-    case LUA_TFUNCTION: return clvalue(t1) == clvalue(t2);
-    case LUA_TUSERDATA:
+    case LUA_TUSERDATA: {
       if (uvalue(t1) == uvalue(t2)) return 1;
       else if ((tm = fasttm(L, uvalue(t1)->uv.metatable, TM_EQ)) == NULL &&
                (tm = fasttm(L, uvalue(t2)->uv.metatable, TM_EQ)) == NULL)
         return 0;  /* no TM */
       else break;  /* will try TM */
-    case LUA_TTABLE:
+    }
+    case LUA_TTABLE: {
       if (hvalue(t1) == hvalue(t2)) return 1;
       else if ((tm = fasttm(L, hvalue(t1)->metatable, TM_EQ)) == NULL &&
                (tm = fasttm(L, hvalue(t2)->metatable, TM_EQ)) == NULL)
         return 0;  /* no TM */
       else break;  /* will try TM */
+    }
+    default: return gcvalue(t1) == gcvalue(t2);
   }
   callTMres(L, tm, t1, t2);  /* call TM */
   return !l_isfalse(L->top);
