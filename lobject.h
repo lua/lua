@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.54 2000/03/24 17:26:08 roberto Exp roberto $
+** $Id: lobject.h,v 1.55 2000/03/24 19:49:23 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,7 @@ typedef enum {
   TAG_USERDATA  =  0, /* default tag for userdata */
   TAG_NUMBER,	/* fixed tag for numbers */
   TAG_STRING,	/* fixed tag for strings */
-  TAG_ARRAY,	/* default tag for tables (or arrays) */
+  TAG_TABLE,	/* default tag for tables */
   TAG_LPROTO,	/* fixed tag for Lua functions */
   TAG_CPROTO,	/* fixed tag for C functions */
   TAG_NIL,	/* last "pre-defined" tag */
@@ -67,7 +67,7 @@ typedef union {
   struct TString *ts;      /* TAG_STRING, TAG_USERDATA */
   struct Proto *tf;        /* TAG_LPROTO, TAG_LMARK */
   struct Closure *cl;           /* TAG_[CL]CLOSURE, TAG_[CL]CLMARK */
-  struct Hash *a;               /* TAG_ARRAY */
+  struct Hash *a;               /* TAG_TABLE */
   int i;                        /* TAG_LINE */
 } Value;
 

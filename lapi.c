@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.74 2000/03/10 18:37:44 roberto Exp roberto $
+** $Id: lapi.c,v 1.75 2000/03/20 19:14:54 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -132,7 +132,7 @@ lua_Object lua_gettable (lua_State *L) {
 lua_Object lua_rawgettable (lua_State *L) {
   lua_Object res;
   luaA_checkCargs(L, 2);
-  if (ttype(L->top-2) != TAG_ARRAY)
+  if (ttype(L->top-2) != TAG_TABLE)
     lua_error(L, "indexed expression not a table in rawgettable");
   res = luaA_putluaObject(L, luaH_get(L, avalue(L->top-2), L->top-1));
   L->top -= 2;
@@ -159,7 +159,7 @@ lua_Object lua_createtable (lua_State *L) {
   TObject o;
   luaC_checkGC(L);
   avalue(&o) = luaH_new(L, 0);
-  ttype(&o) = TAG_ARRAY;
+  ttype(&o) = TAG_TABLE;
   return luaA_putluaObject(L, &o);
 }
 
@@ -201,7 +201,7 @@ int lua_isnil (lua_State *L, lua_Object o) {
 
 int lua_istable (lua_State *L, lua_Object o) {
   UNUSED(L);
-  return (o != LUA_NOOBJECT) && (ttype(o) == TAG_ARRAY);
+  return (o != LUA_NOOBJECT) && (ttype(o) == TAG_TABLE);
 }
 
 int lua_isuserdata (lua_State *L, lua_Object o) {
@@ -342,7 +342,7 @@ void lua_settag (lua_State *L, int tag) {
   luaA_checkCargs(L, 1);
   luaT_realtag(L, tag);
   switch (ttype(L->top-1)) {
-    case TAG_ARRAY:
+    case TAG_TABLE:
       (L->top-1)->value.a->htag = tag;
       break;
     case TAG_USERDATA:
@@ -405,7 +405,7 @@ int luaA_next (lua_State *L, const Hash *t, int i) {
 
 
 int lua_next (lua_State *L, lua_Object t, int i) {
-  if (ttype(t) != TAG_ARRAY)
+  if (ttype(t) != TAG_TABLE)
     lua_error(L, "Lua API error - object is not a table in `lua_next'"); 
   i = luaA_next(L, avalue(t), i);
   top2LC(L, (i==0) ? 0 : 2);

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.11 2000/03/10 18:37:44 roberto Exp roberto $
+** $Id: ldebug.c,v 1.12 2000/03/20 19:14:54 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,7 @@
 
 
 static const lua_Type normtype[] = {  /* ORDER LUA_T */
-  TAG_USERDATA, TAG_NUMBER, TAG_STRING, TAG_ARRAY,
+  TAG_USERDATA, TAG_NUMBER, TAG_STRING, TAG_TABLE,
   TAG_LPROTO, TAG_CPROTO, TAG_NIL,
   TAG_LCLOSURE, TAG_CCLOSURE,
   TAG_LCLOSURE, TAG_CCLOSURE,   /* TAG_LCLMARK, TAG_CCLMARK */

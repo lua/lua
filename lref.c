@@ -1,5 +1,5 @@
 /*
-** $Id: lref.c,v 1.8 2000/03/03 14:58:26 roberto Exp roberto $
+** $Id: lref.c,v 1.9 2000/03/10 18:37:44 roberto Exp roberto $
 ** reference mechanism
 ** See Copyright Notice in lua.h
 */
@@ -84,7 +84,7 @@ static int ismarked (const TObject *o) {
   switch (o->ttype) {
     case TAG_STRING: case TAG_USERDATA:
       return o->value.ts->marked;
-    case TAG_ARRAY:
+    case TAG_TABLE:
       return o->value.a->marked;
     case TAG_LCLOSURE:  case TAG_CCLOSURE:
       return o->value.cl->marked;

@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.35 2000/03/03 14:58:26 roberto Exp roberto $
+** $Id: ltable.c,v 1.36 2000/03/10 18:37:44 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -32,7 +32,7 @@
 
 
 
-#define TagDefault TAG_ARRAY
+#define TagDefault TAG_TABLE
 
 
 
@@ -49,7 +49,7 @@ Node *luaH_mainposition (const Hash *t, const TObject *key) {
     case TAG_STRING: case TAG_USERDATA:
       h = tsvalue(key)->hash;
       break;
-    case TAG_ARRAY:
+    case TAG_TABLE:
       h = IntPoint(L, avalue(key));
       break;
     case TAG_LPROTO:

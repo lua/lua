@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.35 2000/03/20 19:14:54 roberto Exp roberto $
+** $Id: ltm.c,v 1.36 2000/03/27 20:08:02 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -29,7 +29,7 @@ static int luaI_checkevent (lua_State *L, const char *name, int t) {
   int e = luaL_findstring(name, luaT_eventname);
   if (e >= IM_N)
     luaL_verror(L, "event `%.50s' is deprecated", name);
-  if (e == IM_GC && t == TAG_ARRAY)
+  if (e == IM_GC && t == TAG_TABLE)
     luaL_verror(L, "event `gc' for tables is deprecated");
   if (e < 0)
     luaL_verror(L, "`%.50s' is not a valid event name", name);
@@ -46,7 +46,7 @@ static const char luaT_validevents[NUM_TAGS][IM_N] = {
   {1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* TAG_USERDATA */
   {1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},  /* TAG_NUMBER */
   {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},  /* TAG_STRING */
-  {0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* TAG_ARRAY */
+  {0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* TAG_TABLE */
   {1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* TAG_LPROTO */
   {1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* TAG_CPROTO */
   {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}   /* TAG_NIL */
@@ -106,7 +106,7 @@ int lua_copytagmethods (lua_State *L, int tagto, int tagfrom) {
 
 int luaT_effectivetag (lua_State *L, const TObject *o) {
   static const int realtag[] = {  /* ORDER LUA_T */
-    TAG_USERDATA, TAG_NUMBER, TAG_STRING, TAG_ARRAY,
+    TAG_USERDATA, TAG_NUMBER, TAG_STRING, TAG_TABLE,
     TAG_LPROTO, TAG_CPROTO, TAG_NIL,
     TAG_LPROTO, TAG_CPROTO,       /* TAG_LCLOSURE, TAG_CCLOSURE */
   };
@@ -116,7 +116,7 @@ int luaT_effectivetag (lua_State *L, const TObject *o) {
       int tag = o->value.ts->u.d.tag;
       return (tag > L->last_tag) ? TAG_USERDATA : tag;  /* deprecated test */
     }
-    case TAG_ARRAY:    return o->value.a->htag;
+    case TAG_TABLE:    return o->value.a->htag;
     default:             return realtag[t];
   }
 }
@@ -141,7 +141,7 @@ void luaT_settagmethod (lua_State *L, int t, const char *event, TObject *func) {
   if (!luaT_validevent(t, e))
     luaL_verror(L, "cannot change `%.20s' tag method for type `%.20s'%.20s",
                 luaT_eventname[e], luaO_typenames[t],
-                (t == TAG_ARRAY || t == TAG_USERDATA) ? " with default tag"
+                (t == TAG_TABLE || t == TAG_USERDATA) ? " with default tag"
                                                           : "");
   temp = *func;
   *func = *luaT_getim(L, t,e);

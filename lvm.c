@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.95 2000/03/10 18:37:44 roberto Exp roberto $
+** $Id: lvm.c,v 1.96 2000/03/17 13:09:12 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -93,7 +93,7 @@ void luaV_closure (lua_State *L, int nelems) {
 void luaV_gettable (lua_State *L, StkId top) {
   TObject *table = top-2;
   const TObject *im;
-  if (ttype(table) != TAG_ARRAY) {  /* not a table, get gettable TM */
+  if (ttype(table) != TAG_TABLE) {  /* not a table, get gettable TM */
     im = luaT_getimbyObj(L, table, IM_GETTABLE);
     if (ttype(im) == TAG_NIL) {
       L->top = top;
@@ -128,7 +128,7 @@ void luaV_gettable (lua_State *L, StkId top) {
 */
 void luaV_settable (lua_State *L, StkId t, StkId top) {
   const TObject *im;
-  if (ttype(t) != TAG_ARRAY) {  /* not a table, get `settable' method */
+  if (ttype(t) != TAG_TABLE) {  /* not a table, get `settable' method */
     L->top = top;
     im = luaT_getimbyObj(L, t, IM_SETTABLE);
     if (ttype(im) == TAG_NIL)
@@ -155,7 +155,7 @@ void luaV_settable (lua_State *L, StkId t, StkId top) {
 
 
 void luaV_rawsettable (lua_State *L, StkId t) {
-  if (ttype(t) != TAG_ARRAY)
+  if (ttype(t) != TAG_TABLE)
     lua_error(L, "indexed expression not a table");
   else {
     luaH_set(L, avalue(t), t+1, L->top-1);
@@ -291,7 +291,7 @@ void luaV_pack (lua_State *L, StkId firstelem, int nvararg, TObject *tab) {
   int i;
   Hash *htab;
   htab = avalue(tab) = luaH_new(L, nvararg+1);  /* +1 for field `n' */
-  ttype(tab) = TAG_ARRAY;
+  ttype(tab) = TAG_TABLE;
   for (i=0; i<nvararg; i++)
     luaH_setint(L, htab, i+1, firstelem+i);
   luaV_setn(L, htab, nvararg);  /* store counter in field `n' */
@@ -430,7 +430,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const Proto *tf,
         L->top = top;
         luaC_checkGC(L);
         avalue(top) = luaH_new(L, GETARG_U(i));
-        ttype(top) = TAG_ARRAY;
+        ttype(top) = TAG_TABLE;
         top++;
         break;
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.32 2000/03/03 14:58:26 roberto Exp roberto $
+** $Id: lobject.c,v 1.33 2000/03/10 18:37:44 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -41,7 +41,7 @@ int luaO_equalval (const TObject *t1, const TObject *t2) {
       return nvalue(t1) == nvalue(t2);
     case TAG_STRING: case TAG_USERDATA:
       return svalue(t1) == svalue(t2);
-    case TAG_ARRAY: 
+    case TAG_TABLE: 
       return avalue(t1) == avalue(t2);
     case TAG_LPROTO:
       return tfvalue(t1)  == tfvalue(t2);

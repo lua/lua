@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.97 2000/03/24 17:26:08 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.98 2000/03/27 20:08:02 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -380,7 +380,7 @@ void luaB_tostring (lua_State *L) {
     case TAG_STRING:
       lua_pushobject(L, o);
       return;
-    case TAG_ARRAY:
+    case TAG_TABLE:
       sprintf(buff, "table: %p", o->value.a);
       break;
     case TAG_LCLOSURE:  case TAG_CCLOSURE:
