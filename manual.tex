@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 2.5 1997/06/20 19:28:16 roberto Exp roberto $
+% $Id: manual.tex,v 2.6 1997/06/26 20:39:10 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -38,7 +38,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1997/06/20 19:28:16 $}
+\date{\small \verb$Date: 1997/06/26 20:39:10 $}
 
 \maketitle
 
@@ -142,8 +142,8 @@ as stated in the copyright notice in the front page of this manual.
 The implementation described in this manual is available
 at the following URL's:
 \begin{verbatim}
-   http://www.inf.puc-rio.br/~roberto/lua.html
-   ftp://ftp.icad.puc-rio.br/pub/lua/lua.tar.gz
+   http://www.tecgraf.puc-rio.br/lua/
+   ftp://ftp.tecgraf.puc-rio.br/pub/lua/lua.tar.gz
 \end{verbatim}
 
 
@@ -804,7 +804,7 @@ The tag method called for any specific event is selected
 according to the tag of the values involved
 in the event \see{TypesSec}.
 The function \IndexVerb{settagmethod} changes the tag method
-associated with a given pair $<tag, event>$.
+associated with a given pair \M{<tag, event>}.
 Its first parameter is the tag, the second the event name
 (a string, see below),
 and the third parameter is the new method (a function),
@@ -1785,7 +1785,7 @@ Returns the old error handler.
 
 \subsubsection*{\ff {\tt settagmethod (tag, event, newmethod)}}
 \Deffunc{settagmethod}
-This function sets a new tag method to the given pair $<tag, event>$.
+This function sets a new tag method to the given pair \M{<tag, event>}.
 It returns the old method.
 If \verb|newmethod| is \nil,
 it restores the default behavior for the given event.
@@ -1793,7 +1793,7 @@ it restores the default behavior for the given event.
 \subsubsection*{\ff {\tt gettagmethod (tag, event)}}
 \Deffunc{gettagmethod}
 This function returns the current tag method
-for a given pair $<tag, event>$.
+for a given pair \M{<tag, event>}.
 
 
 \subsection{String Manipulation}
