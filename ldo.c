@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.217 2003/04/03 13:35:34 roberto Exp roberto $
+** $Id: ldo.c,v 1.218 2003/05/13 19:22:19 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -269,9 +269,6 @@ StkId luaD_precall (lua_State *L, StkId func) {
     if (L->hookmask & LUA_MASKCALL)
       luaD_callhook(L, LUA_HOOKCALL, -1);
     lua_unlock(L);
-#ifdef LUA_COMPATUPVALUES
-    lua_pushupvalues(L);
-#endif
     n = (*clvalue(L->base - 1)->c.f)(L);  /* do the actual call */
     lua_lock(L);
     return L->top - n;
