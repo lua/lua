@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.13 1998/06/19 16:14:09 roberto Exp $
+** $Id: lobject.c,v 1.14 1998/12/27 20:25:20 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -40,9 +40,7 @@ int luaO_redimension (int oldsize)
 }
 
 
-int luaO_equalObj (TObject *t1, TObject *t2)
-{
-  if (ttype(t1) != ttype(t2)) return 0;
+int luaO_equalval (TObject *t1, TObject *t2) {
   switch (ttype(t1)) {
     case LUA_T_NIL: return 1;
     case LUA_T_NUMBER: return nvalue(t1) == nvalue(t2);

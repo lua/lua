@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.23 1998/12/01 19:09:47 roberto Exp $
+** $Id: lobject.h,v 1.24 1998/12/27 20:25:20 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -193,7 +193,9 @@ extern char *luaO_typenames[];
 
 extern TObject luaO_nilobject;
 
-int luaO_equalObj (TObject *t1, TObject *t2);
+#define luaO_equalObj(t1,t2)	((ttype(t1) != ttype(t2)) ? 0 \
+                                      : luaO_equalval(t1,t2))
+int luaO_equalval (TObject *t1, TObject *t2);
 int luaO_redimension (int oldsize);
 void luaO_insertlist (GCnode *root, GCnode *node);
 double luaO_str2d (char *s);
