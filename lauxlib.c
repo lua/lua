@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.11 1998/06/18 16:57:03 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.12 1998/06/19 16:14:09 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -27,10 +27,11 @@ int luaL_findstring (char *name, char *list[]) {
   return -1;  /* name not found */
 }
 
-void luaL_argerror (int numarg, char *extramsg)
-{
+void luaL_argerror (int numarg, char *extramsg) {
+  lua_Function f = lua_stackedfunction(0);
   char *funcname;
-  lua_getobjname(lua_stackedfunction(0), &funcname);
+  lua_getobjname(f, &funcname);
+  numarg -= lua_nups(f);
   if (funcname == NULL)
     funcname = "???";
   if (extramsg == NULL)

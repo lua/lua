@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.23 1998/08/24 20:14:56 roberto Exp roberto $
+** $Id: liolib.c,v 1.24 1998/08/30 20:25:24 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -284,8 +284,8 @@ static void io_seek (void) {
   FILE *f = getfile(FIRSTARG-1+1);
   int op = luaL_findstring(luaL_opt_string(FIRSTARG-1+2, "cur"), modenames);
   long offset = luaL_opt_number(FIRSTARG-1+3, 0);
-  luaL_arg_check(f, 1, "invalid file handler");
-  luaL_arg_check(op != -1, 2, "invalid mode");
+  luaL_arg_check(f, FIRSTARG-1+1, "invalid file handler");
+  luaL_arg_check(op != -1, FIRSTARG-1+2, "invalid mode");
   op = fseek(f, offset, mode[op]);
   if (op)
     pushresult(0);  /* error */
@@ -296,7 +296,7 @@ static void io_seek (void) {
 
 static void io_flush (void) {
   FILE *f = getfile(FIRSTARG);
-  luaL_arg_check(f || lua_getparam(FIRSTARG) == LUA_NOOBJECT, 1,
+  luaL_arg_check(f || lua_getparam(FIRSTARG) == LUA_NOOBJECT, FIRSTARG,
                  "invalid file handler");
   pushresult(fflush(f) == 0);
 }

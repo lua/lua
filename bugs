@@ -31,7 +31,7 @@ Tue Jan 27 17:12:36 EDT 1998
 
 ** lstring.c / ltable.c
 Wed Jan 28 14:48:12 EDT 1998
->> tables can become full of "emptys" slots, and keep growing without limits.
+>> tables can become full of "empty" slots, and keep growing without limits.
 
 ** lstrlib.c
 Mon Mar  9 15:26:09 EST 1998
@@ -41,3 +41,10 @@ Mon Mar  9 15:26:09 EST 1998
 Mon May 18 19:20:00 EST 1998
 >> arguments for "format" 'x', 'X', 'o' and 'u' must be unsigned int.
 
+
+--- Version 3.1
+
+** liolib.c / lauxlib.c
+Mon Sep  7 15:57:02 EST 1998
+>> function "luaL_argerror" prints wrong argument number (from a user's point
+of view) when functions have upvalues.
