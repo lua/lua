@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.6 1997/09/26 15:02:26 roberto Exp roberto $
+** $Id: lvm.c,v 1.7 1997/10/01 20:05:34 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -570,51 +570,51 @@ StkId luaV_execute (Closure *cl, StkId base)
         break;
 
       case ONTJMP:
-        if (ttype(luaD_stack.top-1) != LUA_T_NIL) pc += *pc;
-        else { pc++; luaD_stack.top--; }
+        aux = *pc++;
+        if (ttype(luaD_stack.top-1) != LUA_T_NIL) pc += aux;
+        else luaD_stack.top--;
         break;
 
       case ONFJMP:
-        if (ttype(luaD_stack.top-1) == LUA_T_NIL) pc += *pc;
-        else { pc++; luaD_stack.top--; }
-        break;
-
-      case JMPB:
-        pc += *pc;
+        aux = *pc++;
+        if (ttype(luaD_stack.top-1) == LUA_T_NIL) pc += aux;
+        else luaD_stack.top--;
         break;
 
       case JMP:
-        pc += get_word(pc);
-        break;
+        aux = next_word(pc); goto jmp;
 
-      case IFFJMPB:
-        if (ttype(--luaD_stack.top) == LUA_T_NIL) pc += *pc;
-        else pc++;
+      case JMPB:
+        aux = *pc++;
+      jmp:
+        pc += aux;
         break;
 
       case IFFJMP:
-        if (ttype(--luaD_stack.top) == LUA_T_NIL) pc += get_word(pc);
-        else skip_word(pc);
-        break;
+        aux = next_word(pc); goto iffjmp;
 
-      case IFTUPJMPB:
-        if (ttype(--luaD_stack.top) != LUA_T_NIL) pc -= *pc;
-        else pc++;
+      case IFFJMPB:
+        aux = *pc++;
+      iffjmp:
+        if (ttype(--luaD_stack.top) == LUA_T_NIL) pc += aux;
         break;
 
       case IFTUPJMP:
-        if (ttype(--luaD_stack.top) != LUA_T_NIL) pc -= get_word(pc);
-        else skip_word(pc);
-        break;
+        aux = next_word(pc); goto iftupjmp;
 
-      case IFFUPJMPB:
-        if (ttype(--luaD_stack.top) == LUA_T_NIL) pc -= *pc;
-        else pc++;
+      case IFTUPJMPB:
+        aux = *pc++;
+      iftupjmp:
+        if (ttype(--luaD_stack.top) != LUA_T_NIL) pc -= aux;
         break;
 
       case IFFUPJMP:
-        if (ttype(--luaD_stack.top) == LUA_T_NIL) pc -= get_word(pc);
-        else skip_word(pc);
+        aux = next_word(pc); goto iffupjmp;
+
+      case IFFUPJMPB:
+        aux = *pc++;
+      iffupjmp:
+        if (ttype(--luaD_stack.top) == LUA_T_NIL) pc -= aux;
         break;
 
       case CLOSURE:

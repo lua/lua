@@ -1,6 +1,6 @@
 %{
 /*
-** $Id: lua.stx,v 1.6 1997/09/26 15:02:26 roberto Exp roberto $
+** $Id: lua.stx,v 1.7 1997/10/01 20:05:34 roberto Exp roberto $
 ** Syntax analizer and code generator
 ** See Copyright Notice in lua.h
 */
@@ -132,31 +132,6 @@ static void code_word (int n)
   check_pc(2);
   currState->pc += 2;
   code_word_at(currState->pc-2, n);
-}
-
-
-static int fix_opcode (int pc, OpCode op, int n)
-{
-  if (n <= 255) {
-    currState->f->code[pc] = op;
-    currState->f->code[pc+1] = n;
-    return 0;
-  }
-  else {
-    check_pc(1);  /* open space */
-    movecode_up(pc+1, pc, currState->pc-pc);
-    currState->pc++;
-    currState->f->code[pc] = op+1;  /* opcode must be word variant */
-    code_word_at(pc+1, n);
-    return 1;
-  }
-}
-
-static int fix_jump (int pc, OpCode op, int n)
-{
-  n -= pc+1;  /* jump is relative to position following jump opcode */
-  if (n > 255) n++;  /* jump must be 1 bigger */
-  return fix_opcode(pc, op, n);
 }
 
 
@@ -501,6 +476,39 @@ static int lua_codestore (int i, int left)
 }
 
 
+static int fix_opcode (int pc, OpCode op, int n)
+{
+  if (n <= 255) {
+    currState->f->code[pc] = op;
+    currState->f->code[pc+1] = n;
+    return 0;
+  }
+  else {
+    check_pc(1);  /* open space */
+    movecode_up(pc+1, pc, currState->pc-pc);
+    currState->pc++;
+    currState->f->code[pc] = op+1;  /* opcode must be word variant */
+    code_word_at(pc+1, n);
+    return 1;
+  }
+}
+
+
+static int fix_jump (int pc, OpCode op, int n)
+{
+  /* jump is relative to position following jump instruction */
+  return fix_opcode(pc, op, n-(pc+JMPSIZE));
+}
+
+
+static void fix_upjmp (OpCode op, int pos)
+{
+  int delta = currState->pc+JMPSIZE - pos;  /* jump is relative */
+  if (delta > 255) delta++;
+  code_opborw(op, delta, 0);
+}
+
+
 static void codeIf (int thenAdd, int elseAdd)
 {
   int elseinit = elseAdd+JMPSIZE;
@@ -516,7 +524,7 @@ static void codeIf (int thenAdd, int elseAdd)
 
 static void code_shortcircuit (OpCode op, int pos)
 {
-  int dist = currState->pc - (pos+1);
+  int dist = currState->pc - (pos+JMPSIZE);
   if (dist > 255)
     luaY_error("and/or expression too long");
   currState->f->code[pos] = op;
@@ -576,7 +584,6 @@ static void init_func (void)
   luaY_codedebugline(luaX_linenumber);
   currState->f->lineDefined = luaX_linenumber;
 }
-
 
 
 static TProtoFunc *close_func (void)
@@ -681,12 +688,13 @@ stat   : IF cond THEN block SaveWord elsepart END
                 &currState->f->code[$2], expsize);
 	 movecode_down($2, $3, currState->pc-$2);
 	 newpos += fix_jump($2, JMPB, currState->pc-expsize);
-	 code_opborw(IFTUPJMPB, currState->pc+1 - newpos, 0);
+	 fix_upjmp(IFTUPJMPB, newpos);
        }}
 
        | REPEAT GetPC block UNTIL expr1
        {
-         code_opborw(IFFUPJMPB, currState->pc+1 - $2, -1);
+	 fix_upjmp(IFFUPJMPB, $2);
+	 deltastack(-1);  /* pops condition */
        }
 
        | varlist1 '=' exprlist1
