@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.33 1995/02/02 20:05:37 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.34 1995/02/06 19:35:09 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -184,7 +184,9 @@ static int lua_tostring (Object *obj)
 */
 static void adjust_top (StkId newtop)
 {
-  Object *nt = stack+newtop;
+  Object *nt;
+  lua_checkstack(newtop);
+  nt = stack+newtop;
   while (top < nt) tag(top++) = LUA_T_NIL;
   top = nt;  /* top could be bigger than newtop */
 }
