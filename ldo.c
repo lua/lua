@@ -43,8 +43,15 @@ void luaD_init (lua_State *L, int stacksize) {
   stacksize += EXTRA_STACK;
   L->stack = luaM_newvector(L, stacksize, TObject);
   L->stacksize = stacksize;
-  L->top = L->basefunc.base = L->stack + RESERVED_STACK_PREFIX;
+  L->top = L->stack + RESERVED_STACK_PREFIX;
   restore_stack_limit(L);
+  luaM_reallocvector(L, L->base_ci, 0, 20, CallInfo);
+  L->ci = L->base_ci;
+  L->ci->base = L->top;
+  L->ci->savedpc = NULL;
+  L->ci->pc = NULL;
+  L->size_ci = 20;
+  L->end_ci = L->base_ci + L->size_ci;
 }
 
 
@@ -98,48 +105,38 @@ void luaD_lineHook (lua_State *L, int line, lua_Hook linehook) {
   if (L->allowhooks) {
     lua_Debug ar;
     ar.event = "line";
-    ar._ci = L->ci;
+    ar._ci = L->ci - L->base_ci;
     ar.currentline = line;
     dohook(L, &ar, linehook);
   }
 }
 
 
-static void luaD_callHook (lua_State *L, lua_Hook callhook,
-                           const char *event) {
+void luaD_callHook (lua_State *L, lua_Hook callhook, const char *event) {
   if (L->allowhooks) {
     lua_Debug ar;
     ar.event = event;
-    ar._ci = L->ci;
-    L->ci->pc = NULL;  /* function is not active */
+    ar._ci = L->ci - L->base_ci;
     dohook(L, &ar, callhook);
   }
 }
 
 
-static StkId callCclosure (lua_State *L, const struct CClosure *cl) {
-  int n;
-  luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
-  lua_unlock(L);
-#if LUA_COMPATUPVALUES
-  lua_pushupvalues(L);
-#endif
-  n = (*cl->f)(L);  /* do the actual call */
-  lua_lock(L);
-  return L->top - n;  /* return index of first result */
+#define newci(L)	((++L->ci == L->end_ci) ? growci(L) : L->ci)
+
+static CallInfo *growci (lua_State *L) {
+  lua_assert(L->ci == L->end_ci);
+  luaM_reallocvector(L, L->base_ci, L->size_ci, 2*L->size_ci, CallInfo);
+  L->ci = L->base_ci + L->size_ci;
+  L->size_ci *= 2;
+  L->end_ci = L->base_ci + L->size_ci;
+  return L->ci;
 }
 
 
-/*
-** Call a function (C or Lua). The function to be called is at *func.
-** The arguments are on the stack, right after the function.
-** When returns, all the results are on the stack, starting at the original
-** function position.
-*/ 
-void luaD_call (lua_State *L, StkId func) {
-  lua_Hook callhook;
-  StkId firstResult;
-  CallInfo ci;
+StkId luaD_precall (lua_State *L, StkId func) {
+  CallInfo *ci;
+  int n;
   if (ttype(func) != LUA_TFUNCTION) {
     /* `func' is not a function; check the `function' tag method */
     const TObject *tm = luaT_gettmbyobj(L, func, TM_CALL);
@@ -149,23 +146,54 @@ void luaD_call (lua_State *L, StkId func) {
     setobj(func, tm);  /* tag method is the new function to be called */
   }
   lua_assert(ttype(func) == LUA_TFUNCTION);
-  ci.prev = L->ci;  /* chain new callinfo */
-  L->ci = &ci;
-  ci.base = func+1;
-  callhook = L->callhook;
-  if (callhook)
-    luaD_callHook(L, callhook, "call");
-  firstResult = (clvalue(func)->c.isC ?
-                        callCclosure(L, &clvalue(func)->c) :
-                        luaV_execute(L, &clvalue(func)->l, func+1));
-  if (callhook)  /* same hook that was active at entry */
-    luaD_callHook(L, callhook, "return");
-  L->ci = ci.prev;  /* unchain callinfo */
-  /* move results to `func' (to erase parameters and function) */
-  while (firstResult < L->top)
-    setobj(func++, firstResult++);
-  L->top = func;
+  ci = newci(L);
+  ci->base = func+1;
+  ci->savedpc = NULL;
+  ci->pc = NULL;
+  if (L->callhook)
+    luaD_callHook(L, L->callhook, "call");
+  if (!clvalue(func)->c.isC) return NULL;
+  /* if is a C function, call it */
+  luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
+  lua_unlock(L);
+#if LUA_COMPATUPVALUES
+  lua_pushupvalues(L);
+#endif
+  n = (*clvalue(func)->c.f)(L);  /* do the actual call */
+  lua_lock(L);
+  return L->top - n;
+}
+
+
+void luaD_poscall (lua_State *L, int wanted, StkId firstResult) { 
+  StkId res;
+  if (L->callhook)
+    luaD_callHook(L, L->callhook, "return");
+  res = L->ci->base - 1;  /* `func' = final position of 1st result */
+  L->ci--;
+  /* move results to correct place */
+  while (wanted != 0 && firstResult < L->top) {
+    setobj(res++, firstResult++);
+    wanted--;
+  }
+  while (wanted-- > 0)
+    setnilvalue(res++);
+  L->top = res;
   luaC_checkGC(L);
+}
+
+
+/*
+** Call a function (C or Lua). The function to be called is at *func.
+** The arguments are on the stack, right after the function.
+** When returns, all the results are on the stack, starting at the original
+** function position.
+*/ 
+void luaD_call (lua_State *L, StkId func, int nResults) {
+  StkId firstResult = luaD_precall(L, func);
+  if (firstResult == NULL)  /* is a Lua function? */
+    firstResult = luaV_execute(L, &clvalue(func)->l, func+1);  /* call it */
+  luaD_poscall(L, nResults, firstResult);
 }
 
 
@@ -179,9 +207,7 @@ struct CallS {  /* data to `f_call' */
 
 static void f_call (lua_State *L, void *ud) {
   struct CallS *c = cast(struct CallS *, ud);
-  luaD_call(L, c->func);
-  if (c->nresults != LUA_MULTRET)
-    luaD_adjusttop(L, c->func + c->nresults);
+  luaD_call(L, c->func, c->nresults);
 }
 
 
@@ -291,7 +317,7 @@ struct lua_longjmp {
   jmp_buf b;
   struct lua_longjmp *previous;
   volatile int status;  /* error code */
-  CallInfo *ci;  /* call info of active function that set protection */
+  int ci;  /* index of call info of active function that set protection */
   StkId top;  /* top stack when protection was set */
   int allowhooks;  /* `allowhook' state when protection was set */
 };
@@ -307,8 +333,7 @@ static void message (lua_State *L, const char *s) {
     incr_top;
     setsvalue(top+1, luaS_new(L, s));
     incr_top;
-    luaD_call(L, top);
-    L->top = top;
+    luaD_call(L, top, 0);
   }
 }
 
@@ -337,7 +362,7 @@ void luaD_breakrun (lua_State *L, int errcode) {
 
 int luaD_runprotected (lua_State *L, void (*f)(lua_State *, void *), void *ud) {
   struct lua_longjmp lj;
-  lj.ci = L->ci;
+  lj.ci = L->ci - L->base_ci;
   lj.top = L->top;
   lj.allowhooks = L->allowhooks;
   lj.status = 0;
@@ -346,7 +371,7 @@ int luaD_runprotected (lua_State *L, void (*f)(lua_State *, void *), void *ud) {
   if (setjmp(lj.b) == 0)
     (*f)(L, ud);
   else {  /* an error occurred: restore the state */
-    L->ci = lj.ci;
+    L->ci = L->base_ci + lj.ci;
     L->top = lj.top;
     L->allowhooks = lj.allowhooks;
     restore_stack_limit(L);

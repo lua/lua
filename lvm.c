@@ -97,14 +97,9 @@ static void callTM (lua_State *L, const TObject *f,
     setobj(base+3, p3);  /* 3th argument */
     L->top++;
   }
-  luaD_call(L, base);
+  luaD_call(L, base, (result ? 1 : 0));
   if (result) {  /* need a result? */
-    if (L->top == base) {  /* are there valid results? */
-      setnilvalue(result);  /* function had no results */
-    }
-    else {
-      setobj(result, base);  /* get first result */
-    }
+    setobj(result, base);  /* get it */
   }
   L->top = base;  /* restore top */
 }
@@ -140,7 +135,7 @@ void luaV_gettable (lua_State *L, StkId t, TObject *key, StkId res) {
   if (ttype(tm) == LUA_TFUNCTION)
     callTM(L, tm, t, key, NULL, res);
   else {
-    t = tm;
+    t = (StkId)tm;  /* ?? */
     goto init;  /* return luaV_gettable(L, tm, key, res); */
   }
 }
@@ -169,7 +164,7 @@ void luaV_settable (lua_State *L, StkId t, TObject *key, StkId val) {
   if (ttype(tm) == LUA_TFUNCTION)
     callTM(L, tm, t, key, val, NULL);
   else {
-    t = tm;
+    t = (StkId)tm;  /* ?? */
     goto init;  /* luaV_settable(L, tm, key, val); */
   }
 }
@@ -311,15 +306,15 @@ static void powOp (lua_State *L, StkId ra, StkId rb, StkId rc) {
 ** some macros for common tasks in `luaV_execute'
 */
 
-#define runtime_check(L, c)	{ if (!(c)) return L->top; }
+#define runtime_check(L, c)	{ if (!(c)) return 0; }
 
 #define RA(i)	(base+GETARG_A(i))
 #define RB(i)	(base+GETARG_B(i))
 #define RC(i)	(base+GETARG_C(i))
 #define RKC(i)	((GETARG_C(i) < MAXSTACK) ? \
 			base+GETARG_C(i) : \
-			tf->k+GETARG_C(i)-MAXSTACK)
-#define KBc(i)	(tf->k+GETARG_Bc(i))
+			cl->p->k+GETARG_C(i)-MAXSTACK)
+#define KBc(i)	(cl->p->k+GETARG_Bc(i))
 
 #define Arith(op, optm)	{ \
   const TObject *b = RB(i); const TObject *c = RKC(i);		\
@@ -332,6 +327,16 @@ static void powOp (lua_State *L, StkId ra, StkId rb, StkId rc) {
 }
 
 
+#define luaV_poscall(L,c,f) \
+  if (c != NO_REG) { \
+    luaD_poscall(L, c, f); \
+    L->top = base + cl->p->maxstacksize; \
+  } \
+  else { \
+    luaD_poscall(L, LUA_MULTRET, f); \
+  }
+
+
 #define dojump(pc, i)	((pc) += GETARG_sBc(i))
 
 /*
@@ -339,17 +344,18 @@ static void powOp (lua_State *L, StkId ra, StkId rb, StkId rc) {
 ** Returns n such that the results are between [n,top).
 */
 StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
-  const Proto *const tf = cl->p;
   const Instruction *pc;
   lua_Hook linehook;
-  if (tf->is_vararg)  /* varargs? */
-    adjust_varargs(L, base, tf->numparams);
-  if (base > L->stack_last - tf->maxstacksize)
+ reinit:
+  lua_assert(L->ci->savedpc == NULL);
+  if (cl->p->is_vararg)  /* varargs? */
+    adjust_varargs(L, base, cl->p->numparams);
+  if (base > L->stack_last - cl->p->maxstacksize)
     luaD_stackerror(L);
-  luaD_adjusttop(L, base + tf->maxstacksize);
-  pc = tf->code;
+  luaD_adjusttop(L, base + cl->p->maxstacksize);
   L->ci->pc = &pc;
-  linehook = L->linehook;
+  linehook = L->ci->linehook = L->linehook;
+  pc = cl->p->code;
   /* main loop of interpreter */
   for (;;) {
     const Instruction i = *pc++;
@@ -528,25 +534,44 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
         break;
       }
       case OP_CALL: {
-        int c;
+        StkId firstResult;
         int b = GETARG_B(i);
-        if (b != NO_REG)
-          L->top = ra+b+1;
-        luaD_call(L, ra);
-        c = GETARG_C(i);
-        if (c != NO_REG) {
-          while (L->top < ra+c) setnilvalue(L->top++);
-          L->top = base + tf->maxstacksize;
+        if (b != NO_REG) L->top = ra+b+1;
+        /* else previous instruction set top */
+        firstResult = luaD_precall(L, ra);
+        if (firstResult) {
+          /* it was a C function (`precall' called it); adjust results */
+          luaV_poscall(L, GETARG_C(i), firstResult);
+        }
+        else {  /* it is a Lua function: `call' it */
+          CallInfo *ci = L->ci;
+          (ci-1)->savedpc = pc;
+          base = ci->base;
+          cl = &clvalue(base - 1)->l;
+          goto reinit;
         }
         break;
       }
       case OP_RETURN: {
+        CallInfo *ci;
         int b;
         luaF_close(L, base);
         b = GETARG_B(i);
-        if (b != NO_REG)
-          L->top = ra+b;
-        return ra;
+        if (b != NO_REG) L->top = ra+b;
+        ci = L->ci - 1;
+        if (ci->savedpc == NULL)
+          return ra;
+        else {  /* previous function is Lua: continue its execution */
+          lua_assert(ttype(ci->base-1) == LUA_TFUNCTION);
+          base = ci->base;  /* restore previous values */
+          linehook = ci->linehook;
+          cl = &clvalue(base - 1)->l;
+          pc = ci->savedpc;
+          ci->savedpc = NULL;
+          lua_assert(GET_OPCODE(*(pc-1)) == OP_CALL);
+          luaV_poscall(L, GETARG_C(*(pc-1)), ra);
+        }
+        break;
       }
       case OP_FORPREP: {
         if (luaV_tonumber(ra, ra) == NULL)
@@ -623,7 +648,7 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
         Closure *ncl;
         int nup, j;
         luaV_checkGC(L, L->top);
-        p = tf->p[GETARG_Bc(i)];
+        p = cl->p->p[GETARG_Bc(i)];
         nup = p->nupvalues;
         ncl = luaF_newLclosure(L, nup);
         ncl->l.p = p;
