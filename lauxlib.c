@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.75 2002/06/18 15:19:27 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.76 2002/06/25 19:15:21 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -272,17 +272,20 @@ LUALIB_API void luaL_buffinit (lua_State *L, luaL_Buffer *B) {
 LUALIB_API int luaL_ref (lua_State *L, int t) {
   int ref;
   lua_rawgeti(L, t, 0);  /* get first free element */
-  ref = (int)lua_tonumber(L, -1);
+  ref = (int)lua_tonumber(L, -1);  /* ref = t[0] */
   lua_pop(L, 1);  /* remove it from stack */
   if (ref != 0) {  /* any free element? */
     lua_rawgeti(L, t, ref);  /* remove it from list */
-    lua_rawseti(L, t, 0);
+    lua_rawseti(L, t, 0);  /* (that is, t[0] = t[ref]) */
   }
   else {  /* no free elements */
-    ref = lua_getn(L, t) + 1;  /* use next `n' */
     lua_pushliteral(L, "n");
+    lua_pushvalue(L, -1);
+    lua_rawget(L, t);  /* get t.n */
+    ref = (int)lua_tonumber(L, -1) + 1;  /* ref = t.n + 1 */
+    lua_pop(L, 1);  /* pop t.n */
     lua_pushnumber(L, ref);
-    lua_rawset(L, t);  /* n = n+1 */
+    lua_rawset(L, t);  /* t.n = t.n + 1 */
   }
   lua_rawseti(L, t, ref);
   return ref;
@@ -292,9 +295,9 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
 LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
   if (ref >= 0) {
     lua_rawgeti(L, t, 0);
+    lua_rawseti(L, t, ref);  /* t[ref] = t[0] */
     lua_pushnumber(L, ref);
-    lua_rawseti(L, t, 0);
-    lua_rawseti(L, t, ref);
+    lua_rawseti(L, t, 0);  /* t[0] = ref */
   }
 }
 
