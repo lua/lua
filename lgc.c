@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.161 2002/11/21 15:46:20 roberto Exp roberto $
+** $Id: lgc.c,v 1.162 2002/11/21 17:19:11 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -470,7 +470,7 @@ static void mark (lua_State *L) {
   marktmu(&st);  /* mark `preserved' userdata */
   propagatemarks(&st);  /* remark, to propagate `preserveness' */
   cleartablekeys(wkv);
-  /* `propagatemarks' may reborne some weak tables; clear them too */
+  /* `propagatemarks' may resuscitate some weak tables; clear them too */
   cleartablekeys(st.wk);
   cleartablevalues(st.wv);
   cleartablekeys(st.wkv);

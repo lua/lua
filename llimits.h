@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.48 2002/11/22 16:35:20 roberto Exp roberto $
+** $Id: llimits.h,v 1.49 2002/11/22 17:16:52 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -57,7 +57,7 @@ typedef long ls_nstr;
 typedef long ls_count;
 
 
-/* chars used as small naturals (so that `char' is reserved for characteres) */
+/* chars used as small naturals (so that `char' is reserved for characters) */
 typedef unsigned char lu_byte;
 
 
@@ -83,7 +83,7 @@ typedef LUSER_ALIGNMENT_T L_Umaxalign;
 #endif
 
 
-/* result of `usual argument convertion' over lua_Number */
+/* result of `usual argument conversion' over lua_Number */
 #ifndef LUA_UACNUMBER
 typedef double l_uacNumber;
 #else

@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.107 2002/11/14 15:41:38 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.108 2002/11/18 11:20:01 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -78,7 +78,7 @@ static int luaB_error (lua_State *L) {
   int level = luaL_optint(L, 2, 1);
   luaL_checkany(L, 1);
   if (!lua_isstring(L, 1) || level == 0)
-    lua_pushvalue(L, 1);  /* propagate error mesage without changes */
+    lua_pushvalue(L, 1);  /* propagate error message without changes */
   else {  /* add extra information */
     luaL_where(L, level);
     lua_pushvalue(L, 1);
@@ -440,7 +440,7 @@ static const char *getpath (lua_State *L) {
 
 static const char *pushnextpath (lua_State *L, const char *path) {
   const char *l;
-  if (*path == '\0') return NULL;  /* no more pathes */
+  if (*path == '\0') return NULL;  /* no more paths */
   if (*path == LUA_PATH_SEP) path++;  /* skip separator */
   l = strchr(path, LUA_PATH_SEP);  /* find next separator */
   if (l == NULL) l = path+strlen(path);
