@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.36 2005/03/22 16:04:29 roberto Exp roberto $
+** $Id: lapi.c,v 2.37 2005/04/04 18:12:51 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -88,7 +88,7 @@ static Table *getcurrenv (lua_State *L) {
 
 void luaA_pushobject (lua_State *L, const TValue *o) {
   setobj2s(L, L->top, o);
-  incr_top(L);
+  api_incr_top(L);
 }
 
 
@@ -822,9 +822,9 @@ static void f_Ccall (lua_State *L, void *ud) {
   cl = luaF_newCclosure(L, 0, getcurrenv(L));
   cl->c.f = c->func;
   setclvalue(L, L->top, cl);  /* push function */
-  incr_top(L);
+  api_incr_top(L);
   setpvalue(L->top, c->ud);  /* push only argument */
-  incr_top(L);
+  api_incr_top(L);
   luaD_call(L, L->top - 2, 0);
 }
 
