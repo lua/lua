@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.27 1999/12/14 18:31:20 roberto Exp roberto $
+** $Id: lobject.c,v 1.28 1999/12/23 18:19:57 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -16,7 +16,7 @@
 const char *const luaO_typenames[] = { /* ORDER LUA_T */
     "userdata", "number", "string", "table", "function", "function", "nil",
     "function", "function", "function", "function", "function", "function",
-    "line", NULL
+    "line", "global", "local", "field", NULL
 };
 
 

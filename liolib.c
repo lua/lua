@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.53 1999/12/27 13:04:53 roberto Exp roberto $
+** $Id: liolib.c,v 1.54 1999/12/28 11:52:49 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -546,8 +546,11 @@ static void errorfb (lua_State *L) {
       break;  /* buffer is full */
     }
     switch (*lua_getobjname(L, func, &name)) {
-      case 'g':
+      case 'g':  case 'l':
         sprintf(buff+strlen(buff), "function `%.50s'", name);
+        break;
+      case 'f':
+        sprintf(buff+strlen(buff), "method `%.50s'", name);
         break;
       case 't':
         sprintf(buff+strlen(buff), "`%.50s' tag method", name);

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.61 1999/12/27 17:33:22 roberto Exp roberto $
+** $Id: ldo.c,v 1.62 1999/12/29 16:31:15 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -114,8 +114,8 @@ void luaD_lineHook (lua_State *L, int line) {
 }
 
 
-static void luaD_callHook (lua_State *L, StkId func, lua_CHFunction callhook,
-                           int isreturn) {
+void luaD_callHook (lua_State *L, StkId func, lua_CHFunction callhook,
+                    int isreturn) {
   if (L->allowhooks) {
     struct C_Lua_Stack oldCLS = L->Cstack;
     StkId old_top = L->Cstack.lua2C = L->Cstack.base = L->top;
@@ -156,6 +156,8 @@ static StkId callC (lua_State *L, lua_CFunction f, StkId base) {
   L->Cstack.num = numarg;
   L->Cstack.lua2C = base;
   L->Cstack.base = L->top;
+  if (L->callhook)
+    luaD_callHook(L, base-1, L->callhook, 0);
   (*f)(L);  /* do the actual call */
   firstResult = L->Cstack.base;
   L->Cstack = oldCLS;
@@ -194,8 +196,6 @@ void luaD_callTM (lua_State *L, const TObject *f, int nParams, int nResults) {
 void luaD_call (lua_State *L, StkId func, int nResults) {
   StkId firstResult;
   lua_CHFunction callhook = L->callhook;
-  if (callhook)
-    luaD_callHook(L, func, callhook, 0);
   retry:  /* for `function' tag method */
   switch (ttype(func)) {
     case LUA_T_CPROTO:
@@ -224,10 +224,10 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
         luaG_callerror(L, func);
       luaD_openstack(L, func);
       *func = *im;  /* tag method is the new function to be called */
-      goto retry;  /* retry the call (without calling callhook again) */
+      goto retry;   /* retry the call */
     }
   }
-  if (callhook)  /* same hook that was used at entry */
+  if (callhook)  /* same hook that was active at entry */
     luaD_callHook(L, NULL, callhook, 1);  /* `return' hook */
   /* adjust the number of results */
   if (nResults == MULT_RET)

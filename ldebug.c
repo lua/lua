@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.2 1999/12/23 18:19:57 roberto Exp roberto $
+** $Id: ldebug.c,v 1.3 1999/12/29 16:31:15 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -45,9 +45,9 @@ int lua_setdebug (lua_State *L, int debug) {
 }
 
 
-lua_Function lua_stackedfunction (lua_State *L, int level) {
+static lua_Function aux_stackedfunction (lua_State *L, int level, StkId top) {
   int i;
-  for (i = (L->top-1)-L->stack; i>=0; i--) {
+  for (i = (top-1)-L->stack; i>=0; i--) {
     if (is_T_MARK(L->stack[i].ttype)) {
       if (level == 0)
         return L->stack+i;
@@ -58,10 +58,15 @@ lua_Function lua_stackedfunction (lua_State *L, int level) {
 }
 
 
-const char *luaG_getname (lua_State *L, const char **name) {
-  lua_Function f = lua_stackedfunction(L, 0);
+lua_Function lua_stackedfunction (lua_State *L, int level) {
+  return aux_stackedfunction(L, level, L->top);
+}
+
+
+static const char *luaG_getname (lua_State *L, const char **name, StkId top) {
+  lua_Function f = aux_stackedfunction(L, 0, top);
   if (f == LUA_NOOBJECT || !hasdebuginfo(L, f) || ttype(f+2) == LUA_T_NIL)
-    return NULL;  /* no name available */
+    return "";  /* no name available */
   else {
     int i = (f+2)->value.i;
     if (ttype(f) == LUA_T_LCLMARK)
@@ -69,14 +74,7 @@ const char *luaG_getname (lua_State *L, const char **name) {
     LUA_ASSERT(L, ttype(f) == LUA_T_LMARK, "must be a Lua function");
     LUA_ASSERT(L, ttype(&tfvalue(f)->consts[i]) == LUA_T_STRING, "");
     *name = tsvalue(&tfvalue(f)->consts[i])->str;
-    switch (ttype(f+2)) {
-      case LUA_T_NGLOBAL: return "global";
-      case LUA_T_NLOCAL: return "local";
-      case LUA_T_NDOT: return "field";
-      default:
-        LUA_INTERNALERROR(L, "invalid tag for NAME");
-        return NULL;  /* unreacheable; to avoid warnings */
-    }
+    return luaO_typename(f+2);
   }
 }
 
@@ -162,8 +160,14 @@ static int checkfunc (lua_State *L, TObject *o) {
 
 
 const char *lua_getobjname (lua_State *L, lua_Object o, const char **name) {
-  /* try to find a name for given function */
   GlobalVar *g;
+  if (is_T_MARK(ttype(o))) {  /* `o' is an active function? */
+    /* look for caller debug information */
+    const char *kind = luaG_getname(L, name, o);
+    if (*kind) return kind;
+    /* else go through */
+  }
+  /* try to find a name for given function */
   luaA_setnormalized(L->top, o); /* to be used by `checkfunc' */
   for (g=L->rootglobal; g; g=g->next) {
     if (checkfunc(L, &g->value)) {
@@ -180,8 +184,8 @@ const char *lua_getobjname (lua_State *L, lua_Object o, const char **name) {
 static void call_index_error (lua_State *L, TObject *o, const char *tp,
                               const char *v) {
   const char *name;
-  const char *kind = luaG_getname(L, &name);
-  if (kind) {  /* is there a name? */
+  const char *kind = luaG_getname(L, &name, L->top);
+  if (*kind) {  /* is there a name? */
     luaL_verror(L, "%.10s `%.30s' is not a %.10s", kind, name, tp);
   }
   else {

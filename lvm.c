@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.76 1999/12/27 17:33:22 roberto Exp roberto $
+** $Id: lvm.c,v 1.77 1999/12/29 16:31:15 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -297,6 +297,8 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
   register StkId top;  /* keep top local, for performance */
   register const Byte *pc = tf->code;
   const TObject *consts = tf->consts;
+  if (L->callhook)
+    luaD_callHook(L, base-1, L->callhook, 0);
   luaD_checkstack(L, (*pc++)+EXTRA_STACK);
   if (*pc < ZEROVARARG)
     luaD_adjusttop(L, base, *(pc++));
