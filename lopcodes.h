@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.103 2003/05/13 20:15:59 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.104 2003/05/14 12:09:12 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -230,10 +230,7 @@ extern const lu_byte luaP_opmodes[NUM_OPCODES];
 #define testTMode(m)	(luaP_opmodes[m] & (1 << 7))
 
 
-#ifdef LUA_OPNAMES
-extern const char *const luaP_opnames[];  /* opcode names */
-#endif
-
+extern const char *const luaP_opnames[NUM_OPCODES];  /* opcode names */
 
 
 /* number of list items to accumulate before a SETLIST instruction */

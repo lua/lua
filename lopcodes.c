@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.23 2003/05/13 20:15:59 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.24 2003/05/14 12:09:12 roberto Exp roberto $
 ** See Copyright Notice in lua.h
 */
 
@@ -16,7 +16,7 @@
 
 #ifdef LUA_OPNAMES
 
-const char *const luaP_opnames[] = {
+const char *const luaP_opnames[NUM_OPCODES] = {
   "MOVE",
   "LOADK",
   "LOADBOOL",
