@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.31 1996/02/13 17:30:39 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.32 1996/02/14 18:25:04 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -109,10 +109,12 @@ static void code_code (TFunc *tf)
  code_byte(code.m.c4);
 }
 
-static void code_word_at (Byte *p, Word n)
+static void code_word_at (Byte *p, int n)
 {
  CodeWord code;
- code.w = n;
+ if ((Word)n != n)
+   yyerror("block too big");
+ code.w = (Word)n;
  *p++ = code.m.c1;
  *p++ = code.m.c2;
 }
