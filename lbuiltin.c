@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.63 1999/09/20 14:57:29 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.64 1999/10/04 17:51:04 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -247,6 +247,13 @@ static void luaB_collectgarbage (void) {
   lua_pushnumber(lua_collectgarbage(luaL_opt_int(1, 0)));
 }
 
+
+static void luaB_type (void) {
+  lua_Object o = luaL_nonnullarg(1);
+  lua_pushstring(lua_type(o));
+  lua_pushnumber(lua_tag(o));
+}
+
 /* }====================================================== */
 
 
@@ -369,13 +376,6 @@ static void luaB_tostring (void) {
       LUA_INTERNALERROR("invalid type");
   }
   lua_pushstring(buff);
-}
-
-
-static void luaB_type (void) {
-  lua_Object o = luaL_nonnullarg(1);
-  lua_pushstring(luaO_typename(luaA_Address(o)));
-  lua_pushnumber(lua_tag(o));
 }
 
 /* }====================================================== */

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.50 1999/09/21 16:10:13 roberto Exp roberto $
+** $Id: lapi.c,v 1.51 1999/10/04 17:51:04 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -216,6 +216,9 @@ void lua_rawsetglobal (const char *name) {
 }
 
 
+const char *lua_type (lua_Object o) {
+  return (o == LUA_NOOBJECT) ? "NOOBJECT" : luaO_typename(Address(o));
+}
 
 int lua_isnil (lua_Object o) {
   return (o!= LUA_NOOBJECT) && (ttype(Address(o)) == LUA_T_NIL);

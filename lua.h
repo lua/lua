@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.34 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: lua.h,v 1.35 1999/09/29 12:56:22 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -57,6 +57,8 @@ void	       lua_endblock		(void);
 lua_Object     lua_lua2C 		(int number);
 #define	       lua_getparam(_)		lua_lua2C(_)
 #define	       lua_getresult(_)		lua_lua2C(_)
+
+const char    *lua_type			(lua_Object object);
 
 int            lua_isnil                (lua_Object object);
 int            lua_istable              (lua_Object object);
@@ -136,10 +138,8 @@ lua_Object     lua_seterrormethod (void);  /* In: new method */
 #ifdef LUA_COMPAT2_5
 
 
-lua_Object     lua_setfallback		(char *event, lua_CFunction fallback);
 
 #define lua_storeglobal		lua_setglobal
-#define lua_type		lua_tag
 
 #define lua_lockobject(o)  lua_refobject(o,1)
 #define	lua_lock() lua_ref(1)
@@ -151,8 +151,6 @@ lua_Object     lua_setfallback		(char *event, lua_CFunction fallback);
 
 #define lua_getindexed(o,n) (lua_pushobject(o), lua_pushnumber(n), lua_gettable())
 #define lua_getfield(o,f)   (lua_pushobject(o), lua_pushstring(f), lua_gettable())
-
-#define lua_copystring(o) (strdup(lua_getstring(o)))
 
 #define lua_getsubscript  lua_gettable
 #define lua_storesubscript  lua_settable
