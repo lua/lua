@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.118 2003/03/11 12:24:34 roberto Exp roberto $
+** $Id: lua.c,v 1.119 2003/03/17 13:01:48 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -285,7 +285,8 @@ static void manual_input (void) {
       lua_getglobal(L, "print");
       lua_insert(L, 1);
       if (lua_pcall(L, lua_gettop(L)-1, 0, 0) != 0)
-        l_message(progname, "error calling `print'");
+        l_message(progname, lua_pushfstring(L, "error calling `print' (%s)",
+                                               lua_tostring(L, -1)));
     }
   }
   lua_settop(L, 0);  /* clear stack */
