@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.127 2002/08/06 15:32:22 roberto Exp roberto $
+** $Id: ldebug.c,v 1.128 2002/08/06 18:01:50 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -25,14 +25,14 @@
 
 
 
-static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name);
+static const char *getfuncname (CallInfo *ci, const char **name);
 
 
 static int isLua (CallInfo *ci) {
   return isLfunction (ci->base - 1);
 }
 
-static int currentpc (lua_State *L, CallInfo *ci) {
+static int currentpc (CallInfo *ci) {
   if (!isLua(ci)) return -1;  /* function is not a Lua function? */
   if (ci->pc != &luaV_callingmark)  /* is not calling another Lua function? */
     ci->u.l.savedpc = *ci->pc;  /* `pc' may not be saved; save it */
@@ -41,8 +41,8 @@ static int currentpc (lua_State *L, CallInfo *ci) {
 }
 
 
-static int currentline (lua_State *L, CallInfo *ci) {
-  int pc = currentpc(L, ci);
+static int currentline (CallInfo *ci) {
+  int pc = currentpc(ci);
   if (pc < 0)
     return -1;  /* only active lua functions have current-line information */
   else
@@ -62,7 +62,7 @@ LUA_API int lua_sethook (lua_State *L, lua_Hook func, int mask) {
   setallowhook(L, allow);
   resethookcount(L);
   for (ci = L->ci; ci != L->base_ci; ci--)  /* update all `savedpc's */
-    currentpc(L, ci);
+    currentpc(ci);
   lua_unlock(L);
   return 1;
 }
@@ -105,7 +105,7 @@ LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
   ci = L->base_ci + ar->i_ci;
   fp = getluaproto(ci);
   if (fp) {  /* is a Lua function? */
-    name = luaF_getlocalname(fp, n, currentpc(L, ci));
+    name = luaF_getlocalname(fp, n, currentpc(ci));
     if (name)
       luaA_pushobject(L, ci->base+(n-1));  /* push value */
   }
@@ -124,7 +124,7 @@ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
   fp = getluaproto(ci);
   L->top--;  /* pop new value */
   if (fp) {  /* is a Lua function? */
-    name = luaF_getlocalname(fp, n, currentpc(L, ci));
+    name = luaF_getlocalname(fp, n, currentpc(ci));
     if (!name || name[0] == '(')  /* `(' starts private locals */
       name = NULL;
     else
@@ -205,7 +205,7 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
         break;
       }
       case 'l': {
-        ar->currentline = (ci) ? currentline(L, ci) : -1;
+        ar->currentline = (ci) ? currentline(ci) : -1;
         break;
       }
       case 'u': {
@@ -213,7 +213,7 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
         break;
       }
       case 'n': {
-        ar->namewhat = (ci) ? getfuncname(L, ci, &ar->name) : NULL;
+        ar->namewhat = (ci) ? getfuncname(ci, &ar->name) : NULL;
         if (ar->namewhat == NULL)
           getname(L, f, ar);
         break;
@@ -415,11 +415,10 @@ static const char *kname (Proto *p, int c) {
 }
 
 
-static const char *getobjname (lua_State *L, CallInfo *ci, int stackpos,
-                               const char **name) {
+static const char *getobjname (CallInfo *ci, int stackpos, const char **name) {
   if (isLua(ci)) {  /* a Lua function? */
     Proto *p = ci_func(ci)->l.p;
-    int pc = currentpc(L, ci);
+    int pc = currentpc(ci);
     Instruction i;
     *name = luaF_getlocalname(p, stackpos+1, pc);
     if (*name)  /* is a local? */
@@ -436,7 +435,7 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int stackpos,
         int a = GETARG_A(i);
         int b = GETARG_B(i);  /* move from `b' to `a' */
         if (b < a)
-          return getobjname(L, ci, b, name);  /* get name for `b' */
+          return getobjname(ci, b, name);  /* get name for `b' */
         break;
       }
       case OP_GETTABLE: {
@@ -454,17 +453,17 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int stackpos,
 }
 
 
-static Instruction getcurrentinstr (lua_State *L, CallInfo *ci) {
+static Instruction getcurrentinstr (CallInfo *ci) {
   return (!isLua(ci)) ? (Instruction)(-1) :
-                        ci_func(ci)->l.p->code[currentpc(L, ci)];
+                        ci_func(ci)->l.p->code[currentpc(ci)];
 }
 
 
-static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
+static const char *getfuncname (CallInfo *ci, const char **name) {
   Instruction i;
   ci--;  /* calling function */
-  i = getcurrentinstr(L, ci);
-  return (GET_OPCODE(i) == OP_CALL ? getobjname(L, ci, GETARG_A(i), name)
+  i = getcurrentinstr(ci);
+  return (GET_OPCODE(i) == OP_CALL ? getobjname(ci, GETARG_A(i), name)
                                    : NULL);  /* no useful name found */
 }
 
@@ -482,7 +481,7 @@ void luaG_typeerror (lua_State *L, const TObject *o, const char *op) {
   const char *name = NULL;
   const char *t = luaT_typenames[ttype(o)];
   const char *kind = (isinstack(L->ci, o)) ?
-                         getobjname(L, L->ci, o - L->ci->base, &name) : NULL;
+                         getobjname(L->ci, o - L->ci->base, &name) : NULL;
   if (kind)
     luaG_runerror(L, "attempt to %s %s `%s' (a %s value)",
                 op, kind, name, t);
@@ -527,7 +526,7 @@ static void addinfo (lua_State *L, int internal) {
   }
   else {  /* add file:line information */
     char buff[LUA_IDSIZE];
-    int line = currentline(L, ci);
+    int line = currentline(ci);
     luaO_chunkid(buff, getstr(getluaproto(ci)->source), LUA_IDSIZE);
     luaO_pushfstring(L, "%s:%d: %s\n", buff, line, msg);
   }
