@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.220 2002/03/19 12:45:25 roberto Exp roberto $
+** $Id: lvm.c,v 1.221 2002/03/20 12:52:32 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -314,7 +314,7 @@ static void powOp (lua_State *L, StkId ra, StkId rb, StkId rc) {
 }
 
 
-#define dojump(pc, i)	((pc) += GETARG_sBc(i))
+#define dojump(pc, i)	((pc) += (i))
 
 /*
 ** Executes current Lua function. Parameters are between [base,top).
@@ -327,13 +327,13 @@ StkId luaV_execute (lua_State *L) {
   const Instruction *pc;
   lua_Hook linehook;
  reinit:
+  linehook = L->linehook;
+  L->ci->pc = &pc;
+  pc = L->ci->savedpc;
+  L->ci->pb = &base;
   base = L->ci->base;
   cl = &clvalue(base - 1)->l;
   k = cl->p->k;
-  linehook = L->linehook;
-  L->ci->pc = &pc;
-  L->ci->pb = &base;
-  pc = L->ci->savedpc;
   /* main loop of interpreter */
   for (;;) {
     const Instruction i = *pc++;
@@ -343,7 +343,8 @@ StkId luaV_execute (lua_State *L) {
     ra = RA(i);
     lua_assert(L->top <= L->stack + L->stacksize && L->top >= L->ci->base);
     lua_assert(L->top == L->ci->top || GET_OPCODE(i) == OP_CALL ||
-         GET_OPCODE(i) == OP_RETURN || GET_OPCODE(i) == OP_SETLISTO);
+         GET_OPCODE(i) == OP_TAILCALL || GET_OPCODE(i) == OP_RETURN ||
+         GET_OPCODE(i) == OP_SETLISTO);
     switch (GET_OPCODE(i)) {
       case OP_MOVE: {
         setobj(ra, RB(i));
@@ -452,7 +453,8 @@ StkId luaV_execute (lua_State *L) {
         break;
       }
       case OP_JMP: {
-        dojump(pc, i);
+        linehook = L->linehook;
+        dojump(pc, GETARG_sBc(i));
         break;
       }
       case OP_TESTEQ: {  /* skip next instruction if test fails */
@@ -513,14 +515,26 @@ StkId luaV_execute (lua_State *L) {
         }
         break;
       }
+      case OP_TAILCALL: {
+        int b = GETARG_B(i);
+        if (L->openupval) luaF_close(L, base);
+        if (b != 0) L->top = ra+b;  /* else previous instruction set top */
+        luaD_poscall(L, LUA_MULTRET, ra);  /* move down function and args. */
+        ra = luaD_precall(L, base-1);
+        if (ra == NULL) goto reinit;  /* it is a Lua function */
+        else if (ra > L->top) return NULL;  /* yield??? */
+        else goto ret;
+      }
       case OP_RETURN: {
-        CallInfo *ci;
         int b;
         if (L->openupval) luaF_close(L, base);
         b = GETARG_B(i);
         if (b != 0) L->top = ra+b-1;
+        lua_assert(L->ci->pc == &pc);
+      }
+      ret: {
+        CallInfo *ci;
         ci = L->ci - 1;
-        lua_assert((ci+1)->pc == &pc);
         if (ci->pc != &pc)  /* previous function was running `here'? */
           return ra;  /* no: return */
         else {  /* yes: continue its execution */
@@ -542,7 +556,7 @@ StkId luaV_execute (lua_State *L) {
         int j = GETARG_sBc(i);
         const TObject *plimit = ra+1;
         const TObject *pstep = ra+2;
-        pc += j;  /* jump back before tests (for error messages) */
+        dojump(pc, j);  /* jump back before tests (for error messages) */
         if (ttype(ra) != LUA_TNUMBER)
           luaD_error(L, "`for' initial value must be a number");
         if (!tonumber(plimit, ra+1))
@@ -552,10 +566,12 @@ StkId luaV_execute (lua_State *L) {
         step = nvalue(pstep);
         index = nvalue(ra) + step;  /* increment index */
         limit = nvalue(plimit);
-        if (step > 0 ? index <= limit : index >= limit)
+        if (step > 0 ? index <= limit : index >= limit) {
           chgnvalue(ra, index);  /* update index */
+          linehook = L->linehook;
+        }
         else
-          pc -= j;  /* undo jump */
+          dojump(pc, -j);  /* undo jump */
         break;
       }
       case OP_TFORLOOP: {
