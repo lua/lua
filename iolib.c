@@ -5,6 +5,7 @@
 #include <errno.h>
 
 #include "lua.h"
+#include "auxlib.h"
 #include "luadebug.h"
 #include "lualib.h"
 
@@ -234,13 +235,12 @@ static void io_debug (void)
 
 static void lua_printstack (FILE *f)
 {
-  int level = 0;
+  int level = 1;  /* skip level 0 (it's this function) */
   lua_Object func;
-  fprintf(f, "Active Stack:\n");
   while ((func = lua_stackedfunction(level++)) != LUA_NOOBJECT) {
     char *name;
     int currentline;
-    fprintf(f, "\t");
+    fprintf(f, (level==2) ? "Active Stack:\n\t" : "\t");
     switch (*lua_getobjname(func, &name)) {
       case 'g':
         fprintf(f, "function %s", name);
@@ -275,7 +275,7 @@ static void errorfb (void)
 }
 
 
-static struct lua_reg iolib[] = {
+static struct luaL_reg iolib[] = {
 {"readfrom", io_readfrom},
 {"writeto",  io_writeto},
 {"appendto", io_appendto},
@@ -295,6 +295,6 @@ static struct lua_reg iolib[] = {
 void iolib_open (void)
 {
   lua_infile=stdin; lua_outfile=stdout;
-  luaI_openlib(iolib, (sizeof(iolib)/sizeof(iolib[0])));
-  lua_setfallback("error", errorfb);
+  luaL_openlib(iolib, (sizeof(iolib)/sizeof(iolib[0])));
+  lua_setglobalmethod("error", errorfb);
 }

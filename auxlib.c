@@ -1,20 +1,20 @@
-char *rcs_auxlib="$Id: $";
+char *rcs_auxlib="$Id: auxlib.c,v 1.1 1997/03/17 17:02:29 roberto Exp roberto $";
 
 #include <stdio.h>
+#include <stdarg.h>
 
 #include "lua.h"
+#include "auxlib.h"
 
 
 void luaL_arg_check(int cond, char *funcname, int numarg, char *extramsg)
 {
   if (!cond) {
-    char buff[100];
     if (extramsg == NULL)
-      sprintf(buff, "bad argument #%d to function `%s'", numarg, funcname);
+      luaL_verror("bad argument #%d to function `%s'", numarg, funcname);
     else
-      sprintf(buff, "bad argument #%d to function `%s' (%s)",
+      luaL_verror("bad argument #%d to function `%s' (%s)",
                       numarg, funcname, extramsg);
-    lua_error(buff);
   }
 }
 
@@ -45,3 +45,20 @@ double luaL_opt_number (int numArg, double def, char *funcname)
                               luaL_check_number(numArg, funcname);
 }
 
+void luaL_openlib (struct luaL_reg *l, int n)
+{
+  int i;
+  for (i=0; i<n; i++)
+    lua_register(l[i].name, l[i].func);
+}
+
+
+void luaL_verror (char *fmt, ...)
+{
+  char buff[1000];
+  va_list argp;
+  va_start(argp, fmt);
+  vsprintf(buff, fmt, argp);
+  va_end(argp);
+  lua_error(buff);
+}

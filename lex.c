@@ -1,9 +1,10 @@
-char *rcs_lex = "$Id: lex.c,v 2.41 1996/11/22 13:08:02 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.42 1997/02/07 13:49:46 roberto Exp roberto $";
 
 
 #include <ctype.h>
 #include <string.h>
 
+#include "auxlib.h"
 #include "mem.h"
 #include "tree.h"
 #include "table.h"
@@ -32,10 +33,8 @@ void lua_setinput (Input fn)
 
 static void luaI_auxsyntaxerror (char *s, char *token)
 {
-  char msg[256];
-  sprintf (msg,"%s;\n> last token read: \"%s\" at line %d in file %s",
+  luaL_verror("%s;\n> last token read: \"%s\" at line %d in file %s",
            s, token, lua_linenumber, lua_parsedfile);
-  lua_error (msg);
 }
 
 void luaI_syntaxerror (char *s)

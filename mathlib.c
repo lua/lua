@@ -3,12 +3,13 @@
 ** Mathematics library to LUA
 */
 
-char *rcs_mathlib="$Id: mathlib.c,v 1.18 1996/08/01 14:55:33 roberto Exp roberto $";
+char *rcs_mathlib="$Id: mathlib.c,v 1.19 1997/03/17 17:01:10 roberto Exp roberto $";
 
 #include <stdlib.h>
 #include <math.h>
 
 #include "lualib.h"
+#include "auxlib.h"
 #include "lua.h"
 
 #ifndef PI
@@ -195,7 +196,7 @@ static void math_randomseed (void)
 }
 
 
-static struct lua_reg mathlib[] = {
+static struct luaL_reg mathlib[] = {
 {"abs",   math_abs},
 {"sin",   math_sin},
 {"cos",   math_cos},
@@ -224,7 +225,7 @@ static struct lua_reg mathlib[] = {
 */
 void mathlib_open (void)
 {
-  luaI_openlib(mathlib, (sizeof(mathlib)/sizeof(mathlib[0])));
+  luaL_openlib(mathlib, (sizeof(mathlib)/sizeof(mathlib[0])));
   old_pow = lua_refobject(lua_setfallback("arith", math_pow), 1);
 }
 
