@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.87 2002/06/26 19:28:44 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.88 2002/06/26 20:36:17 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -323,27 +323,27 @@ static int luaB_tostring (lua_State *L) {
 
 
 static int luaB_newproxy (lua_State *L) {
-  static const char dummy = '\0';
   lua_settop(L, 1);
-  luaL_weakregistry(L);  /* get weak registry */
   lua_newuserdata(L, 0);  /* create proxy */
   if (lua_toboolean(L, 1) == 0)
     return 1;  /* no metatable */
   else if (lua_isboolean(L, 1)) {
     lua_newtable(L);  /* create a new metatable `m' ... */
     lua_pushvalue(L, -1);  /* ... and mark `m' as a valid metatable */
-    lua_pushudataval(L, (void *)&dummy);
-    lua_rawset(L, 2);  /* weakregistry[m] = &dummy */
+    lua_pushboolean(L, 1);
+    lua_rawset(L, lua_upvalueindex(1));  /* weaktable[m] = true */
   }
   else {
-    if (lua_getmetatable(L, 1))  /* check whether registry[m] == &dummy */
-      lua_rawget(L, 2);
-    luaL_arg_check(L, (char *)lua_touserdata(L, -1) == &dummy, 1,
-                      "boolean/proxy expected");
-    lua_getmetatable(L, 1);  /* metatable is valid */
+    int validproxy = 0;  /* to check if weaktable[metatable(u)] == true */
+    if (lua_getmetatable(L, 1)) {
+      lua_rawget(L, lua_upvalueindex(1));
+      validproxy = lua_toboolean(L, -1);
+      lua_pop(L, 1);  /* remove value */
+    }
+    luaL_arg_check(L, validproxy, 1, "boolean/proxy expected");
+    lua_getmetatable(L, 1);  /* metatable is valid; get it */
   }
-  lua_setmetatable(L, 3);
-  lua_pushvalue(L, 3);
+  lua_setmetatable(L, 2);
   return 1;
 }
 
@@ -461,7 +461,6 @@ static const luaL_reg base_funcs[] = {
   {"tostring", luaB_tostring},
   {"type", luaB_type},
   {"assert", luaB_assert},
-  {"newproxy", luaB_newproxy},
   {"unpack", luaB_unpack},
   {"rawequal", luaB_rawequal},
   {"rawget", luaB_rawget},
@@ -569,6 +568,16 @@ static void base_open (lua_State *L) {
   lua_pushliteral(L, "_VERSION");
   lua_pushliteral(L, LUA_VERSION);
   lua_rawset(L, -3);  /* set global _VERSION */
+  /* `newproxy' needs a weaktable as upvalue */
+  lua_pushliteral(L, "newproxy");
+  lua_newtable(L);  /* new table `w' */
+  lua_newtable(L);  /* create `w's metatable */
+  lua_pushliteral(L, "__mode");
+  lua_pushliteral(L, "k");
+  lua_rawset(L, -3);  /* metatable(w).__mode = "k" */
+  lua_setmetatable(L, -2);
+  lua_pushcclosure(L, luaB_newproxy, 1);
+  lua_rawset(L, -3);  /* set global `newproxy' */
   lua_rawset(L, -1);  /* set global _G */
 }
 
