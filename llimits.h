@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.32 2001/09/07 17:39:10 roberto Exp $
+** $Id: llimits.h,v 1.33 2001/10/02 16:45:03 roberto Exp $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -68,10 +68,6 @@ typedef unsigned char lu_byte;
 ** (the shift removes bits that are usually 0 because of alignment)
 */
 #define IntPoint(p)  ((((lu_hash)(p)) >> 4) ^ (lu_hash)(p))
-
-
-
-#define MINPOWER2       4       /* minimum size for `growing' vectors */
 
 
 
