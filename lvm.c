@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.54 1999/03/10 14:09:45 roberto Exp roberto $
+** $Id: lvm.c,v 1.55 1999/04/13 19:28:49 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -620,7 +620,8 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         goto switchentry;  /* do not reset "aux" */
 
       case CHECKSTACK: aux = *pc++;
-        LUA_ASSERT((S->top-S->stack)-base == aux, "wrong stack size");
+        LUA_ASSERT((S->top-S->stack)-base == aux && S->last >= S->top,
+                   "wrong stack size");
         break;
 
     }
