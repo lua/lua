@@ -3,12 +3,13 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.12 1994/10/13 19:28:54 celes Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.13 1994/10/18 18:34:47 roberto Exp celes $";
 
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <time.h>
 #include <sys/stat.h>
 #ifdef __GNUC__
 #include <floatingpoint.h>
@@ -531,9 +532,47 @@ static void io_getenv (void)
 }
 
 /*
-** To abort
+** Return time: hour, min, sec
 */
-static void io_abort (void)
+static void io_time (void)
+{
+ time_t t;
+ struct tm *s;
+ 
+ time(&t);
+ s = localtime(&t);
+ lua_pushnumber(s->tm_hour);
+ lua_pushnumber(s->tm_min);
+ lua_pushnumber(s->tm_sec);
+}
+ 
+/*
+** Return date: dd, mm, yyyy
+*/
+static void io_date (void)
+{
+ time_t t;
+ struct tm *s;
+ 
+ time(&t);
+ s = localtime(&t);
+ lua_pushnumber(s->tm_mday);
+ lua_pushnumber(s->tm_mon+1);
+ lua_pushnumber(s->tm_year+1900);
+}
+ 
+/*
+** Beep
+*/
+static void io_beep (void)
+{
+ printf("\a");
+}
+ 
+/*
+** To exit
+*/
+static void io_exit (void)
 {
  lua_Object o = lua_getparam(1);
  if (lua_isstring(o))
@@ -571,6 +610,9 @@ void iolib_open (void)
  lua_register ("execute",  io_execute);
  lua_register ("remove",   io_remove);
  lua_register ("getenv",   io_getenv);
- lua_register ("abort",    io_abort);
+ lua_register ("time",     io_time);
+ lua_register ("date",     io_date);
+ lua_register ("beep",     io_beep);
+ lua_register ("exit",     io_exit);
  lua_register ("debug",    io_debug);
 }
