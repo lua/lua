@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.188 2002/06/06 17:29:53 roberto Exp roberto $
+** $Id: lparser.c,v 1.189 2002/06/26 16:37:13 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -734,14 +734,14 @@ static const struct {
   lu_byte left;  /* left priority for each binary operator */
   lu_byte right; /* right priority */
 } priority[] = {  /* ORDER OPR */
-   {5, 5}, {5, 5}, {6, 6}, {6, 6},  /* arithmetic */
-   {9, 8}, {4, 3},                  /* power and concat (right associative) */
-   {2, 2}, {2, 2},                  /* equality */
-   {2, 2}, {2, 2}, {2, 2}, {2, 2},  /* order */
-   {1, 1}, {1, 1}                   /* logical */
+   {6, 6}, {6, 6}, {7, 7}, {7, 7},  /* arithmetic */
+   {10, 9}, {5, 4},                  /* power and concat (right associative) */
+   {3, 3}, {3, 3},                  /* equality */
+   {3, 3}, {3, 3}, {3, 3}, {3, 3},  /* order */
+   {2, 2}, {1, 1}                   /* logical (and/or) */
 };
 
-#define UNARY_PRIORITY	7  /* priority for unary operators */
+#define UNARY_PRIORITY	8  /* priority for unary operators */
 
 
 /*
