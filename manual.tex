@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 2.6 1997/06/26 20:39:10 roberto Exp roberto $
+% $Id: manual.tex,v 2.7 1997/06/27 18:39:34 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -38,7 +38,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1997/06/26 20:39:10 $}
+\date{\small \verb$Date: 1997/06/27 18:39:34 $}
 
 \maketitle
 
@@ -263,7 +263,7 @@ values of type userdata and table can have
 as many different tags as needed \see{tag-method}.
 Tags are created with the function \verb|newtag|,
 and the function \verb|tag| returns the tag of a given value.
-To change the tag of a given userdata or table,
+To change the tag of a given table,
 there is the function \verb|settag| \see{pdf-newtag}.
 
 
@@ -1723,12 +1723,12 @@ This function allows Lua to test the tag of a value \see{TypesSec}.
 It receives one argument, and returns its tag (a number).
 \verb|tag| is equivalent to the API function \verb|lua_tag|.
 
-\subsubsection*{\ff {\tt settag (o, tag)}}\Deffunc{settag}
-This function sets the tag of a given object \see{TypesSec}.
-The object \verb|o| must be a userdata or a table.
+\subsubsection*{\ff {\tt settag (t, tag)}}\Deffunc{settag}
+This function sets the tag of a given table \see{TypesSec}.
 \verb|tag| must be a value created with \verb|newtag|
 \see{pdf-newtag}.
-\verb|settag| is equivalent to the API function \verb|lua_settag|.
+For security reasons,
+it is impossible to change the tag of a userdata from Lua.
 
 \subsubsection*{\ff {\tt assert (v)}}\Deffunc{assert}
 This function issues an {\em ``assertion failed!''} error

@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.67 1997/06/23 18:27:53 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.68 1997/06/26 20:47:43 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -313,7 +313,7 @@ static void luaI_call (void)
 static void luaIl_settag (void)
 {
   lua_Object o = lua_getparam(1);
-  luaL_arg_check(o != LUA_NOOBJECT, 1, NULL);
+  luaL_arg_check(lua_istable(o), 1, "table expected");
   lua_pushobject(o);
   lua_settag(luaL_check_number(2));
 }
