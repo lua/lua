@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.190 2004/05/31 19:41:52 roberto Exp roberto $
+** $Id: lua.h,v 1.191 2004/06/02 17:37:03 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -217,6 +217,7 @@ LUA_API int  lua_resume (lua_State *L, int narg);
 #define LUA_GCRESTART	1
 #define LUA_GCCOLLECT	2
 #define LUA_GCCOUNT	3
+#define LUA_GCSTEP	4
 
 LUA_API int lua_gc (lua_State *L, int what, int data);
 
