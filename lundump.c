@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.49 2003/04/07 20:34:20 lhf Exp lhf $
+** $Id: lundump.c,v 1.62 2003/08/15 13:48:53 roberto Exp roberto $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -256,10 +256,9 @@ static Proto* LoadChunk (LoadState* S)
 /*
 ** load precompiled chunk
 */
-Proto* luaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff)
+Proto* luaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char *s)
 {
  LoadState S;
- const char* s=zname(Z);
  if (*s=='@' || *s=='=')
   S.name=s+1;
  else if (*s==LUA_SIGNATURE[0])

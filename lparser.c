@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.214 2003/07/28 18:31:20 roberto Exp roberto $
+** $Id: lparser.c,v 1.215 2003/07/29 18:51:00 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -348,12 +348,12 @@ static void close_func (LexState *ls) {
 }
 
 
-Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff) {
+Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, const char *name) {
   struct LexState lexstate;
   struct FuncState funcstate;
   lexstate.buff = buff;
   lexstate.nestlevel = 0;
-  luaX_setinput(L, &lexstate, z, luaS_new(L, zname(z)));
+  luaX_setinput(L, &lexstate, z, luaS_new(L, name));
   open_func(&lexstate, &funcstate);
   next(&lexstate);  /* read first token */
   chunk(&lexstate);

@@ -1,5 +1,5 @@
 /*
-** $Id: lzio.h,v 1.14 2002/10/08 18:46:08 roberto Exp roberto $
+** $Id: lzio.h,v 1.15 2003/03/20 16:00:56 roberto Exp roberto $
 ** Buffered streams
 ** See Copyright Notice in lua.h
 */
@@ -20,9 +20,7 @@ typedef struct Zio ZIO;
 
 #define zgetc(z)  (((z)->n--)>0 ?  char2int(*(z)->p++) : luaZ_fill(z))
 
-#define zname(z)	((z)->name)
-
-void luaZ_init (ZIO *z, lua_Chunkreader reader, void *data, const char *name);
+void luaZ_init (ZIO *z, lua_Chunkreader reader, void *data);
 size_t luaZ_read (ZIO* z, void* b, size_t n);	/* read next n bytes */
 int luaZ_lookahead (ZIO *z);
 
@@ -55,7 +53,6 @@ struct Zio {
   const char *p;		/* current position in buffer */
   lua_Chunkreader reader;
   void* data;			/* additional data */
-  const char *name;
 };
 
 
