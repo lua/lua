@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.10 1997/12/19 18:34:23 roberto Exp roberto $
+** $Id: lua.c,v 1.11 1997/12/22 18:05:23 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -135,6 +135,7 @@ int main (int argc, char *argv[])
           break;
         default:
           print_message();
+          exit(1);
       }
     }
     else if (strchr(argv[i], '='))
@@ -146,7 +147,7 @@ int main (int argc, char *argv[])
           fprintf(stderr, "lua: cannot execute file ");
           perror(argv[i]);
         }
-        return 1;
+        exit(1);
       }
     }
   }
