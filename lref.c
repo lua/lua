@@ -1,6 +1,6 @@
 /*
-** $Id: lref.c,v 1.4 1999/12/14 18:31:20 roberto Exp roberto $
-** REF mechanism
+** $Id: lref.c,v 1.5 1999/12/23 18:19:57 roberto Exp roberto $
+** reference mechanism
 ** See Copyright Notice in lua.h
 */
 

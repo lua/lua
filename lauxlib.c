@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.21 1999/11/22 13:12:07 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.22 1999/12/20 13:09:45 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 
-/* Please Notice: This file uses only the official API of Lua
+/* This file uses only the official API of Lua.
 ** Any function declared here could be written as an application function.
 ** With care, these functions can be used by other libraries.
 */
@@ -113,7 +113,7 @@ void luaL_verror (lua_State *L, const char *fmt, ...) {
 }
 
 
-#define EXTRALEN	13  /* > strlen('string "..."\0') */
+#define EXTRALEN	sizeof("string \"...\"0")
 
 void luaL_chunkid (char *out, const char *source, int len) {
   if (*source == '(') {
@@ -129,7 +129,7 @@ void luaL_chunkid (char *out, const char *source, int len) {
       const char *b = strchr(source , '\n');  /* stop at first new line */
       int lim = (b && (b-source)<len) ? b-source : len;
       sprintf(out, "string \"%.*s\"", lim, source);
-      strcpy(out+lim+(EXTRALEN-5), "...\"");  /* 5 = strlen("...'\0") */
+      strcpy(out+lim+(EXTRALEN-sizeof("...\"0")), "...\"");
     }
   }
 }

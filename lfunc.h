@@ -1,6 +1,6 @@
 /*
-** $Id: lfunc.h,v 1.8 1999/10/14 19:46:57 roberto Exp roberto $
-** Lua Function structures
+** $Id: lfunc.h,v 1.9 1999/11/22 13:12:07 roberto Exp roberto $
+** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
 

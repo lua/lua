@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.59 1999/12/21 18:04:41 roberto Exp roberto $
+** $Id: ldo.c,v 1.60 1999/12/23 18:19:57 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -56,7 +56,7 @@ void luaD_checkstack (lua_State *L, int n) {
     else {
       L->stack_last += EXTRA_STACK;  /* to be used by error message */
       if (lua_stackedfunction(L, L->stacksize/SLOTS_PER_F) == LUA_NOOBJECT) {
-        /* too few funcs on stack: doesn't look like a rec. loop */
+        /* too few funcs on stack: doesn't look like a recursion loop */
         lua_error(L, "Lua2C - C2Lua overflow");
       }
       else
@@ -253,14 +253,14 @@ static void message (lua_State *L, const char *s) {
 }
 
 /*
-** Reports an error, and jumps up to the available recover label
+** Reports an error, and jumps up to the available recovery label
 */
 void lua_error (lua_State *L, const char *s) {
   if (s) message(L, s);
   if (L->errorJmp)
     longjmp(L->errorJmp->b, 1);
   else {
-    message(L, "exit(1). Unable to recover.\n");
+    message(L, "unable to recover. exiting.\n");
     exit(1);
   }
 }

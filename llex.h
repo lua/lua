@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.14 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: llex.h,v 1.15 1999/11/22 13:12:07 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -13,7 +13,7 @@
 
 #define FIRST_RESERVED	260
 
-/* maximum length of a reserved word (+1 for terminal 0) */
+/* maximum length of a reserved word (+1 for final 0) */
 #define TOKEN_LEN	15
 
 
@@ -34,7 +34,7 @@ enum RESERVED {
 #define MAX_IFS 5  /* arbitrary limit */
 #endif
 
-/* "ifstate" keeps the state of each nested $if the lexical is dealing with. */
+/* `ifState' keeps the state of each nested $if the lexical is dealing with. */
 
 struct ifState {
   int elsepart;  /* true if it's in the $else part */
@@ -46,7 +46,7 @@ struct ifState {
 typedef struct LexState {
   int current;  /* look ahead character */
   int token;  /* look ahead token */
-  struct FuncState *fs;  /* 'FuncState' is private for the parser */
+  struct FuncState *fs;  /* `FuncState' is private for the parser */
   struct lua_State *L;
   union {
     real r;

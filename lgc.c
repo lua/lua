@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.37 1999/12/21 18:04:41 roberto Exp roberto $
+** $Id: lgc.c,v 1.38 1999/12/23 18:19:57 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -181,7 +181,7 @@ static void clear_global_list (lua_State *L, int limit) {
 ** with limit=MAX_INT, that means all elements.
 */
 static void collectstring (lua_State *L, int limit) {
-  TObject o;  /* to call userdata 'gc' tag method */
+  TObject o;  /* to call userdata `gc' tag method */
   int i;
   ttype(&o) = LUA_T_USERDATA;
   clear_global_list(L, limit);
@@ -254,7 +254,7 @@ void luaC_collect (lua_State *L, int all) {
 
 
 long lua_collectgarbage (lua_State *L, long limit) {
-  unsigned long recovered = L->nblocks;  /* to subtract nblocks after gc */
+  unsigned long recovered = L->nblocks;  /* to subtract `nblocks' after gc */
   markall(L);
   luaR_invalidaterefs(L);
   luaC_collect(L, 0);

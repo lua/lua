@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.40 1999/12/14 18:33:29 roberto Exp roberto $
+** $Id: lobject.h,v 1.41 1999/12/23 18:19:57 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -46,7 +46,7 @@ typedef unsigned char  Byte;  /* unsigned 8 bits */
 #define MAX_INT (INT_MAX-2)  /* maximum value of an int (-2 for safety) */
 
 
-/* convertion of pointer to int (for hashing only) */
+/* conversion of pointer to int (for hashing only) */
 /* (the shift removes bits that are usually 0 because of alignment) */
 #define IntPoint(L, p)	(((unsigned int)(p)) >> 3)
 
@@ -65,10 +65,10 @@ typedef unsigned char  Byte;  /* unsigned 8 bits */
 ** grep "ORDER LUA_T"
 */
 typedef enum {
-  LUA_T_USERDATA =  0,  /* tag default for userdata */
+  LUA_T_USERDATA =  0,  /* default tag for userdata */
   LUA_T_NUMBER   = -1,  /* fixed tag for numbers */
   LUA_T_STRING   = -2,  /* fixed tag for strings */
-  LUA_T_ARRAY    = -3,  /* tag default for tables (or arrays) */
+  LUA_T_ARRAY    = -3,  /* default tag for tables (or arrays) */
   LUA_T_LPROTO   = -4,  /* fixed tag for Lua functions */
   LUA_T_CPROTO   = -5,  /* fixed tag for C functions */
   LUA_T_NIL      = -6,  /* last "pre-defined" tag */
@@ -84,7 +84,7 @@ typedef enum {
 #define NUM_TAGS  7
 
 /*
-** chech whether t is a mark; ttypes are negative numbers, so the
+** chech whether `t' is a mark; ttypes are negative numbers, so the
 ** comparisons look reversed.  (ORDER LUA_T)
 */
 #define is_T_MARK(t)	(LUA_T_CMARK <= (t) && (t) <= LUA_T_LCLMARK)
@@ -181,7 +181,7 @@ typedef struct LocVar {
 typedef struct Closure {
   struct Closure *next;
   int marked;
-  int nelems;  /* not included the first one (always the prototype) */
+  int nelems;  /* not including the first one (always the prototype) */
   TObject consts[1];  /* at least one for prototype */
 } Closure;
 

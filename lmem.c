@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.21 1999/11/29 16:38:48 roberto Exp roberto $
+** $Id: lmem.c,v 1.22 1999/12/14 18:31:20 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -49,7 +49,7 @@ void *luaM_realloc (lua_State *L, void *block, unsigned long size) {
   if (s != size)
     lua_error(L, "memory allocation error: block too big");
   if (size == 0) {
-    free(block);  /* block may be NULL, that is OK for free */
+    free(block);  /* block may be NULL; that is OK for free */
     return NULL;
   }
   block = realloc(block, s);

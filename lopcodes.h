@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.33 1999/06/17 17:04:03 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.34 1999/11/25 18:59:43 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -121,7 +121,7 @@ LONGARG /*	b	(add b*(1<<16) to arg of next instruction)	*/
 #define MAX_ARG	((1<<24)-1)
 #endif
 
-/* maximum value of a word of 2 bytes; cannot be bigger than MAX_ARG */
+/* maximum value of a word of 2 bytes; cannot be larger than MAX_ARG */
 #if MAX_ARG < (1<<16)
 #define MAX_WORD	MAX_ARG
 #else

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.1 1999/12/14 18:31:20 roberto Exp roberto $
+** $Id: ltests.c,v 1.2 1999/12/23 18:19:57 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -163,7 +163,7 @@ static void testC (lua_State *L) {
     }
     else if EQ("getparam") {
       int n = getreg(L, &pc);
-      reg[n] = lua_getparam(L, getnum(&pc)+1);  /* skips the commmand itself */
+      reg[n] = lua_getparam(L, getnum(&pc)+1);  /* skips the command itself */
     }
     else if EQ("getresult") {
       int n = getreg(L, &pc);

@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.h,v 1.9 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: lmem.h,v 1.10 1999/11/22 13:12:07 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -18,7 +18,7 @@
 #define refEM   "reference table overflow"
 #define tableEM  "table overflow"
 #define memEM "not enough memory"
-#define arrEM	"internal array bigger than `int' limit"
+#define arrEM	"internal array larger than `int' limit"
 
 void *luaM_realloc (lua_State *L, void *oldblock, unsigned long size);
 void *luaM_growaux (lua_State *L, void *block, unsigned long nelems, int inc, int size,

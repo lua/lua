@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.74 1999/12/21 18:04:41 roberto Exp roberto $
+** $Id: lvm.c,v 1.75 1999/12/23 18:19:57 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -135,21 +135,21 @@ void luaV_gettable (lua_State *L) {
 */
 void luaV_settable (lua_State *L, StkId t) {
   const TObject *im;
-  if (ttype(t) != LUA_T_ARRAY) {  /* not a table, get "settable" method */
+  if (ttype(t) != LUA_T_ARRAY) {  /* not a table, get `settable' method */
     im = luaT_getimbyObj(L, t, IM_SETTABLE);
     if (ttype(im) == LUA_T_NIL)
       lua_error(L, "indexed expression not a table");
   }
   else {  /* object is a table... */
     im = luaT_getim(L, avalue(t)->htag, IM_SETTABLE);
-    if (ttype(im) == LUA_T_NIL) {  /* and does not have a "settable" method */
+    if (ttype(im) == LUA_T_NIL) {  /* and does not have a `settable' method */
       luaH_set(L, avalue(t), t+1, L->top-1);
       L->top--;  /* pop value */
       return;
     }
-    /* else it has a "settable" method, go through to next command */
+    /* else it has a `settable' method, go through to next command */
   }
-  /* object is not a table, or it has a "settable" method */
+  /* object is not a table, or it has a `settable' method */
   /* prepare arguments and call the tag method */
   *(L->top+1) = *(L->top-1);
   *(L->top) = *(t+1);
@@ -210,7 +210,7 @@ static void call_binTM (lua_State *L, StkId top, IMS event, const char *msg) {
   if (ttype(im) == LUA_T_NIL) {
     im = luaT_getimbyObj(L, top-1, event);  /* try second operand */
     if (ttype(im) == LUA_T_NIL) {
-      im = luaT_getim(L, 0, event);  /* try a 'global' i.m. */
+      im = luaT_getim(L, 0, event);  /* try a `global' method */
       if (ttype(im) == LUA_T_NIL)
         lua_error(L, msg);
     }
@@ -603,7 +603,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
       case LONGARGW: aux += highbyte(L, *pc++);
       case LONGARG:  aux += *pc++;
         aux = highbyte(L, highbyte(L, aux));
-        goto switchentry;  /* do not reset "aux" */
+        goto switchentry;  /* do not reset `aux' */
 
     }
   }

@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.87 1999/12/23 18:19:57 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.88 1999/12/27 13:04:53 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -94,16 +94,16 @@ static Hash *gettable (lua_State *L, int arg) {
 ** If your system does not support "stderr", redefine this function, or
 ** redefine _ERRORMESSAGE so that it won't need _ALERT.
 */
-void luaB_alert (lua_State *L) {
+void luaB__alert (lua_State *L) {
   fputs(luaL_check_string(L, 1), stderr);
 }
 
 
 /*
 ** Standard implementation of _ERRORMESSAGE.
-** The library "iolib" redefines _ERRORMESSAGE for better error information.
+** The library `liolib' redefines _ERRORMESSAGE for better error information.
 */
-void luaB_ERRORMESSAGE (lua_State *L) {
+void luaB__ERRORMESSAGE (lua_State *L) {
   lua_Object al = lua_rawgetglobal(L, "_ALERT");
   if (lua_isfunction(L, al)) {  /* avoid error loop if _ALERT is not defined */
     char buff[600];
@@ -529,7 +529,7 @@ static void swap (lua_State *L, Hash *a, int i, int j) {
 
 static int sort_comp (lua_State *L, lua_Object f, const TObject *a,
                                                   const TObject *b) {
-  /* notice: the caller (auxsort) must check stack space */
+  /* WARNING: the caller (auxsort) must ensure stack space */
   if (f != LUA_NOOBJECT) {
     *(L->top) = *f;
     *(L->top+1) = *a;
@@ -609,8 +609,8 @@ void luaB_sort (lua_State *L) {
 
 
 static const struct luaL_reg builtin_funcs[] = {
-  {"_ALERT", luaB_alert},
-  {"_ERRORMESSAGE", luaB_ERRORMESSAGE},
+  {"_ALERT", luaB__alert},
+  {"_ERRORMESSAGE", luaB__ERRORMESSAGE},
   {"call", luaB_call},
   {"collectgarbage", luaB_collectgarbage},
   {"copytagmethods", luaB_copytagmethods},

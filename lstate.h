@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.25 1999/12/06 11:41:28 roberto Exp roberto $
+** $Id: lstate.h,v 1.26 1999/12/21 18:04:41 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -19,7 +19,7 @@ typedef TObject *StkId;  /* index to stack elements */
 
 
 /*
-** "jmp_buf" may be an array, so it is better to make sure it has an
+** `jmp_buf' may be an array, so it is better to make sure it has an
 ** address (and not that it *is* an address...)
 */
 struct lua_longjmp {
@@ -74,7 +74,7 @@ struct lua_State {
   int refSize;  /* size of refArray */
   int refFree;  /* list of free positions in refArray */
   unsigned long GCthreshold;
-  unsigned long nblocks;  /* number of 'blocks' currently allocated */
+  unsigned long nblocks;  /* number of `blocks' currently allocated */
   int debug;
   lua_CHFunction callhook;
   lua_LHFunction linehook;

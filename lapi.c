@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.64 1999/12/14 18:31:20 roberto Exp roberto $
+** $Id: lapi.c,v 1.65 1999/12/23 18:19:57 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -79,7 +79,7 @@ lua_Object luaA_putObjectOnTop (lua_State *L) {
 
 
 static void top2LC (lua_State *L, int n) {
-  /* Put the 'n' elements on the top as the Lua2C contents */
+  /* Put the `n' elements on the top as the Lua2C contents */
   L->Cstack.base = L->top;  /* new base */
   L->Cstack.lua2C = L->Cstack.base-n;  /* position of the new results */
   L->Cstack.num = n;  /* number of results */
