@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.h,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
+** $Id: lmem.h,v 1.2 1997/11/26 18:53:45 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -15,10 +15,7 @@
 
 /* memory error messages */
 #define codeEM   "code size overflow"
-#define symbolEM   "symbol table overflow"
 #define constantEM   "constant table overflow"
-#define stackEM   "stack size overflow"
-#define lexEM   "lex buffer overflow"
 #define refEM   "reference table overflow"
 #define tableEM  "table overflow"
 #define memEM "not enough memory"
