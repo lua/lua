@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.124 2003/08/29 16:48:14 roberto Exp roberto $
+** $Id: llex.c,v 1.125 2003/09/04 20:00:28 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -24,7 +24,15 @@
 
 #define next(ls) (ls->current = zgetc(ls->z))
 
-#define save(ls,c)		luaZ_save(ls->L,ls->buff,c)
+
+#define MINLEXBUF	32
+
+#define save(ls,c)  { \
+  Mbuffer *b = ls->buff; \
+  if (b->n + 1 > b->buffsize) \
+    luaZ_resizebuffer(ls->L, b, ((b->buffsize*2) + MINLEXBUF)); \
+  b->buffer[b->n++] = cast(char, c); }
+
 
 
 #define currIsNewline(ls)	(ls->current == '\n' || ls->current == '\r')

@@ -1,5 +1,5 @@
 /*
-** $Id: lzio.h,v 1.17 2003/08/25 20:00:50 roberto Exp roberto $
+** $Id: lzio.h,v 1.18 2003/08/28 14:38:46 roberto Exp roberto $
 ** Buffered streams
 ** See Copyright Notice in lua.h
 */
@@ -30,8 +30,8 @@ int luaZ_lookahead (ZIO *z);
 
 typedef struct Mbuffer {
   char *buffer;
-  int n;
-  int buffsize;
+  size_t n;
+  size_t buffsize;
 } Mbuffer;
 
 
@@ -52,10 +52,6 @@ char *luaZ_openspace (lua_State *L, Mbuffer *buff, size_t n);
 
 #define luaZ_freebuffer(L, buff)	luaZ_resizebuffer(L, buff, 0)
 
-#define luaZ_save(L,b,c) { \
-  luaM_growvector(L, b->buffer, b->n, b->buffsize, char, \
-                         MAX_INT, "token too long"); \
-  b->buffer[b->n++] = cast(char, c); }
 
 
 /* --------- Private Part ------------------ */
