@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.16 1999/01/13 19:08:37 roberto Exp roberto $
+** $Id: lobject.c,v 1.17 1999/02/12 19:23:02 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,7 @@ int luaO_redimension (int oldsize)
     if (dimensions[i] > oldsize)
       return dimensions[i];
   }
-  lua_error("table overflow");
+  lua_error("tableEM");
   return 0;  /* to avoid warnings */
 }
 
