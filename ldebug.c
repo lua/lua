@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.68 2001/02/22 18:59:59 roberto Exp roberto $
+** $Id: ldebug.c,v 1.69 2001/02/23 17:17:25 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -366,7 +366,7 @@ static Instruction luaG_symbexec (lua_State *L, const Proto *pt,
   int pc;
   if (stackpos < 0) {  /* full check? */
     int i;
-    sl = (lu_byte *)luaO_openspace(L, pt->sizecode);
+    sl = luaO_openspace(L, pt->sizecode, lu_byte);
     for (i=0; i<pt->sizecode; i++)  /* initialize stack-level array */
       sl[i] = SL_EMPTY;
     check(precheck(pt));

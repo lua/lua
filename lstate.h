@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.51 2001/02/20 18:15:33 roberto Exp roberto $
+** $Id: lstate.h,v 1.52 2001/02/23 17:17:25 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -64,7 +64,7 @@ typedef struct stringtable {
 ** `global state', shared by all threads of this state
 */
 typedef struct global_State {
-  l_char *Mbuffer;  /* global buffer */
+  void *Mbuffer;  /* global buffer */
   size_t Mbuffsize;  /* size of Mbuffer */
   Proto *rootproto;  /* list of all prototypes */
   Closure *rootcl;  /* list of all closures */
