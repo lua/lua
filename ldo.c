@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.224 2003/08/27 21:01:44 roberto Exp roberto $
+** $Id: ldo.c,v 1.225 2003/09/05 14:30:59 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -64,11 +64,11 @@ struct lua_longjmp {
 static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
   switch (errcode) {
     case LUA_ERRMEM: {
-      setsvalue2s(oldtop, luaS_new(L, MEMERRMSG));
+      setsvalue2s(oldtop, luaS_newliteral(L, MEMERRMSG));
       break;
     }
     case LUA_ERRERR: {
-      setsvalue2s(oldtop, luaS_new(L, "error in error handling"));
+      setsvalue2s(oldtop, luaS_newliteral(L, "error in error handling"));
       break;
     }
     case LUA_ERRSYNTAX:
