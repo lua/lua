@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.47 2001/01/25 16:45:36 roberto Exp roberto $
+** $Id: lstate.h,v 1.48 2001/01/26 11:45:51 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -32,6 +32,12 @@ extern int islocked;
 #define LUA_UNLOCK
 #endif
 
+/*
+** macro to allow the inclusion of user information in Lua state
+*/
+#ifndef LUA_USERSTATE
+#define LUA_USERSTATE
+#endif
 
 typedef TObject *StkId;  /* index to stack elements */
 
@@ -90,6 +96,7 @@ typedef struct global_State {
 ** "per thread" state
 */
 struct lua_State {
+  LUA_USERSTATE
   StkId top;  /* first free slot in the stack */
   StkId stack;  /* stack base */
   StkId stack_last;  /* last free slot in the stack */

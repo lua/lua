@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.90 2001/01/29 17:16:58 roberto Exp roberto $
+** $Id: lobject.h,v 1.91 2001/01/29 19:34:02 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -40,13 +40,6 @@
 /* check whether `t' is a mark */
 #define is_T_MARK(t)	(ttype(t) == LUA_TMARK)
 
-
-/*
-** tag at the start of all "boxed" Lua values
-*/
-typedef struct TValue {
-  char ttype;
-} TValue;
 
 
 typedef union {
@@ -116,8 +109,6 @@ typedef struct lua_TObject {
 #define TSPACK	((int)sizeof(int))
 
 typedef struct TString {
-  TValue v;
-  unsigned char marked;
   union {
     struct {  /* for strings */
       luint32 hash;
@@ -129,6 +120,7 @@ typedef struct TString {
     } d;
   } u;
   size_t len;
+  int marked;
   struct TString *nexthash;  /* chain for hash table */
   char str[TSPACK];   /* variable length string!! must be the last field! */
 } TString;
@@ -138,7 +130,6 @@ typedef struct TString {
 ** Function Prototypes
 */
 typedef struct Proto {
-  TValue v;
   lua_Number *knum;  /* numbers used by the function */
   int sizeknum;  /* size of `knum' */
   struct TString **kstr;  /* strings used by the function */
@@ -173,15 +164,14 @@ typedef struct LocVar {
 ** Closures
 */
 typedef struct Closure {
-  TValue v;
-  char isC;  /* 0 for Lua functions, 1 for C functions */
-  short nupvalues;
+  int isC;  /* 0 for Lua functions, 1 for C functions */
   union {
     lua_CFunction c;  /* C functions */
     struct Proto *l;  /* Lua functions */
   } f;
   struct Closure *next;
   struct Closure *mark;  /* marked closures (point to itself when not marked) */
+  int nupvalues;
   TObject upvalue[1];
 } Closure;
 
@@ -198,7 +188,6 @@ typedef struct Node {
 
 
 typedef struct Hash {
-  TValue v;
   Node *node;
   int htag;
   int size;
@@ -223,7 +212,6 @@ typedef struct Hash {
 ** informations about a call (for debugging)
 */
 typedef struct CallInfo {
-  TValue v;
   struct Closure *func;  /* function being called */
   const Instruction **pc;  /* current pc of called function */
   int lastpc;  /* last pc traced */

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.82 2001/01/29 17:16:58 roberto Exp roberto $
+** $Id: lgc.c,v 1.83 2001/01/29 19:34:02 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -66,8 +66,6 @@ static void marktable (GCState *st, Hash *h) {
 
 
 static void markobject (GCState *st, TObject *o) {
-  lua_assert(ttype(o) == LUA_TNUMBER ||
-             ttype(o) == ((TValue *)(o->value.v))->ttype);
   switch (ttype(o)) {
     case LUA_TUSERDATA:  case LUA_TSTRING:
       strmark(tsvalue(o));
