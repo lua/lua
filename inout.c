@@ -2,11 +2,9 @@
 ** inout.c
 ** Provide function to realise the input/output function and debugger 
 ** facilities.
-**
-** Waldemar Celes Filho
-** TeCGraf - PUC-Rio
-** 11 May 93
 */
+
+char *rcs_inout="$Id: $";
 
 #include <stdio.h>
 #include <string.h>
@@ -96,6 +94,7 @@ void lua_closefile (void)
 {
  if (fp != NULL)
  {
+  lua_delfile();
   fclose (fp);
   fp = NULL;
  }
@@ -116,6 +115,14 @@ int lua_openstring (char *s)
   if (lua_addfile (sn)) return 1;
  }
  return 0;
+}
+
+/*
+** Function to close an opened string
+*/
+void lua_closestring (void)
+{
+ lua_delfile();
 }
 
 /*
