@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.65 1999/12/23 18:19:57 roberto Exp roberto $
+** $Id: lapi.c,v 1.66 1999/12/27 17:33:22 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -119,8 +119,12 @@ lua_Object lua_gettagmethod (lua_State *L, int tag, const char *event) {
 
 
 lua_Object lua_settagmethod (lua_State *L, int tag, const char *event) {
+  TObject *method;
   luaA_checkCparams(L, 1);
-  luaT_settagmethod(L, tag, event, L->top-1);
+  method = L->top-1;
+  if ((ttype(method) != LUA_T_NIL) && (*lua_type(L, method) != 'f'))
+    lua_error(L, "API error - tag method must be a function or nil");
+  luaT_settagmethod(L, tag, event, method);
   return luaA_putObjectOnTop(L);
 }
 
