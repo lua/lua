@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.22 1999/11/10 15:39:35 roberto Exp roberto $
+** $Id: lstate.h,v 1.23 1999/11/22 13:12:07 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -15,7 +15,7 @@
 
 
 
-typedef int StkId;  /* index to stack elements */
+typedef TObject *StkId;  /* index to stack elements */
 
 
 /*
@@ -27,17 +27,16 @@ struct lua_longjmp {
 };
 
 
-struct Stack {
-  TObject *top;
-  TObject *stack;
-  TObject *last;
-};
-
+/*
+** stack layout for C point of view:
+** [lua2C, lua2C+num) - `array' lua2C
+** [lua2C+num, base)  - space for extra lua_Objects
+** [base, L->top)     - `stack' C2Lua
+*/
 struct C_Lua_Stack {
-  StkId base;  /* when Lua calls C or C calls Lua, points to */
-               /* the first slot after the last parameter. */
-  StkId lua2C; /* points to first element of "array" lua2C */
-  int num;     /* size of "array" lua2C */
+  StkId base;
+  StkId lua2C;
+  int num;
 };
 
 
@@ -51,7 +50,9 @@ typedef struct stringtable {
 
 struct lua_State {
   /* thread-specific state */
-  struct Stack stack;  /* Lua stack */
+  StkId top;  /* first free slot in the stack */
+  StkId stack;  /* stack base */
+  StkId stack_last;  /* last free slot in the stack */
   struct C_Lua_Stack Cstack;  /* C2lua struct */
   struct lua_longjmp *errorJmp;  /* current error recover point */
   char *Mbuffer;  /* global buffer */

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.67 1999/11/25 18:59:43 roberto Exp roberto $
+** $Id: lvm.c,v 1.68 1999/11/29 18:27:49 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -83,13 +83,12 @@ void luaV_setn (lua_State *L, Hash *t, int val) {
 
 void luaV_closure (lua_State *L, int nelems) {
   if (nelems > 0) {
-    struct Stack *S = &L->stack;
     Closure *c = luaF_newclosure(L, nelems);
-    c->consts[0] = *(S->top-1);
-    memcpy(&c->consts[1], S->top-(nelems+1), nelems*sizeof(TObject));
-    S->top -= nelems;
-    ttype(S->top-1) = LUA_T_CLOSURE;
-    (S->top-1)->value.cl = c;
+    c->consts[0] = *(L->top-1);
+    L->top -= nelems;
+    memcpy(&c->consts[1], L->top-1, nelems*sizeof(TObject));
+    ttype(L->top-1) = LUA_T_CLOSURE;
+    (L->top-1)->value.cl = c;
   }
 }
 
@@ -99,7 +98,7 @@ void luaV_closure (lua_State *L, int nelems) {
 ** Receives the table at top-2 and the index at top-1.
 */
 void luaV_gettable (lua_State *L) {
-  TObject *table = L->stack.top-2;
+  TObject *table = L->top-2;
   const TObject *im;
   if (ttype(table) != LUA_T_ARRAY) {  /* not a table, get gettable method */
     im = luaT_getimbyObj(L, table, IM_GETTABLE);
@@ -117,7 +116,7 @@ void luaV_gettable (lua_State *L) {
         luaD_callTM(L, im, 2, 1);  /* calls it */
       }
       else {
-        L->stack.top--;
+        L->top--;
         *table = *h;  /* "push" result into table position */
       }
       return;
@@ -132,8 +131,7 @@ void luaV_gettable (lua_State *L) {
 /*
 ** Receives table at *t, index at *(t+1) and value at top.
 */
-void luaV_settable (lua_State *L, const TObject *t) {
-  struct Stack *S = &L->stack;
+void luaV_settable (lua_State *L, StkId t) {
   const TObject *im;
   if (ttype(t) != LUA_T_ARRAY) {  /* not a table, get "settable" method */
     im = luaT_getimbyObj(L, t, IM_SETTABLE);
@@ -143,29 +141,28 @@ void luaV_settable (lua_State *L, const TObject *t) {
   else {  /* object is a table... */
     im = luaT_getim(L, avalue(t)->htag, IM_SETTABLE);
     if (ttype(im) == LUA_T_NIL) {  /* and does not have a "settable" method */
-      luaH_set(L, avalue(t), t+1, S->top-1);
-      S->top--;  /* pop value */
+      luaH_set(L, avalue(t), t+1, L->top-1);
+      L->top--;  /* pop value */
       return;
     }
     /* else it has a "settable" method, go through to next command */
   }
   /* object is not a table, or it has a "settable" method */
   /* prepare arguments and call the tag method */
-  *(S->top+1) = *(L->stack.top-1);
-  *(S->top) = *(t+1);
-  *(S->top-1) = *t;
-  S->top += 2;  /* WARNING: caller must assure stack space */
+  *(L->top+1) = *(L->top-1);
+  *(L->top) = *(t+1);
+  *(L->top-1) = *t;
+  L->top += 2;  /* WARNING: caller must assure stack space */
   luaD_callTM(L, im, 3, 0);
 }
 
 
-void luaV_rawsettable (lua_State *L, const TObject *t) {
+void luaV_rawsettable (lua_State *L, StkId t) {
   if (ttype(t) != LUA_T_ARRAY)
     lua_error(L, "indexed expression not a table");
   else {
-    struct Stack *S = &L->stack;
-    luaH_set(L, avalue(t), t+1, S->top-1);
-    S->top -= 3;
+    luaH_set(L, avalue(t), t+1, L->top-1);
+    L->top -= 3;
   }
 }
 
@@ -178,17 +175,16 @@ void luaV_getglobal (lua_State *L, GlobalVar *gv) {
     case LUA_T_USERDATA: case LUA_T_ARRAY: case LUA_T_NIL: {
       TObject *im = luaT_getimbyObj(L, value, IM_GETGLOBAL);
       if (ttype(im) != LUA_T_NIL) {  /* is there a tag method? */
-        struct Stack *S = &L->stack;
-        ttype(S->top) = LUA_T_STRING;
-        tsvalue(S->top) = gv->name;  /* global name */
-        S->top++;
-        *S->top++ = *value;
+        ttype(L->top) = LUA_T_STRING;
+        tsvalue(L->top) = gv->name;  /* global name */
+        L->top++;
+        *L->top++ = *value;
         luaD_callTM(L, im, 2, 1);
         return;
       }
       /* else no tag method: go through to default behavior */
     }
-    default: *L->stack.top++ = *value;  /* default behavior */
+    default: *L->top++ = *value;  /* default behavior */
   }
 }
 
@@ -197,26 +193,26 @@ void luaV_setglobal (lua_State *L, GlobalVar *gv) {
   const TObject *oldvalue = &gv->value;
   const TObject *im = luaT_getimbyObj(L, oldvalue, IM_SETGLOBAL);
   if (ttype(im) == LUA_T_NIL)  /* is there a tag method? */
-    gv->value = *(--L->stack.top);
+    gv->value = *(--L->top);
   else {
     /* WARNING: caller must assure stack space */
-    struct Stack *S = &L->stack;
     TObject newvalue;
-    newvalue = *(S->top-1);
-    ttype(S->top-1) = LUA_T_STRING;
-    tsvalue(S->top-1) = gv->name;
-    *S->top++ = *oldvalue;
-    *S->top++ = newvalue;
+    newvalue = *(L->top-1);
+    ttype(L->top-1) = LUA_T_STRING;
+    tsvalue(L->top-1) = gv->name;
+    *L->top++ = *oldvalue;
+    *L->top++ = newvalue;
     luaD_callTM(L, im, 3, 0);
   }
 }
 
 
-static void call_binTM (lua_State *L, IMS event, const char *msg) {
+static void call_binTM (lua_State *L, StkId top, IMS event, const char *msg) {
   /* try first operand */
-  const TObject *im = luaT_getimbyObj(L, L->stack.top-2, event);
+  const TObject *im = luaT_getimbyObj(L, top-2, event);
+  L->top = top;
   if (ttype(im) == LUA_T_NIL) {
-    im = luaT_getimbyObj(L, L->stack.top-1, event);  /* try second operand */
+    im = luaT_getimbyObj(L, top-1, event);  /* try second operand */
     if (ttype(im) == LUA_T_NIL) {
       im = luaT_getim(L, 0, event);  /* try a 'global' i.m. */
       if (ttype(im) == LUA_T_NIL)
@@ -228,8 +224,8 @@ static void call_binTM (lua_State *L, IMS event, const char *msg) {
 }
 
 
-static void call_arith (lua_State *L, IMS event) {
-  call_binTM(L, event, "unexpected type in arithmetic operation");
+static void call_arith (lua_State *L, StkId top, IMS event) {
+  call_binTM(L, top, event, "unexpected type in arithmetic operation");
 }
 
 
@@ -249,11 +245,10 @@ static int luaV_strcomp (const char *l, long ll, const char *r, long lr) {
   }
 }
 
-void luaV_comparison (lua_State *L, lua_Type ttype_less, lua_Type ttype_equal,
-                      lua_Type ttype_great, IMS op) {
-  struct Stack *S = &L->stack;
-  const TObject *l = S->top-2;
-  const TObject *r = S->top-1;
+void luaV_comparison (lua_State *L, StkId top, lua_Type ttype_less,
+                      lua_Type ttype_equal, lua_Type ttype_great, IMS op) {
+  const TObject *l = top-2;
+  const TObject *r = top-1;
   real result;
   if (ttype(l) == LUA_T_NUMBER && ttype(r) == LUA_T_NUMBER)
     result = nvalue(l)-nvalue(r);
@@ -261,37 +256,39 @@ void luaV_comparison (lua_State *L, lua_Type ttype_less, lua_Type ttype_equal,
     result = luaV_strcomp(svalue(l), tsvalue(l)->u.s.len,
                           svalue(r), tsvalue(r)->u.s.len);
   else {
-    call_binTM(L, op, "unexpected type in comparison");
+    call_binTM(L, top, op, "unexpected type in comparison");
     return;
   }
-  S->top--;
-  nvalue(S->top-1) = 1;
-  ttype(S->top-1) = (result < 0) ? ttype_less :
+  nvalue(top-2) = 1;
+  ttype(top-2) = (result < 0) ? ttype_less :
                                 (result == 0) ? ttype_equal : ttype_great;
 }
 
 
-void luaV_pack (lua_State *L, StkId firstel, int nvararg, TObject *tab) {
-  TObject *firstelem = L->stack.stack+firstel;
+void luaV_pack (lua_State *L, StkId firstelem, int nvararg, TObject *tab) {
   int i;
   Hash *htab;
-  if (nvararg < 0) nvararg = 0;
-  htab = avalue(tab) = luaH_new(L, nvararg+1);  /* +1 for field 'n' */
+  htab = avalue(tab) = luaH_new(L, nvararg+1);  /* +1 for field `n' */
   ttype(tab) = LUA_T_ARRAY;
   for (i=0; i<nvararg; i++)
     luaH_setint(L, htab, i+1, firstelem+i);
-  luaV_setn(L, htab, nvararg);  /* store counter in field "n" */
+  luaV_setn(L, htab, nvararg);  /* store counter in field `n' */
 }
 
 
-static void adjust_varargs (lua_State *L, StkId first_extra_arg) {
+static void adjust_varargs (lua_State *L, StkId base, int nfixargs) {
   TObject arg;
-  luaV_pack(L, first_extra_arg,
-       (L->stack.top-L->stack.stack)-first_extra_arg, &arg);
-  luaD_adjusttop(L, first_extra_arg);
-  *L->stack.top++ = arg;
+  int nvararg = (L->top-base) - nfixargs;
+  if (nvararg < 0) {
+    luaV_pack(L, base, 0, &arg);
+    luaD_adjusttop(L, base, nfixargs);
+  }
+  else {
+    luaV_pack(L, base+nfixargs, nvararg, &arg);
+    L->top = base+nfixargs;
+  }
+  *L->top++ = arg;
 }
-
 
 
 /*
@@ -301,25 +298,26 @@ static void adjust_varargs (lua_State *L, StkId first_extra_arg) {
 */
 StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
                     StkId base) {
-  struct Stack *S = &L->stack;  /* to optimize */
+  register StkId top;  /* keep top local, for performance */
   register const Byte *pc = tf->code;
   const TObject *consts = tf->consts;
   if (L->callhook)
     luaD_callHook(L, base, tf, 0);
   luaD_checkstack(L, (*pc++)+EXTRA_STACK);
   if (*pc < ZEROVARARG)
-    luaD_adjusttop(L, base+*(pc++));
+    luaD_adjusttop(L, base, *(pc++));
   else {  /* varargs */
+    adjust_varargs(L, base, (*pc++)-ZEROVARARG);
     luaC_checkGC(L);
-    adjust_varargs(L, base+(*pc++)-ZEROVARARG);
   }
+  top = L->top;
   for (;;) {
     register int aux = 0;
     switchentry:
     switch ((OpCode)*pc++) {
 
       case ENDCODE:
-        S->top = S->stack + base;
+        top = base;
         goto ret;
         
       case RETCODE:
@@ -327,238 +325,240 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
         goto ret;
 
       case CALL: aux = *pc++;
-        luaD_call(L, (S->stack+base) + *pc++, aux);
+        L->top = top;
+        luaD_call(L, base+(*pc++), aux);
+        top = L->top;
         break;
 
       case TAILCALL: aux = *pc++;
-        luaD_call(L, (S->stack+base) + *pc++, MULT_RET);
+        L->top = top;
+        luaD_call(L, base+(*pc++), MULT_RET);
+        top = L->top;
         base += aux;
         goto ret;
 
       case PUSHNIL: aux = *pc++;
         do {
-          ttype(S->top++) = LUA_T_NIL;
+          ttype(top++) = LUA_T_NIL;
         } while (aux--);
         break;
 
       case POP: aux = *pc++;
-        S->top -= aux;
+        top -= aux;
         break;
 
       case PUSHNUMBERW: aux += highbyte(L, *pc++);
       case PUSHNUMBER:  aux += *pc++;
-        ttype(S->top) = LUA_T_NUMBER;
-        nvalue(S->top) = aux;
-        S->top++;
+        ttype(top) = LUA_T_NUMBER;
+        nvalue(top) = aux;
+        top++;
         break;
 
       case PUSHNUMBERNEGW: aux += highbyte(L, *pc++);
       case PUSHNUMBERNEG:  aux += *pc++;
-        ttype(S->top) = LUA_T_NUMBER;
-        nvalue(S->top) = -aux;
-        S->top++;
+        ttype(top) = LUA_T_NUMBER;
+        nvalue(top) = -aux;
+        top++;
         break;
 
       case PUSHCONSTANTW: aux += highbyte(L, *pc++);
       case PUSHCONSTANT:  aux += *pc++;
-        *S->top++ = consts[aux];
+        *top++ = consts[aux];
         break;
 
       case PUSHUPVALUE: aux = *pc++;
-        *S->top++ = cl->consts[aux+1];
+        *top++ = cl->consts[aux+1];
         break;
 
       case PUSHLOCAL: aux = *pc++;
-        *S->top++ = *((S->stack+base) + aux);
+        *top++ = *(base+aux);
         break;
 
       case GETGLOBALW: aux += highbyte(L, *pc++);
       case GETGLOBAL:  aux += *pc++;
+        L->top = top;
         luaV_getglobal(L, tsvalue(&consts[aux])->u.s.gv);
+        top++;
         break;
 
       case GETTABLE:
+        L->top = top;
         luaV_gettable(L);
+        top--;
         break;
 
       case GETDOTTEDW: aux += highbyte(L, *pc++);
       case GETDOTTED:  aux += *pc++;
-        *S->top++ = consts[aux];
+        *top++ = consts[aux];
+        L->top = top;
         luaV_gettable(L);
+        top--;
         break;
 
       case PUSHSELFW: aux += highbyte(L, *pc++);
       case PUSHSELF:  aux += *pc++; {
         TObject receiver;
-        receiver = *(S->top-1);
-        *S->top++ = consts[aux];
+        receiver = *(top-1);
+        *top++ = consts[aux];
+        L->top = top;
         luaV_gettable(L);
-        *S->top++ = receiver;
+        *(top-1) = receiver;
         break;
       }
 
       case CREATEARRAYW: aux += highbyte(L, *pc++);
       case CREATEARRAY:  aux += *pc++;
+        L->top = top;
         luaC_checkGC(L);
-        avalue(S->top) = luaH_new(L, aux);
-        ttype(S->top) = LUA_T_ARRAY;
-        S->top++;
+        avalue(top) = luaH_new(L, aux);
+        ttype(top) = LUA_T_ARRAY;
+        top++;
         break;
 
       case SETLOCAL: aux = *pc++;
-        *((S->stack+base) + aux) = *(--S->top);
+        *(base+aux) = *(--top);
         break;
 
       case SETGLOBALW: aux += highbyte(L, *pc++);
       case SETGLOBAL:  aux += *pc++;
+        L->top = top;
         luaV_setglobal(L, tsvalue(&consts[aux])->u.s.gv);
+        top--;
         break;
 
       case SETTABLEPOP:
-        luaV_settable(L, S->top-3);
-        S->top -= 2;  /* pop table and index */
+        L->top = top;
+        luaV_settable(L, top-3);
+        top -= 3;  /* pop table, index, and value */
         break;
 
       case SETTABLE:
-        luaV_settable(L, S->top-3-(*pc++));
+        L->top = top;
+        luaV_settable(L, top-3-(*pc++));
+        top--;  /* pop value */
         break;
 
       case SETLISTW: aux += highbyte(L, *pc++);
       case SETLIST:  aux += *pc++; {
         int n = *(pc++);
-        Hash *arr = avalue(S->top-n-1);
+        Hash *arr = avalue(top-n-1);
         aux *= LFIELDS_PER_FLUSH;
         for (; n; n--)
-          luaH_setint(L, arr, n+aux, --S->top);
+          luaH_setint(L, arr, n+aux, --top);
         break;
       }
 
       case SETMAP:  aux = *pc++; {
-        Hash *arr = avalue(S->top-(2*aux)-3);
+        Hash *arr = avalue(top-(2*aux)-3);
         do {
-          luaH_set(L, arr, S->top-2, S->top-1);
-          S->top-=2;
+          luaH_set(L, arr, top-2, top-1);
+          top-=2;
         } while (aux--);
         break;
       }
 
       case NEQOP: aux = 1;
       case EQOP: {
-        int res = luaO_equalObj(S->top-2, S->top-1);
+        int res = luaO_equalObj(top-2, top-1);
         if (aux) res = !res;
-        S->top--;
-        ttype(S->top-1) = res ? LUA_T_NUMBER : LUA_T_NIL;
-        nvalue(S->top-1) = 1;
+        top--;
+        ttype(top-1) = res ? LUA_T_NUMBER : LUA_T_NIL;
+        nvalue(top-1) = 1;
         break;
       }
 
        case LTOP:
-         luaV_comparison(L, LUA_T_NUMBER, LUA_T_NIL, LUA_T_NIL, IM_LT);
+         luaV_comparison(L, top, LUA_T_NUMBER, LUA_T_NIL, LUA_T_NIL, IM_LT);
+         top--;
          break;
 
       case LEOP:
-        luaV_comparison(L, LUA_T_NUMBER, LUA_T_NUMBER, LUA_T_NIL, IM_LE);
+        luaV_comparison(L, top, LUA_T_NUMBER, LUA_T_NUMBER, LUA_T_NIL, IM_LE);
+        top--;
         break;
 
       case GTOP:
-        luaV_comparison(L, LUA_T_NIL, LUA_T_NIL, LUA_T_NUMBER, IM_GT);
+        luaV_comparison(L, top, LUA_T_NIL, LUA_T_NIL, LUA_T_NUMBER, IM_GT);
+        top--;
         break;
 
       case GEOP:
-        luaV_comparison(L, LUA_T_NIL, LUA_T_NUMBER, LUA_T_NUMBER, IM_GE);
+        luaV_comparison(L, top, LUA_T_NIL, LUA_T_NUMBER, LUA_T_NUMBER, IM_GE);
+        top--;
         break;
 
-      case ADDOP: {
-        TObject *l = S->top-2;
-        TObject *r = S->top-1;
-        if (tonumber(r) || tonumber(l))
-          call_arith(L, IM_ADD);
-        else {
-          nvalue(l) += nvalue(r);
-          --S->top;
-        }
+      case ADDOP:
+        if (tonumber(top-1) || tonumber(top-2))
+          call_arith(L, top, IM_ADD);
+        else
+          nvalue(top-2) += nvalue(top-1);
+        top--;
         break;
-      }
 
-      case SUBOP: {
-        TObject *l = S->top-2;
-        TObject *r = S->top-1;
-        if (tonumber(r) || tonumber(l))
-          call_arith(L, IM_SUB);
-        else {
-          nvalue(l) -= nvalue(r);
-          --S->top;
-        }
+      case SUBOP:
+        if (tonumber(top-1) || tonumber(top-2))
+          call_arith(L, top, IM_SUB);
+        else
+          nvalue(top-2) -= nvalue(top-1);
+        top--;
         break;
-      }
 
-      case MULTOP: {
-        TObject *l = S->top-2;
-        TObject *r = S->top-1;
-        if (tonumber(r) || tonumber(l))
-          call_arith(L, IM_MUL);
-        else {
-          nvalue(l) *= nvalue(r);
-          --S->top;
-        }
+      case MULTOP:
+        if (tonumber(top-1) || tonumber(top-2))
+          call_arith(L, top, IM_MUL);
+        else
+          nvalue(top-2) *= nvalue(top-1);
+        top--;
         break;
-      }
 
-      case DIVOP: {
-        TObject *l = S->top-2;
-        TObject *r = S->top-1;
-        if (tonumber(r) || tonumber(l))
-          call_arith(L, IM_DIV);
-        else {
-          nvalue(l) /= nvalue(r);
-          --S->top;
-        }
+      case DIVOP:
+        if (tonumber(top-1) || tonumber(top-2))
+          call_arith(L, top, IM_DIV);
+        else
+          nvalue(top-2) /= nvalue(top-1);
+        top--;
         break;
-      }
 
       case POWOP:
-        call_binTM(L, IM_POW, "undefined operation");
+        call_binTM(L, top, IM_POW, "undefined operation");
+        top--;
         break;
 
-      case CONCOP: {
-        TObject *l = S->top-2;
-        TObject *r = S->top-1;
-        if (tostring(L, l) || tostring(L, r))
-          call_binTM(L, IM_CONCAT, "unexpected type for concatenation");
-        else {
-          tsvalue(l) = strconc(L, tsvalue(l), tsvalue(r));
-          --S->top;
-        }
+      case CONCOP:
+        if (tostring(L, top-2) || tostring(L, top-1))
+          call_binTM(L, top, IM_CONCAT, "unexpected type for concatenation");
+        else
+          tsvalue(top-2) = strconc(L, tsvalue(top-2), tsvalue(top-1));
+        L->top = top;
         luaC_checkGC(L);
+        top--;
         break;
-      }
 
       case MINUSOP:
-        if (tonumber(S->top-1)) {
-          ttype(S->top) = LUA_T_NIL;
-          S->top++;
-          call_arith(L, IM_UNM);
+        if (tonumber(top-1)) {
+          ttype(top) = LUA_T_NIL;
+          call_arith(L, top+1, IM_UNM);
         }
         else
-          nvalue(S->top-1) = - nvalue(S->top-1);
+          nvalue(top-1) = - nvalue(top-1);
         break;
 
       case NOTOP:
-        ttype(S->top-1) =
-           (ttype(S->top-1) == LUA_T_NIL) ? LUA_T_NUMBER : LUA_T_NIL;
-        nvalue(S->top-1) = 1;
+        ttype(top-1) =
+           (ttype(top-1) == LUA_T_NIL) ? LUA_T_NUMBER : LUA_T_NIL;
+        nvalue(top-1) = 1;
         break;
 
       case ONTJMPW: aux += highbyte(L, *pc++);
       case ONTJMP:  aux += *pc++;
-        if (ttype(S->top-1) != LUA_T_NIL) pc += aux;
-        else S->top--;
+        if (ttype(top-1) != LUA_T_NIL) pc += aux;
+        else top--;
         break;
 
       case ONFJMPW: aux += highbyte(L, *pc++);
       case ONFJMP:  aux += *pc++;
-        if (ttype(S->top-1) == LUA_T_NIL) pc += aux;
-        else S->top--;
+        if (ttype(top-1) == LUA_T_NIL) pc += aux;
+        else top--;
         break;
 
       case JMPW: aux += highbyte(L, *pc++);
@@ -568,35 +568,40 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
 
       case IFFJMPW: aux += highbyte(L, *pc++);
       case IFFJMP:  aux += *pc++;
-        if (ttype(--S->top) == LUA_T_NIL) pc += aux;
+        if (ttype(--top) == LUA_T_NIL) pc += aux;
         break;
 
       case IFTUPJMPW: aux += highbyte(L, *pc++);
       case IFTUPJMP:  aux += *pc++;
-        if (ttype(--S->top) != LUA_T_NIL) pc -= aux;
+        if (ttype(--top) != LUA_T_NIL) pc -= aux;
         break;
 
       case IFFUPJMPW: aux += highbyte(L, *pc++);
       case IFFUPJMP:  aux += *pc++;
-        if (ttype(--S->top) == LUA_T_NIL) pc -= aux;
+        if (ttype(--top) == LUA_T_NIL) pc -= aux;
         break;
 
       case CLOSUREW: aux += highbyte(L, *pc++);
       case CLOSURE:  aux += *pc++;
-        *S->top++ = consts[aux];
-        luaV_closure(L, *pc++);
+        *top++ = consts[aux];
+        L->top = top;
+        aux = *pc++;
+        luaV_closure(L, aux);
         luaC_checkGC(L);
+        top -= aux;
         break;
 
       case SETLINEW: aux += highbyte(L, *pc++);
       case SETLINE:  aux += *pc++;
-        if ((S->stack+base-1)->ttype != LUA_T_LINE) {
+        L->top = top;
+        if ((base-1)->ttype != LUA_T_LINE) {
           /* open space for LINE value */
-          luaD_openstack(L, (S->top-S->stack)-base);
+          luaD_openstack(L, base);
+          base->ttype = LUA_T_LINE;
           base++;
-          (S->stack+base-1)->ttype = LUA_T_LINE;
+          top++;
         }
-        (S->stack+base-1)->value.i = aux;
+        (base-1)->value.i = aux;
         if (L->linehook)
           luaD_lineHook(L, aux);
         break;
@@ -608,8 +613,8 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
 
     }
   } ret:
+  L->top = top;
   if (L->callhook)
     luaD_callHook(L, 0, NULL, 1);
   return base;
 }
-

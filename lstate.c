@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.17 1999/11/22 13:12:07 roberto Exp roberto $
+** $Id: lstate.c,v 1.18 1999/11/29 19:12:07 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -23,9 +23,6 @@ lua_State *lua_state = NULL;
 
 lua_State *lua_newstate (void) {
   lua_State *L = luaM_new(NULL, lua_State);
-  L->Cstack.base = 0;
-  L->Cstack.lua2C = 0;
-  L->Cstack.num = 0;
   L->errorJmp = NULL;
   L->Mbuffer = NULL;
   L->Mbuffbase = 0;
@@ -63,7 +60,7 @@ void lua_close (lua_State *L) {
   LUA_ASSERT(L, L->rootglobal == NULL, "list should be empty");
   LUA_ASSERT(L, L->roottable == NULL, "list should be empty");
   luaS_freeall(L);
-  luaM_free(L, L->stack.stack);
+  luaM_free(L, L->stack);
   luaM_free(L, L->IMtable);
   luaM_free(L, L->refArray);
   luaM_free(L, L->Mbuffer);

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.33 1999/11/23 13:58:02 roberto Exp roberto $
+** $Id: lgc.c,v 1.34 1999/11/26 18:59:20 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -77,9 +77,9 @@ static void travglobal (lua_State *L) {
 
 
 static void travstack (lua_State *L) {
-  StkId i;
-  for (i = (L->stack.top-1)-L->stack.stack; i>=0; i--)
-    markobject(L, L->stack.stack+i);
+  int i;
+  for (i = (L->top-1)-L->stack; i>=0; i--)
+    markobject(L, L->stack+i);
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.43 1999/11/22 13:12:07 roberto Exp roberto $
+** $Id: lparser.c,v 1.44 1999/11/25 18:59:43 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -581,8 +581,8 @@ static void init_state (LexState *ls, FuncState *fs, TaggedString *source) {
   code_byte(ls, 0);  /* to be filled with maxstacksize */
   code_byte(ls, 0);  /* to be filled with arg information */
   /* push function (to avoid GC) */
-  tfvalue(L->stack.top) = f;
-  ttype(L->stack.top) = LUA_T_PROTO;
+  tfvalue(L->top) = f;
+  ttype(L->top) = LUA_T_PROTO;
   incr_top;
 }
 
@@ -599,7 +599,7 @@ static void close_func (LexState *ls) {
     luaM_reallocvector(ls->L, f->locvars, fs->nvars, LocVar);
   }
   ls->fs = fs->prev;
-  ls->L->stack.top--;  /* pop function */
+  ls->L->top--;  /* pop function */
 }
 
 
