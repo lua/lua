@@ -4,7 +4,7 @@
 ** facilities.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.3 1994/09/05 21:22:43 celes Exp celes $";
+char *rcs_inout="$Id: inout.c,v 2.4 1994/10/11 14:38:17 celes Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,8 +46,7 @@ void lua_errorfunction (void (*fn) (char *s))
 */
 static int fileinput (void)
 {
- int c = fgetc (fp);
- return (c == EOF ? 0 : c);
+ return fgetc (fp);
 }
 
 /*
@@ -55,8 +54,7 @@ static int fileinput (void)
 */
 static int stringinput (void)
 {
- st++;
- return (*(st-1));
+ return *st++;
 }
 
 /*
