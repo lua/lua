@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.10 2004/08/30 13:44:44 roberto Exp $
+** $Id: lgc.c,v 2.12 2004/09/15 20:38:15 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -239,14 +239,17 @@ static void traverseclosure (global_State *g, Closure *cl) {
 
 
 static void checkstacksizes (lua_State *L, StkId max) {
-  int used = L->ci - L->base_ci;  /* number of `ci' in use */
-  if (4*used < L->size_ci && 2*BASIC_CI_SIZE < L->size_ci)
+  int ci_used = L->ci - L->base_ci;  /* number of `ci' in use */
+  int s_used = max - L->stack;  /* part of stack in use */
+  if (L->size_ci > LUA_MAXCALLS)  /* handling overflow? */
+    return;  /* do not touch the stacks */
+  if (4*ci_used < L->size_ci && 2*BASIC_CI_SIZE < L->size_ci)
     luaD_reallocCI(L, L->size_ci/2);  /* still big enough... */
-  else condhardstacktests(luaD_reallocCI(L, L->size_ci));
-  used = max - L->stack;  /* part of stack in use */
-  if (4*used < L->stacksize && 2*(BASIC_STACK_SIZE+EXTRA_STACK) < L->stacksize)
+  condhardstacktests(luaD_reallocCI(L, ci_used + 1));
+  if (4*s_used < L->stacksize &&
+      2*(BASIC_STACK_SIZE+EXTRA_STACK) < L->stacksize)
     luaD_reallocstack(L, L->stacksize/2);  /* still big enough... */
-  else condhardstacktests(luaD_reallocstack(L, L->stacksize));
+  condhardstacktests(luaD_reallocstack(L, s_used));
 }
 
 
@@ -496,7 +499,7 @@ void luaC_freeall (lua_State *L) {
 /* mark root set */
 static void markroot (lua_State *L) {
   global_State *g = G(L);
-  lua_assert(g->gray == NULL);
+  g->gray = NULL;
   g->grayagain = NULL;
   g->weak = NULL;
   markobject(g, g->mainthread);
@@ -510,6 +513,7 @@ static void markroot (lua_State *L) {
 static void remarkupvals (global_State *g) {
   GCObject *o;
   for (o = obj2gco(g->mainthread); o; o = o->gch.next) {
+    lua_assert(!isblack(o));
     if (iswhite(o)) {
       GCObject *curr;
       for (curr = gco2th(o)->openupval; curr != NULL; curr = curr->gch.next) {
@@ -526,7 +530,8 @@ static void remarkupvals (global_State *g) {
 static void atomic (lua_State *L) {
   global_State *g = G(L);
   int aux;
-  lua_assert(g->gray == NULL);
+  /* remark objects cautch by write barrier */
+  propagateall(g);
   /* remark occasional upvalues of (maybe) dead threads */
   remarkupvals(g);
   /* remark weak tables */
@@ -666,10 +671,12 @@ void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v) {
   global_State *g = G(L);
   lua_assert(isblack(o) && iswhite(v) && !isdead(g, v) && !isdead(g, o));
   lua_assert(g->gcgenerational || g->gcstate != GCSfinalize);
-  if (g->gcstate != GCSpropagate)  /* sweeping phases? */
-    black2gray(o);  /* just mark as gray to avoid other barriers */
-  else  /* breaking invariant! */
-    reallymarkobject(g, v);  /* restore it */
+  lua_assert(ttype(&o->gch) != LUA_TTABLE);
+  /* must keep invariant? */
+  if (g->gcstate == GCSpropagate || g->gcgenerational)
+    reallymarkobject(g, v);  /* restore invariant */
+  else  /* don't mind */
+    makewhite(g, o);  /* mark as white just to avoid other barriers */
 }
 
 

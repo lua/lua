@@ -8,13 +8,19 @@ Usage: lua [options] [script [args]].  Available options are:
   -i       enter interactive mode after executing `script'
   -l name  load and run library `name'
   -v       show version information
+  -w       catch use of undefined global variables
   --       stop handling options
 
 This interpreter is suitable for using Lua as a stand-alone language; it loads
 all standard libraries. For a minimal interpreter, see ../../etc/min.c.
 
 If your application simply exports new functions to Lua (which is common),
-then you can use this interpreter (almost) unmodified, as follows:
+then you can use this interpreter unmodified by putting your functions into
+a library and loading it dynamically (if you have built support for dynamic
+libraries).
+
+If you need to add your library statically, then you can use this interpreter
+almost unmodified, as follows:
 
 * First, define a function 
 	 void myinit (lua_State *L)
@@ -22,11 +28,14 @@ then you can use this interpreter (almost) unmodified, as follows:
   are needed by your application, typically exporting your functions to Lua.
   (Of course, you can use any name instead of "myinit".)
 
-* Then, #define lua_userinit(L) to be "openstdlibs(L)+myinit(L)".
-  Here, openstdlibs is a function in lua.c that opens all standard libraries.
-  If you don't need them, just don't call openstdlibs and open any standard
-  libraries that you do need in myinit.
+* Then, #define lua_userinit(L) in luaconf.h to call luaopen_stdlibs and
+  possibly luaopen_stdlibs, which opens all standard libraries. If you don't
+  need them, just don't call openstdlibs and open any standard libraries that
+  you do need in myinit.
 
-* Finally, remember to link your C code when building lua.
+* Alternatively, write your own luaopen_stdlibs; the linker will use your
+  version (if you ask politely).
 
-For other customizations, see ../../etc/config.c.
+Just remember to link your C code when building lua!
+
+For other customizations, see ../../include/luaconf.h .

@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.156 2004/08/30 18:35:14 roberto Exp $
+** $Id: lbaselib.c,v 1.158 2004/09/15 20:39:42 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -273,25 +273,25 @@ static int luaB_loadfile (lua_State *L) {
 }
 
 
-struct Aux_load {
-  int func;
-  int res;
-};
-
-
+/*
+** Reader for generic `load' function: `lua_load' uses the
+** stack for internal stuff, so the reader cannot change the
+** stack top. Instead, it keeps its resulting string in a
+** reserved slot inside the stack.
+*/
 static const char *generic_reader (lua_State *L, void *ud, size_t *size) {
-  struct Aux_load *al = (struct Aux_load *)ud;
-  luaL_unref(L, al->res, LUA_REGISTRYINDEX);
-  lua_getref(L, al->func);
-  lua_call(L, 0, 1);
+  luaL_checkstack(L, 2, "too many nested functions");
+  lua_pushvalue(L, 1);  /* get function */
+  lua_call(L, 0, 1);  /* call it */
   if (lua_isnil(L, -1)) {
     *size = 0;
     return NULL;
   }
   else if (lua_isstring(L, -1)) {
-    const char *res = lua_tostring(L, -1);
-    *size = lua_strlen(L, -1);
-    al->res = luaL_ref(L, LUA_REGISTRYINDEX);
+    const char *res;
+    lua_replace(L, 3);  /* save string in a reserved stack slot */
+    res = lua_tostring(L, 3);
+    *size = lua_strlen(L, 3);
     return res;
   }
   else luaL_error(L, "reader function must return a string");
@@ -300,16 +300,11 @@ static const char *generic_reader (lua_State *L, void *ud, size_t *size) {
 
 
 static int luaB_load (lua_State *L) {
-  struct Aux_load al;
   int status;
   const char *cname = luaL_optstring(L, 2, "=(load)");
   luaL_checktype(L, 1, LUA_TFUNCTION);
-  lua_settop(L, 1);
-  al.func = luaL_ref(L, LUA_REGISTRYINDEX);
-  al.res = LUA_REFNIL;
-  status = lua_load(L, generic_reader, &al, cname);
-  luaL_unref(L, al.func, LUA_REGISTRYINDEX);
-  luaL_unref(L, al.res, LUA_REGISTRYINDEX);
+  lua_settop(L, 3);  /* function, eventual name, plus one reserved slot */
+  status = lua_load(L, generic_reader, NULL, cname);
   return load_aux(L, status);
 }
 
@@ -528,9 +523,13 @@ static int auxresume (lua_State *L, lua_State *co, int narg) {
   int status;
   if (!lua_checkstack(co, narg))
     luaL_error(L, "too many arguments to resume");
+  if (lua_threadstatus(co) == 0 && lua_gettop(co) == 0) {
+    lua_pushliteral(L, "cannot resume dead coroutine");
+    return -1;  /* error flag */
+  }
   lua_xmove(L, co, narg);
   status = lua_resume(co, narg);
-  if (status == 0) {
+  if (status == 0 || status == LUA_YIELD) {
     int nres = lua_gettop(co);
     if (!lua_checkstack(L, nres))
       luaL_error(L, "too many results to resume");
@@ -604,13 +603,34 @@ static int luaB_costatus (lua_State *L) {
   luaL_argcheck(L, co, 1, "coroutine expected");
   if (L == co) lua_pushliteral(L, "running");
   else {
-    lua_Debug ar;
-    if (lua_getstack(co, 0, &ar) == 0 && lua_gettop(co) == 0)
-      lua_pushliteral(L, "dead");
-    else
-      lua_pushliteral(L, "suspended");
+    switch (lua_threadstatus(co)) {
+      case LUA_YIELD:
+        lua_pushliteral(L, "suspended");
+        break;
+      case 0: {
+        lua_Debug ar;
+        if (lua_getstack(co, 0, &ar) > 0)  /* does it have frames? */
+          lua_pushliteral(L, "normal");  /* it is running */
+        else if (lua_gettop(co) == 0)
+            lua_pushliteral(L, "dead");
+        else
+          lua_pushliteral(L, "suspended");  /* initial state */
+        break;  
+      }
+      default:  /* some error occured */
+        lua_pushliteral(L, "dead");
+        break;
+    }
   }
   return 1;
+}
+
+
+static int luaB_cocurrent (lua_State *L) {
+  if (lua_pushthread(L))
+    return 0;  /* main thread is not a coroutine */
+  else
+    return 1;
 }
 
 
@@ -620,6 +640,7 @@ static const luaL_reg co_funcs[] = {
   {"resume", luaB_coresume},
   {"yield", luaB_yield},
   {"status", luaB_costatus},
+  {"current", luaB_cocurrent},
   {NULL, NULL}
 };
 

@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.11 2004/08/30 18:35:14 roberto Exp $
+** $Id: luaconf.h,v 1.12 2004/09/10 17:30:46 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -60,7 +60,7 @@
 #define LUA_FIRSTINDEX		1
 
 /* assertions in Lua (mainly for internal debugging) */
-#define lua_assert(c)		/* empty */
+#define lua_assert(c)		((void)0)
 
 /* }====================================================== */
 
@@ -123,7 +123,7 @@
 #ifdef LUA_CORE
 
 /* LUA-C API assertions */
-#define api_check(L, o)		/* empty */
+#define api_check(L, o)		lua_assert(o)
 
 
 /* an unsigned integer with at least 32 bits */
