@@ -1,19 +1,15 @@
 /*
-** $Id: lauxlib.c,v 1.85 2002/09/05 19:45:42 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.86 2002/09/16 19:49:45 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
 
 
 #include <ctype.h>
+#include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-
-#ifndef lua_filerror
-#include <errno.h>
-#define lua_fileerror	(strerror(errno))
-#endif
 
 
 /* This file uses only the official API of Lua.
@@ -292,6 +288,10 @@ LUALIB_API void luaL_buffinit (lua_State *L, luaL_Buffer *B) {
 
 LUALIB_API int luaL_ref (lua_State *L, int t) {
   int ref;
+  if (lua_isnil(L, -1)) {
+    lua_pop(L, 1);  /* remove from stack */
+    return LUA_REFNIL;  /* `nil' has a unique fixed reference */
+  }
   lua_rawgeti(L, t, 0);  /* get first free element */
   ref = (int)lua_tonumber(L, -1);  /* ref = t[0] */
   lua_pop(L, 1);  /* remove it from stack */
@@ -347,7 +347,7 @@ static const char *getF (lua_State *L, void *ud, size_t *size) {
 
 static int errfile (lua_State *L, const char *filename) {
   if (filename == NULL) filename = "stdin";
-  lua_pushfstring(L, "cannot read %s: %s", filename, lua_fileerror);
+  lua_pushfstring(L, "cannot read %s: %s", filename, strerror(errno));
   return LUA_ERRFILE;
 }
 
