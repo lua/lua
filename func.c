@@ -19,8 +19,12 @@ static int maxcurrvars = 0;
 */
 void luaI_initTFunc (TFunc *f)
 {
+  f->next = NULL;
+  f->marked = 0;
+  f->size = 0;
   f->code = NULL;
   f->lineDefined = 0;
+  f->fileName = NULL;
   f->locvars = NULL;
 }
 

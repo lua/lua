@@ -17,7 +17,7 @@ typedef struct LocVar
 typedef struct TFunc
 {
   struct TFunc	*next;
-  char		marked;
+  int		marked;
   int		size;
   Byte		*code;
   int		lineDefined;
