@@ -1,11 +1,12 @@
 /*
-** $Id: ltests.c,v 1.61 2001/02/01 16:03:38 roberto Exp roberto $
+** $Id: ltests.c,v 1.62 2001/02/02 15:13:05 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
 
 
 #include <ctype.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,6 +35,7 @@
 */
 #ifdef LUA_DEBUG
 
+
 lua_State *lua_state = NULL;
 
 int islocked = 0;
@@ -45,6 +47,88 @@ static void setnameval (lua_State *L, const char *name, int val) {
   lua_pushnumber(L, val);
   lua_settable(L, -3);
 }
+
+
+/*
+** {======================================================================
+** Controlled version for realloc.
+** =======================================================================
+*/
+
+
+/* ensures maximum alignment for HEADER */
+#define HEADER	(sizeof(union L_Umaxalign))
+
+#define MARKSIZE	32
+#define MARK		0x55  /* 01010101 (a nice pattern) */
+
+
+#define blocksize(b)	((size_t *)((char *)(b) - HEADER))
+
+unsigned long memdebug_numblocks = 0;
+unsigned long memdebug_total = 0;
+unsigned long memdebug_maxmem = 0;
+unsigned long memdebug_memlimit = ULONG_MAX;
+
+
+static void *checkblock (void *block) {
+  size_t *b = blocksize(block);
+  size_t size = *b;
+  int i;
+  for (i=0;i<MARKSIZE;i++)
+    lua_assert(*(((char *)b)+HEADER+size+i) == MARK+i);  /* corrupted block? */
+  return b;
+}
+
+
+static void freeblock (void *block) {
+  if (block) {
+    size_t size = *blocksize(block);
+    block = checkblock(block);
+    memset(block, -1, size+HEADER+MARKSIZE);  /* erase block */
+    free(block);  /* free original block */
+    memdebug_numblocks--;
+    memdebug_total -= size;
+  }
+}
+
+
+void *debug_realloc (void *block, size_t oldsize, size_t size) {
+  lua_assert((oldsize == 0) ? block == NULL : oldsize == *blocksize(block));
+  if (size == 0) {
+    freeblock(block);
+    return NULL;
+  }
+  else if (memdebug_total+size > memdebug_memlimit)
+    return NULL;  /* to test memory allocation errors */
+  else {
+    char *newblock;
+    int i;
+    size_t realsize = HEADER+size+MARKSIZE;
+    if (realsize < size) return NULL;  /* overflow! */
+    newblock = (char *)malloc(realsize);  /* alloc a new block */
+    if (newblock == NULL) return NULL;
+    if (oldsize > size) oldsize = size;
+    if (block) {
+      memcpy(newblock+HEADER, block, oldsize);
+      freeblock(block);  /* erase (and check) old copy */
+    }
+    /* initialize new part of the block with something `weird' */
+    memset(newblock+HEADER+oldsize, -MARK, size-oldsize);
+    memdebug_total += size;
+    if (memdebug_total > memdebug_maxmem)
+      memdebug_maxmem = memdebug_total;
+    memdebug_numblocks++;
+    *(size_t *)newblock = size;
+    for (i=0;i<MARKSIZE;i++)
+      *(newblock+HEADER+size+i) = (char)(MARK+i);
+    return newblock+HEADER;
+  }
+}
+
+
+/* }====================================================================== */
+
 
 
 /*

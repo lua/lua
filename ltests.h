@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 1.1 2001/02/02 15:12:25 roberto Exp roberto $
+** $Id: ltests.h,v 1.2 2001/02/05 19:08:01 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -7,6 +7,8 @@
 #ifndef ltests_h
 #define ltests_h
 
+
+#include <stdlib.h>
 
 
 #define LUA_DEBUG
@@ -25,6 +27,14 @@ extern unsigned long memdebug_numblocks;
 extern unsigned long memdebug_total;
 extern unsigned long memdebug_maxmem;
 extern unsigned long memdebug_memlimit;
+
+
+#define l_malloc(s)		debug_realloc(NULL, 0, s)
+#define l_realloc(b, os, s)	debug_realloc(b, os, s)
+#define l_free(b, s)		debug_realloc(b, s, 0)
+
+void *debug_realloc (void *block, size_t oldsize, size_t size);
+
 
 
 /* test for lock/unlock */

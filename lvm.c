@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.163 2001/02/01 17:39:55 roberto Exp roberto $
+** $Id: lvm.c,v 1.164 2001/02/02 15:13:05 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -23,11 +23,6 @@
 #include "ltable.h"
 #include "ltm.h"
 #include "lvm.h"
-
-
-#ifdef OLD_ANSI
-#define strcoll(a,b)	strcmp(a,b)
-#endif
 
 
 

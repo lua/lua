@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.102 2001/01/26 12:12:16 roberto Exp roberto $
+** $Id: liolib.c,v 1.103 2001/02/02 19:02:40 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -21,19 +21,13 @@
 #ifndef OLD_ANSI
 #include <errno.h>
 #include <locale.h>
-#define realloc(b,s)    ((b) == NULL ? malloc(s) : (realloc)(b, s))
-#define free(b)         if (b) (free)(b)
-#else
-/* no support for locale and for strerror: fake them */
-#define setlocale(a,b)	((void)a, strcmp((b),"C")==0?"C":NULL)
-#define LC_ALL		0
-#define LC_COLLATE	0
-#define LC_CTYPE	0
-#define LC_MONETARY	0
-#define LC_NUMERIC	0
-#define LC_TIME		0
-#define strerror(e)	"I/O error"
-#define errno		(-1)
+#endif
+
+
+#ifndef l_realloc
+#define l_malloc(s)		malloc(s)
+#define l_realloc(b,os,s)	realloc(b, s)
+#define l_free(b, os)		free(b)
 #endif
 
 
@@ -258,20 +252,22 @@ static int read_line (lua_State *L, FILE *f) {
 static void read_file (lua_State *L, FILE *f) {
   size_t len = 0;
   size_t size = LUAL_BUFFERSIZE;
+  size_t oldsize = 0;
   char *buffer = NULL;
   for (;;) {
-    char *newbuffer = (char *)realloc(buffer, size);
+    char *newbuffer = (char *)l_realloc(buffer, oldsize, size);
     if (newbuffer == NULL) {
-      free(buffer);
+      l_free(buffer, oldsize);
       lua_error(L, "not enough memory to read a file");
     }
     buffer = newbuffer;
     len += fread(buffer+len, sizeof(char), size-len, f);
     if (len < size) break;  /* did not read all it could */
+    oldsize = size;
     size *= 2;
   }
   lua_pushlstring(L, buffer, len);
-  free(buffer);
+  l_free(buffer, size);
 }
 
 
@@ -282,13 +278,13 @@ static int read_chars (lua_State *L, FILE *f, size_t n) {
   if (n <= LUAL_BUFFERSIZE)
     buffer = statbuff;
   else {
-    buffer = (char  *)malloc(n);
+    buffer = (char  *)l_malloc(n);
     if (buffer == NULL)
       lua_error(L, "not enough memory to read a file");
   }
   n1 = fread(buffer, sizeof(char), n, f);
   lua_pushlstring(L, buffer, n1);
-  if (buffer != statbuff) free(buffer);
+  if (buffer != statbuff) l_free(buffer, n);
   return (n1 > 0 || n == 0);
 }
 
