@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.9 1994/11/10 17:36:54 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.10 1994/11/11 14:00:08 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -459,6 +459,18 @@ int lua_storesubscript (void)
   return(do_protectedrun(&func, 0));
 }
 
+/*
+** API: creates a new table
+*/
+lua_Object lua_createTable (int initSize)
+{
+  adjustC(0);
+  top++;
+  tag(top-1) = LUA_T_ARRAY;
+  avalue(top-1) = lua_createarray(initSize);
+  CBase++;  /* incorporate object in the stack */
+  return Ref(top-1);
+}
 
 /*
 ** Get a parameter, returning the object handle or 0 on error.

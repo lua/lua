@@ -2,7 +2,7 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lua.h,v 3.5 1994/11/08 19:56:39 roberto Exp roberto $
+** $Id: lua.h,v 3.6 1994/11/09 18:10:11 roberto Exp roberto $
 */
 
 
@@ -38,7 +38,7 @@ int            lua_callfunction		(lua_Object function);
 int	       lua_call			(char *funcname);
 
 lua_Object     lua_getparam 		(int number);
-#define	       lua_getresult		lua_getparam
+#define	       lua_getresult(_)		lua_getparam(_)
 
 float          lua_getnumber 		(lua_Object object);
 char          *lua_getstring 		(lua_Object object);
@@ -65,6 +65,7 @@ int	       lua_lock			(lua_Object object);
 lua_Object     lua_getlocked		(int ref);
 void	       lua_unlock		(int ref);
 
+lua_Object     lua_createTable		(int initSize);
 
 /* for lua 1.1 */
 
