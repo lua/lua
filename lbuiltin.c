@@ -1,11 +1,13 @@
 /*
-** $Id: lbuiltin.c,v 1.18 1997/12/17 20:48:58 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.19 1997/12/18 18:32:39 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
 
 
+#include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "lapi.h"
@@ -188,11 +190,23 @@ static void luaI_type (void)
 }
 
 
-static void lua_obj2number (void)
+static void tonumber (void)
 {
-  lua_Object o = lua_getparam(1);
-  if (lua_isnumber(o))
-    lua_pushnumber(lua_getnumber(o));
+  int base = luaL_opt_number(2, 10);
+  if (base == 10) {  /* standard convertion */
+    lua_Object o = lua_getparam(1);
+    if (lua_isnumber(o))
+      lua_pushnumber(lua_getnumber(o));
+  }
+  else {
+    char *s = luaL_check_string(1);
+    unsigned long n;
+    luaL_arg_check(0 <= base && base <= 36, 2, "base out of range");
+    n = strtol(s, &s, base);
+    while (isspace(*s)) s++;  /* skip trailing spaces */
+    if (*s) return;  /* invalid format: return nil */
+    lua_pushnumber(n);
+  }
 }
 
 
@@ -481,7 +495,7 @@ static struct luaL_reg int_funcs[] = {
   {"settagmethod", settagmethod},
   {"gettagmethod", gettagmethod},
   {"settag", settag},
-  {"tonumber", lua_obj2number},
+  {"tonumber", tonumber},
   {"tostring", bi_tostring},
   {"tag", luatag},
   {"type", luaI_type}
