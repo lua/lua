@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.106 2002/06/25 19:18:20 roberto Exp roberto $
+** $Id: llex.c,v 1.107 2002/07/08 18:14:36 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -273,6 +273,7 @@ static void read_string (LexState *LS, int del, SemInfo *seminfo) {
           case 't': save(L, '\t', l); next(LS); break;
           case 'v': save(L, '\v', l); next(LS); break;
           case '\n': save(L, '\n', l); inclinenumber(LS); break;
+          case EOZ: break;  /* will raise an error next loop */
           default: {
             if (!isdigit(LS->current))
               save_and_next(L, LS, l);  /* handles \\, \", \', and \? */
