@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.33 1999/08/10 12:55:56 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.34 1999/08/16 20:52:00 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -334,12 +334,12 @@ static const char *match (const char *s, const char *p, struct Capture *cap) {
       if (isdigit((unsigned char)(*(p+1)))) {  /* capture? */
         s = match_capture(s, *(p+1), cap);
         if (s == NULL) return NULL;
-        p+=2; goto init;  /* else return match(p+2, s, cap) */
+        p+=2; goto init;  /* else return match(s, p+2, cap) */
       }
       else if (*(p+1) == 'b') {  /* balanced string? */
         s = matchbalance(s, p+2, cap);
         if (s == NULL) return NULL;
-        p+=4; goto init;  /* else return match(p+4, s, cap); */
+        p+=4; goto init;  /* else return match(s, p+4, cap); */
       }
       else goto dflt;  /* case default */
     case '\0':  /* end of pattern */
