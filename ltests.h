@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 1.17 2002/10/25 20:05:28 roberto Exp roberto $
+** $Id: ltests.h,v 1.18 2002/11/12 14:34:18 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -43,7 +43,7 @@ void *debug_realloc (void *block, size_t oldsize, size_t size);
 /* test for lock/unlock */
 extern int islocked;
 #define LUA_USERSTATE	int *
-#define getlock(l)	(*(cast(int **, l) - 1))
+#define getlock(l)	(*(cast(LUA_USERSTATE *, l) - 1))
 #define lua_userstateopen(l) if (l != NULL) getlock(l) = &islocked;
 #define lua_lock(l)     lua_assert((*getlock(l))++ == 0)
 #define lua_unlock(l)   lua_assert(--(*getlock(l)) == 0)
