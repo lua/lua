@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.80 1999/12/02 16:24:45 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.81 1999/12/03 18:02:54 roberto Exp $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -462,8 +462,8 @@ static void luaB_foreachvar (lua_State *L) {
       *(L->top++) = gv->value;
       luaD_call(L, L->top-3, 1);
       if (ttype(L->top-1) != LUA_T_NIL) {
+        *(L->top-2) = *(L->top-1);  /* remove extra name */
         L->top--;
-        *(L->top-1) = *L->top;  /* remove extra name */
         return;
       }
       L->top-=2;  /* remove result and extra name */
@@ -738,7 +738,11 @@ static void testC (lua_State *L) {
     else if EQ("unref") {
       lua_unref(L, (int)lua_getnumber(L, reg[getreg(L, &pc)]));
     }
-    else if (EQ("getparam") || EQ("getresult")) {
+    else if EQ("getparam") {
+      int n = getreg(L, &pc);
+      reg[n] = lua_getparam(L, getnum(&pc)+1);  /* skips the commmand itself */
+    }
+    else if EQ("getresult") {
       int n = getreg(L, &pc);
       reg[n] = lua_getparam(L, getnum(&pc));
     }
@@ -786,7 +790,7 @@ static void testC (lua_State *L) {
       int val = getreg(L, &pc);
       int tag = getreg(L, &pc);
       lua_pushusertag(L, (void *)(int)lua_getnumber(L, reg[val]),
-                         lua_getnumber(L, reg[tag]));
+                         (int)lua_getnumber(L, reg[tag]));
     }
     else if EQ("udataval") {
       int n = getreg(L, &pc);
@@ -795,7 +799,36 @@ static void testC (lua_State *L) {
     }
     else if EQ("settagmethod") {
       int n = getreg(L, &pc);
-      lua_settagmethod(L, lua_getnumber(L, reg[n]), getname(&pc));
+      lua_settagmethod(L, (int)lua_getnumber(L, reg[n]), getname(&pc));
+    }
+    else if EQ("beginblock") {
+      lua_beginblock(L);
+    }
+    else if EQ("endblock") {
+      lua_endblock(L);
+    }
+    else if EQ("newstate") {
+      int stacksize = getnum(&pc);
+      lua_State *L1 = lua_newstate("stack", stacksize,
+                                   "builtin", getnum(&pc), NULL);
+      lua_pushuserdata(L, L1);
+    }
+    else if EQ("closestate") {
+      lua_close(lua_getuserdata(L, reg[getreg(L, &pc)]));
+    }
+    else if EQ("doremote") {
+      lua_Object ol1 = reg[getreg(L, &pc)];
+      lua_Object str = reg[getreg(L, &pc)];
+      lua_State *L1;
+      lua_Object temp;
+      int i;
+      if (!lua_isuserdata(L, ol1) || !lua_isstring(L, str))
+        lua_error(L, "bad arguments for `doremote'");
+      L1 = lua_getuserdata(L, ol1);
+      lua_dostring(L1, lua_getstring(L, str));
+      i = 1;
+      while ((temp = lua_getresult(L1, i++)) != LUA_NOOBJECT)
+        lua_pushstring(L, lua_getstring(L1, temp));
     }
     else luaL_verror(L, "unknown command in `testC': %.20s", inst);
   }
