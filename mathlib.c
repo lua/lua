@@ -3,7 +3,7 @@
 ** Mathematics library to LUA
 */
 
-char *rcs_mathlib="$Id: mathlib.c,v 1.10 1995/10/02 17:03:33 roberto Exp roberto $";
+char *rcs_mathlib="$Id: mathlib.c,v 1.11 1995/10/04 13:52:09 roberto Exp $";
 
 #include <stdio.h>		/* NULL */
 #include <math.h>
@@ -17,15 +17,25 @@ char *rcs_mathlib="$Id: mathlib.c,v 1.10 1995/10/02 17:03:33 roberto Exp roberto
 #define TODEGREE(a) ((a)*180.0/PI)
 #define TORAD(a)    ((a)*PI/180.0)
 
+
+static void str_error(char *funcname)
+{
+  char buff[250];
+  sprintf(buff, "incorrect arguments to function `%s'", funcname);
+  lua_error(buff);
+}
+
+static float get_and_check_float (int numArg, char *funcname)
+{
+  lua_Object o = lua_getparam(numArg);
+  if (!lua_isnumber(o))
+    str_error(funcname);
+  return lua_getnumber(o);
+}
+
 static void math_abs (void)
 {
- double d;
- lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT)
-   lua_error ("too few arguments to function `abs'");
- if (!lua_isnumber(o))
-   lua_error ("incorrect arguments to function `abs'");
- d = lua_getnumber(o);
+ double d = get_and_check_float(1, "abs"); 
  if (d < 0) d = -d;
  lua_pushnumber (d);
 }
@@ -33,13 +43,7 @@ static void math_abs (void)
 
 static void math_sin (void)
 {
- double d;
- lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT)
-   lua_error ("too few arguments to function `sin'");
- if (!lua_isnumber(o))
-   lua_error ("incorrect arguments to function `sin'");
- d = lua_getnumber(o);
+ double d = get_and_check_float(1, "sin");
  lua_pushnumber (sin(TORAD(d)));
 }
 
@@ -47,13 +51,7 @@ static void math_sin (void)
 
 static void math_cos (void)
 {
- double d;
- lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT)
-   lua_error ("too few arguments to function `cos'");
- if (!lua_isnumber(o))
-   lua_error ("incorrect arguments to function `cos'");
- d = lua_getnumber(o);
+ double d = get_and_check_float(1, "cos");
  lua_pushnumber (cos(TORAD(d)));
 }
 
@@ -61,117 +59,64 @@ static void math_cos (void)
 
 static void math_tan (void)
 {
- double d;
- lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT)
-   lua_error ("too few arguments to function `tan'");
- if (!lua_isnumber(o))
-   lua_error ("incorrect arguments to function `tan'");
- d = lua_getnumber(o);
+ double d = get_and_check_float(1, "tan");
  lua_pushnumber (tan(TORAD(d)));
 }
 
 
 static void math_asin (void)
 {
- double d;
- lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT)
-   lua_error ("too few arguments to function `asin'");
- if (!lua_isnumber(o))
-   lua_error ("incorrect arguments to function `asin'");
- d = lua_getnumber(o);
+ double d = get_and_check_float(1, "asin");
  lua_pushnumber (TODEGREE(asin(d)));
 }
 
 
 static void math_acos (void)
 {
- double d;
- lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT)
-   lua_error ("too few arguments to function `acos'");
- if (!lua_isnumber(o))
-   lua_error ("incorrect arguments to function `acos'");
- d = lua_getnumber(o);
+ double d = get_and_check_float(1, "acos");
  lua_pushnumber (TODEGREE(acos(d)));
 }
 
 
-
 static void math_atan (void)
 {
- double d;
- lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT)
-   lua_error ("too few arguments to function `atan'");
- if (!lua_isnumber(o))
-   lua_error ("incorrect arguments to function `atan'");
- d = lua_getnumber(o);
+ double d = get_and_check_float(1, "atan");
  lua_pushnumber (TODEGREE(atan(d)));
 }
 
 
 static void math_atan2 (void)
 {
- int d1, d2;
- lua_Object o1 = lua_getparam (1);
- lua_Object o2 = lua_getparam (2);
- if (!lua_isnumber(o1) || !lua_isnumber(o2))
-   lua_error ("incorrect arguments to function `atan2'");
- d1 = (int) lua_getnumber(o1);
- d2 = (int) lua_getnumber(o2);
+ double d1 = get_and_check_float(1, "atan2");
+ double d2 = get_and_check_float(2, "atan2");
  lua_pushnumber (TODEGREE(atan2(d1, d2)));
 }
 
 
 static void math_ceil (void)
 {
- double d;
- lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT)
-   lua_error ("too few arguments to function `ceil'");
- if (!lua_isnumber(o))
-   lua_error ("incorrect arguments to function `ceil'");
- d = lua_getnumber(o);
+ double d = get_and_check_float(1, "ceil");
  lua_pushnumber (ceil(d));
 }
 
 
 static void math_floor (void)
 {
- double d;
- lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT)
-   lua_error ("too few arguments to function `floor'");
- if (!lua_isnumber(o))
-   lua_error ("incorrect arguments to function `floor'");
- d = lua_getnumber(o);
+ double d = get_and_check_float(1, "floor");
  lua_pushnumber (floor(d));
 }
 
 static void math_mod (void)
 {
- int d1, d2;
- lua_Object o1 = lua_getparam (1);
- lua_Object o2 = lua_getparam (2);
- if (!lua_isnumber(o1) || !lua_isnumber(o2))
-   lua_error ("incorrect arguments to function `mod'");
- d1 = (int) lua_getnumber(o1);
- d2 = (int) lua_getnumber(o2);
+ int d1 = (int)get_and_check_float(1, "mod");
+ int d2 = (int)get_and_check_float(2, "mod");
  lua_pushnumber (d1%d2);
 }
 
 
 static void math_sqrt (void)
 {
- double d;
- lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT)
-   lua_error ("too few arguments to function `sqrt'");
- if (!lua_isnumber(o))
-   lua_error ("incorrect arguments to function `sqrt'");
- d = lua_getnumber(o);
+ double d = get_and_check_float(1, "sqrt");
  lua_pushnumber (sqrt(d));
 }
 
@@ -202,104 +147,56 @@ static void math_pow (void)
 static void math_min (void)
 {
  int i=1;
- double d, dmin;
- lua_Object o;
- if ((o = lua_getparam(i++)) == LUA_NOOBJECT)
-   lua_error ("too few arguments to function `min'");
- if (!lua_isnumber(o))
-   lua_error ("incorrect arguments to function `min'");
- dmin = lua_getnumber (o);
- while ((o = lua_getparam(i++)) != LUA_NOOBJECT)
+ double dmin = get_and_check_float(i, "min");
+ while (lua_getparam(++i) != LUA_NOOBJECT)
  {
-  if (!lua_isnumber(o))
-    lua_error ("incorrect arguments to function `min'");
-  d = lua_getnumber (o);
+  double d = get_and_check_float(i, "min");
   if (d < dmin) dmin = d;
  }
  lua_pushnumber (dmin);
 }
 
-
 static void math_max (void)
 {
  int i=1;
- double d, dmax;
- lua_Object o;
- if ((o = lua_getparam(i++)) == LUA_NOOBJECT)
-   lua_error ("too few arguments to function `max'");
- if (!lua_isnumber(o))
-   lua_error ("incorrect arguments to function `max'");
- dmax = lua_getnumber (o);
- while ((o = lua_getparam(i++)) != LUA_NOOBJECT)
+ double dmax = get_and_check_float(i, "max");
+ while (lua_getparam(++i) != LUA_NOOBJECT)
  {
-  if (!lua_isnumber(o))
-    lua_error ("incorrect arguments to function `max'");
-  d = lua_getnumber (o);
+  double d = get_and_check_float(i, "max");
   if (d > dmax) dmax = d;
  }
  lua_pushnumber (dmax);
 }
 
-
 static void math_log (void)
 {
- double d;
- lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT)
-   lua_error ("too few arguments to function `log'");
- if (!lua_isnumber(o))
-   lua_error ("incorrect arguments to function `log'");
- d = lua_getnumber(o);
+ double d = get_and_check_float(1, "log");
  lua_pushnumber (log(d));
 }
 
 
 static void math_log10 (void)
 {
- double d;
- lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT)
-   lua_error ("too few arguments to function `log10'");
- if (!lua_isnumber(o))
-   lua_error ("incorrect arguments to function `log10'");
- d = lua_getnumber(o);
+ double d = get_and_check_float(1, "log10");
  lua_pushnumber (log10(d));
 }
 
 
 static void math_exp (void)
 {
- double d;
- lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT)
-   lua_error ("too few arguments to function `exp'");
- if (!lua_isnumber(o))
-   lua_error ("incorrect arguments to function `exp'");
- d = lua_getnumber(o);
+ double d = get_and_check_float(1, "exp");
  lua_pushnumber (exp(d));
 }
 
 static void math_deg (void)
 {
- float d;
- lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT)
-   lua_error ("too few arguments to function `deg'");
- if (!lua_isnumber(o))
-   lua_error ("incorrect arguments to function `deg'");
- d = lua_getnumber(o);
+ float d = get_and_check_float(1, "deg");
  lua_pushnumber (d*180./PI);
 }
 
 static void math_rad (void)
 {
- float d;
- lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT)
-   lua_error ("too few arguments to function `rad'");
- if (!lua_isnumber(o))
-   lua_error ("incorrect arguments to function `rad'");
- d = lua_getnumber(o);
+ float d = get_and_check_float(1, "rad");
  lua_pushnumber (d/180.*PI);
 }
 
