@@ -170,3 +170,8 @@ in the following platforms:
 * IRIX	  - cc, cc-purify
 * Windows - Visual C++ (.c e .cpp, warning level=4)
 
+
+** lstrlib.c
+Tue May  2 15:27:58 EST 2000
+>> `strfind' gets wrong subject length when there is an offset
+(by Jon Kleiser; since 4.0a)
