@@ -313,3 +313,9 @@ Fri Dec 20 09:53:19 UTC 2002
 >> `resume' was checking the wrong value for stack overflow
 (by Maik Zimmermann; since 5.0b)
 
+** ldo.c
+Thu Jan 23 11:29:06 UTC 2003
+>> error during garbage collection in luaD_protectedparser is not being
+>> protected
+(by Benoit Germain; since 5.0a)
+
