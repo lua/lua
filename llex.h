@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.50 2004/03/12 19:53:56 roberto Exp roberto $
+** $Id: llex.h,v 1.51 2004/12/02 12:59:10 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -28,8 +28,8 @@ enum RESERVED {
   TK_IF, TK_IN, TK_LOCAL, TK_NIL, TK_NOT, TK_OR, TK_REPEAT,
   TK_RETURN, TK_THEN, TK_TRUE, TK_UNTIL, TK_WHILE,
   /* other terminal symbols */
-  TK_NAME, TK_CONCAT, TK_DOTS, TK_EQ, TK_GE, TK_LE, TK_NE, TK_NUMBER,
-  TK_STRING, TK_EOS
+  TK_CONCAT, TK_DOTS, TK_EQ, TK_GE, TK_LE, TK_NE, TK_NUMBER,
+  TK_NAME, TK_STRING, TK_EOS
 };
 
 /* number of reserved words */
