@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.96 2000/06/19 18:05:14 roberto Exp roberto $
+** $Id: lparser.c,v 1.97 2000/06/19 18:26:23 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -56,6 +56,7 @@ static void exp1 (LexState *ls);
 
 
 static void next (LexState *ls) {
+  ls->lastline = ls->linenumber;
   if (ls->lookahead.token != TK_EOS) {  /* is there a look-ahead token? */
     ls->t = ls->lookahead;  /* use this one */
     ls->lookahead.token = TK_EOS;  /* and discharge it */
@@ -91,16 +92,6 @@ static void check_condition (LexState *ls, int c, const char *msg) {
 }
 
 
-static void setline (LexState *ls) {
-  FuncState *fs = ls->fs;
-  if (ls->L->debug && ls->linenumber != fs->lastsetline) {
-    luaX_checklimit(ls, ls->linenumber, MAXARG_U, "lines in a chunk");
-    luaK_code1(fs, OP_SETLINE, ls->linenumber);
-    fs->lastsetline = ls->linenumber;
-  }
-}
-
-
 static int optional (LexState *ls, int c) {
   if (ls->t.token == c) {
     next(ls);
@@ -125,18 +116,6 @@ static void check_match (LexState *ls, int what, int who, int where) {
     }
   }
   next(ls);
-}
-
-
-static void setline_and_next (LexState *ls) {
-  setline(ls);
-  next(ls);
-}
-
-
-static void check_END (LexState *ls, int who, int where) {
-  setline(ls);  /* setline for END */
-  check_match(ls, TK_END, who, where);
 }
 
 
@@ -175,9 +154,7 @@ static int checkname (LexState *ls) {
 
 static void luaI_registerlocalvar (LexState *ls, TString *varname, int line) {
   FuncState *fs = ls->fs;
-  /* start debug only when there are no active local variables,
-     but keep going after starting */
-  if ((ls->L->debug && fs->nlocalvar == 0) || fs->nvars != 0) {
+  if (fs->debug) {
     Proto *f = fs->f;
     luaM_growvector(ls->L, f->locvars, fs->nvars, 1, LocVar, "", MAX_INT);
     f->locvars[fs->nvars].varname = varname;
@@ -368,10 +345,8 @@ static void close_func (LexState *ls) {
   luaM_reallocvector(L, f->kstr, f->nkstr, TString *);
   luaM_reallocvector(L, f->knum, f->nknum, Number);
   luaM_reallocvector(L, f->kproto, f->nkproto, Proto *);
-  if (f->locvars) {  /* debug information? */
-    luaI_registerlocalvar(ls, NULL, -1);  /* flag end of vector */
-    luaM_reallocvector(L, f->locvars, fs->nvars, LocVar);
-  }
+  luaI_registerlocalvar(ls, NULL, -1);  /* flag end of vector */
+  luaM_reallocvector(L, f->locvars, fs->nvars, LocVar);
   ls->fs = fs->prev;
   LUA_ASSERT(L, fs->bl == NULL, "wrong list end");
 }
@@ -383,6 +358,7 @@ Proto *luaY_parser (lua_State *L, ZIO *z) {
   luaX_setinput(L, &lexstate, z, luaS_new(L, zname(z)));
   open_func(&lexstate, &funcstate);
   next(&lexstate);  /* read first token */
+  funcstate.debug = L->debug;  /* previous `next' may scan a pragma */
   chunk(&lexstate);
   check_condition(&lexstate, (lexstate.t.token == TK_EOS), "<eof> expected");
   close_func(&lexstate);
@@ -639,7 +615,6 @@ static void constructor (LexState *ls) {
 
 static void simpleexp (LexState *ls, expdesc *v) {
   FuncState *fs = ls->fs;
-  setline(ls);
   switch (ls->t.token) {
     case TK_NUMBER: {  /* simpleexp -> NUMBER */
       Number r = ls->t.seminfo.r;
@@ -819,13 +794,13 @@ static void whilestat (LexState *ls, int line) {
   expdesc v;
   Breaklabel bl;
   enterbreak(fs, &bl);
-  setline_and_next(ls);  /* trace WHILE when looping */
+  next(ls);
   cond(ls, &v);
   check(ls, TK_DO);
   block(ls);
   luaK_patchlist(fs, luaK_jump(fs), while_init);
   luaK_patchlist(fs, v.u.l.f, luaK_getlabel(fs));
-  check_END(ls, TK_WHILE, line);  /* trace END when loop ends */
+  check_match(ls, TK_END, TK_WHILE, line);
   leavebreak(fs, &bl);
 }
 
@@ -837,7 +812,7 @@ static void repeatstat (LexState *ls, int line) {
   expdesc v;
   Breaklabel bl;
   enterbreak(fs, &bl);
-  setline_and_next(ls);  /* trace REPEAT when looping */
+  next(ls);
   block(ls);
   check_match(ls, TK_UNTIL, TK_REPEAT, line);
   cond(ls, &v);
@@ -905,23 +880,22 @@ static void forstat (LexState *ls, int line) {
   TString *varname;
   Breaklabel bl;
   enterbreak(fs, &bl);
-  setline_and_next(ls);  /* skip `for' */
+  next(ls);  /* skip `for' */
   varname = str_checkname(ls);  /* first variable name */
   switch (ls->t.token) {
     case '=': fornum(ls, varname); break;
     case ',': forlist(ls, varname); break;
     default: luaK_error(ls, "`=' or `,' expected");
   }
-  check_END(ls, TK_FOR, line);
+  check_match(ls, TK_END, TK_FOR, line);
   leavebreak(fs, &bl);
 }
 
 
 static void test_then_block (LexState *ls, expdesc *v) {
   /* test_then_block -> [IF | ELSEIF] cond THEN block */
-  setline_and_next(ls);  /* skip IF or ELSEIF */
+  next(ls);  /* skip IF or ELSEIF */
   cond(ls, v);
-  setline(ls);  /* to trace the THEN */
   check(ls, TK_THEN);
   block(ls);  /* `then' part */
 }
@@ -941,13 +915,13 @@ static void ifstat (LexState *ls, int line) {
   if (ls->t.token == TK_ELSE) {
     luaK_concat(fs, &escapelist, luaK_jump(fs));
     luaK_patchlist(fs, v.u.l.f, luaK_getlabel(fs));
-    setline_and_next(ls);  /* skip ELSE */
+    next(ls);  /* skip ELSE */
     block(ls);  /* `else' part */
   }
   else
     luaK_concat(fs, &escapelist, v.u.l.f);
   luaK_patchlist(fs, escapelist, luaK_getlabel(fs));
-  check_END(ls, TK_IF, line);
+  check_match(ls, TK_END, TK_IF, line);
 }
 
 
@@ -956,7 +930,7 @@ static void localstat (LexState *ls) {
   int nvars = 0;
   int nexps;
   do {
-    setline_and_next(ls);  /* skip LOCAL or ',' */
+    next(ls);  /* skip LOCAL or ',' */
     store_localvar(ls, str_checkname(ls), nvars++);
   } while (ls->t.token == ',');
   if (optional(ls, '='))
@@ -989,7 +963,7 @@ static void funcstat (LexState *ls, int line) {
   expdesc v;
   check_condition(ls, (ls->fs->prev == NULL),
                   "cannot nest this kind of function declaration");
-  setline_and_next(ls);  /* skip FUNCTION */
+  next(ls);  /* skip FUNCTION */
   needself = funcname(ls, &v);
   body(ls, needself, line);
   luaK_storevar(ls, &v);
@@ -1000,7 +974,6 @@ static void namestat (LexState *ls) {
   /* stat -> func | ['%'] NAME assignment */
   FuncState *fs = ls->fs;
   expdesc v;
-  setline(ls);
   var_or_func(ls, &v);
   if (v.k == VEXP) {  /* stat -> func */
     check_condition(ls, luaK_lastisopen(fs), "syntax error");  /* an upvalue? */
@@ -1016,7 +989,7 @@ static void namestat (LexState *ls) {
 static void retstat (LexState *ls) {
   /* stat -> RETURN explist */
   FuncState *fs = ls->fs;
-  setline_and_next(ls);  /* skip RETURN */
+  next(ls);  /* skip RETURN */
   if (!block_follow(ls->t.token))
     explist1(ls);  /* optional return values */
   luaK_code1(fs, OP_RETURN, ls->fs->nlocalvar);
@@ -1031,7 +1004,7 @@ static void breakstat (LexState *ls) {
   Breaklabel *bl = fs->bl;
   if (!bl)
     luaK_error(ls, "no loop to break");
-  setline_and_next(ls);  /* skip BREAK */
+  next(ls);  /* skip BREAK */
   luaK_adjuststack(fs, currentlevel - bl->stacklevel);
   luaK_concat(fs, &bl->breaklist, luaK_jump(fs));
   fs->stacklevel = currentlevel;
@@ -1050,9 +1023,9 @@ static int stat (LexState *ls) {
       return 0;
     }
     case TK_DO: {  /* stat -> DO block END */
-      setline_and_next(ls);  /* skip DO */
+      next(ls);  /* skip DO */
       block(ls);
-      check_END(ls, TK_DO, line);
+      check_match(ls, TK_END, TK_DO, line);
       return 0;
     }
     case TK_FOR: {  /* stat -> forstat */
@@ -1113,13 +1086,14 @@ static void body (LexState *ls, int needself, int line) {
   FuncState new_fs;
   open_func(ls, &new_fs);
   new_fs.f->lineDefined = line;
+  new_fs.debug = ls->L->debug;
   check(ls, '(');
   if (needself)
     add_localvar(ls, "self");
   parlist(ls);
   check(ls, ')');
   chunk(ls);
-  check_END(ls, TK_FUNCTION, line);
+  check_match(ls, TK_END, TK_FUNCTION, line);
   close_func(ls);
   pushclosure(ls, &new_fs);
 }

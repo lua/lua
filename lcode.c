@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.36 2000/06/16 17:51:40 roberto Exp roberto $
+** $Id: lcode.c,v 1.37 2000/06/21 17:05:49 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -307,9 +307,8 @@ static void luaK_goiffalse (FuncState *fs, expdesc *v, int keepvalue) {
 
 
 static int code_label (FuncState *fs, OpCode op, int arg) {
-  int j = luaK_getlabel(fs);
-  luaK_code1(fs, op, arg);
-  return j;
+  luaK_getlabel(fs);  /* those instructions may be jump targets */
+  return luaK_code1(fs, op, arg);
 }
 
 
@@ -624,9 +623,17 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
     case iS: i = CREATE_S(o, arg1); break;
     case iAB: i = CREATE_AB(o, arg1, arg2); break;
   }
-  /* put new instruction in code array */
-  luaM_growvector(fs->L, fs->f->code, fs->pc, 1, Instruction,
+  /* check space for new instruction plus eventual SETLINE */
+  luaM_growvector(fs->L, fs->f->code, fs->pc, 2, Instruction,
                   "code size overflow", MAX_INT);
+  /* check the need for SETLINE */
+  if (fs->debug && fs->ls->lastline != fs->lastsetline) {
+    LexState *ls = fs->ls;
+    luaX_checklimit(ls, ls->lastline, MAXARG_U, "lines in a chunk");
+    fs->f->code[fs->pc++] = CREATE_U(OP_SETLINE, ls->lastline);
+    fs->lastsetline = ls->lastline;
+  }
+  /* put new instruction in code array */
   fs->f->code[fs->pc] = i;
   return fs->pc++;
 }
