@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.7 1994/09/08 15:27:10 celes Exp celes $";
+char *rcs_hash="$Id: hash.c,v 2.8 1994/10/11 12:59:49 celes Exp $";
 
 #include <string.h>
 #include <stdlib.h>
@@ -52,7 +52,7 @@ static int redimension (int nhash)
  return nhash*2+1;
 }
 
-static int index (Hash *t, Object *ref)		/* hash function */
+static int hashindex (Hash *t, Object *ref)		/* hash function */
 {
  switch (tag(ref))
  {
@@ -97,7 +97,7 @@ static int equalObj (Object *t1, Object *t2)
 
 static int present (Hash *t, Object *ref)
 { 
- int h = index(t, ref);
+ int h = hashindex(t, ref);
  if (h < 0) return h;
  while (tag(ref(node(t, h))) != T_NIL)
  {
@@ -195,6 +195,7 @@ void lua_hashcollector (void)
    if (prev == NULL) listhead = next;
    else              prev->next = next;
    hashdelete(curr_array);
+   ++lua_recovered;
   }
   else
   {

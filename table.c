@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.2 1994/07/19 21:27:18 celes Exp celes $";
+char *rcs_table="$Id: table.c,v 2.3 1994/08/03 14:15:46 celes Exp $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -39,6 +39,7 @@ int      		lua_nfile;
 #define GARBAGE_BLOCK 256
 Word lua_block=GARBAGE_BLOCK; /* when garbage collector will be called */
 Word lua_nentity;   /* counter of new entities (strings and arrays) */
+Word lua_recovered;   /* counter of recovered entities (strings and arrays) */
 
 
 /*
@@ -210,10 +211,15 @@ void lua_pack (void)
  /* mark symbol table strings */
  lua_travsymbol(lua_markobject);
 
+ lua_recovered=0; 
+
  lua_strcollector();
  lua_hashcollector();
 
- lua_nentity = 0;      /* reset counter */
+printf("lua_pack: lua_block=%d lua_recovered=%d %%=%.2f\n",lua_block,lua_recovered,100.0*lua_recovered/lua_block);
+
+ lua_nentity = 0;				/* reset counter */
+ lua_block=2*lua_block-3*lua_recovered/2;	/* adapt block size */
 } 
 
 
@@ -224,9 +230,6 @@ char *lua_createstring (char *s)
 {
  if (s == NULL) return NULL;
  
- if (lua_nentity == lua_block)
-  lua_pack ();
- lua_nentity++;
  return lua_strcreate(s);
 }
 
