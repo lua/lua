@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 1.6 1994/04/13 21:37:20 celes Exp celes $";
+char *rcs_luastx = "$Id: lua.stx,v 2.1 1994/04/15 19:02:04 celes Exp celes $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,7 +14,7 @@ char *rcs_luastx = "$Id: lua.stx,v 1.6 1994/04/13 21:37:20 celes Exp celes $";
 #include "table.h"
 #include "lua.h"
 
-#define LISTING 0
+#define LISTING 1
 
 #ifndef MAXCODE
 #define MAXCODE 1024
@@ -219,9 +219,6 @@ functionlist : /* empty */
 	     | functionlist { pc=basepc=maincode; nlocalvar=0;} stat sc 
 		{
 		  maincode=pc;
-#if LISTING
- PrintCode(basepc,maincode,(Byte*)mainbuffer);
-#endif
 		}
 	     | functionlist function
 	     | functionlist setdebug
@@ -705,6 +702,9 @@ int lua_parse (void)
  err = 0;
  if (yyparse () || (err==1)) return 1;
  *maincode++ = HALT;
+#if LISTING
+ PrintCode(basepc,maincode,(Byte*)mainbuffer);
+#endif
  if (lua_execute (initcode)) return 1;
  maincode = initcode;
  return 0;
@@ -887,6 +887,29 @@ static void PrintCode (Byte *p, Byte *end, Byte *code)
     			printf ("%d    RETCODE   %d\n", p-code, *(++p));
     			p++;
    			break;
+   case HALT:           printf ("%d    HALT\n", (p++)-code); break;
+   case SETFUNCTION:
+                        {
+                         CodeWord c1, c2;
+                         int n = p-code;
+                         p++;
+                         get_word(c1,p);
+                         get_word(c2,p);
+                         printf ("%d    SETFUNCTION  %d  %d\n", n, c1.w, c2.w);
+                        }
+                        break;
+   case SETLINE:
+                        {
+                         CodeWord c;
+                         int n = p-code;
+                         p++;
+                         get_word(c,p);
+                         printf ("%d    SETLINE  %d\n", n, c.w);
+                        }
+                        break;
+ 
+   case RESET:          printf ("%d    RESET\n", (p++)-code); break;
+
    default:		printf ("%d    Cannot happen: code %d\n", (p++)-code, *(p-1)); break;
   }
  }
