@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.32 2001/07/24 22:40:08 roberto Exp $
+## $Id: makefile,v 1.34 2002/02/14 21:49:33 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -18,11 +18,12 @@
 
 #EXTRA_H=-DLUA_USER_H='"ltests.h"'
 
-CONFIG = -D_POSIX_SOURCE  $(EXTRA_H)
+CONFIG = -D_POSIX_SOURCE  $(EXTRA_H) \
+  -D'lua_number2int(i,d)=__asm__("fldl %1\nfistpl %0":"=m"(i):"m"(d))'
 
 
 # Compilation parameters
-CC = g++
+CC = gcc
 CWARNS = -Wall -pedantic \
 	-Waggregate-return \
 	-Wcast-align \
@@ -146,9 +147,9 @@ ltests.o: ltests.c lua.h lapi.h lobject.h llimits.h lauxlib.h lcode.h \
  luadebug.h ldo.h lfunc.h lmem.h lstring.h lualib.h
 ltm.o: ltm.c lua.h lobject.h llimits.h lstate.h ltm.h luadebug.h \
  lstring.h ltable.h
-lua.o: lua.c lua.h luadebug.h lualib.h
+lua.o: lua.c lua.h lauxlib.h luadebug.h lualib.h
 lundump.o: lundump.c lua.h ldebug.h lstate.h lobject.h llimits.h ltm.h \
  luadebug.h lfunc.h lmem.h lopcodes.h lstring.h lundump.h lzio.h
-lvm.o: lvm.c lua.h lapi.h lobject.h llimits.h ldebug.h lstate.h ltm.h \
+lvm.o: lvm.c lua.h ldebug.h lstate.h lobject.h llimits.h ltm.h \
  luadebug.h ldo.h lfunc.h lgc.h lopcodes.h lstring.h ltable.h lvm.h
 lzio.o: lzio.c lua.h lzio.h

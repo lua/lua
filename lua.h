@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.121 2002/02/14 21:40:13 roberto Exp roberto $
+** $Id: lua.h,v 1.122 2002/03/07 18:15:10 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: info@lua.org
@@ -292,6 +292,11 @@ LUA_API int lua_pushupvalues (lua_State *L);
 /* function to convert a string to a lua_Number */
 #ifndef lua_str2number
 #define lua_str2number(s,p)     strtod((s), (p))
+#endif
+
+/* function to convert a lua_Number to int (with any rounding method) */
+#ifndef lua_number2int
+#define lua_number2int(i,n)	((i)=(int)(n))
 #endif
 
 /* }====================================================================== */

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.175 2002/03/04 21:29:41 roberto Exp roberto $
+** $Id: lapi.c,v 1.176 2002/03/07 18:15:10 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -597,7 +597,7 @@ LUA_API int lua_getn (lua_State *L, int index) {
   api_check(L, ttype(t) == LUA_TTABLE);
   value = luaH_getstr(hvalue(t), luaS_newliteral(L, "n"));  /* = t.n */
   if (ttype(value) == LUA_TNUMBER)
-    n = cast(int, nvalue(value));
+    lua_number2int(n, nvalue(value));
   else {
     Node *nd;
     Table *a = hvalue(t);
@@ -618,7 +618,7 @@ LUA_API int lua_getn (lua_State *L, int index) {
         max = nvalue(key(nd));
       nd++;
     }
-    n = cast(int, max);
+    lua_number2int(n, max);
   }
   lua_unlock(L);
   return n;

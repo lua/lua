@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: ltable.c,v 1.101 2002/02/14 21:41:08 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -85,7 +85,8 @@ Node *luaH_mainposition (const Table *t, const TObject *key) {
 */
 static int arrayindex (const TObject *key) {
   if (ttype(key) == LUA_TNUMBER) {
-    int k = cast(int, nvalue(key));
+    int k;
+    lua_number2int(k, (nvalue(key)));
     if (cast(lua_Number, k) == nvalue(key) && k >= 1 && !toobig(k))
       return k;
   }
@@ -421,7 +422,8 @@ const TObject *luaH_get (Table *t, const TObject *key) {
   switch (ttype(key)) {
     case LUA_TSTRING: return luaH_getstr(t, tsvalue(key));
     case LUA_TNUMBER: {
-      int k = cast(int, nvalue(key));
+      int k;
+      lua_number2int(k, (nvalue(key)));
       if (cast(lua_Number, k) == nvalue(key))  /* is an integer index? */
         return luaH_getnum(t, k);  /* use specialized version */
       /* else go through */
