@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.74 2001/03/07 18:09:25 roberto Exp roberto $
+** $Id: ldebug.c,v 1.75 2001/03/26 14:31:49 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -419,13 +419,13 @@ static Instruction luaG_symbexec (lua_State *L, const Proto *pt,
         break;
       }
       case OP_SETLIST: {
-        pop = arg2;
-        check(top-pop >= 1);  /* there must be a table below the list */
+        check(arg2 >= 0);
+        pop = top-arg2-1;
         break;
       }
       case OP_SETMAP: {
-        pop = 2*arg1;
-        check(top-pop >= 1);
+        check(arg1 >= 0);
+        pop = top-arg1-1;
         break;
       }
       case OP_CONCAT: {

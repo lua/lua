@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.30 2001/03/07 12:43:52 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.31 2001/03/26 14:31:49 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -366,30 +366,19 @@ static int luaB_require (lua_State *L) {
 }
 
 
-static int luaB_pack (lua_State *L) {
-  int n = lua_gettop(L);
-  lua_newtable(L);
-  aux_setn(L, -3, n);
-  lua_insert(L, 1);
-  while (n)
-    lua_rawseti(L, 1, n--);
-  return 1;
-}
-
-
-static int aux_unpack (lua_State *L, int arg) {
+static int aux_unwrap (lua_State *L, int arg) {
   int n, i;
   luaL_checktype(L, arg, LUA_TTABLE);
   n = lua_getn(L, arg);
-  luaL_checkstack(L, n, l_s("too many arguments"));
+  luaL_checkstack(L, n, l_s("table too big to unwrap"));
   for (i=1; i<=n; i++)  /* push arg[1...n] */
     lua_rawgeti(L, arg, i);
   return n;
 }
 
 
-static int luaB_unpack (lua_State *L) {
-  return aux_unpack(L, 1);
+static int luaB_unwrap (lua_State *L) {
+  return aux_unwrap(L, 1);
 }
 
 
@@ -408,7 +397,7 @@ static int luaB_call (lua_State *L) {
   oldtop = lua_gettop(L);  /* top before function-call preparation */
   /* push function */
   lua_pushvalue(L, 1);
-  n = aux_unpack(L, 2);  /* push arg[1...n] */
+  n = aux_unwrap(L, 2);  /* push arg[1...n] */
   status = lua_call(L, n, LUA_MULTRET);
   if (err != 0) {  /* restore old error method */
     lua_pushvalue(L, err);
@@ -762,8 +751,7 @@ static const luaL_reg base_funcs[] = {
   {l_s("sort"), luaB_sort},
   {l_s("tinsert"), luaB_tinsert},
   {l_s("tremove"), luaB_tremove},
-  {l_s("pack"), luaB_pack},
-  {l_s("unpack"), luaB_unpack},
+  {l_s("unwrap"), luaB_unwrap},
   {l_s("xtype"), luaB_xtype},
 };
 

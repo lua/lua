@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.176 2001/03/07 18:16:22 roberto Exp roberto $
+** $Id: lvm.c,v 1.177 2001/03/26 14:31:49 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -446,18 +446,19 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       }
       case OP_SETLIST: {
         int aux = GETARG_A(i) * LFIELDS_PER_FLUSH;
-        int n = GETARG_B(i);
-        Hash *arr = hvalue(top-n-1);
-        for (; n; n--)
-          setobj(luaH_setnum(L, arr, n+aux), --top);
+        TObject *t = base+GETARG_B(i);
+        Hash *h = hvalue(t);
+        int n;
+        for (n = top-t-1; n; n--)
+          setobj(luaH_setnum(L, h, n+aux), --top);
         break;
       }
       case OP_SETMAP: {
-        int n = GETARG_U(i);
-        Hash *arr = hvalue((top-2*n)-1);
-        for (; n; n--) {
+        TObject *t = base+GETARG_U(i);
+        Hash *h = hvalue(t);
+        while (top-1 > t) {
           top-=2;
-          setobj(luaH_set(L, arr, top), top+1);
+          setobj(luaH_set(L, h, top), top+1);
         }
         break;
       }

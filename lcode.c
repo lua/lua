@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.65 2001/03/07 13:22:55 roberto Exp roberto $
+** $Id: lcode.c,v 1.66 2001/03/26 14:31:49 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -474,13 +474,11 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
       break;
     }
     case OP_SETLIST: {
-      if (arg2 == 0) return NO_JUMP;  /* nothing to do */
-      pop = arg2;
+      pop = fs->stacklevel - 1 - arg2;
       break;
     }
     case OP_SETMAP: {
-      if (arg1 == 0) return NO_JUMP;  /* nothing to do */
-      pop = 2*arg1;
+      pop = fs->stacklevel - 1 - arg1;
       break;
     }
     case OP_PUSHNIL: {

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.140 2001/03/26 14:31:49 roberto Exp roberto $
+** $Id: lparser.c,v 1.141 2001/04/05 16:49:14 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -465,39 +465,40 @@ static void recfield (LexState *ls) {
 static int recfields (LexState *ls) {
   /* recfields -> recfield { `,' recfield } [`,'] */
   FuncState *fs = ls->fs;
+  int t = fs->stacklevel-1;  /* level of table on the stack */
   int n = 1;  /* at least one element */
   recfield(ls);
-  while (ls->t.token == l_c(',')) {
-    next(ls);
-    if (ls->t.token == l_c(';') || ls->t.token == l_c('}'))
-      break;
+  while (ls->t.token == l_c(',') &&
+         (next(ls), (ls->t.token != l_c(';') && ls->t.token != l_c('}')))) {
+    if (n%RFIELDS_PER_FLUSH == 0)
+      luaK_code1(fs, OP_SETMAP, t);
     recfield(ls);
     n++;
-    if (n%RFIELDS_PER_FLUSH == 0)
-      luaK_code1(fs, OP_SETMAP, RFIELDS_PER_FLUSH);
   }
-  luaK_code1(fs, OP_SETMAP, n%RFIELDS_PER_FLUSH);
+  luaK_code1(fs, OP_SETMAP, t);
   return n;
 }
 
 
 static int listfields (LexState *ls) {
   /* listfields -> exp1 { `,' exp1 } [`,'] */
+  expdesc v;
   FuncState *fs = ls->fs;
+  int t = fs->stacklevel-1;  /* level of table on the stack */
   int n = 1;  /* at least one element */
-  exp1(ls);
-  while (ls->t.token == l_c(',')) {
-    next(ls);
-    if (ls->t.token == l_c(';') || ls->t.token == l_c('}'))
-      break;
-    exp1(ls);
-    n++;
+  expr(ls, &v);
+  while (ls->t.token == l_c(',') &&
+         (next(ls), (ls->t.token != l_c(';') && ls->t.token != l_c('}')))) {
+    luaK_tostack(ls, &v, 1);  /* only one value from intermediate expressions */
     luaX_checklimit(ls, n/LFIELDS_PER_FLUSH, MAXARG_A,
                l_s("`item groups' in a list initializer"));
     if (n%LFIELDS_PER_FLUSH == 0)
-      luaK_code2(fs, OP_SETLIST, n/LFIELDS_PER_FLUSH - 1, LFIELDS_PER_FLUSH);
+      luaK_code2(fs, OP_SETLIST, (n-1)/LFIELDS_PER_FLUSH, t);
+    expr(ls, &v);
+    n++;
   }
-  luaK_code2(fs, OP_SETLIST, n/LFIELDS_PER_FLUSH, n%LFIELDS_PER_FLUSH);
+  luaK_tostack(ls, &v, 0);  /* allow multiple values for last expression */
+  luaK_code2(fs, OP_SETLIST, (n-1)/LFIELDS_PER_FLUSH, t);
   return n;
 }
 
