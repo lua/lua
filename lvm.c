@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.68 1999/11/29 18:27:49 roberto Exp roberto $
+** $Id: lvm.c,v 1.69 1999/12/01 19:50:08 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -108,22 +108,22 @@ void luaV_gettable (lua_State *L) {
   else {  /* object is a table... */
     int tg = table->value.a->htag;
     im = luaT_getim(L, tg, IM_GETTABLE);
-    if (ttype(im) == LUA_T_NIL) {  /* and does not have a "gettable" method */
+    if (ttype(im) == LUA_T_NIL) {  /* and does not have a `gettable' method */
       const TObject *h = luaH_get(L, avalue(table), table+1);
       if (ttype(h) == LUA_T_NIL &&
           (ttype(im=luaT_getim(L, tg, IM_INDEX)) != LUA_T_NIL)) {
-        /* result is nil and there is an "index" tag method */
+        /* result is nil and there is an `index' tag method */
         luaD_callTM(L, im, 2, 1);  /* calls it */
       }
       else {
         L->top--;
-        *table = *h;  /* "push" result into table position */
+        *table = *h;  /* `push' result into table position */
       }
       return;
     }
-    /* else it has a "gettable" method, go through to next command */
+    /* else it has a `gettable' method, go through to next command */
   }
-  /* object is not a table, or it has a "gettable" method */
+  /* object is not a table, or it has a `gettable' method */
   luaD_callTM(L, im, 2, 1);
 }
 
@@ -442,6 +442,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
       case SETLIST:  aux += *pc++; {
         int n = *(pc++);
         Hash *arr = avalue(top-n-1);
+        L->top = top-n;  /* final value of `top' (in case of errors) */
         aux *= LFIELDS_PER_FLUSH;
         for (; n; n--)
           luaH_setint(L, arr, n+aux, --top);
@@ -449,7 +450,9 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
       }
 
       case SETMAP:  aux = *pc++; {
-        Hash *arr = avalue(top-(2*aux)-3);
+        StkId finaltop = top-2*(aux+1);
+        Hash *arr = avalue(finaltop-1);
+        L->top = finaltop;  /* final value of `top' (in case of errors) */
         do {
           luaH_set(L, arr, top-2, top-1);
           top-=2;
@@ -529,9 +532,9 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
           call_binTM(L, top, IM_CONCAT, "unexpected type for concatenation");
         else
           tsvalue(top-2) = strconc(L, tsvalue(top-2), tsvalue(top-1));
+        top--;
         L->top = top;
         luaC_checkGC(L);
-        top--;
         break;
 
       case MINUSOP:
@@ -585,7 +588,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
       case CLOSURE:  aux += *pc++;
         *top++ = consts[aux];
         L->top = top;
-        aux = *pc++;
+        aux = *pc++;  /* number of upvalues */
         luaV_closure(L, aux);
         luaC_checkGC(L);
         top -= aux;
