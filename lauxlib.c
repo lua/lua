@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.74 2002/06/13 13:44:50 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.75 2002/06/18 15:19:27 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -143,7 +143,7 @@ LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event) {
     return 0;
   }
   lua_pushvalue(L, obj);
-  lua_upcall(L, 1, 1);
+  lua_call(L, 1, 1);
   return 1;
 }
 
@@ -296,6 +296,25 @@ LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
     lua_rawseti(L, t, 0);
     lua_rawseti(L, t, ref);
   }
+}
+
+
+LUALIB_API void luaL_weakregistry (lua_State *L) {
+  static const char dummy = '\0';  /* index for a weak table in registry */
+  lua_pushudataval(L, (void *)&dummy);  /* push index */
+  lua_rawget(L, LUA_REGISTRYINDEX);  /* get value */
+  if (!lua_isnil(L, -1)) return;  /* weak table already created? */
+  /* else must create a weak table */
+  lua_pop(L, 1);  /* remove previous nil */
+  lua_newtable(L);  /* new table `w' */
+  lua_pushvalue(L, -1);
+  lua_setmetatable(L, -2);  /* setmetatable(w, w) */
+  lua_pushliteral(L, "__mode");
+  lua_pushliteral(L, "kv");
+  lua_rawset(L, -3);  /* metatable(w).__mode = "kv" */
+  lua_pushudataval(L, (void *)&dummy);  /* push index */
+  lua_pushvalue(L, -2);  /* push value */
+  lua_rawset(L, LUA_REGISTRYINDEX);  /* store new weak table into registry */
 }
 
 
