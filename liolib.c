@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.34 1999/03/11 18:59:19 roberto Exp roberto $
+** $Id: liolib.c,v 1.35 1999/03/16 20:07:54 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -74,7 +74,7 @@ static int gettag (void) {
 }
 
 
-static int ishandler (lua_Object f) {
+static int ishandle (lua_Object f) {
   if (lua_isuserdata(f)) {
     int tag = gettag();
     if (lua_tag(f) == CLOSEDTAG(tag))
@@ -87,7 +87,7 @@ static int ishandler (lua_Object f) {
 
 static FILE *getfilebyname (char *name) {
   lua_Object f = lua_getglobal(name);
-  if (!ishandler(f))
+  if (!ishandle(f))
       luaL_verror("global variable `%.50s' is not a file handle", name);
   return lua_getuserdata(f);
 }
@@ -95,13 +95,13 @@ static FILE *getfilebyname (char *name) {
 
 static FILE *getfile (int arg) {
   lua_Object f = lua_getparam(arg);
-  return (ishandler(f)) ? lua_getuserdata(f) : NULL;
+  return (ishandle(f)) ? lua_getuserdata(f) : NULL;
 }
 
 
 static FILE *getnonullfile (int arg) {
   FILE *f = getfile(arg);
-  luaL_arg_check(f, arg, "invalid file handler");
+  luaL_arg_check(f, arg, "invalid file handle");
   return f;
 }
 
@@ -117,11 +117,17 @@ static FILE *getfileparam (char *name, int *arg) {
 }
 
 
+static void rawclose (FILE *f) {
+  if (f != stdin && f != stdout) {
+    if (pclose(f) == -1) fclose(f);
+  }
+}
+
+
 static void closefile (FILE *f) {
   if (f != stdin && f != stdout) {
     int tag = gettag();
-    if (pclose(f) == -1)
-      fclose(f);
+    rawclose(f);
     lua_pushusertag(f, tag);
     lua_settag(CLOSEDTAG(tag));
   }
@@ -130,6 +136,16 @@ static void closefile (FILE *f) {
 
 static void io_close (void) {
   closefile(getnonullfile(1));
+}
+
+
+static void gc_close (void) {
+  int tag = luaL_check_int(1);
+  lua_Object fh = lua_getparam(2);
+  FILE *f = lua_getuserdata(fh);
+  luaL_arg_check(lua_isuserdata(fh) && lua_tag(fh) == tag, 2,
+                 "invalid file handle for GC");
+  rawclose(f);
 }
 
 
@@ -364,7 +380,7 @@ static void io_seek (void) {
 static void io_flush (void) {
   FILE *f = getfile(1);
   luaL_arg_check(f || lua_getparam(1) == LUA_NOOBJECT, 1,
-                 "invalid file handler");
+                 "invalid file handle");
   pushresult(fflush(f) == 0);
 }
 
@@ -550,7 +566,9 @@ void lua_iolibopen (void) {
   /* make sure stdin (with its tag) won't be collected */
   lua_pushusertag(stdin, iotag); lua_ref(1);
   /* close file when collected */
-  lua_pushcfunction(io_close); lua_settagmethod(iotag, "gc");
+  lua_pushnumber(iotag);
+  lua_pushcclosure(gc_close, 1); 
+  lua_settagmethod(iotag, "gc");
   /* register lib functions */
   luaL_openlib(iolib, (sizeof(iolib)/sizeof(iolib[0])));
 }
