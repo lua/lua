@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.81 2001/02/23 20:32:16 roberto Exp roberto $
+** $Id: llex.c,v 1.82 2001/03/06 14:46:54 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -194,6 +194,8 @@ static void read_long_string (LexState *LS, SemInfo *seminfo) {
   checkbuffer(L, 10, l);
   save(L, l_c('['), l);  /* save first `[' */
   save_and_next(L, LS, l);  /* pass the second `[' */
+  if (LS->current == l_c('\n'))  /* string starts with a newline? */
+    inclinenumber(LS);  /* skip it */
   for (;;) {
     checkbuffer(L, 10, l);
     switch (LS->current) {
