@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.90 2002/06/06 12:40:22 roberto Exp roberto $
+** $Id: lua.c,v 1.91 2002/06/18 17:12:05 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -301,27 +301,29 @@ static int handle_argv (char *argv[], int *toclose) {
             break;
           }
           case 'e': {
-            i++;
-            if (argv[i] == NULL) {
+            const char *chunk = argv[i] + 2;
+            if (*chunk == '\0') chunk = argv[++i];
+            if (chunk == NULL) {
               print_usage();
               return EXIT_FAILURE;
             }
-            if (dostring(argv[i], "=prog. argument") != 0) {
+            if (dostring(chunk, "=prog. argument") != 0) {
               fprintf(stderr, "%s: error running argument `%.99s'\n",
-                      progname, argv[i]);
+                      progname, chunk);
               return EXIT_FAILURE;
             }
             break;
           }
           case 'f': {
-            i++;
-            if (argv[i] == NULL) {
+            const char *filename = argv[i] + 2;
+            if (*filename == '\0') filename = argv[++i];
+            if (filename == NULL) {
               print_usage();
               return EXIT_FAILURE;
             }
             getargs(argv+i);  /* collect remaining arguments */
             lua_setglobal(L, "arg");
-            return file_input(argv[i]);  /* stop scanning arguments */
+            return file_input(filename);  /* stop scanning arguments */
           }
           case 's': {
             fprintf(stderr,
