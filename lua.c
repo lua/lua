@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.80 2002/04/01 14:42:33 roberto Exp roberto $
+** $Id: lua.c,v 1.81 2002/04/05 18:54:31 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -342,6 +342,7 @@ static void register_getargs (char *argv[]) {
 
 static void openstdlibs (lua_State *l) {
   lua_baselibopen(l);
+  lua_tablibopen(l);
   lua_iolibopen(l);
   lua_strlibopen(l);
   lua_mathlibopen(l);
