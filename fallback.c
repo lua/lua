@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.27 1997/03/11 18:44:28 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.28 1997/03/19 19:41:10 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -268,6 +268,7 @@ void luaI_setintmethod (void)
   luaL_arg_check(lua_isnil(func) || lua_isfunction(func), "setintmethod",
                  3, "function expected");
   checktag(t);
+  luaI_pushobject(&luaI_IMtable[-t].int_method[e]);
   luaI_IMtable[-t].int_method[e] = *luaI_Address(func);
 }
 
@@ -286,6 +287,7 @@ void luaI_setglobalmethod (void)
   lua_Object func = lua_getparam(2);
   luaL_arg_check(lua_isnil(func) || lua_isfunction(func), "setintmethod",
                  2, "function expected");
+  luaI_pushobject(&gmethod[e]);
   gmethod[e] = *luaI_Address(func);
 }
 
