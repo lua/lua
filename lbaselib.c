@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.15 2000/10/27 16:15:53 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.16 2000/10/31 13:10:24 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -556,7 +556,7 @@ static const struct luaL_reg deprecated_names [num_deprecated] = {
 };
 
 
-#ifdef LUA_DEPRECATETFUNCS
+#ifdef LUA_DEPRECATEDFUNCS
 
 /*
 ** call corresponding function inserting `globals' as first argument
