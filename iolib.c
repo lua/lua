@@ -28,7 +28,11 @@ static void pushresult (int i)
     lua_pushuserdata(NULL);
   else {
     lua_pushnil();
+#ifndef NOSTRERROR
     lua_pushstring(strerror(errno));
+#else
+    lua_pushstring("system unable to define the error");
+#endif
   }
 }
 
