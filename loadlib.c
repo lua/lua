@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.19 2005/03/07 18:07:34 roberto Exp roberto $
+** $Id: loadlib.c,v 1.20 2005/03/08 20:10:05 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 *
@@ -33,7 +33,7 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym);
 
 
 
-#if defined(LUA_USEDLOPEN)
+#if defined(LUA_USE_DLOPEN)
 /*
 ** {========================================================================
 ** This is an implementation of loadlib based on the dlfcn interface.
@@ -67,7 +67,7 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 
 
 
-#elif defined(LUA_USEDLL)
+#elif defined(LUA_USE_DLL)
 /*
 ** {======================================================================
 ** This is an implementation of loadlib for Windows using native functions.
@@ -109,7 +109,7 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 
 
 
-#elif defined(LUA_USEDYLD)
+#elif defined(LUA_USE_DYLD)
 /*
 ** {======================================================================
 ** Native Mac OS X / Darwin Implementation

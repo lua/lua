@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.33 2005/03/08 18:09:16 roberto Exp roberto $
+** $Id: luaconf.h,v 1.34 2005/03/08 20:10:05 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -152,16 +152,16 @@
 
 
 /* CONFIG: LUA-C API assertions */
-#define luac_apicheck(L,o)		lua_assert(o)
+#define luai_apicheck(L,o)		lua_assert(o)
 
 
 /* number of bits in an `int' */
 /* avoid overflows in comparison */
 #if INT_MAX-20 < 32760
-#define LUAC_BITSINT	16
+#define LUAI_BITSINT	16
 #elif INT_MAX > 2147483640L
 /* `int' has at least 32 bits */
-#define LUAC_BITSINT	32
+#define LUAI_BITSINT	32
 #else
 #error "you must define LUA_BITSINT with number of bits in an integer"
 #endif
@@ -169,59 +169,59 @@
 
 /*
 ** CONFIG:
-** LUAC_UINT32: unsigned integer with at least 32 bits
-** LUAC_INT32: signed integer with at least 32 bits
-** LUAC_UMEM: an unsigned integer big enough to count the total memory
+** LUAI_UINT32: unsigned integer with at least 32 bits
+** LUAI_INT32: signed integer with at least 32 bits
+** LUAI_UMEM: an unsigned integer big enough to count the total memory
 **           used by Lua
-** LUAC_MEM: a signed integer big enough to count the total memory used by Lua
+** LUAI_MEM: a signed integer big enough to count the total memory used by Lua
 */
-#if LUAC_BITSINT >= 32
-#define LUAC_UINT32	unsigned int
-#define LUAC_INT32	int
-#define LUAC_MAXINT32	INT_MAX
-#define LUAC_UMEM	size_t
-#define LUAC_MEM		ptrdiff_t
+#if LUAI_BITSINT >= 32
+#define LUAI_UINT32	unsigned int
+#define LUAI_INT32	int
+#define LUAI_MAXINT32	INT_MAX
+#define LUAI_UMEM	size_t
+#define LUAI_MEM		ptrdiff_t
 #else
 /* 16-bit ints */
-#define LUAC_UINT32	unsigned long
-#define LUAC_INT32	long
-#define LUAC_MAXINT32	LONG_MAX
-#define LUAC_UMEM	LUAC_UINT32
-#define LUAC_MEM	ptrdiff_t
+#define LUAI_UINT32	unsigned long
+#define LUAI_INT32	long
+#define LUAI_MAXINT32	LONG_MAX
+#define LUAI_UMEM	LUAI_UINT32
+#define LUAI_MEM	ptrdiff_t
 #endif
 
 
 /* CONFIG: maximum depth for calls (unsigned short) */
-#define LUAC_MAXCALLS	10000
+#define LUAI_MAXCALLS	10000
 
 /*
 ** CONFIG: maximum depth for C calls (unsigned short): Not too big, or may
 ** overflow the C stack...
 */
-#define LUAC_MAXCCALLS	200
+#define LUAI_MAXCCALLS	200
 
 
 /* CONFIG: maximum size for the virtual stack of a C function */
-#define LUAC_MAXCSTACK	2048
+#define LUAI_MAXCSTACK	2048
 
 
 /*
 ** CONFIG: maximum number of syntactical nested non-terminals: Not too big,
 ** or may overflow the C stack...
 */
-#define LUAC_MAXPARSERLEVEL	200
+#define LUAI_MAXPARSERLEVEL	200
 
 
 /* CONFIG: maximum number of variables declared in a function */
-#define LUAC_MAXVARS	200		/* <MAXSTACK */
+#define LUAI_MAXVARS	200		/* <MAXSTACK */
 
 
 /* CONFIG: maximum number of upvalues per function */
-#define LUAC_MAXUPVALUES	60	/* <MAXSTACK */
+#define LUAI_MAXUPVALUES	60	/* <MAXSTACK */
 
 
 /* CONFIG: maximum size of expressions for optimizing `while' code */
-#define LUAC_MAXEXPWHILE	100
+#define LUAI_MAXEXPWHILE	100
 
 
 /* CONFIG: function to convert a lua_Number to int (with any rounding method) */
@@ -257,7 +257,7 @@ __inline int l_lrint (double flt)
 /* CONFIG: function to convert a lua_Number to a string */
 #define lua_number2str(s,n)	sprintf((s), LUA_NUMBER_FMT, (n))
 /* maximum size of previous conversion */
-#define LUAC_MAXNUMBER2STR	32 /* 16 digits, sign, point, and \0 */
+#define LUAI_MAXNUMBER2STR	32 /* 16 digits, sign, point, and \0 */
 
 /* CONFIG: function to convert a string to a lua_Number */
 #define lua_str2number(s,p)	strtod((s), (p))
@@ -265,25 +265,25 @@ __inline int l_lrint (double flt)
 
 
 /* CONFIG: result of a `usual argument conversion' over lua_Number */
-#define LUAC_UACNUMBER	double
+#define LUAI_UACNUMBER	double
 
 
 /* CONFIG: primitive operators for numbers */
-#define luac_numadd(a,b)	((a)+(b))
-#define luac_numsub(a,b)	((a)-(b))
-#define luac_nummul(a,b)	((a)*(b))
-#define luac_numdiv(a,b)	((a)/(b))
-#define luac_numunm(a)		(-(a))
-#define luac_numeq(a,b)		((a)==(b))
-#define luac_numlt(a,b)		((a)<(b))
-#define luac_numle(a,b)		((a)<=(b))
-#define luac_nummod(a,b)	((a) - floor((a)/(b))*(b))
-#define luac_numpow(a,b)	pow(a,b)
+#define luai_numadd(a,b)	((a)+(b))
+#define luai_numsub(a,b)	((a)-(b))
+#define luai_nummul(a,b)	((a)*(b))
+#define luai_numdiv(a,b)	((a)/(b))
+#define luai_numunm(a)		(-(a))
+#define luai_numeq(a,b)		((a)==(b))
+#define luai_numlt(a,b)		((a)<(b))
+#define luai_numle(a,b)		((a)<=(b))
+#define luai_nummod(a,b)	((a) - floor((a)/(b))*(b))
+#define luai_numpow(a,b)	pow(a,b)
 
 
 
 /* CONFIG: type to ensure maximum alignment */
-#define LUAC_USER_ALIGNMENT_T	union { double u; void *s; long l; }
+#define LUAI_USER_ALIGNMENT_T	union { double u; void *s; long l; }
 
 
 /*
@@ -294,16 +294,16 @@ __inline int l_lrint (double flt)
 */
 #ifndef __cplusplus
 /* default handling with long jumps */
-#define LUAC_THROW(L,c)	longjmp((c)->b, 1)
-#define LUAC_TRY(L,c,a)	if (setjmp((c)->b) == 0) { a }
-#define luac_jmpbuf	jmp_buf
+#define LUAI_THROW(L,c)	longjmp((c)->b, 1)
+#define LUAI_TRY(L,c,a)	if (setjmp((c)->b) == 0) { a }
+#define luai_jmpbuf	jmp_buf
 
 #else
 /* C++ exceptions */
-#define LUAC_THROW(L,c)	throw(c)
-#define LUAC_TRY(L,c,a)	try { a } catch(...) \
+#define LUAI_THROW(L,c)	throw(c)
+#define LUAI_TRY(L,c,a)	try { a } catch(...) \
 	{ if ((c)->status == 0) (c)->status = -1; }
-#define luac_jmpbuf	int  /* dummy variable */
+#define luai_jmpbuf	int  /* dummy variable */
 #endif
 
 
@@ -349,9 +349,9 @@ __inline int l_lrint (double flt)
 ** want (or do not want) `os.tmpname' available.
 */
 #ifdef __GNUC__
-#define LUA_USETMPNAME	0
+#define LUA_USE_TMPNAME	0
 #else
-#define LUA_USETMPNAME	1 
+#define LUA_USE_TMPNAME	1 
 #endif
 
 
@@ -359,15 +359,15 @@ __inline int l_lrint (double flt)
 ** CONFIG: Configuration for loadlib: Lua tries to guess the
 ** dynamic-library system that your platform uses (either Windows' DLL,
 ** Mac's dyld, or dlopen). If your system is some kind of Unix, there is
-** a good chance that LUA_USEDLOPEN will work for it. You may need to adapt
+** a good chance that LUA_USE_DLOPEN will work for it. You may need to adapt
 ** also the makefile.
 */
 #if defined(_WIN32)
-#define LUA_USEDLL
+#define LUA_USE_DLL
 #elif defined(__APPLE__) && defined(__MACH__)
-#define LUA_USEDYLD
+#define LUA_USE_DYLD
 #elif defined(__linux) || defined(sun) || defined(sgi) || defined(BSD)
-#define LUA_USEDLOPEN
+#define LUA_USE_DLOPEN
 #endif
 
 
@@ -376,7 +376,7 @@ __inline int l_lrint (double flt)
 
 /* Local configuration */
 
-#undef LUA_USETMPNAME
-#define LUA_USETMPNAME	1
+#undef LUA_USE_TMPNAME
+#define LUA_USE_TMPNAME	1
 
 #endif

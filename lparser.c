@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.16 2005/03/08 18:16:45 roberto Exp roberto $
+** $Id: lparser.c,v 2.17 2005/03/08 20:10:05 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -33,7 +33,7 @@
 
 #define luaY_checklimit(fs,v,l,m)	if ((v)>(l)) errorlimit(fs,l,m)
 
-#define enterlevel(ls) if (++(ls)->nestlevel > LUAC_MAXPARSERLEVEL) \
+#define enterlevel(ls) if (++(ls)->nestlevel > LUAI_MAXPARSERLEVEL) \
 	luaX_lexerror(ls, "chunk has too many syntax levels", 0)
 #define leavelevel(ls)	((ls)->nestlevel--)
 
@@ -181,7 +181,7 @@ static int registerlocalvar (LexState *ls, TString *varname) {
 
 static void new_localvar (LexState *ls, TString *name, int n) {
   FuncState *fs = ls->fs;
-  luaY_checklimit(fs, fs->nactvar+n+1, LUAC_MAXVARS, "local variables");
+  luaY_checklimit(fs, fs->nactvar+n+1, LUAI_MAXVARS, "local variables");
   fs->actvar[fs->nactvar+n] = cast(unsigned short, registerlocalvar(ls, name));
 }
 
@@ -213,7 +213,7 @@ static int indexupvalue (FuncState *fs, TString *name, expdesc *v) {
     }
   }
   /* new one */
-  luaY_checklimit(fs, f->nups + 1, LUAC_MAXUPVALUES, "upvalues");
+  luaY_checklimit(fs, f->nups + 1, LUAI_MAXUPVALUES, "upvalues");
   luaM_growvector(fs->L, f->upvalues, f->nups, f->sizeupvalues,
                   TString *, MAX_INT, "");
   while (oldsize < f->sizeupvalues) f->upvalues[oldsize++] = NULL;
@@ -993,7 +993,7 @@ static int cond (LexState *ls) {
 
 static void whilestat (LexState *ls, int line) {
   /* whilestat -> WHILE cond DO block END */
-  Instruction codeexp[LUAC_MAXEXPWHILE + EXTRAEXP];
+  Instruction codeexp[LUAI_MAXEXPWHILE + EXTRAEXP];
   int lineexp;
   int i;
   int sizeexp;
@@ -1011,7 +1011,7 @@ static void whilestat (LexState *ls, int line) {
   luaK_concat(fs, &v.f, fs->jpc);
   fs->jpc = NO_JUMP;
   sizeexp = fs->pc - expinit;  /* size of expression code */
-  if (sizeexp > LUAC_MAXEXPWHILE) 
+  if (sizeexp > LUAI_MAXEXPWHILE) 
     luaX_syntaxerror(ls, "`while' condition too complex");
   for (i = 0; i < sizeexp; i++)  /* save `exp' code */
     codeexp[i] = fs->f->code[expinit + i];

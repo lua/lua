@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.4 2005/01/10 19:16:29 roberto Exp roberto $
+** $Id: loslib.c,v 1.5 2005/03/08 20:10:05 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -57,7 +57,7 @@ static int io_rename (lua_State *L) {
 
 
 static int io_tmpname (lua_State *L) {
-#if !LUA_USETMPNAME
+#if !LUA_USE_TMPNAME
   luaL_error(L, "`tmpname' not supported");
   return 0;
 #else
