@@ -3,9 +3,10 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.9 1994/11/21 18:22:58 roberto Stab roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.10 1994/12/20 21:20:36 roberto Exp $";
 
 #include <stdio.h>
+#include <string.h>
  
 #include "mem.h"
 #include "fallback.h"
