@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.58 2000/11/24 17:39:56 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.59 2000/12/04 14:43:06 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -585,10 +585,8 @@ static int str_format (lua_State *L) {
       char form[MAX_FORMAT];  /* to store the format (`%...') */
       char buff[MAX_ITEM];  /* to store the formatted item */
       int hasprecision = 0;
-      if (isdigit((unsigned char)*strfrmt) && *(strfrmt+1) == '$') {
-        arg = *strfrmt - '0';
-        strfrmt += 2;  /* skip the `n$' */
-      }
+      if (isdigit((unsigned char)*strfrmt) && *(strfrmt+1) == '$')
+        lua_error(L, "obsolete `format' option (d$)");
       arg++;
       strfrmt = scanformat(L, strfrmt, form, &hasprecision);
       switch (*strfrmt++) {
