@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.27 1998/12/28 13:44:54 roberto Exp roberto $
+** $Id: llex.c,v 1.28 1999/02/04 17:47:59 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -258,8 +258,8 @@ static int read_long_string (LexState *LS) {
     }
   } endloop:
   save_and_next(LS);  /* skip the second ']' */
-  LS->seminfo.ts = luaS_newlstr(L->Mbuffbase+2,
-                          L->Mbuffnext-(L->Mbuffbase-L->Mbuffer)-4);
+  LS->seminfo.ts = luaS_newlstr(L->Mbuffer+(L->Mbuffbase+2),
+                          L->Mbuffnext-L->Mbuffbase-4);
   return STRING;
 }
 
@@ -358,8 +358,8 @@ int luaX_lex (LexState *LS) {
           }
         }
         save_and_next(LS);  /* skip delimiter */
-        LS->seminfo.ts = luaS_newlstr(L->Mbuffbase+1,
-                                L->Mbuffnext-(L->Mbuffbase-L->Mbuffer)-2);
+        LS->seminfo.ts = luaS_newlstr(L->Mbuffer+(L->Mbuffbase+1),
+                                L->Mbuffnext-L->Mbuffbase-2);
         return STRING;
       }
 
@@ -401,7 +401,7 @@ int luaX_lex (LexState *LS) {
             save_and_next(LS);
         }
         save('\0');
-        LS->seminfo.r = luaO_str2d(L->Mbuffbase);
+        LS->seminfo.r = luaO_str2d(L->Mbuffer+L->Mbuffbase);
         if (LS->seminfo.r < 0)
           luaX_error(LS, "invalid numeric format");
         return NUMBER;
@@ -425,7 +425,7 @@ int luaX_lex (LexState *LS) {
             save_and_next(LS);
           } while (isalnum(LS->current) || LS->current == '_');
           save('\0');
-          ts = luaS_new(L->Mbuffbase);
+          ts = luaS_new(L->Mbuffer+L->Mbuffbase);
           if (ts->head.marked >= FIRST_RESERVED)
             return ts->head.marked;  /* reserved word */
           LS->seminfo.ts = ts;

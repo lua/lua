@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.13 1998/08/30 18:28:58 roberto Exp roberto $
+** $Id: lstate.h,v 1.14 1999/02/04 17:47:59 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -56,7 +56,7 @@ struct lua_State {
   struct C_Lua_Stack Cstack;  /* C2lua struct */
   jmp_buf *errorJmp;  /* current error recover point */
   char *Mbuffer;  /* global buffer */
-  char *Mbuffbase;  /* current first position of Mbuffer */
+  int Mbuffbase;  /* current first position of Mbuffer */
   int Mbuffsize;  /* size of Mbuffer */
   int Mbuffnext;  /* next position to fill in Mbuffer */
   struct C_Lua_Stack Cblocks[MAX_C_BLOCKS];
