@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.5 1997/11/21 19:00:46 roberto Exp roberto $
+** $Id: lua.c,v 1.6 1997/12/01 20:31:25 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -24,6 +24,21 @@
 #else
 #define isatty(x)       (x==0)  /* assume stdin is a tty */
 #endif
+
+
+static void assign (char *arg)
+{
+  if (strlen(arg) >= 500)
+    fprintf(stderr, "lua: shell argument too long");
+  else {
+    char buffer[500];
+    char *eq = strchr(arg, '=');
+    lua_pushstring(eq+1);
+    strncpy(buffer, arg, eq-arg);
+    buffer[eq-arg] = 0;
+    lua_setglobal(buffer);
+  }
+}
 
 
 static void manual_input (void)
@@ -65,12 +80,15 @@ int main (int argc, char *argv[])
     else if (strcmp(argv[i], "-v") == 0)
       printf("%s  %s\n(written by %s)\n\n",
              LUA_VERSION, LUA_COPYRIGHT, LUA_AUTHORS);
-    else if ((strcmp(argv[i], "-e") == 0 && i++) || strchr(argv[i], '=')) {
+    else if (strcmp(argv[i], "-e") == 0) {
+      i++;
       if (lua_dostring(argv[i]) != 0) {
         fprintf(stderr, "lua: error running argument `%s'\n", argv[i]);
         return 1;
       }
     }
+    else if (strchr(argv[i], '='))
+      assign(argv[i]);
     else {
       int result = lua_dofile(argv[i]);
       if (result) {
