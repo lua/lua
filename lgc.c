@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.50 2000/05/11 18:57:19 roberto Exp roberto $
+** $Id: lgc.c,v 1.51 2000/05/24 13:54:49 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -19,16 +19,6 @@
 #include "lua.h"
 
 
-
-static void luaD_gcTM (lua_State *L, const TObject *o) {
-  const TObject *im = luaT_getimbyObj(L, o, IM_GC);
-  if (ttype(im) != TAG_NIL) {
-    luaD_checkstack(L, 2);
-    *(L->top++) = *im;
-    *(L->top++) = *o;
-    luaD_call(L, L->top-2, 0);
-  }
-}
 
 
 static int markobject (lua_State *L, TObject *o);
@@ -78,9 +68,9 @@ static void tablemark (lua_State *L, Hash *h) {
 
 
 static void travstack (lua_State *L) {
-  int i;
-  for (i = (L->top-1)-L->stack; i>=0; i--)
-    markobject(L, L->stack+i);
+  StkId o;
+  for (o=L->stack; o<L->top; o++)
+    markobject(L, o);
 }
 
 
@@ -161,54 +151,101 @@ static void collecttable (lua_State *L) {
 }
 
 
-/*
-** collect all elements with `marked' < `limit'.
-** with limit=1, that means all unmarked elements;
-** with limit=MAX_INT, that means all elements.
-*/
-static void collectstringtab (lua_State *L, int limit, stringtable *tb) {
-  int i;
-  TObject o;  /* to call userdata `gc' tag method */
-  ttype(&o) = TAG_USERDATA;
-  for (i=0; i<tb->size; i++) {  /* for each list */
-    TString **p = &tb->hash[i];
-    TString *next;
-    while ((next = *p) != NULL) {
-     if (next->marked >= limit) {
-       if (next->marked < FIXMARK)  /* does not change FIXMARKs */
-         next->marked = 0;
-       p = &next->nexthash;
-     } 
-     else {  /* collect */
-        if (tb == &L->strt)  /* is string? */
-          L->nblocks -= gcsizestring(L, next->u.s.len);
-        else {
-          tsvalue(&o) = next;
-          luaD_gcTM(L, &o);
-          L->nblocks -= gcsizeudata;
-        }
-        *p = next->nexthash;
-        tb->nuse--;
-        luaM_free(L, next);
-      }
-    }
-  }
+static void checktab (lua_State *L, stringtable *tb) {
   if (tb->nuse < (lint32)(tb->size/4) && tb->size > 10)
     luaS_resize(L, tb, tb->size/2);  /* table is too big */
 }
 
 
-static void collectstring (lua_State *L, int limit) {
-  collectstringtab(L, limit, &L->strt);
-  collectstringtab(L, limit, &L->udt);
+/*
+** collect all elements with `marked' <= `limit'.
+** with limit=0, that means all unmarked elements;
+** with limit=MAX_INT, that means all elements.
+*/
+static void collectstringtab (lua_State *L, int limit) {
+  int i;
+  for (i=0; i<L->strt.size; i++) {  /* for each list */
+    TString **p = &L->strt.hash[i];
+    TString *next;
+    while ((next = *p) != NULL) {
+      if (next->marked > limit) {  /* preserve? */
+        if (next->marked < FIXMARK)  /* does not change FIXMARKs */
+          next->marked = 0;
+        p = &next->nexthash;
+      } 
+      else {  /* collect */
+        *p = next->nexthash;
+        L->strt.nuse--;
+        L->nblocks -= gcsizestring(L, next->u.s.len);
+        luaM_free(L, next);
+      }
+    }
+  }
+  checktab(L, &L->strt);
+}
+
+
+static void collectudatatab (lua_State *L, int all) {
+  int i;
+  for (i=0; i<L->udt.size; i++) {  /* for each list */
+    TString **p = &L->udt.hash[i];
+    TString *next;
+    while ((next = *p) != NULL) {
+      LUA_ASSERT(L, next->marked <= 1, "udata cannot be fixed");
+      if (next->marked > all) {  /* preserve? */
+        next->marked = 0;
+        p = &next->nexthash;
+      } 
+      else {  /* collect */
+        int tag = next->u.d.tag;
+        if (tag > L->last_tag) tag = TAG_USERDATA;
+        *p = next->nexthash;
+        next->nexthash = L->IMtable[tag].collected;  /* chain udata */
+        L->IMtable[tag].collected = next;
+        L->nblocks -= gcsizeudata;
+        L->udt.nuse--;
+      }
+    }
+  }
+  checktab(L, &L->udt);
+}
+
+
+static void callgcTM (lua_State *L, const TObject *o) {
+  const TObject *im = luaT_getimbyObj(L, o, IM_GC);
+  if (ttype(im) != TAG_NIL) {
+    luaD_checkstack(L, 2);
+    *(L->top) = *im;
+    *(L->top+1) = *o;
+    L->top += 2;
+    luaD_call(L, L->top-2, 0);
+  }
+}
+
+
+static void callgcTMudata (lua_State *L) {
+  int tag;
+  TObject o;
+  ttype(&o) = TAG_USERDATA;
+  for (tag=L->last_tag; tag>=0; tag--) {
+    TString *udata = L->IMtable[tag].collected;
+    L->IMtable[tag].collected = NULL;
+    while (udata) {
+      TString *next = udata->nexthash;
+      tsvalue(&o) = udata;
+      callgcTM(L, &o);
+      luaM_free(L, udata);
+      udata = next;
+    }
+  }
 }
 
 
 static void markall (lua_State *L) {
-  travstack(L); /* mark stack objects */
-  tablemark(L, L->gt);  /* mark global variable values and names */
-  travlock(L); /* mark locked objects */
   luaT_travtagmethods(L, markobject);  /* mark tag methods */
+  travstack(L); /* mark stack objects */
+  tablemark(L, L->gt);  /* mark global variables */
+  travlock(L); /* mark locked objects */
 }
 
 
@@ -216,8 +253,10 @@ void luaC_collect (lua_State *L, int all) {
   int oldah = L->allowhooks;
   L->allowhooks = 0;  /* stop debug hooks during GC */
   L->GCthreshold *= 4;  /* to avoid GC during GC */
+  collectudatatab(L, all);
+  callgcTMudata(L);
+  collectstringtab(L, all?MAX_INT:0);
   collecttable(L);
-  collectstring(L, all?MAX_INT:1);
   collectproto(L);
   collectclosure(L);
   L->allowhooks = oldah;  /* restore hooks */
@@ -235,7 +274,7 @@ long lua_collectgarbage (lua_State *L, long limit) {
     L->Mbuffsize /= 2;  /* still larger than Mbuffnext*2 */
     luaM_reallocvector(L, L->Mbuffer, L->Mbuffsize, char);
   }
-  luaD_gcTM(L, &luaO_nilobject);
+  callgcTM(L, &luaO_nilobject);
   return recovered;
 }
 

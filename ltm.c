@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.39 2000/03/30 16:41:51 roberto Exp roberto $
+** $Id: ltm.c,v 1.40 2000/05/24 13:54:49 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -61,6 +61,7 @@ static void init_entry (lua_State *L, int tag) {
   int i;
   for (i=0; i<IM_N; i++)
     ttype(luaT_getim(L, tag, i)) = TAG_NIL;
+  L->IMtable[tag].collected = NULL;
 }
 
 

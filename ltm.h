@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 1.11 2000/03/20 19:14:54 roberto Exp roberto $
+** $Id: ltm.h,v 1.12 2000/03/30 16:41:51 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -37,6 +37,7 @@ typedef enum {
 
 struct IM {
   TObject int_method[IM_N];
+  TString *collected;  /* list of G. collected udata with this tag */
 };
 
 
