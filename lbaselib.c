@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.109 2002/11/22 18:01:46 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.110 2002/11/25 17:33:33 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -587,11 +587,28 @@ static int luaB_yield (lua_State *L) {
   return lua_yield(L, lua_gettop(L));
 }
 
+
+static int luaB_costatus (lua_State *L) {
+  lua_State *co = lua_tothread(L, 1);
+  luaL_argcheck(L, co, 1, "coroutine expected");
+  if (L == co) lua_pushliteral(L, "running");
+  else {
+    lua_Debug ar;
+    if (lua_getstack(co, 0, &ar) == 0 && lua_gettop(co) == 0)
+      lua_pushliteral(L, "dead");
+    else
+      lua_pushliteral(L, "suspended");
+  }
+  return 1;
+}
+
+
 static const luaL_reg co_funcs[] = {
   {"create", luaB_cocreate},
   {"wrap", luaB_cowrap},
   {"resume", luaB_coresume},
   {"yield", luaB_yield},
+  {"status", luaB_costatus},
   {NULL, NULL}
 };
 
