@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.84 2001/02/01 17:40:48 roberto Exp roberto $
+** $Id: lgc.c,v 1.85 2001/02/02 15:13:05 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -375,7 +375,7 @@ void luaC_collect (lua_State *L, int all) {
 }
 
 
-static void luaC_collectgarbage (lua_State *L) {
+void luaC_collectgarbage (lua_State *L) {
   markall(L);
   invalidaterefs(G(L));  /* check unlocked references */
   luaC_collect(L, 0);

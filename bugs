@@ -255,3 +255,7 @@ Thu Feb  1 11:55:45 EDT 2001
 >> lua_pushuserdata(L, NULL) is buggy
 (by Edgar Toernig; since 4.0)
 
+** ldo.c
+Fri Feb  2 14:06:40 EDT 2001
+>> «while 1 dostring[[print('hello\n')]] end» never reclaims memory
+(by Andrew Paton; since 4.0b)
