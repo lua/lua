@@ -1,0 +1,2 @@
+- arquivo comecando com # fica com numero da linha defazado (inout.c 2.69)
+- LUA_COMPAT2_5 escrito errado em opcode.c (faltou o LUA_)
