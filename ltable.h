@@ -24,8 +24,7 @@ const TObject *luaH_get (Table *t, const TObject *key);
 void luaH_set (lua_State *L, Table *t, const TObject *key, const TObject *val);
 Table *luaH_new (lua_State *L, int narray, int lnhash);
 void luaH_free (lua_State *L, Table *t);
-int luaH_index (lua_State *L, Table *t, const TObject *key);
-int luaH_nexti (Table *t, int i, TObject *where);
+int luaH_next (lua_State *L, Table *t, TObject *key);
 
 /* exported only for debugging */
 Node *luaH_mainposition (const Table *t, const TObject *key);

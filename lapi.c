@@ -567,18 +567,18 @@ LUA_API void lua_error (lua_State *L, const char *s) {
 
 LUA_API int lua_next (lua_State *L, int index) {
   StkId t;
+  int more;
   lua_lock(L);
   t = luaA_index(L, index);
   api_check(L, ttype(t) == LUA_TTABLE);
-  index = luaH_index(L, hvalue(t), luaA_index(L, -1));
-  index = (luaH_nexti(hvalue(t), index, L->top - 1) != -1);
-  if (index) {
+  more = luaH_next(L, hvalue(t), L->top - 1);
+  if (more) {
     api_incr_top(L);
   }
   else  /* no more elements */
     L->top -= 1;  /* remove key */
   lua_unlock(L);
-  return index;
+  return more;
 }
 
 
