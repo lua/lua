@@ -1,4 +1,4 @@
-char *rcs_auxlib="$Id: auxlib.c,v 1.3 1997/04/06 14:08:08 roberto Exp roberto $";
+char *rcs_auxlib="$Id: auxlib.c,v 1.4 1997/04/07 14:48:53 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -22,11 +22,11 @@ int luaI_findstring (char *name, char *list[])
 
 void luaL_arg_check(int cond, int numarg, char *extramsg)
 {
-  char *funcname;
-  lua_getobjname(lua_stackedfunction(0), &funcname);
-  if (funcname == NULL)
-    funcname = "???";
   if (!cond) {
+    char *funcname;
+    lua_getobjname(lua_stackedfunction(0), &funcname);
+    if (funcname == NULL)
+      funcname = "???";
     if (extramsg == NULL)
       luaL_verror("bad argument #%d to function `%s'", numarg, funcname);
     else
