@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.11 1994/10/13 17:18:32 celes Exp celes $";
+char *rcs_iolib="$Id: iolib.c,v 1.12 1994/10/13 19:28:54 celes Exp roberto $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -13,8 +13,6 @@ char *rcs_iolib="$Id: iolib.c,v 1.11 1994/10/13 17:18:32 celes Exp celes $";
 #ifdef __GNUC__
 #include <floatingpoint.h>
 #endif
-
-#include "mm.h"
 
 #include "lua.h"
 #include "lualib.h"

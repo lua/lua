@@ -3,12 +3,10 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.4 1994/10/17 19:03:23 celes Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.5 1994/10/17 21:45:00 roberto Exp roberto $";
 
 #include <stdlib.h>
 #include <string.h>
-
-#include "mm.h"
 
 #include "opcode.h"
 #include "tree.h"
