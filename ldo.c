@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.43 1999/05/24 17:53:03 roberto Exp roberto $
+** $Id: ldo.c,v 1.44 1999/06/17 17:04:03 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -145,8 +145,7 @@ static StkId callC (lua_CFunction f, StkId base) {
 }
 
 
-static StkId callCclosure (struct Closure *cl, lua_CFunction f, StkId base)
-{
+static StkId callCclosure (struct Closure *cl, lua_CFunction f, StkId base) {
   TObject *pbase;
   int nup = cl->nelems;  /* number of upvalues */
   luaD_checkstack(nup);
@@ -168,15 +167,17 @@ void luaD_callTM (TObject *f, int nParams, int nResults) {
 
 
 /*
-** Call a function (C or Lua). The parameters must be on the L->stack.stack,
-** between [L->stack.stack+base,L->stack.top). The function to be called is at L->stack.stack+base-1.
-** When returns, the results are on the L->stack.stack, between [L->stack.stack+base-1,L->stack.top).
+** Call a function (C or Lua). The parameters must be on the stack,
+** between [top-nArgs,top). The function to be called is right below the
+** arguments.
+** When returns, the results are on the stack, between [top-nArgs-1,top).
 ** The number of results is nResults, unless nResults=MULT_RET.
 */
-void luaD_call (StkId base, int nResults)
-{
+void luaD_calln (int nArgs, int nResults) {
+  struct Stack *S = &L->stack;  /* to optimize */
+  StkId base = (S->top-S->stack)-nArgs;
+  TObject *func = S->stack+base-1;
   StkId firstResult;
-  TObject *func = L->stack.stack+base-1;
   int i;
   switch (ttype(func)) {
     case LUA_T_CPROTO:
@@ -201,24 +202,20 @@ void luaD_call (StkId base, int nResults)
       TObject *im = luaT_getimbyObj(func, IM_FUNCTION);
       if (ttype(im) == LUA_T_NIL)
         lua_error("call expression not a function");
-      luaD_callTM(im, (L->stack.top-L->stack.stack)-(base-1), nResults);
+      luaD_callTM(im, (S->top-S->stack)-(base-1), nResults);
       return;
     }
   }
   /* adjust the number of results */
-  if (nResults != MULT_RET)
+  if (nResults == MULT_RET)
+    nResults = (S->top-S->stack)-firstResult;
+  else
     luaD_adjusttop(firstResult+nResults);
   /* move results to base-1 (to erase parameters and function) */
   base--;
-  nResults = L->stack.top - (L->stack.stack+firstResult);  /* actual number of results */
   for (i=0; i<nResults; i++)
-    *(L->stack.stack+base+i) = *(L->stack.stack+firstResult+i);
-  L->stack.top -= firstResult-base;
-}
-
-
-void luaD_calln (int nArgs, int nResults) {
-    luaD_call((L->stack.top-L->stack.stack)-nArgs, nResults);
+    *(S->stack+base+i) = *(S->stack+firstResult+i);
+  S->top -= firstResult-base;
 }
 
 
@@ -258,32 +255,23 @@ void lua_error (char *s) {
   }
 }
 
-/*
-** Call the function at L->Cstack.base, and incorporate results on
-** the Lua2C structure.
-*/
-static void do_callinc (int nResults)
-{
-  StkId base = L->Cstack.base;
-  luaD_call(base+1, nResults);
-  L->Cstack.lua2C = base;  /* position of the new results */
-  L->Cstack.num = (L->stack.top-L->stack.stack) - base;  /* number of results */
-  L->Cstack.base = base + L->Cstack.num;  /* incorporate results on stack */
-}
-
 
 /*
 ** Execute a protected call. Assumes that function is at L->Cstack.base and
 ** parameters are on top of it. Leave nResults on the stack.
 */
-int luaD_protectedrun (int nResults) {
+int luaD_protectedrun (void) {
   volatile struct C_Lua_Stack oldCLS = L->Cstack;
   struct lua_longjmp myErrorJmp;
   volatile int status;
   struct lua_longjmp *volatile oldErr = L->errorJmp;
   L->errorJmp = &myErrorJmp;
   if (setjmp(myErrorJmp.b) == 0) {
-    do_callinc(nResults);
+    StkId base = L->Cstack.base;
+    luaD_calln((L->stack.top-L->stack.stack)-base-1, MULT_RET);
+    L->Cstack.lua2C = base;  /* position of the new results */
+    L->Cstack.num = (L->stack.top-L->stack.stack) - base;
+    L->Cstack.base = base + L->Cstack.num;  /* incorporate results on stack */
     status = 0;
   }
   else {  /* an error occurred: restore L->Cstack and L->stack.top */
@@ -338,7 +326,7 @@ static int do_main (ZIO *z, int bin) {
     else {
       unsigned long newelems2 = 2*(L->nblocks-old_blocks);
       L->GCthreshold += newelems2;
-      status = luaD_protectedrun(MULT_RET);
+      status = luaD_protectedrun();
       L->GCthreshold -= newelems2;
     }
   } while (bin && status == 0);

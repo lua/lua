@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.45 1999/05/14 12:24:20 roberto Exp roberto $
+** $Id: lapi.c,v 1.46 1999/06/17 17:04:03 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -131,7 +131,7 @@ int lua_callfunction (lua_Object function)
   else {
     luaD_openstack((L->stack.top-L->stack.stack)-L->Cstack.base);
     set_normalized(L->stack.stack+L->Cstack.base, Address(function));
-    return luaD_protectedrun(MULT_RET);
+    return luaD_protectedrun();
   }
 }
 
@@ -675,17 +675,15 @@ lua_Object lua_getref (int ref) {
 ** API: set a function as a fallback
 */
 
-static void do_unprotectedrun (lua_CFunction f, int nParams, int nResults)
-{
-  StkId base = (L->stack.top-L->stack.stack)-nParams;
+static void do_unprotectedrun (lua_CFunction f, int nParams, int nResults) {
   luaD_openstack(nParams);
-  L->stack.stack[base].ttype = LUA_T_CPROTO;
-  L->stack.stack[base].value.f = f;
-  luaD_call(base+1, nResults);
+  (L->stack.top-nParams)->ttype = LUA_T_CPROTO;
+  (L->stack.top-nParams)->value.f = f;
+  luaD_calln(nParams, nResults);
 }
 
-lua_Object lua_setfallback (char *name, lua_CFunction fallback)
-{
+
+lua_Object lua_setfallback (char *name, lua_CFunction fallback) {
   lua_pushstring(name);
   lua_pushcfunction(fallback);
   do_unprotectedrun(luaT_setfallback, 2, 1);

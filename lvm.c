@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.56 1999/05/21 17:23:15 roberto Exp roberto $
+** $Id: lvm.c,v 1.57 1999/05/21 19:41:49 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -342,11 +342,11 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         goto ret;
 
       case CALL: aux = *pc++;
-        luaD_call((S->top-S->stack)-(*pc++), aux);
+        luaD_calln(*pc++, aux);
         break;
 
       case TAILCALL: aux = *pc++;
-        luaD_call((S->top-S->stack)-(*pc++), MULT_RET);
+        luaD_calln(*pc++, MULT_RET);
         base += aux;
         goto ret;
 
