@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.50 2000/05/08 19:37:10 roberto Exp roberto $
+** $Id: lua.h,v 1.51 2000/05/09 14:50:16 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -170,6 +170,7 @@ extern lua_State *lua_state;
 #define lua_error(s)		(lua_error)(lua_state, s)
 #define lua_dofile(filename)	(lua_dofile)(lua_state, filename)
 #define lua_dostring(str)	(lua_dostring)(lua_state, str)
+#define lua_dobuffer(b,s,n)	(lua_dobuffer)(lua_state, b,s,n)
 #define lua_callfunction(f)	(lua_callfunction)(lua_state, f)
 #define lua_beginblock()	(lua_beginblock)(lua_state)
 #define lua_endblock()		(lua_endblock)(lua_state)
