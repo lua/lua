@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 1.23 2000/06/06 16:31:41 roberto Exp roberto $
+** $Id: lvm.h,v 1.24 2000/08/29 14:41:56 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -17,7 +17,6 @@
 #define tostring(L,o) ((ttype(o) != TAG_STRING) && (luaV_tostring(L, o) != 0))
 
 
-void luaV_pack (lua_State *L, StkId firstel);
 int luaV_tonumber (TObject *obj);
 int luaV_tostring (lua_State *L, TObject *obj);
 void luaV_gettable (lua_State *L, StkId top);

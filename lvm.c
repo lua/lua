@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.131 2000/08/29 14:48:16 roberto Exp roberto $
+** $Id: lvm.c,v 1.132 2000/08/31 14:08:27 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -313,7 +313,7 @@ static void strconc (lua_State *L, int total, StkId top) {
 }
 
 
-void luaV_pack (lua_State *L, StkId firstelem) {
+static void luaV_pack (lua_State *L, StkId firstelem) {
   int i;
   Hash *htab = luaH_new(L, 0);
   for (i=0; firstelem+i<L->top; i++)
