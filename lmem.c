@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.13 1999/02/26 15:50:10 roberto Exp roberto $
+** $Id: lmem.c,v 1.14 1999/03/01 17:49:13 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -22,7 +22,7 @@
 #endif
 
 
-#define MINSIZE	16	/* minimum size for "growing" vectors */
+#define MINSIZE	8	/* minimum size for "growing" vectors */
 
 
 
@@ -39,17 +39,12 @@ static unsigned long power2 (unsigned long n) {
 void *luaM_growaux (void *block, unsigned long nelems, int inc, int size,
                        char *errormsg, unsigned long limit) {
   unsigned long newn = nelems+inc;
+  if (newn >= limit) lua_error(errormsg);
   if ((newn ^ nelems) <= nelems ||  /* still the same power of 2 limit? */
        (nelems > 0 && newn < MINSIZE))  /* or block already is MINSIZE? */
       return block;  /* do not need to reallocate */
-  else {  /* it crossed a power of 2 boundary; grow to next power */
-    if (newn >= limit)
-      lua_error(errormsg);
-    newn = power2(newn);
-    if (newn > limit)
-      newn = limit;
-    return luaM_realloc(block, newn*size);
-  }
+  else  /* it crossed a power of 2 boundary; grow to next power */
+    return luaM_realloc(block, power2(newn)*size);
 }
 
 
