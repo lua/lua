@@ -225,7 +225,7 @@ static int get_limits (lua_State *L) {
 
 
 static int mem_query (lua_State *L) {
-  if (lua_isnull(L, 1)) {
+  if (lua_isnone(L, 1)) {
     lua_pushnumber(L, memdebug_total);
     lua_pushnumber(L, memdebug_numblocks);
     lua_pushnumber(L, memdebug_maxmem);
@@ -239,7 +239,7 @@ static int mem_query (lua_State *L) {
 
 
 static int hash_query (lua_State *L) {
-  if (lua_isnull(L, 2)) {
+  if (lua_isnone(L, 2)) {
     luaL_arg_check(L, lua_type(L, 1) == LUA_TSTRING, 1, "string expected");
     lua_pushnumber(L, tsvalue(luaA_index(L, 1))->tsv.hash);
   }
@@ -335,7 +335,7 @@ static int unref (lua_State *L) {
 
 static int eventtable (lua_State *L) {
   luaL_check_any(L, 1);
-  if (lua_isnull(L, 2))
+  if (lua_isnone(L, 2))
     lua_geteventtable(L, 1);
   else {
     lua_settop(L, 2);
@@ -429,7 +429,7 @@ static int doremote (lua_State *L) {
   }
   else {
     int i = 0;
-    while (!lua_isnull(L1, ++i))
+    while (!lua_isnone(L1, ++i))
       lua_pushstring(L, lua_tostring(L1, i));
     lua_pop(L1, i-1);
     return i-1;
@@ -518,7 +518,7 @@ static int testC (lua_State *L) {
       lua_pushnumber(L, lua_isnil(L, getnum));
     }
     else if EQ("isnull") {
-      lua_pushnumber(L, lua_isnull(L, getnum));
+      lua_pushnumber(L, lua_isnone(L, getnum));
     }
     else if EQ("tonumber") {
       lua_pushnumber(L, lua_tonumber(L, getnum));

@@ -177,7 +177,7 @@ static int io_tmpfile (lua_State *L) {
 
 static int io_fromto (lua_State *L, int inout, const char *mode) {
   FILE *current;
-  if (lua_isnull(L, 1)) {
+  if (lua_isnone(L, 1)) {
     getopthandle(L, inout);
     resetfile(L, inout);
     return io_close(L);
@@ -405,7 +405,7 @@ static int io_seek (lua_State *L) {
 
 
 static int io_flush (lua_State *L) {
-  FILE *f = (lua_isnull(L, 1)) ? (FILE *)(NULL) :
+  FILE *f = (lua_isnone(L, 1)) ? (FILE *)(NULL) :
                                  (FILE *)(luaL_check_userdata(L, 1, FILEHANDLE));
   return pushresult(L, fflush(f) == 0);
 }
@@ -525,7 +525,7 @@ static int io_date (lua_State *L) {
 
 
 static int io_time (lua_State *L) {
-  if (lua_isnull(L, 1))  /* called without args? */
+  if (lua_isnone(L, 1))  /* called without args? */
     lua_pushnumber(L, time(NULL));  /* return current time */
   else {
     time_t t;

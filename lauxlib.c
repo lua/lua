@@ -81,7 +81,7 @@ LUALIB_API const char *luaL_check_lstr (lua_State *L, int narg, size_t *len) {
 
 
 LUALIB_API const char *luaL_opt_lstr (lua_State *L, int narg, const char *def, size_t *len) {
-  if (lua_isnull(L, narg)) {
+  if (lua_isnone(L, narg)) {
     if (len)
       *len = (def ? strlen(def) : 0);
     return def;
@@ -99,7 +99,7 @@ LUALIB_API lua_Number luaL_check_number (lua_State *L, int narg) {
 
 
 LUALIB_API lua_Number luaL_opt_number (lua_State *L, int narg, lua_Number def) {
-  if (lua_isnull(L, narg)) return def;
+  if (lua_isnone(L, narg)) return def;
   else return luaL_check_number(L, narg);
 }
 

@@ -137,7 +137,7 @@ static int luaB_getglobal (lua_State *L) {
 
 static int luaB_eventtable (lua_State *L) {
   luaL_check_type(L, 1, LUA_TTABLE);
-  if (lua_isnull(L, 2))
+  if (lua_isnone(L, 2))
     lua_geteventtable(L, 1);
   else {
     lua_settop(L, 2);
@@ -174,7 +174,7 @@ static int luaB_weakmode (lua_State *L) {
 
 static int luaB_globals (lua_State *L) {
   lua_getglobals(L);  /* value to be returned */
-  if (!lua_isnull(L, 1)) {
+  if (!lua_isnone(L, 1)) {
     luaL_check_type(L, 1, LUA_TTABLE);
     lua_pushvalue(L, 1);  /* new table of globals */
     lua_setglobals(L);
@@ -213,7 +213,7 @@ static int luaB_collectgarbage (lua_State *L) {
 
 static int luaB_type (lua_State *L) {
   luaL_check_any(L, 1);
-  if (lua_isnull(L, 2))
+  if (lua_isnone(L, 2))
     lua_pushstring(L, lua_typename(L, lua_type(L, 1)));
   else {
     lua_pushboolean(L,
@@ -362,7 +362,7 @@ static int luaB_call (lua_State *L) {
   int err = 0;  /* index of old error method */
   int status;
   int n;
-  if (!lua_isnull(L, 4)) {  /* set new error method */
+  if (!lua_isnone(L, 4)) {  /* set new error method */
     lua_getglobal(L, LUA_ERRORMESSAGE);
     err = lua_gettop(L);  /* get index */
     lua_pushvalue(L, 4);
@@ -618,7 +618,7 @@ static int luaB_sort (lua_State *L) {
   int n;
   luaL_check_type(L, 1, LUA_TTABLE);
   n = lua_getn(L, 1);
-  if (!lua_isnull(L, 2))  /* is there a 2nd argument? */
+  if (!lua_isnone(L, 2))  /* is there a 2nd argument? */
     luaL_check_type(L, 2, LUA_TFUNCTION);
   lua_settop(L, 2);  /* make sure there is two arguments */
   auxsort(L, 1, n);

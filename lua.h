@@ -227,7 +227,7 @@ LUA_API int   lua_getweakmode (lua_State *L, int index);
 #define lua_isuserdata(L,n)	(lua_type(L,n) == LUA_TUSERDATA)
 #define lua_isnil(L,n)		(lua_type(L,n) == LUA_TNIL)
 #define lua_isboolean(L,n)	(lua_type(L,n) == LUA_TBOOLEAN)
-#define lua_isnull(L,n)		(lua_type(L,n) == LUA_TNONE)
+#define lua_isnone(L,n)		(lua_type(L,n) == LUA_TNONE)
 
 #define lua_pushliteral(L, s)	lua_pushlstring(L, "" s, \
                                                 (sizeof(s)/sizeof(char))-1)
