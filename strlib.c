@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.36 1997/03/17 17:01:10 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.37 1997/03/18 15:30:50 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -24,7 +24,7 @@ struct lbuff {
 static struct lbuff lbuffer = {NULL, 0, 0};
 
 
-static char *lua_strbuffer (unsigned long size)
+static char *luaL_strbuffer (unsigned long size)
 {
   if (size > lbuffer.max) {
     /* ANSI "realloc" doesn't need this test, but some machines (Sun!)
@@ -39,19 +39,23 @@ static char *lua_strbuffer (unsigned long size)
 
 static char *openspace (unsigned long size)
 {
-  char *buff = lua_strbuffer(lbuffer.size+size);
+  char *buff = luaL_strbuffer(lbuffer.size+size);
   return buff+lbuffer.size;
 }
 
 char *luaI_addchar (int c)
 {
   if (lbuffer.size >= lbuffer.max)
-    lua_strbuffer(lbuffer.max == 0 ? 100 : lbuffer.max*2);
+    luaL_strbuffer(lbuffer.max == 0 ? 100 : lbuffer.max*2);
   lbuffer.b[lbuffer.size++] = c;
-  if (c == 0)
-    lbuffer.size = 0;  /* prepare for next string */
   return lbuffer.b;
 }
+
+void luaI_emptybuff (void)
+{
+  lbuffer.size = 0;  /* prepare for next string */
+}
+
 
 static void addnchar (char *s, int n)
 {
@@ -75,7 +79,7 @@ static void str_tok (void)
   lua_Object t = lua_createtable();
   int i = 1;
   /* As strtok changes s1, and s1 is "constant",  make a copy of it */
-  s1 = strcpy(lua_strbuffer(strlen(s1+1)), s1);
+  s1 = strcpy(luaL_strbuffer(strlen(s1+1)), s1);
   while ((s1 = strtok(s1, del)) != NULL) {
     lua_pushobject(t);
     lua_pushnumber(i++);
@@ -105,7 +109,7 @@ static void str_sub (void)
   long start = (long)luaL_check_number(2, "strsub");
   long end = (long)luaL_opt_number(3, strlen(s), "strsub");
   if (1 <= start && start <= end && end <= strlen(s)) {
-    luaI_addchar(0);
+    luaI_emptybuff();
     addnchar(s+start-1, end-start+1);
     lua_pushstring(luaI_addchar(0));
   }
@@ -118,7 +122,7 @@ static void str_sub (void)
 static void str_lower (void)
 {
   char *s = luaL_check_string(1, "strlower");
-  luaI_addchar(0);
+  luaI_emptybuff();
   while (*s)
     luaI_addchar(tolower((unsigned char)*s++));
   lua_pushstring(luaI_addchar(0));
@@ -130,7 +134,7 @@ static void str_lower (void)
 static void str_upper (void)
 {
   char *s = luaL_check_string(1, "strupper");
-  luaI_addchar(0);
+  luaI_emptybuff();
   while (*s)
     luaI_addchar(toupper((unsigned char)*s++));
   lua_pushstring(luaI_addchar(0));
@@ -140,7 +144,7 @@ static void str_rep (void)
 {
   char *s = luaL_check_string(1, "strrep");
   int n = (int)luaL_check_number(2, "strrep");
-  luaI_addchar(0);
+  luaI_emptybuff();
   while (n-- > 0)
     addstr(s);
   lua_pushstring(luaI_addchar(0));
@@ -168,7 +172,7 @@ static char *bracket_end (char *p)
   return (*p == 0) ? NULL : strchr((*p=='^') ? p+2 : p+1, ']');
 }
 
-char *item_end (char *p)
+char *luaL_item_end (char *p)
 {
   switch (*p++) {
     case '\0': return p-1;
@@ -202,7 +206,7 @@ static int matchclass (int c, int cl)
   return (islower((unsigned char)cl) ? res : !res);
 }
 
-int singlematch (int c, char *p)
+int luaL_singlematch (int c, char *p)
 {
   if (c == 0) return 0;
   switch (*p) {
@@ -324,8 +328,8 @@ static char *match (char *s, char *p, int level)
       }
       else goto dflt;
     default: dflt: {  /* it is a pattern item */
-      int m = singlematch(*s, p);
-      char *ep = item_end(p);  /* get what is next */
+      int m = luaL_singlematch(*s, p);
+      char *ep = luaL_item_end(p);  /* get what is next */
       switch (*ep) {
         case '*': {  /* repetition */
           char *res;
@@ -427,7 +431,7 @@ static void str_gsub (void)
   int max_s = (int)luaL_opt_number(4, strlen(src)+1, "gsub");
   int anchor = (*p == '^') ? (p++, 1) : 0;
   int n = 0;
-  luaI_addchar(0);
+  luaI_emptybuff();
   while (n < max_s) {
     char *e = match(src, p, 0);
     if (e) {
@@ -450,10 +454,10 @@ static void str_set (void)
 {
   char *item = luaL_check_string(1, "strset");
   int i;
-  luaL_arg_check(*item_end(item) == 0, "strset", 1, "wrong format");
-  luaI_addchar(0);
+  luaL_arg_check(*luaL_item_end(item) == 0, "strset", 1, "wrong format");
+  luaI_emptybuff();
   for (i=1; i<256; i++)  /* 0 cannot be part of a set */
-    if (singlematch(i, item))
+    if (luaL_singlematch(i, item))
       luaI_addchar(i);
   lua_pushstring(luaI_addchar(0));
 }
@@ -476,7 +480,7 @@ static void str_format (void)
 {
   int arg = 1;
   char *strfrmt = luaL_check_string(arg++, "format");
-  luaI_addchar(0);  /* initialize */
+  luaI_emptybuff();  /* initialize */
   while (*strfrmt) {
     if (*strfrmt != '%')
       luaI_addchar(*strfrmt++);

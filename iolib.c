@@ -116,7 +116,7 @@ static void io_read (void)
   char *p = luaL_opt_string(1, "[^\n]*{\n}", "read");
   int inskip = 0;  /* to control {skips} */
   int c = NEED_OTHER;
-  luaI_addchar(0);
+  luaI_emptybuff();
   while (*p) {
     if (*p == '{') {
       inskip++;
@@ -129,10 +129,10 @@ static void io_read (void)
       p++;
     }
     else {
-      char *ep = item_end(p);  /* get what is next */
+      char *ep = luaL_item_end(p);  /* get what is next */
       int m;  /* match result */
       if (c == NEED_OTHER) c = getc(lua_infile);
-      m = (c == EOF) ? 0 : singlematch((char)c, p);
+      m = (c == EOF) ? 0 : luaL_singlematch((char)c, p);
       if (m) {
         if (inskip == 0) luaI_addchar(c);
         c = NEED_OTHER;
@@ -277,6 +277,45 @@ static void errorfb (void)
 }
 
 
+/* --------------------------------------------
+* functions to manipulate userdata
+*/
+static void getbyte (void)
+{
+  lua_Object ud = lua_getparam(1);
+  int i = luaL_check_number(2, "getbyte")-1;
+  luaL_arg_check(lua_isuserdata(ud), "getbyte", 1, "userdata expected");
+  luaL_arg_check(0 <= i && i < lua_getbindatasize(ud), "getbyte", 2,
+                 "out of range");
+  lua_pushnumber(*(((char *)lua_getbinarydata(ud))+i));
+}
+
+static void createuserdata (void)
+{
+  lua_Object t = lua_getparam(1);
+  int tag = luaL_opt_number(2, 0, "createud");
+  int i;
+  luaI_emptybuff();
+  luaL_arg_check(lua_istable(t), "createud", 1, "table expected");
+  for (i=0; ; i++) {
+    lua_Object o;
+    lua_beginblock();
+    lua_pushobject(t);
+    lua_pushnumber(i+1);
+    o = lua_basicindex();
+    if (lua_isnil(o)) {
+      lua_endblock();
+      break;
+    }
+    luaL_arg_check(lua_isnumber(o), "createud", 1,
+                   "table values must be numbers");
+    luaI_addchar(lua_getnumber(o));
+    lua_endblock();
+  }
+  lua_pushbinarydata(luaI_addchar(0), i, tag);
+}
+
+
 static struct luaL_reg iolib[] = {
 {"readfrom", io_readfrom},
 {"writeto",  io_writeto},
@@ -291,6 +330,8 @@ static struct luaL_reg iolib[] = {
 {"date",     io_date},
 {"exit",     io_exit},
 {"debug",    io_debug},
+{"getbyte",    getbyte},
+{"createud",    createuserdata},
 {"print_stack", errorfb}
 };
 
