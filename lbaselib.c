@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.39 2001/07/12 18:11:58 roberto Exp $
+** $Id: lbaselib.c,v 1.41 2001/08/31 19:46:07 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -234,7 +234,7 @@ static int luaB_settagmethod (lua_State *L) {
   luaL_arg_check(L, lua_isfunction(L, 3) || lua_isnil(L, 3), 3,
                  l_s("function or nil expected"));
   if (strcmp(event, l_s("gc")) == 0)
-    lua_error(L, l_s("deprecated use: cannot set the `gc' tag method from Lua"));
+    lua_error(L, l_s("cannot set `gc' tag method from Lua"));
   lua_gettagmethod(L, tag, event);
   lua_pushvalue(L, 3);
   lua_settagmethod(L, tag, event);
@@ -246,7 +246,7 @@ static int luaB_gettagmethod (lua_State *L) {
   int tag = gettag(L, 1);
   const l_char *event = luaL_check_string(L, 2);
   if (strcmp(event, l_s("gc")) == 0)
-    lua_error(L, l_s("deprecated use: cannot get the `gc' tag method from Lua"));
+    lua_error(L, l_s("cannot get `gc' tag method from Lua"));
   lua_gettagmethod(L, tag, event);
   return 1;
 }
@@ -451,7 +451,7 @@ static int luaB_call (lua_State *L) {
     return 1;
   }
   if (strchr(options, l_c('p')))  /* pack results? */
-    lua_error(L, l_s("deprecated option `p' in `call'"));
+    lua_error(L, l_s("obsolete option `p' in `call'"));
   return lua_gettop(L) - oldtop;  /* results are already on the stack */
 }
 

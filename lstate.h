@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.58 2001/06/15 19:16:41 roberto Exp $
+** $Id: lstate.h,v 1.59 2001/09/07 17:39:10 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -66,7 +66,7 @@ typedef struct global_State {
   lu_mem GCthreshold;
   lu_mem nblocks;  /* number of `bytes' currently allocated */
   Proto *rootproto;  /* list of all prototypes */
-  Closure *rootcl;  /* list of all closed closures */
+  Closure *rootcl;  /* list of all C closures and closed Lua closures */
   Hash *roottable;  /* list of all tables */
   Udata *rootudata;   /* list of all userdata */
   UpVal *rootupval;  /* list of all up values */

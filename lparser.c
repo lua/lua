@@ -627,7 +627,7 @@ static void prefixexp (LexState *ls, expdesc *v) {
     case l_c('%'): {  /* for compatibility only */
       next(ls);  /* skip `%' */
       singlevar(ls->fs, str_checkname(ls), v, 1);
-      check_condition(ls, v->k == VUPVAL, l_s("global upvalues are deprecated"));
+      check_condition(ls, v->k == VUPVAL, l_s("global upvalues are obsolete"));
       next(ls);
       return;
     }

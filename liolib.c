@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.121 2001/07/22 00:59:36 roberto Exp $
+** $Id: liolib.c,v 1.122 2001/08/31 19:46:07 roberto Exp $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -322,7 +322,7 @@ static int io_read (lua_State *L) {
             success = 1; /* always success */
             break;
           case l_c('w'):  /* word */
-            lua_error(L, l_s("option `*w' is deprecated"));
+            lua_error(L, l_s("obsolete option `*w'"));
             break;
           case l_c('u'): {  /* read until */
             size_t pl = lua_strlen(L, n) - 2;
