@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 4.8 1997/06/12 18:27:29 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 4.9 1997/06/16 16:50:22 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -466,9 +466,7 @@ void lua_travstack (int (*fn)(TObject *))
 static void lua_message (char *s)
 {
   TObject *im = luaI_geterrorim();
-  if (ttype(im) == LUA_T_NIL)
-    fprintf(stderr, "lua: %s\n", s);
-  else {
+  if (ttype(im) != LUA_T_NIL) {
     lua_pushstring(s);
     callIM(im, 1, 0);
   }
@@ -1008,7 +1006,7 @@ void luaI_gcIM (TObject *o)
 }
 
 
-static void call_arith (IMS event)
+static void call_binTM (IMS event, char *msg)
 {
   TObject *im = luaI_getimbyObj(top-2, event);  /* try first operand */
   if (ttype(im) == LUA_T_NIL) {
@@ -1016,29 +1014,19 @@ static void call_arith (IMS event)
     if (ttype(im) == LUA_T_NIL) {
       im = luaI_getim(0, event);  /* try a 'global' i.m. */
       if (ttype(im) == LUA_T_NIL)
-        lua_error("unexpected type at arithmetic operation");
+        lua_error(msg);
     }
   }
   lua_pushstring(luaI_eventname[event]);
   callIM(im, 3, 1);
 }
 
-static void concim (TObject *o)
+
+static void call_arith (IMS event)
 {
-  TObject *im = luaI_getimbyObj(o, IM_CONCAT);
-  if (ttype(im) == LUA_T_NIL)
-    lua_error("unexpected type at conversion to string");
-  callIM(im, 2, 1);
+  call_binTM(event, "unexpected type at arithmetic operation");
 }
 
-static void ordim (TObject *o, IMS event)
-{
-  TObject *im = luaI_getimbyObj(o, event);
-  if (ttype(im) == LUA_T_NIL)
-    lua_error("unexpected type at comparison");
-  lua_pushstring(luaI_eventname[event]);
-  callIM(im, 3, 1);
-}
 
 static void comparison (lua_Type ttype_less, lua_Type ttype_equal, 
                         lua_Type ttype_great, IMS op)
@@ -1048,16 +1036,12 @@ static void comparison (lua_Type ttype_less, lua_Type ttype_equal,
   int result;
   if (ttype(l) == LUA_T_NUMBER && ttype(r) == LUA_T_NUMBER)
     result = (nvalue(l) < nvalue(r)) ? -1 : (nvalue(l) == nvalue(r)) ? 0 : 1;
-  else if (tostring(l)) {
-    ordim(l, op);
-    return;
-  }
-  else if (tostring(r)) {
-    ordim(r, op);
-    return;
-  }
-  else
+  else if (ttype(l) == LUA_T_STRING && ttype(r) == LUA_T_STRING)
     result = strcmp(svalue(l), svalue(r));
+  else {
+    call_binTM(op, "unexpected type at comparison");
+    return;
+  }
   top--;
   nvalue(top-1) = 1;
   ttype(top-1) = (result < 0) ? ttype_less :
@@ -1372,10 +1356,8 @@ static StkId lua_execute (Byte *pc, StkId base)
    case CONCOP: {
      TObject *l = top-2;
      TObject *r = top-1;
-     if (tostring(l))  /* first argument is not a string */
-       concim(l);
-     else if (tostring(r))  /* second argument is not a string */
-       concim(r);
+     if (tostring(l) || tostring(r))
+       call_binTM(IM_CONCAT, "unexpected type for concatenation");
      else {
        tsvalue(l) = lua_createstring(lua_strconc(svalue(l),svalue(r)));
        --top;
