@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.110 2000/05/30 19:00:31 roberto Exp roberto $
+** $Id: lvm.c,v 1.111 2000/06/05 14:56:18 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -66,10 +66,9 @@ int luaV_tostring (lua_State *L, TObject *obj) {  /* LUA_NUMBER */
 
 
 void luaV_setn (lua_State *L, Hash *t, int val) {
-  TObject index, value;
-  ttype(&index) = TAG_STRING; tsvalue(&index) = luaS_new(L, "n");
+  TObject value;
   ttype(&value) = TAG_NUMBER; nvalue(&value) = val;
-  luaH_set(L, t, &index, &value);
+  luaH_setstr(L, t, luaS_new(L, "n"), &value);
 }
 
 

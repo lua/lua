@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.43 2000/05/24 13:54:49 roberto Exp roberto $
+** $Id: ltable.c,v 1.44 2000/06/05 20:07:53 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -274,6 +274,14 @@ void luaH_setint (lua_State *L, Hash *t, int key, const TObject *val) {
   TObject index;
   ttype(&index) = TAG_NUMBER;
   nvalue(&index) = key;
+  luaH_set(L, t, &index, val);
+}
+
+
+void luaH_setstr (lua_State *L, Hash *t, TString *key, const TObject *val) {
+  TObject index;
+  ttype(&index) = TAG_STRING;
+  tsvalue(&index) = key;
   luaH_set(L, t, &index, val);
 }
 

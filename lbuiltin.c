@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.111 2000/05/26 19:17:57 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.112 2000/06/02 19:08:56 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -68,12 +68,7 @@ static Number getsize (const Hash *h) {
 
 
 static Number getnarg (lua_State *L, const Hash *a) {
-  TObject index;
-  const TObject *value;
-  /* value = table.n */
-  ttype(&index) = TAG_STRING;
-  tsvalue(&index) = luaS_new(L, "n");
-  value = luaH_get(L, a, &index);
+  const TObject *value = luaH_getstr(a, luaS_new(L, "n"));  /* value = a.n */
   return (ttype(value) == TAG_NUMBER) ? nvalue(value) : getsize(a);
 }
 
