@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.39 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: lparser.c,v 1.40 1999/09/02 13:13:22 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -8,18 +8,15 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "lauxlib.h"
 #include "ldo.h"
 #include "lfunc.h"
 #include "llex.h"
 #include "lmem.h"
+#include "lobject.h"
 #include "lopcodes.h"
 #include "lparser.h"
 #include "lstate.h"
 #include "lstring.h"
-#include "lua.h"
-#include "luadebug.h"
-#include "lzio.h"
 
 
 
@@ -136,7 +133,6 @@ static void parlist (LexState *ls);
 static void part (LexState *ls, constdesc *cd);
 static void recfield (LexState *ls);
 static void ret (LexState *ls);
-static void statlist (LexState *ls);
 static void var_or_func (LexState *ls, vardesc *v);
 static void var_or_func_tail (LexState *ls, vardesc *v);
 
@@ -699,46 +695,108 @@ TProtoFunc *luaY_parser (ZIO *z) {
 /* GRAMAR RULES */
 /*============================================================*/
 
-static void chunk (LexState *ls) {
-  /* chunk -> statlist ret */
-  statlist(ls);
-  ret(ls);
-}
 
-static void statlist (LexState *ls) {
-  /* statlist -> { stat [;] } */
+static void chunk (LexState *ls) {
+  /* chunk -> { stat [;] } ret */
   while (stat(ls)) {
     LUA_ASSERT(ls->fs->stacksize == ls->fs->nlocalvar,
                "stack size != # local vars");
     optional(ls, ';');
   }
+  ret(ls);  /* optional return */
 }
+
+
+static void whilestat (LexState *ls, int line) {
+  /* whilestat -> WHILE cond DO block END */
+  FuncState *fs = ls->fs;
+  TProtoFunc *f = fs->f;
+  int while_init = fs->pc;
+  int cond_end, cond_size;
+  next(ls);
+  cond_end = cond(ls);
+  check(ls, DO);
+  block(ls);
+  check_match(ls, END, WHILE, line);
+  cond_size = cond_end-while_init;
+  check_pc(fs, cond_size);
+  memcpy(f->code+fs->pc, f->code+while_init, cond_size);
+  luaO_memdown(f->code+while_init, f->code+cond_end, fs->pc-while_init);
+  while_init += JMPSIZE + fix_jump(ls, while_init, JMP, fs->pc-cond_size);
+  fix_upjmp(ls, IFTUPJMP, while_init);
+}
+
+
+static void repeatstat (LexState *ls, int line) {
+  /* repeatstat -> REPEAT block UNTIL exp1 */
+  FuncState *fs = ls->fs;
+  int repeat_init = fs->pc;
+  next(ls);
+  block(ls);
+  check_match(ls, UNTIL, REPEAT, line);
+  exp1(ls);
+  fix_upjmp(ls, IFFUPJMP, repeat_init);
+  deltastack(ls, -1);  /* pops condition */
+}
+
+
+static void localstat (LexState *ls) {
+  /* stat -> LOCAL localnamelist decinit */
+  FuncState *fs = ls->fs;
+  listdesc d;
+  int nvars;
+  check_debugline(ls);
+  next(ls);
+  nvars = localnamelist(ls);
+  decinit(ls, &d);
+  fs->nlocalvar += nvars;
+  correctvarlines(ls, nvars);  /* vars will be alive only after decinit */
+  adjust_mult_assign(ls, nvars, &d);
+}
+
+
+static int funcstat (LexState *ls, int line) {
+  /* funcstat -> FUNCTION funcname body */
+  int needself;
+  vardesc v;
+  if (ls->fs->prev)  /* inside other function? */
+    return 0;
+  check_debugline(ls);
+  next(ls);
+  needself = funcname(ls, &v);
+  body(ls, needself, line);
+  storevar(ls, &v);
+  return 1;
+}
+
+
+static void namestat (LexState *ls) {
+  /* stat -> func | ['%'] NAME assignment */
+  vardesc v;
+  check_debugline(ls);
+  var_or_func(ls, &v);
+  if (v.k == VEXP) {  /* stat -> func */
+    if (v.info == 0)  /* is just an upper value? */
+      luaX_error(ls, "syntax error");
+    close_exp(ls, v.info, 0);
+  }
+  else {  /* stat -> ['%'] NAME assignment */
+    int left = assignment(ls, &v, 1);
+    adjuststack(ls, left);  /* remove eventual garbage left on stack */
+  }
+}
+
 
 static int stat (LexState *ls) {
   int line = ls->linenumber;  /* may be needed for error messages */
-  FuncState *fs = ls->fs;
   switch (ls->token) {
     case IF:  /* stat -> IF ifpart END */
       ifpart(ls, line);
       return 1;
 
-    case WHILE: {  /* stat -> WHILE cond DO block END */
-      TProtoFunc *f = fs->f;
-      int while_init = fs->pc;
-      int cond_end, cond_size;
-      next(ls);
-      cond_end = cond(ls);
-      check(ls, DO);
-      block(ls);
-      check_match(ls, END, WHILE, line);
-      cond_size = cond_end-while_init;
-      check_pc(fs, cond_size);
-      memcpy(f->code+fs->pc, f->code+while_init, cond_size);
-      luaO_memdown(f->code+while_init, f->code+cond_end, fs->pc-while_init);
-      while_init += JMPSIZE + fix_jump(ls, while_init, JMP, fs->pc-cond_size);
-      fix_upjmp(ls, IFTUPJMP, while_init);
+    case WHILE:  /* stat -> whilestat */
+      whilestat(ls, line);
       return 1;
-    }
 
     case DO: {  /* stat -> DO block END */
       next(ls);
@@ -747,58 +805,20 @@ static int stat (LexState *ls) {
       return 1;
     }
 
-    case REPEAT: {  /* stat -> REPEAT block UNTIL exp1 */
-      int repeat_init = fs->pc;
-      next(ls);
-      block(ls);
-      check_match(ls, UNTIL, REPEAT, line);
-      exp1(ls);
-      fix_upjmp(ls, IFFUPJMP, repeat_init);
-      deltastack(ls, -1);  /* pops condition */
+    case REPEAT:  /* stat -> repeatstat */
+      repeatstat(ls, line);
       return 1;
-    }
 
-    case FUNCTION: {  /* stat -> FUNCTION funcname body */
-      int needself;
-      vardesc v;
-      if (ls->fs->prev)  /* inside other function? */
-        return 0;
-      check_debugline(ls);
-      next(ls);
-      needself = funcname(ls, &v);
-      body(ls, needself, line);
-      storevar(ls, &v);
-      return 1;
-    }
+    case FUNCTION:  /* stat -> funcstat */
+      return funcstat(ls, line);
 
-    case LOCAL: {  /* stat -> LOCAL localnamelist decinit */
-      listdesc d;
-      int nvars;
-      check_debugline(ls);
-      next(ls);
-      nvars = localnamelist(ls);
-      decinit(ls, &d);
-      fs->nlocalvar += nvars;
-      correctvarlines(ls, nvars);  /* vars will be alive only after decinit */
-      adjust_mult_assign(ls, nvars, &d);
+    case LOCAL:  /* stat -> localstat */
+      localstat(ls);
       return 1;
-    }
 
-    case NAME: case '%': {  /* stat -> func | ['%'] NAME assignment */
-      vardesc v;
-      check_debugline(ls);
-      var_or_func(ls, &v);
-      if (v.k == VEXP) {  /* stat -> func */
-        if (v.info == 0)  /* is just an upper value? */
-          luaX_error(ls, "syntax error");
-        close_exp(ls, v.info, 0);
-      }
-      else {  /* stat -> ['%'] NAME assignment */
-        int left = assignment(ls, &v, 1);
-        adjuststack(ls, left);  /* remove eventual garbage left on stack */
-      }
+    case NAME: case '%':  /* stat -> namestat */
+      namestat(ls);
       return 1;
-    }
 
     case RETURN: case ';': case ELSE: case ELSEIF:
     case END: case UNTIL: case EOS:  /* 'stat' follow */
