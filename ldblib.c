@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.31 2001/01/10 16:58:11 roberto Exp roberto $
+** $Id: ldblib.c,v 1.32 2001/02/02 19:02:40 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -17,14 +17,14 @@
 
 
 
-static void settabss (lua_State *L, const char *i, const char *v) {
+static void settabss (lua_State *L, const l_char *i, const l_char *v) {
   lua_pushstring(L, i);
   lua_pushstring(L, v);
   lua_settable(L, -3);
 }
 
 
-static void settabsi (lua_State *L, const char *i, int v) {
+static void settabsi (lua_State *L, const l_char *i, int v) {
   lua_pushstring(L, i);
   lua_pushnumber(L, v);
   lua_settable(L, -3);
@@ -33,8 +33,8 @@ static void settabsi (lua_State *L, const char *i, int v) {
 
 static int getinfo (lua_State *L) {
   lua_Debug ar;
-  const char *options = luaL_opt_string(L, 2, "flnSu");
-  char buff[20];
+  const l_char *options = luaL_opt_string(L, 2, l_s("flnSu"));
+  l_char buff[20];
   if (lua_isnumber(L, 1)) {
     if (!lua_getstack(L, (int)lua_tonumber(L, 1), &ar)) {
       lua_pushnil(L);  /* level out of range */
@@ -43,35 +43,35 @@ static int getinfo (lua_State *L) {
   }
   else if (lua_isfunction(L, 1)) {
     lua_pushvalue(L, 1);
-    sprintf(buff, ">%.10s", options);
+    sprintf(buff, l_s(">%.10s"), options);
     options = buff;
   }
   else
-    luaL_argerror(L, 1, "function or level expected");
+    luaL_argerror(L, 1, l_s("function or level expected"));
   if (!lua_getinfo(L, options, &ar))
-    luaL_argerror(L, 2, "invalid option");
+    luaL_argerror(L, 2, l_s("invalid option"));
   lua_newtable(L);
   for (; *options; options++) {
     switch (*options) {
-      case 'S':
-        settabss(L, "source", ar.source);
+      case l_c('S'):
+        settabss(L, l_s("source"), ar.source);
         if (ar.source)
-          settabss(L, "short_src", ar.short_src);
-        settabsi(L, "linedefined", ar.linedefined);
-        settabss(L, "what", ar.what);
+          settabss(L, l_s("short_src"), ar.short_src);
+        settabsi(L, l_s("linedefined"), ar.linedefined);
+        settabss(L, l_s("what"), ar.what);
         break;
-      case 'l':
-        settabsi(L, "currentline", ar.currentline);
+      case l_c('l'):
+        settabsi(L, l_s("currentline"), ar.currentline);
         break;
-      case 'u':
-        settabsi(L, "nups", ar.nups);
+      case l_c('u'):
+        settabsi(L, l_s("nups"), ar.nups);
         break;
-      case 'n':
-        settabss(L, "name", ar.name);
-        settabss(L, "namewhat", ar.namewhat);
+      case l_c('n'):
+        settabss(L, l_s("name"), ar.name);
+        settabss(L, l_s("namewhat"), ar.namewhat);
         break;
-      case 'f':
-        lua_pushliteral(L, "func");
+      case l_c('f'):
+        lua_pushliteral(L, l_s("func"));
         lua_pushvalue(L, -3);
         lua_settable(L, -3);
         break;
@@ -83,9 +83,9 @@ static int getinfo (lua_State *L) {
 
 static int getlocal (lua_State *L) {
   lua_Debug ar;
-  const char *name;
+  const l_char *name;
   if (!lua_getstack(L, luaL_check_int(L, 1), &ar))  /* level out of range? */
-    luaL_argerror(L, 1, "level out of range");
+    luaL_argerror(L, 1, l_s("level out of range"));
   name = lua_getlocal(L, &ar, luaL_check_int(L, 2));
   if (name) {
     lua_pushstring(L, name);
@@ -102,7 +102,7 @@ static int getlocal (lua_State *L) {
 static int setlocal (lua_State *L) {
   lua_Debug ar;
   if (!lua_getstack(L, luaL_check_int(L, 1), &ar))  /* level out of range? */
-    luaL_argerror(L, 1, "level out of range");
+    luaL_argerror(L, 1, l_s("level out of range"));
   luaL_checkany(L, 3);
   lua_pushstring(L, lua_setlocal(L, &ar, luaL_check_int(L, 2)));
   return 1;
@@ -111,7 +111,7 @@ static int setlocal (lua_State *L) {
 
 
 /* dummy variables (to define unique addresses) */
-static const char key1[] = "ab";
+static const l_char key1[] = l_s("ab");
 #define KEY_CALLHOOK	((void *)key1)
 #define KEY_LINEHOOK	((void *)(key1+1))
 
@@ -150,7 +150,7 @@ static void sethook (lua_State *L, void *key, lua_Hook hook,
   else if (lua_isfunction(L, 1))
     (*sethookf)(L, hook);
   else
-    luaL_argerror(L, 1, "function expected");
+    luaL_argerror(L, 1, l_s("function expected"));
   lua_getregistry(L);
   lua_pushuserdata(L, key);
   lua_pushvalue(L, -1);  /* dup key */
@@ -174,11 +174,11 @@ static int setlinehook (lua_State *L) {
 
 
 static const luaL_reg dblib[] = {
-  {"getlocal", getlocal},
-  {"getinfo", getinfo},
-  {"setcallhook", setcallhook},
-  {"setlinehook", setlinehook},
-  {"setlocal", setlocal}
+  {l_s("getlocal"), getlocal},
+  {l_s("getinfo"), getinfo},
+  {l_s("setcallhook"), setcallhook},
+  {l_s("setlinehook"), setlinehook},
+  {l_s("setlocal"), setlocal}
 };
 
 

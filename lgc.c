@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.90 2001/02/20 18:28:11 roberto Exp roberto $
+** $Id: lgc.c,v 1.91 2001/02/22 18:59:59 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -331,7 +331,7 @@ static void collectudata (lua_State *L, int all) {
 static void checkMbuffer (lua_State *L) {
   if (G(L)->Mbuffsize > MINBUFFER*2) {  /* is buffer too big? */
     size_t newsize = G(L)->Mbuffsize/2;  /* still larger than MINBUFFER */
-    luaM_reallocvector(L, G(L)->Mbuffer, G(L)->Mbuffsize, newsize, char);
+    luaM_reallocvector(L, G(L)->Mbuffer, G(L)->Mbuffsize, newsize, l_char);
     G(L)->Mbuffsize = newsize;
   }
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.19 2001/01/29 15:26:40 roberto Exp roberto $
+** $Id: lcode.h,v 1.20 2001/02/20 18:15:33 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -47,7 +47,7 @@ typedef struct OpProperties {
 extern const OpProperties luaK_opproperties[];
 
 
-void luaK_error (LexState *ls, const char *msg);
+void luaK_error (LexState *ls, const l_char *msg);
 int luaK_code0 (FuncState *fs, OpCode o);
 int luaK_code1 (FuncState *fs, OpCode o, int arg1);
 int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2);

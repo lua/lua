@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.96 2001/02/20 18:15:33 roberto Exp roberto $
+** $Id: lobject.h,v 1.97 2001/02/20 18:28:11 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -117,7 +117,7 @@ union L_UTString {
 
 
 
-#define getstr(ts)	((char *)(ts) + sizeof(union L_UTString))
+#define getstr(ts)	((l_char *)(ts) + sizeof(union L_UTString))
 #define svalue(o)       getstr(tsvalue(o))
 
 
@@ -200,7 +200,7 @@ typedef struct Hash {
 
 
 /*
-** "module" operation for hashing (size is always a power of 2)
+** `module' operation for hashing (size is always a power of 2)
 */
 #define lmod(s,size)	((int)((s) & ((size)-1)))
 
@@ -220,13 +220,13 @@ typedef struct CallInfo {
 extern const TObject luaO_nilobject;
 
 
-char *luaO_openspace (lua_State *L, size_t n);
+l_char *luaO_openspace (lua_State *L, size_t n);
 
 int luaO_equalObj (const TObject *t1, const TObject *t2);
-int luaO_str2d (const char *s, lua_Number *result);
+int luaO_str2d (const l_char *s, lua_Number *result);
 
-void luaO_verror (lua_State *L, const char *fmt, ...);
-void luaO_chunkid (char *out, const char *source, int len);
+void luaO_verror (lua_State *L, const l_char *fmt, ...);
+void luaO_chunkid (l_char *out, const l_char *source, int len);
 
 
 #endif

@@ -1,6 +1,6 @@
 /*
-** $Id: llimits.h,v 1.23 2001/02/20 18:15:33 roberto Exp roberto $
-** Limits, basic types, and some other "installation-dependent" definitions
+** $Id: llimits.h,v 1.24 2001/02/22 17:15:18 roberto Exp roberto $
+** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
 
@@ -33,7 +33,7 @@
 
 /* function to convert a lua_Number to a string */
 #ifndef NUMBER_FMT
-#define NUMBER_FMT	"%.16g"		/* LUA_NUMBER */
+#define NUMBER_FMT	l_s("%.16g")		/* LUA_NUMBER */
 #endif
 #ifndef lua_number2str
 #define lua_number2str(s,n)	sprintf((s), NUMBER_FMT, (n))
@@ -45,11 +45,21 @@
 #endif
 
 
+/* macro to control type of literal strings */
+#ifndef l_s
+#define l_s(x)	x
+#endif
+
+/* macro to control type of literal chars */
+#ifndef l_c
+#define l_c(x)	x
+#endif
+
 
 /*
 ** the following types define integer types for values that may not
-** fit in a "small int" (16 bits), but may waste space in a
-** "large long" (64 bits). The current definitions should work in
+** fit in a `small int' (16 bits), but may waste space in a
+** `large long' (64 bits). The current definitions should work in
 ** any machine, but may not be optimal.
 */
 
@@ -88,7 +98,7 @@ typedef unsigned char lu_byte;
 
 
 
-#define MINPOWER2       4       /* minimum size for "growing" vectors */
+#define MINPOWER2       4       /* minimum size for `growing' vectors */
 
 
 

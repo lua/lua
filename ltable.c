@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.75 2001/02/01 17:40:48 roberto Exp roberto $
+** $Id: ltable.c,v 1.76 2001/02/20 18:15:33 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -59,9 +59,9 @@ Node *luaH_next (lua_State *L, Hash *t, const TObject *key) {
   else {
     const TObject *v = luaH_get(t, key);
     if (v == &luaO_nilobject)
-      luaD_error(L, "invalid key for `next'");
-    i = (int)(((const char *)v -
-               (const char *)(&t->node[0].val)) / sizeof(Node)) + 1;
+      luaD_error(L, l_s("invalid key for `next'"));
+    i = (int)(((const l_char *)v -
+               (const l_char *)(&t->node[0].val)) / sizeof(Node)) + 1;
   }
   for (; i<t->size; i++) {
     Node *n = node(t, i);
@@ -82,7 +82,7 @@ int luaH_nexti (Hash *t, int i) {
 
 
 #define check_grow(L, p, n) \
-	if ((p) >= MAX_INT/(n)) luaD_error(L, "table overflow");
+	if ((p) >= MAX_INT/(n)) luaD_error(L, l_s("table overflow"));
 
 /*
 ** returns smaller power of 2 larger than `n' (minimum is MINPOWER2) 
@@ -270,7 +270,7 @@ TObject *luaH_set (lua_State *L, Hash *t, const TObject *key) {
     case LUA_TNUMBER: return luaH_setnum(L, t, nvalue(key));
     case LUA_TSTRING: return luaH_setstr(L, t, tsvalue(key));
     case LUA_TNIL:
-      if (L) luaD_error(L, "table index is nil");
+      if (L) luaD_error(L, l_s("table index is nil"));
       return (TObject *)&luaO_nilobject;  /* get option */
     default:         return luaH_setany(L, t, key);
   }

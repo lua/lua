@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.67 2001/02/21 16:52:09 roberto Exp roberto $
+** $Id: ldebug.c,v 1.68 2001/02/22 18:59:59 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -24,7 +24,7 @@
 
 
 
-static const char *getfuncname (lua_State *L, StkId f, const char **name);
+static const l_char *getfuncname (lua_State *L, StkId f, const l_char **name);
 
 
 static void setnormalized (TObject *d, const TObject *s) {
@@ -158,8 +158,8 @@ static Proto *getluaproto (StkId f) {
 }
 
 
-LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
-  const char *name;
+LUA_API const l_char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
+  const l_char *name;
   StkId f;
   Proto *fp;
   LUA_LOCK(L);
@@ -176,8 +176,8 @@ LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
 }
 
 
-LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
-  const char *name;
+LUA_API const l_char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
+  const l_char *name;
   StkId f;
   Proto *fp;
   LUA_LOCK(L);
@@ -187,7 +187,7 @@ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
   L->top--;  /* pop new value */
   if (fp) {  /* `f' is a Lua function? */
     name = luaF_getlocalname(fp, n, currentpc(f));
-    if (!name || name[0] == '(')  /* `(' starts private locals */
+    if (!name || name[0] == l_c('('))  /* `(' starts private locals */
       name = NULL;
     else
       setobj((f+1)+(n-1), L->top);
@@ -200,7 +200,7 @@ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
 static void infoLproto (lua_Debug *ar, Proto *f) {
   ar->source = getstr(f->source);
   ar->linedefined = f->lineDefined;
-  ar->what = "Lua";
+  ar->what = l_s("Lua");
 }
 
 
@@ -214,22 +214,22 @@ static void funcinfo (lua_State *L, lua_Debug *ar, StkId func) {
       cl = infovalue(func)->func;
       break;
     default:
-      luaD_error(L, "value for `lua_getinfo' is not a function");
+      luaD_error(L, l_s("value for `lua_getinfo' is not a function"));
   }
   if (cl->isC) {
-    ar->source = "=C";
+    ar->source = l_s("=C");
     ar->linedefined = -1;
-    ar->what = "C";
+    ar->what = l_s("C");
   }
   else
     infoLproto(ar, cl->f.l);
   luaO_chunkid(ar->short_src, ar->source, sizeof(ar->short_src));
   if (ar->linedefined == 0)
-    ar->what = "main";
+    ar->what = l_s("main");
 }
 
 
-static const char *travtagmethods (global_State *G, const TObject *o) {
+static const l_char *travtagmethods (global_State *G, const TObject *o) {
   if (ttype(o) == LUA_TFUNCTION) {
     int e;
     for (e=0; e<TM_N; e++) {
@@ -243,7 +243,7 @@ static const char *travtagmethods (global_State *G, const TObject *o) {
 }
 
 
-static const char *travglobals (lua_State *L, const TObject *o) {
+static const l_char *travglobals (lua_State *L, const TObject *o) {
   Hash *g = L->gt;
   int i;
   for (i=0; i<g->size; i++) {
@@ -260,20 +260,20 @@ static void getname (lua_State *L, StkId f, lua_Debug *ar) {
   setnormalized(&o, f);
   /* try to find a name for given function */
   if ((ar->name = travglobals(L, &o)) != NULL)
-    ar->namewhat = "global";
+    ar->namewhat = l_s("global");
   /* not found: try tag methods */
   else if ((ar->name = travtagmethods(G(L), &o)) != NULL)
-    ar->namewhat = "tag-method";
-  else ar->namewhat = "";  /* not found at all */
+    ar->namewhat = l_s("tag-method");
+  else ar->namewhat = l_s("");  /* not found at all */
 }
 
 
-LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
+LUA_API int lua_getinfo (lua_State *L, const l_char *what, lua_Debug *ar) {
   StkId func;
   int isactive;
   int status = 1;
   LUA_LOCK(L);
-  isactive = (*what != '>');
+  isactive = (*what != l_c('>'));
   if (isactive)
     func = ar->_func;
   else {
@@ -282,25 +282,25 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
   }
   for (; *what; what++) {
     switch (*what) {
-      case 'S': {
+      case l_c('S'): {
         funcinfo(L, ar, func);
         break;
       }
-      case 'l': {
+      case l_c('l'): {
         ar->currentline = currentline(func);
         break;
       }
-      case 'u': {
+      case l_c('u'): {
         ar->nups = nups(func);
         break;
       }
-      case 'n': {
+      case l_c('n'): {
         ar->namewhat = (isactive) ? getfuncname(L, func, &ar->name) : NULL;
         if (ar->namewhat == NULL)
           getname(L, func, ar);
         break;
       }
-      case 'f': {
+      case l_c('f'): {
         setnormalized(L->top, func);
         incr_top;  /* push function */
         break;
@@ -543,7 +543,7 @@ int luaG_checkcode (lua_State *L, const Proto *pt) {
 }
 
 
-static const char *getobjname (lua_State *L, StkId obj, const char **name) {
+static const l_char *getobjname (lua_State *L, StkId obj, const l_char **name) {
   StkId func = aux_stackedfunction(L, 0, obj);
   if (!isLmark(func))
     return NULL;  /* not an active Lua function */
@@ -556,17 +556,17 @@ static const char *getobjname (lua_State *L, StkId obj, const char **name) {
     switch (GET_OPCODE(i)) {
       case OP_GETGLOBAL: {
         *name = getstr(p->kstr[GETARG_U(i)]);
-        return "global";
+        return l_s("global");
       }
       case OP_GETLOCAL: {
         *name = luaF_getlocalname(p, GETARG_U(i)+1, pc);
         lua_assert(*name);
-        return "local";
+        return l_s("local");
       }
       case OP_PUSHSELF:
       case OP_GETDOTTED: {
         *name = getstr(p->kstr[GETARG_U(i)]);
-        return "field";
+        return l_s("field");
       }
       default:
         return NULL;  /* no useful name found */
@@ -575,7 +575,7 @@ static const char *getobjname (lua_State *L, StkId obj, const char **name) {
 }
 
 
-static const char *getfuncname (lua_State *L, StkId f, const char **name) {
+static const l_char *getfuncname (lua_State *L, StkId f, const l_char **name) {
   StkId func = aux_stackedfunction(L, 0, f);  /* calling function */
   if (!isLmark(func))
     return NULL;  /* not an active Lua function */
@@ -595,19 +595,19 @@ static const char *getfuncname (lua_State *L, StkId f, const char **name) {
 }
 
 
-void luaG_typeerror (lua_State *L, StkId o, const char *op) {
-  const char *name;
-  const char *kind = getobjname(L, o, &name);
-  const char *t = luaT_typename(G(L), o);
+void luaG_typeerror (lua_State *L, StkId o, const l_char *op) {
+  const l_char *name;
+  const l_char *kind = getobjname(L, o, &name);
+  const l_char *t = luaT_typename(G(L), o);
   if (kind)
-    luaO_verror(L, "attempt to %.30s %.20s `%.40s' (a %.10s value)",
+    luaO_verror(L, l_s("attempt to %.30s %.20s `%.40s' (a %.10s value)"),
                 op, kind, name, t);
   else
-    luaO_verror(L, "attempt to %.30s a %.10s value", op, t);
+    luaO_verror(L, l_s("attempt to %.30s a %.10s value"), op, t);
 }
 
 
-void luaG_binerror (lua_State *L, StkId p1, int t, const char *op) {
+void luaG_binerror (lua_State *L, StkId p1, int t, const l_char *op) {
   if (ttype(p1) == t) p1++;
   lua_assert(ttype(p1) != t);
   luaG_typeerror(L, p1, op);
@@ -615,11 +615,11 @@ void luaG_binerror (lua_State *L, StkId p1, int t, const char *op) {
 
 
 void luaG_ordererror (lua_State *L, const TObject *p1, const TObject *p2) {
-  const char *t1 = luaT_typename(G(L), p1);
-  const char *t2 = luaT_typename(G(L), p2);
+  const l_char *t1 = luaT_typename(G(L), p1);
+  const l_char *t2 = luaT_typename(G(L), p2);
   if (t1[2] == t2[2])
-    luaO_verror(L, "attempt to compare two %.10s values", t1);
+    luaO_verror(L, l_s("attempt to compare two %.10s values"), t1);
   else
-    luaO_verror(L, "attempt to compare %.10s with %.10s", t1, t2);
+    luaO_verror(L, l_s("attempt to compare %.10s with %.10s"), t1, t2);
 }
 

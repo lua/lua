@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.25 2001/02/22 17:15:18 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.26 2001/02/22 18:59:59 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -35,21 +35,21 @@ static int luaB__ALERT (lua_State *L) {
 */
 static int luaB__ERRORMESSAGE (lua_State *L) {
   luaL_checktype(L, 1, LUA_TSTRING);
-  lua_getglobal(L, LUA_ALERT);
+  lua_getglobal(L, l_s(LUA_ALERT));
   if (lua_isfunction(L, -1)) {  /* avoid error loop if _ALERT is not defined */
     lua_Debug ar;
-    lua_pushliteral(L, "error: ");
+    lua_pushliteral(L, l_s("error: "));
     lua_pushvalue(L, 1);
     if (lua_getstack(L, 1, &ar)) {
-      lua_getinfo(L, "Sl", &ar);
+      lua_getinfo(L, l_s("Sl"), &ar);
       if (ar.source && ar.currentline > 0) {
-        char buff[100];
-        sprintf(buff, "\n  <%.70s: line %d>", ar.short_src, ar.currentline);
+        l_char buff[100];
+        sprintf(buff, l_s("\n  <%.70s: line %d>"), ar.short_src, ar.currentline);
         lua_pushstring(L, buff);
         lua_concat(L, 2);
       }
     }
-    lua_pushliteral(L, "\n");
+    lua_pushliteral(L, l_s("\n"));
     lua_concat(L, 3);
     lua_rawcall(L, 1, 0);
   }
@@ -66,20 +66,20 @@ static int luaB__ERRORMESSAGE (lua_State *L) {
 static int luaB_print (lua_State *L) {
   int n = lua_gettop(L);  /* number of arguments */
   int i;
-  lua_getglobal(L, "tostring");
+  lua_getglobal(L, l_s("tostring"));
   for (i=1; i<=n; i++) {
-    const char *s;
+    const l_char *s;
     lua_pushvalue(L, -1);  /* function to be called */
     lua_pushvalue(L, i);   /* value to print */
     lua_rawcall(L, 1, 1);
     s = lua_tostring(L, -1);  /* get result */
     if (s == NULL)
-      lua_error(L, "`tostring' must return a string to `print'");
-    if (i>1) fputs("\t", stdout);
+      lua_error(L, l_s("`tostring' must return a string to `print'"));
+    if (i>1) fputs(l_s("\t"), stdout);
     fputs(s, stdout);
     lua_pop(L, 1);  /* pop result */
   }
-  fputs("\n", stdout);
+  fputs(l_s("\n"), stdout);
   return 0;
 }
 
@@ -94,14 +94,14 @@ static int luaB_tonumber (lua_State *L) {
     }
   }
   else {
-    const char *s1 = luaL_check_string(L, 1);
-    char *s2;
+    const l_char *s1 = luaL_check_string(L, 1);
+    l_char *s2;
     unsigned long n;
-    luaL_arg_check(L, 2 <= base && base <= 36, 2, "base out of range");
+    luaL_arg_check(L, 2 <= base && base <= 36, 2, l_s("base out of range"));
     n = strtoul(s1, &s2, base);
     if (s1 != s2) {  /* at least one valid digit? */
       while (isspace(uchar(*s2))) s2++;  /* skip trailing spaces */
-      if (*s2 == '\0') {  /* no invalid trailing characters? */
+      if (*s2 == l_c('\0')) {  /* no invalid trailing characters? */
         lua_pushnumber(L, n);
         return 1;
       }
@@ -135,14 +135,14 @@ static int gettag (lua_State *L, int narg) {
     case LUA_TNUMBER:
       return (int)lua_tonumber(L, narg);
     case LUA_TSTRING: {
-      const char *name = lua_tostring(L, narg);
+      const l_char *name = lua_tostring(L, narg);
       int tag = lua_type2tag(L, name);
       if (tag == LUA_TNONE)
-        luaL_verror(L, "'%.30s' is not a valid type name", name);
+        luaL_verror(L, l_s("'%.30s' is not a valid type name"), name);
       return tag;
     }
     default:
-      luaL_argerror(L, narg, "tag or type name expected");
+      luaL_argerror(L, narg, l_s("tag or type name expected"));
       return 0;  /* to avoid warnings */
   }
 }
@@ -162,7 +162,7 @@ static int luaB_settag (lua_State *L) {
 }
 
 static int luaB_newtype (lua_State *L) {
-  const char *name = luaL_opt_string(L, 1, NULL);
+  const l_char *name = luaL_opt_string(L, 1, NULL);
   lua_pushnumber(L, lua_newtype(L, name, LUA_TTABLE));
   return 1;
 }
@@ -199,11 +199,11 @@ static int luaB_rawset (lua_State *L) {
 
 static int luaB_settagmethod (lua_State *L) {
   int tag = gettag(L, 1);
-  const char *event = luaL_check_string(L, 2);
+  const l_char *event = luaL_check_string(L, 2);
   luaL_arg_check(L, lua_isfunction(L, 3) || lua_isnil(L, 3), 3,
-                 "function or nil expected");
-  if (strcmp(event, "gc") == 0)
-    lua_error(L, "deprecated use: cannot set the `gc' tag method from Lua");
+                 l_s("function or nil expected"));
+  if (strcmp(event, l_s("gc")) == 0)
+    lua_error(L, l_s("deprecated use: cannot set the `gc' tag method from Lua"));
   lua_gettagmethod(L, tag, event);
   lua_pushvalue(L, 3);
   lua_settagmethod(L, tag, event);
@@ -213,9 +213,9 @@ static int luaB_settagmethod (lua_State *L) {
 
 static int luaB_gettagmethod (lua_State *L) {
   int tag = gettag(L, 1);
-  const char *event = luaL_check_string(L, 2);
-  if (strcmp(event, "gc") == 0)
-    lua_error(L, "deprecated use: cannot get the `gc' tag method from Lua");
+  const l_char *event = luaL_check_string(L, 2);
+  if (strcmp(event, l_s("gc")) == 0)
+    lua_error(L, l_s("deprecated use: cannot get the `gc' tag method from Lua"));
   lua_gettagmethod(L, tag, event);
   return 1;
 }
@@ -261,9 +261,9 @@ static int luaB_next (lua_State *L) {
 
 
 static int passresults (lua_State *L, int status, int oldtop) {
-  static const char *const errornames[] =
-    {"ok", "run-time error", "file error", "syntax error",
-     "memory error", "error in error handling"};
+  static const l_char *const errornames[] =
+    {l_s("ok"), l_s("run-time error"), l_s("file error"), l_s("syntax error"),
+     l_s("memory error"), l_s("error in error handling")};
   if (status == 0) {
     int nresults = lua_gettop(L) - oldtop;
     if (nresults > 0)
@@ -283,59 +283,59 @@ static int passresults (lua_State *L, int status, int oldtop) {
 static int luaB_dostring (lua_State *L) {
   int oldtop = lua_gettop(L);
   size_t l;
-  const char *s = luaL_check_lstr(L, 1, &l);
-  const char *chunkname = luaL_opt_string(L, 2, s);
+  const l_char *s = luaL_check_lstr(L, 1, &l);
+  const l_char *chunkname = luaL_opt_string(L, 2, s);
   return passresults(L, lua_dobuffer(L, s, l, chunkname), oldtop);
 }
 
 
 static int luaB_dofile (lua_State *L) {
   int oldtop = lua_gettop(L);
-  const char *fname = luaL_opt_string(L, 1, NULL);
+  const l_char *fname = luaL_opt_string(L, 1, NULL);
   return passresults(L, lua_dofile(L, fname), oldtop);
 }
 
 
 static int luaB_call (lua_State *L) {
   int oldtop;
-  const char *options = luaL_opt_string(L, 3, "");
+  const l_char *options = luaL_opt_string(L, 3, l_s(""));
   int err = 0;  /* index of old error method */
   int i, status;
   int n;
   luaL_checktype(L, 2, LUA_TTABLE);
   n = lua_getn(L, 2);
   if (!lua_isnull(L, 4)) {  /* set new error method */
-    lua_getglobal(L, LUA_ERRORMESSAGE);
+    lua_getglobal(L, l_s(LUA_ERRORMESSAGE));
     err = lua_gettop(L);  /* get index */
     lua_pushvalue(L, 4);
-    lua_setglobal(L, LUA_ERRORMESSAGE);
+    lua_setglobal(L, l_s(LUA_ERRORMESSAGE));
   }
   oldtop = lua_gettop(L);  /* top before function-call preparation */
   /* push function */
   lua_pushvalue(L, 1);
-  luaL_checkstack(L, n, "too many arguments");
+  luaL_checkstack(L, n, l_s("too many arguments"));
   for (i=0; i<n; i++)  /* push arg[1...n] */
     lua_rawgeti(L, 2, i+1);
   status = lua_call(L, n, LUA_MULTRET);
   if (err != 0) {  /* restore old error method */
     lua_pushvalue(L, err);
-    lua_setglobal(L, LUA_ERRORMESSAGE);
+    lua_setglobal(L, l_s(LUA_ERRORMESSAGE));
   }
   if (status != 0) {  /* error in call? */
-    if (strchr(options, 'x'))
+    if (strchr(options, l_c('x')))
       lua_pushnil(L);  /* return nil to signal the error */
     else
       lua_error(L, NULL);  /* propagate error without additional messages */
     return 1;
   }
-  if (strchr(options, 'p'))  /* pack results? */
-    lua_error(L, "deprecated option `p' in `call'");
+  if (strchr(options, l_c('p')))  /* pack results? */
+    lua_error(L, l_s("deprecated option `p' in `call'"));
   return lua_gettop(L) - oldtop;  /* results are already on the stack */
 }
 
 
 static int luaB_tostring (lua_State *L) {
-  char buff[64];
+  l_char buff[64];
   switch (lua_type(L, 1)) {
     case LUA_TNUMBER:
       lua_pushstring(L, lua_tostring(L, 1));
@@ -344,24 +344,24 @@ static int luaB_tostring (lua_State *L) {
       lua_pushvalue(L, 1);
       return 1;
     case LUA_TTABLE:
-      sprintf(buff, "%.40s: %p", lua_xtype(L, 1), lua_topointer(L, 1));
+      sprintf(buff, l_s("%.40s: %p"), lua_xtype(L, 1), lua_topointer(L, 1));
       break;
     case LUA_TFUNCTION:
-      sprintf(buff, "function: %p", lua_topointer(L, 1));
+      sprintf(buff, l_s("function: %p"), lua_topointer(L, 1));
       break;
     case LUA_TUSERDATA: {
-      const char *t = lua_xtype(L, 1);
-      if (strcmp(t, "userdata") == 0)
-        sprintf(buff, "userdata(%d): %p", lua_tag(L, 1), lua_touserdata(L, 1));
+      const l_char *t = lua_xtype(L, 1);
+      if (strcmp(t, l_s("userdata")) == 0)
+        sprintf(buff, l_s("userdata(%d): %p"), lua_tag(L, 1), lua_touserdata(L, 1));
       else
-        sprintf(buff, "%.40s: %p", t, lua_touserdata(L, 1));
+        sprintf(buff, l_s("%.40s: %p"), t, lua_touserdata(L, 1));
       break;
     }
     case LUA_TNIL:
-      lua_pushliteral(L, "nil");
+      lua_pushliteral(L, l_s("nil"));
       return 1;
     default:
-      luaL_argerror(L, 1, "value expected");
+      luaL_argerror(L, 1, l_s("value expected"));
   }
   lua_pushstring(L, buff);
   return 1;
@@ -407,7 +407,7 @@ static int luaB_foreach (lua_State *L) {
 static int luaB_assert (lua_State *L) {
   luaL_checkany(L, 1);
   if (lua_isnil(L, 1))
-    luaL_verror(L, "assertion failed!  %.90s", luaL_opt_string(L, 2, ""));
+    luaL_verror(L, l_s("assertion failed!  %.90s"), luaL_opt_string(L, 2, l_s("")));
   lua_settop(L, 1);
   return 1;
 }
@@ -429,7 +429,7 @@ static int luaB_tinsert (lua_State *L) {
     pos = n+1;
   else
     pos = luaL_check_int(L, 2);  /* 2nd argument is the position */
-  lua_pushliteral(L, "n");
+  lua_pushliteral(L, l_s("n"));
   lua_pushnumber(L, n+1);
   lua_rawset(L, 1);  /* t.n = n+1 */
   for (; n>=pos; n--) {
@@ -453,7 +453,7 @@ static int luaB_tremove (lua_State *L) {
     lua_rawgeti(L, 1, pos+1);
     lua_rawseti(L, 1, pos);  /* a[pos] = a[pos+1] */
   }
-  lua_pushliteral(L, "n");
+  lua_pushliteral(L, l_s("n"));
   lua_pushnumber(L, n-1);
   lua_rawset(L, 1);  /* t.n = n-1 */
   lua_pushnil(L);
@@ -527,12 +527,12 @@ static void auxsort (lua_State *L, int l, int u) {
     for (;;) {  /* invariant: a[l..i] <= P <= a[j..u] */
       /* repeat ++i until a[i] >= P */
       while (lua_rawgeti(L, 1, ++i), sort_comp(L, -1, -2)) {
-        if (i>u) lua_error(L, "invalid order function for sorting");
+        if (i>u) lua_error(L, l_s("invalid order function for sorting"));
         lua_pop(L, 1);  /* remove a[i] */
       }
       /* repeat --j until a[j] <= P */
       while (lua_rawgeti(L, 1, --j), sort_comp(L, -3, -1)) {
-        if (j<l) lua_error(L, "invalid order function for sorting");
+        if (j<l) lua_error(L, l_s("invalid order function for sorting"));
         lua_pop(L, 1);  /* remove a[j] */
       }
       if (j<i) {
@@ -581,10 +581,10 @@ static int luaB_sort (lua_State *L) {
 #define num_deprecated	4
 
 static const luaL_reg deprecated_names [num_deprecated] = {
-  {"foreachvar", luaB_foreach},
-  {"nextvar", luaB_next},
-  {"rawgetglobal", luaB_rawget},
-  {"rawsetglobal", luaB_rawset}
+  {l_s("foreachvar"), luaB_foreach},
+  {l_s("nextvar"), luaB_next},
+  {l_s("rawgetglobal"), luaB_rawget},
+  {l_s("rawsetglobal"), luaB_rawset}
 };
 
 
@@ -618,7 +618,7 @@ static void deprecated_funcs (lua_State *L) {
 ** gives an explicit error in any attempt to call a deprecated function
 */
 static int deprecated_func (lua_State *L) {
-  luaL_verror(L, "function `%.20s' is deprecated", lua_tostring(L, -1));
+  luaL_verror(L, l_s("function `%.20s' is deprecated"), lua_tostring(L, -1));
   return 0;  /* to avoid warnings */
 }
 
@@ -637,49 +637,49 @@ static void deprecated_funcs (lua_State *L) {
 /* }====================================================== */
 
 static const luaL_reg base_funcs[] = {
-  {LUA_ALERT, luaB__ALERT},
-  {LUA_ERRORMESSAGE, luaB__ERRORMESSAGE},
-  {"call", luaB_call},
-  {"collectgarbage", luaB_collectgarbage},
-  {"copytagmethods", luaB_copytagmethods},
-  {"dofile", luaB_dofile},
-  {"dostring", luaB_dostring},
-  {"error", luaB_error},
-  {"foreach", luaB_foreach},
-  {"foreachi", luaB_foreachi},
-  {"gcinfo", luaB_gcinfo},
-  {"getglobal", luaB_getglobal},
-  {"gettagmethod", luaB_gettagmethod},
-  {"globals", luaB_globals},
-  {"newtype", luaB_newtype},
-  {"newtag", luaB_newtype},  /* for compatibility 4.0 */
-  {"next", luaB_next},
-  {"print", luaB_print},
-  {"rawget", luaB_rawget},
-  {"rawset", luaB_rawset},
-  {"rawgettable", luaB_rawget},  /* for compatibility 3.2 */
-  {"rawsettable", luaB_rawset},  /* for compatibility 3.2 */
-  {"setglobal", luaB_setglobal},
-  {"settag", luaB_settag},
-  {"settagmethod", luaB_settagmethod},
-  {"tag", luaB_tag},
-  {"tonumber", luaB_tonumber},
-  {"tostring", luaB_tostring},
-  {"type", luaB_type},
-  {"assert", luaB_assert},
-  {"getn", luaB_getn},
-  {"sort", luaB_sort},
-  {"tinsert", luaB_tinsert},
-  {"tremove", luaB_tremove},
-  {"xtype", luaB_xtype},
+  {l_s(LUA_ALERT), luaB__ALERT},
+  {l_s(LUA_ERRORMESSAGE), luaB__ERRORMESSAGE},
+  {l_s("call"), luaB_call},
+  {l_s("collectgarbage"), luaB_collectgarbage},
+  {l_s("copytagmethods"), luaB_copytagmethods},
+  {l_s("dofile"), luaB_dofile},
+  {l_s("dostring"), luaB_dostring},
+  {l_s("error"), luaB_error},
+  {l_s("foreach"), luaB_foreach},
+  {l_s("foreachi"), luaB_foreachi},
+  {l_s("gcinfo"), luaB_gcinfo},
+  {l_s("getglobal"), luaB_getglobal},
+  {l_s("gettagmethod"), luaB_gettagmethod},
+  {l_s("globals"), luaB_globals},
+  {l_s("newtype"), luaB_newtype},
+  {l_s("newtag"), luaB_newtype},  /* for compatibility 4.0 */
+  {l_s("next"), luaB_next},
+  {l_s("print"), luaB_print},
+  {l_s("rawget"), luaB_rawget},
+  {l_s("rawset"), luaB_rawset},
+  {l_s("rawgettable"), luaB_rawget},  /* for compatibility 3.2 */
+  {l_s("rawsettable"), luaB_rawset},  /* for compatibility 3.2 */
+  {l_s("setglobal"), luaB_setglobal},
+  {l_s("settag"), luaB_settag},
+  {l_s("settagmethod"), luaB_settagmethod},
+  {l_s("tag"), luaB_tag},
+  {l_s("tonumber"), luaB_tonumber},
+  {l_s("tostring"), luaB_tostring},
+  {l_s("type"), luaB_type},
+  {l_s("assert"), luaB_assert},
+  {l_s("getn"), luaB_getn},
+  {l_s("sort"), luaB_sort},
+  {l_s("tinsert"), luaB_tinsert},
+  {l_s("tremove"), luaB_tremove},
+  {l_s("xtype"), luaB_xtype},
 };
 
 
 
 LUALIB_API void lua_baselibopen (lua_State *L) {
   luaL_openl(L, base_funcs);
-  lua_pushliteral(L, LUA_VERSION);
-  lua_setglobal(L, "_VERSION");
+  lua_pushliteral(L, l_s(LUA_VERSION));
+  lua_setglobal(L, l_s("_VERSION"));
   deprecated_funcs(L);
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 1.22 2001/01/25 16:45:36 roberto Exp roberto $
+** $Id: ltm.h,v 1.23 2001/02/09 20:22:29 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -67,12 +67,12 @@ struct TM {
 
 #define validtag(G,t) (NUM_TAGS <= (t) && (t) < G->ntag)
 
-extern const char *const luaT_eventname[];
+extern const l_char *const luaT_eventname[];
 
 
 void luaT_init (lua_State *L);
-int luaT_newtag (lua_State *L, const char *name, int basictype);
-const char *luaT_typename (global_State *G, const TObject *o);
+int luaT_newtag (lua_State *L, const l_char *name, int basictype);
+const l_char *luaT_typename (global_State *G, const TObject *o);
 int luaT_tag (const TObject *o);
 int luaT_validevent (int t, int e);  /* used by compatibility module */
 

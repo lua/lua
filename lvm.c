@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.170 2001/02/20 18:15:33 roberto Exp roberto $
+** $Id: lvm.c,v 1.171 2001/02/22 18:59:59 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -43,7 +43,7 @@ int luaV_tostring (lua_State *L, TObject *obj) {  /* LUA_NUMBER */
   if (ttype(obj) != LUA_TNUMBER)
     return 1;
   else {
-    char s[32];  /* 16 digits, sign, point and \0  (+ some extra...) */
+    l_char s[32];  /* 16 digits, sign, point and \0  (+ some extra...) */
     lua_number2str(s, nvalue(obj));  /* convert `s' to number */
     setsvalue(obj, luaS_new(L, s));
     return 0;
@@ -96,23 +96,23 @@ void luaV_Lclosure (lua_State *L, Proto *l, int nelems) {
 }
 
 
-static void callTM (lua_State *L, const char *fmt, ...) {
+static void callTM (lua_State *L, const l_char *fmt, ...) {
   va_list argp;
   StkId base = L->top;
   int has_result = 0;
   va_start(argp, fmt);
   while (*fmt) {
     switch (*fmt++) {
-      case 'c':
+      case l_c('c'):
         setclvalue(L->top, va_arg(argp, Closure *));
         break;
-      case 'o':
+      case l_c('o'):
         setobj(L->top, va_arg(argp, TObject *));
         break;
-      case 's':
+      case l_c('s'):
         setsvalue(L->top, va_arg(argp, TString *));
         break;
-      case 'r':
+      case l_c('r'):
         has_result = 1;
         continue;
     }
@@ -151,9 +151,9 @@ void luaV_gettable (lua_State *L, StkId t, TObject *key, StkId res) {
   else {  /* not a table; try a `gettable' tag method */
     tm = luaT_gettmbyObj(G(L), t, TM_GETTABLE);
     if (tm == NULL)  /* no tag method? */
-      luaG_typeerror(L, t, "index");
+      luaG_typeerror(L, t, l_s("index"));
   }
-  callTM(L, "coor", tm, t, key, res);
+  callTM(L, l_s("coor"), tm, t, key, res);
 }
 
 
@@ -175,9 +175,9 @@ void luaV_settable (lua_State *L, StkId t, StkId key, StkId val) {
   else {  /* not a table; try a `settable' tag method */
     tm = luaT_gettmbyObj(G(L), t, TM_SETTABLE);
     if (tm == NULL)  /* no tag method? */
-      luaG_typeerror(L, t, "index");
+      luaG_typeerror(L, t, l_s("index"));
   }
-  callTM(L, "cooo", tm, t, key, val);
+  callTM(L, l_s("cooo"), tm, t, key, val);
 }
 
 
@@ -189,7 +189,7 @@ void luaV_getglobal (lua_State *L, TString *name, StkId res) {
     setobj(res, value);  /* default behavior */
   }
   else
-    callTM(L, "csor", tm, name, value, res);
+    callTM(L, l_s("csor"), tm, name, value, res);
 }
 
 
@@ -201,7 +201,7 @@ void luaV_setglobal (lua_State *L, TString *name, StkId val) {
     setobj(oldvalue, val);  /* raw set */
   }
   else
-    callTM(L, "csoo", tm, name, oldvalue, val);
+    callTM(L, l_s("csoo"), tm, name, oldvalue, val);
 }
 
 
@@ -218,21 +218,21 @@ static int call_binTM (lua_State *L, const TObject *p1, const TObject *p2,
     }
   }
   opname = luaS_new(L, luaT_eventname[event]);
-  callTM(L, "coosr", tm, p1, p2, opname, res);
+  callTM(L, l_s("coosr"), tm, p1, p2, opname, res);
   return 1;
 }
 
 
 static void call_arith (lua_State *L, StkId p1, TMS event) {
   if (!call_binTM(L, p1, p1+1, p1, event))
-    luaG_binerror(L, p1, LUA_TNUMBER, "perform arithmetic on");
+    luaG_binerror(L, p1, LUA_TNUMBER, l_s("perform arithmetic on"));
 }
 
 
 static int luaV_strlessthan (const TString *ls, const TString *rs) {
-  const char *l = getstr(ls);
+  const l_char *l = getstr(ls);
   size_t ll = ls->len;
-  const char *r = getstr(rs);
+  const l_char *r = getstr(rs);
   size_t lr = rs->len;
   for (;;) {
     int temp = strcoll(l, r);
@@ -269,18 +269,18 @@ void luaV_strconc (lua_State *L, int total, StkId top) {
     int n = 2;  /* number of elements handled in this pass (at least 2) */
     if (tostring(L, top-2) || tostring(L, top-1)) {
       if (!call_binTM(L, top-2, top-1, top-2, TM_CONCAT))
-        luaG_binerror(L, top-2, LUA_TSTRING, "concat");
+        luaG_binerror(L, top-2, LUA_TSTRING, l_s("concat"));
     }
     else if (tsvalue(top-1)->len > 0) {  /* if len=0, do nothing */
       /* at least two string values; get as many as possible */
       lu_mem tl = (lu_mem)tsvalue(top-1)->len + (lu_mem)tsvalue(top-2)->len;
-      char *buffer;
+      l_char *buffer;
       int i;
       while (n < total && !tostring(L, top-n-1)) {  /* collect total length */
         tl += tsvalue(top-n-1)->len;
         n++;
       }
-      if (tl > MAX_SIZET) luaD_error(L, "string size overflow");
+      if (tl > MAX_SIZET) luaD_error(L, l_s("string size overflow"));
       buffer = luaO_openspace(L, tl);
       tl = 0;
       for (i=n; i>0; i--) {  /* concat all strings */
@@ -303,7 +303,7 @@ static void luaV_pack (lua_State *L, StkId firstelem) {
   for (i=0; firstelem+i<L->top; i++)
     setobj(luaH_setnum(L, htab, i+1), firstelem+i);
   /* store counter in field `n' */
-  n = luaH_setstr(L, htab, luaS_newliteral(L, "n"));
+  n = luaH_setstr(L, htab, luaS_newliteral(L, l_s("n")));
   setnvalue(n, i);
   L->top = firstelem;  /* remove elements from the stack */
   sethvalue(L->top, htab);
@@ -509,7 +509,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       }
       case OP_POW: {
         if (!call_binTM(L, top-2, top-1, top-2, TM_POW))
-          luaD_error(L, "undefined operation");
+          luaD_error(L, l_s("undefined operation"));
         top--;
         break;
       }
@@ -595,11 +595,11 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       case OP_FORPREP: {
         int jmp = GETARG_S(i);
         if (tonumber(top-1))
-          luaD_error(L, "`for' step must be a number");
+          luaD_error(L, l_s("`for' step must be a number"));
         if (tonumber(top-2))
-          luaD_error(L, "`for' limit must be a number");
+          luaD_error(L, l_s("`for' limit must be a number"));
         if (tonumber(top-3))
-          luaD_error(L, "`for' initial value must be a number");
+          luaD_error(L, l_s("`for' initial value must be a number"));
         pc += -jmp;  /* `jump' to loop end (delta is negated here) */
         goto forloop;  /* do not increment index */
       }
@@ -607,7 +607,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         lua_assert(ttype(top-1) == LUA_TNUMBER);
         lua_assert(ttype(top-2) == LUA_TNUMBER);
         if (ttype(top-3) != LUA_TNUMBER)
-          luaD_error(L, "`for' index must be a number");
+          luaD_error(L, l_s("`for' index must be a number"));
         nvalue(top-3) += nvalue(top-1);  /* increment index */
       forloop:
         if (nvalue(top-1) > 0 ?
@@ -621,7 +621,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       case OP_LFORPREP: {
         int jmp = GETARG_S(i);
         if (ttype(top-1) != LUA_TTABLE)
-          luaD_error(L, "`for' table must be a table");
+          luaD_error(L, l_s("`for' table must be a table"));
         top += 3;  /* index,key,value */
         setnvalue(top-3, -1);  /* initial index */
         setnilvalue(top-2);

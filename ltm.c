@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.67 2001/02/20 18:15:33 roberto Exp roberto $
+** $Id: ltm.c,v 1.68 2001/02/22 18:59:59 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -19,15 +19,15 @@
 #include "ltm.h"
 
 
-const char *const luaT_eventname[] = {  /* ORDER TM */
-  "gettable", "settable", "index", "getglobal", "setglobal", "add", "sub",
-  "mul", "div", "pow", "unm", "lt", "concat", "gc", "function",
-  "le", "gt", "ge",  /* deprecated options!! */
+const l_char *const luaT_eventname[] = {  /* ORDER TM */
+  l_s("gettable"), l_s("settable"), l_s("index"), l_s("getglobal"), l_s("setglobal"), l_s("add"), l_s("sub"),
+  l_s("mul"), l_s("div"), l_s("pow"), l_s("unm"), l_s("lt"), l_s("concat"), l_s("gc"), l_s("function"),
+  l_s("le"), l_s("gt"), l_s("ge"),  /* deprecated options!! */
   NULL
 };
 
 
-static int findevent (const char *name) {
+static int findevent (const l_char *name) {
   int i;
   for (i=0; luaT_eventname[i]; i++)
     if (strcmp(luaT_eventname[i], name) == 0)
@@ -36,14 +36,14 @@ static int findevent (const char *name) {
 }
 
 
-static int luaI_checkevent (lua_State *L, const char *name, int t) {
+static int luaI_checkevent (lua_State *L, const l_char *name, int t) {
   int e = findevent(name);
   if (e >= TM_N)
-    luaO_verror(L, "event `%.50s' is deprecated", name);
+    luaO_verror(L, l_s("event `%.50s' is deprecated"), name);
   if (e == TM_GC && t == LUA_TTABLE)
-    luaO_verror(L, "event `gc' for tables is deprecated");
+    luaO_verror(L, l_s("event `gc' for tables is deprecated"));
   if (e < 0)
-    luaO_verror(L, "`%.50s' is not a valid event name", name);
+    luaO_verror(L, l_s("`%.50s' is not a valid event name"), name);
   return e;
 }
 
@@ -68,8 +68,8 @@ int luaT_validevent (int t, int e) {  /* ORDER LUA_T */
 
 
 void luaT_init (lua_State *L) {
-  static const char *const typenames[NUM_TAGS] = {
-    "userdata", "nil", "number", "string", "table", "function"
+  static const l_char *const typenames[NUM_TAGS] = {
+    l_s("userdata"), l_s("nil"), l_s("number"), l_s("string"), l_s("table"), l_s("function")
   };
   int i;
   for (i=0; i<NUM_TAGS; i++)
@@ -77,12 +77,12 @@ void luaT_init (lua_State *L) {
 }
 
 
-int luaT_newtag (lua_State *L, const char *name, int basictype) {
+int luaT_newtag (lua_State *L, const l_char *name, int basictype) {
   int tag;
   int i;
   TString *ts;
   luaM_growvector(L, G(L)->TMtable, G(L)->ntag, G(L)->sizeTM, struct TM,
-                  MAX_INT, "tag table overflow");
+                  MAX_INT, l_s("tag table overflow"));
   tag = G(L)->ntag;
   if (name == NULL)
     ts = NULL;
@@ -105,7 +105,7 @@ int luaT_newtag (lua_State *L, const char *name, int basictype) {
 
 static void checktag (lua_State *L, int tag) {
   if (!(0 <= tag && tag < G(L)->ntag))
-    luaO_verror(L, "%d is not a valid tag", tag);
+    luaO_verror(L, l_s("%d is not a valid tag"), tag);
 }
 
 
@@ -133,7 +133,7 @@ int luaT_tag (const TObject *o) {
 }
 
 
-const char *luaT_typename (global_State *G, const TObject *o) {
+const l_char *luaT_typename (global_State *G, const TObject *o) {
   int t = ttype(o);
   int tag;
   TString *ts;
@@ -154,7 +154,7 @@ const char *luaT_typename (global_State *G, const TObject *o) {
 }
 
 
-LUA_API void lua_gettagmethod (lua_State *L, int t, const char *event) {
+LUA_API void lua_gettagmethod (lua_State *L, int t, const l_char *event) {
   int e;
   LUA_LOCK(L);
   e = luaI_checkevent(L, event, t);
@@ -169,16 +169,16 @@ LUA_API void lua_gettagmethod (lua_State *L, int t, const char *event) {
 }
 
 
-LUA_API void lua_settagmethod (lua_State *L, int t, const char *event) {
+LUA_API void lua_settagmethod (lua_State *L, int t, const l_char *event) {
   int e;
   LUA_LOCK(L);
   e = luaI_checkevent(L, event, t);
   checktag(L, t);
   if (!luaT_validevent(t, e))
-    luaO_verror(L, "cannot change `%.20s' tag method for type `%.20s'%.20s",
+    luaO_verror(L, l_s("cannot change `%.20s' tag method for type `%.20s'%.20s"),
                 luaT_eventname[e], basictypename(G(L), t),
                 (t == LUA_TTABLE || t == LUA_TUSERDATA) ?
-                   " with default tag" : "");
+                   l_s(" with default tag") : l_s(""));
   switch (ttype(L->top - 1)) {
     case LUA_TNIL:
       luaT_gettm(G(L), t, e) = NULL;
@@ -187,7 +187,7 @@ LUA_API void lua_settagmethod (lua_State *L, int t, const char *event) {
       luaT_gettm(G(L), t, e) = clvalue(L->top - 1);
       break;
     default:
-      luaD_error(L, "tag method must be a function (or nil)");
+      luaD_error(L, l_s("tag method must be a function (or nil)"));
   }
   L->top--;
   LUA_UNLOCK(L);

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.55 2001/01/26 11:45:51 roberto Exp roberto $
+** $Id: lstate.c,v 1.56 2001/02/02 15:13:05 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -131,7 +131,7 @@ static void close_state (lua_State *L, lua_State *OL) {
     luaS_freeall(L);
     luaM_freearray(L, G(L)->TMtable, G(L)->sizeTM, struct TM);
     luaM_freearray(L, G(L)->refArray, G(L)->sizeref, struct Ref);
-    luaM_freearray(L, G(L)->Mbuffer, G(L)->Mbuffsize, char);
+    luaM_freearray(L, G(L)->Mbuffer, G(L)->Mbuffsize, l_char);
     luaM_freelem(NULL, L->G, global_State);
   }
   luaM_freearray(OL, L->stack, L->stacksize, TObject);
