@@ -215,5 +215,11 @@ Mon Sep 25 11:47:48 EST 2000
 
 ** lgc.c
 Mon Sep 25 11:50:48 EST 2000
->> GC may crash when checking C closures
+>> GC may crash when checking locked C closures
 (by Philip Yi; since 4.0b)
+
+** lapi.c
+Wed Sep 27 09:50:19 EST 2000
+>> lua_tag should return LUA_NOTAG for non-valid indices
+(by Paul Hankin; since 4.0b)
+
