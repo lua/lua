@@ -1,7 +1,7 @@
-# $Id: makefile,v 1.2 1993/12/22 20:55:06 roberto Exp roberto $
+# $Id: makefile,v 1.3 1993/12/22 21:21:06 roberto Exp roberto $
 # Compilation parameters
 CC = gcc
-CFLAGS = -I/usr/5include -Wall -DMAXCODE=4096 -DMAXCONSTANT=1024 -DMAXSYMBOL=1024 
+CFLAGS = -I/usr/5include -Wall -O2 -DMAXCODE=4096 -DMAXCONSTANT=1024 -DMAXSYMBOL=1024 
 
 AR = ar
 ARFLAGS	= rvl
