@@ -68,7 +68,7 @@ static TString *newlstr (lua_State *L, const char *str, size_t l, lu_hash h) {
 
 TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
   TString *ts;
-  lu_hash h = l;  /* seed */
+  lu_hash h = (lu_hash)l;  /* seed */
   size_t step = (l>>5)+1;  /* if string is too long, don't hash all its chars */
   size_t l1;
   for (l1=l; l1>=step; l1-=step)  /* compute hash */
