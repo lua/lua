@@ -443,7 +443,7 @@ static void funcargs (LexState *ls, expdesc *f) {
     }
     default: {
       luaK_error(ls, "function arguments expected");
-      break;
+      return;
     }
   }
   lua_assert(f->k == VNONRELOC);

@@ -29,7 +29,7 @@ Closure *luaF_newCclosure (lua_State *L, int nelems) {
   c->c.next = G(L)->rootcl;
   G(L)->rootcl = c;
   c->c.marked = 0;
-  c->c.nupvalues = nelems;
+  c->c.nupvalues = cast(short, nelems);
   return c;
 }
 
@@ -40,7 +40,7 @@ Closure *luaF_newLclosure (lua_State *L, int nelems) {
   c->c.next = G(L)->rootcl;
   G(L)->rootcl = c;
   c->l.marked = 0;
-  c->l.nupvalues = nelems;
+  c->l.nupvalues = cast(short, nelems);
   return c;
 }
 

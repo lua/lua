@@ -155,7 +155,6 @@ LUA_API void  lua_gettable (lua_State *L, int index);
 LUA_API void  lua_rawget (lua_State *L, int index);
 LUA_API void  lua_rawgeti (lua_State *L, int index, int n);
 LUA_API void  lua_newtable (lua_State *L);
-LUA_API void  lua_getweakregistry (lua_State *L);
 LUA_API void  lua_geteventtable (lua_State *L, int objindex);
 
 
