@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.89 2002/06/03 20:11:41 roberto Exp roberto $
+** $Id: lua.c,v 1.90 2002/06/06 12:40:22 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -24,10 +24,6 @@ static int isatty (int x) { return x==0; }  /* assume stdin is a tty */
 #endif
 
 
-#ifndef LUA_PROGNAME
-#define LUA_PROGNAME	"lua"
-#endif
-
 
 #ifndef PROMPT
 #define PROMPT		"> "
@@ -46,6 +42,8 @@ static int isatty (int x) { return x==0; }  /* assume stdin is a tty */
 
 static lua_State *L = NULL;
 
+static const char *progname;
+
 
 static lua_Hook old_linehook = NULL;
 static lua_Hook old_callhook = NULL;
@@ -54,7 +52,7 @@ static lua_Hook old_callhook = NULL;
 static void lstop (void) {
   lua_setlinehook(L, old_linehook);
   lua_setcallhook(L, old_callhook);
-  lua_error(L, "interrupted!");
+  luaL_error(L, "interrupted!");
 }
 
 
@@ -68,9 +66,15 @@ static void laction (int i) {
 
 static void report (int status) {
   if (status) {
+    if (status == LUA_ERRRUN) {
+      if (lua_isstring(L, -2) && lua_isstring(L, -1))
+        lua_concat(L, 2);  /* concat error message and traceback */
+      else
+        lua_remove(L, -2);  /* lease only traceback on stack */
+    }
     lua_getglobal(L, "_ALERT");
     lua_pushvalue(L, -2);
-    lua_pcall(L, 1, 0, 0);
+    lua_pcall(L, 1, 0);
     lua_pop(L, 1);
   }
 }
@@ -79,15 +83,11 @@ static void report (int status) {
 static int lcall (int clear) {
   int status;
   int top = lua_gettop(L);
-  lua_getglobal(L, "_ERRORMESSAGE");
-  lua_insert(L, top);
   signal(SIGINT, laction);
-  status = lua_pcall(L, 0, LUA_MULTRET, top);
+  status = lua_pcall(L, 0, LUA_MULTRET);
   signal(SIGINT, SIG_DFL);
-  if (status == 0) {
-    if (clear) lua_settop(L, top);  /* remove eventual results */
-    else lua_remove(L, top);  /* else remove only error function */
-  }
+  if (status == 0 && clear)
+    lua_settop(L, top);  /* remove eventual results */
   return status;
 }
 
@@ -103,7 +103,7 @@ static void print_usage (void) {
   "  -v       print version information\n"
   "  a=b      set global `a' to string `b'\n"
   "  name     execute file `name'\n",
-  LUA_PROGNAME);
+  progname);
 }
 
 
@@ -144,8 +144,8 @@ static void getargs (char *argv[]) {
 
 
 static int l_alert (lua_State *l) {
-  fputs(luaL_check_string(l, 1), stderr);
-  putc('\n', stderr);
+  if (progname) fprintf(stderr, "%s: ", progname);
+  fprintf(stderr, "%s\n", luaL_check_string(l, 1));
   return 0;
 }
 
@@ -248,6 +248,8 @@ static int load_string (void) {
 
 static void manual_input (int version) {
   int status;
+  const char *oldprogname = progname;
+  progname = NULL;
   if (version) print_version();
   while ((status = load_string()) != -1) {
     if (status == 0) status = lcall(0);
@@ -255,10 +257,11 @@ static void manual_input (int version) {
     if (status == 0 && lua_gettop(L) > 0) {  /* any result to print? */
       lua_getglobal(L, "print");
       lua_insert(L, 1);
-      lua_call(L, lua_gettop(L)-1, 0);
+      lua_pcall(L, lua_gettop(L)-1, 0);
     }
   }
   printf("\n");
+  progname = oldprogname;
 }
 
 
@@ -305,7 +308,7 @@ static int handle_argv (char *argv[], int *toclose) {
             }
             if (dostring(argv[i], "=prog. argument") != 0) {
               fprintf(stderr, "%s: error running argument `%.99s'\n",
-                      LUA_PROGNAME, argv[i]);
+                      progname, argv[i]);
               return EXIT_FAILURE;
             }
             break;
@@ -323,7 +326,7 @@ static int handle_argv (char *argv[], int *toclose) {
           case 's': {
             fprintf(stderr,
                     "%s: option `-s' is deprecated (dynamic stack now)\n",
-                    LUA_PROGNAME);
+                    progname);
             break;
           }
           default: {
@@ -369,6 +372,7 @@ int main (int argc, char *argv[]) {
   int status;
   int toclose = 0;
   (void)argc;  /* to avoid warnings */
+  progname = argv[0];
   L = lua_open();  /* create state */
   lua_atpanic(L, l_panic);
   LUA_USERINIT(L);  /* open libraries */
