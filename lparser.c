@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.108 2000/08/14 17:46:27 roberto Exp roberto $
+** $Id: lparser.c,v 1.109 2000/08/15 13:18:28 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -150,40 +150,32 @@ static int checkname (LexState *ls) {
 }
 
 
-static void luaI_registerlocalvar (LexState *ls, TString *varname, int pc) {
-  FuncState *fs = ls->fs;
-  Proto *f = fs->f;
-  luaM_growvector(ls->L, f->locvars, fs->nvars, 1, LocVar, "", MAX_INT);
-  f->locvars[fs->nvars].varname = varname;
-  f->locvars[fs->nvars].pc = pc;
-  fs->nvars++;
+static int luaI_registerlocalvar (LexState *ls, TString *varname) {
+  Proto *f = ls->fs->f;
+  luaM_growvector(ls->L, f->locvars, f->nlocvars, 1, LocVar, "", MAX_INT);
+  f->locvars[f->nlocvars].varname = varname;
+  return f->nlocvars++;
 }
 
 
 static void new_localvar (LexState *ls, TString *name, int n) {
   FuncState *fs = ls->fs;
-  luaX_checklimit(ls, fs->nlocalvar+n+1, MAXLOCALS, "local variables");
-  fs->localvar[fs->nlocalvar+n] = name;
+  luaX_checklimit(ls, fs->nactloc+n+1, MAXLOCALS, "local variables");
+  fs->actloc[fs->nactloc+n] = luaI_registerlocalvar(ls, name);
 }
 
 
 static void adjustlocalvars (LexState *ls, int nvars) {
   FuncState *fs = ls->fs;
-  int i;
-  /* `pc' is first opcode where variable is already active */
-  for (i=fs->nlocalvar; i<fs->nlocalvar+nvars; i++)
-    luaI_registerlocalvar(ls, fs->localvar[i], fs->pc);
-  fs->nlocalvar += nvars;
+  while (nvars--)
+    fs->f->locvars[fs->actloc[fs->nactloc++]].startpc = fs->pc;
 }
 
 
 static void removelocalvars (LexState *ls, int nvars) {
   FuncState *fs = ls->fs;
-  int i;
-  /* `pc' is first opcode where variable is already dead */
-  for (i=0;i<nvars;i++)
-    luaI_registerlocalvar(ls, NULL, fs->pc);
-  fs->nlocalvar -= nvars;
+  while (nvars--)
+    fs->f->locvars[fs->actloc[--fs->nactloc]].endpc = fs->pc;
 }
 
 
@@ -197,8 +189,8 @@ static int search_local (LexState *ls, TString *n, expdesc *var) {
   int level = 0;
   for (fs=ls->fs; fs; fs=fs->prev) {
     int i;
-    for (i=fs->nlocalvar-1; i >= 0; i--) {
-      if (n == fs->localvar[i]) {
+    for (i=fs->nactloc-1; i >= 0; i--) {
+      if (n == fs->f->locvars[fs->actloc[i]].varname) {
         var->k = VLOCAL;
         var->u.index = i;
         return level;
@@ -270,14 +262,14 @@ static void adjust_mult_assign (LexState *ls, int nvars, int nexps) {
 static void code_params (LexState *ls, int nparams, int dots) {
   FuncState *fs = ls->fs;
   adjustlocalvars(ls, nparams);
-  luaX_checklimit(ls, fs->nlocalvar, MAXPARAMS, "parameters");
-  fs->f->numparams = fs->nlocalvar;  /* `self' could be there already */
+  luaX_checklimit(ls, fs->nactloc, MAXPARAMS, "parameters");
+  fs->f->numparams = fs->nactloc;  /* `self' could be there already */
   fs->f->is_vararg = dots;
   if (dots) {
     new_localvarstr(ls, "arg", 0);
     adjustlocalvars(ls, 1);
   }
-  luaK_deltastack(fs, fs->nlocalvar);  /* count parameters in the stack */
+  luaK_deltastack(fs, fs->nactloc);  /* count parameters in the stack */
 }
 
 
@@ -316,7 +308,7 @@ static void open_func (LexState *ls, FuncState *fs) {
   fs->L = ls->L;
   ls->fs = fs;
   fs->stacklevel = 0;
-  fs->nlocalvar = 0;
+  fs->nactloc = 0;
   fs->nupvalues = 0;
   fs->bl = NULL;
   fs->f = f;
@@ -330,7 +322,6 @@ static void open_func (LexState *ls, FuncState *fs) {
   f->maxstacksize = 0;
   f->numparams = 0;  /* default for main chunk */
   f->is_vararg = 0;  /* default for main chunk */
-  fs->nvars = 0;
 }
 
 
@@ -344,8 +335,8 @@ static void close_func (LexState *ls) {
   luaM_reallocvector(L, f->kstr, f->nkstr, TString *);
   luaM_reallocvector(L, f->knum, f->nknum, Number);
   luaM_reallocvector(L, f->kproto, f->nkproto, Proto *);
-  luaI_registerlocalvar(ls, NULL, -1);  /* flag end of vector */
-  luaM_reallocvector(L, f->locvars, fs->nvars, LocVar);
+  removelocalvars(ls, fs->nactloc);
+  luaM_reallocvector(L, f->locvars, f->nlocvars, LocVar);
   luaM_reallocvector(L, f->lineinfo, fs->nlineinfo+1, int);
   f->lineinfo[fs->nlineinfo] = MAX_INT;  /* end flag */
   ls->fs = fs->prev;
@@ -370,7 +361,7 @@ Proto *luaY_parser (lua_State *L, ZIO *z) {
 
 
 /*============================================================*/
-/* GRAMAR RULES */
+/* GRAMMAR RULES */
 /*============================================================*/
 
 
@@ -768,10 +759,10 @@ static int block_follow (int token) {
 static void block (LexState *ls) {
   /* block -> chunk */
   FuncState *fs = ls->fs;
-  int nlocalvar = fs->nlocalvar;
+  int nactloc = fs->nactloc;
   chunk(ls);
-  luaK_adjuststack(fs, fs->nlocalvar - nlocalvar);  /* remove local variables */
-  removelocalvars(ls, fs->nlocalvar - nlocalvar);
+  luaK_adjuststack(fs, fs->nactloc - nactloc);  /* remove local variables */
+  removelocalvars(ls, fs->nactloc - nactloc);
 }
 
 
@@ -1009,8 +1000,8 @@ static void retstat (LexState *ls) {
   next(ls);  /* skip RETURN */
   if (!block_follow(ls->t.token))
     explist1(ls);  /* optional return values */
-  luaK_code1(fs, OP_RETURN, ls->fs->nlocalvar);
-  fs->stacklevel = fs->nlocalvar;  /* removes all temp values */
+  luaK_code1(fs, OP_RETURN, ls->fs->nactloc);
+  fs->stacklevel = fs->nactloc;  /* removes all temp values */
 }
 
 
@@ -1127,7 +1118,7 @@ static void chunk (LexState *ls) {
   while (!islast && !block_follow(ls->t.token)) {
     islast = stat(ls);
     optional(ls, ';');
-    LUA_ASSERT(ls->fs->stacklevel == ls->fs->nlocalvar,
+    LUA_ASSERT(ls->fs->stacklevel == ls->fs->nactloc,
                "stack size != # local vars");
   }
 }

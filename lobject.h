@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.72 2000/08/08 18:26:05 roberto Exp roberto $
+** $Id: lobject.h,v 1.73 2000/08/21 14:34:43 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -124,15 +124,17 @@ typedef struct Proto {
   int marked;
   /* debug information */
   int *lineinfo;  /* map from opcodes to source lines */
+  int nlocvars;
+  struct LocVar *locvars;  /* information about local variables */
   int lineDefined;
   TString  *source;
-  struct LocVar *locvars;  /* ends with line = -1 */
 } Proto;
 
 
 typedef struct LocVar {
-  TString *varname;           /* NULL signals end of scope */
-  int pc;
+  TString *varname;
+  int startpc;  /* first point where variable is active */
+  int endpc;    /* first point where variable is dead */
 } LocVar;
 
 
