@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.58 2002/06/18 15:17:58 roberto Exp roberto $
+** $Id: ldblib.c,v 1.59 2002/06/18 17:10:43 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -126,12 +126,17 @@ static void hookf (lua_State *L, void *key) {
 
 static void callf (lua_State *L, lua_Debug *ar) {
   lua_pushstring(L, ar->event);
+  lua_assert(lua_getinfo(L, "lS", ar) && ar->currentline == -1);
   hookf(L, (void *)&KEY_CALLHOOK);
 }
 
 
 static void linef (lua_State *L, lua_Debug *ar) {
   lua_pushnumber(L, ar->currentline);
+  lua_assert((ar->currentline = ar->linedefined = -1,
+                lua_getinfo(L, "lS", ar) &&
+                ar->currentline == lua_tonumber(L, -1) &&
+                ar->linedefined >= 0));
   hookf(L, (void *)&KEY_LINEHOOK);
 }
 
