@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: lcode.c,v 1.89 2002/02/05 22:39:12 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -176,7 +176,7 @@ void luaK_reserveregs (FuncState *fs, int n) {
   if (fs->freereg > fs->f->maxstacksize) {
     if (fs->freereg >= MAXSTACK)
       luaK_error(fs->ls, "function or expression too complex");
-    fs->f->maxstacksize = cast(short, fs->freereg);
+    fs->f->maxstacksize = cast(lu_byte, fs->freereg);
   }
 }
 
