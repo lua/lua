@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.124 2002/07/08 18:21:33 roberto Exp roberto $
+** $Id: ldebug.c,v 1.125 2002/07/16 14:26:56 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -29,14 +29,16 @@
 static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name);
 
 
+static int isLua (CallInfo *ci) {
+  return isLfunction (ci->base - 1);
+}
 
 static int currentpc (lua_State *L, CallInfo *ci) {
   if (!isLua(ci)) return -1;  /* function is not a Lua function? */
-  /* next function is not using the same `pc'? (not a Lua->Lua call?) */
-  if (ci == L->ci || !isLua(ci+1) || ci->u.l.pc != (ci+1)->u.l.pc)
-    ci->savedpc = *ci->u.l.pc;  /* may not be saved; save it */
+  if (ci->pc && ci->pc != &luaV_callingmark)
+    ci->u.l.savedpc = *ci->pc;  /* `pc' may not be saved; save it */
   /* function's pc is saved */
-  return pcRel(ci->savedpc, ci_func(ci)->l.p);
+  return pcRel(ci->u.l.savedpc, ci_func(ci)->l.p);
 }
 
 
@@ -49,8 +51,18 @@ static int currentline (lua_State *L, CallInfo *ci) {
 }
 
 
-LUA_API int lua_sethook (lua_State *L, lua_Hook func, int mask) {
+/*
+** save all `pc's from active Lua functions
+*/
+void luaG_saveallpcs (lua_State *L) {
   CallInfo *ci;
+  /* first save all not saved `pc's */
+  for (ci = L->ci; ci != L->base_ci; ci--)
+    currentpc(L, ci);  /* save `pc', if necessary */
+}
+
+
+LUA_API int lua_sethook (lua_State *L, lua_Hook func, int mask) {
   int allow;
   lua_lock(L);
   allow = allowhook(L);
@@ -60,8 +72,7 @@ LUA_API int lua_sethook (lua_State *L, lua_Hook func, int mask) {
   L->hookmask = mask;
   setallowhook(L, allow);
   resethookcount(L);
-  for (ci = L->base_ci; ci <= L->ci; ci++)
-    currentpc(L, ci);  /* update `savedpc' */
+  luaG_saveallpcs(L);
   lua_unlock(L);
   return 1;
 }
@@ -143,7 +154,7 @@ static void infoLproto (lua_Debug *ar, Proto *f) {
 
 static void funcinfo (lua_State *L, lua_Debug *ar, StkId func) {
   Closure *cl;
-  if (ttype(func) == LUA_TFUNCTION)
+  if (ttisfunction(func))
     cl = clvalue(func);
   else {
     luaG_runerror(L, "value for `lua_getinfo' is not a function");
@@ -167,7 +178,7 @@ static const char *travglobals (lua_State *L, const TObject *o) {
   int i = sizenode(g);
   while (i--) {
     Node *n = node(g, i);
-    if (luaO_rawequalObj(o, val(n)) && ttype(key(n)) == LUA_TSTRING)
+    if (luaO_rawequalObj(o, val(n)) && ttisstring(key(n)))
       return getstr(tsvalue(key(n)));
   }
   return NULL;
@@ -208,7 +219,7 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
         break;
       }
       case 'u': {
-        ar->nups = (ttype(f) == LUA_TFUNCTION) ? clvalue(f)->c.nupvalues : 0;
+        ar->nups = (ttisfunction(f)) ? clvalue(f)->c.nupvalues : 0;
         break;
       }
       case 'n': {
@@ -220,10 +231,6 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
       case 'f': {
         setobj(L->top, f);
         status = 2;
-        break;
-      }
-      case 'c': {
-        ar->isprotected = (ci && luaD_isprotected(L, ci));
         break;
       }
       default: status = 0;  /* invalid option */
@@ -330,7 +337,7 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
       }
       case OP_GETGLOBAL:
       case OP_SETGLOBAL: {
-        check(ttype(&pt->k[b]) == LUA_TSTRING);
+        check(ttisstring(&pt->k[b]));
         break;
       }
       case OP_SELF: {
@@ -357,7 +364,8 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
           pc += b;  /* do the jump */
         break;
       }
-      case OP_CALL: {
+      case OP_CALL:
+      case OP_TAILCALL: {
         if (b != 0) {
           checkreg(pt, a+b-1);
         }
@@ -370,7 +378,6 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         if (reg >= a) last = pc;  /* affect all registers above base */
         break;
       }
-      case OP_TAILCALL:
       case OP_RETURN: {
         b--;  /* b = num. returns */
         if (b > 0) checkreg(pt, a+b-1);
@@ -411,7 +418,7 @@ int luaG_checkcode (const Proto *pt) {
 
 static const char *kname (Proto *p, int c) {
   c = c - MAXSTACK;
-  if (c >= 0 && ttype(&p->k[c]) == LUA_TSTRING)
+  if (c >= 0 && ttisstring(&p->k[c]))
     return svalue(&p->k[c]);
   else
     return "?";
@@ -420,7 +427,7 @@ static const char *kname (Proto *p, int c) {
 
 static const char *getobjname (lua_State *L, CallInfo *ci, int stackpos,
                                const char **name) {
-  if (isLua(ci)) {  /* an active Lua function? */
+  if (isLua(ci)) {  /* a Lua function? */
     Proto *p = ci_func(ci)->l.p;
     int pc = currentpc(L, ci);
     Instruction i;
@@ -431,7 +438,7 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int stackpos,
     lua_assert(pc != -1);
     switch (GET_OPCODE(i)) {
       case OP_GETGLOBAL: {
-        lua_assert(ttype(&p->k[GETARG_Bx(i)]) == LUA_TSTRING);
+        lua_assert(ttisstring(&p->k[GETARG_Bx(i)]));
         *name = svalue(&p->k[GETARG_Bx(i)]);
         return "global";
       }
@@ -458,10 +465,8 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int stackpos,
 
 
 static Instruction getcurrentinstr (lua_State *L, CallInfo *ci) {
-  if (ci == L->base_ci || !isLua(ci))
-    return (Instruction)(-1);  /* not an active Lua function */
-  else
-    return ci_func(ci)->l.p->code[currentpc(L, ci)];
+  return (!isLua(ci)) ? (Instruction)(-1) :
+                        ci_func(ci)->l.p->code[currentpc(L, ci)];
 }
 
 
@@ -497,8 +502,8 @@ void luaG_typeerror (lua_State *L, const TObject *o, const char *op) {
 
 
 void luaG_concaterror (lua_State *L, StkId p1, StkId p2) {
-  if (ttype(p1) == LUA_TSTRING) p1 = p2;
-  lua_assert(ttype(p1) != LUA_TSTRING);
+  if (ttisstring(p1)) p1 = p2;
+  lua_assert(!ttisstring(p1));
   luaG_typeerror(L, p1, "concat");
 }
 
@@ -540,19 +545,8 @@ static void addinfo (lua_State *L, int internal) {
 
 
 void luaG_errormsg (lua_State *L, int internal) {
-  const TObject *errfunc;
-  if (ttype(L->top - 1) == LUA_TSTRING)
+  if (ttisstring(L->top - 1))
     addinfo(L, internal);
-  errfunc = luaH_getstr(hvalue(registry(L)), luaS_new(L, LUA_TRACEBACK));
-  if (ttype(errfunc) != LUA_TNIL) {  /* is there an error function? */
-    setobj(L->top, errfunc);  /* push function */
-    setobj(L->top + 1, L->top - 1);  /* push error message */
-    L->top += 2;
-    luaD_call(L, L->top - 2, 1);  /* call error function? */
-  }
-  else {
-    setnilvalue(L->top++);
-  }
   luaD_throw(L, LUA_ERRRUN);
 }
 
