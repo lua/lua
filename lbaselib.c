@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.21 2001/02/02 19:02:40 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.22 2001/02/06 13:59:29 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -345,14 +345,19 @@ static int luaB_tostring (lua_State *L) {
       lua_pushvalue(L, 1);
       return 1;
     case LUA_TTABLE:
-      sprintf(buff, "table: %p", lua_topointer(L, 1));
+      sprintf(buff, "%.40s: %p", lua_xtype(L, 1), lua_topointer(L, 1));
       break;
     case LUA_TFUNCTION:
       sprintf(buff, "function: %p", lua_topointer(L, 1));
       break;
-    case LUA_TUSERDATA:
-      sprintf(buff, "userdata(%d): %p", lua_tag(L, 1), lua_touserdata(L, 1));
+    case LUA_TUSERDATA: {
+      const char *t = lua_xtype(L, 1);
+      if (strcmp(t, "userdata") == 0)
+        sprintf(buff, "userdata(%d): %p", lua_tag(L, 1), lua_touserdata(L, 1));
+      else
+        sprintf(buff, "%.40s: %p", t, lua_touserdata(L, 1));
       break;
+    }
     case LUA_TNIL:
       lua_pushliteral(L, "nil");
       return 1;
