@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.12 2002/08/06 18:01:50 roberto Exp roberto $
+** $Id: ltablib.c,v 1.13 2002/10/04 14:30:31 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -149,12 +149,14 @@ static int luaB_tremove (lua_State *L) {
 
 static int str_concat (lua_State *L) {
   luaL_Buffer b;
-  int n = aux_getn(L, 1);
   size_t lsep;
   const char *sep = luaL_opt_lstr(L, 2, "", &lsep);
-  int i;
+  int i = luaL_opt_int(L, 3, 1);
+  int n = luaL_opt_int(L, 4, 0);
+  luaL_check_type(L, 1, LUA_TTABLE);
+  if (n == 0) n = aux_getn(L, 1);
   luaL_buffinit(L, &b);
-  for (i=1; i<=n; i++) {
+  for (; i <= n; i++) {
     lua_rawgeti(L, 1, i);
     luaL_arg_check(L, lua_isstring(L, -1), 1, "table contains non-strings");
     luaL_addvalue(&b);
