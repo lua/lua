@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.67 2002/08/12 17:23:12 roberto Exp roberto $
+** $Id: ldblib.c,v 1.68 2002/08/16 14:45:18 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -198,21 +198,21 @@ static int errorfb (lua_State *L) {
   if (lua_gettop(L) == 0)
     lua_pushliteral(L, "");
   else if (!lua_isstring(L, 1)) return 1;  /* no string message */
-  lua_pushliteral(L, "stack traceback:\n");
+  lua_pushliteral(L, "\nstack traceback:");
   while (lua_getstack(L, level++, &ar)) {
     if (level > LEVELS1 && firstpart) {
       /* no more than `LEVELS2' more levels? */
       if (!lua_getstack(L, level+LEVELS2, &ar))
         level--;  /* keep going */
       else {
-        lua_pushliteral(L, "\t...\n");  /* too many levels */
+        lua_pushliteral(L, "\n\t...");  /* too many levels */
         while (lua_getstack(L, level+LEVELS2, &ar))  /* find last levels */
           level++;
       }
       firstpart = 0;
       continue;
     }
-    lua_pushliteral(L, "\t");
+    lua_pushliteral(L, "\n\t");
     lua_getinfo(L, "Snl", &ar);
     lua_pushfstring(L, "%s:", ar.short_src);
     if (ar.currentline > 0)
@@ -234,7 +234,6 @@ static int errorfb (lua_State *L) {
                              ar.short_src, ar.linedefined);
       }
     }
-    lua_pushliteral(L, "\n");
     lua_concat(L, lua_gettop(L));
   }
   lua_concat(L, lua_gettop(L));

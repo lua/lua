@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.102 2002/08/12 17:23:12 roberto Exp roberto $
+** $Id: lua.c,v 1.103 2002/08/13 15:04:59 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -87,11 +87,8 @@ static void print_usage (void) {
 
 
 static void l_message (const char *pname, const char *msg) {
-  size_t l = strlen(msg);
   if (pname) fprintf(stderr, "%s: ", pname);
-  fprintf(stderr, "%s", msg);
-  if (l > 0 && msg[l-1] != '\n')  /* does not end with newline? */
-    fprintf(stderr, "\n");  /* add a newline */
+  fprintf(stderr, "%s\n", msg);
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.96 2002/08/06 18:54:18 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.97 2002/08/08 20:08:41 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -82,8 +82,7 @@ static int luaB_error (lua_State *L) {
   else {  /* add extra information */
     luaL_where(L, level);
     lua_pushvalue(L, 1);
-    lua_pushliteral(L, "\n");
-    lua_concat(L, 3);
+    lua_concat(L, 2);
   }
   return lua_error(L);
 }

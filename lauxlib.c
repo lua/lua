@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.83 2002/08/08 20:08:41 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.84 2002/08/30 20:00:59 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -81,8 +81,7 @@ LUALIB_API int luaL_error (lua_State *L, const char *fmt, ...) {
   luaL_where(L, 1);
   lua_pushvfstring(L, fmt, argp);
   va_end(argp);
-  lua_pushliteral(L, "\n");
-  lua_concat(L, 3);
+  lua_concat(L, 2);
   return lua_error(L);
 }
 
