@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 1.3 1994/02/13 20:35:53 roberto Exp celes $
+** $Id: opcode.h,v 1.4 1994/04/13 21:37:20 celes Exp celes $
 */
 
 #ifndef opcode_h
@@ -159,5 +159,6 @@ void 	lua_obj2number (void);
 void 	lua_print      (void);
 void 	lua_internaldofile (void);
 void 	lua_internaldostring (void);
+void    lua_travstack (void (*fn)(Object *));
 
 #endif

@@ -2,7 +2,7 @@
 ** hash.h
 ** hash manager for lua
 ** Luiz Henrique de Figueiredo - 17 Aug 90
-** $Id: $
+** $Id: hash.h,v 1.1 1993/12/17 18:41:19 celes Exp celes $
 */
 
 #ifndef hash_h
@@ -22,13 +22,11 @@ typedef struct Hash
  Node         **list;
 } Hash;
 
-#define markarray(t)		((t)->mark)
 
-Hash 	*lua_hashcreate (unsigned int nhash);
-void 	 lua_hashdelete (Hash *h);
+Hash    *lua_createarray (int nhash);
+void     lua_hashmark (Hash *h);
+void     lua_hashcollector (void);
 Object 	*lua_hashdefine (Hash *t, Object *ref);
-void 	 lua_hashmark   (Hash *h);
-
 void     lua_next (void);
 
 #endif

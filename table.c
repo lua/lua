@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 1.4 1994/04/06 12:55:08 celes Exp celes $";
+char *rcs_table="$Id: table.c,v 1.5 1994/04/13 22:10:21 celes Exp celes $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -75,16 +75,17 @@ static char 	       *stringbuffer[MAXSTRING];
 char  		      **lua_string = stringbuffer;
 Word    		lua_nstring=0;
 
-#ifndef MAXARRAY
-#define MAXARRAY	512
-#endif
-static Hash             *arraybuffer[MAXARRAY];
-Hash  	              **lua_array = arraybuffer;
-Word    		lua_narray=0;
-
 #define MAXFILE 	20
 char  		       *lua_file[MAXFILE];
 int      		lua_nfile;
+
+
+#define markstring(s)   (*((s)-1))
+
+
+/* Variables to controll garbage collection */
+Word lua_block=10; /* to check when garbage collector will be called */
+Word lua_nentity;   /* counter of new entities (strings and arrays) */
 
 
 /*
@@ -159,65 +160,64 @@ int lua_findconstant (char *s)
 
 
 /*
+** Traverse symbol table objects
+*/
+void lua_travsymbol (void (*fn)(Object *))
+{
+ int i;
+ for (i=0; i<lua_ntable; i++)
+  fn(&s_object(i));
+}
+
+
+/*
 ** Mark an object if it is a string or a unmarked array.
 */
 void lua_markobject (Object *o)
 {
  if (tag(o) == T_STRING)
-  lua_markstring (svalue(o)) = 1;
- else if (tag(o) == T_ARRAY && markarray(avalue(o)) == 0)
+  markstring (svalue(o)) = 1;
+ else if (tag(o) == T_ARRAY)
    lua_hashmark (avalue(o));
 }
 
+
 /*
-** Mark all strings and arrays used by any object stored at symbol table.
+** Garbage collection. 
+** Delete all unused strings and arrays.
 */
-static void lua_marktable (void)
+void lua_pack (void)
 {
- int i;
- for (i=0; i<lua_ntable; i++)
-  lua_markobject (&s_object(i));
+ /* mark stack strings */
+ lua_travstack(lua_markobject);
+ 
+ /* mark symbol table strings */
+ lua_travsymbol(lua_markobject);
+
+ lua_stringcollector();
+ lua_hashcollector();
+
+ lua_nentity = 0;      /* reset counter */
 } 
 
 /*
-** Simulate a garbage colection. When string table or array table overflows,
-** this function check if all allocated strings and arrays are in use. If
-** there are unused ones, pack (compress) the tables.
+** Garbage collection to atrings.
+** Delete all unmarked strings
 */
-static void lua_pack (void)
+void lua_stringcollector (void)
 {
- lua_markstack ();
- lua_marktable ();
- 
- { /* pack string */
-  int i, j;
-  for (i=j=0; i<lua_nstring; i++)
-   if (lua_markstring(lua_string[i]) == 1)
-   {
-    lua_string[j++] = lua_string[i];
-    lua_markstring(lua_string[i]) = 0;
-   }
-   else
-   {
-    free (lua_string[i]-1);
-   }
-  lua_nstring = j;
- }
-
- { /* pack array */
-  int i, j;
-  for (i=j=0; i<lua_narray; i++)
-   if (markarray(lua_array[i]) == 1)
-   {
-    lua_array[j++] = lua_array[i];
-    markarray(lua_array[i]) = 0;
-   }
-   else
-   {
-    lua_hashdelete (lua_array[i]);
-   }
-  lua_narray = j;
- }
+ int i, j;
+ for (i=j=0; i<lua_nstring; i++)
+  if (markstring(lua_string[i]) == 1)
+  {
+   lua_string[j++] = lua_string[i];
+   markstring(lua_string[i]) = 0;
+  }
+  else
+  {
+   free (lua_string[i]-1);
+  }
+ lua_nstring = j;
 }
 
 /*
@@ -237,7 +237,7 @@ char *lua_createstring (char *s)
    return lua_string[i];
   }
 
- if (lua_nstring >= MAXSTRING-1)
+ if (lua_nentity == lua_block || lua_nstring >= MAXSTRING-1)
  {
   lua_pack ();
   if (lua_nstring >= MAXSTRING-1)
@@ -247,31 +247,9 @@ char *lua_createstring (char *s)
   }
  } 
  lua_string[lua_nstring++] = s;
+ lua_nentity++;
  return s;
 }
-
-/*
-** Allocate a new array, already created, at array table. The function puts 
-** it at the end of the table, checking overflow, and returns its own pointer,
-** or NULL on error.
-*/
-void *lua_createarray (void *a)
-{
- if (a == NULL) return NULL;
- 
- if (lua_narray >= MAXARRAY-1)
- {
-  lua_pack ();
-  if (lua_narray >= MAXARRAY-1)
-  {
-   lua_error ("indexed table overflow");
-   return NULL;
-  }
- } 
- lua_array[lua_narray++] = a;
- return a;
-}
-
 
 /*
 ** Add a file name at file table, checking overflow. This function also set

@@ -1,7 +1,7 @@
 /*
 ** Module to control static tables
 ** TeCGraf - PUC-Rio
-** $Id: table.h,v 1.1 1993/12/17 18:41:19 celes Exp roberto $
+** $Id: table.h,v 1.2 1993/12/22 21:15:16 roberto Exp celes $
 */
 
 #ifndef table_h
@@ -22,17 +22,21 @@ extern Word    lua_narray;
 extern char   *lua_file[];
 extern int     lua_nfile;
 
-#define lua_markstring(s)	(*((s)-1))
+extern Word    lua_block;
+extern Word    lua_nentity;
 
 
-int   lua_findsymbol           (char *s);
-int   lua_findconstant         (char *s);
-void  lua_markobject           (Object *o);
-char *lua_createstring         (char *s);
-void *lua_createarray          (void *a);
-int   lua_addfile              (char *fn);
-int   lua_delfile 	       (void);
-char *lua_filename             (void);
-void  lua_nextvar              (void);
+
+int   lua_findsymbol      (char *s);
+int   lua_findconstant    (char *s);
+void  lua_travsymbol      (void (*fn)(Object *));
+void  lua_markobject      (Object *o);
+void  lua_pack            (void);
+void  lua_stringcollector (void);
+char *lua_createstring    (char *s);
+int   lua_addfile         (char *fn);
+int   lua_delfile 	  (void);
+char *lua_filename        (void);
+void  lua_nextvar         (void);
 
 #endif

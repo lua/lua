@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 1.3 1994/03/28 15:14:02 celes Exp celes $";
+char *rcs_opcode="$Id: opcode.c,v 1.4 1994/04/13 21:37:20 celes Exp celes $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -319,7 +319,7 @@ int lua_execute (Byte *pc)
      if (tonumber(top-1)) return 1;
      if (nvalue(top-1) <= 0) nvalue(top-1) = 101;
     }
-    avalue(top-1) = lua_createarray(lua_hashcreate(nvalue(top-1)));
+    avalue(top-1) = lua_createarray(nvalue(top-1));
     if (avalue(top-1) == NULL)
      return 1;
     tag(top-1) = T_ARRAY;
@@ -603,13 +603,13 @@ int lua_execute (Byte *pc)
 
 
 /*
-** Mark all strings and arrays used by any object stored at stack.
+** Traverse all objects on stack
 */
-void lua_markstack (void)
+void lua_travstack (void (*fn)(Object *))
 {
  Object *o;
  for (o = top-1; o >= stack; o--)
-  lua_markobject (o);
+  fn (o);
 }
 
 /*
