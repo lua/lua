@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.98 2002/08/06 15:32:22 roberto Exp roberto $
+** $Id: lua.c,v 1.99 2002/08/06 18:01:50 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -337,14 +337,15 @@ static int handle_argv (char *argv[], int *interactive) {
 
 
 static int openstdlibs (lua_State *l) {
-  return lua_baselibopen(l) +
-         lua_tablibopen(l) +
-         lua_iolibopen(l) +
-         lua_strlibopen(l) +
-         lua_mathlibopen(l) +
-         lua_dblibopen(l) +
-         /* add your libraries here */
-         0;
+  int res = 0;
+  res += lua_baselibopen(l);
+  res += lua_tablibopen(l);
+  res += lua_iolibopen(l);
+  res += lua_strlibopen(l);
+  res += lua_mathlibopen(l);
+  res += lua_dblibopen(l);
+  /* add your libraries here */
+  return res;
 }
 
 
