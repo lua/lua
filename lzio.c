@@ -1,5 +1,5 @@
 /*
-** $Id: lzio.c,v 1.26 2003/08/25 20:00:50 roberto Exp roberto $
+** $Id: lzio.c,v 1.27 2003/08/27 20:57:52 roberto Exp roberto $
 ** a generic input stream interface
 ** See Copyright Notice in lua.h
 */
@@ -77,8 +77,7 @@ size_t luaZ_read (ZIO *z, void *b, size_t n) {
 char *luaZ_openspace (lua_State *L, Mbuffer *buff, size_t n) {
   if (n > buff->buffsize) {
     if (n < LUA_MINBUFFER) n = LUA_MINBUFFER;
-    luaM_reallocvector(L, buff->buffer, buff->buffsize, n, char);
-    buff->buffsize = n;
+    luaZ_resizebuffer(L, buff, n);
   }
   return buff->buffer;
 }
