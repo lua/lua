@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.91 2002/08/06 15:32:22 roberto Exp roberto $
+** $Id: lstate.h,v 1.92 2002/08/06 18:01:50 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -87,10 +87,11 @@ typedef struct stringtable {
 typedef struct CallInfo {
   StkId base;  /* base for called function */
   StkId	top;  /* top for this function */
-  const Instruction **pc;  /* points to `pc' variable in `luaV_execute' */
+  int state;  /* bit fields; see below */
   union {
     struct {  /* for Lua functions */
       const Instruction *savedpc;
+      const Instruction **pc;  /* points to `pc' variable in `luaV_execute' */
       StkId *pb;  /* points to `base' variable in `luaV_execute' */
     } l;
     struct {  /* for C functions */
@@ -99,6 +100,17 @@ typedef struct CallInfo {
   } u;
 } CallInfo;
 
+
+/*
+** bit fields for `CallInfo.state'
+*/
+#define CI_C		1  /* 1 if function is a C function */
+/* 1 if (Lua) function has an active `luaV_execute' running it */
+#define CI_HASFRAME	2
+/* 1 if Lua function is calling another Lua function (and therefore its
+   `pc' is being used by the other, and therefore CI_SAVEDPC is 1 too) */
+#define CI_CALLING	4
+#define CI_SAVEDPC	8  /* 1 if `savedpc' is updated */
 
 
 #define ci_func(ci)	(clvalue((ci)->base - 1))

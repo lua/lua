@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.128 2002/08/06 18:01:50 roberto Exp roberto $
+** $Id: ldebug.c,v 1.129 2002/08/07 14:35:55 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -28,14 +28,16 @@
 static const char *getfuncname (CallInfo *ci, const char **name);
 
 
-static int isLua (CallInfo *ci) {
-  return isLfunction (ci->base - 1);
-}
+#define isLua(ci)	(!((ci)->state & CI_C))
+
 
 static int currentpc (CallInfo *ci) {
   if (!isLua(ci)) return -1;  /* function is not a Lua function? */
-  if (ci->pc != &luaV_callingmark)  /* is not calling another Lua function? */
-    ci->u.l.savedpc = *ci->pc;  /* `pc' may not be saved; save it */
+  if (!(ci->state & CI_SAVEDPC)) {  /* savedpc outdated? */
+    lua_assert(ci->state & CI_HASFRAME);
+    ci->u.l.savedpc = *ci->u.l.pc;
+    ci->state |= CI_SAVEDPC;
+  }
   /* function's pc is saved */
   return pcRel(ci->u.l.savedpc, ci_func(ci)->l.p);
 }

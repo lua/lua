@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.249 2002/08/05 17:36:24 roberto Exp roberto $
+** $Id: lvm.c,v 1.250 2002/08/07 14:24:24 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -23,8 +23,6 @@
 #include "ltm.h"
 #include "lvm.h"
 
-
-Instruction const *luaV_callingmark = NULL;
 
 
 /* function to convert a lua_Number to a string */
@@ -83,16 +81,18 @@ static void traceexec (lua_State *L) {
   if (mask & LUA_MASKLINE) {
     CallInfo *ci = L->ci;
     Proto *p = ci_func(ci)->l.p;
-    int newline = getline(p, pcRel(*ci->pc, p));
-    if (pcRel(*ci->pc, p) == 0)  /* tracing may be starting now? */
-      ci->u.l.savedpc = *ci->pc;  /* initialize `savedpc' */
+    int newline = getline(p, pcRel(*ci->u.l.pc, p));
+    lua_assert(ci->state & CI_HASFRAME);
+    if (pcRel(*ci->u.l.pc, p) == 0)  /* tracing may be starting now? */
+      ci->u.l.savedpc = *ci->u.l.pc;  /* initialize `savedpc' */
     /* calls linehook when enters a new line or jumps back (loop) */
-    if (*ci->pc <= ci->u.l.savedpc ||
+    if (*ci->u.l.pc <= ci->u.l.savedpc ||
         newline != getline(p, pcRel(ci->u.l.savedpc, p))) {
       luaD_callhook(L, LUA_HOOKLINE, newline);
       ci = L->ci;  /* previous call may reallocate `ci' */
     }
-    ci->u.l.savedpc = *ci->pc;
+    ci->u.l.savedpc = *ci->u.l.pc;
+    ci->state |= CI_SAVEDPC;  /* `savedpc' is updated */
   }
 }
 
@@ -374,11 +374,13 @@ StkId luaV_execute (lua_State *L) {
   const Instruction *pc;
  callentry:  /* entry point when calling new functions */
   L->ci->u.l.pb = &base;
-  L->ci->pc = &pc;
-  pc = L->ci->u.l.savedpc;
+  L->ci->u.l.pc = &pc;
   if (L->hookmask & LUA_MASKCALL)
     luaD_callhook(L, LUA_HOOKCALL, -1);
  retentry:  /* entry point when returning to old functions */
+  lua_assert(L->ci->state & CI_SAVEDPC);
+  L->ci->state = CI_HASFRAME;  /* activate frame */
+  pc = L->ci->u.l.savedpc;
   base = L->ci->base;
   cl = &clvalue(base - 1)->l;
   k = cl->p->k;
@@ -599,7 +601,7 @@ StkId luaV_execute (lua_State *L) {
         if (firstResult) {
           if (firstResult > L->top) {  /* yield? */
             (L->ci - 1)->u.l.savedpc = pc;
-            (L->ci - 1)->pc = &luaV_callingmark;
+            (L->ci - 1)->state = CI_SAVEDPC;
             return NULL;
           }
           /* it was a C function (`precall' called it); adjust results */
@@ -609,7 +611,7 @@ StkId luaV_execute (lua_State *L) {
         else {  /* it is a Lua function */
           if (GET_OPCODE(i) == OP_CALL) {  /* regular call? */
             (L->ci-1)->u.l.savedpc = pc;  /* save `pc' to return later */
-            (L->ci-1)->pc = &luaV_callingmark;  /* function is calling */
+            (L->ci-1)->state = (CI_SAVEDPC | CI_CALLING);
           }
           else {  /* tail call: put new frame in place of previous one */
             int aux;
@@ -618,7 +620,9 @@ StkId luaV_execute (lua_State *L) {
             for (aux = 0; ra1+aux < L->top; aux++)  /* move frame down */
               setobj(base+aux-1, ra1+aux);
             (L->ci - 1)->top = L->top = base+aux;  /* correct top */
+            lua_assert(L->ci->state & CI_SAVEDPC);
             (L->ci - 1)->u.l.savedpc = L->ci->u.l.savedpc;
+            (L->ci - 1)->state = CI_SAVEDPC;
             L->ci--;  /* remove previous frame */
           }
           goto callentry;
@@ -629,20 +633,21 @@ StkId luaV_execute (lua_State *L) {
         CallInfo *ci = L->ci - 1;
         int b = GETARG_B(i);
         if (b != 0) L->top = ra+b-1;
-        lua_assert(L->ci->pc == &pc);
+        lua_assert(L->ci->state & CI_HASFRAME);
         if (L->openupval) luaF_close(L, base);
+        L->ci->state = CI_SAVEDPC;  /* deactivate current function */
+        L->ci->u.l.savedpc = pc;
         /* previous function was running `here'? */
-        if (ci->pc != &luaV_callingmark)
+        if (!(ci->state & CI_CALLING))
           return ra;  /* no: return */
         else {  /* yes: continue its execution (go through) */
           int nresults;
           lua_assert(ttisfunction(ci->base - 1));
+          lua_assert(ci->state & CI_SAVEDPC);
           lua_assert(GET_OPCODE(*(ci->u.l.savedpc - 1)) == OP_CALL);
           nresults = GETARG_C(*(ci->u.l.savedpc - 1)) - 1;
           luaD_poscall(L, nresults, ra);
           if (nresults >= 0) L->top = L->ci->top;
-          L->ci->pc = &pc;  /* function is active again */
-          pc = L->ci->u.l.savedpc;
           goto retentry;
         }
       }

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 1.44 2002/07/05 18:27:39 roberto Exp $
+** $Id: lvm.h,v 1.45 2002/08/05 17:36:24 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -20,13 +20,6 @@
 
 #define equalobj(L,o1,o2) \
 	(ttype(o1) == ttype(o2) && luaV_equalval(L, o1, o2))
-
-
-/*
-** dummy addrees, to mark Lua functions calling other Lua functions (and
-** therefore without a valid `pc'
-*/
-extern Instruction const *luaV_callingmark;
 
 
 int luaV_lessthan (lua_State *L, const TObject *l, const TObject *r);

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.189 2002/08/05 17:36:24 roberto Exp roberto $
+** $Id: ldo.c,v 1.190 2002/08/06 15:32:22 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -108,7 +108,7 @@ static void correctstack (lua_State *L, TObject *oldstack) {
   for (ci = L->base_ci; ci <= L->ci; ci++) {
     ci->base = (ci->base - oldstack) + L->stack;
     ci->top = (ci->top - oldstack) + L->stack;
-    if (ci->pc && ci->pc != &luaV_callingmark)  /* function has a frame? */
+    if (ci->state & CI_HASFRAME)  /* Lua function with active frame? */
       *ci->u.l.pb = (*ci->u.l.pb - oldstack) + L->stack;  /* correct frame */
   }
 }
@@ -229,6 +229,7 @@ StkId luaD_precall (lua_State *L, StkId func) {
     ci->base = restorestack(L, funcr) + 1;
     ci->top = ci->base + p->maxstacksize;
     ci->u.l.savedpc = p->code;  /* starting point */
+    ci->state = CI_SAVEDPC;
     while (L->top < ci->top)
       setnilvalue(L->top++);
     L->top = ci->top;
@@ -241,7 +242,7 @@ StkId luaD_precall (lua_State *L, StkId func) {
     ci = ++L->ci;  /* now `enter' new function */
     ci->base = restorestack(L, funcr) + 1;
     ci->top = L->top + LUA_MINSTACK;
-    ci->pc = NULL;  /* not a Lua function */
+    ci->state = CI_C;  /* a C function */
     if (L->hookmask & LUA_MASKCALL) {
       luaD_callhook(L, LUA_HOOKCALL, -1);
       ci = L->ci;  /* previous call may realocate `ci' */
@@ -300,7 +301,6 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
 LUA_API void lua_cobegin (lua_State *L, int nargs) {
   lua_lock(L);
   luaD_precall(L, L->top - (nargs+1));
-  L->ci->pc = &luaV_callingmark;  /* function is not active (yet) */
   lua_unlock(L);
 }
 
@@ -317,10 +317,10 @@ static void move_results (lua_State *L, TObject *from, TObject *to) {
 static void resume (lua_State *L, void *ud) {
   StkId firstResult;
   CallInfo *ci = L->ci;
-  if (ci->pc == NULL) {  /* not first time? */
+  if (ci->state & CI_C) {  /* not first time (i.e. inside a yield)? */
     /* finish interrupted execution of `OP_CALL' */
     int nresults;
-    lua_assert((ci - 1)->pc == &luaV_callingmark);
+    lua_assert((ci-1)->state & CI_SAVEDPC);
     lua_assert(GET_OPCODE(*((ci-1)->u.l.savedpc - 1)) == OP_CALL ||
                GET_OPCODE(*((ci-1)->u.l.savedpc - 1)) == OP_TAILCALL);
     nresults = GETARG_C(*((ci-1)->u.l.savedpc - 1)) - 1;
@@ -363,9 +363,9 @@ LUA_API int lua_yield (lua_State *L, int nresults) {
   CallInfo *ci;
   lua_lock(L);
   ci = L->ci;
-  if ((ci-1)->pc == NULL)
+  if ((ci-1)->state & CI_C)
     luaG_runerror(L, "cannot yield a C function");
-  lua_assert(ci->pc == NULL);  /* current function is not Lua */
+  lua_assert(ci->state & CI_C);  /* current function is not Lua */
   ci->u.c.yield_results = nresults;
   lua_unlock(L);
   return -1;
