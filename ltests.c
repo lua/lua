@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.5 2000/01/19 12:00:45 roberto Exp roberto $
+** $Id: ltests.c,v 1.6 2000/01/24 20:11:26 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -243,7 +243,7 @@ static void testC (lua_State *L) {
       lua_pushuserdata(L, L1);
     }
     else if EQ("closestate") {
-      lua_close(lua_getuserdata(L, reg[getreg(L, &pc)]));
+      lua_close((lua_State *)lua_getuserdata(L, reg[getreg(L, &pc)]));
     }
     else if EQ("doremote") {
       lua_Object ol1 = reg[getreg(L, &pc)];
@@ -253,7 +253,7 @@ static void testC (lua_State *L) {
       int i;
       if (!lua_isuserdata(L, ol1) || !lua_isstring(L, str))
         lua_error(L, "bad arguments for `doremote'");
-      L1 = lua_getuserdata(L, ol1);
+      L1 = (lua_State *)lua_getuserdata(L, ol1);
       lua_dostring(L1, lua_getstring(L, str));
       i = 1;
       while ((temp = lua_getresult(L1, i++)) != LUA_NOOBJECT)

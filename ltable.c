@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.32 1999/12/07 12:05:34 roberto Exp roberto $
+** $Id: ltable.c,v 1.33 1999/12/23 18:19:57 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -86,7 +86,7 @@ const TObject *luaH_get (lua_State *L, const Hash *t, const TObject *key) {
 int luaH_pos (lua_State *L, const Hash *t, const TObject *key) {
   const TObject *v = luaH_get(L, t, key);
   return (v == &luaO_nilobject) ?  -1 :  /* key not found */
-             ((const char *)v - (const char *)(&t->node[0].val))/sizeof(Node);
+      (int)(((const char *)v - (const char *)(&t->node[0].val))/sizeof(Node));
 }
 
 

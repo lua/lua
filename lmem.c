@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.23 1999/12/27 17:33:22 roberto Exp roberto $
+** $Id: lmem.c,v 1.24 2000/01/13 16:30:47 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -83,7 +83,7 @@ static void *debug_realloc (void *block, size_t size) {
     return NULL;
   }
   else {
-    char *newblock = (malloc)(realsize);  /* alloc a new block */
+    char *newblock = (char *)(malloc)(realsize);  /* alloc a new block */
     int i;
     if (block) {
       size_t oldsize = *blocksize(block);

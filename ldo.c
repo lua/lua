@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.65 2000/01/13 15:56:03 roberto Exp roberto $
+** $Id: ldo.c,v 1.66 2000/01/19 12:00:45 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -266,9 +266,9 @@ void lua_error (lua_State *L, const char *s) {
 */
 int luaD_protectedrun (lua_State *L) {
   struct lua_longjmp myErrorJmp;
-  volatile StkId base = L->Cstack.base;
-  volatile int numCblocks = L->numCblocks;
-  volatile int status;
+  StkId base = L->Cstack.base;
+  int numCblocks = L->numCblocks;
+  int status;
   struct lua_longjmp *volatile oldErr = L->errorJmp;
   L->errorJmp = &myErrorJmp;
   if (setjmp(myErrorJmp.b) == 0) {
@@ -295,9 +295,9 @@ int luaD_protectedrun (lua_State *L) {
 */
 static int protectedparser (lua_State *L, ZIO *z, int bin) {
   struct lua_longjmp myErrorJmp;
-  volatile StkId base = L->Cstack.base;
-  volatile int numCblocks = L->numCblocks;
-  volatile int status;
+  StkId base = L->Cstack.base;
+  int numCblocks = L->numCblocks;
+  int status;
   TProtoFunc *volatile tf;
   struct lua_longjmp *volatile oldErr = L->errorJmp;
   L->errorJmp = &myErrorJmp;

@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.16 1999/12/27 17:33:22 roberto Exp roberto $
+** $Id: llex.h,v 1.17 2000/01/25 18:44:21 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -27,7 +27,10 @@ enum RESERVED {
   DO, ELSE, ELSEIF, END, FUNCTION, IF, LOCAL, NIL, NOT, OR,
   REPEAT, RETURN, THEN, UNTIL, WHILE,
   /* other terminal symbols */
-  NAME, CONC, DOTS, EQ, GE, LE, NE, NUMBER, STRING, EOS};
+  NAME, CONC, DOTS, EQ, GE, LE, NE, NUMBER, STRING, EOS
+};
+
+#define NUM_RESERVED	(WHILE-FIRST_RESERVED+1)  /* number of reserved words */
 
 
 #ifndef MAX_IFS

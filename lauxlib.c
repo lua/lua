@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.24 1999/12/28 11:52:49 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.25 2000/01/19 12:00:45 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -42,11 +42,11 @@ void luaL_argerror (lua_State *L, int narg, const char *extramsg) {
 }
 
 
-static void type_error (lua_State *L, int narg, const char *typename,
+static void type_error (lua_State *L, int narg, const char *type_name,
                         lua_Object o) {
   char buff[100];
   const char *otype = (o == LUA_NOOBJECT) ? "no value" : lua_type(L, o);
-  sprintf(buff, "%.10s expected, got %.10s", typename, otype);
+  sprintf(buff, "%.10s expected, got %.10s", type_name, otype);
   luaL_argerror(L, narg, buff);
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lref.c,v 1.5 1999/12/23 18:19:57 roberto Exp roberto $
+** $Id: lref.c,v 1.6 1999/12/27 17:33:22 roberto Exp roberto $
 ** reference mechanism
 ** See Copyright Notice in lua.h
 */
@@ -25,7 +25,7 @@ int lua_ref (lua_State *L,  int lock) {
       L->refFree = L->refArray[ref].st;
     }
     else {  /* no more free places */
-      luaM_growvector(L, L->refArray, L->refSize, 1, struct ref, refEM, MAX_INT);
+      luaM_growvector(L, L->refArray, L->refSize, 1, struct Ref, refEM, MAX_INT);
       ref = L->refSize++;
     }
     L->refArray[ref].o = *(L->top-1);
@@ -102,7 +102,7 @@ void luaR_invalidaterefs (lua_State *L) {
   int n = L->refSize;
   int i;
   for (i=0; i<n; i++) {
-    struct ref *r = &L->refArray[i];
+    struct Ref *r = &L->refArray[i];
     if (r->st == HOLD && !ismarked(&r->o))
       r->st = COLLECTED;
     LUA_ASSERT(L, (r->st == LOCK && ismarked(&r->o)) ||

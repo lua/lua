@@ -1,5 +1,5 @@
 /*
-** $Id: lref.h,v 1.4 1999/12/14 18:33:29 roberto Exp roberto $
+** $Id: lref.h,v 1.5 1999/12/27 17:33:22 roberto Exp roberto $
 ** reference mechanism
 ** See Copyright Notice in lua.h
 */
@@ -16,7 +16,7 @@
 #define LOCK            -4
 
 
-struct ref {
+struct Ref {
   TObject o;
   int st;  /* can be LOCK, HOLD, COLLECTED, or next (for free list) */
 };

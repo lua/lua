@@ -1,5 +1,5 @@
 /*
-** $Id: lzio.c,v 1.8 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: lzio.c,v 1.9 1999/11/09 17:59:35 roberto Exp roberto $
 ** a generic input stream interface
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,7 @@ ZIO* zmopen (ZIO* z, const char* b, int size, const char *name) {
 
 ZIO* zsopen (ZIO* z, const char* s, const char *name) {
   if (s==NULL) return NULL;
-  return zmopen(z,s,strlen(s),name);
+  return zmopen(z, s, strlen(s), name);
 }
 
 /* -------------------------------------------------------------- FILEs --- */
@@ -43,7 +43,7 @@ ZIO* zsopen (ZIO* z, const char* s, const char *name) {
 static int zffilbuf (ZIO* z) {
   int n;
   if (feof((FILE *)z->u)) return EOZ;
-  n = fread(z->buffer,1,ZBSIZE,z->u);
+  n = fread(z->buffer, 1, ZBSIZE, (FILE *)z->u);
   if (n==0) return EOZ;
   z->n = n-1;
   z->p = z->buffer;

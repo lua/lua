@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.83 2000/01/25 13:57:18 roberto Exp roberto $
+** $Id: lvm.c,v 1.84 2000/01/28 16:53:00 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -311,7 +311,7 @@ static void adjust_varargs (lua_State *L, StkId base, int nfixargs) {
 ** Returns n such that the the results are between [n,top).
 */
 StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
-                    StkId base) {
+                    register StkId base) {
   register StkId top;  /* keep top local, for performance */
   register const Byte *pc = tf->code;
   TaggedString **kstr = tf->kstr;
@@ -661,7 +661,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
       case SETNAMEW: aux += highbyte(L, *pc++);
       case SETNAME:  aux += *pc++;
         if ((base-2)->ttype == LUA_T_LINE) {  /* function has debug info? */
-          (base-1)->ttype = -(*pc++);
+          (base-1)->ttype = (lua_Type)(-(*pc++));
           (base-1)->value.i = aux;
         }
         break;

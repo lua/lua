@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.38 1999/11/22 17:39:51 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.39 1999/12/27 17:33:22 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -382,7 +382,7 @@ static const char *memfind (const char *s1, long l1, const char *s2, long l2) {
     const char *init;  /* to search for a `*s2' inside `s1' */
     l2--;  /* 1st char will be checked by `memchr' */
     l1 = l1-l2;  /* `s2' cannot be found after that */
-    while (l1 > 0 && (init = memchr(s1, *s2, l1)) != NULL) {
+    while (l1 > 0 && (init = (const char *)memchr(s1, *s2, l1)) != NULL) {
       init++;   /* 1st char is already checked */
       if (memcmp(init, s2+1, l2) == 0)
         return init-1;

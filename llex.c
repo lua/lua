@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.49 2000/01/25 18:44:21 roberto Exp roberto $
+** $Id: llex.c,v 1.50 2000/01/26 18:51:49 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -31,15 +31,15 @@
 
 
 /* ORDER RESERVED */
-static const char *const reserved [] = {"and", "do", "else", "elseif", "end",
+static const char *const token2string [] = {"and", "do", "else", "elseif", "end",
     "function", "if", "local", "nil", "not", "or", "repeat", "return", "then",
-    "until", "while", "", "..", "...", "==", ">=", "<=", "~=", "", "", ""};
+    "until", "while", "", "..", "...", "==", ">=", "<=", "~=", "", "", "<eof>"};
 
 
 void luaX_init (lua_State *L) {
   unsigned int i;
-  for (i=0; i<(sizeof(reserved)/sizeof(reserved[0])); i++) {
-    TaggedString *ts = luaS_new(L, reserved[i]);
+  for (i=0; i<NUM_RESERVED; i++) {
+    TaggedString *ts = luaS_new(L, token2string[i]);
     ts->marked = (unsigned char)(RESERVEDMARK+i);  /* reserved word */
   }
 }
@@ -50,8 +50,6 @@ void luaX_init (lua_State *L) {
 void luaX_syntaxerror (LexState *ls, const char *s, const char *token) {
   char buff[MAXSRC];
   luaL_chunkid(buff, zname(ls->lex_z), sizeof(buff));
-  if (token[0] == '\0')
-    token = "<eof>";
   luaL_verror(ls->L, "%.100s;\n  last token read: `%.50s' at line %d in %.80s",
               s, token, ls->linenumber, buff);
 }
@@ -75,7 +73,7 @@ void luaX_token2str (int token, char *s) {
     s[1] = '\0';
   }
   else
-    strcpy(s, reserved[token-FIRST_RESERVED]);
+    strcpy(s, token2string[token-FIRST_RESERVED]);
 }
 
 

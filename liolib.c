@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.55 1999/12/30 18:28:40 roberto Exp roberto $
+** $Id: liolib.c,v 1.56 2000/01/19 12:00:45 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -80,28 +80,30 @@ static int gettag (lua_State *L) {
 }
 
 
-static int ishandle (lua_State *L, lua_Object f) {
+static FILE *gethandle (lua_State *L, lua_Object f) {
   if (lua_isuserdata(L, f)) {
-    int tag = gettag(L);
-    if (lua_tag(L, f) == CLOSEDTAG(L, tag))
+    int ftag = lua_tag(L, f);
+    int iotag = gettag(L);
+    if (ftag == iotag)
+      return (FILE *)lua_getuserdata(L, f);
+    if (ftag == CLOSEDTAG(L, iotag))
       lua_error(L, "cannot access a closed file");
-    return lua_tag(L, f) == tag;
+    /* else go through */
   }
-  else return 0;
+  return NULL;
 }
 
 
 static FILE *getfilebyname (lua_State *L, const char *name) {
-  lua_Object f = lua_rawgetglobal(L, name);
-  if (!ishandle(L, f))
-      luaL_verror(L, "global variable `%.50s' is not a file handle", name);
-  return lua_getuserdata(L, f);
+  FILE *handle = gethandle(L, lua_rawgetglobal(L, name));
+  if (!handle)
+    luaL_verror(L, "global variable `%.50s' is not a file handle", name);
+  return handle;
 }
 
 
 static FILE *getfile (lua_State *L, int arg) {
-  lua_Object f = lua_getparam(L, arg);
-  return (ishandle(L, f)) ? lua_getuserdata(L, f) : NULL;
+  return gethandle(L, lua_getparam(L, arg));
 }
 
 
@@ -182,7 +184,7 @@ static void io_readfrom (lua_State *L) {
       current = NULL;  /* to signal error */
   }
   else if (lua_tag(L, f) == gettag(L))  /* deprecated option */
-    current = lua_getuserdata(L, f);
+    current = (FILE *)lua_getuserdata(L, f);
   else {
     const char *s = luaL_check_string(L, FIRSTARG);
     current = (*s == '|') ? popen(s+1, "r") : fopen(s, "r");
@@ -201,7 +203,7 @@ static void io_writeto (lua_State *L) {
       current = NULL;  /* to signal error */
   }
   else if (lua_tag(L, f) == gettag(L))  /* deprecated option */
-    current = lua_getuserdata(L, f);
+    current = (FILE *)lua_getuserdata(L, f);
   else {
     const char *s = luaL_check_string(L, FIRSTARG);
     current = (*s == '|') ? popen(s+1,"w") : fopen(s, "w");
@@ -301,7 +303,7 @@ static int read_number (lua_State *L, FILE *f) {
 
 static void read_word (lua_State *L, FILE *f) {
   int c;
-  do { c = fgetc(f); } while isspace(c);  /* skip spaces */
+  do { c = fgetc(f); } while (isspace(c));  /* skip spaces */
   while (c != EOF && !isspace(c)) {
     luaL_addchar(L, c);
     c = fgetc(f);
@@ -477,10 +479,10 @@ static void io_clock (lua_State *L) {
 static void io_date (lua_State *L) {
   char b[256];
   const char *s = luaL_opt_string(L, 1, "%c");
-  struct tm *tm;
+  struct tm *stm;
   time_t t;
-  time(&t); tm = localtime(&t);
-  if (strftime(b,sizeof(b),s,tm))
+  time(&t); stm = localtime(&t);
+  if (strftime(b, sizeof(b), s, stm))
     lua_pushstring(L, b);
   else
     lua_error(L, "invalid `date' format");

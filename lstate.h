@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.27 1999/12/27 17:33:22 roberto Exp roberto $
+** $Id: lstate.h,v 1.28 2000/01/19 12:00:45 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -30,7 +30,7 @@ struct lua_longjmp {
 /*
 ** stack layout for C point of view:
 ** [lua2C, lua2C+num) - `array' lua2C
-** [lua2C+num, base)  - space for extra lua_Objects
+** [lua2C+num, base)  - space for extra lua_Objects (limbo)
 ** [base, L->top)     - `stack' C2Lua
 */
 struct C_Lua_Stack {
@@ -70,7 +70,7 @@ struct lua_State {
   stringtable *string_root;  /* array of hash tables for strings and udata */
   struct IM *IMtable;  /* table for tag methods */
   int last_tag;  /* last used tag in IMtable */
-  struct ref *refArray;  /* locked objects */
+  struct Ref *refArray;  /* locked objects */
   int refSize;  /* size of refArray */
   int refFree;  /* list of free positions in refArray */
   unsigned long GCthreshold;

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.69 2000/01/19 12:00:45 roberto Exp roberto $
+** $Id: lapi.c,v 1.70 2000/01/24 20:14:07 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -129,12 +129,13 @@ lua_Object lua_gettable (lua_State *L) {
 
 
 lua_Object lua_rawgettable (lua_State *L) {
+  lua_Object res;
   luaA_checkCparams(L, 2);
   if (ttype(L->top-2) != LUA_T_ARRAY)
     lua_error(L, "indexed expression not a table in rawgettable");
-  *(L->top-2) = *luaH_get(L, avalue(L->top-2), L->top-1);
-  --L->top;
-  return luaA_putObjectOnTop(L);
+  res = luaA_putluaObject(L, luaH_get(L, avalue(L->top-2), L->top-1));
+  L->top -= 2;
+  return res;
 }
 
 
