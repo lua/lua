@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.135 2002/09/05 19:57:08 roberto Exp roberto $
+** $Id: ltests.c,v 1.136 2002/10/22 17:18:28 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -478,6 +478,17 @@ static int log2_aux (lua_State *L) {
 }
 
 
+static int test_do (lua_State *L) {
+  const char *p = luaL_check_string(L, 1);
+  if (*p == '@')
+    lua_dofile(L, p+1);
+  else
+    lua_dostring(L, p);
+  return lua_gettop(L);
+}
+
+
+
 /*
 ** {======================================================
 ** function to test the API with C. It interprets a kind of assembler
@@ -683,6 +694,7 @@ static const struct luaL_reg tests_funcs[] = {
   {"stacklevel", stacklevel},
   {"querystr", string_query},
   {"querytab", table_query},
+  {"doit", test_do},
   {"testC", testC},
   {"ref", tref},
   {"getref", getref},
