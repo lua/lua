@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.13 1995/01/12 14:19:04 roberto Exp $";
+char *rcs_tree="$Id: tree.c,v 1.14 1995/10/17 11:53:53 roberto Exp $";
 
 
 #include <string.h>
@@ -102,40 +102,22 @@ Long lua_strcollector (void)
   return counter;
 }
 
+
 /*
-** Return next variable.
+** Traverse the constant tree looking for a specific symbol number
 */
-static TreeNode *tree_next (TreeNode *node, char *str)
+static TreeNode *nodebysymbol (TreeNode *root, Word symbol)
 {
- if (node == NULL) return NULL;
- else if (str == NULL) return node;
- else
- {
-  int c = lua_strcmp(str, node->ts.str);
-  if (c == 0)
-   return node->left != NULL ? node->left : node->right;
-  else if (c < 0)
-  {
-   TreeNode *result = tree_next(node->left, str);
-   return result != NULL ? result : node->right;
-  }
-  else
-   return tree_next(node->right, str);
- }
+  TreeNode *t;
+  if (root == NULL) return NULL;
+  if (root->varindex == symbol) return root;
+  t = nodebysymbol(root->left, symbol);
+  if (t) return t;
+  return nodebysymbol(root->right, symbol);
 }
 
-TreeNode *lua_varnext (char *n)
+TreeNode *luaI_nodebysymbol (Word symbol)
 {
-  TreeNode *result;
-  char *name = n;
-  while (1)
-  { /* repeat until a valid (non nil) variable */
-    result = tree_next(constant_root, name);
-    if (result == NULL) return NULL;
-    if (result->varindex != NOT_USED &&
-        s_tag(result->varindex) != LUA_T_NIL)
-      return result;
-    name = result->ts.str;
-  }
+  return nodebysymbol(constant_root, symbol); 
 }
 

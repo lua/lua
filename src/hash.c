@@ -3,14 +3,13 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.24 1995/02/06 19:34:03 roberto Exp $";
+char *rcs_hash="$Id: hash.c,v 2.26 1995/10/04 14:20:26 roberto Exp $";
 
 #include <string.h>
 
 #include "mem.h"
 #include "opcode.h"
 #include "hash.h"
-#include "inout.h"
 #include "table.h"
 #include "lua.h"
 
@@ -54,7 +53,7 @@ static Word hashindex (Hash *t, Object *ref)		/* hash function */
  switch (tag(ref))
  {
   case LUA_T_NIL:
-   lua_reportbug ("unexpected type to index table");
+   lua_error ("unexpected type to index table");
    return -1;  /* UNREACHEABLE */
   case LUA_T_NUMBER:
    return (((Word)nvalue(ref))%nhash(t));
@@ -71,7 +70,7 @@ static Word hashindex (Hash *t, Object *ref)		/* hash function */
    return (Word)h%nhash(t);  /* make it a valid index */
   }
   case LUA_T_FUNCTION:
-   return (((IntPoint)bvalue(ref))%nhash(t));
+   return (((IntPoint)ref->value.tf)%nhash(t));
   case LUA_T_CFUNCTION:
    return (((IntPoint)fvalue(ref))%nhash(t));
   case LUA_T_ARRAY:
@@ -90,7 +89,7 @@ Bool lua_equalObj (Object *t1, Object *t2)
     case LUA_T_NUMBER: return nvalue(t1) == nvalue(t2);
     case LUA_T_STRING: return streq(svalue(t1), svalue(t2));
     case LUA_T_ARRAY: return avalue(t1) == avalue(t2);
-    case LUA_T_FUNCTION: return bvalue(t1) == bvalue(t2);
+    case LUA_T_FUNCTION: return t1->value.tf == t2->value.tf;
     case LUA_T_CFUNCTION: return fvalue(t1) == fvalue(t2);
     default: return uvalue(t1) == uvalue(t2);
   }

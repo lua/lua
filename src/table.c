@@ -3,38 +3,34 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.28 1995/01/18 20:15:54 celes Exp $";
+char *rcs_table="$Id: table.c,v 2.38 1995/11/03 15:30:50 roberto Exp $";
 
-#include <string.h>
+/*#include <string.h>*/
 
 #include "mem.h"
 #include "opcode.h"
 #include "tree.h"
 #include "hash.h"
-#include "inout.h"
 #include "table.h"
+#include "inout.h"
 #include "lua.h"
 #include "fallback.h"
+#include "luadebug.h"
 
 
 #define BUFFER_BLOCK 256
 
-Symbol *lua_table;
+Symbol *lua_table = NULL;
 static Word lua_ntable = 0;
 static Long lua_maxsymbol = 0;
 
-TaggedString **lua_constant;
+TaggedString **lua_constant = NULL;
 static Word lua_nconstant = 0;
 static Long lua_maxconstant = 0;
 
 
-
-#define MAXFILE 	20
-char  		       *lua_file[MAXFILE];
-int      		lua_nfile;
-
-#define GARBAGE_BLOCK 256
-#define MIN_GARBAGE_BLOCK 10
+#define GARBAGE_BLOCK 1024
+#define MIN_GARBAGE_BLOCK (GARBAGE_BLOCK/2)
 
 static void lua_nextvar (void);
 static void setglobal (void);
@@ -117,9 +113,8 @@ Word luaI_findsymbolbyname (char *name)
 
 
 /*
-** Given a name, search it at constant table and return its index. If not
-** found, allocate it.
-** On error, return -1.
+** Given a tree node, check it is has a correspondent constant index. If not,
+** allocate it.
 */
 Word luaI_findconstant (TreeNode *t)
 {
@@ -144,26 +139,38 @@ Word luaI_findconstant (TreeNode *t)
 }
 
 
+Word  luaI_findconstantbyname (char *name)
+{
+  return luaI_findconstant(lua_constcreate(name));
+}
+
+
 /*
 ** Traverse symbol table objects
 */
-void lua_travsymbol (void (*fn)(Object *))
+static char *lua_travsymbol (int (*fn)(Object *))
 {
  Word i;
  for (i=0; i<lua_ntable; i++)
-  fn(&s_object(i));
+  if (fn(&s_object(i)))
+    return luaI_nodebysymbol(i)->ts.str;
+ return NULL;
 }
 
 
 /*
 ** Mark an object if it is a string or a unmarked array.
 */
-void lua_markobject (Object *o)
+int lua_markobject (Object *o)
 {
  if (tag(o) == LUA_T_STRING && !tsvalue(o)->marked)
    tsvalue(o)->marked = 1;
  else if (tag(o) == LUA_T_ARRAY)
    lua_hashmark (avalue(o));
+ else if ((o->tag == LUA_T_FUNCTION || o->tag == LUA_T_MARK)
+           && !o->value.tf->marked)
+   o->value.tf->marked = 1;
+ return 0;
 }
 
 
@@ -180,8 +187,10 @@ void lua_pack (void)
   lua_travstack(lua_markobject); /* mark stack objects */
   lua_travsymbol(lua_markobject); /* mark symbol table objects */
   luaI_travlock(lua_markobject); /* mark locked objects */
+  luaI_travfallbacks(lua_markobject);  /* mark fallbacks */
   recovered += lua_strcollector();
   recovered += lua_hashcollector();
+  recovered += luaI_funccollector();
   nentity = 0;				/* reset counter */
   block=(16*block-7*recovered)/12;	/* adapt block size */
   if (block < MIN_GARBAGE_BLOCK) block = MIN_GARBAGE_BLOCK;
@@ -189,70 +198,39 @@ void lua_pack (void)
 
 
 /*
-** Add a file name at file table, checking overflow. This function also set
-** the external variable "lua_filename" with the function filename set.
-** Return 0 on success or error message on error.
-*/
-char *lua_addfile (char *fn)
-{
- if (lua_nfile >= MAXFILE)
-   return "too many files";
- if ((lua_file[lua_nfile++] = luaI_strdup (fn)) == NULL)
-   return "not enough memory";
- return NULL;
-}
-
-/*
-** Delete a file from file stack
-*/
-int lua_delfile (void)
-{
- luaI_free(lua_file[--lua_nfile]); 
- return 1;
-}
-
-/*
-** Return the last file name set.
-*/
-char *lua_filename (void)
-{
- return lua_file[lua_nfile-1];
-}
-
-/*
 ** Internal function: return next global variable
 */
 static void lua_nextvar (void)
 {
- char *varname;
- TreeNode *next;
+ Word next;
  lua_Object o = lua_getparam(1);
  if (o == LUA_NOOBJECT)
-   lua_reportbug("too few arguments to function `nextvar'");
+   lua_error("too few arguments to function `nextvar'");
  if (lua_getparam(2) != LUA_NOOBJECT)
-   lua_reportbug("too many arguments to function `nextvar'");
+   lua_error("too many arguments to function `nextvar'");
  if (lua_isnil(o))
-   varname = NULL;
+   next = 0;
  else if (!lua_isstring(o))
  {
-   lua_reportbug("incorrect argument to function `nextvar'"); 
+   lua_error("incorrect argument to function `nextvar'"); 
    return;  /* to avoid warnings */
  }
  else
-   varname = lua_getstring(o);
- next = lua_varnext(varname);
- if (next == NULL)
+   next = luaI_findsymbolbyname(lua_getstring(o)) + 1;
+ while (next < lua_ntable && s_tag(next) == LUA_T_NIL) next++;
+ if (next >= lua_ntable)
  {
   lua_pushnil();
   lua_pushnil();
  }
  else
  {
+  TreeNode *t = luaI_nodebysymbol(next);
   Object name;
   tag(&name) = LUA_T_STRING;
-  tsvalue(&name) = &(next->ts);
+  tsvalue(&name) = &(t->ts);
   luaI_pushobject(&name);
-  luaI_pushobject(&s_object(next->varindex));
+  luaI_pushobject(&s_object(next));
  }
 }
 
@@ -262,7 +240,7 @@ static void setglobal (void)
   lua_Object name = lua_getparam(1);
   lua_Object value = lua_getparam(2);
   if (!lua_isstring(name))
-    lua_reportbug("incorrect argument to function `setglobal'");
+    lua_error("incorrect argument to function `setglobal'");
   lua_pushobject(value);
   lua_storeglobal(lua_getstring(name));
 }
@@ -272,6 +250,33 @@ static void getglobal (void)
 {
   lua_Object name = lua_getparam(1);
   if (!lua_isstring(name))
-    lua_reportbug("incorrect argument to function `getglobal'");
+    lua_error("incorrect argument to function `getglobal'");
   lua_pushobject(lua_getglobal(lua_getstring(name)));
 }
+
+
+static Object *functofind;
+static int checkfunc (Object *o)
+{
+  if (o->tag == LUA_T_FUNCTION)
+    return
+       ((functofind->tag == LUA_T_FUNCTION || functofind->tag == LUA_T_MARK)
+            && (functofind->value.tf == o->value.tf));
+  if (o->tag == LUA_T_CFUNCTION)
+    return
+       ((functofind->tag == LUA_T_CFUNCTION || functofind->tag == LUA_T_CMARK)
+            && (functofind->value.f == o->value.f));
+  return 0;
+}
+
+
+char *getobjname (lua_Object o, char **name)
+{ /* try to find a name for given function */
+  functofind = luaI_Address(o);
+  if ((*name = luaI_travfallbacks(checkfunc)) != NULL)
+    return "fallback";
+  else if ((*name = lua_travsymbol(checkfunc)) != NULL)
+    return "global";
+  else return "";
+}
+

@@ -3,7 +3,7 @@
 ** Linguagem para Usuarios de Aplicacao
 */
 
-char *rcs_lua="$Id: lua.c,v 1.4 1995/02/07 16:04:15 lhf Exp $";
+char *rcs_lua="$Id: lua.c,v 1.7 1995/10/31 17:05:35 roberto Exp $";
 
 #include <stdio.h>
 #include <string.h>
@@ -13,6 +13,12 @@ char *rcs_lua="$Id: lua.c,v 1.4 1995/02/07 16:04:15 lhf Exp $";
 
 static int lua_argc;
 static char **lua_argv;
+
+/*
+** although this function is POSIX, there is no standard header file that
+** defines it
+*/
+int isatty (int fd);
 
 /*
 %F Allow Lua code to access argv strings.
@@ -33,6 +39,19 @@ static void lua_getargv (void)
 }
 
 
+static void manual_input (void)
+{
+  if (isatty(fileno(stdin)))
+  {
+   char buffer[250];
+   while (gets(buffer) != 0)
+     lua_dostring(buffer);
+  }
+  else
+    lua_dofile(NULL);  /* executes stdin as a file */
+}
+
+
 int main (int argc, char *argv[])
 {
  int i;
@@ -44,26 +63,25 @@ int main (int argc, char *argv[])
  lua_register("argv", lua_getargv);
 
  if (argc < 2)
- {
-   char buffer[250];
-   while (gets(buffer) != 0)
-     result = lua_dostring(buffer);
- }
+   manual_input();
  else
  {
   for (i=1; i<argc; i++)
-  {
    if (strcmp(argv[i], "--") == 0)
    {
     lua_argc = argc-i-1;
     lua_argv = argv+i;
     break;
    }
-  }
   for (i=1; i<argc; i++)
   {
    if (strcmp(argv[i], "--") == 0)
     break;
+   else if (strcmp(argv[i], "-") == 0)
+    manual_input();
+   else if (strcmp(argv[i], "-v") == 0)
+    printf("%s  %s\n(written by %s)\n\n",
+            LUA_VERSION, LUA_COPYRIGHT, LUA_AUTHORS);
    else
     result = lua_dofile (argv[i]);
   }

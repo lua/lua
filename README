@@ -5,38 +5,48 @@
   Dozens of industrial products developed by TeCGraf use Lua.
 
 * Some features of Lua
-  + a simple, pascal-like, syntax;
-  + powerful data description constructs (e.g., associative arrays);
-  + user-controlled type constructors;
-  + fallbacks for extending the meaning of the language in unconventional ways;
-  + Lua programs are compiled into bytecodes, which are then interpreted to
-    simulate a virtual machine;
-  + portable, written in ANSI C.
+  + a simple, pascal-like, syntax
+  + powerful data description constructs (e.g., associative arrays)
+  + user-controlled type constructors
+  + fallbacks for extending the language in unconventional ways (e.g.,
+    inheritance, overloading)
+  + garbage collection
+  + Lua programs are compiled into bytecodes, which are then interpreted
+  + portable, written in ANSI C (runs in Unix, DOS, Windows, Mac, Cray, ...)
 
 * Availability
-  ftp://ftp.icad.puc-rio.br/pub/lua/lua-2.1.tar.gz
-  http://www.inf.puc-rio.br/projetos/roberto/lua.html
+  In Brazil:	ftp://ftp.icad.puc-rio.br/pub/lua/lua-2.2.tar.gz
+  In Canada:	ftp://csg.uwaterloo.ca/pub/lhf/lua/lua-2.2.tar.gz
+  Home page:	http://www.inf.puc-rio.br/~roberto/lua.html
 
-* Changes since version 1.1 (current version is 2.1)
-  + object-oriented support;
-  + fallbacks;
-  + simplified syntax for tables;
-  + many internal improvements.
+* Legal matters
+  Lua is freely available for both academic and commercial purposes.
+  Lua is not in the public domain; TeCGraf keeps its copyright.
+  See COPYRIGHT.
+
+* Changes since version 2.1  (current version is 2.2)
+  + functions now may be declared with any "lvalue" as a name
+  + garbage collection of functions
+  + support for pipes
+
+* Changes since version 1.1
+  + object-oriented support
+  + fallbacks
+  + simplified syntax for tables
+  + many internal improvements
 
 * Installing
   To make, simply type domake.
   If make succeeds, you get an interpreter in ./bin/lua.
+  If make fails, please let me know.
   The libraries are in ./lib.  The include files are in ./include.
   You don't need the other directories for development.
-  There is a reference manual in ./doc and tests in ./test.
+  There is a reference manual in ./doc, and tests and examples in ./test.
   This distribution is biased towards SunOS 4 with gcc but it is simple to
-  change the Makefiles for other systems.
+  change the Makefiles for other systems, if necessary.
   If you are running SunOs, type also "domake dynamic" to build shared
   libraries in ./lib.
-
-* Legal matters
-  Lua is now freely available for both academic and commercial purposes.
-  Lua is not in the public domain; TeCGraf keeps its copyright.
+  If your system does not have "popen", then change ./clients/lib/Makefile.
 
 * Contacting the authors
   Send your comments, bug reports and anything else to lhf@icad.puc-rio.br.

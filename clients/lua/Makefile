@@ -12,6 +12,7 @@ INCS= -I/usr/5include -I$(INC)
 WARN= -Wall -Wmissing-prototypes -Wshadow -ansi
 
 OBJS= lua.o
+SRCS= lua.c
 
 T=$(BIN)/lua
 
@@ -19,9 +20,14 @@ $T: $(OBJS)
 	$(CC) -o $@ $(OBJS) -L$(LIB) -llua -llualib -lm
 
 dynamic:
+	rm -f $T
+	make
 
 clean:
 	rm -f $T $(OBJS)
 
 co:
-	co -M lua.c
+	co -f -M $(SRCS)
+
+klean:	clean
+	rm -f $(SRCS)

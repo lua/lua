@@ -1,8 +1,9 @@
-#!/bin/sh
+#!/bin/sh -x
 # makefile for lua hierarchy
 
+VERSION=2.2
 LUA=`pwd`
-export LUA
+export LUA VERSION
 
 cd $LUA/src; make $*
 cd $LUA/include; make $*

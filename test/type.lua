@@ -30,8 +30,8 @@ typeblock = {x = {default = 0, type = "number"},
 
 function block(t) check(t,typeblock) end
 
-@block{ x = 7, name = "3"}
-@block{ x = "7", name = "3"}
-@block{ x = 7, name = 3}
-@block{ x = 7}
-@block{ x = 7, name = "3", bogus=3.14}
+block{ x = 7, name = "3"}
+block{ x = "7", name = "3"}
+block{ x = 7, name = 3}
+block{ x = 7}
+block{ x = 7, name = "3", bogus=3.14}

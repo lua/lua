@@ -1,4 +1,3 @@
-
 typedef union  
 {
  int   vInt;
@@ -6,7 +5,7 @@ typedef union
  char *pChar;
  Word  vWord;
  Long  vLong;
- Byte *pByte;
+ TFunc *pFunc;
  TreeNode *pNode;
 } YYSTYPE;
 extern YYSTYPE yylval;

@@ -1,18 +1,20 @@
-char *rcs_lex = "$Id: lex.c,v 2.14 1994/12/27 20:50:38 celes Exp $";
+char *rcs_lex = "$Id: lex.c,v 2.21 1995/11/16 20:46:24 roberto Exp $";
  
 
 #include <ctype.h>
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "mem.h"
 #include "tree.h"
 #include "table.h"
 #include "opcode.h"
 #include "inout.h"
 #include "parser.h"
 #include "ugly.h"
+
+#define MINBUFF 260
 
 #define lua_strcmp(a,b)	(a[0]<b[0]?(-1):(a[0]>b[0]?(1):strcmp(a,b)))
 
@@ -21,7 +23,8 @@ char *rcs_lex = "$Id: lex.c,v 2.14 1994/12/27 20:50:38 celes Exp $";
 #define save_and_next()  { save(current); next(); }
 
 static int current;
-static char yytext[256];
+static char *yytext = NULL;
+static int textsize = 0;
 static char *yytextLast;
 
 static Input input;
@@ -30,6 +33,11 @@ void lua_setinput (Input fn)
 {
   current = ' ';
   input = fn;
+  if (yytext == NULL)
+  {
+    textsize = MINBUFF;
+    yytext = newvector(textsize, char);
+  }
 }
 
 char *lua_lasttext (void)
@@ -85,9 +93,64 @@ static int findReserved (char *name)
 }
 
 
+static void growtext (void)
+{
+  int size = yytextLast - yytext;
+  textsize *= 2;
+  yytext = growvector(yytext, textsize, char);
+  yytextLast = yytext + size;
+}
+
+
+static int read_long_string (void)
+{
+  int cont = 0;
+  int spaceleft = textsize - (yytextLast - yytext);
+  while (1)
+  {
+    if (spaceleft <= 2)  /* may read more than 1 char in one cicle */
+    {
+      growtext();
+      spaceleft = textsize - (yytextLast - yytext);
+    }
+    switch (current)
+    {
+      case EOF:
+      case 0:
+        return WRONGTOKEN;
+      case '[':
+        save_and_next(); spaceleft--;
+        if (current == '[')
+        {
+          cont++;
+          save_and_next(); spaceleft--;
+        }
+        continue; 
+      case ']':
+        save_and_next(); spaceleft--;
+        if (current == ']')
+        {
+          if (cont == 0) return STRING;
+          cont--;
+          save_and_next(); spaceleft--;
+        }
+        continue; 
+      case '\n':
+        lua_linenumber++;  /* goes through */
+      default:
+        save_and_next(); spaceleft--;
+    }
+  }
+}
+
+
 int yylex (void)
 {
   float a;
+  static int linelasttoken = 0;
+  if (lua_debug)
+    luaI_codedebugline(linelasttoken);
+  linelasttoken = lua_linenumber;
   while (1)
   {
     yytextLast = yytext;
@@ -99,8 +162,9 @@ int yylex (void)
       case EOF:
       case 0:
        return 0;
-      case '\n': lua_linenumber++;
+      case '\n': linelasttoken = ++lua_linenumber;
       case ' ':
+      case '\r':  /* CR: to avoid problems with DOS/Windows */
       case '\t':
         next();
         continue;
@@ -124,9 +188,24 @@ int yylex (void)
 
       case '-':
         save_and_next();
-        if (current != '-') return '-';
+        if (current != '-') return '-';  /* else goes through */
+      case '#':
         do { next(); } while (current != '\n' && current != 0);
         continue;
+
+      case '[':
+        save_and_next();
+        if (current != '[') return '[';
+        else
+        {
+          save_and_next();  /* pass the second '[' */
+          if (read_long_string() == WRONGTOKEN)
+            return WRONGTOKEN;
+          save_and_next();  /* pass the second ']' */
+          *(yytextLast-2) = 0;  /* erases ']]' */
+          yylval.vWord = luaI_findconstantbyname(yytext+2);
+          return STRING;
+        }
 
       case '=':
         save_and_next();
@@ -152,9 +231,16 @@ int yylex (void)
       case '\'':
       {
         int del = current;
+        int spaceleft = textsize - (yytextLast - yytext);
         next();  /* skip the delimiter */
         while (current != del)
         {
+          if (spaceleft <= 2) /* may read more than 1 char in one cicle */
+          {
+            growtext();
+            spaceleft = textsize - (yytextLast - yytext);
+          }
+          spaceleft--;
           switch (current)
           {
             case EOF:
@@ -177,7 +263,7 @@ int yylex (void)
         }
         next();  /* skip the delimiter */
         *yytextLast = 0;
-        yylval.vWord = luaI_findconstant(lua_constcreate(yytext));
+        yylval.vWord = luaI_findconstantbyname(yytext);
         return STRING;
       }
 
