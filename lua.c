@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.21 1999/07/02 18:22:38 roberto Exp roberto $
+** $Id: lua.c,v 1.22 1999/08/16 20:52:00 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -69,8 +69,9 @@ static void print_message (void) {
 "  -e stat  dostring `stat'\n"
 "  -q       interactive mode without prompt\n"
 "  -i       interactive mode with prompt\n"
-"  -        executes stdin as a file\n"
-"  a=b      sets global `a' with string `b'\n"
+"  -        execute stdin as a file\n"
+"  --       start arguments for table `arg'\n"
+"  a=b      set global `a' with string `b'\n"
 "  name     dofile `name'\n\n");
 }
 
@@ -86,6 +87,27 @@ static void assign (char *arg) {
     buffer[eq-arg] = 0;
     lua_setglobal(buffer);
   }
+}
+
+
+static void getargs (int argc, char *argv[]) {
+  int i, j;
+  lua_Object args = lua_createtable();
+  lua_pushobject(args);
+  lua_setglobal("arg");
+  for (i=0; i<argc; i++)
+    if (strcmp(argv[i], "--") == 0) break;
+  for (j = 0; j<argc; j++) {
+    /* arg[j-i] = argv[j] */
+    lua_pushobject(args); lua_pushnumber(j-i);
+    lua_pushstring(argv[j]); lua_settable();
+  }
+  /* arg.n = maximum index in table `arg' */
+  lua_pushobject(args); lua_pushstring("n");
+  lua_pushnumber(argc-(i+1)); lua_settable();
+  /* arg.nn = minimum index in table `arg' */
+  lua_pushobject(args); lua_pushstring("nn");
+  lua_pushnumber(-i); lua_settable();
 }
 
 
@@ -122,12 +144,12 @@ static void manual_input (int prompt) {
 }
 
 
-int main (int argc, char *argv[])
-{
+int main (int argc, char *argv[]) {
   int i;
   lua_open();
   lua_pushstring("> "); lua_setglobal("_PROMPT");
   lua_userinit();
+  getargs(argc, argv);
   if (argc < 2) {  /* no arguments? */
     if (isatty(0)) {
       printf("%s  %s\n", LUA_VERSION, LUA_COPYRIGHT);
@@ -161,6 +183,9 @@ int main (int argc, char *argv[])
             fprintf(stderr, "lua: error running argument `%s'\n", argv[i]);
             return 1;
           }
+          break;
+        case '-':
+          i = argc;  /* end loop */
           break;
         default:
           print_message();
