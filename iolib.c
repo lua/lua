@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.46 1996/05/27 14:06:58 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.47 1996/08/01 14:55:33 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -16,7 +16,7 @@ char *rcs_iolib="$Id: iolib.c,v 1.46 1996/05/27 14:06:58 roberto Exp roberto $";
 #include "luadebug.h"
 #include "lualib.h"
 
-static FILE *in=stdin, *out=stdout;
+static FILE *in, *out;
 
 
 #ifdef POPEN
@@ -598,6 +598,7 @@ static struct lua_reg iolib[] = {
 
 void iolib_open (void)
 {
+  in=stdin; out=stdout;
   luaI_openlib(iolib, (sizeof(iolib)/sizeof(iolib[0])));
   lua_setfallback("error", errorfb);
 }
