@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.15 1995/12/21 16:14:04 roberto Exp roberto $
+** $Id: opcode.h,v 3.16 1996/01/26 18:03:19 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -11,9 +11,6 @@
 #include "tree.h"
 #include "func.h"
 
-#ifndef real
-#define real float
-#endif
 
 #define FIELDS_PER_FLUSH 40
 
@@ -74,12 +71,9 @@ typedef enum
 #define MULT_RET	255
 
 
-typedef void (*Cfunction) (void);
-typedef int  (*Input) (void);
-
 typedef union
 {
- Cfunction     f;
+ lua_CFunction f;
  real          n;
  TaggedString *ts;
  TFunc         *tf;
@@ -140,9 +134,6 @@ typedef union
 /* Exported functions */
 char   *lua_strdup (char *l);
 
-void    lua_setinput   (Input fn);	/* from "lex.c" module */
-char   *lua_lasttext   (void);		/* from "lex.c" module */
-int     luaY_lex (void);	        /* from "lex.c" module */
 void    lua_parse      (TFunc *tf);	/* from "lua.stx" module */
 void	luaI_codedebugline (int line);  /* from "lua.stx" module */
 void    lua_travstack (int (*fn)(Object *));
