@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.35 1996/09/09 14:11:11 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.36 1996/09/25 21:52:00 roberto Exp roberto $";
 
 
 #include <ctype.h>
@@ -72,9 +72,9 @@ void luaI_addReserved (void)
   }
 }
 
-static int inclinenumber (void)
+static int inclinenumber (int pragma_allowed)
 {
-  if (current == '$') {  /* is a pragma? */
+  if (pragma_allowed && current == '$') {  /* is a pragma? */
     char buff[MINBUFF];
     int i = 0;
     next();  /* skip $ */
@@ -125,7 +125,7 @@ static int read_long_string (char *yytext, int buffsize)
         continue;
       case '\n':
         save_and_next();
-        inclinenumber();
+        inclinenumber(0);
         continue;
       default:
         save_and_next();
@@ -156,7 +156,7 @@ int luaY_lex (void)
     {
       case '\n':
         next();
-        linelasttoken = inclinenumber();
+        linelasttoken = inclinenumber(1);
         continue;
 
       case ' ': case '\t': case '\r':  /* CR: to avoid problems with DOS */
@@ -220,7 +220,7 @@ int luaY_lex (void)
                 case 'n': save('\n'); next(); break;
                 case 't': save('\t'); next(); break;
                 case 'r': save('\r'); next(); break;
-                case '\n': save_and_next(); inclinenumber(); break;
+                case '\n': save_and_next(); inclinenumber(0); break;
                 default : save_and_next(); break;
               }
               break;
