@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.29 1995/05/02 18:43:03 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.30 1995/05/16 17:23:58 roberto Exp celes $";
 
 #include <string.h>
 
@@ -33,8 +33,8 @@ static Long lua_maxconstant = 0;
 char  		       *lua_file[MAXFILE];
 int      		lua_nfile;
 
-#define GARBAGE_BLOCK 256
-#define MIN_GARBAGE_BLOCK 10
+#define GARBAGE_BLOCK 1024
+#define MIN_GARBAGE_BLOCK (GARBAGE_BLOCK/2)
 
 static void lua_nextvar (void);
 static void setglobal (void);
