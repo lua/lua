@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.97 2002/08/08 20:08:41 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.98 2002/09/05 19:45:42 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -109,14 +109,8 @@ static int luaB_getmetatable (lua_State *L) {
     lua_pushnil(L);
     return 1;  /* no metatable */
   }
-  else {
-    lua_pushliteral(L, "__metatable");
-    lua_rawget(L, -2);
-    if (lua_isnil(L, -1))
-      lua_pop(L, 1);
-    /* otherwise returns metatable.__metatable */
-  }
-  return 1;
+  luaL_getmetafield(L, 1, "__metatable");
+  return 1;  /* returns either __metatable field (if present) or metatable */
 }
 
 
@@ -125,6 +119,8 @@ static int luaB_setmetatable (lua_State *L) {
   luaL_check_type(L, 1, LUA_TTABLE);
   luaL_arg_check(L, t == LUA_TNIL || t == LUA_TTABLE, 2,
                     "nil or table expected");
+  if (luaL_getmetafield(L, 1, "__metatable"))
+    luaL_error(L, "cannot change a protected metatable");
   lua_settop(L, 2);
   lua_setmetatable(L, 1);
   return 1;

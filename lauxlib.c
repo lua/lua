@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.84 2002/08/30 20:00:59 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.85 2002/09/05 19:45:42 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -147,7 +147,7 @@ LUALIB_API lua_Number luaL_opt_number (lua_State *L, int narg, lua_Number def) {
 }
 
 
-LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event) {
+LUALIB_API int luaL_getmetafield (lua_State *L, int obj, const char *event) {
   if (!lua_getmetatable(L, obj))  /* no metatable? */
     return 0;
   lua_pushstring(L, event);
@@ -156,6 +156,13 @@ LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event) {
     lua_pop(L, 2);  /* remove metatable and metafield */
     return 0;
   }
+  return 1;
+}
+
+
+LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event) {
+  if (!luaL_getmetafield(L, obj, event))  /* no metafield? */
+    return 0;
   lua_pushvalue(L, obj);
   lua_call(L, 1, 1);
   return 1;
