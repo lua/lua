@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.51 1997/04/01 17:31:42 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.52 1997/04/01 19:02:43 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -20,12 +20,19 @@ char *rcs_inout="$Id: inout.c,v 2.51 1997/04/01 17:31:42 roberto Exp roberto $";
 #include "hash.h"
 #include "luamem.h"
 #include "fallback.h"
+#include "luamem.h"
 
 
 /* Exported variables */
 Word lua_linenumber;
 char *lua_parsedfile;
 
+
+static char *typenames[] = { /* ORDER LUA_T */
+  "userdata", "line", "cmark", "mark", "function",
+  "function", "table", "string", "number", "nil",
+  NULL
+};
 
 static FILE *fp;
 static char *st;
@@ -135,16 +142,26 @@ static void lua_internaldofile (void)
 
 static char *tostring (lua_Object obj)
 {
-  if (lua_isstring(obj))   /* get strings and numbers */
-    return lua_getstring(obj);
-  else if (lua_istable(obj))
-    return "<table>";
-  else if (lua_isfunction(obj))
-    return "<function>";
-  else if (lua_isnil(obj))
-    return "nil";
-  else /* if (lua_isuserdata(obj)) */
-    return "<userdata>";
+  TObject *o = luaI_Address(obj);
+  switch (ttype(o)) {
+    case LUA_T_NUMBER:  case LUA_T_STRING:
+      return lua_getstring(obj);
+    case LUA_T_ARRAY: case LUA_T_FUNCTION:
+    case LUA_T_CFUNCTION: case LUA_T_NIL:
+      return typenames[-ttype(o)];
+    case LUA_T_USERDATA: {
+      char *buff = luaI_buffer(100);
+      int size = o->value.ts->size;
+      int i;
+      strcpy(buff, "userdata: ");
+      if (size > 10) size = 10;
+      for (i=0; i<size; i++)
+        sprintf(buff+strlen(buff), "%.2X",
+               (int)(unsigned char)o->value.ts->str[i]);
+      return buff;
+    }
+    default: return "<unknown object>";
+  }
 }
 
 static void luaI_tostring (void)
@@ -158,6 +175,14 @@ static void luaI_print (void)
   lua_Object obj;
   while ((obj = lua_getparam(i++)) != LUA_NOOBJECT)
     printf("%s\n", tostring(obj));
+}
+
+static void luaI_type (void)
+{
+  lua_Object o = lua_getparam(1);
+  luaL_arg_check(o != LUA_NOOBJECT, "type", 1, "no argument");
+  lua_pushstring(typenames[-ttype(luaI_Address(o))]);
+  lua_pushnumber(lua_tag(o));
 }
 
 /*
@@ -263,7 +288,7 @@ static void luaIl_settag (void)
 
 static void luaIl_newtag (void)
 {
-  lua_pushnumber(lua_newtag(luaL_check_string(1, "newtag")));
+  lua_pushnumber(lua_newtag());
 }
 
 static void basicindex (void)
