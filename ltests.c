@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.24 2000/06/08 17:48:31 roberto Exp roberto $
+** $Id: ltests.c,v 1.25 2000/06/12 13:52:05 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -50,7 +50,7 @@ static void setnameval (lua_Object t, const char *name, int val) {
 */
 
 
-static const char *const instrname[OP_SETLINE+1] = {
+static const char *const instrname[NUM_OPCODES] = {
   "END", "RETURN", "CALL", "TAILCALL", "PUSHNIL", "POP", "PUSHINT", 
   "PUSHSTRING", "PUSHNUM", "PUSHNEGNUM", "PUSHUPVALUE", "GETLOCAL", 
   "GETGLOBAL", "GETTABLE", "GETDOTTED", "GETINDEXED", "PUSHSELF", 

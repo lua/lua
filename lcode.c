@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.35 2000/06/12 13:52:05 roberto Exp roberto $
+** $Id: lcode.c,v 1.36 2000/06/16 17:51:40 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -632,7 +632,7 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
 }
 
 
-const struct OpProperties luaK_opproperties[OP_SETLINE+1] = {
+const struct OpProperties luaK_opproperties[NUM_OPCODES] = {
   {iO, 0},	/* OP_END */
   {iU, 0},	/* OP_RETURN */
   {iAB, 0},	/* OP_CALL */

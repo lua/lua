@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.62 2000/05/22 18:44:46 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.63 2000/06/05 14:56:18 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -152,6 +152,7 @@ OP_SETLINE/*	U	-		-		LINE=u		*/
 
 } OpCode;
 
+#define NUM_OPCODES	((int)OP_SETLINE+1)
 
 
 #define ISJUMP(o)	(OP_JMPNE <= (o) && (o) <= OP_JMP)
