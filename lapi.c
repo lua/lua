@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.174 2002/02/14 21:46:13 roberto Exp roberto $
+** $Id: lapi.c,v 1.175 2002/03/04 21:29:41 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -80,8 +80,18 @@ void luaA_pushobject (lua_State *L, const TObject *o) {
   incr_top(L);
 }
 
-LUA_API int lua_stackspace (lua_State *L) {
-  return (L->stack_last - L->top);
+
+LUA_API int lua_checkstack (lua_State *L, int size) {
+  int res;
+  lua_lock(L);
+  if ((L->top - L->stack) + size >= LUA_MAXSTACK)
+    res = 0;  /* stack overflow */
+  luaD_checkstack(L, size);
+  if (L->ci->top < L->top + size)
+    L->ci->top = L->top + size;
+  res = 1;
+  lua_unlock(L);
+  return res;
 }
 
 
@@ -667,8 +677,7 @@ LUA_API int lua_pushupvalues (lua_State *L) {
   func = (L->ci->base - 1);
   api_check(L, iscfunction(func));
   n = clvalue(func)->c.nupvalues;
-  if (LUA_MINSTACK+n > lua_stackspace(L))
-    luaD_error(L, "stack overflow");
+  luaD_checkstack(L, n + LUA_MINSTACK);
   for (i=0; i<n; i++) {
     setobj(L->top, &clvalue(func)->c.upvalue[i]);
     L->top++;

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: lauxlib.c,v 1.60 2002/02/14 21:41:53 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -67,7 +67,7 @@ static void tag_error (lua_State *L, int narg, int tag) {
 
 
 LUALIB_API void luaL_check_stack (lua_State *L, int space, const char *mes) {
-  if (space > lua_stackspace(L))
+  if (!lua_checkstack(L, space))
     luaL_verror(L, "stack overflow (%.30s)", mes);
 }
 
