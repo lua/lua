@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.21 1998/01/02 17:46:32 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.22 1998/01/07 16:26:48 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -263,7 +263,7 @@ static int getnarg (lua_Object table)
   lua_Object temp;
   /* temp = table.n */
   lua_pushobject(table); lua_pushstring("n"); temp = lua_rawgettable();
-  return (lua_isnumber(temp) ? lua_getnumber(temp) : MAX_WORD);
+  return (lua_isnumber(temp) ? lua_getnumber(temp) : MAX_INT);
 }
 
 static void luaI_call (void)
@@ -283,7 +283,7 @@ static void luaI_call (void)
     lua_Object temp;
     /* temp = arg[i+1] */
     lua_pushobject(arg); lua_pushnumber(i+1); temp = lua_rawgettable();
-    if (narg == MAX_WORD && lua_isnil(temp))
+    if (narg == MAX_INT && lua_isnil(temp))
       break;
     lua_pushobject(temp);
   }

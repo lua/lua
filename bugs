@@ -2,3 +2,14 @@
 Tue Dec  2 10:45:48 EDT 1997
 >> BUG: "lastline" was not reset on function entry, so debug information
 >> started only in the 2nd line of a function.
+
+
+--- Version 3.1 alpha
+
+** lua.c
+Thu Jan 15 14:34:58 EDT 1998
+>> must include "stdlib.h" (for "exit()").
+
+** lbuiltin.c / lobject.h
+Thu Jan 15 14:34:58 EDT 1998
+>> MAX_WORD may be bigger than MAX_INT
