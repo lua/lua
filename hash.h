@@ -2,7 +2,7 @@
 ** hash.h
 ** hash manager for lua
 ** Luiz Henrique de Figueiredo - 17 Aug 90
-** $Id: hash.h,v 2.1 1994/04/20 22:07:57 celes Exp celes $
+** $Id: hash.h,v 2.2 1994/08/05 19:25:09 celes Exp celes $
 */
 
 #ifndef hash_h
@@ -12,14 +12,14 @@ typedef struct node
 {
  Object ref;
  Object val;
- struct node *next;
 } Node;
 
 typedef struct Hash
 {
  char           mark;
  unsigned int   nhash;
- Node         **list;
+ unsigned int   nuse;
+ Node          *node;
 } Hash;
 
 
