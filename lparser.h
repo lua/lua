@@ -47,15 +47,21 @@
 */
 
 typedef enum {
-  VGLOBAL,  /* info is constant index of global name */
-  VLOCAL,   /* info is stack index */
+  VGLOBAL,
+  VLOCAL,
   VINDEXED,
-  VEXP      /* info is jump target if exp has internal jumps */
+  VEXP
 } expkind;
 
 typedef struct expdesc {
   expkind k;
-  int info;
+  union {
+    int index;  /* VGLOBAL: `kstr' index of global name; VLOCAL: stack index */
+    struct {
+      int t;  /* patch list of `exit when true' */
+      int f;  /* patch list of `exit when false' */
+    } l;
+  } u;
 } expdesc;
 
 

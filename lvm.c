@@ -478,36 +478,6 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
         break;
       }
 
-      case NEQOP:
-        top--;
-        setbool(top-1, !luaO_equalObj(top-1, top));
-        break;
-
-      case EQOP:
-        top--;
-        setbool(top-1, luaO_equalObj(top-1, top));
-        break;
-
-      case LTOP:
-        top--;
-        setbool(top-1, luaV_lessthan(L, top-1, top, top+1));
-        break;
-
-      case LEOP:  /* a <= b  ===  !(b<a) */
-        top--;
-        setbool(top-1, !luaV_lessthan(L, top, top-1, top+1));
-        break;
-
-      case GTOP:  /* a > b  ===  (b<a) */
-        top--;
-        setbool(top-1, luaV_lessthan(L, top, top-1, top+1));
-        break;
-
-      case GEOP:  /* a >= b  ===  !(a<b) */
-        top--;
-        setbool(top-1, !luaV_lessthan(L, top-1, top, top+1));
-        break;
-
       case ADDOP:
         if (tonumber(top-1) || tonumber(top-2))
           call_arith(L, top, IM_ADD);
@@ -579,6 +549,44 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
         nvalue(top-1) = 1;
         break;
 
+      case IFNEQJMP:
+        top -= 2;
+        if (!luaO_equalObj(top, top+1)) pc += GETARG_S(i);
+        break;
+
+      case IFEQJMP:
+        top -= 2;
+        if (luaO_equalObj(top, top+1)) pc += GETARG_S(i);
+        break;
+
+      case IFLTJMP:
+        top -= 2;
+        if (luaV_lessthan(L, top, top+1, top+2)) pc += GETARG_S(i);
+        break;
+
+      case IFLEJMP:  /* a <= b  ===  !(b<a) */
+        top -= 2;
+        if (!luaV_lessthan(L, top+1, top, top+2)) pc += GETARG_S(i);
+        break;
+
+      case IFGTJMP:  /* a > b  ===  (b<a) */
+        top -= 2;
+        if (luaV_lessthan(L, top+1, top, top+2)) pc += GETARG_S(i);
+        break;
+
+      case IFGEJMP:  /* a >= b  ===  !(a<b) */
+        top -= 2;
+        if (!luaV_lessthan(L, top, top+1, top+2)) pc += GETARG_S(i);
+        break;
+
+      case IFTJMP:
+        if (ttype(--top) != LUA_T_NIL) pc += GETARG_S(i);
+        break;
+
+      case IFFJMP:
+        if (ttype(--top) == LUA_T_NIL) pc += GETARG_S(i);
+        break;
+
       case ONTJMP:
         if (ttype(top-1) != LUA_T_NIL) pc += GETARG_S(i);
         else top--;
@@ -593,12 +601,9 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
         pc += GETARG_S(i);
         break;
 
-      case IFTJMP:
-        if (ttype(--top) != LUA_T_NIL) pc += GETARG_S(i);
-        break;
-
-      case IFFJMP:
-        if (ttype(--top) == LUA_T_NIL) pc += GETARG_S(i);
+      case PUSHNILJMP:
+        ttype(top++) = LUA_T_NIL;
+        pc++;
         break;
 
       case CLOSURE:

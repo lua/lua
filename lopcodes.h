@@ -11,7 +11,7 @@
 
 /*===========================================================================
   We assume that instructions are unsigned numbers with 4 bytes.
-  All instructions have an opcode in the lower byte. Moreover,
+  All instructions have an opcode in the 8 bits. Moreover,
   an instruction can have 0, 1, or 2 arguments. There are 4 types of
   Instructions:
   type 0: no arguments
@@ -24,21 +24,23 @@
   is the usigned value minus 2^23.
 ===========================================================================*/
 
+#define SIZE_INSTRUCTION	32
+
 #define SIZE_OP		8
-#define SIZE_U		24
-#define POS_U		8
-#define SIZE_S		24
-#define POS_S		8
-#define SIZE_A		16
-#define POS_A		16
+#define SIZE_U		(SIZE_INSTRUCTION-SIZE_OP)
+#define POS_U		SIZE_OP
+#define SIZE_S		(SIZE_INSTRUCTION-SIZE_OP)
+#define POS_S		SIZE_OP
 #define SIZE_B		8
-#define POS_B		8
+#define POS_B		SIZE_OP
+#define SIZE_A		(SIZE_INSTRUCTION-(SIZE_OP+SIZE_B))
+#define POS_A		(SIZE_OP+SIZE_B)
 
 #define EXCESS_S	(1<<(SIZE_S-1))		/* == 2^23 */
 
 
 /* creates a mask with `n' 1 bits at position `p' */
-#define MASK1(n,p)	((~((~0ul)<<n))<<p)
+#define MASK1(n,p)	((~((~(Instruction)0)<<n))<<p)
 
 /* creates a mask with `n' 0 bits at position `p' */
 #define MASK0(n,p)	(~MASK1(n,p))
@@ -58,11 +60,15 @@
 #define GETARG_A(i)	((int)((i)>>POS_A))
 #define GETARG_B(i)	((int)(((i)>>POS_B) & MASK1(SIZE_B,0)))
 
-#define SET_OPCODE(i,o)	(((i)&MASK0(SIZE_OP,0)) | (Instruction)(o))
-#define SETARG_U(i,u)	(((i)&MASK0(SIZE_U,POS_U)) | ((Instruction)(u)<<POS_U))
-#define SETARG_S(i,s)	(((i)&MASK0(SIZE_S,POS_S)) | ((Instruction)((s)+EXCESS_S)<<POS_S))
-#define SETARG_A(i,a)	(((i)&MASK0(SIZE_A,POS_A)) | ((Instruction)(a)<<POS_A))
-#define SETARG_B(i,b)	(((i)&MASK0(SIZE_B,POS_B)) | ((Instruction)(b)<<POS_B))
+#define SET_OPCODE(i,o)	((i) = (((i)&MASK0(SIZE_OP,0)) | (Instruction)(o)))
+#define SETARG_U(i,u)	((i) = (((i)&MASK0(SIZE_U,POS_U)) | \
+                               ((Instruction)(u)<<POS_U)))
+#define SETARG_S(i,s)	((i) = (((i)&MASK0(SIZE_S,POS_S)) | \
+                               ((Instruction)((s)+EXCESS_S)<<POS_S)))
+#define SETARG_A(i,a)	((i) = (((i)&MASK0(SIZE_A,POS_A)) | \
+                               ((Instruction)(a)<<POS_A)))
+#define SETARG_B(i,b)	((i) = (((i)&MASK0(SIZE_B,POS_B)) | \
+                               ((Instruction)(b)<<POS_B)))
 
 #define CREATE_0(o)	 ((Instruction)(o))
 #define CREATE_U(o,u)	 ((Instruction)(o) | (Instruction)(u)<<POS_U)
@@ -115,13 +121,6 @@ SETTABLE,/*	U	v a_u-a_1 i t	 a_u-a_1 i t	t[i]=v		*/
 SETLIST,/*	A B	v_b-v_0 t	t		t[i+a*FPF]=v_i	*/
 SETMAP,/*	U	v_u k_u - v_0 k_0 t	t	t[k_i]=v_i	*/
 
-NEQOP,/*	-	y x		(x~=y)? 1 : nil			*/
-EQOP,/*		-	y x		(x==y)? 1 : nil			*/
-LTOP,/*		-	y x		(x<y)? 1 : nil			*/
-LEOP,/*		-	y x		(x<y)? 1 : nil			*/
-GTOP,/*		-	y x		(x>y)? 1 : nil			*/
-GEOP,/*		-	y x		(x>=y)? 1 : nil			*/
-
 ADDOP,/*	-	y x		x+y				*/
 ADDI,/*		S	x		x+s				*/
 SUBOP,/*	-	y x		x-y				*/
@@ -132,17 +131,30 @@ CONCOP,/*	U	v_u-v_1		v1..-..v_u			*/
 MINUSOP,/*	-	x		-x				*/
 NOTOP,/*	-	x		(x==nil)? 1 : nil		*/
 
+IFNEQJMP,/*	J	y x		-		(x~=y)? PC+=s	*/
+IFEQJMP,/*	J	y x		-		(x==y)? PC+=s	*/
+IFLTJMP,/*	J	y x		-		(x<y)? PC+=s	*/
+IFLEJMP,/*	J	y x		-		(x<y)? PC+=s	*/
+IFGTJMP,/*	J	y x		-		(x>y)? PC+=s	*/
+IFGEJMP,/*	J	y x		-		(x>=y)? PC+=s	*/
+
+IFTJMP,/*	J	x		-		(x!=nil)? PC+=s	*/
+IFFJMP,/*	J	x		-		(x==nil)? PC+=s	*/
 ONTJMP,/*	J	x		(x!=nil)? x : -	(x!=nil)? PC+=s	*/
 ONFJMP,/*	J	x		(x==nil)? x : -	(x==nil)? PC+=s	*/
 JMP,/*		J	-		-		PC+=s		*/
-IFTJMP,/*	J	x		-		(x!=nil)? PC+=s	*/
-IFFJMP,/*	J	x		-		(x==nil)? PC+=s	*/
 
-CLOSURE,/*	A B	v_b-v_1		closure(CNST[a], v_b-v_1)	*/
+PUSHNILJMP,/*	-	-		nil		PC++;		*/
+
+CLOSURE,/*	A B	v_b-v_1		closure(CNST[a], v_1-v_b)	*/
 
 SETLINE/*	U	-		-		LINE=u		*/
 
 } OpCode;
+
+
+
+#define ISJUMP(o)	(IFNEQJMP <= (o) && (o) <= JMP)
 
 
 #define RFIELDS_PER_FLUSH 32	/* records (SETMAP) */
