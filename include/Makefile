@@ -1,4 +1,4 @@
-# makefile for lua distribution (includes)
+# makefile for Lua distribution (includes)
 
 LUA= ..
 

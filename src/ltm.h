@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 1.5 1999/01/15 13:11:57 roberto Exp $
+** $Id: ltm.h,v 1.18 2000/10/05 13:00:17 roberto Exp $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -13,50 +13,47 @@
 
 /*
 * WARNING: if you change the order of this enumeration,
-* grep "ORDER IM"
+* grep "ORDER TM"
 */
 typedef enum {
-  IM_GETTABLE = 0,
-  IM_SETTABLE,
-  IM_INDEX,
-  IM_GETGLOBAL,
-  IM_SETGLOBAL,
-  IM_ADD,
-  IM_SUB,
-  IM_MUL,
-  IM_DIV,
-  IM_POW,
-  IM_UNM,
-  IM_LT,
-  IM_LE,
-  IM_GT,
-  IM_GE,
-  IM_CONCAT,
-  IM_GC,
-  IM_FUNCTION
-} IMS;
-
-#define IM_N 18
+  TM_GETTABLE = 0,
+  TM_SETTABLE,
+  TM_INDEX,
+  TM_GETGLOBAL,
+  TM_SETGLOBAL,
+  TM_ADD,
+  TM_SUB,
+  TM_MUL,
+  TM_DIV,
+  TM_POW,
+  TM_UNM,
+  TM_LT,
+  TM_CONCAT,
+  TM_GC,
+  TM_FUNCTION,
+  TM_N		/* number of elements in the enum */
+} TMS;
 
 
-struct IM {
-  TObject int_method[IM_N];
+struct TM {
+  Closure *method[TM_N];
+  TString *collected;  /* list of garbage-collected udata with this tag */
 };
 
 
-#define luaT_getim(tag,event) (&L->IMtable[-(tag)].int_method[event])
-#define luaT_getimbyObj(o,e)  (luaT_getim(luaT_effectivetag(o),(e)))
-
-extern char *luaT_eventname[];
+#define luaT_gettm(L,tag,event) (L->TMtable[tag].method[event])
+#define luaT_gettmbyObj(L,o,e)  (luaT_gettm((L),luaT_tag(o),(e)))
 
 
-void luaT_init (void);
-void luaT_realtag (int tag);
-int luaT_effectivetag (TObject *o);
-void luaT_settagmethod (int t, char *event, TObject *func);
-TObject *luaT_gettagmethod (int t, char *event);
-char *luaT_travtagmethods (int (*fn)(TObject *));
+#define validtag(t) (NUM_TAGS <= (t) && (t) <= L->last_tag)
 
-void luaT_setfallback (void);  /* only if LUA_COMPAT2_5 */
+extern const char *const luaT_eventname[];
+
+
+void luaT_init (lua_State *L);
+void luaT_realtag (lua_State *L, int tag);
+int luaT_tag (const TObject *o);
+int luaT_validevent (int t, int e);  /* used by compatibility module */
+
 
 #endif

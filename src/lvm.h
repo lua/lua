@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 1.8 1999/02/08 17:07:59 roberto Exp $
+** $Id: lvm.h,v 1.27 2000/10/05 12:14:08 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -13,22 +13,20 @@
 #include "ltm.h"
 
 
-#define tonumber(o) ((ttype(o) != LUA_T_NUMBER) && (luaV_tonumber(o) != 0))
-#define tostring(o) ((ttype(o) != LUA_T_STRING) && (luaV_tostring(o) != 0))
+#define tonumber(o)   ((ttype(o) != LUA_TNUMBER) && (luaV_tonumber(o) != 0))
+#define tostring(L,o) ((ttype(o) != LUA_TSTRING) && (luaV_tostring(L, o) != 0))
 
 
-void luaV_pack (StkId firstel, int nvararg, TObject *tab);
 int luaV_tonumber (TObject *obj);
-int luaV_tostring (TObject *obj);
-void luaV_setn (Hash *t, int val);
-void luaV_gettable (void);
-void luaV_settable (TObject *t);
-void luaV_rawsettable (TObject *t);
-void luaV_getglobal (TaggedString *ts);
-void luaV_setglobal (TaggedString *ts);
-StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base);
-void luaV_closure (int nelems);
-void luaV_comparison (lua_Type ttype_less, lua_Type ttype_equal,
-                      lua_Type ttype_great, IMS op);
+int luaV_tostring (lua_State *L, TObject *obj);
+const TObject *luaV_gettable (lua_State *L, StkId t);
+void luaV_settable (lua_State *L, StkId t, StkId key);
+const TObject *luaV_getglobal (lua_State *L, TString *s);
+void luaV_setglobal (lua_State *L, TString *s);
+StkId luaV_execute (lua_State *L, const Closure *cl, StkId base);
+void luaV_Cclosure (lua_State *L, lua_CFunction c, int nelems);
+void luaV_Lclosure (lua_State *L, Proto *l, int nelems);
+int luaV_lessthan (lua_State *L, const TObject *l, const TObject *r, StkId top);
+void luaV_strconc (lua_State *L, int total, StkId top);
 
 #endif

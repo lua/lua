@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.h,v 1.6 1999/06/22 20:37:23 roberto Exp $
+** $Id: ldo.h,v 1.28 2000/10/06 12:45:25 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -12,35 +12,22 @@
 #include "lstate.h"
 
 
-#define MULT_RET        255
-
-
-
 /*
 ** macro to increment stack top.
 ** There must be always an empty slot at the L->stack.top
 */
-#define incr_top { if (L->stack.top >= L->stack.last) luaD_checkstack(1); \
-                   L->stack.top++; }
+#define incr_top {if (L->top == L->stack_last) luaD_checkstack(L, 1); L->top++;}
 
 
-/* macros to convert from lua_Object to (TObject *) and back */
+void luaD_init (lua_State *L, int stacksize);
+void luaD_adjusttop (lua_State *L, StkId base, int extra);
+void luaD_lineHook (lua_State *L, StkId func, int line, lua_Hook linehook);
+void luaD_call (lua_State *L, StkId func, int nResults);
+void luaD_callTM (lua_State *L, Closure *f, int nParams, int nResults);
+void luaD_checkstack (lua_State *L, int n);
 
-#define Address(lo)     ((lo)+L->stack.stack-1)
-#define Ref(st)         ((st)-L->stack.stack+1)
-
-
-void luaD_init (void);
-void luaD_adjusttop (StkId newtop);
-void luaD_openstack (int nelems);
-void luaD_lineHook (int line);
-void luaD_callHook (StkId base, TProtoFunc *tf, int isreturn);
-void luaD_calln (int nArgs, int nResults);
-void luaD_callTM (TObject *f, int nParams, int nResults);
-int luaD_protectedrun (void);
-void luaD_gcIM (TObject *o);
-void luaD_travstack (int (*fn)(TObject *));
-void luaD_checkstack (int n);
+void luaD_breakrun (lua_State *L, int errcode);
+int luaD_runprotected (lua_State *L, void (*f)(lua_State *, void *), void *ud);
 
 
 #endif

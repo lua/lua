@@ -1,4 +1,4 @@
-# makefile for lua basic library
+# makefile for Lua core library
 
 LUA= ..
 
@@ -6,9 +6,8 @@ include $(LUA)/config
 
 OBJS=	\
 	lapi.o \
-	lauxlib.o \
-	lbuffer.o \
-	lbuiltin.o \
+	lcode.o \
+	ldebug.o \
 	ldo.o \
 	lfunc.o \
 	lgc.o \
@@ -19,6 +18,7 @@ OBJS=	\
 	lstate.o \
 	lstring.o \
 	ltable.o \
+	ltests.o \
 	ltm.o \
 	lundump.o \
 	lvm.o \
@@ -26,9 +26,8 @@ OBJS=	\
 
 SRCS=	\
 	lapi.c \
-	lauxlib.c \
-	lbuffer.c \
-	lbuiltin.c \
+	lcode.c \
+	ldebug.c \
 	ldo.c \
 	lfunc.c \
 	lgc.c \
@@ -39,16 +38,19 @@ SRCS=	\
 	lstate.c \
 	lstring.c \
 	ltable.c \
+	ltests.c \
 	ltm.c \
 	lundump.c \
 	lvm.c \
 	lzio.c \
 	lapi.h \
-	lbuiltin.h \
+	lcode.h \
+	ldebug.h \
 	ldo.h \
 	lfunc.h \
 	lgc.h \
 	llex.h \
+	llimits.h \
 	lmem.h \
 	lobject.h \
 	lopcodes.h \

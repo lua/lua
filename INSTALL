@@ -1,11 +1,14 @@
-This is Lua 3.2
+This is Lua 4.0.
 
 * Installation
   ------------
   Building Lua on a Unix system should be very easy:
 
 	1. Edit "config" to suit your platform, if at all necessary.
-	2. Then, type "make".
+	2. Do "make".
+	3. If you want to install Lua in an "official" place in your system,
+	   then do "make install". The official place and the way to install
+	   files are defined in "config". You may have to be root to do this.
 
   See below for instructions for Windows and Macintosh.
 
@@ -17,55 +20,53 @@ This is Lua 3.2
 	* include files in ./include.
   These are the only directories you need for development.
 
-  There is a reference manual in html in ./doc, some sample code in ./test,
-  and some useful stuff in ./etc.
-  You don't need these directories for development.
+  There man pages for lua and luac in both nroff and html, and a reference
+  manual in html in ./doc, some sample code in ./test, and some useful stuff
+  in ./etc. You don't need these directories for development.
 
   See also the README files in the various subdirectories.
-  A convenient staring point is ./doc/readme.html.
+  A convenient starting point is ./doc/readme.html.
 
 * If you have problems (and solutions!)
   -------------------------------------
   If "make" fails, please let us know (lua@tecgraf.puc-rio.br).
-  If you make changes to "config", please send them to us.
+  If you make changes to "config" or to the Makefiles, please send them to us.
 
 * Shared libraries
   ----------------
-  If you are running SunOs 4.x, type the following after "make" succeeds:
-	ld -o lib/liblua.so.3.2 src/*.o
-	ld -o lib/liblualib.so.3.2 src/lib/*.o
+  If you are running Linux, do "make so" after "make" succeeds.
+  This will create shared libraries in ./lib. It's probably better to
+  build shared libraries before "make install".
 
-  If you are running Linux, type the following after "make" succeeds:
-	ld -o lib/liblua.so.3.2 -shared src/*.o
-	ld -o lib/liblualib.so.3.2 -shared src/lib/*.o
-	cd lib
-	ln -s liblua.so.3.2 liblua.so
-	ln -s liblualib.so.3.2 liblualib.so.3.2
+  If you want the interpreter and the compiler to use shared libraries,
+  then do "make sobin" too.
 
-  If you want the interpreter to use shared libraries, then do this too:
-	rm bin/lua
-	cd src/lua; make
-  You may need to include lib/ in the LD_LIBRAY_PATH environment variable.
+  You may need to include lib/ in the LD_LIBRAY_PATH environment variable
+  to link programs that use the shared libraries if you don't put them in
+  the "official" places with "make install".
 
-  Building shared libraries in other systems is similar but details differ.
+  Building shared libraries in other systems is similar but details differ;
+  you may need to fix a few details in the top-level Makefile.
 
 * Installation on Windows or Macintosh
   ------------------------------------
   The instructions for building Lua on a Mac or Windows machine depend on
   the particular compiler you are using.
   The simplest way is to create a folder with all .c and .h files.
-  Then create projects for the basic library, the standard library,
-  the interpreter and the compiler, as follows:
+  Then create projects for the core library, the standard library,
+  the interpreter, and the compiler, as follows:
 
-  basic lib:	lapi.c lauxlib.c lbuffer.c lbuiltin.c ldo.c lfunc.c lgc.c
-		llex.c lmem.c lobject.c lparser.c lstate.c lstring.c ltable.c
+  core lib:	lapi.c lcode.c ldebug.c ldo.c lfunc.c lgc.c llex.c lmem.c
+		lobject.c lparser.c lstate.c lstring.c ltable.c ltests.c
 		ltm.c lundump.c lvm.c lzio.c
 
-  standard lib:	linit.c ldblib.c liolib.c lmathlib.c lstrlib.c
+  standard lib:	lauxlib.c lbaselib.c ldblib.c liolib.c lmathlib.c lstrlib.c
 
-  interpreter:	basic lib, standard lib, lua.c
+  interpreter:	core lib, standard lib, lua.c
 
-  compiler:	basic lib, dump.c luac.c opcode.c opt.c print.c stubs.c test.c
+  compiler:	core lib, dump.c luac.c opt.c print.c stubs.c
 
   Of course, to use Lua as a library, you'll have to know how to create
   and use libraries with your compiler.
+
+(end of INSTALL)

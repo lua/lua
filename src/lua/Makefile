@@ -1,4 +1,4 @@
-# makefile for lua interpreter
+# makefile for Lua interpreter
 
 LUA= ../..
 
@@ -14,7 +14,7 @@ T= $(BIN)/lua
 all: $T
 
 $T: $(OBJS) $(LIB)/liblua.a $(LIB)/liblualib.a
-	$(CC) -o $@ $(OBJS) -L$(LIB) -llua -llualib -lm
+	$(CC) -o $@ $(OBJS) -L$(LIB) -llua -llualib $(EXTRA_LIBS)
 
 $(LIB)/liblua.a:
 	cd ..; $(MAKE)

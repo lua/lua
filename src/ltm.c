@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.25 1999/05/21 19:41:49 roberto Exp $
+** $Id: ltm.c,v 1.56 2000/10/31 13:10:24 roberto Exp $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -8,241 +8,156 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "lauxlib.h"
+#include "lua.h"
+
+#include "ldo.h"
 #include "lmem.h"
 #include "lobject.h"
 #include "lstate.h"
 #include "ltm.h"
 
 
-char *luaT_eventname[] = {  /* ORDER IM */
-  "gettable", "settable", "index", "getglobal", "setglobal", "add",
-  "sub", "mul", "div", "pow", "unm", "lt", "le", "gt", "ge",
-  "concat", "gc", "function", NULL
+const char *const luaT_eventname[] = {  /* ORDER TM */
+  "gettable", "settable", "index", "getglobal", "setglobal", "add", "sub",
+  "mul", "div", "pow", "unm", "lt", "concat", "gc", "function",
+  "le", "gt", "ge",  /* deprecated options!! */
+  NULL
 };
 
 
-static int luaI_checkevent (char *name, char *list[]) {
-  int e = luaL_findstring(name, list);
+static int findevent (const char *name) {
+  int i;
+  for (i=0; luaT_eventname[i]; i++)
+    if (strcmp(luaT_eventname[i], name) == 0)
+      return i;
+  return -1;  /* name not found */
+}
+
+
+static int luaI_checkevent (lua_State *L, const char *name, int t) {
+  int e = findevent(name);
+  if (e >= TM_N)
+    luaO_verror(L, "event `%.50s' is deprecated", name);
+  if (e == TM_GC && t == LUA_TTABLE)
+    luaO_verror(L, "event `gc' for tables is deprecated");
   if (e < 0)
-    luaL_verror("`%.50s' is not a valid event name", name);
+    luaO_verror(L, "`%.50s' is not a valid event name", name);
   return e;
 }
 
 
 
-/* events in LUA_T_NIL are all allowed, since this is used as a
+/* events in LUA_TNIL are all allowed, since this is used as a
 *  'placeholder' for "default" fallbacks
 */
-static char luaT_validevents[NUM_TAGS][IM_N] = { /* ORDER LUA_T, ORDER IM */
-{1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* LUA_T_USERDATA */
-{1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_T_NUMBER */
-{1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_T_STRING */
-{0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},  /* LUA_T_ARRAY */
-{1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_PROTO */
-{1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_CPROTO */
-{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}   /* LUA_T_NIL */
+/* ORDER LUA_T, ORDER TM */
+static const char luaT_validevents[NUM_TAGS][TM_N] = {
+  {1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* LUA_TUSERDATA */
+  {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},  /* LUA_TNIL */
+  {1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},  /* LUA_TNUMBER */
+  {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_TSTRING */
+  {0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* LUA_TTABLE */
+  {1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}   /* LUA_TFUNCTION */
 };
 
-static int luaT_validevent (int t, int e) {  /* ORDER LUA_T */
-  return (t < LUA_T_NIL) ?  1 : luaT_validevents[-t][e];
+int luaT_validevent (int t, int e) {  /* ORDER LUA_T */
+  return (t >= NUM_TAGS) ?  1 : luaT_validevents[t][e];
 }
 
 
-static void init_entry (int tag) {
+static void init_entry (lua_State *L, int tag) {
   int i;
-  for (i=0; i<IM_N; i++)
-    ttype(luaT_getim(tag, i)) = LUA_T_NIL;
+  for (i=0; i<TM_N; i++)
+    luaT_gettm(L, tag, i) = NULL;
+  L->TMtable[tag].collected = NULL;
 }
 
 
-void luaT_init (void) {
+void luaT_init (lua_State *L) {
   int t;
-  L->last_tag = -(NUM_TAGS-1);
-  luaM_growvector(L->IMtable, 0, NUM_TAGS, struct IM, arrEM, MAX_INT);
-  for (t=L->last_tag; t<=0; t++)
-    init_entry(t);
+  luaM_growvector(L, L->TMtable, 0, NUM_TAGS, struct TM, "", MAX_INT);
+  L->nblocks += NUM_TAGS*sizeof(struct TM);
+  L->last_tag = NUM_TAGS-1;
+  for (t=0; t<=L->last_tag; t++)
+    init_entry(L, t);
 }
 
 
-int lua_newtag (void) {
-  --L->last_tag;
-  luaM_growvector(L->IMtable, -(L->last_tag), 1, struct IM, arrEM, MAX_INT);
-  init_entry(L->last_tag);
+LUA_API int lua_newtag (lua_State *L) {
+  luaM_growvector(L, L->TMtable, L->last_tag, 1, struct TM,
+                  "tag table overflow", MAX_INT);
+  L->nblocks += sizeof(struct TM);
+  L->last_tag++;
+  init_entry(L, L->last_tag);
   return L->last_tag;
 }
 
 
-static void checktag (int tag) {
-  if (!(L->last_tag <= tag && tag <= 0))
-    luaL_verror("%d is not a valid tag", tag);
+static void checktag (lua_State *L, int tag) {
+  if (!(0 <= tag && tag <= L->last_tag))
+    luaO_verror(L, "%d is not a valid tag", tag);
 }
 
-void luaT_realtag (int tag) {
-  if (!(L->last_tag <= tag && tag < LUA_T_NIL))
-    luaL_verror("tag %d was not created by `newtag'", tag);
+void luaT_realtag (lua_State *L, int tag) {
+  if (!validtag(tag))
+    luaO_verror(L, "tag %d was not created by `newtag'", tag);
 }
 
 
-int lua_copytagmethods (int tagto, int tagfrom) {
+LUA_API int lua_copytagmethods (lua_State *L, int tagto, int tagfrom) {
   int e;
-  checktag(tagto);
-  checktag(tagfrom);
-  for (e=0; e<IM_N; e++) {
+  checktag(L, tagto);
+  checktag(L, tagfrom);
+  for (e=0; e<TM_N; e++) {
     if (luaT_validevent(tagto, e))
-      *luaT_getim(tagto, e) = *luaT_getim(tagfrom, e);
+      luaT_gettm(L, tagto, e) = luaT_gettm(L, tagfrom, e);
   }
   return tagto;
 }
 
 
-int luaT_effectivetag (TObject *o) {
-  int t;
-  switch (t = ttype(o)) {
-    case LUA_T_ARRAY:
-      return o->value.a->htag;
-    case LUA_T_USERDATA: {
-      int tag = o->value.ts->u.d.tag;
-      return (tag >= 0) ? LUA_T_USERDATA : tag;
-    }
-    case LUA_T_CLOSURE:
-      return o->value.cl->consts[0].ttype;
-#ifdef DEBUG
-    case LUA_T_PMARK: case LUA_T_CMARK:
-    case LUA_T_CLMARK: case LUA_T_LINE:
-      LUA_INTERNALERROR("invalid type");
-#endif
-    default:
-      return t;
+int luaT_tag (const TObject *o) {
+  int t = ttype(o);
+  switch (t) {
+    case LUA_TUSERDATA: return tsvalue(o)->u.d.tag;
+    case LUA_TTABLE:    return hvalue(o)->htag;
+    default:            return t;
   }
 }
 
 
-TObject *luaT_gettagmethod (int t, char *event) {
-  int e = luaI_checkevent(event, luaT_eventname);
-  checktag(t);
-  if (luaT_validevent(t, e))
-    return luaT_getim(t,e);
-  else
-    return &luaO_nilobject;
-}
-
-
-void luaT_settagmethod (int t, char *event, TObject *func) {
-  TObject temp;
-  int e = luaI_checkevent(event, luaT_eventname);
-  checktag(t);
-  if (!luaT_validevent(t, e))
-    luaL_verror("cannot change tag method `%.20s' for type `%.20s'%.20s",
-                luaT_eventname[e], luaO_typenames[-t],
-                (t == LUA_T_ARRAY || t == LUA_T_USERDATA) ? " with default tag"
-                                                          : "");
-  temp = *func;
-  *func = *luaT_getim(t,e);
-  *luaT_getim(t, e) = temp;
-}
-
-
-char *luaT_travtagmethods (int (*fn)(TObject *)) {  /* ORDER IM */
+LUA_API void lua_gettagmethod (lua_State *L, int t, const char *event) {
   int e;
-  for (e=IM_GETTABLE; e<=IM_FUNCTION; e++) {
-    int t;
-    for (t=0; t>=L->last_tag; t--)
-      if (fn(luaT_getim(t,e)))
-        return luaT_eventname[e];
+  e = luaI_checkevent(L, event, t);
+  checktag(L, t);
+  if (luaT_validevent(t, e) && luaT_gettm(L, t, e)) {
+    clvalue(L->top) = luaT_gettm(L, t, e);
+    ttype(L->top) = LUA_TFUNCTION;
   }
-  return NULL;
-}
-
-
-/*
-* ===================================================================
-* compatibility with old fallback system
-*/
-#ifdef LUA_COMPAT2_5
-
-#include "lapi.h"
-#include "lstring.h"
-
-static void errorFB (void)
-{
-  lua_Object o = lua_getparam(1);
-  if (lua_isstring(o))
-    fprintf(stderr, "lua: %s\n", lua_getstring(o));
   else
-    fprintf(stderr, "lua: unknown error\n");
+    ttype(L->top) = LUA_TNIL;
+  incr_top;
 }
 
 
-static void nilFB (void) { }
-
-
-static void typeFB (void) {
-  lua_error("unexpected type");
-}
-
-
-static void fillvalids (IMS e, TObject *func) {
-  int t;
-  for (t=LUA_T_NIL; t<=LUA_T_USERDATA; t++)
-    if (luaT_validevent(t, e))
-      *luaT_getim(t, e) = *func;
-}
-
-
-void luaT_setfallback (void) {
-  static char *oldnames [] = {"error", "getglobal", "arith", "order", NULL};
-  TObject oldfunc;
-  lua_CFunction replace;
-  char *name = luaL_check_string(1);
-  lua_Object func = lua_getparam(2);
-  luaL_arg_check(lua_isfunction(func), 2, "function expected");
-  switch (luaL_findstring(name, oldnames)) {
-    case 0: {  /* old error fallback */
-      TObject *em = &(luaS_new("_ERRORMESSAGE")->u.s.globalval);
-      oldfunc = *em;
-      *em = *luaA_Address(func);
-      replace = errorFB;
+LUA_API void lua_settagmethod (lua_State *L, int t, const char *event) {
+  int e = luaI_checkevent(L, event, t);
+  checktag(L, t);
+  if (!luaT_validevent(t, e))
+    luaO_verror(L, "cannot change `%.20s' tag method for type `%.20s'%.20s",
+                luaT_eventname[e], luaO_typenames[t],
+                (t == LUA_TTABLE || t == LUA_TUSERDATA) ?
+                   " with default tag" : "");
+  switch (ttype(L->top - 1)) {
+    case LUA_TNIL:
+      luaT_gettm(L, t, e) = NULL;
       break;
-    }
-    case 1:  /* old getglobal fallback */
-      oldfunc = *luaT_getim(LUA_T_NIL, IM_GETGLOBAL);
-      *luaT_getim(LUA_T_NIL, IM_GETGLOBAL) = *luaA_Address(func);
-      replace = nilFB;
+    case LUA_TFUNCTION:
+      luaT_gettm(L, t, e) = clvalue(L->top - 1);
       break;
-    case 2: {  /* old arith fallback */
-      int i;
-      oldfunc = *luaT_getim(LUA_T_NUMBER, IM_POW);
-      for (i=IM_ADD; i<=IM_UNM; i++)  /* ORDER IM */
-        fillvalids(i, luaA_Address(func));
-      replace = typeFB;
-      break;
-    }
-    case 3: {  /* old order fallback */
-      int i;
-      oldfunc = *luaT_getim(LUA_T_NIL, IM_LT);
-      for (i=IM_LT; i<=IM_GE; i++)  /* ORDER IM */
-        fillvalids(i, luaA_Address(func));
-      replace = typeFB;
-      break;
-    }
-    default: {
-      int e;
-      if ((e = luaL_findstring(name, luaT_eventname)) >= 0) {
-        oldfunc = *luaT_getim(LUA_T_NIL, e);
-        fillvalids(e, luaA_Address(func));
-        replace = (e == IM_GC || e == IM_INDEX) ? nilFB : typeFB;
-      }
-      else {
-        luaL_verror("`%.50s' is not a valid fallback name", name);
-        replace = NULL;  /* to avoid warnings */
-      }
-    }
+    default:
+      lua_error(L, "tag method must be a function (or nil)");
   }
-  if (oldfunc.ttype != LUA_T_NIL)
-    luaA_pushobject(&oldfunc);
-  else
-    lua_pushcfunction(replace);
+  L->top--;
 }
-#endif
 

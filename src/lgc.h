@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 1.4 1997/12/01 20:31:25 roberto Exp $
+** $Id: lgc.h,v 1.8 2000/10/02 14:47:43 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -11,11 +11,8 @@
 #include "lobject.h"
 
 
-void luaC_checkGC (void);
-TObject* luaC_getref (int ref);
-int luaC_ref (TObject *o, int lock);
-void luaC_hashcallIM (Hash *l);
-void luaC_strcallIM (TaggedString *l);
+void luaC_collect (lua_State *L, int all);
+void luaC_checkGC (lua_State *L);
 
 
 #endif

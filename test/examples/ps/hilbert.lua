@@ -3,8 +3,6 @@
 -- Luiz Henrique de Figueiredo (lhf@csg.uwaterloo.ca)
 -- 10 Nov 95
 
-$debug
-
 dofile("ps.lua")
 
 function p()

@@ -1,223 +1,99 @@
 /*
-** $Id: print.c,v 1.21 1999/05/25 19:58:55 lhf Exp $
+** $Id: print.c,v 1.32 2000/11/06 20:04:36 lhf Exp $
 ** print bytecodes
 ** See Copyright Notice in lua.h
 */
 
 #include <stdio.h>
 #include <stdlib.h>
+
 #include "luac.h"
 
-#ifdef DEBUG
-static void PrintConstants(TProtoFunc* tf)
+/* macros used in print.h, included in PrintCode */
+#define P_OP(x)	printf("%-11s\t",x)
+#define P_NONE
+#define P_AB	printf("%d %d",GETARG_A(i),GETARG_B(i))
+#define P_F	printf("%d %d\t; %p",GETARG_A(i),GETARG_B(i),tf->kproto[GETARG_A(i)])
+#define P_J	printf("%d\t; to %d",GETARG_S(i),GETARG_S(i)+at+1)
+#define P_Q	PrintString(tf,GETARG_U(i))
+#define P_K	printf("%d\t; %s",GETARG_U(i),tf->kstr[GETARG_U(i)]->str)
+#define P_L	PrintLocal(tf,GETARG_U(i),at-1)
+#define P_N	printf("%d\t; " NUMBER_FMT,GETARG_U(i),tf->knum[GETARG_U(i)])
+#define P_S	printf("%d",GETARG_S(i))
+#define P_U	printf("%u",GETARG_U(i))
+
+static void PrintString(const Proto* tf, int n)
 {
- int i,n=tf->nconsts;
- printf("constants (%d) for %p:\n",n,tf);
- for (i=0; i<n; i++)
+ const char* s=tf->kstr[n]->str;
+ printf("%d\t; ",n);
+ putchar('"');
+ for (; *s; s++)
  {
-  TObject* o=tf->consts+i;
-  printf("%6d ",i);
-  switch (ttype(o))
+  switch (*s)
   {
-   case LUA_T_NUMBER:
-	printf("N " NUMBER_FMT "\n",(double)nvalue(o));
-	break;
-   case LUA_T_STRING:
-	printf("S %p\t\"%s\"\n",tsvalue(o),svalue(o));
-	break;
-   case LUA_T_PROTO:
-	printf("F %p\n",tfvalue(o));
-	break;
-   case LUA_T_NIL:
-	printf("nil\n");
-	break;
-   default:				/* cannot happen */
-	printf("? type=%d\n",ttype(o)); 
-	break;
+   case '"': printf("\\\""); break;
+   case '\a': printf("\\a"); break;
+   case '\b': printf("\\b"); break;
+   case '\f': printf("\\f"); break;
+   case '\n': printf("\\n"); break;
+   case '\r': printf("\\r"); break;
+   case '\t': printf("\\t"); break;
+   case '\v': printf("\\v"); break;
+   default: putchar(*s); break;
   }
  }
-}
-#endif
-
-static void PrintConstant(TProtoFunc* tf, int i, int at)
-{
- TObject* o=luaU_getconstant(tf,i,at);
- switch (ttype(o))
- {
-  case LUA_T_NUMBER:
-       printf(NUMBER_FMT,(double)nvalue(o));
-       break;
-  case LUA_T_STRING:
-       printf("\"%s\"",svalue(o));
-       break;
-  case LUA_T_PROTO:
-       printf("function at %p",(void*)tfvalue(o));
-       break;
-  case LUA_T_NIL:
-       printf("(nil)");
-       break;
-  default:				/* cannot happen */
-       luaU_badconstant("print",i,o,tf);
-       break;
- }
+ putchar('"');
 }
 
-static void PrintCode(TProtoFunc* tf)
+static void PrintLocal(const Proto* tf, int n, int pc)
 {
- Byte* code=tf->code;
- Byte* p=code;
- int line=0;
- int longarg=0;
+ const char* s=luaF_getlocalname(tf,n+1,pc); 
+ printf("%u",n);
+ if (s!=NULL) printf("\t; %s",s);
+}
+
+static void PrintCode(const Proto* tf)
+{
+ const Instruction* code=tf->code;
+ const Instruction* p=code;
  for (;;)
  {
-	Opcode OP;
-	int n=INFO(tf,p,&OP);
-	int i=OP.arg+longarg;
-	int at=p-code;
-	longarg=0;
-	printf("%6d  ",at);
-	{
-	 Byte* q=p;
-	 int j=n;
-	 while (j--) printf("%02X",*q++);
-	}
-	printf("%*s%-14s  ",2*(5-n),"",OP.name);
-	if (OP.arg >=0) printf("%d",i);
-	if (OP.arg2>=0) printf(" %d",OP.arg2);
-
-	switch (OP.class)
-	{
-
-	case ENDCODE:
-		printf("\n");
-		return;
-
-	case PUSHCONSTANT:
-	case GETGLOBAL:
-	case SETGLOBAL:
-	case GETDOTTED:
-	case PUSHSELF:
-	case CLOSURE:
-		printf("\t; ");
-		PrintConstant(tf,i,at);
-		break;
-
-	case PUSHLOCAL:
-	case SETLOCAL:
-	{
-		char* s=luaF_getlocalname(tf,i+1,line);
-		if (s) printf("\t; %s",s);
-		break;
-	}
-
-	case SETLINE:
-		printf("\t; " SOURCE,tf->source->str,line=i);
-		break;
-
-	case LONGARG:
-		longarg=i<<16;
-		break;
-
-/* suggested by Norman Ramsey <nr@cs.virginia.edu> */
-	case ONTJMP:
-	case ONFJMP:
-	case JMP:
-	case IFFJMP:
-		printf("\t; to %d",at+i+n);
-		break;
-	case IFTUPJMP:
-	case IFFUPJMP:
-		printf("\t; to %d",at-i+n);
-		break;
-
-	}
-	printf("\n");
-	p+=n;
- }
-}
-
-static void PrintLocals(TProtoFunc* tf)
-{
- LocVar* v=tf->locvars;
- int n,i;
- if (v==NULL || v->line<0) return;
- n=tf->code[1]; if (n>=ZEROVARARG) n-=ZEROVARARG;
- printf("locals:");
- for (i=0; i<n; v++,i++)		/* arguments */
-  printf(" %s",v->varname->str);
- for (; v->line>=0; v++)
- {
-  if (v->varname==NULL)
-  {
-   --i; if (i<0) luaL_verror("bad locvars[%d]",v-tf->locvars); else printf(")");
+  int at=p-code+1;
+  Instruction i=*p;
+  int line=luaG_getline(tf->lineinfo,at-1,1,NULL);
+  printf("%6d\t",at);
+  if (line>=0) printf("[%d]\t",line); else printf("[-]\t");
+  switch (GET_OPCODE(i)) {
+#include "print.h"
   }
-  else
-  {
-   ++i; printf(" (%s",v->varname->str);
-  }
+  printf("\n");
+  if (i==OP_END) break;
+  p++;
  }
- i-=n;
- while (i--) printf(")");
- printf("\n");
 }
 
 #define IsMain(tf)	(tf->lineDefined==0)
 
-static void PrintHeader(TProtoFunc* tf, TProtoFunc* Main, int at)
+#define SS(x)	(x==1)?"":"s"
+#define S(x)	x,SS(x)
+
+static void PrintHeader(const Proto* tf)
 {
- int size=luaU_codesize(tf);
- if (IsMain(tf))
-  printf("\nmain " SOURCE " (%d bytes at %p)\n",
-	tf->source->str,tf->lineDefined,size,tf);
- else
- {
-  printf("\nfunction " SOURCE " (%d bytes at %p); used at ",
-	tf->source->str,tf->lineDefined,size,tf);
-  if (Main && IsMain(Main))
-   printf("main");
-  else
-   printf("%p",Main);
-  printf("+%d\n",at);
- }
+ printf("\n%s " SOURCE_FMT " (%d instruction%s/%d bytes at %p)\n",
+ 	IsMain(tf)?"main":"function",SOURCE,
+	S(tf->ncode),tf->ncode*Sizeof(Instruction),tf);
+ printf("%d%s param%s, %d stack%s, ",
+	tf->numparams,tf->is_vararg?"+":"",SS(tf->numparams),S(tf->maxstacksize));
+ printf("%d local%s, %d string%s, %d number%s, %d function%s, %d line%s\n",
+	S(tf->nlocvars),S(tf->nkstr),S(tf->nknum),S(tf->nkproto),S(tf->nlineinfo));
 }
 
-static void PrintFunction(TProtoFunc* tf, TProtoFunc* Main, int at);
+#define PrintFunction luaU_printchunk
 
-static void PrintFunctions(TProtoFunc* Main)
+void PrintFunction(const Proto* tf)
 {
- Byte* code=Main->code;
- Byte* p=code;
- int longarg=0;
- for (;;)
- {
-  Opcode OP;
-  int n=INFO(Main,p,&OP);
-  int op=OP.class;
-  int i=OP.arg+longarg;
-  longarg=0;
-  if (op==PUSHCONSTANT || op==CLOSURE)
-  {
-   TObject* o=Main->consts+i;
-   if (ttype(o)==LUA_T_PROTO) PrintFunction(tfvalue(o),Main,(int)(p-code));
-  }
-  else if (op==LONGARG) longarg=i<<16;
-  else if (op==ENDCODE) break;
-  p+=n;
- }
-}
-
-static void PrintFunction(TProtoFunc* tf, TProtoFunc* Main, int at)
-{
- PrintHeader(tf,Main,at);
- PrintLocals(tf);
+ int i,n=tf->nkproto;
+ PrintHeader(tf);
  PrintCode(tf);
-#ifdef DEBUG
- PrintConstants(tf);
-#endif
- PrintFunctions(tf);
-}
-
-void luaU_printchunk(TProtoFunc* Main)
-{
- PrintFunction(Main,0,0);
+ for (i=0; i<n; i++) PrintFunction(tf->kproto[i]);
 }

@@ -1,12 +1,12 @@
-# makefile for lua compiler
+# makefile for Lua compiler
 
 LUA= ../..
 
 include $(LUA)/config
 
 INCS= -I$(INC) $(EXTRA_INCS) -I..
-OBJS= dump.o luac.o opcode.o opt.o print.o stubs.o test.o
-SRCS= dump.c luac.c opcode.c opt.c print.c stubs.c test.c luac.h opcode.h
+OBJS= dump.o luac.o opt.o print.o stubs.o
+SRCS= dump.c luac.c opt.c print.c stubs.c luac.h print.h
 
 T= $(BIN)/luac
 

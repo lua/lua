@@ -1,4 +1,4 @@
-MANIFEST contents of Lua 3.2 distribution on Thu Jul  8 10:34:45 EST 1999
+MANIFEST contents of Lua 4.0 distribution on Mon Nov  6 19:15:16 EDT 2000
 lua
 lua/COPYRIGHT
 lua/HISTORY
@@ -11,16 +11,24 @@ lua/config
 lua/doc
 lua/doc/idx.html
 lua/doc/index.html
+lua/doc/logo.gif
+lua/doc/lua.1
+lua/doc/lua.html
+lua/doc/luac.1
 lua/doc/luac.html
-lua/doc/luac.man
 lua/doc/manual.html
 lua/doc/readme.html
 lua/etc
 lua/etc/Makefile
 lua/etc/README
 lua/etc/bin2c.c
+lua/etc/def.lua
+lua/etc/lua.ico
+lua/etc/lua.magic
+lua/etc/lua.xpm
 lua/etc/min.c
 lua/etc/setfallback.lua
+lua/etc/stdcall.lua
 lua/etc/trace.c
 lua/include
 lua/include/Makefile
@@ -33,10 +41,10 @@ lua/src
 lua/src/Makefile
 lua/src/lapi.c
 lua/src/lapi.h
-lua/src/lauxlib.c
-lua/src/lbuffer.c
-lua/src/lbuiltin.c
-lua/src/lbuiltin.h
+lua/src/lcode.c
+lua/src/lcode.h
+lua/src/ldebug.c
+lua/src/ldebug.h
 lua/src/ldo.c
 lua/src/ldo.h
 lua/src/lfunc.c
@@ -46,13 +54,15 @@ lua/src/lgc.h
 lua/src/lib
 lua/src/lib/Makefile
 lua/src/lib/README
+lua/src/lib/lauxlib.c
+lua/src/lib/lbaselib.c
 lua/src/lib/ldblib.c
-lua/src/lib/linit.c
 lua/src/lib/liolib.c
 lua/src/lib/lmathlib.c
 lua/src/lib/lstrlib.c
 lua/src/llex.c
 lua/src/llex.h
+lua/src/llimits.h
 lua/src/lmem.c
 lua/src/lmem.h
 lua/src/lobject.c
@@ -66,6 +76,7 @@ lua/src/lstring.c
 lua/src/lstring.h
 lua/src/ltable.c
 lua/src/ltable.h
+lua/src/ltests.c
 lua/src/ltm.c
 lua/src/ltm.h
 lua/src/lua
@@ -78,12 +89,10 @@ lua/src/luac/README
 lua/src/luac/dump.c
 lua/src/luac/luac.c
 lua/src/luac/luac.h
-lua/src/luac/opcode.c
-lua/src/luac/opcode.h
 lua/src/luac/opt.c
 lua/src/luac/print.c
+lua/src/luac/print.h
 lua/src/luac/stubs.c
-lua/src/luac/test.c
 lua/src/lundump.c
 lua/src/lundump.h
 lua/src/lvm.c
@@ -92,8 +101,8 @@ lua/src/lzio.c
 lua/src/lzio.h
 lua/test
 lua/test/README
-lua/test/array.lua
 lua/test/bisect.lua
+lua/test/cf-for.lua
 lua/test/cf.lua
 lua/test/examples
 lua/test/examples/ps
@@ -108,9 +117,17 @@ lua/test/factorial.lua
 lua/test/fib.lua
 lua/test/globals.lua
 lua/test/hello.lua
+lua/test/life.lua
+lua/test/lisp.lua
 lua/test/lua
 lua/test/luac
+lua/test/old.lua
+lua/test/qp.lua
 lua/test/save.lua
 lua/test/sort.lua
-lua/test/trace.lua
+lua/test/table.lua
+lua/test/trace-calls.lua
+lua/test/trace-globals.lua
+lua/test/undefined.lua
+lua/test/webform.lua
 END OF MANIFEST

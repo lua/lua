@@ -1,4 +1,32 @@
-This is Lua 3.2
+This is Lua 4.0.
+
+* Changes from version 3.2 to 4.0
+  -------------------------------
+  Language:
+  + new "break" and "for" statements (both numerical and for tables).
+  + uniform treatment of globals: globals are now stored in a Lua table.
+  + improved error messages.
+  + no more '$debug': full speed *and* full debug information.
+  + new read form: read(N) for next N bytes.
+  + general read patterns now deprecated.
+    (still available with -DCOMPAT_READPATTERNS.)
+  + all return values are passed as arguments for the last function
+    (old semantics still available with -DLUA_COMPAT_ARGRET)
+  + garbage collection tag methods for tables now deprecated.
+  + there is now only one tag method for order.
+  API:
+  + New API: fully re-entrant, simpler, and more efficient.
+  + New debug API.
+  Implementation:
+  + cleaner virtual machine -- at least 20% faster.
+  + non-recursive garbage-collector algorithm.
+  + reduced memory usage for programs with many strings.
+  + improved treatment for memory allocation errors.
+  + improved support for 16-bit machines (we hope).
+  + code now compiles unmodified as both ANSI C and C++.
+  + numbers in bases other than 10 are converted using strtoul.
+  + new -f option in Lua to support #! scripts.
+  + luac can now combine text and binaries.
 
 * Changes from version 3.1 to 3.2
   -------------------------------
@@ -79,3 +107,5 @@ This is Lua 3.2
   + fallbacks
   + simplified syntax for tables
   + many internal improvements
+
+(end of HISTORY)

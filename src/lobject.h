@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.28 1999/03/16 16:43:27 roberto Exp $
+** $Id: lobject.h,v 1.82 2000/10/30 17:49:19 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -8,197 +8,197 @@
 #define lobject_h
 
 
-#include <limits.h>
-
+#include "llimits.h"
 #include "lua.h"
 
 
-#ifdef DEBUG
-#include "lauxlib.h"
-#define LUA_INTERNALERROR(s)	\
-	luaL_verror("INTERNAL ERROR - %s [%s:%d]",(s),__FILE__,__LINE__)
-#define LUA_ASSERT(c,s) { if (!(c)) LUA_INTERNALERROR(s); }
+#ifdef LUA_DEBUG
+#undef NDEBUG
+#include <assert.h>
+#define LUA_INTERNALERROR(s)	assert(((void)s,0))
+#define LUA_ASSERT(c,s)		assert(((void)s,(c)))
 #else
-#define LUA_INTERNALERROR(s)  /* empty */
-#define LUA_ASSERT(c,s)  /* empty */
+#define LUA_INTERNALERROR(s)	/* empty */
+#define LUA_ASSERT(c,s)		/* empty */
 #endif
 
 
-/*
-** "real" is the type "number" of Lua
-** GREP LUA_NUMBER to change that
-*/
-#ifndef LUA_NUM_TYPE
-#define LUA_NUM_TYPE double
+#ifdef LUA_DEBUG
+/* to avoid warnings, and make sure value is really unused */
+#define UNUSED(x)	(x=0, (void)(x))
+#else
+#define UNUSED(x)	((void)(x))	/* to avoid warnings */
 #endif
 
 
-typedef LUA_NUM_TYPE real;
-
-#define Byte lua_Byte	/* some systems have Byte as a predefined type */
-typedef unsigned char  Byte;  /* unsigned 8 bits */
+/* mark for closures active in the stack */
+#define LUA_TMARK	6
 
 
-#define MAX_INT   (INT_MAX-2)  /* maximum value of an int (-2 for safety) */
+/* tags for values visible from Lua == first user-created tag */
+#define NUM_TAGS	6
 
-typedef unsigned int IntPoint; /* unsigned with same size as a pointer (for hashing) */
 
-
-/*
-** Lua TYPES
-** WARNING: if you change the order of this enumeration,
-** grep "ORDER LUA_T"
-*/
-typedef enum {
-  LUA_T_USERDATA =  0,  /* tag default for userdata */
-  LUA_T_NUMBER   = -1,  /* fixed tag for numbers */
-  LUA_T_STRING   = -2,  /* fixed tag for strings */
-  LUA_T_ARRAY    = -3,  /* tag default for tables (or arrays) */
-  LUA_T_PROTO    = -4,  /* fixed tag for functions */
-  LUA_T_CPROTO   = -5,  /* fixed tag for Cfunctions */
-  LUA_T_NIL      = -6,  /* last "pre-defined" tag */
-  LUA_T_CLOSURE  = -7,
-  LUA_T_CLMARK   = -8,  /* mark for closures */
-  LUA_T_PMARK    = -9,  /* mark for Lua prototypes */
-  LUA_T_CMARK    = -10, /* mark for C prototypes */
-  LUA_T_LINE     = -11
-} lua_Type;
-
-#define NUM_TAGS  7
+/* check whether `t' is a mark */
+#define is_T_MARK(t)	((t) == LUA_TMARK)
 
 
 typedef union {
-  lua_CFunction f;  /* LUA_T_CPROTO, LUA_T_CMARK */
-  real n;  /* LUA_T_NUMBER */
-  struct TaggedString *ts;  /* LUA_T_STRING, LUA_T_USERDATA */
-  struct TProtoFunc *tf;  /* LUA_T_PROTO, LUA_T_PMARK */
-  struct Closure *cl;  /* LUA_T_CLOSURE, LUA_T_CLMARK */
-  struct Hash *a;  /* LUA_T_ARRAY */
-  int i;  /* LUA_T_LINE */
+  struct TString *ts;	/* LUA_TSTRING, LUA_TUSERDATA */
+  struct Closure *cl;	/* LUA_TFUNCTION */
+  struct Hash *a;	/* LUA_TTABLE */
+  struct CallInfo *i;	/* LUA_TLMARK */
+  Number n;		/* LUA_TNUMBER */
 } Value;
 
 
-typedef struct TObject {
-  lua_Type ttype;
+/* Macros to access values */
+#define ttype(o)        ((o)->ttype)
+#define nvalue(o)       ((o)->value.n)
+#define tsvalue(o)      ((o)->value.ts)
+#define clvalue(o)      ((o)->value.cl)
+#define hvalue(o)       ((o)->value.a)
+#define infovalue(o)	((o)->value.i)
+#define svalue(o)       (tsvalue(o)->str)
+
+
+typedef struct lua_TObject {
+  int ttype;
   Value value;
 } TObject;
-
-
-
-/*
-** generic header for garbage collector lists
-*/
-typedef struct GCnode {
-  struct GCnode *next;
-  int marked;
-} GCnode;
 
 
 /*
 ** String headers for string table
 */
 
-typedef struct TaggedString {
-  GCnode head;
-  unsigned long hash;
-  int constindex;  /* hint to reuse constants (= -1 if this is a userdata) */
+/*
+** most `malloc' libraries allocate memory in blocks of 8 bytes. TSPACK
+** tries to make sizeof(TString) a multiple of this granularity, to reduce
+** waste of space.
+*/
+#define TSPACK	((int)sizeof(int))
+
+typedef struct TString {
   union {
-    struct {
-      TObject globalval;
-      long len;  /* if this is a string, here is its length */
+    struct {  /* for strings */
+      unsigned long hash;
+      int constindex;  /* hint to reuse constants */
     } s;
-    struct {
+    struct {  /* for userdata */
       int tag;
-      void *v;  /* if this is a userdata, here is its value */
+      void *value;
     } d;
   } u;
-  char str[1];   /* \0 byte already reserved */
-} TaggedString;
-
-
+  size_t len;
+  struct TString *nexthash;  /* chain for hash table */
+  int marked;
+  char str[TSPACK];   /* variable length string!! must be the last field! */
+} TString;
 
 
 /*
 ** Function Prototypes
 */
-typedef struct TProtoFunc {
-  GCnode head;
-  struct TObject *consts;
-  int nconsts;
-  Byte *code;  /* ends with opcode ENDCODE */
+typedef struct Proto {
+  Number *knum;  /* Number numbers used by the function */
+  int nknum;  /* size of `knum' */
+  struct TString **kstr;  /* strings used by the function */
+  int nkstr;  /* size of `kstr' */
+  struct Proto **kproto;  /* functions defined inside the function */
+  int nkproto;  /* size of `kproto' */
+  Instruction *code;
+  int ncode;  /* size of `code'; when 0 means an incomplete `Proto' */
+  short numparams;
+  short is_vararg;
+  short maxstacksize;
+  short marked;
+  struct Proto *next;
+  /* debug information */
+  int *lineinfo;  /* map from opcodes to source lines */
+  int nlineinfo;  /* size of `lineinfo' */
+  int nlocvars;
+  struct LocVar *locvars;  /* information about local variables */
   int lineDefined;
-  TaggedString  *source;
-  struct LocVar *locvars;  /* ends with line = -1 */
-} TProtoFunc;
+  TString  *source;
+} Proto;
+
 
 typedef struct LocVar {
-  TaggedString *varname;           /* NULL signals end of scope */
-  int line;
+  TString *varname;
+  int startpc;  /* first point where variable is active */
+  int endpc;    /* first point where variable is dead */
 } LocVar;
-
-
-
-
-
-/* Macros to access structure members */
-#define ttype(o)        ((o)->ttype)
-#define nvalue(o)       ((o)->value.n)
-#define svalue(o)       ((o)->value.ts->str)
-#define tsvalue(o)      ((o)->value.ts)
-#define clvalue(o)      ((o)->value.cl)
-#define avalue(o)       ((o)->value.a)
-#define fvalue(o)       ((o)->value.f)
-#define tfvalue(o)	((o)->value.tf)
-
-#define protovalue(o)	((o)->value.cl->consts)
 
 
 /*
 ** Closures
 */
 typedef struct Closure {
-  GCnode head;
-  int nelems;  /* not included the first one (always the prototype) */
-  TObject consts[1];  /* at least one for prototype */
+  union {
+    lua_CFunction c;  /* C functions */
+    struct Proto *l;  /* Lua functions */
+  } f;
+  struct Closure *next;
+  struct Closure *mark;  /* marked closures (point to itself when not marked) */
+  short isC;  /* 0 for Lua functions, 1 for C functions */
+  short nupvalues;
+  TObject upvalue[1];
 } Closure;
 
 
+#define iscfunction(o)	(ttype(o) == LUA_TFUNCTION && clvalue(o)->isC)
 
-typedef struct node {
-  TObject ref;
+
+typedef struct Node {
+  TObject key;
   TObject val;
+  struct Node *next;  /* for chaining */
 } Node;
 
 typedef struct Hash {
-  GCnode head;
   Node *node;
-  int nhash;
-  int nuse;
   int htag;
+  int size;
+  Node *firstfree;  /* this position is free; all positions after it are full */
+  struct Hash *next;
+  struct Hash *mark;  /* marked tables (point to itself when not marked) */
 } Hash;
 
 
-extern char *luaO_typenames[];
+/* unmarked tables and closures are represented by pointing `mark' to
+** themselves
+*/
+#define ismarked(x)	((x)->mark != (x))
 
-#define luaO_typename(o)        luaO_typenames[-ttype(o)]
+
+/*
+** informations about a call (for debugging)
+*/
+typedef struct CallInfo {
+  struct Closure *func;  /* function being called */
+  const Instruction **pc;  /* current pc of called function */
+  int lastpc;  /* last pc traced */
+  int line;  /* current line */
+  int refi;  /* current index in `lineinfo' */
+} CallInfo;
 
 
-extern TObject luaO_nilobject;
+extern const TObject luaO_nilobject;
+extern const char *const luaO_typenames[];
 
-#define luaO_equalObj(t1,t2)	((ttype(t1) != ttype(t2)) ? 0 \
-                                      : luaO_equalval(t1,t2))
-int luaO_equalval (TObject *t1, TObject *t2);
-int luaO_redimension (int oldsize);
-void luaO_insertlist (GCnode *root, GCnode *node);
-double luaO_str2d (char *s);
 
-#ifdef OLD_ANSI
-void luaO_memup (void *dest, void *src, int size);
-void luaO_memdown (void *dest, void *src, int size);
-#else
-#include <string.h>
-#define luaO_memup(d,s,n)	memmove(d,s,n)
-#define luaO_memdown(d,s,n)	memmove(d,s,n)
-#endif
+#define luaO_typename(o)	(luaO_typenames[ttype(o)])
+
+
+lint32 luaO_power2 (lint32 n);
+char *luaO_openspace (lua_State *L, size_t n);
+
+int luaO_equalObj (const TObject *t1, const TObject *t2);
+int luaO_str2d (const char *s, Number *result);
+
+void luaO_verror (lua_State *L, const char *fmt, ...);
+void luaO_chunkid (char *out, const char *source, int len);
+
 
 #endif
