@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.60 1996/03/15 13:13:13 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.61 1996/03/19 16:50:24 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -259,13 +259,10 @@ static StkId callC (lua_CFunction func, StkId base)
   /* incorporate parameters on the stack */
   CBase = base+CnResults;  /* == top-stack */
   if (call_hook)
-  {
-    callHook (base, LUA_T_CMARK, 0);
-    (*func)();
-    callHook (base, LUA_T_CMARK, 1);
-  }
-  else
-    (*func)();
+    callHook(base, LUA_T_CMARK, 0);
+  (*func)();
+  if (call_hook)  /* func may have changed call_hook */
+    callHook(base, LUA_T_CMARK, 1);
   firstResult = CBase;
   CBase = oldBase;
   CnResults = oldCnResults;
@@ -671,6 +668,23 @@ lua_Object lua_getparam (int number)
  /* Ref(stack+(CBase-CnResults+number-1)) ==
     stack+(CBase-CnResults+number-1)-stack+1 == */
  return CBase-CnResults+number;
+}
+
+int lua_isnumber (lua_Object object)
+{
+  return (object != LUA_NOOBJECT) && (tonumber(Address(object)) == 0);
+}
+
+int lua_isstring (lua_Object object)
+{
+  int t = lua_type(object);
+  return (t == LUA_T_STRING) || (t == LUA_T_NUMBER);
+}
+
+int lua_isfunction (lua_Object object)
+{
+  int t = lua_type(object);
+  return (t == LUA_T_FUNCTION) || (t == LUA_T_CFUNCTION);
 }
 
 /*
