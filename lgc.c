@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.171 2003/04/03 13:35:34 roberto Exp roberto $
+** $Id: lgc.c,v 1.172 2003/04/28 19:26:16 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -24,9 +24,7 @@
 
 typedef struct GCState {
   GCObject *tmark;  /* list of marked objects to be traversed */
-  GCObject *wk;  /* list of traversed key-weak tables (to be cleared) */
-  GCObject *wv;  /* list of traversed value-weak tables */
-  GCObject *wkv;  /* list of traversed key-value weak tables */
+  GCObject *w;  /* list of traversed weak tables (to be cleared) */
   global_State *g;
 } GCState;
 
@@ -125,6 +123,7 @@ void luaC_separateudata (lua_State *L) {
       p = &curr->gch.next;
     }
     else {  /* must call its gc method */
+      markfinalized(gcotou(curr));
       *p = curr->gch.next;
       curr->gch.next = NULL;  /* link `curr' at the end of `collected' list */
       *lastcollected = curr;
@@ -134,13 +133,6 @@ void luaC_separateudata (lua_State *L) {
   /* insert collected udata with gc event into `tmudata' list */
   *lastcollected = G(L)->tmudata;
   G(L)->tmudata = collected;
-}
-
-
-static void removekey (Node *n) {
-  setnilvalue(gval(n));  /* remove corresponding value ... */
-  if (iscollectable(gkey(n)))
-    setttype(gkey(n), LUA_TNONE);  /* dead key; remove it */
 }
 
 
@@ -156,17 +148,14 @@ static void traversetable (GCState *st, Table *h) {
     weakkey = (strchr(svalue(mode), 'k') != NULL);
     weakvalue = (strchr(svalue(mode), 'v') != NULL);
     if (weakkey || weakvalue) {  /* is really weak? */
-      GCObject **weaklist;
       h->marked &= ~(KEYWEAK | VALUEWEAK);  /* clear bits */
       h->marked |= cast(lu_byte, (weakkey << KEYWEAKBIT) |
                                  (weakvalue << VALUEWEAKBIT));
-      weaklist = (weakkey && weakvalue) ? &st->wkv :
-                              (weakkey) ? &st->wk :
-                                          &st->wv;
-      h->gclist = *weaklist;  /* must be cleared after GC, ... */
-      *weaklist = valtogco(h);  /* ... so put in the appropriate list */
+      h->gclist = st->w;  /* must be cleared after GC, ... */
+      st->w = valtogco(h);  /* ... so put in the appropriate list */
     }
   }
+  if (weakkey && weakvalue) return;
   if (!weakvalue) {
     i = h->sizearray;
     while (i--)
@@ -288,48 +277,51 @@ static void propagatemarks (GCState *st) {
 }
 
 
-static int valismarked (const TObject *o) {
-  if (ttisstring(o))
+/*
+** The next function tells whether a key or value can be cleared from
+** a weak table. Non-collectable objects are never removed from weak
+** tables. Strings behave as `values', so are never removed too. for
+** other objects: if really collected, cannot keep them; for userdata
+** being finalized, keep them in keys, but not in values
+*/
+static int iscleared (const TObject *o, int iskey) {
+  if (!iscollectable(o)) return 0;
+  if (ttisstring(o)) {
     stringmark(tsvalue(o));  /* strings are `values', so are never weak */
-  return !iscollectable(o) || testbit(o->value.gc->gch.marked, 0);
-}
-
-
-/*
-** clear collected keys from weaktables
-*/
-static void cleartablekeys (GCObject *l) {
-  while (l) {
-    Table *h = gcotoh(l);
-    int i = sizenode(h);
-    lua_assert(h->marked & KEYWEAK);
-    while (i--) {
-      Node *n = gnode(h, i);
-      if (!valismarked(gkey(n)))  /* key was collected? */
-        removekey(n);  /* remove entry from table */
-    }
-    l = h->gclist;
+    return 0;
   }
+  return !ismarked(gcvalue(o)) ||
+    (ttisuserdata(o) && (!iskey && isfinalized(uvalue(o))));
+}
+
+
+static void removekey (Node *n) {
+  setnilvalue(gval(n));  /* remove corresponding value ... */
+  if (iscollectable(gkey(n)))
+    setttype(gkey(n), LUA_TNONE);  /* dead key; remove it */
 }
 
 
 /*
-** clear collected values from weaktables
+** clear collected entries from weaktables
 */
-static void cleartablevalues (GCObject *l) {
+static void cleartable (GCObject *l) {
   while (l) {
     Table *h = gcotoh(l);
     int i = h->sizearray;
-    lua_assert(h->marked & VALUEWEAK);
-    while (i--) {
-      TObject *o = &h->array[i];
-      if (!valismarked(o))  /* value was collected? */
-        setnilvalue(o);  /* remove value */
+    lua_assert(h->marked & (KEYWEAK | VALUEWEAK));
+    if (h->marked & VALUEWEAK) {
+      while (i--) {
+        TObject *o = &h->array[i];
+        if (iscleared(o, 0))  /* value was collected? */
+          setnilvalue(o);  /* remove value */
+      }
     }
     i = sizenode(h);
     while (i--) {
       Node *n = gnode(h, i);
-      if (!valismarked(gval(n)))  /* value was collected? */
+      if (!ttisnil(gval(n)) &&  /* non-empty entry? */
+          (iscleared(gkey(n), 1) || iscleared(gval(n), 0)))
         removekey(n);  /* remove entry from table */
     }
     l = h->gclist;
@@ -424,7 +416,6 @@ void luaC_callGCTM (lua_State *L) {
     G(L)->rootudata = o;
     setuvalue(L->top - 1, udata);  /* keep a reference to it */
     unmark(o);
-    markfinalized(udata);
     do1gcTM(L, udata);
   }
   L->top--;
@@ -453,26 +444,15 @@ static void markroot (GCState *st, lua_State *L) {
 
 static void mark (lua_State *L) {
   GCState st;
-  GCObject *wkv;
   st.g = G(L);
   st.tmark = NULL;
-  st.wkv = st.wk = st.wv = NULL;
+  st.w = NULL;
   markroot(&st, L);
   propagatemarks(&st);  /* mark all reachable objects */
-  cleartablevalues(st.wkv);
-  cleartablevalues(st.wv);
-  wkv = st.wkv;  /* keys must be cleared after preserving udata */
-  st.wkv = NULL;
-  st.wv = NULL;
   luaC_separateudata(L);  /* separate userdata to be preserved */
   marktmu(&st);  /* mark `preserved' userdata */
   propagatemarks(&st);  /* remark, to propagate `preserveness' */
-  cleartablekeys(wkv);
-  /* `propagatemarks' may resuscitate some weak tables; clear them too */
-  cleartablekeys(st.wk);
-  cleartablevalues(st.wv);
-  cleartablekeys(st.wkv);
-  cleartablevalues(st.wkv);
+  cleartable(st.w);  /* remove collected objects from weak tables */
 }
 
 
