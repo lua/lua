@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: lapi.c,v 1.174 2002/02/14 21:46:13 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -30,7 +30,7 @@ const char lua_ident[] =
 
 
 #ifndef api_check
-#define api_check(L, o)		/* nothing */
+#define api_check(L, o)		((void)1)
 #endif
 
 #define api_checknelems(L, n)	api_check(L, (n) <= (L->top - L->ci->base))
@@ -57,14 +57,10 @@ static TObject *negindex (lua_State *L, int index) {
 }
 
 
-TObject *luaA_index (lua_State *L, int index) {
-  if (index > 0) {
-    api_check(L, index <= L->top - L->ci->base);
-    return L->ci->base+index-1;
-  }
-  else
-    return negindex(L, index);
-}
+#define luaA_index(L, index) \
+  ( (index > 0) ? \
+    (api_check(L, index <= L->top - L->ci->base), L->ci->base+index-1) : \
+    negindex(L, index))
 
 
 static TObject *luaA_indexAcceptable (lua_State *L, int index) {

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.109 2002/02/14 21:42:22 roberto Exp roberto $
+** $Id: ltests.c,v 1.110 2002/03/04 15:26:56 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -40,6 +40,8 @@ static lua_State *lua_state = NULL;
 
 int islocked = 0;
 
+
+#define index(L,k)	(L->ci->base+(k) - 1)
 
 
 static void setnameval (lua_State *L, const char *name, int val) {
@@ -165,7 +167,7 @@ static int listcode (lua_State *L) {
   Proto *p;
   luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
                  1, "Lua function expected");
-  p = clvalue(luaA_index(L, 1))->l.p;
+  p = clvalue(index(L, 1))->l.p;
   lua_newtable(L);
   setnameval(L, "maxstack", p->maxstacksize);
   setnameval(L, "numparams", p->numparams);
@@ -184,7 +186,7 @@ static int listk (lua_State *L) {
   int i;
   luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
                  1, "Lua function expected");
-  p = clvalue(luaA_index(L, 1))->l.p;
+  p = clvalue(index(L, 1))->l.p;
   lua_newtable(L);
   for (i=0; i<p->sizek; i++) {
     lua_pushnumber(L, i+1);
@@ -202,7 +204,7 @@ static int listlocals (lua_State *L) {
   const char *name;
   luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
                  1, "Lua function expected");
-  p = clvalue(luaA_index(L, 1))->l.p;
+  p = clvalue(index(L, 1))->l.p;
   while ((name = luaF_getlocalname(p, ++i, pc)) != NULL)
     lua_pushstring(L, name);
   return i-1;
@@ -242,13 +244,13 @@ static int mem_query (lua_State *L) {
 static int hash_query (lua_State *L) {
   if (lua_isnone(L, 2)) {
     luaL_arg_check(L, lua_type(L, 1) == LUA_TSTRING, 1, "string expected");
-    lua_pushnumber(L, tsvalue(luaA_index(L, 1))->tsv.hash);
+    lua_pushnumber(L, tsvalue(index(L, 1))->tsv.hash);
   }
   else {
-    TObject *o = luaA_index(L, 1);
+    TObject *o = index(L, 1);
     Table *t;
     luaL_check_type(L, 2, LUA_TTABLE);
-    t = hvalue(luaA_index(L, 2));
+    t = hvalue(index(L, 2));
     lua_pushnumber(L, luaH_mainposition(t, o) - t->node);
   }
   return 1;
@@ -270,7 +272,7 @@ static int table_query (lua_State *L) {
   const Table *t;
   int i = luaL_opt_int(L, 2, -1);
   luaL_check_type(L, 1, LUA_TTABLE);
-  t = hvalue(luaA_index(L, 1));
+  t = hvalue(index(L, 1));
   if (i == -1) {
     lua_pushnumber(L, t->sizearray);
     lua_pushnumber(L, sizenode(t));
