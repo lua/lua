@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.155 2003/07/16 20:49:02 roberto Exp roberto $
+** $Id: ldebug.c,v 1.156 2003/10/02 19:21:09 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -159,18 +159,6 @@ static void funcinfo (lua_Debug *ar, StkId func) {
 }
 
 
-static const char *travglobals (lua_State *L, const TObject *o) {
-  Table *g = hvalue(gt(L));
-  int i = sizenode(g);
-  while (i--) {
-    Node *n = gnode(g, i);
-    if (luaO_rawequalObj(o, gval(n)) && ttisstring(gkey(n)))
-      return getstr(tsvalue(gkey(n)));
-  }
-  return NULL;
-}
-
-
 static void info_tailcall (lua_State *L, lua_Debug *ar) {
   ar->name = ar->namewhat = "";
   ar->what = "tail";
@@ -202,10 +190,8 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
       case 'n': {
         ar->namewhat = (ci) ? getfuncname(ci, &ar->name) : NULL;
         if (ar->namewhat == NULL) {
-          /* try to find a global name */
-          if ((ar->name = travglobals(L, f)) != NULL)
-            ar->namewhat = "global";
-          else ar->namewhat = "";  /* not found */
+          ar->namewhat = "";  /* not found */
+          ar->name = NULL;
         }
         break;
       }
