@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.38 2000/05/10 17:00:21 roberto Exp roberto $
+** $Id: lua.c,v 1.39 2000/06/12 13:52:05 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -129,12 +129,16 @@ static void file_input (const char *argv) {
   }
 }
 
+/* maximum length of an input string */
+#ifndef MAXINPUT
+#define MAXINPUT	BUFSIZ
+#endif
 
 static void manual_input (int version, int prompt) {
   int cont = 1;
   if (version) print_version();
   while (cont) {
-    char buffer[BUFSIZ];
+    char buffer[MAXINPUT];
     int i = 0;
     lua_beginblock();
     if (prompt) {
@@ -153,7 +157,7 @@ static void manual_input (int version, int prompt) {
           buffer[i-1] = '\n';
         else break;
       }
-      else if (i >= BUFSIZ-1) {
+      else if (i >= MAXINPUT-1) {
         fprintf(stderr, "lua: input line too long\n");
         break;
       }

@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.8 2000/05/26 14:04:04 roberto Exp roberto $
+** $Id: llimits.h,v 1.9 2000/06/06 16:27:11 roberto Exp roberto $
 ** Limits, basic types, and some other "instalation-dependent" definitions
 ** See Copyright Notice in lua.h
 */
@@ -182,6 +182,12 @@ typedef unsigned long Instruction;
 /* maximum lookback to find a real constant (for code generation) */
 #ifndef LOOKBACKNUMS
 #define LOOKBACKNUMS    20      /* arbitrary constant */
+#endif
+
+
+/* maximum part of a file name kept for error messages */
+#ifndef MAXFILENAME
+#define	MAXFILENAME	260
 #endif
 
 

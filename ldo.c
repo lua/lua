@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.77 2000/05/30 19:00:31 roberto Exp roberto $
+** $Id: ldo.c,v 1.78 2000/06/12 13:52:05 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -329,8 +329,6 @@ static int do_main (lua_State *L, ZIO *z, int bin) {
   return status;
 }
 
-
-#define	MAXFILENAME	260	/* maximum part of a file name kept */
 
 int lua_dofile (lua_State *L, const char *filename) {
   ZIO z;
