@@ -1,7 +1,7 @@
-# $Id: makefile,v 1.6 1994/07/19 21:35:36 celes Exp celes $
+# $Id: makefile,v 1.7 1994/07/19 22:04:51 celes Exp $
 # Compilation parameters
 CC = gcc
-CFLAGS = -I/usr/5include -Wall -O2
+CFLAGS = -I/usr/5include -Wall -Wmissing-prototypes -ansi -O2
 
 AR = ar
 ARFLAGS	= rvl
