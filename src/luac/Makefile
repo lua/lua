@@ -5,7 +5,7 @@ LUA= ../..
 include $(LUA)/config
 
 INCS= -I$(INC) -I.. $(EXTRA_INCS)
-OBJS= luac.o print.o lopcodes.o
+OBJS= luac.o print.o
 SRCS= luac.c print.c
 
 T= $(BIN)/luac
@@ -14,10 +14,6 @@ all:	$T
 
 $T:	$(OBJS) $(LIB)/liblua.a ../lib/lauxlib.o
 	$(CC) -o $@ $(MYLDFLAGS) $(OBJS) ../lib/lauxlib.o -L$(LIB) -llua $(EXTRA_LIBS)
-
-# print.c needs opcode names from lopcodes.c
-lopcodes.o:	../lopcodes.c ../lopcodes.h
-	$(CC) -o $@ -c $(CFLAGS) -DLUA_OPNAMES ../lopcodes.c
 
 $(LIB)/liblua.a:
 	cd ..; $(MAKE)

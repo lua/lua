@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.51 2004/03/24 00:25:08 lhf Exp $
+** $Id: lundump.c,v 1.53 2004/09/01 21:22:34 lhf Exp $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -8,6 +8,7 @@
 #include <stddef.h>
 
 #define lundump_c
+#define LUA_CORE
 
 #include "lua.h"
 
@@ -261,15 +262,15 @@ static void LoadHeader (LoadState* S)
 /*
 ** load precompiled chunk
 */
-Proto* luaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* s)
+Proto* luaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* name)
 {
  LoadState S;
- if (*s=='@' || *s=='=')
-  S.name=s+1;
- else if (*s==LUA_SIGNATURE[0])
+ if (*name=='@' || *name=='=')
+  S.name=name+1;
+ else if (*name==LUA_SIGNATURE[0])
   S.name="binary string";
  else
-  S.name=s;
+  S.name=name;
  S.L=L;
  S.Z=Z;
  S.b=buff;

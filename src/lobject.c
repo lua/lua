@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.1 2003/12/10 12:13:36 roberto Exp $
+** $Id: lobject.c,v 2.4 2004/07/09 16:01:38 roberto Exp $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -10,6 +10,7 @@
 #include <string.h>
 
 #define lobject_c
+#define LUA_CORE
 
 #include "lua.h"
 
@@ -20,11 +21,6 @@
 #include "lstring.h"
 #include "lvm.h"
 
-
-/* function to convert a string to a lua_Number */
-#ifndef lua_str2number
-#define lua_str2number(s,p)     strtod((s), (p))
-#endif
 
 
 const TValue luaO_nilobject = {LUA_TNIL, {NULL}};
@@ -98,7 +94,7 @@ static void pushstr (lua_State *L, const char *str) {
 }
 
 
-/* this function handles only `%d', `%c', %f, and `%s' formats */
+/* this function handles only `%d', `%c', %f, %p, and `%s' formats */
 const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
   int n = 1;
   pushstr(L, "");
@@ -108,9 +104,10 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
     setsvalue2s(L, L->top, luaS_newlstr(L, fmt, e-fmt));
     incr_top(L);
     switch (*(e+1)) {
-      case 's':
+      case 's': {
         pushstr(L, va_arg(argp, char *));
         break;
+      }
       case 'c': {
         char buff[2];
         buff[0] = cast(char, va_arg(argp, int));
@@ -118,17 +115,26 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
         pushstr(L, buff);
         break;
       }
-      case 'd':
+      case 'd': {
         setnvalue(L->top, cast(lua_Number, va_arg(argp, int)));
         incr_top(L);
         break;
-      case 'f':
+      }
+      case 'f': {
         setnvalue(L->top, cast(lua_Number, va_arg(argp, l_uacNumber)));
         incr_top(L);
         break;
-      case '%':
+      }
+      case 'p': {
+        char buff[4*sizeof(void *) + 8]; /* should be enough space for a `%p' */
+        sprintf(buff, "%p", va_arg(argp, void *));
+        pushstr(L, buff);
+        break;
+      }
+      case '%': {
         pushstr(L, "%");
         break;
+      }
       default: {
         char buff[3];
         buff[0] = '%';
@@ -177,7 +183,7 @@ void luaO_chunkid (char *out, const char *source, int bufflen) {
       strcat(out, source);
     }
     else {  /* out = [string "string"] */
-      int len = strcspn(source, "\n");  /* stop at first newline */
+      int len = strcspn(source, "\n\r");  /* stop at first newline */
       bufflen -= sizeof(" [string \"...\"] ");
       if (len > bufflen) len = bufflen;
       strcpy(out, "[string \"");

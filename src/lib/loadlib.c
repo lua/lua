@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.5 2003/05/14 21:01:53 roberto Exp $
+** $Id: loadlib.c,v 1.6 2004/04/30 20:13:38 roberto Exp $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 *
@@ -25,6 +25,9 @@
 * on top of which loadlib could be implemented.
 *
 */
+
+#define loadlib_c
+#define LUA_LIB
 
 #include "lua.h"
 #include "lauxlib.h"

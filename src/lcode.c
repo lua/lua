@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.1 2003/12/10 12:13:36 roberto Exp $
+** $Id: lcode.c,v 2.6 2004/08/24 20:09:11 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 #define lcode_c
+#define LUA_CORE
 
 #include "lua.h"
 
@@ -194,7 +195,7 @@ void luaK_reserveregs (FuncState *fs, int n) {
 
 
 static void freereg (FuncState *fs, int reg) {
-  if (reg >= fs->nactvar && reg < MAXSTACK) {
+  if (!ISK(reg) && reg >= fs->nactvar) {
     fs->freereg--;
     lua_assert(reg == fs->freereg);
   }
@@ -222,7 +223,7 @@ static int addk (FuncState *fs, TValue *k, TValue *v) {
                     MAXARG_Bx, "constant table overflow");
     while (oldsize < f->sizek) setnilvalue(&f->k[oldsize++]);
     setobj(L, &f->k[fs->nk], v);
-    luaC_barrier(L, f, v);
+    luaC_barriert(L, f, v);
     return fs->nk++;
   }
 }
@@ -251,13 +252,26 @@ static int nil_constant (FuncState *fs) {
 }
 
 
-void luaK_setcallreturns (FuncState *fs, expdesc *e, int nresults) {
+void luaK_setreturns (FuncState *fs, expdesc *e, int nresults) {
   if (e->k == VCALL) {  /* expression is an open function call? */
     SETARG_C(getcode(fs, e), nresults+1);
-    if (nresults == 1) {  /* `regular' expression? */
-      e->k = VNONRELOC;
-      e->info = GETARG_A(getcode(fs, e));
-    }
+  }
+  else if (e->k == VVARARG) {
+    SETARG_B(getcode(fs, e), nresults+1);
+    SETARG_A(getcode(fs, e), fs->freereg);
+    luaK_reserveregs(fs, 1);
+  }
+}
+
+
+void luaK_setoneret (FuncState *fs, expdesc *e) {
+  if (e->k == VCALL) {  /* expression is an open function call? */
+    e->k = VNONRELOC;
+    e->info = GETARG_A(getcode(fs, e));
+  }
+  else if (e->k == VVARARG) {
+    SETARG_B(getcode(fs, e), 2);
+    e->k = VRELOCABLE;  /* can relocate its simple result */
   }
 }
 
@@ -285,8 +299,9 @@ void luaK_dischargevars (FuncState *fs, expdesc *e) {
       e->k = VRELOCABLE;
       break;
     }
+    case VVARARG:
     case VCALL: {
-      luaK_setcallreturns(fs, e, 1);
+      luaK_setoneret(fs, e);
       break;
     }
     default: break;  /* there is one value available (somewhere) */
@@ -403,16 +418,16 @@ int luaK_exp2RK (FuncState *fs, expdesc *e) {
   luaK_exp2val(fs, e);
   switch (e->k) {
     case VNIL: {
-      if (fs->nk + MAXSTACK <= MAXARG_C) {  /* constant fit in argC? */
+      if (fs->nk <= MAXINDEXRK) {  /* constant fit in RK operand? */
         e->info = nil_constant(fs);
         e->k = VK;
-        return e->info + MAXSTACK;
+        return RKASK(e->info);
       }
       else break;
     }
     case VK: {
-      if (e->info + MAXSTACK <= MAXARG_C)  /* constant fit in argC? */
-        return e->info + MAXSTACK;
+      if (e->info <= MAXINDEXRK)  /* constant fit in argC? */
+        return RKASK(e->info);
       else break;
     }
     default: break;

@@ -9,6 +9,8 @@
 * load the parsing modules. To try it, do "make luab".
 */
 
+#define LUA_CORE
+
 #include "llex.h"
 #include "lparser.h"
 #include "lzio.h"
@@ -28,6 +30,7 @@ Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, const char *name) {
 /*
 * If you also want to avoid the dump module, ldump.o, enable the code below.
 */
+#define NODUMP
 #ifdef NODUMP
 #include "lundump.h"
 

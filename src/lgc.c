@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.6 2004/03/23 12:57:12 roberto Exp $
+** $Id: lgc.c,v 2.10 2004/08/30 13:44:44 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -7,6 +7,7 @@
 #include <string.h>
 
 #define lgc_c
+#define LUA_CORE
 
 #include "lua.h"
 
@@ -22,10 +23,11 @@
 #include "ltm.h"
 
 
-#define GCSTEPSIZE	(40*sizeof(TValue))
-#define GCFREECOST	(sizeof(TValue)/2)
-#define GCSWEEPCOST	sizeof(TValue)
-#define GCFINALIZECOST	(10*sizeof(TValue))
+#define GCSTEPSIZE	1000
+#define STEPMUL		2
+#define GCSWEEPMAX	10
+#define GCSWEEPCOST	30
+#define GCFINALIZECOST	100
 
 
 #define FIXEDMASK	bitmask(FIXEDBIT)
@@ -266,60 +268,61 @@ static void traversestack (global_State *g, lua_State *l) {
 
 
 /*
-** traverse a given `quantity' of gray objects,
-** turning them to black. Returns extra `quantity' traversed.
+** traverse one gray object, turning it to black.
+** Returns `quantity' traversed.
 */
-static l_mem propagatemarks (global_State *g, l_mem lim) {
-  GCObject *o;
-  while ((o = g->gray) != NULL) {
-    lua_assert(isgray(o));
-    gray2black(o);
-    switch (o->gch.tt) {
-      case LUA_TTABLE: {
-        Table *h = gco2h(o);
-        g->gray = h->gclist;
-        if (traversetable(g, h))  /* table is weak? */
-          black2gray(o);  /* keep it gray */
-        lim -= sizeof(Table) + sizeof(TValue) * h->sizearray +
-                               sizeof(Node) * sizenode(h);
-        break;
-      }
-      case LUA_TFUNCTION: {
-        Closure *cl = gco2cl(o);
-        g->gray = cl->c.gclist;
-        traverseclosure(g, cl);
-        lim -= (cl->c.isC) ? sizeCclosure(cl->c.nupvalues) :
-                             sizeLclosure(cl->l.nupvalues);
-        break;
-      }
-      case LUA_TTHREAD: {
-        lua_State *th = gco2th(o);
-        g->gray = th->gclist;
-        th->gclist = g->grayagain;
-        g->grayagain = o;
-        black2gray(o);
-        traversestack(g, th);
-        lim -= sizeof(lua_State) + sizeof(TValue) * th->stacksize +
-                                   sizeof(CallInfo) * th->size_ci;
-        break;
-      }
-      case LUA_TPROTO: {
-        Proto *p = gco2p(o);
-        g->gray = p->gclist;
-        traverseproto(g, p);
-        lim -= sizeof(Proto) + sizeof(Instruction) * p->sizecode +
-                               sizeof(Proto *) * p->sizep +
-                               sizeof(TValue) * p->sizek + 
-                               sizeof(int) * p->sizelineinfo +
-                               sizeof(LocVar) * p->sizelocvars +
-                               sizeof(TString *) * p->sizeupvalues;
-        break;
-      }
-      default: lua_assert(0);
+static l_mem propagatemark (global_State *g) {
+  GCObject *o = g->gray;
+  lua_assert(isgray(o));
+  gray2black(o);
+  switch (o->gch.tt) {
+    case LUA_TTABLE: {
+      Table *h = gco2h(o);
+      g->gray = h->gclist;
+      if (traversetable(g, h))  /* table is weak? */
+        black2gray(o);  /* keep it gray */
+      return sizeof(Table) + sizeof(TValue) * h->sizearray +
+                             sizeof(Node) * sizenode(h);
+      break;
     }
-    if (lim <= 0) return lim;
+    case LUA_TFUNCTION: {
+      Closure *cl = gco2cl(o);
+      g->gray = cl->c.gclist;
+      traverseclosure(g, cl);
+      return (cl->c.isC) ? sizeCclosure(cl->c.nupvalues) :
+                           sizeLclosure(cl->l.nupvalues);
+      break;
+    }
+    case LUA_TTHREAD: {
+      lua_State *th = gco2th(o);
+      g->gray = th->gclist;
+      th->gclist = g->grayagain;
+      g->grayagain = o;
+      black2gray(o);
+      traversestack(g, th);
+      return sizeof(lua_State) + sizeof(TValue) * th->stacksize +
+                                 sizeof(CallInfo) * th->size_ci;
+      break;
+    }
+    case LUA_TPROTO: {
+      Proto *p = gco2p(o);
+      g->gray = p->gclist;
+      traverseproto(g, p);
+      return sizeof(Proto) + sizeof(Instruction) * p->sizecode +
+                             sizeof(Proto *) * p->sizep +
+                             sizeof(TValue) * p->sizek + 
+                             sizeof(int) * p->sizelineinfo +
+                             sizeof(LocVar) * p->sizelocvars +
+                             sizeof(TString *) * p->sizeupvalues;
+      break;
+    }
+    default: lua_assert(0); return 0;
   }
-  return lim;
+}
+
+
+static void propagateall (global_State *g) {
+  while (g->gray) propagatemark(g);
 }
 
 
@@ -381,6 +384,7 @@ static void freeobj (lua_State *L, GCObject *o) {
       break;
     }
     case LUA_TSTRING: {
+      G(L)->strt.nuse--;
       luaM_free(L, o, sizestring(gco2ts(o)->len));
       break;
     }
@@ -393,59 +397,45 @@ static void freeobj (lua_State *L, GCObject *o) {
 }
 
 
-static l_mem sweepwholelist (lua_State *L, GCObject **p, int keepfixed,
-                             lu_int32 *count);
+
+#define sweepwholelist(L,p)	sweeplist(L,p,LUA_MAXINT32)
 
 
-static GCObject **sweeplist (lua_State *L, GCObject **p, int keepfixed,
-                             l_mem *plim, lu_int32 *count) {
+static GCObject **sweeplist (lua_State *L, GCObject **p, lu_int32 count) {
   GCObject *curr;
   global_State *g = G(L);
-  l_mem lim = *plim;
-  int deadmask = otherwhite(g);
-  if (keepfixed) deadmask |= FIXEDMASK;
-  while ((curr = *p) != NULL) {
-    if (((curr->gch.marked ^ FIXEDMASK) & deadmask) != deadmask) {
-      makewhite(g, curr);
+  int whitebit = otherwhite(g);
+  int deadmask = whitebit | FIXEDMASK;
+  int generational = g->gcgenerational;
+  while ((curr = *p) != NULL && count-- > 0) {
+    if ((curr->gch.marked ^ whitebit) & deadmask) {
+      lua_assert(!isdead(g, curr) || testbit(curr->gch.marked, FIXEDBIT));
+      if (!generational || isdead(g, curr))
+        makewhite(g, curr);
       if (curr->gch.tt == LUA_TTHREAD)
-        lim -= sweepwholelist(L, &gco2th(curr)->openupval, keepfixed, count);
+        sweepwholelist(L, &gco2th(curr)->openupval);
       p = &curr->gch.next;
-      lim -= GCSWEEPCOST;
     }
     else {
-      lua_assert(iswhite(curr));
+      lua_assert(isdead(g, curr));
       *p = curr->gch.next;
       if (curr == g->rootgc)  /* is the first element of the list? */
         g->rootgc = curr->gch.next;  /* adjust first */
       freeobj(L, curr);
-      lim -= GCFREECOST;
-      if (count) (*count)--;
     }
-    if (lim <= 0) break;
   }
-  *plim = lim;
   return p;
 }
 
 
-static l_mem sweepwholelist (lua_State *L, GCObject **p, int keepfixed,
-                             lu_int32 *count) {
-  l_mem lim = MAXLMEM;
-  /* empty lists are quite common here, so avoid useless calls */
-  if (*p) sweeplist(L, p, keepfixed, &lim, count);
-  return MAXLMEM - lim;
-}
 
-
-static l_mem sweepstrings (lua_State *L, int keepfixed, l_mem lim) {
-  int i;
-  global_State *g = G(L);
-  for (i = g->sweepstrgc; i < g->strt.size; i++) {  /* for each list */
-    lim -= sweepwholelist(L, &G(L)->strt.hash[i], keepfixed, &g->strt.nuse);
-    if (lim <= 0) break;
+static void freelist (lua_State *L, GCObject **p) {
+  while (*p) {
+    GCObject *curr = *p;
+    *p = (*p)->gch.next;
+    if (curr != obj2gco(L))
+      freeobj(L, curr);
   }
-  g->sweepstrgc = i+1;
-  return lim;
 }
 
 
@@ -494,19 +484,12 @@ void luaC_callGCTM (lua_State *L) {
 }
 
 
-void luaC_sweepall (lua_State *L) {
+void luaC_freeall (lua_State *L) {
   global_State *g = G(L);
-  l_mem dummy = MAXLMEM;
-  /* finish (occasional) current sweep */
-  sweepstrings(L, 0, MAXLMEM);
-  sweeplist(L, &g->rootgc, 0, &dummy, NULL);
-  /* do a whole new sweep */
-  markobject(g, g->mainthread);  /* cannot collect main thread */
-  g->currentwhite = otherwhite(g);
-  g->sweepgc = &g->rootgc;
-  g->sweepstrgc = 0;
-  sweepstrings(L, 0, MAXLMEM);
-  sweeplist(L, &g->rootgc, 0, &dummy, NULL);
+  int i;
+  freelist(L, &g->rootgc);
+  for (i = 0; i < g->strt.size; i++)  /* free all string lists */
+    freelist(L, &G(L)->strt.hash[i]);
 }
 
 
@@ -530,8 +513,10 @@ static void remarkupvals (global_State *g) {
     if (iswhite(o)) {
       GCObject *curr;
       for (curr = gco2th(o)->openupval; curr != NULL; curr = curr->gch.next) {
-        if (isgray(curr))
-          markvalue(g, gco2uv(curr)->v);
+        if (isgray(curr)) {
+          UpVal *uv = gco2uv(curr);
+          markvalue(g, uv->v);
+        }
       }
     }
   }
@@ -540,6 +525,7 @@ static void remarkupvals (global_State *g) {
 
 static void atomic (lua_State *L) {
   global_State *g = G(L);
+  int aux;
   lua_assert(g->gray == NULL);
   /* remark occasional upvalues of (maybe) dead threads */
   remarkupvals(g);
@@ -548,90 +534,130 @@ static void atomic (lua_State *L) {
   g->weak = NULL;
   lua_assert(!iswhite(obj2gco(g->mainthread)));
   markobject(g, L);  /* mark running thread */
-  propagatemarks(g, MAXLMEM);
+  propagateall(g);
   /* remark gray again */
   g->gray = g->grayagain;
   g->grayagain = NULL;
-  propagatemarks(g, MAXLMEM);
+  propagateall(g);
   luaC_separateudata(L, 0);  /* separate userdata to be preserved */
   marktmu(g);  /* mark `preserved' userdata */
-  propagatemarks(g, MAXLMEM);  /* remark, to propagate `preserveness' */
+  propagateall(g);  /* remark, to propagate `preserveness' */
   cleartable(g->weak);  /* remove collected objects from weak tables */
   /* flip current white */
   g->currentwhite = otherwhite(g);
+  g->sweepstrgc = 0;
+  g->sweepgc = &g->rootgc;
   g->gcstate = GCSsweepstring;
+  aux = g->gcgenerational;
+  g->gcgenerational = (g->estimate <= 4*g->prevestimate/2);
+  if (!aux)  /* last collection was full? */
+    g->prevestimate = g->estimate;  /* keep estimate of last full collection */
+  g->estimate = g->totalbytes;  /* first estimate */
 }
 
 
-static l_mem singlestep (lua_State *L, l_mem lim) {
+static l_mem singlestep (lua_State *L) {
   global_State *g = G(L);
+  /*lua_checkmemory(L);*/
   switch (g->gcstate) {
+    case GCSpause: {
+      /* start a new collection */
+      if (g->gcgenerational)
+        atomic(L);
+      else
+        markroot(L);
+      return 0;
+    }
     case GCSpropagate: {
       if (g->gray)
-        lim = propagatemarks(g, lim);
+        return propagatemark(g);
       else {  /* no more `gray' objects */
         atomic(L);  /* finish mark phase */
-        lim = 0;
+        return 0;
       }
-      break;
     }
     case GCSsweepstring: {
-      lim = sweepstrings(L, 1, lim);
-      if (g->sweepstrgc >= g->strt.size) {  /* nothing more to sweep? */
-        g->sweepstrgc = 0;
+      lu_mem old = g->totalbytes;
+      sweepwholelist(L, &g->strt.hash[g->sweepstrgc++]);
+      if (g->sweepstrgc >= g->strt.size)  /* nothing more to sweep? */
         g->gcstate = GCSsweep;  /* end sweep-string phase */
-      }
-      break;
+      g->estimate -= old - g->totalbytes;
+      return GCSWEEPCOST;
     }
     case GCSsweep: {
-      g->sweepgc = sweeplist(L, g->sweepgc, 1, &lim, NULL);
+      lu_mem old = g->totalbytes;
+      g->sweepgc = sweeplist(L, g->sweepgc, GCSWEEPMAX);
       if (*g->sweepgc == NULL) {  /* nothing more to sweep? */
         checkSizes(L);
-        g->sweepgc = &g->rootgc;
         g->gcstate = GCSfinalize;  /* end sweep phase */
       }
-      break;
+      g->estimate -= old - g->totalbytes;
+      return GCSWEEPMAX*GCSWEEPCOST;
     }
     case GCSfinalize: {
       if (g->tmudata) {
         GCTM(L);
-        lim -= GCFINALIZECOST;
+        return GCFINALIZECOST;
       }
-      else {  /* no more `udata' to finalize */
-        markroot(L);  /* may restart collection */
-        lim = 0;
+      else {
+        g->gcstate = GCSpause;  /* end collection */
+        return 0;
       }
-      break;
     }
-    default: lua_assert(0);
+    default: lua_assert(0); return 0;
   }
-  return lim;
 }
 
 
 void luaC_step (lua_State *L) {
   global_State *g = G(L);
-  l_mem lim = (g->nblocks - (g->GCthreshold - GCSTEPSIZE)) * 2;
+  l_mem lim = (g->totalbytes - (g->GCthreshold - GCSTEPSIZE)) * STEPMUL;
+/*printf("step(%c): ", g->gcgenerational?'g':' ');*/
   do {
-    lim = singlestep(L, lim);
-    if (g->gcstate == GCSfinalize && g->tmudata == NULL)
-      break;  /* do not start new collection */
+    /*printf("%c", "_pswf"[g->gcstate]);*/
+    lim -= singlestep(L);
+    if (g->gcstate == GCSpause)
+      break;
   } while (lim > 0);
-  g->GCthreshold = g->nblocks + GCSTEPSIZE - lim/2;
-  lua_assert((long)g->nblocks + (long)GCSTEPSIZE >= lim/2);
+/*printf("\n");*/
+  if (g->gcstate != GCSpause)
+    g->GCthreshold = g->totalbytes + GCSTEPSIZE;  /* - lim/STEPMUL; */
+  else {
+/*printf("---\n");*/
+    lua_assert(g->totalbytes >= g->estimate);
+    g->GCthreshold = 2*g->estimate;
+    if (g->GCthreshold < g->totalbytes + GCSTEPSIZE)
+      g->GCthreshold = g->totalbytes + GCSTEPSIZE;
+  }
 }
 
 
 void luaC_fullgc (lua_State *L) {
   global_State *g = G(L);
+  if (g->gcstate <= GCSpropagate || g->gcgenerational) {
+    g->gcgenerational = 0;
+    /* reset sweep marks to sweep all elements (returning them to white) */
+    g->sweepstrgc = 0;
+    g->sweepgc = &g->rootgc;
+    /* reset other collector lists */
+    g->gray = NULL;
+    g->grayagain = NULL;
+    g->weak = NULL;
+    g->gcstate = GCSsweepstring;
+  }
+  /* finish any pending sweep phase */
   while (g->gcstate != GCSfinalize) {
-    singlestep(L, MAXLMEM);
+    lua_assert(g->gcstate == GCSsweepstring || g->gcstate == GCSsweep);
+    singlestep(L);
   }
   markroot(L);
+  lua_assert(!g->gcgenerational);
   while (g->gcstate != GCSfinalize) {
-    singlestep(L, MAXLMEM);
+    singlestep(L);
+    g->gcgenerational = 0;  /* keep it in this mode */
   }
-  g->GCthreshold = g->nblocks + GCSTEPSIZE;
+  lua_assert(g->estimate == g->totalbytes);
+  g->GCthreshold = 2*g->estimate;
   luaC_callGCTM(L);  /* call finalizers */
 }
 
@@ -639,11 +665,21 @@ void luaC_fullgc (lua_State *L) {
 void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v) {
   global_State *g = G(L);
   lua_assert(isblack(o) && iswhite(v) && !isdead(g, v) && !isdead(g, o));
-  lua_assert(g->gcstate != GCSfinalize);
+  lua_assert(g->gcgenerational || g->gcstate != GCSfinalize);
   if (g->gcstate != GCSpropagate)  /* sweeping phases? */
     black2gray(o);  /* just mark as gray to avoid other barriers */
   else  /* breaking invariant! */
     reallymarkobject(g, v);  /* restore it */
+}
+
+
+void luaC_barrierback (lua_State *L, GCObject *o, GCObject *v) {
+  global_State *g = G(L);
+  lua_assert(isblack(o) && iswhite(v) && !isdead(g, v) && !isdead(g, o));
+  lua_assert(g->gcgenerational || g->gcstate != GCSfinalize);
+  black2gray(o);  /* make table gray (again) */
+  gco2h(o)->gclist = g->grayagain;
+  g->grayagain = o;
 }
 
 
@@ -662,13 +698,13 @@ void luaC_linkupval (lua_State *L, UpVal *uv) {
   o->gch.next = g->rootgc;  /* link upvalue into `rootgc' list */
   g->rootgc = o;
   if (isgray(o)) { 
-    if (g->gcstate == GCSpropagate) {
+    if (g->gcstate == GCSpropagate || g->gcgenerational) {
       gray2black(o);  /* closed upvalues need barrier */
       luaC_barrier(L, uv, uv->v);
     }
     else {  /* sweep phase: sweep it (turning it into white) */
       makewhite(g, o);
-      lua_assert(g->gcstate != GCSfinalize);
+      lua_assert(g->gcstate != GCSfinalize && g->gcstate != GCSpause);
     }
   }
 }

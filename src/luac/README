@@ -1,7 +1,7 @@
 This is luac, the Lua compiler.
 There are man pages for it in both nroff and html in ../../doc.
 
-luac translates Lua programs into binary files that can be loaded latter.
+luac translates Lua programs into binary files that can be loaded later.
 The main advantages of pre-compiling chunks are: faster loading, protecting
 source code from user changes, and off-line syntax error detection.
 luac can also be used to learn about the Lua virtual machine.

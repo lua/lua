@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.101 2004/01/02 11:54:14 roberto Exp $
+** $Id: lstrlib.c,v 1.106 2004/08/09 13:30:33 roberto Exp $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -12,6 +12,7 @@
 #include <string.h>
 
 #define lstrlib_c
+#define LUA_LIB
 
 #include "lua.h"
 
@@ -20,9 +21,7 @@
 
 
 /* macro to `unsign' a character */
-#ifndef uchar
 #define uchar(c)        ((unsigned char)(c))
-#endif
 
 
 typedef lua_Integer sint32;	/* a signed version for size_t */
@@ -108,11 +107,17 @@ static int str_rep (lua_State *L) {
 static int str_byte (lua_State *L) {
   size_t l;
   const char *s = luaL_checklstring(L, 1, &l);
-  sint32 pos = posrelat(luaL_optinteger(L, 2, 1), l);
-  if (pos <= 0 || (size_t)(pos) > l)  /* index out of range? */
-    return 0;  /* no answer */
-  lua_pushinteger(L, uchar(s[pos-1]));
-  return 1;
+  sint32 posi = posrelat(luaL_optinteger(L, 2, 1), l);
+  sint32 pose = posrelat(luaL_optinteger(L, 3, posi), l);
+  int n, i;
+  if (posi <= 0) posi = 1;
+  if ((size_t)pose > l) pose = l;
+  if (posi > pose) return 0;  /* empty interval; return no values */
+  n = pose -  posi + 1;
+  luaL_checkstack(L, n, "string slice too long");
+  for (i=0; i<n; i++)
+    lua_pushinteger(L, uchar(s[posi+i-1]));
+  return n;
 }
 
 
@@ -134,15 +139,16 @@ static int str_char (lua_State *L) {
 static int writer (lua_State *L, const void* b, size_t size, void* B) {
   (void)L;
   luaL_addlstring((luaL_Buffer*) B, (const char *)b, size);
-  return 1;
+  return 0;
 }
 
 
 static int str_dump (lua_State *L) {
   luaL_Buffer b;
   luaL_checktype(L, 1, LUA_TFUNCTION);
+  lua_settop(L, 1);
   luaL_buffinit(L,&b);
-  if (!lua_dump(L, writer, &b))
+  if (lua_dump(L, writer, &b) != 0)
     luaL_error(L, "unable to dump given function");
   luaL_pushresult(&b);
   return 1;
@@ -155,10 +161,6 @@ static int str_dump (lua_State *L) {
 ** PATTERN MATCHING
 ** =======================================================
 */
-
-#ifndef MAX_CAPTURES
-#define MAX_CAPTURES 32  /* arbitrary limit */
-#endif
 
 
 #define CAP_UNFINISHED	(-1)

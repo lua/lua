@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.187 2004/03/09 17:34:35 roberto Exp $
+** $Id: lua.h,v 1.192 2004/06/04 15:30:53 roberto Exp $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -14,7 +14,10 @@
 #include <stddef.h>
 
 
-#define LUA_VERSION	"Lua 5.1 (work)"
+#include "luaconf.h"
+
+
+#define LUA_VERSION	"Lua 5.1 (work1)"
 #define LUA_COPYRIGHT	"Copyright (C) 1994-2004 Tecgraf, PUC-Rio"
 #define LUA_AUTHORS 	"R. Ierusalimschy, L. H. de Figueiredo & W. Celes"
 
@@ -34,12 +37,11 @@
 #define lua_upvalueindex(i)	(LUA_GLOBALSINDEX-(i))
 
 
-/* error codes for `lua_load' and `lua_pcall' */
+/* error codes for `lua_pcall' */
 #define LUA_ERRRUN	1
-#define LUA_ERRFILE	2
-#define LUA_ERRSYNTAX	3
-#define LUA_ERRMEM	4
-#define LUA_ERRERR	5
+#define LUA_ERRSYNTAX	2
+#define LUA_ERRMEM	3
+#define LUA_ERRERR	4
 
 
 typedef struct lua_State lua_State;
@@ -91,25 +93,12 @@ typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 
 
 /* type of numbers in Lua */
-#ifndef LUA_NUMBER
-typedef double lua_Number;
-#else
 typedef LUA_NUMBER lua_Number;
-#endif
 
 
 /* type for integer functions */
-#ifndef LUA_INTEGER
-typedef long lua_Integer;
-#else
 typedef LUA_INTEGER lua_Integer;
-#endif
 
-
-/* mark for all API functions */
-#ifndef LUA_API
-#define LUA_API		extern
-#endif
 
 
 /*
@@ -155,7 +144,7 @@ LUA_API lua_Number      lua_tonumber (lua_State *L, int idx);
 LUA_API lua_Integer     lua_tointeger (lua_State *L, int idx);
 LUA_API int             lua_toboolean (lua_State *L, int idx);
 LUA_API const char     *lua_tostring (lua_State *L, int idx);
-LUA_API size_t          lua_strlen (lua_State *L, int idx);
+LUA_API size_t          lua_objsize (lua_State *L, int idx);
 LUA_API lua_CFunction   lua_tocfunction (lua_State *L, int idx);
 LUA_API void	       *lua_touserdata (lua_State *L, int idx);
 LUA_API lua_State      *lua_tothread (lua_State *L, int idx);
@@ -228,6 +217,7 @@ LUA_API int  lua_resume (lua_State *L, int narg);
 #define LUA_GCRESTART	1
 #define LUA_GCCOLLECT	2
 #define LUA_GCCOUNT	3
+#define LUA_GCSTEP	4
 
 LUA_API int lua_gc (lua_State *L, int what, int data);
 
@@ -254,11 +244,6 @@ LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud);
 ** ===============================================================
 */
 
-#define lua_boxpointer(L,u) \
-	(*(void **)(lua_newuserdata(L, sizeof(void *))) = (u))
-
-#define lua_unboxpointer(L,i)	(*(void **)(lua_touserdata(L, i)))
-
 #define lua_pop(L,n)		lua_settop(L, -(n)-1)
 
 #define lua_newtable(L)		lua_createtable(L, 0, 0)
@@ -266,6 +251,8 @@ LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud);
 #define lua_register(L,n,f) (lua_pushcfunction(L,f), lua_setglobal(L,n))
 
 #define lua_pushcfunction(L,f)	lua_pushcclosure(L, f, 0)
+
+#define lua_strlen(L,i)		lua_objsize(L,i)
 
 #define lua_isfunction(L,n)	(lua_type(L,n) == LUA_TFUNCTION)
 #define lua_istable(L,n)	(lua_type(L,n) == LUA_TTABLE)
@@ -295,37 +282,7 @@ LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud);
 #define lua_getgccount(L)	lua_gc(L, LUA_GCCOUNT, 0)
 
 
-/* compatibility with ref system */
 
-/* pre-defined references */
-#define LUA_NOREF	(-2)
-#define LUA_REFNIL	(-1)
-
-#define lua_ref(L,lock)	((lock) ? luaL_ref(L, LUA_REGISTRYINDEX) : \
-      (lua_pushstring(L, "unlocked references are obsolete"), lua_error(L), 0))
-
-#define lua_unref(L,ref)	luaL_unref(L, LUA_REGISTRYINDEX, (ref))
-
-#define lua_getref(L,ref)	lua_rawgeti(L, LUA_REGISTRYINDEX, ref)
-
-
-
-/*
-** {======================================================================
-** useful definitions for Lua kernel and libraries
-** =======================================================================
-*/
-
-/* formats for Lua numbers */
-#ifndef LUA_NUMBER_SCAN
-#define LUA_NUMBER_SCAN		"%lf"
-#endif
-
-#ifndef LUA_NUMBER_FMT
-#define LUA_NUMBER_FMT		"%.14g"
-#endif
-
-/* }====================================================================== */
 
 
 /*

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.63 2004/03/13 13:32:09 roberto Exp $
+** $Id: lauxlib.h,v 1.70 2004/07/09 18:23:17 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -15,10 +15,8 @@
 #include "lua.h"
 
 
-#ifndef LUALIB_API
-#define LUALIB_API	LUA_API
-#endif
-
+/* extra error code for `luaL_load' */
+#define LUA_ERRFILE     (LUA_ERRERR+1)
 
 
 typedef struct luaL_reg {
@@ -56,6 +54,9 @@ LUALIB_API int luaL_error (lua_State *L, const char *fmt, ...);
 
 LUALIB_API int luaL_findstring (const char *st, const char *const lst[]);
 
+LUALIB_API const char *luaL_searchpath (lua_State *L, const char *name,
+                                                      const char *path);
+
 LUALIB_API int luaL_ref (lua_State *L, int t);
 LUALIB_API void luaL_unref (lua_State *L, int t, int ref);
 
@@ -85,6 +86,7 @@ LUALIB_API lua_State *(luaL_newstate) (void);
 #define luaL_checklong(L,n)	((long)luaL_checkinteger(L, n))
 #define luaL_optlong(L,n,d)	((long)luaL_optinteger(L, n,d))
 
+#define luaL_typename(L,i)	lua_typename(L,lua_type(L,(i)))
 
 /*
 ** {======================================================
@@ -92,10 +94,6 @@ LUALIB_API lua_State *(luaL_newstate) (void);
 ** =======================================================
 */
 
-
-#ifndef LUAL_BUFFERSIZE
-#define LUAL_BUFFERSIZE	  BUFSIZ
-#endif
 
 
 typedef struct luaL_Buffer {
@@ -122,15 +120,18 @@ LUALIB_API void luaL_pushresult (luaL_Buffer *B);
 /* }====================================================== */
 
 
+/* compatibility with ref system */
 
-/*
-** Compatibility macros and functions
-*/
+/* pre-defined references */
+#define LUA_NOREF       (-2)
+#define LUA_REFNIL      (-1)
 
-LUALIB_API int   lua_dofile (lua_State *L, const char *filename);
-LUALIB_API int   lua_dostring (lua_State *L, const char *str);
-LUALIB_API int   lua_dobuffer (lua_State *L, const char *buff, size_t sz,
-                               const char *n);
+#define lua_ref(L,lock) ((lock) ? luaL_ref(L, LUA_REGISTRYINDEX) : \
+      (lua_pushstring(L, "unlocked references are obsolete"), lua_error(L), 0))
+
+#define lua_unref(L,ref)        luaL_unref(L, LUA_REGISTRYINDEX, (ref))
+
+#define lua_getref(L,ref)       lua_rawgeti(L, LUA_REGISTRYINDEX, ref)
 
 
 #endif

@@ -1,5 +1,5 @@
 /*
-** $Id: luac.c,v 1.47 2004/03/24 00:25:08 lhf Exp $
+** $Id: luac.c,v 1.49 2004/09/01 21:22:34 lhf Exp $
 ** Lua compiler (saves bytecodes to files; also list bytecodes)
 ** See Copyright Notice in lua.h
 */
@@ -8,6 +8,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#define luac_c
+#define LUA_CORE
 
 #include "lua.h"
 #include "lauxlib.h"
@@ -43,8 +46,7 @@ static void fatal(const char* message)
 
 static void cannot(const char* what)
 {
- fprintf(stderr,"%s: cannot %s output file %s: %s\n",
-	progname,what,output,strerror(errno));
+ fprintf(stderr,"%s: cannot %s %s: %s\n",progname,what,output,strerror(errno));
  exit(EXIT_FAILURE);
 }
 
@@ -84,13 +86,14 @@ static int doargs(int argc, char* argv[])
    break;
   }
   else if (IS("-"))			/* end of options; use stdin */
-   return i;
+   break;
   else if (IS("-l"))			/* list */
-   listing=1;
+   ++listing;
   else if (IS("-o"))			/* output file */
   {
    output=argv[++i];
    if (output==NULL || *output==0) usage("`-o' needs argument");
+   if (IS("-")) output=NULL;
   }
   else if (IS("-p"))			/* parse only */
    dumping=0;
@@ -112,11 +115,7 @@ static int doargs(int argc, char* argv[])
  return i;
 }
 
-static Proto* toproto(lua_State* L, int i)
-{
- const Closure* c=(const Closure*)lua_topointer(L,i);
- return c->l.p;
-}
+#define toproto(L,i) (clvalue(L->top+(i))->l.p)
 
 static Proto* combine(lua_State* L, int n)
 {
@@ -124,18 +123,20 @@ static Proto* combine(lua_State* L, int n)
   return toproto(L,-1);
  else
  {
-  int i,pc=0;
+  int i,pc;
   Proto* f=luaF_newproto(L);
   setptvalue2s(L,L->top,f); incr_top(L);
   f->source=luaS_newliteral(L,"=(" PROGNAME ")");
   f->maxstacksize=1;
+  pc=2*n+1;
+  f->code=luaM_newvector(L,pc,Instruction);
+  f->sizecode=pc;
   f->p=luaM_newvector(L,n,Proto*);
   f->sizep=n;
-  f->sizecode=2*n+1;
-  f->code=luaM_newvector(L,f->sizecode,Instruction);
+  pc=0;
   for (i=0; i<n; i++)
   {
-   f->p[i]=toproto(L,i-n);
+   f->p[i]=toproto(L,i-n-1);
    f->code[pc++]=CREATE_ABx(OP_CLOSURE,0,i);
    f->code[pc++]=CREATE_ABC(OP_CALL,0,1,1);
   }
@@ -147,26 +148,23 @@ static Proto* combine(lua_State* L, int n)
 static int writer(lua_State* L, const void* p, size_t size, void* u)
 {
  UNUSED(L);
- return fwrite(p,size,1,(FILE*)u)==1;
+ return (fwrite(p,size,1,(FILE*)u)!=1) && (size!=0);
 }
 
-static int panic(lua_State *L)
-{
- UNUSED(L);
- fatal("not enough memory!");
- return 0;
-}
+void unprint(lua_State* L, const char* name);
 
-int main(int argc, char* argv[])
+struct Smain {
+  int argc;
+  char **argv;
+};
+
+static int pmain(lua_State *L)
 {
- lua_State* L;
+ struct Smain *s = (struct Smain *)lua_touserdata(L, 1);
+ int argc=s->argc;
+ char **argv=s->argv;
  Proto* f;
- int i=doargs(argc,argv);
- argc-=i; argv+=i;
- if (argc<=0) usage("no input files given");
- L=lua_open();
- if (L==NULL) fatal("not enough memory for state");
- lua_atpanic(L,panic);
+ int i;
  if (!lua_checkstack(L,argc)) fatal("too many input files");
  for (i=0; i<argc; i++)
  {
@@ -174,10 +172,10 @@ int main(int argc, char* argv[])
   if (luaL_loadfile(L,filename)!=0) fatal(lua_tostring(L,-1));
  }
  f=combine(L,argc);
- if (listing) luaU_print(f);
+ if (listing) luaU_print(f,listing>1);
  if (dumping)
  {
-  FILE* D=fopen(output,"wb");
+  FILE* D= (output==NULL) ? stdout : fopen(output,"wb");
   if (D==NULL) cannot("open");
   lua_lock(L);
   luaU_dump(L,f,writer,D,stripping);
@@ -185,6 +183,21 @@ int main(int argc, char* argv[])
   if (ferror(D)) cannot("write");
   if (fclose(D)) cannot("close");
  }
+ return 0;
+}
+
+int main(int argc, char* argv[])
+{
+ lua_State* L;
+ struct Smain s;
+ int i=doargs(argc,argv);
+ argc-=i; argv+=i;
+ if (argc<=0) usage("no input files given");
+ L=lua_open();
+ if (L==NULL) fatal("not enough memory for state");
+ s.argc=argc;
+ s.argv=argv;
+ if (lua_cpcall(L,pmain,&s)!=0) fatal(lua_tostring(L,-1));
  lua_close(L);
  return EXIT_SUCCESS;
 }

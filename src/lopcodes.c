@@ -1,10 +1,11 @@
 /*
-** $Id: lopcodes.c,v 1.25 2003/05/14 21:09:53 roberto Exp $
+** $Id: lopcodes.c,v 1.28 2004/07/16 13:15:32 roberto Exp $
 ** See Copyright Notice in lua.h
 */
 
 
 #define lopcodes_c
+#define LUA_CORE
 
 #include "lua.h"
 
@@ -13,8 +14,6 @@
 
 
 /* ORDER OP */
-
-#ifdef LUA_OPNAMES
 
 const char *const luaP_opnames[NUM_OPCODES] = {
   "MOVE",
@@ -52,10 +51,10 @@ const char *const luaP_opnames[NUM_OPCODES] = {
   "SETLIST",
   "SETLISTO",
   "CLOSE",
-  "CLOSURE"
+  "CLOSURE",
+  "VARARG"
 };
 
-#endif
 
 #define opmode(t,a,b,c,m) (((t)<<7) | ((a)<<6) | ((b)<<4) | ((c)<<2) | (m))
 
@@ -97,5 +96,6 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 0, OpArgU, OpArgN, iABx)		/* OP_SETLISTO */
  ,opmode(0, 0, OpArgN, OpArgN, iABC)		/* OP_CLOSE */
  ,opmode(0, 1, OpArgU, OpArgN, iABx)		/* OP_CLOSURE */
+ ,opmode(0, 1, OpArgU, OpArgN, iABC)		/* OP_VARARG */
 };
 

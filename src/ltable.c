@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.1 2003/12/10 12:13:36 roberto Exp $
+** $Id: ltable.c,v 2.5 2004/08/31 17:57:33 roberto Exp $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -21,6 +21,7 @@
 #include <string.h>
 
 #define ltable_c
+#define LUA_CORE
 
 #include "lua.h"
 
@@ -36,18 +37,13 @@
 /*
 ** max size of array part is 2^MAXBITS
 */
-#if BITS_INT > 26
+#if LUA_BITSINT > 26
 #define MAXBITS		24
 #else
-#define MAXBITS		(BITS_INT-2)
+#define MAXBITS		(LUA_BITSINT-2)
 #endif
 
 #define MAXASIZE	(1 << MAXBITS)
-
-/* function to convert a lua_Number to int (with any rounding method) */
-#ifndef lua_number2int
-#define lua_number2int(i,n)	((i)=(int)(n))
-#endif
 
 
 #define hashpow2(t,n)      (gnode(t, lmod((n), sizenode(t))))
@@ -270,7 +266,7 @@ static void setnodevector (lua_State *L, Table *t, int lsize) {
 }
 
 
-static void resize (lua_State *L, Table *t, int nasize, int nhsize) {
+void luaH_resize (lua_State *L, Table *t, int nasize, int nhsize) {
   int i;
   int oldasize = t->sizearray;
   int oldhsize = t->lsizenode;
@@ -315,7 +311,7 @@ static void resize (lua_State *L, Table *t, int nasize, int nhsize) {
 static void rehash (lua_State *L, Table *t) {
   int nasize, nhsize;
   numuse(t, &nasize, &nhsize);  /* compute new sizes for array and hash parts */
-  resize(L, t, nasize, luaO_log2(nhsize)+1);
+  luaH_resize(L, t, nasize, luaO_log2(nhsize)+1);
 }
 
 
@@ -349,26 +345,6 @@ void luaH_free (lua_State *L, Table *t) {
 }
 
 
-#if 0
-/*
-** try to remove an element from a hash table; cannot move any element
-** (because gc can call `remove' during a table traversal)
-*/
-void luaH_remove (Table *t, Node *e) {
-  Node *mp = luaH_mainposition(t, gkey(e));
-  if (e != mp) {  /* element not in its main position? */
-    while (mp->next != e) mp = mp->next;  /* find previous */
-    mp->next = e->next;  /* remove `e' from its list */
-  }
-  else {
-    if (e->next != NULL) ??
-  }
-  lua_assert(ttisnil(gval(node)));
-  setnilvalue(gkey(e));  /* clear node `e' */
-  e->next = NULL;
-}
-#endif
-
 
 /*
 ** inserts a new key into a hash table; first, check whether key's main 
@@ -399,7 +375,7 @@ static TValue *newkey (lua_State *L, Table *t, const TValue *key) {
     }
   }
   setobj2t(L, gkey(mp), key);
-  luaC_barrier(L, t, key);
+  luaC_barriert(L, t, key);
   lua_assert(ttisnil(gval(mp)));
   for (;;) {  /* correct `firstfree' */
     if (ttisnil(gkey(t->firstfree)))
@@ -414,21 +390,6 @@ static TValue *newkey (lua_State *L, Table *t, const TValue *key) {
   lua_assert(ttisboolean(val));
   setnilvalue(val);
   return val;
-}
-
-
-/*
-** generic search function
-*/
-static const TValue *luaH_getany (Table *t, const TValue *key) {
-  if (!ttisnil(key)) {
-    Node *n = luaH_mainposition(t, key);
-    do {  /* check whether `key' is somewhere in the chain */
-      if (luaO_rawequalObj(gkey(n), key)) return gval(n);  /* that's it */
-      else n = n->next;
-    } while (n);
-  }
-  return &luaO_nilobject;
 }
 
 
@@ -470,6 +431,7 @@ const TValue *luaH_getstr (Table *t, TString *key) {
 */
 const TValue *luaH_get (Table *t, const TValue *key) {
   switch (ttype(key)) {
+    case LUA_TNIL: return &luaO_nilobject;
     case LUA_TSTRING: return luaH_getstr(t, rawtsvalue(key));
     case LUA_TNUMBER: {
       int k;
@@ -478,7 +440,14 @@ const TValue *luaH_get (Table *t, const TValue *key) {
         return luaH_getnum(t, k);  /* use specialized version */
       /* else go through */
     }
-    default: return luaH_getany(t, key);
+    default: {
+      Node *n = luaH_mainposition(t, key);
+      do {  /* check whether `key' is somewhere in the chain */
+        if (luaO_rawequalObj(gkey(n), key)) return gval(n);  /* that's it */
+        else n = n->next;
+      } while (n);
+      return &luaO_nilobject;
+    }
   }
 }
 

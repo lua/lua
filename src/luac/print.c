@@ -1,18 +1,13 @@
 /*
-** $Id: print.c,v 1.46 2004/03/24 00:25:08 lhf Exp $
+** $Id: print.c,v 1.48 2004/09/01 21:22:34 lhf Exp $
 ** print bytecodes
 ** See Copyright Notice in lua.h
 */
 
+#include <ctype.h>
 #include <stdio.h>
 
-#if 1
-#define DEBUG_PRINT
-#endif
-
-#ifndef LUA_OPNAMES
-#define LUA_OPNAMES
-#endif
+#define LUA_CORE
 
 #include "ldebug.h"
 #include "lobject.h"
@@ -38,7 +33,7 @@ static void PrintString(const Proto* f, int n)
    case '\r': printf("\\r"); break;
    case '\t': printf("\\t"); break;
    case '\v': printf("\\v"); break;
-   default: putchar(*s); break;
+   default:   printf(isprint(*s) ? "%c" : "\\%03d",*s);
   }
  }
  putchar('"');
@@ -88,13 +83,11 @@ static void PrintCode(const Proto* f)
   {
    case iABC:
     printf("%d",a);
-    if (getBMode(o)!=OpArgN) 
-    { if (b>=MAXSTACK) printf(" #%d",b-MAXSTACK); else printf(" %d",b); }
-    if (getCMode(o)!=OpArgN) 
-    { if (c>=MAXSTACK) printf(" #%d",c-MAXSTACK); else printf(" %d",c); }
+    if (getBMode(o)!=OpArgN) printf(" %d",ISK(b) ? (-1-INDEXK(b)) : b);
+    if (getCMode(o)!=OpArgN) printf(" %d",ISK(c) ? (-1-INDEXK(c)) : c);
     break;
    case iABx:
-    if (getBMode(o)==OpArgK) printf("%d #%d",a,bx); else printf("%d %d",a,bx);
+    if (getBMode(o)==OpArgK) printf("%d %d",a,-1-bx); else printf("%d %d",a,bx);
     break;
    case iAsBx:
     if (o==OP_JMP) printf("%d",sbx); else printf("%d %d",a,sbx);
@@ -115,7 +108,7 @@ static void PrintCode(const Proto* f)
     break;
    case OP_GETTABLE:
    case OP_SELF:
-    if (c>=MAXSTACK) { printf("\t; "); PrintConstant(f,c-MAXSTACK); }
+    if (ISK(c)) { printf("\t; "); PrintConstant(f,INDEXK(c)); }
     break;
    case OP_SETTABLE:
    case OP_ADD:
@@ -126,12 +119,12 @@ static void PrintCode(const Proto* f)
    case OP_EQ:
    case OP_LT:
    case OP_LE:
-    if (b>=MAXSTACK || c>=MAXSTACK)
+    if (ISK(b) || ISK(c))
     {
      printf("\t; ");
-     if (b>=MAXSTACK) PrintConstant(f,b-MAXSTACK); else printf("-");
+     if (ISK(b)) PrintConstant(f,INDEXK(b)); else printf("-");
      printf(" ");
-     if (c>=MAXSTACK) PrintConstant(f,c-MAXSTACK); else printf("-");
+     if (ISK(c)) PrintConstant(f,INDEXK(c)); else printf("-");
     }
     break;
    case OP_JMP:
@@ -161,15 +154,13 @@ static const char* Source(const Proto* f)
   return "(string)";
 }
 
-#define IsMain(f)	(f->lineDefined==0)
-
 #define SS(x)	(x==1)?"":"s"
 #define S(x)	x,SS(x)
 
 static void PrintHeader(const Proto* f)
 {
  printf("\n%s <%s:%d> (%d instruction%s, %d bytes at %p)\n",
- 	IsMain(f)?"main":"function",Source(f),f->lineDefined,
+ 	(f->lineDefined==0)?"main":"function",Source(f),f->lineDefined,
 	S(f->sizecode),f->sizecode*Sizeof(Instruction),VOID(f));
  printf("%d%s param%s, %d stack%s, %d upvalue%s, ",
 	f->numparams,f->is_vararg?"+":"",SS(f->numparams),S(f->maxstacksize),
@@ -178,14 +169,13 @@ static void PrintHeader(const Proto* f)
 	S(f->sizelocvars),S(f->sizek),S(f->sizep));
 }
 
-#ifdef DEBUG_PRINT
 static void PrintConstants(const Proto* f)
 {
  int i,n=f->sizek;
  printf("constants (%d) for %p:\n",n,VOID(f));
  for (i=0; i<n; i++)
  {
-  printf("\t%d\t",i);
+  printf("\t%d\t",i+1);
   PrintConstant(f,i);
   printf("\n");
  }
@@ -212,17 +202,17 @@ static void PrintUpvalues(const Proto* f)
   printf("\t%d\t%s\n",i,getstr(f->upvalues[i]));
  }
 }
-#endif
 
-void luaU_print(const Proto* f)
+void luaU_print(const Proto* f, int full)
 {
  int i,n=f->sizep;
  PrintHeader(f);
  PrintCode(f);
-#ifdef DEBUG_PRINT
- PrintConstants(f);
- PrintLocals(f);
- PrintUpvalues(f);
-#endif
- for (i=0; i<n; i++) luaU_print(f->p[i]);
+ if (full)
+ {
+  PrintConstants(f);
+  PrintLocals(f);
+  PrintUpvalues(f);
+ }
+ for (i=0; i<n; i++) luaU_print(f->p[i],full);
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lzio.c,v 1.28 2003/11/18 10:44:53 roberto Exp $
+** $Id: lzio.c,v 1.29 2004/04/30 20:13:38 roberto Exp $
 ** a generic input stream interface
 ** See Copyright Notice in lua.h
 */
@@ -8,6 +8,7 @@
 #include <string.h>
 
 #define lzio_c
+#define LUA_CORE
 
 #include "lua.h"
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.110 2004/03/23 16:38:43 roberto Exp $
+** $Id: lauxlib.c,v 1.123 2004/08/30 18:35:14 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -18,6 +18,7 @@
 */
 
 #define lauxlib_c
+#define LUA_LIB
 
 #include "lua.h"
 
@@ -62,7 +63,7 @@ LUALIB_API int luaL_argerror (lua_State *L, int narg, const char *extramsg) {
 
 LUALIB_API int luaL_typerror (lua_State *L, int narg, const char *tname) {
   const char *msg = lua_pushfstring(L, "%s expected, got %s",
-                                    tname, lua_typename(L, lua_type(L,narg)));
+                                    tname, luaL_typename(L, narg));
   return luaL_argerror(L, narg, msg);
 }
 
@@ -242,6 +243,8 @@ LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
     if (lua_isnil(L, -1)) {  /* no? */
       lua_pop(L, 1);
       lua_newtable(L);  /* create it */
+      if (lua_getmetatable(L, LUA_GLOBALSINDEX))
+        lua_setmetatable(L, -2);  /* share metatable with global table */
       lua_pushvalue(L, -1);
       /* register it with given name */
       lua_setglobal(L, libname);
@@ -288,7 +291,7 @@ static void getsizes (lua_State *L) {
 }
 
 
-void luaL_setn (lua_State *L, int t, int n) {
+LUALIB_API void luaL_setn (lua_State *L, int t, int n) {
   t = abs_index(L, t);
   getsizes(L);
   lua_pushvalue(L, t);
@@ -298,7 +301,32 @@ void luaL_setn (lua_State *L, int t, int n) {
 }
 
 
-int luaL_getn (lua_State *L, int t) {
+/* find an `n' such that t[n] ~= nil and t[n+1] == nil */
+static int countn (lua_State *L, int t) {
+  int i = LUA_FIRSTINDEX - 1;
+  int j = 2;
+  /* find `i' such that i <= n < i*2 (= j) */
+  for (;;) {
+    lua_rawgeti(L, t, j);
+    if (lua_isnil(L, -1)) break;
+    lua_pop(L, 1);
+    i = j;
+    j = i*2;
+  }
+  lua_pop(L, 1);
+  /* i <= n < j; do a binary search */
+  while (i < j-1) {
+    int m = (i+j)/2;
+    lua_rawgeti(L, t, m);
+    if (lua_isnil(L, -1)) j = m;
+    else i = m;
+    lua_pop(L, 1);
+  }
+  return i - LUA_FIRSTINDEX + 1;
+}
+
+
+LUALIB_API int luaL_getn (lua_State *L, int t) {
   int n;
   t = abs_index(L, t);
   getsizes(L);  /* try sizes[t] */
@@ -307,17 +335,60 @@ int luaL_getn (lua_State *L, int t) {
   if ((n = checkint(L, 2)) >= 0) return n;
   lua_getfield(L, t, "n");  /* else try t.n */
   if ((n = checkint(L, 1)) >= 0) return n;
-  for (n = 1; ; n++) {  /* else must count elements */
-    lua_rawgeti(L, t, n);
-    if (lua_isnil(L, -1)) break;
-    lua_pop(L, 1);
-  }
-  lua_pop(L, 1);
-  return n - 1;
+  return countn(L, t);
 }
 
 /* }====================================================== */
 
+
+static const char *pushnexttemplate (lua_State *L, const char *path) {
+  const char *l;
+  if (*path == '\0') return NULL;  /* no more templates */
+  if (*path == LUA_PATH_SEP) path++;  /* skip separator */
+  l = strchr(path, LUA_PATH_SEP);  /* find next separator */
+  if (l == NULL) l = path+strlen(path);
+  lua_pushlstring(L, path, l - path);  /* template */
+  return l;
+}
+
+
+static const char *luaL_gsub (lua_State *L, const char *s,
+                              const char *p, const char *r) {
+  const char *wild;
+  int l = strlen(p);
+  luaL_Buffer b;
+  luaL_buffinit(L, &b);
+  while ((wild = strstr(s, p)) != NULL) {
+    luaL_addlstring(&b, s, wild - s);  /* push prefix */
+    luaL_addstring(&b, r);  /* push replacement in place of pattern */
+    s = wild + l;  /* continue after `p' */
+  }
+  luaL_addstring(&b, s);  /* push last suffix (`n' already includes this) */
+  luaL_pushresult(&b);
+  return lua_tostring(L, -1);
+}
+
+
+LUALIB_API const char *luaL_searchpath (lua_State *L, const char *name,
+                                                      const char *path) {
+  FILE *f;
+  const char *p = path;
+  for (;;) {
+    const char *fname;
+    if ((p = pushnexttemplate(L, p)) == NULL) {
+      lua_pushfstring(L, "no readable `%s' in path `%s'", name, path);
+      return NULL;
+    }
+    fname = luaL_gsub(L, lua_tostring(L, -1), LUA_PATH_MARK, name);
+    lua_remove(L, -2);  /* remove path template */
+    f = fopen(fname, "r");  /* try to read it */
+    if (f) {
+      fclose(f);
+      return fname;
+    }
+    lua_pop(L, 1);  /* remove file name */ 
+  }
+}
 
 
 /*
@@ -480,9 +551,10 @@ static const char *getF (lua_State *L, void *ud, size_t *size) {
 }
 
 
-static int errfile (lua_State *L, int fnameindex) {
+static int errfile (lua_State *L, const char *what, int fnameindex) {
+  const char *serr = strerror(errno);
   const char *filename = lua_tostring(L, fnameindex) + 1;
-  lua_pushfstring(L, "cannot read %s: %s", filename, strerror(errno));
+  lua_pushfstring(L, "cannot %s %s: %s", what, filename, serr);
   lua_remove(L, fnameindex);
   return LUA_ERRFILE;
 }
@@ -501,7 +573,7 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
   else {
     lua_pushfstring(L, "@%s", filename);
     lf.f = fopen(filename, "r");
-    if (lf.f == NULL) return errfile(L, fnameindex);  /* unable to open file */
+    if (lf.f == NULL) return errfile(L, "open", fnameindex);
   }
   c = getc(lf.f);
   if (c == '#') {  /* Unix exec. file? */
@@ -512,7 +584,7 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
   if (c == LUA_SIGNATURE[0] && lf.f != stdin) {  /* binary file? */
     fclose(lf.f);
     lf.f = fopen(filename, "rb");  /* reopen in binary mode */
-    if (lf.f == NULL) return errfile(L, fnameindex); /* unable to reopen file */
+    if (lf.f == NULL) return errfile(L, "reopen", fnameindex);
     /* skip eventual `#!...' */
    while ((c = getc(lf.f)) != EOF && c != LUA_SIGNATURE[0]) ;
     lf.extraline = 0;
@@ -523,7 +595,7 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
   if (lf.f != stdin) fclose(lf.f);  /* close file (even in case of errors) */
   if (readstatus) {
     lua_settop(L, fnameindex);  /* ignore results from `lua_load' */
-    return errfile(L, fnameindex);
+    return errfile(L, "read", fnameindex);
   }
   lua_remove(L, fnameindex);
   return status;
@@ -554,6 +626,7 @@ LUALIB_API int luaL_loadbuffer (lua_State *L, const char *buff, size_t size,
   return lua_load(L, getS, &ls, name);
 }
 
+
 /* }====================================================== */
 
 
@@ -568,55 +641,15 @@ static void *l_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
 }
 
 
+static int panic (lua_State *L) {
+  fprintf(stderr, "PANIC: unprotected error during Lua-API call\n");
+  return 0;
+}
+
+
 LUALIB_API lua_State *luaL_newstate (void) {
-  return lua_newstate(l_alloc, NULL);
+  lua_State *L = lua_newstate(l_alloc, NULL);
+  lua_atpanic(L, &panic);
+  return L;
 }
 
-
-/*
-** {======================================================
-** compatibility code
-** =======================================================
-*/
-
-
-static void callalert (lua_State *L, int status) {
-  if (status != 0) {
-    lua_getglobal(L, "_ALERT");
-    if (lua_isfunction(L, -1)) {
-      lua_insert(L, -2);
-      lua_call(L, 1, 0);
-    }
-    else {  /* no _ALERT function; print it on stderr */
-      fprintf(stderr, "%s\n", lua_tostring(L, -2));
-      lua_pop(L, 2);  /* remove error message and _ALERT */
-    }
-  }
-}
-
-
-static int aux_do (lua_State *L, int status) {
-  if (status == 0) {  /* parse OK? */
-    status = lua_pcall(L, 0, LUA_MULTRET, 0);  /* call main */
-  }
-  callalert(L, status);
-  return status;
-}
-
-
-LUALIB_API int lua_dofile (lua_State *L, const char *filename) {
-  return aux_do(L, luaL_loadfile(L, filename));
-}
-
-
-LUALIB_API int lua_dobuffer (lua_State *L, const char *buff, size_t size,
-                          const char *name) {
-  return aux_do(L, luaL_loadbuffer(L, buff, size, name));
-}
-
-
-LUALIB_API int lua_dostring (lua_State *L, const char *str) {
-  return lua_dobuffer(L, str, strlen(str), str);
-}
-
-/* }====================================================== */

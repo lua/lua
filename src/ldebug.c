@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.3 2004/03/23 13:10:16 roberto Exp $
+** $Id: ldebug.c,v 2.8 2004/09/01 13:47:31 roberto Exp $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -11,6 +11,7 @@
 
 
 #define ldebug_c
+#define LUA_CORE
 
 #include "lua.h"
 
@@ -34,7 +35,7 @@ static const char *getfuncname (CallInfo *ci, const char **name);
 
 static int currentpc (CallInfo *ci) {
   if (!isLua(ci)) return -1;  /* function is not a Lua function? */
-  return pcRel(ci->u.l.savedpc, ci_func(ci)->l.p);
+  return pcRel(ci->savedpc, ci_func(ci)->l.p);
 }
 
 
@@ -85,7 +86,7 @@ LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
   for (ci = L->ci; level > 0 && ci > L->base_ci; ci--) {
     level--;
     if (f_isLua(ci))  /* Lua function? */
-      level -= ci->u.l.tailcalls;  /* skip lost tail calls */
+      level -= ci->tailcalls;  /* skip lost tail calls */
   }
   if (level > 0 || ci == L->base_ci) status = 0;  /* there is no such level */
   else if (level < 0) {  /* level is of a lost tail call */
@@ -220,8 +221,8 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
   }
   else if (ar->i_ci != 0) {  /* no tail call? */
     CallInfo *ci = L->base_ci + ar->i_ci;
-    lua_assert(ttisfunction(ci->base - 1));
-    status = auxgetinfo(L, what, ar, ci->base - 1, ci);
+    lua_assert(ttisfunction(ci->func));
+    status = auxgetinfo(L, what, ar, ci->func, ci);
   }
   else
     info_tailcall(L, ar);
@@ -254,8 +255,9 @@ static int precheck (const Proto *pt) {
 }
 
 
-static int checkopenop (const Proto *pt, int pc) {
-  Instruction i = pt->code[pc+1];
+#define checkopenop(pt,pc)	luaG_checkopenop((pt)->code[(pc)+1])
+
+int luaG_checkopenop (Instruction i) {
   switch (GET_OPCODE(i)) {
     case OP_CALL:
     case OP_TAILCALL:
@@ -274,8 +276,8 @@ static int checkArgMode (const Proto *pt, int r, enum OpArgMask mode) {
     case OpArgN: check(r == 0); break;
     case OpArgU: break;
     case OpArgR: checkreg(pt, r); break;
-    case OpArgK: 
-      check(r < pt->maxstacksize || (r >= MAXSTACK && r-MAXSTACK < pt->sizek));
+    case OpArgK:
+      check(ISK(r) ? INDEXK(r) < pt->sizek : r < pt->maxstacksize);
       break;
   }
   return 1;
@@ -355,7 +357,7 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
       }
       case OP_TFORLOOP: {
         checkreg(pt, a+5);  /* space for control variables */
-        if (reg >= a) last = pc;  /* affect all registers above base */
+        if (reg >= a+3) last = pc;  /* affect all regs above its call base */
         break;
       }
       case OP_TFORPREP:
@@ -404,6 +406,13 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         }
         break;
       }
+      case OP_VARARG: {
+        check(pt->is_vararg & NEWSTYLEVARARG);
+        b--;
+        if (b == LUA_MULTRET) check(checkopenop(pt, pc));
+        checkreg(pt, a+b-1);
+        break;
+      }
       default: break;
     }
   }
@@ -423,9 +432,8 @@ int luaG_checkcode (const Proto *pt) {
 
 
 static const char *kname (Proto *p, int c) {
-  c = c - MAXSTACK;
-  if (c >= 0 && ttisstring(&p->k[c]))
-    return svalue(&p->k[c]);
+  if (ISK(c) && ttisstring(&p->k[INDEXK(c)]))
+    return svalue(&p->k[INDEXK(c)]);
   else
     return "?";
 }
@@ -479,11 +487,12 @@ static const char *getobjname (CallInfo *ci, int stackpos, const char **name) {
 
 static const char *getfuncname (CallInfo *ci, const char **name) {
   Instruction i;
-  if ((isLua(ci) && ci->u.l.tailcalls > 0) || !isLua(ci - 1))
+  if ((isLua(ci) && ci->tailcalls > 0) || !isLua(ci - 1))
     return NULL;  /* calling function is not Lua (or is unknown) */
   ci--;  /* calling function */
   i = ci_func(ci)->l.p->code[currentpc(ci)];
-  if (GET_OPCODE(i) == OP_CALL || GET_OPCODE(i) == OP_TAILCALL)
+  if (GET_OPCODE(i) == OP_CALL || GET_OPCODE(i) == OP_TAILCALL ||
+      GET_OPCODE(i) == OP_TFORLOOP)
     return getobjname(ci, GETARG_A(i), name);
   else
     return NULL;  /* no useful name can be found */

@@ -1,14 +1,10 @@
-# configuration file for making Lua 5.0
+# configuration file for making Lua 5.1 (work)
 # see INSTALL for installation instructions
 
 # These are default values. Skip this section and see the explanations below.
 
 LOADLIB=
 DLLIB=
-NUMBER=
-POPEN=
-TMPNAM=
-DEGREES=
 USERCONF=
 
 # == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT =======================
@@ -42,50 +38,11 @@ USERCONF=
 
 # --------------------------------------------------------------- Lua libraries
 
-# The Lua IO library (src/lib/liolib.c) has support for pipes using popen and
-# pclose. This support is enabled by default on POSIX systems.
-# If your system is not POSIX but has popen and pclose, define USE_POPEN=1.
-# If you don't want to support pipes, define USE_POPEN=0.
-#
-#POPEN= -DUSE_POPEN=1
-#POPEN= -DUSE_POPEN=0
-#
-# The form below will probably work on (some) Windows systems.
-#
-#POPEN= -DUSE_POPEN=1 -Dpopen=_popen -Dpclose=_pclose
-
-# The Lua OS library (src/lib/liolib.c) exports an interface to the C function
-# tmpnam, which gcc now thinks is `dangerous'. So, support for tmpnam is
-# disabled by default when compiling with gcc.
-# If you still want to use tmpnam, define USE_TMPNAME=1. If you don't want to
-# use tmpnam even if you're not compiling with gcc, define USE_TMPNAME=0.
-#
-#TMPNAM= -DUSE_TMPNAME=1
-#TMPNAM= -DUSE_TMPNAME=0
-
-# The Lua math library (src/lib/lmathlib.c) now operates in radians, unlike
-# previous versions of Lua, which used degrees. To use degrees instead of
-# radians, define USE_DEGREES.
-#
-#DEGREES= -DUSE_DEGREES
+# See include/luaconf.h.
 
 # ------------------------------------------------------------------ Lua core
 
-# Lua uses double for numbers. To change this, uncomment and edit the following
-# line, changing USE_XXX to one of USE_DOUBLE, USE_FLOAT, USE_LONG, USE_INT.
-#
-#NUMBER= -DLUA_USER_H='"../etc/luser_number.h"' -DUSE_XXX
-
-# When compiling Lua with gcc on a Pentium machine, using a fast rounding
-# method for the conversion of doubles to ints can give around 20% speed
-# improvement. To use this rounding method, uncomment the following line.
-#NUMBER= -DLUA_USER_H='"../etc/luser_number.h"' -DUSE_FASTROUND
-
-# For partial compatibility with old upvalue syntax, define LUA_COMPATUPSYNTAX.
-# For partial compatibility with old upvalue behavior in C functions, define
-# LUA_COMPATUPVALUES. Add these definitions to MYCFLAGS.
-#
-# -DLUA_COMPATUPSYNTAX -DLUA_COMPATUPVALUES
+# See include/luaconf.h.
 
 # ------------------------------------------------------------- Lua interpreter
 
@@ -165,14 +122,14 @@ INSTALL_DATA= cp
 
 # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
 
-V= 5.0
+V= 5.1
 
 BIN= $(LUA)/bin
 INC= $(LUA)/include
 LIB= $(LUA)/lib
 
 INCS= -I$(INC) $(EXTRA_INCS)
-DEFS= $(NUMBER) $(EXTRA_DEFS)
+DEFS= $(EXTRA_DEFS)
 
 CFLAGS= $(MYCFLAGS) $(WARN) $(INCS) $(DEFS)
 

@@ -1,6 +1,10 @@
 This directory contains some useful files and code.
 Unlike the code in ../src, everything here is in the public domain.
 
+all.c
+	Full Lua interpreter in a single file.
+	Do "make 1".
+
 lua.ico
 	A Lua icon for Windows (and web sites, as favicon.ico).
 	Drawn by hand by Markus Gritsch <gritsch@iue.tuwien.ac.at>.

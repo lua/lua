@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.2 2004/03/23 17:02:58 roberto Exp $
+** $Id: lstate.h,v 2.7 2004/08/30 13:44:44 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -12,30 +12,6 @@
 #include "lobject.h"
 #include "ltm.h"
 #include "lzio.h"
-
-
-/*
-** macros for thread synchronization inside Lua core machine:
-** all accesses to the global state and to global objects are synchronized.
-** Because threads can read the stack of other threads
-** (when running garbage collection),
-** a thread must also synchronize any write-access to its own stack.
-** Unsynchronized accesses are allowed only when reading its own stack,
-** or when reading immutable fields from global objects
-** (such as string values and udata values). 
-*/
-#ifndef lua_lock
-#define lua_lock(L)	((void) 0)
-#endif
-
-#ifndef lua_unlock
-#define lua_unlock(L)	((void) 0)
-#endif
-
-
-#ifndef lua_userstateopen
-#define lua_userstateopen(l)
-#endif
 
 
 
@@ -70,25 +46,20 @@ typedef struct stringtable {
 ** informations about a call
 */
 typedef struct CallInfo {
-  StkId base;  /* base for called function */
+  StkId base;  /* base for this function */
+  StkId func;  /* function index in the stack */
   StkId	top;  /* top for this function */
-  union {
-    struct {  /* for Lua functions */
-      const Instruction *savedpc;
-      int tailcalls;  /* number of tail calls lost under this entry */
-    } l;
-    struct {  /* for C functions */
-      int dummy;  /* just to avoid an empty struct */
-    } c;
-  } u;
+  int nresults;  /* expected number of results from this function */
+  const Instruction *savedpc;
+  int tailcalls;  /* number of tail calls lost under this entry */
 } CallInfo;
 
 
 
-#define curr_func(L)	(clvalue(L->base - 1))
-#define ci_func(ci)	(clvalue((ci)->base - 1))
+#define curr_func(L)	(clvalue(L->ci->func))
+#define ci_func(ci)	(clvalue((ci)->func))
 #define f_isLua(ci)	(!ci_func(ci)->c.isC)
-#define isLua(ci)	(ttisfunction((ci)->base - 1) && f_isLua(ci))
+#define isLua(ci)	(ttisfunction((ci)->func) && f_isLua(ci))
 
 
 /*
@@ -98,7 +69,9 @@ typedef struct global_State {
   stringtable strt;  /* hash table for strings */
   lua_Alloc realloc;  /* function to reallocate memory */
   void *ud;         /* auxiliary data to `realloc' */
-  int currentwhite;
+  lu_byte currentwhite;
+  lu_byte gcstate;  /* state of garbage collector */
+  lu_byte gcgenerational;
   GCObject *rootgc;  /* list of all collectable objects */
   GCObject *firstudata;   /* udata go to the end of `rootgc' */
   GCObject **sweepgc;  /* position of sweep in `rootgc' */
@@ -107,10 +80,11 @@ typedef struct global_State {
   GCObject *grayagain;  /* list of objects to be traversed atomically */
   GCObject *weak;  /* list of weak tables (to be cleared) */
   GCObject *tmudata;  /* list of userdata to be GC */
-  int gcstate;  /* state of garbage collector */
   Mbuffer buff;  /* temporary buffer for string concatentation */
   lu_mem GCthreshold;
-  lu_mem nblocks;  /* number of `bytes' currently allocated */
+  lu_mem totalbytes;  /* number of bytes currently allocated */
+  lu_mem estimate;  /* an estimate of number of bytes actually in use */
+  lu_mem prevestimate;  /* previous estimate */
   lua_CFunction panic;  /* to be called in unprotected errors */
   TValue _registry;
   struct lua_State *mainthread;

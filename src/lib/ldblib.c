@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.84 2003/11/05 11:59:14 roberto Exp $
+** $Id: ldblib.c,v 1.87 2004/08/13 18:02:36 roberto Exp $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -10,6 +10,7 @@
 #include <string.h>
 
 #define ldblib_c
+#define LUA_LIB
 
 #include "lua.h"
 
@@ -260,7 +261,11 @@ static int debug (lua_State *L) {
     if (fgets(buffer, sizeof(buffer), stdin) == 0 ||
         strcmp(buffer, "cont\n") == 0)
       return 0;
-    lua_dostring(L, buffer);
+    if (luaL_loadbuffer(L, buffer, strlen(buffer), "=debug command") ||
+        lua_pcall(L, 0, 0, 0)) {
+      fputs(lua_tostring(L, -1), stderr);
+      fputs("\n", stderr);
+    }
     lua_settop(L, 0);  /* remove eventual returns */
   }
 }
@@ -298,22 +303,16 @@ static int errorfb (lua_State *L) {
     lua_pushfstring(L, "%s:", ar.short_src);
     if (ar.currentline > 0)
       lua_pushfstring(L, "%d:", ar.currentline);
-    switch (*ar.namewhat) {
-      case 'g':  /* global */ 
-      case 'l':  /* local */
-      case 'f':  /* field */
-      case 'm':  /* method */
+    if (*ar.namewhat != '\0')  /* is there a name? */
         lua_pushfstring(L, " in function `%s'", ar.name);
-        break;
-      default: {
-        if (*ar.what == 'm')  /* main? */
-          lua_pushfstring(L, " in main chunk");
-        else if (*ar.what == 'C' || *ar.what == 't')
-          lua_pushliteral(L, " ?");  /* C function or tail call */
-        else
-          lua_pushfstring(L, " in function <%s:%d>",
-                             ar.short_src, ar.linedefined);
-      }
+    else {
+      if (*ar.what == 'm')  /* main? */
+        lua_pushfstring(L, " in main chunk");
+      else if (*ar.what == 'C' || *ar.what == 't')
+        lua_pushliteral(L, " ?");  /* C function or tail call */
+      else
+        lua_pushfstring(L, " in function <%s:%d>",
+                           ar.short_src, ar.linedefined);
     }
     lua_concat(L, lua_gettop(L) - arg);
   }

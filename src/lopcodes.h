@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.106 2003/05/15 19:46:03 roberto Exp $
+** $Id: lopcodes.h,v 1.111 2004/08/04 20:18:13 roberto Exp $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -41,18 +41,19 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 
 #define SIZE_OP		6
 
-#define POS_C		SIZE_OP
+#define POS_OP		0
+#define POS_A		(POS_OP + SIZE_OP)
+#define POS_C		(POS_A + SIZE_A)
 #define POS_B		(POS_C + SIZE_C)
 #define POS_Bx		POS_C
-#define POS_A		(POS_B + SIZE_B)
 
 
 /*
 ** limits for opcode arguments.
 ** we use (signed) int to manipulate most arguments,
-** so they must fit in BITS_INT-1 bits (-1 for sign)
+** so they must fit in LUA_BITSINT-1 bits (-1 for sign)
 */
-#if SIZE_Bx < BITS_INT-1
+#if SIZE_Bx < LUA_BITSINT-1
 #define MAXARG_Bx        ((1<<SIZE_Bx)-1)
 #define MAXARG_sBx        (MAXARG_Bx>>1)         /* `sBx' is signed */
 #else
@@ -76,10 +77,11 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 ** the following macros help to manipulate instructions
 */
 
-#define GET_OPCODE(i)	(cast(OpCode, (i)&MASK1(SIZE_OP,0)))
-#define SET_OPCODE(i,o)	((i) = (((i)&MASK0(SIZE_OP,0)) | cast(Instruction, o)))
+#define GET_OPCODE(i)	(cast(OpCode, ((i)>>POS_OP) & MASK1(SIZE_OP,0)))
+#define SET_OPCODE(i,o)	((i) = (((i)&MASK0(SIZE_OP,POS_OP)) | \
+		((cast(Instruction, o)<<POS_OP)&MASK1(SIZE_OP,POS_OP))))
 
-#define GETARG_A(i)	(cast(int, (i)>>POS_A))
+#define GETARG_A(i)	(cast(int, ((i)>>POS_A) & MASK1(SIZE_A,0)))
 #define SETARG_A(i,u)	((i) = (((i)&MASK0(SIZE_A,POS_A)) | \
 		((cast(Instruction, u)<<POS_A)&MASK1(SIZE_A,POS_A))))
 
@@ -99,16 +101,33 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 #define SETARG_sBx(i,b)	SETARG_Bx((i),cast(unsigned int, (b)+MAXARG_sBx))
 
 
-#define CREATE_ABC(o,a,b,c)	(cast(Instruction, o) \
+#define CREATE_ABC(o,a,b,c)	((cast(Instruction, o)<<POS_OP) \
 			| (cast(Instruction, a)<<POS_A) \
 			| (cast(Instruction, b)<<POS_B) \
 			| (cast(Instruction, c)<<POS_C))
 
-#define CREATE_ABx(o,a,bc)	(cast(Instruction, o) \
+#define CREATE_ABx(o,a,bc)	((cast(Instruction, o)<<POS_OP) \
 			| (cast(Instruction, a)<<POS_A) \
 			| (cast(Instruction, bc)<<POS_Bx))
 
 
+/*
+** Macros to operate RK indices
+*/
+
+/* this bit 1 means constant (0 means register) */
+#define BITRK		(1 << (SIZE_B - 1))
+
+/* test whether value is a constant */
+#define ISK(x)		((x) & BITRK)
+
+/* gets the index of the constant */
+#define INDEXK(r)	((int)(r) & ~BITRK)
+
+#define MAXINDEXRK	(BITRK - 1)
+
+/* code a constant index as a RK value */
+#define RKASK(x)	((x) | BITRK)
 
 
 /*
@@ -120,7 +139,7 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 /*
 ** R(x) - register
 ** Kst(x) - constant (in constant table)
-** RK(x) == if x < MAXSTACK then R(x) else Kst(x-MAXSTACK)
+** RK(x) == if ISK(x) then Kst(INDEXK(x)) else R(x)
 */
 
 
@@ -183,25 +202,30 @@ OP_SETLIST,/*	A Bx	R(A)[Bx-Bx%FPF+i] := R(A+i), 1 <= i <= Bx%FPF+1	*/
 OP_SETLISTO,/*	A Bx							*/
 
 OP_CLOSE,/*	A 	close all variables in the stack up to (>=) R(A)*/
-OP_CLOSURE/*	A Bx	R(A) := closure(KPROTO[Bx], R(A), ... ,R(A+n))	*/
+OP_CLOSURE,/*	A Bx	R(A) := closure(KPROTO[Bx], R(A), ... ,R(A+n))	*/
+
+OP_VARARG/*	A B	R(A), R(A+1), ..., R(A+B-1) = vararg		*/
 } OpCode;
 
 
-#define NUM_OPCODES	(cast(int, OP_CLOSURE+1))
+#define NUM_OPCODES	(cast(int, OP_VARARG+1))
 
 
 
 /*===========================================================================
   Notes:
-  (1) In OP_CALL, if (B == 0) then B = top. C is the number of returns - 1,
+  (*) In OP_CALL, if (B == 0) then B = top. C is the number of returns - 1,
       and can be 0: OP_CALL then sets `top' to last_result+1, so
       next open instruction (OP_CALL, OP_RETURN, OP_SETLIST) may use `top'.
 
-  (2) In OP_RETURN, if (B == 0) then return up to `top'
+  (*) In OP_VARARG, if (B == 0) then use actual number of varargs and
+      set top (like in OP_CALL).
 
-  (3) For comparisons, B specifies what conditions the test should accept.
+  (*) In OP_RETURN, if (B == 0) then return up to `top'
 
-  (4) All `skips' (pc++) assume that next instruction is a jump
+  (*) For comparisons, B specifies what conditions the test should accept.
+
+  (*) All `skips' (pc++) assume that next instruction is a jump
 ===========================================================================*/
 
 

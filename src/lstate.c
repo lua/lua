@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.5 2004/03/23 12:57:12 roberto Exp $
+** $Id: lstate.c,v 2.12 2004/08/30 13:44:44 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -8,6 +8,7 @@
 #include <stddef.h>
 
 #define lstate_c
+#define LUA_CORE
 
 #include "lua.h"
 
@@ -56,6 +57,7 @@ static void stack_init (lua_State *L1, lua_State *L) {
   L1->stack_last = L1->stack+(L1->stacksize - EXTRA_STACK)-1;
   L1->base_ci = luaM_newvector(L, BASIC_CI_SIZE, CallInfo);
   L1->ci = L1->base_ci;
+  L1->ci->func = L1->top;
   setnilvalue(L1->top++);  /* `function' entry for this `ci' */
   L1->base = L1->ci->base = L1->top;
   L1->ci->top = L1->top + LUA_MINSTACK;
@@ -75,22 +77,25 @@ static void freestack (lua_State *L, lua_State *L1) {
 */
 static void f_luaopen (lua_State *L, void *ud) {
   Udata *u;  /* head of udata list */
+  global_State *g = G(L);
   UNUSED(ud);
   u = cast(Udata *, luaM_malloc(L, sizeudata(0)));
   u->uv.len = 0;
   u->uv.metatable = NULL;
-  G(L)->firstudata = obj2gco(u);
+  g->firstudata = obj2gco(u);
   luaC_link(L, obj2gco(u), LUA_TUSERDATA);
   setbit(u->uv.marked, FIXEDBIT);
   setbit(L->marked, FIXEDBIT);
   stack_init(L, L);  /* init stack */
   sethvalue(L, gt(L), luaH_new(L, 0, 4));  /* table of globals */
+  hvalue(gt(L))->metatable = luaH_new(L, 0, 0);  /* globals metatable */
   sethvalue(L, registry(L), luaH_new(L, 4, 4));  /* registry */
   luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
   luaT_init(L);
   luaX_init(L);
   luaS_fix(luaS_newliteral(L, MEMERRMSG));
-  G(L)->GCthreshold = 4*G(L)->nblocks;
+  g->GCthreshold = 4*g->totalbytes;
+  g->prevestimate = g->estimate = g->totalbytes;
 }
 
 
@@ -119,12 +124,13 @@ static void preinit_state (lua_State *L, global_State *g) {
 static void close_state (lua_State *L) {
   global_State *g = G(L);
   luaF_close(L, L->stack);  /* close all upvalues for this thread */
-  luaC_sweepall(L);  /* collect all elements */
-  lua_assert(g->rootgc == obj2gco(L));
-  luaS_freeall(L);
+  luaC_freeall(L);  /* collect all objects */
+  lua_assert(g->rootgc == NULL);
+  lua_assert(g->strt.nuse == 0);
+  luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size, TString *);
   luaZ_freebuffer(L, &g->buff);
   freestack(L, L);
-  lua_assert(g->nblocks == sizeof(LG));
+  lua_assert(g->totalbytes == sizeof(LG));
   (*g->realloc)(g->ud, fromstate(L), state_size(LG), 0);
 }
 
@@ -136,6 +142,10 @@ lua_State *luaE_newthread (lua_State *L) {
   preinit_state(L1, G(L));
   stack_init(L1, L);  /* init stack */
   setobj2n(L, gt(L1), gt(L));  /* share table of globals */
+  L1->hookmask = L->hookmask;
+  L1->basehookcount = L->basehookcount;
+  L1->hook = L->hook;
+  resethookcount(L1);
   lua_assert(iswhite(obj2gco(L1)));
   return L1;
 }
@@ -169,7 +179,8 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   setnilvalue(registry(L));
   luaZ_initbuffer(L, &g->buff);
   g->panic = NULL;
-  g->gcstate = GCSfinalize;
+  g->gcstate = GCSpause;
+  g->gcgenerational = 0;
   g->rootgc = obj2gco(L);
   g->sweepstrgc = 0;
   g->sweepgc = &g->rootgc;
@@ -181,13 +192,14 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   setnilvalue(gkey(g->dummynode));
   setnilvalue(gval(g->dummynode));
   g->dummynode->next = NULL;
-  g->nblocks = sizeof(LG);
+  g->totalbytes = sizeof(LG);
   if (luaD_rawrunprotected(L, f_luaopen, NULL) != 0) {
     /* memory allocation error: free partial state */
     close_state(L);
     L = NULL;
   }
-  lua_userstateopen(L);
+  else
+    lua_userstateopen(L);
   return L;
 }
 

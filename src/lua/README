@@ -1,4 +1,4 @@
-This is lua, a sample Lua interpreter.
+This is lua, the stand-alone Lua interpreter.
 It can be used as a batch interpreter and also interactively.
 There are man pages for it in both nroff and html in ../../doc.
 
@@ -10,7 +10,7 @@ Usage: lua [options] [script [args]].  Available options are:
   -v       show version information
   --       stop handling options
 
-This interpreter is suitable for using Lua as a standalone language; it loads
+This interpreter is suitable for using Lua as a stand-alone language; it loads
 all standard libraries. For a minimal interpreter, see ../../etc/min.c.
 
 If your application simply exports new functions to Lua (which is common),

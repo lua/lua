@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.38 2002/12/11 12:34:22 roberto Exp $
+** $Id: lcode.h,v 1.39 2004/05/31 18:51:50 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -41,6 +41,8 @@ typedef enum UnOpr { OPR_MINUS, OPR_NOT, OPR_NOUNOPR } UnOpr;
 
 #define luaK_codeAsBx(fs,o,A,sBx)	luaK_codeABx(fs,o,A,(sBx)+MAXARG_sBx)
 
+#define luaK_setmultret(fs,e)	luaK_setreturns(fs, e, LUA_MULTRET)
+
 int luaK_code (FuncState *fs, Instruction i, int line);
 int luaK_codeABx (FuncState *fs, OpCode o, int A, unsigned int Bx);
 int luaK_codeABC (FuncState *fs, OpCode o, int A, int B, int C);
@@ -60,7 +62,8 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k);
 void luaK_goiftrue (FuncState *fs, expdesc *e);
 void luaK_goiffalse (FuncState *fs, expdesc *e);
 void luaK_storevar (FuncState *fs, expdesc *var, expdesc *e);
-void luaK_setcallreturns (FuncState *fs, expdesc *var, int nresults);
+void luaK_setreturns (FuncState *fs, expdesc *e, int nresults);
+void luaK_setoneret (FuncState *fs, expdesc *e);
 int luaK_jump (FuncState *fs);
 void luaK_patchlist (FuncState *fs, int list, int target);
 void luaK_patchtohere (FuncState *fs, int list);
