@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.19 2005/01/04 15:55:12 roberto Exp roberto $
+** $Id: lvm.c,v 2.20 2005/01/05 18:20:51 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -339,14 +339,7 @@ static StkId Arith (lua_State *L, StkId ra, const TValue *rb,
       case TM_SUB: setnvalue(ra, nvalue(b) - nvalue(c)); break;
       case TM_MUL: setnvalue(ra, nvalue(b) * nvalue(c)); break;
       case TM_DIV: setnvalue(ra, nvalue(b) / nvalue(c)); break;
-      case TM_POW: {
-        const TValue *f = luaH_getstr(hvalue(gt(L)), G(L)->tmname[TM_POW]);
-        if (!ttisfunction(f))
-          luaG_runerror(L, "`__pow' (`^' operator) is not a function");
-        prepTMcall(L, f, b, c);
-        callTMres(L, ra);
-        break;
-      }
+      case TM_POW: setnvalue(ra, lua_pow(nvalue(b), nvalue(c))); break;
       default: lua_assert(0); break;
     }
   }
@@ -515,7 +508,13 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         continue;
       }
       case OP_POW: {
-        base = Arith(L, ra, RKB(i), RKC(i), TM_POW, pc);  /***/
+        TValue *rb = RKB(i);
+        TValue *rc = RKC(i);
+        if (ttisnumber(rb) && ttisnumber(rc)) {
+          setnvalue(ra, lua_pow(nvalue(rb), nvalue(rc)));
+        }
+        else
+          base = Arith(L, ra, rb, rc, TM_POW, pc);  /***/
         continue;
       }
       case OP_UNM: {
