@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.18 1999/02/26 15:48:30 roberto Exp roberto $
+** $Id: lobject.c,v 1.19 1999/04/13 19:28:49 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -11,25 +11,24 @@
 #include "lua.h"
 
 
-char *luaO_typenames[] = { /* ORDER LUA_T */
+const char *const luaO_typenames[] = { /* ORDER LUA_T */
     "userdata", "number", "string", "table", "function", "function",
     "nil", "function", "mark", "mark", "mark", "line", NULL
 };
 
 
-TObject luaO_nilobject = {LUA_T_NIL, {NULL}};
+const TObject luaO_nilobject = {LUA_T_NIL, {NULL}};
 
 
 
 /* hash dimensions values */
-static long dimensions[] =
+static const long dimensions[] =
  {5L, 11L, 23L, 47L, 97L, 197L, 397L, 797L, 1597L, 3203L, 6421L,
   12853L, 25717L, 51437L, 102811L, 205619L, 411233L, 822433L,
   1644817L, 3289613L, 6579211L, 13158023L, MAX_INT};
 
 
-int luaO_redimension (int oldsize)
-{
+int luaO_redimension (int oldsize) {
   int i;
   for (i=0; dimensions[i]<MAX_INT; i++) {
     if (dimensions[i] > oldsize)
@@ -40,7 +39,7 @@ int luaO_redimension (int oldsize)
 }
 
 
-int luaO_equalval (TObject *t1, TObject *t2) {
+int luaO_equalval (const TObject *t1, const TObject *t2) {
   switch (ttype(t1)) {
     case LUA_T_NIL: return 1;
     case LUA_T_NUMBER: return nvalue(t1) == nvalue(t2);
@@ -56,8 +55,7 @@ int luaO_equalval (TObject *t1, TObject *t2) {
 }
 
 
-void luaO_insertlist (GCnode *root, GCnode *node)
-{
+void luaO_insertlist (GCnode *root, GCnode *node) {
   node->next = root->next;
   root->next = node;
   node->marked = 0;
@@ -90,7 +88,7 @@ static double expten (unsigned int e) {
 }
 
 
-double luaO_str2d (char *s) {  /* LUA_NUMBER */
+double luaO_str2d (const char *s) {  /* LUA_NUMBER */
   double a = 0.0;
   int point = 0;
   while (isdigit((unsigned char)*s)) {

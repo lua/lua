@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.21 1999/02/23 14:57:28 roberto Exp roberto $
+** $Id: ltable.c,v 1.22 1999/05/21 19:41:49 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -24,7 +24,7 @@
 
 
 
-static long int hashindex (TObject *ref) {
+static long int hashindex (const TObject *ref) {
   long int h;
   switch (ttype(ref)) {
     case LUA_T_NUMBER:
@@ -53,7 +53,7 @@ static long int hashindex (TObject *ref) {
 }
 
 
-Node *luaH_present (Hash *t, TObject *key) {
+Node *luaH_present (const Hash *t, const TObject *key) {
   int tsize = nhash(t);
   long int h = hashindex(key);
   int h1 = h%tsize;
@@ -135,7 +135,7 @@ static void rehash (Hash *t) {
 }
 
 
-void luaH_set (Hash *t, TObject *ref, TObject *val) {
+void luaH_set (Hash *t, const TObject *ref, const TObject *val) {
   Node *n = luaH_present(t, ref);
   if (ttype(ref(n)) != LUA_T_NIL)
     *val(n) = *val;
@@ -153,14 +153,14 @@ void luaH_set (Hash *t, TObject *ref, TObject *val) {
 }
 
 
-int luaH_pos (Hash *t, TObject *r) {
+int luaH_pos (const Hash *t, const TObject *r) {
   Node *n = luaH_present(t, r);
   luaL_arg_check(ttype(val(n)) != LUA_T_NIL, 2, "key not found");
   return n-(t->node);
 }
 
 
-void luaH_setint (Hash *t, int ref, TObject *val) {
+void luaH_setint (Hash *t, int ref, const TObject *val) {
   TObject index;
   ttype(&index) = LUA_T_NUMBER;
   nvalue(&index) = ref;
@@ -168,7 +168,7 @@ void luaH_setint (Hash *t, int ref, TObject *val) {
 }
 
 
-TObject *luaH_getint (Hash *t, int ref) {
+TObject *luaH_getint (const Hash *t, int ref) {
   TObject index;
   ttype(&index) = LUA_T_NUMBER;
   nvalue(&index) = ref;

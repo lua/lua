@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.59 1999/06/17 17:04:03 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.60 1999/07/22 19:35:41 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -42,7 +42,7 @@ static void pushtagstring (TaggedString *s) {
 }
 
 
-static real getsize (Hash *h) {
+static real getsize (const Hash *h) {
   real max = 0;
   int i;
   for (i = 0; i<nhash(h); i++) {
@@ -56,7 +56,7 @@ static real getsize (Hash *h) {
 }
 
 
-static real getnarg (Hash *a) {
+static real getnarg (const Hash *a) {
   TObject index;
   TObject *value;
   /* value = table.n */
@@ -146,10 +146,10 @@ static void luaB_tonumber (void) {
     else lua_pushnil();  /* not a number */
   }
   else {
-    char *s = luaL_check_string(1);
+    char *s;
     long n;
     luaL_arg_check(0 <= base && base <= 36, 2, "base out of range");
-    n = strtol(s, &s, base);
+    n = strtol(luaL_check_string(1), &s, base);
     while (isspace((unsigned char)*s)) s++;  /* skip trailing spaces */
     if (*s) lua_pushnil();  /* invalid format: return nil */
     else lua_pushnumber(n);
@@ -162,7 +162,7 @@ static void luaB_error (void) {
 }
 
 static void luaB_setglobal (void) {
-  char *n = luaL_check_string(1);
+  const char *n = luaL_check_string(1);
   lua_Object value = luaL_nonnullarg(2);
   lua_pushobject(value);
   lua_setglobal(n);
@@ -170,7 +170,7 @@ static void luaB_setglobal (void) {
 }
 
 static void luaB_rawsetglobal (void) {
-  char *n = luaL_check_string(1);
+  const char *n = luaL_check_string(1);
   lua_Object value = luaL_nonnullarg(2);
   lua_pushobject(value);
   lua_rawsetglobal(n);
@@ -250,7 +250,7 @@ static void luaB_collectgarbage (void) {
 
 static void luaB_dostring (void) {
   long l;
-  char *s = luaL_check_lstr(1, &l);
+  const char *s = luaL_check_lstr(1, &l);
   if (*s == ID_CHUNK)
     lua_error("`dostring' cannot run pre-compiled code");
   if (lua_dobuffer(s, l, luaL_opt_string(2, s)) == 0)
@@ -260,7 +260,7 @@ static void luaB_dostring (void) {
 
 
 static void luaB_dofile (void) {
-  char *fname = luaL_opt_string(1, NULL);
+  const char *fname = luaL_opt_string(1, NULL);
   if (lua_dofile(fname) == 0)
     if (luaA_passresults() == 0)
       lua_pushuserdata(NULL);  /* at least one result to signal no errors */
@@ -269,8 +269,8 @@ static void luaB_dofile (void) {
 
 static void luaB_call (void) {
   lua_Object f = luaL_nonnullarg(1);
-  Hash *arg = gethash(2);
-  char *options = luaL_opt_string(3, "");
+  const Hash *arg = gethash(2);
+  const char *options = luaL_opt_string(3, "");
   lua_Object err = lua_getparam(4);
   int narg = (int)getnarg(arg);
   int i, status;
@@ -305,7 +305,7 @@ static void luaB_call (void) {
 
 
 static void luaB_nextvar (void) {
-  TObject *o = luaA_Address(luaL_nonnullarg(1));
+  const TObject *o = luaA_Address(luaL_nonnullarg(1));
   TaggedString *g;
   if (ttype(o) == LUA_T_NIL)
     g = NULL;
@@ -319,8 +319,8 @@ static void luaB_nextvar (void) {
 
 
 static void luaB_next (void) {
-  Hash *a = gethash(1);
-  TObject *k = luaA_Address(luaL_nonnullarg(2));
+  const Hash *a = gethash(1);
+  const TObject *k = luaA_Address(luaL_nonnullarg(2));
   int i = (ttype(k) == LUA_T_NIL) ? 0 : luaH_pos(a, k)+1;
   if (luaA_next(a, i) == 0)
     lua_pushnil();
@@ -329,7 +329,7 @@ static void luaB_next (void) {
 
 static void luaB_tostring (void) {
   lua_Object obj = lua_getparam(1);
-  TObject *o = luaA_Address(obj);
+  const TObject *o = luaA_Address(obj);
   char buff[64];
   switch (ttype(o)) {
     case LUA_T_NUMBER:
@@ -391,7 +391,7 @@ static void luaB_assert (void) {
 
 
 static void luaB_foreachi (void) {
-  Hash *t = gethash(1);
+  const Hash *t = gethash(1);
   int i;
   int n = (int)getnarg(t);
   TObject f;
@@ -413,13 +413,13 @@ static void luaB_foreachi (void) {
 
 
 static void luaB_foreach (void) {
-  Hash *a = gethash(1);
+  const Hash *a = gethash(1);
   int i;
   TObject f;  /* see comment in 'foreachi' */
   f = *luaA_Address(luaL_functionarg(2));
   luaD_checkstack(3);  /* for f, ref, and val */
   for (i=0; i<a->nhash; i++) {
-    Node *nd = &(a->node[i]);
+    const Node *nd = &(a->node[i]);
     if (ttype(val(nd)) != LUA_T_NIL) {
       *(L->stack.top++) = f;
       *(L->stack.top++) = *ref(nd);
@@ -504,7 +504,7 @@ static void swap (Hash *a, int i, int j) {
   luaH_setint(a, j, &temp);
 }
 
-static int sort_comp (lua_Object f, TObject *a, TObject *b) {
+static int sort_comp (lua_Object f, const TObject *a, const TObject *b) {
   /* notice: the caller (auxsort) must check stack space */
   if (f != LUA_NOOBJECT) {
     *(L->stack.top) = *luaA_Address(f);
@@ -604,7 +604,7 @@ static void query_strings (void) {
 
 
 static void countlist (void) {
-  char *s = luaL_check_string(1);
+  const char *s = luaL_check_string(1);
   GCnode *l = (s[0]=='t') ? L->roottable.next : (s[0]=='c') ? L->rootcl.next :
               (s[0]=='p') ? L->rootproto.next : L->rootglobal.next;
   int i=0;
@@ -623,7 +623,7 @@ static void testC (void) {
   static int locks[10];
   lua_Object reg[10];
   char nome[2];
-  char *s = luaL_check_string(1);
+  const char *s = luaL_check_string(1);
   nome[1] = 0;
   for (;;) {
     switch (*s++) {
@@ -674,7 +674,7 @@ static void testC (void) {
 
 
 
-static struct luaL_reg builtin_funcs[] = {
+static const struct luaL_reg builtin_funcs[] = {
 #ifdef LUA_COMPAT2_5
   {"setfallback", luaT_setfallback},
 #endif

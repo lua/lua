@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.44 1999/06/17 17:04:03 roberto Exp roberto $
+** $Id: ldo.c,v 1.45 1999/06/22 20:37:23 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -159,7 +159,7 @@ static StkId callCclosure (struct Closure *cl, lua_CFunction f, StkId base) {
 }
 
 
-void luaD_callTM (TObject *f, int nParams, int nResults) {
+void luaD_callTM (const TObject *f, int nParams, int nResults) {
   luaD_openstack(nParams);
   *(L->stack.top-nParams-1) = *f;
   luaD_calln(nParams, nResults);
@@ -199,7 +199,7 @@ void luaD_calln (int nArgs, int nResults) {
     }
     default: { /* func is not a function */
       /* Check the tag method for invalid functions */
-      TObject *im = luaT_getimbyObj(func, IM_FUNCTION);
+      const TObject *im = luaT_getimbyObj(func, IM_FUNCTION);
       if (ttype(im) == LUA_T_NIL)
         lua_error("call expression not a function");
       luaD_callTM(im, (S->top-S->stack)-(base-1), nResults);
@@ -222,8 +222,7 @@ void luaD_calln (int nArgs, int nResults) {
 /*
 ** Traverse all objects on L->stack.stack
 */
-void luaD_travstack (int (*fn)(TObject *))
-{
+void luaD_travstack (int (*fn)(TObject *)) {
   StkId i;
   for (i = (L->stack.top-1)-L->stack.stack; i>=0; i--)
     fn(L->stack.stack+i);
@@ -231,8 +230,8 @@ void luaD_travstack (int (*fn)(TObject *))
 
 
 
-static void message (char *s) {
-  TObject *em = &(luaS_new("_ERRORMESSAGE")->u.s.globalval);
+static void message (const char *s) {
+  const TObject *em = &(luaS_new("_ERRORMESSAGE")->u.s.globalval);
   if (ttype(em) == LUA_T_PROTO || ttype(em) == LUA_T_CPROTO ||
       ttype(em) == LUA_T_CLOSURE) {
     *L->stack.top = *em;
@@ -245,7 +244,7 @@ static void message (char *s) {
 /*
 ** Reports an error, and jumps up to the available recover label
 */
-void lua_error (char *s) {
+void lua_error (const char *s) {
   if (s) message(s);
   if (L->errorJmp)
     longjmp(L->errorJmp->b, 1);
@@ -335,9 +334,8 @@ static int do_main (ZIO *z, int bin) {
 }
 
 
-void luaD_gcIM (TObject *o)
-{
-  TObject *im = luaT_getimbyObj(o, IM_GC);
+void luaD_gcIM (const TObject *o) {
+  const TObject *im = luaT_getimbyObj(o, IM_GC);
   if (ttype(im) != LUA_T_NIL) {
     *L->stack.top = *o;
     incr_top;
@@ -348,7 +346,7 @@ void luaD_gcIM (TObject *o)
 
 #define	MAXFILENAME	260	/* maximum part of a file name kept */
 
-int lua_dofile (char *filename) {
+int lua_dofile (const char *filename) {
   ZIO z;
   int status;
   int c;
@@ -371,12 +369,12 @@ int lua_dofile (char *filename) {
 }
 
 
-int lua_dostring (char *str) {
+int lua_dostring (const char *str) {
   return lua_dobuffer(str, strlen(str), str);
 }
 
 
-int lua_dobuffer (char *buff, int size, char *name) {
+int lua_dobuffer (const char *buff, int size, const char *name) {
   ZIO z;
   if (!name) name = "?";
   luaZ_mopen(&z, buff, size, name);

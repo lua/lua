@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.24 1999/02/26 15:48:55 roberto Exp roberto $
+** $Id: ltm.c,v 1.25 1999/05/21 19:41:49 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -15,14 +15,14 @@
 #include "ltm.h"
 
 
-char *luaT_eventname[] = {  /* ORDER IM */
+const char *const luaT_eventname[] = {  /* ORDER IM */
   "gettable", "settable", "index", "getglobal", "setglobal", "add",
   "sub", "mul", "div", "pow", "unm", "lt", "le", "gt", "ge",
   "concat", "gc", "function", NULL
 };
 
 
-static int luaI_checkevent (char *name, char *list[]) {
+static int luaI_checkevent (const char *name, const char *const list[]) {
   int e = luaL_findstring(name, list);
   if (e < 0)
     luaL_verror("`%.50s' is not a valid event name", name);
@@ -34,7 +34,8 @@ static int luaI_checkevent (char *name, char *list[]) {
 /* events in LUA_T_NIL are all allowed, since this is used as a
 *  'placeholder' for "default" fallbacks
 */
-static char luaT_validevents[NUM_TAGS][IM_N] = { /* ORDER LUA_T, ORDER IM */
+/* ORDER LUA_T, ORDER IM */
+static const char luaT_validevents[NUM_TAGS][IM_N] = {
 {1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* LUA_T_USERDATA */
 {1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_T_NUMBER */
 {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_T_STRING */
@@ -96,7 +97,7 @@ int lua_copytagmethods (int tagto, int tagfrom) {
 }
 
 
-int luaT_effectivetag (TObject *o) {
+int luaT_effectivetag (const TObject *o) {
   int t;
   switch (t = ttype(o)) {
     case LUA_T_ARRAY:
@@ -118,7 +119,7 @@ int luaT_effectivetag (TObject *o) {
 }
 
 
-TObject *luaT_gettagmethod (int t, char *event) {
+const TObject *luaT_gettagmethod (int t, const char *event) {
   int e = luaI_checkevent(event, luaT_eventname);
   checktag(t);
   if (luaT_validevent(t, e))
@@ -128,7 +129,7 @@ TObject *luaT_gettagmethod (int t, char *event) {
 }
 
 
-void luaT_settagmethod (int t, char *event, TObject *func) {
+void luaT_settagmethod (int t, const char *event, TObject *func) {
   TObject temp;
   int e = luaI_checkevent(event, luaT_eventname);
   checktag(t);
@@ -143,7 +144,7 @@ void luaT_settagmethod (int t, char *event, TObject *func) {
 }
 
 
-char *luaT_travtagmethods (int (*fn)(TObject *)) {  /* ORDER IM */
+const char *luaT_travtagmethods (int (*fn)(TObject *)) {  /* ORDER IM */
   int e;
   for (e=IM_GETTABLE; e<=IM_FUNCTION; e++) {
     int t;
@@ -191,10 +192,11 @@ static void fillvalids (IMS e, TObject *func) {
 
 
 void luaT_setfallback (void) {
-  static char *oldnames [] = {"error", "getglobal", "arith", "order", NULL};
+  static const char *const oldnames [] = {"error", "getglobal", "arith",
+                                          "order", NULL};
   TObject oldfunc;
   lua_CFunction replace;
-  char *name = luaL_check_string(1);
+  const char *name = luaL_check_string(1);
   lua_Object func = lua_getparam(2);
   luaL_arg_check(lua_isfunction(func), 2, "function expected");
   switch (luaL_findstring(name, oldnames)) {

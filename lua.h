@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.32 1999/05/11 20:29:19 roberto Exp roberto $
+** $Id: lua.h,v 1.33 1999/08/11 17:00:59 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -33,18 +33,21 @@ void	       lua_open			(void);
 void           lua_close		(void);
 lua_State      *lua_setstate		(lua_State *st);
 
-lua_Object     lua_settagmethod	(int tag, char *event); /* In: new method */
-lua_Object     lua_gettagmethod	(int tag, char *event);
+lua_Object     lua_settagmethod	(int tag, const char *event);
+                                                       /* In: new method */
+lua_Object     lua_gettagmethod	(int tag, const char *event);
 
 int            lua_newtag		(void);
 int            lua_copytagmethods	(int tagto, int tagfrom);
 void           lua_settag		(int tag); /* In: object */
 
-void           lua_error		(char *s);
-int            lua_dofile 		(char *filename); /* Out: returns */
-int            lua_dostring 		(char *string); /* Out: returns */
-int            lua_dobuffer		(char *buff, int size, char *name);
-					  /* Out: returns */
+void           lua_error		(const char *s);
+int            lua_dofile 		(const char *filename);
+                                                        /* Out: returns */
+int            lua_dostring 		(const char *string);
+                                                        /* Out: returns */
+int            lua_dobuffer		(const char *buff, int size,
+                                         const char *name); /* Out: returns */
 int            lua_callfunction		(lua_Object f);
 					  /* In: parameters; Out: returns */
 
@@ -64,7 +67,7 @@ int            lua_isstring             (lua_Object object);
 int            lua_isfunction           (lua_Object object);
 
 double         lua_getnumber 		(lua_Object object);
-char          *lua_getstring 		(lua_Object object);
+const char    *lua_getstring 		(lua_Object object);
 long           lua_strlen 		(lua_Object object);
 lua_CFunction  lua_getcfunction 	(lua_Object object);
 void	      *lua_getuserdata		(lua_Object object);
@@ -72,18 +75,18 @@ void	      *lua_getuserdata		(lua_Object object);
 
 void 	       lua_pushnil 		(void);
 void           lua_pushnumber 		(double n);
-void           lua_pushlstring		(char *s, long len);
-void           lua_pushstring 		(char *s);
+void           lua_pushlstring		(const char *s, long len);
+void           lua_pushstring 		(const char *s);
 void           lua_pushcclosure		(lua_CFunction fn, int n);
 void           lua_pushusertag          (void *u, int tag);
 void           lua_pushobject       	(lua_Object object);
 
 lua_Object     lua_pop			(void);
 
-lua_Object     lua_getglobal 		(char *name);
-lua_Object     lua_rawgetglobal		(char *name);
-void           lua_setglobal		(char *name); /* In: value */
-void           lua_rawsetglobal		(char *name); /* In: value */
+lua_Object     lua_getglobal 		(const char *name);
+lua_Object     lua_rawgetglobal		(const char *name);
+void           lua_setglobal		(const char *name); /* In: value */
+void           lua_rawsetglobal		(const char *name); /* In: value */
 
 void           lua_settable	(void); /* In: table, index, value */
 void           lua_rawsettable	(void); /* In: table, index, value */
@@ -92,7 +95,7 @@ lua_Object     lua_rawgettable		(void); /* In: table, index */
 
 int            lua_tag			(lua_Object object);
 
-char          *lua_nextvar		(char *varname);  /* Out: value */
+const char    *lua_nextvar		(const char *varname);  /* Out: value */
 int            lua_next			(lua_Object o, int i);
 						/* Out: ref, value */ 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.4 1999/02/04 17:47:59 roberto Exp roberto $
+** $Id: ldblib.c,v 1.5 1999/03/04 21:17:26 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -15,7 +15,7 @@
 
 
 
-static void settabss (lua_Object t, char *i, char *v) {
+static void settabss (lua_Object t, const char *i, const char *v) {
   lua_pushobject(t);
   lua_pushstring(i);
   lua_pushstring(v);
@@ -23,7 +23,7 @@ static void settabss (lua_Object t, char *i, char *v) {
 }
 
 
-static void settabsi (lua_Object t, char *i, int v) {
+static void settabsi (lua_Object t, const char *i, int v) {
   lua_pushobject(t);
   lua_pushstring(i);
   lua_pushnumber(v);
@@ -33,7 +33,7 @@ static void settabsi (lua_Object t, char *i, int v) {
 
 static lua_Object getfuncinfo (lua_Object func) {
   lua_Object result = lua_createtable();
-  char *str;
+  const char *str;
   int line;
   lua_funcinfo(func, &str, &line);
   if (line == -1)  /* C function? */
@@ -48,7 +48,7 @@ static lua_Object getfuncinfo (lua_Object func) {
     settabss(result, "source", str);
   }
   if (line != 0) {  /* is it not a "main"? */
-    char *kind = lua_getobjname(func, &str);
+    const char *kind = lua_getobjname(func, &str);
     if (*kind) {
       settabss(result, "name", str);
       settabss(result, "where", kind);
@@ -86,10 +86,10 @@ static int findlocal (lua_Object func, int arg) {
   if (lua_isnumber(v))
     return (int)lua_getnumber(v);
   else {
-    char *name = luaL_check_string(arg);
+    const char *name = luaL_check_string(arg);
     int i = 0;
     int result = -1;
-    char *vname;
+    const char *vname;
     while (lua_getlocal(func, ++i, &vname) != LUA_NOOBJECT) {
       if (strcmp(name, vname) == 0)
         result = i;  /* keep looping to get the last var with this name */
@@ -104,7 +104,7 @@ static int findlocal (lua_Object func, int arg) {
 static void getlocal (void) {
   lua_Object func = lua_stackedfunction(luaL_check_int(1));
   lua_Object val;
-  char *name;
+  const char *name;
   if (func == LUA_NOOBJECT)  /* level out of range? */
     return;  /* return nil */
   else if (lua_getparam(2) != LUA_NOOBJECT) {  /* 2nd argument? */
@@ -161,7 +161,7 @@ static void linef (int line) {
 }
 
 
-static void callf (lua_Function func, char *file, int line) {
+static void callf (lua_Function func, const char *file, int line) {
   if (func != LUA_NOOBJECT) {
     lua_pushobject(func);
     lua_pushstring(file);
@@ -201,7 +201,7 @@ static void setlinehook (void) {
 }
 
 
-static struct luaL_reg dblib[] = {
+static const struct luaL_reg dblib[] = {
   {"funcinfo", funcinfo},
   {"getlocal", getlocal},
   {"getstack", getstack},

@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.h,v 1.7 1999/02/25 15:16:26 roberto Exp roberto $
+** $Id: lmem.h,v 1.8 1999/02/26 15:48:55 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -20,7 +20,7 @@
 
 void *luaM_realloc (void *oldblock, unsigned long size);
 void *luaM_growaux (void *block, unsigned long nelems, int inc, int size,
-                       char *errormsg, unsigned long limit);
+                       const char *errormsg, unsigned long limit);
 
 #define luaM_free(b)	luaM_realloc((b), 0)
 #define luaM_malloc(t)	luaM_realloc(NULL, (t))

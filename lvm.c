@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.58 1999/06/22 20:37:23 roberto Exp roberto $
+** $Id: lvm.c,v 1.59 1999/08/10 12:55:47 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -114,7 +114,7 @@ void luaV_closure (int nelems) {
 */
 void luaV_gettable (void) {
   TObject *table = L->stack.top-2;
-  TObject *im;
+  const TObject *im;
   if (ttype(table) != LUA_T_ARRAY) {  /* not a table, get gettable method */
     im = luaT_getimbyObj(table, IM_GETTABLE);
     if (ttype(im) == LUA_T_NIL)
@@ -146,9 +146,9 @@ void luaV_gettable (void) {
 /*
 ** Receives table at *t, index at *(t+1) and value at top.
 */
-void luaV_settable (TObject *t) {
+void luaV_settable (const TObject *t) {
   struct Stack *S = &L->stack;
-  TObject *im;
+  const TObject *im;
   if (ttype(t) != LUA_T_ARRAY) {  /* not a table, get "settable" method */
     im = luaT_getimbyObj(t, IM_SETTABLE);
     if (ttype(im) == LUA_T_NIL)
@@ -173,7 +173,7 @@ void luaV_settable (TObject *t) {
 }
 
 
-void luaV_rawsettable (TObject *t) {
+void luaV_rawsettable (const TObject *t) {
   if (ttype(t) != LUA_T_ARRAY)
     lua_error("indexed expression not a table");
   else {
@@ -186,7 +186,7 @@ void luaV_rawsettable (TObject *t) {
 
 void luaV_getglobal (TaggedString *ts) {
   /* WARNING: caller must assure stack space */
-  TObject *value = &ts->u.s.globalval;
+  const TObject *value = &ts->u.s.globalval;
   switch (ttype(value)) {
     /* only userdata, tables and nil can have getglobal tag methods */
     case LUA_T_USERDATA: case LUA_T_ARRAY: case LUA_T_NIL: {
@@ -208,8 +208,8 @@ void luaV_getglobal (TaggedString *ts) {
 
 
 void luaV_setglobal (TaggedString *ts) {
-  TObject *oldvalue = &ts->u.s.globalval;
-  TObject *im = luaT_getimbyObj(oldvalue, IM_SETGLOBAL);
+  const TObject *oldvalue = &ts->u.s.globalval;
+  const TObject *im = luaT_getimbyObj(oldvalue, IM_SETGLOBAL);
   if (ttype(im) == LUA_T_NIL)  /* is there a tag method? */
     luaS_rawsetglobal(ts, --L->stack.top);
   else {
@@ -226,9 +226,9 @@ void luaV_setglobal (TaggedString *ts) {
 }
 
 
-static void call_binTM (IMS event, char *msg)
-{
-  TObject *im = luaT_getimbyObj(L->stack.top-2, event);/* try first operand */
+static void call_binTM (IMS event, const char *msg) {
+  /* try first operand */
+  const TObject *im = luaT_getimbyObj(L->stack.top-2, event);
   if (ttype(im) == LUA_T_NIL) {
     im = luaT_getimbyObj(L->stack.top-1, event);  /* try second operand */
     if (ttype(im) == LUA_T_NIL) {
@@ -242,14 +242,12 @@ static void call_binTM (IMS event, char *msg)
 }
 
 
-static void call_arith (IMS event)
-{
+static void call_arith (IMS event) {
   call_binTM(event, "unexpected type in arithmetic operation");
 }
 
 
-static int luaV_strcomp (char *l, long ll, char *r, long lr)
-{
+static int luaV_strcomp (const char *l, long ll, const char *r, long lr) {
   for (;;) {
     long temp = strcoll(l, r);
     if (temp != 0) return temp;
@@ -268,8 +266,8 @@ static int luaV_strcomp (char *l, long ll, char *r, long lr)
 void luaV_comparison (lua_Type ttype_less, lua_Type ttype_equal,
                       lua_Type ttype_great, IMS op) {
   struct Stack *S = &L->stack;
-  TObject *l = S->top-2;
-  TObject *r = S->top-1;
+  const TObject *l = S->top-2;
+  const TObject *r = S->top-1;
   real result;
   if (ttype(l) == LUA_T_NUMBER && ttype(r) == LUA_T_NUMBER)
     result = nvalue(l)-nvalue(r);
@@ -300,8 +298,7 @@ void luaV_pack (StkId firstel, int nvararg, TObject *tab) {
 }
 
 
-static void adjust_varargs (StkId first_extra_arg)
-{
+static void adjust_varargs (StkId first_extra_arg) {
   TObject arg;
   luaV_pack(first_extra_arg,
        (L->stack.top-L->stack.stack)-first_extra_arg, &arg);
@@ -318,8 +315,8 @@ static void adjust_varargs (StkId first_extra_arg)
 */
 StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
   struct Stack *S = &L->stack;  /* to optimize */
-  register Byte *pc = tf->code;
-  TObject *consts = tf->consts;
+  register const Byte *pc = tf->code;
+  const TObject *consts = tf->consts;
   if (L->callhook)
     luaD_callHook(base, tf, 0);
   luaD_checkstack((*pc++)+EXTRA_STACK);

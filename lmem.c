@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.16 1999/05/20 20:43:06 roberto Exp roberto $
+** $Id: lmem.c,v 1.17 1999/05/24 17:51:05 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,7 @@ static unsigned long power2 (unsigned long n) {
 
 
 void *luaM_growaux (void *block, unsigned long nelems, int inc, int size,
-                       char *errormsg, unsigned long limit) {
+                       const char *errormsg, unsigned long limit) {
   unsigned long newn = nelems+inc;
   if (newn >= limit) lua_error(errormsg);
   if ((newn ^ nelems) <= nelems ||  /* still the same power of 2 limit? */
@@ -86,25 +86,23 @@ unsigned long totalmem = 0;
 
 
 static void *checkblock (void *block) {
-  if (block == NULL)
-    return NULL;
-  else {
-    unsigned long *b = blocksize(block);
-    unsigned long size = *b;
-    int i;
-    for (i=0;i<MARKSIZE;i++)
-      LUA_ASSERT(*(((char *)b)+HEADER+size+i) == MARK+i, "corrupted block");
-    numblocks--;
-    totalmem -= size;
-    return b;
-  }
+  unsigned long *b = blocksize(block);
+  unsigned long size = *b;
+  int i;
+  for (i=0;i<MARKSIZE;i++)
+    LUA_ASSERT(*(((char *)b)+HEADER+size+i) == MARK+i, "corrupted block");
+  numblocks--;
+  totalmem -= size;
+  return b;
 }
 
 
 static void freeblock (void *block) {
-  if (block)
+  if (block) {
     memset(block, -1, *blocksize(block));  /* erase block */
-  free(checkblock(block));
+    block = checkblock(block);
+    free(block);
+  }
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.37 1999/06/17 17:04:03 roberto Exp roberto $
+** $Id: lparser.c,v 1.38 1999/07/22 19:29:42 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -142,7 +142,7 @@ static void var_or_func_tail (LexState *ls, vardesc *v);
 
 
 
-static void checklimit (LexState *ls, int val, int limit, char *msg) {
+static void checklimit (LexState *ls, int val, int limit, const char *msg) {
   if (val > limit) {
     char buff[100];
     sprintf(buff, "too many %.50s (limit=%d)", msg, limit);
@@ -498,7 +498,7 @@ static void lua_pushvar (LexState *ls, vardesc *var) {
 }
 
 
-static void storevar (LexState *ls, vardesc *var) {
+static void storevar (LexState *ls, const vardesc *var) {
   switch (var->k) {
     case VLOCAL:
       code_oparg(ls, SETLOCAL, var->info, -1);
@@ -597,12 +597,13 @@ static void close_func (LexState *ls) {
 
 
 
-static int expfollow [] = {ELSE, ELSEIF, THEN, IF, WHILE, REPEAT, DO, NAME,
-   LOCAL, FUNCTION, END, UNTIL, RETURN, ')', ']', '}', ';', EOS, ',',  0};
+static const int expfollow [] = {ELSE, ELSEIF, THEN, IF, WHILE, REPEAT,
+   DO, NAME, LOCAL, FUNCTION, END, UNTIL, RETURN, ')', ']', '}', ';',
+   EOS, ',',  0};
 
 
-static int is_in (int tok, int *toks) {
-  int *t;
+static int is_in (int tok, const int *toks) {
+  const int *t;
   for (t=toks; *t; t++)
     if (*t == tok) return t-toks;
   return -1;
@@ -923,13 +924,13 @@ static void ret (LexState *ls) {
 */
 #define POW	13
 
-static int binop [] = {EQ, NE, '>', '<', LE, GE, CONC,
-                        '+', '-', '*', '/', '^', 0};
+static const int binop [] = {EQ, NE, '>', '<', LE, GE, CONC,
+                             '+', '-', '*', '/', '^', 0};
 
-static int priority [POW+1] =  {5, 5, 1, 1, 1, 1, 1, 1, 2, 3, 3, 4, 4, 6};
+static const int priority [POW+1] =  {5, 5, 1, 1, 1, 1, 1, 1, 2, 3, 3, 4, 4, 6};
 
-static OpCode opcodes [POW+1] = {NOTOP, MINUSOP, EQOP, NEQOP, GTOP, LTOP,
-  LEOP, GEOP, CONCOP, ADDOP, SUBOP, MULTOP, DIVOP, POWOP};
+static const OpCode opcodes [POW+1] = {NOTOP, MINUSOP, EQOP, NEQOP, GTOP,
+  LTOP, LEOP, GEOP, CONCOP, ADDOP, SUBOP, MULTOP, DIVOP, POWOP};
 
 #define MAXOPS	20  /* op's stack size (arbitrary limit) */
 

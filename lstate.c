@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.11 1999/05/11 14:19:32 roberto Exp roberto $
+** $Id: lstate.c,v 1.12 1999/05/11 20:08:20 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -20,8 +20,7 @@
 lua_State *lua_state = NULL;
 
 
-void lua_open (void)
-{
+void lua_open (void) {
   if (lua_state) return;
   lua_state = luaM_new(lua_State);
   L->Cstack.base = 0;
@@ -58,8 +57,7 @@ void lua_open (void)
 }
 
 
-void lua_close (void)
-{
+void lua_close (void) {
   TaggedString *alludata = luaS_collectudata();
   L->GCthreshold = MAX_INT;  /* to avoid GC during GC */
   luaC_hashcallIM((Hash *)L->roottable.next);  /* GC t.methods for tables */

@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.18 1999/02/08 16:28:48 roberto Exp roberto $
+** $Id: lstring.c,v 1.19 1999/02/26 15:49:53 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -38,7 +38,7 @@ void luaS_init (void) {
 }
 
 
-static unsigned long hash_s (char *s, long l) {
+static unsigned long hash_s (const char *s, long l) {
   unsigned long h = 0;  /* seed */
   while (l--)
       h = h ^ ((h<<5)+(h>>2)+(unsigned char)*(s++));
@@ -83,7 +83,7 @@ static void grow (stringtable *tb) {
 }
 
 
-static TaggedString *newone_s (char *str, long l, unsigned long h) {
+static TaggedString *newone_s (const char *str, long l, unsigned long h) {
   TaggedString *ts = (TaggedString *)luaM_malloc(sizeof(TaggedString)+l);
   memcpy(ts->str, str, l);
   ts->str[l] = 0;  /* ending 0 */
@@ -97,7 +97,7 @@ static TaggedString *newone_s (char *str, long l, unsigned long h) {
   return ts;
 }
 
-static TaggedString *newone_u (char *buff, int tag, unsigned long h) {
+static TaggedString *newone_u (void *buff, int tag, unsigned long h) {
   TaggedString *ts = luaM_new(TaggedString);
   ts->u.d.v = buff;
   ts->u.d.tag = (tag == LUA_ANYTAG) ? 0 : tag;
@@ -109,7 +109,7 @@ static TaggedString *newone_u (char *buff, int tag, unsigned long h) {
   return ts;
 }
 
-static TaggedString *insert_s (char *str, long l, stringtable *tb) {
+static TaggedString *insert_s (const char *str, long l, stringtable *tb) {
   TaggedString *ts;
   unsigned long h = hash_s(str, l);
   int size = tb->size;
@@ -172,16 +172,16 @@ TaggedString *luaS_createudata (void *udata, int tag) {
   return insert_u(udata, tag, &L->string_root[t]);
 }
 
-TaggedString *luaS_newlstr (char *str, long l) {
+TaggedString *luaS_newlstr (const char *str, long l) {
   int t = (l==0) ? 0 : ((int)((unsigned char)str[0]*l))%NUM_HASHSTR;
   return insert_s(str, l, &L->string_root[t]);
 }
 
-TaggedString *luaS_new (char *str) {
+TaggedString *luaS_new (const char *str) {
   return luaS_newlstr(str, strlen(str));
 }
 
-TaggedString *luaS_newfixedstring (char *str) {
+TaggedString *luaS_newfixedstring (const char *str) {
   TaggedString *ts = luaS_new(str);
   if (ts->head.marked == 0)
     ts->head.marked = 2;  /* avoid GC */
@@ -282,7 +282,7 @@ void luaS_rawsetglobal (TaggedString *ts, TObject *newval) {
 }
 
 
-char *luaS_travsymbol (int (*fn)(TObject *)) {
+const char *luaS_travsymbol (int (*fn)(TObject *)) {
   TaggedString *g;
   for (g=(TaggedString *)L->rootglobal.next; g; g=(TaggedString *)g->head.next)
     if (fn(&g->u.s.globalval))
@@ -291,7 +291,7 @@ char *luaS_travsymbol (int (*fn)(TObject *)) {
 }
 
 
-int luaS_globaldefined (char *name) {
+int luaS_globaldefined (const char *name) {
   TaggedString *ts = luaS_new(name);
   return ts->u.s.globalval.ttype != LUA_T_NIL;
 }

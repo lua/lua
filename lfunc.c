@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.9 1998/06/19 16:14:09 roberto Exp roberto $
+** $Id: lfunc.c,v 1.10 1999/03/04 21:17:26 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -16,8 +16,7 @@
 
 
 
-Closure *luaF_newclosure (int nelems)
-{
+Closure *luaF_newclosure (int nelems) {
   Closure *c = (Closure *)luaM_malloc(sizeof(Closure)+nelems*sizeof(TObject));
   luaO_insertlist(&(L->rootcl), (GCnode *)c);
   L->nblocks += gcsizeclosure(c);
@@ -26,8 +25,7 @@ Closure *luaF_newclosure (int nelems)
 }
 
 
-TProtoFunc *luaF_newproto (void)
-{
+TProtoFunc *luaF_newproto (void) {
   TProtoFunc *f = luaM_new(TProtoFunc);
   f->code = NULL;
   f->lineDefined = 0;
@@ -42,8 +40,7 @@ TProtoFunc *luaF_newproto (void)
 
 
 
-static void freefunc (TProtoFunc *f)
-{
+static void freefunc (TProtoFunc *f) {
   luaM_free(f->code);
   luaM_free(f->locvars);
   luaM_free(f->consts);
@@ -51,8 +48,7 @@ static void freefunc (TProtoFunc *f)
 }
 
 
-void luaF_freeproto (TProtoFunc *l)
-{
+void luaF_freeproto (TProtoFunc *l) {
   while (l) {
     TProtoFunc *next = (TProtoFunc *)l->head.next;
     L->nblocks -= gcsizeproto(l);
@@ -62,8 +58,7 @@ void luaF_freeproto (TProtoFunc *l)
 }
 
 
-void luaF_freeclosure (Closure *l)
-{
+void luaF_freeclosure (Closure *l) {
   while (l) {
     Closure *next = (Closure *)l->head.next;
     L->nblocks -= gcsizeclosure(l);
@@ -77,10 +72,9 @@ void luaF_freeclosure (Closure *l)
 ** Look for n-th local variable at line "line" in function "func".
 ** Returns NULL if not found.
 */
-char *luaF_getlocalname (TProtoFunc *func, int local_number, int line)
-{
+const char *luaF_getlocalname (TProtoFunc *func, int local_number, int line) {
   int count = 0;
-  char *varname = NULL;
+  const char *varname = NULL;
   LocVar *lv = func->locvars;
   if (lv == NULL)
     return NULL;

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.20 1999/06/24 19:42:02 roberto Exp roberto $
+** $Id: lua.c,v 1.21 1999/07/02 18:22:38 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -52,7 +52,7 @@ static void laction (int i) {
 }
 
 
-static int ldo (int (*f)(char *), char *name) {
+static int ldo (int (*f)(const char *), const char *name) {
   int res;
   handler h = lreset();
   res = f(name);  /* dostring | dofile */

@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.32 1999/06/17 17:04:03 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.33 1999/08/10 12:55:56 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -16,16 +16,14 @@
 
 
 
-static void addnchar (char *s, int n)
-{
+static void addnchar (const char *s, int n) {
   char *b = luaL_openspace(n);
   memcpy(b, s, n);
   luaL_addsize(n);
 }
 
 
-static void str_len (void)
-{
+static void str_len (void) {
   long l;
   luaL_check_lstr(1, &l);
   lua_pushnumber(l);
@@ -45,7 +43,7 @@ static long posrelat (long pos, long len) {
 
 static void str_sub (void) {
   long l;
-  char *s = luaL_check_lstr(1, &l);
+  const char *s = luaL_check_lstr(1, &l);
   long start = posrelat(luaL_check_long(2), l);
   long end = posrelat(luaL_opt_long(3, -1), l);
   if (start < 1) start = 1;
@@ -59,7 +57,7 @@ static void str_sub (void) {
 static void str_lower (void) {
   long l;
   int i;
-  char *s = luaL_check_lstr(1, &l);
+  const char *s = luaL_check_lstr(1, &l);
   luaL_resetbuffer();
   for (i=0; i<l; i++)
     luaL_addchar(tolower((unsigned char)(s[i])));
@@ -70,17 +68,16 @@ static void str_lower (void) {
 static void str_upper (void) {
   long l;
   int i;
-  char *s = luaL_check_lstr(1, &l);
+  const char *s = luaL_check_lstr(1, &l);
   luaL_resetbuffer();
   for (i=0; i<l; i++)
     luaL_addchar(toupper((unsigned char)(s[i])));
   closeandpush();
 }
 
-static void str_rep (void)
-{
+static void str_rep (void) {
   long l;
-  char *s = luaL_check_lstr(1, &l);
+  const char *s = luaL_check_lstr(1, &l);
   int n = luaL_check_int(2);
   luaL_resetbuffer();
   while (n-- > 0)
@@ -91,7 +88,7 @@ static void str_rep (void)
 
 static void str_byte (void) {
   long l;
-  char *s = luaL_check_lstr(1, &l);
+  const char *s = luaL_check_lstr(1, &l);
   long pos = posrelat(luaL_opt_long(2, 1), l);
   luaL_arg_check(0<pos && pos<=l, 2,  "out of range");
   lua_pushnumber((unsigned char)s[pos-1]);
@@ -123,10 +120,10 @@ static void str_char (void) {
 
 
 struct Capture {
-  char *src_end;  /* end ('\0') of source string */
+  const char *src_end;  /* end ('\0') of source string */
   int level;  /* total number of captures (finished or unfinished) */
   struct {
-    char *init;
+    const char *init;
     int len;  /* -1 signals unfinished capture */
   } capture[MAX_CAPT];
 };
@@ -163,7 +160,7 @@ static int capture_to_close (struct Capture *cap) {
 }
 
 
-char *luaI_classend (char *p) {
+const char *luaI_classend (const char *p) {
   switch (*p++) {
     case ESC:
       if (*p == '\0') lua_error("incorrect pattern (ends with `%')");
@@ -201,7 +198,7 @@ static int matchclass (int c, int cl) {
 
 
 
-static int matchbracketclass (int c, char *p, char *endclass) {
+static int matchbracketclass (int c, const char *p, const char *endclass) {
   int sig = 1;
   if (*(p+1) == '^') {
     sig = 0;
@@ -225,7 +222,7 @@ static int matchbracketclass (int c, char *p, char *endclass) {
 
 
 
-int luaI_singlematch (int c, char *p, char *ep) {
+int luaI_singlematch (int c, const char *p, const char *ep) {
   switch (*p) {
     case '.':  /* matches any char */
       return 1;
@@ -239,10 +236,11 @@ int luaI_singlematch (int c, char *p, char *ep) {
 }
 
 
-static char *match (char *s, char *p, struct Capture *cap);
+static const char *match (const char *s, const char *p, struct Capture *cap);
 
 
-static char *matchbalance (char *s, char *p, struct Capture *cap) {
+static const char *matchbalance (const char *s, const char *p,
+                                 struct Capture *cap) {
   if (*p == 0 || *(p+1) == 0)
     lua_error("unbalanced pattern");
   if (*s != *p) return NULL;
@@ -261,13 +259,14 @@ static char *matchbalance (char *s, char *p, struct Capture *cap) {
 }
 
 
-static char *max_expand (char *s, char *p, char *ep, struct Capture *cap) {
+static const char *max_expand (const char *s, const char *p, const char *ep,
+                         struct Capture *cap) {
   int i = 0;  /* counts maximum expand for item */
   while ((s+i)<cap->src_end && luaI_singlematch((unsigned char)*(s+i), p, ep))
     i++;
   /* keeps trying to match mith the maximum repetitions */
   while (i>=0) {
-    char *res = match((s+i), ep+1, cap);
+    const char *res = match((s+i), ep+1, cap);
     if (res) return res;
     i--;  /* else didn't match; reduce 1 repetition to try again */
   }
@@ -275,9 +274,10 @@ static char *max_expand (char *s, char *p, char *ep, struct Capture *cap) {
 }
 
 
-static char *min_expand (char *s, char *p, char *ep, struct Capture *cap) {
+static const char *min_expand (const char *s, const char *p, const char *ep,
+                         struct Capture *cap) {
   for (;;) {
-    char *res = match(s, ep+1, cap);
+    const char *res = match(s, ep+1, cap);
     if (res != NULL)
       return res;
     else if (s<cap->src_end && luaI_singlematch((unsigned char)*s, p, ep))
@@ -287,8 +287,9 @@ static char *min_expand (char *s, char *p, char *ep, struct Capture *cap) {
 }
 
 
-static char *start_capt (char *s, char *p, struct Capture *cap) {
-  char *res;
+static const char *start_capt (const char *s, const char *p,
+                               struct Capture *cap) {
+  const char *res;
   int level = cap->level;
   if (level >= MAX_CAPT) lua_error("too many captures");
   cap->capture[level].init = s;
@@ -300,9 +301,10 @@ static char *start_capt (char *s, char *p, struct Capture *cap) {
 }
 
 
-static char *end_capt (char *s, char *p, struct Capture *cap) {
+static const char *end_capt (const char *s, const char *p,
+                             struct Capture *cap) {
   int l = capture_to_close(cap);
-  char *res;
+  const char *res;
   cap->capture[l].len = s - cap->capture[l].init;  /* close capture */
   if ((res = match(s, p+1, cap)) == NULL)  /* match failed? */
     cap->capture[l].len = -1;  /* undo capture */
@@ -310,7 +312,8 @@ static char *end_capt (char *s, char *p, struct Capture *cap) {
 }
 
 
-static char *match_capture (char *s, int level, struct Capture *cap) {
+static const char *match_capture (const char *s, int level,
+                                  struct Capture *cap) {
   int l = check_cap(level, cap);
   int len = cap->capture[l].len;
   if (cap->src_end-s >= len &&
@@ -320,7 +323,7 @@ static char *match_capture (char *s, int level, struct Capture *cap) {
 }
 
 
-static char *match (char *s, char *p, struct Capture *cap) {
+static const char *match (const char *s, const char *p, struct Capture *cap) {
   init: /* using goto's to optimize tail recursion */
   switch (*p) {
     case '(':  /* start capture */
@@ -346,11 +349,11 @@ static char *match (char *s, char *p, struct Capture *cap) {
         return (s == cap->src_end) ? s : NULL;  /* check end of string */
       else goto dflt;
     default: dflt: {  /* it is a pattern item */
-      char *ep = luaI_classend(p);  /* points to what is next */
+      const char *ep = luaI_classend(p);  /* points to what is next */
       int m = s<cap->src_end && luaI_singlematch((unsigned char)*s, p, ep);
       switch (*ep) {
         case '?': {  /* optional */
-          char *res;
+          const char *res;
           if (m && ((res=match(s+1, ep+1, cap)) != NULL))
             return res;
           p=ep+1; goto init;  /* else return match(s, ep+1, cap); */
@@ -372,8 +375,8 @@ static char *match (char *s, char *p, struct Capture *cap) {
 
 static void str_find (void) {
   long l;
-  char *s = luaL_check_lstr(1, &l);
-  char *p = luaL_check_string(2);
+  const char *s = luaL_check_lstr(1, &l);
+  const char *p = luaL_check_string(2);
   long init = posrelat(luaL_opt_long(3, 1), l) - 1;
   struct Capture cap;
   luaL_arg_check(0 <= init && init <= l, 3, "out of range");
@@ -388,10 +391,10 @@ static void str_find (void) {
   }
   else {
     int anchor = (*p == '^') ? (p++, 1) : 0;
-    char *s1=s+init;
+    const char *s1=s+init;
     cap.src_end = s+l;
     do {
-      char *res;
+      const char *res;
       cap.level = 0;
       if ((res=match(s1, p, &cap)) != NULL) {
         lua_pushnumber(s1-s+1);  /* start */
@@ -407,7 +410,7 @@ static void str_find (void) {
 
 static void add_s (lua_Object newp, struct Capture *cap) {
   if (lua_isstring(newp)) {
-    char *news = lua_getstring(newp);
+    const char *news = lua_getstring(newp);
     int l = lua_strlen(newp);
     int i;
     for (i=0; i<l; i++) {
@@ -449,8 +452,8 @@ static void add_s (lua_Object newp, struct Capture *cap) {
 
 static void str_gsub (void) {
   long srcl;
-  char *src = luaL_check_lstr(1, &srcl);
-  char *p = luaL_check_string(2);
+  const char *src = luaL_check_lstr(1, &srcl);
+  const char *p = luaL_check_string(2);
   lua_Object newp = lua_getparam(3);
   int max_s = luaL_opt_int(4, srcl+1);
   int anchor = (*p == '^') ? (p++, 1) : 0;
@@ -461,7 +464,7 @@ static void str_gsub (void) {
   luaL_resetbuffer();
   cap.src_end = src+srcl;
   while (n < max_s) {
-    char *e;
+    const char *e;
     cap.level = 0;
     e = match(src, p, &cap);
     if (e) {
@@ -485,7 +488,7 @@ static void str_gsub (void) {
 
 static void luaI_addquoted (int arg) {
   long l;
-  char *s = luaL_check_lstr(arg, &l);
+  const char *s = luaL_check_lstr(arg, &l);
   luaL_addchar('"');
   while (l--) {
     switch (*s) {
@@ -506,7 +509,7 @@ static void luaI_addquoted (int arg) {
 
 static void str_format (void) {
   int arg = 1;
-  char *strfrmt = luaL_check_string(arg);
+  const char *strfrmt = luaL_check_string(arg);
   luaL_resetbuffer();
   while (*strfrmt) {
     if (*strfrmt != '%')
@@ -517,7 +520,7 @@ static void str_format (void) {
       struct Capture cap;
       char form[MAX_FORMAT];  /* to store the format ('%...') */
       char *buff;  /* to store the formatted item */
-      char *initf = strfrmt;
+      const char *initf = strfrmt;
       form[0] = '%';
       if (isdigit((unsigned char)*initf) && *(initf+1) == '$') {
         arg = *initf - '0';
@@ -548,7 +551,7 @@ static void str_format (void) {
           continue;  /* skip the "addsize" at the end */
         case 's': {
           long l;
-          char *s = luaL_check_lstr(arg, &l);
+          const char *s = luaL_check_lstr(arg, &l);
           if (cap.capture[1].len == 0 && l >= 100) {
             /* no precision and string is too big to be formatted;
                keep original string */
@@ -570,7 +573,7 @@ static void str_format (void) {
 }
 
 
-static struct luaL_reg strlib[] = {
+static const struct luaL_reg strlib[] = {
 {"strlen", str_len},
 {"strsub", str_sub},
 {"strlower", str_lower},

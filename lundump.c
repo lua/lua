@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.21 1999/07/02 19:34:26 lhf Exp $
+** $Id: lundump.c,v 1.12 1999/07/08 12:43:23 roberto Exp roberto $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -50,7 +50,7 @@ static unsigned long LoadLong (ZIO* Z)
 /*
 * convert number from text
 */
-double luaU_str2d (char* b, char* where)
+double luaU_str2d (const char* b, const char* where)
 {
  int negative=(b[0]=='-');
  double x=luaO_str2d(b+negative);
@@ -76,7 +76,7 @@ static real LoadNumber (ZIO* Z, int native)
  }
 }
 
-static int LoadInt (ZIO* Z, char* message)
+static int LoadInt (ZIO* Z, const char* message)
 {
  unsigned long l=LoadLong(Z);
  unsigned int i=l;
@@ -169,7 +169,7 @@ static TProtoFunc* LoadFunction (ZIO* Z, int native)
 
 static void LoadSignature (ZIO* Z)
 {
- char* s=SIGNATURE;
+ const char* s=SIGNATURE;
  while (*s!=0 && ezgetc(Z)==*s)
   ++s;
  if (*s!=0) luaL_verror("bad signature in %s",zname(Z));
@@ -231,9 +231,9 @@ TProtoFunc* luaU_undump1 (ZIO* Z)
 /*
 * handle constants that cannot happen
 */
-void luaU_badconstant (char* s, int i, TObject* o, TProtoFunc* tf)
+void luaU_badconstant (const char* s, int i, const TObject* o, TProtoFunc* tf)
 {
  int t=ttype(o);
- char* name= (t>0 || t<LUA_T_LINE) ? "?" : luaO_typenames[-t];
+ const char* name= (t>0 || t<LUA_T_LINE) ? "?" : luaO_typenames[-t];
  luaL_verror("cannot %s constant #%d: type=%d [%s]" IN,s,i,t,name,INLOC);
 }

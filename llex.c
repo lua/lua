@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.36 1999/06/17 17:04:03 roberto Exp roberto $
+** $Id: llex.c,v 1.37 1999/07/22 19:29:42 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -28,8 +28,8 @@
 
 
 /* ORDER RESERVED */
-static char *reserved [] = {"and", "do", "else", "elseif", "end", "function",
-    "if", "local", "nil", "not", "or", "repeat", "return", "then",
+static const char *const reserved [] = {"and", "do", "else", "elseif", "end",
+    "function", "if", "local", "nil", "not", "or", "repeat", "return", "then",
     "until", "while"};
 
 
@@ -44,7 +44,7 @@ void luaX_init (void) {
 
 #define MAXSRC          80
 
-void luaX_syntaxerror (LexState *ls, char *s, char *token) {
+void luaX_syntaxerror (LexState *ls, const char *s, const char *token) {
   char buff[MAXSRC];
   luaL_chunkid(buff, zname(ls->lex_z), sizeof(buff));
   if (token[0] == '\0')
@@ -54,7 +54,7 @@ void luaX_syntaxerror (LexState *ls, char *s, char *token) {
 }
 
 
-void luaX_error (LexState *ls, char *s) {
+void luaX_error (LexState *ls, const char *s) {
   save('\0');
   luaX_syntaxerror(ls, s, luaL_buffer());
 }
@@ -117,8 +117,8 @@ static void skipspace (LexState *LS) {
 }
 
 
-static int checkcond (LexState *LS, char *buff) {
-  static char *opts[] = {"nil", "1", NULL};
+static int checkcond (LexState *LS, const char *buff) {
+  static const char *const opts[] = {"nil", "1", NULL};
   int i = luaL_findstring(buff, opts);
   if (i >= 0) return i;
   else if (isalpha((unsigned char)buff[0]) || buff[0] == '_')
@@ -160,7 +160,7 @@ static void ifskip (LexState *LS) {
 
 
 static void inclinenumber (LexState *LS) {
-  static char *pragmas [] =
+  static const char *const pragmas [] =
     {"debug", "nodebug", "endinput", "end", "ifnot", "if", "else", NULL};
   next(LS);  /* skip '\n' */
   ++LS->linenumber;

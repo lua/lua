@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.h,v 1.15 1999/07/02 19:34:26 lhf Exp $
+** $Id: lundump.h,v 1.9 1999/07/08 12:43:23 roberto Exp roberto $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -11,9 +11,9 @@
 #include "lzio.h"
 
 TProtoFunc* luaU_undump1 (ZIO* Z);	/* load one chunk */
-void luaU_badconstant (char* s, int i, TObject* o, TProtoFunc* tf);
+void luaU_badconstant (const char* s, int i, const TObject* o, TProtoFunc* tf);
 					/* handle cases that cannot happen */
-double luaU_str2d (char* b, char* where);
+double luaU_str2d (const char* b, const char* where);
 					/* convert number from text */
 
 /* definitions for headers of binary files */

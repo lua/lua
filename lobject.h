@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.27 1999/03/04 21:17:26 roberto Exp roberto $
+** $Id: lobject.h,v 1.28 1999/03/16 16:43:27 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -178,19 +178,19 @@ typedef struct Hash {
 } Hash;
 
 
-extern char *luaO_typenames[];
+extern const char *const luaO_typenames[];
 
 #define luaO_typename(o)        luaO_typenames[-ttype(o)]
 
 
-extern TObject luaO_nilobject;
+extern const TObject luaO_nilobject;
 
 #define luaO_equalObj(t1,t2)	((ttype(t1) != ttype(t2)) ? 0 \
                                       : luaO_equalval(t1,t2))
-int luaO_equalval (TObject *t1, TObject *t2);
+int luaO_equalval (const TObject *t1, const TObject *t2);
 int luaO_redimension (int oldsize);
 void luaO_insertlist (GCnode *root, GCnode *node);
-double luaO_str2d (char *s);
+double luaO_str2d (const char *s);
 
 #ifdef OLD_ANSI
 void luaO_memup (void *dest, void *src, int size);
