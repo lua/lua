@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.20 1998/11/13 16:48:48 roberto Exp roberto $
+% $Id: manual.tex,v 1.21 1998/11/20 15:41:43 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -41,7 +41,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{\small \verb$Date: 1998/11/13 16:48:48 $}
+%\date{\small \verb$Date: 1998/11/20 15:41:43 $}
 
 \maketitle
 
@@ -410,11 +410,7 @@ Lua provides some automatic conversions between values at run time.
 Any arithmetic operation applied to a string tries to convert
 that string to a number, following the usual rules.
 Conversely, whenever a number is used when a string is expected,
-that number is converted to a string, according to the following rule:
-if the number is an integer, it is written without exponent or decimal point;
-otherwise, it is formatted following the \verb|%g|
-conversion specification of the \verb|printf| function in the
-standard C library.
+that number is converted to a string, in a reasonable format.
 For complete control on how numbers are converted to strings,
 use the \verb|format| function \see{format}.
 
@@ -523,9 +519,9 @@ only \nil\ is considered false.
 \begin{Produc}
 \produc{stat}{\rwd{while} exp1 \rwd{do} block \rwd{end} \OrNL
 \rwd{repeat} block \rwd{until} exp1 \OrNL
-\rwd{if} exp1 \rwd{then} block \rep{elseif}
+\rwd{if} exp1 \rwd{then} block
+  \rep{\rwd{elseif} exp1 \rwd{then} block}
    \opt{\rwd{else} block} \rwd{end}}
-\produc{elseif}{\rwd{elseif} exp1 \rwd{then} block}
 \end{Produc}
 
 A \T{return} is used to return values from a function or from a chunk.
@@ -687,6 +683,24 @@ from the lower to the higher priority:
 All binary operators are left associative,
 except for \verb|^| (exponentiation),
 which is right associative.
+
+\subsubsection{If Expressions}
+\begin{Produc}
+\produc{exp}{\rwd{if} exp1 \rwd{then} exp1
+   \rep{\rwd{elseif} exp1 \rwd{then} exp1}
+   \opt{\rwd{else} exp1} \rwd{end}}
+\end{Produc}%
+An \Index{if expression} chooses an expression to evaluate
+according to its condition.
+Its final value is the value of the chosen expression.
+An absent else-part is equivalent to \verb|else nil|.
+
+\subsubsection{Assignment Expressions}
+\begin{Produc}
+\produc{exp}{\ter{(} var \ter{=} exp1 \ter{)}}
+\end{Produc}%
+An \Index{assignment expression} executes a regular assignment,
+and results in the final value of its right hand expression.
 
 \subsubsection{Table Constructors} \label{tableconstructor}
 Table \Index{constructors} are expressions that create tables;
@@ -1978,8 +1992,9 @@ field not present in a table or a field with value \nil.
 Therefore, the function only considers fields with non \nil\ values.
 The order in which the indices are enumerated is not specified,
 \emph{even for numeric indices}
-(to traverse a table in numeric order, use a counter).
-If the table is modified in any way during a traversal,
+(to traverse a table in numeric order,
+use a counter or function \verb|foreachi|).
+If the table indices are modified in any way during a traversal,
 the semantics of \verb|next| is undefined.
 
 This function cannot be written with the standard API.
@@ -1992,7 +2007,7 @@ or \nil\ to get a first name.
 Similarly to \verb|next|, it returns the name of another variable
 and its value,
 or \nil\ if there are no more variables.
-There can be no assignments to global variables during the traversal;
+There can be no creation of new global variables during the traversal;
 otherwise the semantics of \verb|nextvar| is undefined.
 
 This function cannot be written with the standard API.
@@ -2150,14 +2165,13 @@ value in the table.
 This function could be defined in Lua:
 \begin{verbatim}
       function getn (t)
-        if type(t.n) == 'number' then return floor(t.n) end
-        local i = next(t, nil)
+        if type(t.n) == 'number' then return t.n end
+        local i = nil
         local max = 0
-        while i do
+        while (i=next(t, i)) do
           if type(i) == 'number' and i>max then max=i end
-          i = next(t, i)
         end
-        return floor(max)
+        return max
       end
 \end{verbatim}
 
@@ -2198,11 +2212,10 @@ as the final value of \verb|foreachi|.
 This function could be defined in Lua:
 \begin{verbatim}
       function foreachi (t, f)
-        local i, n = 1, getn(t)
-        while i<=n do
+        local i, n = 0, getn(t)
+        while (i=i+1)<=n do
           local res = f(i, t[i])
           if res then return res end
-          i = i+1
         end
       end
 \end{verbatim}
@@ -2227,49 +2240,79 @@ This function could be defined in Lua:
       end
 \end{verbatim}
 
+\subsubsection*{\ff \T{tinsert (table [, pos] , value)}}\Deffunc{tinsert}
+
+Inserts element \verb|value| at table position \verb|pos|,
+shifting other elements to open space.
+The default value for \verb|pos| is \verb|n+1|
+(where \verb|n| is the result of \verb|getn(table)| \see{getn})
+so that a call \verb|tinsert(t,x)| inserts \verb|x| at the end
+of table \verb|t|.
+
+This function also sets or increments the field \verb|n| of the table,
+to \verb|n+1|.
+
+This function is equivalent to the following Lua function,
+except that the table accesses are all raw (that is, without tag methods):
+\begin{verbatim}
+      function tinsert (t, ...)
+        local pos, value
+        local n = getn(t)
+        if arg.n == 1 then
+          pos = n+1; value = arg[1]
+        else
+          pos = arg[1]; value = arg[2]
+        end
+        t.n = n+1; n=n+1
+        while (n=n-1)>=pos do
+          t[n+1] = t[n]
+        end
+        t[pos] = value
+      end
+\end{verbatim}
+
+\subsubsection*{\ff \T{tremove (table [, pos])}}\Deffunc{tremove}
+
+Removes from \verb|table| the element at position \verb|pos|,
+shifting other elements to close the space.
+Returns the value of the removed element.
+The default value for \verb|pos| is \verb|n|
+(where \verb|n| is the result of \verb|getn(table)| \see{getn}),
+so that a call \verb|tremove(t)| removes the last element
+of table \verb|t|.
+
+This function also sets or decrements the field \verb|n| of the table,
+to \verb|n-1|.
+
+This function is equivalent to the following Lua function,
+except that the table accesses are all raw (that is, without tag methods):
+\begin{verbatim}
+      function tremove (t, pos)
+        local n = getn(t)
+        pos = pos or n
+        local value = t[pos]
+        if n<=0 then return end
+        t.n = n-1
+        pos = pos-1
+        while (pos=pos+1)<n do
+          t[pos] = t[pos+1]
+        end
+        return value
+      end
+\end{verbatim}
+
 \subsubsection*{\ff \T{sort (table [, comp])}}\Deffunc{sort}
-Sorts table elements in ascending order, \emph{in-place},
+Sorts table elements in a given order, \emph{in-place},
 from \verb|table[1]| to \verb|table[n]|,
 where \verb|n| is the result of \verb|getn(table)| \see{getn}.
 If \verb|comp| is given,
-it must be a function that compares two table elements,
+it must be a function that receives two table elements,
 and returns true when the first is less than the second
-(that is, \verb|not comp(a[i+1], a[i])| will be true after the sort).
+(so that \verb|not comp(a[i+1], a[i])| will be true after the sort).
 If \verb|comp| is not given,
 the standard \verb|<| Lua operator is used instead.
 
 Function \verb|sort| returns the (sorted) table.
-
-This function could be defined in Lua:
-\begin{verbatim}
-      function aux_qsort (a, l, u, leq)
-        if l < u then
-          local m = floor((l+u)/2)  -- choose middle element as pivot
-          a[l], a[m] = a[m], a[l]   -- swap pivot to first position
-          local t = a[l]   -- pivot value
-          m = l
-          local i = l+1
-          while i <= u do
-            -- invariant: a[l+1..m] < t <= a[m+1..i-1]
-            if leq(a[i], t) then
-              m = m+1
-              a[m], a[i] = a[i], a[m]   -- swap
-            end
-            i = i+1
-          end
-          a[l], a[m] = a[m], a[l]   -- swap pivot to a valid place
-          -- a[l+1..m-1] < a[m] <= a[m+1..u]
-          aux_qsort(a, l, m-1, leq)
-          aux_qsort(a, m+1, u, leq)
-        end
-        return a   -- return the table
-      end
-
-      function sort (a, f)
-        f = f or function (a,b) return a<b end
-        return aux_qsort(a, 1, getn(a), f)
-      end                         
-\end{verbatim}
 
 
 \subsection{String Manipulation}
@@ -2364,9 +2407,8 @@ The only differences are that the options/modifiers
 and \verb|h| are not supported,
 and there is an extra option, \verb|q|.
 This option formats a string in a form suitable to be safely read
-back by the Lua interpreter;
-that is,
-the string is written between double quotes,
+back by the Lua interpreter:
+The string is written between double quotes,
 and all double quotes, returns and backslashes in the string
 are correctly escaped when written.
 For instance, the call
@@ -2393,7 +2435,7 @@ The options \verb|c|, \verb|d|, \verb|E|, \verb|e|, \verb|f|,
 \verb|g|, \verb|G|, \verb|i|, \verb|o|, \verb|u|, \verb|X|, and \verb|x| all
 expect a number as argument,
 whereas \verb|q| and \verb|s| expect a string.
-Note that the \verb|*| modifier can be simulated by building
+The \verb|*| modifier can be simulated by building
 the appropriate format string.
 For example, \verb|"%*g"| can be simulated with
 \verb|"%"..width.."g"|.
@@ -2464,17 +2506,15 @@ The following combinations are allowed in describing a character class:
 --- represents the character \emph{x} itself.
 \item[\T{.}] --- (a dot) represents all characters.
 \item[\T{\%a}] --- represents all letters.
-\item[\T{\%A}] --- represents all non letter characters.
+\item[\T{\%c}] --- represents all control characters.
 \item[\T{\%d}] --- represents all digits.
-\item[\T{\%D}] --- represents all non digits.
 \item[\T{\%l}] --- represents all lower case letters.
-\item[\T{\%L}] --- represents all non lower case letter characters.
+\item[\T{\%p}] --- represents all punctuation characters.
 \item[\T{\%s}] --- represents all space characters.
-\item[\T{\%S}] --- represents all non space characters.
 \item[\T{\%u}] --- represents all upper case letters.
-\item[\T{\%U}] --- represents all non upper case letter characters.
 \item[\T{\%w}] --- represents all alphanumeric characters.
-\item[\T{\%W}] --- represents all non alphanumeric characters.
+\item[\T{\%x}] --- represents all hexa-decimal digits.
+\item[\T{\%z}] --- represents the character with representation 0.
 \item[\T{\%\M{x}}] (where \M{x} is any non alphanumeric character)  ---
 represents the character \M{x}.
 This is the standard way to escape the magic characters \verb|()%.[*-?|.
@@ -2495,6 +2535,9 @@ E.g., assuming an \emph{ascii} character set,
 represents the complement of char-set,
 where char-set is interpreted as above.
 \end{description}
+For all classes represented by single letters (\verb|%a|, \verb|%c|, \ldots),
+the correspondent upper-case letter represents the complement of the class.
+For instance, \verb|%S| represents all non-space characters.
 
 The definitions of letter, space, etc. depend on the current locale.
 In particular, the class \verb|[a-z]| may not be equivalent to \verb|%l|.
@@ -2591,6 +2634,8 @@ The function \verb|random|, when called without arguments,
 returns a pseudo-random real number in the range \Math{[0,1)}.
 When called with a number \Math{n},
 \verb|random| returns a pseudo-random integer in the range \Math{[1,n]}.
+When called with two arguments, \Math{l} and \Math{u},
+\verb|random| returns a pseudo-random integer in the range \Math{[l,u]}.
 
 
 \subsection{I/O Facilities} \label{libio}
@@ -2891,9 +2936,17 @@ then \verb|linedefined| is \Math{-1}, and \verb|filename| is \verb|"(C)"|.
 The function \verb|lua_currentline| gives the current line where
 a given function is executing.
 It only works if the function has been compiled with debug
-information \see{pragma}.
+information.
 When no line information is available,
 \verb|lua_currentline| returns \Math{-1}.
+
+The generation of debug information is controled by an internal flag,
+which can be switched with
+\begin{verbatim}
+int lua_setdebug (int debug);
+\end{verbatim}
+This function sets the flag and returns its previous value.
+This flag can also be set from Lua~\see{pragma}.
 
 Function \verb|lua_getobjname| tries to find a reasonable name for
 a given function.
@@ -2918,6 +2971,8 @@ The following functions allow the manipulation of the
 local variables of a given activation record.
 They only work if the function has been compiled with debug
 information \see{pragma}.
+Moreover, for these functions, a local variable becomes
+visible in the line after its definition. 
 \begin{verbatim}
 lua_Object lua_getlocal (lua_Function func, int local_number, char **name);
 int lua_setlocal (lua_Function func, int local_number);
@@ -2947,17 +3002,17 @@ then this function fails and returns 0.
 The Lua interpreter offers two hooks for debugging purposes:
 \begin{verbatim}
 typedef void (*lua_CHFunction) (lua_Function func, char *file, int line);
-extern lua_CHFunction lua_callhook;
+lua_CHFunction lua_setcallhook (lua_CHFunction func);
 
 typedef void (*lua_LHFunction) (int line);
-extern lua_LHFunction lua_linehook;
+lua_LHFunction lua_setlinehook (lua_LHFunction func);
 \end{verbatim}
 The first one is called whenever the interpreter enters or leaves a
 function.
 When entering a function,
 its parameters are a handle to the function activation record,
-plus the file and the line where the function is defined (the same
-information which is provided by \verb|lua_funcinfo|);
+plus the file and the line where the function is defined
+(the same information which is provided by \verb|lua_funcinfo|);
 when leaving a function, \verb|func| is \verb|LUA_NOOBJECT|,
 \verb|file| is \verb|"(return)"|, and \verb|line| is 0.
 
@@ -2971,6 +3026,8 @@ has been compiled with debug information \see{pragma}.
 
 A hook is disabled when its value is \verb|NULL|,
 which is the initial value of both hooks.
+Both \verb|lua_setcallhook| and \verb|lua_setlinehook|
+set their corresponding hooks and return their previous values.
 
 
 
@@ -3039,6 +3096,18 @@ Although great care has been taken to avoid incompatibilities with
 the previous public versions of Lua,
 some differences had to be introduced.
 Here is a list of all these incompatibilities.
+
+\subsection*{Incompatibilities with \Index{version 3.1}}
+\begin{itemize}
+\item
+In the debug API, the old variables \verb|lua_debug|,
+\verb|lua_callhook| and \verb|lua_linehook| now live inside \verb|lua_state|.
+Therefore, they are no more directly accessible, and must be
+manipulated through the new functions \verb|lua_setdebug|,
+\verb|lua_setcallhook| and \verb|lua_setlinehook|.
+
+\item Old pre-compiled code is obsolete, and must be re-compiled.
+\end{itemize}
 
 \subsection*{Incompatibilities with \Index{version 3.0}}
 \begin{itemize}
