@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.30 1998/12/30 17:26:49 roberto Exp roberto $
+** $Id: lapi.c,v 1.31 1999/01/15 13:11:22 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -620,29 +620,6 @@ lua_Object lua_getref (int ref)
 }
 
 /* }====================================================== */
-
-
-/*
-** {======================================================
-** Derived functions
-** =======================================================
-*/
-int (lua_call) (char *name) { return lua_call(name); }
-
-void (lua_pushref) (int ref) { lua_pushref(ref); }
-
-int (lua_refobject) (lua_Object o, int l) { return lua_refobject(o, l); }
-
-void (lua_register) (char *n, lua_CFunction f) { lua_register(n, f); }
-
-void (lua_pushuserdata) (void *u) { lua_pushuserdata(u); }
-
-void (lua_pushcfunction) (lua_CFunction f) { lua_pushcfunction(f); }
-
-int (lua_clonetag) (int t) { return lua_clonetag(t); }
-
-/* }====================================================== */
-
 
 
 

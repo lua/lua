@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.24 1998/08/21 17:43:44 roberto Exp roberto $
+** $Id: lua.h,v 1.25 1998/12/15 14:59:43 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -100,29 +100,21 @@ long	       lua_collectgarbage	(long limit);
 
 
 /* =============================================================== */
-/* some useful macros/derived functions */
+/* some useful macros/functions */
 
-int     (lua_call) (char *name);
 #define lua_call(name)		lua_callfunction(lua_getglobal(name))
 
-void    (lua_pushref) (int ref);
 #define lua_pushref(ref)	lua_pushobject(lua_getref(ref))
 
-int     (lua_refobject) (lua_Object o, int l);
 #define lua_refobject(o,l)	(lua_pushobject(o), lua_ref(l))
 
-void    (lua_register) (char *n, lua_CFunction f);
 #define lua_register(n,f)	(lua_pushcfunction(f), lua_setglobal(n))
 
-void    (lua_pushuserdata) (void *u);
 #define lua_pushuserdata(u)     lua_pushusertag(u, 0)
 
-void    (lua_pushcfunction) (lua_CFunction f);
 #define lua_pushcfunction(f)	lua_pushcclosure(f, 0)
 
-int     (lua_clonetag) (int t);
 #define lua_clonetag(t)		lua_copytagmethods(lua_newtag(), (t))
-
 
 lua_Object     lua_seterrormethod (void);  /* In: new method */
 
