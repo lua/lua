@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.97 2003/03/19 21:16:12 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.98 2003/04/03 13:35:34 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -52,6 +52,17 @@ static int str_sub (lua_State *L) {
   if (start <= end)
     lua_pushlstring(L, s+start-1, end-start+1);
   else lua_pushliteral(L, "");
+  return 1;
+}
+
+
+static int str_reverse (lua_State *L) {
+  size_t l;
+  luaL_Buffer b;
+  const char *s = luaL_checklstring(L, 1, &l);
+  luaL_buffinit(L, &b);
+  while (l--) luaL_putchar(&b, s[l]);
+  luaL_pushresult(&b);
   return 1;
 }
 
@@ -746,6 +757,7 @@ static int str_format (lua_State *L) {
 static const luaL_reg strlib[] = {
   {"len", str_len},
   {"sub", str_sub},
+  {"reverse", str_reverse},
   {"lower", str_lower},
   {"upper", str_upper},
   {"char", str_char},
