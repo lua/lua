@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.137 2003/11/05 11:59:14 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.138 2003/11/11 16:34:17 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -297,7 +297,7 @@ static const char *generic_reader (lua_State *L, void *ud, size_t *size) {
 static int luaB_load (lua_State *L) {
   struct Aux_load al;
   int status;
-  const char *cname = luaL_optstring(L, 2, "= generic load");
+  const char *cname = luaL_optstring(L, 2, "=(load)");
   luaL_checktype(L, 1, LUA_TFUNCTION);
   lua_settop(L, 1);
   al.func = luaL_ref(L, LUA_REGISTRYINDEX);

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.184 2003/10/21 10:58:58 roberto Exp roberto $
+** $Id: lua.h,v 1.185 2003/11/05 11:59:14 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -258,10 +258,7 @@ LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud);
 
 #define lua_newtable(L)		lua_createtable(L, 0, 0)
 
-#define lua_register(L,n,f) \
-	(lua_pushstring(L, n), \
-	 lua_pushcfunction(L, f), \
-	 lua_settable(L, LUA_GLOBALSINDEX))
+#define lua_register(L,n,f) (lua_pushcfunction(L,f), lua_setglobal(L,n))
 
 #define lua_pushcfunction(L,f)	lua_pushcclosure(L, f, 0)
 
