@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.2 1997/11/27 15:59:25 roberto Exp roberto $
+** $Id: lstate.c,v 1.3 1997/12/01 20:31:25 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -69,7 +69,7 @@ void lua_close (void)
   luaM_free(L->Mbuffer);
   luaM_free(L);
   L = NULL;
-#if DEBUG
+#ifdef DEBUG
   printf("total de blocos: %ld\n", numblocks);
   printf("total de memoria: %ld\n", totalmem);
 #endif

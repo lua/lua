@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.10 1997/12/01 20:31:25 roberto Exp roberto $
+** $Id: lgc.c,v 1.11 1997/12/09 13:35:19 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -83,15 +83,19 @@ static void travlock (void)
 
 static int ismarked (TObject *o)
 {
+  /* valid only for locked objects */
   switch (o->ttype) {
     case LUA_T_STRING: case LUA_T_USERDATA:
       return o->value.ts->head.marked;
     case LUA_T_FUNCTION:
       return o->value.cl->head.marked;
-    case LUA_T_PROTO:
-      return o->value.tf->head.marked;
     case LUA_T_ARRAY:
       return o->value.a->head.marked;
+#ifdef DEBUG
+    case LUA_T_LINE: case LUA_T_MARK:
+    case LUA_T_PROTO: case LUA_T_CPROTO:
+      lua_error("internal error");
+#endif
     default:  /* nil, number or cproto */
       return 1;
   }

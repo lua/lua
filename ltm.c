@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.8 1997/11/19 17:29:23 roberto Exp roberto $
+** $Id: ltm.c,v 1.9 1997/11/19 18:16:33 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -106,8 +106,12 @@ int luaT_efectivetag (TObject *o)
     }
     case LUA_T_ARRAY:
       return o->value.a->htag;
-    case LUA_T_FUNCTION:  case LUA_T_MARK:
+    case LUA_T_FUNCTION: case LUA_T_MARK:
       return o->value.cl->consts[0].ttype;
+#ifdef DEBUG
+     case LUA_T_LINE: case LUA_T_PROTO: case LUA_T_CPROTO:
+      lua_error("internal error");
+#endif
     default:
       return t;
   }

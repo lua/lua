@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.11 1997/11/28 16:56:05 roberto Exp roberto $
+** $Id: lapi.c,v 1.12 1997/12/09 13:35:19 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -32,6 +32,25 @@ char lua_ident[] = "$Lua: " LUA_VERSION " " LUA_COPYRIGHT " $\n"
 TObject *luaA_Address (lua_Object o)
 {
   return Address(o);
+}
+
+
+static int normalized_type (TObject *o)
+{
+  int t = ttype(o);
+  switch (t) {
+    case LUA_T_MARK:
+      return LUA_T_FUNCTION;
+    default:
+      return t;
+  }
+}
+
+
+static void set_normalized (TObject *d, TObject *s)
+{
+  d->value = s->value;
+  d->ttype = normalized_type(s);
 }
 
 
@@ -101,7 +120,7 @@ int lua_callfunction (lua_Object function)
     return 1;
   else {
     luaD_openstack((L->stack.top-L->stack.stack)-L->Cstack.base);
-    L->stack.stack[L->Cstack.base] = *Address(function);
+    set_normalized(L->stack.stack+L->Cstack.base, Address(function));
     return luaD_protectedrun(MULT_RET);
   }
 }
@@ -244,8 +263,7 @@ int lua_isstring (lua_Object o)
 
 int lua_isfunction (lua_Object o)
 {
-  return (o != LUA_NOOBJECT) && ((ttype(Address(o)) == LUA_T_FUNCTION) ||
-                                 (ttype(Address(o)) == LUA_T_MARK));
+  return (o != LUA_NOOBJECT) && (normalized_type(Address(o)) == LUA_T_FUNCTION);
 }
 
 
@@ -334,10 +352,10 @@ void lua_pushobject (lua_Object o)
 {
   if (o == LUA_NOOBJECT)
     lua_error("API error - attempt to push a NOOBJECT");
-  *L->stack.top = *Address(o);
-  if (ttype(L->stack.top) == LUA_T_MARK)
-    ttype(L->stack.top) = LUA_T_FUNCTION;
-  incr_top;
+  else {
+    set_normalized(L->stack.top, Address(o));
+    incr_top;
+  }
 }
 
 
@@ -406,11 +424,11 @@ int lua_currentline (lua_Function func)
 
 lua_Object lua_getlocal (lua_Function func, int local_number, char **name)
 {
-  TObject *f = luaA_Address(func);
-  /* check whether func is a Lua function */
-  if (!(f->ttype == LUA_T_MARK || f->ttype == LUA_T_FUNCTION))
+  /* check whether func is a function */
+  if (!lua_isfunction(func))
     return LUA_NOOBJECT;
   else {
+    TObject *f = luaA_Address(func);
     TProtoFunc *fp = protovalue(f)->value.tf;
     *name = luaF_getlocalname(fp, local_number, lua_currentline(func));
     if (*name) {
@@ -444,11 +462,10 @@ int lua_setlocal (lua_Function func, int local_number)
 
 void lua_funcinfo (lua_Object func, char **filename, int *linedefined)
 {
-  TObject *f = Address(func);
-  if (!(ttype(f) == LUA_T_MARK || ttype(f) == LUA_T_FUNCTION))
+  if (!lua_isfunction(func))
     lua_error("API - `funcinfo' called with a non-function value");
   else {
-    f = protovalue(f);
+    TObject *f = protovalue(Address(func));
     if (ttype(f) == LUA_T_PROTO) {
       *filename = tfvalue(f)->fileName->str;
       *linedefined = tfvalue(f)->lineDefined;
@@ -463,16 +480,13 @@ void lua_funcinfo (lua_Object func, char **filename, int *linedefined)
 
 static int checkfunc (TObject *o)
 {
-  return o->ttype == LUA_T_FUNCTION &&
-         (ttype(L->stack.top) == LUA_T_FUNCTION ||
-          ttype(L->stack.top) == LUA_T_MARK) &&
-         clvalue(L->stack.top) == o->value.cl;
+  return luaO_equalObj(o, L->stack.top);
 }
 
 
 char *lua_getobjname (lua_Object o, char **name)
 { /* try to find a name for given function */
-  *(L->stack.top) = *Address(o);  /* to be accessed by "checkfunc */
+  set_normalized(L->stack.top, Address(o)); /* to be accessed by "checkfunc */
   if ((*name = luaT_travtagmethods(checkfunc)) != NULL)
     return "tag-method";
   else if ((*name = luaS_travsymbol(checkfunc)) != NULL)
