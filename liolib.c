@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.58 2000/03/03 14:58:26 roberto Exp roberto $
+** $Id: liolib.c,v 1.59 2000/03/20 19:13:45 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -543,7 +543,7 @@ static void errorfb (lua_State *L) {
     char buffchunk[60];
     lua_getinfo(L, "Snl", &ar);
     luaL_chunkid(buffchunk, ar.source, sizeof(buffchunk));
-    if (level == 2) strcat(buff, "Stack traceback:\n");
+    if (level == 2) strcat(buff, "stack traceback:\n");
     strcat(buff, "  ");
     if (strlen(buff) > MAXMESSAGE-MESSAGESIZE) {
       strcat(buff, "...\n");
