@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.15 1999/01/11 20:23:54 roberto Exp roberto $
+## $Id: makefile,v 1.16 1999/02/04 16:37:41 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -12,16 +12,19 @@
 # define (undefine) _POSIX_SOURCE if your system is (not) POSIX compliant
 #
 # define (undefine) OLD_ANSI if your system does NOT have some new ANSI
-#   facilities (e.g. strerror, locale.h, memmove). Although they are ANSI,
-#   SunOS does not comply; so, add "-DOLD_ANSI" on SunOS
+# facilities (e.g. strerror, locale.h, memmove). SunOS does not comply;
+# so, add "-DOLD_ANSI" on SunOS
 #
 # define LUA_COMPAT2_5 if yous system does need to be compatible with
 # version 2.5 (or older)
 #
 # define LUA_NUM_TYPE if you need numbers to be different from double
 # (for instance, -DLUA_NUM_TYPE=float)
+#
+# undefine EXTRALIB if you do not want builtin functions that can be
+# written in Lua (sort, tinsert, tremove, assert, foreach*)
 
-CONFIG = -DPOPEN -D_POSIX_SOURCE
+CONFIG = -DPOPEN -D_POSIX_SOURCE -DEXTRALIB
 #CONFIG = -DLUA_COMPAT2_5 -DOLD_ANSI -DDEBUG
 
 

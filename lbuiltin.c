@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.47 1999/01/25 12:30:11 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.48 1999/01/26 15:38:01 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -69,11 +69,6 @@ static real getnarg (Hash *a) {
 
 static Hash *gethash (int arg) {
   return avalue(luaA_Address(luaL_tablearg(arg)));
-}
-
-
-static void luaB_getn (void) {
-  lua_pushnumber(getnarg(gethash(1)));
 }
 
 /* }====================================================== */
@@ -306,6 +301,7 @@ static void luaB_call (void) {
 /* }====================================================== */
 
 
+#ifdef	EXTRALIB
 /*
 ** {======================================================
 ** "Extra" functions
@@ -382,6 +378,11 @@ static void luaB_foreachvar (void) {
       L->stack.top--;
     }
   }
+}
+
+
+static void luaB_getn (void) {
+  lua_pushnumber(getnarg(gethash(1)));
 }
 
 
@@ -500,6 +501,7 @@ static void luaB_sort (void) {
 }
 
 /* }}===================================================== */
+#endif
 
 
 /*
@@ -685,7 +687,6 @@ static struct luaL_reg builtin_funcs[] = {
   {"dostring", luaB_dostring},
   {"error", luaB_error},
   {"getglobal", luaB_getglobal},
-  {"getn", luaB_getn},
   {"gettagmethod", luaB_gettagmethod},
   {"newtag", luaB_newtag},
   {"next", luaB_next},
@@ -702,15 +703,18 @@ static struct luaL_reg builtin_funcs[] = {
   {"tag", luaB_luatag},
   {"tonumber", luaB_tonumber},
   {"tostring", luaB_tostring},
-  {"type", luaB_type},
-/* "Extra" functions */
-  {"assert", luaB_assert},
+  {"type", luaB_type}
+#ifdef EXTRALIB
+  /* "Extra" functions */
+ ,{"assert", luaB_assert},
   {"foreach", luaB_foreach},
   {"foreachi", luaB_foreachi},
   {"foreachvar", luaB_foreachvar},
+  {"getn", luaB_getn},
   {"sort", luaB_sort},
   {"tinsert", luaB_tinsert},
   {"tremove", luaB_tremove}
+#endif
 };
 
 
