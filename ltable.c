@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.29 1999/11/10 15:39:35 roberto Exp roberto $
+** $Id: ltable.c,v 1.30 1999/11/22 13:12:07 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -65,7 +65,9 @@ Node *luaH_mainposition (lua_State *L, const Hash *t, const TObject *key) {
       lua_error(L, "unexpected type to index table");
       h = 0;  /* to avoid warnings */
   }
-  return &t->node[h%(unsigned int)t->size];
+  LUA_ASSERT(L, h%(unsigned int)t->size == (h&((unsigned int)t->size-1)),
+            "a&(x-1) == a%x, for x power of 2");
+  return &t->node[h&((unsigned int)t->size-1)];
 }
 
 
@@ -109,7 +111,7 @@ static void setnodevector (lua_State *L, Hash *t, int size) {
 
 Hash *luaH_new (lua_State *L, int size) {
   Hash *t = luaM_new(L, Hash);
-  setnodevector(L, t, luaO_redimension(L, size+1));
+  setnodevector(L, t, luaO_power2(size));
   t->htag = TagDefault;
   t->next = L->roottable;
   L->roottable = t;
@@ -125,7 +127,7 @@ void luaH_free (lua_State *L, Hash *t) {
 }
 
 
-static int newsize (lua_State *L, const Hash *t) {
+static int newsize (const Hash *t) {
   Node *v = t->node;
   int size = t->size;
   int realuse = 0;
@@ -134,7 +136,7 @@ static int newsize (lua_State *L, const Hash *t) {
     if (ttype(&v[i].val) != LUA_T_NIL)
       realuse++;
   }
-  return luaO_redimension(L, realuse*2);
+  return luaO_power2(realuse+realuse/4+1);
 }
 
 
@@ -148,7 +150,7 @@ static void rehash (lua_State *L, Hash *t) {
   Node *nold = t->node;
   int i;
   L->nblocks -= gcsize(L, oldsize);
-  setnodevector(L, t, newsize(L, t));  /* create new array of nodes */
+  setnodevector(L, t, newsize(t));  /* create new array of nodes */
   /* first loop; set only elements that can go in their main positions */
   for (i=0; i<oldsize; i++) {
     Node *old = nold+i;

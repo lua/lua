@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.28 1999/11/22 13:12:07 roberto Exp roberto $
+** $Id: lstring.c,v 1.29 1999/11/22 18:24:50 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -52,24 +52,25 @@ static unsigned long hash_s (const char *s, long l) {
 }
 
 
-void luaS_grow (lua_State *L, stringtable *tb) {
-  int ns = luaO_redimension(L, tb->nuse);  /* new size */
-  TaggedString **newhash = luaM_newvector(L, ns, TaggedString *);
+void luaS_resize (lua_State *L, stringtable *tb, int newsize) {
+  TaggedString **newhash = luaM_newvector(L, newsize, TaggedString *);
   int i;
-  for (i=0; i<ns; i++) newhash[i] = NULL;
+  for (i=0; i<newsize; i++) newhash[i] = NULL;
   /* rehash */
   for (i=0; i<tb->size; i++) {
     TaggedString *p = tb->hash[i];
     while (p) {  /* for each node in the list */
       TaggedString *next = p->nexthash;  /* save next */
-      int h = p->hash%ns;  /* new position */
+      int h = p->hash&(newsize-1);  /* new position */
+      LUA_ASSERT(L, p->hash%newsize == (p->hash&(newsize-1)),
+                    "a&(x-1) == a%x, for x power of 2");
       p->nexthash = newhash[h];  /* chain it in new position */
       newhash[h] = p;
       p = next;
     }
   }
   luaM_free(L, tb->hash);
-  tb->size = ns;
+  tb->size = newsize;
   tb->hash = newhash;
 }
 
@@ -113,14 +114,14 @@ static void newentry (lua_State *L, stringtable *tb, TaggedString *ts, int h) {
   tb->hash[h] = ts;
   tb->nuse++;
   if (tb->nuse > tb->size)  /* too crowded? */
-    luaS_grow(L, tb);
+    luaS_resize(L, tb, tb->size*2);
 }
 
 
 TaggedString *luaS_newlstr (lua_State *L, const char *str, long l) {
   unsigned long h = hash_s(str, l);
   stringtable *tb = &L->string_root[h%NUM_HASHSTR];
-  int h1 = h%tb->size;
+  int h1 = h&(tb->size-1);
   TaggedString *ts;
   for (ts = tb->hash[h1]; ts; ts = ts->nexthash) {
     if (ts->u.s.len == l && (memcmp(str, ts->str, l) == 0))
@@ -136,7 +137,7 @@ TaggedString *luaS_newlstr (lua_State *L, const char *str, long l) {
 TaggedString *luaS_createudata (lua_State *L, void *udata, int tag) {
   unsigned long h = IntPoint(L, udata);
   stringtable *tb = &L->string_root[(h%NUM_HASHUDATA)+NUM_HASHSTR];
-  int h1 = h%tb->size;
+  int h1 = h&(tb->size-1);
   TaggedString *ts;
   for (ts = tb->hash[h1]; ts; ts = ts->nexthash) {
     if (udata == ts->u.d.value && (tag == ts->u.d.tag || tag == LUA_ANYTAG))

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.24 1999/10/04 17:51:04 roberto Exp roberto $
+** $Id: lobject.c,v 1.25 1999/11/22 13:12:07 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -22,22 +22,13 @@ const char *const luaO_typenames[] = { /* ORDER LUA_T */
 const TObject luaO_nilobject = {LUA_T_NIL, {NULL}};
 
 
-
-/* hash dimensions values */
-static const long dimensions[] =
- {5L, 11L, 23L, 47L, 97L, 197L, 397L, 797L, 1597L, 3203L, 6421L,
-  12853L, 25717L, 51437L, 102811L, 205619L, 411233L, 822433L,
-  1644817L, 3289613L, 6579211L, 13158023L, MAX_INT};
-
-
-int luaO_redimension (lua_State *L, int oldsize) {
-  int i;
-  for (i=0; dimensions[i]<MAX_INT; i++) {
-    if (dimensions[i] > oldsize)
-      return dimensions[i];
-  }
-  lua_error(L, "tableEM");
-  return 0;  /* to avoid warnings */
+/*
+** returns smaller power of 2 bigger than `n' (minimum is MINPOWER2) 
+*/
+unsigned long luaO_power2 (unsigned long n) {
+  unsigned long p = MINPOWER2;
+  while (p<=n) p<<=1;
+  return p;
 }
 
 

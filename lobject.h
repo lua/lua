@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.36 1999/11/10 15:39:35 roberto Exp roberto $
+** $Id: lobject.h,v 1.37 1999/11/22 13:12:07 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -45,7 +45,8 @@ typedef unsigned char  Byte;  /* unsigned 8 bits */
 
 
 /* convertion of pointer to int (for hashing only) */
-#define IntPoint(L, p)	((unsigned int)(p))
+/* (the shift removes bits that are usually 0 because of alignment) */
+#define IntPoint(L, p)	(((unsigned int)(p)) >> 3)
 
 
 /*
@@ -194,9 +195,11 @@ typedef struct Hash {
 
 extern const char *const luaO_typenames[];
 
-
 #define luaO_typename(L, o)        luaO_typenames[-ttype(o)]
 
+#define MINPOWER2	4	/* minimum size for "growing" vectors */
+
+unsigned long luaO_power2 (unsigned long n);
 
 extern const TObject luaO_nilobject;
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.12 1999/11/04 17:22:26 roberto Exp roberto $
+** $Id: lstring.h,v 1.13 1999/11/22 13:12:07 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -26,7 +26,7 @@
 
 
 void luaS_init (lua_State *L);
-void luaS_grow (lua_State *L, stringtable *tb);
+void luaS_resize (lua_State *L, stringtable *tb, int newsize);
 TaggedString *luaS_createudata (lua_State *L, void *udata, int tag);
 void luaS_freeall (lua_State *L);
 void luaS_free (lua_State *L, TaggedString *ts);
