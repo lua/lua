@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.58 2002/08/09 21:03:19 roberto Exp roberto $
+% $Id: manual.tex,v 1.59 2002/08/12 17:43:35 roberto Exp roberto $
 
 \documentclass[11pt,twoside,draft]{article}
 \usepackage{fullpage}
@@ -133,7 +133,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{{\small \tt\$Date: 2002/08/09 21:03:19 $ $}}
+%\date{{\small \tt\$Date: 2002/08/12 17:43:35 $ $}}
 
 \maketitle
 
@@ -3863,23 +3863,21 @@ to create a file with the same name.
 
 The library \verb|ldblib| provides
 the functionality of the debug interface to Lua programs.
-If you want to use this library,
-your host application must open it,
-by calling \verb|lua_dblibopen|.
-\DefAPI{lua_dblibopen}
-
 You should exert great care when using this library.
 The functions provided here should be used exclusively for debugging
 and similar tasks, such as profiling.
 Please resist the temptation to use them as a
 usual programming tool:
-They can be \emph{very} slow.
+They can be very slow.
 Moreover, \verb|setlocal| and \verb|getlocal|
 violate the privacy of local variables,
 and therefore can compromise some (otherwise) secure code.
 
+All functions in this library are provided
+inside a \IndexVerb{debug} table.
 
-\subsubsection*{\ff \T{getinfo (function, [what])}}\DefLIB{getinfo}
+
+\subsubsection*{\ff \T{debug.getinfo (function, [what])}}\DefLIB{debug.getinfo}
 
 This function returns a table with information about a function.
 You can give the function directly,
@@ -3904,7 +3902,7 @@ and \verb|getinfo(print)| returns a table with all available information
 about the \verb|print| function.
 
 
-\subsubsection*{\ff \T{getlocal (level, local)}}\DefLIB{getlocal}
+\subsubsection*{\ff \T{debug.getlocal (level, local)}}\DefLIB{debug.getlocal}
 
 This function returns the name and the value of the local variable
 with index \verb|local| of the function at level \verb|level| of the stack.
@@ -3915,7 +3913,8 @@ variable with the given index,
 and raises an error when called with a \verb|level| out of range.
 (You can call \verb|getinfo| to check whether the level is valid.)
 
-\subsubsection*{\ff \T{setlocal (level, local, value)}}\DefLIB{setlocal}
+\subsubsection*{\ff \T{debug.setlocal (level, local, value)}}
+\DefLIB{debug.setlocal}
 
 This function assigns the value \verb|value| to the local variable
 with index \verb|local| of the function at level \verb|level| of the stack.
@@ -3924,31 +3923,41 @@ variable with the given index,
 and raises an error when called with a \verb|level| out of range.
 (You can call \verb|getinfo| to check whether the level is valid.)
 
-\subsubsection*{\ff \T{setcallhook (hook)}}\DefLIB{setcallhook}
+\subsubsection*{\ff \T{debug.sethook (hook, mask [, count])}}
+\DefLIB{debug.sethook}
 
-Sets the function \verb|hook| as the call hook;
-this hook will be called every time the interpreter starts and
-exits the execution of a function.
-The only argument to the call hook is the event name (\verb|"call"| or
-\verb|"return"|).
-You can call \verb|getinfo| with level 2 to get more information about
-the function being called or returning
+Sets the given function as a hook.
+The string \verb|mask| and the number \verb|count| describe
+when the hook will be called.
+The string mask may have the following characteres,
+with the given meaning:
+\begin{description}
+\item[{\tt "c"}] The hook is called every time Lua calls a function;
+\item[{\tt "r"}] The hook is called every time Lua returns from a function;
+\item[{\tt "l"}] The hook is called every time Lua enters a new line of code.
+\end{description}
+With a \verb|count| different from zero,
+the hook is called after every \verb|count| instructions.
+
+When called without arguments,
+the \verb|debug.sethook| function turns off the hook.
+
+When the hook is called, its first parameter is always a string
+describing the event that triggered its call:
+\verb|"call"|, \verb|"return"|, \verb|"line"|, and \verb|"count"|.
+Moreover, for line events,
+it also gets as its second parameter the new line number.
+Inside a hook,
+you can call \verb|getinfo| with level 2 to get more information about
+the running function
 (level~0 is the \verb|getinfo| function,
 and level~1 is the hook function).
-When called without arguments,
-this function turns off call hooks.
-\verb|setcallhook| returns the old call hook.
 
-\subsubsection*{\ff \T{setlinehook (hook)}}\DefLIB{setlinehook}
+\subsubsection*{\ff \T{debug.gethook ()}}\DefLIB{debug.gethook}
 
-Sets the function \verb|hook| as the line hook;
-this hook will be called every time the interpreter changes
-the line of code it is executing.
-The only argument to the line hook is the line number the interpreter
-is about to execute.
-When called without arguments,
-this function turns off line hooks.
-\verb|setlinehook| returns the old line hook.
+Returns the current hook settings, as three values:
+the current hook function, the current hook mask,
+and the current hook count (as set by the \verb|debug.sethook| function).
 
 
 %------------------------------------------------------------------------------
@@ -4052,38 +4061,38 @@ specially the head of the group, Marcelo Gattass.
 At the risk of omitting several names,
 we also thank the following individuals for supporting,
 contributing to, and spreading the word about Lua:
-Mark Ian Barlow,
-John Belmonte,
-Renato Borges,
-Carlos Cassino,
-Renato Cerqueira,
+Alan Watson.
 Andr\'e Clinio,
 Andr\'e Costa,
-Steve Dekorte,
-Jon Erickson,
-Tom\'as Gorham,
-Stephan Herrmann,
-Erik Hougaard,
-David Jeske,
-Jon Kleiser,
-Cameron Laird,
-Carlos Henrique Levy,
-Philippe Lhost,
-Jim Mathies,
-Bret Mogilefsky,
-John Passaniti,
-Vincent Penquerc'h,
-Norman Ramsey,
-Renata Ratton,
-Noemi Rodriguez,
-John Roll,
 Antonio Scuri,
+Bret Mogilefsky,
+Cameron Laird,
+Carlos Cassino,
+Carlos Henrique Levy,
 Claudio Terra,
-Reuben Thomas,
+David Jeske,
 Edgar Toernig,
+Erik Hougaard,
+Jim Mathies,
+John Belmonte,
+John Passaniti,
+John Roll,
+Jon Erickson,
+Jon Kleiser,
+Mark Ian Barlow,
 Nick Trout,
+Noemi Rodriguez,
+Norman Ramsey,
+Philippe Lhost,
+Renata Ratton,
+Renato Borges,
+Renato Cerqueira,
+Reuben Thomas,
+Stephan Herrmann,
+Steve Dekorte,
 Thatcher Ulrich,
-Alan Watson.
+Tom\'as Gorham,
+Vincent Penquerc'h,
 Thank you!
 
 
