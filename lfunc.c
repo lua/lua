@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.45 2001/06/28 14:57:17 roberto Exp $
+** $Id: lfunc.c,v 1.47 2001/09/07 17:39:10 roberto Exp $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -16,30 +16,29 @@
 #include "lstate.h"
 
 
-#define sizeCclosure(n)	(cast(int, sizeof(Closure)) + \
+#define sizeCclosure(n)	(cast(int, sizeof(CClosure)) + \
                          cast(int, sizeof(TObject)*((n)-1)))
 
-#define sizeLclosure(n)	(cast(int, sizeof(Closure)) + \
-                         cast(int, sizeof(TObject *)*((n)-1)))
+#define sizeLclosure(n)	(cast(int, sizeof(LClosure)) + \
+                         cast(int, sizeof(LClosureEntry)*((n)-1)))
 
 
 Closure *luaF_newCclosure (lua_State *L, int nelems) {
   Closure *c = cast(Closure *, luaM_malloc(L, sizeCclosure(nelems)));
-  c->isC = 1;
-  c->next = G(L)->rootcl;
+  c->c.isC = 1;
+  c->c.next = G(L)->rootcl;
   G(L)->rootcl = c;
-  c->mark = c;
-  c->nupvalues = nelems;
+  c->c.marked = 0;
+  c->c.nupvalues = nelems;
   return c;
 }
 
 
 Closure *luaF_newLclosure (lua_State *L, int nelems) {
   Closure *c = cast(Closure *, luaM_malloc(L, sizeLclosure(nelems)));
-  c->isC = 0;
-  c->mark = c;
-  c->u.l.isopen = 0;
-  c->nupvalues = nelems;
+  c->l.isC = 0;
+  c->l.marked = 0;
+  c->l.nupvalues = nelems;
   return c;
 }
 
@@ -47,42 +46,38 @@ Closure *luaF_newLclosure (lua_State *L, int nelems) {
 /*
 ** returns the open pointer in a closure that points higher into the stack
 */
-static StkId uppoint (Closure *cl) {
+static StkId uppoint (LClosure *cl) {
   StkId lp = NULL;
   int i;
-  lua_assert(cl->u.l.isopen);
   for (i=0; i<cl->nupvalues; i++) {
-    if (!luaF_isclosed(cl, i))
-      if (lp == NULL || cl->u.l.upvals[i] > lp)
-        lp = cl->u.l.upvals[i];
+    if (cl->upvals[i].heap == NULL && (lp == NULL || cl->upvals[i].val > lp))
+        lp = cl->upvals[i].val;
   }
-  lua_assert(lp != NULL);
   return lp;
 }
 
 
 void luaF_LConlist (lua_State *L, Closure *cl) {
-  lua_assert(!cl->isC);
-  if (cl->u.l.isopen == 0) {  /* no more open entries? */
-    cl->next = G(L)->rootcl;  /* insert in final list */
+  StkId cli = uppoint(&cl->l);
+  if (cli == NULL) {  /* no more open entries? */
+    cl->l.next = G(L)->rootcl;  /* insert in final list */
     G(L)->rootcl = cl;
   }
   else {  /* insert in list of open closures, ordered by decreasing uppoints */
-    StkId cli = uppoint(cl);
     Closure **p = &L->opencl;
-    while (*p != NULL && uppoint(*p) > cli) p = &(*p)->next;
-    cl->next = *p;
+    while (*p != NULL && uppoint(&(*p)->l) > cli) p = &(*p)->l.next;
+    cl->l.next = *p;
     *p = cl;
   }
 }
 
 
-static int closeCl (lua_State *L, Closure *cl, StkId level) {
+static int closeCl (lua_State *L, LClosure *cl, StkId level) {
   int got = 0;  /* flag: 1 if some pointer in the closure was corrected */
   int i;
   for  (i=0; i<cl->nupvalues; i++) {
     StkId var;
-    if (!luaF_isclosed(cl, i) && (var=cl->u.l.upvals[i]) >= level) {
+    if (cl->upvals[i].heap == NULL && (var=cl->upvals[i].val) >= level) {
       if (ttype(var) != LUA_TUPVAL) {
         UpVal *v = luaM_new(L, UpVal);
         v->val = *var;
@@ -91,8 +86,8 @@ static int closeCl (lua_State *L, Closure *cl, StkId level) {
         G(L)->rootupval = v;
         setupvalue(var, v);
       }
-      cl->u.l.upvals[i] = cast(TObject *, vvalue(var));
-      luaF_closeentry(cl, i);
+      cl->upvals[i].heap = vvalue(var);
+      cl->upvals[i].val = &vvalue(var)->val;
       got = 1;
     }
   }
@@ -104,15 +99,15 @@ void luaF_close (lua_State *L, StkId level) {
   Closure *affected = NULL;  /* closures with open pointers >= level */
   Closure *cl;
   while ((cl=L->opencl) != NULL) {
-    if (!closeCl(L, cl, level)) break;
+    if (!closeCl(L, cast(LClosure *, cl), level)) break;
     /* some pointer in `cl' changed; will re-insert it in original list */
-    L->opencl = cl->next;  /* remove from original list */
-    cl->next = affected;
+    L->opencl = cl->l.next;  /* remove from original list */
+    cl->l.next = affected;
     affected = cl;  /* insert in affected list */
   }
   /* re-insert all affected closures in original list */
   while ((cl=affected) != NULL) {
-    affected = cl->next;
+    affected = cl->l.next;
     luaF_LConlist(L, cl);
   }
 }
@@ -154,7 +149,8 @@ void luaF_freeproto (lua_State *L, Proto *f) {
 
 
 void luaF_freeclosure (lua_State *L, Closure *c) {
-  int size = (c->isC) ? sizeCclosure(c->nupvalues) : sizeLclosure(c->nupvalues);
+  int size = (c->c.isC) ? sizeCclosure(c->c.nupvalues) :
+                          sizeLclosure(c->l.nupvalues);
   luaM_free(L, c, size);
 }
 

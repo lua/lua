@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.140 2001/09/07 17:39:10 roberto Exp $
+** $Id: ldo.c,v 1.141 2001/09/25 17:05:49 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -118,14 +118,14 @@ static void luaD_callHook (lua_State *L, lua_Hook callhook,
 }
 
 
-static StkId callCclosure (lua_State *L, const struct Closure *cl) {
+static StkId callCclosure (lua_State *L, const struct CClosure *cl) {
   int nup = cl->nupvalues;  /* number of upvalues */
   int n;
   luaD_checkstack(L, nup+LUA_MINSTACK);  /* ensure minimum stack size */
   for (n=0; n<nup; n++)  /* copy upvalues as extra arguments */
-    setobj(L->top++, &cl->u.c.upvalue[n]);
+    setobj(L->top++, &cl->upvalue[n]);
   lua_unlock(L);
-  n = (*cl->u.c.f)(L);  /* do the actual call */
+  n = (*cl->f)(L);  /* do the actual call */
   lua_lock(L);
   return L->top - n;  /* return index of first result */
 }
@@ -155,8 +155,9 @@ void luaD_call (lua_State *L, StkId func) {
   callhook = L->callhook;
   if (callhook)
     luaD_callHook(L, callhook, l_s("call"));
-  firstResult = (clvalue(func)->isC ? callCclosure(L, clvalue(func)) :
-                                      luaV_execute(L, clvalue(func), func+1));
+  firstResult = (clvalue(func)->c.isC ?
+                        callCclosure(L, &clvalue(func)->c) :
+                        luaV_execute(L, &clvalue(func)->l, func+1));
   if (callhook)  /* same hook that was active at entry */
     luaD_callHook(L, callhook, l_s("return"));
   L->ci = ci.prev;  /* unchain callinfo */
@@ -213,7 +214,7 @@ static void f_parser (lua_State *L, void *ud) {
   struct SParser *p = cast(struct SParser *, ud);
   Proto *tf = p->bin ? luaU_undump(L, p->z) : luaY_parser(L, p->z);
   Closure *cl = luaF_newLclosure(L, 0);
-  cl->u.l.p = tf;
+  cl->l.p = tf;
   luaF_LConlist(L, cl);
   setclvalue(L->top, cl);
   incr_top;

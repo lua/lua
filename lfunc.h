@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.h,v 1.15 2001/02/23 17:17:25 roberto Exp $
+** $Id: lfunc.h,v 1.16 2001/09/07 17:39:10 roberto Exp $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -9,11 +9,6 @@
 
 
 #include "lobject.h"
-
-
-#define luaF_isclosed(c, i)	(!((c)->u.l.isopen & (1 << (i))))
-#define luaF_openentry(c, i)	((c)->u.l.isopen |= (1 << (i)))
-#define luaF_closeentry(c, i)	((c)->u.l.isopen &= ~(1 << (i)))
 
 
 Proto *luaF_newproto (lua_State *L);

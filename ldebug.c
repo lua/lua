@@ -33,7 +33,7 @@ static const l_char *getfuncname (lua_State *L, CallInfo *ci,
 
 static int isLmark (CallInfo *ci) {
   lua_assert(ci == NULL || ttype(ci->base - 1) == LUA_TFUNCTION);
-  return (ci && ci->prev && !ci_func(ci)->isC);
+  return (ci && ci->prev && !ci_func(ci)->c.isC);
 }
 
 
@@ -117,7 +117,7 @@ int luaG_getline (int *lineinfo, int pc, int refline, int *prefi) {
 static int currentpc (CallInfo *ci) {
   lua_assert(isLmark(ci));
   if (ci->pc)
-    return (*ci->pc - ci_func(ci)->u.l.p->code) - 1;
+    return (*ci->pc - ci_func(ci)->l.p->code) - 1;
   else
     return -1;  /* function is not active */
 }
@@ -127,7 +127,7 @@ static int currentline (CallInfo *ci) {
   if (!isLmark(ci))
     return -1;  /* only active lua functions have current-line information */
   else {
-    int *lineinfo = ci_func(ci)->u.l.p->lineinfo;
+    int *lineinfo = ci_func(ci)->l.p->lineinfo;
     return luaG_getline(lineinfo, currentpc(ci), 1, NULL);
   }
 }
@@ -135,7 +135,7 @@ static int currentline (CallInfo *ci) {
 
 
 static Proto *getluaproto (CallInfo *ci) {
-  return (isLmark(ci) ? ci_func(ci)->u.l.p : NULL);
+  return (isLmark(ci) ? ci_func(ci)->l.p : NULL);
 }
 
 
@@ -193,13 +193,13 @@ static void funcinfo (lua_State *L, lua_Debug *ar, StkId func) {
     luaD_error(L, l_s("value for `lua_getinfo' is not a function"));
     cl = NULL;  /* to avoid warnings */
   }
-  if (cl->isC) {
+  if (cl->c.isC) {
     ar->source = l_s("=C");
     ar->linedefined = -1;
     ar->what = l_s("C");
   }
   else
-    infoLproto(ar, cl->u.l.p);
+    infoLproto(ar, cl->l.p);
   luaO_chunkid(ar->short_src, ar->source, LUA_IDSIZE);
   if (ar->linedefined == 0)
     ar->what = l_s("main");
@@ -268,7 +268,7 @@ LUA_API int lua_getinfo (lua_State *L, const l_char *what, lua_Debug *ar) {
         break;
       }
       case l_c('u'): {
-        ar->nups = (ttype(f) == LUA_TFUNCTION) ? clvalue(f)->nupvalues : 0;
+        ar->nups = (ttype(f) == LUA_TFUNCTION) ? clvalue(f)->c.nupvalues : 0;
         break;
       }
       case l_c('n'): {
@@ -473,7 +473,7 @@ int luaG_checkcode (const Proto *pt) {
 static const l_char *getobjname (lua_State *L, StkId obj, const l_char **name) {
   CallInfo *ci = ci_stack(L, obj);
   if (isLmark(ci)) {  /* an active Lua function? */
-    Proto *p = ci_func(ci)->u.l.p;
+    Proto *p = ci_func(ci)->l.p;
     int pc = currentpc(ci);
     int stackpos = obj - ci->base;
     Instruction i;
@@ -517,7 +517,7 @@ static const l_char *getfuncname (lua_State *L, CallInfo *ci,
   if (ci == &L->basefunc || !isLmark(ci))
     return NULL;  /* not an active Lua function */
   else {
-    Proto *p = ci_func(ci)->u.l.p;
+    Proto *p = ci_func(ci)->l.p;
     int pc = currentpc(ci);
     Instruction i;
     if (pc == -1) return NULL;  /* function is not activated */

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.149 2001/07/22 00:59:36 roberto Exp roberto $
+** $Id: lapi.c,v 1.152 2001/09/07 17:39:10 roberto Exp $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -248,7 +248,7 @@ LUA_API size_t lua_strlen (lua_State *L, int index) {
 
 LUA_API lua_CFunction lua_tocfunction (lua_State *L, int index) {
   StkId o = luaA_indexAcceptable(L, index);
-  return (o == NULL || !iscfunction(o)) ? NULL : clvalue(o)->u.c.f;
+  return (o == NULL || !iscfunction(o)) ? NULL : clvalue(o)->c.f;
 }
 
 
@@ -314,10 +314,10 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   lua_lock(L);
   api_checknelems(L, n);
   cl = luaF_newCclosure(L, n);
-  cl->u.c.f = fn;
+  cl->c.f = fn;
   L->top -= n;
   while (n--)
-    setobj(&cl->u.c.upvalue[n], L->top+n);
+    setobj(&cl->c.upvalue[n], L->top+n);
   setclvalue(L->top, cl);
   incr_top;
   lua_unlock(L);

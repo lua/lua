@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.109 2001/06/28 14:57:17 roberto Exp $
+** $Id: lgc.c,v 1.111 2001/09/07 17:39:10 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -22,7 +22,6 @@
 
 typedef struct GCState {
   Hash *tmark;  /* list of marked tables to be visited */
-  Closure *cmark;  /* list of marked closures to be visited */
 } GCState;
 
 
@@ -30,6 +29,9 @@ typedef struct GCState {
 /* mark a string; marks larger than 1 cannot be changed */
 #define strmark(s)    {if ((s)->tsv.marked == 0) (s)->tsv.marked = 1;}
 
+
+
+static void markobject (GCState *st, TObject *o);
 
 
 static void protomark (Proto *f) {
@@ -51,9 +53,25 @@ static void protomark (Proto *f) {
 
 
 static void markclosure (GCState *st, Closure *cl) {
-  if (!ismarked(cl)) {
-    cl->mark = st->cmark;  /* chain it for later traversal */
-    st->cmark = cl;
+  if (!cl->c.marked) {
+    cl->c.marked = 1;
+    if (cl->c.isC) {
+      int i;
+      for (i=0; i<cl->c.nupvalues; i++)  /* mark its upvalues */
+        markobject(st, &cl->c.upvalue[i]);
+    }
+    else {
+      int i;
+      lua_assert(cl->l.nupvalues == cl->l.p->nupvalues);
+      protomark(cl->l.p);
+      for (i=0; i<cl->l.nupvalues; i++) {  /* mark its upvalues */
+        UpVal *u = cl->l.upvals[i].heap;
+        if (u && !u->marked) {
+          u->marked = 1;
+          markobject(st, &u->val);
+        }
+      }
+    }
   }
 }
 
@@ -120,29 +138,6 @@ static void marktagmethods (global_State *G, GCState *st) {
 }
 
 
-static void traverseclosure (GCState *st, Closure *cl) {
-  if (cl->isC) {
-    int i;
-    for (i=0; i<cl->nupvalues; i++)  /* mark its upvalues */
-      markobject(st, &cl->u.c.upvalue[i]);
-  }
-  else {
-    int i;
-    lua_assert(cl->nupvalues == cl->u.l.p->nupvalues);
-    protomark(cl->u.l.p);
-    for (i=0; i<cl->nupvalues; i++) {  /* mark its upvalues */
-      if (luaF_isclosed(cl, i)) {
-        UpVal *u = cast(UpVal *, cl->u.l.upvals[i]);
-        if (!u->marked) {
-          u->marked = 1;
-          markobject(st, &u->val);
-        }
-      }
-    }
-  }
-}
-
-
 static void removekey (Node *n) {
   lua_assert(ttype(val(n)) == LUA_TNIL);
   if (ttype(key(n)) != LUA_TNIL && ttype(key(n)) != LUA_TNUMBER)
@@ -172,25 +167,16 @@ static void traversetable (GCState *st, Hash *h) {
 
 static void markall (lua_State *L) {
   GCState st;
-  st.cmark = NULL;
   st.tmark = NULL;
   marktagmethods(G(L), &st);  /* mark tag methods */
   markstacks(L, &st); /* mark all stacks */
   marktable(&st, G(L)->type2tag);
   marktable(&st, G(L)->registry);
   marktable(&st, G(L)->weakregistry);
-  for (;;) {  /* mark tables and closures */
-    if (st.cmark) {
-      Closure *cl = st.cmark;  /* get first closure from list */
-      st.cmark = cl->mark;  /* remove it from list */
-      traverseclosure(&st, cl);
-    }
-    else if (st.tmark) {
-      Hash *h = st.tmark;  /* get first table from list */
-      st.tmark = h->mark;  /* remove it from list */
-      traversetable(&st, h);
-    }
-    else break;  /* nothing else to mark */
+  while (st.tmark) {  /* mark tables */
+    Hash *h = st.tmark;  /* get first table from list */
+    st.tmark = h->mark;  /* remove it from list */
+    traversetable(&st, h);
   }
 }
 
@@ -204,7 +190,7 @@ static int hasmark (const TObject *o) {
     case LUA_TTABLE:
       return ismarked(hvalue(o));
     case LUA_TFUNCTION:
-      return ismarked(clvalue(o));
+      return clvalue(o)->c.marked;
     default:  /* number, nil */
       return 1;
   }
@@ -252,12 +238,12 @@ static void collectproto (lua_State *L) {
 static void collectclosure (lua_State *L, Closure **p) {
   Closure *curr;
   while ((curr = *p) != NULL) {
-    if (ismarked(curr)) {
-      curr->mark = curr;  /* unmark */
-      p = &curr->next;
+    if (curr->c.marked) {
+      curr->c.marked = 0;
+      p = &curr->c.next;
     }
     else {
-      *p = curr->next;
+      *p = curr->c.next;
       luaF_freeclosure(L, curr);
     }
   }

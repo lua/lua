@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.112 2001/09/07 17:39:10 roberto Exp $
+** $Id: lobject.h,v 1.113 2001/09/25 17:08:46 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -38,7 +38,7 @@
 typedef union {
   union TString *ts;
   union Udata *u;
-  struct Closure *cl;
+  union Closure *cl;
   struct Hash *h;
   struct UpVal *v;
   lua_Number n;		/* LUA_TNUMBER */
@@ -177,26 +177,38 @@ typedef struct UpVal {
 /*
 ** Closures
 */
-typedef struct Closure {
-  short isC;  /* 0 for Lua functions, 1 for C functions */
-  short nupvalues;
-  struct Closure *next;
-  struct Closure *mark;  /* marked closures (point to itself when not marked) */
-  union {
-    struct {  /* C functions */
-      lua_CFunction f;
-      TObject upvalue[1];
-    } c;
-    struct {  /* Lua functions */
-      struct Proto *p;
-      ls_bitup isopen;  /* bitmap: bit==1 when upvals point to the stack */
-      TObject *upvals[1];  /* may point to the stack or to an UpVal */
-    } l;
-  } u;
+
+typedef struct CClosure {
+  lu_byte isC;  /* 0 for Lua functions, 1 for C functions */
+  lu_byte nupvalues;
+  lu_byte marked;
+  union Closure *next;
+  lua_CFunction f;
+  TObject upvalue[1];
+} CClosure;
+
+
+typedef struct LClosureEntry {
+  TObject *val;
+  UpVal *heap;  /* NULL when upvalue is still in the stack */
+} LClosureEntry;
+
+typedef struct LClosure {
+  lu_byte isC;
+  lu_byte nupvalues;
+  lu_byte marked;
+  union Closure *next;  /* first four fields must be equal to CClosure!! */
+  struct Proto *p;
+  LClosureEntry upvals[1];
+} LClosure;
+
+typedef union Closure {
+  CClosure c;
+  LClosure l;
 } Closure;
 
 
-#define iscfunction(o)	(ttype(o) == LUA_TFUNCTION && clvalue(o)->isC)
+#define iscfunction(o)	(ttype(o) == LUA_TFUNCTION && clvalue(o)->c.isC)
 
 
 
@@ -223,9 +235,7 @@ typedef struct Hash {
 } Hash;
 
 
-/* unmarked tables and closures are represented by pointing `mark' to
-** themselves
-*/
+/* unmarked tables are represented by pointing `mark' to themselves */
 #define ismarked(x)	((x)->mark != (x))
 
 
