@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.6 2004/05/31 18:51:50 roberto Exp roberto $
+** $Id: ldo.c,v 2.7 2004/06/02 19:07:55 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -193,6 +193,7 @@ static StkId adjust_varargs (lua_State *L, int nfixargs, int actual,
   }
   if (style != NEWSTYLEVARARG) {  /* compatibility with old-style vararg */
     int nvar = actual - nfixargs;  /* number of extra arguments */
+    luaC_checkGC(L);
     htab = luaH_new(L, nvar, 1);  /* create `arg' table */
     for (i=0; i<nvar; i++)  /* put extra arguments into `arg' table */
       setobj2n(L, luaH_setnum(L, htab, i+LUA_FIRSTINDEX), L->top - nvar + i);
@@ -244,14 +245,17 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     CallInfo *ci;
     StkId st, base;
     Proto *p = cl->p;
-    luaD_checkstack(L, p->maxstacksize);
-    func = restorestack(L, funcr);
     if (p->is_vararg) {  /* varargs? */
-      int nargs = L->top - func - 1;
+      int nargs = L->top - restorestack(L, funcr) - 1;
+      luaD_checkstack(L, p->maxstacksize + nargs);
       base = adjust_varargs(L, p->numparams, nargs, p->is_vararg);
+      func = restorestack(L, funcr);
     }
-    else
+    else {
+      luaD_checkstack(L, p->maxstacksize);
+      func = restorestack(L, funcr);
       base = func + 1;
+    }
     ci = ++L->ci;  /* now `enter' new function */
     ci->func = func;
     L->base = ci->base = base;
