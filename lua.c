@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.28 1999/12/06 11:41:28 roberto Exp roberto $
+** $Id: lua.c,v 1.29 1999/12/20 13:03:20 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -74,7 +74,7 @@ static void print_message (void) {
 "  -q       interactive mode without prompt\n"
 "  -i       interactive mode with prompt\n"
 "  -        execute stdin as a file\n"
-"  --       start arguments for table `arg'\n"
+"  -f name  dofile `name' with following arguments in table `arg'\n"
 "  a=b      set global `a' with string `b'\n"
 "  name     dofile `name'\n\n");
 }
@@ -96,24 +96,31 @@ static void assign (char *arg) {
 
 static void getargs (int argc, char *argv[]) {
   lua_beginblock(); {
-  int i, j;
+  int i;
   lua_Object args = lua_createtable();
   lua_pushobject(args);
   lua_setglobal("arg");
-  for (i=0; i<argc; i++)
-    if (strcmp(argv[i], "--") == 0) break;
-  for (j = 0; j<argc; j++) {
-    /* arg[j-i] = argv[j] */
-    lua_pushobject(args); lua_pushnumber(j-i);
-    lua_pushstring(argv[j]); lua_settable();
+  for (i=0; i<argc; i++) {
+    /* arg[i] = argv[i] */
+    lua_pushobject(args); lua_pushnumber(i);
+    lua_pushstring(argv[i]); lua_settable();
   }
   /* arg.n = maximum index in table `arg' */
   lua_pushobject(args); lua_pushstring("n");
-  lua_pushnumber(argc-(i+1)); lua_settable();
-  /* arg.nn = minimum index in table `arg' */
-  lua_pushobject(args); lua_pushstring("nn");
-  lua_pushnumber(-i); lua_settable();
+  lua_pushnumber(argc-1); lua_settable();
   } lua_endblock();
+}
+
+
+static void file_input (char **argv, int arg) {
+  int result = ldo(lua_dofile, argv[arg]);
+  if (result) {
+    if (result == 2) {
+      fprintf(stderr, "lua: cannot execute file ");
+      perror(argv[arg]);
+    }
+    exit(1);
+  }
 }
 
 
@@ -157,7 +164,6 @@ int main (int argc, char *argv[]) {
   int i;
   lua_state = lua_newstate("stack", 1024, "builtin", 1, NULL);
   lua_userinit();
-  getargs(argc, argv);
   if (argc < 2) {  /* no arguments? */
     if (isatty(0)) {
       printf("%s  %s\n", LUA_VERSION, LUA_COPYRIGHT);
@@ -187,11 +193,24 @@ int main (int argc, char *argv[]) {
           break;
         case 'e':
           i++;
+          if (i>=argc) {
+            print_message();
+            exit(1);
+          }
           if (ldo(lua_dostring, argv[i]) != 0) {
             fprintf(stderr, "lua: error running argument `%s'\n", argv[i]);
-            return 1;
+            exit(1);
           }
           break;
+        case 'f':
+          i++;
+          if (i>=argc) {
+            print_message();
+            exit(1);
+          }
+          getargs(argc-i, argv+i);  /* collect following arguments */
+          file_input(argv, i);
+          return 0;  /* stop running arguments */
         case '-':
           i = argc;  /* end loop */
           break;
@@ -202,16 +221,8 @@ int main (int argc, char *argv[]) {
     }
     else if (strchr(argv[i], '='))
       assign(argv[i]);
-    else {
-      int result = ldo(lua_dofile, argv[i]);
-      if (result) {
-        if (result == 2) {
-          fprintf(stderr, "lua: cannot execute file ");
-          perror(argv[i]);
-        }
-        exit(1);
-      }
-    }
+    else
+      file_input(argv, i);
   }
 #ifdef DEBUG
   lua_close();
