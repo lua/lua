@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.51 2000/10/03 14:03:21 roberto Exp roberto $
+** $Id: lobject.c,v 1.52 2000/10/05 12:14:08 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -87,23 +87,31 @@ void luaO_verror (lua_State *L, const char *fmt, ...) {
 }
 
 
-#define EXTRALEN	sizeof("string \"...\"0")
+#define EXTRALEN	sizeof(" string \"s...\" ")
 
-void luaO_chunkid (char *out, const char *source, int len) {
-  if (*source == '(') {
-    strncpy(out, source+1, len-1);  /* remove first char */
-    out[len-1] = '\0';  /* make sure `out' has an end */
-    out[strlen(out)-1] = '\0';  /* remove last char */
-  }
+void luaO_chunkid (char *out, const char *source, int bufflen) {
+  if (*source == '=')
+    sprintf(out, "%.*s", bufflen, source+1);  /* remove first char */
   else {
-    len -= EXTRALEN;
-    if (*source == '@')
-      sprintf(out, "file `%.*s'", len, source+1);
+    bufflen -= EXTRALEN;
+    if (*source == '@') {
+      int l;
+      source++;  /* skip the `@' */
+      l = strlen(source);
+      if (l>bufflen) {
+        source += (l-bufflen);  /* get last part of file name */
+        sprintf(out, "file `...%s'", source);
+      }
+      else
+        sprintf(out, "file `%s'", source);
+    }
     else {
-      const char *b = strchr(source , '\n');  /* stop at first new line */
-      int lim = (b && (b-source)<len) ? b-source : len;
-      sprintf(out, "string \"%.*s\"", lim, source);
-      strcpy(out+lim+(EXTRALEN-sizeof("...\"0")), "...\"");
+      int len = strcspn(source, "\n");  /* stop at first newline */
+      if (len > bufflen) len = bufflen;
+      if (source[len] != '\0')  /* must truncate? */
+        sprintf(out, "string \"%.*s...\"", len, source);
+      else
+        sprintf(out, "string \"%s\"", source);
     }
   }
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.45 2000/10/05 13:00:17 roberto Exp roberto $
+** $Id: ldebug.c,v 1.46 2000/10/06 12:45:25 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -193,7 +193,7 @@ static void lua_funcinfo (lua_State *L, lua_Debug *ar, StkId func) {
       lua_error(L, "value for `lua_getinfo' is not a function");
   }
   if (cl->isC) {
-    ar->source = "(C)";
+    ar->source = "=C";
     ar->linedefined = -1;
     ar->what = "C";
   }

@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.16 2000/10/03 14:03:21 roberto Exp roberto $
+** $Id: llimits.h,v 1.17 2000/10/06 19:28:38 roberto Exp roberto $
 ** Limits, basic types, and some other "installation-dependent" definitions
 ** See Copyright Notice in lua.h
 */
@@ -104,7 +104,7 @@ typedef unsigned long Instruction;
 /*
 ** limits for opcode arguments.
 ** we use (signed) int to manipulate most arguments,
-** so they must fit in BITS_INT-1 bits (-1 for signal)
+** so they must fit in BITS_INT-1 bits (-1 for sign)
 */
 #if SIZE_U < BITS_INT-1
 #define MAXARG_U        ((1<<SIZE_U)-1)
@@ -193,12 +193,6 @@ typedef unsigned long Instruction;
 /* maximum lookback to find a real constant (for code generation) */
 #ifndef LOOKBACKNUMS
 #define LOOKBACKNUMS    20      /* arbitrary constant */
-#endif
-
-
-/* maximum part of a file name kept for error messages */
-#ifndef MAXFILENAME
-#define	MAXFILENAME	260
 #endif
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.103 2000/10/05 13:00:17 roberto Exp roberto $
+** $Id: ldo.c,v 1.104 2000/10/06 12:45:25 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -260,14 +260,16 @@ static int protectedparser (lua_State *L, ZIO *z, int bin) {
 
 static int parse_file (lua_State *L, const char *filename) {
   ZIO z;
-  char source[MAXFILENAME];
   int status;
   int bin;  /* flag for file mode */
   int c;    /* look ahead char */
   FILE *f = (filename == NULL) ? stdin : fopen(filename, "r");
   if (f == NULL) return LUA_ERRFILE;  /* unable to open file */
-  if (filename == NULL) filename = "(stdin)";
-  sprintf(source, "@%.*s", (int)sizeof(source)-2, filename);
+  lua_pushstring(L, "@");
+  lua_pushstring(L, (filename == NULL) ? "(stdin)" : filename);
+  lua_concat(L, 2);
+  filename = lua_tostring(L, -1);  /* filename = '@'..filename */
+  lua_pop(L, 1);  /* OK: there is no GC during parser */
   c = fgetc(f);
   ungetc(c, f);
   bin = (c == ID_CHUNK);
@@ -275,7 +277,7 @@ static int parse_file (lua_State *L, const char *filename) {
     f = freopen(filename, "rb", f);  /* set binary mode */
     if (f == NULL) return LUA_ERRFILE;  /* unable to reopen file */
   }
-  luaZ_Fopen(&z, f, source);
+  luaZ_Fopen(&z, f, filename);
   status = protectedparser(L, &z, bin);
   if (f != stdin)
     fclose(f);
