@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.46 2000/09/11 17:38:42 roberto Exp roberto $
+** $Id: lobject.c,v 1.47 2000/09/11 20:29:27 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -127,6 +127,7 @@ int luaO_str2d (const char *s, Number *result) {  /* LUA_NUMBER */
 }
 
 
+/* this function needs to handle only '%d' and '%.XXXs' formats */
 void luaO_verror (lua_State *L, const char *fmt, ...) {
   char buff[500];
   va_list argp;

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.94 2000/09/11 17:38:42 roberto Exp roberto $
+** $Id: ldo.c,v 1.95 2000/09/11 20:29:27 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -218,7 +218,7 @@ void luaD_breakrun (lua_State *L, int errcode) {
   else {
     if (errcode != LUA_ERRMEM)
       message(L, "unable to recover; exiting\n");
-    exit(1);
+    exit(EXIT_FAILURE);
   }
 }
 
@@ -271,7 +271,7 @@ static int protectedparser (lua_State *L, ZIO *z, int bin) {
   old_blocks = L->nblocks;
   chain_longjmp(L, &myErrorJmp);
   if (setjmp(myErrorJmp.b) == 0) {
-    Proto *tf = bin ? luaU_undump1(L, z) : luaY_parser(L, z);
+    Proto *tf = bin ? luaU_undump(L, z) : luaY_parser(L, z);
     luaV_Lclosure(L, tf, 0);
   }
   else {  /* an error occurred: correct error code */
