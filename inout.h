@@ -1,5 +1,5 @@
 /*
-** $Id: inout.h,v 1.11 1996/01/22 17:40:00 roberto Exp roberto $
+** $Id: inout.h,v 1.12 1996/01/26 14:05:28 roberto Exp roberto $
 */
 
 
@@ -10,7 +10,6 @@
 
 
 extern Word lua_linenumber;
-extern Bool lua_debug;
 extern Word lua_debugline;
 extern char *lua_parsedfile;
 
