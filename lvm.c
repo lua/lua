@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.94 2000/03/10 14:38:10 roberto Exp roberto $
+** $Id: lvm.c,v 1.95 2000/03/10 18:37:44 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -258,18 +258,14 @@ int luaV_lessthan (lua_State *L, const TObject *l, const TObject *r, StkId top) 
 }
 
 
-#define setbool(o,cond) if (cond) { \
-                             ttype(o) = TAG_NUMBER; nvalue(o) = 1.0; } \
-                        else ttype(o) = TAG_NIL
-
-
 static void strconc (lua_State *L, int total, StkId top) {
   do {
     int n = 2;  /* number of elements handled in this pass (at least 2) */
     if (tostring(L, top-2) || tostring(L, top-1))
       call_binTM(L, top, IM_CONCAT, "unexpected type for concatenation");
-    else {  /* at least two string values; get as many as possible */
-      long tl = tsvalue(top-2)->u.s.len + tsvalue(top-1)->u.s.len;
+    else if (tsvalue(top-1)->u.s.len > 0) {  /* if len=0, do nothing */
+      /* at least two string values; get as many as possible */
+      long tl = tsvalue(top-1)->u.s.len + tsvalue(top-2)->u.s.len;
       char *buffer;
       int i;
       while (n < total && !tostring(L, top-n-1)) {  /* collect total length */
