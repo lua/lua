@@ -1,6 +1,6 @@
 %{
 /*
-** $Id: lua.stx,v 1.8 1997/10/06 14:51:11 roberto Exp roberto $
+** $Id: lua.stx,v 1.9 1997/10/13 22:12:04 roberto Exp roberto $
 ** Syntax analizer and code generator
 ** See Copyright Notice in lua.h
 */
@@ -422,8 +422,9 @@ static void adjust_mult_assign (int vars, long exps)
 }
 
 
-static void code_args (int dots)
+static void code_args (int nparams, int dots)
 {
+  currState->nlocalvar += nparams;
   if (!dots)
     code_oparg(ARGS, 0, currState->nlocalvar, currState->nlocalvar);
   else {
@@ -617,11 +618,10 @@ TProtoFunc *luaY_parser (ZIO *z, char *chunkname)
 %type <vLong> functioncall, expr  /* if != 0, points to function return
 					 counter */
 %type <vInt>  varlist1, funcParams, funcvalue
-%type <vInt>  fieldlist, localdeclist, decinit
+%type <vInt>  fieldlist, localnamelist, decinit
 %type <vInt>  ffieldlist, ffieldlist1, semicolonpart
 %type <vInt>  lfieldlist, lfieldlist1
-%type <vInt>  parlist1, par
-%type <vLong> var, singlevar, funcname  /* vardesc */
+%type <vLong> var, funcname  /* vardesc */
 %type <pFunc> body
 
 
@@ -646,8 +646,7 @@ statlist : /* empty */
 
 sc	 : /* empty */ | ';' ;
 
-stat   : IF cond THEN block SaveWord elsepart END
-	{ codeIf($2, $5); }
+stat   : IF cond THEN block SaveWord elsepart END { codeIf($2, $5); }
 
        | WHILE GetPC cond DO block END
        {{
@@ -676,17 +675,16 @@ stat   : IF cond THEN block SaveWord elsepart END
 	    left = lua_codestore(i, left);
           adjuststack(left);  /* remove eventual 'garbage' left on stack */
        }}
+
        | functioncall { adjust_functioncall($1, 0); }
-       | LOCAL localdeclist decinit
+
+       | LOCAL localnamelist decinit
        {
          currState->nlocalvar += $2;
          adjust_mult_assign($2, $3);
        }
-       | FUNCTION funcname body
-       {
-	 func_onstack($3);
-	 storevar($2);
-       }
+
+       | FUNCTION funcname body { func_onstack($3); storevar($2); }
        ;
 
 block    : {$<vInt>$ = currState->nlocalvar;} chunk
@@ -701,7 +699,7 @@ funcname	: var { init_func(); $$ = $1; }
 		| varexp ':' NAME
 	{
 	  code_string($3);
-          $$ = 0;  /* indexed variable */
+          $$ = 0;  /* flag indexed variable */
 	  init_func();
 	  add_localvar(luaS_new("self"));
 	}
@@ -712,8 +710,7 @@ body :  '(' parlist ')' chunk END { $$ = close_func(); }
 
 elsepart : /* empty */
 	 | ELSE block
-         | ELSEIF cond THEN block SaveWord elsepart
-	{ codeIf($2, $5); }
+         | ELSEIF cond THEN block SaveWord elsepart { codeIf($2, $5); }
          ;
 
 ret	: /* empty */
@@ -792,8 +789,7 @@ funcvalue    : varexp { $$ = 0; }
 	     }
 	     ;
 
-funcParams :	'(' exprlist ')'
-	{ $$ = adjust_functioncall($2, 1); }
+funcParams :	'(' exprlist ')' { $$ = adjust_functioncall($2, 1); }
 	|	table  { $$ = 1; }
 	;
 
@@ -805,30 +801,18 @@ exprlist1 :  expr	{ if ($1 != 0) $$ = $1; else $$ = -1; }
 	  |  exprlist1 ',' { $<vLong>$ = adjust_functioncall($1, 1); } expr
 	{
 	  if ($4 == 0) $$ = -($<vLong>3 + 1);  /* -length */
-	  else
-	  {
+	  else {
             currState->f->code[$4] = $<vLong>3;  /* store list length */
 	    $$ = $4;
 	  }
 	}
 	  ;
 
-parlist  :	/* empty */ { code_args(0); }
-	  |	parlist1    { code_args($1); }
+parlist  :  /* empty */ { code_args(0, 0); }
+	  | DOTS { code_args(0, 1); }
+	  | localnamelist { code_args($1, 0); }
+	  | localnamelist ',' DOTS { code_args($1, 1); }
 	  ;
-		
-parlist1 :	par		  { $$ = $1; }
-	  |	parlist1 ',' par
-	{
-	  if ($1)
-            luaY_error("invalid parameter list");
-          $$ = $3;
-	}
-	  ;
-
-par : NAME	{ add_localvar($1); $$ = 0; }
-    | DOTS	{ $$ = 1; }
-    ;
 		
 fieldlist  : lfieldlist
   	     { flush_list($1/LFIELDS_PER_FLUSH, $1%LFIELDS_PER_FLUSH); }
@@ -838,10 +822,8 @@ fieldlist  : lfieldlist
 	     { $$ = $1; flush_record($1%RFIELDS_PER_FLUSH); }
 	   ;
 
-semicolonpart : /* empty */
-	        { $$ = 0; }
-	      | ';' ffieldlist
-	        { $$ = $2; flush_record($2%RFIELDS_PER_FLUSH); }
+semicolonpart : /* empty */ { $$ = 0; }
+	      | ';' ffieldlist { $$ = $2; flush_record($2%RFIELDS_PER_FLUSH); }
 	      ;
 
 lastcomma  : /* empty */
@@ -881,37 +863,22 @@ lfieldlist1 : expr1  {$$=1;}
 		}
             ;
 
-varlist1  :	var			
-	  {
-	    $$ = 1;
-	    add_varbuffer($1, 0);
-	  }
-	  |	varlist1 ',' var	
-	  {
-	    add_varbuffer($3, $1);
-	    $$ = $1+1;
-	  }
+varlist1  : var { $$ = 1; add_varbuffer($1, 0); }
+	  | varlist1 ',' var { add_varbuffer($3, $1); $$ = $1+1; }
 	  ;
 		
-var	  :	singlevar { $$ = $1; }
+var	  :	NAME { $$ = singlevar($1, currState); }
 	  |	varexp '[' expr1 ']' { $$ = 0; }  /* indexed variable */
 	  |	varexp '.' NAME { code_string($3); $$ = 0; }/* ind. var. */
 	  ;
 		
-singlevar :	NAME { $$ = singlevar($1, currState); }
-	  ;
-
 varexp	: var { lua_pushvar($1); }
 	| '%' NAME { pushupvalue($2); }
 	;
 
-localdeclist  : NAME {store_localvar($1, 0); $$ = 1;}
-     	  | localdeclist ',' NAME
-	    {
-	     store_localvar($3, $1);
-	     $$ = $1+1;
-	    }
-	  ;
+localnamelist : NAME {store_localvar($1, 0); $$ = 1;}
+	      | localnamelist ',' NAME { store_localvar($3, $1); $$ = $1+1; }
+	      ;
 		
 decinit	  : /* empty */  { $$ = 0; }
 	  | '=' exprlist1 { $$ = $2; }
