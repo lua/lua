@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.30 1999/03/23 19:58:37 roberto Exp roberto $
+** $Id: lparser.c,v 1.31 1999/03/25 21:06:57 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -159,24 +159,25 @@ static void code_oparg_at (LexState *ls, int pc, OpCode op,
     code[pc] = (Byte)op;
     code[pc+1] = (Byte)arg;
   }
-  else if (arg <= MAX_WORD) {
+  else if (arg > MAX_ARG)
+    luaX_error(ls, "code too long");
+  else {  /* MAX_BYTE < arg < MAX_ARG */
+    if (arg > MAX_WORD) {
+      code[pc] = (Byte)LONGARG;
+      code[pc+1] = (Byte)(arg>>16);
+      pc += 2;
+    }
     code[pc] = (Byte)(op-1);  /* opcode for word argument */
-    code[pc+1] = (Byte)(arg>>8);
+    code[pc+1] = (Byte)((arg&0xFFFF)>>8);
     code[pc+2] = (Byte)(arg&0xFF);
   }
-  else if (arg <= MAX_ARG) {
-    code[pc] = (Byte)LONGARG;
-    code[pc+1] = (Byte)(arg>>16);
-    code_oparg_at(ls, pc+2, op, arg&0xFFFF, 0);
-  }
-  else luaX_error(ls, "code too long");
 }
 
 
 static int codesize (int arg) {
   if      (arg <= MAX_BYTE) return 2;  /* opcode + 1 byte */
-  else if (arg <= MAX_WORD) return 3;  /* opcode + 1 word */
-  else return 2+codesize(arg&0xFFFF); /* LONGARG + 1 byte + original opcode */
+  else if (arg <= MAX_WORD) return 3;  /* opcode + 1 word (2 bytes) */
+  else return 5;    /* LONGARG + 1 byte + opcode + 1 word (2 bytes) */
 }
 
 
