@@ -561,6 +561,9 @@ static int testC (lua_State *L) {
     else if EQ("pushnum") {
       lua_pushnumber(L, getnum);
     }
+    else if EQ("pushbool") {
+      lua_pushboolean(L, getnum);
+    }
     else if EQ("pushvalue") {
       lua_pushvalue(L, getnum);
     }
