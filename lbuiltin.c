@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.29 1998/06/05 22:17:44 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.30 1998/06/19 16:14:09 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -22,6 +22,7 @@
 #include "ltable.h"
 #include "ltm.h"
 #include "lua.h"
+#include "lundump.h"
 
 
 
@@ -114,9 +115,11 @@ static void foreach (void)
 
 static void internaldostring (void)
 {
-  if (lua_getparam(2) != LUA_NOOBJECT)
-    lua_error("invalid 2nd argument (probably obsolete code)");
-  if (lua_dostring(luaL_check_string(1)) == 0)
+  long l;
+  char *s = luaL_check_lstr(1, &l);
+  if (*s == ID_CHUNK)
+    lua_error("`dostring' cannot run pre-compiled code");
+  if (lua_dobuffer(s, l, luaL_opt_string(2, NULL)) == 0)
     if (luaA_passresults() == 0)
       lua_pushuserdata(NULL);  /* at least one result to signal no errors */
 }

@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.14 1998/06/15 21:34:14 roberto Exp roberto $
+% $Id: manual.tex,v 1.15 1998/06/18 17:36:27 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -39,7 +39,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{\small \verb$Date: 1998/06/15 21:34:14 $}
+%\date{\small \verb$Date: 1998/06/18 17:36:27 $}
 
 \maketitle
 
@@ -1602,6 +1602,8 @@ Function \verb|lua_dostring| executes only source code.
 The third parameter to \verb|lua_dobuffer| (\verb|name|)
 is the ``name of the chunk'',
 used in error messages and debug information.
+If \verb|name| is \verb|NULL|,
+Lua gives a default name to the chunk.
 In files this name is the file name,
 and \verb|lua_dostring| uses a small prefix
 of the string as the chunk name.
@@ -1949,12 +1951,15 @@ or a non \nil\ value if the chunk returns no values.
 It issues an error when called with a non string argument.
 \verb|dofile| is equivalent to the API function \verb|lua_dofile|.
 
-\subsubsection*{\ff \T{dostring (string)}}\Deffunc{dostring}
+\subsubsection*{\ff \T{dostring (string [, chunkname])}}\Deffunc{dostring}
 This function executes a given string as a Lua chunk.
 If there is any error executing the string,
 \verb|dostring| returns \nil.
 Otherwise, it returns the values returned by the chunk,
 or a non \nil\ value if the chunk returns no values.
+An optional second parameter (\verb|chunkname|)
+is the ``name of the chunk'',
+used in error messages and debug information.
 \verb|dostring| is equivalent to the API function \verb|lua_dostring|.
 
 \subsubsection*{\ff \T{newtag ()}}\Deffunc{newtag}\label{pdf-newtag}

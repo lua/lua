@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.25 1998/05/31 22:22:00 roberto Exp roberto $
+** $Id: ldo.c,v 1.26 1998/06/15 21:34:14 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -392,24 +392,35 @@ int lua_dofile (char *filename)
 #define SSIZE_PREF "20"
 
 
-int lua_dostring (char *str) {
-  char name[SIZE_PREF+25];
-  char *temp;
-  if (str == NULL || *str == ID_CHUNK) return 1;
-  sprintf(name, "(dostring) >> \"%." SSIZE_PREF "s\"", str);
-  temp = strchr(name, '\n');
-  if (temp) {  /* end string after first line */
-   *temp = '"';
-   *(temp+1) = 0;
+static void build_name (char *str, char *name) {
+  if (str == NULL || *str == ID_CHUNK)
+    strcpy(name, "(buffer)");
+  else {
+    char *temp;
+    sprintf(name, "(dostring) >> \"%." SSIZE_PREF "s\"", str);
+    temp = strchr(name, '\n');
+    if (temp) {  /* end string after first line */
+     *temp = '"';
+     *(temp+1) = 0;
+    }
   }
-  return lua_dobuffer(str, strlen(str), name);
+}
+
+
+int lua_dostring (char *str) {
+  return lua_dobuffer(str, strlen(str), NULL);
 }
 
 
 int lua_dobuffer (char *buff, int size, char *name) {
-  int status;
+  char newname[SIZE_PREF+25];
   ZIO z;
-  luaZ_mopen(&z, buff, size, (name==NULL) ? "(buffer)" : name);
+  int status;
+  if (name==NULL) {
+    build_name(buff, newname);
+    name = newname;
+  }
+  luaZ_mopen(&z, buff, size, name);
   status = do_main(&z, buff[0]==ID_CHUNK);
   return status;
 }
