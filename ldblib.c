@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.48 2002/04/22 14:40:50 roberto Exp roberto $
+** $Id: ldblib.c,v 1.49 2002/05/01 20:40:42 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -47,9 +47,9 @@ static int getinfo (lua_State *L) {
     options = buff;
   }
   else
-    luaL_argerror(L, 1, "function or level expected");
+    return luaL_argerror(L, 1, "function or level expected");
   if (!lua_getinfo(L, options, &ar))
-    luaL_argerror(L, 2, "invalid option");
+    return luaL_argerror(L, 2, "invalid option");
   lua_newtable(L);
   for (; *options; options++) {
     switch (*options) {
@@ -85,7 +85,7 @@ static int getlocal (lua_State *L) {
   lua_Debug ar;
   const char *name;
   if (!lua_getstack(L, luaL_check_int(L, 1), &ar))  /* level out of range? */
-    luaL_argerror(L, 1, "level out of range");
+    return luaL_argerror(L, 1, "level out of range");
   name = lua_getlocal(L, &ar, luaL_check_int(L, 2));
   if (name) {
     lua_pushstring(L, name);
@@ -102,7 +102,7 @@ static int getlocal (lua_State *L) {
 static int setlocal (lua_State *L) {
   lua_Debug ar;
   if (!lua_getstack(L, luaL_check_int(L, 1), &ar))  /* level out of range? */
-    luaL_argerror(L, 1, "level out of range");
+    return luaL_argerror(L, 1, "level out of range");
   luaL_check_any(L, 3);
   lua_pushstring(L, lua_setlocal(L, &ar, luaL_check_int(L, 2)));
   return 1;
@@ -187,20 +187,19 @@ static int errorfb (lua_State *L) {
   int level = 1;  /* skip level 0 (it's this function) */
   int firstpart = 1;  /* still before eventual `...' */
   lua_Debug ar;
-  luaL_Buffer b;
-  luaL_buffinit(L, &b);
-  luaL_addstring(&b, luaL_check_string(L, 1));
-  luaL_addstring(&b, "\n");
+  luaL_check_string(L, 1);
+  lua_settop(L, 1);
+  lua_pushliteral(L, "\n");
   while (lua_getstack(L, level++, &ar)) {
-    char buff[120];  /* enough to fit following `sprintf's */
+    char buff[10];
     if (level == 2)
-      luaL_addstring(&b, "stack traceback:\n");
+      lua_pushliteral(L, "stack traceback:\n");
     else if (level > LEVELS1 && firstpart) {
       /* no more than `LEVELS2' more levels? */
       if (!lua_getstack(L, level+LEVELS2, &ar))
         level--;  /* keep going */
       else {
-        luaL_addstring(&b, "       ...\n");  /* too many levels */
+        lua_pushliteral(L, "       ...\n");  /* too many levels */
         while (lua_getstack(L, level+LEVELS2, &ar))  /* find last levels */
           level++;
       }
@@ -208,40 +207,34 @@ static int errorfb (lua_State *L) {
       continue;
     }
     sprintf(buff, "%4d:  ", level-1);
-    luaL_addstring(&b, buff);
+    lua_pushstring(L, buff);
     lua_getinfo(L, "Snl", &ar);
     switch (*ar.namewhat) {
       case 'g':  case 'l':  /* global, local */
-        sprintf(buff, "function `%.50s'", ar.name);
+        luaL_vstr(L, "function `%s'", ar.name);
         break;
       case 'f':  /* field */
-        sprintf(buff, "method `%.50s'", ar.name);
-        break;
-      case 't':  /* tag method */
-        sprintf(buff, "`%.50s' tag method", ar.name);
+      case 'm':  /* method */
+        luaL_vstr(L, "method `%s'", ar.name);
         break;
       default: {
         if (*ar.what == 'm')  /* main? */
-          sprintf(buff, "main of %.70s", ar.short_src);
+          luaL_vstr(L, "main of %s", ar.short_src);
         else if (*ar.what == 'C')  /* C function? */
-          sprintf(buff, "%.70s", ar.short_src);
+          luaL_vstr(L, "%s", ar.short_src);
         else
-          sprintf(buff, "function <%d:%.70s>", ar.linedefined, ar.short_src);
+          luaL_vstr(L, "function <%d:%s>", ar.linedefined, ar.short_src);
         ar.source = NULL;  /* do not print source again */
       }
     }
-    luaL_addstring(&b, buff);
-    if (ar.currentline > 0) {
-      sprintf(buff, " at line %d", ar.currentline);
-      luaL_addstring(&b, buff);
-    }
-    if (ar.source) {
-      sprintf(buff, " [%.70s]", ar.short_src);
-      luaL_addstring(&b, buff);
-    }
-    luaL_addstring(&b, "\n");
+    if (ar.currentline > 0)
+      luaL_vstr(L, " at line %d", ar.currentline);
+    if (ar.source)
+      luaL_vstr(L, " [%s]", ar.short_src);
+    lua_pushliteral(L, "\n");
+    lua_concat(L, lua_gettop(L));
   }
-  luaL_pushresult(&b);
+  lua_concat(L, lua_gettop(L));
   return 1;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.70 2002/05/01 20:40:42 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.71 2002/05/02 17:12:27 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -43,9 +43,7 @@ static int luaB__ERRORMESSAGE (lua_State *L) {
   if (lua_getstack(L, 1, &ar)) {
     lua_getinfo(L, "Sl", &ar);
     if (ar.source && ar.currentline > 0) {
-      char buff[100];
-      sprintf(buff, "\n  <%.70s: line %d>", ar.short_src, ar.currentline);
-      lua_pushstring(L, buff);
+      luaL_vstr(L, "\n  <%s: line %d>", ar.short_src, ar.currentline);
       lua_concat(L, 2);
     }
   }
@@ -72,7 +70,7 @@ static int luaB_print (lua_State *L) {
     lua_rawcall(L, 1, 1);
     s = lua_tostring(L, -1);  /* get result */
     if (s == NULL)
-      luaL_verror(L, "`tostring' must return a string to `print'");
+      return luaL_verror(L, "`tostring' must return a string to `print'");
     if (i>1) fputs("\t", stdout);
     fputs(s, stdout);
     lua_pop(L, 1);  /* pop result */
@@ -112,8 +110,7 @@ static int luaB_tonumber (lua_State *L) {
 
 static int luaB_error (lua_State *L) {
   lua_settop(L, 1);
-  lua_errorobj(L);
-  return 0;  /* to avoid warnings */
+  return lua_errorobj(L);
 }
 
 
@@ -242,7 +239,7 @@ static int luaB_loadfile (lua_State *L) {
 static int luaB_assert (lua_State *L) {
   luaL_check_any(L, 1);
   if (!lua_toboolean(L, 1))
-    luaL_verror(L, "assertion failed!  %.90s", luaL_opt_string(L, 2, ""));
+    return luaL_verror(L, "assertion failed!  %s", luaL_opt_string(L, 2, ""));
   lua_settop(L, 1);
   return 1;
 }
@@ -335,6 +332,7 @@ static const char *getpath (lua_State *L) {
   const char *path;
   lua_getglobal(L, LUA_PATH);  /* try global variable */
   path = lua_tostring(L, -1);
+  lua_pop(L, 1);
   if (path) return path;
   path = getenv(LUA_PATH);  /* else try environment variable */
   if (path) return path;
@@ -342,7 +340,7 @@ static const char *getpath (lua_State *L) {
 }
 
 
-static const char *nextpath (lua_State *L, const char *path) {
+static const char *pushnextpath (lua_State *L, const char *path) {
   const char *l;
   if (*path == '\0') return NULL;  /* no more pathes */
   if (*path == LUA_PATH_SEP) path++;  /* skip separator */
@@ -353,7 +351,7 @@ static const char *nextpath (lua_State *L, const char *path) {
 }
 
 
-static void composename (lua_State *L) {
+static void pushcomposename (lua_State *L) {
   const char *path = lua_tostring(L, -1);
   const char *wild = strchr(path, '?');
   if (wild == NULL) return;  /* no wild char; path is the file name */
@@ -372,35 +370,34 @@ static int luaB_require (lua_State *L) {
   lua_pushvalue(L, 1);
   lua_setglobal(L, "_REQUIREDNAME");
   lua_getglobal(L, REQTAB);
-  if (!lua_istable(L, 2)) luaL_verror(L, REQTAB " is not a table");
+  if (!lua_istable(L, 2)) return luaL_verror(L, REQTAB " is not a table");
   path = getpath(L);
   lua_pushvalue(L, 1);  /* check package's name in book-keeping table */
   lua_gettable(L, 2);
   if (!lua_isnil(L, -1))  /* is it there? */
     return 0;  /* package is already loaded */
   else {  /* must load it */
-    while (status == LUA_ERRFILE && (path = nextpath(L, path)) != NULL) {
-      composename(L);
+    while (status == LUA_ERRFILE) {
+      lua_settop(L, 3);  /* reset stack position */
+      if ((path = pushnextpath(L, path)) == NULL) break;
+      pushcomposename(L);
       status = lua_loadfile(L, lua_tostring(L, -1));  /* try to load it */
-      if (status == 0)
-        status = lua_pcall(L, 0, 0, 0);
-      lua_settop(L, 3);  /* pop string and eventual results from dofile */
     }
   }
   switch (status) {
     case 0: {
+      lua_rawcall(L, 0, 0);  /* run loaded module */
       lua_pushvalue(L, 1);
       lua_pushboolean(L, 1);
       lua_settable(L, 2);  /* mark it as loaded */
       return 0;
     }
     case LUA_ERRFILE: {  /* file not found */
-      luaL_verror(L, "could not load package `%.20s' from path `%.200s'",
-                  lua_tostring(L, 1), lua_tostring(L, 3));
+      return luaL_verror(L, "could not load package `%s' from path `%s'",
+                            lua_tostring(L, 1), getpath(L));
     }
     default: {
-      luaL_verror(L, "error loading package");
-      return 0;  /* to avoid warnings */
+      return luaL_verror(L, "error loading package\n%s", lua_tostring(L, -1));
     }
   }
 }
@@ -445,7 +442,7 @@ static int luaB_resume (lua_State *L) {
   lua_State *co = (lua_State *)lua_getfrombox(L, lua_upvalueindex(1));
   lua_settop(L, 0);
   if (lua_resume(L, co) != 0)
-    lua_errorobj(L);
+    return lua_errorobj(L);
   return lua_gettop(L);
 }
 
@@ -466,7 +463,7 @@ static int luaB_coroutine (lua_State *L) {
   luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1), 1,
     "Lua function expected");
   NL = lua_newthread(L);
-  if (NL == NULL) luaL_verror(L, "unable to create new thread");
+  if (NL == NULL) return luaL_verror(L, "unable to create new thread");
   /* move function and arguments from L to NL */
   for (i=0; i<n; i++) {
     ref = lua_ref(L, 1);

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.44 2002/04/02 20:42:49 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.45 2002/05/01 20:40:42 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -31,9 +31,8 @@ LUALIB_API void luaL_openlib (lua_State *L, const luaL_reg *l, int nup);
 LUALIB_API void luaL_opennamedlib (lua_State *L, const char *libname,
                                    const luaL_reg *l, int nup);
 LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event);
-LUALIB_API void luaL_typerror (lua_State *L, int narg, const char *tname);
-LUALIB_API void luaL_argerror (lua_State *L, int numarg,
-                               const char *extramsg);
+LUALIB_API int luaL_typerror (lua_State *L, int narg, const char *tname);
+LUALIB_API int luaL_argerror (lua_State *L, int numarg, const char *extramsg);
 LUALIB_API const char *luaL_check_lstr (lua_State *L, int numArg,
                                             size_t *len);
 LUALIB_API const char *luaL_opt_lstr (lua_State *L, int numArg,
@@ -45,7 +44,8 @@ LUALIB_API void luaL_check_stack (lua_State *L, int space, const char *msg);
 LUALIB_API void luaL_check_type (lua_State *L, int narg, int t);
 LUALIB_API void luaL_check_any (lua_State *L, int narg);
 
-LUALIB_API void luaL_verror (lua_State *L, const char *fmt, ...);
+LUALIB_API int luaL_verror (lua_State *L, const char *fmt, ...);
+LUALIB_API void luaL_vstr (lua_State *L, const char *fmt, ...);
 LUALIB_API int luaL_findstring (const char *name, 
                                 const char *const list[]);
 

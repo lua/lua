@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.66 2002/04/16 12:00:02 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.67 2002/05/01 20:40:42 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -30,23 +30,21 @@ LUALIB_API int luaL_findstring (const char *name, const char *const list[]) {
 }
 
 
-LUALIB_API void luaL_argerror (lua_State *L, int narg, const char *extramsg) {
+LUALIB_API int luaL_argerror (lua_State *L, int narg, const char *extramsg) {
   lua_Debug ar;
   lua_getstack(L, 0, &ar);
   lua_getinfo(L, "n", &ar);
   if (strcmp(ar.namewhat, "method") == 0) narg--;  /* do not count `self' */
   if (ar.name == NULL)
     ar.name = "?";
-  luaL_verror(L, "bad argument #%d to `%.50s' (%.100s)",
-              narg, ar.name, extramsg);
+  return luaL_verror(L, "bad argument #%d to `%s' (%s)",
+                        narg, ar.name, extramsg);
 }
 
 
-LUALIB_API void luaL_typerror (lua_State *L, int narg, const char *tname) {
-  char buff[80];
-  sprintf(buff, "%.25s expected, got %.25s", tname,
-                                             lua_typename(L, lua_type(L,narg)));
-  luaL_argerror(L, narg, buff);
+LUALIB_API int luaL_typerror (lua_State *L, int narg, const char *tname) {
+  luaL_vstr(L, "%s expected, got %s", tname, lua_typename(L, lua_type(L,narg)));
+  return luaL_argerror(L, narg, lua_tostring(L, -1));
 }
 
 
@@ -57,11 +55,11 @@ static void tag_error (lua_State *L, int narg, int tag) {
 
 LUALIB_API void luaL_check_stack (lua_State *L, int space, const char *mes) {
   if (!lua_checkstack(L, space))
-    luaL_verror(L, "stack overflow (%.30s)", mes);
+    luaL_verror(L, "stack overflow (%s)", mes);
 }
 
 
-LUALIB_API void luaL_check_type(lua_State *L, int narg, int t) {
+LUALIB_API void luaL_check_type (lua_State *L, int narg, int t) {
   if (lua_type(L, narg) != t)
     tag_error(L, narg, t);
 }
@@ -144,13 +142,48 @@ LUALIB_API void luaL_opennamedlib (lua_State *L, const char *libname,
 }
 
 
-LUALIB_API void luaL_verror (lua_State *L, const char *fmt, ...) {
-  char buff[500];
+static void vstr (lua_State *L, const char *fmt, va_list argp) {
+  luaL_Buffer b;
+  luaL_buffinit(L, &b);
+  for (;;) {
+    const char *e = strchr(fmt, '%');
+    if (e == NULL) break;
+    luaL_addlstring(&b, fmt, e-fmt);
+    switch (*(e+1)) {
+      case 's':
+        luaL_addstring(&b, va_arg(argp, char *));
+        break;
+      case 'd':
+        lua_pushnumber(L, va_arg(argp, int));
+        luaL_addvalue (&b);
+        break;
+      case '%':
+        luaL_putchar(&b, '%');
+        break;
+      default:
+        lua_error(L, "invalid format option");
+    }
+    fmt = e+2;
+  }
+  luaL_addstring(&b, fmt);
+  luaL_pushresult(&b);
+}
+
+
+LUALIB_API void luaL_vstr (lua_State *L, const char *fmt, ...) {
   va_list argp;
   va_start(argp, fmt);
-  vsprintf(buff, fmt, argp);
+  vstr(L, fmt, argp);
   va_end(argp);
-  lua_error(L, buff);
+}
+
+
+LUALIB_API int luaL_verror (lua_State *L, const char *fmt, ...) {
+  va_list argp;
+  va_start(argp, fmt);
+  vstr(L, fmt, argp);
+  va_end(argp);
+  return lua_errorobj(L);
 }
 
 

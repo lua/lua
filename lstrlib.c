@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.80 2002/04/02 20:41:59 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.81 2002/05/02 17:12:27 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -170,7 +170,7 @@ typedef struct MatchState {
 static int check_capture (MatchState *ms, int l) {
   l -= '1';
   if (l < 0 || l >= ms->level || ms->capture[l].len == CAP_UNFINISHED)
-    luaL_verror(ms->L, "invalid capture index");
+    return luaL_verror(ms->L, "invalid capture index");
   return l;
 }
 
@@ -179,8 +179,7 @@ static int capture_to_close (MatchState *ms) {
   int level = ms->level;
   for (level--; level>=0; level--)
     if (ms->capture[level].len == CAP_UNFINISHED) return level;
-  luaL_verror(ms->L, "invalid pattern capture");
-  return 0;  /* to avoid warnings */
+  return luaL_verror(ms->L, "invalid pattern capture");
 }
 
 
@@ -663,7 +662,7 @@ static int str_format (lua_State *L) {
       char buff[MAX_ITEM];  /* to store the formatted item */
       int hasprecision = 0;
       if (isdigit(uchar(*strfrmt)) && *(strfrmt+1) == '$')
-        luaL_verror(L, "obsolete `format' option (d$)");
+        return luaL_verror(L, "obsolete `format' option (d$)");
       arg++;
       strfrmt = scanformat(L, strfrmt, form, &hasprecision);
       switch (*strfrmt++) {
@@ -696,7 +695,7 @@ static int str_format (lua_State *L) {
           }
         }
         default:  /* also treat cases `pnLlh' */
-          luaL_verror(L, "invalid option in `format'");
+          return luaL_verror(L, "invalid option in `format'");
       }
       luaL_addlstring(&b, buff, strlen(buff));
     }

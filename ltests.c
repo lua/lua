@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.118 2002/05/01 20:40:42 roberto Exp roberto $
+** $Id: ltests.c,v 1.119 2002/05/02 13:06:20 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -639,7 +639,7 @@ static int testC (lua_State *L) {
     else if EQ("type") {
       lua_pushstring(L, lua_typename(L, lua_type(L, getnum)));
     }
-    else luaL_verror(L, "unknown instruction %.30s", buff);
+    else luaL_verror(L, "unknown instruction %s", buff);
   }
   return 0;
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.3 2002/04/12 19:56:25 roberto Exp roberto $
+** $Id: liolib.c,v 2.4 2002/05/02 17:12:27 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -257,7 +257,7 @@ static int g_read (lua_State *L, FILE *f, int first) {
       else {
         const char *p = lua_tostring(L, n);
         if (!p || p[0] != '*')
-          luaL_verror(L, "invalid `read' option");
+          return luaL_verror(L, "invalid `read' option");
         switch (p[1]) {
           case 'n':  /* number */
             success = read_number(L, f);
@@ -270,11 +270,10 @@ static int g_read (lua_State *L, FILE *f, int first) {
             success = 1; /* always success */
             break;
           case 'w':  /* word */
-            luaL_verror(L, "obsolete option `*w'");
+            return luaL_verror(L, "obsolete option `*w'");
             break;
           default:
-            luaL_argerror(L, n, "invalid format");
-            success = 0;  /* to avoid warnings */
+            return luaL_argerror(L, n, "invalid format");
         }
       }
     }
@@ -430,7 +429,7 @@ static int io_rename (lua_State *L) {
 static int io_tmpname (lua_State *L) {
   char buff[L_tmpnam];
   if (tmpnam(buff) != buff)
-    luaL_verror(L, "unable to generate a unique filename");
+    return luaL_verror(L, "unable to generate a unique filename");
   lua_pushstring(L, buff);
   return 1;
 }
@@ -471,7 +470,7 @@ static int getfield (lua_State *L, const char *key, int d) {
     res = (int)(lua_tonumber(L, -1));
   else {
     if (d == -2)
-      luaL_verror(L, "field `%.20s' missing in date table", key);
+      return luaL_verror(L, "field `%s' missing in date table", key);
     res = d;
   }
   lua_pop(L, 1);
@@ -510,7 +509,7 @@ static int io_date (lua_State *L) {
     if (strftime(b, sizeof(b), s, stm))
       lua_pushstring(L, b);
     else
-      luaL_verror(L, "invalid `date' format");
+      return luaL_verror(L, "invalid `date' format");
   }
   return 1;
 }
