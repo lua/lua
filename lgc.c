@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.64 2000/08/28 17:57:04 roberto Exp roberto $
+** $Id: lgc.c,v 1.65 2000/09/11 17:38:42 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -246,7 +246,7 @@ static void collectstringtab (lua_State *L, int limit) {
     TString **p = &L->strt.hash[i];
     TString *next;
     while ((next = *p) != NULL) {
-      if (next->marked > limit) {  /* preserve? */
+      if ((int)next->marked > limit) {  /* preserve? */
         if (next->marked < FIXMARK)  /* does not change FIXMARKs */
           next->marked = 0;
         p = &next->nexthash;
@@ -270,7 +270,7 @@ static void collectudatatab (lua_State *L, int all) {
     TString *next;
     while ((next = *p) != NULL) {
       LUA_ASSERT(next->marked <= 1, "udata cannot be fixed");
-      if (next->marked > all) {  /* preserve? */
+      if ((int)next->marked > all) {  /* preserve? */
         next->marked = 0;
         p = &next->nexthash;
       } 
