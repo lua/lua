@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 4.9 1997/06/16 16:50:22 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 4.10 1997/06/16 18:42:32 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -667,10 +667,11 @@ lua_Object lua_settagmethod (int tag, char *event, lua_CFunction method)
   return put_luaObjectonTop();
 }
 
-void lua_seterrormethod (lua_CFunction method)
+lua_Object lua_seterrormethod (lua_CFunction method)
 {
   lua_pushcfunction(method);
-  do_unprotectedrun(luaI_seterrormethod, 1, 0);
+  do_unprotectedrun(luaI_seterrormethod, 1, 1);
+  return put_luaObjectonTop();
 }
 
 
