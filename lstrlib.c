@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.24 1999/02/04 19:10:30 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.24 1999/02/04 19:29:51 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -470,12 +470,12 @@ static void str_format (void) {
       luaL_addchar(*strfrmt++);  /* %% */
     else { /* format item */
       struct Capture cap;
-      char form[MAX_FORMAT];      /* store the format ('%...') */
-      char *buff;
+      char form[MAX_FORMAT];  /* to store the format ('%...') */
+      char *buff;  /* to store the formated item */
       char *initf = strfrmt;
       form[0] = '%';
-      if (isdigit((unsigned char)initf[0]) && initf[1] == '$') {
-        arg = initf[0] - '0';
+      if (isdigit((unsigned char)*initf) && *(initf+1) == '$') {
+        arg = *initf - '0';
         initf += 2;  /* skip the 'n$' */
       }
       arg++;
@@ -487,24 +487,8 @@ static void str_format (void) {
         lua_error("invalid format (width or precision too long)");
       strncpy(form+1, initf, strfrmt-initf+1); /* +1 to include conversion */
       form[strfrmt-initf+2] = 0;
-      buff = luaL_openspace(450);  /* 450 > size of format('%99.99f', -1e308) */
+      buff = luaL_openspace(512);  /* 512 > soid luaI_addquot99.99f', -1e308) */
       switch (*strfrmt++) {
-        case 'q':
-          luaI_addquoted(arg);
-          continue;
-        case 's': {
-          char *s = luaL_check_string(arg);
-          int l = strlen(s);
-          buff = luaL_openspace(l+1);
-          if (cap.capture[1].len == 0 && l >= 100) {
-            /* no precision and string is too big to be formated;
-               keep original string */
-            strcpy(buff, s);
-          }
-          else
-            sprintf(buff, form, s);
-          break;
-        }
         case 'c':  case 'd':  case 'i':
           sprintf(buff, form, luaL_check_int(arg));
           break;
@@ -514,6 +498,23 @@ static void str_format (void) {
         case 'e':  case 'E': case 'f': case 'g': case 'G':
           sprintf(buff, form, luaL_check_number(arg));
           break;
+        case 'q':
+          luaI_addquoted(arg);
+          continue;  /* skip the "addsize" at the end */
+        case 's': {
+          long l;
+          char *s = luaL_check_lstr(arg, &l);
+          if (cap.capture[1].len == 0 && l >= 100) {
+            /* no precision and string is too big to be formated;
+               keep original string */
+            addnchar(s, l);
+            continue;  /* skip the "addsize" at the end */
+          }
+          else {
+            sprintf(buff, form, s);
+            break;
+          }
+        }
         default:  /* also treat cases 'pnLlh' */
           lua_error("invalid option in `format'");
       }
