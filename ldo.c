@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.27 1998/06/19 18:47:06 roberto Exp roberto $
+** $Id: ldo.c,v 1.28 1998/07/12 16:14:34 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -17,6 +17,7 @@
 #include "lobject.h"
 #include "lparser.h"
 #include "lstate.h"
+#include "lstring.h"
 #include "ltm.h"
 #include "lua.h"
 #include "luadebug.h"
@@ -32,27 +33,13 @@
 
 
 
-/*
-** Error messages
-*/
-
-static void stderrorim (void)
-{
-  fprintf(stderr, "lua error: %s\n", lua_getstring(lua_getparam(1)));
-}
-
-
-
 #define STACK_UNIT	128
 
 
-void luaD_init (void)
-{
+void luaD_init (void) {
   L->stack.stack = luaM_newvector(STACK_UNIT, TObject);
   L->stack.top = L->stack.stack;
   L->stack.last = L->stack.stack+(STACK_UNIT-1);
-  ttype(&L->errorim) = LUA_T_CPROTO;
-  fvalue(&L->errorim) = stderrorim;
 }
 
 
@@ -246,12 +233,13 @@ void luaD_travstack (int (*fn)(TObject *))
 
 
 
-static void message (char *s)
-{
-  TObject im = L->errorim;
-  if (ttype(&im) != LUA_T_NIL) {
+static void message (char *s) {
+  TObject *em = &(luaS_new("_ERRORMESSAGE")->u.s.globalval);
+  if (ttype(em) != LUA_T_NIL) {
+    *L->stack.top = *em;
+    incr_top;
     lua_pushstring(s);
-    luaD_callTM(&im, 1, 0);
+    luaD_calln(1, 0);
   }
 }
 
@@ -264,7 +252,8 @@ void lua_error (char *s)
   if (L->errorJmp)
     longjmp(*((jmp_buf *)L->errorJmp), 1);
   else {
-    fprintf (stderr, "lua: exit(1). Unable to recover\n");
+    lua_pushstring("lua: exit(1). Unable to recover.\n");
+    lua_call("_ALERT");
     exit(1);
   }
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.20 1998/06/05 22:17:44 roberto Exp roberto $
+** $Id: liolib.c,v 1.21 1998/06/18 17:04:28 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -353,71 +353,75 @@ static void io_debug (void)
 }
 
 
-static void lua_printstack (FILE *f)
-{
+#define MESSAGESIZE	150
+#define MAXMESSAGE	(MESSAGESIZE*10)
+
+static void errorfb (void) {
+  char buff[MAXMESSAGE];
   int level = 1;  /* skip level 0 (it's this function) */
   lua_Object func;
+  sprintf(buff, "lua: %.200s\n", lua_getstring(lua_getparam(1)));
   while ((func = lua_stackedfunction(level++)) != LUA_NOOBJECT) {
     char *name;
     int currentline;
-    char *filename;
+    char *chunkname;
     int linedefined;
-    lua_funcinfo(func, &filename, &linedefined);
-    fprintf(f, (level==2) ? "Active Stack:\n\t" : "\t");
+    lua_funcinfo(func, &chunkname, &linedefined);
+    strcat(buff, (level==2) ? "Active Stack:\n\t" : "\t");
+    if (strlen(buff) > MAXMESSAGE-MESSAGESIZE) {
+      strcat(buff, "...\n");
+      break;  /* buffer is full */
+    }
     switch (*lua_getobjname(func, &name)) {
       case 'g':
-        fprintf(f, "function %s", name);
+        sprintf(buff+strlen(buff), "function %.50s", name);
         break;
       case 't':
-        fprintf(f, "`%s' tag method", name);
+        sprintf(buff+strlen(buff), "`%.50s' tag method", name);
         break;
       default: {
         if (linedefined == 0)
-          fprintf(f, "main of %s", filename);
+          sprintf(buff+strlen(buff), "main of %.50s", chunkname);
         else if (linedefined < 0)
-          fprintf(f, "%s", filename);
+          sprintf(buff+strlen(buff), "%.50s", chunkname);
         else
-          fprintf(f, "function (%s:%d)", filename, linedefined);
-        filename = NULL;
+          sprintf(buff+strlen(buff), "function (%.50s:%d)",
+                  chunkname, linedefined);
+        chunkname = NULL;
       }
     }
     if ((currentline = lua_currentline(func)) > 0)
-      fprintf(f, " at line %d", currentline);
-    if (filename)
-      fprintf(f, " [in file %s]", filename);
-    fprintf(f, "\n");
+      sprintf(buff+strlen(buff), " at line %d", currentline);
+    if (chunkname)
+      sprintf(buff+strlen(buff), " [in chunk %.50s]", chunkname);
+    strcat(buff, "\n");
   }
-}
-
-
-static void errorfb (void)
-{
-  fprintf(stderr, "lua: %s\n", lua_getstring(lua_getparam(1)));
-  lua_printstack(stderr);
+  lua_pushstring(buff);
+  lua_call("_ALERT");
 }
 
 
 
 static struct luaL_reg iolib[] = {
-{"setlocale", setloc},
-{"execute",  io_execute},
-{"remove",   io_remove},
-{"rename",   io_rename},
-{"tmpname",   io_tmpname},
-{"getenv",   io_getenv},
-{"date",     io_date},
-{"clock",     io_clock},
-{"exit",     io_exit},
-{"debug",    io_debug},
-{"print_stack", errorfb}
+  {"setlocale", setloc},
+  {"execute",  io_execute},
+  {"remove",   io_remove},
+  {"rename",   io_rename},
+  {"tmpname",   io_tmpname},
+  {"getenv",   io_getenv},
+  {"date",     io_date},
+  {"clock",     io_clock},
+  {"exit",     io_exit},
+  {"debug",    io_debug},
+  {"_ERRORMESSAGE", errorfb}
 };
 
 static struct luaL_reg iolibtag[] = {
-{"readfrom", io_readfrom},
-{"writeto",  io_writeto},
-{"appendto", io_appendto},
-{"read",     io_read},
-{"write",    io_write}
+  {"readfrom", io_readfrom},
+  {"writeto",  io_writeto},
+  {"appendto", io_appendto},
+  {"read",     io_read},
+  {"write",    io_write}
 };
 
 static void openwithtags (void)
@@ -439,10 +443,7 @@ static void openwithtags (void)
   setfile(stderr, "_STDERR", iotag);
 }
 
-void lua_iolibopen (void)
-{
+void lua_iolibopen (void) {
   luaL_openlib(iolib, (sizeof(iolib)/sizeof(iolib[0])));
   openwithtags();
-  lua_pushcfunction(errorfb);
-  lua_seterrormethod();
 }

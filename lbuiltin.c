@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.32 1998/06/29 18:24:06 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.33 1998/07/12 16:16:43 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -189,6 +189,19 @@ static void luaI_print (void) {
     L->stack.top--;
   }
   printf("\n");
+}
+
+
+static void luaB_message (void) {
+  fputs(luaL_check_string(1), stderr);
+}
+
+
+static void error_message (void) {
+  char buff[200];
+  sprintf(buff, "lua error: %.180s\n", luaL_check_string(1));
+  lua_pushstring(buff);
+  lua_call("_ALERT");
 }
 
 
@@ -568,6 +581,7 @@ static struct luaL_reg int_funcs[] = {
   {"copytagmethods", copytagmethods},
   {"dostring", internaldostring},
   {"error", luaI_error},
+  {"_ERRORMESSAGE", error_message},
   {"foreach", foreach},
   {"foreachvar", foreachvar},
   {"getglobal", getglobal},
@@ -588,7 +602,8 @@ static struct luaL_reg int_funcs[] = {
   {"tonumber", luaB_tonumber},
   {"tostring", to_string},
   {"tag", luatag},
-  {"type", luaI_type}
+  {"type", luaI_type},
+  {"_ALERT", luaB_message}
 };
 
 

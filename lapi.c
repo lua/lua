@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.25 1998/06/05 22:17:44 roberto Exp roberto $
+** $Id: lapi.c,v 1.26 1998/07/12 16:16:02 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -29,9 +29,8 @@ char lua_ident[] = "$Lua: " LUA_VERSION " " LUA_COPYRIGHT " $\n"
 
 
 
-TObject *luaA_Address (lua_Object o)
-{
-  return Address(o);
+TObject *luaA_Address (lua_Object o) {
+  return (o != LUA_NOOBJECT) ?  Address(o) : NULL;
 }
 
 
@@ -150,12 +149,12 @@ lua_Object lua_settagmethod (int tag, char *event)
 }
 
 
-lua_Object lua_seterrormethod (void)
-{
-  TObject temp = L->errorim;
+lua_Object lua_seterrormethod (void) {
+  lua_Object temp;
   checkCparams(1);
-  L->errorim = *(--L->stack.top);
-  return put_luaObject(&temp);
+  temp = lua_getglobal("_ERRORMESSAGE");
+  lua_setglobal("_ERRORMESSAGE");
+  return temp;
 }
 
 

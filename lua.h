@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.22 1998/06/15 21:34:14 roberto Exp roberto $
+** $Id: lua.h,v 1.23 1998/06/18 16:51:53 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -11,7 +11,7 @@
 #ifndef lua_h
 #define lua_h
 
-#define LUA_VERSION	"Lua 3.1"
+#define LUA_VERSION	"Lua 3.2 (alpha)"
 #define LUA_COPYRIGHT	"Copyright (C) 1994-1998 TeCGraf, PUC-Rio"
 #define LUA_AUTHORS 	"W. Celes, R. Ierusalimschy & L. H. de Figueiredo"
 
@@ -32,7 +32,6 @@ lua_State      *lua_setstate		(lua_State *st);
 
 lua_Object     lua_settagmethod	(int tag, char *event); /* In: new method */
 lua_Object     lua_gettagmethod	(int tag, char *event);
-lua_Object     lua_seterrormethod (void);  /* In: new method */
 
 int            lua_newtag		(void);
 int            lua_copytagmethods	(int tagto, int tagfrom);
@@ -124,6 +123,8 @@ void    (lua_pushcfunction) (lua_CFunction f);
 int     (lua_clonetag) (int t);
 #define lua_clonetag(t)		lua_copytagmethods(lua_newtag(), (t))
 
+
+lua_Object     lua_seterrormethod (void);  /* In: new method */
 
 /* ==========================================================================
 ** for compatibility with old versions. Avoid using these macros/functions

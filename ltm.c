@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.15 1998/03/11 13:59:50 roberto Exp roberto $
+** $Id: ltm.c,v 1.16 1998/06/18 16:57:03 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -158,8 +158,6 @@ void luaT_settagmethod (int t, char *event, TObject *func)
 char *luaT_travtagmethods (int (*fn)(TObject *))
 {
   int e;
-  if (fn(&L->errorim))
-    return "error";
   for (e=IM_GETTABLE; e<=IM_FUNCTION; e++) {  /* ORDER IM */
     int t;
     for (t=0; t>=L->last_tag; t--)

@@ -1,7 +1,9 @@
-% $Id: manual.tex,v 1.16 1998/06/19 18:47:06 roberto Exp roberto $
+% $Id: manual.tex,v 1.17 1998/06/29 18:09:28 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
+
+\catcode`\_=12
 
 \newcommand{\See}[1]{Section~\ref{#1}}
 \newcommand{\see}[1]{(see \See{#1})}
@@ -19,7 +21,7 @@
 
 \newcommand{\ff}{$\bullet$\ }
 
-\newcommand{\Version}{3.1}
+\newcommand{\Version}{3.2 (alpha)}
 
 \makeindex
 
@@ -39,7 +41,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{\small \verb$Date: 1998/06/19 18:47:06 $}
+%\date{\small \verb$Date: 1998/06/29 18:09:28 $}
 
 \maketitle
 
@@ -810,7 +812,7 @@ If the function is called in a place that can hold many values
 (syntactically denoted by the non-terminal \M{exp}),
 then no adjustment is made.
 Note that the only place that can hold many values
-is the last expression (or the only one) in an assignment
+is the last (or the only) expression in an assignment
 or in a return statement; see examples below.
 \begin{verbatim}
       f();  -- adjusted to 0
@@ -1263,22 +1265,20 @@ Because Lua is an extension language,
 all Lua actions start from C code in the host program
 calling a function from the Lua library.
 Whenever an error occurs during Lua compilation or execution,
-the \Def{error method} is called,
+function \verb|_ERRORMESSAGE| is called \Deffunc{_ERRORMESSAGE}
+(provided it is different from \nil),
 and then the corresponding function from the library
 (\verb|lua_dofile|, \verb|lua_dostring|,
 \verb|lua_dobuffer|, or \verb|lua_callfunction|)
 is terminated, returning an error condition.
 
-The only argument to the error method is a string
+The only argument to \verb|_ERRORMESSAGE| is a string
 describing the error.
-The default method prints this message to \verb|stderr|.
-If needed, it is possible to change the error method with the
-function \verb|seterrormethod|,
-which gets the new error handler as its only parameter
-\see{pdf-seterrormethod}.
-The standard I/O library uses this facility to redefine the error method,
-using the debug facilities \see{debugI},
-in order to print some extra information,
+The default definition for this function calls \verb|_ALERT|,
+which prints the message to \verb|stderr| \see{alert}.
+The standard I/O library redefines \verb|_ERRORMESSAGE|,
+and uses the debug facilities \see{debugI}
+to print some extra information,
 such as the call stack.
 
 To provide more information about errors,
@@ -1347,11 +1347,11 @@ For that, you must set \verb|lua_state| back to \verb|NULL| before
 calling \verb|lua_open|.
 An easy way to do that is defining an auxiliary function:
 \begin{verbatim}
-lua_State *lua_newstate (void) {
-  lua_State *old = lua_setstate(NULL);
-  lua_open();
-  return lua_setstate(old);
-}
+      lua_State *lua_newstate (void) {
+        lua_State *old = lua_setstate(NULL);
+        lua_open();
+        return lua_setstate(old);
+      }
 \end{verbatim}
 This function creates a new state without changing the current state
 of the interpreter.
@@ -1373,14 +1373,14 @@ If \verb|lua_state| is already \verb|NULL|,
 \verb|lua_close| has no effect.
 
 If you are using multiple states,
-you may find useful the following function,
+you may find useful to define the following function,
 which releases a given state:
 \begin{verbatim}
-void lua_freestate (lua_State *st) {
-  lua_State *old = lua_setstate(st);
-  lua_close();
-  if (old != st) lua_setstate(old);
-}
+      void lua_freestate (lua_State *st) {
+        lua_State *old = lua_setstate(st);
+        lua_close();
+        if (old != st) lua_setstate(old);
+      }
 \end{verbatim}
 
 \subsection{Exchanging Values between C and Lua} \label{valuesCLua}
@@ -1736,18 +1736,10 @@ If the C function has been called from Lua,
 then the corresponding Lua execution terminates,
 as if an error had occurred inside Lua code.
 Otherwise, the whole program terminates with a call to \verb|exit(1)|.
-The \verb|message| is passed to the error handler method.
+The \verb|message| is passed to the error handler function,
+\verb|_ERRORMESSAGE|.
 If \verb|message| is \verb|NULL|,
-the error handler method is not called.
-
-The error handler method \see{error} can be
-changed with: \Deffunc{lua_seterrormethod}
-\begin{verbatim}
-lua_Object lua_seterrormethod (void);
-\end{verbatim}
-This function sets the object at the top of C2lua
-as the new error method,
-and returns the old error method value.
+\verb|_ERRORMESSAGE| is not called.
 
 Tag methods can be changed with: \Deffunc{lua_settagmethod}
 \begin{verbatim}
@@ -1885,7 +1877,7 @@ and \verb|lua_iolibopen|, declared in \verb|lualib.h|.
 
 \subsection{Predefined Functions} \label{predefined}
 
-\subsubsection*{\ff \T{call (func, arg [, mode [, errmethod]])}}\Deffunc{call}
+\subsubsection*{\ff \T{call (func, arg [, mode [, errhandler]])}}\Deffunc{call}
 \label{pdf-call}
 This function calls function \verb|func| with
 the arguments given by the table \verb|arg|.
@@ -1917,14 +1909,15 @@ if an error occurs during the function call,
 the error is propagated.
 If the string \verb|mode| contains \verb|"x"|,
 then the call is \emph{protected}.\index{protected calls}
-In this mode, function \verb|call| does not generate an error,
+In this mode, function \verb|call| does not propagate an error,
 whatever happens during the call.
 Instead, it returns \nil\ to signal the error
-(besides calling the appropriated error method).
+(besides calling the appropriated error handler).
 
-If provided, \verb|errmethod| is temporarily set as the error method,
-while \verb|func| runs.
-As a particular case, if \verb|errmethod| is \nil,
+If provided,
+\verb|errhandler| is temporarily set as the error function
+\verb|_ERRORMESSAGE|, while \verb|func| runs.
+As a particular example, if \verb|errhandler| is \nil,
 no error messages will be issued during the execution of the called function.
 
 \subsubsection*{\ff \T{collectgarbage ([limit])}}\Deffunc{collectgarbage}
@@ -2055,8 +2048,15 @@ This function receives any number of arguments,
 and prints their values using the strings returned by \verb|tostring|.
 This function is not intended for formatted output,
 but only as a quick way to show a value,
-for instance for error messages or debugging.
+for instance for debugging.
 See \See{libio} for functions for formatted output.
+
+\subsubsection*{\ff \T{_ALERT (message)}}\Deffunc{alert}\label{alert}
+This function prints its only string argument to \IndexVerb{stderr}.
+All error messages in Lua are printed through this function.
+Therefore, a program may redefine it
+to change the way such messages are shown
+(for instance, for systems without \verb|stderr|).
 
 \subsubsection*{\ff \T{tonumber (e [, base])}}\Deffunc{tonumber}
 This function receives one argument,
@@ -2163,13 +2163,6 @@ or calls a tag method.
 Its full semantics is explained in \See{tag-method}.
 The string \verb|name| does not need to be a
 syntactically valid variable name.
-
-\subsubsection*{\ff \T{seterrormethod (newmethod)}}
-\label{pdf-seterrormethod}
-Sets the error handler \see{error}.
-\verb|newmethod| must be a function or \nil,
-in which case the error handler does nothing.
-Returns the old error handler.
 
 \subsubsection*{\ff \T{settagmethod (tag, event, newmethod)}}
 \Deffunc{settagmethod}
@@ -2930,7 +2923,7 @@ so any existing program that opens at least one standard
 library before calling Lua does not need to be modified.
 
 \item Function \verb|dostring| no longer accepts an optional second argument,
-with a temporary error method.
+with a temporary error handler.
 This facility is now provided by function \verb|call|.
 
 \item Function \verb|gsub| no longer accepts an optional fourth argument
@@ -2951,8 +2944,10 @@ programs should use an explicit assignment instead, such as
 
 \end{itemize}
 
+% restore underscore to usual meaning
+\catcode`\_=8
+
 \newcommand{\indexentry}[2]{\item {#1} #2}
-%\catcode`\_=12
 \begin{theindex}
 \input{manual.id}
 \end{theindex}
