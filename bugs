@@ -24,3 +24,8 @@ Tue Jan 27 15:27:49 EDT 1998
 >> formats like "%020d" were considered too big (3 algarithms); moreover,
 >> some sistems limit printf to at most 500 chars, so we can limit sizes
 >> to 2 digits (99).
+
+** lapi.c
+Tue Jan 27 17:12:36 EDT 1998
+>> "lua_getstring" may create a new string, so should check GC
+
