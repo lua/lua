@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.13 1998/12/30 17:22:17 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.14 1998/12/30 21:23:26 roberto Exp $
 ** Lua standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -12,15 +12,18 @@
 #include "lua.h"
 #include "lualib.h"
 
-#ifdef M_PI
-#define PI                      M_PI
-#else
-#define PI          ((double)3.14159265358979323846)
-#endif
+
+#define PI	(3.14159265358979323846)
 
 
-#define FROMRAD(a) ((a)*(180.0/PI))
-#define TORAD(a)    ((a)*(PI/180.0))
+/*
+** If you want Lua to operate in radians (instead of degrees),
+** changes these two macros to identities:
+** #define FROMRAD(a)	(a)
+** #define TORAD(a)	(a)
+*/
+#define FROMRAD(a)	((a)*(180.0/PI))
+#define TORAD(a)	((a)*(PI/180.0))
 
 
 static void math_abs (void)

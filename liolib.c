@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.27 1998/12/27 20:21:28 roberto Exp roberto $
+** $Id: liolib.c,v 1.28 1998/12/28 13:44:54 roberto Exp $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -52,11 +52,6 @@ int pclose();
 
 
 
-static int gettag (int i) {
-  return (int)lua_getnumber(lua_getparam(i));
-}
-
-
 static void pushresult (int i) {
   if (i)
     lua_pushuserdata(NULL);
@@ -65,6 +60,17 @@ static void pushresult (int i) {
     lua_pushstring(strerror(errno));
     lua_pushnumber(errno);
   }
+}
+
+
+/*
+** {======================================================
+** FILE Operations
+** =======================================================
+*/
+
+static int gettag (int i) {
+  return (int)lua_getnumber(lua_getparam(i));
 }
 
 
@@ -190,9 +196,11 @@ static void io_appendto (void) {
 
 
 
-/*====================================================
+/*
+** {======================================================
 ** READ
-**===================================================*/
+** =======================================================
+*/
 
 static int read_pattern (FILE *f, char *p) {
   int inskip = 0;  /* {skip} level */
@@ -314,6 +322,8 @@ static void io_read (void) {
   } while ((p = luaL_opt_string(arg++, NULL)) != NULL);
 }
 
+/* }====================================================== */
+
 
 static void io_write (void) {
   int arg = FIRSTARG;
@@ -350,6 +360,14 @@ static void io_flush (void) {
   pushresult(fflush(f) == 0);
 }
 
+/* }====================================================== */
+
+
+/*
+** {======================================================
+** Other O.S. Operations
+** =======================================================
+*/
 
 static void io_execute (void) {
   lua_pushnumber(system(luaL_check_string(1)));
@@ -412,6 +430,9 @@ static void io_exit (void) {
   exit(lua_isnumber(o) ? (int)lua_getnumber(o) : 1);
 }
 
+/* }====================================================== */
+
+
 
 static void io_debug (void) {
   for (;;) {
@@ -439,7 +460,8 @@ static void errorfb (void) {
     char *chunkname;
     int linedefined;
     lua_funcinfo(func, &chunkname, &linedefined);
-    strcat(buff, (level==2) ? "Active Stack:\n\t" : "\t");
+    if (level == 2) strcat(buff, "Active Stack:\n");
+    strcat(buff, "\t");
     if (strlen(buff) > MAXMESSAGE-MESSAGESIZE) {
       strcat(buff, "...\n");
       break;  /* buffer is full */
