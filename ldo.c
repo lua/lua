@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.85 2000/08/10 19:50:47 roberto Exp roberto $
+** $Id: ldo.c,v 1.86 2000/08/28 17:57:04 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -136,20 +136,14 @@ static void luaD_callHook (lua_State *L, StkId func, lua_Hook callhook,
 static StkId callCclosure (lua_State *L, const struct Closure *cl, StkId base) {
   int nup = cl->nupvalues;  /* number of upvalues */
   StkId old_Cbase = L->Cbase;
-  int nres;  /* number of results */
-  if (nup > 0) {
-    int n = L->top - base;  /* number of arguments */
-    luaD_checkstack(L, nup);
-    /* open space for upvalues as extra arguments */
-    while (n--) *(base+nup+n) = *(base+n);
-    L->top += nup;
-    /* copy upvalues into stack */
-    while (nup--) *(base+nup) = cl->upvalue[nup];
-  }
+  int n;
   L->Cbase = base;       /* new base for C function */
-  nres = (*cl->f.c)(L);  /* do the actual call */
+  luaD_checkstack(L, nup);
+  for (n=0; n<nup; n++)  /* copy upvalues as extra arguments */
+    *(L->top++) = cl->upvalue[n];
+  n = (*cl->f.c)(L);  /* do the actual call */
   L->Cbase = old_Cbase;  /* restore old C base */
-  return L->top - nres;  /* return index of first result */
+  return L->top - n;  /* return index of first result */
 }
 
 

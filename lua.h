@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.59 2000/08/17 13:18:01 roberto Exp roberto $
+** $Id: lua.h,v 1.60 2000/08/28 17:57:04 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -153,7 +153,7 @@ int            lua_next (lua_State *L, int index, int i);
 #define lua_clonetag(L,t)	lua_copytagmethods(L, lua_newtag(L), (t))
 
 #define lua_isfunction(L,n)	(*lua_type(L,n) == 'f')
-#define lua_isstring(L,n)	(lua_tostring(L,n))
+#define lua_isstring(L,n)	(lua_tostring(L,n) != 0)
 #define lua_istable(L,n)	(*lua_type(L,n) == 't')
 #define lua_isuserdata(L,n)	(*lua_type(L,n) == 'u')
 #define lua_isnil(L,n)		(lua_type(L,n)[2] == 'l')

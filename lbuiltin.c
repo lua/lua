@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.121 2000/08/15 18:28:48 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.122 2000/08/28 17:57:04 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -640,7 +640,7 @@ static void deprecated_funcs (lua_State *L) {
   hvalue(&gt) = L->gt;
   for (i=0; i<num_deprecated; i++) {
     lua_pushobject(L, &gt);
-    lua_pushcclosure(L, deprecated_global_funcs[i].func, 1);
+    lua_pushcclosure(L, deprecated_global_funcs[i].func, 1); ??
     lua_setglobal(L, deprecated_global_funcs[i].name);
   }
   luaL_openl(L, other_deprecated_global_funcs);
@@ -652,7 +652,7 @@ static void deprecated_funcs (lua_State *L) {
 ** gives an explicit error in any attempt to call a deprecated function
 */
 static int deprecated_func (lua_State *L) {
-  luaL_verror(L, "function `%.20s' is deprecated", luaL_check_string(L, 1));
+  luaL_verror(L, "function `%.20s' is deprecated", luaL_check_string(L, -1));
   return 0;  /* to avoid warnings */
 }
 

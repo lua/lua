@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.30 2000/08/09 19:16:57 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.31 2000/08/28 17:57:04 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -32,8 +32,7 @@ int luaL_findstring (const char *name, const char *const list[]) {
 void luaL_argerror (lua_State *L, int narg, const char *extramsg) {
   lua_Debug ar;
   lua_getstack(L, 0, &ar);
-  lua_getinfo(L, "nu", &ar);
-  narg -= ar.nups;
+  lua_getinfo(L, "n", &ar);
   if (ar.name == NULL)
     ar.name = "?";
   luaL_verror(L, "bad argument #%d to `%.50s' (%.100s)",
