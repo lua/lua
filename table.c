@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.14 1994/11/09 18:11:47 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.15 1994/11/10 20:41:37 roberto Exp roberto $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -149,7 +149,7 @@ int lua_findconstant (char *s)
 */
 void lua_travsymbol (void (*fn)(Object *))
 {
- int i;
+ Word i;
  for (i=0; i<lua_ntable; i++)
   fn(&s_object(i));
 }
@@ -188,7 +188,7 @@ void lua_pack (void)
  lua_hashcollector();
 
  lua_nentity = 0;				/* reset counter */
- lua_block=2*lua_block-3*lua_recovered/2;	/* adapt block size */
+ lua_block=2*lua_block-3*lua_recovered/2U;	/* adapt block size */
 } 
 
 
