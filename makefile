@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.1 1997/09/16 19:33:21 roberto Exp roberto $
+## $Id: makefile,v 1.2 1997/09/26 15:02:26 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -43,7 +43,7 @@ LUAOBJS = \
 	llex.o \
 	lmem.o \
 	lobject.o \
-	lparser.o \
+	lstx.o \
 	lstring.o \
 	ltable.o \
 	ltm.o \
@@ -71,19 +71,16 @@ liblualib.a : $(LIBOBJS)
 liblua.so.1.0 : lua.o
 	ld -o liblua.so.1.0 $(LUAOBJS)
 
-y.tab.c y.tab.h  : lua.stx
-	yacc -d lua.stx
-
-lparser.c : y.tab.c
-	sed -e 's/yy/luaY_/g' -e 's/malloc\.h/stdlib\.h/g' y.tab.c > lparser.c
-
-ltokens.h : y.tab.h
-	sed -e 's/yy/luaY_/g' y.tab.h > ltokens.h
+lstx.c lstx.h  : lua.stx
+	bison -o lstx.c -p luaY_ -d lua.stx
+#	yacc -d lua.stx
+#	sed -e 's/yy/luaY_/g' -e 's/malloc\.h/stdlib\.h/g' y.tab.c > lstx.c
+#	sed -e 's/yy/luaY_/g' y.tab.h > lstx.h
 
 clear	:
 	rcsclean
 	rm -f *.o
-	rm -f lparser.c ltokens.h y.tab.c y.tab.h
+	rm -f lstx.c lstx.h
 	co lua.h lualib.h luadebug.h
 
 
@@ -92,6 +89,7 @@ clear	:
 
 %.c : RCS/%.c,v
 	co $@
+
 
 
 lapi.o: lapi.c lapi.h lua.h lobject.h lauxlib.h ldo.h lfunc.h lgc.h \
@@ -106,18 +104,19 @@ lgc.o: lgc.c ldo.h lobject.h lua.h lfunc.h lgc.h lmem.h lstring.h \
  ltable.h ltm.h
 liolib.o: liolib.c lauxlib.h lua.h luadebug.h lualib.h
 llex.o: llex.c llex.h lobject.h lua.h lzio.h lmem.h lparser.h \
- lstring.h ltokens.h luadebug.h
+ lstring.h lstx.h luadebug.h
 lmathlib.o: lmathlib.c lauxlib.h lua.h lualib.h
 lmem.o: lmem.c lmem.h lua.h
 lobject.o: lobject.c lobject.h lua.h
-lparser.o: lparser.c lauxlib.h lua.h ldo.h lobject.h lfunc.h llex.h \
- lzio.h lmem.h lopcodes.h lparser.h lstring.h luadebug.h
 lstring.o: lstring.c lmem.h lobject.h lua.h lstring.h
 lstrlib.o: lstrlib.c lauxlib.h lua.h lualib.h
+lstx.o: lstx.c lauxlib.h lua.h ldo.h lobject.h lfunc.h llex.h lzio.h \
+ lmem.h lopcodes.h lparser.h lstring.h luadebug.h
 ltable.o: ltable.c lauxlib.h lua.h lmem.h lobject.h ltable.h
 ltm.o: ltm.c lauxlib.h lua.h ldo.h lobject.h lmem.h ltm.h lapi.h
 lua.o: lua.c lua.h luadebug.h lualib.h
-lundump.o: lundump.c lundump.h lobject.h lua.h lzio.h
+lundump.o: lundump.c lauxlib.h lua.h lfunc.h lobject.h lmem.h \
+ lstring.h lundump.h lzio.h
 lvm.o: lvm.c lauxlib.h lua.h ldo.h lobject.h lfunc.h lgc.h lmem.h \
  lopcodes.h lstring.h ltable.h ltm.h luadebug.h lvm.h
 lzio.o: lzio.c lzio.h
