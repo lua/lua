@@ -218,18 +218,17 @@ static void setnodevector (lua_State *L, Table *t, int lsize) {
 }
 
 
-static void rehash (lua_State *L, Table *t) {
+static void resize (lua_State *L, Table *t, int nasize, int nhsize) {
   int i;
-  int oldasize, oldhsize, nasize, nhsize;
+  int oldasize, oldhsize;
   Node *nold;
-  numuse(t, &nasize, &nhsize);  /* compute new sizes for array and hash parts */
   oldasize = t->sizearray;
   if (nasize > oldasize)  /* should grow array part? */
     setarrayvector(L, t, nasize);
   /* create new hash part with appropriate size */
   nold = t->node;  /* save old hash ... */
   oldhsize = t->lsizenode;  /* ... and (log of) old size */
-  setnodevector(L, t, luaO_log2(nhsize+nhsize/4)+1);  
+  setnodevector(L, t, nhsize);  
   /* re-insert elements */
   if (nasize < oldasize) {  /* array part must shrink? */
     t->sizearray = nasize;
@@ -250,6 +249,16 @@ static void rehash (lua_State *L, Table *t) {
   }
   luaM_freearray(L, nold, twoto(oldhsize), Node);  /* free old array */
 }
+
+
+static void rehash (lua_State *L, Table *t) {
+  int nasize, nhsize;
+  numuse(t, &nasize, &nhsize);  /* compute new sizes for array and hash parts */
+  nhsize += nhsize/4;  /* allow some extra for growing nhsize */
+  resize(L, t, nasize, luaO_log2(nhsize)+1);
+}
+
+
 
 /*
 ** }=============================================================
