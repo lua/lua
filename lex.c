@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.18 1995/10/06 13:10:53 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.19 1995/10/13 15:16:25 roberto Exp roberto $";
  
 
 #include <ctype.h>
@@ -148,6 +148,10 @@ static int read_long_string (void)
 int yylex (void)
 {
   float a;
+  static int linelasttoken = 0;
+  if (lua_debug)
+    luaI_codedebugline(linelasttoken);
+  linelasttoken = lua_linenumber;
   while (1)
   {
     yytextLast = yytext;
@@ -159,7 +163,7 @@ int yylex (void)
       case EOF:
       case 0:
        return 0;
-      case '\n': lua_linenumber++;
+      case '\n': linelasttoken = ++lua_linenumber;
       case ' ':
       case '\r':  /* CR: to avoid problems with DOS/Windows */
       case '\t':

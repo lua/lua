@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.23 1995/10/17 11:58:41 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.24 1995/10/23 13:54:11 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,8 +29,7 @@ char *rcs_inout="$Id: inout.c,v 2.23 1995/10/17 11:58:41 roberto Exp roberto $";
 
 /* Exported variables */
 Word lua_linenumber;
-Bool lua_debug;
-Word lua_debugline = 0;
+Bool lua_debug = 0;
 char *lua_parsedfile;
 
 

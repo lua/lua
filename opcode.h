@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.12 1995/10/04 17:13:02 roberto Exp roberto $
+** $Id: opcode.h,v 3.13 1995/10/17 11:58:41 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -68,7 +68,7 @@ typedef enum
  CALLFUNC,
  RETCODE0,
  RETCODE,
- SETLINE,
+ SETLINE
 } OpCode;
 
 #define MULT_RET	255
@@ -85,6 +85,7 @@ typedef union
  TFunc         *tf;
  struct Hash    *a;
  void           *u;
+ int	       i;
 } Value;
 
 typedef struct Object
@@ -147,6 +148,7 @@ void    lua_setinput   (Input fn);	/* from "lex.c" module */
 char   *lua_lasttext   (void);		/* from "lex.c" module */
 int     yylex (void);		        /* from "lex.c" module */
 void    lua_parse      (TFunc *tf);	/* from "lua.stx" module */
+void	luaI_codedebugline (int line);  /* from "lua.stx" module */
 void    lua_travstack (int (*fn)(Object *));
 Object *luaI_Address (lua_Object o);
 void	luaI_pushobject (Object *o);

@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.45 1995/10/17 14:12:45 roberto Exp $";
+char *rcs_opcode="$Id: opcode.c,v 3.46 1995/10/17 14:30:05 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -75,7 +75,7 @@ static void lua_initstack (void)
  stack = newvector(maxstack, Object);
  stackLimit = stack+maxstack;
  top = stack;
- *top = initial_stack;
+ *(top++) = initial_stack;
 }
 
 
@@ -86,19 +86,19 @@ static void lua_initstack (void)
 
 static void growstack (void)
 {
- StkId t = top-stack;
  if (stack == &initial_stack)
    lua_initstack();
  else
  {
+  StkId t = top-stack;
   Long maxstack = stackLimit - stack;
   maxstack *= 2;
   stack = growvector(stack, maxstack, Object);
   stackLimit = stack+maxstack;
+  top = stack + t;
   if (maxstack >= MAX_WORD/2)
     lua_error("stack size overflow");
  }
- top = stack + t;
 }
 
 
@@ -227,16 +227,6 @@ static void callFB (int fb)
   do_call((top-stack)-nParams, luaI_fallBacks[fb].nResults);
 }
 
-/*
-** Call the fallback for invalid functions (see do_call)
-*/
-static void call_funcFB (StkId base, int nResults)
-{
-  open_stack((top-stack)-(base-1));
-  stack[base-1] = luaI_fallBacks[FB_FUNCTION].function;
-  do_call(base, nResults);
-}
-
 
 /*
 ** Call a function (C or Lua). The parameters must be on the stack,
@@ -248,6 +238,7 @@ static void do_call (StkId base, int nResults)
 {
   StkId firstResult;
   Object *func = stack+base-1;
+  int i;
   if (tag(func) == LUA_T_CFUNCTION)
   {
     tag(func) = LUA_T_CMARK;
@@ -260,7 +251,10 @@ static void do_call (StkId base, int nResults)
   }
   else
   { /* func is not a function */
-    call_funcFB(base, nResults);
+    /* Call the fallback for invalid functions */
+    open_stack((top-stack)-(base-1));
+    stack[base-1] = luaI_fallBacks[FB_FUNCTION].function;
+    do_call(base, nResults);
     return;
   }
   /* adjust the number of results */
@@ -268,14 +262,10 @@ static void do_call (StkId base, int nResults)
     adjust_top(firstResult+nResults);
   /* move results to base-1 (to erase parameters and function) */
   base--;
-  if (firstResult != base)
-  {
-    int i;
-    nResults = top - (stack+firstResult);  /* actual number of results */
-    for (i=0; i<nResults; i++)
-      *(stack+base+i) = *(stack+firstResult+i);
-    top -= firstResult-base;
-  }
+  nResults = top - (stack+firstResult);  /* actual number of results */
+  for (i=0; i<nResults; i++)
+    *(stack+base+i) = *(stack+firstResult+i);
+  top -= firstResult-base;
 }
 
 
@@ -366,9 +356,12 @@ lua_Object lua_stackedfunction (int level)
 
 
 void lua_funcinfo (lua_Object func, char **filename, char **funcname,
-                    char **objname, int *linedefined)
+                    char **objname, int *line)
 {
-  return luaI_funcInfo(Address(func), filename, funcname, objname, linedefined);
+  Object *f = Address(func);
+  luaI_funcInfo(f, filename, funcname, objname, line);
+  *line = (f+1 < top && (f+1)->tag == LUA_T_LINE) ?
+          (f+1)->value.i : -1;
 }
 
 
@@ -587,9 +580,9 @@ lua_Object lua_getparam (int number)
 */
 real lua_getnumber (lua_Object object)
 {
- if (object == LUA_NOOBJECT || tag(Address(object)) == LUA_T_NIL) return 0.0;
+ if (object == LUA_NOOBJECT) return 0.0;
  if (tonumber (Address(object))) return 0.0;
- else                   return (nvalue(Address(object)));
+ else return (nvalue(Address(object)));
 }
 
 /*
@@ -597,7 +590,7 @@ real lua_getnumber (lua_Object object)
 */
 char *lua_getstring (lua_Object object)
 {
- if (object == LUA_NOOBJECT || tag(Address(object)) == LUA_T_NIL) return NULL;
+ if (object == LUA_NOOBJECT) return NULL;
  if (tostring (Address(object))) return NULL;
  else return (svalue(Address(object)));
 }
@@ -1168,9 +1161,16 @@ static StkId lua_execute (Byte *pc, StkId base)
    {
     CodeWord code;
     get_word(code,pc);
-    lua_debugline = code.w;
+    if ((stack+base-1)->tag != LUA_T_LINE)
+    {
+      /* open space for LINE value */
+      open_stack((top-stack)-base);
+      base++;
+      (stack+base-1)->tag = LUA_T_LINE;
+    }
+    (stack+base-1)->value.i = code.w;
+    break;
    }
-   break;
 
    default:
     lua_error ("internal error - opcode doesn't match");

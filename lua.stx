@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.20 1995/10/04 14:20:26 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.21 1995/10/17 11:58:41 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,6 +36,7 @@ static Byte **initcode;
 static Byte  *basepc;
 static int   maincode;
 static int   pc;
+
 
 #define MAXVAR 32
 static Long    varbuffer[MAXVAR];    /* variables in an assignment list;
@@ -235,15 +236,17 @@ static void lua_codeadjust (int n)
  }
 }
 
-static void init_function (TreeNode *func)
+static void change2main (void)
 {
- if (funcCode == NULL)	/* first function */
- {
-  funcCode = newvector(CODE_BLOCK, Byte);
-  maxcode = CODE_BLOCK;
- }
- pc=0; basepc=funcCode; maxcurr=maxcode; 
- nlocalvar=0;
+  /* (re)store main values */
+  pc=maincode; basepc=*initcode; maxcurr=maxmain;
+  nlocalvar=0;
+}
+
+static void savemain (void)
+{
+  /* save main values */
+  maincode=pc; *initcode=basepc; maxmain=maxcurr;
 }
 
 static void codereturn (void)
@@ -257,29 +260,43 @@ static void codereturn (void)
   }
 }
 
-static void codedebugline (void)
+void luaI_codedebugline (int line)
 {
-  if (lua_debug)
+  static int lastline = 0;
+  if (lua_debug && line != lastline)
   {
     code_byte(SETLINE);
-    code_word(lua_linenumber);
+    code_word(line);
+    lastline = line;
   }
 }
 
-static void adjust_mult_assign (int vars, int exps, int temps)
+static int adjust_functioncall (Long exp, int i)
 {
-  if (exps < 0) 
+  if (exp <= 0)
+    return -exp; /* exp is -list length */
+  else
   {
-    int r = vars - (-exps-1);
-    if (r >= 0)
-      code_byte(r);
+    int temp = basepc[exp];
+    basepc[exp] = i;
+    return temp+i;
+  }
+}
+
+static void adjust_mult_assign (int vars, Long exps, int temps)
+{
+  if (exps > 0)
+  { /* must correct function call */
+    int diff = vars - basepc[exps];
+    if (diff >= 0)
+      adjust_functioncall(exps, diff);
     else
     {
-      code_byte(0);
+      adjust_functioncall(exps, 0);
       lua_codeadjust(temps);
     }
   }
-  else if (vars != exps)
+  else if (vars != -exps)
     lua_codeadjust(temps);
 }
 
@@ -349,11 +366,14 @@ static void yyerror (char *s)
 */
 void lua_parse (TFunc *tf)
 {
+ lua_debug = 0;
  initcode = &(tf->code);
  *initcode = newvector(CODE_BLOCK, Byte);
  maincode = 0; 
  maxmain = CODE_BLOCK;
+ change2main();
  if (yyparse ()) lua_error("parse error");
+ savemain();
  (*initcode)[maincode++] = RETCODE0;
  tf->size = maincode;
 #if LISTING
@@ -391,10 +411,15 @@ void lua_parse (TFunc *tf)
 %token <vInt>   DEBUG
 
 %type <vLong> PrepJump
-%type <vInt>  expr, exprlist, exprlist1, varlist1, funcParams, funcvalue
+%type <vLong> exprlist, exprlist1  /* if > 0, points to function return
+	counter (which has list length); if <= 0, -list lenght */
+%type <vLong> functioncall, expr  /* if != 0, points to function return
+					 counter */
+%type <vInt>  varlist1, funcParams, funcvalue
 %type <vInt>  fieldlist, localdeclist, decinit
 %type <vInt>  ffieldlist, ffieldlist1, semicolonpart
 %type <vInt>  lfieldlist, lfieldlist1
+%type <vInt>  functiontoken
 %type <vLong> var, singlevar
 %type <pFunc> body
 
@@ -411,62 +436,62 @@ void lua_parse (TFunc *tf)
 
 
 functionlist : /* empty */
-	     | functionlist 
-	        {
-	  	  pc=maincode; basepc=*initcode; maxcurr=maxmain;
-		  nlocalvar=0;
-	        }
-	       stat sc 
-		{
-		  maincode=pc; *initcode=basepc; maxmain=maxcurr;
-		}
+	     | functionlist globalstat
 	     | functionlist function
 	     | functionlist method
-	     | functionlist setdebug
 	     ;
 
-function     : FUNCTION NAME 
-               {
-		init_function($2);
-		$<vInt>$ = lua_linenumber;
-	       }
-               body 	 
+globalstat   : stat sc
+	     | setdebug
+	     ;
+
+function     : functiontoken NAME body 	 
 	       { 
 		Word func = luaI_findsymbol($2);
-		luaI_insertfunction($4);  /* may take part in GC */
+		luaI_insertfunction($3);  /* may take part in GC */
 	        s_tag(func) = LUA_T_FUNCTION;
-                lua_table[func].object.value.tf = $4;
-		$4->lineDefined = $<vInt>3;
-		$4->name1 = $2->ts.str;
-		$4->name2 = NULL;
-		$4->fileName = lua_parsedfile;
+                lua_table[func].object.value.tf = $3;
+		$3->lineDefined = $1;
+		$3->name1 = $2->ts.str;
+		$3->name2 = NULL;
+		$3->fileName = lua_parsedfile;
 	       }
 	       ;
 
-method         : FUNCTION NAME ':' NAME
+method         : functiontoken NAME ':' NAME
 	       {
-		init_function($4);
 		add_localvar(luaI_findsymbolbyname("self"));
-		$<vInt>$ = lua_linenumber;
 	       }
 	       body
 	       {
 	        /* assign function to table field */
-	        pc=maincode; basepc=*initcode; maxcurr=maxmain;
-	        nlocalvar=0;
 		lua_pushvar(luaI_findsymbol($2)+1);
                 code_byte(PUSHSTRING);
 		code_word(luaI_findconstant($4));
                 code_byte(PUSHFUNCTION);
                 code_code($6);
                 code_byte(STOREINDEXED0);
-		maincode=pc; *initcode=basepc; maxmain=maxcurr;
-		$6->lineDefined = $<vInt>5;
+		$6->lineDefined = $1;
 		$6->name1 = $4->ts.str;
 		$6->name2 = $2->ts.str;
 		$6->fileName = lua_parsedfile;
 	       }
 	       ;
+
+functiontoken	: FUNCTION
+	{
+	 if (funcCode == NULL)	/* first function */
+	 {
+	  funcCode = newvector(CODE_BLOCK, Byte);
+	  maxcode = CODE_BLOCK;
+	 }
+	 savemain();  /* save main values */
+	 /* set func values */
+	 pc=0; basepc=funcCode; maxcurr=maxcode; 
+	 nlocalvar=0;
+	 $$ = lua_linenumber;
+	}
+	        ;
 
 body :  '(' parlist ')' block END
 	{
@@ -475,10 +500,12 @@ body :  '(' parlist ')' block END
 	  $$->size = pc;
 	  $$->code = newvector(pc, Byte);
 	  memcpy($$->code, basepc, pc*sizeof(Byte));
+	  /* save func values */
 	  funcCode = basepc; maxcode=maxcurr;
 #if LISTING
                 PrintCode(funcCode,funcCode+pc);
 #endif
+	  change2main();  /* change back to main code */
 	}
 		;
 
@@ -488,11 +515,7 @@ statlist : /* empty */
 
 sc	 : /* empty */ | ';' ;
 
-stat  : { codedebugline(); } stat1 ;
-
-cond  : { codedebugline(); } expr1 ;
-
-stat1  : IF expr1 THEN PrepJump block PrepJump elsepart END
+stat   : IF expr1 THEN PrepJump block PrepJump elsepart END
 	{ codeIf($4, $6); }
 
        | WHILE {$<vLong>$=pc;} expr1 DO PrepJump block PrepJump END
@@ -503,7 +526,7 @@ stat1  : IF expr1 THEN PrepJump block PrepJump elsepart END
 	code_word_at(basepc+$7+1, pc - ($<vLong>2));
        }
      
-       | REPEAT {$<vLong>$=pc;} block UNTIL cond PrepJump
+       | REPEAT {$<vLong>$=pc;} block UNTIL expr1 PrepJump
        {
         basepc[$6] = IFFUPJMP;
 	code_word_at(basepc+$6+1, pc - ($<vLong>2));
@@ -520,7 +543,7 @@ stat1  : IF expr1 THEN PrepJump block PrepJump elsepart END
 	  lua_codeadjust (0);
 	}
        } 
-       | functioncall	{ code_byte(0); }
+       | functioncall
        | LOCAL localdeclist decinit
 	{ nlocalvar += $2;
 	  adjust_mult_assign($2, $3, 0);
@@ -529,7 +552,7 @@ stat1  : IF expr1 THEN PrepJump block PrepJump elsepart END
 
 elsepart : /* empty */
 	 | ELSE block
-         | ELSEIF cond THEN PrepJump block PrepJump elsepart
+         | ELSEIF expr1 THEN PrepJump block PrepJump elsepart
 	{ codeIf($4, $6); }
          ;
      
@@ -544,9 +567,9 @@ block    : {$<vInt>$ = nlocalvar;} statlist ret
          ;
 
 ret	: /* empty */
-        | RETURN { codedebugline(); } exprlist sc
+        | RETURN exprlist sc
           {
-           if ($3 < 0) code_byte(MULT_RET);
+	   adjust_functioncall($2, MULT_RET);
            codereturn();
           }
 	;
@@ -558,46 +581,49 @@ PrepJump : /* empty */
 	  code_word (0);
          }
 	   
-expr1	 : expr { if ($1 == 0) code_byte(1); }
+expr1	 : expr
+	{
+	  adjust_functioncall($1, 1);
+	}
 	 ;
 				
 expr :  '(' expr ')'  { $$ = $2; }
-     |  expr1 EQ  expr1	{ code_byte(EQOP);   $$ = 1; }
-     |	expr1 '<' expr1	{ code_byte(LTOP);   $$ = 1; }
-     |	expr1 '>' expr1	{ code_byte(GTOP);   $$ = 1; }
-     |	expr1 NE  expr1	{ code_byte(EQOP); code_byte(NOTOP); $$ = 1; }
-     |	expr1 LE  expr1	{ code_byte(LEOP);   $$ = 1; }
-     |	expr1 GE  expr1	{ code_byte(GEOP);   $$ = 1; }
-     |	expr1 '+' expr1 { code_byte(ADDOP);  $$ = 1; }
-     |	expr1 '-' expr1 { code_byte(SUBOP);  $$ = 1; }
-     |	expr1 '*' expr1 { code_byte(MULTOP); $$ = 1; }
-     |	expr1 '/' expr1 { code_byte(DIVOP);  $$ = 1; }
-     |	expr1 '^' expr1 { code_byte(POWOP);  $$ = 1; }
-     |	expr1 CONC expr1 { code_byte(CONCOP);  $$ = 1; }
-     |	'-' expr1 %prec UNARY	{ code_byte(MINUSOP); $$ = 1;}
-     | table { $$ = 1; }
-     |  varexp          { $$ = 1;}
-     |  NUMBER          { code_number($1); $$ = 1; }
+     |  expr1 EQ  expr1	{ code_byte(EQOP);   $$ = 0; }
+     |	expr1 '<' expr1	{ code_byte(LTOP);   $$ = 0; }
+     |	expr1 '>' expr1	{ code_byte(GTOP);   $$ = 0; }
+     |	expr1 NE  expr1	{ code_byte(EQOP); code_byte(NOTOP); $$ = 0; }
+     |	expr1 LE  expr1	{ code_byte(LEOP);   $$ = 0; }
+     |	expr1 GE  expr1	{ code_byte(GEOP);   $$ = 0; }
+     |	expr1 '+' expr1 { code_byte(ADDOP);  $$ = 0; }
+     |	expr1 '-' expr1 { code_byte(SUBOP);  $$ = 0; }
+     |	expr1 '*' expr1 { code_byte(MULTOP); $$ = 0; }
+     |	expr1 '/' expr1 { code_byte(DIVOP);  $$ = 0; }
+     |	expr1 '^' expr1 { code_byte(POWOP);  $$ = 0; }
+     |	expr1 CONC expr1 { code_byte(CONCOP);  $$ = 0; }
+     |	'-' expr1 %prec UNARY	{ code_byte(MINUSOP); $$ = 0;}
+     | table { $$ = 0; }
+     |  varexp          { $$ = 0;}
+     |  NUMBER          { code_number($1); $$ = 0; }
      |  STRING
      {
       code_byte(PUSHSTRING);
       code_word($1);
-      $$ = 1;
+      $$ = 0;
      }
-     |	NIL		{code_byte(PUSHNIL); $$ = 1; }
-     |  functioncall    { $$ = 0; }
-     |	NOT expr1	{ code_byte(NOTOP);  $$ = 1;}
+     |	NIL		{code_byte(PUSHNIL); $$ = 0; }
+     |  functioncall    { $$ = $1; }
+     |	NOT expr1	{ code_byte(NOTOP);  $$ = 0;}
      |	expr1 AND PrepJump {code_byte(POP); } expr1
      { 
       basepc[$3] = ONFJMP;
       code_word_at(basepc+$3+1, pc - ($3 + sizeof(Word)+1));
-      $$ = 1;
+      $$ = 0;
      }
      |	expr1 OR PrepJump {code_byte(POP); } expr1	
      { 
       basepc[$3] = ONTJMP;
       code_word_at(basepc+$3+1, pc - ($3 + sizeof(Word)+1));
-      $$ = 1;
+      $$ = 0;
      }
      ;
 
@@ -613,7 +639,12 @@ table :
          ;
 
 functioncall : funcvalue funcParams
-	{ code_byte(CALLFUNC); code_byte($1+$2); }
+	{
+	  code_byte(CALLFUNC);
+	  code_byte($1+$2);
+	  $$ = pc;
+	  code_byte(0);  /* may be modified by other rules */
+	}
 	     ;
 
 funcvalue    : varexp { $$ = 0; }
@@ -626,7 +657,7 @@ funcvalue    : varexp { $$ = 0; }
 	     ;
 
 funcParams :	'(' exprlist ')'
-	{ if ($2<0) { code_byte(1); $$ = -$2; } else $$ = $2; }
+	{ $$ = adjust_functioncall($2, 1); }
 	|	table  { $$ = 1; }
 	;
 
@@ -634,11 +665,15 @@ exprlist  :	/* empty */		{ $$ = 0; }
 	  |	exprlist1		{ $$ = $1; }
 	  ;
 		
-exprlist1 :	expr	{ if ($1 == 0) $$ = -1; else $$ = 1; }
-	  |	exprlist1 ',' { if ($1 < 0) code_byte(1); } expr 
+exprlist1 :  expr	{ if ($1 != 0) $$ = $1; else $$ = -1; }
+	  |  exprlist1 ',' { $<vLong>$ = adjust_functioncall($1, 1); } expr 
 	{
-          int r = $1 < 0 ? -$1 : $1;
-          $$ = ($4 == 0) ? -(r+1) : r+1;
+	  if ($4 == 0) $$ = -($<vLong>3 + 1);  /* -length */
+	  else
+	  {
+	    adjust_functioncall($4, $<vLong>3);
+	    $$ = $4;
+	  }
 	}
 	  ;
 
@@ -757,7 +792,8 @@ decinit	  : /* empty */  { $$ = 0; }
 	  | '=' exprlist1 { $$ = $2; }
 	  ;
 	  
-setdebug  : DEBUG {lua_debug = $1;}
+setdebug  : DEBUG  { lua_debug = $1; }
+	  ;
 
 %%
 
