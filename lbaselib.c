@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.1 2000/09/05 19:33:56 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.2 2000/09/12 13:49:05 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -14,6 +14,7 @@
 #include "lua.h"
 
 #include "lauxlib.h"
+#include "luadebug.h"
 #include "lualib.h"
 
 
@@ -33,15 +34,21 @@ static int luaB__ALERT (lua_State *L) {
 ** The library `liolib' redefines _ERRORMESSAGE for better error information.
 */
 static int luaB__ERRORMESSAGE (lua_State *L) {
-  lua_settop(L, 1);
-  lua_getglobals(L);
-  lua_pushstring(L, LUA_ALERT);
-  lua_rawget(L, -2);
+  luaL_checktype(L, 1, "string");
+  lua_getglobal(L, LUA_ALERT);
   if (lua_isfunction(L, -1)) {  /* avoid error loop if _ALERT is not defined */
-    luaL_checktype(L, 1, "string");
-    lua_pushvalue(L, -1);  /* function to be called */
+    lua_Debug ar;
     lua_pushstring(L, "error: ");
     lua_pushvalue(L, 1);
+    if (lua_getstack(L, 1, &ar)) {
+      lua_getinfo(L, "Sl", &ar);
+      if (ar.source && ar.currentline > 0) {
+        char buff[100];
+        sprintf(buff, "\n  <%.70s: line %d>", ar.short_src, ar.currentline);
+        lua_pushstring(L, buff);
+        lua_concat(L, 2);
+      }
+    }
     lua_pushstring(L, "\n");
     lua_concat(L, 3);
     lua_call(L, 1, 0);
