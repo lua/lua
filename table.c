@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.30 1995/05/16 17:23:58 roberto Exp celes $";
+char *rcs_table="$Id: table.c,v 2.31 1995/05/16 19:23:55 celes Exp roberto $";
 
 #include <string.h>
 
@@ -19,11 +19,11 @@ char *rcs_table="$Id: table.c,v 2.30 1995/05/16 17:23:58 roberto Exp celes $";
 
 #define BUFFER_BLOCK 256
 
-Symbol *lua_table;
+Symbol *lua_table = NULL;
 static Word lua_ntable = 0;
 static Long lua_maxsymbol = 0;
 
-TaggedString **lua_constant;
+TaggedString **lua_constant = NULL;
 static Word lua_nconstant = 0;
 static Long lua_maxconstant = 0;
 
