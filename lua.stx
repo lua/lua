@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 2.8 1994/10/11 13:02:39 celes Exp celes $";
+char *rcs_luastx = "$Id: lua.stx,v 2.9 1994/10/11 14:38:17 celes Exp celes $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -237,11 +237,10 @@ static void init_function (void)
 %token <vInt>   DEBUG
 
 %type <vLong> PrepJump
-%type <vInt>  expr, exprlist, exprlist1, varlist1
+%type <vInt>  expr, exprlist, exprlist1, varlist1, funcvalue
 %type <vInt>  fieldlist, localdeclist
 %type <vInt>  ffieldlist1
 %type <vInt>  lfieldlist1
-%type <vInt>  functionvalue
 %type <vLong> var, singlevar
 
 
@@ -251,6 +250,7 @@ static void init_function (void)
 %left '+' '-'
 %left '*' '/'
 %left UNARY NOT
+%right '^'
 
 
 %% /* beginning of rules section */
@@ -322,7 +322,7 @@ method         : FUNCTION NAME { $<vWord>$ = lua_findsymbol($2); } ':' NAME
 	        if (lua_debug)
 		{
 	         code_byte(SETFUNCTION); 
-                 code_word(lua_nfile-1);
+                 code_code((Byte *)lua_file[lua_nfile-1]);
 		 code_word($<vWord>6);
 		}
 	        lua_codeadjust (0);
@@ -425,7 +425,6 @@ stat1  : IF expr1 THEN PrepJump block PrepJump elsepart END
 	}
        } 
        | functioncall			{ lua_codeadjust (0); }
-       | constructor                    { lua_codeadjust (0); }
        | LOCAL localdeclist decinit   { add_nlocalvar($2); lua_codeadjust (0); }
        ;
 
@@ -480,8 +479,8 @@ PrepJump : /* empty */
 expr1	 : expr { if ($1 == 0) {lua_codeadjust (ntemp+1); incr_ntemp();}}
 	 ;
 				
-expr :	'(' expr ')'    { $$ = $2; }
-     |	expr1 EQ  expr1	{ code_byte(EQOP);   $$ = 1; ntemp--;}
+expr :  '(' expr ')'  { $$ = $2; }
+     |  expr1 EQ  expr1	{ code_byte(EQOP);   $$ = 1; ntemp--;}
      |	expr1 '<' expr1	{ code_byte(LTOP);   $$ = 1; ntemp--;}
      |	expr1 '>' expr1	{ code_byte(LEOP); code_byte(NOTOP); $$ = 1; ntemp--;}
      |	expr1 NE  expr1	{ code_byte(EQOP); code_byte(NOTOP); $$ = 1; ntemp--;}
@@ -491,14 +490,14 @@ expr :	'(' expr ')'    { $$ = $2; }
      |	expr1 '-' expr1 { code_byte(SUBOP);  $$ = 1; ntemp--;}
      |	expr1 '*' expr1 { code_byte(MULTOP); $$ = 1; ntemp--;}
      |	expr1 '/' expr1 { code_byte(DIVOP);  $$ = 1; ntemp--;}
+     |	expr1 '^' expr1 { code_byte(POWOP);  $$ = 1; ntemp--;}
      |	expr1 CONC expr1 { code_byte(CONCOP);  $$ = 1; ntemp--;}
      |	'+' expr1 %prec UNARY	{ $$ = 1; }
      |	'-' expr1 %prec UNARY	{ code_byte(MINUSOP); $$ = 1;}
-     | constructor { $$ = 0; }
      | table { $$ = 1; }
-     |	var             { lua_pushvar ($1); $$ = 1;}
-     |	NUMBER          { code_number($1); $$ = 1; }
-     |	STRING
+     |  varexp          { $$ = 1;}
+     |  NUMBER          { code_number($1); $$ = 1; }
+     |  STRING
      {
       code_byte(PUSHSTRING);
       code_word(lua_findconstant($1));
@@ -506,7 +505,7 @@ expr :	'(' expr ')'    { $$ = $2; }
       incr_ntemp();
      }
      |	NIL		{code_byte(PUSHNIL); $$ = 1; incr_ntemp();}
-     |	functioncall
+     |  functioncall
      {
       $$ = 0;
       if (lua_debug)
@@ -529,21 +528,6 @@ expr :	'(' expr ')'    { $$ = $2; }
      }
      ;
 
-constructor : '@' singlevar table
-      {
-       lua_pushvar ($2);
-       code_byte(PUSHMARK);
-       incr_ntemp();
-       code_byte(PUSHOBJECT);
-       incr_ntemp();
-       code_byte(CALLFUNC); 
-       ntemp -= 4;
-       if (lua_debug)
-       {
-        code_byte(SETLINE); code_word(lua_linenumber);
-       }
-      }
-	    ;
 table :
      {
       code_byte(PUSHWORD);
@@ -557,25 +541,25 @@ table :
      }
          ;
 
-functioncall : functionvalue  
-             {
-              code_byte(PUSHMARK); $<vInt>$ = ntemp; incr_ntemp();
-              if ($1 != 0) lua_pushvar($1);
-             }
-               '(' exprlist ')' { code_byte(CALLFUNC); ntemp = $<vInt>2-1;}
+functioncall : funcvalue funcParams { code_byte(CALLFUNC); ntemp = $1-1; }
 	     ;
-
-functionvalue : var {lua_pushvar ($1); $$ = 0; } 
-              | singlevar ':' NAME 
-		{
-		 $$ = $1;
-		 lua_pushvar($1);
-		 code_byte(PUSHSTRING);
-		 code_word(lua_findconstant($3));
-		 incr_ntemp();
-		 lua_pushvar(0);
-		}
-	      ;
+funcvalue    : varexp
+             {
+              $$ = ntemp; code_byte(PUSHMARK); incr_ntemp();
+             }
+	     | varexp ':' NAME 
+	     { 
+	       code_byte(PUSHSTRING);
+	       code_word(lua_findconstant($3));
+	       incr_ntemp();
+	       $$ = ntemp-1; 
+               code_byte(PUSHMARKMET); 
+	       incr_ntemp();
+	     }
+	     ;
+funcParams :	'(' exprlist ')'
+	|	table
+	;
 		
 exprlist  :	/* empty */		{ $$ = 1; }
 	  |	exprlist1		{ $$ = $1; }
@@ -654,14 +638,14 @@ varlist1  :	var
 	  ;
 		
 var	  :	singlevar { $$ = $1; }
-	  |	var {lua_pushvar ($1);} '[' expr1 ']' 
+	  |	varexp '[' expr1 ']' 
 	  {
 	   $$ = 0;		/* indexed variable */
 	  }
-	  |	var {lua_pushvar ($1);} '.' NAME
+	  |	varexp '.' NAME
 	  {
 	   code_byte(PUSHSTRING);
-	   code_word(lua_findconstant($4)); incr_ntemp();
+	   code_word(lua_findconstant($3)); incr_ntemp();
 	   $$ = 0;		/* indexed variable */
 	  }
 	  ;
@@ -676,6 +660,9 @@ singlevar :	NAME
 	    $$ = -(local+1);		/* return negative value */
 	  }
 	  ;
+
+varexp	: var { lua_pushvar($1); }
+	;
 	  
 localdeclist  : NAME {localvar[nlocalvar]=lua_findsymbol($1); $$ = 1;}
      	  | localdeclist ',' NAME 
@@ -894,7 +881,6 @@ static void PrintCode (Byte *code, Byte *end)
    			break;
    case PUSHINDEXED:    printf ("%d    PUSHINDEXED\n", (p++)-code); break;
    case PUSHMARK:       printf ("%d    PUSHMARK\n", (p++)-code); break;
-   case PUSHOBJECT:     printf ("%d    PUSHOBJECT\n", (p++)-code); break;
    case STORELOCAL0: case STORELOCAL1: case STORELOCAL2: case STORELOCAL3:
    case STORELOCAL4: case STORELOCAL5: case STORELOCAL6: case STORELOCAL7:
    case STORELOCAL8: case STORELOCAL9:
@@ -1008,12 +994,13 @@ static void PrintCode (Byte *code, Byte *end)
    case HALT:		printf ("%d    HALT\n", (p++)-code); break;
    case SETFUNCTION:
                         {
-                         CodeWord c1, c2;
+			 CodeCode c1;
+                         CodeWord c1;
                          int n = p-code;
                          p++;
-                         get_word(c1,p);
+                         get_code(c1,p);
                          get_word(c2,p);
-                         printf ("%d    SETFUNCTION  %d  %d\n", n, c1.w, c2.w);
+                         printf ("%d    SETFUNCTION  %s  %d\n", n, (char *)c1.b, c2.w);
                         }
                         break;
    case SETLINE:
