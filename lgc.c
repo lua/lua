@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.166 2002/12/04 17:38:31 roberto Exp roberto $
+** $Id: lgc.c,v 1.167 2002/12/19 11:11:55 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -110,7 +110,7 @@ static void marktmu (GCState *st) {
 
 
 /* move `dead' udata that need finalization to list `tmudata' */
-static void separateudata (lua_State *L) {
+void luaC_separateudata (lua_State *L) {
   GCObject **p = &G(L)->rootudata;
   GCObject *curr;
   GCObject *collected = NULL;  /* to collect udata with gc event */
@@ -411,7 +411,7 @@ static void do1gcTM (lua_State *L, Udata *udata) {
 }
 
 
-static void callGCTM (lua_State *L) {
+void luaC_callGCTM (lua_State *L) {
   lu_byte oldah = L->allowhook;
   L->allowhook = 0;  /* stop debug hooks during GC tag methods */
   L->top++;  /* reserve space to keep udata while runs its gc method */
@@ -428,12 +428,6 @@ static void callGCTM (lua_State *L) {
   }
   L->top--;
   L->allowhook = oldah;  /* restore hooks */
-}
-
-
-void luaC_callallgcTM (lua_State *L) {
-  separateudata(L);
-  callGCTM(L);  /* call their GC tag methods */
 }
 
 
@@ -469,7 +463,7 @@ static void mark (lua_State *L) {
   wkv = st.wkv;  /* keys must be cleared after preserving udata */
   st.wkv = NULL;
   st.wv = NULL;
-  separateudata(L);  /* separate userdata to be preserved */
+  luaC_separateudata(L);  /* separate userdata to be preserved */
   marktmu(&st);  /* mark `preserved' userdata */
   propagatemarks(&st);  /* remark, to propagate `preserveness' */
   cleartablekeys(wkv);
@@ -485,7 +479,7 @@ void luaC_collectgarbage (lua_State *L) {
   mark(L);
   luaC_sweep(L, 0);
   checkSizes(L);
-  callGCTM(L);
+  luaC_callGCTM(L);
 }
 
 

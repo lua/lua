@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.117 2002/12/04 17:38:31 roberto Exp roberto $
+** $Id: lstate.c,v 1.118 2002/12/19 13:21:08 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -197,10 +197,18 @@ LUA_API lua_State *lua_open (void) {
 }
 
 
+static void callallgcTM (lua_State *L, void *ud) {
+  UNUSED(ud);
+  luaC_callGCTM(L);  /* call GC metamethods for all udata */
+}
+
+
 LUA_API void lua_close (lua_State *L) {
   lua_lock(L);
   L = G(L)->mainthread;  /* only the main thread can be closed */
-  luaC_callallgcTM(L);  /* call GC tag methods for all udata */
+  luaC_separateudata(L);  /* separate udata that have GC metamethods */
+  /* repeat until no more errors */
+  while (luaD_rawrunprotected(L, callallgcTM, NULL) != 0) /* skip */;
   lua_assert(G(L)->tmudata == NULL);
   close_state(L);
 }
