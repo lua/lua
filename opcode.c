@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 2.10 1994/10/17 19:00:40 celes Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 2.11 1994/11/01 17:54:31 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -346,17 +346,15 @@ int lua_execute (Byte *pc)
    break;
    
    case CREATEARRAY:
-    if (tag(top-1) == T_NIL) 
-     nvalue(top-1) = 1;
-    else 
-    {
-     if (tonumber(top-1)) return 1;
-     if (nvalue(top-1) <= 0) nvalue(top-1) = 1;
-    }
-    avalue(top-1) = lua_createarray(nvalue(top-1));
+   {
+    CodeWord size;
+    get_word(size,pc);
+    top++;
+    avalue(top-1) = lua_createarray(size.w);
     if (avalue(top-1) == NULL)
      return 1;
     tag(top-1) = T_ARRAY;
+   }
    break;
    
    case EQOP:

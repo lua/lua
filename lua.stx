@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 2.10 1994/10/17 19:05:32 celes Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 2.11 1994/10/21 19:00:12 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -528,10 +528,8 @@ expr :  '(' expr ')'  { $$ = $2; }
 
 table :
      {
-      code_byte(PUSHWORD);
-      $<vLong>$ = pc; code_word(0);
-      incr_ntemp();
       code_byte(CREATEARRAY);
+      $<vLong>$ = pc; code_word(0);
      }
       '{' fieldlist '}'
      {
@@ -918,7 +916,15 @@ static void PrintCode (Byte *code, Byte *end)
     			printf ("%d    ADJUST   %d\n", p-code, *(++p));
     			p++;
    			break;
-   case CREATEARRAY:	printf ("%d    CREATEARRAY\n", (p++)-code); break;
+   case CREATEARRAY:	
+    {
+      CodeWord c;
+      int n = p-code;
+      p++;
+      get_word(c,p);
+      printf ("%d    CREATEARRAY\n", n, c.w);
+      break;
+    }
    case EQOP:       	printf ("%d    EQOP\n", (p++)-code); break;
    case LTOP:       	printf ("%d    LTOP\n", (p++)-code); break;
    case LEOP:       	printf ("%d    LEOP\n", (p++)-code); break;
