@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.62 2001/02/23 17:17:25 roberto Exp roberto $
+** $Id: lua.c,v 1.63 2001/02/23 17:28:12 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -294,7 +294,7 @@ static int handle_argv (l_char *argv[], struct Options *opt) {
 
 static void getstacksize (int argc, l_char *argv[], struct Options *opt) {
   if (argc >= 2 && argv[1][0] == l_c('-') && argv[1][1] == l_c('s')) {
-    int stacksize = atoi(&argv[1][2]);
+    int stacksize = strtol(&argv[1][2], NULL, 10);
     if (stacksize <= 0) {
       fprintf(stderr, l_s("lua: invalid stack size ('%.20s')\n"), &argv[1][2]);
       exit(EXIT_FAILURE);
