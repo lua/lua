@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.19 2000/05/15 19:48:04 roberto Exp roberto $
+** $Id: ltests.c,v 1.20 2000/05/22 18:44:46 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -246,10 +246,6 @@ static void testC (lua_State *L) {
       int n = getreg(L, &pc);
       reg[n] = lua_getglobal(L, getname(&pc));
     }
-    else if EQ("rawgetglobal") {
-      int n = getreg(L, &pc);
-      reg[n] = lua_rawgetglobal(L, getname(&pc));
-    }
     else if EQ("ref") {
       lua_pushnumber(L, lua_ref(L, 0));
       reg[getreg(L, &pc)] = lua_pop(L);
@@ -276,8 +272,8 @@ static void testC (lua_State *L) {
     else if EQ("setglobal") {
       lua_setglobal(L, getname(&pc));
     }
-    else if EQ("rawsetglobal") {
-      lua_rawsetglobal(L, getname(&pc));
+    else if EQ("pushglobals") {
+      lua_pushglobaltable(L);
     }
     else if EQ("pushstring") {
       lua_pushstring(L, getname(&pc));
@@ -291,14 +287,14 @@ static void testC (lua_State *L) {
     else if EQ("gettable") {
       reg[getreg(L, &pc)] = lua_gettable(L);
     }
-    else if EQ("rawgettable") {
-      reg[getreg(L, &pc)] = lua_rawgettable(L);
+    else if EQ("rawget") {
+      reg[getreg(L, &pc)] = lua_rawget(L);
     }
     else if EQ("settable") {
       lua_settable(L);
     }
-    else if EQ("rawsettable") {
-      lua_rawsettable(L);
+    else if EQ("rawset") {
+      lua_rawset(L);
     }
     else if EQ("tag") {
       lua_pushnumber(L, lua_tag(L, reg[getreg(L, &pc)]));
@@ -360,6 +356,15 @@ static void testC (lua_State *L) {
       while ((temp = lua_getresult(L1, i++)) != LUA_NOOBJECT)
         lua_pushstring(L, lua_getstring(L1, temp));
     }
+#if LUA_DEPRECATETFUNCS
+    else if EQ("rawsetglobal") {
+      lua_rawsetglobal(L, getname(&pc));
+    }
+    else if EQ("rawgetglobal") {
+      int n = getreg(L, &pc);
+      reg[n] = lua_rawgetglobal(L, getname(&pc));
+    }
+#endif
     else luaL_verror(L, "unknown command in `testC': %.20s", inst);
   }
 }

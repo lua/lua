@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.63 2000/05/09 14:50:16 roberto Exp roberto $
+** $Id: liolib.c,v 1.64 2000/05/24 13:54:49 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -73,8 +73,10 @@ static void atribTM (lua_State *L) {
     ctrl->file[inout] = (FILE *)lua_getuserdata(L, newvalue);
   }
   /* set the actual variable */
+  lua_pushglobaltable(L);
+  lua_pushstring(L, varname);
   lua_pushobject(L, newvalue);
-  lua_rawsetglobal(L, varname);
+  lua_rawset(L);
 }
 
 
@@ -541,7 +543,7 @@ static void errorfb (lua_State *L) {
   char buff[MAXMESSAGE];
   int level = 1;  /* skip level 0 (it's this function) */
   lua_Debug ar;
-  lua_Object alertfunc = lua_rawgetglobal(L, LUA_ALERT);
+  lua_Object alertfunc;
   sprintf(buff, "error: %.200s\n", lua_getstring(L, lua_getparam(L, 1)));
   while (lua_getstack(L, level++, &ar)) {
     char buffchunk[60];
@@ -580,6 +582,9 @@ static void errorfb (lua_State *L) {
       sprintf(buff+strlen(buff), " [%.70s]", buffchunk);
     strcat(buff, "\n");
   }
+  lua_pushglobaltable(L);
+  lua_pushstring(L, LUA_ALERT);
+  alertfunc = lua_rawget(L);
   if (lua_isfunction(L, alertfunc)) {  /* avoid loop if _ALERT is not defined */
     lua_pushstring(L, buff);
     lua_callfunction(L, alertfunc);

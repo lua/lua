@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.52 2000/05/10 16:35:18 roberto Exp roberto $
+** $Id: lua.h,v 1.53 2000/05/24 13:54:49 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -101,13 +101,12 @@ lua_Object     lua_pop (lua_State *L);
 
 lua_Object     lua_getglobal (lua_State *L, const char *name);
 void           lua_setglobal (lua_State *L, const char *name); /* In: value */
-lua_Object     lua_rawgetglobal (lua_State *L, const char *name);
-void           lua_rawsetglobal (lua_State *L, const char *name);/* In: value */
 
 void           lua_settable (lua_State *L); /* In: table, index, value */
-void           lua_rawsettable (lua_State *L); /* In: table, index, value */
 lua_Object     lua_gettable (lua_State *L); /* In: table, index */
-lua_Object     lua_rawgettable (lua_State *L); /* In: table, index */
+
+void           lua_rawset (lua_State *L); /* In: table, index, value */
+lua_Object     lua_rawget (lua_State *L); /* In: table, index */
 
 int            lua_tag (lua_State *L, lua_Object obj);
 
@@ -156,7 +155,7 @@ long	       lua_collectgarbage (lua_State *L, long limit);
 
 #ifndef LUA_REENTRANT
 /* 
-** ===============================================================
+** {==============================================================
 ** Macros for single-state use
 ** ===============================================================
 */
@@ -205,12 +204,10 @@ extern lua_State *lua_state;
 #define lua_pop()		(lua_pop)(lua_state)
 #define lua_getglobal(name)	(lua_getglobal)(lua_state, name)
 #define lua_setglobal(name)	(lua_setglobal)(lua_state, name)
-#define lua_rawgetglobal(name)	(lua_rawgetglobal)(lua_state, name)
-#define lua_rawsetglobal(name)	(lua_rawsetglobal)(lua_state, name)
 #define lua_settable()		(lua_settable)(lua_state)
-#define lua_rawsettable()	(lua_rawsettable)(lua_state)
 #define lua_gettable()		(lua_gettable)(lua_state)
-#define lua_rawgettable()	(lua_rawgettable)(lua_state)
+#define lua_rawset()		(lua_rawset)(lua_state)
+#define lua_rawget()		(lua_rawget)(lua_state)
 #define lua_tag(obj)		(lua_tag)(lua_state, obj)
 #define lua_next(o,i)		(lua_next)(lua_state, o,i)
 #define lua_ref(lock)		(lua_ref)(lua_state, lock)
@@ -225,11 +222,31 @@ extern lua_State *lua_state;
 #define lua_pushcclosure(fn,n) \
 		(lua_pushcclosure)(lua_state, (lua_CFunction)(fn), n)
 
+
+/*
+** }==============================================================
+*/
+#endif
+
+/*
+** compatibility with 3.2
+** these functions are only available when Lua is compiled with 
+** the option LUA_DEPRECATETFUNCS
+*/
+
+#define lua_rawsettable		lua_rawset
+#define lua_rawgettable		lua_rawget
+
+lua_Object     lua_rawgetglobal (lua_State *L, const char *name);
+void           lua_rawsetglobal (lua_State *L, const char *name);/* In: value */
+
+#ifndef LUA_REENTRANT
+#define lua_rawgetglobal(name)	(lua_rawgetglobal(lua_state, name))
+#define lua_rawsetglobal(name)	(lua_rawsetglobal(lua_state, name))
 #endif
 
 
 #endif
-
 
 
 

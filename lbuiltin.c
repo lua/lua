@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.109 2000/05/09 14:50:16 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.110 2000/05/24 13:54:49 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -106,7 +106,10 @@ void luaB__ALERT (lua_State *L) {
 ** The library `liolib' redefines _ERRORMESSAGE for better error information.
 */
 void luaB__ERRORMESSAGE (lua_State *L) {
-  lua_Object al = lua_rawgetglobal(L, LUA_ALERT);
+  lua_Object al;
+  lua_pushglobaltable(L);
+  lua_pushstring(L, LUA_ALERT);
+  al = lua_rawget(L);
   if (lua_isfunction(L, al)) {  /* avoid error loop if _ALERT is not defined */
     const char *s = luaL_check_string(L, 1);
     char *buff = luaL_openspace(L, strlen(s)+sizeof("error: \n"));
@@ -214,17 +217,17 @@ void luaB_globals (lua_State *L) {
     lua_setglobaltable(L, luaL_tablearg(L, 1));
 }
 
-void luaB_rawgettable (lua_State *L) {
+void luaB_rawget (lua_State *L) {
   lua_pushobject(L, luaL_nonnullarg(L, 1));
   lua_pushobject(L, luaL_nonnullarg(L, 2));
-  lua_pushobject(L, lua_rawgettable(L));
+  lua_pushobject(L, lua_rawget(L));
 }
 
-void luaB_rawsettable (lua_State *L) {
+void luaB_rawset (lua_State *L) {
   lua_pushobject(L, luaL_nonnullarg(L, 1));
   lua_pushobject(L, luaL_nonnullarg(L, 2));
   lua_pushobject(L, luaL_nonnullarg(L, 3));
-  lua_rawsettable(L);
+  lua_rawset(L);
 }
 
 void luaB_settagmethod (lua_State *L) {
@@ -399,44 +402,6 @@ void luaB_assert (lua_State *L) {
 }
 
 
-void luaB_foreachi (lua_State *L) {
-  const Hash *t = gettable(L, 1);
-  int n = (int)getnarg(L, t);
-  int i;
-  lua_Object f = luaL_functionarg(L, 2);
-  luaD_checkstack(L, 3);  /* for f, key, and val */
-  for (i=1; i<=n; i++) {
-    *(L->top++) = *f;
-    ttype(L->top) = TAG_NUMBER; nvalue(L->top++) = i;
-    *(L->top++) = *luaH_getnum(t, i);
-    luaD_call(L, L->top-3, 1);
-    if (ttype(L->top-1) != TAG_NIL)
-      return;
-    L->top--;  /* remove nil result */
-  }
-}
-
-
-void luaB_foreach (lua_State *L) {
-  const Hash *a = gettable(L, 1);
-  lua_Object f = luaL_functionarg(L, 2);
-  int i;
-  luaD_checkstack(L, 3);  /* for f, key, and val */
-  for (i=0; i<a->size; i++) {
-    const Node *nd = &(a->node[i]);
-    if (ttype(val(nd)) != TAG_NIL) {
-      *(L->top++) = *f;
-      *(L->top++) = *key(nd);
-      *(L->top++) = *val(nd);
-      luaD_call(L, L->top-3, 1);
-      if (ttype(L->top-1) != TAG_NIL)
-        return;
-      L->top--;  /* remove result */
-    }
-  }
-}
-
-
 void luaB_getn (lua_State *L) {
   lua_pushnumber(L, getnarg(L, gettable(L, 1)));
 }
@@ -562,21 +527,70 @@ void luaB_sort (lua_State *L) {
 /* }====================================================== */
 
 
+
 /*
 ** {======================================================
 ** Deprecated functions to manipulate global environment:
-** all of them can be simulated through table operations
+** some of them can be simulated through table operations
 ** over the global table.
 ** =======================================================
 */
+
+
+#ifdef LUA_DEPRECATETFUNCS
+
+static void luaB_foreachi (lua_State *L) {
+  const Hash *t = gettable(L, 1);
+  int n = (int)getnarg(L, t);
+  int i;
+  lua_Object f = luaL_functionarg(L, 2);
+  luaD_checkstack(L, 3);  /* for f, key, and val */
+  for (i=1; i<=n; i++) {
+    *(L->top++) = *f;
+    ttype(L->top) = TAG_NUMBER; nvalue(L->top++) = i;
+    *(L->top++) = *luaH_getnum(t, i);
+    luaD_call(L, L->top-3, 1);
+    if (ttype(L->top-1) != TAG_NIL)
+      return;
+    L->top--;  /* remove nil result */
+  }
+}
+
+
+static void luaB_foreach (lua_State *L) {
+  const Hash *a = gettable(L, 1);
+  lua_Object f = luaL_functionarg(L, 2);
+  int i;
+  luaD_checkstack(L, 3);  /* for f, key, and val */
+  for (i=0; i<a->size; i++) {
+    const Node *nd = &(a->node[i]);
+    if (ttype(val(nd)) != TAG_NIL) {
+      *(L->top++) = *f;
+      *(L->top++) = *key(nd);
+      *(L->top++) = *val(nd);
+      luaD_call(L, L->top-3, 1);
+      if (ttype(L->top-1) != TAG_NIL)
+        return;
+      L->top--;  /* remove result */
+    }
+  }
+}
 
 #define num_deprecated	4
 
 static const struct luaL_reg deprecated_global_funcs[num_deprecated] = {
   {"foreachvar", luaB_foreach},
   {"nextvar", luaB_next},
-  {"rawgetglobal", luaB_rawgettable},
-  {"rawsetglobal", luaB_rawsettable}
+  {"rawgetglobal", luaB_rawget},
+  {"rawsetglobal", luaB_rawset}
+};
+
+
+static const struct luaL_reg other_deprecated_global_funcs[] = {
+  {"foreach", luaB_foreach},
+  {"foreachi", luaB_foreachi},
+  {"rawgettable", luaB_rawget},
+  {"rawsettable", luaB_rawset}
 };
 
 
@@ -591,7 +605,37 @@ static void deprecated_funcs (lua_State *L) {
     lua_pushcclosure(L, deprecated_global_funcs[i].func, 1);
     lua_setglobal(L, deprecated_global_funcs[i].name);
   }
+  luaL_openl(L, other_deprecated_global_funcs);
 }
+
+#else
+
+/*
+** gives an explicit error in any attempt to call an obsolet function
+*/
+static void obsolete_func (lua_State *L) {
+  luaL_verror(L, "function `%.20s' is obsolete", luaL_check_string(L, 1));
+}
+
+
+#define num_deprecated	8
+
+static const char *const obsolete_names [num_deprecated] = {
+  "foreach", "foreachi", "foreachvar", "nextvar", "rawgetglobal",
+  "rawgettable", "rawsetglobal", "rawsettable"
+};
+
+
+static void deprecated_funcs (lua_State *L) {
+  int i;
+  for (i=0; i<num_deprecated; i++) {
+    lua_pushstring(L, obsolete_names[i]);
+    lua_pushcclosure(L, obsolete_func, 1);
+    lua_setglobal(L, obsolete_names[i]);
+  }
+}
+
+#endif
 
 /* }====================================================== */
 
@@ -610,8 +654,8 @@ static const struct luaL_reg builtin_funcs[] = {
   {"newtag", luaB_newtag},
   {"next", luaB_next},
   {"print", luaB_print},
-  {"rawgettable", luaB_rawgettable},
-  {"rawsettable", luaB_rawsettable},
+  {"rawget", luaB_rawget},
+  {"rawset", luaB_rawset},
   {"setglobal", luaB_setglobal},
   {"settag", luaB_settag},
   {"settagmethod", luaB_settagmethod},
@@ -621,8 +665,6 @@ static const struct luaL_reg builtin_funcs[] = {
   {"type", luaB_type},
 /* "Extra" functions */
   {"assert", luaB_assert},
-  {"foreach", luaB_foreach},
-  {"foreachi", luaB_foreachi},
   {"getn", luaB_getn},
   {"sort", luaB_sort},
   {"tinsert", luaB_tinsert},

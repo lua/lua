@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.h,v 1.7 2000/04/17 19:23:12 roberto Exp roberto $
+** $Id: lbuiltin.h,v 1.8 2000/05/08 19:32:53 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -18,8 +18,6 @@ void luaB_copytagmethods (lua_State *L);
 void luaB_dofile (lua_State *L);
 void luaB_dostring (lua_State *L);
 void luaB_error (lua_State *L);
-void luaB_foreach (lua_State *L);
-void luaB_foreachi (lua_State *L);
 void luaB_getglobal (lua_State *L);
 void luaB_getn (lua_State *L);
 void luaB_gettagmethod (lua_State *L);
@@ -27,8 +25,8 @@ void luaB_globals (lua_State *L);
 void luaB_newtag (lua_State *L);
 void luaB_next (lua_State *L);
 void luaB_print (lua_State *L);
-void luaB_rawgettable (lua_State *L);
-void luaB_rawsettable (lua_State *L);
+void luaB_rawget (lua_State *L);
+void luaB_rawset (lua_State *L);
 void luaB_setglobal (lua_State *L);
 void luaB_settag (lua_State *L);
 void luaB_settagmethod (lua_State *L);

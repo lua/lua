@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.80 2000/05/08 20:49:05 roberto Exp roberto $
+** $Id: lapi.c,v 1.81 2000/05/24 13:54:49 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -120,11 +120,11 @@ lua_Object lua_gettable (lua_State *L) {
 }
 
 
-lua_Object lua_rawgettable (lua_State *L) {
+lua_Object lua_rawget (lua_State *L) {
   lua_Object res;
   luaA_checkCargs(L, 2);
   if (ttype(L->top-2) != TAG_TABLE)
-    lua_error(L, "indexed expression not a table in rawgettable");
+    lua_error(L, "indexed expression not a table");
   res = luaA_putluaObject(L, luaH_get(L, avalue(L->top-2), L->top-1));
   L->top -= 2;
   return res;
@@ -140,7 +140,7 @@ void lua_settable (lua_State *L) {
 }
 
 
-void lua_rawsettable (lua_State *L) {
+void lua_rawset (lua_State *L) {
   luaA_checkCargs(L, 3);
   if (ttype(L->top-3) != TAG_TABLE)
     lua_error(L, "indexed expression not a table");
@@ -167,24 +167,6 @@ lua_Object lua_getglobal (lua_State *L, const char *name) {
 void lua_setglobal (lua_State *L, const char *name) {
   luaA_checkCargs(L, 1);
   luaV_setglobal(L, luaS_new(L, name), L->top--);
-}
-
-
-/* deprecated */
-lua_Object lua_rawgetglobal (lua_State *L, const char *name) {
-  lua_pushglobaltable(L);
-  lua_pushstring(L, name);
-  return lua_rawgettable(L);
-}
-
-
-/* deprecated */
-void lua_rawsetglobal (lua_State *L, const char *name) {
-  TObject key;
-  luaA_checkCargs(L, 1);
-  ttype(&key) = TAG_STRING;
-  tsvalue(&key) = luaS_new(L, name);
-  luaH_set(L, L->gt, &key, --L->top);
 }
 
 
@@ -376,3 +358,29 @@ int lua_next (lua_State *L, lua_Object t, int i) {
 }
 
 
+
+#if LUA_DEPRECATETFUNCS
+
+/*
+** obsolete functions
+*/
+
+lua_Object lua_rawgetglobal (lua_State *L, const char *name) {
+  lua_pushglobaltable(L);
+  lua_pushstring(L, name);
+  return lua_rawget(L);
+}
+
+
+void lua_rawsetglobal (lua_State *L, const char *name) {
+  lua_Object value;
+  lua_beginblock(L);
+  value = lua_pop(L);
+  lua_pushglobaltable(L);
+  lua_pushstring(L, name);
+  lua_pushobject(L, value);
+  lua_rawset(L);
+  lua_endblock(L);
+}
+
+#endif
