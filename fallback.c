@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.19 1996/02/08 19:08:34 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.20 1996/02/22 20:34:33 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -116,12 +116,12 @@ static void funcFB (void)
 */
 
 static Object *lockArray = NULL;
-static Word lockSize = 0;
+static int lockSize = 0;
 
 int luaI_lock (Object *object)
 {
-  Word i;
-  Word oldSize;
+  int i;
+  int oldSize;
   if (tag(object) == LUA_T_NIL)
     return -1;   /* special lock ref for nil */
   for (i=0; i<lockSize; i++)
@@ -160,7 +160,7 @@ Object *luaI_getlocked (int ref)
 
 void luaI_travlock (int (*fn)(Object *))
 {
-  Word i;
+  int i;
   for (i=0; i<lockSize; i++)
     fn(&lockArray[i]);
 }
@@ -168,7 +168,7 @@ void luaI_travlock (int (*fn)(Object *))
 
 char *luaI_travfallbacks (int (*fn)(Object *))
 {
-  Word i;
+  int i;
   for (i=0; i<N_FB; i++)
     if (fn(&luaI_fallBacks[i].function))
       return luaI_fallBacks[i].kind;
