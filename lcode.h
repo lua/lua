@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.10 2000/04/05 17:51:58 roberto Exp roberto $
+** $Id: lcode.h,v 1.11 2000/04/07 19:35:20 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -13,7 +13,11 @@
 #include "lparser.h"
 
 
-#define NO_JUMP (-1)            /* marks end of patch list */
+/*
+** Marks the end of a patch list. It is an invalid value both as an absolute
+** address, and as a list link (would link an element to itself).
+*/
+#define NO_JUMP (-1)
 
 
 void luaK_error (LexState *ls, const char *msg);
