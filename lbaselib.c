@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.160 2004/11/18 19:53:49 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.161 2004/12/06 17:53:42 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -396,18 +396,8 @@ static int luaB_tostring (lua_State *L) {
     case LUA_TNIL:
       lua_pushliteral(L, "nil");
       break;
-    case LUA_TTABLE:
-      lua_pushfstring(L, "table: %p", lua_topointer(L, 1));
-      break;
-    case LUA_TFUNCTION:
-      lua_pushfstring(L, "function: %p", lua_topointer(L, 1));
-      break;
-    case LUA_TUSERDATA:
-    case LUA_TLIGHTUSERDATA:
-      lua_pushfstring(L, "userdata: %p", lua_topointer(L, 1));
-      break;
-    case LUA_TTHREAD:
-      lua_pushfstring(L, "thread: %p", lua_topointer(L, 1));
+    default:
+      lua_pushfstring(L, "%s: %p", luaL_typename(L, 1), lua_topointer(L, 1));
       break;
   }
   return 1;
