@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.51 1996/03/21 18:54:29 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.52 1996/04/22 18:00:37 roberto Exp $";
 
 #include "mem.h"
 #include "opcode.h"
@@ -27,8 +27,7 @@ Word lua_nconstant = 0;
 static Long lua_maxconstant = 0;
 
 
-#define GARBAGE_BLOCK 1024
-#define MIN_GARBAGE_BLOCK (GARBAGE_BLOCK/2)
+#define GARBAGE_BLOCK 50
 
 static void lua_nextvar (void);
 
@@ -209,14 +208,13 @@ Long luaI_collectgarbage (void)
 
 void lua_pack (void)
 {
-  static Long block = GARBAGE_BLOCK; /* when garbage collector will be called */
-  static Long nentity = 0;  /* counter of new entities (strings and arrays) */
-  Long recovered = 0;
+  static unsigned long block = GARBAGE_BLOCK;
+  static unsigned long nentity = 0;  /* total of strings, arrays, etc */
+  unsigned long recovered = 0;
   if (nentity++ < block) return;
   recovered = luaI_collectgarbage();
-  nentity = 0;				/* reset counter */
-  block=(16*block-7*recovered)/12;	/* adapt block size */
-  if (block < MIN_GARBAGE_BLOCK) block = MIN_GARBAGE_BLOCK;
+  block = block*2*(1.0 - (float)recovered/nentity);
+  nentity -= recovered;
 } 
 
 
