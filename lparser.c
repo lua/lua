@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.1 1998/05/27 13:08:34 roberto Exp roberto $
+** $Id: lparser.c,v 1.2 1998/06/24 14:48:15 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -112,7 +112,7 @@ static void body (LexState *ls, int needself, int line);
 static void chunk (LexState *ls);
 static void constructor (LexState *ls);
 static void decinit (LexState *ls, listdesc *d);
-static void exp (LexState *ls, vardesc *v);
+static void exp0 (LexState *ls, vardesc *v);
 static void exp1 (LexState *ls);
 static void exp2 (LexState *ls, vardesc *v);
 static void explist (LexState *ls, listdesc *e);
@@ -889,14 +889,14 @@ typedef struct {
 
 static void exp1 (LexState *ls) {
   vardesc v;
-  exp(ls, &v);
+  exp0(ls, &v);
   lua_pushvar(ls, &v);
   if (is_in(ls->token, expfollow) < 0)
     luaX_error(ls, "ill formed expression");
 }
 
 
-static void exp (LexState *ls, vardesc *v) {
+static void exp0 (LexState *ls, vardesc *v) {
   exp2(ls, v);
   while (ls->token == AND || ls->token == OR) {
     int is_and = (ls->token == AND);
@@ -960,9 +960,9 @@ static void exp2 (LexState *ls, vardesc *v) {
 static void simpleexp (LexState *ls, vardesc *v) {
   check_debugline(ls);
   switch (ls->token) {
-    case '(':  /* simpleexp -> '(' exp ')' */
+    case '(':  /* simpleexp -> '(' exp0 ')' */
       next(ls);
-      exp(ls, v);
+      exp0(ls, v);
       check(ls, ')');
       break;
 
@@ -1104,13 +1104,13 @@ static void explist (LexState *ls, listdesc *d) {
 
 static void explist1 (LexState *ls, listdesc *d) {
   vardesc v;
-  exp(ls, &v);
+  exp0(ls, &v);
   d->n = 1;
   while (ls->token == ',') {
     d->n++;
     lua_pushvar(ls, &v);
     next(ls);
-    exp(ls, &v);
+    exp0(ls, &v);
   }
   if (v.k == VEXP)
     d->pc = v.info;
@@ -1241,7 +1241,7 @@ static void part (LexState *ls, constdesc *cd) {
 
     case NAME: {
       vardesc v;
-      exp(ls, &v);
+      exp0(ls, &v);
       if (ls->token == '=') {
         switch (v.k) {
           case VGLOBAL:
