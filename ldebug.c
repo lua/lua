@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.18 2000/05/08 20:49:05 roberto Exp roberto $
+** $Id: ldebug.c,v 1.19 2000/05/12 19:49:18 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -125,7 +125,7 @@ int lua_setlocal (lua_State *L, const lua_Debug *ar, lua_Localvar *v) {
   Proto *fp = getluaproto(f);
   if (!fp) return 0;  /* `f' is not a Lua function? */
   v->name = luaF_getlocalname(fp, v->index, lua_currentline(L, f));
-  if (!v->name) return 0;
+  if (!v->name || v->name[0] == '*') return 0;  /* `*' starts private locals */
   LUA_ASSERT(L, ttype(f+1) == TAG_LINE, "");
   *((f+2)+(v->index-1)) = *v->value;
   return 1;
