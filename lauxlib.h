@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.64 2004/05/03 12:28:43 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.65 2004/05/31 19:27:14 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -14,6 +14,9 @@
 
 #include "lua.h"
 
+
+/* extra error code for `luaL_load' */
+#define LUA_ERRFILE     (LUA_ERRERR+1)
 
 
 typedef struct luaL_reg {
@@ -111,6 +114,20 @@ LUALIB_API void luaL_pushresult (luaL_Buffer *B);
 
 
 /* }====================================================== */
+
+
+/* compatibility with ref system */
+
+/* pre-defined references */
+#define LUA_NOREF       (-2)
+#define LUA_REFNIL      (-1)
+
+#define lua_ref(L,lock) ((lock) ? luaL_ref(L, LUA_REGISTRYINDEX) : \
+      (lua_pushstring(L, "unlocked references are obsolete"), lua_error(L), 0))
+
+#define lua_unref(L,ref)        luaL_unref(L, LUA_REGISTRYINDEX, (ref))
+
+#define lua_getref(L,ref)       lua_rawgeti(L, LUA_REGISTRYINDEX, ref)
 
 
 #endif

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.189 2004/04/30 20:13:38 roberto Exp roberto $
+** $Id: lua.h,v 1.190 2004/05/31 19:41:52 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -37,12 +37,11 @@
 #define lua_upvalueindex(i)	(LUA_GLOBALSINDEX-(i))
 
 
-/* error codes for `lua_load' and `lua_pcall' */
+/* error codes for `lua_pcall' */
 #define LUA_ERRRUN	1
-#define LUA_ERRFILE	2
-#define LUA_ERRSYNTAX	3
-#define LUA_ERRMEM	4
-#define LUA_ERRERR	5
+#define LUA_ERRSYNTAX	2
+#define LUA_ERRMEM	3
+#define LUA_ERRERR	4
 
 
 typedef struct lua_State lua_State;
@@ -280,20 +279,6 @@ LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud);
 #define lua_getregistry(L)	lua_pushvalue(L, LUA_REGISTRYINDEX)
 
 #define lua_getgccount(L)	lua_gc(L, LUA_GCCOUNT, 0)
-
-
-/* compatibility with ref system */
-
-/* pre-defined references */
-#define LUA_NOREF	(-2)
-#define LUA_REFNIL	(-1)
-
-#define lua_ref(L,lock)	((lock) ? luaL_ref(L, LUA_REGISTRYINDEX) : \
-      (lua_pushstring(L, "unlocked references are obsolete"), lua_error(L), 0))
-
-#define lua_unref(L,ref)	luaL_unref(L, LUA_REGISTRYINDEX, (ref))
-
-#define lua_getref(L,ref)	lua_rawgeti(L, LUA_REGISTRYINDEX, ref)
 
 
 
