@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.39 1997/04/04 22:24:51 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.40 1997/04/06 14:08:08 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -24,7 +24,7 @@ struct lbuff {
 static struct lbuff lbuffer = {NULL, 0, 0};
 
 
-static char *luaL_strbuffer (unsigned long size)
+static char *strbuffer (unsigned long size)
 {
   if (size > lbuffer.max) {
     /* ANSI "realloc" doesn't need this test, but some machines (Sun!)
@@ -39,14 +39,14 @@ static char *luaL_strbuffer (unsigned long size)
 
 static char *openspace (unsigned long size)
 {
-  char *buff = luaL_strbuffer(lbuffer.size+size);
+  char *buff = strbuffer(lbuffer.size+size);
   return buff+lbuffer.size;
 }
 
 char *luaI_addchar (int c)
 {
   if (lbuffer.size >= lbuffer.max)
-    luaL_strbuffer(lbuffer.max == 0 ? 100 : lbuffer.max*2);
+    strbuffer(lbuffer.max == 0 ? 100 : lbuffer.max*2);
   lbuffer.b[lbuffer.size++] = c;
   return lbuffer.b;
 }
@@ -79,7 +79,7 @@ static void str_tok (void)
   lua_Object t = lua_createtable();
   int i = 1;
   /* As strtok changes s1, and s1 is "constant",  make a copy of it */
-  s1 = strcpy(luaL_strbuffer(strlen(s1+1)), s1);
+  s1 = strcpy(strbuffer(strlen(s1+1)), s1);
   while ((s1 = strtok(s1, del)) != NULL) {
     lua_pushobject(t);
     lua_pushnumber(i++);
