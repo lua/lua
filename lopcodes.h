@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.2 1997/09/19 18:40:32 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,8 @@ PUSHLOCAL7,/*		-		LOC[7]  */
 PUSHLOCAL8,/*		-		LOC[8]  */
 PUSHLOCAL9,/*		-		LOC[9]  */
 PUSHLOCAL,/*	b	-		LOC[b]  */
-PUSHGLOBAL,/*	w	-		VAR[w]  */
+PUSHGLOBALB,/*	b 	-		VAR[CNST[b]]  */
+PUSHGLOBAL,/*	w	-		VAR[CNST[w]]  */
 GETTABLE,/*		i t		t[i]  */
 PUSHSELF,/*	w	t		t t[CNST[w]]  */
 CREATEARRAY,/*	w	-		newarray(size = w)  */
@@ -51,8 +52,9 @@ SETLOCAL7,/*		x		-		LOC[7]=x  */
 SETLOCAL8,/*		x		-		LOC[8]=x  */
 SETLOCAL9,/*		x		-		LOC[9]=x  */
 SETLOCAL,/*	b	x		-		LOC[b]=x  */
-SETGLOBAL,/*	w	x		-		VAR[w]=x  */
-SETTABLE0,/*	v i t		-		t[i]=v  */
+SETGLOBALB,/*	b	x		-		VAR[CNST[b]]=x  */
+SETGLOBAL,/*	w	x		-		VAR[CNST[w]]=x  */
+SETTABLE0,/*		v i t		-		t[i]=v  */
 SETTABLE,/*	b	v a_b...a_1 i t	a_b...a_1 i t	t[i]=v  */
 SETLIST0,/*	b	v_b...v_1 t	-		t[i]=v_i  */
 SETLIST,/*	b c	v_b...v_1 t	-		t[i+c*FPF]=v_i  */

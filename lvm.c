@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
+** $Id: lvm.c,v 1.2 1997/09/19 18:40:32 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -326,8 +326,12 @@ StkId luaV_execute (Closure *cl, StkId base)
         *luaD_stack.top++ = *((luaD_stack.stack+base) + (*pc++));
         break;
 
+      case PUSHGLOBALB:
+        luaV_getglobal(luaG_findsymbol(tsvalue(&func->consts[*pc++])));
+        break;
+
       case PUSHGLOBAL:
-        luaV_getglobal(get_word(pc));
+        luaV_getglobal(luaG_findsymbol(tsvalue(&func->consts[get_word(pc)])));
         break;
 
       case GETTABLE:
@@ -369,8 +373,12 @@ StkId luaV_execute (Closure *cl, StkId base)
       case SETLOCAL:
         *((luaD_stack.stack+base) + (*pc++)) = *(--luaD_stack.top); break;
 
+      case SETGLOBALB:
+        luaV_setglobal(luaG_findsymbol(tsvalue(&func->consts[*pc++])));
+        break;
+
       case SETGLOBAL:
-        luaV_setglobal(get_word(pc));
+        luaV_setglobal(luaG_findsymbol(tsvalue(&func->consts[get_word(pc)])));
         break;
 
       case SETTABLE0:

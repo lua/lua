@@ -1,6 +1,6 @@
 %{
 /*
-** $Id: lua.stx,v 1.1 1997/09/16 19:33:21 roberto Exp roberto $
+** $Id: lua.stx,v 1.2 1997/09/19 18:40:32 roberto Exp roberto $
 ** Syntax analizer and code generator
 ** See Copyright Notice in lua.h
 */
@@ -11,7 +11,6 @@
 #include "lauxlib.h"
 #include "ldo.h"
 #include "lfunc.h"
-#include "lglobal.h"
 #include "llex.h"
 #include "lmem.h"
 #include "lopcodes.h"
@@ -51,7 +50,7 @@ typedef long vardesc;
 
 
 /* state needed to generate code for a given function */
-static struct State {
+typedef struct State {
   TProtoFunc *f;  /* current function header */
   int pc;  /* next position to code */
   TaggedString *localvar[MAXLOCALS];  /* store local variable names */
@@ -64,7 +63,9 @@ static struct State {
   int maxconsts;  /* size of f->consts */
   vardesc varbuffer[MAXVAR];  /* variables in an assignment list */
   vardesc upvalues[MAXUPVALUES];  /* upvalues */
-} *mainState, *currState;
+} State;
+
+static State *mainState, *currState;
 
 
 
@@ -160,25 +161,24 @@ static void code_constant (int c)
 }
 
 
-static int next_constant (void)
+static int next_constant (State *cs)
 {
-  TProtoFunc *f = currState->f;
-  if (f->nconsts >= currState->maxconsts) {
-    currState->maxconsts =
-      luaM_growvector(&f->consts, currState->maxconsts, TObject,
-                 constantEM, MAX_WORD);
+  TProtoFunc *f = cs->f;
+  if (f->nconsts >= cs->maxconsts) {
+    cs->maxconsts = luaM_growvector(&f->consts, cs->maxconsts, TObject,
+                                    constantEM, MAX_WORD);
   }
   return f->nconsts++;
 }
 
 
-static int string_constant (TaggedString *s)
+static int string_constant (TaggedString *s, State *cs)
 {
-  TProtoFunc *f = currState->f;
+  TProtoFunc *f = cs->f;
   int c = s->u.s.constindex;
   if (!(0 <= c && c < f->nconsts &&
       ttype(&f->consts[c]) == LUA_T_STRING && tsvalue(&f->consts[c]) == s)) {
-    c = next_constant();
+    c = next_constant(cs);
     ttype(&f->consts[c]) = LUA_T_STRING;
     tsvalue(&f->consts[c]) = s;
     s->u.s.constindex = c;  /* hint for next time */
@@ -189,7 +189,7 @@ static int string_constant (TaggedString *s)
 
 static void code_string (TaggedString *s)
 {
-  code_constant(string_constant(s));
+  code_constant(string_constant(s, currState));
 }
 
 
@@ -205,7 +205,7 @@ static int real_constant (real r)
       return c;
   }
   /* not found; create a luaM_new entry */
-  c = next_constant();
+  c = next_constant(currState);
   cnt = currState->f->consts;  /* 'next_constant' may reallocate this vector */
   ttype(&cnt[c]) = LUA_T_NUMBER;
   nvalue(&cnt[c]) = r;
@@ -297,7 +297,7 @@ static void add_varbuffer (vardesc var, int n)
 }
 
 
-static int aux_localname (TaggedString *n, struct State *st)
+static int aux_localname (TaggedString *n, State *st)
 {
   int i;
   for (i=st->nlocalvar-1; i >= 0; i--)
@@ -306,7 +306,7 @@ static int aux_localname (TaggedString *n, struct State *st)
 }
 
 
-static vardesc singlevar (TaggedString *n, struct State *st)
+static vardesc singlevar (TaggedString *n, State *st)
 {
   int i = aux_localname(n, st);
   if (i == -1) {  /* check shadowing */
@@ -314,7 +314,7 @@ static vardesc singlevar (TaggedString *n, struct State *st)
     for (l=1; l<=(st-mainState); l++)
       if (aux_localname(n, st-l) >= 0)
         luaY_syntaxerror("cannot access a variable in outer scope", n->str);
-    return luaG_findsymbol(n)+1;  /* positive value */
+    return string_constant(n, st)+1;  /* positive value */
   }
   else return -(i+1);  /* negative value */
 }
@@ -427,8 +427,15 @@ static void code_args (int dots)
 static void lua_pushvar (vardesc number)
 {
   if (number > 0) {  /* global var */
-    code_push(PUSHGLOBAL);
-    code_word(number-1);
+    number--;
+    if (number <= 255) {
+      code_push(PUSHGLOBALB);
+      code_byte(number);
+    }
+    else {
+      code_push(PUSHGLOBAL);
+      code_word(number);
+    }
   }
   else if (number < 0) {  /* local var */
     number = (-number) - 1;
@@ -450,8 +457,15 @@ static void storevar (vardesc number)
   if (number == 0)  /* indexed var */
     code_opcode(SETTABLE0, -3);
   else if (number > 0) {  /* global var */
-    code_pop(SETGLOBAL);
-    code_word(number-1);
+    number--;
+    if (number <= 255) {
+      code_pop(SETGLOBALB);
+      code_byte(number);
+    }
+    else {
+      code_pop(SETGLOBAL);
+      code_word(number);
+    }
   }
   else {  /* number < 0 - local var */
     number = (-number) - 1;
@@ -516,7 +530,7 @@ static void func_onstack (TProtoFunc *f)
 {
   int i;
   int nupvalues = (currState+1)->f->nupvalues;
-  int c = next_constant();
+  int c = next_constant(currState);
   ttype(&currState->f->consts[c]) = LUA_T_PROTO;
   currState->f->consts[c].value.tf = (currState+1)->f;
   for (i=0; i<nupvalues; i++)
@@ -581,7 +595,7 @@ static TProtoFunc *close_func (void)
 */
 TProtoFunc *luaY_parser (ZIO *z, char *chunkname)
 {
-  struct State state[MAXSTATES];
+  State state[MAXSTATES];
   currState = mainState = &state[0];
   luaX_setinput(z);
   init_state(luaS_new(chunkname));
@@ -788,7 +802,7 @@ funcvalue    : varexp { $$ = 0; }
 	     | varexp ':' NAME
 	     {
                code_push(PUSHSELF);
-	       code_word(string_constant($3));
+	       code_word(string_constant($3, currState));
                $$ = 1;
 	     }
 	     ;
