@@ -1,12 +1,10 @@
 /*
-** $Id: lvm.c,v 1.60 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: lvm.c,v 1.61 1999/09/06 13:55:09 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
 
 
-#include <ctype.h>
-#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,14 +13,12 @@
 #include "ldo.h"
 #include "lfunc.h"
 #include "lgc.h"
-#include "lmem.h"
 #include "lobject.h"
 #include "lopcodes.h"
 #include "lstate.h"
 #include "lstring.h"
 #include "ltable.h"
 #include "ltm.h"
-#include "luadebug.h"
 #include "lvm.h"
 
 
