@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.92 2002/08/05 14:46:02 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.93 2002/08/06 15:32:22 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -78,6 +78,21 @@ static int luaB_tonumber (lua_State *L) {
 static int luaB_error (lua_State *L) {
   luaL_check_any(L, 1);
   return lua_error(L);
+}
+
+
+static int luaB_getmode (lua_State *L) {
+  luaL_check_type(L, 1, LUA_TTABLE);
+  lua_pushstring(L, lua_getmode(L, 1));
+  return 1;
+}
+
+
+static int luaB_setmode (lua_State *L) {
+  luaL_check_type(L, 1, LUA_TTABLE);
+  lua_setmode(L, 1, luaL_check_string(L, 2));
+  lua_settop(L, 1);
+  return 1;
 }
 
 
@@ -460,6 +475,8 @@ static const luaL_reg base_funcs[] = {
   {"setmetatable", luaB_setmetatable},
   {"getglobals", luaB_getglobals},
   {"setglobals", luaB_setglobals},
+  {"getmode", luaB_getmode},
+  {"setmode", luaB_setmode},
   {"next", luaB_next},
   {"ipairs", luaB_ipairs},
   {"pairs", luaB_pairs},
@@ -572,11 +589,7 @@ static void base_open (lua_State *L) {
   /* `newproxy' needs a weaktable as upvalue */
   lua_pushliteral(L, "newproxy");
   lua_newtable(L);  /* new table `w' */
-  lua_pushvalue(L, -1);  /* `w' will be its own metatable */
-  lua_setmetatable(L, -2);
-  lua_pushliteral(L, "__mode");
-  lua_pushliteral(L, "k");
-  lua_rawset(L, -3);  /* metatable(w).__mode = "k" */
+  lua_setmode(L, -1, "k");
   lua_pushcclosure(L, luaB_newproxy, 1);
   lua_rawset(L, -3);  /* set global `newproxy' */
   lua_rawset(L, -1);  /* set global _G */

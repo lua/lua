@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.140 2002/07/17 16:25:13 roberto Exp $
+** $Id: lobject.h,v 1.141 2002/08/05 14:08:02 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -223,8 +223,12 @@ typedef struct Table {
   int sizearray;  /* size of `array' array */
   lu_byte flags;  /* 1<<p means tagmethod(p) is not present */ 
   lu_byte lsizenode;  /* log2 of size of `node' array */
+  lu_byte mode;
 } Table;
 
+/* bit masks for `mode' */
+#define WEAKKEY		1
+#define WEAKVALUE	2
 
 
 /*

@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.114 2002/07/17 16:25:13 roberto Exp $
+** $Id: ltable.c,v 1.115 2002/08/05 14:45:32 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -309,6 +309,7 @@ Table *luaH_new (lua_State *L, int narray, int lnhash) {
   G(L)->roottable = t;
   t->mark = t;
   t->flags = cast(lu_byte, ~0);
+  t->mode = 0;
   /* temporary values (kept only if some malloc fails) */
   t->array = NULL;
   t->sizearray = 0;

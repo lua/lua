@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 1.37 2002/06/25 19:17:22 roberto Exp roberto $
+** $Id: ltm.h,v 1.38 2002/07/01 17:06:58 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -12,12 +12,6 @@
 
 
 /*
-** Important: garbage collection uses two extra bits of `Table.flags'
-** (after TM_MODE), so the maximum number of `fast tag methods' is six
-** (at least while `flags' is a byte).
-*/
-
-/*
 * WARNING: if you change the order of this enumeration,
 * grep "ORDER TM"
 */
@@ -25,8 +19,7 @@ typedef enum {
   TM_INDEX,
   TM_NEWINDEX,
   TM_GC,
-  TM_EQ,
-  TM_MODE,  /* last tag method with `fast' access */
+  TM_EQ,  /* last tag method with `fast' access */
   TM_GETTABLE,
   TM_SETTABLE,
   TM_ADD,
