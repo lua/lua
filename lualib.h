@@ -1,5 +1,5 @@
 /*
-** $Id: lualib.h,v 1.7 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: lualib.h,v 1.8 1999/11/22 13:12:07 roberto Exp roberto $
 ** Lua standard libraries
 ** See Copyright Notice in lua.h
 */
@@ -16,12 +16,10 @@ void lua_mathlibopen (lua_State *L);
 void lua_dblibopen (lua_State *L);
 
 
-void lua_userinit (lua_State *L);
-
 
 /* 
 ** ===============================================================
-** Macros for single-state use
+** Macros (and functions) for single-state use
 ** ===============================================================
 */
 
@@ -31,7 +29,9 @@ void lua_userinit (lua_State *L);
 #define lua_strlibopen()	(lua_strlibopen)(lua_state)
 #define lua_mathlibopen()	(lua_mathlibopen)(lua_state)
 #define lua_dblibopen()		(lua_dblibopen)(lua_state)
-#define lua_userinit()		(lua_userinit)(lua_state)
+
+/* this function should be used only in single-state mode */
+void lua_userinit (void);
 
 #endif
 
