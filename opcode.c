@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.27 1994/12/16 16:08:34 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.28 1994/12/20 21:20:36 roberto Exp celes $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -441,16 +441,10 @@ lua_Object lua_setfallback (char *name, lua_CFunction fallback)
 */
 lua_Object lua_getsubscript (void)
 {
-  static Byte code[2] = {PUSHINDEXED, RETCODE0};
-  int status;
-  Object func;
-  tag(&func) = LUA_T_FUNCTION; bvalue(&func) = code;
   adjustC(2);
-  status = do_protectedrun(&func, 1);
-  if (status == 0)
-    return (Ref(top-1));
-  else
-    return LUA_NOOBJECT;
+  pushsubscript();
+  CBase++;  /* incorporate object in the stack */
+  return (Ref(top-1));
 }
 
 
@@ -487,11 +481,9 @@ void lua_endblock (void)
 */
 int lua_storesubscript (void)
 {
-  static Byte code[2] = {STOREINDEXED0, RETCODE0};
-  Object func;
-  tag(&func) = LUA_T_FUNCTION; bvalue(&func) = code;
   adjustC(3);
-  return(do_protectedrun(&func, 0));
+  storesubscript();
+  return 0;
 }
 
 /*
