@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.18 1998/03/09 21:49:52 roberto Exp roberto $
+** $Id: lobject.h,v 1.19 1998/05/18 22:26:03 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -31,6 +31,11 @@
 #ifndef LUA_NUM_TYPE
 #define LUA_NUM_TYPE double
 #endif
+
+/*
+** format to convert number to strings
+*/
+#define NUMBER_FMT  "%g"
 
 typedef LUA_NUM_TYPE real;
 
