@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.89 1997/03/31 20:59:09 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.90 1997/04/01 19:02:43 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -332,7 +332,7 @@ static void pushsubscript (void)
       }
   }
   else {  /* object is not a table, and/or has a specific "gettable" method */
-    if (im)
+    if (ttype(im) != LUA_T_NIL)
       callIM(im, 2, 1);
     else
       lua_error("indexed expression not a table");
@@ -821,9 +821,17 @@ char *lua_getstring (lua_Object object)
 void *lua_getbinarydata (lua_Object object)
 {
   if (object == LUA_NOOBJECT || ttype(Address(object)) != LUA_T_USERDATA)
-    lua_error("getbinarydata: object is not binary data");
-  return svalue(Address(object));
+    return NULL;
+  else return svalue(Address(object));
 }
+
+void *lua_getuserdata (lua_Object object)
+{
+  void *add = lua_getbinarydata(object);
+  if (add == NULL) return NULL;
+  else return *(void **)add;
+}
+
 
 int lua_getbindatasize (lua_Object object)
 {
