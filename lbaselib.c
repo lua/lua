@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.8 2000/10/02 20:10:55 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.9 2000/10/05 12:14:08 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -433,75 +433,78 @@ static int luaB_tremove (lua_State *L) {
 */
 
 
-static void swap (lua_State *L, int i, int j) {
-  lua_rawgeti(L, 1, i);
-  lua_rawgeti(L, 1, j);
+static void set2 (lua_State *L, int i, int j) {
   lua_rawseti(L, 1, i);
   lua_rawseti(L, 1, j);
 }
 
-static int sort_comp (lua_State *L, int n, int r) {
+static int sort_comp (lua_State *L, int a, int b) {
   /* WARNING: the caller (auxsort) must ensure stack space */
-  int res;
   if (!lua_isnil(L, 2)) {  /* function? */
+    int res;
     lua_pushvalue(L, 2);
-    if (r) {
-      lua_rawgeti(L, 1, n);   /* a[n] */
-      lua_pushvalue(L, -3);  /* pivot */
-    }
-    else {
-      lua_pushvalue(L, -2);  /* pivot */
-      lua_rawgeti(L, 1, n);   /* a[n] */
-    }
+    lua_pushvalue(L, a-1);  /* -1 to compensate function */
+    lua_pushvalue(L, b-2);  /* -2 to compensate function and `a' */
     lua_rawcall(L, 2, 1);
     res = !lua_isnil(L, -1);
+    lua_pop(L, 1);
+    return res;
   }
-  else {  /* a < b? */
-    lua_rawgeti(L, 1, n);   /* a[n] */
-    if (r)  
-      res = lua_lessthan(L, -1, -2);
-    else
-      res = lua_lessthan(L, -2, -1);
-  }
-  lua_pop(L, 1);
-  return res;
+  else  /* a < b? */
+    return lua_lessthan(L, a, b);
 }
 
 static void auxsort (lua_State *L, int l, int u) {
   while (l < u) {  /* for tail recursion */
     int i, j;
-    luaL_checkstack(L, 4, "array too large");
     /* sort elements a[l], a[(l+u)/2] and a[u] */
+    lua_rawgeti(L, 1, l);
     lua_rawgeti(L, 1, u);
-    if (sort_comp(L, l, 0))  /* a[u] < a[l]? */
-      swap(L, l, u);
-    lua_pop(L, 1);
+    if (sort_comp(L, -1, -2))  /* a[u] < a[l]? */
+      set2(L, l, u);  /* swap a[l] - a[u] */
+    else
+      lua_pop(L, 2);
     if (u-l == 1) break;  /* only 2 elements */
     i = (l+u)/2;
-    lua_rawgeti(L, 1, i);  /* Pivot = a[i] */
-    if (sort_comp(L, l, 0))  /* a[i]<a[l]? */
-      swap(L, l, i);
+    lua_rawgeti(L, 1, i);
+    lua_rawgeti(L, 1, l);
+    if (sort_comp(L, -2, -1))  /* a[i]<a[l]? */
+      set2(L, i, l);
     else {
-      if (sort_comp(L, u, 1))  /* a[u]<a[i]? */
-        swap(L, i, u);
+      lua_pop(L, 1);  /* remove a[l] */
+      lua_rawgeti(L, 1, u);
+      if (sort_comp(L, -1, -2))  /* a[u]<a[i]? */
+        set2(L, i, u);
+      else
+        lua_pop(L, 2);
     }
-    lua_pop(L, 1);  /* pop old a[i] */
     if (u-l == 2) break;  /* only 3 elements */
     lua_rawgeti(L, 1, i);  /* Pivot */
-    swap(L, i, u-1);  /* put median element as pivot (a[u-1]) */
-    /* a[l] <= P == a[u-1] <= a[u], only needs to sort from l+1 to u-2 */
+    lua_pushvalue(L, -1);
+    lua_rawgeti(L, 1, u-1);
+    set2(L, i, u-1);
+    /* a[l] <= P == a[u-1] <= a[u], only need to sort from l+1 to u-2 */
     i = l; j = u-1;
     for (;;) {  /* invariant: a[l..i] <= P <= a[j..u] */
-      /* repeat i++ until a[i] >= P */
-      while (sort_comp(L, ++i, 1))
+      /* repeat ++i until a[i] >= P */
+      while (lua_rawgeti(L, 1, ++i), sort_comp(L, -1, -2)) {
         if (i>u) lua_error(L, "invalid order function for sorting");
-      /* repeat j-- until a[j] <= P */
-      while (sort_comp(L, --j, 0))
+        lua_pop(L, 1);  /* remove a[i] */
+      }
+      /* repeat --j until a[j] <= P */
+      while (lua_rawgeti(L, 1, --j), sort_comp(L, -3, -1)) {
         if (j<l) lua_error(L, "invalid order function for sorting");
-      if (j<i) break;
-      swap(L, i, j);
+        lua_pop(L, 1);  /* remove a[j] */
+      }
+      if (j<i) {
+        lua_pop(L, 3);  /* pop pivot, a[i], a[j] */
+        break;
+      }
+      set2(L, i, j);
     }
-    swap(L, u-1, i);  /* swap pivot (a[u-1]) with a[i] */
+    lua_rawgeti(L, 1, u-1);
+    lua_rawgeti(L, 1, i);
+    set2(L, u-1, i);  /* swap pivot (a[u-1]) with a[i] */
     /* a[l..i-1] <= a[i] == P <= a[i+1..u] */
     /* adjust so that smaller "half" is in [j..i] and larger one in [l..u] */
     if (i-l < u-i) {
@@ -510,7 +513,6 @@ static void auxsort (lua_State *L, int l, int u) {
     else {
       j=i+1; i=u; u=j-2;
     }
-    lua_pop(L, 1);  /* remove pivot from stack */
     auxsort(L, j, i);  /* call recursively the smaller one */
   }  /* repeat the routine for the larger one */
 }
