@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: luaconf.h,v 1.1 2004/05/03 12:28:43 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -47,6 +47,9 @@
 
 /* mark for auxlib functions */
 #define LUALIB_API      extern
+
+/* buffer size used by lauxlib buffer system */
+#define LUAL_BUFFERSIZE   BUFSIZ
 
 /* }====================================================== */
 
@@ -217,9 +220,6 @@
 */
 
 #ifdef LUA_LIB
-
-/* buffer size used by lauxlib buffer system */
-#define LUAL_BUFFERSIZE   BUFSIZ
 
 
 
