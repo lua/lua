@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.165 2002/03/20 12:52:32 roberto Exp roberto $
+** $Id: ldo.c,v 1.166 2002/03/25 17:47:14 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -109,15 +109,16 @@ static void luaD_openstack (lua_State *L, StkId pos) {
 
 static void dohook (lua_State *L, lua_Debug *ar, lua_Hook hook) {
   ptrdiff_t top = savestack(L, L->top);
+  ptrdiff_t ci_top = savestack(L, L->ci->top);
   luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
-  L->ci->top += LUA_MINSTACK;
+  L->ci->top = L->top + LUA_MINSTACK;
   L->allowhooks = 0;  /* cannot call hooks inside a hook */
   lua_unlock(L);
   (*hook)(L, ar);
   lua_lock(L);
   lua_assert(L->allowhooks == 0);
   L->allowhooks = 1;
-  L->ci->top -= LUA_MINSTACK;
+  L->ci->top = restorestack(L, ci_top);
   L->top = restorestack(L, top);
 }
 
