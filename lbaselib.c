@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.75 2002/05/16 19:09:19 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.76 2002/06/03 20:11:41 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -106,7 +106,7 @@ static int luaB_metatable (lua_State *L) {
 
 static int luaB_globals (lua_State *L) {
   lua_getglobals(L);  /* value to be returned */
-  if (!lua_isnone(L, 1)) {
+  if (!lua_isnoneornil(L, 1)) {
     luaL_check_type(L, 1, LUA_TTABLE);
     lua_pushvalue(L, 1);  /* new table of globals */
     lua_setglobals(L);

@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.2 2002/04/12 19:57:29 roberto Exp roberto $
+** $Id: ltablib.c,v 1.3 2002/05/02 17:12:27 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -204,7 +204,7 @@ static int luaB_sort (lua_State *L) {
   int n;
   luaL_check_type(L, 1, LUA_TTABLE);
   n = lua_getn(L, 1);
-  if (!lua_isnone(L, 2))  /* is there a 2nd argument? */
+  if (!lua_isnoneornil(L, 2))  /* is there a 2nd argument? */
     luaL_check_type(L, 2, LUA_TFUNCTION);
   lua_settop(L, 2);  /* make sure there is two arguments */
   auxsort(L, 1, n);
