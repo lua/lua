@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.32 1995/09/15 20:47:53 roberto Exp $";
+char *rcs_table="$Id: table.c,v 2.33 1995/10/04 14:20:26 roberto Exp roberto $";
 
 #include <string.h>
 
@@ -119,9 +119,8 @@ Word luaI_findsymbolbyname (char *name)
 
 
 /*
-** Given a name, search it at constant table and return its index. If not
-** found, allocate it.
-** On error, return -1.
+** Given a tree node, check it is has a correspondent constant index. If not,
+** allocate it.
 */
 Word luaI_findconstant (TreeNode *t)
 {
@@ -143,6 +142,12 @@ Word luaI_findconstant (TreeNode *t)
   lua_nconstant++;
  }
  return t->constindex;
+}
+
+
+Word  luaI_findconstantbyname (char *name)
+{
+  return luaI_findconstant(lua_constcreate(name));
 }
 
 

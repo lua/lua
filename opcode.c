@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.41 1995/10/09 13:10:20 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.42 1995/10/09 18:45:59 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -678,7 +678,7 @@ void lua_pushstring (char *s)
 */
 void lua_pushliteral (char *s)
 {
- tsvalue(top) = lua_constant[luaI_findconstant(lua_constcreate(s))];
+ tsvalue(top) = lua_constant[luaI_findconstantbyname(s)];
  tag(top) = LUA_T_STRING;
  incr_top;
 }

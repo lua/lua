@@ -1,7 +1,7 @@
 /*
 ** Module to control static tables
 ** TeCGraf - PUC-Rio
-** $Id: table.h,v 2.9 1994/11/23 14:31:11 roberto Stab roberto $
+** $Id: table.h,v 2.10 1994/12/20 21:20:36 roberto Exp roberto $
 */
 
 #ifndef table_h
@@ -21,6 +21,7 @@ void  lua_initconstant (void);
 Word  luaI_findsymbolbyname (char *name);
 Word  luaI_findsymbol      (TreeNode *t);
 Word  luaI_findconstant    (TreeNode *t);
+Word  luaI_findconstantbyname (char *name);
 void  lua_travsymbol      (void (*fn)(Object *));
 void  lua_markobject      (Object *o);
 void  lua_pack            (void);

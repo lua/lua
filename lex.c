@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.17 1995/10/03 18:06:10 roberto Exp $";
+char *rcs_lex = "$Id: lex.c,v 2.18 1995/10/06 13:10:53 roberto Exp roberto $";
  
 
 #include <ctype.h>
@@ -200,7 +200,7 @@ int yylex (void)
             return WRONGTOKEN;
           save_and_next();  /* pass the second ']' */
           *(yytextLast-2) = 0;  /* erases ']]' */
-          yylval.vWord = luaI_findconstant(lua_constcreate(yytext+2));
+          yylval.vWord = luaI_findconstantbyname(yytext+2);
           return STRING;
         }
 
@@ -260,7 +260,7 @@ int yylex (void)
         }
         next();  /* skip the delimiter */
         *yytextLast = 0;
-        yylval.vWord = luaI_findconstant(lua_constcreate(yytext));
+        yylval.vWord = luaI_findconstantbyname(yytext);
         return STRING;
       }
 
