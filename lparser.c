@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.6 2004/10/04 19:01:53 roberto Exp roberto $
+** $Id: lparser.c,v 2.7 2004/11/19 16:59:08 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -31,7 +31,7 @@
 
 #define getlocvar(fs, i)	((fs)->f->locvars[(fs)->actvar[i]])
 
-#define luaY_checklimit(fs,v,l,m)	if ((v)>(l)) luaY_errorlimit(fs,l,m)
+#define luaY_checklimit(fs,v,l,m)	if ((v)>(l)) errorlimit(fs,l,m)
 
 #define enterlevel(ls) if (++(ls)->nestlevel > LUA_MAXPARSERLEVEL) \
 	luaX_lexerror(ls, "chunk has too many syntax levels", 0)
@@ -90,7 +90,7 @@ static void error_expected (LexState *ls, int token) {
 }
 
 
-static void luaY_errorlimit (FuncState *fs, int limit, const char *what) {
+static void errorlimit (FuncState *fs, int limit, const char *what) {
   const char *msg = (fs->f->lineDefined == 0) ?
     luaO_pushfstring(fs->L, "main function has more than %d %s", limit, what) :
     luaO_pushfstring(fs->L, "function at line %d has more than %d %s",
@@ -412,7 +412,7 @@ Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, const char *name) {
 /*============================================================*/
 
 
-static void luaY_field (LexState *ls, expdesc *v) {
+static void field (LexState *ls, expdesc *v) {
   /* field -> ['.' | ':'] NAME */
   FuncState *fs = ls->fs;
   expdesc key;
@@ -700,7 +700,7 @@ static void primaryexp (LexState *ls, expdesc *v) {
   for (;;) {
     switch (ls->t.token) {
       case '.': {  /* field */
-        luaY_field(ls, v);
+        field(ls, v);
         break;
       }
       case '[': {  /* `[' exp1 `]' */
@@ -1210,10 +1210,10 @@ static int funcname (LexState *ls, expdesc *v) {
   int needself = 0;
   singlevar(ls, v, 1);
   while (ls->t.token == '.')
-    luaY_field(ls, v);
+    field(ls, v);
   if (ls->t.token == ':') {
     needself = 1;
-    luaY_field(ls, v);
+    field(ls, v);
   }
   return needself;
 }
