@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.28 1999/03/10 14:09:45 roberto Exp roberto $
+** $Id: lparser.c,v 1.29 1999/03/11 19:00:12 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -312,6 +312,16 @@ static void store_localvar (LexState *ls, TaggedString *name, int n) {
 static void add_localvar (LexState *ls, TaggedString *name) {
   store_localvar(ls, name, 0);
   ls->fs->nlocalvar++;
+}
+
+
+static void correctvarlines (LexState *ls, int nvars) {
+  FuncState *fs = ls->fs;
+  if (fs->nvars != -1) {  /* debug information? */
+    for (; nvars; nvars--) { /* correct line information */
+      fs->f->locvars[fs->nvars-nvars].line = fs->lastsetline; 
+    }
+  }
 }
 
 
@@ -652,6 +662,7 @@ TProtoFunc *luaY_parser (ZIO *z) {
   init_state(&lexstate, &funcstate, luaS_new(zname(z)));
   next(&lexstate);  /* read first token */
   chunk(&lexstate);
+  check_debugline(&lexstate);
   if (lexstate.token != EOS)
     luaX_error(&lexstate, "<eof> expected");
   close_func(&lexstate);
@@ -743,7 +754,8 @@ static int stat (LexState *ls) {
       next(ls);
       nvars = localnamelist(ls);
       decinit(ls, &d);
-      ls->fs->nlocalvar += nvars;
+      fs->nlocalvar += nvars;
+      correctvarlines(ls, nvars);  /* vars will be alive only after decinit */
       adjust_mult_assign(ls, nvars, &d);
       return 1;
     }
@@ -799,7 +811,7 @@ static void block (LexState *ls) {
   chunk(ls);
   adjuststack(ls, fs->nlocalvar - nlocalvar);
   for (; fs->nlocalvar > nlocalvar; fs->nlocalvar--)
-    luaI_unregisterlocalvar(fs, ls->linenumber);
+    luaI_unregisterlocalvar(fs, fs->lastsetline);
 }
 
 static int funcname (LexState *ls, vardesc *v) {
@@ -855,9 +867,9 @@ static void ifpart (LexState *ls, int line) {
 
 static void ret (LexState *ls) {
   /* ret -> [RETURN explist sc] */
-  check_debugline(ls);
   if (optional(ls, RETURN)) {
     listdesc e;
+    check_debugline(ls);
     explist(ls, &e); 
     if (e.pc > 0) {  /* expression is an open function call? */
       Byte *code = ls->fs->f->code;
