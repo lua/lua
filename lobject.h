@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.67 2000/06/08 18:27:13 roberto Exp roberto $
+** $Id: lobject.h,v 1.68 2000/06/26 19:28:31 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -122,7 +122,6 @@ typedef struct Proto {
   int *lines;  /* source line that generated each opcode */
   int lineDefined;
   TString  *source;
-  int debug;  /* flag for debug information */
   int numparams;
   int is_vararg;
   int maxstacksize;
@@ -171,9 +170,10 @@ typedef struct Hash {
 ** informations about a call (for debugging)
 */
 typedef struct CallInfo {
-  int pc;  /* current pc of called function */
-  int line;  /* current line */
   struct Closure *func;  /* function being called */
+  const Instruction **pc;  /* current pc of called function */
+  int lastpc;  /* last pc traced */
+  int line;  /* current line */
 } CallInfo;
 
 

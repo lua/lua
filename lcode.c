@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.38 2000/06/21 18:13:56 roberto Exp roberto $
+** $Id: lcode.c,v 1.39 2000/06/26 19:28:31 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -423,12 +423,9 @@ int luaK_code1 (FuncState *fs, OpCode o, int arg1) {
 }
 
 
-#define VD	100	/* flag for variable delta */
-
-
 int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
   Instruction i = previous_instruction(fs);
-  int delta = luaK_opproperties[o].delta;
+  int delta = luaK_opproperties[o].push - luaK_opproperties[o].pop;
   int optm = 0;  /* 1 when there is an optimization */
   switch (o) {
     case OP_CLOSURE: {
@@ -621,7 +618,7 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
     case iS: i = CREATE_S(o, arg1); break;
     case iAB: i = CREATE_AB(o, arg1, arg2); break;
   }
-  if (fs->f->debug) {
+  if (fs->debug) {
     LexState *ls = fs->ls;
     luaX_checklimit(ls, ls->lastline, MAXARG_U, "lines in a chunk");
     luaM_growvector(fs->L, fs->f->lines, fs->pc, 1, int, "??", MAXARG_U);
@@ -636,53 +633,54 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
 
 
 const struct OpProperties luaK_opproperties[NUM_OPCODES] = {
-  {iO, 0},	/* OP_END */
-  {iU, 0},	/* OP_RETURN */
-  {iAB, 0},	/* OP_CALL */
-  {iAB, 0},	/* OP_TAILCALL */
-  {iU, VD},	/* OP_PUSHNIL */
-  {iU, VD},	/* OP_POP */
-  {iS, 1},	/* OP_PUSHINT */
-  {iU, 1},	/* OP_PUSHSTRING */
-  {iU, 1},	/* OP_PUSHNUM */
-  {iU, 1},	/* OP_PUSHNEGNUM */
-  {iU, 1},	/* OP_PUSHUPVALUE */
-  {iU, 1},	/* OP_GETLOCAL */
-  {iU, 1},	/* OP_GETGLOBAL */
-  {iO, -1},	/* OP_GETTABLE */
-  {iU, 0},	/* OP_GETDOTTED */
-  {iU, 0},	/* OP_GETINDEXED */
-  {iU, 1},	/* OP_PUSHSELF */
-  {iU, 1},	/* OP_CREATETABLE */
-  {iU, -1},	/* OP_SETLOCAL */
-  {iU, -1},	/* OP_SETGLOBAL */
-  {iAB, VD},	/* OP_SETTABLE */
-  {iAB, VD},	/* OP_SETLIST */
-  {iU, VD},	/* OP_SETMAP */
-  {iO, -1},	/* OP_ADD */
-  {iS, 0},	/* OP_ADDI */
-  {iO, -1},	/* OP_SUB */
-  {iO, -1},	/* OP_MULT */
-  {iO, -1},	/* OP_DIV */
-  {iO, -1},	/* OP_POW */
-  {iU, VD},	/* OP_CONCAT */
-  {iO, 0},	/* OP_MINUS */
-  {iO, 0},	/* OP_NOT */
-  {iS, -2},	/* OP_JMPNE */
-  {iS, -2},	/* OP_JMPEQ */
-  {iS, -2},	/* OP_JMPLT */
-  {iS, -2},	/* OP_JMPLE */
-  {iS, -2},	/* OP_JMPGT */
-  {iS, -2},	/* OP_JMPGE */
-  {iS, -1},	/* OP_JMPT */
-  {iS, -1},	/* OP_JMPF */
-  {iS, -1},	/* OP_JMPONT */
-  {iS, -1},	/* OP_JMPONF */
-  {iS, 0},	/* OP_JMP */
-  {iO, 1},	/* OP_PUSHNILJMP */
-  {iS, 0},	/* OP_FORPREP */
-  {iS, -3},	/* OP_FORLOOP */
-  {iS, 3},	/* OP_LFORPREP */
-  {iS, -4},	/* OP_LFORLOOP */
-  {iAB, VD}	/* OP_CLOSURE */
+  {iO, 0, 0},	/* OP_END */
+  {iU, 0, 0},	/* OP_RETURN */
+  {iAB, 0, 0},	/* OP_CALL */
+  {iAB, 0, 0},	/* OP_TAILCALL */
+  {iU, VD, 0},	/* OP_PUSHNIL */
+  {iU, VD, 0},	/* OP_POP */
+  {iS, 1, 0},	/* OP_PUSHINT */
+  {iU, 1, 0},	/* OP_PUSHSTRING */
+  {iU, 1, 0},	/* OP_PUSHNUM */
+  {iU, 1, 0},	/* OP_PUSHNEGNUM */
+  {iU, 1, 0},	/* OP_PUSHUPVALUE */
+  {iU, 1, 0},	/* OP_GETLOCAL */
+  {iU, 1, 0},	/* OP_GETGLOBAL */
+  {iO, 1, 2},	/* OP_GETTABLE */
+  {iU, 1, 1},	/* OP_GETDOTTED */
+  {iU, 1, 1},	/* OP_GETINDEXED */
+  {iU, 2, 1},	/* OP_PUSHSELF */
+  {iU, 1, 0},	/* OP_CREATETABLE */
+  {iU, 0, 1},	/* OP_SETLOCAL */
+  {iU, 0, 1},	/* OP_SETGLOBAL */
+  {iAB, VD, 0},	/* OP_SETTABLE */
+  {iAB, VD, 0},	/* OP_SETLIST */
+  {iU, VD, 0},	/* OP_SETMAP */
+  {iO, 1, 2},	/* OP_ADD */
+  {iS, 1, 1},	/* OP_ADDI */
+  {iO, 1, 2},	/* OP_SUB */
+  {iO, 1, 2},	/* OP_MULT */
+  {iO, 1, 2},	/* OP_DIV */
+  {iO, 1, 2},	/* OP_POW */
+  {iU, VD, 0},	/* OP_CONCAT */
+  {iO, 1, 1},	/* OP_MINUS */
+  {iO, 1, 1},	/* OP_NOT */
+  {iS, 0, 2},	/* OP_JMPNE */
+  {iS, 0, 2},	/* OP_JMPEQ */
+  {iS, 0, 2},	/* OP_JMPLT */
+  {iS, 0, 2},	/* OP_JMPLE */
+  {iS, 0, 2},	/* OP_JMPGT */
+  {iS, 0, 2},	/* OP_JMPGE */
+  {iS, 0, 1},	/* OP_JMPT */
+  {iS, 0, 1},	/* OP_JMPF */
+  {iS, 0, 1},	/* OP_JMPONT */
+  {iS, 0, 1},	/* OP_JMPONF */
+  {iS, 0, 0},	/* OP_JMP */
+  {iO, 1, 0},	/* OP_PUSHNILJMP */
+  {iS, 0, 0},	/* OP_FORPREP */
+  {iS, 0, 3},	/* OP_FORLOOP */
+  {iS, 3, 0},	/* OP_LFORPREP */
+  {iS, 0, 4},	/* OP_LFORLOOP */
+  {iAB, VD, 0}	/* OP_CLOSURE */
 };
+

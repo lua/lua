@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.117 2000/06/26 19:28:31 roberto Exp roberto $
+** $Id: lvm.c,v 1.118 2000/06/27 19:00:36 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -67,20 +67,19 @@ int luaV_tostring (lua_State *L, TObject *obj) {  /* LUA_NUMBER */
 }
 
 
-static void traceexec (lua_State *L, StkId base, int pc, StkId top) {
+static void traceexec (lua_State *L, StkId base, StkId top, lua_Hook linehook) {
   CallInfo *ci = infovalue(base-1);
-  int oldpc = ci->pc;
-  ci->pc = pc;
-  if (L->linehook && ci->func->f.l->debug) {
-    int *lines = ci->func->f.l->lines;
-    LUA_ASSERT(L, lines, "must have debug information");
-    /* calls linehook when jumps back (loop) or enters a new line */
-    if (pc <= oldpc || lines[pc] != ci->line) {
+  int *lines = ci->func->f.l->lines;
+  int pc = (*ci->pc - 1) - ci->func->f.l->code;
+  if (lines) {
+    /* calls linehook when enters a new line or jumps back (loop) */
+    if (lines[pc] != ci->line || pc <= ci->lastpc) {
       ci->line = lines[pc];
       L->top = top;
-      luaD_lineHook(L, base-2, lines[pc]);
+      luaD_lineHook(L, base-2, lines[pc], linehook);
     }
   }
+  ci->lastpc = pc;
 }
 
 
@@ -113,7 +112,7 @@ void luaV_Lclosure (lua_State *L, Proto *l, int nelems) {
 ** Receives the table at top-2 and the index at top-1.
 */
 void luaV_gettable (lua_State *L, StkId top) {
-  TObject *table = top-2;
+  StkId table = top-2;
   const TObject *im;
   if (ttype(table) != TAG_TABLE) {  /* not a table, get gettable TM */
     im = luaT_getimbyObj(L, table, IM_GETTABLE);
@@ -348,7 +347,8 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
   StkId top;  /* keep top local, for performance */
   const Instruction *pc = tf->code;
   TString **kstr = tf->kstr;
-  int debug = tf->debug;
+  lua_Hook linehook = L->linehook;
+  infovalue(base-1)->pc = &pc;
   luaD_checkstack(L, tf->maxstacksize+EXTRA_STACK);
   if (tf->is_vararg) {  /* varargs? */
     adjust_varargs(L, base, tf->numparams);
@@ -359,9 +359,9 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
   top = L->top;
   /* main loop of interpreter */
   for (;;) {
-    if (debug)
-      traceexec(L, base, pc - tf->code, top);
-   {const Instruction i = *pc++;
+    const Instruction i = *pc++;
+    if (linehook)
+      traceexec(L, base, top, linehook);
     switch (GET_OPCODE(i)) {
 
       case OP_END:
@@ -705,5 +705,5 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
 
     }
-  }}
+  }
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.99 2000/06/26 19:28:31 roberto Exp roberto $
+** $Id: lparser.c,v 1.100 2000/06/28 17:06:07 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -154,7 +154,7 @@ static int checkname (LexState *ls) {
 
 static void luaI_registerlocalvar (LexState *ls, TString *varname, int pc) {
   FuncState *fs = ls->fs;
-  if (fs->f->debug) {
+  if (fs->debug) {
     Proto *f = fs->f;
     luaM_growvector(ls->L, f->locvars, fs->nvars, 1, LocVar, "", MAX_INT);
     f->locvars[fs->nvars].varname = varname;
@@ -359,7 +359,7 @@ Proto *luaY_parser (lua_State *L, ZIO *z) {
   luaX_setinput(L, &lexstate, z, luaS_new(L, zname(z)));
   open_func(&lexstate, &funcstate);
   next(&lexstate);  /* read first token */
-  funcstate.f->debug = L->debug;  /* previous `next' may scan a pragma */
+  funcstate.debug = L->debug;  /* previous `next' may scan a pragma */
   chunk(&lexstate);
   check_condition(&lexstate, (lexstate.t.token == TK_EOS), "<eof> expected");
   close_func(&lexstate);
@@ -1085,7 +1085,7 @@ static void body (LexState *ls, int needself, int line) {
   FuncState new_fs;
   open_func(ls, &new_fs);
   new_fs.f->lineDefined = line;
-  new_fs.f->debug = ls->L->debug;
+  new_fs.debug = ls->L->debug;
   check(ls, '(');
   if (needself) {
     new_localvarstr(ls, "self", 0);

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.79 2000/06/16 17:16:34 roberto Exp roberto $
+** $Id: ldo.c,v 1.80 2000/06/26 19:28:31 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -103,7 +103,7 @@ void luaD_openstack (lua_State *L, StkId pos) {
 }
 
 
-void luaD_lineHook (lua_State *L, StkId func, int line) {
+void luaD_lineHook (lua_State *L, StkId func, int line, lua_Hook linehook) {
   if (L->allowhooks) {
     lua_Debug ar;
     struct C_Lua_Stack oldCLS = L->Cstack;
@@ -113,7 +113,7 @@ void luaD_lineHook (lua_State *L, StkId func, int line) {
     ar.event = "line";
     ar.currentline = line;
     L->allowhooks = 0;  /* cannot call hooks inside a hook */
-    (*L->linehook)(L, &ar);
+    (*linehook)(L, &ar);
     L->allowhooks = 1;
     L->top = old_top;
     L->Cstack = oldCLS;
@@ -187,7 +187,7 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
     case TAG_LCLOSURE: {
       CallInfo ci;
       ci.func = clvalue(func);
-      ci.pc = 0;
+      ci.line = 0;
       ttype(func) = TAG_LMARK;
       infovalue(func) = &ci;
       if (callhook)
