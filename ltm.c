@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.60 2001/01/18 15:59:09 roberto Exp roberto $
+** $Id: ltm.c,v 1.61 2001/01/19 13:20:30 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -84,10 +84,14 @@ void luaT_init (lua_State *L) {
 
 
 LUA_API int lua_newtag (lua_State *L) {
+  int tag;
+  LUA_ENTRY;
   luaM_growvector(L, G(L)->TMtable, G(L)->ntag, G(L)->sizeTM, struct TM,
                   MAX_INT, "tag table overflow");
   init_entry(L, G(L)->ntag);
-  return G(L)->ntag++;
+  tag = G(L)->ntag++;
+  LUA_EXIT;
+  return tag;
 }
 
 
@@ -104,12 +108,14 @@ void luaT_realtag (lua_State *L, int tag) {
 
 LUA_API int lua_copytagmethods (lua_State *L, int tagto, int tagfrom) {
   int e;
+  LUA_ENTRY;
   checktag(L, tagto);
   checktag(L, tagfrom);
   for (e=0; e<TM_N; e++) {
     if (luaT_validevent(tagto, e))
       luaT_gettm(G(L), tagto, e) = luaT_gettm(G(L), tagfrom, e);
   }
+  LUA_EXIT;
   return tagto;
 }
 
@@ -126,6 +132,7 @@ int luaT_tag (const TObject *o) {
 
 LUA_API void lua_gettagmethod (lua_State *L, int t, const char *event) {
   int e;
+  LUA_ENTRY;
   e = luaI_checkevent(L, event, t);
   checktag(L, t);
   if (luaT_validevent(t, e) && luaT_gettm(G(L), t, e)) {
@@ -134,11 +141,14 @@ LUA_API void lua_gettagmethod (lua_State *L, int t, const char *event) {
   else
     setnilvalue(L->top);
   incr_top;
+  LUA_EXIT;
 }
 
 
 LUA_API void lua_settagmethod (lua_State *L, int t, const char *event) {
-  int e = luaI_checkevent(L, event, t);
+  int e;
+  LUA_ENTRY;
+  e = luaI_checkevent(L, event, t);
   checktag(L, t);
   if (!luaT_validevent(t, e))
     luaO_verror(L, "cannot change `%.20s' tag method for type `%.20s'%.20s",
@@ -153,8 +163,9 @@ LUA_API void lua_settagmethod (lua_State *L, int t, const char *event) {
       luaT_gettm(G(L), t, e) = clvalue(L->top - 1);
       break;
     default:
-      lua_error(L, "tag method must be a function (or nil)");
+      luaD_error(L, "tag method must be a function (or nil)");
   }
   L->top--;
+  LUA_EXIT;
 }
 

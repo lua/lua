@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.64 2001/01/18 15:59:09 roberto Exp roberto $
+** $Id: ltable.c,v 1.65 2001/01/19 13:20:30 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -20,6 +20,7 @@
 
 #include "lua.h"
 
+#include "ldo.h"
 #include "lmem.h"
 #include "lobject.h"
 #include "lstate.h"
@@ -112,7 +113,7 @@ Node *luaH_next (lua_State *L, const Hash *t, const TObject *key) {
   else {
     const TObject *v = luaH_get(t, key);
     if (v == &luaO_nilobject)
-      lua_error(L, "invalid key for `next'");
+      luaD_error(L, "invalid key for `next'");
     i = (int)(((const char *)v -
                (const char *)(&t->node[0].val)) / sizeof(Node)) + 1;
   }
@@ -152,7 +153,7 @@ void luaH_remove (Hash *t, TObject *key) {
 static void setnodevector (lua_State *L, Hash *t, luint32 size) {
   int i;
   if (size > MAX_INT)
-    lua_error(L, "table overflow");
+    luaD_error(L, "table overflow");
   t->node = luaM_newvector(L, size, Node);
   for (i=0; i<(int)size; i++) {
     setnilvalue(&t->node[i].key);
@@ -259,7 +260,7 @@ static TObject *luaH_setany (lua_State *L, Hash *t, const TObject *key) {
   Node *mp = luaH_mainposition(t, key);
   Node *n = mp;
   if (!mp)
-    lua_error(L, "table index is nil");
+    luaD_error(L, "table index is nil");
   do {  /* check whether `key' is somewhere in the chain */
     if (luaO_equalObj(key, &n->key))
       return &n->val;  /* that's all */

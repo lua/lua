@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.51 2001/01/19 13:20:30 roberto Exp roberto $
+** $Id: lstate.c,v 1.52 2001/01/22 18:01:38 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -22,6 +22,7 @@
 #ifdef LUA_DEBUG
 static lua_State *lua_state = NULL;
 void luaB_opentests (lua_State *L);
+int islocked = 0;
 #endif
 
 
@@ -42,6 +43,9 @@ struct Sopen {
   int stacksize;
   lua_State *L;
 };
+
+
+static void close_state (lua_State *L);
 
 
 /*
@@ -80,12 +84,13 @@ static void f_luaopen (lua_State *L, void *ud) {
     G(L)->sizeref = 0;
     G(L)->refFree = NONEXT;
     G(L)->nblocks = sizeof(lua_State) + sizeof(global_State);
-    G(L)->GCthreshold = MAX_INT;  /* to avoid GC during pre-definitions */
     luaD_init(L, so->stacksize);  /* init stack */
     L->gt = luaH_new(L, 10);  /* table of globals */
     luaS_init(L);
     luaX_init(L);
     luaT_init(L);
+    G(L)->GCthreshold = 4*G(L)->nblocks;
+    LUA_EXIT;  /* temporary exit to use the API */
     lua_newtable(L);
     lua_ref(L, 1);  /* create registry */
     lua_register(L, LUA_ERRORMESSAGE, errormessage);
@@ -94,37 +99,41 @@ static void f_luaopen (lua_State *L, void *ud) {
     if (lua_state == NULL) lua_state = L;  /* keep first state to be opened */
     lua_assert(lua_gettop(L) == 0);
 #endif
-    G(L)->GCthreshold = 2*G(L)->nblocks;
+    LUA_ENTRY;  /* go back inside */
   }
 }
 
 
 LUA_API lua_State *lua_open (lua_State *OL, int stacksize) {
   struct Sopen so;
-  lua_State *L = luaM_new(OL, lua_State);
-  if (L == NULL) return NULL;  /* memory allocation error */
-  L->G = NULL;
-  L->stack = NULL;
-  L->stacksize = 0;
-  L->errorJmp = NULL;
-  L->callhook = NULL;
-  L->linehook = NULL;
-  L->allowhooks = 1;
-  L->next = L->previous = L;
-  so.stacksize = stacksize;
-  so.L = OL;
-  if (luaD_runprotected(L, f_luaopen, &so) != 0) {
-    /* memory allocation error: free partial state */
-    lua_close(L);
-    return NULL;
+  lua_State *L;
+  LUA_ENTRY;
+  L = luaM_new(OL, lua_State);
+  if (L) {  /* allocation OK? */
+    L->G = NULL;
+    L->stack = NULL;
+    L->stacksize = 0;
+    L->errorJmp = NULL;
+    L->callhook = NULL;
+    L->linehook = NULL;
+    L->allowhooks = 1;
+    L->next = L->previous = L;
+    so.stacksize = stacksize;
+    so.L = OL;
+    if (luaD_runprotected(L, f_luaopen, &so) != 0) {
+      /* memory allocation error: free partial state */
+      close_state(L);
+      L = NULL;
+    }
   }
+  LUA_EXIT;
   return L;
 }
 
 
-LUA_API void lua_close (lua_State *L) {
-  lua_State *L1 = L->next;  /* any surviving thread (if there is one) */
-  lua_assert(L != lua_state || lua_gettop(L) == 0);
+static void close_state (lua_State *L) {
+  lua_State *L1;
+  L1 = L->next;  /* any surviving thread (if there is one) */
   if (L1 == L) L1 = NULL;  /* no surviving threads */
   if (L1 != NULL) {  /* are there other threads? */
     lua_assert(L->previous != L);
@@ -144,6 +153,13 @@ LUA_API void lua_close (lua_State *L) {
   }
   luaM_freearray(L1, L->stack, L->stacksize, TObject);
   luaM_freelem(L1, L, lua_State);
+}
+
+LUA_API void lua_close (lua_State *L) {
+  lua_assert(L != lua_state || lua_gettop(L) == 0);
+  LUA_ENTRY;
+  close_state(L);
+  LUA_EXIT;
   lua_assert(L != lua_state || memdebug_numblocks == 0);
   lua_assert(L != lua_state || memdebug_total == 0);
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.154 2001/01/18 15:59:09 roberto Exp roberto $
+** $Id: lvm.c,v 1.155 2001/01/19 13:20:30 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -219,7 +219,8 @@ static int call_binTM (lua_State *L, StkId top, TMS event) {
         return 0;  /* error */
     }
   }
-  lua_pushstring(L, luaT_eventname[event]);
+  setsvalue(L->top, luaS_new(L, luaT_eventname[event]));
+  incr_top;
   luaD_callTM(L, tm, 3, 1);
   return 1;
 }
@@ -287,7 +288,7 @@ void luaV_strconc (lua_State *L, int total, StkId top) {
         tl += tsvalue(top-n-1)->len;
         n++;
       }
-      if (tl > MAX_SIZET) lua_error(L, "string size overflow");
+      if (tl > MAX_SIZET) luaD_error(L, "string size overflow");
       buffer = luaO_openspace(L, tl);
       tl = 0;
       for (i=n; i>0; i--) {  /* concat all strings */
@@ -520,7 +521,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       }
       case OP_POW: {
         if (!call_binTM(L, top, TM_POW))
-          lua_error(L, "undefined operation");
+          luaD_error(L, "undefined operation");
         top--;
         break;
       }
@@ -606,11 +607,11 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       }
       case OP_FORPREP: {
         if (tonumber(top-1))
-          lua_error(L, "`for' step must be a number");
+          luaD_error(L, "`for' step must be a number");
         if (tonumber(top-2))
-          lua_error(L, "`for' limit must be a number");
+          luaD_error(L, "`for' limit must be a number");
         if (tonumber(top-3))
-          lua_error(L, "`for' initial value must be a number");
+          luaD_error(L, "`for' initial value must be a number");
         if (nvalue(top-1) > 0 ?
             nvalue(top-3) > nvalue(top-2) :
             nvalue(top-3) < nvalue(top-2)) {  /* `empty' loop? */
@@ -623,7 +624,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         lua_assert(ttype(top-1) == LUA_TNUMBER);
         lua_assert(ttype(top-2) == LUA_TNUMBER);
         if (ttype(top-3) != LUA_TNUMBER)
-          lua_error(L, "`for' index must be a number");
+          luaD_error(L, "`for' index must be a number");
         nvalue(top-3) += nvalue(top-1);  /* increment index */
         if (nvalue(top-1) > 0 ?
             nvalue(top-3) > nvalue(top-2) :
@@ -636,7 +637,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       case OP_LFORPREP: {
         Node *node;
         if (ttype(top-1) != LUA_TTABLE)
-          lua_error(L, "`for' table must be a table");
+          luaD_error(L, "`for' table must be a table");
         node = luaH_next(L, hvalue(top-1), &luaO_nilobject);
         if (node == NULL) {  /* `empty' loop? */
           top--;  /* remove table */

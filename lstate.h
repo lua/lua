@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.44 2001/01/19 13:20:30 roberto Exp roberto $
+** $Id: lstate.h,v 1.45 2001/01/22 18:01:38 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -11,6 +11,26 @@
 #include "lua.h"
 #include "luadebug.h"
 
+
+
+#ifdef LUA_DEBUG
+extern int islocked;
+#define LUA_ENTRY	lua_assert(islocked++ == 0)
+#define LUA_EXIT	lua_assert(--islocked == 0)
+#endif
+
+
+/*
+** macros that control all entries and exits from Lua core machine
+** (mainly for thread syncronization)
+*/
+#ifndef LUA_ENTRY
+#define LUA_ENTRY
+#endif
+
+#ifndef LUA_EXIT
+#define LUA_EXIT
+#endif
 
 
 typedef TObject *StkId;  /* index to stack elements */
