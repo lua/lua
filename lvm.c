@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.286 2003/05/13 20:15:59 roberto Exp roberto $
+** $Id: lvm.c,v 1.287 2003/05/14 12:09:12 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -76,13 +76,15 @@ static void traceexec (lua_State *L) {
   if (mask & LUA_MASKLINE) {
     CallInfo *ci = L->ci;
     Proto *p = ci_func(ci)->l.p;
-    int newline = getline(p, pcRel(*ci->u.l.pc, p));
+    int pc = pcRel(*ci->u.l.pc, p);
+    int newline = getline(p, pc);
     if (!L->hookinit) {
       luaG_inithooks(L);
-      return;
+      if (pc != 0)  /* not function start? */
+        return;  /* begin tracing on next line */
     }
     lua_assert(ci->state & CI_HASFRAME);
-    if (pcRel(*ci->u.l.pc, p) == 0)  /* tracing may be starting now? */
+    if (pc == 0)  /* function may be starting now? */
       ci->u.l.savedpc = *ci->u.l.pc;  /* initialize `savedpc' */
     /* calls linehook when enters a new line or jumps back (loop) */
     if (*ci->u.l.pc <= ci->u.l.savedpc ||
