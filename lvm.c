@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.70 1999/12/06 11:40:55 roberto Exp roberto $
+** $Id: lvm.c,v 1.71 1999/12/06 19:30:53 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -286,9 +286,8 @@ static void adjust_varargs (lua_State *L, StkId base, int nfixargs) {
 
 
 /*
-** Execute the given opcode, until a RET. Parameters are between
-** [stack+base,top). Returns n such that the the results are between
-** [stack+n,top).
+** Executes the given Lua function. Parameters are between [base,top).
+** Returns n such that the the results are between [n,top).
 */
 StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
                     StkId base) {
@@ -313,7 +312,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
       case ENDCODE:
         top = base;
         goto ret;
-        
+
       case RETCODE:
         base += *pc++;
         goto ret;
