@@ -3,7 +3,7 @@
 ** Linguagem para Usuarios de Aplicacao
 */
 
-char *rcs_lua="$Id: lua.c,v 1.5 1995/10/06 14:11:40 roberto Exp roberto $";
+char *rcs_lua="$Id: lua.c,v 1.6 1995/10/23 13:54:11 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -80,7 +80,8 @@ int main (int argc, char *argv[])
    else if (strcmp(argv[i], "-") == 0)
     manual_input();
    else if (strcmp(argv[i], "-v") == 0)
-    printf("%s  %s\n\n", LUA_VERSION, LUA_COPYRIGHT);
+    printf("%s  %s\n(written by %s)\n\n",
+            LUA_VERSION, LUA_COPYRIGHT, LUA_AUTHORS);
    else
     result = lua_dofile (argv[i]);
   }
