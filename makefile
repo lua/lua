@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.8 1997/12/23 19:24:36 roberto Exp roberto $
+## $Id: makefile,v 1.9 1998/01/02 17:46:32 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -12,7 +12,7 @@
 # define (undefine) _POSIX_SOURCE if your system is (not) POSIX compliant
 #
 # define (undefine) OLD_ANSI if your system does NOT have some new ANSI
-#   facilities ("strerror" and "locale.h"). Although they are ANSI,
+#   facilities (e.g. strerror, locale.h, memmove). Although they are ANSI,
 #   SunOS does not comply; so, add "-DOLD_ANSI" on SunOS
 #
 # define LUA_COMPAT2_5 if yous system does need to be compatible with
