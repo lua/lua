@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.61 1999/09/06 13:55:09 roberto Exp roberto $
+** $Id: lvm.c,v 1.62 1999/09/17 16:53:54 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -107,7 +107,7 @@ void luaV_gettable (void) {
     int tg = table->value.a->htag;
     im = luaT_getim(tg, IM_GETTABLE);
     if (ttype(im) == LUA_T_NIL) {  /* and does not have a "gettable" method */
-      TObject *h = luaH_get(avalue(table), table+1);
+      const TObject *h = luaH_get(avalue(table), table+1);
       if (ttype(h) == LUA_T_NIL &&
           (ttype(im=luaT_getim(tg, IM_INDEX)) != LUA_T_NIL)) {
         /* result is nil and there is an "index" tag method */

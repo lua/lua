@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.9 1999/10/04 17:51:04 roberto Exp roberto $
+** $Id: lstring.h,v 1.10 1999/10/11 16:13:11 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -9,6 +9,7 @@
 
 
 #include "lobject.h"
+#include "lstate.h"
 
 
 #define NUM_HASHSTR     31  /* a prime not in array `dimensions' */
@@ -25,6 +26,7 @@
 
 
 void luaS_init (void);
+void luaS_grow (stringtable *tb);
 TaggedString *luaS_createudata (void *udata, int tag);
 void luaS_freeall (void);
 void luaS_free (TaggedString *ts);

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.31 1999/10/04 17:51:04 roberto Exp roberto $
+** $Id: lobject.h,v 1.32 1999/10/11 16:13:11 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -162,26 +162,29 @@ typedef struct Closure {
 
 
 typedef struct node {
-  TObject ref;
+  TObject key;
   TObject val;
+  struct node *next;  /* for chaining */
 } Node;
 
 typedef struct Hash {
+  int htag;
+  Node *node;
+  unsigned int size;
+  Node *firstfree;  /* this position is free; all positions after it are full */
   struct Hash *next;
   int marked;
-  Node *node;
-  int nhash;
-  int nuse;
-  int htag;
 } Hash;
 
 
 extern const char *const luaO_typenames[];
 
+
 #define luaO_typename(o)        luaO_typenames[-ttype(o)]
 
 
 extern const TObject luaO_nilobject;
+
 
 #define luaO_equalObj(t1,t2)	((ttype(t1) != ttype(t2)) ? 0 \
                                       : luaO_equalval(t1,t2))

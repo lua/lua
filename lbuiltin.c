@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.65 1999/10/07 19:04:30 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.66 1999/10/11 16:13:11 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -44,13 +44,13 @@ static void pushtagstring (TaggedString *s) {
 
 static real getsize (const Hash *h) {
   real max = 0;
-  int i = nhash(h);
+  int i = h->size;
   Node *n = h->node;
   while (i--) {
-    if (ttype(ref(n)) == LUA_T_NUMBER && 
+    if (ttype(key(n)) == LUA_T_NUMBER && 
         ttype(val(n)) != LUA_T_NIL &&
-        nvalue(ref(n)) > max)
-      max = nvalue(ref(n));
+        nvalue(key(n)) > max)
+      max = nvalue(key(n));
     n++;
   }
   return max;
@@ -59,7 +59,7 @@ static real getsize (const Hash *h) {
 
 static real getnarg (const Hash *a) {
   TObject index;
-  TObject *value;
+  const TObject *value;
   /* value = table.n */
   ttype(&index) = LUA_T_STRING;
   tsvalue(&index) = luaS_new("n");
@@ -337,7 +337,13 @@ static void luaB_nextvar (void) {
 static void luaB_next (void) {
   const Hash *a = gethash(1);
   const TObject *k = luaA_Address(luaL_nonnullarg(2));
-  int i = (ttype(k) == LUA_T_NIL) ? 0 : luaH_pos(a, k)+1;
+  int i;  /* will get first element after `i' */
+  if (ttype(k) == LUA_T_NIL)
+    i = 0;  /* get first */
+  else {
+    i = luaH_pos(a, k)+1;
+    luaL_arg_check(i != 0, 2, "key not found");
+  }
   if (luaA_next(a, i) == 0)
     lua_pushnil();
 }
@@ -408,7 +414,7 @@ static void luaB_foreachi (void) {
      stack may be reallocated by the call. Moreover, some C compilers do not
      initialize structs, so we must do the assignment after the declaration */
   f = *luaA_Address(luaL_functionarg(2));
-  luaD_checkstack(3);  /* for f, ref, and val */
+  luaD_checkstack(3);  /* for f, key, and val */
   for (i=1; i<=n; i++) {
     *(L->stack.top++) = f;
     ttype(L->stack.top) = LUA_T_NUMBER; nvalue(L->stack.top++) = i;
@@ -426,12 +432,12 @@ static void luaB_foreach (void) {
   int i;
   TObject f;  /* see comment in 'foreachi' */
   f = *luaA_Address(luaL_functionarg(2));
-  luaD_checkstack(3);  /* for f, ref, and val */
-  for (i=0; i<a->nhash; i++) {
+  luaD_checkstack(3);  /* for f, key, and val */
+  for (i=0; i<a->size; i++) {
     const Node *nd = &(a->node[i]);
     if (ttype(val(nd)) != LUA_T_NIL) {
       *(L->stack.top++) = f;
-      *(L->stack.top++) = *ref(nd);
+      *(L->stack.top++) = *key(nd);
       *(L->stack.top++) = *val(nd);
       luaD_calln(2, 1);
       if (ttype(L->stack.top-1) != LUA_T_NIL)
@@ -531,36 +537,37 @@ static int sort_comp (lua_Object f, const TObject *a, const TObject *b) {
 }
 
 static void auxsort (Hash *a, int l, int u, lua_Object f) {
+  StkId P = L->stack.top - L->stack.stack;  /* temporary place for pivot */
+  L->stack.top++;
+  ttype(L->stack.stack+P) = LUA_T_NIL;
   while (l < u) {  /* for tail recursion */
-    TObject *P;
     int i, j;
     /* sort elements a[l], a[(l+u)/2] and a[u] */
-    if (sort_comp(f, luaH_getint(a, u), luaH_getint(a, l)))  /* a[l]>a[u]? */
+    if (sort_comp(f, luaH_getint(a, u), luaH_getint(a, l)))  /* a[u]<a[l]? */
       swap(a, l, u);
     if (u-l == 1) break;  /* only 2 elements */
     i = (l+u)/2;
-    P = luaH_getint(a, i);
-    if (sort_comp(f, P, luaH_getint(a, l)))  /* a[l]>a[i]? */
+    *(L->stack.stack+P) = *luaH_getint(a, i);  /* P = a[i] */
+    if (sort_comp(f, L->stack.stack+P, luaH_getint(a, l)))  /* a[i]<a[l]? */
       swap(a, l, i);
-    else if (sort_comp(f, luaH_getint(a, u), P))  /* a[i]>a[u]? */
+    else if (sort_comp(f, luaH_getint(a, u), L->stack.stack+P)) /* a[u]<a[i]? */
       swap(a, i, u);
     if (u-l == 2) break;  /* only 3 elements */
-    P = L->stack.top++;
-    *P = *luaH_getint(a, i);  /* save pivot on stack (for GC) */
+    *(L->stack.stack+P) = *luaH_getint(a, i); /* save pivot on stack (for GC) */
     swap(a, i, u-1);  /* put median element as pivot (a[u-1]) */
     /* a[l] <= P == a[u-1] <= a[u], only needs to sort from l+1 to u-2 */
     i = l; j = u-1;
-    for  (;;) {
-      /* invariant: a[l..i] <= P <= a[j..u] */
-      while (sort_comp(f, luaH_getint(a, ++i), P))  /* stop when a[i] >= P */
+    for  (;;) {  /* invariant: a[l..i] <= P <= a[j..u] */
+      /* repeat i++ until a[i] >= P */
+      while (sort_comp(f, luaH_getint(a, ++i), L->stack.stack+P))
         if (i>u) lua_error("invalid order function for sorting");
-      while (sort_comp(f, P, luaH_getint(a, --j)))  /* stop when a[j] <= P */
+      /* repeat j-- until a[j] <= P */
+      while (sort_comp(f, (L->stack.stack+P), luaH_getint(a, --j)))
         if (j<l) lua_error("invalid order function for sorting");
       if (j<i) break;
       swap(a, i, j);
     }
     swap(a, u-1, i);  /* swap pivot (a[u-1]) with a[i] */
-    L->stack.top--;  /* remove pivot from stack */
     /* a[l..i-1] <= a[i] == P <= a[i+1..u] */
     /* adjust so that smaller "half" is in [j..i] and larger one in [l..u] */
     if (i-l < u-i) {
@@ -571,6 +578,7 @@ static void auxsort (Hash *a, int l, int u, lua_Object f) {
     }
     auxsort(a, j, i, f);  /* call recursively the smaller one */
   }  /* repeat the routine for the larger one */
+  L->stack.top--;  /* remove pivot from stack */
 }
 
 static void luaB_sort (void) {
@@ -608,7 +616,23 @@ static void mem_query (void) {
 
 static void hash_query (void) {
   const TObject *o = luaA_Address(luaL_nonnullarg(1));
-  lua_pushnumber(luaH_hashindex(o));
+  luaL_arg_check(ttype(o) == LUA_T_STRING, 1, "string expected");
+  lua_pushnumber(tsvalue(o)->hash);
+}
+
+
+static void table_query (void) {
+  const Hash *t = avalue(luaA_Address(luaL_tablearg(1)));
+  int i = luaL_opt_int(2, -1);
+  if (i == -1) {
+    lua_pushnumber(t->size);
+    lua_pushnumber(t->firstfree - t->node);
+  }
+  else if (i < t->size) {
+    luaA_pushobject(&t->node[i].key);
+    luaA_pushobject(&t->node[i].val);
+    lua_pushnumber(t->node[i].next == NULL ? 0 : t->node[i].next - t->node);
+  }
 }
 
 
@@ -715,6 +739,7 @@ static const struct luaL_reg builtin_funcs[] = {
   {"extra", extra_services},
   {"hash", hash_query},
   {"querystr", query_strings},
+  {"querytab", table_query},
   {"testC", testC},
   {"totalmem", mem_query},
 #endif

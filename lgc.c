@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.27 1999/10/04 17:51:04 roberto Exp roberto $
+** $Id: lgc.c,v 1.28 1999/10/11 16:13:11 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -51,10 +51,10 @@ static void hashmark (Hash *h) {
   if (!h->marked) {
     int i;
     h->marked = 1;
-    for (i=nhash(h)-1; i>=0; i--) {
+    for (i=h->size-1; i>=0; i--) {
       Node *n = node(h,i);
-      if (ttype(ref(n)) != LUA_T_NIL) {
-        markobject(&n->ref);
+      if (ttype(key(n)) != LUA_T_NIL) {
+        markobject(&n->key);
         markobject(&n->val);
       }
     }
@@ -157,11 +157,11 @@ static void collecttable (void) {
 }
 
 
-static void clear_global_list (void) {
+static void clear_global_list (int limit) {
   TaggedString **p = &L->rootglobal;
   TaggedString *next;
   while ((next = *p) != NULL) {
-    if (next->marked) p = &next->nextglobal;
+    if (next->marked >= limit) p = &next->nextglobal;
     else *p = next->nextglobal;
   }
 }
@@ -176,7 +176,7 @@ static void collectstring (int limit) {
   TObject o;  /* to call userdata 'gc' tag method */
   int i;
   ttype(&o) = LUA_T_USERDATA;
-  clear_global_list();
+  clear_global_list(limit);
   for (i=0; i<NUM_HASHS; i++) {  /* for each hash table */
     stringtable *tb = &L->string_root[i];
     int j;
@@ -200,6 +200,8 @@ static void collectstring (int limit) {
         }
       }
     }
+    if ((tb->nuse+1)*6 < tb->size)
+      luaS_grow(tb);  /* table is too big; `grow' it to a smaller size */
   }
 }
 
@@ -237,7 +239,8 @@ void luaC_collect (int all) {
   collectstring(all?MAX_INT:1);
   collectproto();
   collectclosure();
-  luaD_gcIM(&luaO_nilobject);  /* GC tag method for nil (signal end of GC) */
+  if (!all)
+    luaD_gcIM(&luaO_nilobject);  /* GC tag method for nil (signal end of GC) */
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.22 1999/10/04 17:51:04 roberto Exp roberto $
+** $Id: lstring.c,v 1.23 1999/10/11 16:13:11 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -48,6 +48,7 @@ void luaS_freeall (void) {
       luaM_free(L->string_root[i].hash);
   }
   luaM_free(L->string_root);
+  LUA_ASSERT(init_hash[0] == NULL, "init_hash corrupted");
 }
 
 
@@ -59,8 +60,8 @@ static unsigned long hash_s (const char *s, long l) {
 }
 
 
-static void grow (stringtable *tb) {
-  int ns = luaO_redimension(tb->size*2);  /* new size */
+void luaS_grow (stringtable *tb) {
+  int ns = luaO_redimension(tb->nuse*2);  /* new size */
   TaggedString **newhash = luaM_newvector(ns, TaggedString *);
   int i;
   for (i=0; i<ns; i++) newhash[i] = NULL;
@@ -122,7 +123,7 @@ static void newentry (stringtable *tb, TaggedString *ts, int h) {
       tb->hash = luaM_newvector(1, TaggedString *);  /* so, `clone' it */
       tb->hash[0] = NULL;
     }
-    grow(tb);
+    luaS_grow(tb);
     h = ts->hash%tb->size;  /* new hash position */
   }
   ts->nexthash = tb->hash[h];  /* chain new entry */
