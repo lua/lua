@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.21 1997/12/30 19:08:23 roberto Exp roberto $
+** $Id: lvm.c,v 1.22 1998/01/12 13:35:37 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -20,6 +20,11 @@
 #include "ltm.h"
 #include "luadebug.h"
 #include "lvm.h"
+
+
+#ifdef OLD_ANSI
+#define strcoll(a,b)	strcmp(a,b)
+#endif
 
 
 #define skip_word(pc)	(pc+=2)
