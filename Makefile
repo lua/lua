@@ -44,7 +44,7 @@ install: all
 	cd doc; $(INSTALL_DATA) $(TO_MAN) $(INSTALL_MAN)
 
 local:
-	$(MAKE) install INSTALL_TOP=.. INSTALL_EXEC="cp -up" INSTALL_DATA="cp -up"
+	$(MAKE) install INSTALL_TOP=.. INSTALL_EXEC="cp -p" INSTALL_DATA="cp -p"
 
 # echo config parameters
 echo:

@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.22 2004/12/27 15:58:15 roberto Exp $
+** $Id: luaconf.h,v 1.30 2005/02/28 15:59:11 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -96,7 +96,7 @@
 #define stdin_is_tty()		isatty(0)
 #elif defined(_WIN32)
 #include <io.h>
-#include <fcntl.h>
+#include <stdio.h>
 #define stdin_is_tty()		_isatty(_fileno(stdin))
 #else
 #define stdin_is_tty()		1  /* assume stdin is a tty */
@@ -107,16 +107,6 @@
 #define PROMPT2		">> "
 #define PROGNAME	"lua"
 
-
-/*
-** this macro allows you to open other libraries when starting the
-** stand-alone interpreter
-*/
-#define lua_userinit(L)		luaopen_stdlibs(L)
-/*
-** #define lua_userinit(L)  { int luaopen_mylibs(lua_State *L); \
-**				luaopen_stdlibs(L); luaopen_mylibs(L); }
-*/
 
 
 
@@ -217,8 +207,7 @@
 #if defined(__GNUC__) && defined(__i386)
 #define lua_number2int(i,d)	__asm__ ("fistpl %0":"=m"(i):"t"(d):"st")
 
-#elif defined(_WIN32) && defined(_M_IX86)
-#include <math.h>
+#elif defined(_MSC_VER) && defined(_M_IX86)
 #pragma warning(disable: 4514)
 __inline int l_lrint (double flt)
 {     int i;
@@ -248,6 +237,8 @@ __inline int l_lrint (double flt)
 /* function to convert a lua_Number to a string */
 #include <stdio.h>
 #define lua_number2str(s,n)	sprintf((s), LUA_NUMBER_FMT, (n))
+/* maximum size of previous conversion */
+#define MAX_NUMBER2STR	32 /* 16 digits, sign, point and \0  (+ some extra) */
 
 /* function to convert a string to a lua_Number */
 #define lua_str2number(s,p)	strtod((s), (p))
@@ -258,12 +249,29 @@ __inline int l_lrint (double flt)
 #define LUA_UACNUMBER	double
 
 
+/* primitive operators for numbers */
+#define num_add(a,b)	((a)+(b))
+#define num_sub(a,b)	((a)-(b))
+#define num_mul(a,b)	((a)*(b))
+#define num_div(a,b)	((a)/(b))
+#define num_unm(a)	(-(a))
+#define num_eq(a,b)	((a)==(b))
+#define num_lt(a,b)	((a)<(b))
+#define num_le(a,b)	((a)<=(b))
+#include <math.h>
+#define num_pow(a,b)	pow(a,b)
+
+
 
 /* type to ensure maximum alignment */
 #define LUSER_ALIGNMENT_T	union { double u; void *s; long l; }
 
 
-/* exception handling */
+/*
+** exception handling: by default, Lua handles errors with longjmp/setjmp
+** when compiling as C code and with exceptions when compiling as C++ code.
+** Change that if you prefer to use longjmp/setjmp even with C++.
+*/
 #ifndef __cplusplus
 /* default handling with long jumps */
 #include <setjmp.h>
@@ -282,17 +290,19 @@ __inline int l_lrint (double flt)
 
 
 /*
-** macros for thread synchronization inside Lua core machine:
-** all accesses to the global state and to global objects are synchronized.
-** Because threads can read the stack of other threads
-** (when running garbage collection),
-** a thread must also synchronize any write-access to its own stack.
-** Unsynchronized accesses are allowed only when reading its own stack,
-** or when reading immutable fields from global objects
-** (such as string values and udata values).
+** macros for thread synchronization inside Lua core machine: This is
+** an attempt to simplify the implementation of a multithreaded version
+** of Lua. Do not change that unless you know what you are doing. all
+** accesses to the global state and to global objects are synchronized.
+** Because threads can read the stack of other threads (when running
+** garbage collection), a thread must also synchronize any write-access
+** to its own stack.  Unsynchronized accesses are allowed only when
+** reading its own stack, or when reading immutable fields from global
+** objects (such as string values and udata values).
 */
 #define lua_lock(L)	((void) 0)
 #define lua_unlock(L)	((void) 0)
+
 
 /*
 ** this macro allows a thread switch in appropriate places in the Lua
@@ -303,7 +313,7 @@ __inline int l_lrint (double flt)
 
 
 /* allows user-specific initialization on new threads */
-#define lua_userstateopen(L)	/* empty */
+#define lua_userstateopen(L)	((void)0)
 
 
 #endif
@@ -321,9 +331,6 @@ __inline int l_lrint (double flt)
 #ifdef LUA_LIB
 
 
-
-/* `assert' options */
-
 /* environment variables that hold the search path for packages */
 #define LUA_PATH	"LUA_PATH"
 #define LUA_CPATH	"LUA_CPATH"
@@ -332,7 +339,7 @@ __inline int l_lrint (double flt)
 #define LUA_POF		"luaopen_"
 
 /* separator for open functions in C libraries */
-#define LUA_OFSEP	""
+#define LUA_OFSEP	"_"
 
 /* directory separator (for submodules) */
 #if defined(_WIN32)
@@ -342,18 +349,20 @@ __inline int l_lrint (double flt)
 #endif
 
 /* separator of templates in a path */
-#define LUA_PATH_SEP	';'
+#define LUA_PATHSEP	';'
 
 /* wild char in each template */
 #define LUA_PATH_MARK	"?"
 
 
-/* maximum number of captures in pattern-matching */
-#define MAX_CAPTURES	32  /* arbitrary limit */
+/* maximum number of captures in pattern-matching (arbitrary limit) */
+#define MAX_CAPTURES	32
 
 
 /*
-** by default, gcc does not get `tmpname'
+** by default, gcc does not get `os.tmpname', because it generates a warning
+** when using `tmpname'. Change that if you really want (or do not want)
+** `os.tmpname' available.
 */
 #ifdef __GNUC__
 #define USE_TMPNAME	0
@@ -363,7 +372,11 @@ __inline int l_lrint (double flt)
 
 
 /*
-** Configuration for loadlib
+** Configuration for loadlib: Lua tries to guess the dynamic-library
+** system that your platform uses (either Windows' DLL, Mac's dyld, or
+** dlopen). If your system is some kind of Unix, there is a good chance
+** that USE_DLOPEN will work for it. You may need to adapt also the
+** makefile.
 */
 #if defined(_WIN32)
 #define USE_DLL

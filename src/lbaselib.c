@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.163 2004/12/13 12:15:11 roberto Exp $
+** $Id: lbaselib.c,v 1.169 2005/02/28 17:24:41 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -131,7 +131,10 @@ static void getfunc (lua_State *L) {
 
 static int luaB_getfenv (lua_State *L) {
   getfunc(L);
-  lua_getfenv(L, -1);
+  if (lua_iscfunction(L, -1))  /* is a C function? */
+    lua_pushvalue(L, LUA_GLOBALSINDEX);  /* return the global env. */
+  else
+    lua_getfenv(L, -1);
   return 1;
 }
 
@@ -144,8 +147,8 @@ static int luaB_setfenv (lua_State *L) {
     lua_replace(L, LUA_GLOBALSINDEX);
     return 0;
   }
-  else if (lua_setfenv(L, -2) == 0)
-    luaL_error(L, "`setfenv' cannot change environment of given function");
+  else if (lua_iscfunction(L, -2) || lua_setfenv(L, -2) == 0)
+    luaL_error(L, "`setfenv' cannot change environment of given object");
   return 1;
 }
 
@@ -182,11 +185,11 @@ static int luaB_gcinfo (lua_State *L) {
 
 static int luaB_collectgarbage (lua_State *L) {
   static const char *const opts[] = {"stop", "restart", "collect",
-    "count", "step", "setpace", "setincmode", NULL};
+    "count", "step", "setpace", "setstepmul", NULL};
   static const int optsnum[] = {LUA_GCSTOP, LUA_GCRESTART, LUA_GCCOLLECT,
-    LUA_GCCOUNT, LUA_GCSTEP, LUA_GCSETPACE, LUA_GCSETINCMODE};
+    LUA_GCCOUNT, LUA_GCSTEP, LUA_GCSETPACE, LUA_GCSETSTEPMUL};
   int o = luaL_findstring(luaL_optstring(L, 1, "collect"), opts);
-  int ex = luaL_optint(L, 2, 0);
+  int ex = luaL_optinteger(L, 2, 0);
   luaL_argcheck(L, o >= 0, 1, "invalid option");
   lua_pushinteger(L, lua_gc(L, optsnum[o], ex));
   return 1;
@@ -280,6 +283,7 @@ static int luaB_loadfile (lua_State *L) {
 ** reserved slot inside the stack.
 */
 static const char *generic_reader (lua_State *L, void *ud, size_t *size) {
+  (void)ud;  /* to avoid warnings */
   luaL_checkstack(L, 2, "too many nested functions");
   lua_pushvalue(L, 1);  /* get function */
   lua_call(L, 0, 1);  /* call it */
@@ -469,7 +473,7 @@ static int auxresume (lua_State *L, lua_State *co, int narg) {
   int status;
   if (!lua_checkstack(co, narg))
     luaL_error(L, "too many arguments to resume");
-  if (lua_threadstatus(co) == 0 && lua_gettop(co) == 0) {
+  if (lua_status(co) == 0 && lua_gettop(co) == 0) {
     lua_pushliteral(L, "cannot resume dead coroutine");
     return -1;  /* error flag */
   }
@@ -549,7 +553,7 @@ static int luaB_costatus (lua_State *L) {
   luaL_argcheck(L, co, 1, "coroutine expected");
   if (L == co) lua_pushliteral(L, "running");
   else {
-    switch (lua_threadstatus(co)) {
+    switch (lua_status(co)) {
       case LUA_YIELD:
         lua_pushliteral(L, "suspended");
         break;
@@ -572,7 +576,7 @@ static int luaB_costatus (lua_State *L) {
 }
 
 
-static int luaB_cocurrent (lua_State *L) {
+static int luaB_corunning (lua_State *L) {
   if (lua_pushthread(L))
     return 0;  /* main thread is not a coroutine */
   else
@@ -586,7 +590,7 @@ static const luaL_reg co_funcs[] = {
   {"resume", luaB_coresume},
   {"yield", luaB_yield},
   {"status", luaB_costatus},
-  {"current", luaB_cocurrent},
+  {"running", luaB_corunning},
   {NULL, NULL}
 };
 
@@ -620,9 +624,6 @@ static void base_open (lua_State *L) {
   /* create register._LOADED to track loaded modules */
   lua_newtable(L);
   lua_setfield(L, LUA_REGISTRYINDEX, "_LOADED");
-  /* create register._PRELOAD to allow pre-loaded modules */
-  lua_newtable(L);
-  lua_setfield(L, LUA_REGISTRYINDEX, "_PRELOAD");
   /* set global _G */
   lua_pushvalue(L, LUA_GLOBALSINDEX);
   lua_setglobal(L, "_G");

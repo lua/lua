@@ -1,5 +1,24 @@
 This is Lua 5.1 (work).
 
+* Changes from version 5.0 to 5.1
+  -------------------------------
+  Language:
+  + new module system.
+  + new semantics for control variables of fors.
+  + new semantics for setn/getn.
+  + new syntax/semantics for varargs.
+  + new long strings.
+  API:
+  + new functions: lua_createtable, lua_get(set)field, lua_push(to)integer.
+  + user supplies memory allocator (lua_open becomes lua_newstate).
+  Implementation:
+  + incremental garbage collection.
+  + debug works over other threads.
+  + better handling of end-of-line in the lexer.
+  + fully reentrant parser (new Lua function `load')
+  + better support for 64-bit machines (special thanks to Mike Pall).
+  + native loadlib support for Mac OS X (thanks to Matthew Cox).
+
 * Changes from version 4.0 to 5.0
   -------------------------------
   Language:

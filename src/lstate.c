@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.19 2004/12/13 12:15:11 roberto Exp $
+** $Id: lstate.c,v 2.25 2005/02/23 17:30:22 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -76,33 +76,22 @@ static void freestack (lua_State *L, lua_State *L1) {
 ** open parts that may cause memory-allocation errors
 */
 static void f_luaopen (lua_State *L, void *ud) {
-  Udata *u;  /* head of udata list */
   global_State *g = G(L);
   UNUSED(ud);
-  u = luaM_new(L, Udata);
-  u->uv.len = 0;
-  u->uv.metatable = NULL;
-  g->firstudata = obj2gco(u);
-  luaC_link(L, obj2gco(u), LUA_TUSERDATA);
-  setbit(u->uv.marked, FIXEDBIT);
-  setbit(L->marked, FIXEDBIT);
   stack_init(L, L);  /* init stack */
-  sethvalue(L, gt(L), luaH_new(L, 0, 4));  /* table of globals */
+  sethvalue(L, gt(L), luaH_new(L, 0, 20));  /* table of globals */
   hvalue(gt(L))->metatable = luaH_new(L, 0, 0);  /* globals metatable */
-  sethvalue(L, registry(L), luaH_new(L, 4, 4));  /* registry */
+  sethvalue(L, registry(L), luaH_new(L, 6, 20));  /* registry */
   luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
   luaT_init(L);
   luaX_init(L);
   luaS_fix(luaS_newliteral(L, MEMERRMSG));
   g->GCthreshold = 4*g->totalbytes;
-  g->prevestimate = g->estimate = g->totalbytes;
 }
 
 
 static void preinit_state (lua_State *L, global_State *g) {
   L->l_G = g;
-  L->tt = LUA_TTHREAD;
-  L->marked = luaC_white(g);
   L->stack = NULL;
   L->stacksize = 0;
   L->errorJmp = NULL;
@@ -125,20 +114,19 @@ static void close_state (lua_State *L) {
   global_State *g = G(L);
   luaF_close(L, L->stack);  /* close all upvalues for this thread */
   luaC_freeall(L);  /* collect all objects */
-  lua_assert(g->rootgc == NULL);
+  lua_assert(g->rootgc == obj2gco(L));
   lua_assert(g->strt.nuse == 0);
   luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size, TString *);
   luaZ_freebuffer(L, &g->buff);
   freestack(L, L);
   lua_assert(g->totalbytes == sizeof(LG));
-  (*g->realloc)(g->ud, fromstate(L), state_size(LG), 0);
+  (*g->frealloc)(g->ud, fromstate(L), state_size(LG), 0);
 }
 
 
 lua_State *luaE_newthread (lua_State *L) {
   lua_State *L1 = tostate(luaM_malloc(L, state_size(lua_State)));
-  L1->next = L->next;  /* link new thread after `L' */
-  L->next = obj2gco(L1);
+  luaC_link(L, obj2gco(L1), LUA_TTHREAD);
   preinit_state(L1, G(L));
   stack_init(L1, L);  /* init stack */
   setobj2n(L, gt(L1), gt(L));  /* share table of globals */
@@ -167,11 +155,16 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   L = tostate(l);
   g = &((LG *)L)->g;
   L->next = NULL;
-  g->currentwhite = bitmask(WHITE0BIT);
+  L->tt = LUA_TTHREAD;
+  g->currentwhite = bit2mask(WHITE0BIT, FIXEDBIT);
+  L->marked = luaC_white(g);
+  set2bits(L->marked, FIXEDBIT, SFIXEDBIT);
   preinit_state(L, g);
-  g->realloc = f;
+  g->frealloc = f;
   g->ud = ud;
   g->mainthread = L;
+  g->uvhead.u.l.prev = &g->uvhead;
+  g->uvhead.u.l.next = &g->uvhead;
   g->GCthreshold = 0;  /* mark it as unfinished state */
   g->strt.size = 0;
   g->strt.nuse = 0;
@@ -180,21 +173,17 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   luaZ_initbuffer(L, &g->buff);
   g->panic = NULL;
   g->gcstate = GCSpause;
-  g->gcgenerational = 0;
   g->rootgc = obj2gco(L);
   g->sweepstrgc = 0;
   g->sweepgc = &g->rootgc;
-  g->firstudata = NULL;
   g->gray = NULL;
   g->grayagain = NULL;
   g->weak = NULL;
   g->tmudata = NULL;
-  setnilvalue(gkey(g->dummynode));
-  setnilvalue(gval(g->dummynode));
-  gnext(g->dummynode) = NULL;
   g->totalbytes = sizeof(LG);
-  g->gcpace = GCDIV;
-  g->incgc = 1;
+  g->gcpace = 200;  /* 200% (wait memory to double before next collection) */
+  g->gcstepmul = 200;  /* GC runs `twice the speed' of memory allocation */
+  g->gcdept = 0;
   if (luaD_rawrunprotected(L, f_luaopen, NULL) != 0) {
     /* memory allocation error: free partial state */
     close_state(L);

@@ -6,12 +6,14 @@
 
 CC= gcc
 CFLAGS= -O2 -Wall $(MYCFLAGS)
-MYCFLAGS=
-MYLDFLAGS= -Wl,-E		# enable dynamic loading in Linux
-MYLIBS= -lm -ldl		# enable dynamic loading in Linux
 AR= ar rcu
 RANLIB= ranlib
 RM= rm -f
+
+MYCFLAGS=
+MYLDFLAGS=
+MYLIBS= -lm
+DL= -ldl -Wl,-E			# enable dynamic loading in Linux
 
 # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
 
@@ -49,10 +51,10 @@ $(LIB_T): $(LIB_O)
 	$(RANLIB) $@
 
 $(LUA_T): $(LUA_O) $(CORE_T) $(LIB_T)
-	$(CC) -o $@ $(MYLDFLAGS) $(LUA_O) -L. -llua -llualib $(MYLIBS)
+	$(CC) -o $@ $(MYLDFLAGS) $(LUA_O) -L. -llua -llualib $(MYLIBS) $(DL)
 
 $(LUAC_T): $(LUAC_O) $(CORE_T)
-	$(CC) -o $@ $(MYLDFLAGS) $(LUAC_O) -L. -llua
+	$(CC) -o $@ $(MYLDFLAGS) $(LUAC_O) -L. -llua $(MYLIBS)
 
 clean:
 	$(RM) $(ALL_T) $(ALL_O)
@@ -63,12 +65,13 @@ depend:
 echo:
 	@echo "CC = $(CC)"
 	@echo "CFLAGS = $(CFLAGS)"
-	@echo "MYCFLAGS = $(MYCFLAGS)"
-	@echo "MYLDFLAGS = $(MYLDFLAGS)"
-	@echo "MYLIBS = $(MYLIBS)"
 	@echo "AR = $(AR)"
 	@echo "RANLIB = $(RANLIB)"
 	@echo "RM = $(RM)"
+	@echo "MYCFLAGS = $(MYCFLAGS)"
+	@echo "MYLDFLAGS = $(MYLDFLAGS)"
+	@echo "MYLIBS = $(MYLIBS)"
+	@echo "DL = $(DL)"
 
 # DO NOT DELETE
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.10 2004/12/13 12:15:11 roberto Exp $
+** $Id: lstate.h,v 2.16 2005/02/23 17:30:22 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -67,30 +67,28 @@ typedef struct CallInfo {
 */
 typedef struct global_State {
   stringtable strt;  /* hash table for strings */
-  lua_Alloc realloc;  /* function to reallocate memory */
-  void *ud;         /* auxiliary data to `realloc' */
+  lua_Alloc frealloc;  /* function to reallocate memory */
+  void *ud;         /* auxiliary data to `frealloc' */
   lu_byte currentwhite;
   lu_byte gcstate;  /* state of garbage collector */
-  lu_byte gcgenerational;
   GCObject *rootgc;  /* list of all collectable objects */
-  GCObject *firstudata;   /* udata go to the end of `rootgc' */
   GCObject **sweepgc;  /* position of sweep in `rootgc' */
   int sweepstrgc;  /* position of sweep in `strt' */
   GCObject *gray;  /* list of gray objects */
   GCObject *grayagain;  /* list of objects to be traversed atomically */
   GCObject *weak;  /* list of weak tables (to be cleared) */
-  GCObject *tmudata;  /* list of userdata to be GC */
+  GCObject *tmudata;  /* last element of list of userdata to be GC */
   Mbuffer buff;  /* temporary buffer for string concatentation */
   lu_mem GCthreshold;
   lu_mem totalbytes;  /* number of bytes currently allocated */
   lu_mem estimate;  /* an estimate of number of bytes actually in use */
-  lu_mem prevestimate;  /* previous estimate */
-  int gcpace;  /* relative `speed' of the GC */
-  int incgc;  /* 0 if GC is done non-incrementally */
+  lu_mem gcdept;  /* how much GC is `behind schedule' */
+  int gcpace;  /* size of pause between successive GCs */
+  int gcstepmul;  /* GC `granularity' */
   lua_CFunction panic;  /* to be called in unprotected errors */
   TValue _registry;
   struct lua_State *mainthread;
-  Node dummynode[1];  /* common node array for all empty tables */
+  UpVal uvhead;  /* head of double-linked list of all open upvalues */
   TString *tmname[TM_N];  /* array with tag-method names */
 } global_State;
 
@@ -118,6 +116,7 @@ struct lua_State {
   int hookcount;
   lua_Hook hook;
   TValue _gt;  /* table of globals */
+  TValue env;  /* temporary place for environments */
   GCObject *openupval;  /* list of open upvalues in this stack */
   GCObject *gclist;
   struct lua_longjmp *errorJmp;  /* current error recover point */

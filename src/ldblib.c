@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.89 2004/11/17 12:02:41 roberto Exp $
+** $Id: ldblib.c,v 1.93 2005/02/18 12:40:02 roberto Exp $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -17,6 +17,40 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
+
+
+static int getmetatable (lua_State *L) {
+  luaL_checkany(L, 1);
+  if (!lua_getmetatable(L, 1)) {
+    lua_pushnil(L);  /* no metatable */
+  }
+  return 1;
+}
+
+
+static int setmetatable (lua_State *L) {
+  int t = lua_type(L, 2);
+  luaL_argcheck(L, t == LUA_TNIL || t == LUA_TTABLE, 2,
+                    "nil or table expected");
+  lua_settop(L, 2);
+  lua_pushboolean(L, lua_setmetatable(L, 1));
+  return 1;
+}
+
+
+static int getfenv (lua_State *L) {
+  lua_getfenv(L, 1);
+  return 1;
+}
+
+
+static int setfenv (lua_State *L) {
+  luaL_checktype(L, 2, LUA_TTABLE);
+  lua_settop(L, 2);
+  if (lua_setfenv(L, 1) == 0)
+    luaL_error(L, "`setfenv' cannot change environment of given object");
+  return 1;
+}
 
 
 static void settabss (lua_State *L, const char *i, const char *v) {
@@ -275,12 +309,17 @@ static int debug (lua_State *L) {
 #define LEVELS2	10	/* size of the second part of the stack */
 
 static int errorfb (lua_State *L) {
-  int level = 0;
+  int level;
   int firstpart = 1;  /* still before eventual `...' */
   int arg;
   lua_State *L1 = getthread(L, &arg);
   lua_Debug ar;
-  if (L == L1) level++;  /* skip level 0 (it's this function) */
+  if (lua_isnumber(L, arg+2)) {
+    level = lua_tointeger(L, arg+2);
+    lua_pop(L, 1);
+  }
+  else
+    level = (L == L1) ? 1 : 0;  /* level 0 may be this own function */
   if (lua_gettop(L) == arg)
     lua_pushliteral(L, "");
   else if (!lua_isstring(L, arg+1)) return 1;  /* message is not a string */
@@ -323,6 +362,10 @@ static int errorfb (lua_State *L) {
 
 
 static const luaL_reg dblib[] = {
+  {"getmetatable", getmetatable},
+  {"setmetatable", setmetatable},
+  {"getfenv", getfenv},
+  {"setfenv", setfenv},
   {"getlocal", getlocal},
   {"getinfo", getinfo},
   {"gethook", gethook},
@@ -338,8 +381,6 @@ static const luaL_reg dblib[] = {
 
 LUALIB_API int luaopen_debug (lua_State *L) {
   luaL_openlib(L, LUA_DBLIBNAME, dblib, 0);
-  lua_pushcfunction(L, errorfb);
-  lua_setglobal(L, "_TRACEBACK");
   return 1;
 }
 

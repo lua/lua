@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.8 2004/12/04 18:10:22 roberto Exp $
+** $Id: lobject.h,v 2.11 2005/02/18 12:40:02 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -218,6 +218,7 @@ typedef union Udata {
   struct {
     CommonHeader;
     struct Table *metatable;
+    struct Table *env;
     size_t len;
   } uv;
 } Udata;
@@ -271,7 +272,13 @@ typedef struct LocVar {
 typedef struct UpVal {
   CommonHeader;
   TValue *v;  /* points to stack or to its own value */
-  TValue value;  /* the value (when closed) */
+  union {
+    TValue value;  /* the value (when closed) */
+    struct {  /* double linked list (when open) */
+      struct UpVal *prev;
+      struct UpVal *next;
+    } l;
+  } u;
 } UpVal;
 
 
@@ -280,7 +287,8 @@ typedef struct UpVal {
 */
 
 #define ClosureHeader \
-	CommonHeader; lu_byte isC; lu_byte nupvalues; GCObject *gclist
+	CommonHeader; lu_byte isC; lu_byte nupvalues; GCObject *gclist; \
+	struct Table *env
 
 typedef struct CClosure {
   ClosureHeader;
@@ -292,7 +300,6 @@ typedef struct CClosure {
 typedef struct LClosure {
   ClosureHeader;
   struct Proto *p;
-  TValue g;  /* global table for this closure */
   UpVal *upvals[1];
 } LClosure;
 
@@ -330,7 +337,7 @@ typedef struct Table {
   struct Table *metatable;
   TValue *array;  /* array part */
   Node *node;
-  Node *firstfree;  /* this position is free; all positions after it are full */
+  Node *lastfree;  /* any free position is before this position */
   GCObject *gclist;
   int sizearray;  /* size of `array' array */
 } Table;
@@ -350,6 +357,8 @@ typedef struct Table {
 
 
 extern const TValue luaO_nilobject;
+
+#define ceillog2(x)	(luaO_log2((x)-1) + 1)
 
 int luaO_log2 (unsigned int x);
 int luaO_int2fb (unsigned int x);

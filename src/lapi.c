@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.23 2004/12/13 12:15:11 roberto Exp $
+** $Id: lapi.c,v 2.28 2005/02/23 17:30:22 roberto Exp $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -58,6 +58,11 @@ static TValue *index2adr (lua_State *L, int idx) {
   }
   else switch (idx) {  /* pseudo-indices */
     case LUA_REGISTRYINDEX: return registry(L);
+    case LUA_ENVIRONINDEX: {
+      Closure *func = curr_func(L);
+      sethvalue(L, &L->env, func->c.env);
+      return &L->env;
+    }
     case LUA_GLOBALSINDEX: return gt(L);
     default: {
       Closure *func = curr_func(L);
@@ -66,6 +71,16 @@ static TValue *index2adr (lua_State *L, int idx) {
                 ? &func->c.upvalue[idx-1]
                 : cast(TValue *, &luaO_nilobject);
     }
+  }
+}
+
+
+static Table *getcurrenv (lua_State *L) {
+  if (L->ci == L->base_ci)  /* no enclosing function? */
+    return hvalue(gt(L));  /* use global table as environment */
+  else {
+    Closure *func = curr_func(L);
+    return func->c.env;
   }
 }
 
@@ -186,9 +201,17 @@ LUA_API void lua_replace (lua_State *L, int idx) {
   api_checknelems(L, 1);
   o = index2adr(L, idx);
   api_checkvalidindex(L, o);
-  setobj(L, o, L->top - 1);
-  if (idx < LUA_GLOBALSINDEX)  /* function upvalue? */
-    luaC_barrier(L, curr_func(L), L->top - 1);
+  if (idx == LUA_ENVIRONINDEX) {
+    Closure *func = curr_func(L);
+    api_check(L, ttistable(L->top - 1)); 
+    func->c.env = hvalue(L->top - 1);
+    luaC_barrier(L, func, L->top - 1);
+  }
+  else {
+    setobj(L, o, L->top - 1);
+    if (idx < LUA_GLOBALSINDEX)  /* function upvalue? */
+      luaC_barrier(L, curr_func(L), L->top - 1);
+  }
   L->top--;
   lua_unlock(L);
 }
@@ -452,7 +475,7 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   lua_lock(L);
   luaC_checkGC(L);
   api_checknelems(L, n);
-  cl = luaF_newCclosure(L, n);
+  cl = luaF_newCclosure(L, n, getcurrenv(L));
   cl->c.f = fn;
   L->top -= n;
   while (n--)
@@ -542,7 +565,7 @@ LUA_API void lua_rawgeti (lua_State *L, int idx, int n) {
 LUA_API void lua_createtable (lua_State *L, int narray, int nrec) {
   lua_lock(L);
   luaC_checkGC(L);
-  sethvalue(L, L->top, luaH_new(L, narray, luaO_log2(nrec) + 1));
+  sethvalue(L, L->top, luaH_new(L, narray, nrec));
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -579,7 +602,17 @@ LUA_API void lua_getfenv (lua_State *L, int idx) {
   lua_lock(L);
   o = index2adr(L, idx);
   api_checkvalidindex(L, o);
-  setobj2s(L, L->top, isLfunction(o) ? &clvalue(o)->l.g : gt(L));
+  switch (ttype(o)) {
+    case LUA_TFUNCTION:
+      sethvalue(L, L->top, clvalue(o)->c.env);
+      break;
+    case LUA_TUSERDATA:
+      sethvalue(L, L->top, uvalue(o)->env);
+      break;
+    default:
+      setnilvalue(L->top);
+      break;
+  }
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -682,17 +715,24 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
 
 LUA_API int lua_setfenv (lua_State *L, int idx) {
   StkId o;
-  int res = 0;
+  int res = 1;
   lua_lock(L);
   api_checknelems(L, 1);
   o = index2adr(L, idx);
   api_checkvalidindex(L, o);
   api_check(L, ttistable(L->top - 1));
-  if (isLfunction(o)) {
-    res = 1;
-    clvalue(o)->l.g = *(L->top - 1);
-    luaC_objbarrier(L, clvalue(o), hvalue(L->top - 1));
+  switch (ttype(o)) {
+    case LUA_TFUNCTION:
+      clvalue(o)->c.env = hvalue(L->top - 1);
+      break;
+    case LUA_TUSERDATA:
+      uvalue(o)->env = hvalue(L->top - 1);
+      break;
+    default:
+      res = 0;
+      break;
   }
+  luaC_objbarrier(L, gcvalue(o), hvalue(L->top - 1));
   L->top--;
   lua_unlock(L);
   return res;
@@ -776,7 +816,7 @@ struct CCallS {  /* data to `f_Ccall' */
 static void f_Ccall (lua_State *L, void *ud) {
   struct CCallS *c = cast(struct CCallS *, ud);
   Closure *cl;
-  cl = luaF_newCclosure(L, 0);
+  cl = luaF_newCclosure(L, 0, getcurrenv(L));
   cl->c.f = c->func;
   setclvalue(L, L->top, cl);  /* push function */
   incr_top(L);
@@ -826,7 +866,7 @@ LUA_API int lua_dump (lua_State *L, lua_Chunkwriter writer, void *data) {
 }
 
 
-LUA_API int  lua_threadstatus (lua_State *L) {
+LUA_API int  lua_status (lua_State *L) {
   return L->status;
 }
 
@@ -872,9 +912,9 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
       g->gcpace = data;
       break;
     }
-    case LUA_GCSETINCMODE: {
-      res = g->incgc;
-      g->incgc = data;
+    case LUA_GCSETSTEPMUL: {
+      res = g->gcstepmul;
+      g->gcstepmul = data;
       break;
     }
     default: res = -1;  /* invalid option */
@@ -888,11 +928,6 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
 /*
 ** miscellaneous functions
 */
-
-
-LUA_API const char *lua_version (void) {
-  return LUA_VERSION;
-}
 
 
 LUA_API int lua_error (lua_State *L) {
@@ -940,7 +975,7 @@ LUA_API void lua_concat (lua_State *L, int n) {
 
 LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud) {
   *ud = G(L)->ud;
-  return G(L)->realloc;
+  return G(L)->frealloc;
 }
 
 
@@ -948,7 +983,7 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
   Udata *u;
   lua_lock(L);
   luaC_checkGC(L);
-  u = luaS_newudata(L, size);
+  u = luaS_newudata(L, size, getcurrenv(L));
   setuvalue(L, L->top, u);
   api_incr_top(L);
   lua_unlock(L);
@@ -958,7 +993,7 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
 
 
 
-static const char *aux_upvalue (lua_State *L, StkId fi, int n, TValue **val) {
+static const char *aux_upvalue (StkId fi, int n, TValue **val) {
   Closure *f;
   if (!ttisfunction(fi)) return NULL;
   f = clvalue(fi);
@@ -980,7 +1015,7 @@ LUA_API const char *lua_getupvalue (lua_State *L, int funcindex, int n) {
   const char *name;
   TValue *val;
   lua_lock(L);
-  name = aux_upvalue(L, index2adr(L, funcindex), n, &val);
+  name = aux_upvalue(index2adr(L, funcindex), n, &val);
   if (name) {
     setobj2s(L, L->top, val);
     api_incr_top(L);
@@ -997,7 +1032,7 @@ LUA_API const char *lua_setupvalue (lua_State *L, int funcindex, int n) {
   lua_lock(L);
   fi = index2adr(L, funcindex);
   api_checknelems(L, 1);
-  name = aux_upvalue(L, fi, n, &val);
+  name = aux_upvalue(fi, n, &val);
   if (name) {
     L->top--;
     setobj(L, val, L->top);

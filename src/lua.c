@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.133 2004/11/18 19:53:49 roberto Exp $
+** $Id: lua.c,v 1.135 2005/01/10 17:21:10 roberto Exp $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -79,11 +79,23 @@ static int report (lua_State *L, int status) {
 }
 
 
+static int traceback (lua_State *L) {
+  luaL_getfield(L, LUA_GLOBALSINDEX, "debug.traceback");
+  if (!lua_isfunction(L, -1))
+    lua_pop(L, 1);
+  else {
+    lua_pushvalue(L, 1);  /* pass error message */
+    lua_pushinteger(L, 2);  /* skip this function and traceback */
+    lua_call(L, 2, 1);  /* call debug.traceback */
+  }
+  return 1;
+}
+
+
 static int docall (lua_State *L, int narg, int clear) {
   int status;
   int base = lua_gettop(L) - narg;  /* function index */
-  lua_pushliteral(L, "_TRACEBACK");
-  lua_rawget(L, LUA_GLOBALSINDEX);  /* get traceback function */
+  lua_pushcfunction(L, traceback);  /* push traceback function */
   lua_insert(L, base);  /* put it under chunk and args */
   signal(SIGINT, laction);
   status = lua_pcall(L, narg, (clear ? 0 : LUA_MULTRET), base);
@@ -359,7 +371,7 @@ static int pmain (lua_State *L) {
   int interactive = 1;
   if (s->argv[0] && s->argv[0][0]) progname = s->argv[0];
   globalL = L;
-  lua_userinit(L);  /* open libraries */
+  luaopen_stdlibs(L);  /* open libraries */
   status = handle_luainit(L);
   if (status == 0) {
     status = handle_argv(L, s->argv, &interactive);

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.127 2004/12/20 13:47:29 roberto Exp $
+** $Id: lauxlib.c,v 1.129 2005/02/23 17:30:22 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -350,8 +350,8 @@ LUALIB_API int luaL_getn (lua_State *L, int t) {
 static const char *pushnexttemplate (lua_State *L, const char *path) {
   const char *l;
   if (*path == '\0') return NULL;  /* no more templates */
-  if (*path == LUA_PATH_SEP) path++;  /* skip separator */
-  l = strchr(path, LUA_PATH_SEP);  /* find next separator */
+  if (*path == LUA_PATHSEP) path++;  /* skip separator */
+  l = strchr(path, LUA_PATHSEP);  /* find next separator */
   if (l == NULL) l = path+strlen(path);
   lua_pushlstring(L, path, l - path);  /* template */
   return l;
@@ -704,6 +704,7 @@ static void *l_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
 
 
 static int panic (lua_State *L) {
+  (void)L;  /* to avoid warnings */
   fprintf(stderr, "PANIC: unprotected error during Lua-API call\n");
   return 0;
 }
