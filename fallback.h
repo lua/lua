@@ -1,5 +1,5 @@
 /*
-** $Id: fallback.h,v 1.21 1997/04/02 23:04:12 roberto Exp roberto $
+** $Id: fallback.h,v 1.22 1997/04/04 22:24:51 roberto Exp roberto $
 */
  
 #ifndef fallback_h
@@ -35,8 +35,15 @@ typedef enum {
 
 #define IM_N 18
 
+
+extern struct IM {
+  TObject int_method[IM_N];
+} *luaI_IMtable;
+
 extern char *luaI_eventname[];
 
+#define luaI_getim(tag,event) (&luaI_IMtable[-(tag)].int_method[event])
+#define luaI_getimbyObj(o,e)  (luaI_getim(luaI_efectivetag(o),(e)))
 
 void luaI_setfallback (void);
 int luaI_ref (TObject *object, int lock);
@@ -47,10 +54,8 @@ char *luaI_travfallbacks (int (*fn)(TObject *));
 
 void luaI_settag (int tag, TObject *o);
 void luaI_realtag (int tag);
-TObject *luaI_getim (int tag, IMS event);
-#define luaI_getimbyObj(o,e)  (luaI_getim(luaI_tag(o),(e)))
 TObject *luaI_geterrorim (void);
-int luaI_tag (TObject *o);
+int luaI_efectivetag (TObject *o);
 void luaI_settagmethod (void);
 void luaI_gettagmethod (void);
 void luaI_seterrormethod (void);

@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 2.3 1997/04/06 14:08:08 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 2.4 1997/04/07 14:48:53 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -111,9 +111,7 @@ static int luaI_checkevent (char *name, char *list[])
 }
 
 
-static struct IM {
-  TObject int_method[IM_N];
-} *luaI_IMtable = NULL;
+struct IM *luaI_IMtable = NULL;
 
 static int IMtable_size = 0;
 static int last_tag = LUA_T_NIL;  /* ORDER LUA_T */
@@ -141,7 +139,7 @@ static void init_entry (int tag)
 {
   int i;
   for (i=0; i<IM_N; i++)
-    luaI_IMtable[-tag].int_method[i].ttype = LUA_T_NIL;
+    ttype(luaI_getim(tag, i)) = LUA_T_NIL;
 }
 
 void luaI_initfallbacks (void)
@@ -194,22 +192,16 @@ void luaI_settag (int tag, TObject *o)
 }
 
 
-int luaI_tag (TObject *o)
+int luaI_efectivetag (TObject *o)
 {
   lua_Type t = ttype(o);
-  if (t == LUA_T_USERDATA)
-    return o->value.ts->tag;
+  if (t == LUA_T_USERDATA) {
+    int tag = o->value.ts->tag;
+    return (tag >= 0) ? LUA_T_USERDATA : tag;
+  }
   else if (t == LUA_T_ARRAY)
     return o->value.a->htag;
   else return t;
-}
-
-
-TObject *luaI_getim (int tag, IMS event)
-{
-  if (tag > LUA_T_USERDATA)
-    tag = LUA_T_USERDATA;  /* default for non-registered tags */
-  return &luaI_IMtable[-tag].int_method[event];
 }
 
 
@@ -219,7 +211,7 @@ void luaI_gettagmethod (void)
   int e = luaI_checkevent(luaL_check_string(2), luaI_eventname);
   checktag(t);
   if (validevent(t, e))
-    luaI_pushobject(&luaI_IMtable[-t].int_method[e]);
+    luaI_pushobject(luaI_getim(t,e));
 }
 
 
@@ -234,8 +226,8 @@ void luaI_settagmethod (void)
                 luaI_eventname[e], t);
   luaL_arg_check(lua_isnil(func) || lua_isfunction(func),
                  3, "function expected");
-  luaI_pushobject(&luaI_IMtable[-t].int_method[e]);
-  luaI_IMtable[-t].int_method[e] = *luaI_Address(func);
+  luaI_pushobject(luaI_getim(t,e));
+  *luaI_getim(t, e) = *luaI_Address(func);
 }
 
 
@@ -264,7 +256,7 @@ char *luaI_travfallbacks (int (*fn)(TObject *))
   for (e=IM_GETTABLE; e<=IM_FUNCTION; e++) {  /* ORDER IM */
     int t;
     for (t=0; t>=last_tag; t--)
-      if (fn(&luaI_IMtable[-t].int_method[e]))
+      if (fn(luaI_getim(t,e)))
         return luaI_eventname[e];
   }
   return NULL;
@@ -301,7 +293,7 @@ static void fillvalids (IMS e, TObject *func)
   int t;
   for (t=LUA_T_NIL; t<=LUA_T_USERDATA; t++)
     if (validevent(t, e))
-      luaI_IMtable[-t].int_method[e] = *func;
+      *luaI_getim(t, e) = *func;
 }
 
 void luaI_setfallback (void)
@@ -320,13 +312,13 @@ void luaI_setfallback (void)
       replace = errorFB;
       break;
     case 1:  /* old getglobal fallback */
-      oldfunc = luaI_IMtable[-LUA_T_NIL].int_method[IM_GETGLOBAL];
-      luaI_IMtable[-LUA_T_NIL].int_method[IM_GETGLOBAL] = *luaI_Address(func);
+      oldfunc = *luaI_getim(LUA_T_NIL, IM_GETGLOBAL);
+      *luaI_getim(LUA_T_NIL, IM_GETGLOBAL) = *luaI_Address(func);
       replace = nilFB;
       break;
     case 2: {  /* old arith fallback */
       int i;
-      oldfunc = luaI_IMtable[-LUA_T_USERDATA].int_method[IM_POW];
+      oldfunc = *luaI_getim(LUA_T_USERDATA, IM_POW);
       for (i=IM_ADD; i<=IM_UNM; i++)  /* ORDER IM */
         fillvalids(i, luaI_Address(func));
       replace = typeFB;
@@ -334,7 +326,7 @@ void luaI_setfallback (void)
     }
     case 3: {  /* old order fallback */
       int i;
-      oldfunc = luaI_IMtable[-LUA_T_USERDATA].int_method[IM_LT];
+      oldfunc = *luaI_getim(LUA_T_USERDATA, IM_LT);
       for (i=IM_LT; i<=IM_GE; i++)  /* ORDER IM */
         fillvalids(i, luaI_Address(func));
       replace = typeFB;
@@ -343,7 +335,7 @@ void luaI_setfallback (void)
     default: {
       int e;
       if ((e = luaI_findstring(name, luaI_eventname)) >= 0) {
-        oldfunc = luaI_IMtable[-LUA_T_USERDATA].int_method[e];
+        oldfunc = *luaI_getim(LUA_T_USERDATA, e);
         fillvalids(e, luaI_Address(func));
         replace = (e == IM_GC || e == IM_INDEX) ? nilFB : typeFB;
       }

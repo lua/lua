@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 4.2 1997/04/04 22:24:51 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 4.3 1997/04/15 17:32:47 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -180,11 +180,14 @@ static int lua_tostring (TObject *obj)
 */
 static void adjust_top (StkId newtop)
 {
-  TObject *nt;
-  lua_checkstack(stack+newtop);
-  nt = stack+newtop;  /* warning: previous call may change stack */
-  while (top < nt) ttype(top++) = LUA_T_NIL;
-  top = nt;  /* top could be bigger than newtop */
+  if (newtop <= top-stack)  /* int arith, since newtop may be out of stack */
+    top = stack+newtop;
+  else {
+    TObject *nt;
+    lua_checkstack(stack+newtop);
+    nt = stack+newtop;  /* warning: previous call may change stack */
+    while (top < nt) ttype(top++) = LUA_T_NIL;
+  }
 }
 
 #define adjustC(nParams)	adjust_top(CLS_current.base+nParams)
@@ -300,7 +303,7 @@ static void do_call (StkId base, int nResults)
     return;
   }
   /* adjust the number of results */
-  if (nResults != MULT_RET && top - (stack+firstResult) != nResults)
+  if (nResults != MULT_RET)
     adjust_top(firstResult+nResults);
   /* move results to base-1 (to erase parameters and function) */
   base--;
@@ -317,7 +320,7 @@ static void do_call (StkId base, int nResults)
 */
 static void pushsubscript (void)
 {
-  int tg = luaI_tag(top-2);
+  int tg = luaI_efectivetag(top-2);
   TObject *im = luaI_getim(tg, IM_GETTABLE);
   if (ttype(top-2) == LUA_T_ARRAY && ttype(im) == LUA_T_NIL) {
       TObject *h = lua_hashget(avalue(top-2), top-1);
@@ -1033,9 +1036,18 @@ void lua_pushobject (lua_Object o)
   incr_top;
 }
 
-int lua_tag (lua_Object o)
+int lua_tag (lua_Object lo)
 {
-  return (o == LUA_NOOBJECT) ?  LUA_T_NIL : luaI_tag(Address(o));
+  if (lo == LUA_NOOBJECT) return LUA_T_NIL;
+  else {
+    TObject *o = Address(lo);
+    lua_Type t = ttype(o);
+    if (t == LUA_T_USERDATA)
+      return o->value.ts->tag;
+    else if (t == LUA_T_ARRAY)
+      return o->value.a->htag;
+    else return t;
+  }
 }
 
 
