@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.88 2002/10/16 20:41:35 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.89 2002/10/22 18:07:55 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -93,25 +93,25 @@ LUALIB_API int luaL_findstring (const char *name, const char *const list[]) {
 }
 
 
-LUALIB_API void luaL_check_stack (lua_State *L, int space, const char *mes) {
+LUALIB_API void luaL_checkstack (lua_State *L, int space, const char *mes) {
   if (!lua_checkstack(L, space))
     luaL_error(L, "stack overflow (%s)", mes);
 }
 
 
-LUALIB_API void luaL_check_type (lua_State *L, int narg, int t) {
+LUALIB_API void luaL_checktype (lua_State *L, int narg, int t) {
   if (lua_type(L, narg) != t)
     tag_error(L, narg, t);
 }
 
 
-LUALIB_API void luaL_check_any (lua_State *L, int narg) {
+LUALIB_API void luaL_checkany (lua_State *L, int narg) {
   if (lua_type(L, narg) == LUA_TNONE)
     luaL_argerror(L, narg, "value expected");
 }
 
 
-LUALIB_API const char *luaL_check_lstr (lua_State *L, int narg, size_t *len) {
+LUALIB_API const char *luaL_checklstring (lua_State *L, int narg, size_t *len) {
   const char *s = lua_tostring(L, narg);
   if (!s) tag_error(L, narg, LUA_TSTRING);
   if (len) *len = lua_strlen(L, narg);
@@ -119,17 +119,18 @@ LUALIB_API const char *luaL_check_lstr (lua_State *L, int narg, size_t *len) {
 }
 
 
-LUALIB_API const char *luaL_opt_lstr (lua_State *L, int narg, const char *def, size_t *len) {
+LUALIB_API const char *luaL_optlstring (lua_State *L, int narg,
+                                        const char *def, size_t *len) {
   if (lua_isnoneornil(L, narg)) {
     if (len)
       *len = (def ? strlen(def) : 0);
     return def;
   }
-  else return luaL_check_lstr(L, narg, len);
+  else return luaL_checklstring(L, narg, len);
 }
 
 
-LUALIB_API lua_Number luaL_check_number (lua_State *L, int narg) {
+LUALIB_API lua_Number luaL_checknumber (lua_State *L, int narg) {
   lua_Number d = lua_tonumber(L, narg);
   if (d == 0 && !lua_isnumber(L, narg))  /* avoid extra test when d is not 0 */
     tag_error(L, narg, LUA_TNUMBER);
@@ -137,9 +138,9 @@ LUALIB_API lua_Number luaL_check_number (lua_State *L, int narg) {
 }
 
 
-LUALIB_API lua_Number luaL_opt_number (lua_State *L, int narg, lua_Number def) {
+LUALIB_API lua_Number luaL_optnumber (lua_State *L, int narg, lua_Number def) {
   if (lua_isnoneornil(L, narg)) return def;
-  else return luaL_check_number(L, narg);
+  else return luaL_checknumber(L, narg);
 }
 
 
@@ -165,7 +166,17 @@ LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event) {
 }
 
 
-LUALIB_API void luaL_openlib (lua_State *L, const luaL_reg *l, int nup) {
+LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
+                              const luaL_reg *l, int nup) {
+  if (libname) {
+    lua_pushstring(L, libname);
+    lua_gettable(L, LUA_GLOBALSINDEX);  /* check whether lib already exists */
+    if (lua_isnil(L, -1)) {  /* no? */
+      lua_pop(L, 1);
+      lua_newtable(L);  /* create it */
+    }
+    lua_insert(L, -(nup+1));  /* move library table to below upvalues */
+  }
   for (; l->name; l++) {
     int i;
     lua_pushstring(L, l->name);
@@ -174,18 +185,12 @@ LUALIB_API void luaL_openlib (lua_State *L, const luaL_reg *l, int nup) {
     lua_pushcclosure(L, l->func, nup);
     lua_settable(L, -(nup+3));
   }
-  lua_pop(L, nup);
-}
-
-
-LUALIB_API void luaL_opennamedlib (lua_State *L, const char *libname,
-                                   const luaL_reg *l, int nup) {
-  lua_pushstring(L, libname);
-  lua_insert(L, -(nup+1));
-  lua_newtable(L);
-  lua_insert(L, -(nup+1));
-  luaL_openlib(L, l, nup);
-  lua_settable(L, LUA_GLOBALSINDEX);
+  lua_pop(L, nup);  /* remove upvalues */
+  if (libname) {
+    lua_pushstring(L, libname);
+    lua_pushvalue(L, -2);
+    lua_settable(L, LUA_GLOBALSINDEX);
+  }
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.53 2002/08/30 20:00:59 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.54 2002/09/16 19:49:45 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -27,22 +27,21 @@ typedef struct luaL_reg {
 } luaL_reg;
 
 
-LUALIB_API void luaL_openlib (lua_State *L, const luaL_reg *l, int nup);
-LUALIB_API void luaL_opennamedlib (lua_State *L, const char *libname,
-                                   const luaL_reg *l, int nup);
+LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
+                               const luaL_reg *l, int nup);
 LUALIB_API int luaL_getmetafield (lua_State *L, int obj, const char *e);
 LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *e);
 LUALIB_API int luaL_typerror (lua_State *L, int narg, const char *tname);
 LUALIB_API int luaL_argerror (lua_State *L, int numarg, const char *extramsg);
-LUALIB_API const char *luaL_check_lstr (lua_State *L, int numArg, size_t *l);
-LUALIB_API const char *luaL_opt_lstr (lua_State *L, int numArg,
-                                          const char *def, size_t *l);
-LUALIB_API lua_Number luaL_check_number (lua_State *L, int numArg);
-LUALIB_API lua_Number luaL_opt_number (lua_State *L, int nArg, lua_Number def);
+LUALIB_API const char *luaL_checklstring (lua_State *L, int numArg, size_t *l);
+LUALIB_API const char *luaL_optlstring (lua_State *L, int numArg,
+                                           const char *def, size_t *l);
+LUALIB_API lua_Number luaL_checknumber (lua_State *L, int numArg);
+LUALIB_API lua_Number luaL_optnumber (lua_State *L, int nArg, lua_Number def);
 
-LUALIB_API void luaL_check_stack (lua_State *L, int sz, const char *msg);
-LUALIB_API void luaL_check_type (lua_State *L, int narg, int t);
-LUALIB_API void luaL_check_any (lua_State *L, int narg);
+LUALIB_API void luaL_checkstack (lua_State *L, int sz, const char *msg);
+LUALIB_API void luaL_checktype (lua_State *L, int narg, int t);
+LUALIB_API void luaL_checkany (lua_State *L, int narg);
 
 LUALIB_API void luaL_where (lua_State *L, int lvl);
 LUALIB_API int luaL_error (lua_State *L, const char *fmt, ...);
@@ -64,14 +63,14 @@ LUALIB_API int luaL_loadbuffer (lua_State *L, const char *buff, size_t sz,
 ** ===============================================================
 */
 
-#define luaL_arg_check(L, cond,numarg,extramsg) if (!(cond)) \
+#define luaL_argcheck(L, cond,numarg,extramsg) if (!(cond)) \
                                                luaL_argerror(L, numarg,extramsg)
-#define luaL_check_string(L,n)	(luaL_check_lstr(L, (n), NULL))
-#define luaL_opt_string(L,n,d)	(luaL_opt_lstr(L, (n), (d), NULL))
-#define luaL_check_int(L,n)	((int)luaL_check_number(L, n))
-#define luaL_check_long(L,n)	((long)luaL_check_number(L, n))
-#define luaL_opt_int(L,n,d)	((int)luaL_opt_number(L, n,d))
-#define luaL_opt_long(L,n,d)	((long)luaL_opt_number(L, n,d))
+#define luaL_checkstring(L,n)	(luaL_checklstring(L, (n), NULL))
+#define luaL_optstring(L,n,d)	(luaL_optlstring(L, (n), (d), NULL))
+#define luaL_checkint(L,n)	((int)luaL_checknumber(L, n))
+#define luaL_checklong(L,n)	((long)luaL_checknumber(L, n))
+#define luaL_optint(L,n,d)	((int)luaL_optnumber(L, n,d))
+#define luaL_optlong(L,n,d)	((long)luaL_optnumber(L, n,d))
 
 
 /*
@@ -115,14 +114,24 @@ LUALIB_API void luaL_pushresult (luaL_Buffer *B);
 ** Compatibility macros
 */
 
-#define luaL_checktype  luaL_check_type
-#define luaL_checkany   luaL_check_any
-
 LUALIB_API int   lua_dofile (lua_State *L, const char *filename);
 LUALIB_API int   lua_dostring (lua_State *L, const char *str);
 LUALIB_API int   lua_dobuffer (lua_State *L, const char *buff, size_t sz,
                                const char *n);
 
+/*
+#define luaL_check_lstr 	luaL_checklstring
+#define luaL_opt_lstr 	luaL_optlstring 
+#define luaL_check_number 	luaL_checknumber 
+#define luaL_opt_number	luaL_optnumber
+#define luaL_arg_check	luaL_argcheck
+#define luaL_check_string	luaL_checkstring
+#define luaL_opt_string	luaL_optstring
+#define luaL_check_int	luaL_checkint
+#define luaL_check_long	luaL_checklong
+#define luaL_opt_int	luaL_optint
+#define luaL_opt_long	luaL_optlong
+*/
 
 #endif
 

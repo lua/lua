@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.21 2002/10/16 20:41:35 roberto Exp roberto $
+** $Id: liolib.c,v 2.22 2002/10/21 20:41:24 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -83,6 +83,10 @@ static FILE **newfile (lua_State *L) {
 }
 
 
+/*
+** assumes that top of the stack is the `io' library, and next is
+** the `io' metatable
+*/
 static void registerfile (lua_State *L, FILE *f, const char *name,
                                                  const char *impname) {
   lua_pushstring(L, name);
@@ -90,9 +94,9 @@ static void registerfile (lua_State *L, FILE *f, const char *name,
   if (impname) {
     lua_pushstring(L, impname);
     lua_pushvalue(L, -2);
-    lua_settable(L, -6);
+    lua_settable(L, -6);  /* metatable[impname] = file */
   }
-  lua_settable(L, -3);
+  lua_settable(L, -3);  /* io[name] = file */
 }
 
 
@@ -127,8 +131,8 @@ static int io_gc (lua_State *L) {
 
 
 static int io_open (lua_State *L) {
-  const char *filename = luaL_check_string(L, 1);
-  const char *mode = luaL_opt_string(L, 2, "r");
+  const char *filename = luaL_checkstring(L, 1);
+  const char *mode = luaL_optstring(L, 2, "r");
   FILE **pf = newfile(L);
   *pf = fopen(filename, mode);
   return (*pf == NULL) ? pushresult(L, 0) : 1;
@@ -140,8 +144,8 @@ static int io_popen (lua_State *L) {
   luaL_error(L, "`popen' not supported");
   return 0;
 #else
-  const char *filename = luaL_check_string(L, 1);
-  const char *mode = luaL_opt_string(L, 2, "r");
+  const char *filename = luaL_checkstring(L, 1);
+  const char *mode = luaL_optstring(L, 2, "r");
   FILE **pf = newfile(L);
   *pf = popen(filename, mode);
   return (*pf == NULL) ? pushresult(L, 0) : 1;
@@ -179,7 +183,7 @@ static int g_iofile (lua_State *L, const char *name, const char *mode) {
     if (filename) {
       FILE **pf = newfile(L);
       *pf = fopen(filename, mode);
-      luaL_arg_check(L, *pf, 1,  strerror(errno));
+      luaL_argcheck(L, *pf, 1,  strerror(errno));
     }
     else {
       tofile(L, 1);  /* check that it's a valid file handle */
@@ -227,10 +231,10 @@ static int io_lines (lua_State *L) {
     return f_lines(L);
   }
   else {
-    const char *filename = luaL_check_string(L, 1);
+    const char *filename = luaL_checkstring(L, 1);
     FILE **pf = newfile(L);
     *pf = fopen(filename, "r");
-    luaL_arg_check(L, *pf, 1,  strerror(errno));
+    luaL_argcheck(L, *pf, 1,  strerror(errno));
     aux_lines(L, lua_gettop(L), 1);
     return 1;
   }
@@ -311,7 +315,7 @@ static int g_read (lua_State *L, FILE *f, int first) {
     n = first+1;  /* to return 1 result */
   }
   else {  /* ensure stack space for all results and for auxlib's buffer */
-    luaL_check_stack(L, nargs+LUA_MINSTACK, "too many arguments");
+    luaL_checkstack(L, nargs+LUA_MINSTACK, "too many arguments");
     success = 1;
     for (n = first; nargs-- && success; n++) {
       if (lua_type(L, n) == LUA_TNUMBER) {
@@ -388,7 +392,7 @@ static int g_write (lua_State *L, FILE *f, int arg) {
     }
     else {
       size_t l;
-      const char *s = luaL_check_lstr(L, arg, &l);
+      const char *s = luaL_checklstring(L, arg, &l);
       status = status && (fwrite(s, sizeof(char), l, f) == l);
     }
   }
@@ -411,9 +415,9 @@ static int f_seek (lua_State *L) {
   static const int mode[] = {SEEK_SET, SEEK_CUR, SEEK_END};
   static const char *const modenames[] = {"set", "cur", "end", NULL};
   FILE *f = tofile(L, 1);
-  int op = luaL_findstring(luaL_opt_string(L, 2, "cur"), modenames);
-  long offset = luaL_opt_long(L, 3, 0);
-  luaL_arg_check(L, op != -1, 2, "invalid mode");
+  int op = luaL_findstring(luaL_optstring(L, 2, "cur"), modenames);
+  long offset = luaL_optlong(L, 3, 0);
+  luaL_argcheck(L, op != -1, 2, "invalid mode");
   op = fseek(f, offset, mode[op]);
   if (op)
     return pushresult(L, 0);  /* error */
@@ -473,7 +477,7 @@ static void createmeta (lua_State *L) {
   lua_pushvalue(L, -2);  /* push metatable */
   lua_rawset(L, -3);  /* metatable.__index = metatable */
   lua_pushvalue(L, -1);  /* push metatable (will be upvalue for library) */
-  luaL_openlib(L, flib, 1);
+  luaL_openlib(L, NULL, flib, 1);
   lua_rawset(L, LUA_REGISTRYINDEX);  /* registry.FILEHANDLE = metatable */
 }
 
@@ -487,19 +491,19 @@ static void createmeta (lua_State *L) {
 */
 
 static int io_execute (lua_State *L) {
-  lua_pushnumber(L, system(luaL_check_string(L, 1)));
+  lua_pushnumber(L, system(luaL_checkstring(L, 1)));
   return 1;
 }
 
 
 static int io_remove (lua_State *L) {
-  return pushresult(L, remove(luaL_check_string(L, 1)) == 0);
+  return pushresult(L, remove(luaL_checkstring(L, 1)) == 0);
 }
 
 
 static int io_rename (lua_State *L) {
-  return pushresult(L, rename(luaL_check_string(L, 1),
-                    luaL_check_string(L, 2)) == 0);
+  return pushresult(L, rename(luaL_checkstring(L, 1),
+                    luaL_checkstring(L, 2)) == 0);
 }
 
 
@@ -513,7 +517,7 @@ static int io_tmpname (lua_State *L) {
 
 
 static int io_getenv (lua_State *L) {
-  lua_pushstring(L, getenv(luaL_check_string(L, 1)));  /* if NULL push nil */
+  lua_pushstring(L, getenv(luaL_checkstring(L, 1)));  /* if NULL push nil */
   return 1;
 }
 
@@ -571,8 +575,8 @@ static int getfield (lua_State *L, const char *key, int d) {
 
 
 static int io_date (lua_State *L) {
-  const char *s = luaL_opt_string(L, 1, "%c");
-  time_t t = (time_t)(luaL_opt_number(L, 2, -1));
+  const char *s = luaL_optstring(L, 1, "%c");
+  time_t t = (time_t)(luaL_optnumber(L, 2, -1));
   struct tm *stm;
   if (t == (time_t)(-1))  /* no time given? */
     t = time(NULL);  /* use current time */
@@ -613,7 +617,7 @@ static int io_time (lua_State *L) {
   else {
     time_t t;
     struct tm ts;
-    luaL_check_type(L, 1, LUA_TTABLE);
+    luaL_checktype(L, 1, LUA_TTABLE);
     lua_settop(L, 1);  /* make sure table is at the top */
     ts.tm_sec = getfield(L, "sec", 0);
     ts.tm_min = getfield(L, "min", 0);
@@ -633,8 +637,8 @@ static int io_time (lua_State *L) {
 
 
 static int io_difftime (lua_State *L) {
-  lua_pushnumber(L, difftime((time_t)(luaL_check_number(L, 1)),
-                             (time_t)(luaL_opt_number(L, 2, 0))));
+  lua_pushnumber(L, difftime((time_t)(luaL_checknumber(L, 1)),
+                             (time_t)(luaL_optnumber(L, 2, 0))));
   return 1;
 }
 
@@ -647,16 +651,16 @@ static int io_setloc (lua_State *L) {
   static const char *const catnames[] = {"all", "collate", "ctype", "monetary",
      "numeric", "time", NULL};
   const char *l = lua_tostring(L, 1);
-  int op = luaL_findstring(luaL_opt_string(L, 2, "all"), catnames);
-  luaL_arg_check(L, l || lua_isnoneornil(L, 1), 1, "string expected");
-  luaL_arg_check(L, op != -1, 2, "invalid option");
+  int op = luaL_findstring(luaL_optstring(L, 2, "all"), catnames);
+  luaL_argcheck(L, l || lua_isnoneornil(L, 1), 1, "string expected");
+  luaL_argcheck(L, op != -1, 2, "invalid option");
   lua_pushstring(L, setlocale(cat[op], l));
   return 1;
 }
 
 
 static int io_exit (lua_State *L) {
-  exit(luaL_opt_int(L, 1, EXIT_SUCCESS));
+  exit(luaL_optint(L, 1, EXIT_SUCCESS));
   return 0;  /* to avoid warnings */
 }
 
@@ -681,18 +685,15 @@ static const luaL_reg syslib[] = {
 
 LUALIB_API int lua_iolibopen (lua_State *L) {
   createmeta(L);
-  luaL_opennamedlib(L, LUA_OSLIBNAME, syslib, 0);
-  lua_pushliteral(L, FILEHANDLE);  /* S: FH */
-  lua_rawget(L, LUA_REGISTRYINDEX);  /* S: mt */
-  lua_pushvalue(L, -1);  /* S: mt mt */
-  luaL_opennamedlib(L, LUA_IOLIBNAME, iolib, 1);  /* S: mt */
-  lua_pushliteral(L, LUA_IOLIBNAME);  /* S: `io' mt */
-  lua_gettable(L, LUA_GLOBALSINDEX);  /* S: io mt */
+  luaL_openlib(L, LUA_OSLIBNAME, syslib, 0);
+  lua_pushliteral(L, FILEHANDLE);
+  lua_rawget(L, LUA_REGISTRYINDEX);
+  lua_pushvalue(L, -1);
+  luaL_openlib(L, LUA_IOLIBNAME, iolib, 1);
   /* put predefined file handles into `io' table */
   registerfile(L, stdin, "stdin", IO_INPUT);
   registerfile(L, stdout, "stdout", IO_OUTPUT);
   registerfile(L, stderr, "stderr", NULL);
-  lua_pop(L, 2);  /* S: empty */
   return 0;
 }
 

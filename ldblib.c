@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.69 2002/09/05 19:45:42 roberto Exp roberto $
+** $Id: ldblib.c,v 1.70 2002/09/16 19:18:01 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -32,7 +32,7 @@ static void settabsi (lua_State *L, const char *i, int v) {
 
 static int getinfo (lua_State *L) {
   lua_Debug ar;
-  const char *options = luaL_opt_string(L, 2, "flnSu");
+  const char *options = luaL_optstring(L, 2, "flnSu");
   if (lua_isnumber(L, 1)) {
     if (!lua_getstack(L, (int)(lua_tonumber(L, 1)), &ar)) {
       lua_pushnil(L);  /* level out of range */
@@ -81,9 +81,9 @@ static int getinfo (lua_State *L) {
 static int getlocal (lua_State *L) {
   lua_Debug ar;
   const char *name;
-  if (!lua_getstack(L, luaL_check_int(L, 1), &ar))  /* level out of range? */
+  if (!lua_getstack(L, luaL_checkint(L, 1), &ar))  /* level out of range? */
     return luaL_argerror(L, 1, "level out of range");
-  name = lua_getlocal(L, &ar, luaL_check_int(L, 2));
+  name = lua_getlocal(L, &ar, luaL_checkint(L, 2));
   if (name) {
     lua_pushstring(L, name);
     lua_pushvalue(L, -2);
@@ -98,10 +98,10 @@ static int getlocal (lua_State *L) {
 
 static int setlocal (lua_State *L) {
   lua_Debug ar;
-  if (!lua_getstack(L, luaL_check_int(L, 1), &ar))  /* level out of range? */
+  if (!lua_getstack(L, luaL_checkint(L, 1), &ar))  /* level out of range? */
     return luaL_argerror(L, 1, "level out of range");
-  luaL_check_any(L, 3);
-  lua_pushstring(L, lua_setlocal(L, &ar, luaL_check_int(L, 2)));
+  luaL_checkany(L, 3);
+  lua_pushstring(L, lua_setlocal(L, &ar, luaL_checkint(L, 2)));
   return 1;
 }
 
@@ -151,10 +151,10 @@ static int sethook (lua_State *L) {
     lua_sethook(L, NULL, 0);  /* turn off hooks */
   }
   else {
-    const char *smask = luaL_check_string(L, 2);
-    lua_Number count = luaL_opt_number(L, 3, 0);
-    luaL_check_type(L, 1, LUA_TFUNCTION);
-    luaL_arg_check(L, count <= LUA_MAXCOUNT, 2, "count too large (>= 2^24)");
+    const char *smask = luaL_checkstring(L, 2);
+    lua_Number count = luaL_optnumber(L, 3, 0);
+    luaL_checktype(L, 1, LUA_TFUNCTION);
+    luaL_argcheck(L, count <= LUA_MAXCOUNT, 2, "count too large (>= 2^24)");
     lua_sethook(L, hookf, makemask(smask, (int)count));
   }
   lua_pushlightuserdata(L, (void *)&KEY_HOOK);
@@ -255,7 +255,7 @@ static const luaL_reg dblib[] = {
 
 
 LUALIB_API int lua_dblibopen (lua_State *L) {
-  luaL_opennamedlib(L, LUA_DBLIBNAME, dblib, 0);
+  luaL_openlib(L, LUA_DBLIBNAME, dblib, 0);
   lua_pushliteral(L, "_TRACEBACK");
   lua_pushcfunction(L, errorfb);
   lua_settable(L, LUA_GLOBALSINDEX);

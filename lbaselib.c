@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.105 2002/11/07 15:39:23 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.106 2002/11/14 12:01:35 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -47,19 +47,19 @@ static int luaB_print (lua_State *L) {
 
 
 static int luaB_tonumber (lua_State *L) {
-  int base = luaL_opt_int(L, 2, 10);
+  int base = luaL_optint(L, 2, 10);
   if (base == 10) {  /* standard conversion */
-    luaL_check_any(L, 1);
+    luaL_checkany(L, 1);
     if (lua_isnumber(L, 1)) {
       lua_pushnumber(L, lua_tonumber(L, 1));
       return 1;
     }
   }
   else {
-    const char *s1 = luaL_check_string(L, 1);
+    const char *s1 = luaL_checkstring(L, 1);
     char *s2;
     unsigned long n;
-    luaL_arg_check(L, 2 <= base && base <= 36, 2, "base out of range");
+    luaL_argcheck(L, 2 <= base && base <= 36, 2, "base out of range");
     n = strtoul(s1, &s2, base);
     if (s1 != s2) {  /* at least one valid digit? */
       while (isspace((unsigned char)(*s2))) s2++;  /* skip trailing spaces */
@@ -75,8 +75,8 @@ static int luaB_tonumber (lua_State *L) {
 
 
 static int luaB_error (lua_State *L) {
-  int level = luaL_opt_int(L, 2, 1);
-  luaL_check_any(L, 1);
+  int level = luaL_optint(L, 2, 1);
+  luaL_checkany(L, 1);
   if (!lua_isstring(L, 1) || level == 0)
     lua_pushvalue(L, 1);  /* propagate error mesage without changes */
   else {  /* add extra information */
@@ -89,7 +89,7 @@ static int luaB_error (lua_State *L) {
 
 
 static int luaB_getmetatable (lua_State *L) {
-  luaL_check_any(L, 1);
+  luaL_checkany(L, 1);
   if (!lua_getmetatable(L, 1)) {
     lua_pushnil(L);
     return 1;  /* no metatable */
@@ -101,8 +101,8 @@ static int luaB_getmetatable (lua_State *L) {
 
 static int luaB_setmetatable (lua_State *L) {
   int t = lua_type(L, 2);
-  luaL_check_type(L, 1, LUA_TTABLE);
-  luaL_arg_check(L, t == LUA_TNIL || t == LUA_TTABLE, 2,
+  luaL_checktype(L, 1, LUA_TTABLE);
+  luaL_argcheck(L, t == LUA_TNIL || t == LUA_TTABLE, 2,
                     "nil or table expected");
   if (luaL_getmetafield(L, 1, "__metatable"))
     luaL_error(L, "cannot change a protected metatable");
@@ -116,8 +116,8 @@ static void getfunc (lua_State *L) {
   if (lua_isfunction(L, 1)) lua_pushvalue(L, 1);
   else {
     lua_Debug ar;
-    int level = luaL_opt_int(L, 1, 1);
-    luaL_arg_check(L, level >= 0, 1, "level must be non-negative");
+    int level = luaL_optint(L, 1, 1);
+    luaL_argcheck(L, level >= 0, 1, "level must be non-negative");
     if (lua_getstack(L, level, &ar) == 0)
       luaL_argerror(L, 1, "invalid level");
     lua_getinfo(L, "f", &ar);
@@ -142,7 +142,7 @@ static int luaB_getglobals (lua_State *L) {
 
 
 static int luaB_setglobals (lua_State *L) {
-  luaL_check_type(L, 2, LUA_TTABLE);
+  luaL_checktype(L, 2, LUA_TTABLE);
   getfunc(L);
   if (aux_getglobals(L))  /* __globals defined? */
     luaL_error(L, "cannot change a protected global table");
@@ -156,24 +156,24 @@ static int luaB_setglobals (lua_State *L) {
 
 
 static int luaB_rawequal (lua_State *L) {
-  luaL_check_any(L, 1);
-  luaL_check_any(L, 2);
+  luaL_checkany(L, 1);
+  luaL_checkany(L, 2);
   lua_pushboolean(L, lua_rawequal(L, 1, 2));
   return 1;
 }
 
 
 static int luaB_rawget (lua_State *L) {
-  luaL_check_type(L, 1, LUA_TTABLE);
-  luaL_check_any(L, 2);
+  luaL_checktype(L, 1, LUA_TTABLE);
+  luaL_checkany(L, 2);
   lua_rawget(L, 1);
   return 1;
 }
 
 static int luaB_rawset (lua_State *L) {
-  luaL_check_type(L, 1, LUA_TTABLE);
-  luaL_check_any(L, 2);
-  luaL_check_any(L, 3);
+  luaL_checktype(L, 1, LUA_TTABLE);
+  luaL_checkany(L, 2);
+  luaL_checkany(L, 3);
   lua_rawset(L, 1);
   return 1;
 }
@@ -187,20 +187,20 @@ static int luaB_gcinfo (lua_State *L) {
 
 
 static int luaB_collectgarbage (lua_State *L) {
-  lua_setgcthreshold(L, luaL_opt_int(L, 1, 0));
+  lua_setgcthreshold(L, luaL_optint(L, 1, 0));
   return 0;
 }
 
 
 static int luaB_type (lua_State *L) {
-  luaL_check_any(L, 1);
+  luaL_checkany(L, 1);
   lua_pushstring(L, lua_typename(L, lua_type(L, 1)));
   return 1;
 }
 
 
 static int luaB_next (lua_State *L) {
-  luaL_check_type(L, 1, LUA_TTABLE);
+  luaL_checktype(L, 1, LUA_TTABLE);
   lua_settop(L, 2);  /* create a 2nd argument if there isn't one */
   if (lua_next(L, 1))
     return 2;
@@ -212,7 +212,7 @@ static int luaB_next (lua_State *L) {
 
 
 static int luaB_pairs (lua_State *L) {
-  luaL_check_type(L, 1, LUA_TTABLE);
+  luaL_checktype(L, 1, LUA_TTABLE);
   lua_getglobal(L, "next");  /* return generator, */
   lua_pushvalue(L, 1);  /* state, */
   lua_pushnil(L);  /* and initial value */
@@ -222,7 +222,7 @@ static int luaB_pairs (lua_State *L) {
 
 static int luaB_ipairs (lua_State *L) {
   lua_Number i = lua_tonumber(L, 2);
-  luaL_check_type(L, 1, LUA_TTABLE);
+  luaL_checktype(L, 1, LUA_TTABLE);
   if (i == 0 && lua_isnull(L, 2)) {  /* `for' start? */
     lua_getglobal(L, "ipairs");  /* return generator, */
     lua_pushvalue(L, 1);  /* state, */
@@ -250,8 +250,8 @@ static int passresults (lua_State *L, int status) {
 
 static int luaB_loadstring (lua_State *L) {
   size_t l;
-  const char *s = luaL_check_lstr(L, 1, &l);
-  const char *chunkname = luaL_opt_string(L, 2, s);
+  const char *s = luaL_checklstring(L, 1, &l);
+  const char *chunkname = luaL_optstring(L, 2, s);
   return passresults(L, luaL_loadbuffer(L, s, l, chunkname));
 }
 
@@ -265,7 +265,7 @@ static int writer (lua_State *L, const void* b, size_t size, void* B) {
 
 static int luaB_stringdump (lua_State *L) {
   luaL_Buffer b;
-  luaL_check_type(L, 1, LUA_TFUNCTION);
+  luaL_checktype(L, 1, LUA_TFUNCTION);
   luaL_buffinit(L,&b);
   if (!lua_dump(L, writer, &b))
     luaL_error(L, "unable to dump given function");
@@ -276,13 +276,13 @@ static int luaB_stringdump (lua_State *L) {
 
 
 static int luaB_loadfile (lua_State *L) {
-  const char *fname = luaL_opt_string(L, 1, NULL);
+  const char *fname = luaL_optstring(L, 1, NULL);
   return passresults(L, luaL_loadfile(L, fname));
 }
 
 
 static int luaB_dofile (lua_State *L) {
-  const char *fname = luaL_opt_string(L, 1, NULL);
+  const char *fname = luaL_optstring(L, 1, NULL);
   int status = luaL_loadfile(L, fname);
   if (status != 0) lua_error(L);
   lua_call(L, 0, LUA_MULTRET);
@@ -291,9 +291,9 @@ static int luaB_dofile (lua_State *L) {
 
 
 static int luaB_assert (lua_State *L) {
-  luaL_check_any(L, 1);
+  luaL_checkany(L, 1);
   if (!lua_toboolean(L, 1))
-    return luaL_error(L, "%s", luaL_opt_string(L, 2, "assertion failed!"));
+    return luaL_error(L, "%s", luaL_optstring(L, 2, "assertion failed!"));
   lua_settop(L, 1);
   return 1;
 }
@@ -301,12 +301,12 @@ static int luaB_assert (lua_State *L) {
 
 static int luaB_unpack (lua_State *L) {
   int n, i;
-  luaL_check_type(L, 1, LUA_TTABLE);
+  luaL_checktype(L, 1, LUA_TTABLE);
   lua_pushliteral(L, "n");
   lua_rawget(L, 1);
   n = (lua_isnumber(L, -1)) ?  (int)lua_tonumber(L, -1) : -1;
   for (i=0; i<n || n==-1; i++) {  /* push arg[1...n] */
-    luaL_check_stack(L, LUA_MINSTACK, "table too big to unpack");
+    luaL_checkstack(L, LUA_MINSTACK, "table too big to unpack");
     lua_rawgeti(L, 1, i+1);
     if (n == -1) {  /* no explicit limit? */
       if (lua_isnil(L, -1)) {  /* stop at first `nil' element */
@@ -321,7 +321,7 @@ static int luaB_unpack (lua_State *L) {
 
 static int luaB_pcall (lua_State *L) {
   int status;
-  luaL_check_any(L, 1);
+  luaL_checkany(L, 1);
   status = lua_pcall(L, lua_gettop(L) - 1, LUA_MULTRET, 0);
   lua_pushboolean(L, (status == 0));
   lua_insert(L, 1);
@@ -331,7 +331,7 @@ static int luaB_pcall (lua_State *L) {
 
 static int luaB_xpcall (lua_State *L) {
   int status;
-  luaL_check_any(L, 2);
+  luaL_checkany(L, 2);
   lua_settop(L, 2);
   lua_insert(L, 1);  /* put error function under function to be called */
   status = lua_pcall(L, 0, LUA_MULTRET, 1);
@@ -396,7 +396,7 @@ static int luaB_newproxy (lua_State *L) {
       validproxy = lua_toboolean(L, -1);
       lua_pop(L, 1);  /* remove value */
     }
-    luaL_arg_check(L, validproxy, 1, "boolean/proxy expected");
+    luaL_argcheck(L, validproxy, 1, "boolean/proxy expected");
     lua_getmetatable(L, 1);  /* metatable is valid; get it */
   }
   lua_setmetatable(L, 2);
@@ -463,7 +463,7 @@ static void pushcomposename (lua_State *L) {
 static int luaB_require (lua_State *L) {
   const char *path;
   int status = LUA_ERRFILE;  /* not found (yet) */
-  luaL_check_string(L, 1);
+  luaL_checkstring(L, 1);
   lua_settop(L, 1);
   lua_pushvalue(L, 1);
   lua_setglobal(L, "_REQUIREDNAME");
@@ -563,7 +563,7 @@ static int auxresume (lua_State *L, lua_State *co, int narg) {
 static int luaB_coresume (lua_State *L) {
   lua_State *co = lua_tothread(L, 1);
   int r;
-  luaL_arg_check(L, co, 1, "coroutine/thread expected");
+  luaL_argcheck(L, co, 1, "coroutine/thread expected");
   r = auxresume(L, co, lua_gettop(L) - 1);
   if (r < 0) {
     lua_pushboolean(L, 0);
@@ -588,7 +588,7 @@ static int luaB_auxwrap (lua_State *L) {
 
 static int luaB_cocreate (lua_State *L) {
   lua_State *NL = lua_newthread(L);
-  luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1), 1,
+  luaL_argcheck(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1), 1,
     "Lua function expected");
   lua_pushvalue(L, 1);  /* move function to top */
   lua_xmove(L, NL, 1);  /* move function from L to NL */
@@ -622,7 +622,7 @@ static const luaL_reg co_funcs[] = {
 static void base_open (lua_State *L) {
   lua_pushliteral(L, "_G");
   lua_pushvalue(L, LUA_GLOBALSINDEX);
-  luaL_openlib(L, base_funcs, 0);  /* open lib into global table */
+  luaL_openlib(L, NULL, base_funcs, 0);  /* open lib into global table */
   lua_pushliteral(L, "_VERSION");
   lua_pushliteral(L, LUA_VERSION);
   lua_rawset(L, -3);  /* set global _VERSION */
@@ -642,7 +642,7 @@ static void base_open (lua_State *L) {
 
 LUALIB_API int lua_baselibopen (lua_State *L) {
   base_open(L);
-  luaL_opennamedlib(L, LUA_COLIBNAME, co_funcs, 0);
+  luaL_openlib(L, LUA_COLIBNAME, co_funcs, 0);
   lua_newtable(L);
   lua_setglobal(L, REQTAB);
   return 0;
