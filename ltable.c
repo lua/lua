@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.66 2001/01/24 15:45:33 roberto Exp roberto $
+** $Id: ltable.c,v 1.67 2001/01/25 16:45:36 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -126,30 +126,6 @@ Node *luaH_next (lua_State *L, const Hash *t, const TObject *key) {
 }
 
 
-/*
-** try to remove a key without value from a table. To avoid problems with
-** hash, change `key' for a number with the same hash.
-*/
-void luaH_remove (Hash *t, TObject *key) {
-  if (ttype(key) == LUA_TNUMBER ||
-       (ttype(key) == LUA_TSTRING && tsvalue(key)->len <= 30))
-  return;  /* do not remove numbers nor small strings */
-  else {
-    /* try to find a number `n' with the same hash as `key' */
-    Node *mp = luaH_mainposition(t, key);
-    int n = mp - &t->node[0];
-    /* make sure `n' is not in `t' */
-    while (luaH_getnum(t, n) != &luaO_nilobject) {
-      if (n >= MAX_INT - t->size)
-        return;  /* give up; (to avoid overflow) */
-      n += t->size;
-    }
-    setnvalue(key, n);
-    lua_assert(luaH_mainposition(t, key) == mp);
-  }
-}
-
-
 static void setnodevector (lua_State *L, Hash *t, luint32 size) {
   int i;
   if (size > MAX_INT)
@@ -227,7 +203,7 @@ static void rehash (lua_State *L, Hash *t) {
 ** position), new key goes to an empty position. 
 */
 static TObject *newkey (lua_State *L, Hash *t, Node *mp, const TObject *key) {
-  if (ttype(&mp->key) != LUA_TNIL) {  /* main position is not free? */
+  if (ttype(&mp->val) != LUA_TNIL) {  /* main position is not free? */
     Node *othern = luaH_mainposition(t, &mp->key);  /* `mp' of colliding node */
     Node *n = t->firstfree;  /* get a free place */
     if (othern != mp) {  /* is colliding node out of its main position? */

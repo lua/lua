@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.78 2001/01/22 18:01:38 roberto Exp roberto $
+** $Id: lgc.c,v 1.79 2001/01/25 16:45:36 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -121,6 +121,29 @@ static void marktagmethods (global_State *G, GCState *st) {
 }
 
 
+static void traverseclosure (GCState *st, Closure *f) {
+  int i;
+  for (i=0; i<f->nupvalues; i++)  /* mark its upvalues */
+    markobject(st, &f->upvalue[i]);
+}
+
+
+static void traversetable (GCState *st, Hash *h) {
+  int i;
+  for (i=0; i<h->size; i++) {
+    Node *n = node(h, i);
+    if (ttype(val(n)) == LUA_TNIL) {
+      if (ttype(key(n)) != LUA_TNIL)
+        sethvalue(key(n), NULL);  /* dead key; remove it */
+    }
+    else {
+      markobject(st, &n->key);
+      markobject(st, &n->val);
+    }
+  }
+}
+
+
 static void markall (lua_State *L) {
   GCState st;
   st.cmark = NULL;
@@ -131,25 +154,14 @@ static void markall (lua_State *L) {
   marktable(&st, G(L)->type2tag);
   for (;;) {  /* mark tables and closures */
     if (st.cmark) {
-      int i;
       Closure *f = st.cmark;  /* get first closure from list */
       st.cmark = f->mark;  /* remove it from list */
-      for (i=0; i<f->nupvalues; i++)  /* mark its upvalues */
-        markobject(&st, &f->upvalue[i]);
+      traverseclosure(&st, f);
     }
     else if (st.tmark) {
-      int i;
       Hash *h = st.tmark;  /* get first table from list */
       st.tmark = h->mark;  /* remove it from list */
-      for (i=0; i<h->size; i++) {
-        Node *n = node(h, i);
-        if (ttype(key(n)) != LUA_TNIL) {
-          if (ttype(val(n)) == LUA_TNIL)
-            luaH_remove(h, key(n));  /* dead element; try to remove it */
-          markobject(&st, &n->key);
-          markobject(&st, &n->val);
-        }
-      }
+      traversetable(&st, h);
     }
     else break;  /* nothing else to mark */
   }
