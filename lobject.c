@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.60 2001/01/24 15:45:33 roberto Exp roberto $
+** $Id: lobject.c,v 1.61 2001/01/25 16:45:36 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -37,15 +37,10 @@ int luaO_equalObj (const TObject *t1, const TObject *t2) {
   switch (ttype(t1)) {
     case LUA_TNUMBER:
       return nvalue(t1) == nvalue(t2);
-    case LUA_TSTRING: case LUA_TUSERDATA:
+    case LUA_TNIL:
+      return 1;
+    default:  /* all other types are equal if pointers are equal */
       return tsvalue(t1) == tsvalue(t2);
-    case LUA_TTABLE: 
-      return hvalue(t1) == hvalue(t2);
-    case LUA_TFUNCTION:
-      return clvalue(t1) == clvalue(t2);
-    default:
-      lua_assert(ttype(t1) == LUA_TNIL);
-      return 1; /* LUA_TNIL */
   }
 }
 
