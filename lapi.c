@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.222 2002/11/21 15:16:04 roberto Exp roberto $
+** $Id: lapi.c,v 1.223 2002/11/25 11:16:48 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -731,6 +731,11 @@ LUA_API void lua_setgcthreshold (lua_State *L, int newthreshold) {
 /*
 ** miscellaneous functions
 */
+
+
+LUA_API const char *lua_version (void) {
+  return LUA_VERSION;
+}
 
 
 LUA_API int lua_error (lua_State *L) {
