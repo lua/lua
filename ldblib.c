@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.51 2002/05/07 17:36:56 roberto Exp roberto $
+** $Id: ldblib.c,v 1.52 2002/05/15 18:57:44 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -41,7 +41,7 @@ static int getinfo (lua_State *L) {
     }
   }
   else if (lua_isfunction(L, 1)) {
-    luaL_vstr(L, ">%s", options);
+    lua_pushfstring(L, ">%s", options);
     options = lua_tostring(L, -1);
     lua_pushvalue(L, 1);
   }
@@ -207,23 +207,24 @@ static int errorfb (lua_State *L) {
     sprintf(buff, "%4d-  ", level-1);
     lua_pushstring(L, buff);
     lua_getinfo(L, "Snl", &ar);
-    luaL_vstr(L, "%s:", ar.short_src);
+    lua_pushfstring(L, "%s:", ar.short_src);
     if (ar.currentline > 0)
-      luaL_vstr(L, "%d:", ar.currentline);
+      lua_pushfstring(L, "%d:", ar.currentline);
     switch (*ar.namewhat) {
       case 'g':  /* global */ 
       case 'l':  /* local */
       case 'f':  /* field */
       case 'm':  /* method */
-        luaL_vstr(L, " in function `%s'", ar.name);
+        lua_pushfstring(L, " in function `%s'", ar.name);
         break;
       default: {
         if (*ar.what == 'm')  /* main? */
-          luaL_vstr(L, " in main chunk");
+          lua_pushfstring(L, " in main chunk");
         else if (*ar.what == 'C')  /* C function? */
-          luaL_vstr(L, "%s", ar.short_src);
+          lua_pushfstring(L, "%s", ar.short_src);
         else
-          luaL_vstr(L, " in function <%s:%d>", ar.short_src, ar.linedefined);
+          lua_pushfstring(L, " in function <%s:%d>",
+                             ar.short_src, ar.linedefined);
       }
     }
     lua_pushliteral(L, "\n");

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.69 2002/05/07 17:36:56 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.70 2002/05/15 18:57:44 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -43,8 +43,9 @@ LUALIB_API int luaL_argerror (lua_State *L, int narg, const char *extramsg) {
 
 
 LUALIB_API int luaL_typerror (lua_State *L, int narg, const char *tname) {
-  luaL_vstr(L, "%s expected, got %s", tname, lua_typename(L, lua_type(L,narg)));
-  return luaL_argerror(L, narg, lua_tostring(L, -1));
+  const char *msg = lua_pushfstring(L, "%s expected, got %s",
+                                    tname, lua_typename(L, lua_type(L,narg)));
+  return luaL_argerror(L, narg, msg);
 }
 
 
@@ -142,25 +143,17 @@ LUALIB_API void luaL_opennamedlib (lua_State *L, const char *libname,
 }
 
 
-LUALIB_API void luaL_vstr (lua_State *L, const char *fmt, ...) {
-  va_list argp;
-  va_start(argp, fmt);
-  lua_vpushstr(L, fmt, argp);
-  va_end(argp);
-}
-
-
 LUALIB_API int luaL_verror (lua_State *L, const char *fmt, ...) {
   lua_Debug ar;
+  const char *msg;
   va_list argp;
   va_start(argp, fmt);
-  lua_vpushstr(L, fmt, argp);
+  msg = lua_pushvfstring(L, fmt, argp);
   va_end(argp);
   if (lua_getstack(L, 1, &ar)) {  /* check calling function */
     lua_getinfo(L, "Snl", &ar);
     if (ar.currentline > 0)
-      luaL_vstr(L, "%s:%d: %s",
-                   ar.short_src, ar.currentline, lua_tostring(L, -1));
+      lua_pushfstring(L, "%s:%d: %s", ar.short_src, ar.currentline, msg);
   }
   return lua_errorobj(L);
 }

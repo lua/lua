@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.79 2002/05/07 17:36:56 roberto Exp roberto $
+** $Id: lobject.c,v 1.80 2002/05/15 18:57:44 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -99,7 +99,7 @@ static void pushstr (lua_State *L, const char *str) {
 
 
 /* this function handles only `%d', `%c', %f, and `%s' formats */
-const char *luaO_vpushstr (lua_State *L, const char *fmt, va_list argp) {
+const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
   int n = 1;
   pushstr(L, "");
   for (;;) {
@@ -141,11 +141,11 @@ const char *luaO_vpushstr (lua_State *L, const char *fmt, va_list argp) {
 }
 
 
-const char *luaO_pushstr (lua_State *L, const char *fmt, ...) {
+const char *luaO_pushfstring (lua_State *L, const char *fmt, ...) {
   const char *msg;
   va_list argp;
   va_start(argp, fmt);
-  msg = luaO_vpushstr(L, fmt, argp);
+  msg = luaO_pushvfstring(L, fmt, argp);
   va_end(argp);
   return msg;
 }

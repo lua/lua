@@ -1,7 +1,7 @@
 /*
-** $Id: lua.h,v 1.131 2002/05/06 19:05:10 roberto Exp roberto $
+** $Id: lua.h,v 1.132 2002/05/07 17:36:56 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
-** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
+** Tecgraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: info@lua.org
 ** www: http://www.lua.org
 ** See Copyright Notice at the end of this file
@@ -21,7 +21,7 @@
 
 
 #define LUA_VERSION	"Lua 5.0 (alpha)"
-#define LUA_COPYRIGHT	"Copyright (C) 1994-2002 TeCGraf, PUC-Rio"
+#define LUA_COPYRIGHT	"Copyright (C) 1994-2002 Tecgraf, PUC-Rio"
 #define LUA_AUTHORS 	"W. Celes, R. Ierusalimschy & L. H. de Figueiredo"
 
 
@@ -130,7 +130,7 @@ LUA_API int            lua_lessthan (lua_State *L, int index1, int index2);
 
 LUA_API lua_Number      lua_tonumber (lua_State *L, int index);
 LUA_API int             lua_toboolean (lua_State *L, int index);
-LUA_API const char *lua_tostring (lua_State *L, int index);
+LUA_API const char     *lua_tostring (lua_State *L, int index);
 LUA_API size_t          lua_strlen (lua_State *L, int index);
 LUA_API lua_CFunction   lua_tocfunction (lua_State *L, int index);
 LUA_API void	       *lua_touserdata (lua_State *L, int index);
@@ -144,7 +144,9 @@ LUA_API void  lua_pushnil (lua_State *L);
 LUA_API void  lua_pushnumber (lua_State *L, lua_Number n);
 LUA_API void  lua_pushlstring (lua_State *L, const char *s, size_t len);
 LUA_API void  lua_pushstring (lua_State *L, const char *s);
-LUA_API void  lua_vpushstr (lua_State *L, const char *fmt, va_list argp);
+LUA_API const char *lua_pushvfstring (lua_State *L, const char *fmt,
+                                                    va_list argp);
+LUA_API const char *lua_pushfstring (lua_State *L, const char *fmt, ...);
 LUA_API void  lua_pushcclosure (lua_State *L, lua_CFunction fn, int n);
 LUA_API void  lua_pushboolean (lua_State *L, int b);
 LUA_API void  lua_pushudataval (lua_State *L, void *p);
@@ -319,7 +321,7 @@ LUA_API int lua_pushupvalues (lua_State *L);
 
 
 /******************************************************************************
-* Copyright (C) 1994-2001 TeCGraf, PUC-Rio.  All rights reserved.
+* Copyright (C) 1994-2001 Tecgraf, PUC-Rio.  All rights reserved.
 * 
 * Permission is hereby granted, without written agreement and without license
 * or royalty fees, to use, copy, modify, and distribute this software and its
@@ -341,14 +343,14 @@ LUA_API int lua_pushupvalues (lua_State *L);
 * to, the implied warranties of merchantability and fitness for a particular
 * purpose.  The software provided hereunder is on an "as is" basis, and the
 * authors have no obligation to provide maintenance, support, updates,
-* enhancements, or modifications.  In no event shall TeCGraf, PUC-Rio, or the
+* enhancements, or modifications.  In no event shall Tecgraf, PUC-Rio, or the
 * authors be held liable to any party for direct, indirect, special,
 * incidental, or consequential damages arising out of the use of this software
 * and its documentation.
 * 
 * The Lua language and this implementation have been entirely designed and
 * written by Waldemar Celes Filho, Roberto Ierusalimschy and
-* Luiz Henrique de Figueiredo at TeCGraf, PUC-Rio.
+* Luiz Henrique de Figueiredo at Tecgraf, PUC-Rio.
 *
 * This implementation contains no third-party code.
 ******************************************************************************/

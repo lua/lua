@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.100 2002/05/07 17:36:56 roberto Exp roberto $
+** $Id: llex.c,v 1.101 2002/05/15 18:57:44 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -51,7 +51,7 @@ void luaX_init (lua_State *L) {
 
 void luaX_checklimit (LexState *ls, int val, int limit, const char *msg) {
   if (val > limit) {
-    msg = luaO_pushstr(ls->L, "too many %s (limit=%d)", msg, limit);
+    msg = luaO_pushfstring(ls->L, "too many %s (limit=%d)", msg, limit);
     luaX_syntaxerror(ls, msg);
   }
 }
@@ -61,7 +61,7 @@ static void luaX_error (LexState *ls, const char *s, const char *token) {
   lua_State *L = ls->L;
   char buff[MAXSRC];
   luaO_chunkid(buff, getstr(ls->source), MAXSRC);
-  luaO_pushstr(L, "%s:%d: %s near `%s'", buff, ls->linenumber, s, token); 
+  luaO_pushfstring(L, "%s:%d: %s near `%s'", buff, ls->linenumber, s, token); 
   luaD_errorobj(L, L->top - 1, LUA_ERRSYNTAX);
 }
 
@@ -70,13 +70,13 @@ void luaX_syntaxerror (LexState *ls, const char *msg) {
   const char *lasttoken;
   switch (ls->t.token) {
     case TK_NAME:
-      lasttoken = luaO_pushstr(ls->L, "%s", getstr(ls->t.seminfo.ts));
+      lasttoken = luaO_pushfstring(ls->L, "%s", getstr(ls->t.seminfo.ts));
       break;
     case TK_STRING:
-      lasttoken = luaO_pushstr(ls->L, "\"%s\"", getstr(ls->t.seminfo.ts));
+      lasttoken = luaO_pushfstring(ls->L, "\"%s\"", getstr(ls->t.seminfo.ts));
       break;
     case TK_NUMBER:
-      lasttoken = luaO_pushstr(ls->L, "%f", ls->t.seminfo.r);
+      lasttoken = luaO_pushfstring(ls->L, "%f", ls->t.seminfo.r);
       break;
     default:
       lasttoken = luaX_token2str(ls, ls->t.token);
@@ -89,7 +89,7 @@ void luaX_syntaxerror (LexState *ls, const char *msg) {
 const char *luaX_token2str (LexState *ls, int token) {
   if (token < FIRST_RESERVED) {
     lua_assert(token == (char)token);
-    return luaO_pushstr(ls->L, "%c", token);
+    return luaO_pushfstring(ls->L, "%c", token);
   }
   else
     return token2string[token-FIRST_RESERVED];
@@ -397,7 +397,7 @@ int luaX_lex (LexState *LS, SemInfo *seminfo) {
           int c = LS->current;
           if (iscntrl(c))
             luaX_error(LS, "invalid control char",
-                           luaO_pushstr(LS->L, "char(%d)", c));
+                           luaO_pushfstring(LS->L, "char(%d)", c));
           next(LS);
           return c;  /* single-char tokens (+ - / ...) */
         }

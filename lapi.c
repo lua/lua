@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.190 2002/05/07 17:36:56 roberto Exp roberto $
+** $Id: lapi.c,v 1.191 2002/05/15 18:57:44 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -355,10 +355,23 @@ LUA_API void lua_pushstring (lua_State *L, const char *s) {
 }
 
 
-LUA_API void  lua_vpushstr (lua_State *L, const char *fmt, va_list argp) {
+LUA_API const char *lua_pushvfstring (lua_State *L, const char *fmt,
+                                      va_list argp) {
+  const char *ret;
   lua_lock(L);
-  luaO_vpushstr(L, fmt, argp);
+  ret = luaO_pushvfstring(L, fmt, argp);
   lua_unlock(L);
+  return ret;
+}
+
+
+LUA_API const char *lua_pushfstring (lua_State *L, const char *fmt, ...) {
+  const char *ret;
+  va_list argp;
+  va_start(argp, fmt);
+  ret = lua_pushvfstring(L, fmt, argp);
+  va_end(argp);
+  return ret;
 }
 
 
@@ -556,21 +569,16 @@ LUA_API int lua_pcall (lua_State *L, int nargs, int nresults, int errf) {
 
 static int errfile (lua_State *L, const char *filename) {
   if (filename == NULL) filename = "stdin";
-  lua_pushliteral(L, "cannot read ");
-  lua_pushstring(L, filename);
-  lua_pushliteral(L, ": ");
-  lua_pushstring(L, lua_fileerror);
-  lua_concat(L, 4);
+  lua_pushfstring(L, "cannot read %s: %s", filename, lua_fileerror);
   return LUA_ERRFILE;
 }
 
 
 LUA_API int lua_loadfile (lua_State *L, const char *filename) {
   ZIO z;
-  const char *luafname;  /* name used by lua */ 
+  int fnindex;
   int status;
   int bin;  /* flag for file mode */
-  int nlevel;  /* level on the stack of filename */
   FILE *f = (filename == NULL) ? stdin : fopen(filename, "r");
   if (f == NULL) return errfile(L, filename);  /* unable to open file */
   bin = (ungetc(getc(f), f) == LUA_SIGNATURE[0]);
@@ -580,19 +588,17 @@ LUA_API int lua_loadfile (lua_State *L, const char *filename) {
     if (f == NULL) return errfile(L, filename);  /* unable to reopen file */
   }
   if (filename == NULL)
-    lua_pushstring(L, "=stdin");
-  else {
-    lua_pushliteral(L, "@");
-    lua_pushstring(L, filename);
-    lua_concat(L, 2);
-  }
-  nlevel = lua_gettop(L);
-  luafname = lua_tostring(L, -1);  /* luafname = `@'..filename */
-  luaZ_Fopen(&z, f, luafname);
+    lua_pushliteral(L, "=stdin");
+  else
+    lua_pushfstring(L, "@%s", filename);
+  fnindex = lua_gettop(L);  /* stack index of file name */
+  luaZ_Fopen(&z, f, lua_tostring(L, fnindex));
   status = luaD_protectedparser(L, &z, bin);
-  if (ferror(f))
+  lua_remove(L, fnindex);
+  if (ferror(f)) {
+    if (status == 0) lua_pop(L, 1);  /* remove chunk */
     return errfile(L, filename);
-  lua_remove(L, nlevel);  /* remove filename */
+  }
   if (f != stdin)
     fclose(f);
   return status;

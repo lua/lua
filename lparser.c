@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.182 2002/05/13 13:09:00 roberto Exp roberto $
+** $Id: lparser.c,v 1.183 2002/05/14 17:52:22 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -70,7 +70,7 @@ static void lookahead (LexState *ls) {
 
 static void error_expected (LexState *ls, int token) {
   luaX_syntaxerror(ls,
-         luaO_pushstr(ls->L, "`%s' expected", luaX_token2str(ls, token)));
+         luaO_pushfstring(ls->L, "`%s' expected", luaX_token2str(ls, token)));
 }
 
 
@@ -98,7 +98,7 @@ static void check_match (LexState *ls, int what, int who, int where) {
     if (where == ls->linenumber)
       error_expected(ls, what);
     else {
-      luaX_syntaxerror(ls, luaO_pushstr(ls->L,
+      luaX_syntaxerror(ls, luaO_pushfstring(ls->L,
              "`%s' expected (to close `%s' at line %d)",
               luaX_token2str(ls, what), luaX_token2str(ls, who), where));
     }

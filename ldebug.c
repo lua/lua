@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.115 2002/05/14 17:52:22 roberto Exp roberto $
+** $Id: ldebug.c,v 1.116 2002/05/15 18:57:44 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -517,13 +517,13 @@ void luaG_runerror (lua_State *L, const char *fmt, ...) {
   const char *msg;
   va_list argp;
   va_start(argp, fmt);
-  msg = luaO_vpushstr(L, fmt, argp);
+  msg = luaO_pushvfstring(L, fmt, argp);
   va_end(argp);
   if (isLmark(L->ci)) {
     char buff[LUA_IDSIZE];
     int line = currentline(L, L->ci);
     luaO_chunkid(buff, getstr(getluaproto(L->ci)->source), LUA_IDSIZE);
-    msg = luaO_pushstr(L, "%s:%d: %s", buff, line, msg);
+    msg = luaO_pushfstring(L, "%s:%d: %s", buff, line, msg);
   }
   luaD_error(L, msg, LUA_ERRRUN);
 }

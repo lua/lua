@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.72 2002/05/06 19:05:10 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.73 2002/05/13 13:10:58 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -28,28 +28,6 @@ static int luaB__ALERT (lua_State *L) {
   fputs(luaL_check_string(L, 1), stderr);
   putc('\n', stderr);
   return 0;
-}
-
-
-/*
-** Basic implementation of _ERRORMESSAGE.
-** The library `liolib' redefines _ERRORMESSAGE for better error information.
-*/
-static int luaB__ERRORMESSAGE (lua_State *L) {
-  lua_Debug ar;
-  luaL_check_type(L, 1, LUA_TSTRING);
-  lua_pushliteral(L, "error: ");
-  lua_pushvalue(L, 1);
-  if (lua_getstack(L, 1, &ar)) {
-    lua_getinfo(L, "Sl", &ar);
-    if (ar.source && ar.currentline > 0) {
-      luaL_vstr(L, "\n  <%s: line %d>", ar.short_src, ar.currentline);
-      lua_concat(L, 2);
-    }
-  }
-  lua_pushliteral(L, "\n");
-  lua_concat(L, 3);
-  return 1;
 }
 
 
@@ -408,7 +386,6 @@ static int luaB_require (lua_State *L) {
 
 static const luaL_reg base_funcs[] = {
   {LUA_ALERT, luaB__ALERT},
-  {"_ERRORMESSAGE", luaB__ERRORMESSAGE},
   {"error", luaB_error},
   {"metatable", luaB_metatable},
   {"globals", luaB_globals},
