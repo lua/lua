@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.2 1996/01/29 17:08:23 roberto Exp roberto $
+% $Id: manual.tex,v 1.3 1996/01/30 12:55:10 roberto Exp roberto $
 
 \documentstyle[A4,11pt,bnf]{article}
 
@@ -32,7 +32,7 @@ Waldemar Celes Filho
 Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1996/01/29 17:08:23 $}
+\date{\small \verb$Date: 1996/01/30 12:55:10 $}
 
 \maketitle
 
@@ -100,7 +100,7 @@ or by WWW (World Wide Web) from
 \end{verbatim}
 
 
-\section{Environment and Modules}
+\section{Environment and Chunks}
 
 All statements in Lua are executed in a \Def{global environment}.
 This environment, which keeps all global variables and functions,
@@ -558,7 +558,7 @@ no adjustment is done.
 
 \subsection{\Index{Function Definitions}}
 
-Functions in Lua can be defined anywhere in the global level of a module.
+Functions in Lua can be defined anywhere in the global level of a chunk.
 The syntax for function definition is:
 \begin{Produc}
 \produc{function}{\rwd{function} var \ter{(} \opt{parlist1} \ter{)}
@@ -1460,7 +1460,7 @@ over the fields of a table.
 Function \Def{clone} receives any table and returns a clone of it.
 \begin{verbatim}
 function clone (t)           -- t is a table
-  local new_t = {}           -- creates a new table
+  local new_t = {}           -- create a new table
   local i, v = next(t, nil)  -- i is an index of t, v = t[i]
   while i do
     new_t[i] = v
@@ -1653,6 +1653,51 @@ This code must be registered with:
 \end{verbatim}
 Notice how the string \verb'"parent"' is kept
 locked in Lua for optimal performance.
+
+\subsection{\Index{Modules}}
+Here we explain one possible way to simulate modules in Lua.
+The main idea is to use a table to store the module functions.
+
+A module should be written as a separate chunk, starting with:
+\begin{verbatim}
+if modulename then return end  -- avoid loading twice the same module
+modulename = {}  -- create a table to represent the module
+\end{verbatim}
+After that, functions can be directly defined with the syntax
+\begin{verbatim}
+function modulename.foo (...)
+  ...
+end
+\end{verbatim}
+
+Any code that needs this module has only to execute
+\verb'dofile("filename")', where \verb'filename' is the file
+where the module is written.
+After this, any function can be called with \verb'modulename.foo(...)'.
+
+If a module function is going to be used many times,
+the program can give a local name to it.
+Because functions are values, it is enough to write
+\begin{verbatim}
+localname = modulename.foo
+\end{verbatim}
+Finally, a module may be {\em opened},
+giving direct access to all its functions,
+as shown in the code in Figure~\ref{openmod}.
+\begin{figure}
+\Line
+\begin{verbatim}
+function open (mod)
+  local n, f = next(mod, nil)
+  while n do
+    setglobal(n, f)
+    n, f = next(mod, n)
+  end
+end
+\end{verbatim}
+\caption{Opening a module.\label{openmod}}
+\Line
+\end{figure}
 
 \subsection{A CFunction} \label{exCFunction}\index{functions in C}
 A CFunction to compute the maximum of a variable number of arguments
