@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.19 1999/01/25 12:30:11 roberto Exp roberto $
+** $Id: ltable.c,v 1.20 1999/01/25 17:41:19 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -152,28 +152,10 @@ void luaH_set (Hash *t, TObject *ref, TObject *val) {
 }
 
 
-static Node *hashnext (Hash *t, int i) {
-  Node *n;
-  int tsize = nhash(t);
-  if (i >= tsize)
-    return NULL;
-  n = node(t, i);
-  while (ttype(val(n)) == LUA_T_NIL) {
-    if (++i >= tsize)
-      return NULL;
-    n = node(t, i);
-  }
-  return n;
-}
-
-Node *luaH_next (Hash *t, TObject *r) {
-  if (ttype(r) == LUA_T_NIL)
-    return hashnext(t, 0);
-  else {
-    Node *n = luaH_present(t, r);
-    luaL_arg_check(ttype(val(n)) != LUA_T_NIL, 2, "key not found");
-    return hashnext(t, (n-(t->node))+1);
-  }
+int luaH_pos (Hash *t, TObject *r) {
+  Node *n = luaH_present(t, r);
+  luaL_arg_check(ttype(val(n)) != LUA_T_NIL, 2, "key not found");
+  return n-(t->node);
 }
 
 

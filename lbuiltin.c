@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.52 1999/02/22 14:17:24 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.53 1999/02/22 19:13:12 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -300,7 +300,74 @@ static void luaB_call (void) {
   }
 }
 
+
+static void luaB_nextvar (void) {
+  TObject *o = luaA_Address(luaL_nonnullarg(1));
+  TaggedString *g;
+  if (ttype(o) == LUA_T_NIL)
+    g = NULL;
+  else {
+    luaL_arg_check(ttype(o) == LUA_T_STRING, 1, "variable name expected");
+    g = tsvalue(o);
+  }
+  if (!luaA_nextvar(g))
+    lua_pushnil();
+}
+
+
+static void luaB_next (void) {
+  Hash *a = gethash(1);
+  TObject *k = luaA_Address(luaL_nonnullarg(2));
+  int i = (ttype(k) == LUA_T_NIL) ? 0 : luaH_pos(a, k)+1;
+  if (luaA_next(a, i) == 0)
+    lua_pushnil();
+}
+
+
+static void luaB_tostring (void) {
+  lua_Object obj = lua_getparam(1);
+  TObject *o = luaA_Address(obj);
+  char buff[64];
+  switch (ttype(o)) {
+    case LUA_T_NUMBER:
+      lua_pushstring(lua_getstring(obj));
+      return;
+    case LUA_T_STRING:
+      lua_pushobject(obj);
+      return;
+    case LUA_T_ARRAY:
+      sprintf(buff, "table: %p", (void *)o->value.a);
+      break;
+    case LUA_T_CLOSURE:
+      sprintf(buff, "function: %p", (void *)o->value.cl);
+      break;
+    case LUA_T_PROTO:
+      sprintf(buff, "function: %p", (void *)o->value.tf);
+      break;
+    case LUA_T_CPROTO:
+      sprintf(buff, "function: %p", (void *)o->value.f);
+      break;
+    case LUA_T_USERDATA:
+      sprintf(buff, "userdata: %p", o->value.ts->u.d.v);
+      break;
+    case LUA_T_NIL:
+      lua_pushstring("nil");
+      return;
+    default:
+      LUA_INTERNALERROR("invalid type");
+  }
+  lua_pushstring(buff);
+}
+
+
+static void luaB_type (void) {
+  lua_Object o = luaL_nonnullarg(1);
+  lua_pushstring(luaO_typename(luaA_Address(o)));
+  lua_pushnumber(lua_tag(o));
+}
+
 /* }====================================================== */
+
 
 
 /*
@@ -352,7 +419,7 @@ static void luaB_foreach (void) {
       luaD_calln(2, 1);
       if (ttype(L->stack.top-1) != LUA_T_NIL)
         return;
-      L->stack.top--;
+      L->stack.top--;  /* remove result */
     }
   }
 }
@@ -361,22 +428,21 @@ static void luaB_foreach (void) {
 static void luaB_foreachvar (void) {
   TObject *f = luaA_Address(luaL_functionarg(1));
   GCnode *g;
-  StkId name = L->Cstack.base++;  /* place to keep var name (to avoid GC) */
-  luaD_checkstack(4);  /* for var name, f, s, and globalvar */
-  ttype(L->stack.stack+name) = LUA_T_NIL;
-  L->stack.top++;  /* top == base */
+  luaD_checkstack(4);  /* for extra var name, f, var name, and globalval */
   for (g = L->rootglobal.next; g; g = g->next) {
     TaggedString *s = (TaggedString *)g;
     if (s->u.s.globalval.ttype != LUA_T_NIL) {
-      ttype(L->stack.stack+name) = LUA_T_STRING;
-      tsvalue(L->stack.stack+name) = s;  /* keep s on stack to avoid GC */
+      pushtagstring(s);  /* keep (extra) s on stack to avoid GC */
       *(L->stack.top++) = *f;
       pushtagstring(s);
       *(L->stack.top++) = s->u.s.globalval;
       luaD_calln(2, 1);
-      if (ttype(L->stack.top-1) != LUA_T_NIL)
+      if (ttype(L->stack.top-1) != LUA_T_NIL) {
+        L->stack.top--;
+        *(L->stack.top-1) = *L->stack.top;  /* remove extra s */
         return;
-      L->stack.top--;
+      }
+      L->stack.top-=2;  /* remove result and extra s */
     }
   }
 }
@@ -505,85 +571,7 @@ static void luaB_sort (void) {
 
 
 /*
-** {======================================================
-** Internal Functions.
-** These functions need access to internal structures
-** to be implemented.
-** =======================================================
-*/
-
-
-static void luaB_nextvar (void) {
-  TObject *o = luaA_Address(luaL_nonnullarg(1));
-  TaggedString *g;
-  if (ttype(o) == LUA_T_NIL)
-    g = NULL;
-  else {
-    luaL_arg_check(ttype(o) == LUA_T_STRING, 1, "variable name expected");
-    g = tsvalue(o);
-  }
-  g = luaA_nextvar(g);
-  if (g) {
-    pushtagstring(g);
-    luaA_pushobject(&g->u.s.globalval);
-  }
-  else lua_pushnil();  /* no more globals */
-}
-
-
-static void luaB_next (void) {
-  Node *n = luaH_next(gethash(1), luaA_Address(luaL_nonnullarg(2)));
-  if (n) {
-    luaA_pushobject(&n->ref);
-    luaA_pushobject(&n->val);
-  }
-  else lua_pushnil();
-}
-
-
-static void luaB_tostring (void) {
-  lua_Object obj = lua_getparam(1);
-  TObject *o = luaA_Address(obj);
-  char buff[64];
-  switch (ttype(o)) {
-    case LUA_T_NUMBER:
-      lua_pushstring(lua_getstring(obj));
-      return;
-    case LUA_T_STRING:
-      lua_pushobject(obj);
-      return;
-    case LUA_T_ARRAY:
-      sprintf(buff, "table: %p", (void *)o->value.a);
-      break;
-    case LUA_T_CLOSURE:
-      sprintf(buff, "function: %p", (void *)o->value.cl);
-      break;
-    case LUA_T_PROTO:
-      sprintf(buff, "function: %p", (void *)o->value.tf);
-      break;
-    case LUA_T_CPROTO:
-      sprintf(buff, "function: %p", (void *)o->value.f);
-      break;
-    case LUA_T_USERDATA:
-      sprintf(buff, "userdata: %p", o->value.ts->u.d.v);
-      break;
-    case LUA_T_NIL:
-      lua_pushstring("nil");
-      return;
-    default:
-      LUA_INTERNALERROR("invalid type");
-  }
-  lua_pushstring(buff);
-}
-
-
-static void luaB_type (void) {
-  lua_Object o = luaL_nonnullarg(1);
-  lua_pushstring(luaO_typename(luaA_Address(o)));
-  lua_pushnumber(lua_tag(o));
-}
-
-/* }====================================================== */
+** ====================================================== */
 
 
 
@@ -658,6 +646,12 @@ static void testC (void) {
       case 'I': reg[getnum(s)] = lua_rawgettable(); break;
       case 't': lua_settable(); break;
       case 'T': lua_rawsettable(); break;
+      case 'N' : lua_pushstring(lua_nextvar(lua_getstring(reg[getnum(s)])));
+                 break;
+      case 'n' : { int n=getnum(s);
+                   n=lua_next(reg[n], lua_getnumber(reg[getnum(s)]));
+                   lua_pushnumber(n); break;
+                 }
       default: luaL_verror("unknown command in `testC': %c", *(s-1));
     }
   if (*s == 0) return;

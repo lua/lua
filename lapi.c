@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.36 1999/02/12 19:23:02 roberto Exp roberto $
+** $Id: lapi.c,v 1.37 1999/02/22 19:13:12 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -25,7 +25,7 @@
 
 
 char lua_ident[] = "$Lua: " LUA_VERSION " " LUA_COPYRIGHT " $\n"
-                   "$Autores:  " LUA_AUTHORS " $";
+                   "$Authors:  " LUA_AUTHORS " $";
 
 
 
@@ -70,12 +70,8 @@ void luaA_packresults (void)
 }
 
 
-int luaA_passresults (void)
-{
-  luaD_checkstack(L->Cstack.num);
-  memcpy(L->stack.top, L->Cstack.lua2C+L->stack.stack,
-         L->Cstack.num*sizeof(TObject));
-  L->stack.top += L->Cstack.num;
+int luaA_passresults (void) {
+  L->Cstack.base = L->Cstack.lua2C;  /* position of first result */
   return L->Cstack.num;
 }
 
@@ -87,24 +83,29 @@ static void checkCparams (int nParams)
 }
 
 
-static lua_Object put_luaObject (TObject *o)
-{
+static lua_Object put_luaObject (TObject *o) {
   luaD_openstack((L->stack.top-L->stack.stack)-L->Cstack.base);
   L->stack.stack[L->Cstack.base++] = *o;
   return L->Cstack.base;  /* this is +1 real position (see Ref) */
 }
 
 
-static lua_Object put_luaObjectonTop (void)
-{
+static lua_Object put_luaObjectonTop (void) {
   luaD_openstack((L->stack.top-L->stack.stack)-L->Cstack.base);
   L->stack.stack[L->Cstack.base++] = *(--L->stack.top);
   return L->Cstack.base;  /* this is +1 real position (see Ref) */
 }
 
 
-lua_Object lua_pop (void)
-{
+static void top2LC (int n) {
+  /* Put the 'n' elements on the top as the Lua2C contents */
+  L->Cstack.base = (L->stack.top-L->stack.stack);  /* new base */
+  L->Cstack.lua2C = L->Cstack.base-n;  /* position of the new results */
+  L->Cstack.num = n;  /* number of results */
+}
+
+
+lua_Object lua_pop (void) {
   checkCparams(1);
   return put_luaObjectonTop();
 }
@@ -436,6 +437,11 @@ TaggedString *luaA_nextvar (TaggedString *g) {
   }
   while (g && g->u.s.globalval.ttype == LUA_T_NIL)  /* skip globals with nil */
     g = (TaggedString *)g->head.next;
+  if (g) {
+    ttype(L->stack.top) = LUA_T_STRING; tsvalue(L->stack.top) = g;
+    incr_top;
+    luaA_pushobject(&g->u.s.globalval);
+  }
   return g;
 }
 
@@ -444,11 +450,37 @@ char *lua_nextvar (char *varname) {
   TaggedString *g = (varname == NULL) ? NULL : luaS_new(varname);
   g = luaA_nextvar(g);
   if (g) {
-    luaA_pushobject(&g->u.s.globalval);
+    top2LC(2);
     return g->str;
   }
-  else
+  else {
+    top2LC(0);
     return NULL;
+  }
+}
+
+
+int luaA_next (Hash *t, int i) {
+  Node *n;
+  int tsize = nhash(t);
+  while (i < tsize && ttype(val(n=node(t, i))) == LUA_T_NIL) i++;
+  if (i >= tsize)
+      return 0;
+  else {
+    luaA_pushobject(ref(n));
+    luaA_pushobject(val(n));
+    return i+1;
+  }
+}
+
+
+int lua_next (lua_Object o, int i) {
+  TObject *t = Address(o);
+  if (ttype(t) != LUA_T_ARRAY)
+    lua_error("API error: object is not a table in `lua_next'"); 
+  i = luaA_next(avalue(t), i);
+  top2LC((i==0) ? 0 : 2);
+  return i;
 }
 
 
