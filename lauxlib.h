@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.20 2000/08/28 17:57:04 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.21 2000/08/29 20:43:28 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -47,8 +47,6 @@ void luaL_oldbuffer (lua_State *L, size_t old);
 char *luaL_buffer (lua_State *L);
 
 
-#ifndef LUA_SINGLESTATE
-
 /*
 ** ===============================================================
 ** some useful macros
@@ -65,44 +63,6 @@ char *luaL_buffer (lua_State *L);
 #define luaL_opt_long(L,n,d)	((long)luaL_opt_number(L, n,d))
 #define luaL_openl(L,a)		luaL_openlib(L, a, (sizeof(a)/sizeof(a[0])))
 
-#else
-
-
-/*
-** ===============================================================
-** Macros for single-state use
-** ===============================================================
-*/
-
-#define luaL_arg_check(cond,numarg,extramsg) if (!(cond)) \
-                                               luaL_argerror(numarg,extramsg)
-#define luaL_check_string(n)	(luaL_check_lstr((n), NULL))
-#define luaL_opt_string(n, d)	(luaL_opt_lstr((n), (d), NULL))
-#define luaL_check_int(n)	((int)luaL_check_number(n))
-#define luaL_check_long(n)	((long)luaL_check_number(n))
-#define luaL_opt_int(n,d)	((int)luaL_opt_number(n,d))
-#define luaL_opt_long(n,d)	((long)luaL_opt_number(n,d))
-#define luaL_openl(a)		luaL_openlib(a, (sizeof(a)/sizeof(a[0])))
-
-
-#define luaL_openlib(l,n)	(luaL_openlib)(lua_state,l,n)
-#define luaL_argerror(numarg,extramsg)	\
-				(luaL_argerror)(lua_state,numarg,extramsg)
-#define luaL_check_lstr(numArg,len)	(luaL_check_lstr)(lua_state,numArg,len)
-#define luaL_opt_lstr(numArg,def,len)	\
-				(luaL_opt_lstr)(lua_state,numArg,def,len)
-#define luaL_check_number(numArg)	(luaL_check_number)(lua_state,numArg)
-#define luaL_opt_number(numArg,def)	(luaL_opt_number)(lua_state,numArg,def)
-#define luaL_openspace(size)	(luaL_openspace)(lua_state,size)
-#define luaL_resetbuffer()	(luaL_resetbuffer)(lua_state)
-#define luaL_addchar(c)		(luaL_addchar)(lua_state,c)
-#define luaL_getsize()		(luaL_getsize)(lua_state)
-#define luaL_addsize(n)		(luaL_addsize)(lua_state,n)
-#define luaL_newbuffer(size)	(luaL_newbuffer)(lua_state,size)
-#define luaL_oldbuffer(old)	(luaL_oldbuffer)(lua_state,old)
-#define luaL_buffer()		(luaL_buffer)(lua_state)
-
-#endif
 
 #endif
 
