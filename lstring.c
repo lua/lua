@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.62 2001/03/26 14:31:49 roberto Exp roberto $
+** $Id: lstring.c,v 1.63 2001/06/06 18:00:19 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -47,6 +47,27 @@ void luaS_resize (lua_State *L, int newsize) {
 }
 
 
+static TString *newlstr (lua_State *L, const l_char *str, size_t l, lu_hash h) {
+  TString *ts = (TString *)luaM_malloc(L, sizestring(l));
+  stringtable *tb;
+  ts->nexthash = NULL;
+  ts->len = l;
+  ts->hash = h;
+  ts->marked = 0;
+  ts->constindex = 0;
+  memcpy(getstr(ts), str, l*sizeof(l_char));
+  getstr(ts)[l] = l_c('\0');  /* ending 0 */
+  tb = &G(L)->strt;
+  h = lmod(h, tb->size);
+  ts->nexthash = tb->hash[h];  /* chain new entry */
+  tb->hash[h] = ts;
+  tb->nuse++;
+  if (tb->nuse > (ls_nstr)tb->size && tb->size <= MAX_INT/2)
+    luaS_resize(L, tb->size*2);  /* too crowded */
+  return ts;
+}
+
+
 TString *luaS_newlstr (lua_State *L, const l_char *str, size_t l) {
   TString *ts;
   lu_hash h = l;  /* seed */
@@ -58,29 +79,12 @@ TString *luaS_newlstr (lua_State *L, const l_char *str, size_t l) {
     if (ts->len == l && (memcmp(str, getstr(ts), l) == 0))
       return ts;
   }
-  /* not found */
-  ts = (TString *)luaM_malloc(L, sizestring(l));
-  ts->marked = 0;
-  ts->nexthash = NULL;
-  ts->len = l;
-  ts->hash = h;
-  ts->constindex = 0;
-  memcpy(getstr(ts), str, l*sizeof(l_char));
-  getstr(ts)[l] = 0;  /* ending 0 */
-  h = lmod(h, G(L)->strt.size);
-  ts->nexthash = G(L)->strt.hash[h];  /* chain new entry */
-  G(L)->strt.hash[h] = ts;
-  G(L)->strt.nuse++;
-  if (G(L)->strt.nuse > (ls_nstr)G(L)->strt.size &&
-      G(L)->strt.size <= MAX_INT/2)
-    luaS_resize(L, G(L)->strt.size*2);  /* too crowded */
-  return ts;
+  return newlstr(L, str, l, h);  /* not found */
 }
 
 
 Udata *luaS_newudata (lua_State *L, size_t s) {
   Udata *u = (Udata *)luaM_malloc(L, sizeudata(s));
-  u->marked = 0;
   u->len = s;
   u->tag = 0;
   u->value = ((union L_UUdata *)(u) + 1);

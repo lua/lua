@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.103 2001/06/05 18:17:01 roberto Exp roberto $
+** $Id: lobject.h,v 1.104 2001/06/06 18:00:19 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -82,9 +82,9 @@ typedef TObject *StkId;  /* index to stack elements */
 */
 typedef struct TString {
   lu_hash hash;
-  int constindex;  /* hint to reuse constants */
   size_t len;
-  int marked;
+  unsigned short constindex;  /* hint to reuse constants */
+  short marked;
   struct TString *nexthash;  /* chain for hash table */
 } TString;
 
@@ -105,12 +105,15 @@ union L_UTString {
 
 
 typedef struct Udata {
-  int tag;
+  int tag;  /* negative means `marked' (only during GC) */
   void *value;
   size_t len;
-  int marked;
   struct Udata *next;  /* chain for list of all udata */
 } Udata;
+
+
+#define switchudatamark(u)	((u)->tag = (-((u)->tag+1)))
+#define ismarkedudata(u)	((u)->tag < 0)
 
 
 

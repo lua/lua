@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.99 2001/06/05 19:27:32 roberto Exp roberto $
+** $Id: lgc.c,v 1.100 2001/06/06 18:00:19 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -86,7 +86,8 @@ static void markobject (GCState *st, TObject *o) {
       strmark(tsvalue(o));
       break;
     case LUA_TUSERDATA:
-      uvalue(o)->marked = 1;
+      if (!ismarkedudata(uvalue(o)))
+        switchudatamark(uvalue(o));
       break;
     case LUA_TFUNCTION:
       markclosure(st, clvalue(o));
@@ -196,7 +197,7 @@ static int hasmark (const TObject *o) {
     case LUA_TSTRING:
       return tsvalue(o)->marked;
     case LUA_TUSERDATA:
-      return uvalue(o)->marked;
+      return ismarkedudata(uvalue(o));
     case LUA_TTABLE:
       return ismarked(hvalue(o));
     case LUA_TFUNCTION:
@@ -284,8 +285,8 @@ static void collectudata (lua_State *L) {
   Udata **p = &G(L)->rootudata;
   Udata *next;
   while ((next = *p) != NULL) {
-    if (next->marked) {
-      next->marked = 0;  /* unmark */
+    if (ismarkedudata(next)) {
+      switchudatamark(next);  /* unmark */
       p = &next->next;
     }
     else {  /* collect */

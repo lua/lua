@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.69 2001/06/05 18:17:01 roberto Exp roberto $
+** $Id: lcode.c,v 1.70 2001/06/06 18:00:19 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -231,7 +231,7 @@ int luaK_stringk (FuncState *fs, TString *s) {
     TObject o;
     setsvalue(&o, s);
     c = addk(fs, &o);
-    s->constindex = c;  /* hint for next time */
+    s->constindex = (unsigned short)c;  /* hint for next time */
   }
   return c;
 }
