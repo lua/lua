@@ -5,12 +5,13 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.10 1994/11/09 18:09:22 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.11 1994/11/14 21:40:14 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "mem.h"
 #include "opcode.h"
 #include "hash.h"
 #include "inout.h"
@@ -23,15 +24,21 @@ int lua_linenumber;
 int lua_debug;
 int lua_debugline = 0;
 
+
 /* Internal variables */
+ 
 #ifndef MAXFUNCSTACK
-#define MAXFUNCSTACK 64
+#define MAXFUNCSTACK 100
 #endif
-static struct {
+ 
+typedef struct FuncStackNode {
+  struct FuncStackNode *next;
   char *file;
   int function;
   int line;
-} funcstack[MAXFUNCSTACK];
+} FuncStackNode;
+ 
+static FuncStackNode *funcStack = NULL;
 static int nfuncstack=0;
 
 static FILE *fp;
@@ -110,30 +117,35 @@ void lua_closestring (void)
 
 /*
 ** Called to execute  SETFUNCTION opcode, this function pushs a function into
-** function stack. Return 0 on success or 1 on error.
+** function stack.
 */
-int lua_pushfunction (char *file, int function)
+void lua_pushfunction (char *file, int function)
 {
- if (nfuncstack >= MAXFUNCSTACK-1)
+ FuncStackNode *newNode;
+ if (nfuncstack++ >= MAXFUNCSTACK)
  {
-  lua_error ("function stack overflow");
-  return 1;
+  lua_reportbug("function stack overflow");
  }
- funcstack[nfuncstack].function = function;
- funcstack[nfuncstack].file = file;
- funcstack[nfuncstack].line= lua_debugline;
- nfuncstack++;
- return 0;
+ newNode = new(FuncStackNode);
+ newNode->function = function;
+ newNode->file = file;
+ newNode->line= lua_debugline;
+ newNode->next = funcStack;
+ funcStack = newNode;
 }
 
 /*
-** Called to execute  RESET opcode, this function pops a function from 
+** Called to execute RESET opcode, this function pops a function from 
 ** function stack.
 */
 void lua_popfunction (void)
 {
+ FuncStackNode *temp = funcStack;
+ if (temp == NULL) return;
  --nfuncstack;
- lua_debugline = funcstack[nfuncstack].line;
+ lua_debugline = temp->line;
+ funcStack = temp->next;
+ luaI_free(temp);
 }
 
 /*
@@ -141,22 +153,24 @@ void lua_popfunction (void)
 */
 void lua_reportbug (char *s)
 {
- char msg[1024];
+ char msg[MAXFUNCSTACK*80];
  strcpy (msg, s);
  if (lua_debugline != 0)
  {
-  int i;
-  if (nfuncstack > 0)
+  if (funcStack)
   {
-   sprintf (strchr(msg,0), 
-         "\n\tin statement begining at line %d in function \"%s\" of file \"%s\"",
-         lua_debugline, lua_constant[funcstack[nfuncstack-1].function],
-  	 funcstack[nfuncstack-1].file);
-   sprintf (strchr(msg,0), "\n\tactive stack\n");
-   for (i=nfuncstack-1; i>=0; i--)
-    sprintf (strchr(msg,0), "\t-> function \"%s\" of file \"%s\"\n", 
-                            lua_constant[funcstack[i].function],
-			    funcstack[i].file);
+   FuncStackNode *func = funcStack;
+   int line = lua_debugline;
+   sprintf (strchr(msg,0), "\n\tactive stack:\n");
+   do
+   {
+     sprintf (strchr(msg,0),
+       "\t-> function \"%s\" at file \"%s\":%d\n", 
+                            lua_constant[func->function], func->file, line);
+     line = func->line;
+     func = func->next;
+     lua_popfunction();
+   } while (func);
   }
   else
   {
