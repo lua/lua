@@ -3,18 +3,16 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.14 1994/10/19 17:02:20 celes Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.15 1994/11/13 14:54:18 roberto Exp roberto $";
 
-#include <stdlib.h>
-#include <string.h>
 #include <stdio.h>
 #include <ctype.h>
-#include <time.h>
 #include <sys/stat.h>
-#ifdef __GNUC__
-#include <floatingpoint.h>
-#endif
+#include <string.h>
+#include <time.h>
+#include <stdlib.h>
 
+#include "mem.h"
 #include "lua.h"
 #include "lualib.h"
 
@@ -215,7 +213,6 @@ static void io_read (void)
   }
   else
   {
-   char *ptr;
    double d;
    ungetc (c, in);
    if (fscanf (in, "%s", s) != 1)
@@ -223,8 +220,7 @@ static void io_read (void)
     lua_pushnil ();
     return;
    }
-   d = strtod (s, &ptr);
-   if (!(*ptr))
+   if (sscanf(s, "%lf %*c", &d) == 1)
    {
     lua_pushnumber (d);
     return;
@@ -327,20 +323,20 @@ static void io_readuntil (void)
  else
   d = *lua_getstring(lo);
  
- s = calloc(n+1, sizeof(char));
+ s = newvector(n+1, char);
  while((c = fgetc(in)) != EOF && c != d)
  {
   if (m==n)
   {
    n *= 2;
-   s = realloc(s, (n+1)*sizeof(char));
+   s = growvector(s, n+1, char);
   }
   s[m++] = c;
  }
  if (c != EOF) ungetc(c,in);
  s[m] = 0;
  lua_pushstring(s);
- free(s);
+ luaI_free(s);
 }
 
 

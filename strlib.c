@@ -3,12 +3,12 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.3 1994/08/17 15:10:04 celes Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.4 1994/10/18 18:34:47 roberto Exp roberto $";
 
-#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 
+#include "mem.h"
 #include "lua.h"
 #include "lualib.h"
 
@@ -73,7 +73,7 @@ static void str_sub (void)
   s[end] = 0;
   lua_pushstring (&s[start-1]);
  }
- free (s);
+ luaI_free(s);
 }
 
 /*
@@ -94,7 +94,7 @@ static void str_lower (void)
   c++;
  }
  lua_pushstring(s);
- free(s);
+ luaI_free(s);
 } 
 
 
@@ -116,7 +116,7 @@ static void str_upper (void)
   c++;
  }
  lua_pushstring(s);
- free(s);
+ luaI_free(s);
 } 
 
 

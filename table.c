@@ -3,11 +3,11 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.17 1994/11/14 21:40:14 roberto Exp $";
+char *rcs_table="$Id: table.c,v 2.18 1994/11/16 16:03:48 roberto Exp roberto $";
 
-#include <stdlib.h>
 #include <string.h>
 
+#include "mem.h"
 #include "opcode.h"
 #include "tree.h"
 #include "hash.h"
@@ -16,7 +16,6 @@ char *rcs_table="$Id: table.c,v 2.17 1994/11/14 21:40:14 roberto Exp $";
 #include "lua.h"
 #include "fallback.h"
 
-#define streq(s1,s2)	(s1[0]==s2[0]&&strcmp(s1+1,s2+1)==0)
 
 #define BUFFER_BLOCK 256
 
@@ -50,9 +49,7 @@ static void lua_initsymbol (void)
 {
  int n;
  lua_maxsymbol = BUFFER_BLOCK;
- lua_table = (Symbol *) calloc(lua_maxsymbol, sizeof(Symbol));
- if (lua_table == NULL)
-   lua_error ("symbol table: not enough memory");
+ lua_table = newvector(lua_maxsymbol, Symbol);
  n = luaI_findsymbolbyname("next");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_next;
  n = luaI_findsymbolbyname("nextvar");
@@ -80,9 +77,7 @@ static void lua_initsymbol (void)
 void lua_initconstant (void)
 {
  lua_maxconstant = BUFFER_BLOCK;
- lua_constant = (char **) calloc(lua_maxconstant, sizeof(char *));
- if (lua_constant == NULL)
-   lua_error ("constant table: not enough memory");
+ lua_constant = newvector(lua_maxconstant, char *);
 }
 
 
@@ -102,9 +97,7 @@ int luaI_findsymbol (TreeNode *t)
    lua_maxsymbol *= 2;
    if (lua_maxsymbol > MAX_WORD)
      lua_error("symbol table overflow");
-   lua_table = (Symbol *)realloc(lua_table, lua_maxsymbol*sizeof(Symbol));
-   if (lua_table == NULL)
-     lua_error ("symbol table: not enough memory");
+   lua_table = growvector(lua_table, lua_maxsymbol, Symbol);
   }
   t->varindex = lua_ntable;
   s_tag(lua_ntable) = LUA_T_NIL;
@@ -136,9 +129,7 @@ int luaI_findconstant (TreeNode *t)
    lua_maxconstant *= 2;
    if (lua_maxconstant > MAX_WORD)
      lua_error("constant table overflow");
-   lua_constant = (char**)realloc(lua_constant,lua_maxconstant*sizeof(char*));
-   if (lua_constant == NULL)
-     lua_error ("constant table: not enough memory");
+   lua_constant = growvector(lua_constant, lua_maxconstant, char*);
   }
   t->constindex = lua_nconstant;
   lua_constant[lua_nconstant] = t->str;
@@ -202,7 +193,6 @@ void lua_pack (void)
 char *lua_createstring (char *s)
 {
  if (s == NULL) return NULL;
- 
  return lua_strcreate(s);
 }
 
@@ -226,7 +216,7 @@ char *lua_addfile (char *fn)
 */
 int lua_delfile (void)
 {
- free(lua_file[--lua_nfile]); 
+ luaI_free(lua_file[--lua_nfile]); 
  return 1;
 }
 

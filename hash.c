@@ -3,11 +3,9 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.15 1994/11/10 17:36:54 roberto Exp $";
+char *rcs_hash="$Id: hash.c,v 2.16 1994/11/14 18:41:15 roberto Exp roberto $";
 
-#include <string.h>
-#include <stdlib.h>
-
+#include "mem.h"
 #include "opcode.h"
 #include "hash.h"
 #include "inout.h"
@@ -15,9 +13,6 @@ char *rcs_hash="$Id: hash.c,v 2.15 1994/11/10 17:36:54 roberto Exp $";
 #include "lua.h"
 
 #define streq(s1,s2)	(s1 == s2 || (*(s1) == *(s2) && strcmp(s1,s2)==0))
-
-#define new(s)		((s *)malloc(sizeof(s)))
-#define newvector(n,s)	((s *)calloc(n,sizeof(s)))
 
 #define nhash(t)	((t)->nhash)
 #define nuse(t)		((t)->nuse)
@@ -117,8 +112,6 @@ static Node *hashnodecreate (int nhash)
 {
  int i;
  Node *v = newvector (nhash, Node);
- if (v == NULL)
-   lua_error ("not enough memory");
  for (i=0; i<nhash; i++)
    tag(ref(&v[i])) = LUA_T_NIL;
  return v;
@@ -129,14 +122,9 @@ static Node *hashnodecreate (int nhash)
 */
 static Hash *hashcreate (int nhash)
 {
- Hash *t = new (Hash);
- if (t == NULL)
-   lua_error ("not enough memory");
+ Hash *t = new(Hash);
  nhash = redimension((int)((float)nhash/REHASH_LIMIT));
- 
  nodevector(t) = hashnodecreate(nhash);
- if (nodevector(t) == NULL)
-   lua_error ("not enough memory");
  nhash(t) = nhash;
  nuse(t) = 0;
  markarray(t) = 0;
@@ -148,8 +136,8 @@ static Hash *hashcreate (int nhash)
 */
 static void hashdelete (Hash *t)
 {
- free (nodevector(t));
- free(t);
+ luaI_free (nodevector(t));
+ luaI_free(t);
 }
 
 
@@ -253,7 +241,7 @@ static void rehash (Hash *t)
   if (tag(ref(n)) != LUA_T_NIL && tag(val(n)) != LUA_T_NIL)
    *node(t, present(t, ref(n))) = *n;  /* copy old node to new hahs */
  }
- free(vold);
+ luaI_free(vold);
 }
 
 /*

@@ -3,17 +3,14 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.11 1994/11/13 16:17:04 roberto Exp $";
+char *rcs_opcode="$Id: opcode.c,v 3.12 1994/11/16 16:03:48 roberto Exp roberto $";
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <setjmp.h>
+#include <stdio.h>
+#include <string.h>
 #include <math.h>
-#ifdef __GNUC__
-#include <floatingpoint.h>
-#endif
 
+#include "mem.h"
 #include "opcode.h"
 #include "hash.h"
 #include "inout.h"
@@ -89,9 +86,7 @@ void lua_error (char *s)
 static void lua_initstack (void)
 {
  maxstack = STACK_BUFFER;
- stack = (Object *)calloc(maxstack, sizeof(Object));
- if (stack == NULL)
-   lua_error("stack - not enough memory");
+ stack = newvector(maxstack, Object);
  top = stack;
 }
 
@@ -108,9 +103,7 @@ static void lua_checkstack (Word n)
     lua_initstack();
   t = top-stack;
   maxstack *= 2;
-  stack = (Object *)realloc(stack, maxstack*sizeof(Object));
-  if (stack == NULL)
-    lua_error("stack - not enough memory");
+  stack = growvector(stack, maxstack, Object);
   top = stack + t;
  }
 }
@@ -126,16 +119,11 @@ static char *lua_strconc (char *l, char *r)
  int nl = strlen(l);
  int n = nl+strlen(r)+1;
  if (n > buffer_size)
- {
+  {
    buffer_size = n;
    if (buffer != NULL)
-     free(buffer);
-   buffer = (char *)malloc(buffer_size);
-   if (buffer == NULL)
-   {
-     buffer_size = 0;
-     lua_error("concat - not enough memory");
-   }
+     luaI_free(buffer);
+   buffer = newvector(buffer_size, char);
   }
   strcpy(buffer,l);
   strcpy(buffer+nl, r);
@@ -149,11 +137,10 @@ static char *lua_strconc (char *l, char *r)
 */
 static int lua_tonumber (Object *obj)
 {
- char c;
  float t;
  if (tag(obj) != LUA_T_STRING)
    return 1;
- else if (sscanf(svalue(obj), "%f %c",&t,&c) == 1)
+ else if (sscanf(svalue(obj), "%f %*c",&t) == 1)
  {
    nvalue(obj) = t;
    tag(obj) = LUA_T_NUMBER;
@@ -353,7 +340,7 @@ static int do_protectedmain (void)
   else
     status = 1;
   if (code)
-    free(code);
+    luaI_free(code);
   errorJmp = oldErr;
   CBase = oldCBase;
   top = stack+CBase;
@@ -467,9 +454,9 @@ int lua_storesubscript (void)
 lua_Object lua_createTable (int initSize)
 {
   adjustC(0);
+  tag(top) = LUA_T_ARRAY;
+  avalue(top) = lua_createarray(initSize);
   top++;
-  tag(top-1) = LUA_T_ARRAY;
-  avalue(top-1) = lua_createarray(initSize);
   CBase++;  /* incorporate object in the stack */
   return Ref(top-1);
 }
@@ -540,7 +527,8 @@ void *lua_getuserdata (lua_Object object)
 lua_Object lua_getlocked (int ref)
 {
  adjustC(0);
- *(top++) = *luaI_getlocked(ref);
+ *top = *luaI_getlocked(ref);
+ top++;
  CBase++;  /* incorporate object in the stack */
  return Ref(top-1);
 }
@@ -552,7 +540,8 @@ lua_Object lua_getglobal (char *name)
 {
  int n = luaI_findsymbolbyname(name);
  adjustC(0);
- *(top++) = s_object(n);
+ *top = s_object(n);
+ top++;
  CBase++;  /* incorporate object in the stack */
  return Ref(top-1);
 }
@@ -854,9 +843,9 @@ static int lua_execute (Byte *pc, int base)
    {
     CodeWord size;
     get_word(size,pc);
+    tag(top) = LUA_T_ARRAY;
+    avalue(top) = lua_createarray(size.w);
     top++;
-    tag(top-1) = LUA_T_ARRAY;
-    avalue(top-1) = lua_createarray(size.w);
    }
    break;
 

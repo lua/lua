@@ -3,12 +3,12 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.4 1994/11/14 21:40:14 roberto Exp roberto $";
+char *rcs_tree="$Id: tree.c,v 1.5 1994/11/16 16:03:48 roberto Exp roberto $";
 
 
-#include <stdlib.h>
 #include <string.h>
 
+#include "mem.h"
 #include "lua.h"
 #include "tree.h"
 #include "table.h"
@@ -27,9 +27,7 @@ static TreeNode *tree_create (TreeNode **node, char *str, int *created)
 {
  if (*node == NULL)
  {
-  *node = (TreeNode *) malloc (sizeof(TreeNode)+strlen(str));
-  if (*node == NULL)
-    lua_error("not enough memory");
+  *node = (TreeNode *) luaI_malloc(sizeof(TreeNode)+strlen(str));
   (*node)->left = (*node)->right = NULL;
   strcpy((*node)->str, str);
   (*node)->varindex = (*node)->constindex = UNMARKED_STRING;
@@ -74,19 +72,19 @@ static TreeNode *lua_strfree (TreeNode *parent)
 {
  if (parent->left == NULL && parent->right == NULL) /* no child */
  {
-  free (parent);
+  luaI_free(parent);
   return NULL;
  }
  else if (parent->left == NULL)         /* only right child */
  {
   TreeNode *p = parent->right;
-  free (parent);
+  luaI_free(parent);
   return p;
  }
  else if (parent->right == NULL)        /* only left child */
  {
   TreeNode *p = parent->left;
-  free (parent);
+  luaI_free(parent);
   return p;
  }
  else                                   /* two children */

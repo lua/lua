@@ -3,11 +3,11 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.4 1994/11/10 17:11:52 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.5 1994/11/10 17:36:54 roberto Exp roberto $";
 
 #include <stdio.h>
-#include <stdlib.h>
  
+#include "mem.h"
 #include "fallback.h"
 #include "opcode.h"
 #include "inout.h"
@@ -129,17 +129,12 @@ int lua_lock (lua_Object object)
   if (lockArray == NULL)
   {
     lockSize = 10;
-    lockArray = (Object *)malloc(lockSize);
+    lockArray = newvector(lockSize, Object);
   }
   else
   {
     lockSize = 3*oldSize/2 + 5;
-    lockArray = (Object *)realloc(lockArray, lockSize);
-  }
-  if (lockArray == NULL)
-  {
-    lockSize = 0;
-    lua_error("lock - not enough memory");
+    lockArray = growvector(lockArray, lockSize, Object);
   }
   for (i=oldSize; i<lockSize; i++)
     tag(&lockArray[i]) = LUA_T_NIL;
