@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.18 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.19 1999/09/06 13:13:03 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -39,16 +39,24 @@ void luaL_argerror (int numarg, const char *extramsg) {
               numarg, funcname, extramsg);
 }
 
-const char *luaL_check_lstr (int numArg, long *len) {
-  lua_Object o = lua_getparam(numArg);
-  luaL_arg_check(lua_isstring(o), numArg, "string expected");
+static const char *checkstr (lua_Object o, int numArg, long *len) {
+  const char *s = lua_getstring(o);
+  luaL_arg_check(s, numArg, "string expected");
   if (len) *len = lua_strlen(o);
-  return lua_getstring(o);
+  return s;
+}
+
+const char *luaL_check_lstr (int numArg, long *len) {
+  return checkstr(lua_getparam(numArg), numArg, len);
 }
 
 const char *luaL_opt_lstr (int numArg, const char *def, long *len) {
-  return (lua_getparam(numArg) == LUA_NOOBJECT) ? def :
-                              luaL_check_lstr(numArg, len);
+  lua_Object o = lua_getparam(numArg);
+  if (o == LUA_NOOBJECT) {
+    if (len) *len = def ? strlen(def) : 0;
+    return def;
+  }
+  else return checkstr(o, numArg, len);
 }
 
 double luaL_check_number (int numArg) {
@@ -59,9 +67,13 @@ double luaL_check_number (int numArg) {
 
 
 double luaL_opt_number (int numArg, double def) {
-  return (lua_getparam(numArg) == LUA_NOOBJECT) ? def :
-                              luaL_check_number(numArg);
-}  
+  lua_Object o = lua_getparam(numArg);
+  if (o == LUA_NOOBJECT) return def;
+  else {
+    luaL_arg_check(lua_isnumber(o), numArg, "number expected");
+    return lua_getnumber(o);
+  }
+}
 
 
 lua_Object luaL_tablearg (int arg) {
