@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.h,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
+** $Id: ldo.h,v 1.2 1997/11/04 15:27:53 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -9,43 +9,25 @@
 
 
 #include "lobject.h"
+#include "lstate.h"
 
-
-typedef int StkId;  /* index to luaD_stack.stack elements */
 
 #define MULT_RET        255
 
 
-extern struct Stack {
-  TObject *last;
-  TObject *stack;
-  TObject *top;
-} luaD_stack;
-
-
-extern struct C_Lua_Stack {
-  StkId base;  /* when Lua calls C or C calls Lua, points to */
-               /* the first slot after the last parameter. */
-  StkId lua2C; /* points to first element of "array" lua2C */
-  int num;     /* size of "array" lua2C */
-} luaD_Cstack;
-
-
-extern TObject luaD_errorim;
-
 
 /*
 ** macro to increment stack top.
-** There must be always an empty slot at the luaD_stack.top
+** There must be always an empty slot at the L->stack.top
 */
-#define incr_top { if (luaD_stack.top >= luaD_stack.last) luaD_checkstack(1); \
-                   luaD_stack.top++; }
+#define incr_top { if (L->stack.top >= L->stack.last) luaD_checkstack(1); \
+                   L->stack.top++; }
 
 
 /* macros to convert from lua_Object to (TObject *) and back */
 
-#define Address(lo)     ((lo)+luaD_stack.stack-1)
-#define Ref(st)         ((st)-luaD_stack.stack+1)
+#define Address(lo)     ((lo)+L->stack.stack-1)
+#define Ref(st)         ((st)-L->stack.stack+1)
 
 
 void luaD_init (void);

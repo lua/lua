@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.7 1997/11/04 15:27:53 roberto Exp roberto $
+** $Id: ldo.c,v 1.8 1997/11/07 15:09:49 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -16,6 +16,7 @@
 #include "lmem.h"
 #include "lobject.h"
 #include "lparser.h"
+#include "lstate.h"
 #include "ltm.h"
 #include "lua.h"
 #include "luadebug.h"
@@ -30,14 +31,6 @@
 #endif
 
 
-struct Stack luaD_stack;
-
-
-struct C_Lua_Stack luaD_Cstack = {0, 0, 0};
-
-static  jmp_buf *errorJmp = NULL; /* current error recover point */
-
-
 
 /*
 ** Error messages
@@ -49,8 +42,6 @@ static void stderrorim (void)
   if (lua_isstring(s))
     fprintf(stderr, "lua error: %s\n", lua_getstring(s));
 }
-
-TObject luaD_errorim;
 
 
 static void initCfunc (TObject *o, lua_CFunction f)
@@ -67,24 +58,25 @@ static void initCfunc (TObject *o, lua_CFunction f)
 
 void luaD_init (void)
 {
-  luaD_stack.stack = luaM_newvector(INIT_STACK_SIZE, TObject);
-  luaD_stack.top = luaD_stack.stack;
-  luaD_stack.last = luaD_stack.stack+(INIT_STACK_SIZE-1);
-  initCfunc(&luaD_errorim, stderrorim);
+  L->stacklimit = STACK_LIMIT;
+  L->stack.stack = luaM_newvector(INIT_STACK_SIZE, TObject);
+  L->stack.top = L->stack.stack;
+  L->stack.last = L->stack.stack+(INIT_STACK_SIZE-1);
+  initCfunc(&L->errorim, stderrorim);
 }
 
 
 void luaD_checkstack (int n)
 {
-  if (luaD_stack.last-luaD_stack.top <= n) {
-    static int limit = STACK_LIMIT;
-    StkId top = luaD_stack.top-luaD_stack.stack;
-    int stacksize = (luaD_stack.last-luaD_stack.stack)+1+STACK_EXTRA+n;
-    luaD_stack.stack = luaM_reallocvector(luaD_stack.stack, stacksize,TObject);
-    luaD_stack.last = luaD_stack.stack+(stacksize-1);
-    luaD_stack.top = luaD_stack.stack + top;
-    if (stacksize >= limit) {
-      limit = stacksize+STACK_EXTRA;  /* extra space to run error handler */
+  if (L->stack.last-L->stack.top <= n) {
+    StkId top = L->stack.top-L->stack.stack;
+    int stacksize = (L->stack.last-L->stack.stack)+1+STACK_EXTRA+n;
+    L->stack.stack = luaM_reallocvector(L->stack.stack, stacksize,TObject);
+    L->stack.last = L->stack.stack+(stacksize-1);
+    L->stack.top = L->stack.stack + top;
+    if (stacksize >= L->stacklimit) {
+      /* extra space to run error handler */
+      L->stacklimit = stacksize+STACK_EXTRA;
       if (lua_stackedfunction(100) == LUA_NOOBJECT) {
         /* less than 100 functions on the stack: cannot be recursive loop */
         lua_error("Lua2C - C2Lua overflow");
@@ -101,80 +93,80 @@ void luaD_checkstack (int n)
 */
 void luaD_adjusttop (StkId newtop)
 {
-  int diff = newtop-(luaD_stack.top-luaD_stack.stack);
+  int diff = newtop-(L->stack.top-L->stack.stack);
   if (diff <= 0)
-    luaD_stack.top += diff;
+    L->stack.top += diff;
   else {
     luaD_checkstack(diff);
     while (diff--)
-      ttype(luaD_stack.top++) = LUA_T_NIL;
+      ttype(L->stack.top++) = LUA_T_NIL;
   }
 }
 
 
 /*
-** Open a hole below "nelems" from the luaD_stack.top.
+** Open a hole below "nelems" from the L->stack.top.
 */
 void luaD_openstack (int nelems)
 {
   int i;
   for (i=0; i<nelems; i++)
-    *(luaD_stack.top-i) = *(luaD_stack.top-i-1);
+    *(L->stack.top-i) = *(L->stack.top-i-1);
   incr_top;
 }
 
 
 void luaD_lineHook (int line)
 {
-  struct C_Lua_Stack oldCLS = luaD_Cstack;
-  StkId old_top = luaD_Cstack.lua2C = luaD_Cstack.base = luaD_stack.top-luaD_stack.stack;
-  luaD_Cstack.num = 0;
+  struct C_Lua_Stack oldCLS = L->Cstack;
+  StkId old_top = L->Cstack.lua2C = L->Cstack.base = L->stack.top-L->stack.stack;
+  L->Cstack.num = 0;
   (*lua_linehook)(line);
-  luaD_stack.top = luaD_stack.stack+old_top;
-  luaD_Cstack = oldCLS;
+  L->stack.top = L->stack.stack+old_top;
+  L->Cstack = oldCLS;
 }
 
 
 void luaD_callHook (StkId base, lua_Type type, int isreturn)
 {
-  struct C_Lua_Stack oldCLS = luaD_Cstack;
-  StkId old_top = luaD_Cstack.lua2C = luaD_Cstack.base = luaD_stack.top-luaD_stack.stack;
-  luaD_Cstack.num = 0;
+  struct C_Lua_Stack oldCLS = L->Cstack;
+  StkId old_top = L->Cstack.lua2C = L->Cstack.base = L->stack.top-L->stack.stack;
+  L->Cstack.num = 0;
   if (isreturn)
     (*lua_callhook)(LUA_NOOBJECT, "(return)", 0);
   else {
-    TObject *f = luaD_stack.stack+base-1;
+    TObject *f = L->stack.stack+base-1;
     if (type == LUA_T_PROTO)
       (*lua_callhook)(Ref(f), tfvalue(protovalue(f))->fileName->str,
                               tfvalue(protovalue(f))->lineDefined);
     else
       (*lua_callhook)(Ref(f), "(C)", -1);
   }
-  luaD_stack.top = luaD_stack.stack+old_top;
-  luaD_Cstack = oldCLS;
+  L->stack.top = L->stack.stack+old_top;
+  L->Cstack = oldCLS;
 }
 
 
 /*
-** Call a C function. luaD_Cstack.base will point to the top of the stack,
-** and luaD_Cstack.num is the number of parameters. Returns an index
+** Call a C function. L->Cstack.base will point to the top of the stack,
+** and L->Cstack.num is the number of parameters. Returns an index
 ** to the first result from C.
 */
 static StkId callC (lua_CFunction func, StkId base)
 {
-  struct C_Lua_Stack oldCLS = luaD_Cstack;
+  struct C_Lua_Stack oldCLS = L->Cstack;
   StkId firstResult;
-  luaD_Cstack.num = (luaD_stack.top-luaD_stack.stack) - base;
-  /* incorporate parameters on the luaD_stack.stack */
-  luaD_Cstack.lua2C = base;
-  luaD_Cstack.base = base+luaD_Cstack.num;  /* == top-stack */
+  L->Cstack.num = (L->stack.top-L->stack.stack) - base;
+  /* incorporate parameters on the L->stack.stack */
+  L->Cstack.lua2C = base;
+  L->Cstack.base = base+L->Cstack.num;  /* == top-stack */
   if (lua_callhook)
     luaD_callHook(base, LUA_T_CPROTO, 0);
   (*func)();
   if (lua_callhook)  /* func may have changed lua_callhook */
     luaD_callHook(base, LUA_T_CPROTO, 1);
-  firstResult = luaD_Cstack.base;
-  luaD_Cstack = oldCLS;
+  firstResult = L->Cstack.base;
+  L->Cstack = oldCLS;
   return firstResult;
 }
 
@@ -182,21 +174,21 @@ static StkId callC (lua_CFunction func, StkId base)
 void luaD_callTM (TObject *f, int nParams, int nResults)
 {
   luaD_openstack(nParams);
-  *(luaD_stack.top-nParams-1) = *f;
-  luaD_call((luaD_stack.top-luaD_stack.stack)-nParams, nResults);
+  *(L->stack.top-nParams-1) = *f;
+  luaD_call((L->stack.top-L->stack.stack)-nParams, nResults);
 }
 
 
 /*
-** Call a function (C or Lua). The parameters must be on the luaD_stack.stack,
-** between [luaD_stack.stack+base,luaD_stack.top). The function to be called is at luaD_stack.stack+base-1.
-** When returns, the results are on the luaD_stack.stack, between [luaD_stack.stack+base-1,luaD_stack.top).
+** Call a function (C or Lua). The parameters must be on the L->stack.stack,
+** between [L->stack.stack+base,L->stack.top). The function to be called is at L->stack.stack+base-1.
+** When returns, the results are on the L->stack.stack, between [L->stack.stack+base-1,L->stack.top).
 ** The number of results is nResults, unless nResults=MULT_RET.
 */
 void luaD_call (StkId base, int nResults)
 {
   StkId firstResult;
-  TObject *func = luaD_stack.stack+base-1;
+  TObject *func = L->stack.stack+base-1;
   int i;
   if (ttype(func) == LUA_T_FUNCTION) {
     TObject *proto = protovalue(func);
@@ -209,7 +201,7 @@ void luaD_call (StkId base, int nResults)
     TObject *im = luaT_getimbyObj(func, IM_FUNCTION);
     if (ttype(im) == LUA_T_NIL)
       lua_error("call expression not a function");
-    luaD_callTM(im, (luaD_stack.top-luaD_stack.stack)-(base-1), nResults);
+    luaD_callTM(im, (L->stack.top-L->stack.stack)-(base-1), nResults);
     return;
   }
   /* adjust the number of results */
@@ -217,29 +209,29 @@ void luaD_call (StkId base, int nResults)
     luaD_adjusttop(firstResult+nResults);
   /* move results to base-1 (to erase parameters and function) */
   base--;
-  nResults = luaD_stack.top - (luaD_stack.stack+firstResult);  /* actual number of results */
+  nResults = L->stack.top - (L->stack.stack+firstResult);  /* actual number of results */
   for (i=0; i<nResults; i++)
-    *(luaD_stack.stack+base+i) = *(luaD_stack.stack+firstResult+i);
-  luaD_stack.top -= firstResult-base;
+    *(L->stack.stack+base+i) = *(L->stack.stack+firstResult+i);
+  L->stack.top -= firstResult-base;
 }
 
 
 
 /*
-** Traverse all objects on luaD_stack.stack
+** Traverse all objects on L->stack.stack
 */
 void luaD_travstack (int (*fn)(TObject *))
 {
   StkId i;
-  for (i = (luaD_stack.top-1)-luaD_stack.stack; i>=0; i--)
-    fn (luaD_stack.stack+i);
+  for (i = (L->stack.top-1)-L->stack.stack; i>=0; i--)
+    fn (L->stack.stack+i);
 }
 
 
 
 static void message (char *s)
 {
-  TObject im = luaD_errorim;
+  TObject im = L->errorim;
   if (ttype(&im) != LUA_T_NIL) {
     lua_pushstring(s);
     luaD_callTM(&im, 1, 0);
@@ -252,8 +244,8 @@ static void message (char *s)
 void lua_error (char *s)
 {
   if (s) message(s);
-  if (errorJmp)
-    longjmp(*errorJmp, 1);
+  if (L->errorJmp)
+    longjmp(*((jmp_buf *)L->errorJmp), 1);
   else {
     fprintf (stderr, "lua: exit(1). Unable to recover\n");
     exit(1);
@@ -261,40 +253,40 @@ void lua_error (char *s)
 }
 
 /*
-** Call the function at luaD_Cstack.base, and incorporate results on
+** Call the function at L->Cstack.base, and incorporate results on
 ** the Lua2C structure.
 */
 static void do_callinc (int nResults)
 {
-  StkId base = luaD_Cstack.base;
+  StkId base = L->Cstack.base;
   luaD_call(base+1, nResults);
-  luaD_Cstack.lua2C = base;  /* position of the luaM_new results */
-  luaD_Cstack.num = (luaD_stack.top-luaD_stack.stack) - base;  /* number of results */
-  luaD_Cstack.base = base + luaD_Cstack.num;  /* incorporate results on luaD_stack.stack */
+  L->Cstack.lua2C = base;  /* position of the luaM_new results */
+  L->Cstack.num = (L->stack.top-L->stack.stack) - base;  /* number of results */
+  L->Cstack.base = base + L->Cstack.num;  /* incorporate results on L->stack.stack */
 }
 
 
 /*
-** Execute a protected call. Assumes that function is at luaD_Cstack.base and
+** Execute a protected call. Assumes that function is at L->Cstack.base and
 ** parameters are on top of it. Leave nResults on the stack.
 */
 int luaD_protectedrun (int nResults)
 {
   jmp_buf myErrorJmp;
   int status;
-  struct C_Lua_Stack oldCLS = luaD_Cstack;
-  jmp_buf *oldErr = errorJmp;
-  errorJmp = &myErrorJmp;
+  struct C_Lua_Stack oldCLS = L->Cstack;
+  jmp_buf *oldErr = L->errorJmp;
+  L->errorJmp = &myErrorJmp;
   if (setjmp(myErrorJmp) == 0) {
     do_callinc(nResults);
     status = 0;
   }
-  else { /* an error occurred: restore luaD_Cstack and luaD_stack.top */
-    luaD_Cstack = oldCLS;
-    luaD_stack.top = luaD_stack.stack+luaD_Cstack.base;
+  else { /* an error occurred: restore L->Cstack and L->stack.top */
+    L->Cstack = oldCLS;
+    L->stack.top = L->stack.stack+L->Cstack.base;
     status = 1;
   }
-  errorJmp = oldErr;
+  L->errorJmp = oldErr;
   return status;
 }
 
@@ -307,8 +299,8 @@ static int protectedparser (ZIO *z, char *chunkname, int bin)
   int status;
   TProtoFunc *tf;
   jmp_buf myErrorJmp;
-  jmp_buf *oldErr = errorJmp;
-  errorJmp = &myErrorJmp;
+  jmp_buf *oldErr = L->errorJmp;
+  L->errorJmp = &myErrorJmp;
   if (setjmp(myErrorJmp) == 0) {
     tf = bin ? luaU_undump1(z, chunkname) : luaY_parser(z, chunkname);
     status = 0;
@@ -317,12 +309,12 @@ static int protectedparser (ZIO *z, char *chunkname, int bin)
     tf = NULL;
     status = 1;
   }
-  errorJmp = oldErr;
+  L->errorJmp = oldErr;
   if (status) return 1;  /* error code */
   if (tf == NULL) return 2;  /* 'natural' end */
-  luaD_adjusttop(luaD_Cstack.base+1);  /* one slot for the pseudo-function */
-  luaD_stack.stack[luaD_Cstack.base].ttype = LUA_T_PROTO;
-  luaD_stack.stack[luaD_Cstack.base].value.tf = tf;
+  luaD_adjusttop(L->Cstack.base+1);  /* one slot for the pseudo-function */
+  L->stack.stack[L->Cstack.base].ttype = LUA_T_PROTO;
+  L->stack.stack[L->Cstack.base].value.tf = tf;
   luaV_closure(0);
   return 0;
 }
@@ -332,15 +324,15 @@ static int do_main (ZIO *z, char *chunkname, int bin)
 {
   int status;
   do {
-    long old_blocks = (luaC_checkGC(), luaO_nblocks);
+    long old_blocks = (luaC_checkGC(), L->nblocks);
     status = protectedparser(z, chunkname, bin);
     if (status == 1) return 1;  /* error */
     else if (status == 2) return 0;  /* 'natural' end */
     else {
-      unsigned long newelems2 = 2*(luaO_nblocks-old_blocks);
-      luaC_threshold += newelems2;
+      unsigned long newelems2 = 2*(L->nblocks-old_blocks);
+      L->GCthreshold += newelems2;
       status = luaD_protectedrun(MULT_RET);
-      luaC_threshold -= newelems2;
+      L->GCthreshold -= newelems2;
     }
   } while (bin && status == 0);
   return status;
@@ -351,7 +343,7 @@ void luaD_gcIM (TObject *o)
 {
   TObject *im = luaT_getimbyObj(o, IM_GC);
   if (ttype(im) != LUA_T_NIL) {
-    *luaD_stack.top = *o;
+    *L->stack.top = *o;
     incr_top;
     luaD_callTM(im, 1, 0);
   }

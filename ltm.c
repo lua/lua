@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.6 1997/11/04 15:27:53 roberto Exp roberto $
+** $Id: ltm.c,v 1.7 1997/11/10 17:47:01 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -9,9 +9,9 @@
 #include <string.h>
 
 #include "lauxlib.h"
-#include "ldo.h"
 #include "lmem.h"
 #include "lobject.h"
+#include "lstate.h"
 #include "ltm.h"
 
 
@@ -30,10 +30,6 @@ static int luaI_checkevent (char *name, char *list[])
   return e;
 }
 
-
-struct IM *luaT_IMtable;
-static int IMtable_size;
-static int last_tag;
 
 
 /* events in LUA_T_NIL are all allowed, since this is used as a
@@ -67,34 +63,34 @@ static void init_entry (int tag)
 void luaT_init (void)
 {
   int t;
-  IMtable_size = NUM_TAGS*2;
-  last_tag = -(NUM_TAGS-1);
-  luaT_IMtable = luaM_newvector(IMtable_size, struct IM);
-  for (t=last_tag; t<=0; t++)
+  L->IMtable_size = NUM_TAGS*2;
+  L->last_tag = -(NUM_TAGS-1);
+  L->IMtable = luaM_newvector(L->IMtable_size, struct IM);
+  for (t=L->last_tag; t<=0; t++)
     init_entry(t);
 }
 
 
 int lua_newtag (void)
 {
-  --last_tag;
-  if ((-last_tag) >= IMtable_size)
-    IMtable_size = luaM_growvector(&luaT_IMtable, IMtable_size,
+  --L->last_tag;
+  if ((-L->last_tag) >= L->IMtable_size)
+    L->IMtable_size = luaM_growvector(&L->IMtable, L->IMtable_size,
                                    struct IM, memEM, MAX_INT);
-  init_entry(last_tag);
-  return last_tag;
+  init_entry(L->last_tag);
+  return L->last_tag;
 }
 
 
 static void checktag (int tag)
 {
-  if (!(last_tag <= tag && tag <= 0))
+  if (!(L->last_tag <= tag && tag <= 0))
     luaL_verror("%d is not a valid tag", tag);
 }
 
 void luaT_realtag (int tag)
 {
-  if (!(last_tag <= tag && tag < LUA_T_NIL))
+  if (!(L->last_tag <= tag && tag < LUA_T_NIL))
     luaL_verror("tag %d is not result of `newtag'", tag);
 }
 
@@ -145,11 +141,11 @@ void luaT_settagmethod (int t, char *event, TObject *func)
 char *luaT_travtagmethods (int (*fn)(TObject *))
 {
   int e;
-  if (fn(&luaD_errorim))
+  if (fn(&L->errorim))
     return "error";
   for (e=IM_GETTABLE; e<=IM_FUNCTION; e++) {  /* ORDER IM */
     int t;
-    for (t=0; t>=last_tag; t--)
+    for (t=0; t>=L->last_tag; t--)
       if (fn(luaT_getim(t,e)))
         return luaT_eventname[e];
   }
@@ -203,8 +199,8 @@ void luaT_setfallback (void)
   luaL_arg_check(lua_isfunction(func), 2, "function expected");
   switch (luaO_findstring(name, oldnames)) {
     case 0:  /* old error fallback */
-      oldfunc = luaD_errorim;
-      luaD_errorim = *luaA_Address(func);
+      oldfunc = L->errorim;
+      L->errorim = *luaA_Address(func);
       replace = errorFB;
       break;
     case 1:  /* old getglobal fallback */

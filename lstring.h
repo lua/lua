@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.2 1997/09/26 15:02:26 roberto Exp roberto $
+** $Id: lstring.h,v 1.3 1997/11/04 15:27:53 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -9,8 +9,6 @@
 
 
 #include "lobject.h"
-
-extern GCnode luaS_root;
 
 
 void luaS_init (void);

@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.3 1997/10/23 16:26:37 roberto Exp roberto $
+** $Id: lstring.c,v 1.4 1997/11/04 15:27:53 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -9,6 +9,7 @@
 
 #include "lmem.h"
 #include "lobject.h"
+#include "lstate.h"
 #include "lstring.h"
 #include "lua.h"
 
@@ -19,18 +20,6 @@
 #define gcsizestring(l)	(1+(l/64))
 
 
-GCnode luaS_root = {NULL, 0};  /* list of global variables */
-
-
-typedef struct {
-  int size;
-  int nuse;  /* number of elements (including EMPTYs) */
-  TaggedString **hash;
-} stringtable;
-
-
-static stringtable string_root[NUM_HASHS];
-
 
 static TaggedString EMPTY = {{NULL, 2}, 0, 0L, {{LUA_T_NIL, {NULL}}}, {0}};
 
@@ -38,10 +27,11 @@ static TaggedString EMPTY = {{NULL, 2}, 0, 0L, {{LUA_T_NIL, {NULL}}}, {0}};
 void luaS_init (void)
 {
   int i;
+  L->string_root = luaM_newvector(NUM_HASHS, stringtable);
   for (i=0; i<NUM_HASHS; i++) {
-    string_root[i].size = 0;
-    string_root[i].nuse = 0;
-    string_root[i].hash = NULL;
+    L->string_root[i].size = 0;
+    L->string_root[i].nuse = 0;
+    L->string_root[i].hash = NULL;
   }
 }
 
@@ -93,14 +83,14 @@ static TaggedString *newone(char *buff, int tag, unsigned long h)
     strcpy(ts->str, buff);
     ts->u.globalval.ttype = LUA_T_NIL;  /* initialize global value */
     ts->constindex = 0;
-    luaO_nblocks += gcsizestring(l);
+    L->nblocks += gcsizestring(l);
   }
   else {
     ts = (TaggedString *)luaM_malloc(sizeof(TaggedString));
     ts->u.d.v = buff;
     ts->u.d.tag = tag == LUA_ANYTAG ? 0 : tag;
     ts->constindex = -1;  /* tag -> this is a userdata */
-    luaO_nblocks++;
+    L->nblocks++;
   }
   ts->head.marked = 0;
   ts->head.next = (GCnode *)ts;  /* signal it is in no list */
@@ -138,12 +128,12 @@ static TaggedString *insert (char *buff, int tag, stringtable *tb)
 
 TaggedString *luaS_createudata (void *udata, int tag)
 {
-  return insert(udata, tag, &string_root[(unsigned)udata%NUM_HASHS]);
+  return insert(udata, tag, &L->string_root[(unsigned)udata%NUM_HASHS]);
 }
 
 TaggedString *luaS_new (char *str)
 {
-  return insert(str, LUA_T_STRING, &string_root[(unsigned)str[0]%NUM_HASHS]);
+  return insert(str, LUA_T_STRING, &L->string_root[(unsigned)str[0]%NUM_HASHS]);
 }
 
 TaggedString *luaS_newfixedstring (char *str)
@@ -159,7 +149,7 @@ void luaS_free (TaggedString *l)
 {
   while (l) {
     TaggedString *next = (TaggedString *)l->head.next;
-    luaO_nblocks -= (l->constindex == -1) ? 1 : gcsizestring(strlen(l->str));
+    L->nblocks -= (l->constindex == -1) ? 1 : gcsizestring(strlen(l->str));
     luaM_free(l);
     l = next;
   }
@@ -185,9 +175,9 @@ TaggedString *luaS_collector (void)
 {
   TaggedString *frees = NULL;
   int i;
-  remove_from_list(&luaS_root);
+  remove_from_list(&(L->rootglobal));
   for (i=0; i<NUM_HASHS; i++) {
-    stringtable *tb = &string_root[i];
+    stringtable *tb = &L->string_root[i];
     int j;
     for (j=0; j<tb->size; j++) {
       TaggedString *t = tb->hash[j];
@@ -209,8 +199,8 @@ void luaS_rawsetglobal (TaggedString *ts, TObject *newval)
 {
   ts->u.globalval = *newval;
   if (ts->head.next == (GCnode *)ts) {  /* is not in list? */
-    ts->head.next = luaS_root.next;
-    luaS_root.next = (GCnode *)ts;
+    ts->head.next = L->rootglobal.next;
+    L->rootglobal.next = (GCnode *)ts;
   }
 }
 
@@ -218,7 +208,7 @@ void luaS_rawsetglobal (TaggedString *ts, TObject *newval)
 char *luaS_travsymbol (int (*fn)(TObject *))
 {
   TaggedString *g;
-  for (g=(TaggedString *)luaS_root.next; g; g=(TaggedString *)g->head.next)
+  for (g=(TaggedString *)L->rootglobal.next; g; g=(TaggedString *)g->head.next)
     if (fn(&g->u.globalval))
       return g->str;
   return NULL;

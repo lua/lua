@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.4 1997/10/23 16:26:37 roberto Exp roberto $
+** $Id: lfunc.c,v 1.5 1997/10/24 17:17:24 roberto Exp roberto $
 ** Lua Funcion auxiliar
 ** See Copyright Notice in lua.h
 */
@@ -9,20 +9,18 @@
 
 #include "lfunc.h"
 #include "lmem.h"
+#include "lstate.h"
 
 #define gcsizeproto(p)	5
 #define gcsizeclosure(c) 1
-
-GCnode luaF_root = {NULL, 0};
-GCnode luaF_rootcl = {NULL, 0};
 
 
 
 Closure *luaF_newclosure (int nelems)
 {
   Closure *c = (Closure *)luaM_malloc(sizeof(Closure)+nelems*sizeof(TObject));
-  luaO_insertlist(&luaF_rootcl, (GCnode *)c);
-  luaO_nblocks += gcsizeclosure(c);
+  luaO_insertlist(&(L->rootcl), (GCnode *)c);
+  L->nblocks += gcsizeclosure(c);
   c->nelems = nelems;
   return c;
 }
@@ -46,8 +44,8 @@ TProtoFunc *luaF_newproto (void)
   f->consts = NULL;
   f->nconsts = 0;
   f->locvars = NULL;
-  luaO_insertlist(&luaF_root, (GCnode *)f);
-  luaO_nblocks += gcsizeproto(f);
+  luaO_insertlist(&(L->rootproto), (GCnode *)f);
+  L->nblocks += gcsizeproto(f);
   return f;
 }
 
@@ -66,7 +64,7 @@ void luaF_freeproto (TProtoFunc *l)
 {
   while (l) {
     TProtoFunc *next = (TProtoFunc *)l->head.next;
-    luaO_nblocks -= gcsizeproto(l);
+    L->nblocks -= gcsizeproto(l);
     freefunc(l);
     l = next;
   }
@@ -77,7 +75,7 @@ void luaF_freeclosure (Closure *l)
 {
   while (l) {
     Closure *next = (Closure *)l->head.next;
-    luaO_nblocks -= gcsizeclosure(l);
+    L->nblocks -= gcsizeclosure(l);
     luaM_free(l);
     l = next;
   }

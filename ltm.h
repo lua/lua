@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
+** $Id: ltm.h,v 1.2 1997/11/04 15:27:53 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -9,6 +9,7 @@
 
 
 #include "lobject.h"
+#include "lstate.h"
 
 /*
 * WARNING: if you change the order of this enumeration,
@@ -38,12 +39,12 @@ typedef enum {
 #define IM_N 18
 
 
-extern struct IM {
+struct IM {
   TObject int_method[IM_N];
-} *luaT_IMtable;
+};
 
 
-#define luaT_getim(tag,event) (&luaT_IMtable[-(tag)].int_method[event])
+#define luaT_getim(tag,event) (&L->IMtable[-(tag)].int_method[event])
 #define luaT_getimbyObj(o,e)  (luaT_getim(luaT_efectivetag(o),(e)))
 
 extern char *luaT_eventname[];

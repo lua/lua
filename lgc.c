@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.6 1997/10/24 17:17:24 roberto Exp roberto $
+** $Id: lgc.c,v 1.7 1997/11/03 20:45:23 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -10,6 +10,7 @@
 #include "lgc.h"
 #include "lmem.h"
 #include "lobject.h"
+#include "lstate.h"
 #include "lstring.h"
 #include "ltable.h"
 #include "ltm.h"
@@ -27,12 +28,6 @@ static int markobject (TObject *o);
 ** =======================================================
 */
 
-static struct ref {
-  TObject o;
-  enum {LOCK, HOLD, FREE, COLLECTED} status;
-} *refArray = NULL;
-static int refSize = 0;
-
 
 int luaC_ref (TObject *o, int lock)
 {
@@ -40,18 +35,19 @@ int luaC_ref (TObject *o, int lock)
   if (ttype(o) == LUA_T_NIL)
     ref = -1;   /* special ref for nil */
   else {
-    for (ref=0; ref<refSize; ref++)
-      if (refArray[ref].status == FREE)
+    for (ref=0; ref<L->refSize; ref++)
+      if (L->refArray[ref].status == FREE)
         goto found;
     /* no more empty spaces */ {
-      int oldSize = refSize;
-      refSize = luaM_growvector(&refArray, refSize, struct ref, refEM, MAX_WORD);
-      for (ref=oldSize; ref<refSize; ref++)
-        refArray[ref].status = FREE;
+      int oldSize = L->refSize;
+      L->refSize = luaM_growvector(&L->refArray, L->refSize, struct ref,
+                                   refEM, MAX_WORD);
+      for (ref=oldSize; ref<L->refSize; ref++)
+        L->refArray[ref].status = FREE;
       ref = oldSize;
     } found:
-    refArray[ref].o = *o;
-    refArray[ref].status = lock ? LOCK : HOLD;
+    L->refArray[ref].o = *o;
+    L->refArray[ref].status = lock ? LOCK : HOLD;
   }
   return ref;
 }
@@ -59,8 +55,8 @@ int luaC_ref (TObject *o, int lock)
 
 void lua_unref (int ref)
 {
-  if (ref >= 0 && ref < refSize)
-    refArray[ref].status = FREE;
+  if (ref >= 0 && ref < L->refSize)
+    L->refArray[ref].status = FREE;
 }
 
 
@@ -68,9 +64,9 @@ TObject* luaC_getref (int ref)
 {
   if (ref == -1)
     return &luaO_nilobject;
-  if (ref >= 0 && ref < refSize &&
-      (refArray[ref].status == LOCK || refArray[ref].status == HOLD))
-    return &refArray[ref].o;
+  if (ref >= 0 && ref < L->refSize &&
+      (L->refArray[ref].status == LOCK || L->refArray[ref].status == HOLD))
+    return &L->refArray[ref].o;
   else
     return NULL;
 }
@@ -79,9 +75,9 @@ TObject* luaC_getref (int ref)
 static void travlock (void)
 {
   int i;
-  for (i=0; i<refSize; i++)
-    if (refArray[i].status == LOCK)
-      markobject(&refArray[i].o);
+  for (i=0; i<L->refSize; i++)
+    if (L->refArray[i].status == LOCK)
+      markobject(&L->refArray[i].o);
 }
 
 
@@ -105,9 +101,9 @@ static int ismarked (TObject *o)
 static void invalidaterefs (void)
 {
   int i;
-  for (i=0; i<refSize; i++)
-    if (refArray[i].status == HOLD && !ismarked(&refArray[i].o))
-      refArray[i].status = COLLECTED;
+  for (i=0; i<L->refSize; i++)
+    if (L->refArray[i].status == HOLD && !ismarked(&L->refArray[i].o))
+      L->refArray[i].status = COLLECTED;
 }
 
 
@@ -210,7 +206,7 @@ static void hashmark (Hash *h)
 static void globalmark (void)
 {
   TaggedString *g;
-  for (g=(TaggedString *)luaS_root.next; g; g=(TaggedString *)g->head.next)
+  for (g=(TaggedString *)L->rootglobal.next; g; g=(TaggedString *)g->head.next)
     if (g->u.globalval.ttype != LUA_T_NIL) {
       markobject(&g->u.globalval);
       strmark(g);  /* cannot collect non nil global variables */
@@ -240,23 +236,19 @@ static int markobject (TObject *o)
 
 
 
-#define GARBAGE_BLOCK 150
-
-unsigned long luaC_threshold = GARBAGE_BLOCK;
-
-
 static void markall (void)
 {
   luaD_travstack(markobject); /* mark stack objects */
   globalmark();  /* mark global variable values and names */
   travlock(); /* mark locked objects */
+  markobject(&L->globalbag);  /* mark elements in global bag */
   luaT_travtagmethods(markobject);  /* mark fallbacks */
 }
 
 
 long lua_collectgarbage (long limit)
 {
-  unsigned long recovered = luaO_nblocks;  /* to subtract nblocks after gc */
+  unsigned long recovered = L->nblocks;  /* to subtract nblocks after gc */
   Hash *freetable;
   TaggedString *freestr;
   TProtoFunc *freefunc;
@@ -264,10 +256,10 @@ long lua_collectgarbage (long limit)
   markall();
   invalidaterefs();
   freestr = luaS_collector();
-  freetable = (Hash *)listcollect(&luaH_root);
-  freefunc = (TProtoFunc *)listcollect(&luaF_root);
-  freeclos = (Closure *)listcollect(&luaF_rootcl);
-  luaC_threshold *= 4;  /* to avoid GC during GC */
+  freetable = (Hash *)listcollect(&(L->roottable));
+  freefunc = (TProtoFunc *)listcollect(&(L->rootproto));
+  freeclos = (Closure *)listcollect(&(L->rootcl));
+  L->GCthreshold *= 4;  /* to avoid GC during GC */
   hashcallIM(freetable);  /* GC tag methods for tables */
   strcallIM(freestr);  /* GC tag methods for userdata */
   luaD_gcIM(&luaO_nilobject);  /* GC tag method for nil (signal end of GC) */
@@ -276,16 +268,16 @@ long lua_collectgarbage (long limit)
   luaF_freeproto(freefunc);
   luaF_freeclosure(freeclos);
   luaM_clearbuffer();
-  recovered = recovered-luaO_nblocks;
-/*printf("==total %ld  coletados %ld\n", luaO_nblocks+recovered, recovered);*/
-  luaC_threshold = (limit == 0) ? 2*luaO_nblocks : luaO_nblocks+limit;
+  recovered = recovered-L->nblocks;
+/*printf("==total %ld  coletados %ld\n", L->nblocks+recovered, recovered);*/
+  L->GCthreshold = (limit == 0) ? 2*L->nblocks : L->nblocks+limit;
   return recovered;
 }
 
 
 void luaC_checkGC (void)
 {
-  if (luaO_nblocks >= luaC_threshold)
+  if (L->nblocks >= L->GCthreshold)
     lua_collectgarbage(0);
 }
 

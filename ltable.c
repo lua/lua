@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.4 1997/10/23 16:26:37 roberto Exp roberto $
+** $Id: ltable.c,v 1.5 1997/10/24 17:17:24 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -9,6 +9,7 @@
 #include "lauxlib.h"
 #include "lmem.h"
 #include "lobject.h"
+#include "lstate.h"
 #include "ltable.h"
 #include "lua.h"
 
@@ -22,9 +23,6 @@
 #define REHASH_LIMIT    0.70    /* avoid more than this % full */
 
 #define TagDefault LUA_T_ARRAY;
-
-
-GCnode luaH_root = {NULL, 0};
 
 
 
@@ -95,7 +93,7 @@ void luaH_free (Hash *frees)
 {
   while (frees) {
     Hash *next = (Hash *)frees->head.next;
-    luaO_nblocks -= gcsize(frees->nhash);
+    L->nblocks -= gcsize(frees->nhash);
     hashdelete(frees);
     frees = next;
   }
@@ -110,8 +108,8 @@ Hash *luaH_new (int nhash)
   nhash(t) = nhash;
   nuse(t) = 0;
   t->htag = TagDefault;
-  luaO_insertlist(&luaH_root, (GCnode *)t);
-  luaO_nblocks += gcsize(nhash);
+  luaO_insertlist(&(L->roottable), (GCnode *)t);
+  L->nblocks += gcsize(nhash);
   return t;
 }
 
@@ -145,7 +143,7 @@ static void rehash (Hash *t)
     if (ttype(ref(n)) != LUA_T_NIL && ttype(val(n)) != LUA_T_NIL)
       *node(t, present(t, ref(n))) = *n;  /* copy old node to luaM_new hash */
   }
-  luaO_nblocks += gcsize(t->nhash)-gcsize(nold);
+  L->nblocks += gcsize(t->nhash)-gcsize(nold);
   luaM_free(vold);
 }
 

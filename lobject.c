@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.5 1997/10/24 17:17:24 roberto Exp roberto $
+** $Id: lobject.c,v 1.6 1997/11/03 20:45:23 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -19,9 +19,6 @@ char *luaO_typenames[] = { /* ORDER LUA_T */
 
 TObject luaO_nilobject = {LUA_T_NIL, {NULL}};
 
-
-
-unsigned long luaO_nblocks = 0;
 
 
 /* hash dimensions values */

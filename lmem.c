@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: lmem.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 #include "lmem.h"
+#include "lstate.h"
 #include "lua.h"
 
 
@@ -25,24 +26,21 @@ int luaM_growaux (void **block, unsigned long nelems, int size,
 }
 
 
-static unsigned long Mbuffsize = 0;
-static char *Mbuffer = NULL;
-
 
 void *luaM_buffer (unsigned long size)
 {
-  if (size > Mbuffsize) {
-    Mbuffsize = size;
-    Mbuffer = luaM_realloc(Mbuffer, Mbuffsize);
+  if (size > L->Mbuffsize) {
+    L->Mbuffsize = size;
+    L->Mbuffer = luaM_realloc(L->Mbuffer, L->Mbuffsize);
   }
-  return Mbuffer;
+  return L->Mbuffer;
 }
 
 
 void luaM_clearbuffer (void)
 {
-  Mbuffsize /= 2;
-  Mbuffer = luaM_realloc(Mbuffer, Mbuffsize);
+  L->Mbuffsize /= 2;
+  L->Mbuffer = luaM_realloc(L->Mbuffer, L->Mbuffsize);
 }
 
 

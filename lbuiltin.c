@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.6 1997/11/04 15:27:53 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.7 1997/11/07 18:19:13 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -15,6 +15,7 @@
 #include "lfunc.h"
 #include "lmem.h"
 #include "lobject.h"
+#include "lstate.h"
 #include "lstring.h"
 #include "ltable.h"
 #include "ltm.h"
@@ -51,7 +52,7 @@ static void nextvar (void)
   TObject *o = luaA_Address(luaL_nonnullarg(1));
   TaggedString *g;
   if (ttype(o) == LUA_T_NIL)
-    g = (TaggedString *)luaS_root.next;
+    g = (TaggedString *)L->rootglobal.next;
   else {
     luaL_arg_check(ttype(o) == LUA_T_STRING, 1, "variable name expected");
     g = tsvalue(o);
@@ -72,21 +73,21 @@ static void foreachvar (void)
 {
   TObject f = *luaA_Address(functionarg(1));
   GCnode *g;
-  StkId name = luaD_Cstack.base++;  /* place to keep var name (to avoid GC) */
-  ttype(luaD_stack.stack+name) = LUA_T_NIL;
-  luaD_stack.top++;
-  for (g = luaS_root.next; g; g = g->next) {
+  StkId name = L->Cstack.base++;  /* place to keep var name (to avoid GC) */
+  ttype(L->stack.stack+name) = LUA_T_NIL;
+  L->stack.top++;
+  for (g = L->rootglobal.next; g; g = g->next) {
     TaggedString *s = (TaggedString *)g;
     if (s->u.globalval.ttype != LUA_T_NIL) {
-      ttype(luaD_stack.stack+name) = LUA_T_STRING;
-      tsvalue(luaD_stack.stack+name) = s;  /* keep s on stack to avoid GC */
+      ttype(L->stack.stack+name) = LUA_T_STRING;
+      tsvalue(L->stack.stack+name) = s;  /* keep s on stack to avoid GC */
       luaA_pushobject(&f);
       pushstring(s);
       luaA_pushobject(&s->u.globalval);
-      luaD_call((luaD_stack.top-luaD_stack.stack)-2, 1);
-      if (ttype(luaD_stack.top-1) != LUA_T_NIL)
+      luaD_call((L->stack.top-L->stack.stack)-2, 1);
+      if (ttype(L->stack.top-1) != LUA_T_NIL)
         return;
-      luaD_stack.top--;
+      L->stack.top--;
     }
   }
 }
@@ -115,10 +116,10 @@ static void foreach (void)
       luaA_pushobject(&f);
       luaA_pushobject(ref(nd));
       luaA_pushobject(val(nd));
-      luaD_call((luaD_stack.top-luaD_stack.stack)-2, 1);
-      if (ttype(luaD_stack.top-1) != LUA_T_NIL)
+      luaD_call((L->stack.top-L->stack.stack)-2, 1);
+      if (ttype(L->stack.top-1) != LUA_T_NIL)
         return;
-      luaD_stack.top--;
+      L->stack.top--;
     }
   }
 }
