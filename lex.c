@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.36 1996/09/25 21:52:00 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.38 1996/11/08 12:20:34 roberto Exp roberto $";
 
 
 #include <ctype.h>
@@ -30,9 +30,15 @@ void lua_setinput (Input fn)
   input = fn;
 }
 
-char *lua_lasttext (void)
+void luaI_syntaxerror (char *s)
 {
-  return luaI_buffer(1);
+  char msg[256];
+  char *token = luaI_buffer(1);
+  if (token[0] == 0)
+    token = "<eof>";
+  sprintf (msg,"%s; last token read: \"%s\" at line %d in file `%s'",
+           s, token, lua_linenumber, lua_parsedfile);
+  lua_error (msg);
 }
 
 
@@ -75,11 +81,11 @@ void luaI_addReserved (void)
 static int inclinenumber (int pragma_allowed)
 {
   if (pragma_allowed && current == '$') {  /* is a pragma? */
-    char buff[MINBUFF];
+    char *buff = luaI_buffer(MINBUFF+1);
     int i = 0;
     next();  /* skip $ */
     while (isalnum(current)) {
-      if (i >= MINBUFF) lua_error("pragma too long");
+      if (i >= MINBUFF) luaI_syntaxerror("pragma too long");
       buff[i++] = current;
       next();
     }
@@ -88,7 +94,7 @@ static int inclinenumber (int pragma_allowed)
       lua_debug = 1;
     else if (strcmp(buff, "nodebug") == 0)
       lua_debug = 0;
-    else lua_error("invalid pragma");
+    else luaI_syntaxerror("invalid pragma");
   }
   return ++lua_linenumber;
 }
@@ -285,7 +291,12 @@ int luaY_lex (void)
           a=10.0*a+(current-'0');
           save_and_next();
         } while (isdigit(current));
-        if (current == '.') save_and_next();
+        if (current == '.') {
+          save_and_next();
+          if (current == '.')
+            luaI_syntaxerror(
+              "ambiguous syntax (decimal point x string concatenation)");
+        }
       fraction:
 	{ double da=0.1;
 	  while (isdigit(current))
