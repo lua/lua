@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.127 2001/01/29 15:26:40 roberto Exp roberto $
+** $Id: lparser.c,v 1.128 2001/01/31 13:13:17 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -383,8 +383,8 @@ static int explist1 (LexState *ls) {
   expdesc v;
   expr(ls, &v);
   while (ls->t.token == ',') {
-    luaK_tostack(ls, &v, 1);  /* gets only 1 value from previous expression */
     next(ls);  /* skip comma */
+    luaK_tostack(ls, &v, 1);  /* gets only 1 value from previous expression */
     expr(ls, &v);
     n++;
   }
@@ -450,11 +450,9 @@ static void var_or_func_tail (LexState *ls, expdesc *v) {
         break;
       }
       case ':': {  /* var_or_func_tail -> ':' NAME funcargs */
-        int name;
         next(ls);
-        name = checkname(ls);
         luaK_tostack(ls, v, 1);  /* `v' must be on stack */
-        luaK_code1(ls->fs, OP_PUSHSELF, name);
+        luaK_code1(ls->fs, OP_PUSHSELF, checkname(ls));
         funcargs(ls, 1);
         v->k = VEXP;
         v->u.l.t = v->u.l.f = NO_JUMP;
@@ -966,11 +964,17 @@ static void localstat (LexState *ls) {
 
 
 static int funcname (LexState *ls, expdesc *v) {
-  /* funcname -> NAME [':' NAME | '.' NAME] */
+  /* funcname -> NAME {'.' NAME} [':' NAME] */
   int needself = 0;
   singlevar(ls, str_checkname(ls), v);
-  if (ls->t.token == ':' || ls->t.token == '.') {
-    needself = (ls->t.token == ':');
+  while (ls->t.token == '.') {
+    next(ls);
+    luaK_tostack(ls, v, 1);
+    luaK_kstr(ls, checkname(ls));
+    v->k = VINDEXED;
+  }
+  if (ls->t.token == ':') {
+    needself = 1;
     next(ls);
     luaK_tostack(ls, v, 1);
     luaK_kstr(ls, checkname(ls));
