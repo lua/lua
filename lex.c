@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.34 1996/05/30 14:04:07 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.35 1996/09/09 14:11:11 roberto Exp roberto $";
 
 
 #include <ctype.h>
@@ -25,7 +25,8 @@ static Input input;  /* input function */
 
 void lua_setinput (Input fn)
 {
-  current = ' ';
+  current = '\n';
+  lua_linenumber = 0;
   input = fn;
 }
 
@@ -71,6 +72,26 @@ void luaI_addReserved (void)
   }
 }
 
+static int inclinenumber (void)
+{
+  if (current == '$') {  /* is a pragma? */
+    char buff[MINBUFF];
+    int i = 0;
+    next();  /* skip $ */
+    while (isalnum(current)) {
+      if (i >= MINBUFF) lua_error("pragma too long");
+      buff[i++] = current;
+      next();
+    }
+    buff[i] = 0;
+    if (strcmp(buff, "debug") == 0)
+      lua_debug = 1;
+    else if (strcmp(buff, "nodebug") == 0)
+      lua_debug = 0;
+    else lua_error("invalid pragma");
+  }
+  return ++lua_linenumber;
+}
 
 static int read_long_string (char *yytext, int buffsize)
 {
@@ -103,7 +124,9 @@ static int read_long_string (char *yytext, int buffsize)
         }
         continue;
       case '\n':
-        lua_linenumber++;  /* goes through */
+        save_and_next();
+        inclinenumber();
+        continue;
       default:
         save_and_next();
     }
@@ -131,29 +154,14 @@ int luaY_lex (void)
     int tokensize = 0;
     switch (current)
     {
-      case '\n': linelasttoken = ++lua_linenumber;
-      case ' ':
-      case '\r':  /* CR: to avoid problems with DOS/Windows */
-      case '\t':
+      case '\n':
         next();
+        linelasttoken = inclinenumber();
         continue;
 
-      case '$':
-	save_and_next();
-	while (isalnum(current) || current == '_')
-          save_and_next();
-        save(0);
-	if (strcmp(yytext+1, "debug") == 0)
-	{
-	  luaY_lval.vInt = 1;
-	  return DEBUG;
-        }
-	else if (strcmp(yytext+1, "nodebug") == 0)
-	{
-	  luaY_lval.vInt = 0;
-	  return DEBUG;
-        }
-	return WRONGTOKEN;
+      case ' ': case '\t': case '\r':  /* CR: to avoid problems with DOS */
+        next();
+        continue;
 
       case '-':
         save_and_next();
@@ -212,8 +220,8 @@ int luaY_lex (void)
                 case 'n': save('\n'); next(); break;
                 case 't': save('\t'); next(); break;
                 case 'r': save('\r'); next(); break;
-                case '\n': lua_linenumber++;  /* goes through */
-                default : save(current); next(); break;
+                case '\n': save_and_next(); inclinenumber(); break;
+                default : save_and_next(); break;
               }
               break;
             default:

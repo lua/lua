@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.38 1996/07/24 14:38:12 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.39 1996/09/24 17:29:50 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -440,7 +440,6 @@ void lua_parse (TFunc *tf)
 %token <vFloat> NUMBER
 %token <vWord>  STRING
 %token <pTStr>  NAME 
-%token <vInt>   DEBUG
 
 %type <vLong> PrepJump
 %type <vLong> exprlist, exprlist1  /* if > 0, points to function return
@@ -469,13 +468,9 @@ void lua_parse (TFunc *tf)
 chunk	: chunklist ret
 
 chunklist : /* empty */
-	  | chunklist globalstat
+	  | chunklist stat sc
 	  | chunklist function
 	  ;
-
-globalstat   : stat sc
-	     | setdebug
-	     ;
 
 function     : FUNCTION funcname body 	 
 	       { 
@@ -804,7 +799,4 @@ decinit	  : /* empty */  { $$ = 0; }
 	  | '=' exprlist1 { $$ = $2; }
 	  ;
 	  
-setdebug  : DEBUG  { lua_debug = $1; }
-	  ;
-
 %%
