@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.103 2000/04/13 16:46:43 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.104 2000/04/13 18:08:18 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -223,7 +223,7 @@ void luaB_newtag (lua_State *L) {
 
 void luaB_copytagmethods (lua_State *L) {
   lua_pushnumber(L, lua_copytagmethods(L, luaL_check_int(L, 1),
-                                    luaL_check_int(L, 2)));
+                                          luaL_check_int(L, 2)));
 }
 
 void luaB_rawgettable (lua_State *L) {
@@ -296,7 +296,8 @@ void luaB_dostring (lua_State *L) {
     lua_error(L, "`dostring' cannot run pre-compiled code");
   if (lua_dobuffer(L, s, l, luaL_opt_string(L, 2, s)) == 0)
     passresults(L);
-  /* else return no value */
+  else
+    lua_pushnil(L);
 }
 
 
@@ -304,7 +305,8 @@ void luaB_dofile (lua_State *L) {
   const char *fname = luaL_opt_string(L, 1, NULL);
   if (lua_dofile(L, fname) == 0)
     passresults(L);
-  /* else return no value */
+  else
+    lua_pushnil(L);
 }
 
 

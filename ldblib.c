@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.11 2000/03/03 14:58:26 roberto Exp roberto $
+** $Id: ldblib.c,v 1.12 2000/03/30 17:19:48 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -88,6 +88,7 @@ static void getlocal (lua_State *L) {
     lua_pushstring(L, lvar.name);
     lua_pushobject(L, lvar.value);
   }
+  else lua_pushnil(L);
 }
 
 
@@ -100,6 +101,7 @@ static void setlocal (lua_State *L) {
   lvar.value = luaL_nonnullarg(L, 3);
   if (lua_setlocal(L, &ar, &lvar))
     lua_pushstring(L, lvar.name);
+  else lua_pushnil(L);
 }
 
 
