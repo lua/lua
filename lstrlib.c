@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.17 1998/06/29 18:24:06 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.18 1998/07/01 14:21:57 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -446,13 +446,20 @@ static void str_gsub (void)
 }
 
 
-static void luaI_addquoted (char *s)
-{
+static void luaI_addquoted (int arg) {
+  long l;
+  char *s = luaL_check_lstr(arg, &l);
   luaL_addchar('"');
-  for (; *s; s++) {
-    if (strchr("\"\\\n", *s))
-      luaL_addchar('\\');
-    luaL_addchar(*s);
+  while (l--) {
+    switch (*s) {
+      case '"':  case '\\':  case '\n':
+        luaL_addchar('\\');
+        luaL_addchar(*s);
+        break;
+      case '\0': addnchar("\\000", 4); break;
+      default: luaL_addchar(*s);
+    }
+    s++;
   }
   luaL_addchar('"');
 }
@@ -490,7 +497,7 @@ static void str_format (void)
       buff = luaL_openspace(1000);  /* to store the formatted value */
       switch (*strfrmt++) {
         case 'q':
-          luaI_addquoted(luaL_check_string(arg));
+          luaI_addquoted(arg);
           continue;
         case 's': {
           char *s = luaL_check_string(arg);
