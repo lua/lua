@@ -1,8 +1,7 @@
 /*
-** table.c
 ** Module to control static tables
 ** TeCGraf - PUC-Rio
-** 11 May 93
+** $Id: $
 */
 
 #ifndef table_h
@@ -33,6 +32,7 @@ void  lua_markobject           (Object *o);
 char *lua_createstring         (char *s);
 void *lua_createarray          (void *a);
 int   lua_addfile              (char *fn);
+int   lua_delfile 	       (void);
 char *lua_filename             (void);
 void  lua_nextvar              (void);
 

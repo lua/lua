@@ -1,9 +1,9 @@
 /*
 ** table.c
 ** Module to control static tables
-** TeCGraf - PUC-Rio
-** 11 May 93
 */
+
+char *rcs_table="$Id: $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -14,7 +14,7 @@
 #include "table.h"
 #include "lua.h"
 
-#define streq(s1,s2)	(strcmp(s1,s2)==0)
+#define streq(s1,s2)	(s1[0]==s2[0]&&strcmp(s1+1,s2+1)==0)
 
 #ifndef MAXSYMBOL
 #define MAXSYMBOL	512
@@ -24,10 +24,27 @@ static Symbol  		tablebuffer[MAXSYMBOL] = {
                                     {"tonumber",{T_CFUNCTION,{lua_obj2number}}},
                                     {"next",{T_CFUNCTION,{lua_next}}},
                                     {"nextvar",{T_CFUNCTION,{lua_nextvar}}},
-                                    {"print",{T_CFUNCTION,{lua_print}}}
+                                    {"print",{T_CFUNCTION,{lua_print}}},
+                                    {"dofile",{T_CFUNCTION,{lua_internaldofile}}},
+                                    {"dostring",{T_CFUNCTION,{lua_internaldostring}}}
                                                  };
 Symbol	       	       *lua_table=tablebuffer;
-Word   	 		lua_ntable=5;
+Word   	 		lua_ntable=7;
+
+struct List
+{
+ Symbol *s;
+ struct List *next;
+};
+
+static struct List o6={ tablebuffer+6, 0};
+static struct List o5={ tablebuffer+5, &o6 };
+static struct List o4={ tablebuffer+4, &o5 };
+static struct List o3={ tablebuffer+3, &o4 };
+static struct List o2={ tablebuffer+2, &o3 };
+static struct List o1={ tablebuffer+1, &o2 };
+static struct List o0={ tablebuffer+0, &o1 };
+static struct List *searchlist=&o0;
 
 #ifndef MAXCONSTANT
 #define MAXCONSTANT	256
@@ -65,10 +82,19 @@ int      		lua_nfile;
 */
 int lua_findsymbol (char *s)
 {
- int i;
- for (i=0; i<lua_ntable; i++)
-  if (streq(s,s_name(i)))
-   return i;
+ struct List *l, *p;
+ for (p=NULL, l=searchlist; l!=NULL; p=l, l=l->next)
+  if (streq(s,l->s->name))
+  {
+   if (p!=NULL)
+   {
+    p->next = l->next;
+    l->next = searchlist;
+    searchlist = l;
+   }
+   return (l->s-lua_table);
+  }
+
  if (lua_ntable >= MAXSYMBOL-1)
  {
   lua_error ("symbol table overflow");
@@ -80,9 +106,13 @@ int lua_findsymbol (char *s)
   lua_error ("not enough memory");
   return -1;
  }
- s_tag(lua_ntable++) = T_NIL;
- 
- return (lua_ntable-1);
+ s_tag(lua_ntable) = T_NIL;
+ p = malloc(sizeof(*p)); 
+ p->s = lua_table+lua_ntable;
+ p->next = searchlist;
+ searchlist = p;
+
+ return lua_ntable++;
 }
 
 /*
@@ -108,12 +138,12 @@ int lua_findenclosedconstant (char *s)
  {
   if (s[i] == '\\')
   {
-   switch (s[++i])
+   switch (s[i+1])
    {
-    case 'n': c[j++] = '\n'; break;
-    case 't': c[j++] = '\t'; break;
-    case 'r': c[j++] = '\r'; break;
-    default : c[j++] = '\\'; c[j++] = c[i]; break;
+    case 'n': c[j++] = '\n'; i++; break;
+    case 't': c[j++] = '\t'; i++; break;
+    case 'r': c[j++] = '\r'; i++; break;
+    default : c[j++] = '\\'; break;
    }
   }
   else
@@ -295,6 +325,15 @@ int lua_addfile (char *fn)
 }
 
 /*
+** Delete a file from file stack
+*/
+int lua_delfile (void)
+{
+ lua_nfile--; 
+ return 1;
+}
+
+/*
 ** Return the last file name set.
 */
 char *lua_filename (void)
@@ -332,9 +371,9 @@ void lua_nextvar (void)
    return;
   }
   index++;
-  while (index < lua_ntable-1 && tag(&s_object(index)) == T_NIL) index++;
+  while (index < lua_ntable && tag(&s_object(index)) == T_NIL) index++;
   
-  if (index == lua_ntable-1)
+  if (index == lua_ntable)
   {
    lua_pushnil();
    lua_pushnil();
