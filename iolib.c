@@ -3,11 +3,10 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.42 1996/04/23 12:43:07 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.43 1996/04/30 21:13:55 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
-#include <sys/types.h>
 #include <string.h>
 #include <time.h>
 #include <stdlib.h>
@@ -546,7 +545,7 @@ static void io_debug (void)
 }
 
 
-void lua_printstack (FILE *f)
+static void lua_printstack (FILE *f)
 {
   int level = 0;
   lua_Object func;
