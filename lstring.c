@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.43 2000/09/29 12:42:13 roberto Exp roberto $
+** $Id: lstring.c,v 1.44 2000/10/26 12:47:05 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -13,6 +13,15 @@
 #include "lobject.h"
 #include "lstate.h"
 #include "lstring.h"
+
+
+/*
+** type equivalent to TString, but with maximum alignment requirements
+*/
+union L_UTString {
+  TString ts;
+  union L_Umaxalign dummy;  /* ensures maximum alignment for `local' udata */
+};
 
 
 
@@ -103,12 +112,14 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
 
 
 TString *luaS_newudata (lua_State *L, size_t s, void *udata) {
-  TString *ts = (TString *)luaM_malloc(L, (lint32)sizeof(TString)+s);
+  union L_UTString *uts = (union L_UTString *)luaM_malloc(L,
+                                (lint32)sizeof(union L_UTString)+s);
+  TString *ts = &uts->ts;
   ts->marked = 0;
   ts->nexthash = NULL;
   ts->len = s;
   ts->u.d.tag = 0;
-  ts->u.d.value = (udata == NULL) ? ts+1 : udata;
+  ts->u.d.value = (udata == NULL) ? uts+1 : udata;
   L->nblocks += sizestring(s);
  /* insert it on table */
   newentry(L, &L->udt, ts, IntPoint(ts->u.d.value) & (L->udt.size-1));

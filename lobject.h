@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.80 2000/10/26 12:47:05 roberto Exp roberto $
+** $Id: lobject.h,v 1.81 2000/10/30 16:29:59 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -71,9 +71,16 @@ typedef struct lua_TObject {
 /*
 ** String headers for string table
 */
+
+/*
+** most `malloc' libraries allocate memory in blocks of 8 bytes. TSPACK
+** tries to make sizeof(TString) a multiple of this granularity, to reduce
+** waste of space.
+*/
+#define TSPACK	((int)sizeof(int))
+
 typedef struct TString {
   union {
-    union L_Umaxalign dummy;  /* ensures maximum alignment for `local' udata */
     struct {  /* for strings */
       unsigned long hash;
       int constindex;  /* hint to reuse constants */
@@ -85,8 +92,8 @@ typedef struct TString {
   } u;
   size_t len;
   struct TString *nexthash;  /* chain for hash table */
-  unsigned char marked;
-  char str[1];   /* variable length string!! must be the last field! */
+  int marked;
+  char str[TSPACK];   /* variable length string!! must be the last field! */
 } TString;
 
 
