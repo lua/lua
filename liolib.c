@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.7 2002/06/05 17:24:04 roberto Exp roberto $
+** $Id: liolib.c,v 2.8 2002/06/05 17:42:03 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -99,12 +99,12 @@ static int setnewfile (lua_State *L, FILE *f) {
 
 static int io_close (lua_State *L) {
   FILE *f;
+  int status = 1;
   if (lua_isnone(L, 1)) {
     lua_pushstring(L, IO_OUTPUT);
     lua_rawget(L, lua_upvalueindex(1));
   }
   f = tofile(L, 1);
-  int status = 1;
   if (f != stdin && f != stdout && f != stderr) {
     lua_settop(L, 1);  /* make sure file is on top */
     lua_pushliteral(L, CLOSEDFILEHANDLE);
