@@ -3,18 +3,18 @@
 ** load bytecodes from files
 */
 
-char *rcs_undump="$Id$";
+char *rcs_undump="$Id: undump.c,v 1.1 1996/02/23 19:04:38 lhf Exp lhf $";
 
 #include <stdio.h>
 #include <string.h>
 #include "luac.h"
 
-static void warn(char *s)
+static void warn(char *s)			/* TODO: remove */
 {
  fprintf(stderr,"luac: %s\n",s);
 }
 
-static void panic(char *s)
+static void panic(char *s)			/* TODO: remove */
 {
  warn(s);
  exit(1);
@@ -35,13 +35,6 @@ static void Unthread(Byte *p, int i, int v)
  }
 }
 
-static char* LoadBlock(int size, FILE *D)
-{
- char *b=luaI_malloc(size);
- fread(b,size,1,D);
- return b;
-}
-
 static int LoadWord(FILE *D)
 {
  Word w;
@@ -49,56 +42,70 @@ static int LoadWord(FILE *D)
  return w;
 }
 
+static char* LoadBlock(int size, FILE *D)
+{
+ char *b=luaI_malloc(size);
+ fread(b,size,1,D);
+ return b;
+}
+
 static char* LoadString(FILE *D)
 {
  return LoadBlock(LoadWord(D),D);
 }
 
-static char* LoadCode(int size, FILE *D)
-{
- return LoadBlock(size,D);
-}
+static TFunc *Main=NULL;
 
-static TFunc* LoadFunction(FILE *D)
+static void LoadFunction(FILE *D)
 {
  TFunc *tf=new(TFunc);
  tf->size=LoadWord(D);
  tf->marked=LoadWord(D);
  tf->lineDefined=LoadWord(D);
  tf->fileName=LoadString(D);
- tf->code=LoadCode(tf->size,D);
- while (1)
+ tf->code=LoadBlock(tf->size,D);
+ if (tf->lineDefined==0)			/* new main */
+  Main=tf;
+ else						/* fix PUSHFUNCTION */
+ {
+  CodeCode c;
+  Byte *p=Main->code;
+  c.tf=tf;
+  *p++=c.m.c1; *p++=c.m.c2; *p++=c.m.c3; *p++=c.m.c4;
+ }
+ while (1)					/* unthread */
  {
   int c=getc(D);
   if (c=='V')
   {
    int i=LoadWord(D);
    char *s=LoadString(D);
-   int v=luaI_findsymbolbyname(s);
+   int v=luaI_findsymbolbyname(s);		/* TODO: free s? */
    Unthread(tf->code,i,v);
   }
   else if (c=='S')
   {
    int i=LoadWord(D);
    char *s=LoadString(D);
-   int v=luaI_findconstantbyname(s);
+   int v=luaI_findconstantbyname(s);		/* TODO: free s? */
    Unthread(tf->code,i,v);
   }
   else
   {
-PrintFunction(tf);
+PrintFunction(tf);				/* TODO: remove */
    ungetc(c,D);
-   return tf;
+   return;
   }
  }
 }
 
-static void LoadHeader(FILE *D)
+static void LoadHeader(FILE *D)			/* TODO: error handling */
 {
  char *s=LoadString(D);
  Word w,tw=TEST_WORD;
  float f,tf=TEST_FLOAT;
  if (strcmp(s,SIGNATURE)!=0) panic("bad signature");
+ luaI_free(s);
  getc(D);				/* skip version */
  fread(&w,sizeof(w),1,D);		/* a word for testing byte ordering */
  if (w!=tw) warn("different byte order");
@@ -112,8 +119,9 @@ static void LoadChunk(FILE *D)
  while (1)
  {
   int c=getc(D);
-  if (c=='F') LoadFunction(D); else { ungetc(c,D); return; }
+  if (c=='F') LoadFunction(D); else { ungetc(c,D); break; }
  }
+ /* TODO: run Main */
 }
 
 void Undump(FILE *D)
