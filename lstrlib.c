@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.99 2003/05/14 14:35:54 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.100 2003/10/07 20:13:41 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -200,7 +200,7 @@ static const char *luaI_classend (MatchState *ms, const char *p) {
   switch (*p++) {
     case ESC: {
       if (*p == '\0')
-        luaL_error(ms->L, "malformed pattern (ends with `%')");
+        luaL_error(ms->L, "malformed pattern (ends with `%%')");
       return p+1;
     }
     case '[': {
@@ -682,7 +682,7 @@ static const char *scanformat (lua_State *L, const char *strfrmt,
     luaL_error(L, "invalid format (width or precision too long)");
   if (p-strfrmt+2 > MAX_FORMAT)  /* +2 to include `%' and the specifier */
     luaL_error(L, "invalid format (too long)");
-  form[0] = '%';
+  form[0] = ESC;
   strncpy(form+1, strfrmt, p-strfrmt+1);
   form[p-strfrmt+2] = 0;
   return p;
@@ -697,9 +697,9 @@ static int str_format (lua_State *L) {
   luaL_Buffer b;
   luaL_buffinit(L, &b);
   while (strfrmt < strfrmt_end) {
-    if (*strfrmt != '%')
+    if (*strfrmt != ESC)
       luaL_putchar(&b, *strfrmt++);
-    else if (*++strfrmt == '%')
+    else if (*++strfrmt == ESC)
       luaL_putchar(&b, *strfrmt++);  /* %% */
     else { /* format item */
       char form[MAX_FORMAT];  /* to store the format (`%...') */
