@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.36 2000/03/30 17:19:48 roberto Exp roberto $
+** $Id: lua.c,v 1.37 2000/04/14 17:46:29 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -69,6 +69,7 @@ static void print_message (void) {
   fprintf(stderr,
   "usage: lua [options].  Available options are:\n"
   "  -        execute stdin as a file\n"
+  "  -c       close lua when exiting\n"
   "  -d       turn debug on\n"
   "  -e stat  execute string `stat'\n"
   "  -f name  execute file `name' with remaining arguments in table `arg'\n"
@@ -166,12 +167,14 @@ static void manual_input (int version, int prompt) {
 
 
 int main (int argc, char *argv[]) {
+  int toclose = 0;
+  int status = EXIT_SUCCESS;
   int i = 1;
   if (i < argc && argv[1][0] == '-' && argv[1][1] == 's') {
     int stacksize = atoi(&argv[1][2]);
     if (stacksize == 0) {
       fprintf(stderr, "lua: invalid stack size ('%s')\n", &argv[1][2]);
-      exit(1);
+      exit(EXIT_FAILURE);
     }
     i++;
     lua_state = lua_newstate("stack", stacksize, NULL);
@@ -207,6 +210,9 @@ int main (int argc, char *argv[]) {
             manual_input(1, 1);
           }
           break;
+        case 'c':
+          toclose = 1;
+          break;
         case 'v':
           print_version();
           break;
@@ -214,18 +220,18 @@ int main (int argc, char *argv[]) {
           i++;
           if (i >= argc) {
             print_message();
-            exit(1);
+            status = EXIT_FAILURE; goto endloop;
           }
           if (ldo(lua_dostring, argv[i]) != 0) {
             fprintf(stderr, "lua: error running argument `%s'\n", argv[i]);
-            exit(1);
+            status = EXIT_FAILURE; goto endloop;
           }
           break;
         case 'f':
           i++;
           if (i >= argc) {
             print_message();
-            exit(1);
+            status = EXIT_FAILURE; goto endloop;
           }
           lua_pushobject(getargs(argv+i));  /* collect remaining arguments */
           lua_setglobal("arg");
@@ -234,10 +240,10 @@ int main (int argc, char *argv[]) {
           break;
         case 's':
           fprintf(stderr, "lua: stack size (`-s') must be the first option\n");
-          exit(1);
+          status = EXIT_FAILURE; goto endloop;
         default:
           print_message();
-          exit(1);
+          status = EXIT_FAILURE; goto endloop;
       }
     }
     else if (strchr(argv[i], '='))
@@ -246,9 +252,8 @@ int main (int argc, char *argv[]) {
       file_input(argv[i]);
   }
   endloop:
-#ifdef DEBUG
-  lua_close();
-#endif
-  return 0;
+  if (toclose)
+    lua_close();
+  return status;
 }
 
