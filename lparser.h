@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.5 1999/11/22 13:12:07 roberto Exp roberto $
+** $Id: lparser.h,v 1.6 2000/02/22 13:30:11 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -50,21 +50,19 @@
 
 
 /*
-** Variable descriptor:
-** must include an `exp' option because LL(1) cannot distinguish
-** between variables, upvalues and function calls on first sight.
+** Expression descriptor
 */
 typedef enum {
   VGLOBAL,  /* info is constant index of global name */
   VLOCAL,   /* info is stack index */
   VINDEXED, /* no info (table and index are on the stack) */
-  VEXP      /* info is pc index of a call (or 0 if exp is closed) */
-} varkind;
+  VEXP      /* info is pc index of exp main operator */
+} expkind;
 
-typedef struct vardesc {
-  varkind k;
+typedef struct expdesc {
+  expkind k;
   int info;
-} vardesc;
+} expdesc;
 
 
 /* state needed to generate code for a given function */
@@ -78,7 +76,7 @@ typedef struct FuncState {
   int nupvalues;  /* number of upvalues */
   int nvars;  /* number of entries in f->locvars (-1 if no debug information) */
   int lastsetline;  /* line where last SETLINE was issued */
-  vardesc upvalues[MAXUPVALUES];  /* upvalues */
+  expdesc upvalues[MAXUPVALUES];  /* upvalues */
   TaggedString *localvar[MAXLOCALS];  /* store local variable names */
 } FuncState;
 
