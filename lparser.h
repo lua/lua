@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.8 2000/03/03 14:58:26 roberto Exp roberto $
+** $Id: lparser.h,v 1.9 2000/03/03 18:53:17 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -46,13 +46,11 @@
 ** Expression descriptor
 */
 
-#define NOJUMPS		0
-
 typedef enum {
   VGLOBAL,  /* info is constant index of global name */
   VLOCAL,   /* info is stack index */
-  VINDEXED, /* info is info of the index expression */
-  VEXP      /* info is NOJUMPS if exp has no internal jumps */
+  VINDEXED,
+  VEXP      /* info is jump target if exp has internal jumps */
 } expkind;
 
 typedef struct expdesc {
@@ -61,22 +59,13 @@ typedef struct expdesc {
 } expdesc;
 
 
-/*
-** Expression List descriptor:
-** tells number of expressions in the list,
-** and gives the `info' of last expression.
-*/
-typedef struct listdesc {
-  int n;
-  int info;  /* 0 if last expression has no internal jumps */
-} listdesc;
-
 
 /* state needed to generate code for a given function */
 typedef struct FuncState {
   TProtoFunc *f;  /* current function header */
   struct FuncState *prev;  /* enclosing function */
   int pc;  /* next position to code */
+  int lasttarget;   /* `pc' of last `jump target' */
   int stacksize;  /* number of values on activation register */
   int nlocalvar;  /* number of active local variables */
   int nupvalues;  /* number of upvalues */

@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.43 2000/03/03 14:58:26 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.44 2000/03/03 18:53:17 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -71,7 +71,7 @@ RETCODE,/*	U	-		(return)			*/
 CALL,/*		A B	v_n-v_1 f(at a)	r_b-r_1		f(v1,...,v_n)	*/
 TAILCALL,/*	A B	v_a-v_1 f	(return)	f(v1,...,v_a)	*/
 
-PUSHNIL,/*	U	-		nil_0-nil_u			*/
+PUSHNIL,/*	U	-		nil_1-nil_u			*/
 POP,/*		U	a_u-a_1		-				*/
 
 PUSHINT,/*	S	-		(real)s				*/

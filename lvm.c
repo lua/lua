@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.89 2000/02/22 18:12:46 roberto Exp roberto $
+** $Id: lvm.c,v 1.90 2000/03/03 14:58:26 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -348,10 +348,10 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
         return base+GETARG_B(i);
 
       case PUSHNIL: {
-        register int n = GETARG_U(i);
-        do {
+        int n = GETARG_U(i);
+		do {
           ttype(top++) = LUA_T_NIL;
-        } while (n--);
+		} while (--n > 0);
         break;
       }
 
