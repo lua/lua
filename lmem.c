@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.57 2002/06/18 15:19:27 roberto Exp roberto $
+** $Id: lmem.c,v 1.58 2002/10/08 18:45:07 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -61,6 +61,7 @@ void *luaM_growaux (lua_State *L, void *block, int *size, int size_elems,
 ** generic allocation routine.
 */
 void *luaM_realloc (lua_State *L, void *block, lu_mem oldsize, lu_mem size) {
+  lua_assert((oldsize == 0) == (block == NULL));
   if (size == 0) {
     if (block != NULL) {
       l_free(block, oldsize);
