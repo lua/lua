@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: ltm.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -176,7 +176,7 @@ int luaT_efectivetag (TObject *o)
 {
   lua_Type t = ttype(o);
   if (t == LUA_T_USERDATA) {
-    int tag = o->value.ts->tag;
+    int tag = o->value.ts->u.d.tag;
     return (tag >= 0) ? LUA_T_USERDATA : tag;
   }
   else if (t == LUA_T_ARRAY)

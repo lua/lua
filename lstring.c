@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.1 1997/08/14 20:23:30 roberto Exp $
+** $Id: lstring.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -14,6 +14,10 @@
 
 
 #define NUM_HASHS  61
+
+
+GCnode luaS_root = {NULL, 0};  /* list of global variables */
+
 
 typedef struct {
   int size;
@@ -39,7 +43,7 @@ static stringtable string_root[NUM_HASHS] = {
 };
 
 
-static TaggedString EMPTY = {LUA_T_STRING, {0}, {{NOT_USED, NOT_USED}}, 2, {0}};
+static TaggedString EMPTY = {{NULL, 2}, 0, 0L, {{LUA_T_NIL, {NULL}}}, {0}};
 
 
 
@@ -68,7 +72,7 @@ static void grow (stringtable *tb)
   tb->nuse = 0;
   for (i=0; i<tb->size; i++) {
     if (tb->hash[i] != NULL && tb->hash[i] != &EMPTY) {
-      int h = tb->hash[i]->uu.hash%newsize;
+      int h = tb->hash[i]->hash%newsize;
       while (newhash[h])
         h = (h+1)%newsize;
       newhash[h] = tb->hash[i];
@@ -87,16 +91,18 @@ static TaggedString *newone(char *buff, int tag, unsigned long h)
   if (tag == LUA_T_STRING) {
     ts = (TaggedString *)luaM_malloc(sizeof(TaggedString)+strlen(buff));
     strcpy(ts->str, buff);
-    ts->u.s.varindex = ts->u.s.constindex = NOT_USED;
-    ts->tag = LUA_T_STRING;
+    ts->u.globalval.ttype = LUA_T_NIL;  /* initialize global value */
+    ts->constindex = 0;
   }
   else {
     ts = (TaggedString *)luaM_malloc(sizeof(TaggedString));
-    ts->u.v = buff;
-    ts->tag = tag == LUA_ANYTAG ? 0 : tag;
+    ts->u.d.v = buff;
+    ts->u.d.tag = tag == LUA_ANYTAG ? 0 : tag;
+    ts->constindex = -1;  /* tag -> this is a userdata */
   }
-  ts->marked = 0;
-  ts->uu.hash = h;
+  ts->head.marked = 0;
+  ts->head.next = (GCnode *)ts;  /* signal it is in no list */
+  ts->hash = h;
   return ts;
 }
 
@@ -113,9 +119,9 @@ static TaggedString *insert (char *buff, int tag, stringtable *tb)
   {
     if (ts == &EMPTY)
       j = i;
-    else if ((ts->tag == LUA_T_STRING) ?
+    else if ((ts->constindex >= 0) ?  /* is a string? */
               (tag == LUA_T_STRING && (strcmp(buff, ts->str) == 0)) :
-              ((tag == ts->tag || tag == LUA_ANYTAG) && buff == ts->u.v))
+              ((tag == ts->u.d.tag || tag == LUA_ANYTAG) && buff == ts->u.d.v))
       return ts;
     i = (i+1)%tb->size;
   }
@@ -142,8 +148,8 @@ TaggedString *luaS_new (char *str)
 TaggedString *luaS_newfixedstring (char *str)
 {
   TaggedString *ts = luaS_new(str);
-  if (ts->marked == 0)
-    ts->marked = 2;  /* avoid GC */
+  if (ts->head.marked == 0)
+    ts->head.marked = 2;  /* avoid GC */
   return ts;
 }
 
@@ -151,7 +157,7 @@ TaggedString *luaS_newfixedstring (char *str)
 void luaS_free (TaggedString *l)
 {
   while (l) {
-    TaggedString *next = l->uu.next;
+    TaggedString *next = (TaggedString *)l->head.next;
     luaM_free(l);
     l = next;
   }
@@ -159,22 +165,35 @@ void luaS_free (TaggedString *l)
 
 
 /*
-** Garbage collection function.
+** Garbage collection functions.
 */
+
+static void remove_from_list (GCnode *l)
+{
+  while (l) {
+    GCnode *next = l->next;
+    while (next && !next->marked)
+      next = l->next = next->next;
+    l = next;
+  }
+}
+
+
 TaggedString *luaS_collector (void)
 {
   TaggedString *frees = NULL;
   int i;
+  remove_from_list(&luaS_root);
   for (i=0; i<NUM_HASHS; i++) {
     stringtable *tb = &string_root[i];
     int j;
     for (j=0; j<tb->size; j++) {
       TaggedString *t = tb->hash[j];
       if (t == NULL) continue;
-      if (t->marked == 1)
-        t->marked = 0;
-      else if (!t->marked) {
-        t->uu.next = frees;
+      if (t->head.marked == 1)
+        t->head.marked = 0;
+      else if (!t->head.marked) {
+        t->head.next = (GCnode *)frees;
         frees = t;
         tb->hash[j] = &EMPTY;
         --luaO_nentities;
@@ -182,5 +201,32 @@ TaggedString *luaS_collector (void)
     }
   }
   return frees;
+}
+
+
+void luaS_rawsetglobal (TaggedString *ts, TObject *newval)
+{
+  ts->u.globalval = *newval;
+  if (ts->head.next == (GCnode *)ts) {  /* is not in list? */
+    ts->head.next = luaS_root.next;
+    luaS_root.next = (GCnode *)ts;
+  }
+}
+
+
+char *luaS_travsymbol (int (*fn)(TObject *))
+{
+  TaggedString *g;
+  for (g=(TaggedString *)luaS_root.next; g; g=(TaggedString *)g->head.next)
+    if (fn(&g->u.globalval))
+      return g->str;
+  return NULL;
+}
+
+
+int luaS_globaldefined (char *name)
+{
+  TaggedString *ts = luaS_new(name);
+  return ts->u.globalval.ttype != LUA_T_NIL;
 }
 

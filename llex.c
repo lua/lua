@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: llex.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -8,7 +8,6 @@
 #include <ctype.h>
 #include <string.h>
 
-#include "lglobal.h"
 #include "llex.h"
 #include "lmem.h"
 #include "lobject.h"
@@ -48,7 +47,7 @@ static void addReserved (void)
     firsttime = 0;
     for (i=0; i<(sizeof(reserved)/sizeof(reserved[0])); i++) {
       TaggedString *ts = luaS_new(reserved[i].name);
-      ts->marked = reserved[i].token;  /* reserved word  (always > 255) */
+      ts->head.marked = reserved[i].token;  /* reserved word  (always > 255) */
     }
   }
 }
@@ -120,7 +119,7 @@ static int checkcond (char *buff)
   int i = luaO_findstring(buff, opts);
   if (i >= 0) return i;
   else if (isalpha((unsigned char)buff[0]) || buff[0] == '_')
-    return luaG_globaldefined(buff);
+    return luaS_globaldefined(buff);
   else {
     luaY_syntaxerror("invalid $if condition", buff);
     return 0;  /* to avoid warnings */
@@ -451,8 +450,8 @@ int luaY_lex (void)
           } while (isalnum(current) || current == '_');
           save(0);
           ts = luaS_new(textbuff.text);
-          if (ts->marked > 255)
-            return ts->marked;  /* reserved word */
+          if (ts->head.marked > 255)
+            return ts->head.marked;  /* reserved word */
           luaY_lval.pTStr = ts;
           return NAME;
         }

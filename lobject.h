@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: lobject.h,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -29,64 +29,6 @@ typedef unsigned short Word;  /* unsigned 16 bits */
 typedef unsigned int IntPoint; /* unsigned with same size as a pointer (for hashing) */
 
 
-
-
-/*
-** String headers for string table
-*/
-
-#define NOT_USED  0xFFFE
-
-typedef struct TaggedString {
-  int tag;  /* if != LUA_T_STRING, this is a userdata */
-  union {
-    unsigned long hash;
-    struct TaggedString *next;
-  } uu;
-  union {
-    struct {
-      Word varindex;  /* != NOT_USED  if this is a symbol */
-      Word constindex;  /* hint to reuse constant indexes */
-    } s;
-    void *v;  /* if this is a userdata, here is its value */
-  } u;
-  int marked;   /* for garbage collection; never collect (nor change) if > 1 */
-  char str[1];   /* \0 byte already reserved */
-} TaggedString;
-
-
-
-/*
-** generic header for garbage collector lists
-*/
-typedef struct GCnode {
-  struct GCnode *next;
-  int marked;
-} GCnode;
-
-
-/*
-** Function Prototypes
-*/
-typedef struct TProtoFunc {
-  GCnode head;
-  Byte *code;  /* ends with opcode ENDCODE */
-  int lineDefined;
-  TaggedString  *fileName;
-  struct TObject *consts;
-  int nconsts;
-  struct LocVar *locvars;  /* ends with line = -1 */
-  int nupvalues;
-} TProtoFunc;
-
-typedef struct LocVar {
-  TaggedString *varname;           /* NULL signals end of scope */
-  int line;
-} LocVar;
-
-
-
-
 /*
 ** Lua TYPES
 ** WARNING: if you change the order of this enumeration,
@@ -110,19 +52,74 @@ typedef enum {
 
 
 typedef union {
-  lua_CFunction f;
-  real n;
-  TaggedString *ts;
-  TProtoFunc *tf;
-  struct Closure *cl;
-  struct Hash *a;
-  int i;
+  lua_CFunction f;  /* LUA_T_CFUNCTION, LUA_T_CMARK */
+  real n;  /* LUA_T_NUMBER */
+  struct TaggedString *ts;  /* LUA_T_STRING, LUA_T_USERDATA */
+  struct TProtoFunc *tf;  /* LUA_T_PROTO */
+  struct Closure *cl;  /* LUA_T_FUNCTION, LUA_T_MARK */
+  struct Hash *a;  /* LUA_T_ARRAY */
+  int i;  /* LUA_T_LINE */
 } Value;
+
 
 typedef struct TObject {
   lua_Type ttype;
   Value value;
 } TObject;
+
+
+
+/*
+** generic header for garbage collector lists
+*/
+typedef struct GCnode {
+  struct GCnode *next;
+  int marked;
+} GCnode;
+
+
+/*
+** String headers for string table
+*/
+
+typedef struct TaggedString {
+  GCnode head;
+  int constindex;  /* hint to reuse constants (= -1 if this is a userdata) */
+  unsigned long hash;
+  union {
+    TObject globalval;
+    struct {
+      void *v;  /* if this is a userdata, here is its value */
+      int tag;
+    } d;
+  } u;
+  char str[1];   /* \0 byte already reserved */
+} TaggedString;
+
+
+
+
+/*
+** Function Prototypes
+*/
+typedef struct TProtoFunc {
+  GCnode head;
+  Byte *code;  /* ends with opcode ENDCODE */
+  int lineDefined;
+  TaggedString  *fileName;
+  struct TObject *consts;
+  int nconsts;
+  struct LocVar *locvars;  /* ends with line = -1 */
+  int nupvalues;
+} TProtoFunc;
+
+typedef struct LocVar {
+  TaggedString *varname;           /* NULL signals end of scope */
+  int line;
+} LocVar;
+
+
+
 
 
 /* Macros to access structure members */

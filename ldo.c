@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: ldo.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "lbuiltin.h"
 #include "ldo.h"
 #include "lgc.h"
 #include "lmem.h"
@@ -50,6 +51,7 @@ static void initstack (int n)
   luaD_stack.last = luaD_stack.stack+(maxstack-1);
   luaD_stack.top = luaD_stack.stack;
   *(luaD_stack.top++) = initial_stack;
+  luaB_predefine();
 }
 
 

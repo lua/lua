@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.1 1997/08/14 13:40:46 roberto Exp roberto $
+** $Id: lapi.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -13,7 +13,6 @@
 #include "ldo.h"
 #include "lfunc.h"
 #include "lgc.h"
-#include "lglobal.h"
 #include "lmem.h"
 #include "lobject.h"
 #include "lstring.h"
@@ -182,14 +181,15 @@ lua_Object lua_createtable (void)
 lua_Object lua_getglobal (char *name)
 {
   luaD_checkstack(2);  /* may need that to call T.M. */
-  luaV_getglobal(luaG_findsymbolbyname(name));
+  luaV_getglobal(luaS_new(name));
   return put_luaObjectonTop();
 }
 
 
 lua_Object lua_rawgetglobal (char *name)
 {
-  return put_luaObject(&luaG_global[luaG_findsymbolbyname(name)].object);
+  TaggedString *ts = luaS_new(name);
+  return put_luaObject(&ts->u.globalval);
 }
 
 
@@ -197,15 +197,15 @@ void lua_setglobal (char *name)
 {
   checkCparams(1);
   luaD_checkstack(2);  /* may need that to call T.M. */
-  luaV_setglobal(luaG_findsymbolbyname(name));
+  luaV_setglobal(luaS_new(name));
 }
 
 
 void lua_rawsetglobal (char *name)
 {
-  Word n = luaG_findsymbolbyname(name);
+  TaggedString *ts = luaS_new(name);
   checkCparams(1);
-  s_object(n) = *(--luaD_stack.top);
+  luaS_rawsetglobal(ts, --luaD_stack.top);
 }
 
 
@@ -268,7 +268,7 @@ void *lua_getuserdata (lua_Object object)
 {
   if (object == LUA_NOOBJECT || ttype(Address(object)) != LUA_T_USERDATA)
     return NULL;
-  else return tsvalue(Address(object))->u.v;
+  else return tsvalue(Address(object))->u.d.v;
 }
 
 lua_CFunction lua_getcfunction (lua_Object object)
@@ -352,7 +352,7 @@ int lua_tag (lua_Object lo)
     TObject *o = Address(lo);
     lua_Type t = ttype(o);
     if (t == LUA_T_USERDATA)
-      return o->value.ts->tag;
+      return o->value.ts->u.d.tag;
     else if (t == LUA_T_ARRAY)
       return o->value.a->htag;
     else return t;
@@ -369,7 +369,7 @@ void lua_settag (int tag)
       (luaD_stack.top-1)->value.a->htag = tag;
       break;
     case LUA_T_USERDATA:
-      (luaD_stack.top-1)->value.ts->tag = tag;
+      (luaD_stack.top-1)->value.ts->u.d.tag = tag;
       break;
     default:
       luaL_verror("cannot change the tag of a %s",
@@ -483,7 +483,7 @@ char *lua_getobjname (lua_Object o, char **name)
   functofind = Address(o);
   if ((*name = luaT_travtagmethods(checkfunc)) != NULL)
     return "tag-method";
-  else if ((*name = luaG_travsymbol(checkfunc)) != NULL)
+  else if ((*name = luaS_travsymbol(checkfunc)) != NULL)
     return "global";
   else return "";
 }

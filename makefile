@@ -1,5 +1,5 @@
 #
-## $Id: $
+## $Id: makefile,v 1.1 1997/09/16 19:33:21 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -18,7 +18,7 @@
 # define LUA_COMPAT2_5=0 if yous system does not need to be compatible with
 # version 2.5 (or older)
 
-CONFIG = -DPOPEN -D_POSIX_SOURCE 
+CONFIG = -DPOPEN -D_POSIX_SOURCE
 #CONFIG = -DLUA_COMPAT2_5=0 -DOLD_ANSI -DDEBUG
 
 
@@ -40,7 +40,6 @@ LUAOBJS = \
 	ldo.o \
 	lfunc.o \
 	lgc.o \
-	lglobal.o \
 	llex.o \
 	lmem.o \
 	lobject.o \
@@ -96,31 +95,29 @@ clear	:
 
 
 lapi.o: lapi.c lapi.h lua.h lobject.h lauxlib.h ldo.h lfunc.h lgc.h \
- lglobal.h lmem.h lstring.h ltable.h ltm.h luadebug.h lvm.h
+ lmem.h lstring.h ltable.h ltm.h luadebug.h lvm.h
 lauxlib.o: lauxlib.c lauxlib.h lua.h luadebug.h
 lbuiltin.o: lbuiltin.c lapi.h lua.h lobject.h lauxlib.h lbuiltin.h \
- lglobal.h lmem.h lstring.h ltable.h ltm.h
-ldo.o: ldo.c ldo.h lobject.h lua.h lgc.h lmem.h lparser.h lzio.h ltm.h \
- luadebug.h lundump.h lvm.h
+ lmem.h lstring.h ltable.h ltm.h
+ldo.o: ldo.c lbuiltin.h ldo.h lobject.h lua.h lgc.h lmem.h lparser.h \
+ lzio.h ltm.h luadebug.h lundump.h lvm.h
 lfunc.o: lfunc.c lfunc.h lobject.h lua.h lmem.h
-lgc.o: lgc.c ldo.h lobject.h lua.h lfunc.h lgc.h lglobal.h lmem.h \
- lstring.h ltable.h ltm.h
-lglobal.o: lglobal.c lbuiltin.h lglobal.h lobject.h lua.h lmem.h \
- lstring.h
+lgc.o: lgc.c ldo.h lobject.h lua.h lfunc.h lgc.h lmem.h lstring.h \
+ ltable.h ltm.h
 liolib.o: liolib.c lauxlib.h lua.h luadebug.h lualib.h
-llex.o: llex.c lglobal.h lobject.h lua.h llex.h lzio.h lmem.h \
- lparser.h lstring.h ltokens.h luadebug.h
+llex.o: llex.c llex.h lobject.h lua.h lzio.h lmem.h lparser.h \
+ lstring.h ltokens.h luadebug.h
 lmathlib.o: lmathlib.c lauxlib.h lua.h lualib.h
 lmem.o: lmem.c lmem.h lua.h
 lobject.o: lobject.c lobject.h lua.h
-lparser.o: lparser.c lauxlib.h lua.h ldo.h lobject.h lfunc.h lglobal.h \
- llex.h lzio.h lmem.h lopcodes.h lparser.h lstring.h luadebug.h
+lparser.o: lparser.c lauxlib.h lua.h ldo.h lobject.h lfunc.h llex.h \
+ lzio.h lmem.h lopcodes.h lparser.h lstring.h luadebug.h
 lstring.o: lstring.c lmem.h lobject.h lua.h lstring.h
 lstrlib.o: lstrlib.c lauxlib.h lua.h lualib.h
 ltable.o: ltable.c lauxlib.h lua.h lmem.h lobject.h ltable.h
 ltm.o: ltm.c lauxlib.h lua.h ldo.h lobject.h lmem.h ltm.h lapi.h
-lua.o: lua.c lua.h lualib.h luadebug.h
+lua.o: lua.c lua.h luadebug.h lualib.h
 lundump.o: lundump.c lundump.h lobject.h lua.h lzio.h
-lvm.o: lvm.c lauxlib.h lua.h ldo.h lobject.h lfunc.h lgc.h lglobal.h \
- lmem.h lopcodes.h lstring.h ltable.h ltm.h luadebug.h lvm.h
+lvm.o: lvm.c lauxlib.h lua.h ldo.h lobject.h lfunc.h lgc.h lmem.h \
+ lopcodes.h lstring.h ltable.h ltm.h luadebug.h lvm.h
 lzio.o: lzio.c lzio.h

@@ -1,6 +1,6 @@
 %{
 /*
-** $Id: lua.stx,v 1.4 1997/09/22 20:53:20 roberto Exp roberto $
+** $Id: lua.stx,v 1.5 1997/09/24 19:43:11 roberto Exp roberto $
 ** Syntax analizer and code generator
 ** See Copyright Notice in lua.h
 */
@@ -203,13 +203,13 @@ static int next_constant (State *cs)
 static int string_constant (TaggedString *s, State *cs)
 {
   TProtoFunc *f = cs->f;
-  int c = s->u.s.constindex;
-  if (!(0 <= c && c < f->nconsts &&
+  int c = s->constindex;
+  if (!(c < f->nconsts &&
       ttype(&f->consts[c]) == LUA_T_STRING && tsvalue(&f->consts[c]) == s)) {
     c = next_constant(cs);
     ttype(&f->consts[c]) = LUA_T_STRING;
     tsvalue(&f->consts[c]) = s;
-    s->u.s.constindex = c;  /* hint for next time */
+    s->constindex = c;  /* hint for next time */
   }
   return c;
 }

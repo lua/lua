@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: lbuiltin.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -10,7 +10,6 @@
 #include "lapi.h"
 #include "lauxlib.h"
 #include "lbuiltin.h"
-#include "lglobal.h"
 #include "lmem.h"
 #include "lstring.h"
 #include "ltable.h"
@@ -18,13 +17,25 @@
 #include "lua.h"
 
 
+
 static void nextvar (void)
 {
-  int i = luaG_nextvar(lua_isnil(lua_getparam(1)) ? 0 :
-                             luaG_findsymbolbyname(luaL_check_string(1))+1);
-  if (i >= 0) {
-    lua_pushstring(luaG_global[i].varname->str);
-    luaA_pushobject(&s_object(i));
+  lua_Object v = luaL_nonnullarg(1);
+  TaggedString *g;
+  if (lua_isnil(v))
+    g = (TaggedString *)luaS_root.next;
+  else {
+    TObject *o = luaA_Address(v);
+    luaL_arg_check(ttype(o) == LUA_T_STRING, 1, "variable name expected");
+    g = tsvalue(o);
+    luaL_arg_check((GCnode *)g != g->head.next, 1, "variable name expected");
+    g = (TaggedString *)g->head.next;
+  }
+  while (g && g->u.globalval.ttype == LUA_T_NIL)
+    g = (TaggedString *)g->head.next;
+  if (g) {
+    lua_pushstring(g->str);
+    luaA_pushobject(&g->u.globalval);
   }
 }
 
@@ -32,10 +43,9 @@ static void nextvar (void)
 static void next (void)
 {
   lua_Object o = lua_getparam(1);
-  lua_Object r = lua_getparam(2);
+  lua_Object r = luaL_nonnullarg(2);
   Node *n;
   luaL_arg_check(lua_istable(o), 1, "table expected");
-  luaL_arg_check(r != LUA_NOOBJECT, 2, "value expected");
   n = luaH_next(luaA_Address(o), luaA_Address(r));
   if (n) {
     luaA_pushobject(&n->ref);
@@ -90,7 +100,7 @@ static char *to_string (lua_Object obj)
       return buff;
     }
     case LUA_T_USERDATA: {
-      sprintf(buff, "userdata: %p", o->value.ts->u.v);
+      sprintf(buff, "userdata: %p", o->value.ts->u.d.v);
       return buff;
     }
     case LUA_T_NIL:
@@ -116,8 +126,7 @@ static void luaI_print (void)
 
 static void luaI_type (void)
 {
-  lua_Object o = lua_getparam(1);
-  luaL_arg_check(o != LUA_NOOBJECT, 1, "no argument");
+  lua_Object o = luaL_nonnullarg(1);
   lua_pushstring(luaO_typenames[-ttype(luaA_Address(o))]);
   lua_pushnumber(lua_tag(o));
 }
@@ -149,8 +158,7 @@ static void luaI_assert (void)
 
 static void setglobal (void)
 {
-  lua_Object value = lua_getparam(2);
-  luaL_arg_check(value != LUA_NOOBJECT, 2, NULL);
+  lua_Object value = luaL_nonnullarg(2);
   lua_pushobject(value);
   lua_setglobal(luaL_check_string(1));
   lua_pushobject(value);  /* return given value */
@@ -158,8 +166,7 @@ static void setglobal (void)
 
 static void rawsetglobal (void)
 {
-  lua_Object value = lua_getparam(2);
-  luaL_arg_check(value != LUA_NOOBJECT, 2, NULL);
+  lua_Object value = luaL_nonnullarg(2);
   lua_pushobject(value);
   lua_rawsetglobal(luaL_check_string(1));
   lua_pushobject(value);  /* return given value */
@@ -233,10 +240,8 @@ static void newtag (void)
 
 static void rawgettable (void)
 {
-  lua_Object t = lua_getparam(1);
-  lua_Object i = lua_getparam(2);
-  luaL_arg_check(t != LUA_NOOBJECT, 1, NULL);
-  luaL_arg_check(i != LUA_NOOBJECT, 2, NULL);
+  lua_Object t = luaL_nonnullarg(1);
+  lua_Object i = luaL_nonnullarg(2);
   lua_pushobject(t);
   lua_pushobject(i);
   lua_pushobject(lua_rawgettable());
@@ -245,11 +250,9 @@ static void rawgettable (void)
 
 static void rawsettable (void)
 {
-  lua_Object t = lua_getparam(1);
-  lua_Object i = lua_getparam(2);
-  lua_Object v = lua_getparam(3);
-  luaL_arg_check(t != LUA_NOOBJECT && i != LUA_NOOBJECT && v != LUA_NOOBJECT,
-                 0, NULL);
+  lua_Object t = luaL_nonnullarg(1);
+  lua_Object i = luaL_nonnullarg(2);
+  lua_Object v = luaL_nonnullarg(3);
   lua_pushobject(t);
   lua_pushobject(i);
   lua_pushobject(v);
@@ -259,8 +262,7 @@ static void rawsettable (void)
 
 static void settagmethod (void)
 {
-  lua_Object nf = lua_getparam(3);
-  luaL_arg_check(nf != LUA_NOOBJECT, 3, "value expected");
+  lua_Object nf = luaL_nonnullarg(3);
   lua_pushobject(nf);
   lua_pushobject(lua_settagmethod((int)luaL_check_number(1),
                                   luaL_check_string(2)));
@@ -276,8 +278,7 @@ static void gettagmethod (void)
 
 static void seterrormethod (void)
 {
-  lua_Object nf = lua_getparam(1);
-  luaL_arg_check(nf != LUA_NOOBJECT, 1, "value expected");
+  lua_Object nf = luaL_nonnullarg(1);
   lua_pushobject(nf);
   lua_pushobject(lua_seterrormethod());
 }
@@ -387,18 +388,21 @@ static struct luaL_reg int_funcs[] = {
 void luaB_predefine (void)
 {
   int i;
-  Word n;
+  TaggedString *ts;
+  TObject o;
   /* pre-register mem error messages, to avoid loop when error arises */
   luaS_newfixedstring(tableEM);
   luaS_newfixedstring(memEM);
+  o.ttype = LUA_T_CFUNCTION;
   for (i=0; i<INTFUNCSIZE; i++) {
-    n = luaG_findsymbolbyname(int_funcs[i].name);
-    s_ttype(n) = LUA_T_CFUNCTION;
-    fvalue(&s_object(n)) = int_funcs[i].func;
+    ts = luaS_new(int_funcs[i].name);
+    fvalue(&o) = int_funcs[i].func;
+    luaS_rawsetglobal(ts, &o);
   }
-  n = luaG_findsymbolbyname("_VERSION");
-  s_ttype(n) = LUA_T_STRING;
-  tsvalue(&s_object(n)) = luaS_new(LUA_VERSION);
+  ts = luaS_new("_VERSION");
+  ttype(&o) = LUA_T_STRING;
+  tsvalue(&o) = luaS_new(LUA_VERSION);
+  luaS_rawsetglobal(ts, &o);
 }
 
 

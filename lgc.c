@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: lgc.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -8,7 +8,6 @@
 #include "ldo.h"
 #include "lfunc.h"
 #include "lgc.h"
-#include "lglobal.h"
 #include "lmem.h"
 #include "lobject.h"
 #include "lstring.h"
@@ -91,7 +90,7 @@ static int ismarked (TObject *o)
 {
   switch (o->ttype) {
     case LUA_T_STRING: case LUA_T_USERDATA:
-      return o->value.ts->marked;
+      return o->value.ts->head.marked;
     case LUA_T_FUNCTION:
       return o->value.cl->head.marked;
     case LUA_T_PROTO:
@@ -129,10 +128,11 @@ static void strcallIM (TaggedString *l)
 {
   TObject o;
   ttype(&o) = LUA_T_USERDATA;
-  for (; l; l=l->uu.next) {
-    tsvalue(&o) = l;
-    luaD_gcIM(&o);
-  }
+  for (; l; l=(TaggedString *)l->head.next)
+    if (l->constindex == -1) {  /* is userdata? */
+      tsvalue(&o) = l;
+      luaD_gcIM(&o);
+    }
 }
 
 
@@ -164,8 +164,8 @@ static GCnode *listcollect (GCnode **root)
 
 static void strmark (TaggedString *s)
 {
-  if (!s->marked)
-    s->marked = 1;
+  if (!s->head.marked)
+    s->head.marked = 1;
 }
 
 
@@ -215,6 +215,17 @@ static void hashmark (Hash *h)
 }
 
 
+static void globalmark (void)
+{
+  TaggedString *g;
+  for (g=(TaggedString *)luaS_root.next; g; g=(TaggedString *)g->head.next)
+    if (g->u.globalval.ttype != LUA_T_NIL) {
+      markobject(&g->u.globalval);
+      strmark(g);  /* cannot collect non nil global variables */
+    }
+}
+
+
 static int markobject (TObject *o)
 {
   switch (ttype(o)) {
@@ -253,7 +264,7 @@ long luaC_threshold = GARBAGE_BLOCK;
 static void markall (void)
 {
   luaD_travstack(markobject); /* mark stack objects */
-  luaG_travsymbol(markobject); /* mark symbol table objects */
+  globalmark();  /* mark global variable values and names */
   travlock(); /* mark locked objects */
   luaT_travtagmethods(markobject);  /* mark fallbacks */
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.4 1997/09/22 20:53:20 roberto Exp roberto $
+** $Id: lvm.c,v 1.5 1997/09/24 19:43:11 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -12,7 +12,6 @@
 #include "ldo.h"
 #include "lfunc.h"
 #include "lgc.h"
-#include "lglobal.h"
 #include "lmem.h"
 #include "lopcodes.h"
 #include "lstring.h"
@@ -155,17 +154,17 @@ void luaV_settable (TObject *t, int mode)
 }
 
 
-void luaV_getglobal (Word n)
+void luaV_getglobal (TaggedString *ts)
 {
   /* WARNING: caller must assure stack space */
-  TObject *value = &luaG_global[n].object;
+  TObject *value = &ts->u.globalval;
   TObject *im = luaT_getimbyObj(value, IM_GETGLOBAL);
   if (ttype(im) == LUA_T_NIL) {  /* default behavior */
     *luaD_stack.top++ = *value;
   }
   else {
     ttype(luaD_stack.top) = LUA_T_STRING;
-    tsvalue(luaD_stack.top) = luaG_global[n].varname;
+    tsvalue(luaD_stack.top) = ts;
     luaD_stack.top++;
     *luaD_stack.top++ = *value;
     luaD_callTM(im, 2, 1);
@@ -173,17 +172,17 @@ void luaV_getglobal (Word n)
 }
 
 
-void luaV_setglobal (Word n)
+void luaV_setglobal (TaggedString *ts)
 {
-  TObject *oldvalue = &luaG_global[n].object;
+  TObject *oldvalue = &ts->u.globalval;
   TObject *im = luaT_getimbyObj(oldvalue, IM_SETGLOBAL);
   if (ttype(im) == LUA_T_NIL)  /* default behavior */
-    s_object(n) = *(--luaD_stack.top);
+    luaS_rawsetglobal(ts, --luaD_stack.top);
   else {
     /* WARNING: caller must assure stack space */
     TObject newvalue = *(luaD_stack.top-1);
     ttype(luaD_stack.top-1) = LUA_T_STRING;
-    tsvalue(luaD_stack.top-1) = luaG_global[n].varname;
+    tsvalue(luaD_stack.top-1) = ts;
     *luaD_stack.top++ = *oldvalue;
     *luaD_stack.top++ = newvalue;
     luaD_callTM(im, 3, 0);
@@ -334,7 +333,7 @@ StkId luaV_execute (Closure *cl, StkId base)
       case GETGLOBAL9:
         aux -= GETGLOBAL0;
       getglobal:
-        luaV_getglobal(luaG_findsymbol(tsvalue(&consts[aux])));
+        luaV_getglobal(tsvalue(&consts[aux]));
         break;
 
       case GETTABLE:
@@ -396,7 +395,7 @@ StkId luaV_execute (Closure *cl, StkId base)
       case SETGLOBALB:
         aux = *pc++;
       setglobal:
-        luaV_setglobal(luaG_findsymbol(tsvalue(&consts[aux])));
+        luaV_setglobal(tsvalue(&consts[aux]));
         break;
 
       case SETTABLE0:
