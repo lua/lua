@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.62 2000/12/28 12:55:41 roberto Exp roberto $
+** $Id: ltable.c,v 1.63 2001/01/10 18:56:11 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -143,8 +143,7 @@ void luaH_remove (Hash *t, TObject *key) {
         return;  /* give up; (to avoid overflow) */
       n += t->size;
     }
-    ttype(key) = LUA_TNUMBER;
-    nvalue(key) = n;
+    setnvalue(key, n);
     LUA_ASSERT(luaH_mainposition(t, key) == mp, "cannot change hash");
   }
 }
@@ -156,7 +155,8 @@ static void setnodevector (lua_State *L, Hash *t, luint32 size) {
     lua_error(L, "table overflow");
   t->node = luaM_newvector(L, size, Node);
   for (i=0; i<(int)size; i++) {
-    ttype(&t->node[i].key) = ttype(&t->node[i].val) = LUA_TNIL;
+    setnilvalue(&t->node[i].key);
+    setnilvalue(&t->node[i].val);
     t->node[i].next = NULL;
   }
   t->size = size;
@@ -212,7 +212,7 @@ static void rehash (lua_State *L, Hash *t) {
   for (i=0; i<oldsize; i++) {
     Node *old = nold+i;
     if (ttype(&old->val) != LUA_TNIL)
-      *luaH_set(L, t, &old->key) = old->val;
+      setobj(luaH_set(L, t, &old->key), &old->val);
   }
   luaM_freearray(L, nold, oldsize, Node);  /* free old array */
 }
@@ -243,7 +243,7 @@ static TObject *newkey (lua_State *L, Hash *t, Node *mp, const TObject *key) {
       mp = n;
     }
   }
-  mp->key = *key;
+  setobj(&mp->key, key);
   for (;;) {  /* correct `firstfree' */
     if (ttype(&t->firstfree->key) == LUA_TNIL)
       return &mp->val;  /* OK; table still has a free place */
@@ -279,8 +279,7 @@ TObject *luaH_setnum (lua_State *L, Hash *t, lua_Number key) {
     else n = n->next;
   } while (n);
   /* `key' not found; must insert it */
-  ttype(&kobj) = LUA_TNUMBER;
-  nvalue(&kobj) = key;
+  setnvalue(&kobj, key);
   return newkey(L, t, mp, &kobj);
 }
 
@@ -295,8 +294,7 @@ TObject *luaH_setstr (lua_State *L, Hash *t, TString *key) {
     else n = n->next;
   } while (n);
   /* `key' not found; must insert it */
-  ttype(&kobj) = LUA_TSTRING;
-  tsvalue(&kobj) = key;
+  setsvalue(&kobj, key);
   return newkey(L, t, mp, &kobj);
 }
 

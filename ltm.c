@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.58 2000/12/26 18:46:09 roberto Exp roberto $
+** $Id: ltm.c,v 1.59 2000/12/28 12:55:41 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -129,11 +129,10 @@ LUA_API void lua_gettagmethod (lua_State *L, int t, const char *event) {
   e = luaI_checkevent(L, event, t);
   checktag(L, t);
   if (luaT_validevent(t, e) && luaT_gettm(L, t, e)) {
-    clvalue(L->top) = luaT_gettm(L, t, e);
-    ttype(L->top) = LUA_TFUNCTION;
+    setclvalue(L->top, luaT_gettm(L, t, e));
   }
   else
-    ttype(L->top) = LUA_TNIL;
+    setnilvalue(L->top);
   incr_top;
 }
 

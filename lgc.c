@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.74 2000/12/26 18:46:09 roberto Exp roberto $
+** $Id: lgc.c,v 1.75 2000/12/28 12:55:41 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -145,7 +145,7 @@ static void markall (lua_State *L) {
 
 static int hasmark (const TObject *o) {
   /* valid only for locked objects */
-  switch (o->ttype) {
+  switch (ttype(o)) {
     case LUA_TSTRING: case LUA_TUSERDATA:
       return tsvalue(o)->marked;
     case LUA_TTABLE:
@@ -290,15 +290,14 @@ static void checkMbuffer (lua_State *L) {
 }
 
 
-static void callgcTM (lua_State *L, const TObject *o) {
-  Closure *tm = luaT_gettmbyObj(L, o, TM_GC);
+static void callgcTM (lua_State *L, const TObject *obj) {
+  Closure *tm = luaT_gettmbyObj(L, obj, TM_GC);
   if (tm != NULL) {
     int oldah = L->allowhooks;
     L->allowhooks = 0;  /* stop debug hooks during GC tag methods */
     luaD_checkstack(L, 2);
-    clvalue(L->top) = tm;
-    ttype(L->top) = LUA_TFUNCTION;
-    *(L->top+1) = *o;
+    setclvalue(L->top, tm);
+    setobj(L->top+1, obj);
     L->top += 2;
     luaD_call(L, L->top-2, 0);
     L->allowhooks = oldah;  /* restore hooks */
@@ -308,15 +307,14 @@ static void callgcTM (lua_State *L, const TObject *o) {
 
 static void callgcTMudata (lua_State *L) {
   int tag;
-  TObject o;
-  ttype(&o) = LUA_TUSERDATA;
   L->GCthreshold = 2*L->nblocks;  /* avoid GC during tag methods */
   for (tag=L->ntag-1; tag>=0; tag--) {  /* for each tag (in reverse order) */
     TString *udata;
     while ((udata = L->TMtable[tag].collected) != NULL) {
+      TObject obj;
       L->TMtable[tag].collected = udata->nexthash;  /* remove it from list */
-      tsvalue(&o) = udata;
-      callgcTM(L, &o);
+      setuvalue(&obj, udata);
+      callgcTM(L, &obj);
       luaM_free(L, udata, sizeudata(udata->len));
     }
   }

@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.97 2001/01/10 16:58:11 roberto Exp roberto $
+** $Id: liolib.c,v 1.98 2001/01/11 18:59:03 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -87,11 +87,11 @@ static int pushresult (lua_State *L, int i) {
 
 
 static FILE *gethandle (lua_State *L, IOCtrl *ctrl, int f) {
-  void *p = lua_touserdata(L, f);
+  FILE *p = (FILE *)lua_touserdata(L, f);
   if (p != NULL) {  /* is `f' a userdata ? */
     int ftag = lua_tag(L, f);
     if (ftag == ctrl->iotag)  /* does it have the correct tag? */
-      return (FILE *)p;
+      return p;
     else if (ftag == ctrl->closedtag)
       lua_error(L, "cannot access a closed file");
     /* else go through */
@@ -496,7 +496,7 @@ static int getfield (lua_State *L, const char *key, int d) {
   lua_pushstring(L, key);
   lua_rawget(L, -2);
   if (lua_isnumber(L, -1))
-    res = lua_tonumber(L, -1);
+    res = (int)lua_tonumber(L, -1);
   else {
     if (d == -2)
       luaL_verror(L, "field `%.20s' missing in date table", key);

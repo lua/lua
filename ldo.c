@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.112 2001/01/10 16:58:11 roberto Exp roberto $
+** $Id: ldo.c,v 1.113 2001/01/10 18:56:11 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -74,7 +74,7 @@ void luaD_adjusttop (lua_State *L, StkId base, int extra) {
   else {
     luaD_checkstack(L, diff);
     while (diff--)
-      ttype(L->top++) = LUA_TNIL;
+      setnilvalue(L->top++);
   }
 }
 
@@ -84,7 +84,7 @@ void luaD_adjusttop (lua_State *L, StkId base, int extra) {
 */
 static void luaD_openstack (lua_State *L, StkId pos) {
   int i = L->top-pos; 
-  while (i--) pos[i+1] = pos[i];
+  while (i--) setobj(pos+i+1, pos+i);
   incr_top;
 }
 
@@ -132,7 +132,7 @@ static StkId callCclosure (lua_State *L, const struct Closure *cl, StkId base) {
   L->Cbase = base;       /* new base for C function */
   luaD_checkstack(L, nup+LUA_MINSTACK);  /* ensure minimum stack size */
   for (n=0; n<nup; n++)  /* copy upvalues as extra arguments */
-    *(L->top++) = cl->upvalue[n];
+    setobj(L->top++, &cl->upvalue[n]);
   n = (*cl->f.c)(L);  /* do the actual call */
   L->Cbase = old_Cbase;  /* restore old C base */
   return L->top - n;  /* return index of first result */
@@ -142,8 +142,7 @@ static StkId callCclosure (lua_State *L, const struct Closure *cl, StkId base) {
 void luaD_callTM (lua_State *L, Closure *f, int nParams, int nResults) {
   StkId base = L->top - nParams;
   luaD_openstack(L, base);
-  clvalue(base) = f;
-  ttype(base) = LUA_TFUNCTION;
+  setclvalue(base, f);
   luaD_call(L, base, nResults);
 }
 
@@ -166,13 +165,11 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
     if (tm == NULL)
       luaG_typeerror(L, func, "call");
     luaD_openstack(L, func);
-    clvalue(func) = tm;  /* tag method is the new function to be called */
-    ttype(func) = LUA_TFUNCTION;
+    setclvalue(func, tm);  /* tag method is the new function to be called */
   }
   cl = clvalue(func);
   ci.func = cl;
-  infovalue(func) = &ci;
-  ttype(func) = LUA_TMARK;
+  setivalue(func, &ci);
   callhook = L->callhook;
   if (callhook)
     luaD_callHook(L, func, callhook, "call");
@@ -184,15 +181,15 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
   /* move results to `func' (to erase parameters and function) */
   if (nResults == LUA_MULTRET) {
     while (firstResult < L->top)  /* copy all results */
-      *func++ = *firstResult++;
+      setobj(func++, firstResult++);
     L->top = func;
   }
   else {  /* copy at most `nResults' */
     for (; nResults > 0 && firstResult < L->top; nResults--)
-      *func++ = *firstResult++;
+      setobj(func++, firstResult++);
     L->top = func;
     for (; nResults > 0; nResults--) {  /* if there are not enough results */
-      ttype(L->top) = LUA_TNIL;  /* adjust the stack */
+      setnilvalue(L->top);  /* adjust the stack */
       incr_top;  /* must check stack space */
     }
   }
@@ -334,7 +331,7 @@ struct lua_longjmp {
 static void message (lua_State *L, const char *s) {
   const TObject *em = luaH_getstr(L->gt, luaS_newliteral(L, LUA_ERRORMESSAGE));
   if (ttype(em) == LUA_TFUNCTION) {
-    *L->top = *em;
+    setobj(L->top, em);
     incr_top;
     lua_pushstring(L, s);
     luaD_call(L, L->top-2, 0);

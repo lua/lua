@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.84 2000/12/04 18:33:40 roberto Exp roberto $
+** $Id: lobject.h,v 1.85 2000/12/28 12:55:41 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -40,32 +40,61 @@
 
 
 /* check whether `t' is a mark */
-#define is_T_MARK(t)	((t) == LUA_TMARK)
+#define is_T_MARK(t)	(ttype(t) == LUA_TMARK)
 
 
 typedef union {
-  struct TString *ts;	/* LUA_TSTRING, LUA_TUSERDATA */
-  struct Closure *cl;	/* LUA_TFUNCTION */
-  struct Hash *a;	/* LUA_TTABLE */
-  struct CallInfo *i;	/* LUA_TLMARK */
+  void *v;
   lua_Number n;		/* LUA_TNUMBER */
 } Value;
 
 
+typedef struct lua_TObject {
+  int tt;
+  Value value;
+} TObject;
+
+
 /* Macros to access values */
-#define ttype(o)        ((o)->ttype)
+#define ttype(o)        ((o)->tt)
 #define nvalue(o)       ((o)->value.n)
-#define tsvalue(o)      ((o)->value.ts)
-#define clvalue(o)      ((o)->value.cl)
-#define hvalue(o)       ((o)->value.a)
-#define infovalue(o)	((o)->value.i)
+#define tsvalue(o)      ((struct TString *)(o)->value.v)
+#define clvalue(o)      ((struct Closure *)(o)->value.v)
+#define hvalue(o)       ((struct Hash *)(o)->value.v)
+#define infovalue(o)	((struct CallInfo *)(o)->value.v)
 #define svalue(o)       (tsvalue(o)->str)
 
 
-typedef struct lua_TObject {
-  int ttype;
-  Value value;
-} TObject;
+/* Macros to set values */
+#define setnvalue(obj,x) \
+  { TObject *o=(obj); o->tt=LUA_TNUMBER; o->value.n=(x); }
+
+#define setsvalue(obj,x) \
+  { TObject *o=(obj); struct TString *v=(x); \
+    o->tt=LUA_TSTRING; o->value.v=v; }
+
+#define setuvalue(obj,x) \
+  { TObject *o=(obj); struct TString *v=(x); \
+    o->tt=LUA_TUSERDATA; o->value.v=v; }
+
+#define setclvalue(obj,x) \
+  { TObject *o=(obj); struct Closure *v=(x); \
+    o->tt=LUA_TFUNCTION; o->value.v=v; }
+
+#define sethvalue(obj,x) \
+  { TObject *o=(obj); struct Hash *v=(x); \
+    o->tt=LUA_TTABLE; o->value.v=v; }
+
+#define setivalue(obj,x) \
+  { TObject *o=(obj); struct CallInfo *v=(x); \
+    o->tt=LUA_TMARK; o->value.v=v; }
+
+#define setnilvalue(obj) { (obj)->tt=LUA_TNIL; }
+
+#define setobj(obj1,obj2) \
+  { TObject *o1=(obj1); const TObject *o2=(obj2); \
+    o1->tt=o2->tt; o1->value = o2->value; }
+
 
 
 /*

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.51 2000/11/30 18:50:47 roberto Exp roberto $
+** $Id: ldebug.c,v 1.52 2000/12/26 18:46:09 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -29,10 +29,9 @@ static const char *getfuncname (lua_State *L, StkId f, const char **name);
 
 static void setnormalized (TObject *d, const TObject *s) {
   if (ttype(s) == LUA_TMARK) {
-    clvalue(d) = infovalue(s)->func;
-    ttype(d) = LUA_TFUNCTION;
+    setclvalue(d, infovalue(s)->func);
   }
-  else *d = *s;
+  else setobj(d, s);
 }
 
 
@@ -58,7 +57,7 @@ LUA_API lua_Hook lua_setlinehook (lua_State *L, lua_Hook func) {
 static StkId aux_stackedfunction (lua_State *L, int level, StkId top) {
   int i;
   for (i = (top-1) - L->stack; i>=0; i--) {
-    if (is_T_MARK(L->stack[i].ttype)) {
+    if (is_T_MARK(&L->stack[i])) {
       if (level == 0)
         return L->stack+i;
       level--;
@@ -168,7 +167,7 @@ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
   if (!fp) return NULL;  /* `f' is not a Lua function? */
   name = luaF_getlocalname(fp, n, currentpc(f));
   if (!name || name[0] == '(') return NULL;  /* `(' starts private locals */
-  *((f+1)+(n-1)) = *L->top;
+  setobj((f+1)+(n-1), L->top);
   return name;
 }
 
