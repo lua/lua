@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.1 1994/07/19 21:24:17 celes Exp $";
+char *rcs_tree="$Id: tree.c,v 1.2 1994/10/18 17:36:11 celes Exp roberto $";
 
 
 #include <stdlib.h>
@@ -38,7 +38,7 @@ static char *tree_create (TreeNode **node, char *str, int *created)
  {
   *node = (TreeNode *) malloc (sizeof(TreeNode)+strlen(str));
   if (*node == NULL)
-   lua_error ("memoria insuficiente\n");
+    lua_error("not enough memory");
   (*node)->left = (*node)->right = NULL;
   strcpy((*node)->str, str);
   (*node)->index = UNMARKED_STRING;

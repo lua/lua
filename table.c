@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.13 1994/11/08 20:07:54 roberto Exp $";
+char *rcs_table="$Id: table.c,v 2.14 1994/11/09 18:11:47 roberto Exp roberto $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -50,10 +50,7 @@ static void lua_initsymbol (void)
  lua_maxsymbol = BUFFER_BLOCK;
  lua_table = (Symbol *) calloc(lua_maxsymbol, sizeof(Symbol));
  if (lua_table == NULL)
- {
-  lua_error ("symbol table: not enough memory");
-  return;
- }
+   lua_error ("symbol table: not enough memory");
  n = lua_findsymbol("next");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_next;
  n = lua_findsymbol("nextvar");
@@ -98,27 +95,16 @@ int lua_findsymbol (char *s)
  if (lua_table == NULL)
   lua_initsymbol(); 
  n = lua_varcreate(s);
- if (n == NULL)
- {
-  lua_error ("create symbol: not enough memory");
-  return -1;
- }
  if (indexstring(n) == UNMARKED_STRING)
  {
   if (lua_ntable == lua_maxsymbol)
   {
    lua_maxsymbol *= 2;
    if (lua_maxsymbol > MAX_WORD)
-   {
-    lua_error("symbol table overflow");
-    return -1;
-   }
+     lua_error("symbol table overflow");
    lua_table = (Symbol *)realloc(lua_table, lua_maxsymbol*sizeof(Symbol));
    if (lua_table == NULL)
-   {
-    lua_error ("symbol table: not enough memory");
-    return -1;
-   }
+     lua_error ("symbol table: not enough memory");
   }
   indexstring(n) = lua_ntable;
   s_tag(lua_ntable) = LUA_T_NIL;
@@ -139,27 +125,16 @@ int lua_findconstant (char *s)
  if (lua_constant == NULL)
   lua_initconstant();
  n = lua_constcreate(s);
- if (n == NULL)
- {
-  lua_error ("create constant: not enough memory");
-  return -1;
- }
  if (indexstring(n) == UNMARKED_STRING)
  {
   if (lua_nconstant == lua_maxconstant)
   {
    lua_maxconstant *= 2;
    if (lua_maxconstant > MAX_WORD)
-   {
-    lua_error("constant table overflow");
-    return -1;
-   }
+     lua_error("constant table overflow");
    lua_constant = (char**)realloc(lua_constant,lua_maxconstant*sizeof(char*));
    if (lua_constant == NULL)
-   {
-    lua_error ("constant table: not enough memory");
-    return -1;
-   }
+     lua_error ("constant table: not enough memory");
   }
   indexstring(n) = lua_nconstant;
   lua_constant[lua_nconstant] = n;
@@ -267,22 +242,18 @@ void lua_nextvar (void)
  char *varname, *next;
  lua_Object o = lua_getparam(1);
  if (o == 0)
- { lua_error ("too few arguments to function `nextvar'"); return; }
+   lua_error ("too few arguments to function `nextvar'");
  if (lua_getparam(2) != NULL)
- { lua_error ("too many arguments to function `nextvar'"); return; }
+   lua_error ("too many arguments to function `nextvar'");
  if (lua_isnil(o))
- {
-  varname = NULL;
- }
+   varname = NULL;
  else if (!lua_isstring(o))
- { 
-  lua_error ("incorrect argument to function `nextvar'"); 
-  return;
+ {
+   lua_error ("incorrect argument to function `nextvar'"); 
+   return;  /* to avoid warnings */
  }
  else
- {
-  varname = lua_getstring(o);
- }
+   varname = lua_getstring(o);
  next = lua_varnext(varname);
  if (next == NULL)
  {
