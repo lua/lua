@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.61 2004/05/10 18:11:32 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.62 2005/01/07 20:00:33 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -33,13 +33,28 @@ static int math_sin (lua_State *L) {
   return 1;
 }
 
+static int math_sinh (lua_State *L) {
+  lua_pushnumber(L, sinh(luaL_checknumber(L, 1)));
+  return 1;
+}
+
 static int math_cos (lua_State *L) {
   lua_pushnumber(L, cos(luaL_checknumber(L, 1)));
   return 1;
 }
 
+static int math_cosh (lua_State *L) {
+  lua_pushnumber(L, cosh(luaL_checknumber(L, 1)));
+  return 1;
+}
+
 static int math_tan (lua_State *L) {
   lua_pushnumber(L, tan(luaL_checknumber(L, 1)));
+  return 1;
+}
+
+static int math_tanh (lua_State *L) {
+  lua_pushnumber(L, tanh(luaL_checknumber(L, 1)));
   return 1;
 }
 
@@ -76,6 +91,14 @@ static int math_floor (lua_State *L) {
 static int math_mod (lua_State *L) {
   lua_pushnumber(L, fmod(luaL_checknumber(L, 1), luaL_checknumber(L, 2)));
   return 1;
+}
+
+static int math_modf (lua_State *L) {
+  double ip;
+  double fp = modf(luaL_checknumber(L, 1), &ip);
+  lua_pushnumber(L, ip);
+  lua_pushnumber(L, fp);
+  return 2;
 }
 
 static int math_sqrt (lua_State *L) {
@@ -192,8 +215,11 @@ static int math_randomseed (lua_State *L) {
 static const luaL_reg mathlib[] = {
   {"abs",   math_abs},
   {"sin",   math_sin},
+  {"sinh",   math_sinh},
   {"cos",   math_cos},
+  {"cosh",   math_cosh},
   {"tan",   math_tan},
+  {"tanh",   math_tanh},
   {"asin",  math_asin},
   {"acos",  math_acos},
   {"atan",  math_atan},
@@ -201,6 +227,7 @@ static const luaL_reg mathlib[] = {
   {"ceil",  math_ceil},
   {"floor", math_floor},
   {"mod",   math_mod},
+  {"modf",   math_modf},
   {"frexp", math_frexp},
   {"ldexp", math_ldexp},
   {"sqrt",  math_sqrt},
@@ -225,6 +252,8 @@ LUALIB_API int luaopen_math (lua_State *L) {
   luaL_openlib(L, LUA_MATHLIBNAME, mathlib, 0);
   lua_pushnumber(L, PI);
   lua_setfield(L, -2, "pi");
+  lua_pushnumber(L, HUGE_VAL);
+  lua_setfield(L, -2, "huge");
   return 1;
 }
 
