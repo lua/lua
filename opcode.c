@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.36 1995/04/11 17:56:30 celes Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.37 1995/05/02 18:43:03 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -68,14 +68,10 @@ Object *luaI_Address (lua_Object o)
 ** Error messages
 */
 
-#define MAXMESSAGE MAXFUNCSTACK*80
 
 static void lua_message (char *s)
 {
-  char msg[MAXMESSAGE];
-  strcpy (msg, s);
-  luaI_reportbug(msg, MAXMESSAGE-strlen(s));
-  lua_pushstring(msg);
+  luaI_reportbug(s, 1);
   do_call(&luaI_fallBacks[FB_ERROR].function, (top-stack)-1, 0, (top-stack)-1);
 }
 

@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.28 1995/01/18 20:15:54 celes Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.29 1995/05/02 18:43:03 roberto Exp roberto $";
 
 #include <string.h>
 
@@ -68,6 +68,8 @@ static void lua_initsymbol (void)
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_internaldostring;
  n = luaI_findsymbolbyname("setfallback");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_setfallback;
+ n = luaI_findsymbolbyname("getstack");
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_getstack;
  n = luaI_findsymbolbyname("error");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_error;
 }

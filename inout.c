@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.18 1995/03/17 20:42:20 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.19 1995/05/02 18:43:03 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,6 +18,14 @@ char *rcs_inout="$Id: inout.c,v 2.18 1995/03/17 20:42:20 roberto Exp roberto $";
 #include "table.h"
 #include "tree.h"
 #include "lua.h"
+
+
+#ifndef MAXFUNCSTACK
+#define MAXFUNCSTACK 100
+#endif
+
+#define MAXMESSAGE MAXFUNCSTACK*80
+
 
 /* Exported variables */
 Word lua_linenumber;
@@ -145,10 +153,12 @@ void lua_popfunction (void)
 }
 
 /*
-** Report bug building a message.
+** Report bug building a message and pushing it on the stack.
 */
-void luaI_reportbug (char *msg, int size)
+void luaI_reportbug (char *s, int err)
 {
+  char msg[MAXMESSAGE];
+  strcpy (msg, s);
  if (lua_debugline != 0)
  {
   if (funcStack)
@@ -163,7 +173,7 @@ void luaI_reportbug (char *msg, int size)
               lua_constant[func->function]->str, func->file, line);
      line = func->line;
      func = func->next;
-     lua_popfunction();
+     if (err) lua_popfunction();
    } while (func);
   }
   else
@@ -173,6 +183,7 @@ void luaI_reportbug (char *msg, int size)
          lua_debugline, lua_filename());
   }
  }
+ lua_pushstring(msg);
 }
 
  
@@ -286,5 +297,12 @@ void luaI_error (void)
   char *s = lua_getstring(lua_getparam(1));
   if (s == NULL) s = "(no message)";
   lua_error(s);
+}
+
+void luaI_getstack (void)
+{
+  char *s = lua_getstring(lua_getparam(1));
+  if (s == NULL) s = "";
+  luaI_reportbug(s, 0);
 }
 
