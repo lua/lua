@@ -1,8 +1,8 @@
 /*
-** LUA - Linguagem para Usuarios de Aplicacao
-** Grupo de Tecnologia em Computacao Grafica
-** TeCGraf - PUC-Rio
-** $Id: lua.h,v 3.41 1997/04/02 22:52:42 roberto Exp roberto $
+** LUA - An Extensible Extension Language
+** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
+** e-mail: lua@tecgraf.puc-rio.br
+** $Id: lua.h,v 3.42 1997/04/02 23:04:12 roberto Exp roberto $
 */
 
 
