@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: ltablib.c,v 1.1 2002/04/09 20:19:06 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -214,81 +214,6 @@ static int luaB_sort (lua_State *L) {
 /* }====================================================== */
 
 
-/*
-** {======================================================
-** Coroutine library
-** =======================================================
-*/
-
-
-static int luaB_resume (lua_State *L) {
-  lua_State *co = (lua_State *)lua_getfrombox(L, lua_upvalueindex(1));
-  lua_settop(L, 0);
-  if (lua_resume(L, co) != 0)
-    lua_error(L, "error running co-routine");
-  return lua_gettop(L);
-}
-
-
-
-static int gc_coroutine (lua_State *L) {
-  lua_State *co = (lua_State *)lua_getfrombox(L, 1);
-  lua_closethread(L, co);
-  return 0;
-}
-
-
-static int luaB_coroutine (lua_State *L) {
-  lua_State *NL;
-  int ref;
-  int i;
-  int n = lua_gettop(L);
-  luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1), 1,
-    "Lua function expected");
-  NL = lua_newthread(L);
-  if (NL == NULL) lua_error(L, "unable to create new thread");
-  /* move function and arguments from L to NL */
-  for (i=0; i<n; i++) {
-    ref = lua_ref(L, 1);
-    lua_getref(NL, ref);
-    lua_insert(NL, 1);
-    lua_unref(L, ref);
-  }
-  lua_cobegin(NL, n-1);
-  lua_newpointerbox(L, NL);
-  lua_pushliteral(L, "Coroutine");
-  lua_rawget(L, LUA_REGISTRYINDEX);
-  lua_setmetatable(L, -2);
-  lua_pushcclosure(L, luaB_resume, 1);
-  return 1;
-}
-
-
-static int luaB_yield (lua_State *L) {
-  return lua_yield(L, lua_gettop(L));
-}
-
-static const luaL_reg co_funcs[] = {
-  {"create", luaB_coroutine},
-  {"yield", luaB_yield},
-  {NULL, NULL}
-};
-
-
-static void co_open (lua_State *L) {
-  luaL_opennamedlib(L, "co", co_funcs, 0);
-  /* create metatable for coroutines */
-  lua_pushliteral(L, "Coroutine");
-  lua_newtable(L);
-  lua_pushliteral(L, "__gc");
-  lua_pushcfunction(L, gc_coroutine);
-  lua_rawset(L, -3);
-  lua_rawset(L, LUA_REGISTRYINDEX);
-}
-
-/* }====================================================== */
-
-
 static const luaL_reg tab_funcs[] = {
   {"foreach", luaB_foreach},
   {"foreachi", luaB_foreachi},
@@ -302,7 +227,6 @@ static const luaL_reg tab_funcs[] = {
 
 LUALIB_API int lua_tablibopen (lua_State *L) {
   luaL_opennamedlib(L, "tab", tab_funcs, 0);
-  co_open(L);
   return 0;
 }
 
