@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.54 1996/05/06 14:29:35 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.55 1996/05/28 21:07:32 roberto Exp roberto $";
 
 #include "mem.h"
 #include "opcode.h"
@@ -214,7 +214,7 @@ void lua_pack (void)
   unsigned long recovered = 0;
   if (nentity++ < block) return;
   recovered = luaI_collectgarbage();
-  block = block*2*(1.0 - (float)recovered/nentity);
+  block = 2*(block-recovered);
   nentity -= recovered;
 } 
 
