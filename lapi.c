@@ -1,10 +1,11 @@
 /*
-** $Id: lapi.c,v 1.211 2002/08/08 20:08:41 roberto Exp roberto $
+** $Id: lapi.c,v 1.212 2002/08/30 19:09:21 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
 
 
+#include <assert.h>
 #include <string.h>
 
 #include "lua.h"
@@ -32,12 +33,12 @@ const char lua_ident[] =
 
 
 #ifndef api_check
-#define api_check(L, o)		((void)1)
+#define api_check(L, o)		/*{ assert(o); }*/
 #endif
 
 #define api_checknelems(L, n)	api_check(L, (n) <= (L->top - L->ci->base))
 
-#define api_incr_top(L)   (api_check(L, L->top<L->ci->top), L->top++)
+#define api_incr_top(L)   {api_check(L, L->top < L->ci->top); L->top++;}
 
 
 
@@ -60,10 +61,14 @@ static TObject *negindex (lua_State *L, int index) {
 }
 
 
-#define luaA_index(L, index) \
-  ( (index > 0) ? \
-    (api_check(L, index <= L->top - L->ci->base), L->ci->base+index-1) : \
-    negindex(L, index))
+static TObject *luaA_index (lua_State *L, int index) {
+  if (index > 0) {
+    api_check(L, index <= L->top - L->ci->base);
+    return L->ci->base + index - 1;
+  }
+  else
+    return negindex(L, index);
+}
 
 
 static TObject *luaA_indexAcceptable (lua_State *L, int index) {
