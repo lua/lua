@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.22 2002/10/21 20:41:24 roberto Exp roberto $
+** $Id: liolib.c,v 2.23 2002/11/14 15:41:38 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -37,14 +37,17 @@
 #define IO_OUTPUT		"_output"
 
 
-static int pushresult (lua_State *L, int i) {
+static int pushresult (lua_State *L, int i, const char *filename) {
   if (i) {
     lua_pushboolean(L, 1);
     return 1;
   }
   else {
     lua_pushnil(L);
-    lua_pushstring(L, strerror(errno));
+    if (filename)
+      lua_pushfstring(L, "%s: %s", filename, strerror(errno));
+    else
+      lua_pushfstring(L, "%s", strerror(errno));
     lua_pushnumber(L, errno);
     return 3;
   }
@@ -118,7 +121,7 @@ static int io_close (lua_State *L) {
     lua_pushstring(L, IO_OUTPUT);
     lua_rawget(L, lua_upvalueindex(1));
   }
-  return pushresult(L, aux_close(L));
+  return pushresult(L, aux_close(L), NULL);
 }
 
 
@@ -135,7 +138,7 @@ static int io_open (lua_State *L) {
   const char *mode = luaL_optstring(L, 2, "r");
   FILE **pf = newfile(L);
   *pf = fopen(filename, mode);
-  return (*pf == NULL) ? pushresult(L, 0) : 1;
+  return (*pf == NULL) ? pushresult(L, 0, filename) : 1;
 }
 
 
@@ -148,7 +151,7 @@ static int io_popen (lua_State *L) {
   const char *mode = luaL_optstring(L, 2, "r");
   FILE **pf = newfile(L);
   *pf = popen(filename, mode);
-  return (*pf == NULL) ? pushresult(L, 0) : 1;
+  return (*pf == NULL) ? pushresult(L, 0, filename) : 1;
 #endif
 }
 
@@ -156,7 +159,7 @@ static int io_popen (lua_State *L) {
 static int io_tmpfile (lua_State *L) {
   FILE **pf = newfile(L);
   *pf = tmpfile();
-  return (*pf == NULL) ? pushresult(L, 0) : 1;
+  return (*pf == NULL) ? pushresult(L, 0, NULL) : 1;
 }
 
 
@@ -183,7 +186,10 @@ static int g_iofile (lua_State *L, const char *name, const char *mode) {
     if (filename) {
       FILE **pf = newfile(L);
       *pf = fopen(filename, mode);
-      luaL_argcheck(L, *pf, 1,  strerror(errno));
+      if (*pf == NULL) {
+        lua_pushfstring(L, "%s: %s", filename, strerror(errno));
+        luaL_argerror(L, 1, lua_tostring(L, -1));
+      }
     }
     else {
       tofile(L, 1);  /* check that it's a valid file handle */
@@ -396,7 +402,7 @@ static int g_write (lua_State *L, FILE *f, int arg) {
       status = status && (fwrite(s, sizeof(char), l, f) == l);
     }
   }
-  pushresult(L, status);
+  pushresult(L, status, NULL);
   return 1;
 }
 
@@ -420,7 +426,7 @@ static int f_seek (lua_State *L) {
   luaL_argcheck(L, op != -1, 2, "invalid mode");
   op = fseek(f, offset, mode[op]);
   if (op)
-    return pushresult(L, 0);  /* error */
+    return pushresult(L, 0, NULL);  /* error */
   else {
     lua_pushnumber(L, ftell(f));
     return 1;
@@ -429,12 +435,12 @@ static int f_seek (lua_State *L) {
 
 
 static int io_flush (lua_State *L) {
-  return pushresult(L, fflush(getiofile(L, IO_OUTPUT)) == 0);
+  return pushresult(L, fflush(getiofile(L, IO_OUTPUT)) == 0, NULL);
 }
 
 
 static int f_flush (lua_State *L) {
-  return pushresult(L, fflush(tofile(L, 1)) == 0);
+  return pushresult(L, fflush(tofile(L, 1)) == 0, NULL);
 }
 
 
@@ -497,13 +503,15 @@ static int io_execute (lua_State *L) {
 
 
 static int io_remove (lua_State *L) {
-  return pushresult(L, remove(luaL_checkstring(L, 1)) == 0);
+  const char *filename = luaL_checkstring(L, 1);
+  return pushresult(L, remove(filename) == 0, filename);
 }
 
 
 static int io_rename (lua_State *L) {
-  return pushresult(L, rename(luaL_checkstring(L, 1),
-                    luaL_checkstring(L, 2)) == 0);
+  const char *fromname = luaL_checkstring(L, 1);
+  const char *toname = luaL_checkstring(L, 2);
+  return pushresult(L, rename(fromname, toname) == 0, fromname);
 }
 
 
