@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.2 2004/08/05 19:30:37 roberto Exp roberto $
+** $Id: loslib.c,v 1.3 2004/10/08 18:57:16 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -91,15 +91,13 @@ static int io_clock (lua_State *L) {
 */
 
 static void setfield (lua_State *L, const char *key, int value) {
-  lua_pushstring(L, key);
   lua_pushinteger(L, value);
-  lua_rawset(L, -3);
+  lua_setfield(L, -2, key);
 }
 
 static void setboolfield (lua_State *L, const char *key, int value) {
-  lua_pushstring(L, key);
   lua_pushboolean(L, value);
-  lua_rawset(L, -3);
+  lua_setfield(L, -2, key);
 }
 
 static int getboolfield (lua_State *L, const char *key) {

@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.25 2005/01/10 16:31:30 roberto Exp roberto $
+** $Id: luaconf.h,v 1.26 2005/01/10 18:17:39 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -237,6 +237,8 @@ __inline int l_lrint (double flt)
 /* function to convert a lua_Number to a string */
 #include <stdio.h>
 #define lua_number2str(s,n)	sprintf((s), LUA_NUMBER_FMT, (n))
+/* maximum size of previous conversion */
+#define MAX_NUMBER2STR	32 /* 16 digits, sign, point and \0  (+ some extra) */
 
 /* function to convert a string to a lua_Number */
 #define lua_str2number(s,p)	strtod((s), (p))
