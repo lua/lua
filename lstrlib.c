@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.18 1998/07/01 14:21:57 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.19 1998/07/12 16:13:45 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -138,8 +138,11 @@ struct Capture {
 static void push_captures (struct Capture *cap)
 {
   int i;
-  for (i=0; i<cap->level; i++)
-    lua_pushlstring(cap->capture[i].init, cap->capture[i].len);
+  for (i=0; i<cap->level; i++) {
+    int l = cap->capture[i].len;
+    if (l == -1) lua_error("unfinished capture");
+    lua_pushlstring(cap->capture[i].init, l);
+  }
 }
 
 

@@ -48,3 +48,7 @@ Mon May 18 19:20:00 EST 1998
 Mon Sep  7 15:57:02 EST 1998
 >> function "luaL_argerror" prints wrong argument number (from a user's point
 of view) when functions have upvalues.
+
+** lstrlib.c
+Tue Nov 10 17:29:36 EDT 1998
+>> gsub/strfind do not check whether captures are properly finished.
