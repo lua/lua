@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.90 2000/08/29 19:01:34 roberto Exp roberto $
+** $Id: ldo.c,v 1.91 2000/08/29 20:43:28 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -28,13 +28,8 @@
 #include "lzio.h"
 
 
-#define EXTRA_STACK	32	/* space to handle stack overflow errors */
-
-/*
-** typical numer of stack slots used by a (big) function
-** (this constant is used only for choosing error messages)
-*/
-#define SLOTS_PER_F	20
+/* space to handle stack overflow errors */
+#define EXTRA_STACK	(2*LUA_MINSTACK)
 
 
 void luaD_init (lua_State *L, int stacksize) {
@@ -93,20 +88,26 @@ static void luaD_openstack (lua_State *L, StkId pos) {
 }
 
 
+static void dohook (lua_State *L, lua_Debug *ar, lua_Hook hook) {
+  StkId old_Cbase = L->Cbase;
+  StkId old_top = L->Cbase = L->top;
+  luaD_checkstack(L, LUA_MINSTACK);  /* assures minimum stack size */
+  L->allowhooks = 0;  /* cannot call hooks inside a hook */
+  (*hook)(L, ar);
+  LUA_ASSERT(L->allowhooks == 0, "invalid allow");
+  L->allowhooks = 1;
+  L->top = old_top;
+  L->Cbase = old_Cbase;
+}
+
+
 void luaD_lineHook (lua_State *L, StkId func, int line, lua_Hook linehook) {
   if (L->allowhooks) {
     lua_Debug ar;
-    StkId old_Cbase = L->Cbase;
-    StkId old_top = L->Cbase = L->top;
     ar._func = func;
     ar.event = "line";
     ar.currentline = line;
-    L->allowhooks = 0;  /* cannot call hooks inside a hook */
-    (*linehook)(L, &ar);
-    LUA_ASSERT(L->allowhooks == 0, "invalid allow");
-    L->allowhooks = 1;
-    L->top = old_top;
-    L->Cbase = old_Cbase;
+    dohook(L, &ar, linehook);
   }
 }
 
@@ -115,16 +116,9 @@ static void luaD_callHook (lua_State *L, StkId func, lua_Hook callhook,
                     const char *event) {
   if (L->allowhooks) {
     lua_Debug ar;
-    StkId old_Cbase = L->Cbase;
-    StkId old_top = L->Cbase = L->top;
     ar._func = func;
     ar.event = event;
-    L->allowhooks = 0;  /* cannot call hooks inside a hook */
-    (*callhook)(L, &ar);
-    LUA_ASSERT(L->allowhooks == 0, "invalid allow");
-    L->allowhooks = 1;
-    L->top = old_top;
-    L->Cbase = old_Cbase;
+    dohook(L, &ar, callhook);
   }
 }
 
