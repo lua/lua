@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.111 2002/11/26 08:45:36 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.112 2002/11/26 12:53:29 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -213,7 +213,8 @@ static int luaB_next (lua_State *L) {
 
 static int luaB_pairs (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
-  lua_getglobal(L, "next");  /* return generator, */
+  lua_pushliteral(L, "next");
+  lua_rawget(L, LUA_GLOBALSINDEX);  /* return generator, */
   lua_pushvalue(L, 1);  /* state, */
   lua_pushnil(L);  /* and initial value */
   return 3;
@@ -224,7 +225,8 @@ static int luaB_ipairs (lua_State *L) {
   lua_Number i = lua_tonumber(L, 2);
   luaL_checktype(L, 1, LUA_TTABLE);
   if (i == 0 && lua_isnone(L, 2)) {  /* `for' start? */
-    lua_getglobal(L, "ipairs");  /* return generator, */
+    lua_pushliteral(L, "ipairs");
+    lua_rawget(L, LUA_GLOBALSINDEX);  /* return generator, */
     lua_pushvalue(L, 1);  /* state, */
     lua_pushnumber(L, 0);  /* and initial value */
     return 3;

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.109 2002/11/19 13:49:43 roberto Exp roberto $
+** $Id: lua.c,v 1.110 2002/11/25 17:47:13 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -121,7 +121,8 @@ static int report (int status) {
 static int lcall (int narg, int clear) {
   int status;
   int base = lua_gettop(L) - narg;  /* function index */
-  lua_getglobal(L, "_TRACEBACK");  /* get traceback function */
+  lua_pushliteral(L, "_TRACEBACK");
+  lua_rawget(L, LUA_GLOBALSINDEX);  /* get traceback function */
   lua_insert(L, base);  /* put it under chunk and args */
   signal(SIGINT, laction);
   status = lua_pcall(L, narg, (clear ? 0 : LUA_MULTRET), base);
@@ -175,7 +176,8 @@ static int dostring (const char *s, const char *name) {
 
 
 static int load_file (const char *name) {
-  lua_getglobal(L, "require");
+  lua_pushliteral(L, "require");
+  lua_rawget(L, LUA_GLOBALSINDEX);
   if (!lua_isfunction(L, -1)) {  /* no `require' defined? */
     lua_pop(L, 1);
     return file_input(name);
@@ -228,7 +230,8 @@ static int readline (lua_State *l, const char *prompt) {
 
 static const char *get_prompt (int firstline) {
   const char *p = NULL;
-  lua_getglobal(L, firstline ? "_PROMPT" : "_PROMPT2");
+  lua_pushstring(L, firstline ? "_PROMPT" : "_PROMPT2");
+  lua_rawget(L, LUA_GLOBALSINDEX);
   p = lua_tostring(L, -1);
   if (p == NULL) p = (firstline ? PROMPT : PROMPT2);
   lua_pop(L, 1);  /* remove global */
