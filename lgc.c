@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.180 2003/11/19 19:41:57 roberto Exp roberto $
+** $Id: lgc.c,v 1.181 2003/12/01 16:33:30 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -114,8 +114,9 @@ static void reallymarkobject (global_State *g, GCObject *o) {
       return;
     }
     case LUA_TUSERDATA: {
+      Table *mt = gcotou(o)->uv.metatable;
       white2black(o);  /* userdata do not go to gray list */
-      markobject(g, gcotou(o)->uv.metatable);
+      if (mt) markobject(g, mt);
       return;
     }
     case LUA_TFUNCTION: {
@@ -191,7 +192,8 @@ static void traversetable (global_State *g, Table *h) {
   int weakkey = 0;
   int weakvalue = 0;
   const TObject *mode;
-  markobject(g, h->metatable);
+  if (h->metatable)
+    markobject(g, h->metatable);
   lua_assert(h->lsizenode || h->node == g->dummynode);
   mode = gfasttm(g, h->metatable, TM_MODE);
   if (mode && ttisstring(mode)) {  /* is there a weak mode? */
@@ -534,7 +536,6 @@ static void markroot (lua_State *L) {
   g->weak = NULL;
   makewhite(valtogco(g->mainthread));
   markobject(g, g->mainthread);
-  markvalue(g, defaultmeta(L));
   markvalue(g, registry(L));
   if (L != g->mainthread)  /* another thread is running? */
     markobject(g, L);  /* cannot collect it */

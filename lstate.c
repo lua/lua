@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.128 2003/11/18 14:55:11 roberto Exp roberto $
+** $Id: lstate.c,v 1.129 2003/12/01 16:33:30 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -76,10 +76,6 @@ static void freestack (lua_State *L, lua_State *L1) {
 static void f_luaopen (lua_State *L, void *ud) {
   UNUSED(ud);
   stack_init(L, L);  /* init stack */
-  /* create default meta table with a dummy table, and then close the loop */
-  defaultmeta(L)->tt = LUA_TTABLE;
-  sethvalue(defaultmeta(L), luaH_new(L, 0, 0));
-  hvalue(defaultmeta(L))->metatable = hvalue(defaultmeta(L));
   sethvalue(gt(L), luaH_new(L, 0, 4));  /* table of globals */
   sethvalue(registry(L), luaH_new(L, 4, 4));  /* registry */
   luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
@@ -161,7 +157,6 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->strt.size = 0;
   g->strt.nuse = 0;
   g->strt.hash = NULL;
-  setnilvalue(defaultmeta(L));
   setnilvalue(registry(L));
   luaZ_initbuffer(L, &g->buff);
   g->panic = NULL;

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.248 2003/10/20 12:25:23 roberto Exp roberto $
+** $Id: lapi.c,v 1.249 2003/10/20 17:42:41 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -555,7 +555,7 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
       mt = uvalue(obj)->uv.metatable;
       break;
   }
-  if (mt == NULL || mt == hvalue(defaultmeta(L)))
+  if (mt == NULL)
     res = 0;
   else {
     sethvalue(L->top, mt);
@@ -634,21 +634,26 @@ LUA_API void lua_rawseti (lua_State *L, int idx, int n) {
 
 
 LUA_API int lua_setmetatable (lua_State *L, int objindex) {
-  TObject *obj, *mt;
+  TObject *obj;
+  Table *mt;
   int res = 1;
   lua_lock(L);
   api_checknelems(L, 1);
   obj = luaA_index(L, objindex);
   api_checkvalidindex(L, obj);
-  mt = (!ttisnil(L->top - 1)) ? L->top - 1 : defaultmeta(L);
-  api_check(L, ttistable(mt));
+  if (ttisnil(L->top - 1))
+    mt = NULL;
+  else {
+    api_check(L, ttistable(L->top - 1));
+    mt = hvalue(L->top - 1);
+  }
   switch (ttype(obj)) {
     case LUA_TTABLE: {
-      hvalue(obj)->metatable = hvalue(mt);  /* write barrier */
+      hvalue(obj)->metatable = mt;  /* write barrier */
       break;
     }
     case LUA_TUSERDATA: {
-      uvalue(obj)->uv.metatable = hvalue(mt);  /* write barrier */
+      uvalue(obj)->uv.metatable = mt;  /* write barrier */
       break;
     }
     default: {

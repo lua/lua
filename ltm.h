@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 1.40 2002/09/19 20:12:47 roberto Exp roberto $
+** $Id: ltm.h,v 1.41 2002/11/14 11:51:50 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -36,8 +36,8 @@ typedef enum {
 
 
 
-#define gfasttm(g,et,e) \
-  (((et)->flags & (1u<<(e))) ? NULL : luaT_gettm(et, e, (g)->tmname[e]))
+#define gfasttm(g,et,e) ((et) == NULL ? NULL : \
+  ((et)->flags & (1u<<(e))) ? NULL : luaT_gettm(et, e, (g)->tmname[e]))
 
 #define fasttm(l,et,e)	gfasttm(G(l), et, e)
 

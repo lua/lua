@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.79 2003/04/28 19:26:16 roberto Exp roberto $
+** $Id: lstring.c,v 1.80 2003/11/17 19:50:05 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -94,7 +94,7 @@ Udata *luaS_newudata (lua_State *L, size_t s) {
   u->uv.marked = 0;  /* is not finalized */
   u->uv.tt = LUA_TUSERDATA;
   u->uv.len = s;
-  u->uv.metatable = hvalue(defaultmeta(L));
+  u->uv.metatable = NULL;
   /* chain it on udata list */
   u->uv.next = G(L)->rootudata;
   G(L)->rootudata = valtogco(u);

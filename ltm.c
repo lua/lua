@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.105 2002/12/04 17:38:31 roberto Exp roberto $
+** $Id: ltm.c,v 1.106 2003/04/03 13:35:34 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -57,14 +57,17 @@ const TObject *luaT_gettm (Table *events, TMS event, TString *ename) {
 
 
 const TObject *luaT_gettmbyobj (lua_State *L, const TObject *o, TMS event) {
-  TString *ename = G(L)->tmname[event];
+  Table *mt;
   switch (ttype(o)) {
     case LUA_TTABLE:
-      return luaH_getstr(hvalue(o)->metatable, ename);
+      mt = hvalue(o)->metatable;
+      break;
     case LUA_TUSERDATA:
-      return luaH_getstr(uvalue(o)->uv.metatable, ename);
+      mt = uvalue(o)->uv.metatable;
+      break;
     default:
-      return &luaO_nilobject;
+      mt = NULL;
   }
+  return (mt ?  luaH_getstr(mt, G(L)->tmname[event]) : &luaO_nilobject);
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.113 2003/11/18 14:55:11 roberto Exp roberto $
+** $Id: lstate.h,v 1.114 2003/12/01 16:33:30 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -41,9 +41,6 @@
 
 struct lua_longjmp;  /* defined in ldo.c */
 
-
-/* default meta table (both for tables and udata) */
-#define defaultmeta(L)	(&G(L)->_defaultmeta)
 
 /* table of globals */
 #define gt(L)	(&L->_gt)
@@ -113,7 +110,6 @@ typedef struct global_State {
   lu_mem nblocks;  /* number of `bytes' currently allocated */
   lua_CFunction panic;  /* to be called in unprotected errors */
   TObject _registry;
-  TObject _defaultmeta;
   struct lua_State *mainthread;
   Node dummynode[1];  /* common node array for all empty tables */
   TString *tmname[TM_N];  /* array with tag-method names */
