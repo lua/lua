@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.55 1999/03/01 20:22:16 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.56 1999/03/04 21:17:26 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -389,12 +389,16 @@ static void luaB_assert (void) {
 
 static void luaB_foreachi (void) {
   Hash *t = gethash(1);
-  TObject *f = luaA_Address(luaL_functionarg(2));
   int i;
   int n = (int)getnarg(t);
+  TObject f;
+  /* 'f' cannot be a pointer to TObject, because it is on the stack, and the
+     stack may be reallocated by the call. Moreover, some C compilers do not
+     initialize structs, so we must do the assignment after the declaration */
+  f = *luaA_Address(luaL_functionarg(2));
   luaD_checkstack(3);  /* for f, ref, and val */
   for (i=1; i<=n; i++) {
-    *(L->stack.top++) = *f;
+    *(L->stack.top++) = f;
     ttype(L->stack.top) = LUA_T_NUMBER; nvalue(L->stack.top++) = i;
     *(L->stack.top++) = *luaH_getint(t, i);
     luaD_calln(2, 1);
@@ -407,13 +411,14 @@ static void luaB_foreachi (void) {
 
 static void luaB_foreach (void) {
   Hash *a = gethash(1);
-  TObject *f = luaA_Address(luaL_functionarg(2));
   int i;
+  TObject f;  /* see comment in 'foreachi' */
+  f = *luaA_Address(luaL_functionarg(2));
   luaD_checkstack(3);  /* for f, ref, and val */
   for (i=0; i<a->nhash; i++) {
     Node *nd = &(a->node[i]);
     if (ttype(val(nd)) != LUA_T_NIL) {
-      *(L->stack.top++) = *f;
+      *(L->stack.top++) = f;
       *(L->stack.top++) = *ref(nd);
       *(L->stack.top++) = *val(nd);
       luaD_calln(2, 1);
@@ -426,14 +431,15 @@ static void luaB_foreach (void) {
 
 
 static void luaB_foreachvar (void) {
-  TObject *f = luaA_Address(luaL_functionarg(1));
   GCnode *g;
+  TObject f;  /* see comment in 'foreachi' */
+  f = *luaA_Address(luaL_functionarg(1));
   luaD_checkstack(4);  /* for extra var name, f, var name, and globalval */
   for (g = L->rootglobal.next; g; g = g->next) {
     TaggedString *s = (TaggedString *)g;
     if (s->u.s.globalval.ttype != LUA_T_NIL) {
       pushtagstring(s);  /* keep (extra) s on stack to avoid GC */
-      *(L->stack.top++) = *f;
+      *(L->stack.top++) = f;
       pushtagstring(s);
       *(L->stack.top++) = s->u.s.globalval;
       luaD_calln(2, 1);
@@ -494,10 +500,10 @@ static void swap (Hash *a, int i, int j) {
   luaH_setint(a, j, &temp);
 }
 
-static int sort_comp (TObject *f, TObject *a, TObject *b) {
+static int sort_comp (lua_Object f, TObject *a, TObject *b) {
   /* notice: the caller (auxsort) must check stack space */
-  if (f) {
-    *(L->stack.top) = *f;
+  if (f != LUA_NOOBJECT) {
+    *(L->stack.top) = *luaA_Address(f);
     *(L->stack.top+1) = *a;
     *(L->stack.top+2) = *b;
     L->stack.top += 3;
@@ -512,7 +518,7 @@ static int sort_comp (TObject *f, TObject *a, TObject *b) {
   return ttype(--(L->stack.top)) != LUA_T_NIL;
 }
 
-static void auxsort (Hash *a, int l, int u, TObject *f) {
+static void auxsort (Hash *a, int l, int u, lua_Object f) {
   while (l < u) {  /* for tail recursion */
     TObject *P;
     int i, j;
@@ -560,10 +566,10 @@ static void luaB_sort (void) {
   Hash *a = gethash(1);
   int n = (int)getnarg(a);
   lua_Object func = lua_getparam(2);
-  TObject *f = luaA_Address(func);
-  luaL_arg_check(!f || lua_isfunction(func), 2, "function expected");
+  luaL_arg_check(func == LUA_NOOBJECT || lua_isfunction(func), 2,
+                 "function expected");
   luaD_checkstack(4);  /* for Pivot, f, a, b (sort_comp) */
-  auxsort(a, 1, n, f);
+  auxsort(a, 1, n, func);
   lua_pushobject(t);
 }
 

@@ -90,3 +90,9 @@ Fri Apr 30 11:10:20 EST 1999
 >> '$' at end of pattern was matching regular '$', too.
 (by anna)
 
+** lbuiltin.c
+Fri May 21 17:15:11 EST 1999
+>> foreach, foreachi, foreachvar points to function in stack when stack
+can be reallocated.
+(by tomas)
+
