@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.137 2002/06/20 20:41:46 roberto Exp roberto $
+** $Id: lgc.c,v 1.138 2002/06/24 17:19:43 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -215,7 +215,7 @@ static void traversetable (GCState *st, Table *h) {
   int weakvalue = 0;
   marktable(st, h->metatable);
   lua_assert(h->lsizenode || h->node == G(st->L)->dummynode);
-  mode = fasttm(st->L, h->metatable, TM_WEAKMODE);
+  mode = fasttm(st->L, h->metatable, TM_MODE);
   if (mode && ttype(mode) == LUA_TSTRING) {  /* weak table? */
     h->mark = st->toclear;  /* must be cleared after GC, ... */
     st->toclear = h;  /* ...put in the appropriate list */
@@ -458,10 +458,10 @@ void luaC_collectgarbage (lua_State *L) {
   st.toclear = NULL;
   markstacks(&st); /* mark all stacks */
   propagatemarks(&st);  /* mark all reachable objects */
+  cleartables(st.toclear);
   separateudata(L);  /* separate userdata to be preserved */
   marktmu(&st);  /* mark `preserved' userdata */
   propagatemarks(&st);  /* remark */
-  cleartables(st.toclear);
   luaC_collect(L, 0);
   checkMbuffer(L);
   G(L)->GCthreshold = 2*G(L)->nblocks;  /* new threshold */
