@@ -1,7 +1,7 @@
 /*
 ** mem.c
 ** memory manager for lua
-** $Id: mem.h,v 1.4 1996/03/14 15:55:49 roberto Exp roberto $
+** $Id: mem.h,v 1.5 1996/03/21 16:31:32 roberto Exp roberto $
 */
  
 #ifndef mem_h
@@ -13,9 +13,14 @@
 
 
 /* memory error messages */
-#define NUMERRMSG 6
-enum memerrormsg {codeEM, symbolEM, constantEM, stackEM, lexEM, lockEM};
-extern char *luaI_memerrormsg[];
+#define codeEM   "code size overflow"
+#define symbolEM   "symbol table overflow"
+#define constantEM   "constant table overflow"
+#define stackEM   "stack size overflow"
+#define lexEM   "lex buffer overflow"
+#define lockEM   "lock table overflow"
+#define tableEM  "table overflow"
+#define memEM "not enough memory"
 
 
 void luaI_free (void *block);
@@ -23,7 +28,7 @@ void *luaI_malloc (unsigned long size);
 void *luaI_realloc (void *oldblock, unsigned long size);
 void *luaI_buffer (unsigned long size);
 int luaI_growvector (void **block, unsigned long nelems, int size,
-                       enum memerrormsg errormsg, unsigned long limit);
+                       char *errormsg, unsigned long limit);
 
 #define new(s)          ((s *)luaI_malloc(sizeof(s)))
 #define newvector(n,s)  ((s *)luaI_malloc((n)*sizeof(s)))

@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.49 1996/03/14 15:57:19 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.50 1996/03/21 16:31:32 roberto Exp roberto $";
 
 #include "mem.h"
 #include "opcode.h"
@@ -75,12 +75,11 @@ void luaI_initsymbol (void)
 */
 void luaI_initconstant (void)
 {
- int i;
  lua_maxconstant = BUFFER_BLOCK;
  lua_constant = newvector(lua_maxconstant, TaggedString *);
  /* pre-register mem error messages, to avoid loop when error arises */
- for (i=0; i<NUMERRMSG; i++)
-   luaI_findconstantbyname(luaI_memerrormsg[i]);
+ luaI_findconstantbyname(tableEM);
+ luaI_findconstantbyname(memEM);
 }
 
 

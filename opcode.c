@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.63 1996/03/20 17:05:44 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.64 1996/03/21 16:31:32 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -102,7 +102,7 @@ static void growstack (void)
   if (stacksize >= limit)
   {
     limit = stacksize;
-    lua_error(luaI_memerrormsg[stackEM]);
+    lua_error(stackEM);
   }
  }
 }

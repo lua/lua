@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_mem = "$Id: mem.c,v 1.9 1996/03/14 15:55:49 roberto Exp roberto $";
+char *rcs_mem = "$Id: mem.c,v 1.10 1996/03/21 16:31:32 roberto Exp roberto $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -14,27 +14,8 @@ char *rcs_mem = "$Id: mem.c,v 1.9 1996/03/14 15:55:49 roberto Exp roberto $";
 #include "table.h"
 
 
-char *luaI_memerrormsg[NUMERRMSG] = {
-  "code size overflow",
-  "symbol table overflow",
-  "constant table overflow",
-  "stack size overflow",
-  "lex buffer overflow",
-  "lock table overflow"
-};
-
-
-static void mem_error (void)
-{
-  Long recovered = luaI_collectgarbage();  /* try to collect garbage  */
-  if (recovered)
-    lua_error("not enough memory");
-  else
-  { /* if there is no garbage then must exit */
-    fprintf(stderr, "lua error: memory overflow - unable to recover\n");
-    exit(1);
-  }
-}
+#define mem_error()  lua_error(memEM)
+ 
 
 void luaI_free (void *block)
 {
@@ -66,10 +47,10 @@ void *luaI_realloc (void *oldblock, unsigned long size)
 
 
 int luaI_growvector (void **block, unsigned long nelems, int size,
-                       enum memerrormsg errormsg, unsigned long limit)
+                       char *errormsg, unsigned long limit)
 {
   if (nelems >= limit)
-    lua_error(luaI_memerrormsg[errormsg]);
+    lua_error(errormsg);
   nelems = (nelems == 0) ? 20 : nelems*2;
   if (nelems > limit)
     nelems = limit;

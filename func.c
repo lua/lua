@@ -102,8 +102,7 @@ void lua_funcinfo (lua_Object func, char **filename, int *linedefined)
 void luaI_registerlocalvar (TaggedString *varname, int line)
 {
   if (numcurrvars >= maxcurrvars)
-    maxcurrvars = growvector(&currvars, maxcurrvars, LocVar,
-                    lockEM, MAX_WORD);
+    maxcurrvars = growvector(&currvars, maxcurrvars, LocVar, "", MAX_WORD);
   currvars[numcurrvars].varname = varname;
   currvars[numcurrvars].line = line;
   numcurrvars++;
