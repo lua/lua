@@ -2,7 +2,7 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lua.h,v 3.11 1994/11/18 19:46:21 roberto Stab roberto $
+** $Id: lua.h,v 3.12 1994/12/13 15:54:21 roberto Exp roberto $
 */
 
 
@@ -25,6 +25,8 @@ typedef enum
 
 /* Public Part */
 
+#define LUA_NOOBJECT  0
+
 typedef void (*lua_CFunction) (void);
 typedef unsigned int lua_Object;
 
@@ -44,7 +46,6 @@ lua_Object     lua_getparam 		(int number);
 
 float          lua_getnumber 		(lua_Object object);
 char          *lua_getstring 		(lua_Object object);
-char 	      *lua_copystring 		(lua_Object object);
 lua_CFunction  lua_getcfunction 	(lua_Object object);
 void          *lua_getuserdata  	(lua_Object object);
 
@@ -68,7 +69,7 @@ int	       lua_lock			(void);
 lua_Object     lua_getlocked		(int ref);
 void	       lua_unlock		(int ref);
 
-lua_Object     lua_createtable		(int initSize);
+lua_Object     lua_createtable		(void);
 
 
 /* some useful macros */
@@ -92,5 +93,7 @@ lua_Object     lua_createtable		(int initSize);
 
 #define lua_getindexed(o,n) (lua_pushobject(o), lua_pushnumber(n), lua_getsubscript())
 #define lua_getfield(o,f)   (lua_pushobject(o), lua_pushstring(f), lua_getsubscript())
+
+#define lua_copystring(o) (strdup(lua_getstring(o)))
 
 #endif

@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.24 1994/12/06 14:27:18 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.25 1994/12/13 15:54:21 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -448,7 +448,7 @@ lua_Object lua_getsubscript (void)
   if (status == 0)
     return (Ref(top-1));
   else
-    return 0;
+    return LUA_NOOBJECT;
 }
 
 
@@ -495,10 +495,10 @@ int lua_storesubscript (void)
 /*
 ** API: creates a new table
 */
-lua_Object lua_createtable (int initSize)
+lua_Object lua_createtable (void)
 {
   adjustC(0);
-  avalue(top) = lua_createarray(initSize);
+  avalue(top) = lua_createarray(0);
   tag(top) = LUA_T_ARRAY;
   top++;
   CBase++;  /* incorporate object in the stack */
@@ -506,12 +506,12 @@ lua_Object lua_createtable (int initSize)
 }
 
 /*
-** Get a parameter, returning the object handle or 0 on error.
+** Get a parameter, returning the object handle or LUA_NOOBJECT on error.
 ** 'number' must be 1 to get the first parameter.
 */
 lua_Object lua_getparam (int number)
 {
- if (number <= 0 || number > CnResults) return 0;
+ if (number <= 0 || number > CnResults) return LUA_NOOBJECT;
  /* Ref(stack+(CBase-CnResults+number-1)) ==
     stack+(CBase-CnResults+number-1)-stack+1 == */
  return CBase-CnResults+number;
@@ -522,7 +522,7 @@ lua_Object lua_getparam (int number)
 */
 real lua_getnumber (lua_Object object)
 {
- if (object == 0 || tag(Address(object)) == LUA_T_NIL) return 0.0;
+ if (object == LUA_NOOBJECT || tag(Address(object)) == LUA_T_NIL) return 0.0;
  if (tonumber (Address(object))) return 0.0;
  else                   return (nvalue(Address(object)));
 }
@@ -532,19 +532,9 @@ real lua_getnumber (lua_Object object)
 */
 char *lua_getstring (lua_Object object)
 {
- if (object == 0 || tag(Address(object)) == LUA_T_NIL) return NULL;
+ if (object == LUA_NOOBJECT || tag(Address(object)) == LUA_T_NIL) return NULL;
  if (tostring (Address(object))) return NULL;
  else return (svalue(Address(object)));
-}
-
-/*
-** Given an object handle, return a copy of its string. On error, return NULL.
-*/
-char *lua_copystring (lua_Object object)
-{
- if (object == 0 || tag(Address(object)) == LUA_T_NIL) return NULL;
- if (tostring (Address(object))) return NULL;
- else return (strdup(svalue(Address(object))));
 }
 
 /*
@@ -552,8 +542,8 @@ char *lua_copystring (lua_Object object)
 */
 lua_CFunction lua_getcfunction (lua_Object object)
 {
- if (object == 0) return NULL;
- if (tag(Address(object)) != LUA_T_CFUNCTION) return NULL;
+ if (object == LUA_NOOBJECT || tag(Address(object)) != LUA_T_CFUNCTION)
+   return NULL;
  else return (fvalue(Address(object)));
 }
 
@@ -562,8 +552,8 @@ lua_CFunction lua_getcfunction (lua_Object object)
 */
 void *lua_getuserdata (lua_Object object)
 {
- if (object == 0) return NULL;
- if (tag(Address(object)) < LUA_T_USERDATA) return NULL;
+ if (object == LUA_NOOBJECT || tag(Address(object)) < LUA_T_USERDATA)
+   return NULL;
  else return (uvalue(Address(object)));
 }
 
