@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.35 1998/12/30 13:16:50 roberto Exp roberto $
+** $Id: lvm.c,v 1.36 1998/12/30 17:26:49 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -85,7 +85,7 @@ int luaV_tostring (TObject *obj) {
     if ((real)LONG_MIN <= f && f <= (real)LONG_MAX && (real)(i=(long)f) == f)
       sprintf(s, "%ld", i);
     else
-      sprintf(s, "%g", (double)nvalue(obj));
+      sprintf(s, "%.15g", (double)nvalue(obj));
     tsvalue(obj) = luaS_new(s);
     ttype(obj) = LUA_T_STRING;
     return 0;
