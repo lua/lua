@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.6 1994/11/14 21:40:14 roberto Exp $";
+char *rcs_luastx = "$Id: lua.stx,v 3.7 1994/11/17 18:59:06 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,7 +15,7 @@ char *rcs_luastx = "$Id: lua.stx,v 3.6 1994/11/14 21:40:14 roberto Exp $";
 #include "lua.h"
 
 #ifndef LISTING
-#define LISTING 1
+#define LISTING 0
 #endif
 
 #ifndef CODE_BLOCK
@@ -866,6 +866,7 @@ static void PrintCode (Byte *code, Byte *end)
    case SUBOP:       	printf ("%d    SUBOP\n", (p++)-code); break;
    case MULTOP:      	printf ("%d    MULTOP\n", (p++)-code); break;
    case DIVOP:       	printf ("%d    DIVOP\n", (p++)-code); break;
+   case POWOP:       	printf ("%d    POWOP\n", (p++)-code); break;
    case CONCOP:       	printf ("%d    CONCOP\n", (p++)-code); break;
    case MINUSOP:       	printf ("%d    MINUSOP\n", (p++)-code); break;
    case NOTOP:       	printf ("%d    NOTOP\n", (p++)-code); break;
