@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.46 2002/11/22 16:35:20 roberto Exp roberto $
+** $Id: llex.h,v 1.47 2003/02/28 17:19:47 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -65,6 +65,7 @@ typedef struct LexState {
 
 void luaX_init (lua_State *L);
 void luaX_setinput (lua_State *L, LexState *LS, ZIO *z, TString *source);
+TString *luaX_newstring (LexState *LS, const char *str, size_t l);
 int luaX_lex (LexState *LS, SemInfo *seminfo);
 void luaX_checklimit (LexState *ls, int val, int limit, const char *msg);
 void luaX_syntaxerror (LexState *ls, const char *s);

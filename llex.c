@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.120 2003/05/15 12:20:24 roberto Exp roberto $
+** $Id: llex.c,v 1.121 2003/08/21 14:16:43 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -108,6 +108,16 @@ static void luaX_lexerror (LexState *ls, const char *s, int token) {
     luaX_error(ls, s, luaX_token2str(ls, token));
   else
     luaX_error(ls, s, luaZ_buffer(ls->buff));
+}
+
+
+TString *luaX_newstring (LexState *LS, const char *str, size_t l) {
+  lua_State *L = LS->L;
+  TString *ts = luaS_newlstr(L, str, l);
+  TObject *o = luaH_setstr(L, LS->fs->h, ts);  /* entry for `str' */
+  if (ttisnil(o))
+    setbvalue(o, 1);  /* make sure `str' will not be collected */
+  return ts;
 }
 
 
@@ -253,7 +263,7 @@ static void read_long_string (LexState *LS, SemInfo *seminfo) {
   save_and_next(LS, l);  /* skip the second `]' */
   save(LS, '\0', l);
   if (seminfo)
-    seminfo->ts = luaS_newlstr(LS->L, luaZ_buffer(LS->buff) + 2, l - 5);
+    seminfo->ts = luaX_newstring(LS, luaZ_buffer(LS->buff) + 2, l - 5);
 }
 
 
@@ -311,7 +321,7 @@ static void read_string (LexState *LS, int del, SemInfo *seminfo) {
   }
   save_and_next(LS, l);  /* skip delimiter */
   save(LS, '\0', l);
-  seminfo->ts = luaS_newlstr(LS->L, luaZ_buffer(LS->buff) + 1, l - 3);
+  seminfo->ts = luaX_newstring(LS, luaZ_buffer(LS->buff) + 1, l - 3);
 }
 
 
@@ -401,7 +411,7 @@ int luaX_lex (LexState *LS, SemInfo *seminfo) {
         else if (isalpha(LS->current) || LS->current == '_') {
           /* identifier or reserved word */
           size_t l = readname(LS);
-          TString *ts = luaS_newlstr(LS->L, luaZ_buffer(LS->buff), l);
+          TString *ts = luaX_newstring(LS, luaZ_buffer(LS->buff), l);
           if (ts->tsv.reserved > 0)  /* reserved word? */
             return ts->tsv.reserved - 1 + FIRST_RESERVED;
           seminfo->ts = ts;

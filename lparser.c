@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.215 2003/07/29 18:51:00 roberto Exp roberto $
+** $Id: lparser.c,v 1.216 2003/08/25 19:51:54 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -13,6 +13,7 @@
 
 #include "lcode.h"
 #include "ldebug.h"
+#include "ldo.h"
 #include "lfunc.h"
 #include "llex.h"
 #include "lmem.h"
@@ -68,6 +69,14 @@ static void next (LexState *ls) {
 static void lookahead (LexState *ls) {
   lua_assert(ls->lookahead.token == TK_EOS);
   ls->lookahead.token = luaX_lex(ls, &ls->lookahead.seminfo);
+}
+
+
+static void anchor_token (LexState *ls) {
+  if (ls->t.token == TK_NAME || ls->t.token == TK_STRING) {
+    TString *ts = ls->t.seminfo.ts;
+    luaX_newstring(ls, getstr(ts), ts->tsv.len);
+  }
 }
 
 
@@ -138,9 +147,11 @@ static void checkname(LexState *ls, expdesc *e) {
 static int luaI_registerlocalvar (LexState *ls, TString *varname) {
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
+  int oldsize = f->sizelocvars;
   luaM_growvector(ls->L, f->locvars, fs->nlocvars, f->sizelocvars,
                   LocVar, USHRT_MAX, "too many local variables");
-  f->locvars[fs->nlocvars].varname = varname;
+  while (oldsize < f->sizelocvars) f->locvars[oldsize++].varname = NULL;
+  f->locvars[fs->nlocvars].varname = varname;  /* write barrier */
   return fs->nlocvars++;
 }
 
@@ -170,24 +181,27 @@ static void removevars (LexState *ls, int tolevel) {
 
 
 static void new_localvarstr (LexState *ls, const char *name, int n) {
-  new_localvar(ls, luaS_new(ls->L, name), n);
+  TString *ts = luaX_newstring(ls, name, strlen(name));
+  new_localvar(ls, ts, n);
 }
 
 
 static int indexupvalue (FuncState *fs, TString *name, expdesc *v) {
   int i;
   Proto *f = fs->f;
+  int oldsize = f->sizeupvalues;
   for (i=0; i<f->nups; i++) {
     if (fs->upvalues[i].k == v->k && fs->upvalues[i].info == v->info) {
-      lua_assert(fs->f->upvalues[i] == name);
+      lua_assert(f->upvalues[i] == name);
       return i;
     }
   }
   /* new one */
   luaX_checklimit(fs->ls, f->nups + 1, MAXUPVALUES, "upvalues");
-  luaM_growvector(fs->L, fs->f->upvalues, f->nups, fs->f->sizeupvalues,
+  luaM_growvector(fs->L, f->upvalues, f->nups, f->sizeupvalues,
                   TString *, MAX_INT, "");
-  fs->f->upvalues[f->nups] = name;
+  while (oldsize < f->sizeupvalues) f->upvalues[oldsize++] = NULL;
+  f->upvalues[f->nups] = name;  /* write barrier */
   lua_assert(v->k == VLOCAL || v->k == VUPVAL);
   fs->upvalues[f->nups].k = cast(lu_byte, v->k);
   fs->upvalues[f->nups].info = cast(lu_byte, v->info);
@@ -290,10 +304,12 @@ static void leaveblock (FuncState *fs) {
 static void pushclosure (LexState *ls, FuncState *func, expdesc *v) {
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
+  int oldsize = f->sizep;
   int i;
   luaM_growvector(ls->L, f->p, fs->np, f->sizep, Proto *,
                   MAXARG_Bx, "constant table overflow");
-  f->p[fs->np++] = func->f;
+  while (oldsize < f->sizep) f->p[oldsize++] = NULL;
+  f->p[fs->np++] = func->f;  /* write barrier */
   init_exp(v, VRELOCABLE, luaK_codeABx(fs, OP_CLOSURE, 0, fs->np-1));
   for (i=0; i<func->f->nups; i++) {
     OpCode o = (func->upvalues[i].k == VLOCAL) ? OP_MOVE : OP_GETUPVAL;
@@ -303,24 +319,30 @@ static void pushclosure (LexState *ls, FuncState *func, expdesc *v) {
 
 
 static void open_func (LexState *ls, FuncState *fs) {
+  lua_State *L = ls->L;
   Proto *f = luaF_newproto(ls->L);
   fs->f = f;
   fs->prev = ls->fs;  /* linked list of funcstates */
   fs->ls = ls;
-  fs->L = ls->L;
+  fs->L = L;
   ls->fs = fs;
   fs->pc = 0;
   fs->lasttarget = 0;
   fs->jpc = NO_JUMP;
   fs->freereg = 0;
   fs->nk = 0;
-  fs->h = luaH_new(ls->L, 0, 0);
   fs->np = 0;
   fs->nlocvars = 0;
   fs->nactvar = 0;
   fs->bl = NULL;
   f->source = ls->source;
   f->maxstacksize = 2;  /* registers 0/1 are always valid */
+  fs->h = luaH_new(L, 0, 0);
+  /* anchor table of constants and prototype (to avoid being collected) */
+  sethvalue2s(L->top, fs->h);
+  incr_top(L);
+  setptvalue2s(L->top, f);
+  incr_top(L);
 }
 
 
@@ -345,6 +367,9 @@ static void close_func (LexState *ls) {
   lua_assert(luaG_checkcode(f));
   lua_assert(fs->bl == NULL);
   ls->fs = fs->prev;
+  L->top -= 2;  /* remove table and prototype from the stack */
+  /* last token read was anchored in defunct function; must reanchor it */
+  if (fs) anchor_token(ls);
 }
 
 
@@ -362,6 +387,7 @@ Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, const char *name) {
   lua_assert(funcstate.prev == NULL);
   lua_assert(funcstate.f->nups == 0);
   lua_assert(lexstate.nestlevel == 0);
+  lua_assert(lexstate.fs == NULL);
   return funcstate.f;
 }
 
@@ -530,7 +556,7 @@ static void parlist (LexState *ls) {
         case TK_DOTS: {  /* param -> `...' */
           next(ls);
           /* use `arg' as default name */
-          new_localvar(ls, luaS_new(ls->L, "arg"), nparams++);
+          new_localvarstr(ls, "arg", nparams++);
           f->is_vararg = 1;
           break;
         }

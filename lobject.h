@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.159 2003/03/18 12:50:04 roberto Exp roberto $
+** $Id: lobject.h,v 1.160 2003/04/28 19:26:16 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -92,44 +92,49 @@ typedef struct lua_TObject {
 #define l_isfalse(o)	(ttisnil(o) || (ttisboolean(o) && bvalue(o) == 0))
 
 /* Macros to set values */
+#define setnilvalue(obj) ((obj)->tt=LUA_TNIL)
+
 #define setnvalue(obj,x) \
-  { TObject *i_o=(obj); i_o->tt=LUA_TNUMBER; i_o->value.n=(x); }
+  { TObject *i_o=(obj); i_o->value.n=(x); i_o->tt=LUA_TNUMBER; }
 
 #define chgnvalue(obj,x) \
 	check_exp(ttype(obj)==LUA_TNUMBER, (obj)->value.n=(x))
 
 #define setpvalue(obj,x) \
-  { TObject *i_o=(obj); i_o->tt=LUA_TLIGHTUSERDATA; i_o->value.p=(x); }
+  { TObject *i_o=(obj); i_o->value.p=(x); i_o->tt=LUA_TLIGHTUSERDATA; }
 
 #define setbvalue(obj,x) \
-  { TObject *i_o=(obj); i_o->tt=LUA_TBOOLEAN; i_o->value.b=(x); }
+  { TObject *i_o=(obj); i_o->value.b=(x); i_o->tt=LUA_TBOOLEAN; }
 
 #define setsvalue(obj,x) \
-  { TObject *i_o=(obj); i_o->tt=LUA_TSTRING; \
-    i_o->value.gc=cast(GCObject *, (x)); \
+  { TObject *i_o=(obj); \
+    i_o->value.gc=cast(GCObject *, (x)); i_o->tt=LUA_TSTRING; \
     lua_assert(i_o->value.gc->gch.tt == LUA_TSTRING); }
 
 #define setuvalue(obj,x) \
-  { TObject *i_o=(obj); i_o->tt=LUA_TUSERDATA; \
-    i_o->value.gc=cast(GCObject *, (x)); \
+  { TObject *i_o=(obj); \
+    i_o->value.gc=cast(GCObject *, (x)); i_o->tt=LUA_TUSERDATA; \
     lua_assert(i_o->value.gc->gch.tt == LUA_TUSERDATA); }
 
 #define setthvalue(obj,x) \
-  { TObject *i_o=(obj); i_o->tt=LUA_TTHREAD; \
-    i_o->value.gc=cast(GCObject *, (x)); \
+  { TObject *i_o=(obj); \
+    i_o->value.gc=cast(GCObject *, (x)); i_o->tt=LUA_TTHREAD; \
     lua_assert(i_o->value.gc->gch.tt == LUA_TTHREAD); }
 
 #define setclvalue(obj,x) \
-  { TObject *i_o=(obj); i_o->tt=LUA_TFUNCTION; \
-    i_o->value.gc=cast(GCObject *, (x)); \
+  { TObject *i_o=(obj); \
+    i_o->value.gc=cast(GCObject *, (x)); i_o->tt=LUA_TFUNCTION; \
     lua_assert(i_o->value.gc->gch.tt == LUA_TFUNCTION); }
 
 #define sethvalue(obj,x) \
-  { TObject *i_o=(obj); i_o->tt=LUA_TTABLE; \
-    i_o->value.gc=cast(GCObject *, (x)); \
+  { TObject *i_o=(obj); \
+    i_o->value.gc=cast(GCObject *, (x)); i_o->tt=LUA_TTABLE; \
     lua_assert(i_o->value.gc->gch.tt == LUA_TTABLE); }
 
-#define setnilvalue(obj) ((obj)->tt=LUA_TNIL)
+#define setptvalue(obj,x) \
+  { TObject *i_o=(obj); \
+    i_o->value.gc=cast(GCObject *, (x)); i_o->tt=LUA_TPROTO; \
+    lua_assert(i_o->value.gc->gch.tt == LUA_TPROTO); }
 
 
 
@@ -155,6 +160,8 @@ typedef struct lua_TObject {
 /* to stack (not from same stack) */
 #define setobj2s	setobj
 #define setsvalue2s	setsvalue
+#define sethvalue2s	sethvalue
+#define setptvalue2s	setptvalue
 /* from table to same table */
 #define setobjt2t	setobj
 /* to table */

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.222 2003/08/25 19:51:54 roberto Exp roberto $
+** $Id: ldo.c,v 1.223 2003/08/26 12:04:13 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -429,18 +429,17 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
 struct SParser {  /* data to `f_parser' */
   ZIO *z;
   Mbuffer buff;  /* buffer to be used by the scanner */
-  int bin;
   const char *name;
 };
 
 static void f_parser (lua_State *L, void *ud) {
-  struct SParser *p;
   Proto *tf;
   Closure *cl;
+  struct SParser *p = cast(struct SParser *, ud);
+  int c = luaZ_lookahead(p->z);
   luaC_checkGC(L);
-  p = cast(struct SParser *, ud);
-  tf = p->bin ? luaU_undump(L, p->z, &p->buff, p->name) :
-                luaY_parser(L, p->z, &p->buff, p->name);
+  tf = (c == LUA_SIGNATURE[0]) ? luaU_undump(L, p->z, &p->buff, p->name) :
+                                 luaY_parser(L, p->z, &p->buff, p->name);
   cl = luaF_newLclosure(L, 0, gt(L));
   cl->l.p = tf;
   setclvalue(L->top, cl);
@@ -448,18 +447,13 @@ static void f_parser (lua_State *L, void *ud) {
 }
 
 
-int luaD_protectedparser (lua_State *L, ZIO *z, int bin, const char *name) {
+int luaD_protectedparser (lua_State *L, ZIO *z, const char *name) {
   struct SParser p;
   int status;
-  ptrdiff_t oldtopr = savestack(L, L->top);  /* save current top */
-  p.z = z; p.bin = bin; p.name = name;
+  p.z = z; p.name = name;
   luaZ_initbuffer(L, &p.buff);
-  status = luaD_rawrunprotected(L, f_parser, &p);
+  status = luaD_pcall(L, f_parser, &p, savestack(L, L->top), L->errfunc);
   luaZ_freebuffer(L, &p.buff);
-  if (status != 0) {  /* error? */
-    StkId oldtop = restorestack(L, oldtopr);
-    seterrorobj(L, status, oldtop);
-  }
   return status;
 }
 

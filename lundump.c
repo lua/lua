@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.62 2003/08/15 13:48:53 roberto Exp roberto $
+** $Id: lundump.c,v 1.63 2003/08/25 19:51:54 roberto Exp roberto $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -9,6 +9,7 @@
 #include "lua.h"
 
 #include "ldebug.h"
+#include "ldo.h"
 #include "lfunc.h"
 #include "lmem.h"
 #include "lopcodes.h"
@@ -122,6 +123,7 @@ static void LoadLocals (LoadState* S, Proto* f)
  n=LoadInt(S);
  f->locvars=luaM_newvector(S->L,n,LocVar);
  f->sizelocvars=n;
+ for (i=0; i<n; i++) f->locvars[i].varname=NULL;
  for (i=0; i<n; i++)
  {
   f->locvars[i].varname=LoadString(S);
@@ -147,6 +149,7 @@ static void LoadUpvalues (LoadState* S, Proto* f)
 		S->name,n,f->nups);
  f->upvalues=luaM_newvector(S->L,n,TString*);
  f->sizeupvalues=n;
+ for (i=0; i<n; i++) f->upvalues[i]=NULL;
  for (i=0; i<n; i++) f->upvalues[i]=LoadString(S);
 }
 
@@ -158,6 +161,7 @@ static void LoadConstants (LoadState* S, Proto* f)
  n=LoadInt(S);
  f->k=luaM_newvector(S->L,n,TObject);
  f->sizek=n;
+ for (i=0; i<n; i++) setnilvalue(&f->k[i]);
  for (i=0; i<n; i++)
  {
   TObject* o=&f->k[i];
@@ -181,12 +185,15 @@ static void LoadConstants (LoadState* S, Proto* f)
  n=LoadInt(S);
  f->p=luaM_newvector(S->L,n,Proto*);
  f->sizep=n;
+ for (i=0; i<n; i++) f->p[i]=NULL;
  for (i=0; i<n; i++) f->p[i]=LoadFunction(S,f->source);
 }
 
 static Proto* LoadFunction (LoadState* S, TString* p)
 {
  Proto* f=luaF_newproto(S->L);
+ setptvalue2s(S->L->top, f);
+ incr_top(S->L);
  f->source=LoadString(S); if (f->source==NULL) f->source=p;
  f->lineDefined=LoadInt(S);
  f->nups=LoadByte(S);
@@ -201,6 +208,7 @@ static Proto* LoadFunction (LoadState* S, TString* p)
 #ifndef TRUST_BINARIES
  if (!luaG_checkcode(f)) luaG_runerror(S->L,"bad code in %s",S->name);
 #endif
+ S->L->top--;
  return f;
 }
 

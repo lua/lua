@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.117 2003/04/03 13:35:34 roberto Exp roberto $
+** $Id: lcode.c,v 1.119 2003/08/27 20:58:52 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -207,17 +207,19 @@ static void freeexp (FuncState *fs, expdesc *e) {
 
 
 static int addk (FuncState *fs, TObject *k, TObject *v) {
-  const TObject *idx = luaH_get(fs->h, k);
+  TObject *idx = luaH_set(fs->L, fs->h, k);
+  Proto *f = fs->f;
+  int oldsize = f->sizek;
   if (ttisnumber(idx)) {
     lua_assert(luaO_rawequalObj(&fs->f->k[cast(int, nvalue(idx))], v));
     return cast(int, nvalue(idx));
   }
   else {  /* constant not found; create a new entry */
-    Proto *f = fs->f;
+    setnvalue(idx, cast(lua_Number, fs->nk));
     luaM_growvector(fs->L, f->k, fs->nk, f->sizek, TObject,
                     MAXARG_Bx, "constant table overflow");
-    setobj2n(&f->k[fs->nk], v);
-    setnvalue(luaH_set(fs->L, fs->h, k), cast(lua_Number, fs->nk));
+    while (oldsize < f->sizek) setnilvalue(&f->k[oldsize++]);
+    setobj(&f->k[fs->nk], v);  /* write barrier */
     return fs->nk++;
   }
 }

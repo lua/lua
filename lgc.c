@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.175 2003/07/16 20:49:02 roberto Exp roberto $
+** $Id: lgc.c,v 1.176 2003/07/29 19:25:37 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -176,20 +176,29 @@ static void traversetable (GCState *st, Table *h) {
 }
 
 
+/*
+** All marks are conditional because a GC may happen while the
+** prototype is still being created
+*/
 static void traverseproto (GCState *st, Proto *f) {
   int i;
-  stringmark(f->source);
+  if (f->source) stringmark(f->source);
   for (i=0; i<f->sizek; i++) {  /* mark literal strings */
     if (ttisstring(f->k+i))
       stringmark(tsvalue(f->k+i));
   }
-  for (i=0; i<f->sizeupvalues; i++)  /* mark upvalue names */
-    stringmark(f->upvalues[i]);
-  for (i=0; i<f->sizep; i++)  /* mark nested protos */
-    markvalue(st, f->p[i]);
-  for (i=0; i<f->sizelocvars; i++)  /* mark local-variable names */
-    stringmark(f->locvars[i].varname);
-  lua_assert(luaG_checkcode(f));
+  for (i=0; i<f->sizeupvalues; i++) {  /* mark upvalue names */
+    if (f->upvalues[i])
+      stringmark(f->upvalues[i]);
+  }
+  for (i=0; i<f->sizep; i++) {  /* mark nested protos */
+    if (f->p[i])
+      markvalue(st, f->p[i]);
+  }
+  for (i=0; i<f->sizelocvars; i++) {  /* mark local-variable names */
+    if (f->locvars[i].varname)
+      stringmark(f->locvars[i].varname);
+  }
 }
 
 
