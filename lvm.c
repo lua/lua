@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.25 1998/03/09 21:49:52 roberto Exp roberto $
+** $Id: lvm.c,v 1.26 1998/03/11 13:59:50 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -680,13 +680,14 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base)
         if (ttype(--S->top) == LUA_T_NIL) pc -= aux;
         break;
 
-      case CLOSURE:
-        aux = *pc++; goto closure;
+      case CLOSUREW:
+        aux = next_word(pc); goto closure;
 
-      case CLOSURE0: case CLOSURE1:
-        aux -= CLOSURE0;
+      case CLOSURE:
+        aux = *pc++;
       closure:
-        luaV_closure(aux);
+        *S->top++ = consts[aux];
+        luaV_closure(*pc++);
         luaC_checkGC();
         break;
 
