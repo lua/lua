@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.136 2002/05/08 17:34:23 roberto Exp roberto $
+** $Id: lgc.c,v 1.137 2002/06/20 20:41:46 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -364,8 +364,6 @@ static void collectudata (lua_State *L) {
     }
     else {
       *p = curr->uv.next;
-      lua_assert(isfinalized(curr) ||
-                 fasttm(L, curr->uv.metatable, TM_GC) == NULL);
       luaM_free(L, curr, sizeudata(curr->uv.len & (~(size_t)3)));
     }
   }
