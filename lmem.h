@@ -19,7 +19,7 @@ void *luaM_growaux (lua_State *L, void *block, int *size, int size_elem,
                     int limit, const l_char *errormsg);
 
 #define luaM_free(L, b, s)	luaM_realloc(L, (b), (s), 0)
-#define luaM_freelem(L, b, t)	luaM_realloc(L, (b), sizeof(t), 0)
+#define luaM_freelem(L, b)	luaM_realloc(L, (b), sizeof(*(b)), 0)
 #define luaM_freearray(L, b, n, t)	luaM_realloc(L, (b), \
                                       cast(lu_mem, n)*cast(lu_mem, sizeof(t)), 0)
 

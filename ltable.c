@@ -127,7 +127,7 @@ Hash *luaH_new (lua_State *L, int size) {
 
 void luaH_free (lua_State *L, Hash *t) {
   luaM_freearray(L, t->node, t->size, Node);
-  luaM_freelem(L, t, Hash);
+  luaM_freelem(L, t);
 }
 
 
