@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.16 2000/03/30 20:55:50 roberto Exp roberto $
+** $Id: ldebug.c,v 1.17 2000/05/08 19:32:53 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -197,7 +197,7 @@ int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
       case 'f':
         setnormalized(L->top, func);
         incr_top;
-        ar->func = luaA_putObjectOnTop(L);
+        ar->func = lua_pop(L);
         break;
       default: return 0;  /* invalid option */
     }

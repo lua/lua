@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.78 2000/04/17 19:23:12 roberto Exp roberto $
+** $Id: lapi.c,v 1.79 2000/05/08 19:32:53 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -44,13 +44,6 @@ lua_Object luaA_putluaObject (lua_State *L, const TObject *o) {
 }
 
 
-lua_Object luaA_putObjectOnTop (lua_State *L) {
-  luaD_openstack(L, L->Cstack.base);
-  *L->Cstack.base++ = *(--L->top);
-  return L->Cstack.base-1;
-}
-
-
 static void top2LC (lua_State *L, int n) {
   /* Put the `n' elements on the top as the Lua2C contents */
   L->Cstack.base = L->top;  /* new base */
@@ -61,7 +54,11 @@ static void top2LC (lua_State *L, int n) {
 
 lua_Object lua_pop (lua_State *L) {
   luaA_checkCargs(L, 1);
-  return luaA_putObjectOnTop(L);
+  if (L->Cstack.base != L->top-1) {
+    luaD_openstack(L, L->Cstack.base);
+    *L->Cstack.base = *(--L->top);
+  }
+  return L->Cstack.base++;
 }
 
 
@@ -112,14 +109,14 @@ lua_Object lua_settagmethod (lua_State *L, int tag, const char *event) {
   if ((ttype(method) != TAG_NIL) && (*lua_type(L, method) != 'f'))
     lua_error(L, "Lua API error - tag method must be a function or nil");
   luaT_settagmethod(L, tag, event, method);
-  return luaA_putObjectOnTop(L);
+  return lua_pop(L);
 }
 
 
 lua_Object lua_gettable (lua_State *L) {
   luaA_checkCargs(L, 2);
   luaV_gettable(L, L->top--);
-  return luaA_putObjectOnTop(L);
+  return lua_pop(L);
 }
 
 
@@ -163,7 +160,7 @@ lua_Object lua_createtable (lua_State *L) {
 
 lua_Object lua_getglobal (lua_State *L, const char *name) {
   luaV_getglobal(L, luaS_new(L, name), L->top++);
-  return luaA_putObjectOnTop(L);
+  return lua_pop(L);
 }
 
 
