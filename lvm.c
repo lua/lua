@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.27 2005/03/07 16:59:01 roberto Exp roberto $
+** $Id: lvm.c,v 2.28 2005/03/07 18:27:34 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -334,12 +334,14 @@ static StkId Arith (lua_State *L, StkId ra, const TValue *rb,
   L->ci->savedpc = pc;
   if ((b = luaV_tonumber(rb, &tempb)) != NULL &&
       (c = luaV_tonumber(rc, &tempc)) != NULL) {
+    lua_Number nb = nvalue(b), nc = nvalue(c);
     switch (op) {
-      case TM_ADD: setnvalue(ra, num_add(nvalue(b), nvalue(c))); break;
-      case TM_SUB: setnvalue(ra, num_sub(nvalue(b), nvalue(c))); break;
-      case TM_MUL: setnvalue(ra, num_mul(nvalue(b), nvalue(c))); break;
-      case TM_DIV: setnvalue(ra, num_div(nvalue(b), nvalue(c))); break;
-      case TM_POW: setnvalue(ra, num_pow(nvalue(b), nvalue(c))); break;
+      case TM_ADD: setnvalue(ra, num_add(nb, nc)); break;
+      case TM_SUB: setnvalue(ra, num_sub(nb, nc)); break;
+      case TM_MUL: setnvalue(ra, num_mul(nb, nc)); break;
+      case TM_DIV: setnvalue(ra, num_div(nb, nc)); break;
+      case TM_MOD: setnvalue(ra, num_mod(nb, nc)); break;
+      case TM_POW: setnvalue(ra, num_pow(nb, nc)); break;
       default: lua_assert(0); break;
     }
   }
@@ -475,7 +477,8 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         if (ttisnumber(rb) && ttisnumber(rc)) {
-          setnvalue(ra, num_add(nvalue(rb), nvalue(rc)));
+          lua_Number nb = nvalue(rb), nc = nvalue(rc);
+          setnvalue(ra, num_add(nb, nc));
         }
         else
           base = Arith(L, ra, rb, rc, TM_ADD, pc);  /***/
@@ -485,7 +488,8 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         if (ttisnumber(rb) && ttisnumber(rc)) {
-          setnvalue(ra, num_sub(nvalue(rb), nvalue(rc)));
+          lua_Number nb = nvalue(rb), nc = nvalue(rc);
+          setnvalue(ra, num_sub(nb, nc));
         }
         else
           base = Arith(L, ra, rb, rc, TM_SUB, pc);  /***/
@@ -495,7 +499,8 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         if (ttisnumber(rb) && ttisnumber(rc)) {
-          setnvalue(ra, num_mul(nvalue(rb), nvalue(rc)));
+          lua_Number nb = nvalue(rb), nc = nvalue(rc);
+          setnvalue(ra, num_mul(nb, nc));
         }
         else
           base = Arith(L, ra, rb, rc, TM_MUL, pc);  /***/
@@ -505,17 +510,30 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         if (ttisnumber(rb) && ttisnumber(rc)) {
-          setnvalue(ra, num_div(nvalue(rb), nvalue(rc)));
+          lua_Number nb = nvalue(rb), nc = nvalue(rc);
+          setnvalue(ra, num_div(nb, nc));
         }
         else
           base = Arith(L, ra, rb, rc, TM_DIV, pc);  /***/
+        continue;
+      }
+      case OP_MOD: {
+        TValue *rb = RKB(i);
+        TValue *rc = RKC(i);
+        if (ttisnumber(rb) && ttisnumber(rc)) {
+          lua_Number nb = nvalue(rb), nc = nvalue(rc);
+          setnvalue(ra, num_mod(nb, nc));
+        }
+        else
+          base = Arith(L, ra, rb, rc, TM_MOD, pc);  /***/
         continue;
       }
       case OP_POW: {
         TValue *rb = RKB(i);
         TValue *rc = RKC(i);
         if (ttisnumber(rb) && ttisnumber(rc)) {
-          setnvalue(ra, num_pow(nvalue(rb), nvalue(rc)));
+          lua_Number nb = nvalue(rb), nc = nvalue(rc);
+          setnvalue(ra, num_pow(nb, nc));
         }
         else
           base = Arith(L, ra, rb, rc, TM_POW, pc);  /***/
@@ -525,7 +543,8 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         const TValue *rb = RB(i);
         TValue temp;
         if (tonumber(rb, &temp)) {
-          setnvalue(ra, num_unm(nvalue(rb)));
+          lua_Number nb = nvalue(rb);
+          setnvalue(ra, num_unm(nb));
         }
         else {
           setnilvalue(&temp);

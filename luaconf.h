@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.30 2005/02/28 15:59:11 roberto Exp roberto $
+** $Id: luaconf.h,v 1.31 2005/03/08 13:27:36 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -261,6 +261,7 @@ __inline int l_lrint (double flt)
 #define num_lt(a,b)	((a)<(b))
 #define num_le(a,b)	((a)<=(b))
 #include <math.h>
+#define num_mod(a,b)	((a) - floor((a)/(b))*(b))
 #define num_pow(a,b)	pow(a,b)
 
 
