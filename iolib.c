@@ -1,16 +1,15 @@
 /*
 ** iolib.c
 ** Input/output library to LUA
-**
-** Waldemar Celes Filho
-** TeCGraf - PUC-Rio
-** 19 May 93
 */
+
+char *rcs_iolib="$Id: $";
 
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <sys/stat.h>
 #ifdef __GNUC__
 #include <floatingpoint.h>
 #endif
@@ -110,6 +109,58 @@ static void io_writeto (void)
 
 
 /*
+** Open a file to write appended.
+** LUA interface:
+**			status = appendto (filename)
+** where:
+**			status = 2 -> success (already exist)
+**			status = 1 -> success (new file)
+**			status = 0 -> error
+*/
+static void io_appendto (void)
+{
+ lua_Object o = lua_getparam (1);
+ if (o == NULL)			/* restore standart output */
+ {
+  if (out != stdout)
+  {
+   fclose (out);
+   out = stdout;
+  }
+  lua_pushnumber (1);
+ }
+ else
+ {
+  if (!lua_isstring (o))
+  {
+   lua_error ("incorrect argument to function 'appendto`");
+   lua_pushnumber (0);
+  }
+  else
+  {
+   int r;
+   FILE *fp;
+   struct stat st;
+   if (stat(lua_getstring(o), &st) == -1) r = 1;
+   else                                   r = 2;
+   fp = fopen (lua_getstring(o),"a");
+   if (fp == NULL)
+   {
+    lua_pushnumber (0);
+   }
+   else
+   {
+    if (out != stdout) fclose (out);
+    out = fp;
+    lua_pushnumber (r);
+   }
+  }
+ }
+}
+
+
+
+/*
 ** Read a variable. On error put nil on stack.
 ** LUA interface:
 **			variable = read ([format])
@@ -183,7 +234,16 @@ static void io_read (void)
    char f[80];
    char s[256];
    sprintf (f, "%%%ds", m);
-   fscanf (in, f, s);
+   if (fgets (s, m, in) == NULL)
+   {
+    lua_pushnil();
+    return;
+   }
+   else
+   {
+    if (s[strlen(s)-1] == '\n')
+     s[strlen(s)-1] = 0;
+   }
    switch (tolower(t))
    {
     case 'i':
@@ -394,6 +454,7 @@ void iolib_open (void)
 {
  lua_register ("readfrom", io_readfrom);
  lua_register ("writeto",  io_writeto);
+ lua_register ("appendto", io_appendto);
  lua_register ("read",     io_read);
  lua_register ("write",    io_write);
  lua_register ("execute",  io_execute);
