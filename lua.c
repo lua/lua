@@ -3,9 +3,10 @@
 ** Linguagem para Usuarios de Aplicacao
 */
 
-char *rcs_lua="$Id: lua.c,v 1.2 1994/11/28 17:12:49 roberto Exp celes $";
+char *rcs_lua="$Id: lua.c,v 1.3 1994/12/14 19:58:20 celes Exp $";
 
 #include <stdio.h>
+#include <string.h>
 
 #include "lua.h"
 #include "lualib.h"
