@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.10 1994/12/20 21:20:36 roberto Exp $";
+char *rcs_fallback="$Id: fallback.c,v 1.11 1995/02/06 19:34:03 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -11,7 +11,6 @@ char *rcs_fallback="$Id: fallback.c,v 1.10 1994/12/20 21:20:36 roberto Exp $";
 #include "mem.h"
 #include "fallback.h"
 #include "opcode.h"
-#include "inout.h"
 #include "lua.h"
 
 
@@ -84,31 +83,31 @@ static void indexFB (void)
 
 static void gettableFB (void)
 {
-  lua_reportbug("indexed expression not a table");
+  lua_error("indexed expression not a table");
 }
  
 
 static void arithFB (void)
 {
-  lua_reportbug("unexpected type at conversion to number");
+  lua_error("unexpected type at conversion to number");
 }
 
 static void concatFB (void)
 {
-  lua_reportbug("unexpected type at conversion to string");
+  lua_error("unexpected type at conversion to string");
 }
 
 
 static void orderFB (void)
 {
-  lua_reportbug("unexpected type at comparison");
+  lua_error("unexpected type at comparison");
 }
 
 static void GDFB (void) { }
 
 static void funcFB (void)
 {
-  lua_reportbug("call expression not a function");
+  lua_error("call expression not a function");
 }
 
 

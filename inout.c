@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.17 1995/03/17 20:27:11 celes Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.18 1995/03/17 20:42:20 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,11 +26,7 @@ Word lua_debugline = 0;
 
 
 /* Internal variables */
- 
-#ifndef MAXFUNCSTACK
-#define MAXFUNCSTACK 100
-#endif
- 
+
 typedef struct FuncStackNode {
   struct FuncStackNode *next;
   char *file;
@@ -124,7 +120,7 @@ void lua_pushfunction (char *file, Word function)
  FuncStackNode *newNode;
  if (nfuncstack++ >= MAXFUNCSTACK)
  {
-  lua_reportbug("function stack overflow");
+  lua_error("function stack overflow");
  }
  newNode = new(FuncStackNode);
  newNode->function = function;
@@ -149,12 +145,10 @@ void lua_popfunction (void)
 }
 
 /*
-** Report bug building a message and sending it to lua_error function.
+** Report bug building a message.
 */
-void lua_reportbug (char *s)
+void luaI_reportbug (char *msg, int size)
 {
- char msg[MAXFUNCSTACK*80];
- strcpy (msg, s);
  if (lua_debugline != 0)
  {
   if (funcStack)
@@ -179,7 +173,6 @@ void lua_reportbug (char *s)
          lua_debugline, lua_filename());
   }
  }
- lua_error (msg);
 }
 
  
@@ -292,6 +285,6 @@ void luaI_error (void)
 {
   char *s = lua_getstring(lua_getparam(1));
   if (s == NULL) s = "(no message)";
-  lua_reportbug(s);
+  lua_error(s);
 }
 

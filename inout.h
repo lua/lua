@@ -1,5 +1,5 @@
 /*
-** $Id: inout.h,v 1.6 1994/11/21 21:41:09 roberto Stab roberto $
+** $Id: inout.h,v 1.7 1994/12/20 21:20:36 roberto Exp roberto $
 */
 
 
@@ -7,6 +7,10 @@
 #define inout_h
 
 #include "types.h"
+
+#ifndef MAXFUNCSTACK
+#define MAXFUNCSTACK 100
+#endif
 
 extern Word lua_linenumber;
 extern Bool lua_debug;
@@ -18,7 +22,7 @@ char *lua_openstring   (char *s);
 void lua_closestring  (void);
 void lua_pushfunction (char *file, Word function);
 void lua_popfunction  (void);
-void lua_reportbug    (char *s);
+void luaI_reportbug (char *s, int size);
 
 void    lua_internaldofile (void);
 void    lua_internaldostring (void);

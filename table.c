@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.27 1995/01/13 22:11:12 roberto Exp celes $";
+char *rcs_table="$Id: table.c,v 2.28 1995/01/18 20:15:54 celes Exp roberto $";
 
 #include <string.h>
 
@@ -11,8 +11,8 @@ char *rcs_table="$Id: table.c,v 2.27 1995/01/13 22:11:12 roberto Exp celes $";
 #include "opcode.h"
 #include "tree.h"
 #include "hash.h"
-#include "inout.h"
 #include "table.h"
+#include "inout.h"
 #include "lua.h"
 #include "fallback.h"
 
@@ -228,14 +228,14 @@ static void lua_nextvar (void)
  TreeNode *next;
  lua_Object o = lua_getparam(1);
  if (o == LUA_NOOBJECT)
-   lua_reportbug("too few arguments to function `nextvar'");
+   lua_error("too few arguments to function `nextvar'");
  if (lua_getparam(2) != LUA_NOOBJECT)
-   lua_reportbug("too many arguments to function `nextvar'");
+   lua_error("too many arguments to function `nextvar'");
  if (lua_isnil(o))
    varname = NULL;
  else if (!lua_isstring(o))
  {
-   lua_reportbug("incorrect argument to function `nextvar'"); 
+   lua_error("incorrect argument to function `nextvar'"); 
    return;  /* to avoid warnings */
  }
  else
@@ -262,7 +262,7 @@ static void setglobal (void)
   lua_Object name = lua_getparam(1);
   lua_Object value = lua_getparam(2);
   if (!lua_isstring(name))
-    lua_reportbug("incorrect argument to function `setglobal'");
+    lua_error("incorrect argument to function `setglobal'");
   lua_pushobject(value);
   lua_storeglobal(lua_getstring(name));
 }
@@ -272,6 +272,6 @@ static void getglobal (void)
 {
   lua_Object name = lua_getparam(1);
   if (!lua_isstring(name))
-    lua_reportbug("incorrect argument to function `getglobal'");
+    lua_error("incorrect argument to function `getglobal'");
   lua_pushobject(lua_getglobal(lua_getstring(name)));
 }

@@ -3,14 +3,13 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.23 1995/01/12 14:19:04 roberto Exp $";
+char *rcs_hash="$Id: hash.c,v 2.24 1995/02/06 19:34:03 roberto Exp roberto $";
 
 #include <string.h>
 
 #include "mem.h"
 #include "opcode.h"
 #include "hash.h"
-#include "inout.h"
 #include "table.h"
 #include "lua.h"
 
@@ -54,7 +53,7 @@ static Word hashindex (Hash *t, Object *ref)		/* hash function */
  switch (tag(ref))
  {
   case LUA_T_NIL:
-   lua_reportbug ("unexpected type to index table");
+   lua_error ("unexpected type to index table");
    return -1;  /* UNREACHEABLE */
   case LUA_T_NUMBER:
    return (((Word)nvalue(ref))%nhash(t));
