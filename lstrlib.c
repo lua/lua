@@ -154,12 +154,12 @@ static int str_char (lua_State *L) {
 typedef struct MatchState {
   const char *src_init;  /* init of source string */
   const char *src_end;  /* end (`\0') of source string */
+  lua_State *L;
   int level;  /* total number of captures (finished or unfinished) */
   struct {
     const char *init;
     sint32 len;
   } capture[MAX_CAPTURES];
-  lua_State *L;
 } MatchState;
 
 
@@ -449,7 +449,7 @@ static int str_find (lua_State *L) {
   const char *p = luaL_check_lstr(L, 2, &l2);
   sint32 init = posrelat(luaL_opt_long(L, 3, 1), l1) - 1;
   luaL_arg_check(L, 0 <= init && (size_t)(init) <= l1, 3, "out of range");
-  if (lua_istrue(L, 4) ||  /* explicit request? */
+  if (lua_toboolean(L, 4) ||  /* explicit request? */
       strpbrk(p, SPECIALS) == NULL) {  /* or no special characters? */
     /* do a plain search */
     const char *s2 = lmemfind(s+init, l1-init, p, l2);

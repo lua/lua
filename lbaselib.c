@@ -264,7 +264,7 @@ static int luaB_loadfile (lua_State *L) {
 
 static int luaB_assert (lua_State *L) {
   luaL_check_any(L, 1);
-  if (!lua_istrue(L, 1))
+  if (!lua_toboolean(L, 1))
     luaL_verror(L, "assertion failed!  %.90s", luaL_opt_string(L, 2, ""));
   lua_settop(L, 1);
   return 1;
@@ -569,7 +569,7 @@ static int sort_comp (lua_State *L, int a, int b) {
     lua_pushvalue(L, a-1);  /* -1 to compensate function */
     lua_pushvalue(L, b-2);  /* -2 to compensate function and `a' */
     lua_rawcall(L, 2, 1);
-    res = lua_istrue(L, -1);
+    res = lua_toboolean(L, -1);
     lua_pop(L, 1);
     return res;
   }

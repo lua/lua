@@ -117,7 +117,6 @@ LUA_API int   lua_stackspace (lua_State *L);
 */
 
 LUA_API int             lua_isnumber (lua_State *L, int index);
-LUA_API int             lua_istrue (lua_State *L, int index);
 LUA_API int             lua_isstring (lua_State *L, int index);
 LUA_API int             lua_iscfunction (lua_State *L, int index);
 LUA_API int             lua_type (lua_State *L, int index);
@@ -217,7 +216,11 @@ LUA_API void  lua_newuserdatabox (lua_State *L, void *u);
 
 #define lua_pop(L,n)		lua_settop(L, -(n)-1)
 
-#define lua_register(L,n,f)	(lua_pushcfunction(L, f), lua_setglobal(L, n))
+#define lua_register(L,n,f) \
+	(lua_pushstring(L, n), \
+	 lua_pushcfunction(L, f), \
+	 lua_settable(L, LUA_GLOBALSINDEX))
+
 #define lua_pushcfunction(L,f)	lua_pushcclosure(L, f, 0)
 
 #define lua_isfunction(L,n)	(lua_type(L,n) == LUA_TFUNCTION)

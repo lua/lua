@@ -185,12 +185,6 @@ LUA_API int lua_isnumber (lua_State *L, int index) {
 }
 
 
-LUA_API int lua_istrue (lua_State *L, int index) {
-  TObject *o = luaA_indexAcceptable(L, index);
-  return (o != NULL && !l_isfalse(o));
-}
-
-
 LUA_API int lua_isstring (lua_State *L, int index) {
   int t = lua_type(L, index);
   return (t == LUA_TSTRING || t == LUA_TNUMBER);
@@ -231,10 +225,7 @@ LUA_API lua_Number lua_tonumber (lua_State *L, int index) {
 
 LUA_API int lua_toboolean (lua_State *L, int index) {
   const TObject *o = luaA_indexAcceptable(L, index);
-  if (o != NULL && (ttype(o) == LUA_TBOOLEAN))
-    return bvalue(o);
-  else
-    return -1;
+  return (o != NULL) && !l_isfalse(o);
 }
 
 
