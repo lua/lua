@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.207 2003/02/28 17:19:47 roberto Exp roberto $
+** $Id: lparser.c,v 1.208 2003/04/03 13:35:34 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1027,30 +1027,34 @@ static int exp1 (LexState *ls) {
 
 
 static void forbody (LexState *ls, int base, int line, int nvars, int isnum) {
+  /* forbody -> DO block */
   BlockCnt bl;
   FuncState *fs = ls->fs;
   int prep, endfor;
-  adjustlocalvars(ls, nvars);  /* scope for all variables */
+  adjustlocalvars(ls, 3);  /* control variables */
   check(ls, TK_DO);
-  enterblock(fs, &bl, 1);  /* loop block */
-  prep = luaK_getlabel(fs);
+  prep = luaK_codeAsBx(fs, (isnum ? OP_FORPREP : OP_TFORPREP), base, NO_JUMP);
+  enterblock(fs, &bl, 0);  /* scope for declared variables */
+  adjustlocalvars(ls, nvars);
+  luaK_reserveregs(fs, nvars);
   block(ls);
-  luaK_patchtohere(fs, prep-1);
+  leaveblock(fs);  /* end of scope for declared variables */
+  luaK_patchtohere(fs, prep);
   endfor = (isnum) ? luaK_codeAsBx(fs, OP_FORLOOP, base, NO_JUMP) :
-                     luaK_codeABC(fs, OP_TFORLOOP, base, 0, nvars - 3);
+                     luaK_codeABC(fs, OP_TFORLOOP, base, 0, nvars);
   luaK_fixline(fs, line);  /* pretend that `OP_FOR' starts the loop */
-  luaK_patchlist(fs, (isnum) ? endfor : luaK_jump(fs), prep);
-  leaveblock(fs);
+  luaK_patchlist(fs, (isnum ? endfor : luaK_jump(fs)), prep + 1);
 }
 
 
 static void fornum (LexState *ls, TString *varname, int line) {
-  /* fornum -> NAME = exp1,exp1[,exp1] DO body */
+  /* fornum -> NAME = exp1,exp1[,exp1] forbody */
   FuncState *fs = ls->fs;
   int base = fs->freereg;
-  new_localvar(ls, varname, 0);
+  new_localvarstr(ls, "(for index)", 0);
   new_localvarstr(ls, "(for limit)", 1);
   new_localvarstr(ls, "(for step)", 2);
+  new_localvar(ls, varname, 3);
   check(ls, '=');
   exp1(ls);  /* initial value */
   check(ls, ',');
@@ -1061,39 +1065,39 @@ static void fornum (LexState *ls, TString *varname, int line) {
     luaK_codeABx(fs, OP_LOADK, fs->freereg, luaK_numberK(fs, 1));
     luaK_reserveregs(fs, 1);
   }
-  luaK_codeABC(fs, OP_SUB, fs->freereg - 3, fs->freereg - 3, fs->freereg - 1);
-  luaK_jump(fs);
-  forbody(ls, base, line, 3, 1);
+  forbody(ls, base, line, 1, 1);
 }
 
 
 static void forlist (LexState *ls, TString *indexname) {
-  /* forlist -> NAME {,NAME} IN explist1 DO body */
+  /* forlist -> NAME {,NAME} IN explist1 forbody */
   FuncState *fs = ls->fs;
   expdesc e;
   int nvars = 0;
   int line;
   int base = fs->freereg;
+  /* create control variables */
   new_localvarstr(ls, "(for generator)", nvars++);
   new_localvarstr(ls, "(for state)", nvars++);
+  new_localvarstr(ls, "(for control)", nvars++);
+  /* create declared variables */
   new_localvar(ls, indexname, nvars++);
   while (testnext(ls, ','))
     new_localvar(ls, str_checkname(ls), nvars++);
   check(ls, TK_IN);
   line = ls->linenumber;
-  adjust_assign(ls, nvars, explist1(ls, &e), &e);
+  adjust_assign(ls, 3, explist1(ls, &e), &e);
   luaK_checkstack(fs, 3);  /* extra space to call generator */
-  luaK_codeAsBx(fs, OP_TFORPREP, base, NO_JUMP);
-  forbody(ls, base, line, nvars, 0);
+  forbody(ls, base, line, nvars - 3, 0);
 }
 
 
 static void forstat (LexState *ls, int line) {
-  /* forstat -> fornum | forlist */
+  /* forstat -> FOR (fornum | forlist) END */
   FuncState *fs = ls->fs;
   TString *varname;
   BlockCnt bl;
-  enterblock(fs, &bl, 0);  /* block to control variable scope */
+  enterblock(fs, &bl, 1);  /* scope for loop and control variables */
   next(ls);  /* skip `for' */
   varname = str_checkname(ls);  /* first variable name */
   switch (ls->t.token) {
@@ -1102,7 +1106,7 @@ static void forstat (LexState *ls, int line) {
     default: luaX_syntaxerror(ls, "`=' or `in' expected");
   }
   check_match(ls, TK_END, TK_FOR, line);
-  leaveblock(fs);
+  leaveblock(fs);  /* loop scope (`break' jumps to this point) */
 }
 
 

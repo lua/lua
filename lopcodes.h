@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.101 2002/08/20 20:03:05 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.102 2002/08/21 18:56:09 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -172,6 +172,7 @@ OP_TAILCALL,/*	A B C	return R(A)(R(A+1), ... ,R(A+B-1))		*/
 OP_RETURN,/*	A B	return R(A), ... ,R(A+B-2)	(see note)	*/
 
 OP_FORLOOP,/*	A sBx	R(A)+=R(A+2); if R(A) <?= R(A+1) then PC+= sBx	*/
+OP_FORPREP,/*	A sBx	R(A)-=R(A+2); PC += sBx				*/
 
 OP_TFORLOOP,/*	A C	R(A+2), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2)); 
                         if R(A+2) ~= nil then pc++			*/
@@ -214,7 +215,6 @@ enum OpModeMask {
   OpModesetA,           /* instruction set register A */
   OpModeK,              /* Bx is a constant */
   OpModeT		/* operator is a test */
-  
 };
 
 

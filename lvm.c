@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.284 2003/04/03 13:35:34 roberto Exp roberto $
+** $Id: lvm.c,v 1.285 2003/05/05 18:39:57 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -639,43 +639,45 @@ StkId luaV_execute (lua_State *L) {
         }
       }
       case OP_FORLOOP: {
-        lua_Number step, idx, limit;
-        const TObject *plimit = ra+1;
-        const TObject *pstep = ra+2;
-        if (!ttisnumber(ra))
-          luaG_runerror(L, "`for' initial value must be a number");
-        if (!tonumber(plimit, ra+1))
-          luaG_runerror(L, "`for' limit must be a number");
-        if (!tonumber(pstep, ra+2))
-          luaG_runerror(L, "`for' step must be a number");
-        step = nvalue(pstep);
-        idx = nvalue(ra) + step;  /* increment index */
-        limit = nvalue(plimit);
+        lua_Number step = nvalue(ra+2);
+        lua_Number idx = nvalue(ra) + step;  /* increment index */
+        lua_Number limit = nvalue(ra+1);
         if (step > 0 ? idx <= limit : idx >= limit) {
           dojump(pc, GETARG_sBx(i));  /* jump back */
-          chgnvalue(ra, idx);  /* update index */
+          setnvalue(ra, idx);  /* update internal index... */
+          setnvalue(ra+3, idx);  /* ...and external index */
         }
         break;
       }
+      case OP_FORPREP: {
+        const TObject *init = ra;
+        const TObject *plimit = ra+1;
+        const TObject *pstep = ra+2;
+        if (!tonumber(init, ra))
+          luaG_runerror(L, "`for' initial value must be a number");
+        else if (!tonumber(plimit, ra+1))
+          luaG_runerror(L, "`for' limit must be a number");
+        else if (!tonumber(pstep, ra+2))
+          luaG_runerror(L, "`for' step must be a number");
+        setnvalue(ra, nvalue(ra) - nvalue(pstep));
+        dojump(pc, GETARG_sBx(i));
+        break;
+      }
       case OP_TFORLOOP: {
-        int nvar = GETARG_C(i) + 1;
-        StkId cb = ra + nvar + 2;  /* call base */
-        setobjs2s(cb, ra);
-        setobjs2s(cb+1, ra+1);
+        StkId cb = ra + 3;  /* call base */
         setobjs2s(cb+2, ra+2);
+        setobjs2s(cb+1, ra+1);
+        setobjs2s(cb, ra);
         L->top = cb+3;  /* func. + 2 args (state and index) */
-        luaD_call(L, cb, nvar);
+        luaD_call(L, cb, GETARG_C(i));
         L->top = L->ci->top;
-        ra = XRA(i) + 2;  /* final position of first result */
-        cb = ra + nvar;
-        do {  /* move results to proper positions */
-          nvar--;
-          setobjs2s(ra+nvar, cb+nvar);
-        } while (nvar > 0);
-        if (ttisnil(ra))  /* break loop? */
+        cb = XRA(i) + 3;  /* previous call may change the stack */
+        if (ttisnil(cb))  /* break loop? */
           pc++;  /* skip jump (break loop) */
-        else
+        else {
+          setobjs2s(cb-1, cb);  /* save control variable */
           dojump(pc, GETARG_sBx(*pc) + 1);  /* jump back */
+        }
         break;
       }
       case OP_TFORPREP: {  /* for compatibility only */
