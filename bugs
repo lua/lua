@@ -633,3 +633,39 @@ patch = [[
 ]],
 
 }
+
+
+
+-----------------------------------------------------------------
+-- Lua 5.0.2
+
+Bug{
+what = [[string concatenation may cause arithmetic overflow, leading
+to a buffer overflow]],
+
+report = [[Rici Lake, 20/05/2004]],
+
+example = [[
+longs = string.rep("\0", 2^25)
+function catter(i)
+    return assert(loadstring(
+      string.format("return function(a) return a%s end",
+                     string.rep("..a", i-1))))()
+end
+rep129 = catter(129)
+rep129(longs)
+]],
+
+patch = [[
+* lvm.c:
+329c329,331
+<         tl += tsvalue(top-n-1)->tsv.len;
+---
+>         size_t l = tsvalue(top-n-1)->tsv.len;
+>         if (l >= MAX_SIZET - tl) luaG_runerror(L, "string length overflow");
+>         tl += l;
+332d333
+<       if (tl > MAX_SIZET) luaG_runerror(L, "string size overflow");
+]]
+}
+
