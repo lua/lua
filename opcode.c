@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.73 1996/09/02 21:57:51 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.74 1996/09/20 12:51:16 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -481,8 +481,7 @@ int luaI_dorun (TFunc *tf)
   adjustC(1);  /* one slot for the pseudo-function */
   stack[CLS_current.base].tag = LUA_T_FUNCTION;
   stack[CLS_current.base].value.tf = tf;
-  status = do_protectedrun(0);
-  adjustC(0);
+  status = do_protectedrun(MULT_RET);
   return status;
 }
 

@@ -3,7 +3,7 @@
 ** Linguagem para Usuarios de Aplicacao
 */
 
-char *rcs_lua="$Id: lua.c,v 1.12 1996/07/05 20:55:43 roberto Exp roberto $";
+char *rcs_lua="$Id: lua.c,v 1.13 1996/07/06 20:20:35 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -21,11 +21,13 @@ char *rcs_lua="$Id: lua.c,v 1.12 1996/07/05 20:55:43 roberto Exp roberto $";
 
 static void manual_input (void)
 {
-  if (isatty(0))
-  {
-   char buffer[250];
-   while (fgets(buffer, sizeof(buffer), stdin) != 0)
-     lua_dostring(buffer);
+  if (isatty(0)) {
+    char buffer[250];
+    while (fgets(buffer, sizeof(buffer), stdin) != 0) {
+      lua_beginblock();
+      lua_dostring(buffer);
+      lua_endblock();
+    }
   }
   else
     lua_dofile(NULL);  /* executes stdin as a file */

@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.39 1996/09/09 14:11:11 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.40 1996/09/11 21:53:02 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -111,15 +111,25 @@ static void check_arg (int cond, char *func)
   }
 }
 
+
+static int passresults (void)
+{
+  int arg = 0;
+  lua_Object obj;
+  while ((obj = lua_getresult(++arg)) != LUA_NOOBJECT)
+    lua_pushobject(obj);
+  return arg-1;
+}
  
 /*
 ** Internal function: do a string
 */
 void lua_internaldostring (void)
 {
- lua_Object obj = lua_getparam (1);
- if (lua_isstring(obj) && !lua_dostring(lua_getstring(obj)))
-  lua_pushnumber(1);
+  lua_Object obj = lua_getparam (1);
+  if (lua_isstring(obj) && lua_dostring(lua_getstring(obj)) == 0)
+    if (passresults() == 0)
+      lua_pushuserdata(NULL);  /* at least one result to signal no errors */
 }
 
 /*
@@ -134,8 +144,9 @@ void lua_internaldofile (void)
  else if (obj != LUA_NOOBJECT)
    lua_error("invalid argument to function `dofile'");
  /* else fname = NULL */
- if (!lua_dofile(fname))
-  lua_pushnumber(1);
+ if (lua_dofile(fname) == 0)
+    if (passresults() == 0)
+      lua_pushuserdata(NULL);  /* at least one result to signal no errors */
 }
  
 
