@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.13 1998/06/19 18:52:27 roberto Exp roberto $
+## $Id: makefile,v 1.14 1999/01/08 16:47:44 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -28,6 +28,10 @@ CONFIG = -DPOPEN -D_POSIX_SOURCE
 CC = gcc
 CWARNS = -Wall -Wmissing-prototypes -Wshadow -pedantic -Wpointer-arith -Wcast-align -Waggregate-return
 CFLAGS = $(CONFIG) $(CWARNS) -ansi -O2
+
+
+# To make early versions
+CO_OPTIONS =
 
 
 AR = ar
@@ -82,14 +86,14 @@ clear	:
 	rcsclean
 	rm -f *.o
 	rm -f
-	co lua.h lualib.h luadebug.h
+	co $(CO_OPTIONS) lua.h lualib.h luadebug.h
 
 
 %.h : RCS/%.h,v
-	co $@
+	co $(CO_OPTIONS) $@
 
 %.c : RCS/%.c,v
-	co $@
+	co $(CO_OPTIONS) $@
 
 
 lapi.o: lapi.c lapi.h lua.h lobject.h lauxlib.h ldo.h lstate.h lfunc.h \
