@@ -137,6 +137,15 @@ LUA_API void lua_insert (lua_State *L, int index) {
 }
 
 
+LUA_API void lua_replace (lua_State *L, int index) {
+  lua_lock(L);
+  api_checknelems(L, 1);
+  setobj(luaA_index(L, index), L->top - 1);
+  L->top--;
+  lua_unlock(L);
+}
+
+
 LUA_API void lua_pushvalue (lua_State *L, int index) {
   lua_lock(L);
   setobj(L->top, luaA_index(L, index));
@@ -172,7 +181,7 @@ LUA_API int lua_iscfunction (lua_State *L, int index) {
 LUA_API int lua_isnumber (lua_State *L, int index) {
   TObject n;
   TObject *o = luaA_indexAcceptable(L, index);
-  return (o != NULL && (ttype(o) == LUA_TNUMBER || luaV_tonumber(o, &n)));
+  return (o != NULL && luaV_tonumber(o, &n));
 }
 
 
@@ -213,8 +222,7 @@ LUA_API int lua_lessthan (lua_State *L, int index1, int index2) {
 LUA_API lua_Number lua_tonumber (lua_State *L, int index) {
   TObject n;
   const TObject *o = luaA_indexAcceptable(L, index);
-  if (o != NULL &&
-      (ttype(o) == LUA_TNUMBER || (o = luaV_tonumber(o, &n)) != NULL))
+  if (o != NULL && (o = luaV_tonumber(o, &n)) != NULL)
     return nvalue(o);
   else
     return 0;
@@ -473,17 +481,6 @@ LUA_API void lua_rawseti (lua_State *L, int index, int n) {
   api_check(L, ttype(o) == LUA_TTABLE);
   luaH_setnum(L, hvalue(o), n, L->top-1);
   L->top--;
-  lua_unlock(L);
-}
-
-
-LUA_API void lua_setglobals (lua_State *L) {
-  StkId newtable;
-  lua_lock(L);
-  api_checknelems(L, 1);
-  newtable = --L->top;
-  api_check(L, ttype(newtable) == LUA_TTABLE);
-  setobj(gt(L), newtable);
   lua_unlock(L);
 }
 

@@ -108,6 +108,7 @@ LUA_API void  lua_settop (lua_State *L, int index);
 LUA_API void  lua_pushvalue (lua_State *L, int index);
 LUA_API void  lua_remove (lua_State *L, int index);
 LUA_API void  lua_insert (lua_State *L, int index);
+LUA_API void  lua_replace (lua_State *L, int index);
 LUA_API int   lua_stackspace (lua_State *L);
 
 
@@ -163,7 +164,6 @@ LUA_API void  lua_setstr (lua_State *L, int index, const char *name);
 LUA_API void  lua_settable (lua_State *L, int index);
 LUA_API void  lua_rawset (lua_State *L, int index);
 LUA_API void  lua_rawseti (lua_State *L, int index, int n);
-LUA_API void  lua_setglobals (lua_State *L);
 LUA_API void  lua_setmetatable (lua_State *L, int objindex);
 
 
@@ -186,7 +186,7 @@ LUA_API int   lua_dobuffer (lua_State *L, const char *buff, size_t size,
 */
 LUA_API void lua_cobegin (lua_State *L, int nargs);
 LUA_API int  lua_yield (lua_State *L, int nresults);
-LUA_API void lua_resume (lua_State *L, lua_State *co);
+LUA_API int  lua_resume (lua_State *L, lua_State *co);
 
 /*
 ** Garbage-collection functions
@@ -234,6 +234,7 @@ LUA_API void  lua_newuserdatabox (lua_State *L, void *u);
 
 #define lua_getregistry(L)	lua_pushvalue(L, LUA_REGISTRYINDEX)
 #define lua_getglobals(L)	lua_pushvalue(L, LUA_GLOBALSINDEX)
+#define lua_setglobals(L)	lua_replace(L, LUA_GLOBALSINDEX)
 #define lua_getglobal(L,s)	lua_getstr(L, LUA_GLOBALSINDEX, s)
 #define lua_setglobal(L,s)	lua_setstr(L, LUA_GLOBALSINDEX, s)
 
