@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 1.1 1993/12/17 18:53:07 celes Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 1.2 1993/12/22 21:19:23 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -111,8 +111,8 @@ static void align_n (unsigned size)
 }
 
 static void code_number (float f)
-{ int i = f;
-  if (f == i)  /* f has an integer value */
+{ Word i = (Word)f;
+  if (f == (float)i)  /* f has an (short) integer value */
   {
    if (i <= 2) code_byte(PUSH0 + i);
    else if (i <= 255)
