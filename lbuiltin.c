@@ -387,6 +387,37 @@ static void luaB_foreachvar (void) {
 }
 
 
+static void luaB_tinsert (void) {
+  Hash *a = gethash(1);
+  lua_Object v = lua_getparam(3);
+  int n = (int)getnarg(a);
+  int pos;
+  if (v != LUA_NOOBJECT)
+    pos = luaL_check_int(2);
+  else {  /* called with only 2 arguments */
+    v = luaL_nonnullarg(2);
+    pos = n+1;
+  }
+  luaV_setn(a, n+1);  /* increment field "n" */
+  for ( ;n>=pos; n--)
+    tablemove(a, n, n+1);
+  luaH_setint(a, pos, luaA_Address(v));
+}
+
+
+static void luaB_tremove (void) {
+  Hash *a = gethash(1);
+  int n = (int)getnarg(a);
+  int pos = luaL_opt_int(2, n);
+  TObject v = *luaH_getint(a, pos);
+  if (n <= 0) return;  /* table is "empty" */
+  luaV_setn(a, n-1);  /* decrement field "n" */
+  for ( ;pos<n; pos++)
+    tablemove(a, pos+1, pos);
+  luaA_pushobject(&v);
+}
+
+
 /*
 ** Quicksort algorithm from "Programming Pearls", pg. 112
 */
@@ -666,7 +697,9 @@ static struct luaL_reg builtin_funcs[] = {
   {"foreach", luaB_foreach},
   {"foreachi", luaB_foreachi},
   {"foreachvar", luaB_foreachvar},
-  {"sort", luaB_sort}
+  {"sort", luaB_sort},
+  {"tinsert", luaB_tinsert},
+  {"tremove", luaB_tremove}
 };
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.33 1998/12/24 14:57:23 roberto Exp $
+** $Id: lvm.c,v 1.34 1998/12/27 20:25:20 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -90,6 +90,16 @@ int luaV_tostring (TObject *obj) {
     ttype(obj) = LUA_T_STRING;
     return 0;
   }
+}
+
+
+void luaV_setn (Hash *t, int val) {
+  TObject index, value;
+  ttype(&index) = LUA_T_STRING;
+  tsvalue(&index) = luaS_new("n");
+  ttype(&value) = LUA_T_NUMBER;
+  nvalue(&value) = val;
+  *(luaH_set(t, &index)) = value;
 }
 
 
@@ -275,8 +285,7 @@ void luaV_comparison (lua_Type ttype_less, lua_Type ttype_equal,
 }
 
 
-void luaV_pack (StkId firstel, int nvararg, TObject *tab)
-{
+void luaV_pack (StkId firstel, int nvararg, TObject *tab) {
   TObject *firstelem = L->stack.stack+firstel;
   int i;
   Hash *htab;
@@ -285,14 +294,7 @@ void luaV_pack (StkId firstel, int nvararg, TObject *tab)
   ttype(tab) = LUA_T_ARRAY;
   for (i=0; i<nvararg; i++)
     luaH_setint(htab, i+1, firstelem+i);
-  /* store counter in field "n" */ {
-    TObject index, extra;
-    ttype(&index) = LUA_T_STRING;
-    tsvalue(&index) = luaS_new("n");
-    ttype(&extra) = LUA_T_NUMBER;
-    nvalue(&extra) = nvararg;
-    *(luaH_set(htab, &index)) = extra;
-  }
+  luaV_setn(htab, nvararg);  /* store counter in field "n" */
 }
 
 
