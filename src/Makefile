@@ -1,24 +1,35 @@
-# makefile for lua
+# makefile for lua distribution
 
-LIB= $(LUA)/lib
 INC= $(LUA)/include
+LIB= $(LUA)/lib
+
+# in SunOs /usr/5include contains prototypes for standard lib
+INCS= -I/usr/5include -I$(INC)
+WARN= -Wall -Wmissing-prototypes -Wshadow -ansi
 
 CC= gcc
-CFLAGS= -g -Wall -O2 -I$(INC) $(DEFS)
-DEFS= -DMAXCODE=64000 -DMAXCONSTANT=1024 -DMAXSYMBOL=1024 -DMAXARRAY=1024
+CFLAGS= $(INCS) $(DEFS) $(WARN) -O2
 
-OBJS= hash.o inout.o lex.o opcode.o table.o y.tab.o
+OBJS= fallback.o hash.o inout.o lex.o mem.o opcode.o parser.o table.o tree.o
+
 SLIB= $(LIB)/liblua.a
-DLIB= $(LIB)/liblua.so.1.1
 
-libs: $(SLIB) $(DLIB)
+# dynamic libraries only work for SunOs
+DLIB= $(LIB)/liblua.so.2.1
+
+all: $(SLIB)
+
+dynamic: $(DLIB)
 
 $(SLIB): $(OBJS)
-	ar ruvl $@ $(OBJS)
-	ranlib $(SLIB)
+	ar rcuv $@ $(OBJS)
+	ranlib $@
 
 $(DLIB): $(OBJS)
 	ld -o $@ $(OBJS)
 
 clean:
 	rm -f $(OBJS) $(SLIB) $(DLIB)
+
+co:
+	co -M fallback.c hash.c inout.c lex.c mem.c opcode.c table.c tree.c fallback.h hash.h inout.h mem.h opcode.h table.h tree.h types.h ugly.h

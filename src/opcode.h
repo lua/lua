@@ -1,10 +1,14 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 2.1 1994/04/20 22:07:57 celes Exp $
+** $Id: opcode.h,v 3.10 1994/12/20 21:20:36 roberto Exp $
 */
 
 #ifndef opcode_h
 #define opcode_h
+
+#include "lua.h"
+#include "types.h"
+#include "tree.h"
 
 #ifndef STACKGAP
 #define STACKGAP	128
@@ -16,21 +20,8 @@
 
 #define FIELDS_PER_FLUSH 40
 
-typedef unsigned char  Byte;
+#define MAX_TEMPS	20
 
-typedef unsigned short Word;
-
-typedef union
-{
- struct {char c1; char c2;} m;
- Word w;
-} CodeWord;
-
-typedef union
-{
- struct {char c1; char c2; char c3; char c4;} m;
- float f;
-} CodeFloat;
 
 typedef enum 
 { 
@@ -40,13 +31,13 @@ typedef enum
  PUSHWORD,
  PUSHFLOAT,
  PUSHSTRING,
+ PUSHFUNCTION,
  PUSHLOCAL0, PUSHLOCAL1, PUSHLOCAL2, PUSHLOCAL3, PUSHLOCAL4,
  PUSHLOCAL5, PUSHLOCAL6, PUSHLOCAL7, PUSHLOCAL8, PUSHLOCAL9,
  PUSHLOCAL,
  PUSHGLOBAL,
  PUSHINDEXED,
- PUSHMARK,
- PUSHOBJECT,
+ PUSHSELF,
  STORELOCAL0, STORELOCAL1, STORELOCAL2, STORELOCAL3, STORELOCAL4,
  STORELOCAL5, STORELOCAL6, STORELOCAL7, STORELOCAL8, STORELOCAL9,
  STORELOCAL,
@@ -56,15 +47,19 @@ typedef enum
  STORELIST0,
  STORELIST,
  STORERECORD,
+ ADJUST0,
  ADJUST,
  CREATEARRAY,
  EQOP,
  LTOP,
  LEOP,
+ GTOP,
+ GEOP,
  ADDOP,
  SUBOP,
  MULTOP,
  DIVOP,
+ POWOP,
  CONCOP,
  MINUSOP,
  NOTOP,
@@ -76,61 +71,51 @@ typedef enum
  IFFUPJMP,
  POP,
  CALLFUNC,
+ RETCODE0,
  RETCODE,
- HALT,
  SETFUNCTION,
  SETLINE,
  RESET
 } OpCode;
 
-typedef enum
-{
- T_MARK,
- T_NIL,
- T_NUMBER,
- T_STRING,
- T_ARRAY,
- T_FUNCTION,
- T_CFUNCTION,
- T_USERDATA
-} Type; 
+#define MULT_RET	255
+
 
 typedef void (*Cfunction) (void);
 typedef int  (*Input) (void);
 
 typedef union
 {
- Cfunction 	 f;
- real    	 n;
- char      	*s;
- Byte      	*b;
+ Cfunction     f;
+ real          n;
+ TaggedString *ts;
+ Byte         *b;
  struct Hash    *a;
  void           *u;
 } Value;
 
 typedef struct Object
 {
- Type  tag;
+ lua_Type  tag;
  Value value;
 } Object;
 
 typedef struct
 {
- char   *name;
  Object  object;
 } Symbol;
 
 /* Macros to access structure members */
 #define tag(o)		((o)->tag)
 #define nvalue(o)	((o)->value.n)
-#define svalue(o)	((o)->value.s)
+#define svalue(o)	((o)->value.ts->str)
+#define tsvalue(o)	((o)->value.ts)
 #define bvalue(o)	((o)->value.b)
 #define avalue(o)	((o)->value.a)
 #define fvalue(o)	((o)->value.f)
 #define uvalue(o)	((o)->value.u)
 
 /* Macros to access symbol table */
-#define s_name(i)	(lua_table[i].name)
 #define s_object(i)	(lua_table[i].object)
 #define s_tag(i)	(tag(&s_object(i)))
 #define s_nvalue(i)	(nvalue(&s_object(i)))
@@ -140,25 +125,40 @@ typedef struct
 #define s_fvalue(i)	(fvalue(&s_object(i)))
 #define s_uvalue(i)	(uvalue(&s_object(i)))
 
+typedef union
+{
+ struct {char c1; char c2;} m;
+ Word w;
+} CodeWord;
 #define get_word(code,pc)    {code.m.c1 = *pc++; code.m.c2 = *pc++;}
+
+typedef union
+{
+ struct {char c1; char c2; char c3; char c4;} m;
+ float f;
+} CodeFloat;
 #define get_float(code,pc)   {code.m.c1 = *pc++; code.m.c2 = *pc++;\
                               code.m.c3 = *pc++; code.m.c4 = *pc++;}
- 
+
+typedef union
+{
+ struct {char c1; char c2; char c3; char c4;} m;
+ Byte *b;
+} CodeCode;
+#define get_code(code,pc)    {code.m.c1 = *pc++; code.m.c2 = *pc++;\
+                              code.m.c3 = *pc++; code.m.c4 = *pc++;}
 
 
 /* Exported functions */
-int     lua_execute   (Byte *pc);
-void    lua_markstack (void);
 char   *lua_strdup (char *l);
 
 void    lua_setinput   (Input fn);	/* from "lex.c" module */
 char   *lua_lasttext   (void);		/* from "lex.c" module */
-int     lua_parse      (void); 		/* from "lua.stx" module */
-void    lua_type       (void);
-void 	lua_obj2number (void);
-void 	lua_print      (void);
-void 	lua_internaldofile (void);
-void 	lua_internaldostring (void);
+int     yylex (void);		        /* from "lex.c" module */
+void    lua_parse      (Byte **code);	/* from "lua.stx" module */
 void    lua_travstack (void (*fn)(Object *));
+Object *luaI_Address (lua_Object o);
+void	luaI_pushobject (Object *o);
+void    luaI_gcFB       (Object *o);
 
 #endif

@@ -2,11 +2,12 @@
 typedef union  
 {
  int   vInt;
- long  vLong;
  float vFloat;
  char *pChar;
  Word  vWord;
+ Long  vLong;
  Byte *pByte;
+ TreeNode *pNode;
 } YYSTYPE;
 extern YYSTYPE yylval;
 # define WRONGTOKEN 257
@@ -22,16 +23,17 @@ extern YYSTYPE yylval;
 # define END 267
 # define RETURN 268
 # define LOCAL 269
-# define NUMBER 270
-# define FUNCTION 271
+# define FUNCTION 270
+# define NUMBER 271
 # define STRING 272
 # define NAME 273
 # define DEBUG 274
 # define AND 275
 # define OR 276
-# define NE 277
-# define LE 278
-# define GE 279
-# define CONC 280
-# define UNARY 281
-# define NOT 282
+# define EQ 277
+# define NE 278
+# define LE 279
+# define GE 280
+# define CONC 281
+# define UNARY 282
+# define NOT 283

@@ -1,7 +1,7 @@
 /*
 ** Math library to LUA
 ** TeCGraf - PUC-Rio
-** $Id: mathlib.h,v 1.1 1993/12/17 18:41:19 celes Exp $
+** $Id: mathlib.h,v 1.1 1993/12/17 18:41:19 celes Stab $
 */
 
 

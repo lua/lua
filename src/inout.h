@@ -1,21 +1,30 @@
 /*
-** $Id: inout.h,v 1.1 1993/12/17 18:41:19 celes Exp $
+** $Id: inout.h,v 1.7 1994/12/20 21:20:36 roberto Exp $
 */
 
 
 #ifndef inout_h
 #define inout_h
 
-extern int lua_linenumber;
-extern int lua_debug;
-extern int lua_debugline;
+#include "types.h"
 
-int  lua_openfile     (char *fn);
+extern Word lua_linenumber;
+extern Bool lua_debug;
+extern Word lua_debugline;
+
+char *lua_openfile     (char *fn);
 void lua_closefile    (void);
-int  lua_openstring   (char *s);
+char *lua_openstring   (char *s);
 void lua_closestring  (void);
-int  lua_pushfunction (int file, int function);
+void lua_pushfunction (char *file, Word function);
 void lua_popfunction  (void);
 void lua_reportbug    (char *s);
+
+void    lua_internaldofile (void);
+void    lua_internaldostring (void);
+void    lua_print      (void);
+void    luaI_type       (void);
+void    lua_obj2number (void);
+void	luaI_error     (void);
 
 #endif

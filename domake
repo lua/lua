@@ -1,6 +1,10 @@
 #!/bin/sh
+# makefile for lua hierarchy
 
 LUA=`pwd`
 export LUA
 
-make $*
+cd $LUA/src; make $*
+cd $LUA/include; make $*
+cd $LUA/clients/lib; make $*
+cd $LUA/clients/lua; make $*

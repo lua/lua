@@ -3,7 +3,7 @@ $debug
 function check (object, class)
  local v = next(object,nil);
  while v ~= nil do
-   if class[v] = nil then
+   if class[v] == nil then
     print("unknown field: " .. v) 
    elseif type(object[v]) ~= class[v].type then
     print("wrong type for field " .. v)
@@ -12,7 +12,7 @@ function check (object, class)
  end
  v = next(class,nil);
  while v ~= nil do
-   if object[v] = nil then
+   if object[v] == nil then
      if class[v].default ~= nil then
       object[v] = class[v].default
      else
@@ -23,9 +23,9 @@ function check (object, class)
  end
 end
 
-typeblock = @{x = @{default = 0, type = "number"},
-               y = @{default = 0, type = "number"},
-               name = @{type = "string"}
+typeblock = {x = {default = 0, type = "number"},
+               y = {default = 0, type = "number"},
+               name = {type = "string"}
               }
 
 function block(t) check(t,typeblock) end

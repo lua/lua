@@ -31,7 +31,7 @@ function sort(a,n)			-- selection sort
 end
 
 function main()
- x=@()
+ x={}
  n=-1
  n=n+1;	x[n]="a"
  n=n+1;	x[n]="waldemar"

@@ -1,10 +1,10 @@
 
 
 function savevar (n,v)
- if v = nil then return end;
- if type(v) = "number" then print(n.."="..v) return end
- if type(v) = "string" then print(n.."='"..v.."'") return end
- if type(v) = "table" then
+ if v == nil then return end;
+ if type(v) == "number" then print(n.."="..v) return end
+ if type(v) == "string" then print(n.."='"..v.."'") return end
+ if type(v) == "table" then
    if v.__visited__ ~= nil then
      print(n .. "=" .. v.__visited__);
    else
@@ -14,7 +14,7 @@ function savevar (n,v)
     r,f = next(v,nil);
     while r ~= nil do
       if r ~= "__visited__" then
-        if type(r) = 'string' then
+        if type(r) == 'string' then
           savevar(n.."['"..r.."']",f)
 	else
           savevar(n.."["..r.."]",f)
@@ -36,9 +36,9 @@ local n,v
 end
 
 a = 3
-x = @{a = 4, b = "name", l=@[4,5,67]}
+x = {a = 4, b = "name", l={4,5,67}}
 
-b = @{t=5}
+b = {t=5}
 x.next = b
 
 

@@ -1,138 +1,147 @@
 /*
 ** hash.c
 ** hash manager for lua
-** Luiz Henrique de Figueiredo - 17 Aug 90
 */
 
-char *rcs_hash="$Id: hash.c,v 2.1 1994/04/20 22:07:57 celes Exp $";
+char *rcs_hash="$Id: hash.c,v 2.24 1995/02/06 19:34:03 roberto Exp $";
 
 #include <string.h>
-#include <stdlib.h>
 
-#include "mm.h"
-
+#include "mem.h"
 #include "opcode.h"
 #include "hash.h"
 #include "inout.h"
 #include "table.h"
 #include "lua.h"
 
-#define streq(s1,s2)	(strcmp(s1,s2)==0)
-#define strneq(s1,s2)	(strcmp(s1,s2)!=0)
-
-#define new(s)		((s *)malloc(sizeof(s)))
-#define newvector(n,s)	((s *)calloc(n,sizeof(s)))
+#define streq(s1,s2)	(s1 == s2 || (*(s1) == *(s2) && strcmp(s1,s2)==0))
 
 #define nhash(t)	((t)->nhash)
-#define nodelist(t)	((t)->list)
-#define list(t,i)	((t)->list[i])
+#define nuse(t)		((t)->nuse)
 #define markarray(t)    ((t)->mark)
-#define ref_tag(n)	(tag(&(n)->ref))
-#define ref_nvalue(n)	(nvalue(&(n)->ref))
-#define ref_svalue(n)	(svalue(&(n)->ref))
+#define nodevector(t)	((t)->node)
+#define node(t,i)	(&(t)->node[i])
+#define ref(n)		(&(n)->ref)
+#define val(n)		(&(n)->val)
 
-#ifndef ARRAYBLOCK
-#define ARRAYBLOCK 50
-#endif
 
-typedef struct ArrayList
+#define REHASH_LIMIT	0.70	/* avoid more than this % full */
+
+
+static Hash *listhead = NULL;
+
+
+
+/* hash dimensions values */
+static Word dimensions[] = 
+ {3, 5, 7, 11, 23, 47, 97, 197, 397, 797, 1597, 3203, 6421,
+  12853, 25717, 51437, 65521, 0};  /* 65521 == last prime < MAX_WORD */
+
+static Word redimension (Word nhash)
 {
- Hash *array;
- struct ArrayList *next;
-} ArrayList;
-
-static ArrayList *listhead = NULL;
-
-static int head (Hash *t, Object *ref)		/* hash function */
-{
- if (tag(ref) == T_NUMBER) return (((int)nvalue(ref))%nhash(t));
- else if (tag(ref) == T_STRING)
+ Word i;
+ for (i=0; dimensions[i]!=0; i++)
  {
-  int h;
-  char *name = svalue(ref);
-  for (h=0; *name!=0; name++)		/* interpret name as binary number */
+  if (dimensions[i] > nhash)
+   return dimensions[i];
+ }
+ lua_error("table overflow");
+ return 0;  /* to avoid warnings */
+}
+
+static Word hashindex (Hash *t, Object *ref)		/* hash function */
+{
+ switch (tag(ref))
+ {
+  case LUA_T_NIL:
+   lua_reportbug ("unexpected type to index table");
+   return -1;  /* UNREACHEABLE */
+  case LUA_T_NUMBER:
+   return (((Word)nvalue(ref))%nhash(t));
+  case LUA_T_STRING:
   {
-   h <<= 8;
-   h  += (unsigned char) *name;		/* avoid sign extension */
-   h  %= nhash(t);			/* make it a valid index */
+   unsigned long h = tsvalue(ref)->hash;
+   if (h == 0)
+   {
+     char *name = svalue(ref);
+     while (*name)
+       h = ((h<<5)-h)^(unsigned char)*(name++);
+     tsvalue(ref)->hash = h;
+   }
+   return (Word)h%nhash(t);  /* make it a valid index */
   }
-  return h;
- }
- else
- {
-  lua_reportbug ("unexpected type to index table");
-  return -1;
+  case LUA_T_FUNCTION:
+   return (((IntPoint)bvalue(ref))%nhash(t));
+  case LUA_T_CFUNCTION:
+   return (((IntPoint)fvalue(ref))%nhash(t));
+  case LUA_T_ARRAY:
+   return (((IntPoint)avalue(ref))%nhash(t));
+  default:  /* user data */
+   return (((IntPoint)uvalue(ref))%nhash(t));
  }
 }
 
-static Node *present(Hash *t, Object *ref, int h)
+Bool lua_equalObj (Object *t1, Object *t2)
 {
- Node *n=NULL, *p;
- if (tag(ref) == T_NUMBER)
- {
-  for (p=NULL,n=list(t,h); n!=NULL; p=n, n=n->next)
-   if (ref_tag(n) == T_NUMBER && nvalue(ref) == ref_nvalue(n)) break;
- }  
- else if (tag(ref) == T_STRING)
- {
-  for (p=NULL,n=list(t,h); n!=NULL; p=n, n=n->next)
-   if (ref_tag(n) == T_STRING && streq(svalue(ref),ref_svalue(n))) break;
- }  
- if (n==NULL)				/* name not present */
-  return NULL;
-#if 0
- if (p!=NULL)				/* name present but not first */
- {
-  p->next=n->next;			/* move-to-front self-organization */
-  n->next=list(t,h);
-  list(t,h)=n;
- }
-#endif
- return n;
+  if (tag(t1) != tag(t2)) return 0;
+  switch (tag(t1))
+  {
+    case LUA_T_NIL: return 1;
+    case LUA_T_NUMBER: return nvalue(t1) == nvalue(t2);
+    case LUA_T_STRING: return streq(svalue(t1), svalue(t2));
+    case LUA_T_ARRAY: return avalue(t1) == avalue(t2);
+    case LUA_T_FUNCTION: return bvalue(t1) == bvalue(t2);
+    case LUA_T_CFUNCTION: return fvalue(t1) == fvalue(t2);
+    default: return uvalue(t1) == uvalue(t2);
+  }
 }
 
-static void freelist (Node *n)
-{
- while (n)
+static Word present (Hash *t, Object *ref)
+{ 
+ Word h = hashindex(t, ref);
+ while (tag(ref(node(t, h))) != LUA_T_NIL)
  {
-  Node *next = n->next;
-  free (n);
-  n = next;
+  if (lua_equalObj(ref, ref(node(t, h))))
+    return h;
+  h = (h+1) % nhash(t);
  }
+ return h;
+}
+
+
+/*
+** Alloc a vector node 
+*/
+static Node *hashnodecreate (Word nhash)
+{
+ Word i;
+ Node *v = newvector (nhash, Node);
+ for (i=0; i<nhash; i++)
+   tag(ref(&v[i])) = LUA_T_NIL;
+ return v;
 }
 
 /*
 ** Create a new hash. Return the hash pointer or NULL on error.
 */
-static Hash *hashcreate (unsigned int nhash)
+static Hash *hashcreate (Word nhash)
 {
- Hash *t = new (Hash);
- if (t == NULL)
- {
-  lua_error ("not enough memory");
-  return NULL;
- }
+ Hash *t = new(Hash);
+ nhash = redimension((Word)((float)nhash/REHASH_LIMIT));
+ nodevector(t) = hashnodecreate(nhash);
  nhash(t) = nhash;
+ nuse(t) = 0;
  markarray(t) = 0;
- nodelist(t) = newvector (nhash, Node*);
- if (nodelist(t) == NULL)
- {
-  lua_error ("not enough memory");
-  return NULL;
- }
  return t;
 }
 
 /*
 ** Delete a hash
 */
-static void hashdelete (Hash *h)
+static void hashdelete (Hash *t)
 {
- int i;
- for (i=0; i<nhash(h); i++)
-  freelist (list(h,i));
- free (nodelist(h));
- free(h);
+ luaI_free (nodevector(t));
+ luaI_free(t);
 }
 
 
@@ -143,12 +152,12 @@ void lua_hashmark (Hash *h)
 {
  if (markarray(h) == 0)
  {
-  int i;
+  Word i;
   markarray(h) = 1;
   for (i=0; i<nhash(h); i++)
   {
-   Node *n;
-   for (n = list(h,i); n != NULL; n = n->next)
+   Node *n = node(h,i);
+   if (tag(ref(n)) != LUA_T_NIL)
    {
     lua_markobject(&n->ref);
     lua_markobject(&n->val);
@@ -156,92 +165,125 @@ void lua_hashmark (Hash *h)
   }
  } 
 }
+
+
+static void call_fallbacks (void)
+{
+  Hash *curr_array;
+  Object t;
+  tag(&t) = LUA_T_ARRAY;
+  for (curr_array = listhead; curr_array; curr_array = curr_array->next)
+    if (markarray(curr_array) != 1)
+    {
+      avalue(&t) = curr_array;
+      luaI_gcFB(&t);
+    }
+  tag(&t) = LUA_T_NIL;
+  luaI_gcFB(&t);  /* end of list */
+}
+
  
 /*
 ** Garbage collection to arrays
 ** Delete all unmarked arrays.
 */
-void lua_hashcollector (void)
+Long lua_hashcollector (void)
 {
- ArrayList *curr = listhead, *prev = NULL;
- while (curr != NULL)
+ Hash *curr_array = listhead, *prev = NULL;
+ Long counter = 0;
+ call_fallbacks();
+ while (curr_array != NULL)
  {
-  ArrayList *next = curr->next;
-  if (markarray(curr->array) != 1)
+  Hash *next = curr_array->next;
+  if (markarray(curr_array) != 1)
   {
    if (prev == NULL) listhead = next;
    else              prev->next = next;
-   hashdelete(curr->array);
-   free(curr);
+   hashdelete(curr_array);
+   ++counter;
   }
   else
   {
-   markarray(curr->array) = 0;
-   prev = curr;
+   markarray(curr_array) = 0;
+   prev = curr_array;
   }
-  curr = next;
+  curr_array = next;
  }
+ return counter;
 }
 
 
 /*
 ** Create a new array
-** This function insert the new array at array list. It also
-** execute garbage collection if the number of array created
+** This function inserts the new array in the array list. It also
+** executes garbage collection if the number of arrays created
 ** exceed a pre-defined range.
 */
-Hash *lua_createarray (int nhash)
+Hash *lua_createarray (Word nhash)
 {
- ArrayList *new = new(ArrayList);
- if (new == NULL)
- {
-  lua_error ("not enough memory");
-  return NULL;
- }
- new->array = hashcreate(nhash);
- if (new->array == NULL)
- {
-  lua_error ("not enough memory");
-  return NULL;
- }
+ Hash *array;
+ lua_pack();
+ array = hashcreate(nhash);
+ array->next = listhead;
+ listhead = array;
+ return array;
+}
 
- if (lua_nentity == lua_block)
-  lua_pack(); 
 
- lua_nentity++;
- new->next = listhead;
- listhead = new;
- return new->array;
+/*
+** Re-hash
+*/
+static void rehash (Hash *t)
+{
+ Word i;
+ Word   nold = nhash(t);
+ Node *vold = nodevector(t);
+ nhash(t) = redimension(nhash(t));
+ nodevector(t) = hashnodecreate(nhash(t));
+ for (i=0; i<nold; i++)
+ {
+  Node *n = vold+i;
+  if (tag(ref(n)) != LUA_T_NIL && tag(val(n)) != LUA_T_NIL)
+   *node(t, present(t, ref(n))) = *n;  /* copy old node to new hahs */
+ }
+ luaI_free(vold);
+}
+
+/*
+** If the hash node is present, return its pointer, otherwise return
+** null.
+*/
+Object *lua_hashget (Hash *t, Object *ref)
+{
+ Word h = present(t, ref);
+ if (tag(ref(node(t, h))) != LUA_T_NIL) return val(node(t, h));
+ else return NULL;
 }
 
 
 /*
 ** If the hash node is present, return its pointer, otherwise create a new
 ** node for the given reference and also return its pointer.
-** On error, return NULL.
 */
 Object *lua_hashdefine (Hash *t, Object *ref)
 {
- int   h;
+ Word   h;
  Node *n;
- h = head (t, ref);
- if (h < 0) return NULL; 
- 
- n = present(t, ref, h);
- if (n == NULL)
+ h = present(t, ref);
+ n = node(t, h);
+ if (tag(ref(n)) == LUA_T_NIL)
  {
-  n = new(Node);
-  if (n == NULL)
+  nuse(t)++;
+  if ((float)nuse(t) > (float)nhash(t)*REHASH_LIMIT)
   {
-   lua_error ("not enough memory");
-   return NULL;
+   rehash(t);
+   h = present(t, ref);
+   n = node(t, h);
   }
-  n->ref = *ref;
-  tag(&n->val) = T_NIL;
-  n->next = list(t,h);			/* link node to head of list */
-  list(t,h) = n;
+  *ref(n) = *ref;
+  tag(val(n)) = LUA_T_NIL;
  }
- return (&n->val);
+ return (val(n));
 }
 
 
@@ -251,97 +293,44 @@ Object *lua_hashdefine (Hash *t, Object *ref)
 ** in the hash.
 ** This function pushs the element value and its reference to the stack.
 */
-static void firstnode (Hash *a, int h)
+static void hashnext (Hash *t, Word i)
 {
- if (h < nhash(a))
- {  
-  int i;
-  for (i=h; i<nhash(a); i++)
+ if (i >= nhash(t))
+ {
+  lua_pushnil(); lua_pushnil();
+  return;
+ }
+ while (tag(ref(node(t,i))) == LUA_T_NIL || tag(val(node(t,i))) == LUA_T_NIL)
+ {
+  if (++i >= nhash(t))
   {
-   if (list(a,i) != NULL)
-   {
-    if (tag(&list(a,i)->val) != T_NIL)
-    {
-     lua_pushobject (&list(a,i)->ref);
-     lua_pushobject (&list(a,i)->val);
-     return;
-    }
-    else
-    {
-     Node *next = list(a,i)->next;
-     while (next != NULL && tag(&next->val) == T_NIL) next = next->next;
-     if (next != NULL)
-     {
-      lua_pushobject (&next->ref);
-      lua_pushobject (&next->val);
-      return;
-     }
-    }
-   }
+   lua_pushnil(); lua_pushnil();
+   return;
   }
  }
- lua_pushnil();
- lua_pushnil();
+ luaI_pushobject(ref(node(t,i)));
+ luaI_pushobject(val(node(t,i)));
 }
+
 void lua_next (void)
 {
- Hash   *a;
- Object *o = lua_getparam (1);
- Object *r = lua_getparam (2);
- if (o == NULL || r == NULL)
- { lua_error ("too few arguments to function `next'"); return; }
- if (lua_getparam (3) != NULL)
- { lua_error ("too many arguments to function `next'"); return; }
- if (tag(o) != T_ARRAY)
- { lua_error ("first argument of function `next' is not a table"); return; }
- a = avalue(o);
- if (tag(r) == T_NIL)
+ Hash   *t;
+ lua_Object o = lua_getparam(1);
+ lua_Object r = lua_getparam(2);
+ if (o == LUA_NOOBJECT || r == LUA_NOOBJECT)
+   lua_error ("too few arguments to function `next'");
+ if (lua_getparam(3) != LUA_NOOBJECT)
+   lua_error ("too many arguments to function `next'");
+ if (!lua_istable(o))
+   lua_error ("first argument of function `next' is not a table");
+ t = avalue(luaI_Address(o));
+ if (lua_isnil(r))
  {
-  firstnode (a, 0);
-  return;
+  hashnext(t, 0);
  }
  else
  {
-  int h = head (a, r);
-  if (h >= 0)
-  {
-   Node *n = list(a,h);
-   while (n)
-   {
-    if (memcmp(&n->ref,r,sizeof(Object)) == 0)
-    {
-     if (n->next == NULL)
-     {
-      firstnode (a, h+1);
-      return;
-     }
-     else if (tag(&n->next->val) != T_NIL)
-     {
-      lua_pushobject (&n->next->ref);
-      lua_pushobject (&n->next->val);
-      return;
-     }
-     else
-     {
-      Node *next = n->next->next;
-      while (next != NULL && tag(&next->val) == T_NIL) next = next->next;
-      if (next == NULL)
-      {
-       firstnode (a, h+1);
-       return;
-      }
-      else
-      {
-       lua_pushobject (&next->ref);
-       lua_pushobject (&next->val);
-      }
-      return;
-     }
-    }
-    n = n->next;
-   }
-   if (n == NULL)
-    lua_error ("error in function 'next': reference not found");
-  }
+  Word h = present (t, luaI_Address(r));
+  hashnext(t, h+1);
  }
 }
