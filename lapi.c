@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.125 2001/02/02 15:13:05 roberto Exp roberto $
+** $Id: lapi.c,v 1.126 2001/02/07 18:13:49 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -335,14 +335,13 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
 }
 
 
-LUA_API void lua_pushusertag (lua_State *L, void *u, int tag) {
+LUA_API int lua_pushuserdata (lua_State *L, void *u) {
+  int isnew;
   LUA_LOCK(L);
-  /* ORDER LUA_T */
-  if (!(tag == LUA_ANYTAG || tag == LUA_TUSERDATA || validtag(G(L), tag)))
-    luaO_verror(L, "invalid tag for a userdata (%d)", tag);
-  setuvalue(L->top, luaS_createudata(L, u, tag));
+  isnew = luaS_createudata(L, u, L->top);
   api_incr_top(L);
   LUA_UNLOCK(L);
+  return isnew;
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.84 2001/01/25 16:45:36 roberto Exp roberto $
+** $Id: lua.h,v 1.85 2001/01/26 11:45:51 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -32,7 +32,6 @@
 #define LUA_REFREGISTRY	0
 
 /* pre-defined tags */
-#define LUA_ANYTAG	(-1)
 #define LUA_NOTAG	(-2)
 
 
@@ -137,7 +136,7 @@ LUA_API void  lua_pushnumber (lua_State *L, lua_Number n);
 LUA_API void  lua_pushlstring (lua_State *L, const char *s, size_t len);
 LUA_API void  lua_pushstring (lua_State *L, const char *s);
 LUA_API void  lua_pushcclosure (lua_State *L, lua_CFunction fn, int n);
-LUA_API void  lua_pushusertag (lua_State *L, void *u, int tag);
+LUA_API int   lua_pushuserdata (lua_State *L, void *u);
 
 
 /*
@@ -210,7 +209,7 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size);
 #define lua_pop(L,n)		lua_settop(L, -(n)-1)
 
 #define lua_register(L,n,f)	(lua_pushcfunction(L, f), lua_setglobal(L, n))
-#define lua_pushuserdata(L,u)	lua_pushusertag(L, u, 0)
+#define lua_pushusertag(L,u,t)	(lua_pushuserdata(L, u), lua_settag(L, t))
 #define lua_pushcfunction(L,f)	lua_pushcclosure(L, f, 0)
 #define lua_clonetag(L,t)	lua_copytagmethods(L, lua_newtag(L), (t))
 

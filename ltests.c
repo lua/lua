@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.63 2001/02/06 16:01:29 roberto Exp roberto $
+** $Id: ltests.c,v 1.64 2001/02/06 18:18:58 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -348,11 +348,17 @@ static int unref (lua_State *L) {
 }
 
 static int newuserdata (lua_State *L) {
-  if (lua_isnumber(L, 2))
-    lua_pushusertag(L, (void *)luaL_check_int(L, 1), luaL_check_int(L, 2));
-  else
+  if (lua_isnumber(L, 2)) {
+    int tag = luaL_check_int(L, 2);
+    int res = lua_pushuserdata(L, (void *)luaL_check_int(L, 1));
+    if (tag) lua_settag(L, tag);
+    lua_pushnumber(L, res);
+    return 2;
+  }
+  else {
     lua_newuserdata(L, luaL_check_int(L, 1));
-  return 1;
+    return 1;
+  }
 }
 
 static int udataval (lua_State *L) {
@@ -361,6 +367,10 @@ static int udataval (lua_State *L) {
   return 1;
 }
 
+static int newtag (lua_State *L) {
+  lua_pushnumber(L, lua_newtype(L, lua_tostring(L, 1), lua_tonumber(L, 2)));
+  return 1;
+}
 
 static int doonnewstack (lua_State *L) {
   lua_State *L1 = lua_open(L, luaL_check_int(L, 1));
@@ -631,6 +641,7 @@ static const struct luaL_reg tests_funcs[] = {
   {"unref", unref},
   {"newuserdata", newuserdata},
   {"udataval", udataval},
+  {"newtag", newtag},
   {"doonnewstack", doonnewstack},
   {"newstate", newstate},
   {"closestate", closestate},

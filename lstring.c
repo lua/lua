@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.54 2001/02/01 13:56:49 roberto Exp roberto $
+** $Id: lstring.c,v 1.55 2001/02/01 17:40:48 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -102,17 +102,17 @@ TString *luaS_newudata (lua_State *L, size_t s, void *udata) {
 }
 
 
-TString *luaS_createudata (lua_State *L, void *udata, int tag) {
+int luaS_createudata (lua_State *L, void *udata, TObject *o) {
   int h1 = lmod(IntPoint(udata), G(L)->udt.size);
   TString *ts;
   for (ts = G(L)->udt.hash[h1]; ts; ts = ts->nexthash) {
-    if (udata == ts->u.d.value && (tag == ts->u.d.tag || tag == LUA_ANYTAG))
-      return ts;
+    if (udata == ts->u.d.value) {
+      setuvalue(o, ts);
+      return 0;
+    }
   }
   /* not found */
-  ts = luaS_newudata(L, 0, udata);
-  if (tag != LUA_ANYTAG)
-    ts->u.d.tag = tag;
-  return ts;
+  setuvalue(o, luaS_newudata(L, 0, udata));
+  return 1;
 }
 
