@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.72 2000/10/02 20:10:55 roberto Exp roberto $
+** $Id: lua.h,v 1.73 2000/10/05 12:14:08 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -41,6 +41,7 @@
 #define LUA_ERRFILE	2
 #define LUA_ERRSYNTAX	3
 #define LUA_ERRMEM	4
+#define LUA_ERRERR	5
 
 
 typedef struct lua_State lua_State;

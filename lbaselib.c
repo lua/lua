@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.9 2000/10/05 12:14:08 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.10 2000/10/06 19:13:29 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -229,7 +229,8 @@ static int luaB_next (lua_State *L) {
 
 static int passresults (lua_State *L, int status, int oldtop) {
   static const char *const errornames[] =
-    {"ok", "run-time error", "file error", "syntax error", "memory error"};
+    {"ok", "run-time error", "file error", "syntax error",
+     "memory error", "error in error handling"};
   if (status == 0) {
     int nresults = lua_gettop(L) - oldtop;
     if (nresults > 0)

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.51 2000/09/11 19:42:57 roberto Exp roberto $
+** $Id: lua.c,v 1.52 2000/09/25 16:15:52 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -91,10 +91,12 @@ static int ldo (int (*f)(lua_State *l, const char *), const char *name) {
   res = f(L, name);  /* dostring | dofile */
   lua_settop(L, top);  /* remove eventual results */
   signal(SIGINT, h);  /* restore old action */
+  /* Lua gives no message in such cases, so lua.c provides one */
   if (res == LUA_ERRMEM) {
-    /* Lua gives no message in such case, so lua.c provides one */
     fprintf(stderr, "lua: memory allocation error\n");
   }
+  else if (res == LUA_ERRERR)
+    fprintf(stderr, "lua: error in error message\n");
   return res;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.104 2000/10/06 12:45:25 roberto Exp roberto $
+** $Id: ldo.c,v 1.105 2000/10/09 13:47:32 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -43,9 +43,8 @@ void luaD_init (lua_State *L, int stacksize) {
 void luaD_checkstack (lua_State *L, int n) {
   if (L->stack_last - L->top <= n) {  /* stack overflow? */
     if (L->stack_last-L->stack > (L->stacksize-1)) {
-      /* overflow while handling overflow: do what?? */
-      L->top -= EXTRA_STACK;
-      lua_error(L, "BAD STACK OVERFLOW! DATA CORRUPTED!");
+      /* overflow while handling overflow */
+      luaD_breakrun(L, LUA_ERRERR);  /* break run without error message */
     }
     else {
       L->stack_last += EXTRA_STACK;  /* to be used by error message */
