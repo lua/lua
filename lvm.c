@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.32 2005/03/09 16:28:07 roberto Exp roberto $
+** $Id: lvm.c,v 2.33 2005/03/16 16:59:21 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -371,7 +371,7 @@ static StkId Arith (lua_State *L, StkId ra, const TValue *rb,
 #define KBx(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgK, k+GETARG_Bx(i))
 
 
-#define dojump(L,pc,i)	{(pc) += (i); lua_threadyield(L);}
+#define dojump(L,pc,i)	{(pc) += (i); luai_threadyield(L);}
 
 
 StkId luaV_execute (lua_State *L, int nexeccalls) {
