@@ -1,5 +1,5 @@
 /*
-** $Id: func.h,v 1.7 1996/03/08 12:04:04 roberto Exp roberto $
+** $Id: func.h,v 1.8 1996/03/14 15:54:20 roberto Exp roberto $
 */
 
 #ifndef func_h
@@ -30,7 +30,8 @@ typedef struct TFunc
   LocVar        *locvars;
 } TFunc;
 
-Long luaI_funccollector (void);
+TFunc *luaI_funccollector (long *cont);
+void luaI_funcfree (TFunc *l);
 void luaI_insertfunction (TFunc *f);
 
 void luaI_initTFunc (TFunc *f);

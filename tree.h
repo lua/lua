@@ -1,7 +1,7 @@
 /*
 ** tree.h
 ** TecCGraf - PUC-Rio
-** $Id: tree.h,v 1.15 1997/02/11 11:35:05 roberto Exp roberto $
+** $Id: tree.h,v 1.16 1997/03/19 19:41:10 roberto Exp roberto $
 */
 
 #ifndef tree_h
@@ -15,6 +15,7 @@
 typedef struct TaggedString
 {
   int tag;  /* if != LUA_T_STRING, this is a userdata */
+  struct TaggedString *next;
   long size;
   Word varindex;  /* != NOT_USED  if this is a symbol */
   Word constindex;  /* != NOT_USED  if this is a constant */
@@ -26,7 +27,8 @@ typedef struct TaggedString
 
 TaggedString *lua_createstring (char *str);
 TaggedString *luaI_createuserdata (char *buff, long size, int tag);
-Long lua_strcollector (void);
-void luaI_strcallIM (void);
+TaggedString *luaI_strcollector (long *cont);
+void luaI_strfree (TaggedString *l);
+void luaI_strcallIM (TaggedString *l);
 
 #endif

@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.41 1997/04/06 14:08:08 roberto Exp roberto $";
+char *rcs_hash="$Id: hash.c,v 2.42 1997/05/08 20:43:30 roberto Exp roberto $";
 
 
 #include "luamem.h"
@@ -167,46 +167,50 @@ void lua_hashmark (Hash *h)
 }
 
 
-void luaI_hashcallIM (void)
+void luaI_hashcallIM (Hash *l)
 {
-  Hash *curr_array;
   TObject t;
   ttype(&t) = LUA_T_ARRAY;
-  for (curr_array = listhead; curr_array; curr_array = curr_array->next)
-    if (markarray(curr_array) != 1)
-    {
-      avalue(&t) = curr_array;
-      luaI_gcIM(&t);
-    }
+  for (; l; l=l->next) {
+    avalue(&t) = l;
+    luaI_gcIM(&t);
+  }
+}
+
+
+void luaI_hashfree (Hash *frees)
+{
+  while (frees) {
+    Hash *next = frees->next;
+    hashdelete(frees);
+    frees = next;
+  }
 }
 
  
-/*
-** Garbage collection to arrays
-** Delete all unmarked arrays.
-*/
-Long lua_hashcollector (void)
+Hash *luaI_hashcollector (long *acum)
 {
- Hash *curr_array = listhead, *prev = NULL;
- Long counter = 0;
- while (curr_array != NULL)
- {
-  Hash *next = curr_array->next;
-  if (markarray(curr_array) != 1)
-  {
-   if (prev == NULL) listhead = next;
-   else              prev->next = next;
-   hashdelete(curr_array);
-   ++counter;
+  Hash *curr_array = listhead, *prev = NULL, *frees = NULL;
+  long counter = 0;
+  while (curr_array != NULL) {
+    Hash *next = curr_array->next;
+    if (markarray(curr_array) != 1) {
+      if (prev == NULL)
+        listhead = next;
+      else
+        prev->next = next;
+      curr_array->next = frees;
+      frees = curr_array;
+      ++counter;
+    }
+    else {
+      markarray(curr_array) = 0;
+      prev = curr_array;
+    }
+    curr_array = next;
   }
-  else
-  {
-   markarray(curr_array) = 0;
-   prev = curr_array;
-  }
-  curr_array = next;
- }
- return counter;
+  *acum += counter;
+  return frees;
 }
 
 

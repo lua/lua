@@ -3,10 +3,11 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.67 1997/04/06 14:08:08 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.68 1997/04/07 14:48:53 roberto Exp roberto $";
 
 #include "luamem.h"
 #include "auxlib.h"
+#include "func.h"
 #include "opcode.h"
 #include "tree.h"
 #include "hash.h"
@@ -176,32 +177,43 @@ static void call_nilIM (void)
 ** Garbage collection. 
 ** Delete all unused strings and arrays.
 */
-Long luaI_collectgarbage (void)
+static long gc_block = GARBAGE_BLOCK;
+static long gc_nentity = 0;  /* total of strings, arrays, etc */
+
+static void markall (void)
 {
-  Long recovered = 0;
   lua_travstack(lua_markobject); /* mark stack objects */
   lua_travsymbol(lua_markobject); /* mark symbol table objects */
   luaI_travlock(lua_markobject); /* mark locked objects */
   luaI_travfallbacks(lua_markobject);  /* mark fallbacks */
-  luaI_hashcallIM();
-  luaI_strcallIM();
+}
+
+
+static void lua_collectgarbage (void)
+{
+  long recovered = 0;
+  Hash *freetable;
+  TaggedString *freestr;
+  TFunc *freefunc;
+  markall();
+  freetable = luaI_hashcollector(&recovered);
+  freestr = luaI_strcollector(&recovered);
+  freefunc = luaI_funccollector(&recovered);
+  gc_block = 2*(gc_block-recovered);
+  gc_nentity -= recovered;
+  luaI_hashcallIM(freetable);
+  luaI_strcallIM(freestr);
   call_nilIM();
-  luaI_invalidaterefs();
-  recovered += lua_strcollector();
-  recovered += lua_hashcollector();
-  recovered += luaI_funccollector();
-  return recovered;
+  luaI_hashfree(freetable);
+  luaI_strfree(freestr);
+  luaI_funcfree(freefunc);
 } 
+
 
 void lua_pack (void)
 {
-  static unsigned long block = GARBAGE_BLOCK;
-  static unsigned long nentity = 0;  /* total of strings, arrays, etc */
-  unsigned long recovered = 0;
-  if (nentity++ < block) return;
-  recovered = luaI_collectgarbage();
-  block = 2*(block-recovered);
-  nentity -= recovered;
+  if (gc_nentity++ >= gc_block)
+    lua_collectgarbage();
 } 
 
 

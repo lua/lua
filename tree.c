@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.24 1997/03/31 14:17:09 roberto Exp roberto $";
+char *rcs_tree="$Id: tree.c,v 1.25 1997/05/05 20:21:23 roberto Exp roberto $";
 
 
 #include <string.h>
@@ -29,7 +29,8 @@ static int initialized = 0;
 
 static stringtable string_root[NUM_HASHS];
 
-static TaggedString EMPTY = {LUA_T_STRING, 0, NOT_USED, NOT_USED, 0, 2, {0}};
+static TaggedString EMPTY = {LUA_T_STRING, NULL, 0, NOT_USED, NOT_USED,
+                             0, 2, {0}};
 
 
 static unsigned long hash (char *buff, long size)
@@ -134,32 +135,34 @@ TaggedString *lua_createstring (char *str)
 }
 
 
-void luaI_strcallIM (void)
+void luaI_strcallIM (TaggedString *l)
 {
-  int i;
   TObject o;
   ttype(&o) = LUA_T_USERDATA;
-  for (i=0; i<NUM_HASHS; i++) {
-    stringtable *tb = &string_root[i];
-    int j;
-    for (j=0; j<tb->size; j++) {
-      TaggedString *t = tb->hash[j];
-      if (t != NULL && t->tag != LUA_T_STRING && t->marked == 0) {
-        tsvalue(&o) = t;
-        luaI_gcIM(&o);
-      }
-    }
+  for (; l; l=l->next) {
+    tsvalue(&o) = l;
+    luaI_gcIM(&o);
+  }
+}
+
+
+void luaI_strfree (TaggedString *l)
+{
+  while (l) {
+    TaggedString *next = l->next;
+    luaI_free(l);
+    l = next;
   }
 }
 
 
 /*
 ** Garbage collection function.
-** This function traverse the string list freeing unindexed strings
 */
-Long lua_strcollector (void)
+TaggedString *luaI_strcollector (long *acum)
 {
   Long counter = 0;
+  TaggedString *frees = NULL;
   int i;
   for (i=0; i<NUM_HASHS; i++)
   {
@@ -174,13 +177,15 @@ Long lua_strcollector (void)
           t->marked = 0;
         else
         {
-          luaI_free(t);
+          t->next = frees;
+          frees = t;
           tb->hash[j] = &EMPTY;
           counter++;
         }
       }
     }
   }
-  return counter;
+  *acum += counter;
+  return frees;
 }
 

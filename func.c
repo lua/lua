@@ -49,35 +49,44 @@ void luaI_freefunc (TFunc *f)
   luaI_free (f);
 }
 
+
+void luaI_funcfree (TFunc *l)
+{
+  while (l) {
+    TFunc *next = l->next;
+    luaI_freefunc(l);
+    l = next;
+  }
+}
+
 /*
 ** Garbage collection function.
-** This function traverse the function list freeing unindexed functions
 */
-Long luaI_funccollector (void)
+TFunc *luaI_funccollector (long *acum)
 {
   TFunc *curr = function_root;
   TFunc *prev = NULL;
-  Long counter = 0;
-  while (curr)
-  {
+  TFunc *frees = NULL;
+  long counter = 0;
+  while (curr) {
     TFunc *next = curr->next;
-    if (!curr->marked)
-    {
+    if (!curr->marked) {
       if (prev == NULL)
         function_root = next;
       else
         prev->next = next;
-      luaI_freefunc (curr);
+      curr->next = frees;
+      frees = curr;
       ++counter;
     }
-    else
-    {
+    else {
       curr->marked = 0;
       prev = curr;
     } 
     curr = next;
   }
-  return counter;
+  *acum += counter;
+  return frees;
 }
 
 
