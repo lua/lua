@@ -59,8 +59,9 @@ static void f_luaopen (lua_State *L, void *ud) {
     G(L)->rootproto = NULL;
     G(L)->rootcl = NULL;
     G(L)->roottable = NULL;
-    G(L)->rootudata = NULL;
     G(L)->rootupval = NULL;
+    G(L)->rootudata = NULL;
+    G(L)->tmudata = NULL;
     G(L)->nblocks = sizeof(lua_State) + sizeof(global_State);
     luaD_init(L, so->stacksize);  /* init stack */
     /* create default event table with a dummy table, and then close the loop */
@@ -118,6 +119,7 @@ static void close_state (lua_State *L, lua_State *OL) {
   else if (G(L)) {  /* last thread; close global state */
     if (G(L)->rootudata)  /* (avoid problems with incomplete states) */
       luaC_callallgcTM(L);  /* call GC tag methods for all udata */
+    lua_assert(G(L)->tmudata == NULL);
     luaC_collect(L, 1);  /* collect all elements */
     lua_assert(G(L)->rootproto == NULL);
     lua_assert(G(L)->rootudata == NULL);

@@ -136,6 +136,8 @@ static void markudet (lua_State *L, GCState *st) {
   Udata *u;
   for (u = G(L)->rootudata; u; u = u->uv.next)
     marktable(st, u->uv.eventtable);
+  for (u = G(L)->tmudata; u; u = u->uv.next)
+    marktable(st, u->uv.eventtable);
 }
 
 
@@ -290,27 +292,30 @@ static void collecttable (lua_State *L) {
 }
 
 
-static Udata *collectudata (lua_State *L, int keep) {
+static void collectudata (lua_State *L) {
   Udata **p = &G(L)->rootudata;
   Udata *curr;
-  Udata *collected = NULL;
+  Udata *collected = NULL;  /* to collect udata with gc event */
+  Udata **lastcollected = &collected;
   while ((curr = *p) != NULL) {
     if (isudmarked(curr)) {
       unmarkud(curr);
       p = &curr->uv.next;
     }
-    else {  /* collect */
-      const TObject *tm = fasttm(L, curr->uv.eventtable, TM_GC);
+    else {
       *p = curr->uv.next;
-      if (keep || tm != NULL) {
-        curr->uv.next = collected;
-        collected = curr;
+      if (fasttm(L, curr->uv.eventtable, TM_GC) != NULL) {  /* gc event? */
+        curr->uv.next = NULL;  /* link `curr' at the end of `collected' list */
+        *lastcollected = curr;
+        lastcollected = &curr->uv.next;
       }
-      else  /* no gc action; delete udata */
+      else  /* no gc event; delete udata */
         luaM_free(L, curr, sizeudata(curr->uv.len));
     }
   }
-  return collected;
+  /* insert collected udata with gc event into `tmudata' list */
+  *lastcollected = G(L)->tmudata;
+  G(L)->tmudata = collected;
 }
 
 
@@ -365,12 +370,12 @@ static void callgcTM (lua_State *L, Udata *udata) {
 }
 
 
-static void callgcTMudata (lua_State *L, Udata *c) {
+static void callgcTMudata (lua_State *L) {
   luaD_checkstack(L, 3);
   L->top++;  /* reserve space to keep udata while runs its gc method */
-  while (c != NULL) {
-    Udata *udata = c;
-    c = udata->uv.next;  /* remove udata from list */
+  while (G(L)->tmudata != NULL) {
+    Udata *udata = G(L)->tmudata;
+    G(L)->tmudata = udata->uv.next;  /* remove udata from list */
     udata->uv.next = G(L)->rootudata;  /* resurect it */
     G(L)->rootudata = udata;
     setuvalue(L->top - 1, udata);
@@ -383,34 +388,32 @@ static void callgcTMudata (lua_State *L, Udata *c) {
 
 
 void luaC_callallgcTM (lua_State *L) {
-  if (G(L)->rootudata) {  /* avoid problems with incomplete states */
-    Udata *c = collectudata(L, 1);  /* collect all udata */
-    callgcTMudata(L, c);  /* call their GC tag methods */
-  }
+  lua_assert(G(L)->tmudata == NULL);
+  G(L)->tmudata = G(L)->rootudata;  /* all udata must be collected */
+  G(L)->rootudata = NULL;
+  callgcTMudata(L);  /* call their GC tag methods */
 }
 
 
-Udata *luaC_collect (lua_State *L, int all) {
-  Udata *c = collectudata(L, 0);
+void luaC_collect (lua_State *L, int all) {
+  collectudata(L);
   collectstrings(L, all);
   collecttable(L);
   collectproto(L);
   collectupval(L);
   collectclosures(L);
-  return c;
 }
 
 
 void luaC_collectgarbage (lua_State *L) {
-  Udata *c;
   GCState st;
   st.tmark = NULL;
   st.toclear = NULL;
   markall(L, &st);
   cleartables(st.toclear);
-  c = luaC_collect(L, 0);
+  luaC_collect(L, 0);
   checkMbuffer(L);
   G(L)->GCthreshold = 2*G(L)->nblocks;  /* new threshold */
-  callgcTMudata(L, c);
+  callgcTMudata(L);
 }
 

@@ -81,8 +81,9 @@ typedef struct global_State {
   Proto *rootproto;  /* list of all prototypes */
   Closure *rootcl;  /* list of all closures */
   Table *roottable;  /* list of all tables */
-  Udata *rootudata;   /* list of all userdata */
   UpVal *rootupval;  /* list of closed up values */
+  Udata *rootudata;   /* list of all userdata */
+  Udata *tmudata;  /* list of userdata to be GC */
   TString *tmname[TM_N];  /* array with tag-method names */
 } global_State;
 
