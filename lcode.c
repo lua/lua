@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.14 2000/03/17 13:09:46 roberto Exp roberto $
+** $Id: lcode.c,v 1.15 2000/03/17 14:46:04 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -139,8 +139,7 @@ static void luaK_eq (FuncState *fs) {
 static void luaK_neq (FuncState *fs) {
   Instruction previous = prepare(fs, CREATE_S(OP_IFNEQJMP, 0), -2);
   if (previous == CREATE_U(OP_PUSHNIL, 1)) {
-    fs->pc -= 2;  /* remove PUSHNIL and IFNEQJMP */
-    luaK_deltastack(fs, 1);  /* undo delta from `prepare' */
+    setprevious(fs, CREATE_S(OP_IFTJMP, 0));
   }
 }
 
@@ -345,12 +344,6 @@ static void luaK_jump (FuncState *fs, OpCode jump) {
         break;
       }
       else return;  /* do not set previous */
-    case OP_PUSHNIL:
-      if (jump == OP_IFFJMP) {
-        previous = CREATE_S(OP_JMP, 0);
-        break;
-      }
-      else return;  /* do not set previous */
     default: return;
   }
   setprevious(fs, previous);
@@ -419,6 +412,7 @@ void luaK_goiftrue (FuncState *fs, expdesc *v, int keepvalue) {
   Instruction *previous;
   discharge1(fs, v);
   previous = &fs->f->code[fs->pc-1];
+  LUA_ASSERT(L, GET_OPCODE(*previous) != OP_SETLINE, "bad place to set line");
   if (ISJUMP(GET_OPCODE(*previous)))
     SET_OPCODE(*previous, invertjump(GET_OPCODE(*previous)));
   else {
@@ -435,6 +429,7 @@ void luaK_goiffalse (FuncState *fs, expdesc *v, int keepvalue) {
   Instruction previous;
   discharge1(fs, v);
   previous = fs->f->code[fs->pc-1];
+  LUA_ASSERT(L, GET_OPCODE(previous) != OP_SETLINE, "bad place to set line");
   if (!ISJUMP(GET_OPCODE(previous))) {
     OpCode jump = keepvalue ? OP_ONTJMP : OP_IFTJMP;
     luaK_jump(fs, jump);
@@ -450,6 +445,7 @@ void luaK_tostack (LexState *ls, expdesc *v, int onlyone) {
   if (discharge(fs, v)) return;
   else {  /* is an expression */
     OpCode previous = GET_OPCODE(fs->f->code[fs->pc-1]);
+    LUA_ASSERT(L, previous != OP_SETLINE, "bad place to set line");
     if (!ISJUMP(previous) && v->u.l.f == NO_JUMP && v->u.l.t == NO_JUMP) {
       /* it is an expression without jumps */
       if (onlyone && v->k == VEXP)
