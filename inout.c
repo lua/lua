@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.16 1994/12/20 21:20:36 roberto Exp celes $";
+char *rcs_inout="$Id: inout.c,v 2.17 1995/03/17 20:27:11 celes Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -235,9 +235,11 @@ void lua_print (void)
 void luaI_type (void)
 {
   lua_Object o = lua_getparam(1);
+  int t;
   if (o == LUA_NOOBJECT)
     lua_error("no parameter to function 'type'");
-  switch (lua_type(o))
+  t = lua_type(o);
+  switch (t)
   {
     case LUA_T_NIL :
       lua_pushliteral("nil");
@@ -261,6 +263,7 @@ void luaI_type (void)
       lua_pushliteral("userdata");
       break;
   }
+  lua_pushnumber(t);
 }
  
 /*
