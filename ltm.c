@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.59 2000/12/28 12:55:41 roberto Exp roberto $
+** $Id: ltm.c,v 1.60 2001/01/18 15:59:09 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -68,36 +68,36 @@ int luaT_validevent (int t, int e) {  /* ORDER LUA_T */
 static void init_entry (lua_State *L, int tag) {
   int i;
   for (i=0; i<TM_N; i++)
-    luaT_gettm(L, tag, i) = NULL;
-  L->TMtable[tag].collected = NULL;
+    luaT_gettm(G(L), tag, i) = NULL;
+  G(L)->TMtable[tag].collected = NULL;
 }
 
 
 void luaT_init (lua_State *L) {
   int t;
-  L->TMtable = luaM_newvector(L, NUM_TAGS+2, struct TM);
-  L->sizeTM = NUM_TAGS+2;
-  L->ntag = NUM_TAGS;
-  for (t=0; t<L->ntag; t++)
+  G(L)->TMtable = luaM_newvector(L, NUM_TAGS+2, struct TM);
+  G(L)->sizeTM = NUM_TAGS+2;
+  G(L)->ntag = NUM_TAGS;
+  for (t=0; t<G(L)->ntag; t++)
     init_entry(L, t);
 }
 
 
 LUA_API int lua_newtag (lua_State *L) {
-  luaM_growvector(L, L->TMtable, L->ntag, L->sizeTM, struct TM,
+  luaM_growvector(L, G(L)->TMtable, G(L)->ntag, G(L)->sizeTM, struct TM,
                   MAX_INT, "tag table overflow");
-  init_entry(L, L->ntag);
-  return L->ntag++;
+  init_entry(L, G(L)->ntag);
+  return G(L)->ntag++;
 }
 
 
 static void checktag (lua_State *L, int tag) {
-  if (!(0 <= tag && tag < L->ntag))
+  if (!(0 <= tag && tag < G(L)->ntag))
     luaO_verror(L, "%d is not a valid tag", tag);
 }
 
 void luaT_realtag (lua_State *L, int tag) {
-  if (!validtag(tag))
+  if (!validtag(G(L), tag))
     luaO_verror(L, "tag %d was not created by `newtag'", tag);
 }
 
@@ -108,7 +108,7 @@ LUA_API int lua_copytagmethods (lua_State *L, int tagto, int tagfrom) {
   checktag(L, tagfrom);
   for (e=0; e<TM_N; e++) {
     if (luaT_validevent(tagto, e))
-      luaT_gettm(L, tagto, e) = luaT_gettm(L, tagfrom, e);
+      luaT_gettm(G(L), tagto, e) = luaT_gettm(G(L), tagfrom, e);
   }
   return tagto;
 }
@@ -128,8 +128,8 @@ LUA_API void lua_gettagmethod (lua_State *L, int t, const char *event) {
   int e;
   e = luaI_checkevent(L, event, t);
   checktag(L, t);
-  if (luaT_validevent(t, e) && luaT_gettm(L, t, e)) {
-    setclvalue(L->top, luaT_gettm(L, t, e));
+  if (luaT_validevent(t, e) && luaT_gettm(G(L), t, e)) {
+    setclvalue(L->top, luaT_gettm(G(L), t, e));
   }
   else
     setnilvalue(L->top);
@@ -147,10 +147,10 @@ LUA_API void lua_settagmethod (lua_State *L, int t, const char *event) {
                    " with default tag" : "");
   switch (ttype(L->top - 1)) {
     case LUA_TNIL:
-      luaT_gettm(L, t, e) = NULL;
+      luaT_gettm(G(L), t, e) = NULL;
       break;
     case LUA_TFUNCTION:
-      luaT_gettm(L, t, e) = clvalue(L->top - 1);
+      luaT_gettm(G(L), t, e) = clvalue(L->top - 1);
       break;
     default:
       lua_error(L, "tag method must be a function (or nil)");

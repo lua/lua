@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.63 2001/01/10 18:56:11 roberto Exp roberto $
+** $Id: ltable.c,v 1.64 2001/01/18 15:59:09 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -144,7 +144,7 @@ void luaH_remove (Hash *t, TObject *key) {
       n += t->size;
     }
     setnvalue(key, n);
-    LUA_ASSERT(luaH_mainposition(t, key) == mp, "cannot change hash");
+    lua_assert(luaH_mainposition(t, key) == mp);
   }
 }
 
@@ -167,8 +167,8 @@ static void setnodevector (lua_State *L, Hash *t, luint32 size) {
 Hash *luaH_new (lua_State *L, int size) {
   Hash *t = luaM_new(L, Hash);
   t->htag = TagDefault;
-  t->next = L->roottable;
-  L->roottable = t;
+  t->next = G(L)->roottable;
+  G(L)->roottable = t;
   t->mark = t;
   t->size = 0;
   t->node = NULL;
@@ -201,7 +201,7 @@ static void rehash (lua_State *L, Hash *t) {
   Node *nold = t->node;
   int nelems = numuse(t);
   int i;
-  LUA_ASSERT(nelems<=oldsize, "wrong count");
+  lua_assert(nelems<=oldsize);
   if (nelems >= oldsize-oldsize/4)  /* using more than 3/4? */
     setnodevector(L, t, (luint32)oldsize*2);
   else if (nelems <= oldsize/4 &&  /* less than 1/4? */

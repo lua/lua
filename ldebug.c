@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.52 2000/12/26 18:46:09 roberto Exp roberto $
+** $Id: ldebug.c,v 1.53 2001/01/18 15:59:09 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -96,20 +96,20 @@ int luaG_getline (int *lineinfo, int pc, int refline, int *prefi) {
   refi = prefi ? *prefi : 0;
   if (lineinfo[refi] < 0)
     refline += -lineinfo[refi++]; 
-  LUA_ASSERT(lineinfo[refi] >= 0, "invalid line info");
+  lua_assert(lineinfo[refi] >= 0);
   while (lineinfo[refi] > pc) {
     refline--;
     refi--;
     if (lineinfo[refi] < 0)
       refline -= -lineinfo[refi--]; 
-    LUA_ASSERT(lineinfo[refi] >= 0, "invalid line info");
+    lua_assert(lineinfo[refi] >= 0);
   }
   for (;;) {
     int nextline = refline + 1;
     int nextref = refi + 1;
     if (lineinfo[nextref] < 0)
       nextline += -lineinfo[nextref++]; 
-    LUA_ASSERT(lineinfo[nextref] >= 0, "invalid line info");
+    lua_assert(lineinfo[nextref] >= 0);
     if (lineinfo[nextref] > pc)
       break;
     refline = nextline;
@@ -122,7 +122,7 @@ int luaG_getline (int *lineinfo, int pc, int refline, int *prefi) {
 
 static int currentpc (StkId f) {
   CallInfo *ci = infovalue(f);
-  LUA_ASSERT(isLmark(f), "function has no pc");
+  lua_assert(isLmark(f));
   if (ci->pc)
     return (*ci->pc - ci->func->f.l->code) - 1;
   else
@@ -204,13 +204,13 @@ static void funcinfo (lua_State *L, lua_Debug *ar, StkId func) {
 }
 
 
-static const char *travtagmethods (lua_State *L, const TObject *o) {
+static const char *travtagmethods (global_State *G, const TObject *o) {
   if (ttype(o) == LUA_TFUNCTION) {
     int e;
     for (e=0; e<TM_N; e++) {
       int t;
-      for (t=0; t<L->ntag; t++)
-        if (clvalue(o) == luaT_gettm(L, t, e))
+      for (t=0; t<G->ntag; t++)
+        if (clvalue(o) == luaT_gettm(G, t, e))
           return luaT_eventname[e];
     }
   }
@@ -237,7 +237,7 @@ static void getname (lua_State *L, StkId f, lua_Debug *ar) {
   if ((ar->name = travglobals(L, &o)) != NULL)
     ar->namewhat = "global";
   /* not found: try tag methods */
-  else if ((ar->name = travtagmethods(L, &o)) != NULL)
+  else if ((ar->name = travtagmethods(G(L), &o)) != NULL)
     ar->namewhat = "tag-method";
   else ar->namewhat = "";  /* not found at all */
 }
@@ -308,22 +308,22 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int stackpos) {
     top++;  /* `arg' */
   while (pc < lastpc) {
     const Instruction i = code[pc++];
-    LUA_ASSERT(0 <= top && top <= pt->maxstacksize, "wrong stack");
+    lua_assert(0 <= top && top <= pt->maxstacksize);
     switch (GET_OPCODE(i)) {
       case OP_RETURN: {
-        LUA_ASSERT(top >= GETARG_U(i), "wrong stack");
+        lua_assert(top >= GETARG_U(i));
         top = GETARG_U(i);
         break;
       }
       case OP_TAILCALL: {
-        LUA_ASSERT(top >= GETARG_A(i), "wrong stack");
+        lua_assert(top >= GETARG_A(i));
         top = GETARG_B(i);
         break;
       }
       case OP_CALL: {
         int nresults = GETARG_B(i);
         if (nresults == MULT_RET) nresults = 1;
-        LUA_ASSERT(top >= GETARG_A(i), "wrong stack");
+        lua_assert(top >= GETARG_A(i));
         top = pushpc(stack, pc, GETARG_A(i), nresults);
         break;
       }
@@ -368,10 +368,9 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int stackpos) {
       }
       default: {
         OpCode op = GET_OPCODE(i);
-        LUA_ASSERT(luaK_opproperties[op].push != VD,
-                   "invalid opcode for default");
+        lua_assert(luaK_opproperties[op].push != VD);
         top -= (int)luaK_opproperties[op].pop;
-        LUA_ASSERT(top >= 0, "wrong stack");
+        lua_assert(top >= 0);
         top = pushpc(stack, pc, top, luaK_opproperties[op].push);
       }
     }
@@ -389,7 +388,7 @@ static const char *getobjname (lua_State *L, StkId obj, const char **name) {
     int pc = currentpc(func);
     int stackpos = obj - (func+1);  /* func+1 == function base */
     Instruction i = luaG_symbexec(p, pc, stackpos);
-    LUA_ASSERT(pc != -1, "function must be active");
+    lua_assert(pc != -1);
     switch (GET_OPCODE(i)) {
       case OP_GETGLOBAL: {
         *name = p->kstr[GETARG_U(i)]->str;
@@ -397,7 +396,7 @@ static const char *getobjname (lua_State *L, StkId obj, const char **name) {
       }
       case OP_GETLOCAL: {
         *name = luaF_getlocalname(p, GETARG_U(i)+1, pc);
-        LUA_ASSERT(*name, "local must exist");
+        lua_assert(*name);
         return "local";
       }
       case OP_PUSHSELF:
@@ -449,7 +448,7 @@ void luaG_typeerror (lua_State *L, StkId o, const char *op) {
 
 void luaG_binerror (lua_State *L, StkId p1, int t, const char *op) {
   if (ttype(p1) == t) p1++;
-  LUA_ASSERT(ttype(p1) != t, "must be an error");
+  lua_assert(ttype(p1) != t);
   luaG_typeerror(L, p1, op);
 }
 

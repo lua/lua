@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.49 2001/01/10 17:41:50 roberto Exp roberto $
+** $Id: lstring.c,v 1.50 2001/01/11 18:59:20 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -19,16 +19,16 @@
 
 
 void luaS_init (lua_State *L) {
-  luaS_resize(L, &L->strt, MINPOWER2);
-  luaS_resize(L, &L->udt, MINPOWER2);
+  luaS_resize(L, &G(L)->strt, MINPOWER2);
+  luaS_resize(L, &G(L)->udt, MINPOWER2);
 }
 
 
 void luaS_freeall (lua_State *L) {
-  LUA_ASSERT(L->strt.nuse==0, "non-empty string table");
-  luaM_freearray(L, L->strt.hash, L->strt.size, TString *);
-  LUA_ASSERT(L->udt.nuse==0, "non-empty udata table");
-  luaM_freearray(L, L->udt.hash, L->udt.size, TString *);
+  lua_assert(G(L)->strt.nuse==0);
+  luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size, TString *);
+  lua_assert(G(L)->udt.nuse==0);
+  luaM_freearray(L, G(L)->udt.hash, G(L)->udt.size, TString *);
 }
 
 
@@ -41,10 +41,9 @@ void luaS_resize (lua_State *L, stringtable *tb, int newsize) {
     TString *p = tb->hash[i];
     while (p) {  /* for each node in the list */
       TString *next = p->nexthash;  /* save next */
-      luint32 h = (tb == &L->strt) ? p->u.s.hash : IntPoint(p->u.d.value);
+      luint32 h = (tb == &G(L)->strt) ? p->u.s.hash : IntPoint(p->u.d.value);
       int h1 = lmod(h, newsize);  /* new position */
-      LUA_ASSERT((int)(h%newsize) == lmod(h, newsize),
-                    "a&(x-1) == a%x, for x power of 2");
+      lua_assert((int)(h%newsize) == lmod(h, newsize));
       p->nexthash = newhash[h1];  /* chain it in new position */
       newhash[h1] = p;
       p = next;
@@ -73,7 +72,7 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
   size_t l1;
   for (l1=l; l1>=step; l1-=step)  /* compute hash */
     h = h ^ ((h<<5)+(h>>2)+(unsigned char)str[l1-1]);
-  for (ts = L->strt.hash[lmod(h, L->strt.size)]; ts; ts = ts->nexthash) {
+  for (ts = G(L)->strt.hash[lmod(h, G(L)->strt.size)]; ts; ts = ts->nexthash) {
     if (ts->len == l && (memcmp(str, ts->str, l) == 0))
       return ts;
   }
@@ -86,7 +85,7 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
   ts->u.s.constindex = 0;
   memcpy(ts->str, str, l);
   ts->str[l] = 0;  /* ending 0 */
-  newentry(L, &L->strt, ts, lmod(h, L->strt.size));  /* insert it on table */
+  newentry(L, &G(L)->strt, ts, lmod(h, G(L)->strt.size));  /* insert it */
   return ts;
 }
 
@@ -100,15 +99,15 @@ TString *luaS_newudata (lua_State *L, size_t s, void *udata) {
   ts->u.d.tag = 0;
   ts->u.d.value = (udata == NULL) ? uts+1 : udata;
   /* insert it on table */
-  newentry(L, &L->udt, ts, lmod(IntPoint(ts->u.d.value), L->udt.size));
+  newentry(L, &G(L)->udt, ts, lmod(IntPoint(ts->u.d.value), G(L)->udt.size));
   return ts;
 }
 
 
 TString *luaS_createudata (lua_State *L, void *udata, int tag) {
-  int h1 = lmod(IntPoint(udata), L->udt.size);
+  int h1 = lmod(IntPoint(udata), G(L)->udt.size);
   TString *ts;
-  for (ts = L->udt.hash[h1]; ts; ts = ts->nexthash) {
+  for (ts = G(L)->udt.hash[h1]; ts; ts = ts->nexthash) {
     if (udata == ts->u.d.value && (tag == ts->u.d.tag || tag == LUA_ANYTAG))
       return ts;
   }

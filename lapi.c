@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.116 2001/01/10 18:56:11 roberto Exp roberto $
+** $Id: lapi.c,v 1.117 2001/01/18 15:59:09 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -230,7 +230,7 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
 
 LUA_API void lua_pushusertag (lua_State *L, void *u, int tag) {
   /* ORDER LUA_T */
-  if (!(tag == LUA_ANYTAG || tag == LUA_TUSERDATA || validtag(tag)))
+  if (!(tag == LUA_ANYTAG || tag == LUA_TUSERDATA || validtag(G(L), tag)))
     luaO_verror(L, "invalid tag for a userdata (%d)", tag);
   setuvalue(L->top, luaS_createudata(L, u, tag));
   api_incr_top(L);
@@ -261,14 +261,14 @@ LUA_API void lua_gettable (lua_State *L, int index) {
 
 LUA_API void lua_rawget (lua_State *L, int index) {
   StkId t = Index(L, index);
-  LUA_ASSERT(ttype(t) == LUA_TTABLE, "table expected");
+  lua_assert(ttype(t) == LUA_TTABLE);
   setobj(L->top - 1, luaH_get(hvalue(t), L->top - 1));
 }
 
 
 LUA_API void lua_rawgeti (lua_State *L, int index, int n) {
   StkId o = Index(L, index);
-  LUA_ASSERT(ttype(o) == LUA_TTABLE, "table expected");
+  lua_assert(ttype(o) == LUA_TTABLE);
   setobj(L->top, luaH_getnum(hvalue(o), n));
   api_incr_top(L);
 }
@@ -284,9 +284,9 @@ LUA_API int lua_getref (lua_State *L, int ref) {
   if (ref == LUA_REFNIL) {
     setnilvalue(L->top);
   }
-  else if (0 <= ref && ref < L->nref &&
-          (L->refArray[ref].st == LOCK || L->refArray[ref].st == HOLD)) {
-    setobj(L->top, &L->refArray[ref].o);
+  else if (0 <= ref && ref < G(L)->nref &&
+          (G(L)->refArray[ref].st == LOCK || G(L)->refArray[ref].st == HOLD)) {
+    setobj(L->top, &G(L)->refArray[ref].o);
   }
   else
     return 0;
@@ -324,7 +324,7 @@ LUA_API void lua_settable (lua_State *L, int index) {
 
 LUA_API void lua_rawset (lua_State *L, int index) {
   StkId t = Index(L, index);
-  LUA_ASSERT(ttype(t) == LUA_TTABLE, "table expected");
+  lua_assert(ttype(t) == LUA_TTABLE);
   setobj(luaH_set(L, hvalue(t), L->top-2), (L->top-1));
   L->top -= 2;
 }
@@ -332,7 +332,7 @@ LUA_API void lua_rawset (lua_State *L, int index) {
 
 LUA_API void lua_rawseti (lua_State *L, int index, int n) {
   StkId o = Index(L, index);
-  LUA_ASSERT(ttype(o) == LUA_TTABLE, "table expected");
+  lua_assert(ttype(o) == LUA_TTABLE);
   setobj(luaH_setnum(L, hvalue(o), n), (L->top-1));
   L->top--;
 }
@@ -340,7 +340,7 @@ LUA_API void lua_rawseti (lua_State *L, int index, int n) {
 
 LUA_API void lua_setglobals (lua_State *L) {
   StkId newtable = --L->top;
-  LUA_ASSERT(ttype(newtable) == LUA_TTABLE, "table expected");
+  lua_assert(ttype(newtable) == LUA_TTABLE);
   L->gt = hvalue(newtable);
 }
 
@@ -350,17 +350,17 @@ LUA_API int lua_ref (lua_State *L,  int lock) {
   if (ttype(L->top-1) == LUA_TNIL)
     ref = LUA_REFNIL;
   else {
-    if (L->refFree != NONEXT) {  /* is there a free place? */
-      ref = L->refFree;
-      L->refFree = L->refArray[ref].st;
+    if (G(L)->refFree != NONEXT) {  /* is there a free place? */
+      ref = G(L)->refFree;
+      G(L)->refFree = G(L)->refArray[ref].st;
     }
     else {  /* no more free places */
-      luaM_growvector(L, L->refArray, L->nref, L->sizeref, struct Ref,
+      luaM_growvector(L, G(L)->refArray, G(L)->nref, G(L)->sizeref, struct Ref,
                       MAX_INT, "reference table overflow");
-      ref = L->nref++;
+      ref = G(L)->nref++;
     }
-    setobj(&L->refArray[ref].o, L->top-1);
-    L->refArray[ref].st = lock ? LOCK : HOLD;
+    setobj(&G(L)->refArray[ref].o, L->top-1);
+    G(L)->refArray[ref].st = lock ? LOCK : HOLD;
   }
   L->top--;
   return ref;
@@ -386,18 +386,18 @@ LUA_API void lua_rawcall (lua_State *L, int nargs, int nresults) {
 #define GCunscale(x)		((mem_int)(x)<<10)
 
 LUA_API int lua_getgcthreshold (lua_State *L) {
-  return GCscale(L->GCthreshold);
+  return GCscale(G(L)->GCthreshold);
 }
 
 LUA_API int lua_getgccount (lua_State *L) {
-  return GCscale(L->nblocks);
+  return GCscale(G(L)->nblocks);
 }
 
 LUA_API void lua_setgcthreshold (lua_State *L, int newthreshold) {
   if (newthreshold > GCscale(ULONG_MAX))
-    L->GCthreshold = ULONG_MAX;
+    G(L)->GCthreshold = ULONG_MAX;
   else
-    L->GCthreshold = GCunscale(newthreshold);
+    G(L)->GCthreshold = GCunscale(newthreshold);
   luaC_checkGC(L);
 }
 
@@ -424,9 +424,9 @@ LUA_API void lua_settag (lua_State *L, int tag) {
 
 LUA_API void lua_unref (lua_State *L, int ref) {
   if (ref >= 0) {
-    LUA_ASSERT(ref < L->nref && L->refArray[ref].st < 0, "invalid ref");
-    L->refArray[ref].st = L->refFree;
-    L->refFree = ref;
+    lua_assert(ref < G(L)->nref && G(L)->refArray[ref].st < 0);
+    G(L)->refArray[ref].st = G(L)->refFree;
+    G(L)->refFree = ref;
   }
 }
 
@@ -434,7 +434,7 @@ LUA_API void lua_unref (lua_State *L, int ref) {
 LUA_API int lua_next (lua_State *L, int index) {
   StkId t = luaA_index(L, index);
   Node *n;
-  LUA_ASSERT(ttype(t) == LUA_TTABLE, "table expected");
+  lua_assert(ttype(t) == LUA_TTABLE);
   n = luaH_next(L, hvalue(t), luaA_index(L, -1));
   if (n) {
     setobj(L->top-1, key(n));

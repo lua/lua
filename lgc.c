@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.75 2000/12/28 12:55:41 roberto Exp roberto $
+** $Id: lgc.c,v 1.76 2001/01/18 15:59:09 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -54,11 +54,11 @@ static void markstack (lua_State *L, GCState *st) {
 }
 
 
-static void marklock (lua_State *L, GCState *st) {
+static void marklock (global_State *G, GCState *st) {
   int i;
-  for (i=0; i<L->nref; i++) {
-    if (L->refArray[i].st == LOCK)
-      markobject(st, &L->refArray[i].o);
+  for (i=0; i<G->nref; i++) {
+    if (G->refArray[i].st == LOCK)
+      markobject(st, &G->refArray[i].o);
   }
 }
 
@@ -73,12 +73,12 @@ static void markclosure (GCState *st, Closure *cl) {
 }
 
 
-static void marktagmethods (lua_State *L, GCState *st) {
+static void marktagmethods (global_State *G, GCState *st) {
   int e;
   for (e=0; e<TM_N; e++) {
     int t;
-    for (t=0; t<L->ntag; t++) {
-      Closure *cl = luaT_gettm(L, t, e);
+    for (t=0; t<G->ntag; t++) {
+      Closure *cl = luaT_gettm(G, t, e);
       if (cl) markclosure(st, cl);
     }
   }
@@ -113,9 +113,9 @@ static void markall (lua_State *L) {
   st.cmark = NULL;
   st.tmark = L->gt;  /* put table of globals in mark list */
   L->gt->mark = NULL;
-  marktagmethods(L, &st);  /* mark tag methods */
+  marktagmethods(G(L), &st);  /* mark tag methods */
   markstack(L, &st); /* mark stack objects */
-  marklock(L, &st); /* mark locked objects */
+  marklock(G(L), &st); /* mark locked objects */
   for (;;) {  /* mark tables and closures */
     if (st.cmark) {
       int i;
@@ -161,27 +161,26 @@ static int hasmark (const TObject *o) {
 /* macro for internal debugging; check if a link of free refs is valid */
 #define VALIDLINK(L, st,n)      (NONEXT <= (st) && (st) < (n))
 
-static void invalidaterefs (lua_State *L) {
-  int n = L->nref;
+static void invalidaterefs (global_State *G) {
+  int n = G->nref;
   int i;
   for (i=0; i<n; i++) {
-    struct Ref *r = &L->refArray[i];
+    struct Ref *r = &G->refArray[i];
     if (r->st == HOLD && !hasmark(&r->o))
       r->st = COLLECTED;
-    LUA_ASSERT((r->st == LOCK && hasmark(&r->o)) ||
+    lua_assert((r->st == LOCK && hasmark(&r->o)) ||
                (r->st == HOLD && hasmark(&r->o)) ||
                 r->st == COLLECTED ||
                 r->st == NONEXT ||
-               (r->st < n && VALIDLINK(L, L->refArray[r->st].st, n)),
-               "inconsistent ref table");
+               (r->st < n && VALIDLINK(L, G->refArray[r->st].st, n)));
   }
-  LUA_ASSERT(VALIDLINK(L, L->refFree, n), "inconsistent ref table");
+  lua_assert(VALIDLINK(L, G->refFree, n));
 }
 
 
 
 static void collectproto (lua_State *L) {
-  Proto **p = &L->rootproto;
+  Proto **p = &G(L)->rootproto;
   Proto *next;
   while ((next = *p) != NULL) {
     if (next->marked) {
@@ -197,7 +196,7 @@ static void collectproto (lua_State *L) {
 
 
 static void collectclosure (lua_State *L) {
-  Closure **p = &L->rootcl;
+  Closure **p = &G(L)->rootcl;
   Closure *next;
   while ((next = *p) != NULL) {
     if (ismarked(next)) {
@@ -213,7 +212,7 @@ static void collectclosure (lua_State *L) {
 
 
 static void collecttable (lua_State *L) {
-  Hash **p = &L->roottable;
+  Hash **p = &G(L)->roottable;
   Hash *next;
   while ((next = *p) != NULL) {
     if (ismarked(next)) {
@@ -236,8 +235,8 @@ static void checktab (lua_State *L, stringtable *tb) {
 
 static void collectstrings (lua_State *L, int all) {
   int i;
-  for (i=0; i<L->strt.size; i++) {  /* for each list */
-    TString **p = &L->strt.hash[i];
+  for (i=0; i<G(L)->strt.size; i++) {  /* for each list */
+    TString **p = &G(L)->strt.hash[i];
     TString *next;
     while ((next = *p) != NULL) {
       if (next->marked && !all) {  /* preserve? */
@@ -247,22 +246,22 @@ static void collectstrings (lua_State *L, int all) {
       } 
       else {  /* collect */
         *p = next->nexthash;
-        L->strt.nuse--;
+        G(L)->strt.nuse--;
         luaM_free(L, next, sizestring(next->len));
       }
     }
   }
-  checktab(L, &L->strt);
+  checktab(L, &G(L)->strt);
 }
 
 
 static void collectudata (lua_State *L, int all) {
   int i;
-  for (i=0; i<L->udt.size; i++) {  /* for each list */
-    TString **p = &L->udt.hash[i];
+  for (i=0; i<G(L)->udt.size; i++) {  /* for each list */
+    TString **p = &G(L)->udt.hash[i];
     TString *next;
     while ((next = *p) != NULL) {
-      LUA_ASSERT(next->marked <= 1, "udata cannot be fixed");
+      lua_assert(next->marked <= 1);
       if (next->marked && !all) {  /* preserve? */
         next->marked = 0;
         p = &next->nexthash;
@@ -270,28 +269,28 @@ static void collectudata (lua_State *L, int all) {
       else {  /* collect */
         int tag = next->u.d.tag;
         *p = next->nexthash;
-        next->nexthash = L->TMtable[tag].collected;  /* chain udata */
-        L->TMtable[tag].collected = next;
-        L->udt.nuse--;
+        next->nexthash = G(L)->TMtable[tag].collected;  /* chain udata */
+        G(L)->TMtable[tag].collected = next;
+        G(L)->udt.nuse--;
       }
     }
   }
-  checktab(L, &L->udt);
+  checktab(L, &G(L)->udt);
 }
 
 
 #define MINBUFFER	256
 static void checkMbuffer (lua_State *L) {
-  if (L->Mbuffsize > MINBUFFER*2) {  /* is buffer too big? */
-    size_t newsize = L->Mbuffsize/2;  /* still larger than MINBUFFER */
-    luaM_reallocvector(L, L->Mbuffer, L->Mbuffsize, newsize, char);
-    L->Mbuffsize = newsize;
+  if (G(L)->Mbuffsize > MINBUFFER*2) {  /* is buffer too big? */
+    size_t newsize = G(L)->Mbuffsize/2;  /* still larger than MINBUFFER */
+    luaM_reallocvector(L, G(L)->Mbuffer, G(L)->Mbuffsize, newsize, char);
+    G(L)->Mbuffsize = newsize;
   }
 }
 
 
 static void callgcTM (lua_State *L, const TObject *obj) {
-  Closure *tm = luaT_gettmbyObj(L, obj, TM_GC);
+  Closure *tm = luaT_gettmbyObj(G(L), obj, TM_GC);
   if (tm != NULL) {
     int oldah = L->allowhooks;
     L->allowhooks = 0;  /* stop debug hooks during GC tag methods */
@@ -307,12 +306,12 @@ static void callgcTM (lua_State *L, const TObject *obj) {
 
 static void callgcTMudata (lua_State *L) {
   int tag;
-  L->GCthreshold = 2*L->nblocks;  /* avoid GC during tag methods */
-  for (tag=L->ntag-1; tag>=0; tag--) {  /* for each tag (in reverse order) */
+  G(L)->GCthreshold = 2*G(L)->nblocks;  /* avoid GC during tag methods */
+  for (tag=G(L)->ntag-1; tag>=0; tag--) {  /* for each tag (in reverse order) */
     TString *udata;
-    while ((udata = L->TMtable[tag].collected) != NULL) {
+    while ((udata = G(L)->TMtable[tag].collected) != NULL) {
       TObject obj;
-      L->TMtable[tag].collected = udata->nexthash;  /* remove it from list */
+      G(L)->TMtable[tag].collected = udata->nexthash;  /* remove it from list */
       setuvalue(&obj, udata);
       callgcTM(L, &obj);
       luaM_free(L, udata, sizeudata(udata->len));
@@ -333,16 +332,16 @@ void luaC_collect (lua_State *L, int all) {
 
 static void luaC_collectgarbage (lua_State *L) {
   markall(L);
-  invalidaterefs(L);  /* check unlocked references */
+  invalidaterefs(G(L));  /* check unlocked references */
   luaC_collect(L, 0);
   checkMbuffer(L);
-  L->GCthreshold = 2*L->nblocks;  /* set new threshold */
+  G(L)->GCthreshold = 2*G(L)->nblocks;  /* set new threshold */
   callgcTM(L, &luaO_nilobject);
 }
 
 
 void luaC_checkGC (lua_State *L) {
-  if (L->nblocks >= L->GCthreshold)
+  if (G(L)->nblocks >= G(L)->GCthreshold)
     luaC_collectgarbage(L);
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.113 2001/01/10 18:56:11 roberto Exp roberto $
+** $Id: ldo.c,v 1.114 2001/01/18 15:59:09 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -55,7 +55,7 @@ void luaD_checkstack (lua_State *L, int n) {
     }
     else {
       L->stack_last += EXTRA_STACK;  /* to be used by error message */
-      LUA_ASSERT(L->stack_last == L->stack+L->stacksize-1, "wrong stack limit");
+      lua_assert(L->stack_last == L->stack+L->stacksize-1);
       lua_error(L, "stack overflow");
     }
   }
@@ -95,7 +95,7 @@ static void dohook (lua_State *L, lua_Debug *ar, lua_Hook hook) {
   luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
   L->allowhooks = 0;  /* cannot call hooks inside a hook */
   (*hook)(L, ar);
-  LUA_ASSERT(L->allowhooks == 0, "invalid allow");
+  lua_assert(L->allowhooks == 0);
   L->allowhooks = 1;
   L->top = old_top;
   L->Cbase = old_Cbase;
@@ -161,7 +161,7 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
   Closure *cl;
   if (ttype(func) != LUA_TFUNCTION) {
     /* `func' is not a function; check the `function' tag method */
-    Closure *tm = luaT_gettmbyObj(L, func, TM_FUNCTION);
+    Closure *tm = luaT_gettmbyObj(G(L), func, TM_FUNCTION);
     if (tm == NULL)
       luaG_typeerror(L, func, "call");
     luaD_openstack(L, func);
@@ -177,7 +177,7 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
                            luaV_execute(L, cl, func+1));
   if (callhook)  /* same hook that was active at entry */
     luaD_callHook(L, func, callhook, "return");
-  LUA_ASSERT(ttype(func) == LUA_TMARK, "invalid tag");
+  lua_assert(ttype(func) == LUA_TMARK);
   /* move results to `func' (to erase parameters and function) */
   if (nResults == LUA_MULTRET) {
     while (firstResult < L->top)  /* copy all results */
@@ -244,12 +244,12 @@ static int protectedparser (lua_State *L, ZIO *z, int bin) {
   int status;
   p.z = z; p.bin = bin;
   luaC_checkGC(L);
-  old_blocks = L->nblocks;
+  old_blocks = G(L)->nblocks;
   status = luaD_runprotected(L, f_parser, &p);
   if (status == 0) {
     /* add new memory to threshold (as it probably will stay) */
-    LUA_ASSERT(L->nblocks >= old_blocks, "cannot reduce memory usage here");
-    L->GCthreshold += (L->nblocks - old_blocks);
+    lua_assert(G(L)->nblocks >= old_blocks);
+    G(L)->GCthreshold += (G(L)->nblocks - old_blocks);
   }
   else if (status == LUA_ERRRUN)  /* an error occurred: correct error code */
     status = LUA_ERRSYNTAX;

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.153 2001/01/15 16:13:24 roberto Exp roberto $
+** $Id: lvm.c,v 1.154 2001/01/18 15:59:09 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -118,16 +118,16 @@ const TObject *luaV_gettable (lua_State *L, StkId t) {
   int tg;
   if (ttype(t) == LUA_TTABLE &&  /* `t' is a table? */
       ((tg = hvalue(t)->htag) == LUA_TTABLE ||  /* with default tag? */
-        luaT_gettm(L, tg, TM_GETTABLE) == NULL)) { /* or no TM? */
+        luaT_gettm(G(L), tg, TM_GETTABLE) == NULL)) { /* or no TM? */
     /* do a primitive get */
     const TObject *h = luaH_get(hvalue(t), L->top-1);
     /* result is no nil or there is no `index' tag method? */
-    if (ttype(h) != LUA_TNIL || ((tm=luaT_gettm(L, tg, TM_INDEX)) == NULL))
+    if (ttype(h) != LUA_TNIL || ((tm=luaT_gettm(G(L), tg, TM_INDEX)) == NULL))
       return h;  /* return result */
     /* else call `index' tag method */
   }
   else {  /* try a `gettable' tag method */
-    tm = luaT_gettmbyObj(L, t, TM_GETTABLE);
+    tm = luaT_gettmbyObj(G(L), t, TM_GETTABLE);
   }
   if (tm != NULL) {  /* is there a tag method? */
     luaD_checkstack(L, 2);
@@ -152,11 +152,11 @@ void luaV_settable (lua_State *L, StkId t, StkId key) {
   int tg;
   if (ttype(t) == LUA_TTABLE &&  /* `t' is a table? */
       ((tg = hvalue(t)->htag) == LUA_TTABLE ||  /* with default tag? */
-        luaT_gettm(L, tg, TM_SETTABLE) == NULL)) { /* or no TM? */
+        luaT_gettm(G(L), tg, TM_SETTABLE) == NULL)) { /* or no TM? */
     setobj(luaH_set(L, hvalue(t), key), L->top-1);  /* do a primitive set */
   }
   else {  /* try a `settable' tag method */
-    Closure *tm = luaT_gettmbyObj(L, t, TM_SETTABLE);
+    Closure *tm = luaT_gettmbyObj(G(L), t, TM_SETTABLE);
     if (tm != NULL) {
       luaD_checkstack(L, 3);
       setobj(L->top+2, L->top-1);
@@ -174,7 +174,7 @@ void luaV_settable (lua_State *L, StkId t, StkId key) {
 
 const TObject *luaV_getglobal (lua_State *L, TString *s) {
   const TObject *value = luaH_getstr(L->gt, s);
-  Closure *tm = luaT_gettmbyObj(L, value, TM_GETGLOBAL);
+  Closure *tm = luaT_gettmbyObj(G(L), value, TM_GETGLOBAL);
   if (tm == NULL)  /* is there a tag method? */
     return value;  /* default behavior */
   else {  /* tag method */
@@ -191,7 +191,7 @@ const TObject *luaV_getglobal (lua_State *L, TString *s) {
 
 void luaV_setglobal (lua_State *L, TString *s) {
   TObject *oldvalue = luaH_setstr(L, L->gt, s);
-  Closure *tm = luaT_gettmbyObj(L, oldvalue, TM_SETGLOBAL);
+  Closure *tm = luaT_gettmbyObj(G(L), oldvalue, TM_SETGLOBAL);
   if (tm == NULL) {  /* no tag methods? */
     setobj(oldvalue, L->top - 1);  /* raw set */
   }
@@ -209,12 +209,12 @@ void luaV_setglobal (lua_State *L, TString *s) {
 
 static int call_binTM (lua_State *L, StkId top, TMS event) {
   /* try first operand */
-  Closure *tm = luaT_gettmbyObj(L, top-2, event);
+  Closure *tm = luaT_gettmbyObj(G(L), top-2, event);
   L->top = top;
   if (tm == NULL) {
-    tm = luaT_gettmbyObj(L, top-1, event);  /* try second operand */
+    tm = luaT_gettmbyObj(G(L), top-1, event);  /* try second operand */
     if (tm == NULL) {
-      tm = luaT_gettm(L, 0, event);  /* try a `global' method */
+      tm = luaT_gettm(G(L), 0, event);  /* try a `global' method */
       if (tm == NULL)
         return 0;  /* error */
     }
@@ -369,7 +369,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       }
       case OP_PUSHNIL: {
         int n = GETARG_U(i);
-        LUA_ASSERT(n>0, "invalid argument");
+        lua_assert(n>0);
         do {
           setnilvalue(top++);
         } while (--n > 0);
@@ -620,8 +620,8 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
       }
       case OP_FORLOOP: {
-        LUA_ASSERT(ttype(top-1) == LUA_TNUMBER, "invalid step");
-        LUA_ASSERT(ttype(top-2) == LUA_TNUMBER, "invalid limit");
+        lua_assert(ttype(top-1) == LUA_TNUMBER);
+        lua_assert(ttype(top-2) == LUA_TNUMBER);
         if (ttype(top-3) != LUA_TNUMBER)
           lua_error(L, "`for' index must be a number");
         nvalue(top-3) += nvalue(top-1);  /* increment index */
@@ -651,7 +651,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       }
       case OP_LFORLOOP: {
         Node *node;
-        LUA_ASSERT(ttype(top-3) == LUA_TTABLE, "invalid table");
+        lua_assert(ttype(top-3) == LUA_TTABLE);
         node = luaH_next(L, hvalue(top-3), top-2);
         if (node == NULL)  /* end loop? */
           top -= 3;  /* remove table, key, and value */

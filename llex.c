@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.74 2001/01/10 17:41:50 roberto Exp roberto $
+** $Id: llex.c,v 1.75 2001/01/15 18:07:56 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,7 @@ void luaX_init (lua_State *L) {
   int i;
   for (i=0; i<NUM_RESERVED; i++) {
     TString *ts = luaS_new(L, token2string[i]);
-    LUA_ASSERT(strlen(token2string[i])+1 <= TOKEN_LEN, "incorrect token_len");
+    lua_assert(strlen(token2string[i])+1 <= TOKEN_LEN);
     ts->marked = (unsigned char)(RESERVEDMARK+i);  /* reserved word */
   }
 }
@@ -65,7 +65,7 @@ void luaX_error (LexState *ls, const char *s, int token) {
   char buff[TOKEN_LEN];
   luaX_token2str(token, buff);
   if (buff[0] == '\0')
-    luaX_syntaxerror(ls, s, ls->L->Mbuffer);
+    luaX_syntaxerror(ls, s, G(ls->L)->Mbuffer);
   else
     luaX_syntaxerror(ls, s, buff);
 }
@@ -123,10 +123,10 @@ void luaX_setinput (lua_State *L, LexState *LS, ZIO *z, TString *source) {
 /* use Mbuffer to store names, literal strings and numbers */
 
 #define EXTRABUFF	128
-#define checkbuffer(L, n, len)	if ((len)+(n) > L->Mbuffsize) \
+#define checkbuffer(L, n, len)	if ((len)+(n) > G(L)->Mbuffsize) \
                                   luaO_openspace(L, (len)+(n)+EXTRABUFF)
 
-#define save(L, c, l)	(L->Mbuffer[l++] = (char)c)
+#define save(L, c, l)	(G(L)->Mbuffer[l++] = (char)c)
 #define save_and_next(L, LS, l)  (save(L, LS->current, l), next(LS))
 
 
@@ -176,7 +176,7 @@ static void read_number (LexState *LS, int comma, SemInfo *seminfo) {
     }
   }
   save(L, '\0', l);
-  if (!luaO_str2d(L->Mbuffer, &seminfo->r))
+  if (!luaO_str2d(G(L)->Mbuffer, &seminfo->r))
     luaX_error(LS, "malformed number", TK_NUMBER);
 }
 
@@ -220,7 +220,7 @@ static void read_long_string (LexState *LS, SemInfo *seminfo) {
   } endloop:
   save_and_next(L, LS, l);  /* skip the second ']' */
   save(L, '\0', l);
-  seminfo->ts = luaS_newlstr(L, L->Mbuffer+2, l-5);
+  seminfo->ts = luaS_newlstr(L, G(L)->Mbuffer+2, l-5);
 }
 
 
@@ -272,7 +272,7 @@ static void read_string (LexState *LS, int del, SemInfo *seminfo) {
   }
   save_and_next(L, LS, l);  /* skip delimiter */
   save(L, '\0', l);
-  seminfo->ts = luaS_newlstr(L, L->Mbuffer+1, l-3);
+  seminfo->ts = luaS_newlstr(L, G(L)->Mbuffer+1, l-3);
 }
 
 
@@ -367,7 +367,7 @@ int luaX_lex (LexState *LS, SemInfo *seminfo) {
         }
         tname: {  /* identifier or reserved word */
           size_t l = readname(LS);
-          TString *ts = luaS_newlstr(LS->L, LS->L->Mbuffer, l);
+          TString *ts = luaS_newlstr(LS->L, G(LS->L)->Mbuffer, l);
           if (ts->marked >= RESERVEDMARK)  /* reserved word? */
             return ts->marked-RESERVEDMARK+FIRST_RESERVED;
           seminfo->ts = ts;

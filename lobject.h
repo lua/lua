@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.85 2000/12/28 12:55:41 roberto Exp roberto $
+** $Id: lobject.h,v 1.86 2001/01/18 15:59:09 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -15,11 +15,9 @@
 #ifdef LUA_DEBUG
 #undef NDEBUG
 #include <assert.h>
-#define LUA_INTERNALERROR(s)	assert(((void)s,0))
-#define LUA_ASSERT(c,s)		assert(((void)s,(c)))
+#define lua_assert(c)		assert(c)
 #else
-#define LUA_INTERNALERROR(s)	/* empty */
-#define LUA_ASSERT(c,s)		/* empty */
+#define lua_assert(c)		/* empty */
 #endif
 
 
@@ -67,27 +65,27 @@ typedef struct lua_TObject {
 
 /* Macros to set values */
 #define setnvalue(obj,x) \
-  { TObject *o=(obj); o->tt=LUA_TNUMBER; o->value.n=(x); }
+  { TObject *_o=(obj); _o->tt=LUA_TNUMBER; _o->value.n=(x); }
 
 #define setsvalue(obj,x) \
-  { TObject *o=(obj); struct TString *v=(x); \
-    o->tt=LUA_TSTRING; o->value.v=v; }
+  { TObject *_o=(obj); struct TString *_v=(x); \
+    _o->tt=LUA_TSTRING; _o->value.v=_v; }
 
 #define setuvalue(obj,x) \
-  { TObject *o=(obj); struct TString *v=(x); \
-    o->tt=LUA_TUSERDATA; o->value.v=v; }
+  { TObject *_o=(obj); struct TString *_v=(x); \
+    _o->tt=LUA_TUSERDATA; _o->value.v=_v; }
 
 #define setclvalue(obj,x) \
-  { TObject *o=(obj); struct Closure *v=(x); \
-    o->tt=LUA_TFUNCTION; o->value.v=v; }
+  { TObject *_o=(obj); struct Closure *_v=(x); \
+    _o->tt=LUA_TFUNCTION; _o->value.v=_v; }
 
 #define sethvalue(obj,x) \
-  { TObject *o=(obj); struct Hash *v=(x); \
-    o->tt=LUA_TTABLE; o->value.v=v; }
+  { TObject *_o=(obj); struct Hash *_v=(x); \
+    _o->tt=LUA_TTABLE; _o->value.v=_v; }
 
 #define setivalue(obj,x) \
-  { TObject *o=(obj); struct CallInfo *v=(x); \
-    o->tt=LUA_TMARK; o->value.v=v; }
+  { TObject *_o=(obj); struct CallInfo *_v=(x); \
+    _o->tt=LUA_TMARK; _o->value.v=_v; }
 
 #define setnilvalue(obj) { (obj)->tt=LUA_TNIL; }
 

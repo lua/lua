@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.41 2000/12/26 18:46:09 roberto Exp roberto $
+** $Id: lmem.c,v 1.42 2000/12/28 12:55:41 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -161,9 +161,9 @@ void *luaM_realloc (lua_State *L, void *block, luint32 oldsize, luint32 size) {
       else return NULL;  /* error before creating state! */
     }
   }
-  if (L) {
-    L->nblocks -= oldsize;
-    L->nblocks += size;
+  if (L && G(L)) {
+    G(L)->nblocks -= oldsize;
+    G(L)->nblocks += size;
   }
   return block;
 }

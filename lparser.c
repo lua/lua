@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.123 2001/01/10 17:41:50 roberto Exp roberto $
+** $Id: lparser.c,v 1.124 2001/01/15 16:13:24 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -65,7 +65,7 @@ static void next (LexState *ls) {
 
 
 static void lookahead (LexState *ls) {
-  LUA_ASSERT(ls->lookahead.token == TK_EOS, "two look-aheads");
+  lua_assert(ls->lookahead.token == TK_EOS);
   ls->lookahead.token = luaX_lex(ls, &ls->lookahead.seminfo);
 }
 
@@ -285,7 +285,7 @@ static void enterbreak (FuncState *fs, Breaklabel *bl) {
 
 static void leavebreak (FuncState *fs, Breaklabel *bl) {
   fs->bl = bl->previous;
-  LUA_ASSERT(bl->stacklevel == fs->stacklevel, "wrong levels");
+  lua_assert(bl->stacklevel == fs->stacklevel);
   luaK_patchlist(fs, bl->breaklist, luaK_getlabel(fs));
 }
 
@@ -352,7 +352,7 @@ static void close_func (LexState *ls) {
   f->lineinfo[fs->nlineinfo++] = MAX_INT;  /* end flag */
   f->sizelineinfo = fs->nlineinfo;
   ls->fs = fs->prev;
-  LUA_ASSERT(fs->bl == NULL, "wrong list end");
+  lua_assert(fs->bl == NULL);
 }
 
 
@@ -365,8 +365,8 @@ Proto *luaY_parser (lua_State *L, ZIO *z) {
   chunk(&lexstate);
   check_condition(&lexstate, (lexstate.t.token == TK_EOS), "<eof> expected");
   close_func(&lexstate);
-  LUA_ASSERT(funcstate.prev == NULL, "wrong list end");
-  LUA_ASSERT(funcstate.nupvalues == 0, "no upvalues in main");
+  lua_assert(funcstate.prev == NULL);
+  lua_assert(funcstate.nupvalues == 0);
   return funcstate.f;
 }
 
@@ -1130,8 +1130,7 @@ static void chunk (LexState *ls) {
   while (!islast && !block_follow(ls->t.token)) {
     islast = stat(ls);
     optional(ls, ';');
-    LUA_ASSERT(ls->fs->stacklevel == ls->fs->nactloc,
-               "stack size != # local vars");
+    lua_assert(ls->fs->stacklevel == ls->fs->nactloc);
   }
 }
 

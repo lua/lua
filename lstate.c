@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.49 2000/12/26 18:46:09 roberto Exp roberto $
+** $Id: lstate.c,v 1.50 2000/12/28 12:55:41 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -47,6 +47,24 @@ static void f_luaopen (lua_State *L, void *ud) {
     stacksize = DEFAULT_STACK_SIZE;
   else
     stacksize += LUA_MINSTACK;
+  L->G = luaM_new(L, global_State);
+  G(L)->strt.size = G(L)->udt.size = 0;
+  G(L)->strt.nuse = G(L)->udt.nuse = 0;
+  G(L)->strt.hash = G(L)->udt.hash = NULL;
+  G(L)->Mbuffer = NULL;
+  G(L)->Mbuffsize = 0;
+  G(L)->rootproto = NULL;
+  G(L)->rootcl = NULL;
+  G(L)->roottable = NULL;
+  G(L)->TMtable = NULL;
+  G(L)->sizeTM = 0;
+  G(L)->ntag = 0;
+  G(L)->refArray = NULL;
+  G(L)->nref = 0;
+  G(L)->sizeref = 0;
+  G(L)->refFree = NONEXT;
+  G(L)->nblocks = sizeof(lua_State) + sizeof(global_State);
+  G(L)->GCthreshold = MAX_INT;  /* to avoid GC during pre-definitions */
   L->gt = luaH_new(L, 10);  /* table of globals */
   luaD_init(L, stacksize);
   luaS_init(L);
@@ -58,61 +76,48 @@ static void f_luaopen (lua_State *L, void *ud) {
 #ifdef LUA_DEBUG
   luaB_opentests(L);
   if (lua_state == NULL) lua_state = L;  /* keep first state to be opened */
-  LUA_ASSERT(lua_gettop(L) == 0, "wrong API stack");
+  lua_assert(lua_gettop(L) == 0);
 #endif
 }
 
 
 LUA_API lua_State *lua_open (int stacksize) {
-  lua_State *L = luaM_new(NULL, lua_State);
+  lua_State *L;
+  L = luaM_new(NULL, lua_State);
   if (L == NULL) return NULL;  /* memory allocation error */
+  L->G = NULL;
   L->stack = NULL;
   L->stacksize = 0;
-  L->strt.size = L->udt.size = 0;
-  L->strt.nuse = L->udt.nuse = 0;
-  L->strt.hash = L->udt.hash = NULL;
-  L->Mbuffer = NULL;
-  L->Mbuffsize = 0;
-  L->rootproto = NULL;
-  L->rootcl = NULL;
-  L->roottable = NULL;
-  L->TMtable = NULL;
-  L->sizeTM = 0;
-  L->ntag = 0;
-  L->refArray = NULL;
-  L->nref = 0;
-  L->sizeref = 0;
-  L->refFree = NONEXT;
-  L->nblocks = sizeof(lua_State);
-  L->GCthreshold = MAX_INT;  /* to avoid GC during pre-definitions */
+  L->errorJmp = NULL;
   L->callhook = NULL;
   L->linehook = NULL;
   L->allowhooks = 1;
-  L->errorJmp = NULL;
   if (luaD_runprotected(L, f_luaopen, &stacksize) != 0) {
     /* memory allocation error: free partial state */
     lua_close(L);
     return NULL;
   }
-  L->GCthreshold = 2*L->nblocks;
+  G(L)->GCthreshold = 2*G(L)->nblocks;
   return L;
 }
 
 
 LUA_API void lua_close (lua_State *L) {
-  LUA_ASSERT(L != lua_state || lua_gettop(L) == 0, "garbage in C stack");
-  luaC_collect(L, 1);  /* collect all elements */
-  LUA_ASSERT(L->rootproto == NULL, "list should be empty");
-  LUA_ASSERT(L->rootcl == NULL, "list should be empty");
-  LUA_ASSERT(L->roottable == NULL, "list should be empty");
-  luaS_freeall(L);
-  luaM_freearray(L, L->stack, L->stacksize, TObject);
-  luaM_freearray(L, L->TMtable, L->sizeTM, struct TM);
-  luaM_freearray(L, L->refArray, L->sizeref, struct Ref);
-  luaM_freearray(L, L->Mbuffer, L->Mbuffsize, char);
-  LUA_ASSERT(L->nblocks == sizeof(lua_State), "wrong count for nblocks");
-  luaM_freelem(L, L, lua_State);
-  LUA_ASSERT(L != lua_state || memdebug_numblocks == 0, "memory leak!");
-  LUA_ASSERT(L != lua_state || memdebug_total == 0,"memory leak!");
+  lua_assert(L != lua_state || lua_gettop(L) == 0);
+  if (G(L)) {  /* close global state */
+    luaC_collect(L, 1);  /* collect all elements */
+    lua_assert(G(L)->rootproto == NULL);
+    lua_assert(G(L)->rootcl == NULL);
+    lua_assert(G(L)->roottable == NULL);
+    luaS_freeall(L);
+    luaM_freearray(L, G(L)->TMtable, G(L)->sizeTM, struct TM);
+    luaM_freearray(L, G(L)->refArray, G(L)->sizeref, struct Ref);
+    luaM_freearray(L, G(L)->Mbuffer, G(L)->Mbuffsize, char);
+    luaM_freelem(NULL, L->G, global_State);
+  }
+  luaM_freearray(NULL, L->stack, L->stacksize, TObject);
+  luaM_freelem(NULL, L, lua_State);
+  lua_assert(L != lua_state || memdebug_numblocks == 0);
+  lua_assert(L != lua_state || memdebug_total == 0);
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.57 2000/12/04 18:33:40 roberto Exp roberto $
+** $Id: lobject.c,v 1.58 2000/12/28 12:55:41 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -49,18 +49,18 @@ int luaO_equalObj (const TObject *t1, const TObject *t2) {
     case LUA_TFUNCTION:
       return clvalue(t1) == clvalue(t2);
     default:
-      LUA_ASSERT(ttype(t1) == LUA_TNIL, "invalid type");
+      lua_assert(ttype(t1) == LUA_TNIL);
       return 1; /* LUA_TNIL */
   }
 }
 
 
 char *luaO_openspace (lua_State *L, size_t n) {
-  if (n > L->Mbuffsize) {
-    luaM_reallocvector(L, L->Mbuffer, L->Mbuffsize, n, char);
-    L->Mbuffsize = n;
+  if (n > G(L)->Mbuffsize) {
+    luaM_reallocvector(L, G(L)->Mbuffer, G(L)->Mbuffsize, n, char);
+    G(L)->Mbuffsize = n;
   }
-  return L->Mbuffer;
+  return G(L)->Mbuffer;
 }
 
 

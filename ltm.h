@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 1.18 2000/10/05 13:00:17 roberto Exp roberto $
+** $Id: ltm.h,v 1.19 2000/12/26 18:46:09 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -41,11 +41,11 @@ struct TM {
 };
 
 
-#define luaT_gettm(L,tag,event) (L->TMtable[tag].method[event])
-#define luaT_gettmbyObj(L,o,e)  (luaT_gettm((L),luaT_tag(o),(e)))
+#define luaT_gettm(G,tag,event) (G->TMtable[tag].method[event])
+#define luaT_gettmbyObj(G,o,e)  (luaT_gettm((G),luaT_tag(o),(e)))
 
 
-#define validtag(t) (NUM_TAGS <= (t) && (t) < L->ntag)
+#define validtag(G,t) (NUM_TAGS <= (t) && (t) < G->ntag)
 
 extern const char *const luaT_eventname[];
 

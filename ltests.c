@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.56 2001/01/15 16:13:24 roberto Exp roberto $
+** $Id: ltests.c,v 1.57 2001/01/18 15:59:09 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -215,7 +215,8 @@ static int table_query (lua_State *L) {
 
 
 static int string_query (lua_State *L) {
-  stringtable *tb = (*luaL_check_string(L, 1) == 's') ? &L->strt : &L->udt;
+  stringtable *tb = (*luaL_check_string(L, 1) == 's') ? &G(L)->strt :
+                                                        &G(L)->udt;
   int s = luaL_opt_int(L, 2, 0) - 1;
   if (s==-1) {
     lua_pushnumber(L ,tb->nuse);

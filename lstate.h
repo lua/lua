@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.42 2000/11/24 17:39:56 roberto Exp roberto $
+** $Id: lstate.h,v 1.43 2000/12/26 18:46:09 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -42,24 +42,17 @@ typedef struct stringtable {
 } stringtable;
 
 
-
-struct lua_State {
-  /* thread-specific state */
-  StkId top;  /* first free slot in the stack */
-  StkId stack;  /* stack base */
-  StkId stack_last;  /* last free slot in the stack */
-  int stacksize;
-  StkId Cbase;  /* base for current C function */
-  struct lua_longjmp *errorJmp;  /* current error recover point */
+/*
+** "global state", shared by all threads of this state
+*/
+typedef struct global_State {
   char *Mbuffer;  /* global buffer */
   size_t Mbuffsize;  /* size of Mbuffer */
-  /* global state */
   Proto *rootproto;  /* list of all prototypes */
   Closure *rootcl;  /* list of all closures */
   Hash *roottable;  /* list of all tables */
   stringtable strt;  /* hash table for strings */
   stringtable udt;   /* hash table for udata */
-  Hash *gt;  /* table for globals */
   struct TM *TMtable;  /* table for tag methods */
   int sizeTM;  /* size of TMtable */
   int ntag;  /* number of tags in TMtable */
@@ -69,10 +62,28 @@ struct lua_State {
   int refFree;  /* list of free positions in refArray */
   mem_int GCthreshold;
   mem_int nblocks;  /* number of `bytes' currently allocated */
+} global_State;
+
+
+/*
+** "per thread" state
+*/
+struct lua_State {
+  StkId top;  /* first free slot in the stack */
+  StkId stack;  /* stack base */
+  StkId stack_last;  /* last free slot in the stack */
+  int stacksize;
+  StkId Cbase;  /* base for current C function */
+  struct lua_longjmp *errorJmp;  /* current error recover point */
+  Hash *gt;  /* table for globals */
   lua_Hook callhook;
   lua_Hook linehook;
   int allowhooks;
+  global_State *G;
 };
+
+
+#define G(L)	(L->G)
 
 
 #endif
