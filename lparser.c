@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.217 2003/08/27 21:01:44 roberto Exp roberto $
+** $Id: lparser.c,v 1.218 2003/09/05 14:00:27 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1167,11 +1167,13 @@ static void ifstat (LexState *ls, int line) {
 
 static void localfunc (LexState *ls) {
   expdesc v, b;
+  FuncState *fs = ls->fs;
   new_localvar(ls, str_checkname(ls), 0);
-  init_exp(&v, VLOCAL, ls->fs->freereg++);
+  init_exp(&v, VLOCAL, fs->freereg);
+  luaK_reserveregs(fs, 1);
   adjustlocalvars(ls, 1);
   body(ls, &b, 0, ls->linenumber);
-  luaK_storevar(ls->fs, &v, &b);
+  luaK_storevar(fs, &v, &b);
 }
 
 
@@ -1346,7 +1348,8 @@ static void chunk (LexState *ls) {
   while (!islast && !block_follow(ls->t.token)) {
     islast = statement(ls);
     testnext(ls, ';');
-    lua_assert(ls->fs->freereg >= ls->fs->nactvar);
+    lua_assert(ls->fs->f->maxstacksize >= ls->fs->freereg &&
+               ls->fs->freereg >= ls->fs->nactvar);
     ls->fs->freereg = ls->fs->nactvar;  /* free registers */
   }
   leavelevel(ls);

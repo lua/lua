@@ -358,7 +358,37 @@ coroutine.resume(co)
 coroutine.resume(co)     --> seg. fault
 ]],
 report = [[by Alex Bilyk, 09/05/2003]], 
-patch = [[???]],
+patch = [[
+* ldo.c:
+325,326c325
+<     if (nargs >= L->top - L->base)
+<       luaG_runerror(L, "cannot resume dead coroutine");
+---
+>     lua_assert(nargs < L->top - L->base);
+329c328,329
+<   else if (ci->state & CI_YIELD) {  /* inside a yield? */
+---
+>   else {  /* inside a yield */
+>     lua_assert(ci->state & CI_YIELD);
+344,345d343
+<   else
+<     luaG_runerror(L, "cannot resume non-suspended coroutine");
+351a350,358
+> static int resume_error (lua_State *L, const char *msg) {
+>   L->top = L->ci->base;
+>   setsvalue2s(L->top, luaS_new(L, msg));
+>   incr_top(L);
+>   lua_unlock(L);
+>   return LUA_ERRRUN;
+> }
+> 
+> 
+355a363,366
+>   if (L->ci == L->base_ci && nargs >= L->top - L->base)
+>       return resume_error(L, "cannot resume dead coroutine");
+>   else if (!(L->ci->state & CI_YIELD))  /* not inside a yield? */
+>     return resume_error(L, "cannot resume non-suspended coroutine");
+]],
 }
 
 
@@ -514,3 +544,27 @@ patch = [[
 >   char buff[128];
 ]]
 }
+
+
+Bug{
+what = [[syntax `local function' does not increment stack size]],
+
+report = [[Rici Lake, 26/09/2003]],
+
+example = [[
+-- must run this with precompiled code
+local a,b,c
+local function d () end
+]],
+
+patch = [[
+* lparser.c:
+1145c1145,1146
+<   init_exp(&v, VLOCAL, ls->fs->freereg++);
+---
+>   init_exp(&v, VLOCAL, ls->fs->freereg);
+>   luaK_reserveregs(ls->fs, 1);
+]],
+
+}
+
