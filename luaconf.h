@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.7 2004/06/23 15:57:29 roberto Exp roberto $
+** $Id: luaconf.h,v 1.8 2004/06/29 16:57:56 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -84,9 +84,15 @@
 #define PROGNAME	"lua"
 
 
-#define LUA_EXTRALIBS   /* empty */
-
-#define lua_userinit(L)		openstdlibs(L)
+/*
+** this macro allows you to open other libraries when starting the
+** stand-alone interpreter
+*/
+#define lua_userinit(L)		luaopen_stdlibs(L)
+/*
+** #define lua_userinit(L)  { int luaopen_mylibs(lua_State *L); \
+**				luaopen_stdlibs(L); luaopen_mylibs(L); }
+*/
 
 
 
