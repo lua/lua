@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.14 2005/03/07 16:58:27 roberto Exp roberto $
+** $Id: lparser.c,v 2.15 2005/03/08 18:00:16 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -460,11 +460,11 @@ static void recfield (LexState *ls, struct ConsControl *cc) {
   expdesc key, val;
   if (ls->t.token == TK_NAME) {
     luaY_checklimit(fs, cc->nh, MAX_INT, "items in a constructor");
-    cc->nh++;
     checkname(ls, &key);
   }
   else  /* ls->t.token == '[' */
     yindex(ls, &key);
+  cc->nh++;
   checknext(ls, '=');
   luaK_exp2RK(fs, &key);
   expr(ls, &val);
