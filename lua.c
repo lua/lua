@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.104 2002/09/05 19:45:42 roberto Exp roberto $
+** $Id: lua.c,v 1.105 2002/09/20 13:32:56 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -74,11 +74,11 @@ static void laction (int i) {
 
 static void print_usage (void) {
   fprintf(stderr,
-  "usage: %s [options] [prog [args]].\n"
+  "usage: %s [options] [script [args]].\n"
   "Available options are:\n"
   "  -        execute stdin as a file\n"
   "  -e stat  execute string `stat'\n"
-  "  -i       enter interactive mode after executing `prog'\n"
+  "  -i       enter interactive mode after executing `script'\n"
   "  -l name  execute file `name'\n"
   "  -v       print version information\n"
   "  --       stop handling options\n" ,
