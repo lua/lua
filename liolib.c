@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.15 2002/08/06 18:01:50 roberto Exp roberto $
+** $Id: liolib.c,v 2.16 2002/08/16 20:02:13 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -122,7 +122,7 @@ static int io_open (lua_State *L) {
 
 
 static int io_popen (lua_State *L) {
-#ifndef POPEN
+#ifndef USE_POPEN
   luaL_error(L, "`popen' not supported");
   return 0;
 #else
