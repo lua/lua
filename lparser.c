@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.83 2000/04/27 17:39:56 roberto Exp roberto $
+** $Id: lparser.c,v 1.84 2000/05/08 18:46:34 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -139,13 +139,13 @@ static void check_END (LexState *ls, int who, int where) {
 
 static int string_constant (FuncState *fs, TString *s) {
   Proto *f = fs->f;
-  int c = s->constindex;
+  int c = s->u.s.constindex;
   if (c >= f->nkstr || f->kstr[c] != s) {
     luaM_growvector(fs->L, f->kstr, f->nkstr, 1, TString *,
                     constantEM, MAXARG_U);
     c = f->nkstr++;
     f->kstr[c] = s;
-    s->constindex = c;  /* hint for next time */
+    s->u.s.constindex = c;  /* hint for next time */
   }
   return c;
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.16 2000/04/14 17:46:15 roberto Exp roberto $
+** $Id: ltests.c,v 1.17 2000/05/08 19:32:53 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -14,6 +14,7 @@
 
 #include "lapi.h"
 #include "lauxlib.h"
+#include "ldo.h"
 #include "lmem.h"
 #include "lopcodes.h"
 #include "lstate.h"
@@ -193,23 +194,21 @@ static void table_query (lua_State *L) {
 
 
 static void string_query (lua_State *L) {
-  int h = luaL_check_int(L, 1) - 1;
+  stringtable *tb = (*luaL_check_string(L, 1) == 's') ? &L->strt : &L->udt;
   int s = luaL_opt_int(L, 2, 0) - 1;
   if (s==-1) {
-    if (h < NUM_HASHS) {
-      lua_pushnumber(L, L->string_root[h].nuse);
-      lua_pushnumber(L, L->string_root[h].size);
-    }
+    lua_pushnumber(L, tb->nuse);
+    lua_pushnumber(L, tb->size);
   }
-  else {
-    TString *ts = L->string_root[h].hash[s];
-    for (ts = L->string_root[h].hash[s]; ts; ts = ts->nexthash) {
-      if (ts->constindex == -1) lua_pushstring(L, "<USERDATA>");
-      else lua_pushstring(L, ts->str);
+  else if (s < tb->size) {
+    TString *ts;
+    for (ts = tb->hash[s]; ts; ts = ts->nexthash) {
+      ttype(L->top) = TAG_STRING;
+      tsvalue(L->top) = ts;
+      incr_top;
     }
   }
 }
-
 
 /*
 ** {======================================================

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.47 2000/04/14 18:12:35 roberto Exp roberto $
+** $Id: lgc.c,v 1.48 2000/05/08 19:32:53 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -166,36 +166,41 @@ static void collecttable (lua_State *L) {
 ** with limit=1, that means all unmarked elements;
 ** with limit=MAX_INT, that means all elements.
 */
-static void collectstring (lua_State *L, int limit) {
-  TObject o;  /* to call userdata `gc' tag method */
+static void collectstringtab (lua_State *L, int limit, stringtable *tb) {
   int i;
+  TObject o;  /* to call userdata `gc' tag method */
   ttype(&o) = TAG_USERDATA;
-  for (i=0; i<NUM_HASHS; i++) {  /* for each hash table */
-    stringtable *tb = &L->string_root[i];
-    int j;
-    for (j=0; j<tb->size; j++) {  /* for each list */
-      TString **p = &tb->hash[j];
-      TString *next;
-      while ((next = *p) != NULL) {
-       if (next->marked >= limit) {
-         if (next->marked < FIXMARK)  /* does not change FIXMARKs */
-           next->marked = 0;
-         p = &next->nexthash;
-       } 
-       else {  /* collect */
-          if (next->constindex == -1) {  /* is userdata? */
-            tsvalue(&o) = next;
-            luaD_gcTM(L, &o);
-          }
-          *p = next->nexthash;
-          luaS_free(L, next);
-          tb->nuse--;
+  for (i=0; i<tb->size; i++) {  /* for each list */
+    TString **p = &tb->hash[i];
+    TString *next;
+    while ((next = *p) != NULL) {
+     if (next->marked >= limit) {
+       if (next->marked < FIXMARK)  /* does not change FIXMARKs */
+         next->marked = 0;
+       p = &next->nexthash;
+     } 
+     else {  /* collect */
+        if (tb == &L->strt)  /* is string? */
+          L->nblocks -= gcsizestring(L, next->u.s.len);
+        else {
+          tsvalue(&o) = next;
+          luaD_gcTM(L, &o);
+          L->nblocks -= gcsizeudata;
         }
+        *p = next->nexthash;
+        tb->nuse--;
+        luaM_free(L, next);
       }
     }
-    if ((tb->nuse+1)*6 < tb->size)
-      luaS_resize(L, tb, tb->size/2);  /* table is too big */
   }
+  if (tb->nuse < (tb->size/4) && tb->size > 10)
+    luaS_resize(L, tb, tb->size/2);  /* table is too big */
+}
+
+
+static void collectstring (lua_State *L, int limit) {
+  collectstringtab(L, limit, &L->strt);
+  collectstringtab(L, limit, &L->udt);
 }
 
 

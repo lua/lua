@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.18 2000/03/10 18:37:44 roberto Exp roberto $
+** $Id: lstring.h,v 1.19 2000/05/08 19:32:53 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -12,11 +12,6 @@
 #include "lstate.h"
 
 
-#define NUM_HASHSTR     32
-#define NUM_HASHUDATA   31
-#define NUM_HASHS (NUM_HASHSTR+NUM_HASHUDATA)
-
-
 /*
 ** any TString with mark>=FIXMARK is never collected.
 ** Marks>=RESERVEDMARK are used to identify reserved words.
@@ -25,11 +20,14 @@
 #define RESERVEDMARK	3
 
 
+#define gcsizestring(L, l)      numblocks(L, 0, sizeof(TString)+l)
+#define gcsizeudata             gcsizestring(L, 0)
+
+
 void luaS_init (lua_State *L);
 void luaS_resize (lua_State *L, stringtable *tb, int newsize);
 TString *luaS_createudata (lua_State *L, void *udata, int tag);
 void luaS_freeall (lua_State *L);
-void luaS_free (lua_State *L, TString *ts);
 TString *luaS_newlstr (lua_State *L, const char *str, long l);
 TString *luaS_new (lua_State *L, const char *str);
 TString *luaS_newfixed (lua_State *L, const char *str);
