@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.54 2000/05/26 19:17:57 roberto Exp roberto $
+** $Id: lua.h,v 1.55 2000/06/30 19:17:08 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -30,6 +30,14 @@
 
 #define LUA_ANYTAG	(-1)
 
+
+/* error code for lua_do* */
+#define LUA_ERRFILE	2
+#define LUA_ERRSYNTAX	3
+#define LUA_ERRRUN	1
+#define LUA_ERRMEM	4
+
+
 typedef struct lua_State lua_State;
 
 typedef void (*lua_CFunction) (lua_State *L);
@@ -58,7 +66,7 @@ int            lua_dostring (lua_State *L, const char *str);
 int            lua_dobuffer (lua_State *L, const char *buff, size_t size,
                              const char *name);         /* Out: returns */
 int            lua_callfunction (lua_State *L, lua_Object f);
-					  /* In: parameters; Out: returns */
+					  /* In: arguments; Out: returns */
 
 void	       lua_beginblock (lua_State *L);
 void	       lua_endblock (lua_State *L);
@@ -111,7 +119,7 @@ lua_Object     lua_rawget (lua_State *L); /* In: table, index */
 int            lua_tag (lua_State *L, lua_Object obj);
 
 int            lua_next (lua_State *L, lua_Object o, int i);
-						/* Out: ref, value */ 
+						/* Out: index, value */ 
 
 int            lua_ref (lua_State *L, int lock); /* In: value */
 lua_Object     lua_getref (lua_State *L, int ref);

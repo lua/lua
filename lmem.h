@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.h,v 1.13 2000/03/16 20:35:07 roberto Exp roberto $
+** $Id: lmem.h,v 1.14 2000/05/24 13:54:49 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -12,9 +12,6 @@
 
 #include "llimits.h"
 #include "lua.h"
-
-/* memory error message */
-#define memEM "not enough memory"
 
 void *luaM_realloc (lua_State *L, void *oldblock, lint32 size);
 void *luaM_growaux (lua_State *L, void *block, size_t nelems,
@@ -37,6 +34,7 @@ void *luaM_growaux (lua_State *L, void *block, size_t nelems,
 extern unsigned long memdebug_numblocks;
 extern unsigned long memdebug_total;
 extern unsigned long memdebug_maxmem;
+extern unsigned long memdebug_memlimit;
 #endif
 
 

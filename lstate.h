@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.33 2000/05/10 16:33:20 roberto Exp roberto $
+** $Id: lstate.h,v 1.34 2000/05/24 13:54:49 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -19,11 +19,14 @@ typedef TObject *StkId;  /* index to stack elements */
 
 
 /*
-** `jmp_buf' may be an array, so it is better to make sure it has an
-** address (and not that it *is* an address...)
+** chain list of long jumps
 */
 struct lua_longjmp {
   jmp_buf b;
+  struct lua_longjmp *previous;
+  volatile int status;  /* error code */
+  StkId base;
+  int numCblocks;
 };
 
 
