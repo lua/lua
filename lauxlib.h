@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.5 1997/12/17 20:48:58 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.6 1998/01/09 15:06:07 roberto Exp roberto $
 ** Auxiliar functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -23,8 +23,10 @@ struct luaL_reg {
 
 void luaL_openlib (struct luaL_reg *l, int n);
 void luaL_argerror (int numarg, char *extramsg);
-char *luaL_check_string (int numArg);
-char *luaL_opt_string (int numArg, char *def);
+#define luaL_check_string(n)  (luaL_check_lstr((n), NULL))
+char *luaL_check_lstr (int numArg, long *len);
+#define luaL_opt_string(n, d) (luaL_opt_lstr((n), (d), NULL))
+char *luaL_opt_lstr (int numArg, char *def, long *len);
 double luaL_check_number (int numArg);
 double luaL_opt_number (int numArg, double def);
 lua_Object luaL_functionarg (int arg);
@@ -34,6 +36,7 @@ void luaL_verror (char *fmt, ...);
 char *luaL_openspace (int size);
 void luaL_resetbuffer (void);
 void luaL_addchar (int c);
+int luaL_getsize (void);
 void luaL_addsize (int n);
 int luaL_newbuffer (int size);
 void luaL_oldbuffer (int old);

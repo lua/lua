@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: lbuffer.c,v 1.1 1997/12/23 19:24:36 roberto Exp roberto $
 ** Auxiliar functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -57,6 +57,10 @@ void luaL_addsize (int n)
   L->Mbuffnext += n;
 }
 
+int luaL_getsize (void)
+{
+  return L->Mbuffnext-(L->Mbuffbase-L->Mbuffer);
+}
 
 int luaL_newbuffer (int size)
 {

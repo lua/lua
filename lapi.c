@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.20 1998/01/27 19:13:45 roberto Exp roberto $
+** $Id: lapi.c,v 1.21 1998/02/12 19:23:32 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -219,7 +219,7 @@ lua_Object lua_getglobal (char *name)
 lua_Object lua_rawgetglobal (char *name)
 {
   TaggedString *ts = luaS_new(name);
-  return put_luaObject(&ts->u.globalval);
+  return put_luaObject(&ts->u.s.globalval);
 }
 
 
@@ -293,6 +293,14 @@ char *lua_getstring (lua_Object object)
   else return (svalue(Address(object)));
 }
 
+long lua_getstrlen (lua_Object object)
+{
+  luaC_checkGC();  /* "tostring" may create a new string */
+  if (object == LUA_NOOBJECT || tostring(Address(object)))
+    return 0L;
+  else return (tsvalue(Address(object))->u.s.len);
+}
+
 void *lua_getuserdata (lua_Object object)
 {
   if (object == LUA_NOOBJECT || ttype(Address(object)) != LUA_T_USERDATA)
@@ -321,16 +329,20 @@ void lua_pushnumber (double n)
   incr_top;
 }
 
+void lua_pushlstr (char *s, long len)
+{
+  tsvalue(L->stack.top) = luaS_newlstr(s, len);
+  ttype(L->stack.top) = LUA_T_STRING;
+  incr_top;
+  luaC_checkGC();
+}
+
 void lua_pushstring (char *s)
 {
   if (s == NULL)
-    ttype(L->stack.top) = LUA_T_NIL;
-  else {
-    tsvalue(L->stack.top) = luaS_new(s);
-    ttype(L->stack.top) = LUA_T_STRING;
-  }
-  incr_top;
-  luaC_checkGC();
+    lua_pushnil();
+  else
+    lua_pushlstr(s, strlen(s));
 }
 
 void lua_pushCclosure (lua_CFunction fn, int n)

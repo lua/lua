@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.15 1998/01/14 13:48:28 roberto Exp roberto $
+** $Id: lobject.h,v 1.16 1998/01/19 19:49:22 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -95,10 +95,13 @@ typedef struct GCnode {
 
 typedef struct TaggedString {
   GCnode head;
-  int constindex;  /* hint to reuse constants (= -1 if this is a userdata) */
   unsigned long hash;
+  int constindex;  /* hint to reuse constants (= -1 if this is a userdata) */
   union {
-    TObject globalval;
+    struct {
+      TObject globalval;
+      long len;  /* if this is a string, here is its length */
+    } s;
     struct {
       int tag;
       void *v;  /* if this is a userdata, here is its value */

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.8 1998/01/09 15:06:07 roberto Exp $
+** $Id: lauxlib.c,v 1.8 1998/01/09 15:09:53 roberto Exp roberto $
 ** Auxiliar functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -31,17 +31,18 @@ void luaL_argerror (int numarg, char *extramsg)
                     numarg, funcname, extramsg);
 }
 
-char *luaL_check_string (int numArg)
+char *luaL_check_lstr (int numArg, long *len)
 {
   lua_Object o = lua_getparam(numArg);
   luaL_arg_check(lua_isstring(o), numArg, "string expected");
+  if (len) *len = lua_getstrlen(o);
   return lua_getstring(o);
 }
 
-char *luaL_opt_string (int numArg, char *def)
+char *luaL_opt_lstr (int numArg, char *def, long *len)
 {
   return (lua_getparam(numArg) == LUA_NOOBJECT) ? def :
-                              luaL_check_string(numArg);
+                              luaL_check_lstr(numArg, len);
 }
 
 double luaL_check_number (int numArg)

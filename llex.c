@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.14 1998/01/19 20:18:02 roberto Exp roberto $
+** $Id: llex.c,v 1.15 1998/02/11 20:56:46 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -358,8 +358,8 @@ int luaY_lex (YYSTYPE *l)
           }
         }
         next(LS);  /* skip delimiter */
-        save(0);
-        l->pTStr = luaS_new(L->Mbuffbase+1);
+        l->pTStr = luaS_newlstr(L->Mbuffbase+1,
+                                L->Mbuffnext-((L->Mbuffbase+1)-L->Mbuffer));
         L->Mbuffer[L->Mbuffnext-1] = del;  /* restore delimiter */
         return STRING;
       }

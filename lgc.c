@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.15 1998/01/09 14:44:55 roberto Exp roberto $
+** $Id: lgc.c,v 1.16 1998/01/19 19:49:22 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -213,8 +213,8 @@ static void globalmark (void)
 {
   TaggedString *g;
   for (g=(TaggedString *)L->rootglobal.next; g; g=(TaggedString *)g->head.next)
-    if (g->u.globalval.ttype != LUA_T_NIL) {
-      markobject(&g->u.globalval);
+    if (g->u.s.globalval.ttype != LUA_T_NIL) {
+      markobject(&g->u.s.globalval);
       strmark(g);  /* cannot collect non nil global variables */
     }
 }

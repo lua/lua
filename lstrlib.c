@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.7 1998/01/09 14:57:43 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.8 1998/01/27 19:11:36 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -19,83 +19,86 @@
 static void addnchar (char *s, int n)
 {
   char *b = luaL_openspace(n);
-  strncpy(b, s, n);
+  memcpy(b, s, n);
   luaL_addsize(n);
-}
-
-
-static void addstr (char *s)
-{
-  addnchar(s, strlen(s));
 }
 
 
 static void str_len (void)
 {
- lua_pushnumber(strlen(luaL_check_string(1)));
+  long l;
+  luaL_check_lstr(1, &l);
+  lua_pushnumber(l);
 }
 
 
 static void closeandpush (void)
 {
-  luaL_addchar(0);
-  lua_pushstring(luaL_buffer());
+  lua_pushlstr(luaL_buffer(), luaL_getsize());
+}
+
+
+static long posrelat (long pos, long len)
+{
+  /* relative string position: negative means back from end */
+  return (pos>=0) ? pos : len+pos+1;
 }
 
 
 static void str_sub (void)
 {
-  char *s = luaL_check_string(1);
-  long l = strlen(s);
-  long start = (long)luaL_check_number(2);
-  long end = (long)luaL_opt_number(3, -1);
-  if (start < 0) start = l+start+1;
-  if (end < 0) end = l+end+1;
-  if (1 <= start && start <= end && end <= l) {
-    luaL_resetbuffer();
-    addnchar(s+start-1, end-start+1);
-    closeandpush();
-  }
+  long l;
+  char *s = luaL_check_lstr(1, &l);
+  long start = posrelat(luaL_check_number(2), l);
+  long end = posrelat(luaL_opt_number(3, -1), l);
+  if (1 <= start && start <= end && end <= l)
+    lua_pushlstr(s+start-1, end-start+1);
   else lua_pushstring("");
 }
 
 
 static void str_lower (void)
 {
-  char *s;
+  long l;
+  int i;
+  char *s = luaL_check_lstr(1, &l);
   luaL_resetbuffer();
-  for (s = luaL_check_string(1); *s; s++)
-    luaL_addchar(tolower((unsigned char)*s));
+  for (i=0; i<l; i++)
+    luaL_addchar(tolower((unsigned char)(s[i])));
   closeandpush();
 }
 
 
 static void str_upper (void)
 {
-  char *s;
+  long l;
+  int i;
+  char *s = luaL_check_lstr(1, &l);
   luaL_resetbuffer();
-  for (s = luaL_check_string(1); *s; s++)
-    luaL_addchar(toupper((unsigned char)*s));
+  for (i=0; i<l; i++)
+    luaL_addchar(toupper((unsigned char)(s[i])));
   closeandpush();
 }
 
 static void str_rep (void)
 {
-  char *s = luaL_check_string(1);
+  long l;
+  char *s = luaL_check_lstr(1, &l);
   int n = (int)luaL_check_number(2);
   luaL_resetbuffer();
   while (n-- > 0)
-    addstr(s);
+    addnchar(s, l);
   closeandpush();
 }
 
 
 static void str_ascii (void)
 {
-  char *s = luaL_check_string(1);
-  long pos = (long)luaL_opt_number(2, 1) - 1;
-  luaL_arg_check(0<=pos && pos<strlen(s), 2,  "out of range");
-  lua_pushnumber((unsigned char)s[pos]);
+  long l;
+  char *s = luaL_check_lstr(1, &l);
+  long pos = posrelat(luaL_opt_number(2, 1), l);
+  luaL_arg_check(0<pos && pos<=l, 2,  "out of range");
+  lua_pushnumber((unsigned char)s[pos-1]);
 }
 
 
@@ -124,14 +127,8 @@ struct Capture {
 static void push_captures (struct Capture *cap)
 {
   int i;
-  for (i=0; i<cap->level; i++) {
-    int l = cap->capture[i].len;
-    char *buff = luaL_openspace(l+1);
-    if (l == -1) lua_error("unfinished capture");
-    strncpy(buff, cap->capture[i].init, l);
-    buff[l] = 0;
-    lua_pushstring(buff);
-  }
+  for (i=0; i<cap->level; i++)
+    lua_pushlstr(cap->capture[i].init, cap->capture[i].len);
 }
 
 
@@ -163,7 +160,6 @@ static char *bracket_end (char *p)
 static int matchclass (int c, int cl)
 {
   int res;
-  if (c == 0) return 0;
   switch (tolower((unsigned char)cl)) {
     case 'w' : res = isalnum((unsigned char)c); break;
     case 'd' : res = isdigit((unsigned char)c); break;
@@ -184,7 +180,7 @@ int luaI_singlematch (int c, char *p, char **ep)
   switch (*p) {
     case '.':
       *ep = p+1;
-      return (c != 0);
+      return 1;
     case '\0':
       *ep = p;
       return 0;
@@ -198,7 +194,6 @@ int luaI_singlematch (int c, char *p, char **ep)
       int sig = *(p+1) == '^' ? (p++, 0) : 1;
       if (end == NULL) lua_error("incorrect pattern (missing `]')");
       *ep = end+1;
-      if (c == 0) return 0;
       while (++p < end) {
         if (*p == ESC) {
           if (((p+1) < end) && matchclass(c, *++p)) return sig;
@@ -254,7 +249,8 @@ static char *matchitem (char *s, char *p, struct Capture *cap, char **ep)
     }
     else p--;  /* and go through */
   }
-  return (luaI_singlematch(*s, p, ep) ? s+1 : NULL);
+  /* "luaI_singlematch" sets "ep" (so must be called even when *s == 0) */
+  return (luaI_singlematch(*s, p, ep) && *s) ? s+1 : NULL;
 }
 
 
@@ -322,10 +318,11 @@ static char *match (char *s, char *p, struct Capture *cap)
 
 static void str_find (void)
 {
-  char *s = luaL_check_string(1);
+  long l;
+  char *s = luaL_check_lstr(1, &l);
   char *p = luaL_check_string(2);
-  long init = (long)luaL_opt_number(3, 1) - 1;
-  luaL_arg_check(0 <= init && init <= strlen(s), 3, "out of range");
+  long init = posrelat(luaL_opt_number(3, 1), l) - 1;
+  luaL_arg_check(0 <= init && init <= l, 3, "out of range");
   if (lua_getparam(4) != LUA_NOOBJECT ||
       strpbrk(p, SPECIALS) == NULL) {  /* no special caracters? */
     char *s2 = strstr(s+init, p);
@@ -381,7 +378,10 @@ static void add_s (lua_Object newp, struct Capture *cap)
       lua_error(NULL);
     }
     res = lua_getresult(1);
-    addstr(lua_isstring(res) ? lua_getstring(res) : "");
+    if (lua_isstring(res))
+      addnchar(lua_getstring(res), lua_getstrlen(res));
+    else
+      addnchar(NULL, 0);
     lua_endblock();
   }
   else luaL_arg_check(0, 3, "string or function expected");
@@ -413,7 +413,7 @@ static void str_gsub (void)
     else break;
     if (anchor) break;
   }
-  addstr(src);
+  addnchar(src, strlen(src));
   closeandpush();
   lua_pushnumber(n);  /* number of substitutions */
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.13 1997/12/26 18:38:16 roberto Exp roberto $
+** $Id: liolib.c,v 1.14 1998/01/07 16:26:48 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -184,7 +184,7 @@ static void io_read (void)
 {
   int arg = FIRSTARG;
   FILE *f = getfileparam(FINPUT, &arg);
-  char *buff;
+  int l;
   char *p = luaL_opt_string(arg, "[^\n]*{\n}");
   int inskip = 0;  /* to control {skips} */
   int c = NEED_OTHER;
@@ -204,10 +204,16 @@ static void io_read (void)
       char *ep;  /* get what is next */
       int m;  /* match result */
       if (c == NEED_OTHER) c = getc(f);
-      m = luaI_singlematch((c == EOF) ? 0 : (char)c, p, &ep);
-      if (m) {
-        if (inskip == 0) luaL_addchar(c);
-        c = NEED_OTHER;
+      if (c == EOF) {
+        luaI_singlematch(0, p, &ep);  /* to set "ep" */
+        m = 0;
+      }
+      else {
+        m = luaI_singlematch((char)c, p, &ep);
+        if (m) {
+          if (inskip == 0) luaL_addchar(c);
+          c = NEED_OTHER;
+        }
       }
       switch (*ep) {
         case '*':  /* repetition */
@@ -225,10 +231,9 @@ static void io_read (void)
   } break_while:
   if (c >= 0)  /* not EOF nor NEED_OTHER? */
      ungetc(c, f);
-  luaL_addchar(0);
-  buff = luaL_buffer();
-  if (*buff != 0 || *p == 0)  /* read something or did not fail? */
-    lua_pushstring(buff);
+  l = luaL_getsize();
+  if (l > 0 || *p == 0)  /* read something or did not fail? */
+    lua_pushlstr(luaL_buffer(), l);
 }
 
 
@@ -238,8 +243,9 @@ static void io_write (void)
   FILE *f = getfileparam(FOUTPUT, &arg);
   int status = 1;
   char *s;
-  while ((s = luaL_opt_string(arg++, NULL)) != NULL)
-    status = status && (fputs(s, f) != EOF);
+  long l;
+  while ((s = luaL_opt_lstr(arg++, NULL, &l)) != NULL)
+    status = status && (fwrite(s, 1, l, f) == l);
   pushresult(status);
 }
 

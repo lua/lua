@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.24 1998/02/12 19:23:32 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.25 1998/02/12 19:27:10 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -47,11 +47,11 @@ static void nextvar (void)
     luaL_arg_check((GCnode *)g != g->head.next, 1, "variable name expected");
     g = (TaggedString *)g->head.next;
   }
-  while (g && g->u.globalval.ttype == LUA_T_NIL)  /* skip globals with nil */
+  while (g && g->u.s.globalval.ttype == LUA_T_NIL)  /* skip globals with nil */
     g = (TaggedString *)g->head.next;
   if (g) {
     pushstring(g);
-    luaA_pushobject(&g->u.globalval);
+    luaA_pushobject(&g->u.s.globalval);
   }
 }
 
@@ -65,12 +65,12 @@ static void foreachvar (void)
   L->stack.top++;
   for (g = L->rootglobal.next; g; g = g->next) {
     TaggedString *s = (TaggedString *)g;
-    if (s->u.globalval.ttype != LUA_T_NIL) {
+    if (s->u.s.globalval.ttype != LUA_T_NIL) {
       ttype(L->stack.stack+name) = LUA_T_STRING;
       tsvalue(L->stack.stack+name) = s;  /* keep s on stack to avoid GC */
       luaA_pushobject(&f);
       pushstring(s);
-      luaA_pushobject(&s->u.globalval);
+      luaA_pushobject(&s->u.s.globalval);
       luaD_call((L->stack.top-L->stack.stack)-2, 1);
       if (ttype(L->stack.top-1) != LUA_T_NIL)
         return;
@@ -331,22 +331,17 @@ static void copytagmethods (void)
 
 static void rawgettable (void)
 {
-  lua_Object t = luaL_nonnullarg(1);
-  lua_Object i = luaL_nonnullarg(2);
-  lua_pushobject(t);
-  lua_pushobject(i);
+  lua_pushobject(luaL_nonnullarg(1));
+  lua_pushobject(luaL_nonnullarg(2));
   lua_pushobject(lua_rawgettable());
 }
 
 
 static void rawsettable (void)
 {
-  lua_Object t = luaL_nonnullarg(1);
-  lua_Object i = luaL_nonnullarg(2);
-  lua_Object v = luaL_nonnullarg(3);
-  lua_pushobject(t);
-  lua_pushobject(i);
-  lua_pushobject(v);
+  lua_pushobject(luaL_nonnullarg(1));
+  lua_pushobject(luaL_nonnullarg(2));
+  lua_pushobject(luaL_nonnullarg(3));
   lua_rawsettable();
 }
 

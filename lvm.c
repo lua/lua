@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.22 1998/01/12 13:35:37 roberto Exp roberto $
+** $Id: lvm.c,v 1.23 1998/01/14 13:49:15 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -37,13 +37,14 @@
 
 
 
-static TaggedString *strconc (char *l, char *r)
+static TaggedString *strconc (TaggedString *l, TaggedString *r)
 {
-  size_t nl = strlen(l);
-  char *buffer = luaL_openspace(nl+strlen(r)+1);
-  strcpy(buffer, l);
-  strcpy(buffer+nl, r);
-  return luaS_new(buffer);
+  size_t nl = l->u.s.len;
+  size_t nr = r->u.s.len;
+  char *buffer = luaL_openspace(nl+nr+1);
+  memcpy(buffer, l->str, nl);
+  memcpy(buffer+nl, r->str, nr);
+  return luaS_newlstr(buffer, nl+nr);
 }
 
 
@@ -167,7 +168,7 @@ void luaV_settable (TObject *t, int mode)
 void luaV_getglobal (TaggedString *ts)
 {
   /* WARNING: caller must assure stack space */
-  TObject *value = &ts->u.globalval;
+  TObject *value = &ts->u.s.globalval;
   TObject *im = luaT_getimbyObj(value, IM_GETGLOBAL);
   if (ttype(im) == LUA_T_NIL) {  /* default behavior */
     *L->stack.top++ = *value;
@@ -185,7 +186,7 @@ void luaV_getglobal (TaggedString *ts)
 
 void luaV_setglobal (TaggedString *ts)
 {
-  TObject *oldvalue = &ts->u.globalval;
+  TObject *oldvalue = &ts->u.s.globalval;
   TObject *im = luaT_getimbyObj(oldvalue, IM_SETGLOBAL);
   if (ttype(im) == LUA_T_NIL)  /* default behavior */
     luaS_rawsetglobal(ts, --L->stack.top);
@@ -224,6 +225,23 @@ static void call_arith (IMS event)
 }
 
 
+static int strcomp (char *l, long ll, char *r, long lr)
+{
+  for (;;) {
+    long temp = strcoll(l, r);
+    if (temp != 0) return temp;
+    /* strings are equal up to a '\0' */
+    temp = strlen(l);  /* index of first '\0' in both strings */
+    if (temp == ll)  /* l is finished? */
+      return (temp == lr) ? 0 : -1;  /* l is equal or smaller than r */
+    else if (temp == lr)  /* r is finished? */
+      return 1;  /* l is greater than r (because l is not finished) */
+    /* both strings longer than temp; go on comparing (after the '\0') */
+    temp++;
+    l += temp; ll -= temp; r += temp; lr -= temp;
+  }
+}
+
 static void comparison (lua_Type ttype_less, lua_Type ttype_equal,
                         lua_Type ttype_great, IMS op)
 {
@@ -234,7 +252,8 @@ static void comparison (lua_Type ttype_less, lua_Type ttype_equal,
   if (ttype(l) == LUA_T_NUMBER && ttype(r) == LUA_T_NUMBER)
     result = (nvalue(l) < nvalue(r)) ? -1 : (nvalue(l) == nvalue(r)) ? 0 : 1;
   else if (ttype(l) == LUA_T_STRING && ttype(r) == LUA_T_STRING)
-    result = strcoll(svalue(l), svalue(r));
+    result = strcomp(svalue(l), tsvalue(l)->u.s.len,
+                     svalue(r), tsvalue(r)->u.s.len);
   else {
     call_binTM(op, "unexpected type in comparison");
     return;
@@ -582,7 +601,7 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base)
         if (tostring(l) || tostring(r))
           call_binTM(IM_CONCAT, "unexpected type for concatenation");
         else {
-          tsvalue(l) = strconc(svalue(l), svalue(r));
+          tsvalue(l) = strconc(tsvalue(l), tsvalue(r));
           --S->top;
         }
         luaC_checkGC();
