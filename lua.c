@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.94 2002/06/26 16:37:39 roberto Exp roberto $
+** $Id: lua.c,v 1.95 2002/07/09 18:19:44 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -74,14 +74,14 @@ static void print_usage (void) {
   "  -i       enter interactive mode after executing `prog'\n"
   "  -l name  execute file `name'\n"
   "  -v       print version information\n"
-  "  --       stop handling arguments\n" ,
+  "  --       stop handling options\n" ,
   progname);
 }
 
 
 static void l_message (const char *pname, const char *msg) {
   if (pname) fprintf(stderr, "%s: ", pname);
-  fprintf(stderr, "%s\n", msg);
+  fprintf(stderr, "%s", msg);
 }
 
 
@@ -119,13 +119,13 @@ static int lcall (int clear) {
 
 static int l_panic (lua_State *l) {
   (void)l;
-  l_message(progname, "unable to recover; exiting");
+  l_message(progname, "unable to recover; exiting\n");
   return 0;
 }
 
 
 static void print_version (void) {
-  l_message(NULL, LUA_VERSION "  " LUA_COPYRIGHT);
+  l_message(NULL, LUA_VERSION "  " LUA_COPYRIGHT "\n");
 }
 
 
@@ -161,14 +161,13 @@ static int dostring (const char *s, const char *name) {
 }
 
 
-#ifdef USE_READLINE
-#include <readline/readline.h>
-#include <readline/history.h>
-#define save_line(b)	if (strcspn(b, " \t\n") != 0) add_history(b)
-#define push_line(b)	if (incomplete) lua_pushstring(L, "\n"); lua_pushstring(L, b); free(b)
-#else
-#define save_line(b)
-#define push_line(b)	lua_pushstring(L, b)
+#ifndef save_line
+#define save_line(b)	/* empty */
+#endif
+
+
+#ifndef read_line
+#define read_line(p)	readline(p)
 
 /* maximum length of an input line */
 #ifndef MAXINPUT
@@ -176,14 +175,23 @@ static int dostring (const char *s, const char *name) {
 #endif
 
 
-static char *readline (const char *prompt) {
+static int readline (const char *prompt) {
   static char buffer[MAXINPUT];
   if (prompt) {
     fputs(prompt, stdout);
     fflush(stdout);
   }
-  return fgets(buffer, sizeof(buffer), stdin);
+  if (fgets(buffer, sizeof(buffer), stdin) == NULL)
+    return 0;  /* read fails */
+  else {
+    size_t l = strlen(buffer);
+    if (l > 0 && buffer[l-1] == '\n')
+      buffer[l-1] = '\0';  /* remove eventual `\n' */
+    lua_pushstring(L, buffer);
+    return 1;
+  }
 }
+
 #endif
 
 
@@ -209,35 +217,33 @@ static int incomplete (int status) {
 
 
 static int load_string (void) {
-  int firstline = 1;
   int status;
+  int moreinput = 1;
   lua_settop(L, 0);
-  do {  /* repeat until gets a complete line */
-    char *buffer = readline(get_prompt(firstline));
-    if (buffer == NULL) {  /* input end? */
-      lua_settop(L, 0);
-      return -1;  /* input end */
-    }
-    if (firstline && buffer[0] == '=') {
-      buffer[0] = ' ';
-      lua_pushstring(L, "return");
-    }
-    firstline = 0;
-    push_line(buffer);
-    lua_concat(L, lua_gettop(L));
+  if (read_line(get_prompt(1)) == 0)  /* no input? */
+    return -1;
+  if (lua_tostring(L, -1)[0] == '=') {  /* line starts with `=' ? */
+    lua_pushfstring(L, "return %s", lua_tostring(L, -1)+1);/* `=' -> `return' */
+    lua_remove(L, -2);  /* remove original line */
+  }
+  for (;;) {  /* repeat until gets a complete line */
     status = luaL_loadbuffer(L, lua_tostring(L, 1), lua_strlen(L, 1), "=stdin");
-  } while (incomplete(status));  /* repeat loop to get rest of `line' */
+    if (!moreinput || !incomplete(status))  /* cannot try to add lines? */
+      break;
+    lua_pushliteral(L, "\n");  /* no; add line separator */
+    moreinput = read_line(get_prompt(0));
+    lua_concat(L, lua_gettop(L));  /* join lines and line separator */
+  }
   save_line(lua_tostring(L, 1));
-  lua_remove(L, 1);
+  lua_remove(L, 1);  /* remove line */
   return status;
 }
 
 
-static void manual_input (int version) {
+static void manual_input (void) {
   int status;
   const char *oldprogname = progname;
   progname = NULL;
-  if (version) print_version();
   while ((status = load_string()) != -1) {
     if (status == 0) status = lcall(0);
     report(status, 0);
@@ -247,6 +253,7 @@ static void manual_input (int version) {
       lua_pcall(L, lua_gettop(L)-1, 0);
     }
   }
+  lua_settop(L, 0);  /* clear stack */
   fputs("\n", stdout);
   progname = oldprogname;
 }
@@ -255,7 +262,8 @@ static void manual_input (int version) {
 static int handle_argv (char *argv[], int *interactive) {
   if (argv[1] == NULL) {  /* no more arguments? */
     if (isatty(0)) {
-      manual_input(1);
+      print_version();
+      manual_input();
     }
     else
       file_input(NULL);  /* executes stdin as a file */
@@ -304,11 +312,11 @@ static int handle_argv (char *argv[], int *interactive) {
           break;
         }
         case 'c': {
-          l_message(progname, "option `-c' is deprecated");
+          l_message(progname, "option `-c' is deprecated\n");
           break;
         }
         case 's': {
-          l_message(progname, "option `-s' is deprecated");
+          l_message(progname, "option `-s' is deprecated\n");
           break;
         }
         default: {
@@ -335,6 +343,7 @@ static int openstdlibs (lua_State *l) {
          lua_strlibopen(l) +
          lua_mathlibopen(l) +
          lua_dblibopen(l) +
+         /* add your libraries here */
          0;
 }
 
@@ -356,11 +365,11 @@ int main (int argc, char *argv[]) {
   progname = argv[0];
   L = lua_open();  /* create state */
   lua_atpanic(L, l_panic);
-  lua_pop(L, LUA_USERINIT(L));  /* open libraries, dischard any results */
+  lua_pop(L, LUA_USERINIT(L));  /* open libraries, discard any results */
   status = handle_luainit();
   if (status != 0) return status;
   status = handle_argv(argv, &interactive);
-  if (status == 0 && interactive) manual_input(0);
+  if (status == 0 && interactive) manual_input();
   lua_close(L);
   return status;
 }
