@@ -3,7 +3,7 @@
 ** load bytecodes from files
 */
 
-char* rcs_undump="$Id: undump.c,v 1.14 1996/03/14 17:31:15 lhf Exp $";
+char* rcs_undump="$Id: undump.c,v 1.15 1996/11/07 13:59:51 lhf Exp lhf $";
 
 #include <stdio.h>
 #include <string.h>
@@ -144,12 +144,9 @@ static void Unthread(Byte* code, int i, int v)
  {
   Word w;
   Byte* p=code+i;
-  Byte* c=&w;
-  get_word(w,p);
-  i=w;
-  w=v;
-  p[-2]=c[0];
-  p[-1]=c[1];
+  memcpy(&w,p,sizeof(w));
+  i=w; w=v;
+  memcpy(p,&w,sizeof(w));
  }
 }
 
