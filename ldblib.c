@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.12 2000/03/30 17:19:48 roberto Exp roberto $
+** $Id: ldblib.c,v 1.13 2000/04/14 17:44:20 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -46,7 +46,7 @@ static void getstack (lua_State *L) {
   if (!lua_getstack(L, luaL_check_int(L, 1), &ar))  /* level out of range? */
     return;
   else {
-    const char *options = luaL_check_string(L, 2);
+    const char *options = luaL_opt_string(L, 2, "flnSu");
     lua_Object res = lua_createtable(L);
     if (!lua_getinfo(L, options, &ar))
       luaL_argerror(L, 2, "invalid option");
