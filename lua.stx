@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.16 1994/12/27 20:41:11 celes Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.17 1995/01/13 22:11:12 roberto Exp celes $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,7 +41,8 @@ static Long    varbuffer[MAXVAR];    /* variables in an assignment list;
 				it's long to store negative Word values */
 static int     nvarbuffer=0;	     /* number of variables at a list */
 
-static Word    localvar[STACKGAP];   /* store local variable names */
+#define MAXLOCALS 32
+static Word    localvar[MAXLOCALS];  /* store local variable names */
 static int     nlocalvar=0;	     /* number of local variables */
 
 #define MAXFIELDS FIELDS_PER_FLUSH*2
@@ -103,10 +104,10 @@ static void code_word_at (Byte *p, Word n)
 
 static void push_field (Word name)
 {
-  if (nfields < STACKGAP-1)
+  if (nfields < MAXFIELDS)
     fields[nfields++] = name;
   else
-   lua_error ("too many fields in a constructor");
+   lua_error ("too many fields in nested constructors");
 }
 
 static void flush_record (int n)
@@ -135,18 +136,26 @@ static void flush_list (int m, int n)
   code_byte(n);
 }
 
-static void add_nlocalvar (int n)
+static void add_localvar (Word name)
 {
- if (MAX_TEMPS+nlocalvar+MAXVAR+n < STACKGAP)
-  nlocalvar += n;
+ if (nlocalvar < MAXLOCALS)
+  localvar[nlocalvar++] = name;
  else
   lua_error ("too many local variables");
 }
 
-static void incr_nvarbuffer (void)
+static void store_localvar (Word name, int n)
 {
- if (nvarbuffer < MAXVAR-1)
-  nvarbuffer++;
+ if (nlocalvar+n < MAXLOCALS)
+  localvar[nlocalvar+n] = name;
+ else
+  lua_error ("too many local variables");
+}
+
+static void add_varbuffer (Long var)
+{
+ if (nvarbuffer < MAXVAR)
+  varbuffer[nvarbuffer++] = var;
  else
   lua_error ("variable buffer overflow");
 }
@@ -436,8 +445,7 @@ function     : FUNCTION NAME
 method         : FUNCTION NAME ':' NAME
 	       {
 		init_function($4);
-	        localvar[nlocalvar]=luaI_findsymbolbyname("self");
-	        add_nlocalvar(1);
+		add_localvar(luaI_findsymbolbyname("self"));
 	       }
 	       body
 	       {
@@ -506,9 +514,9 @@ stat1  : IF expr1 THEN PrepJump block PrepJump elsepart END
        } 
        | functioncall	{ code_byte(0); }
        | LOCAL localdeclist decinit
-	{ add_nlocalvar($2);
+	{ nlocalvar += $2;
 	  adjust_mult_assign($2, $3, 0);
-	 }
+	}
        ;
 
 elsepart : /* empty */
@@ -632,13 +640,11 @@ parlist  :	/* empty */ { lua_codeadjust(0); }
 		
 parlist1 :	NAME		  
 		{
-		 localvar[nlocalvar]=luaI_findsymbol($1); 
-		 add_nlocalvar(1);
+		 add_localvar(luaI_findsymbol($1));
 		}
 	  |	parlist1 ',' NAME 
 		{
-		 localvar[nlocalvar]=luaI_findsymbol($3); 
-		 add_nlocalvar(1);
+		 add_localvar(luaI_findsymbol($3));
 		}
 	  ;
 		
@@ -683,12 +689,12 @@ lfieldlist1 : expr1  {$$=1;}
 varlist1  :	var			
 	  {
 	   nvarbuffer = 0; 
-           varbuffer[nvarbuffer] = $1; incr_nvarbuffer();
+	   add_varbuffer($1);
 	   $$ = ($1 == 0) ? 1 : 0;
 	  }
 	  |	varlist1 ',' var	
 	  { 
-           varbuffer[nvarbuffer] = $3; incr_nvarbuffer();
+	   add_varbuffer($3);
 	   $$ = ($3 == 0) ? $1 + 1 : $1;
 	  }
 	  ;
@@ -720,10 +726,10 @@ singlevar :	NAME
 varexp	: var { lua_pushvar($1); }
 	;
 	  
-localdeclist  : NAME {localvar[nlocalvar]=luaI_findsymbol($1); $$ = 1;}
+localdeclist  : NAME {store_localvar(luaI_findsymbol($1), 0); $$ = 1;}
      	  | localdeclist ',' NAME 
 	    {
-	     localvar[nlocalvar+$1]=luaI_findsymbol($3); 
+	     store_localvar(luaI_findsymbol($3), $1);
 	     $$ = $1+1;
 	    }
 	  ;

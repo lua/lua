@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.9 1994/11/23 14:31:11 roberto Stab $
+** $Id: opcode.h,v 3.10 1994/12/20 21:20:36 roberto Exp celes $
 */
 
 #ifndef opcode_h
@@ -10,17 +10,11 @@
 #include "types.h"
 #include "tree.h"
 
-#ifndef STACKGAP
-#define STACKGAP	128
-#endif 
-
 #ifndef real
 #define real float
 #endif
 
 #define FIELDS_PER_FLUSH 40
-
-#define MAX_TEMPS	20
 
 
 typedef enum 

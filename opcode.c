@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.34 1995/02/06 19:35:09 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.35 1995/02/10 12:51:29 roberto Exp celes $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -23,13 +23,15 @@ char *rcs_opcode="$Id: opcode.c,v 3.34 1995/02/06 19:35:09 roberto Exp roberto $
 #define tostring(o) ((tag(o) != LUA_T_STRING) && (lua_tostring(o) != 0))
 
 
-#define STACK_BUFFER (STACKGAP+128)
+#define STACK_SIZE 	128
 
 typedef int StkId;  /* index to stack elements */
 
-static Long    maxstack = 0L;
-static Object *stack = NULL;
-static Object *top = NULL;
+static Object initial_stack;
+
+static Object *stackLimit = &initial_stack+1;
+static Object *stack = &initial_stack;
+static Object *top = &initial_stack;
 
 
 /* macros to convert from lua_Object to (Object *) and back */
@@ -37,6 +39,11 @@ static Object *top = NULL;
 #define Address(lo)     ((lo)+stack-1)
 #define Ref(st)         ((st)-stack+1)
  
+
+/* macro to increment stack top. There must be always an empty slot in
+*  the stack
+*/
+#define incr_top	if (++top >= stackLimit) growstack()
 
 static StkId CBase = 0;  /* when Lua calls C or C calls Lua, points to */
                           /* the first slot after the last parameter. */
@@ -88,29 +95,35 @@ void lua_error (char *s)
 */
 static void lua_initstack (void)
 {
- maxstack = STACK_BUFFER;
+ Long maxstack = STACK_SIZE;
  stack = newvector(maxstack, Object);
+ stackLimit = stack+maxstack;
  top = stack;
+ *top = initial_stack;
 }
 
 
 /*
 ** Check stack overflow and, if necessary, realloc vector
 */
-#define lua_checkstack(n)  if ((Long)(n) > maxstack) checkstack(n)
+#define lua_checkstack(nt)  if ((nt) >= stackLimit) growstack()
 
-static void checkstack (StkId n)
+static void growstack (void)
 {
- StkId t;
- if (stack == NULL)
+ StkId t = top-stack;
+ if (stack == &initial_stack)
    lua_initstack();
- if (maxstack >= MAX_INT)
-   lua_error("stack size overflow");
- t = top-stack;
- maxstack *= 2;
- if (maxstack >= MAX_INT)
-   maxstack = MAX_INT;
- stack = growvector(stack, maxstack, Object);
+ else
+ {
+  Long maxstack = stackLimit - stack;
+  if (maxstack >= MAX_INT)
+    lua_error("stack size overflow");
+  maxstack *= 2;
+  if (maxstack >= MAX_INT)
+    maxstack = MAX_INT;
+  stack = growvector(stack, maxstack, Object);
+  stackLimit = stack+maxstack;
+ }
  top = stack + t;
 }
 
@@ -185,8 +198,8 @@ static int lua_tostring (Object *obj)
 static void adjust_top (StkId newtop)
 {
   Object *nt;
-  lua_checkstack(newtop);
-  nt = stack+newtop;
+  lua_checkstack(stack+newtop);
+  nt = stack+newtop;  /* warning: previous call may change stack */
   while (top < nt) tag(top++) = LUA_T_NIL;
   top = nt;  /* top could be bigger than newtop */
 }
@@ -227,7 +240,7 @@ static void call_funcFB (Object *func, StkId base, int nResults, StkId whereRes)
   /* open space for first parameter (func) */
   for (i=top-stack; i>base; i--)
     stack[i] = stack[i-1];
-  top++;
+  incr_top;
   stack[base] = *func;
   do_call(&luaI_fallBacks[FB_FUNCTION].function, base, nResults, whereRes);
 }
@@ -499,7 +512,7 @@ lua_Object lua_createtable (void)
   adjustC(0);
   avalue(top) = lua_createarray(0);
   tag(top) = LUA_T_ARRAY;
-  top++;
+  incr_top;
   CBase++;  /* incorporate object in the stack */
   return Ref(top-1);
 }
@@ -561,7 +574,7 @@ lua_Object lua_getlocked (int ref)
 {
  adjustC(0);
  *top = *luaI_getlocked(ref);
- top++;
+ incr_top;
  CBase++;  /* incorporate object in the stack */
  return Ref(top-1);
 }
@@ -569,9 +582,8 @@ lua_Object lua_getlocked (int ref)
 
 void lua_pushlocked (int ref)
 {
- lua_checkstack(top-stack+1);
  *top = *luaI_getlocked(ref);
- top++;
+ incr_top;
 }
 
 
@@ -590,7 +602,7 @@ lua_Object lua_getglobal (char *name)
  Word n = luaI_findsymbolbyname(name);
  adjustC(0);
  *top = s_object(n);
- top++;
+ incr_top;
  CBase++;  /* incorporate object in the stack */
  return Ref(top-1);
 }
@@ -610,8 +622,8 @@ void lua_storeglobal (char *name)
 */
 void lua_pushnil (void)
 {
- lua_checkstack(top-stack+1);
- tag(top++) = LUA_T_NIL;
+ tag(top) = LUA_T_NIL;
+ incr_top;
 }
 
 /*
@@ -619,8 +631,8 @@ void lua_pushnil (void)
 */
 void lua_pushnumber (real n)
 {
- lua_checkstack(top-stack+1);
- tag(top) = LUA_T_NUMBER; nvalue(top++) = n;
+ tag(top) = LUA_T_NUMBER; nvalue(top) = n;
+ incr_top;
 }
 
 /*
@@ -628,10 +640,9 @@ void lua_pushnumber (real n)
 */
 void lua_pushstring (char *s)
 {
- lua_checkstack(top-stack+1);
  tsvalue(top) = lua_createstring(s);
  tag(top) = LUA_T_STRING;
- top++;
+ incr_top;
 }
 
 /*
@@ -639,10 +650,9 @@ void lua_pushstring (char *s)
 */
 void lua_pushliteral (char *s)
 {
- lua_checkstack(top-stack+1);
  tsvalue(top) = lua_constant[luaI_findconstant(lua_constcreate(s))];
  tag(top) = LUA_T_STRING;
- top++;
+ incr_top;
 }
 
 /*
@@ -650,8 +660,8 @@ void lua_pushliteral (char *s)
 */
 void lua_pushcfunction (lua_CFunction fn)
 {
- lua_checkstack(top-stack+1);
- tag(top) = LUA_T_CFUNCTION; fvalue(top++) = fn;
+ tag(top) = LUA_T_CFUNCTION; fvalue(top) = fn;
+ incr_top;
 }
 
 /*
@@ -660,8 +670,8 @@ void lua_pushcfunction (lua_CFunction fn)
 void lua_pushusertag (void *u, int tag)
 {
  if (tag < LUA_T_USERDATA) return;
- lua_checkstack(top-stack+1);
- tag(top) = tag; uvalue(top++) = u;
+ tag(top) = tag; uvalue(top) = u;
+ incr_top;
 }
 
 /*
@@ -669,8 +679,8 @@ void lua_pushusertag (void *u, int tag)
 */
 void lua_pushobject (lua_Object o)
 {
- lua_checkstack(top-stack+1);
- *top++ = *Address(o);
+ *top = *Address(o);
+ incr_top;
 }
 
 /*
@@ -678,8 +688,8 @@ void lua_pushobject (lua_Object o)
 */
 void luaI_pushobject (Object *o)
 {
- lua_checkstack(top-stack+1);
- *top++ = *o;
+ *top = *o;
+ incr_top;
 }
 
 int lua_type (lua_Object o)
@@ -693,7 +703,8 @@ int lua_type (lua_Object o)
 
 void luaI_gcFB (Object *o)
 {
-  *(top++) = *o;
+  *top = *o;
+  incr_top;
   do_call(&luaI_fallBacks[FB_GC].function, (top-stack)-1, 0, (top-stack)-1);
 }
 
@@ -734,26 +745,28 @@ static void comparison (lua_Type tag_less, lua_Type tag_equal,
 */
 static StkId lua_execute (Byte *pc, StkId base)
 {
- lua_checkstack(STACKGAP+MAX_TEMPS+base);
  while (1)
  {
   OpCode opcode;
   switch (opcode = (OpCode)*pc++)
   {
-   case PUSHNIL: tag(top++) = LUA_T_NIL; break;
+   case PUSHNIL: tag(top) = LUA_T_NIL; incr_top; break;
 
    case PUSH0: case PUSH1: case PUSH2:
      tag(top) = LUA_T_NUMBER;
-     nvalue(top++) = opcode-PUSH0;
+     nvalue(top) = opcode-PUSH0;
+     incr_top;
      break;
 
-   case PUSHBYTE: tag(top) = LUA_T_NUMBER; nvalue(top++) = *pc++; break;
+   case PUSHBYTE: 
+     tag(top) = LUA_T_NUMBER; nvalue(top) = *pc++; incr_top; break;
 
    case PUSHWORD:
    {
     CodeWord code;
     get_word(code,pc);
-    tag(top) = LUA_T_NUMBER; nvalue(top++) = code.w;
+    tag(top) = LUA_T_NUMBER; nvalue(top) = code.w;
+    incr_top;
    }
    break;
 
@@ -761,7 +774,8 @@ static StkId lua_execute (Byte *pc, StkId base)
    {
     CodeFloat code;
     get_float(code,pc);
-    tag(top) = LUA_T_NUMBER; nvalue(top++) = code.f;
+    tag(top) = LUA_T_NUMBER; nvalue(top) = code.f;
+    incr_top;
    }
    break;
 
@@ -769,7 +783,8 @@ static StkId lua_execute (Byte *pc, StkId base)
    {
     CodeWord code;
     get_word(code,pc);
-    tag(top) = LUA_T_STRING; tsvalue(top++) = lua_constant[code.w];
+    tag(top) = LUA_T_STRING; tsvalue(top) = lua_constant[code.w];
+    incr_top;
    }
    break;
 
@@ -777,22 +792,25 @@ static StkId lua_execute (Byte *pc, StkId base)
    {
     CodeCode code;
     get_code(code,pc);
-    tag(top) = LUA_T_FUNCTION; bvalue(top++) = code.b;
+    tag(top) = LUA_T_FUNCTION; bvalue(top) = code.b;
+    incr_top;
    }
    break;
 
    case PUSHLOCAL0: case PUSHLOCAL1: case PUSHLOCAL2:
    case PUSHLOCAL3: case PUSHLOCAL4: case PUSHLOCAL5:
    case PUSHLOCAL6: case PUSHLOCAL7: case PUSHLOCAL8:
-   case PUSHLOCAL9: *top++ = *((stack+base) + (int)(opcode-PUSHLOCAL0)); break;
+   case PUSHLOCAL9: 
+     *top = *((stack+base) + (int)(opcode-PUSHLOCAL0)); incr_top; break;
 
-   case PUSHLOCAL: *top++ = *((stack+base) + (*pc++)); break;
+   case PUSHLOCAL: *top = *((stack+base) + (*pc++)); incr_top; break;
 
    case PUSHGLOBAL:
    {
     CodeWord code;
     get_word(code,pc);
-    *top++ = s_object(code.w);
+    *top = s_object(code.w);
+    incr_top;
    }
    break;
 
@@ -805,9 +823,11 @@ static StkId lua_execute (Byte *pc, StkId base)
      Object receiver = *(top-1);
      CodeWord code;
      get_word(code,pc);
-     tag(top) = LUA_T_STRING; tsvalue(top++) = lua_constant[code.w];
+     tag(top) = LUA_T_STRING; tsvalue(top) = lua_constant[code.w];
+     incr_top;
      pushsubscript();
-     *(top++) = receiver;
+     *top = receiver;
+     incr_top;
      break;
    }
 
@@ -837,6 +857,7 @@ static StkId lua_execute (Byte *pc, StkId base)
     int n = *pc++;
     if (tag(top-3-n) != LUA_T_ARRAY)
     {
+      lua_checkstack(top+2);
       *(top+1) = *(top-1);
       *(top) = *(top-2-n);
       *(top-1) = *(top-3-n);
@@ -901,7 +922,7 @@ static StkId lua_execute (Byte *pc, StkId base)
     get_word(size,pc);
     avalue(top) = lua_createarray(size.w);
     tag(top) = LUA_T_ARRAY;
-    top++;
+    incr_top;
    }
    break;
 
@@ -1007,7 +1028,8 @@ static StkId lua_execute (Byte *pc, StkId base)
    case MINUSOP:
     if (tonumber(top-1))
     {
-      tag(top++) = LUA_T_NIL;
+      tag(top) = LUA_T_NIL;
+      incr_top;
       call_arith("unm");
     }
     else
