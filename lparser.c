@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.94 2000/06/05 14:56:18 roberto Exp roberto $
+** $Id: lparser.c,v 1.95 2000/06/12 13:52:05 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -352,7 +352,7 @@ static void pushclosure (LexState *ls, FuncState *func) {
 }
 
 
-static void open_func (LexState *ls, FuncState *fs, TString *source) {
+static void open_func (LexState *ls, FuncState *fs) {
   Proto *f = luaF_newproto(ls->L);
   fs->prev = ls->fs;  /* linked list of funcstates */
   fs->ls = ls;
@@ -364,7 +364,7 @@ static void open_func (LexState *ls, FuncState *fs, TString *source) {
   fs->lastsetline = 0;
   fs->bl = NULL;
   fs->f = f;
-  f->source = source;
+  f->source = ls->source;
   fs->pc = 0;
   fs->lasttarget = 0;
   fs->jlt = NO_JUMP;
@@ -398,8 +398,8 @@ static void close_func (LexState *ls) {
 Proto *luaY_parser (lua_State *L, ZIO *z) {
   struct LexState lexstate;
   struct FuncState funcstate;
-  luaX_setinput(L, &lexstate, z);
-  open_func(&lexstate, &funcstate, luaS_new(L, zname(z)));
+  luaX_setinput(L, &lexstate, z, luaS_new(L, zname(z)));
+  open_func(&lexstate, &funcstate);
   next(&lexstate);  /* read first token */
   chunk(&lexstate);
   check_condition(&lexstate, (lexstate.t.token == TK_EOS), "<eof> expected");
@@ -1128,7 +1128,7 @@ static void parlist (LexState *ls) {
 static void body (LexState *ls, int needself, int line) {
   /* body ->  '(' parlist ')' chunk END */
   FuncState new_fs;
-  open_func(ls, &new_fs, ls->fs->f->source);
+  open_func(ls, &new_fs);
   new_fs.f->lineDefined = line;
   check(ls, '(');
   if (needself)
