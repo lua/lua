@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.20 2000/05/15 19:30:41 roberto Exp roberto $
+** $Id: ldebug.c,v 1.21 2000/05/30 19:00:31 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -89,7 +89,7 @@ static int lua_nups (StkId f) {
   switch (ttype(f)) {
     case TAG_LCLOSURE:  case TAG_CCLOSURE:
     case TAG_LMARK:   case TAG_CMARK:
-      return f->value.cl->nupvalues;
+      return clvalue(f)->nupvalues;
     default:
       return 0;
   }

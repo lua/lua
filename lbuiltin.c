@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.113 2000/06/05 20:15:33 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.114 2000/06/06 16:31:41 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -74,7 +74,7 @@ static Number getnarg (lua_State *L, const Hash *a) {
 
 
 static Hash *gettable (lua_State *L, int arg) {
-  return avalue(luaL_tablearg(L, arg));
+  return hvalue(luaL_tablearg(L, arg));
 }
 
 /* }====================================================== */
@@ -358,14 +358,14 @@ void luaB_tostring (lua_State *L) {
       lua_pushobject(L, o);
       return;
     case TAG_TABLE:
-      sprintf(buff, "table: %p", o->value.a);
+      sprintf(buff, "table: %p", hvalue(o));
       break;
     case TAG_LCLOSURE:  case TAG_CCLOSURE:
-      sprintf(buff, "function: %p", o->value.cl);
+      sprintf(buff, "function: %p", clvalue(o));
       break;
     case TAG_USERDATA:
-      sprintf(buff, "userdata: %p(%d)", o->value.ts->u.d.value,
-                                        o->value.ts->u.d.tag);
+      sprintf(buff, "userdata: %p(%d)", tsvalue(o)->u.d.value,
+                                        tsvalue(o)->u.d.tag);
       break;
     case TAG_NIL:
       lua_pushstring(L, "nil");
@@ -602,7 +602,7 @@ static void deprecated_funcs (lua_State *L) {
   TObject gt;
   int i;
   ttype(&gt) = TAG_TABLE;
-  avalue(&gt) = L->gt;
+  hvalue(&gt) = L->gt;
   for (i=0; i<num_deprecated; i++) {
     lua_pushobject(L, &gt);
     lua_pushcclosure(L, deprecated_global_funcs[i].func, 1);

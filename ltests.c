@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.22 2000/06/02 17:06:42 roberto Exp roberto $
+** $Id: ltests.c,v 1.23 2000/06/02 19:10:01 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -161,14 +161,14 @@ static void hash_query (void) {
     lua_pushnumber(tsvalue(o)->u.s.hash);
   }
   else {
-    const Hash *t = avalue(luaL_tablearg(2));
+    const Hash *t = hvalue(luaL_tablearg(2));
     lua_pushnumber(luaH_mainposition(t, o) - t->node);
   }
 }
 
 
 static void table_query (void) {
-  const Hash *t = avalue(luaL_tablearg(1));
+  const Hash *t = hvalue(luaL_tablearg(1));
   int i = luaL_opt_int(2, -1);
   if (i == -1) {
     lua_pushnumber(t->size);

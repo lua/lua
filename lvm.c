@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.112 2000/06/05 20:15:33 roberto Exp roberto $
+** $Id: lvm.c,v 1.113 2000/06/06 16:31:41 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -104,10 +104,10 @@ void luaV_gettable (lua_State *L, StkId top) {
     }
   }
   else {  /* object is a table... */
-    int tg = table->value.a->htag;
+    int tg = hvalue(table)->htag;
     im = luaT_getim(L, tg, IM_GETTABLE);
     if (ttype(im) == TAG_NIL) {  /* and does not have a `gettable' TM */
-      const TObject *h = luaH_get(L, avalue(table), table+1);
+      const TObject *h = luaH_get(L, hvalue(table), table+1);
       if (ttype(h) == TAG_NIL &&
           (ttype(im=luaT_getim(L, tg, IM_INDEX)) != TAG_NIL)) {
         /* result is nil and there is an `index' tag method */
@@ -138,9 +138,9 @@ void luaV_settable (lua_State *L, StkId t, StkId top) {
       luaG_indexerror(L, t);
   }
   else {  /* object is a table... */
-    im = luaT_getim(L, avalue(t)->htag, IM_SETTABLE);
+    im = luaT_getim(L, hvalue(t)->htag, IM_SETTABLE);
     if (ttype(im) == TAG_NIL) {  /* and does not have a `settable' method */
-      *luaH_set(L, avalue(t), t+1) = *(top-1);
+      *luaH_set(L, hvalue(t), t+1) = *(top-1);
       return;
     }
     /* else it has a `settable' method, go through to next command */
@@ -301,7 +301,7 @@ static void strconc (lua_State *L, int total, StkId top) {
 void luaV_pack (lua_State *L, StkId firstelem, int nvararg, TObject *tab) {
   int i;
   Hash *htab;
-  htab = avalue(tab) = luaH_new(L, nvararg+1);  /* +1 for field `n' */
+  htab = hvalue(tab) = luaH_new(L, nvararg+1);  /* +1 for field `n' */
   ttype(tab) = TAG_TABLE;
   for (i=0; i<nvararg; i++)
     *luaH_setint(L, htab, i+1) = *(firstelem+i);
@@ -445,7 +445,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       case OP_CREATETABLE:
         L->top = top;
         luaC_checkGC(L);
-        avalue(top) = luaH_new(L, GETARG_U(i));
+        hvalue(top) = luaH_new(L, GETARG_U(i));
         ttype(top) = TAG_TABLE;
         top++;
         break;
@@ -467,7 +467,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       case OP_SETLIST: {
         int aux = GETARG_A(i) * LFIELDS_PER_FLUSH;
         int n = GETARG_B(i);
-        Hash *arr = avalue(top-n-1);
+        Hash *arr = hvalue(top-n-1);
         L->top = top-n;  /* final value of `top' (in case of errors) */
         for (; n; n--)
           *luaH_setint(L, arr, n+aux) = *(--top);
@@ -477,7 +477,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       case OP_SETMAP: {
         int n = GETARG_U(i);
         StkId finaltop = top-2*n;
-        Hash *arr = avalue(finaltop-1);
+        Hash *arr = hvalue(finaltop-1);
         L->top = finaltop;  /* final value of `top' (in case of errors) */
         for (; n; n--) {
           top-=2;
@@ -656,7 +656,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         LUA_ASSERT(L, ttype(top-2) == TAG_TABLE, "invalid table");
         LUA_ASSERT(L, ttype(top-1) == TAG_NUMBER, "invalid counter");
         L->top = top;
-        n = luaA_next(L, avalue(top-2), (int)nvalue(top-1));
+        n = luaA_next(L, hvalue(top-2), (int)nvalue(top-1));
         if (n == 0)  /* end loop? */
           top -= 2;  /* remove table and counter */
         else {

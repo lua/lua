@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.65 2000/05/24 13:54:49 roberto Exp roberto $
+** $Id: lobject.h,v 1.66 2000/05/30 19:00:31 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -73,10 +73,10 @@ typedef union {
 /* Macros to access values */
 #define ttype(o)        ((o)->ttype)
 #define nvalue(o)       ((o)->value.n)
-#define svalue(o)       ((o)->value.ts->str)
 #define tsvalue(o)      ((o)->value.ts)
 #define clvalue(o)      ((o)->value.cl)
-#define avalue(o)       ((o)->value.a)
+#define hvalue(o)       ((o)->value.a)
+#define svalue(o)       (tsvalue(o)->str)
 
 
 typedef struct lua_TObject {

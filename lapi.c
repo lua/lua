@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.82 2000/05/26 19:17:57 roberto Exp roberto $
+** $Id: lapi.c,v 1.83 2000/06/06 16:31:41 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -63,7 +63,7 @@ lua_Object lua_pop (lua_State *L) {
 
 
 void lua_pushglobaltable (lua_State *L) {
-  avalue(L->top) = L->gt;
+  hvalue(L->top) = L->gt;
   ttype(L->top) = TAG_TABLE;
   incr_top;
 }
@@ -72,7 +72,7 @@ void lua_pushglobaltable (lua_State *L) {
 void lua_setglobaltable (lua_State *L, lua_Object newtable) {
   if (lua_type(L, newtable)[0] != 't')  /* type == "table"? */
     lua_error(L, "Lua API error - invalid value for global table");
-  L->gt = avalue(newtable);
+  L->gt = hvalue(newtable);
 }
 
 
@@ -125,7 +125,7 @@ lua_Object lua_rawget (lua_State *L) {
   luaA_checkCargs(L, 2);
   if (ttype(L->top-2) != TAG_TABLE)
     lua_error(L, "indexed expression not a table");
-  res = luaA_putluaObject(L, luaH_get(L, avalue(L->top-2), L->top-1));
+  res = luaA_putluaObject(L, luaH_get(L, hvalue(L->top-2), L->top-1));
   L->top -= 2;
   return res;
 }
@@ -144,7 +144,7 @@ void lua_rawset (lua_State *L) {
   luaA_checkCargs(L, 3);
   if (ttype(L->top-3) != TAG_TABLE)
     lua_error(L, "indexed expression not a table");
-  *luaH_set(L, avalue(L->top-3), L->top-2) = *(L->top-1);
+  *luaH_set(L, hvalue(L->top-3), L->top-2) = *(L->top-1);
   L->top -= 3;
 }
 
@@ -152,7 +152,7 @@ void lua_rawset (lua_State *L) {
 lua_Object lua_createtable (lua_State *L) {
   TObject o;
   luaC_checkGC(L);
-  avalue(&o) = luaH_new(L, 0);
+  hvalue(&o) = luaH_new(L, 0);
   ttype(&o) = TAG_TABLE;
   return luaA_putluaObject(L, &o);
 }
@@ -311,7 +311,7 @@ int lua_tag (lua_State *L, lua_Object o) {
   if (o == LUA_NOOBJECT)
     return TAG_NIL;
   else if (ttype(o) == TAG_USERDATA)  /* to allow `old' tags (deprecated) */
-    return o->value.ts->u.d.tag;
+    return tsvalue(o)->u.d.tag;
   else
     return luaT_effectivetag(L, o);
 }
@@ -322,10 +322,10 @@ void lua_settag (lua_State *L, int tag) {
   luaT_realtag(L, tag);
   switch (ttype(L->top-1)) {
     case TAG_TABLE:
-      (L->top-1)->value.a->htag = tag;
+      hvalue(L->top-1)->htag = tag;
       break;
     case TAG_USERDATA:
-      (L->top-1)->value.ts->u.d.tag = tag;
+      tsvalue(L->top-1)->u.d.tag = tag;
       break;
     default:
       luaL_verror(L, "cannot change the tag of a %.20s",
@@ -352,7 +352,7 @@ int luaA_next (lua_State *L, const Hash *t, int i) {
 int lua_next (lua_State *L, lua_Object t, int i) {
   if (ttype(t) != TAG_TABLE)
     lua_error(L, "Lua API error - object is not a table in `lua_next'"); 
-  i = luaA_next(L, avalue(t), i);
+  i = luaA_next(L, hvalue(t), i);
   top2LC(L, (i==0) ? 0 : 2);
   return i;
 }
