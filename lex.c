@@ -1,40 +1,5 @@
-char *rcs_lex = "$Id: lex.c,v 2.7 1994/10/17 19:01:53 celes Exp celes $";
-/*$Log: lex.c,v $
- * Revision 2.7  1994/10/17  19:01:53  celes
- * new algorithm for reading floats.
- * files end with EOF, instead of 0.
- *
- * Revision 2.6  1994/09/26  16:21:52  celes
- * Mudancas para tornar lex.c um modulo independente dos outros
- * modulos de Lua
- *
- * Revision 2.5  1994/09/22  12:44:00  lhf
- * added support for ugly tokens
- *
- * Revision 2.4  1994/09/05  19:14:40  celes
- * escapes \' e \" em strings; correcao do escape \\
- *
- * Revision 2.3  1994/08/17  17:41:50  celes
- * Implementacao da macro 'lua_strcmp'
- *
- * Revision 2.2  1994/08/05  19:27:41  celes
- * implementacao de dois buffer de 'yytext' para evitar bug
- * no look ahead do yacc
- *
- * Revision 2.1  1994/04/15  19:00:28  celes
- * Retirar chamada da funcao lua_findsymbol associada a cada
- * token NAME. A decisao de chamar lua_findsymbol ou lua_findconstant
- * fica a cargo do modulo "lua.stx".
- *
- * Revision 1.3  1993/12/28  16:42:29  roberto
- * "include"s de string.h e stdlib.h para evitar warnings
- *
- * Revision 1.2  1993/12/22  21:39:15  celes
- * Tratamento do token $debug e $nodebug
- *
- * Revision 1.1  1993/12/22  21:15:16  roberto
- * Initial revision
- **/
+char *rcs_lex = "$Id: lex.c,v 2.8 1994/10/18 17:34:34 celes Exp roberto $";
+ 
 
 #include <ctype.h>
 #include <math.h>
@@ -119,7 +84,7 @@ static int findReserved (char *name)
 }
 
 
-int yylex ()
+int yylex (void)
 {
   float a;
   currentText = !currentText;
