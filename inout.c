@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.66 1997/06/20 19:19:09 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.67 1997/06/23 18:27:53 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -401,7 +401,7 @@ void luaI_predefine (void)
     n = luaI_findsymbolbyname(int_funcs[i].name);
     s_ttype(n) = LUA_T_CFUNCTION; s_fvalue(n) = int_funcs[i].func;
   }
-  n = luaI_findsymbolbyname("_VERSION_");
+  n = luaI_findsymbolbyname("_VERSION");
   s_ttype(n) = LUA_T_STRING; s_tsvalue(n) = lua_createstring(LUA_VERSION);
 }
 
