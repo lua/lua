@@ -1,5 +1,5 @@
 /*
-** $Id$
+** $Id: loadlib.c,v 1.1 2003/03/17 13:01:48 roberto Exp roberto $
 ** Bare-bones dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 *
@@ -95,7 +95,7 @@ static void pusherror(lua_State *L)
 	0, error, 0, buffer, sizeof(buffer), 0))
   lua_pushstring(L,buffer);
  else
-  lua_pushfstring("system error %d\n",error);
+  lua_pushfstring(L,"system error %d\n",error);
 }
 
 static int loadlib(lua_State *L)
