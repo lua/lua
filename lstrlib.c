@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.24 1999/02/04 19:29:51 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.25 1999/02/05 11:22:58 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -471,7 +471,7 @@ static void str_format (void) {
     else { /* format item */
       struct Capture cap;
       char form[MAX_FORMAT];  /* to store the format ('%...') */
-      char *buff;  /* to store the formated item */
+      char *buff;  /* to store the formatted item */
       char *initf = strfrmt;
       form[0] = '%';
       if (isdigit((unsigned char)*initf) && *(initf+1) == '$') {
@@ -505,7 +505,7 @@ static void str_format (void) {
           long l;
           char *s = luaL_check_lstr(arg, &l);
           if (cap.capture[1].len == 0 && l >= 100) {
-            /* no precision and string is too big to be formated;
+            /* no precision and string is too big to be formatted;
                keep original string */
             addnchar(s, l);
             continue;  /* skip the "addsize" at the end */

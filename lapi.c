@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.34 1999/02/04 17:47:59 roberto Exp roberto $
+** $Id: lapi.c,v 1.35 1999/02/08 17:07:59 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -465,11 +465,6 @@ int lua_setdebug (int debug) {
 ** Debug interface
 ** =======================================================
 */
-
-
-/* Hooks */
-lua_CHFunction lua_callhook = NULL;
-lua_LHFunction lua_linehook = NULL;
 
 
 lua_Function lua_stackedfunction (int level)

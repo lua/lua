@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.21 1998/11/20 15:41:43 roberto Exp roberto $
+% $Id: manual.tex,v 1.22 1999/02/05 12:15:07 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -41,7 +41,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{\small \verb$Date: 1998/11/20 15:41:43 $}
+%\date{\small \verb$Date: 1999/02/05 12:15:07 $}
 
 \maketitle
 
@@ -91,7 +91,7 @@ a intera\c{c}\~ao entre programas Lua e programas C hospedeiros.
 \begin{quotation}
 \noindent
 \footnotesize
-Copyright \copyright\ 1994--1998 TeCGraf, PUC-Rio.  All rights reserved.
+Copyright \copyright\ 1994--1999 TeCGraf, PUC-Rio.  All rights reserved.
 
 \noindent
 Permission is hereby granted, without written agreement and without license
@@ -697,10 +697,11 @@ An absent else-part is equivalent to \verb|else nil|.
 
 \subsubsection{Assignment Expressions}
 \begin{Produc}
-\produc{exp}{\ter{(} var \ter{=} exp1 \ter{)}}
+\produc{exp}{\ter{(} varlist1 \ter{=} explist1 \ter{)}}
 \end{Produc}%
-An \Index{assignment expression} executes a regular assignment,
-and results in the final value of its right hand expression.
+An \Index{assignment expression} executes a multiple assignment,
+and results in the final value of its first right hand expression
+(that is, the value assigned to the first variable in the variable list).
 
 \subsubsection{Table Constructors} \label{tableconstructor}
 Table \Index{constructors} are expressions that create tables;
@@ -2752,7 +2753,8 @@ plus a string describing the error.
 
 \subsubsection*{\ff \T{seek (filehandle [, whence] [, offset])}}\Deffunc{seek}
 
-Sets the file position, measured in bytes from the beginning of the file,
+Sets and gets the file position,
+measured in bytes from the beginning of the file,
 to the position given by \verb|offset| plus a base
 specified by the string \verb|whence|, as follows:
 \begin{description}

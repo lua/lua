@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.15 1999/01/04 13:37:07 roberto Exp roberto $
+** $Id: lobject.c,v 1.16 1999/01/13 19:08:37 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -112,7 +112,7 @@ double luaO_str2d (char *s) {  /* LUA_NUMBER */
       s++;
       sig = -1;
     }
-    if (!isdigit((unsigned char)*s)) return -1;  /* no digit in expoent part? */
+    if (!isdigit((unsigned char)*s)) return -1;  /* no digit in the exponent? */
     do {
       e = 10*e + (*(s++)-'0');
     } while (isdigit((unsigned char)*s));

@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.49 1999/02/04 19:12:35 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.50 1999/02/08 16:29:35 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -29,7 +29,7 @@
 
 /*
 ** {======================================================
-** Auxliliar functions
+** Auxiliary functions
 ** =======================================================
 */
 

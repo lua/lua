@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.30 1999/01/15 11:38:33 roberto Exp roberto $
+** $Id: ldo.c,v 1.31 1999/02/04 17:47:59 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -136,7 +136,7 @@ static StkId callC (lua_CFunction f, StkId base)
   if (L->callhook)
     luaD_callHook(base, NULL, 0);
   (*f)();  /* do the actual call */
-  if (L->callhook)  /* func may have changed lua_callhook */
+  if (L->callhook)  /* func may have changed callhook */
     luaD_callHook(base, NULL, 1);
   firstResult = CS->base;
   *CS = oldCLS;
