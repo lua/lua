@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.132 2000/08/31 14:08:27 roberto Exp roberto $
+** $Id: lvm.c,v 1.133 2000/08/31 21:02:55 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -112,10 +112,10 @@ void luaV_Lclosure (lua_State *L, Proto *l, int nelems) {
 
 /*
 ** Function to index a table.
-** Receives the table at top-2 and the index at top-1.
+** Receives the table at `t' and the key at top.
 */
-void luaV_gettable (lua_State *L, StkId top) {
-  StkId t = top-2;
+const TObject *luaV_gettable (lua_State *L, StkId t) {
+  const TObject *im;
   int tg;
   if (ttype(t) == TAG_TABLE &&  /* `t' is a table? */
       ((tg = hvalue(t)->htag) == TAG_TABLE ||  /* with default tag? */
@@ -123,46 +123,49 @@ void luaV_gettable (lua_State *L, StkId top) {
     /* do a primitive get */
     const TObject *h = luaH_get(L, hvalue(t), t+1);
     /* result is no nil or there is no `index' tag method? */
-    const TObject *im;
     if (ttype(h) != TAG_NIL ||
         (ttype(im=luaT_getim(L, tg, IM_INDEX)) == TAG_NIL))
-      *t = *h;  /* put result into table position */
-    else {  /* call `index' tag method */
-      L->top = top;
-      luaD_callTM(L, im, 2, 1);
-    }
+      return h;  /* return result */
+    /* else call `index' tag method */
   }
   else {  /* try a 'gettable' TM */
-    const TObject *im = luaT_getimbyObj(L, t, IM_GETTABLE);
-    L->top = top;
-    if (ttype(im) != TAG_NIL)  /* call `gettable' tag method */
-      luaD_callTM(L, im, 2, 1);
-    else  /* no tag method */
-      luaG_typeerror(L, t, "index");
+    im = luaT_getimbyObj(L, t, IM_GETTABLE);
+  }
+  if (ttype(im) != TAG_NIL) {  /* is there a tag method? */
+    luaD_checkstack(L, 2);
+    *(L->top+1) = *(L->top-1);  /* key */
+    *L->top = *t;  /* table */
+    *(L->top-1) = *im;  /* tag method */
+    L->top += 2;
+    luaD_call(L, L->top - 3, 1);
+    return L->top - 1;  /* call result */
+  }
+  else {  /* no tag method */
+    luaG_typeerror(L, t, "index");
+    return NULL;  /* to avoid warnings */
   }
 }
 
 
 /*
-** Receives table at *t, index at *(t+1) and value at `top'.
+** Receives table at `t', key at `key' and value at top.
 */
-void luaV_settable (lua_State *L, StkId t, StkId top) {
+void luaV_settable (lua_State *L, StkId t, StkId key) {
   int tg;
   if (ttype(t) == TAG_TABLE &&  /* `t' is a table? */
       ((tg = hvalue(t)->htag) == TAG_TABLE ||  /* with default tag? */
         ttype(luaT_getim(L, tg, IM_SETTABLE)) == TAG_NIL)) /* or no TM? */
-    *luaH_set(L, hvalue(t), t+1) = *(top-1);  /* do a primitive set */
+    *luaH_set(L, hvalue(t), key) = *(L->top-1);  /* do a primitive set */
   else {  /* try a `settable' tag method */
     const TObject *im = luaT_getimbyObj(L, t, IM_SETTABLE);
-    L->top = top;
     if (ttype(im) != TAG_NIL) {
       luaD_checkstack(L, 3);
-      *(top+2) = *(top-1);
-      *(top+1) = *(t+1);
-      *(top) = *t;
-      *(top-1) = *im;
-      L->top = top+3;
-      luaD_call(L, top-1, 0);  /* call `settable' tag method */
+      *(L->top+2) = *(L->top-1);
+      *(L->top+1) = *key;
+      *(L->top) = *t;
+      *(L->top-1) = *im;
+      L->top += 3;
+      luaD_call(L, L->top - 4, 0);  /* call `settable' tag method */
     }
     else  /* no tag method... */
       luaG_typeerror(L, t, "index");
@@ -170,49 +173,48 @@ void luaV_settable (lua_State *L, StkId t, StkId top) {
 }
 
 
-void luaV_getglobal (lua_State *L, TString *s, StkId top) {
+const TObject *luaV_getglobal (lua_State *L, TString *s) {
   const TObject *value = luaH_getstr(L->gt, s);
   TObject *im = luaT_getimbyObj(L, value, IM_GETGLOBAL);
   if (ttype(im) == TAG_NIL)  /* is there a tag method? */
-    *top = *value;  /* default behavior */
+    return value;  /* default behavior */
   else {  /* tag method */
-    L->top = top;
     luaD_checkstack(L, 3);
-    *top = *im;
-    ttype(top+1) = TAG_STRING;
-    tsvalue(top+1) = s;  /* global name */
-    *(top+2) = *value;
-    L->top = top+3;
-    luaD_call(L, top, 1);
+    *L->top = *im;
+    ttype(L->top+1) = TAG_STRING;
+    tsvalue(L->top+1) = s;  /* global name */
+    *(L->top+2) = *value;
+    L->top += 3;
+    luaD_call(L, L->top - 3, 1);
+    return L->top - 1;
   }
 }
 
 
-void luaV_setglobal (lua_State *L, TString *s, StkId top) {
+void luaV_setglobal (lua_State *L, TString *s) {
   const TObject *oldvalue = luaH_getstr(L->gt, s);
   const TObject *im = luaT_getimbyObj(L, oldvalue, IM_SETGLOBAL);
   if (ttype(im) == TAG_NIL) {  /* is there a tag method? */
     if (oldvalue != &luaO_nilobject) {
       /* cast to remove `const' is OK, because `oldvalue' != luaO_nilobject */
-      *(TObject *)oldvalue = *(top-1);
+      *(TObject *)oldvalue = *(L->top - 1);
     }
     else {
       TObject key;
       ttype(&key) = TAG_STRING;
       tsvalue(&key) = s;
-      *luaH_set(L, L->gt, &key) = *(top-1);
+      *luaH_set(L, L->gt, &key) = *(L->top - 1);
     }
   }
   else {
-    L->top = top;
     luaD_checkstack(L, 3);
-    *(top+2) = *(top-1);  /* new value */
-    *(top+1) = *oldvalue;
-    ttype(top) = TAG_STRING;
-    tsvalue(top) = s;
-    *(top-1) = *im;
-    L->top = top+3;
-    luaD_call(L, top-1, 0);
+    *(L->top+2) = *(L->top-1);  /* new value */
+    *(L->top+1) = *oldvalue;
+    ttype(L->top) = TAG_STRING;
+    tsvalue(L->top) = s;
+    *(L->top-1) = *im;
+    L->top += 3;
+    luaD_call(L, L->top - 4, 0);
   }
 }
 
@@ -280,7 +282,7 @@ int luaV_lessthan (lua_State *L, const TObject *l, const TObject *r, StkId top) 
 }
 
 
-static void strconc (lua_State *L, int total, StkId top) {
+void luaV_strconc (lua_State *L, int total, StkId top) {
   do {
     int n = 2;  /* number of elements handled in this pass (at least 2) */
     if (tostring(L, top-2) || tostring(L, top-1)) {
@@ -425,26 +427,28 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
       }
       case OP_GETGLOBAL: {
-        luaV_getglobal(L, kstr[GETARG_U(i)], top);
+        L->top = top;
+        *top = *luaV_getglobal(L, kstr[GETARG_U(i)]);
         top++;
         break;
       }
       case OP_GETTABLE: {
-        luaV_gettable(L, top);
+        L->top = top;
         top--;
+        *(top-1) = *luaV_gettable(L, top-1);
         break;
       }
       case OP_GETDOTTED: {
         ttype(top) = TAG_STRING;
-        tsvalue(top++) = kstr[GETARG_U(i)];
-        luaV_gettable(L, top);
-        top--;
+        tsvalue(top) = kstr[GETARG_U(i)];
+        L->top = top+1;
+        *(top-1) = *luaV_gettable(L, top-1);
         break;
       }
       case OP_GETINDEXED: {
-        *top++ = *(base+GETARG_U(i));
-        luaV_gettable(L, top);
-        top--;
+        *top = *(base+GETARG_U(i));
+        L->top = top+1;
+        *(top-1) = *luaV_gettable(L, top-1);
         break;
       }
       case OP_PUSHSELF: {
@@ -452,7 +456,8 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         receiver = *(top-1);
         ttype(top) = TAG_STRING;
         tsvalue(top++) = kstr[GETARG_U(i)];
-        luaV_gettable(L, top);
+        L->top = top;
+        *(top-2) = *luaV_gettable(L, top-2);
         *(top-1) = receiver;
         break;
       }
@@ -469,12 +474,15 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
       }
       case OP_SETGLOBAL: {
-        luaV_setglobal(L, kstr[GETARG_U(i)], top);
+        L->top = top;
+        luaV_setglobal(L, kstr[GETARG_U(i)]);
         top--;
         break;
       }
       case OP_SETTABLE: {
-        luaV_settable(L, top-GETARG_A(i), top);
+        StkId t = top-GETARG_A(i);
+        L->top = top;
+        luaV_settable(L, t, t+1);
         top -= GETARG_B(i);  /* pop values */
         break;
       }
@@ -548,7 +556,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
       }
       case OP_CONCAT: {
         int n = GETARG_U(i);
-        strconc(L, n, top);
+        luaV_strconc(L, n, top);
         top -= n-1;
         L->top = top;
         luaC_checkGC(L);

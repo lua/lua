@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.45 2000/08/07 20:21:34 roberto Exp roberto $
+** $Id: ltm.c,v 1.46 2000/08/09 19:16:57 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -119,20 +119,23 @@ int luaT_effectivetag (lua_State *L, const TObject *o) {
 }
 
 
-const TObject *luaT_gettagmethod (lua_State *L, int t, const char *event) {
+void lua_gettagmethod (lua_State *L, int t, const char *event) {
   int e;
   e = luaI_checkevent(L, event, t);
   checktag(L, t);
   if (luaT_validevent(t, e))
-    return luaT_getim(L, t,e);
+    *L->top = *luaT_getim(L, t,e);
   else
-    return &luaO_nilobject;
+    ttype(L->top) = TAG_NIL;
+  L->top++;
 }
 
 
-void luaT_settagmethod (lua_State *L, int t, const char *event, TObject *func) {
+void lua_settagmethod (lua_State *L, int t, const char *event) {
   TObject temp;
   int e;
+  LUA_ASSERT(lua_isnil(L, -1) || lua_isfunction(L, -1),
+             "function or nil expected");
   e = luaI_checkevent(L, event, t);
   checktag(L, t);
   if (!luaT_validevent(t, e))
@@ -140,8 +143,8 @@ void luaT_settagmethod (lua_State *L, int t, const char *event, TObject *func) {
                 luaT_eventname[e], luaO_typenames[t],
                 (t == TAG_TABLE || t == TAG_USERDATA) ? " with default tag"
                                                           : "");
-  temp = *func;
-  *func = *luaT_getim(L, t,e);
+  temp = *(L->top - 1);
+  *(L->top - 1) = *luaT_getim(L, t,e);
   *luaT_getim(L, t, e) = temp;
 }
 

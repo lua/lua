@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.18 2000/08/09 19:16:57 roberto Exp roberto $
+** $Id: ldblib.c,v 1.19 2000/08/28 17:57:04 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -18,18 +18,16 @@
 
 
 static void settabss (lua_State *L, const char *i, const char *v) {
-  lua_pushobject(L, -1);
   lua_pushstring(L, i);
   lua_pushstring(L, v);
-  lua_settable(L);
+  lua_settable(L, -3);
 }
 
 
 static void settabsi (lua_State *L, const char *i, int v) {
-  lua_pushobject(L, -1);
   lua_pushstring(L, i);
   lua_pushnumber(L, v);
-  lua_settable(L);
+  lua_settable(L, -3);
 }
 
 
@@ -44,7 +42,7 @@ static int getinfo (lua_State *L) {
     }
   }
   else if (lua_isfunction(L, 1)) {
-    lua_pushobject(L, 1);
+    lua_pushvalue(L, 1);
     sprintf(buff, ">%.10s", options);
     options = buff;
   }
@@ -71,10 +69,9 @@ static int getinfo (lua_State *L) {
         settabss(L, "namewhat", ar.namewhat);
         break;
       case 'f':
-        lua_pushobject(L, -1);
         lua_pushstring(L, "func");
-        lua_pushobject(L, -4);
-        lua_settable(L);
+        lua_pushvalue(L, -3);
+        lua_settable(L, -3);
         break;
     }
   }
@@ -90,7 +87,7 @@ static int getlocal (lua_State *L) {
   name = lua_getlocal(L, &ar, luaL_check_int(L, 2));
   if (name) {
     lua_pushstring(L, name);
-    lua_pushobject(L, -2);
+    lua_pushvalue(L, -2);
     return 2;
   }
   else {

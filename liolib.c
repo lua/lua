@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.75 2000/08/31 13:30:10 roberto Exp roberto $
+** $Id: liolib.c,v 1.76 2000/08/31 20:23:40 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -107,7 +107,7 @@ static FILE *getfilebyref (lua_State *L, IOCtrl *ctrl, int inout) {
   FILE *f;
   lua_getglobals(L);
   lua_getref(L, ctrl->ref[inout]);
-  lua_rawget(L);
+  lua_rawget(L, -2);
   f = gethandle(L, ctrl, -1);
   if (f == NULL)
     luaL_verror(L, "global variable `%.10s' is not a file handle",
@@ -564,58 +564,77 @@ static int io_debug (lua_State *L) {
 }
 
 
-
-#define MESSAGESIZE	150
-#define MAXMESSAGE (MESSAGESIZE*10)
-
+#define LEVELS1	12	/* size of the first part of the stack */
+#define LEVELS2	10	/* size of the second part of the stack */
 
 static int errorfb (lua_State *L) {
-  char buff[MAXMESSAGE];
   int level = 1;  /* skip level 0 (it's this function) */
+  int firstpart = 1;  /* still before eventual `...' */
   lua_Debug ar;
-  sprintf(buff, "error: %.200s\n", lua_tostring(L, 1));
+  lua_settop(L, 1);
+  luaL_checktype(L, 1, "string");
+  lua_pushstring(L, "error: ");
+  lua_insert(L, 1);
+  lua_pushstring(L, "\nstack traceback:\n");
+  lua_concat(L, 3);
   while (lua_getstack(L, level++, &ar)) {
+    char buff[120];  /* enough to fit following `sprintf's */
     char buffchunk[60];
+    int toconcat = 1;  /* number of strings in the stack to concat */
+    if (level > LEVELS1 && firstpart) {
+      /* no more than `LEVELS2' more levels? */
+      if (!lua_getstack(L, level+LEVELS2, &ar))
+        level--;  /* keep going */
+      else {
+        lua_pushstring(L, "       ...\n");  /* too many levels */
+        lua_concat(L, 2);
+        while (lua_getstack(L, level+LEVELS2, &ar))  /* get last levels */
+        level++;
+      }
+      firstpart = 0;
+      continue;
+    }
+    sprintf(buff, "%4d:  ", level-1);
+    lua_pushstring(L, buff); toconcat++;
     lua_getinfo(L, "Snl", &ar);
     luaL_chunkid(buffchunk, ar.source, sizeof(buffchunk));
-    if (level == 2) strcat(buff, "stack traceback:\n");
-    strcat(buff, "  ");
-    if (strlen(buff) > MAXMESSAGE-MESSAGESIZE) {
-      strcat(buff, "...\n");
-      break;  /* buffer is full */
-    }
     switch (*ar.namewhat) {
       case 'g':  case 'l':  /* global, local */
-        sprintf(buff+strlen(buff), "function `%.50s'", ar.name);
+        sprintf(buff, "function `%.50s'", ar.name);
         break;
       case 'f':  /* field */
-        sprintf(buff+strlen(buff), "method `%.50s'", ar.name);
+        sprintf(buff, "method `%.50s'", ar.name);
         break;
       case 't':  /* tag method */
-        sprintf(buff+strlen(buff), "`%.50s' tag method", ar.name);
+        sprintf(buff, "`%.50s' tag method", ar.name);
         break;
       default: {
         if (*ar.what == 'm')  /* main? */
-          sprintf(buff+strlen(buff), "main of %.70s", buffchunk);
+          sprintf(buff, "main of %.70s", buffchunk);
         else if (*ar.what == 'C')  /* C function? */
-          sprintf(buff+strlen(buff), "%.70s", buffchunk);
+          sprintf(buff, "%.70s", buffchunk);
         else
-          sprintf(buff+strlen(buff), "function <%d:%.70s>",
-                  ar.linedefined, buffchunk);
+          sprintf(buff, "function <%d:%.70s>", ar.linedefined, buffchunk);
         ar.source = NULL;
       }
     }
-    if (ar.currentline > 0)
-      sprintf(buff+strlen(buff), " at line %d", ar.currentline);
-    if (ar.source)
-      sprintf(buff+strlen(buff), " [%.70s]", buffchunk);
-    strcat(buff, "\n");
+    lua_pushstring(L, buff); toconcat++;
+    if (ar.currentline > 0) {
+      sprintf(buff, " at line %d", ar.currentline);
+      lua_pushstring(L, buff); toconcat++;
+    }
+    if (ar.source) {
+      sprintf(buff, " [%.70s]", buffchunk);
+      lua_pushstring(L, buff); toconcat++;
+    }
+    lua_pushstring(L, "\n"); toconcat++;
+    lua_concat(L, toconcat);
   }
   lua_getglobals(L);
   lua_pushstring(L, LUA_ALERT);
-  lua_rawget(L);
+  lua_rawget(L, -2);
   if (lua_isfunction(L, -1)) {  /* avoid loop if _ALERT is not defined */
-    lua_pushstring(L, buff);
+    lua_pushvalue(L, -3);  /* error message */
     lua_call(L, 1, 0);
   }
   return 0;

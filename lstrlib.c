@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.49 2000/08/31 13:30:22 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.50 2000/08/31 20:23:40 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -469,7 +469,7 @@ static void add_s (lua_State *L, struct Capture *cap) {
     size_t oldbuff;
     int n;
     const char *s;
-    lua_pushobject(L, 3);
+    lua_pushvalue(L, 3);
     n = push_captures(L, cap);
     /* function may use buffer, so save it and create a new one */
     oldbuff = luaL_newbuffer(L, 0);

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.92 2000/08/31 20:23:40 roberto Exp roberto $
+** $Id: lapi.c,v 1.93 2000/08/31 21:01:43 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -69,25 +69,24 @@ void lua_settop (lua_State *L, int index) {
 }
 
 
-void lua_move (lua_State *L, int index) {
-  TObject *p = Index(L, index);
-  TObject temp = *p;
+void lua_remove (lua_State *L, int index) {
+  StkId p = Index(L, index);
   while (++p < L->top) *(p-1) = *p;
-  *(L->top-1) = temp;
+  L->top--;
 }
 
 
 void lua_insert (lua_State *L, int index) {
   TObject temp = *(L->top-1);
-  TObject *p = Index(L, index);
-  TObject *q;
+  StkId p = Index(L, index);
+  StkId q;
   for (q = L->top-1; q>p; q--)
     *q = *(q-1);
   *p = temp;
 }
 
 
-void lua_pushobject (lua_State *L, int index) {
+void lua_pushvalue (lua_State *L, int index) {
   *L->top = *Index(L, index);
   api_incr_top(L);
 }
@@ -133,15 +132,22 @@ int lua_isnumber (lua_State *L, int index) {
 
 int lua_tag (lua_State *L, int index) {
   btest(L, index, 
-   ((ttype(o) == TAG_USERDATA) ? tsvalue(o)->u.d.tag : luaT_effectivetag(L, o)),
-   -1);
+   ((ttype(o) == TAG_USERDATA) ? tsvalue(o)->u.d.tag :
+                                 luaT_effectivetag(L, o)), -1);
 }
 
-int lua_equal(lua_State *L, int index1, int index2) {
+int lua_equal (lua_State *L, int index1, int index2) {
   StkId o1 = Index(L, index1);
   StkId o2 = Index(L, index2);
   if (o1 >= L->top || o2 >= L->top) return 0;  /* index out-of-range */
   else return luaO_equalObj(o1, o2);
+}
+
+int lua_lessthan (lua_State *L, int index1, int index2) {
+  StkId o1 = Index(L, index1);
+  StkId o2 = Index(L, index2);
+  if (o1 >= L->top || o2 >= L->top) return 0;  /* index out-of-range */
+  else return luaV_lessthan(L, o1, o2, L->top);
 }
 
 
@@ -168,14 +174,13 @@ void *lua_touserdata (lua_State *L, int index) {
 }
 
 const void *lua_topointer (lua_State *L, int index) {
-  const TObject *o = Index(L, index);
+  StkId o = Index(L, index);
   switch (ttype(o)) {
     case TAG_NUMBER:  case TAG_NIL:
       return NULL;
     case TAG_STRING:
-      return tsvalue(o)->str;
     case TAG_USERDATA:
-      return tsvalue(o)->u.d.value;
+      return tsvalue(o);
     case TAG_TABLE: 
       return hvalue(o);
     case TAG_CCLOSURE: case TAG_LCLOSURE:
@@ -243,31 +248,38 @@ void lua_pushusertag (lua_State *L, void *u, int tag) {  /* ORDER LUA_T */
 
 
 void lua_getglobal (lua_State *L, const char *name) {
-  luaV_getglobal(L, luaS_new(L, name), L->top++);
+  StkId top = L->top;
+  *top = *luaV_getglobal(L, luaS_new(L, name));
+  L->top = top+1;
 }
 
 
-void lua_gettable (lua_State *L) {
-  luaV_gettable(L, L->top--);
+void lua_gettable (lua_State *L, int tableindex) {
+  StkId t = Index(L, tableindex);
+  StkId top = L->top;
+  *(top-1) = *luaV_gettable(L, t);
+  L->top = top;  /* tag method may change top */
 }
 
 
-void lua_rawget (lua_State *L) {
-  LUA_ASSERT(ttype(L->top-2) == TAG_TABLE, "table expected");
-  *(L->top - 2) = *luaH_get(L, hvalue(L->top - 2), L->top - 1);
-  L->top--;
+void lua_rawget (lua_State *L, int tableindex) {
+  StkId t = Index(L, tableindex);
+  LUA_ASSERT(ttype(t) == TAG_TABLE, "table expected");
+  *(L->top - 1) = *luaH_get(L, hvalue(t), L->top - 1);
+}
+
+
+void lua_rawgeti (lua_State *L, int index, int n) {
+  StkId o = Index(L, index);
+  LUA_ASSERT(ttype(o) == TAG_TABLE, "table expected");
+  *L->top = *luaH_getnum(hvalue(o), n);
+  api_incr_top(L);
 }
 
 
 void lua_getglobals (lua_State *L) {
   hvalue(L->top) = L->gt;
   ttype(L->top) = TAG_TABLE;
-  api_incr_top(L);
-}
-
-
-void lua_gettagmethod (lua_State *L, int tag, const char *event) {
-  *L->top = *luaT_gettagmethod(L, tag, event);
   api_incr_top(L);
 }
 
@@ -300,38 +312,40 @@ void lua_newtable (lua_State *L) {
 
 
 void lua_setglobal (lua_State *L, const char *name) {
-  luaV_setglobal(L, luaS_new(L, name), L->top--);
-}
-
-
-void lua_settable (lua_State *L) {
   StkId top = L->top;
-  luaV_settable(L, top-3, top);
-  L->top = top-3;  /* pop table, index, and value */
+  luaV_setglobal(L, luaS_new(L, name));
+  L->top = top-1;  /* remove element from the top */
 }
 
 
-void lua_rawset (lua_State *L) {
-  LUA_ASSERT(ttype(L->top-3) == TAG_TABLE, "table expected");
-  *luaH_set(L, hvalue(L->top-3), L->top-2) = *(L->top-1);
-  L->top -= 3;
+void lua_settable (lua_State *L, int tableindex) {
+  StkId t = Index(L, tableindex);
+  StkId top = L->top;
+  luaV_settable(L, t, top-2);
+  L->top = top-2;  /* pop index and value */
+}
+
+
+void lua_rawset (lua_State *L, int tableindex) {
+  StkId t = Index(L, tableindex);
+  LUA_ASSERT(ttype(t) == TAG_TABLE, "table expected");
+  *luaH_set(L, hvalue(t), L->top-2) = *(L->top-1);
+  L->top -= 2;
+}
+
+
+void lua_rawseti (lua_State *L, int index, int n) {
+  StkId o = Index(L, index);
+  LUA_ASSERT(ttype(o) == TAG_TABLE, "table expected");
+  *luaH_setint(L, hvalue(o), n) = *(L->top-1);
+  L->top--;
 }
 
 
 void lua_setglobals (lua_State *L) {
-  TObject *newtable = --L->top;
+  StkId newtable = --L->top;
   LUA_ASSERT(ttype(newtable) == TAG_TABLE, "table expected");
   L->gt = hvalue(newtable);
-}
-
-
-void lua_settagmethod (lua_State *L, int tag, const char *event) {
-  TObject *method = L->top - 1;
-  if (ttype(method) != TAG_NIL &&
-      ttype(method) != TAG_CCLOSURE &&
-      ttype(method) != TAG_LCLOSURE)
-    lua_error(L, "Lua API error - tag method must be a function or nil");
-  luaT_settagmethod(L, tag, event, method);
 }
 
 
@@ -362,7 +376,6 @@ int lua_ref (lua_State *L,  int lock) {
 ** miscellaneous functions
 */
 
-
 void lua_settag (lua_State *L, int tag) {
   luaT_realtag(L, tag);
   switch (ttype(L->top-1)) {
@@ -389,8 +402,8 @@ void lua_unref (lua_State *L, int ref) {
 }
 
 
-int lua_next (lua_State *L) {
-  const TObject *t = Index(L, -2);
+int lua_next (lua_State *L, int tableindex) {
+  StkId t = Index(L, tableindex);
   Node *n;
   LUA_ASSERT(ttype(t) == TAG_TABLE, "table expected");
   n = luaH_next(L, hvalue(t), Index(L, -1));
@@ -401,7 +414,7 @@ int lua_next (lua_State *L) {
     return 1;
   }
   else {  /* no more elements */
-    L->top -= 2;  /* remove key and table */
+    L->top -= 1;  /* remove key */
     return 0;
   }
 }
@@ -425,5 +438,12 @@ int lua_getn (lua_State *L, int index) {
     }
     return (int)max;
   }
+}
+
+
+void lua_concat (lua_State *L, int n) {
+  StkId top = L->top;
+  luaV_strconc(L, n, top);
+  L->top = top-(n-1);
 }
 

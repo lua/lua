@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.64 2000/08/31 20:23:40 roberto Exp roberto $
+** $Id: lua.h,v 1.65 2000/08/31 21:01:43 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -52,7 +52,7 @@ typedef int (*lua_CFunction) (lua_State *L);
 /*
 ** state manipulation
 */
-lua_State     *lua_newstate (int stacksize, int builtin);
+lua_State     *lua_newstate (int stacksize);
 void           lua_close (lua_State *L);
 
 
@@ -61,8 +61,8 @@ void           lua_close (lua_State *L);
 */
 int            lua_gettop (lua_State *L);
 void           lua_settop (lua_State *L, int index);
-void           lua_pushobject (lua_State *L, int index);
-void           lua_move (lua_State *L, int index);
+void           lua_pushvalue (lua_State *L, int index);
+void           lua_remove (lua_State *L, int index);
 void           lua_insert (lua_State *L, int index);
 int            lua_stackspace (lua_State *L);
 
@@ -77,6 +77,7 @@ int            lua_iscfunction (lua_State *L, int index);
 int            lua_tag (lua_State *L, int index);
 
 int            lua_equal (lua_State *L, int index1, int index2);
+int            lua_lessthan (lua_State *L, int index1, int index2);
 
 double         lua_tonumber (lua_State *L, int index);
 const char    *lua_tostring (lua_State *L, int index);
@@ -101,8 +102,9 @@ void           lua_pushusertag (lua_State *L, void *u, int tag);
 ** get functions (Lua -> stack)
 */
 void           lua_getglobal (lua_State *L, const char *name);
-void           lua_gettable (lua_State *L);
-void           lua_rawget (lua_State *L);
+void           lua_gettable (lua_State *L, int tableindex);
+void           lua_rawget (lua_State *L, int tableindex);
+void           lua_rawgeti (lua_State *L, int tableindex, int n);
 void           lua_getglobals (lua_State *L);
 void           lua_gettagmethod (lua_State *L, int tag, const char *event);
 
@@ -115,8 +117,9 @@ void           lua_newtable (lua_State *L);
 ** set functions (stack -> Lua)
 */
 void           lua_setglobal (lua_State *L, const char *name);
-void           lua_settable (lua_State *L);
-void           lua_rawset (lua_State *L);
+void           lua_settable (lua_State *L, int tableindex);
+void           lua_rawset (lua_State *L, int tableindex);
+void           lua_rawseti (lua_State *L, int tableindex, int n);
 void           lua_setglobals (lua_State *L);
 void           lua_settagmethod (lua_State *L, int tag, const char *event);
 int            lua_ref (lua_State *L, int lock);
@@ -145,9 +148,10 @@ void	       lua_unref (lua_State *L, int ref);
 
 long	       lua_collectgarbage (lua_State *L, long limit);
 
-int            lua_next (lua_State *L);
-int            lua_getn (lua_State *L, int index);
+int            lua_next (lua_State *L, int tableindex);
+int            lua_getn (lua_State *L, int tableindex);
 
+void           lua_concat (lua_State *L, int n);
 
 
 /* 

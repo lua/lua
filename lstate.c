@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.34 2000/08/28 17:57:04 roberto Exp roberto $
+** $Id: lstate.c,v 1.35 2000/08/31 13:30:39 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -9,7 +9,6 @@
 
 #include "lua.h"
 
-#include "lbuiltin.h"
 #include "ldo.h"
 #include "lgc.h"
 #include "llex.h"
@@ -20,7 +19,13 @@
 #include "ltm.h"
 
 
-lua_State *lua_newstate (int stacksize, int put_builtin) {
+#ifdef DEBUG
+extern lua_State *lua_state;
+void luaB_opentests (lua_State *L);
+#endif
+
+
+lua_State *lua_newstate (int stacksize) {
   struct lua_longjmp myErrorJmp;
   lua_State *L = luaM_new(NULL, lua_State);
   if (L == NULL) return NULL;  /* memory allocation error */
@@ -54,8 +59,9 @@ lua_State *lua_newstate (int stacksize, int put_builtin) {
     luaS_init(L);
     luaX_init(L);
     luaT_init(L);
-    if (put_builtin)
-      luaB_predefine(L);
+#ifdef DEBUG
+    luaB_opentests(L);
+#endif
     L->GCthreshold = L->nblocks*4;
     L->errorJmp = NULL;
     return L;
@@ -66,10 +72,6 @@ lua_State *lua_newstate (int stacksize, int put_builtin) {
   }
 }
 
-
-#ifdef DEBUG
-extern lua_State *lua_state;
-#endif
 
 void lua_close (lua_State *L) {
   luaC_collect(L, 1);  /* collect all elements */
@@ -83,6 +85,7 @@ void lua_close (lua_State *L) {
   luaM_free(L, L->Mbuffer);
   LUA_ASSERT(L->nblocks == 0, "wrong count for nblocks");
   luaM_free(L, L);
+  LUA_ASSERT(L->Cbase == L->stack, "stack not empty");
   LUA_ASSERT(L != lua_state || memdebug_numblocks == 0, "memory leak!");
   LUA_ASSERT(L != lua_state || memdebug_total == 0,"memory leak!");
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.38 2000/08/31 13:29:47 roberto Exp roberto $
+** $Id: ltests.c,v 1.39 2000/08/31 20:23:40 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -38,10 +38,9 @@ void luaB_opentests (lua_State *L);
 
 
 static void setnameval (lua_State *L, const char *name, int val) {
-  lua_pushobject(L, -1);
   lua_pushstring(L, name);
   lua_pushnumber(L, val);
-  lua_settable(L);
+  lua_settable(L, -3);
 }
 
 
@@ -100,10 +99,9 @@ static int listcode (lua_State *L) {
   setnameval(L, "numparams", p->numparams);
   pc = 0;
   do {
-    lua_pushobject(L, -1);
     lua_pushnumber(L, pc+1);
     res = pushop(L, p, pc++);
-    lua_settable(L);
+    lua_settable(L, -3);
   } while (res);
   return 1;
 }
@@ -116,10 +114,9 @@ static int liststrings (lua_State *L) {
   p = clvalue(luaA_index(L, 1))->f.l;
   lua_newtable(L);
   for (i=0; i<p->nkstr; i++) {
-    lua_pushobject(L, -1);
     lua_pushnumber(L, i+1);
     lua_pushstring(L, p->kstr[i]->str);
-    lua_settable(L);
+    lua_settable(L, -3);
   }
   return 1;
 }
@@ -241,7 +238,7 @@ static int string_query (lua_State *L) {
 
 static int tref (lua_State *L) {
   luaL_checktype(L, 1, "any");
-  lua_pushobject(L, 1);
+  lua_pushvalue(L, 1);
   lua_pushnumber(L, lua_ref(L, luaL_opt_int(L, 2, 1)));
   return 1;
 }
@@ -270,7 +267,7 @@ static int udataval (lua_State *L) {
 }
 
 static int newstate (lua_State *L) {
-  lua_State *L1 = lua_newstate(luaL_check_int(L, 1), luaL_check_int(L, 2));
+  lua_State *L1 = lua_newstate(luaL_check_int(L, 1));
   if (L1)
     lua_pushuserdata(L, L1);
   else
@@ -390,17 +387,20 @@ static int testC (lua_State *L) {
     else if EQ("pushnum") {
       lua_pushnumber(L, getnum);
     }
-    else if EQ("pushobject") {
-      lua_pushobject(L, getnum);
+    else if EQ("pushvalue") {
+      lua_pushvalue(L, getnum);
     }
-    else if EQ("move") {
-      lua_move(L, getnum);
+    else if EQ("remove") {
+      lua_remove(L, getnum);
     }
     else if EQ("insert") {
       lua_insert(L, getnum);
     }
     else if EQ("next") {
-      lua_next(L);
+      lua_next(L, -2);
+    }
+    else if EQ("concat") {
+      lua_concat(L, getnum);
     }
     else if EQ("call") {
       int narg = getnum;
@@ -445,7 +445,7 @@ static const struct luaL_reg tests_funcs[] = {
 void luaB_opentests (lua_State *L) {
   lua_newtable(L);
   lua_getglobals(L);
-  lua_pushobject(L, -2);
+  lua_pushvalue(L, -2);
   lua_setglobals(L);
   luaL_openl(L, tests_funcs);  /* open functions inside new table */
   lua_setglobals(L);  /* restore old table of globals */

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.48 2000/08/31 14:28:17 roberto Exp roberto $
+** $Id: lua.c,v 1.49 2000/08/31 20:23:40 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -54,6 +54,7 @@ extern void USERINIT (void);
 #else
 #define USERINIT	userinit
 static void userinit (void) {
+  lua_baselibopen(L);
   lua_iolibopen(L);
   lua_strlibopen(L);
   lua_mathlibopen(L);
@@ -103,7 +104,7 @@ static void print_message (void) {
   fprintf(stderr,
   "usage: lua [options].  Available options are:\n"
   "  -        execute stdin as a file\n"
-  "  -c       close lua when exiting\n"
+  "  -c       close Lua when exiting\n"
   "  -e stat  execute string `stat'\n"
   "  -f name  execute file `name' with remaining arguments in table `arg'\n"
   "  -i       enter interactive mode with prompt\n"
@@ -134,12 +135,14 @@ static void getargs (char *argv[]) {
   lua_newtable(L);
   for (i=0; argv[i]; i++) {
     /* arg[i] = argv[i] */
-    lua_pushobject(L, -1); lua_pushnumber(L, i);
-    lua_pushstring(L, argv[i]); lua_settable(L);
+    lua_pushnumber(L, i);
+    lua_pushstring(L, argv[i]);
+    lua_settable(L, -3);
   }
   /* arg.n = maximum index in table `arg' */
-  lua_pushobject(L, -1); lua_pushstring(L, "n");
-  lua_pushnumber(L, i-1); lua_settable(L);
+  lua_pushstring(L, "n");
+  lua_pushnumber(L, i-1);
+  lua_settable(L, -3);
 }
 
 
@@ -311,7 +314,7 @@ int main (int argc, char *argv[]) {
   int status;
   opt.toclose = 0;
   getstacksize(argc, argv, &opt);  /* handle option `-s' */
-  L = lua_newstate(opt.stacksize, 1);  /* create state */
+  L = lua_newstate(opt.stacksize);  /* create state */
   USERINIT();  /* open libraries */
   register_getargs(argv);  /* create `getargs' function */
   status = handle_argv(argv+1, &opt);
