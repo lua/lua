@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.54 2003/04/28 19:57:50 roberto Exp roberto $
+** $Id: llimits.h,v 1.55 2003/05/14 21:01:53 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -153,12 +153,6 @@ typedef lu_int32 Instruction;
 /* maximum number of upvalues per function */
 #ifndef MAXUPVALUES
 #define MAXUPVALUES	32	/* <MAXSTACK */
-#endif
-
-
-/* maximum number of parameters in a function */
-#ifndef MAXPARAMS
-#define MAXPARAMS 100           /* <MAXLOCALS */
 #endif
 
 
