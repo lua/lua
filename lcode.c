@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.90 2002/03/05 12:42:47 roberto Exp roberto $
+** $Id: lcode.c,v 1.91 2002/03/08 19:10:32 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -21,9 +21,6 @@
 
 
 #define hasjumps(e)	((e)->t != (e)->f)
-
-#define getcode(fs,e)	((fs)->f->code[(e)->info])
-
 
 
 void luaK_error (LexState *ls, const char *msg) {
@@ -501,7 +498,7 @@ static OpCode invertoperator (OpCode op) {
 
 static void invertjump (FuncState *fs, expdesc *e) {
   Instruction *pc = getjumpcontrol(fs, e->info);
-  *pc = SET_OPCODE(*pc, invertoperator(GET_OPCODE(*pc)));
+  SET_OPCODE(*pc, invertoperator(GET_OPCODE(*pc)));
 }
 
 
