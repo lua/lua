@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.102 2000/10/05 12:14:08 roberto Exp roberto $
+** $Id: ldo.c,v 1.103 2000/10/05 13:00:17 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -41,7 +41,7 @@ void luaD_init (lua_State *L, int stacksize) {
 
 
 void luaD_checkstack (lua_State *L, int n) {
-  if (L->stack_last-L->top <= n) {  /* stack overflow? */
+  if (L->stack_last - L->top <= n) {  /* stack overflow? */
     if (L->stack_last-L->stack > (L->stacksize-1)) {
       /* overflow while handling overflow: do what?? */
       L->top -= EXTRA_STACK;
@@ -112,19 +112,19 @@ void luaD_lineHook (lua_State *L, StkId func, int line, lua_Hook linehook) {
 }
 
 
-void luaD_callHook (lua_State *L, StkId func, lua_Hook callhook,
+static void luaD_callHook (lua_State *L, StkId func, lua_Hook callhook,
                     const char *event) {
   if (L->allowhooks) {
     lua_Debug ar;
     ar._func = func;
     ar.event = event;
+    infovalue(func)->pc = NULL;  /* function is not active */
     dohook(L, &ar, callhook);
   }
 }
 
 
 static StkId callCclosure (lua_State *L, const struct Closure *cl, StkId base) {
-  lua_Hook callhook = L->callhook;
   int nup = cl->nupvalues;  /* number of upvalues */
   StkId old_Cbase = L->Cbase;
   int n;
@@ -132,11 +132,7 @@ static StkId callCclosure (lua_State *L, const struct Closure *cl, StkId base) {
   luaD_checkstack(L, nup+LUA_MINSTACK);  /* ensure minimum stack size */
   for (n=0; n<nup; n++)  /* copy upvalues as extra arguments */
     *(L->top++) = cl->upvalue[n];
-  if (callhook)
-    luaD_callHook(L, base-1, callhook, "call");
   n = (*cl->f.c)(L);  /* do the actual call */
-  if (callhook)  /* same hook that was active at entry */
-    luaD_callHook(L, base-1, callhook, "return");
   L->Cbase = old_Cbase;  /* restore old C base */
   return L->top - n;  /* return index of first result */
 }
@@ -159,6 +155,7 @@ void luaD_callTM (lua_State *L, Closure *f, int nParams, int nResults) {
 ** The number of results is nResults, unless nResults=LUA_MULTRET.
 */ 
 void luaD_call (lua_State *L, StkId func, int nResults) {
+  lua_Hook callhook;
   StkId firstResult;
   CallInfo ci;
   Closure *cl;
@@ -175,22 +172,29 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
   ci.func = cl;
   infovalue(func) = &ci;
   ttype(func) = LUA_TMARK;
-  if (cl->isC)
-    firstResult = callCclosure(L, cl, func+1);
-  else
-    firstResult = luaV_execute(L, cl, func+1);
+  callhook = L->callhook;
+  if (callhook)
+    luaD_callHook(L, func, callhook, "call");
+  firstResult = (cl->isC ? callCclosure(L, cl, func+1) :
+                           luaV_execute(L, cl, func+1));
+  if (callhook)  /* same hook that was active at entry */
+    luaD_callHook(L, func, callhook, "return");
   LUA_ASSERT(ttype(func) == LUA_TMARK, "invalid tag");
-  /* adjust the number of results */
-  if (nResults == LUA_MULTRET)
-    nResults = L->top - firstResult;
-  else
-    luaD_adjusttop(L, firstResult, nResults);
   /* move results to `func' (to erase parameters and function) */
-  while (nResults) {
-    *func++ = *(L->top - nResults);
-    nResults--;
+  if (nResults == LUA_MULTRET) {
+    while (firstResult < L->top)  /* copy all results */
+      *func++ = *firstResult++;
+    L->top = func;
   }
-  L->top = func;
+  else {  /* copy at most `nResults' */
+    for (; nResults > 0 && firstResult < L->top; nResults--)
+      *func++ = *firstResult++;
+    L->top = func;
+    for (; nResults > 0; nResults--) {  /* if there are not enough results */
+      ttype(L->top) = LUA_TNIL;  /* adjust the stack */
+      incr_top;  /* must check stack space */
+    }
+  }
   luaC_checkGC(L);
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.44 2000/10/05 12:14:08 roberto Exp roberto $
+** $Id: ldebug.c,v 1.45 2000/10/05 13:00:17 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -92,8 +92,8 @@ static int lua_nups (StkId f) {
 
 int luaG_getline (int *lineinfo, int pc, int refline, int *prefi) {
   int refi;
-  if (lineinfo == NULL) return -1;  /* no line info */
-  else if (pc == -1) return refline;  /* function preamble */
+  if (lineinfo == NULL || pc == -1)
+    return -1;  /* no line info or function is not active */
   refi = prefi ? *prefi : 0;
   if (lineinfo[refi] < 0)
     refline += -lineinfo[refi++]; 
@@ -124,7 +124,10 @@ int luaG_getline (int *lineinfo, int pc, int refline, int *prefi) {
 static int lua_currentpc (StkId f) {
   CallInfo *ci = infovalue(f);
   LUA_ASSERT(isLmark(f), "function has no pc");
-  return (*ci->pc - ci->func->f.l->code) - 1;
+  if (ci->pc)
+    return (*ci->pc - ci->func->f.l->code) - 1;
+  else
+    return -1;  /* function is not active */
 }
 
 
