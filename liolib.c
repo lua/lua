@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.100 2001/01/25 16:45:36 roberto Exp roberto $
+** $Id: liolib.c,v 1.101 2001/01/26 11:45:51 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -306,14 +306,12 @@ static int io_read (lua_State *L) {
     luaL_checkstack(L, nargs+LUA_MINSTACK, "too many arguments");
     success = 1;
     for (n = 1; n<=nargs && success; n++) {
-      const char *p = luaL_check_string(L, n);
-      if (p[0] != '*') {
-        if (lua_isnumber(L, n))
-          success = read_chars(L, f, (size_t)lua_tonumber(L, n));
-        else
-          lua_error(L, "read patterns are deprecated");
-      }
+      if (lua_type(L, n) == LUA_TNUMBER)
+        success = read_chars(L, f, (size_t)lua_tonumber(L, n));
       else {
+        const char *p = lua_tostring(L, n);
+        if (!p || p[0] != '*')
+          lua_error(L, "invalid `read' option");
         switch (p[1]) {
           case 'n':  /* number */
             success = read_number(L, f);
