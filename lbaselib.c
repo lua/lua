@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.98 2002/09/05 19:45:42 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.99 2002/09/16 19:49:45 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -140,9 +140,18 @@ static void getfunc (lua_State *L) {
 }
 
 
+static int aux_getglobals (lua_State *L) {
+  lua_getglobals(L, -1);
+  lua_pushliteral(L, "__globals");
+  lua_rawget(L, -2);
+  return !lua_isnil(L, -1);
+}
+
+
 static int luaB_getglobals (lua_State *L) {
   getfunc(L);
-  lua_getglobals(L, -1);
+  if (!aux_getglobals(L))  /* __globals not defined? */
+    lua_pop(L, 1);  /* remove it, to return real globals */
   return 1;
 }
 
@@ -150,6 +159,10 @@ static int luaB_getglobals (lua_State *L) {
 static int luaB_setglobals (lua_State *L) {
   luaL_check_type(L, 2, LUA_TTABLE);
   getfunc(L);
+  if (aux_getglobals(L))  /* __globals defined? */
+    luaL_error(L, "cannot change a protected global table");
+  else
+    lua_pop(L, 2);  /* remove __globals and real global table */
   lua_pushvalue(L, 2);
   if (lua_setglobals(L, -2) == 0)
     luaL_error(L, "cannot change global table of given function");
