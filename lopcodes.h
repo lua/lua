@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.109 2004/05/31 18:51:50 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.110 2004/06/29 18:49:02 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -41,10 +41,11 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 
 #define SIZE_OP		6
 
+#define POS_OP		0
+#define POS_A		(POS_OP + SIZE_OP)
 #define POS_C		(POS_A + SIZE_A)
 #define POS_B		(POS_C + SIZE_C)
 #define POS_Bx		POS_C
-#define POS_A		SIZE_OP
 
 
 /*
@@ -76,8 +77,9 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 ** the following macros help to manipulate instructions
 */
 
-#define GET_OPCODE(i)	(cast(OpCode, (i)&MASK1(SIZE_OP,0)))
-#define SET_OPCODE(i,o)	((i) = (((i)&MASK0(SIZE_OP,0)) | cast(Instruction, o)))
+#define GET_OPCODE(i)	(cast(OpCode, ((i)>>POS_OP) & MASK1(SIZE_OP,0)))
+#define SET_OPCODE(i,o)	((i) = (((i)&MASK0(SIZE_OP,POS_OP)) | \
+		((cast(Instruction, o)<<POS_OP)&MASK1(SIZE_OP,POS_OP))))
 
 #define GETARG_A(i)	(cast(int, ((i)>>POS_A) & MASK1(SIZE_A,0)))
 #define SETARG_A(i,u)	((i) = (((i)&MASK0(SIZE_A,POS_A)) | \
@@ -99,12 +101,12 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 #define SETARG_sBx(i,b)	SETARG_Bx((i),cast(unsigned int, (b)+MAXARG_sBx))
 
 
-#define CREATE_ABC(o,a,b,c)	(cast(Instruction, o) \
+#define CREATE_ABC(o,a,b,c)	((cast(Instruction, o)<<POS_OP) \
 			| (cast(Instruction, a)<<POS_A) \
 			| (cast(Instruction, b)<<POS_B) \
 			| (cast(Instruction, c)<<POS_C))
 
-#define CREATE_ABx(o,a,bc)	(cast(Instruction, o) \
+#define CREATE_ABx(o,a,bc)	((cast(Instruction, o)<<POS_OP) \
 			| (cast(Instruction, a)<<POS_A) \
 			| (cast(Instruction, bc)<<POS_Bx))
 
