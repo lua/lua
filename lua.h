@@ -2,12 +2,17 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lua.h,v 1.2 1994/08/03 14:15:46 celes Exp celes $
+** $Id: lua.h,v 1.3 1994/08/17 15:05:08 celes Exp celes $
 */
 
 
 #ifndef lua_h
 #define lua_h
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 typedef void (*lua_CFunction) (void);
 typedef struct Object *lua_Object;
@@ -55,5 +60,9 @@ int            lua_istable          	(lua_Object object);
 int            lua_isfunction 		(lua_Object object);
 int            lua_iscfunction 		(lua_Object object);
 int            lua_isuserdata 		(lua_Object object);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
