@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.16 1997/12/17 20:57:20 roberto Exp roberto $
+** $Id: ldo.c,v 1.17 1997/12/18 18:32:39 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -296,7 +296,7 @@ int luaD_protectedrun (int nResults)
 /*
 ** returns 0 = chunk loaded; 1 = error; 2 = no more chunks to load
 */
-static int protectedparser (ZIO *z, char *chunkname, int bin)
+static int protectedparser (ZIO *z, int bin)
 {
   int status;
   TProtoFunc *tf;
@@ -304,7 +304,7 @@ static int protectedparser (ZIO *z, char *chunkname, int bin)
   jmp_buf *oldErr = L->errorJmp;
   L->errorJmp = &myErrorJmp;
   if (setjmp(myErrorJmp) == 0) {
-    tf = bin ? luaU_undump1(z, chunkname) : luaY_parser(z, chunkname);
+    tf = bin ? luaU_undump1(z) : luaY_parser(z);
     status = 0;
   }
   else {
@@ -322,12 +322,12 @@ static int protectedparser (ZIO *z, char *chunkname, int bin)
 }
 
 
-static int do_main (ZIO *z, char *chunkname, int bin)
+static int do_main (ZIO *z, int bin)
 {
   int status;
   do {
     long old_blocks = (luaC_checkGC(), L->nblocks);
-    status = protectedparser(z, chunkname, bin);
+    status = protectedparser(z, bin);
     if (status == 1) return 1;  /* error */
     else if (status == 2) return 0;  /* 'natural' end */
     else {
@@ -368,8 +368,8 @@ int lua_dofile (char *filename)
   bin = (c == ID_CHUNK);
   if (bin)
     f = freopen(filename, "rb", f);  /* set binary mode */
-  luaZ_Fopen(&z, f);
-  status = do_main(&z, filename, bin);
+  luaZ_Fopen(&z, f, filename);
+  status = do_main(&z, bin);
   if (f != stdin)
     fclose(f);
   return status;
@@ -383,15 +383,15 @@ int lua_dofile (char *filename)
 int lua_dostring (char *str)
 {
   int status;
-  char buff[SIZE_PREF+25];
+  char name[SIZE_PREF+25];
   char *temp;
   ZIO z;
   if (str == NULL) return 1;
-  sprintf(buff, "(dostring) >> %." SSIZE_PREF "s", str);
-  temp = strchr(buff, '\n');
+  sprintf(name, "(dostring) >> %." SSIZE_PREF "s", str);
+  temp = strchr(name, '\n');
   if (temp) *temp = 0;  /* end string after first line */
-  luaZ_sopen(&z, str);
-  status = do_main(&z, buff, 0);
+  luaZ_sopen(&z, str, name);
+  status = do_main(&z, 0);
   return status;
 }
 
@@ -401,8 +401,8 @@ int lua_dobuffer (char *buff, int size)
 {
   int status;
   ZIO z;
-  luaZ_mopen(&z, buff, size);
-  status = do_main(&z, "(buffer)", 1);
+  luaZ_mopen(&z, buff, size, "(buffer)");
+  status = do_main(&z, 1);
   return status;
 }
 #endif
