@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.45 2000/01/28 16:53:00 roberto Exp roberto $
+** $Id: lobject.h,v 1.46 2000/02/11 16:52:54 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -36,11 +36,14 @@
 #define LUA_NUM_TYPE double
 #endif
 
-
 typedef LUA_NUM_TYPE real;
 
-#define Byte lua_Byte	/* some systems have Byte as a predefined type */
-typedef unsigned char  Byte;  /* unsigned 8 bits */
+
+/*
+** type for virtual-machine instructions
+** must be an unsigned with 4 bytes (see details in lopcodes.h)
+*/
+typedef unsigned long Instruction;
 
 
 #define MAX_INT (INT_MAX-2)  /* maximum value of an int (-2 for safety) */
@@ -157,9 +160,12 @@ typedef struct TProtoFunc {
   int nknum;  /* size of `knum' */
   struct TProtoFunc **kproto;  /* functions defined inside the function */
   int nkproto;  /* size of `kproto' */
-  Byte *code;  /* ends with opcode ENDCODE */
+  Instruction *code;  /* ends with opcode ENDCODE */
   int lineDefined;
   TaggedString  *source;
+  short numparams;
+  short is_vararg;
+  short maxstacksize;
   struct LocVar *locvars;  /* ends with line = -1 */
 } TProtoFunc;
 

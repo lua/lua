@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.38 2000/01/28 16:53:00 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.39 2000/02/11 16:52:54 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -8,67 +8,79 @@
 #define lopcodes_h
 
 
+
+/*===========================================================================
+  We assume that instructions are unsigned numbers with 4 bytes.
+  All instructions have an opcode in the lower byte. Moreover,
+  an instruction can have 0, 1, or 2 arguments. There are 4 types of
+  Instructions:
+  type 0: no arguments
+  type 1: 1 unsigned argument in the higher 24 bits (called `U')
+  type 2: 1 signed argument in the higher 24 bits          (`S')
+  type 3: 1st unsigned argument in the higher 16 bits      (`A')
+          2nd unsigned argument in the middle 8 bits       (`B')
+
+  The signed argument is represented in excess 2^23; that is, the real value
+  is 2^23 minus the usigned value.
+===========================================================================*/
+
 /*
-** NOTICE: variants of the same opcode must be consecutive: First, those
-** with word parameter, then with byte parameter.
+** the following macros help to manipulate instructions
 */
+
+#define MAXARG_U	((1<<24)-1)
+#define MAXARG_S	((1<<23)-1)
+#define MAXARG_A	((1<<16)-1)
+#define MAXARG_B	((1<<8)-1)
+
+#define GET_OPCODE(i)	((OpCode)((i)&0xFF))
+#define GETARG_U(i)	((int)((i)>>8))
+#define GETARG_S(i)	((int)((i)>>8)-(1<<23))
+#define GETARG_A(i)	((int)((i)>>16))
+#define GETARG_B(i)	((int)(((i)>>8) & 0xFF))
+
+#define SET_OPCODE(i,o)	(((i)&0xFFFFFF00u) | (Instruction)(o))
+#define SETARG_U(i,u)	(((i)&0x000000FFu) | ((Instruction)(u)<<8))
+#define SETARG_S(i,s)	(((i)&0x000000FFu) | ((Instruction)((s)+(1<<23))<<8))
+#define SETARG_A(i,a)	(((i)&0x0000FFFFu) | ((Instruction)(a)<<16))
+#define SETARG_B(i,b)	(((i)&0xFFFF00FFu) | ((Instruction)(b)<<8))
+
 
 
 typedef enum {
 /* name          parm    before          after           side effect
 -----------------------------------------------------------------------------*/
 ENDCODE,/*	-	-		(return)			*/
-RETCODE,/*	b	-		(return)			*/
+RETCODE,/*	U	-		(return)			*/
 
-CALL,/*		b c	v_n-v_1 f(at c)	r_b-r_1		f(v1,...,v_n)	*/
+CALL,/*		A B	v_n-v_1 f(at a)	r_b-r_1		f(v1,...,v_n)	*/
+TAILCALL,/*	A B	v_a-v_1 f	(return)	f(v1,...,v_a)	*/
 
-TAILCALL,/*	b c	v_c-v_1 f	(return)	f(v1,...,v_c)	*/
+PUSHNIL,/*	U	-		nil_0-nil_u			*/
+POP,/*		U	a_u-a_1		-				*/
 
-PUSHNIL,/*	b	-		nil_0-nil_b			*/
-POP,/*		b	a_b-a_1		-				*/
+PUSHINT,/*	S	-		(real)s				*/
+PUSHSTRING,/*	U	-		KSTR[u]				*/
+PUSHNUMBER,/*	U	-		KNUM[u]				*/
 
-PUSHINTW,/*	w	-		(float)w			*/
-PUSHINT,/*	b	-		(float)b			*/
+PUSHUPVALUE,/*	U	-		Closure[u]			*/
 
-PUSHINTNEGW,/* w	-		(float)-w			*/
-PUSHINTNEG,/* b		-		(float)-b			*/
-
-PUSHSTRINGW,/*	w	-		KSTR[w]				*/
-PUSHSTRING,/*	b	-		KSTR[b]				*/
-PUSHNUMBERW,/*	w	-		KNUM[w]				*/
-PUSHNUMBER,/*	b	-		KNUM[b]				*/
-
-PUSHUPVALUE,/*	b	-		Closure[b]			*/
-
-PUSHLOCAL,/*	b	-		LOC[b]				*/
-
-GETGLOBALW,/*	w	-		VAR[CNST[w]]			*/
-GETGLOBAL,/*	b	-		VAR[CNST[b]]			*/
+PUSHLOCAL,/*	U	-		LOC[u]				*/
+GETGLOBAL,/*	U	-		VAR[CNST[u]]			*/
 
 GETTABLE,/*	-	i t		t[i]				*/
+GETDOTTED,/*	U	t		t[CNST[u]]			*/
+PUSHSELF,/*	U	t		t t[CNST[u]]			*/
 
-GETDOTTEDW,/*	w	t		t[CNST[w]]			*/
-GETDOTTED,/*	b	t		t[CNST[b]]			*/
+CREATETABLE,/*	U	-		newarray(size = u)		*/
 
-PUSHSELFW,/*	w	t		t t[CNST[w]]			*/
-PUSHSELF,/*	b	t		t t[CNST[b]]			*/
-
-CREATEARRAYW,/*	w	-		newarray(size = w)		*/
-CREATEARRAY,/*	b	-		newarray(size = b)		*/
-
-SETLOCAL,/*	b	x		-		LOC[b]=x	*/
-
-SETGLOBALW,/*	w	x		-		VAR[CNST[w]]=x	*/
-SETGLOBAL,/*	b	x		-		VAR[CNST[b]]=x	*/
-
+SETLOCAL,/*	U	x		-		LOC[u]=x	*/
+SETGLOBAL,/*	U	x		-		VAR[CNST[u]]=x	*/
 SETTABLEPOP,/*	-	v i t		-		t[i]=v		*/
+SETTABLE,/*	U	v a_u-a_1 i t	 a_u-a_1 i t	  t[i]=v	*/
 
-SETTABLE,/*	b	v a_b-a_1 i t	 a_b-a_1 i t	  t[i]=v	*/
-
-SETLISTW,/*	w c	v_c-v_1 t	t		t[i+w*FPF]=v_i	*/
-SETLIST,/*	b c	v_c-v_1 t	t		t[i+b*FPF]=v_i	*/
-
-SETMAP,/*	b	v_b k_b - v_0 k_0 t	t	t[k_i]=v_i	*/
+SETLIST,/*	A B	v_b-v_0 t	t		t[i+a*FPF]=v_i	*/
+SETMAP,/*	U	v_u k_u - v_0 k_0 t	t	t[k_i]=v_i	*/
 
 NEQOP,/*	-	y x		(x~=y)? 1 : nil			*/
 EQOP,/*		-	y x		(x==y)? 1 : nil			*/
@@ -85,54 +97,21 @@ CONCOP,/*	-	y x		x..y				*/
 MINUSOP,/*	-	x		-x				*/
 NOTOP,/*	-	x		(x==nil)? 1 : nil		*/
 
-ONTJMPW,/*	w	x		(x!=nil)? x : -	(x!=nil)? PC+=w	*/
-ONTJMP,/*	b	x		(x!=nil)? x : -	(x!=nil)? PC+=b	*/
-ONFJMPW,/*	w	x		(x==nil)? x : -	(x==nil)? PC+=w	*/
-ONFJMP,/*	b	x		(x==nil)? x : -	(x==nil)? PC+=b	*/
-JMPW,/*		w	-		-		PC+=w		*/
-JMP,/*		b	-		-		PC+=b		*/
-IFFJMPW,/*	w	x		-		(x==nil)? PC+=w	*/
-IFFJMP,/*	b	x		-		(x==nil)? PC+=b	*/
-IFTUPJMPW,/*	w	x		-		(x!=nil)? PC-=w	*/
-IFTUPJMP,/*	b	x		-		(x!=nil)? PC-=b	*/
-IFFUPJMPW,/*	w	x		-		(x==nil)? PC-=w	*/
-IFFUPJMP,/*	b	x		-		(x==nil)? PC-=b	*/
+ONTJMP,/*	S	x		(x!=nil)? x : -	(x!=nil)? PC+=s	*/
+ONFJMP,/*	S	x		(x==nil)? x : -	(x==nil)? PC+=s	*/
+JMP,/*		S	-		-		PC+=s		*/
+IFTJMP,/*	S	x		-		(x!=nil)? PC+=s	*/
+IFFJMP,/*	S	x		-		(x==nil)? PC+=s	*/
 
-CLOSUREW,/*	w c	v_c-v_1		closure(CNST[w], v_c-v_1)	*/
-CLOSURE,/*	b c	v_c-v_1		closure(CNST[b], v_c-v_1)	*/
+CLOSURE,/*	A B	v_b-v_1		closure(CNST[a], v_b-v_1)	*/
 
-SETLINEW,/*	w	-		-		LINE=w		*/
-SETLINE,/*	b	-		-		LINE=b		*/
-
-LONGARGW,/*	w	(add w*(1<<16) to arg of next instruction)	*/
-LONGARG /*	b	(add b*(1<<16) to arg of next instruction)	*/
+SETLINE/*	U	-		-		LINE=u		*/
 
 } OpCode;
 
 
 #define RFIELDS_PER_FLUSH 32	/* records (SETMAP) */
-#define LFIELDS_PER_FLUSH 64    /* FPF - lists (SETLIST) */
-
-#define ZEROVARARG	128
-
-
-/* maximum value of an arg of 3 bytes; must fit in an "int" */
-#if MAX_INT < (1<<24)
-#define MAX_ARG	MAX_INT
-#else
-#define MAX_ARG	((1<<24)-1)
-#endif
-
-/* maximum value of a word of 2 bytes; cannot be larger than MAX_ARG */
-#if MAX_ARG < (1<<16)
-#define MAX_WORD	MAX_ARG
-#else
-#define MAX_WORD	((1<<16)-1)
-#endif
-
-
-/* maximum value of a byte */
-#define MAX_BYTE	((1<<8)-1)
+#define LFIELDS_PER_FLUSH 64    /* FPF - lists (SETLIST) (<MAXARG_B) */
 
 
 #endif
