@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.3 2004/04/30 20:13:38 roberto Exp roberto $
+** $Id: ltable.c,v 2.4 2004/08/10 19:17:23 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -394,21 +394,6 @@ static TValue *newkey (lua_State *L, Table *t, const TValue *key) {
 
 
 /*
-** generic search function
-*/
-static const TValue *luaH_getany (Table *t, const TValue *key) {
-  if (!ttisnil(key)) {
-    Node *n = luaH_mainposition(t, key);
-    do {  /* check whether `key' is somewhere in the chain */
-      if (luaO_rawequalObj(gkey(n), key)) return gval(n);  /* that's it */
-      else n = n->next;
-    } while (n);
-  }
-  return &luaO_nilobject;
-}
-
-
-/*
 ** search function for integers
 */
 const TValue *luaH_getnum (Table *t, int key) {
@@ -446,6 +431,7 @@ const TValue *luaH_getstr (Table *t, TString *key) {
 */
 const TValue *luaH_get (Table *t, const TValue *key) {
   switch (ttype(key)) {
+    case LUA_TNIL: return &luaO_nilobject;
     case LUA_TSTRING: return luaH_getstr(t, rawtsvalue(key));
     case LUA_TNUMBER: {
       int k;
@@ -454,7 +440,14 @@ const TValue *luaH_get (Table *t, const TValue *key) {
         return luaH_getnum(t, k);  /* use specialized version */
       /* else go through */
     }
-    default: return luaH_getany(t, key);
+    default: {
+      Node *n = luaH_mainposition(t, key);
+      do {  /* check whether `key' is somewhere in the chain */
+        if (luaO_rawequalObj(gkey(n), key)) return gval(n);  /* that's it */
+        else n = n->next;
+      } while (n);
+      return &luaO_nilobject;
+    }
   }
 }
 
