@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.19 1997/12/23 19:24:19 roberto Exp roberto $
+** $Id: lvm.c,v 1.20 1997/12/29 17:35:46 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -474,7 +474,12 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base)
         break;
 
       case ARGS:
-        luaD_adjusttop(base+(*pc++));
+        aux = *pc++; goto args;
+
+      case ARGS0: case ARGS1: case ARGS2: case ARGS3:
+        aux -= ARGS0;
+      args:
+        luaD_adjusttop(base+aux);
         break;
 
       case VARARGS:

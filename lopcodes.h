@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.12 1997/10/24 18:40:29 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.13 1997/12/29 17:35:46 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -172,6 +172,10 @@ POP0,/*		-	-		-		TOP-=1  */
 POP1,/*		-	-		-		TOP-=2  */
 
 ARGS,/*		b	-		-		TOP=BASE+b  */
+ARGS0,/*	-	-		-		TOP=BASE+0  */
+ARGS1,/*	-	-		-		TOP=BASE+1  */
+ARGS2,/*	-	-		-		TOP=BASE+2  */
+ARGS3,/*	-	-		-		TOP=BASE+3  */
 VARARGS/*	b	v_x...v_1	{v_1...v_x;n=x}	TOP=BASE+b+1  */
 } OpCode;
 
