@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.118 2000/11/30 18:50:47 roberto Exp roberto $
+** $Id: lparser.c,v 1.119 2000/12/04 18:33:40 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -121,8 +121,8 @@ static int string_constant (FuncState *fs, TString *s) {
   Proto *f = fs->f;
   int c = s->u.s.constindex;
   if (c >= f->nkstr || f->kstr[c] != s) {
-    luaM_growvector(fs->L, f->kstr, f->nkstr, 1, TString *,
-                    "constant table overflow", MAXARG_U);
+    luaM_growvector(fs->L, f->kstr, f->nkstr, fs->sizekstr, TString *,
+                    MAXARG_U, "constant table overflow");
     c = f->nkstr++;
     f->kstr[c] = s;
     s->u.s.constindex = c;  /* hint for next time */
@@ -152,7 +152,8 @@ static int checkname (LexState *ls) {
 
 static int luaI_registerlocalvar (LexState *ls, TString *varname) {
   Proto *f = ls->fs->f;
-  luaM_growvector(ls->L, f->locvars, f->nlocvars, 1, LocVar, "", MAX_INT);
+  luaM_growvector(ls->L, f->locvars, f->nlocvars, ls->fs->sizelocvars,
+                  LocVar, MAX_INT, "");
   f->locvars[f->nlocvars].varname = varname;
   return f->nlocvars++;
 }
@@ -294,8 +295,8 @@ static void pushclosure (LexState *ls, FuncState *func) {
   int i;
   for (i=0; i<func->nupvalues; i++)
     luaK_tostack(ls, &func->upvalues[i], 1);
-  luaM_growvector(ls->L, f->kproto, f->nkproto, 1, Proto *,
-                  "constant table overflow", MAXARG_A);
+  luaM_growvector(ls->L, f->kproto, f->nkproto, fs->sizekproto, Proto *,
+                  MAXARG_A, "constant table overflow");
   f->kproto[f->nkproto++] = func->f;
   luaK_code2(fs, OP_CLOSURE, f->nkproto-1, func->nupvalues);
 }
@@ -303,21 +304,27 @@ static void pushclosure (LexState *ls, FuncState *func) {
 
 static void open_func (LexState *ls, FuncState *fs) {
   Proto *f = luaF_newproto(ls->L);
+  fs->f = f;
   fs->prev = ls->fs;  /* linked list of funcstates */
   fs->ls = ls;
   fs->L = ls->L;
   ls->fs = fs;
-  fs->stacklevel = 0;
-  fs->nactloc = 0;
-  fs->nupvalues = 0;
-  fs->bl = NULL;
-  fs->f = f;
-  f->source = ls->source;
   fs->pc = 0;
   fs->lasttarget = 0;
-  fs->lastline = 0;
   fs->jlt = NO_JUMP;
+  fs->stacklevel = 0;
+  fs->sizekstr = 0;
+  fs->sizekproto = 0;
+  fs->sizeknum = 0;
+  fs->sizelineinfo = 0;
+  fs->sizecode = 0;
+  fs->sizelocvars = 0;
+  fs->nactloc = 0;
+  fs->nupvalues = 0;
+  fs->lastline = 0;
+  fs->bl = NULL;
   f->code = NULL;
+  f->source = ls->source;
   f->maxstacksize = 0;
   f->numparams = 0;  /* default for main chunk */
   f->is_vararg = 0;  /* default for main chunk */

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.72 2000/10/26 12:47:05 roberto Exp roberto $
+** $Id: lgc.c,v 1.73 2000/11/24 17:39:56 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -56,7 +56,7 @@ static void markstack (lua_State *L, GCState *st) {
 
 static void marklock (lua_State *L, GCState *st) {
   int i;
-  for (i=0; i<L->refSize; i++) {
+  for (i=0; i<L->nref; i++) {
     if (L->refArray[i].st == LOCK)
       markobject(st, &L->refArray[i].o);
   }
@@ -77,7 +77,7 @@ static void marktagmethods (lua_State *L, GCState *st) {
   int e;
   for (e=0; e<TM_N; e++) {
     int t;
-    for (t=0; t<=L->last_tag; t++) {
+    for (t=0; t<L->ntag; t++) {
       Closure *cl = luaT_gettm(L, t, e);
       if (cl) markclosure(st, cl);
     }
@@ -162,7 +162,7 @@ static int hasmark (const TObject *o) {
 #define VALIDLINK(L, st,n)      (NONEXT <= (st) && (st) < (n))
 
 static void invalidaterefs (lua_State *L) {
-  int n = L->refSize;
+  int n = L->nref;
   int i;
   for (i=0; i<n; i++) {
     struct Ref *r = &L->refArray[i];
@@ -314,7 +314,7 @@ static void callgcTMudata (lua_State *L) {
   TObject o;
   ttype(&o) = LUA_TUSERDATA;
   L->GCthreshold = 2*L->nblocks;  /* avoid GC during tag methods */
-  for (tag=L->last_tag; tag>=0; tag--) {  /* for each tag (in reverse order) */
+  for (tag=L->ntag-1; tag>=0; tag--) {  /* for each tag (in reverse order) */
     TString *udata;
     while ((udata = L->TMtable[tag].collected) != NULL) {
       L->TMtable[tag].collected = udata->nexthash;  /* remove it from list */

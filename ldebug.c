@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.50 2000/10/30 12:38:50 roberto Exp roberto $
+** $Id: ldebug.c,v 1.51 2000/11/30 18:50:47 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -210,7 +210,7 @@ static const char *travtagmethods (lua_State *L, const TObject *o) {
     int e;
     for (e=0; e<TM_N; e++) {
       int t;
-      for (t=0; t<=L->last_tag; t++)
+      for (t=0; t<L->ntag; t++)
         if (clvalue(o) == luaT_gettm(L, t, e))
           return luaT_eventname[e];
     }

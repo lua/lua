@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.52 2000/11/30 18:50:47 roberto Exp roberto $
+** $Id: lcode.c,v 1.53 2000/12/04 18:33:40 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -107,8 +107,8 @@ static int number_constant (FuncState *fs, lua_Number r) {
   while (--c >= lim)
     if (f->knum[c] == r) return c;
   /* not found; create a new entry */
-  luaM_growvector(fs->L, f->knum, f->nknum, 1, lua_Number,
-                  "constant table overflow", MAXARG_U);
+  luaM_growvector(fs->L, f->knum, f->nknum, fs->sizeknum, lua_Number,
+                  MAXARG_U, "constant table overflow");
   c = f->nknum++;
   f->knum[c] = r;
   return c;
@@ -423,10 +423,13 @@ static void codelineinfo (FuncState *fs) {
   Proto *f = fs->f;
   LexState *ls = fs->ls;
   if (ls->lastline > fs->lastline) {
-    luaM_growvector(fs->L, f->lineinfo, f->nlineinfo, 2, int,
-                    "line info overflow", MAX_INT);
-    if (ls->lastline > fs->lastline+1)
+    if (ls->lastline > fs->lastline+1) {
+      luaM_growvector(fs->L, f->lineinfo, f->nlineinfo, fs->sizelineinfo, int,
+                      MAX_INT, "line info overflow");
       f->lineinfo[f->nlineinfo++] = -(ls->lastline - (fs->lastline+1));
+    }
+    luaM_growvector(fs->L, f->lineinfo, f->nlineinfo, fs->sizelineinfo, int,
+                    MAX_INT, "line info overflow");
     f->lineinfo[f->nlineinfo++] = fs->pc;
     fs->lastline = ls->lastline;
   }
@@ -640,8 +643,8 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
   }
   codelineinfo(fs);
   /* put new instruction in code array */
-  luaM_growvector(fs->L, fs->f->code, fs->pc, 1, Instruction,
-                  "code size overflow", MAX_INT);
+  luaM_growvector(fs->L, fs->f->code, fs->pc, fs->sizecode, Instruction,
+                  MAX_INT, "code size overflow");
   fs->f->code[fs->pc] = i;
   return fs->pc++;
 }

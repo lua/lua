@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.39 2000/10/30 16:29:59 roberto Exp roberto $
+** $Id: lmem.c,v 1.40 2000/11/24 17:39:56 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -116,15 +116,20 @@ static void *debug_realloc (void *block, size_t size) {
 #endif
 
 
-void *luaM_growaux (lua_State *L, void *block, size_t nelems,
-               int inc, size_t size, const char *errormsg, size_t limit) {
-  size_t newn = nelems+inc;
-  if (nelems >= limit-inc) lua_error(L, errormsg);
-  if ((newn ^ nelems) <= nelems ||  /* still the same power-of-2 limit? */
-       (nelems > 0 && newn < MINPOWER2))  /* or block already is MINPOWER2? */
-      return block;  /* do not need to reallocate */
-  else  /* it crossed a power-of-2 boundary; grow to next power */
-    return luaM_realloc(L, block, luaO_power2(newn)*size);
+void *luaM_growaux (lua_State *L, void *block, int *size, int size_elems,
+                    int limit, const char *errormsg) {
+  void *newblock;
+  int newsize = (*size)*2;
+  if (newsize < MINPOWER2)
+    newsize = MINPOWER2;  /* minimum size */
+  else if (*size >= limit/2) {  /* cannot double it? */
+    if (*size < limit - MINPOWER2)  /* try something smaller... */
+      newsize = limit;  /* still have at least MINPOWER2 free places */
+    else lua_error(L, errormsg);
+  }
+  newblock = luaM_realloc(L, block, (luint32)newsize*(luint32)size_elems);
+  *size = newsize;  /* update only when everything else is OK */
+  return newblock;
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 1.17 2000/10/05 12:14:08 roberto Exp roberto $
+** $Id: ltm.h,v 1.18 2000/10/05 13:00:17 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -45,7 +45,7 @@ struct TM {
 #define luaT_gettmbyObj(L,o,e)  (luaT_gettm((L),luaT_tag(o),(e)))
 
 
-#define validtag(t) (NUM_TAGS <= (t) && (t) <= L->last_tag)
+#define validtag(t) (NUM_TAGS <= (t) && (t) < L->ntag)
 
 extern const char *const luaT_eventname[];
 

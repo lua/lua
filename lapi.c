@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.111 2000/11/24 17:39:56 roberto Exp roberto $
+** $Id: lapi.c,v 1.112 2000/12/04 18:33:40 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -289,7 +289,7 @@ LUA_API void lua_getglobals (lua_State *L) {
 LUA_API int lua_getref (lua_State *L, int ref) {
   if (ref == LUA_REFNIL)
     ttype(L->top) = LUA_TNIL;
-  else if (0 <= ref && ref < L->refSize &&
+  else if (0 <= ref && ref < L->nref &&
           (L->refArray[ref].st == LOCK || L->refArray[ref].st == HOLD))
     *L->top = L->refArray[ref].o;
   else
@@ -360,10 +360,10 @@ LUA_API int lua_ref (lua_State *L,  int lock) {
       L->refFree = L->refArray[ref].st;
     }
     else {  /* no more free places */
-      luaM_growvector(L, L->refArray, L->refSize, 1, struct Ref,
-                      "reference table overflow", MAX_INT);
+      luaM_growvector(L, L->refArray, L->nref, L->sizeref, struct Ref,
+                      MAX_INT, "reference table overflow");
       L->nblocks += sizeof(struct Ref);
-      ref = L->refSize++;
+      ref = L->nref++;
     }
     L->refArray[ref].o = *(L->top-1);
     L->refArray[ref].st = lock ? LOCK : HOLD;
@@ -430,7 +430,7 @@ LUA_API void lua_settag (lua_State *L, int tag) {
 
 LUA_API void lua_unref (lua_State *L, int ref) {
   if (ref >= 0) {
-    LUA_ASSERT(ref < L->refSize && L->refArray[ref].st < 0, "invalid ref");
+    LUA_ASSERT(ref < L->nref && L->refArray[ref].st < 0, "invalid ref");
     L->refArray[ref].st = L->refFree;
     L->refFree = ref;
   }

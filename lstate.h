@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.41 2000/10/05 13:00:17 roberto Exp roberto $
+** $Id: lstate.h,v 1.42 2000/11/24 17:39:56 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -61,9 +61,11 @@ struct lua_State {
   stringtable udt;   /* hash table for udata */
   Hash *gt;  /* table for globals */
   struct TM *TMtable;  /* table for tag methods */
-  int last_tag;  /* last used tag in TMtable */
+  int sizeTM;  /* size of TMtable */
+  int ntag;  /* number of tags in TMtable */
   struct Ref *refArray;  /* locked objects */
-  int refSize;  /* size of refArray */
+  int nref;  /* first unused element in refArray */
+  int sizeref;  /* size of refArray */
   int refFree;  /* list of free positions in refArray */
   mem_int GCthreshold;
   mem_int nblocks;  /* number of `bytes' currently allocated */

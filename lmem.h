@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.h,v 1.16 2000/10/30 16:29:59 roberto Exp roberto $
+** $Id: lmem.h,v 1.17 2000/11/24 17:39:56 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -14,17 +14,17 @@
 #include "lua.h"
 
 void *luaM_realloc (lua_State *L, void *oldblock, luint32 size);
-void *luaM_growaux (lua_State *L, void *block, size_t nelems,
-                    int inc, size_t size, const char *errormsg,
-                    size_t limit);
+void *luaM_growaux (lua_State *L, void *block, int *size, int size_elem,
+                    int limit, const char *errormsg);
 
 #define luaM_free(L, b)		luaM_realloc(L, (b), 0)
 #define luaM_malloc(L, t)	luaM_realloc(L, NULL, (t))
 #define luaM_new(L, t)          ((t *)luaM_malloc(L, sizeof(t)))
 #define luaM_newvector(L, n,t)  ((t *)luaM_malloc(L, (n)*(luint32)sizeof(t)))
 
-#define luaM_growvector(L, v,nelems,inc,t,e,l) \
-          ((v)=(t *)luaM_growaux(L, v,nelems,inc,sizeof(t),e,l))
+#define luaM_growvector(L,v,nelems,size,t,limit,e) \
+          if (((nelems)+1) > (size)) \
+            ((v)=(t *)luaM_growaux(L,v,&(size),sizeof(t),limit,e))
 
 #define luaM_reallocvector(L, v,n,t) \
 	((v)=(t *)luaM_realloc(L, v,(n)*(luint32)sizeof(t)))

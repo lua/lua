@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.56 2000/10/31 13:10:24 roberto Exp roberto $
+** $Id: ltm.c,v 1.57 2000/11/30 18:50:47 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -75,26 +75,26 @@ static void init_entry (lua_State *L, int tag) {
 
 void luaT_init (lua_State *L) {
   int t;
-  luaM_growvector(L, L->TMtable, 0, NUM_TAGS, struct TM, "", MAX_INT);
+  L->sizeTM = NUM_TAGS+2;
+  L->TMtable = luaM_newvector(L, L->sizeTM, struct TM);
   L->nblocks += NUM_TAGS*sizeof(struct TM);
-  L->last_tag = NUM_TAGS-1;
-  for (t=0; t<=L->last_tag; t++)
+  L->ntag = NUM_TAGS;
+  for (t=0; t<L->ntag; t++)
     init_entry(L, t);
 }
 
 
 LUA_API int lua_newtag (lua_State *L) {
-  luaM_growvector(L, L->TMtable, L->last_tag, 1, struct TM,
-                  "tag table overflow", MAX_INT);
+  luaM_growvector(L, L->TMtable, L->ntag, L->sizeTM, struct TM,
+                  MAX_INT, "tag table overflow");
   L->nblocks += sizeof(struct TM);
-  L->last_tag++;
-  init_entry(L, L->last_tag);
-  return L->last_tag;
+  init_entry(L, L->ntag);
+  return L->ntag++;
 }
 
 
 static void checktag (lua_State *L, int tag) {
-  if (!(0 <= tag && tag <= L->last_tag))
+  if (!(0 <= tag && tag < L->ntag))
     luaO_verror(L, "%d is not a valid tag", tag);
 }
 
