@@ -1,11 +1,11 @@
 /*
-** $Id: lstate.c,v 1.37 2000/09/11 17:38:42 roberto Exp roberto $
+** $Id: lstate.c,v 1.38 2000/09/11 19:42:57 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
 
 
-#include <stdarg.h>
+#include <stdio.h>
 
 #include "lua.h"
 
@@ -23,6 +23,19 @@
 extern lua_State *lua_state;
 void luaB_opentests (lua_State *L);
 #endif
+
+
+/*
+** built-in implementation for ERRORMESSAGE. In a "correct" environment
+** ERRORMESSAGE should have an external definition, and so this function
+** would not be used.
+*/
+static int errormessage (lua_State *L) {
+  const char *s = lua_tostring(L, 1);
+  if (s == NULL) s = "(no message)";
+  fprintf(stderr, "error: %s\n", s);
+  return 0;
+}
 
 
 lua_State *lua_open (int stacksize) {
@@ -57,6 +70,7 @@ lua_State *lua_open (int stacksize) {
     luaS_init(L);
     luaX_init(L);
     luaT_init(L);
+    lua_register(L, LUA_ERRORMESSAGE, errormessage);
 #ifdef DEBUG
     luaB_opentests(L);
 #endif
