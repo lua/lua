@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.72 2001/01/29 17:16:58 roberto Exp roberto $
+** $Id: ltable.c,v 1.73 2001/01/29 19:34:02 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -203,7 +203,7 @@ TObject *luaH_setnum (lua_State *L, Hash *t, lua_Number key) {
   Node *mp = hashnum(t, key);
   Node *n = mp;
   do {  /* check whether `key' is somewhere in the chain */
-    if (nvalue_key(n) == key && ttype_key(n) == LUA_TNUMBER)
+    if (ttype_key(n) == LUA_TNUMBER && nvalue_key(n) == key)
       return &n->val;  /* that's all */
     else n = n->next;
   } while (n);
@@ -222,7 +222,7 @@ TObject *luaH_setstr (lua_State *L, Hash *t, TString *key) {
   Node *mp = hashstr(t, key);
   Node *n = mp;
   do {  /* check whether `key' is somewhere in the chain */
-    if (tsvalue_key(n) == key && ttype_key(n) == LUA_TSTRING)
+    if (ttype_key(n) == LUA_TSTRING && tsvalue_key(n) == key)
       return &n->val;  /* that's all */
     else n = n->next;
   } while (n);
@@ -241,7 +241,7 @@ static TObject *luaH_setany (lua_State *L, Hash *t, const TObject *key) {
   Node *n = mp;
   do {  /* check whether `key' is somewhere in the chain */
     /* compare as `tsvalue', but may be other pointers (it is the same) */
-    if (tsvalue_key(n) == tsvalue(key) && ttype_key(n) == ttype(key))
+    if (ttype_key(n) == ttype(key) && tsvalue_key(n) == tsvalue(key))
       return &n->val;  /* that's all */
     else n = n->next;
   } while (n);
