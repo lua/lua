@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.34 2001/08/31 19:46:07 roberto Exp $
+** $Id: lstring.h,v 1.35 2001/11/28 20:13:13 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -29,6 +29,8 @@
 #define luaS_new(L, s)	(luaS_newlstr(L, s, strlen(s)))
 #define luaS_newliteral(L, s)	(luaS_newlstr(L, "" s, \
                                  (sizeof(s)/sizeof(char))-1))
+
+#define luaS_fix(s)	((s)->tsv.marked = FIXMARK)
 
 void luaS_resize (lua_State *L, int newsize);
 Udata *luaS_newudata (lua_State *L, size_t s);

@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.88 2002/03/18 20:24:14 roberto Exp roberto $
+** $Id: ltm.c,v 1.89 2002/04/05 18:54:31 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,7 @@ void luaT_init (lua_State *L) {
   int i;
   for (i=0; i<TM_N; i++) {
     G(L)->tmname[i] = luaS_new(L, luaT_eventname[i]);
-    G(L)->tmname[i]->tsv.marked = FIXMARK;  /* never collect these names */
+    luaS_fix(G(L)->tmname[i]);  /* never collect these names */
   }
 }
 
