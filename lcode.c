@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.3 2000/03/03 14:58:26 roberto Exp roberto $
+** $Id: lcode.c,v 1.4 2000/03/03 18:53:17 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -86,7 +86,7 @@ void luaK_retcode (LexState *ls, int nlocals, listdesc *e) {
     *last = SETARG_B(*last, nlocals);
   }
   else
-    luaK_U(ls, RETCODE, nlocals, 0);
+    luaK_primitivecode(ls, CREATE_U(RETCODE, nlocals));
 }
 
 
