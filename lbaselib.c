@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.37 2001/06/06 18:00:19 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.38 2001/06/20 17:25:30 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -139,7 +139,7 @@ static int luaB_getglobal (lua_State *L) {
 
 /* auxiliary function to get `tags' */
 static int gettag (lua_State *L, int narg) {
-  switch (lua_type(L, narg)) {
+  switch (lua_rawtag(L, narg)) {
     case LUA_TNUMBER:
       return (int)lua_tonumber(L, narg);
     case LUA_TSTRING: {
@@ -162,7 +162,7 @@ static int luaB_tag (lua_State *L) {
   return 1;
 }
 
-static int luaB_settag (lua_State *L) {
+static int luaB_settype (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
   lua_pushvalue(L, 1);  /* push table */
   lua_settag(L, gettag(L, 2));
@@ -194,7 +194,7 @@ static int luaB_weakmode (lua_State *L) {
 
 static int luaB_newtype (lua_State *L) {
   const l_char *name = luaL_opt_string(L, 1, NULL);
-  lua_pushnumber(L, lua_newxtype(L, name, LUA_TTABLE));
+  lua_pushnumber(L, lua_newtype(L, name, LUA_TTABLE));
   return 1;
 }
 
@@ -267,14 +267,14 @@ static int luaB_collectgarbage (lua_State *L) {
 
 static int luaB_type (lua_State *L) {
   luaL_checkany(L, 1);
-  lua_pushstring(L, lua_tag2name(L, lua_type(L, 1)));
+  lua_pushstring(L, lua_type(L, 1));
   return 1;
 }
 
 
-static int luaB_xtype (lua_State *L) {
+static int luaB_rawtype (lua_State *L) {
   luaL_checkany(L, 1);
-  lua_pushstring(L, lua_xtypename(L, 1));
+  lua_pushstring(L, lua_tag2name(L, lua_rawtag(L, 1)));
   return 1;
 }
 
@@ -458,7 +458,7 @@ static int luaB_call (lua_State *L) {
 
 static int luaB_tostring (lua_State *L) {
   l_char buff[64];
-  switch (lua_type(L, 1)) {
+  switch (lua_rawtag(L, 1)) {
     case LUA_TNUMBER:
       lua_pushstring(L, lua_tostring(L, 1));
       return 1;
@@ -466,13 +466,13 @@ static int luaB_tostring (lua_State *L) {
       lua_pushvalue(L, 1);
       return 1;
     case LUA_TTABLE:
-      sprintf(buff, l_s("%.40s: %p"), lua_xtypename(L, 1), lua_topointer(L, 1));
+      sprintf(buff, l_s("%.40s: %p"), lua_type(L, 1), lua_topointer(L, 1));
       break;
     case LUA_TFUNCTION:
       sprintf(buff, l_s("function: %p"), lua_topointer(L, 1));
       break;
     case LUA_TUSERDATA: {
-      const l_char *t = lua_xtypename(L, 1);
+      const l_char *t = lua_type(L, 1);
       if (strcmp(t, l_s("userdata")) == 0)
         sprintf(buff, l_s("userdata(%d): %p"), lua_tag(L, 1),
                 lua_touserdata(L, 1));
@@ -715,9 +715,11 @@ static const luaL_reg base_funcs[] = {
   {l_s("rawset"), luaB_rawset},
   {l_s("rawgettable"), luaB_rawget},  /* for compatibility 3.2 */
   {l_s("rawsettable"), luaB_rawset},  /* for compatibility 3.2 */
+  {l_s("rawtype"), luaB_rawtype},
   {l_s("require"), luaB_require},
   {l_s("setglobal"), luaB_setglobal},
-  {l_s("settag"), luaB_settag},
+  {l_s("settag"), luaB_settype},  /* for compatibility 4.0 */
+  {l_s("settype"), luaB_settype},
   {l_s("settagmethod"), luaB_settagmethod},
   {l_s("tag"), luaB_tag},
   {l_s("tonumber"), luaB_tonumber},
@@ -729,7 +731,6 @@ static const luaL_reg base_funcs[] = {
   {l_s("tinsert"), luaB_tinsert},
   {l_s("tremove"), luaB_tremove},
   {l_s("unpack"), luaB_unpack},
-  {l_s("xtype"), luaB_xtype},
   {l_s("weakmode"), luaB_weakmode}
 };
 

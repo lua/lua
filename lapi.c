@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.146 2001/06/15 20:36:57 roberto Exp roberto $
+** $Id: lapi.c,v 1.147 2001/06/26 13:20:45 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -134,22 +134,13 @@ LUA_API void lua_pushvalue (lua_State *L, int index) {
 */
 
 
-LUA_API int lua_type (lua_State *L, int index) {
+LUA_API int lua_rawtag (lua_State *L, int index) {
   StkId o = luaA_indexAcceptable(L, index);
   return (o == NULL) ? LUA_TNONE : ttype(o);
 }
 
 
-LUA_API const l_char *lua_tag2name (lua_State *L, int tag) {
-  const l_char *s;
-  lua_lock(L);
-  s = (tag == LUA_TNONE) ? l_s("no value") : basictypename(G(L), tag);
-  lua_unlock(L);
-  return s;
-}
-
-
-LUA_API const l_char *lua_xtypename (lua_State *L, int index) {
+LUA_API const l_char *lua_type (lua_State *L, int index) {
   StkId o;
   const l_char *type;
   lua_lock(L);
@@ -174,7 +165,7 @@ LUA_API int lua_isnumber (lua_State *L, int index) {
 
 
 LUA_API int lua_isstring (lua_State *L, int index) {
-  int t = lua_type(L, index);
+  int t = lua_rawtag(L, index);
   return (t == LUA_TSTRING || t == LUA_TNUMBER);
 }
 
@@ -587,7 +578,7 @@ LUA_API void lua_setgcthreshold (lua_State *L, int newthreshold) {
 ** miscellaneous functions
 */
 
-LUA_API int lua_newxtype (lua_State *L, const l_char *name, int basictype) {
+LUA_API int lua_newtype (lua_State *L, const l_char *name, int basictype) {
   int tag;
   lua_lock(L);
   if (basictype != LUA_TNONE &&
@@ -618,6 +609,15 @@ LUA_API int lua_name2tag (lua_State *L, const l_char *name) {
 }
 
 
+LUA_API const l_char *lua_tag2name (lua_State *L, int tag) {
+  const l_char *s;
+  lua_lock(L);
+  s = (tag == LUA_TNONE) ? l_s("no value") : typenamebytag(G(L), tag);
+  lua_unlock(L);
+  return s;
+}
+
+
 LUA_API void lua_settag (lua_State *L, int tag) {
   int basictype;
   lua_lock(L);
@@ -627,7 +627,7 @@ LUA_API void lua_settag (lua_State *L, int tag) {
   basictype = G(L)->TMtable[tag].basictype;
   if (basictype != LUA_TNONE && basictype != ttype(L->top-1))
     luaO_verror(L, l_s("tag %d can only be used for type '%.20s'"), tag,
-                basictypename(G(L), basictype));
+                typenamebytag(G(L), basictype));
   switch (ttype(L->top-1)) {
     case LUA_TTABLE:
       hvalue(L->top-1)->htag = tag;

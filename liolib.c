@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.117 2001/06/28 14:45:44 roberto Exp roberto $
+** $Id: liolib.c,v 1.118 2001/07/12 14:59:14 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -77,14 +77,14 @@ static int pushresult (lua_State *L, int i) {
 */
 
 
-#define checkfile(L,f)	(strcmp(lua_xtypename(L,(f)), FILEHANDLE) == 0)
+#define checkfile(L,f)	(strcmp(lua_type(L,(f)), FILEHANDLE) == 0)
 
 
 static FILE *getopthandle (lua_State *L, int inout) {
   FILE *p = (FILE *)lua_touserdata(L, 1);
   if (p != NULL) {  /* is it a userdata ? */
     if (!checkfile(L, 1)) {  /* not a valid file handle? */
-      if (strcmp(lua_xtypename(L, 1), CLOSEDFILEHANDLE) == 0)
+      if (strcmp(lua_type(L, 1), CLOSEDFILEHANDLE) == 0)
         luaL_argerror(L, 1, l_s("file is closed"));
       else
         luaL_argerror(L, 1, l_s("(invalid value)"));
@@ -310,7 +310,7 @@ static int io_read (lua_State *L) {
     luaL_checkstack(L, nargs+LUA_MINSTACK, l_s("too many arguments"));
     success = 1;
     for (n = 1; n<=nargs && success; n++) {
-      if (lua_type(L, n) == LUA_TNUMBER) {
+      if (lua_rawtag(L, n) == LUA_TNUMBER) {
         size_t l = (size_t)lua_tonumber(L, n);
         success = (l == 0) ? test_eof(L, f) : read_chars(L, f, l);
       }
@@ -362,7 +362,7 @@ static int io_write (lua_State *L) {
   int arg;
   int status = 1;
   for (arg=1; arg<=nargs; arg++) {
-    if (lua_type(L, arg) == LUA_TNUMBER) {
+    if (lua_rawtag(L, arg) == LUA_TNUMBER) {
       /* optimization: could be done exactly as for strings */
       status = status &&
           fprintf(f, l_s(LUA_NUMBER_FMT), lua_tonumber(L, arg)) > 0;
@@ -686,8 +686,8 @@ static const luaL_reg iolib[] = {
 
 
 LUALIB_API int lua_iolibopen (lua_State *L) {
-  int iotag = lua_newxtype(L, FILEHANDLE, LUA_TUSERDATA);
-  lua_newxtype(L, CLOSEDFILEHANDLE, LUA_TUSERDATA);
+  int iotag = lua_newtype(L, FILEHANDLE, LUA_TUSERDATA);
+  lua_newtype(L, CLOSEDFILEHANDLE, LUA_TUSERDATA);
   luaL_openl(L, iolib);
   /* predefined file handles */
   newfilewithname(L, stdin, basicfiles[INFILE]);

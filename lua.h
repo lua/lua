@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.99 2001/06/28 14:45:44 roberto Exp roberto $
+** $Id: lua.h,v 1.100 2001/07/05 19:32:42 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: info@lua.org
@@ -51,10 +51,16 @@ typedef struct lua_State lua_State;
 
 typedef int (*lua_CFunction) (lua_State *L);
 
+
 /*
-** types returned by `lua_type'
+** an invalid `tag'
 */
-#define LUA_TNONE	(-1)
+#define LUA_NOTAG	(-1)
+
+/*
+** tags for basic types
+*/
+#define LUA_TNONE	LUA_NOTAG
 
 #define LUA_TUSERDATA	0
 #define LUA_TNIL	1
@@ -62,11 +68,6 @@ typedef int (*lua_CFunction) (lua_State *L);
 #define LUA_TSTRING	3
 #define LUA_TTABLE	4
 #define LUA_TFUNCTION	5
-
-/*
-** an invalid `tag'
-*/
-#define LUA_NOTAG	(-2)
 
 
 /* minimum Lua stack available to a C function */
@@ -122,13 +123,12 @@ LUA_API int   lua_stackspace (lua_State *L);
 ** access functions (stack -> C)
 */
 
-LUA_API int             lua_type (lua_State *L, int index);
-LUA_API const lua_char *lua_tag2name (lua_State *L, int tag);
-LUA_API const lua_char *lua_xtypename (lua_State *L, int index);
+LUA_API const lua_char *lua_type (lua_State *L, int index);
 LUA_API int             lua_isnumber (lua_State *L, int index);
 LUA_API int             lua_isstring (lua_State *L, int index);
 LUA_API int             lua_iscfunction (lua_State *L, int index);
 LUA_API int             lua_tag (lua_State *L, int index);
+LUA_API int             lua_rawtag (lua_State *L, int index);
 
 LUA_API int            lua_equal (lua_State *L, int index1, int index2);
 LUA_API int            lua_lessthan (lua_State *L, int index1, int index2);
@@ -201,10 +201,12 @@ LUA_API void  lua_setgcthreshold (lua_State *L, int newthreshold);
 /*
 ** miscellaneous functions
 */
-LUA_API int   lua_newxtype (lua_State *L, const lua_char *name, int basictype);
-LUA_API int   lua_name2tag (lua_State *L, const lua_char *name);
+LUA_API int   lua_newtype (lua_State *L, const lua_char *name, int basictype);
 LUA_API int   lua_copytagmethods (lua_State *L, int tagto, int tagfrom);
 LUA_API void  lua_settag (lua_State *L, int tag);
+
+LUA_API int             lua_name2tag (lua_State *L, const lua_char *name);
+LUA_API const lua_char *lua_tag2name (lua_State *L, int tag);
 
 LUA_API void  lua_error (lua_State *L, const lua_char *s);
 
@@ -219,13 +221,8 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size);
 LUA_API void  lua_newuserdatabox (lua_State *L, void *u);
 
 LUA_API void  lua_setweakmode (lua_State *L, int mode);
-LUA_API int  lua_getweakmode (lua_State *L, int index);
+LUA_API int   lua_getweakmode (lua_State *L, int index);
 
-
-/*
-** deprecated function
-*/
-LUA_API void lua_pushusertag (lua_State *L, void *u, int tag);
 
 
 /* 
@@ -242,11 +239,11 @@ LUA_API void lua_pushusertag (lua_State *L, void *u, int tag);
 #define lua_pushcfunction(L,f)	lua_pushcclosure(L, f, 0)
 #define lua_clonetag(L,t)	lua_copytagmethods(L, lua_newtag(L), (t))
 
-#define lua_isfunction(L,n)	(lua_type(L,n) == LUA_TFUNCTION)
-#define lua_istable(L,n)	(lua_type(L,n) == LUA_TTABLE)
-#define lua_isuserdata(L,n)	(lua_type(L,n) == LUA_TUSERDATA)
-#define lua_isnil(L,n)		(lua_type(L,n) == LUA_TNIL)
-#define lua_isnull(L,n)		(lua_type(L,n) == LUA_TNONE)
+#define lua_isfunction(L,n)	(lua_rawtag(L,n) == LUA_TFUNCTION)
+#define lua_istable(L,n)	(lua_rawtag(L,n) == LUA_TTABLE)
+#define lua_isuserdata(L,n)	(lua_rawtag(L,n) == LUA_TUSERDATA)
+#define lua_isnil(L,n)		(lua_rawtag(L,n) == LUA_TNIL)
+#define lua_isnull(L,n)		(lua_rawtag(L,n) == LUA_TNONE)
 
 #define lua_pushliteral(L, s)	lua_pushlstring(L, s, \
                                                 (sizeof(s)/sizeof(lua_char))-1)
@@ -256,7 +253,7 @@ LUA_API void lua_pushusertag (lua_State *L, void *u, int tag);
 /*
 ** compatibility macros
 */
-#define lua_newtag(L)	lua_newxtype(L, NULL, LUA_TNONE)
+#define lua_newtag(L)	lua_newtype(L, NULL, LUA_TNONE)
 #define lua_typename	lua_tag2name
 
 #endif
@@ -294,8 +291,8 @@ LUA_API void lua_pushusertag (lua_State *L, void *u, int tag);
 /*
 ** formats for Lua numbers
 */
-#ifndef LUA_SCAN_NUMBER
-#define LUA_SCAN_NUMBER		"%lf"
+#ifndef LUA_NUMBER_SCAN
+#define LUA_NUMBER_SCAN		"%lf"
 #endif
 #ifndef LUA_NUMBER_FMT
 #define LUA_NUMBER_FMT		"%.16g"

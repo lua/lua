@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.72 2001/06/06 18:00:19 roberto Exp roberto $
+** $Id: ltm.c,v 1.73 2001/06/15 20:36:57 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -70,7 +70,8 @@ int luaT_validevent (int t, int e) {  /* ORDER LUA_T */
 
 void luaT_init (lua_State *L) {
   static const l_char *const typenames[NUM_TAGS] = {
-    l_s("userdata"), l_s("nil"), l_s("number"), l_s("string"), l_s("table"), l_s("function")
+    l_s("userdata"), l_s("nil"), l_s("number"), l_s("string"),
+    l_s("table"), l_s("function")
   };
   int i;
   for (i=0; i<NUM_TAGS; i++)
@@ -177,7 +178,7 @@ LUA_API void lua_settagmethod (lua_State *L, int t, const l_char *event) {
   checktag(L, t);
   if (!luaT_validevent(t, e))
     luaO_verror(L, l_s("cannot change `%.20s' tag method for type `%.20s'%.20s"),
-                luaT_eventname[e], basictypename(G(L), t),
+                luaT_eventname[e], typenamebytag(G(L), t),
                 (t == LUA_TTABLE || t == LUA_TUSERDATA) ?
                    l_s(" with default tag") : l_s(""));
   switch (ttype(L->top - 1)) {
