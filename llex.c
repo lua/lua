@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.9 1997/12/02 12:43:54 roberto Exp roberto $
+** $Id: llex.c,v 1.10 1997/12/09 13:35:19 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -8,6 +8,7 @@
 #include <ctype.h>
 #include <string.h>
 
+#include "lauxlib.h"
 #include "llex.h"
 #include "lmem.h"
 #include "lobject.h"
@@ -66,8 +67,7 @@ void luaX_setinput (ZIO *z)
   LS->ifstate[0].elsepart = 1;  /* to avoid a free $else */
   LS->lex_z = z;
   firstline(LS);
-  LS->textbuff.buffsize = 20;
-  LS->textbuff.text = luaM_buffer(LS->textbuff.buffsize);
+  luaL_resetbuffer();
 }
 
 
@@ -201,22 +201,15 @@ static void inclinenumber (LexState *LS)
 
 
 
-static void save (LexState *LS, int c)
-{
-  if (LS->textbuff.tokensize >= LS->textbuff.buffsize)
-    LS->textbuff.text = luaM_buffer(LS->textbuff.buffsize *= 2);
-  LS->textbuff.text[LS->textbuff.tokensize++] = c;
-}
+#define save(c)	luaL_addchar(c)
+#define save_and_next(LS)  (save(LS->current), next(LS))
 
 
 char *luaX_lasttoken (void)
 {
-  save(L->lexstate, 0);
-  return L->lexstate->textbuff.text;
+  save(0);
+  return luaL_buffer();
 }
-
-
-#define save_and_next(LS)  (save(LS, LS->current), next(LS))
 
 
 static int read_long_string (LexState *LS, YYSTYPE *l)
@@ -225,7 +218,7 @@ static int read_long_string (LexState *LS, YYSTYPE *l)
   while (1) {
     switch (LS->current) {
       case EOZ:
-        save(LS, 0);
+        save(0);
         return WRONGTOKEN;
       case '[':
         save_and_next(LS);
@@ -243,7 +236,7 @@ static int read_long_string (LexState *LS, YYSTYPE *l)
         }
         continue;
       case '\n':
-        save(LS, '\n');
+        save('\n');
         inclinenumber(LS);
         continue;
       default:
@@ -251,9 +244,9 @@ static int read_long_string (LexState *LS, YYSTYPE *l)
     }
   } endloop:
   save_and_next(LS);  /* pass the second ']' */
-  LS->textbuff.text[LS->textbuff.tokensize-2] = 0;  /* erases ']]' */
-  l->pTStr = luaS_new(LS->textbuff.text+2);
-  LS->textbuff.text[LS->textbuff.tokensize-2] = ']';  /* restores ']]' */
+  L->Mbuffer[L->Mbuffnext-2] = 0;  /* erases ']]' */
+  l->pTStr = luaS_new(L->Mbuffbase+2);
+  L->Mbuffer[L->Mbuffnext-2] = ']';  /* restores ']]' */
   return STRING;
 }
 
@@ -267,7 +260,7 @@ int luaY_lex (YYSTYPE *l)
 {
   LexState *LS = L->lexstate;
   double a;
-  LS->textbuff.tokensize = 0;
+  luaL_resetbuffer();
   if (lua_debug)
     luaY_codedebugline(LS->linelasttoken);
   LS->linelasttoken = LS->linenumber;
@@ -286,7 +279,7 @@ int luaY_lex (YYSTYPE *l)
         save_and_next(LS);
         if (LS->current != '-') return '-';
         do { next(LS); } while (LS->current != '\n' && LS->current != EOZ);
-        LS->textbuff.tokensize = 0;
+        luaL_resetbuffer();
         continue;
 
       case '[':
@@ -325,15 +318,15 @@ int luaY_lex (YYSTYPE *l)
           switch (LS->current) {
             case EOZ:
             case '\n':
-              save(LS, 0);
+              save(0);
               return WRONGTOKEN;
             case '\\':
               next(LS);  /* do not save the '\' */
               switch (LS->current) {
-                case 'n': save(LS, '\n'); next(LS); break;
-                case 't': save(LS, '\t'); next(LS); break;
-                case 'r': save(LS, '\r'); next(LS); break;
-                case '\n': save(LS, '\n'); inclinenumber(LS); break;
+                case 'n': save('\n'); next(LS); break;
+                case 't': save('\t'); next(LS); break;
+                case 'r': save('\r'); next(LS); break;
+                case '\n': save('\n'); inclinenumber(LS); break;
                 default : save_and_next(LS); break;
               }
               break;
@@ -342,9 +335,9 @@ int luaY_lex (YYSTYPE *l)
           }
         }
         next(LS);  /* skip delimiter */
-        save(LS, 0);
-        l->pTStr = luaS_new(LS->textbuff.text+1);
-        LS->textbuff.text[LS->textbuff.tokensize-1] = del;  /* restore delimiter */
+        save(0);
+        l->pTStr = luaS_new(L->Mbuffbase+1);
+        L->Mbuffer[L->Mbuffnext-1] = del;  /* restore delimiter */
         return STRING;
       }
 
@@ -375,7 +368,7 @@ int luaY_lex (YYSTYPE *l)
         if (LS->current == '.') {
           save_and_next(LS);
           if (LS->current == '.') {
-            save(LS, 0);
+            save(0);
             luaY_error(
               "ambiguous syntax (decimal point x string concatenation)");
           }
@@ -396,7 +389,7 @@ int luaY_lex (YYSTYPE *l)
 	    neg=(LS->current=='-');
             if (LS->current == '+' || LS->current == '-') save_and_next(LS);
             if (!isdigit(LS->current)) {
-              save(LS, 0); return WRONGTOKEN; }
+              save(0); return WRONGTOKEN; }
             do {
               e=10.0*e+(LS->current-'0');
               save_and_next(LS);
@@ -412,23 +405,24 @@ int luaY_lex (YYSTYPE *l)
         }
 
       case EOZ:
-        save(LS, 0);
+        save(0);
         if (LS->iflevel > 0)
           luaY_syntaxerror("input ends inside a $if", "");
         return 0;
 
       default:
         if (LS->current != '_' && !isalpha(LS->current)) {
+          int c = LS->current;
           save_and_next(LS);
-          return LS->textbuff.text[0];
+          return c;
         }
         else {  /* identifier or reserved word */
           TaggedString *ts;
           do {
             save_and_next(LS);
           } while (isalnum(LS->current) || LS->current == '_');
-          save(LS, 0);
-          ts = luaS_new(LS->textbuff.text);
+          save(0);
+          ts = luaS_new(L->Mbuffbase);
           if (ts->head.marked > 255)
             return ts->head.marked;  /* reserved word */
           l->pTStr = ts;

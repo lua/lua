@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.3 1997/11/21 19:00:46 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.4 1997/12/09 13:35:19 roberto Exp roberto $
 ** Auxiliar functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -27,6 +27,13 @@ lua_Object luaL_functionarg (int arg);
 lua_Object luaL_tablearg (int arg);
 lua_Object luaL_nonnullarg (int numArg);
 void luaL_verror (char *fmt, ...);
+char *luaL_openspace (int size);
+void luaL_resetbuffer (void);
+void luaL_addchar (int c);
+void luaL_addsize (int n);
+int luaL_newbuffer (int size);
+void luaL_oldbuffer (int old);
+char *luaL_buffer (void);
 
 
 #endif

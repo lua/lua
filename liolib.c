@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.8 1997/11/28 12:40:37 roberto Exp roberto $
+** $Id: liolib.c,v 1.9 1997/12/09 13:50:08 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -190,7 +190,7 @@ static void io_read (void)
   char *p = luaL_opt_string(arg, "[^\n]*{\n}");
   int inskip = 0;  /* to control {skips} */
   int c = NEED_OTHER;
-  luaI_emptybuff();
+  luaL_resetbuffer();
   while (*p) {
     if (*p == '{') {
       inskip++;
@@ -208,7 +208,7 @@ static void io_read (void)
       if (c == NEED_OTHER) c = getc(f);
       m = luaI_singlematch((c == EOF) ? 0 : (char)c, p, &ep);
       if (m) {
-        if (inskip == 0) luaI_addchar(c);
+        if (inskip == 0) luaL_addchar(c);
         c = NEED_OTHER;
       }
       switch (*ep) {
@@ -227,7 +227,8 @@ static void io_read (void)
   } break_while:
   if (c >= 0)  /* not EOF nor NEED_OTHER? */
      ungetc(c, f);
-  buff = luaI_addchar(0);
+  luaL_addchar(0);
+  buff = luaL_buffer();
   if (*buff != 0 || *p == 0)  /* read something or did not fail? */
     lua_pushstring(buff);
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.16 1997/12/11 17:21:11 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.17 1997/12/15 16:17:20 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -131,7 +131,7 @@ static void internaldofile (void)
 
 static char *to_string (lua_Object obj)
 {
-  char *buff = luaM_buffer(30);
+  char *buff = luaL_openspace(30);
   TObject *o = luaA_Address(obj);
   switch (ttype(o)) {
     case LUA_T_NUMBER:  case LUA_T_STRING:

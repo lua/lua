@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.16 1997/12/09 13:35:19 roberto Exp roberto $
+** $Id: lvm.c,v 1.17 1997/12/15 16:17:20 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -27,7 +27,7 @@
 #define next_word(pc)   (pc+=2, get_word(pc-2))
 
 
-/* Extra stack to run a function: LUA_T_LINE(1), TM calls(2), ... */
+/* Extra stack size to run a function: LUA_T_LINE(1), TM calls(2), ... */
 #define	EXTRA_STACK	5
 
 
@@ -35,7 +35,7 @@
 static TaggedString *strconc (char *l, char *r)
 {
   size_t nl = strlen(l);
-  char *buffer = luaM_buffer(nl+strlen(r)+1);
+  char *buffer = luaL_openspace(nl+strlen(r)+1);
   strcpy(buffer, l);
   strcpy(buffer+nl, r);
   return luaS_new(buffer);

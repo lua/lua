@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.h,v 1.3 1997/11/26 20:44:52 roberto Exp roberto $
+** $Id: lmem.h,v 1.4 1997/12/01 20:30:44 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -20,8 +20,6 @@
 #define tableEM  "table overflow"
 #define memEM "not enough memory"
 
-void *luaM_buffer (unsigned long size);
-void luaM_clearbuffer (void);
 void *luaM_realloc (void *oldblock, unsigned long size);
 int luaM_growaux (void **block, unsigned long nelems, int size,
                        char *errormsg, unsigned long limit);

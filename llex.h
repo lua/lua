@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.4 1997/11/26 18:53:45 roberto Exp roberto $
+** $Id: llex.h,v 1.5 1997/12/02 12:43:44 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -21,18 +21,11 @@ struct ifState {
   int skip;  /* true if part must be skiped */
 };
 
-struct textBuff {
-  char *text;  /* always points to luaM_buffer */
-  int tokensize;
-  int buffsize;
-};
-
 
 typedef struct LexState {
   int current;  /* look ahead character */
   struct zio *lex_z;  /* input stream */
   int linenumber;  /* input line counter */
-  struct textBuff textbuff;  /* buffer for tokens */
   int linelasttoken;  /* line where last token was read */
   int lastline;  /* last line wherein a SETLINE was generated */
   struct ifState ifstate[MAX_IFS];

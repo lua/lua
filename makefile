@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.5 1997/11/07 15:09:49 roberto Exp roberto $
+## $Id: makefile,v 1.6 1997/11/19 17:29:23 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -94,7 +94,8 @@ clear	:
 
 lapi.o: lapi.c lapi.h lua.h lobject.h lauxlib.h ldo.h lstate.h lfunc.h \
  lgc.h lmem.h lstring.h ltable.h ltm.h luadebug.h lvm.h
-lauxlib.o: lauxlib.c lauxlib.h lua.h luadebug.h
+lauxlib.o: lauxlib.c lauxlib.h lua.h lmem.h lstate.h lobject.h \
+ luadebug.h
 lbuiltin.o: lbuiltin.c lapi.h lua.h lobject.h lauxlib.h lbuiltin.h \
  ldo.h lstate.h lfunc.h lmem.h lstring.h ltable.h ltm.h
 ldo.o: ldo.c ldo.h lobject.h lua.h lstate.h lfunc.h lgc.h lmem.h \
@@ -103,13 +104,13 @@ lfunc.o: lfunc.c lfunc.h lobject.h lua.h lmem.h lstate.h
 lgc.o: lgc.c ldo.h lobject.h lua.h lstate.h lfunc.h lgc.h lmem.h \
  lstring.h ltable.h ltm.h
 liolib.o: liolib.c lauxlib.h lua.h luadebug.h lualib.h
-llex.o: llex.c llex.h lobject.h lua.h lzio.h lmem.h lparser.h lstate.h \
- lstring.h lstx.h luadebug.h
+llex.o: llex.c lauxlib.h lua.h llex.h lobject.h lzio.h lmem.h \
+ lparser.h lstate.h lstring.h lstx.h luadebug.h
 lmathlib.o: lmathlib.c lauxlib.h lua.h lualib.h
 lmem.o: lmem.c lmem.h lstate.h lobject.h lua.h
 lobject.o: lobject.c lobject.h lua.h
-lstate.o: lstate.c lbuiltin.h ldo.h lobject.h lua.h lstate.h llex.h \
- lzio.h lmem.h lstring.h ltable.h ltm.h
+lstate.o: lstate.c lbuiltin.h ldo.h lobject.h lua.h lstate.h lfunc.h \
+ lgc.h llex.h lzio.h lmem.h lstring.h ltable.h ltm.h
 lstring.o: lstring.c lmem.h lobject.h lua.h lstate.h lstring.h
 lstrlib.o: lstrlib.c lauxlib.h lua.h lualib.h
 lstx.o: lstx.c lauxlib.h lua.h ldo.h lobject.h lstate.h lfunc.h llex.h \

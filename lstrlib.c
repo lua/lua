@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.3 1997/12/09 13:35:19 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.4 1997/12/15 17:58:49 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -15,56 +15,12 @@
 #include "lualib.h"
 
 
-struct lbuff {
-  char *b;
-  size_t max;
-  size_t size;
-};
-
-static struct lbuff lbuffer = {NULL, 0, 0};
-
-
-static char *strbuffer (unsigned long size)
-{
-  if (size > lbuffer.max) {
-    /* ANSI "realloc" doesn't need this test, but some machines (Sun!)
-       don't follow ANSI */
-    lbuffer.b = (lbuffer.b) ? realloc(lbuffer.b, lbuffer.max=size) :
-                              malloc(lbuffer.max=size);
-    if (lbuffer.b == NULL)
-      lua_error("memory overflow");
-  }
-  return lbuffer.b;
-}
-
-
-static char *openspace (unsigned long size)
-{
-  char *buff = strbuffer(lbuffer.size+size);
-  return buff+lbuffer.size;
-}
-
-
-char *luaI_addchar (int c)
-{
-  if (lbuffer.size >= lbuffer.max)
-    strbuffer(lbuffer.max == 0 ? 100 : lbuffer.max*2);
-  lbuffer.b[lbuffer.size++] = c;
-  return lbuffer.b;
-}
-
-
-void luaI_emptybuff (void)
-{
-  lbuffer.size = 0;  /* prepare for next string */
-}
-
 
 static void addnchar (char *s, int n)
 {
-  char *b = openspace(n);
+  char *b = luaL_openspace(n);
   strncpy(b, s, n);
-  lbuffer.size += n;
+  luaL_addsize(n);
 }
 
 
@@ -80,6 +36,13 @@ static void str_len (void)
 }
 
 
+static void closeandpush (void)
+{
+  luaL_addchar(0);
+  lua_pushstring(luaL_buffer());
+}
+
+
 static void str_sub (void)
 {
   char *s = luaL_check_string(1);
@@ -89,9 +52,9 @@ static void str_sub (void)
   if (start < 0) start = l+start+1;
   if (end < 0) end = l+end+1;
   if (1 <= start && start <= end && end <= l) {
-    luaI_emptybuff();
+    luaL_resetbuffer();
     addnchar(s+start-1, end-start+1);
-    lua_pushstring(luaI_addchar(0));
+    closeandpush();
   }
   else lua_pushstring("");
 }
@@ -100,30 +63,30 @@ static void str_sub (void)
 static void str_lower (void)
 {
   char *s;
-  luaI_emptybuff();
+  luaL_resetbuffer();
   for (s = luaL_check_string(1); *s; s++)
-    luaI_addchar(tolower((unsigned char)*s));
-  lua_pushstring(luaI_addchar(0));
+    luaL_addchar(tolower((unsigned char)*s));
+  closeandpush();
 }
 
 
 static void str_upper (void)
 {
   char *s;
-  luaI_emptybuff();
+  luaL_resetbuffer();
   for (s = luaL_check_string(1); *s; s++)
-    luaI_addchar(toupper((unsigned char)*s));
-  lua_pushstring(luaI_addchar(0));
+    luaL_addchar(toupper((unsigned char)*s));
+  closeandpush();
 }
 
 static void str_rep (void)
 {
   char *s = luaL_check_string(1);
   int n = (int)luaL_check_number(2);
-  luaI_emptybuff();
+  luaL_resetbuffer();
   while (n-- > 0)
     addstr(s);
-  lua_pushstring(luaI_addchar(0));
+  closeandpush();
 }
 
 
@@ -163,7 +126,7 @@ static void push_captures (struct Capture *cap)
   int i;
   for (i=0; i<cap->level; i++) {
     int l = cap->capture[i].len;
-    char *buff = openspace(l+1);
+    char *buff = luaL_openspace(l+1);
     if (l == -1) lua_error("unfinished capture");
     strncpy(buff, cap->capture[i].init, l);
     buff[l] = 0;
@@ -395,7 +358,7 @@ static void add_s (lua_Object newp, struct Capture *cap)
     char *news = lua_getstring(newp);
     while (*news) {
       if (*news != ESC || !isdigit((unsigned char)*++news))
-        luaI_addchar(*news++);
+        luaL_addchar(*news++);
       else {
         int l = check_cap(*news++, cap);
         addnchar(cap->capture[l].init, cap->capture[l].len);
@@ -404,24 +367,24 @@ static void add_s (lua_Object newp, struct Capture *cap)
   }
   else if (lua_isfunction(newp)) {
     lua_Object res;
-    struct lbuff oldbuff;
     int status;
+    int oldbuff;
     lua_beginblock();
     push_captures(cap);
-    /* function may use lbuffer, so save it and create a luaM_new one */
-    oldbuff = lbuffer;
-    lbuffer.b = NULL; lbuffer.max = lbuffer.size = 0;
+    /* function may use buffer, so save it and create a new one */
+    oldbuff = luaL_newbuffer(0);
     status = lua_callfunction(newp);
     /* restore old buffer */
-    free(lbuffer.b);
-    lbuffer = oldbuff;
-    if (status != 0)
+    luaL_oldbuffer(oldbuff);
+    if (status != 0) {
+      lua_endblock();
       lua_error(NULL);
+    }
     res = lua_getresult(1);
     addstr(lua_isstring(res) ? lua_getstring(res) : "");
     lua_endblock();
   }
-  else luaL_arg_check(0, 3, NULL);
+  else luaL_arg_check(0, 3, "string or function expected");
 }
 
 
@@ -433,7 +396,7 @@ static void str_gsub (void)
   int max_s = (int)luaL_opt_number(4, strlen(src)+1);
   int anchor = (*p == '^') ? (p++, 1) : 0;
   int n = 0;
-  luaI_emptybuff();
+  luaL_resetbuffer();
   while (n < max_s) {
     struct Capture cap;
     char *e;
@@ -446,25 +409,25 @@ static void str_gsub (void)
     if (e && e>src) /* non empty match? */
       src = e;  /* skip it */
     else if (*src)
-      luaI_addchar(*src++);
+      luaL_addchar(*src++);
     else break;
     if (anchor) break;
   }
   addstr(src);
-  lua_pushstring(luaI_addchar(0));
+  closeandpush();
   lua_pushnumber(n);  /* number of substitutions */
 }
 
 
 static void luaI_addquoted (char *s)
 {
-  luaI_addchar('"');
+  luaL_addchar('"');
   for (; *s; s++) {
     if (strchr("\"\\\n", *s))
-      luaI_addchar('\\');
-    luaI_addchar(*s);
+      luaL_addchar('\\');
+    luaL_addchar(*s);
   }
-  luaI_addchar('"');
+  luaL_addchar('"');
 }
 
 #define MAX_FORMAT 200
@@ -473,12 +436,12 @@ static void str_format (void)
 {
   int arg = 1;
   char *strfrmt = luaL_check_string(arg);
-  luaI_emptybuff();  /* initialize */
+  luaL_resetbuffer();
   while (*strfrmt) {
     if (*strfrmt != '%')
-      luaI_addchar(*strfrmt++);
+      luaL_addchar(*strfrmt++);
     else if (*++strfrmt == '%')
-      luaI_addchar(*strfrmt++);  /* %% */
+      luaL_addchar(*strfrmt++);  /* %% */
     else { /* format item */
       char form[MAX_FORMAT];      /* store the format ('%...') */
       struct Capture cap;
@@ -496,14 +459,14 @@ static void str_format (void)
       arg++;
       strncpy(form+1, initf, strfrmt-initf+1); /* +1 to include convertion */
       form[strfrmt-initf+2] = 0;
-      buff = openspace(1000);  /* to store the formatted value */
+      buff = luaL_openspace(1000);  /* to store the formatted value */
       switch (*strfrmt++) {
         case 'q':
           luaI_addquoted(luaL_check_string(arg));
           continue;
         case 's': {
           char *s = luaL_check_string(arg);
-          buff = openspace(strlen(s));
+          buff = luaL_openspace(strlen(s));
           sprintf(buff, form, s);
           break;
         }
@@ -517,10 +480,10 @@ static void str_format (void)
         default:  /* also treat cases 'pnLlh' */
           lua_error("invalid option in `format'");
       }
-      lbuffer.size += strlen(buff);
+      luaL_addsize(strlen(buff));
     }
   }
-  lua_pushstring(luaI_addchar(0));  /* push the result */
+  closeandpush();  /* push the result */
 }
 
 
