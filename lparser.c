@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.86 2000/05/12 18:12:04 roberto Exp roberto $
+** $Id: lparser.c,v 1.87 2000/05/15 19:48:04 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -626,12 +626,12 @@ static int listfields (LexState *ls) {
     checklimit(ls, n, MAXARG_A*LFIELDS_PER_FLUSH,
                "items in a list initializer");
     if (++mod_n == LFIELDS_PER_FLUSH) {
-      luaK_code2(fs, OP_SETLIST, n/LFIELDS_PER_FLUSH - 1, LFIELDS_PER_FLUSH-1);
+      luaK_code2(fs, OP_SETLIST, n/LFIELDS_PER_FLUSH - 1, LFIELDS_PER_FLUSH);
       mod_n = 0;
     }
   }
   if (mod_n > 0)
-    luaK_code2(fs, OP_SETLIST, n/LFIELDS_PER_FLUSH, mod_n-1);
+    luaK_code2(fs, OP_SETLIST, n/LFIELDS_PER_FLUSH, mod_n);
   return n;
 }
 
@@ -911,12 +911,12 @@ static void repeatstat (LexState *ls, int line) {
 
 static void forbody (LexState *ls, OpCode prepfor, OpCode loopfor) {
   FuncState *fs = ls->fs;
-  int prep = luaK_code0(fs, prepfor);
+  int prep = luaK_code1(fs, prepfor, NO_JUMP);
   int blockinit = luaK_getlabel(fs);
   check(ls, TK_DO);
   block(ls);
   luaK_patchlist(fs, prep, luaK_getlabel(fs));
-  luaK_patchlist(fs, luaK_code0(fs, loopfor), blockinit);
+  luaK_patchlist(fs, luaK_code1(fs, loopfor, NO_JUMP), blockinit);
 }
 
 

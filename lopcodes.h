@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.60 2000/04/27 17:39:15 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.61 2000/05/15 19:48:04 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -112,7 +112,7 @@ OP_SETLOCAL,/*	L	x		-		LOC[l]=x	*/
 OP_SETGLOBAL,/*	K	x		-		VAR[KSTR[k]]=x	*/
 OP_SETTABLE,/*	A B	v a_a-a_1 i t	(pops b values)	t[i]=v		*/
 
-OP_SETLIST,/*	A B	v_b-v_0 t	t		t[i+a*FPF]=v_i	*/
+OP_SETLIST,/*	A B	v_b-v_1 t	t		t[i+a*FPF]=v_i	*/
 OP_SETMAP,/*	U	v_u k_u - v_0 k_0 t	t	t[k_i]=v_i	*/
 
 OP_ADD,/*	-	y x		x+y				*/

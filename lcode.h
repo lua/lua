@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.11 2000/04/07 19:35:20 roberto Exp roberto $
+** $Id: lcode.h,v 1.12 2000/04/12 18:47:03 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -18,6 +18,14 @@
 ** address, and as a list link (would link an element to itself).
 */
 #define NO_JUMP (-1)
+
+
+enum Mode {iO, iU, iS, iAB};  /* instruction format */
+
+extern const struct OpProperties {
+  char mode;
+  signed char delta;
+} luaK_opproperties[];
 
 
 void luaK_error (LexState *ls, const char *msg);

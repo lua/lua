@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.18 2000/05/10 16:33:20 roberto Exp roberto $
+** $Id: ltests.c,v 1.19 2000/05/15 19:48:04 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -14,6 +14,7 @@
 
 #include "lapi.h"
 #include "lauxlib.h"
+#include "lcode.h"
 #include "ldo.h"
 #include "lmem.h"
 #include "lopcodes.h"
@@ -49,70 +50,40 @@ static void setnameval (lua_State *L, lua_Object t, const char *name, int val) {
 */
 
 
-#define O(o)	sprintf(buff, "%s", o)
-#define U(o)	sprintf(buff, "%-12s%4u", o, GETARG_U(i))
-#define S(o)	sprintf(buff, "%-12s%4d", o, GETARG_S(i))
-#define AB(o)	sprintf(buff, "%-12s%4d %4d", o, GETARG_A(i), GETARG_B(i))
-
+static const char *const instrname[OP_SETLINE+1] = {
+  "END", "RETURN", "CALL", "TAILCALL", "PUSHNIL", "POP", "PUSHINT", 
+  "PUSHSTRING", "PUSHNUM", "PUSHNEGNUM", "PUSHUPVALUE", "GETLOCAL", 
+  "GETGLOBAL", "GETTABLE", "GETDOTTED", "GETINDEXED", "PUSHSELF", 
+  "CREATETABLE", "SETLOCAL", "SETGLOBAL", "SETTABLE", "SETLIST", "SETMAP", 
+  "ADD", "ADDI", "SUB", "MULT", "DIV", "POW", "CONCAT", "MINUS", "NOT", 
+  "JMPNE", "JMPEQ", "JMPLT", "JMPLE", "JMPGT", "JMPGE", "JMPT", "JMPF", 
+  "JMPONT", "JMPONF", "JMP", "PUSHNILJMP", "FORPREP", "FORLOOP", "LFORPREP", 
+  "LFORLOOP", "CLOSURE", "SETLINE"
+};
 
 
 static int pushop (lua_State *L, Instruction i) {
   char buff[100];
-  switch (GET_OPCODE(i)) {
-    case OP_END: O("END"); lua_pushstring(L, buff); return 0;
-    case OP_RETURN: U("RETURN"); break;
-    case OP_CALL: AB("CALL"); break;
-    case OP_TAILCALL: AB("TAILCALL"); break;
-    case OP_PUSHNIL: U("PUSHNIL"); break;
-    case OP_POP: U("POP"); break;
-    case OP_PUSHINT: S("PUSHINT"); break;
-    case OP_PUSHSTRING: U("PUSHSTRING"); break;
-    case OP_PUSHNUM: U("PUSHNUM"); break;
-    case OP_PUSHNEGNUM: U("PUSHNEGNUM"); break;
-    case OP_PUSHUPVALUE: U("PUSHUPVALUE"); break;
-    case OP_GETLOCAL: U("GETLOCAL"); break;
-    case OP_GETGLOBAL: U("GETGLOBAL"); break;
-    case OP_GETTABLE: O("GETTABLE"); break;
-    case OP_GETDOTTED: U("GETDOTTED"); break;
-    case OP_GETINDEXED: U("GETINDEXED"); break;
-    case OP_PUSHSELF: U("PUSHSELF"); break;
-    case OP_CREATETABLE: U("CREATETABLE"); break;
-    case OP_SETLOCAL: U("SETLOCAL"); break;
-    case OP_SETGLOBAL: U("SETGLOBAL"); break;
-    case OP_SETTABLE: AB("SETTABLE"); break;
-    case OP_SETLIST: AB("SETLIST"); break;
-    case OP_SETMAP: U("SETMAP"); break;
-    case OP_ADD: O("ADD"); break;
-    case OP_ADDI: S("ADDI"); break;
-    case OP_SUB: O("SUB"); break;
-    case OP_MULT: O("MULT"); break;
-    case OP_DIV: O("DIV"); break;
-    case OP_POW: O("POW"); break;
-    case OP_CONCAT: U("CONCAT"); break;
-    case OP_MINUS: O("MINUS"); break;
-    case OP_NOT: O("NOT"); break;
-    case OP_JMPNE: S("JMPNE"); break;
-    case OP_JMPEQ: S("JMPEQ"); break;
-    case OP_JMPLT: S("JMPLT"); break;
-    case OP_JMPLE: S("JMPLE"); break;
-    case OP_JMPGT: S("JMPGT"); break;
-    case OP_JMPGE: S("JMPGE"); break;
-    case OP_JMPT: S("JMPT"); break;
-    case OP_JMPF: S("JMPF"); break;
-    case OP_JMPONT: S("JMPONT"); break;
-    case OP_JMPONF: S("JMPONF"); break;
-    case OP_JMP: S("JMP"); break;
-    case OP_PUSHNILJMP: O("PUSHNILJMP"); break;
-    case OP_FORPREP: S("FORPREP"); break;
-    case OP_FORLOOP: S("FORLOOP"); break;
-    case OP_LFORPREP: S("LFORPREP"); break;
-    case OP_LFORLOOP: S("LFORLOOP"); break;
-    case OP_CLOSURE: AB("CLOSURE"); break;
-    case OP_SETLINE: U("SETLINE"); break;
+  OpCode o = GET_OPCODE(i);
+  const char *name = instrname[o];
+  switch ((enum Mode)luaK_opproperties[o].mode) {  
+    case iO:
+      sprintf(buff, "%s", name);
+      break;
+    case iU:
+      sprintf(buff, "%-12s%4u", name, GETARG_U(i));
+      break;
+    case iS:
+      sprintf(buff, "%-12s%4d", name, GETARG_S(i));
+      break;
+    case iAB:
+      sprintf(buff, "%-12s%4d %4d", name, GETARG_A(i), GETARG_B(i));
+      break;
   }
   lua_pushstring(L, buff);
-  return 1;
+  return (o != OP_END);
 }
+
 
 static void listcode (lua_State *L) {
   lua_Object o = luaL_nonnullarg(L, 1);

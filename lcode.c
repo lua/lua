@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.29 2000/05/08 19:32:53 roberto Exp roberto $
+** $Id: lcode.c,v 1.30 2000/05/15 19:48:04 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -37,7 +37,7 @@ static Instruction previous_instruction (FuncState *fs) {
 
 
 int luaK_jump (FuncState *fs) {
-  int j = luaK_code0(fs, OP_JMP);
+  int j = luaK_code1(fs, OP_JMP, NO_JUMP);
   if (j == fs->lasttarget) {  /* possible jumps to this jump? */
     luaK_concat(fs, &j, fs->jlt);  /* keep them on hold */
     fs->jlt = NO_JUMP;
@@ -279,7 +279,7 @@ static void luaK_testgo (FuncState *fs, expdesc *v, int invert, OpCode jump) {
       SET_OPCODE(*previous, invertjump(GET_OPCODE(*previous)));
   }
   else
-    luaK_code0(fs, jump);
+    luaK_code1(fs, jump, NO_JUMP);
   luaK_concat(fs, exitlist, fs->pc-1);  /* insert last jump in `exitlist' */
   luaK_patchlist(fs, *golist, luaK_getlabel(fs));
   *golist = NO_JUMP;
@@ -324,10 +324,11 @@ void luaK_tostack (LexState *ls, expdesc *v, int onlyone) {
         if (ISJUMP(previous))
           luaK_concat(fs, &v->u.l.t, fs->pc-1);  /* put `previous' in t. list */
         else {
-          j = code_label(fs, OP_JMP, 0);  /* to jump over both pushes */
+          j = code_label(fs, OP_JMP, NO_JUMP);  /* to jump over both pushes */
           luaK_deltastack(fs, -1);  /* next PUSHes may be skipped */
         }
         p_nil = code_label(fs, OP_PUSHNILJMP, 0);
+        luaK_deltastack(fs, -1);  /* next PUSH is skipped */
         p_1 = code_label(fs, OP_PUSHINT, 1);
         luaK_patchlist(fs, j, luaK_getlabel(fs));
       }
@@ -394,12 +395,12 @@ void luaK_posfix (LexState *ls, int op, expdesc *v1, expdesc *v2) {
       case '/': luaK_code0(fs, OP_DIV); break;
       case '^': luaK_code0(fs, OP_POW); break;
       case TK_CONCAT: luaK_code1(fs, OP_CONCAT, 2); break;
-      case TK_EQ: luaK_code0(fs, OP_JMPEQ); break;
-      case TK_NE: luaK_code0(fs, OP_JMPNE); break;
-      case '>': luaK_code0(fs, OP_JMPGT); break;
-      case '<': luaK_code0(fs, OP_JMPLT); break;
-      case TK_GE: luaK_code0(fs, OP_JMPGE); break;
-      case TK_LE: luaK_code0(fs, OP_JMPLE); break;
+      case TK_EQ: luaK_code1(fs, OP_JMPEQ, NO_JUMP); break;
+      case TK_NE: luaK_code1(fs, OP_JMPNE, NO_JUMP); break;
+      case '>': luaK_code1(fs, OP_JMPGT, NO_JUMP); break;
+      case '<': luaK_code1(fs, OP_JMPLT, NO_JUMP); break;
+      case TK_GE: luaK_code1(fs, OP_JMPGE, NO_JUMP); break;
+      case TK_LE: luaK_code1(fs, OP_JMPLE, NO_JUMP); break;
     }
   }
 }
@@ -415,196 +416,120 @@ int luaK_code1 (FuncState *fs, OpCode o, int arg1) {
 }
 
 
+#define VD	100	/* flag for variable delta */
+
 
 int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
   Instruction i = previous_instruction(fs);
-  int delta = 0;
-  enum {iO, iU, iS, iAB, iP} mode;  /* instruction format (or iP to optimize) */
-  mode = iP;
-
+  int delta = luaK_opproperties[o].delta;
+  int optm = 0;  /* 1 when there is an optimization */
   switch (o) {
 
     case OP_CLOSURE:
       delta = -arg2+1;
-      mode = iAB;
-      break;
-
-    case OP_SETLINE:
-      mode = iU;
-      break;
-
-    case OP_CALL:
-      mode = iAB;
-      break;
-
-    case OP_PUSHINT:
-      delta = 1;
-      mode = iS;
       break;
 
     case OP_SETTABLE:
-      delta = -arg2;
-      mode = iAB;
-      break;
-
     case OP_SETLIST:
-      delta = -(arg2+1);
-      mode = iAB;
+      delta = -arg2;
       break;
 
     case OP_SETMAP:
       delta = -2*(arg1+1);
-      mode = iU;
-      break;
-
-    case OP_FORLOOP:
-      delta = -3;
-      arg1 = NO_JUMP;
-      mode = iS;
-      break;
-
-    case OP_SETLOCAL:
-    case OP_SETGLOBAL:
-      delta = -1;
-      mode = iU;
-      break;
-
-    case OP_FORPREP:
-    case OP_JMP:
-      arg1 = NO_JUMP;
-      mode = iS;
-      break;
-
-    case OP_LFORPREP:
-      delta = 3;
-      arg1 = NO_JUMP;
-      mode = iS;
-      break;
-
-    case OP_LFORLOOP:
-      delta = -4;
-      arg1 = NO_JUMP;
-      mode = iS;
-      break;
-
-    case OP_END:
-    case OP_PUSHNILJMP:
-    case OP_NOT:
-      mode = iO;
-      break;
-
-    case OP_PUSHSTRING:
-    case OP_PUSHNUM:
-    case OP_PUSHNEGNUM:
-    case OP_PUSHUPVALUE:
-    case OP_GETLOCAL:
-    case OP_GETGLOBAL:
-    case OP_PUSHSELF:
-    case OP_CREATETABLE:
-      delta = 1;
-      mode = iU;
-      break;
-
-    case OP_JMPLT:
-    case OP_JMPLE:
-    case OP_JMPGT:
-    case OP_JMPGE:
-      delta = -2;
-      arg1 = NO_JUMP;
-      mode = iS;
-      break;
-
-    case OP_MULT:
-    case OP_DIV:
-    case OP_POW:
-      delta = -1;
-      mode = iO;
       break;
 
     case OP_RETURN:
       if (GET_OPCODE(i) == OP_CALL && GETARG_B(i) == MULT_RET) {
         SET_OPCODE(i, OP_TAILCALL);
         SETARG_B(i, arg1);
+        optm = 1;
       }
-      else mode = iU;
       break;
 
     case OP_PUSHNIL:
       delta = arg1;
       switch(GET_OPCODE(i)) {
-        case OP_PUSHNIL: SETARG_U(i, GETARG_U(i)+arg1); break;
-        default: mode = iU; break;
+        case OP_PUSHNIL: SETARG_U(i, GETARG_U(i)+arg1); optm = 1; break;
+        default: break;
       }
       break;
 
     case OP_POP:
       delta = -arg1;
       switch(GET_OPCODE(i)) {
-        case OP_SETTABLE: SETARG_B(i, GETARG_B(i)+arg1); break;
-        default: mode = iU; break;
+        case OP_SETTABLE: SETARG_B(i, GETARG_B(i)+arg1); optm = 1; break;
+        default: break;
       }
       break;
 
     case OP_GETTABLE:
-      delta = -1;
       switch(GET_OPCODE(i)) {
-        case OP_PUSHSTRING: SET_OPCODE(i, OP_GETDOTTED); break;  /* `t.x' */
-        case OP_GETLOCAL: SET_OPCODE(i, OP_GETINDEXED); break;  /* `t[i]' */
-        default: mode = iO; break;
+        case OP_PUSHSTRING:  /* `t.x' */
+          SET_OPCODE(i, OP_GETDOTTED);
+          optm = 1;
+          break;
+        case OP_GETLOCAL:  /* `t[i]' */
+          SET_OPCODE(i, OP_GETINDEXED);
+          optm = 1;
+          break;
+        default: break;
       }
       break;
 
     case OP_ADD:
-      delta = -1;
       switch(GET_OPCODE(i)) {
-        case OP_PUSHINT: SET_OPCODE(i, OP_ADDI); break;  /* `a+k' */
-        default: mode = iO; break;
+        case OP_PUSHINT: SET_OPCODE(i, OP_ADDI); optm = 1; break;  /* `a+k' */
+        default: break;
       }
       break;
 
     case OP_SUB:
-      delta = -1;
       switch(GET_OPCODE(i)) {
-        case OP_PUSHINT: i = CREATE_S(OP_ADDI, -GETARG_S(i)); break; /* `a-k' */
-        default: mode = iO; break;
+        case OP_PUSHINT:  /* `a-k' */
+          i = CREATE_S(OP_ADDI, -GETARG_S(i));
+          optm = 1;
+          break;
+        default: break;
       }
       break;
 
     case OP_CONCAT:
       delta = -arg1+1;
       switch(GET_OPCODE(i)) {
-        case OP_CONCAT: SETARG_U(i, GETARG_U(i)+1); break;  /* `a..b..c' */
-        default: mode = iU; break;
+        case OP_CONCAT:  /* `a..b..c' */
+          SETARG_U(i, GETARG_U(i)+1);
+          optm = 1;
+          break;
+        default: break;
       }
       break;
 
     case OP_MINUS:
       switch(GET_OPCODE(i)) {
-        case OP_PUSHINT: SETARG_S(i, -GETARG_S(i)); break;  /* `-k' */
-        case OP_PUSHNUM: SET_OPCODE(i, OP_PUSHNEGNUM); break;  /* `-k' */
-        default: mode = iO; break;
+        case OP_PUSHINT:  /* `-k' */
+          SETARG_S(i, -GETARG_S(i));
+          optm = 1;
+          break;
+        case OP_PUSHNUM:  /* `-k' */
+          SET_OPCODE(i, OP_PUSHNEGNUM);
+          optm = 1;
+          break;
+        default: break;
       }
       break;
 
     case OP_JMPNE:
-      delta = -2;
-      if (i == CREATE_U(OP_PUSHNIL, 1))  /* `a~=nil' */
+      if (i == CREATE_U(OP_PUSHNIL, 1)) {  /* `a~=nil' */
         i = CREATE_S(OP_JMPT, NO_JUMP);
-      else {
-        arg1 = NO_JUMP;
-        mode = iS;
+        optm = 1;
       }
       break;
 
     case OP_JMPEQ:
-      delta = -2;
       if (i == CREATE_U(OP_PUSHNIL, 1)) {  /* `a==nil' */
         i = CREATE_0(OP_NOT);
         delta = -1;  /* just undo effect of previous PUSHNIL */
-      }
-      else {
-        arg1 = NO_JUMP;
-        mode = iS;
+        optm = 1;
       }
       break;
 
@@ -612,11 +537,9 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
     case OP_JMPF:
     case OP_JMPONT:
     case OP_JMPONF:
-      delta = -1;
-      arg1 = NO_JUMP;
       switch (GET_OPCODE(i)) {
-        case OP_NOT: i = CREATE_S(invertjump(o), NO_JUMP); break;
-        default: mode = iS; break;
+        case OP_NOT: i = CREATE_S(invertjump(o), NO_JUMP); optm = 1; break;
+        default: break;
       }
       break;
 
@@ -625,19 +548,23 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
     case OP_TAILCALL:
     case OP_ADDI:
       LUA_INTERNALERROR(L, "instruction used only for optimizations");
-      return 0;  /* to avoid warnings */
+      break;
+
+    default:
+      LUA_ASSERT(L, delta != VD, "invalid delta");
+      break;
 
   }
   luaK_deltastack(fs, delta);
-  switch (mode) {  /* handle instruction formats */
+  if (optm) {  /* optimize: put instruction in place of last one */
+      fs->f->code[fs->pc-1] = i;  /* change previous instruction */
+      return fs->pc-1;  /* do not generate new instruction */
+  }
+  switch ((enum Mode)luaK_opproperties[o].mode) {
     case iO: i = CREATE_0(o); break;
     case iU: i = CREATE_U(o, arg1); break;
     case iS: i = CREATE_S(o, arg1); break;
     case iAB: i = CREATE_AB(o, arg1, arg2); break;
-    case iP: {  /* optimize: put instruction in place of last one */
-      fs->f->code[fs->pc-1] = i;  /* change previous instruction */
-      return fs->pc-1;
-    }
   }
   /* actually create the new instruction */
   luaM_growvector(fs->L, fs->f->code, fs->pc, 1, Instruction, codeEM, MAX_INT);
@@ -645,3 +572,56 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
   return fs->pc++;
 }
 
+
+const struct OpProperties luaK_opproperties[OP_SETLINE+1] = {
+  {iO, 0},	/* OP_END */
+  {iU, 0},	/* OP_RETURN */
+  {iAB, 0},	/* OP_CALL */
+  {iAB, 0},	/* OP_TAILCALL */
+  {iU, VD},	/* OP_PUSHNIL */
+  {iU, VD},	/* OP_POP */
+  {iS, 1},	/* OP_PUSHINT */
+  {iU, 1},	/* OP_PUSHSTRING */
+  {iU, 1},	/* OP_PUSHNUM */
+  {iU, 1},	/* OP_PUSHNEGNUM */
+  {iU, 1},	/* OP_PUSHUPVALUE */
+  {iU, 1},	/* OP_GETLOCAL */
+  {iU, 1},	/* OP_GETGLOBAL */
+  {iO, -1},	/* OP_GETTABLE */
+  {iU, 0},	/* OP_GETDOTTED */
+  {iU, 0},	/* OP_GETINDEXED */
+  {iU, 1},	/* OP_PUSHSELF */
+  {iU, 1},	/* OP_CREATETABLE */
+  {iU, -1},	/* OP_SETLOCAL */
+  {iU, -1},	/* OP_SETGLOBAL */
+  {iAB, VD},	/* OP_SETTABLE */
+  {iAB, VD},	/* OP_SETLIST */
+  {iU, VD},	/* OP_SETMAP */
+  {iO, -1},	/* OP_ADD */
+  {iS, 0},	/* OP_ADDI */
+  {iO, -1},	/* OP_SUB */
+  {iO, -1},	/* OP_MULT */
+  {iO, -1},	/* OP_DIV */
+  {iO, -1},	/* OP_POW */
+  {iU, VD},	/* OP_CONCAT */
+  {iO, 0},	/* OP_MINUS */
+  {iO, 0},	/* OP_NOT */
+  {iS, -2},	/* OP_JMPNE */
+  {iS, -2},	/* OP_JMPEQ */
+  {iS, -2},	/* OP_JMPLT */
+  {iS, -2},	/* OP_JMPLE */
+  {iS, -2},	/* OP_JMPGT */
+  {iS, -2},	/* OP_JMPGE */
+  {iS, -1},	/* OP_JMPT */
+  {iS, -1},	/* OP_JMPF */
+  {iS, -1},	/* OP_JMPONT */
+  {iS, -1},	/* OP_JMPONF */
+  {iS, 0},	/* OP_JMP */
+  {iO, 1},	/* OP_PUSHNILJMP */
+  {iS, 0},	/* OP_FORPREP */
+  {iS, -3},	/* OP_FORLOOP */
+  {iS, 3},	/* OP_LFORPREP */
+  {iS, -4},	/* OP_LFORLOOP */
+  {iAB, VD},	/* OP_CLOSURE */
+  {iU, 0}	/* OP_SETLINE */
+};

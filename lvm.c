@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.105 2000/05/08 19:32:53 roberto Exp roberto $
+** $Id: lvm.c,v 1.106 2000/05/15 19:48:04 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -470,7 +470,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
 
       case OP_SETLIST: {
         int aux = GETARG_A(i) * LFIELDS_PER_FLUSH;
-        int n = GETARG_B(i)+1;
+        int n = GETARG_B(i);
         Hash *arr = avalue(top-n-1);
         L->top = top-n;  /* final value of `top' (in case of errors) */
         for (; n; n--)
