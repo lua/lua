@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.76 2001/06/15 20:36:57 roberto Exp roberto $
+** $Id: lcode.c,v 1.77 2001/07/17 14:30:44 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -794,7 +794,7 @@ int luaK_codeABC (FuncState *fs, OpCode o, int a, int b, int c) {
 }
 
 
-int luaK_codeABc (FuncState *fs, OpCode o, int a, int bc) {
+int luaK_codeABc (FuncState *fs, OpCode o, int a, unsigned int bc) {
   lua_assert(getOpMode(o) == iABc || getOpMode(o) == iAsBc);
   return luaK_code(fs, CREATE_ABc(o, a, bc));
 }
