@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.53 2004/05/28 18:35:05 roberto Exp roberto $
+** $Id: liolib.c,v 2.54 2004/07/09 15:47:48 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -114,13 +114,11 @@ static int io_gc (lua_State *L) {
 
 
 static int io_tostring (lua_State *L) {
-  char buff[4*sizeof(void *) + 8];  /* enough space for a `%p' */
-  FILE **f = topfile(L);
-  if (*f == NULL)
-    strcpy(buff, "closed");
+  FILE *f = *topfile(L);
+  if (f == NULL)
+    lua_pushstring(L, "file (closed)");
   else
-    sprintf(buff, "%p", lua_touserdata(L, 1));
-  lua_pushfstring(L, "file (%s)", buff);
+    lua_pushfstring(L, "file (%p)", f);
   return 1;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.2 2004/04/30 20:13:38 roberto Exp roberto $
+** $Id: lobject.c,v 2.3 2004/05/03 12:30:41 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -94,7 +94,7 @@ static void pushstr (lua_State *L, const char *str) {
 }
 
 
-/* this function handles only `%d', `%c', %f, and `%s' formats */
+/* this function handles only `%d', `%c', %f, %p, and `%s' formats */
 const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
   int n = 1;
   pushstr(L, "");
@@ -104,9 +104,10 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
     setsvalue2s(L, L->top, luaS_newlstr(L, fmt, e-fmt));
     incr_top(L);
     switch (*(e+1)) {
-      case 's':
+      case 's': {
         pushstr(L, va_arg(argp, char *));
         break;
+      }
       case 'c': {
         char buff[2];
         buff[0] = cast(char, va_arg(argp, int));
@@ -114,17 +115,26 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
         pushstr(L, buff);
         break;
       }
-      case 'd':
+      case 'd': {
         setnvalue(L->top, cast(lua_Number, va_arg(argp, int)));
         incr_top(L);
         break;
-      case 'f':
+      }
+      case 'f': {
         setnvalue(L->top, cast(lua_Number, va_arg(argp, l_uacNumber)));
         incr_top(L);
         break;
-      case '%':
+      }
+      case 'p': {
+        char buff[4*sizeof(void *) + 8]; /* should be enough space for a `%p' */
+        sprintf(buff, "%p", va_arg(argp, void *));
+        pushstr(L, buff);
+        break;
+      }
+      case '%': {
         pushstr(L, "%");
         break;
+      }
       default: {
         char buff[3];
         buff[0] = '%';
