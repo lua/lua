@@ -1,6 +1,6 @@
 %{
 /*
-** $Id: lua.stx,v 1.32 1998/01/12 13:00:51 roberto Exp roberto $
+** $Id: lua.stx,v 1.33 1998/01/12 13:35:37 roberto Exp roberto $
 ** Syntax analizer and code generator
 ** See Copyright Notice in lua.h
 */
@@ -643,7 +643,6 @@ TProtoFunc *luaY_parser (ZIO *z)
 
 %start chunk
 
-%token WRONGTOKEN
 %token NIL
 %token IF THEN ELSE ELSEIF WHILE DO REPEAT UNTIL END
 %token RETURN
