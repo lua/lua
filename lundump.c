@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.17 1999/03/29 16:16:18 lhf Exp $
+** $Id: lundump.c,v 1.8 1999/03/30 20:29:34 roberto Exp roberto $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -134,7 +134,7 @@ static void LoadLocals (TProtoFunc* tf, ZIO* Z)
  tf->locvars[i].varname=NULL;
 }
 
-static TProtoFunc* LoadFunction(ZIO* Z);
+static TProtoFunc* LoadFunction (ZIO* Z);
 
 static void LoadConstants (TProtoFunc* tf, ZIO* Z)
 {
@@ -224,7 +224,7 @@ static TProtoFunc* LoadChunk (ZIO* Z)
 ** load one chunk from a file or buffer
 ** return main if ok and NULL at EOF
 */
-TProtoFunc* luaU_undump1(ZIO* Z)
+TProtoFunc* luaU_undump1 (ZIO* Z)
 {
  int c=zgetc(Z);
  if (c==ID_CHUNK)
@@ -237,7 +237,7 @@ TProtoFunc* luaU_undump1(ZIO* Z)
 /*
 ** test number representation
 */
-void luaU_testnumber(void)
+void luaU_testnumber (void)
 {
  if (sizeof(real)!=SIZEOF_NUMBER)
   luaL_verror("numbers have %d bytes; expected %d. see lundump.h",
@@ -259,7 +259,7 @@ void luaU_testnumber(void)
 /*
 * handle constants that cannot happen
 */
-void luaU_badconstant(char* s, int i, TObject* o, TProtoFunc* tf)
+void luaU_badconstant (char* s, int i, TObject* o, TProtoFunc* tf)
 {
  int t=ttype(o);
  char* name= (t>0 || t<LUA_T_LINE) ? "?" : luaO_typenames[-t];

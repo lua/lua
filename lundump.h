@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.h,v 1.13 1999/03/29 16:16:18 lhf Exp $
+** $Id: lundump.h,v 1.6 1999/03/30 20:29:34 roberto Exp roberto $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -41,9 +41,9 @@
 /* -- end of user configuration -- DO NOT CHANGE ANYTHING BELOW THIS LINE -- */
 
 
-TProtoFunc* luaU_undump1(ZIO* Z);	/* load one chunk */
-void luaU_testnumber(void);		/* test number representation */
-void luaU_badconstant(char* s, int i, TObject* o, TProtoFunc* tf);
+TProtoFunc* luaU_undump1 (ZIO* Z);	/* load one chunk */
+void luaU_testnumber (void);		/* test number representation */
+void luaU_badconstant (char* s, int i, TObject* o, TProtoFunc* tf);
 					/* handle cases that cannot happen */
 
 /* definitions for headers of binary files */
