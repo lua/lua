@@ -1,10 +1,9 @@
-char *rcs_lex = "$Id: lex.c,v 2.20 1995/10/25 13:05:51 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.21 1995/11/16 20:46:24 roberto Exp roberto $";
  
 
 #include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "mem.h"
 #include "tree.h"
@@ -144,7 +143,7 @@ static int read_long_string (void)
 }
 
 
-int yylex (void)
+int luaY_lex (void)
 {
   float a;
   static int linelasttoken = 0;
@@ -176,12 +175,12 @@ int yylex (void)
         *yytextLast = 0;
 	if (lua_strcmp(yytext, "debug") == 0)
 	{
-	  yylval.vInt = 1;
+	  luaY_lval.vInt = 1;
 	  return DEBUG;
         }
 	else if (lua_strcmp(yytext, "nodebug") == 0)
 	{
-	  yylval.vInt = 0;
+	  luaY_lval.vInt = 0;
 	  return DEBUG;
         }
 	return WRONGTOKEN;
@@ -203,7 +202,7 @@ int yylex (void)
             return WRONGTOKEN;
           save_and_next();  /* pass the second ']' */
           *(yytextLast-2) = 0;  /* erases ']]' */
-          yylval.vWord = luaI_findconstantbyname(yytext+2);
+          luaY_lval.vWord = luaI_findconstantbyname(yytext+2);
           return STRING;
         }
 
@@ -263,7 +262,7 @@ int yylex (void)
         }
         next();  /* skip the delimiter */
         *yytextLast = 0;
-        yylval.vWord = luaI_findconstantbyname(yytext);
+        luaY_lval.vWord = luaI_findconstantbyname(yytext);
         return STRING;
       }
 
@@ -286,7 +285,7 @@ int yylex (void)
         *yytextLast = 0;
         res = findReserved(yytext);
         if (res) return res;
-        yylval.pNode = lua_constcreate(yytext);
+        luaY_lval.pNode = lua_constcreate(yytext);
         return NAME;
       }
 
@@ -327,7 +326,7 @@ fraction:
 	      ea*=ea;
 	    }
           }
-          yylval.vFloat = a;
+          luaY_lval.vFloat = a;
           return NUMBER;
         }
 
