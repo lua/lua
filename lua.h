@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.176 2003/05/14 21:06:56 roberto Exp roberto $
+** $Id: lua.h,v 1.177 2003/05/15 12:20:04 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -248,6 +248,7 @@ LUA_API void  lua_concat (lua_State *L, int n);
 #define lua_islightuserdata(L,n)	(lua_type(L,n) == LUA_TLIGHTUSERDATA)
 #define lua_isnil(L,n)		(lua_type(L,n) == LUA_TNIL)
 #define lua_isboolean(L,n)	(lua_type(L,n) == LUA_TBOOLEAN)
+#define lua_isthread(L,n)	(lua_type(L,n) == LUA_TTHREAD)
 #define lua_isnone(L,n)		(lua_type(L,n) == LUA_TNONE)
 #define lua_isnoneornil(L, n)	(lua_type(L,n) <= 0)
 
