@@ -118,3 +118,7 @@ Thu Sep  2 10:07:20 EST 1999
 could realloc f->consts.
 (by Supratik Champati; since 3.2 beta)
 
+** lobject.c / lbuiltin.c
+Wed Sep  8 17:41:54 EST 1999
+>> tonumber'e1' and tonumber('  ', x), for x!=10, gave 0 instead of nil.
+(since 3.1)

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.21 1999/09/06 13:55:09 roberto Exp roberto $
+** $Id: lobject.c,v 1.22 1999/09/06 20:19:22 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -91,37 +91,34 @@ static double expten (unsigned int e) {
 int luaO_str2d (const char *s, real *result) {  /* LUA_NUMBER */
   double a = 0.0;
   int point = 0;  /* number of decimal digits */
-  int sig = 1;
-  int valid = 0;  /* check whether number has at least one valid digit */
+  int sig;
   while (isspace((unsigned char)*s)) s++;
-  if (*s == '-') {
-    s++;
-    sig = -1;
+  sig = 1;
+  switch (*s) {
+    case '-': sig = -1;  /* go through */
+    case '+': s++;
   }
-  else if (*s == '+') s++;
-  while (isdigit((unsigned char)*s)) {
+  if (! (isdigit((unsigned char)*s) ||
+          (*s == '.' && isdigit((unsigned char)*(s+1)))))
+    return 0;  /* not (at least one digit before or after the point) */
+  while (isdigit((unsigned char)*s))
     a = 10.0*a + (*(s++)-'0');
-    valid = 1;
-  }
   if (*s == '.') {
     s++;
     while (isdigit((unsigned char)*s)) {
       a = 10.0*a + (*(s++)-'0');
       point++;
-      valid = 1;
     }
   }
-  if (!valid) return 0;
   a *= sig;
   if (toupper((unsigned char)*s) == 'E') {
     int e = 0;
-    sig = 1;
     s++;
-    if (*s == '-') {
-      s++;
-      sig = -1;
+    sig = 1;
+    switch (*s) {
+      case '-': sig = -1;  /* go through */
+      case '+': s++;
     }
-    else if (*s == '+') s++;
     if (!isdigit((unsigned char)*s)) return 0;  /* no digit in the exponent? */
     do {
       e = 10*e + (*(s++)-'0');

@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.60 1999/07/22 19:35:41 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.61 1999/08/16 20:52:00 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -146,13 +146,15 @@ static void luaB_tonumber (void) {
     else lua_pushnil();  /* not a number */
   }
   else {
-    char *s;
-    long n;
+    const char *s1 = luaL_check_string(1);
+    char *s2;
+    real n;
     luaL_arg_check(0 <= base && base <= 36, 2, "base out of range");
-    n = strtol(luaL_check_string(1), &s, base);
-    while (isspace((unsigned char)*s)) s++;  /* skip trailing spaces */
-    if (*s) lua_pushnil();  /* invalid format: return nil */
-    else lua_pushnumber(n);
+    n = strtoul(s1, &s2, base);
+    if (s1 == s2) return;  /* no valid digits: return nil */
+    while (isspace((unsigned char)*s2)) s2++;  /* skip trailing spaces */
+    if (*s2) return;  /* invalid trailing character: return nil */
+    lua_pushnumber(n);
   }
 }
 
