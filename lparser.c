@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.29 1999/03/11 19:00:12 roberto Exp roberto $
+** $Id: lparser.c,v 1.30 1999/03/23 19:58:37 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -662,7 +662,6 @@ TProtoFunc *luaY_parser (ZIO *z) {
   init_state(&lexstate, &funcstate, luaS_new(zname(z)));
   next(&lexstate);  /* read first token */
   chunk(&lexstate);
-  check_debugline(&lexstate);
   if (lexstate.token != EOS)
     luaX_error(&lexstate, "<eof> expected");
   close_func(&lexstate);
