@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.95 2000/06/12 13:52:05 roberto Exp roberto $
+** $Id: lparser.c,v 1.96 2000/06/19 18:05:14 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -37,7 +37,6 @@ typedef struct Constdesc {
 
 typedef struct Breaklabel {
   struct Breaklabel *previous;  /* chain */
-  TString *label;
   int breaklist;
   int stacklevel;
 } Breaklabel;
@@ -309,7 +308,6 @@ static void code_params (LexState *ls, int nparams, int dots) {
 
 static void enterbreak (FuncState *fs, Breaklabel *bl) {
   bl->stacklevel = fs->stacklevel;
-  bl->label = NULL;
   bl->breaklist = NO_JUMP;
   bl->previous = fs->bl;
   fs->bl = bl;
@@ -320,22 +318,6 @@ static void leavebreak (FuncState *fs, Breaklabel *bl) {
   fs->bl = bl->previous;
   LUA_ASSERT(fs->L, bl->stacklevel == fs->stacklevel, "wrong levels");
   luaK_patchlist(fs, bl->breaklist, luaK_getlabel(fs));
-}
-
-
-static Breaklabel *findlabel (LexState *ls) {
-  FuncState *fs = ls->fs;
-  Breaklabel *bl;
-  TString *label = (ls->t.token == TK_NAME) ? ls->t.seminfo.ts : NULL;
-  for (bl=fs->bl; bl; bl=bl->previous) {
-    if (bl->label == label) {
-    if (label) next(ls);  /* no errors; can skip optional label */
-      return bl;
-    }
-  }
-  /* label not found */
-  luaK_error(fs->ls, "invalid break");
-  return NULL;  /* to avoid warnings */
 }
 
 
@@ -1045,10 +1027,11 @@ static void retstat (LexState *ls) {
 static void breakstat (LexState *ls) {
   /* stat -> BREAK [NAME] */
   FuncState *fs = ls->fs;
-  Breaklabel *bl;
   int currentlevel = fs->stacklevel;
+  Breaklabel *bl = fs->bl;
+  if (!bl)
+    luaK_error(ls, "no loop to break");
   setline_and_next(ls);  /* skip BREAK */
-  bl = findlabel(ls);
   luaK_adjuststack(fs, currentlevel - bl->stacklevel);
   luaK_concat(fs, &bl->breaklist, luaK_jump(fs));
   fs->stacklevel = currentlevel;
@@ -1145,33 +1128,14 @@ static void body (LexState *ls, int needself, int line) {
 /* }====================================================================== */
 
 
-static TString *optional_label (LexState *ls) {
-  /* label -> [ '|' NAME '|' ] */ 
-  if (optional(ls, '|')) {
-    TString *l = str_checkname(ls);
-    check(ls, '|');
-    return l;
-  }
-  else
-    return NULL;  /* there is no label */
-}
-
-
 static void chunk (LexState *ls) {
-  /* chunk -> { [label] stat [';'] } */
+  /* chunk -> { stat [';'] } */
   int islast = 0;
   while (!islast && !block_follow(ls->t.token)) {
-    Breaklabel bl;
-    TString *l = optional_label(ls);
-    if (l) {
-      enterbreak(ls->fs, &bl);
-      bl.label = l;
-    }
     islast = stat(ls);
     optional(ls, ';');
     LUA_ASSERT(ls->L, ls->fs->stacklevel == ls->fs->nlocalvar,
                "stack size != # local vars");
-    if (l) leavebreak(ls->fs, &bl);
   }
 }
 
