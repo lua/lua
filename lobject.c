@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.87 2002/09/02 19:54:49 roberto Exp roberto $
+** $Id: lobject.c,v 1.88 2002/09/19 13:03:53 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -57,7 +57,8 @@ int luaO_log2 (unsigned int x) {
 
 int luaO_rawequalObj (const TObject *t1, const TObject *t2) {
   if (ttype(t1) != ttype(t2)) return 0;
-  switch (ttype(t1)) {
+  if (iscollectable(t1)) return gcvalue(t1) == gcvalue(t2);
+  else switch (ttype(t1)) {
     case LUA_TNIL:
       return 1;
     case LUA_TBOOLEAN:
@@ -66,9 +67,9 @@ int luaO_rawequalObj (const TObject *t1, const TObject *t2) {
       return pvalue(t1) == pvalue(t2);
     case LUA_TNUMBER:
       return nvalue(t1) == nvalue(t2);
-    default:
-      return gcvalue(t1) == gcvalue(t2);
   }
+  lua_assert(0);
+  return 0;  /* to avoid warnings */
 }
 
 
