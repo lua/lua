@@ -4,9 +4,10 @@
 ** facilities.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.2 1994/08/17 22:22:44 roberto Exp celes $";
+char *rcs_inout="$Id: inout.c,v 2.3 1994/09/05 21:22:43 celes Exp celes $";
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "opcode.h"
@@ -25,7 +26,7 @@ int lua_debugline;
 #ifndef MAXFUNCSTACK
 #define MAXFUNCSTACK 64
 #endif
-static struct { int file; int function; } funcstack[MAXFUNCSTACK];
+static struct { char *file; int function; } funcstack[MAXFUNCSTACK];
 static int nfuncstack=0;
 
 static FILE *fp;
@@ -123,15 +124,15 @@ void lua_error (char *s)
 ** Called to execute  SETFUNCTION opcode, this function pushs a function into
 ** function stack. Return 0 on success or 1 on error.
 */
-int lua_pushfunction (int file, int function)
+int lua_pushfunction (char *file, int function)
 {
  if (nfuncstack >= MAXFUNCSTACK-1)
  {
   lua_error ("function stack overflow");
   return 1;
  }
- funcstack[nfuncstack].file = file;
  funcstack[nfuncstack].function = function;
+ funcstack[nfuncstack].file = file;
  nfuncstack++;
  return 0;
 }
@@ -160,12 +161,12 @@ void lua_reportbug (char *s)
    sprintf (strchr(msg,0), 
          "\n\tin statement begining at line %d in function \"%s\" of file \"%s\"",
          lua_debugline, lua_varname(funcstack[nfuncstack-1].function),
-  	 lua_file[funcstack[nfuncstack-1].file]);
+  	 funcstack[nfuncstack-1].file);
    sprintf (strchr(msg,0), "\n\tactive stack\n");
    for (i=nfuncstack-1; i>=0; i--)
     sprintf (strchr(msg,0), "\t-> function \"%s\" of file \"%s\"\n", 
                             lua_varname(funcstack[i].function),
-			    lua_file[funcstack[i].file]);
+			    funcstack[i].file);
   }
   else
   {

@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 2.7 1994/08/05 19:31:09 celes Exp celes $";
+char *rcs_luastx = "$Id: lua.stx,v 2.8 1994/10/11 13:02:39 celes Exp celes $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -283,7 +283,7 @@ function     : FUNCTION NAME
 	        if (lua_debug)
 		{
 	         code_byte(SETFUNCTION); 
-                 code_word(lua_nfile-1);
+                 code_code((Byte *)lua_file[lua_nfile-1]);
 		 code_word($<vWord>3);
 		}
 	        lua_codeadjust (0);

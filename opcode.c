@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 2.7 1994/09/20 15:11:11 celes Exp celes $";
+char *rcs_opcode="$Id: opcode.c,v 2.8 1994/09/27 21:43:30 celes Exp celes $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -600,10 +600,11 @@ int lua_execute (Byte *pc)
    
    case SETFUNCTION:
    {
-    CodeWord file, func;
-    get_word(file,pc);
+    CodeCode file; 
+    CodeWord func;
+    get_code(file,pc);
     get_word(func,pc);
-    if (lua_pushfunction (file.w, func.w))
+    if (lua_pushfunction ((char *)file.b, func.w))
      return 1;
    }
    break;
