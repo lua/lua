@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.40 1996/09/25 21:52:00 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.41 1996/11/08 12:49:35 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -540,7 +540,7 @@ stat   : IF expr1 THEN PrepJump block PrepJump elsepart END
 	  lua_codeadjust (0);
 	}
        } 
-       | functioncall
+       | functioncall {;}
        | LOCAL localdeclist decinit
 	{ nlocalvar += $2;
 	  adjust_mult_assign($2, $3, 0);
