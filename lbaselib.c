@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.101 2002/10/25 20:05:28 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.102 2002/10/25 21:31:28 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -273,7 +273,7 @@ static int luaB_loadstring (lua_State *L) {
 
 static int writer (lua_State *L, const void* b, size_t size, void* B) {
   (void)L;
-  luaL_addlstring((luaL_Buffer*) B, b, size);
+  luaL_addlstring((luaL_Buffer*) B, (const char *)b, size);
   return 1;
 }
 
