@@ -1,6 +1,6 @@
 %{
 /*
-** $Id: lua.stx,v 1.14 1997/10/24 18:40:29 roberto Exp roberto $
+** $Id: lua.stx,v 1.15 1997/10/28 17:26:53 roberto Exp roberto $
 ** Syntax analizer and code generator
 ** See Copyright Notice in lua.h
 */
@@ -676,6 +676,8 @@ statlist : /* empty */
 sc	 : /* empty */ | ';' ;
 
 stat   : IF cond THEN block SaveWord elsepart END { codeIf($2, $5); }
+
+       | DO block END
 
        | WHILE GetPC cond DO block END
        {{
