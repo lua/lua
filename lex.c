@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.16 1995/09/15 20:48:26 roberto Exp $";
+char *rcs_lex = "$Id: lex.c,v 2.17 1995/10/03 18:06:10 roberto Exp $";
  
 
 #include <ctype.h>
@@ -185,7 +185,8 @@ int yylex (void)
 
       case '-':
         save_and_next();
-        if (current != '-') return '-';
+        if (current != '-') return '-';  /* else goes through */
+      case '#':
         do { next(); } while (current != '\n' && current != 0);
         continue;
 
