@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.12 1999/02/02 13:47:31 roberto Exp roberto $
+** $Id: lparser.c,v 1.13 1999/02/02 17:57:49 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -114,6 +114,7 @@ static void chunk (LexState *ls);
 static void constructor (LexState *ls);
 static void decinit (LexState *ls, listdesc *d);
 static void exp0 (LexState *ls, vardesc *v);
+static void Gexp (LexState *ls, vardesc *v);
 static void exp1 (LexState *ls);
 static void exp2 (LexState *ls, vardesc *v);
 static void explist (LexState *ls, listdesc *e);
@@ -162,7 +163,7 @@ static int code_oparg_at (LexState *ls, int pc, OpCode op, int arg, int delta) {
     return 2;  /* code size (opcode + 1 byte) */
   }
   else if (arg <= MAX_WORD) {
-    code[pc] = (Byte)(op+1);
+    code[pc] = (Byte)(op-1);
     code[pc+1] = (Byte)(arg>>8);
     code[pc+2] = (Byte)(arg&0xFF);
     return 3;  /* code size (opcode + 1 word) */
@@ -429,6 +430,15 @@ static void code_args (LexState *ls, int nparams, int dots) {
 }
 
 
+static void unloaddot (LexState *ls, vardesc *v) {
+  /* dotted variables <a.x> must be stored like regular indexed vars <a["x"]> */
+  if (v->k == VDOT) {
+    code_constant(ls, v->info);
+    v->k = VINDEXED;
+  }
+}
+
+
 static void lua_pushvar (LexState *ls, vardesc *var) {
   switch (var->k) {
     case VLOCAL:
@@ -452,20 +462,26 @@ static void lua_pushvar (LexState *ls, vardesc *var) {
 }
 
 
-static void storevar (LexState *ls, vardesc *var) {
+static void genstorevar (LexState *ls, vardesc *var, OpCode *codes) {
   switch (var->k) {
     case VLOCAL:
-      code_oparg(ls, SETLOCAL, var->info, -1);
+      code_oparg(ls, codes[0], var->info, -1);
       break;
     case VGLOBAL:
-      code_oparg(ls, SETGLOBAL, var->info, -1);
+      code_oparg(ls, codes[1], var->info, -1);
       break;
     case VINDEXED:
-      code_opcode(ls, SETTABLE0, -3);
+      code_opcode(ls, codes[2], -3);
       break;
     default:
       LUA_INTERNALERROR("invalid var kind to store");
   }
+}
+
+
+static void storevar (LexState *ls, vardesc *var) {
+  static OpCode codes[] = {SETLOCAL, SETGLOBAL, SETTABLE0};
+  genstorevar(ls, var, codes);
 }
 
 
@@ -932,6 +948,21 @@ static void exp0 (LexState *ls, vardesc *v) {
 }
 
 
+static void Gexp (LexState *ls, vardesc *v) {
+  /* Gexp -> exp0 | var '=' exp1 */
+  static OpCode codes[] = {SETLOCALDUP, SETGLOBALDUP, SETTABLEDUP};
+  exp0(ls, v);
+  if (ls->token == '=' && v->k != VEXP) {  /* assignment expression? */
+    next(ls);  /* skip '=' */
+    unloaddot(ls, v);
+    exp1(ls);
+    genstorevar(ls, v, codes);
+    deltastack(ls, 1);  /* DUP operations push an extra value */
+    v->k = VEXP; v->info = 0;
+  }
+}
+
+
 static void push (LexState *ls, stack_op *s, int op) {
   if (s->top == MAXOPS)
     luaX_error(ls, "expression too complex");
@@ -993,9 +1024,9 @@ static void simpleexp (LexState *ls, vardesc *v, stack_op *s) {
       ifpart(ls, 1, ls->linenumber);
       break;
 
-    case '(':  /* simpleexp -> '(' exp0 ')' */
+    case '(':  /* simpleexp -> '(' Gexp ')' */
       next(ls);
-      exp0(ls, v);
+      Gexp(ls, v);
       check(ls, ')');
       return;
 
@@ -1206,13 +1237,10 @@ static void decinit (LexState *ls, listdesc *d) {
   }
 }
 
+
 static int assignment (LexState *ls, vardesc *v, int nvars) {
   int left = 0;
-  /* dotted variables <a.x> must be stored like regular indexed vars <a["x"]> */
-  if (v->k == VDOT) {
-    code_constant(ls, v->info);
-    v->k = VINDEXED;
-  }
+  unloaddot(ls, v);
   if (ls->token == ',') {  /* assignment -> ',' NAME assignment */
     vardesc nv;
     next(ls);

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.41 1999/01/25 17:39:28 roberto Exp roberto $
+** $Id: lvm.c,v 1.42 1999/02/02 17:57:49 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -330,10 +330,22 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
     register int aux = 0;
     switch ((OpCode)*pc++) {
 
+      case ENDCODE: aux = 1;
+        S->top = S->stack + base;
+        /* goes through */
+      case RETCODE:
+        if (lua_callhook)
+          luaD_callHook(base, NULL, 1);
+        return base + (aux ? 0 : *pc);
+
       case PUSHNIL: aux = *pc++;
         do {
           ttype(S->top++) = LUA_T_NIL;
         } while (aux--);
+        break;
+
+      case POP: aux = *pc++;
+        S->top -= (aux+1);
         break;
 
       case PUSHNUMBERW: aux = highbyte(*pc++);
@@ -341,6 +353,15 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         ttype(S->top) = LUA_T_NUMBER;
         nvalue(S->top) = aux-NUMOFFSET;
         S->top++;
+        break;
+
+      case PUSHCONSTANTW: aux = highbyte(*pc++);
+      case PUSHCONSTANT:  aux += *pc++;
+        *S->top++ = consts[aux];
+        break;
+
+      case PUSHUPVALUE: aux = *pc++;
+        *S->top++ = cl->consts[aux+1];
         break;
 
       case PUSHLOCAL: aux = *pc++;
@@ -371,17 +392,20 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         break;
       }
 
-      case PUSHCONSTANTW: aux = highbyte(*pc++);
-      case PUSHCONSTANT:  aux += *pc++;
-        *S->top++ = consts[aux];
-        break;
-
-      case PUSHUPVALUE: aux = *pc++;
-        *S->top++ = cl->consts[aux+1];
+      case CREATEARRAYW: aux = highbyte(*pc++);
+      case CREATEARRAY:  aux += *pc++;
+        luaC_checkGC();
+        avalue(S->top) = luaH_new(aux);
+        ttype(S->top) = LUA_T_ARRAY;
+        S->top++;
         break;
 
       case SETLOCAL: aux = *pc++;
         *((S->stack+base) + aux) = *(--S->top);
+        break;
+
+      case SETLOCALDUP: aux = *pc++;
+        *((S->stack+base) + aux) = *(S->top-1);
         break;
 
       case SETGLOBALW: aux = highbyte(*pc++);
@@ -389,9 +413,23 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         luaV_setglobal(tsvalue(&consts[aux]));
         break;
 
+      case SETGLOBALDUPW: aux = highbyte(*pc++);
+      case SETGLOBALDUP:  aux += *pc++;
+        *S->top = *(S->top-1);
+        S->top++;
+        luaV_setglobal(tsvalue(&consts[aux]));
+        break;
+
       case SETTABLE0:
        luaV_settable(S->top-3, 0);
        break;
+
+      case SETTABLEDUP: {
+       TObject temp = *(S->top-1);
+       luaV_settable(S->top-3, 0);
+       *(S->top++) = temp;
+       break;
+     }
 
       case SETTABLE:
         luaV_settable(S->top-3-(*pc++), 1);
@@ -415,18 +453,6 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         } while (aux--);
         break;
       }
-
-      case POP: aux = *pc++;
-        S->top -= (aux+1);
-        break;
-
-      case CREATEARRAYW: aux = highbyte(*pc++);
-      case CREATEARRAY:  aux += *pc++;
-        luaC_checkGC();
-        avalue(S->top) = luaH_new(aux);
-        ttype(S->top) = LUA_T_ARRAY;
-        S->top++;
-        break;
 
       case NEQOP: aux = 1;
       case EQOP: {
@@ -579,14 +605,6 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         break;
       }
 
-      case ENDCODE: aux = 1;
-        S->top = S->stack + base;
-        /* goes through */
-      case RETCODE:
-        if (lua_callhook)
-          luaD_callHook(base, NULL, 1);
-        return base + (aux ? 0 : *pc);
-
       case SETLINEW: aux = highbyte(*pc++);
       case SETLINE:  aux += *pc++;
         if ((S->stack+base-1)->ttype != LUA_T_LINE) {
@@ -600,10 +618,6 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
           luaD_lineHook(aux);
         break;
 
-#ifdef DEBUG
-      default:
-        LUA_INTERNALERROR("opcode doesn't match");
-#endif
     }
   }
 }

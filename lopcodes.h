@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.18 1998/06/25 14:37:00 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.19 1999/02/02 17:57:49 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -12,7 +12,7 @@
 
 /*
 ** NOTICE: variants of the same opcode must be consecutive: First, those
-** with byte parameter, then with word parameter.
+** with word parameter, then with byte parameter.
 */
 
 
@@ -20,49 +20,55 @@ typedef enum {
 /* name          parm    before          after           side effect
 -----------------------------------------------------------------------------*/
 ENDCODE,/*	-	-		-  */
+RETCODE,/*	b	-		-  */
 
 PUSHNIL,/*	b	-		nil_0...nil_b  */
+POP,/*		b	-		-		TOP-=(b+1)  */
 
-PUSHNUMBER,/*	b	-		(float)(b-NUMOFFSET)  */
 PUSHNUMBERW,/*	w	-		(float)(w-NUMOFFSET)  */
+PUSHNUMBER,/*	b	-		(float)(b-NUMOFFSET)  */
 
-PUSHCONSTANT,/*	b	-		CNST[b] */
 PUSHCONSTANTW,/*w	-		CNST[w] */
+PUSHCONSTANT,/*	b	-		CNST[b] */
 
 PUSHUPVALUE,/*	b	-		Closure[b] */
 
 PUSHLOCAL,/*	b	-		LOC[b]  */
 
-GETGLOBAL,/*	b 	-		VAR[CNST[b]]  */
 GETGLOBALW,/*	w	-		VAR[CNST[w]]  */
+GETGLOBAL,/*	b 	-		VAR[CNST[b]]  */
 
 GETTABLE,/*	-	i t		t[i]  */
 
-GETDOTTED,/*	b	t		t[CNST[b]]  */
 GETDOTTEDW,/*	w	t		t[CNST[w]]  */
+GETDOTTED,/*	b	t		t[CNST[b]]  */
 
-PUSHSELF,/*	b	t		t t[CNST[b]]  */
 PUSHSELFW,/*	w	t		t t[CNST[w]]  */
+PUSHSELF,/*	b	t		t t[CNST[b]]  */
 
-CREATEARRAY,/*	b	-		newarray(size = b)  */
 CREATEARRAYW,/*	w	-		newarray(size = w)  */
+CREATEARRAY,/*	b	-		newarray(size = b)  */
 
 SETLOCAL,/*	b	x		-		LOC[b]=x  */
+SETLOCALDUP,/*	b	x		x		LOC[b]=x  */
 
-SETGLOBAL,/*	b	x		-		VAR[CNST[b]]=x  */
 SETGLOBALW,/*	w	x		-		VAR[CNST[w]]=x  */
+SETGLOBAL,/*	b	x		-		VAR[CNST[b]]=x  */
+SETGLOBALDUPW,/*w	x		x		VAR[CNST[w]]=x  */
+SETGLOBALDUP,/*	b	x		x		VAR[CNST[b]]=x  */
 
 SETTABLE0,/*	-	v i t		-		t[i]=v  */
+SETTABLEDUP,/*	-	v i t		v		t[i]=v  */
 
 SETTABLE,/*	b	v a_b...a_1 i t	a_b...a_1 i t	t[i]=v  */
 
-SETLIST,/*	b c	v_c...v_1 t	-		t[i+b*FPF]=v_i  */
 SETLISTW,/*	w c	v_c...v_1 t	-		t[i+w*FPF]=v_i  */
+SETLIST,/*	b c	v_c...v_1 t	-		t[i+b*FPF]=v_i  */
 
 SETMAP,/*	b	v_b k_b ...v_0 k_0 t	t	t[k_i]=v_i  */
 
-EQOP,/*		-	y x		(x==y)? 1 : nil  */
 NEQOP,/*	-	y x		(x~=y)? 1 : nil  */
+EQOP,/*		-	y x		(x==y)? 1 : nil  */
 LTOP,/*		-	y x		(x<y)? 1 : nil  */
 LEOP,/*		-	y x		(x<y)? 1 : nil  */
 GTOP,/*		-	y x		(x>y)? 1 : nil  */
@@ -76,29 +82,25 @@ CONCOP,/*	-	y x		x..y  */
 MINUSOP,/*	-	x		-x  */
 NOTOP,/*	-	x		(x==nil)? 1 : nil  */
 
-ONTJMP,/*	b	x		(x!=nil)? x : -	(x!=nil)? PC+=b  */
 ONTJMPW,/*	w	x		(x!=nil)? x : -	(x!=nil)? PC+=w  */
-ONFJMP,/*	b	x		(x==nil)? x : -	(x==nil)? PC+=b  */
+ONTJMP,/*	b	x		(x!=nil)? x : -	(x!=nil)? PC+=b  */
 ONFJMPW,/*	w	x		(x==nil)? x : -	(x==nil)? PC+=w  */
-JMP,/*		b	-		-		PC+=b  */
+ONFJMP,/*	b	x		(x==nil)? x : -	(x==nil)? PC+=b  */
 JMPW,/*		w	-		-		PC+=w  */
-IFFJMP,/*	b	x		-		(x==nil)? PC+=b  */
+JMP,/*		b	-		-		PC+=b  */
 IFFJMPW,/*	w	x		-		(x==nil)? PC+=w  */
-IFTUPJMP,/*	b	x		-		(x!=nil)? PC-=b  */
+IFFJMP,/*	b	x		-		(x==nil)? PC+=b  */
 IFTUPJMPW,/*	w	x		-		(x!=nil)? PC-=w  */
-IFFUPJMP,/*	b	x		-		(x==nil)? PC-=b  */
+IFTUPJMP,/*	b	x		-		(x!=nil)? PC-=b  */
 IFFUPJMPW,/*	w	x		-		(x==nil)? PC-=w  */
+IFFUPJMP,/*	b	x		-		(x==nil)? PC-=b  */
 
 CLOSURE,/*	b c	v_c...v_1	closure(CNST[b], v_c...v_1) */
 
 CALLFUNC,/*	b c	v_c...v_1 f	r_b...r_1	f(v1,...,v_c)  */
 
-RETCODE,/*	b	-		-  */
-
-SETLINE,/*	b	-		-		LINE=b  */
 SETLINEW,/*	w	-		-		LINE=w  */
-
-POP /*		b	-		-		TOP-=(b+1)  */
+SETLINE /*	b	-		-		LINE=b  */
 
 } OpCode;
 
