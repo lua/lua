@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.265 2002/11/21 14:18:01 roberto Exp roberto $
+** $Id: lvm.c,v 1.266 2002/11/21 15:16:04 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -352,6 +352,8 @@ static void Arith (lua_State *L, StkId ra,
 #define runtime_check(L, c)	{ if (!(c)) return 0; }
 
 #define RA(i)	(base+GETARG_A(i))
+/* to be used after possible stack reallocation */
+#define XRA(i)	(L->base+GETARG_A(i))
 #define RB(i)	(base+GETARG_B(i))
 #define RKB(i)	((GETARG_B(i) < MAXSTACK) ? RB(i) : k+GETARG_B(i)-MAXSTACK)
 #define RC(i)	(base+GETARG_C(i))
@@ -363,12 +365,10 @@ static void Arith (lua_State *L, StkId ra,
 
 
 StkId luaV_execute (lua_State *L) {
-  StkId base;
   LClosure *cl;
   TObject *k;
   const Instruction *pc;
  callentry:  /* entry point when calling new functions */
-  L->ci->u.l.pb = &base;
   L->ci->u.l.pc = &pc;
   if (L->hookmask & LUA_MASKCALL)
     luaD_callhook(L, LUA_HOOKCALL, -1);
@@ -377,13 +377,12 @@ StkId luaV_execute (lua_State *L) {
              L->ci->state == (CI_SAVEDPC | CI_CALLING));
   L->ci->state = CI_HASFRAME;  /* activate frame */
   pc = L->ci->u.l.savedpc;
-  base = L->base;
-  cl = &clvalue(base - 1)->l;
+  cl = &clvalue(L->base - 1)->l;
   k = cl->p->k;
   /* main loop of interpreter */
   for (;;) {
     const Instruction i = *pc++;
-    StkId ra;
+    StkId base, ra;
     if (L->hookmask >= LUA_MASKLINE &&
         (--L->hookcount == 0 || L->hookmask & LUA_MASKLINE)) {
       traceexec(L);
@@ -394,9 +393,10 @@ StkId luaV_execute (lua_State *L) {
       }
     }
     /* warning!! several calls may realloc the stack and invalidate `ra' */
+    base = L->base;
     ra = RA(i);
     lua_assert(L->ci->state & CI_HASFRAME);
-    lua_assert(base == L->base && base == L->ci->base);
+    lua_assert(base == L->ci->base);
     lua_assert(L->top <= L->stack + L->stacksize && L->top >= base);
     lua_assert(L->top == L->ci->top ||
          GET_OPCODE(i) == OP_CALL ||   GET_OPCODE(i) == OP_TAILCALL ||
@@ -434,7 +434,7 @@ StkId luaV_execute (lua_State *L) {
         v = luaH_getstr(hvalue(&cl->g), tsvalue(rb));
         if (!ttisnil(v)) { setobj2s(ra, v); }
         else
-          setobj2s(RA(i), luaV_index(L, &cl->g, rb, 0));
+          setobj2s(XRA(i), luaV_index(L, &cl->g, rb, 0));
         break;
       }
       case OP_GETTABLE: {
@@ -444,10 +444,10 @@ StkId luaV_execute (lua_State *L) {
           const TObject *v = luaH_get(hvalue(rb), rc);
           if (!ttisnil(v)) { setobj2s(ra, v); }
           else
-            setobj2s(RA(i), luaV_index(L, rb, rc, 0));
+            setobj2s(XRA(i), luaV_index(L, rb, rc, 0));
         }
         else
-          setobj2s(RA(i), luaV_getnotable(L, rb, rc, 0));
+          setobj2s(XRA(i), luaV_getnotable(L, rb, rc, 0));
         break;
       }
       case OP_SETGLOBAL: {
@@ -480,10 +480,10 @@ StkId luaV_execute (lua_State *L) {
           const TObject *v = luaH_getstr(hvalue(rb), tsvalue(rc));
           if (!ttisnil(v)) { setobj2s(ra, v); }
           else
-            setobj2s(RA(i), luaV_index(L, rb, rc, 0));
+            setobj2s(XRA(i), luaV_index(L, rb, rc, 0));
         }
         else
-          setobj2s(RA(i), luaV_getnotable(L, rb, rc, 0));
+          setobj2s(XRA(i), luaV_getnotable(L, rb, rc, 0));
         break;
       }
       case OP_ADD: {
@@ -552,7 +552,7 @@ StkId luaV_execute (lua_State *L) {
         int b = GETARG_B(i);
         int c = GETARG_C(i);
         luaV_concat(L, c-b+1, c);  /* may change `base' (and `ra') */
-        setobjs2s(RA(i), base+b);
+        setobjs2s(XRA(i), base+b);
         luaC_checkGC(L);
         break;
       }
@@ -610,10 +610,11 @@ StkId luaV_execute (lua_State *L) {
           }
           else {  /* tail call: put new frame in place of previous one */
             int aux;
-            StkId ra1 = RA(i);  /* `luaD_precall' may change the stack */
+            base = (L->ci - 1)->base;  /* `luaD_precall' may change the stack */
+            ra = RA(i);
             if (L->openupval) luaF_close(L, base);
-            for (aux = 0; ra1+aux < L->top; aux++)  /* move frame down */
-              setobjs2s(base+aux-1, ra1+aux);
+            for (aux = 0; ra+aux < L->top; aux++)  /* move frame down */
+              setobjs2s(base+aux-1, ra+aux);
             (L->ci - 1)->top = L->top = base+aux;  /* correct top */
             lua_assert(L->ci->state & CI_SAVEDPC);
             (L->ci - 1)->u.l.savedpc = L->ci->u.l.savedpc;
@@ -673,7 +674,7 @@ StkId luaV_execute (lua_State *L) {
         L->top = ra+5;
         luaD_call(L, ra+2, GETARG_C(i) + 1);
         L->top = L->ci->top;
-        if (ttisnil(RA(i)+2)) pc++;  /* skip jump (break loop) */
+        if (ttisnil(XRA(i)+2)) pc++;  /* skip jump (break loop) */
         else dojump(pc, GETARG_sBx(*pc) + 1);  /* else jump back */
         break;
       }

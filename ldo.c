@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.204 2002/11/18 18:45:38 roberto Exp roberto $
+** $Id: ldo.c,v 1.205 2002/11/21 15:16:04 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -107,13 +107,8 @@ static void correctstack (lua_State *L, TObject *oldstack) {
   for (up = L->openupval; up != NULL; up = up->gch.next)
     gcotouv(up)->v = (gcotouv(up)->v - oldstack) + L->stack;
   for (ci = L->base_ci; ci <= L->ci; ci++) {
-    StkId newbase = (ci->base - oldstack) + L->stack;
     ci->top = (ci->top - oldstack) + L->stack;
-    if (ci->state & CI_HASFRAME) {  /* Lua function with active frame? */
-      lua_assert(*ci->u.l.pb == ci->base);
-      *ci->u.l.pb = newbase;  /* correct frame */
-    }
-    ci->base = newbase;
+    ci->base = (ci->base - oldstack) + L->stack;
   }
   L->base = L->ci->base;
 }
