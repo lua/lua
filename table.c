@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.46 1996/02/14 13:35:51 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.47 1996/02/14 18:25:04 roberto Exp roberto $";
 
 #include "mem.h"
 #include "opcode.h"
@@ -39,19 +39,19 @@ static struct {
   char *name;
   lua_CFunction func;
 } int_funcs[] = {
-  {"nextvar", lua_nextvar},
-  {"error", luaI_error},
-  {"tonumber", lua_obj2number},
-  {"setfallback", luaI_setfallback},
-  {"next", lua_next},
+  {"assert", luaI_assert},
   {"dofile", lua_internaldofile},
-  {"setglobal", luaI_setglobal},
-  {"getglobal", luaI_getglobal},
-  {"type", luaI_type},
-  {"tostring", luaI_tostring},
-  {"print", luaI_print},
   {"dostring", lua_internaldostring},
-  {"assert", luaI_assert}
+  {"error", luaI_error},
+  {"getglobal", luaI_getglobal},
+  {"next", lua_next},
+  {"nextvar", lua_nextvar},
+  {"print", luaI_print},
+  {"setfallback", luaI_setfallback},
+  {"setglobal", luaI_setglobal},
+  {"tonumber", lua_obj2number},
+  {"tostring", luaI_tostring},
+  {"type", luaI_type}
 };
 
 #define INTFUNCSIZE (sizeof(int_funcs)/sizeof(int_funcs[0]))
@@ -100,8 +100,6 @@ Word luaI_findsymbol (TaggedString *t)
   lua_table[lua_ntable].varname = t;
   s_tag(lua_ntable) = LUA_T_NIL;
   lua_ntable++;
-  if (!t->marked)
-    t->marked = 2;  /* avoid GC */
  }
  return t->varindex;
 }
@@ -109,7 +107,7 @@ Word luaI_findsymbol (TaggedString *t)
 
 Word luaI_findsymbolbyname (char *name)
 {
-  return luaI_findsymbol(lua_createstring(name));
+  return luaI_findsymbol(luaI_createfixedstring(name));
 }
 
 
@@ -133,8 +131,6 @@ Word luaI_findconstant (TaggedString *t)
   t->constindex = lua_nconstant;
   lua_constant[lua_nconstant] = t;
   lua_nconstant++;
-  if (!t->marked)
-    t->marked = 2;  /* avoid GC */
  }
  return t->constindex;
 }
@@ -142,13 +138,15 @@ Word luaI_findconstant (TaggedString *t)
 
 Word  luaI_findconstantbyname (char *name)
 {
-  return luaI_findconstant(lua_createstring(name));
+  return luaI_findconstant(luaI_createfixedstring(name));
 }
 
-TaggedString *lua_constcreate(char *name)
+TaggedString *luaI_createfixedstring (char *name)
 {
-  int i = luaI_findconstantbyname(name);
-  return lua_constant[i];
+  TaggedString *ts = lua_createstring(name);
+  if (!ts->marked)
+    ts->marked = 2;  /* avoid GC */
+  return ts;
 }
 
 

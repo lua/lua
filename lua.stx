@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.32 1996/02/14 18:25:04 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.33 1996/02/26 17:07:20 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -487,7 +487,7 @@ funcname	: var { $$ =$1; init_func(); }
 	  code_word(luaI_findconstant($3));
 	  $$ = 0;  /* indexed variable */
 	  init_func();
-	  add_localvar(lua_constcreate("self"));
+	  add_localvar(luaI_createfixedstring("self"));
 	}
 		;
 
