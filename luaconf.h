@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.35 2005/03/09 16:28:07 roberto Exp roberto $
+** $Id: luaconf.h,v 1.36 2005/03/18 18:02:04 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -233,9 +233,9 @@
 *@ LUAI_MAXCALLS limits the number of nested calls.
 ** CHANGE it if you need really deep recursive calls. This limit is
 ** arbitrary; its only purpose is to stop infinite recursion before
-** exhausting memory. (This value must fit in an unsigned short.)
+** exhausting memory.
 */
-#define LUAI_MAXCALLS	40000
+#define LUAI_MAXCALLS	20000
 
 
 /*
@@ -510,7 +510,7 @@ __inline int l_lrint (double flt)
 
 
 /*
-*@ LUA_EXTRASPACE allows you to add user-specific data in a lua_State
+*@ LUAI_EXTRASPACE allows you to add user-specific data in a lua_State
 ** (the data goes just *before* the lua_State pointer).
 ** CHANGE (define) this if you really need that. This value must be
 ** a multiple of the maximum alignment required for your machine.
@@ -519,8 +519,8 @@ __inline int l_lrint (double flt)
 
 
 /*
-*@ lua_userstateopen allows user-specific initialization on new threads.
-** CHANGE it if you defined LUA_EXTRASPACE and need to initialize that
+*@ luai_userstateopen allows user-specific initialization on new threads.
+** CHANGE it if you defined LUAI_EXTRASPACE and need to initialize that
 ** data whenever a new lua_State is created.
 */
 #define luai_userstateopen(L)	((void)0)

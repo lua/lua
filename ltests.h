@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.10 2004/09/10 17:30:46 roberto Exp roberto $
+** $Id: ltests.h,v 2.11 2005/01/10 16:31:30 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -51,14 +51,15 @@ int lua_checkmemory (lua_State *L);
 
 
 /* test for lock/unlock */
-#undef lua_userstateopen
+#undef luai_userstateopen
 #undef lua_lock
 #undef lua_unlock
+#undef LUAI_EXTRASPACE
 
 extern int islocked;
-#define LUA_USERSTATE	int *
-#define getlock(l)	(*(cast(LUA_USERSTATE *, l) - 1))
-#define lua_userstateopen(l)	getlock(l) = &islocked;
+#define LUAI_EXTRASPACE		sizeof(double)
+#define getlock(l)	(*(cast(int **, l) - 1))
+#define luai_userstateopen(l)	getlock(l) = &islocked;
 #define lua_lock(l)     lua_assert((*getlock(l))++ == 0)
 #define lua_unlock(l)   lua_assert(--(*getlock(l)) == 0)
 

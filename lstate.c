@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.25 2005/02/23 17:30:22 roberto Exp roberto $
+** $Id: lstate.c,v 2.26 2005/03/18 18:02:04 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -179,7 +179,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
     L = NULL;
   }
   else
-    lua_userstateopen(L);
+    luai_userstateopen(L);
   return L;
 }
 
