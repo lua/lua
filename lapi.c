@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.178 2002/03/18 20:11:52 roberto Exp roberto $
+** $Id: lapi.c,v 1.179 2002/03/20 12:51:29 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -85,7 +85,7 @@ void luaA_pushobject (lua_State *L, const TObject *o) {
 LUA_API int lua_checkstack (lua_State *L, int size) {
   int res;
   lua_lock(L);
-  if ((L->top - L->stack) >= LUA_MAXSTACK - size)
+  if ((L->top - L->ci->base + size) > LUA_MAXCSTACK)
     res = 0;  /* stack overflow */
   else {
     luaD_checkstack(L, size);
