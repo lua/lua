@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.54 2004/07/09 15:47:48 roberto Exp roberto $
+** $Id: liolib.c,v 2.55 2004/07/09 16:01:38 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -41,6 +41,12 @@ static int pushresult (lua_State *L, int i, const char *filename) {
     lua_pushinteger(L, errno);
     return 3;
   }
+}
+
+
+static void fileerror (lua_State *L, int arg, const char *filename) {
+  lua_pushfstring(L, "%s: %s", filename, strerror(errno));
+  luaL_argerror(L, arg, lua_tostring(L, -1));
 }
 
 
@@ -156,10 +162,8 @@ static int g_iofile (lua_State *L, int f, const char *mode) {
     if (filename) {
       FILE **pf = newfile(L);
       *pf = fopen(filename, mode);
-      if (*pf == NULL) {
-        lua_pushfstring(L, "%s: %s", filename, strerror(errno));
-        luaL_argerror(L, 1, lua_tostring(L, -1));
-      }
+      if (*pf == NULL)
+        fileerror(L, 1, filename);
     }
     else {
       tofile(L);  /* check that it's a valid file handle */
@@ -212,7 +216,8 @@ static int io_lines (lua_State *L) {
     const char *filename = luaL_checkstring(L, 1);
     FILE **pf = newfile(L);
     *pf = fopen(filename, "r");
-    luaL_argcheck(L, *pf, 1,  strerror(errno));
+    if (*pf == NULL)
+      fileerror(L, 1, filename);
     aux_lines(L, lua_gettop(L), 1);
     return 1;
   }
