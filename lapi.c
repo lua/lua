@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.219 2002/11/14 11:51:50 roberto Exp roberto $
+** $Id: lapi.c,v 1.220 2002/11/14 16:15:53 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -131,6 +131,7 @@ LUA_API lua_CFunction lua_atpanic (lua_State *L, lua_CFunction panicf) {
 LUA_API lua_State *lua_newthread (lua_State *L) {
   lua_State *L1;
   lua_lock(L);
+  luaC_checkGC(L);
   L1 = luaE_newthread(L);
   setthvalue(L->top, L1);
   api_incr_top(L);
@@ -309,6 +310,7 @@ LUA_API const char *lua_tostring (lua_State *L, int index) {
     const char *s;
     lua_lock(L);  /* `luaV_tostring' may create a new string */
     s = (luaV_tostring(L, o) ? svalue(o) : NULL);
+    luaC_checkGC(L);
     lua_unlock(L);
     return s;
   }
@@ -394,6 +396,7 @@ LUA_API void lua_pushnumber (lua_State *L, lua_Number n) {
 
 LUA_API void lua_pushlstring (lua_State *L, const char *s, size_t len) {
   lua_lock(L);
+  luaC_checkGC(L);
   setsvalue2s(L->top, luaS_newlstr(L, s, len));
   api_incr_top(L);
   lua_unlock(L);
@@ -412,6 +415,7 @@ LUA_API const char *lua_pushvfstring (lua_State *L, const char *fmt,
                                       va_list argp) {
   const char *ret;
   lua_lock(L);
+  luaC_checkGC(L);
   ret = luaO_pushvfstring(L, fmt, argp);
   lua_unlock(L);
   return ret;
@@ -422,6 +426,7 @@ LUA_API const char *lua_pushfstring (lua_State *L, const char *fmt, ...) {
   const char *ret;
   va_list argp;
   lua_lock(L);
+  luaC_checkGC(L);
   va_start(argp, fmt);
   ret = luaO_pushvfstring(L, fmt, argp);
   va_end(argp);
@@ -433,6 +438,7 @@ LUA_API const char *lua_pushfstring (lua_State *L, const char *fmt, ...) {
 LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   Closure *cl;
   lua_lock(L);
+  luaC_checkGC(L);
   api_checknelems(L, n);
   cl = luaF_newCclosure(L, n);
   cl->c.f = fn;
@@ -499,6 +505,7 @@ LUA_API void lua_rawgeti (lua_State *L, int index, int n) {
 
 LUA_API void lua_newtable (lua_State *L) {
   lua_lock(L);
+  luaC_checkGC(L);
   sethvalue(L->top, luaH_new(L, 0, 0));
   api_incr_top(L);
   lua_unlock(L);
@@ -753,11 +760,11 @@ LUA_API int lua_next (lua_State *L, int index) {
 
 LUA_API void lua_concat (lua_State *L, int n) {
   lua_lock(L);
+  luaC_checkGC(L);
   api_checknelems(L, n);
   if (n >= 2) {
     luaV_concat(L, n, L->top - L->ci->base - 1);
     L->top -= (n-1);
-    luaC_checkGC(L);
   }
   else if (n == 0) {  /* push empty string */
     setsvalue2s(L->top, luaS_newlstr(L, NULL, 0));
@@ -771,6 +778,7 @@ LUA_API void lua_concat (lua_State *L, int n) {
 LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
   Udata *u;
   lua_lock(L);
+  luaC_checkGC(L);
   u = luaS_newudata(L, size);
   setuvalue(L->top, u);
   api_incr_top(L);
