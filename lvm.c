@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.288 2003/07/07 13:37:56 roberto Exp roberto $
+** $Id: lvm.c,v 1.289 2003/07/16 20:49:02 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -88,13 +88,17 @@ static void traceexec (lua_State *L, const Instruction *pc) {
 }
 
 
-static void callTMres (lua_State *L, const TObject *f,
-                       const TObject *p1, const TObject *p2, StkId res) {
-  ptrdiff_t result = savestack(L, res);
+static void prepTMcall (lua_State *L, const TObject *f,
+                        const TObject *p1, const TObject *p2) {
   setobj2s(L->top, f);  /* push function */
   setobj2s(L->top+1, p1);  /* 1st argument */
   setobj2s(L->top+2, p2);  /* 2nd argument */
-  luaD_checkstack(L, 3);  /* cannot check before (could invalidate p1, p2) */
+}
+
+
+static void callTMres (lua_State *L, StkId res) {
+  ptrdiff_t result = savestack(L, res);
+  luaD_checkstack(L, 3);
   L->top += 3;
   luaD_call(L, L->top - 3, 1);
   res = restorestack(L, result);
@@ -104,13 +108,8 @@ static void callTMres (lua_State *L, const TObject *f,
 
 
 
-static void callTM (lua_State *L, const TObject *f,
-                    const TObject *p1, const TObject *p2, const TObject *p3) {
-  setobj2s(L->top, f);  /* push function */
-  setobj2s(L->top+1, p1);  /* 1st argument */
-  setobj2s(L->top+2, p2);  /* 2nd argument */
-  setobj2s(L->top+3, p3);  /* 3th argument */
-  luaD_checkstack(L, 4);  /* cannot check before (could invalidate p1...p3) */
+static void callTM (lua_State *L) {
+  luaD_checkstack(L, 4);
   L->top += 4;
   luaD_call(L, L->top - 4, 0);
 }
@@ -133,7 +132,8 @@ void luaV_gettable (lua_State *L, const TObject *t, TObject *key, StkId val) {
     else if (ttisnil(tm = luaT_gettmbyobj(L, t, TM_INDEX)))
       luaG_typeerror(L, t, "index");
     if (ttisfunction(tm)) {
-      callTMres(L, tm, t, key, val);
+      prepTMcall(L, tm, t, key);
+      callTMres(L, val);
       return;
     }
     t = tm;  /* else repeat with `tm' */ 
@@ -159,7 +159,9 @@ void luaV_settable (lua_State *L, const TObject *t, TObject *key, StkId val) {
     else if (ttisnil(tm = luaT_gettmbyobj(L, t, TM_NEWINDEX)))
       luaG_typeerror(L, t, "index");
     if (ttisfunction(tm)) {
-      callTM(L, tm, t, key, val);
+      prepTMcall(L, tm, t, key);
+      setobj2s(L->top+3, val);  /* 3th argument */
+      callTM(L);
       return;
     }
     t = tm;  /* else repeat with `tm' */ 
@@ -174,7 +176,8 @@ static int call_binTM (lua_State *L, const TObject *p1, const TObject *p2,
   if (ttisnil(tm))
     tm = luaT_gettmbyobj(L, p2, event);  /* try second operand */
   if (!ttisfunction(tm)) return 0;
-  callTMres(L, tm, p1, p2, res);
+  prepTMcall(L, tm, p1, p2);
+  callTMres(L, res);
   return 1;
 }
 
@@ -201,7 +204,8 @@ static int call_orderTM (lua_State *L, const TObject *p1, const TObject *p2,
   tm2 = luaT_gettmbyobj(L, p2, event);
   if (!luaO_rawequalObj(tm1, tm2))  /* different metamethods? */
     return -1;
-  callTMres(L, tm1, p1, p2, L->top);
+  prepTMcall(L, tm1, p1, p2);
+  callTMres(L, L->top);
   return !l_isfalse(L->top);
 }
 
@@ -280,7 +284,8 @@ int luaV_equalval (lua_State *L, const TObject *t1, const TObject *t2) {
     default: return gcvalue(t1) == gcvalue(t2);
   }
   if (tm == NULL) return 0;  /* no TM? */
-  callTMres(L, tm, t1, t2, L->top);  /* call TM */
+  prepTMcall(L, tm, t1, t2);
+  callTMres(L, L->top);  /* call TM */
   return !l_isfalse(L->top);
 }
 
@@ -334,7 +339,8 @@ static StkId Arith (lua_State *L, StkId ra, const TObject *rb,
         const TObject *f = luaH_getstr(hvalue(gt(L)), G(L)->tmname[TM_POW]);
         if (!ttisfunction(f))
           luaG_runerror(L, "`__pow' (`^' operator) is not a function");
-        callTMres(L, f, b, c, ra);
+        prepTMcall(L, f, b, c);
+        callTMres(L, ra);
         break;
       }
       default: lua_assert(0); break;
