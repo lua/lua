@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.23 1996/11/12 16:00:16 roberto Exp $
+% $Id: manual.tex,v 1.24 1996/11/14 17:45:37 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -35,7 +35,7 @@ Waldemar Celes
 \tecgraf\ --- Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1996/11/12 16:00:16 $}
+\date{\small \verb$Date: 1996/11/14 17:45:37 $}
 
 \maketitle
 
@@ -1987,6 +1987,8 @@ void callOldFallback (lua_Object table, lua_Object index)
   lua_pushobject(table);
   lua_pushobject(index);
   lua_callfunction(oldIndex);
+  if (lua_getresult(1) != LUA_NOOBJECT)
+    lua_pushobject(lua_getresult(1));  /* return result */
 }
 
 void Index (void)
