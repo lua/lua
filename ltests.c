@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.4 2000/01/13 16:30:47 roberto Exp roberto $
+** $Id: ltests.c,v 1.5 2000/01/19 12:00:45 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -182,7 +182,7 @@ static void testC (lua_State *L) {
       lua_pushobject(L, reg[getreg(L, &pc)]);
     }
     else if EQ("call") {
-      lua_call(L, getname(&pc));
+      if (lua_call(L, getname(&pc))) lua_error(L, NULL);
     }
     else if EQ("gettable") {
       reg[getreg(L, &pc)] = lua_gettable(L);
