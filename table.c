@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.41 1996/01/22 17:40:00 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.42 1996/01/23 18:39:45 roberto Exp roberto $";
 
 /*#include <string.h>*/
 
@@ -33,8 +33,6 @@ static Long lua_maxconstant = 0;
 #define MIN_GARBAGE_BLOCK (GARBAGE_BLOCK/2)
 
 static void lua_nextvar (void);
-static void setglobal (void);
-static void getglobal (void);
 
 /*
 ** Initialise symbol table with internal functions
@@ -57,9 +55,9 @@ static void lua_initsymbol (void)
  n = luaI_findsymbolbyname("dofile");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_internaldofile;
  n = luaI_findsymbolbyname("setglobal");
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = setglobal;
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_setglobal;
  n = luaI_findsymbolbyname("getglobal");
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = getglobal;
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_getglobal;
  n = luaI_findsymbolbyname("type"); 
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_type;
  n = luaI_findsymbolbyname("tostring");
@@ -243,26 +241,6 @@ static void lua_nextvar (void)
   luaI_pushobject(&name);
   luaI_pushobject(&s_object(next));
  }
-}
-
-
-static void setglobal (void)
-{
-  lua_Object name = lua_getparam(1);
-  lua_Object value = lua_getparam(2);
-  if (!lua_isstring(name))
-    lua_error("incorrect argument to function `setglobal'");
-  lua_pushobject(value);
-  lua_storeglobal(lua_getstring(name));
-}
-
-
-static void getglobal (void)
-{
-  lua_Object name = lua_getparam(1);
-  if (!lua_isstring(name))
-    lua_error("incorrect argument to function `getglobal'");
-  lua_pushobject(lua_getglobal(lua_getstring(name)));
 }
 
 
