@@ -12,6 +12,8 @@
 
 FILE *lua_infile, *lua_outfile;
 
+int lua_tagio;
+
 
 #ifdef POPEN
 FILE *popen();
@@ -56,7 +58,7 @@ static void io_readfrom (void)
   lua_Object f = lua_getparam(1);
   if (f == LUA_NOOBJECT)
     closefile(lua_infile);  /* restore standart input */
-  else if (lua_isuserdata(f))
+  else if (lua_tag(f) == lua_tagio)
     lua_infile = lua_getuserdata(f);
   else {
     char *s = luaL_check_string(1, "readfrom");
@@ -68,7 +70,7 @@ static void io_readfrom (void)
       return;
     }
   }
-  lua_pushuserdata(lua_infile);
+  lua_pushusertag(lua_infile, lua_tagio);
 }
 
 
@@ -77,7 +79,7 @@ static void io_writeto (void)
   lua_Object f = lua_getparam(1);
   if (f == LUA_NOOBJECT)
     closefile(lua_outfile);  /* restore standart output */
-  else if (lua_isuserdata(f))
+  else if (lua_tag(f) == lua_tagio)
     lua_outfile = lua_getuserdata(f);
   else {
     char *s = luaL_check_string(1, "writeto");
@@ -89,7 +91,7 @@ static void io_writeto (void)
       return;
     }
   }
-  lua_pushuserdata(lua_outfile);
+  lua_pushusertag(lua_outfile, lua_tagio);
 }
 
 
@@ -99,7 +101,7 @@ static void io_appendto (void)
   FILE *fp = fopen (s, "a");
   if (fp != NULL) {
     lua_outfile = fp;
-    lua_pushuserdata(lua_outfile);
+    lua_pushusertag(lua_outfile, lua_tagio);
   }
   else
     pushresult(0);
@@ -294,6 +296,7 @@ static struct luaL_reg iolib[] = {
 
 void iolib_open (void)
 {
+  lua_tagio = lua_newtag("userdata");
   lua_infile=stdin; lua_outfile=stdout;
   luaL_openlib(iolib, (sizeof(iolib)/sizeof(iolib[0])));
   lua_setglobalmethod("error", errorfb);
