@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 1.13 1999/12/01 19:50:08 roberto Exp roberto $
+** $Id: lvm.h,v 1.14 2000/01/19 16:50:30 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -21,11 +21,11 @@ void luaV_pack (lua_State *L, StkId firstel, int nvararg, TObject *tab);
 int luaV_tonumber (TObject *obj);
 int luaV_tostring (lua_State *L, TObject *obj);
 void luaV_setn (lua_State *L, Hash *t, int val);
-void luaV_gettable (lua_State *L);
-void luaV_settable (lua_State *L, StkId t);
+void luaV_gettable (lua_State *L, StkId top);
+void luaV_settable (lua_State *L, StkId t, StkId top);
 void luaV_rawsettable (lua_State *L, StkId t);
-void luaV_getglobal (lua_State *L, GlobalVar *gv);
-void luaV_setglobal (lua_State *L, GlobalVar *gv);
+void luaV_getglobal (lua_State *L, GlobalVar *gv, StkId top);
+void luaV_setglobal (lua_State *L, GlobalVar *gv, StkId top);
 StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf, StkId base);
 void luaV_closure (lua_State *L, int nelems);
 void luaV_comparison (lua_State *L);

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.80 2000/01/19 12:00:45 roberto Exp roberto $
+** $Id: lvm.c,v 1.81 2000/01/19 16:50:30 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -103,13 +103,15 @@ void luaV_closure (lua_State *L, int nelems) {
 ** Function to index a table.
 ** Receives the table at top-2 and the index at top-1.
 */
-void luaV_gettable (lua_State *L) {
-  TObject *table = L->top-2;
+void luaV_gettable (lua_State *L, StkId top) {
+  TObject *table = top-2;
   const TObject *im;
   if (ttype(table) != LUA_T_ARRAY) {  /* not a table, get gettable method */
     im = luaT_getimbyObj(L, table, IM_GETTABLE);
-    if (ttype(im) == LUA_T_NIL)
+    if (ttype(im) == LUA_T_NIL) {
+      L->top = top;
       luaG_indexerror(L, table);
+    }
   }
   else {  /* object is a table... */
     int tg = table->value.a->htag;
@@ -119,28 +121,29 @@ void luaV_gettable (lua_State *L) {
       if (ttype(h) == LUA_T_NIL &&
           (ttype(im=luaT_getim(L, tg, IM_INDEX)) != LUA_T_NIL)) {
         /* result is nil and there is an `index' tag method */
+        L->top = top;
         luaD_callTM(L, im, 2, 1);  /* calls it */
       }
-      else {
-        L->top--;
+      else
         *table = *h;  /* `push' result into table position */
-      }
       return;
     }
     /* else it has a `gettable' method, go through to next command */
   }
   /* object is not a table, or it has a `gettable' method */
+  L->top = top;
   luaD_callTM(L, im, 2, 1);
 }
 
 
 /*
-** Receives table at *t, index at *(t+1) and value at top.
+** Receives table at *t, index at *(t+1) and value at `top'.
 ** WARNING: caller must assure 3 extra stack slots (to call a tag method)
 */
-void luaV_settable (lua_State *L, StkId t) {
+void luaV_settable (lua_State *L, StkId t, StkId top) {
   const TObject *im;
   if (ttype(t) != LUA_T_ARRAY) {  /* not a table, get `settable' method */
+    L->top = top;
     im = luaT_getimbyObj(L, t, IM_SETTABLE);
     if (ttype(im) == LUA_T_NIL)
       luaG_indexerror(L, t);
@@ -148,20 +151,19 @@ void luaV_settable (lua_State *L, StkId t) {
   else {  /* object is a table... */
     im = luaT_getim(L, avalue(t)->htag, IM_SETTABLE);
     if (ttype(im) == LUA_T_NIL) {  /* and does not have a `settable' method */
-      luaH_set(L, avalue(t), t+1, L->top-1);
-      L->top--;  /* pop value */
+      luaH_set(L, avalue(t), t+1, top-1);
       return;
     }
     /* else it has a `settable' method, go through to next command */
   }
   /* object is not a table, or it has a `settable' method */
   /* prepare arguments and call the tag method */
-  *(L->top+2) = *(L->top-1);
-  *(L->top+1) = *(t+1);
-  *(L->top) = *t;
-  *(L->top-1) = *im;
-  L->top += 3;
-  luaD_call(L, L->top-4, 0);
+  *(top+2) = *(top-1);
+  *(top+1) = *(t+1);
+  *(top) = *t;
+  *(top-1) = *im;
+  L->top = top+3;
+  luaD_call(L, top-1, 0);
 }
 
 
@@ -178,18 +180,18 @@ void luaV_rawsettable (lua_State *L, StkId t) {
 /*
 ** WARNING: caller must assure 3 extra stack slots (to call a tag method)
 */
-void luaV_getglobal (lua_State *L, GlobalVar *gv) {
+void luaV_getglobal (lua_State *L, GlobalVar *gv, StkId top) {
   const TObject *value = &gv->value;
   TObject *im = luaT_getimbyObj(L, value, IM_GETGLOBAL);
   if (ttype(im) == LUA_T_NIL)  /* is there a tag method? */
-    *L->top++ = *value;  /* default behavior */
+    *top = *value;  /* default behavior */
   else {  /* tag method */
-    *L->top = *im;
-    ttype(L->top+1) = LUA_T_STRING;
-    tsvalue(L->top+1) = gv->name;  /* global name */
-    *(L->top+2) = *value;
-    L->top += 3;
-    luaD_call(L, L->top-3, 1);
+    *top = *im;
+    ttype(top+1) = LUA_T_STRING;
+    tsvalue(top+1) = gv->name;  /* global name */
+    *(top+2) = *value;
+    L->top = top+3;
+    luaD_call(L, top, 1);
   }
 }
 
@@ -197,19 +199,19 @@ void luaV_getglobal (lua_State *L, GlobalVar *gv) {
 /*
 ** WARNING: caller must assure 3 extra stack slots (to call a tag method)
 */
-void luaV_setglobal (lua_State *L, GlobalVar *gv) {
+void luaV_setglobal (lua_State *L, GlobalVar *gv, StkId top) {
   const TObject *oldvalue = &gv->value;
   const TObject *im = luaT_getimbyObj(L, oldvalue, IM_SETGLOBAL);
   if (ttype(im) == LUA_T_NIL)  /* is there a tag method? */
-    gv->value = *(--L->top);
+    gv->value = *(top-1);
   else {
-    *(L->top+2) = *(L->top-1);  /* new value */
-    *(L->top+1) = *oldvalue;
-    ttype(L->top) = LUA_T_STRING;
-    tsvalue(L->top) = gv->name;
-    *(L->top-1) = *im;
-    L->top += 3;
-    luaD_call(L, L->top-4, 0);
+    *(top+2) = *(top-1);  /* new value */
+    *(top+1) = *oldvalue;
+    ttype(top) = LUA_T_STRING;
+    tsvalue(top) = gv->name;
+    *(top-1) = *im;
+    L->top = top+3;
+    luaD_call(L, top-1, 0);
   }
 }
 
@@ -385,18 +387,14 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
 
       case GETGLOBALW: aux += highbyte(L, *pc++);
       case GETGLOBAL:  aux += *pc++;
-        L->top = top;
         LUA_ASSERT(L, ttype(&consts[aux]) == LUA_T_STRING, "unexpected type");
-        luaV_getglobal(L, tsvalue(&consts[aux])->u.s.gv);
+        luaV_getglobal(L, tsvalue(&consts[aux])->u.s.gv, top);
         top++;
-        LUA_ASSERT(L, top==L->top, "top's not synchronized");
         break;
 
       case GETTABLE:
-        L->top = top;
-        luaV_gettable(L);
+        luaV_gettable(L, top);
         top--;
-        LUA_ASSERT(L, top==L->top, "top's not synchronized");
         break;
 
       case GETDOTTEDW: aux += highbyte(L, *pc++);
@@ -404,10 +402,8 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
         LUA_ASSERT(L, ttype(&consts[aux]) == LUA_T_STRING, "unexpected type");
         ttype(top) = LUA_T_STRING;
         tsvalue(top++) = tsvalue(&consts[aux]);
-        L->top = top;
-        luaV_gettable(L);
+        luaV_gettable(L, top);
         top--;
-        LUA_ASSERT(L, top==L->top, "top's not synchronized");
         break;
 
       case PUSHSELFW: aux += highbyte(L, *pc++);
@@ -417,8 +413,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
         LUA_ASSERT(L, ttype(&consts[aux]) == LUA_T_STRING, "unexpected type");
         ttype(top) = LUA_T_STRING;
         tsvalue(top++) = tsvalue(&consts[aux]);
-        L->top = top;
-        luaV_gettable(L);
+        luaV_gettable(L, top);
         *(top-1) = receiver;
         break;
       }
@@ -439,23 +434,18 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
       case SETGLOBALW: aux += highbyte(L, *pc++);
       case SETGLOBAL:  aux += *pc++;
         LUA_ASSERT(L, ttype(&consts[aux]) == LUA_T_STRING, "unexpected type");
-        L->top = top;
-        luaV_setglobal(L, tsvalue(&consts[aux])->u.s.gv);
+        luaV_setglobal(L, tsvalue(&consts[aux])->u.s.gv, top);
         top--;
-        LUA_ASSERT(L, top==L->top, "top's not synchronized");
         break;
 
       case SETTABLEPOP:
-        L->top = top;
-        luaV_settable(L, top-3);
+        luaV_settable(L, top-3, top);
         top -= 3;  /* pop table, index, and value */
         break;
 
       case SETTABLE:
-        L->top = top;
-        luaV_settable(L, top-3-(*pc++));
+        luaV_settable(L, top-3-(*pc++), top);
         top--;  /* pop value */
-        LUA_ASSERT(L, top==L->top, "top's not synchronized");
         break;
 
       case SETLISTW: aux += highbyte(L, *pc++);
