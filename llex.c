@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.128 2003/10/20 12:24:34 roberto Exp roberto $
+** $Id: llex.c,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -61,14 +61,6 @@ void luaX_init (lua_State *L) {
 #define MAXSRC          80
 
 
-void luaX_checklimit (LexState *ls, int val, int limit, const char *msg) {
-  if (val > limit) {
-    msg = luaO_pushfstring(ls->L, "too many %s (limit=%d)", msg, limit);
-    luaX_syntaxerror(ls, msg);
-  }
-}
-
-
 const char *luaX_token2str (LexState *ls, int token) {
   if (token < FIRST_RESERVED) {
     lua_assert(token == (unsigned char)token);
@@ -93,11 +85,12 @@ static const char *txtToken (LexState *ls, int token) {
 }
 
 
-static void luaX_lexerror (LexState *ls, const char *msg, int token) {
+void luaX_lexerror (LexState *ls, const char *msg, int token) {
   char buff[MAXSRC];
   luaO_chunkid(buff, getstr(ls->source), MAXSRC);
-  luaO_pushfstring(ls->L, "%s:%d: %s near `%s'",
-                          buff, ls->linenumber, msg, txtToken(ls, token)); 
+  msg = luaO_pushfstring(ls->L, "%s:%d: %s", buff, ls->linenumber, msg);
+  if (token)
+    luaO_pushfstring(ls->L, "%s near `%s'", msg, txtToken(ls, token));
   luaD_throw(ls->L, LUA_ERRSYNTAX);
 }
 
@@ -123,8 +116,8 @@ static void inclinenumber (LexState *ls) {
   next(ls);  /* skip `\n' or `\r' */
   if (currIsNewline(ls) && ls->current != old)
     next(ls);  /* skip `\n\r' or `\r\n' */
-  ++ls->linenumber;
-  luaX_checklimit(ls, ls->linenumber, MAX_INT, "lines in a chunk");
+  if (++ls->linenumber >= MAX_INT)
+    luaX_syntaxerror(ls, "chunk has too many lines");
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.48 2003/08/27 21:01:44 roberto Exp roberto $
+** $Id: llex.h,v 1.49 2003/10/20 12:24:34 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -67,7 +67,7 @@ void luaX_init (lua_State *L);
 void luaX_setinput (lua_State *L, LexState *LS, ZIO *z, TString *source);
 TString *luaX_newstring (LexState *LS, const char *str, size_t l);
 int luaX_lex (LexState *LS, SemInfo *seminfo);
-void luaX_checklimit (LexState *ls, int val, int limit, const char *msg);
+void luaX_lexerror (LexState *ls, const char *msg, int token);
 void luaX_syntaxerror (LexState *ls, const char *s);
 const char *luaX_token2str (LexState *ls, int token);
 

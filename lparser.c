@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.222 2003/12/09 16:56:11 roberto Exp roberto $
+** $Id: lparser.c,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -28,9 +28,10 @@
 
 #define getlocvar(fs, i)	((fs)->f->locvars[(fs)->actvar[i]])
 
+#define luaY_checklimit(fs,v,l,m)	if ((v)>(l)) luaY_errorlimit(fs,l,m)
 
-#define enterlevel(ls)	if (++(ls)->nestlevel > LUA_MAXPARSERLEVEL) \
-		luaX_syntaxerror(ls, "too many syntax levels");
+#define enterlevel(ls) if (++(ls)->nestlevel > LUA_MAXPARSERLEVEL) \
+	luaX_lexerror(ls, "chunk has too many syntax levels", 0)
 #define leavelevel(ls)	((ls)->nestlevel--)
 
 
@@ -83,6 +84,15 @@ static void anchor_token (LexState *ls) {
 static void error_expected (LexState *ls, int token) {
   luaX_syntaxerror(ls,
          luaO_pushfstring(ls->L, "`%s' expected", luaX_token2str(ls, token)));
+}
+
+
+static void luaY_errorlimit (FuncState *fs, int limit, const char *what) {
+  const char *msg = (fs->f->lineDefined == 0) ?
+    luaO_pushfstring(fs->L, "main function has more than %d %s", limit, what) :
+    luaO_pushfstring(fs->L, "function at line %d has more than %d %s",
+                            fs->f->lineDefined, limit, what);
+  luaX_lexerror(fs->ls, msg, 0);
 }
 
 
@@ -163,7 +173,7 @@ static int luaI_registerlocalvar (LexState *ls, TString *varname) {
 
 static void new_localvar (LexState *ls, TString *name, int n) {
   FuncState *fs = ls->fs;
-  luaX_checklimit(ls, fs->nactvar+n+1, MAXVARS, "local variables");
+  luaY_checklimit(fs, fs->nactvar+n+1, MAXVARS, "local variables");
   fs->actvar[fs->nactvar+n] = cast(unsigned short,
                                    luaI_registerlocalvar(ls, name));
 }
@@ -196,7 +206,7 @@ static int indexupvalue (FuncState *fs, TString *name, expdesc *v) {
     }
   }
   /* new one */
-  luaX_checklimit(fs->ls, f->nups + 1, MAXUPVALUES, "upvalues");
+  luaY_checklimit(fs, f->nups + 1, MAXUPVALUES, "upvalues");
   luaM_growvector(fs->L, f->upvalues, f->nups, f->sizeupvalues,
                   TString *, MAX_INT, "");
   while (oldsize < f->sizeupvalues) f->upvalues[oldsize++] = NULL;
@@ -441,7 +451,7 @@ static void recfield (LexState *ls, struct ConsControl *cc) {
   int reg = ls->fs->freereg;
   expdesc key, val;
   if (ls->t.token == TK_NAME) {
-    luaX_checklimit(ls, cc->nh, MAX_INT, "items in a constructor");
+    luaY_checklimit(fs, cc->nh, MAX_INT, "items in a constructor");
     cc->nh++;
     checkname(ls, &key);
   }
@@ -485,7 +495,7 @@ static void lastlistfield (FuncState *fs, struct ConsControl *cc) {
 
 static void listfield (LexState *ls, struct ConsControl *cc) {
   expr(ls, &cc->v);
-  luaX_checklimit(ls, cc->na, MAXARG_Bx, "items in a constructor");
+  luaY_checklimit(ls->fs, cc->na, MAXARG_Bx, "items in a constructor");
   cc->na++;
   cc->tostore++;
 }
