@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.237 2002/06/12 14:51:31 roberto Exp roberto $
+** $Id: lvm.c,v 1.238 2002/06/13 13:39:55 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -118,32 +118,29 @@ static void callTM (lua_State *L, const TObject *f,
 void luaV_gettable (lua_State *L, const TObject *t, TObject *key, StkId res) {
   const TObject *tm;
   int loop = 0;
-  init:
-  if (ttype(t) == LUA_TTABLE) {  /* `t' is a table? */
-    Table *h = hvalue(t);
-    Table *et = h->metatable;
-    if ((tm = fasttm(L, et, TM_GETTABLE)) == NULL) {  /* no gettable TM? */
-      const TObject *v = luaH_get(h, key);  /* do a primitive get */
-      if (ttype(v) != LUA_TNIL ||  /* result is no nil ... */
-          (tm = fasttm(L, et, TM_INDEX)) == NULL) {  /* ... or no index TM? */
-        setobj(res, v);  /* default get */
-        return;
+  do {
+    if (ttype(t) == LUA_TTABLE) {  /* `t' is a table? */
+      Table *h = hvalue(t);
+      Table *et = h->metatable;
+      if ((tm = fasttm(L, et, TM_GETTABLE)) == NULL) {  /* no gettable TM? */
+        const TObject *v = luaH_get(h, key);  /* do a primitive get */
+        if (ttype(v) != LUA_TNIL ||  /* result is no nil ... */
+            (tm = fasttm(L, et, TM_INDEX)) == NULL) {  /* ... or no index TM? */
+          setobj(res, v);  /* default get */
+          return;
+        }
       }
+      /* else will try the tag method */
     }
-    /* else will try the tag method */
-  } else {  /* not a table; try a `gettable' tag method */
-    if (ttype(tm = luaT_gettmbyobj(L, t, TM_GETTABLE)) == LUA_TNIL) {
+    else if (ttype(tm = luaT_gettmbyobj(L, t, TM_GETTABLE)) == LUA_TNIL)
       luaG_typeerror(L, t, "index");
-      return;  /* to avoid warnings */
+    if (ttype(tm) == LUA_TFUNCTION) {
+      callTMres(L, tm, t, key, res);
+      return;
     }
-  }
-  if (ttype(tm) == LUA_TFUNCTION)
-    callTMres(L, tm, t, key, res);
-  else {
-    if (++loop == MAXTAGLOOP) luaG_runerror(L, "loop in gettable");
-    t = tm;
-    goto init;  /* return luaV_gettable(L, tm, key, res); */
-  }
+    t = tm;  /* else repeat access with `tm' */ 
+  } while (++loop <= MAXTAGLOOP);
+  luaG_runerror(L, "loop in gettable");
 }
 
 
@@ -153,32 +150,29 @@ void luaV_gettable (lua_State *L, const TObject *t, TObject *key, StkId res) {
 void luaV_settable (lua_State *L, const TObject *t, TObject *key, StkId val) {
   const TObject *tm;
   int loop = 0;
-  init:
-  if (ttype(t) == LUA_TTABLE) {  /* `t' is a table? */
-    Table *h = hvalue(t);
-    Table *et = h->metatable;
-    if ((tm = fasttm(L, et, TM_SETTABLE)) == NULL) {  /* no settable TM? */
-      TObject *oldval = luaH_set(L, h, key); /* do a primitive set */
-      if (ttype(oldval) != LUA_TNIL ||  /* result is no nil ... */
-          (tm = fasttm(L, et, TM_NEWINDEX)) == NULL) {  /* ... or no TM? */
-        setobj(oldval, val);
-        return;
+  do {
+    if (ttype(t) == LUA_TTABLE) {  /* `t' is a table? */
+      Table *h = hvalue(t);
+      Table *et = h->metatable;
+      if ((tm = fasttm(L, et, TM_SETTABLE)) == NULL) {  /* no settable TM? */
+        TObject *oldval = luaH_set(L, h, key); /* do a primitive set */
+        if (ttype(oldval) != LUA_TNIL ||  /* result is no nil ... */
+            (tm = fasttm(L, et, TM_NEWINDEX)) == NULL) {  /* ... or no TM? */
+          setobj(oldval, val);
+          return;
+        }
       }
+      /* else will try the tag method */
     }
-    /* else will try the tag method */
-  } else {  /* `t' is not a table; try a `settable' tag method */
-    if (ttype(tm = luaT_gettmbyobj(L, t, TM_SETTABLE)) == LUA_TNIL) {
+    else if (ttype(tm = luaT_gettmbyobj(L, t, TM_SETTABLE)) == LUA_TNIL)
       luaG_typeerror(L, t, "index");
-      return;  /* to avoid warnings */
+    if (ttype(tm) == LUA_TFUNCTION) {
+      callTM(L, tm, t, key, val);
+      return;
     }
-  }
-  if (ttype(tm) == LUA_TFUNCTION)
-    callTM(L, tm, t, key, val);
-  else {
-    if (++loop == MAXTAGLOOP) luaG_runerror(L, "loop in settable");
-    t = tm;
-    goto init;  /* luaV_settable(L, tm, key, val); */
-  }
+    t = tm;  /* else repeat with `tm' */ 
+  } while (++loop <= MAXTAGLOOP);
+  luaG_runerror(L, "loop in settable");
 }
 
 
