@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_luamem = "$Id: mem.c,v 1.14 1997/03/03 19:55:38 roberto Exp roberto $";
+char *rcs_luamem = "$Id: luamem.c,v 1.15 1997/03/31 14:17:09 roberto Exp roberto $";
 
 #include <stdlib.h>
 
@@ -19,7 +19,7 @@ void luaI_free (void *block)
 {
   if (block)
   {
-    *((int *)block) = -1;  /* to catch errors */
+    *((char *)block) = -1;  /* to catch errors */
     free(block);
   }
 }
