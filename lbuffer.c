@@ -1,5 +1,5 @@
 /*
-** $Id: lbuffer.c,v 1.5 1998/12/28 13:44:54 roberto Exp roberto $
+** $Id: lbuffer.c,v 1.6 1999/02/25 15:17:01 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -17,11 +17,14 @@
 -------------------------------------------------------*/
 
 
+#define EXTRABUFF	32
+
+
 #define openspace(size)  if (L->Mbuffnext+(size) > L->Mbuffsize) Openspace(size)
 
 static void Openspace (int size) {
   lua_State *l = L;  /* to optimize */
-  l->Mbuffsize = l->Mbuffnext+size;
+  l->Mbuffsize = l->Mbuffnext+size+EXTRABUFF;
   l->Mbuffer =  luaM_growvector(l->Mbuffer, l->Mbuffnext, size, char,
                                 memEM, MAX_INT);
 }
