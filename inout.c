@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.36 1996/03/19 22:28:37 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.37 1996/05/28 21:07:32 roberto Exp $";
 
 #include <stdio.h>
 
@@ -113,8 +113,6 @@ void lua_internaldostring (void)
  lua_Object obj = lua_getparam (1);
  if (lua_isstring(obj) && !lua_dostring(lua_getstring(obj)))
   lua_pushnumber(1);
- else
-  lua_pushnil();
 }
 
 /*
@@ -131,8 +129,6 @@ void lua_internaldofile (void)
  /* else fname = NULL */
  if (!lua_dofile(fname))
   lua_pushnumber(1);
- else
-  lua_pushnil();
 }
  
 
@@ -218,8 +214,6 @@ void lua_obj2number (void)
   lua_Object o = lua_getparam(1);
   if (lua_isnumber(o))
     lua_pushnumber(lua_getnumber(o));
-  else
-    lua_pushnil();
 }
 
 

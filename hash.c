@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.29 1996/02/14 18:25:04 roberto Exp roberto $";
+char *rcs_hash="$Id: hash.c,v 2.30 1996/05/06 14:30:27 roberto Exp roberto $";
 
 
 #include "mem.h"
@@ -283,17 +283,11 @@ Object *lua_hashdefine (Hash *t, Object *ref)
 static void hashnext (Hash *t, int i)
 {
  if (i >= nhash(t))
- {
-  lua_pushnil(); lua_pushnil();
   return;
- }
  while (tag(ref(node(t,i))) == LUA_T_NIL || tag(val(node(t,i))) == LUA_T_NIL)
  {
   if (++i >= nhash(t))
-  {
-   lua_pushnil(); lua_pushnil();
    return;
-  }
  }
  luaI_pushobject(ref(node(t,i)));
  luaI_pushobject(val(node(t,i)));
