@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.192 2004/06/04 15:30:53 roberto Exp roberto $
+** $Id: lua.h,v 1.193 2004/09/15 20:39:42 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -251,26 +251,26 @@ LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud);
 
 #define lua_newtable(L)		lua_createtable(L, 0, 0)
 
-#define lua_register(L,n,f) (lua_pushcfunction(L,f), lua_setglobal(L,n))
+#define lua_register(L,n,f) (lua_pushcfunction(L, (f)), lua_setglobal(L, (n)))
 
-#define lua_pushcfunction(L,f)	lua_pushcclosure(L, f, 0)
+#define lua_pushcfunction(L,f)	lua_pushcclosure(L, (f), 0)
 
-#define lua_strlen(L,i)		lua_objsize(L,i)
+#define lua_strlen(L,i)		lua_objsize(L, (i))
 
-#define lua_isfunction(L,n)	(lua_type(L,n) == LUA_TFUNCTION)
-#define lua_istable(L,n)	(lua_type(L,n) == LUA_TTABLE)
-#define lua_islightuserdata(L,n)	(lua_type(L,n) == LUA_TLIGHTUSERDATA)
-#define lua_isnil(L,n)		(lua_type(L,n) == LUA_TNIL)
-#define lua_isboolean(L,n)	(lua_type(L,n) == LUA_TBOOLEAN)
-#define lua_isthread(L,n)	(lua_type(L,n) == LUA_TTHREAD)
-#define lua_isnone(L,n)		(lua_type(L,n) == LUA_TNONE)
-#define lua_isnoneornil(L, n)	(lua_type(L,n) <= 0)
+#define lua_isfunction(L,n)	(lua_type(L, (n)) == LUA_TFUNCTION)
+#define lua_istable(L,n)	(lua_type(L, (n)) == LUA_TTABLE)
+#define lua_islightuserdata(L,n)	(lua_type(L, (n)) == LUA_TLIGHTUSERDATA)
+#define lua_isnil(L,n)		(lua_type(L, (n)) == LUA_TNIL)
+#define lua_isboolean(L,n)	(lua_type(L, (n)) == LUA_TBOOLEAN)
+#define lua_isthread(L,n)	(lua_type(L, (n)) == LUA_TTHREAD)
+#define lua_isnone(L,n)		(lua_type(L, (n)) == LUA_TNONE)
+#define lua_isnoneornil(L, n)	(lua_type(L, (n)) <= 0)
 
 #define lua_pushliteral(L, s)	\
 	lua_pushlstring(L, "" s, (sizeof(s)/sizeof(char))-1)
 
-#define lua_setglobal(L,s)	lua_setfield(L, LUA_GLOBALSINDEX, s)
-#define lua_getglobal(L,s)	lua_getfield(L, LUA_GLOBALSINDEX, s)
+#define lua_setglobal(L,s)	lua_setfield(L, LUA_GLOBALSINDEX, (s))
+#define lua_getglobal(L,s)	lua_getfield(L, LUA_GLOBALSINDEX, (s))
 
 
 

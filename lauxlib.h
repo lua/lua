@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.71 2004/09/21 16:54:32 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.72 2004/09/29 21:00:25 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -84,15 +84,15 @@ LUALIB_API const char *luaL_setfield (lua_State *L, int idx, const char *fname);
 */
 
 #define luaL_argcheck(L, cond,numarg,extramsg)	\
-		((void)((cond) || luaL_argerror(L, numarg,extramsg)))
+		((void)((cond) || luaL_argerror(L, (numarg), (extramsg))))
 #define luaL_checkstring(L,n)	(luaL_checklstring(L, (n), NULL))
 #define luaL_optstring(L,n,d)	(luaL_optlstring(L, (n), (d), NULL))
-#define luaL_checkint(L,n)	((int)luaL_checkinteger(L, n))
-#define luaL_optint(L,n,d)	((int)luaL_optinteger(L, n,d))
-#define luaL_checklong(L,n)	((long)luaL_checkinteger(L, n))
-#define luaL_optlong(L,n,d)	((long)luaL_optinteger(L, n,d))
+#define luaL_checkint(L,n)	((int)luaL_checkinteger(L, (n)))
+#define luaL_optint(L,n,d)	((int)luaL_optinteger(L, (n), (d)))
+#define luaL_checklong(L,n)	((long)luaL_checkinteger(L, (n)))
+#define luaL_optlong(L,n,d)	((long)luaL_optinteger(L, (n), (d)))
 
-#define luaL_typename(L,i)	lua_typename(L,lua_type(L,(i)))
+#define luaL_typename(L,i)	lua_typename(L, lua_type(L,(i)))
 
 /*
 ** {======================================================
@@ -137,7 +137,7 @@ LUALIB_API void luaL_pushresult (luaL_Buffer *B);
 
 #define lua_unref(L,ref)        luaL_unref(L, LUA_REGISTRYINDEX, (ref))
 
-#define lua_getref(L,ref)       lua_rawgeti(L, LUA_REGISTRYINDEX, ref)
+#define lua_getref(L,ref)       lua_rawgeti(L, LUA_REGISTRYINDEX, (ref))
 
 
 #endif
