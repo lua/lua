@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 4.3 1997/04/15 17:32:47 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 4.4 1997/04/24 22:59:57 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -320,9 +320,13 @@ static void do_call (StkId base, int nResults)
 */
 static void pushsubscript (void)
 {
-  int tg = luaI_efectivetag(top-2);
-  TObject *im = luaI_getim(tg, IM_GETTABLE);
-  if (ttype(top-2) == LUA_T_ARRAY && ttype(im) == LUA_T_NIL) {
+  TObject *im;
+  if (ttype(top-2) != LUA_T_ARRAY)  /* not a table, get "gettable" method */
+    im = luaI_getimbyObj(top-2, IM_GETTABLE);
+  else {  /* object is a table... */
+    int tg = (top-2)->value.a->htag;
+    im = luaI_getim(tg, IM_GETTABLE);
+    if (ttype(im) == LUA_T_NIL) {  /* and does not have a "gettable" method */
       TObject *h = lua_hashget(avalue(top-2), top-1);
       if (h != NULL && ttype(h) != LUA_T_NIL) {
         --top;
@@ -334,13 +338,15 @@ static void pushsubscript (void)
         --top;
         ttype(top-1) = LUA_T_NIL;
       }
+      return;
+    }
+    /* else it has a "gettable" method, go through to next command */
   }
-  else {  /* object is not a table, and/or has a specific "gettable" method */
-    if (ttype(im) != LUA_T_NIL)
-      callIM(im, 2, 1);
-    else
-      lua_error("indexed expression not a table");
-  }
+  /* object is not a table, or it has a "gettable" method */ 
+  if (ttype(im) != LUA_T_NIL)
+    callIM(im, 2, 1);
+  else
+    lua_error("indexed expression not a table");
 }
 
 
