@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.139 2001/02/23 17:17:25 roberto Exp roberto $
+** $Id: lparser.c,v 1.140 2001/03/26 14:31:49 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -992,7 +992,7 @@ static void funcstat (LexState *ls, int line) {
 }
 
 
-static void namestat (LexState *ls) {
+static void exprstat (LexState *ls) {
   /* stat -> func | assignment */
   FuncState *fs = ls->fs;
   expdesc v;
@@ -1059,8 +1059,12 @@ static int statement (LexState *ls) {
       repeatstat(ls, line);
       return 0;
     }
-    case TK_FUNCTION: {  /* stat -> funcstat */
-      funcstat(ls, line);
+    case TK_FUNCTION: {
+      lookahead(ls);
+      if (ls->lookahead.token == '(')
+        exprstat(ls);
+      else
+        funcstat(ls, line);  /* stat -> funcstat */
       return 0;
     }
     case TK_LOCAL: {  /* stat -> localstat */
@@ -1076,7 +1080,7 @@ static int statement (LexState *ls) {
       return 1;  /* must be last statement */
     }
     default: {
-      namestat(ls);
+      exprstat(ls);
       return 0;  /* to avoid warnings */
     }
   }
