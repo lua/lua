@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.18 2000/02/08 16:34:31 roberto Exp roberto $
+** $Id: llex.h,v 1.19 2000/03/03 14:58:26 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -23,15 +23,16 @@
 */
 enum RESERVED {
   /* terminal symbols denoted by reserved words */
-  AND = FIRST_RESERVED,
-  DO, ELSE, ELSEIF, END, FUNCTION, IF, LOCAL, NIL, NOT, OR,
-  REPEAT, RETURN, THEN, UNTIL, WHILE,
+  TK_AND = FIRST_RESERVED,
+  TK_DO, TK_ELSE, TK_ELSEIF, TK_END, TK_FUNCTION, TK_IF, TK_LOCAL,
+  TK_NIL, TK_NOT, TK_OR, TK_REPEAT, TK_RETURN, TK_THEN, TK_UNTIL, TK_WHILE,
   /* other terminal symbols */
-  NAME, CONC, DOTS, EQ, GE, LE, NE, NUMBER, STRING, EOS
+  TK_NAME, TK_CONC, TK_DOTS, TK_EQ, TK_GE, TK_LE, TK_NE, TK_NUMBER,
+  TK_STRING, TK_EOS
 };
 
 /* number of reserved words */
-#define NUM_RESERVED	((int)(WHILE-FIRST_RESERVED+1))
+#define NUM_RESERVED	((int)(TK_WHILE-FIRST_RESERVED+1))
 
 
 #ifndef MAX_IFS
@@ -53,8 +54,8 @@ typedef struct LexState {
   struct FuncState *fs;  /* `FuncState' is private to the parser */
   struct lua_State *L;
   union {
-    real r;
-    TaggedString *ts;
+    Number r;
+    TString *ts;
   } seminfo;  /* semantics information */
   struct zio *z;  /* input stream */
   int linenumber;  /* input line counter */

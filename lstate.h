@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.28 2000/01/19 12:00:45 roberto Exp roberto $
+** $Id: lstate.h,v 1.29 2000/02/08 16:34:31 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -43,7 +43,7 @@ struct C_Lua_Stack {
 typedef struct stringtable {
   int size;
   int nuse;  /* number of elements (including EMPTYs) */
-  TaggedString **hash;
+  TString **hash;
 } stringtable;
 
 
@@ -63,7 +63,7 @@ struct lua_State {
   struct C_Lua_Stack *Cblocks;
   int numCblocks;  /* number of nested Cblocks */
   /* global state */
-  TProtoFunc *rootproto;  /* list of all prototypes */
+  Proto *rootproto;  /* list of all prototypes */
   Closure *rootcl;  /* list of all closures */
   Hash *roottable;  /* list of all tables */
   GlobalVar *rootglobal;  /* list of global variables */

@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.32 2000/02/22 18:12:46 roberto Exp roberto $
+** $Id: ltm.c,v 1.33 2000/03/03 14:58:26 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -32,33 +32,33 @@ static int luaI_checkevent (lua_State *L, const char *name, const char *const li
 
 
 
-/* events in LUA_T_NIL are all allowed, since this is used as a
+/* events in TAG_NIL are all allowed, since this is used as a
 *  'placeholder' for "default" fallbacks
 */
 /* ORDER LUA_T, ORDER IM */
 static const char luaT_validevents[NUM_TAGS][IM_N] = {
-{1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* LUA_T_USERDATA */
-{1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},  /* LUA_T_NUMBER */
-{1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_T_STRING */
-{0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* LUA_T_ARRAY */
-{1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_LPROTO */
-{1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_CPROTO */
-{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}   /* LUA_T_NIL */
+{1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* TAG_USERDATA */
+{1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1},  /* TAG_NUMBER */
+{1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},  /* TAG_STRING */
+{0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* TAG_ARRAY */
+{1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* TAG_LPROTO */
+{1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* TAG_CPROTO */
+{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}   /* TAG_NIL */
 };
 
 int luaT_validevent (int t, int e) {  /* ORDER LUA_T */
 #ifdef LUA_COMPAT_GC
-  if (t == LUA_T_ARRAY && e == IM_GC)
+  if (t == TAG_ARRAY && e == IM_GC)
     return 1;  /* old versions allowed gc tag method for tables */
 #endif
-  return (t < LUA_T_NIL) ?  1 : luaT_validevents[-t][e];
+  return (t < TAG_NIL) ?  1 : luaT_validevents[-t][e];
 }
 
 
 static void init_entry (lua_State *L, int tag) {
   int i;
   for (i=0; i<IM_N; i++)
-    ttype(luaT_getim(L, tag, i)) = LUA_T_NIL;
+    ttype(luaT_getim(L, tag, i)) = TAG_NIL;
 }
 
 
@@ -85,7 +85,7 @@ static void checktag (lua_State *L, int tag) {
 }
 
 void luaT_realtag (lua_State *L, int tag) {
-  if (!(L->last_tag <= tag && tag < LUA_T_NIL))
+  if (!(L->last_tag <= tag && tag < TAG_NIL))
     luaL_verror(L, "tag %d was not created by `newtag'", tag);
 }
 
@@ -104,17 +104,17 @@ int lua_copytagmethods (lua_State *L, int tagto, int tagfrom) {
 
 int luaT_effectivetag (const TObject *o) {
   static const int realtag[] = {  /* ORDER LUA_T */
-    LUA_T_USERDATA, LUA_T_NUMBER, LUA_T_STRING, LUA_T_ARRAY,
-    LUA_T_LPROTO, LUA_T_CPROTO, LUA_T_NIL,
-    LUA_T_LPROTO, LUA_T_CPROTO,       /* LUA_T_LCLOSURE, LUA_T_CCLOSURE */
+    TAG_USERDATA, TAG_NUMBER, TAG_STRING, TAG_ARRAY,
+    TAG_LPROTO, TAG_CPROTO, TAG_NIL,
+    TAG_LPROTO, TAG_CPROTO,       /* TAG_LCLOSURE, TAG_CCLOSURE */
   };
   int t;
   switch (t = ttype(o)) {
-    case LUA_T_USERDATA: {
+    case TAG_USERDATA: {
       int tag = o->value.ts->u.d.tag;
-      return (tag >= 0) ? LUA_T_USERDATA : tag;  /* deprecated test */
+      return (tag >= 0) ? TAG_USERDATA : tag;  /* deprecated test */
     }
-    case LUA_T_ARRAY:    return o->value.a->htag;
+    case TAG_ARRAY:    return o->value.a->htag;
     default:             return realtag[-t];
   }
 }
@@ -149,7 +149,7 @@ void luaT_settagmethod (lua_State *L, int t, const char *event, TObject *func) {
   if (!luaT_validevent(t, e))
     luaL_verror(L, "cannot change `%.20s' tag method for type `%.20s'%.20s",
                 luaT_eventname[e], luaO_typenames[-t],
-                (t == LUA_T_ARRAY || t == LUA_T_USERDATA) ? " with default tag"
+                (t == TAG_ARRAY || t == TAG_USERDATA) ? " with default tag"
                                                           : "");
   temp = *func;
   *func = *luaT_getim(L, t,e);

@@ -1,5 +1,5 @@
 /*
-** $Id: lref.c,v 1.7 2000/02/08 16:34:31 roberto Exp roberto $
+** $Id: lref.c,v 1.8 2000/03/03 14:58:26 roberto Exp roberto $
 ** reference mechanism
 ** See Copyright Notice in lua.h
 */
@@ -17,7 +17,7 @@
 int lua_ref (lua_State *L,  int lock) {
   int ref;
   luaA_checkCargs(L, 1);
-  if (ttype(L->top-1) == LUA_T_NIL)
+  if (ttype(L->top-1) == TAG_NIL)
     ref = LUA_REFNIL;
   else {
     if (L->refFree != NONEXT) {  /* is there a free place? */
@@ -82,13 +82,13 @@ void lua_endblock (lua_State *L) {
 static int ismarked (const TObject *o) {
   /* valid only for locked objects */
   switch (o->ttype) {
-    case LUA_T_STRING: case LUA_T_USERDATA:
+    case TAG_STRING: case TAG_USERDATA:
       return o->value.ts->marked;
-    case LUA_T_ARRAY:
+    case TAG_ARRAY:
       return o->value.a->marked;
-    case LUA_T_LCLOSURE:  case LUA_T_CCLOSURE:
+    case TAG_LCLOSURE:  case TAG_CCLOSURE:
       return o->value.cl->marked;
-    case LUA_T_LPROTO:
+    case TAG_LPROTO:
       return o->value.tf->marked;
     default:  /* number or cproto */
       return 1;

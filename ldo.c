@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.67 2000/02/08 16:34:31 roberto Exp roberto $
+** $Id: ldo.c,v 1.68 2000/03/03 14:58:26 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -86,7 +86,7 @@ void luaD_adjusttop (lua_State *L, StkId base, int extra) {
   else {
     luaD_checkstack(L, diff);
     while (diff--)
-      ttype(L->top++) = LUA_T_NIL;
+      ttype(L->top++) = TAG_NIL;
   }
 }
 
@@ -191,29 +191,29 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
   lua_Dbghook callhook = L->callhook;
   retry:  /* for `function' tag method */
   switch (ttype(func)) {
-    case LUA_T_CPROTO:
-      ttype(func) = LUA_T_CMARK;
+    case TAG_CPROTO:
+      ttype(func) = TAG_CMARK;
       firstResult = callC(L, fvalue(func), func+1);
       break;
-    case LUA_T_LPROTO:
-      ttype(func) = LUA_T_LMARK;
+    case TAG_LPROTO:
+      ttype(func) = TAG_LMARK;
       firstResult = luaV_execute(L, NULL, tfvalue(func), func+1);
       break;
-    case LUA_T_LCLOSURE: {
+    case TAG_LCLOSURE: {
       Closure *c = clvalue(func);
-      ttype(func) = LUA_T_LCLMARK;
+      ttype(func) = TAG_LCLMARK;
       firstResult = luaV_execute(L, c, tfvalue(c->consts), func+1);
       break;
     }
-    case LUA_T_CCLOSURE: {
+    case TAG_CCLOSURE: {
       Closure *c = clvalue(func);
-      ttype(func) = LUA_T_CCLMARK;
+      ttype(func) = TAG_CCLMARK;
       firstResult = callCclosure(L, c, func+1);
       break;
     }
     default: { /* `func' is not a function; check the `function' tag method */
       const TObject *im = luaT_getimbyObj(L, func, IM_FUNCTION);
-      if (ttype(im) == LUA_T_NIL)
+      if (ttype(im) == TAG_NIL)
         luaG_callerror(L, func);
       luaD_openstack(L, func);
       *func = *im;  /* tag method is the new function to be called */
@@ -298,7 +298,7 @@ static int protectedparser (lua_State *L, ZIO *z, int bin) {
   StkId base = L->Cstack.base;
   int numCblocks = L->numCblocks;
   int status;
-  TProtoFunc *volatile tf;
+  Proto *volatile tf;
   struct lua_longjmp *volatile oldErr = L->errorJmp;
   L->errorJmp = &myErrorJmp;
   L->top = base;   /* clear C2Lua */
@@ -316,7 +316,7 @@ static int protectedparser (lua_State *L, ZIO *z, int bin) {
   L->errorJmp = oldErr;
   if (status) return 1;  /* error code */
   if (tf == NULL) return 2;  /* `natural' end */
-  L->top->ttype = LUA_T_LPROTO;  /* push new function on the stack */
+  L->top->ttype = TAG_LPROTO;  /* push new function on the stack */
   L->top->value.tf = tf;
   incr_top;
   return 0;
@@ -345,7 +345,7 @@ static int do_main (lua_State *L, ZIO *z, int bin) {
 
 void luaD_gcIM (lua_State *L, const TObject *o) {
   const TObject *im = luaT_getimbyObj(L, o, IM_GC);
-  if (ttype(im) != LUA_T_NIL) {
+  if (ttype(im) != TAG_NIL) {
     luaD_checkstack(L, 2);
     *(L->top++) = *im;
     *(L->top++) = *o;

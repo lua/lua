@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.72 2000/02/22 17:54:16 roberto Exp roberto $
+** $Id: lapi.c,v 1.73 2000/03/03 14:58:26 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -33,7 +33,7 @@ const char lua_ident[] = "$Lua: " LUA_VERSION " " LUA_COPYRIGHT " $\n"
 
 const TObject *luaA_protovalue (const TObject *o) {
   switch (ttype(o)) {
-    case LUA_T_CCLOSURE:  case LUA_T_LCLOSURE:
+    case TAG_CCLOSURE:  case TAG_LCLOSURE:
       return protovalue(o);
     default:
       return o;
@@ -106,7 +106,7 @@ lua_Object lua_settagmethod (lua_State *L, int tag, const char *event) {
   TObject *method;
   luaA_checkCargs(L, 1);
   method = L->top-1;
-  if ((ttype(method) != LUA_T_NIL) && (*lua_type(L, method) != 'f'))
+  if ((ttype(method) != TAG_NIL) && (*lua_type(L, method) != 'f'))
     lua_error(L, "Lua API error - tag method must be a function or nil");
   luaT_settagmethod(L, tag, event, method);
   return luaA_putObjectOnTop(L);
@@ -132,7 +132,7 @@ lua_Object lua_gettable (lua_State *L) {
 lua_Object lua_rawgettable (lua_State *L) {
   lua_Object res;
   luaA_checkCargs(L, 2);
-  if (ttype(L->top-2) != LUA_T_ARRAY)
+  if (ttype(L->top-2) != TAG_ARRAY)
     lua_error(L, "indexed expression not a table in rawgettable");
   res = luaA_putluaObject(L, luaH_get(L, avalue(L->top-2), L->top-1));
   L->top -= 2;
@@ -159,7 +159,7 @@ lua_Object lua_createtable (lua_State *L) {
   TObject o;
   luaC_checkGC(L);
   avalue(&o) = luaH_new(L, 0);
-  ttype(&o) = LUA_T_ARRAY;
+  ttype(&o) = TAG_ARRAY;
   return luaA_putluaObject(L, &o);
 }
 
@@ -196,21 +196,21 @@ const char *lua_type (lua_State *L, lua_Object o) {
 
 int lua_isnil (lua_State *L, lua_Object o) {
   UNUSED(L);
-  return (o != LUA_NOOBJECT) && (ttype(o) == LUA_T_NIL);
+  return (o != LUA_NOOBJECT) && (ttype(o) == TAG_NIL);
 }
 
 int lua_istable (lua_State *L, lua_Object o) {
   UNUSED(L);
-  return (o != LUA_NOOBJECT) && (ttype(o) == LUA_T_ARRAY);
+  return (o != LUA_NOOBJECT) && (ttype(o) == TAG_ARRAY);
 }
 
 int lua_isuserdata (lua_State *L, lua_Object o) {
   UNUSED(L);
-  return (o != LUA_NOOBJECT) && (ttype(o) == LUA_T_USERDATA);
+  return (o != LUA_NOOBJECT) && (ttype(o) == TAG_USERDATA);
 }
 
 int lua_iscfunction (lua_State *L, lua_Object o) {
-  return (lua_tag(L, o) == LUA_T_CPROTO);
+  return (lua_tag(L, o) == TAG_CPROTO);
 }
 
 int lua_isnumber (lua_State *L, lua_Object o) {
@@ -220,8 +220,8 @@ int lua_isnumber (lua_State *L, lua_Object o) {
 
 int lua_isstring (lua_State *L, lua_Object o) {
   UNUSED(L);
-  return (o != LUA_NOOBJECT && (ttype(o) == LUA_T_STRING ||
-                                ttype(o) == LUA_T_NUMBER));
+  return (o != LUA_NOOBJECT && (ttype(o) == TAG_STRING ||
+                                ttype(o) == TAG_NUMBER));
 }
 
 int lua_isfunction (lua_State *L, lua_Object o) {
@@ -258,7 +258,7 @@ long lua_strlen (lua_State *L, lua_Object obj) {
 
 void *lua_getuserdata (lua_State *L, lua_Object obj) {
   UNUSED(L);
-  if (obj == LUA_NOOBJECT || ttype(obj) != LUA_T_USERDATA)
+  if (obj == LUA_NOOBJECT || ttype(obj) != TAG_USERDATA)
     return NULL;
   else return tsvalue(obj)->u.d.value;
 }
@@ -271,19 +271,19 @@ lua_CFunction lua_getcfunction (lua_State *L, lua_Object obj) {
 
 
 void lua_pushnil (lua_State *L) {
-  ttype(L->top) = LUA_T_NIL;
+  ttype(L->top) = TAG_NIL;
   incr_top;
 }
 
 void lua_pushnumber (lua_State *L, double n) {
-  ttype(L->top) = LUA_T_NUMBER;
+  ttype(L->top) = TAG_NUMBER;
   nvalue(L->top) = n;
   incr_top;
 }
 
 void lua_pushlstring (lua_State *L, const char *s, long len) {
   tsvalue(L->top) = luaS_newlstr(L, s, len);
-  ttype(L->top) = LUA_T_STRING;
+  ttype(L->top) = TAG_STRING;
   incr_top;
   luaC_checkGC(L);
 }
@@ -299,7 +299,7 @@ void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   if (fn == NULL)
     lua_error(L, "Lua API error - attempt to push a NULL Cfunction");
   luaA_checkCargs(L, n);
-  ttype(L->top) = LUA_T_CPROTO;
+  ttype(L->top) = TAG_CPROTO;
   fvalue(L->top) = fn;
   incr_top;
   luaV_closure(L, n);
@@ -310,7 +310,7 @@ void lua_pushusertag (lua_State *L, void *u, int tag) {
   if (tag < 0 && tag != LUA_ANYTAG)
     luaT_realtag(L, tag);  /* error if tag is not valid */
   tsvalue(L->top) = luaS_createudata(L, u, tag);
-  ttype(L->top) = LUA_T_USERDATA;
+  ttype(L->top) = TAG_USERDATA;
   incr_top;
   luaC_checkGC(L);
 }
@@ -331,8 +331,8 @@ void lua_pushobject (lua_State *L, lua_Object o) {
 int lua_tag (lua_State *L, lua_Object o) {
   UNUSED(L);
   if (o == LUA_NOOBJECT)
-    return LUA_T_NIL;
-  else if (ttype(o) == LUA_T_USERDATA)  /* to allow `old' tags (deprecated) */
+    return TAG_NIL;
+  else if (ttype(o) == TAG_USERDATA)  /* to allow `old' tags (deprecated) */
     return o->value.ts->u.d.tag;
   else
     return luaT_effectivetag(o);
@@ -343,10 +343,10 @@ void lua_settag (lua_State *L, int tag) {
   luaA_checkCargs(L, 1);
   luaT_realtag(L, tag);
   switch (ttype(L->top-1)) {
-    case LUA_T_ARRAY:
+    case TAG_ARRAY:
       (L->top-1)->value.a->htag = tag;
       break;
-    case LUA_T_USERDATA:
+    case TAG_USERDATA:
       (L->top-1)->value.ts->u.d.tag = tag;
       break;
     default:
@@ -357,7 +357,7 @@ void lua_settag (lua_State *L, int tag) {
 }
 
 
-GlobalVar *luaA_nextvar (lua_State *L, TaggedString *ts) {
+GlobalVar *luaA_nextvar (lua_State *L, TString *ts) {
   GlobalVar *gv;
   if (ts == NULL)
     gv = L->rootglobal;  /* first variable */
@@ -366,10 +366,10 @@ GlobalVar *luaA_nextvar (lua_State *L, TaggedString *ts) {
     luaL_arg_check(L, ts->u.s.gv, 1, "variable name expected");
     gv = ts->u.s.gv->next;  /* get next */
   }
-  while (gv && gv->value.ttype == LUA_T_NIL)  /* skip globals with nil */
+  while (gv && gv->value.ttype == TAG_NIL)  /* skip globals with nil */
     gv = gv->next;
   if (gv) {
-    ttype(L->top) = LUA_T_STRING; tsvalue(L->top) = gv->name;
+    ttype(L->top) = TAG_STRING; tsvalue(L->top) = gv->name;
     incr_top;
     luaA_pushobject(L, &gv->value);
   }
@@ -378,7 +378,7 @@ GlobalVar *luaA_nextvar (lua_State *L, TaggedString *ts) {
 
 
 const char *lua_nextvar (lua_State *L, const char *varname) {
-  TaggedString *ts = (varname == NULL) ? NULL : luaS_new(L, varname);
+  TString *ts = (varname == NULL) ? NULL : luaS_new(L, varname);
   GlobalVar *gv = luaA_nextvar(L, ts);
   if (gv) {
     top2LC(L, 2);
@@ -395,7 +395,7 @@ int luaA_next (lua_State *L, const Hash *t, int i) {
   int tsize = t->size;
   for (; i<tsize; i++) {
     Node *n = node(t, i);
-    if (ttype(val(n)) != LUA_T_NIL) {
+    if (ttype(val(n)) != TAG_NIL) {
       luaA_pushobject(L, key(n));
       luaA_pushobject(L, val(n));
       return i+1;  /* index to be used next time */
@@ -406,7 +406,7 @@ int luaA_next (lua_State *L, const Hash *t, int i) {
 
 
 int lua_next (lua_State *L, lua_Object t, int i) {
-  if (ttype(t) != LUA_T_ARRAY)
+  if (ttype(t) != TAG_ARRAY)
     lua_error(L, "Lua API error - object is not a table in `lua_next'"); 
   i = luaA_next(L, avalue(t), i);
   top2LC(L, (i==0) ? 0 : 2);

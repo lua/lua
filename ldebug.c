@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.9 2000/02/17 18:30:36 roberto Exp roberto $
+** $Id: ldebug.c,v 1.10 2000/03/03 14:58:26 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -23,11 +23,11 @@
 
 
 static const lua_Type normtype[] = {  /* ORDER LUA_T */
-  LUA_T_USERDATA, LUA_T_NUMBER, LUA_T_STRING, LUA_T_ARRAY,
-  LUA_T_LPROTO, LUA_T_CPROTO, LUA_T_NIL,
-  LUA_T_LCLOSURE, LUA_T_CCLOSURE,
-  LUA_T_LCLOSURE, LUA_T_CCLOSURE,   /* LUA_T_LCLMARK, LUA_T_CCLMARK */
-  LUA_T_LPROTO, LUA_T_CPROTO        /* LUA_T_LMARK, LUA_T_CMARK */
+  TAG_USERDATA, TAG_NUMBER, TAG_STRING, TAG_ARRAY,
+  TAG_LPROTO, TAG_CPROTO, TAG_NIL,
+  TAG_LCLOSURE, TAG_CCLOSURE,
+  TAG_LCLOSURE, TAG_CCLOSURE,   /* TAG_LCLMARK, TAG_CCLMARK */
+  TAG_LPROTO, TAG_CPROTO        /* TAG_LMARK, TAG_CMARK */
 };
 
 
@@ -39,7 +39,7 @@ static void setnormalized (TObject *d, const TObject *s) {
 
 
 static int hasdebuginfo (lua_State *L, StkId f) {
-  return (f+1 < L->top && (f+1)->ttype == LUA_T_LINE);
+  return (f+1 < L->top && (f+1)->ttype == TAG_LINE);
 }
 
 
@@ -89,8 +89,8 @@ int lua_getstack (lua_State *L, int level, lua_Dbgactreg *ar) {
 
 static int lua_nups (StkId f) {
   switch (ttype(f)) {
-    case LUA_T_LCLOSURE:  case LUA_T_CCLOSURE:
-    case LUA_T_LCLMARK:   case LUA_T_CCLMARK:
+    case TAG_LCLOSURE:  case TAG_CCLOSURE:
+    case TAG_LCLMARK:   case TAG_CCLMARK:
       return f->value.cl->nelems;
     default:
       return 0;
@@ -103,10 +103,10 @@ static int lua_currentline (lua_State *L, StkId f) {
 }
 
 
-static TProtoFunc *getluaproto (StkId f) {
-  if (ttype(f) == LUA_T_LMARK)
+static Proto *getluaproto (StkId f) {
+  if (ttype(f) == TAG_LMARK)
     return f->value.tf;
-  else if (ttype(f) == LUA_T_LCLMARK)
+  else if (ttype(f) == TAG_LCLMARK)
     return protovalue(f)->value.tf;
   else return NULL;
 }
@@ -114,13 +114,13 @@ static TProtoFunc *getluaproto (StkId f) {
 
 int lua_getlocal (lua_State *L, const lua_Dbgactreg *ar, lua_Dbglocvar *v) {
   StkId f = ar->_func;
-  TProtoFunc *fp = getluaproto(f);
+  Proto *fp = getluaproto(f);
   if (!fp) return 0;  /* `f' is not a Lua function? */
   v->name = luaF_getlocalname(fp, v->index, lua_currentline(L, f));
   if (!v->name) return 0;
-  /* if `name', there must be a LUA_T_LINE */
+  /* if `name', there must be a TAG_LINE */
   /* therefore, f+2 points to function base */
-  LUA_ASSERT(L, ttype(f+1) == LUA_T_LINE, "");
+  LUA_ASSERT(L, ttype(f+1) == TAG_LINE, "");
   v->value = luaA_putluaObject(L, (f+2)+(v->index-1));
   return 1;
 }
@@ -128,11 +128,11 @@ int lua_getlocal (lua_State *L, const lua_Dbgactreg *ar, lua_Dbglocvar *v) {
 
 int lua_setlocal (lua_State *L, const lua_Dbgactreg *ar, lua_Dbglocvar *v) {
   StkId f = ar->_func;
-  TProtoFunc *fp = getluaproto(f);
+  Proto *fp = getluaproto(f);
   if (!fp) return 0;  /* `f' is not a Lua function? */
   v->name = luaF_getlocalname(fp, v->index, lua_currentline(L, f));
   if (!v->name) return 0;
-  LUA_ASSERT(L, ttype(f+1) == LUA_T_LINE, "");
+  LUA_ASSERT(L, ttype(f+1) == TAG_LINE, "");
   *((f+2)+(v->index-1)) = *v->value;
   return 1;
 }
@@ -141,12 +141,12 @@ int lua_setlocal (lua_State *L, const lua_Dbgactreg *ar, lua_Dbglocvar *v) {
 static void lua_funcinfo (lua_Dbgactreg *ar) {
   StkId func = ar->_func;
   switch (ttype(func)) {
-    case LUA_T_LPROTO:  case LUA_T_LMARK:
+    case TAG_LPROTO:  case TAG_LMARK:
       ar->source = tfvalue(func)->source->str;
       ar->linedefined = tfvalue(func)->lineDefined;
       ar->what = "Lua";
       break;
-    case LUA_T_LCLOSURE:  case LUA_T_LCLMARK:
+    case TAG_LCLOSURE:  case TAG_LCLMARK:
       ar->source = tfvalue(protovalue(func))->source->str;
       ar->linedefined = tfvalue(protovalue(func))->lineDefined;
       ar->what = "Lua";

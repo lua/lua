@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.40 2000/01/25 13:57:18 roberto Exp roberto $
+** $Id: lgc.c,v 1.41 2000/01/28 16:53:00 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -28,7 +28,7 @@ static int markobject (lua_State *L, TObject *o);
 
 
 
-static void protomark (lua_State *L, TProtoFunc *f) {
+static void protomark (lua_State *L, Proto *f) {
   if (!f->marked) {
     int i;
     f->marked = 1;
@@ -57,7 +57,7 @@ static void hashmark (lua_State *L, Hash *h) {
     h->marked = 1;
     for (i=h->size-1; i>=0; i--) {
       Node *n = node(h,i);
-      if (ttype(key(n)) != LUA_T_NIL) {
+      if (ttype(key(n)) != TAG_NIL) {
         markobject(L, &n->key);
         markobject(L, &n->val);
       }
@@ -70,7 +70,7 @@ static void travglobal (lua_State *L) {
   GlobalVar *gv;
   for (gv=L->rootglobal; gv; gv=gv->next) {
     LUA_ASSERT(L, gv->name->u.s.gv == gv, "inconsistent global name");
-    if (gv->value.ttype != LUA_T_NIL) {
+    if (gv->value.ttype != TAG_NIL) {
       strmark(L, gv->name);  /* cannot collect non nil global variables */
       markobject(L, &gv->value);
     }
@@ -96,17 +96,17 @@ static void travlock (lua_State *L) {
 
 static int markobject (lua_State *L, TObject *o) {
   switch (ttype(o)) {
-    case LUA_T_USERDATA:  case LUA_T_STRING:
+    case TAG_USERDATA:  case TAG_STRING:
       strmark(L, tsvalue(o));
       break;
-    case LUA_T_ARRAY:
+    case TAG_ARRAY:
       hashmark(L, avalue(o));
       break;
-    case LUA_T_LCLOSURE:  case LUA_T_LCLMARK:
-    case LUA_T_CCLOSURE:  case LUA_T_CCLMARK:
+    case TAG_LCLOSURE:  case TAG_LCLMARK:
+    case TAG_CCLOSURE:  case TAG_CCLMARK:
       closuremark(L, o->value.cl);
       break;
-    case LUA_T_LPROTO: case LUA_T_LMARK:
+    case TAG_LPROTO: case TAG_LMARK:
       protomark(L, o->value.tf);
       break;
     default: break;  /* numbers, cprotos, etc */
@@ -116,8 +116,8 @@ static int markobject (lua_State *L, TObject *o) {
 
 
 static void collectproto (lua_State *L) {
-  TProtoFunc **p = &L->rootproto;
-  TProtoFunc *next;
+  Proto **p = &L->rootproto;
+  Proto *next;
   while ((next = *p) != NULL) {
     if (next->marked) {
       next->marked = 0;
@@ -185,14 +185,14 @@ static void clear_global_list (lua_State *L, int limit) {
 static void collectstring (lua_State *L, int limit) {
   TObject o;  /* to call userdata `gc' tag method */
   int i;
-  ttype(&o) = LUA_T_USERDATA;
+  ttype(&o) = TAG_USERDATA;
   clear_global_list(L, limit);
   for (i=0; i<NUM_HASHS; i++) {  /* for each hash table */
     stringtable *tb = &L->string_root[i];
     int j;
     for (j=0; j<tb->size; j++) {  /* for each list */
-      TaggedString **p = &tb->hash[j];
-      TaggedString *next;
+      TString **p = &tb->hash[j];
+      TString *next;
       while ((next = *p) != NULL) {
        if (next->marked >= limit) {
          if (next->marked < FIXMARK)  /* does not change FIXMARKs */
@@ -220,7 +220,7 @@ static void collectstring (lua_State *L, int limit) {
 static void tableTM (lua_State *L) {
   Hash *p;
   TObject o;
-  ttype(&o) = LUA_T_ARRAY;
+  ttype(&o) = TAG_ARRAY;
   for (p = L->roottable; p; p = p->next) {
     if (!p->marked) {
       avalue(&o) = p;

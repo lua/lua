@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.26 2000/02/17 19:17:44 lhf Exp lhf $
+** $Id: lundump.c,v 1.18 2000/03/03 14:58:26 roberto Exp roberto $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -50,7 +50,7 @@ static unsigned long LoadLong (lua_State* L, ZIO* Z)
  return (hi<<16)|lo;
 }
 
-static real LoadNumber (lua_State* L, ZIO* Z)
+static Number LoadNumber (lua_State* L, ZIO* Z)
 {
  char b[256];
  int size=ezgetc(L,Z);
@@ -67,15 +67,15 @@ static int LoadInt (lua_State* L, ZIO* Z, const char* message)
  return i;
 }
 
-static void LoadCode (lua_State* L, TProtoFunc* tf, ZIO* Z)
+static void LoadCode (lua_State* L, Proto* tf, ZIO* Z)
 {
  int size=LoadInt(L,Z,"code too long (%lu bytes) in %.255s");
  tf->code=luaM_newvector(L,size,Instruction);
  LoadBlock(L,tf->code,size*sizeof(tf->code[0]),Z);
- if (tf->code[size-1]!=ENDCODE) luaL_verror(L,"bad code in %.255s",zname(Z));
+ if (tf->code[size-1]!=OP_END) luaL_verror(L,"bad code in %.255s",zname(Z));
 }
 
-static TaggedString* LoadString (lua_State* L, ZIO* Z)
+static TString* LoadString (lua_State* L, ZIO* Z)
 {
  long size=LoadLong(L,Z);
  if (size==0)
@@ -88,7 +88,7 @@ static TaggedString* LoadString (lua_State* L, ZIO* Z)
  }
 }
 
-static void LoadLocals (lua_State* L, TProtoFunc* tf, ZIO* Z)
+static void LoadLocals (lua_State* L, Proto* tf, ZIO* Z)
 {
  int i,n=LoadInt(L,Z,"too many locals (%lu) in %.255s");
  if (n==0) return;
@@ -102,21 +102,21 @@ static void LoadLocals (lua_State* L, TProtoFunc* tf, ZIO* Z)
  tf->locvars[i].varname=NULL;
 }
 
-static TProtoFunc* LoadFunction (lua_State* L, ZIO* Z, int native);
+static Proto* LoadFunction (lua_State* L, ZIO* Z, int native);
 
-static void LoadConstants (lua_State* L, TProtoFunc* tf, ZIO* Z, int native)
+static void LoadConstants (lua_State* L, Proto* tf, ZIO* Z, int native)
 {
  int i,n;
  tf->nkstr=n=LoadInt(L,Z,"too many strings (%lu) in %.255s");
  if (n>0)
  {
-  tf->kstr=luaM_newvector(L,n,TaggedString*);
+  tf->kstr=luaM_newvector(L,n,TString*);
   for (i=0; i<n; i++) tf->kstr[i]=LoadString(L,Z);
  }
  tf->nknum=n=LoadInt(L,Z,"too many numbers (%lu) in %.255s");
  if (n>0)
  {
-  tf->knum=luaM_newvector(L,n,real);
+  tf->knum=luaM_newvector(L,n,Number);
   if (native)
    LoadBlock(L,tf->knum,n*sizeof(tf->knum[0]),Z);
   else
@@ -125,14 +125,14 @@ static void LoadConstants (lua_State* L, TProtoFunc* tf, ZIO* Z, int native)
  tf->nkproto=n=LoadInt(L,Z,"too many functions (%lu) in %.255s");
  if (n>0)
  {
-  tf->kproto=luaM_newvector(L,n,TProtoFunc*);
+  tf->kproto=luaM_newvector(L,n,Proto*);
   for (i=0; i<n; i++) tf->kproto[i]=LoadFunction(L,Z,native);
  }
 }
 
-static TProtoFunc* LoadFunction (lua_State* L, ZIO* Z, int native)
+static Proto* LoadFunction (lua_State* L, ZIO* Z, int native)
 {
- TProtoFunc* tf=luaF_newproto(L);
+ Proto* tf=luaF_newproto(L);
  tf->lineDefined=LoadInt(L,Z,"lineDefined too large (%lu) in %.255s");
  tf->source=LoadString(L,Z);
  if (tf->source==NULL) tf->source=luaS_new(L,zname(Z));
@@ -172,12 +172,12 @@ static int LoadHeader (lua_State* L, ZIO* Z)
  native=(sizeofR!=0);
  if (native)				/* test number representation */
  {
-  if (sizeofR!=sizeof(real))
+  if (sizeofR!=sizeof(Number))
    luaL_verror(L,"unknown number size in %.255s: read %d; expected %d",
-	 zname(Z),sizeofR,(int)sizeof(real));
+	 zname(Z),sizeofR,(int)sizeof(Number));
   else
   {
-   real f=0,tf=TEST_NUMBER;
+   Number f=0,tf=TEST_NUMBER;
    LoadBlock(L,&f,sizeof(f),Z);
    if ((long)f!=(long)tf)		/* disregard errors in last bit of fraction */
     luaL_verror(L,"unknown number format in %.255s: "
@@ -188,7 +188,7 @@ static int LoadHeader (lua_State* L, ZIO* Z)
  return native;
 }
 
-static TProtoFunc* LoadChunk (lua_State* L, ZIO* Z)
+static Proto* LoadChunk (lua_State* L, ZIO* Z)
 {
  return LoadFunction(L,Z,LoadHeader(L,Z));
 }
@@ -197,7 +197,7 @@ static TProtoFunc* LoadChunk (lua_State* L, ZIO* Z)
 ** load one chunk from a file or buffer
 ** return main if ok and NULL at EOF
 */
-TProtoFunc* luaU_undump1 (lua_State* L, ZIO* Z)
+Proto* luaU_undump1 (lua_State* L, ZIO* Z)
 {
  int c=zgetc(Z);
  if (c==ID_CHUNK)

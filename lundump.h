@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.h,v 1.18 2000/01/28 17:51:09 lhf Exp $
+** $Id: lundump.h,v 1.13 2000/03/03 14:58:26 roberto Exp roberto $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -11,11 +11,11 @@
 #include "lzio.h"
 
 /* load one chunk */
-TProtoFunc* luaU_undump1 (lua_State* L, ZIO* Z);
+Proto* luaU_undump1 (lua_State* L, ZIO* Z);
 
 /* handle cases that cannot happen */
 void luaU_badconstant (lua_State* L, const char* s, int i,
-			const TObject* o, const TProtoFunc* tf);
+			const TObject* o, const Proto* tf);
 
 /* convert number from text */
 double luaU_str2d (lua_State* L, const char* b, const char* where);

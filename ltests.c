@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.7 2000/02/08 16:34:31 roberto Exp roberto $
+** $Id: ltests.c,v 1.8 2000/02/21 18:30:06 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -39,7 +39,7 @@ static void mem_query (lua_State *L) {
 static void hash_query (lua_State *L) {
   lua_Object o = luaL_nonnullarg(L, 1);
   if (lua_getparam(L, 2) == LUA_NOOBJECT) {
-    luaL_arg_check(L, ttype(o) == LUA_T_STRING, 1, "string expected");
+    luaL_arg_check(L, ttype(o) == TAG_STRING, 1, "string expected");
     lua_pushnumber(L, tsvalue(o)->hash);
   }
   else {
@@ -75,7 +75,7 @@ static void query_strings (lua_State *L) {
     }
   }
   else {
-    TaggedString *ts = L->string_root[h].hash[s];
+    TString *ts = L->string_root[h].hash[s];
     for (ts = L->string_root[h].hash[s]; ts; ts = ts->nexthash) {
       if (ts->constindex == -1) lua_pushstring(L, "<USERDATA>");
       else lua_pushstring(L, ts->str);

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.31 2000/02/17 18:30:36 roberto Exp roberto $
+** $Id: lobject.c,v 1.32 2000/03/03 14:58:26 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -20,7 +20,7 @@ const char *const luaO_typenames[] = { /* ORDER LUA_T */
 };
 
 
-const TObject luaO_nilobject = {LUA_T_NIL, {NULL}};
+const TObject luaO_nilobject = {TAG_NIL, {NULL}};
 
 
 /*
@@ -35,19 +35,19 @@ unsigned long luaO_power2 (unsigned long n) {
 
 int luaO_equalval (const TObject *t1, const TObject *t2) {
   switch (ttype(t1)) {
-    case LUA_T_NIL:
+    case TAG_NIL:
       return 1;
-    case LUA_T_NUMBER:
+    case TAG_NUMBER:
       return nvalue(t1) == nvalue(t2);
-    case LUA_T_STRING: case LUA_T_USERDATA:
+    case TAG_STRING: case TAG_USERDATA:
       return svalue(t1) == svalue(t2);
-    case LUA_T_ARRAY: 
+    case TAG_ARRAY: 
       return avalue(t1) == avalue(t2);
-    case LUA_T_LPROTO:
+    case TAG_LPROTO:
       return tfvalue(t1)  == tfvalue(t2);
-    case LUA_T_CPROTO:
+    case TAG_CPROTO:
       return fvalue(t1)  == fvalue(t2);
-    case LUA_T_CCLOSURE: case LUA_T_LCLOSURE:
+    case TAG_CCLOSURE: case TAG_LCLOSURE:
       return t1->value.cl == t2->value.cl;
     default:
      LUA_INTERNALERROR(L, "invalid type");
@@ -67,7 +67,7 @@ static double expten (unsigned int e) {
 }
 
 
-int luaO_str2d (const char *s, real *result) {  /* LUA_NUMBER */
+int luaO_str2d (const char *s, Number *result) {  /* LUA_NUMBER */
   double a = 0.0;
   int point = 0;  /* number of decimal digits */
   int sig;

@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.34 2000/02/08 16:34:31 roberto Exp roberto $
+** $Id: ltable.c,v 1.35 2000/03/03 14:58:26 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -32,7 +32,7 @@
 
 
 
-#define TagDefault LUA_T_ARRAY
+#define TagDefault TAG_ARRAY
 
 
 
@@ -43,22 +43,22 @@
 Node *luaH_mainposition (const Hash *t, const TObject *key) {
   unsigned long h;
   switch (ttype(key)) {
-    case LUA_T_NUMBER:
+    case TAG_NUMBER:
       h = (unsigned long)(long)nvalue(key);
       break;
-    case LUA_T_STRING: case LUA_T_USERDATA:
+    case TAG_STRING: case TAG_USERDATA:
       h = tsvalue(key)->hash;
       break;
-    case LUA_T_ARRAY:
+    case TAG_ARRAY:
       h = IntPoint(L, avalue(key));
       break;
-    case LUA_T_LPROTO:
+    case TAG_LPROTO:
       h = IntPoint(L, tfvalue(key));
       break;
-    case LUA_T_CPROTO:
+    case TAG_CPROTO:
       h = IntPoint(L, fvalue(key));
       break;
-    case LUA_T_LCLOSURE:  case LUA_T_CCLOSURE:
+    case TAG_LCLOSURE:  case TAG_CCLOSURE:
       h = IntPoint(L, clvalue(key));
       break;
     default:
@@ -95,7 +95,7 @@ static Node *hashnodecreate (lua_State *L, int nhash) {
   Node *v = luaM_newvector(L, nhash, Node);
   int i;
   for (i=0; i<nhash; i++) {
-    ttype(&v[i].key) = ttype(&v[i].val) = LUA_T_NIL;
+    ttype(&v[i].key) = ttype(&v[i].val) = TAG_NIL;
     v[i].next = NULL;
   }
   return v;
@@ -134,7 +134,7 @@ static int newsize (const Hash *t) {
   int realuse = 0;
   int i;
   for (i=0; i<size; i++) {
-    if (ttype(&v[i].val) != LUA_T_NIL)
+    if (ttype(&v[i].val) != TAG_NIL)
       realuse++;
   }
   return luaO_power2(realuse+realuse/4+1);
@@ -149,7 +149,7 @@ static void rehash (lua_State *L, Hash *t) {
   setnodevector(L, t, newsize(t));  /* create new array of nodes */
   for (i=0; i<oldsize; i++) {
     Node *old = nold+i;
-    if (ttype(&old->val) != LUA_T_NIL)
+    if (ttype(&old->val) != TAG_NIL)
        luaH_set(L, t, &old->key, &old->val);
   }
   luaM_free(L, nold);  /* free old array */
@@ -182,7 +182,7 @@ void luaH_set (lua_State *L, Hash *t, const TObject *key, const TObject *val) {
     else n = n->next;
   } while (n);
   /* `key' not found; must insert it */
-  if (ttype(&mp->key) != LUA_T_NIL) {  /* main position is not free? */
+  if (ttype(&mp->key) != TAG_NIL) {  /* main position is not free? */
     Node *othern;  /* main position of colliding node */
     n = t->firstfree;  /* get a free place */
     /* is colliding node out of its main position? (can only happens if
@@ -204,7 +204,7 @@ void luaH_set (lua_State *L, Hash *t, const TObject *key, const TObject *val) {
   mp->key = *key;
   mp->val = *val;
   for (;;) {  /* check free places */
-    if (ttype(&(t->firstfree)->key) == LUA_T_NIL)
+    if (ttype(&(t->firstfree)->key) == TAG_NIL)
       return;  /* OK; table still has a free place */
     else if (t->firstfree == t->node) break;  /* cannot decrement from here */
     else (t->firstfree)--;
@@ -215,7 +215,7 @@ void luaH_set (lua_State *L, Hash *t, const TObject *key, const TObject *val) {
 
 void luaH_setint (lua_State *L, Hash *t, int key, const TObject *val) {
   TObject index;
-  ttype(&index) = LUA_T_NUMBER;
+  ttype(&index) = TAG_NUMBER;
   nvalue(&index) = key;
   luaH_set(L, t, &index, val);
 }
@@ -223,7 +223,7 @@ void luaH_setint (lua_State *L, Hash *t, int key, const TObject *val) {
 
 const TObject *luaH_getint (lua_State *L, const Hash *t, int key) {
   TObject index;
-  ttype(&index) = LUA_T_NUMBER;
+  ttype(&index) = TAG_NUMBER;
   nvalue(&index) = key;
   return luaH_get(L, t, &index);
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.16 2000/03/03 14:58:26 roberto Exp roberto $
+** $Id: lstring.h,v 1.17 2000/03/10 14:38:10 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -27,13 +27,13 @@
 
 void luaS_init (lua_State *L);
 void luaS_resize (lua_State *L, stringtable *tb, int newsize);
-TaggedString *luaS_createudata (lua_State *L, void *udata, int tag);
+TString *luaS_createudata (lua_State *L, void *udata, int tag);
 void luaS_freeall (lua_State *L);
-void luaS_free (lua_State *L, TaggedString *ts);
-TaggedString *luaS_newlstr (lua_State *L, const char *str, long l);
-TaggedString *luaS_new (lua_State *L, const char *str);
-TaggedString *luaS_newfixed (lua_State *L, const char *str);
-GlobalVar *luaS_assertglobal (lua_State *L, TaggedString *ts);
+void luaS_free (lua_State *L, TString *ts);
+TString *luaS_newlstr (lua_State *L, const char *str, long l);
+TString *luaS_new (lua_State *L, const char *str);
+TString *luaS_newfixed (lua_State *L, const char *str);
+GlobalVar *luaS_assertglobal (lua_State *L, TString *ts);
 GlobalVar *luaS_assertglobalbyname (lua_State *L, const char *name);
 int luaS_globaldefined (lua_State *L, const char *name);
 

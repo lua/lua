@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.18 2000/01/28 16:53:00 roberto Exp roberto $
+** $Id: lfunc.c,v 1.19 2000/03/03 14:58:26 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -13,7 +13,7 @@
 #include "lmem.h"
 #include "lstate.h"
 
-#define gcsizeproto(L, p)	numblocks(L, 0, sizeof(TProtoFunc))
+#define gcsizeproto(L, p)	numblocks(L, 0, sizeof(Proto))
 #define gcsizeclosure(L, c)	numblocks(L, c->nelems, sizeof(Closure))
 
 
@@ -29,8 +29,8 @@ Closure *luaF_newclosure (lua_State *L, int nelems) {
 }
 
 
-TProtoFunc *luaF_newproto (lua_State *L) {
-  TProtoFunc *f = luaM_new(L, TProtoFunc);
+Proto *luaF_newproto (lua_State *L) {
+  Proto *f = luaM_new(L, Proto);
   f->code = NULL;
   f->lineDefined = 0;
   f->source = NULL;
@@ -49,7 +49,7 @@ TProtoFunc *luaF_newproto (lua_State *L) {
 }
 
 
-void luaF_freeproto (lua_State *L, TProtoFunc *f) {
+void luaF_freeproto (lua_State *L, Proto *f) {
   L->nblocks -= gcsizeproto(L, f);
   luaM_free(L, f->code);
   luaM_free(L, f->locvars);
@@ -70,7 +70,7 @@ void luaF_freeclosure (lua_State *L, Closure *c) {
 ** Look for n-th local variable at line `line' in function `func'.
 ** Returns NULL if not found.
 */
-const char *luaF_getlocalname (const TProtoFunc *func,
+const char *luaF_getlocalname (const Proto *func,
                                int local_number, int line) {
   int count = 0;
   const char *varname = NULL;

@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.44 2000/03/03 18:53:17 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.47 2000/03/09 13:57:37 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -20,7 +20,7 @@
   type 3: 1st unsigned argument in the higher 16 bits      (`A')
           2nd unsigned argument in the middle 8 bits       (`B')
 
-  The signed argument is represented in excess 2^23; that is, the real value
+  The signed argument is represented in excess 2^23; that is, the Number value
   is the usigned value minus 2^23.
 ===========================================================================*/
 
@@ -88,73 +88,73 @@ typedef enum {
 /*----------------------------------------------------------------------
 name		args	stack before	stack after	side effects
 ------------------------------------------------------------------------*/
-ENDCODE,/*	-	-		(return)			*/
-RETCODE,/*	U	-		(return)			*/
+OP_END,/*	-	-		(return)			*/
+OP_RETURN,/*	U	-		(return)			*/
 
-CALL,/*		A B	v_n-v_1 f(at a)	r_b-r_1		f(v1,...,v_n)	*/
-TAILCALL,/*	A B	v_a-v_1 f	(return)	f(v1,...,v_a)	*/
+OP_CALL,/*	A B	v_n-v_1 f(at a)	r_b-r_1		f(v1,...,v_n)	*/
+OP_TAILCALL,/*	A B	v_a-v_1 f	(return)	f(v1,...,v_a)	*/
 
-PUSHNIL,/*	U	-		nil_1-nil_u			*/
-POP,/*		U	a_u-a_1		-				*/
+OP_PUSHNIL,/*	U	-		nil_1-nil_u			*/
+OP_POP,/*	U	a_u-a_1		-				*/
 
-PUSHINT,/*	S	-		(real)s				*/
-PUSHSTRING,/*	K	-		KSTR[k]				*/
-PUSHNUM,/*	N	-		KNUM[u]				*/
-PUSHNEGNUM,/*	N	-		-KNUM[u]			*/
+OP_PUSHINT,/*	S	-		(Number)s				*/
+OP_PUSHSTRING,/* K	-		KSTR[k]				*/
+OP_PUSHNUM,/*	N	-		KNUM[u]				*/
+OP_PUSHNEGNUM,/* N	-		-KNUM[u]			*/
 
-PUSHUPVALUE,/*	U	-		Closure[u]			*/
+OP_PUSHUPVALUE,/* U	-		Closure[u]			*/
 
-PUSHLOCAL,/*	L	-		LOC[u]				*/
-GETGLOBAL,/*	K	-		VAR[KSTR[k]]			*/
+OP_PUSHLOCAL,/*	L	-		LOC[u]				*/
+OP_GETGLOBAL,/*	K	-		VAR[KSTR[k]]			*/
 
-GETTABLE,/*	-	i t		t[i]				*/
-GETDOTTED,/*	K	t		t[KSTR[k]]			*/
-PUSHSELF,/*	K	t		t t[KSTR[k]]			*/
+OP_GETTABLE,/*	-	i t		t[i]				*/
+OP_GETDOTTED,/*	K	t		t[KSTR[k]]			*/
+OP_PUSHSELF,/*	K	t		t t[KSTR[k]]			*/
 
-CREATETABLE,/*	U	-		newarray(size = u)		*/
+OP_CREATETABLE,/* U	-		newarray(size = u)		*/
 
-SETLOCAL,/*	L	x		-		LOC[u]=x	*/
-SETGLOBAL,/*	K	x		-		VAR[KSTR[k]]=x	*/
-SETTABLEPOP,/*	-	v i t		-		t[i]=v		*/
-SETTABLE,/*	U	v a_u-a_1 i t	 a_u-a_1 i t	t[i]=v		*/
+OP_SETLOCAL,/*	L	x		-		LOC[u]=x	*/
+OP_SETGLOBAL,/*	K	x		-		VAR[KSTR[k]]=x	*/
+OP_SETTABLEPOP,/* -	v i t		-		t[i]=v		*/
+OP_SETTABLE,/*	U	v a_u-a_1 i t	 a_u-a_1 i t	t[i]=v		*/
 
-SETLIST,/*	A B	v_b-v_0 t	t		t[i+a*FPF]=v_i	*/
-SETMAP,/*	U	v_u k_u - v_0 k_0 t	t	t[k_i]=v_i	*/
+OP_SETLIST,/*	A B	v_b-v_0 t	t		t[i+a*FPF]=v_i	*/
+OP_SETMAP,/*	U	v_u k_u - v_0 k_0 t	t	t[k_i]=v_i	*/
 
-ADDOP,/*	-	y x		x+y				*/
-ADDI,/*		S	x		x+s				*/
-SUBOP,/*	-	y x		x-y				*/
-MULTOP,/*	-	y x		x*y				*/
-DIVOP,/*	-	y x		x/y				*/
-POWOP,/*	-	y x		x^y				*/
-CONCOP,/*	U	v_u-v_1		v1..-..v_u			*/
-MINUSOP,/*	-	x		-x				*/
-NOTOP,/*	-	x		(x==nil)? 1 : nil		*/
+OP_ADD,/*	-	y x		x+y				*/
+OP_ADDI,/*	S	x		x+s				*/
+OP_SUB,/*	-	y x		x-y				*/
+OP_MULT,/*	-	y x		x*y				*/
+OP_DIV,/*	-	y x		x/y				*/
+OP_POW,/*	-	y x		x^y				*/
+OP_CONC,/*	U	v_u-v_1		v1..-..v_u			*/
+OP_MINUS,/*	-	x		-x				*/
+OP_NOT,/*	-	x		(x==nil)? 1 : nil		*/
 
-IFNEQJMP,/*	J	y x		-		(x~=y)? PC+=s	*/
-IFEQJMP,/*	J	y x		-		(x==y)? PC+=s	*/
-IFLTJMP,/*	J	y x		-		(x<y)? PC+=s	*/
-IFLEJMP,/*	J	y x		-		(x<y)? PC+=s	*/
-IFGTJMP,/*	J	y x		-		(x>y)? PC+=s	*/
-IFGEJMP,/*	J	y x		-		(x>=y)? PC+=s	*/
+OP_IFNEQJMP,/*	J	y x		-		(x~=y)? PC+=s	*/
+OP_IFEQJMP,/*	J	y x		-		(x==y)? PC+=s	*/
+OP_IFLTJMP,/*	J	y x		-		(x<y)? PC+=s	*/
+OP_IFLEJMP,/*	J	y x		-		(x<y)? PC+=s	*/
+OP_IFGTJMP,/*	J	y x		-		(x>y)? PC+=s	*/
+OP_IFGEJMP,/*	J	y x		-		(x>=y)? PC+=s	*/
 
-IFTJMP,/*	J	x		-		(x!=nil)? PC+=s	*/
-IFFJMP,/*	J	x		-		(x==nil)? PC+=s	*/
-ONTJMP,/*	J	x		(x!=nil)? x : -	(x!=nil)? PC+=s	*/
-ONFJMP,/*	J	x		(x==nil)? x : -	(x==nil)? PC+=s	*/
-JMP,/*		J	-		-		PC+=s		*/
+OP_IFTJMP,/*	J	x		-		(x!=nil)? PC+=s	*/
+OP_IFFJMP,/*	J	x		-		(x==nil)? PC+=s	*/
+OP_ONTJMP,/*	J	x		(x!=nil)? x : -	(x!=nil)? PC+=s	*/
+OP_ONFJMP,/*	J	x		(x==nil)? x : -	(x==nil)? PC+=s	*/
+OP_JMP,/*	J	-		-		PC+=s		*/
 
-PUSHNILJMP,/*	-	-		nil		PC++;		*/
+OP_PUSHNILJMP,/* -	-		nil		PC++;		*/
 
-CLOSURE,/*	A B	v_b-v_1		closure(CNST[a], v_1-v_b)	*/
+OP_CLOSURE,/*	A B	v_b-v_1		closure(CNST[a], v_1-v_b)	*/
 
-SETLINE/*	U	-		-		LINE=u		*/
+OP_SETLINE/*	U	-		-		LINE=u		*/
 
 } OpCode;
 
 
 
-#define ISJUMP(o)	(IFNEQJMP <= (o) && (o) <= JMP)
+#define ISJUMP(o)	(OP_IFNEQJMP <= (o) && (o) <= OP_JMP)
 
 
 #define RFIELDS_PER_FLUSH 32	/* records (SETMAP) */

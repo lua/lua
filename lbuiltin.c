@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.94 2000/03/03 14:58:26 roberto Exp $
+** $Id: lbuiltin.c,v 1.95 2000/03/09 00:19:22 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -52,20 +52,20 @@ void luaB_opentests (lua_State *L);
 */
 
 
-static void pushtagstring (lua_State *L, TaggedString *s) {
-  ttype(L->top) = LUA_T_STRING;
+static void pushtagstring (lua_State *L, TString *s) {
+  ttype(L->top) = TAG_STRING;
   tsvalue(L->top) = s;
   incr_top;
 }
 
 
-static real getsize (const Hash *h) {
-  real max = 0;
+static Number getsize (const Hash *h) {
+  Number max = 0;
   int i = h->size;
   Node *n = h->node;
   while (i--) {
-    if (ttype(key(n)) == LUA_T_NUMBER && 
-        ttype(val(n)) != LUA_T_NIL &&
+    if (ttype(key(n)) == TAG_NUMBER && 
+        ttype(val(n)) != TAG_NIL &&
         nvalue(key(n)) > max)
       max = nvalue(key(n));
     n++;
@@ -74,14 +74,14 @@ static real getsize (const Hash *h) {
 }
 
 
-static real getnarg (lua_State *L, const Hash *a) {
+static Number getnarg (lua_State *L, const Hash *a) {
   TObject index;
   const TObject *value;
   /* value = table.n */
-  ttype(&index) = LUA_T_STRING;
+  ttype(&index) = TAG_STRING;
   tsvalue(&index) = luaS_new(L, "n");
   value = luaH_get(L, a, &index);
-  return (ttype(value) == LUA_T_NUMBER) ? nvalue(value) : getsize(a);
+  return (ttype(value) == TAG_NUMBER) ? nvalue(value) : getsize(a);
 }
 
 
@@ -167,7 +167,7 @@ void luaB_tonumber (lua_State *L) {
   else {
     const char *s1 = luaL_check_string(L, 1);
     char *s2;
-    real n;
+    Number n;
     luaL_arg_check(L, 0 <= base && base <= 36, 2, "base out of range");
     n = strtoul(s1, &s2, base);
     if (s1 == s2) return;  /* no valid digits: return nil */
@@ -244,7 +244,7 @@ void luaB_settagmethod (lua_State *L) {
   luaL_arg_check(L, lua_isnil(L, nf) || lua_isfunction(L, nf), 3,
                  "function or nil expected");
 #ifndef LUA_COMPAT_GC
-  if (strcmp(event, "gc") == 0 && tag != LUA_T_NIL)
+  if (strcmp(event, "gc") == 0 && tag != TAG_NIL)
     lua_error(L, "cannot set this `gc' tag method from Lua");
 #endif
   lua_pushobject(L, nf);
@@ -349,11 +349,11 @@ void luaB_call (lua_State *L) {
 
 void luaB_nextvar (lua_State *L) {
   lua_Object o = luaL_nonnullarg(L, 1);
-  TaggedString *name;
-  if (ttype(o) == LUA_T_NIL)
+  TString *name;
+  if (ttype(o) == TAG_NIL)
     name = NULL;
   else {
-    luaL_arg_check(L, ttype(o) == LUA_T_STRING, 1, "variable name expected");
+    luaL_arg_check(L, ttype(o) == TAG_STRING, 1, "variable name expected");
     name = tsvalue(o);
   }
   if (!luaA_nextvar(L, name))
@@ -365,7 +365,7 @@ void luaB_next (lua_State *L) {
   const Hash *a = gettable(L, 1);
   lua_Object k = luaL_nonnullarg(L, 2);
   int i;  /* `luaA_next' gets first element after `i' */
-  if (ttype(k) == LUA_T_NIL)
+  if (ttype(k) == TAG_NIL)
     i = 0;  /* get first */
   else {
     i = luaH_pos(L, a, k)+1;
@@ -380,29 +380,29 @@ void luaB_tostring (lua_State *L) {
   lua_Object o = lua_getparam(L, 1);
   char buff[64];
   switch (ttype(o)) {
-    case LUA_T_NUMBER:
+    case TAG_NUMBER:
       lua_pushstring(L, lua_getstring(L, o));
       return;
-    case LUA_T_STRING:
+    case TAG_STRING:
       lua_pushobject(L, o);
       return;
-    case LUA_T_ARRAY:
+    case TAG_ARRAY:
       sprintf(buff, "table: %p", o->value.a);
       break;
-    case LUA_T_LCLOSURE:  case LUA_T_CCLOSURE:
+    case TAG_LCLOSURE:  case TAG_CCLOSURE:
       sprintf(buff, "function: %p", o->value.cl);
       break;
-    case LUA_T_LPROTO:
+    case TAG_LPROTO:
       sprintf(buff, "function: %p", o->value.tf);
       break;
-    case LUA_T_CPROTO:
+    case TAG_CPROTO:
       sprintf(buff, "function: %p", o->value.f);
       break;
-    case LUA_T_USERDATA:
+    case TAG_USERDATA:
       sprintf(buff, "userdata: %p(%d)", o->value.ts->u.d.value,
                                         o->value.ts->u.d.tag);
       break;
-    case LUA_T_NIL:
+    case TAG_NIL:
       lua_pushstring(L, "nil");
       return;
     default:
@@ -440,10 +440,10 @@ void luaB_foreachi (lua_State *L) {
   luaD_checkstack(L, 3);  /* for f, key, and val */
   for (i=1; i<=n; i++) {
     *(L->top++) = *f;
-    ttype(L->top) = LUA_T_NUMBER; nvalue(L->top++) = i;
+    ttype(L->top) = TAG_NUMBER; nvalue(L->top++) = i;
     *(L->top++) = *luaH_getint(L, t, i);
     luaD_call(L, L->top-3, 1);
-    if (ttype(L->top-1) != LUA_T_NIL)
+    if (ttype(L->top-1) != TAG_NIL)
       return;
     L->top--;  /* remove nil result */
   }
@@ -457,12 +457,12 @@ void luaB_foreach (lua_State *L) {
   luaD_checkstack(L, 3);  /* for f, key, and val */
   for (i=0; i<a->size; i++) {
     const Node *nd = &(a->node[i]);
-    if (ttype(val(nd)) != LUA_T_NIL) {
+    if (ttype(val(nd)) != TAG_NIL) {
       *(L->top++) = *f;
       *(L->top++) = *key(nd);
       *(L->top++) = *val(nd);
       luaD_call(L, L->top-3, 1);
-      if (ttype(L->top-1) != LUA_T_NIL)
+      if (ttype(L->top-1) != TAG_NIL)
         return;
       L->top--;  /* remove result */
     }
@@ -475,13 +475,13 @@ void luaB_foreachvar (lua_State *L) {
   GlobalVar *gv;
   luaD_checkstack(L, 4);  /* for extra var name, f, var name, and globalval */
   for (gv = L->rootglobal; gv; gv = gv->next) {
-    if (gv->value.ttype != LUA_T_NIL) {
+    if (gv->value.ttype != TAG_NIL) {
       pushtagstring(L, gv->name);  /* keep (extra) name on stack to avoid GC */
       *(L->top++) = *f;
       pushtagstring(L, gv->name);
       *(L->top++) = gv->value;
       luaD_call(L, L->top-3, 1);
-      if (ttype(L->top-1) != LUA_T_NIL) {
+      if (ttype(L->top-1) != TAG_NIL) {
         *(L->top-2) = *(L->top-1);  /* remove extra name */
         L->top--;
         return;
@@ -551,7 +551,7 @@ static int sort_comp (lua_State *L, lua_Object f, const TObject *a,
     L->top += 3;
     luaD_call(L, L->top-3, 1);
     L->top--;
-    return (ttype(L->top) != LUA_T_NIL);
+    return (ttype(L->top) != TAG_NIL);
   }
   else  /* a < b? */
     return luaV_lessthan(L, a, b, L->top);
@@ -559,7 +559,7 @@ static int sort_comp (lua_State *L, lua_Object f, const TObject *a,
 
 static void auxsort (lua_State *L, Hash *a, int l, int u, lua_Object f) {
   StkId P = L->top++;  /* temporary place for pivot */
-  ttype(P) = LUA_T_NIL;
+  ttype(P) = TAG_NIL;
   while (l < u) {  /* for tail recursion */
     int i, j;
     /* sort elements a[l], a[(l+u)/2] and a[u] */

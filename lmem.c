@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.26 2000/03/03 14:58:26 roberto Exp roberto $
+** $Id: lmem.c,v 1.27 2000/03/10 14:01:05 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -16,7 +16,7 @@
 
 
 /*
-** real ANSI systems do not need these tests;
+** Number ANSI systems do not need these tests;
 ** but some systems (Sun OS) are not that ANSI...
 */
 #ifdef OLD_ANSI

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.49 2000/02/21 18:33:26 roberto Exp roberto $
+** $Id: lobject.h,v 1.50 2000/03/03 14:58:26 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -27,14 +27,14 @@
 #define UNUSED(x)	(void)x		/* to avoid warnings */
 
 /*
-** "real" is the type "number" of Lua
+** Define the type `number' of Lua
 ** GREP LUA_NUMBER to change that
 */
 #ifndef LUA_NUM_TYPE
 #define LUA_NUM_TYPE double
 #endif
 
-typedef LUA_NUM_TYPE real;
+typedef LUA_NUM_TYPE Number;
 
 
 /*
@@ -66,45 +66,45 @@ typedef unsigned long Instruction;
 ** grep "ORDER LUA_T"
 */
 typedef enum {
-  LUA_T_USERDATA  =  0, /* default tag for userdata */
-  LUA_T_NUMBER    = -1, /* fixed tag for numbers */
-  LUA_T_STRING    = -2, /* fixed tag for strings */
-  LUA_T_ARRAY     = -3, /* default tag for tables (or arrays) */
-  LUA_T_LPROTO    = -4, /* fixed tag for Lua functions */
-  LUA_T_CPROTO    = -5, /* fixed tag for C functions */
-  LUA_T_NIL       = -6, /* last "pre-defined" tag */
+  TAG_USERDATA  =  0, /* default tag for userdata */
+  TAG_NUMBER    = -1, /* fixed tag for numbers */
+  TAG_STRING    = -2, /* fixed tag for strings */
+  TAG_ARRAY     = -3, /* default tag for tables (or arrays) */
+  TAG_LPROTO    = -4, /* fixed tag for Lua functions */
+  TAG_CPROTO    = -5, /* fixed tag for C functions */
+  TAG_NIL       = -6, /* last "pre-defined" tag */
 
-  LUA_T_LCLOSURE  = -7, /* Lua closure */
-  LUA_T_CCLOSURE  = -8, /* C closure */
+  TAG_LCLOSURE  = -7, /* Lua closure */
+  TAG_CCLOSURE  = -8, /* C closure */
 
-  LUA_T_LCLMARK   = -9 ,/* mark for Lua closures */
-  LUA_T_CCLMARK   = -10,/* mark for C closures */
-  LUA_T_LMARK     = -11,/* mark for Lua prototypes */
-  LUA_T_CMARK     = -12,/* mark for C prototypes */
+  TAG_LCLMARK   = -9 ,/* mark for Lua closures */
+  TAG_CCLMARK   = -10,/* mark for C closures */
+  TAG_LMARK     = -11,/* mark for Lua prototypes */
+  TAG_CMARK     = -12,/* mark for C prototypes */
 
-  LUA_T_LINE     = -13
+  TAG_LINE     = -13
 } lua_Type;
 
 #define NUM_TAGS	7	/* tags for values visible from Lua */
 
 
-#define LAST_REGULAR_TAG  LUA_T_CCLOSURE  /* after that, are all marks */
+#define LAST_REGULAR_TAG  TAG_CCLOSURE  /* after that, are all marks */
 
 /*
 ** check whether `t' is a mark; ttypes are negative numbers, so the
 ** comparisons look reversed.  (ORDER LUA_T)
 */
-#define is_T_MARK(t)	(LUA_T_CMARK <= (t) && (t) <= LUA_T_LCLMARK)
+#define is_T_MARK(t)	(TAG_CMARK <= (t) && (t) <= TAG_LCLMARK)
 
 
 typedef union {
-  lua_CFunction f;              /* LUA_T_CPROTO, LUA_T_CMARK */
-  real n;                       /* LUA_T_NUMBER */
-  struct TaggedString *ts;      /* LUA_T_STRING, LUA_T_USERDATA */
-  struct TProtoFunc *tf;        /* LUA_T_LPROTO, LUA_T_LMARK */
-  struct Closure *cl;           /* LUA_T_[CL]CLOSURE, LUA_T_[CL]CLMARK */
-  struct Hash *a;               /* LUA_T_ARRAY */
-  int i;                        /* LUA_T_LINE */
+  lua_CFunction f;              /* TAG_CPROTO, TAG_CMARK */
+  Number n;                       /* TAG_NUMBER */
+  struct TString *ts;      /* TAG_STRING, TAG_USERDATA */
+  struct Proto *tf;        /* TAG_LPROTO, TAG_LMARK */
+  struct Closure *cl;           /* TAG_[CL]CLOSURE, TAG_[CL]CLMARK */
+  struct Hash *a;               /* TAG_ARRAY */
+  int i;                        /* TAG_LINE */
 } Value;
 
 
@@ -118,14 +118,14 @@ typedef struct TObject {
 typedef struct GlobalVar {
   TObject value;
   struct GlobalVar *next;
-  struct TaggedString *name;
+  struct TString *name;
 } GlobalVar;
 
 
 /*
 ** String headers for string table
 */
-typedef struct TaggedString {
+typedef struct TString {
   union {
     struct {  /* for strings */
       GlobalVar *gv;  /* eventual global value with this name */
@@ -136,12 +136,12 @@ typedef struct TaggedString {
       void *value;
     } d;
   } u;
-  struct TaggedString *nexthash;  /* chain for hash table */
+  struct TString *nexthash;  /* chain for hash table */
   unsigned long hash;
   int constindex;  /* hint to reuse constants (= -1 if this is a userdata) */
   unsigned char marked;
   char str[1];   /* \0 byte already reserved */
-} TaggedString;
+} TString;
 
 
 
@@ -149,27 +149,27 @@ typedef struct TaggedString {
 /*
 ** Function Prototypes
 */
-typedef struct TProtoFunc {
-  struct TProtoFunc *next;
+typedef struct Proto {
+  struct Proto *next;
   int marked;
-  struct TaggedString **kstr;  /* strings used by the function */
+  struct TString **kstr;  /* strings used by the function */
   int nkstr;  /* size of `kstr' */
-  real *knum;  /* real numbers used by the function */
+  Number *knum;  /* Number numbers used by the function */
   int nknum;  /* size of `knum' */
-  struct TProtoFunc **kproto;  /* functions defined inside the function */
+  struct Proto **kproto;  /* functions defined inside the function */
   int nkproto;  /* size of `kproto' */
   Instruction *code;  /* ends with opcode ENDCODE */
   int lineDefined;
-  TaggedString  *source;
+  TString  *source;
   int numparams;
   int is_vararg;
   int maxstacksize;
   struct LocVar *locvars;  /* ends with line = -1 */
-} TProtoFunc;
+} Proto;
 
 
 typedef struct LocVar {
-  TaggedString *varname;           /* NULL signals end of scope */
+  TString *varname;           /* NULL signals end of scope */
   int line;
 } LocVar;
 
@@ -202,10 +202,10 @@ typedef struct Closure {
 
 
 
-typedef struct node {
+typedef struct Node {
   TObject key;
   TObject val;
-  struct node *next;  /* for chaining */
+  struct Node *next;  /* for chaining */
 } Node;
 
 typedef struct Hash {
@@ -230,7 +230,7 @@ unsigned long luaO_power2 (unsigned long n);
 #define luaO_equalObj(t1,t2)  (ttype(t1) == ttype(t2) && luaO_equalval(t1,t2))
 int luaO_equalval (const TObject *t1, const TObject *t2);
 int luaO_redimension (lua_State *L, int oldsize);
-int luaO_str2d (const char *s, real *result);
+int luaO_str2d (const char *s, Number *result);
 
 
 #endif
