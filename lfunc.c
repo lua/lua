@@ -22,6 +22,7 @@
                          cast(int, sizeof(TObject *)*((n)-1)))
 
 
+
 Closure *luaF_newCclosure (lua_State *L, int nelems) {
   Closure *c = cast(Closure *, luaM_malloc(L, sizeCclosure(nelems)));
   c->c.isC = 1;
@@ -36,76 +37,39 @@ Closure *luaF_newCclosure (lua_State *L, int nelems) {
 Closure *luaF_newLclosure (lua_State *L, int nelems) {
   Closure *c = cast(Closure *, luaM_malloc(L, sizeLclosure(nelems)));
   c->l.isC = 0;
+  c->c.next = G(L)->rootcl;
+  G(L)->rootcl = c;
   c->l.marked = 0;
   c->l.nupvalues = nelems;
   return c;
 }
 
 
-/*
-** returns the open pointer in a closure that points higher into the stack
-*/
-static StkId uppoint (LClosure *cl) {
-  StkId lp = NULL;
-  int i;
-  for (i=0; i<cl->nupvalues; i++) {
-    if (!isclosed(cl->upvals[i]) && (lp == NULL || cl->upvals[i] > lp))
-      lp = cl->upvals[i];
+UpVal *luaF_findupval (lua_State *L, StkId level) {
+  UpVal **pp = &L->openupval;
+  UpVal *p;
+  while ((p = *pp) != NULL && p->v >= level) {
+    if (p->v == level) return p;
+    pp = &p->next;
   }
-  return lp;
-}
-
-
-void luaF_LConlist (lua_State *L, Closure *cl) {
-  StkId cli = uppoint(&cl->l);
-  if (cli == NULL) {  /* no more open entries? */
-    cl->l.next = G(L)->rootcl;  /* insert in final list */
-    G(L)->rootcl = cl;
-  }
-  else {  /* insert in list of open closures, ordered by decreasing uppoints */
-    Closure **p = &L->opencl;
-    while (*p != NULL && uppoint(&(*p)->l) > cli) p = &(*p)->l.next;
-    cl->l.next = *p;
-    *p = cl;
-  }
-}
-
-
-static int closeCl (lua_State *L, LClosure *cl, StkId level) {
-  int got = 0;  /* flag: 1 if some pointer in the closure was corrected */
-  int i;
-  for  (i=0; i<cl->nupvalues; i++) {
-    StkId var;
-    if (!isclosed(cl->upvals[i]) && (var=cl->upvals[i]) >= level) {
-      if (ttype(var) != LUA_TUPVAL) {
-        TObject *v = luaM_newvector(L, 2, TObject);
-        v[1] = *var;
-        setupvalue(v, G(L)->rootupval, LUA_HEAPUPVAL);
-        G(L)->rootupval = v;
-        setupvalue(var, &v[1], LUA_TUPVAL);
-      }
-      cl->upvals[i] = vvalue(var);
-      got = 1;
-    }
-  }
-  return got;
+  p = luaM_new(L, UpVal);  /* not found: create a new one */
+  p->v = level;  /* current value lives in the stack */
+  p->mark = 1;  /* won't participate in GC while open */
+  p->next = *pp;  /* chain it in the proper position */
+  *pp = p;
+  return p;
 }
 
 
 void luaF_close (lua_State *L, StkId level) {
-  Closure *affected = NULL;  /* closures with open pointers >= level */
-  Closure *cl;
-  while ((cl=L->opencl) != NULL) {
-    if (!closeCl(L, cast(LClosure *, cl), level)) break;
-    /* some pointer in `cl' changed; will re-insert it in original list */
-    L->opencl = cl->l.next;  /* remove from original list */
-    cl->l.next = affected;
-    affected = cl;  /* insert in affected list */
-  }
-  /* re-insert all affected closures in original list */
-  while ((cl=affected) != NULL) {
-    affected = cl->l.next;
-    luaF_LConlist(L, cl);
+  UpVal *p;
+  while ((p = L->openupval) != NULL && p->v >= level) {
+    setobj(&p->value, p->v);  /* save current value */
+    p->v = &p->value;  /* now current value lives here */
+    L->openupval = p->next;  /* remove from `open' list */
+    p->next = G(L)->rootupval;  /* chain in `closed' list */
+    p->mark = 0;  /* now it can be collected */
+    G(L)->rootupval = p;
   }
 }
 

@@ -215,7 +215,6 @@ static void f_parser (lua_State *L, void *ud) {
   Proto *tf = p->bin ? luaU_undump(L, p->z) : luaY_parser(L, p->z);
   Closure *cl = luaF_newLclosure(L, 0);
   cl->l.p = tf;
-  luaF_LConlist(L, cl);
   setclvalue(L->top, cl);
   incr_top;
 }

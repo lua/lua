@@ -170,15 +170,15 @@ typedef struct LocVar {
 
 
 /*
-** Upvalues in the heap. There is a small trick here: to allow a closure to
-** diferentiate between upvalues in the heap and in the stack, upvalues in
-** the heap always have another TObject before them (like those in the stack),
-** but those `prefix' objects have a tag that cannot happen in the stack.
-** Moreover, we use these extra `prexif' object to store GC-related
-** information.
+** Upvalues
 */
 
-#define isclosed(u)	(ttype((u)-1) == LUA_HEAPUPVAL)
+typedef struct UpVal {
+  TObject *v;  /* points to stack or to its own value */
+  int mark;
+  struct UpVal *next;
+  TObject value;  /* the value (when closed) */
+} UpVal;
 
 
 /*
@@ -201,7 +201,7 @@ typedef struct LClosure {
   lu_byte marked;
   union Closure *next;  /* first four fields must be equal to CClosure!! */
   struct Proto *p;
-  TObject *upvals[1];
+  UpVal *upvals[1];
 } LClosure;
 
 
@@ -221,8 +221,8 @@ typedef union Closure {
 
 typedef struct Node {
   struct Node *next;  /* for chaining */
-  TObject key;
-  TObject val;
+  TObject _key;
+  TObject _val;
 } Node;
 
 

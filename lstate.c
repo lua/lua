@@ -10,6 +10,7 @@
 #include "lua.h"
 
 #include "ldo.h"
+#include "lfunc.h"
 #include "lgc.h"
 #include "llex.h"
 #include "lmem.h"
@@ -88,7 +89,7 @@ LUA_API lua_State *lua_newthread (lua_State *OL, int stacksize) {
     L->errorJmp = NULL;
     L->callhook = NULL;
     L->linehook = NULL;
-    L->opencl = NULL;
+    L->openupval = NULL;
     L->allowhooks = 1;
     L->next = L->previous = L;
     so.stacksize = stacksize;
@@ -105,6 +106,8 @@ LUA_API lua_State *lua_newthread (lua_State *OL, int stacksize) {
 
 
 static void close_state (lua_State *L, lua_State *OL) {
+  luaF_close(L, L->stack);  /* close all upvalues for this thread */
+  lua_assert(L->openupval == NULL);
   if (OL != NULL) {  /* are there other threads? */
     lua_assert(L->previous != L);
     L->previous->next = L->next;
@@ -116,6 +119,7 @@ static void close_state (lua_State *L, lua_State *OL) {
     lua_assert(G(L)->rootproto == NULL);
     lua_assert(G(L)->rootudata == NULL);
     lua_assert(G(L)->rootcl == NULL);
+    lua_assert(G(L)->rootupval == NULL);
     lua_assert(G(L)->roottable == NULL);
     luaS_freeall(L);
     luaM_freearray(L, G(L)->TMtable, G(L)->sizeTM, struct TM);
@@ -125,6 +129,7 @@ static void close_state (lua_State *L, lua_State *OL) {
   luaM_freearray(OL, L->stack, L->stacksize, TObject);
   luaM_freelem(OL, L);
 }
+
 
 LUA_API void lua_close (lua_State *L) {
   lua_State *OL;

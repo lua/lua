@@ -390,8 +390,7 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
       }
       case OP_GETUPVAL: {
         int b = GETARG_B(i);
-        lua_assert(isclosed(cl->upvals[b]) || cl->upvals[b] < base);
-        setobj(ra, cl->upvals[b]);
+        setobj(ra, cl->upvals[b]->v);
         break;
       }
       case OP_GETGLOBAL: {
@@ -410,8 +409,7 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
       }
       case OP_SETUPVAL: {
         int b = GETARG_B(i);
-        lua_assert(isclosed(cl->upvals[b]) || cl->upvals[b] < base);
-        setobj(cl->upvals[b], ra);
+        setobj(cl->upvals[b]->v, ra);
         break;
       }
       case OP_SETTABLE: {
@@ -648,10 +646,9 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
             ncl->l.upvals[j] = cl->upvals[GETARG_B(*pc)];
           else {
             lua_assert(GET_OPCODE(*pc) == OP_MOVE);
-            ncl->l.upvals[j] = base + GETARG_B(*pc);
+            ncl->l.upvals[j] = luaF_findupval(L, base + GETARG_B(*pc));
           }
         }
-        luaF_LConlist(L, ncl);
         setclvalue(ra, ncl);
         break;
       }

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.63 2001/10/31 19:58:11 roberto Exp $
+** $Id: lstate.h,v 1.64 2001/11/06 21:40:51 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -65,10 +65,10 @@ typedef struct global_State {
   lu_mem GCthreshold;
   lu_mem nblocks;  /* number of `bytes' currently allocated */
   Proto *rootproto;  /* list of all prototypes */
-  Closure *rootcl;  /* list of all C closures and closed Lua closures */
+  Closure *rootcl;  /* list of all closures */
   Table *roottable;  /* list of all tables */
   Udata *rootudata;   /* list of all userdata */
-  TObject *rootupval;  /* list of all up values */
+  UpVal *rootupval;  /* list of closed up values */
 } global_State;
 
 
@@ -88,7 +88,7 @@ struct lua_State {
   lua_Hook linehook;
   int allowhooks;
   struct lua_longjmp *errorJmp;  /* current error recover point */
-  Closure *opencl;  /* list of closures still pointing to this stack */
+  UpVal *openupval;  /* list of open upvalues in this stack */
   lua_State *next;  /* circular double linked list of states */
   lua_State *previous;
   CallInfo basefunc;

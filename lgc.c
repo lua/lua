@@ -65,10 +65,10 @@ static void markclosure (GCState *st, Closure *cl) {
       lua_assert(cl->l.nupvalues == cl->l.p->nupvalues);
       protomark(cl->l.p);
       for (i=0; i<cl->l.nupvalues; i++) {  /* mark its upvalues */
-        TObject *u = cl->l.upvals[i];
-        if (isclosed(u)) {
-          ttype(u-1) = LUA_TNIL;  /* temporary value (to mark as visited) */
-          markobject(st, u);
+        UpVal *u = cl->l.upvals[i];
+        if (!u->mark) {
+          u->mark = 1;
+          markobject(st, u->v);
         }
       }
     }
@@ -101,7 +101,7 @@ static void markobject (GCState *st, TObject *o) {
       break;
     }
     default: {
-      lua_assert(0 <= ttype(o) && ttype(o) <= LUA_TUPVAL);
+      lua_assert(ttype(o) == LUA_TNIL || ttype(o) == LUA_TNUMBER);
       break;
     }
   }
@@ -241,7 +241,8 @@ static void collectproto (lua_State *L) {
 }
 
 
-static void collectclosure (lua_State *L, Closure **p) {
+static void collectclosures (lua_State *L) {
+  Closure **p = &G(L)->rootcl;
   Closure *curr;
   while ((curr = *p) != NULL) {
     if (curr->c.marked) {
@@ -256,13 +257,19 @@ static void collectclosure (lua_State *L, Closure **p) {
 }
 
 
-static void collectclosures (lua_State *L) {
-  lua_State *L1 = L;
-  do {  /* for each thread */
-    collectclosure(L1, &L1->opencl);
-    L1 = L1->next;
-  } while (L1 != L);
-  collectclosure(L, &G(L)->rootcl);
+static void collectupval (lua_State *L) {
+  UpVal **v = &G(L)->rootupval;
+  UpVal *curr;
+  while ((curr = *v) != NULL) {
+    if (curr->mark) {
+      curr->mark = 0;
+      v = &curr->next;  /* next */
+    }
+    else {
+      *v = curr->next;  /* next */
+      luaM_freelem(L, curr);
+    }
+  }
 }
 
 
@@ -277,23 +284,6 @@ static void collecttable (lua_State *L) {
     else {
       *p = curr->next;
       luaH_free(L, curr);
-    }
-  }
-}
-
-
-static void collectupval (lua_State *L) {
-  TObject **v = &G(L)->rootupval;
-  TObject *curr;
-  while ((curr = *v) != NULL) {
-    if (ttype(curr) == LUA_TNIL) {  /* was marked? */
-      ttype(curr) = LUA_HEAPUPVAL;  /* unmark */
-      v = &vvalue(curr);  /* next */
-    }
-    else {
-      lua_assert(ttype(curr) == LUA_HEAPUPVAL);
-      *v = vvalue(curr);  /* next */
-      luaM_freearray(L, curr, 2, TObject);
     }
   }
 }
