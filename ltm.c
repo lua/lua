@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.9 1997/11/19 18:16:33 roberto Exp roberto $
+** $Id: ltm.c,v 1.10 1997/12/11 14:48:46 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -46,7 +46,7 @@ static char validevents[NUM_TAGS][IM_N] = { /* ORDER LUA_T, ORDER IM */
 };
 
 
-static int validevent (lua_Type t, int e)
+static int validevent (int t, int e)
 { /* ORDER LUA_T */
   return (t < LUA_T_NIL) ?  1 : validevents[-t][e];
 }
@@ -94,6 +94,18 @@ void luaT_realtag (int tag)
     luaL_verror("tag %d is not result of `newtag'", tag);
 }
 
+
+int lua_copytagmethods (int tagto, int tagfrom)
+{
+  int e;
+  checktag(tagto);
+  checktag(tagfrom);
+  for (e=0; e<IM_N; e++) {
+    if (validevent(tagto, e))
+      *luaT_getim(tagto, e) = *luaT_getim(tagfrom, e);
+  }
+  return tagto;
+}
 
 
 int luaT_efectivetag (TObject *o)

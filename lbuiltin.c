@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.14 1997/12/01 20:30:44 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.15 1997/12/09 13:35:19 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -299,6 +299,13 @@ static void newtag (void)
 }
 
 
+static void copytagmethods (void)
+{
+  lua_pushnumber(lua_copytagmethods(luaL_check_number(1),
+                                    luaL_check_number(2)));
+}
+
+
 static void rawgettable (void)
 {
   lua_Object t = luaL_nonnullarg(1);
@@ -431,6 +438,7 @@ static struct luaL_reg int_funcs[] = {
   {"call", luaI_call},
   {"collectgarbage", luaI_collectgarbage},
   {"dofile", internaldofile},
+  {"copytagmethods", copytagmethods},
   {"dostring", internaldostring},
   {"error", luaI_error},
   {"foreach", foreach},

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.8 1997/12/01 20:31:25 roberto Exp roberto $
+** $Id: lua.h,v 1.9 1997/12/09 13:35:19 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -64,6 +64,7 @@ lua_Object     lua_gettagmethod	(int tag, char *event);
 lua_Object     lua_seterrormethod (void);  /* In: new method */
 
 int            lua_newtag		(void);
+int            lua_copytagmethods	(int tagto, int tagfrom);
 void           lua_settag		(int tag); /* In: object */
 
 void           lua_error		(char *s);
@@ -139,6 +140,7 @@ long	       lua_collectgarbage	(long limit);
 
 #define lua_pushcfunction(f)	lua_pushCclosure(f, 0)
 
+#define lua_clonetag(t)		lua_copytagmethods(lua_newtag(), (t))
 
 
 /* ==========================================================================
