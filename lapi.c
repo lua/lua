@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.91 2000/08/31 14:08:27 roberto Exp roberto $
+** $Id: lapi.c,v 1.92 2000/08/31 20:23:40 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -167,6 +167,23 @@ void *lua_touserdata (lua_State *L, int index) {
   access(L, index, (ttype(o) == TAG_USERDATA), NULL, tsvalue(o)->u.d.value);
 }
 
+const void *lua_topointer (lua_State *L, int index) {
+  const TObject *o = Index(L, index);
+  switch (ttype(o)) {
+    case TAG_NUMBER:  case TAG_NIL:
+      return NULL;
+    case TAG_STRING:
+      return tsvalue(o)->str;
+    case TAG_USERDATA:
+      return tsvalue(o)->u.d.value;
+    case TAG_TABLE: 
+      return hvalue(o);
+    case TAG_CCLOSURE: case TAG_LCLOSURE:
+      return clvalue(o);
+    default: return NULL;
+  }
+}
+
 
 
 /*
@@ -236,7 +253,7 @@ void lua_gettable (lua_State *L) {
 
 
 void lua_rawget (lua_State *L) {
-  LUA_ASSERT(ttype(L->top-2) == TAG_TABLE, "not a table");
+  LUA_ASSERT(ttype(L->top-2) == TAG_TABLE, "table expected");
   *(L->top - 2) = *luaH_get(L, hvalue(L->top - 2), L->top - 1);
   L->top--;
 }
@@ -295,7 +312,7 @@ void lua_settable (lua_State *L) {
 
 
 void lua_rawset (lua_State *L) {
-  LUA_ASSERT(ttype(L->top-3) == TAG_TABLE, "not a table");
+  LUA_ASSERT(ttype(L->top-3) == TAG_TABLE, "table expected");
   *luaH_set(L, hvalue(L->top-3), L->top-2) = *(L->top-1);
   L->top -= 3;
 }
@@ -303,7 +320,7 @@ void lua_rawset (lua_State *L) {
 
 void lua_setglobals (lua_State *L) {
   TObject *newtable = --L->top;
-  LUA_ASSERT(ttype(newtable) == TAG_TABLE, "not a table");
+  LUA_ASSERT(ttype(newtable) == TAG_TABLE, "table expected");
   L->gt = hvalue(newtable);
 }
 
@@ -375,7 +392,7 @@ void lua_unref (lua_State *L, int ref) {
 int lua_next (lua_State *L) {
   const TObject *t = Index(L, -2);
   Node *n;
-  LUA_ASSERT(ttype(t) == TAG_TABLE, "object is not a table in `lua_next'");
+  LUA_ASSERT(ttype(t) == TAG_TABLE, "table expected");
   n = luaH_next(L, hvalue(t), Index(L, -1));
   if (n) {
     *(L->top-1) = *key(n);
@@ -386,6 +403,27 @@ int lua_next (lua_State *L) {
   else {  /* no more elements */
     L->top -= 2;  /* remove key and table */
     return 0;
+  }
+}
+
+
+int lua_getn (lua_State *L, int index) {
+  Hash *h = hvalue(Index(L, index));
+  const TObject *value = luaH_getstr(h, luaS_new(L, "n"));  /* value = h.n */
+  if (ttype(value) == TAG_NUMBER)
+    return (int)nvalue(value);
+  else {
+    Number max = 0;
+    int i = h->size;
+    Node *n = h->node;
+    while (i--) {
+      if (ttype(key(n)) == TAG_NUMBER &&
+          ttype(val(n)) != TAG_NIL &&
+          nvalue(key(n)) > max)
+        max = nvalue(key(n));
+      n++;
+    }
+    return (int)max;
   }
 }
 
