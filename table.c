@@ -3,10 +3,12 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 1.1 1993/12/17 18:41:19 celes Exp roberto $";
+char *rcs_table="$Id: table.c,v 1.2 1993/12/22 21:15:16 roberto Exp celes $";
 
 #include <stdlib.h>
 #include <string.h>
+
+#include "mm.h"
 
 #include "opcode.h"
 #include "hash.h"
@@ -49,12 +51,14 @@ static struct List *searchlist=&o0;
 #ifndef MAXCONSTANT
 #define MAXCONSTANT	256
 #endif
-static char  	       *constantbuffer[MAXCONSTANT] = {"mark","nil","number",
-                                                       "string","table",
-                                                       "function","cfunction"
+/* pre-defined constants need garbage collection extra byte */ 
+static char  	       *constantbuffer[MAXCONSTANT] = {" mark"+1," nil"+1,
+						       " number"+1, " string"+1,
+						       " table"+1, " function"+1,
+						       " cfunction"+1, " userdata"+1
                                                       };
 char  	      	      **lua_constant = constantbuffer;
-Word    		lua_nconstant=T_CFUNCTION+1;
+Word    		lua_nconstant=T_USERDATA+1;
 
 #ifndef MAXSTRING
 #define MAXSTRING	512
@@ -215,8 +219,13 @@ static void lua_pack (void)
 */
 char *lua_createstring (char *s)
 {
+ int i;
  if (s == NULL) return NULL;
  
+ for (i=0; i<lua_nstring; i++)
+  if (streq(s,lua_string[i]))
+   return s;
+
  if (lua_nstring >= MAXSTRING-1)
  {
   lua_pack ();
