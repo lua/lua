@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.106 2001/06/15 20:36:57 roberto Exp roberto $
+** $Id: lobject.h,v 1.107 2001/06/26 13:20:45 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -54,6 +54,8 @@ typedef struct lua_TObject {
 /* Macros to set values */
 #define setnvalue(obj,x) \
   { TObject *_o=(obj); _o->tt=LUA_TNUMBER; _o->value.n=(x); }
+
+#define chgnvalue(obj,x)	((obj)->value.n=(x))
 
 #define setsvalue(obj,x) \
   { TObject *_o=(obj); _o->tt=LUA_TSTRING; _o->value.ts=(x); }

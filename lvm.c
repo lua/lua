@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.187 2001/06/20 17:22:46 roberto Exp roberto $
+** $Id: lvm.c,v 1.188 2001/06/26 13:20:45 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -39,9 +39,10 @@ static void luaV_checkGC (lua_State *L, StkId top) {
 
 
 const TObject *luaV_tonumber (const TObject *obj, TObject *n) {
+  lua_Number num;
   if (ttype(obj) == LUA_TNUMBER) return obj;
-  if (ttype(obj) == LUA_TSTRING && luaO_str2d(svalue(obj), &nvalue(n))) {
-    setttype(n, LUA_TNUMBER);
+  if (ttype(obj) == LUA_TSTRING && luaO_str2d(svalue(obj), &num)) {
+    setnvalue(n, num);
     return n;
   }
   else
@@ -580,10 +581,11 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
           luaD_error(L, l_s("`for' limit must be a number"));
         if (luaV_tonumber(ra+2, ra+2) == NULL)
           luaD_error(L, l_s("`for' step must be a number"));
-        nvalue(ra) -= nvalue(ra+2);/* decrement index (to be incremented) */
+        /* decrement index (to be incremented) */
+        chgnvalue(ra, nvalue(ra) - nvalue(ra+2));
         pc += -GETARG_sBc(i);  /* `jump' to loop end (delta is negated here) */
         /* store in `ra+1' total number of repetitions */
-        nvalue(ra+1) = ((nvalue(ra+1)-nvalue(ra))/nvalue(ra+2));
+        chgnvalue(ra+1, (nvalue(ra+1)-nvalue(ra))/nvalue(ra+2));
         /* go through */
       }
       case OP_FORLOOP: {
@@ -591,8 +593,9 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
                          ttype(ra+2) == LUA_TNUMBER);
         if (ttype(ra) != LUA_TNUMBER)
           luaD_error(L, l_s("`for' index must be a number"));
-        if (--nvalue(ra+1) >= 0) {
-          nvalue(ra) += nvalue(ra+2);  /* increment index */
+        chgnvalue(ra+1, nvalue(ra+1) - 1);  /* decrement counter */
+        if (nvalue(ra+1) >= 0) {
+          chgnvalue(ra, nvalue(ra) + nvalue(ra+2));  /* increment index */
           dojump(pc, i);  /* repeat loop */
         }
         break;
