@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.77 2002/02/14 22:23:43 roberto Exp roberto $
+** $Id: lua.c,v 1.78 2002/02/15 15:15:10 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -243,6 +243,7 @@ static int lcall (lua_State *l, const char *name) {
 
 static void manual_input (int version) {
   if (version) print_version();
+  lua_settop(L, 0);
   lua_pushcfunction(L, trap_eof);  /* set up handler for incomplete lines */
   while (load_string()) {
     ldo(lcall, NULL, 0);
@@ -255,7 +256,7 @@ static void manual_input (int version) {
       lua_settop(L, 1);  /* remove eventual results */
   }
   printf("\n");
-  lua_settop(L, 0);  /* remove trap_eof */
+  lua_pop(L, 1);  /* remove trap_eof */
 }
 
 
