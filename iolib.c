@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.25 1995/10/23 13:53:48 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.26 1995/10/26 14:21:56 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -24,6 +24,22 @@ static FILE *in=stdin, *out=stdout;
 #define popen(x,y) NULL  /* that is, popen always fails */
 #define pclose(x)  (-1)
 #endif
+
+static void str_error(char *funcname)
+{
+  char buff[250];
+  sprintf(buff, "incorrect arguments to function `%s'", funcname);
+  lua_error(buff);
+}
+
+static char *check_and_get_string (int numArg, char *funcname)
+{
+  lua_Object o = lua_getparam(numArg);
+  if (!(lua_isstring(o) || lua_isnumber(o)))
+    str_error(funcname);
+  return lua_getstring(o);
+}
+
 
 static void closeread (void)
 {
@@ -55,34 +71,23 @@ static void closewrite (void)
 */
 static void io_readfrom (void)
 {
- lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT)			/* restore standart input */
- {
+ if (lua_getparam (1) == LUA_NOOBJECT)	
+ { /* restore standart input */
   closeread();
   lua_pushnumber (1);
  }
  else
  {
-  if (!lua_isstring (o))
-  {
-   lua_error ("incorrect argument to function 'readfrom`");
-   lua_pushnumber (0);
-  }
-  else
-  {
-   char *s = lua_getstring(o);
+   char *s = check_and_get_string(1, "readfrom");
    FILE *fp = (*s == '|') ? popen(s+1, "r") : fopen(s, "r");
    if (fp == NULL)
-   {
     lua_pushnumber (0);
-   }
    else
    {
     closeread();
     in = fp;
     lua_pushnumber (1);
    }
-  }
  }
 }
 
@@ -97,34 +102,23 @@ static void io_readfrom (void)
 */
 static void io_writeto (void)
 {
- lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT)			/* restore standart output */
+ if (lua_getparam (1) == LUA_NOOBJECT)	/* restore standart output */
  {
   closewrite();
   lua_pushnumber (1);
  }
  else
  {
-  if (!lua_isstring (o))
-  {
-   lua_error ("incorrect argument to function 'writeto`");
-   lua_pushnumber (0);
-  }
-  else
-  {
-   char *s = lua_getstring(o);
+   char *s = check_and_get_string(1, "writeto");
    FILE *fp = (*s == '|') ? popen(s+1,"w") : fopen(s,"w");
    if (fp == NULL)
-   {
     lua_pushnumber (0);
-   }
    else
    {
     closewrite();
     out = fp;
     lua_pushnumber (1);
    }
-  }
  }
 }
 
@@ -140,30 +134,17 @@ static void io_writeto (void)
 */
 static void io_appendto (void)
 {
- lua_Object o = lua_getparam (1);
- if (!lua_isstring (o))
- {
-   lua_error ("incorrect argument to function 'appendto`");
-   lua_pushnumber (0);
- }
+ char *s = check_and_get_string(1, "appendto");
+ struct stat st;
+ int r = (stat(s, &st) == -1) ? 1 : 2;
+ FILE *fp = fopen (s, "a");
+ if (fp == NULL)
+  lua_pushnumber (0);
  else
  {
-   int r;
-   FILE *fp;
-   struct stat st;
-   if (stat(lua_getstring(o), &st) == -1) r = 1;
-   else                                   r = 2;
-   fp = fopen (lua_getstring(o),"a");
-   if (fp == NULL)
-   {
-    lua_pushnumber (0);
-   }
-   else
-   {
-    if (out != stdout) fclose (out);
-    out = fp;
-    lua_pushnumber (r);
-   }
+  if (out != stdout) fclose (out);
+  out = fp;
+  lua_pushnumber (r);
  }
 }
 
@@ -185,30 +166,17 @@ static void io_appendto (void)
 static void io_read (void)
 {
  lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT || !lua_isstring(o))	/* free format */
+ if (o == LUA_NOOBJECT) 	/* free format */
  {
   int c;
   char s[256];
   while (isspace(c=fgetc(in)))
    ;
-  if (c == '\"')
+  if (c == '\"' || c == '\'')
   {
+   int del = c;
    int n=0;
-   while((c = fgetc(in)) != '\"')
-   {
-    if (c == EOF)
-    {
-     lua_pushnil ();
-     return;
-    }
-    s[n++] = c;
-   }
-   s[n] = 0;
-  }
-  else if (c == '\'')
-  {
-   int n=0;
-   while((c = fgetc(in)) != '\'')
+   while((c = fgetc(in)) != del)
    {
     if (c == EOF)
     {
@@ -239,7 +207,7 @@ static void io_read (void)
  }
  else				/* formatted */
  {
-  char *e = lua_getstring(o);
+  char *e = check_and_get_string(1, "read");
   char t;
   int  m=0;
   while (isspace(*e)) e++;
@@ -483,18 +451,7 @@ static void io_write (void)
 */
 static void io_execute (void)
 {
- lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT || !lua_isstring (o))
- {
-  lua_error ("incorrect argument to function 'execute`");
-  lua_pushnumber (0);
- }
- else
- {
-  int res = system(lua_getstring(o));
-  lua_pushnumber (res);
- }
- return;
+  lua_pushnumber(system(check_and_get_string(1, "execute")));
 }
 
 /*
@@ -503,20 +460,10 @@ static void io_execute (void)
 */
 static void io_remove  (void)
 {
- lua_Object o = lua_getparam (1);
- if (o == LUA_NOOBJECT || !lua_isstring (o))
- {
-  lua_error ("incorrect argument to function 'execute`");
-  lua_pushnumber (0);
- }
- else
- {
-  if (remove(lua_getstring(o)) == 0)
+ if (remove(check_and_get_string(1, "remove")) == 0)
    lua_pushnumber (1);
-  else
+ else
    lua_pushnumber (0);
- }
- return;
 }
 
 
@@ -525,15 +472,9 @@ static void io_remove  (void)
 */
 static void io_getenv (void)
 {
- lua_Object s = lua_getparam(1);
- if (!lua_isstring(s))
-  lua_pushnil();
- else
- {
-  char *env = getenv(lua_getstring(s));
-  if (env == NULL) lua_pushnil();
-  else             lua_pushstring(env); 
- }
+ char *env = getenv(check_and_get_string(1, "getenv"));
+ if (env == NULL) lua_pushnil();
+ else             lua_pushstring(env); 
 }
 
 /*
@@ -602,26 +543,23 @@ static void io_debug (void)
 }
 
 
-static void print_message (void)
+void lua_printstack (FILE *f)
 {
-  lua_Object o = lua_getparam(1);
-  char *s = lua_isstring(o) ? lua_getstring(o) : "(no messsage)";
   int level = 0;
   lua_Object func;
-  fprintf(stderr, "lua: %s\n", s);
-  fprintf(stderr, "Active Stack:\n");
+  fprintf(f, "Active Stack:\n");
   while ((func = lua_stackedfunction(level++)) != LUA_NOOBJECT)
   {
     char *name;
     int currentline;
-    fprintf(stderr, "\t");
+    fprintf(f, "\t");
     switch (*getobjname(func, &name))
     {
       case 'g':
-        fprintf(stderr, "function %s", name);
+        fprintf(f, "function %s", name);
         break;
       case 'f':
-        fprintf(stderr, "fallback %s", name);
+        fprintf(f, "fallback %s", name);
         break;
       default:
       {
@@ -629,18 +567,28 @@ static void print_message (void)
         int linedefined;
         lua_funcinfo(func, &filename, &linedefined);
         if (linedefined == 0)
-          fprintf(stderr, "main of %s", filename);
+          fprintf(f, "main of %s", filename);
         else if (linedefined < 0)
-          fprintf(stderr, "%s", filename);
+          fprintf(f, "%s", filename);
         else
-          fprintf(stderr, "function (%s:%d)", filename, linedefined);
+          fprintf(f, "function (%s:%d)", filename, linedefined);
       }
     }
     if ((currentline = lua_currentline(func)) > 0)
-      fprintf(stderr, "  at line %d", currentline);
-    fprintf(stderr, "\n");
+      fprintf(f, "  at line %d", currentline);
+    fprintf(f, "\n");
   }
 }
+
+
+static void errorfb (void)
+{
+  lua_Object o = lua_getparam(1);
+  char *s = lua_isstring(o) ? lua_getstring(o) : "(no messsage)";
+  fprintf(stderr, "lua: %s\n", s);
+  lua_printstack(stderr);
+}
+
 
 /*
 ** Open io library
@@ -661,5 +609,6 @@ void iolib_open (void)
  lua_register ("beep",     io_beep);
  lua_register ("exit",     io_exit);
  lua_register ("debug",    io_debug);
- lua_setfallback("error", print_message);
+ lua_register ("print_stack", errorfb);
+ lua_setfallback("error", errorfb);
 }
