@@ -3,7 +3,7 @@
 ** load bytecodes from files
 */
 
-char* rcs_undump="$Id: undump.c,v 1.19 1996/11/14 15:00:32 lhf Exp lhf $";
+char* rcs_undump="$Id: undump.c,v 1.20 1996/11/16 20:14:23 lhf Exp lhf $";
 
 #include <stdio.h>
 #include <string.h>
@@ -255,12 +255,15 @@ static void LoadHeader(FILE* D)			/* TODO: error handling */
  version=getc(D);
  if (version>0x23)				/* after 2.5 */
  {
-  int oldsizeofI=getc(D);
+  int oldsizeofW=getc(D);
   int oldsizeofF=getc(D);
   int oldsizeofP=getc(D);
-  if (oldsizeofF!=4) lua_error("sizeof(float)!=4. not an IEEE machine?");
+  if (oldsizeofW!=2)
+   lua_error("cannot load binary file created on machine with sizeof(Word)!=2");
+  if (oldsizeofF!=4)
+   lua_error("cannot load binary file created on machine with sizeof(float)!=4. not an IEEE machine?");
   if (oldsizeofP!=sizeof(TFunc*))		/* TODO: pack */
-   lua_error("different pointer sizes");
+   lua_error("cannot load binary file: different pointer sizes");
  }
  fread(&w,sizeof(w),1,D);			/* test word */
  if (w!=tw)
