@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.82 2002/04/09 20:19:06 roberto Exp roberto $
+** $Id: lua.c,v 1.83 2002/04/22 14:40:50 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -25,7 +25,7 @@ static int isatty (int x) { return x==0; }  /* assume stdin is a tty */
 
 
 #ifndef LUA_PROGNAME
-#define LUA_PROGNAME	"lua: "
+#define LUA_PROGNAME	"lua"
 #endif
 
 
@@ -69,7 +69,7 @@ static void laction (int i) {
 /* Lua gives no message in such cases, so we provide one */
 static void report (int result) {
   if (result == LUA_ERRMEM || result == LUA_ERRERR)
-    fprintf(stderr, "%s%s\n", LUA_PROGNAME, luaL_errstr(result));
+    fprintf(stderr, "%s: %s\n", LUA_PROGNAME, luaL_errstr(result));
 }
 
 
@@ -88,7 +88,7 @@ static int ldo (int (*f)(lua_State *l, const char *), const char *name,
 
 static void print_usage (void) {
   fprintf(stderr,
-  "usage: lua [options].  Available options are:\n"
+  "usage: %s [options].  Available options are:\n"
   "  -        execute stdin as a file\n"
   "  -c       close Lua when exiting\n"
   "  -e stat  execute string `stat'\n"
@@ -96,8 +96,8 @@ static void print_usage (void) {
   "  -i       enter interactive mode\n"
   "  -v       print version information\n"
   "  a=b      set global `a' to string `b'\n"
-  "  name     execute file `name'\n"
-);
+  "  name     execute file `name'\n",
+  LUA_PROGNAME);
 }
 
 
@@ -141,7 +141,7 @@ static int file_input (const char *name) {
   int result = ldo(lua_dofile, name, 1);
   if (result) {
     if (result == LUA_ERRFILE) {
-      fprintf(stderr, "%s%s ", LUA_PROGNAME, luaL_errstr(result));
+      fprintf(stderr, "%s: %s ", LUA_PROGNAME, luaL_errstr(result));
       perror(name);
     }
     return EXIT_FAILURE;
@@ -301,8 +301,8 @@ static int handle_argv (char *argv[], int *toclose) {
               return EXIT_FAILURE;
             }
             if (ldo(lua_dostring, argv[i], 1) != 0) {
-              fprintf(stderr, LUA_PROGNAME "error running argument `%.99s'\n",
-                      argv[i]);
+              fprintf(stderr, "%s: error running argument `%.99s'\n",
+                      LUA_PROGNAME, argv[i]);
               return EXIT_FAILURE;
             }
             break;
@@ -318,8 +318,9 @@ static int handle_argv (char *argv[], int *toclose) {
             return file_input(argv[i]);  /* stop scanning arguments */
           }
           case 's': {
-            fprintf(stderr, LUA_PROGNAME
-                    "option `-s' is deprecated (dynamic stack now)\n");
+            fprintf(stderr,
+                    "%s: option `-s' is deprecated (dynamic stack now)\n",
+                    LUA_PROGNAME);
             break;
           }
           default: {
