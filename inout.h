@@ -1,5 +1,5 @@
 /*
-** $Id: inout.h,v 1.13 1996/02/07 14:13:47 roberto Exp roberto $
+** $Id: inout.h,v 1.14 1996/03/15 13:13:13 roberto Exp roberto $
 */
 
 
@@ -7,7 +7,7 @@
 #define inout_h
 
 #include "types.h"
-#include "stdio.h"
+#include <stdio.h>
 
 
 extern Word lua_linenumber;
