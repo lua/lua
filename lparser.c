@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.89 2000/05/24 13:54:49 roberto Exp roberto $
+** $Id: lparser.c,v 1.90 2000/05/24 18:04:17 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -183,21 +183,17 @@ static TString *optionalname (LexState *ls) {
 }
 
 
-static void luaI_registerlocalvar (LexState *ls, TString *varname,
-                                   int line) {
+static void luaI_registerlocalvar (LexState *ls, TString *varname, int line) {
   FuncState *fs = ls->fs;
-  if (fs->nvars != -1) {  /* debug information? */
+  /* start debug only when there are no active local variables,
+     but keep going after starting */
+  if ((ls->L->debug && fs->nlocalvar == 0) || fs->nvars != 0) {
     Proto *f = fs->f;
     luaM_growvector(ls->L, f->locvars, fs->nvars, 1, LocVar, "", MAX_INT);
     f->locvars[fs->nvars].varname = varname;
     f->locvars[fs->nvars].line = line;
     fs->nvars++;
   }
-}
-
-
-static void luaI_unregisterlocalvar (LexState *ls, int line) {
-  luaI_registerlocalvar(ls, NULL, line);
 }
 
 
@@ -212,17 +208,18 @@ static void adjustlocalvars (LexState *ls, int nvars) {
   int line = ls->fs->lastsetline;
   FuncState *fs = ls->fs;
   int i;
-  fs->nlocalvar += nvars;
-  for (i=fs->nlocalvar-nvars; i<fs->nlocalvar; i++)
+  for (i=fs->nlocalvar; i<fs->nlocalvar+nvars; i++)
     luaI_registerlocalvar(ls, fs->localvar[i], line);
+  fs->nlocalvar += nvars;
 }
 
 
 static void removelocalvars (LexState *ls, int nvars) {
   int line = ls->fs->lastsetline;
+  int i;
+  for (i=0;i<nvars;i++)
+    luaI_registerlocalvar(ls, NULL, line);
   ls->fs->nlocalvar -= nvars;
-  while (nvars--)
-    luaI_unregisterlocalvar(ls, line);
 }
 
 
@@ -367,7 +364,6 @@ static void func_onstack (LexState *ls, FuncState *func) {
 
 
 static void init_state (LexState *ls, FuncState *fs, TString *source) {
-  lua_State *L = ls->L;
   Proto *f = luaF_newproto(ls->L);
   fs->prev = ls->fs;  /* linked list of funcstates */
   fs->ls = ls;
@@ -387,7 +383,7 @@ static void init_state (LexState *ls, FuncState *fs, TString *source) {
   f->maxstacksize = 0;
   f->numparams = 0;  /* default for main chunk */
   f->is_vararg = 0;  /* default for main chunk */
-  fs->nvars = (L->debug) ? 0 : -1;  /* flag no debug information? */
+  fs->nvars = 0;
 }
 
 
@@ -401,7 +397,7 @@ static void close_func (LexState *ls) {
   luaM_reallocvector(L, f->kstr, f->nkstr, TString *);
   luaM_reallocvector(L, f->knum, f->nknum, Number);
   luaM_reallocvector(L, f->kproto, f->nkproto, Proto *);
-  if (fs->nvars != -1) {  /* debug information? */
+  if (f->locvars) {  /* debug information? */
     luaI_registerlocalvar(ls, NULL, -1);  /* flag end of vector */
     luaM_reallocvector(L, f->locvars, fs->nvars, LocVar);
   }
