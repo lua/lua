@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.81 2000/04/11 18:37:18 roberto Exp roberto $
+** $Id: lparser.c,v 1.82 2000/04/12 18:57:19 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -323,7 +323,6 @@ static int getvarname (LexState *ls, expdesc *var) {
       return var->u.index;
     case VLOCAL:
       return string_constant(ls->fs, ls->fs->localvar[var->u.index]);
-      break;
     default:
       error_unexpected(ls);  /* there is no `var name' */
       return 0;  /* to avoid warnings */
@@ -481,6 +480,8 @@ static void funcargs (LexState *ls, int slf) {
 #ifdef LUA_COMPAT_ARGRET
       if (nargs > 0)  /* arg list is not empty? */
         luaK_setcallreturns(fs, 1);  /* last call returns only 1 value */
+#else
+      UNUSED(nargs);  /* to avoid warnings */
 #endif
       break;
     }
