@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.79 1999/12/01 19:50:08 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.80 1999/12/02 16:24:45 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -664,86 +664,143 @@ static void query_strings (lua_State *L) {
 }
 
 
-static void extra_services (lua_State *L) {
-  const char *service = luaL_check_string(L, 1);
-  switch (*service) {
-    case 'U':  /* create a userdata with a given value/tag */
-      lua_pushusertag(L, (void *)luaL_check_int(L, 2), luaL_check_int(L, 3));
-      break;
+static const char *delimits = " \t\n,;";
 
-    case 'u':  /* return the value of a userdata */
-      lua_pushnumber(L, (int)lua_getuserdata(L, lua_getparam(L, 2)));
-      break;
-
-    case 't':  /* set `gc' tag method */
-      lua_pushobject(L, lua_getparam(L, 3));
-      lua_settagmethod(L, luaL_check_int(L, 2), "gc");
-      break;
-
-    default: luaL_argerror(L, 1, "invalid service");
-  }
+static void skip (const char **pc) {
+  while (**pc != '\0' && strchr(delimits, **pc)) (*pc)++;
 }
 
+static int getnum (const char **pc) {
+  int res = 0;
+  skip(pc);
+  while (isdigit(**pc)) res = res*10 + (*(*pc)++) - '0';
+  return res;
+}
+  
+static int getreg (lua_State *L, const char **pc) {
+  skip(pc);
+  if (*(*pc)++ != 'r') lua_error(L, "`testC' expecting a register");
+  return getnum(pc);
+}
+
+static const char *getname (const char **pc) {
+  static char buff[30];
+  int i = 0;
+  skip(pc);
+  while (**pc != '\0' && !strchr(delimits, **pc))
+    buff[i++] = *(*pc)++;
+  buff[i] = '\0';
+  return buff;
+}
+
+
+#define EQ(s1)	(strcmp(s1, inst) == 0)
 
 static void testC (lua_State *L) {
-#define getnum(L, s)	((*s++) - '0')
-#define getname(L, s)	(nome[0] = *s++, nome)
-
   lua_Object reg[10];
-  char nome[2];
-  const char *s = luaL_check_string(L, 1);
-  nome[1] = 0;
+  const char *pc = luaL_check_string(L, 1);
   for (;;) {
-    switch (*s++) {
-      case '0': case '1': case '2': case '3': case '4':
-      case '5': case '6': case '7': case '8': case '9':
-        lua_pushnumber(L, *(s-1) - '0');
-        break;
-
-      case 'c': reg[getnum(L, s)] = lua_createtable(L); break;
-      case 'C': { lua_CFunction f = lua_getcfunction(L, lua_getglobal(L, getname(L, s)));
-                  lua_pushcclosure(L, f, getnum(L, s));
-                  break;
-                }
-      case 'P': reg[getnum(L, s)] = lua_pop(L); break;
-      case 'g': { int n=getnum(L, s); reg[n]=lua_getglobal(L, getname(L, s)); break; }
-      case 'G': { int n = getnum(L, s);
-                  reg[n] = lua_rawgetglobal(L, getname(L, s));
-                  break;
-                }
-      case 'l': lua_pushnumber(L, lua_ref(L, 1)); reg[getnum(L, s)] = lua_pop(L); break;
-      case 'L': lua_pushnumber(L, lua_ref(L, 0)); reg[getnum(L, s)] = lua_pop(L); break;
-      case 'r': { int n=getnum(L, s);
-                  reg[n]=lua_getref(L, (int)lua_getnumber(L, reg[getnum(L, s)]));
-                  break;
-                }
-      case 'u': lua_unref(L, (int)lua_getnumber(L, reg[getnum(L, s)]));
-                break;
-      case 'p': { int n = getnum(L, s); reg[n] = lua_getparam(L, getnum(L, s)); break; }
-      case '=': lua_setglobal(L, getname(L, s)); break;
-      case 's': lua_pushstring(L, getname(L, s)); break;
-      case 'o': lua_pushobject(L, reg[getnum(L, s)]); break;
-      case 'f': lua_call(L, getname(L, s)); break;
-      case 'i': reg[getnum(L, s)] = lua_gettable(L); break;
-      case 'I': reg[getnum(L, s)] = lua_rawgettable(L); break;
-      case 't': lua_settable(L); break;
-      case 'T': lua_rawsettable(L); break;
-      case 'N' : lua_pushstring(L, lua_nextvar(L, lua_getstring(L, reg[getnum(L, s)])));
-                 break;
-      case 'n' : { int n=getnum(L, s);
-                   n=lua_next(L, reg[n], (int)lua_getnumber(L, reg[getnum(L, s)]));
-                   lua_pushnumber(L, n); break;
-                 }
-      case 'q' : { int n1=getnum(L, s); int n2=getnum(L, s);
-                   lua_pushnumber(L, lua_equal(L, reg[n1], reg[n2]));
-                   break;
-                 }
-      default: luaL_verror(L, "unknown command in `testC': %c", *(s-1));
+    const char *inst = getname(&pc);
+    if EQ("") return;
+    else if EQ("pushnum") {
+      lua_pushnumber(L, getnum(&pc));
     }
-  if (*s == 0) return;
-  if (*s++ != ' ') lua_error(L, "missing ` ' between commands in `testC'");
+    else if EQ("createtable") {
+      reg[getreg(L, &pc)] = lua_createtable(L);
+    }
+    else if EQ("closure") {
+      lua_CFunction f = lua_getcfunction(L, lua_getglobal(L, getname(&pc)));
+      lua_pushcclosure(L, f, getnum(&pc));
+    }
+    else if EQ("pop") {
+      reg[getreg(L, &pc)] = lua_pop(L);
+    }
+    else if EQ("getglobal") {
+      int n = getreg(L, &pc);
+      reg[n] = lua_getglobal(L, getname(&pc));
+    }
+    else if EQ("rawgetglobal") {
+      int n = getreg(L, &pc);
+      reg[n] = lua_rawgetglobal(L, getname(&pc));
+    }
+    else if EQ("ref") {
+      lua_pushnumber(L, lua_ref(L, 0));
+      reg[getreg(L, &pc)] = lua_pop(L);
+    }
+    else if EQ("reflock") {
+      lua_pushnumber(L, lua_ref(L, 1));
+      reg[getreg(L, &pc)] = lua_pop(L);
+    }
+    else if EQ("getref") {
+      int n = getreg(L, &pc);
+      reg[n] = lua_getref(L, (int)lua_getnumber(L, reg[getreg(L, &pc)]));
+    }
+    else if EQ("unref") {
+      lua_unref(L, (int)lua_getnumber(L, reg[getreg(L, &pc)]));
+    }
+    else if (EQ("getparam") || EQ("getresult")) {
+      int n = getreg(L, &pc);
+      reg[n] = lua_getparam(L, getnum(&pc));
+    }
+    else if EQ("setglobal") {
+      lua_setglobal(L, getname(&pc));
+    }
+    else if EQ("rawsetglobal") {
+      lua_rawsetglobal(L, getname(&pc));
+    }
+    else if EQ("pushstring") {
+      lua_pushstring(L, getname(&pc));
+    }
+    else if EQ("pushreg") {
+      lua_pushobject(L, reg[getreg(L, &pc)]);
+    }
+    else if EQ("call") {
+      lua_call(L, getname(&pc));
+    }
+    else if EQ("gettable") {
+      reg[getreg(L, &pc)] = lua_gettable(L);
+    }
+    else if EQ("rawgettable") {
+      reg[getreg(L, &pc)] = lua_rawgettable(L);
+    }
+    else if EQ("settable") {
+      lua_settable(L);
+    }
+    else if EQ("rawsettable") {
+      lua_rawsettable(L);
+    }
+    else if EQ("nextvar") {
+      lua_pushstring(L, lua_nextvar(L, lua_getstring(L, reg[getreg(L, &pc)])));
+    }
+    else if EQ("next") {
+      int n = getreg(L, &pc);
+      n = lua_next(L, reg[n], (int)lua_getnumber(L, reg[getreg(L, &pc)]));
+      lua_pushnumber(L, n);
+    }
+    else if EQ("equal") {
+      int n1 = getreg(L, &pc);
+      int n2 = getreg(L, &pc);
+      lua_pushnumber(L, lua_equal(L, reg[n1], reg[n2]));
+    }
+    else if EQ("pushusertag") {
+      int val = getreg(L, &pc);
+      int tag = getreg(L, &pc);
+      lua_pushusertag(L, (void *)(int)lua_getnumber(L, reg[val]),
+                         lua_getnumber(L, reg[tag]));
+    }
+    else if EQ("udataval") {
+      int n = getreg(L, &pc);
+      lua_pushnumber(L, (int)lua_getuserdata(L, reg[getreg(L, &pc)]));
+      reg[n] = lua_pop(L);
+    }
+    else if EQ("settagmethod") {
+      int n = getreg(L, &pc);
+      lua_settagmethod(L, lua_getnumber(L, reg[n]), getname(&pc));
+    }
+    else luaL_verror(L, "unknown command in `testC': %.20s", inst);
   }
 }
+                
 
 /* }====================================================== */
 #endif
@@ -752,7 +809,6 @@ static void testC (lua_State *L) {
 
 static const struct luaL_reg builtin_funcs[] = {
 #ifdef DEBUG
-  {"extra", extra_services},
   {"hash", hash_query},
   {"querystr", query_strings},
   {"querytab", table_query},
