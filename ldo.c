@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.21 1998/01/07 16:26:48 roberto Exp roberto $
+** $Id: ldo.c,v 1.22 1998/01/27 21:21:27 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -288,8 +288,8 @@ int luaD_protectedrun (int nResults)
 {
   jmp_buf myErrorJmp;
   int status;
-  struct C_Lua_Stack oldCLS = L->Cstack;
-  jmp_buf *oldErr = L->errorJmp;
+  volatile struct C_Lua_Stack oldCLS = L->Cstack;
+  jmp_buf *volatile oldErr = L->errorJmp;
   L->errorJmp = &myErrorJmp;
   if (setjmp(myErrorJmp) == 0) {
     do_callinc(nResults);
@@ -310,10 +310,10 @@ int luaD_protectedrun (int nResults)
 */
 static int protectedparser (ZIO *z, int bin)
 {
-  int status;
-  TProtoFunc *tf;
+  volatile int status;
+  TProtoFunc *volatile tf;
   jmp_buf myErrorJmp;
-  jmp_buf *oldErr = L->errorJmp;
+  jmp_buf *volatile oldErr = L->errorJmp;
   L->errorJmp = &myErrorJmp;
   if (setjmp(myErrorJmp) == 0) {
     tf = bin ? luaU_undump1(z) : luaY_parser(z);
