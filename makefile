@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.27 2000/09/11 20:29:27 roberto Exp roberto $
+## $Id: makefile,v 1.28 2000/09/18 19:46:37 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -26,7 +26,7 @@
 # define LUA_DEPRECATETFUNCS to include obsolete functions
 
 CONFIG = -DPOPEN -D_POSIX_SOURCE
-#CONFIG = -DOLD_ANSI -DDEBUG -DLUA_COMPAT_READPATTERN -DLUA_COMPAT_ARGRET
+#CONFIG = -DOLD_ANSI -DLUA_DEBUG -DLUA_COMPAT_READPATTERN -DLUA_COMPAT_ARGRET
 # -DLUA_DEPRECATETFUNCS
 
 
