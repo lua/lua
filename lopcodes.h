@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.40 2000/02/14 16:51:08 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.41 2000/02/22 13:30:11 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -50,6 +50,8 @@
 /*
 ** K = U argument used as index to `kstr'
 ** J = S argument used as jump offset (relative to pc of next instruction)
+** L = U argument used as index of local variable
+** N = U argument used as index to `knum'
 */
 
 typedef enum {
@@ -66,13 +68,13 @@ POP,/*		U	a_u-a_1		-				*/
 
 PUSHINT,/*	S	-		(real)s				*/
 PUSHSTRING,/*	K	-		KSTR[k]				*/
-PUSHNUM,/*	U	-		KNUM[u]				*/
-PUSHNEGNUM,/*	U	-		-KNUM[u]			*/
+PUSHNUM,/*	N	-		KNUM[u]				*/
+PUSHNEGNUM,/*	N	-		-KNUM[u]			*/
 
 PUSHUPVALUE,/*	U	-		Closure[u]			*/
 
-PUSHLOCAL,/*	U	-		LOC[u]				*/
-GETGLOBAL,/*	K	-		VAR[CNST[k]]			*/
+PUSHLOCAL,/*	L	-		LOC[u]				*/
+GETGLOBAL,/*	K	-		VAR[KSTR[k]]			*/
 
 GETTABLE,/*	-	i t		t[i]				*/
 GETDOTTED,/*	K	t		t[KSTR[k]]			*/
@@ -80,7 +82,7 @@ PUSHSELF,/*	K	t		t t[KSTR[k]]			*/
 
 CREATETABLE,/*	U	-		newarray(size = u)		*/
 
-SETLOCAL,/*	U	x		-		LOC[u]=x	*/
+SETLOCAL,/*	L	x		-		LOC[u]=x	*/
 SETGLOBAL,/*	K	x		-		VAR[KSTR[k]]=x	*/
 SETTABLEPOP,/*	-	v i t		-		t[i]=v		*/
 SETTABLE,/*	U	v a_u-a_1 i t	 a_u-a_1 i t	t[i]=v		*/
