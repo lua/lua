@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.134 2005/01/10 16:30:59 roberto Exp roberto $
+** $Id: lua.c,v 1.135 2005/01/10 17:21:10 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -30,7 +30,7 @@
 
 static lua_State *globalL = NULL;
 
-static const char *progname = PROGNAME;
+static const char *progname = LUA_PROGNAME;
 
 
 
@@ -150,43 +150,12 @@ static int dolibrary (lua_State *L, const char *name) {
 }
 
 
-
-/*
-** this macro defines a function to show the prompt and reads the
-** next line for manual input
-*/
-#ifndef lua_readline
-#define lua_readline(L,prompt)		readline(L,prompt)
-
-/* maximum length of an input line */
-#ifndef MAXINPUT
-#define MAXINPUT	512
-#endif
-
-
-static int readline (lua_State *L, const char *prompt) {
-  static char buffer[MAXINPUT];
-  if (prompt) {
-    fputs(prompt, stdout);
-    fflush(stdout);
-  }
-  if (fgets(buffer, sizeof(buffer), stdin) == NULL)
-    return 0;  /* read fails */
-  else {
-    lua_pushstring(L, buffer);
-    return 1;
-  }
-}
-
-#endif
-
-
 static const char *get_prompt (lua_State *L, int firstline) {
-  const char *p = NULL;
+  const char *p;
   lua_pushstring(L, firstline ? "_PROMPT" : "_PROMPT2");
   lua_rawget(L, LUA_GLOBALSINDEX);
   p = lua_tostring(L, -1);
-  if (p == NULL) p = (firstline ? PROMPT : PROMPT2);
+  if (p == NULL) p = (firstline ? LUA_PROMPT : LUA_PROMPT2);
   lua_pop(L, 1);  /* remove global */
   return p;
 }
@@ -203,23 +172,39 @@ static int incomplete (lua_State *L, int status) {
 }
 
 
+static int pushline (lua_State *L, int firstline) {
+  char buffer[LUA_MAXINPUT];
+  char *b = buffer;
+  size_t l;
+  const char *prmt = get_prompt(L, firstline);
+  if (lua_readline(L, b, prmt) == 0)
+    return 0;  /* no input */
+  l = strlen(b);
+  if (l > 0 && b[l-1] == '\n')  /* line ends with newline? */
+    b[l-1] = '\0';  /* remove it */
+  if (firstline && b[0] == '=')  /* first line starts with `=' ? */
+    lua_pushfstring(L, "return %s", b+1);  /* change it to `return' */
+  else
+    lua_pushstring(L, b);
+  return 1;
+}
+
+
 static int loadline (lua_State *L) {
   int status;
   lua_settop(L, 0);
-  if (lua_readline(L, get_prompt(L, 1)) == 0)  /* no input? */
-    return -1;
-  if (lua_tostring(L, -1)[0] == '=') {  /* line starts with `=' ? */
-    lua_pushfstring(L, "return %s", lua_tostring(L, -1)+1);/* `=' -> `return' */
-    lua_remove(L, -2);  /* remove original line */
-  }
+  if (!pushline(L, 1))
+    return -1;  /* no input */
   for (;;) {  /* repeat until gets a complete line */
     status = luaL_loadbuffer(L, lua_tostring(L, 1), lua_strlen(L, 1), "=stdin");
     if (!incomplete(L, status)) break;  /* cannot try to add lines? */
-    if (lua_readline(L, get_prompt(L, 0)) == 0)  /* no more input? */
+    if (!pushline(L, 0))  /* no more input? */
       return -1;
-    lua_concat(L, lua_gettop(L));  /* join lines */
+    lua_pushliteral(L, "\n");  /* add a new line... */
+    lua_insert(L, -2);  /* ...between the two lines */
+    lua_concat(L, 3);  /* join them */
   }
-  lua_saveline(L, lua_tostring(L, 1));
+  lua_saveline(L, 1);
   lua_remove(L, 1);  /* remove line */
   return status;
 }
@@ -260,7 +245,7 @@ static int checkvar (lua_State *L) {
 static int handle_argv (lua_State *L, char *argv[], int *interactive) {
   if (argv[1] == NULL) {  /* no arguments? */
     *interactive = 0;
-    if (stdin_is_tty())
+    if (lua_stdin_is_tty())
       dotty(L);
     else
       dofile(L, NULL);  /* executes stdin as a file */

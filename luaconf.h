@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.36 2005/03/18 18:02:04 roberto Exp roberto $
+** $Id: luaconf.h,v 1.37 2005/03/18 18:55:45 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -133,28 +133,48 @@
 /* CONFIG: definition of isatty */
 #ifdef _POSIX_C_SOURCE
 #include <unistd.h>
-#define stdin_is_tty()		isatty(0)
+#define lua_stdin_is_tty()	isatty(0)
 #elif defined(_WIN32)
 #include <io.h>
 #include <stdio.h>
-#define stdin_is_tty()		_isatty(_fileno(stdin))
+#define lua_stdin_is_tty()	_isatty(_fileno(stdin))
 #else
-#define stdin_is_tty()		1  /* assume stdin is a tty */
+#define lua_stdin_is_tty()	1  /* assume stdin is a tty */
 #endif
 
 
-#define PROMPT		"> "
-#define PROMPT2		">> "
-#define PROGNAME	"lua"
+#define LUA_PROMPT		"> "
+#define LUA_PROMPT2		">> "
+#define LUA_PROGNAME		"lua"
 
-
+/*
+*@ LUA_MAXINPUT is the maximum length for an input line
+** CHANGE it if you need longer lines.
+*/
+#define LUA_MAXINPUT	512
 
 
 /*
-** CONFIG: this macro can be used by some history system to save lines
-** read in manual input
+*@ lua_readline defines how to show a prompt and then read a line from
+** the standard input.
+*@ lua_saveline defines how to "save" a read line.
+** CHANGE them if you want to improve this functionality (e.g., using GNU
+** readline and history facilities). (Lua already tries to use those
+** facilities when it detects a GNU compiler.)
 */
-#define lua_saveline(L,line)	/* empty */
+#ifdef __GNUC__
+#include <readline/readline.h>
+#include <readline/history.h>
+#define lua_readline(L,b,p)	(((b)=readline(p)) != NULL)
+#define lua_saveline(L,idx) \
+	if (lua_strlen(L,idx) > 0)  /* non-empty line? */ \
+	  add_history(lua_tostring(L, idx));  /* add it to history */
+#else
+#define lua_readline(L,b,p)	\
+	(fputs(p, stdout), fflush(stdout),  /* show prompt */ \
+	fgets(b, LUA_MAXINPUT, stdin) != NULL)  /* get line */
+#define lua_saveline(L,idx)	((void)0)
+#endif
 
 
 
