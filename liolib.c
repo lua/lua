@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.90 2000/10/27 16:15:53 roberto Exp roberto $
+** $Id: liolib.c,v 1.91 2000/10/31 13:10:24 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -51,6 +51,8 @@ int pclose(); */
 
 #define INFILE	0
 #define OUTFILE 1
+#define NOFILE	2
+
 
 typedef struct IOCtrl {
   int ref[2];  /* ref for strings _INPUT/_OUTPUT */
@@ -132,7 +134,8 @@ static int setreturn (lua_State *L, IOCtrl *ctrl, FILE *f, int inout) {
   if (f == NULL)
     return pushresult(L, 0);
   else {
-    setfile(L, ctrl, f, inout);
+    if (inout != NOFILE)
+      setfile(L, ctrl, f, inout);
     lua_pushusertag(L, f, ctrl->iotag);
     return 1;
   }
@@ -171,12 +174,13 @@ static int io_open (lua_State *L) {
   FILE *f;
   lua_pop(L, 1);  /* remove upvalue */
   f = fopen(luaL_check_string(L, 1), luaL_check_string(L, 2));
-  if (f) {
-    lua_pushusertag(L, f, ctrl->iotag);
-    return 1;
-  }
-  else
-    return pushresult(L, 0);
+  return setreturn(L, ctrl, f, NOFILE);
+}
+
+
+static int io_tmpfile (lua_State *L) {
+  IOCtrl *ctrl = (IOCtrl *)lua_touserdata(L, -1);
+  return setreturn(L, ctrl, tmpfile(), NOFILE);
 }
 
 
@@ -227,71 +231,9 @@ static int io_appendto (lua_State *L) {
 
 
 
-#ifdef LUA_COMPAT_READPATTERN
-
-/*
-** We cannot lookahead without need, because this can lock stdin.
-** This flag signals when we need to read a next char.
-*/
-#define NEED_OTHER (EOF-1)  /* just some flag different from EOF */
-
-
-static int read_pattern (lua_State *L, FILE *f, const char *p) {
-  int inskip = 0;  /* {skip} level */
-  int c = NEED_OTHER;
-  luaL_Buffer b;
-  luaL_buffinit(L, &b);
-  while (*p != '\0') {
-    switch (*p) {
-      case '{':
-        inskip++;
-        p++;
-        continue;
-      case '}':
-        if (!inskip) lua_error(L, "unbalanced braces in read pattern");
-        inskip--;
-        p++;
-        continue;
-      default: {
-        const char *ep = luaI_classend(L, p);  /* get what is next */
-        int m;  /* match result */
-        if (c == NEED_OTHER) c = getc(f);
-        m = (c==EOF) ? 0 : luaI_singlematch(c, p, ep);
-        if (m) {
-          if (!inskip) luaL_putchar(&b, c);
-          c = NEED_OTHER;
-        }
-        switch (*ep) {
-          case '+':  /* repetition (1 or more) */
-            if (!m) goto break_while;  /* pattern fails? */
-            /* else go through */
-          case '*':  /* repetition (0 or more) */
-            while (m) {  /* reads the same item until it fails */
-              c = getc(f);
-              m = (c==EOF) ? 0 : luaI_singlematch(c, p, ep);
-              if (m && !inskip) luaL_putchar(&b, c);
-            }
-            /* go through to continue reading the pattern */
-          case '?':  /* optional */
-            p = ep+1;  /* continues reading the pattern */
-            continue;
-          default:
-            if (!m) goto break_while;  /* pattern fails? */
-            p = ep;  /* else continues reading the pattern */
-        }
-      }
-    }
-  } break_while:
-  if (c != NEED_OTHER) ungetc(c, f);
-  luaL_pushresult(&b);  /* close buffer */
-  return (*p == '\0');
-}
-
-#else
 
 #define read_pattern(L, f, p) (lua_error(L, "read patterns are deprecated"), 0)
 
-#endif
 
 
 static int read_number (lua_State *L, FILE *f) {
@@ -400,8 +342,10 @@ static int io_read (lua_State *L) {
       success = read_chars(L, f, (size_t)lua_tonumber(L, n));
     else {
       const char *p = luaL_check_string(L, n);
-      if (p[0] != '*')
-        success = read_pattern(L, f, p);  /* deprecated! */
+      if (p[0] != '*') {
+        lua_error(L, "read patterns are deprecated");
+        success = 0;  /* to avoid warnings */
+      }
       else {
         switch (p[1]) {
           case 'n':  /* number */
@@ -516,7 +460,10 @@ static int io_rename (lua_State *L) {
 
 
 static int io_tmpname (lua_State *L) {
-  lua_pushstring(L, tmpnam(NULL));
+  char buff[L_tmpnam];
+  if (tmpnam(buff) != buff)
+    lua_error(L, "unable to generate a unique filename");
+  lua_pushstring(L, buff);
   return 1;
 }
 
@@ -548,7 +495,7 @@ static int io_date (lua_State *L) {
 }
 
 
-static int setloc (lua_State *L) {
+static int io_setloc (lua_State *L) {
   static const int cat[] = {LC_ALL, LC_COLLATE, LC_CTYPE, LC_MONETARY,
                       LC_NUMERIC, LC_TIME};
   static const char *const catnames[] = {"all", "collate", "ctype", "monetary",
@@ -658,28 +605,29 @@ static int errorfb (lua_State *L) {
 static const struct luaL_reg iolib[] = {
   {LUA_ERRORMESSAGE, errorfb},
   {"clock",     io_clock},
-  {"date",     io_date},
-  {"debug",    io_debug},
-  {"execute",  io_execute},
-  {"exit",     io_exit},
-  {"getenv",   io_getenv},
-  {"remove",   io_remove},
-  {"rename",   io_rename},
-  {"setlocale", setloc},
+  {"date",      io_date},
+  {"debug",     io_debug},
+  {"execute",   io_execute},
+  {"exit",      io_exit},
+  {"getenv",    io_getenv},
+  {"remove",    io_remove},
+  {"rename",    io_rename},
+  {"setlocale", io_setloc},
   {"tmpname",   io_tmpname}
 };
 
 
 static const struct luaL_reg iolibtag[] = {
-  {"appendto", io_appendto},
-  {"closefile",   io_close},
+  {"appendto",  io_appendto},
+  {"closefile", io_close},
   {"flush",     io_flush},
-  {"openfile",   io_open},
-  {"read",     io_read},
-  {"readfrom", io_readfrom},
-  {"seek",     io_seek},
-  {"write",    io_write},
-  {"writeto",  io_writeto}
+  {"openfile",  io_open},
+  {"read",      io_read},
+  {"readfrom",  io_readfrom},
+  {"seek",      io_seek},
+  {"tmpfile",   io_tmpfile},
+  {"write",     io_write},
+  {"writeto",   io_writeto}
 };
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lualib.h,v 1.13 2000/10/20 16:39:03 roberto Exp roberto $
+** $Id: lualib.h,v 1.14 2000/10/27 16:15:53 roberto Exp roberto $
 ** Lua standard libraries
 ** See Copyright Notice in lua.h
 */
@@ -24,11 +24,5 @@ LUALIB_API void lua_strlibopen (lua_State *L);
 LUALIB_API void lua_mathlibopen (lua_State *L);
 LUALIB_API void lua_dblibopen (lua_State *L);
 
-
-
-/* Auxiliary functions (private) */
-
-const char *luaI_classend (lua_State *L, const char *p);
-int luaI_singlematch (int c, const char *p, const char *ep);
 
 #endif
