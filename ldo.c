@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.37 1999/03/04 21:17:26 roberto Exp roberto $
+** $Id: ldo.c,v 1.38 1999/03/05 20:45:01 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -362,20 +362,17 @@ int lua_dofile (char *filename) {
   int status;
   int c;
   int bin;
-  char name[MAXFILENAME+2];  /* +2 for '@' and '\0' */
+  char source[MAXFILENAME];
   FILE *f = (filename == NULL) ? stdin : fopen(filename, "r");
   if (f == NULL)
     return 2;
-  if (filename == NULL)
-    strcpy(name, "@(stdin)");
-  else
-    sprintf(name, "@%.*s", MAXFILENAME, filename);
   c = fgetc(f);
   ungetc(c, f);
   bin = (c == ID_CHUNK);
   if (bin)
     f = freopen(filename, "rb", f);  /* set binary mode */
-  luaZ_Fopen(&z, f, name);
+  luaL_filesource(source, filename, MAXFILENAME);
+  luaZ_Fopen(&z, f, source);
   status = do_main(&z, bin);
   if (f != stdin)
     fclose(f);
