@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.37 1999/07/22 19:29:42 roberto Exp roberto $
+** $Id: llex.c,v 1.38 1999/08/16 20:52:00 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -402,8 +402,7 @@ int luaX_lex (LexState *LS) {
             save_and_next(LS);
         }
         save('\0');
-        LS->seminfo.r = luaO_str2d(L->Mbuffer+L->Mbuffbase);
-        if (LS->seminfo.r < 0)
+        if (!luaO_str2d(L->Mbuffer+L->Mbuffbase, &LS->seminfo.r))
           luaX_error(LS, "invalid numeric format");
         return NUMBER;
 

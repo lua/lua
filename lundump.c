@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.12 1999/07/08 12:43:23 roberto Exp roberto $
+** $Id: lundump.c,v 1.13 1999/08/16 20:52:00 roberto Exp roberto $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -50,12 +50,12 @@ static unsigned long LoadLong (ZIO* Z)
 /*
 * convert number from text
 */
-double luaU_str2d (const char* b, const char* where)
+real luaU_str2d (const char* b, const char* where)
 {
- int negative=(b[0]=='-');
- double x=luaO_str2d(b+negative);
- if (x<0) luaL_verror("cannot convert number '%s' in %s",b,where);
- return negative ? -x : x;
+ real x;
+ if (!luaO_str2d(b, &x))
+   luaL_verror("cannot convert number '%s' in %s",b,where);
+ return x;
 }
 
 static real LoadNumber (ZIO* Z, int native)
