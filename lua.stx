@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.8 1994/11/17 19:09:46 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.9 1994/11/17 21:11:37 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -365,7 +365,6 @@ expr :  '(' expr ')'  { $$ = $2; }
      |	expr1 '/' expr1 { code_byte(DIVOP);  $$ = 1; }
      |	expr1 '^' expr1 { code_byte(POWOP);  $$ = 1; }
      |	expr1 CONC expr1 { code_byte(CONCOP);  $$ = 1; }
-     |	'+' expr1 %prec UNARY	{ $$ = 1; }
      |	'-' expr1 %prec UNARY	{ code_byte(MINUSOP); $$ = 1;}
      | table { $$ = 1; }
      |  varexp          { $$ = 1;}
