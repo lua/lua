@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.118 2003/02/12 09:11:01 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.119 2003/02/13 16:07:37 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -466,11 +466,12 @@ static int luaB_require (lua_State *L) {
   }
   switch (status) {
     case 0: {
+      lua_getglobal(L, "_REQUIREDNAME");  /* save previous name */
+      lua_insert(L, -2);  /* put it below function */
       lua_pushvalue(L, 1);
-      lua_setglobal(L, "_REQUIREDNAME");
+      lua_setglobal(L, "_REQUIREDNAME");  /* set new name */
       lua_call(L, 0, 0);  /* run loaded module */
-      lua_pushnil(L);
-      lua_setglobal(L, "_REQUIREDNAME");  /* reset */
+      lua_setglobal(L, "_REQUIREDNAME");  /* reset to previous name */
       lua_pushvalue(L, 1);
       lua_pushboolean(L, 1);
       lua_rawset(L, 2);  /* mark it as loaded */
