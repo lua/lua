@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.24 2005/01/07 20:00:33 roberto Exp roberto $
+** $Id: luaconf.h,v 1.25 2005/01/10 16:31:30 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -247,9 +247,17 @@ __inline int l_lrint (double flt)
 #define LUA_UACNUMBER	double
 
 
-/* primitive `^' operator for numbers */
+/* primitive operators for numbers */
+#define num_add(a,b)	((a)+(b))
+#define num_sub(a,b)	((a)-(b))
+#define num_mul(a,b)	((a)*(b))
+#define num_div(a,b)	((a)/(b))
+#define num_unm(a)	(-(a))
+#define num_eq(a,b)	((a)==(b))
+#define num_lt(a,b)	((a)<(b))
+#define num_le(a,b)	((a)<=(b))
 #include <math.h>
-#define lua_pow(a,b)	pow(a,b)
+#define num_pow(a,b)	pow(a,b)
 
 
 
