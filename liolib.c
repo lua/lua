@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.81 2000/09/12 13:58:37 roberto Exp roberto $
+** $Id: liolib.c,v 1.82 2000/09/12 18:41:55 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -21,6 +21,8 @@
 #ifndef OLD_ANSI
 #include <errno.h>
 #include <locale.h>
+#define realloc(b,s)    ((b) == NULL ? malloc(s) : (realloc)(b, s))
+#define free(b)         if (b) (free)(b)
 #else
 /* no support for locale and for strerror: fake them */
 #define setlocale(a,b)	((void)a, strcmp((b),"C")==0?"C":NULL)
