@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.53 2001/02/23 20:30:01 roberto Exp roberto $
+** $Id: lstate.h,v 1.54 2001/03/02 17:27:50 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -30,8 +30,6 @@
 #ifndef LUA_USERSTATE
 #define LUA_USERSTATE
 #endif
-
-typedef TObject *StkId;  /* index to stack elements */
 
 
 /*
@@ -90,18 +88,19 @@ typedef struct global_State {
 struct lua_State {
   LUA_USERSTATE
   StkId top;  /* first free slot in the stack */
-  StkId stack;  /* stack base */
+  CallInfo *ci;  /* call info for current function */
   StkId stack_last;  /* last free slot in the stack */
-  int stacksize;
-  StkId Cbase;  /* base for current C function */
   Hash *gt;  /* table for globals */
   global_State *G;
+  StkId stack;  /* stack base */
+  int stacksize;
   lua_Hook callhook;
   lua_Hook linehook;
   int allowhooks;
   struct lua_longjmp *errorJmp;  /* current error recover point */
   lua_State *next;  /* circular double linked list of states */
   lua_State *previous;
+  CallInfo basefunc;
 };
 
 

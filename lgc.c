@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.92 2001/02/23 17:17:25 roberto Exp roberto $
+** $Id: lgc.c,v 1.93 2001/03/02 17:27:50 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -85,9 +85,6 @@ static void markobject (GCState *st, TObject *o) {
     case LUA_TUSERDATA:  case LUA_TSTRING:
       strmark(tsvalue(o));
       break;
-    case LUA_TMARK:
-      markclosure(st, infovalue(o)->func);
-      break;
     case LUA_TFUNCTION:
       markclosure(st, clvalue(o));
       break;
@@ -107,8 +104,8 @@ static void markstacks (lua_State *L, GCState *st) {
     marktable(st, L1->gt);  /* mark table of globals */
     for (o=L1->stack; o<L1->top; o++)
       markobject(st, o);
-    lim = (L1->stack_last - L1->top > MAXSTACK) ? L1->top+MAXSTACK
-                                              : L1->stack_last;
+    lim = (L1->stack_last - L1->ci->base > MAXSTACK) ? L1->ci->base+MAXSTACK
+                                                     : L1->stack_last;
     for (; o<=lim; o++) setnilvalue(o);
     lua_assert(L1->previous->next == L1 && L1->next->previous == L1);
     L1 = L1->next;

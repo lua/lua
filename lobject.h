@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.99 2001/02/23 20:32:32 roberto Exp roberto $
+** $Id: lobject.h,v 1.100 2001/03/02 17:27:50 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -22,24 +22,15 @@
 #endif
 
 
-/* ttype for closures active in the stack */
-#define LUA_TMARK	6
-
 
 /* tags for values visible from Lua == first user-created tag */
 #define NUM_TAGS	6
-
-
-/* check whether `t' is a mark */
-#define is_T_MARK(t)	(ttype(t) == LUA_TMARK)
-
 
 
 typedef union {
   struct TString *ts;
   struct Closure *cl;
   struct Hash *h;
-  struct CallInfo *info;
   lua_Number n;		/* LUA_TNUMBER */
 } Value;
 
@@ -56,7 +47,6 @@ typedef struct lua_TObject {
 #define tsvalue(o)      ((o)->value.ts)
 #define clvalue(o)      ((o)->value.cl)
 #define hvalue(o)       ((o)->value.h)
-#define infovalue(o)	((o)->value.info)
 
 
 /* Macros to set values */
@@ -75,15 +65,14 @@ typedef struct lua_TObject {
 #define sethvalue(obj,x) \
   { TObject *_o=(obj); _o->tt=LUA_TTABLE; _o->value.h=(x); }
 
-#define setivalue(obj,x) \
-  { TObject *_o=(obj); _o->tt=LUA_TMARK; _o->value.info=(x); }
-
 #define setnilvalue(obj) ((obj)->tt=LUA_TNIL)
 
 #define setobj(obj1,obj2) \
   { TObject *o1=(obj1); const TObject *o2=(obj2); \
     o1->tt=o2->tt; o1->value = o2->value; }
 
+
+typedef TObject *StkId;  /* index to stack elements */
 
 
 /*
@@ -209,12 +198,15 @@ typedef struct Hash {
 ** informations about a call (for debugging)
 */
 typedef struct CallInfo {
-  struct Closure *func;  /* function being called */
+  struct CallInfo *prev;  /* linked list */
+  StkId base;  /* base for called function */
   const Instruction **pc;  /* current pc of called function */
   int lastpc;  /* last pc traced */
   int line;  /* current line */
   int refi;  /* current index in `lineinfo' */
 } CallInfo;
+
+#define ci_func(ci)	(clvalue((ci)->base - 1))
 
 
 extern const TObject luaO_nilobject;

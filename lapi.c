@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.134 2001/02/23 17:28:12 roberto Exp roberto $
+** $Id: lapi.c,v 1.135 2001/03/02 17:27:50 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -31,7 +31,7 @@ const l_char lua_ident[] = l_s("$Lua: ") LUA_VERSION l_s(" ")
 #define api_check(L, o)		/* nothing */
 #endif
 
-#define api_checknelems(L, n)	api_check(L, (n) <= (L->top - L->Cbase))
+#define api_checknelems(L, n)	api_check(L, (n) <= (L->top - L->ci->base))
 
 #define api_incr_top(L)	incr_top
 
@@ -39,11 +39,11 @@ const l_char lua_ident[] = l_s("$Lua: ") LUA_VERSION l_s(" ")
 
 TObject *luaA_index (lua_State *L, int index) {
   if (index > 0) {
-    api_check(L, index <= L->top - L->Cbase);
-    return L->Cbase+index-1;
+    api_check(L, index <= L->top - L->ci->base);
+    return L->ci->base+index-1;
   }
   else {
-    api_check(L, index != 0 && -index <= L->top - L->Cbase);
+    api_check(L, index != 0 && -index <= L->top - L->ci->base);
     return L->top+index;
   }
 }
@@ -51,13 +51,13 @@ TObject *luaA_index (lua_State *L, int index) {
 
 static TObject *luaA_indexAcceptable (lua_State *L, int index) {
   if (index > 0) {
-    TObject *o = L->Cbase+(index-1);
-    api_check(L, index <= L->stack_last - L->Cbase);
+    TObject *o = L->ci->base+(index-1);
+    api_check(L, index <= L->stack_last - L->ci->base);
     if (o >= L->top) return NULL;
     else return o;
   }
   else {
-    api_check(L, index != 0 && -index <= L->top - L->Cbase);
+    api_check(L, index != 0 && -index <= L->top - L->ci->base);
     return L->top+index;
   }
 }
@@ -86,7 +86,7 @@ LUA_API int lua_stackspace (lua_State *L) {
 LUA_API int lua_gettop (lua_State *L) {
   int i;
   lua_lock(L);
-  i = (L->top - L->Cbase);
+  i = (L->top - L->ci->base);
   lua_unlock(L);
   return i;
 }
@@ -95,9 +95,9 @@ LUA_API int lua_gettop (lua_State *L) {
 LUA_API void lua_settop (lua_State *L, int index) {
   lua_lock(L);
   if (index >= 0)
-    luaD_adjusttop(L, L->Cbase, index);
+    luaD_adjusttop(L, L->ci->base, index);
   else {
-    api_check(L, -(index+1) <= (L->top - L->Cbase));
+    api_check(L, -(index+1) <= (L->top - L->ci->base));
     L->top = L->top+index+1;  /* index is negative */
   }
   lua_unlock(L);

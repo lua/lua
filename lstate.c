@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.57 2001/02/23 17:17:25 roberto Exp roberto $
+** $Id: lstate.c,v 1.58 2001/03/02 17:27:50 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -99,6 +99,8 @@ LUA_API lua_State *lua_open (lua_State *OL, int stacksize) {
     L->G = NULL;
     L->stack = NULL;
     L->stacksize = 0;
+    L->ci = &L->basefunc;
+    L->basefunc.prev = NULL;
     L->errorJmp = NULL;
     L->callhook = NULL;
     L->linehook = NULL;

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.173 2001/02/23 20:30:52 roberto Exp roberto $
+** $Id: lvm.c,v 1.174 2001/03/07 13:22:55 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -51,10 +51,10 @@ int luaV_tostring (lua_State *L, TObject *obj) {  /* LUA_NUMBER */
 }
 
 
-static void traceexec (lua_State *L, StkId base, lua_Hook linehook) {
-  CallInfo *ci = infovalue(base-1);
-  int *lineinfo = ci->func->f.l->lineinfo;
-  int pc = (*ci->pc - ci->func->f.l->code) - 1;
+static void traceexec (lua_State *L, lua_Hook linehook) {
+  CallInfo *ci = L->ci;
+  int *lineinfo = ci_func(ci)->f.l->lineinfo;
+  int pc = (*ci->pc - ci_func(ci)->f.l->code) - 1;
   int newline;
   if (pc == 0) {  /* may be first time? */
     ci->line = 1;
@@ -65,7 +65,7 @@ static void traceexec (lua_State *L, StkId base, lua_Hook linehook) {
   /* calls linehook when enters a new line or jumps back (loop) */
   if (newline != ci->line || pc <= ci->lastpc) {
     ci->line = newline;
-    luaD_lineHook(L, base-2, newline, linehook);
+    luaD_lineHook(L, newline, linehook);
   }
   ci->lastpc = pc;
 }
@@ -332,7 +332,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
   const Instruction *pc = tf->code;
   TString **const kstr = tf->kstr;
   const lua_Hook linehook = L->linehook;
-  infovalue(base-1)->pc = &pc;
+  L->ci->pc = &pc;
   if (tf->is_vararg)  /* varargs? */
     adjust_varargs(L, base, tf->numparams);
   luaD_adjusttop(L, base, tf->maxstacksize);
@@ -342,7 +342,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
     const Instruction i = *pc++;
     lua_assert(L->top == base+tf->maxstacksize);
     if (linehook)
-      traceexec(L, base, linehook);
+      traceexec(L, linehook);
     switch (GET_OPCODE(i)) {
       case OP_RETURN: {
         L->top = top;

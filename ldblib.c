@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.33 2001/02/23 17:17:25 roberto Exp roberto $
+** $Id: ldblib.c,v 1.34 2001/03/06 20:09:38 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -121,7 +121,7 @@ static void hookf (lua_State *L, void *key) {
   lua_pushuserdata(L, key);
   lua_gettable(L, -2);
   if (lua_isfunction(L, -1)) {
-    lua_pushvalue(L, 1);
+    lua_pushvalue(L, -3);  /* original argument (below table and function) */
     lua_rawcall(L, 1, 0);
   }
   else
