@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.28 1997/03/11 18:44:28 roberto Exp roberto $
+** $Id: opcode.h,v 3.29 1997/03/19 19:41:10 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -14,6 +14,10 @@
 
 #define FIELDS_PER_FLUSH 40
 
+/*
+* WARNING: if you change the order of this enumeration,
+* grep "ORDER LUA_T"
+*/
 typedef enum
 {
  LUA_T_NIL      = -9,

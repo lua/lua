@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.84 1997/03/11 18:44:28 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.85 1997/03/19 19:41:10 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -1006,18 +1006,18 @@ void luaI_gcIM (Object *o)
 }
 
 
-static void call_arith (char *op)
+static void call_arith (IMS event)
 {
-  Object *im = luaI_getimbyObj(top-2, IM_ARITH);  /* try first operand */
+  Object *im = luaI_getimbyObj(top-2, event);  /* try first operand */
   if (ttype(im) == LUA_T_NIL) {
-    im = luaI_getimbyObj(top-1, IM_ARITH);  /* try second operand */
+    im = luaI_getimbyObj(top-1, event);  /* try second operand */
     if (ttype(im) == LUA_T_NIL) {
-      im = luaI_getim(0, IM_ARITH);  /* try a 'global' i.m. */
+      im = luaI_getim(0, event);  /* try a 'global' i.m. */
       if (ttype(im) == LUA_T_NIL)
         lua_error("unexpected type at conversion to number");
     }
   }
-  lua_pushstring(op);
+  lua_pushstring(luaI_eventname[event]);
   callIM(im, 3, 1);
 }
 
@@ -1029,17 +1029,17 @@ static void concim (Object *o)
   callIM(im, 2, 1);
 }
 
-static void ordim (Object *o, char *op)
+static void ordim (Object *o, IMS event)
 {
-  Object *im = luaI_getimbyObj(o, IM_ORDER);
+  Object *im = luaI_getimbyObj(o, event);
   if (ttype(im) == LUA_T_NIL)
     lua_error("unexpected type at comparison");
-  lua_pushstring(op);
+  lua_pushstring(luaI_eventname[event]);
   callIM(im, 3, 1);
 }
 
 static void comparison (lua_Type ttype_less, lua_Type ttype_equal, 
-                        lua_Type ttype_great, char *op)
+                        lua_Type ttype_great, IMS op)
 {
   Object *l = top-2;
   Object *r = top-1;
@@ -1292,19 +1292,19 @@ static StkId lua_execute (Byte *pc, StkId base)
    break;
 
     case LTOP:
-      comparison(LUA_T_NUMBER, LUA_T_NIL, LUA_T_NIL, "lt");
+      comparison(LUA_T_NUMBER, LUA_T_NIL, LUA_T_NIL, IM_LT);
       break;
 
    case LEOP:
-      comparison(LUA_T_NUMBER, LUA_T_NUMBER, LUA_T_NIL, "le");
+      comparison(LUA_T_NUMBER, LUA_T_NUMBER, LUA_T_NIL, IM_LE);
       break;
 
    case GTOP:
-      comparison(LUA_T_NIL, LUA_T_NIL, LUA_T_NUMBER, "gt");
+      comparison(LUA_T_NIL, LUA_T_NIL, LUA_T_NUMBER, IM_GT);
       break;
 
    case GEOP:
-      comparison(LUA_T_NIL, LUA_T_NUMBER, LUA_T_NUMBER, "ge");
+      comparison(LUA_T_NIL, LUA_T_NUMBER, LUA_T_NUMBER, IM_GE);
       break;
 
    case ADDOP:
@@ -1312,7 +1312,7 @@ static StkId lua_execute (Byte *pc, StkId base)
     Object *l = top-2;
     Object *r = top-1;
     if (tonumber(r) || tonumber(l))
-      call_arith("add");
+      call_arith(IM_ADD);
     else
     {
       nvalue(l) += nvalue(r);
@@ -1326,7 +1326,7 @@ static StkId lua_execute (Byte *pc, StkId base)
     Object *l = top-2;
     Object *r = top-1;
     if (tonumber(r) || tonumber(l))
-      call_arith("sub");
+      call_arith(IM_SUB);
     else
     {
       nvalue(l) -= nvalue(r);
@@ -1340,7 +1340,7 @@ static StkId lua_execute (Byte *pc, StkId base)
     Object *l = top-2;
     Object *r = top-1;
     if (tonumber(r) || tonumber(l))
-      call_arith("mul");
+      call_arith(IM_MUL);
     else
     {
       nvalue(l) *= nvalue(r);
@@ -1354,7 +1354,7 @@ static StkId lua_execute (Byte *pc, StkId base)
     Object *l = top-2;
     Object *r = top-1;
     if (tonumber(r) || tonumber(l))
-      call_arith("div");
+      call_arith(IM_DIV);
     else
     {
       nvalue(l) /= nvalue(r);
@@ -1364,7 +1364,7 @@ static StkId lua_execute (Byte *pc, StkId base)
    break;
 
    case POWOP:
-    call_arith("pow");
+    call_arith(IM_POW);
     break;
 
    case CONCOP: {
@@ -1386,7 +1386,7 @@ static StkId lua_execute (Byte *pc, StkId base)
     {
       ttype(top) = LUA_T_NIL;
       incr_top;
-      call_arith("unm");
+      call_arith(IM_UNM);
     }
     else
       nvalue(top-1) = - nvalue(top-1);

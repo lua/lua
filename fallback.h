@@ -1,5 +1,5 @@
 /*
-** $Id: fallback.h,v 1.14 1997/02/26 17:38:41 roberto Unstable roberto $
+** $Id: fallback.h,v 1.15 1997/03/19 19:41:10 roberto Exp roberto $
 */
  
 #ifndef fallback_h
@@ -8,19 +8,44 @@
 #include "lua.h"
 #include "opcode.h"
 
-#define IM_GETTABLE  0
-#define IM_ARITH  1
-#define IM_ORDER  2
-#define IM_CONCAT  3
-#define IM_SETTABLE  4
-#define IM_GC 5
-#define IM_FUNCTION 6
-#define IM_INDEX  7
-#define IM_N 8
+/*
+* WARNING: if you change the order of this enumeration,
+* grep "ORDER IM"
+*/
+typedef enum {
+  IM_GETTABLE = 0,
+  IM_SETTABLE,
+  IM_INDEX,
+  IM_ADD,
+  IM_SUB,
+  IM_MUL,
+  IM_DIV,
+  IM_POW,
+  IM_UNM,
+  IM_LT,
+  IM_LE,
+  IM_GT,
+  IM_GE,
+  IM_CONCAT,
+  IM_GC,
+  IM_FUNCTION
+} IMS;
 
-#define GIM_ERROR 0
-#define GIM_GETGLOBAL 1
-#define GIM_SETGLOBAL 2
+#define IM_N 16
+
+extern char *luaI_eventname[];
+
+
+/*
+* WARNING: if you change the order of this enumeration,
+* grep "ORDER GIM"
+*/
+typedef enum {
+  GIM_ERROR = 0,
+  GIM_GETGLOBAL,
+  GIM_SETGLOBAL
+} IMGS;
+
 #define GIM_N 3
 
 void luaI_setfallback (void);
@@ -30,11 +55,12 @@ void luaI_travlock (int (*fn)(Object *));
 void luaI_invalidaterefs (void);
 char *luaI_travfallbacks (int (*fn)(Object *));
 
+void luaI_type (void);
 void luaI_settag (int tag, Object *o);
 lua_Type luaI_typetag (int tag);
-Object *luaI_getim (int tag, int event);
-Object *luaI_getgim (int event);
-Object *luaI_getimbyObj (Object *o, int event);
+Object *luaI_getim (int tag, IMS event);
+Object *luaI_getgim (IMGS event);
+Object *luaI_getimbyObj (Object *o, IMS event);
 int luaI_tag (Object *o);
 void luaI_setintmethod (void);
 void luaI_setglobalmethod (void);
