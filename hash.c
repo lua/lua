@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.5 1994/08/17 15:03:11 celes Exp $";
+char *rcs_hash="$Id: hash.c,v 2.6 1994/08/17 17:41:23 celes Exp celes $";
 
 #include <string.h>
 #include <stdlib.h>
@@ -265,23 +265,61 @@ static void rehash (Hash *t)
 */
 Object *lua_hashget (Hash *t, Object *ref)
 {
+ static int count = 1000;
  static Object nil_obj = {T_NIL, {NULL}};
- Object parent;
- int count = 1000; 
- tag(&parent) = T_STRING;
- svalue(&parent) = "parent";
- do
+ int h = present(t, ref);
+ if (h < 0) return NULL; 
+ if (tag(ref(node(t, h))) != T_NIL) return val(node(t, h));
+ if (--count == 0) 
  {
-  int h = present(t, ref);
-  if (h < 0) return NULL; 
-  if (tag(ref(node(t, h))) != T_NIL) return val(node(t, h));
-  
-  h = present(t, &parent); /* assert(p >= 0); */
-  t = tag(ref(node(t, h))) != T_NIL && tag(val(node(t, h))) == T_ARRAY ?
+  lua_reportbug ("hierarchy too deep (maybe there is an inheritance loop)");
+  return &nil_obj;
+ }
+
+ { /* check "parent" field */
+  Hash *p;
+  Object parent;
+  tag(&parent) = T_STRING;
+  svalue(&parent) = "parent";
+  h = present(t, &parent); /* assert(h >= 0); */
+  p = tag(ref(node(t, h))) != T_NIL && tag(val(node(t, h))) == T_ARRAY ?
       avalue(val(node(t, h))) : NULL;
- } while (t != NULL && --count);
- if (count == 0) 
-   lua_reportbug ("hierarchy too deep (maybe there is an inheritance loop)");
+  if (p != NULL)
+  {
+   Object *r = lua_hashget(p, ref);
+   if (tag(r) != T_NIL) { count++; return r; }
+  }
+ }
+
+ { /* check "parents" field */
+  Hash *ps;
+  Object parents;
+  tag(&parents) = T_STRING;
+  svalue(&parents) = "parents";
+  h = present(t, &parents); /* assert(h >= 0); */
+  ps = tag(ref(node(t, h))) != T_NIL && tag(val(node(t, h))) == T_ARRAY ?
+      avalue(val(node(t, h))) : NULL;
+  if (ps != NULL)
+  {
+   Hash *p;
+   Object index;
+   tag(&index) = T_NUMBER;
+   nvalue(&index) = 1;
+   h = present(ps, &index);
+   p = tag(ref(node(ps, h))) != T_NIL && tag(val(node(ps, h))) == T_ARRAY ?
+       avalue(val(node(ps, h))) : NULL;
+   while (p != NULL)
+   {
+    Object *r = lua_hashget(p, ref);
+    if (tag(r) != T_NIL) { count++; return r; }
+    nvalue(&index)++;
+    h = present(ps, &index);
+    p = tag(ref(node(ps, h))) != T_NIL && tag(val(node(ps, h))) == T_ARRAY ? 
+	avalue(val(node(ps, h))) : NULL;
+   }
+  }
+ }
+ count++;
  return &nil_obj;
 }
 
