@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.7 2004/06/29 18:49:02 roberto Exp roberto $
+** $Id: ldebug.c,v 2.8 2004/09/01 13:47:31 roberto Exp $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -261,11 +261,11 @@ int luaG_checkopenop (Instruction i) {
   switch (GET_OPCODE(i)) {
     case OP_CALL:
     case OP_TAILCALL:
-    case OP_RETURN: {
+    case OP_RETURN:
+    case OP_SETLIST: {
       check(GETARG_B(i) == 0);
       return 1;
     }
-    case OP_SETLISTO: return 1;
     default: return 0;  /* invalid instruction after an open call */
   }
 }
@@ -392,7 +392,8 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         break;
       }
       case OP_SETLIST: {
-        checkreg(pt, a + (b&(LFIELDS_PER_FLUSH-1)) + 1);
+        if (b > 0) checkreg(pt, a + b);
+        if (c == 0) pc++;
         break;
       }
       case OP_CLOSURE: {
