@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.65 2003/01/20 11:03:05 roberto Exp roberto $
+% $Id: manual.tex,v 1.66 2003/01/21 17:45:11 roberto Exp roberto $
 %{[(
 
 \documentclass[11pt,twoside]{article}
@@ -26,13 +26,18 @@
 \newcommand{\Index}[1]{#1\index{#1@{\lowercase{#1}}}}
 \newcommand{\IndexVerb}[1]{\T{#1}\index{#1@{\tt #1}}}
 \newcommand{\IndexEmph}[1]{\emph{#1}\index{#1@{\lowercase{#1}}}}
-\newcommand{\IndexTM}[1]{\index{#1 event@{``#1'' event}}\index{metamethod!#1}}
+\newcommand{\IndexTM}[1]{\index{#1 event@{\Q{#1} event}}\index{metamethod!#1}}
 \newcommand{\Def}[1]{\emph{#1}\index{#1}}
 \newcommand{\IndexAPI}[1]{\T{#1}\DefAPI{#1}}
 \newcommand{\IndexLIB}[1]{\T{#1}\DefLIB{#1}}
 \newcommand{\DefLIB}[1]{\index{#1@{\tt #1}}}
 \newcommand{\DefAPI}[1]{\index{C API!#1@{\tt #1}}}
 \newcommand{\IndexKW}[1]{\index{keywords!#1@{\tt #1}}}
+
+\newcommand{\Q}[1]{``#1''}
+\newcommand{\Em}{---}
+\newcommand{\En}{--}
+\newcommand{\C}[1]{}
 
 \newcommand{\ff}{$\bullet$\ }
 
@@ -134,7 +139,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{{\small \tt\$Date: 2003/01/20 11:03:05 $ $}}
+%\date{{\small \tt\$Date: 2003/01/21 17:45:11 $ $}}
 
 \maketitle
 
@@ -202,7 +207,8 @@ a intera\c{c}\~ao entre programas Lua e programas C~hospedeiros.
 \pagestyle{plain}
 \pagenumbering{arabic}
 
-%------------------------------------------------------------------------------
+
+\C{------------------------------------------------------------------------------}
 \section{Introduction}
 
 Lua is an extension programming language designed to support
@@ -212,7 +218,7 @@ Lua is intended to be used as a powerful, light-weight
 configuration language for any program that needs one.
 Lua is implemented as a library, written in C.
 
-Being an extension language, Lua has no notion of a ``main'' program:
+Being an extension language, Lua has no notion of a \Q{main} program:
 it only works \emph{embedded} in a host client,
 called the \emph{embedding program} or simply the \emph{host}.
 This host program can invoke functions to execute a piece of Lua code,
@@ -236,25 +242,25 @@ which are available at Lua's web site.
 \begin{itemize}
 \item
 R.~Ierusalimschy, L.~H.~de Figueiredo, and W.~Celes.
-Lua---an extensible extension language.
-\emph{Software: Practice \& Experience} {\bf 26} \#6 (1996) 635--652.
+Lua\Em{}an extensible extension language.
+\emph{Software: Practice \& Experience} {\bf 26} \#6 (1996) 635\En{}652.
 \item
 L.~H.~de Figueiredo, R.~Ierusalimschy, and W.~Celes.
 The design and implementation of a language for extending applications.
-\emph{Proceedings of XXI Brazilian Seminar on Software and Hardware} (1994) 273--283.
+\emph{Proceedings of XXI Brazilian Seminar on Software and Hardware} (1994) 273\En{}283.
 \item
 L.~H.~de Figueiredo, R.~Ierusalimschy, and W.~Celes.
 Lua: an extensible embedded language.
-\emph{Dr. Dobb's Journal} {\bf  21} \#12 (Dec 1996) 26--33.
+\emph{Dr. Dobb's Journal} {\bf  21} \#12 (Dec 1996) 26\En{}33.
 \item
 R.~Ierusalimschy, L.~H.~de Figueiredo, and W.~Celes.
 The evolution of an extension language: a history of Lua,
-\emph{Proceedings of V Brazilian Symposium on Programming Languages} (2001) B-14--B-28.
+\emph{Proceedings of V Brazilian Symposium on Programming Languages} (2001) B-14\En{}B-28.
 \end{itemize}
 
-Lua means ``moon'' in Portuguese.
+Lua means \Q{moon} in Portuguese.
 
-%------------------------------------------------------------------------------
+\C{------------------------------------------------------------------------------}
 \section{Lua Concepts}\label{concepts}
 
 This section describes the main concepts of Lua as a language.
@@ -513,7 +519,7 @@ If \verb|__mode| contains \verb|v|,
 the values in the table are weak.
 
 
-%------------------------------------------------------------------------------
+\C{------------------------------------------------------------------------------}
 \section{The Language}\label{language}
 
 This section describes the lexis, the syntax, and the semantics of Lua.
@@ -588,7 +594,7 @@ may contain nested \verb|[[| $\ldots$ \verb|]]| pairs,
 and do not interpret escape sequences.
 For convenience,
 when the opening \verb|[[| is immediately followed by a newline,
-the newline is not included in the string.  % ]]
+the newline is not included in the string.  \C{ ]]}
 That form is specially convenient for
 writing strings that contain program pieces or
 other quoted strings.
@@ -631,18 +637,18 @@ in Unix systems \see{lua-sa}.
 \subsection{Variables}\label{variables}
 
 Variables are places that store values.
-%In Lua, variables are given by simple identifiers or by table fields.
+\C{In Lua, variables are given by simple identifiers or by table fields.}
 
 A single name can denote a global variable, a local variable,
 or a formal parameter in a function
 (formal parameters are just local variables):
 \begin{Produc}
 \produc{var}{\Nter{Name}}
-\end{Produc}%
+\end{Produc}
 Square brackets are used to index a table:
 \begin{Produc}
 \produc{var}{prefixexp \ter{[} exp \ter{]}}
-\end{Produc}%
+\end{Produc}
 The first expression should result in a table value,
 and the second expression identifies a specific entry inside that table.
 
@@ -650,7 +656,7 @@ The syntax \verb|var.NAME| is just syntactic sugar for
 \verb|var["NAME"]|:
 \begin{Produc}
 \produc{var}{prefixexp \ter{.} \Nter{Name}}
-\end{Produc}%
+\end{Produc}
 
 The expression denoting the table to be indexed has a restricted syntax;
 see \See{expressions} for details.
@@ -691,19 +697,19 @@ which are executed sequentially.
 Each statement can be optionally followed by a semicolon:
 \begin{Produc}
 \produc{chunk}{\rep{stat \opt{\ter{;}}}}
-\end{Produc}%
+\end{Produc}
 
 \subsubsection{Blocks}
 A \Index{block} is a list of statements;
 syntactically, a block is equal to a chunk:
 \begin{Produc}
 \produc{block}{chunk}
-\end{Produc}%
+\end{Produc}
 
 A block may be explicitly delimited to produce a single statement:
 \begin{Produc}
 \produc{stat}{\rwd{do} block \rwd{end}}
-\end{Produc}%
+\end{Produc}
 \IndexKW{do}
 Explicit blocks are useful
 to control the scope of variable declarations.
@@ -721,7 +727,7 @@ The elements in both lists are separated by commas:
 \produc{stat}{varlist1 \ter{=} explist1}
 \produc{varlist1}{var \rep{\ter{,} var}}
 \produc{explist1}{exp \rep{\ter{,} exp}}
-\end{Produc}%
+\end{Produc}
 Expressions are discussed in \See{expressions}.
 
 Before the assignment,
@@ -765,7 +771,7 @@ familiar syntax:
 \produc{stat}{\rwd{if} exp \rwd{then} block
   \rep{\rwd{elseif} exp \rwd{then} block}
    \opt{\rwd{else} block} \rwd{end}}
-\end{Produc}%
+\end{Produc}
 Lua also has a \rwd{for} statement, in two flavors \see{for}.
 
 The \Index{condition expression} \M{exp} of a
@@ -776,13 +782,13 @@ All values different from \nil{} and \False{} are considered true
 
 The \rwd{return} statement is used to return values
 from a function or from a chunk.\IndexKW{return}
-\label{return}%
-\index{return statement}%
+\label{return}
+\index{return statement}
 Functions and chunks may return more than one value,
 so the syntax for the \rwd{return} statement is
 \begin{Produc}
 \produc{stat}{\rwd{return} \opt{explist1}}
-\end{Produc}%
+\end{Produc}
 
 The \rwd{break} statement can be used to terminate the execution of a
 \rwd{while}, \rwd{repeat}, or \rwd{for} loop,
@@ -790,7 +796,7 @@ and to skip to the next statement after the loop:\IndexKW{break}
 \index{break statement}
 \begin{Produc}
 \produc{stat}{\rwd{break}}
-\end{Produc}%
+\end{Produc}
 A \rwd{break} ends the innermost enclosing loop.
 
 \NOTE
@@ -821,7 +827,7 @@ It has the following syntax:
 \begin{Produc}
 \produc{stat}{\rwd{for} \Nter{Name} \ter{=} exp \ter{,} exp \opt{\ter{,} exp}
                     \rwd{do} block \rwd{end}}
-\end{Produc}%
+\end{Produc}
 The \emph{block} is repeated for \emph{name} starting at the value of
 the first \emph{exp}, until it passes the second \emph{exp} by steps of the
 third \emph{exp}.
@@ -864,7 +870,7 @@ It has the following syntax:
 \begin{Produc}
 \produc{stat}{\rwd{for} \Nter{Name} \rep{\ter{,} \Nter{Name}} \rwd{in} explist1
                     \rwd{do} block \rwd{end}}
-\end{Produc}%
+\end{Produc}
 A \rwd{for} statement like
 \begin{verbatim}
        for var_1, ..., var_n in explist do block end
@@ -883,8 +889,8 @@ is equivalent to the code:
 Note the following:
 \begin{itemize}\itemsep=0pt
 \item \verb|explist| is evaluated only once.
-Its results are a ``generator'' function,
-a ``state'', and an initial value for the first ``iterator variable''.
+Its results are a \Q{generator} function,
+a \Q{state}, and an initial value for the first \Q{iterator variable}.
 \item \verb|_f| and \verb|_s| are invisible variables.
 The names are here for explanatory purposes only.
 \item The behavior is \emph{undefined} if you assign to any
@@ -902,7 +908,7 @@ Because of possible side-effects,
 function calls can be executed as statements:
 \begin{Produc}
 \produc{stat}{functioncall}
-\end{Produc}%
+\end{Produc}
 In this case, all returned values are thrown away.
 Function calls are explained in \See{functioncall}.
 
@@ -912,7 +918,7 @@ The declaration may include an initial assignment:\IndexKW{local}
 \begin{Produc}
 \produc{stat}{\rwd{local} namelist \opt{\ter{=} explist1}}
 \produc{namelist}{\Nter{Name} \rep{\ter{,} \Nter{Name}}}
-\end{Produc}%
+\end{Produc}
 If present, an initial assignment has the same semantics
 of a multiple assignment \see{assignment}.
 Otherwise, all variables are initialized with \nil.
@@ -926,7 +932,7 @@ Visibility rules for local variables are explained in \See{visibility}.
 
 \subsection{\Index{Expressions}}\label{expressions}
 
-%\subsubsection{\Index{Basic Expressions}}
+\C{\subsubsection{\Index{Basic Expressions}}}
 The basic expressions in Lua are the following:
 \begin{Produc}
 \produc{exp}{prefixexp}
@@ -936,7 +942,7 @@ The basic expressions in Lua are the following:
 \produc{exp}{function}
 \produc{exp}{tableconstructor}
 \produc{prefixexp}{var \Or functioncall \Or \ter{(} exp \ter{)}}
-\end{Produc}%
+\end{Produc}
 \IndexKW{nil}\IndexKW{false}\IndexKW{true}
 
 An expression enclosed in parentheses always results in only one value.
@@ -985,7 +991,7 @@ Tables, userdata, and functions are compared \emph{by reference},
 that is,
 two tables are considered equal only if they are the \emph{same} table.
 
-%% TODO eq metamethod
+\C{TODO eq metamethod}
 
 Every time you create a new table (or userdata, or function),
 this new value is different from any previously existing value.
@@ -1004,7 +1010,7 @@ The order operators work as follows.
 If both arguments are numbers, then they are compared as such.
 Otherwise, if both arguments are strings,
 then their values are compared according to the current locale.
-Otherwise, the ``lt'' or the ``le'' metamethod is called \see{metatable}.
+Otherwise, the \Q{lt} or the \Q{le} metamethod is called \see{metatable}.
 
 
 \subsubsection{Logical Operators}
@@ -1045,7 +1051,7 @@ The string \Index{concatenation} operator in Lua is
 denoted by two dots (`\verb|..|').
 If both operands are strings or numbers, then they are converted to
 strings according to the rules mentioned in \See{coercion}.
-Otherwise, the ``concat'' metamethod is called \see{metatable}.
+Otherwise, the \Q{concat} metamethod is called \see{metatable}.
 
 \subsubsection{Precedence}
 \Index{Operator precedence} in Lua follows the table below,
@@ -1076,7 +1082,7 @@ The general syntax for constructors is
 \produc{field}{\ter{[} exp \ter{]} \ter{=} exp \Or
                \Nter{Name} \ter{=} exp \Or exp}
 \produc{fieldsep}{\ter{,} \Or \ter{;}}
-\end{Produc}%
+\end{Produc}
 
 Each field of the form \verb|[exp1] = exp2| adds to the new table an entry
 with key \verb|exp1| and value \verb|exp2|.
@@ -1119,13 +1125,13 @@ as a convenience for machine-generated code.
 A \Index{function call} in Lua has the following syntax:
 \begin{Produc}
 \produc{functioncall}{prefixexp args}
-\end{Produc}%
+\end{Produc}
 In a function call,
 first \M{prefixexp} and \M{args} are evaluated.
 If the value of \M{prefixexp} has type \emph{function},
 then that function is called,
 with the given arguments.
-Otherwise, its ``call'' metamethod is called,
+Otherwise, its \Q{call} metamethod is called,
 having as first parameter the value of \M{prefixexp},
 followed by the original call arguments
 \see{metatable}.
@@ -1133,8 +1139,8 @@ followed by the original call arguments
 The form
 \begin{Produc}
 \produc{functioncall}{prefixexp \ter{:} \Nter{name} args}
-\end{Produc}%
-can be used to call ``methods''.
+\end{Produc}
+can be used to call \Q{methods}.
 A call \verb|v:name(...)|
 is syntactic sugar for \verb|v.name(v, ...)|,
 except that \verb|v| is evaluated only once.
@@ -1144,7 +1150,7 @@ Arguments have the following syntax:
 \produc{args}{\ter{(} \opt{explist1} \ter{)}}
 \produc{args}{tableconstructor}
 \produc{args}{Literal}
-\end{Produc}%
+\end{Produc}
 All argument expressions are evaluated before the call.
 A call of the form \verb|f{...}| is syntactic sugar for
 \verb|f({...})|, that is,
@@ -1209,14 +1215,14 @@ The syntax for function definition is\IndexKW{function}
 \begin{Produc}
 \produc{function}{\rwd{function} funcbody}
 \produc{funcbody}{\ter{(} \opt{parlist1} \ter{)} block \rwd{end}}
-\end{Produc}%
+\end{Produc}
 
 The following syntactic sugar simplifies function definitions:
 \begin{Produc}
 \produc{stat}{\rwd{function} funcname funcbody}
 \produc{stat}{\rwd{local} \rwd{function} \Nter{name} funcbody}
 \produc{funcname}{\Nter{name} \rep{\ter{.} \Nter{name}} \opt{\ter{:} \Nter{name}}}
-\end{Produc}%
+\end{Produc}
 The statement
 \begin{verbatim}
        function f () ... end
@@ -1259,8 +1265,8 @@ initialized with the argument values:
 \begin{Produc}
 \produc{parlist1}{namelist \opt{\ter{,} \ter{\ldots}}}
 \produc{parlist1}{\ter{\ldots}}
-\end{Produc}%
-\label{vararg}%
+\end{Produc}
+\label{vararg}
 When a function is called,
 the list of \Index{arguments} is adjusted to
 the length of the list of parameters,
@@ -1338,7 +1344,7 @@ For instance:
 \end{verbatim}
 Notice that, in a declaration like \verb|local x = x|,
 the new \verb|x| being declared is not in scope yet,
-so the second \verb|x| refers to the ``outside'' variable.
+so the second \verb|x| refers to the \Q{outside} variable.
 
 Because of these \Index{lexical scoping} rules,
 local variables can be freely accessed by functions
@@ -1353,7 +1359,7 @@ For instance:
 \end{verbatim}
 
 Notice that each execution of a \rwd{local} statement
-``creates'' new local variables.
+\Q{creates} new local variables.
 Consider the following example:
 \begin{verbatim}
   a = {}
@@ -1403,14 +1409,14 @@ Metatables control the operations listed next.
 Each operation is identified by its corresponding name.
 The key for each operation is a string with its name prefixed by
 two underscores;
-for instance, the key for operation ``add'' is the
+for instance, the key for operation \Q{add} is the
 string \verb|"__add"|.
 The semantics of these operations is better explained by a Lua function
 describing how the interpreter executes that operation.
-%Each function shows how a handler is called,
-%its arguments (that is, its signature),
-%its results,
-%and the default behavior in the absence of a handler.
+\C{Each function shows how a handler is called,}
+\C{its arguments (that is, its signature),}
+\C{its results,}
+\C{and the default behavior in the absence of a handler.}
 The code shown here in Lua is only illustrative;
 the real behavior is hard coded in the interpreter,
 and it is much more efficient than this simulation.
@@ -1420,7 +1426,7 @@ are described in \See{predefined}.
 
 \begin{description}
 
-\item[``add'':]\IndexTM{add}
+\item[\Q{add}:]\IndexTM{add}
 the \verb|+| operation.
 
 The function \verb|getbinhandler| below defines how Lua chooses a handler
@@ -1434,7 +1440,7 @@ then Lua tries the second operand.
        end
 \end{verbatim}
 Using that function,
-the behavior of the ``add'' operation is
+the behavior of the \Q{add} operation is
 \begin{verbatim}
        function add_event (op1, op2)
          local o1, o2 = tonumber(op1), tonumber(op2)
@@ -1452,19 +1458,19 @@ the behavior of the ``add'' operation is
        end
 \end{verbatim}
 
-\item[``sub'':]\IndexTM{sub}
+\item[\Q{sub}:]\IndexTM{sub}
 the \verb|-| operation.
-Behavior similar to the ``add'' operation.
+Behavior similar to the \Q{add} operation.
 
-\item[``mul'':]\IndexTM{mul}
+\item[\Q{mul}:]\IndexTM{mul}
 the \verb|*| operation.
-Behavior similar to the ``add'' operation.
+Behavior similar to the \Q{add} operation.
 
-\item[``div'':]\IndexTM{div}
+\item[\Q{div}:]\IndexTM{div}
 the \verb|/| operation.
-Behavior similar to the ``add'' operation.
+Behavior similar to the \Q{add} operation.
 
-\item[``pow'':]\IndexTM{pow}
+\item[\Q{pow}:]\IndexTM{pow}
 the \verb|^| operation (exponentiation) operation.
 \begin{verbatim} ??
        function pow_event (op1, op2)
@@ -1478,7 +1484,7 @@ the \verb|^| operation (exponentiation) operation.
        end
 \end{verbatim}
 
-\item[``unm'':]\IndexTM{unm}
+\item[\Q{unm}:]\IndexTM{unm}
 the unary \verb|-| operation.
 \begin{verbatim}
        function unm_event (op)
@@ -1498,7 +1504,7 @@ the unary \verb|-| operation.
        end
 \end{verbatim}
 
-\item[``lt'':]\IndexTM{lt}
+\item[\Q{lt}:]\IndexTM{lt}
 the \verb|<| operation.
 \begin{verbatim}
        function lt_event (op1, op2)
@@ -1518,7 +1524,7 @@ the \verb|<| operation.
 \end{verbatim}
 \verb|a>b| is equivalent to \verb|b<a|.
 
-\item[``le'':]\IndexTM{lt}
+\item[\Q{le}:]\IndexTM{lt}
 the \verb|<=| operation.
 \begin{verbatim}
        function le_event (op1, op2)
@@ -1542,12 +1548,12 @@ the \verb|<=| operation.
        end
 \end{verbatim}
 \verb|a>=b| is equivalent to \verb|b<=a|.
-Notice that, in the absence of a ``le'' metamethod,
-Lua tries the ``lt'', assuming that \verb|a<=b| is
+Notice that, in the absence of a \Q{le} metamethod,
+Lua tries the \Q{lt}, assuming that \verb|a<=b| is
 equivalent to \verb|not (b<a)|.
 
 
-\item[``concat'':]\IndexTM{concatenation}
+\item[\Q{concat}:]\IndexTM{concatenation}
 the \verb|..| (concatenation) operation.
 \begin{verbatim}
        function concat_event (op1, op2)
@@ -1565,8 +1571,8 @@ the \verb|..| (concatenation) operation.
        end
 \end{verbatim}
 
-\item[``index'':]\IndexTM{index}
-The ``gettable'' operation \verb|table[key]|.
+\item[\Q{index}:]\IndexTM{index}
+The \Q{gettable} operation \verb|table[key]|.
 \begin{verbatim}
        function gettable_event (table, key)
          local h
@@ -1587,8 +1593,8 @@ The ``gettable'' operation \verb|table[key]|.
        end
 \end{verbatim}
 
-\item[``newindex'':]\IndexTM{index}
-The ``settable'' operation \verb|table[key] = value|.
+\item[\Q{newindex}:]\IndexTM{index}
+The \Q{settable} operation \verb|table[key] = value|.
 \begin{verbatim}
        function settable_event (table, key, value)
          local h
@@ -1610,7 +1616,7 @@ The ``settable'' operation \verb|table[key] = value|.
 \end{verbatim}
 
 
-\item[``call'':]\IndexTM{call}
+\item[\Q{call}:]\IndexTM{call}
 called when Lua calls a value.
 \begin{verbatim}
        function function_event (func, ...)
@@ -1659,7 +1665,7 @@ Lua supports coroutines,
 also called \emph{semi-coroutines}
 or \emph{collaborative multithreading}.
 A coroutine in Lua represents an independent thread of execution.
-Unlike ``real'' threads, however,
+Unlike \Q{real} threads, however,
 a coroutine only suspends its execution by explicitly calling
 an yield function.
 
@@ -1753,7 +1759,7 @@ main    false   cannot resume dead coroutine
 
 
 
-%------------------------------------------------------------------------------
+\C{------------------------------------------------------------------------------}
 \section{The Application Program Interface}\label{API}
 \index{C API}
 
@@ -1764,7 +1770,7 @@ All API functions and related types and constants
 are declared in the header file \verb|lua.h|.
 
 \NOTE
-Even when we use the term ``function'',
+Even when we use the term \Q{function},
 any facility in the API may be provided as a \emph{macro} instead.
 All such macros use each of its arguments exactly once
 (except for the first argument, which is always a Lua state),
@@ -1801,8 +1807,8 @@ and frees all dynamic memory used by that state.
 On several platforms, you may not need to call this function,
 because all resources are naturally released when the host program ends.
 On the other hand,
-long-running programs ---
-like a daemon or a web server ---
+long-running programs \Em{}
+like a daemon or a web server \Em{}
 might need to release states as soon as they are not needed,
 to avoid growing too large.
 
@@ -1813,7 +1819,7 @@ Lua offers partial support for multiple threads of execution.
 If you have a C~library that offers multi-threading, 
 then Lua can cooperate with it to implement the equivalent facility in Lua.
 Also, Lua implements its own coroutine system on top of threads.
-The following function creates a new ``thread'' in Lua:
+The following function creates a new \Q{thread} in Lua:
 \begin{verbatim}
        lua_State *lua_newthread (lua_State *L);
 \end{verbatim}
@@ -1821,7 +1827,7 @@ The following function creates a new ``thread'' in Lua:
 The new state returned by this function shares with the original state
 all global environment (such as tables),
 but has an independent run-time stack.
-(The use of these multiple stacks must be ``synchronized'' with C.
+(The use of these multiple stacks must be \Q{synchronized} with C.
 How to explain that? TO BE WRITTEN.)
 
 Each thread has an independent table for global variables.
@@ -1997,7 +2003,7 @@ These functions can be called with any acceptable index.
 
 \verb|lua_type| returns the type of a value in the stack,
 or \verb|LUA_TNONE| for a non-valid index
-(that is, if that stack position is ``empty'').
+(that is, if that stack position is \Q{empty}).
 The types are coded by the following constants
 defined in \verb|lua.h|:
 \verb|LUA_TNIL|,
@@ -2061,7 +2067,7 @@ When called with a non-valid index,
 they act as if the given value had an incorrect type.
 
 \verb|lua_toboolean| converts the Lua value at the given index
-to a C ``boolean'' value (that is, 0 or 1).
+to a C \Q{boolean} value (that is, 0 or 1).
 Like all tests in Lua, it returns 1 for any Lua value different from
 \False{} and \nil;
 otherwise it returns 0.
@@ -2132,7 +2138,7 @@ make an internal copy of the given string.
 otherwise, you should use the more general \verb|lua_pushlstring|,
 which accepts an explicit size.
 
-You can also push ``formatted'' strings:
+You can also push \Q{formatted} strings:
 \begin{verbatim}
        const char *lua_pushfstring  (lua_State *L, const char *fmt, ...);
        const char *lua_pushvfstring (lua_State *L, const char *fmt,
@@ -2191,11 +2197,11 @@ In particular
 After the collection,
 a new threshold is set according to the previous rule.
 
-%% TODO do we need a new way to do that??
-% If you want to change the adaptive behavior of the garbage collector,
-% you can use the garbage-collection tag method for \nil{} %
-% to set your own threshold
-% (the tag method is called after Lua resets the threshold).
+\C{TODO do we need a new way to do that??}
+\C{ If you want to change the adaptive behavior of the garbage collector,}
+\C{ you can use the garbage-collection tag method for \nil{} }
+\C{ to set your own threshold}
+\C{ (the tag method is called after Lua resets the threshold).}
 
 
 \subsection{Userdata}\label{userdata}
@@ -2214,7 +2220,7 @@ A light userdata represents a pointer.
 It is a value (like a number):
 You do not create it, it has no metatables,
 it is not collected (as it was never created).
-A light userdata is equal to ``any''
+A light userdata is equal to \Q{any}
 light userdata with the same address.
 
 In Lua code, there is no way to test whether a userdata is full or light;
@@ -2278,10 +2284,10 @@ You can load a Lua chunk with
 \DefAPI{Chunkreader}\DefAPI{lua_load}
 The return values of \verb|lua_load| are:
 \begin{itemize}
-\item 0 --- no errors;
-\item \IndexAPI{LUA_ERRSYNTAX} ---
+\item 0 \Em{} no errors;
+\item \IndexAPI{LUA_ERRSYNTAX} \Em{}
 syntax error during pre-compilation.
-\item \IndexAPI{LUA_ERRMEM} ---
+\item \IndexAPI{LUA_ERRMEM} \Em{}
 memory allocation error.
 \end{itemize}
 If there are no errors,
@@ -2337,7 +2343,7 @@ The table is left where it was in the stack;
 this is convenient for getting multiple values from a table.
 
 As in Lua, this function may trigger a metamethod
-for the ``index'' event \see{metatable}.
+for the \Q{index} event \see{metatable}.
 To get the real value of any table key,
 without invoking any metamethod,
 use the \emph{raw} version:
@@ -2360,7 +2366,7 @@ The table is left where it was in the stack;
 this is convenient for setting multiple values in a table.
 
 As in Lua, this operation may trigger a metamethod
-for the ``settable'' or ``newindex'' events.
+for the \Q{settable} or \Q{newindex} events.
 To set the real value of any table index,
 without invoking any metamethod,
 use the \emph{raw} version:
@@ -2377,7 +2383,7 @@ You can traverse a table with the function
 where \verb|index| points to the table to be traversed.
 The function pops a key from the stack,
 and pushes a key-value pair from the table
-(the ``next'' pair after the given key).
+(the \Q{next} pair after the given key).
 If there are no more elements, then \verb|lua_next| returns 0
 (and pushes nothing).
 Use a \nil{} key to signal the start of a traversal.
@@ -2480,7 +2486,7 @@ Here it is in~C:
     lua_settable(L, LUA_GLOBALSINDEX);             /* set global variable `a' */
     lua_pop(L, 1);                               /* remove `t' from the stack */
 \end{verbatim}
-Notice that the code above is ``balanced'':
+Notice that the code above is \Q{balanced}:
 at its end, the stack is back to its original configuration.
 This is considered good programming practice.
 
@@ -2530,10 +2536,10 @@ The \verb|lua_pcall| function returns 0 in case of success,
 or one of the following error codes
 (defined in \verb|lua.h|):
 \begin{itemize}
-\item \IndexAPI{LUA_ERRRUN} --- a runtime error.
-\item \IndexAPI{LUA_ERRMEM} --- memory allocation error.
+\item \IndexAPI{LUA_ERRRUN} \Em{} a runtime error.
+\item \IndexAPI{LUA_ERRMEM} \Em{} memory allocation error.
 For such errors, Lua does not call the error handler function.
-\item \IndexAPI{LUA_ERRERR} ---
+\item \IndexAPI{LUA_ERRERR} \Em{}
 error while running the error handler function.
 \end{itemize}
 
@@ -2541,7 +2547,7 @@ error while running the error handler function.
 \medskip
 
 >>>>
-%% TODO: mover essas 2 para algum lugar melhor.
+\C{ TODO: mover essas 2 para algum lugar melhor.}
 Some special Lua functions have their own C~interfaces.
 The host program can generate a Lua error calling the function
 \begin{verbatim}
@@ -2557,7 +2563,7 @@ then the corresponding Lua execution terminates,
 as if an error had occurred inside Lua code.
 Otherwise, the whole host program terminates with a call to
 \verb|exit(EXIT_FAILURE)|.
-%% TODO: at_panic
+\C{ TODO: at_panic}
 
 The function
 \begin{verbatim}
@@ -2690,7 +2696,7 @@ implemented by the auxiliary library,
 and therefore should not be used by other purposes.
 
 
-%------------------------------------------------------------------------------
+\C{------------------------------------------------------------------------------}
 \section{The Debug Interface} \label{debugI}
 
 Lua has no built-in debugging facilities.
@@ -2698,7 +2704,7 @@ Instead, it offers a special interface
 by means of functions and \emph{hooks}.
 This interface allows the construction of different
 kinds of debuggers, profilers, and other tools
-that need ``inside information'' from the interpreter.
+that need \Q{inside information} from the interpreter.
 
 \subsection{Stack and Function Information}
 
@@ -2778,7 +2784,7 @@ if the function was defined in a file,
 then \verb|source| starts with a \verb|@| followed by the file name.
 
 \item[short\_src]
-A ``printable'' version of \verb|source|, to be used in error messages.
+A \Q{printable} version of \verb|source|, to be used in error messages.
 
 \item[linedefined]
 the line number where the definition of the function starts.
@@ -2869,7 +2875,7 @@ A hook may be called in four different events:
 a \emph{call} event, when Lua calls a function;
 a \emph{return} event, when Lua returns from a function;
 a \emph{line} event, when Lua starts executing a new line of code;
-and a \emph{count} event, which happens every ``count'' instructions.
+and a \emph{count} event, which happens every \Q{count} instructions.
 Lua identifies them with the following constants:
 \verb|LUA_HOOKCALL|\DefAPI{LUA_HOOKCALL},
 \verb|LUA_HOOKRET|\DefAPI{LUA_HOOKRET},
@@ -2896,9 +2902,9 @@ plus the macro \verb|LUA_MASKCOUNT(count)|.
 For each event, the hook is called as explained below:
 \begin{description}
 \item{The call hook} is called when the interpreter calls a function.
-The hook is called just after Lua ``enters'' the new function.
+The hook is called just after Lua \Q{enters} the new function.
 \item{The return hook} is called when the interpreter returns from a function.
-The hook is called just before Lua ``leaves'' the function.
+The hook is called just before Lua \Q{leaves} the function.
 \item{The line hook} is called when the interpreter is about to
 start the execution of a new line of code,
 or when it jumps back (even for the same line).
@@ -2930,14 +2936,14 @@ Therefore, if a hook calls Lua to execute a function or a chunk,
 that execution occurs without any calls to hooks.
 
 
-%------------------------------------------------------------------------------
+\C{------------------------------------------------------------------------------}
 \section{Standard Libraries}\label{libraries}
 
 The standard libraries provide useful functions
 that are implemented directly through the standard C~API.
 Some of these functions provide essential services to the language
 (e.g. \verb|type| and \verb|getmetatable|);
-others provide access to ``outside'' services (e.g. I/O);
+others provide access to \Q{outside} services (e.g. I/O);
 and others could be implemented in Lua itself,
 but are quite useful or have critical performance to
 deserve an implementation in C (e.g. \verb|sort|).
@@ -2987,8 +2993,8 @@ with a string containing the current interpreter version.
 The current content of this string is {\tt "Lua \Version"}.
 
 \subsubsection*{\ff \T{assert (v [, message])}}\DefLIB{assert}
-Issues an \emph{``assertion failed!''} error
-when its argument \verb|v| is \nil{} or \false;
+Issues an \emph{\Q{assertion failed!}} error
+when its argument \verb|v| is \nil{} or \False;
 otherwise, returns this argument.
 This function is equivalent to the following Lua function:
 \begin{verbatim}
@@ -3035,7 +3041,7 @@ Returns the current table of globals in use by the function.
 which specifies the function at that stack level:
 Level 1 is the function calling \verb|getglobals|.
 If the given function is not a Lua function,
-returns the ``global'' table of globals.
+returns the \Q{global} table of globals.
 The default for \verb|function| is 1.
 
 \subsubsection*{\ff \T{getmetatable (object)}}
@@ -3072,7 +3078,7 @@ returns the compiled chunk as a function;
 otherwise, returns \nil{} plus an error message.
 
 The optional parameter \verb|chunkname|
-is the ``name of the chunk'',
+is the \Q{name of the chunk},
 which is used in error messages and debug information.
 
 To load and run a given string, use the idiom
@@ -3113,7 +3119,7 @@ so that the construction
 \begin{verbatim}
        for k,v in pairs(t) do ... end
 \end{verbatim}
-will iterate over all pairs of key--value of table \verb|t|.
+will iterate over all pairs of key\En{}value of table \verb|t|.
 
 \subsubsection*{\ff \T{pcall (func, arg1, arg2, ...)}}\DefLIB{pcall}
 \label{pdf-pcall}
@@ -3285,8 +3291,8 @@ where to start the search;
 its default value is~1, and may be negative.
 A value of \True{} as a fourth, optional argument \verb|plain|
 turns off the pattern matching facilities,
-so the function does a plain ``find substring'' operation,
-with no characters in \verb|pattern| being considered ``magic''.
+so the function does a plain \Q{find substring} operation,
+with no characters in \verb|pattern| being considered \Q{magic}.
 Note that if \verb|plain| is given, then \verb|init| must be given too.
 
 \subsubsection*{\ff \T{string.len (s)}}\DefLIB{string.len}
@@ -3451,26 +3457,26 @@ The following combinations are allowed in describing a character class:
 \begin{description}\leftskip=20pt
 \item[\emph{x}] (where \emph{x} is not one of the magic characters
 \verb|^$()%.[]*+-?|)
---- represents the character \emph{x} itself.
-\item[\T{.}] --- (a dot) represents all characters.
-\item[\T{\%a}] --- represents all letters.
-\item[\T{\%c}] --- represents all control characters.
-\item[\T{\%d}] --- represents all digits.
-\item[\T{\%l}] --- represents all lowercase letters.
-\item[\T{\%p}] --- represents all punctuation characters.
-\item[\T{\%s}] --- represents all space characters.
-\item[\T{\%u}] --- represents all uppercase letters.
-\item[\T{\%w}] --- represents all alphanumeric characters.
-\item[\T{\%x}] --- represents all hexadecimal digits.
-\item[\T{\%z}] --- represents the character with representation 0.
-\item[\T{\%\M{x}}] (where \M{x} is any non-alphanumeric character)  ---
+\Em{} represents the character \emph{x} itself.
+\item[\T{.}] \Em{} (a dot) represents all characters.
+\item[\T{\%a}] \Em{} represents all letters.
+\item[\T{\%c}] \Em{} represents all control characters.
+\item[\T{\%d}] \Em{} represents all digits.
+\item[\T{\%l}] \Em{} represents all lowercase letters.
+\item[\T{\%p}] \Em{} represents all punctuation characters.
+\item[\T{\%s}] \Em{} represents all space characters.
+\item[\T{\%u}] \Em{} represents all uppercase letters.
+\item[\T{\%w}] \Em{} represents all alphanumeric characters.
+\item[\T{\%x}] \Em{} represents all hexadecimal digits.
+\item[\T{\%z}] \Em{} represents the character with representation 0.
+\item[\T{\%\M{x}}] (where \M{x} is any non-alphanumeric character)  \Em{}
 represents the character \M{x}.
 This is the standard way to escape the magic characters.
 We recommend that any punctuation character (even the non magic)
 should be preceded by a \verb|%|
 when used to represent itself in a pattern.
 
-\item[\T{[\M{set}]}] ---
+\item[\T{[\M{set}]}] \Em{}
 represents the class which is the union of all
 characters in \M{set}.
 A range of characters may be specified by
@@ -3488,7 +3494,7 @@ The interaction between ranges and classes is not defined.
 Therefore, patterns like \verb|[%a-z]| or \verb|[a-%%]|
 have no meaning.
 
-\item[\T{[\^\null\M{set}]}] ---
+\item[\T{[\^\null\M{set}]}] \Em{}
 represents the complement of \M{set},
 where \M{set} is interpreted as above.
 \end{description}
@@ -3576,13 +3582,13 @@ represents an array or a list.
 For those functions, an important concept is the \emph{size} of the array.
 There are three ways to specify that size:
 \begin{itemize}
-\item the field \verb|"n"| ---
+\item the field \verb|"n"| \Em{}
 When the table has a field \verb|"n"| with a numerical value,
 that value is assumed as its size.
-\item \verb|setn| ---
+\item \verb|setn| \Em{}
 You can call the \verb|table.setn| function to explicitly set
 the size of a table.
-\item implicit size ---
+\item implicit size \Em{}
 Otherwise, the size of the object is one less the first integer index
 with a \nil{} value.
 \end{itemize}
@@ -3622,13 +3628,13 @@ then the loop is broken, and this value is returned
 as the final value of \verb|foreachi|.
 
 \subsubsection*{\ff \T{table.getn (table)}}\DefLIB{table.getn}\label{getn}
-Returns the ``size'' of a table, when seen as a list.
+Returns the \Q{size} of a table, when seen as a list.
 If the table has an \verb|n| field with a numeric value,
-this value is the ``size'' of the table.
+this value is the \Q{size} of the table.
 Otherwise, if there was a previous call to
 \verb|table.getn| or to \verb|table.setn| over this table,
 the respective value is returned.
-Otherwise, the ``size'' is one less the first integer index with
+Otherwise, the \Q{size} is one less the first integer index with
 a \nil{} value.
 
 Notice that the last option happens only once for a table.
@@ -3679,7 +3685,7 @@ calling \verb|table.setn(table, n-1)|.
 
 \subsubsection*{\ff \T{table.setn (table, n)}}\DefLIB{table.setn}
 
-Updates the ``size'' of a table.
+Updates the \Q{size} of a table.
 If the table has a field \verb|"n"| with a numerical value,
 that value is changed to the given \verb|n|.
 Otherwise, it updates an internal state of the \verb|table| library
@@ -3731,12 +3737,12 @@ are interfaces to the simple random generator functions
 (No guarantees can be given for their statistical properties.)
 When called without arguments,
 \verb|math.random| returns a pseudo-random real number
-in the range \Math{[0,1)}.  %]
+in the range \Math{[0,1)}.  \C{]}
 When called with a number \Math{n},
 \verb|math.random| returns a pseudo-random integer in the range \Math{[1,n]}.
 When called with two arguments, \Math{l} and \Math{u},
 \verb|math.random| returns a pseudo-random integer in the range \Math{[l,u]}.
-The \verb|math.randomseed| function sets a ``seed''
+The \verb|math.randomseed| function sets a \Q{seed}
 for the pseudo-random generator:
 Equal seeds produce equal sequences of numbers.
 
@@ -3817,12 +3823,12 @@ or, in case of errors, \nil{} plus an error message.
 
 The \verb|mode| string can be any of the following:
 \begin{description}\leftskip=20pt
-\item[``r''] read mode (the default);
-\item[``w''] write mode;
-\item[``a''] append mode;
-\item[``r+''] update mode, all previous data is preserved;
-\item[``w+''] update mode, all previous data is erased;
-\item[``a+''] append update mode, previous data is preserved,
+\item[\Q{r}] read mode (the default);
+\item[\Q{w}] write mode;
+\item[\Q{a}] append mode;
+\item[\Q{r+}] update mode, all previous data is preserved;
+\item[\Q{w+}] update mode, all previous data is erased;
+\item[\Q{a+}] append update mode, previous data is preserved,
   writing is only allowed at the end of file.
 \end{description}
 The \verb|mode| string may also have a \verb|b| at the end,
@@ -3883,11 +3889,11 @@ it uses a default format that reads the entire next line
 
 The available formats are
 \begin{description}\leftskip=20pt
-\item[``*n''] reads a number;
+\item[\Q{*n}] reads a number;
 this is the only format that returns a number instead of a string.
-\item[``*a''] reads the whole file, starting at the current position.
+\item[\Q{*a}] reads the whole file, starting at the current position.
 On end of file, it returns the empty string.
-\item[``*l''] reads the next line (skipping the end of line),
+\item[\Q{*l}] reads the next line (skipping the end of line),
 returning \nil{} on end of file.
 This is the default format.
 \item[\emph{number}] reads a string with up to that number of characters,
@@ -3904,9 +3910,9 @@ measured in bytes from the beginning of the file,
 to the position given by \verb|offset| plus a base
 specified by the string \verb|whence|, as follows:
 \begin{description}\leftskip=20pt
-\item[``set''] base is position 0 (beginning of the file);
-\item[``cur''] base is current position;
-\item[``end''] base is end of file;
+\item[\Q{set}] base is position 0 (beginning of the file);
+\item[\Q{cur}] base is current position;
+\item[\Q{end}] base is end of file;
 \end{description}
 In case of success, function \verb|seek| returns the final file position,
 measured in bytes from the beginning of the file.
@@ -4029,7 +4035,7 @@ and may have fields \verb|hour|, \verb|min|, \verb|sec|, and \verb|isdst|
 
 The returned value is a number, whose meaning depends on your system.
 In Posix, Windows, and some other systems, this number counts the number
-of seconds since some given start time (the ``epoch'').
+of seconds since some given start time (the \Q{epoch}).
 In other systems, the meaning is not specified,
 and the number returned by \verb|time| can be used only as an argument to
 \verb|date| and \verb|difftime|.
@@ -4150,7 +4156,7 @@ the current hook function, the current hook mask,
 and the current hook count (as set by the \verb|debug.sethook| function).
 
 
-%------------------------------------------------------------------------------
+\C{------------------------------------------------------------------------------}
 \section{\Index{Lua Stand-alone}} \label{lua-sa}
 
 Although Lua has been designed as an extension language,
@@ -4169,7 +4175,7 @@ The options are:
 \begin{description}\leftskip=20pt
 \item[\T{-} ] executes \verb|stdin| as a file;
 \item[\T{-e} \rm\emph{stat}] executes string \emph{stat};
-\item[\T{-l} \rm\emph{file}] ``requires'' \emph{file};
+\item[\T{-l} \rm\emph{file}] \Q{requires} \emph{file};
 \item[\T{-i}] enters interactive mode after running \emph{script};
 \item[\T{-v}] prints version information;
 \item[\T{--}] stop handling options.
@@ -4248,7 +4254,7 @@ then
 \end{verbatim}
 is a more portable solution.) 
 
-%------------------------------------------------------------------------------
+\C{------------------------------------------------------------------------------}
 \section*{Acknowledgments}
 
 The Lua team is grateful to \tecgraf{} for its continued support to Lua.
@@ -4368,7 +4374,9 @@ Userdata!!
 
 \end{itemize}
 
-%{===============================================================
+
+
+\C{[===============================================================}
 \newpage
 \section*{The Complete Syntax of Lua} \label{BNF}
 \addcontentsline{toc}{section}{The Complete Syntax of Lua}
@@ -4386,8 +4394,8 @@ enclosed in single quotes.
 \renewenvironment{Produc}{\vspace{0.8ex}\par\noindent\hspace{3ex}\it\begin{tabular}{rrl}}{\end{tabular}\vspace{0.8ex}\par\noindent}
 
 \renewcommand{\OrNL}{\\ & \Or & }
-%\newcommand{\Nter}[1]{{\rm{\tt#1}}}
-%\newcommand{\Nter}[1]{\ter{#1}}
+\C{\newcommand{\Nter}[1]{{\rm{\tt#1}}}}
+\C{\newcommand{\Nter}[1]{\ter{#1}}}
 
 \index{grammar}
 
@@ -4397,7 +4405,7 @@ enclosed in single quotes.
 
 \produc{block}{chunk}
 
-\produc{stat}{%
+\produc{stat}{
 	varlist1 \ter{=} explist1
 \OrNL	functioncall
 \OrNL	\rwd{do} block \rwd{end}
@@ -4422,7 +4430,7 @@ enclosed in single quotes.
 
 \produc{varlist1}{var \rep{\ter{,} var}}
 
-\produc{var}{%
+\produc{var}{
 	\Nter{Name}
 \Or	prefixexp \ter{[} exp \ter{]}
 \Or	prefixexp \ter{.} \Nter{Name}
@@ -4434,7 +4442,7 @@ enclosed in single quotes.
 
 \produc{explist1}{\rep{exp \ter{,}} exp}
 
-\produc{exp}{%
+\produc{exp}{
 	\rwd{nil}
 	\rwd{false}
 	\rwd{true}
@@ -4449,12 +4457,12 @@ enclosed in single quotes.
 
 \produc{prefixexp}{var \Or functioncall \Or \ter{(} exp \ter{)}}
 
-\produc{functioncall}{%
+\produc{functioncall}{
 	prefixexp args
 \Or	prefixexp \ter{:} \Nter{Name} args
 }
 
-\produc{args}{%
+\produc{args}{
 	\ter{(} \opt{explist1} \ter{)}
 \Or	tableconstructor
 \Or	\Nter{Literal}
@@ -4464,7 +4472,7 @@ enclosed in single quotes.
 
 \produc{funcbody}{\ter{(} \opt{parlist1} \ter{)} block \rwd{end}}
 
-\produc{parlist1}{%
+\produc{parlist1}{
 	\Nter{Name} \rep{\ter{,} \Nter{Name}} \opt{\ter{,} \ter{\ldots}}
 \Or	\ter{\ldots}
 }
@@ -4482,9 +4490,9 @@ enclosed in single quotes.
 
 \end{Produc}
 
-%}===============================================================
+\C{]===============================================================}
 
-% Index
+\C{ Index}
 
 \newpage
 \addcontentsline{toc}{section}{Index}
@@ -4492,3 +4500,4 @@ enclosed in single quotes.
 
 \end{document}
 %)]}
+
