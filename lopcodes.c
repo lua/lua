@@ -1,5 +1,5 @@
 /*
-** $Id:$
+** $Id: lopcodes.c,v 1.2 2001/07/03 17:02:02 roberto Exp roberto $
 ** extracted automatically from lopcodes.h by mkprint.lua
 ** DO NOT EDIT
 ** See Copyright Notice in lua.h
@@ -62,7 +62,7 @@ const l_char *const luaP_opnames[] = {
    ((b)<<OpModeBreg) | ((c)<<OpModeCreg) | \
    ((sa)<<OpModesetA) | ((k)<<OpModeK) | (m))
 
-const lu_byte luaP_opmodes[] = {
+const lu_byte luaP_opmodes[NUM_OPCODES] = {
 /*       T _ B C sA K mode		   opcode    */
   opmode(0,0,1,0, 1,0,iABC)		/* OP_MOVE */
  ,opmode(0,0,0,0, 1,1,iABc)		/* OP_LOADK */

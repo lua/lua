@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.77 2001/07/03 17:01:34 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.78 2001/07/24 17:19:07 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -213,7 +213,7 @@ enum OpModeMask {
   OpModeT               /* operator is a test */
 };
 
-extern const lu_byte luaP_opmodes[];
+extern const lu_byte luaP_opmodes[NUM_OPCODES];
 
 #define getOpMode(m)            ((enum OpMode)(luaP_opmodes[m] & 3))
 #define testOpMode(m, b)        (luaP_opmodes[m] & (1 << (b)))
