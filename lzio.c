@@ -1,5 +1,5 @@
 /*
-** $Id: lzio.c,v 1.5 1999/02/25 19:13:56 roberto Exp roberto $
+** $Id: lzio.c,v 1.6 1999/03/04 14:49:18 roberto Exp roberto $
 ** a generic input stream interface
 ** See Copyright Notice in lua.h
 */
@@ -43,7 +43,7 @@ ZIO* zsopen (ZIO* z, char* s, char *name)
 
 static int zffilbuf (ZIO* z) {
  int n;
- if (feof(z->u)) return EOZ;
+ if (feof((FILE *)z->u)) return EOZ;
  n=fread(z->buffer,1,ZBSIZE,z->u);
  if (n==0) return EOZ;
  z->n=n-1;
