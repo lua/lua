@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.11 2004/06/29 18:49:02 roberto Exp roberto $
+** $Id: lvm.c,v 2.12 2004/08/10 19:17:23 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -623,7 +623,8 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
           if (L->openupval) luaF_close(L, base);
           for (aux = 0; pfunc+aux < L->top; aux++)  /* move frame down */
             setobjs2s(L, func+aux, pfunc+aux);
-          ci->top = L->top = base+aux;  /* correct top */
+          ci->top = L->top = func+aux;  /* correct top */
+          lua_assert(L->top == L->base + clvalue(func)->l.p->maxstacksize);
           ci->savedpc = L->ci->savedpc;
           ci->tailcalls++;  /* one more call lost */
           L->ci--;  /* remove new frame */
