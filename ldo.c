@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.192 2002/08/07 20:55:00 roberto Exp roberto $
+** $Id: ldo.c,v 1.193 2002/08/30 19:09:21 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -151,7 +151,7 @@ static void luaD_growCI (lua_State *L) {
 }
 
 
-void luaD_callhook (lua_State *L, lua_Hookevent event, int line) {
+void luaD_callhook (lua_State *L, int event, int line) {
   lua_Hook hook = L->hook;
   if (hook && allowhook(L)) {
     ptrdiff_t top = savestack(L, L->top);
