@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.26 2000/05/24 18:04:17 roberto Exp roberto $
+** $Id: llex.h,v 1.27 2000/05/25 18:59:59 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -35,15 +35,6 @@ enum RESERVED {
 #define NUM_RESERVED	((int)(TK_WHILE-FIRST_RESERVED+1))
 
 
-/* `ifState' keeps the state of each nested $if the lexical is dealing with. */
-
-struct ifState {
-  int elsepart;  /* true if it's in the $else part */
-  int condition;  /* true if $if condition is true */
-  int skip;  /* true if part must be skipped */
-};
-
-
 typedef struct Token {
   int token;
   union {
@@ -60,8 +51,6 @@ typedef struct LexState {
   struct lua_State *L;
   struct zio *z;  /* input stream */
   int linenumber;  /* input line counter */
-  int iflevel;  /* level of nested $if's (for lexical analysis) */
-  struct ifState ifstate[MAX_IFS];
 } LexState;
 
 

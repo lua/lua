@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.60 2000/05/24 18:04:17 roberto Exp roberto $
+** $Id: llex.c,v 1.61 2000/05/25 18:59:59 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -96,149 +96,53 @@ static void luaX_invalidchar (LexState *ls, int c) {
 }
 
 
-static void firstline (LexState *LS)
-{
-  int c = zgetc(LS->z);
-  if (c == '#')
-    while ((c=zgetc(LS->z)) != '\n' && c != EOZ) /* skip first line */;
-  zungetc(LS->z);
+static const char *readname (lua_State *L, LexState *LS) {
+  luaL_resetbuffer(L);
+  do {
+    save_and_next(L, LS);
+  } while (isalnum(LS->current) || LS->current == '_');
+  save(L, '\0');
+  return L->Mbuffer+L->Mbuffbase;
+}
+
+
+static void inclinenumber (LexState *LS) {
+  next(LS);  /* skip '\n' */
+  ++LS->linenumber;
+  luaX_checklimit(LS, LS->linenumber, MAX_INT, "lines in a chunk");
+}
+
+
+static void checkpragma (lua_State *L, LexState *LS) {
+  static const char *const pragmas [] = {"debug", "nodebug", NULL};
+  if (LS->current == '$') {  /* is a pragma? */
+    switch (luaL_findstring(readname(L, LS)+1, pragmas)) {
+      case 0:  /* debug */
+        L->debug = 1;
+        break;
+      case 1:  /* nodebug */
+        L->debug = 0;
+        break;
+      default:
+        luaX_error(LS, "unknown pragma", TK_STRING);
+    }
+  }
 }
 
 
 void luaX_setinput (lua_State *L, LexState *LS, ZIO *z) {
   LS->L = L;
-  LS->current = '\n';
   LS->lookahead.token = TK_EOS;  /* no look-ahead token */
-  LS->linenumber = 0;
-  LS->iflevel = 0;
-  LS->ifstate[0].skip = 0;
-  LS->ifstate[0].elsepart = 1;  /* to avoid a free $else */
   LS->z = z;
   LS->fs = NULL;
-  firstline(LS);
-  luaL_resetbuffer(L);
-}
-
-
-
-/*
-** =======================================================
-** PRAGMAS
-** =======================================================
-*/
-
-static void skipspace (LexState *LS) {
-  while (LS->current == ' ' || LS->current == '\t' || LS->current == '\r')
-    next(LS);
-}
-
-
-static int globaldefined (lua_State *L, const char *name) {
-  const TObject *value = luaH_getglobal(L, name);
-  return ttype(value) != TAG_NIL;
-}
-
-
-static int checkcond (lua_State *L, LexState *LS, const char *buff) {
-  static const char *const opts[] = {"nil", "1", NULL};
-  int i = luaL_findstring(buff, opts);
-  if (i >= 0) return i;
-  else if (isalpha((unsigned char)buff[0]) || buff[0] == '_')
-    return globaldefined(L, buff);
-  else {
-    luaX_syntaxerror(LS, "invalid $if condition", buff);
-    return 0;  /* to avoid warnings */
+  LS->linenumber = 1;
+  next(LS);  /* read first char */
+  if (LS->current == '#') {
+    do {  /* skip first line */
+      next(LS);
+    } while (LS->current != '\n' && LS->current != EOZ);
   }
-}
-
-
-static void readname (LexState *LS, char *buff) {
-  int i = 0;
-  skipspace(LS);
-  while (isalnum(LS->current) || LS->current == '_') {
-    if (i >= PRAGMASIZE) {
-      buff[PRAGMASIZE] = 0;
-      luaX_syntaxerror(LS, "pragma too long", buff);
-    }
-    buff[i++] = (char)LS->current;
-    next(LS);
-  }
-  buff[i] = 0;
-}
-
-
-static void inclinenumber (lua_State *L, LexState *LS);
-
-
-static void ifskip (lua_State *L, LexState *LS) {
-  while (LS->ifstate[LS->iflevel].skip) {
-    if (LS->current == '\n')
-      inclinenumber(L, LS);
-    else if (LS->current == EOZ)
-      luaX_error(LS, "input ends inside a $if", TK_EOS);
-    else next(LS);
-  }
-}
-
-
-static void inclinenumber (lua_State *L, LexState *LS) {
-  static const char *const pragmas [] =
-    {"debug", "nodebug", "endinput", "end", "ifnot", "if", "else", NULL};
-  next(LS);  /* skip '\n' */
-  ++LS->linenumber;
-  luaX_checklimit(LS, LS->linenumber, MAX_INT, "lines in a chunk");
-  if (LS->current == '$') {  /* is a pragma? */
-    char buff[PRAGMASIZE+1];
-    int ifnot = 0;
-    int skip = LS->ifstate[LS->iflevel].skip;
-    next(LS);  /* skip $ */
-    readname(LS, buff);
-    switch (luaL_findstring(buff, pragmas)) {
-      case 0:  /* debug */
-        if (!skip) L->debug = 1;
-        break;
-      case 1:  /* nodebug */
-        if (!skip) L->debug = 0;
-        break;
-      case 2:  /* endinput */
-        if (!skip) {
-          LS->current = EOZ;
-          LS->iflevel = 0;  /* to allow $endinput inside a $if */
-        }
-        break;
-      case 3:  /* end */
-        if (LS->iflevel-- == 0)
-          luaX_syntaxerror(LS, "unmatched $end", "$end");
-        break;
-      case 4:  /* ifnot */
-        ifnot = 1;
-        /* go through */
-      case 5:  /* if */
-        if (LS->iflevel == MAX_IFS-1)
-          luaX_syntaxerror(LS, "too many nested $ifs", "$if");
-        readname(LS, buff);
-        LS->iflevel++;
-        LS->ifstate[LS->iflevel].elsepart = 0;
-        LS->ifstate[LS->iflevel].condition = checkcond(L, LS, buff) ? !ifnot : ifnot;
-        LS->ifstate[LS->iflevel].skip = skip || !LS->ifstate[LS->iflevel].condition;
-        break;
-      case 6:  /* else */
-        if (LS->ifstate[LS->iflevel].elsepart)
-          luaX_syntaxerror(LS, "unmatched $else", "$else");
-        LS->ifstate[LS->iflevel].elsepart = 1;
-        LS->ifstate[LS->iflevel].skip = LS->ifstate[LS->iflevel-1].skip ||
-                                      LS->ifstate[LS->iflevel].condition;
-        break;
-      default:
-        luaX_syntaxerror(LS, "unknown pragma", buff);
-    }
-    skipspace(LS);
-    if (LS->current == '\n')  /* pragma must end with a '\n' ... */
-      inclinenumber(L, LS);
-    else if (LS->current != EOZ)  /* or eof */
-      luaX_syntaxerror(LS, "invalid pragma format", buff);
-    ifskip(L, LS);
-  }
+  else checkpragma(L, LS);
 }
 
 
@@ -275,7 +179,7 @@ static void read_long_string (lua_State *L, LexState *LS) {
         continue;
       case '\n':
         save(L, '\n');
-        inclinenumber(L, LS);
+        inclinenumber(LS);
         continue;
       default:
         save_and_next(L, LS);
@@ -304,7 +208,7 @@ static void read_string (lua_State *L, LexState *LS, int del) {
           case 'r': save(L, '\r'); next(LS); break;
           case 't': save(L, '\t'); next(LS); break;
           case 'v': save(L, '\v'); next(LS); break;
-          case '\n': save(L, '\n'); inclinenumber(L, LS); break;
+          case '\n': save(L, '\n'); inclinenumber(LS); break;
           case '0': case '1': case '2': case '3': case '4':
           case '5': case '6': case '7': case '8': case '9': {
             int c = 0;
@@ -343,7 +247,8 @@ int luaX_lex (LexState *LS) {
         continue;
 
       case '\n':
-        inclinenumber(L, LS);
+        inclinenumber(LS);
+        checkpragma(L, LS);
         continue;
 
       case '-':
@@ -432,8 +337,6 @@ int luaX_lex (LexState *LS) {
         return TK_NUMBER;
 
       case EOZ:
-        if (LS->iflevel > 0)
-          luaX_error(LS, "input ends inside a $if", TK_EOS);
         return TK_EOS;
 
       case '_': goto tname;
@@ -447,13 +350,7 @@ int luaX_lex (LexState *LS) {
           return c;
         }
         tname: {  /* identifier or reserved word */
-          TString *ts;
-          luaL_resetbuffer(L);
-          do {
-            save_and_next(L, LS);
-          } while (isalnum(LS->current) || LS->current == '_');
-          save(L, '\0');
-          ts = luaS_new(L, L->Mbuffer+L->Mbuffbase);
+          TString *ts = luaS_new(L, readname(L, LS));
           if (ts->marked >= RESERVEDMARK)  /* reserved word? */
             return ts->marked-RESERVEDMARK+FIRST_RESERVED;
           LS->t.seminfo.ts = ts;

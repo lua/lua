@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.6 2000/04/26 13:43:25 roberto Exp roberto $
+** $Id: llimits.h,v 1.7 2000/05/24 13:54:49 roberto Exp roberto $
 ** Limits, basic types, and some other "instalation-dependent" definitions
 ** See Copyright Notice in lua.h
 */
@@ -176,18 +176,6 @@ typedef unsigned long Instruction;
 /* maximum number of values printed in one call to `print' */
 #ifndef MAXPRINT
 #define MAXPRINT        40	/* arbitrary limit */
-#endif
-
-
-/* maximum depth of nested $ifs */
-#ifndef MAX_IFS
-#define MAX_IFS 5  /* arbitrary limit */
-#endif
-
-
-/* maximum size of a pragma line */
-#ifndef PRAGMASIZE
-#define PRAGMASIZE      80  /* arbitrary limit */
 #endif
 
 
