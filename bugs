@@ -250,3 +250,8 @@ Fri Dec 22 15:30:42 EDT 2000
 >> when `read' fails it must return nil (and not no value)
 (by cassino; since at least 3.1)
 
+** lstring.c/lapi.c
+Thu Feb  1 11:55:45 EDT 2001
+>> lua_pushuserdata(L, NULL) is buggy
+(by Edgar Toernig; since 4.0)
+

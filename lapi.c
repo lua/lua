@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.121 2001/01/26 11:45:51 roberto Exp roberto $
+** $Id: lapi.c,v 1.122 2001/01/29 17:16:58 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -702,6 +702,7 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
   TString *ts;
   void *p;
   LUA_LOCK;
+  if (size == 0) size = 1;
   ts = luaS_newudata(L, size, NULL);
   setuvalue(L->top, ts);
   api_incr_top(L);
