@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.176 2002/03/07 18:15:10 roberto Exp roberto $
+** $Id: lapi.c,v 1.177 2002/03/18 18:18:35 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -35,7 +35,8 @@ const char lua_ident[] =
 
 #define api_checknelems(L, n)	api_check(L, (n) <= (L->top - L->ci->base))
 
-#define api_incr_top(L)	incr_top(L)
+#define api_incr_top(L)   (api_check(L, L->top+1<L->stack_last), L->top++)
+
 
 
 
