@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 2.6 1994/09/08 16:51:49 celes Exp $";
+char *rcs_opcode="$Id: opcode.c,v 2.7 1994/09/20 15:11:11 celes Exp celes $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -92,10 +92,9 @@ static char *lua_strconc (char *l, char *r)
 
 static int ToReal (char* s, float* f)
 {
- int n;
+ char c;
  float t;
- sscanf(s,"%f %n",&t,&n);
- if (s[n]==0) { *f=t; return 1; } else return 0;
+ if (sscanf(s,"%f %c",&t,&c) == 1) { *f=t; return 1; } else return 0;
 }
 
 /*
@@ -132,7 +131,7 @@ static Object *lua_convtonumber (Object *obj)
   return &cvt;
  }
   
- if (tag(obj) == T_STRING && ToReal(svalue(obj), &nvalue(obj)))
+ if (tag(obj) == T_STRING && ToReal(svalue(obj), &nvalue(&cvt)))
   tag(&cvt) = T_NUMBER;
  else 
   tag(&cvt) = T_NIL;
