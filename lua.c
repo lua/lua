@@ -201,7 +201,7 @@ static int trap_eof (lua_State *l) {
 }
 
 
-static int load_string (int *toprint) {
+static int load_string (void) {
   lua_getglobal(L, LUA_ERRORMESSAGE);
   lua_pushvalue(L, 1);
   lua_setglobal(L, LUA_ERRORMESSAGE);
@@ -214,8 +214,7 @@ static int load_string (int *toprint) {
       lua_setglobal(L, LUA_ERRORMESSAGE);
       return 0;
     }
-    *toprint = !incomplete && buffer[0] == '=';
-    if (*toprint) {
+    if (!incomplete && buffer[0] == '=') {
       buffer[0] = ' ';
       lua_pushstring(L, "return");
     }
@@ -244,12 +243,11 @@ static int lcall (lua_State *l, const char *name) {
 
 
 static void manual_input (int version) {
-  int toprint = 0;
   if (version) print_version();
   lua_pushcfunction(L, trap_eof);  /* set up handler for incomplete lines */
-  while (load_string(&toprint)) {
+  while (load_string()) {
     ldo(lcall, NULL, 0);
-    if (toprint && lua_gettop(L) > 1) {  /* any result to print? */
+    if (lua_gettop(L) > 1) {  /* any result to print? */
       lua_getglobal(L, "print");
       lua_insert(L, 2);
       lua_call(L, lua_gettop(L)-2, 0);
@@ -355,8 +353,8 @@ static void openstdlibs (lua_State *l) {
 int main (int argc, char *argv[]) {
   int status;
   int toclose = 0;
-  (void)argc;  /* unused parameter: avoid warnings */
-  L = lua_open(0);  /* create state */
+  (void)argc;  /* to avoid warnings */
+  L = lua_open();  /* create state */
   LUA_USERINIT(L);  /* open libraries */
   register_getargs(argv);  /* create `getargs' function */
   status = handle_argv(argv+1, &toclose);
