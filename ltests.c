@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.142 2002/11/14 11:51:23 roberto Exp roberto $
+** $Id: ltests.c,v 1.143 2002/11/14 15:41:38 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -64,7 +64,7 @@ static void setnameval (lua_State *L, const char *name, int val) {
 #define MARK		0x55  /* 01010101 (a nice pattern) */
 
 
-#define blocksize(b)	(cast(size_t *, b) - HEADER/sizeof(size_t))
+#define blocksize(b)	(cast(size_t *, cast(char *, b) - HEADER))
 
 unsigned long memdebug_numblocks = 0;
 unsigned long memdebug_total = 0;
