@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.25 2001/02/23 17:17:25 roberto Exp roberto $
+** $Id: llimits.h,v 1.26 2001/02/23 17:28:12 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -11,6 +11,8 @@
 #include <limits.h>
 #include <stddef.h>
 
+
+#include "lua.h"
 
 
 /*
