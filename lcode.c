@@ -264,8 +264,7 @@ static int nil_constant (FuncState *fs) {
 
 void luaK_setcallreturns (FuncState *fs, expdesc *e, int nresults) {
   if (e->k == VCALL) {  /* expression is an open function call? */
-    if (nresults == LUA_MULTRET) nresults = NO_REG;
-    SETARG_C(getcode(fs, e), nresults);
+    SETARG_C(getcode(fs, e), nresults+1);
     if (nresults == 1) {  /* `regular' expression? */
       e->k = VNONRELOC;
       e->u.i.info = GETARG_A(getcode(fs, e));

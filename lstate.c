@@ -104,6 +104,7 @@ LUA_API lua_State *lua_newthread (lua_State *OL, int stacksize) {
     }
   }
   if (OL) lua_unlock(OL);
+  lua_userstateopen(L);
   return L;
 }
 

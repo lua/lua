@@ -168,8 +168,8 @@ OP_TESTGE,/*	A C	test := (R(A) >= R/K(C))			*/
 OP_TESTT,/*	A B	test := R(B); if (test) R(A) := R(B)		*/
 OP_TESTF,/*	A B	test := not R(B); if (test) R(A) := R(B)	*/
 
-OP_CALL,/*	A B C	R(A), ... ,R(A+C-1) := R(A)(R(A+1), ... ,R(A+B))*/
-OP_RETURN,/*	A B	return R(A), ... ,R(A+B-1)	(see (3))	*/
+OP_CALL,/*	A B C	R(A), ... ,R(A+C-2) := R(A)(R(A+1), ... ,R(A+B-1))*/
+OP_RETURN,/*	A B	return R(A), ... ,R(A+B-2)	(see (3))	*/
 
 OP_FORPREP,/*	A sBc							*/
 OP_FORLOOP,/*	A sBc							*/
@@ -182,6 +182,9 @@ OP_SETLISTO,/*	A Bc							*/
 
 OP_CLOSE,/*	A 	close all variables in the stack up to (>=) R(A)*/
 OP_CLOSURE /*	A Bc	R(A) := closure(KPROTO[Bc], R(A), ... ,R(A+n))	*/
+/*----------------------------------------------------------------------
+pseudo-instructions (interruptions): cannot occur in regular code
+------------------------------------------------------------------------*/
 } OpCode;
 
 
@@ -194,11 +197,11 @@ OP_CLOSURE /*	A Bc	R(A) := closure(KPROTO[Bc], R(A), ... ,R(A+n))	*/
   (1) In the current implementation there is no `test' variable;
       instructions OP_TEST* and OP_CJMP must always occur together.
 
-  (2) In OP_CALL, if (B == NO_REG) then B = top. C is the number of returns,
-      and can be NO_REG. OP_CALL can set `top' to last_result+1, so
+  (2) In OP_CALL, if (B == 0) then B = top. C is the number of returns - 1,
+      and can be 0: OP_CALL then sets `top' to last_result+1, so
       next open instruction (OP_CALL, OP_RETURN, OP_SETLIST) may use `top'.
 
-  (3) In OP_RETURN, if (B == NO_REG) then return up to `top'
+  (3) In OP_RETURN, if (B == 0) then return up to `top'
 ===========================================================================*/
 
 
@@ -219,6 +222,12 @@ extern const lu_byte luaP_opmodes[NUM_OPCODES];
 #define getOpMode(m)            (cast(enum OpMode, luaP_opmodes[m] & 3))
 #define testOpMode(m, b)        (luaP_opmodes[m] & (1 << (b)))
 
+
+/*
+** constant instructions
+*/
+
+extern const Instruction luaP_yieldop;
 
 /*
 ** opcode names (only included when compiled with LUA_OPNAMES)

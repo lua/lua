@@ -20,7 +20,7 @@ const TObject *luaV_tonumber (const TObject *obj, TObject *n);
 int luaV_tostring (lua_State *L, TObject *obj);
 void luaV_gettable (lua_State *L, StkId t, TObject *key, StkId res);
 void luaV_settable (lua_State *L, StkId t, TObject *key, StkId val);
-StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base);
+StkId luaV_execute (lua_State *L);
 int luaV_lessthan (lua_State *L, const TObject *l, const TObject *r);
 void luaV_strconc (lua_State *L, int total, StkId top);
 

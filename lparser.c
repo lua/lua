@@ -335,7 +335,7 @@ static void close_func (LexState *ls) {
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
   removelocalvars(ls, fs->nactloc, 0);
-  luaK_codeABC(fs, OP_RETURN, 0, 0, 0);  /* final return */
+  luaK_codeABC(fs, OP_RETURN, 0, 1, 0);  /* final return */
   luaK_getlabel(fs);  /* close eventual list of pending jumps */
   lua_assert(G(L)->roottable == fs->h);
   G(L)->roottable = fs->h->next;
@@ -449,13 +449,13 @@ static void funcargs (LexState *ls, expdesc *f) {
   lua_assert(f->k == VNONRELOC);
   base = f->u.i.info;  /* base register for call */
   if (args.k == VCALL)
-    nparams = NO_REG;  /* open call */
+    nparams = LUA_MULTRET;  /* open call */
   else {
     if (args.k != VVOID)
       luaK_exp2nextreg(fs, &args);  /* close last argument */
     nparams = fs->freereg - (base+1);
   }
-  init_exp(f, VCALL, luaK_codeABC(fs, OP_CALL, base, nparams, 1));
+  init_exp(f, VCALL, luaK_codeABC(fs, OP_CALL, base, nparams+1, 2));
   fs->freereg = base+1;  /* call remove function and arguments and leaves
                             (unless changed) one result */
 }
@@ -1136,7 +1136,7 @@ static void retstat (LexState *ls) {
     if (e.k == VCALL) {
       luaK_setcallreturns(fs, &e, LUA_MULTRET);
       first = fs->nactloc;
-      nret = NO_REG;  /* return all values */
+      nret = LUA_MULTRET;  /* return all values */
     }
     else {
       luaK_exp2nextreg(fs, &e);  /* values must go to the `stack' */
@@ -1144,7 +1144,7 @@ static void retstat (LexState *ls) {
       nret = fs->freereg - first;  /* return all `active' values */
     }
   }
-  luaK_codeABC(fs, OP_RETURN, first, nret, 0);
+  luaK_codeABC(fs, OP_RETURN, first, nret+1, 0);
   fs->freereg = fs->nactloc;  /* removes all temp values */
 }
 

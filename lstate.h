@@ -39,6 +39,10 @@
 #define LUA_USERSTATE
 #endif
 
+#ifndef lua_userstateopen
+#define lua_userstateopen(l)
+#endif
+
 
 
 struct lua_longjmp;  /* defined in ldo.c */
@@ -77,8 +81,8 @@ typedef struct CallInfo {
   const Instruction *savedpc;
   lua_Hook linehook;
   StkId	top;  /* top for this function (when it's a Lua function) */
-  /* extra information for debugging */
   const Instruction **pc;
+  /* extra information for line tracing */
   int lastpc;  /* last pc traced */
   int line;  /* current line */
   int refi;  /* current index in `lineinfo' */

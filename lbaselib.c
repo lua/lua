@@ -148,30 +148,6 @@ static int luaB_eventtable (lua_State *L) {
 }
 
 
-static int luaB_weakmode (lua_State *L) {
-  const char *mode = luaL_check_string(L, 2);
-  luaL_check_type(L, 1, LUA_TTABLE);
-  if (*mode == '?') {
-    char buff[3];
-    char *s = buff;
-    int imode = lua_getweakmode(L, 1);
-    if (imode & LUA_WEAK_KEY) *s++ = 'k';
-    if (imode & LUA_WEAK_VALUE) *s++ = 'v';
-    *s = '\0';
-    lua_pushstring(L, buff);
-    return 1;
-  }
-  else {
-    int imode = 0;
-    if (strchr(mode, 'k')) imode |= LUA_WEAK_KEY;
-    if (strchr(mode, 'v')) imode |= LUA_WEAK_VALUE;
-    lua_pushvalue(L, 1);  /* push table */
-    lua_setweakmode(L, imode);
-    return 1;  /* return the table */
-  }
-}
-
-
 static int luaB_globals (lua_State *L) {
   lua_getglobals(L);  /* value to be returned */
   if (!lua_isnone(L, 1)) {
@@ -286,6 +262,14 @@ static int luaB_loadfile (lua_State *L) {
   return passresults(L, lua_loadfile(L, fname), oldtop);
 }
 
+
+static int luaB_assert (lua_State *L) {
+  luaL_check_any(L, 1);
+  if (!lua_istrue(L, 1))
+    luaL_verror(L, "assertion failed!  %.90s", luaL_opt_string(L, 2, ""));
+  lua_settop(L, 1);
+  return 1;
+}
 
 
 #define LUA_PATH	"LUA_PATH"
@@ -428,6 +412,40 @@ static int luaB_tostring (lua_State *L) {
 }
 
 
+static int luaB_resume (lua_State *L) {
+  lua_State *co = (lua_State *)lua_touserdata(L, lua_upvalueindex(1));
+  lua_resume(L, co);
+  return 0;
+}
+
+
+static int luaB_coroutine (lua_State *L) {
+  lua_State *NL;
+  int ref;
+  luaL_check_type(L, 1, LUA_TFUNCTION);
+  NL = lua_newthread(L, 0);
+  if (NL == NULL) lua_error(L, "unable to create new thread");
+  /* move function from L to NL */
+  ref = lua_ref(L, 1);
+  lua_getref(NL, ref);
+  lua_unref(L, ref);
+  lua_cobegin(NL, 0);
+  lua_newuserdatabox(L, NL);
+  lua_pushcclosure(L, luaB_resume, 1);
+  return 1;
+}
+
+
+static int luaB_yield (lua_State *L) {
+  return lua_yield(L, 0);
+}
+
+
+/*
+** {======================================================
+** Auxiliar table-related functions
+*/
+
 static int luaB_foreachi (lua_State *L) {
   int n, i;
   luaL_check_type(L, 1, LUA_TTABLE);
@@ -461,15 +479,6 @@ static int luaB_foreach (lua_State *L) {
       return 1;
     lua_pop(L, 2);  /* remove value and result */
   }
-}
-
-
-static int luaB_assert (lua_State *L) {
-  luaL_check_any(L, 1);
-  if (!lua_istrue(L, 1))
-    luaL_verror(L, "assertion failed!  %.90s", luaL_opt_string(L, 2, ""));
-  lua_settop(L, 1);
-  return 1;
 }
 
 
@@ -518,7 +527,6 @@ static int luaB_tremove (lua_State *L) {
   lua_rawseti(L, 1, n);  /* t[n] = nil */
   return 1;
 }
-
 
 
 
@@ -627,6 +635,8 @@ static int luaB_sort (lua_State *L) {
 
 /* }====================================================== */
 
+/* }====================================================== */
+
 
 
 static const luaL_reg base_funcs[] = {
@@ -634,6 +644,7 @@ static const luaL_reg base_funcs[] = {
   {LUA_ERRORMESSAGE, luaB__ERRORMESSAGE},
   {"call", luaB_call},
   {"collectgarbage", luaB_collectgarbage},
+  {"coroutine", luaB_coroutine},
   {"dofile", luaB_dofile},
   {"dostring", luaB_dostring},
   {"error", luaB_error},
@@ -659,7 +670,7 @@ static const luaL_reg base_funcs[] = {
   {"tinsert", luaB_tinsert},
   {"tremove", luaB_tremove},
   {"unpack", luaB_unpack},
-  {"weakmode", luaB_weakmode}
+  {"yield", luaB_yield}
 };
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: ldebug.c,v 1.96 2001/12/18 20:52:30 roberto Exp $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -303,7 +303,7 @@ static int checkopenop (const Proto *pt, int pc) {
   switch (GET_OPCODE(i)) {
     case OP_CALL:
     case OP_RETURN: {
-      check(GETARG_B(i) == NO_REG);
+      check(GETARG_B(i) == 0);
       return 1;
     }
     case OP_SETLISTO: return 1;
@@ -391,10 +391,11 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         break;
       }
       case OP_CALL: {
-        if (b != NO_REG) {
-          checkreg(pt, a+b);
+        if (b != 0) {
+          checkreg(pt, a+b-1);
         }
-        if (c == NO_REG) {
+        c--;  /* c = num. returns */
+        if (c == LUA_MULTRET) {
           check(checkopenop(pt, pc));
         }
         else if (c != 0)
@@ -403,8 +404,8 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         break;
       }
       case OP_RETURN: {
-        if (b != NO_REG && b != 0)
-          checkreg(pt, a+b-1);
+        b--;  /* b = num. returns */
+        if (b > 0) checkreg(pt, a+b-1);
         break;
       }
       case OP_FORPREP:

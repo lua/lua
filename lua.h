@@ -45,10 +45,6 @@
 #define LUA_ERRMEM	4
 #define LUA_ERRERR	5
 
-/* weak-table modes */
-#define LUA_WEAK_KEY	1
-#define LUA_WEAK_VALUE	2
-
 
 typedef struct lua_State lua_State;
 
@@ -182,6 +178,14 @@ LUA_API int   lua_loadbuffer (lua_State *L, const char *buff, size_t size,
 LUA_API int   lua_dobuffer (lua_State *L, const char *buff, size_t size,
                             const char *name);
 
+
+/*
+** coroutine functions
+*/
+LUA_API void lua_cobegin (lua_State *L, int nargs);
+LUA_API int  lua_yield (lua_State *L, int nresults);
+LUA_API void lua_resume (lua_State *L, lua_State *co);
+
 /*
 ** Garbage-collection functions
 */
@@ -202,9 +206,6 @@ LUA_API void  lua_concat (lua_State *L, int n);
 
 LUA_API void *lua_newuserdata (lua_State *L, size_t size);
 LUA_API void  lua_newuserdatabox (lua_State *L, void *u);
-
-LUA_API void  lua_setweakmode (lua_State *L, int mode);
-LUA_API int   lua_getweakmode (lua_State *L, int index);
 
 
 
@@ -242,7 +243,7 @@ LUA_API int   lua_getweakmode (lua_State *L, int index);
 ** compatibility macros and functions
 */
 
-LUA_API void lua_pushupvalues (lua_State *L);
+LUA_API int lua_pushupvalues (lua_State *L);
 
 #define lua_isnull	lua_isnone
 

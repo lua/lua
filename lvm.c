@@ -254,29 +254,6 @@ void luaV_strconc (lua_State *L, int total, StkId top) {
 }
 
 
-static void adjust_varargs (lua_State *L, StkId base, int nfixargs) {
-  int i;
-  Table *htab;
-  TObject n, nname;
-  StkId firstvar = base + nfixargs;  /* position of first vararg */
-  if (L->top < firstvar) {
-    luaD_checkstack(L, firstvar - L->top);
-    while (L->top < firstvar)
-      setnilvalue(L->top++);
-  }
-  htab = luaH_new(L, 0, 0);
-  for (i=0; firstvar+i<L->top; i++)
-    luaH_setnum(L, htab, i+1, firstvar+i);
-  /* store counter in field `n' */
-  setnvalue(&n, i);
-  setsvalue(&nname, luaS_newliteral(L, "n"));
-  luaH_set(L, htab, &nname, &n);
-  L->top = firstvar;  /* remove elements from the stack */
-  sethvalue(L->top, htab);
-  incr_top;
-}
-
-
 static void powOp (lua_State *L, StkId ra, StkId rb, StkId rc) {
   const TObject *b = rb;
   const TObject *c = rc;
@@ -307,8 +284,8 @@ static void powOp (lua_State *L, StkId ra, StkId rb, StkId rc) {
 #define RC(i)	(base+GETARG_C(i))
 #define RKC(i)	((GETARG_C(i) < MAXSTACK) ? \
 			base+GETARG_C(i) : \
-			cl->p->k+GETARG_C(i)-MAXSTACK)
-#define KBc(i)	(cl->p->k+GETARG_Bc(i))
+			k+GETARG_C(i)-MAXSTACK)
+#define KBc(i)	(k+GETARG_Bc(i))
 
 #define Arith(op, optm)	{ \
   const TObject *b = RB(i); const TObject *c = RKC(i);		\
@@ -321,38 +298,26 @@ static void powOp (lua_State *L, StkId ra, StkId rb, StkId rc) {
 }
 
 
-#define luaV_poscall(L,c,f,ci) \
-  if (c != NO_REG) { \
-    luaD_poscall(L, c, f); \
-    L->top = ci->top; \
-  } \
-  else { \
-    luaD_poscall(L, LUA_MULTRET, f); \
-  }
-
-
 #define dojump(pc, i)	((pc) += GETARG_sBc(i))
 
 /*
-** Executes the given Lua function. Parameters are between [base,top).
+** Executes current Lua function. Parameters are between [base,top).
 ** Returns n such that the results are between [n,top).
 */
-StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
+StkId luaV_execute (lua_State *L) {
+  StkId base;
+  LClosure *cl;
+  TObject *k;
   const Instruction *pc;
   lua_Hook linehook;
  reinit:
-  lua_assert(L->ci->savedpc == NULL);
+  base = L->ci->base;
+  cl = &clvalue(base - 1)->l;
+  k = cl->p->k;
+  linehook = L->ci->linehook;
   L->ci->pc = &pc;
-  L->ci->top = base + cl->p->maxstacksize;
-  if (cl->p->is_vararg)  /* varargs? */
-    adjust_varargs(L, base, cl->p->numparams);
-  if (base > L->stack_last - cl->p->maxstacksize)
-    luaD_stackerror(L);
-  while (L->top < L->ci->top)
-    setnilvalue(L->top++);
-  L->top = L->ci->top;
-  linehook = L->ci->linehook = L->linehook;
-  pc = cl->p->code;
+  pc = L->ci->savedpc;
+  L->ci->savedpc = NULL;
   /* main loop of interpreter */
   for (;;) {
     const Instruction i = *pc++;
@@ -535,18 +500,21 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
       case OP_CALL: {
         StkId firstResult;
         int b = GETARG_B(i);
-        if (b != NO_REG) L->top = ra+b+1;
-        /* else previous instruction set top */
+        int nresults;
+        if (b != 0) L->top = ra+b;  /* else previous instruction set top */
+        nresults = GETARG_C(i) - 1;
         firstResult = luaD_precall(L, ra);
         if (firstResult) {
+          if (firstResult == base) {  /* yield?? */
+            (L->ci-1)->savedpc = pc;
+            return NULL;
+          }
           /* it was a C function (`precall' called it); adjust results */
-          luaV_poscall(L, GETARG_C(i), firstResult, L->ci);
+          luaD_poscall(L, nresults, firstResult);
+          if (nresults >= 0) L->top = L->ci->top;
         }
         else {  /* it is a Lua function: `call' it */
-          CallInfo *ci = L->ci;
-          (ci-1)->savedpc = pc;
-          base = ci->base;
-          cl = &clvalue(base - 1)->l;
+          (L->ci-1)->savedpc = pc;
           goto reinit;
         }
         break;
@@ -556,19 +524,23 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
         int b;
         if (L->openupval) luaF_close(L, base);
         b = GETARG_B(i);
-        if (b != NO_REG) L->top = ra+b;
+        if (b != 0) L->top = ra+b-1;
         ci = L->ci - 1;
         if (ci->savedpc == NULL)
           return ra;
         else {  /* previous function is Lua: continue its execution */
+          int nresults;
           lua_assert(ttype(ci->base-1) == LUA_TFUNCTION);
           base = ci->base;  /* restore previous values */
           linehook = ci->linehook;
           cl = &clvalue(base - 1)->l;
+          k = cl->p->k;
           pc = ci->savedpc;
           ci->savedpc = NULL;
           lua_assert(GET_OPCODE(*(pc-1)) == OP_CALL);
-          luaV_poscall(L, GETARG_C(*(pc-1)), ra, ci);
+          nresults = GETARG_C(*(pc-1)) - 1;
+          luaD_poscall(L, nresults, ra);
+          if (nresults >= 0) L->top = L->ci->top;
         }
         break;
       }
