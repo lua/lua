@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.11 1998/03/09 18:28:08 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.12 1998/03/24 20:14:25 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -494,9 +494,11 @@ static void str_format (void)
           sprintf(buff, form, s);
           break;
         }
-        case 'c':  case 'd':  case 'i': case 'o':
-        case 'u':  case 'x':  case 'X':
+        case 'c':  case 'd':  case 'i':
           sprintf(buff, form, (int)luaL_check_number(arg));
+          break;
+        case 'o':  case 'u':  case 'x':  case 'X':
+          sprintf(buff, form, (unsigned int)luaL_check_number(arg));
           break;
         case 'e':  case 'E': case 'f': case 'g': case 'G':
           sprintf(buff, form, luaL_check_number(arg));
