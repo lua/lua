@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.19 1996/08/28 20:46:26 roberto Exp roberto $
+% $Id: manual.tex,v 1.20 1996/11/01 17:02:10 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -36,7 +36,7 @@ Waldemar Celes
 \tecgraf\ --- Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1996/08/28 20:46:26 $}
+\date{\small \verb$Date: 1996/11/01 17:02:10 $}
 
 \maketitle
 
@@ -1486,7 +1486,8 @@ When called without parameters,
 it closes the current input file,
 and restores \verb'stdin' as the current input file.
 
-If this function fails, it returns \nil.
+If this function fails, it returns \nil,
+plus a string describing the error.
 
 {\em System dependent:} if \verb'filename' starts with a \verb'|',
 then a \Index{piped input} is open, via function \IndexVerb{popen}.
@@ -1508,7 +1509,8 @@ this function closes the current output file,
 and restores \verb'stdout' as the current output file.
 \index{closing a file}
 
-If this function fails, it returns \nil.
+If this function fails, it returns \nil,
+plus a string describing the error.
 
 {\em System dependent:} if \verb'filename' starts with a \verb'|',
 then a \Index{piped output} is open, via function \IndexVerb{popen}.
@@ -1521,14 +1523,20 @@ It returns the file handle,
 or \nil\ in case of error.
 Unlike the \verb'writeto' operation,
 this function does not erase any previous content of the file.
+If this function fails, it returns \nil,
+plus a string describing the error.
 
 \subsubsection*{\ff{\tt remove (filename)}}\Deffunc{remove}
 
 This function deletes the file with the given name.
+If this function fails, it returns \nil,
+plus a string describing the error.
 
 \subsubsection*{\ff{\tt rename (name1, name2)}}\Deffunc{rename}
 
 This function renames file \verb'name1' to \verb'name2'.
+If this function fails, it returns \nil,
+plus a string describing the error.
 
 \subsubsection*{\ff{\tt tmpname ()}}\Deffunc{tmpname}
 
@@ -1588,6 +1596,8 @@ or \nil\ if the next characters do not conform to an integer format.
 This function writes the value of each of its arguments to the
 current output file.
 The arguments must be strings or numbers.
+If this function fails, it returns \nil,
+plus a string describing the error.
 
 \subsubsection*{\ff{\tt date ([format])}}\Deffunc{date}
 
