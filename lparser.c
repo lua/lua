@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.70 2000/03/15 20:50:33 roberto Exp roberto $
+** $Id: lparser.c,v 1.71 2000/03/20 19:15:37 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -96,15 +96,6 @@ static void check (LexState *ls, int c) {
 }
 
 
-static int optional (LexState *ls, int c) {
-  if (ls->token == c) {
-    next(ls);
-    return 1;
-  }
-  else return 0;
-}
-
-
 static void checklimit (LexState *ls, int val, int limit, const char *msg) {
   if (val > limit) {
     char buff[100];
@@ -114,12 +105,22 @@ static void checklimit (LexState *ls, int val, int limit, const char *msg) {
 }
 
 
-static void check_debugline (LexState *ls) {
+static void setline (LexState *ls) {
   FuncState *fs = ls->fs;
   if (ls->L->debug && ls->linenumber != fs->lastsetline) {
+    checklimit(ls, ls->linenumber, MAXARG_U, "lines in a chunk");
     luaK_U(fs, OP_SETLINE, ls->linenumber, 0);
     fs->lastsetline = ls->linenumber;
   }
+}
+
+
+static int optional (LexState *ls, int c) {
+  if (ls->token == c) {
+    next(ls);
+    return 1;
+  }
+  else return 0;
 }
 
 
@@ -127,6 +128,18 @@ static void check_match (LexState *ls, int what, int who, int where) {
   if (ls->token != what)
     error_unmatched(ls, what, who, where);
   next(ls);
+}
+
+
+static void setline_and_next (LexState *ls) {
+  setline(ls);
+  next(ls);
+}
+
+
+static void check_END (LexState *ls, int who, int where) {
+  setline(ls);  /* setline for END */
+  check_match(ls, TK_END, who, where);
 }
 
 
@@ -661,7 +674,7 @@ static void constructor (LexState *ls) {
 
 static void simpleexp (LexState *ls, expdesc *v) {
   FuncState *fs = ls->fs;
-  check_debugline(ls);
+  setline(ls);
   switch (ls->token) {
     case TK_NUMBER: {  /* simpleexp -> NUMBER */
       Number r = ls->seminfo.r;
@@ -828,15 +841,14 @@ static void whilestat (LexState *ls, int line) {
   FuncState *fs = ls->fs;
   int while_init = luaK_getlabel(fs);
   expdesc v;
-  next(ls);  /* skip WHILE */
+  setline_and_next(ls);  /* trace WHILE when looping */
   expr(ls, &v);  /* read condition */
   luaK_goiftrue(fs, &v, 0);
   check(ls, TK_DO);
   block(ls);
   luaK_fixjump(fs, luaK_S(fs, OP_JMP, 0, 0), while_init);
   luaK_patchlist(fs, v.u.l.f, luaK_getlabel(fs));
-  check_debugline(ls);  /* trace `end' when loop finish */
-  check_match(ls, TK_END, TK_WHILE, line);
+  check_END(ls, TK_WHILE, line);
 }
 
 
@@ -845,8 +857,7 @@ static void repeatstat (LexState *ls, int line) {
   FuncState *fs = ls->fs;
   int repeat_init = luaK_getlabel(fs);
   expdesc v;
-  check_debugline(ls);  /* trace `repeat' when looping */
-  next(ls);
+  setline_and_next(ls);  /* trace REPEAT when looping */
   block(ls);
   check_match(ls, TK_UNTIL, TK_REPEAT, line);
   expr(ls, &v);
@@ -883,8 +894,7 @@ static void localstat (LexState *ls) {
   FuncState *fs = ls->fs;
   int nvars;
   int nexps;
-  check_debugline(ls);
-  next(ls);
+  setline_and_next(ls);  /* skip LOCAL */
   nvars = localnamelist(ls);
   nexps = decinit(ls);
   adjustlocalvars(ls, nvars, fs->lastsetline);
@@ -913,8 +923,7 @@ static int funcstat (LexState *ls, int line) {
   expdesc v;
   if (ls->fs->prev)  /* inside other function? */
     return 0;
-  next(ls);
-  check_debugline(ls);
+  setline_and_next(ls);  /* skip FUNCTION */
   needself = funcname(ls, &v);
   body(ls, needself, line);
   luaK_storevar(ls, &v);
@@ -926,7 +935,7 @@ static void namestat (LexState *ls) {
   /* stat -> func | ['%'] NAME assignment */
   FuncState *fs = ls->fs;
   expdesc v;
-  check_debugline(ls);
+  setline(ls);
   var_or_func(ls, &v);
   if (v.k == VEXP) {  /* stat -> func */
     if (!luaK_lastisopen(fs))  /* is just an upvalue? */
@@ -940,25 +949,24 @@ static void namestat (LexState *ls) {
 }
 
 
-static void ifpart (LexState *ls, int line) {
+static void ifpart (LexState *ls) {
   /* ifpart -> cond THEN block (ELSEIF ifpart | [ELSE block] END) */
   FuncState *fs = ls->fs;
   expdesc v;
   int elseinit;
-  next(ls);  /* skip IF or ELSEIF */
+  setline_and_next(ls);  /* skip IF or ELSEIF */
   expr(ls, &v);  /* cond */
   luaK_goiftrue(fs, &v, 0);
+  setline(ls);  /* to trace the THEN */
   check(ls, TK_THEN);
   block(ls);  /* `then' part */
   luaK_S(fs, OP_JMP, 0, 0);  /* 2nd jump: over `else' part */
   elseinit = luaK_getlabel(fs);  /* address of 2nd jump == elseinit-1 */
-  check_debugline(ls);  /* trace `else' (or `elseif') */
   if (ls->token == TK_ELSEIF)
-    ifpart(ls, line);
-  else {
-    if (optional(ls, TK_ELSE))
-      block(ls);  /* `else' part */
-    check_match(ls, TK_END, TK_IF, line);
+    ifpart(ls);
+  else if (ls->token == TK_ELSE) {
+    setline_and_next(ls);  /* skip ELSE */
+    block(ls);  /* `else' part */
   }
   if (fs->pc > elseinit) {  /* is there an `else' part? */
     luaK_fixjump(fs, elseinit-1, luaK_getlabel(fs));  /* fix 2nd jump */
@@ -975,17 +983,18 @@ static int stat (LexState *ls) {
   int line = ls->linenumber;  /* may be needed for error messages */
   switch (ls->token) {
     case TK_IF:  /* stat -> IF ifpart END */
-      ifpart(ls, line);  /* condition will set debug line */
+      ifpart(ls);
+      check_END(ls, TK_IF, line);
       return 1;
 
     case TK_WHILE:  /* stat -> whilestat */
-      whilestat(ls, line);  /* debug line only after 1st jump */
+      whilestat(ls, line);
       return 1;
 
     case TK_DO: {  /* stat -> DO block END */
-      next(ls);
+      setline_and_next(ls);  /* skip DO */
       block(ls);
-      check_match(ls, TK_END, TK_DO, line);
+      check_END(ls, TK_DO, line);
       return 1;
     }
 
@@ -1060,11 +1069,9 @@ static void body (LexState *ls, int needself, int line) {
   if (needself)
     add_localvar(ls, luaS_newfixed(ls->L, "self"));
   parlist(ls);
-  check_debugline(ls);  /* trace function header */
   check(ls, ')');
   chunk(ls);
-  check_debugline(ls);  /* trace `end' when finish */
-  check_match(ls, TK_END, TK_FUNCTION, line);
+  check_END(ls, TK_FUNCTION, line);
   close_func(ls);
   func_onstack(ls, &new_fs);
 }
@@ -1075,8 +1082,7 @@ static void ret (LexState *ls) {
   if (ls->token == TK_RETURN) {
     FuncState *fs = ls->fs;
     int nexps;  /* number of expressions returned */
-    check_debugline(ls);
-    next(ls);
+    setline_and_next(ls);  /* skip RETURN */
     nexps = explist(ls);
     luaK_retcode(fs, ls->fs->nlocalvar, nexps);
     fs->stacksize = fs->nlocalvar;  /* removes all temp values */
