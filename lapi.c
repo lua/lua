@@ -23,8 +23,10 @@
 #include "lvm.h"
 
 
-const l_char lua_ident[] = l_s("$Lua: ") l_s(LUA_VERSION) l_s(" ")
-  l_s(LUA_COPYRIGHT) l_s(" $\n") l_s("$Authors: ") l_s(LUA_AUTHORS) l_s(" $");
+const l_char lua_ident[] =
+  l_s("$Lua: ") l_s(LUA_VERSION) l_s(" ") l_s(LUA_COPYRIGHT) l_s(" $\n")
+  l_s("$Authors: ") l_s(LUA_AUTHORS) l_s(" $\n")
+  l_s("$URL: www.lua.org $\n");
 
 
 
