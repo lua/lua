@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.14 1997/12/09 13:35:19 roberto Exp roberto $
+** $Id: ldo.c,v 1.15 1997/12/15 16:17:20 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -405,3 +405,14 @@ int lua_dostring (char *str)
   return status;
 }
 
+
+#if 0
+int lua_dobuffer (char *buff, int size)
+{
+  int status;
+  ZIO z;
+  luaZ_mopen(&z, buff, size);
+  status = do_main(&z, "(buffer)", 1);
+  return status;
+}
+#endif
