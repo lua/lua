@@ -104,7 +104,9 @@ LUA_API void lua_settop (lua_State *L, int index) {
   lua_lock(L);
   if (index >= 0) {
     api_check(L, index <= L->stack_last - L->ci->base);
-    luaD_adjusttop(L, L->ci->base+index);
+    while (L->top < L->ci->base + index)
+      setnilvalue(L->top++);
+    L->top = L->ci->base + index;
   }
   else {
     api_check(L, -(index+1) <= (L->top - L->ci->base));

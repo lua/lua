@@ -256,30 +256,26 @@ void luaV_strconc (lua_State *L, int total, StkId top) {
 }
 
 
-static void luaV_pack (lua_State *L, StkId firstelem) {
+static void adjust_varargs (lua_State *L, StkId base, int nfixargs) {
   int i;
-  Table *htab = luaH_new(L, 0, 0);
+  Table *htab;
   TObject n, nname;
-  for (i=0; firstelem+i<L->top; i++)
-    luaH_setnum(L, htab, i+1, firstelem+i);
+  StkId firstvar = base + nfixargs;  /* position of first vararg */
+  if (L->top < firstvar) {
+    luaD_checkstack(L, firstvar - L->top);
+    while (L->top < firstvar)
+      setnilvalue(L->top++);
+  }
+  htab = luaH_new(L, 0, 0);
+  for (i=0; firstvar+i<L->top; i++)
+    luaH_setnum(L, htab, i+1, firstvar+i);
   /* store counter in field `n' */
   setnvalue(&n, i);
   setsvalue(&nname, luaS_newliteral(L, "n"));
   luaH_set(L, htab, &nname, &n);
-  L->top = firstelem;  /* remove elements from the stack */
+  L->top = firstvar;  /* remove elements from the stack */
   sethvalue(L->top, htab);
   incr_top;
-}
-
-
-static void adjust_varargs (lua_State *L, StkId base, int nfixargs) {
-  int nvararg = (L->top-base) - nfixargs;
-  StkId firstvar = base + nfixargs;  /* position of first vararg */
-  if (nvararg < 0) {
-    luaD_checkstack(L, -nvararg);
-    luaD_adjusttop(L, firstvar);
-  }
-  luaV_pack(L, firstvar);
 }
 
 
@@ -352,7 +348,9 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
     adjust_varargs(L, base, cl->p->numparams);
   if (base > L->stack_last - cl->p->maxstacksize)
     luaD_stackerror(L);
-  luaD_adjusttop(L, base + cl->p->maxstacksize);
+  while (L->top < base + cl->p->maxstacksize)
+    setnilvalue(L->top++);
+  L->top = base + cl->p->maxstacksize;
   L->ci->pc = &pc;
   linehook = L->ci->linehook = L->linehook;
   pc = cl->p->code;

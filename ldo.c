@@ -69,16 +69,6 @@ void luaD_stackerror (lua_State *L) {
 
 
 /*
-** adjust top to new value; assume that new top is valid
-*/
-void luaD_adjusttop (lua_State *L, StkId newtop) {
-  while (L->top < newtop)
-    setnilvalue(L->top++);
-  L->top = newtop;  /* `newtop' could be lower than `top' */
-}
-
-
-/*
 ** Open a hole inside the stack at `pos'
 */
 static void luaD_openstack (lua_State *L, StkId pos) {

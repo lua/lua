@@ -23,7 +23,6 @@
 
 
 void luaD_init (lua_State *L, int stacksize);
-void luaD_adjusttop (lua_State *L, StkId newtop);
 void luaD_lineHook (lua_State *L, int line, lua_Hook linehook);
 void luaD_callHook (lua_State *L, lua_Hook callhook, const char *event);
 StkId luaD_precall (lua_State *L, StkId func);
