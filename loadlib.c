@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.18 2005/02/28 15:58:48 roberto Exp roberto $
+** $Id: loadlib.c,v 1.19 2005/03/07 18:07:34 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 *
@@ -33,7 +33,7 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym);
 
 
 
-#if defined(USE_DLOPEN)
+#if defined(LUA_USEDLOPEN)
 /*
 ** {========================================================================
 ** This is an implementation of loadlib based on the dlfcn interface.
@@ -67,7 +67,7 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 
 
 
-#elif defined(USE_DLL)
+#elif defined(LUA_USEDLL)
 /*
 ** {======================================================================
 ** This is an implementation of loadlib for Windows using native functions.
@@ -109,7 +109,7 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 
 
 
-#elif defined(USE_DYLD)
+#elif defined(LUA_USEDYLD)
 /*
 ** {======================================================================
 ** Native Mac OS X / Darwin Implementation
@@ -119,6 +119,7 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 #include <mach-o/dyld.h>
 
 
+/* Mac appends a `_' before C function names */
 #undef POF
 #define POF	"_" LUA_POF
 

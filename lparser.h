@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.51 2004/05/31 18:51:50 roberto Exp roberto $
+** $Id: lparser.h,v 1.52 2005/03/07 16:58:27 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -67,8 +67,8 @@ typedef struct FuncState {
   int np;  /* number of elements in `p' */
   short nlocvars;  /* number of elements in `locvars' */
   lu_byte nactvar;  /* number of active local variables */
-  upvaldesc upvalues[MAXUPVALUES];  /* upvalues */
-  unsigned short actvar[MAXVARS];  /* declared-variable stack */
+  upvaldesc upvalues[LUAC_MAXUPVALUES];  /* upvalues */
+  unsigned short actvar[LUAC_MAXVARS];  /* declared-variable stack */
 } FuncState;
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.62 2004/12/13 12:15:11 roberto Exp roberto $
+** $Id: llimits.h,v 1.63 2005/01/14 14:19:42 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -15,12 +15,14 @@
 #include "lua.h"
 
 
+#define api_check	luac_apicheck
 
-typedef LUA_UINT32 lu_int32;
 
-typedef LU_MEM lu_mem;
+typedef LUAC_UINT32 lu_int32;
 
-typedef L_MEM l_mem;
+typedef LUAC_UMEM lu_mem;
+
+typedef LUAC_MEM l_mem;
 
 
 
@@ -45,11 +47,11 @@ typedef unsigned char lu_byte;
 
 
 /* type to ensure maximum alignment */
-typedef LUSER_ALIGNMENT_T L_Umaxalign;
+typedef LUAC_USER_ALIGNMENT_T L_Umaxalign;
 
 
 /* result of a `usual argument conversion' over lua_Number */
-typedef LUA_UACNUMBER l_uacNumber;
+typedef LUAC_UACNUMBER l_uacNumber;
 
 
 #define check_exp(c,e)	(lua_assert(c), (e))

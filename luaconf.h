@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.32 2005/03/08 18:00:16 roberto Exp roberto $
+** $Id: luaconf.h,v 1.33 2005/03/08 18:09:16 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -30,7 +30,7 @@
 ** =======================================================
 */
 
-/* default path */
+/* CONFIG: default path */
 #if defined(_WIN32)
 #define LUA_ROOT	"C:\\Program Files\\Lua51"
 #define LUA_LDIR	LUA_ROOT "\\lua"
@@ -51,33 +51,58 @@
 #endif
 
 
+/* CONFIG: directory separator (for submodules) */
+#if defined(_WIN32)
+#define LUA_DIRSEP	"\\"
+#else
+#define LUA_DIRSEP	"/"
+#endif
 
-/* type of numbers in Lua */
+
+/* CONFIG: environment variables that hold the search path for packages */
+#define LUA_PATH	"LUA_PATH"
+#define LUA_CPATH	"LUA_CPATH"
+
+/* CONFIG: prefix for open functions in C libraries */
+#define LUA_POF		"luaopen_"
+
+/* CONFIG: separator for open functions in C libraries */
+#define LUA_OFSEP	"_"
+
+/* CONFIG: separator of templates in a path */
+#define LUA_PATHSEP	';'
+
+/* CONFIG: wild char in each template */
+#define LUA_PATH_MARK	"?"
+
+
+
+/* CONFIG: type of numbers in Lua */
 #define LUA_NUMBER	double
 
-/* formats for Lua numbers */
+/* CONFIG: formats for Lua numbers */
 #define LUA_NUMBER_SCAN		"%lf"
 #define LUA_NUMBER_FMT		"%.14g"
 
 
 /*
-** type for integer functions
+** CONFIG: type for integer functions
 ** on most machines, `ptrdiff_t' gives a reasonable size for integers
 */
 #define LUA_INTEGER	ptrdiff_t
 
 
-/* mark for all API functions */
+/* CONFIG: mark for all API functions */
 #define LUA_API		extern
 
-/* mark for auxlib functions */
+/* CONFIG: mark for auxlib functions */
 #define LUALIB_API	extern
 
-/* buffer size used by lauxlib buffer system */
+/* CONFIG: buffer size used by lauxlib buffer system */
 #define LUAL_BUFFERSIZE		BUFSIZ
 
 
-/* assertions in Lua (mainly for internal debugging) */
+/* CONFIG: assertions in Lua (mainly for internal debugging) */
 #define lua_assert(c)		((void)0)
 
 /* }====================================================== */
@@ -92,7 +117,7 @@
 
 #ifdef lua_c
 
-/* definition of `isatty' */
+/* CONFIG: definition of `isatty' */
 #ifdef _POSIX_C_SOURCE
 #include <unistd.h>
 #define stdin_is_tty()		isatty(0)
@@ -113,7 +138,7 @@
 
 
 /*
-** this macro can be used by some `history' system to save lines
+** CONFIG: this macro can be used by some `history' system to save lines
 ** read in manual input
 */
 #define lua_saveline(L,line)	/* empty */
@@ -126,86 +151,80 @@
 
 
 
-/*
-** {======================================================
-** Core configuration
-** =======================================================
-*/
-
-#ifdef LUA_CORE
-
-/* LUA-C API assertions */
-#define api_check(L,o)		lua_assert(o)
+/* CONFIG: LUA-C API assertions */
+#define luac_apicheck(L,o)		lua_assert(o)
 
 
 /* number of bits in an `int' */
 /* avoid overflows in comparison */
 #if INT_MAX-20 < 32760
-#define LUA_BITSINT	16
+#define LUAC_BITSINT	16
 #elif INT_MAX > 2147483640L
 /* `int' has at least 32 bits */
-#define LUA_BITSINT	32
+#define LUAC_BITSINT	32
 #else
 #error "you must define LUA_BITSINT with number of bits in an integer"
 #endif
 
 
 /*
-** L_UINT32: unsigned integer with at least 32 bits
-** L_INT32: signed integer with at least 32 bits
-** LU_MEM: an unsigned integer big enough to count the total memory used by Lua
-** L_MEM: a signed integer big enough to count the total memory used by Lua
+** CONFIG:
+** LUAC_UINT32: unsigned integer with at least 32 bits
+** LUAC_INT32: signed integer with at least 32 bits
+** LUAC_UMEM: an unsigned integer big enough to count the total memory
+**           used by Lua
+** LUAC_MEM: a signed integer big enough to count the total memory used by Lua
 */
-#if LUA_BITSINT >= 32
-#define LUA_UINT32	unsigned int
-#define LUA_INT32	int
-#define LUA_MAXINT32	INT_MAX
-#define LU_MEM		size_t
-#define L_MEM		ptrdiff_t
+#if LUAC_BITSINT >= 32
+#define LUAC_UINT32	unsigned int
+#define LUAC_INT32	int
+#define LUAC_MAXINT32	INT_MAX
+#define LUAC_UMEM	size_t
+#define LUAC_MEM		ptrdiff_t
 #else
 /* 16-bit ints */
-#define LUA_UINT32	unsigned long
-#define LUA_INT32	long
-#define LUA_MAXINT32	LONG_MAX
-#define LU_MEM		LUA_UINT32
-#define L_MEM		ptrdiff_t
+#define LUAC_UINT32	unsigned long
+#define LUAC_INT32	long
+#define LUAC_MAXINT32	LONG_MAX
+#define LUAC_UMEM	LUAC_UINT32
+#define LUAC_MEM	ptrdiff_t
 #endif
 
 
-/* maximum depth for calls (unsigned short) */
-#define LUA_MAXCALLS	10000
+/* CONFIG: maximum depth for calls (unsigned short) */
+#define LUAC_MAXCALLS	10000
 
 /*
-** maximum depth for C calls (unsigned short): Not too big, or may
+** CONFIG: maximum depth for C calls (unsigned short): Not too big, or may
 ** overflow the C stack...
 */
-#define LUA_MAXCCALLS	200
+#define LUAC_MAXCCALLS	200
 
 
-/* maximum size for the virtual stack of a C function */
-#define MAXCSTACK	2048
+/* CONFIG: maximum size for the virtual stack of a C function */
+#define LUAC_MAXCSTACK	2048
 
 
 /*
-** maximum number of syntactical nested non-terminals: Not too big,
+** CONFIG: maximum number of syntactical nested non-terminals: Not too big,
 ** or may overflow the C stack...
 */
-#define LUA_MAXPARSERLEVEL	200
+#define LUAC_MAXPARSERLEVEL	200
 
 
-/* maximum number of variables declared in a function */
-#define MAXVARS	200		/* <MAXSTACK */
+/* CONFIG: maximum number of variables declared in a function */
+#define LUAC_MAXVARS	200		/* <MAXSTACK */
 
 
-/* maximum number of upvalues per function */
-#define MAXUPVALUES		60	/* <MAXSTACK */
+/* CONFIG: maximum number of upvalues per function */
+#define LUAC_MAXUPVALUES	60	/* <MAXSTACK */
 
 
-/* maximum size of expressions for optimizing `while' code */
-#define MAXEXPWHILE		100
+/* CONFIG: maximum size of expressions for optimizing `while' code */
+#define LUAC_MAXEXPWHILE	100
 
 
-/* function to convert a lua_Number to int (with any rounding method) */
+/* CONFIG: function to convert a lua_Number to int (with any rounding method) */
 #if defined(__GNUC__) && defined(__i386)
 #define lua_number2int(i,d)	__asm__ ("fistpl %0":"=m"(i):"t"(d):"st")
 
@@ -231,171 +250,133 @@ __inline int l_lrint (double flt)
 #endif
 
 
-/* function to convert a lua_Number to lua_Integer (with any rounding method) */
+/* CONFIG: function to convert a lua_Number to lua_Integer (with any rounding method) */
 #define lua_number2integer(i,n)		lua_number2int((i), (n))
 
 
-/* function to convert a lua_Number to a string */
+/* CONFIG: function to convert a lua_Number to a string */
 #define lua_number2str(s,n)	sprintf((s), LUA_NUMBER_FMT, (n))
 /* maximum size of previous conversion */
-#define MAX_NUMBER2STR	32 /* 16 digits, sign, point and \0  (+ some extra) */
+#define LUAC_MAXNUMBER2STR	32 /* 16 digits, sign, point, and \0 */
 
-/* function to convert a string to a lua_Number */
+/* CONFIG: function to convert a string to a lua_Number */
 #define lua_str2number(s,p)	strtod((s), (p))
 
 
 
-/* result of a `usual argument conversion' over lua_Number */
-#define LUA_UACNUMBER	double
+/* CONFIG: result of a `usual argument conversion' over lua_Number */
+#define LUAC_UACNUMBER	double
 
 
-/* primitive operators for numbers */
-#define num_add(a,b)	((a)+(b))
-#define num_sub(a,b)	((a)-(b))
-#define num_mul(a,b)	((a)*(b))
-#define num_div(a,b)	((a)/(b))
-#define num_unm(a)	(-(a))
-#define num_eq(a,b)	((a)==(b))
-#define num_lt(a,b)	((a)<(b))
-#define num_le(a,b)	((a)<=(b))
-#define num_mod(a,b)	((a) - floor((a)/(b))*(b))
-#define num_pow(a,b)	pow(a,b)
+/* CONFIG: primitive operators for numbers */
+#define luac_numadd(a,b)	((a)+(b))
+#define luac_numsub(a,b)	((a)-(b))
+#define luac_nummul(a,b)	((a)*(b))
+#define luac_numdiv(a,b)	((a)/(b))
+#define luac_numunm(a)		(-(a))
+#define luac_numeq(a,b)		((a)==(b))
+#define luac_numlt(a,b)		((a)<(b))
+#define luac_numle(a,b)		((a)<=(b))
+#define luac_nummod(a,b)	((a) - floor((a)/(b))*(b))
+#define luac_numpow(a,b)	pow(a,b)
 
 
 
-/* type to ensure maximum alignment */
-#define LUSER_ALIGNMENT_T	union { double u; void *s; long l; }
+/* CONFIG: type to ensure maximum alignment */
+#define LUAC_USER_ALIGNMENT_T	union { double u; void *s; long l; }
 
 
 /*
-** exception handling: by default, Lua handles errors with longjmp/setjmp
-** when compiling as C code and with exceptions when compiling as C++ code.
-** Change that if you prefer to use longjmp/setjmp even with C++.
+** CONFIG: exception handling: by default, Lua handles errors with
+** longjmp/setjmp when compiling as C code and with exceptions
+** when compiling as C++ code.  Change that if you prefer to use
+** longjmp/setjmp even with C++.
 */
 #ifndef __cplusplus
 /* default handling with long jumps */
-#define L_THROW(L,c)	longjmp((c)->b, 1)
-#define L_TRY(L,c,a)	if (setjmp((c)->b) == 0) { a }
-#define l_jmpbuf	jmp_buf
+#define LUAC_THROW(L,c)	longjmp((c)->b, 1)
+#define LUAC_TRY(L,c,a)	if (setjmp((c)->b) == 0) { a }
+#define luac_jmpbuf	jmp_buf
 
 #else
 /* C++ exceptions */
-#define L_THROW(L,c)	throw(c)
-#define L_TRY(L,c,a)	try { a } catch(...) \
+#define LUAC_THROW(L,c)	throw(c)
+#define LUAC_TRY(L,c,a)	try { a } catch(...) \
 	{ if ((c)->status == 0) (c)->status = -1; }
-#define l_jmpbuf	int  /* dummy variable */
+#define luac_jmpbuf	int  /* dummy variable */
 #endif
 
 
 
 /*
-** macros for thread synchronization inside Lua core machine: This is
-** an attempt to simplify the implementation of a multithreaded version
-** of Lua. Do not change that unless you know what you are doing. all
-** accesses to the global state and to global objects are synchronized.
-** Because threads can read the stack of other threads (when running
-** garbage collection), a thread must also synchronize any write-access
-** to its own stack.  Unsynchronized accesses are allowed only when
-** reading its own stack, or when reading immutable fields from global
-** objects (such as string values and udata values).
+** CONFIG: macros for thread synchronization inside Lua core
+** machine: This is an attempt to simplify the implementation of a
+** multithreaded version of Lua. Do not change that unless you know
+** what you are doing. all accesses to the global state and to global
+** objects are synchronized.  Because threads can read the stack of
+** other threads (when running garbage collection), a thread must also
+** synchronize any write-access to its own stack.  Unsynchronized
+** accesses are allowed only when reading its own stack, or when reading
+** immutable fields from global objects (such as string values and udata
+** values).
 */
 #define lua_lock(L)	((void) 0)
 #define lua_unlock(L)	((void) 0)
 
 
 /*
-** this macro allows a thread switch in appropriate places in the Lua
-** core
+** CONFIG: this macro allows a thread switch in appropriate places in
+** the Lua core
 */
 #define lua_threadyield(L)	{lua_unlock(L); lua_lock(L);}
 
 
 
-/* allows user-specific initialization on new threads */
+/* CONFIG: allows user-specific initialization on new threads */
 #define lua_userstateopen(L)	((void)0)
 
 
-#endif
-
-/* }====================================================== */
 
 
 
-/*
-** {======================================================
-** Library configuration
-** =======================================================
-*/
-
-#ifdef LUA_LIB
-
-
-/* environment variables that hold the search path for packages */
-#define LUA_PATH	"LUA_PATH"
-#define LUA_CPATH	"LUA_CPATH"
-
-/* prefix for open functions in C libraries */
-#define LUA_POF		"luaopen_"
-
-/* separator for open functions in C libraries */
-#define LUA_OFSEP	"_"
-
-/* directory separator (for submodules) */
-#if defined(_WIN32)
-#define LUA_DIRSEP	"\\"
-#else
-#define LUA_DIRSEP	"/"
-#endif
-
-/* separator of templates in a path */
-#define LUA_PATHSEP	';'
-
-/* wild char in each template */
-#define LUA_PATH_MARK	"?"
-
-
-/* maximum number of captures in pattern-matching (arbitrary limit) */
-#define MAX_CAPTURES	32
+/* CONFIG: maximum number of captures in pattern-matching (arbitrary limit) */
+#define LUA_MAXCAPTURES		32
 
 
 /*
-** by default, gcc does not get `os.tmpname', because it generates a warning
-** when using `tmpname'. Change that if you really want (or do not want)
-** `os.tmpname' available.
+** CONFIG: by default, gcc does not get `os.tmpname', because it
+** generates a warning when using `tmpname'. Change that if you really
+** want (or do not want) `os.tmpname' available.
 */
 #ifdef __GNUC__
-#define USE_TMPNAME	0
+#define LUA_USETMPNAME	0
 #else
-#define USE_TMPNAME	1 
+#define LUA_USETMPNAME	1 
 #endif
 
 
 /*
-** Configuration for loadlib: Lua tries to guess the dynamic-library
-** system that your platform uses (either Windows' DLL, Mac's dyld, or
-** dlopen). If your system is some kind of Unix, there is a good chance
-** that USE_DLOPEN will work for it. You may need to adapt also the
-** makefile.
+** CONFIG: Configuration for loadlib: Lua tries to guess the
+** dynamic-library system that your platform uses (either Windows' DLL,
+** Mac's dyld, or dlopen). If your system is some kind of Unix, there is
+** a good chance that LUA_USEDLOPEN will work for it. You may need to adapt
+** also the makefile.
 */
 #if defined(_WIN32)
-#define USE_DLL
+#define LUA_USEDLL
 #elif defined(__APPLE__) && defined(__MACH__)
-#define USE_DYLD
+#define LUA_USEDYLD
 #elif defined(__linux) || defined(sun) || defined(sgi) || defined(BSD)
-#define USE_DLOPEN
+#define LUA_USEDLOPEN
 #endif
 
 
-#endif
 
-/* }====================================================== */
-
-
-
+/* ======================================================= */
 
 /* Local configuration */
 
-#undef USE_TMPNAME
-#define USE_TMPNAME	1
+#undef LUA_USETMPNAME
+#define LUA_USETMPNAME	1
 
 #endif

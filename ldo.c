@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.14 2005/02/18 12:40:02 roberto Exp roberto $
+** $Id: ldo.c,v 2.15 2005/03/08 18:09:16 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -43,7 +43,7 @@
 /* chain list of long jump buffers */
 struct lua_longjmp {
   struct lua_longjmp *previous;
-  l_jmpbuf b;
+  luac_jmpbuf b;
   volatile int status;  /* error code */
 };
 
@@ -71,7 +71,7 @@ static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
 void luaD_throw (lua_State *L, int errcode) {
   if (L->errorJmp) {
     L->errorJmp->status = errcode;
-    L_THROW(L, L->errorJmp);
+    LUAC_THROW(L, L->errorJmp);
   }
   else {
     if (G(L)->panic) G(L)->panic(L);
@@ -85,7 +85,7 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
   lj.status = 0;
   lj.previous = L->errorJmp;  /* chain new error handler */
   L->errorJmp = &lj;
-  L_TRY(L, &lj,
+  LUAC_TRY(L, &lj,
     (*f)(L, ud);
   );
   L->errorJmp = lj.previous;  /* restore old error handler */
@@ -95,10 +95,10 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
 
 static void restore_stack_limit (lua_State *L) {
   lua_assert(L->stack_last - L->stack == L->stacksize - EXTRA_STACK - 1);
-  if (L->size_ci > LUA_MAXCALLS) {  /* there was an overflow? */
+  if (L->size_ci > LUAC_MAXCALLS) {  /* there was an overflow? */
     int inuse = (L->ci - L->base_ci);
-    if (inuse + 1 < LUA_MAXCALLS)  /* can `undo' overflow? */
-      luaD_reallocCI(L, LUA_MAXCALLS);
+    if (inuse + 1 < LUAC_MAXCALLS)  /* can `undo' overflow? */
+      luaD_reallocCI(L, LUAC_MAXCALLS);
   }
 }
 
@@ -149,11 +149,11 @@ void luaD_growstack (lua_State *L, int n) {
 
 
 static CallInfo *growCI (lua_State *L) {
-  if (L->size_ci > LUA_MAXCALLS)  /* overflow while handling overflow? */
+  if (L->size_ci > LUAC_MAXCALLS)  /* overflow while handling overflow? */
     luaD_throw(L, LUA_ERRERR);
   else {
     luaD_reallocCI(L, 2*L->size_ci);
-    if (L->size_ci > LUA_MAXCALLS)
+    if (L->size_ci > LUAC_MAXCALLS)
       luaG_runerror(L, "stack overflow");
   }
   return ++L->ci;
@@ -340,10 +340,10 @@ void luaD_poscall (lua_State *L, int wanted, StkId firstResult) {
 ** function position.
 */ 
 void luaD_call (lua_State *L, StkId func, int nResults) {
-  if (++L->nCcalls >= LUA_MAXCCALLS) {
-    if (L->nCcalls == LUA_MAXCCALLS)
+  if (++L->nCcalls >= LUAC_MAXCCALLS) {
+    if (L->nCcalls == LUAC_MAXCCALLS)
       luaG_runerror(L, "C stack overflow");
-    else if (L->nCcalls >= (LUA_MAXCCALLS + (LUA_MAXCCALLS>>3)))
+    else if (L->nCcalls >= (LUAC_MAXCCALLS + (LUAC_MAXCCALLS>>3)))
       luaD_throw(L, LUA_ERRERR);  /* error while handing stack error */
   }
   if (luaD_precall(L, func, nResults) == PCRLUA) {  /* is a Lua function? */

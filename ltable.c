@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.15 2005/01/10 18:17:39 roberto Exp roberto $
+** $Id: ltable.c,v 2.16 2005/03/08 18:09:16 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -38,10 +38,10 @@
 /*
 ** max size of array part is 2^MAXBITS
 */
-#if LUA_BITSINT > 26
+#if LUAC_BITSINT > 26
 #define MAXBITS		26
 #else
-#define MAXBITS		(LUA_BITSINT-2)
+#define MAXBITS		(LUAC_BITSINT-2)
 #endif
 
 #define MAXASIZE	(1 << MAXBITS)
@@ -120,7 +120,7 @@ static int arrayindex (const TValue *key) {
     lua_Number n = nvalue(key);
     int k;
     lua_number2int(k, n);
-    if (num_eq(cast(lua_Number, k), nvalue(key)))
+    if (luac_numeq(cast(lua_Number, k), nvalue(key)))
       return k;
   }
   return -1;  /* `key' did not match some condition */
@@ -437,7 +437,7 @@ const TValue *luaH_getnum (Table *t, int key) {
     lua_Number nk = cast(lua_Number, key);
     Node *n = hashnum(t, nk);
     do {  /* check whether `key' is somewhere in the chain */
-      if (ttisnumber(gkey(n)) && num_eq(nvalue(gkey(n)), nk))
+      if (ttisnumber(gkey(n)) && luac_numeq(nvalue(gkey(n)), nk))
         return gval(n);  /* that's it */
       else n = gnext(n);
     } while (n);
@@ -470,7 +470,7 @@ const TValue *luaH_get (Table *t, const TValue *key) {
     case LUA_TNUMBER: {
       int k;
       lua_number2int(k, (nvalue(key)));
-      if (num_eq(cast(lua_Number, k), nvalue(key)))  /* is an integer index? */
+      if (luac_numeq(cast(lua_Number, k), nvalue(key)))  /* index is integer? */
         return luaH_getnum(t, k);  /* use specialized version */
       /* else go through */
     }
@@ -494,7 +494,7 @@ TValue *luaH_set (lua_State *L, Table *t, const TValue *key) {
     return cast(TValue *, p);
   else {
     if (ttisnil(key)) luaG_runerror(L, "table index is nil");
-    else if (ttisnumber(key) && !num_eq(nvalue(key), nvalue(key)))
+    else if (ttisnumber(key) && !luac_numeq(nvalue(key), nvalue(key)))
       luaG_runerror(L, "table index is NaN");
     return newkey(L, t, key);
   }

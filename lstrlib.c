@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.108 2004/11/19 16:58:43 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.109 2004/12/01 15:46:06 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -172,7 +172,7 @@ typedef struct MatchState {
   struct {
     const char *init;
     ptrdiff_t len;
-  } capture[MAX_CAPTURES];
+  } capture[LUA_MAXCAPTURES];
 } MatchState;
 
 
@@ -327,7 +327,7 @@ static const char *start_capture (MatchState *ms, const char *s,
                                     const char *p, int what) {
   const char *res;
   int level = ms->level;
-  if (level >= MAX_CAPTURES) luaL_error(ms->L, "too many captures");
+  if (level >= LUA_MAXCAPTURES) luaL_error(ms->L, "too many captures");
   ms->capture[level].init = s;
   ms->capture[level].len = what;
   ms->level = level+1;

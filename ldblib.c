@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.92 2005/01/18 17:23:25 roberto Exp roberto $
+** $Id: ldblib.c,v 1.93 2005/02/18 12:40:02 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -19,7 +19,7 @@
 
 
 
-static int getmetatable (lua_State *L) {
+static int db_getmetatable (lua_State *L) {
   luaL_checkany(L, 1);
   if (!lua_getmetatable(L, 1)) {
     lua_pushnil(L);  /* no metatable */
@@ -28,7 +28,7 @@ static int getmetatable (lua_State *L) {
 }
 
 
-static int setmetatable (lua_State *L) {
+static int db_setmetatable (lua_State *L) {
   int t = lua_type(L, 2);
   luaL_argcheck(L, t == LUA_TNIL || t == LUA_TTABLE, 2,
                     "nil or table expected");
@@ -38,13 +38,13 @@ static int setmetatable (lua_State *L) {
 }
 
 
-static int getfenv (lua_State *L) {
+static int db_getfenv (lua_State *L) {
   lua_getfenv(L, 1);
   return 1;
 }
 
 
-static int setfenv (lua_State *L) {
+static int db_setfenv (lua_State *L) {
   luaL_checktype(L, 2, LUA_TTABLE);
   lua_settop(L, 2);
   if (lua_setfenv(L, 1) == 0)
@@ -77,7 +77,7 @@ static lua_State *getthread (lua_State *L, int *arg) {
 }
 
 
-static int getinfo (lua_State *L) {
+static int db_getinfo (lua_State *L) {
   lua_Debug ar;
   int arg;
   lua_State *L1 = getthread(L, &arg);
@@ -130,7 +130,7 @@ static int getinfo (lua_State *L) {
 }
     
 
-static int getlocal (lua_State *L) {
+static int db_getlocal (lua_State *L) {
   int arg;
   lua_State *L1 = getthread(L, &arg);
   lua_Debug ar;
@@ -151,7 +151,7 @@ static int getlocal (lua_State *L) {
 }
 
 
-static int setlocal (lua_State *L) {
+static int db_setlocal (lua_State *L) {
   int arg;
   lua_State *L1 = getthread(L, &arg);
   lua_Debug ar;
@@ -178,12 +178,12 @@ static int auxupvalue (lua_State *L, int get) {
 }
 
 
-static int getupvalue (lua_State *L) {
+static int db_getupvalue (lua_State *L) {
   return auxupvalue(L, 1);
 }
 
 
-static int setupvalue (lua_State *L) {
+static int db_setupvalue (lua_State *L) {
   luaL_checkany(L, 3);
   return auxupvalue(L, 0);
 }
@@ -244,7 +244,7 @@ static void gethooktable (lua_State *L) {
 }
 
 
-static int sethook (lua_State *L) {
+static int db_sethook (lua_State *L) {
   int arg;
   lua_State *L1 = getthread(L, &arg);
   if (lua_isnoneornil(L, arg+1)) {
@@ -267,7 +267,7 @@ static int sethook (lua_State *L) {
 }
 
 
-static int gethook (lua_State *L) {
+static int db_gethook (lua_State *L) {
   int arg;
   lua_State *L1 = getthread(L, &arg);
   char buff[5];
@@ -288,7 +288,7 @@ static int gethook (lua_State *L) {
 }
 
 
-static int debug (lua_State *L) {
+static int db_debug (lua_State *L) {
   for (;;) {
     char buffer[250];
     fputs("lua_debug> ", stderr);
@@ -308,7 +308,7 @@ static int debug (lua_State *L) {
 #define LEVELS1	12	/* size of the first part of the stack */
 #define LEVELS2	10	/* size of the second part of the stack */
 
-static int errorfb (lua_State *L) {
+static int db_errorfb (lua_State *L) {
   int level;
   int firstpart = 1;  /* still before eventual `...' */
   int arg;
@@ -362,19 +362,19 @@ static int errorfb (lua_State *L) {
 
 
 static const luaL_reg dblib[] = {
-  {"getmetatable", getmetatable},
-  {"setmetatable", setmetatable},
-  {"getfenv", getfenv},
-  {"setfenv", setfenv},
-  {"getlocal", getlocal},
-  {"getinfo", getinfo},
-  {"gethook", gethook},
-  {"getupvalue", getupvalue},
-  {"sethook", sethook},
-  {"setlocal", setlocal},
-  {"setupvalue", setupvalue},
-  {"debug", debug},
-  {"traceback", errorfb},
+  {"getmetatable", db_getmetatable},
+  {"setmetatable", db_setmetatable},
+  {"getfenv", db_getfenv},
+  {"setfenv", db_setfenv},
+  {"getlocal", db_getlocal},
+  {"getinfo", db_getinfo},
+  {"gethook", db_gethook},
+  {"getupvalue", db_getupvalue},
+  {"sethook", db_sethook},
+  {"setlocal", db_setlocal},
+  {"setupvalue", db_setupvalue},
+  {"debug", db_debug},
+  {"traceback", db_errorfb},
   {NULL, NULL}
 };
 
