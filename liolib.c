@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.25 2002/11/25 15:05:39 roberto Exp roberto $
+** $Id: liolib.c,v 2.26 2002/12/04 15:17:36 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -62,6 +62,19 @@ static FILE **topfile (lua_State *L, int findex) {
   }
   lua_pop(L, 1);
   return f;
+}
+
+
+static int io_type (lua_State *L) {
+  FILE **f = (FILE **)lua_touserdata(L, 1);
+  if (f == NULL || !lua_getmetatable(L, 1) ||
+                   !lua_rawequal(L, -1, lua_upvalueindex(1)))
+    lua_pushnil(L);
+  else if (*f == NULL)
+    lua_pushliteral(L, "closed file");
+  else
+    lua_pushliteral(L, "file");
+  return 1;
 }
 
 
@@ -464,6 +477,7 @@ static const luaL_reg iolib[] = {
   {"popen", io_popen},
   {"read", io_read},
   {"tmpfile", io_tmpfile},
+  {"type", io_type},
   {"write", io_write},
   {NULL, NULL}
 };
