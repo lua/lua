@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.47 2000/08/28 17:57:04 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.48 2000/08/29 20:43:28 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -265,7 +265,7 @@ static const char *max_expand (lua_State *L, const char *s, const char *p,
   long i = 0;  /* counts maximum expand for item */
   while ((s+i)<cap->src_end && luaI_singlematch((unsigned char)*(s+i), p, ep))
     i++;
-  /* keeps trying to match mith the maximum repetitions */
+  /* keeps trying to match with the maximum repetitions */
   while (i>=0) {
     const char *res = match(L, (s+i), ep+1, cap);
     if (res) return res;
