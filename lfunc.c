@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.69 2003/10/20 17:42:41 roberto Exp roberto $
+** $Id: lfunc.c,v 1.70 2003/11/17 19:50:05 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -46,39 +46,40 @@ Closure *luaF_newLclosure (lua_State *L, int nelems, TObject *e) {
 
 
 UpVal *luaF_newupval (lua_State *L) {
-  UpVal *p = luaM_new(L, UpVal);
-  luaC_link(L, valtogco(p), LUA_TUPVAL);
-  p->v = &p->value;
-  setnilvalue(p->v);
-  return p;
+  UpVal *uv = luaM_new(L, UpVal);
+  luaC_link(L, valtogco(uv), LUA_TUPVAL);
+  uv->v = &uv->value;
+  setnilvalue(uv->v);
+  return uv;
 }
 
 
 UpVal *luaF_findupval (lua_State *L, StkId level) {
   GCObject **pp = &L->openupval;
   UpVal *p;
-  UpVal *v;
+  UpVal *uv;
   while ((p = ngcotouv(*pp)) != NULL && p->v >= level) {
     if (p->v == level) return p;
     pp = &p->next;
   }
-  v = luaM_new(L, UpVal);  /* not found: create a new one */
-  v->tt = LUA_TUPVAL;
-  v->marked = bitmask(BLACKBIT);  /* open upvalues should not be collected */
-  v->v = level;  /* current value lives in the stack */
-  v->next = *pp;  /* chain it in the proper position */
-  *pp = valtogco(v);
-  return v;
+  uv = luaM_new(L, UpVal);  /* not found: create a new one */
+  uv->tt = LUA_TUPVAL;
+  uv->marked = bitmask(FIXEDBIT);  /* open upvalues cannot be collected */
+  uv->v = level;  /* current value lives in the stack */
+  uv->next = *pp;  /* chain it in the proper position */
+  *pp = valtogco(uv);
+  return uv;
 }
 
 
 void luaF_close (lua_State *L, StkId level) {
-  UpVal *p;
-  while ((p = ngcotouv(L->openupval)) != NULL && p->v >= level) {
-    setobj(&p->value, p->v);  /* save current value (write barrier) */
-    p->v = &p->value;  /* now current value lives here */
-    L->openupval = p->next;  /* remove from `open' list */
-    luaC_link(L, valtogco(p), LUA_TUPVAL);
+  UpVal *uv;
+  while ((uv = ngcotouv(L->openupval)) != NULL && uv->v >= level) {
+    setobj(&uv->value, uv->v);  /* save current value (write barrier) */
+    uv->v = &uv->value;  /* now current value lives here */
+    L->openupval = uv->next;  /* remove from `open' list */
+    resetbit(uv->marked, FIXEDBIT);  /* closed upvalues can be collected */
+    luaC_link(L, valtogco(uv), LUA_TUPVAL);
   }
 }
 
