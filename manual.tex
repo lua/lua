@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.29 1999/04/07 16:40:04 roberto Exp roberto $
+% $Id: manual.tex,v 1.30 1999/04/14 20:47:12 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -41,7 +41,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{{\small \tt\$Date: 1999/04/07 16:40:04 $ $}}
+\date{{\small \tt\$Date: 1999/04/14 20:47:12 $ $}}
 
 \maketitle
 
@@ -2152,10 +2152,11 @@ This function could be defined in Lua:
 \begin{verbatim}
       function getn (t)
         if type(t.n) == 'number' then return t.n end
-        local i = nil
         local max = 0
-        while (i=next(t, i)) do
+        local i = next(t, nil)
+        while i do
           if type(i) == 'number' and i>max then max=i end
+          i = next(t, i)
         end
         return max
       end
@@ -2198,10 +2199,11 @@ as the final value of \verb|foreachi|.
 This function could be defined in Lua:
 \begin{verbatim}
       function foreachi (t, f)
-        local i, n = 0, getn(t)
-        while (i=i+1)<=n do
+        local i, n = 1, getn(t)
+        while i <= n do
           local res = f(i, t[i])
           if res then return res end
+          i = i+1
         end
       end
 \end{verbatim}
