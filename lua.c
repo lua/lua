@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.39 2000/06/12 13:52:05 roberto Exp roberto $
+** $Id: lua.c,v 1.40 2000/06/16 17:16:34 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -76,7 +76,7 @@ static void print_message (void) {
   "  -f name  execute file `name' with remaining arguments in table `arg'\n"
   "  -i       enter interactive mode with prompt\n"
   "  -q       enter interactive mode without prompt\n"
-  "  -sNUM    set stack size to NUM (must be first option)\n"
+  "  -sNUM    set stack size to NUM (must be the first option)\n"
   "  -v       print version information\n"
   "  a=b      set global `a' to string `b'\n"
   "  name     execute file `name'\n"
