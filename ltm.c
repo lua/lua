@@ -26,7 +26,7 @@ const char *const luaT_typenames[] = {
 void luaT_init (lua_State *L) {
   static const char *const luaT_eventname[] = {  /* ORDER TM */
     "gettable", "settable", "index",
-    "gc",
+    "gc", "weakmode",
     "add", "sub", "mul", "div",
     "pow", "unm", "lt", "concat",
     "call"

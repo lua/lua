@@ -274,7 +274,6 @@ Table *luaH_new (lua_State *L, int narray, int lnhash) {
   t->next = G(L)->roottable;
   G(L)->roottable = t;
   t->mark = t;
-  t->weakmode = 0;
   t->flags = cast(unsigned short, ~0);
   /* temporary values (kept only if some malloc fails) */
   t->array = NULL;

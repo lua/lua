@@ -19,6 +19,7 @@ typedef enum {
   TM_SETTABLE,
   TM_INDEX,
   TM_GC,
+  TM_WEAKMODE,
   TM_ADD,
   TM_SUB,
   TM_MUL,

@@ -695,28 +695,7 @@ LUA_API void lua_newuserdatabox (lua_State *L, void *p) {
 }
 
 
-LUA_API int lua_getweakmode (lua_State *L, int index) {
-  StkId t;
-  int mode;
-  lua_lock(L);
-  t = luaA_index(L, index);
-  api_check(L, ttype(t) == LUA_TTABLE);
-  mode = hvalue(t)->weakmode;
-  lua_unlock(L);
-  return mode;
-}
-
-
-LUA_API void  lua_setweakmode (lua_State *L, int mode) {
-  lua_lock(L);
-  api_check(L, ttype(L->top-1) == LUA_TTABLE);
-  hvalue(L->top-1)->weakmode = cast(lu_byte, mode);
-  lua_unlock(L);
-}
-
-
-
-LUA_API void lua_pushupvalues (lua_State *L) {
+LUA_API int lua_pushupvalues (lua_State *L) {
   TObject *func;
   int n, i;
   lua_lock(L);
@@ -730,6 +709,7 @@ LUA_API void lua_pushupvalues (lua_State *L) {
     L->top++;
   }
   lua_unlock(L);
+  return n;
 }
 
 

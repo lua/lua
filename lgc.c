@@ -4,6 +4,8 @@
 ** See Copyright Notice in lua.h
 */
 
+#include <string.h>
+
 #include "lua.h"
 
 #include "ldebug.h"
@@ -22,6 +24,7 @@
 typedef struct GCState {
   Table *tmark;  /* list of marked tables to be visited */
   Table *toclear;  /* list of visited weak tables (to be cleared after GC) */
+  lua_State *L;
 } GCState;
 
 
@@ -119,8 +122,8 @@ static void markobject (GCState *st, TObject *o) {
 }
 
 
-static void markstacks (lua_State *L, GCState *st) {
-  lua_State *L1 = L;
+static void markstacks (GCState *st) {
+  lua_State *L1 = st->L;
   do {  /* for each thread */
     StkId o, lim;
     for (o=L1->stack; o<L1->top; o++)
@@ -130,15 +133,15 @@ static void markstacks (lua_State *L, GCState *st) {
     for (; o<=lim; o++) setnilvalue(o);
     lua_assert(L1->previous->next == L1 && L1->next->previous == L1);
     L1 = L1->next;
-  } while (L1 != L);
+  } while (L1 != st->L);
 }
 
 
-static void markudet (lua_State *L, GCState *st) {
+static void markudet (GCState *st) {
   Udata *u;
-  for (u = G(L)->rootudata; u; u = u->uv.next)
+  for (u = G(st->L)->rootudata; u; u = u->uv.next)
     marktable(st, u->uv.eventtable);
-  for (u = G(L)->tmudata; u; u = u->uv.next)
+  for (u = G(st->L)->tmudata; u; u = u->uv.next)
     marktable(st, u->uv.eventtable);
 }
 
@@ -152,13 +155,20 @@ static void removekey (Node *n) {
 
 static void traversetable (GCState *st, Table *h) {
   int i;
-  int mode = h->weakmode;
+  const TObject *mode;
+  int weakkey = 0;
+  int weakvalue = 0;
+  marktable(st, h->eventtable);
+  mode = fasttm(st->L, h->eventtable, TM_WEAKMODE);
   if (mode) {  /* weak table? must be cleared after GC... */
     h->mark = st->toclear;  /* put in the appropriate list */
     st->toclear = h;
+    if (ttype(mode) == LUA_TSTRING) {
+      weakkey = (strchr(svalue(mode), 'k') != NULL);
+      weakvalue = (strchr(svalue(mode), 'v') != NULL);
+    }
   }
-  marktable(st, h->eventtable);
-  if (!(mode & LUA_WEAK_VALUE)) {
+  if (!weakvalue) {
     i = sizearray(h);
     while (i--)
       markobject(st, &h->array[i]);
@@ -168,18 +178,18 @@ static void traversetable (GCState *st, Table *h) {
     Node *n = node(h, i);
     if (ttype(val(n)) != LUA_TNIL) {
       lua_assert(ttype(key(n)) != LUA_TNIL);
-      if (!(mode & LUA_WEAK_KEY))
-        markobject(st, key(n));
-      if (!(mode & LUA_WEAK_VALUE))
-        markobject(st, val(n));
+      if (!weakkey) markobject(st, key(n));
+      if (!weakvalue) markobject(st, val(n));
     }
   }
 }
 
 
-static void markall (lua_State *L, GCState *st) {
-  markstacks(L, st); /* mark all stacks */
-  markudet(L, st);  /* mark userdata's event tables */
+static void markall (GCState *st) {
+  lua_assert(hvalue(defaultet(st->L))->flags == cast(unsigned short, ~0));
+                                                      /* table is unchanged */
+  markstacks(st); /* mark all stacks */
+  markudet(st);  /* mark userdata's event tables */
   while (st->tmark) {  /* traverse marked tables */
     Table *h = st->tmark;  /* get first table from list */
     st->tmark = h->mark;  /* remove it from list */
@@ -210,7 +220,6 @@ static int hasmark (const TObject *o) {
 static void cleartables (Table *h) {
   for (; h; h = h->mark) {
     int i;
-    lua_assert(h->weakmode);
     i = sizearray(h);
     while (i--) {
       TObject *o = &h->array[i];
@@ -421,9 +430,10 @@ void luaC_collect (lua_State *L, int all) {
 
 void luaC_collectgarbage (lua_State *L) {
   GCState st;
+  st.L = L;
   st.tmark = NULL;
   st.toclear = NULL;
-  markall(L, &st);
+  markall(&st);
   cleartables(st.toclear);
   luaC_collect(L, 0);
   checkMbuffer(L);

@@ -214,9 +214,9 @@ typedef union Closure {
 */
 
 typedef struct Node {
-  struct Node *next;  /* for chaining */
   TObject _key;
   TObject _val;
+  struct Node *next;  /* for chaining */
 } Node;
 
 
@@ -226,7 +226,6 @@ typedef struct Table {
   Node *node;
   int sizearray;  /* size of `array' array */
   lu_byte lsizenode;  /* log2 of size of `node' array */
-  lu_byte weakmode;
   unsigned short flags;  /* 1<<p means tagmethod(p) is not present */ 
   Node *firstfree;  /* this position is free; all positions after it are full */
   struct Table *next;
