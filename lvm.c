@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.242 2002/06/24 14:11:14 roberto Exp roberto $
+** $Id: lvm.c,v 1.243 2002/06/24 15:07:21 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -32,7 +32,7 @@
 
 
 /* limit for table tag-method chains (to avoid loops) */
-#define MAXTAGLOOP	10000
+#define MAXTAGLOOP	100
 
 
 static void luaV_checkGC (lua_State *L, StkId top) {
@@ -108,34 +108,46 @@ static void callTM (lua_State *L, const TObject *f,
 }
 
 
+static const TObject *luaV_index (lua_State *L, const TObject *t,
+                                  TObject *key, int loop) {
+  const TObject *tm = fasttm(L, hvalue(t)->metatable, TM_INDEX);
+  if (tm == NULL) return &luaO_nilobject;  /* no TM */
+  if (ttype(tm) == LUA_TFUNCTION) {
+    callTMres(L, tm, t, key);
+    return L->top;
+  }
+  else return luaV_gettable(L, tm, key, loop);
+}
+
+static const TObject *luaV_getnotable (lua_State *L, const TObject *t,
+                                       TObject *key, int loop) {
+  const TObject *tm = luaT_gettmbyobj(L, t, TM_GETTABLE);
+  if (ttype(tm) == LUA_TNIL)
+    luaG_typeerror(L, t, "index");
+  if (ttype(tm) == LUA_TFUNCTION) {
+    callTMres(L, tm, t, key);
+    return L->top;
+  }
+  else return luaV_gettable(L, tm, key, loop);
+}
+
+
 /*
 ** Function to index a table.
 ** Receives the table at `t' and the key at `key'.
 ** leaves the result at `res'.
 */
-const TObject *luaV_gettable (lua_State *L, const TObject *t, TObject *key) {
-  const TObject *tm;
-  int loop = 0;
-  do {
-    if (ttype(t) == LUA_TTABLE) {  /* `t' is a table? */
-      Table *h = hvalue(t);
-      const TObject *v = luaH_get(h, key);  /* do a primitive get */
-      if (ttype(v) != LUA_TNIL ||  /* result is no nil? */
-          (tm = fasttm(L, h->metatable, TM_INDEX)) == NULL) {  /* or no TM? */
-        return v;
-      }
-      /* else will try the tag method */
-    }
-    else if (ttype(tm = luaT_gettmbyobj(L, t, TM_GETTABLE)) == LUA_TNIL)
-      luaG_typeerror(L, t, "index");
-    if (ttype(tm) == LUA_TFUNCTION) {
-      callTMres(L, tm, t, key);
-      return L->top;
-    }
-    t = tm;  /* else repeat access with `tm' */ 
-  } while (++loop <= MAXTAGLOOP);
-  luaG_runerror(L, "loop in gettable");
-  return NULL;  /* to avoid warnings */
+const TObject *luaV_gettable (lua_State *L, const TObject *t, TObject *key,
+                              int loop) {
+  if (loop > MAXTAGLOOP)
+    luaG_runerror(L, "loop in gettable");
+  if (ttype(t) == LUA_TTABLE) {  /* `t' is a table? */
+    Table *h = hvalue(t);
+    const TObject *v = luaH_get(h, key);  /* do a primitive get */
+    if (ttype(v) != LUA_TNIL) return v;
+    else return luaV_index(L, t, key, loop+1);
+  }
+  else return luaV_getnotable(L, t, key, loop+1);
 }
 
 
@@ -392,12 +404,26 @@ StkId luaV_execute (lua_State *L) {
         break;
       }
       case OP_GETGLOBAL: {
-        lua_assert(ttype(KBx(i)) == LUA_TSTRING && ttype(&cl->g) == LUA_TTABLE);
-        setobj(RA(i), luaV_gettable(L, &cl->g, KBx(i)));
+        StkId rb = KBx(i);
+        const TObject *v;
+        lua_assert(ttype(rb) == LUA_TSTRING && ttype(&cl->g) == LUA_TTABLE);
+        v = luaH_getstr(hvalue(&cl->g), tsvalue(rb));
+        if (ttype(v) != LUA_TNIL) { setobj(ra, v); }
+        else
+          setobj(RA(i), luaV_index(L, &cl->g, rb, 0));
         break;
       }
       case OP_GETTABLE: {
-        setobj(RA(i), luaV_gettable(L, RB(i), RKC(i)));
+        StkId rb = RB(i);
+        TObject *rc = RKC(i);
+        if (ttype(rb) == LUA_TTABLE) {
+          const TObject *v = luaH_get(hvalue(rb), rc);
+          if (ttype(v) != LUA_TNIL) { setobj(ra, v); }
+          else
+            setobj(RA(i), luaV_index(L, rb, rc, 0));
+        }
+        else
+          setobj(RA(i), luaV_getnotable(L, rb, rc, 0));
         break;
       }
       case OP_SETGLOBAL: {
@@ -423,8 +449,17 @@ StkId luaV_execute (lua_State *L) {
       }
       case OP_SELF: {
         StkId rb = RB(i);
+        TObject *rc = RKC(i);
+        runtime_check(L, ttype(rc) == LUA_TSTRING);
         setobj(ra+1, rb);
-        setobj(RA(i), luaV_gettable(L, rb, RKC(i)));
+        if (ttype(rb) == LUA_TTABLE) {
+          const TObject *v = luaH_getstr(hvalue(rb), tsvalue(rc));
+          if (ttype(v) != LUA_TNIL) { setobj(ra, v); }
+          else
+            setobj(RA(i), luaV_index(L, rb, rc, 0));
+        }
+        else
+          setobj(RA(i), luaV_getnotable(L, rb, rc, 0));
         break;
       }
       case OP_ADD: {
@@ -620,11 +655,10 @@ StkId luaV_execute (lua_State *L) {
         else dojump(pc, GETARG_sBx(*pc) + 1);  /* else jump back */
         break;
       }
-      case OP_TFORPREP: {
+      case OP_TFORPREP: {  /* for compatibility only */
         if (ttype(ra) == LUA_TTABLE) {
           setobj(ra+1, ra);
-          setsvalue(ra, luaS_new(L, "next"));
-          setobj(RA(i), luaV_gettable(L, gt(L), ra));
+          setobj(ra, luaH_getstr(hvalue(gt(L)), luaS_new(L, "next")));
         }
         dojump(pc, GETARG_sBx(i));
         break;
