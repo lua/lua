@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.11 2004/08/30 18:35:14 roberto Exp roberto $
+** $Id: luaconf.h,v 1.12 2004/09/10 17:30:46 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -160,7 +160,7 @@
 
 
 /* maximum number of upvalues per function */
-#define MAXUPVALUES		32	/* <MAXSTACK */
+#define MAXUPVALUES		60	/* <MAXSTACK */
 
 
 /* maximum size of expressions for optimizing `while' code */
@@ -274,6 +274,9 @@
 
 /* environment variable that holds the search path for packages */
 #define LUA_PATH	"LUA_PATH"
+
+/* directory separator (for submodules) */
+#define LUA_DIRSEP	"/"
 
 /* separator of templates in a path */
 #define LUA_PATH_SEP	';'
