@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.107 2002/11/11 13:28:06 roberto Exp roberto $
+** $Id: lua.c,v 1.108 2002/11/14 15:42:05 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -98,8 +98,8 @@ static void print_usage (void) {
   "  -        execute stdin as a file\n"
   "  -e stat  execute string `stat'\n"
   "  -i       enter interactive mode after executing `script'\n"
-  "  -l name  execute file `name'\n"
-  "  -v       print version information\n"
+  "  -l name  load and run library `name'\n"
+  "  -v       show version information\n"
   "  --       stop handling options\n" ,
   progname);
 }
@@ -111,7 +111,7 @@ static void l_message (const char *pname, const char *msg) {
 }
 
 
-static void report (int status) {
+static int report (int status) {
   const char *msg;
   if (status) {
     msg = lua_tostring(L, -1);
@@ -119,20 +119,19 @@ static void report (int status) {
     l_message(progname, msg);
     lua_pop(L, 1);
   }
+  return status;
 }
 
 
-static int lcall (int clear) {
+static int lcall (int narg, int clear) {
   int status;
-  int top = lua_gettop(L);
+  int base = lua_gettop(L) - narg;  /* function index */
   lua_getglobal(L, "_TRACEBACK");  /* get traceback function */
-  lua_insert(L, top);  /* put it under chunk */
+  lua_insert(L, base);  /* put it under chunk and args */
   signal(SIGINT, laction);
-  status = lua_pcall(L, 0, LUA_MULTRET, -2);
+  status = lua_pcall(L, narg, (clear ? 0 : LUA_MULTRET), base);
   signal(SIGINT, SIG_DFL);
-  lua_remove(L, top);  /* remove traceback function */
-  if (status == 0 && clear)
-    lua_settop(L, top);  /* remove eventual results */
+  lua_remove(L, base);  /* remove traceback function */
   return status;
 }
 
@@ -165,9 +164,8 @@ static void getargs (char *argv[], int n) {
 
 
 static int docall (int status) {
-  if (status == 0) status = lcall(1);
-  report(status);
-  return status;
+  if (status == 0) status = lcall(0, 1);
+  return report(status);
 }
 
 
@@ -178,6 +176,19 @@ static int file_input (const char *name) {
 
 static int dostring (const char *s, const char *name) {
   return docall(luaL_loadbuffer(L, s, strlen(s), name));
+}
+
+
+static int load_file (const char *name) {
+  lua_getglobal(L, "require");
+  if (!lua_isfunction(L, -1)) {  /* no `require' defined? */
+    lua_pop(L, 1);
+    return file_input(name);
+  }
+  else {
+    lua_pushstring(L, name);
+    return report(lcall(1, 1));
+  }
 }
 
 
@@ -268,7 +279,7 @@ static void manual_input (void) {
   const char *oldprogname = progname;
   progname = NULL;
   while ((status = load_string()) != -1) {
-    if (status == 0) status = lcall(0);
+    if (status == 0) status = lcall(0, 0);
     report(status);
     if (status == 0 && lua_gettop(L) > 0) {  /* any result to print? */
       lua_getglobal(L, "print");
@@ -331,7 +342,7 @@ static int handle_argv (char *argv[], int *interactive) {
             print_usage();
             return EXIT_FAILURE;
           }
-          if (file_input(filename))
+          if (load_file(filename))
             return EXIT_FAILURE;  /* stop if file fails */
           break;
         }
@@ -351,7 +362,7 @@ static int handle_argv (char *argv[], int *interactive) {
     } endloop:
     if (argv[i] != NULL) {
       const char *filename = argv[i];
-      getargs(argv, i);  /* collect remaining arguments */
+      getargs(argv, i);  /* collect arguments */
       lua_setglobal(L, "arg");
       return file_input(filename);  /* stop scanning arguments */
     }
