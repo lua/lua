@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.4 2000/03/31 16:28:45 roberto Exp roberto $
+** $Id: llimits.h,v 1.5 2000/04/04 20:48:44 roberto Exp roberto $
 ** Limits, basic types, and some other "instalation-dependent" definitions
 ** See Copyright Notice in lua.h
 */
@@ -29,7 +29,7 @@ typedef LUA_NUM_TYPE Number;
 ** conversion of pointer to int (for hashing only)
 ** (the shift removes bits that are usually 0 because of alignment)
 */
-#define IntPoint(L, p)  (((unsigned long)(p)) >> 3)
+#define IntPoint(p)  (((unsigned long)(p)) >> 3)
 
 
 /*
