@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.101 2000/04/03 13:20:33 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.102 2000/04/04 20:49:32 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -157,8 +157,10 @@ void luaB_tonumber (lua_State *L) {
   int base = luaL_opt_int(L, 2, 10);
   if (base == 10) {  /* standard conversion */
     lua_Object o = luaL_nonnullarg(L, 1);
-    if (lua_isnumber(L, o)) lua_pushnumber(L, lua_getnumber(L, o));
-    else lua_pushnil(L);  /* not a number */
+    if (lua_isnumber(L, o)) {
+      lua_pushnumber(L, lua_getnumber(L, o));
+      return;
+    }
   }
   else {
     const char *s1 = luaL_check_string(L, 1);
@@ -166,11 +168,15 @@ void luaB_tonumber (lua_State *L) {
     Number n;
     luaL_arg_check(L, 0 <= base && base <= 36, 2, "base out of range");
     n = strtoul(s1, &s2, base);
-    if (s1 == s2) return;  /* no valid digits: return nil */
-    while (isspace((unsigned char)*s2)) s2++;  /* skip trailing spaces */
-    if (*s2) return;  /* invalid trailing character: return nil */
-    lua_pushnumber(L, n);
+    if (s1 != s2) {  /* at least one valid digit? */
+      while (isspace((unsigned char)*s2)) s2++;  /* skip trailing spaces */
+      if (*s2 == '\0') {  /* no invalid trailing characters? */
+        lua_pushnumber(L, n);
+        return;
+      }
+    }
   }
+  lua_pushnil(L);  /* else not a number */
 }
 
 
