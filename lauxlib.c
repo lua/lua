@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.96 2003/03/18 12:25:32 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.97 2003/03/18 18:48:31 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -45,9 +45,7 @@ LUALIB_API int luaL_argerror (lua_State *L, int narg, const char *extramsg) {
   if (strcmp(ar.namewhat, "method") == 0) {
     narg--;  /* do not count `self' */
     if (narg == 0)  /* error is in the self argument itself? */
-      return luaL_error(L,
-        "calling %s on bad self (perhaps using `:' instead of `.')",
-        ar.name);
+      return luaL_error(L, "calling `%s' on bad self (%s)", ar.name, extramsg);
   }
   if (ar.name == NULL)
     ar.name = "?";
