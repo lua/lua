@@ -1,18 +1,28 @@
 /*
-** Libraries to be used in LUA programs
-** Grupo de Tecnologia em Computacao Grafica
-** TeCGraf - PUC-Rio
-** $Id: lualib.h,v 1.12 1997/03/18 15:30:50 roberto Exp roberto $
+** $Id: $
+** Lua standard libraries
+** See Copyright Notice in lua.h
 */
+
 
 #ifndef lualib_h
 #define lualib_h
 
 #include "lua.h"
 
-void iolib_open   (void);
-void strlib_open  (void);
-void mathlib_open (void);
+
+void lua_iolibopen   (void);
+void lua_strlibopen  (void);
+void lua_mathlibopen (void);
+
+
+
+
+/* To keep compatibility with old versions */
+
+#define iolib_open	lua_iolibopen
+#define strlib_open	lua_strlibopen
+#define mathlib_open	lua_mathlibopen
 
 
 
@@ -22,8 +32,7 @@ char *luaI_addchar (int c);
 void luaI_emptybuff (void);
 void luaI_addquoted (char *s);
 
-char *luaL_item_end (char *p);
-int luaL_singlematch (int c, char *p);
+int luaI_singlematch (int c, char *p, char **ep);
 
 #endif
 
