@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.161 2004/12/06 17:53:42 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.162 2004/12/07 18:31:34 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -182,9 +182,9 @@ static int luaB_gcinfo (lua_State *L) {
 
 static int luaB_collectgarbage (lua_State *L) {
   static const char *const opts[] = {"stop", "restart", "collect",
-    "count", "step", "setstepmul", "setincmode", NULL};
+    "count", "step", "setpace", "setincmode", NULL};
   static const int optsnum[] = {LUA_GCSTOP, LUA_GCRESTART, LUA_GCCOLLECT,
-    LUA_GCCOUNT, LUA_GCSTEP, LUA_GCSETSTEPMUL, LUA_GCSETINCMODE};
+    LUA_GCCOUNT, LUA_GCSTEP, LUA_GCSETPACE, LUA_GCSETINCMODE};
   int o = luaL_findstring(luaL_optstring(L, 1, "collect"), opts);
   int ex = luaL_optint(L, 2, 0);
   luaL_argcheck(L, o >= 0, 1, "invalid option");

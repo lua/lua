@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.17 2004/11/24 19:20:21 roberto Exp roberto $
+** $Id: lgc.c,v 2.18 2004/12/06 17:53:42 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -27,6 +27,7 @@
 #define GCSWEEPMAX	10
 #define GCSWEEPCOST	30
 #define GCFINALIZECOST	100
+#define GCSTEPMUL	8
 
 
 #define FIXEDMASK	bitmask(FIXEDBIT)
@@ -621,18 +622,17 @@ static l_mem singlestep (lua_State *L) {
 
 void luaC_step (lua_State *L) {
   global_State *g = G(L);
-  l_mem lim = (g->totalbytes - (g->GCthreshold - GCSTEPSIZE)) * g->stepmul;
+  l_mem lim = (g->totalbytes - (g->GCthreshold - GCSTEPSIZE)) * GCSTEPMUL;
   do {
     lim -= singlestep(L);
     if (g->gcstate == GCSpause)
       break;
   } while (lim > 0 || !g->incgc);
-  if (g->incgc)
+  if (g->gcstate != GCSpause)
     g->GCthreshold = g->totalbytes + GCSTEPSIZE;  /* - lim/STEPMUL; */
   else {
     lua_assert(g->totalbytes >= g->estimate);
-    lua_assert(g->gcstate == GCSpause);
-    g->GCthreshold = 2*g->estimate;
+    g->GCthreshold = g->estimate + ((g->estimate/GCDIV) * g->gcpace);
   }
 }
 
