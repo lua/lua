@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.223 2003/08/26 12:04:13 roberto Exp roberto $
+** $Id: ldo.c,v 1.224 2003/08/27 21:01:44 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -331,13 +331,8 @@ static void resume (lua_State *L, void *ud) {
   int nargs = *cast(int *, ud);
   CallInfo *ci = L->ci;
   if (!L->isSuspended) {
-    if (ci == L->base_ci) {  /* no activation record? */
-      if (nargs >= L->top - L->base)
-        luaG_runerror(L, "cannot resume dead coroutine");
-      luaD_precall(L, L->top - (nargs + 1));  /* start coroutine */
-    }
-    else
-      luaG_runerror(L, "cannot resume non-suspended coroutine");
+    lua_assert(ci == L->base_ci && nargs < L->top - L->base);
+    luaD_precall(L, L->top - (nargs + 1));  /* start coroutine */
   }
   else {  /* resumming from previous yield */
     if (!f_isLua(ci)) {  /* `common' yield? */
@@ -357,12 +352,29 @@ static void resume (lua_State *L, void *ud) {
 }
 
 
+static int resume_error (lua_State *L, const char *msg) {
+  L->top = L->ci->base;
+  setsvalue2s(L->top, luaS_new(L, msg));
+  incr_top(L);
+  lua_unlock(L);
+  return LUA_ERRRUN;
+}
+
+
 LUA_API int lua_resume (lua_State *L, int nargs) {
   int status;
   lu_byte old_allowhooks;
   lua_lock(L);
-  old_allowhooks = L->allowhook;
   lua_assert(L->errfunc == 0 && L->nCcalls == 0);
+  if (!L->isSuspended) {
+    if (L->ci == L->base_ci) {  /* no activation record? */
+      if (nargs >= L->top - L->base)
+        return resume_error(L, "cannot resume dead coroutine");
+    }
+    else
+      return resume_error(L, "cannot resume non-suspended coroutine");
+  }
+  old_allowhooks = L->allowhook;
   status = luaD_rawrunprotected(L, resume, &nargs);
   if (status != 0) {  /* error? */
     L->ci = L->base_ci;  /* go back to initial level */
