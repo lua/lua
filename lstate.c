@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.8 2004/06/02 19:09:36 roberto Exp roberto $
+** $Id: lstate.c,v 2.9 2004/06/17 14:06:52 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -139,6 +139,10 @@ lua_State *luaE_newthread (lua_State *L) {
   preinit_state(L1, G(L));
   stack_init(L1, L);  /* init stack */
   setobj2n(L, gt(L1), gt(L));  /* share table of globals */
+  L1->hookmask = L->hookmask;
+  L1->basehookcount = L->basehookcount;
+  L1->hook = L->hook;
+  resethookcount(L1);
   lua_assert(iswhite(obj2gco(L1)));
   return L1;
 }
