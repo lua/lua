@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.8 1994/10/18 17:34:34 celes Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.9 1994/11/03 17:09:20 roberto Exp roberto $";
  
 
 #include <ctype.h>
@@ -246,22 +246,17 @@ fraction:
           yylval.vFloat = a;
           return NUMBER;
         }
-      case U_and:	next(); return AND;
-      case U_do:	next(); return DO;
-      case U_else:	next(); return ELSE;
-      case U_elseif:	next(); return ELSEIF;
-      case U_end:	next(); return END;
-      case U_function:	next(); return FUNCTION;
-      case U_if:	next(); return IF;
-      case U_local:	next(); return LOCAL;
-      case U_nil:	next(); return NIL;
-      case U_not:	next(); return NOT;
-      case U_or:	next(); return OR;
-      case U_repeat:	next(); return REPEAT;
-      case U_return:	next(); return RETURN;
-      case U_then:	next(); return THEN;
-      case U_until:	next(); return UNTIL;
-      case U_while:	next(); return WHILE;
+
+      case U_and: case U_do: case U_else: case U_elseif: case U_end:
+      case U_function: case U_if: case U_local: case U_nil: case U_not:
+      case U_or: case U_repeat: case U_return: case U_then:
+      case U_until: case U_while:
+      {
+        int old = current;
+        next();
+        return reserved[old-U_and].token;
+      }
+
       case U_eq:	next(); return EQ;
       case U_le:	next(); return LE;
       case U_ge:	next(); return GE;
