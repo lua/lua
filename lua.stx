@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.21 1995/10/17 11:58:41 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.22 1995/10/25 13:05:51 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -447,10 +447,10 @@ globalstat   : stat sc
 
 function     : functiontoken NAME body 	 
 	       { 
-		Word func = luaI_findsymbol($2);
-		luaI_insertfunction($3);  /* may take part in GC */
-	        s_tag(func) = LUA_T_FUNCTION;
-                lua_table[func].object.value.tf = $3;
+		code_byte(PUSHFUNCTION);
+		code_code($3);
+		code_byte(STOREGLOBAL);
+		code_word(luaI_findsymbol($2));
 		$3->lineDefined = $1;
 		$3->name1 = $2->ts.str;
 		$3->name2 = NULL;
@@ -458,23 +458,19 @@ function     : functiontoken NAME body
 	       }
 	       ;
 
-method         : functiontoken NAME ':' NAME
-	       {
-		add_localvar(luaI_findsymbolbyname("self"));
-	       }
-	       body
+method         : functiontoken NAME methkind NAME body
 	       {
 	        /* assign function to table field */
 		lua_pushvar(luaI_findsymbol($2)+1);
                 code_byte(PUSHSTRING);
 		code_word(luaI_findconstant($4));
                 code_byte(PUSHFUNCTION);
-                code_code($6);
+                code_code($5);
                 code_byte(STOREINDEXED0);
-		$6->lineDefined = $1;
-		$6->name1 = $4->ts.str;
-		$6->name2 = $2->ts.str;
-		$6->fileName = lua_parsedfile;
+		$5->lineDefined = $1;
+		$5->name1 = $4->ts.str;
+		$5->name2 = $2->ts.str;
+		$5->fileName = lua_parsedfile;
 	       }
 	       ;
 
@@ -492,6 +488,10 @@ functiontoken	: FUNCTION
 	 $$ = lua_linenumber;
 	}
 	        ;
+
+methkind	: ':'  { add_localvar(luaI_findsymbolbyname("self")); }
+		| '.'  /* no self */
+		;
 
 body :  '(' parlist ')' block END
 	{
@@ -581,10 +581,7 @@ PrepJump : /* empty */
 	  code_word (0);
          }
 	   
-expr1	 : expr
-	{
-	  adjust_functioncall($1, 1);
-	}
+expr1	 : expr { adjust_functioncall($1, 1); }
 	 ;
 				
 expr :  '(' expr ')'  { $$ = $2; }
