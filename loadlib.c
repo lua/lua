@@ -1,11 +1,11 @@
 /*
-** $Id: loadlib.c,v 1.20 2005/03/08 20:10:05 roberto Exp roberto $
+** $Id: loadlib.c,v 1.21 2005/03/09 16:28:07 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
-*
-* This module contains an implementation of loadlib for Unix systems
-* that have dlfcn, an implementation for Darwin (Mac OS X), an
-* implementation for Windows, and a stub for other systems.
+**
+** This module contains an implementation of loadlib for Unix systems
+** that have dlfcn, an implementation for Darwin (Mac OS X), an
+** implementation for Windows, and a stub for other systems.
 */
 
 
@@ -19,6 +19,17 @@
 #include "lua.h"
 #include "lauxlib.h"
 #include "lualib.h"
+
+
+/* environment variables that hold the search path for packages */
+#define LUA_PATH	"LUA_PATH"
+#define LUA_CPATH	"LUA_CPATH"
+
+/* prefix for open functions in C libraries */
+#define LUA_POF		"luaopen_"
+
+/* separator for open functions in C libraries */
+#define LUA_OFSEP	"_"
 
 
 #define LIBPREFIX	"LOADLIB: "
