@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.15 1996/01/22 17:38:57 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.16 1996/01/26 12:11:28 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -29,12 +29,20 @@ char *lua_check_string (int numArg, char *funcname)
   return lua_getstring(o);
 }
 
-float lua_check_number (int numArg, char *funcname)
+double lua_check_number (int numArg, char *funcname)
 {
   lua_Object o = lua_getparam(numArg);
-  if (!lua_isnumber(o))
-    lua_arg_error(funcname);
-  return lua_getnumber(o);
+  if (lua_isnumber(o))
+    return lua_getnumber(o);
+  else if (lua_isstring(o))
+  {
+    float t;
+    char c;
+    if (sscanf(lua_getstring(o), "%f %c",&t, &c) == 1)
+      return t;
+  }
+  lua_arg_error(funcname);
+  return 0;  /* to avoid warnings */
 }
 
 char *luaI_addchar (int c)
@@ -171,7 +179,7 @@ static void str_ascii (void)
 #define MAX_CONVERTION 2000
 #define MAX_FORMAT 50
 
-static void io_format (void)
+static void str_format (void)
 {
   int arg = 1;
   char *strfrmt = lua_check_string(arg++, "format");
@@ -244,5 +252,5 @@ void strlib_open (void)
  lua_register ("strlower", str_lower);
  lua_register ("strupper", str_upper);
  lua_register ("ascii", str_ascii);
- lua_register ("format",    io_format);
+ lua_register ("format",    str_format);
 }
