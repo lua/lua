@@ -1,5 +1,8 @@
-char *rcs_lex = "$Id: lex.c,v 2.4 1994/09/05 19:14:40 celes Exp lhf $";
+char *rcs_lex = "$Id: lex.c,v 2.5 1994/09/22 12:44:00 lhf Exp celes $";
 /*$Log: lex.c,v $
+ * Revision 2.5  1994/09/22  12:44:00  lhf
+ * added support for ugly tokens
+ *
  * Revision 2.4  1994/09/05  19:14:40  celes
  * escapes \' e \" em strings; correcao do escape \\
  *
@@ -27,13 +30,12 @@ char *rcs_lex = "$Id: lex.c,v 2.4 1994/09/05 19:14:40 celes Exp lhf $";
 
 #include <ctype.h>
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "opcode.h"
-#include "hash.h"
 #include "inout.h"
-#include "table.h"
 #include "y.tab.h"
 
 #define lua_strcmp(a,b)	(a[0]<b[0]?(-1):(a[0]>b[0]?(1):strcmp(a,b)))
@@ -137,6 +139,9 @@ int yylex ()
   while (1)
   {
     yytextLast = yytext[currentText];
+#if 0
+    fprintf(stderr,"'%c' %d\n",current,current);
+#endif
     switch (current)
     {
       case '\n': lua_linenumber++;
@@ -167,6 +172,11 @@ int yylex ()
         if (current != '-') return '-';
         do { next(); } while (current != '\n' && current != 0);
         continue;
+
+      case '=':
+        save_and_next();
+        if (current != '=') return '=';
+        else { save_and_next(); return EQ; }
 
       case '<':
         save_and_next();
@@ -213,7 +223,7 @@ int yylex ()
         }
         next();  /* skip the delimiter */
         *yytextLast = 0;
-        yylval.vWord = lua_findconstant (yytext[currentText]);
+        yylval.pChar = yytext[currentText];
         return STRING;
       }
 
@@ -268,26 +278,26 @@ fraction: while (isdigit(current)) save_and_next();
         yylval.vFloat = atof(yytext[currentText]);
         return NUMBER;
 
-      case U_and:	return AND;
-      case U_do:	return DO;
-      case U_else:	return ELSE;
-      case U_elseif:	return ELSEIF;
-      case U_end:	return END;
-      case U_function:	return FUNCTION;
-      case U_if:	return IF;
-      case U_local:	return LOCAL;
-      case U_nil:	return NIL;
-      case U_not:	return NOT;
-      case U_or:	return OR;
-      case U_repeat:	return REPEAT;
-      case U_return:	return RETURN;
-      case U_then:	return THEN;
-      case U_until:	return UNTIL;
-      case U_while:	return WHILE;
-      case U_le:	return LE;
-      case U_ge:	return GE;
-      case U_ne:	return NE;
-      case U_sc:	return CONC;
+      case U_and:	next(); return AND;
+      case U_do:	next(); return DO;
+      case U_else:	next(); return ELSE;
+      case U_elseif:	next(); return ELSEIF;
+      case U_end:	next(); return END;
+      case U_function:	next(); return FUNCTION;
+      case U_if:	next(); return IF;
+      case U_local:	next(); return LOCAL;
+      case U_nil:	next(); return NIL;
+      case U_not:	next(); return NOT;
+      case U_or:	next(); return OR;
+      case U_repeat:	next(); return REPEAT;
+      case U_return:	next(); return RETURN;
+      case U_then:	next(); return THEN;
+      case U_until:	next(); return UNTIL;
+      case U_while:	next(); return WHILE;
+      case U_le:	next(); return LE;
+      case U_ge:	next(); return GE;
+      case U_ne:	next(); return NE;
+      case U_sc:	next(); return CONC;
 
       default: 		/* also end of file */
       {
