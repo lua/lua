@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.92 1997/04/02 22:52:42 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.93 1997/04/02 23:04:12 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -412,9 +412,9 @@ static void getglobal (Word n)
 */
 void lua_travstack (int (*fn)(TObject *))
 {
- TObject *o;
- for (o = top-1; o >= stack; o--)
-   fn (o);
+  StkId i;
+  for (i = (top-1)-stack; i>=0; i--)
+    fn (stack+i);
 }
 
 
@@ -671,7 +671,7 @@ void lua_setintmethod (int tag, char *event, lua_CFunction method)
     lua_pushcfunction (method);
   else
     lua_pushnil();
-  do_unprotectedrun(luaI_setintmethod, 3, 0);
+  do_unprotectedrun(luaI_setintmethod, 3, 1);
 }
 
 void lua_seterrormethod (lua_CFunction method)
