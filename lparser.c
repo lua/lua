@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.109 2000/08/15 13:18:28 roberto Exp roberto $
+** $Id: lparser.c,v 1.110 2000/08/22 17:44:17 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -877,10 +877,9 @@ static void forlist (LexState *ls, TString *indexname) {
   next(ls);  /* skip `in' */
   exp1(ls);  /* table */
   new_localvarstr(ls, "*table*", 0);
-  new_localvarstr(ls, "*counter*", 1);
-  new_localvar(ls, indexname, 2);
-  new_localvar(ls, valname, 3);
-  forbody(ls, 4, OP_LFORPREP, OP_LFORLOOP);
+  new_localvar(ls, indexname, 1);
+  new_localvar(ls, valname, 2);
+  forbody(ls, 3, OP_LFORPREP, OP_LFORLOOP);
 }
 
 

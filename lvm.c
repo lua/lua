@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.130 2000/08/29 14:41:56 roberto Exp roberto $
+** $Id: lvm.c,v 1.131 2000/08/29 14:48:16 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -656,34 +656,30 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
       }
       case OP_LFORPREP: {
+        Node *node;
         if (ttype(top-1) != TAG_TABLE)
           lua_error(L, "`for' table must be a table");
-        top++;  /* counter */
-        L->top = top;
-        ttype(top-1) = TAG_NUMBER;
-        nvalue(top-1) = (Number)luaA_next(L, hvalue(top-2), 0);  /* counter */
-        if (nvalue(top-1) == 0) {  /* `empty' loop? */
-          top -= 2;  /* remove table and counter */
+        node = luaH_next(L, hvalue(top-1), &luaO_nilobject);
+        if (node == NULL) {  /* `empty' loop? */
+          top--;  /* remove table */
           pc += GETARG_S(i)+1;  /* jump to loop end */
         }
         else {
           top += 2;  /* index,value */
-          LUA_ASSERT(top==L->top, "bad top");
+          *(top-2) = *key(node);
+          *(top-1) = *val(node);
         }
         break;
       }
       case OP_LFORLOOP: {
-        int n;
-        top -= 2;  /* remove old index,value */
-        LUA_ASSERT(ttype(top-2) == TAG_TABLE, "invalid table");
-        LUA_ASSERT(ttype(top-1) == TAG_NUMBER, "invalid counter");
-        L->top = top;
-        n = luaA_next(L, hvalue(top-2), (int)nvalue(top-1));
-        if (n == 0)  /* end loop? */
-          top -= 2;  /* remove table and counter */
+        Node *node;
+        LUA_ASSERT(ttype(top-3) == TAG_TABLE, "invalid table");
+        node = luaH_next(L, hvalue(top-3), top-2);
+        if (node == NULL)  /* end loop? */
+          top -= 3;  /* remove table, key, and value */
         else {
-          nvalue(top-1) = (Number)n;
-          top += 2;  /* new index,value */
+          *(top-2) = *key(node);
+          *(top-1) = *val(node);
           pc += GETARG_S(i);  /* repeat loop */
         }
         break;

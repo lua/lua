@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.61 2000/08/29 14:33:31 roberto Exp roberto $
+** $Id: lua.h,v 1.62 2000/08/29 20:43:28 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -29,6 +29,7 @@
 #define LUA_REFNIL	(-1)
 
 #define LUA_ANYTAG	(-1)
+#define LUA_NOTAG	(-2)
 
 #define LUA_MULTRET	(-1)
 
@@ -129,7 +130,7 @@ int            lua_dobuffer (lua_State *L, const char *buff, size_t size,
 
 
 /*
-** miscelaneous functions
+** miscellaneous functions
 */
 int            lua_newtag (lua_State *L);
 int            lua_copytagmethods (lua_State *L, int tagto, int tagfrom);
@@ -141,7 +142,7 @@ void	       lua_unref (lua_State *L, int ref);
 
 long	       lua_collectgarbage (lua_State *L, long limit);
 
-int            lua_next (lua_State *L, int index, int i);
+int            lua_next (lua_State *L);
 
 
 

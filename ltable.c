@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.52 2000/08/07 20:21:34 roberto Exp roberto $
+** $Id: ltable.c,v 1.53 2000/08/09 19:16:57 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -114,11 +114,25 @@ const TObject *luaH_get (lua_State *L, const Hash *t, const TObject *key) {
 }
 
 
-int luaH_pos (lua_State *L, const Hash *t, const TObject *key) {
-  const TObject *v = luaH_get(L, t, key);
-  return (v == &luaO_nilobject) ?  -1 :  /* key not found */
-      (int)(((const char *)v - (const char *)(&t->node[0].val))/sizeof(Node));
+Node *luaH_next (lua_State *L, const Hash *t, const TObject *key) {
+  int i;
+  if (ttype(key) == TAG_NIL)
+    i = 0;  /* first iteration */
+  else {
+    const TObject *v = luaH_get(L, t, key);
+    if (v == &luaO_nilobject)
+      lua_error(L, "invalid key for `next'");
+    i = (int)(((const char *)v -
+               (const char *)(&t->node[0].val)) / sizeof(Node)) + 1;
+  }
+  for (; i<t->size; i++) {
+    Node *n = node(t, i);
+    if (ttype(val(n)) != TAG_NIL)
+      return n;
+  }
+  return NULL;  /* no more elements */
 }
+
 
 /*
 ** try to remove a key without value from a table. To avoid problems with

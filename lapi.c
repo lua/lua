@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.89 2000/08/29 14:52:27 roberto Exp roberto $
+** $Id: lapi.c,v 1.90 2000/08/29 20:43:28 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -327,7 +327,7 @@ int lua_ref (lua_State *L,  int lock) {
 
 
 /*
-** miscelaneous functions
+** miscellaneous functions
 */
 
 
@@ -359,24 +359,21 @@ void lua_unref (lua_State *L, int ref) {
 }
 
 
-int luaA_next (lua_State *L, const Hash *t, int i) {
-  int tsize = t->size;
-  for (; i<tsize; i++) {
-    Node *n = node(t, i);
-    if (ttype(val(n)) != TAG_NIL) {
-      luaA_pushobject(L, key(n));
-      luaA_pushobject(L, val(n));
-      return i+1;  /* index to be used next time */
-    }
-  }
-  return 0;  /* no more elements */
-}
-
-
-int lua_next (lua_State *L, int index, int i) {
-  const TObject *t = Index(L, index);
+int lua_next (lua_State *L) {
+  const TObject *t = Index(L, -2);
+  Node *n;
   if (ttype(t) != TAG_TABLE)
     lua_error(L, "Lua API error - object is not a table in `lua_next'"); 
-  return luaA_next(L, hvalue(t), i);
+  n = luaH_next(L, hvalue(t), Index(L, -1));
+  if (n) {
+    *(L->top-1) = *key(n);
+    *L->top = *val(n);
+    api_incr_top(L);
+    return 1;
+  }
+  else {  /* no more elements */
+    L->top -= 2;  /* remove key and table */
+    return 0;
+  }
 }
 

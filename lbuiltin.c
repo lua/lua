@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.123 2000/08/29 14:33:31 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.124 2000/08/29 14:41:56 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -267,6 +267,18 @@ int luaB_type (lua_State *L) {
   return 1;
 }
 
+
+int luaB_next (lua_State *L) {
+  luaL_checktype(L, 1, "table");
+  lua_settop(L, 2);  /* create a 2nd argument if there isn't one */
+  if (lua_next(L))
+    return 2;
+  else {
+    lua_pushnil(L);
+    return 1;
+  }
+}
+
 /* }====================================================== */
 
 
@@ -354,23 +366,6 @@ int luaB_call (lua_State *L) {
   }
 }
 
-
-int luaB_next (lua_State *L) {
-  const Hash *a = gettable(L, 1);
-  int i;  /* `luaA_next' gets first element after `i' */
-  if (lua_isnull(L, 2) || lua_isnil(L, 2))  /* no index or nil index? */
-    i = 0;  /* get first */
-  else {
-    i = luaH_pos(L, a, luaA_index(L, 2))+1;
-    luaL_arg_check(L, i != 0, 2, "key not found");
-  }
-  if (luaA_next(L, a, i) != 0)
-    return 2;  /* `luaA_next' left them on the stack */
-  else {
-    lua_pushnil(L);
-    return 1;
-  }
-}
 
 
 int luaB_tostring (lua_State *L) {
