@@ -2,7 +2,7 @@
 ** LUA - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
-** $Id: lua.h,v 4.5 1997/06/06 20:54:40 roberto Exp roberto $
+** $Id: lua.h,v 4.6 1997/06/09 17:28:14 roberto Exp roberto $
 */
 
 
@@ -21,8 +21,8 @@
 typedef void (*lua_CFunction) (void);
 typedef unsigned int lua_Object;
 
-void           lua_settagmethod	(int tag, char *event, lua_CFunction method);
-void           lua_gettagmethod	(int tag, char *event);  /* out: method */
+lua_Object     lua_settagmethod	(int tag, char *event, lua_CFunction method);
+lua_Object     lua_gettagmethod	(int tag, char *event);
 void           lua_seterrormethod (lua_CFunction method);
 
 int            lua_newtag		(void);
@@ -80,9 +80,6 @@ lua_Object     lua_getref		(int ref);
 void	       lua_unref		(int ref);
 
 lua_Object     lua_createtable		(void);
-
-lua_Object     lua_getudata		(void *u, int tag);
-
 
 long	       lua_collectgarbage	(long limit);
 

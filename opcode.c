@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 4.6 1997/06/06 20:54:40 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 4.7 1997/06/09 17:28:14 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -552,13 +552,14 @@ static void do_callinc (int nResults)
   CLS_current.base = base + CLS_current.num;  /* incorporate results on stack */
 }
 
+
 static void do_unprotectedrun (lua_CFunction f, int nParams, int nResults)
 {
-  adjustC(nParams);
-  open_stack((top-stack)-CLS_current.base);
-  stack[CLS_current.base].ttype = LUA_T_CFUNCTION;
-  stack[CLS_current.base].value.f = f;
-  do_callinc(nResults);
+  StkId base = (top-stack)-nParams;
+  open_stack(nParams);
+  stack[base].ttype = LUA_T_CFUNCTION;
+  stack[base].value.f = f;
+  do_call(base+1, nResults);
 }
 
 
@@ -687,17 +688,18 @@ lua_Object lua_setfallback (char *name, lua_CFunction fallback)
   lua_pushstring(name);
   lua_pushcfunction(fallback);
   do_unprotectedrun(luaI_setfallback, 2, 1);
-  return (Ref(top-1));
+  return put_luaObjectonTop();
 }
 
-void lua_gettagmethod (int tag, char *event)
+lua_Object lua_gettagmethod (int tag, char *event)
 {
   lua_pushnumber(tag);
   lua_pushstring(event);
   do_unprotectedrun(luaI_gettagmethod, 2, 1);
+  return put_luaObjectonTop();
 }
 
-void lua_settagmethod (int tag, char *event, lua_CFunction method)
+lua_Object lua_settagmethod (int tag, char *event, lua_CFunction method)
 {
   lua_pushnumber(tag);
   lua_pushstring(event);
@@ -706,11 +708,12 @@ void lua_settagmethod (int tag, char *event, lua_CFunction method)
   else
     lua_pushnil();
   do_unprotectedrun(luaI_settagmethod, 3, 1);
+  return put_luaObjectonTop();
 }
 
 void lua_seterrormethod (lua_CFunction method)
 {
-  lua_pushcfunction (method);
+  lua_pushcfunction(method);
   do_unprotectedrun(luaI_seterrormethod, 1, 0);
 }
 
@@ -992,7 +995,8 @@ void lua_pushcfunction (lua_CFunction fn)
 
 void lua_pushusertag (void *u, int tag)
 {
-  if (tag < 0) luaI_realtag(tag);  /* error if tag is not valid */
+  if (tag < 0 && tag != LUA_ANYTAG)
+    luaI_realtag(tag);  /* error if tag is not valid */
   tsvalue(top) = luaI_createudata(u, tag);
   ttype(top) = LUA_T_USERDATA;
   incr_top;
