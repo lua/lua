@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.50 2000/06/30 14:35:17 roberto Exp roberto $
+** $Id: ltable.c,v 1.51 2000/08/04 19:38:35 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -127,14 +127,16 @@ int luaH_pos (lua_State *L, const Hash *t, const TObject *key) {
 ** hash, change `key' for a number with the same hash.
 */
 void luaH_remove (Hash *t, TObject *key) {
-  /* do not remove numbers */
-  if (ttype(key) != TAG_NUMBER) {
+  if (ttype(key) == TAG_NUMBER ||
+       (ttype(key) == TAG_STRING && tsvalue(key)->u.s.len <= 30))
+  return;  /* do not remove numbers nor small strings */
+  else {
     /* try to find a number `n' with the same hash as `key' */
     Node *mp = luaH_mainposition(t, key);
     int n = mp - &t->node[0];
     /* make sure `n' is not in `t' */
     while (luaH_getnum(t, n) != &luaO_nilobject) {
-      if (t->size >= MAX_INT-n)
+      if (n >= MAX_INT - t->size)
         return;  /* give up; (to avoid overflow) */
       n += t->size;
     }
@@ -165,7 +167,7 @@ Hash *luaH_new (lua_State *L, int size) {
   t->htag = TagDefault;
   t->next = L->roottable;
   L->roottable = t;
-  t->marked = 0;
+  t->mark = t;
   t->size = 0;
   L->nblocks += gcsize(L, 0);
   t->node = NULL;

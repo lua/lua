@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.69 2000/06/28 20:20:36 roberto Exp roberto $
+** $Id: lobject.h,v 1.70 2000/06/30 14:35:17 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -110,15 +110,15 @@ typedef struct TString {
 ** Function Prototypes
 */
 typedef struct Proto {
-  struct Proto *next;
-  int marked;
-  struct TString **kstr;  /* strings used by the function */
-  int nkstr;  /* size of `kstr' */
   Number *knum;  /* Number numbers used by the function */
   int nknum;  /* size of `knum' */
+  struct TString **kstr;  /* strings used by the function */
+  int nkstr;  /* size of `kstr' */
   struct Proto **kproto;  /* functions defined inside the function */
   int nkproto;  /* size of `kproto' */
   Instruction *code;  /* ends with opcode ENDCODE */
+  struct Proto *next;
+  int marked;
   int *lines;  /* source line that generated each opcode */
   int lineDefined;
   TString  *source;
@@ -139,12 +139,12 @@ typedef struct LocVar {
 ** Closures
 */
 typedef struct Closure {
-  struct Closure *next;
-  int marked;
   union {
     lua_CFunction c;  /* C functions */
     struct Proto *l;  /* Lua functions */
   } f;
+  struct Closure *next;
+  struct Closure *mark;  /* marked closures (point to itself when not marked) */
   int nupvalues;
   TObject upvalue[1];
 } Closure;
@@ -157,13 +157,19 @@ typedef struct Node {
 } Node;
 
 typedef struct Hash {
-  int htag;
   Node *node;
+  int htag;
   int size;
   Node *firstfree;  /* this position is free; all positions after it are full */
   struct Hash *next;
-  int marked;
+  struct Hash *mark;  /* marked tables (point to itself when not marked) */
 } Hash;
+
+
+/* unmarked tables and closures are represented by pointing `mark' to
+** themselves
+*/
+#define ismarked(x)	((x)->mark != (x))
 
 
 /*

@@ -1,5 +1,5 @@
 /*
-** $Id: lref.c,v 1.14 2000/06/12 13:52:05 roberto Exp roberto $
+** $Id: lref.c,v 1.15 2000/06/30 14:35:17 roberto Exp roberto $
 ** reference mechanism
 ** See Copyright Notice in lua.h
 */
@@ -81,15 +81,15 @@ void lua_endblock (lua_State *L) {
 
 
 
-static int ismarked (const TObject *o) {
+static int hasmark (const TObject *o) {
   /* valid only for locked objects */
   switch (o->ttype) {
     case TAG_STRING: case TAG_USERDATA:
       return tsvalue(o)->marked;
     case TAG_TABLE:
-      return hvalue(o)->marked;
+      return ismarked(hvalue(o));
     case TAG_LCLOSURE:  case TAG_CCLOSURE:
-      return clvalue(o)->marked;
+      return ismarked(clvalue(o)->mark);
     default:  /* number */
       return 1;
   }
@@ -104,9 +104,9 @@ void luaR_invalidaterefs (lua_State *L) {
   int i;
   for (i=0; i<n; i++) {
     struct Ref *r = &L->refArray[i];
-    if (r->st == HOLD && !ismarked(&r->o))
+    if (r->st == HOLD && !hasmark(&r->o))
       r->st = COLLECTED;
-    LUA_ASSERT((r->st == LOCK && ismarked(&r->o)) ||
+    LUA_ASSERT((r->st == LOCK && hasmark(&r->o)) ||
                 r->st == COLLECTED ||
                 r->st == NONEXT ||
                (r->st < n && VALIDLINK(L, L->refArray[r->st].st, n)),

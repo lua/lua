@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.24 2000/06/12 13:52:05 roberto Exp roberto $
+** $Id: lfunc.c,v 1.25 2000/06/26 19:28:31 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -25,7 +25,7 @@ Closure *luaF_newclosure (lua_State *L, int nelems) {
                                          (lint32)sizeof(TObject)*(nelems-1));
   c->next = L->rootcl;
   L->rootcl = c;
-  c->marked = 0;
+  c->mark = c;
   c->nupvalues = nelems;
   L->nblocks += gcsizeclosure(L, c);
   return c;

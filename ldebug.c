@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.26 2000/06/30 14:29:35 roberto Exp roberto $
+** $Id: ldebug.c,v 1.27 2000/06/30 14:35:17 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -172,25 +172,38 @@ static void lua_funcinfo (lua_Debug *ar, StkId func) {
 }
 
 
-static int checkfunc (lua_State *L, TObject *o) {
-  return luaO_equalObj(o, L->top);
+static const char *travtagmethods (lua_State *L, const TObject *o) {
+  int e;
+  for (e=0; e<IM_N; e++) {
+    int t;
+    for (t=0; t<=L->last_tag; t++)
+      if (luaO_equalObj(o, luaT_getim(L, t,e)))
+        return luaT_eventname[e];
+  }
+  return NULL;
+}
+
+
+static const char *travglobals (lua_State *L, const TObject *o) {
+  Hash *g = L->gt;
+  int i;
+  for (i=0; i<=g->size; i++) {
+    if (luaO_equalObj(o, val(node(g, i))) &&
+        ttype(key(node(g, i))) == TAG_STRING) 
+      return tsvalue(key(node(g, i)))->str;
+  }
+  return NULL;
 }
 
 
 static void lua_getobjname (lua_State *L, StkId f, lua_Debug *ar) {
-  Hash *g = L->gt;
-  int i;
+  TObject o;
+  setnormalized(&o, f);
   /* try to find a name for given function */
-  setnormalized(L->top, f); /* to be used by `checkfunc' */
-  for (i=0; i<=g->size; i++) {
-    if (ttype(key(node(g,i))) == TAG_STRING && checkfunc(L, val(node(g,i)))) {
-      ar->name = tsvalue(key(node(g,i)))->str;
-      ar->namewhat = "global";
-      return;
-    }
-  }
+  if ((ar->name = travglobals(L, &o)) != NULL)
+    ar->namewhat = "global";
   /* not found: try tag methods */
-  if ((ar->name = luaT_travtagmethods(L, checkfunc)) != NULL)
+  else if ((ar->name = travtagmethods(L, &o)) != NULL)
     ar->namewhat = "tag-method";
   else ar->namewhat = "";  /* not found at all */
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.58 2000/06/26 19:28:31 roberto Exp roberto $
+** $Id: lgc.c,v 1.59 2000/06/30 14:35:17 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -20,101 +20,133 @@
 #include "ltm.h"
 
 
+typedef struct GCState {
+  Hash *tmark;  /* list of marked tables to be visited */
+  Closure *cmark;  /* list of marked closures to be visited */
+} GCState;
 
 
-static int markobject (lua_State *L, TObject *o);
+
+static int markobject (GCState *st, TObject *o);
 
 
 /* mark a string; marks larger than 1 cannot be changed */
-#define strmark(L, s)    {if ((s)->marked == 0) (s)->marked = 1;}
+#define strmark(s)    {if ((s)->marked == 0) (s)->marked = 1;}
 
 
 
-static void protomark (lua_State *L, Proto *f) {
+static void protomark (Proto *f) {
   if (!f->marked) {
     int i;
     f->marked = 1;
-    strmark(L, f->source);
+    strmark(f->source);
     for (i=0; i<f->nkstr; i++)
-      strmark(L, f->kstr[i]);
+      strmark(f->kstr[i]);
     for (i=0; i<f->nkproto; i++)
-      protomark(L, f->kproto[i]);
+      protomark(f->kproto[i]);
     if (f->locvars) {  /* is there debug information? */
       LocVar *lv;
       for (lv=f->locvars; lv->pc != -1; lv++)  /* mark local-variable names */
-        if (lv->varname) strmark(L, lv->varname);
+        if (lv->varname) strmark(lv->varname);
     }
   }
 }
 
 
-static void closuremark (lua_State *L, Closure *f) {
-  if (!f->marked) {
-    int i = f->nupvalues;
-    f->marked = 1;
-    while (i--)
-      markobject(L, &f->upvalue[i]);
-  }
-}
-
-
-static void tablemark (lua_State *L, Hash *h) {
-  if (!h->marked) {
-    int i;
-    h->marked = 1;
-    for (i=h->size-1; i>=0; i--) {
-      Node *n = node(h,i);
-      if (ttype(key(n)) != TAG_NIL) {
-        if (ttype(val(n)) == TAG_NIL)
-          luaH_remove(h, key(n));  /* dead element; try to remove it */
-        markobject(L, &n->key);
-        markobject(L, &n->val);
-      }
-    }
-  }
-}
-
-
-static void travstack (lua_State *L) {
+static void markstack (lua_State *L, GCState *st) {
   StkId o;
   for (o=L->stack; o<L->top; o++)
-    markobject(L, o);
+    markobject(st, o);
 }
 
 
-static void travlock (lua_State *L) {
+static void marklock (lua_State *L, GCState *st) {
   int i;
   for (i=0; i<L->refSize; i++) {
     if (L->refArray[i].st == LOCK)
-      markobject(L, &L->refArray[i].o);
+      markobject(st, &L->refArray[i].o);
   }
 }
 
 
-static int markobject (lua_State *L, TObject *o) {
+static void marktagmethods (lua_State *L, GCState *st) {
+  int e;
+  for (e=0; e<IM_N; e++) {
+    int t;
+    for (t=0; t<=L->last_tag; t++)
+      markobject(st, luaT_getim(L, t,e));
+  }
+}
+
+
+static int markobject (GCState *st, TObject *o) {
   switch (ttype(o)) {
     case TAG_USERDATA:  case TAG_STRING:
-      strmark(L, tsvalue(o));
+      strmark(tsvalue(o));
       break;
-    case TAG_TABLE:
-      tablemark(L, hvalue(o));
-      break;
-    case TAG_LCLOSURE:
-      protomark(L, clvalue(o)->f.l);
-      closuremark(L, clvalue(o));
-      break;
-    case TAG_LMARK: {
-      Closure *cl = infovalue(o)->func;
-      protomark(L, cl->f.l);
-      closuremark(L, cl);
+    case TAG_TABLE: {
+      if (!ismarked(hvalue(o))) {
+        hvalue(o)->mark = st->tmark;  /* chain it in list of marked */
+        st->tmark = hvalue(o);
+      }
       break;
     }
+    case TAG_LMARK: {
+      Closure *cl = infovalue(o)->func;
+      if (!ismarked(cl)) {
+        protomark(cl->f.l);
+        cl->mark = st->cmark;  /* chain it for later traversal */
+        st->cmark = cl;
+      }
+      break;
+    }
+    case TAG_LCLOSURE:
+      protomark(clvalue(o)->f.l);
+      /* go through */
     case TAG_CCLOSURE:  case TAG_CMARK:
-      closuremark(L, clvalue(o));
+      if (!ismarked(clvalue(o))) {
+        clvalue(o)->mark = st->cmark;  /* chain it for later traversal */
+        st->cmark = clvalue(o);
+      }
       break;
     default: break;  /* numbers, etc */
   }
   return 0;
+}
+
+
+static void markall (lua_State *L) {
+  GCState st;
+  st.cmark = NULL;
+  st.tmark = L->gt;  /* put table of globals in mark list */
+  L->gt->mark = NULL;
+  marktagmethods(L, &st);  /* mark tag methods */
+  markstack(L, &st); /* mark stack objects */
+  marklock(L, &st); /* mark locked objects */
+  for (;;) {  /* mark tables and closures */
+    if (st.cmark) {
+      int i;
+      Closure *f = st.cmark;  /* get first closure from list */
+      st.cmark = f->mark;  /* remove it from list */
+      for (i=0; i<f->nupvalues; i++)  /* mark its upvalues */
+        markobject(&st, &f->upvalue[i]);
+    }
+    else if (st.tmark) {
+      int i;
+      Hash *h = st.tmark;  /* get first table from list */
+      st.tmark = h->mark;  /* remove it from list */
+      for (i=0; i<h->size; i++) {
+        Node *n = node(h, i);
+        if (ttype(key(n)) != TAG_NIL) {
+          if (ttype(val(n)) == TAG_NIL)
+            luaH_remove(h, key(n));  /* dead element; try to remove it */
+          markobject(&st, &n->key);
+          markobject(&st, &n->val);
+        }
+      }
+    }
+    else break;  /* nothing else to mark */
+  }
 }
 
 
@@ -138,8 +170,8 @@ static void collectclosure (lua_State *L) {
   Closure **p = &L->rootcl;
   Closure *next;
   while ((next = *p) != NULL) {
-    if (next->marked) {
-      next->marked = 0;
+    if (ismarked(next)) {
+      next->mark = next;  /* unmark */
       p = &next->next;
     }
     else {
@@ -154,8 +186,8 @@ static void collecttable (lua_State *L) {
   Hash **p = &L->roottable;
   Hash *next;
   while ((next = *p) != NULL) {
-    if (next->marked) {
-      next->marked = 0;
+    if (ismarked(next)) {
+      next->mark = next;  /* unmark */
       p = &next->next;
     }
     else {
@@ -253,14 +285,6 @@ static void callgcTMudata (lua_State *L) {
       udata = next;
     }
   }
-}
-
-
-static void markall (lua_State *L) {
-  luaT_travtagmethods(L, markobject);  /* mark tag methods */
-  travstack(L); /* mark stack objects */
-  tablemark(L, L->gt);  /* mark global variables */
-  travlock(L); /* mark locked objects */
 }
 
 
