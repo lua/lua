@@ -3,7 +3,7 @@
 ** load bytecodes from files
 */
 
-char* rcs_undump="$Id: undump.c,v 1.13 1996/03/12 20:00:40 lhf Exp lhf $";
+char* rcs_undump="$Id: undump.c,v 1.14 1996/03/14 17:31:15 lhf Exp $";
 
 #include <stdio.h>
 #include <string.h>
@@ -142,13 +142,14 @@ static void Unthread(Byte* code, int i, int v)
 {
  while (i!=0)
  {
-  CodeWord c;
+  Word w;
   Byte* p=code+i;
-  get_word(c,p);
-  i=c.w;
-  c.w=v;
-  p[-2]=c.m.c1;
-  p[-1]=c.m.c2;
+  Byte* c=&w;
+  get_word(w,p);
+  i=w;
+  w=v;
+  p[-2]=c[0];
+  p[-1]=c[1];
  }
 }
 
@@ -208,13 +209,9 @@ static void LoadFunction(FILE* D)
  }
  else						/* fix PUSHFUNCTION */
  {
-  CodeCode c;
-  Byte* p;
   tf->marked=LoadWord(D);
   tf->fileName=Main->fileName;
-  p=Main->code+tf->marked;
-  c.tf=tf;
-  *p++=c.m.c1; *p++=c.m.c2; *p++=c.m.c3; *p++=c.m.c4;
+  memcpy(Main->code+tf->marked,&tf,sizeof(tf));
   lastF=lastF->next=tf;
  }
  tf->code=LoadBlock(tf->size,D);
