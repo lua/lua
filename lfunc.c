@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.70 2003/11/17 19:50:05 roberto Exp roberto $
+** $Id: lfunc.c,v 1.71 2003/11/19 19:41:30 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -16,13 +16,6 @@
 #include "lmem.h"
 #include "lobject.h"
 #include "lstate.h"
-
-
-#define sizeCclosure(n)	(cast(int, sizeof(CClosure)) + \
-                         cast(int, sizeof(TObject)*((n)-1)))
-
-#define sizeLclosure(n)	(cast(int, sizeof(LClosure)) + \
-                         cast(int, sizeof(TObject *)*((n)-1)))
 
 
 
