@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.231 2003/02/24 16:54:20 roberto Exp roberto $
+** $Id: lapi.c,v 1.232 2003/02/27 12:33:07 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -56,8 +56,10 @@ static TObject *negindex (lua_State *L, int idx) {
     default: {
       TObject *func = (L->base - 1);
       idx = LUA_GLOBALSINDEX - idx;
-      api_check(L, iscfunction(func) && idx <= clvalue(func)->c.nupvalues);
-      return &clvalue(func)->c.upvalue[idx-1];
+      lua_assert(iscfunction(func));
+      return (idx <= clvalue(func)->c.nupvalues)
+                ? &clvalue(func)->c.upvalue[idx-1]
+                : NULL;
     }
   }
 }
@@ -68,8 +70,11 @@ static TObject *luaA_index (lua_State *L, int idx) {
     api_check(L, idx <= L->top - L->base);
     return L->base + idx - 1;
   }
-  else
-    return negindex(L, idx);
+  else {
+    TObject *o = negindex(L, idx);
+    api_check(L, o != NULL);
+    return o;
+  }
 }
 
 
