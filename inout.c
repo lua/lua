@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.63 1997/06/18 20:35:49 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.64 1997/06/19 18:04:34 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -150,9 +150,18 @@ static void packresults (void)
 */
 static void lua_internaldostring (void)
 {
+  lua_Object err = lua_getparam(2);
+  if (err != LUA_NOOBJECT) {  /* set new error method */
+    lua_pushobject(err);
+    err = lua_seterrormethod();
+  }
   if (lua_dostring(luaL_check_string(1)) == 0)
     if (passresults() == 0)
       lua_pushuserdata(NULL);  /* at least one result to signal no errors */
+  if (err != LUA_NOOBJECT) {  /* restore old error method */
+    lua_pushobject(err);
+    lua_seterrormethod();
+  }
 }
 
 /*
