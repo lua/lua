@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.82 2001/06/11 14:56:42 roberto Exp roberto $
+** $Id: ldebug.c,v 1.83 2001/06/15 20:36:57 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -225,8 +225,8 @@ static const l_char *travglobals (lua_State *L, const TObject *o) {
   int i;
   for (i=0; i<g->size; i++) {
     if (luaO_equalObj(o, val(node(g, i))) &&
-        ttype_key(node(g, i)) == LUA_TSTRING)
-      return getstr(tsvalue_key(node(g, i)));
+        ttype(key(node(g, i))) == LUA_TSTRING)
+      return getstr(tsvalue(key(node(g, i))));
   }
   return NULL;
 }

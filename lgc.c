@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.106 2001/06/15 20:36:57 roberto Exp roberto $
+** $Id: lgc.c,v 1.107 2001/06/21 16:41:34 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -128,8 +128,8 @@ static void traverseclosure (GCState *st, Closure *f) {
 
 static void removekey (Node *n) {
   lua_assert(ttype(val(n)) == LUA_TNIL);
-  if (ttype_key(n) != LUA_TNIL && ttype_key(n) != LUA_TNUMBER)
-    ttype_key(n) = LUA_TNONE;  /* dead key; remove it */
+  if (ttype(key(n)) != LUA_TNIL && ttype(key(n)) != LUA_TNUMBER)
+    setttype(key(n), LUA_TNONE);  /* dead key; remove it */
 }
 
 
@@ -143,14 +143,11 @@ static void traversetable (GCState *st, Hash *h) {
     if (ttype(val(n)) == LUA_TNIL)
       removekey(n);
     else {
-      lua_assert(ttype_key(n) != LUA_TNIL);
-      if (ttype_key(n) != LUA_TNUMBER && !(mode & LUA_WEAK_KEY)) {
-        TObject k;
-        setkey2obj(&k, n);
-        markobject(st, &k);
-      }
+      lua_assert(ttype(key(n)) != LUA_TNIL);
+      if (ttype(key(n)) != LUA_TNUMBER && !(mode & LUA_WEAK_KEY))
+        markobject(st, key(n));
       if (!(mode & LUA_WEAK_VALUE))
-        markobject(st, &n->val);
+        markobject(st, val(n));
     }
   }
 }
@@ -181,16 +178,16 @@ static void markall (lua_State *L) {
 }
 
 
-static int hasmark (int tt, Value *v) {
-  switch (tt) {
+static int hasmark (const TObject *o) {
+  switch (ttype(o)) {
     case LUA_TSTRING:
-      return v->ts->tsv.marked;
+      return tsvalue(o)->tsv.marked;
     case LUA_TUSERDATA:
-      return ismarkedudata(v->u);
+      return ismarkedudata(uvalue(o));
     case LUA_TTABLE:
-      return ismarked(v->h);
+      return ismarked(hvalue(o));
     case LUA_TFUNCTION:
-      return ismarked(v->cl);
+      return ismarked(clvalue(o));
     default:  /* number, nil */
       return 1;
   }
@@ -202,8 +199,7 @@ static void cleardeadnodes (Hash *h) {
   for (i=0; i<h->size; i++) {
     Node *n = node(h, i);
     if (ttype(val(n)) == LUA_TNIL) continue;  /* empty node */
-    if (!hasmark(ttype(val(n)), &(val(n)->value)) ||
-        !hasmark(ttype_key(n), &n->key_value)) {
+    if (!hasmark(val(n)) || !hasmark(key(n))) {
       setnilvalue(val(n));  /* remove value */
       removekey(n);
     }

@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.h,v 1.31 2001/01/29 17:17:26 roberto Exp roberto $
+** $Id: ltable.h,v 1.32 2001/02/02 16:32:00 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -11,15 +11,9 @@
 
 
 #define node(_t,_i)	(&(_t)->node[_i])
+#define key(_n)		(&(_n)->key)
 #define val(_n)		(&(_n)->val)
 
-#define ttype_key(_n)		((_n)->key_tt)
-#define nvalue_key(_n)		((_n)->key_value.n)
-#define tsvalue_key(_n)		((_n)->key_value.ts)
-#define setkey2obj(_o,_k) \
-  ((_o)->tt = ttype_key(_k), (_o)->value = (_k)->key_value)
-#define setobj2key(_k,_o) \
-  (ttype_key(_k) = (_o)->tt, (_k)->key_value = (_o)->value)
 
 #define luaH_get(_t,_k)		luaH_set(NULL,_t,_k)
 #define luaH_getnum(_t,_k)	luaH_setnum(NULL,_t,_k)

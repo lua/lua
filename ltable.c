@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.80 2001/06/06 18:00:19 roberto Exp roberto $
+** $Id: ltable.c,v 1.81 2001/06/15 20:36:57 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -32,9 +32,9 @@
 #define TagDefault LUA_TTABLE
 
 
-#define hashnum(t,n)		(&t->node[lmod((lu_hash)(ls_hash)(n), t->size)])
-#define hashstr(t,str)		(&t->node[lmod((str)->tsv.hash, t->size)])
-#define hashpointer(t,p)	(&t->node[lmod(IntPoint(p), t->size)])
+#define hashnum(t,n)		(node(t, lmod((lu_hash)(ls_hash)(n), t->size)))
+#define hashstr(t,str)		(node(t, lmod((str)->tsv.hash, t->size)))
+#define hashpointer(t,p)	(node(t, lmod(IntPoint(p), t->size)))
 
 
 /*
@@ -42,13 +42,13 @@
 ** of its hash value)
 */
 Node *luaH_mainposition (const Hash *t, const Node *n) {
-  switch (ttype_key(n)) {
+  switch (ttype(key(n))) {
     case LUA_TNUMBER:
-      return hashnum(t, nvalue_key(n));
+      return hashnum(t, nvalue(key(n)));
     case LUA_TSTRING:
-      return hashstr(t, tsvalue_key(n));
+      return hashstr(t, tsvalue(key(n)));
     default:  /* all other types are hashed as (void *) */
-      return hashpointer(t, tsvalue_key(n));
+      return hashpointer(t, tsvalue(key(n)));
   }
 }
 
@@ -62,7 +62,7 @@ Node *luaH_next (lua_State *L, Hash *t, const TObject *key) {
     if (v == &luaO_nilobject)
       luaD_error(L, l_s("invalid key for `next'"));
     i = (int)(((const l_char *)v -
-               (const l_char *)(&t->node[0].val)) / sizeof(Node)) + 1;
+               (const l_char *)(val(node(t, 0)))) / sizeof(Node)) + 1;
   }
   for (; i<t->size; i++) {
     Node *n = node(t, i);
@@ -103,11 +103,11 @@ static void setnodevector (lua_State *L, Hash *t, int size) {
   t->node = luaM_newvector(L, size, Node);
   for (i=0; i<size; i++) {
     t->node[i].next = NULL;
-    t->node[i].key_tt = LUA_TNIL;
-    setnilvalue(&t->node[i].val);
+    setnilvalue(key(node(t, i)));
+    setnilvalue(val(node(t, i)));
   }
   t->size = size;
-  t->firstfree = &t->node[size-1];  /* first free position to be used */
+  t->firstfree = node(t, size-1);  /* first free position to be used */
 }
 
 
@@ -161,12 +161,9 @@ static void rehash (lua_State *L, Hash *t) {
     setnodevector(L, t, oldsize);  /* just rehash; keep the same size */
   for (i=0; i<oldsize; i++) {
     Node *old = nold+i;
-    if (ttype(&old->val) != LUA_TNIL) {
-      TObject o;
-      TObject *v;
-      setkey2obj(&o, old);
-      v = luaH_set(L, t, &o);
-      setobj(v, &old->val);
+    if (ttype(val(old)) != LUA_TNIL) {
+      TObject *v = luaH_set(L, t, key(old));
+      setobj(v, val(old));
     }
   }
   luaM_freearray(L, nold, oldsize, Node);  /* free old array */
@@ -181,7 +178,7 @@ static void rehash (lua_State *L, Hash *t) {
 ** position), new key goes to an empty position. 
 */
 static TObject *newkey (lua_State *L, Hash *t, Node *mp, const TObject *key) {
-  if (ttype(&mp->val) != LUA_TNIL) {  /* main position is not free? */
+  if (ttype(val(mp)) != LUA_TNIL) {  /* main position is not free? */
     Node *othern = luaH_mainposition(t, mp);  /* `mp' of colliding node */
     Node *n = t->firstfree;  /* get a free place */
     if (othern != mp) {  /* is colliding node out of its main position? */
@@ -190,7 +187,7 @@ static TObject *newkey (lua_State *L, Hash *t, Node *mp, const TObject *key) {
       othern->next = n;  /* redo the chain with `n' in place of `mp' */
       *n = *mp;  /* copy colliding node into free pos. (mp->next also goes) */
       mp->next = NULL;  /* now `mp' is free */
-      setnilvalue(&mp->val);
+      setnilvalue(val(mp));
     }
     else {  /* colliding node is in its own main position */
       /* new node will go into free position */
@@ -199,11 +196,11 @@ static TObject *newkey (lua_State *L, Hash *t, Node *mp, const TObject *key) {
       mp = n;
     }
   }
-  setobj2key(mp, key);
-  lua_assert(ttype(&mp->val) == LUA_TNIL);
+  setobj(key(mp), key);
+  lua_assert(ttype(val(mp)) == LUA_TNIL);
   for (;;) {  /* correct `firstfree' */
-    if (ttype_key(t->firstfree) == LUA_TNIL)
-      return &mp->val;  /* OK; table still has a free place */
+    if (ttype(key(t->firstfree)) == LUA_TNIL)
+      return val(mp);  /* OK; table still has a free place */
     else if (t->firstfree == t->node) break;  /* cannot decrement from here */
     else (t->firstfree)--;
   }
@@ -220,8 +217,8 @@ TObject *luaH_setnum (lua_State *L, Hash *t, lua_Number key) {
   Node *mp = hashnum(t, key);
   Node *n = mp;
   do {  /* check whether `key' is somewhere in the chain */
-    if (ttype_key(n) == LUA_TNUMBER && nvalue_key(n) == key)
-      return &n->val;  /* that's all */
+    if (ttype(key(n)) == LUA_TNUMBER && nvalue(key(n)) == key)
+      return val(n);  /* that's all */
     else n = n->next;
   } while (n);
   if (L == NULL) return (TObject *)&luaO_nilobject;  /* get option */
@@ -239,8 +236,8 @@ TObject *luaH_setstr (lua_State *L, Hash *t, TString *key) {
   Node *mp = hashstr(t, key);
   Node *n = mp;
   do {  /* check whether `key' is somewhere in the chain */
-    if (ttype_key(n) == LUA_TSTRING && tsvalue_key(n) == key)
-      return &n->val;  /* that's all */
+    if (ttype(key(n)) == LUA_TSTRING && tsvalue(key(n)) == key)
+      return val(n);  /* that's all */
     else n = n->next;
   } while (n);
   if (L == NULL) return (TObject *)&luaO_nilobject;  /* get option */
@@ -258,8 +255,8 @@ static TObject *luaH_setany (lua_State *L, Hash *t, const TObject *key) {
   Node *n = mp;
   do {  /* check whether `key' is somewhere in the chain */
     /* compare as `tsvalue', but may be other pointers (it is the same) */
-    if (ttype_key(n) == ttype(key) && tsvalue_key(n) == tsvalue(key))
-      return &n->val;  /* that's all */
+    if (ttype(key(n)) == ttype(key) && tsvalue(key(n)) == tsvalue(key))
+      return val(n);  /* that's all */
     else n = n->next;
   } while (n);
   if (L == NULL) return (TObject *)&luaO_nilobject;  /* get option */

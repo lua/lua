@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.186 2001/06/15 20:36:57 roberto Exp roberto $
+** $Id: lvm.c,v 1.187 2001/06/20 17:22:46 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -41,7 +41,7 @@ static void luaV_checkGC (lua_State *L, StkId top) {
 const TObject *luaV_tonumber (const TObject *obj, TObject *n) {
   if (ttype(obj) == LUA_TNUMBER) return obj;
   if (ttype(obj) == LUA_TSTRING && luaO_str2d(svalue(obj), &nvalue(n))) {
-    ttype(n) = LUA_TNUMBER;
+    setttype(n, LUA_TNUMBER);
     return n;
   }
   else
@@ -617,7 +617,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         if (n != -1) {  /* repeat loop? */
           Node *node = node(t, n);
           setnvalue(ra+1, n);  /* index */
-          setkey2obj(ra+2, node);
+          setobj(ra+2, key(node));
           setobj(ra+3, val(node));
           dojump(pc, i);  /* repeat loop */
         }

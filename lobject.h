@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.105 2001/06/07 15:01:21 roberto Exp roberto $
+** $Id: lobject.h,v 1.106 2001/06/15 20:36:57 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -72,6 +72,9 @@ typedef struct lua_TObject {
 #define setobj(obj1,obj2) \
   { TObject *o1=(obj1); const TObject *o2=(obj2); \
     o1->tt=o2->tt; o1->value = o2->value; }
+
+#define setttype(obj, tt) (ttype(obj) = (tt))
+
 
 
 typedef TObject *StkId;  /* index to stack elements */
@@ -167,8 +170,7 @@ typedef struct Closure {
 
 typedef struct Node {
   struct Node *next;  /* for chaining */
-  int key_tt;  /* (break object to save padding space) */
-  Value key_value;
+  TObject key;
   TObject val;
 } Node;
 

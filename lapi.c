@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.145 2001/06/15 19:16:41 roberto Exp roberto $
+** $Id: lapi.c,v 1.146 2001/06/15 20:36:57 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -672,7 +672,7 @@ LUA_API int lua_next (lua_State *L, int index) {
   api_check(L, ttype(t) == LUA_TTABLE);
   n = luaH_next(L, hvalue(t), luaA_index(L, -1));
   if (n) {
-    setkey2obj(L->top-1, n);
+    setobj(L->top-1, key(n));
     setobj(L->top, val(n));
     api_incr_top(L);
     more = 1;
@@ -701,10 +701,10 @@ LUA_API int lua_getn (lua_State *L, int index) {
     int i = hvalue(t)->size;
     Node *nd = hvalue(t)->node;
     while (i--) {
-      if (ttype_key(nd) == LUA_TNUMBER &&
+      if (ttype(key(nd)) == LUA_TNUMBER &&
           ttype(val(nd)) != LUA_TNIL &&
-          nvalue_key(nd) > max)
-        max = nvalue_key(nd);
+          nvalue(key(nd)) > max)
+        max = nvalue(key(nd));
       nd++;
     }
     n = (int)max;
