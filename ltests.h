@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: ltests.h,v 1.1 2001/02/02 15:12:25 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -7,8 +7,6 @@
 #ifndef ltests_h
 #define ltests_h
 
-
-#include "llimits.h"
 
 
 #define LUA_DEBUG
@@ -23,10 +21,10 @@
 
 
 /* memory allocator control variables */
-extern mem_int memdebug_numblocks;
-extern mem_int memdebug_total;
-extern mem_int memdebug_maxmem;
-extern mem_int memdebug_memlimit;
+extern unsigned long memdebug_numblocks;
+extern unsigned long memdebug_total;
+extern unsigned long memdebug_maxmem;
+extern unsigned long memdebug_memlimit;
 
 
 /* test for lock/unlock */

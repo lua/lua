@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.43 2001/01/19 13:20:30 roberto Exp roberto $
+** $Id: lmem.c,v 1.44 2001/01/24 15:45:33 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -42,10 +42,10 @@
 
 #define blocksize(b)	((size_t *)((char *)(b) - HEADER))
 
-mem_int memdebug_numblocks = 0;
-mem_int memdebug_total = 0;
-mem_int memdebug_maxmem = 0;
-mem_int memdebug_memlimit = LONG_MAX;
+unsigned long memdebug_numblocks = 0;
+unsigned long memdebug_total = 0;
+unsigned long memdebug_maxmem = 0;
+unsigned long memdebug_memlimit = ULONG_MAX;
 
 
 static void *checkblock (void *block) {
