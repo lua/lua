@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.55 1999/12/02 16:24:45 roberto Exp roberto $
+** $Id: ldo.c,v 1.56 1999/12/02 16:41:29 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -28,23 +28,19 @@
 #include "lzio.h"
 
 
-
-#ifndef DEFAULT_STACK_SIZE
-#define DEFAULT_STACK_SIZE      1024
-#endif
-
 #define EXTRA_STACK	32	/* space to handle stack overflow errors */
 
 /*
-** typical numer of recursive calls that fit in the stack
-** (only for error messages)
+** typical numer of stack slots used by a (big) function
+** (this constant is used only for choosing error messages)
 */
-#define REC_DEEP	(DEFAULT_STACK_SIZE/20)
+#define SLOTS_PER_F	20
 
 
-void luaD_init (lua_State *L) {
-  L->stack = luaM_newvector(L, DEFAULT_STACK_SIZE+EXTRA_STACK, TObject);
-  L->stack_last = L->stack+(DEFAULT_STACK_SIZE-1);
+void luaD_init (lua_State *L, int stacksize) {
+  L->stack = luaM_newvector(L, stacksize+EXTRA_STACK, TObject);
+  L->stack_last = L->stack+(stacksize-1);
+  L->stacksize = stacksize;
   L->Cstack.base = L->Cstack.lua2C = L->top = L->stack;
   L->Cstack.num = 0;
 }
@@ -52,15 +48,15 @@ void luaD_init (lua_State *L) {
 
 void luaD_checkstack (lua_State *L, int n) {
   if (L->stack_last-L->top <= n) {  /* stack overflow? */
-    if (L->stack_last-L->stack > (DEFAULT_STACK_SIZE-1)) {
+    if (L->stack_last-L->stack > (L->stacksize-1)) {
       /* overflow while handling overflow: do what?? */
       L->top -= EXTRA_STACK;
       lua_error(L, "BAD STACK OVERFLOW! DATA CORRUPTED!!");
     }
     else {
       L->stack_last += EXTRA_STACK;  /* to be used by error message */
-      if (lua_stackedfunction(L, REC_DEEP) == LUA_NOOBJECT) {
-        /* less than REC_DEEP funcs on stack: doesn't look like a rec. loop */
+      if (lua_stackedfunction(L, L->stacksize/SLOTS_PER_F) == LUA_NOOBJECT) {
+        /* too few funcs on stack: doesn't look like a rec. loop */
         lua_error(L, "Lua2C - C2Lua overflow");
       }
       else
@@ -71,8 +67,8 @@ void luaD_checkstack (lua_State *L, int n) {
 
 
 static void restore_stack_limit (lua_State *L) {
-  if (L->top-L->stack < DEFAULT_STACK_SIZE-1)
-    L->stack_last = L->stack+(DEFAULT_STACK_SIZE-1);
+  if (L->top-L->stack < L->stacksize-1)
+    L->stack_last = L->stack+(L->stacksize-1);
 }
 
 
@@ -145,7 +141,7 @@ static StkId callC (lua_State *L, lua_CFunction f, StkId base) {
   if (L->callhook)
     luaD_callHook(L, base, NULL, 0);
   (*f)(L);  /* do the actual call */
-  if (L->callhook)  /* test again: `func' may have changed callhook */
+  if (L->callhook)  /* test again: `func' may change callhook */
     luaD_callHook(L, base, NULL, 1);
   firstResult = L->Cstack.base;
   L->Cstack = oldCLS;
@@ -201,7 +197,7 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
                        luaV_execute(L, c, tfvalue(proto), func+1);
       break;
     }
-    default: { /* func is not a function */
+    default: { /* `func' is not a function */
       /* Check the tag method for invalid functions */
       const TObject *im = luaT_getimbyObj(L, func, IM_FUNCTION);
       if (ttype(im) == LUA_T_NIL)
@@ -251,13 +247,12 @@ void lua_error (lua_State *L, const char *s) {
 ** parameters are on top of it. Leave nResults on the stack.
 */
 int luaD_protectedrun (lua_State *L) {
-  volatile struct C_Lua_Stack oldCLS = L->Cstack;
   struct lua_longjmp myErrorJmp;
+  volatile StkId base = L->Cstack.base;
   volatile int status;
   struct lua_longjmp *volatile oldErr = L->errorJmp;
   L->errorJmp = &myErrorJmp;
   if (setjmp(myErrorJmp.b) == 0) {
-    StkId base = L->Cstack.base;
     luaD_call(L, base, MULT_RET);
     L->Cstack.lua2C = base;  /* position of the new results */
     L->Cstack.num = L->top - base;
@@ -265,8 +260,8 @@ int luaD_protectedrun (lua_State *L) {
     status = 0;
   }
   else {  /* an error occurred: restore the stack */
-    L->Cstack = oldCLS;
-    L->top = L->Cstack.base;
+    L->Cstack.num = 0;  /* no results */
+    L->top = L->Cstack.base = L->Cstack.lua2C = base;
     restore_stack_limit(L);
     status = 1;
   }
@@ -279,29 +274,29 @@ int luaD_protectedrun (lua_State *L) {
 ** returns 0 = chunk loaded; 1 = error; 2 = no more chunks to load
 */
 static int protectedparser (lua_State *L, ZIO *z, int bin) {
-  volatile struct C_Lua_Stack oldCLS = L->Cstack;
   struct lua_longjmp myErrorJmp;
+  volatile StkId base = L->Cstack.base;
   volatile int status;
   TProtoFunc *volatile tf;
   struct lua_longjmp *volatile oldErr = L->errorJmp;
   L->errorJmp = &myErrorJmp;
+  L->top = base;   /* erase C2Lua */
   if (setjmp(myErrorJmp.b) == 0) {
     tf = bin ? luaU_undump1(L, z) : luaY_parser(L, z);
     status = 0;
   }
-  else {  /* an error occurred: restore L->Cstack and L->top */
-    L->Cstack = oldCLS;
-    L->top = L->Cstack.base;
+  else {  /* an error occurred: restore Cstack and top */
+    L->Cstack.num = 0;  /* no results */
+    L->top = L->Cstack.base = L->Cstack.lua2C = base;
     tf = NULL;
     status = 1;
   }
   L->errorJmp = oldErr;
   if (status) return 1;  /* error code */
   if (tf == NULL) return 2;  /* `natural' end */
-  luaD_adjusttop(L, L->Cstack.base, 1);  /* one slot for the pseudo-function */
-  L->Cstack.base->ttype = LUA_T_PROTO;
-  L->Cstack.base->value.tf = tf;
-  luaV_closure(L, 0);
+  L->top->ttype = LUA_T_PROTO;  /* push new function on the stack */
+  L->top->value.tf = tf;
+  incr_top;
   return 0;
 }
 
@@ -313,7 +308,7 @@ static int do_main (lua_State *L, ZIO *z, int bin) {
     long old_blocks = (luaC_checkGC(L), L->nblocks);
     status = protectedparser(L, z, bin);
     if (status == 1) return 1;  /* error */
-    else if (status == 2) return 0;  /* 'natural' end */
+    else if (status == 2) return 0;  /* `natural' end */
     else {
       unsigned long newelems2 = 2*(L->nblocks-old_blocks);
       L->GCthreshold += newelems2;
