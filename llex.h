@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.17 2000/01/25 18:44:21 roberto Exp roberto $
+** $Id: llex.h,v 1.18 2000/02/08 16:34:31 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -11,7 +11,7 @@
 #include "lzio.h"
 
 
-#define FIRST_RESERVED	260
+#define FIRST_RESERVED	257
 
 /* maximum length of a reserved word (+1 for final 0) */
 #define TOKEN_LEN	15
@@ -30,7 +30,8 @@ enum RESERVED {
   NAME, CONC, DOTS, EQ, GE, LE, NE, NUMBER, STRING, EOS
 };
 
-#define NUM_RESERVED	(WHILE-FIRST_RESERVED+1)  /* number of reserved words */
+/* number of reserved words */
+#define NUM_RESERVED	((int)(WHILE-FIRST_RESERVED+1))
 
 
 #ifndef MAX_IFS
@@ -49,13 +50,13 @@ struct ifState {
 typedef struct LexState {
   int current;  /* look ahead character */
   int token;  /* look ahead token */
-  struct FuncState *fs;  /* `FuncState' is private for the parser */
+  struct FuncState *fs;  /* `FuncState' is private to the parser */
   struct lua_State *L;
   union {
     real r;
     TaggedString *ts;
   } seminfo;  /* semantics information */
-  struct zio *lex_z;  /* input stream */
+  struct zio *z;  /* input stream */
   int linenumber;  /* input line counter */
   int iflevel;  /* level of nested $if's (for lexical analysis) */
   struct ifState ifstate[MAX_IFS];

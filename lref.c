@@ -1,5 +1,5 @@
 /*
-** $Id: lref.c,v 1.6 1999/12/27 17:33:22 roberto Exp roberto $
+** $Id: lref.c,v 1.7 2000/02/08 16:34:31 roberto Exp roberto $
 ** reference mechanism
 ** See Copyright Notice in lua.h
 */
@@ -16,7 +16,7 @@
 
 int lua_ref (lua_State *L,  int lock) {
   int ref;
-  luaA_checkCparams(L, 1);
+  luaA_checkCargs(L, 1);
   if (ttype(L->top-1) == LUA_T_NIL)
     ref = LUA_REFNIL;
   else {
@@ -39,7 +39,8 @@ int lua_ref (lua_State *L,  int lock) {
 void lua_unref (lua_State *L, int ref) {
   if (ref >= 0) {
     if (ref >= L->refSize || L->refArray[ref].st >= 0)
-      lua_error(L, "API error - invalid parameter for function `lua_unref'");
+      lua_error(L, "Lua API error - "
+                   "invalid argument for function `lua_unref'");
     L->refArray[ref].st = L->refFree;
     L->refFree = ref;
   }
@@ -67,7 +68,7 @@ void lua_beginblock (lua_State *L) {
 
 void lua_endblock (lua_State *L) {
   if (L->numCblocks <= 0)
-    lua_error(L, "API error - no block to end");
+    lua_error(L, "Lua API error - no block to end");
   --L->numCblocks;
   L->Cstack = L->Cblocks[L->numCblocks];
   L->top = L->Cstack.base;

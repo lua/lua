@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.32 2000/01/19 16:50:14 roberto Exp roberto $
+** $Id: lua.c,v 1.33 2000/02/21 18:30:42 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -87,16 +87,10 @@ static void print_version (void) {
 
 
 static void assign (char *arg) {
-  char buffer[500];
-  if (strlen(arg) >= sizeof(buffer))
-    fprintf(stderr, "lua: shell argument too long");
-  else {
-    char *eq = strchr(arg, '=');
-    lua_pushstring(eq+1);
-    strncpy(buffer, arg, eq-arg);
-    buffer[eq-arg] = 0;
-    lua_setglobal(buffer);
-  }
+  char *eq = strchr(arg, '=');
+  *eq = '\0';  /* spilt `arg' in two strings (name & value) */
+  lua_pushstring(eq+1);
+  lua_setglobal(arg);
 }
 
 
@@ -139,7 +133,7 @@ static void manual_input (int prompt) {
     if (prompt) {
       const char *s = lua_getstring(lua_getglobal("_PROMPT"));
       if (!s) s = PROMPT;
-      printf("%s", s);
+      fputs(s, stdout);
     }
     for(;;) {
       int c = getchar();
@@ -153,7 +147,7 @@ static void manual_input (int prompt) {
         else break;
       }
       else if (i >= BUFSIZ-1) {
-        fprintf(stderr, "lua: argument line too long\n");
+        fprintf(stderr, "lua: input line too long\n");
         break;
       }
       else buffer[i++] = (char)c;
@@ -217,9 +211,9 @@ int main (int argc, char *argv[]) {
             print_message();
             exit(1);
           }
-          getargs(argc-i, argv+i);  /* collect following arguments */
+          getargs(argc-i, argv+i);  /* collect remaining arguments */
           file_input(argv, i);
-          i = argc;  /* stop running arguments */
+          i = argc;  /* stop scanning arguments */
           break;
         default:
           print_message();

@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.31 2000/01/19 12:00:45 roberto Exp roberto $
+** $Id: ltm.c,v 1.32 2000/02/22 18:12:46 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -147,7 +147,7 @@ void luaT_settagmethod (lua_State *L, int t, const char *event, TObject *func) {
   e = luaI_checkevent(L, event, luaT_eventname);
   checktag(L, t);
   if (!luaT_validevent(t, e))
-    luaL_verror(L, "cannot change tag method `%.20s' for type `%.20s'%.20s",
+    luaL_verror(L, "cannot change `%.20s' tag method for type `%.20s'%.20s",
                 luaT_eventname[e], luaO_typenames[-t],
                 (t == LUA_T_ARRAY || t == LUA_T_USERDATA) ? " with default tag"
                                                           : "");

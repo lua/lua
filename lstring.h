@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.14 1999/11/26 18:59:20 roberto Exp roberto $
+** $Id: lstring.h,v 1.15 1999/12/14 18:42:57 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -12,8 +12,8 @@
 #include "lstate.h"
 
 
-#define NUM_HASHSTR     31  /* a prime not in array `dimensions' */
-#define NUM_HASHUDATA   31  /* idem */
+#define NUM_HASHSTR     31
+#define NUM_HASHUDATA   31
 #define NUM_HASHS (NUM_HASHSTR+NUM_HASHUDATA)
 
 

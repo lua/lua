@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.66 2000/01/19 12:00:45 roberto Exp roberto $
+** $Id: ldo.c,v 1.67 2000/02/08 16:34:31 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -52,7 +52,7 @@ void luaD_checkstack (lua_State *L, int n) {
     if (L->stack_last-L->stack > (L->stacksize-1)) {
       /* overflow while handling overflow: do what?? */
       L->top -= EXTRA_STACK;
-      lua_error(L, "BAD STACK OVERFLOW! DATA CORRUPTED!!");
+      lua_error(L, "BAD STACK OVERFLOW! DATA CORRUPTED!");
     }
     else {
       lua_Dbgactreg dummy;
@@ -62,7 +62,7 @@ void luaD_checkstack (lua_State *L, int n) {
         lua_error(L, "Lua2C - C2Lua overflow");
       }
       else
-        lua_error(L, "stack size overflow");
+        lua_error(L, "stack overflow; possible recursion loop");
     }
   }
 }
@@ -254,7 +254,7 @@ void lua_error (lua_State *L, const char *s) {
   if (L->errorJmp)
     longjmp(L->errorJmp->b, 1);
   else {
-    message(L, "unable to recover. exiting.\n");
+    message(L, "unable to recover; exiting\n");
     exit(1);
   }
 }
@@ -301,7 +301,7 @@ static int protectedparser (lua_State *L, ZIO *z, int bin) {
   TProtoFunc *volatile tf;
   struct lua_longjmp *volatile oldErr = L->errorJmp;
   L->errorJmp = &myErrorJmp;
-  L->top = base;   /* erase C2Lua */
+  L->top = base;   /* clear C2Lua */
   if (setjmp(myErrorJmp.b) == 0) {
     tf = bin ? luaU_undump1(L, z) : luaY_parser(L, z);
     status = 0;

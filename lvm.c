@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.88 2000/02/22 13:31:30 roberto Exp roberto $
+** $Id: lvm.c,v 1.89 2000/02/22 18:12:46 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -29,8 +29,6 @@
 #define strcoll(a,b)	strcmp(a,b)
 #endif
 
-
-#define highbyte(L, x)	((x)<<8)
 
 
 /*
@@ -106,7 +104,7 @@ void luaV_closure (lua_State *L, int nelems) {
 void luaV_gettable (lua_State *L, StkId top) {
   TObject *table = top-2;
   const TObject *im;
-  if (ttype(table) != LUA_T_ARRAY) {  /* not a table, get gettable method */
+  if (ttype(table) != LUA_T_ARRAY) {  /* not a table, get gettable TM */
     im = luaT_getimbyObj(L, table, IM_GETTABLE);
     if (ttype(im) == LUA_T_NIL) {
       L->top = top;
@@ -116,7 +114,7 @@ void luaV_gettable (lua_State *L, StkId top) {
   else {  /* object is a table... */
     int tg = table->value.a->htag;
     im = luaT_getim(L, tg, IM_GETTABLE);
-    if (ttype(im) == LUA_T_NIL) {  /* and does not have a `gettable' method */
+    if (ttype(im) == LUA_T_NIL) {  /* and does not have a `gettable' TM */
       const TObject *h = luaH_get(L, avalue(table), table+1);
       if (ttype(h) == LUA_T_NIL &&
           (ttype(im=luaT_getim(L, tg, IM_INDEX)) != LUA_T_NIL)) {
@@ -128,9 +126,9 @@ void luaV_gettable (lua_State *L, StkId top) {
         *table = *h;  /* `push' result into table position */
       return;
     }
-    /* else it has a `gettable' method, go through to next command */
+    /* else it has a `gettable' TM, go through to next command */
   }
-  /* object is not a table, or it has a `gettable' method */
+  /* object is not a table, or it has a `gettable' TM */
   L->top = top;
   luaD_callTM(L, im, 2, 1);
 }
@@ -261,7 +259,7 @@ int luaV_lessthan (lua_State *L, TObject *l, TObject *r) {
   else if (ttype(l) == LUA_T_STRING && ttype(r) == LUA_T_STRING)
     return (luaV_strcomp(tsvalue(l), tsvalue(r)) < 0);
   else {
-    /* update top and put arguments in correct order to call Tag Method */
+    /* update top and put arguments in correct order to call TM */
     if (l<r)  /* are arguments in correct order? */
       L->top = r+1;  /* yes; 2nd is on top */
     else {  /* no; exchange them */
@@ -562,7 +560,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
           call_arith(L, top+1, IM_UNM);
         }
         else
-          nvalue(top-1) = - nvalue(top-1);
+          nvalue(top-1) = -nvalue(top-1);
         break;
 
       case NOTOP:

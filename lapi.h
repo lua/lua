@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.h,v 1.12 1999/12/23 18:19:57 roberto Exp roberto $
+** $Id: lapi.h,v 1.13 2000/01/19 12:00:45 roberto Exp roberto $
 ** Auxiliary functions from Lua API
 ** See Copyright Notice in lua.h
 */
@@ -11,7 +11,7 @@
 #include "lobject.h"
 
 
-void luaA_checkCparams (lua_State *L, int nParams);
+void luaA_checkCargs (lua_State *L, int nargs);
 const TObject *luaA_protovalue (const TObject *o);
 void luaA_pushobject (lua_State *L, const TObject *o);
 GlobalVar *luaA_nextvar (lua_State *L, TaggedString *g);

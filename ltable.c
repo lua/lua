@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.33 1999/12/23 18:19:57 roberto Exp roberto $
+** $Id: ltable.c,v 1.34 2000/02/08 16:34:31 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -32,7 +32,7 @@
 
 
 
-#define TagDefault LUA_T_ARRAY;
+#define TagDefault LUA_T_ARRAY
 
 
 

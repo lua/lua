@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.8 2000/02/11 16:52:54 roberto Exp roberto $
+** $Id: ldebug.c,v 1.9 2000/02/17 18:30:36 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -187,7 +187,7 @@ static void lua_getobjname (lua_State *L, StkId f, lua_Dbgactreg *ar) {
 int lua_getinfo (lua_State *L, const char *what, lua_Dbgactreg *ar) {
   StkId func = ar->_func;
   LUA_ASSERT(L, is_T_MARK(ttype(func)), "invalid activation record");
-  for ( ;*what; what++) {
+  for (; *what; what++) {
     switch (*what) {
       case 'S':
         lua_funcinfo(ar);

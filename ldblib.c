@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.9 1999/12/21 18:04:41 roberto Exp roberto $
+** $Id: ldblib.c,v 1.10 2000/01/19 12:00:45 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -50,7 +50,7 @@ static void getstack (lua_State *L) {
     lua_Object res = lua_createtable(L);
     if (!lua_getinfo(L, options, &ar))
       luaL_argerror(L, 2, "invalid option");
-    for ( ;*options; options++) {
+    for (; *options; options++) {
       switch (*options) {
         case 'S':
           settabss(L, res, "source", ar.source);
@@ -103,6 +103,10 @@ static void setlocal (lua_State *L) {
 }
 
 
+/*
+** because of these variables, this module is not reentrant, and should
+** not be used in multiple states
+*/
 
 static int linehook = LUA_NOREF;  /* Lua reference to line hook function */
 static int callhook = LUA_NOREF;  /* Lua reference to call hook function */

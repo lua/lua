@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.56 2000/01/19 12:00:45 roberto Exp roberto $
+** $Id: liolib.c,v 1.57 2000/02/08 16:34:31 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -97,7 +97,7 @@ static FILE *gethandle (lua_State *L, lua_Object f) {
 static FILE *getfilebyname (lua_State *L, const char *name) {
   FILE *handle = gethandle(L, lua_rawgetglobal(L, name));
   if (!handle)
-    luaL_verror(L, "global variable `%.50s' is not a file handle", name);
+    luaL_verror(L, "`%.50s' is not a file handle", name);
   return handle;
 }
 
@@ -286,7 +286,7 @@ static int read_pattern (lua_State *L, FILE *f, const char *p) {
 
 #else
 
-#define read_pattern(L, f,p)   (lua_error(L, "read patterns are deprecated"), 0)
+#define read_pattern(L, f, p) (lua_error(L, "read patterns are deprecated"), 0)
 
 #endif
 
@@ -525,9 +525,6 @@ static void io_debug (lua_State *L) {
 #define MAXMESSAGE (MESSAGESIZE*10)
 
 
-#define MAXSRC		60
-
-
 static void errorfb (lua_State *L) {
   char buff[MAXMESSAGE];
   int level = 1;  /* skip level 0 (it's this function) */
@@ -535,10 +532,10 @@ static void errorfb (lua_State *L) {
   lua_Object alertfunc = lua_rawgetglobal(L, "_ALERT");
   sprintf(buff, "error: %.200s\n", lua_getstring(L, lua_getparam(L, 1)));
   while (lua_getstack(L, level++, &ar)) {
-    char buffchunk[MAXSRC];
+    char buffchunk[60];
     lua_getinfo(L, "Snl", &ar);
     luaL_chunkid(buffchunk, ar.source, sizeof(buffchunk));
-    if (level == 2) strcat(buff, "Active Stack:\n");
+    if (level == 2) strcat(buff, "Stack traceback:\n");
     strcat(buff, "  ");
     if (strlen(buff) > MAXMESSAGE-MESSAGESIZE) {
       strcat(buff, "...\n");

@@ -1,5 +1,5 @@
 /*
-** $Id: lbuffer.c,v 1.10 1999/11/10 15:40:46 roberto Exp roberto $
+** $Id: lbuffer.c,v 1.11 1999/11/22 13:12:07 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -19,10 +19,14 @@
 -------------------------------------------------------*/
 
 
+/*
+** amount of extra space (pre)allocated when buffer is reallocated
+*/
 #define EXTRABUFF	32
 
 
-#define openspace(L, size)  if (L->Mbuffnext+(size) > L->Mbuffsize) Openspace(L, size)
+#define openspace(L, size)  if (L->Mbuffnext+(size) > L->Mbuffsize) \
+                              Openspace(L, size)
 
 static void Openspace (lua_State *L, int size) {
   L->Mbuffsize = (L->Mbuffnext+size+EXTRABUFF)*2;

@@ -1,7 +1,16 @@
 /*
-** $Id: lbuiltin.c,v 1.92 2000/01/19 16:50:30 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.93 2000/02/22 18:12:46 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
+*/
+
+
+/*
+** =========================================================================
+** All built-in functions are public (i.e. not static) and are named luaB_f,
+** where f is the function name in Lua. So, if you do not need all these
+** functions, you may register manually only the ones that you need.
+** =========================================================================
 */
 
 
@@ -91,7 +100,7 @@ static Hash *gettable (lua_State *L, int arg) {
 
 
 /*
-** If your system does not support "stderr", redefine this function, or
+** If your system does not support `stderr', redefine this function, or
 ** redefine _ERRORMESSAGE so that it won't need _ALERT.
 */
 void luaB__ALERT (lua_State *L) {
@@ -116,9 +125,9 @@ void luaB__ERRORMESSAGE (lua_State *L) {
 
 
 /*
-** If your system does not support "stdout", you can just remove this function.
-** If you need, you can define your own "print" function, following this
-** model but changing "fputs" to put the strings at a proper place
+** If your system does not support `stdout', you can just remove this function.
+** If you need, you can define your own `print' function, following this
+** model but changing `fputs' to put the strings at a proper place
 ** (a console window or a log file, for instance).
 */
 #ifndef MAXPRINT
@@ -174,17 +183,17 @@ void luaB_error (lua_State *L) {
 }
 
 void luaB_setglobal (lua_State *L) {
-  const char *n = luaL_check_string(L, 1);
+  const char *name = luaL_check_string(L, 1);
   lua_Object value = luaL_nonnullarg(L, 2);
   lua_pushobject(L, value);
-  lua_setglobal(L, n);
+  lua_setglobal(L, name);
 }
 
 void luaB_rawsetglobal (lua_State *L) {
-  const char *n = luaL_check_string(L, 1);
+  const char *name = luaL_check_string(L, 1);
   lua_Object value = luaL_nonnullarg(L, 2);
   lua_pushobject(L, value);
-  lua_rawsetglobal(L, n);
+  lua_rawsetglobal(L, name);
 }
 
 void luaB_getglobal (lua_State *L) {
@@ -236,7 +245,7 @@ void luaB_settagmethod (lua_State *L) {
                  "function or nil expected");
 #ifndef LUA_COMPAT_GC
   if (strcmp(event, "gc") == 0 && tag != LUA_T_NIL)
-    lua_error(L, "cannot set this tag method from Lua");
+    lua_error(L, "cannot set this `gc' tag method from Lua");
 #endif
   lua_pushobject(L, nf);
   lua_pushobject(L, lua_settagmethod(L, tag, event));
@@ -325,7 +334,7 @@ void luaB_call (lua_State *L) {
       return;  /* return nil to signal the error */
     }
     else
-      lua_error(L, NULL);
+      lua_error(L, NULL);  /* propagate error without additional messages */
   }
   else {  /* no errors */
     if (strchr(options, 'p')) {  /* pack results? */
@@ -340,14 +349,14 @@ void luaB_call (lua_State *L) {
 
 void luaB_nextvar (lua_State *L) {
   lua_Object o = luaL_nonnullarg(L, 1);
-  TaggedString *g;
+  TaggedString *name;
   if (ttype(o) == LUA_T_NIL)
-    g = NULL;
+    name = NULL;
   else {
     luaL_arg_check(L, ttype(o) == LUA_T_STRING, 1, "variable name expected");
-    g = tsvalue(o);
+    name = tsvalue(o);
   }
-  if (!luaA_nextvar(L, g))
+  if (!luaA_nextvar(L, name))
     lua_pushnil(L);
 }
 
@@ -355,7 +364,7 @@ void luaB_nextvar (lua_State *L) {
 void luaB_next (lua_State *L) {
   const Hash *a = gettable(L, 1);
   lua_Object k = luaL_nonnullarg(L, 2);
-  int i;  /* will get first element after `i' */
+  int i;  /* `luaA_next' gets first element after `i' */
   if (ttype(k) == LUA_T_NIL)
     i = 0;  /* get first */
   else {
@@ -390,7 +399,8 @@ void luaB_tostring (lua_State *L) {
       sprintf(buff, "function: %p", o->value.f);
       break;
     case LUA_T_USERDATA:
-      sprintf(buff, "userdata: %p", o->value.ts->u.d.value);
+      sprintf(buff, "userdata: %p(%d)", o->value.ts->u.d.value,
+                                        o->value.ts->u.d.tag);
       break;
     case LUA_T_NIL:
       lua_pushstring(L, "nil");
@@ -435,7 +445,7 @@ void luaB_foreachi (lua_State *L) {
     luaD_call(L, L->top-3, 1);
     if (ttype(L->top-1) != LUA_T_NIL)
       return;
-    L->top--;
+    L->top--;  /* remove nil result */
   }
 }
 
@@ -499,7 +509,7 @@ void luaB_tinsert (lua_State *L) {
     pos = n+1;
   }
   luaV_setn(L, a, n+1);  /* a.n = n+1 */
-  for ( ;n>=pos; n--)
+  for (; n>=pos; n--)
     luaH_move(L, a, n, n+1);  /* a[n+1] = a[n] */
   luaH_setint(L, a, pos, v);  /* a[pos] = v */
 }
@@ -521,6 +531,7 @@ void luaB_tremove (lua_State *L) {
 /*
 ** {======================================================
 ** Quicksort
+** (based on `Algorithms in MODULA-3', Robert Sedgewick; Addison-Wesley, 1993.)
 */
 
 static void swap (lua_State *L, Hash *a, int i, int j) {
@@ -602,7 +613,7 @@ void luaB_sort (lua_State *L) {
   lua_Object func = lua_getparam(L, 2);
   luaL_arg_check(L, func == LUA_NOOBJECT || lua_isfunction(L, func), 2,
                  "function expected");
-  luaD_checkstack(L, 4);  /* for Pivot, f, a, b (sort_comp) */
+  luaD_checkstack(L, 4);  /* for pivot, f, a, b (sort_comp) */
   auxsort(L, a, 1, n, func);
   lua_pushobject(L, t);
 }
@@ -640,7 +651,7 @@ static const struct luaL_reg builtin_funcs[] = {
   {"tonumber", luaB_tonumber},
   {"tostring", luaB_tostring},
   {"type", luaB_type},
-  /* "Extra" functions */
+/* "Extra" functions */
   {"assert", luaB_assert},
   {"foreach", luaB_foreach},
   {"foreachi", luaB_foreachi},

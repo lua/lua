@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.60 2000/02/22 13:30:11 roberto Exp roberto $
+** $Id: lparser.c,v 1.61 2000/03/03 12:33:59 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -434,7 +434,7 @@ static int funcparams (LexState *ls, int slf) {
       break;
 
     case STRING:  /* funcparams -> STRING */
-      code_string(ls, ls->seminfo.ts);  /* must use 'seminfo' before `next' */
+      code_string(ls, ls->seminfo.ts);  /* must use `seminfo' before `next' */
       next(ls);
       break;
 
@@ -660,7 +660,7 @@ static void simpleexp (LexState *ls, expdesc *v) {
     }
 
     case STRING:  /* simpleexp -> STRING */
-      /* must use 'seminfo' before `next' */
+      /* must use `seminfo' before `next' */
       v->info = code_string(ls, ls->seminfo.ts);
       next(ls);
       break;
@@ -930,7 +930,7 @@ static void namestat (LexState *ls) {
   check_debugline(ls);
   var_or_func(ls, &v);
   if (v.k == VEXP) {  /* stat -> func */
-    if (!luaK_iscall(ls, v.info))  /* is just an upper value? */
+    if (!luaK_iscall(ls, v.info))  /* is just an upvalue? */
       luaK_error(ls, "syntax error");
     luaK_setcallreturns(ls, v.info, 0);  /* call statement uses no results */
   }
@@ -1006,7 +1006,7 @@ static int stat (LexState *ls) {
       return 1;
 
     case RETURN: case ';': case ELSE: case ELSEIF:
-    case END: case UNTIL: case EOS:  /* 'stat' follow */
+    case END: case UNTIL: case EOS:  /* `stat' follow */
       return 0;
 
     default:

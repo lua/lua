@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.48 2000/02/17 18:30:36 roberto Exp roberto $
+** $Id: lobject.h,v 1.49 2000/02/21 18:33:26 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -14,15 +14,13 @@
 
 
 #ifdef DEBUG
-#ifdef NDEBUG
 #undef NDEBUG
-#endif
 #include <assert.h>
 #define LUA_INTERNALERROR(L,s)	assert(0)
 #define LUA_ASSERT(L,c,s)	assert(c)
 #else
 #define LUA_INTERNALERROR(L,s)	/* empty */
-#define LUA_ASSERT(L,c,s)		/* empty */
+#define LUA_ASSERT(L,c,s)	/* empty */
 #endif
 
 
@@ -51,7 +49,7 @@ typedef unsigned long Instruction;
 
 /* conversion of pointer to int (for hashing only) */
 /* (the shift removes bits that are usually 0 because of alignment) */
-#define IntPoint(L, p)	(((unsigned int)(p)) >> 3)
+#define IntPoint(L, p)	(((unsigned long)(p)) >> 3)
 
 
 /*
@@ -68,21 +66,21 @@ typedef unsigned long Instruction;
 ** grep "ORDER LUA_T"
 */
 typedef enum {
-  LUA_T_USERDATA =  0,  /* default tag for userdata */
-  LUA_T_NUMBER   = -1,  /* fixed tag for numbers */
-  LUA_T_STRING   = -2,  /* fixed tag for strings */
-  LUA_T_ARRAY    = -3,  /* default tag for tables (or arrays) */
-  LUA_T_LPROTO   = -4,  /* fixed tag for Lua functions */
-  LUA_T_CPROTO   = -5,  /* fixed tag for C functions */
-  LUA_T_NIL      = -6,  /* last "pre-defined" tag */
+  LUA_T_USERDATA  =  0, /* default tag for userdata */
+  LUA_T_NUMBER    = -1, /* fixed tag for numbers */
+  LUA_T_STRING    = -2, /* fixed tag for strings */
+  LUA_T_ARRAY     = -3, /* default tag for tables (or arrays) */
+  LUA_T_LPROTO    = -4, /* fixed tag for Lua functions */
+  LUA_T_CPROTO    = -5, /* fixed tag for C functions */
+  LUA_T_NIL       = -6, /* last "pre-defined" tag */
 
   LUA_T_LCLOSURE  = -7, /* Lua closure */
   LUA_T_CCLOSURE  = -8, /* C closure */
 
   LUA_T_LCLMARK   = -9 ,/* mark for Lua closures */
   LUA_T_CCLMARK   = -10,/* mark for C closures */
-  LUA_T_LMARK    = -11, /* mark for Lua prototypes */
-  LUA_T_CMARK    = -12, /* mark for C prototypes */
+  LUA_T_LMARK     = -11,/* mark for Lua prototypes */
+  LUA_T_CMARK     = -12,/* mark for C prototypes */
 
   LUA_T_LINE     = -13
 } lua_Type;
@@ -93,7 +91,7 @@ typedef enum {
 #define LAST_REGULAR_TAG  LUA_T_CCLOSURE  /* after that, are all marks */
 
 /*
-** chech whether `t' is a mark; ttypes are negative numbers, so the
+** check whether `t' is a mark; ttypes are negative numbers, so the
 ** comparisons look reversed.  (ORDER LUA_T)
 */
 #define is_T_MARK(t)	(LUA_T_CMARK <= (t) && (t) <= LUA_T_LCLMARK)
@@ -221,6 +219,7 @@ typedef struct Hash {
 
 
 extern const char *const luaO_typenames[];
+extern const TObject luaO_nilobject;
 
 #define luaO_typename(o)        luaO_typenames[-ttype(o)]
 
@@ -228,11 +227,7 @@ extern const char *const luaO_typenames[];
 
 unsigned long luaO_power2 (unsigned long n);
 
-extern const TObject luaO_nilobject;
-
-
-#define luaO_equalObj(t1,t2)	((ttype(t1) != ttype(t2)) ? 0 \
-                                      : luaO_equalval(t1,t2))
+#define luaO_equalObj(t1,t2)  (ttype(t1) == ttype(t2) && luaO_equalval(t1,t2))
 int luaO_equalval (const TObject *t1, const TObject *t2);
 int luaO_redimension (lua_State *L, int oldsize);
 int luaO_str2d (const char *s, real *result);

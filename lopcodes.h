@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.41 2000/02/22 13:30:11 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.42 2000/03/02 12:32:53 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -21,8 +21,10 @@
           2nd unsigned argument in the middle 8 bits       (`B')
 
   The signed argument is represented in excess 2^23; that is, the real value
-  is 2^23 minus the usigned value.
+  is the usigned value minus 2^23.
 ===========================================================================*/
+
+#define EXCESS_S	(1<<23)		/* == 2^23 */
 
 /*
 ** the following macros help to manipulate instructions
@@ -35,13 +37,13 @@
 
 #define GET_OPCODE(i)	((OpCode)((i)&0xFF))
 #define GETARG_U(i)	((int)((i)>>8))
-#define GETARG_S(i)	((int)((i)>>8)-(1<<23))
+#define GETARG_S(i)	((int)((i)>>8)-EXCESS_S)
 #define GETARG_A(i)	((int)((i)>>16))
 #define GETARG_B(i)	((int)(((i)>>8) & 0xFF))
 
 #define SET_OPCODE(i,o)	(((i)&0xFFFFFF00u) | (Instruction)(o))
 #define SETARG_U(i,u)	(((i)&0x000000FFu) | ((Instruction)(u)<<8))
-#define SETARG_S(i,s)	(((i)&0x000000FFu) | ((Instruction)((s)+(1<<23))<<8))
+#define SETARG_S(i,s)	(((i)&0x000000FFu) | ((Instruction)((s)+EXCESS_S)<<8))
 #define SETARG_A(i,a)	(((i)&0x0000FFFFu) | ((Instruction)(a)<<16))
 #define SETARG_B(i,b)	(((i)&0xFFFF00FFu) | ((Instruction)(b)<<8))
 
@@ -55,8 +57,9 @@
 */
 
 typedef enum {
-/* name          parm    before          after           side effect
------------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------
+name		args	stack before	stack after	side effects
+------------------------------------------------------------------------*/
 ENDCODE,/*	-	-		(return)			*/
 RETCODE,/*	U	-		(return)			*/
 

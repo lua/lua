@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.17 2000/01/25 13:57:18 roberto Exp roberto $
+** $Id: lfunc.c,v 1.18 2000/01/28 16:53:00 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -14,7 +14,7 @@
 #include "lstate.h"
 
 #define gcsizeproto(L, p)	numblocks(L, 0, sizeof(TProtoFunc))
-#define gcsizeclosure(L, c) numblocks(L, c->nelems, sizeof(Closure))
+#define gcsizeclosure(L, c)	numblocks(L, c->nelems, sizeof(Closure))
 
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.1 2000/02/22 13:30:11 roberto Exp roberto $
+** $Id: lcode.c,v 1.2 2000/03/03 12:33:59 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -152,7 +152,7 @@ int luaK_kstr (LexState *ls, int c) {
 #endif
 
 static int real_constant (LexState *ls, real r) {
-  /* check whether `r' has appeared within the last LIM entries */
+  /* check whether `r' has appeared within the last LOOKBACKNUMS entries */
   TProtoFunc *f = ls->fs->f;
   int c = f->nknum;
   int lim = c < LOOKBACKNUMS ? 0 : c-LOOKBACKNUMS;

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.71 2000/02/08 16:34:31 roberto Exp roberto $
+** $Id: lapi.c,v 1.72 2000/02/22 17:54:16 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -41,9 +41,10 @@ const TObject *luaA_protovalue (const TObject *o) {
 }
 
 
-void luaA_checkCparams (lua_State *L, int nParams) {
-  if (nParams > L->top-L->Cstack.base)
-    lua_error(L, "API error - wrong number of arguments in C2lua stack");
+void luaA_checkCargs (lua_State *L, int nargs) {
+  if (nargs > L->top-L->Cstack.base)
+    luaL_verror(L, "Lua API error - "
+                   "expected at least %d arguments in C2lua stack", nargs);
 }
 
 
@@ -70,7 +71,7 @@ static void top2LC (lua_State *L, int n) {
 
 
 lua_Object lua_pop (lua_State *L) {
-  luaA_checkCparams(L, 1);
+  luaA_checkCargs(L, 1);
   return luaA_putObjectOnTop(L);
 }
 
@@ -103,10 +104,10 @@ lua_Object lua_gettagmethod (lua_State *L, int tag, const char *event) {
 
 lua_Object lua_settagmethod (lua_State *L, int tag, const char *event) {
   TObject *method;
-  luaA_checkCparams(L, 1);
+  luaA_checkCargs(L, 1);
   method = L->top-1;
   if ((ttype(method) != LUA_T_NIL) && (*lua_type(L, method) != 'f'))
-    lua_error(L, "API error - tag method must be a function or nil");
+    lua_error(L, "Lua API error - tag method must be a function or nil");
   luaT_settagmethod(L, tag, event, method);
   return luaA_putObjectOnTop(L);
 }
@@ -114,7 +115,7 @@ lua_Object lua_settagmethod (lua_State *L, int tag, const char *event) {
 
 lua_Object lua_seterrormethod (lua_State *L) {
   lua_Object temp;
-  luaA_checkCparams(L, 1);
+  luaA_checkCargs(L, 1);
   temp = lua_getglobal(L, "_ERRORMESSAGE");
   lua_setglobal(L, "_ERRORMESSAGE");
   return temp;
@@ -122,7 +123,7 @@ lua_Object lua_seterrormethod (lua_State *L) {
 
 
 lua_Object lua_gettable (lua_State *L) {
-  luaA_checkCparams(L, 2);
+  luaA_checkCargs(L, 2);
   luaV_gettable(L, L->top--);
   return luaA_putObjectOnTop(L);
 }
@@ -130,7 +131,7 @@ lua_Object lua_gettable (lua_State *L) {
 
 lua_Object lua_rawgettable (lua_State *L) {
   lua_Object res;
-  luaA_checkCparams(L, 2);
+  luaA_checkCargs(L, 2);
   if (ttype(L->top-2) != LUA_T_ARRAY)
     lua_error(L, "indexed expression not a table in rawgettable");
   res = luaA_putluaObject(L, luaH_get(L, avalue(L->top-2), L->top-1));
@@ -141,7 +142,7 @@ lua_Object lua_rawgettable (lua_State *L) {
 
 void lua_settable (lua_State *L) {
   StkId top;
-  luaA_checkCparams(L, 3);
+  luaA_checkCargs(L, 3);
   top = L->top;
   luaV_settable(L, top-3, top);
   L->top = top-3;  /* pop table, index, and value */
@@ -149,7 +150,7 @@ void lua_settable (lua_State *L) {
 
 
 void lua_rawsettable (lua_State *L) {
-  luaA_checkCparams(L, 3);
+  luaA_checkCargs(L, 3);
   luaV_rawsettable(L, L->top-3);
 }
 
@@ -176,14 +177,14 @@ lua_Object lua_rawgetglobal (lua_State *L, const char *name) {
 
 
 void lua_setglobal (lua_State *L, const char *name) {
-  luaA_checkCparams(L, 1);
+  luaA_checkCargs(L, 1);
   luaV_setglobal(L, luaS_assertglobalbyname(L, name), L->top--);
 }
 
 
 void lua_rawsetglobal (lua_State *L, const char *name) {
   GlobalVar *gv = luaS_assertglobalbyname(L, name);
-  luaA_checkCparams(L, 1);
+  luaA_checkCargs(L, 1);
   gv->value = *(--L->top);
 }
 
@@ -296,8 +297,8 @@ void lua_pushstring (lua_State *L, const char *s) {
 
 void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   if (fn == NULL)
-    lua_error(L, "API error - attempt to push a NULL Cfunction");
-  luaA_checkCparams(L, n);
+    lua_error(L, "Lua API error - attempt to push a NULL Cfunction");
+  luaA_checkCargs(L, n);
   ttype(L->top) = LUA_T_CPROTO;
   fvalue(L->top) = fn;
   incr_top;
@@ -321,7 +322,7 @@ void luaA_pushobject (lua_State *L, const TObject *o) {
 
 void lua_pushobject (lua_State *L, lua_Object o) {
   if (o == LUA_NOOBJECT)
-    lua_error(L, "API error - attempt to push a NOOBJECT");
+    lua_error(L, "Lua API error - attempt to push a NOOBJECT");
   *L->top = *o;
   incr_top;
 }
@@ -339,7 +340,7 @@ int lua_tag (lua_State *L, lua_Object o) {
 
 
 void lua_settag (lua_State *L, int tag) {
-  luaA_checkCparams(L, 1);
+  luaA_checkCargs(L, 1);
   luaT_realtag(L, tag);
   switch (ttype(L->top-1)) {
     case LUA_T_ARRAY:
@@ -406,7 +407,7 @@ int luaA_next (lua_State *L, const Hash *t, int i) {
 
 int lua_next (lua_State *L, lua_Object t, int i) {
   if (ttype(t) != LUA_T_ARRAY)
-    lua_error(L, "API error - object is not a table in `lua_next'"); 
+    lua_error(L, "Lua API error - object is not a table in `lua_next'"); 
   i = luaA_next(L, avalue(t), i);
   top2LC(L, (i==0) ? 0 : 2);
   return i;

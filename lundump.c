@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.16 1999/12/02 19:11:51 roberto Exp roberto $
+** $Id: lundump.c,v 1.26 2000/02/17 19:17:44 lhf Exp lhf $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -50,22 +50,13 @@ static unsigned long LoadLong (lua_State* L, ZIO* Z)
  return (hi<<16)|lo;
 }
 
-static real LoadNumber (lua_State* L, ZIO* Z, int native)
+static real LoadNumber (lua_State* L, ZIO* Z)
 {
- if (native)
- {
-  real x;
-  LoadBlock(L,&x,sizeof(x),Z);
-  return x;
- }
- else
- {
-  char b[256];
-  int size=ezgetc(L,Z);
-  LoadBlock(L,b,size,Z);
-  b[size]=0;
-  return luaU_str2d(L,b,zname(Z));
- }
+ char b[256];
+ int size=ezgetc(L,Z);
+ LoadBlock(L,b,size,Z);
+ b[size]=0;
+ return luaU_str2d(L,b,zname(Z));
 }
 
 static int LoadInt (lua_State* L, ZIO* Z, const char* message)
@@ -76,19 +67,15 @@ static int LoadInt (lua_State* L, ZIO* Z, const char* message)
  return i;
 }
 
-#define PAD	5			/* two word operands plus opcode */
-
-static Byte* LoadCode (lua_State* L, ZIO* Z)
+static void LoadCode (lua_State* L, TProtoFunc* tf, ZIO* Z)
 {
  int size=LoadInt(L,Z,"code too long (%lu bytes) in %.255s");
- Byte* b=luaM_malloc(L,size+PAD);
- LoadBlock(L,b,size,Z);
- if (b[size-1]!=ENDCODE) luaL_verror(L,"bad code in %.255s",zname(Z));
- memset(b+size,ENDCODE,PAD);		/* pad code for safety */
- return b;
+ tf->code=luaM_newvector(L,size,Instruction);
+ LoadBlock(L,tf->code,size*sizeof(tf->code[0]),Z);
+ if (tf->code[size-1]!=ENDCODE) luaL_verror(L,"bad code in %.255s",zname(Z));
 }
 
-static TaggedString* LoadTString (lua_State* L, ZIO* Z)
+static TaggedString* LoadString (lua_State* L, ZIO* Z)
 {
  long size=LoadLong(L,Z);
  if (size==0)
@@ -97,7 +84,7 @@ static TaggedString* LoadTString (lua_State* L, ZIO* Z)
  {
   char* s=luaL_openspace(L,size);
   LoadBlock(L,s,size,Z);
-  return luaS_newlstr(L,s,size-1);
+  return luaS_newlstr(L,s,size-1);	/* remove trailing '\0' */
  }
 }
 
@@ -109,7 +96,7 @@ static void LoadLocals (lua_State* L, TProtoFunc* tf, ZIO* Z)
  for (i=0; i<n; i++)
  {
   tf->locvars[i].line=LoadInt(L,Z,"too many lines (%lu) in %.255s");
-  tf->locvars[i].varname=LoadTString(L,Z);
+  tf->locvars[i].varname=LoadString(L,Z);
  }
  tf->locvars[i].line=-1;		/* flag end of vector */
  tf->locvars[i].varname=NULL;
@@ -119,31 +106,27 @@ static TProtoFunc* LoadFunction (lua_State* L, ZIO* Z, int native);
 
 static void LoadConstants (lua_State* L, TProtoFunc* tf, ZIO* Z, int native)
 {
- int i,n=LoadInt(L,Z,"too many constants (%lu) in %.255s");
- tf->nconsts=n;
- if (n==0) return;
- tf->consts=luaM_newvector(L,n,TObject);
- for (i=0; i<n; i++)
+ int i,n;
+ tf->nkstr=n=LoadInt(L,Z,"too many strings (%lu) in %.255s");
+ if (n>0)
  {
-  TObject* o=tf->consts+i;
-  ttype(o)=-ezgetc(L,Z);		/* ttype(o) is negative - ORDER LUA_T */
-  switch (ttype(o))
-  {
-   case LUA_T_NUMBER:
-	nvalue(o)=LoadNumber(L,Z,native);
-	break;
-   case LUA_T_STRING:
-	tsvalue(o)=LoadTString(L,Z);
-	break;
-   case LUA_T_LPROTO:
-	tfvalue(o)=LoadFunction(L,Z,native);
-	break;
-   case LUA_T_NIL:
-	break;
-   default:				/* cannot happen */
-	luaU_badconstant(L,"load",i,o,tf);
-	break;
-  }
+  tf->kstr=luaM_newvector(L,n,TaggedString*);
+  for (i=0; i<n; i++) tf->kstr[i]=LoadString(L,Z);
+ }
+ tf->nknum=n=LoadInt(L,Z,"too many numbers (%lu) in %.255s");
+ if (n>0)
+ {
+  tf->knum=luaM_newvector(L,n,real);
+  if (native)
+   LoadBlock(L,tf->knum,n*sizeof(tf->knum[0]),Z);
+  else
+   for (i=0; i<n; i++) tf->knum[i]=LoadNumber(L,Z);
+ }
+ tf->nkproto=n=LoadInt(L,Z,"too many functions (%lu) in %.255s");
+ if (n>0)
+ {
+  tf->kproto=luaM_newvector(L,n,TProtoFunc*);
+  for (i=0; i<n; i++) tf->kproto[i]=LoadFunction(L,Z,native);
  }
 }
 
@@ -151,9 +134,12 @@ static TProtoFunc* LoadFunction (lua_State* L, ZIO* Z, int native)
 {
  TProtoFunc* tf=luaF_newproto(L);
  tf->lineDefined=LoadInt(L,Z,"lineDefined too large (%lu) in %.255s");
- tf->source=LoadTString(L,Z);
+ tf->source=LoadString(L,Z);
  if (tf->source==NULL) tf->source=luaS_new(L,zname(Z));
- tf->code=LoadCode(L,Z);
+ tf->numparams=LoadInt(L,Z,"numparams too large (%lu) in %.255s");
+ tf->is_vararg=LoadInt(L,Z,"is_vararg too large (%lu) in %.255s");
+ tf->maxstacksize=LoadInt(L,Z,"maxstacksize too large (%lu) in %.255s");
+ LoadCode(L,tf,Z);
  LoadLocals(L,tf,Z);
  LoadConstants(L,tf,Z,native);
  return tf;
@@ -167,6 +153,8 @@ static void LoadSignature (lua_State* L, ZIO* Z)
  if (*s!=0) luaL_verror(L,"bad signature in %.255s",zname(Z));
 }
 
+#define V(v)	v/16,v%16
+
 static int LoadHeader (lua_State* L, ZIO* Z)
 {
  int version,sizeofR,native;
@@ -174,12 +162,12 @@ static int LoadHeader (lua_State* L, ZIO* Z)
  version=ezgetc(L,Z);
  if (version>VERSION)
   luaL_verror(L,
-	"%.255s too new: version=0x%02x; expected at most 0x%02x",
-	zname(Z),version,VERSION);
+	"%.255s too new: its version is %d.%d; expected at most %d.%d",
+	zname(Z),V(version),V(VERSION));
  if (version<VERSION0)			/* check last major change */
   luaL_verror(L,
-	"%.255s too old: version=0x%02x; expected at least 0x%02x",
-	zname(Z),version,VERSION0);
+	"%.255s too old: its version is %d.%d; expected at least %d.%d",
+	zname(Z),V(version),V(VERSION));
  sizeofR=ezgetc(L,Z);
  native=(sizeofR!=0);
  if (native)				/* test number representation */
@@ -189,9 +177,9 @@ static int LoadHeader (lua_State* L, ZIO* Z)
 	 zname(Z),sizeofR,(int)sizeof(real));
   else
   {
-   real tf=TEST_NUMBER;
-   real f=LoadNumber(L,Z,native);
-   if ((long)f!=(long)tf)
+   real f=0,tf=TEST_NUMBER;
+   LoadBlock(L,&f,sizeof(f),Z);
+   if ((long)f!=(long)tf)		/* disregard errors in last bit of fraction */
     luaL_verror(L,"unknown number format in %.255s: "
 	  "read " NUMBER_FMT "; expected " NUMBER_FMT,
 	  zname(Z),f,tf);
@@ -217,16 +205,6 @@ TProtoFunc* luaU_undump1 (lua_State* L, ZIO* Z)
  else if (c!=EOZ)
   luaL_verror(L,"%.255s is not a Lua binary file",zname(Z));
  return NULL;
-}
-
-/*
-* handle constants that cannot happen
-*/
-void luaU_badconstant (lua_State* L, const char* s, int i, const TObject* o, const TProtoFunc* tf)
-{
- int t=ttype(o);
- const char* name= (t>0 || t<LUA_T_LINE) ? "?" : luaO_typenames[-t];
- luaL_verror(L,"cannot %.255s constant #%d: type=%d [%s]" IN,s,i,t,name,INLOC);
 }
 
 /*

@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 1.8 1999/11/22 13:12:07 roberto Exp roberto $
+** $Id: ltm.h,v 1.9 2000/02/22 18:12:46 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -30,10 +30,9 @@ typedef enum {
   IM_LT,
   IM_CONCAT,
   IM_GC,
-  IM_FUNCTION
+  IM_FUNCTION,
+  IM_N		/* number of elements in the enum */
 } IMS;
-
-#define IM_N 15
 
 
 struct IM {

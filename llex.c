@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.50 2000/01/26 18:51:49 roberto Exp roberto $
+** $Id: llex.c,v 1.51 2000/02/08 16:34:31 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,7 @@
 
 
 
-#define next(LS) (LS->current = zgetc(LS->lex_z))
+#define next(LS) (LS->current = zgetc(LS->z))
 
 
 #define save(L, c)	luaL_addchar(L, c)
@@ -37,7 +37,7 @@ static const char *const token2string [] = {"and", "do", "else", "elseif", "end"
 
 
 void luaX_init (lua_State *L) {
-  unsigned int i;
+  int i;
   for (i=0; i<NUM_RESERVED; i++) {
     TaggedString *ts = luaS_new(L, token2string[i]);
     ts->marked = (unsigned char)(RESERVEDMARK+i);  /* reserved word */
@@ -49,7 +49,7 @@ void luaX_init (lua_State *L) {
 
 void luaX_syntaxerror (LexState *ls, const char *s, const char *token) {
   char buff[MAXSRC];
-  luaL_chunkid(buff, zname(ls->lex_z), sizeof(buff));
+  luaL_chunkid(buff, zname(ls->z), sizeof(buff));
   luaL_verror(ls->L, "%.100s;\n  last token read: `%.50s' at line %d in %.80s",
               s, token, ls->linenumber, buff);
 }
@@ -86,10 +86,10 @@ static void luaX_invalidchar (LexState *ls, int c) {
 
 static void firstline (LexState *LS)
 {
-  int c = zgetc(LS->lex_z);
+  int c = zgetc(LS->z);
   if (c == '#')
-    while ((c=zgetc(LS->lex_z)) != '\n' && c != EOZ) /* skip first line */;
-  zungetc(LS->lex_z);
+    while ((c=zgetc(LS->z)) != '\n' && c != EOZ) /* skip first line */;
+  zungetc(LS->z);
 }
 
 
@@ -100,7 +100,7 @@ void luaX_setinput (lua_State *L, LexState *LS, ZIO *z) {
   LS->iflevel = 0;
   LS->ifstate[0].skip = 0;
   LS->ifstate[0].elsepart = 1;  /* to avoid a free $else */
-  LS->lex_z = z;
+  LS->z = z;
   LS->fs = NULL;
   firstline(LS);
   luaL_resetbuffer(L);
@@ -322,7 +322,7 @@ int luaX_lex (LexState *LS) {
   for (;;) {
     switch (LS->current) {
 
-      case ' ': case '\t': case '\r':  /* CR: to avoid problems with DOS */
+      case ' ': case '\t': case '\r':  /* `\r' to avoid problems with DOS */
         next(LS);
         continue;
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.6 2000/02/22 13:30:11 roberto Exp roberto $
+** $Id: lparser.h,v 1.7 2000/03/03 12:33:59 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -14,31 +14,31 @@
 
 /* maximum number of local variables */
 #ifndef MAXLOCALS
-#define MAXLOCALS 200  /* arbitrary limit (<=MAXARG_B) */
+#define MAXLOCALS 200		/* arbitrary limit (<=MAXARG_B) */
 #endif
 
 
 /* maximum number of upvalues */
 #ifndef MAXUPVALUES
-#define MAXUPVALUES 32  /* arbitrary limit (<=MAXARG_B) */
+#define MAXUPVALUES 32		/* arbitrary limit (<=MAXARG_B) */
 #endif
 
 
 /* maximum number of variables in the left side of an assignment */
 #ifndef MAXVARSLH
-#define MAXVARSLH	100  /* arbitrary limit (<=MAXARG_B) */
+#define MAXVARSLH 100		/* arbitrary limit (<=MAXARG_B) */
 #endif
 
 
 /* maximum number of parameters in a function */
 #ifndef MAXPARAMS
-#define MAXPARAMS	100  /* arbitrary limit (<=MAXLOCALS) */
+#define MAXPARAMS 100		/* arbitrary limit (<=MAXLOCALS) */
 #endif
 
 
 /* maximum stack size in a function */
 #ifndef MAXSTACK
-#define MAXSTACK	256  /* arbitrary limit (<=MAXARG_A) */
+#define MAXSTACK 256		/* arbitrary limit (<=MAXARG_A) */
 #endif
 
 

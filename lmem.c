@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.24 2000/01/13 16:30:47 roberto Exp roberto $
+** $Id: lmem.c,v 1.25 2000/02/08 16:34:31 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -43,7 +43,9 @@
 #define free(b)		debug_realloc(b, 0)
 
 
-#define HEADER		(sizeof(double))  /* maximum alignment */
+/* ensures maximum alignment for HEADER */
+#define HEADER	(sizeof(double)>sizeof(long) ? sizeof(double) : sizeof(long))
+
 #define MARKSIZE	16
 #define MARK		0x55  /* 01010101 (a nice pattern) */
 
@@ -77,21 +79,21 @@ static void freeblock (void *block) {
 
 
 static void *debug_realloc (void *block, size_t size) {
-  size_t realsize = HEADER+size+MARKSIZE;
   if (size == 0) {
     freeblock(block);
     return NULL;
   }
   else {
+    size_t realsize = HEADER+size+MARKSIZE;
     char *newblock = (char *)(malloc)(realsize);  /* alloc a new block */
     int i;
+    if (newblock == NULL) return NULL;
     if (block) {
       size_t oldsize = *blocksize(block);
       if (oldsize > size) oldsize = size;
       memcpy(newblock+HEADER, block, oldsize);
       freeblock(block);  /* erase (and check) old copy */
     }
-    if (newblock == NULL) return NULL;
     memdebug_total += size;
     memdebug_numblocks++;
     *(unsigned long *)newblock = size;
@@ -123,14 +125,13 @@ void *luaM_growaux (lua_State *L, void *block, unsigned long nelems,
 ** generic allocation routine.
 */
 void *luaM_realloc (lua_State *L, void *block, unsigned long size) {
-  size_t s = (size_t)size;
-  if (s != size)
-    lua_error(L, "memory allocation error: block too big");
   if (size == 0) {
     free(block);  /* block may be NULL; that is OK for free */
     return NULL;
   }
-  block = realloc(block, s);
+  else if ((size_t)size != size)
+    lua_error(L, "memory allocation error: block too big");
+  block = realloc(block, size);
   if (block == NULL)
     lua_error(L, memEM);
   return block;

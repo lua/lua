@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.30 1999/11/26 18:59:20 roberto Exp roberto $
+** $Id: lstring.c,v 1.31 1999/12/14 18:42:57 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -18,7 +18,7 @@
 
 
 #define gcsizestring(L, l)	numblocks(L, 0, sizeof(TaggedString)+l)
-#define gcsizeudata	gcsizestring(L, 0)
+#define gcsizeudata		gcsizestring(L, 0)
 
 
 
