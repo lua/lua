@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.51 2002/07/01 19:23:58 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.52 2002/08/08 20:08:41 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -30,31 +30,29 @@ typedef struct luaL_reg {
 LUALIB_API void luaL_openlib (lua_State *L, const luaL_reg *l, int nup);
 LUALIB_API void luaL_opennamedlib (lua_State *L, const char *libname,
                                    const luaL_reg *l, int nup);
-LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event);
+LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *e);
 LUALIB_API int luaL_typerror (lua_State *L, int narg, const char *tname);
 LUALIB_API int luaL_argerror (lua_State *L, int numarg, const char *extramsg);
-LUALIB_API const char *luaL_check_lstr (lua_State *L, int numArg,
-                                            size_t *len);
+LUALIB_API const char *luaL_check_lstr (lua_State *L, int numArg, size_t *l);
 LUALIB_API const char *luaL_opt_lstr (lua_State *L, int numArg,
-                                          const char *def, size_t *len);
+                                          const char *def, size_t *l);
 LUALIB_API lua_Number luaL_check_number (lua_State *L, int numArg);
 LUALIB_API lua_Number luaL_opt_number (lua_State *L, int nArg, lua_Number def);
 
-LUALIB_API void luaL_check_stack (lua_State *L, int space, const char *msg);
+LUALIB_API void luaL_check_stack (lua_State *L, int sz, const char *msg);
 LUALIB_API void luaL_check_type (lua_State *L, int narg, int t);
 LUALIB_API void luaL_check_any (lua_State *L, int narg);
 
-LUALIB_API void luaL_where (lua_State *L, int level);
+LUALIB_API void luaL_where (lua_State *L, int lvl);
 LUALIB_API int luaL_error (lua_State *L, const char *fmt, ...);
 
-LUALIB_API int luaL_findstring (const char *name, 
-                                const char *const list[]);
+LUALIB_API int luaL_findstring (const char *st, const char *const lst[]);
 
 LUALIB_API int luaL_ref (lua_State *L, int t);
 LUALIB_API void luaL_unref (lua_State *L, int t, int ref);
 
 LUALIB_API int luaL_loadfile (lua_State *L, const char *filename);
-LUALIB_API int luaL_loadbuffer (lua_State *L, const char *buff, size_t size,
+LUALIB_API int luaL_loadbuffer (lua_State *L, const char *buff, size_t sz,
                                 const char *name);
 
 
@@ -89,7 +87,7 @@ LUALIB_API int luaL_loadbuffer (lua_State *L, const char *buff, size_t size,
 
 typedef struct luaL_Buffer {
   char *p;			/* current position in buffer */
-  int level;
+  int lvl;  /* number of strings in the stack (level) */
   lua_State *L;
   char buffer[LUAL_BUFFERSIZE];
 } luaL_Buffer;
@@ -121,8 +119,8 @@ LUALIB_API void luaL_pushresult (luaL_Buffer *B);
 
 LUALIB_API int   lua_dofile (lua_State *L, const char *filename);
 LUALIB_API int   lua_dostring (lua_State *L, const char *str);
-LUALIB_API int   lua_dobuffer (lua_State *L, const char *buff, size_t size,
-                               const char *name);
+LUALIB_API int   lua_dobuffer (lua_State *L, const char *buff, size_t sz,
+                               const char *n);
 
 
 #endif

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.82 2002/08/06 18:01:50 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.83 2002/08/08 20:08:41 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -208,27 +208,27 @@ static int emptybuffer (luaL_Buffer *B) {
   else {
     lua_pushlstring(B->L, B->buffer, l);
     B->p = B->buffer;
-    B->level++;
+    B->lvl++;
     return 1;
   }
 }
 
 
 static void adjuststack (luaL_Buffer *B) {
-  if (B->level > 1) {
+  if (B->lvl > 1) {
     lua_State *L = B->L;
     int toget = 1;  /* number of levels to concat */
     size_t toplen = lua_strlen(L, -1);
     do {
       size_t l = lua_strlen(L, -(toget+1));
-      if (B->level - toget + 1 >= LIMIT || toplen > l) {
+      if (B->lvl - toget + 1 >= LIMIT || toplen > l) {
         toplen += l;
         toget++;
       }
       else break;
-    } while (toget < B->level);
+    } while (toget < B->lvl);
     lua_concat(L, toget);
-    B->level = B->level - toget + 1;
+    B->lvl = B->lvl - toget + 1;
   }
 }
 
@@ -253,8 +253,8 @@ LUALIB_API void luaL_addstring (luaL_Buffer *B, const char *s) {
 
 LUALIB_API void luaL_pushresult (luaL_Buffer *B) {
   emptybuffer(B);
-  lua_concat(B->L, B->level);
-  B->level = 1;
+  lua_concat(B->L, B->lvl);
+  B->lvl = 1;
 }
 
 
@@ -269,7 +269,7 @@ LUALIB_API void luaL_addvalue (luaL_Buffer *B) {
   else {
     if (emptybuffer(B))
       lua_insert(L, -2);  /* put buffer before new value */
-    B->level++;  /* add new value into B stack */
+    B->lvl++;  /* add new value into B stack */
     adjuststack(B);
   }
 }
@@ -278,7 +278,7 @@ LUALIB_API void luaL_addvalue (luaL_Buffer *B) {
 LUALIB_API void luaL_buffinit (lua_State *L, luaL_Buffer *B) {
   B->L = L;
   B->p = B->buffer;
-  B->level = 0;
+  B->lvl = 0;
 }
 
 /* }====================================================== */
