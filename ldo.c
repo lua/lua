@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.105 2000/10/09 13:47:32 roberto Exp roberto $
+** $Id: ldo.c,v 1.106 2000/10/09 15:46:43 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -264,11 +264,6 @@ static int parse_file (lua_State *L, const char *filename) {
   int c;    /* look ahead char */
   FILE *f = (filename == NULL) ? stdin : fopen(filename, "r");
   if (f == NULL) return LUA_ERRFILE;  /* unable to open file */
-  lua_pushstring(L, "@");
-  lua_pushstring(L, (filename == NULL) ? "(stdin)" : filename);
-  lua_concat(L, 2);
-  filename = lua_tostring(L, -1);  /* filename = '@'..filename */
-  lua_pop(L, 1);  /* OK: there is no GC during parser */
   c = fgetc(f);
   ungetc(c, f);
   bin = (c == ID_CHUNK);
@@ -276,6 +271,11 @@ static int parse_file (lua_State *L, const char *filename) {
     f = freopen(filename, "rb", f);  /* set binary mode */
     if (f == NULL) return LUA_ERRFILE;  /* unable to reopen file */
   }
+  lua_pushstring(L, "@");
+  lua_pushstring(L, (filename == NULL) ? "(stdin)" : filename);
+  lua_concat(L, 2);
+  filename = lua_tostring(L, -1);  /* filename = '@'..filename */
+  lua_pop(L, 1);  /* OK: there is no GC during parser */
   luaZ_Fopen(&z, f, filename);
   status = protectedparser(L, &z, bin);
   if (f != stdin)
