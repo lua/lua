@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.70 1996/06/10 19:36:24 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.71 1996/07/24 17:55:57 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -551,7 +551,13 @@ int lua_dofile (char *filename)
     return 2;
   c = fgetc(f);
   ungetc(c, f);
-  status = (c == ID_CHUNK) ? luaI_undump(f) : do_protectedmain();
+  if (c == ID_CHUNK)
+    status = luaI_undump(f);
+  else {
+    if (c == '#')
+      while ((c=fgetc(f)) != '\n') /* skip first line */;
+    status = do_protectedmain();
+  }
   lua_closefile();
   return status;
 }
