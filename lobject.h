@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.88 2001/01/25 16:45:36 roberto Exp roberto $
+** $Id: lobject.h,v 1.89 2001/01/26 15:58:50 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -178,10 +178,12 @@ typedef struct Closure {
 
 
 typedef struct Node {
-  TObject key;
-  TObject val;
   struct Node *next;  /* for chaining */
+  int key_tt;  /* (break object to save padding space) */
+  Value key_value;
+  TObject val;
 } Node;
+
 
 typedef struct Hash {
   Node *node;

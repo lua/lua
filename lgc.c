@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.80 2001/01/26 13:18:00 roberto Exp roberto $
+** $Id: lgc.c,v 1.81 2001/01/26 14:16:24 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -133,11 +133,16 @@ static void traversetable (GCState *st, Hash *h) {
   for (i=0; i<h->size; i++) {
     Node *n = node(h, i);
     if (ttype(val(n)) == LUA_TNIL) {
-      if (ttype(key(n)) != LUA_TNIL)
-        sethvalue(key(n), NULL);  /* dead key; remove it */
+      if (ttype_key(n) != LUA_TNIL)
+        n->key_value.v = NULL;  /* dead key; remove it */
     }
     else {
-      markobject(st, &n->key);
+      lua_assert(ttype_key(n) != LUA_TNIL);
+      if (ttype_key(n) != LUA_TNUMBER) {
+        TObject o;
+        setkey2obj(&o, n);
+        markobject(st, &o);
+      }
       markobject(st, &n->val);
     }
   }

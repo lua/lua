@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.h,v 1.29 2001/01/26 14:16:35 roberto Exp roberto $
+** $Id: ltable.h,v 1.30 2001/01/29 13:02:20 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -10,13 +10,20 @@
 #include "lobject.h"
 
 
-#define node(t,i)	(&(t)->node[i])
-#define key(n)		(&(n)->key)
-#define val(n)		(&(n)->val)
+#define node(_t,_i)	(&(_t)->node[_i])
+#define val(_n)		(&(_n)->val)
 
-#define luaH_get(t,k)	luaH_set(NULL,t,k)
-#define luaH_getnum(t,k)	luaH_setnum(NULL,t,k)
-#define luaH_getstr(t,k)	luaH_setstr(NULL,t,k)
+#define ttype_key(_n)		((_n)->key_tt)
+#define nvalue_key(_n)		((_n)->key_value.n)
+#define tsvalue_key(_n)		((TString *)(_n)->key_value.v)
+#define setkey2obj(_o,_k) \
+  ((_o)->tt = ttype_key(_k), (_o)->value = (_k)->key_value)
+#define setobj2key(_k,_o) \
+  (ttype_key(_k) = (_o)->tt, (_k)->key_value = (_o)->value)
+
+#define luaH_get(_t,_k)	luaH_set(NULL,_t,_k)
+#define luaH_getnum(_t,_k)	luaH_setnum(NULL,_t,_k)
+#define luaH_getstr(_t,_k)	luaH_setstr(NULL,_t,_k)
 
 Hash *luaH_new (lua_State *L, int nhash);
 void luaH_free (lua_State *L, Hash *t);
@@ -27,7 +34,7 @@ TObject *luaH_setnum (lua_State *L, Hash *t, lua_Number key);
 TObject *luaH_setstr (lua_State *L, Hash *t, TString *key);
 
 /* exported only for debugging */
-Node *luaH_mainposition (const Hash *t, const TObject *key);
+Node *luaH_mainposition (const Hash *t, const Node *n);
 
 
 #endif

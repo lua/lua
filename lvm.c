@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.159 2001/01/29 13:02:20 roberto Exp roberto $
+** $Id: lvm.c,v 1.160 2001/01/29 15:26:40 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -662,7 +662,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         else {
           Node *node = node(t, n);
           setnvalue(top-3, n);  /* index */
-          setobj(top-2, key(node));
+          setkey2obj(top-2, node);
           setobj(top-1, val(node));
           dojump(pc, i);  /* repeat loop */
         }

@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.70 2001/01/26 15:58:50 roberto Exp roberto $
+** $Id: ltable.c,v 1.71 2001/01/29 13:02:20 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -40,14 +40,14 @@
 ** returns the `main' position of an element in a table (that is, the index
 ** of its hash value)
 */
-Node *luaH_mainposition (const Hash *t, const TObject *key) {
-  switch (ttype(key)) {
+Node *luaH_mainposition (const Hash *t, const Node *n) {
+  switch (ttype_key(n)) {
     case LUA_TNUMBER:
-      return hashnum(t, nvalue(key));
+      return hashnum(t, nvalue_key(n));
     case LUA_TSTRING:
-      return hashstr(t, tsvalue(key));
+      return hashstr(t, tsvalue_key(n));
     default:  /* all other types are hashed as (void *) */
-      return hashpointer(t, hvalue(key));
+      return hashpointer(t, tsvalue_key(n));
   }
 }
 
@@ -87,9 +87,9 @@ static void setnodevector (lua_State *L, Hash *t, luint32 size) {
     luaD_error(L, "table overflow");
   t->node = luaM_newvector(L, size, Node);
   for (i=0; i<(int)size; i++) {
-    setnilvalue(&t->node[i].key);
-    setnilvalue(&t->node[i].val);
     t->node[i].next = NULL;
+    t->node[i].key_tt = LUA_TNIL;
+    setnilvalue(&t->node[i].val);
   }
   t->size = size;
   t->firstfree = &t->node[size-1];  /* first free position to be used */
@@ -143,8 +143,13 @@ static void rehash (lua_State *L, Hash *t) {
     setnodevector(L, t, oldsize);
   for (i=0; i<oldsize; i++) {
     Node *old = nold+i;
-    if (ttype(&old->val) != LUA_TNIL)
-      setobj(luaH_set(L, t, &old->key), &old->val);
+    if (ttype(&old->val) != LUA_TNIL) {
+      TObject o;
+      TObject *v;
+      setkey2obj(&o, old);
+      v = luaH_set(L, t, &o);
+      setobj(v, &old->val);
+    }
   }
   luaM_freearray(L, nold, oldsize, Node);  /* free old array */
 }
@@ -159,7 +164,7 @@ static void rehash (lua_State *L, Hash *t) {
 */
 static TObject *newkey (lua_State *L, Hash *t, Node *mp, const TObject *key) {
   if (ttype(&mp->val) != LUA_TNIL) {  /* main position is not free? */
-    Node *othern = luaH_mainposition(t, &mp->key);  /* `mp' of colliding node */
+    Node *othern = luaH_mainposition(t, mp);  /* `mp' of colliding node */
     Node *n = t->firstfree;  /* get a free place */
     if (othern != mp) {  /* is colliding node out of its main position? */
       /* yes; move colliding node into free position */
@@ -176,10 +181,10 @@ static TObject *newkey (lua_State *L, Hash *t, Node *mp, const TObject *key) {
       mp = n;
     }
   }
-  setobj(&mp->key, key);
+  setobj2key(mp, key);
   lua_assert(ttype(&mp->val) == LUA_TNIL);
   for (;;) {  /* correct `firstfree' */
-    if (ttype(&t->firstfree->key) == LUA_TNIL)
+    if (ttype_key(t->firstfree) == LUA_TNIL)
       return &mp->val;  /* OK; table still has a free place */
     else if (t->firstfree == t->node) break;  /* cannot decrement from here */
     else (t->firstfree)--;
@@ -197,7 +202,7 @@ TObject *luaH_setnum (lua_State *L, Hash *t, lua_Number key) {
   Node *mp = hashnum(t, key);
   Node *n = mp;
   do {  /* check whether `key' is somewhere in the chain */
-    if (nvalue(&n->key) == key && ttype(&n->key) == LUA_TNUMBER)
+    if (nvalue_key(n) == key && ttype_key(n) == LUA_TNUMBER)
       return &n->val;  /* that's all */
     else n = n->next;
   } while (n);
@@ -216,7 +221,7 @@ TObject *luaH_setstr (lua_State *L, Hash *t, TString *key) {
   Node *mp = hashstr(t, key);
   Node *n = mp;
   do {  /* check whether `key' is somewhere in the chain */
-    if (tsvalue(&n->key) == key && ttype(&n->key) == LUA_TSTRING)
+    if (tsvalue_key(n) == key && ttype_key(n) == LUA_TSTRING)
       return &n->val;  /* that's all */
     else n = n->next;
   } while (n);
@@ -234,8 +239,8 @@ static TObject *luaH_setany (lua_State *L, Hash *t, const TObject *key) {
   Node *mp = hashpointer(t, hvalue(key));
   Node *n = mp;
   do {  /* check whether `key' is somewhere in the chain */
-    /* compare as `hvalue', but may be other pointers (it is the same) */
-    if (hvalue(&n->key) == hvalue(key) && ttype(&n->key) == ttype(key))
+    /* compare as `tsvalue', but may be other pointers (it is the same) */
+    if (tsvalue_key(n) == tsvalue(key) && ttype_key(n) == ttype(key))
       return &n->val;  /* that's all */
     else n = n->next;
   } while (n);
