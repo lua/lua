@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.115 2004/06/02 19:06:14 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.116 2004/06/17 14:06:52 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -340,6 +340,56 @@ LUALIB_API int luaL_getn (lua_State *L, int t) {
 
 /* }====================================================== */
 
+
+
+
+static const char *pushnexttemplate (lua_State *L, const char *path) {
+  const char *l;
+  if (*path == '\0') return NULL;  /* no more templates */
+  if (*path == LUA_PATH_SEP) path++;  /* skip separator */
+  l = strchr(path, LUA_PATH_SEP);  /* find next separator */
+  if (l == NULL) l = path+strlen(path);
+  lua_pushlstring(L, path, l - path);  /* template */
+  return l;
+}
+
+
+static void pushcomposename (lua_State *L) {
+  const char *tem = lua_tostring(L, -1);
+  const char *wild;
+  int n = 1;
+  while ((wild = strchr(tem, LUA_PATH_MARK)) != NULL) {
+    /* is there stack space for prefix, name, and eventual last suffix? */
+    luaL_checkstack(L, 3, "too many marks in a path component");
+    lua_pushlstring(L, tem, wild - tem);  /* push prefix */
+    lua_pushvalue(L, 1);  /* push package name (in place of MARK) */
+    tem = wild + 1;  /* continue after MARK */
+    n += 2;
+  }
+  lua_pushstring(L, tem);  /* push last suffix (`n' already includes this) */
+  lua_concat(L, n);
+}
+
+
+LUALIB_API int luaL_searchpath (lua_State *L, const char *name,
+                                const char *path, luaL_Loader f, void *data) {
+  int status;
+  const char *p = path;
+  int top = lua_gettop(L);
+  do {
+    lua_settop(L, top);
+    if ((p = pushnexttemplate(L, p)) == NULL) {
+      lua_pushfstring(L, "cound not find `%s' in path `%s'", name, path);
+      return LUA_ERRFILE;
+    }
+    pushcomposename(L);
+    lua_remove(L, -2);  /* remove path template */
+    lua_assert(lua_gettop(L) == top + 1);
+    status = f(data, lua_tostring(L, -1));  /* try to load it */
+    lua_remove(L, top+1);  /* remove file name */
+  } while (status == LUA_ERRFILE);
+  return status;
+}
 
 
 /*

@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.147 2004/06/15 13:31:30 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.148 2004/06/21 16:45:09 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -261,7 +261,11 @@ static int luaB_loadstring (lua_State *L) {
 
 static int luaB_loadfile (lua_State *L) {
   const char *fname = luaL_optstring(L, 1, NULL);
-  return load_aux(L, luaL_loadfile(L, fname));
+  const char *path = luaL_optstring(L, 2, NULL);
+  int status = (path == NULL)
+               ? luaL_loadfile(L, fname)
+               : luaL_searchpath(L, fname, path, (luaL_Loader)luaL_loadfile, L);
+  return load_aux(L, status);
 }
 
 
@@ -455,7 +459,6 @@ static const char *getpath (lua_State *L) {
   const char *path;
   lua_getglobal(L, LUA_PATH);  /* try global variable */
   path = lua_tostring(L, -1);
-  lua_pop(L, 1);
   if (path) return path;
   path = getenv(LUA_PATH);  /* else try environment variable */
   if (path) return path;
@@ -463,81 +466,28 @@ static const char *getpath (lua_State *L) {
 }
 
 
-static const char *pushnextpath (lua_State *L, const char *path) {
-  const char *l;
-  if (*path == '\0') return NULL;  /* no more paths */
-  if (*path == LUA_PATH_SEP) path++;  /* skip separator */
-  l = strchr(path, LUA_PATH_SEP);  /* find next separator */
-  if (l == NULL) l = path+strlen(path);
-  lua_pushlstring(L, path, l - path);  /* directory name */
-  return l;
-}
-
-
-static void pushcomposename (lua_State *L) {
-  const char *path = lua_tostring(L, -1);
-  const char *wild;
-  int n = 1;
-  while ((wild = strchr(path, LUA_PATH_MARK)) != NULL) {
-    /* is there stack space for prefix, name, and eventual last suffix? */
-    luaL_checkstack(L, 3, "too many marks in a path component");
-    lua_pushlstring(L, path, wild - path);  /* push prefix */
-    lua_pushvalue(L, 1);  /* push package name (in place of MARK) */
-    path = wild + 1;  /* continue after MARK */
-    n += 2;
-  }
-  lua_pushstring(L, path);  /* push last suffix (`n' already includes this) */
-  lua_concat(L, n);
-}
-
-
 static int luaB_require (lua_State *L) {
-  const char *path;
-  int status = LUA_ERRFILE;  /* not found (yet) */
-  luaL_checkstring(L, 1);
-  lua_settop(L, 1);
+  const char *name = luaL_checkstring(L, 1);
+  const char *path = getpath(L);
   lua_getglobal(L, REQTAB);
-  if (!lua_istable(L, 2)) return luaL_error(L, "`" REQTAB "' is not a table");
-  path = getpath(L);
-  lua_pushvalue(L, 1);  /* check package's name in book-keeping table */
-  lua_rawget(L, 2);
+  if (!lua_istable(L, -1))
+    return luaL_error(L, "global `" REQTAB "' is not a table");
+  lua_getfield(L, -1, name);
   if (lua_toboolean(L, -1))  /* is it there? */
     return 1;  /* package is already loaded; return its result */
-  else {  /* must load it */
-    while (status == LUA_ERRFILE) {
-      lua_settop(L, 3);  /* reset stack position */
-      if ((path = pushnextpath(L, path)) == NULL) break;
-      pushcomposename(L);
-      status = luaL_loadfile(L, lua_tostring(L, -1));  /* try to load it */
-    }
+  /* else must load it */
+  if (luaL_searchpath(L, name, path, (luaL_Loader)luaL_loadfile, L) != 0)
+    return luaL_error(L, "error loading package `%s' (%s)", name,
+                         lua_tostring(L, -1));
+  lua_pushvalue(L, 1);  /* pass name as argument to module */
+  lua_call(L, 1, 1);  /* run loaded module */
+  if (lua_isnil(L, -1)) {  /* nil return? */
+    lua_pop(L, 1);  /* remove it */
+    lua_pushboolean(L, 1);  /* replace to true */
   }
-  switch (status) {
-    case 0: {
-      lua_getglobal(L, "_REQUIREDNAME");  /* save previous name */
-      lua_insert(L, -2);  /* put it below function */
-      lua_pushvalue(L, 1);
-      lua_setglobal(L, "_REQUIREDNAME");  /* set new name */
-      lua_call(L, 0, 1);  /* run loaded module */
-      lua_insert(L, -2);  /* put result below previous name */
-      lua_setglobal(L, "_REQUIREDNAME");  /* reset to previous name */
-      if (lua_isnil(L, -1)) {  /* no/nil return? */
-        lua_pushboolean(L, 1);
-        lua_replace(L, -2);  /* replace to true */
-      }
-      lua_pushvalue(L, 1);
-      lua_pushvalue(L, -2);
-      lua_rawset(L, 2);  /* mark it as loaded */
-      return 1;  /* return value */
-    }
-    case LUA_ERRFILE: {  /* file not found */
-      return luaL_error(L, "could not load package `%s' from path `%s'",
-                            lua_tostring(L, 1), getpath(L));
-    }
-    default: {
-      return luaL_error(L, "error loading package `%s' (%s)",
-                           lua_tostring(L, 1), lua_tostring(L, -1));
-    }
-  }
+  lua_pushvalue(L, -1);  /* duplicate result (to return it) */
+  lua_setfield(L, -4, name);  /* mark `name' as loaded */
+  return 1;  /* return value */
 }
 
 /* }====================================================== */
