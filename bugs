@@ -13,3 +13,8 @@ Thu Jan 15 14:34:58 EDT 1998
 ** lbuiltin.c / lobject.h
 Thu Jan 15 14:34:58 EDT 1998
 >> MAX_WORD may be bigger than MAX_INT
+
+
+** llex.c
+Mon Jan 19 18:17:18 EDT 1998
+>> wrong line number (+1) in error report when file starts with "#..."
