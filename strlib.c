@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.41 1997/04/06 14:17:06 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.42 1997/06/16 20:29:59 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -67,28 +67,6 @@ static void addnchar (char *s, int n)
 static void addstr (char *s)
 {
   addnchar(s, strlen(s));
-}
-
-/*
-** Interface to strtok
-*/
-static void str_tok (void)
-{
-  char *s1 = luaL_check_string(1);
-  char *del = luaL_check_string(2);
-  lua_Object t = lua_createtable();
-  int i = 1;
-  /* As strtok changes s1, and s1 is "constant",  make a copy of it */
-  s1 = strcpy(strbuffer(strlen(s1+1)), s1);
-  while ((s1 = strtok(s1, del)) != NULL) {
-    lua_pushobject(t);
-    lua_pushnumber(i++);
-    lua_pushstring(s1);
-    lua_settable();
-    s1 = NULL;  /* prepare for next strtok */
-  }
-  lua_pushobject(t);
-  lua_pushnumber(i-1);  /* total number of tokens */
 }
 
 
@@ -306,7 +284,7 @@ static char *match (char *s, char *p, int level)
       return res;
     }
     case ESC:
-      if (isdigit((unsigned char)*(p+1))) {  /* capture */
+      if (isdigit((unsigned char)(*(p+1)))) {  /* capture */
         int l = check_cap(*(p+1), level);
         if (strncmp(capture[l].init, s, capture[l].len) == 0) {
           /* return match(p+2, s+capture[l].len, level); */
@@ -394,7 +372,7 @@ static void str_find (void)
   }
 }
 
-static void add_s (lua_Object newp)
+static void add_s (lua_Object newp, lua_Object table, int n)
 {
   if (lua_isstring(newp)) {
     char *news = lua_getstring(newp);
@@ -411,7 +389,10 @@ static void add_s (lua_Object newp)
     lua_Object res;
     struct lbuff oldbuff;
     lua_beginblock();
+    if (lua_istable(table))
+      lua_pushobject(table);
     push_captures();
+    lua_pushnumber(n);
     /* function may use lbuffer, so save it and create a new one */
     oldbuff = lbuffer;
     lbuffer.b = NULL; lbuffer.max = lbuffer.size = 0;
@@ -431,15 +412,16 @@ static void str_gsub (void)
   char *src = luaL_check_string(1);
   char *p = luaL_check_string(2);
   lua_Object newp = lua_getparam(3);
-  int max_s = (int)luaL_opt_number(4, strlen(src)+1);
+  lua_Object table = lua_getparam(4);
+  int max_s = (int)luaL_opt_number(lua_istable(table)?5:4, strlen(src)+1);
   int anchor = (*p == '^') ? (p++, 1) : 0;
   int n = 0;
   luaI_emptybuff();
   while (n < max_s) {
     char *e = match(src, p, 0);
     if (e) {
-      add_s(newp);
       n++;
+      add_s(newp, table, n);
     }
     if (e && e>src) /* non empty match? */
       src = e;  /* skip it */
@@ -527,7 +509,6 @@ static void str_format (void)
 
 
 static struct luaL_reg strlib[] = {
-{"strtok", str_tok},
 {"strlen", str_len},
 {"strsub", str_sub},
 {"strset", str_set},
