@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.66 2001/03/26 14:31:49 roberto Exp roberto $
+** $Id: lua.c,v 1.67 2001/06/06 18:00:19 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -34,10 +34,6 @@ static int isatty (int x) { return x==0; }  /* assume stdin is a tty */
 #define LUA_USERINIT(L)		openstdlibs(L)
 #endif
 
-
-#ifndef LUA_USERFINI
-#define LUA_USERFINI
-#endif
 
 
 /*
