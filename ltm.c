@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.74 2001/07/12 18:11:58 roberto Exp roberto $
+** $Id: ltm.c,v 1.75 2001/07/23 19:56:00 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -21,9 +21,10 @@
 
 
 const l_char *const luaT_eventname[] = {  /* ORDER TM */
-  l_s("gettable"), l_s("settable"), l_s("index"), l_s("getglobal"), l_s("setglobal"), l_s("add"), l_s("sub"),
-  l_s("mul"), l_s("div"), l_s("pow"), l_s("unm"), l_s("lt"), l_s("concat"), l_s("gc"), l_s("function"),
-  l_s("le"), l_s("gt"), l_s("ge"),  /* deprecated options!! */
+  l_s("gettable"), l_s("settable"), l_s("index"), l_s("getglobal"),
+  l_s("setglobal"), l_s("add"), l_s("sub"), l_s("mul"), l_s("div"),
+  l_s("pow"), l_s("unm"), l_s("lt"), l_s("concat"), l_s("gc"),
+  l_s("function"),
   NULL
 };
 
@@ -37,12 +38,8 @@ static int findevent (const l_char *name) {
 }
 
 
-static int luaI_checkevent (lua_State *L, const l_char *name, int t) {
+static int luaI_checkevent (lua_State *L, const l_char *name) {
   int e = findevent(name);
-  if (e >= TM_N)
-    luaO_verror(L, l_s("event `%.50s' is deprecated"), name);
-  if (e == TM_GC && t == LUA_TTABLE)
-    luaO_verror(L, l_s("event `gc' for tables is deprecated"));
   if (e < 0)
     luaO_verror(L, l_s("`%.50s' is not a valid event name"), name);
   return e;
@@ -157,7 +154,7 @@ const l_char *luaT_typename (global_State *G, const TObject *o) {
 LUA_API void lua_gettagmethod (lua_State *L, int t, const l_char *event) {
   int e;
   lua_lock(L);
-  e = luaI_checkevent(L, event, t);
+  e = luaI_checkevent(L, event);
   checktag(L, t);
   if (luaT_validevent(t, e) && luaT_gettm(G(L), t, e)) {
     setclvalue(L->top, luaT_gettm(G(L), t, e));
@@ -172,7 +169,7 @@ LUA_API void lua_gettagmethod (lua_State *L, int t, const l_char *event) {
 LUA_API void lua_settagmethod (lua_State *L, int t, const l_char *event) {
   int e;
   lua_lock(L);
-  e = luaI_checkevent(L, event, t);
+  e = luaI_checkevent(L, event);
   checktag(L, t);
   if (!luaT_validevent(t, e))
     luaO_verror(L, l_s("cannot change `%.20s' tag method for type `%.20s'%.20s"),
