@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.32 1996/11/07 20:26:19 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.33 1996/11/20 13:47:59 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -154,7 +154,7 @@ static void str_lower (void)
   char *s = lua_check_string(1, "strlower");
   luaI_addchar(0);
   while (*s)
-    luaI_addchar(tolower(*s++));
+    luaI_addchar(tolower((unsigned char)*s++));
   lua_pushstring(luaI_addchar(0));
 }
 
@@ -166,7 +166,7 @@ static void str_upper (void)
   char *s = lua_check_string(1, "strupper");
   luaI_addchar(0);
   while (*s)
-    luaI_addchar(toupper(*s++));
+    luaI_addchar(toupper((unsigned char)*s++));
   lua_pushstring(luaI_addchar(0));
 }
 
@@ -222,18 +222,18 @@ char *item_end (char *p)
 static int matchclass (int c, int cl)
 {
   int res;
-  switch (tolower(cl)) {
-    case 'a' : res = isalpha(c); break;
-    case 'c' : res = iscntrl(c); break;
-    case 'd' : res = isdigit(c); break;
-    case 'l' : res = islower(c); break;
-    case 'p' : res = ispunct(c); break;
-    case 's' : res = isspace(c); break;
-    case 'u' : res = isupper(c); break;
-    case 'w' : res = isalnum(c); break;
+  switch (tolower((unsigned char)cl)) {
+    case 'a' : res = isalpha((unsigned char)c); break;
+    case 'c' : res = iscntrl((unsigned char)c); break;
+    case 'd' : res = isdigit((unsigned char)c); break;
+    case 'l' : res = islower((unsigned char)c); break;
+    case 'p' : res = ispunct((unsigned char)c); break;
+    case 's' : res = isspace((unsigned char)c); break;
+    case 'u' : res = isupper((unsigned char)c); break;
+    case 'w' : res = isalnum((unsigned char)c); break;
     default: return (cl == c);
   }
-  return (islower(cl) ? res : !res);
+  return (islower((unsigned char)cl) ? res : !res);
 }
 
 int singlematch (int c, char *p)
@@ -333,7 +333,7 @@ static char *match (char *s, char *p, int level)
       return res;
     }
     case ESC:
-      if (isdigit(*(p+1))) {  /* capture */
+      if (isdigit((unsigned char)*(p+1))) {  /* capture */
         int l = check_cap(*(p+1), level);
         if (strncmp(capture[l].init, s, capture[l].len) == 0) {
           /* return match(p+2, s+capture[l].len, level); */
@@ -415,7 +415,7 @@ static void add_s (lua_Object newp)
   if (lua_isstring(newp)) {
     char *news = lua_getstring(newp);
     while (*news) {
-      if (*news != ESC || !isdigit(*++news))
+      if (*news != ESC || !isdigit((unsigned char)*++news))
         luaI_addchar(*news++);
       else {
         int l = check_cap(*news++, num_captures);

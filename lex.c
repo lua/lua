@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.39 1996/11/08 19:08:30 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.40 1996/11/21 14:44:04 roberto Exp roberto $";
 
 
 #include <ctype.h>
@@ -85,7 +85,7 @@ static int inclinenumber (int pragma_allowed)
     char *buff = luaI_buffer(MINBUFF+1);
     int i = 0;
     next();  /* skip $ */
-    while (isalnum(current)) {
+    while (isalnum((unsigned char)current)) {
       if (i >= MINBUFF) luaI_syntaxerror("pragma too long");
       buff[i++] = current;
       next();
@@ -259,7 +259,9 @@ int luaY_lex (void)
       case '_':
       {
         TaggedString *ts;
-        do { save_and_next(); } while (isalnum(current) || current == '_');
+        do {
+          save_and_next();
+        } while (isalnum((unsigned char)current) || current == '_');
         save(0);
         ts = lua_createstring(yytext);
         if (ts->marked > 2)
@@ -281,7 +283,7 @@ int luaY_lex (void)
           }
           else return CONC;   /* .. */
         }
-        else if (!isdigit(current)) return '.';
+        else if (!isdigit((unsigned char)current)) return '.';
         /* current is a digit: goes through to number */
 	a=0.0;
         goto fraction;
@@ -292,7 +294,7 @@ int luaY_lex (void)
         do {
           a=10.0*a+(current-'0');
           save_and_next();
-        } while (isdigit(current));
+        } while (isdigit((unsigned char)current));
         if (current == '.') {
           save_and_next();
           if (current == '.')
@@ -301,7 +303,7 @@ int luaY_lex (void)
         }
       fraction:
 	{ double da=0.1;
-	  while (isdigit(current))
+	  while (isdigit((unsigned char)current))
 	  {
             a+=(current-'0')*da;
             da/=10.0;
@@ -315,11 +317,12 @@ int luaY_lex (void)
             save_and_next();
 	    neg=(current=='-');
             if (current == '+' || current == '-') save_and_next();
-            if (!isdigit(current)) { save(0); return WRONGTOKEN; }
+            if (!isdigit((unsigned char)current)) {
+              save(0); return WRONGTOKEN; }
             do {
               e=10.0*e+(current-'0');
               save_and_next();
-            } while (isdigit(current));
+            } while (isdigit((unsigned char)current));
 	    for (ea=neg?0.1:10.0; e>0; e>>=1)
 	    {
 	      if (e & 1) a*=ea;
