@@ -303,3 +303,13 @@ Fri Dec  6 17:06:40 UTC 2002
 >> scope of generic for variables is not sound
 (by Gavin Wraith; since 5.0a)
 
+
+
+
+=================================================================
+--- Version 5.0 beta
+** lbaselib.c
+Fri Dec 20 09:53:19 UTC 2002
+>> `resume' was checking the wrong value for stack overflow
+(by Maik Zimmermann; since 5.0b)
+
