@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.4 2002/05/02 17:12:27 roberto Exp roberto $
+** $Id: liolib.c,v 2.5 2002/05/06 19:05:10 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -60,8 +60,9 @@ static FILE *tofile (lua_State *L, int findex) {
     lua_pop(L, 1);
     return *f;
   }
-  luaL_argerror(L, findex, "bad file");
-  return NULL;  /* to avoid warnings */
+  if (findex > 0)
+    luaL_argerror(L, findex, "bad file");
+  return NULL;
 }
 
 
@@ -133,14 +134,18 @@ static int io_tmpfile (lua_State *L) {
 
 
 static FILE *getiofile (lua_State *L, const char *name) {
+  FILE *f;
   lua_pushstring(L, name);
   lua_rawget(L, lua_upvalueindex(1));
-  return tofile(L, -1);
+  f = tofile(L, -1);
+  if (f == NULL)
+    luaL_verror(L, "%s is closed", name);
+  return f;
 }
 
 
 static int g_iofile (lua_State *L, const char *name, const char *mode) {
-  if (lua_isnone(L, 1)) {
+  if (lua_isnoneornil(L, 1)) {
     lua_pushstring(L, name);
     lua_rawget(L, lua_upvalueindex(1));
     return 1;
@@ -154,8 +159,8 @@ static int g_iofile (lua_State *L, const char *name, const char *mode) {
       newfile(L, f);
     }
     else {
+      tofile(L, 1);  /* check that it's a valid file handle */
       lua_pushvalue(L, 1);
-      tofile(L, -1);  /* check that it's a valid file handle */
     }
     lua_rawset(L, lua_upvalueindex(1));
     return 0;

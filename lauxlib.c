@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.71 2002/05/16 18:39:46 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.72 2002/06/03 20:11:41 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -37,7 +37,13 @@ LUALIB_API int luaL_argerror (lua_State *L, int narg, const char *extramsg) {
   lua_Debug ar;
   lua_getstack(L, 0, &ar);
   lua_getinfo(L, "n", &ar);
-  if (strcmp(ar.namewhat, "method") == 0) narg--;  /* do not count `self' */
+  if (strcmp(ar.namewhat, "method") == 0) {
+    narg--;  /* do not count `self' */
+    if (narg == 0)  /* error is in the self argument itself? */
+      return luaL_verror(L,
+        "calling %s on bad self (perhaps using `:' instead of `.')",
+        ar.name);
+  }
   if (ar.name == NULL)
     ar.name = "?";
   return luaL_verror(L, "bad argument #%d to `%s' (%s)",
@@ -314,6 +320,7 @@ typedef struct LoadF {
 
 static const char *getF (void *ud, size_t *size) {
   LoadF *lf = (LoadF *)ud;
+  if (feof(lf->f)) return NULL;
   *size = fread(lf->buff, 1, LUAL_BUFFERSIZE, lf->f);
   return (*size > 0) ? lf->buff : NULL;
 }
