@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.95 2003/02/11 15:32:31 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.96 2003/03/18 12:25:32 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -202,7 +202,10 @@ LUALIB_API int luaL_getmetafield (lua_State *L, int obj, const char *event) {
     lua_pop(L, 2);  /* remove metatable and metafield */
     return 0;
   }
-  return 1;
+  else {
+    lua_remove(L, -2);  /* remove only metatable */
+    return 1;
+  }
 }
 
 
