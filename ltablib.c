@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.8 2002/06/25 19:16:44 roberto Exp roberto $
+** $Id: ltablib.c,v 1.9 2002/07/01 19:25:28 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -16,7 +16,7 @@
 
 
 static int checkint (lua_State *L) {
-  int n = lua_tonumber(L, -1);
+  int n = (int)lua_tonumber(L, -1);
   if (n == 0 && !lua_isnumber(L, -1)) n = -1;
   lua_pop(L, 1);
   return n;
