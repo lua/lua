@@ -64,7 +64,7 @@ int luaV_tostring (lua_State *L, TObject *obj) {
 static void traceexec (lua_State *L, lua_Hook linehook) {
   CallInfo *ci = L->ci;
   int *lineinfo = ci_func(ci)->l.p->lineinfo;
-  int pc = (int)(*ci->pc - ci_func(ci)->l.p->code) - 1;
+  int pc = cast(int, *ci->pc - ci_func(ci)->l.p->code) - 1;
   int newline;
   if (pc == 0) {  /* may be first time? */
     ci->line = 1;
@@ -221,9 +221,10 @@ int luaV_lessthan (lua_State *L, const TObject *l, const TObject *r) {
 }
 
 
-void luaV_strconc (lua_State *L, int total, StkId top) {
-  luaV_checkGC(L, top);
+void luaV_strconc (lua_State *L, int total, int last) {
+  luaV_checkGC(L, L->ci->base + last + 1);
   do {
+    StkId top = L->ci->base + last + 1;
     int n = 2;  /* number of elements handled in this pass (at least 2) */
     if (tostring(L, top-2) || tostring(L, top-1)) {
       if (!call_binTM(L, top-2, top-1, top-2, TM_CONCAT))
@@ -249,7 +250,7 @@ void luaV_strconc (lua_State *L, int total, StkId top) {
       setsvalue(top-n, luaS_newlstr(L, buffer, tl));
     }
     total -= n-1;  /* got `n' strings to create 1 new */
-    top -= n-1;
+    last -= n-1;
   } while (total > 1);  /* repeat until only 1 result left */
 }
 
@@ -431,71 +432,50 @@ StkId luaV_execute (lua_State *L) {
         break;
       }
       case OP_CONCAT: {
-        StkId top = RC(i)+1;
-        StkId rb = RB(i);
-        luaV_strconc(L, top-rb, top);
-        setobj(ra, rb);
+        int b = GETARG_B(i);
+        int c = GETARG_C(i);
+        luaV_strconc(L, c-b+1, c);
+        setobj(ra, base+b);
         break;
       }
-      case OP_CJMP:
       case OP_JMP: {
         dojump(pc, i);
         break;
       }
-      case OP_TESTEQ: {
-        lua_assert(GET_OPCODE(*pc) == OP_CJMP);
-        if (luaO_equalObj(ra, RKC(i))) dojump(pc, *pc);
-        pc++;
+      case OP_TESTEQ: {  /* skip next instruction if test fails */
+        if (!luaO_equalObj(ra, RKC(i))) pc++;
         break;
       }
       case OP_TESTNE: {
-        lua_assert(GET_OPCODE(*pc) == OP_CJMP);
-        if (!luaO_equalObj(ra, RKC(i))) dojump(pc, *pc);
-        pc++;
+        if (luaO_equalObj(ra, RKC(i))) pc++;
         break;
       }
       case OP_TESTLT: {
-        lua_assert(GET_OPCODE(*pc) == OP_CJMP);
-        if (luaV_lessthan(L, ra, RKC(i))) dojump(pc, *pc);
-        pc++;
+        if (!luaV_lessthan(L, ra, RKC(i))) pc++;
         break;
       }
       case OP_TESTLE: {  /* b <= c  ===  !(c<b) */
-        lua_assert(GET_OPCODE(*pc) == OP_CJMP);
-        if (!luaV_lessthan(L, RKC(i), ra)) dojump(pc, *pc);
-        pc++;
+        if (luaV_lessthan(L, RKC(i), ra)) pc++;
         break;
       }
       case OP_TESTGT: {  /* b > c  ===  (c<b) */
-        lua_assert(GET_OPCODE(*pc) == OP_CJMP);
-        if (luaV_lessthan(L, RKC(i), ra)) dojump(pc, *pc);
-        pc++;
+        if (!luaV_lessthan(L, RKC(i), ra)) pc++;
         break;
       }
       case OP_TESTGE: {  /* b >= c  === !(b<c) */
-        lua_assert(GET_OPCODE(*pc) == OP_CJMP);
-        if (!luaV_lessthan(L, ra, RKC(i))) dojump(pc, *pc);
-        pc++;
+        if (luaV_lessthan(L, ra, RKC(i))) pc++;
         break;
       }
       case OP_TESTT: {
         StkId rb = RB(i);
-        lua_assert(GET_OPCODE(*pc) == OP_CJMP);
-        if (!l_isfalse(rb)) {
-          setobj(ra, rb);
-          dojump(pc, *pc);
-        }
-        pc++;
+        if (l_isfalse(rb)) pc++;
+        else setobj(ra, rb);
         break;
       }
       case OP_TESTF: {
         StkId rb = RB(i);
-        lua_assert(GET_OPCODE(*pc) == OP_CJMP);
-        if (l_isfalse(rb)) {
-          setobj(ra, rb);
-          dojump(pc, *pc);
-        }
-        pc++;
+        if (!l_isfalse(rb)) pc++;
+        else setobj(ra, rb);
         break;
       }
       case OP_CALL: {

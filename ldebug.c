@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.96 2001/12/18 20:52:30 roberto Exp $
+** $Id: ldebug.c,v 1.97 2002/01/09 22:02:47 roberto Exp $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -350,7 +350,7 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
       if (a == reg) last = pc;  /* change register `a' */
     }
     if (testOpMode(op, OpModeT))
-      check(GET_OPCODE(pt->code[pc+1]) == OP_CJMP);
+      check(pc+2 < pt->sizecode);  /* check skip */
     switch (op) {
       case OP_LOADBOOL: {
         check(c == 0 || pc+2 < pt->sizecode);  /* check its jump */
@@ -381,8 +381,7 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         check(c < MAXSTACK && b < c);
         break;
       }
-      case OP_JMP:
-      case OP_CJMP: {
+      case OP_JMP: {
         int dest = pc+1+b;
 	check(0 <= dest && dest < pt->sizecode);
         /* not full check and jump is forward and do not skip `lastpc'? */

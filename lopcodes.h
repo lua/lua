@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: lopcodes.h,v 1.85 2002/01/09 22:02:47 roberto Exp $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -156,17 +156,16 @@ OP_NOT,/*	A B	R(A) := not R(B)				*/
 OP_CONCAT,/*	A B C	R(A) := R(B).. ... ..R(C)			*/
 
 OP_JMP,/*	sBc	PC += sBc					*/
-OP_CJMP,/*	sBc	if test then PC += sBc		(see (1))	*/
 
-OP_TESTEQ,/*	A C	test := (R(A) == R/K(C))			*/
-OP_TESTNE,/*	A C	test := (R(A) ~= R/K(C))			*/
-OP_TESTLT,/*	A C	test := (R(A) < R/K(C))				*/
-OP_TESTLE,/*	A C	test := (R(A) <= R/K(C))			*/
-OP_TESTGT,/*	A C	test := (R(A) > R/K(C))				*/
-OP_TESTGE,/*	A C	test := (R(A) >= R/K(C))			*/
+OP_TESTEQ,/*	A C	if not (R(A) == R/K(C)) then pc++		*/
+OP_TESTNE,/*	A C	if not (R(A) ~= R/K(C)) then pc++		*/
+OP_TESTLT,/*	A C	if not (R(A) < R/K(C)) then pc++		*/
+OP_TESTLE,/*	A C	if not (R(A) <= R/K(C)) then pc++		*/
+OP_TESTGT,/*	A C	if not (R(A) > R/K(C)) then pc++		*/
+OP_TESTGE,/*	A C	if not (R(A) >= R/K(C)) then pc++		*/
 
-OP_TESTT,/*	A B	test := R(B); if (test) R(A) := R(B)		*/
-OP_TESTF,/*	A B	test := not R(B); if (test) R(A) := R(B)	*/
+OP_TESTT,/*	A B	if (R(B)) then R(A) := R(B) else pc++		*/ 
+OP_TESTF,/*	A B	if not (R(B)) then R(A) := R(B) else pc++	*/ 
 
 OP_CALL,/*	A B C	R(A), ... ,R(A+C-2) := R(A)(R(A+1), ... ,R(A+B-1))*/
 OP_RETURN,/*	A B	return R(A), ... ,R(A+B-2)	(see (3))	*/
@@ -194,14 +193,11 @@ pseudo-instructions (interruptions): cannot occur in regular code
 
 /*===========================================================================
   Notes:
-  (1) In the current implementation there is no `test' variable;
-      instructions OP_TEST* and OP_CJMP must always occur together.
-
-  (2) In OP_CALL, if (B == 0) then B = top. C is the number of returns - 1,
+  (1) In OP_CALL, if (B == 0) then B = top. C is the number of returns - 1,
       and can be 0: OP_CALL then sets `top' to last_result+1, so
       next open instruction (OP_CALL, OP_RETURN, OP_SETLIST) may use `top'.
 
-  (3) In OP_RETURN, if (B == 0) then return up to `top'
+  (2) In OP_RETURN, if (B == 0) then return up to `top'
 ===========================================================================*/
 
 

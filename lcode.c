@@ -71,7 +71,7 @@ int luaK_jump (FuncState *fs) {
 
 static int luaK_condjump (FuncState *fs, OpCode op, int A, int B, int C) {
   luaK_codeABC(fs, op, A, B, C);
-  return luaK_codeAsBc(fs, OP_CJMP, 0, NO_JUMP);
+  return luaK_codeAsBc(fs, OP_JMP, 0, NO_JUMP);
 }
 
 
@@ -127,12 +127,11 @@ static int luaK_getjump (FuncState *fs, int pc) {
 static Instruction *getjumpcontrol (FuncState *fs, int pc) {
   Instruction *pi = &fs->f->code[pc];
   OpCode op = GET_OPCODE(*pi);
-  if (op == OP_CJMP)
+  lua_assert(op == OP_JMP || op == OP_FORLOOP || op == OP_TFORLOOP);
+  if (pc >= 1 && testOpMode(GET_OPCODE(*(pi-1)), OpModeT))
     return pi-1;
-  else {
-    lua_assert(op == OP_JMP || op == OP_FORLOOP || op == OP_TFORLOOP);
+  else
     return pi;
-  }
 }
 
 
@@ -312,18 +311,23 @@ static int code_label (FuncState *fs, int A, int b, int jump) {
 
 
 static void dischargejumps (FuncState *fs, expdesc *e, int reg) {
-  if (hasjumps(e)) {
+  if (e->k == VJMP || hasjumps(e)) {
     int final;  /* position after whole expression */
     int p_f = NO_JUMP;  /* position of an eventual PUSH false */
     int p_t = NO_JUMP;  /* position of an eventual PUSH true */
-    if (need_value(fs, e->f, OP_TESTF) || need_value(fs, e->t, OP_TESTT)) {
+    if (e->k == VJMP || need_value(fs, e->f, OP_TESTF) ||
+                        need_value(fs, e->t, OP_TESTT)) {
       /* expression needs values */
       if (e->k != VJMP) {
         luaK_getlabel(fs);  /* these instruction may be jump target */
         luaK_codeAsBc(fs, OP_JMP, 0, 2);  /* to jump over both pushes */
       }
-      p_f = code_label(fs, reg, 0, 1);
-      p_t = code_label(fs, reg, 1, 0);
+      else {  /* last expression is a conditional (test + jump) */
+        fs->pc--;  /* remove its jump */
+        lua_assert(testOpMode(GET_OPCODE(fs->f->code[fs->pc - 1]), OpModeT));
+      }
+      p_t = code_label(fs, reg, 1, 1);
+      p_f = code_label(fs, reg, 0, 0);
     }
     final = luaK_getlabel(fs);
     luaK_patchlistaux(fs, e->f, p_f, NO_REG, final, reg, p_f);
@@ -389,7 +393,6 @@ static void luaK_exp2reg (FuncState *fs, expdesc *e, int reg) {
       break;
     }
     case VJMP: {
-      luaK_concat(fs, &e->t, e->u.i.info);  /* put this jump in `t' list */
       break;
     }
     default: {

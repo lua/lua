@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: lopcodes.c,v 1.8 2001/12/11 22:48:44 roberto Exp $
 ** extracted automatically from lopcodes.h by mkprint.lua
 ** DO NOT EDIT
 ** See Copyright Notice in lua.h
@@ -37,7 +37,6 @@ const char *const luaP_opnames[] = {
   "NOT",
   "CONCAT",
   "JMP",
-  "CJMP",
   "TESTEQ",
   "TESTNE",
   "TESTLT",
@@ -88,7 +87,6 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0,0,1,0, 1,0,iABC)		/* OP_NOT */
  ,opmode(0,0,1,1, 1,0,iABC)		/* OP_CONCAT */
  ,opmode(0,0,0,0, 0,0,iAsBc)		/* OP_JMP */
- ,opmode(0,0,0,0, 0,0,iAsBc)		/* OP_CJMP */
  ,opmode(1,0,0,1, 0,0,iABC)		/* OP_TESTEQ */
  ,opmode(1,0,0,1, 0,0,iABC)		/* OP_TESTNE */
  ,opmode(1,0,0,1, 0,0,iABC)		/* OP_TESTLT */
