@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.151 2002/11/04 12:31:44 roberto Exp roberto $
+** $Id: lobject.h,v 1.152 2002/11/07 15:37:10 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -219,6 +219,7 @@ typedef struct Proto {
   int sizep;  /* size of `p' */
   int sizelocvars;
   int lineDefined;
+  GCObject *gclist;
   lu_byte nupvalues;
   lu_byte numparams;
   lu_byte is_vararg;
@@ -249,19 +250,18 @@ typedef struct UpVal {
 ** Closures
 */
 
+#define ClosureHeader \
+	CommonHeader; lu_byte isC; lu_byte nupvalues; GCObject *gclist
+
 typedef struct CClosure {
-  CommonHeader;
-  lu_byte isC;  /* 0 for Lua functions, 1 for C functions */
-  lu_byte nupvalues;
+  ClosureHeader;
   lua_CFunction f;
   TObject upvalue[1];
 } CClosure;
 
 
 typedef struct LClosure {
-  CommonHeader;
-  lu_byte isC;
-  lu_byte nupvalues;  /* first five fields must be equal to CClosure!! */
+  ClosureHeader;
   struct Proto *p;
   TObject g;  /* global table for this closure */
   UpVal *upvals[1];
@@ -298,7 +298,7 @@ typedef struct Table {
   TObject *array;  /* array part */
   Node *node;
   Node *firstfree;  /* this position is free; all positions after it are full */
-  struct Table *gclist;
+  GCObject *gclist;
   int sizearray;  /* size of `array' array */
 } Table;
 
