@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.43 1996/04/30 21:13:55 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.44 1996/05/03 20:10:59 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -141,7 +141,7 @@ static void io_appendto (void)
 }
 
 
-static char getformat (char *f, int *just, int *m, int *n)
+static char getformat (char *f, int *just, long *m, int *n)
 {
   int t;
   switch (*f++)
@@ -211,7 +211,7 @@ static void read_until_blank (void)
   if (c != EOF) ungetc(c,in);
 }
 
-static void read_m (int m)
+static void read_m (size_t m)
 {
   int c;
   while (m-- && (c = fgetc(in)) != EOF)
@@ -260,7 +260,8 @@ static void io_read (void)
     read_free();
   else				/* formatted */
   {
-    int m, dummy1, dummy2;
+    long m;
+    int dummy1, dummy2;
     switch (getformat(lua_check_string(1, "read"), &dummy1, &m, &dummy2))
     {
       case 's':
@@ -348,7 +349,7 @@ static void io_readuntil (void)
 **			string -> nao se aplica
 */
 
-static int write_fill (int n, int c)
+static int write_fill (size_t n, int c)
 {
   while (n--)
     if (fputc(c, out) == EOF)
@@ -356,11 +357,11 @@ static int write_fill (int n, int c)
   return 1;
 }
 
-static int write_string (char *s, int just, int m)
+static int write_string (char *s, int just, long m)
 {
   int status;
-  int l = strlen(s);
-  int pre;  /* number of blanks before string */
+  size_t l = strlen(s);
+  size_t pre;  /* number of blanks before string */
   if (m < 0) m = l;
   else if (l > m)
   {
@@ -374,14 +375,14 @@ static int write_string (char *s, int just, int m)
   return status;
 }
 
-static int write_quoted (int just, int m)
+static int write_quoted (int just, long m)
 {
   luaI_addchar(0);
   luaI_addquoted(lua_check_string(1, "write"));
   return write_string(luaI_addchar(0), just, m);
 }
 
-static int write_float (int just, int m, int n)
+static int write_float (int just, long m, int n)
 {
   char buffer[100];
   lua_Object p = lua_getparam(1);
@@ -396,7 +397,7 @@ static int write_float (int just, int m, int n)
 }
 
 
-static int write_int (int just, int m, int n)
+static int write_int (int just, long m, int n)
 {
   char buffer[100];
   lua_Object p = lua_getparam(1);
@@ -425,7 +426,8 @@ static void io_write (void)
   }
   else					/* formated */
   {
-    int just, m, n;
+    long m;
+    int just, n;
     switch (getformat(lua_check_string(2, "write"), &just, &m, &n))
     {
       case 's':
@@ -490,7 +492,7 @@ static void io_errorno (void)
 
 
 /*
-** To get a environment variable
+** To get an environment variable
 */
 static void io_getenv (void)
 {

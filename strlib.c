@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.22 1996/03/22 17:57:24 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.23 1996/04/30 21:13:55 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -38,17 +38,17 @@ double lua_check_number (int numArg, char *funcname)
   return lua_getnumber(o);
 }
 
-static int lua_opt_number (int numArg, int def, char *funcname)
+static long lua_opt_number (int numArg, long def, char *funcname)
 {
   return (lua_getparam(numArg) == LUA_NOOBJECT) ? def :
-                              (int)lua_check_number(numArg, funcname);
+                              (long)lua_check_number(numArg, funcname);
 }
 
 char *luaI_addchar (int c)
 {
   static char *buff = NULL;
-  static int max = 0;
-  static int n = 0;
+  static size_t max = 0;
+  static size_t n = 0;
   if (n >= max)
   {
     if (max == 0)
@@ -80,12 +80,12 @@ static void str_find (void)
 {
  char *s1 = lua_check_string(1, "strfind");
  char *s2 = lua_check_string(2, "strfind");
- int init = lua_opt_number(3, 1, "strfind") - 1;
+ long init = lua_opt_number(3, 1, "strfind") - 1;
  char *f = (init>=0 && init<=strlen(s1)) ? strstr(s1+init,s2) : NULL;
  if (f != NULL)
  {
-  int pos = f-s1+1;
-  if (lua_opt_number(4, INT_MAX, "strfind") >= pos+strlen(s2)-1)
+  size_t pos = f-s1+1;
+  if (lua_opt_number(4, LONG_MAX, "strfind") >= pos+strlen(s2)-1)
    lua_pushnumber (pos);
   else
    lua_pushnil();
@@ -114,8 +114,8 @@ static void str_len (void)
 static void str_sub (void)
 {
  char *s = lua_check_string(1, "strsub");
- int start = (int)lua_check_number(2, "strsub");
- int end = lua_opt_number(3, strlen(s), "strsub");
+ long start = (long)lua_check_number(2, "strsub");
+ long end = lua_opt_number(3, strlen(s), "strsub");
  if (end < start || start < 1 || end > strlen(s))
   lua_pushliteral("");
  else
@@ -162,7 +162,7 @@ static void str_upper (void)
 static void str_ascii (void)
 {
   char *s = lua_check_string(1, "ascii");
-  int pos = lua_opt_number(2, 1, "ascii") - 1;
+  long pos = lua_opt_number(2, 1, "ascii") - 1;
   if (pos<0 || pos>=strlen(s))
     lua_arg_error("ascii");
   lua_pushnumber(s[pos]);
