@@ -1,11 +1,13 @@
 /*
-** $Id: lstate.h,v 1.9 1998/06/02 20:37:04 roberto Exp roberto $
+** $Id: lstate.h,v 1.10 1998/06/19 16:14:09 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
 
 #ifndef lstate_h
 #define lstate_h
+
+#include <setjmp.h>
 
 #include "lobject.h"
 #include "lua.h"
@@ -39,9 +41,11 @@ typedef struct {
 } stringtable;
 
 
+enum Status {LOCK, HOLD, FREE, COLLECTED};
+
 struct ref {
   TObject o;
-  enum {LOCK, HOLD, FREE, COLLECTED} status;
+  enum Status status;
 };
 
 
@@ -49,7 +53,7 @@ struct lua_State {
   /* thread-specific state */
   struct Stack stack;  /* Lua stack */
   struct C_Lua_Stack Cstack;  /* C2lua struct */
-  void *errorJmp;  /* current error recover point */
+  jmp_buf *errorJmp;  /* current error recover point */
   char *Mbuffer;  /* global buffer */
   char *Mbuffbase;  /* current first position of Mbuffer */
   int Mbuffsize;  /* size of Mbuffer */
