@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.124 2003/02/27 11:52:30 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.125 2003/03/06 19:36:16 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -408,6 +408,10 @@ static int luaB_newproxy (lua_State *L) {
 #define LUA_PATH_SEP	';'
 #endif
 
+#ifndef LUA_PATH_MARK
+#define LUA_PATH_MARK	'?'
+#endif
+
 #ifndef LUA_PATH_DEFAULT
 #define LUA_PATH_DEFAULT	"?;?.lua"
 #endif
@@ -438,12 +442,18 @@ static const char *pushnextpath (lua_State *L, const char *path) {
 
 static void pushcomposename (lua_State *L) {
   const char *path = lua_tostring(L, -1);
-  const char *wild = strchr(path, '?');
-  if (wild == NULL) return;  /* no wild char; path is the file name */
-  lua_pushlstring(L, path, wild - path);
-  lua_pushvalue(L, 1);  /* package name */
-  lua_pushstring(L, wild + 1);
-  lua_concat(L, 3);
+  const char *wild;
+  int n = 1;
+  while ((wild = strchr(path, LUA_PATH_MARK)) != NULL) {
+    /* is there stack space for prefix, name, and eventual last sufix? */
+    luaL_checkstack(L, 3, "too many marks in a path component");
+    lua_pushlstring(L, path, wild - path);  /* push prefix */
+    lua_pushvalue(L, 1);  /* push package name (in place of MARK) */
+    path = wild + 1;  /* continue after MARK */
+    n += 2;
+  }
+  lua_pushstring(L, path);  /* push last sufix (`n' already includes this) */
+  lua_concat(L, n);
 }
 
 
