@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.103 2002/08/13 15:04:59 roberto Exp roberto $
+** $Id: lua.c,v 1.104 2002/09/05 19:45:42 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -337,7 +337,7 @@ static int handle_argv (char *argv[], int *interactive) {
       return file_input(filename);  /* stop scanning arguments */
     }
   }
-  return EXIT_SUCCESS;
+  return 0;
 }
 
 
