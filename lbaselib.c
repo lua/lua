@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.126 2003/03/11 12:08:13 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.127 2003/03/11 12:24:34 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -154,7 +154,9 @@ static int luaB_setfenv (lua_State *L) {
   else
     lua_pop(L, 2);  /* remove __globals and real environment table */
   lua_pushvalue(L, 2);
-  if (lua_setfenv(L, -2) == 0)
+  if (lua_isnumber(L, 1) && lua_tonumber(L, 1) == 0)
+    lua_replace(L, LUA_GLOBALSINDEX);
+  else if (lua_setfenv(L, -2) == 0)
     luaL_error(L, "cannot change environment of given function");
   return 0;
 }
@@ -246,19 +248,12 @@ static int luaB_ipairs (lua_State *L) {
 
 
 static int load_aux (lua_State *L, int status) {
-  if (status == 0) {  /* OK? */
-    lua_Debug ar;
-    lua_getstack(L, 1, &ar);
-    lua_getinfo(L, "f", &ar);  /* get calling function */
-    lua_getfenv(L, -1);  /* get its environment */
-    lua_setfenv(L, -3);  /* set it as the environment of the new chunk */
-    lua_pop(L, 1);  /* remove calling function */
+  if (status == 0)  /* OK? */
     return 1;
-  }
   else {
     lua_pushnil(L);
-    lua_insert(L, -2);
-    return 2;
+    lua_insert(L, -2);  /* put before error message */
+    return 2;  /* return nil plus error message */
   }
 }
 
