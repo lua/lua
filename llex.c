@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.87 2001/06/15 20:36:57 roberto Exp roberto $
+** $Id: llex.c,v 1.88 2001/06/20 21:07:57 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -377,7 +377,7 @@ int luaX_lex (LexState *LS, SemInfo *seminfo) {
           return TK_NAME;
         }
         else {
-          int c = LS->current;
+          l_charint c = LS->current;
           if (iscntrl(c))
             luaX_invalidchar(LS, c);
           next(LS);

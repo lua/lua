@@ -1,11 +1,10 @@
 /*
-** $Id: liolib.c,v 1.119 2001/07/12 18:11:58 roberto Exp roberto $
+** $Id: liolib.c,v 1.120 2001/07/16 18:48:31 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
 
 
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,13 +21,6 @@
 #ifndef OLD_ANSI
 #include <errno.h>
 #include <locale.h>
-#endif
-
-
-#ifndef l_realloc
-#define l_malloc(s)		malloc(s)
-#define l_realloc(b,os,s)	realloc(b, s)
-#define l_free(b, os)		free(b)
 #endif
 
 
@@ -330,7 +322,7 @@ static int io_read (lua_State *L) {
             success = 1; /* always success */
             break;
           case l_c('w'):  /* word */
-            lua_error(L, "option `*w' is deprecated");
+            lua_error(L, l_s("option `*w' is deprecated"));
             break;
           case l_c('u'): {  /* read until */
             size_t pl = lua_strlen(L, n) - 2;

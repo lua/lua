@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.147 2001/06/26 13:20:45 roberto Exp roberto $
+** $Id: lapi.c,v 1.148 2001/07/12 18:11:58 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -489,7 +489,7 @@ LUA_API int lua_ref (lua_State *L,  int lock) {
       lua_rawseti(L, -2, ref);
       lua_pop(L, 1);  /* remove registry */
     }
-    lua_pushliteral(L, "n");
+    lua_pushliteral(L, l_s("n"));
     lua_pushnumber(L, ref);
     lua_settable(L, -3);
     lua_pop(L, 2);

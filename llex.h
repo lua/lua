@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.35 2001/03/06 14:46:54 roberto Exp roberto $
+** $Id: llex.h,v 1.36 2001/06/20 21:07:57 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -49,7 +49,7 @@ typedef struct Token {
 
 
 typedef struct LexState {
-  int current;  /* current character */
+  l_charint current;  /* current character */
   Token t;  /* current token */
   Token lookahead;  /* look ahead token */
   struct FuncState *fs;  /* `FuncState' is private to the parser */
