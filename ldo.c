@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.133 2001/04/06 19:26:06 roberto Exp roberto $
+** $Id: ldo.c,v 1.134 2001/04/11 18:39:37 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -48,17 +48,15 @@ void luaD_init (lua_State *L, int stacksize) {
 }
 
 
-void luaD_checkstack (lua_State *L, int n) {
-  if (L->stack_last - L->top <= n) {  /* stack overflow? */
-    if (L->stack_last == L->stack+L->stacksize-1) {
-      /* overflow while handling overflow */
-      luaD_breakrun(L, LUA_ERRERR);  /* break run without error message */
-    }
-    else {
-      L->stack_last += EXTRA_STACK;  /* to be used by error message */
-      lua_assert(L->stack_last == L->stack+L->stacksize-1);
-      luaD_error(L, l_s("stack overflow"));
-    }
+void luaD_stackerror (lua_State *L) {
+  if (L->stack_last == L->stack+L->stacksize-1) {
+    /* overflow while handling overflow */
+    luaD_breakrun(L, LUA_ERRERR);  /* break run without error message */
+  }
+  else {
+    L->stack_last += EXTRA_STACK;  /* to be used by error message */
+    lua_assert(L->stack_last == L->stack+L->stacksize-1);
+    luaD_error(L, l_s("stack overflow"));
   }
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.178 2001/04/06 18:25:00 roberto Exp roberto $
+** $Id: lvm.c,v 1.179 2001/06/05 18:17:01 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -26,6 +26,16 @@
 #include "ltm.h"
 #include "lvm.h"
 
+
+
+static void luaV_checkGC (lua_State *L, StkId top) {
+  if (G(L)->nblocks >= G(L)->GCthreshold) {
+    StkId temp = L->top;
+    L->top = top;
+    luaC_collectgarbage(L);
+    L->top = temp;  /* restore old top position */
+  }
+}
 
 
 const TObject *luaV_tonumber (const TObject *obj, TObject *n) {
@@ -262,6 +272,7 @@ int luaV_lessthan (lua_State *L, const TObject *l, const TObject *r) {
 
 
 void luaV_strconc (lua_State *L, int total, StkId top) {
+  luaV_checkGC(L, top);
   do {
     int n = 2;  /* number of elements handled in this pass (at least 2) */
     if (tostring(L, top-2) || tostring(L, top-1)) {
@@ -353,7 +364,11 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
   lua_Hook linehook;
   if (tf->is_vararg)  /* varargs? */
     adjust_varargs(L, base, tf->numparams);
-  luaD_adjusttop(L, base, tf->maxstacksize);
+  if (base > L->stack_last - tf->maxstacksize)
+    luaD_stackerror(L);
+  while (L->top < base+tf->maxstacksize)
+    setnilvalue(L->top++);
+  L->top = base+tf->maxstacksize;
   pc = tf->code;
   L->ci->pc = &pc;
   linehook = L->linehook;
@@ -406,8 +421,9 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
       }
       case OP_NEWTABLE: {
-        luaC_checkGC(L);
-        sethvalue(RA(i), luaH_new(L, GETARG_Bc(i)));
+        StkId ra = RA(i);
+        sethvalue(ra, luaH_new(L, GETARG_Bc(i)));
+        luaV_checkGC(L, ra+1);
         break;
       }
       case OP_SELF: {
@@ -463,7 +479,6 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         StkId rb = RB(i);
         luaV_strconc(L, top-rb, top);
         setobj(RA(i), rb);
-        luaC_checkGC(L);
         break;
       }
       case OP_CJMP:
@@ -630,10 +645,10 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         Proto *p = tf->kproto[GETARG_Bc(i)];
         int nup = p->nupvalues;
         StkId ra = RA(i);
+        luaV_checkGC(L, ra+nup);
         L->top = ra+nup;
         luaV_Lclosure(L, p, nup);
         L->top = base+tf->maxstacksize;
-        luaC_checkGC(L);
         break;
       }
     }

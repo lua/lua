@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.142 2001/04/06 18:25:00 roberto Exp roberto $
+** $Id: lparser.c,v 1.143 2001/06/05 18:17:01 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -495,7 +495,6 @@ static void recfield (LexState *ls, expdesc *t) {
 static int recfields (LexState *ls, expdesc *t) {
   /* recfields -> recfield { `,' recfield } [`,'] */
   int n = 1;  /* at least one element */
-  luaK_exp2nextreg(ls->fs, t);
   recfield(ls, t);
   while (ls->t.token == l_c(',')) {
     next(ls);
@@ -513,7 +512,6 @@ static int listfields (LexState *ls, expdesc *t) {
   FuncState *fs = ls->fs;
   int n = 1;  /* at least one element */
   int reg;
-  luaK_exp2nextreg(ls->fs, t);
   reg = fs->freereg;
   expr(ls, &v);
   while (ls->t.token == l_c(',') &&
@@ -578,6 +576,7 @@ static void constructor (LexState *ls, expdesc *t) {
   Constdesc cd;
   pc = luaK_codeABc(fs, OP_NEWTABLE, 0, 0);
   init_exp(t, VRELOCABLE, pc);
+  luaK_exp2nextreg(ls->fs, t);  /* fix it at stack top (for gc) */
   check(ls, l_c('{'));
   constructor_part(ls, t, &cd);
   n = cd.n;
