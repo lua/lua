@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.48 2000/10/05 12:14:08 roberto Exp roberto $
+** $Id: ltests.c,v 1.49 2000/10/05 13:00:17 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -389,6 +389,45 @@ static int testC (lua_State *L) {
   for (;;) {
     const char *inst = getname;
     if EQ("") return 0;
+    else if EQ("isnumber") {
+      lua_pushnumber(L, lua_isnumber(L, getnum));
+    }
+    else if EQ("isstring") {
+      lua_pushnumber(L, lua_isstring(L, getnum));
+    }
+    else if EQ("istable") {
+      lua_pushnumber(L, lua_istable(L, getnum));
+    }
+    else if EQ("iscfunction") {
+      lua_pushnumber(L, lua_iscfunction(L, getnum));
+    }
+    else if EQ("isfunction") {
+      lua_pushnumber(L, lua_isfunction(L, getnum));
+    }
+    else if EQ("isuserdata") {
+      lua_pushnumber(L, lua_isuserdata(L, getnum));
+    }
+    else if EQ("isnil") {
+      lua_pushnumber(L, lua_isnil(L, getnum));
+    }
+    else if EQ("isnull") {
+      lua_pushnumber(L, lua_isnull(L, getnum));
+    }
+    else if EQ("tonumber") {
+      lua_pushnumber(L, lua_tonumber(L, getnum));
+    }
+    else if EQ("tostring") {
+      lua_pushstring(L, lua_tostring(L, getnum));
+    }
+    else if EQ("tonumber") {
+      lua_pushnumber(L, lua_tonumber(L, getnum));
+    }
+    else if EQ("strlen") {
+      lua_pushnumber(L, lua_strlen(L, getnum));
+    }
+    else if EQ("tocfunction") {
+      lua_pushcfunction(L, lua_tocfunction(L, getnum));
+    }
     else if EQ("return") {
       return getnum;
     }
