@@ -1,13 +1,11 @@
 /*
-** $Id: lstate.h,v 1.37 2000/08/28 17:57:04 roberto Exp roberto $
+** $Id: lstate.h,v 1.38 2000/09/11 17:38:42 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
 
 #ifndef lstate_h
 #define lstate_h
-
-#include <setjmp.h>
 
 #include "lobject.h"
 #include "lua.h"
@@ -33,15 +31,7 @@ struct Ref {
 };
 
 
-/*
-** chain list of long jumps
-*/
-struct lua_longjmp {
-  jmp_buf b;
-  struct lua_longjmp *previous;
-  volatile int status;  /* error code */
-  StkId base;
-};
+struct lua_longjmp;  /* defined in ldo.c */
 
 
 typedef struct stringtable {

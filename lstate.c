@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.39 2000/09/12 18:42:32 roberto Exp roberto $
+** $Id: lstate.c,v 1.40 2000/09/21 14:41:25 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -20,7 +20,7 @@
 
 
 #ifdef DEBUG
-extern lua_State *lua_state;
+static lua_State *lua_state = NULL;
 void luaB_opentests (lua_State *L);
 #endif
 
@@ -38,8 +38,29 @@ static int errormessage (lua_State *L) {
 }
 
 
+/*
+** open parts that may cause memory-allocation errors
+*/
+static void f_luaopen (lua_State *L, void *ud) {
+  int stacksize = *(int *)ud;
+  if (stacksize == 0)
+    stacksize = DEFAULT_STACK_SIZE;
+  else
+    stacksize += LUA_MINSTACK;
+  L->gt = luaH_new(L, 10);
+  luaD_init(L, stacksize);
+  luaS_init(L);
+  luaX_init(L);
+  luaT_init(L);
+  lua_register(L, LUA_ERRORMESSAGE, errormessage);
+#ifdef DEBUG
+  luaB_opentests(L);
+  if (lua_state == NULL) lua_state = L;  /* keep first state to be opened */
+#endif
+}
+
+
 lua_State *lua_open (int stacksize) {
-  struct lua_longjmp myErrorJmp;
   lua_State *L = luaM_new(NULL, lua_State);
   if (L == NULL) return NULL;  /* memory allocation error */
   L->stack = NULL;
@@ -62,26 +83,14 @@ lua_State *lua_open (int stacksize) {
   L->callhook = NULL;
   L->linehook = NULL;
   L->allowhooks = 1;
-  L->errorJmp = &myErrorJmp;
-  if (setjmp(myErrorJmp.b) == 0) {  /* to catch memory allocation errors */
-    L->gt = luaH_new(L, 10);
-    luaD_init(L, (stacksize == 0) ? DEFAULT_STACK_SIZE :
-                                    stacksize+LUA_MINSTACK);
-    luaS_init(L);
-    luaX_init(L);
-    luaT_init(L);
-    lua_register(L, LUA_ERRORMESSAGE, errormessage);
-#ifdef DEBUG
-    luaB_opentests(L);
-#endif
-    L->GCthreshold = L->nblocks*4;
-    L->errorJmp = NULL;
-    return L;
-  }
-  else {  /* memory allocation error: free partial state */
+  L->errorJmp = NULL;
+  if (luaD_runprotected(L, f_luaopen, &stacksize) != 0) {
+    /* memory allocation error: free partial state */
     lua_close(L);
     return NULL;
   }
+  L->GCthreshold = L->nblocks*4;
+  return L;
 }
 
 

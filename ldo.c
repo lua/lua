@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.95 2000/09/11 20:29:27 roberto Exp roberto $
+** $Id: ldo.c,v 1.96 2000/09/12 13:47:39 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -199,88 +199,60 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
 }
 
 
-static void message (lua_State *L, const char *s) {
-  const TObject *em = luaH_getglobal(L, LUA_ERRORMESSAGE);
-  if (*luaO_typename(em) == 'f') {
-    *L->top = *em;
-    incr_top;
-    lua_pushstring(L, s);
-    luaD_call(L, L->top-2, 0);
-  }
-}
-
-
-void luaD_breakrun (lua_State *L, int errcode) {
-  if (L->errorJmp) {
-    L->errorJmp->status = errcode;
-    longjmp(L->errorJmp->b, 1);
-  }
-  else {
-    if (errcode != LUA_ERRMEM)
-      message(L, "unable to recover; exiting\n");
-    exit(EXIT_FAILURE);
-  }
-}
-
-/*
-** Reports an error, and jumps up to the available recovery label
-*/
-void lua_error (lua_State *L, const char *s) {
-  if (s) message(L, s);
-  luaD_breakrun(L, LUA_ERRRUN);
-}
-
-
-static void chain_longjmp (lua_State *L, struct lua_longjmp *lj) {
-  lj->status = 0;
-  lj->base = L->Cbase;
-  lj->previous = L->errorJmp;
-  L->errorJmp = lj;
-}
-
-
-static int restore_longjmp (lua_State *L, struct lua_longjmp *lj) {
-  L->Cbase = lj->base;
-  L->errorJmp = lj->previous;
-  return lj->status;
-}
-
-
 /*
 ** Execute a protected call.
 */
+struct CallS {  /* data to `f_call' */
+  StkId func;
+  int nresults;
+};
+
+static void f_call (lua_State *L, void *ud) {
+  struct CallS *c = (struct CallS *)ud;
+  luaD_call(L, c->func, c->nresults);
+}
+
+
 int lua_call (lua_State *L, int nargs, int nresults) {
   StkId func = L->top - (nargs+1);  /* function to be called */
-  struct lua_longjmp myErrorJmp;
-  chain_longjmp(L, &myErrorJmp);
-  if (setjmp(myErrorJmp.b) == 0) {
-    luaD_call(L, func, nresults);
-  }
-  else {  /* an error occurred: restore the state */
-    L->top = func;  /* remove garbage from the stack */
-    restore_stack_limit(L);
-  }
-  return restore_longjmp(L, &myErrorJmp);
+  struct CallS c;
+  int status;
+  c.func = func; c.nresults = nresults;
+  status = luaD_runprotected(L, f_call, &c);
+  if (status != 0)  /* an error occurred? */
+    L->top = func;  /* remove parameters from the stack */
+  return status;
+}
+
+
+/*
+** Execute a protected parser.
+*/
+struct ParserS {  /* data to `f_parser' */
+  ZIO *z;
+  int bin;
+};
+
+static void f_parser (lua_State *L, void *ud) {
+  struct ParserS *p = (struct ParserS *)ud;
+  Proto *tf = p->bin ? luaU_undump(L, p->z) : luaY_parser(L, p->z);
+  luaV_Lclosure(L, tf, 0);
 }
 
 
 static int protectedparser (lua_State *L, ZIO *z, int bin) {
-  struct lua_longjmp myErrorJmp;
+  struct ParserS p;
   unsigned long old_blocks;
+  int status;
+  p.z = z; p.bin = bin;
   luaC_checkGC(L);
   old_blocks = L->nblocks;
-  chain_longjmp(L, &myErrorJmp);
-  if (setjmp(myErrorJmp.b) == 0) {
-    Proto *tf = bin ? luaU_undump(L, z) : luaY_parser(L, z);
-    luaV_Lclosure(L, tf, 0);
-  }
-  else {  /* an error occurred: correct error code */
-    if (myErrorJmp.status == LUA_ERRRUN)
-      myErrorJmp.status = LUA_ERRSYNTAX;
-  }
+  status = luaD_runprotected(L, f_parser, &p);
+  if (status == LUA_ERRRUN)  /* an error occurred: correct error code */
+    status = LUA_ERRSYNTAX;
   /* add new memory to threshould (as it probably will stay) */
   L->GCthreshold += (L->nblocks - old_blocks);
-  return restore_longjmp(L, &myErrorJmp);  /* error code */
+  return status;
 }
 
 
@@ -338,4 +310,72 @@ int lua_dobuffer (lua_State *L, const char *buff, size_t size,
 int lua_dostring (lua_State *L, const char *str) {
   return lua_dobuffer(L, str, strlen(str), str);
 }
+
+
+/*
+** {======================================================
+** Error-recover functions (based on long jumps)
+** =======================================================
+*/
+
+/* chain list of long jump buffers */
+struct lua_longjmp {
+  jmp_buf b;
+  struct lua_longjmp *previous;
+  volatile int status;  /* error code */
+};
+
+
+static void message (lua_State *L, const char *s) {
+  const TObject *em = luaH_getglobal(L, LUA_ERRORMESSAGE);
+  if (*luaO_typename(em) == 'f') {
+    *L->top = *em;
+    incr_top;
+    lua_pushstring(L, s);
+    luaD_call(L, L->top-2, 0);
+  }
+}
+
+
+/*
+** Reports an error, and jumps up to the available recovery label
+*/
+void lua_error (lua_State *L, const char *s) {
+  if (s) message(L, s);
+  luaD_breakrun(L, LUA_ERRRUN);
+}
+
+
+void luaD_breakrun (lua_State *L, int errcode) {
+  if (L->errorJmp) {
+    L->errorJmp->status = errcode;
+    longjmp(L->errorJmp->b, 1);
+  }
+  else {
+    if (errcode != LUA_ERRMEM)
+      message(L, "unable to recover; exiting\n");
+    exit(EXIT_FAILURE);
+  }
+}
+
+
+int luaD_runprotected (lua_State *L, void (*f)(lua_State *, void *), void *ud) {
+  StkId oldCbase = L->Cbase;
+  StkId oldtop = L->top;
+  struct lua_longjmp lj;
+  lj.status = 0;
+  lj.previous = L->errorJmp;  /* chain new error handler */
+  L->errorJmp = &lj;
+  if (setjmp(lj.b) == 0)
+    (*f)(L, ud);
+  else {  /* an error occurred: restore the state */
+    L->Cbase = oldCbase;
+    L->top = oldtop;
+    restore_stack_limit(L);
+  }
+  L->errorJmp = lj.previous;  /* restore old error handler */
+  return lj.status;
+}
+
+/* }====================================================== */
 
