@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.15 1999/11/22 17:39:51 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.16 1999/12/03 11:26:23 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -16,33 +16,6 @@ struct luaL_reg {
   const char *name;
   lua_CFunction func;
 };
-
-
-#ifdef LUA_REENTRANT
-
-#define luaL_arg_check(L, cond,numarg,extramsg) if (!(cond)) \
-                                               luaL_argerror(L, numarg,extramsg)
-#define luaL_check_string(L,n)	(luaL_check_lstr(L, (n), NULL))
-#define luaL_opt_string(L,n,d)	(luaL_opt_lstr(L, (n), (d), NULL))
-#define luaL_check_int(L,n)	((int)luaL_check_number(L, n))
-#define luaL_check_long(L,n)	((long)luaL_check_number(L, n))
-#define luaL_opt_int(L,n,d)	((int)luaL_opt_number(L, n,d))
-#define luaL_opt_long(L,n,d)	((long)luaL_opt_number(L, n,d))
-#define luaL_openl(L,a)		luaL_openlib(L, a, (sizeof(a)/sizeof(a[0])))
-
-#else
-
-#define luaL_arg_check(cond,numarg,extramsg) if (!(cond)) \
-                                               luaL_argerror(numarg,extramsg)
-#define luaL_check_string(n)	(luaL_check_lstr((n), NULL))
-#define luaL_opt_string(n, d)	(luaL_opt_lstr((n), (d), NULL))
-#define luaL_check_int(n)	((int)luaL_check_number(n))
-#define luaL_check_long(n)	((long)luaL_check_number(n))
-#define luaL_opt_int(n,d)	((int)luaL_opt_number(n,d))
-#define luaL_opt_long(n,d)	((long)luaL_opt_number(n,d))
-#define luaL_openl(a)		luaL_openlib(a, (sizeof(a)/sizeof(a[0])))
-
-#endif
 
 
 void luaL_openlib (lua_State *L, const struct luaL_reg *l, int n);
@@ -68,7 +41,43 @@ void luaL_chunkid (char *out, const char *source, int len);
 void luaL_filesource (char *out, const char *filename, int len);
 
 
-#ifndef LUA_REENTRANT
+#ifdef LUA_REENTRANT
+
+/*
+** ===============================================================
+** some useful macros
+** ===============================================================
+*/
+
+#define luaL_arg_check(L, cond,numarg,extramsg) if (!(cond)) \
+                                               luaL_argerror(L, numarg,extramsg)
+#define luaL_check_string(L,n)	(luaL_check_lstr(L, (n), NULL))
+#define luaL_opt_string(L,n,d)	(luaL_opt_lstr(L, (n), (d), NULL))
+#define luaL_check_int(L,n)	((int)luaL_check_number(L, n))
+#define luaL_check_long(L,n)	((long)luaL_check_number(L, n))
+#define luaL_opt_int(L,n,d)	((int)luaL_opt_number(L, n,d))
+#define luaL_opt_long(L,n,d)	((long)luaL_opt_number(L, n,d))
+#define luaL_openl(L,a)		luaL_openlib(L, a, (sizeof(a)/sizeof(a[0])))
+
+#else
+
+
+/*
+** ===============================================================
+** Macros for single-state use
+** ===============================================================
+*/
+
+#define luaL_arg_check(cond,numarg,extramsg) if (!(cond)) \
+                                               luaL_argerror(numarg,extramsg)
+#define luaL_check_string(n)	(luaL_check_lstr((n), NULL))
+#define luaL_opt_string(n, d)	(luaL_opt_lstr((n), (d), NULL))
+#define luaL_check_int(n)	((int)luaL_check_number(n))
+#define luaL_check_long(n)	((long)luaL_check_number(n))
+#define luaL_opt_int(n,d)	((int)luaL_opt_number(n,d))
+#define luaL_opt_long(n,d)	((long)luaL_opt_number(n,d))
+#define luaL_openl(a)		luaL_openlib(a, (sizeof(a)/sizeof(a[0])))
+
 
 #define luaL_openlib(l,n)	(luaL_openlib)(lua_state,l,n)
 #define luaL_argerror(numarg,extramsg)	\
