@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.40 1998/12/27 20:22:36 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.43 1998/12/30 13:16:50 roberto Exp $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -28,7 +28,7 @@
 
 
 /*
-** =======================================================
+** {======================================================
 ** Auxliliar functions
 ** =======================================================
 */
@@ -45,7 +45,6 @@ static void pushtagstring (TaggedString *s) {
 static real getsize (Hash *h) {
   real max = 0;
   int i;
-  LUA_ASSERT(ttype(t) == LUA_T_ARRAY, "table expected");
   for (i = 0; i<nhash(h); i++) {
     Node *n = h->node+i;
     if (ttype(ref(n)) == LUA_T_NUMBER && 
@@ -77,15 +76,11 @@ static void luaB_getn (void) {
   lua_pushnumber(getnarg(gethash(1)));
 }
 
-
-static void tablemove (Hash *a, int from, int to) {
-  TObject temp = *luaH_getint(a, from);
-  luaH_setint(a, to, &temp);
-}
+/* }====================================================== */
 
 
 /*
-** =======================================================
+** {======================================================
 ** Functions that use only the official API
 ** =======================================================
 */
@@ -243,10 +238,11 @@ static void luaB_collectgarbage (void) {
   lua_pushnumber(lua_collectgarbage(luaL_opt_int(1, 0)));
 }
 
+/* }====================================================== */
 
 
 /*
-** =======================================================
+** {======================================================
 ** Functions that could use only the official API but
 ** do not, for efficiency.
 ** =======================================================
@@ -307,13 +303,16 @@ static void luaB_call (void) {
   }
 }
 
+/* }====================================================== */
 
 
 /*
-** =======================================================
+** {======================================================
 ** "Extra" functions
-** (These functions can be written in Lua, so you can
-**  delete them if you need a tiny Lua implementation.)
+** These functions can be written in Lua, so you can
+**  delete them if you need a tiny Lua implementation.
+** If you delete them, remove their entries in array
+** "builtin_funcs".
 ** =======================================================
 */
 
@@ -332,8 +331,7 @@ static void luaB_foreachi (void) {
   luaD_checkstack(3);  /* for f, ref, and val */
   for (i=1; i<=n; i++) {
     *(L->stack.top++) = f;
-    ttype(L->stack.top) = LUA_T_NUMBER;
-    nvalue(L->stack.top++) = i;
+    ttype(L->stack.top) = LUA_T_NUMBER; nvalue(L->stack.top++) = i;
     *(L->stack.top++) = *luaH_getint(t, i);
     luaD_calln(2, 1);
     if (ttype(L->stack.top-1) != LUA_T_NIL)
@@ -400,7 +398,7 @@ static void luaB_tinsert (void) {
   }
   luaV_setn(a, n+1);  /* increment field "n" */
   for ( ;n>=pos; n--)
-    tablemove(a, n, n+1);
+    luaH_move(a, n, n+1);
   luaH_setint(a, pos, luaA_Address(v));
 }
 
@@ -413,69 +411,79 @@ static void luaB_tremove (void) {
   if (n <= 0) return;  /* table is "empty" */
   luaV_setn(a, n-1);  /* decrement field "n" */
   for ( ;pos<n; pos++)
-    tablemove(a, pos+1, pos);
+    luaH_move(a, pos+1, pos);
   luaA_pushobject(&v);
 }
 
 
-/*
-** Quicksort algorithm from "Programming Pearls", pg. 112
+/* {
+** Quicksort
 */
 
 static void swap (Hash *a, int i, int j) {
-  /* notice: must use two temporary vars, because luaH_setint may cause a
-     rehash and change the addresses of values in the array */
-  TObject ai = *luaH_getint(a, i);
-  tablemove(a, j, i);
-  luaH_setint(a, j, &ai);
+  TObject temp = *luaH_getint(a, i);
+  luaH_move(a, j, i);
+  luaH_setint(a, j, &temp);
 }
 
 static int sort_comp (TObject *f, TObject *a, TObject *b) {
   /* notice: the caller (auxsort) must check stack space */
   if (f) {
-    *(L->stack.top++) = *f;
-    *(L->stack.top++) = *a;
-    *(L->stack.top++) = *b;
+    *(L->stack.top) = *f;
+    *(L->stack.top+1) = *a;
+    *(L->stack.top+2) = *b;
+    L->stack.top += 3;
     luaD_calln(2, 1);
   }
   else {  /* a < b? */
-    *(L->stack.top++) = *a;
-    *(L->stack.top++) = *b;
+    *(L->stack.top) = *a;
+    *(L->stack.top+1) = *b;
+    L->stack.top += 2;
     luaV_comparison(LUA_T_NUMBER, LUA_T_NIL, LUA_T_NIL, IM_LT);
   }
   return ttype(--(L->stack.top)) != LUA_T_NIL;
 }
 
 static void auxsort (Hash *a, int l, int u, TObject *f) {
-  init:
+  init: /* using goto's to optimize tail recursion */
   if (u <= l) return;  /* 0 or 1 element */
-  luaD_checkstack(4);  /* for pivot, f, a, b (sort_comp) */
-  if (u-l == 1) {  /* only two elements? */
-    if (sort_comp(f, luaH_getint(a, u), luaH_getint(a, l)))  /* a[u] < a[l]? */
-      swap(a, l, u);
-  }
   else {
-    int i;
-    int m = l;
-    swap(a, l, (l+u)/2);  /* put middle element as pivot (a[l]) */
-    *(L->stack.top++) = *luaH_getint(a, l);  /* save pivot on stack (for GC) */
-    for  (i=l+1; i<=u; i++) {
-      /* invariant: a[l+1..m] < P <= a[m+1..i-1] */
-      if (sort_comp(f, luaH_getint(a, i), L->stack.top-1)) {  /* a[i] < P? */
-        m++;
-        swap(a, m, i);
-      }
+    TObject *P;
+    int i, j;
+    /* sort elements a[l], a[(l+u)/2] and a[u] */
+    if (sort_comp(f, luaH_getint(a, u), luaH_getint(a, l)))  /* a[l]>a[u]? */
+      swap(a, l, u);
+    if (u-l == 1) return;  /* only 2 elements */
+    i = (l+u)/2;
+    if (sort_comp(f, luaH_getint(a, i), luaH_getint(a, l)))  /* a[l]>a[i]? */
+      swap(a, l, i);
+    else if (sort_comp(f, luaH_getint(a, u), luaH_getint(a, i)))  /* a[i]>a[u]? */
+      swap(a, i, u);
+    if (u-l == 2) return;  /* only 3 elements */
+    P = L->stack.top++;
+    *P = *luaH_getint(a, i);  /* save pivot on stack (for GC) */
+    swap(a, i, u-1);  /* put median element as pivot (a[u-1]) */
+    /* a[l] <= P == a[u-1] <= a[u], only needs to sort from l+1 to u-2 */
+    i = l; j = u-1;
+    for  (;;) {
+      /* invariant: a[l..i] <= P <= a[j..u] */
+      while (sort_comp(f, luaH_getint(a, ++i), P))  /* stop when a[i] >= P */
+        if (i>u) lua_error("invalid order function for sorting");
+      while (sort_comp(f, P, luaH_getint(a, --j)))  /* stop when a[j] <= P */
+        if (j<l) lua_error("invalid order function for sorting");
+      if (j<i) break;
+      swap(a, i, j);
     }
+    swap(a, u-1, i);  /* swap pivot (a[u-1]) with a[i] */
     L->stack.top--;  /* remove pivot from stack */
-    swap(a, l, m);  /* swap pivot with a[m] */
-    /* a[l..m-1] < a[m] <= a[m+1..u] */
-    if (m-l < u-m) {  /* check which "half" is bigger */
-      auxsort(a, l, m-1, f);  /* call recursively the smaller one */
-      l = m+1; goto init;  /* auxsort(a, m+1, u, f); */
+    /* a[l..i-1] <= a[i] == P <= a[i+1..u] */
+    if (i-l < u-i) {  /* check which "half" is bigger */
+      auxsort(a, l, i-1, f);  /* call recursively the smaller one */
+      l = i+1; goto init;  /* auxsort(a, i+1, u, f); */
     }
     else {
-      auxsort(a, m+1, u, f);
-      u = m-1; goto init;  /* auxsort(a, l, m-1, f); */
+      auxsort(a, i+1, u, f);
+      u = i-1; goto init;  /* auxsort(a, l, i-1, f); */
     }
   }
 }
@@ -487,14 +495,16 @@ static void luaB_sort (void) {
   lua_Object func = lua_getparam(2);
   TObject *f = luaA_Address(func);
   luaL_arg_check(!f || lua_isfunction(func), 2, "function expected");
+  luaD_checkstack(4);  /* for Pivot, f, a, b (sort_comp) */
   auxsort(a, 1, n, f);
   lua_pushobject(t);
 }
 
+/* }}===================================================== */
 
 
 /*
-** =======================================================
+** {======================================================
 ** Internal Functions.
 ** These functions need access to internal structures
 ** to be implemented.
@@ -576,12 +586,13 @@ static void luaB_type (void) {
   lua_pushnumber(lua_tag(o));
 }
 
+/* }====================================================== */
 
 
 
 #ifdef DEBUG
 /*
-** =======================================================
+** {======================================================
 ** some DEBUG functions
 ** =======================================================
 */
@@ -652,6 +663,7 @@ static void testC (void) {
   }
 }
 
+/* }====================================================== */
 #endif
 
 
