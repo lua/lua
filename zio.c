@@ -1,7 +1,7 @@
 /*
 * zio.c
 * a generic input stream interface
-* $Id: zio.c,v 1.5 1997/06/13 13:49:16 lhf Exp $
+* $Id: zio.c,v 1.1 1997/06/16 16:50:22 roberto Exp roberto $
 */
 
 #include <stdio.h>
@@ -9,13 +9,6 @@
 #include <string.h>
 #include "zio.h"
 
-#ifdef POPEN
-FILE *popen();
-int pclose();
-#else
-#define popen(x,y) NULL  /* that is, popen always fails */
-#define pclose(x)  (-1)
-#endif
 
 /* ----------------------------------------------------- memory buffers --- */
 
@@ -24,18 +17,12 @@ static int zmfilbuf(ZIO* z)
  return EOZ;
 }
 
-static int zmclose(ZIO* z)
-{
- return 1; 
-}
-
 ZIO* zmopen(ZIO* z, char* b, int size)
 {
  if (b==NULL) return NULL;
  z->n=size;
  z->p= (unsigned char *)b;
  z->filbuf=zmfilbuf;
- z->close=zmclose;
  z->u=NULL;
  return z;
 }
@@ -59,11 +46,6 @@ static int zffilbuf(ZIO* z)
  return *(z->p++);
 }
 
-static int zfclose(ZIO* z)
-{
- if (z->u==stdin) return 0;
- return fclose(z->u);
-}
 
 ZIO* zFopen(ZIO* z, FILE* f)
 {
@@ -71,30 +53,10 @@ ZIO* zFopen(ZIO* z, FILE* f)
  z->n=0;
  z->p=z->buffer;
  z->filbuf=zffilbuf;
- z->close=zfclose;
  z->u=f;
  return z;
 }
 
-ZIO* zfopen(ZIO* z, char* s, char* m)
-{
- return zFopen(z,fopen(s,m)); 
-}
-
-/* -------------------------------------------------------------- pipes --- */
-
-static int zpclose(ZIO* z)
-{
- return pclose(z->u);
-}
-
-ZIO* zpopen(ZIO* z, char* s, char* m)
-{
- z=zFopen(z,popen(s,m)); 
- if (z==NULL) return NULL;
- z->close=zpclose;
- return z;
-}
 
 /* --------------------------------------------------------------- read --- */
 int zread(ZIO *z, void *b, int n)
