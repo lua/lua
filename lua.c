@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.33 2000/02/21 18:30:42 roberto Exp roberto $
+** $Id: lua.c,v 1.34 2000/03/03 14:58:26 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -74,6 +74,7 @@ static void print_message (void) {
   "  -f name  execute file `name' with remaining arguments in table `arg'\n"
   "  -i       enter interactive mode with prompt\n"
   "  -q       enter interactive mode without prompt\n"
+  "  -sNUM    set stack size to NUM (must be first option)\n"
   "  -v       print version information\n"
   "  a=b      set global `a' to string `b'\n"
   "  name     execute file `name'\n"
@@ -94,38 +95,39 @@ static void assign (char *arg) {
 }
 
 
-static void getargs (int argc, char *argv[]) {
+static void getargs (char *argv[]) {
   lua_beginblock(); {
   int i;
   lua_Object args = lua_createtable();
   lua_pushobject(args);
   lua_setglobal("arg");
-  for (i=0; i<argc; i++) {
+  for (i=0; argv[i]; i++) {
     /* arg[i] = argv[i] */
     lua_pushobject(args); lua_pushnumber(i);
     lua_pushstring(argv[i]); lua_settable();
   }
   /* arg.n = maximum index in table `arg' */
   lua_pushobject(args); lua_pushstring("n");
-  lua_pushnumber(argc-1); lua_settable();
+  lua_pushnumber(i-1); lua_settable();
   } lua_endblock();
 }
 
 
-static void file_input (char **argv, int arg) {
-  int result = ldo(lua_dofile, argv[arg]);
+static void file_input (const char *argv) {
+  int result = ldo(lua_dofile, argv);
   if (result) {
     if (result == 2) {
       fprintf(stderr, "lua: cannot execute file ");
-      perror(argv[arg]);
+      perror(argv);
     }
     exit(1);
   }
 }
 
 
-static void manual_input (int prompt) {
+static void manual_input (int version, int prompt) {
   int cont = 1;
+  if (version) print_version();
   while (cont) {
     char buffer[BUFSIZ];
     int i = 0;
@@ -161,70 +163,83 @@ static void manual_input (int prompt) {
 
 
 int main (int argc, char *argv[]) {
-  int i;
-  lua_state = lua_newstate("stack", 1024, "builtin", 1, NULL);
+  (void)argc;  /* unused */
+  argv++;  /* skip program name */
+  if (*argv && (*argv)[0] == '-' && (*argv)[1] == 's') {
+    int stacksize = atoi((*argv)+2);
+    if (stacksize == 0) {
+      fprintf(stderr, "lua: invalid stack size\n");
+      exit(1);
+    }
+    argv++;
+    lua_state = lua_newstate("stack", stacksize, NULL);
+  }
+  else
+    lua_state = lua_newstate(NULL);
   lua_userinit();
-  if (argc < 2) {  /* no arguments? */
+  if (*argv == NULL) {  /* no other arguments? */
     if (isatty(0)) {
-      print_version();
-      manual_input(1);
+      manual_input(1, 1);
     }
     else
       ldo(lua_dofile, NULL);  /* executes stdin as a file */
   }
-  else for (i=1; i<argc; i++) {
-    if (argv[i][0] == '-') {  /* option? */
-      switch (argv[i][1]) {
+  else for (; *argv; argv++) {
+    if ((*argv)[0] == '-') {  /* option? */
+      switch ((*argv)[1]) {
         case 0:
           ldo(lua_dofile, NULL);  /* executes stdin as a file */
           break;
         case 'i':
-          manual_input(1);
+          manual_input(0, 1);
           break;
         case 'q':
-          manual_input(0);
+          manual_input(0, 0);
           break;
         case 'd':
           lua_setdebug(lua_state, 1);
-          if (i==argc-1) {  /* last argument? */
-            print_version();
-            manual_input(1);
+          if (*(argv+1) == NULL) {  /* last argument? */
+            manual_input(1, 1);
           }
           break;
         case 'v':
           print_version();
           break;
         case 'e':
-          i++;
-          if (i>=argc) {
+          argv++;
+          if (*argv == NULL) {
             print_message();
             exit(1);
           }
-          if (ldo(lua_dostring, argv[i]) != 0) {
-            fprintf(stderr, "lua: error running argument `%s'\n", argv[i]);
+          if (ldo(lua_dostring, *argv) != 0) {
+            fprintf(stderr, "lua: error running argument `%s'\n", *argv);
             exit(1);
           }
           break;
         case 'f':
-          i++;
-          if (i>=argc) {
+          argv++;
+          if (*argv == NULL) {
             print_message();
             exit(1);
           }
-          getargs(argc-i, argv+i);  /* collect remaining arguments */
-          file_input(argv, i);
-          i = argc;  /* stop scanning arguments */
+          getargs(argv);  /* collect remaining arguments */
+          file_input(*argv);
+          goto endloop;  /* stop scanning arguments */
           break;
+        case 's':
+          fprintf(stderr, "lua: stack size (`-s') must be the first option\n");
+          exit(1);
         default:
           print_message();
           exit(1);
       }
     }
-    else if (strchr(argv[i], '='))
-      assign(argv[i]);
+    else if (strchr(*argv, '='))
+      assign(*argv);
     else
-      file_input(argv, i);
+      file_input(*argv);
   }
+  endloop:
 #ifdef DEBUG
   lua_close();
 #endif
