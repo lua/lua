@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.66 2002/04/09 20:19:06 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.67 2002/04/12 19:57:29 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -200,6 +200,23 @@ static int luaB_next (lua_State *L) {
 }
 
 
+static int luaB_nexti (lua_State *L) {
+  lua_Number i = lua_tonumber(L, 2);
+  luaL_check_type(L, 1, LUA_TTABLE);
+  if (i == 0) {  /* `for' start? */
+    lua_getglobal(L, "nexti");  /* return generator, */
+    lua_pushvalue(L, 1);  /* state, */
+    lua_pushnumber(L, 1);  /* and initial value */
+    return 3;
+  }
+  else {  /* `for' step */
+    lua_pushnumber(L, i+1);  /* next value */
+    lua_rawgeti(L, 1, i);
+    return (lua_isnil(L, -1)) ? 0 : 2;
+  }
+}
+
+
 static int passresults (lua_State *L, int status, int oldtop) {
   if (status == 0) {
     int nresults = lua_gettop(L) - oldtop;
@@ -256,58 +273,6 @@ static int luaB_assert (lua_State *L) {
     luaL_verror(L, "assertion failed!  %.90s", luaL_opt_string(L, 2, ""));
   lua_settop(L, 1);
   return 1;
-}
-
-
-#define LUA_PATH	"LUA_PATH"
-
-#define LUA_PATH_SEP	";"
-
-#ifndef LUA_PATH_DEFAULT
-#define LUA_PATH_DEFAULT	"./"
-#endif
-
-static int luaB_require (lua_State *L) {
-  const char *path;
-  luaL_check_string(L, 1);
-  lua_settop(L, 1);
-  lua_getglobal(L, LUA_PATH);  /* get path */
-  if (lua_isstring(L, 2))  /* is LUA_PATH defined? */
-    path = lua_tostring(L, 2);
-  else {  /* LUA_PATH not defined */
-    lua_pop(L, 1);  /* pop old global value */
-    path = getenv(LUA_PATH);  /* try environment variable */
-    if (path == NULL) path = LUA_PATH_DEFAULT;  /* else use default */
-    lua_pushstring(L, path);
-    lua_pushvalue(L, -1);  /* duplicate to leave a copy on stack */
-    lua_setglobal(L, LUA_PATH);
-  }
-  lua_pushvalue(L, 1);  /* check package's name in book-keeping table */
-  lua_gettable(L, lua_upvalueindex(1));
-  if (!lua_isnil(L, -1))  /* is it there? */
-    return 0;  /* package is already loaded */
-  else {  /* must load it */
-    for (;;) {  /* traverse path */
-      int res;
-      int l = strcspn(path, LUA_PATH_SEP);  /* find separator */
-      lua_pushlstring(L, path, l);  /* directory name */
-      lua_pushvalue(L, 1);  /* package name */
-      lua_concat(L, 2);  /* concat directory with package name */
-      res = lua_dofile(L, lua_tostring(L, -1));  /* try to load it */
-      lua_settop(L, 2);  /* pop string and eventual results from dofile */
-      if (res == 0) break;  /* ok; file done */
-      else if (res != LUA_ERRFILE)
-        lua_error(L, NULL);  /* error running package; propagate it */
-      if (*(path+l) == '\0')  /* no more directories? */
-        luaL_verror(L, "could not load package `%.20s' from path `%.200s'",
-                    lua_tostring(L, 1), lua_tostring(L, 2));
-      path += l+1;  /* try next directory */
-    }
-  }
-  lua_pushvalue(L, 1);
-  lua_pushnumber(L, 1);
-  lua_settable(L, lua_upvalueindex(1));  /* mark it as loaded */
-  return 0;
 }
 
 
@@ -395,6 +360,104 @@ static int luaB_tostring (lua_State *L) {
 }
 
 
+
+/*
+** {======================================================
+** `require' function
+** =======================================================
+*/
+
+
+/* name of global that holds table with loaded packages */
+#define REQTAB		"_LOADED"
+
+/* name of global that holds the search path for packages */
+#define LUA_PATH	"LUA_PATH"
+
+#ifndef LUA_PATH_SEP
+#define LUA_PATH_SEP	';'
+#endif
+
+#ifndef LUA_PATH_DEFAULT
+#define LUA_PATH_DEFAULT	"?.lua"
+#endif
+
+
+static const char *getpath (lua_State *L) {
+  const char *path;
+  lua_getglobal(L, LUA_PATH);  /* try global variable */
+  path = lua_tostring(L, -1);
+  if (path) return path;
+  path = getenv(LUA_PATH);  /* else try environment variable */
+  if (path) return path;
+  return LUA_PATH_DEFAULT;  /* else use default */
+}
+
+
+static const char *nextpath (lua_State *L, const char *path) {
+  const char *l;
+  if (*path == '\0') return NULL;  /* no more pathes */
+  if (*path == LUA_PATH_SEP) path++;  /* skip separator */
+  l = strchr(path, LUA_PATH_SEP);  /* find next separator */
+  if (l == NULL) l = path+strlen(path);
+  lua_pushlstring(L, path, l - path);  /* directory name */
+  return l;
+}
+
+
+static void composename (lua_State *L) {
+  const char *path = lua_tostring(L, -1);
+  const char *wild = strchr(path, '?');
+  if (wild == NULL) return;  /* no wild char; path is the file name */
+  lua_pushlstring(L, path, wild - path);
+  lua_pushvalue(L, 1);  /* package name */
+  lua_pushstring(L, wild + 1);
+  lua_concat(L, 3);
+}
+
+
+static int luaB_require (lua_State *L) {
+  const char *path;
+  int status = LUA_ERRFILE;  /* not found (yet) */
+  luaL_check_string(L, 1);
+  lua_settop(L, 1);
+  lua_pushvalue(L, 1);
+  lua_setglobal(L, "_REQUIREDNAME");
+  lua_getglobal(L, REQTAB);
+  if (!lua_istable(L, 2)) lua_error(L, REQTAB " is not a table");
+  path = getpath(L);
+  lua_pushvalue(L, 1);  /* check package's name in book-keeping table */
+  lua_gettable(L, 2);
+  if (!lua_isnil(L, -1))  /* is it there? */
+    return 0;  /* package is already loaded */
+  else {  /* must load it */
+    while (status == LUA_ERRFILE && (path = nextpath(L, path)) != NULL) {
+      composename(L);
+      status = lua_dofile(L, lua_tostring(L, -1));  /* try to load it */
+      lua_settop(L, 3);  /* pop string and eventual results from dofile */
+    }
+  }
+  switch (status) {
+    case 0: {
+      lua_pushvalue(L, 1);
+      lua_pushboolean(L, 1);
+      lua_settable(L, 2);  /* mark it as loaded */
+      return 0;
+    }
+    case LUA_ERRFILE: {  /* file not found */
+      luaL_verror(L, "could not load package `%.20s' from path `%.200s'",
+                  lua_tostring(L, 1), lua_tostring(L, 3));
+    }
+    default: {  /* error loading package */
+      lua_error(L, NULL);
+      return 0;  /* to avoid warnings */
+    }
+  }
+}
+
+/* }====================================================== */
+
+
 static const luaL_reg base_funcs[] = {
   {LUA_ALERT, luaB__ALERT},
   {LUA_ERRORMESSAGE, luaB__ERRORMESSAGE},
@@ -402,6 +465,7 @@ static const luaL_reg base_funcs[] = {
   {"metatable", luaB_metatable},
   {"globals", luaB_globals},
   {"next", luaB_next},
+  {"nexti", luaB_nexti},
   {"print", luaB_print},
   {"tonumber", luaB_tonumber},
   {"tostring", luaB_tostring},
@@ -417,6 +481,7 @@ static const luaL_reg base_funcs[] = {
   {"loadstring", luaB_loadstring},
   {"dofile", luaB_dofile},
   {"dostring", luaB_dostring},
+  {"require", luaB_require},
   {NULL, NULL}
 };
 
@@ -511,10 +576,8 @@ static void base_open (lua_State *L) {
 LUALIB_API int lua_baselibopen (lua_State *L) {
   base_open(L);
   co_open(L);
-  /* `require' needs an empty table as upvalue */
   lua_newtable(L);
-  lua_pushcclosure(L, luaB_require, 1);
-  lua_setglobal(L, "require");
+  lua_setglobal(L, REQTAB);
   return 0;
 }
 
