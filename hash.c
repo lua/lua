@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.26 1995/10/04 14:20:26 roberto Exp roberto $";
+char *rcs_hash="$Id: hash.c,v 2.26 1995/10/04 14:20:26 roberto Exp $";
 
 #include <string.h>
 
@@ -13,7 +13,6 @@ char *rcs_hash="$Id: hash.c,v 2.26 1995/10/04 14:20:26 roberto Exp roberto $";
 #include "table.h"
 #include "lua.h"
 
-#define streq(s1,s2)	(s1 == s2 || (*(s1) == *(s2) && strcmp(s1,s2)==0))
 
 #define nhash(t)	((t)->nhash)
 #define nuse(t)		((t)->nuse)
@@ -24,11 +23,10 @@ char *rcs_hash="$Id: hash.c,v 2.26 1995/10/04 14:20:26 roberto Exp roberto $";
 #define val(n)		(&(n)->val)
 
 
-#define REHASH_LIMIT	0.70	/* avoid more than this % full */
+#define REHASH_LIMIT    0.70    /* avoid more than this % full */
 
 
 static Hash *listhead = NULL;
-
 
 
 /* hash dimensions values */
@@ -36,7 +34,7 @@ static Word dimensions[] =
  {3, 5, 7, 11, 23, 47, 97, 197, 397, 797, 1597, 3203, 6421,
   12853, 25717, 51437, 65521, 0};  /* 65521 == last prime < MAX_WORD */
 
-static Word redimension (Word nhash)
+Word luaI_redimension (Word nhash)
 {
  Word i;
  for (i=0; dimensions[i]!=0; i++)
@@ -58,17 +56,7 @@ static Word hashindex (Hash *t, Object *ref)		/* hash function */
   case LUA_T_NUMBER:
    return (((Word)nvalue(ref))%nhash(t));
   case LUA_T_STRING:
-  {
-   unsigned long h = tsvalue(ref)->hash;
-   if (h == 0)
-   {
-     char *name = svalue(ref);
-     while (*name)
-       h = ((h<<5)-h)^(unsigned char)*(name++);
-     tsvalue(ref)->hash = h;
-   }
-   return (Word)h%nhash(t);  /* make it a valid index */
-  }
+   return (Word)((tsvalue(ref)->hash)%nhash(t));  /* make it a valid index */
   case LUA_T_FUNCTION:
    return (((IntPoint)ref->value.tf)%nhash(t));
   case LUA_T_CFUNCTION:
@@ -87,7 +75,7 @@ int lua_equalObj (Object *t1, Object *t2)
   {
     case LUA_T_NIL: return 1;
     case LUA_T_NUMBER: return nvalue(t1) == nvalue(t2);
-    case LUA_T_STRING: return streq(svalue(t1), svalue(t2));
+    case LUA_T_STRING: return svalue(t1) == svalue(t2);
     case LUA_T_ARRAY: return avalue(t1) == avalue(t2);
     case LUA_T_FUNCTION: return t1->value.tf == t2->value.tf;
     case LUA_T_CFUNCTION: return fvalue(t1) == fvalue(t2);
@@ -126,7 +114,7 @@ static Node *hashnodecreate (Word nhash)
 static Hash *hashcreate (Word nhash)
 {
  Hash *t = new(Hash);
- nhash = redimension((Word)((float)nhash/REHASH_LIMIT));
+ nhash = luaI_redimension((Word)((float)nhash/REHASH_LIMIT));
  nodevector(t) = hashnodecreate(nhash);
  nhash(t) = nhash;
  nuse(t) = 0;
@@ -237,7 +225,7 @@ static void rehash (Hash *t)
  Word i;
  Word   nold = nhash(t);
  Node *vold = nodevector(t);
- nhash(t) = redimension(nhash(t));
+ nhash(t) = luaI_redimension(nhash(t));
  nodevector(t) = hashnodecreate(nhash(t));
  for (i=0; i<nold; i++)
  {

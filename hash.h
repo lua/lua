@@ -2,13 +2,14 @@
 ** hash.h
 ** hash manager for lua
 ** Luiz Henrique de Figueiredo - 17 Aug 90
-** $Id: hash.h,v 2.8 1995/01/12 14:19:04 roberto Exp roberto $
+** $Id: hash.h,v 2.9 1996/02/07 14:13:17 roberto Exp roberto $
 */
 
 #ifndef hash_h
 #define hash_h
 
 #include "types.h"
+#include "opcode.h"
 
 typedef struct node
 {
@@ -27,6 +28,7 @@ typedef struct Hash
 
 
 int      lua_equalObj (Object *t1, Object *t2);
+Word     luaI_redimension (Word nhash);
 Hash    *lua_createarray (Word nhash);
 void     lua_hashmark (Hash *h);
 Long     lua_hashcollector (void);

@@ -97,7 +97,7 @@ void lua_funcinfo (lua_Object func, char **filename, int *linedefined)
 /*
 ** Stores information to know that variable has been declared in given line
 */
-void luaI_registerlocalvar (TreeNode *varname, int line)
+void luaI_registerlocalvar (TaggedString *varname, int line)
 {
   if (numcurrvars >= maxcurrvars)
     if (currvars == NULL)
@@ -152,7 +152,7 @@ char *luaI_getlocalname (TFunc *func, int local_number, int line)
     if (lv->varname)               /* register */
     {
       if (++count == local_number)
-        varname = lv->varname->ts.str;
+        varname = lv->varname->str;
     }
     else                           /* unregister */
       if (--count < local_number)

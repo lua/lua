@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.43 1996/01/26 14:04:32 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.44 1996/01/26 18:03:19 roberto Exp $";
 
 /*#include <string.h>*/
 
@@ -85,7 +85,7 @@ void lua_initconstant (void)
 ** Given a name, search it at symbol table and return its index. If not
 ** found, allocate it.
 */
-Word luaI_findsymbol (TreeNode *t)
+Word luaI_findsymbol (TaggedString *t)
 {
  if (lua_table == NULL)
   lua_initsymbol(); 
@@ -111,7 +111,7 @@ Word luaI_findsymbol (TreeNode *t)
 
 Word luaI_findsymbolbyname (char *name)
 {
-  return luaI_findsymbol(lua_constcreate(name));
+  return luaI_findsymbol(luaI_createfixedstring(name));
 }
 
 
@@ -119,7 +119,7 @@ Word luaI_findsymbolbyname (char *name)
 ** Given a tree node, check it is has a correspondent constant index. If not,
 ** allocate it.
 */
-Word luaI_findconstant (TreeNode *t)
+Word luaI_findconstant (TaggedString *t)
 {
  if (lua_constant == NULL)
   lua_initconstant();
@@ -135,7 +135,7 @@ Word luaI_findconstant (TreeNode *t)
    lua_constant = growvector(lua_constant, lua_maxconstant, TaggedString *);
   }
   t->constindex = lua_nconstant;
-  lua_constant[lua_nconstant] = &(t->ts);
+  lua_constant[lua_nconstant] = t;
   lua_nconstant++;
  }
  return t->constindex;
@@ -144,7 +144,13 @@ Word luaI_findconstant (TreeNode *t)
 
 Word  luaI_findconstantbyname (char *name)
 {
-  return luaI_findconstant(lua_constcreate(name));
+  return luaI_findconstant(luaI_createfixedstring(name));
+}
+
+TaggedString *lua_constcreate(char *name)
+{
+  int i = luaI_findconstantbyname(name);
+  return lua_constant[i];
 }
 
 
@@ -156,7 +162,7 @@ static char *lua_travsymbol (int (*fn)(Object *))
  Word i;
  for (i=0; i<lua_ntable; i++)
   if (fn(&s_object(i)))
-    return lua_table[i].varname->ts.str;
+    return lua_table[i].varname->str;
  return NULL;
 }
 
@@ -165,7 +171,7 @@ static char *lua_travsymbol (int (*fn)(Object *))
 ** Mark an object if it is a string or a unmarked array.
 */
 int lua_markobject (Object *o)
-{
+{/* if already marked, does not change mark value */
  if (tag(o) == LUA_T_STRING && !tsvalue(o)->marked)
    tsvalue(o)->marked = 1;
  else if (tag(o) == LUA_T_ARRAY)
@@ -235,10 +241,10 @@ static void lua_nextvar (void)
  }
  else
  {
-  TreeNode *t = lua_table[next].varname;
+  TaggedString *t = lua_table[next].varname;
   Object name;
   tag(&name) = LUA_T_STRING;
-  tsvalue(&name) = &(t->ts);
+  tsvalue(&name) = t;
   luaI_pushobject(&name);
   luaI_pushobject(&s_object(next));
  }

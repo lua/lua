@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.23 1996/02/07 14:14:40 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.24 1996/02/09 19:35:23 roberto Exp roberto $";
  
 
 #include <ctype.h>
@@ -287,7 +287,7 @@ int luaY_lex (void)
         *yytextLast = 0;
         res = findReserved(yytext);
         if (res) return res;
-        luaY_lval.pNode = lua_constcreate(yytext);
+        luaY_lval.pTStr = luaI_createfixedstring(yytext);
         return NAME;
       }
 

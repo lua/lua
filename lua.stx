@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.28 1996/02/05 13:26:01 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.29 1996/02/07 18:10:27 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,7 +45,7 @@ static Long    varbuffer[MAXVAR];    /* variables in an assignment list;
 static int     nvarbuffer=0;	     /* number of variables at a list */
 
 #define MAXLOCALS 32
-static TreeNode *localvar[MAXLOCALS];  /* store local variable names */
+static TaggedString *localvar[MAXLOCALS];  /* store local variable names */
 static int     nlocalvar=0;	     /* number of local variables */
 
 #define MAXFIELDS FIELDS_PER_FLUSH*2
@@ -151,7 +151,7 @@ static void flush_list (int m, int n)
   code_byte(n);
 }
 
-static void store_localvar (TreeNode *name, int n)
+static void store_localvar (TaggedString *name, int n)
 {
  if (nlocalvar+n < MAXLOCALS)
   localvar[nlocalvar+n] = name;
@@ -161,7 +161,7 @@ static void store_localvar (TreeNode *name, int n)
    luaI_registerlocalvar(name, lua_linenumber);
 }
 
-static void add_localvar (TreeNode *name)
+static void add_localvar (TaggedString *name)
 {
   store_localvar(name, 0);
   nlocalvar++;
@@ -202,7 +202,7 @@ static void code_number (float f)
 /*
 ** Search a local name and if find return its index. If do not find return -1
 */
-static int lua_localname (TreeNode *n)
+static int lua_localname (TaggedString *n)
 {
  int i;
  for (i=nlocalvar-1; i >= 0; i--)
@@ -420,7 +420,7 @@ void lua_parse (TFunc *tf)
  Word  vWord;
  Long  vLong;
  TFunc *pFunc;
- TreeNode *pNode;
+ TaggedString *pTStr;
 }
 
 %start functionlist
@@ -433,7 +433,7 @@ void lua_parse (TFunc *tf)
 %token FUNCTION
 %token <vFloat> NUMBER
 %token <vWord>  STRING
-%token <pNode>  NAME 
+%token <pTStr>  NAME 
 %token <vInt>   DEBUG
 
 %type <vLong> PrepJump

@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.55 1996/02/07 18:10:27 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.56 1996/02/08 17:03:20 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -381,7 +381,7 @@ static void getglobal (Word n)
   if (tag(top-1) == LUA_T_NIL)
   { /* must call getglobal fallback */
     tag(top-1) = LUA_T_STRING;
-    tsvalue(top-1) = &lua_table[n].varname->ts;
+    tsvalue(top-1) = lua_table[n].varname;
     callFB(FB_GETGLOBAL);
   }
 }
@@ -787,17 +787,6 @@ void lua_pushnumber (real n)
 void lua_pushstring (char *s)
 {
  tsvalue(top) = lua_createstring(s);
- tag(top) = LUA_T_STRING;
- incr_top;
-}
-
-/*
-** Push an object (tag=string) on stack and register it on the constant table.
-*/
-void lua_pushliteral (char *s)
-{
- Word ct = luaI_findconstantbyname(s);  /* this call may change lua_constant */
- tsvalue(top) = lua_constant[ct];
  tag(top) = LUA_T_STRING;
  incr_top;
 }
