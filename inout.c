@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.47 1997/03/19 19:41:10 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.48 1997/03/20 19:20:23 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -18,7 +18,7 @@ char *rcs_inout="$Id: inout.c,v 2.47 1997/03/19 19:41:10 roberto Exp roberto $";
 #include "tree.h"
 #include "lua.h"
 #include "hash.h"
-#include "mem.h"
+#include "luamem.h"
 #include "fallback.h"
 
 

@@ -3,12 +3,12 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.22 1997/03/19 19:41:10 roberto Exp roberto $";
+char *rcs_tree="$Id: tree.c,v 1.23 1997/03/31 14:02:58 roberto Exp roberto $";
 
 
 #include <string.h>
 
-#include "mem.h"
+#include "luamem.h"
 #include "lua.h"
 #include "tree.h"
 #include "lex.h"

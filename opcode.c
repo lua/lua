@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.86 1997/03/20 19:20:43 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.87 1997/03/31 14:02:58 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -11,7 +11,7 @@ char *rcs_opcode="$Id: opcode.c,v 3.86 1997/03/20 19:20:43 roberto Exp roberto $
 #include <stdlib.h>
 
 #include "luadebug.h"
-#include "mem.h"
+#include "luamem.h"
 #include "opcode.h"
 #include "hash.h"
 #include "inout.h"

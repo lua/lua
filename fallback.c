@@ -3,13 +3,13 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.33 1997/03/24 17:13:22 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.34 1997/03/31 14:02:58 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
  
 #include "auxlib.h"
-#include "mem.h"
+#include "luamem.h"
 #include "fallback.h"
 #include "opcode.h"
 #include "lua.h"

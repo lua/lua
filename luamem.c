@@ -3,11 +3,11 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_mem = "$Id: mem.c,v 1.14 1997/02/25 11:12:28 roberto Exp roberto $";
+char *rcs_luamem = "$Id: mem.c,v 1.14 1997/03/03 19:55:38 roberto Exp roberto $";
 
 #include <stdlib.h>
 
-#include "mem.h"
+#include "luamem.h"
 #include "lua.h"
 
 

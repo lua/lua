@@ -2,7 +2,7 @@
 
 #include "luadebug.h"
 #include "table.h"
-#include "mem.h"
+#include "luamem.h"
 #include "func.h"
 #include "opcode.h"
 

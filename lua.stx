@@ -1,13 +1,13 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.44 1997/02/13 16:18:39 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.45 1997/03/06 17:30:55 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "luadebug.h"
-#include "mem.h"
+#include "luamem.h"
 #include "lex.h"
 #include "opcode.h"
 #include "hash.h"
