@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.8 1994/11/02 20:29:09 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.9 1994/11/03 21:48:36 roberto Exp $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -54,7 +54,7 @@ static void lua_initsymbol (void)
   return;
  }
  n = lua_findsymbol("type"); 
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_type;
+ s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_type;
  n = lua_findsymbol("tonumber");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_obj2number;
  n = lua_findsymbol("next");
@@ -78,19 +78,9 @@ void lua_initconstant (void)
  lua_maxconstant = BUFFER_BLOCK;
  lua_constant = (char **) calloc(lua_maxconstant, sizeof(char *));
  if (lua_constant == NULL)
- {
-  lua_error ("constant table: not enough memory");
-  return;
- }
- lua_findconstant("mark");
- lua_findconstant("nil");
- lua_findconstant("number");
- lua_findconstant("string");
- lua_findconstant("table");
- lua_findconstant("function");
- lua_findconstant("cfunction");
- lua_findconstant("userdata");
+   lua_error ("constant table: not enough memory");
 }
+
 
 /*
 ** Given a name, search it at symbol table and return its index. If not
