@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.9 2004/06/08 16:23:58 roberto Exp roberto $
+** $Id: lvm.c,v 2.10 2004/06/29 17:05:00 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -369,9 +369,9 @@ static StkId Arith (lua_State *L, StkId ra, const TValue *rb,
 #define RB(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgR, base+GETARG_B(i))
 #define RC(i)	check_exp(getCMode(GET_OPCODE(i)) == OpArgR, base+GETARG_C(i))
 #define RKB(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgK, \
-	(GETARG_B(i) < MAXSTACK) ? base+GETARG_B(i) : k+GETARG_B(i)-MAXSTACK)
+	ISK(GETARG_B(i)) ? k+INDEXK(GETARG_B(i)) : base+GETARG_B(i))
 #define RKC(i)	check_exp(getCMode(GET_OPCODE(i)) == OpArgK, \
-	(GETARG_C(i) < MAXSTACK) ? base+GETARG_C(i) : k+GETARG_C(i)-MAXSTACK)
+	ISK(GETARG_C(i)) ? k+INDEXK(GETARG_C(i)) : base+GETARG_C(i))
 #define KBx(i)	check_exp(getBMode(GET_OPCODE(i)) == OpArgK, k+GETARG_Bx(i))
 
 

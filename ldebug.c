@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.5 2004/05/31 18:51:50 roberto Exp roberto $
+** $Id: ldebug.c,v 2.6 2004/06/02 19:07:55 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -276,8 +276,8 @@ static int checkArgMode (const Proto *pt, int r, enum OpArgMask mode) {
     case OpArgN: check(r == 0); break;
     case OpArgU: break;
     case OpArgR: checkreg(pt, r); break;
-    case OpArgK: 
-      check(r < pt->maxstacksize || (r >= MAXSTACK && r-MAXSTACK < pt->sizek));
+    case OpArgK:
+      check(ISK(r) ? INDEXK(r) < pt->sizek : r < pt->maxstacksize);
       break;
   }
   return 1;
@@ -432,9 +432,8 @@ int luaG_checkcode (const Proto *pt) {
 
 
 static const char *kname (Proto *p, int c) {
-  c = c - MAXSTACK;
-  if (c >= 0 && ttisstring(&p->k[c]))
-    return svalue(&p->k[c]);
+  if (ISK(c) && ttisstring(&p->k[INDEXK(c)]))
+    return svalue(&p->k[INDEXK(c)]);
   else
     return "?";
 }

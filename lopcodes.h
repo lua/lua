@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.108 2004/05/17 12:34:00 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.109 2004/05/31 18:51:50 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -109,6 +109,23 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 			| (cast(Instruction, bc)<<POS_Bx))
 
 
+/*
+** Macros to operate RK indices
+*/
+
+/* this bit 1 means constant (0 means register) */
+#define BITRK		(1 << (SIZE_B - 1))
+
+/* test whether value is a constant */
+#define ISK(x)		((x) & BITRK)
+
+/* gets the index of the constant */
+#define INDEXK(r)	((int)(r) & ~BITRK)
+
+#define MAXINDEXRK	(BITRK - 1)
+
+/* code a constant index as a RK value */
+#define RKASK(x)	((x) | BITRK)
 
 
 /*
@@ -120,7 +137,7 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 /*
 ** R(x) - register
 ** Kst(x) - constant (in constant table)
-** RK(x) == if x < MAXSTACK then R(x) else Kst(x-MAXSTACK)
+** RK(x) == if ISK(x) then Kst(INDEXK(x)) else R(x)
 */
 
 
