@@ -46,9 +46,7 @@ const char *const luaP_opnames[] = {
   "TESTF",
   "CALL",
   "RETURN",
-  "FORPREP",
   "FORLOOP",
-  "TFORPREP",
   "TFORLOOP",
   "SETLIST",
   "SETLISTO",
@@ -60,10 +58,10 @@ const char *const luaP_opnames[] = {
 
 #define opmode(t,x,b,c,sa,k,m) (((t)<<OpModeT) | \
    ((b)<<OpModeBreg) | ((c)<<OpModeCreg) | \
-   ((sa)<<OpModesetA) | ((k)<<OpModeK) | (m))
+   ((sa)<<OpModesetA) | ((k)<<OpModeK) | (x)<<OpModeNoTrace | (m))
 
 const lu_byte luaP_opmodes[NUM_OPCODES] = {
-/*       T _ B C sA K mode		   opcode    */
+/*       T n B C sA K mode		   opcode    */
   opmode(0,0,1,0, 1,0,iABC)		/* OP_MOVE */
  ,opmode(0,0,0,0, 1,1,iABc)		/* OP_LOADK */
  ,opmode(0,0,0,0, 1,0,iABC)		/* OP_LOADBOOL */
@@ -95,10 +93,8 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(1,0,1,0, 1,0,iABC)		/* OP_TESTF */
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_CALL */
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_RETURN */
- ,opmode(0,0,0,0, 0,0,iAsBc)		/* OP_FORPREP */
- ,opmode(0,0,0,0, 0,0,iAsBc)		/* OP_FORLOOP */
- ,opmode(0,0,0,0, 0,0,iAsBc)		/* OP_TFORPREP */
- ,opmode(0,0,0,0, 0,0,iAsBc)		/* OP_TFORLOOP */
+ ,opmode(0,1,0,0, 0,0,iAsBc)		/* OP_FORLOOP */
+ ,opmode(0,1,0,0, 0,0,iAsBc)		/* OP_TFORLOOP */
  ,opmode(0,0,0,0, 0,0,iABc)		/* OP_SETLIST */
  ,opmode(0,0,0,0, 0,0,iABc)		/* OP_SETLISTO */
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_CLOSE */

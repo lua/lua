@@ -54,13 +54,6 @@ LUA_API lua_Hook lua_setlinehook (lua_State *L, lua_Hook func) {
 }
 
 
-static CallInfo *ci_stack (lua_State *L, StkId obj) {
-  CallInfo *ci = L->ci;
-  while (ci->base > obj && ci > L->base_ci) ci--;
-  return ci;
-}
-
-
 LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
   int status;
   lua_lock(L);
@@ -283,6 +276,7 @@ static int checklineinfo (const Proto *pt) {
   int *lineinfo = pt->lineinfo;
   if (lineinfo == NULL) return 1;
   check(pt->sizelineinfo >= 2 && lineinfo[pt->sizelineinfo-1] == MAX_INT);
+  lua_assert(luaG_getline(lineinfo, pt->sizecode-1, 1, NULL) < MAX_INT);
   if (*lineinfo < 0) lineinfo++;
   check(*lineinfo == 0);
   return 1;
@@ -292,7 +286,7 @@ static int checklineinfo (const Proto *pt) {
 static int precheck (const Proto *pt) {
   check(checklineinfo(pt));
   check(pt->maxstacksize <= MAXSTACK);
-  check(pt->numparams+pt->is_vararg <= pt->maxstacksize);
+  lua_assert(pt->numparams+pt->is_vararg <= pt->maxstacksize);
   check(GET_OPCODE(pt->code[pt->sizecode-1]) == OP_RETURN);
   return 1;
 }
@@ -381,7 +375,9 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         check(c < MAXSTACK && b < c);
         break;
       }
-      case OP_JMP: {
+      case OP_JMP:
+      case OP_FORLOOP:
+      case OP_TFORLOOP: {
         int dest = pc+1+b;
 	check(0 <= dest && dest < pt->sizecode);
         /* not full check and jump is forward and do not skip `lastpc'? */
@@ -407,21 +403,6 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         if (b > 0) checkreg(pt, a+b-1);
         break;
       }
-      case OP_FORPREP:
-      case OP_TFORPREP: {
-        int dest = pc-b;  /* jump is negated here */
-        check(0 <= dest && dest < pt->sizecode &&
-              GET_OPCODE(pt->code[dest]) == op+1);
-        break;
-      }
-      case OP_FORLOOP:
-      case OP_TFORLOOP: {
-        int dest = pc+b;
-        check(0 <= dest && dest < pt->sizecode &&
-              pt->code[dest] == SET_OPCODE(i, op-1));
-        checkreg(pt, a + ((op == OP_FORLOOP) ? 2 : 3));
-        break;
-      }
       case OP_SETLIST: {
         checkreg(pt, a + (b&(LFIELDS_PER_FLUSH-1)) + 1);
         break;
@@ -445,12 +426,11 @@ int luaG_checkcode (const Proto *pt) {
 }
 
 
-static const char *getobjname (lua_State *L, StkId obj, const char **name) {
-  CallInfo *ci = ci_stack(L, obj);
+static const char *getobjname (lua_State *L, CallInfo *ci, int stackpos,
+                               const char **name) {
   if (isLmark(ci)) {  /* an active Lua function? */
     Proto *p = ci_func(ci)->l.p;
     int pc = currentpc(L, ci);
-    int stackpos = obj - ci->base;
     Instruction i;
     *name = luaF_getlocalname(p, stackpos+1, pc);
     if (*name)  /* is a local? */
@@ -467,7 +447,7 @@ static const char *getobjname (lua_State *L, StkId obj, const char **name) {
         int a = GETARG_A(i);
         int b = GETARG_B(i);  /* move from `b' to `a' */
         if (b < a)
-          return getobjname(L, ci->base+b, name);  /* get name for `b' */
+          return getobjname(L, ci, b, name);  /* get name for `b' */
         break;
       }
       case OP_GETTABLE:
@@ -496,7 +476,7 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
     Instruction i;
     i = p->code[pc];
     return (GET_OPCODE(i) == OP_CALL
-             ? getobjname(L, ci->base+GETARG_A(i), name)
+             ? getobjname(L, ci, GETARG_A(i), name)
              : NULL);  /* no useful name found */
   }
 }
@@ -504,7 +484,7 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
 
 void luaG_typeerror (lua_State *L, StkId o, const char *op) {
   const char *name;
-  const char *kind = getobjname(L, o, &name);
+  const char *kind = getobjname(L, L->ci, o - L->ci->base, &name);  /* ?? */
   const char *t = luaT_typenames[ttype(o)];
   if (kind)
     luaO_verror(L, "attempt to %.30s %.20s `%.40s' (a %.10s value)",

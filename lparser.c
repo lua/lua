@@ -955,17 +955,17 @@ static void exp1 (LexState *ls) {
 }
 
 
-static void forbody (LexState *ls, int nvar, OpCode prepfor, OpCode loopfor) {
+static void forbody (LexState *ls, int nvar, OpCode loopfor) {
   /* forbody -> DO block END */
   FuncState *fs = ls->fs;
   int basereg = fs->freereg - nvar;
-  int prep = luaK_codeAsBc(fs, prepfor, basereg, NO_JUMP);
+  int prep = luaK_jump(fs);
   int blockinit = luaK_getlabel(fs);
   check(ls, TK_DO);
   adjustlocalvars(ls, nvar);  /* scope for control variables */
   block(ls);
+  luaK_patchlist(fs, prep, luaK_getlabel(fs));
   luaK_patchlist(fs, luaK_codeAsBc(fs, loopfor, basereg, NO_JUMP), blockinit);
-  luaK_fixfor(fs, prep, luaK_getlabel(fs));
   removelocalvars(ls, nvar, 1);
 }
 
@@ -986,13 +986,15 @@ static void fornum (LexState *ls, TString *varname) {
   new_localvar(ls, varname, 0);
   new_localvarstr(ls, "(limit)", 1);
   new_localvarstr(ls, "(step)", 2);
-  forbody(ls, 3, OP_FORPREP, OP_FORLOOP);
+  luaK_codeABC(fs, OP_SUB, fs->freereg - 3, fs->freereg - 3, fs->freereg - 1);
+  forbody(ls, 3, OP_FORLOOP);
 }
 
 
 static void forlist (LexState *ls, TString *indexname) {
   /* forlist -> NAME,NAME IN exp1 forbody */
   TString *valname;
+  FuncState *fs = ls->fs;
   check(ls, ',');
   valname = str_checkname(ls);
   next(ls);  /* skip var name */
@@ -1002,8 +1004,9 @@ static void forlist (LexState *ls, TString *indexname) {
   new_localvarstr(ls, "(index)", 1);
   new_localvar(ls, indexname, 2);
   new_localvar(ls, valname, 3);
-  luaK_reserveregs(ls->fs, 3);  /* registers for control, index and val */
-  forbody(ls, 4, OP_TFORPREP, OP_TFORLOOP);
+  luaK_reserveregs(fs, 3);  /* registers for control, index and val */
+  luaK_codeABc(fs, OP_LOADK, fs->freereg - 3, luaK_numberK(fs, -1));
+  forbody(ls, 4, OP_TFORLOOP);
 }
 
 

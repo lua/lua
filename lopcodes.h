@@ -169,10 +169,7 @@ OP_TESTF,/*	A B	if not (R(B)) then R(A) := R(B) else pc++	*/
 OP_CALL,/*	A B C	R(A), ... ,R(A+C-2) := R(A)(R(A+1), ... ,R(A+B-1))*/
 OP_RETURN,/*	A B	return R(A), ... ,R(A+B-2)	(see (3))	*/
 
-OP_FORPREP,/*	A sBc							*/
 OP_FORLOOP,/*	A sBc							*/
-
-OP_TFORPREP,/*	A sBc							*/
 OP_TFORLOOP,/*	A sBc							*/
 
 OP_SETLIST,/*	A Bc	R(A)[Bc-Bc%FPF+i] := R(A+i), 1 <= i <= Bc%FPF+1	*/
@@ -206,7 +203,8 @@ enum OpModeMask {
   OpModeCreg,           /* C is a register/constant */
   OpModesetA,           /* instruction set register A */
   OpModeK,              /* Bc is a constant */
-  OpModeT               /* operator is a test */
+  OpModeT,		/* operator is a test */
+  OpModeNoTrace		/* operator should not be traced */
 };
 
 extern const lu_byte luaP_opmodes[NUM_OPCODES];

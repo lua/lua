@@ -77,17 +77,6 @@ static void luaK_fixjump (FuncState *fs, int pc, int dest) {
 
 
 /*
-** prep-for instructions (OP_FORPREP & OP_TFORPREP) have a negated jump,
-** as they simulate the real jump...
-*/
-void luaK_fixfor (FuncState *fs, int pc, int dest) {
-  Instruction *jmp = &fs->f->code[pc];
-  int offset = dest-(pc+1);
-  SETARG_sBc(*jmp, -offset);
-}
-
-
-/*
 ** returns current `pc' and marks it as a jump target (to avoid wrong
 ** optimizations with consecutive instructions not in the same basic block).
 ** discharge list of jumps to last target.

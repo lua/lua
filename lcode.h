@@ -57,7 +57,6 @@ void luaK_storevar (FuncState *fs, expdesc *var, expdesc *e);
 void luaK_setcallreturns (FuncState *fs, expdesc *var, int nresults);
 int luaK_jump (FuncState *fs);
 void luaK_patchlist (FuncState *fs, int list, int target);
-void luaK_fixfor (FuncState *fs, int pc, int dest);
 void luaK_concat (FuncState *fs, int *l1, int l2);
 int luaK_getlabel (FuncState *fs);
 void luaK_prefix (FuncState *fs, UnOpr op, expdesc *v);

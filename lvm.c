@@ -26,6 +26,9 @@
 #include "lvm.h"
 
 
+/* limit for table tag-method chains (to avoid loops) */
+#define MAXTAGLOOP	10000
+
 
 static void luaV_checkGC (lua_State *L, StkId top) {
   if (G(L)->nblocks >= G(L)->GCthreshold) {
@@ -65,6 +68,8 @@ static void traceexec (lua_State *L, lua_Hook linehook) {
   int *lineinfo = ci_func(ci)->l.p->lineinfo;
   int pc = cast(int, *ci->pc - ci_func(ci)->l.p->code) - 1;
   int newline;
+  if (testOpMode(GET_OPCODE(*(*ci->pc - 1)), OpModeNoTrace))
+    return;
   if (ci->line == -1) return;  /* no linehooks for this function */
   else if (ci->line == 0) {  /* first linehook? */
     if (pc == 0) {  /* function is starting now? */
@@ -123,6 +128,7 @@ static void callTM (lua_State *L, const TObject *f,
 */
 void luaV_gettable (lua_State *L, StkId t, TObject *key, StkId res) {
   const TObject *tm;
+  int loop = 0;
   init:
   if (ttype(t) == LUA_TTABLE) {  /* `t' is a table? */
     Table *et = hvalue(t)->metatable;
@@ -145,6 +151,7 @@ void luaV_gettable (lua_State *L, StkId t, TObject *key, StkId res) {
   if (ttype(tm) == LUA_TFUNCTION)
     callTMres(L, tm, t, key, res);
   else {
+    if (++loop == MAXTAGLOOP) luaD_error(L, "loop in gettable");
     t = (StkId)tm;  /* ?? */
     goto init;  /* return luaV_gettable(L, tm, key, res); */
   }
@@ -156,6 +163,7 @@ void luaV_gettable (lua_State *L, StkId t, TObject *key, StkId res) {
 */
 void luaV_settable (lua_State *L, StkId t, TObject *key, StkId val) {
   const TObject *tm;
+  int loop = 0;
   init:
   if (ttype(t) == LUA_TTABLE) {  /* `t' is a table? */
     Table *et = hvalue(t)->metatable;
@@ -173,6 +181,7 @@ void luaV_settable (lua_State *L, StkId t, TObject *key, StkId val) {
   if (ttype(tm) == LUA_TFUNCTION)
     callTM(L, tm, t, key, val);
   else {
+    if (++loop == MAXTAGLOOP) luaD_error(L, "loop in settable");
     t = (StkId)tm;  /* ?? */
     goto init;  /* luaV_settable(L, tm, key, val); */
   }
@@ -301,8 +310,8 @@ static void powOp (lua_State *L, StkId ra, StkId rb, StkId rc) {
 #define Arith(op, optm)	{ \
   const TObject *b = RB(i); const TObject *c = RKC(i);		\
   TObject tempb, tempc; \
-  if ((ttype(b) == LUA_TNUMBER || (b = luaV_tonumber(b, &tempb)) != NULL) && \
-      (ttype(c) == LUA_TNUMBER || (c = luaV_tonumber(c, &tempc)) != NULL)) { \
+  if ((b = luaV_tonumber(b, &tempb)) != NULL && \
+      (c = luaV_tonumber(c, &tempc)) != NULL) { \
     setnvalue(ra, nvalue(b) op nvalue(c));		\
   } else		\
     call_arith(L, RB(i), RKC(i), ra, optm); \
@@ -423,7 +432,7 @@ StkId luaV_execute (lua_State *L) {
       }
       case OP_UNM: {
         const TObject *rb = RB(i);
-        if (ttype(rb) == LUA_TNUMBER || (rb=luaV_tonumber(rb, ra)) != NULL) {
+        if ((rb=luaV_tonumber(rb, ra)) != NULL) {
           setnvalue(ra, -nvalue(rb));
         }
         else {
@@ -441,7 +450,7 @@ StkId luaV_execute (lua_State *L) {
       case OP_CONCAT: {
         int b = GETARG_B(i);
         int c = GETARG_C(i);
-        luaV_strconc(L, c-b+1, c);  /* this call may change `base' (and `ra') */
+        luaV_strconc(L, c-b+1, c);  /* may change `base' (and `ra') */
         setobj(base+GETARG_A(i), base+b);
         luaV_checkGC(L, base+c+1);
         break;
@@ -532,53 +541,41 @@ StkId luaV_execute (lua_State *L) {
         }
         break;
       }
-      case OP_FORPREP: {
-        if (luaV_tonumber(ra, ra) == NULL)
+      case OP_FORLOOP: {
+        lua_Number step, index, limit;
+        int j = GETARG_sBc(i);
+        pc += j;  /* jump back before tests (for error messages) */
+        if (ttype(ra) != LUA_TNUMBER)
           luaD_error(L, "`for' initial value must be a number");
         if (luaV_tonumber(ra+1, ra+1) == NULL)
           luaD_error(L, "`for' limit must be a number");
         if (luaV_tonumber(ra+2, ra+2) == NULL)
           luaD_error(L, "`for' step must be a number");
-        /* decrement index (to be incremented) */
-        chgnvalue(ra, nvalue(ra) - nvalue(ra+2));
-        pc += -GETARG_sBc(i);  /* `jump' to loop end (delta is negated here) */
-        /* store in `ra+1' total number of repetitions */
-        chgnvalue(ra+1, (nvalue(ra+1)-nvalue(ra))/nvalue(ra+2));
-        /* go through */
-      }
-      case OP_FORLOOP: {
-        runtime_check(L, ttype(ra+1) == LUA_TNUMBER &&
-                         ttype(ra+2) == LUA_TNUMBER);
-        if (ttype(ra) != LUA_TNUMBER)
-          luaD_error(L, "`for' index must be a number");
-        chgnvalue(ra+1, nvalue(ra+1) - 1);  /* decrement counter */
-        if (nvalue(ra+1) >= 0) {
-          chgnvalue(ra, nvalue(ra) + nvalue(ra+2));  /* increment index */
-          dojump(pc, i);  /* repeat loop */
-        }
+        step = nvalue(ra+2);
+        index = nvalue(ra) + step;  /* increment index */
+        limit = nvalue(ra+1);
+        if (step > 0 ? index <= limit : index >= limit)
+          chgnvalue(ra, index);  /* update index */
+        else
+          pc -= j;  /* undo jump */
         break;
-      }
-      case OP_TFORPREP: {
-        if (ttype(ra) != LUA_TTABLE)
-          luaD_error(L, "`for' table must be a table");
-        setnvalue(ra+1, -1);  /* initial index */
-        setnilvalue(ra+2);
-        setnilvalue(ra+3);
-        pc += -GETARG_sBc(i);  /* `jump' to loop end (delta is negated here) */
-        /* go through */
       }
       case OP_TFORLOOP: {
         Table *t;
         int n;
-        runtime_check(L, ttype(ra) == LUA_TTABLE &&
-                         ttype(ra+1) == LUA_TNUMBER);
+        int j = GETARG_sBc(i);
+        pc += j;  /* jump back before tests (for error messages) */
+        if (ttype(ra) != LUA_TTABLE)
+          luaD_error(L, "`for' table must be a table");
+        runtime_check(L, ttype(ra+1) == LUA_TNUMBER);
         t = hvalue(ra);
         n = cast(int, nvalue(ra+1));
         n = luaH_nexti(t, n, ra+2);
         if (n != -1) {  /* repeat loop? */
           setnvalue(ra+1, n);  /* index */
-          dojump(pc, i);  /* repeat loop */
         }
+        else
+          pc -= j;  /* undo jump */
         break;
       }
       case OP_SETLIST:
