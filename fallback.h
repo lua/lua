@@ -1,5 +1,5 @@
 /*
-** $Id: fallback.h,v 1.6 1994/11/21 13:30:15 roberto Exp roberto $
+** $Id: fallback.h,v 1.7 1994/11/21 18:22:58 roberto Stab roberto $
 */
  
 #ifndef fallback_h
@@ -26,6 +26,7 @@ void luaI_setfallback (void);
 int luaI_lock (Object *object);
 Object *luaI_getlocked (int ref);
 void luaI_travlock (void (*fn)(Object *));
+void luaI_travfallbacks (void (*fn)(Object *));
 
 #endif
 

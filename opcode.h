@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.10 1994/12/20 21:20:36 roberto Exp celes $
+** $Id: opcode.h,v 3.11 1995/04/11 17:56:30 celes Exp $
 */
 
 #ifndef opcode_h
@@ -9,6 +9,7 @@
 #include "lua.h"
 #include "types.h"
 #include "tree.h"
+#include "func.h"
 
 #ifndef real
 #define real float
@@ -83,7 +84,7 @@ typedef union
  Cfunction     f;
  real          n;
  TaggedString *ts;
- Byte         *b;
+ TFunc         *tf;
  struct Hash    *a;
  void           *u;
 } Value;
@@ -104,7 +105,6 @@ typedef struct
 #define nvalue(o)	((o)->value.n)
 #define svalue(o)	((o)->value.ts->str)
 #define tsvalue(o)	((o)->value.ts)
-#define bvalue(o)	((o)->value.b)
 #define avalue(o)	((o)->value.a)
 #define fvalue(o)	((o)->value.f)
 #define uvalue(o)	((o)->value.u)
@@ -114,7 +114,6 @@ typedef struct
 #define s_tag(i)	(tag(&s_object(i)))
 #define s_nvalue(i)	(nvalue(&s_object(i)))
 #define s_svalue(i)	(svalue(&s_object(i)))
-#define s_bvalue(i)	(bvalue(&s_object(i)))
 #define s_avalue(i)	(avalue(&s_object(i)))
 #define s_fvalue(i)	(fvalue(&s_object(i)))
 #define s_uvalue(i)	(uvalue(&s_object(i)))
@@ -137,7 +136,7 @@ typedef union
 typedef union
 {
  struct {char c1; char c2; char c3; char c4;} m;
- Byte *b;
+ TFunc *tf;
 } CodeCode;
 #define get_code(code,pc)    {code.m.c1 = *pc++; code.m.c2 = *pc++;\
                               code.m.c3 = *pc++; code.m.c4 = *pc++;}
@@ -149,7 +148,7 @@ char   *lua_strdup (char *l);
 void    lua_setinput   (Input fn);	/* from "lex.c" module */
 char   *lua_lasttext   (void);		/* from "lex.c" module */
 int     yylex (void);		        /* from "lex.c" module */
-void    lua_parse      (Byte **code);	/* from "lua.stx" module */
+void    lua_parse      (TFunc *tf);	/* from "lua.stx" module */
 void    lua_travstack (void (*fn)(Object *));
 Object *luaI_Address (lua_Object o);
 void	luaI_pushobject (Object *o);

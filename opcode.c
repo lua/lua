@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.38 1995/05/16 17:23:58 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.38 1995/05/16 17:23:58 roberto Exp $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -259,7 +259,7 @@ static void do_call (Object *func, StkId base, int nResults, StkId whereRes)
   if (tag(func) == LUA_T_CFUNCTION)
     firstResult = callC(fvalue(func), base);
   else if (tag(func) == LUA_T_FUNCTION)
-    firstResult = lua_execute(bvalue(func), base);
+    firstResult = lua_execute(func->value.tf->code, base);
   else
   { /* func is not a function */
     call_funcFB(func, base, nResults, whereRes);
@@ -360,24 +360,26 @@ static int do_protectedrun (Object *function, int nResults)
 
 static int do_protectedmain (void)
 {
-  Byte *code = NULL;
+  TFunc tf;
   int status;
   StkId oldCBase = CBase;
   jmp_buf myErrorJmp;
   jmp_buf *oldErr = errorJmp;
   errorJmp = &myErrorJmp;
+  tf.code = NULL;
   if (setjmp(myErrorJmp) == 0)
   {
     Object f;
-    lua_parse(&code);
-    tag(&f) = LUA_T_FUNCTION; bvalue(&f) = code;
+    f.tag = LUA_T_FUNCTION;
+    f.value.tf = &tf;
+    lua_parse(&tf);
     do_call(&f, CBase, 0, CBase);
     status = 0;
   }
   else
     status = 1;
-  if (code)
-    luaI_free(code);
+  if (tf.code)
+    luaI_free(tf.code);
   errorJmp = oldErr;
   CBase = oldCBase;
   top = stack+CBase;
@@ -793,7 +795,9 @@ static StkId lua_execute (Byte *pc, StkId base)
    {
     CodeCode code;
     get_code(code,pc);
-    tag(top) = LUA_T_FUNCTION; bvalue(top) = code.b;
+    luaI_insertfunction(code.tf);  /* may take part in GC */
+    top->tag = LUA_T_FUNCTION;
+    top->value.tf = code.tf;
     incr_top;
    }
    break;
@@ -1116,7 +1120,7 @@ static StkId lua_execute (Byte *pc, StkId base)
     CodeWord func;
     get_code(file,pc);
     get_word(func,pc);
-    lua_pushfunction ((char *)file.b, func.w);
+    lua_pushfunction ((char *)file.tf, func.w);
    }
    break;
 

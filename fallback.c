@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.12 1995/05/02 18:43:03 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.13 1995/10/02 17:03:33 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -168,3 +168,10 @@ void luaI_travlock (void (*fn)(Object *))
     fn(&lockArray[i]);
 }
 
+
+void luaI_travfallbacks (void (*fn)(Object *))
+{
+  Word i;
+  for (i=0; i<N_FB; i++)
+    fn(&luaI_fallBacks[i].function);
+}

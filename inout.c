@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.19 1995/05/02 18:43:03 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.20 1995/05/16 17:23:58 roberto Exp $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -222,7 +222,7 @@ void lua_print (void)
  {
   if      (lua_isnumber(obj))    printf("%g\n",lua_getnumber(obj));
   else if (lua_isstring(obj))    printf("%s\n",lua_getstring(obj));
-  else if (lua_isfunction(obj))  printf("function: %p\n",bvalue(luaI_Address(obj)));
+  else if (lua_isfunction(obj))  printf("function: %p\n",(luaI_Address(obj))->value.tf);
   else if (lua_iscfunction(obj)) printf("cfunction: %p\n",lua_getcfunction(obj)
 );
   else if (lua_isuserdata(obj))  printf("userdata: %p\n",lua_getuserdata(obj));

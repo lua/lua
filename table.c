@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.31 1995/05/16 19:23:55 celes Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.32 1995/09/15 20:47:53 roberto Exp $";
 
 #include <string.h>
 
@@ -166,6 +166,8 @@ void lua_markobject (Object *o)
    tsvalue(o)->marked = 1;
  else if (tag(o) == LUA_T_ARRAY)
    lua_hashmark (avalue(o));
+ else if (o->tag == LUA_T_FUNCTION && !o->value.tf->marked)
+   o->value.tf->marked = 1;
 }
 
 
@@ -182,8 +184,10 @@ void lua_pack (void)
   lua_travstack(lua_markobject); /* mark stack objects */
   lua_travsymbol(lua_markobject); /* mark symbol table objects */
   luaI_travlock(lua_markobject); /* mark locked objects */
+  luaI_travfallbacks(lua_markobject);  /* mark fallbacks */
   recovered += lua_strcollector();
   recovered += lua_hashcollector();
+  recovered += luaI_funccollector();
   nentity = 0;				/* reset counter */
   block=(16*block-7*recovered)/12;	/* adapt block size */
   if (block < MIN_GARBAGE_BLOCK) block = MIN_GARBAGE_BLOCK;
