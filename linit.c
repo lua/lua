@@ -1,5 +1,5 @@
 /*
-** $Id: linit.c,v 1.8 2004/07/09 15:47:48 roberto Exp roberto $
+** $Id: linit.c,v 1.9 2005/02/18 12:40:02 roberto Exp roberto $
 ** Initialization of libraries for lua.c
 ** See Copyright Notice in lua.h
 */
@@ -29,12 +29,15 @@ static const luaL_reg lualibs[] = {
 
 LUALIB_API int luaopen_stdlibs (lua_State *L) {
   const luaL_reg *lib = lualibs;
+  int t = lua_gettop(L);
+  lua_pushvalue(L, LUA_ENVIRONINDEX);  /* save original environment */
   for (; lib->func; lib++) {
     lib->func(L);  /* open library */
-    lua_settop(L, 0);  /* discard any results */
-    lua_pushvalue(L, LUA_GLOBALSINDEX);
+    lua_settop(L, t + 1);  /* discard any results */
+    lua_pushvalue(L, -1);
     lua_replace(L, LUA_ENVIRONINDEX);  /* restore environment */
   }
- return 0;
+  lua_pop(L, 1);
+  return 0;
 }
 
