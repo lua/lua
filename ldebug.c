@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.149 2003/03/18 12:50:04 roberto Exp roberto $
+** $Id: ldebug.c,v 1.150 2003/03/19 21:24:04 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -436,7 +436,7 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
 
 
 int luaG_checkcode (const Proto *pt) {
-  return luaG_symbexec(pt, pt->sizecode, NO_REG);
+  return (luaG_symbexec(pt, pt->sizecode, NO_REG) != 0);
 }
 
 
