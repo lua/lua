@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.29 2005/02/23 17:30:22 roberto Exp roberto $
+** $Id: luaconf.h,v 1.30 2005/02/28 15:59:11 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -36,16 +36,18 @@
 #define LUA_LDIR	LUA_ROOT "\\lua"
 #define LUA_CDIR	LUA_ROOT "\\dll"
 #define LUA_PATH_DEFAULT  \
-		"?.lua;" LUA_LDIR "\\?.lua;" LUA_LDIR "\\?\\init.lua"
-#define LUA_CPATH_DEFAULT	"?.dll;" LUA_CDIR "\\?.dll"
+		"?.lua;"  LUA_LDIR"\\?.lua;"  LUA_LDIR"\\?\\init.lua"
+#define LUA_CPATH_DEFAULT	\
+	"?.dll;"  "l?.dll;"  LUA_CDIR"\\?.dll;"  LUA_CDIR"\\l?.dll"
 
 #else
 #define LUA_ROOT	"/usr/local"
 #define LUA_LDIR	LUA_ROOT "/share/lua/5.1"
 #define LUA_CDIR	LUA_ROOT "/lib/lua/5.1"
 #define LUA_PATH_DEFAULT  \
-		"./?.lua;" LUA_LDIR "/?.lua;" LUA_LDIR "/?/init.lua"
-#define LUA_CPATH_DEFAULT	"./?.so;" LUA_CDIR "/?.so"
+		"./?.lua;"  LUA_LDIR"/?.lua;"  LUA_LDIR"/?/init.lua"
+#define LUA_CPATH_DEFAULT	\
+	"./?.so;"  "./l?.so;"  LUA_CDIR"/?.so;"  LUA_CDIR"/l?.so"
 #endif
 
 
