@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.45 2000/03/29 20:19:20 roberto Exp roberto $
+** $Id: lgc.c,v 1.46 2000/03/30 20:55:50 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -18,6 +18,17 @@
 #include "ltm.h"
 #include "lua.h"
 
+
+
+static void luaD_gcTM (lua_State *L, const TObject *o) {
+  const TObject *im = luaT_getimbyObj(L, o, IM_GC);
+  if (ttype(im) != TAG_NIL) {
+    luaD_checkstack(L, 2);
+    *(L->top++) = *im;
+    *(L->top++) = *o;
+    luaD_call(L, L->top-2, 0);
+  }
+}
 
 
 static int markobject (lua_State *L, TObject *o);
@@ -201,7 +212,7 @@ static void collectstring (lua_State *L, int limit) {
        else {  /* collect */
           if (next->constindex == -1) {  /* is userdata? */
             tsvalue(&o) = next;
-            luaD_gcIM(L, &o);
+            luaD_gcTM(L, &o);
           }
           *p = next->nexthash;
           luaS_free(L, next);
@@ -240,13 +251,13 @@ long lua_collectgarbage (lua_State *L, long limit) {
   markall(L);
   luaR_invalidaterefs(L);
   luaC_collect(L, 0);
-  luaD_gcIM(L, &luaO_nilobject);  /* GC tag method for nil (signal end of GC) */
   recovered = recovered - L->nblocks;
   L->GCthreshold = (limit == 0) ? 2*L->nblocks : L->nblocks+limit;
   if (L->Mbuffsize > L->Mbuffnext*4) {  /* is buffer too big? */
     L->Mbuffsize /= 2;  /* still larger than Mbuffnext*2 */
     luaM_reallocvector(L, L->Mbuffer, L->Mbuffsize, char);
   }
+  luaD_gcTM(L, &luaO_nilobject);
   return recovered;
 }
 

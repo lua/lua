@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.h,v 1.18 2000/03/24 17:26:08 roberto Exp roberto $
+** $Id: ldo.h,v 1.19 2000/03/29 20:19:20 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -26,7 +26,6 @@ void luaD_lineHook (lua_State *L, StkId func, int line);
 void luaD_call (lua_State *L, StkId func, int nResults);
 void luaD_callTM (lua_State *L, const TObject *f, int nParams, int nResults);
 int luaD_protectedrun (lua_State *L);
-void luaD_gcIM (lua_State *L, const TObject *o);
 void luaD_checkstack (lua_State *L, int n);
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.71 2000/03/30 17:19:48 roberto Exp roberto $
+** $Id: ldo.c,v 1.72 2000/03/30 20:55:50 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -323,17 +323,6 @@ static int do_main (lua_State *L, ZIO *z, int bin) {
   } while (bin && status == 0);
   L->debug = debug;  /* restore debug status */
   return status;
-}
-
-
-void luaD_gcIM (lua_State *L, const TObject *o) {
-  const TObject *im = luaT_getimbyObj(L, o, IM_GC);
-  if (ttype(im) != TAG_NIL) {
-    luaD_checkstack(L, 2);
-    *(L->top++) = *im;
-    *(L->top++) = *o;
-    luaD_call(L, L->top-2, 0);
-  }
 }
 
 
