@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.h,v 1.5 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: lapi.h,v 1.6 1999/09/20 14:57:29 roberto Exp roberto $
 ** Auxiliary functions from Lua API
 ** See Copyright Notice in lua.h
 */
@@ -18,6 +18,6 @@ void luaA_packresults (void);
 int luaA_passresults (void);
 TaggedString *luaA_nextvar (TaggedString *g);
 int luaA_next (const Hash *t, int i);
-lua_Object put_luaObjectonTop (void);
+lua_Object luaA_putObjectOnTop (void);
 
 #endif

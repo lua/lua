@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.48 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: lapi.c,v 1.49 1999/09/20 14:57:29 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -85,7 +85,7 @@ static lua_Object put_luaObject (const TObject *o) {
 }
 
 
-lua_Object put_luaObjectonTop (void) {
+lua_Object luaA_putObjectOnTop (void) {
   luaD_openstack((L->stack.top-L->stack.stack)-L->Cstack.base);
   L->stack.stack[L->Cstack.base++] = *(--L->stack.top);
   return L->Cstack.base;  /* this is +1 real position (see Ref) */
@@ -102,7 +102,7 @@ static void top2LC (int n) {
 
 lua_Object lua_pop (void) {
   checkCparams(1);
-  return put_luaObjectonTop();
+  return luaA_putObjectOnTop();
 }
 
 
@@ -137,7 +137,7 @@ lua_Object lua_gettagmethod (int tag, const char *event) {
 lua_Object lua_settagmethod (int tag, const char *event) {
   checkCparams(1);
   luaT_settagmethod(tag, event, L->stack.top-1);
-  return put_luaObjectonTop();
+  return luaA_putObjectOnTop();
 }
 
 
@@ -153,7 +153,7 @@ lua_Object lua_seterrormethod (void) {
 lua_Object lua_gettable (void) {
   checkCparams(2);
   luaV_gettable();
-  return put_luaObjectonTop();
+  return luaA_putObjectOnTop();
 }
 
 
@@ -163,7 +163,7 @@ lua_Object lua_rawgettable (void) {
     lua_error("indexed expression not a table in rawgettable");
   *(L->stack.top-2) = *luaH_get(avalue(L->stack.top-2), L->stack.top-1);
   --L->stack.top;
-  return put_luaObjectonTop();
+  return luaA_putObjectOnTop();
 }
 
 
@@ -192,7 +192,7 @@ lua_Object lua_createtable (void) {
 lua_Object lua_getglobal (const char *name) {
   luaD_checkstack(2);  /* may need that to call T.M. */
   luaV_getglobal(luaS_new(name));
-  return put_luaObjectonTop();
+  return luaA_putObjectOnTop();
 }
 
 
