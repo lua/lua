@@ -1,11 +1,13 @@
 /*
-** $Id: lfunc.c,v 1.62 2002/11/13 11:31:39 roberto Exp roberto $
+** $Id: lfunc.c,v 1.63 2002/11/14 16:15:53 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
 
 
 #include <stdlib.h>
+
+#define lfunc_c
 
 #include "lua.h"
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.92 2002/11/07 15:37:10 roberto Exp roberto $
+** $Id: lobject.c,v 1.93 2002/11/21 15:16:04 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -8,6 +8,8 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+
+#define lobject_c
 
 #include "lua.h"
 
