@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.21 1999/02/04 16:36:16 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.22 1999/02/08 17:07:59 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -22,6 +22,7 @@ RETCODE,/*	b	-		-  */
 
 PUSHNIL,/*	b	-		nil_0...nil_b  */
 POP,/*		b	-		-		TOP-=(b+1)  */
+POPDUP,/*	b	v		v		TOP-=(b+1)  */
 
 PUSHNUMBERW,/*	w	-		(float)(w-NUMOFFSET)  */
 PUSHNUMBER,/*	b	-		(float)(b-NUMOFFSET)  */
@@ -59,6 +60,7 @@ SETTABLEPOP,/*	-	v i t		-		t[i]=v  */
 SETTABPPDUP,/*	-	v i t		v		t[i]=v  */
 
 SETTABLE,/*	b	v a_b...a_1 i t	a_b...a_1 i t	t[i]=v  */
+SETTABLEDUP,/*	b	v a_b...a_1 i t	v a_b...a_1 i t	t[i]=v  */
 
 SETLISTW,/*	w c	v_c...v_1 t	-		t[i+w*FPF]=v_i  */
 SETLIST,/*	b c	v_c...v_1 t	-		t[i+b*FPF]=v_i  */

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.45 1999/02/04 17:47:59 roberto Exp roberto $
+** $Id: lvm.c,v 1.46 1999/02/08 17:07:59 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -344,7 +344,12 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         break;
 
       case POP: aux = *pc++;
-        S->top -= (aux+1);
+        S->top -= aux;
+        break;
+
+      case POPDUP: aux = *pc++;
+        *(S->top-aux-1) = *(S->top-1);
+        S->top -= aux;
         break;
 
       case PUSHNUMBERW: aux += highbyte(*pc++);
@@ -420,20 +425,26 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         break;
 
       case SETTABLEPOP:
-       luaV_settable(S->top-3);
-       S->top -= 2;  /* pop table and index */
-       break;
+        luaV_settable(S->top-3);
+        S->top -= 2;  /* pop table and index */
+        break;
 
       case SETTABPPDUP: {
-       TObject temp = *(S->top-1);
-       luaV_settable(S->top-3);
-       S->top--;  /* pop index (temp goes into "table" position) */
-       *(S->top-1) = temp;
-       break;
-     }
+        TObject temp = *(S->top-1);
+        luaV_settable(S->top-3);
+        S->top--;  /* pop index (temp goes into "table" position) */
+        *(S->top-1) = temp;
+        break;
+      }
 
       case SETTABLE:
         luaV_settable(S->top-3-(*pc++));
+        break;
+
+      case SETTABLEDUP:
+        *S->top = *(S->top-1);
+        S->top++;
+        luaV_settable(S->top-(3+1)-(*pc++));
         break;
 
       case SETLISTW: aux += highbyte(*pc++);

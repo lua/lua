@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.16 1999/02/04 17:47:59 roberto Exp roberto $
+** $Id: lparser.c,v 1.17 1999/02/08 17:07:59 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -102,7 +102,7 @@ typedef struct FuncState {
 /*
 ** prototypes for non-terminal functions
 */
-static int assignment (LexState *ls, vardesc *v, int nvars);
+static int assignment (LexState *ls, vardesc *v, int nvars, OpCode *codes);
 static int cond (LexState *ls);
 static int funcname (LexState *ls, vardesc *v);
 static int funcparams (LexState *ls, int slf);
@@ -387,7 +387,7 @@ static void check_debugline (LexState *ls) {
 
 static void adjuststack (LexState *ls, int n) {
   if (n > 0)
-    code_oparg(ls, POP, n-1, -n);
+    code_oparg(ls, POP, n, -n);
   else if (n < 0)
     code_oparg(ls, PUSHNIL, (-n)-1, -n);
 }
@@ -472,7 +472,13 @@ static void lua_pushvar (LexState *ls, vardesc *var) {
 }
 
 
-static void genstorevar (LexState *ls, vardesc *var, OpCode *codes) {
+/* to be used by "storevar" and assignment */
+static OpCode set_pop[] = {SETLOCAL, SETGLOBAL, SETTABLEPOP, SETTABLE};
+static OpCode set_dup[] = {SETLOCALDUP, SETGLOBALDUP, SETTABPPDUP,
+                           SETTABLEDUP};
+
+
+static void storevar (LexState *ls, vardesc *var, OpCode *codes) {
   switch (var->k) {
     case VLOCAL:
       code_oparg(ls, codes[0], var->info, -1);
@@ -486,12 +492,6 @@ static void genstorevar (LexState *ls, vardesc *var, OpCode *codes) {
     default:
       LUA_INTERNALERROR("invalid var kind to store");
   }
-}
-
-
-static void storevar (LexState *ls, vardesc *var) {
-  static OpCode codes[] = {SETLOCAL, SETGLOBAL, SETTABLEPOP};
-  genstorevar(ls, var, codes);
 }
 
 
@@ -748,7 +748,7 @@ static int stat (LexState *ls) {
       next(ls);
       needself = funcname(ls, &v);
       body(ls, needself, line);
-      storevar(ls, &v);
+      storevar(ls, &v, set_pop);
       return 1;
     }
 
@@ -773,8 +773,8 @@ static int stat (LexState *ls) {
           luaX_error(ls, "syntax error");
         close_exp(ls, v.info, 0);
       }
-      else {
-        int left = assignment(ls, &v, 1);  /* stat -> ['%'] NAME assignment */
+      else {  /* stat -> ['%'] NAME assignment */
+        int left = assignment(ls, &v, 1, set_pop);
         adjuststack(ls, left);  /* remove eventual 'garbage' left on stack */
       }
       return 1;
@@ -953,14 +953,13 @@ static void exp0 (LexState *ls, vardesc *v) {
 
 
 static void Gexp (LexState *ls, vardesc *v) {
-  /* Gexp -> exp0 | var '=' exp1 */
-  static OpCode codes[] = {SETLOCALDUP, SETGLOBALDUP, SETTABPPDUP};
+  /* Gexp -> exp0 | assignment */
   exp0(ls, v);
-  if (v->k != VEXP && optional(ls, '=')) {  /* assignment expression? */
-    unloaddot(ls, v);
-    exp1(ls);
-    genstorevar(ls, v, codes);
+  if (v->k != VEXP && (ls->token == '=' || ls->token == ',')) {
+    int left = assignment(ls, v, 1, set_dup);
     deltastack(ls, 1);  /* DUP operations push an extra value */
+    if (left > 0)
+      code_oparg(ls, POPDUP, left, -left);
     v->k = VEXP; v->info = 0;  /* this expression is closed now */
   }
 }
@@ -1244,7 +1243,7 @@ static void decinit (LexState *ls, listdesc *d) {
 }
 
 
-static int assignment (LexState *ls, vardesc *v, int nvars) {
+static int assignment (LexState *ls, vardesc *v, int nvars, OpCode *codes) {
   int left = 0;
   unloaddot(ls, v);
   if (ls->token == ',') {  /* assignment -> ',' NAME assignment */
@@ -1253,7 +1252,7 @@ static int assignment (LexState *ls, vardesc *v, int nvars) {
     var_or_func(ls, &nv);
     if (nv.k == VEXP)
       luaX_error(ls, "syntax error");
-    left = assignment(ls, &nv, nvars+1);
+    left = assignment(ls, &nv, nvars+1, set_pop);
   }
   else {  /* assignment -> '=' explist1 */
     listdesc d;
@@ -1263,10 +1262,10 @@ static int assignment (LexState *ls, vardesc *v, int nvars) {
   }
   if (v->k != VINDEXED || left+(nvars-1) == 0) {
     /* global/local var or indexed var without values in between */
-    storevar(ls, v);
+    storevar(ls, v, codes);
   }
   else {  /* indexed var with values in between*/
-    code_oparg(ls, SETTABLE, left+(nvars-1), -1);
+    code_oparg(ls, codes[3], left+(nvars-1), -1);
     left += 2;  /* table/index are not popped, because they aren't on top */
   }
   return left;
