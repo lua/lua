@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.38 2000/10/26 12:47:05 roberto Exp roberto $
+** $Id: lmem.c,v 1.39 2000/10/30 16:29:59 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -41,17 +41,17 @@
 #define MARK		0x55  /* 01010101 (a nice pattern) */
 
 
-#define blocksize(b)	((unsigned long *)((char *)(b) - HEADER))
+#define blocksize(b)	((size_t *)((char *)(b) - HEADER))
 
-unsigned long memdebug_numblocks = 0;
-unsigned long memdebug_total = 0;
-unsigned long memdebug_maxmem = 0;
-unsigned long memdebug_memlimit = LONG_MAX;
+mem_int memdebug_numblocks = 0;
+mem_int memdebug_total = 0;
+mem_int memdebug_maxmem = 0;
+mem_int memdebug_memlimit = LONG_MAX;
 
 
 static void *checkblock (void *block) {
-  unsigned long *b = blocksize(block);
-  unsigned long size = *b;
+  size_t *b = blocksize(block);
+  size_t size = *b;
   int i;
   for (i=0;i<MARKSIZE;i++)
     assert(*(((char *)b)+HEADER+size+i) == MARK+i);  /* corrupted block? */
@@ -93,7 +93,7 @@ static void *debug_realloc (void *block, size_t size) {
     memdebug_total += size;
     if (memdebug_total > memdebug_maxmem) memdebug_maxmem = memdebug_total;
     memdebug_numblocks++;
-    *(unsigned long *)newblock = size;
+    *(size_t *)newblock = size;
     for (i=0;i<MARKSIZE;i++)
       *(newblock+HEADER+size+i) = (char)(MARK+i);
     return newblock+HEADER;
@@ -131,7 +131,7 @@ void *luaM_growaux (lua_State *L, void *block, size_t nelems,
 /*
 ** generic allocation routine.
 */
-void *luaM_realloc (lua_State *L, void *block, lint32 size) {
+void *luaM_realloc (lua_State *L, void *block, luint32 size) {
   if (size == 0) {
     free(block);  /* block may be NULL; that is OK for free */
     return NULL;

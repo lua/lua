@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.h,v 1.23 2000/06/06 16:31:41 roberto Exp roberto $
+** $Id: ltable.h,v 1.24 2000/08/31 14:08:27 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -24,7 +24,7 @@ TObject *luaH_set (lua_State *L, Hash *t, const TObject *key);
 Node * luaH_next (lua_State *L, const Hash *t, const TObject *r);
 TObject *luaH_setint (lua_State *L, Hash *t, int key);
 void luaH_setstrnum (lua_State *L, Hash *t, TString *key, Number val);
-unsigned long luaH_hash (lua_State *L, const TObject *key);
+luint32 luaH_hash (lua_State *L, const TObject *key);
 const TObject *luaH_getglobal (lua_State *L, const char *name);
 
 /* exported only for debugging */

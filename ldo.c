@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.108 2000/10/20 16:39:03 roberto Exp roberto $
+** $Id: ldo.c,v 1.109 2000/10/30 12:38:50 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -241,7 +241,7 @@ static void f_parser (lua_State *L, void *ud) {
 
 static int protectedparser (lua_State *L, ZIO *z, int bin) {
   struct ParserS p;
-  unsigned long old_blocks;
+  mem_int old_blocks;
   int status;
   p.z = z; p.bin = bin;
   luaC_checkGC(L);
@@ -249,6 +249,7 @@ static int protectedparser (lua_State *L, ZIO *z, int bin) {
   status = luaD_runprotected(L, f_parser, &p);
   if (status == 0) {
     /* add new memory to threshold (as it probably will stay) */
+    LUA_ASSERT(L->nblocks >= old_blocks, "cannot reduce memory usage here");
     L->GCthreshold += (L->nblocks - old_blocks);
   }
   else if (status == LUA_ERRRUN)  /* an error occurred: correct error code */

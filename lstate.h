@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.40 2000/09/29 12:42:13 roberto Exp roberto $
+** $Id: lstate.h,v 1.41 2000/10/05 13:00:17 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -37,7 +37,7 @@ struct TM;  /* defined in ltm.h */
 
 typedef struct stringtable {
   int size;
-  lint32 nuse;  /* number of elements */
+  luint32 nuse;  /* number of elements */
   TString **hash;
 } stringtable;
 
@@ -65,8 +65,8 @@ struct lua_State {
   struct Ref *refArray;  /* locked objects */
   int refSize;  /* size of refArray */
   int refFree;  /* list of free positions in refArray */
-  unsigned long GCthreshold;
-  unsigned long nblocks;  /* number of `bytes' currently allocated */
+  mem_int GCthreshold;
+  mem_int nblocks;  /* number of `bytes' currently allocated */
   lua_Hook callhook;
   lua_Hook linehook;
   int allowhooks;

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.71 2000/10/05 13:00:17 roberto Exp roberto $
+** $Id: lgc.c,v 1.72 2000/10/26 12:47:05 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -229,7 +229,7 @@ static void collecttable (lua_State *L) {
 
 
 static void checktab (lua_State *L, stringtable *tb) {
-  if (tb->nuse < (lint32)(tb->size/4) && tb->size > 10)
+  if (tb->nuse < (luint32)(tb->size/4) && tb->size > 10)
     luaS_resize(L, tb, tb->size/2);  /* table is too big */
 }
 
@@ -286,7 +286,7 @@ static void collectudata (lua_State *L, int all) {
 static void checkMbuffer (lua_State *L) {
   if (L->Mbuffsize > MINBUFFER*2) {  /* is buffer too big? */
     size_t newsize = L->Mbuffsize/2;  /* still larger than MINBUFFER */
-    L->nblocks += (newsize - L->Mbuffsize)*sizeof(char);
+    L->nblocks -= (L->Mbuffsize - newsize)*sizeof(char);
     L->Mbuffsize = newsize;
     luaM_reallocvector(L, L->Mbuffer, newsize, char);
   }

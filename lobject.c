@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.54 2000/10/10 19:53:20 roberto Exp roberto $
+** $Id: lobject.c,v 1.55 2000/10/20 16:36:32 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -30,8 +30,8 @@ const char *const luaO_typenames[] = {
 /*
 ** returns smaller power of 2 larger than `n' (minimum is MINPOWER2) 
 */
-lint32 luaO_power2 (lint32 n) {
-  lint32 p = MINPOWER2;
+luint32 luaO_power2 (luint32 n) {
+  luint32 p = MINPOWER2;
   while (p<=n) p<<=1;
   return p;
 }

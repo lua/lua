@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.44 2000/10/26 12:47:05 roberto Exp roberto $
+** $Id: lstring.c,v 1.45 2000/10/30 17:49:19 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -44,8 +44,8 @@ void luaS_freeall (lua_State *L) {
 }
 
 
-static unsigned long hash_s (const char *s, size_t l) {
-  unsigned long h = l;  /* seed */
+static luint32 hash_s (const char *s, size_t l) {
+  luint32 h = l;  /* seed */
   size_t step = (l>>5)|1;  /* if string is too long, don't hash all its chars */
   for (; l>=step; l-=step)
     h = h ^ ((h<<5)+(h>>2)+(unsigned char)*(s++));
@@ -62,7 +62,7 @@ void luaS_resize (lua_State *L, stringtable *tb, int newsize) {
     TString *p = tb->hash[i];
     while (p) {  /* for each node in the list */
       TString *next = p->nexthash;  /* save next */
-      unsigned long h = (tb == &L->strt) ? p->u.s.hash : IntPoint(p->u.d.value);
+      luint32 h = (tb == &L->strt) ? p->u.s.hash : IntPoint(p->u.d.value);
       int h1 = h&(newsize-1);  /* new position */
       LUA_ASSERT(h%newsize == (h&(newsize-1)),
                     "a&(x-1) == a%x, for x power of 2");
@@ -72,7 +72,10 @@ void luaS_resize (lua_State *L, stringtable *tb, int newsize) {
     }
   }
   luaM_free(L, tb->hash);
-  L->nblocks += (newsize - tb->size)*sizeof(TString *);
+  if (newsize > tb->size)  /* avoid "unsigned negative" values */
+    L->nblocks += (newsize - tb->size)*sizeof(TString *);
+  else
+    L->nblocks -= (tb->size - newsize)*sizeof(TString *);
   tb->size = newsize;
   tb->hash = newhash;
 }
@@ -82,14 +85,14 @@ static void newentry (lua_State *L, stringtable *tb, TString *ts, int h) {
   ts->nexthash = tb->hash[h];  /* chain new entry */
   tb->hash[h] = ts;
   tb->nuse++;
-  if (tb->nuse > (lint32)tb->size && tb->size < MAX_INT/2)  /* too crowded? */
+  if (tb->nuse > (luint32)tb->size && tb->size < MAX_INT/2)  /* too crowded? */
     luaS_resize(L, tb, tb->size*2);
 }
 
 
 
 TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
-  unsigned long h = hash_s(str, l);
+  luint32 h = hash_s(str, l);
   int h1 = h & (L->strt.size-1);
   TString *ts;
   for (ts = L->strt.hash[h1]; ts; ts = ts->nexthash) {
@@ -113,7 +116,7 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
 
 TString *luaS_newudata (lua_State *L, size_t s, void *udata) {
   union L_UTString *uts = (union L_UTString *)luaM_malloc(L,
-                                (lint32)sizeof(union L_UTString)+s);
+                                (luint32)sizeof(union L_UTString)+s);
   TString *ts = &uts->ts;
   ts->marked = 0;
   ts->nexthash = NULL;

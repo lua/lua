@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.57 2000/10/05 12:14:08 roberto Exp roberto $
+** $Id: ltable.c,v 1.58 2000/10/26 12:47:05 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -40,10 +40,10 @@
 ** of its hash value)
 */
 Node *luaH_mainposition (const Hash *t, const TObject *key) {
-  unsigned long h;
+  luint32 h;
   switch (ttype(key)) {
     case LUA_TNUMBER:
-      h = (unsigned long)(long)nvalue(key);
+      h = (luint32)(lint32)nvalue(key);
       break;
     case LUA_TSTRING:
       h = tsvalue(key)->u.s.hash;
@@ -82,7 +82,7 @@ static const TObject *luaH_getany (lua_State *L, const Hash *t,
 
 /* specialized version for numbers */
 const TObject *luaH_getnum (const Hash *t, Number key) {
-  Node *n = &t->node[(unsigned long)(long)key&(t->size-1)];
+  Node *n = &t->node[(luint32)(lint32)key&(t->size-1)];
   do {
     if (ttype(&n->key) == LUA_TNUMBER && nvalue(&n->key) == key)
       return &n->val;
@@ -158,7 +158,7 @@ void luaH_remove (Hash *t, TObject *key) {
 }
 
 
-static void setnodevector (lua_State *L, Hash *t, lint32 size) {
+static void setnodevector (lua_State *L, Hash *t, luint32 size) {
   int i;
   if (size > MAX_INT)
     lua_error(L, "table overflow");
@@ -167,7 +167,10 @@ static void setnodevector (lua_State *L, Hash *t, lint32 size) {
     ttype(&t->node[i].key) = ttype(&t->node[i].val) = LUA_TNIL;
     t->node[i].next = NULL;
   }
-  L->nblocks += gcsize(L, size) - gcsize(L, t->size);
+  if ((int)size > t->size)  /* avoid "unsigned negative" values */
+    L->nblocks += gcsize(L, size) - gcsize(L, t->size);
+  else
+    L->nblocks -= gcsize(L, t->size) - gcsize(L, size);
   t->size = size;
   t->firstfree = &t->node[size-1];  /* first free position to be used */
 }
@@ -214,7 +217,7 @@ static void rehash (lua_State *L, Hash *t) {
   int i;
   LUA_ASSERT(nelems<=oldsize, "wrong count");
   if (nelems >= oldsize-oldsize/4)  /* using more than 3/4? */
-    setnodevector(L, t, (lint32)oldsize*2);
+    setnodevector(L, t, (luint32)oldsize*2);
   else if (nelems <= oldsize/4 &&  /* less than 1/4? */
            oldsize > MINPOWER2)
     setnodevector(L, t, oldsize/2);

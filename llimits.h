@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.18 2000/10/09 13:47:32 roberto Exp roberto $
+** $Id: llimits.h,v 1.19 2000/10/26 12:47:05 roberto Exp roberto $
 ** Limits, basic types, and some other "installation-dependent" definitions
 ** See Copyright Notice in lua.h
 */
@@ -50,7 +50,11 @@ typedef LUA_NUM_TYPE Number;
 
 
 
-typedef unsigned long lint32;  /* unsigned int with at least 32 bits */
+typedef unsigned long luint32;  /* unsigned int with at least 32 bits */
+typedef long lint32;              /* signed int with at least 32 bits */
+
+/* an unsigned integer big enough to count the total memory used by Lua */
+typedef unsigned long mem_int;
 
 
 #define MAX_SIZET	((size_t)(~(size_t)0)-2)
@@ -62,7 +66,7 @@ typedef unsigned long lint32;  /* unsigned int with at least 32 bits */
 ** conversion of pointer to int (for hashing only)
 ** (the shift removes bits that are usually 0 because of alignment)
 */
-#define IntPoint(p)  (((unsigned long)(p)) >> 3)
+#define IntPoint(p)  (((luint32)(p)) >> 3)
 
 
 
@@ -87,7 +91,7 @@ union L_Umaxalign { double d; char *s; long l; };
 ** For a very small machine, you may change that to 2 bytes (and adjust
 ** the following limits accordingly)
 */
-typedef unsigned long Instruction;
+typedef luint32 Instruction;
 
 
 /*
