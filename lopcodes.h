@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.51 2000/03/24 17:26:08 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.52 2000/03/24 19:49:23 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -137,7 +137,7 @@ OP_JMP,/*	J	-		-		PC+=s		*/
 
 OP_PUSHNILJMP,/* -	-		nil		PC++;		*/
 
-OP_CLOSURE,/*	A B	v_b-v_1		closure(CNST[a], v_1-v_b)	*/
+OP_CLOSURE,/*	A B	v_b-v_1		closure(KPROTO[a], v_1-v_b)	*/
 
 OP_SETLINE/*	U	-		-		LINE=u		*/
 
