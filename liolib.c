@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.18 1998/05/20 22:21:35 roberto Exp roberto $
+** $Id: liolib.c,v 1.19 1998/06/02 21:20:54 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -427,7 +427,7 @@ static void openwithtags (void)
     /* put both tags as upvalues for these functions */
     lua_pushnumber(iotag);
     lua_pushnumber(closedtag);
-    lua_pushCclosure(iolibtag[i].func, 2);
+    lua_pushcclosure(iolibtag[i].func, 2);
     lua_setglobal(iolibtag[i].name);
   }
   setfile(stdin, FINPUT, iotag);

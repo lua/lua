@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.23 1998/03/06 18:47:42 roberto Exp roberto $
+** $Id: lapi.c,v 1.24 1998/03/09 21:49:52 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -345,7 +345,7 @@ void lua_pushstring (char *s)
     lua_pushlstring(s, strlen(s));
 }
 
-void lua_pushCclosure (lua_CFunction fn, int n)
+void lua_pushcclosure (lua_CFunction fn, int n)
 {
   if (fn == NULL)
     lua_error("API error - attempt to push a NULL Cfunction");

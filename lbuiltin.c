@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.27 1998/03/09 21:49:52 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.28 1998/05/31 22:19:35 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -430,7 +430,7 @@ static void testC (void)
 
       case 'c': reg[getnum(s)] = lua_createtable(); break;
       case 'C': { lua_CFunction f = lua_getcfunction(lua_getglobal(getname(s)));
-                  lua_pushCclosure(f, getnum(s));
+                  lua_pushcclosure(f, getnum(s));
                   break;
                 }
       case 'P': reg[getnum(s)] = lua_pop(); break;
