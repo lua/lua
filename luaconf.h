@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.8 2004/06/29 16:57:56 roberto Exp roberto $
+** $Id: luaconf.h,v 1.9 2004/07/09 14:29:29 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -29,6 +29,10 @@
 ** Generic configuration
 ** =======================================================
 */
+
+/* default path */
+#define LUA_PATH_DEFAULT	"?;?.lua"
+
 
 /* type of numbers in Lua */
 #define LUA_NUMBER	double
@@ -278,9 +282,6 @@
 
 /* wild char in each template */
 #define LUA_PATH_MARK	"?"
-
-/* default path */
-#define LUA_PATH_DEFAULT	"?;?.lua"
 
 
 /* maximum number of captures in pattern-matching */
