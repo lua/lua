@@ -271,8 +271,7 @@ static void lua_printstack (FILE *f)
 
 static void errorfb (void)
 {
-  char *s = luaL_opt_string(1, "(no messsage)", NULL);
-  fprintf(stderr, "lua: %s\n", s);
+  fprintf(stderr, "lua: %s\n", lua_getstring(lua_getparam(1)));
   lua_printstack(stderr);
 }
 
@@ -283,11 +282,16 @@ static void errorfb (void)
 static void getbyte (void)
 {
   lua_Object ud = lua_getparam(1);
-  int i = luaL_check_number(2, "getbyte")-1;
+  int i = luaL_opt_number(2, -1, "getbyte");
   luaL_arg_check(lua_isuserdata(ud), "getbyte", 1, "userdata expected");
-  luaL_arg_check(0 <= i && i < lua_getbindatasize(ud), "getbyte", 2,
-                 "out of range");
-  lua_pushnumber(*(((char *)lua_getbinarydata(ud))+i));
+  if (i == -1)
+    lua_pushnumber(lua_getbindatasize(ud));
+  else {
+    i--;
+    luaL_arg_check(0 <= i && i < lua_getbindatasize(ud), "getbyte", 2,
+                   "out of range");
+    lua_pushnumber(*(((char *)lua_getbinarydata(ud))+i));
+  }
 }
 
 static void createuserdata (void)
