@@ -24,34 +24,51 @@
   is the usigned value minus 2^23.
 ===========================================================================*/
 
-#define EXCESS_S	(1<<23)		/* == 2^23 */
+#define SIZE_OP		8
+#define SIZE_U		24
+#define POS_U		8
+#define SIZE_S		24
+#define POS_S		8
+#define SIZE_A		16
+#define POS_A		16
+#define SIZE_B		8
+#define POS_B		8
+
+#define EXCESS_S	(1<<(SIZE_S-1))		/* == 2^23 */
+
+
+/* creates a mask with `n' 1 bits at position `p' */
+#define MASK1(n,p)	((~((~0ul)<<n))<<p)
+
+/* creates a mask with `n' 0 bits at position `p' */
+#define MASK0(n,p)	(~MASK1(n,p))
 
 /*
 ** the following macros help to manipulate instructions
 */
 
-#define MAXARG_U	((1<<24)-1)
-#define MAXARG_S	((1<<23)-1)
-#define MAXARG_A	((1<<16)-1)
-#define MAXARG_B	((1<<8)-1)
+#define MAXARG_U	((1<<SIZE_U)-1)
+#define MAXARG_S	((1<<(SIZE_S-1))-1)  /* `S' is signed */
+#define MAXARG_A	((1<<SIZE_A)-1)
+#define MAXARG_B	((1<<SIZE_B)-1)
 
-#define GET_OPCODE(i)	((OpCode)((i)&0xFF))
-#define GETARG_U(i)	((int)((i)>>8))
-#define GETARG_S(i)	((int)((i)>>8)-EXCESS_S)
-#define GETARG_A(i)	((int)((i)>>16))
-#define GETARG_B(i)	((int)(((i)>>8) & 0xFF))
+#define GET_OPCODE(i)	((OpCode)((i)&MASK1(SIZE_OP,0)))
+#define GETARG_U(i)	((int)((i)>>POS_U))
+#define GETARG_S(i)	((int)((i)>>POS_S)-EXCESS_S)
+#define GETARG_A(i)	((int)((i)>>POS_A))
+#define GETARG_B(i)	((int)(((i)>>POS_B) & MASK1(SIZE_B,0)))
 
-#define SET_OPCODE(i,o)	(((i)&0xFFFFFF00u) | (Instruction)(o))
-#define SETARG_U(i,u)	(((i)&0x000000FFu) | ((Instruction)(u)<<8))
-#define SETARG_S(i,s)	(((i)&0x000000FFu) | ((Instruction)((s)+EXCESS_S)<<8))
-#define SETARG_A(i,a)	(((i)&0x0000FFFFu) | ((Instruction)(a)<<16))
-#define SETARG_B(i,b)	(((i)&0xFFFF00FFu) | ((Instruction)(b)<<8))
+#define SET_OPCODE(i,o)	(((i)&MASK0(SIZE_OP,0)) | (Instruction)(o))
+#define SETARG_U(i,u)	(((i)&MASK0(SIZE_U,POS_U)) | ((Instruction)(u)<<POS_U))
+#define SETARG_S(i,s)	(((i)&MASK0(SIZE_S,POS_S)) | ((Instruction)((s)+EXCESS_S)<<POS_S))
+#define SETARG_A(i,a)	(((i)&MASK0(SIZE_A,POS_A)) | ((Instruction)(a)<<POS_A))
+#define SETARG_B(i,b)	(((i)&MASK0(SIZE_B,POS_B)) | ((Instruction)(b)<<POS_B))
 
 #define CREATE_0(o)	 ((Instruction)(o))
-#define CREATE_U(o,u)	 ((Instruction)(o) | (Instruction)(u)<<8)
-#define CREATE_S(o,s)	 ((Instruction)(o) | ((Instruction)(s)+EXCESS_S)<<8)
-#define CREATE_AB(o,a,b) ((Instruction)(o) | ((Instruction)(a)<<16) \
-                                           |  ((Instruction)(b)<<8))
+#define CREATE_U(o,u)	 ((Instruction)(o) | (Instruction)(u)<<POS_U)
+#define CREATE_S(o,s)	 ((Instruction)(o) | ((Instruction)(s)+EXCESS_S)<<POS_S)
+#define CREATE_AB(o,a,b) ((Instruction)(o) | ((Instruction)(a)<<POS_A) \
+                                           |  ((Instruction)(b)<<POS_B))
 
 
 /*
@@ -111,7 +128,7 @@ SUBOP,/*	-	y x		x-y				*/
 MULTOP,/*	-	y x		x*y				*/
 DIVOP,/*	-	y x		x/y				*/
 POWOP,/*	-	y x		x^y				*/
-CONCOP,/*	-	y x		x..y				*/
+CONCOP,/*	U	v_u-v_1		v1..-..v_u			*/
 MINUSOP,/*	-	x		-x				*/
 NOTOP,/*	-	x		(x==nil)? 1 : nil		*/
 

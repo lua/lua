@@ -88,6 +88,16 @@ static void luaK_sub (LexState *ls) {
 }
 
 
+static void luaK_conc (LexState *ls) {
+  Instruction *previous = previous_instruction(ls);
+  luaK_deltastack(ls, -1);
+  switch(GET_OPCODE(*previous)) {
+    case CONCOP: *previous = SETARG_U(*previous, GETARG_U(*previous)+1); break;
+    default: luaK_primitivecode(ls, CREATE_U(CONCOP, 2));
+  }
+}
+
+
 void luaK_retcode (LexState *ls, int nlocals, int nexps) {
   Instruction *previous = previous_instruction(ls);
   if (nexps > 0 && GET_OPCODE(*previous) == CALL) {
@@ -286,7 +296,7 @@ void luaK_posfix (LexState *ls, int op, expdesc *v1, expdesc *v2) {
     case '*': luaK_0(ls, MULTOP, -1); break;
     case '/': luaK_0(ls, DIVOP, -1); break;
     case '^': luaK_0(ls, POWOP, -1); break;
-    case CONC: luaK_0(ls, CONCOP, -1); break;
+    case CONC: luaK_conc(ls); break;
     case EQ: luaK_0(ls, EQOP, -1); break;
     case NE: luaK_0(ls, NEQOP, -1); break;
     case '>': luaK_0(ls, GTOP, -1); break;

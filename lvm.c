@@ -39,17 +39,6 @@
 
 
 
-static TaggedString *strconc (lua_State *L, const TaggedString *l,
-                                            const TaggedString *r) {
-  long nl = l->u.s.len;
-  long nr = r->u.s.len;
-  char *buffer = luaL_openspace(L, nl+nr);
-  memcpy(buffer, l->str, nl);
-  memcpy(buffer+nl, r->str, nr);
-  return luaS_newlstr(L, buffer, nl+nr);
-}
-
-
 int luaV_tonumber (TObject *obj) {  /* LUA_NUMBER */
   if (ttype(obj) != LUA_T_STRING)
     return 1;
@@ -253,22 +242,16 @@ static int luaV_strcomp (const TaggedString *ls, const TaggedString *rs) {
 }
 
 
-int luaV_lessthan (lua_State *L, TObject *l, TObject *r) {
+int luaV_lessthan (lua_State *L, const TObject *l, const TObject *r, StkId top) {
   if (ttype(l) == LUA_T_NUMBER && ttype(r) == LUA_T_NUMBER)
     return (nvalue(l) < nvalue(r));
   else if (ttype(l) == LUA_T_STRING && ttype(r) == LUA_T_STRING)
     return (luaV_strcomp(tsvalue(l), tsvalue(r)) < 0);
-  else {
-    /* update top and put arguments in correct order to call TM */
-    if (l<r)  /* are arguments in correct order? */
-      L->top = r+1;  /* yes; 2nd is on top */
-    else {  /* no; exchange them */
-      TObject temp = *r;
-      *r = *l;
-      *l = temp;
-      L->top = l+1;  /* 1st is on top */
-    }
-    call_binTM(L, L->top, IM_LT, "unexpected type in comparison");
+  else {  /* call TM */
+    luaD_checkstack(L, 2);
+    *top++ = *l;
+    *top++ = *r;
+    call_binTM(L, top, IM_LT, "unexpected type in comparison");
     L->top--;
     return (ttype(L->top) != LUA_T_NIL);
   }
@@ -278,6 +261,34 @@ int luaV_lessthan (lua_State *L, TObject *l, TObject *r) {
 #define setbool(o,cond) if (cond) { \
                              ttype(o) = LUA_T_NUMBER; nvalue(o) = 1.0; } \
                         else ttype(o) = LUA_T_NIL
+
+
+static void strconc (lua_State *L, int total, StkId top) {
+  do {
+    int n = 2;  /* number of elements handled in this pass (at least 2) */
+    if (tostring(L, top-2) || tostring(L, top-1))
+      call_binTM(L, top, IM_CONCAT, "unexpected type for concatenation");
+    else {  /* at least two string values; get as many as possible */
+      long tl = tsvalue(top-2)->u.s.len + tsvalue(top-1)->u.s.len;
+      char *buffer;
+      int i;
+      while (n < total && !tostring(L, top-n-1)) {  /* collect total length */
+        tl += tsvalue(top-n-1)->u.s.len;
+        n++;
+      }
+      buffer = luaL_openspace(L, tl);
+      tl = 0;
+      for (i=n; i>0; i--) {  /* concat all strings */
+        long l = tsvalue(top-i)->u.s.len;
+        memcpy(buffer+tl, tsvalue(top-i)->str, l);
+        tl += l;
+      }
+      tsvalue(top-n) = luaS_newlstr(L, buffer, tl);
+    }
+    total -= n-1;  /* got `n' strings to create 1 new */
+    top -= n-1;
+  } while (total > 1);  /* repeat until only 1 result left */
+}
 
 
 void luaV_pack (lua_State *L, StkId firstelem, int nvararg, TObject *tab) {
@@ -479,22 +490,22 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
 
       case LTOP:
         top--;
-        setbool(top-1, luaV_lessthan(L, top-1, top));
+        setbool(top-1, luaV_lessthan(L, top-1, top, top+1));
         break;
 
       case LEOP:  /* a <= b  ===  !(b<a) */
         top--;
-        setbool(top-1, !luaV_lessthan(L, top, top-1));
+        setbool(top-1, !luaV_lessthan(L, top, top-1, top+1));
         break;
 
       case GTOP:  /* a > b  ===  (b<a) */
         top--;
-        setbool(top-1, luaV_lessthan(L, top, top-1));
+        setbool(top-1, luaV_lessthan(L, top, top-1, top+1));
         break;
 
       case GEOP:  /* a >= b  ===  !(a<b) */
         top--;
-        setbool(top-1, !luaV_lessthan(L, top-1, top));
+        setbool(top-1, !luaV_lessthan(L, top-1, top, top+1));
         break;
 
       case ADDOP:
@@ -544,15 +555,14 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
         top--;
         break;
 
-      case CONCOP:
-        if (tostring(L, top-2) || tostring(L, top-1))
-          call_binTM(L, top, IM_CONCAT, "unexpected type for concatenation");
-        else
-          tsvalue(top-2) = strconc(L, tsvalue(top-2), tsvalue(top-1));
-        top--;
+      case CONCOP: {
+        int n = GETARG_U(i);
+        strconc(L, n, top);
+        top -= n-1;
         L->top = top;
         luaC_checkGC(L);
         break;
+      }
 
       case MINUSOP:
         if (tonumber(top-1)) {

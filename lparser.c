@@ -716,7 +716,7 @@ static int get_priority (int op, int *rp) {
 
     case  '+': case  '-': *rp = 5; return 5;
 
-    case  CONC: *rp = 4; return 4;  /* left associative (?) */
+    case  CONC: *rp = 3; return 4;  /* right associative (?) */
 
     case EQ: case  NE: case  '>': case  '<': case  LE: case  GE:
       *rp = 2; return 2;
@@ -941,18 +941,17 @@ static void namestat (LexState *ls) {
 
 
 static void ifpart (LexState *ls, int line) {
-  /* ifpart -> cond THEN block [ELSE block | ELSEIF ifpart] */
+  /* ifpart -> cond THEN block (ELSEIF ifpart | [ELSE block] END) */
   FuncState *fs = ls->fs;
   int c;  /* address of the conditional jump */
-  int je;  /* address of the unconditional jump (to skip `else' part) */
   int elseinit;
   next(ls);  /* skip IF or ELSEIF */
   exp1(ls);  /* cond */
-  c = luaK_S(ls, IFFJMP, 0, -1);  /* jump over `then' part if `cond' is false */
+  c = luaK_S(ls, IFFJMP, 0, -1);  /* 1st jump: over `then' part */
   check(ls, THEN);
   block(ls);  /* `then' part */
-  je = luaK_S(ls, JMP, 0, 0);  /* jump over `else' part after `then' */
-  elseinit = luaK_getlabel(ls);
+  luaK_S(ls, JMP, 0, 0);  /* 2nd jump: over `else' part */
+  elseinit = luaK_getlabel(ls);  /* address of 2nd jump == elseinit-1 */
   if (ls->token == ELSEIF)
     ifpart(ls, line);
   else {
@@ -961,13 +960,12 @@ static void ifpart (LexState *ls, int line) {
     check_match(ls, END, IF, line);
   }
   if (fs->pc > elseinit) {  /* is there an `else' part? */
-    luaK_fixjump(ls, je, luaK_getlabel(ls));  /* last jump jumps over it */
-    luaK_fixjump(ls, c, elseinit);  /* fix first jump to `else' part */
+    luaK_fixjump(ls, c, elseinit);  /* fix 1st jump to `else' part */
+    luaK_fixjump(ls, elseinit-1, luaK_getlabel(ls));  /* fix 2nd jump */
   }
   else {  /* no else part */
-    fs->pc--;  /* remove last jump */
-    LUA_ASSERT(L, fs->pc == je, "jump out of place");
-    luaK_fixjump(ls, c, luaK_getlabel(ls));  /* fix first jump to `if' end */
+    fs->pc--;  /* remove 2nd jump */
+    luaK_fixjump(ls, c, luaK_getlabel(ls));  /* fix 1st jump to `if' end */
   }
 }
 
