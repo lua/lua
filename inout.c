@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.5 1994/10/17 19:04:19 celes Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.6 1994/11/02 20:29:39 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -60,16 +60,20 @@ static int stringinput (void)
 
 /*
 ** Function to open a file to be input unit. 
-** Return 0 on success or 1 on error.
+** Return 0 on success or error message on error.
 */
-int lua_openfile (char *fn)
+char *lua_openfile (char *fn)
 {
  lua_linenumber = 1;
  lua_setinput (fileinput);
  fp = fopen (fn, "r");
- if (fp == NULL) return 1;
- if (lua_addfile (fn)) return 1;
- return 0;
+ if (fp == NULL)
+ {
+   static char buff[32];
+   sprintf(buff, "unable to open file %.10s", fn);
+   return buff;
+ }
+ return lua_addfile (fn);
 }
 
 /*
@@ -88,7 +92,7 @@ void lua_closefile (void)
 /*
 ** Function to open a string to be input unit
 */
-int lua_openstring (char *s)
+char *lua_openstring (char *s)
 {
  lua_linenumber = 1;
  lua_setinput (stringinput);
@@ -96,9 +100,8 @@ int lua_openstring (char *s)
  {
   char sn[64];
   sprintf (sn, "String: %10.10s...", s);
-  if (lua_addfile (sn)) return 1;
+  return lua_addfile (sn);
  }
- return 0;
 }
 
 /*
@@ -208,19 +211,21 @@ void lua_print (void)
   else if (lua_iscfunction(obj)) printf("cfunction: %p\n",lua_getcfunction (obj)
 );
   else if (lua_isuserdata(obj))  printf("userdata: %p\n",lua_getuserdata (obj));
-  else if (lua_istable(obj))     printf("table: %p\n",obj);
+  else if (lua_istable(obj))     printf("table: %p\n",avalue(obj));
   else if (lua_isnil(obj))       printf("nil\n");
   else                           printf("invalid value to print\n");
  }
 }
- 
- 
+
+
 /*
 ** Internal function: return an object type.
 */
-void lua_type (void)
+void luaI_type (void)
 {
   Object *o = lua_getparam(1);
+  if (o == NULL)
+    lua_error("no parameter to function 'type'");
   switch (tag(o))
   {
     case LUA_T_NIL :
@@ -247,3 +252,24 @@ void lua_type (void)
   }
 }
  
+/*
+** Internal function: convert an object to a number
+*/
+void lua_obj2number (void)
+{
+  lua_Object o = lua_getparam(1);
+  if (lua_isnumber(o))
+    lua_pushobject(o);
+  else if (lua_isstring(o))
+  {
+    char c;
+    float f;
+    if (sscanf(lua_getstring(o),"%f %c",&f,&c) == 1)
+      lua_pushnumber(f);
+    else
+      lua_pushnil();
+  }
+  else
+    lua_pushnil();
+}
+
