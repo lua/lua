@@ -1,5 +1,5 @@
 #
-## $Id: makefile,v 1.26 2000/08/09 19:16:57 roberto Exp roberto $
+## $Id: makefile,v 1.27 2000/09/11 20:29:27 roberto Exp roberto $
 ## Makefile
 ## See Copyright Notice in lua.h
 #
@@ -114,7 +114,7 @@ clear	:
 lapi.o: lapi.c lua.h lapi.h lobject.h llimits.h ldo.h lstate.h \
  luadebug.h lfunc.h lgc.h lmem.h lstring.h ltable.h ltm.h lvm.h
 lauxlib.o: lauxlib.c lua.h lauxlib.h luadebug.h
-lbaselib.o: lbaselib.c lua.h lauxlib.h lualib.h
+lbaselib.o: lbaselib.c lua.h lauxlib.h luadebug.h lualib.h
 lcode.o: lcode.c /usr/include/stdlib.h lua.h lcode.h llex.h lobject.h \
  llimits.h lzio.h lopcodes.h lparser.h ldo.h lstate.h luadebug.h \
  lmem.h
@@ -148,7 +148,7 @@ ltable.o: ltable.c lua.h lmem.h llimits.h lobject.h lstate.h \
  luadebug.h lstring.h ltable.h
 ltests.o: ltests.c lua.h lapi.h lobject.h llimits.h lauxlib.h lcode.h \
  llex.h lzio.h lopcodes.h lparser.h ldebug.h lstate.h luadebug.h ldo.h \
- lfunc.h lmem.h lstring.h ltable.h
+ lfunc.h lmem.h lstring.h ltable.h lualib.h
 ltm.o: ltm.c lua.h ldo.h lobject.h llimits.h lstate.h luadebug.h \
  lmem.h ltm.h
 lua.o: lua.c lua.h luadebug.h lualib.h
