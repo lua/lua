@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.167 2005/02/18 12:40:02 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.168 2005/02/23 17:30:22 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -576,7 +576,7 @@ static int luaB_costatus (lua_State *L) {
 }
 
 
-static int luaB_cocurrent (lua_State *L) {
+static int luaB_corunning (lua_State *L) {
   if (lua_pushthread(L))
     return 0;  /* main thread is not a coroutine */
   else
@@ -590,7 +590,7 @@ static const luaL_reg co_funcs[] = {
   {"resume", luaB_coresume},
   {"yield", luaB_yield},
   {"status", luaB_costatus},
-  {"current", luaB_cocurrent},
+  {"running", luaB_corunning},
   {NULL, NULL}
 };
 
