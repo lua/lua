@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.85 2001/06/28 14:57:17 roberto Exp roberto $
+** $Id: ldebug.c,v 1.86 2001/06/28 19:58:57 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -354,11 +354,11 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
       case iABC: {
         b = GETARG_B(i);
         c = GETARG_C(i);
-        if (testOpMode(op, OpModeBreg)) {
+        if (testOpMode(op, OpModeBreg))
           checkreg(pt, b);
+        if (testOpMode(op, OpModeCreg))
           check(c < pt->maxstacksize ||
                (c >= MAXSTACK && c-MAXSTACK < pt->sizek));
-        }
         break;
       }
       case iABc: {
@@ -397,7 +397,8 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         break;
       }
       case OP_CONCAT: {
-        check(b < c);  /* at least two operands */
+        /* `c' is a register, and at least two operands */
+        check(c < MAXSTACK && b < c);
         break;
       }
       case OP_JMP:
