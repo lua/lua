@@ -3,7 +3,7 @@
 ** load bytecodes from files
 */
 
-char* rcs_undump="$Id: undump.c,v 1.17 1996/11/14 11:44:34 lhf Exp lhf $";
+char* rcs_undump="$Id: undump.c,v 1.18 1996/11/14 13:33:15 lhf Exp lhf $";
 
 #include <stdio.h>
 #include <string.h>
@@ -253,7 +253,7 @@ static void LoadHeader(FILE* D)			/* TODO: error handling */
  int version;
  LoadSignature(D);
  version=getc(D);
- if (version>23)				/* after 2.5 */
+ if (version>0x23)				/* after 2.5 */
  {
   int oldsizeofI=getc(D);
   int oldsizeofF=getc(D);
