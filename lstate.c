@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.92 2002/05/01 20:40:42 roberto Exp roberto $
+** $Id: lstate.c,v 1.93 2002/05/07 17:36:56 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -38,7 +38,7 @@ static int default_panic (lua_State *L) {
 static void stack_init (lua_State *L, lua_State *OL) {
   L->stack = luaM_newvector(OL, BASIC_STACK_SIZE, TObject);
   L->stacksize = BASIC_STACK_SIZE;
-  L->top = L->stack + RESERVED_STACK_PREFIX;
+  L->top = L->stack;
   L->stack_last = L->stack+(BASIC_STACK_SIZE-EXTRA_STACK)-1;
   L->base_ci = luaM_newvector(OL, BASIC_CI_SIZE, CallInfo);
   L->ci = L->base_ci;

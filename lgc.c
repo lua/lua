@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.134 2002/04/05 18:54:31 roberto Exp roberto $
+** $Id: lgc.c,v 1.135 2002/04/23 15:04:39 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -100,7 +100,6 @@ static void marktable (GCState *st, Table *h) {
   if (!ismarked(h)) {
     h->mark = st->tmark;  /* chain it for later traversal */
     st->tmark = h;
-    marktable(st, h->metatable);
   }
 }
 
@@ -153,6 +152,9 @@ static void markstacks (GCState *st) {
       luaE_closethread(st->L, L1->previous);  /* collect it */
       continue;
     }
+    markobject(st, defaultmeta(L1));
+    markobject(st, gt(L1));
+    markobject(st, registry(L1));
     for (o=L1->stack; o<L1->top; o++)
       markobject(st, o);
     lim = o;

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.83 2002/04/16 17:08:28 roberto Exp roberto $
+** $Id: lstate.h,v 1.84 2002/04/23 15:04:39 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -50,23 +50,23 @@ struct lua_longjmp;  /* defined in ldo.c */
 
 
 /*
-** reserve init of stack to store some global values
+** array of `global' objects
 */
 
+#define NUMGLOBS	3
+
 /* default meta table (both for tables and udata) */
-#define defaultmeta(L)	(L->stack)
+#define defaultmeta(L)	(L->globs)
 
 /* table of globals */
-#define gt(L)	(L->stack + 1)
+#define gt(L)	(L->globs + 1)
 
 /* registry */
-#define registry(L)	(L->stack + 2)
-
-#define RESERVED_STACK_PREFIX	3
+#define registry(L)	(L->globs + 2)
 
 
-/* space to handle TM calls */
-#define EXTRA_STACK   4
+/* space to handle TM calls and other temporary overflows */
+#define EXTRA_STACK   5
 
 
 #define BASIC_CI_SIZE           8
@@ -130,6 +130,7 @@ struct lua_State {
   CallInfo *end_ci;  /* points after end of ci array*/
   CallInfo *base_ci;  /* array of CallInfo's */
   global_State *l_G;
+  TObject globs[NUMGLOBS];  /* registry, table of globals, etc. */
   struct lua_longjmp *errorJmp;  /* current error recover point */
   UpVal *openupval;  /* list of open upvalues in this stack */
   lua_State *next;  /* circular double linked list of states */
