@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.45 1999/12/02 16:41:29 roberto Exp roberto $
+** $Id: llex.c,v 1.46 1999/12/14 18:31:20 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -401,7 +401,8 @@ int luaX_lex (LexState *LS) {
           save_and_next(L, LS);
         if (toupper(LS->current) == 'E') {
           save_and_next(L, LS);  /* read 'E' */
-          save_and_next(L, LS);  /* read '+', '-' or first digit */
+          if (LS->current == '+' || LS->current == '-')
+            save_and_next(L, LS);  /* optional exponent signal */
           while (isdigit(LS->current))
             save_and_next(L, LS);
         }
