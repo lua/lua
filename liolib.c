@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.46 2003/08/25 19:49:47 roberto Exp roberto $
+** $Id: liolib.c,v 2.47 2003/10/07 20:13:41 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -236,8 +236,7 @@ static int io_readline (lua_State *L);
 
 
 static void aux_lines (lua_State *L, int idx, int close) {
-  lua_pushliteral(L, FILEHANDLE);
-  lua_rawget(L, LUA_REGISTRYINDEX);
+  lua_getfield(L, LUA_REGISTRYINDEX, FILEHANDLE);
   lua_pushvalue(L, idx);
   lua_pushboolean(L, close);  /* close/not close file when finished */
   lua_pushcclosure(L, io_readline, 3);
@@ -512,9 +511,8 @@ static void createmeta (lua_State *L) {
   *newfile(L) = stdout;
   lua_rawseti(L, -2, IO_OUTPUT);
   /* file methods */
-  lua_pushliteral(L, "__index");
-  lua_pushvalue(L, -2);  /* push metatable */
-  lua_rawset(L, -3);  /* metatable.__index = metatable */
+  lua_pushvalue(L, -1);  /* push metatable */
+  lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
   luaL_openlib(L, NULL, flib, 0);
 }
 
@@ -594,8 +592,7 @@ static void setboolfield (lua_State *L, const char *key, int value) {
 
 static int getboolfield (lua_State *L, const char *key) {
   int res;
-  lua_pushstring(L, key);
-  lua_gettable(L, -2);
+  lua_getfield(L, -1, key);
   res = lua_toboolean(L, -1);
   lua_pop(L, 1);
   return res;
@@ -604,8 +601,7 @@ static int getboolfield (lua_State *L, const char *key) {
 
 static int getfield (lua_State *L, const char *key, int d) {
   int res;
-  lua_pushstring(L, key);
-  lua_gettable(L, -2);
+  lua_getfield(L, -1, key);
   if (lua_isnumber(L, -1))
     res = (int)lua_tointeger(L, -1);
   else {

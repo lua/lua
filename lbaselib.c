@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.133 2003/08/27 21:02:08 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.134 2003/10/07 20:13:41 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -220,8 +220,7 @@ static int luaB_next (lua_State *L) {
 
 static int luaB_pairs (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
-  lua_pushliteral(L, "next");
-  lua_rawget(L, LUA_GLOBALSINDEX);  /* return generator, */
+  lua_getfield(L, LUA_GLOBALSINDEX, "next");  /* return generator, */
   lua_pushvalue(L, 1);  /* state, */
   lua_pushnil(L);  /* and initial value */
   return 3;
@@ -232,8 +231,7 @@ static int luaB_ipairs (lua_State *L) {
   int i = (int)lua_tointeger(L, 2);
   luaL_checktype(L, 1, LUA_TTABLE);
   if (i == 0 && lua_isnone(L, 2)) {  /* `for' start? */
-    lua_pushliteral(L, "ipairs");
-    lua_rawget(L, LUA_GLOBALSINDEX);  /* return generator, */
+    lua_getfield(L, LUA_GLOBALSINDEX, "ipairs");  /* return generator, */
     lua_pushvalue(L, 1);  /* state, */
     lua_pushinteger(L, 0);  /* and initial value */
     return 3;
@@ -693,23 +691,19 @@ static const luaL_reg co_funcs[] = {
 
 
 static void base_open (lua_State *L) {
-  lua_pushliteral(L, "_G");
   lua_pushvalue(L, LUA_GLOBALSINDEX);
   luaL_openlib(L, NULL, base_funcs, 0);  /* open lib into global table */
-  lua_pushliteral(L, "_VERSION");
   lua_pushliteral(L, LUA_VERSION);
-  lua_rawset(L, -3);  /* set global _VERSION */
+  lua_setfield(L, -2, "_VERSION");  /* set global _VERSION */
   /* `newproxy' needs a weaktable as upvalue */
-  lua_pushliteral(L, "newproxy");
   lua_newtable(L);  /* new table `w' */
   lua_pushvalue(L, -1);  /* `w' will be its own metatable */
   lua_setmetatable(L, -2);
-  lua_pushliteral(L, "__mode");
   lua_pushliteral(L, "kv");
-  lua_rawset(L, -3);  /* metatable(w).__mode = "kv" */
+  lua_setfield(L, -2, "__mode");  /* metatable(w).__mode = "kv" */
   lua_pushcclosure(L, luaB_newproxy, 1);
-  lua_rawset(L, -3);  /* set global `newproxy' */
-  lua_rawset(L, -1);  /* set global _G */
+  lua_setfield(L, -2, "newproxy");  /* set global `newproxy' */
+  lua_setfield(L, -1, "_G");  /* set global _G */
 }
 
 

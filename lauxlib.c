@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.104 2003/10/02 20:31:17 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.105 2003/10/07 20:13:41 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -108,15 +108,13 @@ LUALIB_API int luaL_findstring (const char *name, const char *const list[]) {
 
 
 LUALIB_API int luaL_newmetatable (lua_State *L, const char *tname) {
-  lua_pushstring(L, tname);
-  lua_rawget(L, LUA_REGISTRYINDEX);  /* get registry.name */
+  lua_getfield(L, LUA_REGISTRYINDEX, tname);  /* get registry.name */
   if (!lua_isnil(L, -1))  /* name already in use? */
     return 0;  /* leave previous value on top, but return 0 */
   lua_pop(L, 1);
   lua_newtable(L);  /* create metatable */
-  lua_pushstring(L, tname);
-  lua_pushvalue(L, -2);
-  lua_rawset(L, LUA_REGISTRYINDEX);  /* registry.name = metatable */
+  lua_pushvalue(L, -1);
+  lua_setfield(L, LUA_REGISTRYINDEX, tname);  /* registry.name = metatable */
   lua_pushvalue(L, -1);
   lua_pushstring(L, tname);
   lua_rawset(L, LUA_REGISTRYINDEX);  /* registry[metatable] = name */
@@ -125,8 +123,7 @@ LUALIB_API int luaL_newmetatable (lua_State *L, const char *tname) {
 
 
 LUALIB_API void  luaL_getmetatable (lua_State *L, const char *tname) {
-  lua_pushstring(L, tname);
-  lua_rawget(L, LUA_REGISTRYINDEX);
+  lua_getfield(L, LUA_REGISTRYINDEX, tname);
 }
 
 
@@ -215,8 +212,7 @@ LUALIB_API lua_Integer luaL_optinteger (lua_State *L, int narg,
 LUALIB_API int luaL_getmetafield (lua_State *L, int obj, const char *event) {
   if (!lua_getmetatable(L, obj))  /* no metatable? */
     return 0;
-  lua_pushstring(L, event);
-  lua_rawget(L, -2);
+  lua_getfield(L, -1, event);
   if (lua_isnil(L, -1)) {
     lua_pop(L, 2);  /* remove metatable and metafield */
     return 0;
@@ -241,24 +237,23 @@ LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event) {
 LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
                               const luaL_reg *l, int nup) {
   if (libname) {
-    lua_pushstring(L, libname);
-    lua_gettable(L, LUA_GLOBALSINDEX);  /* check whether lib already exists */
+    /* check whether lib already exists */
+    lua_getfield(L, LUA_GLOBALSINDEX, libname);
     if (lua_isnil(L, -1)) {  /* no? */
       lua_pop(L, 1);
       lua_newtable(L);  /* create it */
-      lua_pushstring(L, libname);
-      lua_pushvalue(L, -2);
-      lua_settable(L, LUA_GLOBALSINDEX);  /* register it with given name */
+      lua_pushvalue(L, -1);
+      /* register it with given name */
+      lua_setfield(L, LUA_GLOBALSINDEX, libname);
     }
     lua_insert(L, -(nup+1));  /* move library table to below upvalues */
   }
   for (; l->name; l++) {
     int i;
-    lua_pushstring(L, l->name);
     for (i=0; i<nup; i++)  /* copy upvalues to the top */
-      lua_pushvalue(L, -(nup+1));
+      lua_pushvalue(L, -nup);
     lua_pushcclosure(L, l->func, nup);
-    lua_settable(L, -(nup+3));
+    lua_setfield(L, -(nup+2), l->name);
   }
   lua_pop(L, nup);  /* remove upvalues */
 }
@@ -286,9 +281,8 @@ static void getsizes (lua_State *L) {
     lua_newtable(L);  /* create it */
     lua_pushvalue(L, -1);  /* `size' will be its own metatable */
     lua_setmetatable(L, -2);
-    lua_pushliteral(L, "__mode");
     lua_pushliteral(L, "kv");
-    lua_rawset(L, -3);  /* metatable(N).__mode = "kv" */
+    lua_setfield(L, -2, "__mode");  /* metatable(N).__mode = "kv" */
     lua_pushvalue(L, -1);
     lua_rawseti(L, LUA_REGISTRYINDEX, ARRAYSIZE_REF);  /* store in register */
   }
@@ -297,12 +291,10 @@ static void getsizes (lua_State *L) {
 
 void luaL_setn (lua_State *L, int t, int n) {
   t = abs_index(L, t);
-  lua_pushliteral(L, "n");
-  lua_rawget(L, t);
+  lua_getfield(L, t, "n");
   if (checkint(L, 1) >= 0) {  /* is there a numeric field `n'? */
-    lua_pushliteral(L, "n");  /* use it */
     lua_pushinteger(L, n);
-    lua_rawset(L, t);
+    lua_setfield(L, t, "n");
   }
   else {  /* use `sizes' */
     getsizes(L);
@@ -317,8 +309,7 @@ void luaL_setn (lua_State *L, int t, int n) {
 int luaL_getn (lua_State *L, int t) {
   int n;
   t = abs_index(L, t);
-  lua_pushliteral(L, "n");  /* try t.n */
-  lua_rawget(L, t);
+  lua_getfield(L, t, "n");  /* try t.n */
   if ((n = checkint(L, 1)) >= 0) return n;
   getsizes(L);  /* else try sizes[t] */
   lua_pushvalue(L, t);

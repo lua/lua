@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.81 2003/07/07 13:37:08 roberto Exp roberto $
+** $Id: ldblib.c,v 1.82 2003/10/07 20:13:41 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -19,16 +19,14 @@
 
 
 static void settabss (lua_State *L, const char *i, const char *v) {
-  lua_pushstring(L, i);
   lua_pushstring(L, v);
-  lua_rawset(L, -3);
+  lua_setfield(L, -2, i);
 }
 
 
 static void settabsi (lua_State *L, const char *i, int v) {
-  lua_pushstring(L, i);
   lua_pushinteger(L, v);
-  lua_rawset(L, -3);
+  lua_setfield(L, -2, i);
 }
 
 
@@ -85,12 +83,11 @@ static int getinfo (lua_State *L) {
         settabss(L, "namewhat", ar.namewhat);
         break;
       case 'f':
-        lua_pushliteral(L, "func");
         if (L == L1)
-          lua_pushvalue(L, -3);
+          lua_pushvalue(L, -2);
         else
           lua_xmove(L1, L, 1);
-        lua_rawset(L, -3);
+        lua_setfield(L, -2, "func");
         break;
     }
   }
@@ -341,9 +338,8 @@ static const luaL_reg dblib[] = {
 
 LUALIB_API int luaopen_debug (lua_State *L) {
   luaL_openlib(L, LUA_DBLIBNAME, dblib, 0);
-  lua_pushliteral(L, "_TRACEBACK");
   lua_pushcfunction(L, errorfb);
-  lua_settable(L, LUA_GLOBALSINDEX);
+  lua_setfield(L, LUA_GLOBALSINDEX, "_TRACEBACK");
   return 1;
 }
 
