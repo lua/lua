@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.15 1996/04/01 14:36:35 roberto Exp roberto $
+% $Id: manual.tex,v 1.16 1996/04/22 18:00:37 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -34,7 +34,7 @@ Waldemar Celes Filho
 \tecgraf\ --- Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1996/04/01 14:36:35 $}
+\date{\small \verb$Date: 1996/04/22 18:00:37 $}
 
 \maketitle
 
@@ -1079,12 +1079,10 @@ The routines to manipulate references are the following:
 \Deffunc{lua_ref}\Deffunc{lua_getref}
 \Deffunc{lua_pushref}\Deffunc{lua_unref}
 \begin{verbatim}
-typedef int lua_Reference;
-
-lua_Reference  lua_ref (int lock);
-lua_Object     lua_getref  (lua_Reference ref);
-void           lua_pushref (lua_Reference ref);
-void           lua_unref (lua_Reference ref);
+int            lua_ref (int lock);
+lua_Object     lua_getref  (int ref);
+void           lua_pushref (int ref);
+void           lua_unref (int ref);
 \end{verbatim}
 The function \verb'lua_ref' creates a reference
 to the object which is on the top of the stack,
@@ -1122,7 +1120,7 @@ Currently there are three standard libraries:
 \begin{itemize}
 \item string manipulation;
 \item mathematical functions (sin, cos, etc);
-\item input and output.
+\item input and output (plus some system facilities).
 \end{itemize}
 In order to have access to these libraries,
 the host program must call the functions
@@ -1382,8 +1380,6 @@ This function opens a file named \verb'filename' and sets it as the
 {\em current} output file.
 Unlike the \verb'writeto' operation,
 this function does not erase any previous content of the file.
-This function returns 2 if the file already exists,
-1 if it creates a new file, and \nil\ on failure.
 
 \subsubsection*{{\tt remove (filename)}}\Deffunc{remove}
 
@@ -1484,15 +1480,11 @@ it returns a reasonable date and time representation.
 This function replaces functions \verb'date' and \verb'time' from
 previous Lua versions.
 
+\subsubsection*{{\tt exit ([code])}}\Deffunc{exit}
 
-% \subsubsection*{{\tt debug ()}}
-% This function, when called, repeatedly presents a prompt \verb'lua_debug> '
-% in the error output stream (\verb'stderr'),
-% reads a line from the standard input,
-% and executes (``dostring'') the line.
-% The loop ends when the user types \verb'cont' to the prompt.
-% This function then returns and the execution of the program continues.
-
+This function calls the C function \verb-exit-,
+with an optional \verb-code-,
+to terminate the program.
 
 
 \section{The Debuger Interface} \label{debugI}
@@ -1850,8 +1842,8 @@ as illustrated in Figure~\ref{Cinher}.
 \begin{verbatim}
 #include "lua.h"
 
-lua_Reference lockedParentName;  /* lock index for the string "parent" */
-lua_Reference lockedOldIndex;    /* previous fallback function */
+int lockedParentName;  /* lock index for the string "parent" */
+int lockedOldIndex;    /* previous fallback function */
 
 void callOldFallback (lua_Object table, lua_Object index)
 {
@@ -2090,10 +2082,13 @@ Here is a list of all these differences.
 Functions \verb'date' and \verb'time' (from \verb'iolib')
 have been superseded by the new version of function \verb'date'.
 \item
+Function \verb'append' (from \verb'iolib') now returns 1 whenever it succeeds,
+whether the file is new or not.
+\item
 Function \verb'int2str' (from \verb'strlib') has been superseded by new
 function \verb'format', with parameter \verb'"%c"'.
 \item
-The lock mechanism has been superseded by the reference mechanism.
+The API lock mechanism has been superseded by the reference mechanism.
 However, \verb-lua.h- provides compatibility macros,
 so there is no need to change programs.
 \item
