@@ -137,3 +137,9 @@ Wed Dec 29 16:05:43 EDT 1999
 Thu Dec 30 16:39:33 EDT 1999
 >> cannot reopen stdin (for binary mode)
 (by lhf & roberto; since 3.1)
+
+** lapi.c
+Thu Mar  2 09:41:53 EST 2000
+>> lua_settable should check stack space (it could call a T.M.)
+(by lhf & celes; since 3.2; it was already fixed by fixed stack)
+
