@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.2 1999/12/23 18:19:57 roberto Exp roberto $
+** $Id: ltests.c,v 1.3 1999/12/27 17:33:22 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -30,8 +30,8 @@ void luaB_opentests (lua_State *L);
 
 
 static void mem_query (lua_State *L) {
-  lua_pushnumber(L, totalmem);
-  lua_pushnumber(L, numblocks);
+  lua_pushnumber(L, memdebug_total);
+  lua_pushnumber(L, memdebug_numblocks);
 }
 
 

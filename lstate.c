@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.22 1999/12/07 11:42:54 roberto Exp roberto $
+** $Id: lstate.c,v 1.23 1999/12/21 18:04:41 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -105,8 +105,8 @@ void lua_close (lua_State *L) {
   LUA_ASSERT(L, L->Cstack.base == L->top, "C2Lua not empty");
   luaM_free(L, L);
   if (L == lua_state) {
-    LUA_ASSERT(L, numblocks == 0, "memory leak!");
-    LUA_ASSERT(L, totalmem == 0,"memory leak!");
+    LUA_ASSERT(L, memdebug_numblocks == 0, "memory leak!");
+    LUA_ASSERT(L, memdebug_total == 0,"memory leak!");
     lua_state = NULL;
   }
 }
