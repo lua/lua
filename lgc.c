@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.174 2003/07/07 13:32:19 roberto Exp roberto $
+** $Id: lgc.c,v 1.175 2003/07/16 20:49:02 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -108,7 +108,8 @@ static void marktmu (GCState *st) {
 
 
 /* move `dead' udata that need finalization to list `tmudata' */
-void luaC_separateudata (lua_State *L) {
+size_t luaC_separateudata (lua_State *L) {
+  size_t deadmem = 0;
   GCObject **p = &G(L)->rootudata;
   GCObject *curr;
   GCObject *collected = NULL;  /* to collect udata with gc event */
@@ -123,6 +124,7 @@ void luaC_separateudata (lua_State *L) {
       p = &curr->gch.next;
     }
     else {  /* must call its gc method */
+      deadmem += sizeudata(gcotou(curr)->uv.len);
       markfinalized(gcotou(curr));
       *p = curr->gch.next;
       curr->gch.next = NULL;  /* link `curr' at the end of `collected' list */
@@ -133,6 +135,7 @@ void luaC_separateudata (lua_State *L) {
   /* insert collected udata with gc event into `tmudata' list */
   *lastcollected = G(L)->tmudata;
   G(L)->tmudata = collected;
+  return deadmem;
 }
 
 
@@ -377,7 +380,7 @@ static void sweepstrings (lua_State *L, int all) {
 }
 
 
-static void checkSizes (lua_State *L) {
+static void checkSizes (lua_State *L, size_t deadmem) {
   /* check size of string hash */
   if (G(L)->strt.nuse < cast(lu_int32, G(L)->strt.size/4) &&
       G(L)->strt.size > MINSTRTABSIZE*2)
@@ -387,7 +390,8 @@ static void checkSizes (lua_State *L) {
     size_t newsize = luaZ_sizebuffer(&G(L)->buff) / 2;
     luaZ_resizebuffer(L, &G(L)->buff, newsize);
   }
-  G(L)->GCthreshold = 2*G(L)->nblocks;  /* new threshold */
+  lua_assert(G(L)->nblocks > deadmem);
+  G(L)->GCthreshold = 2*G(L)->nblocks - deadmem;  /* new threshold */
 }
 
 
@@ -440,24 +444,26 @@ static void markroot (GCState *st, lua_State *L) {
 }
 
 
-static void mark (lua_State *L) {
+static size_t mark (lua_State *L) {
+  size_t deadmem;
   GCState st;
   st.g = G(L);
   st.tmark = NULL;
   st.w = NULL;
   markroot(&st, L);
   propagatemarks(&st);  /* mark all reachable objects */
-  luaC_separateudata(L);  /* separate userdata to be preserved */
+  deadmem = luaC_separateudata(L);  /* separate userdata to be preserved */
   marktmu(&st);  /* mark `preserved' userdata */
   propagatemarks(&st);  /* remark, to propagate `preserveness' */
   cleartable(st.w);  /* remove collected objects from weak tables */
+  return deadmem;
 }
 
 
 void luaC_collectgarbage (lua_State *L) {
-  mark(L);
+  size_t deadmem = mark(L);
   luaC_sweep(L, 0);
-  checkSizes(L);
+  checkSizes(L, deadmem);
   luaC_callGCTM(L);
 }
 
