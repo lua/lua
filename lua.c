@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.114 2003/01/17 15:27:28 roberto Exp roberto $
+** $Id: lua.c,v 1.115 2003/01/29 10:27:07 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -397,7 +397,7 @@ static int pmain (lua_State *l) {
   struct Smain *s = (struct Smain *)lua_touserdata(l, 1);
   int status;
   int interactive = 0;
-  if (s->argv[0][0] != '\0') progname = s->argv[0];
+  if (s->argv[0] && s->argv[0][0]) progname = s->argv[0];
   L = l;
   lua_userinit(l);  /* open libraries */
   status = handle_luainit();
