@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.77 2000/10/26 12:47:05 roberto Exp roberto $
+** $Id: lua.h,v 1.78 2000/10/30 12:38:50 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -45,7 +45,7 @@
 #define LUA_MULTRET	(-1)
 
 
-/* minimum stack avaiable for a C function */
+/* minimum stack available for a C function */
 #define LUA_MINSTACK	20
 
 
