@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.127 2002/01/30 17:26:44 roberto Exp roberto $
+** $Id: lgc.c,v 1.128 2002/03/04 21:32:34 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -366,7 +366,7 @@ static void collectstrings (lua_State *L, int all) {
     }
   }
   if (G(L)->strt.nuse < cast(ls_nstr, G(L)->strt.size/4) &&
-      G(L)->strt.size > 4)
+      G(L)->strt.size > MINSTRTABSIZE*2)
     luaS_resize(L, G(L)->strt.size/2);  /* table is too big */
 }
 

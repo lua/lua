@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: llimits.h,v 1.37 2002/02/14 21:43:01 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -107,6 +107,11 @@ typedef unsigned long Instruction;
 #define MAXPARAMS 100           /* arbitrary limit (<MAXLOCALS) */
 #endif
 
+
+/* minimum size for the string table */
+#ifndef MINSTRTABSIZE
+#define MINSTRTABSIZE	20
+#endif
 
 
 #endif
