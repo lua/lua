@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.5 2004/11/24 19:20:21 roberto Exp $
+** $Id: lfunc.c,v 2.7 2005/01/19 15:54:26 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -57,7 +57,7 @@ UpVal *luaF_findupval (lua_State *L, StkId level) {
   while ((p = ngcotouv(*pp)) != NULL && p->v >= level) {
     lua_assert(p->v != &p->u.value);
     if (p->v == level) {  /* found a corresponding upvalue? */
-      if (isdead(G(L), obj2gco(p)))  /* is it dead? */
+      if (isdead(g, obj2gco(p)))  /* is it dead? */
         changewhite(obj2gco(p));  /* ressurect it */
       return p;
     }
@@ -106,7 +106,7 @@ void luaF_close (lua_State *L, StkId level) {
       setobj(L, &uv->u.value, uv->v);
       if (isgray(o)) {
         gray2black(o);  /* closed upvalues are never gray */
-        luaC_barrier(L, uv, uv->v);
+        luaC_barrier(L, uv, &uv->u.value);
       }
       uv->v = &uv->u.value;  /* now current value lives here */
       luaC_linkupval(L, uv);  /* link upvalue into `gcroot' list */

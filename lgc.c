@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.21 2005/01/14 14:19:42 roberto Exp $
+** $Id: lgc.c,v 2.22 2005/01/18 17:18:09 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -29,13 +29,11 @@
 #define GCFINALIZECOST	100
 
 
-#define FIXEDMASK	bitmask(FIXEDBIT)
-
 #define maskmarks \
-	cast(lu_byte, ~(bitmask(BLACKBIT)|bit2mask(WHITE0BIT, WHITE1BIT)))
+	cast(lu_byte, ~(bitmask(BLACKBIT)|WHITEBITS))
 
 #define makewhite(g,x)	\
-   ((x)->gch.marked = ((x)->gch.marked & maskmarks) | g->currentwhite)
+   ((x)->gch.marked = ((x)->gch.marked & maskmarks) | luaC_white(g))
 
 #define white2gray(x)	reset2bits((x)->gch.marked, WHITE0BIT, WHITE1BIT)
 #define gray2black(x)	setbit((x)->gch.marked, BLACKBIT)
@@ -59,6 +57,8 @@
 #define markobject(g,t) { if (iswhite(obj2gco(t))) \
 		reallymarkobject(g, obj2gco(t)); }
 
+
+#define setthreshold(g)  (g->GCthreshold = (g->estimate/100) * g->gcpace)
 
 
 static void removeentry (Node *n) {
@@ -400,24 +400,23 @@ static void freeobj (lua_State *L, GCObject *o) {
 
 
 
-#define sweepwholelist(L,p)	sweeplist(L,p,LUA_MAXINT32)
+#define sweepwholelist(L,p)	sweeplist(L,p,MAX_LUMEM)
 
 
-static GCObject **sweeplist (lua_State *L, GCObject **p, lu_int32 count) {
+static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
   GCObject *curr;
   global_State *g = G(L);
-  int whitebit = otherwhite(g);
-  int deadmask = whitebit | FIXEDMASK;
+  int deadmask = otherwhite(g);
   while ((curr = *p) != NULL && count-- > 0) {
-    if ((curr->gch.marked ^ whitebit) & deadmask) {
+    if (curr->gch.tt == LUA_TTHREAD)  /* sweep open upvalues of each thread */
+      sweepwholelist(L, &gco2th(curr)->openupval);
+    if ((curr->gch.marked ^ WHITEBITS) & deadmask) {  /* not dead? */
       lua_assert(!isdead(g, curr) || testbit(curr->gch.marked, FIXEDBIT));
-      makewhite(g, curr);
-      if (curr->gch.tt == LUA_TTHREAD)
-        sweepwholelist(L, &gco2th(curr)->openupval);
+      makewhite(g, curr);  /* make it white (for next cycle) */
       p = &curr->gch.next;
     }
-    else {
-      lua_assert(isdead(g, curr));
+    else {  /* must erase `curr' */
+      lua_assert(isdead(g, curr) || deadmask == bitmask(SFIXEDBIT));
       *p = curr->gch.next;
       if (curr == g->rootgc)  /* is the first element of the list? */
         g->rootgc = curr->gch.next;  /* adjust first */
@@ -428,21 +427,10 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_int32 count) {
 }
 
 
-
-static void freelist (lua_State *L, GCObject **p) {
-  while (*p) {
-    GCObject *curr = *p;
-    *p = (*p)->gch.next;
-    if (curr != obj2gco(L))
-      freeobj(L, curr);
-  }
-}
-
-
 static void checkSizes (lua_State *L) {
   global_State *g = G(L);
   /* check size of string hash */
-  if (g->strt.nuse < cast(lu_int32, G(L)->strt.size/4) &&
+  if (g->strt.nuse < cast(lu_int32, g->strt.size/4) &&
       g->strt.size > MINSTRTABSIZE*2)
     luaS_resize(L, g->strt.size/2);  /* table is too big */
   /* check size of buffer */
@@ -487,9 +475,10 @@ void luaC_callGCTM (lua_State *L) {
 void luaC_freeall (lua_State *L) {
   global_State *g = G(L);
   int i;
-  freelist(L, &g->rootgc);
+  g->currentwhite = WHITEBITS | bitmask(SFIXEDBIT);  /* mask to collect all elements */
+  sweepwholelist(L, &g->rootgc);
   for (i = 0; i < g->strt.size; i++)  /* free all string lists */
-    freelist(L, &G(L)->strt.hash[i]);
+    sweepwholelist(L, &g->strt.hash[i]);
 }
 
 
@@ -604,6 +593,8 @@ static l_mem singlestep (lua_State *L) {
 void luaC_step (lua_State *L) {
   global_State *g = G(L);
   l_mem lim = (GCSTEPSIZE/100) * g->gcstepmul;
+  if (lim == 0)
+    lim = (MAX_LUMEM-1)/2;  /* no limit */
   g->gcdept += g->totalbytes - g->GCthreshold;
   do {
     lim -= singlestep(L);
@@ -620,7 +611,7 @@ void luaC_step (lua_State *L) {
   }
   else {
     lua_assert(g->totalbytes >= g->estimate);
-    g->GCthreshold = (g->estimate/100) * g->gcpace;
+    setthreshold(g);
   }
 }
 
@@ -637,6 +628,7 @@ void luaC_fullgc (lua_State *L) {
     g->weak = NULL;
     g->gcstate = GCSsweepstring;
   }
+  lua_assert(g->gcstate != GCSpause && g->gcstate != GCSpropagate);
   /* finish any pending sweep phase */
   while (g->gcstate != GCSfinalize) {
     lua_assert(g->gcstate == GCSsweepstring || g->gcstate == GCSsweep);
@@ -646,7 +638,7 @@ void luaC_fullgc (lua_State *L) {
   while (g->gcstate != GCSpause) {
     singlestep(L);
   }
-  g->GCthreshold = 2*g->estimate;
+  setthreshold(g);
 }
 
 

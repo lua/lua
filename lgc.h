@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.9 2004/09/15 20:38:15 roberto Exp $
+** $Id: lgc.h,v 2.10 2005/01/19 15:54:26 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -47,7 +47,9 @@
 ** bit 3 - for tables: has weak keys
 ** bit 4 - for tables: has weak values
 ** bit 5 - object is fixed (should not be collected)
+** bit 6 - object is "super" fixed (only the main thread)
 */
+
 
 #define WHITE0BIT	0
 #define WHITE1BIT	1
@@ -56,21 +58,23 @@
 #define KEYWEAKBIT	3
 #define VALUEWEAKBIT	4
 #define FIXEDBIT	5
+#define SFIXEDBIT	6
+#define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)
 
 
 #define iswhite(x)      test2bits((x)->gch.marked, WHITE0BIT, WHITE1BIT)
 #define isblack(x)      testbit((x)->gch.marked, BLACKBIT)
 #define isgray(x)	(!isblack(x) && !iswhite(x))
 
-#define otherwhite(g)	(g->currentwhite ^ bit2mask(WHITE0BIT, WHITE1BIT))
-#define isdead(g,v)	((v)->gch.marked & otherwhite(g))
+#define otherwhite(g)	(g->currentwhite ^ WHITEBITS)
+#define isdead(g,v)	((v)->gch.marked & otherwhite(g) & WHITEBITS)
 
-#define changewhite(x)	((x)->gch.marked ^= bit2mask(WHITE0BIT, WHITE1BIT))
+#define changewhite(x)	((x)->gch.marked ^= WHITEBITS)
 #define gray2black(x)	setbit((x)->gch.marked, BLACKBIT)
 
 #define valiswhite(x)	(iscollectable(x) && iswhite(gcvalue(x)))
 
-#define luaC_white(g)	cast(lu_byte, (g)->currentwhite)
+#define luaC_white(g)	cast(lu_byte, (g)->currentwhite & WHITEBITS)
 
 
 #define luaC_checkGC(L) { if (G(L)->totalbytes >= G(L)->GCthreshold) \
