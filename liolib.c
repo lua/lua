@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.49 2003/10/10 13:29:28 roberto Exp roberto $
+** $Id: liolib.c,v 2.50 2004/04/30 20:13:38 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -569,7 +569,7 @@ static void setboolfield (lua_State *L, const char *key, int value) {
 static int getboolfield (lua_State *L, const char *key) {
   int res;
   lua_getfield(L, -1, key);
-  res = lua_toboolean(L, -1);
+  res = lua_isnil(L, -1) ? -1 : lua_toboolean(L, -1);
   lua_pop(L, 1);
   return res;
 }
