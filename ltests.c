@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.76 2001/03/09 18:05:05 roberto Exp roberto $
+** $Id: ltests.c,v 1.77 2001/03/26 14:31:49 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -337,9 +337,16 @@ static int table_query (lua_State *L) {
     return 2;
   }
   else if (i < t->size) {
-    TObject o;
-    setkey2obj(&o, &t->node[i]);
-    luaA_pushobject(L, &o);
+    if (ttype(val(node(t, i))) != LUA_TNIL ||
+        ttype_key(node(t, i)) == LUA_TNIL ||
+        ttype_key(node(t, i)) == LUA_TNUMBER ||
+        tsvalue_key(node(t, i)) != NULL) {
+      TObject o;
+      setkey2obj(&o, node(t, i));
+      luaA_pushobject(L, &o);
+    }
+    else
+      lua_pushstring(L, "<undef>");
     luaA_pushobject(L, &t->node[i].val);
     if (t->node[i].next) {
       lua_pushnumber(L, t->node[i].next - t->node);

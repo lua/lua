@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.31 2001/03/26 14:31:49 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.32 2001/04/06 18:25:00 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -167,6 +167,29 @@ static int luaB_settag (lua_State *L) {
   lua_pushvalue(L, 1);  /* push table */
   lua_settag(L, gettag(L, 2));
   return 1;  /* return table */
+}
+
+static int luaB_weakmode (lua_State *L) {
+  const char *mode = luaL_opt_string(L, 2, NULL);
+  luaL_checktype(L, 1, LUA_TTABLE);
+  if (mode == NULL) {
+    char buff[3];
+    char *s = buff;
+    int imode = lua_getweakmode(L, 1);
+    if (imode & LUA_WEAK_KEY) *s++ = 'k';
+    if (imode & LUA_WEAK_VALUE) *s++ = 'v';
+    *s = '\0';
+    lua_pushstring(L, buff);
+    return 1;
+  }
+  else {
+    int imode = 0;
+    lua_pushvalue(L, 1);  /* push table */
+    if (strchr(mode, l_c('k'))) imode |= LUA_WEAK_KEY;
+    if (strchr(mode, l_c('v'))) imode |= LUA_WEAK_VALUE;
+    lua_setweakmode(L, imode);
+    return 1;
+  }
 }
 
 static int luaB_newtype (lua_State *L) {
@@ -753,6 +776,7 @@ static const luaL_reg base_funcs[] = {
   {l_s("tremove"), luaB_tremove},
   {l_s("unwrap"), luaB_unwrap},
   {l_s("xtype"), luaB_xtype},
+  {l_s("weakmode"), luaB_weakmode}
 };
 
 

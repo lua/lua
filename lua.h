@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.92 2001/03/26 14:31:49 roberto Exp roberto $
+** $Id: lua.h,v 1.93 2001/04/06 21:17:37 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -45,6 +45,11 @@
 #define LUA_ERRSYNTAX	3
 #define LUA_ERRMEM	4
 #define LUA_ERRERR	5
+
+/* weak modes */
+#define LUA_WEAK_KEY	1
+#define LUA_WEAK_VALUE	2
+
 
 typedef struct lua_State lua_State;
 
@@ -208,6 +213,9 @@ LUA_API void  lua_concat (lua_State *L, int n);
 
 LUA_API void *lua_newuserdata (lua_State *L, size_t size);
 
+LUA_API void  lua_setweakmode (lua_State *L, int mode);
+LUA_API int  lua_getweakmode (lua_State *L, int index);
+
 
 /* 
 ** ===============================================================
@@ -290,7 +298,7 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size);
 
 
 /******************************************************************************
-* Copyright (C) 1994-2000 TeCGraf, PUC-Rio.  All rights reserved.
+* Copyright (C) 1994-2001 TeCGraf, PUC-Rio.  All rights reserved.
 * 
 * Permission is hereby granted, without written agreement and without license
 * or royalty fees, to use, copy, modify, and distribute this software and its

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.136 2001/03/07 18:09:25 roberto Exp roberto $
+** $Id: lapi.c,v 1.137 2001/03/26 14:31:49 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -681,18 +681,19 @@ LUA_API int lua_next (lua_State *L, int index) {
 
 
 LUA_API int lua_getn (lua_State *L, int index) {
-  Hash *h;
+  StkId t;
   const TObject *value;
   int n;
   lua_lock(L);
-  h = hvalue(luaA_index(L, index));
-  value = luaH_getstr(h, luaS_newliteral(L, l_s("n")));  /* = h.n */
+  t = luaA_index(L, index);
+  api_check(L, ttype(t) == LUA_TTABLE);
+  value = luaH_getstr(hvalue(t), luaS_newliteral(L, l_s("n")));  /* = t.n */
   if (ttype(value) == LUA_TNUMBER)
     n = (int)nvalue(value);
   else {
     lua_Number max = 0;
-    int i = h->size;
-    Node *nd = h->node;
+    int i = hvalue(t)->size;
+    Node *nd = hvalue(t)->node;
     while (i--) {
       if (ttype_key(nd) == LUA_TNUMBER &&
           ttype(val(nd)) != LUA_TNIL &&
@@ -735,5 +736,25 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size) {
   p = ts->u.d.value;
   lua_unlock(L);
   return p;
+}
+
+
+LUA_API int lua_getweakmode (lua_State *L, int index) {
+  StkId t;
+  int mode;
+  lua_lock(L);
+  t = luaA_index(L, index);
+  api_check(L, ttype(t) == LUA_TTABLE);
+  mode = hvalue(t)->weakmode;
+  lua_unlock(L);
+  return mode;
+}
+
+
+LUA_API void  lua_setweakmode (lua_State *L, int mode) {
+  lua_lock(L);
+  api_check(L, ttype(L->top-1) == LUA_TTABLE);
+  hvalue(L->top-1)->weakmode = mode;
+  lua_unlock(L);
 }
 

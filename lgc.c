@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.94 2001/03/07 18:09:25 roberto Exp roberto $
+** $Id: lgc.c,v 1.95 2001/03/26 14:31:49 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -36,9 +36,6 @@ typedef struct GCState {
   Closure *cmark;  /* list of marked closures to be visited */
 } GCState;
 
-
-
-static void markobject (GCState *st, TObject *o);
 
 
 /* mark a string; marks larger than 1 cannot be changed */
@@ -144,22 +141,30 @@ static void traverseclosure (GCState *st, Closure *f) {
 }
 
 
+static void removekey (Node *n) {
+  if (ttype_key(n) != LUA_TNIL && ttype_key(n) != LUA_TNUMBER)
+    n->key_value.ts = NULL;  /* dead key; remove it */
+}
+
+
 static void traversetable (GCState *st, Hash *h) {
   int i;
+  int mode = h->weakmode;
+  if (mode == (LUA_WEAK_KEY | LUA_WEAK_VALUE))
+    return;  /* avoid traversing if both keys and values are weak */
   for (i=0; i<h->size; i++) {
     Node *n = node(h, i);
-    if (ttype(val(n)) == LUA_TNIL) {
-      if (ttype_key(n) != LUA_TNIL)
-        n->key_value.ts = NULL;  /* dead key; remove it */
-    }
+    if (ttype(val(n)) == LUA_TNIL)
+      removekey(n);
     else {
       lua_assert(ttype_key(n) != LUA_TNIL);
-      if (ttype_key(n) != LUA_TNUMBER) {
-        TObject o;
-        setkey2obj(&o, n);
-        markobject(st, &o);
+      if (ttype_key(n) != LUA_TNUMBER && !(mode & LUA_WEAK_KEY)) {
+        TObject k;
+        setkey2obj(&k, n);
+        markobject(st, &k);
       }
-      markobject(st, &n->val);
+      if (!(mode & LUA_WEAK_VALUE))
+        markobject(st, &n->val);
     }
   }
 }
@@ -190,7 +195,6 @@ static void markall (lua_State *L) {
 
 
 static int hasmark (const TObject *o) {
-  /* valid only for locked objects */
   switch (ttype(o)) {
     case LUA_TSTRING: case LUA_TUSERDATA:
       return tsvalue(o)->marked;
@@ -198,7 +202,7 @@ static int hasmark (const TObject *o) {
       return ismarked(hvalue(o));
     case LUA_TFUNCTION:
       return ismarked(clvalue(o));
-    default:  /* number */
+    default:  /* number, nil */
       return 1;
   }
 }
@@ -221,6 +225,30 @@ static void invalidaterefs (global_State *G) {
                (r->st < n && VALIDLINK(L, G->refArray[r->st].st, n)));
   }
   lua_assert(VALIDLINK(L, G->refFree, n));
+}
+
+
+static void invalidatetable (Hash *h) {
+  int i;
+  for (i=0; i<h->size; i++) {
+    Node *n = node(h, i);
+    TObject k;
+    if (ttype(val(n)) == LUA_TNIL) continue;  /* empty node */
+    setkey2obj(&k, n);
+    if (!hasmark(val(n)) || !hasmark(&k)) {
+      setnilvalue(val(n));  /* remove value */
+      removekey(n);
+    }
+  }
+}
+
+
+static void invalidatetables (global_State *G) {
+  Hash *h;
+  for (h = G->roottable; h; h = h->next) {
+    if (ismarked(h) && h->weakmode)
+      invalidatetable(h);
+  }
 }
 
 
@@ -381,6 +409,7 @@ void luaC_collect (lua_State *L, int all) {
 void luaC_collectgarbage (lua_State *L) {
   markall(L);
   invalidaterefs(G(L));  /* check unlocked references */
+  invalidatetables(G(L));
   luaC_collect(L, 0);
   checkMbuffer(L);
   G(L)->GCthreshold = 2*G(L)->nblocks;  /* set new threshold */

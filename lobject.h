@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.100 2001/03/02 17:27:50 roberto Exp roberto $
+** $Id: lobject.h,v 1.101 2001/03/07 18:09:25 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -179,6 +179,7 @@ typedef struct Hash {
   Node *firstfree;  /* this position is free; all positions after it are full */
   struct Hash *next;
   struct Hash *mark;  /* marked tables (point to itself when not marked) */
+  int weakmode;
 } Hash;
 
 

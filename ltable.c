@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.77 2001/02/23 17:17:25 roberto Exp roberto $
+** $Id: ltable.c,v 1.78 2001/03/26 14:31:49 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -118,6 +118,7 @@ Hash *luaH_new (lua_State *L, int size) {
   G(L)->roottable = t;
   t->mark = t;
   t->size = 0;
+  t->weakmode = 0;
   t->node = NULL;
   setnodevector(L, t, power2(L, size));
   return t;
