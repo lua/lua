@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.53 2000/05/30 19:00:31 roberto Exp roberto $
+** $Id: lgc.c,v 1.54 2000/06/05 14:56:18 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -64,6 +64,8 @@ static void tablemark (lua_State *L, Hash *h) {
     for (i=h->size-1; i>=0; i--) {
       Node *n = node(h,i);
       if (ttype(key(n)) != TAG_NIL) {
+        if (ttype(val(n)) == TAG_NIL)
+          luaH_remove(h, key(n));  /* dead element; try to remove it */
         markobject(L, &n->key);
         markobject(L, &n->val);
       }

@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.42 2000/05/11 18:57:19 roberto Exp roberto $
+** $Id: ltable.c,v 1.43 2000/05/24 13:54:49 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -119,6 +119,28 @@ int luaH_pos (lua_State *L, const Hash *t, const TObject *key) {
   const TObject *v = luaH_get(L, t, key);
   return (v == &luaO_nilobject) ?  -1 :  /* key not found */
       (int)(((const char *)v - (const char *)(&t->node[0].val))/sizeof(Node));
+}
+
+/*
+** try to remove a key without value from a table. To avoid problems with
+** hash, change `key' for a number with the same hash.
+*/
+void luaH_remove (Hash *t, TObject *key) {
+  /* do not remove numbers */
+  if (ttype(key) != TAG_NUMBER) {
+    /* try to find a number `n' with the same hash as `key' */
+    Node *mp = luaH_mainposition(t, key);
+    int n = mp - &t->node[0];
+    /* make sure `n' is not in `t' */
+    while (luaH_getnum(t, n) != &luaO_nilobject) {
+      if (t->size >= MAX_INT-n)
+        return;  /* give up; (to avoid overflow) */
+      n += t->size;
+    }
+    ttype(key) = TAG_NUMBER;
+    nvalue(key) = n;
+    LUA_ASSERT(L, luaH_mainposition(t, key) == mp, "cannot change hash");
+  }
 }
 
 
