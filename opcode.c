@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.68 1996/04/25 14:10:00 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.69 1996/05/28 21:07:32 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -539,7 +539,7 @@ int lua_call (char *funcname)
 
 /*
 ** Open file, generate opcode and execute global statement. Return 0 on
-** success or 1 on error.
+** success or non 0 on error.
 */
 int lua_dofile (char *filename)
 {
@@ -547,7 +547,7 @@ int lua_dofile (char *filename)
   int c;
   FILE *f = lua_openfile(filename);
   if (f == NULL)
-    return 1;
+    return 2;
   c = fgetc(f);
   ungetc(c, f);
   status = (c == ID_CHUNK) ? luaI_undump(f) : do_protectedmain();
@@ -557,12 +557,14 @@ int lua_dofile (char *filename)
 
 /*
 ** Generate opcode stored on string and execute global statement. Return 0 on
-** success or 1 on error.
+** success or non 0 on error.
 */
-int lua_dostring (char *string)
+int lua_dostring (char *str)
 {
   int status;
-  lua_openstring(string);
+  if (str == NULL)
+    return 1;
+  lua_openstring(str);
   status = do_protectedmain();
   lua_closestring();
   return status;
