@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.137 2005/03/22 16:55:35 roberto Exp roberto $
+** $Id: lua.c,v 1.138 2005/03/23 17:50:49 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -46,8 +46,9 @@ static void print_usage (void) {
   "  -        execute stdin as a file\n"
   "  -e stat  execute string `stat'\n"
   "  -i       enter interactive mode after executing `script'\n"
-  "  -l name  load and run library `name'\n"
+  "  -l name  require library `name'\n"
   "  -v       show version information\n"
+  "  -w	      control access to undefined globals\n"
   "  --       stop handling options\n" ,
   progname);
 }
@@ -130,14 +131,9 @@ static int dostring (lua_State *L, const char *s, const char *name) {
 
 
 static int dolibrary (lua_State *L, const char *name) {
-  luaL_getfield(L, LUA_GLOBALSINDEX, "package.path");
-  if (!lua_isstring(L, -1)) {
-    l_message(progname, "`package.path' must be a string");
-    return 1;
-  }
-  name = luaL_searchpath(L, name, lua_tostring(L, -1));
-  if (name == NULL) return report(L, 1);
-  else  return dofile(L, name);
+  lua_getglobal(L, "require");
+  lua_pushstring(L, name);
+  return report(L, lua_pcall(L, 1, 0, 0));
 }
 
 
