@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.18 2001/01/10 16:58:11 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.19 2001/01/25 16:45:36 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -404,7 +404,8 @@ static int luaB_assert (lua_State *L) {
   luaL_checkany(L, 1);
   if (lua_isnil(L, 1))
     luaL_verror(L, "assertion failed!  %.90s", luaL_opt_string(L, 2, ""));
-  return 0;
+  lua_settop(L, 1);
+  return 1;
 }
 
 

@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.47 2000/12/28 17:25:45 roberto Exp roberto $
+% $Id: manual.tex,v 1.48 2001/01/29 19:33:55 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage}
@@ -134,7 +134,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{{\small \tt\$Date: 2000/12/28 17:25:45 $ $}}
+\date{{\small \tt\$Date: 2001/01/29 19:33:55 $ $}}
 
 \maketitle
 
@@ -2436,7 +2436,8 @@ to change the way such messages are shown
 
 \subsubsection*{\ff \T{assert (v [, message])}}\DefLIB{assert}
 Issues an \emph{``assertion failed!''} error
-when its argument \verb|v| is \nil.
+when its argument \verb|v| is \nil;
+otherwise, returns this argument.
 This function is equivalent to the following Lua function:
 \begin{verbatim}
        function assert (v, m)
@@ -2444,6 +2445,7 @@ This function is equivalent to the following Lua function:
            m = m or ""
            error("assertion failed!  " .. m)
          end
+         return v
        end
 \end{verbatim}
 
