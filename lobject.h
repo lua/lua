@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.37 1999/11/22 13:12:07 roberto Exp roberto $
+** $Id: lobject.h,v 1.38 1999/11/26 18:59:20 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -25,6 +25,8 @@
 #define LUA_ASSERT(L,c,s)		/* empty */
 #endif
 
+
+#define UNUSED(x)	(void)x		/* to avoid warnings */
 
 /*
 ** "real" is the type "number" of Lua

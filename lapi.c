@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.60 1999/11/29 19:31:29 roberto Exp roberto $
+** $Id: lapi.c,v 1.61 1999/12/01 19:50:08 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -29,11 +29,6 @@
 const char lua_ident[] = "$Lua: " LUA_VERSION " " LUA_COPYRIGHT " $\n"
                                "$Authors:  " LUA_AUTHORS " $";
 
-
-
-TObject *luaA_Address (lua_State *L, lua_Object o) {
-  return (o != LUA_NOOBJECT) ?  Address(L, o) : NULL;
-}
 
 
 static lua_Type normalized_type (const TObject *o) {
@@ -71,14 +66,14 @@ static void checkCparams (lua_State *L, int nParams) {
 static lua_Object put_luaObject (lua_State *L, const TObject *o) {
   luaD_openstack(L, L->Cstack.base);
   *L->Cstack.base++ = *o;
-  return Ref(L, L->Cstack.base-1);
+  return L->Cstack.base-1;
 }
 
 
 lua_Object luaA_putObjectOnTop (lua_State *L) {
   luaD_openstack(L, L->Cstack.base);
   *L->Cstack.base++ = *(--L->top);
-  return Ref(L, L->Cstack.base-1);
+  return L->Cstack.base-1;
 }
 
 
@@ -102,7 +97,7 @@ lua_Object lua_pop (lua_State *L) {
 */
 lua_Object lua_lua2C (lua_State *L, int number) {
   if (number <= 0 || number > L->Cstack.num) return LUA_NOOBJECT;
-  return Ref(L, L->Cstack.lua2C+number-1);
+  return L->Cstack.lua2C+number-1;
 }
 
 
@@ -111,7 +106,7 @@ int lua_callfunction (lua_State *L, lua_Object function) {
     return 1;
   else {
     luaD_openstack(L, L->Cstack.base);
-    set_normalized(L->Cstack.base, Address(L, function));
+    set_normalized(L->Cstack.base, function);
     return luaD_protectedrun(L);
   }
 }
@@ -205,27 +200,33 @@ void lua_rawsetglobal (lua_State *L, const char *name) {
 
 
 const char *lua_type (lua_State *L, lua_Object o) {
-  return (o == LUA_NOOBJECT) ? "NOOBJECT" : luaO_typename(L, Address(L, o));
+  UNUSED(L);
+  return (o == LUA_NOOBJECT) ? "NOOBJECT" : luaO_typename(L, o);
 }
 
 int lua_isnil (lua_State *L, lua_Object o) {
-  return (o != LUA_NOOBJECT) && (ttype(Address(L, o)) == LUA_T_NIL);
+  UNUSED(L);
+  return (o != LUA_NOOBJECT) && (ttype(o) == LUA_T_NIL);
 }
 
 int lua_istable (lua_State *L, lua_Object o) {
-  return (o != LUA_NOOBJECT) && (ttype(Address(L, o)) == LUA_T_ARRAY);
+  UNUSED(L);
+  return (o != LUA_NOOBJECT) && (ttype(o) == LUA_T_ARRAY);
 }
 
 int lua_isuserdata (lua_State *L, lua_Object o) {
-  return (o != LUA_NOOBJECT) && (ttype(Address(L, o)) == LUA_T_USERDATA);
+  UNUSED(L);
+  return (o != LUA_NOOBJECT) && (ttype(o) == LUA_T_USERDATA);
 }
 
 int lua_iscfunction (lua_State *L, lua_Object o) {
+  UNUSED(L);
   return (lua_tag(L, o) == LUA_T_CPROTO);
 }
 
 int lua_isnumber (lua_State *L, lua_Object o) {
-  return (o != LUA_NOOBJECT) && (tonumber(Address(L, o)) == 0);
+  UNUSED(L);
+  return (o != LUA_NOOBJECT) && (tonumber(o) == 0);
 }
 
 int lua_isstring (lua_State *L, lua_Object o) {
@@ -239,41 +240,44 @@ int lua_isfunction (lua_State *L, lua_Object o) {
 }
 
 int lua_equal(lua_State *L, lua_Object o1, lua_Object o2) {
+  UNUSED(L);
   if (o1 == LUA_NOOBJECT || o2 == LUA_NOOBJECT) return (o1 == o2);
-  else return luaO_equalObj(Address(L, o1), Address(L, o2));
+  else return luaO_equalObj(o1, o2);
 }
 
 
 double lua_getnumber (lua_State *L, lua_Object obj) {
- if (obj == LUA_NOOBJECT) return 0.0;
- if (tonumber(Address(L, obj))) return 0.0;
- else return (nvalue(Address(L, obj)));
+  UNUSED(L);
+  if (obj == LUA_NOOBJECT) return 0.0;
+  if (tonumber(obj)) return 0.0;
+  else return (nvalue(obj));
 }
 
 const char *lua_getstring (lua_State *L, lua_Object obj) {
   luaC_checkGC(L);  /* `tostring' may create a new string */
-  if (obj == LUA_NOOBJECT || tostring(L, Address(L, obj)))
+  if (obj == LUA_NOOBJECT || tostring(L, obj))
     return NULL;
-  else return (svalue(Address(L, obj)));
+  else return (svalue(obj));
 }
 
 long lua_strlen (lua_State *L, lua_Object obj) {
-  luaC_checkGC(L);  /* `tostring' may create a new string */
-  if (obj == LUA_NOOBJECT || tostring(L, Address(L, obj)))
+  UNUSED(L);
+  if (obj == LUA_NOOBJECT || tostring(L, obj))
     return 0L;
-  else return (tsvalue(Address(L, obj))->u.s.len);
+  else return (tsvalue(obj)->u.s.len);
 }
 
 void *lua_getuserdata (lua_State *L, lua_Object obj) {
-  if (obj == LUA_NOOBJECT || ttype(Address(L, obj)) != LUA_T_USERDATA)
+  UNUSED(L);
+  if (obj == LUA_NOOBJECT || ttype(obj) != LUA_T_USERDATA)
     return NULL;
-  else return tsvalue(Address(L, obj))->u.d.value;
+  else return tsvalue(obj)->u.d.value;
 }
 
 lua_CFunction lua_getcfunction (lua_State *L, lua_Object obj) {
   if (!lua_iscfunction(L, obj))
     return NULL;
-  else return fvalue(luaA_protovalue(Address(L, obj)));
+  else return fvalue(luaA_protovalue(obj));
 }
 
 
@@ -330,16 +334,16 @@ void luaA_pushobject (lua_State *L, const TObject *o) {
 void lua_pushobject (lua_State *L, lua_Object o) {
   if (o == LUA_NOOBJECT)
     lua_error(L, "API error - attempt to push a NOOBJECT");
-  set_normalized(L->top, Address(L, o));
+  set_normalized(L->top, o);
   incr_top;
 }
 
 
-int lua_tag (lua_State *L, lua_Object lo) {
-  if (lo == LUA_NOOBJECT)
+int lua_tag (lua_State *L, lua_Object o) {
+  UNUSED(L);
+  if (o == LUA_NOOBJECT)
      return LUA_T_NIL;
   else {
-    const TObject *o = Address(L, lo);
     int t;
     switch (t = ttype(o)) {
       case LUA_T_USERDATA:
@@ -429,8 +433,7 @@ int luaA_next (lua_State *L, const Hash *t, int i) {
 }
 
 
-int lua_next (lua_State *L, lua_Object o, int i) {
-  const TObject *t = Address(L, o);
+int lua_next (lua_State *L, lua_Object t, int i) {
   if (ttype(t) != LUA_T_ARRAY)
     lua_error(L, "API error - object is not a table in `lua_next'"); 
   i = luaA_next(L, avalue(t), i);
@@ -482,33 +485,31 @@ lua_Function lua_stackedfunction (lua_State *L, int level) {
     int t = L->stack[i].ttype;
     if (t == LUA_T_CLMARK || t == LUA_T_PMARK || t == LUA_T_CMARK)
       if (level-- == 0)
-        return Ref(L, L->stack+i);
+        return L->stack+i;
   }
   return LUA_NOOBJECT;
 }
 
 
-int lua_nups (lua_State *L, lua_Function func) {
-  const TObject *o = luaA_Address(L, func);
-  return (!o || normalized_type(o) != LUA_T_CLOSURE) ? 0 : o->value.cl->nelems;
+int lua_nups (lua_State *L, lua_Function f) {
+  UNUSED(L);
+  return (!f || normalized_type(f) != LUA_T_CLOSURE) ? 0 : f->value.cl->nelems;
 }
 
 
-int lua_currentline (lua_State *L, lua_Function func) {
-  const TObject *f = Address(L, func);
+int lua_currentline (lua_State *L, lua_Function f) {
   return (f+1 < L->top && (f+1)->ttype == LUA_T_LINE) ? (f+1)->value.i : -1;
 }
 
 
-lua_Object lua_getlocal (lua_State *L, lua_Function func, int local_number,
+lua_Object lua_getlocal (lua_State *L, lua_Function f, int local_number,
                          const char **name) {
-  /* check whether func is a Lua function */
-  if (lua_tag(L, func) != LUA_T_PROTO)
+  /* check whether `f' is a Lua function */
+  if (lua_tag(L, f) != LUA_T_PROTO)
     return LUA_NOOBJECT;
   else {
-    TObject *f = Address(L, func);
     TProtoFunc *fp = luaA_protovalue(f)->value.tf;
-    *name = luaF_getlocalname(fp, local_number, lua_currentline(L, func));
+    *name = luaF_getlocalname(fp, local_number, lua_currentline(L, f));
     if (*name) {
       /* if "*name", there must be a LUA_T_LINE */
       /* therefore, f+2 points to function base */
@@ -520,15 +521,14 @@ lua_Object lua_getlocal (lua_State *L, lua_Function func, int local_number,
 }
 
 
-int lua_setlocal (lua_State *L, lua_Function func, int local_number) {
-  /* check whether func is a Lua function */
-  if (lua_tag(L, func) != LUA_T_PROTO)
+int lua_setlocal (lua_State *L, lua_Function f, int local_number) {
+  /* check whether `f' is a Lua function */
+  if (lua_tag(L, f) != LUA_T_PROTO)
     return 0;
   else {
-    TObject *f = Address(L, func);
     TProtoFunc *fp = luaA_protovalue(f)->value.tf;
     const char *name = luaF_getlocalname(fp, local_number,
-                                         lua_currentline(L, func));
+                                         lua_currentline(L, f));
     checkCparams(L, 1);
     --L->top;
     if (name) {
@@ -548,7 +548,7 @@ void lua_funcinfo (lua_State *L, lua_Object func,
   if (!lua_isfunction(L, func))
     lua_error(L, "API error - `funcinfo' called with a non-function value");
   else {
-    const TObject *f = luaA_protovalue(Address(L, func));
+    const TObject *f = luaA_protovalue(func);
     if (normalized_type(f) == LUA_T_PROTO) {
       *source = tfvalue(f)->source->str;
       *linedefined = tfvalue(f)->lineDefined;
@@ -569,7 +569,7 @@ static int checkfunc (lua_State *L, TObject *o) {
 const char *lua_getobjname (lua_State *L, lua_Object o, const char **name) {
   /* try to find a name for given function */
   GlobalVar *g;
-  set_normalized(L->top, Address(L, o)); /* to be used by `checkfunc' */
+  set_normalized(L->top, o); /* to be used by `checkfunc' */
   for (g=L->rootglobal; g; g=g->next) {
     if (checkfunc(L, &g->value)) {
       *name = g->name->str;

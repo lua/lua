@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.78 1999/11/30 13:06:50 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.79 1999/12/01 19:50:08 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -70,7 +70,7 @@ static real getnarg (lua_State *L, const Hash *a) {
 
 
 static Hash *gettable (lua_State *L, int arg) {
-  return avalue(luaA_Address(L, luaL_tablearg(L, arg)));
+  return avalue(luaL_tablearg(L, arg));
 }
 
 /* }====================================================== */
@@ -329,7 +329,7 @@ static void luaB_call (lua_State *L) {
 
 
 static void luaB_nextvar (lua_State *L) {
-  const TObject *o = luaA_Address(L, luaL_nonnullarg(L, 1));
+  lua_Object o = luaL_nonnullarg(L, 1);
   TaggedString *g;
   if (ttype(o) == LUA_T_NIL)
     g = NULL;
@@ -344,7 +344,7 @@ static void luaB_nextvar (lua_State *L) {
 
 static void luaB_next (lua_State *L) {
   const Hash *a = gettable(L, 1);
-  const TObject *k = luaA_Address(L, luaL_nonnullarg(L, 2));
+  lua_Object k = luaL_nonnullarg(L, 2);
   int i;  /* will get first element after `i' */
   if (ttype(k) == LUA_T_NIL)
     i = 0;  /* get first */
@@ -358,15 +358,14 @@ static void luaB_next (lua_State *L) {
 
 
 static void luaB_tostring (lua_State *L) {
-  lua_Object obj = lua_getparam(L, 1);
-  const TObject *o = luaA_Address(L, obj);
+  lua_Object o = lua_getparam(L, 1);
   char buff[64];
   switch (ttype(o)) {
     case LUA_T_NUMBER:
-      lua_pushstring(L, lua_getstring(L, obj));
+      lua_pushstring(L, lua_getstring(L, o));
       return;
     case LUA_T_STRING:
-      lua_pushobject(L, obj);
+      lua_pushobject(L, o);
       return;
     case LUA_T_ARRAY:
       sprintf(buff, "table: %p", o->value.a);
@@ -417,7 +416,7 @@ static void luaB_foreachi (lua_State *L) {
   const Hash *t = gettable(L, 1);
   int n = (int)getnarg(L, t);
   int i;
-  StkId f = luaA_Address(L, luaL_functionarg(L, 2));
+  lua_Object f = luaL_functionarg(L, 2);
   luaD_checkstack(L, 3);  /* for f, key, and val */
   for (i=1; i<=n; i++) {
     *(L->top++) = *f;
@@ -433,7 +432,7 @@ static void luaB_foreachi (lua_State *L) {
 
 static void luaB_foreach (lua_State *L) {
   const Hash *a = gettable(L, 1);
-  StkId f = luaA_Address(L, luaL_functionarg(L, 2));
+  lua_Object f = luaL_functionarg(L, 2);
   int i;
   luaD_checkstack(L, 3);  /* for f, key, and val */
   for (i=0; i<a->size; i++) {
@@ -452,7 +451,7 @@ static void luaB_foreach (lua_State *L) {
 
 
 static void luaB_foreachvar (lua_State *L) {
-  StkId f = luaA_Address(L, luaL_functionarg(L, 1));
+  lua_Object f = luaL_functionarg(L, 1);
   GlobalVar *gv;
   luaD_checkstack(L, 4);  /* for extra var name, f, var name, and globalval */
   for (gv = L->rootglobal; gv; gv = gv->next) {
@@ -492,7 +491,7 @@ static void luaB_tinsert (lua_State *L) {
   luaV_setn(L, a, n+1);  /* a.n = n+1 */
   for ( ;n>=pos; n--)
     luaH_move(L, a, n, n+1);  /* a[n+1] = a[n] */
-  luaH_setint(L, a, pos, luaA_Address(L, v));  /* a[pos] = v */
+  luaH_setint(L, a, pos, v);  /* a[pos] = v */
 }
 
 
@@ -525,7 +524,7 @@ static int sort_comp (lua_State *L, lua_Object f, const TObject *a,
                                                   const TObject *b) {
   /* notice: the caller (auxsort) must check stack space */
   if (f != LUA_NOOBJECT) {
-    *(L->top) = *luaA_Address(L, f);
+    *(L->top) = *f;
     *(L->top+1) = *a;
     *(L->top+2) = *b;
     L->top += 3;
@@ -618,20 +617,20 @@ static void mem_query (lua_State *L) {
 
 
 static void hash_query (lua_State *L) {
-  const TObject *o = luaA_Address(L, luaL_nonnullarg(L, 1));
+  lua_Object o = luaL_nonnullarg(L, 1);
   if (lua_getparam(L, 2) == LUA_NOOBJECT) {
     luaL_arg_check(L, ttype(o) == LUA_T_STRING, 1, "string expected");
     lua_pushnumber(L, tsvalue(o)->hash);
   }
   else {
-    const Hash *t = avalue(luaA_Address(L, luaL_tablearg(L, 2)));
+    const Hash *t = avalue(luaL_tablearg(L, 2));
     lua_pushnumber(L, luaH_mainposition(L, t, o) - t->node);
   }
 }
 
 
 static void table_query (lua_State *L) {
-  const Hash *t = avalue(luaA_Address(L, luaL_tablearg(L, 1)));
+  const Hash *t = avalue(luaL_tablearg(L, 1));
   int i = luaL_opt_int(L, 2, -1);
   if (i == -1) {
     lua_pushnumber(L, t->size);
