@@ -35,10 +35,10 @@
 /*
 ** max size of array part is 2^MAXBITS
 */
-#if BITS_INT > 24
+#if BITS_INT > 26
 #define MAXBITS		24
 #else
-#define MAXBITS		(BITS_INT-1)
+#define MAXBITS		(BITS_INT-2)
 #endif
 
 /* check whether `x' < 2^MAXBITS */
@@ -140,9 +140,9 @@ int luaH_nexti (Table *t, int i, TObject *where) {
 static void computesizes  (int nums[], int ntotal, int *narray, int *nhash) {
   int n = 0;  /* (log of) optimal size for array part */
   int na = 0;  /* number of elements to go to array part */
-  int i=0;
+  int i;
   int a = nums[0];  /* number of elements smaller than 2^i */
-  while (++i <= MAXBITS && *narray >= twoto(i-1)) {
+  for (i = 1; i <= MAXBITS && *narray >= twoto(i-1); i++) {
     if (nums[i] == 0) continue;
     a += nums[i];
     if (a >= twoto(i-1)) {  /* more than half elements in use? */
@@ -152,7 +152,7 @@ static void computesizes  (int nums[], int ntotal, int *narray, int *nhash) {
   }
   lua_assert(na <= *narray && *narray <= ntotal);
   *nhash = ntotal - na;
-  *narray = (n == 0) ? 0 : (1<<n);
+  *narray = (n == 0) ? 0 : twoto(n);
   lua_assert(na <= *narray && na >= *narray/2);
 }
 
@@ -199,8 +199,6 @@ static void numuse (const Table *t, int *narray, int *nhash) {
 
 static void setarrayvector (lua_State *L, Table *t, int size) {
   int i;
-  if (size > twoto(MAXBITS))
-    luaD_error(L, "table overflow");
   luaM_reallocvector(L, t->array, t->sizearray, size, TObject);
   for (i=t->sizearray; i<size; i++)
      setnilvalue(&t->array[i]);
