@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.11 2004/09/08 14:23:09 roberto Exp roberto $
+** $Id: lgc.c,v 2.12 2004/09/15 20:38:15 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -367,7 +367,7 @@ static void cleartable (GCObject *l) {
     while (i--) {
       Node *n = gnode(h, i);
       if (!ttisnil(gval(n)) &&  /* non-empty entry? */
-          (iscleared(gkey(n), 1) || iscleared(gval(n), 0)))
+          (iscleared(key2tval(n), 1) || iscleared(gval(n), 0)))
         removeentry(n);  /* remove entry from table */
     }
     l = h->gclist;

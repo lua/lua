@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.3 2004/05/03 12:30:41 roberto Exp roberto $
+** $Id: lobject.c,v 2.4 2004/07/09 16:01:38 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,7 @@
 
 
 
-const TValue luaO_nilobject = {LUA_TNIL, {NULL}};
+const TValue luaO_nilobject = {{NULL}, LUA_TNIL};
 
 
 /*

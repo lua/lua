@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.5 2004/08/31 17:57:33 roberto Exp roberto $
+** $Id: ltable.c,v 2.6 2004/09/27 18:54:45 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -152,7 +152,7 @@ int luaH_next (lua_State *L, Table *t, StkId key) {
   }
   for (i -= t->sizearray; i < sizenode(t); i++) {  /* then hash part */
     if (!ttisnil(gval(gnode(t, i)))) {  /* a non-nil value? */
-      setobj2s(L, key, gkey(gnode(t, i)));
+      setobj2s(L, key, key2tval(gnode(t, i)));
       setobj2s(L, key+1, gval(gnode(t, i)));
       return 1;
     }
@@ -215,7 +215,7 @@ static void numuse (const Table *t, int *narray, int *nhash) {
   while (i--) {
     Node *n = &t->node[i];
     if (!ttisnil(gval(n))) {
-      int k = arrayindex(gkey(n));
+      int k = arrayindex(key2tval(n));
       if (0 < k && k <= MAXASIZE) {  /* is `key' an appropriate array index? */
         nums[luaO_log2(k-1)+1]++;  /* count as such */
         (*narray)++;
@@ -245,12 +245,12 @@ static void setnodevector (lua_State *L, Table *t, int lsize) {
     t->node = G(L)->dummynode;  /* use common `dummynode' */
     lua_assert(ttisnil(gkey(t->node)));  /* assert invariants: */
     lua_assert(ttisnil(gval(t->node)));
-    lua_assert(t->node->next == NULL);  /* (`dummynode' must be empty) */
+    lua_assert(gnext(t->node) == NULL);  /* (`dummynode' must be empty) */
   }
   else {
     t->node = luaM_newvector(L, size, Node);
     for (i=0; i<size; i++) {
-      t->node[i].next = NULL;
+      gnext(&t->node[i]) = NULL;
       setnilvalue(gkey(gnode(t, i)));
       setnilvalue(gval(gnode(t, i)));
     }
@@ -274,7 +274,7 @@ void luaH_resize (lua_State *L, Table *t, int nasize, int nhsize) {
     nold = temp;
     setnilvalue(gkey(G(L)->dummynode));  /* restate invariant */
     setnilvalue(gval(G(L)->dummynode));
-    lua_assert(G(L)->dummynode->next == NULL);
+    lua_assert(gnext(G(L)->dummynode) == NULL);
   }
   if (nasize > oldasize)  /* array part must grow? */
     setarrayvector(L, t, nasize);
@@ -295,7 +295,7 @@ void luaH_resize (lua_State *L, Table *t, int nasize, int nhsize) {
   for (i = twoto(oldhsize) - 1; i >= 0; i--) {
     Node *old = nold+i;
     if (!ttisnil(gval(old)))
-      setobjt2t(L, luaH_set(L, t, gkey(old)), gval(old));
+      setobjt2t(L, luaH_set(L, t, key2tval(old)), gval(old));
   }
   if (oldhsize)
     luaM_freearray(L, nold, twoto(oldhsize), Node);  /* free old array */
@@ -351,24 +351,25 @@ static TValue *newkey (lua_State *L, Table *t, const TValue *key) {
   TValue *val;
   Node *mp = luaH_mainposition(t, key);
   if (!ttisnil(gval(mp))) {  /* main position is not free? */
-    Node *othern = luaH_mainposition(t, gkey(mp));  /* `mp' of colliding node */
+    /* `mp' of colliding node */
+    Node *othern = luaH_mainposition(t, key2tval(mp));
     Node *n = t->firstfree;  /* get a free place */
     if (othern != mp) {  /* is colliding node out of its main position? */
       /* yes; move colliding node into free position */
-      while (othern->next != mp) othern = othern->next;  /* find previous */
-      othern->next = n;  /* redo the chain with `n' in place of `mp' */
+      while (gnext(othern) != mp) othern = gnext(othern);  /* find previous */
+      gnext(othern) = n;  /* redo the chain with `n' in place of `mp' */
       *n = *mp;  /* copy colliding node into free pos. (mp->next also goes) */
-      mp->next = NULL;  /* now `mp' is free */
+      gnext(mp) = NULL;  /* now `mp' is free */
       setnilvalue(gval(mp));
     }
     else {  /* colliding node is in its own main position */
       /* new node will go into free position */
-      n->next = mp->next;  /* chain new position */
-      mp->next = n;
+      gnext(n) = gnext(mp);  /* chain new position */
+      gnext(mp) = n;
       mp = n;
     }
   }
-  setobj2t(L, gkey(mp), key);
+  gkey(mp)->value = key->value; gkey(mp)->tt = key->tt;
   luaC_barriert(L, t, key);
   lua_assert(ttisnil(gval(mp)));
   for (;;) {  /* correct `firstfree' */
@@ -400,7 +401,7 @@ const TValue *luaH_getnum (Table *t, int key) {
     do {  /* check whether `key' is somewhere in the chain */
       if (ttisnumber(gkey(n)) && nvalue(gkey(n)) == nk)
         return gval(n);  /* that's it */
-      else n = n->next;
+      else n = gnext(n);
     } while (n);
     return &luaO_nilobject;
   }
@@ -415,7 +416,7 @@ const TValue *luaH_getstr (Table *t, TString *key) {
   do {  /* check whether `key' is somewhere in the chain */
     if (ttisstring(gkey(n)) && rawtsvalue(gkey(n)) == key)
       return gval(n);  /* that's it */
-    else n = n->next;
+    else n = gnext(n);
   } while (n);
   return &luaO_nilobject;
 }
@@ -438,8 +439,9 @@ const TValue *luaH_get (Table *t, const TValue *key) {
     default: {
       Node *n = luaH_mainposition(t, key);
       do {  /* check whether `key' is somewhere in the chain */
-        if (luaO_rawequalObj(gkey(n), key)) return gval(n);  /* that's it */
-        else n = n->next;
+        if (luaO_rawequalObj(key2tval(n), key))
+          return gval(n);  /* that's it */
+        else n = gnext(n);
       } while (n);
       return &luaO_nilobject;
     }
