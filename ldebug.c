@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.49 2000/10/27 11:39:52 roberto Exp roberto $
+** $Id: ldebug.c,v 1.50 2000/10/30 12:38:50 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -371,7 +371,7 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int stackpos) {
         OpCode op = GET_OPCODE(i);
         LUA_ASSERT(luaK_opproperties[op].push != VD,
                    "invalid opcode for default");
-        top -= luaK_opproperties[op].pop;
+        top -= (int)luaK_opproperties[op].pop;
         LUA_ASSERT(top >= 0, "wrong stack");
         top = pushpc(stack, pc, top, luaK_opproperties[op].push);
       }

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.116 2000/10/27 11:39:52 roberto Exp roberto $
+** $Id: lparser.c,v 1.117 2000/11/29 11:57:42 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -690,8 +690,8 @@ static BinOpr getbinopr (int op) {
 
 
 static const struct {
-  char left;  /* left priority for each binary operator */
-  char right; /* right priority */
+  unsigned char left;  /* left priority for each binary operator */
+  unsigned char right; /* right priority */
 } priority[] = {  /* ORDER OPR */
    {5, 5}, {5, 5}, {6, 6}, {6, 6},  /* arithmetic */
    {9, 8}, {4, 3},                  /* power and concat (right associative) */
@@ -718,13 +718,13 @@ static BinOpr subexpr (LexState *ls, expdesc *v, int limit) {
   else simpleexp(ls, v);
   /* expand while operators have priorities higher than `limit' */
   op = getbinopr(ls->t.token);
-  while (op != OPR_NOBINOPR && priority[op].left > limit) {
+  while (op != OPR_NOBINOPR && (int)priority[op].left > limit) {
     expdesc v2;
     BinOpr nextop;
     next(ls);
     luaK_infix(ls, op, v);
     /* read sub-expression with higher priority */
-    nextop = subexpr(ls, &v2, priority[op].right);
+    nextop = subexpr(ls, &v2, (int)priority[op].right);
     luaK_posfix(ls, op, v, &v2);
     op = nextop;
   }

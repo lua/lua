@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.50 2000/08/31 14:08:27 roberto Exp roberto $
+** $Id: lcode.c,v 1.51 2000/09/29 12:42:13 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -445,7 +445,7 @@ int luaK_code1 (FuncState *fs, OpCode o, int arg1) {
 
 int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
   Instruction i = previous_instruction(fs);
-  int delta = luaK_opproperties[o].push - luaK_opproperties[o].pop;
+  int delta = (int)luaK_opproperties[o].push - (int)luaK_opproperties[o].pop;
   int optm = 0;  /* 1 when there is an optimization */
   switch (o) {
     case OP_CLOSURE: {
@@ -647,7 +647,7 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
 }
 
 
-const struct OpProperties luaK_opproperties[NUM_OPCODES] = {
+const OpProperties luaK_opproperties[NUM_OPCODES] = {
   {iO, 0, 0},	/* OP_END */
   {iU, 0, 0},	/* OP_RETURN */
   {iAB, 0, 0},	/* OP_CALL */
