@@ -1,4 +1,4 @@
-# $Id: makefile,v 1.21 1996/03/05 15:57:53 roberto Exp roberto $
+# $Id: makefile,v 1.22 1996/03/15 18:22:09 roberto Exp roberto $
 
 #configuration
 
@@ -52,7 +52,7 @@ y.tab.c y.tab.h  : lua.stx
 	yacc++ -d lua.stx
 
 parser.c : y.tab.c
-	sed -e 's/yy/luaY_/g' y.tab.c > parser.c
+	sed -e 's/yy/luaY_/g' -e 's/malloc\.h/stdlib\.h/g' y.tab.c > parser.c
 
 parser.h : y.tab.h
 	sed -e 's/yy/luaY_/g' y.tab.h > parser.h
