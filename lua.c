@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.110 2002/11/25 17:47:13 roberto Exp roberto $
+** $Id: lua.c,v 1.111 2002/12/04 15:38:25 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -388,19 +388,44 @@ static int handle_luainit (void) {
 }
 
 
-int main (int argc, char *argv[]) {
+struct Smain {
+  int argc;
+  char **argv;
+  int status;
+};
+
+
+static int pmain (lua_State *l) {
+  struct Smain *s = (struct Smain *)lua_touserdata(l, 1);
   int status;
   int interactive = 0;
-  (void)argc;  /* to avoid warnings */
-  progname = argv[0];
-  L = lua_open();  /* create state */
-  lua_atpanic(L, l_panic);
-  lua_userinit(L);  /* open libraries */
+  progname = s->argv[0];
+  L = l;
+  lua_userinit(l);  /* open libraries */
   status = handle_luainit();
-  if (status != 0) return status;
-  status = handle_argv(argv, &interactive);
-  if (status == 0 && interactive) manual_input();
-  lua_close(L);
-  return status;
+  if (status == 0) {
+    status = handle_argv(s->argv, &interactive);
+    if (status == 0 && interactive) manual_input();
+  }
+  s->status = status;
+  return 0;
+}
+
+
+int main (int argc, char *argv[]) {
+  int status;
+  struct Smain s;
+  lua_State *l = lua_open();  /* create state */
+  if (l == NULL) {
+    l_message(argv[0], "cannot create state: not enough memory");
+    return EXIT_FAILURE;
+  }
+  s.argc = argc;
+  s.argv = argv;
+  lua_atpanic(l, l_panic);
+  status = lua_cpcall(l, &pmain, &s);
+  report(status);
+  lua_close(l);
+  return (status || s.status) ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 

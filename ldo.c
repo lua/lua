@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.208 2002/11/22 17:16:52 roberto Exp roberto $
+** $Id: ldo.c,v 1.209 2002/11/22 18:01:46 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -378,35 +378,17 @@ LUA_API int lua_yield (lua_State *L, int nresults) {
 }
 
 
-/*
-** Execute a protected call.
-*/
-struct CallS {  /* data to `f_call' */
-  StkId func;
-  int nresults;
-};
-
-
-static void f_call (lua_State *L, void *ud) {
-  struct CallS *c = cast(struct CallS *, ud);
-  luaD_call(L, c->func, c->nresults);
-}
-
-
-int luaD_pcall (lua_State *L, int nargs, int nresults, ptrdiff_t errfunc) {
-  struct CallS c;
+int luaD_pcall (lua_State *L, Pfunc func, void *u,
+                ptrdiff_t old_top, ptrdiff_t ef) {
   int status;
   unsigned short oldnCcalls = L->nCcalls;
-  ptrdiff_t old_top = savestack(L, L->top);
   ptrdiff_t old_ci = saveci(L, L->ci);
   lu_byte old_allowhooks = L->allowhook;
   ptrdiff_t old_errfunc = L->errfunc;
-  L->errfunc = errfunc;
-  c.func = L->top - (nargs+1);  /* function to be called */
-  c.nresults = nresults;
-  status = luaD_rawrunprotected(L, &f_call, &c);
+  L->errfunc = ef;
+  status = luaD_rawrunprotected(L, func, u);
   if (status != 0) {  /* an error occurred? */
-    StkId oldtop = restorestack(L, old_top) - (nargs+1);
+    StkId oldtop = restorestack(L, old_top);
     luaF_close(L, oldtop);  /* close eventual pending closures */
     seterrorobj(L, status, oldtop);
     L->nCcalls = oldnCcalls;
@@ -418,6 +400,7 @@ int luaD_pcall (lua_State *L, int nargs, int nresults, ptrdiff_t errfunc) {
   L->errfunc = old_errfunc;
   return status;
 }
+
 
 
 /*

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.223 2002/11/25 11:16:48 roberto Exp roberto $
+** $Id: lapi.c,v 1.224 2002/11/25 17:50:14 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -649,12 +649,66 @@ LUA_API void lua_call (lua_State *L, int nargs, int nresults) {
 }
 
 
+
+/*
+** Execute a protected call.
+*/
+struct CallS {  /* data to `f_call' */
+  StkId func;
+  int nresults;
+};
+
+
+static void f_call (lua_State *L, void *ud) {
+  struct CallS *c = cast(struct CallS *, ud);
+  luaD_call(L, c->func, c->nresults);
+}
+
+
+
 LUA_API int lua_pcall (lua_State *L, int nargs, int nresults, int errfunc) {
+  struct CallS c;
   int status;
   ptrdiff_t func;
   lua_lock(L);
   func = (errfunc == 0) ? 0 : savestack(L, luaA_index(L, errfunc));
-  status = luaD_pcall(L, nargs, nresults, func);
+  c.func = L->top - (nargs+1);  /* function to be called */
+  c.nresults = nresults;
+  status = luaD_pcall(L, &f_call, &c, savestack(L, c.func), func);
+  lua_unlock(L);
+  return status;
+}
+
+
+/*
+** Execute a protected C call.
+*/
+struct CCallS {  /* data to `f_Ccall' */
+  lua_CFunction func;
+  void *ud;
+};
+
+
+static void f_Ccall (lua_State *L, void *ud) {
+  struct CCallS *c = cast(struct CCallS *, ud);
+  Closure *cl;
+  cl = luaF_newCclosure(L, 0);
+  cl->c.f = c->func;
+  setclvalue(L->top, cl);  /* push function */
+  incr_top(L);
+  setpvalue(L->top, c->ud);  /* push only argument */
+  incr_top(L);
+  luaD_call(L, L->top - 2, 0);
+}
+
+
+LUA_API int lua_cpcall (lua_State *L, lua_CFunction func, void *ud) {
+  struct CCallS c;
+  int status;
+  lua_lock(L);
+  c.func = func;
+  c.ud = ud;
+  status = luaD_pcall(L, &f_Ccall, &c, savestack(L, L->top), 0);
   lua_unlock(L);
   return status;
 }
