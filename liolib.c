@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.47 2003/10/07 20:13:41 roberto Exp roberto $
+** $Id: liolib.c,v 2.48 2003/10/10 12:57:55 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -628,7 +628,7 @@ static int io_date (lua_State *L) {
   if (stm == NULL)  /* invalid date? */
     lua_pushnil(L);
   else if (strcmp(s, "*t") == 0) {
-    lua_newtable(L);
+    lua_createtable(L, 0, 9);  /* 9 = number of fields */
     setfield(L, "sec", stm->tm_sec);
     setfield(L, "min", stm->tm_min);
     setfield(L, "hour", stm->tm_hour);

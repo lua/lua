@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.245 2003/10/07 20:13:41 roberto Exp roberto $
+** $Id: lapi.c,v 1.246 2003/10/10 12:57:55 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -532,10 +532,10 @@ LUA_API void lua_rawgeti (lua_State *L, int idx, int n) {
 }
 
 
-LUA_API void lua_newtable (lua_State *L) {
+LUA_API void lua_createtable (lua_State *L, int narray, int nrec) {
   lua_lock(L);
   luaC_checkGC(L);
-  sethvalue(L->top, luaH_new(L, 0, 0));
+  sethvalue(L->top, luaH_new(L, narray, luaO_log2(nrec) + 1));
   api_incr_top(L);
   lua_unlock(L);
 }

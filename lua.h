@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.180 2003/10/07 20:13:41 roberto Exp roberto $
+** $Id: lua.h,v 1.181 2003/10/10 12:57:55 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -185,7 +185,7 @@ LUA_API void  lua_gettable (lua_State *L, int idx);
 LUA_API void  lua_getfield (lua_State *L, int idx, const char *k);
 LUA_API void  lua_rawget (lua_State *L, int idx);
 LUA_API void  lua_rawgeti (lua_State *L, int idx, int n);
-LUA_API void  lua_newtable (lua_State *L);
+LUA_API void  lua_createtable (lua_State *L, int narr, int nrec);
 LUA_API void *lua_newuserdata (lua_State *L, size_t sz);
 LUA_API int   lua_getmetatable (lua_State *L, int objindex);
 LUA_API void  lua_getfenv (lua_State *L, int idx);
@@ -253,6 +253,8 @@ LUA_API void  lua_concat (lua_State *L, int n);
 #define lua_unboxpointer(L,i)	(*(void **)(lua_touserdata(L, i)))
 
 #define lua_pop(L,n)		lua_settop(L, -(n)-1)
+
+#define lua_newtable(L)		lua_createtable(L, 0, 0)
 
 #define lua_register(L,n,f) \
 	(lua_pushstring(L, n), \

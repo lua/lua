@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.164 2003/10/02 20:31:17 roberto Exp roberto $
+** $Id: ltests.c,v 1.165 2003/10/07 20:13:41 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -207,11 +207,10 @@ static int listk (lua_State *L) {
   luaL_argcheck(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1),
                  1, "Lua function expected");
   p = clvalue(func_at(L, 1))->l.p;
-  lua_newtable(L);
+  lua_createtable(L, p->sizek, 0);
   for (i=0; i<p->sizek; i++) {
-    lua_pushinteger(L, i+1);
     luaA_pushobject(L, p->k+i);
-    lua_settable(L, -3);
+    lua_rawseti(L, -2, i+1);
   }
   return 1;
 }
@@ -236,7 +235,7 @@ static int listlocals (lua_State *L) {
 
 
 static int get_limits (lua_State *L) {
-  lua_newtable(L);
+  lua_createtable(L, 0, 5);
   setnameval(L, "BITS_INT", BITS_INT);
   setnameval(L, "LFPF", LFIELDS_PER_FLUSH);
   setnameval(L, "MAXVARS", MAXVARS);
