@@ -1,5 +1,8 @@
-char *rcs_lex = "$Id$";
-/*$Log$*/
+char *rcs_lex = "$Id: lex.c,v 1.1 1993/12/22 21:15:16 roberto Exp celes $";
+/*$Log: lex.c,v $
+ * Revision 1.1  1993/12/22  21:15:16  roberto
+ * Initial revision
+ **/
 
 #include <ctype.h>
 #include <math.h>
@@ -84,17 +87,33 @@ int yylex ()
     yytextLast = yytext;
     switch (current)
     {
-      case 0: return 0;
       case '\n': lua_linenumber++;
       case ' ':
       case '\t':
-        save_and_next();
+        next();
         continue;
+
+      case '$':
+	next();
+	while (isalnum(current) || current == '_')
+          save_and_next();
+        *yytextLast = 0;
+	if (strcmp(yytext, "debug") == 0)
+	{
+	  yylval.vInt = 1;
+	  return DEBUG;
+        }
+	else if (strcmp(yytext, "nodebug") == 0)
+	{
+	  yylval.vInt = 0;
+	  return DEBUG;
+        }
+	return WRONGTOKEN;
   
       case '-':
         save_and_next();
         if (current != '-') return '-';
-        do { save_and_next(); } while (current != '\n' && current != 0);
+        do { next(); } while (current != '\n' && current != 0);
         continue;
   
       case '<':
@@ -195,11 +214,10 @@ fraction: while (isdigit(current)) save_and_next();
         yylval.vFloat = atof(yytext);
         return NUMBER;
 
-      default: 
+      default: 		/* also end of file */
       {
-        int temp = current;
         save_and_next();
-        return temp;      
+        return *yytext;      
       }
     }
   }
