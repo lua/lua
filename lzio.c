@@ -1,5 +1,5 @@
 /*
-** $Id: zio.c,v 1.2 1997/06/20 19:25:54 roberto Exp $
+** $Id: lzio.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** a generic input stream interface
 ** See Copyright Notice in lua.h
 */
@@ -15,12 +15,12 @@
 
 /* ----------------------------------------------------- memory buffers --- */
 
-static int zmfilbuf(ZIO* z)
+static int zmfilbuf (ZIO* z)
 {
  return EOZ;
 }
 
-ZIO* zmopen(ZIO* z, char* b, int size)
+ZIO* zmopen (ZIO* z, char* b, int size)
 {
  if (b==NULL) return NULL;
  z->n=size;
@@ -32,7 +32,7 @@ ZIO* zmopen(ZIO* z, char* b, int size)
 
 /* ------------------------------------------------------------ strings --- */
 
-ZIO* zsopen(ZIO* z, char* s)
+ZIO* zsopen (ZIO* z, char* s)
 {
  if (s==NULL) return NULL;
  return zmopen(z,s,strlen(s));
@@ -40,7 +40,7 @@ ZIO* zsopen(ZIO* z, char* s)
 
 /* -------------------------------------------------------------- FILEs --- */
 
-static int zffilbuf(ZIO* z)
+static int zffilbuf (ZIO* z)
 {
  int n=fread(z->buffer,1,ZBSIZE,z->u);
  if (n==0) return EOZ;
@@ -50,7 +50,7 @@ static int zffilbuf(ZIO* z)
 }
 
 
-ZIO* zFopen(ZIO* z, FILE* f)
+ZIO* zFopen (ZIO* z, FILE* f)
 {
  if (f==NULL) return NULL;
  z->n=0;
@@ -62,7 +62,7 @@ ZIO* zFopen(ZIO* z, FILE* f)
 
 
 /* --------------------------------------------------------------- read --- */
-int zread(ZIO *z, void *b, int n)
+int zread (ZIO *z, void *b, int n)
 {
   while (n) {
     int m;

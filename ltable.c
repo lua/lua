@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.5 1997/10/24 17:17:24 roberto Exp roberto $
+** $Id: ltable.c,v 1.6 1997/11/19 17:29:23 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -84,7 +84,7 @@ static Node *hashnodecreate (int nhash)
 */
 static void hashdelete (Hash *t)
 {
-  luaM_free (nodevector(t));
+  luaM_free(nodevector(t));
   luaM_free(t);
 }
 

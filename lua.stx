@@ -1,6 +1,6 @@
 %{
 /*
-** $Id: lua.stx,v 1.17 1997/11/07 15:09:49 roberto Exp roberto $
+** $Id: lua.stx,v 1.18 1997/11/19 17:29:23 roberto Exp roberto $
 ** Syntax analizer and code generator
 ** See Copyright Notice in lua.h
 */
@@ -613,7 +613,7 @@ TProtoFunc *luaY_parser (ZIO *z, char *chunkname)
   L->lexstate = &lexstate;
   luaX_setinput(z);
   init_state(luaS_new(chunkname));
-  if (luaY_parse ()) lua_error("parse error");
+  if (luaY_parse()) lua_error("parse error");
   return close_func();
 }
 

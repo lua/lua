@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.5 1997/11/19 17:29:23 roberto Exp roberto $
+** $Id: lapi.c,v 1.6 1997/11/19 18:16:33 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -270,7 +270,7 @@ int lua_isfunction (lua_Object o)
 real lua_getnumber (lua_Object object)
 {
  if (object == LUA_NOOBJECT) return 0.0;
- if (tonumber (Address(object))) return 0.0;
+ if (tonumber(Address(object))) return 0.0;
  else return (nvalue(Address(object)));
 }
 

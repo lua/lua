@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.2 1997/09/26 15:02:26 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.3 1997/11/04 15:27:53 roberto Exp roberto $
 ** Auxiliar functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -15,7 +15,7 @@
 
 
 
-void luaL_arg_check(int cond, int numarg, char *extramsg)
+void luaL_arg_check (int cond, int numarg, char *extramsg)
 {
   if (!cond) {
     char *funcname;

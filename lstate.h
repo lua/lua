@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: lstate.h,v 1.1 1997/11/19 17:30:36 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -18,9 +18,9 @@
 typedef int StkId;  /* index to stack elements */
 
 struct Stack {
-  TObject *last;
-  TObject *stack;
   TObject *top;
+  TObject *stack;
+  TObject *last;
 };
 
 struct C_Lua_Stack {
@@ -45,14 +45,14 @@ struct ref {
 
 
 typedef struct LState {
-  struct C_Lua_Stack Cblocks[MAX_C_BLOCKS];
-  int numCblocks;  /* number of nested Cblocks */
-  TObject *functofind;  /* auxiliar */
   struct Stack stack;  /* Lua stack */
   struct C_Lua_Stack Cstack;  /* C2lua struct */
   int stacklimit;  /* limit for stack overflow */
   void *errorJmp;  /* current error recover point */
   TObject errorim;  /* error tag method */
+  struct C_Lua_Stack Cblocks[MAX_C_BLOCKS];
+  int numCblocks;  /* number of nested Cblocks */
+  TObject *functofind;  /* auxiliar */
   GCnode rootproto;  /* list of all prototypes */
   GCnode rootcl;  /* list of all closures */
   GCnode roottable;  /* list of all tables */

@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.4 1997/11/04 15:27:53 roberto Exp roberto $
+** $Id: lstring.c,v 1.5 1997/11/19 17:29:23 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -74,7 +74,7 @@ static void grow (stringtable *tb)
 }
 
 
-static TaggedString *newone(char *buff, int tag, unsigned long h)
+static TaggedString *newone (char *buff, int tag, unsigned long h)
 {
   TaggedString *ts;
   if (tag == LUA_T_STRING) {

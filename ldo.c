@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.8 1997/11/07 15:09:49 roberto Exp roberto $
+** $Id: ldo.c,v 1.9 1997/11/19 17:29:23 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -224,7 +224,7 @@ void luaD_travstack (int (*fn)(TObject *))
 {
   StkId i;
   for (i = (L->stack.top-1)-L->stack.stack; i>=0; i--)
-    fn (L->stack.stack+i);
+    fn(L->stack.stack+i);
 }
 
 

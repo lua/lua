@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: lzio.h,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
 ** Buffered streams
 ** See Copyright Notice in lua.h
 */
@@ -22,11 +22,11 @@
 
 typedef struct zio ZIO;
 
-ZIO* zFopen(ZIO* z, FILE* f);		/* open FILEs */
-ZIO* zsopen(ZIO* z, char* s);		/* string */
-ZIO* zmopen(ZIO* z, char* b, int size);	/* memory */
+ZIO* zFopen (ZIO* z, FILE* f);		/* open FILEs */
+ZIO* zsopen (ZIO* z, char* s);		/* string */
+ZIO* zmopen (ZIO* z, char* b, int size);	/* memory */
 
-int zread(ZIO* z, void* b, int n);	/* read next n bytes */
+int zread (ZIO* z, void* b, int n);	/* read next n bytes */
 
 #define zgetc(z)	(--(z)->n>=0 ? ((int)*(z)->p++): (z)->filbuf(z))
 #define zungetc(z)	(++(z)->n,--(z)->p)
