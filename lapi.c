@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.207 2002/08/06 15:32:22 roberto Exp roberto $
+** $Id: lapi.c,v 1.208 2002/08/06 17:06:56 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -506,24 +506,11 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
 }
 
 
-static LClosure *getfunc (lua_State *L, int level) {
-  CallInfo *ci;
-  TObject *f;
-  if (L->ci - L->base_ci < level) ci = L->base_ci;
-  else ci = L->ci - level;
-  f = ci->base - 1;
-  if (isLfunction(f))
-    return &clvalue(f)->l;
-  else
-    return NULL;
-}
-
-
-LUA_API void lua_getglobals (lua_State *L, int level) {
-  LClosure *f;
+LUA_API void lua_getglobals (lua_State *L, int index) {
+  StkId o;
   lua_lock(L);
-  f = getfunc(L, level);
-  setobj(L->top, (f ? &f->g : gt(L)));
+  o = luaA_index(L, index);
+  setobj(L->top, isLfunction(o) ? &clvalue(o)->l.g : gt(L));
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -608,16 +595,20 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
 }
 
 
-LUA_API int lua_setglobals (lua_State *L, int level) {
-  LClosure *f;
+LUA_API int lua_setglobals (lua_State *L, int index) {
+  StkId o;
+  int res = 0;
   lua_lock(L);
   api_checknelems(L, 1);
-  f = getfunc(L, level);
+  o = luaA_index(L, index);
   L->top--;
   api_check(L, ttistable(L->top));
-  if (f) f->g = *(L->top);
+  if (isLfunction(o)) {
+    res = 1;
+    clvalue(o)->l.g = *(L->top);
+  }
   lua_unlock(L);
-  return (f != NULL);
+  return res;
 }
 
 

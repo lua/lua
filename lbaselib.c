@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.94 2002/08/06 17:06:56 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.95 2002/08/06 18:01:50 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -123,21 +123,32 @@ static int luaB_setmetatable (lua_State *L) {
 }
 
 
+static void getfunc (lua_State *L) {
+  if (lua_isfunction(L, 1)) lua_pushvalue(L, 1);
+  else {
+    lua_Debug ar;
+    int level = luaL_opt_int(L, 1, 1);
+    luaL_arg_check(L, level >= 0, 1, "level must be non-negative");
+    if (lua_getstack(L, level, &ar) == 0)
+      luaL_argerror(L, 1, "invalid level");
+    lua_getinfo(L, "f", &ar);
+  }
+}
+
+
 static int luaB_getglobals (lua_State *L) {
-  int level = luaL_opt_int(L, 1, 1);
-  luaL_arg_check(L, level >= 0, 2, "level must be non-negative");
-  lua_getglobals(L, level);  /* value to be returned */
+  getfunc(L);
+  lua_getglobals(L, -1);
   return 1;
 }
 
 
 static int luaB_setglobals (lua_State *L) {
-  int level = luaL_opt_int(L, 2, 1);
-  luaL_arg_check(L, level >= 1, 2, "level must be positive");
-  luaL_check_type(L, 1, LUA_TTABLE);
-  lua_settop(L, 1);
-  if (lua_setglobals(L, level) == 0)
-    luaL_error(L, "cannot change global table at level %d", level);
+  luaL_check_type(L, 2, LUA_TTABLE);
+  getfunc(L);
+  lua_pushvalue(L, 2);
+  if (lua_setglobals(L, -2) == 0)
+    luaL_error(L, "cannot change global table of given function");
   return 0;
 }
 
