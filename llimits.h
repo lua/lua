@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.50 2002/11/22 18:01:46 roberto Exp roberto $
+** $Id: llimits.h,v 1.51 2002/11/25 17:47:13 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -48,6 +48,9 @@ typedef int ls_hash;
 /* an unsigned integer big enough to count the total memory used by Lua; */
 /* it should be at least as large as size_t */
 typedef unsigned long lu_mem;
+
+#define MAX_LUMEM	ULONG_MAX
+
 
 /* an integer big enough to count the number of strings in use */
 typedef long ls_nstr;

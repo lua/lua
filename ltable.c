@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.126 2002/12/04 17:38:31 roberto Exp roberto $
+** $Id: ltable.c,v 1.127 2003/02/13 16:08:32 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -160,7 +160,7 @@ static void computesizes  (int nums[], int ntotal, int *narray, int *nhash) {
   int a = nums[0];  /* number of elements smaller than 2^i */
   int na = a;  /* number of elements to go to array part */
   int n = (na == 0) ? -1 : 0;  /* (log of) optimal size for array part */
-  for (i = 1; i <= MAXBITS && *narray >= twoto(i-1); i++) {
+  for (i = 1; a < *narray && *narray >= twoto(i-1); i++) {
     if (nums[i] > 0) {
       a += nums[i];
       if (a >= twoto(i-1)) {  /* more than half elements in use? */
@@ -200,8 +200,9 @@ static void numuse (const Table *t, int *narray, int *nhash) {
   /* count elements in hash part */
   i = sizenode(t);
   while (i--) {
-    if (!ttisnil(val(&t->node[i]))) {
-      int k = arrayindex(key(&t->node[i]));
+    Node *n = &t->node[i];
+    if (!ttisnil(val(n))) {
+      int k = arrayindex(key(n));
       if (k >= 0) {  /* is `key' an appropriate array index? */
         nums[luaO_log2(k-1)+1]++;  /* count as such */
         (*narray)++;
