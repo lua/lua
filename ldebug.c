@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.70 2001/02/23 20:30:52 roberto Exp roberto $
+** $Id: ldebug.c,v 1.71 2001/03/02 17:27:50 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -223,7 +223,7 @@ static void funcinfo (lua_State *L, lua_Debug *ar, StkId func) {
   }
   else
     infoLproto(ar, cl->f.l);
-  luaO_chunkid(ar->short_src, ar->source, sizeof(ar->short_src));
+  luaO_chunkid(ar->short_src, ar->source, LUA_IDSIZE);
   if (ar->linedefined == 0)
     ar->what = l_s("main");
 }
