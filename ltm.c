@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.19 1999/01/13 19:08:10 roberto Exp roberto $
+** $Id: ltm.c,v 1.20 1999/01/15 13:11:57 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -164,6 +164,7 @@ char *luaT_travtagmethods (int (*fn)(TObject *)) {  /* ORDER IM */
 #ifdef LUA_COMPAT2_5
 
 #include "lapi.h"
+#include "lstring.h"
 
 static void errorFB (void)
 {
@@ -199,11 +200,13 @@ void luaT_setfallback (void) {
   lua_Object func = lua_getparam(2);
   luaL_arg_check(lua_isfunction(func), 2, "function expected");
   switch (luaL_findstring(name, oldnames)) {
-    case 0:  /* old error fallback */
-      oldfunc = L->errorim;
-      L->errorim = *luaA_Address(func);
+    case 0: {  /* old error fallback */
+      TObject *em = &(luaS_new("_ERRORMESSAGE")->u.s.globalval);
+      oldfunc = *em;
+      *em = *luaA_Address(func);
       replace = errorFB;
       break;
+    }
     case 1:  /* old getglobal fallback */
       oldfunc = *luaT_getim(LUA_T_NIL, IM_GETGLOBAL);
       *luaT_getim(LUA_T_NIL, IM_GETGLOBAL) = *luaA_Address(func);
