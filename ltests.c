@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.6 2000/01/24 20:11:26 roberto Exp roberto $
+** $Id: ltests.c,v 1.7 2000/02/08 16:34:31 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -7,6 +7,7 @@
 
 #include <ctype.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define LUA_REENTRANT
 
