@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.109 2004/12/01 15:46:06 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.110 2005/03/08 20:10:05 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -176,7 +176,7 @@ typedef struct MatchState {
 } MatchState;
 
 
-#define ESC		'%'
+#define L_ESC		'%'
 #define SPECIALS	"^$*+?.([%-"
 
 
@@ -198,7 +198,7 @@ static int capture_to_close (MatchState *ms) {
 
 static const char *classend (MatchState *ms, const char *p) {
   switch (*p++) {
-    case ESC: {
+    case L_ESC: {
       if (*p == '\0')
         luaL_error(ms->L, "malformed pattern (ends with `%%')");
       return p+1;
@@ -208,7 +208,7 @@ static const char *classend (MatchState *ms, const char *p) {
       do {  /* look for a `]' */
         if (*p == '\0')
           luaL_error(ms->L, "malformed pattern (missing `]')");
-        if (*(p++) == ESC && *p != '\0')
+        if (*(p++) == L_ESC && *p != '\0')
           p++;  /* skip escapes (e.g. `%]') */
       } while (*p != ']');
       return p+1;
@@ -246,7 +246,7 @@ static int matchbracketclass (int c, const char *p, const char *ec) {
     p++;  /* skip the `^' */
   }
   while (++p < ec) {
-    if (*p == ESC) {
+    if (*p == L_ESC) {
       p++;
       if (match_class(c, uchar(*p)))
         return sig;
@@ -265,7 +265,7 @@ static int matchbracketclass (int c, const char *p, const char *ec) {
 static int singlematch (int c, const char *p, const char *ep) {
   switch (*p) {
     case '.': return 1;  /* matches any char */
-    case ESC: return match_class(c, uchar(*(p+1)));
+    case L_ESC: return match_class(c, uchar(*(p+1)));
     case '[': return matchbracketclass(c, p, ep-1);
     default:  return (uchar(*p) == c);
   }
@@ -371,7 +371,7 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
     case ')': {  /* end capture */
       return end_capture(ms, s, p+1);
     }
-    case ESC: {
+    case L_ESC: {
       switch (*(p+1)) {
         case 'b': {  /* balanced string? */
           s = matchbalance(ms, s, p+2);
@@ -567,7 +567,7 @@ static void add_s (MatchState *ms, luaL_Buffer *b,
     size_t l = lua_strlen(L, 3);
     size_t i;
     for (i=0; i<l; i++) {
-      if (news[i] != ESC)
+      if (news[i] != L_ESC)
         luaL_putchar(b, news[i]);
       else {
         i++;  /* skip ESC */
@@ -682,7 +682,7 @@ static const char *scanformat (lua_State *L, const char *strfrmt,
     luaL_error(L, "invalid format (width or precision too long)");
   if (p-strfrmt+2 > MAX_FORMAT)  /* +2 to include `%' and the specifier */
     luaL_error(L, "invalid format (too long)");
-  form[0] = ESC;
+  form[0] = L_ESC;
   strncpy(form+1, strfrmt, p-strfrmt+1);
   form[p-strfrmt+2] = 0;
   return p;
@@ -697,9 +697,9 @@ static int str_format (lua_State *L) {
   luaL_Buffer b;
   luaL_buffinit(L, &b);
   while (strfrmt < strfrmt_end) {
-    if (*strfrmt != ESC)
+    if (*strfrmt != L_ESC)
       luaL_putchar(&b, *strfrmt++);
-    else if (*++strfrmt == ESC)
+    else if (*++strfrmt == L_ESC)
       luaL_putchar(&b, *strfrmt++);  /* %% */
     else { /* format item */
       char form[MAX_FORMAT];  /* to store the format (`%...') */
