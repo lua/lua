@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.36 1999/03/26 13:48:26 roberto Exp roberto $
+** $Id: liolib.c,v 1.37 1999/04/05 19:47:05 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -221,9 +221,17 @@ static void io_appendto (void) {
 ** =======================================================
 */
 
+
+/*
+** We cannot lookahead without need, because this can lock stdin.
+** This flag signals when we need to read a next char.
+*/
+#define NEED_OTHER (EOF-1)  /* just some flag different from EOF */
+
+
 static int read_pattern (FILE *f, char *p) {
   int inskip = 0;  /* {skip} level */
-  int c = getc(f);
+  int c = NEED_OTHER;
   while (*p != '\0') {
     switch (*p) {
       case '{':
@@ -238,6 +246,7 @@ static int read_pattern (FILE *f, char *p) {
       default: {
         char *ep;  /* get what is next */
         int m;  /* match result */
+        if (c == NEED_OTHER) c = getc(f);
         if (c != EOF)
           m = luaI_singlematch(c, p, &ep);
         else {
@@ -246,7 +255,7 @@ static int read_pattern (FILE *f, char *p) {
         }
         if (m) {
           if (!inskip) luaL_addchar(c);
-          c = getc(f);
+          c = NEED_OTHER;
         }
         switch (*ep) {
           case '*':  /* repetition */
@@ -256,17 +265,14 @@ static int read_pattern (FILE *f, char *p) {
             p = ep+1;  /* continues reading the pattern */
             continue;
           default:
-            if (!m) {  /* pattern fails? */
-              ungetc(c, f);
-              return 0;
-            }
-            p = ep;  /* continues reading the pattern */
+            if (!m) goto break_while;  /* pattern fails? */
+            p = ep;  /* else continues reading the pattern */
         }
       }
     }
-  }
-  ungetc(c, f);
-  return 1;
+  } break_while:
+  if (c != NEED_OTHER) ungetc(c, f);
+  return (*p == '\0');
 }
 
 
