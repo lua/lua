@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.150 2002/09/05 19:57:40 roberto Exp roberto $
+** $Id: lgc.c,v 1.151 2002/09/19 19:54:22 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -332,17 +332,15 @@ static void sweepstrings (lua_State *L, int all) {
 }
 
 
-#define MINBUFFER	256
 static void checkSizes (lua_State *L) {
   /* check size of string hash */
   if (G(L)->strt.nuse < cast(ls_nstr, G(L)->strt.size/4) &&
       G(L)->strt.size > MINSTRTABSIZE*2)
     luaS_resize(L, G(L)->strt.size/2);  /* table is too big */
   /* check size of buffer */
-  if (G(L)->Mbuffsize > MINBUFFER*2) {  /* is buffer too big? */
-    size_t newsize = G(L)->Mbuffsize/2;  /* still larger than MINBUFFER */
-    luaM_reallocvector(L, G(L)->Mbuffer, G(L)->Mbuffsize, newsize, char);
-    G(L)->Mbuffsize = newsize;
+  if (luaZ_sizebuffer(&G(L)->buff) > LUA_MINBUFFER*2) {  /* buffer too big? */
+    size_t newsize = luaZ_sizebuffer(&G(L)->buff) / 2;
+    luaZ_resizebuffer(L, &G(L)->buff, newsize);
   }
 }
 

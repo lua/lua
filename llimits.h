@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.44 2002/06/13 13:45:31 roberto Exp roberto $
+** $Id: llimits.h,v 1.45 2002/07/08 20:22:08 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -147,6 +147,12 @@ typedef unsigned long Instruction;
 /* minimum size for the string table (must be power of 2) */
 #ifndef MINSTRTABSIZE
 #define MINSTRTABSIZE	32
+#endif
+
+
+/* minimum size for string buffer */
+#ifndef LUA_MINBUFFER
+#define LUA_MINBUFFER	32
 #endif
 
 

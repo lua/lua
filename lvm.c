@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.255 2002/09/19 13:03:53 roberto Exp roberto $
+** $Id: lvm.c,v 1.256 2002/09/19 20:12:47 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -303,7 +303,7 @@ void luaV_concat (lua_State *L, int total, int last) {
         n++;
       }
       if (tl > MAX_SIZET) luaG_runerror(L, "string size overflow");
-      buffer = luaO_openspace(L, tl);
+      buffer = luaZ_openspace(L, &G(L)->buff, tl);
       tl = 0;
       for (i=n; i>0; i--) {  /* concat all strings */
         size_t l = tsvalue(top-i)->tsv.len;

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.104 2002/08/16 20:00:28 roberto Exp roberto $
+** $Id: lstate.c,v 1.105 2002/08/30 19:09:21 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -61,8 +61,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   G(L)->strt.size = 0;
   G(L)->strt.nuse = 0;
   G(L)->strt.hash = NULL;
-  G(L)->Mbuffer = NULL;
-  G(L)->Mbuffsize = 0;
+  luaZ_initbuffer(L, &G(L)->buff);
   G(L)->panic = &default_panic;
   G(L)->rootgc = NULL;
   G(L)->rootudata = NULL;
@@ -160,7 +159,7 @@ static void close_state (lua_State *L) {
     lua_assert(G(L)->rootgc == NULL);
     lua_assert(G(L)->rootudata == NULL);
     luaS_freeall(L);
-    luaM_freearray(L, G(L)->Mbuffer, G(L)->Mbuffsize, char);
+    luaZ_freebuffer(L, &G(L)->buff);
     luaM_freelem(NULL, L->l_G);
   }
   luaE_closethread(NULL, L);
