@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.32 2000/08/08 20:42:07 roberto Exp roberto $
+** $Id: ltests.c,v 1.33 2000/08/09 19:16:57 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -315,7 +315,7 @@ static void testC (void) {
       lua_setglobal(getname(&pc));
     }
     else if EQ("pushglobals") {
-      lua_pushglobaltable();
+      lua_pushglobals();
     }
     else if EQ("pushstring") {
       lua_pushstring(getname(&pc));
