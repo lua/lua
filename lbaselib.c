@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.34 2001/04/11 18:39:37 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.35 2001/04/23 16:35:45 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -170,9 +170,9 @@ static int luaB_settag (lua_State *L) {
 }
 
 static int luaB_weakmode (lua_State *L) {
-  const char *mode = luaL_opt_string(L, 2, NULL);
+  const char *mode = luaL_check_string(L, 2);
   luaL_checktype(L, 1, LUA_TTABLE);
-  if (mode == NULL) {
+  if (*mode == l_c('?')) {
     char buff[3];
     char *s = buff;
     int imode = lua_getweakmode(L, 1);
@@ -184,11 +184,11 @@ static int luaB_weakmode (lua_State *L) {
   }
   else {
     int imode = 0;
-    lua_pushvalue(L, 1);  /* push table */
     if (strchr(mode, l_c('k'))) imode |= LUA_WEAK_KEY;
     if (strchr(mode, l_c('v'))) imode |= LUA_WEAK_VALUE;
+    lua_pushvalue(L, 1);  /* push table */
     lua_setweakmode(L, imode);
-    return 1;
+    return 1;  /* return the table */
   }
 }
 
