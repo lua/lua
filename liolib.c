@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.101 2001/01/26 11:45:51 roberto Exp roberto $
+** $Id: liolib.c,v 1.102 2001/01/26 12:12:16 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -644,7 +644,7 @@ static int errorfb (lua_State *L) {
 
 
 
-static const struct luaL_reg iolib[] = {
+static const luaL_reg iolib[] = {
   {"appendto",  io_appendto},
   {"clock",     io_clock},
   {"closefile", io_close},

@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.30 2000/11/23 13:47:39 roberto Exp roberto $
+** $Id: ldblib.c,v 1.31 2001/01/10 16:58:11 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -173,7 +173,7 @@ static int setlinehook (lua_State *L) {
 }
 
 
-static const struct luaL_reg dblib[] = {
+static const luaL_reg dblib[] = {
   {"getlocal", getlocal},
   {"getinfo", getinfo},
   {"setcallhook", setcallhook},

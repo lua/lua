@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.19 2001/01/25 16:45:36 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.20 2001/01/31 19:53:01 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -576,7 +576,7 @@ static int luaB_sort (lua_State *L) {
 
 #define num_deprecated	4
 
-static const struct luaL_reg deprecated_names [num_deprecated] = {
+static const luaL_reg deprecated_names [num_deprecated] = {
   {"foreachvar", luaB_foreach},
   {"nextvar", luaB_next},
   {"rawgetglobal", luaB_rawget},
@@ -632,7 +632,7 @@ static void deprecated_funcs (lua_State *L) {
 
 /* }====================================================== */
 
-static const struct luaL_reg base_funcs[] = {
+static const luaL_reg base_funcs[] = {
   {LUA_ALERT, luaB__ALERT},
   {LUA_ERRORMESSAGE, luaB__ERRORMESSAGE},
   {"call", luaB_call},

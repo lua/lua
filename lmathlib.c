@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.32 2000/10/31 13:10:24 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.33 2000/12/04 18:33:40 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -199,7 +199,7 @@ static int math_randomseed (lua_State *L) {
 }
 
 
-static const struct luaL_reg mathlib[] = {
+static const luaL_reg mathlib[] = {
 {"abs",   math_abs},
 {"sin",   math_sin},
 {"cos",   math_cos},
