@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.23 2005/02/10 13:25:02 roberto Exp roberto $
+** $Id: lgc.c,v 2.24 2005/02/11 20:03:35 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -461,12 +461,15 @@ static void GCTM (lua_State *L) {
   tm = fasttm(L, udata->uv.metatable, TM_GC);
   if (tm != NULL) {
     lu_byte oldah = L->allowhook;
+    lu_mem oldt = g->GCthreshold;
     L->allowhook = 0;  /* stop debug hooks during GC tag method */
+    g->GCthreshold = 2*g->totalbytes;  /* avoid GC steps */
     setobj2s(L, L->top, tm);
     setuvalue(L, L->top+1, udata);
     L->top += 2;
     luaD_call(L, L->top - 2, 0);
     L->allowhook = oldah;  /* restore hooks */
+    g->GCthreshold = oldt;  /* restore threshold */
   }
 }
 
@@ -582,9 +585,7 @@ static l_mem singlestep (lua_State *L) {
     }
     case GCSfinalize: {
       if (g->tmudata) {
-        g->GCthreshold += GCFINALIZECOST;  /* avoid GC steps inside method */
         GCTM(L);
-        g->GCthreshold -= GCFINALIZECOST;  /* correct threshold */
         return GCFINALIZECOST;
       }
       else {
