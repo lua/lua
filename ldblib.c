@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.47 2002/04/09 19:48:08 roberto Exp roberto $
+** $Id: ldblib.c,v 1.48 2002/04/22 14:40:50 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -189,7 +189,6 @@ static int errorfb (lua_State *L) {
   lua_Debug ar;
   luaL_Buffer b;
   luaL_buffinit(L, &b);
-  luaL_addstring(&b, "error: ");
   luaL_addstring(&b, luaL_check_string(L, 1));
   luaL_addstring(&b, "\n");
   while (lua_getstack(L, level++, &ar)) {
@@ -243,12 +242,7 @@ static int errorfb (lua_State *L) {
     luaL_addstring(&b, "\n");
   }
   luaL_pushresult(&b);
-  lua_getglobal(L, LUA_ALERT);
-  if (lua_isfunction(L, -1)) {  /* avoid loop if _ALERT is not defined */
-    lua_pushvalue(L, -2);  /* error message */
-    lua_rawcall(L, 1, 0);
-  }
-  return 0;
+  return 1;
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.68 2002/04/15 20:54:41 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.69 2002/04/22 14:40:23 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -26,6 +26,7 @@
 */
 static int luaB__ALERT (lua_State *L) {
   fputs(luaL_check_string(L, 1), stderr);
+  putc('\n', stderr);
   return 0;
 }
 
@@ -35,26 +36,22 @@ static int luaB__ALERT (lua_State *L) {
 ** The library `liolib' redefines _ERRORMESSAGE for better error information.
 */
 static int luaB__ERRORMESSAGE (lua_State *L) {
+  lua_Debug ar;
   luaL_check_type(L, 1, LUA_TSTRING);
-  lua_getglobal(L, LUA_ALERT);
-  if (lua_isfunction(L, -1)) {  /* avoid error loop if _ALERT is not defined */
-    lua_Debug ar;
-    lua_pushliteral(L, "error: ");
-    lua_pushvalue(L, 1);
-    if (lua_getstack(L, 1, &ar)) {
-      lua_getinfo(L, "Sl", &ar);
-      if (ar.source && ar.currentline > 0) {
-        char buff[100];
-        sprintf(buff, "\n  <%.70s: line %d>", ar.short_src, ar.currentline);
-        lua_pushstring(L, buff);
-        lua_concat(L, 2);
-      }
+  lua_pushliteral(L, "error: ");
+  lua_pushvalue(L, 1);
+  if (lua_getstack(L, 1, &ar)) {
+    lua_getinfo(L, "Sl", &ar);
+    if (ar.source && ar.currentline > 0) {
+      char buff[100];
+      sprintf(buff, "\n  <%.70s: line %d>", ar.short_src, ar.currentline);
+      lua_pushstring(L, buff);
+      lua_concat(L, 2);
     }
-    lua_pushliteral(L, "\n");
-    lua_concat(L, 3);
-    lua_rawcall(L, 1, 0);
   }
-  return 0;
+  lua_pushliteral(L, "\n");
+  lua_concat(L, 3);
+  return 1;
 }
 
 
@@ -114,7 +111,8 @@ static int luaB_tonumber (lua_State *L) {
 
 
 static int luaB_error (lua_State *L) {
-  lua_error(L, luaL_opt_string(L, 1, NULL));
+  lua_settop(L, 1);
+  lua_errorobj(L);
   return 0;  /* to avoid warnings */
 }
 
@@ -217,53 +215,27 @@ static int luaB_nexti (lua_State *L) {
 }
 
 
-static int passresults (lua_State *L, int status, int oldtop) {
-  if (status == 0) {
-    int nresults = lua_gettop(L) - oldtop;
-    if (nresults > 0)
-      return nresults;  /* results are already on the stack */
-    else {
-      lua_pushboolean(L, 1); /* at least one result to signal no errors */
-      return 1;
-    }
-  }
-  else {  /* error */
+static int passresults (lua_State *L, int status) {
+  if (status == 0) return 1;
+  else {
     lua_pushnil(L);
-    lua_pushstring(L, luaL_errstr(status));  /* error code */
+    lua_insert(L, -2);
     return 2;
   }
 }
 
 
-static int luaB_dostring (lua_State *L) {
-  int oldtop = lua_gettop(L);
-  size_t l;
-  const char *s = luaL_check_lstr(L, 1, &l);
-  const char *chunkname = luaL_opt_string(L, 2, s);
-  return passresults(L, lua_dobuffer(L, s, l, chunkname), oldtop);
-}
-
-
 static int luaB_loadstring (lua_State *L) {
-  int oldtop = lua_gettop(L);
   size_t l;
   const char *s = luaL_check_lstr(L, 1, &l);
   const char *chunkname = luaL_opt_string(L, 2, s);
-  return passresults(L, lua_loadbuffer(L, s, l, chunkname), oldtop);
-}
-
-
-static int luaB_dofile (lua_State *L) {
-  int oldtop = lua_gettop(L);
-  const char *fname = luaL_opt_string(L, 1, NULL);
-  return passresults(L, lua_dofile(L, fname), oldtop);
+  return passresults(L, lua_loadbuffer(L, s, l, chunkname));
 }
 
 
 static int luaB_loadfile (lua_State *L) {
-  int oldtop = lua_gettop(L);
   const char *fname = luaL_opt_string(L, 1, NULL);
-  return passresults(L, lua_loadfile(L, fname), oldtop);
+  return passresults(L, lua_loadfile(L, fname));
 }
 
 
@@ -276,53 +248,29 @@ static int luaB_assert (lua_State *L) {
 }
 
 
-static int aux_unpack (lua_State *L, int arg) {
+static int luaB_unpack (lua_State *L) {
   int n, i;
-  luaL_check_type(L, arg, LUA_TTABLE);
-  n = lua_getn(L, arg);
+  luaL_check_type(L, 1, LUA_TTABLE);
+  n = lua_getn(L, 1);
   luaL_check_stack(L, n+LUA_MINSTACK, "table too big to unpack");
   for (i=1; i<=n; i++)  /* push arg[1...n] */
-    lua_rawgeti(L, arg, i);
+    lua_rawgeti(L, 1, i);
   return n;
 }
 
 
-static int luaB_unpack (lua_State *L) {
-  return aux_unpack(L, 1);
-}
-
-
-static int luaB_call (lua_State *L) {
-  int oldtop;
-  const char *options = luaL_opt_string(L, 3, "");
-  int err = 0;  /* index of old error method */
+static int luaB_pcall (lua_State *L) {
   int status;
-  int n;
-  if (!lua_isnone(L, 4)) {  /* set new error method */
-    lua_getglobal(L, "_ERRORMESSAGE");
-    err = lua_gettop(L);  /* get index */
-    lua_pushvalue(L, 4);
-    lua_setglobal(L, "_ERRORMESSAGE");
+  luaL_check_any(L, 1);
+  luaL_check_any(L, 2);
+  status = lua_pcall(L, lua_gettop(L) - 2, LUA_MULTRET, 1);
+  if (status != 0)
+    return passresults(L, status);
+  else {
+    lua_pushboolean(L, 1);
+    lua_replace(L, 1);
+    return lua_gettop(L);  /* return `true' + all results */
   }
-  oldtop = lua_gettop(L);  /* top before function-call preparation */
-  /* push function */
-  lua_pushvalue(L, 1);
-  n = aux_unpack(L, 2);  /* push arg[1...n] */
-  status = lua_call(L, n, LUA_MULTRET);
-  if (err != 0) {  /* restore old error method */
-    lua_pushvalue(L, err);
-    lua_setglobal(L, "_ERRORMESSAGE");
-  }
-  if (status != 0) {  /* error in call? */
-    if (strchr(options, 'x'))
-      lua_pushnil(L);  /* return nil to signal the error */
-    else
-      lua_error(L, NULL);  /* propagate error without additional messages */
-    return 1;
-  }
-  if (strchr(options, 'p'))  /* pack results? */
-    lua_error(L, "obsolete option `p' in `call'");
-  return lua_gettop(L) - oldtop;  /* results are already on the stack */
 }
 
 
@@ -433,7 +381,9 @@ static int luaB_require (lua_State *L) {
   else {  /* must load it */
     while (status == LUA_ERRFILE && (path = nextpath(L, path)) != NULL) {
       composename(L);
-      status = lua_dofile(L, lua_tostring(L, -1));  /* try to load it */
+      status = lua_loadfile(L, lua_tostring(L, -1));  /* try to load it */
+      if (status == 0)
+        status = lua_pcall(L, 0, 0, 0);
       lua_settop(L, 3);  /* pop string and eventual results from dofile */
     }
   }
@@ -448,8 +398,8 @@ static int luaB_require (lua_State *L) {
       luaL_verror(L, "could not load package `%.20s' from path `%.200s'",
                   lua_tostring(L, 1), lua_tostring(L, 3));
     }
-    default: {  /* error loading package */
-      lua_error(L, NULL);
+    default: {
+      lua_error(L, "error loading package");
       return 0;  /* to avoid warnings */
     }
   }
@@ -474,13 +424,11 @@ static const luaL_reg base_funcs[] = {
   {"unpack", luaB_unpack},
   {"rawget", luaB_rawget},
   {"rawset", luaB_rawset},
-  {"call", luaB_call},
+  {"pcall", luaB_pcall},
   {"collectgarbage", luaB_collectgarbage},
   {"gcinfo", luaB_gcinfo},
   {"loadfile", luaB_loadfile},
   {"loadstring", luaB_loadstring},
-  {"dofile", luaB_dofile},
-  {"dostring", luaB_dostring},
   {"require", luaB_require},
   {NULL, NULL}
 };
@@ -497,7 +445,7 @@ static int luaB_resume (lua_State *L) {
   lua_State *co = (lua_State *)lua_getfrombox(L, lua_upvalueindex(1));
   lua_settop(L, 0);
   if (lua_resume(L, co) != 0)
-    lua_error(L, "error running co-routine");
+    lua_errorobj(L);
   return lua_gettop(L);
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.65 2002/04/04 20:25:55 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.66 2002/04/16 12:00:02 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -21,19 +21,6 @@
 #include "lualib.h"
 
 
-LUALIB_API const char *luaL_errstr (int errcode) {
-  static const char *const errstr[] = {
-    "ok",
-    "run-time error",
-    "cannot read file",
-    "syntax error",
-    "not enough memory",
-    "error in error handling"
-  };
-  return errstr[errcode];
-}
-
-
 LUALIB_API int luaL_findstring (const char *name, const char *const list[]) {
   int i;
   for (i=0; list[i]; i++)
@@ -41,6 +28,7 @@ LUALIB_API int luaL_findstring (const char *name, const char *const list[]) {
       return i;
   return -1;  /* name not found */
 }
+
 
 LUALIB_API void luaL_argerror (lua_State *L, int narg, const char *extramsg) {
   lua_Debug ar;

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.90 2002/04/22 14:40:23 roberto Exp roberto $
+** $Id: lstate.c,v 1.91 2002/04/23 15:04:39 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -57,6 +57,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   UNUSED(ud);
   /* create a new global state */
   L->l_G = luaM_new(L, global_State);
+  G(L)->GCthreshold = 0;  /* mark it as unfinished state */
   G(L)->strt.size = 0;
   G(L)->strt.nuse = 0;
   G(L)->strt.hash = NULL;
@@ -83,6 +84,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
   luaT_init(L);
   luaX_init(L);
+  luaS_fix(luaS_newliteral(L, MEMERRMSG));
   G(L)->GCthreshold = 4*G(L)->nblocks;
 }
 
@@ -122,12 +124,14 @@ LUA_API lua_State *lua_newthread (lua_State *OL) {
 
 LUA_API lua_State *lua_open (void) {
   lua_State *L;
+  TObject dummy;
+  setnilvalue(&dummy);
   L = luaM_new(NULL, lua_State);
   if (L) {  /* allocation OK? */
     preinit_state(L);
     L->l_G = NULL;
     L->next = L->previous = L;
-    if (luaD_runprotected(L, f_luaopen, &luaO_nilobject, NULL) != 0) {
+    if (luaD_runprotected(L, f_luaopen, &dummy) != 0) {
       /* memory allocation error: free partial state */
       close_state(L);
       L = NULL;

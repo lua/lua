@@ -1,10 +1,12 @@
 /*
-** $Id: lapi.c,v 1.184 2002/04/16 17:08:28 roberto Exp roberto $
+** $Id: lapi.c,v 1.185 2002/04/22 14:40:50 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
 
 
+#include <errno.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "lua.h"
@@ -516,7 +518,7 @@ LUA_API void lua_setmetatable (lua_State *L, int objindex) {
 
 
 /*
-** `do' functions (run Lua code)
+** `load' and `call' functions (run Lua code)
 */
 
 LUA_API void lua_rawcall (lua_State *L, int nargs, int nresults) {
@@ -526,17 +528,6 @@ LUA_API void lua_rawcall (lua_State *L, int nargs, int nresults) {
   func = L->top - (nargs+1);
   luaD_call(L, func, nresults);
   lua_unlock(L);
-}
-
-
-LUA_API int lua_call (lua_State *L, int nargs, int nresults) {
-  int status;
-  int errpos = lua_gettop(L) - nargs;
-  lua_getglobal(L, "_ERRORMESSAGE");
-  lua_insert(L, errpos);  /* put below function and args */
-  status = lua_pcall(L, nargs, nresults, errpos);
-  lua_remove(L, errpos);
-  return status;
 }
 
 
@@ -551,31 +542,11 @@ LUA_API int lua_pcall (lua_State *L, int nargs, int nresults, int errf) {
 }
 
 
-static int aux_do (lua_State *L, int status) {
-  if (status == 0) {  /* parse OK? */
-    int err = lua_gettop(L);
-    lua_getglobal(L, "_ERRORMESSAGE");
-    lua_insert(L, err);
-    status = lua_pcall(L, 0, LUA_MULTRET, err);  /* call main */
-    lua_remove(L, err);  /* remove error function */
-  }
-  return status;
-}
-
-
-LUA_API int lua_dofile (lua_State *L, const char *filename) {
-  return aux_do(L, lua_loadfile(L, filename));
-}
-
-
-LUA_API int lua_dobuffer (lua_State *L, const char *buff, size_t size,
-                          const char *name) {
-  return aux_do(L, lua_loadbuffer(L, buff, size, name));
-}
-
-
-LUA_API int lua_dostring (lua_State *L, const char *str) {
-  return lua_dobuffer(L, str, strlen(str), str);
+static int errfile (lua_State *L, const char *filename) {
+  char buff[150];
+  sprintf(buff, "cannot read file `%.80s' (%.40s)", filename, strerror(errno));
+  lua_pushstring(L, buff);
+  return LUA_ERRFILE;
 }
 
 
@@ -585,12 +556,12 @@ LUA_API int lua_loadfile (lua_State *L, const char *filename) {
   int bin;  /* flag for file mode */
   int nlevel;  /* level on the stack of filename */
   FILE *f = (filename == NULL) ? stdin : fopen(filename, "r");
-  if (f == NULL) return LUA_ERRFILE;  /* unable to open file */
+  if (f == NULL) return errfile(L, filename);  /* unable to open file */
   bin = (ungetc(getc(f), f) == LUA_SIGNATURE[0]);
   if (bin && f != stdin) {
     fclose(f);
     f = fopen(filename, "rb");  /* reopen in binary mode */
-    if (f == NULL) return LUA_ERRFILE;  /* unable to reopen file */
+    if (f == NULL) return errfile(L, filename);  /* unable to reopen file */
   }
   if (filename == NULL)
     lua_pushstring(L, "=stdin");
@@ -603,7 +574,8 @@ LUA_API int lua_loadfile (lua_State *L, const char *filename) {
   filename = lua_tostring(L, -1);  /* filename = `@'..filename */
   luaZ_Fopen(&z, f, filename);
   status = luaD_protectedparser(L, &z, bin);
-  if (ferror(f)) status = LUA_ERRFILE;
+  if (ferror(f))
+    return errfile(L, filename);
   lua_remove(L, nlevel);  /* remove filename */
   if (f != stdin)
     fclose(f);
@@ -661,9 +633,10 @@ LUA_API void lua_setgcthreshold (lua_State *L, int newthreshold) {
 */
 
 
-LUA_API void lua_error (lua_State *L, const char *s) {
+LUA_API void lua_errorobj (lua_State *L) {
   lua_lock(L);
-  luaD_runerror(L, s);
+  api_checknelems(L, 1);
+  luaD_errorobj(L, L->top - 1, LUA_ERRRUN);
   lua_unlock(L);
 }
 
@@ -767,3 +740,62 @@ LUA_API int lua_pushupvalues (lua_State *L) {
 }
 
 
+
+/*
+** {======================================================
+** compatibility code
+** =======================================================
+*/
+
+
+static void callalert (lua_State *L, int status) {
+  if (status != 0) {
+    int top = lua_gettop(L);
+    lua_getglobal(L, "_ALERT");
+    lua_insert(L, -2);
+    lua_pcall(L, 1, 0, 0);
+    lua_settop(L, top-1);
+  }
+}
+
+
+LUA_API int lua_call (lua_State *L, int nargs, int nresults) {
+  int status;
+  int errpos = lua_gettop(L) - nargs;
+  lua_getglobal(L, "_ERRORMESSAGE");
+  lua_insert(L, errpos);  /* put below function and args */
+  status = lua_pcall(L, nargs, nresults, errpos);
+  lua_remove(L, errpos);
+  callalert(L, status);
+  return status;
+}
+
+static int aux_do (lua_State *L, int status) {
+  if (status == 0) {  /* parse OK? */
+    int err = lua_gettop(L);
+    lua_getglobal(L, "_ERRORMESSAGE");
+    lua_insert(L, err);
+    status = lua_pcall(L, 0, LUA_MULTRET, err);  /* call main */
+    lua_remove(L, err);  /* remove error function */
+  }
+  callalert(L, status);
+  return status;
+}
+
+
+LUA_API int lua_dofile (lua_State *L, const char *filename) {
+  return aux_do(L, lua_loadfile(L, filename));
+}
+
+
+LUA_API int lua_dobuffer (lua_State *L, const char *buff, size_t size,
+                          const char *name) {
+  return aux_do(L, lua_loadbuffer(L, buff, size, name));
+}
+
+
+LUA_API int lua_dostring (lua_State *L, const char *str) {
+  return lua_dobuffer(L, str, strlen(str), str);
+}
+
+/* }====================================================== */

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.83 2002/04/22 14:40:50 roberto Exp roberto $
+** $Id: lua.c,v 1.84 2002/04/23 14:59:22 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -66,23 +66,30 @@ static void laction (int i) {
 }
 
 
-/* Lua gives no message in such cases, so we provide one */
-static void report (int result) {
-  if (result == LUA_ERRMEM || result == LUA_ERRERR)
-    fprintf(stderr, "%s: %s\n", LUA_PROGNAME, luaL_errstr(result));
+static void report (int status) {
+  if (status == 0) return;
+  else {
+    const char *msg = lua_tostring(L, -1);
+    if (msg == NULL) msg = "(no message)";
+    fprintf(stderr, "error: %s\n", msg);
+    lua_pop(L, 1);
+  }
 }
 
 
-static int ldo (int (*f)(lua_State *l, const char *), const char *name,
-                int clear) {
-  int result;
+static int lcall (int clear) {
+  int status;
   int top = lua_gettop(L);
+  lua_getglobal(L, "_ERRORMESSAGE");
+  lua_insert(L, top);
   signal(SIGINT, laction);
-  result = f(L, name);  /* dostring | dofile */
+  status = lua_pcall(L, 0, LUA_MULTRET, top);
   signal(SIGINT, SIG_DFL);
-  if (clear) lua_settop(L, top);  /* remove eventual results */
-  report(result);
-  return result;
+  if (status == 0) {
+    if (clear) lua_settop(L, top);  /* remove eventual results */
+    else lua_remove(L, top);  /* else remove only error function */
+  }
+  return status;
 }
 
 
@@ -138,16 +145,18 @@ static int l_getargs (lua_State *l) {
 
 
 static int file_input (const char *name) {
-  int result = ldo(lua_dofile, name, 1);
-  if (result) {
-    if (result == LUA_ERRFILE) {
-      fprintf(stderr, "%s: %s ", LUA_PROGNAME, luaL_errstr(result));
-      perror(name);
-    }
-    return EXIT_FAILURE;
-  }
-  else
-    return EXIT_SUCCESS;
+  int status = lua_loadfile(L, name);
+  if (status == 0) status = lcall(1);
+  report(status);
+  return status;
+}
+
+
+static int dostring (const char *s) {
+  int status = lua_loadbuffer(L, s, strlen(s), s);
+  if (status == 0) status = lcall(1);
+  report(status);
+  return status;
 }
 
 
@@ -177,85 +186,65 @@ static char *readline (const char *prompt) {
 #endif
 
 
-static const char *get_prompt (int incomplete) {
+static const char *get_prompt (int firstline) {
   const char *p = NULL;
-  lua_getglobal(L, incomplete ? "_PROMPT2" : "_PROMPT");
+  lua_getglobal(L, firstline ? "_PROMPT" : "_PROMPT2");
   p = lua_tostring(L, -1);
-  if (p == NULL) p = (incomplete ? PROMPT2 : PROMPT);
+  if (p == NULL) p = (firstline ? PROMPT : PROMPT2);
   lua_pop(L, 1);  /* remove global */
   return p;
 }
 
 
-static int incomplete = 0;
-
-static int trap_eof (lua_State *l) {
- const char *s = lua_tostring(l, 1);
- if (strstr(s, "last token read: `<eof>'") != NULL)
-   incomplete = 1;
- else
-   fprintf(stderr, "error: %s\n", s);
- return 0;
+static int incomplete (int status) {
+  if (status == LUA_ERRSYNTAX &&
+         strstr(lua_tostring(L, -1), "last token read: `<eof>'") != NULL) {
+    lua_pop(L, 1);
+    return 1;
+  }
+  else
+    return 0;
 }
 
 
 static int load_string (void) {
-  lua_getglobal(L, "_ERRORMESSAGE");
-  lua_pushvalue(L, 1);
-  lua_setglobal(L, "_ERRORMESSAGE");
-  incomplete = 0;
-  for (;;) {  /* repeat until gets a complete line */
-    int result;
-    char *buffer = readline(get_prompt(incomplete));
+  int firstline = 1;
+  int status;
+  lua_settop(L, 0);
+  do {  /* repeat until gets a complete line */
+    char *buffer = readline(get_prompt(firstline));
     if (buffer == NULL) {  /* input end? */
-      lua_settop(L, 2);
-      lua_setglobal(L, "_ERRORMESSAGE");
-      return 0;
+      lua_settop(L, 0);
+      return -1;  /* input end */
     }
-    if (!incomplete && buffer[0] == '=') {
+    if (firstline && buffer[0] == '=') {
       buffer[0] = ' ';
       lua_pushstring(L, "return");
     }
+    firstline = 0;
     push_line(buffer);
-    lua_concat(L, lua_gettop(L)-2);
-    incomplete = 0;
-    result = lua_loadbuffer(L, lua_tostring(L, 3), lua_strlen(L, 3), "=stdin");
-    if (incomplete) continue;  /* repeat loop to get rest of `line' */
-    save_line(lua_tostring(L, 3));
-    lua_remove(L, 3);
-    if (result == 0) {
-      lua_insert(L, 2);  /* swap compiled chunk with old _ERRORMESSAGE */
-      lua_setglobal(L, "_ERRORMESSAGE");  /* restore old _ERRORMESSAGE */
-      return 1;
-    }
-    else
-      report(result);
- }
-}
-
-
-static int lcall (lua_State *l, const char *name) {
-  (void)name;  /* to avoid warnings */
-  return lua_call(l, 0, LUA_MULTRET);
+    lua_concat(L, lua_gettop(L));
+    status = lua_loadbuffer(L, lua_tostring(L, 1), lua_strlen(L, 1), "=stdin");
+  } while (incomplete(status));  /* repeat loop to get rest of `line' */
+  save_line(lua_tostring(L, 1));
+  lua_remove(L, 1);
+  return status;
 }
 
 
 static void manual_input (int version) {
+  int status;
   if (version) print_version();
-  lua_settop(L, 0);
-  lua_pushcfunction(L, trap_eof);  /* set up handler for incomplete lines */
-  while (load_string()) {
-    ldo(lcall, NULL, 0);
-    if (lua_gettop(L) > 1) {  /* any result to print? */
+  while ((status = load_string()) != -1) {
+    if (status == 0) status = lcall(0);
+    report(status);
+    if (status == 0 && lua_gettop(L) > 0) {  /* any result to print? */
       lua_getglobal(L, "print");
-      lua_insert(L, 2);
-      lua_call(L, lua_gettop(L)-2, 0);
+      lua_insert(L, 1);
+      lua_call(L, lua_gettop(L)-1, 0);
     }
-    else
-      lua_settop(L, 1);  /* remove eventual results */
   }
   printf("\n");
-  lua_pop(L, 1);  /* remove trap_eof */
 }
 
 
@@ -265,7 +254,7 @@ static int handle_argv (char *argv[], int *toclose) {
       manual_input(1);
     }
     else
-      ldo(lua_dofile, NULL, 1);  /* executes stdin as a file */
+      file_input(NULL);  /* executes stdin as a file */
   }
   else {  /* other arguments; loop over them */
     int i;
@@ -274,12 +263,12 @@ static int handle_argv (char *argv[], int *toclose) {
         if (strchr(argv[i], '='))
           assign(argv[i]);
         else
-          if (file_input(argv[i]) != EXIT_SUCCESS)
+          if (file_input(argv[i]))
             return EXIT_FAILURE;  /* stop if file fails */
         }
         else switch (argv[i][1]) {  /* option */
           case '\0': {
-            ldo(lua_dofile, NULL, 1);  /* executes stdin as a file */
+            file_input(NULL);  /* executes stdin as a file */
             break;
           }
           case 'i': {
@@ -300,7 +289,7 @@ static int handle_argv (char *argv[], int *toclose) {
               print_usage();
               return EXIT_FAILURE;
             }
-            if (ldo(lua_dostring, argv[i], 1) != 0) {
+            if (dostring(argv[i]) != 0) {
               fprintf(stderr, "%s: error running argument `%.99s'\n",
                       LUA_PROGNAME, argv[i]);
               return EXIT_FAILURE;

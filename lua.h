@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.128 2002/04/22 14:40:23 roberto Exp roberto $
+** $Id: lua.h,v 1.129 2002/05/01 20:40:42 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: info@lua.org
@@ -35,7 +35,7 @@
 #define lua_upvalueindex(i)	(LUA_GLOBALSINDEX-(i))
 
 
-/* error codes for `lua_do*' and the like */
+/* error codes for `lua_load*' and `lua_pcall' */
 #define LUA_ERRRUN	1
 #define LUA_ERRFILE	2
 #define LUA_ERRSYNTAX	3
@@ -166,18 +166,13 @@ LUA_API void  lua_setmetatable (lua_State *L, int objindex);
 
 
 /*
-** `load' and `do' functions (load and run Lua code)
+** `load' and `call' functions (load and run Lua code)
 */
-LUA_API int   lua_call (lua_State *L, int nargs, int nresults);
 LUA_API void  lua_rawcall (lua_State *L, int nargs, int nresults);
 LUA_API int   lua_pcall (lua_State *L, int nargs, int nresults, int errf);
 LUA_API int   lua_loadfile (lua_State *L, const char *filename);
 LUA_API int   lua_loadbuffer (lua_State *L, const char *buff, size_t size,
-                            const char *name);
-LUA_API int   lua_dofile (lua_State *L, const char *filename);
-LUA_API int   lua_dostring (lua_State *L, const char *str);
-LUA_API int   lua_dobuffer (lua_State *L, const char *buff, size_t size,
-                            const char *name);
+                              const char *name);
 
 
 /*
@@ -243,9 +238,16 @@ LUA_API void *lua_newuserdata (lua_State *L, size_t size);
                                                 (sizeof(s)/sizeof(char))-1)
 
 
+
 /*
 ** compatibility macros and functions
 */
+
+LUA_API int   lua_call (lua_State *L, int nargs, int nresults);
+LUA_API int   lua_dofile (lua_State *L, const char *filename);
+LUA_API int   lua_dostring (lua_State *L, const char *str);
+LUA_API int   lua_dobuffer (lua_State *L, const char *buff, size_t size,
+                            const char *name);
 
 LUA_API int lua_pushupvalues (lua_State *L);
 
