@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.114 2002/12/04 17:38:31 roberto Exp roberto $
+** $Id: lcode.c,v 1.115 2002/12/11 12:34:22 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -207,10 +207,10 @@ static void freeexp (FuncState *fs, expdesc *e) {
 
 
 static int addk (FuncState *fs, TObject *k, TObject *v) {
-  const TObject *index = luaH_get(fs->h, k);
-  if (ttisnumber(index)) {
-    lua_assert(luaO_rawequalObj(&fs->f->k[cast(int, nvalue(index))], v));
-    return cast(int, nvalue(index));
+  const TObject *idx = luaH_get(fs->h, k);
+  if (ttisnumber(idx)) {
+    lua_assert(luaO_rawequalObj(&fs->f->k[cast(int, nvalue(idx))], v));
+    return cast(int, nvalue(idx));
   }
   else {  /* constant not found; create a new entry */
     Proto *f = fs->f;

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.276 2003/02/18 16:02:56 roberto Exp roberto $
+** $Id: lvm.c,v 1.277 2003/02/27 11:52:30 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -680,7 +680,7 @@ StkId luaV_execute (lua_State *L) {
         }
       }
       case OP_FORLOOP: {
-        lua_Number step, index, limit;
+        lua_Number step, idx, limit;
         const TObject *plimit = ra+1;
         const TObject *pstep = ra+2;
         if (!ttisnumber(ra))
@@ -690,11 +690,11 @@ StkId luaV_execute (lua_State *L) {
         if (!tonumber(pstep, ra+2))
           luaG_runerror(L, "`for' step must be a number");
         step = nvalue(pstep);
-        index = nvalue(ra) + step;  /* increment index */
+        idx = nvalue(ra) + step;  /* increment index */
         limit = nvalue(plimit);
-        if (step > 0 ? index <= limit : index >= limit) {
+        if (step > 0 ? idx <= limit : idx >= limit) {
           dojump(pc, GETARG_sBx(i));  /* jump back */
-          chgnvalue(ra, index);  /* update index */
+          chgnvalue(ra, idx);  /* update index */
         }
         break;
       }
