@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.68 2002/08/16 14:45:18 roberto Exp roberto $
+** $Id: ldblib.c,v 1.69 2002/09/05 19:45:42 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -198,7 +198,8 @@ static int errorfb (lua_State *L) {
   if (lua_gettop(L) == 0)
     lua_pushliteral(L, "");
   else if (!lua_isstring(L, 1)) return 1;  /* no string message */
-  lua_pushliteral(L, "\nstack traceback:");
+  else lua_pushliteral(L, "\n");
+  lua_pushliteral(L, "stack traceback:");
   while (lua_getstack(L, level++, &ar)) {
     if (level > LEVELS1 && firstpart) {
       /* no more than `LEVELS2' more levels? */
