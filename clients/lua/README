@@ -1,0 +1,5 @@
+This client is a simple lua interpreter.
+It either loads and executes the files named on the command line or reads
+and executes lines from stdin.
+Note that, in the second case, each line must contain a complete statement.
+For instance, functions cannot span several lines.

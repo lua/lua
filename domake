@@ -1,0 +1,6 @@
+#!/bin/sh
+
+LUA=`pwd`
+export LUA
+
+make $*
