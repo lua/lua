@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.61 2002/12/04 17:38:31 roberto Exp roberto $
+** $Id: lmem.c,v 1.62 2003/10/02 20:31:17 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -45,13 +45,16 @@
 void *luaM_growaux (lua_State *L, void *block, int *size, int size_elems,
                     int limit, const char *errormsg) {
   void *newblock;
-  int newsize = (*size)*2;
-  if (newsize < MINSIZEARRAY)
-    newsize = MINSIZEARRAY;  /* minimum size */
-  else if (*size >= limit/2) {  /* cannot double it? */
-    if (*size < limit - MINSIZEARRAY)  /* try something smaller... */
-      newsize = limit;  /* still have at least MINSIZEARRAY free places */
-    else luaG_runerror(L, errormsg);
+  int newsize;
+  if (*size >= limit/2) {  /* cannot double it? */
+    if (*size >= limit - MINSIZEARRAY)  /* try something smaller... */
+      luaG_runerror(L, errormsg);
+    newsize = limit;  /* still have at least MINSIZEARRAY free places */
+  }
+  else {
+    newsize = (*size)*2;
+    if (newsize < MINSIZEARRAY)
+      newsize = MINSIZEARRAY;  /* minimum size */
   }
   newblock = luaM_realloc(L, block,
                           cast(lu_mem, *size)*cast(lu_mem, size_elems),
