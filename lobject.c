@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.94 2002/12/04 17:38:31 roberto Exp roberto $
+** $Id: lobject.c,v 1.95 2003/01/27 13:00:43 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -28,6 +28,20 @@
 
 
 const TObject luaO_nilobject = {LUA_TNIL, {NULL}};
+
+
+/*
+** converts an integer to a "floating point byte", represented as
+** (mmmmmxxx), where the real value is (xxx) * 2^(mmmmm)
+*/
+int luaO_int2fb (unsigned int x) {
+  int m = 0;  /* mantissa */
+  while (x >= (1<<3)) {
+    x = (x+1) >> 1;
+    m++;
+  }
+  return (m << 3) | cast(int, x);
+}
 
 
 int luaO_log2 (unsigned int x) {

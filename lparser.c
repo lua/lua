@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.204 2003/02/11 10:46:24 roberto Exp roberto $
+** $Id: lparser.c,v 1.205 2003/02/11 10:49:53 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -515,8 +515,7 @@ static void constructor (LexState *ls, expdesc *t) {
   } while (testnext(ls, ',') || testnext(ls, ';'));
   check_match(ls, '}', '{', line);
   lastlistfield(fs, &cc);
-  if (cc.na > 0)
-    SETARG_B(fs->f->code[pc], luaO_log2(cc.na-1)+2); /* set initial table size */
+  SETARG_B(fs->f->code[pc], luaO_int2fb(cc.na)); /* set initial array size */
   SETARG_C(fs->f->code[pc], luaO_log2(cc.nh)+1);  /* set initial table size */
 }
 

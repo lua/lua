@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.151 2003/01/29 10:27:53 roberto Exp roberto $
+** $Id: ltests.c,v 1.152 2003/02/10 17:31:13 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -512,6 +512,13 @@ static int log2_aux (lua_State *L) {
   return 1;
 }
 
+static int int2fb_aux (lua_State *L) {
+  int b = luaO_int2fb(luaL_checkint(L, 1));
+  lua_pushnumber(L, b);
+  lua_pushnumber(L, fb2int(b));
+  return 2;
+}
+
 
 static int test_do (lua_State *L) {
   const char *p = luaL_checkstring(L, 1);
@@ -790,6 +797,7 @@ static const struct luaL_reg tests_funcs[] = {
   {"closestate", closestate},
   {"doremote", doremote},
   {"log2", log2_aux},
+  {"int2fb", int2fb_aux},
   {"totalmem", mem_query},
   {"resume", coresume},
   {"setyhook", setyhook},
