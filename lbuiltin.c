@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.104 2000/04/13 18:08:18 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.105 2000/04/14 17:44:20 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -256,11 +256,6 @@ void luaB_gettagmethod (lua_State *L) {
                                         luaL_check_string(L, 2)));
 }
 
-void luaB_seterrormethod (lua_State *L) {
-  lua_Object nf = luaL_functionarg(L, 1);
-  lua_pushobject(L, nf);
-  lua_pushobject(L, lua_seterrormethod(L));
-}
 
 void luaB_collectgarbage (lua_State *L) {
   lua_pushnumber(L, lua_collectgarbage(L, luaL_opt_int(L, 1, 0)));
@@ -318,8 +313,10 @@ void luaB_call (lua_State *L) {
   int narg = (int)getnarg(L, arg);
   int i, status;
   if (err != LUA_NOOBJECT) {  /* set new error method */
+    lua_Object oldem = lua_getglobal(L, "_ERRORMESSAGE");
     lua_pushobject(L, err);
-    err = lua_seterrormethod(L);
+    lua_setglobal(L, "_ERRORMESSAGE");
+    err = oldem;
   }
   /* push arg[1...n] */
   luaD_checkstack(L, narg);
@@ -328,7 +325,7 @@ void luaB_call (lua_State *L) {
   status = lua_callfunction(L, f);
   if (err != LUA_NOOBJECT) {  /* restore old error method */
     lua_pushobject(L, err);
-    lua_seterrormethod(L);
+    lua_setglobal(L, "_ERRORMESSAGE");
   }
   if (status != 0) {  /* error in call? */
     if (strchr(options, 'x')) {
@@ -632,7 +629,6 @@ static const struct luaL_reg builtin_funcs[] = {
   {"rawgettable", luaB_rawgettable},
   {"rawsetglobal", luaB_rawsetglobal},
   {"rawsettable", luaB_rawsettable},
-  {"seterrormethod", luaB_seterrormethod},
   {"setglobal", luaB_setglobal},
   {"settag", luaB_settag},
   {"settagmethod", luaB_settagmethod},

@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.h,v 1.5 1999/12/28 19:23:41 roberto Exp roberto $
+** $Id: lbuiltin.h,v 1.6 2000/03/03 14:58:26 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -32,7 +32,6 @@ void luaB_rawgetglobal (lua_State *L);
 void luaB_rawgettable (lua_State *L);
 void luaB_rawsetglobal (lua_State *L);
 void luaB_rawsettable (lua_State *L);
-void luaB_seterrormethod (lua_State *L);
 void luaB_setglobal (lua_State *L);
 void luaB_settag (lua_State *L);
 void luaB_settagmethod (lua_State *L);

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.46 2000/04/14 17:46:37 roberto Exp roberto $
+** $Id: lua.h,v 1.47 2000/04/14 17:48:20 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -11,7 +11,7 @@
 #ifndef lua_h
 #define lua_h
 
-#define LUA_VERSION	"Lua 4.0"
+#define LUA_VERSION	"Lua 4.0 (alpha)"
 #define LUA_COPYRIGHT	"Copyright (C) 1994-2000 TeCGraf, PUC-Rio"
 #define LUA_AUTHORS 	"W. Celes, R. Ierusalimschy & L. H. de Figueiredo"
 
@@ -112,8 +112,6 @@ lua_Object     lua_createtable (lua_State *L);
 long	       lua_collectgarbage (lua_State *L, long limit);
 
 
-lua_Object     lua_seterrormethod (lua_State *L);  /* In: new method */
-
 
 /* 
 ** ===============================================================
@@ -207,9 +205,8 @@ extern lua_State *lua_state;
 #define lua_unref(ref)		(lua_unref)(lua_state, ref)
 #define lua_createtable()	(lua_createtable)(lua_state)
 #define lua_collectgarbage(limit)	(lua_collectgarbage)(lua_state, limit)
-#define lua_seterrormethod()	(lua_seterrormethod)(lua_state)
 /*
-** the following typecast is a little dirty, but we cannot find another
+** the following typecast is a little dirty, but we know of no other
 ** way to keep compatibility with old definition of `lua_CFunction'
 */
 #define lua_pushcclosure(fn,n) \
