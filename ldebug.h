@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.h,v 1.18 2002/03/25 17:47:14 roberto Exp roberto $
+** $Id: ldebug.h,v 1.19 2002/04/10 12:11:07 roberto Exp roberto $
 ** Auxiliary functions from Debug Interface module
 ** See Copyright Notice in lua.h
 */
@@ -13,6 +13,8 @@
 
 
 #define pcRel(pc, p)	(cast(int, (pc) - (p)->code) - 1)
+
+#define getline(f,pc)	(((f)->lineinfo) ? (f)->lineinfo[pc] : 0)
 
 void luaG_typeerror (lua_State *L, const TObject *o, const char *opname);
 void luaG_concaterror (lua_State *L, StkId p1, StkId p2);
