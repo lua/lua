@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 4.7 1997/06/09 17:28:14 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 4.8 1997/06/12 18:27:29 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -18,8 +18,8 @@ char *rcs_opcode="$Id: opcode.c,v 4.7 1997/06/09 17:28:14 roberto Exp roberto $"
 #include "table.h"
 #include "lua.h"
 #include "fallback.h"
-#include "undump.h"
 #include "auxlib.h"
+#include "lex.h"
 
 #define tonumber(o) ((ttype(o) != LUA_T_NUMBER) && (lua_tonumber(o) != 0))
 #define tostring(o) ((ttype(o) != LUA_T_STRING) && (lua_tostring(o) != 0))
@@ -597,7 +597,8 @@ int luaI_dorun (TFunc *tf)
   return status;
 }
 
-static int do_protectedmain (lua_CFunction closef)
+
+int lua_domain (void)
 {
   TFunc tf;
   int status;
@@ -614,14 +615,12 @@ static int do_protectedmain (lua_CFunction closef)
     adjustC(0);  /* erase extra slot */
     status = 1;
   }
-  closef();
   if (status == 0)
     status = luaI_dorun(&tf);
   errorJmp = oldErr;
   luaI_free(tf.code);
   return status;
 }
-
 
 /*
 ** Execute the given lua function. Return 0 on success or 1 on error.
@@ -636,47 +635,6 @@ int lua_callfunction (lua_Object function)
     stack[CLS_current.base] = *Address(function);
     return do_protectedrun (MULT_RET);
   }
-}
-
-
-/*
-** Open file, generate opcode and execute global statement. Return 0 on
-** success or non 0 on error.
-*/
-int lua_dofile (char *filename)
-{
-  int status;
-  int c;
-  FILE *f = lua_openfile(filename);
-  if (f == NULL)
-    return 2;
-  c = fgetc(f);
-  ungetc(c, f);
-  if (c == ID_CHUNK) {
-    f = freopen(filename, "rb", f);  /* set binary mode */
-    status = luaI_undump(f);
-    lua_closefile();
-  }
-  else {
-    if (c == '#')
-      while ((c=fgetc(f)) != '\n') /* skip first line */;
-    status = do_protectedmain(lua_closefile);
-  }
-  return status;
-}
-
-/*
-** Generate opcode stored on string and execute global statement. Return 0 on
-** success or non 0 on error.
-*/
-int lua_dostring (char *str)
-{
-  int status;
-  if (str == NULL)
-    return 1;
-  lua_openstring(str);
-  status = do_protectedmain(lua_closestring);
-  return status;
 }
 
 
@@ -1058,7 +1016,7 @@ static void call_arith (IMS event)
     if (ttype(im) == LUA_T_NIL) {
       im = luaI_getim(0, event);  /* try a 'global' i.m. */
       if (ttype(im) == LUA_T_NIL)
-        lua_error("unexpected type at conversion to number");
+        lua_error("unexpected type at arithmetic operation");
     }
   }
   lua_pushstring(luaI_eventname[event]);

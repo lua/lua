@@ -5,22 +5,24 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.59 1997/05/26 14:42:51 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.60 1997/06/09 17:28:14 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
 
 #include "auxlib.h"
-#include "lex.h"
-#include "opcode.h"
+#include "fallback.h"
+#include "hash.h"
 #include "inout.h"
+#include "lex.h"
+#include "lua.h"
+#include "luamem.h"
+#include "luamem.h"
+#include "opcode.h"
 #include "table.h"
 #include "tree.h"
-#include "lua.h"
-#include "hash.h"
-#include "luamem.h"
-#include "fallback.h"
-#include "luamem.h"
+#include "undump.h"
+#include "zio.h"
 
 
 /* Exported variables */
@@ -34,73 +36,58 @@ char *luaI_typenames[] = { /* ORDER LUA_T */
   NULL
 };
 
-static FILE *fp;
-static char *st;
 
-/*
-** Function to get the next character from the input file
-*/
-static int fileinput (void)
+
+int lua_dofile (char *filename)
 {
-  int c = fgetc(fp);
-  return (c == EOF) ? 0 : c;
-}
+  int status;
+  int c;
+  FILE *f = (filename == NULL) ? stdin : fopen(filename, "r");
+  if (f == NULL)
+    return 2;
+  lua_parsedfile = luaI_createfixedstring(filename?filename:"(stdin)")->str;
+  c = fgetc(f);
+  ungetc(c, f);
+  if (c == ID_CHUNK) {
+    ZIO z;
+    f = freopen(filename, "rb", f);  /* set binary mode */
+    zFopen(&z, f);
+    lua_setinput(&z);
+    status = luaI_undump(&z);
+    zclose(&z);
+  }
+  else {
+    ZIO z;
+    if (c == '#')
+      while ((c=fgetc(f)) != '\n') /* skip first line */;
+    zFopen(&z, f);
+    lua_setinput(&z);
+    status = lua_domain();
+    zclose(&z);
+  }
+  return status;
+}                      
 
-/*
-** Function to get the next character from the input string
-*/
-static int stringinput (void)
-{
- return *st++;
-}
 
-/*
-** Function to open a file to be input unit. 
-** Return the file.
-*/
-FILE *lua_openfile (char *fn)
-{
- lua_setinput (fileinput);
- if (fn == NULL)
- {
-   fp = stdin;
-   fn = "(stdin)";
- }
- else
-   fp = fopen (fn, "r");
- lua_parsedfile = luaI_createfixedstring(fn)->str;
- return fp;
-}
 
-/*
-** Function to close an opened file
-*/
-void lua_closefile (void)
-{
- if (fp != stdin)
-   fclose(fp);
-}
-
-/*
-** Function to open a string to be input unit
-*/
 #define SIZE_PREF 20  /* size of string prefix to appear in error messages */
-void lua_openstring (char *s)
+
+int lua_dostring (char *str)
 {
+  int status;
   char buff[SIZE_PREF+25];
-  lua_setinput(stringinput);
-  st = s;
-  sprintf(buff, "(dostring) >> %.20s%s", s,
-          (strlen(s) > SIZE_PREF) ? "..." : "");
+  ZIO z;
+  if (str == NULL) return 1;
+  sprintf(buff, "(dostring) >> %.20s%s", str,
+          (strlen(str) > SIZE_PREF) ? "..." : "");
   lua_parsedfile = luaI_createfixedstring(buff)->str;
+  zsopen(&z, str);
+  lua_setinput(&z);
+  status = lua_domain();
+  zclose(&z);
+  return status;
 }
 
-/*
-** Function to close an opened string
-*/
-void lua_closestring (void)
-{
-}
 
 
 

@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.32 1997/04/04 22:24:51 roberto Exp roberto $
+** $Id: opcode.h,v 3.33 1997/04/11 21:34:53 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -166,5 +166,6 @@ TObject *luaI_Address (lua_Object o);
 void	luaI_pushobject (TObject *o);
 void    luaI_gcIM       (TObject *o);
 int     luaI_dorun (TFunc *tf);
+int     lua_domain (void);
 
 #endif

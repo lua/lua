@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 3.4 1997/06/11 14:20:51 roberto Exp $";
+char *rcs_lex = "$Id: lex.c,v 3.4 1997/06/11 18:56:02 roberto Exp roberto $";
 
 
 #include <ctype.h>
@@ -15,13 +15,13 @@ char *rcs_lex = "$Id: lex.c,v 3.4 1997/06/11 14:20:51 roberto Exp $";
 
 #define MINBUFF 250
 
-#define next() (current = input())
+static int current;  /* look ahead character */
+static ZIO *lex_z;
+
+
+#define next() (current = zgetc(lex_z))
 #define save(x) (yytext[tokensize++] = (x))
 #define save_and_next()  (save(current), next())
-
-
-static int current;  /* look ahead character */
-static Input input;  /* input function */
 
 
 #define MAX_IFS	5
@@ -37,14 +37,14 @@ static struct {
 static int iflevel;  /* level of nested $if's */
 
 
-void lua_setinput (Input fn)
+void lua_setinput (ZIO *z)
 {
   current = '\n';
   lua_linenumber = 0;
   iflevel = 0;
   ifstate[0].skip = 0;
   ifstate[0].elsepart = 1;  /* to avoid a free $else */
-  input = fn;
+  lex_z = z;
 }
 
 
@@ -155,7 +155,7 @@ static void ifskip (void)
   while (ifstate[iflevel].skip) {
     if (current == '\n')
       inclinenumber();
-    else if (current == 0)
+    else if (current == EOZ)
       luaI_auxsyntaxerror("input ends inside a $if");
     else next();
   }
@@ -183,7 +183,7 @@ static void inclinenumber (void)
         break;
       case 2:  /* endinput */
         if (!skip) {
-          current = 0;
+          current = EOZ;
           iflevel = 0;  /* to allow $endinput inside a $if */
         }
         break;
@@ -216,7 +216,7 @@ static void inclinenumber (void)
     skipspace();
     if (current == '\n')  /* pragma must end with a '\n' ... */
       inclinenumber();
-    else if (current != 0)  /* or eof */
+    else if (current != EOZ)  /* or eof */
       luaI_auxsyntaxerror("invalid pragma format");
     ifskip();
   }
@@ -232,7 +232,7 @@ static int read_long_string (char *yytext, int buffsize)
       yytext = luaI_buffer(buffsize *= 2);
     switch (current)
     {
-      case 0:
+      case EOZ:
         save(0);
         return WRONGTOKEN;
       case '[':
@@ -295,7 +295,7 @@ int luaY_lex (void)
       case '-':
         save_and_next();
         if (current != '-') return '-';
-        do { next(); } while (current != '\n' && current != 0);
+        do { next(); } while (current != '\n' && current != EOZ);
         continue;
 
       case '[':
@@ -338,7 +338,7 @@ int luaY_lex (void)
             yytext = luaI_buffer(buffsize *= 2);
           switch (current)
           {
-            case 0:
+            case EOZ:
             case '\n':
               save(0);
               return WRONGTOKEN;
@@ -455,7 +455,7 @@ int luaY_lex (void)
           return NUMBER;
         }
 
-      case 0:
+      case EOZ:
         save(0);
         if (iflevel > 0)
           luaI_syntaxerror("missing $endif");

@@ -1,5 +1,5 @@
 /*
-** $Id: inout.h,v 1.16 1996/05/28 21:07:32 roberto Exp roberto $
+** $Id: inout.h,v 1.17 1997/02/26 17:38:41 roberto Unstable roberto $
 */
 
 

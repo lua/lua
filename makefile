@@ -1,4 +1,4 @@
-# $Id: makefile,v 1.33 1997/04/06 14:08:08 roberto Exp roberto $
+# $Id: makefile,v 1.34 1997/06/11 18:57:00 roberto Exp roberto $
 
 #configuration
 
@@ -32,7 +32,8 @@ LUAOBJS = \
 	luamem.o \
 	func.o \
 	undump.o \
-	auxlib.o
+	auxlib.o \
+	zio.o
 
 LIBOBJS = 	\
 	iolib.o \
@@ -77,29 +78,32 @@ clear	:
 	co $@
 
 
-auxlib.o: auxlib.c lua.h auxlib.h
+auxlib.o: auxlib.c lua.h auxlib.h luadebug.h
 fallback.o: fallback.c auxlib.h lua.h luamem.h fallback.h opcode.h \
  types.h tree.h func.h table.h hash.h
 func.o: func.c luadebug.h lua.h table.h tree.h types.h opcode.h func.h \
  luamem.h
 hash.o: hash.c luamem.h opcode.h lua.h types.h tree.h func.h hash.h \
  table.h auxlib.h
-inout.o: inout.c auxlib.h lua.h lex.h opcode.h types.h tree.h func.h \
- inout.h table.h hash.h luamem.h fallback.h
+inout.o: inout.c auxlib.h lua.h fallback.h opcode.h types.h tree.h \
+ func.h hash.h inout.h lex.h zio.h luamem.h table.h undump.h
 iolib.o: iolib.c lua.h auxlib.h luadebug.h lualib.h
 lex.o: lex.c auxlib.h lua.h luamem.h tree.h types.h table.h opcode.h \
- func.h lex.h inout.h luadebug.h parser.h
+ func.h lex.h zio.h inout.h luadebug.h parser.h
 lua.o: lua.c lua.h auxlib.h lualib.h
 luamem.o: luamem.c luamem.h lua.h
 mathlib.o: mathlib.c lualib.h lua.h auxlib.h
 opcode.o: opcode.c luadebug.h lua.h luamem.h opcode.h types.h tree.h \
- func.h hash.h inout.h table.h fallback.h undump.h auxlib.h
-parser.o: parser.c luadebug.h lua.h luamem.h lex.h opcode.h types.h \
- tree.h func.h hash.h inout.h table.h
+ func.h hash.h inout.h table.h fallback.h auxlib.h lex.h zio.h
+parser.o: parser.c luadebug.h lua.h luamem.h lex.h zio.h opcode.h \
+ types.h tree.h func.h hash.h inout.h table.h
 strlib.o: strlib.c lua.h auxlib.h lualib.h
-table.o: table.c luamem.h auxlib.h lua.h opcode.h types.h tree.h \
- func.h hash.h table.h inout.h fallback.h luadebug.h
-tree.o: tree.c luamem.h lua.h tree.h types.h lex.h hash.h opcode.h \
- func.h table.h fallback.h
-undump.o: undump.c opcode.h lua.h types.h tree.h func.h luamem.h \
- table.h undump.h
+table.o: table.c luamem.h auxlib.h lua.h func.h types.h tree.h \
+ opcode.h hash.h table.h inout.h fallback.h luadebug.h
+tree.o: tree.c luamem.h lua.h tree.h types.h lex.h zio.h hash.h \
+ opcode.h func.h table.h fallback.h
+undump.o: undump.c auxlib.h lua.h opcode.h types.h tree.h func.h \
+ luamem.h table.h undump.h zio.h
+y.tab.o: y.tab.c luadebug.h lua.h luamem.h lex.h zio.h opcode.h \
+ types.h tree.h func.h hash.h inout.h table.h
+zio.o: zio.c zio.h
