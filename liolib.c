@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.19 1998/06/02 21:20:54 roberto Exp roberto $
+** $Id: liolib.c,v 1.20 1998/06/05 22:17:44 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -326,8 +326,10 @@ static void setloc (void)
 {
   static int cat[] = {LC_ALL, LC_COLLATE, LC_CTYPE, LC_MONETARY, LC_NUMERIC,
                       LC_TIME};
-  int op = (int)luaL_opt_number(2, 0);
-  luaL_arg_check(0 <= op && op <= 5, 2, "invalid option");
+  static char *catnames[] = {"all", "collate", "ctype", "monetary",
+     "numeric", "time", NULL};
+  int op = luaL_findstring(luaL_opt_string(2, "all"), catnames);
+  luaL_arg_check(op != -1, 2, "invalid option");
   lua_pushstring(setlocale(cat[op], luaL_check_string(1)));
 }
 
