@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.25 2000/02/08 16:34:31 roberto Exp roberto $
+** $Id: lmem.c,v 1.26 2000/03/03 14:58:26 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -29,7 +29,7 @@
 #ifdef DEBUG
 /*
 ** {======================================================================
-** Controled version for realloc.
+** Controlled version for realloc.
 ** =======================================================================
 */
 
