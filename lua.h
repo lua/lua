@@ -2,7 +2,7 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lua.h,v 3.7 1994/11/13 16:17:04 roberto Exp $
+** $Id: lua.h,v 3.8 1994/11/17 16:41:42 roberto Exp roberto $
 */
 
 
@@ -13,14 +13,13 @@
  
 typedef enum
 {
- LUA_T_MARK,
- LUA_T_NIL,
- LUA_T_NUMBER,
- LUA_T_STRING,
- LUA_T_ARRAY,
- LUA_T_FUNCTION,
- LUA_T_CFUNCTION,
- LUA_T_USERDATA
+ LUA_T_NIL	= -1,
+ LUA_T_NUMBER	= -2,
+ LUA_T_STRING	= -3,
+ LUA_T_ARRAY	= -4,
+ LUA_T_FUNCTION	= -5,
+ LUA_T_CFUNCTION= -6,
+ LUA_T_USERDATA = 0
 } lua_Type;
  
 
@@ -53,7 +52,7 @@ int 	       lua_pushnil 		(void);
 int            lua_pushnumber 		(float n);
 int            lua_pushstring 		(char *s);
 int            lua_pushcfunction	(lua_CFunction fn);
-int            lua_pushuserdata     	(void *u);
+int            lua_pushusertag     	(void *u, int tag);
 int            lua_pushobject       	(lua_Object object);
 
 lua_Object     lua_getglobal 		(char *name);
@@ -76,6 +75,8 @@ lua_Object     lua_createTable		(int initSize);
 
 #define lua_getindexed(o,n) (lua_pushobject(o), lua_pushnumber(n), lua_getsubscript())
 #define lua_getfield(o,f)   (lua_pushobject(o), lua_pushstring(f), lua_getsubscript())
+
+#define lua_pushuserdata(u)     lua_pushusertag(u,LUA_USERDATA)
 
 #define lua_isnil(_)            (lua_type(_)==LUA_T_NIL)
 #define lua_isnumber(_)         (lua_type(_)==LUA_T_NUMBER)

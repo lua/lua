@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.17 1994/11/16 17:38:08 roberto Exp roberto $";
+char *rcs_hash="$Id: hash.c,v 2.18 1994/11/17 13:58:57 roberto Exp roberto $";
 
 #include "mem.h"
 #include "opcode.h"
@@ -49,6 +49,9 @@ static int hashindex (Hash *t, Object *ref)		/* hash function */
 {
  switch (tag(ref))
  {
+  case LUA_T_NIL:
+   lua_reportbug ("unexpected type to index table");
+   return -1;  /* UNREACHEABLE */
   case LUA_T_NUMBER:
    return (((int)nvalue(ref))%nhash(t));
   case LUA_T_STRING:
@@ -69,11 +72,8 @@ static int hashindex (Hash *t, Object *ref)		/* hash function */
    return (((int)fvalue(ref))%nhash(t));
   case LUA_T_ARRAY:
    return (((int)avalue(ref))%nhash(t));
-  case LUA_T_USERDATA:
+  default:  /* user data */
    return (((int)uvalue(ref))%nhash(t));
-  default:
-   lua_reportbug ("unexpected type to index table");
-   return -1;  /* UNREACHEABLE */
  }
 }
 

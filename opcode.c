@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.15 1994/11/17 16:41:42 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.16 1994/11/17 19:43:34 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -536,7 +536,7 @@ lua_CFunction lua_getcfunction (lua_Object object)
 void *lua_getuserdata (lua_Object object)
 {
  if (object == 0) return NULL;
- if (tag(Address(object)) != LUA_T_USERDATA) return NULL;
+ if (tag(Address(object)) < LUA_T_USERDATA) return NULL;
  else return (uvalue(Address(object)));
 }
 
@@ -621,10 +621,11 @@ int lua_pushcfunction (lua_CFunction fn)
 /*
 ** Push an object (tag=userdata) to stack. Return 0 on success or 1 on error.
 */
-int lua_pushuserdata (void *u)
+int lua_pushusertag (void *u, int tag)
 {
  lua_checkstack(top-stack+1);
- tag(top) = LUA_T_USERDATA; uvalue(top++) = u;
+ if (tag < LUA_T_USERDATA) return 1;
+ tag(top) = tag; uvalue(top++) = u;
  return 0;
 }
 
