@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.99 2000/03/27 20:10:21 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.100 2000/03/29 20:19:20 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -371,7 +371,7 @@ void luaB_next (lua_State *L) {
 
 
 void luaB_tostring (lua_State *L) {
-  lua_Object o = lua_getparam(L, 1);
+  lua_Object o = luaL_nonnullarg(L, 1);
   char buff[64];
   switch (ttype(o)) {
     case TAG_NUMBER:

@@ -143,3 +143,13 @@ Thu Mar  2 09:41:53 EST 2000
 >> lua_settable should check stack space (it could call a T.M.)
 (by lhf & celes; since 3.2; it was already fixed by fixed stack)
 
+** lparser.c
+Mon Apr  3 09:59:06 EST 2000
+>> '%' should be in expfollow
+(by Edgar Toernig; since 3.1; it was already fixed)
+
+** lbuiltin.c
+Mon Apr  3 10:05:05 EST 2000
+>> tostring() without arguments gives seg. fault.
+(by Edgar Toernig; since 3.0)
+
