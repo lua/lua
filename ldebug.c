@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.39 2000/08/31 13:29:12 roberto Exp roberto $
+** $Id: ldebug.c,v 1.40 2000/09/11 20:29:27 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -195,7 +195,7 @@ static void lua_funcinfo (lua_Debug *ar, StkId func) {
     default:
       LUA_INTERNALERROR("invalid `func' value");
   }
-  luaO_chunkid(ar->source_id, ar->source, sizeof(ar->source_id));
+  luaO_chunkid(ar->short_src, ar->source, sizeof(ar->short_src));
   if (ar->linedefined == 0)
     ar->what = "main";
 }
