@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.38 1996/11/08 12:20:34 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.38 1996/11/08 12:49:35 roberto Exp roberto $";
 
 
 #include <ctype.h>
@@ -36,7 +36,7 @@ void luaI_syntaxerror (char *s)
   char *token = luaI_buffer(1);
   if (token[0] == 0)
     token = "<eof>";
-  sprintf (msg,"%s; last token read: \"%s\" at line %d in file `%s'",
+  sprintf (msg,"%s;\n> last token read: \"%s\" at line %d in file %s",
            s, token, lua_linenumber, lua_parsedfile);
   lua_error (msg);
 }
@@ -80,6 +80,7 @@ void luaI_addReserved (void)
 
 static int inclinenumber (int pragma_allowed)
 {
+  ++lua_linenumber;
   if (pragma_allowed && current == '$') {  /* is a pragma? */
     char *buff = luaI_buffer(MINBUFF+1);
     int i = 0;
@@ -96,7 +97,7 @@ static int inclinenumber (int pragma_allowed)
       lua_debug = 0;
     else luaI_syntaxerror("invalid pragma");
   }
-  return ++lua_linenumber;
+  return lua_linenumber;
 }
 
 static int read_long_string (char *yytext, int buffsize)
