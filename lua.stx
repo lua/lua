@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.15 1994/12/27 20:04:29 celes Exp celes $";
+char *rcs_luastx = "$Id: lua.stx,v 3.16 1994/12/27 20:41:11 celes Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -237,7 +237,7 @@ static void init_function (TreeNode *func)
   if (lua_debug)
   {
     code_byte(SETFUNCTION); 
-    code_code((Byte *)strdup(lua_file[lua_nfile-1]));
+    code_code((Byte *)luaI_strdup(lua_file[lua_nfile-1]));
     code_word(luaI_findconstant(func));
   }
 }

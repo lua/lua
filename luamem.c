@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_mem = "$Id: mem.c,v 1.2 1994/11/16 18:09:11 roberto Stab $";
+char *rcs_mem = "$Id: mem.c,v 1.3 1994/12/20 21:20:36 roberto Exp roberto $";
 
 #include <stdlib.h>
 
@@ -34,3 +34,10 @@ void *luaI_realloc (void *oldblock, unsigned long size)
   return block;
 }
 
+
+char *luaI_strdup (char *str)
+{
+  char *newstr = luaI_malloc(strlen(str)+1);
+  strcpy(newstr, str);
+  return newstr;
+}

@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.25 1994/12/20 21:20:36 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.26 1995/01/12 14:19:04 roberto Exp roberto $";
 
 #include <string.h>
 
@@ -197,7 +197,7 @@ char *lua_addfile (char *fn)
 {
  if (lua_nfile >= MAXFILE)
    return "too many files";
- if ((lua_file[lua_nfile++] = strdup (fn)) == NULL)
+ if ((lua_file[lua_nfile++] = luaI_strdup (fn)) == NULL)
    return "not enough memory";
  return NULL;
 }

@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.7 1994/12/16 15:53:57 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.8 1995/01/06 20:31:10 roberto Exp roberto $";
 
 #include <string.h>
 #include <ctype.h>
@@ -109,7 +109,7 @@ static void str_lower (void)
  lua_Object o = lua_getparam (1);
  if (!lua_isstring(o))
    lua_error ("incorrect arguments to function `strlower'");
- c = s = strdup(lua_getstring(o));
+ c = s = luaI_strdup(lua_getstring(o));
  while (*c != 0)
  {
   *c = tolower(*c);
@@ -131,7 +131,7 @@ static void str_upper (void)
  lua_Object o = lua_getparam (1);
  if (!lua_isstring(o))
    lua_error ("incorrect arguments to function `strlower'");
- c = s = strdup(lua_getstring(o));
+ c = s = luaI_strdup(lua_getstring(o));
  while (*c != 0)
  {
   *c = toupper(*c);
