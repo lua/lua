@@ -13,7 +13,7 @@ T= $(BIN)/luac
 all:	$T
 
 $T:	$(OBJS) $(LIB)/liblua.a $(LIB)/liblualib.a
-	$(CC) -o $@ $(MYLDFLAGS) $(OBJS) -L$(LIB) -llua -llualib $(EXTRA_LIBS)
+	$(CC) -o $@ $(MYLDFLAGS) $(OBJS) -L$(LIB) -llua -llualib $(EXTRA_LIBS) $(DLLIB)
 
 # print.c needs opcode names from lopcodes.c
 lopcodes.o:	../lopcodes.c ../lopcodes.h

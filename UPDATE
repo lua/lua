@@ -1,0 +1,24 @@
+This is Lua 5.0.1, an update of Lua 5.0 that includes the following changes,
+which fix all known bugs in Lua 5.0.
+
+src/ldo.c
+	Attempt to resume running coroutine crashed Lua
+src/lgc.c
+	C functions also may have stacks larger than current top
+	Userdata to be collected still counted into new GC threshold
+src/lgc.h
+	Userdata to be collected still counted into new GC threshold
+src/lparser.c
+	Syntax `local function' did not increment stack size
+src/lvm.c
+	`pc' address was invalidated when a coroutine was suspended
+	Count hook might be called without being set
+src/lib/lbaselib.c
+	Buffer overflow for unusual %p representation
+src/lib/liolib.c
+	`file.close()' could not be called without arguments
+	Buffer overflow for unusual %p representation
+src/luac/luac.c
+	Missing lock/unlock
+
+To use this update, simply open this tarball over the original Lua 5.0 source.

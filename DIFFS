@@ -1,0 +1,623 @@
+diff -r lua-5.0/doc/manual.html lua-5.0.1/doc/manual.html
+5c5
+< <title>Lua 5.0 Reference Manual</title>
+---
+> <TITLE>Lua: 5.0 reference manual</TITLE>
+12,14c12
+< <a HREF="http://www.lua.org/home.html">
+< <img SRC="logo.gif" ALT="[Lua logo]" BORDER=0>
+< </a>
+---
+> <A HREF="http://www.lua.org/home.html"><IMG SRC="logo.gif" ALT="Lua" BORDER=0></A>
+22c20
+< &copy; 2003 TeCGraf, PUC-Rio.  All rights reserved.
+---
+> &copy; 2003 Tecgraf, PUC-Rio.  All rights reserved.
+32c30
+< <h1>1 - Introduction</h1>
+---
+> <a name="1"><h1>1 - Introduction</h1></a>
+37c35
+< It also offers good suport for object-oriented programming,
+---
+> It also offers good support for object-oriented programming,
+54c52
+< <p>The Lua distribuition includes a stand-alone embedding program,
+---
+> <p>The Lua distribution includes a stand-alone embedding program,
+90c88
+< <a name="language"><h1>2 - The Language</h1></a>
+---
+> <a name="language"><a name="2"><h1>2 - The Language</h1></a></a>
+108c106
+< <p><a name="lexical"><h2>2.1 - Lexical Conventions</h2></a>
+---
+> <p><a name="lexical"><a name="2.1"><h2>2.1 - Lexical Conventions</h2></a></a>
+125,126c123
+<        repeat    return    then      true      until
+<        while
+---
+>        repeat    return    then      true      until     while
+214c211
+< <p><a name="TypesSec"><h2>2.2 - Values and Types</h2></a>
+---
+> <p><a name="TypesSec"><a name="2.2"><h2>2.2 - Values and Types</h2></a></a>
+295c292
+< <p><a name="coercion"><h3>2.2.1 - Coercion</h3></a>
+---
+> <p><a name="coercion"><a name="2.2.1"><h3>2.2.1 - Coercion</h3></a></a>
+306c303
+< <p><a name="variables"><h2>2.3 - Variables</h2></a>
+---
+> <p><a name="variables"><a name="2.3"><h2>2.3 - Variables</h2></a></a>
+375c372
+< <p><a name="stats"><h2>2.4 - Statements</h2></a>
+---
+> <p><a name="stats"><a name="2.4"><h2>2.4 - Statements</h2></a></a>
+383c380
+< <p><a name="chunks"><h3>2.4.1 - Chunks</h3></a>
+---
+> <p><a name="chunks"><a name="2.4.1"><h3>2.4.1 - Chunks</h3></a></a>
+408c405
+< <p><h3>2.4.2 - Blocks</h3>
+---
+> <p><a name="2.4.2"><h3>2.4.2 - Blocks</h3></a>
+426c423
+< <p><a name="assignment"><h3>2.4.3 - Assignment</h3></a>
+---
+> <p><a name="assignment"><a name="2.4.3"><h3>2.4.3 - Assignment</h3></a></a>
+461c458
+< before it is assigned 4.
+---
+> before it is assigned&nbsp;4.
+488c485
+< <p><a name="control"><h3>2.4.4 - Control Structures</h3></a>
+---
+> <p><a name="control"><a name="2.4.4"><h3>2.4.4 - Control Structures</h3></a></a>
+519c516
+< skiping to the next statement after the loop:
+---
+> skipping to the next statement after the loop:
+539c536
+< <p><a name="for"><h3>2.4.5 - For Statement</h3></a>
+---
+> <p><a name="for"><a name="2.4.5"><h3>2.4.5 - For Statement</h3></a></a>
+626c623
+< <p><a name="funcstat"><h3>2.4.6 - Function Calls as Statements</h3></a>
+---
+> <p><a name="funcstat"><a name="2.4.6"><h3>2.4.6 - Function Calls as Statements</h3></a></a>
+635c632
+< <p><a name="localvar"><h3>2.4.7 - Local Declarations</h3></a>
+---
+> <p><a name="localvar"><a name="2.4.7"><h3>2.4.7 - Local Declarations</h3></a></a>
+652c649
+< <p><a name="expressions"><h2>2.5 - Expressions</h2></a>
+---
+> <p><a name="expressions"><a name="2.5"><h2>2.5 - Expressions</h2></a></a>
+683c680
+< <p><h3>2.5.1 - Arithmetic Operators</h3>
+---
+> <p><a name="2.5.1"><h3>2.5.1 - Arithmetic Operators</h3></a>
+698c695
+< <p><a name="rel-ops"><h3>2.5.2 - Relational Operators</h3></a>
+---
+> <p><a name="rel-ops"><a name="2.5.2"><h3>2.5.2 - Relational Operators</h3></a></a>
+734c731
+< <p><h3>2.5.3 - Logical Operators</h3>
+---
+> <p><a name="2.5.3"><h3>2.5.3 - Logical Operators</h3></a>
+767c764
+< <p><a name="concat"><h3>2.5.4 - Concatenation</h3></a>
+---
+> <p><a name="concat"><a name="2.5.4"><h3>2.5.4 - Concatenation</h3></a></a>
+774c771
+< <p><h3>2.5.5 - Precedence</h3>
+---
+> <p><a name="2.5.5"><h3>2.5.5 - Precedence</h3></a>
+787c784
+< As usual, you can use parentheses to change the precedences of an expression.
+---
+> You can use parentheses to change the precedences in an expression.
+792c789
+< <p><a name="tableconstructor"><h3>2.5.6 - Table Constructors</h3></a>
+---
+> <p><a name="tableconstructor"><a name="2.5.6"><h3>2.5.6 - Table Constructors</h3></a></a>
+842c839
+< <p><a name="functioncall"><h3>2.5.7 - Function Calls</h3></a>
+---
+> <p><a name="functioncall"><a name="2.5.7"><h3>2.5.7 - Function Calls</h3></a></a>
+947c944
+<   return x, f(x)       -- adicional results
+---
+>   return x, f(x)       -- additional results
+952c949
+< <p><a name="func-def"><h3>2.5.8 - Function Definitions</h3></a>
+---
+> <p><a name="func-def"><a name="2.5.8"><h3>2.5.8 - Function Definitions</h3></a></a>
+1061c1058
+< <p><a name="visibility"><h2>2.6 - Visibility Rules</h2></a>
+---
+> <p><a name="visibility"><a name="2.6"><h2>2.6 - Visibility Rules</h2></a></a>
+1118c1115
+< <p><a name="error"><h2>2.7 - Error Handling</h2></a>
+---
+> <p><a name="error"><a name="2.7"><h2>2.7 - Error Handling</h2></a></a>
+1133c1130
+< <p><a name="metatable"><h2>2.8 - Metatables</h2></a>
+---
+> <p><a name="metatable"><a name="2.8"><h2>2.8 - Metatables</h2></a></a>
+1315c1312
+<    if type(op1) ~= type(op2) then  -- diferent types?
+---
+>    if type(op1) ~= type(op2) then  -- different types?
+1443c1440
+< <p><a name="GC"><h2>2.9 - Garbage Collection</h2></a>
+---
+> <p><a name="GC"><a name="2.9"><h2>2.9 - Garbage Collection</h2></a></a>
+1474c1471
+< <p><h3>2.9.1 - Garbage-Collection Metamethods</h3>
+---
+> <p><a name="2.9.1"><h3>2.9.1 - Garbage-Collection Metamethods</h3></a>
+1506c1503
+< <p><a name="weak-table"><h3>2.9.2 - Weak Tables</h3></a>
+---
+> <p><a name="weak-table"><a name="2.9.2"><h3>2.9.2 - Weak Tables</h3></a></a>
+1524c1521
+< If the <code>__mode</code> field is a string containing the character `<code>k</code>&acute;,
+---
+> If the <code>__mode</code> field is a string containing the character&nbsp;`<code>k</code>&acute;,
+1534c1531
+< <p><a name="coroutine"><h2>2.10 - Coroutines</h2></a>
+---
+> <p><a name="coroutine"><a name="2.10"><h2>2.10 - Coroutines</h2></a></a>
+1552c1549
+< passing as argument the thread returned by <code>coroutine.create</code>,
+---
+> passing as its first argument the thread returned by <code>coroutine.create</code>,
+1633c1630
+< <a name="API"><h1>3 - The Application Program Interface</h1></a>
+---
+> <a name="API"><a name="3"><h1>3 - The Application Program Interface</h1></a></a>
+1648c1645
+< <p><a name="mangstate"><h2>3.1 - States</h2></a>
+---
+> <p><a name="mangstate"><a name="3.1"><h2>3.1 - States</h2></a></a>
+1684c1681
+< <p><h2>3.2 - The Stack and Indices</h2>
+---
+> <p><a name="3.2"><h2>3.2 - The Stack and Indices</h2></a>
+1694c1691
+< and it is where the C function pushes its results (see <a href="#LuacallC">3.16</a>)
+---
+> and it is where the C function pushes its results to be returned to the caller (see <a href="#LuacallC">3.16</a>)
+1739c1736
+< it ensures that at least <code>LUA_MINSTACK</code> positions are available.
+---
+> it ensures that at least <code>LUA_MINSTACK</code> stack positions are available.
+1763c1760
+< <p><h2>3.3 - Stack Manipulation</h2>
+---
+> <p><a name="3.3"><h2>3.3 - Stack Manipulation</h2></a>
+1816c1813
+< <p><h2>3.4 - Querying the Stack</h2>
+---
+> <p><a name="3.4"><h2>3.4 - Querying the Stack</h2></a>
+1890c1887
+< <p><a name="lua-to"><h2>3.5 - Getting Values from the Stack</h2></a>
+---
+> <p><a name="lua-to"><a name="3.5"><h2>3.5 - Getting Values from the Stack</h2></a></a>
+1969c1966
+< <p><a name="pushing"><h2>3.6 - Pushing Values onto the Stack</h2></a>
+---
+> <p><a name="pushing"><a name="3.6"><h2>3.6 - Pushing Values onto the Stack</h2></a></a>
+1999,2000c1996
+<        const char *lua_pushvfstring (lua_State *L, const char *fmt,
+<                                                    va_list argp);
+---
+>        const char *lua_pushvfstring (lua_State *L, const char *fmt, va_list argp);
+2028c2024
+< If <code>n</code> is 1, the result is that single string
+---
+> If <code>n</code>&nbsp;is&nbsp;1, the result is that single string
+2034c2030
+< <p><a name="GC-API"><h2>3.7 - Controlling Garbage Collection</h2></a>
+---
+> <p><a name="GC-API"><a name="3.7"><h2>3.7 - Controlling Garbage Collection</h2></a></a>
+2047c2043
+<        int  lua_getgccount (lua_State *L);
+---
+>        int  lua_getgccount     (lua_State *L);
+2067c2063
+< <p><a name="userdata"><h2>3.8 - Userdata</h2></a>
+---
+> <p><a name="userdata"><a name="3.8"><h2>3.8 - Userdata</h2></a></a>
+2112c2108
+< <p><h2>3.9 - Metatables</h2>
+---
+> <p><a name="3.9"><h2>3.9 - Metatables</h2></a>
+2133c2129
+< <p><h2>3.10 - Loading Lua Chunks</h2>
+---
+> <p><a name="3.10"><h2>3.10 - Loading Lua Chunks</h2></a>
+2160c2156
+< <p><code>lua_load</code> uses an user-supplied <em>reader</em> function to read the chunk.
+---
+> <p><code>lua_load</code> uses a user-supplied <em>reader</em> function to read the chunk.
+2162c2158
+< it calls the reader,
+---
+> <code>lua_load</code> calls the reader,
+2182c2178
+< <p><h2>3.11 - Manipulating Tables</h2>
+---
+> <p><a name="3.11"><h2>3.11 - Manipulating Tables</h2></a>
+2263c2259
+< <p><a name="globals"><h2>3.12 - Manipulating Environments</h2></a>
+---
+> <p><a name="globals"><a name="3.12"><h2>3.12 - Manipulating Environments</h2></a></a>
+2295c2291
+< <p><h2>3.13 - Using Tables as Arrays</h2>
+---
+> <p><a name="3.13"><h2>3.13 - Using Tables as Arrays</h2></a>
+2312c2308
+< <p><h2>3.14 - Calling Functions</h2>
+---
+> <p><a name="3.14"><h2>3.14 - Calling Functions</h2></a>
+2367c2363
+< <p><a name="lua_pcall"><h2>3.15 - Protected Calls</h2></a>
+---
+> <p><a name="lua_pcall"><a name="3.15"><h2>3.15 - Protected Calls</h2></a></a>
+2414c2410
+< <p><a name="LuacallC"><h2>3.16 - Defining C Functions</h2></a>
+---
+> <p><a name="LuacallC"><a name="3.16"><h2>3.16 - Defining C Functions</h2></a></a>
+2482c2478
+< <p><a name="c-closure"><h2>3.17 - Defining C Closures</h2></a>
+---
+> <p><a name="c-closure"><a name="3.17"><h2>3.17 - Defining C Closures</h2></a></a>
+2517c2513
+< <p><a name="registry"><h2>3.18 - Registry</h2></a>
+---
+> <p><a name="registry"><a name="3.18"><h2>3.18 - Registry</h2></a></a>
+2535c2531
+< <p><h2>3.19 - Error Handling in C</h2>
+---
+> <p><a name="3.19"><h2>3.19 - Error Handling in C</h2></a>
+2542,2543c2538,2539
+< to set a recover point,
+< and any error jumps to the most recent active recover point.
+---
+> to set a recover point;
+> any error jumps to the most recent active recover point.
+2546c2542
+< Lua calls a <em>panic function</em>,
+---
+> Lua calls a <em>panic function</em>
+2553,2554c2549,2550
+< never returning (e.g. doing a long jump).
+< Nevertheless, the corresponding Lua will not be consistent;
+---
+> never returning (e.g., by doing a long jump).
+> Nevertheless, the corresponding Lua state will not be consistent;
+2578c2574
+< Any value returned by <code>func</code> is dicarded.
+---
+> Any value returned by <code>func</code> is discarded.
+2590c2586
+< <p><h2>3.20 - Threads</h2>
+---
+> <p><a name="3.20"><h2>3.20 - Threads</h2></a>
+2611,2616c2607,2609
+< <p>You destroy threads with <code>lua_closethread</code>:
+< <PRE>
+<        void lua_closethread (lua_State *L, lua_State *thread);
+< </PRE>
+< You cannot close the sole (or last) thread of a state.
+< Instead, you must close the state itself.
+---
+> <p>There is no explicit function to close or to destroy a thread.
+> Threads are subject to garbage collection,
+> like any Lua object.
+2622c2615
+<        int lua_yield (lua_State *L, int nresults);
+---
+>        int lua_yield  (lua_State *L, int nresults);
+2632c2625
+< <code>lua_resume</code> returns 0 if there is no errors running the coroutine,
+---
+> <code>lua_resume</code> returns 0 if there are no errors running the coroutine,
+2660c2653
+< <a name="debugI"><h1>4 - The Debug Interface</h1></a>
+---
+> <a name="debugI"><a name="4"><h1>4 - The Debug Interface</h1></a></a>
+2669c2662
+< <p><h2>4.1 - Stack and Function Information</h2>
+---
+> <p><a name="4.1"><h2>4.1 - Stack and Function Information</h2></a>
+2681c2674
+< When there is no errors, <code>lua_getstack</code> returns 1;
+---
+> When there are no errors, <code>lua_getstack</code> returns 1;
+2789c2782
+< <p><h2>4.2 - Manipulating Local Variables and Upvalues</h2>
+---
+> <p><a name="4.2"><h2>4.2 - Manipulating Local Variables and Upvalues</h2></a>
+2866c2859
+< <p><a name="sub-hooks"><h2>4.3 - Hooks</h2></a>
+---
+> <p><a name="sub-hooks"><a name="4.3"><h2>4.3 - Hooks</h2></a></a>
+2942c2935
+< <a name="libraries"><h1>5 - Standard Libraries</h1></a>
+---
+> <a name="libraries"><a name="5"><h1>5 - Standard Libraries</h1></a></a>
+2985c2978
+< <p><a name="predefined"><h2>5.1 - Basic Functions</h2></a>
+---
+> <p><a name="predefined"><a name="5.1"><h2>5.1 - Basic Functions</h2></a></a>
+3018c3011
+< Terminates the last protected function called,
+---
+> Terminates the last protected function called
+3046c3039
+< <p>if the environment has a <code>"__fenv"</code> field,
+---
+> <p>If the environment has a <code>"__fenv"</code> field,
+3151c3144
+< That means that any error inside <code>f</code> is not propagated;
+---
+> That means that any error inside&nbsp;<code>f</code> is not propagated;
+3155c3148
+< which is true if the call succeeds without errors.
+---
+> which is <B>true</B> if the call succeeds without errors.
+3330c3323
+< <p><h2>5.2 - Coroutine Manipulation</h2>
+---
+> <p><a name="5.2"><h2>5.2 - Coroutine Manipulation</h2></a>
+3333c3326
+< the basic library, and come inside the table .
+---
+> the basic library and come inside the table <code>coroutine</code>.
+3388c3381
+< <p><h2>5.3 - String Manipulation</h2>
+---
+> <p><a name="5.3"><h2>5.3 - String Manipulation</h2></a>
+3595c3588
+< a <em>character class</em> is used to represent a set of characters.
+---
+> A <em>character class</em> is used to represent a set of characters.
+3651c3644
+< a <em>pattern item</em> may be
+---
+> A <em>pattern item</em> may be
+3688c3681
+< a <em>pattern</em> is a sequence of pattern items.
+---
+> A <em>pattern</em> is a sequence of pattern items.
+3715c3708
+< <p><h2>5.4 - Table Manipulation</h2>
+---
+> <p><a name="5.4"><h2>5.4 - Table Manipulation</h2></a>
+3824c3817
+< <p><a name="mathlib"><h2>5.5 - Mathematical Functions</h2></a>
+---
+> <p><a name="mathlib"><a name="5.5"><h2>5.5 - Mathematical Functions</h2></a></a>
+3879c3872
+< <p><a name="libio"><h2>5.6 - Input and Output Facilities</h2></a>
+---
+> <p><a name="libio"><a name="5.6"><h2>5.6 - Input and Output Facilities</h2></a></a>
+4072c4065
+< <p><a name="libiosys"><h2>5.7 - Operating System Facilities</h2></a>
+---
+> <p><a name="libiosys"><a name="5.7"><h2>5.7 - Operating System Facilities</h2></a></a>
+4098c4091
+< <code>wday</code> (weekday, Sunday is 1),
+---
+> <code>wday</code> (weekday, Sunday is&nbsp;1),
+4187c4180
+< <p><h2>5.8 - The Reflexive Debug Interface</h2>
+---
+> <p><a name="5.8"><h2>5.8 - The Reflexive Debug Interface</h2></a>
+4323c4316
+< <a name="lua-sa"><h1>6 - Lua Stand-alone</h1></a>
+---
+> <a name="lua-sa"><a name="6"><h1>6 - Lua Stand-alone</h1></a></a>
+4462c4455
+< Vincent Penquerc'h,
+---
+> Vincent Penquerc'h.
+4583c4576
+< <p>	exp ::=  <b>nil</b> <b>false</b> <b>true</b> | Number | Literal | function | prefixexp | tableconstructor | exp binop exp | unop exp 
+---
+> <p>	exp ::=  <b>nil</b> | <b>false</b> | <b>true</b> | Number | Literal | function | prefixexp | tableconstructor | exp binop exp | unop exp 
+4612c4605,4609
+< </body></html>
+---
+> <HR>
+> <SMALL>
+> Last update:
+> Tue Nov 25 16:08:37 BRST 2003
+> </SMALL>
+4613a4611,4612
+> </BODY>
+> </HTML>
+diff -r lua-5.0/include/lua.h lua-5.0.1/include/lua.h
+2c2
+< ** $Id: lua.h,v 1.175 2003/03/18 12:31:39 roberto Exp $
+---
+> ** $Id: lua.h,v 1.175a 2003/03/18 12:31:39 roberto Exp $
+17c17
+< #define LUA_VERSION	"Lua 5.0"
+---
+> #define LUA_VERSION	"Lua 5.0.1"
+diff -r lua-5.0/src/ldo.c lua-5.0.1/src/ldo.c
+2c2
+< ** $Id: ldo.c,v 1.217 2003/04/03 13:35:34 roberto Exp $
+---
+> ** $Id: ldo.c,v 1.217a 2003/04/03 13:35:34 roberto Exp $
+325,326c325
+<     if (nargs >= L->top - L->base)
+<       luaG_runerror(L, "cannot resume dead coroutine");
+---
+>     lua_assert(nargs < L->top - L->base);
+329c328,329
+<   else if (ci->state & CI_YIELD) {  /* inside a yield? */
+---
+>   else {  /* inside a yield */
+>     lua_assert(ci->state & CI_YIELD);
+344,345d343
+<   else
+<     luaG_runerror(L, "cannot resume non-suspended coroutine");
+351a350,358
+> static int resume_error (lua_State *L, const char *msg) {
+>   L->top = L->ci->base;
+>   setsvalue2s(L->top, luaS_new(L, msg));
+>   incr_top(L);
+>   lua_unlock(L);
+>   return LUA_ERRRUN;
+> }
+> 
+> 
+355a363,368
+>   if (L->ci == L->base_ci) {
+>     if (nargs >= L->top - L->base)
+>       return resume_error(L, "cannot resume dead coroutine");
+>   }
+>   else if (!(L->ci->state & CI_YIELD))  /* not inside a yield? */
+>     return resume_error(L, "cannot resume non-suspended coroutine");
+diff -r lua-5.0/src/lgc.c lua-5.0.1/src/lgc.c
+2c2
+< ** $Id: lgc.c,v 1.171 2003/04/03 13:35:34 roberto Exp $
+---
+> ** $Id: lgc.c,v 1.171a 2003/04/03 13:35:34 roberto Exp $
+113c113,114
+< void luaC_separateudata (lua_State *L) {
+---
+> size_t luaC_separateudata (lua_State *L) {
+>   size_t deadmem = 0;
+127a129
+>       deadmem += sizeudata(gcotou(curr)->uv.len);
+136a139
+>   return deadmem;
+247c250
+<     if (!(ci->state & CI_C) && lim < ci->top)
+---
+>     if (lim < ci->top)
+390c393
+< static void checkSizes (lua_State *L) {
+---
+> static void checkSizes (lua_State *L, size_t deadmem) {
+400c403
+<   G(L)->GCthreshold = 2*G(L)->nblocks;  /* new threshold */
+---
+>   G(L)->GCthreshold = 2*G(L)->nblocks - deadmem;  /* new threshold */
+454c457,458
+< static void mark (lua_State *L) {
+---
+> static size_t mark (lua_State *L) {
+>   size_t deadmem;
+467c471
+<   luaC_separateudata(L);  /* separate userdata to be preserved */
+---
+>   deadmem = luaC_separateudata(L);  /* separate userdata to be preserved */
+475a480
+>   return deadmem;
+480c485
+<   mark(L);
+---
+>   size_t deadmem = mark(L);
+482c487
+<   checkSizes(L);
+---
+>   checkSizes(L, deadmem);
+diff -r lua-5.0/src/lgc.h lua-5.0.1/src/lgc.h
+2c2
+< ** $Id: lgc.h,v 1.19 2003/02/28 19:45:15 roberto Exp $
+---
+> ** $Id: lgc.h,v 1.19a 2003/02/28 19:45:15 roberto Exp $
+18c18
+< void luaC_separateudata (lua_State *L);
+---
+> size_t luaC_separateudata (lua_State *L);
+diff -r lua-5.0/src/lib/lbaselib.c lua-5.0.1/src/lib/lbaselib.c
+2c2
+< ** $Id: lbaselib.c,v 1.130 2003/04/03 13:35:34 roberto Exp $
+---
+> ** $Id: lbaselib.c,v 1.130a 2003/04/03 13:35:34 roberto Exp $
+327c327
+<   char buff[64];
+---
+>   char buff[128];
+diff -r lua-5.0/src/lib/liolib.c lua-5.0.1/src/lib/liolib.c
+2c2
+< ** $Id: liolib.c,v 2.39 2003/03/19 21:16:12 roberto Exp $
+---
+> ** $Id: liolib.c,v 2.39a 2003/03/19 21:16:12 roberto Exp $
+161c161
+<   if (lua_isnone(L, 1)) {
+---
+>   if (lua_isnone(L, 1) && lua_type(L, lua_upvalueindex(1)) == LUA_TTABLE) {
+178c178
+<   char buff[32];
+---
+>   char buff[128];
+diff -r lua-5.0/src/lparser.c lua-5.0.1/src/lparser.c
+2c2
+< ** $Id: lparser.c,v 1.208 2003/04/03 13:35:34 roberto Exp $
+---
+> ** $Id: lparser.c,v 1.208a 2003/04/03 13:35:34 roberto Exp $
+1143a1144
+>   FuncState *fs = ls->fs;
+1145c1146,1147
+<   init_exp(&v, VLOCAL, ls->fs->freereg++);
+---
+>   init_exp(&v, VLOCAL, fs->freereg);
+>   luaK_reserveregs(fs, 1);
+1148c1150,1152
+<   luaK_storevar(ls->fs, &v, &b);
+---
+>   luaK_storevar(fs, &v, &b);
+>   /* debug information will only see the variable after this point! */
+>   getlocvar(fs, fs->nactvar - 1).startpc = fs->pc;
+diff -r lua-5.0/src/luac/Makefile lua-5.0.1/src/luac/Makefile
+16c16
+< 	$(CC) -o $@ $(MYLDFLAGS) $(OBJS) -L$(LIB) -llua -llualib $(EXTRA_LIBS)
+---
+> 	$(CC) -o $@ $(MYLDFLAGS) $(OBJS) -L$(LIB) -llua -llualib $(EXTRA_LIBS) $(DLLIB)
+diff -r lua-5.0/src/luac/luac.c lua-5.0.1/src/luac/luac.c
+2c2
+< ** $Id: luac.c,v 1.44 2003/04/07 20:34:20 lhf Exp $
+---
+> ** $Id: luac.c,v 1.44a 2003/04/07 20:34:20 lhf Exp $
+184a185
+>   lua_lock(L);
+185a187
+>   lua_unlock(L);
+diff -r lua-5.0/src/lvm.c lua-5.0.1/src/lvm.c
+2c2
+< ** $Id: lvm.c,v 1.284 2003/04/03 13:35:34 roberto Exp $
+---
+> ** $Id: lvm.c,v 1.284a 2003/04/03 13:35:34 roberto Exp $
+69c69
+<   if (mask > LUA_MASKLINE) {  /* instruction-hook set? */
+---
+>   if (mask & LUA_MASKCOUNT) {  /* instruction-hook set? */
+402d401
+<   L->ci->u.l.pc = &pc;
+405a405
+>   L->ci->u.l.pc = &pc;
+676,678c676
+<           lua_assert(ci->u.l.pc == &pc &&
+<                      ttisfunction(ci->base - 1) &&
+<                      (ci->state & CI_SAVEDPC));
+---
+>           lua_assert(ttisfunction(ci->base - 1) && (ci->state & CI_SAVEDPC));
+diff -r lua-5.0/test/luac.lua lua-5.0.1/test/luac.lua
+4,6c4,6
+< assert(arg[1]~=nil,"usage: lua luac.lua file.lua")
+< f=assert(io.open("luac.out","w"))
+< f:write(string.dump(loadfile(arg[1])))
+---
+> assert(arg[1]~=nil and arg[2]==nil,"usage: lua luac.lua file.lua")
+> f=assert(io.open("luac.out","wb"))
+> f:write(string.dump(assert(loadfile(arg[1]))))

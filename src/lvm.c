@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.284 2003/04/03 13:35:34 roberto Exp $
+** $Id: lvm.c,v 1.284a 2003/04/03 13:35:34 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -66,7 +66,7 @@ int luaV_tostring (lua_State *L, StkId obj) {
 
 static void traceexec (lua_State *L) {
   lu_byte mask = L->hookmask;
-  if (mask > LUA_MASKLINE) {  /* instruction-hook set? */
+  if (mask & LUA_MASKCOUNT) {  /* instruction-hook set? */
     if (L->hookcount == 0) {
       resethookcount(L);
       luaD_callhook(L, LUA_HOOKCOUNT, -1);
@@ -399,10 +399,10 @@ StkId luaV_execute (lua_State *L) {
   TObject *k;
   const Instruction *pc;
  callentry:  /* entry point when calling new functions */
-  L->ci->u.l.pc = &pc;
   if (L->hookmask & LUA_MASKCALL)
     luaD_callhook(L, LUA_HOOKCALL, -1);
  retentry:  /* entry point when returning to old functions */
+  L->ci->u.l.pc = &pc;
   lua_assert(L->ci->state == CI_SAVEDPC ||
              L->ci->state == (CI_SAVEDPC | CI_CALLING));
   L->ci->state = CI_HASFRAME;  /* activate frame */
@@ -673,9 +673,7 @@ StkId luaV_execute (lua_State *L) {
         }
         else {  /* yes: continue its execution */
           int nresults;
-          lua_assert(ci->u.l.pc == &pc &&
-                     ttisfunction(ci->base - 1) &&
-                     (ci->state & CI_SAVEDPC));
+          lua_assert(ttisfunction(ci->base - 1) && (ci->state & CI_SAVEDPC));
           lua_assert(GET_OPCODE(*(ci->u.l.savedpc - 1)) == OP_CALL);
           nresults = GETARG_C(*(ci->u.l.savedpc - 1)) - 1;
           luaD_poscall(L, nresults, ra);

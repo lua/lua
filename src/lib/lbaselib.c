@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.130 2003/04/03 13:35:34 roberto Exp $
+** $Id: lbaselib.c,v 1.130a 2003/04/03 13:35:34 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -324,7 +324,7 @@ static int luaB_xpcall (lua_State *L) {
 
 
 static int luaB_tostring (lua_State *L) {
-  char buff[64];
+  char buff[128];
   luaL_checkany(L, 1);
   if (luaL_callmeta(L, 1, "__tostring"))  /* is there a metafield? */
     return 1;  /* use its value */
