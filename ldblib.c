@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.28 2000/11/06 13:19:08 roberto Exp roberto $
+** $Id: ldblib.c,v 1.30 2000/11/14 18:46:20 roberto Exp $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -111,9 +111,9 @@ static int setlocal (lua_State *L) {
 
 
 /* dummy variables (to define unique addresses) */
-static char key1, key2;
-#define KEY_CALLHOOK	(&key1)
-#define KEY_LINEHOOK	(&key2)
+static const char key1[] = "ab";
+#define KEY_CALLHOOK	((void *)key1)
+#define KEY_LINEHOOK	((void *)(key1+1))
 
 
 static void hookf (lua_State *L, void *key) {
