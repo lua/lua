@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.79 1997/01/31 14:27:11 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.80 1997/02/11 11:35:05 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -671,20 +671,41 @@ lua_Object lua_getparam (int number)
  return CLS_current.base-CLS_current.num+number;
 }
 
-int lua_isnumber (lua_Object object)
+int lua_isnil (lua_Object o)
 {
-  return (object != LUA_NOOBJECT) && (tonumber(Address(object)) == 0);
+  return (o!= LUA_NOOBJECT) && (tag(Address(o)) == LUA_T_NIL);
 }
 
-int lua_isstring (lua_Object object)
+int lua_istable (lua_Object o)
 {
-  int t = lua_type(object);
+  return (o!= LUA_NOOBJECT) && (tag(Address(o)) == LUA_T_ARRAY);
+}
+
+int lua_isuserdata (lua_Object o)
+{
+  return (o!= LUA_NOOBJECT) && (tag(Address(o)) == LUA_T_USERDATA);
+}
+
+int lua_iscfunction (lua_Object o)
+{
+  int t = lua_type(o);
+  return (t == LUA_T_CMARK) || (t == LUA_T_CFUNCTION);
+}
+
+int lua_isnumber (lua_Object o)
+{
+  return (o!= LUA_NOOBJECT) && (tonumber(Address(o)) == 0);
+}
+
+int lua_isstring (lua_Object o)
+{
+  int t = lua_type(o);
   return (t == LUA_T_STRING) || (t == LUA_T_NUMBER);
 }
 
-int lua_isfunction (lua_Object object)
+int lua_isfunction (lua_Object o)
 {
-  int t = lua_type(object);
+  int t = lua_type(o);
   return (t == LUA_T_FUNCTION) || (t == LUA_T_CFUNCTION) ||
          (t == LUA_T_MARK) || (t == LUA_T_CMARK);
 }
@@ -732,14 +753,6 @@ lua_CFunction lua_getcfunction (lua_Object object)
                                 (tag(Address(object)) != LUA_T_CMARK)))
    return NULL;
  else return (fvalue(Address(object)));
-}
-
-/*
-** Given an object handle, return its user data. On error, return NULL.
-*/
-void *lua_getuserdata (lua_Object object)
-{
-  return *(void **)lua_getbinarydata(object);
 }
 
 
@@ -888,7 +901,7 @@ int lua_type (lua_Object o)
     lua_Type t = tag(Address(o));
     if (t == LUA_T_USERDATA)
       return (Address(o))->value.ts->tag;
-    else return tag(Address(o));
+    else return t;
   }
 }
 

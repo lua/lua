@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.24 1996/11/01 12:46:59 roberto Exp roberto $
+** $Id: opcode.h,v 3.25 1997/02/11 11:35:05 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -13,6 +13,20 @@
 
 
 #define FIELDS_PER_FLUSH 40
+
+typedef enum
+{
+ LUA_T_NIL      = -1,
+ LUA_T_NUMBER   = -2,
+ LUA_T_STRING   = -3,
+ LUA_T_ARRAY    = -4,  /* array==table */
+ LUA_T_FUNCTION = -5,
+ LUA_T_CFUNCTION= -6,
+ LUA_T_MARK     = -7,
+ LUA_T_CMARK    = -8,
+ LUA_T_LINE     = -9,
+ LUA_T_USERDATA = 0
+} lua_Type;
 
 
 typedef enum {
