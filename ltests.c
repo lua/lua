@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.36 2000/08/29 14:57:10 roberto Exp roberto $
+** $Id: ltests.c,v 1.37 2000/08/29 19:05:11 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -335,32 +335,24 @@ static void skip (const char **pc) {
   while (**pc != '\0' && strchr(delimits, **pc)) (*pc)++;
 }
 
-static int getnum (const char **pc, int *reg) {
+static int getnum (lua_State *L, const char **pc) {
   int res = 0;
   int sig = 1;
-  int ref = 0;
   skip(pc);
-  if (**pc == 'r') {
-    ref = 1;
+  if (**pc == '.') {
+    res = (int)lua_tonumber(L, -1);
+    lua_settop(L, -1);
     (*pc)++;
+    return res;
   }
   else if (**pc == '-') {
     sig = -1;
     (*pc)++;
   }
   while (isdigit(**pc)) res = res*10 + (*(*pc)++) - '0';
-  if (!ref)
-    return sig*res;
-  else
-    return reg[res];
+  return sig*res;
 }
   
-static int getreg (const char **pc) {
-  skip(pc);
-  (*pc)++;  /* skip the `r' */
-  return getnum(pc, NULL);
-}
-
 static const char *getname (char *buff, const char **pc) {
   int i = 0;
   skip(pc);
@@ -373,14 +365,12 @@ static const char *getname (char *buff, const char **pc) {
 
 #define EQ(s1)	(strcmp(s1, inst) == 0)
 
-#define getnum	((getnum)(&pc, reg))
-#define getreg	((getreg)(&pc))
+#define getnum	((getnum)(L, &pc))
 #define getname	((getname)(buff, &pc))
 
 
 static int testC (lua_State *L) {
   char buff[30];
-  int reg[10];
   const char *pc = luaL_check_string(L, 1);
   for (;;) {
     const char *inst = getname;
@@ -388,18 +378,11 @@ static int testC (lua_State *L) {
     else if EQ("return") {
       return getnum;
     }
-    else if EQ("retall") {
-      return lua_gettop(L) - 1;
-    }
     else if EQ("gettop") {
-      reg[getreg] = lua_gettop(L);
+      lua_pushnumber(L, lua_gettop(L));
     }
     else if EQ("settop") {
       lua_settop(L, getnum);
-    }
-    else if EQ("setreg") {
-      int n = getreg;
-      reg[n] = lua_tonumber(L, getnum);
     }
     else if EQ("pushnum") {
       lua_pushnumber(L, getnum);
@@ -407,8 +390,8 @@ static int testC (lua_State *L) {
     else if EQ("pushobject") {
       lua_pushobject(L, getnum);
     }
-    else if EQ("pushstring") {
-      lua_pushstring(L, getname);
+    else if EQ("next") {
+      lua_next(L);
     }
     else if EQ("call") {
       int narg = getnum;
