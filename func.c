@@ -5,6 +5,7 @@
 #include "luamem.h"
 #include "func.h"
 #include "opcode.h"
+#include "inout.h"
 
 
 static TFunc *function_root = NULL;
@@ -23,7 +24,7 @@ void luaI_initTFunc (TFunc *f)
   f->size = 0;
   f->code = NULL;
   f->lineDefined = 0;
-  f->fileName = NULL;
+  f->fileName = lua_parsedfile;
   f->locvars = NULL;
 }
 

@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 4.10 1997/06/16 18:42:32 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 4.11 1997/06/16 19:48:18 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -604,7 +604,6 @@ int lua_domain (void)
   jmp_buf *oldErr = errorJmp;
   errorJmp = &myErrorJmp;
   luaI_initTFunc(&tf);
-  tf.fileName = lua_parsedfile;
   if (setjmp(myErrorJmp) == 0) {
     lua_parse(&tf);
     status = 0;

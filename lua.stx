@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.45 1997/03/06 17:30:55 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.46 1997/03/31 14:19:01 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -489,7 +489,6 @@ body :  '(' parlist ')' block END
           luaI_initTFunc($$);
 	  $$->size = pc;
 	  $$->code = newvector(pc, Byte);
-	  $$->fileName = lua_parsedfile;
 	  $$->lineDefined = $2;
 	  memcpy($$->code, basepc, pc*sizeof(Byte));
           if (lua_debug)
