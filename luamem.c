@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_luamem = "$Id: luamem.c,v 1.15 1997/03/31 14:17:09 roberto Exp roberto $";
+char *rcs_luamem = "$Id: luamem.c,v 1.16 1997/04/01 21:23:20 roberto Exp $";
 
 #include <stdlib.h>
 
@@ -15,7 +15,7 @@ char *rcs_luamem = "$Id: luamem.c,v 1.15 1997/03/31 14:17:09 roberto Exp roberto
 
 #if !DEBUG
 
-void luaI_free (void *block)
+static void lfree (void *block)
 {
   if (block)
   {
@@ -31,6 +31,10 @@ void *luaI_realloc (void *oldblock, unsigned long size)
   size_t s = (size_t)size;
   if (s != size)
     lua_error("Allocation Error: Block too big");
+  if (size == 0) {  /* ANSI doen't need this, but some machines... */
+    lfree(oldblock);
+    return NULL;
+  }
   block = oldblock ? realloc(oldblock, s) : malloc(s);
   if (block == NULL)
     lua_error(memEM);

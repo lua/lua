@@ -1,7 +1,7 @@
 /*
 ** mem.c
 ** memory manager for lua
-** $Id: luamem.h,v 1.9 1997/03/31 14:10:11 roberto Exp roberto $
+** $Id: luamem.h,v 1.10 1997/07/29 20:38:45 roberto Exp roberto $
 */
  
 #ifndef luamem_h
@@ -23,12 +23,12 @@
 #define memEM "not enough memory"
 
 
-void luaI_free (void *block);
 void *luaI_realloc (void *oldblock, unsigned long size);
 void *luaI_buffer (unsigned long size);
 int luaI_growvector (void **block, unsigned long nelems, int size,
                        char *errormsg, unsigned long limit);
 
+#define luaI_free(b)	luaI_realloc((b), 0)
 #define luaI_malloc(s)	luaI_realloc(NULL, (s))
 #define new(s)          ((s *)luaI_malloc(sizeof(s)))
 #define newvector(n,s)  ((s *)luaI_malloc((n)*sizeof(s)))
