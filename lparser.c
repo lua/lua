@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.131 2001/02/09 18:37:33 roberto Exp roberto $
+** $Id: lparser.c,v 1.132 2001/02/09 20:22:29 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -352,7 +352,7 @@ static void close_func (LexState *ls) {
   luaM_reallocvector(L, f->lineinfo, f->sizelineinfo, fs->nlineinfo+1, int);
   f->lineinfo[fs->nlineinfo++] = MAX_INT;  /* end flag */
   f->sizelineinfo = fs->nlineinfo;
-  lua_assert(luaG_checkcode(f));
+  lua_assert(luaG_checkcode(L, f));
   ls->fs = fs->prev;
   lua_assert(fs->bl == NULL);
 }
@@ -431,60 +431,6 @@ static void funcargs (LexState *ls, int slf) {
   fs->stacklevel = slevel;  /* call will remove function and arguments */
   luaK_code2(fs, OP_CALL, slevel, MULT_RET);
 }
-
-
-static void var_or_func_tail (LexState *ls, expdesc *v) {
-  for (;;) {
-    switch (ls->t.token) {
-      case '.': {  /* var_or_func_tail -> '.' NAME */
-        next(ls);
-        luaK_tostack(ls, v, 1);  /* `v' must be on stack */
-        luaK_kstr(ls, checkname(ls));
-        v->k = VINDEXED;
-        break;
-      }
-      case '[': {  /* var_or_func_tail -> '[' exp1 ']' */
-        next(ls);
-        luaK_tostack(ls, v, 1);  /* `v' must be on stack */
-        v->k = VINDEXED;
-        exp1(ls);
-        check(ls, ']');
-        break;
-      }
-      case ':': {  /* var_or_func_tail -> ':' NAME funcargs */
-        next(ls);
-        luaK_tostack(ls, v, 1);  /* `v' must be on stack */
-        luaK_code1(ls->fs, OP_PUSHSELF, checkname(ls));
-        funcargs(ls, 1);
-        v->k = VEXP;
-        v->u.l.t = v->u.l.f = NO_JUMP;
-        break;
-      }
-      case '(': case TK_STRING: case '{': {  /* var_or_func_tail -> funcargs */
-        luaK_tostack(ls, v, 1);  /* `v' must be on stack */
-        funcargs(ls, 0);
-        v->k = VEXP;
-        v->u.l.t = v->u.l.f = NO_JUMP;
-        break;
-      }
-      default: return;  /* should be follow... */
-    }
-  }
-}
-
-
-static void var_or_func (LexState *ls, expdesc *v) {
-  /* var_or_func -> ['%'] NAME var_or_func_tail */
-  if (optional(ls, '%')) {  /* upvalue? */
-    pushupvalue(ls, str_checkname(ls));
-    v->k = VEXP;
-    v->u.l.t = v->u.l.f = NO_JUMP;
-  }
-  else  /* variable name */
-    singlevar(ls, str_checkname(ls), v);
-  var_or_func_tail(ls, v);
-}
-
 
 
 /*
@@ -615,47 +561,51 @@ static void constructor (LexState *ls) {
 ** =======================================================================
 */
 
-
-static void simpleexp (LexState *ls, expdesc *v) {
+static void primaryexp (LexState *ls, expdesc *v) {
   FuncState *fs = ls->fs;
   switch (ls->t.token) {
-    case TK_NUMBER: {  /* simpleexp -> NUMBER */
+    case TK_NUMBER: {
       lua_Number r = ls->t.seminfo.r;
       next(ls);
       luaK_number(fs, r);
       break;
     }
-    case TK_STRING: {  /* simpleexp -> STRING */
+    case TK_STRING: {
       code_string(ls, ls->t.seminfo.ts);  /* must use `seminfo' before `next' */
       next(ls);
       break;
     }
-    case TK_NIL: {  /* simpleexp -> NIL */
+    case TK_NIL: {
       luaK_adjuststack(fs, -1);
       next(ls);
       break;
     }
-    case '{': {  /* simpleexp -> constructor */
+    case '{': {  /* constructor */
       constructor(ls);
       break;
     }
-    case TK_FUNCTION: {  /* simpleexp -> FUNCTION body */
+    case TK_FUNCTION: {
       next(ls);
       body(ls, 0, ls->linenumber);
       break;
     }
-    case '(': {  /* simpleexp -> '(' expr ')' */
+    case '(': {
       next(ls);
       expr(ls, v);
       check(ls, ')');
       return;
     }
-    case TK_NAME: case '%': {
-      var_or_func(ls, v);
+    case TK_NAME: {
+      singlevar(ls, str_checkname(ls), v);
       return;
     }
+    case '%': {
+      next(ls);  /* skip `%' */
+      pushupvalue(ls, str_checkname(ls));
+      break;
+    }
     default: {
-      luaK_error(ls, "<expression> expected");
+      luaK_error(ls, "unexpected symbol");
       return;
     }
   }
@@ -664,10 +614,46 @@ static void simpleexp (LexState *ls, expdesc *v) {
 }
 
 
-static void exp1 (LexState *ls) {
-  expdesc v;
-  expr(ls, &v);
-  luaK_tostack(ls, &v, 1);
+static void simpleexp (LexState *ls, expdesc *v) {
+  /* simpleexp ->
+        primaryexp { '.' NAME | '[' exp ']' | ':' NAME funcargs | funcargs } */
+  primaryexp(ls, v);
+  for (;;) {
+    switch (ls->t.token) {
+      case '.': {  /* '.' NAME */
+        next(ls);
+        luaK_tostack(ls, v, 1);  /* `v' must be on stack */
+        luaK_kstr(ls, checkname(ls));
+        v->k = VINDEXED;
+        break;
+      }
+      case '[': {  /* '[' exp1 ']' */
+        next(ls);
+        luaK_tostack(ls, v, 1);  /* `v' must be on stack */
+        v->k = VINDEXED;
+        exp1(ls);
+        check(ls, ']');
+        break;
+      }
+      case ':': {  /* ':' NAME funcargs */
+        next(ls);
+        luaK_tostack(ls, v, 1);  /* `v' must be on stack */
+        luaK_code1(ls->fs, OP_PUSHSELF, checkname(ls));
+        funcargs(ls, 1);
+        v->k = VEXP;
+        v->u.l.t = v->u.l.f = NO_JUMP;
+        break;
+      }
+      case '(': case TK_STRING: case '{': {  /* funcargs */
+        luaK_tostack(ls, v, 1);  /* `v' must be on stack */
+        funcargs(ls, 0);
+        v->k = VEXP;
+        v->u.l.t = v->u.l.f = NO_JUMP;
+        break;
+      }
+      default: return;  /* should be follow... */
+    }
+  }
 }
 
 
@@ -748,6 +734,13 @@ static void expr (LexState *ls, expdesc *v) {
   subexpr(ls, v, -1);
 }
 
+
+static void exp1 (LexState *ls) {
+  expdesc v;
+  expr(ls, &v);
+  luaK_tostack(ls, &v, 1);
+}
+
 /* }==================================================================== */
 
 
@@ -781,10 +774,10 @@ static void block (LexState *ls) {
 static int assignment (LexState *ls, expdesc *v, int nvars) {
   int left = 0;  /* number of values left in the stack after assignment */
   luaX_checklimit(ls, nvars, MAXVARSLH, "variables in a multiple assignment");
-  if (ls->t.token == ',') {  /* assignment -> ',' NAME assignment */
+  if (ls->t.token == ',') {  /* assignment -> ',' simpleexp assignment */
     expdesc nv;
     next(ls);
-    var_or_func(ls, &nv);
+    simpleexp(ls, &nv);
     check_condition(ls, (nv.k != VEXP), "syntax error");
     left = assignment(ls, &nv, nvars+1);
   }
@@ -998,15 +991,15 @@ static void funcstat (LexState *ls, int line) {
 
 
 static void namestat (LexState *ls) {
-  /* stat -> func | ['%'] NAME assignment */
+  /* stat -> func | assignment */
   FuncState *fs = ls->fs;
   expdesc v;
-  var_or_func(ls, &v);
+  simpleexp(ls, &v);
   if (v.k == VEXP) {  /* stat -> func */
     check_condition(ls, luaK_lastisopen(fs), "syntax error");  /* an upvalue? */
     luaK_setcallreturns(fs, 0);  /* call statement uses no results */
   }
-  else {  /* stat -> ['%'] NAME assignment */
+  else {  /* stat -> assignment */
     int left = assignment(ls, &v, 1);
     luaK_adjuststack(fs, left);  /* remove eventual garbage left on stack */
   }
@@ -1072,10 +1065,6 @@ static int stat (LexState *ls) {
       localstat(ls);
       return 0;
     }
-    case TK_NAME: case '%': {  /* stat -> namestat */
-      namestat(ls);
-      return 0;
-    }
     case TK_RETURN: {  /* stat -> retstat */
       retstat(ls);
       return 1;  /* must be last statement */
@@ -1085,7 +1074,7 @@ static int stat (LexState *ls) {
       return 1;  /* must be last statement */
     }
     default: {
-      luaK_error(ls, "<statement> expected");
+      namestat(ls);
       return 0;  /* to avoid warnings */
     }
   }
