@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.3 2004/08/24 20:12:06 roberto Exp roberto $
+** $Id: lstring.c,v 2.4 2004/11/19 15:52:40 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -78,7 +78,7 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
   size_t step = (l>>5)+1;  /* if string is too long, don't hash all its chars */
   size_t l1;
   for (l1=l; l1>=step; l1-=step)  /* compute hash */
-    h = h ^ ((h<<5)+(h>>2)+(unsigned char)(str[l1-1]));
+    h = h ^ ((h<<5)+(h>>2)+cast(unsigned char, str[l1-1]));
   for (o = G(L)->strt.hash[lmod(h, G(L)->strt.size)];
        o != NULL;
        o = o->gch.next) {

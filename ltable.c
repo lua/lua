@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.7 2004/10/06 18:34:16 roberto Exp roberto $
+** $Id: ltable.c,v 2.8 2004/11/24 18:55:42 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -393,7 +393,7 @@ static TValue *newkey (lua_State *L, Table *t, const TValue *key) {
 */
 const TValue *luaH_getnum (Table *t, int key) {
   /* (1 <= key && key <= t->sizearray) */
-  if ((unsigned int)(key-1) < (unsigned int)t->sizearray)
+  if (cast(unsigned int, key-1) < cast(unsigned int, t->sizearray))
     return &t->array[key-1];
   else {
     lua_Number nk = cast(lua_Number, key);
