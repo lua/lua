@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.19 2004/12/01 15:52:54 roberto Exp roberto $
+** $Id: luaconf.h,v 1.21 2004/12/13 12:08:34 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -31,10 +31,22 @@
 */
 
 /* default path */
-#define LUA_PATH_DEFAULT \
-   "./?.lua;/usr/local/share/lua/5.0/?.lua;/usr/local/share/lua/5.0/?/init.lua"
-#define LUA_CPATH_DEFAULT \
-   "./?.so;/usr/local/lib/lua/5.0/?.so;/usr/local/lib/lua/5.0/lib?.so"
+#if defined(_WIN32)
+#define LUA_ROOT	"C:\\Program Files\\Lua51"
+#define LUA_LDIR	LUA_ROOT "\\lua"
+#define LUA_CDIR	LUA_ROOT "\\dll"
+#define LUA_PATH_DEFAULT  \
+		"?.lua;" LUA_LDIR "\\?.lua;" LUA_LDIR "\\?\\init.lua"
+#define LUA_CPATH_DEFAULT	"?.dll;" LUA_CDIR "\\?.dll"
+
+#else
+#define LUA_ROOT	"/usr/local"
+#define LUA_LDIR	LUA_ROOT "/share/lua/5.1"
+#define LUA_CDIR	LUA_ROOT "/lib/lua/5.1"
+#define LUA_PATH_DEFAULT  \
+		"./?.lua;" LUA_LDIR "/?.lua;" LUA_LDIR "/?/init.lua"
+#define LUA_CPATH_DEFAULT	"./?.so;" LUA_CDIR "/?.so"
+#endif
 
 
 
@@ -57,10 +69,10 @@
 #define LUA_API		extern
 
 /* mark for auxlib functions */
-#define LUALIB_API      extern
+#define LUALIB_API	extern
 
 /* buffer size used by lauxlib buffer system */
-#define LUAL_BUFFERSIZE   BUFSIZ
+#define LUAL_BUFFERSIZE		BUFSIZ
 
 
 /* assertions in Lua (mainly for internal debugging) */
@@ -82,6 +94,10 @@
 #ifdef _POSIX_C_SOURCE
 #include <unistd.h>
 #define stdin_is_tty()		isatty(0)
+#elif defined(_WIN32)
+#include <io.h>
+#include <fcntl.h>
+#define stdin_is_tty()		_isatty(_fileno(stdin))
 #else
 #define stdin_is_tty()		1  /* assume stdin is a tty */
 #endif
@@ -200,13 +216,30 @@
 /* function to convert a lua_Number to int (with any rounding method) */
 #if defined(__GNUC__) && defined(__i386)
 #define lua_number2int(i,d)	__asm__ ("fistpl %0":"=m"(i):"t"(d):"st")
+
+#elif defined(_WIN32) && defined(_M_IX86)
+#include <math.h>
+#pragma warning(disable: 4514)
+__inline int l_lrint (double flt)
+{     int i;
+      _asm {
+      fld flt
+      fistp i
+      };
+      return i;
+}
+#define lua_number2int(i,d)   ((i)=l_lrint((d)))
+
 #elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199900L)
 /* on machines compliant with C99, you can try `lrint' */
 #include <math.h>
 #define lua_number2int(i,d)	((i)=lrint(d))
+
 #else
 #define lua_number2int(i,d)	((i)=(int)(d))
+
 #endif
+
 
 /* function to convert a lua_Number to lua_Integer (with any rounding method) */
 #define lua_number2integer(i,n)		lua_number2int((i), (n))
@@ -258,8 +291,8 @@
 ** or when reading immutable fields from global objects
 ** (such as string values and udata values).
 */
-#define lua_lock(L)     ((void) 0)
-#define lua_unlock(L)   ((void) 0)
+#define lua_lock(L)	((void) 0)
+#define lua_unlock(L)	((void) 0)
 
 /*
 ** this macro allows a thread switch in appropriate places in the Lua
@@ -272,9 +305,6 @@
 /* allows user-specific initialization on new threads */
 #define lua_userstateopen(L)	/* empty */
 
-
-/* initial GC parameters */
-#define STEPMUL		4
 
 #endif
 
@@ -305,8 +335,15 @@
 #define LUA_POF		"luaopen_"
 #endif
 
+/* separator for open functions in C libraries */
+#define LUA_OFSEP	""
+
 /* directory separator (for submodules) */
+#if defined(_WIN32)
+#define LUA_DIRSEP	"\\"
+#else
 #define LUA_DIRSEP	"/"
+#endif
 
 /* separator of templates in a path */
 #define LUA_PATH_SEP	';'
@@ -332,12 +369,12 @@
 /*
 ** Configuration for loadlib
 */
-#if defined(__linux) || defined(sun) || defined(sgi) || defined(BSD)
-#define USE_DLOPEN
-#elif defined(_WIN32)
+#if defined(_WIN32)
 #define USE_DLL
 #elif defined(__APPLE__) && defined(__MACH__)
 #define USE_DYLD
+#elif defined(__linux) || defined(sun) || defined(sgi) || defined(BSD)
+#define USE_DLOPEN
 #endif
 
 
