@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: ldo.c,v 1.154 2002/01/11 20:27:41 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -148,12 +148,12 @@ StkId luaD_precall (lua_State *L, StkId func) {
   if (!cl->isC) {  /* Lua function? prepare its call */
     StkId base = func+1;
     Proto *p = cl->p;
-    ci->linehook = L->linehook;
     ci->savedpc = p->code;  /* starting point */
     if (p->is_vararg)  /* varargs? */
       adjust_varargs(L, base, p->numparams);
     if (base > L->stack_last - p->maxstacksize)
       luaD_stackerror(L);
+    ci->line = 0;
     ci->top = base + p->maxstacksize;
     while (L->top < ci->top)
       setnilvalue(L->top++);

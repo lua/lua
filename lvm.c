@@ -66,10 +66,17 @@ static void traceexec (lua_State *L, lua_Hook linehook) {
   int *lineinfo = ci_func(ci)->l.p->lineinfo;
   int pc = cast(int, *ci->pc - ci_func(ci)->l.p->code) - 1;
   int newline;
-  if (pc == 0) {  /* may be first time? */
-    ci->line = 1;
-    ci->refi = 0;
-    ci->lastpc = pc+1;  /* make sure it will call linehook */
+  if (ci->line == -1) return;  /* no linehooks for this function */
+  else if (ci->line == 0) {  /* first linehook? */
+    if (pc == 0) {  /* function is starting now? */
+      ci->line = 1;
+      ci->refi = 0;
+      ci->lastpc = pc+1;  /* make sure it will call linehook */
+    }
+    else {  /* function started without hooks: */
+      ci->line = -1;  /* keep it that way */
+      return;
+    }
   }
   newline = luaG_getline(lineinfo, pc, ci->line, &ci->refi);
   /* calls linehook when enters a new line or jumps back (loop) */
@@ -315,7 +322,7 @@ StkId luaV_execute (lua_State *L) {
   base = L->ci->base;
   cl = &clvalue(base - 1)->l;
   k = cl->p->k;
-  linehook = L->ci->linehook;
+  linehook = L->linehook;
   L->ci->pc = &pc;
   pc = L->ci->savedpc;
   L->ci->savedpc = NULL;
@@ -513,7 +520,6 @@ StkId luaV_execute (lua_State *L) {
           int nresults;
           lua_assert(ttype(ci->base-1) == LUA_TFUNCTION);
           base = ci->base;  /* restore previous values */
-          linehook = ci->linehook;
           cl = &clvalue(base - 1)->l;
           k = cl->p->k;
           pc = ci->savedpc;

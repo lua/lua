@@ -82,7 +82,6 @@ typedef struct stringtable {
 typedef struct CallInfo {
   StkId base;  /* base for called function */
   const Instruction *savedpc;
-  lua_Hook linehook;
   StkId	top;  /* top for this function (when it's a Lua function) */
   const Instruction **pc;
   /* extra information for line tracing */
