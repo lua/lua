@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.18 1994/11/18 19:46:21 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.19 1994/11/21 13:30:15 roberto Exp $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -209,6 +209,20 @@ static int callC (lua_CFunction func, int base)
   return firstResult;
 }
 
+/*
+** Call the fallback for invalid functions (see do_call)
+*/
+static void call_funcFB (Object *func, int base, int nResults, int whereRes)
+{
+  int i;
+  /* open space for first parameter (func) */
+  for (i=top-stack; i>base; i--)
+    stack[i] = stack[i-1];
+  top++;
+  stack[base] = *func;
+  do_call(&luaI_fallBacks[FB_FUNCTION].function, base, nResults, whereRes);
+}
+
 
 /*
 ** Call a function (C or Lua). The parameters must be on the stack,
@@ -224,9 +238,9 @@ static void do_call (Object *func, int base, int nResults, int whereRes)
   else if (tag(func) == LUA_T_FUNCTION)
     firstResult = lua_execute(bvalue(func), base);
   else
-  {
-   lua_reportbug ("call expression not a function");
-   return;  /* to avoid warnings */
+  { /* func is not a function */
+    call_funcFB(func, base, nResults, whereRes);
+    return;
   }
   /* adjust the number of results */
   if (nResults != MULT_RET && top - (stack+firstResult) != nResults)

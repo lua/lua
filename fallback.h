@@ -1,5 +1,5 @@
 /*
-** $Id: fallback.h,v 1.5 1994/11/18 19:46:21 roberto Exp roberto $
+** $Id: fallback.h,v 1.6 1994/11/21 13:30:15 roberto Exp roberto $
 */
  
 #ifndef fallback_h
@@ -20,6 +20,7 @@ extern struct FB {
 #define FB_CONCAT  5
 #define FB_SETTABLE  6
 #define FB_GC 7
+#define FB_FUNCTION 8
 
 void luaI_setfallback (void);
 int luaI_lock (Object *object);

@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.7 1994/11/18 19:46:21 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.8 1994/11/21 13:30:15 roberto Exp roberto $";
 
 #include <stdio.h>
  
@@ -21,6 +21,7 @@ static void arithFB (void);
 static void concatFB (void);
 static void orderFB (void);
 static void GDFB (void);
+static void funcFB (void);
 
 
 /*
@@ -34,7 +35,8 @@ struct FB  luaI_fallBacks[] = {
 {"order", {LUA_T_CFUNCTION, orderFB}},
 {"concat", {LUA_T_CFUNCTION, concatFB}},
 {"settable", {LUA_T_CFUNCTION, gettableFB}},
-{"gc", {LUA_T_CFUNCTION, GDFB}}
+{"gc", {LUA_T_CFUNCTION, GDFB}},
+{"function", {LUA_T_CFUNCTION, funcFB}}
 };
 
 #define N_FB  (sizeof(luaI_fallBacks)/sizeof(struct FB))
@@ -102,6 +104,11 @@ static void orderFB (void)
 }
 
 static void GDFB (void) { }
+
+static void funcFB (void)
+{
+  lua_reportbug("call expression not a function");
+}
 
 
 /*
