@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.223 2002/03/25 17:47:14 roberto Exp roberto $
+** $Id: lvm.c,v 1.224 2002/04/09 19:47:44 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -64,15 +64,16 @@ int luaV_tostring (lua_State *L, TObject *obj) {
 
 static void traceexec (lua_State *L) {
   CallInfo *ci = L->ci;
-  int *lineinfo = ci_func(ci)->l.p->lineinfo;
-  int pc = cast(int, *ci->pc - ci_func(ci)->l.p->code) - 1;
-  int newline = lineinfo[pc];
-  if (pc == 0)  /* tracing may be starting now? */
-    ci->lastpc = 0;  /* initialize `lastpc' */
+  Proto *p = ci_func(ci)->l.p;
+  int newline = p->lineinfo[pcRel(*ci->pc, p)];
+  if (pcRel(*ci->pc, p) == 0)  /* tracing may be starting now? */
+    ci->savedpc = *ci->pc;  /* initialize `savedpc' */
   /* calls linehook when enters a new line or jumps back (loop) */
-  if (pc <= ci->lastpc || newline != lineinfo[ci->lastpc])
+  if (*ci->pc <= ci->savedpc || newline != p->lineinfo[pcRel(ci->savedpc, p)]) {
     luaD_lineHook(L, newline);
-  L->ci->lastpc = pc;
+    ci = L->ci;  /* previous call may reallocate `ci' */
+  }
+  ci->savedpc = *ci->pc;
 }
 
 

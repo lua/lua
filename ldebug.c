@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.106 2002/04/04 17:21:31 roberto Exp roberto $
+** $Id: ldebug.c,v 1.107 2002/04/09 19:47:44 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -37,9 +37,9 @@ static int isLmark (CallInfo *ci) {
 static int currentpc (lua_State *L, CallInfo *ci) {
   if (ci->pc == NULL) return -1;  /* function is not an active Lua function */
   if (ci == L->ci || ci->pc != (ci+1)->pc)  /* no other function using `pc'? */
-    return (*ci->pc - ci_func(ci)->l.p->code) - 1;
-  else  /* function's pc is saved */
-    return (ci->savedpc - ci_func(ci)->l.p->code) - 1;
+    ci->savedpc = *ci->pc;  /* may not be saved; save it */
+  /* function's pc is saved */
+  return pcRel(ci->savedpc, ci_func(ci)->l.p);
 }
 
 
@@ -69,7 +69,7 @@ LUA_API lua_Hook lua_setlinehook (lua_State *L, lua_Hook func) {
   oldhook = L->linehook;
   L->linehook = func;
   for (ci = L->base_ci; ci <= L->ci; ci++)
-    ci->lastpc = currentpc(L, ci);
+    currentpc(L, ci);  /* update `savedpc' */
   lua_unlock(L);
   return oldhook;
 }
