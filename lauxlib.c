@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.113 2004/05/31 19:27:14 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.114 2004/06/02 13:50:46 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -299,6 +299,31 @@ LUALIB_API void luaL_setn (lua_State *L, int t, int n) {
 }
 
 
+/* find an `n' such that t[n] ~= nil and t[n+1] == nil */
+static int countn (lua_State *L, int t) {
+  int i = LUA_FIRSTINDEX - 1;
+  int j = 2;
+  /* find `i' such that i <= n < i*2 (= j) */
+  for (;;) {
+    lua_rawgeti(L, t, j);
+    if (lua_isnil(L, -1)) break;
+    lua_pop(L, 1);
+    i = j;
+    j = i*2;
+  }
+  lua_pop(L, 1);
+  /* i <= n < j; do a binary search */
+  while (i < j-1) {
+    int m = (i+j)/2;
+    lua_rawgeti(L, t, m);
+    if (lua_isnil(L, -1)) j = m;
+    else i = m;
+    lua_pop(L, 1);
+  }
+  return i - LUA_FIRSTINDEX + 1;
+}
+
+
 LUALIB_API int luaL_getn (lua_State *L, int t) {
   int n;
   t = abs_index(L, t);
@@ -308,13 +333,7 @@ LUALIB_API int luaL_getn (lua_State *L, int t) {
   if ((n = checkint(L, 2)) >= 0) return n;
   lua_getfield(L, t, "n");  /* else try t.n */
   if ((n = checkint(L, 1)) >= 0) return n;
-  for (n = LUA_FIRSTINDEX; ; n++) {  /* else must count elements */
-    lua_rawgeti(L, t, n);
-    if (lua_isnil(L, -1)) break;
-    lua_pop(L, 1);
-  }
-  lua_pop(L, 1);
-  return n - LUA_FIRSTINDEX;
+  return countn(L, t);
 }
 
 /* }====================================================== */
