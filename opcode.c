@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.85 1997/03/19 19:41:10 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.86 1997/03/20 19:20:43 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -32,14 +32,14 @@ char *rcs_opcode="$Id: opcode.c,v 3.85 1997/03/19 19:41:10 roberto Exp roberto $
 
 typedef int StkId;  /* index to stack elements */
 
-static Object initial_stack;
+static TObject initial_stack;
 
-static Object *stackLimit = &initial_stack+1;
-static Object *stack = &initial_stack;
-static Object *top = &initial_stack;
+static TObject *stackLimit = &initial_stack+1;
+static TObject *stack = &initial_stack;
+static TObject *top = &initial_stack;
 
 
-/* macros to convert from lua_Object to (Object *) and back */
+/* macros to convert from lua_Object to (TObject *) and back */
  
 #define Address(lo)     ((lo)+stack-1)
 #define Ref(st)         ((st)-stack+1)
@@ -72,7 +72,7 @@ static void do_call (StkId base, int nResults);
 
 
 
-Object *luaI_Address (lua_Object o)
+TObject *luaI_Address (lua_Object o)
 {
   return Address(o);
 }
@@ -84,7 +84,7 @@ Object *luaI_Address (lua_Object o)
 static void lua_initstack (void)
 {
  Long maxstack = STACK_SIZE;
- stack = newvector(maxstack, Object);
+ stack = newvector(maxstack, TObject);
  stackLimit = stack+maxstack;
  top = stack;
  *(top++) = initial_stack;
@@ -105,7 +105,7 @@ static void growstack (void)
   static int limit = STACK_LIMIT;
   StkId t = top-stack;
   Long stacksize = stackLimit - stack;
-  stacksize = growvector(&stack, stacksize, Object, stackEM, limit+100);
+  stacksize = growvector(&stack, stacksize, TObject, stackEM, limit+100);
   stackLimit = stack+stacksize;
   top = stack + t;
   if (stacksize >= limit)
@@ -134,7 +134,7 @@ static char *lua_strconc (char *l, char *r)
 ** Convert, if possible, to a number object.
 ** Return 0 if success, not 0 if error.
 */
-static int lua_tonumber (Object *obj)
+static int lua_tonumber (TObject *obj)
 {
  float t;
  char c;
@@ -155,7 +155,7 @@ static int lua_tonumber (Object *obj)
 ** Convert, if possible, to a string ttype
 ** Return 0 in success or not 0 on error.
 */
-static int lua_tostring (Object *obj)
+static int lua_tostring (TObject *obj)
 {
   if (ttype(obj) != LUA_T_NUMBER)
     return 1;
@@ -179,7 +179,7 @@ static int lua_tostring (Object *obj)
 */
 static void adjust_top (StkId newtop)
 {
-  Object *nt;
+  TObject *nt;
   lua_checkstack(stack+newtop);
   nt = stack+newtop;  /* warning: previous call may change stack */
   while (top < nt) ttype(top++) = LUA_T_NIL;
@@ -228,7 +228,7 @@ static void callHook (StkId base, lua_Type type, int isreturn)
     (*lua_callhook)(LUA_NOOBJECT, "(return)", 0);
   else
   {
-    Object *f = stack+base-1;
+    TObject *f = stack+base-1;
     if (type == LUA_T_MARK)
       (*lua_callhook)(Ref(f), f->value.tf->fileName, f->value.tf->lineDefined);
     else
@@ -261,7 +261,7 @@ static StkId callC (lua_CFunction func, StkId base)
   return firstResult;
 }
 
-static void callIM (Object *f, int nParams, int nResults)
+static void callIM (TObject *f, int nParams, int nResults)
 {
   open_stack(nParams);
   *(top-nParams-1) = *f;
@@ -278,7 +278,7 @@ static void callIM (Object *f, int nParams, int nResults)
 static void do_call (StkId base, int nResults)
 {
   StkId firstResult;
-  Object *func = stack+base-1;
+  TObject *func = stack+base-1;
   int i;
   if (ttype(func) == LUA_T_CFUNCTION) {
     ttype(func) = LUA_T_CMARK;
@@ -290,7 +290,7 @@ static void do_call (StkId base, int nResults)
   }
   else { /* func is not a function */
     /* Check the fallback for invalid functions */
-    Object *im = luaI_getimbyObj(func, IM_FUNCTION);
+    TObject *im = luaI_getimbyObj(func, IM_FUNCTION);
     if (ttype(im) == LUA_T_NIL)
       lua_error("call expression not a function");
     open_stack((top-stack)-(base-1));
@@ -317,9 +317,9 @@ static void do_call (StkId base, int nResults)
 static void pushsubscript (void)
 {
   int tg = luaI_tag(top-2);
-  Object *im = luaI_getim(tg, IM_GETTABLE);
+  TObject *im = luaI_getim(tg, IM_GETTABLE);
   if (ttype(top-2) == LUA_T_ARRAY && ttype(im) == LUA_T_NIL) {
-      Object *h = lua_hashget(avalue(top-2), top-1);
+      TObject *h = lua_hashget(avalue(top-2), top-1);
       if (h != NULL && ttype(h) != LUA_T_NIL) {
         --top;
         *(top-1) = *h;
@@ -346,7 +346,7 @@ lua_Object lua_basicindex (void)
   if (ttype(top-2) != LUA_T_ARRAY)
     lua_error("indexed expression not a table in basic indexing");
   else {
-    Object *h = lua_hashget(avalue(top-2), top-1);
+    TObject *h = lua_hashget(avalue(top-2), top-1);
     --top;
     if (h != NULL)
       *(top-1) = *h;
@@ -364,11 +364,11 @@ lua_Object lua_basicindex (void)
 ** mode = 1: normal store (with internal methods)
 ** mode = 2: "deep stack" store (with internal methods)
 */
-static void storesubscript (Object *t, int mode)
+static void storesubscript (TObject *t, int mode)
 {
-  Object *im = (mode == 0) ? NULL : luaI_getimbyObj(t, IM_SETTABLE);
+  TObject *im = (mode == 0) ? NULL : luaI_getimbyObj(t, IM_SETTABLE);
   if (ttype(t) == LUA_T_ARRAY && (im == NULL || ttype(im) == LUA_T_NIL)) {
-    Object *h = lua_hashdefine(avalue(t), t+1);
+    TObject *h = lua_hashdefine(avalue(t), t+1);
     *h = *(top-1);
     top -= (mode == 2) ? 1 : 3;
   }
@@ -394,7 +394,7 @@ static void getglobal (Word n)
   *top = lua_table[n].object;
   incr_top;
   if (ttype(top-1) == LUA_T_NIL) {  /* check i.m. */
-    Object *im = luaI_getgim(GIM_GETGLOBAL);
+    TObject *im = luaI_getgim(GIM_GETGLOBAL);
     if (ttype(im) != LUA_T_NIL) {
       ttype(top-1) = LUA_T_STRING;
       tsvalue(top-1) = lua_table[n].varname;
@@ -406,9 +406,9 @@ static void getglobal (Word n)
 /*
 ** Traverse all objects on stack
 */
-void lua_travstack (int (*fn)(Object *))
+void lua_travstack (int (*fn)(TObject *))
 {
- Object *o;
+ TObject *o;
  for (o = top-1; o >= stack; o--)
    fn (o);
 }
@@ -420,7 +420,7 @@ void lua_travstack (int (*fn)(Object *))
 
 static void lua_message (char *s)
 {
-  Object *im = luaI_getgim(GIM_ERROR);
+  TObject *im = luaI_getgim(GIM_ERROR);
   if (ttype(im) == LUA_T_NIL)
     fprintf(stderr, "lua: %s\n", s);
   else {
@@ -458,14 +458,14 @@ lua_Function lua_stackedfunction (int level)
 
 int lua_currentline (lua_Function func)
 {
-  Object *f = Address(func);
+  TObject *f = Address(func);
   return (f+1 < top && (f+1)->ttype == LUA_T_LINE) ? (f+1)->value.i : -1;
 }
 
 
 lua_Object lua_getlocal (lua_Function func, int local_number, char **name)
 {
-  Object *f = luaI_Address(func);
+  TObject *f = luaI_Address(func);
   *name = luaI_getlocalname(f->value.tf, local_number, lua_currentline(func));
   if (*name)
   {
@@ -479,7 +479,7 @@ lua_Object lua_getlocal (lua_Function func, int local_number, char **name)
 
 int lua_setlocal (lua_Function func, int local_number)
 {
-  Object *f = Address(func);
+  TObject *f = Address(func);
   char *name = luaI_getlocalname(f->value.tf, local_number, lua_currentline(func));
   adjustC(1);
   --top;
@@ -843,7 +843,7 @@ lua_CFunction lua_getcfunction (lua_Object object)
 
 lua_Object lua_getref (int ref)
 {
-  Object *o = luaI_getref(ref);
+  TObject *o = luaI_getref(ref);
   if (o == NULL)
     return LUA_NOOBJECT;
   adjustC(0);
@@ -855,7 +855,7 @@ lua_Object lua_getref (int ref)
 
 void lua_pushref (int ref)
 {
-  Object *o = luaI_getref(ref);
+  TObject *o = luaI_getref(ref);
   if (o == NULL)
     lua_error("access to invalid (possibly garbage collected) reference");
   luaI_pushobject(o);
@@ -970,7 +970,7 @@ void lua_pushusertag (void *u, int tag)
 /*
 ** Push an object on the stack.
 */
-void luaI_pushobject (Object *o)
+void luaI_pushobject (TObject *o)
 {
  *top = *o;
  incr_top;
@@ -995,9 +995,9 @@ int lua_tag (lua_Object o)
 }
 
 
-void luaI_gcIM (Object *o)
+void luaI_gcIM (TObject *o)
 {
-  Object *im = luaI_getimbyObj(o, IM_GC);
+  TObject *im = luaI_getimbyObj(o, IM_GC);
   if (ttype(im) != LUA_T_NIL) {
     *top = *o;
     incr_top;
@@ -1008,7 +1008,7 @@ void luaI_gcIM (Object *o)
 
 static void call_arith (IMS event)
 {
-  Object *im = luaI_getimbyObj(top-2, event);  /* try first operand */
+  TObject *im = luaI_getimbyObj(top-2, event);  /* try first operand */
   if (ttype(im) == LUA_T_NIL) {
     im = luaI_getimbyObj(top-1, event);  /* try second operand */
     if (ttype(im) == LUA_T_NIL) {
@@ -1021,17 +1021,17 @@ static void call_arith (IMS event)
   callIM(im, 3, 1);
 }
 
-static void concim (Object *o)
+static void concim (TObject *o)
 {
-  Object *im = luaI_getimbyObj(o, IM_CONCAT);
+  TObject *im = luaI_getimbyObj(o, IM_CONCAT);
   if (ttype(im) == LUA_T_NIL)
     lua_error("unexpected type at conversion to string");
   callIM(im, 2, 1);
 }
 
-static void ordim (Object *o, IMS event)
+static void ordim (TObject *o, IMS event)
 {
-  Object *im = luaI_getimbyObj(o, event);
+  TObject *im = luaI_getimbyObj(o, event);
   if (ttype(im) == LUA_T_NIL)
     lua_error("unexpected type at comparison");
   lua_pushstring(luaI_eventname[event]);
@@ -1041,8 +1041,8 @@ static void ordim (Object *o, IMS event)
 static void comparison (lua_Type ttype_less, lua_Type ttype_equal, 
                         lua_Type ttype_great, IMS op)
 {
-  Object *l = top-2;
-  Object *r = top-1;
+  TObject *l = top-2;
+  TObject *r = top-1;
   int result;
   if (ttype(l) == LUA_T_NUMBER && ttype(r) == LUA_T_NUMBER)
     result = (nvalue(l) < nvalue(r)) ? -1 : (nvalue(l) == nvalue(r)) ? 0 : 1;
@@ -1065,21 +1065,21 @@ static void comparison (lua_Type ttype_less, lua_Type ttype_equal,
 
 static void adjust_varargs (StkId first_extra_arg)
 {
-  Object arg;
-  Object *firstelem = stack+first_extra_arg;
+  TObject arg;
+  TObject *firstelem = stack+first_extra_arg;
   int nvararg = top-firstelem;
   int i;
   if (nvararg < 0) nvararg = 0;
   avalue(&arg)  = lua_createarray(nvararg+1);  /* +1 for field 'n' */
   ttype(&arg) = LUA_T_ARRAY;
   for (i=0; i<nvararg; i++) {
-    Object index;
+    TObject index;
     ttype(&index) = LUA_T_NUMBER;
     nvalue(&index) = i+1;
     *(lua_hashdefine(avalue(&arg), &index)) = *(firstelem+i);
   }
   /* store counter in field "n" */ {
-    Object index, extra;
+    TObject index, extra;
     ttype(&index) = LUA_T_STRING;
     tsvalue(&index) = lua_createstring("n");
     ttype(&extra) = LUA_T_NUMBER;
@@ -1177,7 +1177,7 @@ static StkId lua_execute (Byte *pc, StkId base)
 
    case PUSHSELF:
    {
-     Object receiver = *(top-1);
+     TObject receiver = *(top-1);
      Word w;
      get_word(w,pc);
      ttype(top) = LUA_T_STRING; tsvalue(top) = lua_constant[w];
@@ -1219,7 +1219,7 @@ static StkId lua_execute (Byte *pc, StkId base)
    case STORELIST:
    {
     int m, n;
-    Object *arr;
+    TObject *arr;
     if (opcode == STORELIST0) m = 0;
     else m = *(pc++) * FIELDS_PER_FLUSH;
     n = *(pc++);
@@ -1237,7 +1237,7 @@ static StkId lua_execute (Byte *pc, StkId base)
    case STORERECORD:  /* opcode obsolete: supersed by STOREMAP */
    {
     int n = *(pc++);
-    Object *arr = top-n-1;
+    TObject *arr = top-n-1;
     while (n)
     {
      Word w;
@@ -1252,7 +1252,7 @@ static StkId lua_execute (Byte *pc, StkId base)
 
    case STOREMAP: {
      int n = *(pc++);
-     Object *arr = top-(2*n)-1;
+     TObject *arr = top-(2*n)-1;
      while (n--) {
        *(lua_hashdefine (avalue(arr), top-2)) = *(top-1);
        top-=2;
@@ -1309,8 +1309,8 @@ static StkId lua_execute (Byte *pc, StkId base)
 
    case ADDOP:
    {
-    Object *l = top-2;
-    Object *r = top-1;
+    TObject *l = top-2;
+    TObject *r = top-1;
     if (tonumber(r) || tonumber(l))
       call_arith(IM_ADD);
     else
@@ -1323,8 +1323,8 @@ static StkId lua_execute (Byte *pc, StkId base)
 
    case SUBOP:
    {
-    Object *l = top-2;
-    Object *r = top-1;
+    TObject *l = top-2;
+    TObject *r = top-1;
     if (tonumber(r) || tonumber(l))
       call_arith(IM_SUB);
     else
@@ -1337,8 +1337,8 @@ static StkId lua_execute (Byte *pc, StkId base)
 
    case MULTOP:
    {
-    Object *l = top-2;
-    Object *r = top-1;
+    TObject *l = top-2;
+    TObject *r = top-1;
     if (tonumber(r) || tonumber(l))
       call_arith(IM_MUL);
     else
@@ -1351,8 +1351,8 @@ static StkId lua_execute (Byte *pc, StkId base)
 
    case DIVOP:
    {
-    Object *l = top-2;
-    Object *r = top-1;
+    TObject *l = top-2;
+    TObject *r = top-1;
     if (tonumber(r) || tonumber(l))
       call_arith(IM_DIV);
     else
@@ -1368,8 +1368,8 @@ static StkId lua_execute (Byte *pc, StkId base)
     break;
 
    case CONCOP: {
-     Object *l = top-2;
-     Object *r = top-1;
+     TObject *l = top-2;
+     TObject *r = top-1;
      if (tostring(l))  /* first argument is not a string */
        concim(l);
      else if (tostring(r))  /* second argument is not a string */

@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.62 1997/03/21 21:39:57 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.63 1997/03/26 22:22:41 roberto Exp roberto $";
 
 #include "mem.h"
 #include "opcode.h"
@@ -113,7 +113,7 @@ TaggedString *luaI_createfixedstring (char *name)
 /*
 ** Traverse symbol table objects
 */
-static char *lua_travsymbol (int (*fn)(Object *))
+static char *lua_travsymbol (int (*fn)(TObject *))
 {
  Word i;
  for (i=0; i<lua_ntable; i++)
@@ -126,7 +126,7 @@ static char *lua_travsymbol (int (*fn)(Object *))
 /*
 ** Mark an object if it is a string or a unmarked array.
 */
-int lua_markobject (Object *o)
+int lua_markobject (TObject *o)
 {/* if already marked, does not change mark value */
  if (ttype(o) == LUA_T_USERDATA ||
      (ttype(o) == LUA_T_STRING && !tsvalue(o)->marked))
@@ -142,7 +142,7 @@ int lua_markobject (Object *o)
 /*
 * returns 0 if the object is going to be (garbage) collected
 */
-int luaI_ismarked (Object *o)
+int luaI_ismarked (TObject *o)
 {
   switch (o->ttype)
   {
@@ -160,7 +160,7 @@ int luaI_ismarked (Object *o)
 
 static void call_nilIM (void)
 { /* signals end of garbage collection */
-  Object t;
+  TObject t;
   ttype(&t) = LUA_T_NIL;
   luaI_gcIM(&t);  /* end of list */
 }
@@ -227,8 +227,8 @@ void luaI_nextvar (void)
 }
 
 
-static Object *functofind;
-static int checkfunc (Object *o)
+static TObject *functofind;
+static int checkfunc (TObject *o)
 {
   if (o->ttype == LUA_T_FUNCTION)
     return

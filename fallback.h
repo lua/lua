@@ -1,5 +1,5 @@
 /*
-** $Id: fallback.h,v 1.16 1997/03/20 19:20:43 roberto Exp roberto $
+** $Id: fallback.h,v 1.17 1997/03/24 17:13:22 roberto Exp roberto $
 */
  
 #ifndef fallback_h
@@ -49,19 +49,19 @@ typedef enum {
 #define GIM_N 3
 
 void luaI_setfallback (void);
-int luaI_ref (Object *object, int lock);
-Object *luaI_getref (int ref);
-void luaI_travlock (int (*fn)(Object *));
+int luaI_ref (TObject *object, int lock);
+TObject *luaI_getref (int ref);
+void luaI_travlock (int (*fn)(TObject *));
 void luaI_invalidaterefs (void);
-char *luaI_travfallbacks (int (*fn)(Object *));
+char *luaI_travfallbacks (int (*fn)(TObject *));
 
 void luaI_type (void);
-void luaI_settag (int tag, Object *o);
+void luaI_settag (int tag, TObject *o);
 lua_Type luaI_typetag (int tag);
-Object *luaI_getim (int tag, IMS event);
+TObject *luaI_getim (int tag, IMS event);
 #define luaI_getimbyObj(o,e)  (luaI_getim(luaI_tag(o),(e)))
-Object *luaI_getgim (IMGS event);
-int luaI_tag (Object *o);
+TObject *luaI_getgim (IMGS event);
+int luaI_tag (TObject *o);
 void luaI_setintmethod (void);
 void luaI_setglobalmethod (void);
 void luaI_initfallbacks (void);

@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.36 1997/03/19 19:41:10 roberto Exp roberto $";
+char *rcs_hash="$Id: hash.c,v 2.37 1997/03/21 18:52:37 roberto Exp roberto $";
 
 
 #include "mem.h"
@@ -48,7 +48,7 @@ int luaI_redimension (int nhash)
  return 0;  /* to avoid warnings */
 }
 
-static int hashindex (Hash *t, Object *ref)		/* hash function */
+static int hashindex (Hash *t, TObject *ref)		/* hash function */
 {
   long int h;
   switch (ttype(ref)) {
@@ -70,7 +70,7 @@ static int hashindex (Hash *t, Object *ref)		/* hash function */
   return h%nhash(t);  /* make it a valid index */
 }
 
-int lua_equalObj (Object *t1, Object *t2)
+int lua_equalObj (TObject *t1, TObject *t2)
 {
   if (ttype(t1) != ttype(t2)) return 0;
   switch (ttype(t1))
@@ -87,7 +87,7 @@ int lua_equalObj (Object *t1, Object *t2)
   }
 }
 
-static int present (Hash *t, Object *ref)
+static int present (Hash *t, TObject *ref)
 { 
  int h = hashindex(t, ref);
  while (ttype(ref(node(t, h))) != LUA_T_NIL)
@@ -162,7 +162,7 @@ void lua_hashmark (Hash *h)
 void luaI_hashcallIM (void)
 {
   Hash *curr_array;
-  Object t;
+  TObject t;
   ttype(&t) = LUA_T_ARRAY;
   for (curr_array = listhead; curr_array; curr_array = curr_array->next)
     if (markarray(curr_array) != 1)
@@ -242,7 +242,7 @@ static void rehash (Hash *t)
 ** If the hash node is present, return its pointer, otherwise return
 ** null.
 */
-Object *lua_hashget (Hash *t, Object *ref)
+TObject *lua_hashget (Hash *t, TObject *ref)
 {
  int h = present(t, ref);
  if (ttype(ref(node(t, h))) != LUA_T_NIL) return val(node(t, h));
@@ -254,7 +254,7 @@ Object *lua_hashget (Hash *t, Object *ref)
 ** If the hash node is present, return its pointer, otherwise create a new
 ** node for the given reference and also return its pointer.
 */
-Object *lua_hashdefine (Hash *t, Object *ref)
+TObject *lua_hashdefine (Hash *t, TObject *ref)
 {
  int   h;
  Node *n;

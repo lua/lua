@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.21 1997/02/11 11:35:05 roberto Exp roberto $";
+char *rcs_tree="$Id: tree.c,v 1.22 1997/03/19 19:41:10 roberto Exp roberto $";
 
 
 #include <string.h>
@@ -125,7 +125,7 @@ TaggedString *lua_createstring (char *str)
 void luaI_strcallIM (void)
 {
   int i;
-  Object o;
+  TObject o;
   ttype(&o) = LUA_T_USERDATA;
   for (i=0; i<NUM_HASHS; i++) {
     stringtable *tb = &string_root[i];

@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.29 1997/03/19 19:41:10 roberto Exp roberto $
+** $Id: opcode.h,v 3.30 1997/03/20 19:20:43 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -125,11 +125,11 @@ typedef union
  int	       i;
 } Value;
 
-typedef struct Object
+typedef struct TObject
 {
  lua_Type ttype;
  Value value;
-} Object;
+} TObject;
 
 
 /* Macros to access structure members */
@@ -159,10 +159,10 @@ typedef struct Object
 /* Exported functions */
 void    lua_parse      (TFunc *tf);	/* from "lua.stx" module */
 void	luaI_codedebugline (int line);  /* from "lua.stx" module */
-void    lua_travstack (int (*fn)(Object *));
-Object *luaI_Address (lua_Object o);
-void	luaI_pushobject (Object *o);
-void    luaI_gcIM       (Object *o);
+void    lua_travstack (int (*fn)(TObject *));
+TObject *luaI_Address (lua_Object o);
+void	luaI_pushobject (TObject *o);
+void    luaI_gcIM       (TObject *o);
 int     luaI_dorun (TFunc *tf);
 
 #endif

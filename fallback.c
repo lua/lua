@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.32 1997/03/21 18:37:28 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.33 1997/03/24 17:13:22 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -39,12 +39,12 @@ void luaI_type (void)
 */
 
 static struct ref {
-  Object o;
+  TObject o;
   enum {LOCK, HOLD, FREE, COLLECTED} status;
 } *refArray = NULL;
 static int refSize = 0;
 
-int luaI_ref (Object *object, int lock)
+int luaI_ref (TObject *object, int lock)
 {
   int i;
   int oldSize;
@@ -73,9 +73,9 @@ void lua_unref (int ref)
 }
 
 
-Object *luaI_getref (int ref)
+TObject *luaI_getref (int ref)
 {
-  static Object nul = {LUA_T_NIL, {0}};
+  static TObject nul = {LUA_T_NIL, {0}};
   if (ref == -1)
     return &nul;
   if (ref >= 0 && ref < refSize &&
@@ -86,7 +86,7 @@ Object *luaI_getref (int ref)
 }
 
 
-void luaI_travlock (int (*fn)(Object *))
+void luaI_travlock (int (*fn)(TObject *))
 {
   int i;
   for (i=0; i<refSize; i++)
@@ -140,7 +140,7 @@ static int luaI_checkevent (char *name, char *list[])
 
 static struct IM {
   lua_Type tp;
-  Object int_method[IM_N];
+  TObject int_method[IM_N];
 } *luaI_IMtable = NULL;
 
 static int IMtable_size = 0;
@@ -219,7 +219,7 @@ lua_Type luaI_typetag (int tag)
   }
 }
 
-void luaI_settag (int tag, Object *o)
+void luaI_settag (int tag, TObject *o)
 {
   if (ttype(o) != luaI_typetag(tag))
     lua_error("Tag is not compatible with this type");
@@ -230,7 +230,7 @@ void luaI_settag (int tag, Object *o)
 }
 
 
-int luaI_tag (Object *o)
+int luaI_tag (TObject *o)
 {
   lua_Type t = ttype(o);
   if (t == LUA_T_USERDATA)
@@ -241,7 +241,7 @@ int luaI_tag (Object *o)
 }
 
 
-Object *luaI_getim (int tag, IMS event)
+TObject *luaI_getim (int tag, IMS event)
 {
   if (tag > LUA_T_USERDATA)
     tag = LUA_T_USERDATA;  /* default for non-registered tags */
@@ -263,11 +263,11 @@ void luaI_setintmethod (void)
   luaI_IMtable[-t].int_method[e] = *luaI_Address(func);
 }
 
-static Object gmethod[GIM_N] = {
+static TObject gmethod[GIM_N] = {
   {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}, {LUA_T_NIL, {NULL}}
 };
 
-Object *luaI_getgim (IMGS event)
+TObject *luaI_getgim (IMGS event)
 {
   return &gmethod[event];
 }
@@ -282,7 +282,7 @@ void luaI_setglobalmethod (void)
   gmethod[e] = *luaI_Address(func);
 }
 
-char *luaI_travfallbacks (int (*fn)(Object *))
+char *luaI_travfallbacks (int (*fn)(TObject *))
 {
   int e;
   for (e=GIM_ERROR; e<=GIM_SETGLOBAL; e++) {  /* ORDER GIM */
@@ -324,7 +324,7 @@ static void typeFB (void)
 }
 
 
-static void fillvalids (IMS e, Object *func)
+static void fillvalids (IMS e, TObject *func)
 {
   int t;
   for (t=LUA_T_NIL; t<=LUA_T_USERDATA; t++)
@@ -335,7 +335,7 @@ static void fillvalids (IMS e, Object *func)
 void luaI_setfallback (void)
 {
   int e;
-  Object oldfunc;
+  TObject oldfunc;
   lua_CFunction replace;
   char *name = luaL_check_string(1, "setfallback");
   lua_Object func = lua_getparam(2);

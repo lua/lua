@@ -1,7 +1,7 @@
 /*
 ** hash.h
 ** hash manager for lua
-** $Id: hash.h,v 2.13 1997/02/26 17:38:41 roberto Unstable roberto $
+** $Id: hash.h,v 2.14 1997/03/19 19:41:10 roberto Exp roberto $
 */
 
 #ifndef hash_h
@@ -11,8 +11,8 @@
 #include "opcode.h"
 
 typedef struct node {
- Object ref;
- Object val;
+ TObject ref;
+ TObject val;
 } Node;
 
 typedef struct Hash {
@@ -25,14 +25,14 @@ typedef struct Hash {
 } Hash;
 
 
-int      lua_equalObj (Object *t1, Object *t2);
+int      lua_equalObj (TObject *t1, TObject *t2);
 int      luaI_redimension (int nhash);
 Hash    *lua_createarray (int nhash);
 void     lua_hashmark (Hash *h);
 Long     lua_hashcollector (void);
 void	 luaI_hashcallIM (void);
-Object  *lua_hashget (Hash *t, Object *ref);
-Object 	*lua_hashdefine (Hash *t, Object *ref);
+TObject  *lua_hashget (Hash *t, TObject *ref);
+TObject 	*lua_hashdefine (Hash *t, TObject *ref);
 void     lua_next (void);
 
 #endif

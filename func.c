@@ -83,7 +83,7 @@ Long luaI_funccollector (void)
 
 void lua_funcinfo (lua_Object func, char **filename, int *linedefined)
 {
-  Object *f = luaI_Address(func);
+  TObject *f = luaI_Address(func);
   if (f->ttype == LUA_T_MARK || f->ttype == LUA_T_FUNCTION)
   {
     *filename = f->value.tf->fileName;
