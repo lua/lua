@@ -1,3 +1,5 @@
+% $Id: $
+
 \documentstyle[A4,11pt,bnf]{article}
 
 \newcommand{\rw}[1]{{\bf #1}}
@@ -42,6 +44,8 @@ as a configuration language for any program that needs one.
 This document describes version 2.2 of the Lua programming language and the
 API that allows interaction between Lua programs and its host C program.
 It also presents some examples of using the main features of the system.
+
+{\em Lua manual: \verb$Date$, \verb$Revision$}
 \end{abstract}
 
 \vspace{4ex}
@@ -1080,8 +1084,9 @@ it can be unlocked with a call to \verb'lua_unlock'.
 The set of \Index{predefined functions} in Lua is small but powerful.
 Most of them provide features that allows some degree of
 \Index{reflexivity} in the language.
-Many of these features cannot be simulated with the rest of the
-Language nor with the standard API.
+Some of these features cannot be simulated with the rest of the
+Language nor with the standard Lua API.
+Others are just helpful interfaces to common API functions.
 
 The libraries, on the other hand, provide useful routines
 that are implemented directly through the standard API.
@@ -1104,7 +1109,10 @@ declared in \verb-lualib.h-.
 \subsubsection*{{\tt dofile (filename)}}\Deffunc{dofile}
 This function receives a file name,
 opens it and executes its contents as a Lua chunk.
+When called without arguments,
+it executes the contents of the standard input.
 It returns 1 if there are no errors, \nil\ otherwise.
+It issues an error when called with a non string argument.
 
 \subsubsection*{{\tt dostring (string)}}\Deffunc{dostring}
 This function executes a given string as a Lua chunk.
@@ -1141,6 +1149,10 @@ and its value,
 or \nil\ if there are no more variables.
 See Section \ref{exnext} for an example of the use of this function.
 
+\subsubsection*{{\tt tostring (e)}}\Deffunc{tostring}
+This function receives an argument of any type and
+converts it to a string in a reasonable format.
+
 \subsubsection*{{\tt print (e1, e2, ...)}}\Deffunc{print}
 This function receives any number of arguments,
 and prints their values in a reasonable format.
@@ -1174,6 +1186,10 @@ This tag can be used to distinguish between user
 data with different tags,
 and between C functions and Lua functions.
 
+\subsubsection*{{\tt assert (v)}}\Deffunc{assert}
+This function issues an {\em ``assertion failed!''} error
+when its argument is \nil.
+
 \subsubsection*{{\tt error (message)}}\Deffunc{error}
 This function issues an error message and terminates
 the last called function from the library
@@ -1185,6 +1201,7 @@ This function assigns the given value to a global variable.
 The string \verb'name' does not need to be a syntactically valid variable name.
 Therefore, this function can set global variables with strange names like
 \verb'm v 1' or \verb'34'.
+It returns the value of its second argument.
 
 \subsubsection*{{\tt getglobal (name)}}\Deffunc{getglobal}
 This function retrieves the value of a global variable.
@@ -1240,11 +1257,19 @@ All other characters are left unchanged.
 Returns the ascii code of the character \verb's[i]'.
 If \verb'i' is absent, it is assumed to be 1.
 
-\subsubsection*{{\tt int2str (\{i\})}}\Deffunc{int2str}
-Receives 0 or more numbers.
-Returns a string with length equal to the number of arguments,
-wherein each character has ascii value equal
-to its correspondent argument.
+\subsubsection*{{\tt format (formatstring, e1, e2, \ldots)}}\Deffunc{format}
+This function returns a formated version of its variable number of arguments
+following the description given in its first argument (which must be a string). 
+The format string follows the same rules as the \verb'printf' family of
+standard C functions.
+The only differencies are that the options/modifiers
+ \verb'*', \verb'l', \verb'L', \verb'n', \verb'p',
+ and \verb'h' are not supported.
+The options \verb'c',  \verb'd',  \verb'i', \verb'o', \verb'u', 
+\verb'x',  \verb'X', \verb'e',  \verb'E', \verb'f', and \verb'g' all
+expect a number argument,
+while \verb's' expects a string.
+
 
 \subsection{Mathematical Functions} \label{mathlib}
 
@@ -1350,6 +1375,8 @@ Particularly, the format \verb'"s1"' reads a single character.
 \subsubsection*{{\tt readuntil (char)}}\Deffunc{readuntil}
 
 Reads the current input until the first ocurrence of the given character.
+When called with no parameters or with nil,
+reads until the end of the current input file.
 Returns the string read.
 The character itself is not read.
 
@@ -1383,9 +1410,25 @@ For integers, it is the minimum number of digits.
 This option has no meaning for strings.
 \end{description}
 
+{\em Warning:}
+This format parameter is now obsolete;
+formated output should use the \verb'format' function.
+
 When called without a format string,
 this function writes numbers using the \verb'%g' format
 and strings with \verb'%s'.
+
+\subsubsection*{{\tt date ()}}\Deffunc{date}
+
+This function returns 4 values:
+the current day of the month,
+the month ([1-12]), the current year,
+and the day of the week (1 = Sunday, 7 = Saturday).
+
+\subsubsection*{{\tt time ()}}\Deffunc{time}
+
+This function returns the current time through 3 values:
+hours ([0-23]), minutes, and seconds.
 
 % \subsubsection*{{\tt debug ()}}
 % This function, when called, repeatedly presents a prompt \verb'lua_debug> '
