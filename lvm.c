@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.116 2000/06/19 18:04:41 roberto Exp roberto $
+** $Id: lvm.c,v 1.117 2000/06/26 19:28:31 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -67,17 +67,17 @@ int luaV_tostring (lua_State *L, TObject *obj) {  /* LUA_NUMBER */
 }
 
 
-static void traceexec (lua_State *L, StkId base, int pc) {
+static void traceexec (lua_State *L, StkId base, int pc, StkId top) {
   CallInfo *ci = infovalue(base-1);
   int oldpc = ci->pc;
-  pc--;  /* pc has been already incremented */
   ci->pc = pc;
   if (L->linehook && ci->func->f.l->debug) {
     int *lines = ci->func->f.l->lines;
     LUA_ASSERT(L, lines, "must have debug information");
-    /* calls linehook when jumps back (a loop) or enters a new line */
+    /* calls linehook when jumps back (loop) or enters a new line */
     if (pc <= oldpc || lines[pc] != ci->line) {
       ci->line = lines[pc];
+      L->top = top;
       luaD_lineHook(L, base-2, lines[pc]);
     }
   }
@@ -359,11 +359,9 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
   top = L->top;
   /* main loop of interpreter */
   for (;;) {
-    Instruction i = *pc++;
-    if (debug) {
-      L->top = top;
-      traceexec(L, base, pc - tf->code);
-    }
+    if (debug)
+      traceexec(L, base, pc - tf->code, top);
+   {const Instruction i = *pc++;
     switch (GET_OPCODE(i)) {
 
       case OP_END:
@@ -707,5 +705,5 @@ StkId luaV_execute (lua_State *L, const Closure *cl, StkId base) {
         break;
 
     }
-  }
+  }}
 }
