@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.125 2004/09/21 16:54:32 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.126 2004/09/29 21:03:14 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -375,9 +375,19 @@ LUALIB_API const char *luaL_gsub (lua_State *L, const char *s, const char *p,
 }
 
 
+static int readable (const char *fname) {
+  int err;
+  FILE *f = fopen(fname, "r");  /* try to open file */
+  if (f == NULL) return 0;  /* open failed */
+  getc(f);  /* try to read it */
+  err = ferror(f);
+  fclose(f);
+  return (err == 0);
+}
+
+
 LUALIB_API const char *luaL_searchpath (lua_State *L, const char *name,
                                                       const char *path) {
-  FILE *f;
   const char *p = path;
   for (;;) {
     const char *fname;
@@ -387,15 +397,8 @@ LUALIB_API const char *luaL_searchpath (lua_State *L, const char *name,
     }
     fname = luaL_gsub(L, lua_tostring(L, -1), LUA_PATH_MARK, name);
     lua_remove(L, -2);  /* remove path template */
-    f = fopen(fname, "r");  /* try to open it */
-    if (f) {
-      int err;
-      getc(f);  /* try to read file */
-      err = ferror(f);
-      fclose(f);
-      if (err == 0)  /* open and read sucessful? */
-        return fname;  /* return that file name */
-    }
+    if (readable(fname))  /* does file exist and is readable? */
+      return fname;  /* return that file name */
     lua_pop(L, 1);  /* remove file name */ 
   }
 }
