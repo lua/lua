@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.206 2002/11/21 15:46:44 roberto Exp roberto $
+** $Id: ldo.c,v 1.207 2002/11/21 17:19:11 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -126,7 +126,7 @@ void luaD_reallocstack (lua_State *L, int newsize) {
 void luaD_reallocCI (lua_State *L, int newsize) {
   CallInfo *oldci = L->base_ci;
   luaM_reallocvector(L, L->base_ci, L->size_ci, newsize, CallInfo);
-  L->size_ci = newsize;
+  L->size_ci = cast(unsigned short, newsize);
   L->ci = (L->ci - oldci) + L->base_ci;
   L->end_ci = L->base_ci + L->size_ci;
 }
@@ -288,15 +288,18 @@ void luaD_poscall (lua_State *L, int wanted, StkId firstResult) {
 ** function position.
 */ 
 void luaD_call (lua_State *L, StkId func, int nResults) {
-  StkId firstResult = luaD_precall(L, func);
-  if (firstResult == NULL) {  /* is a Lua function? */
-    firstResult = luaV_execute(L);  /* call it */
-    if (firstResult == NULL) {
-      luaD_poscall(L, 0, L->top);
-      luaG_runerror(L, "attempt to yield across tag-method/C-call boundary");
-    }
+  StkId firstResult;
+  if (++L->nCcalls >= LUA_MAXCCALLS) {
+    if (L->nCcalls == LUA_MAXCCALLS)
+      luaG_runerror(L, "stack overflow");
+    else if (L->nCcalls >= (LUA_MAXCCALLS + (LUA_MAXCCALLS>>3)))
+      luaD_throw(L, LUA_ERRERR);  /* error while handing stack error */
   }
+  firstResult = luaD_precall(L, func);
+  if (firstResult == NULL)  /* is a Lua function? */
+    firstResult = luaV_execute(L);  /* call it */
   luaD_poscall(L, nResults, firstResult);
+  L->nCcalls--;
 }
 
 
@@ -337,11 +340,12 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
   lu_byte old_allowhooks;
   lua_lock(L);
   old_allowhooks = L->allowhook;
-  lua_assert(L->errfunc == 0);
+  lua_assert(L->errfunc == 0 && L->nCcalls == 0);
   status = luaD_rawrunprotected(L, resume, &nargs);
   if (status != 0) {  /* error? */
     L->ci = L->base_ci;  /* go back to initial level */
     L->base = L->ci->base;
+    L->nCcalls = 0;
     luaF_close(L, L->base);  /* close eventual pending closures */
     seterrorobj(L, status, L->base);
     L->allowhook = old_allowhooks;
@@ -356,6 +360,8 @@ LUA_API int lua_yield (lua_State *L, int nresults) {
   CallInfo *ci;
   lua_lock(L);
   ci = L->ci;
+  if (L->nCcalls > 0)
+    luaG_runerror(L, "attempt to yield across metamethod/C-call boundary");
   if (ci->state & CI_C) {  /* usual yield */
     if ((ci-1)->state & CI_C)
       luaG_runerror(L, "cannot yield a C function");
@@ -365,8 +371,7 @@ LUA_API int lua_yield (lua_State *L, int nresults) {
         setobjs2s(L->base + i, L->top - nresults + i);
       L->top = L->base + nresults;
     }
-  }
-  /* else it's an yield inside a hook: nothing to do */
+  } /* else it's an yield inside a hook: nothing to do */
   ci->state |= CI_YIELD;
   lua_unlock(L);
   return -1;
@@ -391,6 +396,7 @@ static void f_call (lua_State *L, void *ud) {
 int luaD_pcall (lua_State *L, int nargs, int nresults, ptrdiff_t errfunc) {
   struct CallS c;
   int status;
+  unsigned short oldnCcalls = L->nCcalls;
   ptrdiff_t old_top = savestack(L, L->top);
   ptrdiff_t old_ci = saveci(L, L->ci);
   lu_byte old_allowhooks = L->allowhook;
@@ -403,6 +409,7 @@ int luaD_pcall (lua_State *L, int nargs, int nresults, ptrdiff_t errfunc) {
     StkId oldtop = restorestack(L, old_top) - (nargs+1);
     luaF_close(L, oldtop);  /* close eventual pending closures */
     seterrorobj(L, status, oldtop);
+    L->nCcalls = oldnCcalls;
     L->ci = restoreci(L, old_ci);
     L->base = L->ci->base;
     L->allowhook = old_allowhooks;

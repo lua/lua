@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.47 2002/10/22 17:18:28 roberto Exp roberto $
+** $Id: llimits.h,v 1.48 2002/11/22 16:35:20 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -119,9 +119,19 @@ typedef LUA_UACNUMBER l_uacNumber;
 typedef unsigned long Instruction;
 
 
-/* maximum depth for calls */
+/* maximum depth for calls (unsigned short) */
 #ifndef LUA_MAXCALLS
 #define LUA_MAXCALLS        4096
+#endif
+
+
+/*
+** maximum depth for C calls (unsigned short): Not too big, or may
+** overflow the C stack...
+*/
+
+#ifndef LUA_MAXCCALLS
+#define LUA_MAXCCALLS        200
 #endif
 
 
@@ -165,7 +175,10 @@ typedef unsigned long Instruction;
 #endif
 
 
-/* maximum number of syntactical nested non-terminals */
+/*
+** maximum number of syntactical nested non-terminals: Not too big,
+** or may overflow the C stack...
+*/
 #ifndef LUA_MAXPARSERLEVEL
 #define LUA_MAXPARSERLEVEL	200
 #endif

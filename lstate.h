@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.104 2002/11/21 15:16:04 roberto Exp roberto $
+** $Id: lstate.h,v 1.105 2002/11/21 15:46:44 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -138,7 +138,8 @@ struct lua_State {
   int stacksize;
   CallInfo *end_ci;  /* points after end of ci array*/
   CallInfo *base_ci;  /* array of CallInfo's */
-  int size_ci;  /* size of array `base_ci' */
+  unsigned short size_ci;  /* size of array `base_ci' */
+  unsigned short nCcalls;  /* number of nested C calls */
   lu_byte hookmask;
   lu_byte allowhook;
   lu_byte hookinit;
