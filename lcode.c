@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.94 2002/04/02 20:34:53 roberto Exp roberto $
+** $Id: lcode.c,v 1.95 2002/04/09 18:49:30 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -293,7 +293,51 @@ static int code_label (FuncState *fs, int A, int b, int jump) {
 }
 
 
-static void dischargejumps (FuncState *fs, expdesc *e, int reg) {
+static void discharge2reg (FuncState *fs, expdesc *e, int reg) {
+  luaK_dischargevars(fs, e);
+  switch (e->k) {
+    case VNIL: {
+      luaK_nil(fs, reg, 1);
+      break;
+    }
+    case VFALSE:  case VTRUE: {
+      luaK_codeABC(fs, OP_LOADBOOL, reg, e->k == VTRUE, 0);
+      break;
+    }
+    case VK: {
+      luaK_codeABc(fs, OP_LOADK, reg, e->info);
+      break;
+    }
+    case VRELOCABLE: {
+      Instruction *pc = &getcode(fs, e);
+      SETARG_A(*pc, reg);
+      break;
+    }
+    case VNONRELOC: {
+      if (reg != e->info)
+        luaK_codeABC(fs, OP_MOVE, reg, e->info, 0);
+      break;
+    }
+    default: {
+      lua_assert(e->k == VVOID || e->k == VJMP);
+      return;  /* nothing to do... */
+    }
+  }
+  e->info = reg;
+  e->k = VNONRELOC;
+}
+
+
+static void discharge2anyreg (FuncState *fs, expdesc *e) {
+  if (e->k != VNONRELOC) {
+    luaK_reserveregs(fs, 1);
+    discharge2reg(fs, e, fs->freereg-1);
+  }
+}
+
+
+static void luaK_exp2reg (FuncState *fs, expdesc *e, int reg) {
+  discharge2reg(fs, e, reg);
   if (e->k == VJMP || hasjumps(e)) {
     int final;  /* position after whole expression */
     int p_f = NO_JUMP;  /* position of an eventual PUSH false */
@@ -317,76 +361,16 @@ static void dischargejumps (FuncState *fs, expdesc *e, int reg) {
     luaK_patchlistaux(fs, e->t, final, reg, p_t, NO_REG, p_t);
   }
   e->f = e->t = NO_JUMP;
-}
-
-
-static void discharge2reg (FuncState *fs, expdesc *e, int reg) {
-  luaK_dischargevars(fs, e);
-  switch (e->k) {
-    case VNIL: {
-      luaK_nil(fs, reg, 1);
-      break;
-    }
-    case VFALSE:  case VTRUE: {
-      luaK_codeABC(fs, OP_LOADBOOL, reg, e->k == VTRUE, 0);
-      break;
-    }
-    case VK: {
-      luaK_codeABc(fs, OP_LOADK, reg, e->info);
-      break;
-    }
-    case VRELOCABLE: {
-      Instruction *pc = &getcode(fs, e);
-      SETARG_A(*pc, reg);
-      break;
-    }
-    default: return;
-  }
-  e->info = reg;
-  e->k = VNONRELOC;
-}
-
-
-static void discharge2anyreg (FuncState *fs, expdesc *e) {
-  if (e->k != VNONRELOC) {
-    luaK_reserveregs(fs, 1);
-    discharge2reg(fs, e, fs->freereg-1);
-  }
-}
-
-
-static void luaK_exp2reg (FuncState *fs, expdesc *e, int reg) {
-  discharge2reg(fs, e, reg);
-  switch (e->k) {
-    case VVOID: {
-      return;  /* nothing to do... */
-    }
-    case VNONRELOC: {
-      if (reg != e->info)
-        luaK_codeABC(fs, OP_MOVE, reg, e->info, 0);
-      break;
-    }
-    case VJMP: {
-      break;
-    }
-    default: {
-      lua_assert(0);  /* cannot happen */
-      break;
-    }
-  }
-  dischargejumps(fs, e, reg);
   e->info = reg;
   e->k = VNONRELOC;
 }
 
 
 void luaK_exp2nextreg (FuncState *fs, expdesc *e) {
-  int reg;
   luaK_dischargevars(fs, e);
   freeexp(fs, e);
-  reg = fs->freereg;
   luaK_reserveregs(fs, 1);
-  luaK_exp2reg(fs, e, reg);
+  luaK_exp2reg(fs, e, fs->freereg - 1);
 }
 
 
@@ -395,7 +379,7 @@ int luaK_exp2anyreg (FuncState *fs, expdesc *e) {
   if (e->k == VNONRELOC) {
     if (!hasjumps(e)) return e->info;  /* exp is already in a register */ 
     if (e->info >= fs->nactloc) {  /* reg. is not a local? */
-      dischargejumps(fs, e, e->info);  /* put value on it */
+      luaK_exp2reg(fs, e, e->info);  /* put value on it */
       return e->info;
     }
   }
@@ -440,23 +424,20 @@ void luaK_storevar (FuncState *fs, expdesc *var, expdesc *exp) {
     case VLOCAL: {
       freeexp(fs, exp);
       luaK_exp2reg(fs, exp, var->info);
-      break;
+      return;
     }
     case VUPVAL: {
       int e = luaK_exp2anyreg(fs, exp);
-      freereg(fs, e);
       luaK_codeABC(fs, OP_SETUPVAL, e, var->info, 0);
       break;
     }
     case VGLOBAL: {
       int e = luaK_exp2anyreg(fs, exp);
-      freereg(fs, e);
       luaK_codeABc(fs, OP_SETGLOBAL, e, var->info);
       break;
     }
     case VINDEXED: {
       int e = luaK_exp2anyreg(fs, exp);
-      freereg(fs, e);
       luaK_codeABC(fs, OP_SETTABLE, e, var->info, var->aux);
       break;
     }
@@ -465,6 +446,7 @@ void luaK_storevar (FuncState *fs, expdesc *var, expdesc *exp) {
       break;
     }
   }
+  freeexp(fs, exp);
 }
 
 
