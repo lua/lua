@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.16 1998/03/06 16:54:42 roberto Exp roberto $
+** $Id: llex.c,v 1.17 1998/03/09 17:22:49 roberto Exp roberto $
 ** Lexical Analizer
 ** See Copyright Notice in lua.h
 */
@@ -323,11 +323,15 @@ int luaY_lex (YYSTYPE *l)
             case '\\':
               next(LS);  /* do not save the '\' */
               switch (LS->current) {
+                case 'a': save('\a'); next(LS); break;
+                case 'b': save('\b'); next(LS); break;
+                case 'f': save('\f'); next(LS); break;
                 case 'n': save('\n'); next(LS); break;
-                case 't': save('\t'); next(LS); break;
                 case 'r': save('\r'); next(LS); break;
+                case 't': save('\t'); next(LS); break;
+                case 'v': save('\v'); next(LS); break;
                 case '\n': save('\n'); inclinenumber(LS); break;
-                case '\\': case '"': case '\'': {
+                case '\\': case '"': case '\'': case '?': {
                   save(LS->current);
                   next(LS);
                   break;
@@ -338,9 +342,10 @@ int luaY_lex (YYSTYPE *l)
                     int i = 0;
                     do {
                       c = 10*c + (LS->current-'0');
-                      i++;
                       next(LS);
-                    } while (i<3 && isdigit(LS->current));
+                    } while (++i<3 && isdigit(LS->current));
+                    if (c >= 256)
+                      luaY_error("escape sequence too large");
                     save(c);
                   }
                   else {
