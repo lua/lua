@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 3.1 1997/04/12 15:01:49 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 3.2 1997/04/14 15:30:29 roberto Exp roberto $";
 
 
 #include <ctype.h>
@@ -151,6 +151,7 @@ static void inclinenumber (void);
 
 static void ifskip (int thisiflevel)
 {
+  if (thisiflevel < 0) return;
   while (iflevel > thisiflevel &&
          (ifstate[thisiflevel] == 0 || ifstate[thisiflevel] == 3)) {
     if (current == '\n')
@@ -165,7 +166,7 @@ static void ifskip (int thisiflevel)
 static void inclinenumber (void)
 {
   static char *pragmas [] = 
-    {"debug", "nodebug", "end", "ifnot", "if", "else", NULL};
+    {"debug", "nodebug", "end", "ifnot", "if", "else", "endinput", NULL};
   next();  /* skip '\n' */
   ++lua_linenumber;
   if (current == '$') {  /* is a pragma? */
@@ -198,6 +199,9 @@ static void inclinenumber (void)
           luaI_auxsyntaxerror("unmatched $else");
         ifstate[iflevel-1] = ifstate[iflevel-1] | 2;
         break;
+      case 6:  /* endinput */
+        current = 0;
+        break;
       default:
         luaI_auxsynterrbf("invalid pragma", buff);
     }
@@ -206,8 +210,7 @@ static void inclinenumber (void)
       inclinenumber();
     else if (current != 0)  /* or eof */
       luaI_auxsyntaxerror("invalid pragma format");
-    if (iflevel > 0)
-      ifskip(iflevel-1);
+    ifskip(iflevel-1);
   }
 }
 
