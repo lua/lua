@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.18 2002/09/17 20:35:54 roberto Exp roberto $
+** $Id: liolib.c,v 2.19 2002/09/19 20:12:47 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -194,25 +194,36 @@ static int io_output (lua_State *L) {
 
 static int io_readline (lua_State *L);
 
-static int io_lines (lua_State *L) {
-  FILE *f = fopen(luaL_check_string(L, 1), "r");
-  luaL_arg_check(L, f, 1,  strerror(errno));
+
+static void aux_lines (lua_State *L, int index, int close) {
   lua_pushliteral(L, FILEHANDLE);
   lua_rawget(L, LUA_REGISTRYINDEX);
-  newfile(L, f);
-  lua_pushboolean(L, 1);  /* must close file when finished */
+  lua_pushvalue(L, index);
+  lua_pushboolean(L, close);  /* close/not close file when finished */
   lua_pushcclosure(L, io_readline, 3);
-  return 1;
 }
+
 
 static int f_lines (lua_State *L) {
   tofile(L, 1);  /* check that it's a valid file handle */
-  lua_pushliteral(L, FILEHANDLE);
-  lua_rawget(L, LUA_REGISTRYINDEX);
-  lua_pushvalue(L, 1);
-  lua_pushboolean(L, 0);  /* does not close file when finished */
-  lua_pushcclosure(L, io_readline, 3);
+  aux_lines(L, 1, 0);
   return 1;
+}
+
+
+static int io_lines (lua_State *L) {
+  if (lua_isnoneornil(L, 1)) {  /* no arguments? */
+    lua_pushstring(L, IO_INPUT);
+    lua_rawget(L, lua_upvalueindex(1));  /* will iterate over default input */
+    return f_lines(L);
+  }
+  else {
+    FILE *f = fopen(luaL_check_string(L, 1), "r");
+    luaL_arg_check(L, f, 1,  strerror(errno));
+    newfile(L, f);
+    aux_lines(L, lua_gettop(L), 1);
+    return 1;
+  }
 }
 
 
