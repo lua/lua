@@ -275,5 +275,14 @@ Fri Dec 21 15:21:05 EDT 2001
 >> seg. fault when rawget/rawset get extra arguments
 (by Eric Mauger; since 4.0b)
 
+** lvm.c
+Wed Jun 19 13:28:20 EST 2002
+>> line hook gets wrong `ar'
+(by Daniel C. Sinclair; since 4.0.b)
 
+** ldo.c
+Wed Jun 19 13:31:49 EST 2002
+>> `protectedparser' may run GC, and then collect `filename'
+>> (in function `parse_file')
+(by Alex Bilyk; since 4.0)
 
