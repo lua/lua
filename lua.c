@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.23 1999/08/18 17:40:54 roberto Exp roberto $
+** $Id: lua.c,v 1.24 1999/11/09 17:59:35 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -175,7 +175,7 @@ int main (int argc, char *argv[]) {
           lua_setdebug(1);
           break;
         case 'v':
-          printf("%s  %s\n(written by %s)\n\n",
+          printf("%s  %s\n(written by %s)\n",
                  LUA_VERSION, LUA_COPYRIGHT, LUA_AUTHORS);
           break;
         case 'e':
