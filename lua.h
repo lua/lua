@@ -2,14 +2,14 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lua.h,v 3.31 1996/11/12 16:00:16 roberto Exp roberto $
+** $Id: lua.h,v 3.32 1996/11/20 13:49:32 roberto Exp roberto $
 */
 
 
 #ifndef lua_h
 #define lua_h
 
-#define LUA_VERSION	"Lua 2.5.1"
+#define LUA_VERSION	"Lua 2.?"
 #define LUA_COPYRIGHT	"Copyright (C) 1994-1996 TeCGraf"
 #define LUA_AUTHORS 	"W. Celes, R. Ierusalimschy & L. H. de Figueiredo"
 
@@ -63,12 +63,15 @@ int            lua_isfunction           (lua_Object object);
 float          lua_getnumber 		(lua_Object object);
 char          *lua_getstring 		(lua_Object object);
 lua_CFunction  lua_getcfunction 	(lua_Object object);
+void          *lua_getbinarydata	(lua_Object object);
+int            lua_getbindatasize	(lua_Object object);
 void          *lua_getuserdata  	(lua_Object object);
 
 void 	       lua_pushnil 		(void);
 void           lua_pushnumber 		(float n);
 void           lua_pushstring 		(char *s);
 void           lua_pushcfunction	(lua_CFunction fn);
+void           lua_pushbinarydata	(void *buff, int size, int tag);
 void           lua_pushusertag     	(void *u, int tag);
 void           lua_pushobject       	(lua_Object object);
 

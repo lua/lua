@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.23 1996/09/26 21:08:41 roberto Exp roberto $
+** $Id: opcode.h,v 3.24 1996/11/01 12:46:59 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -102,7 +102,6 @@ typedef union
  TaggedString *ts;
  TFunc         *tf;
  struct Hash    *a;
- void           *u;
  int	       i;
 } Value;
 
@@ -120,7 +119,6 @@ typedef struct Object
 #define tsvalue(o)	((o)->value.ts)
 #define avalue(o)	((o)->value.a)
 #define fvalue(o)	((o)->value.f)
-#define uvalue(o)	((o)->value.u)
 
 /* Macros to access symbol table */
 #define s_object(i)	(lua_table[i].object)

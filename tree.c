@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.19 1996/02/22 20:34:33 roberto Exp $";
+char *rcs_tree="$Id: tree.c,v 1.20 1996/03/14 15:56:26 roberto Exp roberto $";
 
 
 #include <string.h>
@@ -28,14 +28,14 @@ static int initialized = 0;
 
 static stringtable string_root[NUM_HASHS];
 
-static TaggedString EMPTY = {NOT_USED, NOT_USED, 0, 2, {0}};
+static TaggedString EMPTY = {LUA_T_STRING, 0, NOT_USED, NOT_USED, 0, 2, {0}};
 
 
-static unsigned long hash (char *str)
+static unsigned long hash (char *buff, long size)
 {
   unsigned long h = 0;
-  while (*str)
-    h = ((h<<5)-h)^(unsigned char)*(str++);
+  while (size--)
+    h = ((h<<5)-h)^(unsigned char)*(buff++);
   return h;
 }
 
@@ -71,10 +71,10 @@ static void grow (stringtable *tb)
   tb->hash = newhash;
 }
 
-static TaggedString *insert (char *str, stringtable *tb)
+static TaggedString *insert (char *buff, long size, int tag, stringtable *tb)
 {
   TaggedString *ts;
-  unsigned long h = hash(str);
+  unsigned long h = hash(buff, size);
   int i;
   int j = -1;
   if ((Long)tb->nuse*3 >= (Long)tb->size*2)
@@ -84,12 +84,13 @@ static TaggedString *insert (char *str, stringtable *tb)
     grow(tb);
   }
   i = h%tb->size;
-  while (tb->hash[i])
+  while ((ts = tb->hash[i]) != NULL)
   {
-    if (tb->hash[i] == &EMPTY)
+    if (ts == &EMPTY)
       j = i;
-    else if (strcmp(str, tb->hash[i]->str) == 0)
-      return tb->hash[i];
+    else if (ts->size == size && ts->tag == tag &&
+             memcmp(buff, ts->str, size) == 0)
+      return ts;
     i = (i+1)%tb->size;
   }
   /* not found */
@@ -98,17 +99,24 @@ static TaggedString *insert (char *str, stringtable *tb)
     i = j;
   else
     tb->nuse++;
-  ts = tb->hash[i] = (TaggedString *)luaI_malloc(sizeof(TaggedString)+strlen(str));
-  strcpy(ts->str, str);
+  ts = tb->hash[i] = (TaggedString *)luaI_malloc(sizeof(TaggedString)+size-1);
+  memcpy(ts->str, buff, size);
+  ts->tag = tag;
+  ts->size = size;
   ts->marked = 0;
   ts->hash = h;
   ts->varindex = ts->constindex = NOT_USED;
   return ts;
 }
 
-TaggedString *lua_createstring (char *str) 
+TaggedString *luaI_createuserdata (char *buff, long size, int tag)
 {
-  return insert(str, &string_root[(unsigned)str[0]%NUM_HASHS]);
+  return insert(buff, size, tag, &string_root[(unsigned)buff[0]%NUM_HASHS]);
+}
+
+TaggedString *lua_createstring (char *str)
+{
+  return luaI_createuserdata(str, strlen(str)+1, LUA_T_STRING);
 }
 
 

@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.78 1996/11/22 13:08:28 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.79 1997/01/31 14:27:11 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -709,6 +709,20 @@ char *lua_getstring (lua_Object object)
  else return (svalue(Address(object)));
 }
 
+void *lua_getbinarydata (lua_Object object)
+{
+  if (object == LUA_NOOBJECT || tag(Address(object)) != LUA_T_USERDATA)
+    lua_error("getbinarydata: object is not binary data");
+  return svalue(Address(object));
+}
+
+int lua_getbindatasize (lua_Object object)
+{
+  if (object == LUA_NOOBJECT || tag(Address(object)) != LUA_T_USERDATA)
+    return 0;
+  else return (Address(object))->value.ts->size;
+}
+
 /*
 ** Given an object handle, return its cfuntion pointer. On error, return NULL.
 */
@@ -725,9 +739,7 @@ lua_CFunction lua_getcfunction (lua_Object object)
 */
 void *lua_getuserdata (lua_Object object)
 {
- if (object == LUA_NOOBJECT || tag(Address(object)) < LUA_T_USERDATA)
-   return NULL;
- else return (uvalue(Address(object)));
+  return *(void **)lua_getbinarydata(object);
 }
 
 
@@ -825,15 +837,25 @@ void lua_pushcfunction (lua_CFunction fn)
  incr_top;
 }
 
+void lua_pushbinarydata (void *buff, int size, int tag)
+{
+  if (buff == NULL)
+    tag(top) = LUA_T_NIL;
+  else {
+    tsvalue(top) = luaI_createuserdata(buff, size, tag);
+    tag(top) = LUA_T_USERDATA;
+  }
+  incr_top;
+}
+
 /*
 ** Push an object (tag=userdata) to stack.
 */
 void lua_pushusertag (void *u, int tag)
 {
- if (tag < LUA_T_USERDATA) 
-   lua_error("invalid tag in `lua_pushusertag'");
- tag(top) = tag; uvalue(top) = u;
- incr_top;
+  if (tag < LUA_T_USERDATA) 
+    lua_error("invalid tag in `lua_pushusertag'");
+  lua_pushbinarydata(&u, sizeof(void *), tag);
 }
 
 /*
@@ -862,8 +884,12 @@ int lua_type (lua_Object o)
 {
   if (o == LUA_NOOBJECT)
     return LUA_T_NIL;
-  else
-    return tag(Address(o));
+  else {
+    lua_Type t = tag(Address(o));
+    if (t == LUA_T_USERDATA)
+      return (Address(o))->value.ts->tag;
+    else return tag(Address(o));
+  }
 }
 
 

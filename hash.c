@@ -3,7 +3,7 @@
 ** hash manager for lua
 */
 
-char *rcs_hash="$Id: hash.c,v 2.31 1996/07/12 20:00:26 roberto Exp roberto $";
+char *rcs_hash="$Id: hash.c,v 2.32 1996/11/18 13:48:44 roberto Exp roberto $";
 
 
 #include "mem.h"
@@ -50,12 +50,9 @@ static int hashindex (Hash *t, Object *ref)		/* hash function */
 {
   long int h;
   switch (tag(ref)) {
-    case LUA_T_NIL:
-      lua_error ("unexpected type to index table");
-      h = 0;  /* UNREACHEABLE */
     case LUA_T_NUMBER:
       h = (long int)nvalue(ref); break;
-    case LUA_T_STRING:
+    case LUA_T_STRING: case LUA_T_USERDATA:
       h = tsvalue(ref)->hash; break;
     case LUA_T_FUNCTION:
       h = (IntPoint)ref->value.tf; break;
@@ -63,8 +60,9 @@ static int hashindex (Hash *t, Object *ref)		/* hash function */
       h = (IntPoint)fvalue(ref); break;
     case LUA_T_ARRAY:
       h = (IntPoint)avalue(ref); break;
-    default:  /* user data */
-      h = (IntPoint)uvalue(ref); break;
+    default:
+      lua_error ("unexpected type to index table");
+      h = 0;  /* UNREACHEABLE */
   }
   if (h < 0) h = -h;
   return h%nhash(t);  /* make it a valid index */
@@ -77,11 +75,13 @@ int lua_equalObj (Object *t1, Object *t2)
   {
     case LUA_T_NIL: return 1;
     case LUA_T_NUMBER: return nvalue(t1) == nvalue(t2);
-    case LUA_T_STRING: return svalue(t1) == svalue(t2);
+    case LUA_T_STRING: case LUA_T_USERDATA: return svalue(t1) == svalue(t2);
     case LUA_T_ARRAY: return avalue(t1) == avalue(t2);
     case LUA_T_FUNCTION: return t1->value.tf == t2->value.tf;
     case LUA_T_CFUNCTION: return fvalue(t1) == fvalue(t2);
-    default: return uvalue(t1) == uvalue(t2);
+    default:
+     lua_error("internal error at `lua_equalObj'");
+     return 0; /* UNREACHEABLE */
   }
 }
 
