@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.167 2002/02/14 21:46:58 roberto Exp $
+** $Id: lparser.c,v 1.168 2002/03/08 19:10:32 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -24,14 +24,17 @@
 
 
 /*
-** nodes for break list (list of active breakable loops)
+** nodes for block list (list of active blocks)
 */
-typedef struct Breaklabel {
-  struct Breaklabel *previous;  /* chain */
+typedef struct BlockCnt {
+  struct BlockCnt *previous;  /* chain */
   int breaklist;  /* list of jumps out of this loop */
-  int nactloc;  /* # of active local variables outside the breakable structure */
-} Breaklabel;
-
+  int nactloc;  /* # active local variables outside the breakable structure */
+  int nactvar;
+  int defaultglob;
+  int upval;  /* true if some variable in the block is an upvalue */
+  int isbreakable;  /* true if `block' is a loop */
+} BlockCnt;
 
 
 
@@ -77,9 +80,7 @@ static void check (LexState *ls, int c) {
 }
 
 
-static void check_condition (LexState *ls, int c, const char *msg) {
-  if (!c) luaK_error(ls, msg);
-}
+#define check_condition(ls,c,msg)	{ if (!(c)) luaK_error(ls, msg); }
 
 
 static int optional (LexState *ls, int c) {
@@ -143,46 +144,62 @@ static int luaI_registerlocalvar (LexState *ls, TString *varname) {
 }
 
 
-static void new_localvar (LexState *ls, TString *name, int n) {
+static vardesc *new_var (LexState *ls, int n) {
   FuncState *fs = ls->fs;
-  luaX_checklimit(ls, fs->nactloc+n+1, MAXLOCALS, "local variables");
-  fs->actloc[fs->nactloc+n] = luaI_registerlocalvar(ls, name);
+  luaX_checklimit(ls, fs->nactvar+n+1, MAXVARS, "variables");
+  return &fs->actvar[fs->nactvar+n];
+}
+
+
+static void new_localvar (LexState *ls, TString *name, int n) {
+  vardesc *v = new_var(ls, n);  
+  v->k = VLOCAL;
+  v->i = luaI_registerlocalvar(ls, name);
+  v->level = ls->fs->nactloc + n;
 }
 
 
 static void adjustlocalvars (LexState *ls, int nvars) {
   FuncState *fs = ls->fs;
   while (nvars--) {
-    fs->f->locvars[fs->actloc[fs->nactloc]].startpc = fs->pc;
-    resetbit(fs->wasup, fs->nactloc);
+    lua_assert(fs->actvar[fs->nactvar].k == VLOCAL);
+    fs->f->locvars[fs->actvar[fs->nactvar].i].startpc = fs->pc;
+    fs->nactvar++;
     fs->nactloc++;
   }
 }
 
 
-static void closelevel (LexState *ls, int level) {
+static void adjustglobalvars (LexState *ls, int nvars, int level) {
   FuncState *fs = ls->fs;
-  int i;
-  for (i=level; i<fs->nactloc; i++)
-    if (testbit(fs->wasup, i)) {
-      luaK_codeABC(fs, OP_CLOSE, level, 0, 0);
-      return;
-    }
-  return;  /* nothing to close */
+  while (nvars--) {
+    fs->actvar[fs->nactvar].k = VGLOBAL;
+    fs->actvar[fs->nactvar].level = level;
+    fs->nactvar++;
+  }
 }
 
 
-static void removelocalvars (LexState *ls, int nvars, int toclose) {
+static void removevars (LexState *ls, int tolevel) {
   FuncState *fs = ls->fs;
-  if (toclose)
-    closelevel(ls, fs->nactloc - nvars);
-  while (nvars--)
-    fs->f->locvars[fs->actloc[--fs->nactloc]].endpc = fs->pc;
+  while (fs->nactvar > tolevel) {
+    fs->nactvar--;
+    if (fs->actvar[fs->nactvar].k == VLOCAL) {
+      fs->nactloc--;
+      fs->f->locvars[fs->actvar[fs->nactvar].i].endpc = fs->pc;
+    }
+  }
 }
 
 
 static void new_localvarstr (LexState *ls, const char *name, int n) {
   new_localvar(ls, luaS_new(ls->L, name), n);
+}
+
+
+static void create_local (LexState *ls, const char *name) {
+  new_localvarstr(ls, name, 0);
+  adjustlocalvars(ls, 1);
 }
 
 
@@ -199,28 +216,72 @@ static int indexupvalue (FuncState *fs, expdesc *v) {
 }
 
 
-static void singlevar (FuncState *fs, TString *n, expdesc *var, int baselevel) {
-  if (fs == NULL)
-    init_exp(var, VGLOBAL, 0);  /* not local in any level; global variable */
-  else {  /* look up at current level */
-    int i;
-    for (i=fs->nactloc-1; i >= 0; i--) {
-      if (n == fs->f->locvars[fs->actloc[i]].varname) {
-        if (!baselevel)
-          setbit(fs->wasup, i);  /* will be upvalue in some other level */
-        init_exp(var, VLOCAL, i);
-        return;
+static vardesc *searchvar (FuncState *fs, TString *n) {
+  int i;
+  for (i=fs->nactvar-1; i >= 0; i--) {
+    vardesc *v = &fs->actvar[i];
+    if (v->k == VLOCAL ? n == fs->f->locvars[v->i].varname
+                       : n == tsvalue(&fs->f->k[v->i]))
+      return v;
+  }
+  return NULL;  /* not found */
+}
+
+
+static void markupval (FuncState *fs, int level) {
+  BlockCnt *bl = fs->bl;
+  while (bl && bl->nactloc > level) bl = bl->previous;
+  if (bl) bl->upval = 1;
+}
+
+
+static int singlevar_aux (FuncState *fs, TString *n, expdesc *var, int nd) {
+  if (fs == NULL) {  /* no more levels? */
+    init_exp(var, VGLOBAL, NO_REG);  /* default is free global */
+    return VNIL;  /* not found */
+  }
+  else {
+    vardesc *v = searchvar(fs, n);  /* look up at current level */
+    if (v) {
+      if (v->level == NO_REG) {  /* free global? */
+        lua_assert(v->k == VGLOBAL);
+        init_exp(var, VGLOBAL, NO_REG);
       }
+      else
+        init_exp(var, VLOCAL, v->level);
+      return v->k;
     }
-    /* not found at current level; try upper one */
-    singlevar(fs->prev, n, var, 0);
-    if (var->k == VGLOBAL) {
-      if (baselevel)
-        var->info = luaK_stringK(fs, n);  /* info points to global name */
+    else {  /* not found at current level; try upper one */
+      int k = singlevar_aux(fs->prev, n, var, nd && fs->defaultglob == NO_REG);
+      if (var->k == VGLOBAL) {
+        if (k == VNIL && nd && fs->defaultglob != NO_REG) {
+          init_exp(var, VLOCAL, fs->defaultglob);
+          k = VGLOBAL;  /* now there is a declaration */
+        }
+      }
+      else {  /* LOCAL or UPVAL */
+        if (var->k == VLOCAL)
+          markupval(fs->prev, var->info);  /* local will be used as an upval */
+        var->info = indexupvalue(fs, var);
+        var->k = VUPVAL;  /* upvalue in this level */
+      }
+      return k;
     }
-    else {  /* local variable in some upper level? */
-      var->info = indexupvalue(fs, var);
-      var->k = VUPVAL;  /* upvalue in this level */
+  }
+}
+
+
+static void singlevar (FuncState *fs, TString *n, expdesc *var) {
+  int k = singlevar_aux(fs, n, var, 1);
+  if (k == VNIL || k == VGLOBAL) {  /* global? */
+    if (var->k == VGLOBAL)  /* free global? */
+      var->info = luaK_stringK(fs, n);
+    else {  /* `indexed' global */
+      expdesc e;
+      codestring(fs->ls, &e, n);
+      luaK_exp2anyreg(fs, var);
+      var->aux = luaK_exp2RK(fs, &e);
+      var->k = VINDEXED;
     }
   }
 }
@@ -250,29 +311,38 @@ static void adjust_assign (LexState *ls, int nvars, int nexps, expdesc *e) {
 static void code_params (LexState *ls, int nparams, int dots) {
   FuncState *fs = ls->fs;
   adjustlocalvars(ls, nparams);
-  luaX_checklimit(ls, fs->nactloc, MAXPARAMS, "parameters");
+  luaX_checklimit(ls, fs->nactvar, MAXPARAMS, "parameters");
   fs->f->numparams = cast(lu_byte, fs->nactloc);
   fs->f->is_vararg = cast(lu_byte, dots);
-  if (dots) {
-    new_localvarstr(ls, "arg", 0);
-    adjustlocalvars(ls, 1);
-  }
+  if (dots)
+    create_local(ls, "arg");
   luaK_reserveregs(fs, fs->nactloc);  /* reserve register for parameters */
 }
 
 
-static void enterbreak (FuncState *fs, Breaklabel *bl) {
+static void enterblock (FuncState *fs, BlockCnt *bl, int isbreakable) {
   bl->breaklist = NO_JUMP;
+  bl->isbreakable = isbreakable;
   bl->nactloc = fs->nactloc;
+  bl->nactvar = fs->nactvar;
+  bl->defaultglob = fs->defaultglob;
+  bl->upval = 0;
   bl->previous = fs->bl;
   fs->bl = bl;
 }
 
 
-static void leavebreak (FuncState *fs, Breaklabel *bl) {
+static void leaveblock (FuncState *fs) {
+  BlockCnt *bl = fs->bl;
   fs->bl = bl->previous;
-  luaK_patchtohere(fs, bl->breaklist);
+  removevars(fs->ls, bl->nactvar);
+  if (bl->upval)
+    luaK_codeABC(fs, OP_CLOSE, bl->nactloc, 0, 0);
   lua_assert(bl->nactloc == fs->nactloc);
+  lua_assert(bl->nactvar == fs->nactvar);
+  fs->defaultglob = bl->defaultglob;
+  fs->freereg = bl->nactloc;  /* free registers used by locals */
+  luaK_patchtohere(fs, bl->breaklist);
 }
 
 
@@ -308,7 +378,9 @@ static void open_func (LexState *ls, FuncState *fs) {
   fs->nlineinfo = 0;
   fs->nlocvars = 0;
   fs->nactloc = 0;
+  fs->nactvar = 0;
   fs->lastline = 0;
+  fs->defaultglob = NO_REG;  /* default is free globals */
   fs->bl = NULL;
   f->code = NULL;
   f->source = ls->source;
@@ -322,7 +394,7 @@ static void close_func (LexState *ls) {
   lua_State *L = ls->L;
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
-  removelocalvars(ls, fs->nactloc, 0);
+  removevars(ls, 0);
   luaK_codeABC(fs, OP_RETURN, 0, 1, 0);  /* final return */
   luaK_getlabel(fs);  /* close eventual list of pending jumps */
   lua_assert(G(L)->roottable == fs->h);
@@ -352,8 +424,7 @@ Proto *luaY_parser (lua_State *L, ZIO *z) {
   open_func(&lexstate, &funcstate);
   next(&lexstate);  /* read first token */
   chunk(&lexstate);
-  check_condition(&lexstate, (lexstate.t.token == TK_EOS),
-                             "<eof> expected");
+  check_condition(&lexstate, (lexstate.t.token == TK_EOS), "<eof> expected");
   close_func(&lexstate);
   lua_assert(funcstate.prev == NULL);
   lua_assert(funcstate.f->nupvalues == 0);
@@ -593,13 +664,13 @@ static void prefixexp (LexState *ls, expdesc *v) {
       return;
     }
     case TK_NAME: {
-      singlevar(ls->fs, str_checkname(ls), v, 1);
+      singlevar(ls->fs, str_checkname(ls), v);
       next(ls);
       return;
     }
     case '%': {  /* for compatibility only */
       next(ls);  /* skip `%' */
-      singlevar(ls->fs, str_checkname(ls), v, 1);
+      singlevar(ls->fs, str_checkname(ls), v);
       check_condition(ls, v->k == VUPVAL, "global upvalues are obsolete");
       next(ls);
       return;
@@ -797,10 +868,11 @@ static int block_follow (int token) {
 static void block (LexState *ls) {
   /* block -> chunk */
   FuncState *fs = ls->fs;
-  int nactloc = fs->nactloc;
+  BlockCnt bl;
+  enterblock(fs, &bl, 0);
   chunk(ls);
-  removelocalvars(ls, fs->nactloc - nactloc, 1);
-  fs->freereg = nactloc;  /* free registers used by locals */
+  lua_assert(bl.breaklist == NO_JUMP);
+  leaveblock(fs);
 }
 
 
@@ -887,8 +959,8 @@ static void whilestat (LexState *ls, int line) {
   FuncState *fs = ls->fs;
   int while_init = luaK_getlabel(fs);
   expdesc v;
-  Breaklabel bl;
-  enterbreak(fs, &bl);
+  BlockCnt bl;
+  enterblock(fs, &bl, 1);
   next(ls);
   cond(ls, &v);
   check(ls, TK_DO);
@@ -896,7 +968,7 @@ static void whilestat (LexState *ls, int line) {
   luaK_patchlist(fs, luaK_jump(fs), while_init);
   luaK_patchtohere(fs, v.f);
   check_match(ls, TK_END, TK_WHILE, line);
-  leavebreak(fs, &bl);
+  leaveblock(fs);
 }
 
 
@@ -905,14 +977,14 @@ static void repeatstat (LexState *ls, int line) {
   FuncState *fs = ls->fs;
   int repeat_init = luaK_getlabel(fs);
   expdesc v;
-  Breaklabel bl;
-  enterbreak(fs, &bl);
+  BlockCnt bl;
+  enterblock(fs, &bl, 1);
   next(ls);
   block(ls);
   check_match(ls, TK_UNTIL, TK_REPEAT, line);
   cond(ls, &v);
   luaK_patchlist(fs, v.f, repeat_init);
-  leavebreak(fs, &bl);
+  leaveblock(fs);
 }
 
 
@@ -949,7 +1021,6 @@ static void fornum (LexState *ls, TString *varname) {
   block(ls);
   luaK_patchtohere(fs, prep-1);
   luaK_patchlist(fs, luaK_codeAsBc(fs, OP_FORLOOP, base, NO_JUMP), prep);
-  removelocalvars(ls, 3, 1);
 }
 
 
@@ -977,7 +1048,6 @@ static void forlist (LexState *ls, TString *indexname) {
   block(ls);
   luaK_patchlist(fs, luaK_jump(fs), prep-1);
   luaK_patchtohere(fs, prep);
-  removelocalvars(ls, nvars+1, 1);
 }
 
 
@@ -985,8 +1055,8 @@ static void forstat (LexState *ls, int line) {
   /* forstat -> fornum | forlist */
   FuncState *fs = ls->fs;
   TString *varname;
-  Breaklabel bl;
-  enterbreak(fs, &bl);
+  BlockCnt bl;
+  enterblock(fs, &bl, 1);
   next(ls);  /* skip `for' */
   varname = str_checkname(ls);  /* first variable name */
   next(ls);  /* skip var name */
@@ -996,7 +1066,7 @@ static void forstat (LexState *ls, int line) {
     default: luaK_error(ls, "`=' or `in' expected");
   }
   check_match(ls, TK_END, TK_FOR, line);
-  leavebreak(fs, &bl);
+  leaveblock(fs);
 }
 
 
@@ -1054,10 +1124,37 @@ static void localstat (LexState *ls) {
 }
 
 
+static void globalstat (LexState *ls) {
+  /* stat -> GLOBAL NAME {`,' NAME} [IN exp] | GLOBAL IN exp */
+  FuncState *fs = ls->fs;
+  next(ls);  /* skip GLOBAL */
+  if (optional(ls, TK_IN)) {  /* default declaration? */
+    exp1(ls);
+    fs->defaultglob = fs->freereg - 1;
+    create_local(ls, "(global table)");
+  }
+  else {
+    int nvars = 0;
+    do {
+      vardesc *v = new_var(ls, nvars++);  
+      v->i = luaK_stringK(ls->fs, str_checkname(ls));
+      next(ls);  /* skip name */
+    } while (optional(ls, ','));
+    if (!optional(ls, TK_IN))
+      adjustglobalvars(ls, nvars, NO_REG);  /* free globals */
+    else {
+      exp1(ls);
+      adjustglobalvars(ls, nvars, ls->fs->freereg - 1);
+      create_local(ls, "(global table)");
+    }
+  }
+}
+
+
 static int funcname (LexState *ls, expdesc *v) {
   /* funcname -> NAME {field} [`:' NAME] */
   int needself = 0;
-  singlevar(ls->fs, str_checkname(ls), v, 1);
+  singlevar(ls->fs, str_checkname(ls), v);
   next(ls);  /* skip var name */
   while (ls->t.token == '.') {
     luaY_field(ls, v);
@@ -1125,11 +1222,17 @@ static void retstat (LexState *ls) {
 static void breakstat (LexState *ls) {
   /* stat -> BREAK [NAME] */
   FuncState *fs = ls->fs;
-  Breaklabel *bl = fs->bl;
+  BlockCnt *bl = fs->bl;
+  int upval = 0;
+  next(ls);  /* skip BREAK */
+  while (bl && !bl->isbreakable) {
+    upval |= bl->upval;
+    bl = bl->previous;
+  }
   if (!bl)
     luaK_error(ls, "no loop to break");
-  next(ls);  /* skip BREAK */
-  closelevel(ls, bl->nactloc);
+  if (upval)
+    luaK_codeABC(fs, OP_CLOSE, bl->nactloc, 0, 0);
   luaK_concat(fs, &bl->breaklist, luaK_jump(fs));
 }
 
@@ -1165,6 +1268,10 @@ static int statement (LexState *ls) {
     }
     case TK_LOCAL: {  /* stat -> localstat */
       localstat(ls);
+      return 0;
+    }
+    case TK_GLOBAL: {  /* stat -> globalstat */
+      globalstat(ls);
       return 0;
     }
     case TK_RETURN: {  /* stat -> retstat */
@@ -1207,10 +1314,8 @@ static void body (LexState *ls, expdesc *e, int needself, int line) {
   open_func(ls, &new_fs);
   new_fs.f->lineDefined = line;
   check(ls, '(');
-  if (needself) {
-    new_localvarstr(ls, "self", 0);
-    adjustlocalvars(ls, 1);
-  }
+  if (needself)
+    create_local(ls, "self");
   parlist(ls);
   check(ls, ')');
   chunk(ls);

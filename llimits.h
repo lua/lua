@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.38 2002/03/05 16:22:54 roberto Exp roberto $
+** $Id: llimits.h,v 1.39 2002/03/07 18:11:51 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -96,9 +96,9 @@ typedef unsigned long Instruction;
 #define MAXSTACK	250
 
 
-/* maximum number of local variables */
-#ifndef MAXLOCALS
-#define MAXLOCALS 200           /* arbitrary limit (<MAXSTACK) */
+/* maximum number of variables declared in a function */
+#ifndef MAXVARS
+#define MAXVARS 200           /* arbitrary limit (<MAXSTACK) */
 #endif
 
 

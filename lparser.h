@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: lparser.h,v 1.39 2002/02/08 22:42:41 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -11,18 +11,6 @@
 #include "lobject.h"
 #include "ltable.h"
 #include "lzio.h"
-
-
-
-/* small implementation of bit arrays */
-
-#define BPW	(CHAR_BIT*sizeof(unsigned int))  /* bits per word */
-
-#define words2bits(b)	(((b)-1)/BPW + 1)
-
-#define setbit(a, b)	((a)[(b)/BPW] |= (1 << (b)%BPW))
-#define resetbit(a, b)	((a)[(b)/BPW] &= ~((1 << (b)%BPW)))
-#define testbit(a, b)	((a)[(b)/BPW] & (1 << (b)%BPW))
 
 
 /*
@@ -37,7 +25,7 @@ typedef enum {
   VK,		/* info = index of constant in `k' */
   VLOCAL,	/* info = local register */
   VUPVAL,       /* info = index of upvalue in `upvalues' */
-  VGLOBAL,	/* info = index of global name in `k' */
+  VGLOBAL,	/* info = index of table; aux = index of global name in `k' */
   VINDEXED,	/* info = table register; aux = index register (or `k') */
   VRELOCABLE,	/* info = instruction pc */
   VNONRELOC,	/* info = result register */
@@ -53,6 +41,18 @@ typedef struct expdesc {
 } expdesc;
 
 
+/* describe declared variables */
+typedef struct vardesc {
+  int i;  /* if local, its index in `locvars';
+             if global, its name index in `k' */
+  lu_byte k;
+  lu_byte level;  /* if local, stack level;
+                     if global, corresponding local (NO_REG for free globals) */
+} vardesc;
+
+
+struct BlockCnt;  /* defined in lparser.c */
+
 /* state needed to generate code for a given function */
 typedef struct FuncState {
   Proto *f;  /* current function header */
@@ -60,21 +60,21 @@ typedef struct FuncState {
   struct FuncState *prev;  /* enclosing function */
   struct LexState *ls;  /* lexical state */
   struct lua_State *L;  /* copy of the Lua state */
-  struct Breaklabel *bl;  /* chain of breakable blocks */
+  struct BlockCnt *bl;  /* chain of current blocks */
   int pc;  /* next position to code (equivalent to `ncode') */
   int lasttarget;   /* `pc' of last `jump target' */
   int jlt;  /* list of jumps to `lasttarget' */
   int freereg;  /* first free register */
+  int defaultglob;  /* where to look for non-declared globals */
   int nk;  /* number of elements in `k' */
   int np;  /* number of elements in `p' */
   int nlineinfo;  /* number of elements in `lineinfo' */
   int nlocvars;  /* number of elements in `locvars' */
   int nactloc;  /* number of active local variables */
+  int nactvar;  /* number of elements in array `actvar' */
   int lastline;  /* line where last `lineinfo' was generated */
   expdesc upvalues[MAXUPVALUES];  /* upvalues */
-  int actloc[MAXLOCALS];  /* local-variable stack (indices to locvars) */
-  unsigned int wasup[words2bits(MAXLOCALS)];  /* bit array to mark whether a
-                             local variable was used as upvalue at some level */
+  vardesc actvar[MAXVARS];  /* declared-variable stack */
 } FuncState;
 
 
