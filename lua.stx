@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.24 1995/10/26 14:21:56 roberto Exp roberto $";
+char *rcs_luastx = "$Id: lua.stx,v 3.25 1995/10/26 17:02:50 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -804,8 +804,8 @@ static void PrintCode (Byte *code, Byte *end)
     			p++;
    			break;
    case PUSHBYTE:
-    			printf ("%d    PUSHBYTE   %d\n", p-code, *(++p));
-    			p++;
+    			printf ("%d    PUSHBYTE   %d\n", p-code, *(p+1));
+    			p+=2;
    			break;
    case PUSHWORD:
                         {
@@ -850,8 +850,8 @@ static void PrintCode (Byte *code, Byte *end)
     			printf ("%d    PUSHLOCAL%c\n", p-code, *p-PUSHLOCAL0+'0');
     			p++;
    			break;
-   case PUSHLOCAL:	printf ("%d    PUSHLOCAL   %d\n", p-code, *(++p));
-    			p++;
+   case PUSHLOCAL:	printf ("%d    PUSHLOCAL   %d\n", p-code, *(p+1));
+    			p+=2;
    			break;
    case PUSHGLOBAL:
     			{
@@ -870,8 +870,8 @@ static void PrintCode (Byte *code, Byte *end)
     			p++;
    			break;
    case STORELOCAL:
-    			printf ("%d    STORELOCAL   %d\n", p-code, *(++p));
-    			p++;
+    			printf ("%d    STORELOCAL   %d\n", p-code, *(p+1));
+    			p+=2;
    			break;
    case STOREGLOBAL:
     			{
@@ -892,25 +892,25 @@ static void PrintCode (Byte *code, Byte *end)
 			}
 			break;
    case STOREINDEXED0:  printf ("%d    STOREINDEXED0\n", (p++)-code); break;
-   case STOREINDEXED:   printf ("%d    STOREINDEXED   %d\n", p-code, *(++p));
-    			p++;
+   case STOREINDEXED:   printf ("%d    STOREINDEXED   %d\n", p-code, *(p+1));
+    			p+=2;
    			break;
    case STORELIST0:
-	printf("%d      STORELIST0  %d\n", p-code, *(++p));
-        p++;
+	printf("%d      STORELIST0  %d\n", p-code, *(p+1));
+        p+=2+;
         break;
    case STORELIST:
 	printf("%d      STORELIST  %d %d\n", p-code, *(p+1), *(p+2));
         p+=3;
         break;
    case STORERECORD:
-       printf("%d      STORERECORD  %d\n", p-code, *(++p));
-       p += *p*sizeof(Word) + 1;
+       printf("%d      STORERECORD  %d\n", p-code, *(p+1));
+       p += *p*sizeof(Word) + 2;
        break;
    case ADJUST0: printf ("%d    ADJUST0\n", (p++)-code); break;
    case ADJUST:
-    			printf ("%d    ADJUST   %d\n", p-code, *(++p));
-    			p++;
+    			printf ("%d    ADJUST   %d\n", p-code, *(p+1));
+    			p+=2;
    			break;
    case CREATEARRAY:	
     {
@@ -993,8 +993,8 @@ static void PrintCode (Byte *code, Byte *end)
 	break;
    case RETCODE0: printf ("%d    RETCODE0\n", (p++)-code); break;
    case RETCODE:
-    			printf ("%d    RETCODE   %d\n", p-code, *(++p));
-    			p++;
+    			printf ("%d    RETCODE   %d\n", p-code, *(p+1));
+    			p+=2;
    			break;
    case SETLINE:
                         {
@@ -1006,7 +1006,9 @@ static void PrintCode (Byte *code, Byte *end)
                         }
                         break;
 
-   default:		printf ("%d    Cannot happen: code %d\n", (p++)-code, *(p-1)); break;
+   default:		printf ("%d    Cannot happen: code %d\n", p-code, *p));
+                        p+=1;
+                        break;
   }
  }
 }
