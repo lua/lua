@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.13 2004/08/12 14:19:51 roberto Exp roberto $
+** $Id: lvm.c,v 2.14 2004/09/15 20:39:42 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -710,21 +710,19 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         dojump(L, pc, GETARG_sBx(i));
         continue;
       }
-      case OP_SETLIST:
-      case OP_SETLISTO: {
-        int bc = GETARG_Bx(i);
-        int n, last;
+      case OP_SETLIST: {
+        int n = GETARG_B(i);
+        int c = GETARG_C(i);
+        int last;
         Table *h;
         runtime_check(L, ttistable(ra));
         h = hvalue(ra);
-        if (GET_OPCODE(i) == OP_SETLIST)
-          n = (bc&(LFIELDS_PER_FLUSH-1)) + 1;
-        else {
+        if (n == 0) {
           n = L->top - ra - 1;
           L->top = L->ci->top;
         }
-        bc &= ~(LFIELDS_PER_FLUSH-1);  /* bc = bc - bc%FPF */
-        last = bc + n + LUA_FIRSTINDEX - 1;
+        if (c == 0) c = cast(int, *pc++);
+        last = ((c-1)*LFIELDS_PER_FLUSH) + n + LUA_FIRSTINDEX - 1;
         if (last > h->sizearray)  /* needs more space? */
           luaH_resize(L, h,  last, h->lsizenode);  /* pre-alloc it at once */
         for (; n > 0; n--) {

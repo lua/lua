@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.5 2004/07/16 13:30:53 roberto Exp roberto $
+** $Id: lcode.c,v 2.6 2004/08/24 20:09:11 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -243,7 +243,14 @@ int luaK_numberK (FuncState *fs, lua_Number r) {
 }
 
 
-static int nil_constant (FuncState *fs) {
+static int boolK (FuncState *fs, int b) {
+  TValue o;
+  setbvalue(&o, b);
+  return addk(fs, &o, &o);
+}
+
+
+static int nilK (FuncState *fs) {
   TValue k, v;
   setnilvalue(&v);
   /* cannot use nil as key; instead use table itself to represent nil */
@@ -417,9 +424,11 @@ void luaK_exp2val (FuncState *fs, expdesc *e) {
 int luaK_exp2RK (FuncState *fs, expdesc *e) {
   luaK_exp2val(fs, e);
   switch (e->k) {
+    case VTRUE:
+    case VFALSE:
     case VNIL: {
       if (fs->nk <= MAXINDEXRK) {  /* constant fit in RK operand? */
-        e->info = nil_constant(fs);
+        e->info = (e->k == VNIL) ? nilK(fs) : boolK(fs, (e->k == VTRUE));
         e->k = VK;
         return RKASK(e->info);
       }
@@ -733,5 +742,19 @@ int luaK_codeABx (FuncState *fs, OpCode o, int a, unsigned int bc) {
   lua_assert(getOpMode(o) == iABx || getOpMode(o) == iAsBx);
   lua_assert(getCMode(o) == OpArgN);
   return luaK_code(fs, CREATE_ABx(o, a, bc), fs->ls->lastline);
+}
+
+
+void luaK_setlist (FuncState *fs, int base, int nelems, int tostore) {
+  int c =  (nelems - 1)/LFIELDS_PER_FLUSH + 1;
+  int b = (tostore == LUA_MULTRET) ? 0 : tostore;
+  lua_assert(tostore != 0);
+  if (c <= MAXARG_C)
+    luaK_codeABC(fs, OP_SETLIST, base, b, c);
+  else {
+    luaK_codeABC(fs, OP_SETLIST, base, b, 0);
+    luaK_code(fs, cast(Instruction, c), fs->ls->lastline);
+  }
+  fs->freereg = base + 1;  /* free registers with list values */
 }
 

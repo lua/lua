@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.4 2004/04/30 20:13:38 roberto Exp roberto $
+** $Id: lparser.c,v 2.5 2004/05/31 18:51:50 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -475,9 +475,8 @@ static void closelistfield (FuncState *fs, struct ConsControl *cc) {
   luaK_exp2nextreg(fs, &cc->v);
   cc->v.k = VVOID;
   if (cc->tostore == LFIELDS_PER_FLUSH) {
-    luaK_codeABx(fs, OP_SETLIST, cc->t->info, cc->na-1);  /* flush */
+    luaK_setlist(fs, cc->t->info, cc->na, cc->tostore);  /* flush */
     cc->tostore = 0;  /* no more items pending */
-    fs->freereg = cc->t->info + 1;  /* free registers */
   }
 }
 
@@ -486,15 +485,14 @@ static void lastlistfield (FuncState *fs, struct ConsControl *cc) {
   if (cc->tostore == 0) return;
   if (hasmultret(cc->v.k)) {
     luaK_setmultret(fs, &cc->v);
-    luaK_codeABx(fs, OP_SETLISTO, cc->t->info, cc->na-1);
+    luaK_setlist(fs, cc->t->info, cc->na, LUA_MULTRET);
     cc->na--;  /* do not count last expression (unknown number of elements) */
   }
   else {
     if (cc->v.k != VVOID)
       luaK_exp2nextreg(fs, &cc->v);
-    luaK_codeABx(fs, OP_SETLIST, cc->t->info, cc->na-1);
+    luaK_setlist(fs, cc->t->info, cc->na, cc->tostore);
   }
-  fs->freereg = cc->t->info + 1;  /* free registers */
 }
 
 

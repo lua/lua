@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.110 2004/06/29 18:49:02 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.111 2004/08/04 20:18:13 roberto Exp $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -198,8 +198,7 @@ OP_TFORLOOP,/*	A C	R(A+2), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2));
 OP_TFORPREP,/*	A sBx	if type(R(A)) == table then R(A+1):=R(A), R(A):=next;
 			pc+=sBx					*/
 
-OP_SETLIST,/*	A Bx	R(A)[Bx-Bx%FPF+i] := R(A+i), 1 <= i <= Bx%FPF+1	*/
-OP_SETLISTO,/*	A Bx							*/
+OP_SETLIST,/*	A B C	R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B	*/
 
 OP_CLOSE,/*	A 	close all variables in the stack up to (>=) R(A)*/
 OP_CLOSURE,/*	A Bx	R(A) := closure(KPROTO[Bx], R(A), ... ,R(A+n))	*/
@@ -219,11 +218,15 @@ OP_VARARG/*	A B	R(A), R(A+1), ..., R(A+B-1) = vararg		*/
       next open instruction (OP_CALL, OP_RETURN, OP_SETLIST) may use `top'.
 
   (*) In OP_VARARG, if (B == 0) then use actual number of varargs and
-      set top (like in OP_CALL).
+      set top (like in OP_CALL with C == 0).
 
   (*) In OP_RETURN, if (B == 0) then return up to `top'
 
-  (*) For comparisons, B specifies what conditions the test should accept.
+  (*) In OP_SETLIST, if (B == 0) then B = `top';
+      if (C == 0) then next `instruction' is real C
+
+  (*) For comparisons, A specifies what condition the test should accept
+      (true or false).
 
   (*) All `skips' (pc++) assume that next instruction is a jump
 ===========================================================================*/
