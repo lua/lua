@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.19 1996/03/14 15:52:35 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.20 1996/03/19 22:28:37 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -75,7 +75,7 @@ static void str_find (void)
  char *s2 = lua_check_string(2, "strfind");
  int init = (lua_getparam(3) == LUA_NOOBJECT) ? 0 :
                                  (int)lua_check_number(3, "strfind")-1;
- char *f = strstr(s1+init,s2);
+ char *f = (init>=0 && init<=strlen(s1)) ? strstr(s1+init,s2) : NULL;
  if (f != NULL)
  {
   int pos = f-s1+1;
