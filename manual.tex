@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.64 2002/12/11 13:43:15 roberto Exp roberto $
+% $Id: manual.tex,v 1.65 2003/01/20 11:03:05 roberto Exp roberto $
 %{[(
 
 \documentclass[11pt,twoside]{article}
@@ -134,7 +134,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-%\date{{\small \tt\$Date: 2002/12/11 13:43:15 $ $}}
+%\date{{\small \tt\$Date: 2003/01/20 11:03:05 $ $}}
 
 \maketitle
 
@@ -570,8 +570,10 @@ and can contain the C-like escape sequences
 `\verb|\t|' (horizontal tab),
 `\verb|\v|' (vertical tab),
 `\verb|\\|' (backslash),
-`\verb|\"|' (double quote),
-`\verb|\'|' (single quote),
+`\verb|\"|' (quotation mark),
+`\verb|\'|' (apostrophe),
+`\verb|\[|' (left square bracket),
+`\verb|\]|' (right square bracket),
 and `\verb|\|\emph{newline}' (that is, a backslash followed by a real newline,
 which  results in a newline in the string).
 A character in a string may also be specified by its numerical value
@@ -1393,7 +1395,7 @@ functions \verb|setmetatable| and \verb|getmetatable| \see{pdf-getmetatable}.
 For each of those operations Lua associates a specific key
 called an \emph{event}.
 When Lua performs one of those operations over a table or a userdata,
-if checks whether that object has a metatable with the corresponding event.
+it checks whether that object has a metatable with the corresponding event.
 If so, the value associated with that key (the \IndexEmph{metamethod})
 controls how Lua will perform the operation.
 
@@ -1519,11 +1521,11 @@ the \verb|<| operation.
 \item[``le'':]\IndexTM{lt}
 the \verb|<=| operation.
 \begin{verbatim}
-       function lt_event (op1, op2)
+       function le_event (op1, op2)
          if type(op1) == "number" and type(op2) == "number" then
-           return op1 < op2   -- numeric comparison
+           return op1 <= op2   -- numeric comparison
          elseif type(op1) == "string" and type(op2) == "string" then
-           return op1 < op2   -- lexicographic comparison
+           return op1 <= op2   -- lexicographic comparison
          else
            local h = getbinhandler(op1, op2, "__le")
            if h then
@@ -1804,13 +1806,10 @@ like a daemon or a web server ---
 might need to release states as soon as they are not needed,
 to avoid growing too large.
 
-With the exception of \verb|lua_open|,
-all functions in the Lua API need a state as their first argument.
-
 
 \subsection{Threads}
 
-Lua offers a partial support for multiple threads of execution.
+Lua offers partial support for multiple threads of execution.
 If you have a C~library that offers multi-threading, 
 then Lua can cooperate with it to implement the equivalent facility in Lua.
 Also, Lua implements its own coroutine system on top of threads.
@@ -2247,7 +2246,7 @@ and then it frees its corresponding memory.
 
 \subsection{Metatables}
 
-The following functions allow you do manipulate the metatables
+The following functions allow you to manipulate the metatables
 of an object:
 \begin{verbatim}
        int lua_getmetatable (lua_State *L, int objindex);
@@ -2338,7 +2337,7 @@ The table is left where it was in the stack;
 this is convenient for getting multiple values from a table.
 
 As in Lua, this function may trigger a metamethod
-for the ``gettable'' or ``index'' events \see{metatable}.
+for the ``index'' event \see{metatable}.
 To get the real value of any table key,
 without invoking any metamethod,
 use the \emph{raw} version:
@@ -2989,7 +2988,7 @@ The current content of this string is {\tt "Lua \Version"}.
 
 \subsubsection*{\ff \T{assert (v [, message])}}\DefLIB{assert}
 Issues an \emph{``assertion failed!''} error
-when its argument \verb|v| is \nil;
+when its argument \verb|v| is \nil{} or \false;
 otherwise, returns this argument.
 This function is equivalent to the following Lua function:
 \begin{verbatim}
@@ -3692,10 +3691,10 @@ so that subsequent calls to \verb|table.getn(table)| return \verb|n|.
 This library is an interface to most of the functions of the
 standard C~math library.
 (Some have slightly different names.)
-It provides all its functions inside the table \verb|math|\DefLIB{math}.
+It provides all its functions inside the table \IndexLIB{math}.
 In addition,
 it registers a ??tag method for the binary exponentiation operator \verb|^|
-that returns \Math{x^y} when applied to numbers \verb|x^y|.
+that returns \Math{x^y} when applied to numbers \verb|x| and \verb|y|.
 
 The library provides the following functions:
 \DefLIB{math.abs}\DefLIB{math.acos}\DefLIB{math.asin}\DefLIB{math.atan}
