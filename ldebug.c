@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.101 2002/03/08 19:10:32 roberto Exp roberto $
+** $Id: ldebug.c,v 1.102 2002/03/11 12:45:00 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -439,6 +439,15 @@ int luaG_checkcode (const Proto *pt) {
 }
 
 
+static const char *kname (Proto *p, int c) {
+  c = c - MAXSTACK;
+  if (c >= 0 && ttype(&p->k[c]) == LUA_TSTRING)
+    return svalue(&p->k[c]);
+  else
+    return "?";
+}
+
+
 static const char *getobjname (lua_State *L, CallInfo *ci, int stackpos,
                                const char **name) {
   if (isLmark(ci)) {  /* an active Lua function? */
@@ -463,13 +472,17 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int stackpos,
           return getobjname(L, ci, b, name);  /* get name for `b' */
         break;
       }
-      case OP_GETTABLE:
-      case OP_SELF: {
-        int c = GETARG_C(i) - MAXSTACK;
-        if (c >= 0 && ttype(&p->k[c]) == LUA_TSTRING) {
-          *name = svalue(&p->k[c]);
-          return "field";
+      case OP_GETTABLE: {
+        *name = luaF_getlocalname(p, GETARG_B(i)+1, pc);
+        if (*name && *name[0] == '*') {
+          *name = kname(p, GETARG_C(i));
+          return "global";
         }
+        /* else go through */
+      }
+      case OP_SELF: {
+        *name = kname(p, GETARG_C(i));
+        return "field";
         break;
       }
       default: break;
@@ -479,26 +492,38 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int stackpos,
 }
 
 
-static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
-  ci--;  /* calling function */
+static Instruction getcurrentinstr (lua_State *L, CallInfo *ci) {
   if (ci == L->base_ci || !isLmark(ci))
-    return NULL;  /* not an active Lua function */
-  else {
-    Proto *p = ci_func(ci)->l.p;
-    int pc = currentpc(L, ci);
-    Instruction i;
-    i = p->code[pc];
-    return (GET_OPCODE(i) == OP_CALL
-             ? getobjname(L, ci, GETARG_A(i), name)
-             : NULL);  /* no useful name found */
-  }
+    return (Instruction)(-1);  /* not an active Lua function */
+  else
+    return ci_func(ci)->l.p->code[currentpc(L, ci)];
 }
 
 
-void luaG_typeerror (lua_State *L, StkId o, const char *op) {
+static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
+  Instruction i;
+  ci--;  /* calling function */
+  i = getcurrentinstr(L, ci);
+  return (GET_OPCODE(i) == OP_CALL ? getobjname(L, ci, GETARG_A(i), name)
+                                   : NULL);  /* no useful name found */
+}
+
+
+/* only ANSI way to check whether a pointer points to an array */
+static int isinstack (CallInfo *ci, const TObject *o) {
+  StkId p;
+  for (p = ci->base; p < ci->top; p++)
+    if (o == p) return 1;
+  return 0;
+}
+
+
+void luaG_typeerror (lua_State *L, const TObject *o, const char *op) {
   const char *name;
-  const char *kind = getobjname(L, L->ci, o - L->ci->base, &name);  /* ?? */
   const char *t = luaT_typenames[ttype(o)];
+  const char *kind = NULL;
+  if (isinstack(L->ci, o))
+    kind = getobjname(L, L->ci, o - L->ci->base, &name);
   if (kind)
     luaO_verror(L, "attempt to %.30s %.20s `%.40s' (a %.10s value)",
                 op, kind, name, t);
@@ -514,11 +539,11 @@ void luaG_concaterror (lua_State *L, StkId p1, StkId p2) {
 }
 
 
-void luaG_aritherror (lua_State *L, StkId p1, TObject *p2) {
+void luaG_aritherror (lua_State *L, StkId p1, const TObject *p2) {
   TObject temp;
-  if (luaV_tonumber(p1, &temp) != NULL)
-    p1 = p2;  /* first operand is OK; error is in the second */
-  luaG_typeerror(L, p1, "perform arithmetic on");
+  if (luaV_tonumber(p1, &temp) == NULL)
+    p2 = p1;  /* first operand is wrong */
+  luaG_typeerror(L, p2, "perform arithmetic on");
 }
 
 

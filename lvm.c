@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.218 2002/03/04 21:33:09 roberto Exp roberto $
+** $Id: lvm.c,v 1.219 2002/03/08 19:10:32 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -125,7 +125,7 @@ static void callTM (lua_State *L, const TObject *f,
 ** Receives the table at `t' and the key at `key'.
 ** leaves the result at `res'.
 */
-void luaV_gettable (lua_State *L, StkId t, TObject *key, StkId res) {
+void luaV_gettable (lua_State *L, const TObject *t, TObject *key, StkId res) {
   const TObject *tm;
   int loop = 0;
   init:
@@ -151,7 +151,7 @@ void luaV_gettable (lua_State *L, StkId t, TObject *key, StkId res) {
     callTMres(L, tm, t, key, res);
   else {
     if (++loop == MAXTAGLOOP) luaD_error(L, "loop in gettable");
-    t = (StkId)tm;  /* ?? */
+    t = tm;
     goto init;  /* return luaV_gettable(L, tm, key, res); */
   }
 }
@@ -160,7 +160,7 @@ void luaV_gettable (lua_State *L, StkId t, TObject *key, StkId res) {
 /*
 ** Receives table at `t', key at `key' and value at `val'.
 */
-void luaV_settable (lua_State *L, StkId t, TObject *key, StkId val) {
+void luaV_settable (lua_State *L, const TObject *t, TObject *key, StkId val) {
   const TObject *tm;
   int loop = 0;
   init:
@@ -181,7 +181,7 @@ void luaV_settable (lua_State *L, StkId t, TObject *key, StkId val) {
     callTM(L, tm, t, key, val);
   else {
     if (++loop == MAXTAGLOOP) luaD_error(L, "loop in settable");
-    t = (StkId)tm;  /* ?? */
+    t = tm;
     goto init;  /* luaV_settable(L, tm, key, val); */
   }
 }
@@ -198,7 +198,7 @@ static int call_binTM (lua_State *L, const TObject *p1, const TObject *p2,
 }
 
 
-static void call_arith (lua_State *L, StkId p1, TObject *p2,
+static void call_arith (lua_State *L, StkId p1, const TObject *p2,
                         StkId res, TMS event) {
   if (!call_binTM(L, p1, p2, res, event))
     luaG_aritherror(L, p1, p2);
