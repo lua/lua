@@ -223,7 +223,7 @@ int luaV_lessthan (lua_State *L, const TObject *l, const TObject *r) {
   else {  /* try TM */
     if (!call_binTM(L, l, r, L->top, TM_LT))
       luaG_ordererror(L, l, r);
-    return (ttype(L->top) != LUA_TNIL);
+    return !l_isfalse(L->top);
   }
 }
 
@@ -369,6 +369,11 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
         setnvalue(ra, (lua_Number)GETARG_sBc(i));
         break;
       }
+      case OP_LOADBOOL: {
+        setbvalue(ra, GETARG_B(i));
+        if (GETARG_C(i)) pc++;  /* skip next instruction (if C) */
+        break;
+      }
       case OP_LOADNIL: {
         TObject *rb = RB(i);
         do {
@@ -450,11 +455,8 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
         break;
       }
       case OP_NOT: {
-        if (ttype(RB(i)) == LUA_TNIL) {
-          setnvalue(ra, 1);
-        } else {
-          setnilvalue(ra);
-        }
+        int res = l_isfalse(RB(i));  /* next assignment may change this value */
+        setbvalue(ra, res);
         break;
       }
       case OP_CONCAT: {
@@ -508,7 +510,7 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
       case OP_TESTT: {
         StkId rb = RB(i);
         lua_assert(GET_OPCODE(*pc) == OP_CJMP);
-        if (ttype(rb) != LUA_TNIL) {
+        if (!l_isfalse(rb)) {
           setobj(ra, rb);
           dojump(pc, *pc);
         }
@@ -516,16 +518,12 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
         break;
       }
       case OP_TESTF: {
+        StkId rb = RB(i);
         lua_assert(GET_OPCODE(*pc) == OP_CJMP);
-        if (ttype(RB(i)) == LUA_TNIL) {
-          setnilvalue(ra);
+        if (l_isfalse(rb)) {
+          setobj(ra, rb);
           dojump(pc, *pc);
         }
-        pc++;
-        break;
-      }
-      case OP_NILJMP: {
-        setnilvalue(ra);
         pc++;
         break;
       }

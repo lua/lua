@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.35 2001/09/07 17:39:10 roberto Exp $
+** $Id: lparser.h,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -32,6 +32,8 @@
 typedef enum {
   VVOID,	/* no value */
   VNIL,
+  VTRUE,
+  VFALSE,
   VNUMBER,	/* n = value */
   VK,		/* info = index of constant in `k' */
   VLOCAL,	/* info = local register */

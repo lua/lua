@@ -37,7 +37,8 @@ typedef union {
   union Closure *cl;
   struct Table *h;
   struct lua_TObject *v;
-  lua_Number n;		/* LUA_TNUMBER */
+  lua_Number n;
+  int b;
 } Value;
 
 
@@ -55,13 +56,19 @@ typedef struct lua_TObject {
 #define clvalue(o)      ((o)->value.cl)
 #define hvalue(o)       ((o)->value.h)
 #define vvalue(o)	((o)->value.v)
+#define bvalue(o)	((o)->value.b)
 
+#define l_isfalse(o)	(ttype(o) == LUA_TNIL || \
+			(ttype(o) == LUA_TBOOLEAN && bvalue(o) == 0))
 
 /* Macros to set values */
 #define setnvalue(obj,x) \
   { TObject *_o=(obj); _o->tt=LUA_TNUMBER; _o->value.n=(x); }
 
 #define chgnvalue(obj,x)	((obj)->value.n=(x))
+
+#define setbvalue(obj,x) \
+  { TObject *_o=(obj); _o->tt=LUA_TBOOLEAN; _o->value.b=(x); }
 
 #define setsvalue(obj,x) \
   { TObject *_o=(obj); _o->tt=LUA_TSTRING; _o->value.ts=(x); }

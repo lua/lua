@@ -174,6 +174,12 @@ LUA_API int lua_isnumber (lua_State *L, int index) {
 }
 
 
+LUA_API int lua_istrue (lua_State *L, int index) {
+  TObject *o = luaA_indexAcceptable(L, index);
+  return (o != NULL && !l_isfalse(o));
+}
+
+
 LUA_API int lua_isstring (lua_State *L, int index) {
   int t = lua_type(L, index);
   return (t == LUA_TSTRING || t == LUA_TNUMBER);
@@ -210,6 +216,15 @@ LUA_API lua_Number lua_tonumber (lua_State *L, int index) {
     return nvalue(o);
   else
     return 0;
+}
+
+
+LUA_API int lua_toboolean (lua_State *L, int index) {
+  const TObject *o = luaA_indexAcceptable(L, index);
+  if (o != NULL && (ttype(o) == LUA_TBOOLEAN))
+    return bvalue(o);
+  else
+    return -1;
 }
 
 
@@ -319,6 +334,14 @@ LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
     setobj(&cl->c.upvalue[n], L->top+n);
   setclvalue(L->top, cl);
   incr_top;
+  lua_unlock(L);
+}
+
+
+LUA_API void lua_pushboolean (lua_State *L, int b) {
+  lua_lock(L);
+  setbvalue(L->top, b);
+  api_incr_top(L);
   lua_unlock(L);
 }
 

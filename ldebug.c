@@ -359,6 +359,10 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
     if (testOpMode(op, OpModeT))
       check(GET_OPCODE(pt->code[pc+1]) == OP_CJMP);
     switch (op) {
+      case OP_LOADBOOL: {
+        check(c == 0 || pc+2 < pt->sizecode);  /* check its jump */
+        break;
+      }
       case OP_LOADNIL: {
         if (a <= reg && reg <= b)
           last = pc;  /* set registers from `a' to `b' */
@@ -391,10 +395,6 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
         /* not full check and jump is forward and do not skip `lastpc'? */
         if (reg != NO_REG && pc < dest && dest <= lastpc)
           pc += b;  /* do the jump */
-        break;
-      }
-      case OP_NILJMP: {
-        check(pc+2 < pt->sizecode);  /* check its jump */
         break;
       }
       case OP_CALL: {

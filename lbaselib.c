@@ -216,10 +216,8 @@ static int luaB_type (lua_State *L) {
   if (lua_isnull(L, 2))
     lua_pushstring(L, lua_typename(L, lua_type(L, 1)));
   else {
-    if (strcmp(lua_typename(L, lua_type(L, 1)), luaL_check_string(L, 2)) == 0)
-      lua_pushnumber(L, 1);
-    else
-      lua_pushnil(L);
+    lua_pushboolean(L,
+       (strcmp(lua_typename(L, lua_type(L, 1)), luaL_check_string(L, 2)) == 0));
   }
   return 1;
 }
@@ -401,8 +399,12 @@ static int luaB_tostring (lua_State *L) {
     case LUA_TSTRING:
       lua_pushvalue(L, 1);
       return 1;
+    case LUA_TBOOLEAN:
+      lua_pushstring(L, (lua_toboolean(L, 1) ? "true" : "false"));
+      return 1;
     case LUA_TTABLE:
-      sprintf(buff, "%.40s: %p", lua_typename(L, lua_type(L, 1)), lua_topointer(L, 1));
+      sprintf(buff, "%.40s: %p", lua_typename(L, lua_type(L, 1)),
+                                 lua_topointer(L, 1));
       break;
     case LUA_TFUNCTION:
       sprintf(buff, "function: %p", lua_topointer(L, 1));
@@ -464,9 +466,8 @@ static int luaB_foreach (lua_State *L) {
 
 static int luaB_assert (lua_State *L) {
   luaL_check_any(L, 1);
-  if (lua_isnil(L, 1))
-    luaL_verror(L, "assertion failed!  %.90s",
-                   luaL_opt_string(L, 2, ""));
+  if (!lua_istrue(L, 1))
+    luaL_verror(L, "assertion failed!  %.90s", luaL_opt_string(L, 2, ""));
   lua_settop(L, 1);
   return 1;
 }
@@ -542,7 +543,7 @@ static int sort_comp (lua_State *L, int a, int b) {
     lua_pushvalue(L, a-1);  /* -1 to compensate function */
     lua_pushvalue(L, b-2);  /* -2 to compensate function and `a' */
     lua_rawcall(L, 2, 1);
-    res = !lua_isnil(L, -1);
+    res = lua_istrue(L, -1);
     lua_pop(L, 1);
     return res;
   }

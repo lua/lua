@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.82 2001/09/07 17:39:10 roberto Exp $
+** $Id: lcode.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -221,10 +221,10 @@ static void freeexp (FuncState *fs, expdesc *e) {
 }
 
 
-static int addk (FuncState *fs, TObject *k) {
+static int addk (FuncState *fs, TObject *k, TObject *v) {
   const TObject *index = luaH_get(fs->h, k);
   if (ttype(index) == LUA_TNUMBER) {
-    lua_assert(luaO_equalObj(&fs->f->k[cast(int, nvalue(index))], k));
+    lua_assert(luaO_equalObj(&fs->f->k[cast(int, nvalue(index))], v));
     return cast(int, nvalue(index));
   }
   else {  /* constant not found; create a new entry */
@@ -232,7 +232,7 @@ static int addk (FuncState *fs, TObject *k) {
     Proto *f = fs->f;
     luaM_growvector(fs->L, f->k, fs->nk, f->sizek, TObject,
                     MAXARG_Bc, "constant table overflow");
-    setobj(&f->k[fs->nk], k);
+    setobj(&f->k[fs->nk], v);
     setnvalue(&o, fs->nk);
     luaH_set(fs->L, fs->h, k, &o);
     return fs->nk++;
@@ -243,14 +243,22 @@ static int addk (FuncState *fs, TObject *k) {
 int luaK_stringk (FuncState *fs, TString *s) {
   TObject o;
   setsvalue(&o, s);
-  return addk(fs, &o);
+  return addk(fs, &o, &o);
 }
 
 
 static int number_constant (FuncState *fs, lua_Number r) {
   TObject o;
   setnvalue(&o, r);
-  return addk(fs, &o);
+  return addk(fs, &o, &o);
+}
+
+
+static int nil_constant (FuncState *fs) {
+  TObject k, v;
+  setnilvalue(&v);
+  sethvalue(&k, fs->h);  /* cannot use nil as key; instead use table itself */
+  return addk(fs, &k, &v);
 }
 
 
@@ -298,27 +306,29 @@ void luaK_dischargevars (FuncState *fs, expdesc *e) {
 }
 
 
-static int code_label (FuncState *fs, OpCode op, int A, int sBc) {
+static int code_label (FuncState *fs, int A, int b, int jump) {
   luaK_getlabel(fs);  /* those instructions may be jump targets */
-  return luaK_codeAsBc(fs, op, A, sBc);
+  return luaK_codeABC(fs, OP_LOADBOOL, A, b, jump);
 }
 
 
 static void dischargejumps (FuncState *fs, expdesc *e, int reg) {
   if (hasjumps(e)) {
     int final;  /* position after whole expression */
-    int p_nil = NO_JUMP;  /* position of an eventual PUSHNIL */
-    int p_1 = NO_JUMP;  /* position of an eventual PUSHINT */
+    int p_f = NO_JUMP;  /* position of an eventual PUSH false */
+    int p_t = NO_JUMP;  /* position of an eventual PUSH true */
     if (need_value(fs, e->f, OP_TESTF) || need_value(fs, e->t, OP_TESTT)) {
       /* expression needs values */
-      if (e->k != VJMP)
-        code_label(fs, OP_JMP, 0, 2);  /* to jump over both pushes */
-      p_nil = code_label(fs, OP_NILJMP, reg, 0);
-      p_1 = code_label(fs, OP_LOADINT, reg, 1);
+      if (e->k != VJMP) {
+        luaK_getlabel(fs);  /* these instruction may be jump target */
+        luaK_codeAsBc(fs, OP_JMP, 0, 2);  /* to jump over both pushes */
+      }
+      p_f = code_label(fs, reg, 0, 1);
+      p_t = code_label(fs, reg, 1, 0);
     }
     final = luaK_getlabel(fs);
-    luaK_patchlistaux(fs, e->f, p_nil, NO_REG, final,    reg, p_nil);
-    luaK_patchlistaux(fs, e->t, final,    reg,   p_1, NO_REG,   p_1);
+    luaK_patchlistaux(fs, e->f, p_f, NO_REG, final, reg, p_f);
+    luaK_patchlistaux(fs, e->t, final, reg, p_t, NO_REG, p_t);
   }
   e->f = e->t = NO_JUMP;
 }
@@ -329,6 +339,10 @@ static void discharge2reg (FuncState *fs, expdesc *e, int reg) {
   switch (e->k) {
     case VNIL: {
       luaK_nil(fs, reg, 1);
+      break;
+    }
+    case VFALSE:  case VTRUE: {
+      luaK_codeABC(fs, OP_LOADBOOL, reg, e->k == VTRUE, 0);
       break;
     }
     case VNUMBER: {
@@ -424,13 +438,25 @@ void luaK_exp2val (FuncState *fs, expdesc *e) {
 
 int luaK_exp2RK (FuncState *fs, expdesc *e) {
   luaK_exp2val(fs, e);
-  if (e->k == VNUMBER && fs->nk + MAXSTACK <= MAXARG_C) {
-      e->u.i.info = number_constant(fs, e->u.n);
-      e->k = VK;
+  switch (e->k) {
+    case VNUMBER: case VNIL: {
+      if (fs->nk + MAXSTACK <= MAXARG_C) {  /* constant fit in argC? */
+        e->u.i.info = (e->k == VNIL) ? nil_constant(fs) :
+                                       number_constant(fs, e->u.n);
+        e->k = VK;
+        return e->u.i.info + MAXSTACK;
+      }
+      else break;
+    }
+    case VK: {
+      if (e->u.i.info + MAXSTACK <= MAXARG_C)  /* constant fit in argC? */
+        return e->u.i.info + MAXSTACK;
+      else break;
+    }
+    default: break;
   }
-  else if (!(e->k == VK && e->u.i.info + MAXSTACK <= MAXARG_C))
-    luaK_exp2anyreg(fs, e);  /* not a constant in the right range */
-  return (e->k == VK) ? e->u.i.info+MAXSTACK : e->u.i.info;
+  /* not a constant in the right range: put in a register */
+  return luaK_exp2anyreg(fs, e);
 }
 
 
@@ -521,11 +547,11 @@ void luaK_goiftrue (FuncState *fs, expdesc *e) {
   int pc;  /* pc of last jump */
   luaK_dischargevars(fs, e);
   switch (e->k) {
-    case VK: case VNUMBER: {
+    case VK: case VNUMBER: case VTRUE: {
       pc = NO_JUMP;  /* always true; do nothing */
       break;
     }
-    case VNIL: {
+    case VFALSE: {
       pc = luaK_codeAsBc(fs, OP_JMP, 0, NO_JUMP);  /* always jump */
       break;
     }
@@ -534,14 +560,8 @@ void luaK_goiftrue (FuncState *fs, expdesc *e) {
       pc = e->u.i.info;
       break;
     }
-    case VRELOCABLE:
-    case VNONRELOC: {
-      pc = jumponcond(fs, e, OP_TESTF);
-      break;
-    }
     default: {
-      pc = 0;  /* to avoid warnings */
-      lua_assert(0);  /* cannot happen */
+      pc = jumponcond(fs, e, OP_TESTF);
       break;
     }
   }
@@ -555,23 +575,20 @@ static void luaK_goiffalse (FuncState *fs, expdesc *e) {
   int pc;  /* pc of last jump */
   luaK_dischargevars(fs, e);
   switch (e->k) {
-    case VNIL: {
+    case VNIL: case VFALSE: {
       pc = NO_JUMP;  /* always false; do nothing */
+      break;
+    }
+    case VTRUE: {
+      pc = luaK_codeAsBc(fs, OP_JMP, 0, NO_JUMP);  /* always jump */
       break;
     }
     case VJMP: {
       pc = e->u.i.info;
       break;
     }
-    case VK: case VNUMBER:  /* cannot optimize it (`or' must keep value) */
-    case VRELOCABLE:
-    case VNONRELOC: {
-      pc = jumponcond(fs, e, OP_TESTT);
-      break;
-    }
     default: {
-      pc = 0;  /* to avoid warnings */
-      lua_assert(0);  /* cannot happen */
+      pc = jumponcond(fs, e, OP_TESTT);
       break;
     }
   }
@@ -584,13 +601,12 @@ static void luaK_goiffalse (FuncState *fs, expdesc *e) {
 static void codenot (FuncState *fs, expdesc *e) {
   luaK_dischargevars(fs, e);
   switch (e->k) {
-    case VNIL: {
-      e->u.n = 1;
-      e->k = VNUMBER;
+    case VNIL: case VFALSE: {
+      e->k = VTRUE;
       break;
     }
-    case VK:  case VNUMBER: {
-      e->k = VNIL;
+    case VK:  case VNUMBER: case VTRUE: {
+      e->k = VFALSE;
       break;
     }
     case VJMP: {
@@ -718,23 +734,6 @@ void luaK_posfix (FuncState *fs, BinOpr op, expdesc *e1, expdesc *e2) {
         e1->k = VRELOCABLE;
       }
       break;
-    }
-    case OPR_EQ: case OPR_NE: {
-      luaK_exp2val(fs, e2);
-      if (e2->k == VNIL) {  /* exp x= nil ? */
-        if (e1->k == VK) {  /* constant x= nil ? */
-          if (op == OPR_EQ)  /* constant == nil ? */
-            e1->k = VNIL;  /* always false */
-          /* else always true (leave the constant itself) */
-        }
-        else {
-          OpCode opc = (op == OPR_EQ) ? OP_TESTF : OP_TESTT;
-          e1->u.i.info = jumponcond(fs, e1, opc);
-          e1->k = VJMP;
-        }
-        break;
-      }
-      /* else go through */
     }
     default: {
       int o1, o2;

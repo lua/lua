@@ -52,6 +52,7 @@
 #define hashnum(t,n)	\
            (node(t, lmod(cast(lu_hash, cast(ls_hash, n)), sizenode(t))))
 #define hashstr(t,str)	 (node(t, lmod((str)->tsv.hash, sizenode(t))))
+#define hashboolean(t,p) (node(t, lmod(p, sizenode(t))))
 #define hashpointer(t,p) (node(t, lmod(IntPoint(p), sizenode(t))))
 
 
@@ -65,6 +66,8 @@ Node *luaH_mainposition (const Table *t, const TObject *key) {
       return hashnum(t, nvalue(key));
     case LUA_TSTRING:
       return hashstr(t, tsvalue(key));
+    case LUA_TBOOLEAN:
+      return hashboolean(t, bvalue(key));
     default:  /* all other types are hashed as (void *) */
       return hashpointer(t, tsvalue(key));
   }

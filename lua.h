@@ -64,9 +64,10 @@ typedef int (*lua_CFunction) (lua_State *L);
 #define LUA_TUSERDATA	0
 #define LUA_TNIL	1
 #define LUA_TNUMBER	2
-#define LUA_TSTRING	3
-#define LUA_TTABLE	4
-#define LUA_TFUNCTION	5
+#define LUA_TBOOLEAN	3
+#define LUA_TSTRING	4
+#define LUA_TTABLE	5
+#define LUA_TFUNCTION	6
 
 
 /* minimum Lua stack available to a C function */
@@ -117,6 +118,7 @@ LUA_API int   lua_stackspace (lua_State *L);
 */
 
 LUA_API int             lua_isnumber (lua_State *L, int index);
+LUA_API int             lua_istrue (lua_State *L, int index);
 LUA_API int             lua_isstring (lua_State *L, int index);
 LUA_API int             lua_iscfunction (lua_State *L, int index);
 LUA_API int             lua_type (lua_State *L, int index);
@@ -126,6 +128,7 @@ LUA_API int            lua_equal (lua_State *L, int index1, int index2);
 LUA_API int            lua_lessthan (lua_State *L, int index1, int index2);
 
 LUA_API lua_Number      lua_tonumber (lua_State *L, int index);
+LUA_API int             lua_toboolean (lua_State *L, int index);
 LUA_API const char *lua_tostring (lua_State *L, int index);
 LUA_API size_t          lua_strlen (lua_State *L, int index);
 LUA_API lua_CFunction   lua_tocfunction (lua_State *L, int index);
@@ -141,6 +144,7 @@ LUA_API void  lua_pushnumber (lua_State *L, lua_Number n);
 LUA_API void  lua_pushlstring (lua_State *L, const char *s, size_t len);
 LUA_API void  lua_pushstring (lua_State *L, const char *s);
 LUA_API void  lua_pushcclosure (lua_State *L, lua_CFunction fn, int n);
+LUA_API void  lua_pushboolean (lua_State *L, int b);
 
 
 /*
@@ -222,6 +226,7 @@ LUA_API int   lua_getweakmode (lua_State *L, int index);
 #define lua_istable(L,n)	(lua_type(L,n) == LUA_TTABLE)
 #define lua_isuserdata(L,n)	(lua_type(L,n) == LUA_TUSERDATA)
 #define lua_isnil(L,n)		(lua_type(L,n) == LUA_TNIL)
+#define lua_isboolean(L,n)	(lua_type(L,n) == LUA_TBOOLEAN)
 #define lua_isnull(L,n)		(lua_type(L,n) == LUA_TNONE)
 
 #define lua_pushliteral(L, s)	lua_pushlstring(L, "" s, \

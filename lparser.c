@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.160 2001/10/25 19:14:14 roberto Exp $
+** $Id: lparser.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -698,6 +698,16 @@ static void simpleexp (LexState *ls, expdesc *v) {
     }
     case TK_NIL: {
       init_exp(v, VNIL, 0);
+      next(ls);
+      break;
+    }
+    case TK_TRUE: {
+      init_exp(v, VTRUE, 0);
+      next(ls);
+      break;
+    }
+    case TK_FALSE: {
+      init_exp(v, VFALSE, 0);
       next(ls);
       break;
     }

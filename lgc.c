@@ -110,7 +110,9 @@ static void markobject (GCState *st, TObject *o) {
       break;
     }
     default: {
-      lua_assert(ttype(o) == LUA_TNIL || ttype(o) == LUA_TNUMBER);
+      lua_assert(ttype(o) == LUA_TNIL ||
+                 ttype(o) == LUA_TNUMBER ||
+                 ttype(o) == LUA_TBOOLEAN);
       break;
     }
   }
@@ -196,7 +198,7 @@ static int hasmark (const TObject *o) {
       return ismarked(hvalue(o));
     case LUA_TFUNCTION:
       return clvalue(o)->c.marked;
-    default:  /* number, nil */
+    default:  /* number, nil, boolean */
       return 1;
   }
 }

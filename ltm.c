@@ -19,7 +19,7 @@
 
 
 const char *const luaT_typenames[] = {
-  "userdata", "nil", "number", "string", "table", "function"
+  "userdata", "nil", "number", "boolean", "string", "table", "function"
 };
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.82 2001/10/25 19:14:14 roberto Exp $
+** $Id: lopcodes.h,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -130,6 +130,7 @@ name		args	description
 OP_MOVE,/*	A B	R(A) := R(B)					*/
 OP_LOADK,/*	A Bc	R(A) := Kst(Bc)					*/
 OP_LOADINT,/*	A sBc	R(A) := (Number)sBc				*/
+OP_LOADBOOL,/*	A B C	R(A) := (Bool)B; if (C) PC++			*/
 OP_LOADNIL,/*	A B	R(A) := ... := R(B) := nil			*/
 OP_GETUPVAL,/*	A B	R(A) := UpValue[B]				*/
 
@@ -165,9 +166,7 @@ OP_TESTGT,/*	A C	test := (R(A) > R/K(C))				*/
 OP_TESTGE,/*	A C	test := (R(A) >= R/K(C))			*/
 
 OP_TESTT,/*	A B	test := R(B); if (test) R(A) := R(B)		*/
-OP_TESTF,/*	A B	test := not R(B); if (test) R(A) := nil		*/
-
-OP_NILJMP,/*	A Bc	R(A) := nil; PC++;				*/
+OP_TESTF,/*	A B	test := not R(B); if (test) R(A) := R(B)	*/
 
 OP_CALL,/*	A B C	R(A), ... ,R(A+C-1) := R(A)(R(A+1), ... ,R(A+B))*/
 OP_RETURN,/*	A B	return R(A), ... ,R(A+B-1)	(see (3))	*/

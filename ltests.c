@@ -580,17 +580,11 @@ static int testC (lua_State *L) {
     }
     else if EQ("lessthan") {
       int a = getnum;
-      if (lua_lessthan(L, a, getnum))
-        lua_pushnumber(L, 1);
-      else
-        lua_pushnil(L);
+      lua_pushboolean(L, lua_lessthan(L, a, getnum));
     }
     else if EQ("equal") {
       int a = getnum;
-      if (lua_equal(L, a, getnum))
-        lua_pushnumber(L, 1);
-      else
-        lua_pushnil(L);
+      lua_pushboolean(L, lua_equal(L, a, getnum));
     }
     else if EQ("rawcall") {
       int narg = getnum;

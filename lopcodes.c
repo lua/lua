@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.6 2001/10/25 19:14:14 roberto Exp $
+** $Id: lopcodes.c,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
 ** extracted automatically from lopcodes.h by mkprint.lua
 ** DO NOT EDIT
 ** See Copyright Notice in lua.h
@@ -18,6 +18,7 @@ const char *const luaP_opnames[] = {
   "MOVE",
   "LOADK",
   "LOADINT",
+  "LOADBOOL",
   "LOADNIL",
   "GETUPVAL",
   "GETGLOBAL",
@@ -45,7 +46,6 @@ const char *const luaP_opnames[] = {
   "TESTGE",
   "TESTT",
   "TESTF",
-  "NILJMP",
   "CALL",
   "RETURN",
   "FORPREP",
@@ -69,6 +69,7 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
   opmode(0,0,1,0, 1,0,iABC)		/* OP_MOVE */
  ,opmode(0,0,0,0, 1,1,iABc)		/* OP_LOADK */
  ,opmode(0,0,0,0, 1,0,iAsBc)		/* OP_LOADINT */
+ ,opmode(0,0,0,0, 1,0,iABC)		/* OP_LOADBOOL */
  ,opmode(0,0,1,0, 1,0,iABC)		/* OP_LOADNIL */
  ,opmode(0,0,0,0, 1,0,iABC)		/* OP_GETUPVAL */
  ,opmode(0,0,0,0, 1,1,iABc)		/* OP_GETGLOBAL */
@@ -96,7 +97,6 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(1,0,0,1, 0,0,iABC)		/* OP_TESTGE */
  ,opmode(1,0,1,0, 1,0,iABC)		/* OP_TESTT */
  ,opmode(1,0,1,0, 1,0,iABC)		/* OP_TESTF */
- ,opmode(0,0,0,0, 1,0,iABc)		/* OP_NILJMP */
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_CALL */
  ,opmode(0,0,0,0, 0,0,iABC)		/* OP_RETURN */
  ,opmode(0,0,0,0, 0,0,iAsBc)		/* OP_FORPREP */
