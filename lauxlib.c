@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.98 2003/04/01 17:52:31 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.99 2003/04/03 13:35:34 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -29,6 +29,11 @@
 /* reserved references */
 #define FREELIST_REF	1	/* free list of references */
 #define ARRAYSIZE_REF	2	/* array sizes */
+
+
+/* convert a stack index to positive */
+#define abs_index(L, i)		((i) > 0 || (i) <= LUA_REGISTRYINDEX ? (i) : \
+					lua_gettop(L) + (i) + 1)
 
 
 /*
@@ -208,6 +213,7 @@ LUALIB_API int luaL_getmetafield (lua_State *L, int obj, const char *event) {
 
 
 LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event) {
+  obj = abs_index(L, obj);
   if (!luaL_getmetafield(L, obj, event))  /* no metafield? */
     return 0;
   lua_pushvalue(L, obj);
@@ -274,6 +280,7 @@ static void getsizes (lua_State *L) {
 
 
 void luaL_setn (lua_State *L, int t, int n) {
+  t = abs_index(L, t);
   lua_pushliteral(L, "n");
   lua_rawget(L, t);
   if (checkint(L, 1) >= 0) {  /* is there a numeric field `n'? */
@@ -293,6 +300,7 @@ void luaL_setn (lua_State *L, int t, int n) {
 
 int luaL_getn (lua_State *L, int t) {
   int n;
+  t = abs_index(L, t);
   lua_pushliteral(L, "n");  /* try t.n */
   lua_rawget(L, t);
   if ((n = checkint(L, 1)) >= 0) return n;
@@ -320,7 +328,6 @@ int luaL_getn (lua_State *L, int t) {
 */
 
 
-#define buffempty(B)	((B)->p == (B)->buffer)
 #define bufflen(B)	((B)->p - (B)->buffer)
 #define bufffree(B)	((size_t)(LUAL_BUFFERSIZE - bufflen(B)))
 
@@ -411,6 +418,7 @@ LUALIB_API void luaL_buffinit (lua_State *L, luaL_Buffer *B) {
 
 LUALIB_API int luaL_ref (lua_State *L, int t) {
   int ref;
+  t = abs_index(L, t);
   if (lua_isnil(L, -1)) {
     lua_pop(L, 1);  /* remove from stack */
     return LUA_REFNIL;  /* `nil' has a unique fixed reference */
@@ -436,6 +444,7 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
 
 LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
   if (ref >= 0) {
+    t = abs_index(L, t);
     lua_rawgeti(L, t, FREELIST_REF);
     lua_rawseti(L, t, ref);  /* t[ref] = t[FREELIST_REF] */
     lua_pushnumber(L, (lua_Number)ref);
