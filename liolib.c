@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.31 2003/02/11 15:24:52 roberto Exp roberto $
+** $Id: liolib.c,v 2.32 2003/02/11 15:31:50 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -22,20 +22,43 @@
 
 
 /*
+** by default, gcc does not get `tmpname'
+*/
+#ifndef LUA_USETMPNAME
+#ifdef __GNUC__
+#define LUA_USETMPNAME	0
+#else
+#define LUA_USETMPNAME	1
+#endif
+#endif
+
+
+/*
+** by default, posix systems get `popen'
+*/
+#ifndef USE_POPEN
+#ifdef _POSIX_C_SOURCE
+#if _POSIX_C_SOURCE >= 2
+#define USE_POPEN	1
+#endif
+#endif
+#endif
+
+#ifndef USE_POPEN
+#define USE_POPEN	0
+#endif
+
+
+
+
+/*
 ** {======================================================
 ** FILE Operations
 ** =======================================================
 */
 
 
-#ifdef _POSIX_C_SOURCE
-#if _POSIX_C_SOURCE >= 2
-#define USE_POPEN
-#endif
-#endif
-
-
-#ifndef USE_POPEN
+#if !USE_POPEN
 #define pclose(f)    (-1)
 #endif
 
@@ -180,7 +203,7 @@ static int io_open (lua_State *L) {
 
 
 static int io_popen (lua_State *L) {
-#ifndef USE_POPEN
+#if !USE_POPEN
   luaL_error(L, "`popen' not supported");
   return 0;
 #else
@@ -247,10 +270,10 @@ static int io_output (lua_State *L) {
 static int io_readline (lua_State *L);
 
 
-static void aux_lines (lua_State *L, int index, int close) {
+static void aux_lines (lua_State *L, int idx, int close) {
   lua_pushliteral(L, FILEHANDLE);
   lua_rawget(L, LUA_REGISTRYINDEX);
-  lua_pushvalue(L, index);
+  lua_pushvalue(L, idx);
   lua_pushboolean(L, close);  /* close/not close file when finished */
   lua_pushcclosure(L, io_readline, 3);
 }
@@ -546,11 +569,16 @@ static int io_rename (lua_State *L) {
 
 
 static int io_tmpname (lua_State *L) {
+#if !LUA_USETMPNAME
+  luaL_error(L, "`tmpname' not supported");
+  return 0;
+#else
   char buff[L_tmpnam];
   if (tmpnam(buff) != buff)
     return luaL_error(L, "unable to generate a unique filename");
   lua_pushstring(L, buff);
   return 1;
+#endif
 }
 
 
