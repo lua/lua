@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.34 1998/12/27 20:25:20 roberto Exp roberto $
+** $Id: lvm.c,v 1.35 1998/12/30 13:16:50 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -95,10 +95,8 @@ int luaV_tostring (TObject *obj) {
 
 void luaV_setn (Hash *t, int val) {
   TObject index, value;
-  ttype(&index) = LUA_T_STRING;
-  tsvalue(&index) = luaS_new("n");
-  ttype(&value) = LUA_T_NUMBER;
-  nvalue(&value) = val;
+  ttype(&index) = LUA_T_STRING; tsvalue(&index) = luaS_new("n");
+  ttype(&value) = LUA_T_NUMBER; nvalue(&value) = val;
   *(luaH_set(t, &index)) = value;
 }
 
@@ -121,8 +119,7 @@ void luaV_closure (int nelems)
 ** Function to index a table.
 ** Receives the table at top-2 and the index at top-1.
 */
-void luaV_gettable (void)
-{
+void luaV_gettable (void) {
   struct Stack *S = &L->stack;
   TObject *im;
   if (ttype(S->top-2) != LUA_T_ARRAY)  /* not a table, get "gettable" method */
@@ -147,40 +144,51 @@ void luaV_gettable (void)
     /* else it has a "gettable" method, go through to next command */
   }
   /* object is not a table, or it has a "gettable" method */
-  if (ttype(im) != LUA_T_NIL)
-    luaD_callTM(im, 2, 1);
-  else
+  if (ttype(im) == LUA_T_NIL)
     lua_error("indexed expression not a table");
+  luaD_callTM(im, 2, 1);
 }
 
 
 /*
 ** Function to store indexed based on values at the stack.top
-** mode = 0: raw store (without tag methods)
-** mode = 1: normal store (with tag methods)
-** mode = 2: "deep L->stack.stack" store (with tag methods)
+** deep = 1: "deep L->stack.stack" store (with tag methods)
 */
-void luaV_settable (TObject *t, int mode)
-{
+void luaV_settable (TObject *t, int deep) {
   struct Stack *S = &L->stack;
-  TObject *im = (mode == 0) ? NULL : luaT_getimbyObj(t, IM_SETTABLE);
-  if (ttype(t) == LUA_T_ARRAY && (im == NULL || ttype(im) == LUA_T_NIL)) {
-    TObject *h = luaH_set(avalue(t), t+1);
-    *h = *(S->top-1);
-    S->top -= (mode == 2) ? 1 : 3;
-  }
-  else {  /* object is not a table, and/or has a specific "settable" method */
-    if (im && ttype(im) != LUA_T_NIL) {
-      if (mode == 2) {
-        *(S->top+1) = *(L->stack.top-1);
-        *(S->top) = *(t+1);
-        *(S->top-1) = *t;
-        S->top += 2;  /* WARNING: caller must assure stack space */
-      }
-      luaD_callTM(im, 3, 0);
+  TObject *im;
+  if (ttype(t) != LUA_T_ARRAY)  /* not a table, get "settable" method */
+    im = luaT_getimbyObj(t, IM_SETTABLE);
+  else {  /* object is a table... */
+    im = luaT_getim(avalue(t)->htag, IM_SETTABLE);
+    if (ttype(im) == LUA_T_NIL) {  /* and does not have a "settable" method */
+      *(luaH_set(avalue(t), t+1)) = *(S->top-1);
+      /* if deep, pop only value; otherwise, pop table, index and value */
+      S->top -= (deep) ? 1 : 3;
+      return;
     }
-    else
-      lua_error("indexed expression not a table");
+    /* else it has a "settable" method, go through to next command */
+  }
+  /* object is not a table, or it has a "settable" method */
+  if (ttype(im) == LUA_T_NIL)
+    lua_error("indexed expression not a table");
+  if (deep) {  /* table and index were not on top; copy them */
+    *(S->top+1) = *(L->stack.top-1);
+    *(S->top) = *(t+1);
+    *(S->top-1) = *t;
+    S->top += 2;  /* WARNING: caller must assure stack space */
+  }
+  luaD_callTM(im, 3, 0);
+}
+
+
+void luaV_rawsettable (TObject *t) {
+  if (ttype(t) != LUA_T_ARRAY)
+    lua_error("indexed expression not a table");
+  else {
+    struct Stack *S = &L->stack;
+    *(luaH_set(avalue(t), t+1)) = *(S->top-1);
+    S->top -= 3;
   }
 }
 
@@ -462,11 +470,11 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base)
         break;
 
       case SETTABLE0:
-       luaV_settable(S->top-3, 1);
+       luaV_settable(S->top-3, 0);
        break;
 
       case SETTABLE:
-        luaV_settable(S->top-3-(*pc++), 2);
+        luaV_settable(S->top-3-(*pc++), 1);
         break;
 
       case SETLISTW:

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.28 1998/09/07 18:59:59 roberto Exp roberto $
+** $Id: lapi.c,v 1.29 1998/12/03 15:45:15 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -179,17 +179,15 @@ lua_Object lua_rawgettable (void)
 }
 
 
-void lua_settable (void)
-{
+void lua_settable (void) {
   checkCparams(3);
-  luaV_settable(L->stack.top-3, 1);
+  luaV_settable(L->stack.top-3, 0);
 }
 
 
-void lua_rawsettable (void)
-{
+void lua_rawsettable (void) {
   checkCparams(3);
-  luaV_settable(L->stack.top-3, 0);
+  luaV_rawsettable(L->stack.top-3);
 }
 
 
