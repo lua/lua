@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.44 1996/01/26 18:03:19 roberto Exp $";
+char *rcs_table="$Id: table.c,v 2.45 1996/02/12 18:32:40 roberto Exp roberto $";
 
 /*#include <string.h>*/
 
@@ -37,44 +37,44 @@ static void lua_nextvar (void);
 /*
 ** Initialise symbol table with internal functions
 */
-static void lua_initsymbol (void)
+static struct {
+  char *name;
+  lua_CFunction func;
+} int_funcs[] = {
+  {"nextvar", lua_nextvar},
+  {"error", luaI_error},
+  {"tonumber", lua_obj2number},
+  {"setfallback", luaI_setfallback},
+  {"next", lua_next},
+  {"dofile", lua_internaldofile},
+  {"setglobal", luaI_setglobal},
+  {"getglobal", luaI_getglobal},
+  {"type", luaI_type},
+  {"tostring", luaI_tostring},
+  {"print", luaI_print},
+  {"dostring", lua_internaldostring},
+  {"assert", luaI_assert}
+};
+
+#define INTFUNCSIZE (sizeof(int_funcs)/sizeof(int_funcs[0]))
+
+void luaI_initsymbol (void)
 {
- Word n;
- lua_maxsymbol = BUFFER_BLOCK;
- lua_table = newvector(lua_maxsymbol, Symbol);
- n = luaI_findsymbolbyname("nextvar");
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_nextvar;
- n = luaI_findsymbolbyname("error");
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_error;
- n = luaI_findsymbolbyname("tonumber");
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_obj2number;
- n = luaI_findsymbolbyname("setfallback");
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_setfallback;
- n = luaI_findsymbolbyname("next");
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_next;
- n = luaI_findsymbolbyname("dofile");
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_internaldofile;
- n = luaI_findsymbolbyname("setglobal");
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_setglobal;
- n = luaI_findsymbolbyname("getglobal");
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_getglobal;
- n = luaI_findsymbolbyname("type"); 
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_type;
- n = luaI_findsymbolbyname("tostring");
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_tostring;
- n = luaI_findsymbolbyname("print");
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_print;
- n = luaI_findsymbolbyname("dostring");
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_internaldostring;
- n = luaI_findsymbolbyname("assert");
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_assert;
+  int i;
+  lua_maxsymbol = BUFFER_BLOCK;
+  lua_table = newvector(lua_maxsymbol, Symbol);
+  for (i=0; i<INTFUNCSIZE; i++)
+  {
+    Word n = luaI_findsymbolbyname(int_funcs[i].name);
+    s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = int_funcs[i].func;
+  }
 }
 
 
 /*
 ** Initialise constant table with pre-defined constants
 */
-void lua_initconstant (void)
+void luaI_initconstant (void)
 {
  lua_maxconstant = BUFFER_BLOCK;
  lua_constant = newvector(lua_maxconstant, TaggedString *);
@@ -87,8 +87,6 @@ void lua_initconstant (void)
 */
 Word luaI_findsymbol (TaggedString *t)
 {
- if (lua_table == NULL)
-  lua_initsymbol(); 
  if (t->varindex == NOT_USED)
  {
   if (lua_ntable == lua_maxsymbol)
@@ -104,6 +102,8 @@ Word luaI_findsymbol (TaggedString *t)
   lua_table[lua_ntable].varname = t;
   s_tag(lua_ntable) = LUA_T_NIL;
   lua_ntable++;
+  if (!t->marked)
+    t->marked = 2;  /* avoid GC */
  }
  return t->varindex;
 }
@@ -111,7 +111,7 @@ Word luaI_findsymbol (TaggedString *t)
 
 Word luaI_findsymbolbyname (char *name)
 {
-  return luaI_findsymbol(luaI_createfixedstring(name));
+  return luaI_findsymbol(lua_createstring(name));
 }
 
 
@@ -121,8 +121,6 @@ Word luaI_findsymbolbyname (char *name)
 */
 Word luaI_findconstant (TaggedString *t)
 {
- if (lua_constant == NULL)
-  lua_initconstant();
  if (t->constindex == NOT_USED)
  {
   if (lua_nconstant == lua_maxconstant)
@@ -137,6 +135,8 @@ Word luaI_findconstant (TaggedString *t)
   t->constindex = lua_nconstant;
   lua_constant[lua_nconstant] = t;
   lua_nconstant++;
+  if (!t->marked)
+    t->marked = 2;  /* avoid GC */
  }
  return t->constindex;
 }
@@ -144,7 +144,7 @@ Word luaI_findconstant (TaggedString *t)
 
 Word  luaI_findconstantbyname (char *name)
 {
-  return luaI_findconstant(luaI_createfixedstring(name));
+  return luaI_findconstant(lua_createstring(name));
 }
 
 TaggedString *lua_constcreate(char *name)

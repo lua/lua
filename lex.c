@@ -1,4 +1,4 @@
-char *rcs_lex = "$Id: lex.c,v 2.25 1996/02/12 18:32:40 roberto Exp roberto $";
+char *rcs_lex = "$Id: lex.c,v 2.26 1996/02/13 17:30:39 roberto Exp roberto $";
  
 
 #include <ctype.h>
@@ -47,7 +47,6 @@ char *lua_lasttext (void)
 }
 
 
-/* The reserved words must be listed in lexicographic order */
 static struct
   {
     char *name;
@@ -74,22 +73,14 @@ static struct
 #define RESERVEDSIZE (sizeof(reserved)/sizeof(reserved[0]))
 
 
-static int findReserved (char *name)
+void luaI_addReserved (void)
 {
-  int l = 0;
-  int h = RESERVEDSIZE - 1;
-  while (l <= h)
+  int i;
+  for (i=0; i<RESERVEDSIZE; i++)
   {
-    int m = (l+h)/2;
-    int comp = lua_strcmp(name, reserved[m].name);
-    if (comp < 0)
-      h = m-1;
-    else if (comp == 0)
-      return reserved[m].token;
-    else
-      l = m+1;
+    TaggedString *ts = lua_createstring(reserved[i].name);
+    ts->marked = reserved[i].token;  /* reserved word  (always > 255) */
   }
-  return 0;
 }
 
 
@@ -282,12 +273,14 @@ int luaY_lex (void)
       case 'Z':
       case '_':
       {
-        Word res;
+        TaggedString *ts;
         do { save_and_next(); } while (isalnum(current) || current == '_');
         *yytextLast = 0;
-        res = findReserved(yytext);
-        if (res) return res;
-        luaY_lval.pTStr = luaI_createfixedstring(yytext);
+        ts = lua_createstring(yytext);
+        if (ts->marked > 2)
+          return ts->marked;  /* reserved word */
+        luaY_lval.pTStr = ts;
+        ts->marked = 2;  /* avoid GC */
         return NAME;
       }
 

@@ -1,7 +1,7 @@
 /*
 ** Module to control static tables
 ** TeCGraf - PUC-Rio
-** $Id: table.h,v 2.16 1996/02/06 16:18:21 roberto Exp roberto $
+** $Id: table.h,v 2.17 1996/02/12 18:32:40 roberto Exp roberto $
 */
 
 #ifndef table_h
@@ -20,7 +20,8 @@ typedef struct
 extern Symbol *lua_table;
 extern TaggedString **lua_constant;
 
-void  lua_initconstant (void);
+void luaI_initsymbol (void);
+void  luaI_initconstant (void);
 Word  luaI_findsymbolbyname (char *name);
 Word  luaI_findsymbol      (TaggedString *t);
 Word  luaI_findconstant    (TaggedString *t);

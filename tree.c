@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_tree="$Id: tree.c,v 1.15 1996/01/26 18:03:19 roberto Exp $";
+char *rcs_tree="$Id: tree.c,v 1.16 1996/02/12 18:32:40 roberto Exp roberto $";
 
 
 #include <string.h>
@@ -11,6 +11,7 @@ char *rcs_tree="$Id: tree.c,v 1.15 1996/01/26 18:03:19 roberto Exp $";
 #include "mem.h"
 #include "lua.h"
 #include "tree.h"
+#include "lex.h"
 #include "hash.h"
 #include "table.h"
 
@@ -25,9 +26,12 @@ typedef struct {
   TaggedString **hash;
 } stringtable;
 
+static int initialized = 0;
+
 static stringtable string_root[NUM_HASHS];
 
 static TaggedString EMPTY = {NOT_USED, NOT_USED, 0, 0, {0}};
+
 
 static unsigned long hash (char *str)
 {
@@ -36,6 +40,15 @@ static unsigned long hash (char *str)
     h = ((h<<5)-h)^(unsigned char)*(str++);
   return h;
 }
+
+static void initialize (void)
+{
+  initialized = 1;
+  luaI_addReserved();
+  luaI_initsymbol();
+  luaI_initconstant();
+}
+
 
 static void grow (stringtable *tb)
 {
@@ -69,7 +82,11 @@ static TaggedString *insert (char *str, stringtable *tb)
   int i;
   int j = -1;
   if ((Long)tb->nuse*3 >= (Long)tb->size*2)
+  {
+    if (!initialized)
+      initialize();
     grow(tb);
+  }
   i = h%tb->size;
   while (tb->hash[i])
   {
@@ -97,12 +114,6 @@ TaggedString *lua_createstring (char *str)
   return insert(str, &string_root[(unsigned)str[0]%NUM_HASHS]);
 }
 
-TaggedString *luaI_createfixedstring (char *str) 
-{
-  TaggedString *ts = lua_createstring(str);
-  ts->marked = 2;  /* to avoid GC */
-  return ts;
-}
 
 /*
 ** Garbage collection function.
@@ -119,7 +130,7 @@ Long lua_strcollector (void)
     for (j=0; j<tb->size; j++)
     {
       TaggedString *t = tb->hash[j];
-      if (t != NULL && t != &EMPTY && t->marked != 2)
+      if (t != NULL && t != &EMPTY && t->marked <= 1)
       {
         if (t->marked)
           t->marked = 0;
