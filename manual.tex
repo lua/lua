@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.16 1996/04/22 18:00:37 roberto Exp roberto $
+% $Id: manual.tex,v 1.17 1996/04/29 18:50:08 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -34,7 +34,7 @@ Waldemar Celes Filho
 \tecgraf\ --- Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1996/04/22 18:00:37 $}
+\date{\small \verb$Date: 1996/04/29 18:50:08 $}
 
 \maketitle
 
@@ -753,6 +753,8 @@ int            lua_dostring             (char *string);
 \end{verbatim}
 Both functions return an error code:
 0, in case of success; non zero, in case of errors.
+More specifically, \verb'lua_dofile' returns 2 if for any reason
+it could not open the file.
 The function \verb'lua_dofile', if called with argument NULL (0),
 executes the ``file'' {\tt stdin}.
 Function \verb'lua_dofile' is also able to execute pre-compiled chunks.
@@ -1301,7 +1303,7 @@ are correctly escaped when written.
 The options \verb'c', \verb'd', \verb'E', \verb'e', \verb'f',
 \verb'g' \verb'i', \verb'o', \verb'u', \verb'X', and \verb'x' all
 expect a number argument,
-while \verb'q' and \verb's' expects a string.
+while \verb'q' and \verb's' expect a string.
 
 
 \subsection{Mathematical Functions} \label{mathlib}
