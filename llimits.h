@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.52 2003/02/20 19:33:23 roberto Exp roberto $
+** $Id: llimits.h,v 1.53 2003/04/28 19:26:16 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -56,8 +56,6 @@ typedef LUA_UINT32 lu_int32;
 ** it should be at least as large as `size_t'
 */
 typedef lu_int32 lu_mem;
-
-#define MAX_LUMEM	ULONG_MAX
 
 
 /* chars used as small naturals (so that `char' is reserved for characters) */
@@ -138,7 +136,7 @@ typedef lu_int32 Instruction;
 #endif
 
 
-/* maximum size for the C stack */
+/* maximum size for the virtual stack of a C function */
 #ifndef LUA_MAXCSTACK
 #define LUA_MAXCSTACK        2048
 #endif
@@ -150,19 +148,19 @@ typedef lu_int32 Instruction;
 
 /* maximum number of variables declared in a function */
 #ifndef MAXVARS
-#define MAXVARS 200           /* arbitrary limit (<MAXSTACK) */
+#define MAXVARS 200           /* <MAXSTACK */
 #endif
 
 
 /* maximum number of upvalues per function */
 #ifndef MAXUPVALUES
-#define MAXUPVALUES	32
+#define MAXUPVALUES	32	/* <MAXSTACK */
 #endif
 
 
 /* maximum number of parameters in a function */
 #ifndef MAXPARAMS
-#define MAXPARAMS 100           /* arbitrary limit (<MAXLOCALS) */
+#define MAXPARAMS 100           /* <MAXLOCALS */
 #endif
 
 
