@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.53 1999/02/22 19:13:12 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.54 1999/02/23 14:57:28 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -147,7 +147,7 @@ static void luaB_tonumber (void) {
     long n;
     luaL_arg_check(0 <= base && base <= 36, 2, "base out of range");
     n = strtol(s, &s, base);
-    while (isspace(*s)) s++;  /* skip trailing spaces */
+    while (isspace((unsigned char)*s)) s++;  /* skip trailing spaces */
     if (*s) lua_pushnil();  /* invalid format: return nil */
     else lua_pushnumber(n);
   }
@@ -190,7 +190,7 @@ static void luaB_settag (void) {
   lua_Object o = luaL_tablearg(1);
   lua_pushobject(o);
   lua_settag(luaL_check_int(2));
-  lua_pushobject(o);  /* returns first argument */
+  lua_pushobject(o);  /* return first argument */
 }
 
 static void luaB_newtag (void) {
@@ -649,7 +649,7 @@ static void testC (void) {
       case 'N' : lua_pushstring(lua_nextvar(lua_getstring(reg[getnum(s)])));
                  break;
       case 'n' : { int n=getnum(s);
-                   n=lua_next(reg[n], lua_getnumber(reg[getnum(s)]));
+                   n=lua_next(reg[n], (int)lua_getnumber(reg[getnum(s)]));
                    lua_pushnumber(n); break;
                  }
       default: luaL_verror("unknown command in `testC': %c", *(s-1));
