@@ -3,7 +3,7 @@
 ** Linguagem para Usuarios de Aplicacao
 */
 
-char *rcs_lua="$Id: lua.c,v 1.4 1995/02/07 16:04:15 lhf Exp roberto $";
+char *rcs_lua="$Id: lua.c,v 1.5 1995/10/06 14:11:40 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -13,6 +13,12 @@ char *rcs_lua="$Id: lua.c,v 1.4 1995/02/07 16:04:15 lhf Exp roberto $";
 
 static int lua_argc;
 static char **lua_argv;
+
+/*
+** although this function is POSIX, there is no standard header file that
+** defines it
+*/
+int isatty (int fd);
 
 /*
 %F Allow Lua code to access argv strings.
@@ -35,9 +41,14 @@ static void lua_getargv (void)
 
 static void manual_input (void)
 {
+  if (isatty(fileno(stdin)))
+  {
    char buffer[250];
    while (gets(buffer) != 0)
      lua_dostring(buffer);
+  }
+  else
+    lua_dofile(NULL);  /* executes stdin as a file */
 }
 
 
