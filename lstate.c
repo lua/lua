@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.69 2001/10/17 21:12:57 roberto Exp $
+** $Id: lstate.c,v 1.70 2001/10/25 19:14:14 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -64,7 +64,7 @@ static void f_luaopen (lua_State *L, void *ud) {
     G(L)->ntag = 0;
     G(L)->nblocks = sizeof(lua_State) + sizeof(global_State);
     luaD_init(L, so->stacksize);  /* init stack */
-    L->gt = luaH_new(L, 0, 4);  /* table of globals */
+    sethvalue(&L->gt, luaH_new(L, 0, 4));  /* table of globals */
     G(L)->type2tag = luaH_new(L, 0, 3);
     sethvalue(&G(L)->registry, luaH_new(L, 0, 0));
     luaS_resize(L, 4);  /* initial size of string table */

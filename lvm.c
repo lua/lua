@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.195 2001/10/02 16:45:03 roberto Exp $
+** $Id: lvm.c,v 1.196 2001/10/25 19:14:14 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -176,7 +176,7 @@ void luaV_settable (lua_State *L, StkId t, TObject *key, StkId val) {
 
 
 void luaV_getglobal (lua_State *L, TString *name, StkId res) {
-  const TObject *value = luaH_getstr(L->gt, name);
+  const TObject *value = luaH_getstr(hvalue(&L->gt), name);
   Closure *tm;
   if (!HAS_TM_GETGLOBAL(L, ttype(value)) ||  /* is there a tag method? */
       (tm = luaT_gettmbyObj(G(L), value, TM_GETGLOBAL)) == NULL) {
@@ -188,12 +188,12 @@ void luaV_getglobal (lua_State *L, TString *name, StkId res) {
 
 
 void luaV_setglobal (lua_State *L, TString *name, StkId val) {
-  const TObject *oldvalue = luaH_getstr(L->gt, name);
+  const TObject *oldvalue = luaH_getstr(hvalue(&L->gt), name);
   Closure *tm;
   if (!HAS_TM_SETGLOBAL(L, ttype(oldvalue)) ||  /* no tag methods? */
      (tm = luaT_gettmbyObj(G(L), oldvalue, TM_SETGLOBAL)) == NULL) {
     if (oldvalue == &luaO_nilobject)
-      luaH_setstr(L, L->gt, name, val);  /* raw set */
+      luaH_setstr(L, hvalue(&L->gt), name, val);  /* raw set */
     else
       settableval(oldvalue, val);  /* warning: tricky optimization! */
   }

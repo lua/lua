@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.105 2001/10/17 21:12:57 roberto Exp $
+** $Id: lua.h,v 1.106 2001/10/31 19:40:14 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: info@lua.org
@@ -30,11 +30,12 @@
 #define LUA_MULTRET	(-1)
 
 
-/* pseudo-index for registry */
+/*
+** pseudo-indices
+*/
 #define LUA_REGISTRYINDEX	(-10000)
-
-/* pseudo-indices for upvalues */
-#define lua_upvalueindex(i)	(LUA_REGISTRYINDEX-(i))
+#define LUA_GLOBALSINDEX	(-10001)
+#define lua_upvalueindex(i)	(LUA_GLOBALSINDEX-(i))
 
 
 /* error codes for `lua_do*' and the like */
@@ -160,7 +161,6 @@ LUA_API void  lua_getglobal (lua_State *L, const lua_char *name);
 LUA_API void  lua_gettable (lua_State *L, int index);
 LUA_API void  lua_rawget (lua_State *L, int index);
 LUA_API void  lua_rawgeti (lua_State *L, int index, int n);
-LUA_API void  lua_getglobals (lua_State *L);
 LUA_API void  lua_gettagmethod (lua_State *L, int tag, const lua_char *event);
 LUA_API void  lua_newtable (lua_State *L);
 LUA_API void  lua_getweakregistry (lua_State *L);
@@ -244,6 +244,7 @@ LUA_API int   lua_getweakmode (lua_State *L, int index);
                                                 (sizeof(s)/sizeof(lua_char))-1)
 
 #define lua_getregistry(L)	lua_pushvalue(L, LUA_REGISTRYINDEX);
+#define lua_getglobals(L)	lua_pushvalue(L, LUA_GLOBALSINDEX);
 
 
 

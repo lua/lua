@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.157 2001/10/25 19:14:14 roberto Exp $
+** $Id: lapi.c,v 1.158 2001/10/31 19:40:14 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -44,13 +44,16 @@ static TObject *negindex (lua_State *L, int index) {
   if (index > LUA_REGISTRYINDEX) {
     api_check(L, index != 0 && -index <= L->top - L->ci->base);
     return L->top+index;
-  } else if (index == LUA_REGISTRYINDEX)  /* pseudo-indices */
-      return &G(L)->registry;
-  else {
-    TObject *func = (L->ci->base - 1);
-    index = LUA_REGISTRYINDEX - index;
-    api_check(L, iscfunction(func) && index <= clvalue(func)->c.nupvalues);
-    return &clvalue(func)->c.upvalue[index-1];
+  }
+  else switch (index) {  /* pseudo-indices */
+    case LUA_REGISTRYINDEX: return &G(L)->registry;
+    case LUA_GLOBALSINDEX: return &L->gt;
+    default: {
+      TObject *func = (L->ci->base - 1);
+      index = LUA_GLOBALSINDEX - index;
+      api_check(L, iscfunction(func) && index <= clvalue(func)->c.nupvalues);
+      return &clvalue(func)->c.upvalue[index-1];
+    }
   }
 }
 
@@ -381,14 +384,6 @@ LUA_API void lua_rawgeti (lua_State *L, int index, int n) {
 }
 
 
-LUA_API void lua_getglobals (lua_State *L) {
-  lua_lock(L);
-  sethvalue(L->top, L->gt);
-  api_incr_top(L);
-  lua_unlock(L);
-}
-
-
 LUA_API void lua_newtable (lua_State *L) {
   lua_lock(L);
   sethvalue(L->top, luaH_new(L, 0, 0));
@@ -453,7 +448,7 @@ LUA_API void lua_setglobals (lua_State *L) {
   api_checknelems(L, 1);
   newtable = --L->top;
   api_check(L, ttype(newtable) == LUA_TTABLE);
-  L->gt = hvalue(newtable);
+  setobj(&L->gt, newtable);
   lua_unlock(L);
 }
 

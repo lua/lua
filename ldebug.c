@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.90 2001/10/02 16:45:03 roberto Exp $
+** $Id: ldebug.c,v 1.91 2001/10/25 19:14:14 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -221,7 +221,7 @@ static const l_char *travtagmethods (global_State *G, const TObject *o) {
 
 
 static const l_char *travglobals (lua_State *L, const TObject *o) {
-  Table *g = L->gt;
+  Table *g = hvalue(&L->gt);
   int i = sizenode(g);
   while (i--) {
     Node *n = node(g, i);
