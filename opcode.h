@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.30 1997/03/20 19:20:43 roberto Exp roberto $
+** $Id: opcode.h,v 3.31 1997/03/31 14:02:58 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -34,6 +34,8 @@ typedef enum
 
 #define NUM_TYPES 10
 
+
+extern char *luaI_typenames[];
 
 typedef enum {
 /* name          parm    before          after           side effect

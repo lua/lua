@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.38 1997/04/02 23:04:12 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 2.1 1997/04/03 18:24:23 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -115,7 +115,7 @@ static int luaI_checkevent (char *name, char *list[])
 {
   int e = findstring(name, list);
   if (e < 0)
-    luaL_verror("invalid event name `%s'", name);
+    luaL_verror("`%s' is not a valid event name", name);
   return e;
 }
 
@@ -180,17 +180,19 @@ int lua_newtag (void)
 static void checktag (int tag)
 {
   if (!(last_tag <= tag && tag <= 0))
-    lua_error("invalid tag");
+    luaL_verror("%d is not a valid tag", tag);
 }
 
-int luaI_userdatatag (int tag)
+void luaI_realtag (int tag)
 {
-  return (tag >= 0 || (last_tag <= tag && tag < LUA_T_NIL));
+  if (!(last_tag <= tag && tag < LUA_T_NIL))
+    luaL_verror("tag %d is not result of `newtag'", tag);
 }
 
 
 void luaI_settag (int tag, TObject *o)
 {
+  luaI_realtag(tag);
   switch (ttype(o)) {
     case LUA_T_ARRAY:
       o->value.a->htag = tag;
@@ -199,7 +201,7 @@ void luaI_settag (int tag, TObject *o)
       o->value.ts->tag = tag;
       break;
     default:
-      lua_error("settag: cannot change tag of given object");
+      luaL_verror("cannot change tag of a %s", luaI_typenames[-ttype(o)]);
   }
 }
 
@@ -223,25 +225,26 @@ TObject *luaI_getim (int tag, IMS event)
 }
 
 
-void luaI_getintmethod (void)
+void luaI_gettagmethod (void)
 {
-  int t = (int)luaL_check_number(1, "getintmethod");
-  int e = luaI_checkevent(luaL_check_string(2, "getintmethod"), luaI_eventname);
+  int t = (int)luaL_check_number(1, "gettagmethod");
+  int e = luaI_checkevent(luaL_check_string(2, "gettagmethod"), luaI_eventname);
   checktag(t);
   if (validevent(t, e))
     luaI_pushobject(&luaI_IMtable[-t].int_method[e]);
 }
 
 
-void luaI_setintmethod (void)
+void luaI_settagmethod (void)
 {
-  int t = (int)luaL_check_number(1, "setintmethod");
-  int e = luaI_checkevent(luaL_check_string(2, "setintmethod"), luaI_eventname);
+  int t = (int)luaL_check_number(1, "settagmethod");
+  int e = luaI_checkevent(luaL_check_string(2, "settagmethod"), luaI_eventname);
   lua_Object func = lua_getparam(3);
   checktag(t);
   if (!validevent(t, e))
-    lua_error("cannot change this internal method");
-  luaL_arg_check(lua_isnil(func) || lua_isfunction(func), "setintmethod",
+    luaL_verror("cannot change internal method `%s' for tag %d",
+                luaI_eventname[e], t);
+  luaL_arg_check(lua_isnil(func) || lua_isfunction(func), "settagmethod",
                  3, "function expected");
   luaI_pushobject(&luaI_IMtable[-t].int_method[e]);
   luaI_IMtable[-t].int_method[e] = *luaI_Address(func);
@@ -352,7 +355,7 @@ void luaI_setfallback (void)
     replace = typeFB;
   }
   else {
-    lua_error("invalid fallback name");
+    luaL_verror("`%s' is not a valid fallback name", name);
     replace = NULL;  /* to avoid warnings */
   }
   if (oldfunc.ttype != LUA_T_NIL)

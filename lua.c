@@ -3,7 +3,7 @@
 ** Linguagem para Usuarios de Aplicacao
 */
 
-char *rcs_lua="$Id: lua.c,v 1.13 1996/07/06 20:20:35 roberto Exp roberto $";
+char *rcs_lua="$Id: lua.c,v 1.14 1996/09/24 17:30:28 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -59,8 +59,8 @@ int main (int argc, char *argv[])
       result = lua_dofile (argv[i]);
       if (result) {
         if (result == 2) {
-          fprintf(stderr, "lua: cannot execute file `%s' - ", argv[i]);
-          perror(NULL);
+          fprintf(stderr, "lua: cannot execute file ");
+          perror(argv[i]);
         }
         return 1;
       }

@@ -33,7 +33,7 @@ static void pushresult (int i)
 #ifndef NOSTRERROR
     lua_pushstring(strerror(errno));
 #else
-    lua_pushstring("system unable to define the error");
+    lua_pushstring("O.S. unable to define the error");
 #endif
   }
 }
@@ -124,7 +124,7 @@ static void io_read (void)
     }
     else if (*p == '}') {
       if (inskip == 0)
-        lua_error("unbalanced `{...}' in read pattern");
+        lua_error("unbalanced braces in read pattern");
       inskip--;
       p++;
     }
@@ -248,7 +248,7 @@ static void lua_printstack (FILE *f)
         fprintf(f, "function %s", name);
         break;
       case 'f':
-        fprintf(f, "`%s' fallback", name);
+        fprintf(f, "`%s' iternal method", name);
         break;
       default: {
         char *filename;
@@ -289,7 +289,7 @@ static void getbyte (void)
   else {
     i--;
     if (0 <= i && i < lua_getbindatasize(ud))
-      lua_pushnumber(*(((char *)lua_getbinarydata(ud))+i));
+      lua_pushnumber(*(((char *)lua_getbindata(ud))+i));
     else
       lua_pushnil();
   }
@@ -307,7 +307,7 @@ static void createuserdata (void)
     lua_beginblock();
     lua_pushobject(t);
     lua_pushnumber(i+1);
-    o = lua_basicindex();
+    o = lua_rawgettable();
     if (lua_isnil(o)) {
       lua_endblock();
       break;
@@ -317,7 +317,7 @@ static void createuserdata (void)
     luaI_addchar(lua_getnumber(o));
     lua_endblock();
   }
-  lua_pushbinarydata(luaI_addchar(0), i, tag);
+  lua_pushbindata(luaI_addchar(0), i, tag);
 }
 
 

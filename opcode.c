@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.93 1997/04/02 23:04:12 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 4.1 1997/04/03 18:27:06 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdio.h>
@@ -19,6 +19,7 @@ char *rcs_opcode="$Id: opcode.c,v 3.93 1997/04/02 23:04:12 roberto Exp roberto $
 #include "lua.h"
 #include "fallback.h"
 #include "undump.h"
+#include "auxlib.h"
 
 #define tonumber(o) ((ttype(o) != LUA_T_NUMBER) && (lua_tonumber(o) != 0))
 #define tostring(o) ((ttype(o) != LUA_T_STRING) && (lua_tostring(o) != 0))
@@ -340,11 +341,11 @@ static void pushsubscript (void)
 }
 
 
-lua_Object lua_basicindex (void)
+lua_Object lua_rawgettable (void)
 {
   adjustC(2);
   if (ttype(top-2) != LUA_T_ARRAY)
-    lua_error("indexed expression not a table in basic indexing");
+    lua_error("indexed expression not a table in raw gettable");
   else {
     TObject *h = lua_hashget(avalue(top-2), top-1);
     --top;
@@ -360,7 +361,7 @@ lua_Object lua_basicindex (void)
 
 /*
 ** Function to store indexed based on values at the top
-** mode = 0: basic store (without internal methods)
+** mode = 0: raw store (without internal methods)
 ** mode = 1: normal store (with internal methods)
 ** mode = 2: "deep stack" store (with internal methods)
 */
@@ -656,14 +657,14 @@ lua_Object lua_setfallback (char *name, lua_CFunction fallback)
   return (Ref(top-1));
 }
 
-void lua_getintmethod (int tag, char *event)
+void lua_gettagmethod (int tag, char *event)
 {
   lua_pushnumber(tag);
   lua_pushstring(event);
-  do_unprotectedrun(luaI_getintmethod, 2, 1);
+  do_unprotectedrun(luaI_gettagmethod, 2, 1);
 }
 
-void lua_setintmethod (int tag, char *event, lua_CFunction method)
+void lua_settagmethod (int tag, char *event, lua_CFunction method)
 {
   lua_pushnumber(tag);
   lua_pushstring(event);
@@ -671,7 +672,7 @@ void lua_setintmethod (int tag, char *event, lua_CFunction method)
     lua_pushcfunction (method);
   else
     lua_pushnil();
-  do_unprotectedrun(luaI_setintmethod, 3, 1);
+  do_unprotectedrun(luaI_settagmethod, 3, 1);
 }
 
 void lua_seterrormethod (lua_CFunction method)
@@ -685,7 +686,7 @@ void lua_seterrormethod (lua_CFunction method)
 ** API: receives on the stack the table and the index.
 ** returns the value.
 */
-lua_Object lua_getsubscript (void)
+lua_Object lua_gettable (void)
 {
   adjustC(2);
   pushsubscript();
@@ -729,13 +730,13 @@ void lua_settag (int tag)
 /* 
 ** API: receives on the stack the table, the index, and the new value.
 */
-void lua_storesubscript (void)
+void lua_settable (void)
 {
   adjustC(3);
   storesubscript(top-3, 1);
 }
 
-void lua_basicstoreindex (void)
+void lua_rawsettable (void)
 {
   adjustC(3);
   storesubscript(top-3, 0);
@@ -825,7 +826,7 @@ char *lua_getstring (lua_Object object)
  else return (svalue(Address(object)));
 }
 
-void *lua_getbinarydata (lua_Object object)
+void *lua_getbindata (lua_Object object)
 {
   if (object == LUA_NOOBJECT || ttype(Address(object)) != LUA_T_USERDATA)
     return NULL;
@@ -834,7 +835,7 @@ void *lua_getbinarydata (lua_Object object)
 
 void *lua_getuserdata (lua_Object object)
 {
-  void *add = lua_getbinarydata(object);
+  void *add = lua_getbindata(object);
   if (add == NULL) return NULL;
   else return *(void **)add;
 }
@@ -875,7 +876,7 @@ void lua_pushref (int ref)
 {
   TObject *o = luaI_getref(ref);
   if (o == NULL)
-    lua_error("access to invalid (possibly garbage collected) reference");
+    lua_error("access to invalid reference (possibly garbage collected)");
   luaI_pushobject(o);
 }
 
@@ -900,7 +901,7 @@ lua_Object lua_getglobal (char *name)
 }
 
 
-lua_Object lua_basicgetglobal (char *name)
+lua_Object lua_rawgetglobal (char *name)
 {
   adjustC(0);
   *top = lua_table[luaI_findsymbolbyname(name)].object;
@@ -938,7 +939,7 @@ void lua_setglobal (char *name)
   setglobal(luaI_findsymbolbyname(name));
 }
 
-void lua_basicsetglobal (char *name)
+void lua_rawsetglobal (char *name)
 {
  Word n = luaI_findsymbolbyname(name);
  adjustC(1);
@@ -989,13 +990,13 @@ void lua_pushcfunction (lua_CFunction fn)
  incr_top;
 }
 
-void lua_pushbinarydata (void *buff, int size, int tag)
+void lua_pushbindata (void *buff, int size, int tag)
 {
   if (buff == NULL)
     ttype(top) = LUA_T_NIL;
   else {
-    if (!luaI_userdatatag(tag))
-      lua_error("invalid tag for userdata");
+    if (tag < 0)
+      luaI_realtag(tag);
     tsvalue(top) = luaI_createuserdata(buff, size, tag);
     ttype(top) = LUA_T_USERDATA;
   }
@@ -1007,7 +1008,7 @@ void lua_pushbinarydata (void *buff, int size, int tag)
 */
 void lua_pushusertag (void *u, int tag)
 {
-  lua_pushbinarydata(&u, sizeof(void *), tag);
+  lua_pushbindata(&u, sizeof(void *), tag);
 }
 
 /*

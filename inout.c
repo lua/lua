@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.53 1997/04/02 22:53:35 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.54 1997/04/02 23:04:12 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -28,7 +28,7 @@ Word lua_linenumber;
 char *lua_parsedfile;
 
 
-static char *typenames[] = { /* ORDER LUA_T */
+char *luaI_typenames[] = { /* ORDER LUA_T */
   "userdata", "line", "cmark", "mark", "function",
   "function", "table", "string", "number", "nil",
   NULL
@@ -95,8 +95,7 @@ void lua_openstring (char *s)
   char buff[SIZE_PREF+25];
   lua_setinput(stringinput);
   st = s;
-  strcpy(buff, "(dostring) >> ");
-  strncat(buff, s, SIZE_PREF);
+  sprintf(buff, "(dostring) >> %.20s", s);
   if (strlen(s) > SIZE_PREF) strcat(buff, "...");
   lua_parsedfile = luaI_createfixedstring(buff)->str;
 }
@@ -148,7 +147,7 @@ static char *tostring (lua_Object obj)
       return lua_getstring(obj);
     case LUA_T_ARRAY: case LUA_T_FUNCTION:
     case LUA_T_CFUNCTION: case LUA_T_NIL:
-      return typenames[-ttype(o)];
+      return luaI_typenames[-ttype(o)];
     case LUA_T_USERDATA: {
       char *buff = luaI_buffer(100);
       int size = o->value.ts->size;
@@ -181,7 +180,7 @@ static void luaI_type (void)
 {
   lua_Object o = lua_getparam(1);
   luaL_arg_check(o != LUA_NOOBJECT, "type", 1, "no argument");
-  lua_pushstring(typenames[-ttype(luaI_Address(o))]);
+  lua_pushstring(luaI_typenames[-ttype(luaI_Address(o))]);
   lua_pushnumber(lua_tag(o));
 }
 
@@ -219,12 +218,12 @@ static void luaI_setglobal (void)
   lua_pushobject(value);  /* return given value */
 }
 
-static void luaI_basicsetglobal (void)
+static void luaI_rawsetglobal (void)
 {
   lua_Object value = lua_getparam(2);
-  luaL_arg_check(value != LUA_NOOBJECT, "basicsetglobal", 2, NULL);
+  luaL_arg_check(value != LUA_NOOBJECT, "rawsetglobal", 2, NULL);
   lua_pushobject(value);
-  lua_basicsetglobal(luaL_check_string(1, "basicsetglobal"));
+  lua_rawsetglobal(luaL_check_string(1, "rawsetglobal"));
   lua_pushobject(value);  /* return given value */
 }
 
@@ -233,9 +232,9 @@ static void luaI_getglobal (void)
   lua_pushobject(lua_getglobal(luaL_check_string(1, "getglobal")));
 }
 
-static void luaI_basicgetglobal (void)
+static void luaI_rawgetglobal (void)
 {
-  lua_pushobject(lua_basicgetglobal(luaL_check_string(1, "basicgetglobal")));
+  lua_pushobject(lua_rawgetglobal(luaL_check_string(1, "rawgetglobal")));
 }
 
 static void luatag (void)
@@ -291,28 +290,28 @@ static void luaIl_newtag (void)
   lua_pushnumber(lua_newtag());
 }
 
-static void basicindex (void)
+static void rawgettable (void)
 {
   lua_Object t = lua_getparam(1);
   lua_Object i = lua_getparam(2);
-  luaL_arg_check(t != LUA_NOOBJECT, "basicindex", 1, NULL);
-  luaL_arg_check(i != LUA_NOOBJECT, "basicindex", 2, NULL);
+  luaL_arg_check(t != LUA_NOOBJECT, "rawgettable", 1, NULL);
+  luaL_arg_check(i != LUA_NOOBJECT, "rawgettable", 2, NULL);
   lua_pushobject(t);
   lua_pushobject(i);
-  lua_pushobject(lua_basicindex());
+  lua_pushobject(lua_rawgettable());
 }
 
-static void basicstoreindex (void)
+static void rawsettable (void)
 {
   lua_Object t = lua_getparam(1);
   lua_Object i = lua_getparam(2);
   lua_Object v = lua_getparam(3);
   luaL_arg_check(t != LUA_NOOBJECT && i != LUA_NOOBJECT && v != LUA_NOOBJECT,
-            "basicindex", 0, NULL);
+            "rawsettable", 0, NULL);
   lua_pushobject(t);
   lua_pushobject(i);
   lua_pushobject(v);
-  lua_basicstoreindex();
+  lua_rawsettable();
 }
 
 
@@ -325,10 +324,6 @@ static struct {
   lua_CFunction func;
 } int_funcs[] = {
   {"assert", luaI_assert},
-  {"basicgetglobal", luaI_basicgetglobal},
-  {"basicindex", basicindex},
-  {"basicsetglobal", luaI_basicsetglobal},
-  {"basicstoreindex", basicstoreindex},
   {"call", luaI_call},
   {"dofile", lua_internaldofile},
   {"dostring", lua_internaldostring},
@@ -338,11 +333,15 @@ static struct {
   {"next", lua_next},
   {"nextvar", luaI_nextvar},
   {"print", luaI_print},
+  {"rawgetglobal", luaI_rawgetglobal},
+  {"rawgettable", rawgettable},
+  {"rawsetglobal", luaI_rawsetglobal},
+  {"rawsettable", rawsettable},
   {"seterrormethod", luaI_seterrormethod},
   {"setfallback", luaI_setfallback},
   {"setglobal", luaI_setglobal},
-  {"setintmethod", luaI_setintmethod},
-  {"getintmethod", luaI_getintmethod},
+  {"settagmethod", luaI_settagmethod},
+  {"gettagmethod", luaI_gettagmethod},
   {"settag", luaIl_settag},
   {"tonumber", lua_obj2number},
   {"tostring", luaI_tostring},

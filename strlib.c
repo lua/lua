@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.37 1997/03/18 15:30:50 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.38 1997/03/26 22:23:15 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -84,7 +84,7 @@ static void str_tok (void)
     lua_pushobject(t);
     lua_pushnumber(i++);
     lua_pushstring(s1);
-    lua_storesubscript();
+    lua_settable();
     s1 = NULL;  /* prepare for next strtok */
   }
   lua_pushobject(t);
@@ -121,10 +121,10 @@ static void str_sub (void)
 */
 static void str_lower (void)
 {
-  char *s = luaL_check_string(1, "strlower");
+  char *s;
   luaI_emptybuff();
-  while (*s)
-    luaI_addchar(tolower((unsigned char)*s++));
+  for (s = luaL_check_string(1, "strlower"); *s; s++)
+    luaI_addchar(tolower((unsigned char)*s));
   lua_pushstring(luaI_addchar(0));
 }
 
@@ -133,10 +133,10 @@ static void str_lower (void)
 */
 static void str_upper (void)
 {
-  char *s = luaL_check_string(1, "strupper");
+  char *s;
   luaI_emptybuff();
-  while (*s)
-    luaI_addchar(toupper((unsigned char)*s++));
+  for (s = luaL_check_string(1, "strupper"); *s; s++)
+    luaI_addchar(toupper((unsigned char)*s));
   lua_pushstring(luaI_addchar(0));
 }
 
@@ -177,11 +177,11 @@ char *luaL_item_end (char *p)
   switch (*p++) {
     case '\0': return p-1;
     case ESC:
-      if (*p == 0) lua_error("incorrect pattern");
+      if (*p == 0) luaL_verror("incorrect pattern (ends with `%c')", ESC);
       return p+1;
     case '[': {
       char *end = bracket_end(p);
-      if (end == NULL) lua_error("incorrect pattern");
+      if (end == NULL) lua_error("incorrect pattern (missing `]')");
       return end+1;
     }
     default:
@@ -492,7 +492,7 @@ static void str_format (void)
       char *initf = strfrmt-1;  /* -1 to include % */
       strfrmt = match(strfrmt, "[-+ #]*(%d*)%.?(%d*)", 0);
       if (capture[0].len > 3 || capture[1].len > 3)  /* < 1000? */
-        lua_error("invalid format (width/precision too long)");
+        lua_error("invalid format (width or precision too long)");
       strncpy(form, initf, strfrmt-initf+1); /* +1 to include convertion */
       form[strfrmt-initf+1] = 0;
       buff = openspace(1000);  /* to store the formated value */

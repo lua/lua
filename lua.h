@@ -2,7 +2,7 @@
 ** LUA - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
-** $Id: lua.h,v 3.42 1997/04/02 23:04:12 roberto Exp roberto $
+** $Id: lua.h,v 4.1 1997/04/03 18:26:08 roberto Exp roberto $
 */
 
 
@@ -19,9 +19,8 @@
 typedef void (*lua_CFunction) (void);
 typedef unsigned int lua_Object;
 
-lua_Object     lua_setfallback		(char *event, lua_CFunction fallback);
-void           lua_setintmethod	(int tag, char *event, lua_CFunction method);
-void           lua_getintmethod	(int tag, char *event);  /* out: method */
+void           lua_settagmethod	(int tag, char *event, lua_CFunction method);
+void           lua_gettagmethod	(int tag, char *event);  /* out: method */
 void           lua_seterrormethod (lua_CFunction method);
 
 int            lua_newtag		(void);
@@ -53,26 +52,26 @@ int            lua_isfunction           (lua_Object object);
 float          lua_getnumber 		(lua_Object object);
 char          *lua_getstring 		(lua_Object object);
 lua_CFunction  lua_getcfunction 	(lua_Object object);
-void          *lua_getbinarydata	(lua_Object object);
+void          *lua_getbindata		(lua_Object object);
 int            lua_getbindatasize	(lua_Object object);
 
 void 	       lua_pushnil 		(void);
 void           lua_pushnumber 		(float n);
 void           lua_pushstring 		(char *s);
 void           lua_pushcfunction	(lua_CFunction fn);
-void           lua_pushbinarydata	(void *buff, int size, int tag);
+void           lua_pushbindata		(void *buff, int size, int tag);
 void           lua_pushusertag     	(void *u, int tag);
 void           lua_pushobject       	(lua_Object object);
 
 lua_Object     lua_getglobal 		(char *name);
-lua_Object     lua_basicgetglobal	(char *name);
+lua_Object     lua_rawgetglobal		(char *name);
 void           lua_setglobal		(char *name); /* In: value */
-void           lua_basicsetglobal	(char *name); /* In: value */
+void           lua_rawsetglobal		(char *name); /* In: value */
 
-void           lua_storesubscript	(void); /* In: table, index, value */
-void           lua_basicstoreindex	(void); /* In: table, index, value */
-lua_Object     lua_getsubscript		(void); /* In: table, index */
-lua_Object     lua_basicindex		(void); /* In: table, index */
+void           lua_settable	(void); /* In: table, index, value */
+void           lua_rawsettable	(void); /* In: table, index, value */
+lua_Object     lua_gettable 		(void); /* In: table, index */
+lua_Object     lua_rawgettable		(void); /* In: table, index */
 
 int            lua_tag			(lua_Object object);
 
@@ -98,6 +97,8 @@ lua_Object     lua_createtable		(void);
 /* =============================================================== */
 /* for compatibility with old versions. Avoid using these macros/functions */
 
+lua_Object     lua_setfallback		(char *event, lua_CFunction fallback);
+
 #define lua_storeglobal(n)	lua_setglobal(n)
 #define lua_type(o)		(lua_tag(o))
 
@@ -111,9 +112,10 @@ void	*lua_getuserdata	(lua_Object object);
 
 #define lua_pushliteral(o)  lua_pushstring(o)
 
-#define lua_getindexed(o,n) (lua_pushobject(o), lua_pushnumber(n), lua_getsubscript())
-#define lua_getfield(o,f)   (lua_pushobject(o), lua_pushliteral(f), lua_getsubscript())
+#define lua_getindexed(o,n) (lua_pushobject(o), lua_pushnumber(n), lua_gettable())
+#define lua_getfield(o,f)   (lua_pushobject(o), lua_pushliteral(f), lua_gettable())
 
 #define lua_copystring(o) (strdup(lua_getstring(o)))
 
+#define lua_getsubscript  lua_gettable
 #endif
