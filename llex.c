@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.54 2000/03/24 17:26:08 roberto Exp roberto $
+** $Id: llex.c,v 1.55 2000/04/05 17:51:58 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -378,7 +378,7 @@ int luaX_lex (LexState *LS) {
             next(LS);
             return TK_DOTS;   /* ... */
           }
-          else return TK_CONC;   /* .. */
+          else return TK_CONCAT;   /* .. */
         }
         else if (!isdigit(LS->current)) return '.';
         else goto fraction;  /* LS->current is a digit */
