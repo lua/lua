@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.37 1997/04/02 22:52:42 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.38 1997/04/02 23:04:12 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -243,6 +243,7 @@ void luaI_setintmethod (void)
     lua_error("cannot change this internal method");
   luaL_arg_check(lua_isnil(func) || lua_isfunction(func), "setintmethod",
                  3, "function expected");
+  luaI_pushobject(&luaI_IMtable[-t].int_method[e]);
   luaI_IMtable[-t].int_method[e] = *luaI_Address(func);
 }
 
