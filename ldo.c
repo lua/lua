@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.4 1997/10/23 16:26:37 roberto Exp roberto $
+** $Id: ldo.c,v 1.5 1997/10/24 17:17:24 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -45,28 +45,14 @@ static  jmp_buf *errorJmp = NULL; /* current error recover point */
 ** Error messages
 */
 
-static void auxerrorim (char *form)
+static void stderrorim (void)
 {
   lua_Object s = lua_getparam(1);
   if (lua_isstring(s))
-    fprintf(stderr, form, lua_getstring(s));
+    fprintf(stderr, "lua error: %s\n", lua_getstring(s));
 }
-
-
-static void femergencyerror (void)
-{
-  auxerrorim("THERE WAS AN ERROR INSIDE AN ERROR METHOD:\n%s\n");
-}
-
-
-static void stderrorim (void)
-{
-  auxerrorim("lua: %s\n");
-}
-
 
 TObject luaD_errorim;
-static TObject emergencyerror;
 
 
 static void initCfunc (TObject *o, lua_CFunction f)
@@ -88,7 +74,6 @@ static void initstack (int n)
   *luaD_stack.stack = initial_stack;
   luaB_predefine();
   initCfunc(&luaD_errorim, stderrorim);
-  initCfunc(&emergencyerror, femergencyerror);
 }
 
 
@@ -261,10 +246,8 @@ static void message (char *s)
 {
   TObject im = luaD_errorim;
   if (ttype(&im) != LUA_T_NIL) {
-    luaD_errorim = emergencyerror;
     lua_pushstring(s);
     luaD_callTM(&im, 1, 0);
-    luaD_errorim = im;
   }
 }
 
