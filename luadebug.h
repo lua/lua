@@ -1,5 +1,5 @@
 /*
-** $Id: luadebug.h,v 1.26 2002/03/14 16:50:06 roberto Exp roberto $
+** $Id: luadebug.h,v 1.27 2002/04/04 17:21:31 roberto Exp roberto $
 ** Debugging API
 ** See Copyright Notice in lua.h
 */
@@ -28,14 +28,15 @@ LUA_API lua_Hook lua_setlinehook (lua_State *L, lua_Hook func);
 #define LUA_IDSIZE	60
 
 struct lua_Debug {
-  const char *event;     /* `call', `return', `line' */
-  const char *name;      /* (n) */
-  const char *namewhat;  /* (n) `global', `local', `field', `method' */
-  const char *what;      /* (S) `Lua' function, `C' function, Lua `main' */
-  const char *source;    /* (S) */
-  int currentline;       /* (l) */
-  int nups;              /* (u) number of upvalues */
-  int linedefined;       /* (S) */
+  const char *event;	/* `call', `return', `line' */
+  const char *name;	/* (n) */
+  const char *namewhat;	/* (n) `global', `local', `field', `method' */
+  const char *what;	/* (S) `Lua' function, `C' function, Lua `main' */
+  const char *source;	/* (S) */
+  int currentline;	/* (l) */
+  int isprotected;	/* (c) function was called in protected mode */
+  int nups;		/* (u) number of upvalues */
+  int linedefined;	/* (S) */
   char short_src[LUA_IDSIZE]; /* (S) */
   /* private part */
   int i_ci;  /* active function */

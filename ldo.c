@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.179 2002/06/03 20:12:50 roberto Exp roberto $
+** $Id: ldo.c,v 1.180 2002/06/18 15:19:27 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -499,6 +499,14 @@ int luaD_runprotected (lua_State *L, Pfunc f, TObject *ud) {
   }
   L->errorJmp = lj.previous;  /* restore old error handler */
   return lj.status;
+}
+
+
+int luaD_isprotected (lua_State *L, CallInfo *ci) {
+  struct lua_longjmp *l;
+  for (l = L->errorJmp; l; l = l->previous)
+    if (l->ci+1 == ci) return 1;
+  return 0;
 }
 
 /* }====================================================== */

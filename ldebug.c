@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.119 2002/06/13 13:39:55 roberto Exp roberto $
+** $Id: ldebug.c,v 1.120 2002/06/18 15:19:27 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -181,6 +181,7 @@ static void getname (lua_State *L, const TObject *f, lua_Debug *ar) {
 }
 
 
+
 LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
   StkId f;
   CallInfo *ci;
@@ -218,6 +219,10 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
       case 'f': {
         setobj(L->top, f);
         status = 2;
+        break;
+      }
+      case 'c': {
+        ar->isprotected = (ci && luaD_isprotected(L, ci));
         break;
       }
       default: status = 0;  /* invalid option */
