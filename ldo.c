@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.121 2001/02/02 15:13:05 roberto Exp roberto $
+** $Id: ldo.c,v 1.122 2001/02/02 16:23:20 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -143,14 +143,6 @@ static StkId callCclosure (lua_State *L, const struct Closure *cl, StkId base) {
 }
 
 
-void luaD_callTM (lua_State *L, Closure *f, int nParams, int nResults) {
-  StkId base = L->top - nParams;
-  luaD_openstack(L, base);
-  setclvalue(base, f);
-  luaD_call(L, base, nResults);
-}
-
-
 /*
 ** Call a function (C or Lua). The function to be called is at *func.
 ** The arguments are on the stack, right after the function.
@@ -182,6 +174,7 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
   if (callhook)  /* same hook that was active at entry */
     luaD_callHook(L, func, callhook, "return");
   lua_assert(ttype(func) == LUA_TMARK);
+  setnilvalue(func);  /* remove callinfo from the stack */
   /* move results to `func' (to erase parameters and function) */
   if (nResults == LUA_MULTRET) {
     while (firstResult < L->top)  /* copy all results */

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.58 2001/01/29 17:16:58 roberto Exp roberto $
+** $Id: ldebug.c,v 1.59 2001/02/02 15:13:05 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -397,10 +397,12 @@ static Instruction luaG_symbexec (const Proto *pt, int lastpc, int stackpos) {
       }
       default: {
         OpCode op = GET_OPCODE(i);
-        lua_assert(luaK_opproperties[op].push != VD);
-        top -= (int)luaK_opproperties[op].pop;
-        lua_assert(top >= 0);
-        top = pushpc(stack, pc, top, luaK_opproperties[op].push);
+        int push = (int)luaK_opproperties[op].push;
+        int pop = (int)luaK_opproperties[op].pop;
+        lua_assert(push != VD && pop != VD);
+        lua_assert(0 <= top-pop && top+push <= pt->maxstacksize);
+        top -= pop;
+        top = pushpc(stack, pc, top, push);
       }
     }
   }
@@ -482,9 +484,9 @@ void luaG_binerror (lua_State *L, StkId p1, int t, const char *op) {
 }
 
 
-void luaG_ordererror (lua_State *L, StkId top) {
-  const char *t1 = luaT_typename(G(L), top-2);
-  const char *t2 = luaT_typename(G(L), top-1);
+void luaG_ordererror (lua_State *L, const TObject *p1, const TObject *p2) {
+  const char *t1 = luaT_typename(G(L), p1);
+  const char *t2 = luaT_typename(G(L), p2);
   if (t1[2] == t2[2])
     luaO_verror(L, "attempt to compare two %.10s values", t1);
   else

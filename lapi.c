@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.124 2001/02/01 16:03:38 roberto Exp roberto $
+** $Id: lapi.c,v 1.125 2001/02/02 15:13:05 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -208,7 +208,7 @@ LUA_API int lua_lessthan (lua_State *L, int index1, int index2) {
   o1 = luaA_indexAcceptable(L, index1);
   o2 = luaA_indexAcceptable(L, index2);
   i = (o1 == NULL || o2 == NULL) ? 0  /* index out-of-range */
-                                 : luaV_lessthan(L, o1, o2, L->top);
+                                 : luaV_lessthan(L, o1, o2);
   LUA_UNLOCK(L);
   return i;
 }
@@ -364,7 +364,7 @@ LUA_API void lua_gettable (lua_State *L, int index) {
   StkId t;
   LUA_LOCK(L);
   t = Index(L, index);
-  luaV_gettable(L, t, L->top, L->top-1);
+  luaV_gettable(L, t, L->top-1, L->top-1);
   LUA_UNLOCK(L);
 }
 
@@ -433,7 +433,7 @@ LUA_API void lua_newtable (lua_State *L) {
 
 LUA_API void lua_setglobal (lua_State *L, const char *name) {
   LUA_LOCK(L);
-  luaV_setglobal(L, luaS_new(L, name), L->top);
+  luaV_setglobal(L, luaS_new(L, name), L->top - 1);
   L->top--;  /* remove element from the top */
   LUA_UNLOCK(L);
 }
@@ -443,7 +443,7 @@ LUA_API void lua_settable (lua_State *L, int index) {
   StkId t;
   LUA_LOCK(L);
   t = Index(L, index);
-  luaV_settable(L, t, L->top - 2, L->top);
+  luaV_settable(L, t, L->top - 2, L->top - 1);
   L->top -= 2;  /* pop index and value */
   LUA_UNLOCK(L);
 }

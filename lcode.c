@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.58 2001/01/29 13:14:49 roberto Exp roberto $
+** $Id: lcode.c,v 1.59 2001/01/29 15:26:40 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -460,25 +460,26 @@ int luaK_code1 (FuncState *fs, OpCode o, int arg1) {
 int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
   Proto *f;
   Instruction i = previous_instruction(fs);
-  int delta = (int)luaK_opproperties[o].push - (int)luaK_opproperties[o].pop;
+  int push = (int)luaK_opproperties[o].push;
+  int pop = (int)luaK_opproperties[o].pop;
   int optm = 0;  /* 1 when there is an optimization */
   switch (o) {
     case OP_CLOSURE: {
-      delta = -arg2+1;
+      pop = arg2;
       break;
     }
     case OP_SETTABLE: {
-      delta = -arg2;
+      pop = arg2;
       break;
     }
     case OP_SETLIST: {
       if (arg2 == 0) return NO_JUMP;  /* nothing to do */
-      delta = -arg2;
+      pop = arg2;
       break;
     }
     case OP_SETMAP: {
       if (arg1 == 0) return NO_JUMP;  /* nothing to do */
-      delta = -2*arg1;
+      pop = 2*arg1;
       break;
     }
     case OP_RETURN: {
@@ -491,7 +492,7 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
     }
     case OP_PUSHNIL: {
       if (arg1 == 0) return NO_JUMP;  /* nothing to do */
-      delta = arg1;
+      push = arg1;
       switch(GET_OPCODE(i)) {
         case OP_PUSHNIL: SETARG_U(i, GETARG_U(i)+arg1); optm = 1; break;
         default: break;
@@ -500,7 +501,7 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
     }
     case OP_POP: {
       if (arg1 == 0) return NO_JUMP;  /* nothing to do */
-      delta = -arg1;
+      pop = arg1;
       switch(GET_OPCODE(i)) {
         case OP_SETTABLE: SETARG_B(i, GETARG_B(i)+arg1); optm = 1; break;
         default: break;
@@ -539,7 +540,7 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
       break;
     }
     case OP_CONCAT: {
-      delta = -arg1+1;
+      pop = arg1;
       switch(GET_OPCODE(i)) {
         case OP_CONCAT:  /* `a..b..c' */
           SETARG_U(i, GETARG_U(i)+1);
@@ -573,7 +574,7 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
     case OP_JMPEQ: {
       if (i == CREATE_U(OP_PUSHNIL, 1)) {  /* `a==nil' */
         i = CREATE_0(OP_NOT);
-        delta = -1;  /* just undo effect of previous PUSHNIL */
+        pop = 1;  /* just undo effect of previous PUSHNIL */
         optm = 1;
       }
       break;
@@ -637,12 +638,14 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
       break;
     }
     default: {
-      lua_assert(delta != VD);
       break;
     }
   }
   f = fs->f;
-  luaK_deltastack(fs, delta);
+  lua_assert(push != VD);
+  lua_assert(pop != VD);
+  luaK_deltastack(fs, push);
+  luaK_deltastack(fs, -pop);
   if (optm) {  /* optimize: put instruction in place of last one */
       f->code[fs->pc-1] = i;  /* change previous instruction */
       return fs->pc-1;  /* do not generate new instruction */
@@ -668,7 +671,7 @@ const OpProperties luaK_opproperties[NUM_OPCODES] = {
   {iAB, 0, 0},	/* OP_CALL */
   {iAB, 0, 0},	/* OP_TAILCALL */
   {iU, VD, 0},	/* OP_PUSHNIL */
-  {iU, VD, 0},	/* OP_POP */
+  {iU, 0, VD},	/* OP_POP */
   {iS, 1, 0},	/* OP_PUSHINT */
   {iU, 1, 0},	/* OP_PUSHSTRING */
   {iU, 1, 0},	/* OP_PUSHNUM */
@@ -683,16 +686,16 @@ const OpProperties luaK_opproperties[NUM_OPCODES] = {
   {iU, 1, 0},	/* OP_CREATETABLE */
   {iU, 0, 1},	/* OP_SETLOCAL */
   {iU, 0, 1},	/* OP_SETGLOBAL */
-  {iAB, VD, 0},	/* OP_SETTABLE */
-  {iAB, VD, 0},	/* OP_SETLIST */
-  {iU, VD, 0},	/* OP_SETMAP */
+  {iAB, 0, VD},	/* OP_SETTABLE */
+  {iAB, 0, VD},	/* OP_SETLIST */
+  {iU, 0, VD},	/* OP_SETMAP */
   {iO, 1, 2},	/* OP_ADD */
   {iS, 1, 1},	/* OP_ADDI */
   {iO, 1, 2},	/* OP_SUB */
   {iO, 1, 2},	/* OP_MULT */
   {iO, 1, 2},	/* OP_DIV */
   {iO, 1, 2},	/* OP_POW */
-  {iU, VD, 0},	/* OP_CONCAT */
+  {iU, 1, VD},	/* OP_CONCAT */
   {iO, 1, 1},	/* OP_MINUS */
   {iO, 1, 1},	/* OP_NOT */
   {iS, 0, 2},	/* OP_JMPNE */
@@ -711,6 +714,6 @@ const OpProperties luaK_opproperties[NUM_OPCODES] = {
   {iS, 0, 3},	/* OP_FORLOOP */
   {iS, 3, 0},	/* OP_LFORPREP */
   {iS, 0, 4},	/* OP_LFORLOOP */
-  {iAB, VD, 0}	/* OP_CLOSURE */
+  {iAB, 1, VD}	/* OP_CLOSURE */
 };
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.86 2001/02/02 16:23:20 roberto Exp roberto $
+** $Id: lgc.c,v 1.87 2001/02/02 16:32:00 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -101,11 +101,14 @@ static void markobject (GCState *st, TObject *o) {
 static void markstacks (lua_State *L, GCState *st) {
   lua_State *L1 = L;
   do {  /* for each thread */
-    StkId o;
+    StkId o, lim;
     marktable(st, L1->gt);  /* mark table of globals */
     for (o=L1->stack; o<L1->top; o++)
       markobject(st, o);
-    lua_assert(L->previous->next == L && L->next->previous == L);
+    lim = (L1->stack_last - L1->top > MAXSTACK) ? L1->top+MAXSTACK
+                                              : L1->stack_last;
+    for (; o<=lim; o++) setnilvalue(o);
+    lua_assert(L1->previous->next == L1 && L1->next->previous == L1);
     L1 = L1->next;
   } while (L1 != L);
 }
