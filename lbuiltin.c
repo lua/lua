@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.69 1999/10/26 10:53:40 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.70 1999/11/04 17:22:26 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -696,7 +696,6 @@ static void testC (void) {
 #define getnum(s)	((*s++) - '0')
 #define getname(s)	(nome[0] = *s++, nome)
 
-  static int locks[10];
   lua_Object reg[10];
   char nome[2];
   const char *s = luaL_check_string(1);
@@ -719,10 +718,14 @@ static void testC (void) {
                   reg[n] = lua_rawgetglobal(getname(s));
                   break;
                 }
-      case 'l': locks[getnum(s)] = lua_ref(1); break;
-      case 'L': locks[getnum(s)] = lua_ref(0); break;
-      case 'r': { int n=getnum(s); reg[n]=lua_getref(locks[getnum(s)]); break; }
-      case 'u': lua_unref(locks[getnum(s)]); break;
+      case 'l': lua_pushnumber(lua_ref(1)); reg[getnum(s)] = lua_pop(); break;
+      case 'L': lua_pushnumber(lua_ref(0)); reg[getnum(s)] = lua_pop(); break;
+      case 'r': { int n=getnum(s);
+                  reg[n]=lua_getref((int)lua_getnumber(reg[getnum(s)]));
+                  break;
+                }
+      case 'u': lua_unref((int)lua_getnumber(reg[getnum(s)]));
+                break;
       case 'p': { int n = getnum(s); reg[n] = lua_getparam(getnum(s)); break; }
       case '=': lua_setglobal(getname(s)); break;
       case 's': lua_pushstring(getname(s)); break;
