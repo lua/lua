@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.43 2002/04/23 14:59:35 roberto Exp roberto $
+** $Id: llimits.h,v 1.44 2002/06/13 13:45:31 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -51,6 +51,10 @@ typedef unsigned long lu_mem;
 
 /* an integer big enough to count the number of strings in use */
 typedef long ls_nstr;
+
+/* an integer big enough to count the number of steps when calling a
+** `count' hook */
+typedef long ls_count;
 
 
 /* chars used as small naturals (so that `char' is reserved for characteres) */

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.244 2002/07/05 18:27:39 roberto Exp roberto $
+** $Id: lvm.c,v 1.245 2002/07/08 18:21:33 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -70,7 +70,7 @@ int luaV_tostring (lua_State *L, TObject *obj) {
 
 static void traceexec (lua_State *L) {
   int mask = L->hookmask;
-  if (mask >= LUA_MASKCOUNT) {  /* instruction hook set? */
+  if (mask > LUA_MASKLINE) {  /* instruction hook set? */
     if (L->hookcount == 0) {
       luaD_callhook(L, LUA_HOOKCOUNT, -1);
       resethookcount(L);

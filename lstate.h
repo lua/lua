@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.86 2002/07/02 16:43:28 roberto Exp roberto $
+** $Id: lstate.h,v 1.87 2002/07/08 18:21:33 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -131,7 +131,7 @@ struct lua_State {
   CallInfo *base_ci;  /* array of CallInfo's */
   global_State *l_G;
   int hookmask;
-  int hookcount;
+  ls_count hookcount;
   lua_Hook hook;
   TObject globs[NUMGLOBS];  /* registry, table of globals, etc. */
   struct lua_longjmp *errorJmp;  /* current error recover point */

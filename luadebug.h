@@ -1,5 +1,5 @@
 /*
-** $Id: luadebug.h,v 1.28 2002/06/18 17:10:43 roberto Exp roberto $
+** $Id: luadebug.h,v 1.29 2002/07/08 18:21:33 roberto Exp roberto $
 ** Debugging API
 ** See Copyright Notice in lua.h
 */
@@ -19,9 +19,8 @@ typedef enum lua_Hookevent {
 #define LUA_MASKCALL	(2 << LUA_HOOKCALL)
 #define LUA_MASKRET	(2 << LUA_HOOKRET)
 #define LUA_MASKLINE	(2 << LUA_HOOKLINE)
-#define lua_maskcount(count)	((count) << (LUA_HOOKCOUNT+1))
+#define LUA_MASKCOUNT(count)	((count) << (LUA_HOOKCOUNT+1))
 #define lua_getmaskcount(mask)	((mask) >> (LUA_HOOKCOUNT+1))
-#define LUA_MASKCOUNT		(lua_maskcount(1))
 
 typedef struct lua_Debug lua_Debug;  /* activation record */
 
