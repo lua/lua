@@ -209,7 +209,7 @@ static void read_long_string (LexState *LS, SemInfo *seminfo) {
     switch (LS->current) {
       case EOZ:
         save(L, '\0', l);
-        luaX_error(LS, "unfinished long string", TK_STRING);
+        luaX_error(LS, "unfinished long string", TK_EOS);
         break;  /* to avoid warnings */
       case '[':
         save_and_next(L, LS, l);
@@ -303,12 +303,6 @@ int luaX_lex (LexState *LS, SemInfo *seminfo) {
       case '\n':
         inclinenumber(LS);
         continue;
-
-      case '$':
-        luaX_error(LS,
-                   "unexpected `$' (pragmas are no longer supported)",
-                   LS->current);
-        break;
 
       case '-':
         next(LS);
