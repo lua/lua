@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.6 2004/09/27 18:54:45 roberto Exp roberto $
+** $Id: ltable.c,v 2.7 2004/10/06 18:34:16 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -38,7 +38,7 @@
 ** max size of array part is 2^MAXBITS
 */
 #if LUA_BITSINT > 26
-#define MAXBITS		24
+#define MAXBITS		26
 #else
 #define MAXBITS		(LUA_BITSINT-2)
 #endif
