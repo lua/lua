@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.29 1996/09/20 18:20:44 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.30 1996/10/31 17:26:04 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -359,10 +359,10 @@ static char *match (char *s, char *p, int level)
 
 static void str_find (void)
 {
-  char *s = lua_check_string(1, "find");
-  char *p = lua_check_string(2, "find");
+  char *s = lua_check_string(1, "strfind");
+  char *p = lua_check_string(2, "strfind");
   long init = lua_opt_number(3, 1, "strfind") - 1;
-  lua_arg_check(0 <= init && init <= strlen(s), "find");
+  lua_arg_check(0 <= init && init <= strlen(s), "strfind");
   if (lua_getparam(4) != LUA_NOOBJECT || 
       strpbrk(p, SPECIALS) == NULL) {  /* no special caracters? */
     char *s2 = strstr(s+init, p);
@@ -415,7 +415,7 @@ static void add_s (lua_Object newp)
     addstr(lua_isstring(res) ? lua_getstring(res) : "");
     lua_endblock();
   }
-  else lua_error("incorrect argument to `gsub'");
+  else lua_arg_check(0, "gsub");
 }
 
 static void str_gsub (void)
