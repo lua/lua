@@ -1,5 +1,5 @@
 /*
-** $Id: lzio.h,v 1.5 1999/08/16 20:52:00 roberto Exp roberto $
+** $Id: lzio.h,v 1.6 2000/05/24 13:54:49 roberto Exp roberto $
 ** Buffered streams
 ** See Copyright Notice in lua.h
 */
@@ -33,9 +33,12 @@ size_t zread (ZIO* z, void* b, size_t n);	/* read next n bytes */
 #define zname(z)	((z)->name)
 
 
+
 /* --------- Private Part ------------------ */
 
+#ifndef ZBSIZE
 #define ZBSIZE	256			/* buffer size */
+#endif
 
 struct zio {
   size_t n;				/* bytes still unread */

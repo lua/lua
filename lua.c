@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.53 2000/10/09 15:46:43 roberto Exp roberto $
+** $Id: lua.c,v 1.54 2000/10/17 13:36:24 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -115,7 +115,7 @@ static void print_message (void) {
 
 
 static void print_version (void) {
-  printf("%s  %s\n", LUA_VERSION, LUA_COPYRIGHT);
+  printf("%.80s  %.80s\n", LUA_VERSION, LUA_COPYRIGHT);
 }
 
 
@@ -255,7 +255,7 @@ static int handle_argv (char *argv[], struct Options *opt) {
               return EXIT_FAILURE;
             }
             if (ldo(lua_dostring, argv[i]) != 0) {
-              fprintf(stderr, "lua: error running argument `%s'\n", argv[i]);
+              fprintf(stderr, "lua: error running argument `%.99s'\n", argv[i]);
               return EXIT_FAILURE;
             }
             break;
@@ -289,7 +289,7 @@ static void getstacksize (int argc, char *argv[], struct Options *opt) {
   if (argc >= 2 && argv[1][0] == '-' && argv[1][1] == 's') {
     int stacksize = atoi(&argv[1][2]);
     if (stacksize <= 0) {
-      fprintf(stderr, "lua: invalid stack size ('%s')\n", &argv[1][2]);
+      fprintf(stderr, "lua: invalid stack size ('%.20s')\n", &argv[1][2]);
       exit(EXIT_FAILURE);
     }
     opt->stacksize = stacksize;

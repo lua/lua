@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.53 2000/10/09 13:47:32 roberto Exp roberto $
+** $Id: lobject.c,v 1.54 2000/10/10 19:53:20 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -76,10 +76,13 @@ int luaO_str2d (const char *s, Number *result) {  /* LUA_NUMBER */
 }
 
 
+/* maximum length of a string format for `luaO_verror' */
+#define MAX_VERROR	280
+
 /* this function needs to handle only '%d' and '%.XXs' formats */
 void luaO_verror (lua_State *L, const char *fmt, ...) {
   va_list argp;
-  char buff[600];  /* to hold formatted message */
+  char buff[MAX_VERROR];  /* to hold formatted message */
   va_start(argp, fmt);
   vsprintf(buff, fmt, argp);
   va_end(argp);
@@ -88,8 +91,10 @@ void luaO_verror (lua_State *L, const char *fmt, ...) {
 
 
 void luaO_chunkid (char *out, const char *source, int bufflen) {
-  if (*source == '=')
-    sprintf(out, "%.*s", bufflen-1, source+1);  /* remove first char */
+  if (*source == '=') {
+    strncpy(out, source+1, bufflen);  /* remove first char */
+    out[bufflen-1] = '\0';  /* ensures null termination */
+  }
   else {
     if (*source == '@') {
       int l;
@@ -98,19 +103,23 @@ void luaO_chunkid (char *out, const char *source, int bufflen) {
       l = strlen(source);
       if (l>bufflen) {
         source += (l-bufflen);  /* get last part of file name */
-        sprintf(out, "file `...%s'", source);
+        sprintf(out, "file `...%.99s'", source);
       }
       else
-        sprintf(out, "file `%s'", source);
+        sprintf(out, "file `%.99s'", source);
     }
     else {
       int len = strcspn(source, "\n");  /* stop at first newline */
       bufflen -= sizeof("string \"%.*s...\"");
       if (len > bufflen) len = bufflen;
-      if (source[len] != '\0')  /* must truncate? */
-        sprintf(out, "string \"%.*s...\"", len, source);
+      if (source[len] != '\0') {  /* must truncate? */
+        strcpy(out, "string \"");
+        out += strlen(out);
+        strncpy(out, source, len);
+        strcpy(out+len, "...\"");
+      }
       else
-        sprintf(out, "string \"%s\"", source);
+        sprintf(out, "string \"%.99s\"", source);
     }
   }
 }
