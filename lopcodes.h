@@ -129,7 +129,6 @@ name		args	description
 ------------------------------------------------------------------------*/
 OP_MOVE,/*	A B	R(A) := R(B)					*/
 OP_LOADK,/*	A Bc	R(A) := Kst(Bc)					*/
-OP_LOADINT,/*	A sBc	R(A) := (Number)sBc				*/
 OP_LOADBOOL,/*	A B C	R(A) := (Bool)B; if (C) PC++			*/
 OP_LOADNIL,/*	A B	R(A) := ... := R(B) := nil			*/
 OP_GETUPVAL,/*	A B	R(A) := UpValue[B]				*/
@@ -180,10 +179,7 @@ OP_SETLIST,/*	A Bc	R(A)[Bc-Bc%FPF+i] := R(A+i), 1 <= i <= Bc%FPF+1	*/
 OP_SETLISTO,/*	A Bc							*/
 
 OP_CLOSE,/*	A 	close all variables in the stack up to (>=) R(A)*/
-OP_CLOSURE /*	A Bc	R(A) := closure(KPROTO[Bc], R(A), ... ,R(A+n))	*/
-/*----------------------------------------------------------------------
-pseudo-instructions (interruptions): cannot occur in regular code
-------------------------------------------------------------------------*/
+OP_CLOSURE/*	A Bc	R(A) := closure(KPROTO[Bc], R(A), ... ,R(A+n))	*/
 } OpCode;
 
 

@@ -17,7 +17,6 @@
 const char *const luaP_opnames[] = {
   "MOVE",
   "LOADK",
-  "LOADINT",
   "LOADBOOL",
   "LOADNIL",
   "GETUPVAL",
@@ -67,7 +66,6 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
 /*       T _ B C sA K mode		   opcode    */
   opmode(0,0,1,0, 1,0,iABC)		/* OP_MOVE */
  ,opmode(0,0,0,0, 1,1,iABc)		/* OP_LOADK */
- ,opmode(0,0,0,0, 1,0,iAsBc)		/* OP_LOADINT */
  ,opmode(0,0,0,0, 1,0,iABC)		/* OP_LOADBOOL */
  ,opmode(0,0,1,0, 1,0,iABC)		/* OP_LOADNIL */
  ,opmode(0,0,0,0, 1,0,iABC)		/* OP_GETUPVAL */

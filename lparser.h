@@ -34,7 +34,6 @@ typedef enum {
   VNIL,
   VTRUE,
   VFALSE,
-  VNUMBER,	/* n = value */
   VK,		/* info = index of constant in `k' */
   VLOCAL,	/* info = local register */
   VUPVAL,       /* info = index of upvalue in `upvalues' */
@@ -48,12 +47,7 @@ typedef enum {
 
 typedef struct expdesc {
   expkind k;
-  union {
-    struct {
-      int info, aux;
-    } i;
-    lua_Number n;
-  } u;
+  int info, aux;
   int t;  /* patch list of `exit when true' */
   int f;  /* patch list of `exit when false' */
 } expdesc;

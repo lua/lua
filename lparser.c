@@ -130,12 +130,12 @@ static TString *str_checkname (LexState *ls) {
 static void init_exp (expdesc *e, expkind k, int i) {
   e->f = e->t = NO_JUMP;
   e->k = k;
-  e->u.i.info = i;
+  e->info = i;
 }
 
 
 static void codestring (LexState *ls, expdesc *e, TString *s) {
-  init_exp(e, VK, luaK_stringk(ls->fs, s));
+  init_exp(e, VK, luaK_stringK(ls->fs, s));
 }
 
 
@@ -201,7 +201,7 @@ static void new_localvarstr (LexState *ls, const char *name, int n) {
 static int indexupvalue (FuncState *fs, expdesc *v) {
   int i;
   for (i=0; i<fs->f->nupvalues; i++) {
-    if (fs->upvalues[i].k == v->k && fs->upvalues[i].u.i.info == v->u.i.info)
+    if (fs->upvalues[i].k == v->k && fs->upvalues[i].info == v->info)
       return i;
   }
   /* new one */
@@ -228,10 +228,10 @@ static void singlevar (FuncState *fs, TString *n, expdesc *var, int baselevel) {
     singlevar(fs->prev, n, var, 0);
     if (var->k == VGLOBAL) {
       if (baselevel)
-        var->u.i.info = luaK_stringk(fs, n);  /* info points to global name */
+        var->info = luaK_stringK(fs, n);  /* info points to global name */
     }
     else {  /* local variable in some upper level? */
-      var->u.i.info = indexupvalue(fs, var);
+      var->info = indexupvalue(fs, var);
       var->k = VUPVAL;  /* upvalue in this level */
     }
   }
@@ -447,7 +447,7 @@ static void funcargs (LexState *ls, expdesc *f) {
     }
   }
   lua_assert(f->k == VNONRELOC);
-  base = f->u.i.info;  /* base register for call */
+  base = f->info;  /* base register for call */
   if (args.k == VCALL)
     nparams = LUA_MULTRET;  /* open call */
   else {
@@ -489,7 +489,7 @@ static void recfield (LexState *ls, expdesc *t) {
   luaK_exp2RK(fs, &key);
   expr(ls, &val);
   luaK_exp2anyreg(fs, &val);
-  luaK_codeABC(fs, OP_SETTABLE, val.u.i.info, t->u.i.info,
+  luaK_codeABC(fs, OP_SETTABLE, val.info, t->info,
                luaK_exp2RK(fs, &key));
   fs->freereg = reg;  /* free registers */
 }
@@ -526,7 +526,7 @@ static int listfields (LexState *ls, expdesc *t) {
     luaK_exp2nextreg(fs, &v);
     luaX_checklimit(ls, n, MAXARG_Bc, "items in a constructor");
     if (n%LFIELDS_PER_FLUSH == 0) {
-      luaK_codeABc(fs, OP_SETLIST, t->u.i.info, n-1);  /* flush */
+      luaK_codeABc(fs, OP_SETLIST, t->info, n-1);  /* flush */
       fs->freereg = reg;  /* free registers */
     }
     expr(ls, &v);
@@ -534,11 +534,11 @@ static int listfields (LexState *ls, expdesc *t) {
   }
   if (v.k == VCALL) {
     luaK_setcallreturns(fs, &v, LUA_MULTRET);
-    luaK_codeABc(fs, OP_SETLISTO, t->u.i.info, n-1);
+    luaK_codeABc(fs, OP_SETLISTO, t->info, n-1);
   }
   else {
     luaK_exp2nextreg(fs, &v);
-    luaK_codeABc(fs, OP_SETLIST, t->u.i.info, n-1);
+    luaK_codeABc(fs, OP_SETLIST, t->info, n-1);
   }
   fs->freereg = reg;  /* free registers */
   return n;
@@ -686,8 +686,7 @@ static void simpleexp (LexState *ls, expdesc *v) {
                | primaryexp */
   switch (ls->t.token) {
     case TK_NUMBER: {
-      init_exp(v, VNUMBER, 0);
-      v->u.n = ls->t.seminfo.r;
+      init_exp(v, VK, luaK_numberK(ls->fs, ls->t.seminfo.r));
       next(ls);  /* must use `seminfo' before `next' */
       break;
     }
@@ -859,18 +858,18 @@ static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
   int conflict = 0;
   for (; lh; lh = lh->prev) {
     if (lh->v.k == VINDEXED) {
-      if (lh->v.u.i.info == v->u.i.info) {  /* conflict? */
+      if (lh->v.info == v->info) {  /* conflict? */
         conflict = 1;
-        lh->v.u.i.info = extra;  /* previous assignment will use safe copy */
+        lh->v.info = extra;  /* previous assignment will use safe copy */
       }
-      if (lh->v.u.i.aux == v->u.i.info) {  /* conflict? */
+      if (lh->v.aux == v->info) {  /* conflict? */
         conflict = 1;
-        lh->v.u.i.aux = extra;  /* previous assignment will use safe copy */
+        lh->v.aux = extra;  /* previous assignment will use safe copy */
       }
     }
   }
   if (conflict) {
-    luaK_codeABC(fs, OP_MOVE, fs->freereg, v->u.i.info, 0);  /* make copy */
+    luaK_codeABC(fs, OP_MOVE, fs->freereg, v->info, 0);  /* make copy */
     luaK_reserveregs(fs, 1);
   }
 }
@@ -980,8 +979,8 @@ static void fornum (LexState *ls, TString *varname) {
   exp1(ls);  /* limit */
   if (optional(ls, ','))
     exp1(ls);  /* optional step */
-  else {
-    luaK_codeAsBc(fs, OP_LOADINT, fs->freereg, 1);  /* default step */
+  else {  /* default step = 1 */
+    luaK_codeABc(fs, OP_LOADK, fs->freereg, luaK_numberK(fs, 1));
     luaK_reserveregs(fs, 1);
   }
   new_localvar(ls, varname, 0);
