@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.58 1999/12/06 12:03:45 roberto Exp roberto $
+** $Id: ldo.c,v 1.59 1999/12/21 18:04:41 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -93,7 +93,8 @@ void luaD_adjusttop (lua_State *L, StkId base, int extra) {
 ** Open a hole inside the stack at `pos'
 */
 void luaD_openstack (lua_State *L, StkId pos) {
-  luaO_memup(pos+1, pos, (L->top-pos)*sizeof(TObject));
+  int i = L->top-pos; 
+  while (i--) pos[i+1] = pos[i];
   incr_top;
 }
 
@@ -122,15 +123,18 @@ static void luaD_callHook (lua_State *L, StkId func, lua_CHFunction callhook,
     if (isreturn)
       callhook(L, LUA_NOOBJECT, "(return)", 0);
     else {
-      if (ttype(func) == LUA_T_PROTO)
-        callhook(L, func, tfvalue(func)->source->str,
-                          tfvalue(func)->lineDefined);
-      else if (ttype(func) == LUA_T_CLOSURE &&
-               ttype(clvalue(func)->consts) == LUA_T_PROTO)
-        callhook(L, func, tfvalue(protovalue(func))->source->str,
-                          tfvalue(protovalue(func))->lineDefined);
-      else
-        callhook(L, func, "(C)", -1);
+      switch (ttype(func)) {
+        case LUA_T_LPROTO:
+          callhook(L, func, tfvalue(func)->source->str,
+                            tfvalue(func)->lineDefined);
+          break;
+        case LUA_T_LCLOSURE:
+          callhook(L, func, tfvalue(protovalue(func))->source->str,
+                            tfvalue(protovalue(func))->lineDefined);
+          break;
+        default:
+          callhook(L, func, "(C)", -1);
+      }
     }
     L->allowhooks = 1;
     L->top = old_top;
@@ -158,16 +162,16 @@ static StkId callC (lua_State *L, lua_CFunction f, StkId base) {
 }
 
 
-static StkId callCclosure (lua_State *L, const struct Closure *cl,
-                           lua_CFunction f, StkId base) {
+static StkId callCclosure (lua_State *L, const struct Closure *cl, StkId base) {
   int nup = cl->nelems;  /* number of upvalues */
+  int n = L->top-base;   /* number of arguments (to move up) */
   luaD_checkstack(L, nup);
   /* open space for upvalues as extra arguments */
-  luaO_memup(base+nup, base, (L->top-base)*sizeof(TObject));
-  /* copy upvalues into stack */
-  memcpy(base, cl->consts+1, nup*sizeof(TObject));
+  while (n--) *(base+nup+n) = *(base+n);
   L->top += nup;
-  return callC(L, f, base);
+  /* copy upvalues into stack */
+  while (nup--) *(base+nup) = cl->consts[nup+1];
+  return callC(L, fvalue(cl->consts), base);
 }
 
 
@@ -197,17 +201,20 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
       ttype(func) = LUA_T_CMARK;
       firstResult = callC(L, fvalue(func), func+1);
       break;
-    case LUA_T_PROTO:
-      ttype(func) = LUA_T_PMARK;
+    case LUA_T_LPROTO:
+      ttype(func) = LUA_T_LMARK;
       firstResult = luaV_execute(L, NULL, tfvalue(func), func+1);
       break;
-    case LUA_T_CLOSURE: {
+    case LUA_T_LCLOSURE: {
       Closure *c = clvalue(func);
-      TObject *proto = c->consts;
-      ttype(func) = LUA_T_CLMARK;
-      firstResult = (ttype(proto) == LUA_T_CPROTO) ?
-                       callCclosure(L, c, fvalue(proto), func+1) :
-                       luaV_execute(L, c, tfvalue(proto), func+1);
+      ttype(func) = LUA_T_LCLMARK;
+      firstResult = luaV_execute(L, c, tfvalue(c->consts), func+1);
+      break;
+    }
+    case LUA_T_CCLOSURE: {
+      Closure *c = clvalue(func);
+      ttype(func) = LUA_T_CCLMARK;
+      firstResult = callCclosure(L, c, func+1);
       break;
     }
     default: { /* `func' is not a function; check the `function' tag method */
@@ -226,16 +233,18 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
     nResults = L->top - firstResult;
   else
     luaD_adjusttop(L, firstResult, nResults);
-  /* move results to func (to erase parameters and function) */
-  luaO_memdown(func, firstResult, nResults*sizeof(TObject));
-  L->top = func+nResults;
+  /* move results to `func' (to erase parameters and function) */
+  while (nResults) {
+    *func++ = *(L->top - nResults);
+    nResults--;
+  }
+  L->top = func;
 }
 
 
 static void message (lua_State *L, const char *s) {
   const TObject *em = &(luaS_assertglobalbyname(L, "_ERRORMESSAGE")->value);
-  if (ttype(em) == LUA_T_PROTO || ttype(em) == LUA_T_CPROTO ||
-      ttype(em) == LUA_T_CLOSURE) {
+  if (*luaO_typename(em) == 'f') {
     *L->top = *em;
     incr_top;
     lua_pushstring(L, s);
@@ -313,7 +322,7 @@ static int protectedparser (lua_State *L, ZIO *z, int bin) {
   L->errorJmp = oldErr;
   if (status) return 1;  /* error code */
   if (tf == NULL) return 2;  /* `natural' end */
-  L->top->ttype = LUA_T_PROTO;  /* push new function on the stack */
+  L->top->ttype = LUA_T_LPROTO;  /* push new function on the stack */
   L->top->value.tf = tf;
   incr_top;
   return 0;

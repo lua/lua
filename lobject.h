@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.39 1999/12/02 16:24:45 roberto Exp roberto $
+** $Id: lobject.h,v 1.40 1999/12/14 18:33:29 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -69,25 +69,33 @@ typedef enum {
   LUA_T_NUMBER   = -1,  /* fixed tag for numbers */
   LUA_T_STRING   = -2,  /* fixed tag for strings */
   LUA_T_ARRAY    = -3,  /* tag default for tables (or arrays) */
-  LUA_T_PROTO    = -4,  /* fixed tag for functions */
-  LUA_T_CPROTO   = -5,  /* fixed tag for Cfunctions */
+  LUA_T_LPROTO   = -4,  /* fixed tag for Lua functions */
+  LUA_T_CPROTO   = -5,  /* fixed tag for C functions */
   LUA_T_NIL      = -6,  /* last "pre-defined" tag */
-  LUA_T_CLOSURE  = -7,
-  LUA_T_CLMARK   = -8,  /* mark for closures */
-  LUA_T_PMARK    = -9,  /* mark for Lua prototypes */
-  LUA_T_CMARK    = -10, /* mark for C prototypes */
-  LUA_T_LINE     = -11
+  LUA_T_LCLOSURE  = -7, /* Lua closure */
+  LUA_T_CCLOSURE  = -8, /* C closure */
+  LUA_T_LCLMARK   = -9 ,/* mark for Lua closures */
+  LUA_T_CCLMARK   = -10,/* mark for C closures */
+  LUA_T_LMARK    = -11, /* mark for Lua prototypes */
+  LUA_T_CMARK    = -12, /* mark for C prototypes */
+  LUA_T_LINE     = -13
 } lua_Type;
 
 #define NUM_TAGS  7
+
+/*
+** chech whether t is a mark; ttypes are negative numbers, so the
+** comparisons look reversed.  (ORDER LUA_T)
+*/
+#define is_T_MARK(t)	(LUA_T_CMARK <= (t) && (t) <= LUA_T_LCLMARK)
 
 
 typedef union {
   lua_CFunction f;  /* LUA_T_CPROTO, LUA_T_CMARK */
   real n;  /* LUA_T_NUMBER */
   struct TaggedString *ts;  /* LUA_T_STRING, LUA_T_USERDATA */
-  struct TProtoFunc *tf;  /* LUA_T_PROTO, LUA_T_PMARK */
-  struct Closure *cl;  /* LUA_T_CLOSURE, LUA_T_CLMARK */
+  struct TProtoFunc *tf;  /* LUA_T_LPROTO, LUA_T_LMARK */
+  struct Closure *cl;  /* LUA_T_[CL]CLOSURE, LUA_T_[CL]CLMARK */
   struct Hash *a;  /* LUA_T_ARRAY */
   int i;  /* LUA_T_LINE */
 } Value;

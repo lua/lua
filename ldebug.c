@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: ldebug.c,v 1.1 1999/12/14 18:31:20 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -42,10 +42,11 @@ int lua_setdebug (lua_State *L, int debug) {
 lua_Function lua_stackedfunction (lua_State *L, int level) {
   int i;
   for (i = (L->top-1)-L->stack; i>=0; i--) {
-    int t = L->stack[i].ttype;
-    if (t == LUA_T_CLMARK || t == LUA_T_PMARK || t == LUA_T_CMARK)
-      if (level-- == 0)
+    if (is_T_MARK(L->stack[i].ttype)) {
+      if (level == 0)
         return L->stack+i;
+      level--;
+    }
   }
   return LUA_NOOBJECT;
 }
@@ -53,8 +54,12 @@ lua_Function lua_stackedfunction (lua_State *L, int level) {
 
 int lua_nups (lua_State *L, lua_Function f) {
   UNUSED(L);
-  return (!f || luaA_normalizedtype(f) != LUA_T_CLOSURE) ? 0 :
-            f->value.cl->nelems;
+  switch (luaA_normalizedtype(f)) {
+    case LUA_T_LCLOSURE:  case LUA_T_CCLOSURE:
+      return f->value.cl->nelems;
+    default:
+      return 0;
+  }
 }
 
 
@@ -66,7 +71,7 @@ int lua_currentline (lua_State *L, lua_Function f) {
 lua_Object lua_getlocal (lua_State *L, lua_Function f, int local_number,
                          const char **name) {
   /* check whether `f' is a Lua function */
-  if (lua_tag(L, f) != LUA_T_PROTO)
+  if (lua_tag(L, f) != LUA_T_LPROTO)
     return LUA_NOOBJECT;
   else {
     TProtoFunc *fp = luaA_protovalue(f)->value.tf;
@@ -84,7 +89,7 @@ lua_Object lua_getlocal (lua_State *L, lua_Function f, int local_number,
 
 int lua_setlocal (lua_State *L, lua_Function f, int local_number) {
   /* check whether `f' is a Lua function */
-  if (lua_tag(L, f) != LUA_T_PROTO)
+  if (lua_tag(L, f) != LUA_T_LPROTO)
     return 0;
   else {
     TProtoFunc *fp = luaA_protovalue(f)->value.tf;
@@ -110,7 +115,7 @@ void lua_funcinfo (lua_State *L, lua_Object func,
     lua_error(L, "API error - `funcinfo' called with a non-function value");
   else {
     const TObject *f = luaA_protovalue(func);
-    if (luaA_normalizedtype(f) == LUA_T_PROTO) {
+    if (luaA_normalizedtype(f) == LUA_T_LPROTO) {
       *source = tfvalue(f)->source->str;
       *linedefined = tfvalue(f)->lineDefined;
     }

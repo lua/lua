@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.73 1999/12/14 18:31:20 roberto Exp roberto $
+** $Id: lvm.c,v 1.74 1999/12/21 18:04:41 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -86,8 +86,10 @@ void luaV_closure (lua_State *L, int nelems) {
     Closure *c = luaF_newclosure(L, nelems);
     c->consts[0] = *(L->top-1);
     L->top -= nelems;
-    memcpy(&c->consts[1], L->top-1, nelems*sizeof(TObject));
-    ttype(L->top-1) = LUA_T_CLOSURE;
+    while (nelems--)
+      c->consts[nelems+1] = *(L->top-1+nelems);
+    ttype(L->top-1) = (ttype(&c->consts[0]) == LUA_T_CPROTO) ?
+                        LUA_T_CCLOSURE : LUA_T_LCLOSURE;
     (L->top-1)->value.cl = c;
   }
 }
@@ -577,6 +579,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
         *top++ = consts[aux];
         L->top = top;
         aux = *pc++;  /* number of upvalues */
+        LUA_ASSERT(L, aux>0, "closure with no upvalues");
         luaV_closure(L, aux);
         luaC_checkGC(L);
         top -= aux;

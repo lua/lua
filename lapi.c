@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.63 1999/12/06 12:03:45 roberto Exp roberto $
+** $Id: lapi.c,v 1.64 1999/12/14 18:31:20 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -30,19 +30,13 @@ const char lua_ident[] = "$Lua: " LUA_VERSION " " LUA_COPYRIGHT " $\n"
 
 
 
-lua_Type luaA_normalizedtype (const TObject *o) {
-  int t = ttype(o);
-  switch (t) {
-    case LUA_T_PMARK:
-      return LUA_T_PROTO;
-    case LUA_T_CMARK:
-      return LUA_T_CPROTO;
-    case LUA_T_CLMARK:
-      return LUA_T_CLOSURE;
-    default:
-      return t;
-  }
-}
+const lua_Type luaA_normtype[] = {  /* ORDER LUA_T */
+  LUA_T_USERDATA, LUA_T_NUMBER, LUA_T_STRING, LUA_T_ARRAY,
+  LUA_T_LPROTO, LUA_T_CPROTO, LUA_T_NIL,
+  LUA_T_LCLOSURE, LUA_T_CCLOSURE,
+  LUA_T_LCLOSURE, LUA_T_CCLOSURE,   /* LUA_T_LCLMARK, LUA_T_CCLMARK */
+  LUA_T_LPROTO, LUA_T_CPROTO        /* LUA_T_LMARK, LUA_T_CMARK */
+};
 
 
 void luaA_setnormalized (TObject *d, const TObject *s) {
@@ -52,7 +46,15 @@ void luaA_setnormalized (TObject *d, const TObject *s) {
 
 
 const TObject *luaA_protovalue (const TObject *o) {
-  return (luaA_normalizedtype(o) == LUA_T_CLOSURE) ?  protovalue(o) : o;
+  switch (luaA_normalizedtype(o)) {
+    case LUA_T_CCLOSURE:  case LUA_T_LCLOSURE:
+      return protovalue(o);
+    default:
+      LUA_ASSERT(L, luaA_normalizedtype(o) == LUA_T_LPROTO ||
+                    luaA_normalizedtype(o) == LUA_T_CPROTO,
+                    "invalid `function'");
+      return o;
+  }
 }
 
 
@@ -228,26 +230,32 @@ int lua_isnumber (lua_State *L, lua_Object o) {
 }
 
 int lua_isstring (lua_State *L, lua_Object o) {
-  int t = lua_tag(L, o);
-  return (t == LUA_T_STRING) || (t == LUA_T_NUMBER);
+  UNUSED(L);
+  return (o != LUA_NOOBJECT && (ttype(o) == LUA_T_STRING ||
+                                ttype(o) == LUA_T_NUMBER));
 }
 
 int lua_isfunction (lua_State *L, lua_Object o) {
-  int t = lua_tag(L, o);
-  return (t == LUA_T_PROTO) || (t == LUA_T_CPROTO);
+  return *lua_type(L, o) == 'f';
 }
 
 int lua_equal(lua_State *L, lua_Object o1, lua_Object o2) {
   UNUSED(L);
-  if (o1 == LUA_NOOBJECT || o2 == LUA_NOOBJECT) return (o1 == o2);
-  else return luaO_equalObj(o1, o2);
+  if (o1 == LUA_NOOBJECT || o2 == LUA_NOOBJECT)
+    return (o1 == o2);
+  else {
+    TObject obj1, obj2;
+    luaA_setnormalized(&obj1, o1);
+    luaA_setnormalized(&obj2, o2);
+    return luaO_equalObj(&obj1, &obj2);
+  }
 }
 
 
 double lua_getnumber (lua_State *L, lua_Object obj) {
   UNUSED(L);
-  if (obj == LUA_NOOBJECT) return 0.0;
-  if (tonumber(obj)) return 0.0;
+  if (obj == LUA_NOOBJECT  || tonumber(obj))
+     return 0.0;
   else return (nvalue(obj));
 }
 
@@ -339,28 +347,11 @@ void lua_pushobject (lua_State *L, lua_Object o) {
 int lua_tag (lua_State *L, lua_Object o) {
   UNUSED(L);
   if (o == LUA_NOOBJECT)
-     return LUA_T_NIL;
-  else {
-    int t;
-    switch (t = ttype(o)) {
-      case LUA_T_USERDATA:
-        return o->value.ts->u.d.tag;
-      case LUA_T_ARRAY:
-        return o->value.a->htag;
-      case LUA_T_PMARK:
-        return LUA_T_PROTO;
-      case LUA_T_CMARK:
-        return LUA_T_CPROTO;
-      case LUA_T_CLOSURE: case LUA_T_CLMARK:
-        return o->value.cl->consts[0].ttype;
-#ifdef DEBUG
-      case LUA_T_LINE:
-        LUA_INTERNALERROR(L, "invalid type");
-#endif
-      default:
-        return t;
-    }
-  }
+    return LUA_T_NIL;
+  else if (ttype(o) == LUA_T_USERDATA)  /* to allow `old' tags (deprecated) */
+    return o->value.ts->u.d.tag;
+  else
+    return luaT_effectivetag(o);
 }
 
 

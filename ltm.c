@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.28 1999/10/04 17:51:04 roberto Exp roberto $
+** $Id: ltm.c,v 1.29 1999/11/22 13:12:07 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -42,7 +42,7 @@ static const char luaT_validevents[NUM_TAGS][IM_N] = {
 {1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_T_NUMBER */
 {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},  /* LUA_T_STRING */
 {0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1},  /* LUA_T_ARRAY */
-{1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_PROTO */
+{1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_LPROTO */
 {1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},  /* LUA_T_CPROTO */
 {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}   /* LUA_T_NIL */
 };
@@ -104,23 +104,21 @@ int lua_copytagmethods (lua_State *L, int tagto, int tagfrom) {
 
 
 int luaT_effectivetag (const TObject *o) {
+  static const int realtag[] = {  /* ORDER LUA_T */
+    LUA_T_USERDATA, LUA_T_NUMBER, LUA_T_STRING, LUA_T_ARRAY,
+    LUA_T_LPROTO, LUA_T_CPROTO, LUA_T_NIL,
+    LUA_T_LPROTO, LUA_T_CPROTO,       /* LUA_T_LCLOSURE, LUA_T_CCLOSURE */
+    LUA_T_LPROTO, LUA_T_CPROTO,       /* LUA_T_LCLMARK, LUA_T_CCLMARK */
+    LUA_T_LPROTO, LUA_T_CPROTO        /* LUA_T_LMARK, LUA_T_CMARK */
+  };
   int t;
   switch (t = ttype(o)) {
-    case LUA_T_ARRAY:
-      return o->value.a->htag;
     case LUA_T_USERDATA: {
       int tag = o->value.ts->u.d.tag;
-      return (tag >= 0) ? LUA_T_USERDATA : tag;
+      return (tag >= 0) ? LUA_T_USERDATA : tag;  /* deprecated test */
     }
-    case LUA_T_CLOSURE:
-      return o->value.cl->consts[0].ttype;
-#ifdef DEBUG
-    case LUA_T_PMARK: case LUA_T_CMARK:
-    case LUA_T_CLMARK: case LUA_T_LINE:
-      LUA_INTERNALERROR(L, "invalid type");
-#endif
-    default:
-      return t;
+    case LUA_T_ARRAY:    return o->value.a->htag;
+    default:             return realtag[-t];
   }
 }
 

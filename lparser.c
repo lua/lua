@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.48 1999/12/21 17:31:28 roberto Exp roberto $
+** $Id: lparser.c,v 1.49 1999/12/22 16:58:36 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -547,7 +547,7 @@ static void func_onstack (LexState *ls, FuncState *func) {
   FuncState *fs = ls->fs;
   int i;
   int c = next_constant(ls, fs->f);
-  ttype(&fs->f->consts[c]) = LUA_T_PROTO;
+  ttype(&fs->f->consts[c]) = LUA_T_LPROTO;
   fs->f->consts[c].value.tf = func->f;
   if (func->nupvalues == 0)
     code_constant(ls, c);
@@ -580,7 +580,7 @@ static void init_state (LexState *ls, FuncState *fs, TaggedString *source) {
   code_byte(ls, 0);  /* to be filled with arg information */
   /* push function (to avoid GC) */
   tfvalue(L->top) = f;
-  ttype(L->top) = LUA_T_PROTO;
+  ttype(L->top) = LUA_T_LPROTO;
   incr_top;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 1.26 1999/11/26 18:59:20 roberto Exp roberto $
+** $Id: lobject.c,v 1.27 1999/12/14 18:31:20 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -14,8 +14,9 @@
 
 
 const char *const luaO_typenames[] = { /* ORDER LUA_T */
-    "userdata", "number", "string", "table", "function", "function",
-    "nil", "function", "mark", "mark", "mark", "line", NULL
+    "userdata", "number", "string", "table", "function", "function", "nil",
+    "function", "function", "function", "function", "function", "function",
+    "line", NULL
 };
 
 
@@ -34,13 +35,20 @@ unsigned long luaO_power2 (unsigned long n) {
 
 int luaO_equalval (const TObject *t1, const TObject *t2) {
   switch (ttype(t1)) {
-    case LUA_T_NIL: return 1;
-    case LUA_T_NUMBER: return nvalue(t1) == nvalue(t2);
-    case LUA_T_STRING: case LUA_T_USERDATA: return svalue(t1) == svalue(t2);
-    case LUA_T_ARRAY: return avalue(t1) == avalue(t2);
-    case LUA_T_PROTO: return tfvalue(t1)  == tfvalue(t2);
-    case LUA_T_CPROTO: return fvalue(t1)  == fvalue(t2);
-    case LUA_T_CLOSURE: return t1->value.cl == t2->value.cl;
+    case LUA_T_NIL:
+      return 1;
+    case LUA_T_NUMBER:
+      return nvalue(t1) == nvalue(t2);
+    case LUA_T_STRING: case LUA_T_USERDATA:
+      return svalue(t1) == svalue(t2);
+    case LUA_T_ARRAY: 
+      return avalue(t1) == avalue(t2);
+    case LUA_T_LPROTO:
+      return tfvalue(t1)  == tfvalue(t2);
+    case LUA_T_CPROTO:
+      return fvalue(t1)  == fvalue(t2);
+    case LUA_T_CCLOSURE: case LUA_T_LCLOSURE:
+      return t1->value.cl == t2->value.cl;
     default:
      LUA_INTERNALERROR(L, "invalid type");
      return 0; /* UNREACHABLE */

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.h,v 1.10 1999/12/02 16:24:45 roberto Exp roberto $
+** $Id: lapi.h,v 1.11 1999/12/14 18:33:29 roberto Exp roberto $
 ** Auxiliary functions from Lua API
 ** See Copyright Notice in lua.h
 */
@@ -11,7 +11,11 @@
 #include "lobject.h"
 
 
-lua_Type luaA_normalizedtype (const TObject *o);
+extern const lua_Type luaA_normtype[];
+
+#define luaA_normalizedtype(o)	(luaA_normtype[-ttype(o)])
+
+
 void luaA_setnormalized (TObject *d, const TObject *s);
 void luaA_checkCparams (lua_State *L, int nParams);
 const TObject *luaA_protovalue (const TObject *o);

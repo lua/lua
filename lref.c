@@ -1,5 +1,5 @@
 /*
-** $Id: lref.c,v 1.3 1999/11/22 13:12:07 roberto Exp roberto $
+** $Id: lref.c,v 1.4 1999/12/14 18:31:20 roberto Exp roberto $
 ** REF mechanism
 ** See Copyright Notice in lua.h
 */
@@ -85,15 +85,10 @@ static int ismarked (const TObject *o) {
       return o->value.ts->marked;
     case LUA_T_ARRAY:
       return o->value.a->marked;
-    case LUA_T_CLOSURE:
+    case LUA_T_LCLOSURE:  case LUA_T_CCLOSURE:
       return o->value.cl->marked;
-    case LUA_T_PROTO:
+    case LUA_T_LPROTO:
       return o->value.tf->marked;
-#ifdef DEBUG
-    case LUA_T_LINE: case LUA_T_CLMARK:
-    case LUA_T_CMARK: case LUA_T_PMARK:
-      LUA_INTERNALERROR(L, "invalid type");
-#endif
     default:  /* number or cproto */
       return 1;
   }

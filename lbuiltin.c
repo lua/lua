@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.85 1999/12/14 18:42:57 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.86 1999/12/20 13:10:38 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -377,10 +377,10 @@ void luaB_tostring (lua_State *L) {
     case LUA_T_ARRAY:
       sprintf(buff, "table: %p", o->value.a);
       break;
-    case LUA_T_CLOSURE:
+    case LUA_T_LCLOSURE:  case LUA_T_CCLOSURE:
       sprintf(buff, "function: %p", o->value.cl);
       break;
-    case LUA_T_PROTO:
+    case LUA_T_LPROTO:
       sprintf(buff, "function: %p", o->value.tf);
       break;
     case LUA_T_CPROTO:

@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.24 1999/12/02 18:45:03 lhf Exp $
+** $Id: lundump.c,v 1.16 1999/12/02 19:11:51 roberto Exp roberto $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -135,7 +135,7 @@ static void LoadConstants (lua_State* L, TProtoFunc* tf, ZIO* Z, int native)
    case LUA_T_STRING:
 	tsvalue(o)=LoadTString(L,Z);
 	break;
-   case LUA_T_PROTO:
+   case LUA_T_LPROTO:
 	tfvalue(o)=LoadFunction(L,Z,native);
 	break;
    case LUA_T_NIL:

@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.83 1999/12/07 12:05:34 roberto Exp $
+** $Id: ltests.c,v 1.1 1999/12/14 18:31:20 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -17,6 +17,7 @@
 #include "lstring.h"
 #include "ltable.h"
 #include "lua.h"
+#include "luadebug.h"
 
 
 void luaB_opentests (lua_State *L);
@@ -195,6 +196,12 @@ static void testC (lua_State *L) {
     else if EQ("rawsettable") {
       lua_rawsettable(L);
     }
+    else if EQ("tag") {
+      lua_pushnumber(L, lua_tag(L, reg[getreg(L, &pc)]));
+    }
+    else if EQ("type") {
+      lua_pushstring(L, lua_type(L, reg[getreg(L, &pc)]));
+    }
     else if EQ("nextvar") {
       lua_pushstring(L, lua_nextvar(L, lua_getstring(L, reg[getreg(L, &pc)])));
     }
@@ -222,6 +229,10 @@ static void testC (lua_State *L) {
     else if EQ("settagmethod") {
       int n = getreg(L, &pc);
       lua_settagmethod(L, (int)lua_getnumber(L, reg[n]), getname(&pc));
+    }
+    else if EQ("getfunc") {
+      int n = getreg(L, &pc);
+      reg[n] = lua_stackedfunction(L, getnum(&pc));
     }
     else if EQ("beginblock") {
       lua_beginblock(L);
