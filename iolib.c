@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.4 1994/04/25 20:11:23 celes Exp celes $";
+char *rcs_iolib="$Id: iolib.c,v 1.5 1994/08/04 16:23:29 celes Exp celes $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -443,7 +443,7 @@ static void io_write (void)
 ** Execute a executable program using "system".
 ** Return the result of execution.
 */
-void io_execute (void)
+static void io_execute (void)
 {
  lua_Object o = lua_getparam (1);
  if (o == NULL || !lua_isstring (o))
@@ -463,7 +463,7 @@ void io_execute (void)
 ** Remove a file.
 ** On error put 0 on stack, otherwise put 1.
 */
-void io_remove  (void)
+static void io_remove  (void)
 {
  lua_Object o = lua_getparam (1);
  if (o == NULL || !lua_isstring (o))
@@ -481,6 +481,35 @@ void io_remove  (void)
  return;
 }
 
+
+/*
+** To get a environment variables
+*/
+static void io_getenv (void)
+{
+ lua_Object s = lua_getparam(1);
+ if (!lua_isstring(s))
+  lua_pushnil();
+ else
+ {
+  char *env = getenv(lua_getstring(s));
+  if (env == NULL) lua_pushnil();
+  else             lua_pushstring(env); 
+ }
+}
+
+/*
+** To abort
+*/
+static void io_abort (void)
+{
+ lua_Object o = lua_getparam(1);
+ if (lua_isstring(o))
+  printf("%s\n", lua_getstring(o));
+ exit(1);
+}
+
+
 /*
 ** Open io library
 */
@@ -493,4 +522,6 @@ void iolib_open (void)
  lua_register ("write",    io_write);
  lua_register ("execute",  io_execute);
  lua_register ("remove",   io_remove);
+ lua_register ("getenv",   io_getenv);
+ lua_register ("abort",    io_abort);
 }
