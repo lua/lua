@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.25 2000/04/13 16:51:01 roberto Exp roberto $
+** $Id: lcode.c,v 1.26 2000/04/14 17:47:24 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -311,54 +311,39 @@ static int code_label (FuncState *fs, OpCode op, int arg) {
 }
 
 
-static void jump_to_value (FuncState *fs, expdesc *v, Instruction previous) {
-  int p_nil = NO_JUMP;  /* position of an eventual PUSHNIL */
-  int p_1 = NO_JUMP;  /* position of an eventual PUSHINT */
-  int final;  /* position after whole expression */
-  if (ISJUMP(previous)) {
-    luaK_concat(fs, &v->u.l.t, fs->pc-1);  /* put `previous' in true list */
-    p_nil = code_label(fs, OP_PUSHNILJMP, 0);
-    p_1 = code_label(fs, OP_PUSHINT, 1);
-  }
-  else {  /* still may need a PUSHNIL or a PUSHINT */
-    int need_nil = need_value(fs, v->u.l.f, OP_JMPONF);
-    int need_1 = need_value(fs, v->u.l.t, OP_JMPONT);
-    if (need_nil && need_1) {
-      int j = code_label(fs, OP_JMP, 0);  /* skip both pushes */
-      p_nil = code_label(fs, OP_PUSHNILJMP, 0);
-      p_1 = code_label(fs, OP_PUSHINT, 1);
-      luaK_patchlist(fs, j, luaK_getlabel(fs));
-      luaK_deltastack(fs, -1);  /* previous PUSHINT may be skipped */
-    }
-    else if (need_nil || need_1) {
-      int j = code_label(fs, OP_JMP, 0);  /* skip one push */
-      if (need_nil)
-        p_nil = code_label(fs, OP_PUSHNIL, 1);
-      else  /* need_1 */
-        p_1 = code_label(fs, OP_PUSHINT, 1);
-      luaK_patchlist(fs, j, luaK_getlabel(fs));
-      luaK_deltastack(fs, -1);  /* previous PUSHs may be skipped */
-    }
-  }
-  final = luaK_getlabel(fs);
-  luaK_patchlistaux(fs, v->u.l.f, p_nil, OP_JMPONF, final);
-  luaK_patchlistaux(fs, v->u.l.t, p_1, OP_JMPONT, final);
-  v->u.l.f = v->u.l.t = NO_JUMP;
-}
-
-
 void luaK_tostack (LexState *ls, expdesc *v, int onlyone) {
   FuncState *fs = ls->fs;
   if (!discharge(fs, v)) {  /* `v' is an expression? */
     OpCode previous = GET_OPCODE(fs->f->code[fs->pc-1]);
     LUA_ASSERT(L, previous != OP_SETLINE, "bad place to set line");
     if (!ISJUMP(previous) && v->u.l.f == NO_JUMP && v->u.l.t == NO_JUMP) {
-      /* it is an expression without jumps */
+      /* expression has no jumps */
       if (onlyone)
         luaK_setcallreturns(fs, 1);  /* call must return 1 value */
     }
-    else  /* expression has jumps... */
-      jump_to_value(fs, v, previous);
+    else {  /* expression has jumps */
+      int final;  /* position after whole expression */
+      int j = NO_JUMP;  /*  eventual  jump over values */
+      int p_nil = NO_JUMP;  /* position of an eventual PUSHNIL */
+      int p_1 = NO_JUMP;  /* position of an eventual PUSHINT */
+      if (ISJUMP(previous) || need_value(fs, v->u.l.f, OP_JMPONF) ||
+                              need_value(fs, v->u.l.t, OP_JMPONT)) {
+        /* expression need values */
+        if (ISJUMP(previous))
+          luaK_concat(fs, &v->u.l.t, fs->pc-1);  /* put `previous' in t. list */
+        else {
+          j = code_label(fs, OP_JMP, 0);  /* to jump over both pushes */
+          luaK_deltastack(fs, -1);  /* next PUSHes may be skipped */
+        }
+        p_nil = code_label(fs, OP_PUSHNILJMP, 0);
+        p_1 = code_label(fs, OP_PUSHINT, 1);
+        luaK_patchlist(fs, j, luaK_getlabel(fs));
+      }
+      final = luaK_getlabel(fs);
+      luaK_patchlistaux(fs, v->u.l.f, p_nil, OP_JMPONF, final);
+      luaK_patchlistaux(fs, v->u.l.t, p_1, OP_JMPONT, final);
+      v->u.l.f = v->u.l.t = NO_JUMP;
+    }
   }
 }
 
