@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.105 2002/09/20 13:32:56 roberto Exp roberto $
+** $Id: lua.c,v 1.106 2002/10/21 20:43:38 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -47,6 +47,11 @@ static int isatty (int x) { return x==0; }  /* assume stdin is a tty */
 #endif
 
 
+#ifndef LUA_EXTRALIBS
+#define LUA_EXTRALIBS	/* empty */
+#endif
+
+
 static lua_State *L = NULL;
 
 static const char *progname;
@@ -54,6 +59,20 @@ static const char *progname;
 
 static lua_Hook old_hook = NULL;
 static unsigned long old_mask = 0;
+
+
+static const luaL_reg lualibs[] = {
+  {"baselib", lua_baselibopen},
+  {"tablib", lua_tablibopen},
+  {"iolib", lua_iolibopen},
+  {"strlib", lua_strlibopen},
+  {"mathlib", lua_mathlibopen},
+  {"dblib", lua_dblibopen},
+  /* add your libraries here */
+  LUA_EXTRALIBS
+  {NULL, NULL}
+};
+
 
 
 static void lstop (lua_State *l, lua_Debug *ar) {
@@ -341,16 +360,10 @@ static int handle_argv (char *argv[], int *interactive) {
 }
 
 
-static int openstdlibs (lua_State *l) {
-  int res = 0;
-  res += lua_baselibopen(l);
-  res += lua_tablibopen(l);
-  res += lua_iolibopen(l);
-  res += lua_strlibopen(l);
-  res += lua_mathlibopen(l);
-  res += lua_dblibopen(l);
-  /* add your libraries here */
-  return res;
+static void openstdlibs (lua_State *l) {
+  const luaL_reg *lib = lualibs;
+  for (; lib->name; lib++)
+    lua_pop(l, lib->func(l));  /* open library, discard any results */
 }
 
 
@@ -371,7 +384,7 @@ int main (int argc, char *argv[]) {
   progname = argv[0];
   L = lua_open();  /* create state */
   lua_atpanic(L, l_panic);
-  lua_pop(L, lua_userinit(L));  /* open libraries, discard any results */
+  lua_userinit(L);  /* open libraries */
   status = handle_luainit();
   if (status != 0) return status;
   status = handle_argv(argv, &interactive);
