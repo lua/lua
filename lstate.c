@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.24 2005/02/10 13:25:02 roberto Exp roberto $
+** $Id: lstate.c,v 2.25 2005/02/23 17:30:22 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -24,20 +24,9 @@
 #include "ltm.h"
 
 
-/*
-** macro to allow the inclusion of user information in Lua state
-*/
-#ifndef LUA_USERSTATE
-#define EXTRASPACE	0
-#else
-union UEXTRASPACE {L_Umaxalign a; LUA_USERSTATE b;};
-#define EXTRASPACE (sizeof(union UEXTRASPACE))
-#endif
-
-
-#define state_size(x)	(sizeof(x) + EXTRASPACE)
-#define tostate(l)	(cast(lua_State *, cast(lu_byte *, l) + EXTRASPACE))
-#define fromstate(l)	(cast(lu_byte *, (l)) - EXTRASPACE)
+#define state_size(x)	(sizeof(x) + LUAI_EXTRASPACE)
+#define fromstate(l)	(cast(lu_byte *, (l)) - LUAI_EXTRASPACE)
+#define tostate(l)   (cast(lua_State *, cast(lu_byte *, l) + LUAI_EXTRASPACE))
 
 
 /*

@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.5 2005/03/08 20:10:05 roberto Exp roberto $
+** $Id: loslib.c,v 1.6 2005/03/09 16:28:07 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -57,16 +57,13 @@ static int io_rename (lua_State *L) {
 
 
 static int io_tmpname (lua_State *L) {
-#if !LUA_USE_TMPNAME
-  luaL_error(L, "`tmpname' not supported");
-  return 0;
-#else
-  char buff[L_tmpnam];
-  if (tmpnam(buff) != buff)
-    return luaL_error(L, "unable to generate a unique filename in `tmpname'");
+  char buff[LUA_TMPNAMBUFSIZE];
+  int err;
+  lua_tmpnam(buff, err);
+  if (err)
+    return luaL_error(L, "unable to generate a unique filename");
   lua_pushstring(L, buff);
   return 1;
-#endif
 }
 
 
