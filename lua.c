@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.7 1997/12/03 19:57:54 roberto Exp roberto $
+** $Id: lua.c,v 1.8 1997/12/11 14:48:46 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -40,16 +40,36 @@ static void assign (char *arg)
   }
 }
 
+#define BUF_SIZE	512
 
-static void manual_input (void)
+static void manual_input (int prompt)
 {
   if (isatty(0)) {
-    char buffer[250];
-    while (1) {
+    int cont = 1;
+    while (cont) {
+      char buffer[BUF_SIZE];
+      int i = 0;
       lua_beginblock();
-      printf("%s", lua_getstring(lua_getglobal("_PROMPT")));
-      if (fgets(buffer, sizeof(buffer), stdin) == 0)
-        break;
+      if (prompt)
+        printf("%s", lua_getstring(lua_getglobal("_PROMPT")));
+      for(;;) {
+        int c = getchar();
+        if (c == EOF) {
+          cont = 0;
+          break;
+        }
+        else if (c == '\n') {
+          if (i>0 && buffer[i-1] == '\\')
+            buffer[i-1] = '\n';
+          else break;
+        }
+        else if (i >= BUF_SIZE-1) {
+          fprintf(stderr, "lua: argument line too long\n");
+          break;
+        }
+        else buffer[i++] = c;
+      }
+      buffer[i] = 0;
       lua_dostring(buffer);
       lua_endblock();
     }
@@ -70,11 +90,13 @@ int main (int argc, char *argv[])
   lua_pushstring("> "); lua_setglobal("_PROMPT");
   if (argc < 2) {
     printf("%s  %s\n", LUA_VERSION, LUA_COPYRIGHT);
-    manual_input();
+    manual_input(1);
   }
   else for (i=1; i<argc; i++) {
     if (strcmp(argv[i], "-") == 0)
-      manual_input();
+      manual_input(1);
+    else if (strcmp(argv[i], "-q") == 0)
+      manual_input(0);
     else if (strcmp(argv[i], "-d") == 0)
       lua_debug = 1;
     else if (strcmp(argv[i], "-v") == 0)
