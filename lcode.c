@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.99 2002/05/07 17:36:56 roberto Exp roberto $
+** $Id: lcode.c,v 1.100 2002/05/09 14:14:34 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -36,6 +36,13 @@ void luaK_nil (FuncState *fs, int from, int n) {
     }
   }
   luaK_codeABC(fs, OP_LOADNIL, from, from+n-1, 0);  /* else no optimization */
+}
+
+
+void luaK_moveexp (expdesc *e, int offset) {
+  if (e->t != NO_JUMP) e->t += offset;
+  if (e->f != NO_JUMP) e->f += offset;
+  if (e->k == VRELOCABLE || e->k == VJMP) e->info += offset;
 }
 
 
@@ -515,12 +522,10 @@ void luaK_goiftrue (FuncState *fs, expdesc *e) {
     }
   }
   luaK_concat(fs, &e->f, pc);  /* insert last jump in `f' list */
-  luaK_patchtohere(fs, e->t);
-  e->t = NO_JUMP;
 }
 
 
-static void luaK_goiffalse (FuncState *fs, expdesc *e) {
+void luaK_goiffalse (FuncState *fs, expdesc *e) {
   int pc;  /* pc of last jump */
   luaK_dischargevars(fs, e);
   switch (e->k) {
@@ -542,8 +547,6 @@ static void luaK_goiffalse (FuncState *fs, expdesc *e) {
     }
   }
   luaK_concat(fs, &e->t, pc);  /* insert last jump in `t' list */
-  luaK_patchtohere(fs, e->f);
-  e->f = NO_JUMP;
 }
 
 
@@ -607,10 +610,14 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
   switch (op) {
     case OPR_AND: {
       luaK_goiftrue(fs, v);
+      luaK_patchtohere(fs, v->t);
+      v->t = NO_JUMP;
       break;
     }
     case OPR_OR: {
       luaK_goiffalse(fs, v);
+      luaK_patchtohere(fs, v->f);
+      v->f = NO_JUMP;
       break;
     }
     case OPR_CONCAT: {
@@ -727,7 +734,7 @@ void luaK_posfix (FuncState *fs, BinOpr op, expdesc *e1, expdesc *e2) {
 }
 
 
-static int luaK_code (FuncState *fs, Instruction i) {
+int luaK_code (FuncState *fs, Instruction i, int line) {
   Proto *f = fs->f;
   int oldsize = f->sizecode;
   /* put new instruction in code array */
@@ -736,19 +743,19 @@ static int luaK_code (FuncState *fs, Instruction i) {
   f->code[fs->pc] = i;
   if (f->sizecode != oldsize)
     luaM_reallocvector(fs->L, f->lineinfo, oldsize, f->sizecode, int);
-  f->lineinfo[fs->pc] = fs->ls->lastline;
+  f->lineinfo[fs->pc] = line;
   return fs->pc++;
 }
 
 
 int luaK_codeABC (FuncState *fs, OpCode o, int a, int b, int c) {
   lua_assert(getOpMode(o) == iABC);
-  return luaK_code(fs, CREATE_ABC(o, a, b, c));
+  return luaK_code(fs, CREATE_ABC(o, a, b, c), fs->ls->lastline);
 }
 
 
 int luaK_codeABx (FuncState *fs, OpCode o, int a, unsigned int bc) {
   lua_assert(getOpMode(o) == iABx || getOpMode(o) == iAsBx);
-  return luaK_code(fs, CREATE_ABx(o, a, bc));
+  return luaK_code(fs, CREATE_ABx(o, a, bc), fs->ls->lastline);
 }
 

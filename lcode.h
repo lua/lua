@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.32 2002/04/24 20:07:46 roberto Exp roberto $
+** $Id: lcode.h,v 1.33 2002/05/07 17:36:56 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -41,6 +41,7 @@ typedef enum UnOpr { OPR_MINUS, OPR_NOT, OPR_NOUNOPR } UnOpr;
 
 #define luaK_codeAsBx(fs,o,A,sBx)	luaK_codeABx(fs,o,A,(sBx)+MAXARG_sBx)
 
+int luaK_code (FuncState *fs, Instruction i, int line);
 int luaK_codeABx (FuncState *fs, OpCode o, int A, unsigned int Bx);
 int luaK_codeABC (FuncState *fs, OpCode o, int A, int B, int C);
 void luaK_nil (FuncState *fs, int from, int n);
@@ -54,7 +55,9 @@ void luaK_exp2val (FuncState *fs, expdesc *e);
 int luaK_exp2RK (FuncState *fs, expdesc *e);
 void luaK_self (FuncState *fs, expdesc *e, expdesc *key);
 void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k);
+void luaK_moveexp (expdesc *e, int offset);
 void luaK_goiftrue (FuncState *fs, expdesc *e);
+void luaK_goiffalse (FuncState *fs, expdesc *e);
 void luaK_storevar (FuncState *fs, expdesc *var, expdesc *e);
 void luaK_setcallreturns (FuncState *fs, expdesc *var, int nresults);
 int luaK_jump (FuncState *fs);

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.178 2002/04/24 20:07:46 roberto Exp roberto $
+** $Id: lparser.c,v 1.179 2002/05/07 17:36:56 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -946,22 +946,61 @@ static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
 static void cond (LexState *ls, expdesc *v) {
   /* cond -> exp */
   expr(ls, v);  /* read condition */
+  if (v->k == VNIL) v->k = VFALSE;  /* `falses' are all equal here */
   luaK_goiftrue(ls->fs, v);
+  luaK_patchtohere(ls->fs, v->t);
 }
 
 
+/*
+** The while statement optimizes its code by coding the condition
+** after its body (and thus avoiding one jump in the loop).
+*/
+
+/*
+** maximum size of expressions for optimizing `while' code
+*/
+#ifndef MAXEXPWHILE
+#define MAXEXPWHILE	100
+#endif
+
+/*
+** the call `luaK_goiffalse' may grow the size of an expression by
+** at most this:
+*/
+#define EXTRAEXP	5
+
 static void whilestat (LexState *ls, int line) {
   /* whilestat -> WHILE cond DO block END */
+  Instruction codeexp[MAXEXPWHILE + EXTRAEXP];
+  int lineexp = 0;
+  int i;
+  int sizeexp;
   FuncState *fs = ls->fs;
   int while_init = luaK_getlabel(fs);
   expdesc v;
   BlockCnt bl;
-  enterblock(fs, &bl, 1);
   next(ls);
-  cond(ls, &v);
+  expr(ls, &v);
+  if (v.k == VK) v.k = VTRUE;  /* `trues' are all equal here */
+  lineexp = ls->linenumber;
+  luaK_goiffalse(fs, &v);
+  sizeexp = fs->pc - while_init;
+  if (sizeexp > MAXEXPWHILE) 
+    luaX_syntaxerror(ls, "while condition too complex");
+  fs->pc = while_init;  /* remove `exp' code */
+  luaK_getlabel(fs);
+  for (i = 0; i < sizeexp; i++)  /* save `exp' code */
+    codeexp[i] = fs->f->code[while_init + i];
+  luaK_jump(fs);
+  enterblock(fs, &bl, 1);
   check(ls, TK_DO);
   block(ls);
-  luaK_patchlist(fs, luaK_jump(fs), while_init);
+  luaK_patchtohere(fs, while_init);  /* initial jump jumps to here */
+  luaK_moveexp(&v, fs->pc - while_init);  /* correct pointers */
+  for (i=0; i<sizeexp; i++)
+    luaK_code(fs, codeexp[i], lineexp);
+  luaK_patchlist(fs, v.t, while_init+1);
   luaK_patchtohere(fs, v.f);
   check_match(ls, TK_END, TK_WHILE, line);
   leaveblock(fs);
