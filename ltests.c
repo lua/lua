@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.10 2000/03/16 20:35:07 roberto Exp roberto $
+** $Id: ltests.c,v 1.11 2000/04/06 17:35:23 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -70,16 +70,16 @@ static int printop (lua_State *L, Instruction i) {
     case OP_PUSHNUM: U("PUSHNUM"); break;
     case OP_PUSHNEGNUM: U("PUSHNEGNUM"); break;
     case OP_PUSHUPVALUE: U("PUSHUPVALUE"); break;
-    case OP_PUSHLOCAL: U("PUSHLOCAL"); break;
+    case OP_GETLOCAL: U("GETLOCAL"); break;
     case OP_GETGLOBAL: U("GETGLOBAL"); break;
     case OP_GETTABLE: O("GETTABLE"); break;
     case OP_GETDOTTED: U("GETDOTTED"); break;
+    case OP_GETINDEXED: U("GETINDEXED"); break;
     case OP_PUSHSELF: U("PUSHSELF"); break;
     case OP_CREATETABLE: U("CREATETABLE"); break;
-    case OP_SETLOCAL: U("SETLOCAL"); break;
+    case OP_SETLOCAL: AB("SETLOCAL"); break;
     case OP_SETGLOBAL: U("SETGLOBAL"); break;
-    case OP_SETTABLEPOP: O("SETTABLEPOP"); break;
-    case OP_SETTABLE: U("SETTABLE"); break;
+    case OP_SETTABLE: AB("SETTABLE"); break;
     case OP_SETLIST: AB("SETLIST"); break;
     case OP_SETMAP: U("SETMAP"); break;
     case OP_ADD: O("ADD"); break;
@@ -89,10 +89,10 @@ static int printop (lua_State *L, Instruction i) {
     case OP_MULT: O("MULT"); break;
     case OP_DIV: O("DIV"); break;
     case OP_POW: O("POW"); break;
-    case OP_CONC: U("CONC"); break;
+    case OP_CONCAT: U("CONCAT"); break;
     case OP_MINUS: O("MINUS"); break;
     case OP_NOT: O("NOT"); break;
-    case OP_JMPNEQ: S("JMPNEQ"); break;
+    case OP_JMPNE: S("JMPNE"); break;
     case OP_JMPEQ: S("JMPEQ"); break;
     case OP_JMPLT: S("JMPLT"); break;
     case OP_JMPLE: S("JMPLE"); break;

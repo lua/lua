@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.53 2000/03/27 14:31:12 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.54 2000/04/04 20:48:44 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -105,35 +105,35 @@ OP_PUSHNEGNUM,/* N	-		-KNUM[u]			*/
 
 OP_PUSHUPVALUE,/* U	-		Closure[u]			*/
 
-OP_PUSHLOCAL,/*	L	-		LOC[u]				*/
+OP_GETLOCAL,/*	L	-		LOC[u]				*/
 OP_GETGLOBAL,/*	K	-		VAR[KSTR[k]]			*/
 
 OP_GETTABLE,/*	-	i t		t[i]				*/
 OP_GETDOTTED,/*	K	t		t[KSTR[k]]			*/
+OP_GETINDEXED,/* L	t		t[LOC[U]]			*/
 OP_PUSHSELF,/*	K	t		t t[KSTR[k]]			*/
 
 OP_CREATETABLE,/* U	-		newarray(size = u)		*/
 
-OP_SETLOCAL,/*	L	x		-		LOC[u]=x	*/
+OP_SETLOCAL,/*	L B	v_b-v_1		-		LOC[L]=v_b	*/
 OP_SETGLOBAL,/*	K	x		-		VAR[KSTR[k]]=x	*/
-OP_SETTABLEPOP,/* -	v i t		-		t[i]=v		*/
-OP_SETTABLE,/*	U	v a_u-a_1 i t	 a_u-a_1 i t	t[i]=v		*/
+OP_SETTABLE,/*	A B	v a_a-a_1 i t	 a_x-a_1 i t	t[i]=v		*/
 
 OP_SETLIST,/*	A B	v_b-v_0 t	t		t[i+a*FPF]=v_i	*/
 OP_SETMAP,/*	U	v_u k_u - v_0 k_0 t	t	t[k_i]=v_i	*/
 
-OP_INCLOCAL,/*	sA B	-		-		LOC[B]+=sA	*/
+OP_INCLOCAL,/*	sA L	-		-		LOC[L]+=sA	*/
 OP_ADD,/*	-	y x		x+y				*/
 OP_ADDI,/*	S	x		x+s				*/
 OP_SUB,/*	-	y x		x-y				*/
 OP_MULT,/*	-	y x		x*y				*/
 OP_DIV,/*	-	y x		x/y				*/
 OP_POW,/*	-	y x		x^y				*/
-OP_CONC,/*	U	v_u-v_1		v1..-..v_u			*/
+OP_CONCAT,/*	U	v_u-v_1		v1..-..v_u			*/
 OP_MINUS,/*	-	x		-x				*/
 OP_NOT,/*	-	x		(x==nil)? 1 : nil		*/
 
-OP_JMPNEQ,/*	J	y x		-		(x~=y)? PC+=s	*/
+OP_JMPNE,/*	J	y x		-		(x~=y)? PC+=s	*/
 OP_JMPEQ,/*	J	y x		-		(x==y)? PC+=s	*/
 OP_JMPLT,/*	J	y x		-		(x<y)? PC+=s	*/
 OP_JMPLE,/*	J	y x		-		(x<y)? PC+=s	*/
@@ -156,7 +156,7 @@ OP_SETLINE/*	U	-		-		LINE=u		*/
 
 
 
-#define ISJUMP(o)	(OP_JMPNEQ <= (o) && (o) <= OP_JMP)
+#define ISJUMP(o)	(OP_JMPNE <= (o) && (o) <= OP_JMP)
 
 
 #endif
