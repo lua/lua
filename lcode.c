@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.110 2002/08/20 20:03:05 roberto Exp roberto $
+** $Id: lcode.c,v 1.111 2002/08/21 18:56:33 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -686,14 +686,14 @@ void luaK_fixline (FuncState *fs, int line) {
 
 int luaK_code (FuncState *fs, Instruction i, int line) {
   Proto *f = fs->f;
-  int oldsize = f->sizecode;
   luaK_dischargejpc(fs);  /* `pc' will change */
   /* put new instruction in code array */
   luaM_growvector(fs->L, f->code, fs->pc, f->sizecode, Instruction,
                   MAX_INT, "code size overflow");
   f->code[fs->pc] = i;
-  if (f->sizecode != oldsize)
-    luaM_reallocvector(fs->L, f->lineinfo, oldsize, f->sizecode, int);
+  /* save corresponding line information */
+  luaM_growvector(fs->L, f->lineinfo, fs->pc, f->sizelineinfo, int,
+                  MAX_INT, "code size overflow");
   f->lineinfo[fs->pc] = line;
   return fs->pc++;
 }

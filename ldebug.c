@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.133 2002/08/20 20:03:05 roberto Exp roberto $
+** $Id: ldebug.c,v 1.134 2002/09/05 19:45:42 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -248,6 +248,7 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
 
 static int precheck (const Proto *pt) {
   check(pt->maxstacksize <= MAXSTACK);
+  check(pt->sizelineinfo == pt->sizecode || pt->sizelineinfo == 0);
   lua_assert(pt->numparams+pt->is_vararg <= pt->maxstacksize);
   check(GET_OPCODE(pt->code[pt->sizecode-1]) == OP_RETURN);
   return 1;
