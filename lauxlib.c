@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.20 1999/10/05 18:33:43 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.21 1999/11/22 13:12:07 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -113,17 +113,24 @@ void luaL_verror (lua_State *L, const char *fmt, ...) {
 }
 
 
+#define EXTRALEN	13  /* > strlen('string "..."\0') */
+
 void luaL_chunkid (char *out, const char *source, int len) {
-  len -= 13;  /* 13 = strlen("string ''...\0") */
-  if (*source == '@')
-    sprintf(out, "file `%.*s'", len, source+1);
-  else if (*source == '(')
-    strcpy(out, "(C code)");
+  if (*source == '(') {
+    strncpy(out, source+1, len-1);  /* remove first char */
+    out[len-1] = '\0';  /* make sure `out' has an end */
+    out[strlen(out)-1] = '\0';  /* remove last char */
+  }
   else {
-    const char *b = strchr(source , '\n');  /* stop string at first new line */
-    int lim = (b && (b-source)<len) ? b-source : len;
-    sprintf(out, "string `%.*s'", lim, source);
-    strcpy(out+lim+(13-5), "...'");  /* 5 = strlen("...'\0") */
+    len -= EXTRALEN;
+    if (*source == '@')
+      sprintf(out, "file `%.*s'", len, source+1);
+    else {
+      const char *b = strchr(source , '\n');  /* stop at first new line */
+      int lim = (b && (b-source)<len) ? b-source : len;
+      sprintf(out, "string \"%.*s\"", lim, source);
+      strcpy(out+lim+(EXTRALEN-5), "...\"");  /* 5 = strlen("...'\0") */
+    }
   }
 }
 
