@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.4 1997/12/11 14:48:46 roberto Exp roberto $
+** $Id: lstate.c,v 1.5 1997/12/17 20:48:58 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -17,13 +17,13 @@
 #include "ltm.h"
 
 
-LState *lua_state = NULL;
+lua_State *lua_state = NULL;
 
 
 void lua_open (void)
 {
   if (lua_state) return;
-  lua_state = luaM_new(LState);
+  lua_state = luaM_new(lua_State);
   L->numCblocks = 0;
   L->Cstack.base = 0;
   L->Cstack.lua2C = 0;
@@ -76,3 +76,11 @@ void lua_close (void)
   printf("total de memoria: %ld\n", totalmem);
 #endif
 }
+
+
+lua_State *lua_setstate (lua_State *st) {
+  lua_State *old = lua_state;
+  lua_state = st;
+  return old;
+}
+

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.7 1998/01/09 14:57:43 roberto Exp $
+** $Id: lstate.h,v 1.8 1998/05/27 13:03:40 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -8,6 +8,7 @@
 #define lstate_h
 
 #include "lobject.h"
+#include "lua.h"
 
 
 #define MAX_C_BLOCKS 10
@@ -44,10 +45,18 @@ struct ref {
 };
 
 
-typedef struct LState {
+struct lua_State {
+  /* trhead-specific state */
   struct Stack stack;  /* Lua stack */
   struct C_Lua_Stack Cstack;  /* C2lua struct */
   void *errorJmp;  /* current error recover point */
+  char *Mbuffer;  /* global buffer */
+  char *Mbuffbase;  /* current first position of Mbuffer */
+  int Mbuffsize;  /* size of Mbuffer */
+  int Mbuffnext;  /* next position to fill in Mbuffer */
+  struct C_Lua_Stack Cblocks[MAX_C_BLOCKS];
+  int numCblocks;  /* number of nested Cblocks */
+  /* global state */
   TObject errorim;  /* error tag method */
   GCnode rootproto;  /* list of all prototypes */
   GCnode rootcl;  /* list of all closures */
@@ -61,16 +70,10 @@ typedef struct LState {
   int refSize;  /* size of refArray */
   unsigned long GCthreshold;
   unsigned long nblocks;  /* number of 'blocks' currently allocated */
-  char *Mbuffer;  /* global buffer */
-  char *Mbuffbase;  /* current first position of Mbuffer */
-  int Mbuffsize;  /* size of Mbuffer */
-  int Mbuffnext;  /* next position to fill in Mbuffer */
-  struct C_Lua_Stack Cblocks[MAX_C_BLOCKS];
-  int numCblocks;  /* number of nested Cblocks */
-} LState;
+};
 
 
-extern LState *lua_state;
+extern lua_State *lua_state;
 
 
 #define L	lua_state

@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.10 1998/05/20 22:21:35 roberto Exp roberto $
+% $Id: manual.tex,v 1.11 1998/05/27 19:09:39 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -38,7 +38,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1998/05/20 22:21:35 $}
+\date{\small \verb$Date: 1998/05/27 19:09:39 $}
 
 \maketitle
 
@@ -1291,6 +1291,7 @@ the set of C functions available to the host program to communicate
 with the Lua library.
 The API functions can be classified in the following categories:
 \begin{enumerate}
+\item managing states;
 \item exchanging values between C and Lua;
 \item executing Lua code;
 \item manipulating (reading and writing) Lua objects;
@@ -1301,29 +1302,75 @@ The API functions can be classified in the following categories:
 All API functions and related types and constants
 are declared in the header file \verb|lua.h|.
 
+\subsection{Managing States}
+The whole state of the Lua interpreter
+(global variables, stack, tag methods, etc)
+is stored in a dynamic structure pointed by\Deffunc{lua_state}
+\begin{verbatim}
+typedef struct lua_State lua_State;
+extern lua_State *lua_state;
+\end{verbatim}
+
 Before calling any API function,
-the library must be initalizated.
-This is done by calling:\Deffunc{lua_open}
+this state must be initialized.
+This is done by calling\Deffunc{lua_open}
 \begin{verbatim}
 void           lua_open                 (void);
 \end{verbatim}
 This function allocates and initializes some internal structures,
 and defines all pre-defined functions of Lua.
-If the library is already opened,
-this function has no effect.
+If \verb|lua_state| is already different from \verb|NULL|,
+this function has no effect;
+therefore, it is safe to call this function multiple times.
 All standard libraries call \verb|lua_open| when they are opened.
 
-If necessary, the library may be closed:\Deffunc{lua_close}
+Function \verb|lua_setstate| is used to change the current state
+of Lua:\Deffunc{lua_setstate}
+\begin{verbatim}
+lua_State      *lua_setstate            (lua_State *st);
+\end{verbatim}
+It sets \verb|lua_state| to \verb|st| and returns the old state.
+
+Multiple, independent, states may be created.
+For that, you must set \verb|lua_state| back to \verb|NULL| before
+calling \verb|lua_open|.
+An easy way to do that is defining an auxiliary function:
+\begin{verbatim}
+lua_State *lua_newstate (void) {
+  lua_State *old = lua_setstate(NULL);
+  lua_open();
+  return lua_setstate(old);
+}
+\end{verbatim}
+This function creates a new state without changing the current state
+of the interpreter.
+Notice that any new state is built with all predefined functions;
+any additional library (such as the standard libraries) must be
+explicitly open in the new state, if needed.
+
+If necessary, a state may be released:\Deffunc{lua_close}
 \begin{verbatim}
 void           lua_close                (void);
 \end{verbatim}
-This function destroys all objects in the Lua environment
+This function destroys all objects in the current Lua environment
 (calling the correspondent garbage collector tag methods),
-and then frees all dynamic memory used by the library.
+frees all dynamic memory used by the state,
+and then sets \verb|lua_state| to \verb|NULL|.
 Usually, there is no need to call this function,
 since these resources are naturally released when the program ends.
-If the library is already closed,
+If \verb|lua_state| is already \verb|NULL|,
 this function has no effect.
+
+If you are using multiple states,
+you may find useful the following function,
+which releases a given state:
+\begin{verbatim}
+void lua_freestate (lua_State *st) {
+  lua_State *old = lua_setstate(st);
+  lua_close();
+  if (old != st) lua_setstate(old);
+}
+\end{verbatim}
 
 \subsection{Exchanging Values between C and Lua} \label{valuesCLua}
 Because Lua has no static type system,
@@ -1522,12 +1569,13 @@ The use of explicit nested blocks is strongly encouraged.
 \subsection{Executing Lua Code}
 A host program can execute Lua chunks written in a file or in a string
 using the following functions:
-\Deffunc{lua_dofile}\Deffunc{lua_dostring}
+\Deffunc{lua_dofile}\Deffunc{lua_dostring}\Deffunc{lua_dobuffer}
 \begin{verbatim}
 int lua_dofile   (char *filename);
 int lua_dostring (char *string);
+int lua_dobuffer (char *buff, int size);
 \end{verbatim}
-Both functions return an error code:
+All these functions return an error code:
 0, in case of success; non zero, in case of errors.
 More specifically, \verb|lua_dofile| returns 2 if for any reason
 it could not open the file.
@@ -1536,6 +1584,8 @@ executes the \verb|stdin| stream.
 Function \verb|lua_dofile| is also able to execute pre-compiled chunks.
 It automatically detects whether the file is text or binary,
 and loads it accordingly (see program \IndexVerb{luac}).
+Function \verb|lua_dostring| executes only source code,
+and function \verb|lua_dobuffer| executes only pre-compiled chunks.
 
 These functions return, in structure lua2C,
 any values eventually returned by the chunks.
@@ -1975,7 +2025,7 @@ converts it to a string in a reasonable format.
 
 \subsubsection*{\ff \T{print (e1, e2, ...)}}\Deffunc{print}
 This function receives any number of arguments,
-and prints their values in a reasonable format.
+and prints their values using the strings returned by \verb|tostring|.
 This function is not intended for formatted output,
 but as a quick way to show a value,
 for instance for error messages or debugging.
@@ -2177,7 +2227,7 @@ letter depends on the current locale.
 Returns a string that is the concatenation of \verb|n| copies of
 the string \verb|s|.
 
-\subsubsection*{\ff \T{ascii (s [, i])}}\Deffunc{ascii}
+\subsubsection*{\ff \T{strbyte (s [, i])}}\Deffunc{strbyte}
 Returns the internal numerical code of the character \verb|s[i]|.
 If \verb|i| is absent, then it is assumed to be 1.
 If \verb|i| is negative,
@@ -2185,10 +2235,10 @@ it is replaced by the length of the string minus its
 absolute value plus 1.
 Therefore, \M{-1} points to the last character of \verb|s|.
 
-\subsubsection*{\ff \T{int2str (i1, i2, \ldots)}}\Deffunc{int2str}
+\subsubsection*{\ff \T{strchar (i1, i2, \ldots)}}\Deffunc{strchar}
 Receives 0 or more integers.
 Returns a string with length equal to the number of arguments,
-wherein each character has ascii value equal
+wherein each character has the internal numerical code equal
 to its correspondent argument.
 
 \subsubsection*{\ff \T{format (formatstring, e1, e2, \ldots)}}\Deffunc{format}

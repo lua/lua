@@ -1,5 +1,5 @@
 /*
-** $Id: lbuffer.c,v 1.1 1997/12/23 19:24:36 roberto Exp roberto $
+** $Id: lbuffer.c,v 1.2 1998/03/06 16:54:42 roberto Exp roberto $
 ** Auxiliar functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -22,7 +22,7 @@
 
 static void Openspace (int size)
 {
-  LState *l = L;  /* to optimize */
+  lua_State *l = L;  /* to optimize */
   int base = l->Mbuffbase-l->Mbuffer;
   l->Mbuffsize *= 2;
   if (l->Mbuffnext+size > l->Mbuffsize)  /* still not big enough? */
