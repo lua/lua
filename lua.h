@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.160 2002/10/25 20:05:28 roberto Exp roberto $
+** $Id: lua.h,v 1.161 2002/10/25 21:31:28 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -123,6 +123,8 @@ LUA_API void  lua_insert (lua_State *L, int idx);
 LUA_API void  lua_replace (lua_State *L, int idx);
 LUA_API int   lua_checkstack (lua_State *L, int sz);
 
+LUA_API void  lua_movethread (lua_State *from, lua_State *to, int n);
+
 
 /*
 ** access functions (stack -> C)
@@ -201,9 +203,8 @@ LUA_API int lua_dump (lua_State *L, lua_Chunkwriter writer, void *data);
 /*
 ** coroutine functions
 */
-LUA_API void lua_cobegin (lua_State *L, int nargs);
 LUA_API int  lua_yield (lua_State *L, int nresults);
-LUA_API int  lua_resume (lua_State *L, lua_State *co);
+LUA_API int  lua_resume (lua_State *L, int narg);
 
 /*
 ** Garbage-collection functions

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.98 2002/10/22 17:58:14 roberto Exp roberto $
+** $Id: lstate.h,v 1.99 2002/10/25 20:05:28 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -83,7 +83,7 @@ typedef struct CallInfo {
       StkId *pb;  /* points to `base' variable in `luaV_execute' */
     } l;
     struct {  /* for C functions */
-      int yield_results;
+      int dummy;  /* just to avoid an empty struct */
     } c;
   } u;
 } CallInfo;
@@ -99,6 +99,7 @@ typedef struct CallInfo {
    `pc' is being used by the other, and therefore CI_SAVEDPC is 1 too) */
 #define CI_CALLING	4
 #define CI_SAVEDPC	8  /* 1 if `savedpc' is updated */
+#define CI_YIELD	16  /* 1 if thread is suspended */
 
 
 #define ci_func(ci)	(clvalue((ci)->base - 1))

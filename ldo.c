@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.196 2002/10/09 13:42:01 roberto Exp roberto $
+** $Id: ldo.c,v 1.197 2002/10/25 20:05:28 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -44,22 +44,23 @@ struct lua_longjmp {
 };
 
 
-static void seterrorobj (lua_State *L, int errcode) {
+static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
   switch (errcode) {
     case LUA_ERRMEM: {
-      setsvalue(L->top, luaS_new(L, MEMERRMSG));
+      setsvalue(oldtop, luaS_new(L, MEMERRMSG));
       break;
     }
     case LUA_ERRERR: {
-      setsvalue(L->top, luaS_new(L, "error in error handling"));
+      setsvalue(oldtop, luaS_new(L, "error in error handling"));
       break;
     }
     case LUA_ERRSYNTAX:
     case LUA_ERRRUN: {
-      return;  /* error message already on top */
+      setobj(oldtop, L->top - 1);  /* error message on current top */
+      break;
     }
   }
-  L->top++;
+  L->top = oldtop + 1;
 }
 
 
@@ -298,67 +299,46 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
 }
 
 
-LUA_API void lua_cobegin (lua_State *L, int nargs) {
-  lua_lock(L);
-  luaD_precall(L, L->top - (nargs+1));
-  lua_unlock(L);
-}
-
-
-static void move_results (lua_State *L, TObject *from, TObject *to) {
-  while (from < to) {
-    setobj(L->top, from);
-    from++;
-    incr_top(L);
-  }
-}
-
-
 static void resume (lua_State *L, void *ud) {
   StkId firstResult;
+  int nargs = *cast(int *, ud);
   CallInfo *ci = L->ci;
-  if (ci->state & CI_C) {  /* not first time (i.e. inside a yield)? */
+  if (ci == L->base_ci) {  /* no activation record? */
+    if (nargs >= L->top - L->ci->base)
+      luaG_runerror(L, "cannot resume dead coroutine");
+    luaD_precall(L, L->top - (nargs + 1));  /* start coroutine */
+  }
+  else if (ci->state && CI_YIELD) {  /* inside a yield? */
     /* finish interrupted execution of `OP_CALL' */
     int nresults;
     lua_assert((ci-1)->state & CI_SAVEDPC);
     lua_assert(GET_OPCODE(*((ci-1)->u.l.savedpc - 1)) == OP_CALL ||
                GET_OPCODE(*((ci-1)->u.l.savedpc - 1)) == OP_TAILCALL);
     nresults = GETARG_C(*((ci-1)->u.l.savedpc - 1)) - 1;
-    luaD_poscall(L, nresults, L->top);  /* complete it */
+    luaD_poscall(L, nresults, L->top - nargs);  /* complete it */
     if (nresults >= 0) L->top = L->ci->top;
   }
+  else
+    luaG_runerror(L, "cannot resume non-suspended coroutine");
   firstResult = luaV_execute(L);
-  if (firstResult == NULL)   /* yield? */
-    *cast(int *, ud) = L->ci->u.c.yield_results;
-  else {  /* return */
-    *cast(int *, ud) = L->top - firstResult;
+  if (firstResult != NULL)   /* return? */
     luaD_poscall(L, LUA_MULTRET, firstResult);  /* finalize this coroutine */
-  }
 }
 
 
-LUA_API int lua_resume (lua_State *L, lua_State *co) {
-  CallInfo *ci;
-  int numres;
+LUA_API int lua_resume (lua_State *L, int nargs) {
   int status;
+  int old_allowhooks;
   lua_lock(L);
-  ci = co->ci;
-  if (ci == co->base_ci) {  /* no activation record? ?? */
-    luaO_pushfstring(L, "cannot resume dead thread");
-    status = LUA_ERRRUN;
-  }
-  else if (co->errorJmp != NULL) {  /* ?? */
-    luaO_pushfstring(L, "cannot resume active thread");
-    status = LUA_ERRRUN;
-  }
-  else {
-    status = luaD_rawrunprotected(co, resume, &numres);
-    if (status == 0)  
-      move_results(L, co->top - numres, co->top);
-    else {
-      setobj(L->top++, co->top - 1);  /* move error message to other stack */
-      co->ci = co->base_ci;  /* `kill' thread */
-    }
+  old_allowhooks = allowhook(L);
+  lua_assert(L->errfunc == 0);
+  status = luaD_rawrunprotected(L, resume, &nargs);
+  if (status != 0) {
+    L->ci = L->base_ci;  /* `kill' thread (??) */
+    seterrorobj(L, status, L->ci->base);
+    luaF_close(L, L->top);  /* close eventual pending closures */
+    setallowhook(L, old_allowhooks);
+    restore_stack_limit(L);
   }
   lua_unlock(L);
   return status;
@@ -372,7 +352,12 @@ LUA_API int lua_yield (lua_State *L, int nresults) {
   if ((ci-1)->state & CI_C)
     luaG_runerror(L, "cannot yield a C function");
   lua_assert(ci->state & CI_C);  /* current function is not Lua */
-  ci->u.c.yield_results = nresults;
+  if (L->top - nresults > ci->base) {  /* is there garbage in the stack? */
+    int i;
+    for (i=0; i<nresults; i++)  /* move down results */
+      setobj(ci->base + i, L->top - nresults + i);
+    L->top = ci->base + nresults;
+  }
   lua_unlock(L);
   return -1;
 }
@@ -405,12 +390,8 @@ int luaD_pcall (lua_State *L, int nargs, int nresults, ptrdiff_t errfunc) {
   c.nresults = nresults;
   status = luaD_rawrunprotected(L, &f_call, &c);
   if (status != 0) {  /* an error occurred? */
-    StkId err;  /* error msg. position */
-    seterrorobj(L, status);
-    err = L->top - 1;
-    /* remove parameters and func from the stack */
-    L->top = restorestack(L, old_top) - (nargs+1);
-    setobj(L->top++, err);  /* copy error message to corrected top */
+    StkId oldtop = restorestack(L, old_top) - (nargs+1);
+    seterrorobj(L, status, oldtop);
     luaF_close(L, L->top);  /* close eventual pending closures */
     L->ci = restoreci(L, old_ci);
     setallowhook(L, old_allowhooks);
@@ -461,9 +442,7 @@ int luaD_protectedparser (lua_State *L, ZIO *z, int bin) {
   }
   else {  /* error */
     StkId oldtop = restorestack(L, oldtopr);
-    seterrorobj(L, status);
-    setobj(oldtop, L->top - 1);  /* copy error message to old top */
-    L->top = oldtop+1;
+    seterrorobj(L, status, oldtop);
   }
   return status;
 }

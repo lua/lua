@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.214 2002/10/25 20:05:28 roberto Exp roberto $
+** $Id: lapi.c,v 1.215 2002/10/25 21:31:28 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -102,6 +102,19 @@ LUA_API int lua_checkstack (lua_State *L, int size) {
   }
   lua_unlock(L);
   return res;
+}
+
+
+LUA_API void lua_movethread (lua_State *from, lua_State *to, int n) {
+  int i;
+  lua_lock(to);
+  api_checknelems(from, n);
+  from->top -= n;
+  for (i = 0; i < n; i++) {
+    setobj(to->top, from->top + i);
+    api_incr_top(to);
+  }
+  lua_unlock(to);
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.102 2002/10/25 21:31:28 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.103 2002/10/25 21:36:54 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -557,12 +557,23 @@ static const luaL_reg base_funcs[] = {
 ** =======================================================
 */
 
-
-static int luaB_auxresume (lua_State *L, lua_State *co) {
+static int auxresume (lua_State *L, lua_State *co, int narg) {
   int status;
-  int oldtop = lua_gettop(L);
-  status = lua_resume(L, co);
-  return (status != 0) ? -1 : lua_gettop(L) - oldtop;
+  if (!lua_checkstack(co, narg))
+    luaL_error(L, "too many arguments to resume");
+  lua_movethread(L, co, narg);
+  status = lua_resume(co, narg);
+  if (status == 0) {
+    int nres = lua_gettop(co);
+    if (!lua_checkstack(L, narg))
+      luaL_error(L, "too many results to resume");
+    lua_movethread(co, L, nres);  /* move yielded values */
+    return nres;
+  }
+  else {
+    lua_movethread(co, L, 1);  /* move error message */
+    return -1;  /* error flag */
+  }
 }
 
 
@@ -570,7 +581,7 @@ static int luaB_coresume (lua_State *L) {
   lua_State *co = lua_tothread(L, 1);
   int r;
   luaL_arg_check(L, co, 1, "coroutine/thread expected");
-  r = luaB_auxresume(L, co);
+  r = auxresume(L, co, lua_gettop(L) - 1);
   if (r < 0) {
     lua_pushboolean(L, 0);
     lua_insert(L, -2);
@@ -585,28 +596,19 @@ static int luaB_coresume (lua_State *L) {
 
 
 static int luaB_auxwrap (lua_State *L) {
-  int r = luaB_auxresume(L, lua_tothread(L, lua_upvalueindex(1)));
-  if (r < 0) lua_error(L);
+  lua_State *co = lua_tothread(L, lua_upvalueindex(1));
+  int r = auxresume(L, co, lua_gettop(L));
+  if (r < 0) lua_error(L);  /* propagate error */
   return r;
 }
 
 
 static int luaB_cocreate (lua_State *L) {
-  lua_State *NL;
-  int ref;
-  int i;
-  int n = lua_gettop(L);
+  lua_State *NL = lua_newthread(L);
   luaL_arg_check(L, lua_isfunction(L, 1) && !lua_iscfunction(L, 1), 1,
     "Lua function expected");
-  NL = lua_newthread(L);
-  /* move function and arguments from L to NL */
-  for (i = 1; i <= n; i++) {
-    lua_pushvalue(L, i);
-    ref = lua_ref(L, 1);
-    lua_getref(NL, ref);
-    lua_unref(L, ref);
-  }
-  lua_cobegin(NL, n-1);
+  lua_pushvalue(L, 1);  /* move function to top */
+  lua_movethread(L, NL, 1);  /* move function from L to NL */
   return 1;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.257 2002/10/08 18:46:08 roberto Exp roberto $
+** $Id: lvm.c,v 1.258 2002/10/25 20:05:28 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -592,6 +592,7 @@ StkId luaV_execute (lua_State *L) {
           if (firstResult > L->top) {  /* yield? */
             (L->ci - 1)->u.l.savedpc = pc;
             (L->ci - 1)->state = CI_SAVEDPC;
+            L->ci->state |= CI_YIELD;
             return NULL;
           }
           /* it was a C function (`precall' called it); adjust results */
