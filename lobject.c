@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.10 2005/03/08 20:10:05 roberto Exp roberto $
+** $Id: lobject.c,v 2.11 2005/03/09 16:28:07 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -29,7 +29,8 @@ const TValue luaO_nilobject = {{NULL}, LUA_TNIL};
 
 /*
 ** converts an integer to a "floating point byte", represented as
-** (mmmmmxxx), where the real value is (xxx) * 2^(mmmmm)
+** (eeeeexxx), where the real value is (1xxx) * 2^(eeeee - 1) if
+** eeeee != 0 and (xxx) otherwise.
 */
 int luaO_int2fb (unsigned int x) {
   int e = 0;  /* expoent */
