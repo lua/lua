@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.9 2004/06/02 19:08:52 roberto Exp roberto $
+** $Id: ltests.c,v 2.10 2004/07/09 18:23:17 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -153,9 +153,9 @@ void *debug_realloc (void *ud, void *block, size_t oldsize, size_t size) {
 
 static int testobjref1 (global_State *g, GCObject *f, GCObject *t) {
   if (isdead(g,t)) return 0;
-  if (g->gcstate == GCSpropagate)
+  if (g->gcstate == GCSpropagate || g->gcgenerational)
     return !isblack(f) || !iswhite(t);
-  else if (g->gcstate == GCSfinalize)
+  else if (g->gcstate == GCSfinalize && !g->gcgenerational)
     return iswhite(f);
   else
     return 1;
@@ -175,7 +175,8 @@ static void printobj (global_State *g, GCObject *o) {
 static int testobjref (global_State *g, GCObject *f, GCObject *t) {
   int r = testobjref1(g,f,t);
   if (!r) {
-    printf("%d(%02X) - ", g->gcstate, g->currentwhite);
+    printf("%d(%02X) %c - ", g->gcstate, g->currentwhite,
+                             g->gcgenerational ? 'G' : ' ');
     printobj(g, f);
     printf("\t-> ");
     printobj(g, t);
@@ -290,9 +291,12 @@ static void checkstack (global_State *g, lua_State *L1) {
 
 static void checkobject (global_State *g, GCObject *o) {
   if (isdead(g, o))
-    lua_assert(g->gcstate == GCSsweepstring || g->gcstate == GCSsweep);
+/*    lua_assert(g->gcstate == GCSsweepstring || g->gcstate == GCSsweep);*/
+{ if (!(g->gcstate == GCSsweepstring || g->gcstate == GCSsweep))
+printf(">>> %d  %s  %02x\n", g->gcstate, luaT_typenames[o->gch.tt], o->gch.marked);
+}
   else {
-    if (g->gcstate == GCSfinalize)
+    if (g->gcstate == GCSfinalize && !g->gcgenerational)
       lua_assert(iswhite(o));
     switch (o->gch.tt) {
       case LUA_TUPVAL: {

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.5 2004/03/15 21:04:33 roberto Exp roberto $
+** $Id: lgc.h,v 2.6 2004/08/10 19:17:23 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -39,12 +39,13 @@
 
 /*
 ** Layout for bit use in `marked' field:
-** bit 0 - object is gray
-** bit 1 - object is black
-** bit 2 - For userdata: is finalized;
-           for tables: has weak keys
-** bit 3 - for tables: has weak values
-** bit 4 - object is fixed (should not be collected)
+** bit 0 - object is white (type 0)
+** bit 1 - object is white (type 1)
+** bit 2 - object is black
+** bit 3 - for userdata: has been finalized
+** bit 3 - for tables: has weak keys
+** bit 4 - for tables: has weak values
+** bit 5 - object is fixed (should not be collected)
 */
 
 #define WHITE0BIT	0
@@ -86,7 +87,7 @@
 
 size_t luaC_separateudata (lua_State *L, int all);
 void luaC_callGCTM (lua_State *L);
-void luaC_sweepall (lua_State *L);
+void luaC_freeall (lua_State *L);
 void luaC_step (lua_State *L);
 void luaC_fullgc (lua_State *L);
 void luaC_link (lua_State *L, GCObject *o, lu_byte tt);

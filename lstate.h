@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.4 2004/05/31 18:51:50 roberto Exp roberto $
+** $Id: lstate.h,v 2.5 2004/06/02 19:07:55 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -69,7 +69,9 @@ typedef struct global_State {
   stringtable strt;  /* hash table for strings */
   lua_Alloc realloc;  /* function to reallocate memory */
   void *ud;         /* auxiliary data to `realloc' */
-  int currentwhite;
+  lu_byte currentwhite;
+  lu_byte gcstate;  /* state of garbage collector */
+  lu_byte gcgenerational;
   GCObject *rootgc;  /* list of all collectable objects */
   GCObject *firstudata;   /* udata go to the end of `rootgc' */
   GCObject **sweepgc;  /* position of sweep in `rootgc' */
@@ -78,7 +80,6 @@ typedef struct global_State {
   GCObject *grayagain;  /* list of objects to be traversed atomically */
   GCObject *weak;  /* list of weak tables (to be cleared) */
   GCObject *tmudata;  /* list of userdata to be GC */
-  int gcstate;  /* state of garbage collector */
   Mbuffer buff;  /* temporary buffer for string concatentation */
   lu_mem GCthreshold;
   lu_mem nblocks;  /* number of `bytes' currently allocated */

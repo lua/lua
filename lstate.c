@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.9 2004/06/17 14:06:52 roberto Exp roberto $
+** $Id: lstate.c,v 2.10 2004/06/17 14:25:31 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -122,9 +122,10 @@ static void preinit_state (lua_State *L, global_State *g) {
 static void close_state (lua_State *L) {
   global_State *g = G(L);
   luaF_close(L, L->stack);  /* close all upvalues for this thread */
-  luaC_sweepall(L);  /* collect all elements */
-  lua_assert(g->rootgc == obj2gco(L));
-  luaS_freeall(L);
+  luaC_freeall(L);  /* collect all objects */
+  lua_assert(g->rootgc == NULL);
+  lua_assert(g->strt.nuse == 0);
+  luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size, TString *);
   luaZ_freebuffer(L, &g->buff);
   freestack(L, L);
   lua_assert(g->nblocks == sizeof(LG));
@@ -177,6 +178,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   luaZ_initbuffer(L, &g->buff);
   g->panic = NULL;
   g->gcstate = GCSfinalize;
+  g->gcgenerational = 0;
   g->rootgc = obj2gco(L);
   g->sweepstrgc = 0;
   g->sweepgc = &g->rootgc;
