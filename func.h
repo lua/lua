@@ -1,3 +1,7 @@
+/*
+** $Id: $
+*/
+
 #ifndef func_h
 #define func_h
 
