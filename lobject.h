@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.50 2000/03/03 14:58:26 roberto Exp roberto $
+** $Id: lobject.h,v 1.51 2000/03/10 18:37:44 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -57,7 +57,7 @@ typedef unsigned long Instruction;
 ** objects count 1, and each 32 bytes of `raw' memory count 1; we add
 ** 2 to the total as a minimum (and also to count the overhead of malloc)
 */
-#define numblocks(L, o,b)	((o)+(b)/32+2)
+#define numblocks(L, o,b)	((o)+((b)>>5)+2)
 
 
 /*
