@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.18 1999/04/09 03:10:40 lhf Exp lhf $
+** $Id: lundump.c,v 1.19 1999/04/15 12:30:03 lhf Exp lhf $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -14,12 +14,6 @@
 #include "lundump.h"
 
 #define	LoadBlock(b,size,Z)	ezread(Z,b,size)
-
-#if LUAC_NATIVE
-	#define doLoadNumber(x,Z)	LoadBlock(&x,sizeof(x),Z)
-#else
-	#define doLoadNumber(x,Z)	x=LoadNumber(Z)
-#endif
 
 static void unexpectedEOZ (ZIO* Z)
 {
@@ -55,6 +49,11 @@ static unsigned long LoadLong (ZIO* Z)
 
 static real LoadNumber (ZIO* Z)
 {
+#ifdef LUAC_NATIVE
+ real x;
+ LoadBlock(&x,sizeof(x),Z);
+ return x;
+#else
  char b[256];
  int size=ezgetc(Z);
  LoadBlock(b,size,Z);
@@ -62,7 +61,8 @@ static real LoadNumber (ZIO* Z)
  if (b[0]=='-')
   return -luaO_str2d(b+1);
  else
-  return luaO_str2d(b);
+  return  luaO_str2d(b);
+#endif
 }
 
 static int LoadInt (ZIO* Z, char* message)
@@ -127,7 +127,7 @@ static void LoadConstants (TProtoFunc* tf, ZIO* Z)
   switch (ttype(o))
   {
    case LUA_T_NUMBER:
-	doLoadNumber(nvalue(o),Z);
+	nvalue(o)=LoadNumber(Z);
 	break;
    case LUA_T_STRING:
 	tsvalue(o)=LoadTString(Z);
@@ -178,10 +178,9 @@ static void LoadHeader (ZIO* Z)
 	"%s too old: version=0x%02x; expected at least 0x%02x",
 	zname(Z),version,VERSION0);
  sizeofR=ezgetc(Z);			/* test number representation */
-#if LUAC_NATIVE
+#ifdef LUAC_NATIVE
  if (sizeofR==0)
-  luaL_verror("cannot read numbers in %s: "
-	"support for decimal format not enabled",
+  luaL_verror("cannot read numbers in %s: no support for decimal format",
 	zname(Z));
  if (sizeofR!=sizeof(real))
   luaL_verror("unknown number size in %s: read %d; expected %d",
@@ -189,16 +188,15 @@ static void LoadHeader (ZIO* Z)
  else
  {
  real f=-TEST_NUMBER,tf=TEST_NUMBER;
- doLoadNumber(f,Z);
- if (f!=tf)
-  luaL_verror("unknown number representation in %s: "
+ f=LoadNumber(Z);
+ if ((long)f!=(long)tf)
+  luaL_verror("unknown number format in %s: "
 	"read " NUMBER_FMT "; expected " NUMBER_FMT,
 	zname(Z),f,tf);
  }
 #else
  if (sizeofR!=0)
-  luaL_verror("cannot read numbers in %s: "
-	"support for native format not enabled",
+  luaL_verror("cannot read numbers in %s: no support for native format",
 	zname(Z));
 #endif
 }
