@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.28 1995/11/10 17:55:48 roberto Exp roberto $";
+char *rcs_iolib="$Id: iolib.c,v 1.29 1995/11/10 18:32:59 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <ctype.h>
@@ -289,12 +289,19 @@ static void io_read (void)
     switch (getformat(lua_check_string(1, "read"), &dummy1, &m, &dummy2))
     {
       case 's':
+      {
+        char *s;
         if (m < 0)
           read_until_blank();
         else
           read_m(m);
-        lua_pushstring(add_char(0));
+        s = add_char(0);
+        if ((m >= 0 && strlen(s) == m) || (m < 0 && strlen(s) > 0))
+          lua_pushstring(s);
+        else
+          lua_pushnil();
         break;
+      }
 
       case 'i':  /* can read as float, since it makes no difference to Lua */
       case 'f':
@@ -324,8 +331,13 @@ static void io_read (void)
 */
 static void io_readuntil (void)
 {
- int del = *lua_check_string(1, "readuntil");
- int c = read_until_char(del);
+ int del, c;
+ lua_Object p = lua_getparam(1);
+ if (p == LUA_NOOBJECT || lua_isnil(p))
+   del = EOF;
+ else
+  del = *lua_check_string(1, "readuntil");
+ c = read_until_char(del);
  if (c != EOF) ungetc(c,in);
  lua_pushstring(add_char(0));
 }
@@ -560,7 +572,7 @@ void lua_printstack (FILE *f)
     char *name;
     int currentline;
     fprintf(f, "\t");
-    switch (*getobjname(func, &name))
+    switch (*lua_getobjname(func, &name))
     {
       case 'g':
         fprintf(f, "function %s", name);
