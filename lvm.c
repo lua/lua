@@ -105,7 +105,6 @@ static void callTM (lua_State *L, const TObject *f,
 }
 
 
-
 /*
 ** Function to index a table.
 ** Receives the table at `t' and the key at `key'.
@@ -139,7 +138,6 @@ void luaV_gettable (lua_State *L, StkId t, TObject *key, StkId res) {
     goto init;  /* return luaV_gettable(L, tm, key, res); */
   }
 }
-
 
 
 /*
@@ -285,7 +283,7 @@ static void powOp (lua_State *L, StkId ra, StkId rb, StkId rc) {
   TObject tempb, tempc;
   if ((b = luaV_tonumber(b, &tempb)) != NULL &&
       (c = luaV_tonumber(c, &tempc)) != NULL) {
-    TObject o, f;
+    TObject f, o;
     setsvalue(&o, luaS_newliteral(L, "pow"));
     luaV_gettable(L, gt(L), &o, &f);
     if (ttype(&f) != LUA_TFUNCTION)
@@ -323,10 +321,10 @@ static void powOp (lua_State *L, StkId ra, StkId rb, StkId rc) {
 }
 
 
-#define luaV_poscall(L,c,f) \
+#define luaV_poscall(L,c,f,ci) \
   if (c != NO_REG) { \
     luaD_poscall(L, c, f); \
-    L->top = base + cl->p->maxstacksize; \
+    L->top = ci->top; \
   } \
   else { \
     luaD_poscall(L, LUA_MULTRET, f); \
@@ -344,14 +342,15 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
   lua_Hook linehook;
  reinit:
   lua_assert(L->ci->savedpc == NULL);
+  L->ci->pc = &pc;
+  L->ci->top = base + cl->p->maxstacksize;
   if (cl->p->is_vararg)  /* varargs? */
     adjust_varargs(L, base, cl->p->numparams);
   if (base > L->stack_last - cl->p->maxstacksize)
     luaD_stackerror(L);
-  while (L->top < base + cl->p->maxstacksize)
+  while (L->top < L->ci->top)
     setnilvalue(L->top++);
-  L->top = base + cl->p->maxstacksize;
-  L->ci->pc = &pc;
+  L->top = L->ci->top;
   linehook = L->ci->linehook = L->linehook;
   pc = cl->p->code;
   /* main loop of interpreter */
@@ -360,6 +359,8 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
     const StkId ra = RA(i);
     if (linehook)
       traceexec(L, linehook);
+    lua_assert(L->top == L->ci->top || GET_OPCODE(i) == OP_CALL ||
+         GET_OPCODE(i) == OP_RETURN || GET_OPCODE(i) == OP_SETLISTO);
     switch (GET_OPCODE(i)) {
       case OP_MOVE: {
         setobj(ra, RB(i));
@@ -539,7 +540,7 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
         firstResult = luaD_precall(L, ra);
         if (firstResult) {
           /* it was a C function (`precall' called it); adjust results */
-          luaV_poscall(L, GETARG_C(i), firstResult);
+          luaV_poscall(L, GETARG_C(i), firstResult, L->ci);
         }
         else {  /* it is a Lua function: `call' it */
           CallInfo *ci = L->ci;
@@ -553,7 +554,7 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
       case OP_RETURN: {
         CallInfo *ci;
         int b;
-        luaF_close(L, base);
+        if (L->openupval) luaF_close(L, base);
         b = GETARG_B(i);
         if (b != NO_REG) L->top = ra+b;
         ci = L->ci - 1;
@@ -567,7 +568,7 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
           pc = ci->savedpc;
           ci->savedpc = NULL;
           lua_assert(GET_OPCODE(*(pc-1)) == OP_CALL);
-          luaV_poscall(L, GETARG_C(*(pc-1)), ra);
+          luaV_poscall(L, GETARG_C(*(pc-1)), ra, ci);
         }
         break;
       }
@@ -630,8 +631,10 @@ StkId luaV_execute (lua_State *L, const LClosure *cl, StkId base) {
         bc = GETARG_Bc(i);
         if (GET_OPCODE(i) == OP_SETLIST)
           n = (bc&(LFIELDS_PER_FLUSH-1)) + 1;
-        else
+        else {
           n = L->top - ra - 1;
+          L->top = L->ci->top;
+        }
         bc &= ~(LFIELDS_PER_FLUSH-1);  /* bc = bc - bc%FPF */
         for (; n > 0; n--)
           luaH_setnum(L, h, bc+n, ra+n);

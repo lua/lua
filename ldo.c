@@ -49,7 +49,6 @@ void luaD_init (lua_State *L, int stacksize) {
   L->ci = L->base_ci;
   L->ci->base = L->top;
   L->ci->savedpc = NULL;
-  L->ci->pc = NULL;
   L->size_ci = 20;
   L->end_ci = L->base_ci + L->size_ci;
 }
@@ -107,6 +106,7 @@ void luaD_callHook (lua_State *L, lua_Hook callhook, const char *event) {
     lua_Debug ar;
     ar.event = event;
     ar._ci = L->ci - L->base_ci;
+    L->ci->pc = NULL;  /* function is not active */
     dohook(L, &ar, callhook);
   }
 }
@@ -135,11 +135,9 @@ StkId luaD_precall (lua_State *L, StkId func) {
     luaD_openstack(L, func);
     setobj(func, tm);  /* tag method is the new function to be called */
   }
-  lua_assert(ttype(func) == LUA_TFUNCTION);
   ci = newci(L);
   ci->base = func+1;
   ci->savedpc = NULL;
-  ci->pc = NULL;
   if (L->callhook)
     luaD_callHook(L, L->callhook, "call");
   if (!clvalue(func)->c.isC) return NULL;

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.1 2001/11/29 22:14:34 rieru Exp rieru $
+** $Id: lstate.h,v 1.68 2001/12/18 20:52:30 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -76,6 +76,7 @@ typedef struct CallInfo {
   StkId base;  /* base for called function */
   const Instruction *savedpc;
   lua_Hook linehook;
+  StkId	top;  /* top for this function (when it's a Lua function) */
   /* extra information for debugging */
   const Instruction **pc;
   int lastpc;  /* last pc traced */
