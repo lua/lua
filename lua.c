@@ -39,7 +39,6 @@ int main (int argc, char *argv[])
   iolib_open ();
   strlib_open ();
   mathlib_open ();
- 
   if (argc < 2)
     manual_input();
   else for (i=1; i<argc; i++) {
@@ -48,8 +47,8 @@ int main (int argc, char *argv[])
     else if (strcmp(argv[i], "-v") == 0)
       printf("%s  %s\n(written by %s)\n\n",
              LUA_VERSION, LUA_COPYRIGHT, LUA_AUTHORS);
-    else if (strcmp(argv[i], "-x") == 0) {
-      if (lua_dostring(argv[++i]) != 0) {
+    else if ((strcmp(argv[i], "-e") == 0 && i++) || strchr(argv[i], '=')) {
+      if (lua_dostring(argv[i]) != 0) {
         fprintf(stderr, "lua: error running argument `%s'\n", argv[i]);
         return 1;
       }
