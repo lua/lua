@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.6 1994/08/11 23:11:57 celes Exp celes $";
+char *rcs_iolib="$Id: iolib.c,v 1.7 1994/08/17 15:10:04 celes Exp roberto $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -510,6 +510,21 @@ static void io_abort (void)
  exit(1);
 }
 
+/*
+** To debug a lua program. Start a dialog with the user, interpreting
+   lua commands until an 'cont'.
+*/
+static void io_debug (void)
+{
+  while (1)
+  {
+    char buffer[250];
+    printf("lua_debug> ");
+    if (gets(buffer) == 0) return;
+    if (strcmp(buffer, "cont") == 0) return;
+    lua_dostring(buffer);
+  }
+}
 
 /*
 ** Open io library
@@ -525,4 +540,5 @@ void iolib_open (void)
  lua_register ("remove",   io_remove);
  lua_register ("getenv",   io_getenv);
  lua_register ("abort",    io_abort);
+ lua_register ("debug",    io_debug);
 }
