@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 3.31 1997/03/31 14:02:58 roberto Exp roberto $
+** $Id: opcode.h,v 3.32 1997/04/04 22:24:51 roberto Exp roberto $
 */
 
 #ifndef opcode_h
@@ -60,7 +60,7 @@ PUSHLOCAL6,/*		-		LOC[6]  */
 PUSHLOCAL7,/*		-		LOC[7]  */
 PUSHLOCAL8,/*		-		LOC[8]  */
 PUSHLOCAL9,/*		-		LOC[9]  */
-PUSHLOCAL,/*	w	-		LOC[w]  */
+PUSHLOCAL,/*	b	-		LOC[b]  */
 PUSHGLOBAL,/*	w	-		VAR[w]  */
 PUSHINDEXED,/*		i t		t[i]  */
 PUSHSELF,/*	w	t		t t[STR[w]]  */
@@ -74,14 +74,14 @@ STORELOCAL6,/*		x		-		LOC[6]=x  */
 STORELOCAL7,/*		x		-		LOC[7]=x  */
 STORELOCAL8,/*		x		-		LOC[8]=x  */
 STORELOCAL9,/*		x		-		LOC[9]=x  */
-STORELOCAL,/*	w	x		-		LOC[w]=x  */
+STORELOCAL,/*	b	x		-		LOC[b]=x  */
 STOREGLOBAL,/*	w	x		-		VAR[w]=x  */
 STOREINDEXED0,/*	v i t		-		t[i]=v  */
 STOREINDEXED,/*	b	v a_b...a_1 i t	a_b...a_1 i t	t[i]=v  */
-STORELIST0,/*	w	v_w...v_1 t	-		t[i]=v_i  */
-STORELIST,/*	w n	v_w...v_1 t	-		t[i+n*FPF]=v_i  */
-STORERECORD,/*	n
-		w_n...w_1 v_n...v_1 t	-		t[STR[w_i]]=v_i  */
+STORELIST0,/*	b	v_b...v_1 t	-		t[i]=v_i  */
+STORELIST,/*	b c	v_b...v_1 t	-		t[i+c*FPF]=v_i  */
+STORERECORD,/*	b
+		w_b...w_1 v_b...v_1 t	-		t[STR[w_i]]=v_i  */
 ADJUST0,/*		-		-		TOP=BASE  */
 ADJUST,/*	b	-		-		TOP=BASE+b  */
 CREATEARRAY,/*	w	-		newarray(size = w)  */
@@ -98,19 +98,19 @@ POWOP,/*		y x		x^y  */
 CONCOP,/*		y x		x..y  */
 MINUSOP,/*		x		-x  */
 NOTOP,/*		x		(x==nil)? 1 : nil  */
-ONTJMP,/*		w	x	-		(x!=nil)? PC+=w  */
-ONFJMP,/*		w	x	-		(x==nil)? PC+=w  */
+ONTJMP,/*	w	x		-		(x!=nil)? PC+=w  */
+ONFJMP,/*	w	x		-		(x==nil)? PC+=w  */
 JMP,/*		w	-		-		PC+=w  */
-UPJMP,/*		w	-	-		PC-=w  */
-IFFJMP,/*		w	x	-		(x==nil)? PC+=w  */
+UPJMP,/*	w	-		-		PC-=w  */
+IFFJMP,/*	w	x		-		(x==nil)? PC+=w  */
 IFFUPJMP,/*	w	x		-		(x==nil)? PC-=w  */
 POP,/*			x		-  */
-CALLFUNC,/*	n m	v_n...v_1 f	r_m...r_1	f(v1,...,v_n)  */
+CALLFUNC,/*	b c	v_b...v_1 f	r_c...r_1	f(v1,...,v_b)  */
 RETCODE0,
 RETCODE,/*	b	-		-  */
 SETLINE,/*	w	-		-		LINE=w  */
-VARARGS,/*	b	v_n...v_1	{v_1...v_n;n=n}  */
-STOREMAP/*	n	v_n k_n ...v_1 k_1 t	-	t[k_i]=v_i  */
+VARARGS,/*	b	v_b...v_1	{v_1...v_b;n=b}  */
+STOREMAP/*	b	v_b k_b ...v_1 k_1 t	-	t[k_i]=v_i  */
 } OpCode;
 
 
