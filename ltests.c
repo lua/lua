@@ -387,7 +387,7 @@ static int doonnewstack (lua_State *L) {
 
 
 static int s2d (lua_State *L) {
-  lua_pushnumber(L, *cast(double *, luaL_check_string(L, 1)));
+  lua_pushnumber(L, *cast(const double *, luaL_check_string(L, 1)));
   return 1;
 }
 
