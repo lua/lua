@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.h,v 1.3 1999/12/14 18:33:29 roberto Exp roberto $
+** $Id: lbuiltin.h,v 1.4 1999/12/27 17:33:22 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -9,7 +9,7 @@
 
 #include "lua.h"
 
-void luaB__alert (lua_State *L);
+void luaB__ALERT (lua_State *L);
 void luaB__ERRORMESSAGE (lua_State *L);
 void luaB_print (lua_State *L);
 void luaB_tonumber (lua_State *L);

@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.88 1999/12/27 13:04:53 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.89 1999/12/27 17:33:22 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -94,7 +94,7 @@ static Hash *gettable (lua_State *L, int arg) {
 ** If your system does not support "stderr", redefine this function, or
 ** redefine _ERRORMESSAGE so that it won't need _ALERT.
 */
-void luaB__alert (lua_State *L) {
+void luaB__ALERT (lua_State *L) {
   fputs(luaL_check_string(L, 1), stderr);
 }
 
@@ -609,7 +609,7 @@ void luaB_sort (lua_State *L) {
 
 
 static const struct luaL_reg builtin_funcs[] = {
-  {"_ALERT", luaB__alert},
+  {"_ALERT", luaB__ALERT},
   {"_ERRORMESSAGE", luaB__ERRORMESSAGE},
   {"call", luaB_call},
   {"collectgarbage", luaB_collectgarbage},
