@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.63 2002/03/27 15:30:41 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.64 2002/04/02 20:42:49 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -46,6 +46,7 @@ LUALIB_API void luaL_argerror (lua_State *L, int narg, const char *extramsg) {
   lua_Debug ar;
   lua_getstack(L, 0, &ar);
   lua_getinfo(L, "n", &ar);
+  if (strcmp(ar.namewhat, "method") == 0) narg--;  /* do not count `self' */
   if (ar.name == NULL)
     ar.name = "?";
   luaL_verror(L, "bad argument #%d to `%.50s' (%.100s)",
