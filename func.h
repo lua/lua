@@ -12,6 +12,10 @@ typedef struct TFunc
   char		marked;
   int		size;
   Byte		*code;
+  int		lineDefined;
+  char		*name1;  /* function or method name (or null if main) */
+  char		*name2;  /* object name (or null if not method) */
+  char		*fileName;
 } TFunc;
 
 Long luaI_funccollector (void);

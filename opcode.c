@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 3.42 1995/10/09 18:45:59 roberto Exp roberto $";
+char *rcs_opcode="$Id: opcode.c,v 3.43 1995/10/13 15:16:25 roberto Exp roberto $";
 
 #include <setjmp.h>
 #include <stdlib.h>
@@ -248,9 +248,15 @@ static void do_call (StkId base, int nResults)
   StkId firstResult;
   Object *func = stack+base-1;
   if (tag(func) == LUA_T_CFUNCTION)
+  {
+    tag(func) = LUA_T_CMARK;
     firstResult = callC(fvalue(func), base);
+  }
   else if (tag(func) == LUA_T_FUNCTION)
+  {
+    tag(func) = LUA_T_MARK;
     firstResult = lua_execute(func->value.tf->code, base);
+  }
   else
   { /* func is not a function */
     call_funcFB(base, nResults);
@@ -313,21 +319,21 @@ static void storesubscript (void)
 /*
 ** Traverse all objects on stack
 */
-void lua_travstack (void (*fn)(Object *))
+void lua_travstack (int (*fn)(Object *))
 {
  Object *o;
  for (o = top-1; o >= stack; o--)
-  fn (o);
+   fn (o);
 }
 
 
 /*
-** Error messages
+** Error messages and debug functions
 */
 
 static void lua_message (char *s)
 {
-  luaI_reportbug(s, 1);
+  lua_pushstring(s);
   callFB(FB_ERROR);
 }
 
@@ -345,6 +351,25 @@ void lua_error (char *s)
     exit(1);
   }
 }
+
+
+lua_Object luaD_stackedfunction (int level)
+{
+  Object *p = top;
+  while (--p >= stack)
+    if (p->tag == LUA_T_MARK || p->tag == LUA_T_CMARK)
+      if (level-- == 0)
+        return Ref(p);
+  return LUA_NOOBJECT;
+}
+
+
+void luaD_funcInfo (lua_Object func, char **filename, char **funcname,
+                    char **objname, int *linedefined)
+{
+  return luaI_funcInfo(Address(func), filename, funcname, objname, linedefined);
+}
+
 
 
 /*
@@ -386,6 +411,9 @@ static int do_protectedmain (void)
   adjustC(1);  /* one slot for the pseudo-function */
   stack[CBase].tag = LUA_T_FUNCTION;
   stack[CBase].value.tf = &tf;
+  tf.lineDefined = 0;
+  tf.name1 = tf.name2 = NULL;
+  tf.fileName = lua_parsedfile;
   tf.code = NULL;
   if (setjmp(myErrorJmp) == 0)
   {
@@ -454,12 +482,7 @@ int lua_dofile (char *filename)
 int lua_dostring (char *string)
 {
   int status;
-  char *message = lua_openstring(string);
-  if (message)
-  {
-    lua_message(message);
-    return 1;
-  }
+  lua_openstring(string);
   status = do_protectedmain();
   lua_closestring();
   return status;
@@ -1138,26 +1161,12 @@ static StkId lua_execute (Byte *pc, StkId base)
    case RETCODE:
      return base+*pc;
 
-   case SETFUNCTION:
-   {
-    CodeCode file;
-    CodeWord func;
-    get_code(file,pc);
-    get_word(func,pc);
-    lua_pushfunction ((char *)file.tf, func.w);
-   }
-   break;
-
    case SETLINE:
    {
     CodeWord code;
     get_word(code,pc);
     lua_debugline = code.w;
    }
-   break;
-
-   case RESET:
-    lua_popfunction ();
    break;
 
    default:

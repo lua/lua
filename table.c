@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.33 1995/10/04 14:20:26 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.34 1995/10/13 15:16:25 roberto Exp roberto $";
 
 #include <string.h>
 
@@ -27,11 +27,6 @@ TaggedString **lua_constant = NULL;
 static Word lua_nconstant = 0;
 static Long lua_maxconstant = 0;
 
-
-
-#define MAXFILE 	20
-char  		       *lua_file[MAXFILE];
-int      		lua_nfile;
 
 #define GARBAGE_BLOCK 1024
 #define MIN_GARBAGE_BLOCK (GARBAGE_BLOCK/2)
@@ -68,8 +63,6 @@ static void lua_initsymbol (void)
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = lua_internaldostring;
  n = luaI_findsymbolbyname("setfallback");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_setfallback;
- n = luaI_findsymbolbyname("getstack");
- s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_getstack;
  n = luaI_findsymbolbyname("error");
  s_tag(n) = LUA_T_CFUNCTION; s_fvalue(n) = luaI_error;
 }
@@ -154,25 +147,29 @@ Word  luaI_findconstantbyname (char *name)
 /*
 ** Traverse symbol table objects
 */
-void lua_travsymbol (void (*fn)(Object *))
+static char *lua_travsymbol (int (*fn)(Object *))
 {
  Word i;
  for (i=0; i<lua_ntable; i++)
-  fn(&s_object(i));
+  if (fn(&s_object(i)))
+    return luaI_nodebysymbol(i)->ts.str;
+ return NULL;
 }
 
 
 /*
 ** Mark an object if it is a string or a unmarked array.
 */
-void lua_markobject (Object *o)
+int lua_markobject (Object *o)
 {
  if (tag(o) == LUA_T_STRING && !tsvalue(o)->marked)
    tsvalue(o)->marked = 1;
  else if (tag(o) == LUA_T_ARRAY)
    lua_hashmark (avalue(o));
- else if (o->tag == LUA_T_FUNCTION && !o->value.tf->marked)
+ else if ((o->tag == LUA_T_FUNCTION || o->tag == LUA_T_MARK)
+           && !o->value.tf->marked)
    o->value.tf->marked = 1;
+ return 0;
 }
 
 
@@ -200,70 +197,39 @@ void lua_pack (void)
 
 
 /*
-** Add a file name at file table, checking overflow. This function also set
-** the external variable "lua_filename" with the function filename set.
-** Return 0 on success or error message on error.
-*/
-char *lua_addfile (char *fn)
-{
- if (lua_nfile >= MAXFILE)
-   return "too many files";
- if ((lua_file[lua_nfile++] = luaI_strdup (fn)) == NULL)
-   return "not enough memory";
- return NULL;
-}
-
-/*
-** Delete a file from file stack
-*/
-int lua_delfile (void)
-{
- luaI_free(lua_file[--lua_nfile]); 
- return 1;
-}
-
-/*
-** Return the last file name set.
-*/
-char *lua_filename (void)
-{
- return lua_file[lua_nfile-1];
-}
-
-/*
 ** Internal function: return next global variable
 */
 static void lua_nextvar (void)
 {
- char *varname;
- TreeNode *next;
+ Word next;
  lua_Object o = lua_getparam(1);
  if (o == LUA_NOOBJECT)
    lua_error("too few arguments to function `nextvar'");
  if (lua_getparam(2) != LUA_NOOBJECT)
    lua_error("too many arguments to function `nextvar'");
  if (lua_isnil(o))
-   varname = NULL;
+   next = 0;
  else if (!lua_isstring(o))
  {
    lua_error("incorrect argument to function `nextvar'"); 
    return;  /* to avoid warnings */
  }
  else
-   varname = lua_getstring(o);
- next = lua_varnext(varname);
- if (next == NULL)
+   next = luaI_findsymbolbyname(lua_getstring(o)) + 1;
+ while (next < lua_ntable && s_tag(next) == LUA_T_NIL) next++;
+ if (next >= lua_ntable)
  {
   lua_pushnil();
   lua_pushnil();
  }
  else
  {
+  TreeNode *t = luaI_nodebysymbol(next);
   Object name;
   tag(&name) = LUA_T_STRING;
-  tsvalue(&name) = &(next->ts);
+  tsvalue(&name) = &(t->ts);
   luaI_pushobject(&name);
-  luaI_pushobject(&s_object(next->varindex));
+  luaI_pushobject(&s_object(next));
  }
 }
 
@@ -286,3 +252,37 @@ static void getglobal (void)
     lua_error("incorrect argument to function `getglobal'");
   lua_pushobject(lua_getglobal(lua_getstring(name)));
 }
+
+
+static lua_CFunction cfunc = NULL;
+static int checkfunc (Object *o)
+{
+  return ((o->tag == LUA_T_CMARK || o->tag == LUA_T_CFUNCTION) &&
+           o->value.f == cfunc);
+}
+
+
+void luaI_funcInfo (struct Object *func, char **filename, char **funcname,
+                    char **objname, int *linedefined)
+{
+  if (func->tag == LUA_T_MARK || func->tag == LUA_T_FUNCTION)
+  {
+    TFunc *f = func->value.tf;
+    *filename = f->fileName;
+    *funcname = f->name1;
+    *objname = f->name2;
+    *linedefined = f->lineDefined;
+  }
+  else if (func->tag == LUA_T_CMARK || func->tag == LUA_T_CFUNCTION)
+  {
+    /* temporario: */
+    cfunc = func->value.f;
+    *filename = "(?)";
+    *objname = 0;
+    *linedefined = 0;
+    *funcname = lua_travsymbol(checkfunc);
+    if (*funcname == NULL)
+      *funcname = luaI_travfallbacks(checkfunc);
+  }
+}
+

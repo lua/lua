@@ -5,7 +5,7 @@
 ** Also provides some predefined lua functions.
 */
 
-char *rcs_inout="$Id: inout.c,v 2.21 1995/10/04 14:20:26 roberto Exp roberto $";
+char *rcs_inout="$Id: inout.c,v 2.22 1995/10/09 13:06:20 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,19 +31,8 @@ char *rcs_inout="$Id: inout.c,v 2.21 1995/10/04 14:20:26 roberto Exp roberto $";
 Word lua_linenumber;
 Bool lua_debug;
 Word lua_debugline = 0;
+char *lua_parsedfile;
 
-
-/* Internal variables */
-
-typedef struct FuncStackNode {
-  struct FuncStackNode *next;
-  char *file;
-  Word function;
-  Word line;
-} FuncStackNode;
- 
-static FuncStackNode *funcStack = NULL;
-static Word nfuncstack=0;
 
 static FILE *fp;
 static char *st;
@@ -70,16 +59,17 @@ static int stringinput (void)
 */
 char *lua_openfile (char *fn)
 {
- lua_linenumber = 1;
  lua_setinput (fileinput);
  fp = fopen (fn, "r");
  if (fp == NULL)
  {
    static char buff[255];
-   sprintf(buff, "unable to open file %.230s", fn);
+   sprintf(buff, "unable to open file `%.200s'", fn);
    return buff;
  }
- return lua_addfile (fn);
+ lua_linenumber = 1;
+ lua_parsedfile = lua_constcreate(fn)->ts.str;
+ return NULL;
 }
 
 /*
@@ -89,7 +79,6 @@ void lua_closefile (void)
 {
  if (fp != NULL)
  {
-  lua_delfile();
   fclose (fp);
   fp = NULL;
  }
@@ -98,16 +87,12 @@ void lua_closefile (void)
 /*
 ** Function to open a string to be input unit
 */
-char *lua_openstring (char *s)
+void lua_openstring (char *s)
 {
- lua_linenumber = 1;
  lua_setinput (stringinput);
  st = s;
- {
-  char sn[64];
-  sprintf (sn, "String: %10.10s...", s);
-  return lua_addfile (sn);
- }
+ lua_linenumber = 1;
+ lua_parsedfile = lua_constcreate("(string)")->ts.str;
 }
 
 /*
@@ -115,75 +100,6 @@ char *lua_openstring (char *s)
 */
 void lua_closestring (void)
 {
- lua_delfile();
-}
-
-
-/*
-** Called to execute  SETFUNCTION opcode, this function pushs a function into
-** function stack.
-*/
-void lua_pushfunction (char *file, Word function)
-{
- FuncStackNode *newNode;
- if (nfuncstack++ >= MAXFUNCSTACK)
- {
-  lua_error("function stack overflow");
- }
- newNode = new(FuncStackNode);
- newNode->function = function;
- newNode->file = file;
- newNode->line= lua_debugline;
- newNode->next = funcStack;
- funcStack = newNode;
-}
-
-/*
-** Called to execute RESET opcode, this function pops a function from 
-** function stack.
-*/
-void lua_popfunction (void)
-{
- FuncStackNode *temp = funcStack;
- if (temp == NULL) return;
- --nfuncstack;
- lua_debugline = temp->line;
- funcStack = temp->next;
- luaI_free(temp);
-}
-
-/*
-** Report bug building a message and pushing it on the stack.
-*/
-void luaI_reportbug (char *s, int err)
-{
-  char msg[MAXMESSAGE];
-  strcpy (msg, s);
- if (lua_debugline != 0)
- {
-  if (funcStack)
-  {
-   FuncStackNode *func = funcStack;
-   int line = lua_debugline;
-   sprintf (strchr(msg,0), "\n\tactive stack:\n");
-   do
-   {
-     sprintf (strchr(msg,0),
-       "\t-> function \"%s\" at file \"%s\":%u\n", 
-              lua_constant[func->function]->str, func->file, line);
-     line = func->line;
-     func = func->next;
-     if (err) lua_popfunction();
-   } while (func);
-  }
-  else
-  {
-   sprintf (strchr(msg,0),
-         "\n\tin statement begining at line %u of file \"%s\"", 
-         lua_debugline, lua_filename());
-  }
- }
- lua_pushstring(msg);
 }
 
  
@@ -295,12 +211,5 @@ void luaI_error (void)
   char *s = lua_getstring(lua_getparam(1));
   if (s == NULL) s = "(no message)";
   lua_error(s);
-}
-
-void luaI_getstack (void)
-{
-  char *s = lua_getstring(lua_getparam(1));
-  if (s == NULL) s = "";
-  luaI_reportbug(s, 0);
 }
 

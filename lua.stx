@@ -1,6 +1,6 @@
 %{
 
-char *rcs_luastx = "$Id: lua.stx,v 3.19 1995/06/08 19:47:28 roberto Exp $";
+char *rcs_luastx = "$Id: lua.stx,v 3.20 1995/10/04 14:20:26 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -244,17 +244,10 @@ static void init_function (TreeNode *func)
  }
  pc=0; basepc=funcCode; maxcurr=maxcode; 
  nlocalvar=0;
-  if (lua_debug)
-  {
-    code_byte(SETFUNCTION); 
-    code_code((TFunc *)luaI_strdup(lua_file[lua_nfile-1]));
-    code_word(luaI_findconstant(func));
-  }
 }
 
 static void codereturn (void)
 {
-  if (lua_debug) code_byte(RESET); 
   if (nlocalvar == 0)
     code_byte(RETCODE0);
   else
@@ -345,8 +338,8 @@ static void codeIf (Long thenAdd, Long elseAdd)
 static void yyerror (char *s)
 {
  static char msg[256];
- sprintf (msg,"%s near \"%s\" at line %d in file \"%s\"",
-          s, lua_lasttext (), lua_linenumber, lua_filename());
+ sprintf (msg,"%s near \"%s\" at line %d in file `%s'",
+          s, lua_lasttext (), lua_linenumber, lua_parsedfile);
  lua_error (msg);
 }
 
@@ -435,6 +428,7 @@ functionlist : /* empty */
 function     : FUNCTION NAME 
                {
 		init_function($2);
+		$<vInt>$ = lua_linenumber;
 	       }
                body 	 
 	       { 
@@ -442,6 +436,10 @@ function     : FUNCTION NAME
 		luaI_insertfunction($4);  /* may take part in GC */
 	        s_tag(func) = LUA_T_FUNCTION;
                 lua_table[func].object.value.tf = $4;
+		$4->lineDefined = $<vInt>3;
+		$4->name1 = $2->ts.str;
+		$4->name2 = NULL;
+		$4->fileName = lua_parsedfile;
 	       }
 	       ;
 
@@ -449,6 +447,7 @@ method         : FUNCTION NAME ':' NAME
 	       {
 		init_function($4);
 		add_localvar(luaI_findsymbolbyname("self"));
+		$<vInt>$ = lua_linenumber;
 	       }
 	       body
 	       {
@@ -462,6 +461,10 @@ method         : FUNCTION NAME ':' NAME
                 code_code($6);
                 code_byte(STOREINDEXED0);
 		maincode=pc; *initcode=basepc; maxmain=maxcurr;
+		$6->lineDefined = $<vInt>5;
+		$6->name1 = $4->ts.str;
+		$6->name2 = $2->ts.str;
+		$6->fileName = lua_parsedfile;
 	       }
 	       ;
 
@@ -966,17 +969,6 @@ static void PrintCode (Byte *code, Byte *end)
     			printf ("%d    RETCODE   %d\n", p-code, *(++p));
     			p++;
    			break;
-   case SETFUNCTION:
-                        {
-			 CodeCode c1;
-                         CodeWord c2;
-                         int n = p-code;
-                         p++;
-                         get_code(c1,p);
-                         get_word(c2,p);
-                         printf ("%d    SETFUNCTION  %s  %d\n", n, (char *)c1.tf, c2.w);
-                        }
-                        break;
    case SETLINE:
                         {
                          CodeWord c;
@@ -987,7 +979,6 @@ static void PrintCode (Byte *code, Byte *end)
                         }
                         break;
 
-   case RESET:		printf ("%d    RESET\n", (p++)-code); break;
    default:		printf ("%d    Cannot happen: code %d\n", (p++)-code, *(p-1)); break;
   }
  }
