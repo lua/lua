@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.1 1997/11/19 17:31:19 roberto Exp roberto $
+** $Id: lstate.c,v 1.2 1997/11/27 15:59:25 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -7,6 +7,8 @@
 
 #include "lbuiltin.h"
 #include "ldo.h"
+#include "lfunc.h"
+#include "lgc.h"
 #include "llex.h"
 #include "lmem.h"
 #include "lstate.h"
@@ -48,3 +50,27 @@ void lua_open (void)
   luaB_predefine();
 }
 
+
+void lua_close (void)
+{
+  TaggedString *alludata = luaS_collectudata();
+  L->GCthreshold = MAX_INT;  /* to avoid GC during GC */
+  luaC_hashcallIM((Hash *)L->roottable.next);  /* GC t.methods for tables */
+  luaC_strcallIM(alludata);  /* GC tag methods for userdata */
+  luaD_gcIM(&luaO_nilobject);  /* GC tag method for nil (signal end of GC) */
+  luaH_free((Hash *)L->roottable.next);
+  luaF_freeproto((TProtoFunc *)L->rootproto.next);
+  luaF_freeclosure((Closure *)L->rootcl.next);
+  luaS_free(alludata);
+  luaS_freeall();
+  luaM_free(L->stack.stack);
+  luaM_free(L->IMtable);
+  luaM_free(L->refArray);
+  luaM_free(L->Mbuffer);
+  luaM_free(L);
+  L = NULL;
+#if DEBUG
+  printf("total de blocos: %ld\n", numblocks);
+  printf("total de memoria: %ld\n", totalmem);
+#endif
+}

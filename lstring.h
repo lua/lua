@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.h,v 1.4 1997/11/19 17:29:23 roberto Exp roberto $
+** $Id: lstring.h,v 1.5 1997/11/26 18:53:45 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -20,5 +20,8 @@ TaggedString *luaS_newfixedstring (char *str);
 void luaS_rawsetglobal (TaggedString *ts, TObject *newval);
 char *luaS_travsymbol (int (*fn)(TObject *));
 int luaS_globaldefined (char *name);
+TaggedString *luaS_collectudata (void);
+void luaS_freeall (void);
+
 
 #endif

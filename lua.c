@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.4 1997/11/19 17:29:23 roberto Exp roberto $
+** $Id: lua.c,v 1.5 1997/11/21 19:00:46 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -82,7 +82,9 @@ int main (int argc, char *argv[])
       }
     }
   }
-/*  lua_close(); */
+#if DEBUG
+  lua_close();
+#endif
   return 0;
 }
 

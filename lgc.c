@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.8 1997/11/19 17:29:23 roberto Exp roberto $
+** $Id: lgc.c,v 1.9 1997/11/27 15:59:25 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -108,7 +108,7 @@ static void invalidaterefs (void)
 
 
 
-static void hashcallIM (Hash *l)
+void luaC_hashcallIM (Hash *l)
 {
   TObject t;
   ttype(&t) = LUA_T_ARRAY;
@@ -119,7 +119,7 @@ static void hashcallIM (Hash *l)
 }
 
 
-static void strcallIM (TaggedString *l)
+void luaC_strcallIM (TaggedString *l)
 {
   TObject o;
   ttype(&o) = LUA_T_USERDATA;
@@ -259,8 +259,8 @@ long lua_collectgarbage (long limit)
   freefunc = (TProtoFunc *)listcollect(&(L->rootproto));
   freeclos = (Closure *)listcollect(&(L->rootcl));
   L->GCthreshold *= 4;  /* to avoid GC during GC */
-  hashcallIM(freetable);  /* GC tag methods for tables */
-  strcallIM(freestr);  /* GC tag methods for userdata */
+  luaC_hashcallIM(freetable);  /* GC tag methods for tables */
+  luaC_strcallIM(freestr);  /* GC tag methods for userdata */
   luaD_gcIM(&luaO_nilobject);  /* GC tag method for nil (signal end of GC) */
   luaH_free(freetable);
   luaS_free(freestr);

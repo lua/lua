@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.5 1997/11/19 17:29:23 roberto Exp roberto $
+** $Id: lstring.c,v 1.6 1997/11/21 19:00:46 roberto Exp roberto $
 ** String table (keep all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -192,6 +192,44 @@ TaggedString *luaS_collector (void)
     }
   }
   return frees;
+}
+
+
+TaggedString *luaS_collectudata (void)
+{
+  TaggedString *frees = NULL;
+  int i;
+  L->rootglobal.next = NULL;  /* empty list of globals */
+  for (i=0; i<NUM_HASHS; i++) {
+    stringtable *tb = &L->string_root[i];
+    int j;
+    for (j=0; j<tb->size; j++) {
+      TaggedString *t = tb->hash[j];
+      if (t == NULL || t == &EMPTY || t->constindex != -1)
+        continue;  /* get only user datas */
+      t->head.next = (GCnode *)frees;
+      frees = t;
+      tb->hash[j] = &EMPTY;
+    }
+  }
+  return frees;
+}
+
+
+void luaS_freeall (void)
+{
+  int i;
+  for (i=0; i<NUM_HASHS; i++) {
+    stringtable *tb = &L->string_root[i];
+    int j;
+    for (j=0; j<tb->size; j++) {
+      TaggedString *t = tb->hash[j];
+      if (t == &EMPTY) continue;
+      luaM_free(t);
+    }
+    luaM_free(tb->hash);
+  }
+  luaM_free(L->string_root);
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.6 1997/11/27 15:59:25 roberto Exp roberto $
+** $Id: lua.h,v 1.7 1997/11/27 18:25:14 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -55,6 +55,7 @@ typedef unsigned int lua_Object;
 
 
 void	       lua_open			(void);
+void           lua_close		(void);
 
 lua_Object     lua_settagmethod	(int tag, char *event); /* In: new method */
 lua_Object     lua_gettagmethod	(int tag, char *event);
