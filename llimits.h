@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.3 2000/03/27 20:08:33 roberto Exp roberto $
+** $Id: llimits.h,v 1.4 2000/03/31 16:28:45 roberto Exp roberto $
 ** Limits, basic types, and some other "instalation-dependent" definitions
 ** See Copyright Notice in lua.h
 */
@@ -69,14 +69,12 @@ typedef unsigned long Instruction;
 
 #define SIZE_U          (SIZE_INSTRUCTION-SIZE_OP)
 #define POS_U           SIZE_OP
-#define SIZE_S          (SIZE_INSTRUCTION-SIZE_OP)
-#define POS_S           SIZE_OP
 #define POS_B           SIZE_OP
 #define SIZE_A          (SIZE_INSTRUCTION-(SIZE_OP+SIZE_B))
 #define POS_A           (SIZE_OP+SIZE_B)
 
 #define MAXARG_U        ((1<<SIZE_U)-1)
-#define MAXARG_S        ((1<<(SIZE_S-1))-1)  /* `S' is signed */
+#define MAXARG_S        (MAXARG_U>>1)		/* `S' is signed */
 #define MAXARG_A        ((1<<SIZE_A)-1)
 #define MAXARG_B        ((1<<SIZE_B)-1)
 

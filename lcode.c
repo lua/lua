@@ -1,9 +1,11 @@
 /*
-** $Id: lcode.c,v 1.17 2000/03/24 12:18:30 roberto Exp roberto $
+** $Id: lcode.c,v 1.18 2000/03/24 17:26:08 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
 
+
+#include "stdlib.h"
 
 #define LUA_REENTRANT
 
@@ -73,11 +75,12 @@ static void setprevious (FuncState *fs, Instruction i) {
 
 
 static void luaK_minus (FuncState *fs) {
+  /* PUSHINT s; MINUS    -> PUSHINT -s   (-k) */
+  /* PUSHNUM u; MINUS    -> PUSHNEGNUM u   (-k) */
   Instruction previous = prepare(fs, CREATE_0(OP_MINUS), 0);
   switch(GET_OPCODE(previous)) {
     case OP_PUSHINT: SETARG_S(previous, -GETARG_S(previous)); break;
     case OP_PUSHNUM: SET_OPCODE(previous, OP_PUSHNEGNUM); break;
-    case OP_PUSHNEGNUM: SET_OPCODE(previous, OP_PUSHNUM); break;
     default: return;
   }
   setprevious(fs, previous);
@@ -85,6 +88,7 @@ static void luaK_minus (FuncState *fs) {
 
 
 static void luaK_gettable (FuncState *fs) {
+  /* PUSHSTRING u; GETTABLE -> GETDOTTED u   (t.x) */
   Instruction previous = prepare(fs, CREATE_0(OP_GETTABLE), -1);
   switch(GET_OPCODE(previous)) {
     case OP_PUSHSTRING: SET_OPCODE(previous, OP_GETDOTTED); break;
@@ -95,6 +99,7 @@ static void luaK_gettable (FuncState *fs) {
 
 
 static void luaK_add (FuncState *fs) {
+  /* PUSHINT s; ADD -> ADDI s   (a+k) */
   Instruction previous = prepare(fs, CREATE_0(OP_ADD), -1);
   switch(GET_OPCODE(previous)) {
     case OP_PUSHINT: SET_OPCODE(previous, OP_ADDI); break;
@@ -105,6 +110,7 @@ static void luaK_add (FuncState *fs) {
 
 
 static void luaK_sub (FuncState *fs) {
+  /* PUSHINT s; SUB -> ADDI -s   (a-k) */
   Instruction previous = prepare(fs, CREATE_0(OP_SUB), -1);
   switch(GET_OPCODE(previous)) {
     case OP_PUSHINT:
@@ -118,6 +124,7 @@ static void luaK_sub (FuncState *fs) {
 
 
 static void luaK_conc (FuncState *fs) {
+  /* CONC u; CONC 2 -> CONC u+1   (a..b..c) */
   Instruction previous = prepare(fs, CREATE_U(OP_CONC, 2), -1);
   switch(GET_OPCODE(previous)) {
     case OP_CONC: SETARG_U(previous, GETARG_U(previous)+1); break;
@@ -127,8 +134,27 @@ static void luaK_conc (FuncState *fs) {
 }
 
 
+static void luaK_setlocal (FuncState *fs, int l) {
+  /* PUSHLOCAL l; ADDI k, SETLOCAL l -> INCLOCAL k, l   ((local)a=a+k) */
+  Instruction *code = fs->f->code;
+  int pc = fs->pc;
+  if (pc-1 > fs->lasttarget &&  /* no jumps in-between instructions? */
+      code[pc-2] == CREATE_U(OP_PUSHLOCAL, l) &&
+      GET_OPCODE(code[pc-1]) == OP_ADDI &&
+      abs(GETARG_S(code[pc-1])) <= MAXARG_sA) {
+    int inc = GETARG_S(code[pc-1]);
+    fs->pc = pc-1;
+    code[pc-2] = CREATE_sAB(OP_INCLOCAL, inc, l);
+    luaK_deltastack(fs, -1);
+  }
+  else
+    luaK_U(fs, OP_SETLOCAL, l, -1);
+}
+
+
 static void luaK_eq (FuncState *fs) {
-  Instruction previous = prepare(fs, CREATE_S(OP_IFEQJMP, 0), -2);
+  /* PUSHNIL 1; JMPEQ -> NOT  (a==nil) */
+  Instruction previous = prepare(fs, CREATE_S(OP_JMPEQ, 0), -2);
   if (previous == CREATE_U(OP_PUSHNIL, 1)) {
     setprevious(fs, CREATE_0(OP_NOT));
     luaK_deltastack(fs, 1);  /* undo delta from `prepare' */
@@ -137,9 +163,10 @@ static void luaK_eq (FuncState *fs) {
 
 
 static void luaK_neq (FuncState *fs) {
-  Instruction previous = prepare(fs, CREATE_S(OP_IFNEQJMP, 0), -2);
+  /* PUSHNIL 1; JMPNEQ -> JMPT   (a~=nil) */
+  Instruction previous = prepare(fs, CREATE_S(OP_JMPNEQ, 0), -2);
   if (previous == CREATE_U(OP_PUSHNIL, 1)) {
-    setprevious(fs, CREATE_S(OP_IFTJMP, 0));
+    setprevious(fs, CREATE_S(OP_JMPT, 0));
   }
 }
 
@@ -171,7 +198,7 @@ void luaK_fixjump (FuncState *fs, int pc, int dest) {
     SETARG_S(*jmp, 0);  /* absolute value to represent end of list */
   else {  /* jump is relative to position following jump instruction */
     int offset = dest-(pc+1);
-    if (offset < -MAXARG_S || offset > MAXARG_S)
+    if (abs(offset) > MAXARG_S)
       luaK_error(fs->ls, "control structure too long");
     SETARG_S(*jmp, offset);
   }
@@ -298,7 +325,7 @@ void luaK_storevar (LexState *ls, const expdesc *var) {
   FuncState *fs = ls->fs;
   switch (var->k) {
     case VLOCAL:
-      luaK_U(fs, OP_SETLOCAL, var->u.index, -1);
+      luaK_setlocal(fs, var->u.index);
       break;
     case VGLOBAL:
       luaK_U(fs, OP_SETGLOBAL, var->u.index, -1);
@@ -315,14 +342,14 @@ void luaK_storevar (LexState *ls, const expdesc *var) {
 
 static OpCode invertjump (OpCode op) {
   switch (op) {
-    case OP_IFNEQJMP: return OP_IFEQJMP;
-    case OP_IFEQJMP: return OP_IFNEQJMP;
-    case OP_IFLTJMP: return OP_IFGEJMP;
-    case OP_IFLEJMP: return OP_IFGTJMP;
-    case OP_IFGTJMP: return OP_IFLEJMP;
-    case OP_IFGEJMP: return OP_IFLTJMP;
-    case OP_IFTJMP: case OP_ONTJMP:  return OP_IFFJMP;
-    case OP_IFFJMP: case OP_ONFJMP:  return OP_IFTJMP;
+    case OP_JMPNEQ: return OP_JMPEQ;
+    case OP_JMPEQ: return OP_JMPNEQ;
+    case OP_JMPLT: return OP_JMPGE;
+    case OP_JMPLE: return OP_JMPGT;
+    case OP_JMPGT: return OP_JMPLE;
+    case OP_JMPGE: return OP_JMPLT;
+    case OP_JMPT: case OP_JMPONT:  return OP_JMPF;
+    case OP_JMPF: case OP_JMPONF:  return OP_JMPT;
     default:
       LUA_INTERNALERROR(NULL, "invalid jump instruction");
       return OP_END;  /* to avoid warnings */
@@ -334,8 +361,8 @@ static void luaK_jump (FuncState *fs, OpCode jump) {
   Instruction previous = prepare(fs, CREATE_S(jump, 0), -1);
   switch (GET_OPCODE(previous)) {
     case OP_NOT: previous = CREATE_S(invertjump(jump), 0); break;
-    case OP_PUSHINT:
-      if (jump == OP_IFTJMP) {
+    case OP_PUSHNIL:  /* optimize `repeat until nil' */
+      if (GETARG_U(previous) == 1 && jump == OP_JMPF) {
         previous = CREATE_S(OP_JMP, 0);
         break;
       }
@@ -364,10 +391,10 @@ static void luaK_patchlistaux (FuncState *fs, int list, int target,
       luaK_fixjump(fs, list, special_target);
     else {
       luaK_fixjump(fs, list, target);  /* do the patch */
-      if (op == OP_ONTJMP)  /* remove eventual values */
-        SET_OPCODE(*i, OP_IFTJMP);
-      else if (op == OP_ONFJMP)
-        SET_OPCODE(*i, OP_IFFJMP);
+      if (op == OP_JMPONT)  /* remove eventual values */
+        SET_OPCODE(*i, OP_JMPT);
+      else if (op == OP_JMPONF)
+        SET_OPCODE(*i, OP_JMPF);
     }
     list = next;
   }
@@ -427,12 +454,12 @@ static void luaK_testgo (FuncState *fs, expdesc *v, int invert, OpCode jump) {
 
 
 void luaK_goiftrue (FuncState *fs, expdesc *v, int keepvalue) {
-  luaK_testgo(fs, v, 1, keepvalue ? OP_ONFJMP : OP_IFFJMP);
+  luaK_testgo(fs, v, 1, keepvalue ? OP_JMPONF : OP_JMPF);
 }
 
 
 void luaK_goiffalse (FuncState *fs, expdesc *v, int keepvalue) {
-  luaK_testgo(fs, v, 0, keepvalue ? OP_ONTJMP : OP_IFTJMP);
+  luaK_testgo(fs, v, 0, keepvalue ? OP_JMPONT : OP_JMPT);
 }
 
 
@@ -456,8 +483,8 @@ void luaK_tostack (LexState *ls, expdesc *v, int onlyone) {
         p_1 = luaK_S(fs, OP_PUSHINT, 1, 1);
       }
       else {  /* still may need a PUSHNIL or a PUSHINT */
-        int need_nil = need_value(fs, v->u.l.f, OP_ONFJMP);
-        int need_1 = need_value(fs, v->u.l.t, OP_ONTJMP);
+        int need_nil = need_value(fs, v->u.l.f, OP_JMPONF);
+        int need_1 = need_value(fs, v->u.l.t, OP_JMPONT);
         if (need_nil && need_1) {
           luaK_S(fs, OP_JMP, 2, 0);  /* skip both pushes */
           p_nil = luaK_0(fs, OP_PUSHNILJMP, 0);
@@ -472,8 +499,8 @@ void luaK_tostack (LexState *ls, expdesc *v, int onlyone) {
         }
       }
       final = luaK_getlabel(fs);
-      luaK_patchlistaux(fs, v->u.l.f, p_nil, OP_ONFJMP, final);
-      luaK_patchlistaux(fs, v->u.l.t, p_1, OP_ONTJMP, final);
+      luaK_patchlistaux(fs, v->u.l.f, p_nil, OP_JMPONF, final);
+      luaK_patchlistaux(fs, v->u.l.t, p_1, OP_JMPONT, final);
       v->u.l.f = v->u.l.t = NO_JUMP;
     }
   }
@@ -536,10 +563,10 @@ void luaK_posfix (LexState *ls, int op, expdesc *v1, expdesc *v2) {
       case TK_CONC: luaK_conc(fs); break;
       case TK_EQ: luaK_eq(fs); break;
       case TK_NE: luaK_neq(fs); break;
-      case '>': luaK_S(fs, OP_IFGTJMP, 0, -2); break;
-      case '<': luaK_S(fs, OP_IFLTJMP, 0, -2); break;
-      case TK_GE: luaK_S(fs, OP_IFGEJMP, 0, -2); break;
-      case TK_LE: luaK_S(fs, OP_IFLEJMP, 0, -2); break;
+      case '>': luaK_S(fs, OP_JMPGT, 0, -2); break;
+      case '<': luaK_S(fs, OP_JMPLT, 0, -2); break;
+      case TK_GE: luaK_S(fs, OP_JMPGE, 0, -2); break;
+      case TK_LE: luaK_S(fs, OP_JMPLE, 0, -2); break;
     }
   }
 }

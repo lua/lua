@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.97 2000/03/27 20:10:21 roberto Exp roberto $
+** $Id: lvm.c,v 1.98 2000/03/29 20:19:20 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -365,9 +365,9 @@ StkId luaV_execute (lua_State *L, const Closure *cl, register StkId base) {
       case OP_PUSHNIL: {
         int n = GETARG_U(i);
         LUA_ASSERT(L, n>0, "invalid argument");
-		do {
+        do {
           ttype(top++) = TAG_NIL;
-		} while (--n > 0);
+        } while (--n > 0);
         break;
       }
 
@@ -491,6 +491,21 @@ StkId luaV_execute (lua_State *L, const Closure *cl, register StkId base) {
         top--;
         break;
 
+      case OP_INCLOCAL: {
+        TObject *var = base+GETARG_B(i);
+        int n = GETARG_sA(i);
+        if (tonumber(var)) {
+          *top = *var;  /* PUSHLOCAL */
+          ttype(top+1) = TAG_NUMBER;
+          nvalue(top+1) = (Number)n;  /* PUSHINT */
+          call_arith(L, top+2, IM_ADD);
+          *var = *top;  /* SETLOCAL */
+        }
+        else
+          nvalue(var) += (Number)n;
+        break;
+      }
+
       case OP_ADDI:
         if (tonumber(top-1)) {
           ttype(top) = TAG_NUMBER;
@@ -554,50 +569,50 @@ StkId luaV_execute (lua_State *L, const Closure *cl, register StkId base) {
         nvalue(top-1) = 1;
         break;
 
-      case OP_IFNEQJMP:
+      case OP_JMPNEQ:
         top -= 2;
         if (!luaO_equalObj(top, top+1)) pc += GETARG_S(i);
         break;
 
-      case OP_IFEQJMP:
+      case OP_JMPEQ:
         top -= 2;
         if (luaO_equalObj(top, top+1)) pc += GETARG_S(i);
         break;
 
-      case OP_IFLTJMP:
+      case OP_JMPLT:
         top -= 2;
         if (luaV_lessthan(L, top, top+1, top+2)) pc += GETARG_S(i);
         break;
 
-      case OP_IFLEJMP:  /* a <= b  ===  !(b<a) */
+      case OP_JMPLE:  /* a <= b  ===  !(b<a) */
         top -= 2;
         if (!luaV_lessthan(L, top+1, top, top+2)) pc += GETARG_S(i);
         break;
 
-      case OP_IFGTJMP:  /* a > b  ===  (b<a) */
+      case OP_JMPGT:  /* a > b  ===  (b<a) */
         top -= 2;
         if (luaV_lessthan(L, top+1, top, top+2)) pc += GETARG_S(i);
         break;
 
-      case OP_IFGEJMP:  /* a >= b  ===  !(a<b) */
+      case OP_JMPGE:  /* a >= b  ===  !(a<b) */
         top -= 2;
         if (!luaV_lessthan(L, top, top+1, top+2)) pc += GETARG_S(i);
         break;
 
-      case OP_IFTJMP:
+      case OP_JMPT:
         if (ttype(--top) != TAG_NIL) pc += GETARG_S(i);
         break;
 
-      case OP_IFFJMP:
+      case OP_JMPF:
         if (ttype(--top) == TAG_NIL) pc += GETARG_S(i);
         break;
 
-      case OP_ONTJMP:
+      case OP_JMPONT:
         if (ttype(top-1) != TAG_NIL) pc += GETARG_S(i);
         else top--;
         break;
 
-      case OP_ONFJMP:
+      case OP_JMPONF:
         if (ttype(top-1) == TAG_NIL) pc += GETARG_S(i);
         else top--;
         break;
