@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.57 2000/08/09 19:16:57 roberto Exp roberto $
+** $Id: lua.h,v 1.58 2000/08/14 19:10:14 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -122,7 +122,7 @@ int            lua_next (lua_State *L, lua_Object o, int i);
 						/* Out: index, value */ 
 
 int            lua_ref (lua_State *L, int lock); /* In: value */
-lua_Object     lua_getref (lua_State *L, int ref);
+int            lua_pushref (lua_State *L, int ref);  /* Out: value */
 void	       lua_unref (lua_State *L, int ref);
 
 lua_Object     lua_createtable (lua_State *L);
@@ -140,7 +140,7 @@ long	       lua_collectgarbage (lua_State *L, long limit);
 #ifndef LUA_SINGLESTATE
 
 #define lua_call(L,name)	lua_callfunction(L, lua_getglobal(L, name))
-#define lua_pushref(L,ref)	lua_pushobject(L, lua_getref(L, ref))
+#define lua_getref(L, ref)  (lua_pushref(L, ref) ? lua_pop(L) : LUA_NOOBJECT)
 #define lua_refobject(L,o,l)	(lua_pushobject(L, o), lua_ref(L, l))
 #define lua_register(L,n,f)	(lua_pushcfunction(L, f), lua_setglobal(L, n))
 #define lua_pushuserdata(L,u)	lua_pushusertag(L, u, 0)
@@ -150,7 +150,7 @@ long	       lua_collectgarbage (lua_State *L, long limit);
 #else
 
 #define lua_call(name)		lua_callfunction(lua_getglobal(name))
-#define lua_pushref(ref)	lua_pushobject(lua_getref(ref))
+#define lua_getref(ref)		(lua_pushref(ref) ? lua_pop() : LUA_NOOBJECT)
 #define lua_refobject(o,l)	(lua_pushobject(o), lua_ref(l))
 #define lua_register(n,f)	(lua_pushcfunction(f), lua_setglobal(n))
 #define lua_pushuserdata(u)	lua_pushusertag(u, 0)
@@ -219,7 +219,7 @@ extern lua_State *lua_state;
 #define lua_tag(obj)		(lua_tag)(lua_state, obj)
 #define lua_next(o,i)		(lua_next)(lua_state, o,i)
 #define lua_ref(lock)		(lua_ref)(lua_state, lock)
-#define lua_getref(ref)		(lua_getref)(lua_state, ref)
+#define lua_pushref(ref)	(lua_pushref)(lua_state, ref)
 #define lua_unref(ref)		(lua_unref)(lua_state, ref)
 #define lua_createtable()	(lua_createtable)(lua_state)
 #define lua_collectgarbage(limit)	(lua_collectgarbage)(lua_state, limit)

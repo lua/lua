@@ -1,5 +1,5 @@
 /*
-** $Id: lref.c,v 1.16 2000/08/07 20:21:34 roberto Exp roberto $
+** $Id: lref.c,v 1.17 2000/08/09 19:16:57 roberto Exp roberto $
 ** reference mechanism
 ** See Copyright Notice in lua.h
 */
@@ -8,6 +8,7 @@
 #include "lua.h"
 
 #include "lapi.h"
+#include "ldo.h"
 #include "lmem.h"
 #include "lref.h"
 #include "lstate.h"
@@ -47,14 +48,16 @@ void lua_unref (lua_State *L, int ref) {
 }
 
 
-lua_Object lua_getref (lua_State *L, int ref) {
+int lua_pushref (lua_State *L, int ref) {
   if (ref == LUA_REFNIL)
-    return luaA_putluaObject(L, &luaO_nilobject);
+    ttype(L->top) = TAG_NIL;
   else if (0 <= ref && ref < L->refSize &&
           (L->refArray[ref].st == LOCK || L->refArray[ref].st == HOLD))
-    return luaA_putluaObject(L, &L->refArray[ref].o);
+    *L->top = L->refArray[ref].o;
   else
-    return LUA_NOOBJECT;
+    return 0;
+  incr_top;
+  return 1;
 }
 
 
