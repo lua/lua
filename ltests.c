@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.156 2003/03/19 21:14:53 roberto Exp roberto $
+** $Id: ltests.c,v 1.157 2003/04/03 13:35:34 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -716,6 +716,16 @@ static int testC (lua_State *L) {
     }
     else if EQ("type") {
       lua_pushstring(L, lua_typename(L, lua_type(L, getnum)));
+    }
+    else if EQ("getn") {
+      int i = getnum;
+      lua_pushintegral(L, luaL_getn(L, i));
+    }
+    else if EQ("setn") {
+      int i = getnum;
+      int n = cast(int, lua_tonumber(L, -1));
+      luaL_setn(L, i, n);
+      lua_pop(L, 1);
     }
     else luaL_error(L, "unknown instruction %s", buff);
   }
