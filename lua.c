@@ -1,10 +1,11 @@
 /*
-** $Id: lua.c,v 1.12 1997/12/22 20:03:50 roberto Exp roberto $
+** $Id: lua.c,v 1.13 1998/01/19 19:49:49 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
 
 
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,6 +26,39 @@
 #else
 #define isatty(x)       (x==0)  /* assume stdin is a tty */
 #endif
+
+
+typedef void (*handler)(int);  /* type for signal actions */
+
+static void laction (int i);
+
+static handler lreset (void)
+{
+  lua_linehook = NULL;
+  lua_callhook = NULL;
+  return signal(SIGINT, laction);
+}
+
+static void lstop (void)
+{
+  lreset();
+  lua_error("interrupted!");
+}
+
+static void laction (int i)
+{
+  lua_linehook = (lua_LHFunction)lstop;
+  lua_callhook = (lua_CHFunction)lstop;
+}
+
+static int ldo (int (*f)(char *), char *name)
+{
+  int res;
+  handler h = lreset();
+  res = f(name);  /* dostring | dofile */
+  signal(SIGINT, h);  /* restore old action */
+  return res;
+}
 
 
 static void print_message (void)
@@ -85,7 +119,7 @@ static void manual_input (int prompt)
       else buffer[i++] = c;
     }
     buffer[i] = 0;
-    lua_dostring(buffer);
+    ldo(lua_dostring, buffer);
     lua_endblock();
   }
   printf("\n");
@@ -106,13 +140,13 @@ int main (int argc, char *argv[])
       manual_input(1);
     }
     else
-      lua_dofile(NULL);  /* executes stdin as a file */
+      ldo(lua_dofile, NULL);  /* executes stdin as a file */
   }
   else for (i=1; i<argc; i++) {
     if (argv[i][0] == '-') {  /* option? */
       switch (argv[i][1]) {
         case 0:
-          lua_dofile(NULL);  /* executes stdin as a file */
+          ldo(lua_dofile, NULL);  /* executes stdin as a file */
           break;
         case 'i':
           manual_input(1);
@@ -129,7 +163,7 @@ int main (int argc, char *argv[])
           break;
         case 'e':
           i++;
-          if (lua_dostring(argv[i]) != 0) {
+          if (ldo(lua_dostring, argv[i]) != 0) {
             fprintf(stderr, "lua: error running argument `%s'\n", argv[i]);
             return 1;
           }
@@ -142,7 +176,7 @@ int main (int argc, char *argv[])
     else if (strchr(argv[i], '='))
       assign(argv[i]);
     else {
-      int result = lua_dofile(argv[i]);
+      int result = ldo(lua_dofile, argv[i]);
       if (result) {
         if (result == 2) {
           fprintf(stderr, "lua: cannot execute file ");
