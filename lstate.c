@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.129 2003/12/01 16:33:30 roberto Exp roberto $
+** $Id: lstate.c,v 1.130 2003/12/01 18:22:56 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -74,7 +74,13 @@ static void freestack (lua_State *L, lua_State *L1) {
 ** open parts that may cause memory-allocation errors
 */
 static void f_luaopen (lua_State *L, void *ud) {
+  Udata *u;  /* head of udata list */
   UNUSED(ud);
+  u = cast(Udata *, luaM_malloc(L, sizeudata(0)));
+  u->uv.len = 0;
+  u->uv.metatable = NULL;
+  G(L)->firstudata = valtogco(u);
+  luaC_link(L, valtogco(u), LUA_TUSERDATA);
   stack_init(L, L);  /* init stack */
   sethvalue(gt(L), luaH_new(L, 0, 4));  /* table of globals */
   sethvalue(registry(L), luaH_new(L, 4, 4));  /* registry */
@@ -110,7 +116,6 @@ static void close_state (lua_State *L) {
   luaF_close(L, L->stack);  /* close all upvalues for this thread */
   luaC_sweepall(L);  /* collect all elements */
   lua_assert(g->rootgc == NULL);
-  lua_assert(g->rootudata == NULL);
   luaS_freeall(L);
   luaZ_freebuffer(L, &g->buff);
   freestack(L, L);
@@ -162,7 +167,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->panic = NULL;
   g->gcstate = 0;
   g->rootgc = NULL;
-  g->rootudata = NULL;
+  g->firstudata = NULL;
   g->gray = NULL;
   g->weak = NULL;
   g->tmudata = NULL;

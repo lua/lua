@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.181 2003/12/01 16:33:30 roberto Exp roberto $
+** $Id: lgc.c,v 1.182 2003/12/01 18:22:56 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -158,7 +158,7 @@ static void marktmu (global_State *g) {
 /* move `dead' udata that need finalization to list `tmudata' */
 size_t luaC_separateudata (lua_State *L) {
   size_t deadmem = 0;
-  GCObject **p = &G(L)->rootudata;
+  GCObject **p = &G(L)->firstudata;
   GCObject *curr;
   GCObject *collected = NULL;  /* to collect udata with gc event */
   GCObject **lastcollected = &collected;
@@ -495,8 +495,8 @@ static void GCTM (lua_State *L) {
     Udata *udata = gcotou(o);
     const TObject *tm;
     g->tmudata = udata->uv.next;  /* remove udata from `tmudata' */
-    udata->uv.next = g->rootudata;  /* return it to `root' list */
-    g->rootudata = o;
+    udata->uv.next = g->firstudata->uv.next;  /* return it to `root' list */
+    g->firstudata->uv.next = o;
     makewhite(o);
     tm = fasttm(L, udata->uv.metatable, TM_GC);
     if (tm != NULL) {
@@ -524,7 +524,6 @@ void luaC_callGCTM (lua_State *L) {
 void luaC_sweepall (lua_State *L) {
   l_mem dummy = MAXLMEM;
   sweepstrings(L, 0);
-  sweeplist(L, &G(L)->rootudata, 0, &dummy);
   sweeplist(L, &G(L)->rootgc, 0, &dummy);
 }
 
@@ -537,8 +536,8 @@ static void markroot (lua_State *L) {
   makewhite(valtogco(g->mainthread));
   markobject(g, g->mainthread);
   markvalue(g, registry(L));
-  if (L != g->mainthread)  /* another thread is running? */
-    markobject(g, L);  /* cannot collect it */
+  markobject(g, g->firstudata);
+  markobject(g, L);  /* mark running thread */
   g->gcstate = GCSpropagate;
 }
 
@@ -549,8 +548,10 @@ static void atomic (lua_State *L) {
   marktmu(g);  /* mark `preserved' userdata */
   propagatemarks(g, MAXLMEM);  /* remark, to propagate `preserveness' */
   cleartable(g->weak);  /* remove collected objects from weak tables */
-  g->sweepgc = &g->rootgc;
-  g->sweepudata = &g->rootudata;
+  /* first element of root list will be used as temporary head for sweep
+     phase, so it won't be seeped */
+  makewhite(g->rootgc);
+  g->sweepgc = &g->rootgc->gch.next;
   sweepstrings(L, maskbf);
   g->gcstate = GCSsweep;
 }
@@ -559,7 +560,6 @@ static void atomic (lua_State *L) {
 static void sweepstep (lua_State *L) {
   global_State *g = G(L);
   l_mem lim = GCSTEPSIZE;
-  g->sweepudata = sweeplist(L, g->sweepudata, maskbf, &lim);
   g->sweepgc = sweeplist(L, g->sweepgc, maskbf, &lim);
   if (lim == GCSTEPSIZE) {  /* nothing more to sweep? */
     g->gcstate = GCSfinalize;  /* end sweep phase */
