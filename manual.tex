@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.25 1996/11/18 14:27:42 roberto Exp $
+% $Id: manual.tex,v 1.26 1997/01/23 16:17:53 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
@@ -35,9 +35,12 @@ Waldemar Celes
 \tecgraf\ --- Departamento de Inform\'atica --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1996/11/18 14:27:42 $}
+\date{\small \verb$Date: 1997/01/23 16:17:53 $}
 
 \maketitle
+
+\thispagestyle{empty}
+\pagestyle{empty}
 
 \begin{abstract}
 \noindent
@@ -69,7 +72,7 @@ ca\-racte\-r\'{\i}sticas do sistema.
 \vfill
 \begin{quotation}
 \noindent
-\small
+\footnotesize
 Copyright (c) 1994--1996 TeCGraf, PUC-Rio.  Written by Waldemar Celes Filho,
 Roberto Ierusalimschy, Luiz Henrique de Figueiredo.  All rights reserved.
 %
@@ -97,9 +100,13 @@ documentation.
 \end{quotation}
 \vfill
 
-\thispagestyle{empty}
-\setcounter{page}{0}
 \newpage
+
+\tableofcontents
+
+\newpage
+\setcounter{page}{1}
+\pagestyle{plain}
 
 
 \section{Introduction}
@@ -1235,7 +1242,6 @@ the function returns the first index
 of the table (and its associated value).
 When called with the last index, or with \nil\ in an empty table,
 it returns \nil.
-This function cannot be written with the standard API.
 
 In Lua there is no declaration of fields;
 semantically, there is no difference between a
@@ -1243,8 +1249,11 @@ field not present in a table or a field with value \nil.
 Therefore, the function only considers fields with non \nil\ values.
 The order in which the indices are enumerated is not specified,
 {\em even for numeric indices}.
+If the table is modified in any way during a traversal,
+the semantics of \verb|next| is undefined.
 
 See Section~\ref{exnext} for an example of the use of this function.
+This function cannot be written with the standard API.
 
 \subsubsection*{\ff{\tt nextvar (name)}}\Deffunc{nextvar}
 This function is similar to the function \verb'next',
@@ -1254,6 +1263,9 @@ or \nil\ to get a first name.
 Similarly to \verb'next', it returns the name of another variable
 and its value,
 or \nil\ if there are no more variables.
+There can be no assignments to global variables during the traversal;
+otherwise the semantics of \verb|nextvar| is undefined.
+
 See Section~\ref{exnext} for an example of the use of this function.
 This function cannot be written with the standard API.
 
@@ -1495,36 +1507,56 @@ where char-set is interpreted as above.
 \end{description}
 
 \paragraph{Pattern Item:}
-a \Def{pattern item} may be a single character class,
-or a character class followed by \verb'*' or by \verb'?'.
-A single character class matches any single character in the class.
-A character class followed by \verb'*' matches 0 or more repetitions
-of characters in the class.
-A character class followed by \verb'?' matches 0 or one occurrence
-of a character in the class.
-A pattern item may also has the form \verb'%n',
-for \verb-n- between 1 and 9;
+a \Def{pattern item} may be:
+\begin{itemize}
+\item
+a single character class,
+which matches any single character in the class;
+\item
+a single character class followed by \verb'*',
+which matches 0 or more repetitions of characters in the class.
+These repetition itens will always match the longest possible sequence.
+\item
+a single character class followed by \verb'-',
+which also matches 0 or more repetitions of characters in the class.
+Unlike \verb'*',
+these repetition itens will always match the shortest possible sequence.
+\item
+a single character class followed by \verb'?',
+which matches 0 or 1 occurrence of a character in the class;
+\item
+{\tt \%$n$}, for $n$ between 1 and 9;
 such item matches a sub-string equal to the n-th captured string
-(see below).
+(see below);
+\item
+{\tt \%b$xy$}, where $x$ and $y$ are two distinct characters;
+such item mathes strings that start with $x$, end with $y$, 
+and where the $x$ and $y$ are {\em balanced}.
+That means that, if one reads the string from left to write,
+counting plus 1 for an $x$ and minus 1 for a $y$,
+the ending $y$ is the first where the count reaches 0.
+For instance, the item \verb|%()| matches expressions with
+balanced parentheses.
+\end{itemize}
 
 \paragraph{Pattern:}
 a \Def{pattern} is a sequence of pattern items.
-Any repetition item (\verb'*') inside a pattern will always
-match the longest possible sequence.
 A \verb'^' at the beginning of a pattern anchors the match at the
 beginning of the subject string.
 A \verb'$' at the end of a pattern anchors the match at the
 end of the subject string.
 
-A pattern may contain sub-patterns enclosed in parentheses,
+\paragraph{Captures:}
+a pattern may contain sub-patterns enclosed in parentheses,
 that describe \Def{captures}.
 When a match succeeds, the sub-strings of the subject string
-that match captures are {\em captured\/} for future use.
+that match captures are stored ({\em captured\/}) for future use.
 Captures are numbered according to their left parentheses.
 For instance, in the pattern \verb|"(a*(.)%w(%s*))"|,
-the capture \verb|"(a*(.)%w(%s*))"| has number 1
-(and therefore is the first capture),
-\verb|(.)| has number 2, and \verb|(%s*)| has number 3.
+the part of the string matching \verb|"a*(.)%w(%s*)"| is
+stored as the first capture (and therefore has number 1);
+the character matching \verb|.| is captured with number 2,
+and the part matching \verb|%s*| has number 3.
 
 \subsection{Mathematical Functions} \label{mathlib}
 
@@ -1947,7 +1979,9 @@ end
 \end{verbatim}
 
 The next example prints the names of all global variables
-in the system with non nil values:
+in the system with non nil values.
+Notice that the traversal is made with local variables,
+to avoid changing a global variable:
 \begin{verbatim}
 function printGlobalVariables ()
   local i, v = nextvar(nil)
@@ -2474,7 +2508,5 @@ Special care should be taken with macros like
 \input{manual.id}
 \end{theindex}
 
-\pagebreak
-\tableofcontents
 
 \end{document}
