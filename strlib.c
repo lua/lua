@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.30 1996/10/31 17:26:04 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.31 1996/10/31 20:18:05 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -493,25 +493,24 @@ static void str_format (void)
       switch (*strfrmt++) {
         case 'q':
           luaI_addquoted(lua_check_string(arg++, "format"));
-          break;
+          continue;
         case 's': {
           char *s = lua_check_string(arg++, "format");
           buff = openspace(strlen(s));
-          lbuffer.size += sprintf(buff, form, s);
+          sprintf(buff, form, s);
           break;
         }
         case 'c':  case 'd':  case 'i': case 'o':
         case 'u':  case 'x':  case 'X':
-          lbuffer.size += sprintf(buff, form,
-                                  (int)lua_check_number(arg++, "format"));
+          sprintf(buff, form, (int)lua_check_number(arg++, "format"));
           break;
         case 'e':  case 'E': case 'f': case 'g':
-          lbuffer.size += sprintf(buff, form,
-                                  lua_check_number(arg++, "format"));
+          sprintf(buff, form, lua_check_number(arg++, "format"));
           break;
         default:  /* also treat cases 'pnLlh' */
           lua_error("invalid format option in function `format'");
       }
+      lbuffer.size += strlen(buff);
     }
   }
   lua_pushstring(luaI_addchar(0));  /* push the result */
