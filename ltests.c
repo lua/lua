@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.78 2001/04/11 14:42:41 roberto Exp roberto $
+** $Id: ltests.c,v 1.79 2001/04/17 17:35:54 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -433,8 +433,8 @@ static int udataval (lua_State *L) {
 }
 
 static int newtag (lua_State *L) {
-  lua_pushnumber(L, lua_newtype(L, lua_tostring(L, 1),
-                                   (int)lua_tonumber(L, 2)));
+  lua_pushnumber(L, lua_newxtype(L, lua_tostring(L, 1),
+                                    (int)lua_tonumber(L, 2)));
   return 1;
 }
 

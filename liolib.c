@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.110 2001/03/06 20:09:38 roberto Exp roberto $
+** $Id: liolib.c,v 1.111 2001/03/26 14:31:49 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -75,14 +75,14 @@ static int pushresult (lua_State *L, int i) {
 */
 
 
-#define checkfile(L,f)	(strcmp(lua_xtype(L,(f)), FILEHANDLE) == 0)
+#define checkfile(L,f)	(strcmp(lua_xtypename(L,(f)), FILEHANDLE) == 0)
 
 
 static FILE *getopthandle (lua_State *L, int inout) {
   FILE *p = (FILE *)lua_touserdata(L, 1);
   if (p != NULL) {  /* is it a userdata ? */
     if (!checkfile(L, 1)) {
-      if (strcmp(lua_xtype(L, 1), l_s("ClosedFileHandle")) == 0)
+      if (strcmp(lua_xtypename(L, 1), l_s("ClosedFileHandle")) == 0)
         luaL_argerror(L, 1, l_s("file is closed"));
       else
         luaL_argerror(L, 1, l_s("(invalid value)"));
@@ -102,7 +102,7 @@ static FILE *getopthandle (lua_State *L, int inout) {
 
 
 static void pushfile (lua_State *L, FILE *f) {
-  lua_pushusertag(L, f, lua_type2tag(L, FILEHANDLE));
+  lua_pushusertag(L, f, lua_name2tag(L, FILEHANDLE));
 }
 
 
@@ -132,7 +132,7 @@ static int closefile (lua_State *L, FILE *f) {
     return 1;
   else {
     lua_pushuserdata(L, f);
-    lua_settag(L, lua_type2tag(L, l_s("ClosedFileHandle")));
+    lua_settag(L, lua_name2tag(L, l_s("ClosedFileHandle")));
     return (CLOSEFILE(L, f) == 0);
   }
 }
@@ -678,8 +678,8 @@ static const luaL_reg iolib[] = {
 
 
 LUALIB_API int lua_iolibopen (lua_State *L) {
-  int iotag = lua_newtype(L, FILEHANDLE, LUA_TUSERDATA);
-  lua_newtype(L, l_s("ClosedFileHandle"), LUA_TUSERDATA);
+  int iotag = lua_newxtype(L, FILEHANDLE, LUA_TUSERDATA);
+  lua_newxtype(L, l_s("ClosedFileHandle"), LUA_TUSERDATA);
   luaL_openl(L, iolib);
   /* predefined file handles */
   setfile(L, stdin, INFILE);

@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.139 2001/04/11 18:39:37 roberto Exp roberto $
+** $Id: lapi.c,v 1.140 2001/04/17 17:35:54 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -151,16 +151,16 @@ LUA_API int lua_type (lua_State *L, int index) {
 }
 
 
-LUA_API const l_char *lua_typename (lua_State *L, int t) {
+LUA_API const l_char *lua_tag2name (lua_State *L, int tag) {
   const l_char *s;
   lua_lock(L);
-  s = (t == LUA_TNONE) ? l_s("no value") : basictypename(G(L), t);
+  s = (tag == LUA_TNONE) ? l_s("no value") : basictypename(G(L), tag);
   lua_unlock(L);
   return s;
 }
 
 
-LUA_API const l_char *lua_xtype (lua_State *L, int index) {
+LUA_API const l_char *lua_xtypename (lua_State *L, int index) {
   StkId o;
   const l_char *type;
   lua_lock(L);
@@ -621,7 +621,7 @@ LUA_API void lua_setgcthreshold (lua_State *L, int newthreshold) {
 ** miscellaneous functions
 */
 
-LUA_API int lua_newtype (lua_State *L, const l_char *name, int basictype) {
+LUA_API int lua_newxtype (lua_State *L, const l_char *name, int basictype) {
   int tag;
   lua_lock(L);
   if (basictype != LUA_TNONE &&
@@ -636,7 +636,7 @@ LUA_API int lua_newtype (lua_State *L, const l_char *name, int basictype) {
 }
 
 
-LUA_API int lua_type2tag (lua_State *L, const l_char *name) {
+LUA_API int lua_name2tag (lua_State *L, const l_char *name) {
   int tag;
   const TObject *v;
   lua_lock(L);
@@ -798,3 +798,18 @@ LUA_API void  lua_setweakmode (lua_State *L, int mode) {
   lua_unlock(L);
 }
 
+
+
+/*
+** deprecated function
+*/
+LUA_API void lua_pushusertag (lua_State *L, void *u, int tag) {
+  /* ???????? */
+  if (lua_pushuserdata(L, u) || 1)  /* new udata? */
+    lua_settag(L, tag);  /* OK, no conflit */
+  else {
+    if (lua_tag(L, -1) != tag) {
+      lua_error(L, "conflicting tags for the same userdata");
+}
+  }
+}

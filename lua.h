@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.95 2001/04/11 18:39:37 roberto Exp roberto $
+** $Id: lua.h,v 1.96 2001/04/17 17:35:54 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: info@lua.org
@@ -124,8 +124,8 @@ LUA_API int   lua_stackspace (lua_State *L);
 */
 
 LUA_API int             lua_type (lua_State *L, int index);
-LUA_API const lua_char *lua_typename (lua_State *L, int t);
-LUA_API const lua_char *lua_xtype (lua_State *L, int index);
+LUA_API const lua_char *lua_tag2name (lua_State *L, int tag);
+LUA_API const lua_char *lua_xtypename (lua_State *L, int index);
 LUA_API int             lua_isnumber (lua_State *L, int index);
 LUA_API int             lua_isstring (lua_State *L, int index);
 LUA_API int             lua_iscfunction (lua_State *L, int index);
@@ -203,8 +203,8 @@ LUA_API void  lua_setgcthreshold (lua_State *L, int newthreshold);
 /*
 ** miscellaneous functions
 */
-LUA_API int   lua_newtype (lua_State *L, const lua_char *name, int basictype);
-LUA_API int   lua_type2tag (lua_State *L, const lua_char *name);
+LUA_API int   lua_newxtype (lua_State *L, const lua_char *name, int basictype);
+LUA_API int   lua_name2tag (lua_State *L, const lua_char *name);
 LUA_API int   lua_copytagmethods (lua_State *L, int tagto, int tagfrom);
 LUA_API void  lua_settag (lua_State *L, int tag);
 
@@ -223,6 +223,12 @@ LUA_API void  lua_setweakmode (lua_State *L, int mode);
 LUA_API int  lua_getweakmode (lua_State *L, int index);
 
 
+/*
+** deprecated function
+*/
+LUA_API void lua_pushusertag (lua_State *L, void *u, int tag);
+
+
 /* 
 ** ===============================================================
 ** some useful macros
@@ -234,7 +240,6 @@ LUA_API int  lua_getweakmode (lua_State *L, int index);
 #define lua_pop(L,n)		lua_settop(L, -(n)-1)
 
 #define lua_register(L,n,f)	(lua_pushcfunction(L, f), lua_setglobal(L, n))
-#define lua_pushusertag(L,u,t)	(lua_pushuserdata(L, u), lua_settag(L, t))
 #define lua_pushcfunction(L,f)	lua_pushcclosure(L, f, 0)
 #define lua_clonetag(L,t)	lua_copytagmethods(L, lua_newtag(L), (t))
 
@@ -249,7 +254,11 @@ LUA_API int  lua_getweakmode (lua_State *L, int index);
 
 
 
-#define lua_newtag(L)	lua_newtype(L, NULL, LUA_TNONE)
+/*
+** compatibility macros
+*/
+#define lua_newtag(L)	lua_newxtype(L, NULL, LUA_TNONE)
+#define lua_typename	lua_tag2name
 
 #endif
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.33 2001/04/11 14:42:41 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.34 2001/04/11 18:39:37 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -144,7 +144,7 @@ static int gettag (lua_State *L, int narg) {
       return (int)lua_tonumber(L, narg);
     case LUA_TSTRING: {
       const l_char *name = lua_tostring(L, narg);
-      int tag = lua_type2tag(L, name);
+      int tag = lua_name2tag(L, name);
       if (tag == LUA_TNONE)
         luaL_verror(L, l_s("'%.30s' is not a valid type name"), name);
       return tag;
@@ -194,7 +194,7 @@ static int luaB_weakmode (lua_State *L) {
 
 static int luaB_newtype (lua_State *L) {
   const l_char *name = luaL_opt_string(L, 1, NULL);
-  lua_pushnumber(L, lua_newtype(L, name, LUA_TTABLE));
+  lua_pushnumber(L, lua_newxtype(L, name, LUA_TTABLE));
   return 1;
 }
 
@@ -267,14 +267,14 @@ static int luaB_collectgarbage (lua_State *L) {
 
 static int luaB_type (lua_State *L) {
   luaL_checkany(L, 1);
-  lua_pushstring(L, lua_typename(L, lua_type(L, 1)));
+  lua_pushstring(L, lua_tag2name(L, lua_type(L, 1)));
   return 1;
 }
 
 
 static int luaB_xtype (lua_State *L) {
   luaL_checkany(L, 1);
-  lua_pushstring(L, lua_xtype(L, 1));
+  lua_pushstring(L, lua_xtypename(L, 1));
   return 1;
 }
 
@@ -406,19 +406,19 @@ static int luaB_require (lua_State *L) {
 }
 
 
-static int aux_unwrap (lua_State *L, int arg) {
+static int aux_unpack (lua_State *L, int arg) {
   int n, i;
   luaL_checktype(L, arg, LUA_TTABLE);
   n = lua_getn(L, arg);
-  luaL_checkstack(L, n, l_s("table too big to unwrap"));
+  luaL_checkstack(L, n, l_s("table too big to unpack"));
   for (i=1; i<=n; i++)  /* push arg[1...n] */
     lua_rawgeti(L, arg, i);
   return n;
 }
 
 
-static int luaB_unwrap (lua_State *L) {
-  return aux_unwrap(L, 1);
+static int luaB_unpack (lua_State *L) {
+  return aux_unpack(L, 1);
 }
 
 
@@ -437,7 +437,7 @@ static int luaB_call (lua_State *L) {
   oldtop = lua_gettop(L);  /* top before function-call preparation */
   /* push function */
   lua_pushvalue(L, 1);
-  n = aux_unwrap(L, 2);  /* push arg[1...n] */
+  n = aux_unpack(L, 2);  /* push arg[1...n] */
   status = lua_call(L, n, LUA_MULTRET);
   if (err != 0) {  /* restore old error method */
     lua_pushvalue(L, err);
@@ -466,13 +466,13 @@ static int luaB_tostring (lua_State *L) {
       lua_pushvalue(L, 1);
       return 1;
     case LUA_TTABLE:
-      sprintf(buff, l_s("%.40s: %p"), lua_xtype(L, 1), lua_topointer(L, 1));
+      sprintf(buff, l_s("%.40s: %p"), lua_xtypename(L, 1), lua_topointer(L, 1));
       break;
     case LUA_TFUNCTION:
       sprintf(buff, l_s("function: %p"), lua_topointer(L, 1));
       break;
     case LUA_TUSERDATA: {
-      const l_char *t = lua_xtype(L, 1);
+      const l_char *t = lua_xtypename(L, 1);
       if (strcmp(t, l_s("userdata")) == 0)
         sprintf(buff, l_s("userdata(%d): %p"), lua_tag(L, 1),
                 lua_touserdata(L, 1));
@@ -793,7 +793,7 @@ static const luaL_reg base_funcs[] = {
   {l_s("sort"), luaB_sort},
   {l_s("tinsert"), luaB_tinsert},
   {l_s("tremove"), luaB_tremove},
-  {l_s("unwrap"), luaB_unwrap},
+  {l_s("unpack"), luaB_unpack},
   {l_s("xtype"), luaB_xtype},
   {l_s("weakmode"), luaB_weakmode}
 };

@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.66 2001/03/26 14:31:49 roberto Exp roberto $
+** $Id: lcode.c,v 1.67 2001/04/06 18:25:00 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -265,14 +265,10 @@ void luaK_concat (FuncState *fs, int *l1, int l2) {
     *l1 = l2;
   else {
     int list = *l1;
-    for (;;) {  /* traverse `l1' */
-      int next = luaK_getjump(fs, list);
-      if (next == NO_JUMP) {  /* end of list? */
-        luaK_fixjump(fs, list, l2);
-        return;
-      }
+    int next;
+    while ((next = luaK_getjump(fs, list)) != NO_JUMP)  /* find last element */
       list = next;
-    }
+    luaK_fixjump(fs, list, l2);
   }
 }
 
@@ -310,8 +306,8 @@ void luaK_goiftrue (FuncState *fs, expdesc *v, int keepvalue) {
 }
 
 
-static void luaK_goiffalse (FuncState *fs, expdesc *v, int keepvalue) {
-  luaK_testgo(fs, v, 0, keepvalue ? OP_JMPONT : OP_JMPT);
+static void luaK_goiffalse (FuncState *fs, expdesc *v) {
+  luaK_testgo(fs, v, 0, OP_JMPONT);
 }
 
 
@@ -385,7 +381,7 @@ void luaK_infix (LexState *ls, BinOpr op, expdesc *v) {
       luaK_goiftrue(fs, v, 1);
       break;
     case OPR_OR:
-      luaK_goiffalse(fs, v, 1);
+      luaK_goiffalse(fs, v);
       break;
     default:
       luaK_tostack(ls, v, 1);  /* all other binary operators need a value */
