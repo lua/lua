@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.56 2000/04/07 19:35:31 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.57 2000/04/12 18:57:19 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -36,8 +36,6 @@
 
 
 
-#define MAXARG_sA	(MAXARG_A>>1)	/* max value for a signed A */
-
 
 /* creates a mask with `n' 1 bits at position `p' */
 #define MASK1(n,p)	((~((~(Instruction)0)<<n))<<p)
@@ -71,11 +69,6 @@
 #define GETARG_B(i)	((int)(((i)>>POS_B) & MASK1(SIZE_B,0)))
 #define SETARG_B(i,b)	((i) = (((i)&MASK0(SIZE_B,POS_B)) | \
                                ((Instruction)(b)<<POS_B)))
-
-
-#define CREATE_sAB(o,a,b)	(CREATE_AB((o),(a)+MAXARG_sA,(b)))
-#define GETARG_sA(i)		(GETARG_A(i)-MAXARG_sA)
-
 
 
 /*
@@ -122,7 +115,6 @@ OP_SETTABLE,/*	A B	v a_a-a_1 i t	(pops b values)	t[i]=v		*/
 OP_SETLIST,/*	A B	v_b-v_0 t	t		t[i+a*FPF]=v_i	*/
 OP_SETMAP,/*	U	v_u k_u - v_0 k_0 t	t	t[k_i]=v_i	*/
 
-OP_INCLOCAL,/*	sA L	-		-		LOC[l]+=sA	*/
 OP_ADD,/*	-	y x		x+y				*/
 OP_ADDI,/*	S	x		x+s				*/
 OP_SUB,/*	-	y x		x-y				*/

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.100 2000/04/07 13:13:11 roberto Exp roberto $
+** $Id: lvm.c,v 1.101 2000/04/12 18:57:19 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -500,19 +500,6 @@ StkId luaV_execute (lua_State *L, const Closure *cl, register StkId base) {
         top--;
         break;
 
-      case OP_INCLOCAL: {
-        TObject *var = base+GETARG_B(i);
-        int n = GETARG_sA(i);
-        if (tonumber(var)) {
-          *top = *var;  /* PUSHLOCAL */
-          addK(L, top+1, n);
-          *var = *top;  /* SETLOCAL */
-        }
-        else
-          nvalue(var) += (Number)n;
-        break;
-      }
-
       case OP_ADDI:
         if (tonumber(top-1))
           addK(L, top, GETARG_S(i));
@@ -647,7 +634,8 @@ StkId luaV_execute (lua_State *L, const Closure *cl, register StkId base) {
         Number index;
         LUA_ASSERT(L, ttype(top-1) == TAG_NUMBER, "invalid step");
         LUA_ASSERT(L, ttype(top-2) == TAG_NUMBER, "invalid limit");
-        if (tonumber(top-3)) lua_error(L, "`for' index must be a number");
+        if (ttype(top-3) != TAG_NUMBER)
+          lua_error(L, "`for' index must be a number");
         index = nvalue(top-3)+step;
         if ((step>0) ? index<=limit : index>=limit) {
           nvalue(top-3) = index;

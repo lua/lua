@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.13 2000/04/12 18:57:19 roberto Exp roberto $
+** $Id: ltests.c,v 1.14 2000/04/12 19:56:50 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -52,7 +52,6 @@ static void setnameval (lua_State *L, lua_Object t, const char *name, int val) {
 #define U(o)	sprintf(buff, "%-12s%4u", o, GETARG_U(i))
 #define S(o)	sprintf(buff, "%-12s%4d", o, GETARG_S(i))
 #define AB(o)	sprintf(buff, "%-12s%4d %4d", o, GETARG_A(i), GETARG_B(i))
-#define sAB(o)	sprintf(buff, "%-12s%4d %4d", o, GETARG_sA(i), GETARG_B(i))
 
 
 
@@ -83,7 +82,6 @@ static int printop (lua_State *L, Instruction i) {
     case OP_SETLIST: AB("SETLIST"); break;
     case OP_SETMAP: U("SETMAP"); break;
     case OP_ADD: O("ADD"); break;
-    case OP_INCLOCAL: sAB("INCLOCAL"); break;
     case OP_ADDI: S("ADDI"); break;
     case OP_SUB: O("SUB"); break;
     case OP_MULT: O("MULT"); break;
@@ -147,7 +145,6 @@ static void get_limits (lua_State *L) {
   setnameval(L, t, "MAXARG_S", MAXARG_S);
   setnameval(L, t, "MAXARG_A", MAXARG_A);
   setnameval(L, t, "MAXARG_B", MAXARG_B);
-  setnameval(L, t, "MAXARG_sA", MAXARG_sA);
   setnameval(L, t, "MAXSTACK", MAXSTACK);
   setnameval(L, t, "MAXLOCALS", MAXLOCALS);
   setnameval(L, t, "MAXUPVALUES", MAXUPVALUES);

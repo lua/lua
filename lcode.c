@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.23 2000/04/07 19:35:20 roberto Exp roberto $
+** $Id: lcode.c,v 1.24 2000/04/12 18:57:19 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -460,6 +460,9 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
     case OP_MULT: case OP_DIV: case OP_POW:
       delta = -1; mode = iO; break;
 
+    case OP_SETLOCAL:  /* `setlocal' default pops one value */
+        delta = -1; arg2 = 1; mode = iAB; break;
+
     case OP_RETURN:
       if (GET_OPCODE(i) == OP_CALL && GETARG_B(i) == MULT_RET) {
         SET_OPCODE(i, OP_TAILCALL);
@@ -500,26 +503,6 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
         default: mode = iO; break;
       }
       break;
-
-    case OP_SETLOCAL: {
-      int pc = fs->pc;
-      Instruction *code = fs->f->code;
-      delta = -1;
-      if (pc-1 > fs->lasttarget &&  /* no jumps in-between instructions? */
-          code[pc-2] == CREATE_U(OP_GETLOCAL, arg1) &&
-          GET_OPCODE(i) == OP_ADDI && abs(GETARG_S(i)) <= MAXARG_sA) {
-        /* `local=local+k' */
-        fs->pc = pc-1;
-        code[pc-2] = CREATE_sAB(OP_INCLOCAL, GETARG_S(i), arg1);
-        luaK_deltastack(fs, delta);
-        return pc-1;
-      }
-      else {
-        arg2 = 1;  /* `setlocal' default pops one value */
-        mode = iAB;
-      }
-      break;
-    }
 
     case OP_ADD:
       delta = -1;
@@ -585,8 +568,7 @@ int luaK_code2 (FuncState *fs, OpCode o, int arg1, int arg2) {
       break;
 
     case OP_GETDOTTED: case OP_GETINDEXED:
-    case OP_TAILCALL: case OP_INCLOCAL:
-    case OP_ADDI:
+    case OP_TAILCALL: case OP_ADDI:
       LUA_INTERNALERROR(L, "instruction used only for optimizations");
       return 0;  /* to avoid warnings */
 
