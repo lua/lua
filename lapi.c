@@ -654,7 +654,7 @@ LUA_API void lua_concat (lua_State *L, int n) {
   lua_lock(L);
   api_checknelems(L, n);
   if (n >= 2) {
-    luaV_strconc(L, n, L->top);
+    luaV_strconc(L, n, L->top - L->ci->base - 1);
     L->top -= (n-1);
     luaC_checkGC(L);
   }
