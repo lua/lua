@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.132 2004/08/30 18:35:14 roberto Exp roberto $
+** $Id: lua.c,v 1.133 2004/11/18 19:53:49 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -82,8 +82,7 @@ static int report (lua_State *L, int status) {
 static int docall (lua_State *L, int narg, int clear) {
   int status;
   int base = lua_gettop(L) - narg;  /* function index */
-  lua_pushliteral(L, "_TRACEBACK");
-  lua_rawget(L, LUA_GLOBALSINDEX);  /* get traceback function */
+  luaL_getfield(L, LUA_GLOBALSINDEX, "debug.traceback");
   lua_insert(L, base);  /* put it under chunk and args */
   signal(SIGINT, laction);
   status = lua_pcall(L, narg, (clear ? 0 : LUA_MULTRET), base);
@@ -359,7 +358,7 @@ static int pmain (lua_State *L) {
   int interactive = 1;
   if (s->argv[0] && s->argv[0][0]) progname = s->argv[0];
   globalL = L;
-  lua_userinit(L);  /* open libraries */
+  luaopen_stdlibs(L);  /* open libraries */
   status = handle_luainit(L);
   if (status == 0) {
     status = handle_argv(L, s->argv, &interactive);
