@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.23 2004/12/13 12:15:11 roberto Exp $
+** $Id: lapi.c,v 2.24 2005/01/04 15:55:12 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -826,7 +826,7 @@ LUA_API int lua_dump (lua_State *L, lua_Chunkwriter writer, void *data) {
 }
 
 
-LUA_API int  lua_threadstatus (lua_State *L) {
+LUA_API int  lua_status (lua_State *L) {
   return L->status;
 }
 
@@ -888,11 +888,6 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
 /*
 ** miscellaneous functions
 */
-
-
-LUA_API const char *lua_version (void) {
-  return LUA_VERSION;
-}
 
 
 LUA_API int lua_error (lua_State *L) {

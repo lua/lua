@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.162 2004/12/07 18:31:34 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.163 2004/12/13 12:15:11 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -469,7 +469,7 @@ static int auxresume (lua_State *L, lua_State *co, int narg) {
   int status;
   if (!lua_checkstack(co, narg))
     luaL_error(L, "too many arguments to resume");
-  if (lua_threadstatus(co) == 0 && lua_gettop(co) == 0) {
+  if (lua_status(co) == 0 && lua_gettop(co) == 0) {
     lua_pushliteral(L, "cannot resume dead coroutine");
     return -1;  /* error flag */
   }
@@ -549,7 +549,7 @@ static int luaB_costatus (lua_State *L) {
   luaL_argcheck(L, co, 1, "coroutine expected");
   if (L == co) lua_pushliteral(L, "running");
   else {
-    switch (lua_threadstatus(co)) {
+    switch (lua_status(co)) {
       case LUA_YIELD:
         lua_pushliteral(L, "suspended");
         break;

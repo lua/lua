@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.196 2004/12/06 17:53:42 roberto Exp roberto $
+** $Id: lua.h,v 1.197 2004/12/13 12:15:11 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -18,6 +18,7 @@
 
 
 #define LUA_VERSION	"Lua 5.1 (work)"
+#define LUA_VERSION_NUM	501
 #define LUA_COPYRIGHT	"Copyright (C) 1994-2004 Tecgraf, PUC-Rio"
 #define LUA_AUTHORS 	"R. Ierusalimschy, L. H. de Figueiredo & W. Celes"
 
@@ -37,7 +38,7 @@
 #define lua_upvalueindex(i)	(LUA_GLOBALSINDEX-(i))
 
 
-/* return codes for `lua_pcall', `lua_resume', and `lua_threadstatus' */
+/* return codes for `lua_pcall', `lua_resume', and `lua_status' */
 #define LUA_YIELD	1
 #define LUA_ERRRUN	2
 #define LUA_ERRSYNTAX	3
@@ -214,7 +215,7 @@ LUA_API int lua_dump (lua_State *L, lua_Chunkwriter writer, void *data);
 */
 LUA_API int  lua_yield (lua_State *L, int nresults);
 LUA_API int  lua_resume (lua_State *L, int narg);
-LUA_API int  lua_threadstatus (lua_State *L);
+LUA_API int  lua_status (lua_State *L);
 
 /*
 ** garbage-collection function and options
@@ -234,8 +235,6 @@ LUA_API int lua_gc (lua_State *L, int what, int data);
 /*
 ** miscellaneous functions
 */
-
-LUA_API const char *lua_version (void);
 
 LUA_API int   lua_error (lua_State *L);
 
