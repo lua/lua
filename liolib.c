@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.37 1999/04/05 19:47:05 roberto Exp roberto $
+** $Id: liolib.c,v 1.38 1999/04/14 20:40:32 roberto Exp $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -244,23 +244,25 @@ static int read_pattern (FILE *f, char *p) {
         p++;
         continue;
       default: {
-        char *ep;  /* get what is next */
+        char *ep = luaI_classend(p);  /* get what is next */
         int m;  /* match result */
         if (c == NEED_OTHER) c = getc(f);
-        if (c != EOF)
-          m = luaI_singlematch(c, p, &ep);
-        else {
-          luaI_singlematch(0, p, &ep);  /* to set "ep" */
-          m = 0;  /* EOF matches no pattern */
-        }
+        m = (c==EOF) ? 0 : luaI_singlematch(c, p, ep);
         if (m) {
           if (!inskip) luaL_addchar(c);
           c = NEED_OTHER;
         }
         switch (*ep) {
-          case '*':  /* repetition */
-            if (!m) p = ep+1;  /* else stay in (repeat) the same item */
-            continue;
+          case '+':  /* repetition (1 or more) */
+            if (!m) goto break_while;  /* pattern fails? */
+            /* else go through */
+          case '*':  /* repetition (0 or more) */
+            while (m) {  /* reads the same item until it fails */
+              c = getc(f);
+              m = (c==EOF) ? 0 : luaI_singlematch(c, p, ep);
+              if (m && !inskip) luaL_addchar(c);
+            }
+            /* go through to continue reading the pattern */
           case '?':  /* optional */
             p = ep+1;  /* continues reading the pattern */
             continue;
@@ -336,7 +338,7 @@ static void io_read (void) {
         success = 1; /* always success */
         break;
       case 4:  /* word */
-        success = read_pattern(f, "{%s*}%S%S*");
+        success = read_pattern(f, "{%s*}%S+");
         break;
       default:
         success = read_pattern(f, p);

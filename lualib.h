@@ -1,5 +1,5 @@
 /*
-** $Id: lualib.h,v 1.4 1998/06/19 16:14:09 roberto Exp roberto $
+** $Id: lualib.h,v 1.5 1999/01/08 16:47:44 roberto Exp roberto $
 ** Lua standard libraries
 ** See Copyright Notice in lua.h
 */
@@ -29,7 +29,8 @@ void lua_userinit (void);
 
 /* Auxiliary functions (private) */
 
-int luaI_singlematch (int c, char *p, char **ep);
+char *luaI_classend (char *p);
+int luaI_singlematch (int c, char *p, char *ep);
 
 #endif
 
