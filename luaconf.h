@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.16 2004/11/18 19:53:49 roberto Exp roberto $
+** $Id: luaconf.h,v 1.17 2004/11/24 18:55:56 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -62,9 +62,6 @@
 /* buffer size used by lauxlib buffer system */
 #define LUAL_BUFFERSIZE   BUFSIZ
 
-
-/* first index for arrays */
-#define LUA_FIRSTINDEX		1
 
 /* assertions in Lua (mainly for internal debugging) */
 #define lua_assert(c)		((void)0)
