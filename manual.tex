@@ -1,4 +1,4 @@
-% $Id: manual.tex,v 1.30 1999/04/14 20:47:12 roberto Exp roberto $
+% $Id: manual.tex,v 1.31 1999/05/05 19:21:57 roberto Exp roberto $
 
 \documentclass[11pt]{article}
 \usepackage{fullpage,bnf}
@@ -41,7 +41,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{{\small \tt\$Date: 1999/04/14 20:47:12 $ $}}
+\date{{\small \tt\$Date: 1999/05/05 19:21:57 $ $}}
 
 \maketitle
 
@@ -1719,9 +1719,9 @@ equivalent to the Lua code:
   lua_pushnumber(4);                                   /* 3rd argument */
   lua_callfunction(lua_getglobal("f"));           /* call Lua function */
   lua_pushobject(lua_getresult(1));   /* push first result of the call */
-  lua_setglobal("a");                      /* sets global variable 'a' */
-  lua_pushobject(lua_getresult(2));   /* push second result of the call */
-  lua_setglobal("b");                      /* sets global variable 'b' */
+  lua_setglobal("a");                       /* set global variable 'a' */
+  lua_pushobject(lua_getresult(2));  /* push second result of the call */
+  lua_setglobal("b");                       /* set global variable 'b' */
 \end{verbatim}
 
 Some special Lua functions have exclusive interfaces.
@@ -2459,27 +2459,27 @@ For instance, when \verb|n| is 1 only the first occurrence of
 
 Here are some examples:
 \begin{verbatim}
-  x = gsub("hello world", "(%w%w*)", "%1 %1")
+  x = gsub("hello world", "(%w+)", "%1 %1")
   --> x="hello hello world world"
 
-  x = gsub("hello world", "(%w%w*)", "%1 %1", 1)
+  x = gsub("hello world", "(%w+)", "%1 %1", 1)
   --> x="hello hello world"
 
-  x = gsub("hello world from Lua", "(%w%w*)%s*(%w%w*)", "%2 %1")
+  x = gsub("hello world from Lua", "(%w+)%s*(%w+)", "%2 %1")
   --> x="world hello Lua from"
 
-  x = gsub("home = $HOME, user = $USER", "$(%w%w*)", getenv)
+  x = gsub("home = $HOME, user = $USER", "%$(%w+)", getenv)
   --> x="home = /home/roberto, user = roberto"  (for instance)
 
-  x = gsub("4+5 = $return 4+5$", "$(.-)%$", dostring)
+  x = gsub("4+5 = $return 4+5$", "%$(.-)%$", dostring)
   --> x="4+5 = 9"
 
-  local t = {name="lua", version="3.1"}
-  x = gsub("$name - $version", "$(%w%w*)", function (v) return %t[v] end)
-  --> x="lua - 3.1"
+  local t = {name="lua", version="3.2"}
+  x = gsub("$name - $version", "%$(%w+)", function (v) return %t[v] end)
+  --> x="lua - 3.2"
 
   t = {n=0}
-  gsub("first second word", "(%w%w*)", function (w) tinsert(%t, w) end)
+  gsub("first second word", "(%w+)", function (w) tinsert(%t, w) end)
   --> t={"first", "second", "word"; n=3}
 \end{verbatim}
 
@@ -2491,7 +2491,7 @@ a \Def{character class} is used to represent a set of characters.
 The following combinations are allowed in describing a character class:
 \begin{description}
 \item[\emph{x}] (where \emph{x} is any character not in the list
-\verb|()%.[]*-?|)
+\verb|^$()%.[]*+-?|)
 --- represents the character \emph{x} itself.
 \item[\T{.}] --- (a dot) represents all characters.
 \item[\T{\%a}] --- represents all letters.
@@ -2507,6 +2507,8 @@ The following combinations are allowed in describing a character class:
 \item[\T{\%\M{x}}] (where \M{x} is any non alphanumeric character)  ---
 represents the character \M{x}.
 This is the standard way to escape the magic characters \verb|()%.[]*-?|.
+It is strongly recommended that any control character (even the non magic),
+when used to represent itself in a pattern, should be preceded by a \verb|%|.
 \item[\T{[char-set]}] ---
 Represents the class which is the union of all
 characters in char-set.
@@ -2533,7 +2535,7 @@ In particular, the class \verb|[a-z]| may not be equivalent to \verb|%l|.
 The second form should be preferred for more portable programs.
 
 \paragraph{Pattern Item:}
-a \Def{pattern item} may be:
+a \Def{pattern item} may be
 \begin{itemize}
 \item
 a single character class,
@@ -2541,12 +2543,16 @@ which matches any single character in the class;
 \item
 a single character class followed by \verb|*|,
 which matches 0 or more repetitions of characters in the class.
-These repetition items will always match the longest possible sequence.
+These repetition items will always match the longest possible sequence;
+\item
+a single character class followed by \verb|+|,
+which matches 1 or more repetitions of characters in the class.
+These repetition items will always match the longest possible sequence;
 \item
 a single character class followed by \verb|-|,
 which also matches 0 or more repetitions of characters in the class.
 Unlike \verb|*|,
-these repetition items will always match the shortest possible sequence.
+these repetition items will always match the shortest possible sequence;
 \item
 a single character class followed by \verb|?|,
 which matches 0 or 1 occurrence of a character in the class;
@@ -2804,7 +2810,7 @@ it uses a default pattern that reads the next line
 
 A \Def{read pattern} is a sequence of read pattern items.
 An item may be a single character class
-or a character class followed by \verb|?| or by \verb|*|.
+or a character class followed by \verb|?|, by \verb|*|, or by \verb|+|.
 A single character class reads the next character from the input
 if it belongs to the class, otherwise it fails.
 A character class followed by \verb|?| reads the next character
@@ -2813,6 +2819,9 @@ it never fails.
 A character class followed by \verb|*| reads until a character that
 does not belong to the class, or end of file;
 since it can match a sequence of zero characters, it never fails.
+A character class followed by \verb|+| reads until a character that
+does not belong to the class, or end of file;
+it fails if it cannot read at least one character.
 Note that the behavior of read patterns is slightly different from
 the regular pattern matching behavior,
 where a \verb|*| expands to the maximum length \emph{such that}
@@ -2838,7 +2847,7 @@ It is equivalent to the pattern \verb|".*"|.
 \item[``*w''] returns the next word
 (maximal sequence of non white-space characters),
 skipping spaces if necessary, or \nil\ on end of file.
-It is equivalent to the pattern \verb|"{%s*}%S%S*"|.
+It is equivalent to the pattern \verb|"{%s*}%S+"|.
 \end{description}
 
 \subsubsection*{\ff \T{write ([filehandle, ] value1, ...)}}\Deffunc{write}
