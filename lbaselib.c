@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.77 2002/06/05 16:59:21 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.78 2002/06/05 17:24:04 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -96,7 +96,8 @@ static int luaB_metatable (lua_State *L) {
   else {
     int t = lua_type(L, 2);
     luaL_check_type(L, 1, LUA_TTABLE);
-    luaL_arg_check(L, t == LUA_TNIL || t == LUA_TTABLE, 2, "nil/table expected");
+    luaL_arg_check(L, t == LUA_TNIL || t == LUA_TTABLE, 2,
+                      "nil or table expected");
     lua_settop(L, 2);
     lua_setmetatable(L, 1);
   }
@@ -224,7 +225,7 @@ static int luaB_unpack (lua_State *L) {
 }
 
 
-static int luaB_pcall (lua_State *L) {
+static int luaB_xpcall (lua_State *L) {
   int status;
   luaL_check_any(L, 1);
   luaL_check_any(L, 2);
@@ -234,6 +235,20 @@ static int luaB_pcall (lua_State *L) {
   else {
     lua_pushboolean(L, 1);
     lua_replace(L, 1);
+    return lua_gettop(L);  /* return `true' + all results */
+  }
+}
+
+
+static int luaB_pcall (lua_State *L) {
+  int status;
+  luaL_check_any(L, 1);
+  status = lua_pcall(L, lua_gettop(L) - 1, LUA_MULTRET, 0);
+  if (status != 0)
+    return passresults(L, status);
+  else {
+    lua_pushboolean(L, 1);
+    lua_insert(L, 1);
     return lua_gettop(L);  /* return `true' + all results */
   }
 }
@@ -388,6 +403,7 @@ static const luaL_reg base_funcs[] = {
   {"rawget", luaB_rawget},
   {"rawset", luaB_rawset},
   {"pcall", luaB_pcall},
+  {"xpcall", luaB_xpcall},
   {"collectgarbage", luaB_collectgarbage},
   {"gcinfo", luaB_gcinfo},
   {"loadfile", luaB_loadfile},
