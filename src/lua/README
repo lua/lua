@@ -2,39 +2,31 @@ This is lua, a sample Lua interpreter.
 It can be used as a batch interpreter and also interactively.
 There are man pages for it in both nroff and html in ../../doc.
 
-Here are the options that it understands:
+Usage: ./lua [options] [script [args]].  Available options are:
   -        execute stdin as a file
-  -c       close Lua when exiting
   -e stat  execute string `stat'
-  -f name  execute file `name' with remaining arguments in table `arg'
-  -i       enter interactive mode with prompt
-  -q       enter interactive mode without prompt
-  -sNUM    set stack size to NUM (must be the first option)
-  -v       print version information
-  a=b      set global `a' to string `b'
-  name     execute file `name'
+  -i       enter interactive mode after executing `script'
+  -l name  load and run library `name'
+  -v       show version information
+  --       stop handling options
 
-If no options are given, then it reads lines from stdin and executes them
-as they are read -- so, each line must contain a complete statement.
-To span a statement across several lines, end each line with a backslash '\'.
-
-To change the prompt, set the global variable _PROMPT to whatever you want.
-You can do this after calling the interpreter or on the command line with
-	lua _PROMPT="lua: " -i
-for example. Note that you need "-i" in this case.
-
-You must be careful when using quotes on the command line because they are
-usually handled by the shell.
-
-This interpreter is good for using Lua as a standalone language.
-For a minimal interpreter, see ../../etc/min.c.
+This interpreter is suitable for using Lua as a standalone language; it loads
+all standard libraries. For a minimal interpreter, see ../../etc/min.c.
 
 If your application simply exports new functions to Lua (which is common),
 then you can use this interpreter (almost) unmodified, as follows:
-First, define a function 
-	void myinit (lua_State *L)
-in your own code. In this function, you should do whatever initializations
-are needed by your application, typically exporting your functions to Lua.
-Then, add a call "myinit(L)" in lua.c after the place marked
-	"add your libraries here"
-Of course, you can use any name instead of "myinit".
+
+* First, define a function 
+	 void myinit (lua_State *L)
+  in your own code. In this function, you should do whatever initializations
+  are needed by your application, typically exporting your functions to Lua.
+  (Of course, you can use any name instead of "myinit".)
+
+* Then, #define lua_userinit(L) to be "openstdlibs(L)+myinit(L)".
+  Here, openstdlibs is a function in lua.c that opens all standard libraries.
+  If you don't need them, just don't call openstdlibs and open any standard
+  libraries that you do need in myinit.
+
+* Finally, remember to link your C code when building lua.
+
+For other customizations, see ../../etc/config.c.

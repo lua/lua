@@ -4,19 +4,26 @@ LUA= ../..
 
 include $(LUA)/config
 
-INCS= -I$(INC) $(EXTRA_INCS) -I..
-OBJS= dump.o luac.o opt.o print.o stubs.o
-SRCS= dump.c luac.c opt.c print.c stubs.c luac.h print.h
+INCS= -I$(INC) -I.. $(EXTRA_INCS)
+OBJS= luac.o print.o lopcodes.o
+SRCS= luac.c print.c
 
 T= $(BIN)/luac
 
-all: $T
+all:	$T
 
-$T: $(OBJS) $(LIB)/liblua.a
-	$(CC) -o $@ $(OBJS) -L$(LIB) -llua
+$T:	$(OBJS) $(LIB)/liblua.a $(LIB)/liblualib.a
+	$(CC) -o $@ $(MYLDFLAGS) $(OBJS) -L$(LIB) -llua -llualib $(EXTRA_LIBS)
+
+# print.c needs opcode names from lopcodes.c
+lopcodes.o:	../lopcodes.c ../lopcodes.h
+	$(CC) -o $@ -c $(CFLAGS) -DLUA_OPNAMES ../lopcodes.c
 
 $(LIB)/liblua.a:
 	cd ..; $(MAKE)
+
+$(LIB)/liblualib.a:
+	cd ../lib; $(MAKE)
 
 clean:
 	rm -f $(OBJS) $T

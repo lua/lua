@@ -1,0 +1,33 @@
+# If you don't want to use make, run this script.
+# But make sure you read config to see what can be customized.
+
+
+# Easiest way to build bin/lua:
+# cc -O2 -o bin/lua -Iinclude -Isrc src/*.c src/lib/*.c src/lua/*.c -lm -ldl
+
+
+# Easiest way to build Lua libraries and executables:
+echo -n 'building core library... '
+cd src
+cc -O2 -c -I../include *.c
+ar rc ../lib/liblua.a *.o
+rm -f *.o
+
+echo -n 'standard library... '
+cd lib
+cc -O2 -c -I../../include *.c
+ar rc ../../lib/liblualib.a *.o
+rm -f *.o
+
+echo -n 'lua... '
+cd ../lua
+cc -O2 -o ../../bin/lua -I../../include *.c ../../lib/*.a -lm -ldl
+
+echo -n 'luac... '
+cd ../luac
+cc -O2 -o ../../bin/luac -I../../include -I.. *.c -DLUA_OPNAMES ../lopcodes.c ../../lib/*.a
+
+echo 'done'
+
+cd ../..
+bin/lua test/hello.lua

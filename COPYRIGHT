@@ -1,53 +1,33 @@
-Lua Copyright Notice
---------------------
+Lua License
+-----------
 
-Lua is free and non-proprietary.
-It can be used for both academic and commercial purposes at absolutely no cost.
-There are no royalties or GNU-like "copyleft" restrictions.
-Lua (probably) qualifies as Open Source software.
-Nevertheless, Lua is not in the public domain and TeCGraf keeps its copyright. 
+Lua is licensed under the terms of the MIT license reproduced below.
+This means that Lua is free software and can be used for both academic
+and commercial purposes at absolutely no cost.
 
-If you use Lua, please give us credit (a nice way to do this is to include a
-Lua logo in a web page for your product), but we would appreciate *not*
-receiving lengthy legal documents to sign.
-
-The legal details are below. 
+For details and rationale, see http://www.lua.org/license.html .
 
 ===============================================================================
 
-Copyright (C) 1994-2000 TeCGraf, PUC-Rio.  All rights reserved.
+Copyright (C) 2003 Tecgraf, PUC-Rio.
 
-Permission is hereby granted, without written agreement and without license
-or royalty fees, to use, copy, modify, translate, and distribute
-this software and its documentation (hereby called the "package")
-for any purpose, including commercial applications, subject to
-the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
- * The above copyright notice and this permission notice shall appear in all
-   copies or substantial portions of this package.
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
 
- * The origin of this package must not be misrepresented; you must not
-   claim that you wrote the original package. If you use this package in a
-   product, an acknowledgment in the product documentation would be greatly
-   appreciated (but it is not required).
-
- * Altered source versions must be plainly marked as such, and must not be
-   misrepresented as being the original package.
-   
-The authors specifically disclaim any warranties, including, but not limited
-to, the implied warranties of merchantability and fitness for a particular
-purpose.  The package provided hereunder is on an "as is" basis, and the
-authors have no obligation to provide maintenance, support, updates,
-enhancements, or modifications.  In no event shall TeCGraf, PUC-Rio, or the
-authors be held liable to any party for direct, indirect, special,
-incidental, or consequential damages arising out of the use of this package
-and its documentation.
-
-The Lua language and this implementation have been entirely designed and written
-by Waldemar Celes, Roberto Ierusalimschy, and Luiz Henrique de Figueiredo
-at TeCGraf, PUC-Rio in Brazil.
-
-This implementation contains no third-party code.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
 
 ===============================================================================
 

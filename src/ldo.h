@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.h,v 1.28 2000/10/06 12:45:25 roberto Exp $
+** $Id: ldo.h,v 1.56 2002/12/04 17:29:32 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -10,24 +10,51 @@
 
 #include "lobject.h"
 #include "lstate.h"
+#include "lzio.h"
 
 
 /*
-** macro to increment stack top.
-** There must be always an empty slot at the L->stack.top
-*/
-#define incr_top {if (L->top == L->stack_last) luaD_checkstack(L, 1); L->top++;}
+** macro to control inclusion of some hard tests on stack reallocation
+*/ 
+#ifndef HARDSTACKTESTS
+#define condhardstacktests(x)	{ /* empty */ }
+#else
+#define condhardstacktests(x)	x
+#endif
 
 
-void luaD_init (lua_State *L, int stacksize);
-void luaD_adjusttop (lua_State *L, StkId base, int extra);
-void luaD_lineHook (lua_State *L, StkId func, int line, lua_Hook linehook);
+#define luaD_checkstack(L,n)	\
+  if ((char *)L->stack_last - (char *)L->top <= (n)*(int)sizeof(TObject)) \
+    luaD_growstack(L, n); \
+  else condhardstacktests(luaD_reallocstack(L, L->stacksize));
+
+
+#define incr_top(L) {luaD_checkstack(L,1); L->top++;}
+
+#define savestack(L,p)		((char *)(p) - (char *)L->stack)
+#define restorestack(L,n)	((TObject *)((char *)L->stack + (n)))
+
+#define saveci(L,p)		((char *)(p) - (char *)L->base_ci)
+#define restoreci(L,n)		((CallInfo *)((char *)L->base_ci + (n)))
+
+
+/* type of protected functions, to be ran by `runprotected' */
+typedef void (*Pfunc) (lua_State *L, void *ud);
+
+void luaD_resetprotection (lua_State *L);
+int luaD_protectedparser (lua_State *L, ZIO *z, int bin);
+void luaD_callhook (lua_State *L, int event, int line);
+StkId luaD_precall (lua_State *L, StkId func);
 void luaD_call (lua_State *L, StkId func, int nResults);
-void luaD_callTM (lua_State *L, Closure *f, int nParams, int nResults);
-void luaD_checkstack (lua_State *L, int n);
+int luaD_pcall (lua_State *L, Pfunc func, void *u,
+                ptrdiff_t oldtop, ptrdiff_t ef);
+void luaD_poscall (lua_State *L, int wanted, StkId firstResult);
+void luaD_reallocCI (lua_State *L, int newsize);
+void luaD_reallocstack (lua_State *L, int newsize);
+void luaD_growstack (lua_State *L, int n);
 
-void luaD_breakrun (lua_State *L, int errcode);
-int luaD_runprotected (lua_State *L, void (*f)(lua_State *, void *), void *ud);
+void luaD_throw (lua_State *L, int errcode);
+int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud);
 
 
 #endif

@@ -4,17 +4,16 @@ LUA= ../..
 
 include $(LUA)/config
 
-EXTRA_DEFS= $(POSIX)
-
+EXTRA_DEFS= $(USERCONF)
 OBJS= lua.o
 SRCS= lua.c
 
 T= $(BIN)/lua
 
-all: $T
+all:	$T
 
-$T: $(OBJS) $(LIB)/liblua.a $(LIB)/liblualib.a
-	$(CC) -o $@ $(OBJS) -L$(LIB) -llua -llualib $(EXTRA_LIBS)
+$T:	$(OBJS) $(LIB)/liblua.a $(LIB)/liblualib.a
+	$(CC) -o $@ $(MYLDFLAGS) $(OBJS) -L$(LIB) -llua -llualib $(EXTRA_LIBS) $(DLLIB)
 
 $(LIB)/liblua.a:
 	cd ..; $(MAKE)

@@ -1,23 +1,32 @@
 -- trace calls
--- example: lua trace-calls.lua hello.lua bisect.lua
+-- example: lua -ltrace-calls.lua bisect.lua
 
-function callhook(func)
- local t=getinfo(2)
- write(">>> ")
---foreach(t,print)
+local level=0
+
+function hook(event)
+ local t=debug.getinfo(3)
+ io.write(level," >>> ",string.rep(" ",level))
+ if t~=nil and t.currentline>=0 then io.write(t.short_src,":",t.currentline," ") end
+ t=debug.getinfo(2)
+ if event=="call" then
+  level=level+1
+ else
+  level=level-1 if level<0 then level=0 end
+ end
  if t.what=="main" then
-  if func=="call" then
-   write("begin ",t.source)
+  if event=="call" then
+   io.write("begin ",t.short_src)
   else
-   write("end ",t.source)
+   io.write("end ",t.short_src)
   end
  elseif t.what=="Lua" then
-  write(func," ",t.name," <",t.linedefined,":",t.source,">")
+-- table.foreach(t,print)
+  io.write(event," ",t.name or "(Lua)"," <",t.linedefined,":",t.short_src,">")
  else
-  write(func," ",t.name," [",t.what,"] ")
+ io.write(event," ",t.name or "(C)"," [",t.what,"] ")
  end
- if t.currentline>=0 then write(":",t.currentline) end
- write("\n")
+ io.write("\n")
 end
 
-setcallhook(callhook)
+debug.sethook(hook,"cr")
+level=0

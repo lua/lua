@@ -1,22 +1,18 @@
 This is luac, the Lua compiler.
 There are man pages for it in both nroff and html in ../../doc.
 
-luac translates Lua programs into binary files that can be loaded and executed
-with lua_dofile in C or with dofile in Lua.
+luac translates Lua programs into binary files that can be loaded latter.
 The main advantages of pre-compiling chunks are: faster loading, protecting
 source code from user changes, and off-line syntax error detection.
 luac can also be used to learn about the Lua virtual machine.
 
-Here are the options that luac understands:
-
+Usage: /l/luac/luac [options] [filenames].  Available options are:
   -        process stdin
   -l       list
-  -o file  output file (default is "luac.out")
+  -o name  output to file `name' (default is "luac.out")
   -p       parse only
   -s       strip debug information
-  -t       test code integrity
   -v       show version information
+  --       stop handling options
 
 luac is also an example of how to use the internals of Lua (politely).
-Finally, luac does not need the runtime code, and stubs.c makes sure it is not
-linked into luac. This file also shows how to avoid linking the parser.

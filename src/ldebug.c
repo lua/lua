@@ -1,11 +1,14 @@
 /*
-** $Id: ldebug.c,v 1.50 2000/10/30 12:38:50 roberto Exp $
+** $Id: ldebug.c,v 1.150 2003/03/19 21:24:04 roberto Exp $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
 
 
 #include <stdlib.h>
+#include <string.h>
+
+#define ldebug_c
 
 #include "lua.h"
 
@@ -20,447 +23,563 @@
 #include "lstring.h"
 #include "ltable.h"
 #include "ltm.h"
-#include "luadebug.h"
+#include "lvm.h"
 
 
 
-static const char *getfuncname (lua_State *L, StkId f, const char **name);
+static const char *getfuncname (CallInfo *ci, const char **name);
 
 
-static void setnormalized (TObject *d, const TObject *s) {
-  if (ttype(s) == LUA_TMARK) {
-    clvalue(d) = infovalue(s)->func;
-    ttype(d) = LUA_TFUNCTION;
+#define isLua(ci)	(!((ci)->state & CI_C))
+
+
+static int currentpc (CallInfo *ci) {
+  if (!isLua(ci)) return -1;  /* function is not a Lua function? */
+  if (ci->state & CI_HASFRAME)  /* function has a frame? */
+    ci->u.l.savedpc = *ci->u.l.pc;  /* use `pc' from there */
+  /* function's pc is saved */
+  return pcRel(ci->u.l.savedpc, ci_func(ci)->l.p);
+}
+
+
+static int currentline (CallInfo *ci) {
+  int pc = currentpc(ci);
+  if (pc < 0)
+    return -1;  /* only active lua functions have current-line information */
+  else
+    return getline(ci_func(ci)->l.p, pc);
+}
+
+
+void luaG_inithooks (lua_State *L) {
+  CallInfo *ci;
+  for (ci = L->ci; ci != L->base_ci; ci--)  /* update all `savedpc's */
+    currentpc(ci);
+  L->hookinit = 1;
+}
+
+
+/*
+** this function can be called asynchronous (e.g. during a signal)
+*/
+LUA_API int lua_sethook (lua_State *L, lua_Hook func, int mask, int count) {
+  if (func == NULL || mask == 0) {  /* turn off hooks? */
+    mask = 0;
+    func = NULL;
   }
-  else *d = *s;
+  L->hook = func;
+  L->basehookcount = count;
+  resethookcount(L);
+  L->hookmask = cast(lu_byte, mask);
+  L->hookinit = 0;
+  return 1;
 }
 
 
-static int isLmark (StkId o) {
-  return (o && ttype(o) == LUA_TMARK && !infovalue(o)->func->isC);
+LUA_API lua_Hook lua_gethook (lua_State *L) {
+  return L->hook;
 }
 
 
-LUA_API lua_Hook lua_setcallhook (lua_State *L, lua_Hook func) {
-  lua_Hook oldhook = L->callhook;
-  L->callhook = func;
-  return oldhook;
+LUA_API int lua_gethookmask (lua_State *L) {
+  return L->hookmask;
 }
 
 
-LUA_API lua_Hook lua_setlinehook (lua_State *L, lua_Hook func) {
-  lua_Hook oldhook = L->linehook;
-  L->linehook = func;
-  return oldhook;
-}
-
-
-static StkId aux_stackedfunction (lua_State *L, int level, StkId top) {
-  int i;
-  for (i = (top-1) - L->stack; i>=0; i--) {
-    if (is_T_MARK(L->stack[i].ttype)) {
-      if (level == 0)
-        return L->stack+i;
-      level--;
-    }
-  }
-  return NULL;
+LUA_API int lua_gethookcount (lua_State *L) {
+  return L->basehookcount;
 }
 
 
 LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
-  StkId f = aux_stackedfunction(L, level, L->top);
-  if (f == NULL) return 0;  /* there is no such level */
+  int status;
+  CallInfo *ci;
+  lua_lock(L);
+  for (ci = L->ci; level > 0 && ci > L->base_ci; ci--) {
+    level--;
+    if (!(ci->state & CI_C))  /* Lua function? */
+      level -= ci->u.l.tailcalls;  /* skip lost tail calls */
+  }
+  if (level > 0 || ci == L->base_ci) status = 0;  /* there is no such level */
+  else if (level < 0) {  /* level is of a lost tail call */
+    status = 1;
+    ar->i_ci = 0;
+  }
   else {
-    ar->_func = f;
-    return 1;
+    status = 1;
+    ar->i_ci = ci - L->base_ci;
   }
+  lua_unlock(L);
+  return status;
 }
 
 
-static int nups (StkId f) {
-  switch (ttype(f)) {
-    case LUA_TFUNCTION:
-      return clvalue(f)->nupvalues;
-    case LUA_TMARK:
-      return infovalue(f)->func->nupvalues;
-    default:
-      return 0;
-  }
-}
-
-
-int luaG_getline (int *lineinfo, int pc, int refline, int *prefi) {
-  int refi;
-  if (lineinfo == NULL || pc == -1)
-    return -1;  /* no line info or function is not active */
-  refi = prefi ? *prefi : 0;
-  if (lineinfo[refi] < 0)
-    refline += -lineinfo[refi++]; 
-  LUA_ASSERT(lineinfo[refi] >= 0, "invalid line info");
-  while (lineinfo[refi] > pc) {
-    refline--;
-    refi--;
-    if (lineinfo[refi] < 0)
-      refline -= -lineinfo[refi--]; 
-    LUA_ASSERT(lineinfo[refi] >= 0, "invalid line info");
-  }
-  for (;;) {
-    int nextline = refline + 1;
-    int nextref = refi + 1;
-    if (lineinfo[nextref] < 0)
-      nextline += -lineinfo[nextref++]; 
-    LUA_ASSERT(lineinfo[nextref] >= 0, "invalid line info");
-    if (lineinfo[nextref] > pc)
-      break;
-    refline = nextline;
-    refi = nextref;
-  }
-  if (prefi) *prefi = refi;
-  return refline;
-}
-
-
-static int currentpc (StkId f) {
-  CallInfo *ci = infovalue(f);
-  LUA_ASSERT(isLmark(f), "function has no pc");
-  if (ci->pc)
-    return (*ci->pc - ci->func->f.l->code) - 1;
-  else
-    return -1;  /* function is not active */
-}
-
-
-static int currentline (StkId f) {
-  if (!isLmark(f))
-    return -1;  /* only active lua functions have current-line information */
-  else {
-    CallInfo *ci = infovalue(f);
-    int *lineinfo = ci->func->f.l->lineinfo;
-    return luaG_getline(lineinfo, currentpc(f), 1, NULL);
-  }
-}
-
-
-
-static Proto *getluaproto (StkId f) {
-  return (isLmark(f) ?  infovalue(f)->func->f.l : NULL);
+static Proto *getluaproto (CallInfo *ci) {
+  return (isLua(ci) ? ci_func(ci)->l.p : NULL);
 }
 
 
 LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
   const char *name;
-  StkId f = ar->_func;
-  Proto *fp = getluaproto(f);
-  if (!fp) return NULL;  /* `f' is not a Lua function? */
-  name = luaF_getlocalname(fp, n, currentpc(f));
-  if (!name) return NULL;
-  luaA_pushobject(L, (f+1)+(n-1));  /* push value */
+  CallInfo *ci;
+  Proto *fp;
+  lua_lock(L);
+  name = NULL;
+  ci = L->base_ci + ar->i_ci;
+  fp = getluaproto(ci);
+  if (fp) {  /* is a Lua function? */
+    name = luaF_getlocalname(fp, n, currentpc(ci));
+    if (name)
+      luaA_pushobject(L, ci->base+(n-1));  /* push value */
+  }
+  lua_unlock(L);
   return name;
 }
 
 
 LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
   const char *name;
-  StkId f = ar->_func;
-  Proto *fp = getluaproto(f);
+  CallInfo *ci;
+  Proto *fp;
+  lua_lock(L);
+  name = NULL;
+  ci = L->base_ci + ar->i_ci;
+  fp = getluaproto(ci);
   L->top--;  /* pop new value */
-  if (!fp) return NULL;  /* `f' is not a Lua function? */
-  name = luaF_getlocalname(fp, n, currentpc(f));
-  if (!name || name[0] == '(') return NULL;  /* `(' starts private locals */
-  *((f+1)+(n-1)) = *L->top;
+  if (fp) {  /* is a Lua function? */
+    name = luaF_getlocalname(fp, n, currentpc(ci));
+    if (!name || name[0] == '(')  /* `(' starts private locals */
+      name = NULL;
+    else
+      setobjs2s(ci->base+(n-1), L->top);
+  }
+  lua_unlock(L);
   return name;
 }
 
 
-static void infoLproto (lua_Debug *ar, Proto *f) {
-  ar->source = f->source->str;
-  ar->linedefined = f->lineDefined;
-  ar->what = "Lua";
-}
-
-
-static void funcinfo (lua_State *L, lua_Debug *ar, StkId func) {
-  Closure *cl = NULL;
-  switch (ttype(func)) {
-    case LUA_TFUNCTION:
-      cl = clvalue(func);
-      break;
-    case LUA_TMARK:
-      cl = infovalue(func)->func;
-      break;
-    default:
-      lua_error(L, "value for `lua_getinfo' is not a function");
-  }
-  if (cl->isC) {
-    ar->source = "=C";
+static void funcinfo (lua_Debug *ar, StkId func) {
+  Closure *cl = clvalue(func);
+  if (cl->c.isC) {
+    ar->source = "=[C]";
     ar->linedefined = -1;
     ar->what = "C";
   }
-  else
-    infoLproto(ar, cl->f.l);
-  luaO_chunkid(ar->short_src, ar->source, sizeof(ar->short_src));
-  if (ar->linedefined == 0)
-    ar->what = "main";
-}
-
-
-static const char *travtagmethods (lua_State *L, const TObject *o) {
-  if (ttype(o) == LUA_TFUNCTION) {
-    int e;
-    for (e=0; e<TM_N; e++) {
-      int t;
-      for (t=0; t<=L->last_tag; t++)
-        if (clvalue(o) == luaT_gettm(L, t, e))
-          return luaT_eventname[e];
-    }
+  else {
+    ar->source = getstr(cl->l.p->source);
+    ar->linedefined = cl->l.p->lineDefined;
+    ar->what = (ar->linedefined == 0) ? "main" : "Lua";
   }
-  return NULL;
+  luaO_chunkid(ar->short_src, ar->source, LUA_IDSIZE);
 }
 
 
 static const char *travglobals (lua_State *L, const TObject *o) {
-  Hash *g = L->gt;
-  int i;
-  for (i=0; i<g->size; i++) {
-    if (luaO_equalObj(o, val(node(g, i))) &&
-        ttype(key(node(g, i))) == LUA_TSTRING) 
-      return tsvalue(key(node(g, i)))->str;
+  Table *g = hvalue(gt(L));
+  int i = sizenode(g);
+  while (i--) {
+    Node *n = gnode(g, i);
+    if (luaO_rawequalObj(o, gval(n)) && ttisstring(gkey(n)))
+      return getstr(tsvalue(gkey(n)));
   }
   return NULL;
 }
 
 
-static void getname (lua_State *L, StkId f, lua_Debug *ar) {
-  TObject o;
-  setnormalized(&o, f);
-  /* try to find a name for given function */
-  if ((ar->name = travglobals(L, &o)) != NULL)
-    ar->namewhat = "global";
-  /* not found: try tag methods */
-  else if ((ar->name = travtagmethods(L, &o)) != NULL)
-    ar->namewhat = "tag-method";
-  else ar->namewhat = "";  /* not found at all */
+static void info_tailcall (lua_State *L, lua_Debug *ar) {
+  ar->name = ar->namewhat = "";
+  ar->what = "tail";
+  ar->linedefined = ar->currentline = -1;
+  ar->source = "=(tail call)";
+  luaO_chunkid(ar->short_src, ar->source, LUA_IDSIZE);
+  ar->nups = 0;
+  setnilvalue(L->top);
+}
+
+
+static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
+                    StkId f, CallInfo *ci) {
+  int status = 1;
+  for (; *what; what++) {
+    switch (*what) {
+      case 'S': {
+        funcinfo(ar, f);
+        break;
+      }
+      case 'l': {
+        ar->currentline = (ci) ? currentline(ci) : -1;
+        break;
+      }
+      case 'u': {
+        ar->nups = clvalue(f)->c.nupvalues;
+        break;
+      }
+      case 'n': {
+        ar->namewhat = (ci) ? getfuncname(ci, &ar->name) : NULL;
+        if (ar->namewhat == NULL) {
+          /* try to find a global name */
+          if ((ar->name = travglobals(L, f)) != NULL)
+            ar->namewhat = "global";
+          else ar->namewhat = "";  /* not found */
+        }
+        break;
+      }
+      case 'f': {
+        setobj2s(L->top, f);
+        break;
+      }
+      default: status = 0;  /* invalid option */
+    }
+  }
+  return status;
 }
 
 
 LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
-  StkId func;
-  int isactive = (*what != '>');
-  if (isactive)
-    func = ar->_func;
-  else {
-    what++;  /* skip the '>' */
-    func = L->top - 1;
+  int status = 1;
+  lua_lock(L);
+  if (*what == '>') {
+    StkId f = L->top - 1;
+    if (!ttisfunction(f))
+      luaG_runerror(L, "value for `lua_getinfo' is not a function");
+    status = auxgetinfo(L, what + 1, ar, f, NULL);
+    L->top--;  /* pop function */
   }
-  for (; *what; what++) {
-    switch (*what) {
-      case 'S': {
-        funcinfo(L, ar, func);
-        break;
-      }
-      case 'l': {
-        ar->currentline = currentline(func);
-        break;
-      }
-      case 'u': {
-        ar->nups = nups(func);
-        break;
-      }
-      case 'n': {
-        ar->namewhat = (isactive) ? getfuncname(L, func, &ar->name) : NULL;
-        if (ar->namewhat == NULL)
-          getname(L, func, ar);
-        break;
-      }
-      case 'f': {
-        setnormalized(L->top, func);
-        incr_top;  /* push function */
-        break;
-      }
-      default: return 0;  /* invalid option */
-    }
+  else if (ar->i_ci != 0) {  /* no tail call? */
+    CallInfo *ci = L->base_ci + ar->i_ci;
+    lua_assert(ttisfunction(ci->base - 1));
+    status = auxgetinfo(L, what, ar, ci->base - 1, ci);
   }
-  if (!isactive) L->top--;  /* pop function */
-  return 1;
+  else
+    info_tailcall(L, ar);
+  if (strchr(what, 'f')) incr_top(L);
+  lua_unlock(L);
+  return status;
 }
 
 
 /*
 ** {======================================================
-** Symbolic Execution
+** Symbolic Execution and code checker
 ** =======================================================
 */
 
+#define check(x)		if (!(x)) return 0;
 
-static int pushpc (int *stack, int pc, int top, int n) {
-  while (n--)
-    stack[top++] = pc-1;
-  return top;
+#define checkjump(pt,pc)	check(0 <= pc && pc < pt->sizecode)
+
+#define checkreg(pt,reg)	check((reg) < (pt)->maxstacksize)
+
+
+
+static int precheck (const Proto *pt) {
+  check(pt->maxstacksize <= MAXSTACK);
+  check(pt->sizelineinfo == pt->sizecode || pt->sizelineinfo == 0);
+  lua_assert(pt->numparams+pt->is_vararg <= pt->maxstacksize);
+  check(GET_OPCODE(pt->code[pt->sizecode-1]) == OP_RETURN);
+  return 1;
 }
 
 
-static Instruction luaG_symbexec (const Proto *pt, int lastpc, int stackpos) {
-  int stack[MAXSTACK];  /* stores last instruction that changed a stack entry */
-  const Instruction *code = pt->code;
-  int top = pt->numparams;
-  int pc = 0;
-  if (pt->is_vararg)  /* varargs? */
-    top++;  /* `arg' */
-  while (pc < lastpc) {
-    const Instruction i = code[pc++];
-    LUA_ASSERT(0 <= top && top <= pt->maxstacksize, "wrong stack");
-    switch (GET_OPCODE(i)) {
-      case OP_RETURN: {
-        LUA_ASSERT(top >= GETARG_U(i), "wrong stack");
-        top = GETARG_U(i);
+static int checkopenop (const Proto *pt, int pc) {
+  Instruction i = pt->code[pc+1];
+  switch (GET_OPCODE(i)) {
+    case OP_CALL:
+    case OP_TAILCALL:
+    case OP_RETURN: {
+      check(GETARG_B(i) == 0);
+      return 1;
+    }
+    case OP_SETLISTO: return 1;
+    default: return 0;  /* invalid instruction after an open call */
+  }
+}
+
+
+static int checkRK (const Proto *pt, int r) {
+  return (r < pt->maxstacksize || (r >= MAXSTACK && r-MAXSTACK < pt->sizek));
+}
+
+
+static Instruction luaG_symbexec (const Proto *pt, int lastpc, int reg) {
+  int pc;
+  int last;  /* stores position of last instruction that changed `reg' */
+  last = pt->sizecode-1;  /* points to final return (a `neutral' instruction) */
+  check(precheck(pt));
+  for (pc = 0; pc < lastpc; pc++) {
+    const Instruction i = pt->code[pc];
+    OpCode op = GET_OPCODE(i);
+    int a = GETARG_A(i);
+    int b = 0;
+    int c = 0;
+    checkreg(pt, a);
+    switch (getOpMode(op)) {
+      case iABC: {
+        b = GETARG_B(i);
+        c = GETARG_C(i);
+        if (testOpMode(op, OpModeBreg)) {
+          checkreg(pt, b);
+        }
+        else if (testOpMode(op, OpModeBrk))
+          check(checkRK(pt, b));
+        if (testOpMode(op, OpModeCrk))
+          check(checkRK(pt, c));
         break;
       }
-      case OP_TAILCALL: {
-        LUA_ASSERT(top >= GETARG_A(i), "wrong stack");
-        top = GETARG_B(i);
+      case iABx: {
+        b = GETARG_Bx(i);
+        if (testOpMode(op, OpModeK)) check(b < pt->sizek);
         break;
       }
-      case OP_CALL: {
-        int nresults = GETARG_B(i);
-        if (nresults == MULT_RET) nresults = 1;
-        LUA_ASSERT(top >= GETARG_A(i), "wrong stack");
-        top = pushpc(stack, pc, GETARG_A(i), nresults);
+      case iAsBx: {
+        b = GETARG_sBx(i);
         break;
       }
-      case OP_PUSHNIL: {
-        top = pushpc(stack, pc, top, GETARG_U(i));
+    }
+    if (testOpMode(op, OpModesetA)) {
+      if (a == reg) last = pc;  /* change register `a' */
+    }
+    if (testOpMode(op, OpModeT)) {
+      check(pc+2 < pt->sizecode);  /* check skip */
+      check(GET_OPCODE(pt->code[pc+1]) == OP_JMP);
+    }
+    switch (op) {
+      case OP_LOADBOOL: {
+        check(c == 0 || pc+2 < pt->sizecode);  /* check its jump */
         break;
       }
-      case OP_POP: {
-        top -= GETARG_U(i);
+      case OP_LOADNIL: {
+        if (a <= reg && reg <= b)
+          last = pc;  /* set registers from `a' to `b' */
         break;
       }
-      case OP_SETTABLE:
-      case OP_SETLIST: {
-        top -= GETARG_B(i);
+      case OP_GETUPVAL:
+      case OP_SETUPVAL: {
+        check(b < pt->nups);
         break;
       }
-      case OP_SETMAP: {
-        top -= 2*GETARG_U(i);
+      case OP_GETGLOBAL:
+      case OP_SETGLOBAL: {
+        check(ttisstring(&pt->k[b]));
+        break;
+      }
+      case OP_SELF: {
+        checkreg(pt, a+1);
+        if (reg == a+1) last = pc;
         break;
       }
       case OP_CONCAT: {
-        top -= GETARG_U(i);
-        stack[top++] = pc-1;
+        /* `c' is a register, and at least two operands */
+        check(c < MAXSTACK && b < c);
+        break;
+      }
+      case OP_TFORLOOP:
+        checkreg(pt, a+c+5);
+        if (reg >= a) last = pc;  /* affect all registers above base */
+        /* go through */
+      case OP_FORLOOP:
+        checkreg(pt, a+2);
+        /* go through */
+      case OP_JMP: {
+        int dest = pc+1+b;
+	check(0 <= dest && dest < pt->sizecode);
+        /* not full check and jump is forward and do not skip `lastpc'? */
+        if (reg != NO_REG && pc < dest && dest <= lastpc)
+          pc += b;  /* do the jump */
+        break;
+      }
+      case OP_CALL:
+      case OP_TAILCALL: {
+        if (b != 0) {
+          checkreg(pt, a+b-1);
+        }
+        c--;  /* c = num. returns */
+        if (c == LUA_MULTRET) {
+          check(checkopenop(pt, pc));
+        }
+        else if (c != 0)
+          checkreg(pt, a+c-1);
+        if (reg >= a) last = pc;  /* affect all registers above base */
+        break;
+      }
+      case OP_RETURN: {
+        b--;  /* b = num. returns */
+        if (b > 0) checkreg(pt, a+b-1);
+        break;
+      }
+      case OP_SETLIST: {
+        checkreg(pt, a + (b&(LFIELDS_PER_FLUSH-1)) + 1);
         break;
       }
       case OP_CLOSURE: {
-        top -= GETARG_B(i);
-        stack[top++] = pc-1;
-        break;
-      }
-      case OP_JMPONT:
-      case OP_JMPONF: {
-        int newpc = pc + GETARG_S(i);
-        /* jump is forward and do not skip `lastpc'? */
-        if (pc < newpc && newpc <= lastpc) {
-          stack[top-1] = pc-1;  /* value comes from `and'/`or' */
-          pc = newpc;  /* do the jump */
+        int nup;
+        check(b < pt->sizep);
+        nup = pt->p[b]->nups;
+        check(pc + nup < pt->sizecode);
+        for (; nup>0; nup--) {
+          OpCode op1 = GET_OPCODE(pt->code[pc+nup]);
+          check(op1 == OP_GETUPVAL || op1 == OP_MOVE);
         }
-        else
-          top--;  /* do not jump; pop value */
         break;
       }
-      default: {
-        OpCode op = GET_OPCODE(i);
-        LUA_ASSERT(luaK_opproperties[op].push != VD,
-                   "invalid opcode for default");
-        top -= luaK_opproperties[op].pop;
-        LUA_ASSERT(top >= 0, "wrong stack");
-        top = pushpc(stack, pc, top, luaK_opproperties[op].push);
-      }
+      default: break;
     }
   }
-  return code[stack[stackpos]];
+  return pt->code[last];
 }
 
-
-static const char *getobjname (lua_State *L, StkId obj, const char **name) {
-  StkId func = aux_stackedfunction(L, 0, obj);
-  if (!isLmark(func))
-    return NULL;  /* not an active Lua function */
-  else {
-    Proto *p = infovalue(func)->func->f.l;
-    int pc = currentpc(func);
-    int stackpos = obj - (func+1);  /* func+1 == function base */
-    Instruction i = luaG_symbexec(p, pc, stackpos);
-    LUA_ASSERT(pc != -1, "function must be active");
-    switch (GET_OPCODE(i)) {
-      case OP_GETGLOBAL: {
-        *name = p->kstr[GETARG_U(i)]->str;
-        return "global";
-      }
-      case OP_GETLOCAL: {
-        *name = luaF_getlocalname(p, GETARG_U(i)+1, pc);
-        LUA_ASSERT(*name, "local must exist");
-        return "local";
-      }
-      case OP_PUSHSELF:
-      case OP_GETDOTTED: {
-        *name = p->kstr[GETARG_U(i)]->str;
-        return "field";
-      }
-      default:
-        return NULL;  /* no useful name found */
-    }
-  }
-}
-
-
-static const char *getfuncname (lua_State *L, StkId f, const char **name) {
-  StkId func = aux_stackedfunction(L, 0, f);  /* calling function */
-  if (!isLmark(func))
-    return NULL;  /* not an active Lua function */
-  else {
-    Proto *p = infovalue(func)->func->f.l;
-    int pc = currentpc(func);
-    Instruction i;
-    if (pc == -1) return NULL;  /* function is not activated */
-    i = p->code[pc];
-    switch (GET_OPCODE(i)) {
-      case OP_CALL: case OP_TAILCALL:
-        return getobjname(L, (func+1)+GETARG_A(i), name);
-      default:
-        return NULL;  /* no useful name found */
-    }
-  }
-}
-
+#undef check
+#undef checkjump
+#undef checkreg
 
 /* }====================================================== */
 
 
-void luaG_typeerror (lua_State *L, StkId o, const char *op) {
-  const char *name;
-  const char *kind = getobjname(L, o, &name);
-  const char *t = luaO_typename(o);
+int luaG_checkcode (const Proto *pt) {
+  return luaG_symbexec(pt, pt->sizecode, NO_REG);
+}
+
+
+static const char *kname (Proto *p, int c) {
+  c = c - MAXSTACK;
+  if (c >= 0 && ttisstring(&p->k[c]))
+    return svalue(&p->k[c]);
+  else
+    return "?";
+}
+
+
+static const char *getobjname (CallInfo *ci, int stackpos, const char **name) {
+  if (isLua(ci)) {  /* a Lua function? */
+    Proto *p = ci_func(ci)->l.p;
+    int pc = currentpc(ci);
+    Instruction i;
+    *name = luaF_getlocalname(p, stackpos+1, pc);
+    if (*name)  /* is a local? */
+      return "local";
+    i = luaG_symbexec(p, pc, stackpos);  /* try symbolic execution */
+    lua_assert(pc != -1);
+    switch (GET_OPCODE(i)) {
+      case OP_GETGLOBAL: {
+        int g = GETARG_Bx(i);  /* global index */
+        lua_assert(ttisstring(&p->k[g]));
+        *name = svalue(&p->k[g]);
+        return "global";
+      }
+      case OP_MOVE: {
+        int a = GETARG_A(i);
+        int b = GETARG_B(i);  /* move from `b' to `a' */
+        if (b < a)
+          return getobjname(ci, b, name);  /* get name for `b' */
+        break;
+      }
+      case OP_GETTABLE: {
+        int k = GETARG_C(i);  /* key index */
+        *name = kname(p, k);
+        return "field";
+      }
+      case OP_SELF: {
+        int k = GETARG_C(i);  /* key index */
+        *name = kname(p, k);
+        return "method";
+      }
+      default: break;
+    }
+  }
+  return NULL;  /* no useful name found */
+}
+
+
+static const char *getfuncname (CallInfo *ci, const char **name) {
+  Instruction i;
+  if ((isLua(ci) && ci->u.l.tailcalls > 0) || !isLua(ci - 1))
+    return NULL;  /* calling function is not Lua (or is unknown) */
+  ci--;  /* calling function */
+  i = ci_func(ci)->l.p->code[currentpc(ci)];
+  if (GET_OPCODE(i) == OP_CALL || GET_OPCODE(i) == OP_TAILCALL)
+    return getobjname(ci, GETARG_A(i), name);
+  else
+    return NULL;  /* no useful name can be found */
+}
+
+
+/* only ANSI way to check whether a pointer points to an array */
+static int isinstack (CallInfo *ci, const TObject *o) {
+  StkId p;
+  for (p = ci->base; p < ci->top; p++)
+    if (o == p) return 1;
+  return 0;
+}
+
+
+void luaG_typeerror (lua_State *L, const TObject *o, const char *op) {
+  const char *name = NULL;
+  const char *t = luaT_typenames[ttype(o)];
+  const char *kind = (isinstack(L->ci, o)) ?
+                         getobjname(L->ci, o - L->base, &name) : NULL;
   if (kind)
-    luaO_verror(L, "attempt to %.30s %.20s `%.40s' (a %.10s value)",
+    luaG_runerror(L, "attempt to %s %s `%s' (a %s value)",
                 op, kind, name, t);
   else
-    luaO_verror(L, "attempt to %.30s a %.10s value", op, t);
+    luaG_runerror(L, "attempt to %s a %s value", op, t);
 }
 
 
-void luaG_binerror (lua_State *L, StkId p1, int t, const char *op) {
-  if (ttype(p1) == t) p1++;
-  LUA_ASSERT(ttype(p1) != t, "must be an error");
-  luaG_typeerror(L, p1, op);
+void luaG_concaterror (lua_State *L, StkId p1, StkId p2) {
+  if (ttisstring(p1)) p1 = p2;
+  lua_assert(!ttisstring(p1));
+  luaG_typeerror(L, p1, "concatenate");
 }
 
 
-void luaG_ordererror (lua_State *L, StkId top) {
-  const char *t1 = luaO_typename(top-2);
-  const char *t2 = luaO_typename(top-1);
+void luaG_aritherror (lua_State *L, const TObject *p1, const TObject *p2) {
+  TObject temp;
+  if (luaV_tonumber(p1, &temp) == NULL)
+    p2 = p1;  /* first operand is wrong */
+  luaG_typeerror(L, p2, "perform arithmetic on");
+}
+
+
+int luaG_ordererror (lua_State *L, const TObject *p1, const TObject *p2) {
+  const char *t1 = luaT_typenames[ttype(p1)];
+  const char *t2 = luaT_typenames[ttype(p2)];
   if (t1[2] == t2[2])
-    luaO_verror(L, "attempt to compare two %.10s values", t1);
+    luaG_runerror(L, "attempt to compare two %s values", t1);
   else
-    luaO_verror(L, "attempt to compare %.10s with %.10s", t1, t2);
+    luaG_runerror(L, "attempt to compare %s with %s", t1, t2);
+  return 0;
+}
+
+
+static void addinfo (lua_State *L, const char *msg) {
+  CallInfo *ci = L->ci;
+  if (isLua(ci)) {  /* is Lua code? */
+    char buff[LUA_IDSIZE];  /* add file:line information */
+    int line = currentline(ci);
+    luaO_chunkid(buff, getstr(getluaproto(ci)->source), LUA_IDSIZE);
+    luaO_pushfstring(L, "%s:%d: %s", buff, line, msg);
+  }
+}
+
+
+void luaG_errormsg (lua_State *L) {
+  if (L->errfunc != 0) {  /* is there an error handling function? */
+    StkId errfunc = restorestack(L, L->errfunc);
+    if (!ttisfunction(errfunc)) luaD_throw(L, LUA_ERRERR);
+    setobjs2s(L->top, L->top - 1);  /* move argument */
+    setobjs2s(L->top - 1, errfunc);  /* push function */
+    incr_top(L);
+    luaD_call(L, L->top - 2, 1);  /* call it */
+  }
+  luaD_throw(L, LUA_ERRRUN);
+}
+
+
+void luaG_runerror (lua_State *L, const char *fmt, ...) {
+  va_list argp;
+  va_start(argp, fmt);
+  addinfo(L, luaO_pushvfstring(L, fmt, argp));
+  va_end(argp);
+  luaG_errormsg(L);
 }
 

@@ -1,27 +1,16 @@
--- temperature conversion table
+-- temperature conversion table (celsius to farenheit)
 
--- celsius to farenheit
-
-c0=-20
-while c0<50 do
-
-	c1=c0+10
-	write("C ")
-	c=c0
-	while c<c1 do
-		write(format("%3.0f ",c))
-		c=c+1
+for c0=-20,50-1,10 do
+	io.write("C ")
+	for c=c0,c0+10-1 do
+		io.write(string.format("%3.0f ",c))
 	end
-	write("\n")
+	io.write("\n")
 	
-	c=c0
-	write("F ")
-	while c<c1 do
+	io.write("F ")
+	for c=c0,c0+10-1 do
 		f=(9/5)*c+32
-		write(format("%3.0f ",f))
-		c=c+1
+		io.write(string.format("%3.0f ",f))
 	end
-	write("\n\n")
-
-	c0=c1
+	io.write("\n\n")
 end

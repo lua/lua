@@ -1,5 +1,5 @@
 /*
-** $Id: lzio.h,v 1.7 2000/10/20 16:36:32 roberto Exp $
+** $Id: lzio.h,v 1.15 2003/03/20 16:00:56 roberto Exp $
 ** Buffered streams
 ** See Copyright Notice in lua.h
 */
@@ -8,46 +8,57 @@
 #ifndef lzio_h
 #define lzio_h
 
-#include <stdio.h>
+#include "lua.h"
 
-
-
-/* For Lua only */
-#define zFopen	luaZ_Fopen
-#define zsopen	luaZ_sopen
-#define zmopen	luaZ_mopen
-#define zread	luaZ_read
 
 #define EOZ	(-1)			/* end of stream */
 
-typedef struct zio ZIO;
+typedef struct Zio ZIO;
 
-ZIO* zFopen (ZIO* z, FILE* f, const char *name);	/* open FILEs */
-ZIO* zsopen (ZIO* z, const char* s, const char *name);	/* string */
-ZIO* zmopen (ZIO* z, const char* b, size_t size, const char *name); /* memory */
 
-size_t zread (ZIO* z, void* b, size_t n);	/* read next n bytes */
+#define char2int(c)	cast(int, cast(unsigned char, (c)))
 
-#define zgetc(z)	(((z)->n--)>0 ? ((int)*(z)->p++): (z)->filbuf(z))
-#define zungetc(z)	(++(z)->n,--(z)->p)
+#define zgetc(z)  (((z)->n--)>0 ?  char2int(*(z)->p++) : luaZ_fill(z))
+
 #define zname(z)	((z)->name)
 
+void luaZ_init (ZIO *z, lua_Chunkreader reader, void *data, const char *name);
+size_t luaZ_read (ZIO* z, void* b, size_t n);	/* read next n bytes */
+int luaZ_lookahead (ZIO *z);
+
+
+
+typedef struct Mbuffer {
+  char *buffer;
+  size_t buffsize;
+} Mbuffer;
+
+
+char *luaZ_openspace (lua_State *L, Mbuffer *buff, size_t n);
+
+#define luaZ_initbuffer(L, buff) ((buff)->buffer = NULL, (buff)->buffsize = 0)
+
+#define luaZ_sizebuffer(buff)	((buff)->buffsize)
+#define luaZ_buffer(buff)	((buff)->buffer)
+
+#define luaZ_resizebuffer(L, buff, size) \
+	(luaM_reallocvector(L, (buff)->buffer, (buff)->buffsize, size, char), \
+	(buff)->buffsize = size)
+
+#define luaZ_freebuffer(L, buff)	luaZ_resizebuffer(L, buff, 0)
 
 
 /* --------- Private Part ------------------ */
 
-#ifndef ZBSIZE
-#define ZBSIZE	256			/* buffer size */
-#endif
-
-struct zio {
-  size_t n;				/* bytes still unread */
-  const unsigned char* p;		/* current position in buffer */
-  int (*filbuf)(ZIO* z);
-  void* u;				/* additional data */
+struct Zio {
+  size_t n;			/* bytes still unread */
+  const char *p;		/* current position in buffer */
+  lua_Chunkreader reader;
+  void* data;			/* additional data */
   const char *name;
-  unsigned char buffer[ZBSIZE];		/* buffer */
 };
 
+
+int luaZ_fill (ZIO *z);
 
 #endif

@@ -1,6 +1,6 @@
 /*
-** $Id: luac.c,v 1.28 2000/11/06 20:06:27 lhf Exp $
-** lua compiler (saves bytecodes to files; also list binary files)
+** $Id: luac.c,v 1.44 2003/04/07 20:34:20 lhf Exp $
+** Lua compiler (saves bytecodes to files; also list bytecodes)
 ** See Copyright Notice in lua.h
 */
 
@@ -8,78 +8,80 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "lparser.h"
-#include "lstate.h"
-#include "lzio.h"
-#include "luac.h"
+#include "lua.h"
+#include "lauxlib.h"
 
-#define	OUTPUT	"luac.out"		/* default output file */
+#include "lfunc.h"
+#include "lmem.h"
+#include "lobject.h"
+#include "lopcodes.h"
+#include "lstring.h"
+#include "lundump.h"
 
-static void usage(const char* message, const char* arg);
-static int doargs(int argc, const char* argv[]);
-static Proto* load(const char* filename);
-static FILE* efopen(const char* name, const char* mode);
-static void strip(Proto* tf);
-static Proto* combine(Proto** P, int n);
+#ifndef LUA_DEBUG
+#define luaB_opentests(L)
+#endif
 
-lua_State* lua_state=NULL;		/* lazy! */
+#ifndef PROGNAME
+#define PROGNAME	"luac"		/* program name */
+#endif
+
+#define	OUTPUT		"luac.out"	/* default output file */
 
 static int listing=0;			/* list bytecodes? */
 static int dumping=1;			/* dump bytecodes? */
 static int stripping=0;			/* strip debug information? */
-static int testing=0;			/* test integrity? */
-static const char* output=OUTPUT;	/* output file name */
+static char Output[]={ OUTPUT };	/* default output file name */
+static const char* output=Output;	/* output file name */
+static const char* progname=PROGNAME;	/* actual program name */
 
-#define	IS(s)	(strcmp(argv[i],s)==0)
-
-int main(int argc, const char* argv[])
+static void fatal(const char* message)
 {
- Proto** P,*tf;
- int i=doargs(argc,argv);
- argc-=i; argv+=i;
- if (argc<=0) usage("no input files given",NULL);
- L=lua_open(0);
- P=luaM_newvector(L,argc,Proto*);
- for (i=0; i<argc; i++)
-  P[i]=load(IS("-")? NULL : argv[i]);
- tf=combine(P,argc);
- if (dumping) luaU_optchunk(tf);
- if (listing) luaU_printchunk(tf);
- if (testing) luaU_testchunk(tf);
- if (dumping)
- {
-  if (stripping) strip(tf);
-  luaU_dumpchunk(tf,efopen(output,"wb"));
- }
- return 0;
+ fprintf(stderr,"%s: %s\n",progname,message);
+ exit(EXIT_FAILURE);
+}
+
+static void cannot(const char* name, const char* what, const char* mode)
+{
+ fprintf(stderr,"%s: cannot %s %sput file ",progname,what,mode);
+ perror(name);
+ exit(EXIT_FAILURE);
 }
 
 static void usage(const char* message, const char* arg)
 {
  if (message!=NULL)
  {
-  fprintf(stderr,"luac: "); fprintf(stderr,message,arg); fprintf(stderr,"\n");
+  fprintf(stderr,"%s: ",progname); fprintf(stderr,message,arg); fprintf(stderr,"\n");
  }
  fprintf(stderr,
- "usage: luac [options] [filenames].  Available options are:\n"
+ "usage: %s [options] [filenames].  Available options are:\n"
  "  -        process stdin\n"
  "  -l       list\n"
- "  -o file  output file (default is \"" OUTPUT "\")\n"
+ "  -o name  output to file `name' (default is \"" OUTPUT "\")\n"
  "  -p       parse only\n"
  "  -s       strip debug information\n"
- "  -t       test code integrity\n"
  "  -v       show version information\n"
- );
- exit(1);
+ "  --       stop handling options\n",
+ progname);
+ exit(EXIT_FAILURE);
 }
 
-static int doargs(int argc, const char* argv[])
+#define	IS(s)	(strcmp(argv[i],s)==0)
+
+static int doargs(int argc, char* argv[])
 {
  int i;
+ if (argv[0]!=NULL && *argv[0]!=0) progname=argv[0];
  for (i=1; i<argc; i++)
  {
-  if (*argv[i]!='-')			/* end of options */
+  if (*argv[i]!='-')			/* end of options; keep it */
    break;
+  else if (IS("--"))			/* end of options; skip it */
+  {
+   ++i;
+   break;
+  }
   else if (IS("-"))			/* end of options; use stdin */
    return i;
   else if (IS("-l"))			/* list */
@@ -87,117 +89,103 @@ static int doargs(int argc, const char* argv[])
   else if (IS("-o"))			/* output file */
   {
    output=argv[++i];
-   if (output==NULL) usage(NULL,NULL);
+   if (output==NULL || *output==0) usage("`-o' needs argument",NULL);
   }
   else if (IS("-p"))			/* parse only */
    dumping=0;
   else if (IS("-s"))			/* strip debug information */
    stripping=1;
-  else if (IS("-t"))			/* test */
-  {
-   testing=1;
-   dumping=0;
-  }
   else if (IS("-v"))			/* show version */
   {
    printf("%s  %s\n",LUA_VERSION,LUA_COPYRIGHT);
-   if (argc==2) exit(0);
+   if (argc==2) exit(EXIT_SUCCESS);
   }
   else					/* unknown option */
    usage("unrecognized option `%s'",argv[i]);
  }
- if (i==argc && (listing || testing))
+ if (i==argc && (listing || !dumping))
  {
   dumping=0;
-  argv[--i]=OUTPUT;
+  argv[--i]=Output;
  }
  return i;
 }
 
-static Proto* load(const char* filename)
+static Proto* toproto(lua_State* L, int i)
 {
- Proto* tf;
- ZIO z;
- char source[512];
- FILE* f;
- int c,undump;
- if (filename==NULL) 
- {
-  f=stdin;
-  filename="(stdin)";
- }
- else
-  f=efopen(filename,"r");
- c=ungetc(fgetc(f),f);
- if (ferror(f))
- {
-  fprintf(stderr,"luac: cannot read from ");
-  perror(filename);
-  exit(1);
- }
- undump=(c==ID_CHUNK);
- if (undump && f!=stdin)
- {
-  fclose(f);
-  f=efopen(filename,"rb");
- }
- sprintf(source,"@%.*s",Sizeof(source)-2,filename);
- luaZ_Fopen(&z,f,source);
- tf = undump ? luaU_undump(L,&z) : luaY_parser(L,&z);
- if (f!=stdin) fclose(f);
- return tf;
+ const Closure* c=(const Closure*)lua_topointer(L,i);
+ return c->l.p;
 }
 
-static Proto* combine(Proto** P, int n)
+static Proto* combine(lua_State* L, int n)
 {
  if (n==1)
-  return P[0];
+  return toproto(L,-1);
  else
  {
   int i,pc=0;
-  Proto* tf=luaF_newproto(L);
-  tf->source=luaS_new(L,"=(luac)");
-  tf->maxstacksize=1;
-  tf->kproto=P;
-  tf->nkproto=n;
-  tf->ncode=2*n+1;
-  tf->code=luaM_newvector(L,tf->ncode,Instruction);
+  Proto* f=luaF_newproto(L);
+  f->source=luaS_newliteral(L,"=(" PROGNAME ")");
+  f->maxstacksize=1;
+  f->p=luaM_newvector(L,n,Proto*);
+  f->sizep=n;
+  f->sizecode=2*n+1;
+  f->code=luaM_newvector(L,f->sizecode,Instruction);
   for (i=0; i<n; i++)
   {
-   tf->code[pc++]=CREATE_AB(OP_CLOSURE,i,0);
-   tf->code[pc++]=CREATE_AB(OP_CALL,0,0);
+   f->p[i]=toproto(L,i-n);
+   f->code[pc++]=CREATE_ABx(OP_CLOSURE,0,i);
+   f->code[pc++]=CREATE_ABC(OP_CALL,0,1,1);
   }
-  tf->code[pc++]=OP_END;
-  return tf;
+  f->code[pc++]=CREATE_ABC(OP_RETURN,0,1,0);
+  return f;
  }
 }
 
-static void strip(Proto* tf)
+static void strip(lua_State* L, Proto* f)
 {
- int i,n=tf->nkproto;
- tf->lineinfo=NULL;
- tf->nlineinfo=0;
- tf->source=luaS_new(L,"=(none)");
- tf->locvars=NULL;
- tf->nlocvars=0;
- for (i=0; i<n; i++) strip(tf->kproto[i]);
+ int i,n=f->sizep;
+ luaM_freearray(L, f->lineinfo, f->sizelineinfo, int);
+ luaM_freearray(L, f->locvars, f->sizelocvars, struct LocVar);
+ luaM_freearray(L, f->upvalues, f->sizeupvalues, TString *);
+ f->lineinfo=NULL; f->sizelineinfo=0;
+ f->locvars=NULL;  f->sizelocvars=0;
+ f->upvalues=NULL; f->sizeupvalues=0;
+ f->source=luaS_newliteral(L,"=(none)");
+ for (i=0; i<n; i++) strip(L,f->p[i]);
 }
 
-static FILE* efopen(const char* name, const char* mode)
+static int writer(lua_State* L, const void* p, size_t size, void* u)
 {
- FILE* f=fopen(name,mode);
- if (f==NULL)
+ UNUSED(L);
+ return fwrite(p,size,1,(FILE*)u)==1;
+}
+
+int main(int argc, char* argv[])
+{
+ lua_State* L;
+ Proto* f;
+ int i=doargs(argc,argv);
+ argc-=i; argv+=i;
+ if (argc<=0) usage("no input files given",NULL);
+ L=lua_open();
+ luaB_opentests(L);
+ for (i=0; i<argc; i++)
  {
-  fprintf(stderr,"luac: cannot open %sput file ",*mode=='r' ? "in" : "out");
-  perror(name);
-  exit(1);
+  const char* filename=IS("-") ? NULL : argv[i];
+  if (luaL_loadfile(L,filename)!=0) fatal(lua_tostring(L,-1));
  }
- return f; 
-}
-
-void luaU_testchunk(const Proto* Main)
-{
- UNUSED(Main);
- fprintf(stderr,"luac: -t not operational in this version\n");
- exit(1);
+ f=combine(L,argc);
+ if (listing) luaU_print(f);
+ if (dumping)
+ {
+  FILE* D=fopen(output,"wb");
+  if (D==NULL) cannot(output,"open","out");
+  if (stripping) strip(L,f);
+  luaU_dump(L,f,writer,D);
+  if (ferror(D)) cannot(output,"write","out");
+  fclose(D);
+ }
+ lua_close(L);
+ return 0;
 }

@@ -1,6 +1,6 @@
 /*
-** $Id: llimits.h,v 1.19 2000/10/26 12:47:05 roberto Exp $
-** Limits, basic types, and some other "installation-dependent" definitions
+** $Id: llimits.h,v 1.52 2003/02/20 19:33:23 roberto Exp $
+** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
 
@@ -11,6 +11,8 @@
 #include <limits.h>
 #include <stddef.h>
 
+
+#include "lua.h"
 
 
 /*
@@ -32,25 +34,29 @@
 
 
 /*
-** Define the type `number' of Lua
-** GREP LUA_NUMBER to change that
+** the following types define integer types for values that may not
+** fit in a `small int' (16 bits), but may waste space in a
+** `large long' (64 bits). The current definitions should work in
+** any machine, but may not be optimal.
 */
-#ifndef LUA_NUM_TYPE
-#define LUA_NUM_TYPE double
-#endif
 
-typedef LUA_NUM_TYPE Number;
+/* an unsigned integer to hold hash values */
+typedef unsigned int lu_hash;
+/* its signed equivalent */
+typedef int ls_hash;
 
-/* function to convert a Number to a string */
-#define NUMBER_FMT	"%.16g"		/* LUA_NUMBER */
-#define lua_number2str(s,n)	sprintf((s), NUMBER_FMT, (n))
+/* an unsigned integer big enough to count the total memory used by Lua; */
+/* it should be at least as large as size_t */
+typedef unsigned long lu_mem;
 
-/* function to convert a string to a Number */
-#define lua_str2number(s,p)	strtod((s), (p))
-
+#define MAX_LUMEM	ULONG_MAX
 
 
-typedef unsigned long lint32;  /* unsigned int with at least 32 bits */
+/* an integer big enough to count the number of strings in use */
+typedef long ls_nstr;
+
+/* chars used as small naturals (so that `char' is reserved for characters) */
+typedef unsigned char lu_byte;
 
 
 #define MAX_SIZET	((size_t)(~(size_t)0)-2)
@@ -59,117 +65,93 @@ typedef unsigned long lint32;  /* unsigned int with at least 32 bits */
 #define MAX_INT (INT_MAX-2)  /* maximum value of an int (-2 for safety) */
 
 /*
-** conversion of pointer to int (for hashing only)
-** (the shift removes bits that are usually 0 because of alignment)
+** conversion of pointer to integer
+** this is for hashing only; there is no problem if the integer
+** cannot hold the whole pointer value
 */
-#define IntPoint(p)  (((unsigned long)(p)) >> 3)
-
-
-
-#define MINPOWER2       4       /* minimum size for "growing" vectors */
-
-
-
-#ifndef DEFAULT_STACK_SIZE
-#define DEFAULT_STACK_SIZE      1024
-#endif
+#define IntPoint(p)  ((lu_hash)(p))
 
 
 
 /* type to ensure maximum alignment */
-union L_Umaxalign { double d; char *s; long l; };
+#ifndef LUSER_ALIGNMENT_T
+typedef union { double u; void *s; long l; } L_Umaxalign;
+#else
+typedef LUSER_ALIGNMENT_T L_Umaxalign;
+#endif
+
+
+/* result of `usual argument conversion' over lua_Number */
+#ifndef LUA_UACNUMBER
+typedef double l_uacNumber;
+#else
+typedef LUA_UACNUMBER l_uacNumber;
+#endif
+
+
+#ifndef lua_assert
+#define lua_assert(c)		/* empty */
+#endif
+
+
+#ifndef check_exp
+#define check_exp(c,e)	(e)
+#endif
+
+
+#ifndef UNUSED
+#define UNUSED(x)	((void)(x))	/* to avoid warnings */
+#endif
+
+
+#ifndef cast
+#define cast(t, exp)	((t)(exp))
+#endif
 
 
 
 /*
 ** type for virtual-machine instructions
 ** must be an unsigned with (at least) 4 bytes (see details in lopcodes.h)
-** For a very small machine, you may change that to 2 bytes (and adjust
-** the following limits accordingly)
 */
 typedef unsigned long Instruction;
 
 
-/*
-** size and position of opcode arguments.
-** For an instruction with 2 bytes, size is 16, and size_b can be 5
-** (accordingly, size_u will be 10, and size_a will be 5)
-*/
-#define SIZE_INSTRUCTION        32
-#define SIZE_B          9
-
-#define SIZE_OP         6
-#define SIZE_U          (SIZE_INSTRUCTION-SIZE_OP)
-#define POS_U           SIZE_OP
-#define POS_B           SIZE_OP
-#define SIZE_A          (SIZE_INSTRUCTION-(SIZE_OP+SIZE_B))
-#define POS_A           (SIZE_OP+SIZE_B)
+/* maximum depth for calls (unsigned short) */
+#ifndef LUA_MAXCALLS
+#define LUA_MAXCALLS        4096
+#endif
 
 
 /*
-** limits for opcode arguments.
-** we use (signed) int to manipulate most arguments,
-** so they must fit in BITS_INT-1 bits (-1 for sign)
+** maximum depth for C calls (unsigned short): Not too big, or may
+** overflow the C stack...
 */
-#if SIZE_U < BITS_INT-1
-#define MAXARG_U        ((1<<SIZE_U)-1)
-#define MAXARG_S        (MAXARG_U>>1)		/* `S' is signed */
-#else
-#define MAXARG_U        MAX_INT
-#define MAXARG_S        MAX_INT
-#endif
 
-#if SIZE_A < BITS_INT-1
-#define MAXARG_A        ((1<<SIZE_A)-1)
-#else
-#define MAXARG_A        MAX_INT
-#endif
-
-#if SIZE_B < BITS_INT-1
-#define MAXARG_B        ((1<<SIZE_B)-1)
-#else
-#define MAXARG_B        MAX_INT
+#ifndef LUA_MAXCCALLS
+#define LUA_MAXCCALLS        200
 #endif
 
 
-/* maximum stack size in a function */
-#ifndef MAXSTACK
+/* maximum size for the C stack */
+#ifndef LUA_MAXCSTACK
+#define LUA_MAXCSTACK        2048
+#endif
+
+
+/* maximum stack for a Lua function */
 #define MAXSTACK	250
-#endif
-
-#if MAXSTACK > MAXARG_B
-#undef MAXSTACK
-#define MAXSTACK	MAXARG_B
-#endif
 
 
-/* maximum number of local variables */
-#ifndef MAXLOCALS
-#define MAXLOCALS 200           /* arbitrary limit (<MAXSTACK) */
-#endif
-#if MAXLOCALS>=MAXSTACK
-#undef MAXLOCALS
-#define MAXLOCALS	(MAXSTACK-1)
+/* maximum number of variables declared in a function */
+#ifndef MAXVARS
+#define MAXVARS 200           /* arbitrary limit (<MAXSTACK) */
 #endif
 
 
-/* maximum number of upvalues */
+/* maximum number of upvalues per function */
 #ifndef MAXUPVALUES
-#define MAXUPVALUES 32          /* arbitrary limit (<=MAXARG_B) */
-#endif
-#if MAXUPVALUES>MAXARG_B
-#undef MAXUPVALUES
-#define MAXUPVALUES	MAXARG_B
-#endif
-
-
-/* maximum number of variables in the left side of an assignment */
-#ifndef MAXVARSLH
-#define MAXVARSLH 100           /* arbitrary limit (<MULT_RET) */
-#endif
-#if MAXVARSLH>=MULT_RET
-#undef MAXVARSLH
-#define MAXVARSLH	(MULT_RET-1)
+#define MAXUPVALUES	32
 #endif
 
 
@@ -177,27 +159,26 @@ typedef unsigned long Instruction;
 #ifndef MAXPARAMS
 #define MAXPARAMS 100           /* arbitrary limit (<MAXLOCALS) */
 #endif
-#if MAXPARAMS>=MAXLOCALS
-#undef MAXPARAMS
-#define MAXPARAMS	(MAXLOCALS-1)
+
+
+/* minimum size for the string table (must be power of 2) */
+#ifndef MINSTRTABSIZE
+#define MINSTRTABSIZE	32
 #endif
 
 
-/* number of list items to accumulate before a SETLIST instruction */
-#define LFIELDS_PER_FLUSH	64
-#if LFIELDS_PER_FLUSH>(MAXSTACK/4)
-#undef LFIELDS_PER_FLUSH
-#define LFIELDS_PER_FLUSH	(MAXSTACK/4)
+/* minimum size for string buffer */
+#ifndef LUA_MINBUFFER
+#define LUA_MINBUFFER	32
 #endif
 
-/* number of record items to accumulate before a SETMAP instruction */
-/* (each item counts 2 elements on the stack: an index and a value) */
-#define RFIELDS_PER_FLUSH	(LFIELDS_PER_FLUSH/2)
 
-
-/* maximum lookback to find a real constant (for code generation) */
-#ifndef LOOKBACKNUMS
-#define LOOKBACKNUMS    20      /* arbitrary constant */
+/*
+** maximum number of syntactical nested non-terminals: Not too big,
+** or may overflow the C stack...
+*/
+#ifndef LUA_MAXPARSERLEVEL
+#define LUA_MAXPARSERLEVEL	200
 #endif
 
 

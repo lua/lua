@@ -9,11 +9,13 @@ OBJS=	\
 	lcode.o \
 	ldebug.o \
 	ldo.o \
+	ldump.o \
 	lfunc.o \
 	lgc.o \
 	llex.o \
 	lmem.o \
 	lobject.o \
+	lopcodes.o \
 	lparser.o \
 	lstate.o \
 	lstring.o \
@@ -29,11 +31,13 @@ SRCS=	\
 	lcode.c \
 	ldebug.c \
 	ldo.c \
+	ldump.c \
 	lfunc.c \
 	lgc.c \
 	llex.c \
 	lmem.c \
 	lobject.c \
+	lopcodes.c \
 	lparser.c \
 	lstate.c \
 	lstring.c \
@@ -65,9 +69,9 @@ SRCS=	\
 
 T= $(LIB)/liblua.a
 
-all: $T
+all:	$T
 
-$T: $(OBJS)
+$T:	$(OBJS)
 	$(AR) $@ $(OBJS)
 	$(RANLIB) $@
 
