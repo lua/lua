@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.106 2002/11/14 12:01:35 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.107 2002/11/14 15:41:38 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -396,7 +396,7 @@ static int luaB_newproxy (lua_State *L) {
       validproxy = lua_toboolean(L, -1);
       lua_pop(L, 1);  /* remove value */
     }
-    luaL_argcheck(L, validproxy, 1, "boolean/proxy expected");
+    luaL_argcheck(L, validproxy, 1, "boolean or proxy expected");
     lua_getmetatable(L, 1);  /* metatable is valid; get it */
   }
   lua_setmetatable(L, 2);
@@ -563,7 +563,7 @@ static int auxresume (lua_State *L, lua_State *co, int narg) {
 static int luaB_coresume (lua_State *L) {
   lua_State *co = lua_tothread(L, 1);
   int r;
-  luaL_argcheck(L, co, 1, "coroutine/thread expected");
+  luaL_argcheck(L, co, 1, "coroutine expected");
   r = auxresume(L, co, lua_gettop(L) - 1);
   if (r < 0) {
     lua_pushboolean(L, 0);
