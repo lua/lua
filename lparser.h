@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.h,v 1.41 2002/03/25 17:47:14 roberto Exp roberto $
+** $Id: lparser.h,v 1.42 2002/05/09 18:00:38 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -63,7 +63,7 @@ typedef struct FuncState {
   struct BlockCnt *bl;  /* chain of current blocks */
   int pc;  /* next position to code (equivalent to `ncode') */
   int lasttarget;   /* `pc' of last `jump target' */
-  int jlt;  /* list of jumps to `lasttarget' */
+  int jpc;  /* list of jumps to `pc' */
   int freereg;  /* first free register */
   int defaultglob;  /* where to look for non-declared globals */
   int nk;  /* number of elements in `k' */

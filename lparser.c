@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.179 2002/05/07 17:36:56 roberto Exp roberto $
+** $Id: lparser.c,v 1.180 2002/05/10 17:02:32 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -367,7 +367,7 @@ static void open_func (LexState *ls, FuncState *fs) {
   ls->fs = fs;
   fs->pc = 0;
   fs->lasttarget = 0;
-  fs->jlt = NO_JUMP;
+  fs->jpc = NO_JUMP;
   fs->freereg = 0;
   fs->nk = 0;
   fs->h = luaH_new(ls->L, 0, 0);
@@ -391,7 +391,6 @@ static void close_func (LexState *ls) {
   Proto *f = fs->f;
   removevars(ls, 0);
   luaK_codeABC(fs, OP_RETURN, 0, 1, 0);  /* final return */
-  luaK_getlabel(fs);  /* close eventual list of pending jumps */
   lua_assert(G(L)->roottable == fs->h);
   G(L)->roottable = fs->h->next;
   luaH_free(L, fs->h);
@@ -977,30 +976,33 @@ static void whilestat (LexState *ls, int line) {
   int i;
   int sizeexp;
   FuncState *fs = ls->fs;
-  int while_init = luaK_getlabel(fs);
+  int whileinit, blockinit, expinit;
   expdesc v;
   BlockCnt bl;
   next(ls);
+  whileinit = luaK_jump(fs);
+  expinit = luaK_getlabel(fs);
   expr(ls, &v);
   if (v.k == VK) v.k = VTRUE;  /* `trues' are all equal here */
   lineexp = ls->linenumber;
   luaK_goiffalse(fs, &v);
-  sizeexp = fs->pc - while_init;
+  luaK_dischargejpc(fs);
+  sizeexp = fs->pc - expinit;
   if (sizeexp > MAXEXPWHILE) 
     luaX_syntaxerror(ls, "while condition too complex");
-  fs->pc = while_init;  /* remove `exp' code */
-  luaK_getlabel(fs);
   for (i = 0; i < sizeexp; i++)  /* save `exp' code */
-    codeexp[i] = fs->f->code[while_init + i];
-  luaK_jump(fs);
+    codeexp[i] = fs->f->code[expinit + i];
+  fs->pc = expinit;  /* remove `exp' code */
   enterblock(fs, &bl, 1);
   check(ls, TK_DO);
+  blockinit = luaK_getlabel(fs);
   block(ls);
-  luaK_patchtohere(fs, while_init);  /* initial jump jumps to here */
-  luaK_moveexp(&v, fs->pc - while_init);  /* correct pointers */
+  luaK_patchtohere(fs, whileinit);  /* initial jump jumps to here */
+  if (v.t != NO_JUMP) v.t += fs->pc - expinit;
+  if (v.f != NO_JUMP) v.f += fs->pc - expinit;
   for (i=0; i<sizeexp; i++)
     luaK_code(fs, codeexp[i], lineexp);
-  luaK_patchlist(fs, v.t, while_init+1);
+  luaK_patchlist(fs, v.t, blockinit);
   luaK_patchtohere(fs, v.f);
   check_match(ls, TK_END, TK_WHILE, line);
   leaveblock(fs);

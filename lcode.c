@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.100 2002/05/09 14:14:34 roberto Exp roberto $
+** $Id: lcode.c,v 1.101 2002/05/10 17:02:32 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -39,55 +39,45 @@ void luaK_nil (FuncState *fs, int from, int n) {
 }
 
 
-void luaK_moveexp (expdesc *e, int offset) {
-  if (e->t != NO_JUMP) e->t += offset;
-  if (e->f != NO_JUMP) e->f += offset;
-  if (e->k == VRELOCABLE || e->k == VJMP) e->info += offset;
-}
-
-
 int luaK_jump (FuncState *fs) {
-  int j = luaK_codeAsBx(fs, OP_JMP, 0, NO_JUMP);
-  if (j == fs->lasttarget) {  /* possible jumps to this jump? */
-    luaK_concat(fs, &j, fs->jlt);  /* keep them on hold */
-    fs->jlt = NO_JUMP;
-  }
+  int jpc = fs->jpc;  /* save list of jumps to here */
+  int j;
+  fs->jpc = NO_JUMP;
+  j = luaK_codeAsBx(fs, OP_JMP, 0, NO_JUMP);
+  luaK_concat(fs, &j, jpc);  /* keep them on hold */
   return j;
 }
 
 
 static int luaK_condjump (FuncState *fs, OpCode op, int A, int B, int C) {
   luaK_codeABC(fs, op, A, B, C);
-  return luaK_codeAsBx(fs, OP_JMP, 0, NO_JUMP);
+  return luaK_jump(fs);
 }
 
 
 static void luaK_fixjump (FuncState *fs, int pc, int dest) {
   Instruction *jmp = &fs->f->code[pc];
-  if (dest == NO_JUMP)
-    SETARG_sBx(*jmp, NO_JUMP);  /* point to itself to represent end of list */
-  else {  /* jump is relative to position following jump instruction */
-    int offset = dest-(pc+1);
-    if (abs(offset) > MAXARG_sBx)
-      luaX_syntaxerror(fs->ls, "control structure too long");
-    SETARG_sBx(*jmp, offset);
-  }
+  int offset = dest-(pc+1);
+  lua_assert(dest != NO_JUMP);
+  if (abs(offset) > MAXARG_sBx)
+    luaX_syntaxerror(fs->ls, "control structure too long");
+  SETARG_sBx(*jmp, offset);
 }
 
 
 /*
 ** returns current `pc' and marks it as a jump target (to avoid wrong
 ** optimizations with consecutive instructions not in the same basic block).
-** discharge list of jumps to last target.
 */
 int luaK_getlabel (FuncState *fs) {
-  if (fs->pc != fs->lasttarget) {
-    int lasttarget = fs->lasttarget;
-    fs->lasttarget = fs->pc;
-    luaK_patchlist(fs, fs->jlt, lasttarget);  /* discharge old list `jlt' */
-    fs->jlt = NO_JUMP;  /* nobody jumps to this new label (yet) */
-  }
+  fs->lasttarget = fs->pc;
   return fs->pc;
+}
+
+
+void luaK_dischargejpc (FuncState *fs) {
+  luaK_patchlist(fs, fs->jpc, fs->pc);  /* discharge old list `jpc' */
+  fs->jpc = NO_JUMP;
 }
 
 
@@ -155,20 +145,20 @@ static void luaK_patchlistaux (FuncState *fs, int list,
 
 
 void luaK_patchlist (FuncState *fs, int list, int target) {
-  if (target == fs->lasttarget)  /* same target that list `jlt'? */
-    luaK_concat(fs, &fs->jlt, list);  /* delay fixing */
-  else
-    luaK_patchlistaux(fs, list, target, NO_REG, target, NO_REG, target);
+  lua_assert(target <= fs->pc);
+  luaK_patchlistaux(fs, list, target, NO_REG, target, NO_REG, target);
 }
 
 
 void luaK_patchtohere (FuncState *fs, int list) {
-  luaK_patchlist(fs, list, luaK_getlabel(fs));
+  luaK_getlabel(fs);
+  luaK_concat(fs, &fs->jpc, list);
 }
 
 
 void luaK_concat (FuncState *fs, int *l1, int l2) {
-  if (*l1 == NO_JUMP)
+  if (l2 == NO_JUMP) return;
+  else if (*l1 == NO_JUMP)
     *l1 = l2;
   else {
     int list = *l1;
@@ -508,7 +498,7 @@ void luaK_goiftrue (FuncState *fs, expdesc *e) {
       break;
     }
     case VFALSE: {
-      pc = luaK_codeAsBx(fs, OP_JMP, 0, NO_JUMP);  /* always jump */
+      pc = luaK_jump(fs);  /* always jump */
       break;
     }
     case VJMP: {
@@ -534,7 +524,7 @@ void luaK_goiffalse (FuncState *fs, expdesc *e) {
       break;
     }
     case VTRUE: {
-      pc = luaK_codeAsBx(fs, OP_JMP, 0, NO_JUMP);  /* always jump */
+      pc = luaK_jump(fs);  /* always jump */
       break;
     }
     case VJMP: {
@@ -737,6 +727,7 @@ void luaK_posfix (FuncState *fs, BinOpr op, expdesc *e1, expdesc *e2) {
 int luaK_code (FuncState *fs, Instruction i, int line) {
   Proto *f = fs->f;
   int oldsize = f->sizecode;
+  luaK_dischargejpc(fs);  /* `pc' will change */
   /* put new instruction in code array */
   luaM_growvector(fs->L, f->code, fs->pc, f->sizecode, Instruction,
                   MAX_INT, "code size overflow");
