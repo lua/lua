@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.45 1999/09/13 19:42:02 roberto Exp roberto $
+** $Id: liolib.c,v 1.46 1999/10/07 19:18:36 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -352,7 +352,7 @@ static void io_read (void) {
     int success;
     luaL_resetbuffer();
     if (lua_isnumber(op))
-      success = read_chars(f, lua_getnumber(op));
+      success = read_chars(f, (int)lua_getnumber(op));
     else {
       const char *p = luaL_opt_string(arg, "*l");
       if (p[0] != '*')
