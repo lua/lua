@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.17 1995/10/17 14:30:05 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.18 1996/01/30 15:25:23 roberto Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -123,7 +123,7 @@ int luaI_lock (Object *object)
   Word i;
   Word oldSize;
   if (tag(object) == LUA_T_NIL)
-    return -1;
+    return -1;   /* special lock ref for nil */
   for (i=0; i<lockSize; i++)
     if (tag(&lockArray[i]) == LUA_T_NIL)
     {
@@ -151,13 +151,18 @@ int luaI_lock (Object *object)
 
 void lua_unlock (int ref)
 {
-  tag(&lockArray[ref]) = LUA_T_NIL;
+  if (ref >= 0 && ref < lockSize)
+    tag(&lockArray[ref]) = LUA_T_NIL;
 }
 
 
 Object *luaI_getlocked (int ref)
 {
-  return &lockArray[ref];
+  static Object nul = {LUA_T_NIL, {0}};
+  if (ref >= 0 && ref < lockSize)
+    return &lockArray[ref];
+  else
+    return &nul;
 }
 
 
