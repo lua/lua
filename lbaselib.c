@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.136 2003/10/23 18:06:22 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.137 2003/11/05 11:59:14 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -484,14 +484,14 @@ static void pushcomposename (lua_State *L) {
   const char *wild;
   int n = 1;
   while ((wild = strchr(path, LUA_PATH_MARK)) != NULL) {
-    /* is there stack space for prefix, name, and eventual last sufix? */
+    /* is there stack space for prefix, name, and eventual last suffix? */
     luaL_checkstack(L, 3, "too many marks in a path component");
     lua_pushlstring(L, path, wild - path);  /* push prefix */
     lua_pushvalue(L, 1);  /* push package name (in place of MARK) */
     path = wild + 1;  /* continue after MARK */
     n += 2;
   }
-  lua_pushstring(L, path);  /* push last sufix (`n' already includes this) */
+  lua_pushstring(L, path);  /* push last suffix (`n' already includes this) */
   lua_concat(L, n);
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.227 2003/10/20 12:24:26 roberto Exp roberto $
+** $Id: ldo.c,v 1.228 2003/10/20 17:42:41 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -334,7 +334,7 @@ static void resume (lua_State *L, void *ud) {
     lua_assert(ci == L->base_ci && nargs < L->top - L->base);
     luaD_precall(L, L->top - (nargs + 1));  /* start coroutine */
   }
-  else {  /* resumming from previous yield */
+  else {  /* resuming from previous yield */
     if (!f_isLua(ci)) {  /* `common' yield? */
       /* finish interrupted execution of `OP_CALL' */
       int nresults;
