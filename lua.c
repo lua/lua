@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.136 2005/03/21 18:12:07 roberto Exp roberto $
+** $Id: lua.c,v 1.137 2005/03/22 16:55:35 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -16,15 +16,6 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
-
-
-/*
-** generic extra include file
-*/
-#ifdef LUA_USERCONFIG
-#include LUA_USERCONFIG
-#endif
-
 
 
 
