@@ -244,6 +244,8 @@ LUA_API int   lua_getweakmode (lua_State *L, int index);
 
 LUA_API void lua_pushupvalues (lua_State *L);
 
+#define lua_isnull	lua_isnone
+
 
 /* compatibility with ref system */
 

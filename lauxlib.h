@@ -102,6 +102,15 @@ LUALIB_API void luaL_pushresult (luaL_Buffer *B);
 /* }====================================================== */
 
 
+
+/*
+** Compatibility macros
+*/
+
+#define luaL_checktype  luaL_check_type
+#define luaL_checkany   luaL_check_any
+
+
 #endif
 
 
