@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.216 2003/08/25 19:51:54 roberto Exp roberto $
+** $Id: lparser.c,v 1.217 2003/08/27 21:01:44 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -320,7 +320,7 @@ static void pushclosure (LexState *ls, FuncState *func, expdesc *v) {
 
 static void open_func (LexState *ls, FuncState *fs) {
   lua_State *L = ls->L;
-  Proto *f = luaF_newproto(ls->L);
+  Proto *f = luaF_newproto(L);
   fs->f = f;
   fs->prev = ls->fs;  /* linked list of funcstates */
   fs->ls = ls;
