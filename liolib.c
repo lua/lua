@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.40 1999/05/14 12:24:04 roberto Exp roberto $
+** $Id: liolib.c,v 1.41 1999/06/23 13:48:39 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -89,7 +89,7 @@ static int ishandle (lua_Object f) {
 
 
 static FILE *getfilebyname (char *name) {
-  lua_Object f = lua_getglobal(name);
+  lua_Object f = lua_rawgetglobal(name);
   if (!ishandle(f))
       luaL_verror("global variable `%.50s' is not a file handle", name);
   return lua_getuserdata(f);
