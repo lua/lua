@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.129 2003/03/19 21:14:34 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.130 2003/04/03 13:35:34 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -656,8 +656,8 @@ static void base_open (lua_State *L) {
   lua_pushvalue(L, -1);  /* `w' will be its own metatable */
   lua_setmetatable(L, -2);
   lua_pushliteral(L, "__mode");
-  lua_pushliteral(L, "k");
-  lua_rawset(L, -3);  /* metatable(w).__mode = "k" */
+  lua_pushliteral(L, "kv");
+  lua_rawset(L, -3);  /* metatable(w).__mode = "kv" */
   lua_pushcclosure(L, luaB_newproxy, 1);
   lua_rawset(L, -3);  /* set global `newproxy' */
   lua_rawset(L, -1);  /* set global _G */

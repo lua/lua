@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.100 2003/04/07 14:35:00 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.101 2003/05/15 12:20:24 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -271,8 +271,8 @@ static void getsizes (lua_State *L) {
     lua_pushvalue(L, -1);  /* `size' will be its own metatable */
     lua_setmetatable(L, -2);
     lua_pushliteral(L, "__mode");
-    lua_pushliteral(L, "k");
-    lua_rawset(L, -3);  /* metatable(N).__mode = "k" */
+    lua_pushliteral(L, "kv");
+    lua_rawset(L, -3);  /* metatable(N).__mode = "kv" */
     lua_pushvalue(L, -1);
     lua_rawseti(L, LUA_REGISTRYINDEX, ARRAYSIZE_REF);  /* store in register */
   }
