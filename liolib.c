@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.55 2004/07/09 16:01:38 roberto Exp roberto $
+** $Id: liolib.c,v 2.56 2004/08/09 14:35:59 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -96,7 +96,7 @@ static int aux_close (lua_State *L) {
   if (f == stdin || f == stdout || f == stderr)
     return 0;  /* file cannot be closed */
   else {
-    int ok = (pclose(f) != -1) || (fclose(f) == 0);
+    int ok = (fclose(f) == 0);
     if (ok)
       *(FILE **)lua_touserdata(L, 1) = NULL;  /* mark file as closed */
     return ok;
@@ -293,6 +293,7 @@ static int g_read (lua_State *L, FILE *f, int first) {
   int nargs = lua_gettop(L) - 1;
   int success;
   int n;
+  clearerr(f);
   if (nargs == 0) {  /* no arguments? */
     success = read_line(L, f);
     n = first+1;  /* to return 1 result */
@@ -327,6 +328,8 @@ static int g_read (lua_State *L, FILE *f, int first) {
       }
     }
   }
+  if (ferror(f))
+    return pushresult(L, 0, NULL);
   if (!success) {
     lua_pop(L, 1);  /* remove last result */
     lua_pushnil(L);  /* push nil instead */
@@ -347,9 +350,13 @@ static int f_read (lua_State *L) {
 
 static int io_readline (lua_State *L) {
   FILE *f = *(FILE **)lua_touserdata(L, lua_upvalueindex(2));
+  int sucess;
   if (f == NULL)  /* file is already closed? */
     luaL_error(L, "file is already closed");
-  if (read_line(L, f)) return 1;
+  sucess = read_line(L, f);
+  if (ferror(f))
+    luaL_error(L, "%s", strerror(errno));
+  if (sucess) return 1;
   else {  /* EOF */
     if (lua_toboolean(L, lua_upvalueindex(3))) {  /* generator created file? */
       lua_settop(L, 0);
