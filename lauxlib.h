@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.17 1999/12/29 16:24:03 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.18 2000/05/24 13:54:49 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -45,7 +45,7 @@ void luaL_oldbuffer (lua_State *L, size_t old);
 char *luaL_buffer (lua_State *L);
 
 
-#ifdef LUA_REENTRANT
+#ifndef LUA_SINGLESTATE
 
 /*
 ** ===============================================================

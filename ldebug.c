@@ -1,13 +1,11 @@
 /*
-** $Id: ldebug.c,v 1.29 2000/08/08 18:26:05 roberto Exp roberto $
+** $Id: ldebug.c,v 1.30 2000/08/08 20:42:07 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
 
 
 #include <stdlib.h>
-
-#define LUA_REENTRANT
 
 #include "lua.h"
 

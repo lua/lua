@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.82 2000/08/04 19:38:35 roberto Exp roberto $
+** $Id: ldo.c,v 1.83 2000/08/08 20:42:07 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -9,8 +9,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define LUA_REENTRANT
 
 #include "lua.h"
 

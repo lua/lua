@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.31 2000/08/08 18:26:05 roberto Exp roberto $
+** $Id: ltests.c,v 1.32 2000/08/08 20:42:07 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define LUA_SINGLESTATE
 
 #include "lua.h"
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lualib.h,v 1.8 1999/11/22 13:12:07 roberto Exp roberto $
+** $Id: lualib.h,v 1.9 2000/06/16 17:22:43 roberto Exp roberto $
 ** Lua standard libraries
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,7 @@ void lua_dblibopen (lua_State *L);
 ** ===============================================================
 */
 
-#ifndef LUA_REENTRANT
+#ifdef LUA_SINGLESTATE
 
 #define lua_iolibopen()		(lua_iolibopen)(lua_state)
 #define lua_strlibopen()	(lua_strlibopen)(lua_state)

@@ -1,11 +1,9 @@
 /*
-** $Id: lref.c,v 1.15 2000/06/30 14:35:17 roberto Exp roberto $
+** $Id: lref.c,v 1.16 2000/08/07 20:21:34 roberto Exp roberto $
 ** reference mechanism
 ** See Copyright Notice in lua.h
 */
 
-
-#define LUA_REENTRANT
 
 #include "lua.h"
 

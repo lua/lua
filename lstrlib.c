@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.44 2000/06/12 13:52:05 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.45 2000/06/12 14:37:18 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -10,8 +10,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define LUA_REENTRANT
 
 #include "lua.h"
 

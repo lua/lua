@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.55 2000/06/30 19:17:08 roberto Exp roberto $
+** $Id: lua.h,v 1.56 2000/08/07 18:39:16 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: lua@tecgraf.puc-rio.br
@@ -16,7 +16,7 @@
 #include <stddef.h>
 
 
-#define LUA_VERSION	"Lua 4.0 (alpha)"
+#define LUA_VERSION	"Lua 4.0 (beta)"
 #define LUA_COPYRIGHT	"Copyright (C) 1994-2000 TeCGraf, PUC-Rio"
 #define LUA_AUTHORS 	"W. Celes, R. Ierusalimschy & L. H. de Figueiredo"
 
@@ -137,7 +137,7 @@ long	       lua_collectgarbage (lua_State *L, long limit);
 ** ===============================================================
 */
 
-#ifdef LUA_REENTRANT
+#ifndef LUA_SINGLESTATE
 
 #define lua_call(L,name)	lua_callfunction(L, lua_getglobal(L, name))
 #define lua_pushref(L,ref)	lua_pushobject(L, lua_getref(L, ref))
@@ -161,7 +161,7 @@ long	       lua_collectgarbage (lua_State *L, long limit);
 
 
 
-#ifndef LUA_REENTRANT
+#ifdef LUA_SINGLESTATE
 /* 
 ** {==============================================================
 ** Macros for single-state use
@@ -248,7 +248,7 @@ extern lua_State *lua_state;
 lua_Object     lua_rawgetglobal (lua_State *L, const char *name);
 void           lua_rawsetglobal (lua_State *L, const char *name);/* In: value */
 
-#ifndef LUA_REENTRANT
+#ifdef LUA_SINGLESTATE
 #define lua_rawgetglobal(name)	(lua_rawgetglobal(lua_state, name))
 #define lua_rawsetglobal(name)	(lua_rawsetglobal(lua_state, name))
 #endif

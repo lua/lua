@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.44 2000/08/04 19:38:35 roberto Exp roberto $
+** $Id: ltm.c,v 1.45 2000/08/07 20:21:34 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -7,8 +7,6 @@
 
 #include <stdio.h>
 #include <string.h>
-
-#define LUA_REENTRANT
 
 #include "lua.h"
 

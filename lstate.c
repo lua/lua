@@ -1,13 +1,11 @@
 /*
-** $Id: lstate.c,v 1.30 2000/08/04 19:38:35 roberto Exp roberto $
+** $Id: lstate.c,v 1.31 2000/08/08 20:42:07 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
 
 
 #include <stdarg.h>
-
-#define LUA_REENTRANT
 
 #include "lua.h"
 
@@ -22,9 +20,6 @@
 #include "lstring.h"
 #include "ltable.h"
 #include "ltm.h"
-
-
-lua_State *lua_state = NULL;
 
 
 lua_State *lua_newstate (int stacksize, int put_builtin) {
@@ -74,6 +69,8 @@ lua_State *lua_newstate (int stacksize, int put_builtin) {
   }
 }
 
+
+extern lua_State *lua_state;
 
 void lua_close (lua_State *L) {
   luaC_collect(L, 1);  /* collect all elements */

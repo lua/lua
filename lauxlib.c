@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.28 2000/05/24 13:54:49 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.29 2000/06/12 13:52:05 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -13,8 +13,6 @@
 ** Any function declared here could be written as an application function.
 ** With care, these functions can be used by other libraries.
 */
-
-#define LUA_REENTRANT
 
 #include "lua.h"
 

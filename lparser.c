@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.105 2000/08/08 20:48:55 roberto Exp roberto $
+** $Id: lparser.c,v 1.106 2000/08/09 14:49:13 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -7,8 +7,6 @@
 
 #include <stdio.h>
 #include <string.h>
-
-#define LUA_REENTRANT
 
 #include "lua.h"
 

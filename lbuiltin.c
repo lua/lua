@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.117 2000/06/30 14:35:17 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.118 2000/08/04 19:38:35 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -18,8 +18,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define LUA_REENTRANT
 
 #include "lua.h"
 

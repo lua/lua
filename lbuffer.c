@@ -1,13 +1,11 @@
 /*
-** $Id: lbuffer.c,v 1.13 2000/05/24 13:54:49 roberto Exp roberto $
+** $Id: lbuffer.c,v 1.14 2000/06/12 13:52:05 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
 
 
 #include <stdio.h>
-
-#define LUA_REENTRANT
 
 #include "lua.h"
 

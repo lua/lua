@@ -1,10 +1,8 @@
 /*
-** $Id: lgc.c,v 1.60 2000/08/07 20:21:34 roberto Exp roberto $
+** $Id: lgc.c,v 1.61 2000/08/08 20:42:07 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
-
-#define LUA_REENTRANT
 
 #include "lua.h"
 

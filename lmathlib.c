@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.24 2000/03/10 18:37:44 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.25 2000/06/12 13:52:05 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -7,8 +7,6 @@
 
 #include <stdlib.h>
 #include <math.h>
-
-#define LUA_REENTRANT
 
 #include "lua.h"
 

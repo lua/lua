@@ -1,13 +1,11 @@
 /*
-** $Id: lstring.c,v 1.40 2000/06/30 14:35:17 roberto Exp $
+** $Id: lstring.c,v 1.41 2000/08/04 19:38:35 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
 
 
 #include <string.h>
-
-#define LUA_REENTRANT
 
 #include "lua.h"
 
