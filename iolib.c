@@ -3,7 +3,7 @@
 ** Input/output library to LUA
 */
 
-char *rcs_iolib="$Id: iolib.c,v 1.3 1994/03/28 15:14:02 celes Exp celes $";
+char *rcs_iolib="$Id: iolib.c,v 1.4 1994/04/25 20:11:23 celes Exp celes $";
 
 #include <stdlib.h>
 #include <string.h>
@@ -344,9 +344,11 @@ static char *buildformat (char *e, lua_Object o)
  static char buffer[512];
  static char f[80];
  char *string = &buffer[255];
+ char *fstart=e, *fspace;
  char t, j='r';
  int  m=0, n=0, l;
  while (isspace(*e)) e++;
+ fspace = e;
  t = *e++;
  if (*e == '<' || *e == '|' || *e == '>') j = *e++;
  while (isdigit(*e))
@@ -359,16 +361,22 @@ static char *buildformat (char *e, lua_Object o)
  if (j == '<' || j == '|') sprintf(strchr(f,0),"-");
  if (m != 0)   sprintf(strchr(f,0),"%d", m);
  if (n != 0)   sprintf(strchr(f,0),".%d", n);
- sprintf(strchr(f,0), "%c", t);
- switch (tolower(t))
+ switch (t)
  {
-  case 'i': t = 'i';
+  case 'i': case 'I': t = 'd';
+   sprintf(strchr(f,0), "%c", t);
    sprintf (string, f, (long int)lua_getnumber(o));
   break;
-  case 'f': case 'g': case 'e': t = 'f';
+  case 'f': case 'g': case 'e': case 'G': case 'E': 
+   sprintf(strchr(f,0), "%c", t);
    sprintf (string, f, (float)lua_getnumber(o));
   break;
-  case 's': t = 's';
+  case 'F': t = 'f';
+   sprintf(strchr(f,0), "%c", t);
+   sprintf (string, f, (float)lua_getnumber(o));
+  break;
+  case 's': case 'S': t = 's';
+   sprintf(strchr(f,0), "%c", t);
    sprintf (string, f, lua_getstring(o));
   break;
   default: return "";
@@ -383,13 +391,22 @@ static char *buildformat (char *e, lua_Object o)
  }
  else if (m!=0 && j=='|')
  {
+  int k;
   int i=l-1;
-  while (isspace(string[i])) i--;
-  string -= (m-i) / 2;
-  i=0;
-  while (string[i]==0) string[i++] = ' ';
-  string[l] = 0;
+  while (isspace(string[i]) || string[i]==0) i--;
+  string -= (m-i)/2;
+  for(k=0; k<(m-i)/2; k++)
+   string[k] = ' ';
  }
+ /* add space characteres */
+ while (fspace != fstart)
+ {
+  string--;
+  fspace--;
+  *string = *fspace; 
+ }
+ while (isspace(*e)) string[l++] = *e++;
+ string[l] = 0;
  return string;
 }
 static void io_write (void)
