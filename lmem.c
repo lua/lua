@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.1 1997/09/16 19:25:59 roberto Exp roberto $
+** $Id: lmem.c,v 1.2 1997/11/19 17:29:23 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -80,16 +80,8 @@ void *luaM_realloc (void *block, unsigned long size)
 
 #define MARK    55
 
-static unsigned long numblocks = 0;
-static unsigned long totalmem = 0;
-
-
-
-void luaM_query (void)
-{
-  lua_pushnumber(totalmem);
-  lua_pushnumber(numblocks);
-}
+unsigned long numblocks = 0;
+unsigned long totalmem = 0;
 
 
 static void *checkblock (void *block)

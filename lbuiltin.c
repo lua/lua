@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.12 1997/11/27 18:25:14 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.13 1997/11/28 12:39:45 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -373,6 +373,13 @@ static void luaI_collectgarbage (void)
 */
 #ifdef DEBUG
 
+static void mem_query (void)
+{
+  lua_pushnumber(totalmem);
+  lua_pushnumber(numblocks);
+}
+
+
 static void testC (void)
 {
 #define getnum(s)	((*s++) - '0')
@@ -433,7 +440,7 @@ static struct luaL_reg int_funcs[] = {
 #endif
 #ifdef DEBUG
   {"testC", testC},
-  {"totalmem", luaM_query},
+  {"totalmem", mem_query},
 #endif
   {"assert", luaI_assert},
   {"call", luaI_call},
