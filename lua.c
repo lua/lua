@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.40 2000/06/16 17:16:34 roberto Exp roberto $
+** $Id: lua.c,v 1.41 2000/06/19 13:15:15 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -175,17 +175,16 @@ int main (int argc, char *argv[]) {
   int toclose = 0;
   int status = EXIT_SUCCESS;
   int i = 1;
+  int stacksize = 0;
   if (i < argc && argv[1][0] == '-' && argv[1][1] == 's') {
-    int stacksize = atoi(&argv[1][2]);
+    stacksize = atoi(&argv[1][2]);
     if (stacksize == 0) {
       fprintf(stderr, "lua: invalid stack size ('%s')\n", &argv[1][2]);
       exit(EXIT_FAILURE);
     }
     i++;
-    lua_state = lua_newstate("stack", stacksize, NULL);
   }
-  else
-    lua_state = lua_newstate(NULL);
+  lua_state = lua_newstate(stacksize, 1);
   lua_userinit();
   lua_pushuserdata(argv);
   lua_pushcclosure(l_getargs, 1);

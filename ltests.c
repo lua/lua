@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.27 2000/06/26 19:28:31 roberto Exp roberto $
+** $Id: ltests.c,v 1.28 2000/06/28 17:06:07 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -374,8 +374,7 @@ static void testC (void) {
     }
     else if EQ("newstate") {
       int stacksize = getnum(&pc);
-      lua_State *L1 = lua_newstate("stack", stacksize,
-                                   "builtin", getnum(&pc), NULL);
+      lua_State *L1 = lua_newstate(stacksize, getnum(&pc));
       lua_pushuserdata(L1);
     }
     else if EQ("closestate") {

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.27 2000/06/12 13:52:05 roberto Exp roberto $
+** $Id: lstate.c,v 1.28 2000/06/30 14:35:17 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -27,7 +27,7 @@
 lua_State *lua_state = NULL;
 
 
-static lua_State *newstate_aux (int stacksize, int put_builtin) {
+lua_State *lua_newstate (int stacksize, int put_builtin) {
   lua_State *L = luaM_new(NULL, lua_State);
   L->errorJmp = NULL;
   L->Mbuffer = NULL;
@@ -50,6 +50,7 @@ static lua_State *newstate_aux (int stacksize, int put_builtin) {
   L->linehook = NULL;
   L->allowhooks = 1;
   L->gt = luaH_new(L, 10);
+  if (stacksize == 0) stacksize = DEFAULT_STACK_SIZE;
   luaD_init(L, stacksize);
   luaS_init(L);
   luaX_init(L);
@@ -58,31 +59,6 @@ static lua_State *newstate_aux (int stacksize, int put_builtin) {
     luaB_predefine(L);
   L->GCthreshold = L->nblocks*4;
   return L;
-}
-
-
-lua_State *lua_newstate (const char *s, ...) {
-  static const char *const ops[] = {"stack", "builtin", NULL};
-  va_list ap;
-  int stacksize = DEFAULT_STACK_SIZE;
-  int put_builtin = 1;
-  va_start(ap, s);
-  while (s) {
-    switch (luaL_findstring(s, ops)) {
-      case 0:  /* stack */
-        stacksize = va_arg(ap, int);
-        break;
-      case 1:  /* builtin */
-        put_builtin = va_arg(ap, int);
-        break;
-      default:  /* invalid argument */
-        va_end(ap);
-        return NULL;
-    }
-    s = va_arg(ap, const char *);
-  }
-  va_end(ap);
-  return newstate_aux(stacksize, put_builtin);
 }
 
 
