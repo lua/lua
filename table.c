@@ -3,7 +3,7 @@
 ** Module to control static tables
 */
 
-char *rcs_table="$Id: table.c,v 2.26 1995/01/12 14:19:04 roberto Exp roberto $";
+char *rcs_table="$Id: table.c,v 2.27 1995/01/13 22:11:12 roberto Exp celes $";
 
 #include <string.h>
 
@@ -183,7 +183,7 @@ void lua_pack (void)
   recovered += lua_strcollector();
   recovered += lua_hashcollector();
   nentity = 0;				/* reset counter */
-  block=2*block-3*recovered/2;	/* adapt block size */
+  block=(16*block-7*recovered)/12;	/* adapt block size */
   if (block < MIN_GARBAGE_BLOCK) block = MIN_GARBAGE_BLOCK;
 } 
 
