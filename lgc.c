@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.22 2005/01/18 17:18:09 roberto Exp roberto $
+** $Id: lgc.c,v 2.23 2005/02/10 13:25:02 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -114,21 +114,23 @@ static void reallymarkobject (global_State *g, GCObject *o) {
 
 
 static void marktmu (global_State *g) {
-  GCObject *u;
-  for (u = g->tmudata; u; u = u->gch.next) {
-    makewhite(g, u);  /* may be marked, if left from previous GC */
-    reallymarkobject(g, u);
+  GCObject *u = g->tmudata;
+  if (u) {
+    do {
+      u = u->gch.next;
+      makewhite(g, u);  /* may be marked, if left from previous GC */
+      reallymarkobject(g, u);
+    } while (u != g->tmudata);
   }
 }
 
 
 /* move `dead' udata that need finalization to list `tmudata' */
 size_t luaC_separateudata (lua_State *L, int all) {
+  global_State *g = G(L);
   size_t deadmem = 0;
-  GCObject **p = &G(L)->mainthread->next;
+  GCObject **p = &g->mainthread->next;
   GCObject *curr;
-  GCObject *collected = NULL;  /* to collect udata with gc event */
-  GCObject **lastcollected = &collected;
   while ((curr = *p) != NULL) {
     if (!(iswhite(curr) || all) || isfinalized(gco2u(curr)))
       p = &curr->gch.next;  /* don't bother with them */
@@ -140,14 +142,16 @@ size_t luaC_separateudata (lua_State *L, int all) {
       deadmem += sizeudata(gco2u(curr));
       markfinalized(gco2u(curr));
       *p = curr->gch.next;
-      curr->gch.next = NULL;  /* link `curr' at the end of `collected' list */
-      *lastcollected = curr;
-      lastcollected = &curr->gch.next;
+      /* link `curr' at the end of `tmudata' list */
+      if (g->tmudata == NULL)  /* list is empty? */
+        g->tmudata = curr->gch.next = curr;  /* creates a circular list */
+      else {
+        curr->gch.next = g->tmudata->gch.next;
+        g->tmudata->gch.next = curr;
+        g->tmudata = curr;
+      }
     }
   }
-  /* insert collected udata with gc event into `tmudata' list */
-  *lastcollected = G(L)->tmudata;
-  G(L)->tmudata = collected;
   return deadmem;
 }
 
@@ -443,10 +447,14 @@ static void checkSizes (lua_State *L) {
 
 static void GCTM (lua_State *L) {
   global_State *g = G(L);
-  GCObject *o = g->tmudata;
+  GCObject *o = g->tmudata->gch.next;  /* get first element */
   Udata *udata = rawgco2u(o);
   const TValue *tm;
-  g->tmudata = udata->uv.next;  /* remove udata from `tmudata' */
+  /* remove udata from `tmudata' */
+  if (o == g->tmudata)  /* last element? */
+    g->tmudata = NULL;
+  else
+    g->tmudata->gch.next = udata->uv.next;
   udata->uv.next = g->mainthread->next;  /* return it to `root' list */
   g->mainthread->next = o;
   makewhite(g, o);
