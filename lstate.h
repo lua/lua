@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.101 2002/11/13 11:31:39 roberto Exp roberto $
+** $Id: lstate.h,v 1.102 2002/11/18 11:01:55 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -92,14 +92,14 @@ typedef struct CallInfo {
 /*
 ** bit fields for `CallInfo.state'
 */
-#define CI_C		1  /* 1 if function is a C function */
+#define CI_C		(1<<0)  /* 1 if function is a C function */
 /* 1 if (Lua) function has an active `luaV_execute' running it */
-#define CI_HASFRAME	2
+#define CI_HASFRAME	(1<<1)
 /* 1 if Lua function is calling another Lua function (and therefore its
    `pc' is being used by the other, and therefore CI_SAVEDPC is 1 too) */
-#define CI_CALLING	4
-#define CI_SAVEDPC	8  /* 1 if `savedpc' is updated */
-#define CI_YIELD	16  /* 1 if thread is suspended */
+#define CI_CALLING	(1<<2)
+#define CI_SAVEDPC	(1<<3)  /* 1 if `savedpc' is updated */
+#define CI_YIELD	(1<<4)  /* 1 if thread is suspended */
 
 
 #define ci_func(ci)	(clvalue((ci)->base - 1))

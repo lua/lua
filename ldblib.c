@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.70 2002/09/16 19:18:01 roberto Exp roberto $
+** $Id: ldblib.c,v 1.71 2002/11/14 15:41:38 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -167,8 +167,13 @@ static int sethook (lua_State *L) {
 static int gethook (lua_State *L) {
   char buff[5];
   unsigned long mask = lua_gethookmask(L);
-  lua_pushlightuserdata(L, (void *)&KEY_HOOK);
-  lua_rawget(L, LUA_REGISTRYINDEX);   /* get hook */
+  lua_Hook hook = lua_gethook(L);
+  if (hook != NULL && hook != hookf)  /* external hook? */
+    lua_pushliteral(L, "external hook");
+  else {
+    lua_pushlightuserdata(L, (void *)&KEY_HOOK);
+    lua_rawget(L, LUA_REGISTRYINDEX);   /* get hook */
+  }
   lua_pushstring(L, unmakemask(mask, buff));
   lua_pushnumber(L, lua_getmaskcount(mask));
   return 3;
