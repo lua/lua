@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.23 1999/02/25 19:13:56 roberto Exp roberto $
+** $Id: ltm.c,v 1.24 1999/02/26 15:48:55 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -129,7 +129,7 @@ TObject *luaT_gettagmethod (int t, char *event) {
 
 
 void luaT_settagmethod (int t, char *event, TObject *func) {
-  TObject temp = *func;
+  TObject temp;
   int e = luaI_checkevent(event, luaT_eventname);
   checktag(t);
   if (!luaT_validevent(t, e))
@@ -137,6 +137,7 @@ void luaT_settagmethod (int t, char *event, TObject *func) {
                 luaT_eventname[e], luaO_typenames[-t],
                 (t == LUA_T_ARRAY || t == LUA_T_USERDATA) ? " with default tag"
                                                           : "");
+  temp = *func;
   *func = *luaT_getim(t,e);
   *luaT_getim(t, e) = temp;
 }

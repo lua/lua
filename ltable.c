@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.20 1999/01/25 17:41:19 roberto Exp roberto $
+** $Id: ltable.c,v 1.21 1999/02/23 14:57:28 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -140,7 +140,8 @@ void luaH_set (Hash *t, TObject *ref, TObject *val) {
   if (ttype(ref(n)) != LUA_T_NIL)
     *val(n) = *val;
   else {
-    TObject buff = *val;  /* rehash may invalidate this address */
+    TObject buff;
+    buff = *val;  /* rehash may invalidate this address */
     if ((long)nuse(t)*3L > (long)nhash(t)*2L) {
       rehash(t);
       n = luaH_present(t, ref);

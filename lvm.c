@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.55 1999/04/13 19:28:49 roberto Exp roberto $
+** $Id: lvm.c,v 1.56 1999/05/21 17:23:15 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -214,7 +214,8 @@ void luaV_setglobal (TaggedString *ts) {
   else {
     /* WARNING: caller must assure stack space */
     struct Stack *S = &L->stack;
-    TObject newvalue = *(S->top-1);
+    TObject newvalue;
+    newvalue = *(S->top-1);
     ttype(S->top-1) = LUA_T_STRING;
     tsvalue(S->top-1) = ts;
     *S->top++ = *oldvalue;
@@ -403,7 +404,8 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
 
       case PUSHSELFW: aux += highbyte(*pc++);
       case PUSHSELF:  aux += *pc++; {
-        TObject receiver = *(S->top-1);
+        TObject receiver;
+        receiver = *(S->top-1);
         *S->top++ = consts[aux];
         luaV_gettable();
         *S->top++ = receiver;
@@ -439,17 +441,17 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
       case SETLISTW: aux += highbyte(*pc++);
       case SETLIST:  aux += *pc++; {
         int n = *(pc++);
-        TObject *arr = S->top-n-1;
+        Hash *arr = avalue(S->top-n-1);
         aux *= LFIELDS_PER_FLUSH;
         for (; n; n--)
-          luaH_setint(avalue(arr), n+aux, --S->top);
+          luaH_setint(arr, n+aux, --S->top);
         break;
       }
 
       case SETMAP:  aux = *pc++; {
-        TObject *arr = S->top-(2*aux)-3;
+        Hash *arr = avalue(S->top-(2*aux)-3);
         do {
-          luaH_set(avalue(arr), S->top-2, S->top-1);
+          luaH_set(arr, S->top-2, S->top-1);
           S->top-=2;
         } while (aux--);
         break;
