@@ -1,9 +1,10 @@
-# $Id: makefile,v 1.22 1996/03/15 18:22:09 roberto Exp roberto $
+# $Id: makefile,v 1.23 1996/04/25 14:01:27 roberto Exp roberto $
 
 #configuration
 
 # define (undefine) POPEN if your system (does not) support piped I/O
-CONFIG = -DPOPEN
+# define (undefine) POSIX if your system is (not) POSIX compliant
+CONFIG = -DPOPEN -DPOSIX
 # Compilation parameters
 CC = gcc
 CFLAGS = $(CONFIG) -I/usr/5include -Wall -Wmissing-prototypes -Wshadow -ansi -O2
