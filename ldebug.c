@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.120 2002/06/18 15:19:27 roberto Exp roberto $
+** $Id: ldebug.c,v 1.121 2002/06/18 17:10:43 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -517,8 +517,9 @@ void luaG_ordererror (lua_State *L, const TObject *p1, const TObject *p2) {
 
 
 static void addinfo (lua_State *L, int internal) {
-  CallInfo *ci = (internal) ? L->ci : L->ci - 1;
   const char *msg = svalue(L->top - 1);
+  CallInfo *ci = L->ci;
+  if (!internal && ci > L->base_ci) ci--;
   if (strchr(msg, '\n')) return;  /* message already `formatted' */
   if (!isLmark(ci)) {  /* no Lua code? */
     luaO_pushfstring(L, "%s\n", msg);  /* no extra info */
@@ -542,6 +543,9 @@ void luaG_errormsg (lua_State *L, int internal) {
     setobj(L->top + 1, L->top - 1);  /* push error message */
     L->top += 2;
     luaD_call(L, L->top - 2, 1);  /* call error function? */
+  }
+  else {
+    setnilvalue(L->top++);
   }
   luaD_throw(L, LUA_ERRRUN);
 }
