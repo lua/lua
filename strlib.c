@@ -3,7 +3,7 @@
 ** String library to LUA
 */
 
-char *rcs_strlib="$Id: strlib.c,v 1.33 1996/11/20 13:47:59 roberto Exp roberto $";
+char *rcs_strlib="$Id: strlib.c,v 1.34 1996/11/22 13:08:02 roberto Exp roberto $";
 
 #include <string.h>
 #include <stdio.h>
@@ -195,7 +195,7 @@ static void str_ascii (void)
 /* pattern matching */
 
 #define ESC	'%'
-#define SPECIALS  "^$*?.([%"
+#define SPECIALS  "^$*?.([%-"
 
 static char *bracket_end (char *p)
 {
@@ -367,6 +367,17 @@ static char *match (char *s, char *p, int level)
             return res;
           p=ep+1; goto init;  /* else return match(s, ep+1, level); */
         }
+        case '-': {  /* repetition */
+          char *res;
+          if ((res = match(s, ep+1, level)) != 0)
+            return res;
+          else if (m) {
+            s++;
+            goto init;  /* return match(s+1, p, level); */
+          }
+          else
+            return NULL;
+        }
         case '?': {  /* optional */
           char *res;
           if (m && (res = match(s+1, ep+1, level)))
@@ -447,20 +458,21 @@ static void str_gsub (void)
   char *src = lua_check_string(1, "gsub");
   char *p = lua_check_string(2, "gsub");
   lua_Object newp = lua_getparam(3);
-  int max_s = lua_opt_number(4, strlen(src), "gsub");
+  int max_s = lua_opt_number(4, strlen(src)+1, "gsub");
   int anchor = (*p == '^') ? (p++, 1) : 0;
   int n = 0;
   luaI_addchar(0);
-  while (*src && n < max_s) {
-    char *e;
-    if ((e=match(src, p, 0)) == NULL)
-      luaI_addchar(*src++);
-    else {
-      if (e == src) lua_error("empty pattern in substitution");
+  while (n < max_s) {
+    char *e = match(src, p, 0);
+    if (e) {
       add_s(newp);
-      src = e;
       n++;
     }
+    if (e && e>src) /* non empty match? */
+      src = e;  /* skip it */
+    else if (*src)
+      luaI_addchar(*src++);
+    else break;
     if (anchor) break;
   }
   addstr(src);
