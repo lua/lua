@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.77 1999/12/29 16:31:15 roberto Exp roberto $
+** $Id: lvm.c,v 1.78 1999/12/30 18:28:40 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -33,8 +33,11 @@
 #define highbyte(L, x)	((x)<<8)
 
 
-/* Extra stack size to run a function: LUA_T_LINE(1), TM calls(2), ... */
-#define	EXTRA_STACK	6
+/*
+** Extra stack size to run a function:
+** LUA_T_LINE(1), NAME(1), TM calls(3) (plus some extra...)
+*/
+#define	EXTRA_STACK	8
 
 
 
@@ -133,6 +136,7 @@ void luaV_gettable (lua_State *L) {
 
 /*
 ** Receives table at *t, index at *(t+1) and value at top.
+** WARNING: caller must assure 3 extra stack slots (to call a tag method)
 */
 void luaV_settable (lua_State *L, StkId t) {
   const TObject *im;
@@ -152,11 +156,12 @@ void luaV_settable (lua_State *L, StkId t) {
   }
   /* object is not a table, or it has a `settable' method */
   /* prepare arguments and call the tag method */
-  *(L->top+1) = *(L->top-1);
-  *(L->top) = *(t+1);
-  *(L->top-1) = *t;
-  L->top += 2;  /* WARNING: caller must assure stack space */
-  luaD_callTM(L, im, 3, 0);
+  *(L->top+2) = *(L->top-1);
+  *(L->top+1) = *(t+1);
+  *(L->top) = *t;
+  *(L->top-1) = *im;
+  L->top += 3;
+  luaD_call(L, L->top-4, 0);
 }
 
 
@@ -170,36 +175,41 @@ void luaV_rawsettable (lua_State *L, StkId t) {
 }
 
 
+/*
+** WARNING: caller must assure 3 extra stack slots (to call a tag method)
+*/
 void luaV_getglobal (lua_State *L, GlobalVar *gv) {
-  /* WARNING: caller must assure stack space */
   const TObject *value = &gv->value;
   TObject *im = luaT_getimbyObj(L, value, IM_GETGLOBAL);
-  if (ttype(im) != LUA_T_NIL) {  /* is there a tag method? */
-    ttype(L->top) = LUA_T_STRING;
-    tsvalue(L->top) = gv->name;  /* global name */
-    L->top++;
-    *L->top++ = *value;
-    luaD_callTM(L, im, 2, 1);
-  } else {  /* no tag method */
+  if (ttype(im) == LUA_T_NIL)  /* is there a tag method? */
     *L->top++ = *value;  /* default behavior */
+  else {  /* tag method */
+    *L->top = *im;
+    ttype(L->top+1) = LUA_T_STRING;
+    tsvalue(L->top+1) = gv->name;  /* global name */
+    *(L->top+2) = *value;
+    L->top += 3;
+    luaD_call(L, L->top-3, 1);
   }
 }
 
 
+/*
+** WARNING: caller must assure 3 extra stack slots (to call a tag method)
+*/
 void luaV_setglobal (lua_State *L, GlobalVar *gv) {
   const TObject *oldvalue = &gv->value;
   const TObject *im = luaT_getimbyObj(L, oldvalue, IM_SETGLOBAL);
   if (ttype(im) == LUA_T_NIL)  /* is there a tag method? */
     gv->value = *(--L->top);
   else {
-    /* WARNING: caller must assure stack space */
-    TObject newvalue;
-    newvalue = *(L->top-1);
-    ttype(L->top-1) = LUA_T_STRING;
-    tsvalue(L->top-1) = gv->name;
-    *L->top++ = *oldvalue;
-    *L->top++ = newvalue;
-    luaD_callTM(L, im, 3, 0);
+    *(L->top+2) = *(L->top-1);  /* new value */
+    *(L->top+1) = *oldvalue;
+    ttype(L->top) = LUA_T_STRING;
+    tsvalue(L->top) = gv->name;
+    *(L->top-1) = *im;
+    L->top += 3;
+    luaD_call(L, L->top-4, 0);
   }
 }
 
@@ -372,12 +382,14 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
         L->top = top;
         luaV_getglobal(L, tsvalue(&consts[aux])->u.s.gv);
         top++;
+        LUA_ASSERT(L, top==L->top, "top's not synchronized");
         break;
 
       case GETTABLE:
         L->top = top;
         luaV_gettable(L);
         top--;
+        LUA_ASSERT(L, top==L->top, "top's not synchronized");
         break;
 
       case GETDOTTEDW: aux += highbyte(L, *pc++);
@@ -386,6 +398,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
         L->top = top;
         luaV_gettable(L);
         top--;
+        LUA_ASSERT(L, top==L->top, "top's not synchronized");
         break;
 
       case PUSHSELFW: aux += highbyte(L, *pc++);
@@ -417,6 +430,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
         L->top = top;
         luaV_setglobal(L, tsvalue(&consts[aux])->u.s.gv);
         top--;
+        LUA_ASSERT(L, top==L->top, "top's not synchronized");
         break;
 
       case SETTABLEPOP:
@@ -429,6 +443,7 @@ StkId luaV_execute (lua_State *L, const Closure *cl, const TProtoFunc *tf,
         L->top = top;
         luaV_settable(L, top-3-(*pc++));
         top--;  /* pop value */
+        LUA_ASSERT(L, top==L->top, "top's not synchronized");
         break;
 
       case SETLISTW: aux += highbyte(L, *pc++);

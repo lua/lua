@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.63 1999/12/30 18:28:40 roberto Exp roberto $
+** $Id: ldo.c,v 1.64 1999/12/30 18:40:57 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -353,9 +353,10 @@ static int do_main (lua_State *L, ZIO *z, int bin) {
 void luaD_gcIM (lua_State *L, const TObject *o) {
   const TObject *im = luaT_getimbyObj(L, o, IM_GC);
   if (ttype(im) != LUA_T_NIL) {
-    *L->top = *o;
-    incr_top;
-    luaD_callTM(L, im, 1, 0);
+    luaD_checkstack(L, 2);
+    *(L->top++) = *im;
+    *(L->top++) = *o;
+    luaD_call(L, L->top-2, 0);
   }
 }
 
@@ -365,25 +366,18 @@ void luaD_gcIM (lua_State *L, const TObject *o) {
 int lua_dofile (lua_State *L, const char *filename) {
   ZIO z;
   int status;
-  int bin;
+  int bin;  /* flag for file mode */
+  int c;    /* look ahead char */
   char source[MAXFILENAME];
-  FILE *f;
+  FILE *f = (filename == NULL) ? stdin : fopen(filename, "r");
+  if (f == NULL) return 2;  /* unable to open file */
   luaL_filesource(source, filename, sizeof(source));
-  if (filename == NULL) {
-    f = stdin;
-    bin = 0;  /* cannot handle stdin as a binary file */
-  }
-  else {
-    int c;
-    f = fopen(filename, "r");
-    if (f == NULL) return 2;  /* unable to open file */
-    c = fgetc(f);
-    ungetc(c, f);
-    bin = (c == ID_CHUNK);
-    if (bin) {
-      f = freopen(filename, "rb", f);  /* set binary mode */
-      if (f == NULL) return 2;  /* unable to reopen file */
-    }
+  c = fgetc(f);
+  ungetc(c, f);
+  bin = (c == ID_CHUNK);
+  if (bin && f != stdin) {
+    f = freopen(filename, "rb", f);  /* set binary mode */
+    if (f == NULL) return 2;  /* unable to reopen file */
   }
   luaZ_Fopen(&z, f, source);
   status = do_main(L, &z, bin);
