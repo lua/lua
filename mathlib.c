@@ -3,7 +3,7 @@
 ** Mathematics library to LUA
 */
 
-char *rcs_mathlib="$Id: mathlib.c,v 1.6 1994/11/18 19:46:21 roberto Stab roberto $";
+char *rcs_mathlib="$Id: mathlib.c,v 1.7 1994/12/16 15:53:57 roberto Exp roberto $";
 
 #include <stdio.h>		/* NULL */
 #include <math.h>
@@ -169,10 +169,11 @@ static void math_pow (void)
  lua_Object op = lua_getparam(3);
  if (!lua_isnumber(o1) || !lua_isnumber(o2) || *(lua_getstring(op)) != 'p')
  {
+   lua_Object old = lua_getlocked(old_pow);
    lua_pushobject(o1);
    lua_pushobject(o2);
    lua_pushobject(op);
-   if (lua_callfunction(lua_getlocked(old_pow)) != 0)
+   if (lua_callfunction(old) != 0)
      lua_error(NULL);
  }
  else
