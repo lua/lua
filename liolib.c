@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.93 2000/12/04 18:33:40 roberto Exp roberto $
+** $Id: liolib.c,v 1.94 2000/12/18 13:42:19 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -506,19 +506,6 @@ static int getfield (lua_State *L, const char *key, int d) {
 }
 
 
-static void tm2table (lua_State *L, struct tm *stm) {
-  setfield(L, "sec", stm->tm_sec);
-  setfield(L, "min", stm->tm_min);
-  setfield(L, "hour", stm->tm_hour);
-  setfield(L, "day", stm->tm_mday);
-  setfield(L, "month", stm->tm_mon+1);
-  setfield(L, "year", stm->tm_year+1900);
-  setfield(L, "wday", stm->tm_wday+1);
-  setfield(L, "yday", stm->tm_yday+1);
-  setfield(L, "isdst", stm->tm_isdst);
-}
-
-
 static int io_date (lua_State *L) {
   const char *s = luaL_opt_string(L, 1, "%c");
   time_t t = (time_t)luaL_opt_number(L, 2, -1);
@@ -535,7 +522,15 @@ static int io_date (lua_State *L) {
     lua_pushnil(L);
   else if (strcmp(s, "*t") == 0) {
     lua_newtable(L);
-    tm2table(L, stm);
+    setfield(L, "sec", stm->tm_sec);
+    setfield(L, "min", stm->tm_min);
+    setfield(L, "hour", stm->tm_hour);
+    setfield(L, "day", stm->tm_mday);
+    setfield(L, "month", stm->tm_mon+1);
+    setfield(L, "year", stm->tm_year+1900);
+    setfield(L, "wday", stm->tm_wday+1);
+    setfield(L, "yday", stm->tm_yday+1);
+    setfield(L, "isdst", stm->tm_isdst);
   }
   else {
     char b[256];
@@ -566,10 +561,8 @@ static int io_time (lua_State *L) {
     t = mktime(&ts);
     if (t == (time_t)-1)
       lua_pushnil(L);
-    else {
-      tm2table(L, &ts);  /* copy back updated values */
+    else
       lua_pushnumber(L, t);
-    }
   }
   return 1;
 }
