@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.43 2000/10/05 13:00:17 roberto Exp roberto $
+** $Id: lstate.c,v 1.44 2000/10/06 19:28:47 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -60,7 +60,7 @@ static void f_luaopen (lua_State *L, void *ud) {
 }
 
 
-lua_State *lua_open (int stacksize) {
+LUA_API lua_State *lua_open (int stacksize) {
   lua_State *L = luaM_new(NULL, lua_State);
   if (L == NULL) return NULL;  /* memory allocation error */
   L->stack = NULL;
@@ -94,7 +94,7 @@ lua_State *lua_open (int stacksize) {
 }
 
 
-void lua_close (lua_State *L) {
+LUA_API void lua_close (lua_State *L) {
   luaC_collect(L, 1);  /* collect all elements */
   LUA_ASSERT(L->rootproto == NULL, "list should be empty");
   LUA_ASSERT(L->rootcl == NULL, "list should be empty");

@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.53 2000/10/05 12:14:08 roberto Exp roberto $
+** $Id: ltm.c,v 1.54 2000/10/05 13:00:17 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -83,7 +83,7 @@ void luaT_init (lua_State *L) {
 }
 
 
-int lua_newtag (lua_State *L) {
+LUA_API int lua_newtag (lua_State *L) {
   luaM_growvector(L, L->TMtable, L->last_tag, 1, struct TM,
                   "tag table overflow", MAX_INT);
   L->nblocks += sizeof(struct TM);
@@ -104,7 +104,7 @@ void luaT_realtag (lua_State *L, int tag) {
 }
 
 
-int lua_copytagmethods (lua_State *L, int tagto, int tagfrom) {
+LUA_API int lua_copytagmethods (lua_State *L, int tagto, int tagfrom) {
   int e;
   checktag(L, tagto);
   checktag(L, tagfrom);
@@ -126,7 +126,7 @@ int luaT_tag (const TObject *o) {
 }
 
 
-void lua_gettagmethod (lua_State *L, int t, const char *event) {
+LUA_API void lua_gettagmethod (lua_State *L, int t, const char *event) {
   int e;
   e = luaI_checkevent(L, event, t);
   checktag(L, t);
@@ -140,7 +140,7 @@ void lua_gettagmethod (lua_State *L, int t, const char *event) {
 }
 
 
-void lua_settagmethod (lua_State *L, int t, const char *event) {
+LUA_API void lua_settagmethod (lua_State *L, int t, const char *event) {
   Closure *oldtm;
   int e = luaI_checkevent(L, event, t);
   checktag(L, t);

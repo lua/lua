@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.46 2000/10/06 12:45:25 roberto Exp roberto $
+** $Id: ldebug.c,v 1.47 2000/10/09 13:47:32 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -41,14 +41,14 @@ static int isLmark (StkId o) {
 }
 
 
-lua_Hook lua_setcallhook (lua_State *L, lua_Hook func) {
+LUA_API lua_Hook lua_setcallhook (lua_State *L, lua_Hook func) {
   lua_Hook oldhook = L->callhook;
   L->callhook = func;
   return oldhook;
 }
 
 
-lua_Hook lua_setlinehook (lua_State *L, lua_Hook func) {
+LUA_API lua_Hook lua_setlinehook (lua_State *L, lua_Hook func) {
   lua_Hook oldhook = L->linehook;
   L->linehook = func;
   return oldhook;
@@ -68,7 +68,7 @@ static StkId aux_stackedfunction (lua_State *L, int level, StkId top) {
 }
 
 
-int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
+LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
   StkId f = aux_stackedfunction(L, level, L->top);
   if (f == NULL) return 0;  /* there is no such level */
   else {
@@ -78,7 +78,7 @@ int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
 }
 
 
-static int lua_nups (StkId f) {
+static int nups (StkId f) {
   switch (ttype(f)) {
     case LUA_TFUNCTION:
       return clvalue(f)->nupvalues;
@@ -121,7 +121,7 @@ int luaG_getline (int *lineinfo, int pc, int refline, int *prefi) {
 }
 
 
-static int lua_currentpc (StkId f) {
+static int currentpc (StkId f) {
   CallInfo *ci = infovalue(f);
   LUA_ASSERT(isLmark(f), "function has no pc");
   if (ci->pc)
@@ -131,13 +131,13 @@ static int lua_currentpc (StkId f) {
 }
 
 
-static int lua_currentline (StkId f) {
+static int currentline (StkId f) {
   if (!isLmark(f))
     return -1;  /* only active lua functions have current-line information */
   else {
     CallInfo *ci = infovalue(f);
     int *lineinfo = ci->func->f.l->lineinfo;
-    return luaG_getline(lineinfo, lua_currentpc(f), 1, NULL);
+    return luaG_getline(lineinfo, currentpc(f), 1, NULL);
   }
 }
 
@@ -148,25 +148,27 @@ static Proto *getluaproto (StkId f) {
 }
 
 
-const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int localnum) {
+LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar,
+                                  int localnum) {
   const char *name;
   StkId f = ar->_func;
   Proto *fp = getluaproto(f);
   if (!fp) return NULL;  /* `f' is not a Lua function? */
-  name = luaF_getlocalname(fp, localnum, lua_currentpc(f));
+  name = luaF_getlocalname(fp, localnum, currentpc(f));
   if (!name) return NULL;
   luaA_pushobject(L, (f+1)+(localnum-1));  /* push value */
   return name;
 }
 
 
-const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int localnum) {
+LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar,
+                                  int localnum) {
   const char *name;
   StkId f = ar->_func;
   Proto *fp = getluaproto(f);
   L->top--;  /* pop new value */
   if (!fp) return NULL;  /* `f' is not a Lua function? */
-  name = luaF_getlocalname(fp, localnum, lua_currentpc(f));
+  name = luaF_getlocalname(fp, localnum, currentpc(f));
   if (!name || name[0] == '*') return NULL;  /* `*' starts private locals */
   *((f+1)+(localnum-1)) = *L->top;
   return name;
@@ -180,7 +182,7 @@ static void infoLproto (lua_Debug *ar, Proto *f) {
 }
 
 
-static void lua_funcinfo (lua_State *L, lua_Debug *ar, StkId func) {
+static void funcinfo (lua_State *L, lua_Debug *ar, StkId func) {
   Closure *cl = NULL;
   switch (ttype(func)) {
     case LUA_TFUNCTION:
@@ -231,7 +233,7 @@ static const char *travglobals (lua_State *L, const TObject *o) {
 }
 
 
-static void lua_getname (lua_State *L, StkId f, lua_Debug *ar) {
+static void getname (lua_State *L, StkId f, lua_Debug *ar) {
   TObject o;
   setnormalized(&o, f);
   /* try to find a name for given function */
@@ -244,7 +246,7 @@ static void lua_getname (lua_State *L, StkId f, lua_Debug *ar) {
 }
 
 
-int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
+LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
   StkId func;
   int isactive = (*what != '>');
   if (isactive)
@@ -256,21 +258,21 @@ int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
   for (; *what; what++) {
     switch (*what) {
       case 'S': {
-        lua_funcinfo(L, ar, func);
+        funcinfo(L, ar, func);
         break;
       }
       case 'l': {
-        ar->currentline = lua_currentline(func);
+        ar->currentline = currentline(func);
         break;
       }
       case 'u': {
-        ar->nups = lua_nups(func);
+        ar->nups = nups(func);
         break;
       }
       case 'n': {
         ar->namewhat = (isactive) ? getfuncname(L, func, &ar->name) : NULL;
         if (ar->namewhat == NULL)
-          lua_getname(L, func, ar);
+          getname(L, func, ar);
         break;
       }
       case 'f': {
@@ -387,7 +389,7 @@ static const char *getobjname (lua_State *L, StkId obj, const char **name) {
     return NULL;  /* not an active Lua function */
   else {
     Proto *p = infovalue(func)->func->f.l;
-    int pc = lua_currentpc(func);
+    int pc = currentpc(func);
     int stackpos = obj - (func+1);  /* func+1 == function base */
     Instruction i = luaG_symbexec(p, pc, stackpos);
     LUA_ASSERT(pc != -1, "function must be active");
@@ -419,7 +421,7 @@ static const char *getfuncname (lua_State *L, StkId f, const char **name) {
     return NULL;  /* not an active Lua function */
   else {
     Proto *p = infovalue(func)->func->f.l;
-    int pc = lua_currentpc(func);
+    int pc = currentpc(func);
     Instruction i;
     if (pc == -1) return NULL;  /* function is not activated */
     i = p->code[pc];

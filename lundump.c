@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.32 2000/09/21 03:15:36 lhf Exp $
+** $Id: lundump.c,v 1.32 2000/09/21 03:15:36 lhf Exp lhf $
 ** load bytecodes from files
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,7 @@ static const char* ZNAME (ZIO* Z)
 
 static void unexpectedEOZ (lua_State* L, ZIO* Z)
 {
- luaO_verror(L,"unexpected end of file in `%.255s'",ZNAME(Z));
+ luaO_verror(L,"unexpected end of file in `%.99s'",ZNAME(Z));
 }
 
 static int ezgetc (lua_State* L, ZIO* Z)
@@ -107,7 +107,8 @@ static void LoadCode (lua_State* L, Proto* tf, ZIO* Z, int swap)
  int size=LoadInt(L,Z,swap);
  tf->code=luaM_newvector(L,size,Instruction);
  LoadVector(L,tf->code,size,sizeof(*tf->code),Z,swap);
- if (tf->code[size-1]!=OP_END) luaO_verror(L,"bad code in `%.255s'",ZNAME(Z));
+ if (tf->code[size-1]!=OP_END) luaO_verror(L,"bad code in `%.99s'",ZNAME(Z));
+ luaF_protook(L,tf,size);
 }
 
 static void LoadLocals (lua_State* L, Proto* tf, ZIO* Z, int swap)
@@ -125,8 +126,8 @@ static void LoadLocals (lua_State* L, Proto* tf, ZIO* Z, int swap)
 
 static void LoadLines (lua_State* L, Proto* tf, ZIO* Z, int swap)
 {
- int n=LoadInt(L,Z,swap);
- if (n==0) return;
+ int n;
+ tf->nlineinfo=n=LoadInt(L,Z,swap);
  tf->lineinfo=luaM_newvector(L,n,int);
  LoadVector(L,tf->lineinfo,n,sizeof(*tf->lineinfo),Z,swap);
 }
@@ -157,10 +158,10 @@ static Proto* LoadFunction (lua_State* L, ZIO* Z, int swap)
  tf->numparams=LoadInt(L,Z,swap);
  tf->is_vararg=LoadByte(L,Z);
  tf->maxstacksize=LoadInt(L,Z,swap);
- LoadCode(L,tf,Z,swap);
  LoadLocals(L,tf,Z,swap);
  LoadLines(L,tf,Z,swap);
  LoadConstants(L,tf,Z,swap);
+ LoadCode(L,tf,Z,swap);
  return tf;
 }
 
@@ -169,14 +170,14 @@ static void LoadSignature (lua_State* L, ZIO* Z)
  const char* s=SIGNATURE;
  while (*s!=0 && ezgetc(L,Z)==*s)
   ++s;
- if (*s!=0) luaO_verror(L,"bad signature in `%.255s'",ZNAME(Z));
+ if (*s!=0) luaO_verror(L,"bad signature in `%.99s'",ZNAME(Z));
 }
 
 static void TestSize (lua_State* L, int s, const char* what, ZIO* Z)
 {
  int r=ezgetc(L,Z);
  if (r!=s)
-  luaO_verror(L,"virtual machine mismatch in `%.255s':\n"
+  luaO_verror(L,"virtual machine mismatch in `%.99s':\n"
 	"  %s is %d but read %d",ZNAME(Z),what,s,r);
 }
 
@@ -190,11 +191,11 @@ static int LoadHeader (lua_State* L, ZIO* Z)
  LoadSignature(L,Z);
  version=ezgetc(L,Z);
  if (version>VERSION)
-  luaO_verror(L,"`%.255s' too new:\n"
+  luaO_verror(L,"`%.99s' too new:\n"
 	"  read version %d.%d; expected at most %d.%d",
 	ZNAME(Z),V(version),V(VERSION));
  if (version<VERSION0)			/* check last major change */
-  luaO_verror(L,"`%.255s' too old:\n"
+  luaO_verror(L,"`%.99s' too old:\n"
 	"  read version %d.%d; expected at least %d.%d",
 	ZNAME(Z),V(version),V(VERSION));
  swap=(luaU_endianess()!=ezgetc(L,Z));	/* need to swap bytes? */
@@ -207,9 +208,8 @@ static int LoadHeader (lua_State* L, ZIO* Z)
  TESTSIZE(sizeof(Number));
  f=LoadNumber(L,Z,swap);
  if ((long)f!=(long)tf)		/* disregard errors in last bit of fraction */
-  luaO_verror(L,"unknown number format in `%.255s':\n"
-      "  read " NUMBER_FMT "; expected " NUMBER_FMT,
-      ZNAME(Z),f,tf);
+  luaO_verror(L,"unknown number format in `%.99s':\n"
+      "  read " NUMBER_FMT "; expected " NUMBER_FMT, ZNAME(Z),f,tf);
  return swap;
 }
 
@@ -230,7 +230,7 @@ Proto* luaU_undump (lua_State* L, ZIO* Z)
   tf=LoadChunk(L,Z);
  c=zgetc(Z);
  if (c!=EOZ)
-  luaO_verror(L,"`%.255s' apparently contains more than one chunk",ZNAME(Z));
+  luaO_verror(L,"`%.99s' apparently contains more than one chunk",ZNAME(Z));
  return tf;
 }
 

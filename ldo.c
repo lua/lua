@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.106 2000/10/09 15:46:43 roberto Exp roberto $
+** $Id: ldo.c,v 1.107 2000/10/10 19:51:39 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -212,7 +212,7 @@ static void f_call (lua_State *L, void *ud) {
 }
 
 
-int lua_call (lua_State *L, int nargs, int nresults) {
+LUA_API int lua_call (lua_State *L, int nargs, int nresults) {
   StkId func = L->top - (nargs+1);  /* function to be called */
   struct CallS c;
   int status;
@@ -284,7 +284,7 @@ static int parse_file (lua_State *L, const char *filename) {
 }
 
 
-int lua_dofile (lua_State *L, const char *filename) {
+LUA_API int lua_dofile (lua_State *L, const char *filename) {
   int status = parse_file(L, filename);
   if (status == 0)  /* parse OK? */
     status = lua_call(L, 0, LUA_MULTRET);  /* call main */
@@ -301,7 +301,7 @@ static int parse_buffer (lua_State *L, const char *buff, size_t size,
 }
 
 
-int lua_dobuffer (lua_State *L, const char *buff, size_t size,
+LUA_API int lua_dobuffer (lua_State *L, const char *buff, size_t size,
                   const char *name) {
   int status = parse_buffer(L, buff, size, name);
   if (status == 0)  /* parse OK? */
@@ -310,7 +310,7 @@ int lua_dobuffer (lua_State *L, const char *buff, size_t size,
 }
 
 
-int lua_dostring (lua_State *L, const char *str) {
+LUA_API int lua_dostring (lua_State *L, const char *str) {
   return lua_dobuffer(L, str, strlen(str), str);
 }
 
@@ -343,7 +343,7 @@ static void message (lua_State *L, const char *s) {
 /*
 ** Reports an error, and jumps up to the available recovery label
 */
-void lua_error (lua_State *L, const char *s) {
+LUA_API void lua_error (lua_State *L, const char *s) {
   if (s) message(L, s);
   luaD_breakrun(L, LUA_ERRRUN);
 }
