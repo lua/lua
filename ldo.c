@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 1.19 1997/12/23 12:50:49 roberto Exp roberto $
+** $Id: ldo.c,v 1.20 1997/12/26 18:38:16 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -157,6 +157,21 @@ static StkId callC (lua_CFunction f, StkId base)
 }
 
 
+static StkId callCclosure (struct Closure *cl, lua_CFunction f, StkId base)
+{
+  TObject *pbase;
+  int nup = cl->nelems;  /* number of upvalues */
+  luaD_checkstack(nup);
+  pbase = L->stack.stack+base;  /* care: previous call may change this */
+  /* open space for upvalues as extra arguments */
+  luaO_memup(pbase+nup, pbase, (L->stack.top-pbase)*sizeof(TObject));
+  /* copy upvalues into stack */
+  memcpy(pbase, cl->consts+1, nup*sizeof(TObject));
+  L->stack.top += nup;
+  return callC(f, base);
+}
+
+
 void luaD_callTM (TObject *f, int nParams, int nResults)
 {
   luaD_openstack(nParams);
@@ -190,7 +205,7 @@ void luaD_call (StkId base, int nResults)
       TObject *proto = &(c->consts[0]);
       ttype(func) = LUA_T_CLMARK;
       firstResult = (ttype(proto) == LUA_T_CPROTO) ?
-                       callC(fvalue(proto), base) :
+                       callCclosure(c, fvalue(proto), base) :
                        luaV_execute(c, tfvalue(proto), base);
       break;
     }

@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.20 1997/12/30 17:57:45 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.21 1998/01/02 17:46:32 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -441,7 +441,6 @@ static void testC (void)
       case 'r': { int n=getnum(s); reg[n]=lua_getref(locks[getnum(s)]); break; }
       case 'u': lua_unref(locks[getnum(s)]); break;
       case 'p': { int n = getnum(s); reg[n] = lua_getparam(getnum(s)); break; }
-      case 'U': { int n = getnum(s); reg[n] = lua_upvalue(getnum(s)); break; }
       case '=': lua_setglobal(getname(s)); break;
       case 's': lua_pushstring(getname(s)); break;
       case 'o': lua_pushobject(reg[getnum(s)]); break;

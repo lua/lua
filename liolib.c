@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.12 1997/12/18 19:11:43 roberto Exp roberto $
+** $Id: liolib.c,v 1.13 1997/12/26 18:38:16 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -34,6 +34,8 @@
 #define CLOSEDTAG	2
 #define IOTAG		1
 
+#define FIRSTARG      3  /* 1st and 2nd are upvalues */
+
 #define FINPUT		"_INPUT"
 #define FOUTPUT		"_OUTPUT"
 
@@ -49,7 +51,7 @@ int pclose();
 
 static int gettag (int i)
 {
-  return lua_getnumber(lua_upvalue(i));
+  return lua_getnumber(lua_getparam(i));
 }
 
 
@@ -124,7 +126,7 @@ static void setreturn (FILE *f, char *name)
 static void io_readfrom (void)
 {
   FILE *current;
-  lua_Object f = lua_getparam(1);
+  lua_Object f = lua_getparam(FIRSTARG);
   if (f == LUA_NOOBJECT) {
     closefile(FINPUT);
     current = stdin;
@@ -132,7 +134,7 @@ static void io_readfrom (void)
   else if (lua_tag(f) == gettag(IOTAG))
     current = lua_getuserdata(f);
   else {
-    char *s = luaL_check_string(1);
+    char *s = luaL_check_string(FIRSTARG);
     current = (*s == '|') ? popen(s+1, "r") : fopen(s, "r");
     if (current == NULL) {
       pushresult(0);
@@ -146,7 +148,7 @@ static void io_readfrom (void)
 static void io_writeto (void)
 {
   FILE *current;
-  lua_Object f = lua_getparam(1);
+  lua_Object f = lua_getparam(FIRSTARG);
   if (f == LUA_NOOBJECT) {
     closefile(FOUTPUT);
     current = stdout;
@@ -154,7 +156,7 @@ static void io_writeto (void)
   else if (lua_tag(f) == gettag(IOTAG))
     current = lua_getuserdata(f);
   else {
-    char *s = luaL_check_string(1);
+    char *s = luaL_check_string(FIRSTARG);
     current = (*s == '|') ? popen(s+1,"w") : fopen(s,"w");
     if (current == NULL) {
       pushresult(0);
@@ -167,7 +169,7 @@ static void io_writeto (void)
 
 static void io_appendto (void)
 {
-  char *s = luaL_check_string(1);
+  char *s = luaL_check_string(FIRSTARG);
   FILE *fp = fopen (s, "a");
   if (fp != NULL)
     setreturn(fp, FOUTPUT);
@@ -180,7 +182,7 @@ static void io_appendto (void)
 
 static void io_read (void)
 {
-  int arg = 1;
+  int arg = FIRSTARG;
   FILE *f = getfileparam(FINPUT, &arg);
   char *buff;
   char *p = luaL_opt_string(arg, "[^\n]*{\n}");
@@ -232,7 +234,7 @@ static void io_read (void)
 
 static void io_write (void)
 {
-  int arg = 1;
+  int arg = FIRSTARG;
   FILE *f = getfileparam(FOUTPUT, &arg);
   int status = 1;
   char *s;
