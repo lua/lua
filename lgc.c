@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.10 2004/08/30 13:44:44 roberto Exp roberto $
+** $Id: lgc.c,v 2.11 2004/09/08 14:23:09 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -499,7 +499,7 @@ void luaC_freeall (lua_State *L) {
 /* mark root set */
 static void markroot (lua_State *L) {
   global_State *g = G(L);
-  lua_assert(g->gray == NULL);
+  g->gray = NULL;
   g->grayagain = NULL;
   g->weak = NULL;
   markobject(g, g->mainthread);
@@ -513,6 +513,7 @@ static void markroot (lua_State *L) {
 static void remarkupvals (global_State *g) {
   GCObject *o;
   for (o = obj2gco(g->mainthread); o; o = o->gch.next) {
+    lua_assert(!isblack(o));
     if (iswhite(o)) {
       GCObject *curr;
       for (curr = gco2th(o)->openupval; curr != NULL; curr = curr->gch.next) {
@@ -529,7 +530,8 @@ static void remarkupvals (global_State *g) {
 static void atomic (lua_State *L) {
   global_State *g = G(L);
   int aux;
-  lua_assert(g->gray == NULL);
+  /* remark objects cautch by write barrier */
+  propagateall(g);
   /* remark occasional upvalues of (maybe) dead threads */
   remarkupvals(g);
   /* remark weak tables */
@@ -669,10 +671,12 @@ void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v) {
   global_State *g = G(L);
   lua_assert(isblack(o) && iswhite(v) && !isdead(g, v) && !isdead(g, o));
   lua_assert(g->gcgenerational || g->gcstate != GCSfinalize);
-  if (g->gcstate != GCSpropagate)  /* sweeping phases? */
-    black2gray(o);  /* just mark as gray to avoid other barriers */
-  else  /* breaking invariant! */
-    reallymarkobject(g, v);  /* restore it */
+  lua_assert(ttype(&o->gch) != LUA_TTABLE);
+  /* must keep invariant? */
+  if (g->gcstate == GCSpropagate || g->gcgenerational)
+    reallymarkobject(g, v);  /* restore invariant */
+  else  /* don't mind */
+    makewhite(g, o);  /* mark as white just to avoid other barriers */
 }
 
 
