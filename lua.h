@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.157 2002/09/02 20:00:41 roberto Exp roberto $
+** $Id: lua.h,v 1.158 2002/10/22 17:18:28 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -297,7 +297,7 @@ LUA_API int lua_pushupvalues (lua_State *L);
 #endif
 
 #ifndef LUA_NUMBER_FMT
-#define LUA_NUMBER_FMT		"%.16g"
+#define LUA_NUMBER_FMT		"%.14g"
 #endif
 
 /* }====================================================================== */
