@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 1.106 2002/06/03 12:59:26 roberto Exp roberto $
+** $Id: lcode.c,v 1.107 2002/06/12 14:51:31 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -138,7 +138,7 @@ static void luaK_patchlistaux (FuncState *fs, int list,
 }
 
 
-void luaK_dischargejpc (FuncState *fs) {
+static void luaK_dischargejpc (FuncState *fs) {
   luaK_patchlistaux(fs, fs->jpc, fs->pc, NO_REG, fs->pc, NO_REG, fs->pc);
   fs->jpc = NO_JUMP;
 }
@@ -207,7 +207,7 @@ static void freeexp (FuncState *fs, expdesc *e) {
 static int addk (FuncState *fs, TObject *k, TObject *v) {
   const TObject *index = luaH_get(fs->h, k);
   if (ttype(index) == LUA_TNUMBER) {
-    lua_assert(luaO_equalObj(&fs->f->k[cast(int, nvalue(index))], v));
+    lua_assert(luaO_rawequalObj(&fs->f->k[cast(int, nvalue(index))], v));
     return cast(int, nvalue(index));
   }
   else {  /* constant not found; create a new entry */

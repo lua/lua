@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.78 2002/06/05 17:24:04 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.79 2002/06/06 12:39:48 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -114,6 +114,15 @@ static int luaB_globals (lua_State *L) {
   }
   return 1;
 }
+
+
+static int luaB_rawequal (lua_State *L) {
+  luaL_check_any(L, 1);
+  luaL_check_any(L, 2);
+  lua_pushboolean(L, lua_rawequal(L, 1, 2));
+  return 1;
+}
+
 
 static int luaB_rawget (lua_State *L) {
   luaL_check_type(L, 1, LUA_TTABLE);
@@ -400,6 +409,7 @@ static const luaL_reg base_funcs[] = {
   {"type", luaB_type},
   {"assert", luaB_assert},
   {"unpack", luaB_unpack},
+  {"rawequal", luaB_rawequal},
   {"rawget", luaB_rawget},
   {"rawset", luaB_rawset},
   {"pcall", luaB_pcall},

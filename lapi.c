@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.196 2002/06/06 12:40:22 roberto Exp roberto $
+** $Id: lapi.c,v 1.197 2002/06/12 14:51:31 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -211,11 +211,24 @@ LUA_API int lua_isstring (lua_State *L, int index) {
 }
 
 
-LUA_API int lua_equal (lua_State *L, int index1, int index2) {
+LUA_API int lua_rawequal (lua_State *L, int index1, int index2) {
   StkId o1 = luaA_indexAcceptable(L, index1);
   StkId o2 = luaA_indexAcceptable(L, index2);
   return (o1 == NULL || o2 == NULL) ? 0  /* index out of range */
-                                 : luaO_equalObj(o1, o2);
+                                    : luaO_rawequalObj(o1, o2);
+}
+
+
+LUA_API int lua_equal (lua_State *L, int index1, int index2) {
+  StkId o1, o2;
+  int i;
+  lua_lock(L);  /* may call tag method */
+  o1 = luaA_indexAcceptable(L, index1);
+  o2 = luaA_indexAcceptable(L, index2);
+  i = (o1 == NULL || o2 == NULL) ? 0  /* index out of range */
+                                 : equalobj(L, o1, o2);
+  lua_unlock(L);
+  return i;
 }
 
 

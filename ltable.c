@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.108 2002/05/15 18:57:44 roberto Exp roberto $
+** $Id: ltable.c,v 1.109 2002/05/27 20:35:40 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -76,9 +76,15 @@ Node *luaH_mainposition (const Table *t, const TObject *key) {
       return hashboolean(t, bvalue(key));
     case LUA_TUDATAVAL:
       return hashpointer(t, pvalue(key));
-    default:  /* other types are hashed as (struct *) */
-      return hashpointer(t, tsvalue(key));
+    case LUA_TUSERDATA:
+      return hashpointer(t, uvalue(key));
+    case LUA_TFUNCTION:
+      return hashpointer(t, clvalue(key));
+    case LUA_TTABLE:
+      return hashpointer(t, hvalue(key));
   }
+  lua_assert(0);
+  return 0;  /* to avoid warnings */
 }
 
 
@@ -391,7 +397,7 @@ static const TObject *luaH_getany (Table *t, const TObject *key) {
   else {
     Node *n = luaH_mainposition(t, key);
     do {  /* check whether `key' is somewhere in the chain */
-      if (luaO_equalObj(key(n), key)) return val(n);  /* that's it */
+      if (luaO_rawequalObj(key(n), key)) return val(n);  /* that's it */
       else n = n->next;
     } while (n);
     return &luaO_nilobject;

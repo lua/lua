@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.236 2002/06/06 18:17:33 roberto Exp roberto $
+** $Id: lvm.c,v 1.237 2002/06/12 14:51:31 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -250,6 +250,34 @@ static int luaV_lessequal (lua_State *L, const TObject *l, const TObject *r) {
 }
 
 
+int luaV_equalval (lua_State *L, const TObject *t1, const TObject *t2) {
+  const TObject *tm = NULL;
+  lua_assert(ttype(t1) == ttype(t2));
+  switch (ttype(t1)) {
+    case LUA_TNIL: return 1;
+    case LUA_TNUMBER: return nvalue(t1) == nvalue(t2);
+    case LUA_TSTRING: return tsvalue(t1) == tsvalue(t2);
+    case LUA_TBOOLEAN: return bvalue(t1) == bvalue(t2);  /* true must be 1 !! */
+    case LUA_TUDATAVAL: return pvalue(t1) == pvalue(t2);
+    case LUA_TFUNCTION: return clvalue(t1) == clvalue(t2);
+    case LUA_TUSERDATA:
+      if (uvalue(t1) == uvalue(t2)) return 1;
+      else if ((tm = fasttm(L, uvalue(t1)->uv.metatable, TM_EQ)) == NULL &&
+               (tm = fasttm(L, uvalue(t2)->uv.metatable, TM_EQ)) == NULL)
+        return 0;  /* no TM */
+      else break;  /* will try TM */
+    case LUA_TTABLE:
+      if (hvalue(t1) == hvalue(t2)) return 1;
+      else if ((tm = fasttm(L, hvalue(t1)->metatable, TM_EQ)) == NULL &&
+               (tm = fasttm(L, hvalue(t2)->metatable, TM_EQ)) == NULL)
+        return 0;  /* no TM */
+      else break;  /* will try TM */
+  }
+  callTMres(L, tm, t1, t2, L->top);  /* call TM */
+  return !l_isfalse(L->top);
+}
+
+
 void luaV_concat (lua_State *L, int total, int last) {
   do {
     StkId top = L->ci->base + last + 1;
@@ -464,7 +492,7 @@ StkId luaV_execute (lua_State *L) {
         break;
       }
       case OP_EQ: {  /* skip next instruction if test fails */
-        if (luaO_equalObj(ra, RKC(i)) != GETARG_B(i)) pc++;
+        if (equalobj(L, ra, RKC(i)) != GETARG_B(i)) pc++;
         else dojump(pc, GETARG_sBx(*pc) + 1);
         break;
       }

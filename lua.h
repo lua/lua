@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.137 2002/06/05 12:34:19 roberto Exp roberto $
+** $Id: lua.h,v 1.138 2002/06/06 12:40:22 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -130,6 +130,7 @@ LUA_API int             lua_type (lua_State *L, int index);
 LUA_API const char     *lua_typename (lua_State *L, int type);
 
 LUA_API int            lua_equal (lua_State *L, int index1, int index2);
+LUA_API int            lua_rawequal (lua_State *L, int index1, int index2);
 LUA_API int            lua_lessthan (lua_State *L, int index1, int index2);
 
 LUA_API lua_Number      lua_tonumber (lua_State *L, int index);

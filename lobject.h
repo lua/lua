@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.133 2002/05/16 18:39:46 roberto Exp roberto $
+** $Id: lobject.h,v 1.134 2002/06/12 14:56:22 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -34,14 +34,14 @@ typedef struct lua_TObject {
 
 
 /* Macros to access values */
-#define ttype(o)        ((o)->tt)
-#define pvalue(o)	((o)->value.p)
-#define nvalue(o)       ((o)->value.n)
-#define tsvalue(o)      ((o)->value.ts)
-#define uvalue(o)      ((o)->value.u)
-#define clvalue(o)      ((o)->value.cl)
-#define hvalue(o)       ((o)->value.h)
-#define bvalue(o)	((o)->value.b)
+#define ttype(o)	((o)->tt)
+#define pvalue(o)	check_exp(ttype(o)==LUA_TUDATAVAL, (o)->value.p)
+#define nvalue(o)	check_exp(ttype(o)==LUA_TNUMBER, (o)->value.n)
+#define tsvalue(o)	check_exp(ttype(o)==LUA_TSTRING, (o)->value.ts)
+#define uvalue(o)	check_exp(ttype(o)==LUA_TUSERDATA, (o)->value.u)
+#define clvalue(o)	check_exp(ttype(o)==LUA_TFUNCTION, (o)->value.cl)
+#define hvalue(o)	check_exp(ttype(o)==LUA_TTABLE, (o)->value.h)
+#define bvalue(o)	check_exp(ttype(o)==LUA_TBOOLEAN, (o)->value.b)
 
 #define l_isfalse(o)	(ttype(o) == LUA_TNIL || \
 			(ttype(o) == LUA_TBOOLEAN && bvalue(o) == 0))
@@ -50,7 +50,8 @@ typedef struct lua_TObject {
 #define setnvalue(obj,x) \
   { TObject *i_o=(obj); i_o->tt=LUA_TNUMBER; i_o->value.n=(x); }
 
-#define chgnvalue(obj,x)	((obj)->value.n=(x))
+#define chgnvalue(obj,x) \
+	check_exp(ttype(obj)==LUA_TNUMBER, (obj)->value.n=(x))
 
 #define setpvalue(obj,x) \
   { TObject *i_o=(obj); i_o->tt=LUA_TUDATAVAL; i_o->value.p=(x); }
@@ -222,7 +223,8 @@ typedef struct Table {
 /*
 ** `module' operation for hashing (size is always a power of 2)
 */
-#define lmod(s,size)	(cast(int, (s) & ((size)-1)))
+#define lmod(s,size) \
+	check_exp((size&(size-1))==0, (cast(int, (s) & ((size)-1))))
 
 
 #define twoto(x)	(1<<(x))
@@ -239,7 +241,7 @@ int luaO_log2 (unsigned int x);
 #define luaO_openspace(L,n,t)	cast(t *, luaO_openspaceaux(L,(n)*sizeof(t)))
 void *luaO_openspaceaux (lua_State *L, size_t n);
 
-int luaO_equalObj (const TObject *t1, const TObject *t2);
+int luaO_rawequalObj (const TObject *t1, const TObject *t2);
 int luaO_str2d (const char *s, lua_Number *result);
 
 const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp);
