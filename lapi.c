@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.156 2001/10/17 21:17:45 roberto Exp $
+** $Id: lapi.c,v 1.157 2001/10/25 19:14:14 roberto Exp $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -458,30 +458,6 @@ LUA_API void lua_setglobals (lua_State *L) {
 }
 
 
-LUA_API int lua_ref (lua_State *L,  int lock) {
-  int ref;
-  if (lock == 0) lua_error(L, l_s("unlocked references are obsolete"));
-  if (lua_isnil(L, -1)) {
-    lua_pop(L, 1);
-    return LUA_REFNIL;
-  }
-  lua_rawgeti(L, LUA_REGISTRYINDEX, 0);  /* get first free element */
-  ref = cast(int, lua_tonumber(L, -1));
-  lua_pop(L, 1);  /* remove it from stack */
-  if (ref != 0) {  /* some free element? */
-    lua_rawgeti(L, LUA_REGISTRYINDEX, ref);  /* remove it from list */
-    lua_rawseti(L, LUA_REGISTRYINDEX, 0);
-  }
-  else {  /* no free elements */
-    ref = lua_getn(L, LUA_REGISTRYINDEX) + 1;  /* use next `n' */
-    lua_pushliteral(L, l_s("n"));
-    lua_pushnumber(L, ref);
-    lua_settable(L, LUA_REGISTRYINDEX);  /* n = n+1 */
-  }
-  lua_rawseti(L, LUA_REGISTRYINDEX, ref);
-  return ref;
-}
-
 
 /*
 ** `do' functions (run Lua code)
@@ -632,16 +608,6 @@ LUA_API void lua_error (lua_State *L, const l_char *s) {
   lua_lock(L);
   luaD_error(L, s);
   lua_unlock(L);
-}
-
-
-LUA_API void lua_unref (lua_State *L, int ref) {
-  if (ref >= 0) {
-    lua_rawgeti(L, LUA_REGISTRYINDEX, 0);
-    lua_pushnumber(L, ref);
-    lua_rawseti(L, LUA_REGISTRYINDEX, 0);
-    lua_rawseti(L, LUA_REGISTRYINDEX, ref);
-  }
 }
 
 

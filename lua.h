@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.104 2001/10/11 21:41:21 roberto Exp $
+** $Id: lua.h,v 1.105 2001/10/17 21:12:57 roberto Exp $
 ** Lua - An Extensible Extension Language
 ** TeCGraf: Grupo de Tecnologia em Computacao Grafica, PUC-Rio, Brazil
 ** e-mail: info@lua.org
@@ -24,11 +24,6 @@
 
 /* name of global variable with error handler */
 #define LUA_ERRORMESSAGE	"_ERRORMESSAGE"
-
-
-/* pre-defined references */
-#define LUA_NOREF	(-2)
-#define LUA_REFNIL	(-1)
 
 
 /* option for multiple returns in `lua_call' */
@@ -180,7 +175,6 @@ LUA_API void  lua_rawset (lua_State *L, int index);
 LUA_API void  lua_rawseti (lua_State *L, int index, int n);
 LUA_API void  lua_setglobals (lua_State *L);
 LUA_API void  lua_settagmethod (lua_State *L, int tag, const lua_char *event);
-LUA_API int   lua_ref (lua_State *L, int lock);
 
 
 /*
@@ -213,8 +207,6 @@ LUA_API int             lua_name2tag (lua_State *L, const lua_char *name);
 LUA_API const lua_char *lua_tag2name (lua_State *L, int tag);
 
 LUA_API void  lua_error (lua_State *L, const lua_char *s);
-
-LUA_API void  lua_unref (lua_State *L, int ref);
 
 LUA_API int   lua_next (lua_State *L, int index);
 LUA_API int   lua_getn (lua_State *L, int index);
@@ -253,7 +245,6 @@ LUA_API int   lua_getweakmode (lua_State *L, int index);
 
 #define lua_getregistry(L)	lua_pushvalue(L, LUA_REGISTRYINDEX);
 
-#define lua_getref(L,ref)	lua_rawgeti(L, LUA_REGISTRYINDEX, ref)
 
 
 /*
@@ -263,6 +254,20 @@ LUA_API int   lua_getweakmode (lua_State *L, int index);
 #define lua_typename	lua_tag2name
 
 LUA_API void lua_pushupvalues (lua_State *L);
+
+
+/* compatibility with ref system */
+
+/* pre-defined references */
+#define LUA_NOREF	(-2)
+#define LUA_REFNIL	(-1)
+
+#define lua_ref(L,lock)	((lock) ? luaL_ref(L, LUA_REGISTRYINDEX) : \
+		(lua_error(L, l_s("unlocked references are obsolete")), 0))
+
+#define lua_unref(L,ref)	luaL_unref(L, LUA_REGISTRYINDEX, (ref))
+
+#define lua_getref(L,ref)	lua_rawgeti(L, LUA_REGISTRYINDEX, ref)
 
 #endif
 

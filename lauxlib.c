@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.51 2001/07/12 18:11:58 roberto Exp $
+** $Id: lauxlib.c,v 1.52 2001/10/26 17:33:30 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -42,7 +42,7 @@ LUALIB_API void luaL_argerror (lua_State *L, int narg, const l_char *extramsg) {
 }
 
 
-static void type_error (lua_State *L, int narg, const l_char *tname) {
+LUALIB_API void luaL_typerror (lua_State *L, int narg, const l_char *tname) {
   l_char buff[80];
   sprintf(buff, l_s("%.25s expected, got %.25s"), tname, lua_type(L,narg));
   luaL_argerror(L, narg, buff);
@@ -50,7 +50,7 @@ static void type_error (lua_State *L, int narg, const l_char *tname) {
 
 
 static void tag_error (lua_State *L, int narg, int tag) {
-  type_error(L, narg, lua_typename(L, tag)); 
+  luaL_typerror(L, narg, lua_typename(L, tag)); 
 }
 
 
@@ -75,7 +75,7 @@ LUALIB_API void luaL_check_any (lua_State *L, int narg) {
 LUALIB_API void *luaL_check_userdata (lua_State *L, int narg,
                                       const l_char *name) {
   if (strcmp(lua_type(L, narg), name) != 0)
-    type_error(L, narg, name);
+    luaL_typerror(L, narg, name);
   return lua_touserdata(L, narg);
 }
 
@@ -223,3 +223,34 @@ LUALIB_API void luaL_buffinit (lua_State *L, luaL_Buffer *B) {
 }
 
 /* }====================================================== */
+
+
+LUALIB_API int luaL_ref (lua_State *L, int t) {
+  int ref;
+  lua_rawgeti(L, t, 0);  /* get first free element */
+  ref = (int)lua_tonumber(L, -1);
+  lua_pop(L, 1);  /* remove it from stack */
+  if (ref != 0) {  /* any free element? */
+    lua_rawgeti(L, t, ref);  /* remove it from list */
+    lua_rawseti(L, t, 0);
+  }
+  else {  /* no free elements */
+    ref = lua_getn(L, t) + 1;  /* use next `n' */
+    lua_pushliteral(L, l_s("n"));
+    lua_pushnumber(L, ref);
+    lua_settable(L, t);  /* n = n+1 */
+  }
+  lua_rawseti(L, t, ref);
+  return ref;
+}
+
+
+LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
+  if (ref >= 0) {
+    lua_rawgeti(L, t, 0);
+    lua_pushnumber(L, ref);
+    lua_rawseti(L, t, 0);
+    lua_rawseti(L, t, ref);
+  }
+}
+
