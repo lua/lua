@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 1.2 2001/02/05 19:08:01 roberto Exp roberto $
+** $Id: ltests.h,v 1.3 2001/02/06 16:01:29 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -49,7 +49,7 @@ extern lua_State *lua_state;
 
 void luaB_opentests (lua_State *L);
 
-#define LUA_USERINIT(L) luaB_opentests(L)
+#define LUA_USERINIT(L) (luaB_opentests(L), openstdlibs(L))
 
 
 #endif

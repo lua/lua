@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.62 2001/02/02 15:13:05 roberto Exp roberto $
+** $Id: ltests.c,v 1.63 2001/02/06 16:01:29 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -652,12 +652,6 @@ void luaB_opentests (lua_State *L) {
   luaL_openl(L, tests_funcs);  /* open functions inside new table */
   lua_setglobals(L);  /* restore old table of globals */
   lua_setglobal(L, "T");  /* set new table as global T */
-  /* open other libraries */
-  lua_baselibopen(L);
-  lua_iolibopen(L);
-  lua_strlibopen(L);
-  lua_mathlibopen(L);
-  lua_dblibopen(L);
 }
 
 #endif

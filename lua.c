@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.57 2001/01/22 18:01:38 roberto Exp roberto $
+** $Id: lua.c,v 1.58 2001/01/26 11:45:51 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -30,8 +30,7 @@ static int isatty (int x) { return x==0; }  /* assume stdin is a tty */
 
 
 #ifndef LUA_USERINIT
-#define LUA_USERINIT(L)	(lua_baselibopen(L), lua_iolibopen(L), \
-    lua_strlibopen(L), lua_mathlibopen(L), lua_dblibopen(L))
+#define LUA_USERINIT(L)		openstdlibs(L)
 #endif
 
 
@@ -307,6 +306,15 @@ static void register_getargs (char *argv[]) {
   lua_pushuserdata(L, argv);
   lua_pushcclosure(L, l_getargs, 1);
   lua_setglobal(L, "getargs");
+}
+
+
+static void openstdlibs (lua_State *l) {
+  lua_baselibopen(l);
+  lua_iolibopen(l);
+  lua_strlibopen(l);
+  lua_mathlibopen(l);
+  lua_dblibopen(l);
 }
 
 
