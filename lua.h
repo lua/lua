@@ -2,7 +2,7 @@
 ** LUA - Linguagem para Usuarios de Aplicacao
 ** Grupo de Tecnologia em Computacao Grafica
 ** TeCGraf - PUC-Rio
-** $Id: lua.h,v 3.8 1994/11/17 16:41:42 roberto Exp roberto $
+** $Id: lua.h,v 3.9 1994/11/17 21:23:43 roberto Exp roberto $
 */
 
 
@@ -76,7 +76,7 @@ lua_Object     lua_createTable		(int initSize);
 #define lua_getindexed(o,n) (lua_pushobject(o), lua_pushnumber(n), lua_getsubscript())
 #define lua_getfield(o,f)   (lua_pushobject(o), lua_pushstring(f), lua_getsubscript())
 
-#define lua_pushuserdata(u)     lua_pushusertag(u,LUA_USERDATA)
+#define lua_pushuserdata(u)     lua_pushusertag(u, LUA_T_USERDATA)
 
 #define lua_isnil(_)            (lua_type(_)==LUA_T_NIL)
 #define lua_isnumber(_)         (lua_type(_)==LUA_T_NUMBER)
