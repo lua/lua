@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.157 2003/04/03 13:35:34 roberto Exp roberto $
+** $Id: ltests.c,v 1.158 2003/04/07 14:35:00 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -250,6 +250,12 @@ static int get_limits (lua_State *L) {
   setnameval(L, "MAXSTACK", MAXSTACK);
   setnameval(L, "MAXUPVALUES", MAXUPVALUES);
   return 1;
+}
+
+
+static int setgcthreshold (lua_State *L) {
+  lua_setgcthreshold(L, luaL_checkint(L, 1));
+  return 0;
 }
 
 
@@ -808,6 +814,7 @@ static const struct luaL_reg tests_funcs[] = {
   {"doremote", doremote},
   {"log2", log2_aux},
   {"int2fb", int2fb_aux},
+  {"setgcthreshold", setgcthreshold},
   {"totalmem", mem_query},
   {"resume", coresume},
   {"setyhook", setyhook},
