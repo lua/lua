@@ -3,12 +3,13 @@
 ** load bytecodes from files
 */
 
-char* rcs_undump="$Id: undump.c,v 1.20 1996/11/16 20:14:23 lhf Exp lhf $";
+char* rcs_undump="$Id: undump.c,v 1.21 1996/11/18 11:18:29 lhf Exp lhf $";
 
 #include <stdio.h>
 #include <string.h>
+#include "auxlib.h"
 #include "opcode.h"
-#include "mem.h"
+#include "luamem.h"
 #include "table.h"
 #include "undump.h"
 
@@ -17,19 +18,12 @@ static int swapfloat=0;
 static TFunc* Main=NULL;			/* functions in a chunk */
 static TFunc* lastF=NULL;
 
-static void warn(char* s)			/* TODO: remove */
-{
-#if 0
- fprintf(stderr,"undump: %s\n",s);
-#endif
-}
-
 static void FixCode(Byte* code, Byte* end)	/* swap words */
 {
  Byte* p;
  for (p=code; p!=end;)
  {
-	OpCode op=(OpCode)*p;
+	int op=*p;
 	switch (op)
 	{
 	case PUSHNIL:
@@ -83,6 +77,8 @@ static void FixCode(Byte* code, Byte* end)	/* swap words */
 	case STORELIST0:
 	case ADJUST:
 	case RETCODE:
+	case VARARGS:
+	case STOREMAP:
 		p+=2;
 		break;
 	case STORELIST:
@@ -132,7 +128,8 @@ static void FixCode(Byte* code, Byte* end)	/* swap words */
 		break;
 	}
 	default:
-		lua_error("corrupt binary file");
+		luaL_verror("corrupt binary file: bad opcode %d at %d\n",
+			op,(int)(p-code));
 		break;
 	}
  }
@@ -156,7 +153,7 @@ static int LoadWord(FILE* D)
  fread(&w,sizeof(w),1,D);
  if (swapword)
  {
-  Byte* p=(Byte*)&w;				/* TODO: need union? */
+  Byte* p=(Byte*)&w;
   Byte t;
   t=p[0]; p[0]=p[1]; p[1]=t;
  }
@@ -243,10 +240,10 @@ static void LoadSignature(FILE* D)
  char* s=SIGNATURE;
  while (*s!=0 && getc(D)==*s)
   ++s;
- if (*s!=0) lua_error("bad signature");
+ if (*s!=0) lua_error("cannot load binary file: bad signature");
 }
 
-static void LoadHeader(FILE* D)			/* TODO: error handling */
+static void LoadHeader(FILE* D)
 {
  Word w,tw=TEST_WORD;
  float f,tf=TEST_FLOAT;
@@ -259,30 +256,33 @@ static void LoadHeader(FILE* D)			/* TODO: error handling */
   int oldsizeofF=getc(D);
   int oldsizeofP=getc(D);
   if (oldsizeofW!=2)
-   lua_error("cannot load binary file created on machine with sizeof(Word)!=2");
+   luaL_verror(
+	"cannot load binary file created on machine with sizeof(Word)=%d; "
+	"expected 2",oldsizeofW);
   if (oldsizeofF!=4)
-   lua_error("cannot load binary file created on machine with sizeof(float)!=4. not an IEEE machine?");
-  if (oldsizeofP!=sizeof(TFunc*))		/* TODO: pack */
-   lua_error("cannot load binary file: different pointer sizes");
+   luaL_verror(
+	"cannot load binary file created on machine with sizeof(float)=%d; "
+	"expected 4\nnot an IEEE machine?",oldsizeofF);
+  if (oldsizeofP!=sizeof(TFunc*))		/* TODO: pack? */
+   luaL_verror(
+	"cannot load binary file created on machine with sizeof(TFunc*)=%d; "
+	"expected %d",oldsizeofP,sizeof(TFunc*));
  }
  fread(&w,sizeof(w),1,D);			/* test word */
  if (w!=tw)
  {
   swapword=1;
-  warn("different byte order");
  }
  fread(&f,sizeof(f),1,D);			/* test float */
  if (f!=tf)
  {
-  Byte* p=(Byte*)&f;				/* TODO: need union? */
+  Byte* p=(Byte*)&f;
   Byte t;
   swapfloat=1;
   t=p[0]; p[0]=p[3]; p[3]=t;
   t=p[1]; p[1]=p[2]; p[2]=t;
   if (f!=tf)					/* TODO: try another perm? */
-   lua_error("different float representation");
-  else
-   warn("different byte order in floats");
+   lua_error("cannot load binary file: unknown float representation");
  }
 }
 
