@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.149 2002/12/19 11:11:55 roberto Exp roberto $
+** $Id: ltests.c,v 1.150 2002/12/20 10:26:33 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -805,7 +805,15 @@ static void fim (void) {
 }
 
 
+static int l_panic (lua_State *L) {
+  UNUSED(L);
+  fprintf(stderr, "unable to recover; exiting\n");
+  return 0;
+}
+
+
 int luaB_opentests (lua_State *L) {
+  lua_atpanic(L, l_panic);
   lua_userstateopen(L);  /* init lock */
   lua_state = L;  /* keep first state to be opened */
   luaL_openlib(L, "T", tests_funcs, 0);
