@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 1.27 1999/10/19 13:33:22 roberto Exp roberto $
+** $Id: ltable.c,v 1.28 1999/10/26 10:53:40 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -26,7 +26,7 @@
 #include "lua.h"
 
 
-#define gcsize(n)	(1+(n/16))
+#define gcsize(n)	numblocks(n*2, sizeof(Hash))
 
 
 
@@ -48,16 +48,16 @@ Node *luaH_mainposition (const Hash *t, const TObject *key) {
       h = tsvalue(key)->hash;
       break;
     case LUA_T_ARRAY:
-      h = (IntPoint)avalue(key);
+      h = IntPoint(avalue(key));
       break;
     case LUA_T_PROTO:
-      h = (IntPoint)tfvalue(key);
+      h = IntPoint(tfvalue(key));
       break;
     case LUA_T_CPROTO:
-      h = (IntPoint)fvalue(key);
+      h = IntPoint(fvalue(key));
       break;
     case LUA_T_CLOSURE:
-      h = (IntPoint)clvalue(key);
+      h = IntPoint(clvalue(key));
       break;
     default:
       lua_error("unexpected type to index table");

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 1.20 1999/10/04 17:51:04 roberto Exp roberto $
+** $Id: lstate.h,v 1.21 1999/11/04 17:22:26 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -13,8 +13,6 @@
 #include "lua.h"
 #include "luadebug.h"
 
-
-#define GARBAGE_BLOCK 150
 
 
 typedef int StkId;  /* index to stack elements */
@@ -50,13 +48,6 @@ typedef struct stringtable {
 } stringtable;
 
 
-enum Status {LOCK, HOLD, FREE, COLLECTED};
-
-struct ref {
-  TObject o;
-  enum Status status;
-};
-
 
 struct lua_State {
   /* thread-specific state */
@@ -82,6 +73,7 @@ struct lua_State {
   int last_tag;  /* last used tag in IMtable */
   struct ref *refArray;  /* locked objects */
   int refSize;  /* size of refArray */
+  int refFree;  /* list of free positions in refArray */
   unsigned long GCthreshold;
   unsigned long nblocks;  /* number of 'blocks' currently allocated */
 };

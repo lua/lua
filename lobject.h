@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.34 1999/10/19 13:33:22 roberto Exp roberto $
+** $Id: lobject.h,v 1.35 1999/11/04 17:22:26 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -43,7 +43,17 @@ typedef unsigned char  Byte;  /* unsigned 8 bits */
 
 #define MAX_INT   (INT_MAX-2)  /* maximum value of an int (-2 for safety) */
 
-typedef unsigned int IntPoint; /* unsigned with same size as a pointer (for hashing) */
+
+/* convertion of pointer to int (for hashing only) */
+#define IntPoint(p)	((unsigned int)(p))
+
+
+/*
+** number of `blocks' for garbage collection: each reference to other
+** objects count 1, and each 32 bytes of `raw' memory count 1; we add
+** 2 to the total as a minimum (and also to count the overhead of malloc)
+*/
+#define numblocks(o,b)	((o)+(b)/32+2)
 
 
 /*

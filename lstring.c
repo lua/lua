@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 1.25 1999/10/19 13:33:22 roberto Exp roberto $
+** $Id: lstring.c,v 1.26 1999/11/04 17:22:26 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -15,7 +15,8 @@
 
 
 
-#define gcsizestring(l)	(1+(l/64))  /* "weight" for a string with length 'l' */
+#define gcsizestring(l)	numblocks(0, sizeof(TaggedString)+l)
+#define gcsizeudata	gcsizestring(0)
 
 
 
@@ -109,7 +110,7 @@ static TaggedString *newone_u (void *buff, int tag, unsigned long h) {
   ts->u.d.value = buff;
   ts->u.d.tag = (tag == LUA_ANYTAG) ? 0 : tag;
   ts->constindex = -1;  /* tag -> this is a userdata */
-  L->nblocks++;
+  L->nblocks += gcsizeudata;
   return ts;
 }
 
@@ -147,7 +148,7 @@ TaggedString *luaS_newlstr (const char *str, long l) {
 
 
 TaggedString *luaS_createudata (void *udata, int tag) {
-  unsigned long h = (IntPoint)udata;
+  unsigned long h = IntPoint(udata);
   stringtable *tb = &L->string_root[(h%NUM_HASHUDATA)+NUM_HASHSTR];
   int h1 = h%tb->size;
   TaggedString *ts;
@@ -175,7 +176,7 @@ TaggedString *luaS_newfixedstring (const char *str) {
 
 void luaS_free (TaggedString *t) {
   if (t->constindex == -1)  /* is userdata? */
-    L->nblocks--;
+    L->nblocks -= gcsizeudata;
   else {  /* is string */
     L->nblocks -= gcsizestring(t->u.s.len);
     luaM_free(t->u.s.gv);

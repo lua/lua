@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.12 1999/10/04 17:51:04 roberto Exp roberto $
+** $Id: lfunc.c,v 1.13 1999/10/14 19:46:57 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -11,8 +11,8 @@
 #include "lmem.h"
 #include "lstate.h"
 
-#define gcsizeproto(p)	5  /* approximate "weight" for a prototype */
-#define gcsizeclosure(c) 1  /* approximate "weight" for a closure */
+#define gcsizeproto(p)	numblocks(0, sizeof(TProtoFunc))
+#define gcsizeclosure(c) numblocks(c->nelems, sizeof(Closure))
 
 
 
@@ -21,8 +21,8 @@ Closure *luaF_newclosure (int nelems) {
   c->next = L->rootcl;
   L->rootcl = c;
   c->marked = 0;
-  L->nblocks += gcsizeclosure(c);
   c->nelems = nelems;
+  L->nblocks += gcsizeclosure(c);
   return c;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 1.14 1999/10/04 17:51:04 roberto Exp $
+** $Id: lstate.c,v 1.15 1999/10/14 17:53:35 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -10,6 +10,7 @@
 #include "lgc.h"
 #include "llex.h"
 #include "lmem.h"
+#include "lref.h"
 #include "lstate.h"
 #include "lstring.h"
 #include "ltm.h"
@@ -41,13 +42,15 @@ void lua_open (void) {
   L->IMtable = NULL;
   L->refArray = NULL;
   L->refSize = 0;
-  L->GCthreshold = GARBAGE_BLOCK;
+  L->refFree = NONEXT;
   L->nblocks = 0;
+  L->GCthreshold = MAX_INT;  /* to avoid GC during pre-definitions */
   luaD_init();
   luaS_init();
   luaX_init();
   luaT_init();
   luaB_predefine();
+  L->GCthreshold = L->nblocks*4;
 }
 
 
@@ -69,5 +72,4 @@ void lua_close (void) {
   LUA_ASSERT(totalmem == 0,"memory leak!");
   L = NULL;
 }
-
 
