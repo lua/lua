@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 1.122 2001/01/29 17:16:58 roberto Exp roberto $
+** $Id: lapi.c,v 1.123 2001/02/01 13:56:49 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -353,23 +353,18 @@ LUA_API void lua_pushusertag (lua_State *L, void *u, int tag) {
 
 
 LUA_API void lua_getglobal (lua_State *L, const char *name) {
-  StkId top;
   LUA_LOCK;
-  top = L->top;
-  setobj(top, luaV_getglobal(L, luaS_new(L, name)));
-  L->top = top;
+  luaV_getglobal(L, luaS_new(L, name), L->top);
   api_incr_top(L);
   LUA_UNLOCK;
 }
 
 
 LUA_API void lua_gettable (lua_State *L, int index) {
-  StkId t, top;
+  StkId t;
   LUA_LOCK;
   t = Index(L, index);
-  top = L->top;
-  setobj(top-1, luaV_gettable(L, t));
-  L->top = top;  /* tag method may change top */
+  luaV_gettable(L, t, L->top, L->top-1);
   LUA_UNLOCK;
 }
 
@@ -437,22 +432,19 @@ LUA_API void lua_newtable (lua_State *L) {
 
 
 LUA_API void lua_setglobal (lua_State *L, const char *name) {
-  StkId top;
   LUA_LOCK;
-  top = L->top;
-  luaV_setglobal(L, luaS_new(L, name));
-  L->top = top-1;  /* remove element from the top */
+  luaV_setglobal(L, luaS_new(L, name), L->top);
+  L->top--;  /* remove element from the top */
   LUA_UNLOCK;
 }
 
 
 LUA_API void lua_settable (lua_State *L, int index) {
-  StkId t, top;
+  StkId t;
   LUA_LOCK;
   t = Index(L, index);
-  top = L->top;
-  luaV_settable(L, t, top-2);
-  L->top = top-2;  /* pop index and value */
+  luaV_settable(L, t, L->top - 2, L->top);
+  L->top -= 2;  /* pop index and value */
   LUA_UNLOCK;
 }
 

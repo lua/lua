@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.59 2001/01/22 18:01:38 roberto Exp roberto $
+** $Id: ltests.c,v 1.60 2001/01/29 17:16:58 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -483,6 +483,13 @@ static int testC (lua_State *L) {
     }
     else if EQ("concat") {
       lua_concat(L, getnum);
+    }
+    else if EQ("lessthan") {
+      int a = getnum;
+      if (lua_lessthan(L, a, getnum))
+        lua_pushnumber(L, 1);
+      else
+        lua_pushnil(L);
     }
     else if EQ("rawcall") {
       int narg = getnum;
