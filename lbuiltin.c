@@ -1,5 +1,5 @@
 /*
-** $Id: lbuiltin.c,v 1.122 2000/08/28 17:57:04 roberto Exp roberto $
+** $Id: lbuiltin.c,v 1.123 2000/08/29 14:33:31 roberto Exp roberto $
 ** Built-in functions
 ** See Copyright Notice in lua.h
 */
@@ -333,7 +333,6 @@ int luaB_call (lua_State *L) {
   for (i=0; i<n; i++)
     *(L->top++) = *luaH_getnum(arg, i+1);
   status = lua_call(L, n, LUA_MULTRET);
-  n = lua_gettop(L) - oldtop;  /* number of results */
   if (err != 0) {  /* restore old error method */
     lua_pushobject(L, err);
     lua_setglobal(L, LUA_ERRORMESSAGE);
@@ -347,12 +346,11 @@ int luaB_call (lua_State *L) {
   }
   else {  /* no errors */
     if (strchr(options, 'p')) {  /* pack results? */
-      luaV_pack(L, luaA_index(L, oldtop+1), n, L->top);
-      incr_top;
+      luaV_pack(L, luaA_index(L, oldtop+1));
       return 1;  /* only table is returned */
     }
     else
-      return n;  /* results are already on the stack */
+      return lua_gettop(L) - oldtop;  /* results are already on the stack */
   }
 }
 

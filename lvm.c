@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.128 2000/08/22 20:49:29 roberto Exp roberto $
+** $Id: lvm.c,v 1.129 2000/08/22 20:53:30 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -313,30 +313,25 @@ static void strconc (lua_State *L, int total, StkId top) {
 }
 
 
-void luaV_pack (lua_State *L, StkId firstelem, int nvararg, TObject *tab) {
+void luaV_pack (lua_State *L, StkId firstelem) {
   int i;
-  Hash *htab;
-  htab = hvalue(tab) = luaH_new(L, nvararg+1);  /* +1 for field `n' */
-  ttype(tab) = TAG_TABLE;
-  for (i=0; i<nvararg; i++)
+  Hash *htab = luaH_new(L, 0);
+  for (i=0; firstelem+i<L->top; i++)
     *luaH_setint(L, htab, i+1) = *(firstelem+i);
   /* store counter in field `n' */
-  luaH_setstrnum(L, htab, luaS_new(L, "n"), nvararg);
+  luaH_setstrnum(L, htab, luaS_new(L, "n"), i);
+  L->top = firstelem;  /* remove elements from the stack */
+  ttype(L->top) = TAG_TABLE;
+  hvalue(L->top) = htab;
+  incr_top;
 }
 
 
 static void adjust_varargs (lua_State *L, StkId base, int nfixargs) {
-  TObject arg;
   int nvararg = (L->top-base) - nfixargs;
-  if (nvararg < 0) {
-    luaV_pack(L, base, 0, &arg);
+  if (nvararg < 0)
     luaD_adjusttop(L, base, nfixargs);
-  }
-  else {
-    luaV_pack(L, base+nfixargs, nvararg, &arg);
-    L->top = base+nfixargs;
-  }
-  *L->top++ = arg;
+  luaV_pack(L, base+nfixargs);
 }
 
 
