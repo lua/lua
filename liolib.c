@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.57 2004/08/13 19:52:13 roberto Exp roberto $
+** $Id: liolib.c,v 2.58 2005/02/18 12:40:02 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -191,9 +191,9 @@ static int io_output (lua_State *L) {
 static int io_readline (lua_State *L);
 
 
-static void aux_lines (lua_State *L, int idx, int close) {
+static void aux_lines (lua_State *L, int idx, int toclose) {
   lua_pushvalue(L, idx);
-  lua_pushboolean(L, close);  /* close/not close file when finished */
+  lua_pushboolean(L, toclose);  /* close/not close file when finished */
   lua_pushcclosure(L, io_readline, 2);
 }
 
