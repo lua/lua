@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 1.58 2000/03/30 20:55:50 roberto Exp roberto $
+** $Id: lobject.h,v 1.59 2000/03/31 16:28:45 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -110,7 +110,7 @@ typedef struct TString {
   unsigned long hash;
   int constindex;  /* hint to reuse constants (= -1 if this is a userdata) */
   unsigned char marked;
-  char str[1];   /* \0 byte already reserved */
+  char str[1];   /* variable length string!! must be the last field! */
 } TString;
 
 
