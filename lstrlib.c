@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.6 1998/01/09 14:44:55 roberto Exp $
+** $Id: lstrlib.c,v 1.7 1998/01/09 14:57:43 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -449,14 +449,14 @@ static void str_format (void)
       char *initf = strfrmt;
       form[0] = '%';
       cap.level = 0;
-      strfrmt = match(strfrmt, "%d?%$?[-+ #]*(%d*)%.?(%d*)", &cap);
-      if (cap.capture[0].len > 3 || cap.capture[1].len > 3)  /* < 1000? */
-        lua_error("invalid format (width or precision too long)");
       if (isdigit((unsigned char)initf[0]) && initf[1] == '$') {
         arg = initf[0] - '0';
         initf += 2;  /* skip the 'n$' */
       }
       arg++;
+      strfrmt = match(initf, "[-+ #0]*(%d*)%.?(%d*)", &cap);
+      if (cap.capture[0].len > 2 || cap.capture[1].len > 2)  /* < 100? */
+        lua_error("invalid format (width or precision too long)");
       strncpy(form+1, initf, strfrmt-initf+1); /* +1 to include convertion */
       form[strfrmt-initf+2] = 0;
       buff = luaL_openspace(1000);  /* to store the formatted value */
