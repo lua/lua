@@ -4,7 +4,7 @@
 ** facilities.
 */
 
-char *rcs_inout="$Id: inout.c,v 1.2 1993/12/22 21:15:16 roberto Exp celes $";
+char *rcs_inout="$Id: inout.c,v 2.1 1994/07/19 21:27:18 celes Exp roberto $";
 
 #include <stdio.h>
 #include <string.h>
@@ -14,6 +14,7 @@ char *rcs_inout="$Id: inout.c,v 1.2 1993/12/22 21:15:16 roberto Exp celes $";
 #include "inout.h"
 #include "table.h"
 #include "tree.h"
+#include "lua.h"
 
 /* Exported variables */
 int lua_linenumber;
