@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.51 2002/11/25 17:47:13 roberto Exp roberto $
+** $Id: llimits.h,v 1.52 2003/02/20 19:33:23 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -40,20 +40,25 @@
 ** any machine, but may not be optimal.
 */
 
-/* an unsigned integer to hold hash values */
-typedef unsigned int lu_hash;
-/* its signed equivalent */
-typedef int ls_hash;
 
-/* an unsigned integer big enough to count the total memory used by Lua; */
-/* it should be at least as large as size_t */
-typedef unsigned long lu_mem;
+/*
+** an unsigned integer with at least 32 bits
+*/
+#ifndef LUA_UINT32
+#define LUA_UINT32	unsigned long
+#endif
+
+typedef LUA_UINT32 lu_int32;
+
+
+/*
+** an unsigned integer big enough to count the total memory used by Lua;
+** it should be at least as large as `size_t'
+*/
+typedef lu_int32 lu_mem;
 
 #define MAX_LUMEM	ULONG_MAX
 
-
-/* an integer big enough to count the number of strings in use */
-typedef long ls_nstr;
 
 /* chars used as small naturals (so that `char' is reserved for characters) */
 typedef unsigned char lu_byte;
@@ -69,7 +74,7 @@ typedef unsigned char lu_byte;
 ** this is for hashing only; there is no problem if the integer
 ** cannot hold the whole pointer value
 */
-#define IntPoint(p)  ((lu_hash)(p))
+#define IntPoint(p)  ((unsigned int)(p))
 
 
 
@@ -114,7 +119,7 @@ typedef LUA_UACNUMBER l_uacNumber;
 ** type for virtual-machine instructions
 ** must be an unsigned with (at least) 4 bytes (see details in lopcodes.h)
 */
-typedef unsigned long Instruction;
+typedef lu_int32 Instruction;
 
 
 /* maximum depth for calls (unsigned short) */

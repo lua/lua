@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.170 2003/03/18 12:50:04 roberto Exp roberto $
+** $Id: lgc.c,v 1.171 2003/04/03 13:35:34 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -389,7 +389,7 @@ static void sweepstrings (lua_State *L, int all) {
 
 static void checkSizes (lua_State *L) {
   /* check size of string hash */
-  if (G(L)->strt.nuse < cast(ls_nstr, G(L)->strt.size/4) &&
+  if (G(L)->strt.nuse < cast(lu_int32, G(L)->strt.size/4) &&
       G(L)->strt.size > MINSTRTABSIZE*2)
     luaS_resize(L, G(L)->strt.size/2);  /* table is too big */
   /* check size of buffer */
