@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 1.65 2000/09/11 17:38:42 roberto Exp roberto $
+** $Id: lgc.c,v 1.66 2000/09/19 08:42:35 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -152,7 +152,7 @@ static int hasmark (const TObject *o) {
     case TAG_TABLE:
       return ismarked(hvalue(o));
     case TAG_LCLOSURE:  case TAG_CCLOSURE:
-      return ismarked(clvalue(o)->mark);
+      return ismarked(clvalue(o));
     default:  /* number */
       return 1;
   }
