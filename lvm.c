@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.46 1999/02/08 17:07:59 roberto Exp roberto $
+** $Id: lvm.c,v 1.47 1999/02/08 18:54:19 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -355,7 +355,14 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
       case PUSHNUMBERW: aux += highbyte(*pc++);
       case PUSHNUMBER:  aux += *pc++;
         ttype(S->top) = LUA_T_NUMBER;
-        nvalue(S->top) = aux-NUMOFFSET;
+        nvalue(S->top) = aux;
+        S->top++;
+        break;
+
+      case PUSHNEGW: aux += highbyte(*pc++);
+      case PUSHNEG:  aux += *pc++;
+        ttype(S->top) = LUA_T_NUMBER;
+        nvalue(S->top) = -aux;
         S->top++;
         break;
 
@@ -429,7 +436,7 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         S->top -= 2;  /* pop table and index */
         break;
 
-      case SETTABPPDUP: {
+      case SETTABLEPOPDUP: {
         TObject temp = *(S->top-1);
         luaV_settable(S->top-3);
         S->top--;  /* pop index (temp goes into "table" position) */
@@ -605,7 +612,8 @@ StkId luaV_execute (Closure *cl, TProtoFunc *tf, StkId base) {
         if (ttype(--S->top) == LUA_T_NIL) pc -= aux;
         break;
 
-      case CLOSURE:  aux = *pc++;
+      case CLOSUREW: aux += highbyte(*pc++);
+      case CLOSURE:  aux += *pc++;
         *S->top++ = consts[aux];
         luaV_closure(*pc++);
         luaC_checkGC();

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.17 1999/02/08 17:07:59 roberto Exp roberto $
+** $Id: lparser.c,v 1.18 1999/02/08 18:54:19 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -267,9 +267,11 @@ static int real_constant (FuncState *fs, real r) {
 
 
 static void code_number (LexState *ls, real f) {
-  if (-NUMOFFSET <= f && f <= (real)(MAX_WORD-NUMOFFSET) &&
-      (int)f == f)  /* f+NUMOFFSET has a short integer value? */
-    code_oparg(ls, PUSHNUMBER, (int)f+NUMOFFSET, 1);
+  real af = (f<0) ? -f : f;
+  if (0 <= af && af <= (real)MAX_WORD && (int)af == af) {
+    /* abs(f) has a short integer value */
+    code_oparg(ls, (f<0) ? PUSHNEG : PUSHNUMBER, (int)af, 1);
+  }
   else
     code_constant(ls, real_constant(ls->fs, f));
 }
@@ -474,7 +476,7 @@ static void lua_pushvar (LexState *ls, vardesc *var) {
 
 /* to be used by "storevar" and assignment */
 static OpCode set_pop[] = {SETLOCAL, SETGLOBAL, SETTABLEPOP, SETTABLE};
-static OpCode set_dup[] = {SETLOCALDUP, SETGLOBALDUP, SETTABPPDUP,
+static OpCode set_dup[] = {SETLOCALDUP, SETGLOBALDUP, SETTABLEPOPDUP,
                            SETTABLEDUP};
 
 
@@ -562,6 +564,7 @@ static void init_state (LexState *ls, FuncState *fs, TaggedString *filename) {
   tfvalue(L->stack.top) = f; ttype(L->stack.top) = LUA_T_PROTO;
   incr_top;
 }
+
 
 static void close_func (LexState *ls) {
   FuncState *fs = ls->fs;

@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.22 1999/02/08 17:07:59 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.23 1999/02/08 18:54:19 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -21,11 +21,14 @@ ENDCODE,/*	-	-		-  */
 RETCODE,/*	b	-		-  */
 
 PUSHNIL,/*	b	-		nil_0...nil_b  */
-POP,/*		b	-		-		TOP-=(b+1)  */
-POPDUP,/*	b	v		v		TOP-=(b+1)  */
+POP,/*		b	-		-		TOP-=b  */
+POPDUP,/*	b	v		v		TOP-=b  */
 
-PUSHNUMBERW,/*	w	-		(float)(w-NUMOFFSET)  */
-PUSHNUMBER,/*	b	-		(float)(b-NUMOFFSET)  */
+PUSHNUMBERW,/*	w	-		(float)w */
+PUSHNUMBER,/*	b	-		(float)b */
+
+PUSHNEGW,/*	w	-		(float)-w */
+PUSHNEG,/*	b	-		(float)-b */
 
 PUSHCONSTANTW,/*w	-		CNST[w] */
 PUSHCONSTANT,/*	b	-		CNST[b] */
@@ -57,7 +60,7 @@ SETGLOBALDUPW,/*w	x		x		VAR[CNST[w]]=x  */
 SETGLOBALDUP,/*	b	x		x		VAR[CNST[b]]=x  */
 
 SETTABLEPOP,/*	-	v i t		-		t[i]=v  */
-SETTABPPDUP,/*	-	v i t		v		t[i]=v  */
+SETTABLEPOPDUP,/* -	v i t		v		t[i]=v  */
 
 SETTABLE,/*	b	v a_b...a_1 i t	a_b...a_1 i t	t[i]=v  */
 SETTABLEDUP,/*	b	v a_b...a_1 i t	v a_b...a_1 i t	t[i]=v  */
@@ -95,6 +98,7 @@ IFTUPJMP,/*	b	x		-		(x!=nil)? PC-=b  */
 IFFUPJMPW,/*	w	x		-		(x==nil)? PC-=w  */
 IFFUPJMP,/*	b	x		-		(x==nil)? PC-=b  */
 
+CLOSUREW,/*	w c	v_c...v_1	closure(CNST[w], v_c...v_1) */
 CLOSURE,/*	b c	v_c...v_1	closure(CNST[b], v_c...v_1) */
 
 CALLFUNC,/*	b c	v_c...v_1 f	r_b...r_1	f(v1,...,v_c)  */
@@ -106,8 +110,6 @@ LONGARG /*	b	(add b*(1<<16) to arg of next instruction) */
 
 } OpCode;
 
-
-#define NUMOFFSET	100	/* offset for immediate numbers */
 
 #define RFIELDS_PER_FLUSH 32	/* records (SETMAP) */
 #define LFIELDS_PER_FLUSH 64    /* FPF - lists (SETLIST) */
