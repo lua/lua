@@ -3,7 +3,7 @@
 ** Mathematics library to LUA
 */
 
-char *rcs_mathlib="$Id: mathlib.c,v 1.4 1994/10/11 13:06:47 celes Exp roberto $";
+char *rcs_mathlib="$Id: mathlib.c,v 1.5 1994/11/17 19:43:34 roberto Exp roberto $";
 
 #include <stdio.h>		/* NULL */
 #include <math.h>
@@ -310,5 +310,5 @@ void mathlib_open (void)
  lua_register ("exp",   math_exp);
  lua_register ("deg",   math_deg);
  lua_register ("rad",   math_rad);
- old_pow = lua_lock(lua_setfallback("arith", math_pow));
+ old_pow = lua_lockobject(lua_setfallback("arith", math_pow));
 }

@@ -1,5 +1,5 @@
 /*
-** $Id: fallback.h,v 1.3 1994/11/10 17:11:52 roberto Exp roberto $
+** $Id: fallback.h,v 1.4 1994/11/10 17:36:54 roberto Exp roberto $
 */
  
 #ifndef fallback_h
@@ -23,6 +23,7 @@ extern struct FB {
 #define FB_GC 8
 
 void luaI_setfallback (void);
+int luaI_lock (Object *object);
 Object *luaI_getlocked (int ref);
 void luaI_travlock (void (*fn)(Object *));
 

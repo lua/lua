@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
  
-char *rcs_fallback="$Id: fallback.c,v 1.5 1994/11/10 17:36:54 roberto Exp roberto $";
+char *rcs_fallback="$Id: fallback.c,v 1.6 1994/11/16 17:38:08 roberto Exp roberto $";
 
 #include <stdio.h>
  
@@ -112,16 +112,16 @@ static void GDFB (void) { }
 static Object *lockArray = NULL;
 static int lockSize = 0;
 
-int lua_lock (lua_Object object)
+int luaI_lock (Object *object)
 {
   int i;
   int oldSize;
-  if (lua_isnil(object))
+  if (tag(object) == LUA_T_NIL)
     return -1;
   for (i=0; i<lockSize; i++)
     if (tag(&lockArray[i]) == LUA_T_NIL)
     {
-      lockArray[i] = *luaI_Address(object);
+      lockArray[i] = *object;
       return i;
     }
   /* no more empty spaces */
@@ -138,7 +138,7 @@ int lua_lock (lua_Object object)
   }
   for (i=oldSize; i<lockSize; i++)
     tag(&lockArray[i]) = LUA_T_NIL;
-  lockArray[oldSize] = *luaI_Address(object);
+  lockArray[oldSize] = *object;
   return oldSize;
 }
 
