@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 1.166 2001/02/07 18:13:49 roberto Exp roberto $
+** $Id: lvm.c,v 1.167 2001/02/09 18:07:47 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -225,9 +225,9 @@ static void call_arith (lua_State *L, StkId p1, TMS event) {
 
 
 static int luaV_strlessthan (const TString *ls, const TString *rs) {
-  const char *l = ls->str;
+  const char *l = getstr(ls);
   size_t ll = ls->len;
-  const char *r = rs->str;
+  const char *r = getstr(rs);
   size_t lr = rs->len;
   for (;;) {
     int temp = strcoll(l, r);
@@ -281,7 +281,7 @@ void luaV_strconc (lua_State *L, int total, StkId top) {
       tl = 0;
       for (i=n; i>0; i--) {  /* concat all strings */
         size_t l = tsvalue(top-i)->len;
-        memcpy(buffer+tl, tsvalue(top-i)->str, l);
+        memcpy(buffer+tl, svalue(top-i), l);
         tl += l;
       }
       setsvalue(top-n, luaS_newlstr(L, buffer, tl));

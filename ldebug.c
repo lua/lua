@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 1.60 2001/02/07 18:13:49 roberto Exp roberto $
+** $Id: ldebug.c,v 1.61 2001/02/09 18:37:33 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -198,7 +198,7 @@ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
 
 
 static void infoLproto (lua_Debug *ar, Proto *f) {
-  ar->source = f->source->str;
+  ar->source = getstr(f->source);
   ar->linedefined = f->lineDefined;
   ar->what = "Lua";
 }
@@ -249,7 +249,7 @@ static const char *travglobals (lua_State *L, const TObject *o) {
   for (i=0; i<g->size; i++) {
     if (luaO_equalObj(o, val(node(g, i))) &&
         ttype_key(node(g, i)) == LUA_TSTRING)
-      return tsvalue_key(node(g, i))->str;
+      return getstr(tsvalue_key(node(g, i)));
   }
   return NULL;
 }
@@ -499,7 +499,7 @@ static const char *getobjname (lua_State *L, StkId obj, const char **name) {
     lua_assert(pc != -1);
     switch (GET_OPCODE(i)) {
       case OP_GETGLOBAL: {
-        *name = p->kstr[GETARG_U(i)]->str;
+        *name = getstr(p->kstr[GETARG_U(i)]);
         return "global";
       }
       case OP_GETLOCAL: {
@@ -509,7 +509,7 @@ static const char *getobjname (lua_State *L, StkId obj, const char **name) {
       }
       case OP_PUSHSELF:
       case OP_GETDOTTED: {
-        *name = p->kstr[GETARG_U(i)]->str;
+        *name = getstr(p->kstr[GETARG_U(i)]);
         return "field";
       }
       default:

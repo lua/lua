@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 1.64 2001/01/26 11:45:51 roberto Exp roberto $
+** $Id: ltm.c,v 1.65 2001/02/02 15:13:05 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -150,7 +150,7 @@ const char *luaT_typename (global_State *G, const TObject *o) {
   ts = G->TMtable[tag].name;
   if (ts == NULL)
     ts = G->TMtable[t].name;
-  return ts->str;
+  return getstr(ts);
 }
 
 

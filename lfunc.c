@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 1.38 2001/01/29 19:34:02 roberto Exp roberto $
+** $Id: lfunc.c,v 1.39 2001/02/01 17:40:48 roberto Exp roberto $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -79,7 +79,7 @@ const char *luaF_getlocalname (const Proto *f, int local_number, int pc) {
     if (pc < f->locvars[i].endpc) {  /* is variable active? */
       local_number--;
       if (local_number == 0)
-        return f->locvars[i].varname->str;
+        return getstr(f->locvars[i].varname);
     }
   }
   return NULL;  /* not found */

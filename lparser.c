@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 1.130 2001/02/08 11:19:10 roberto Exp roberto $
+** $Id: lparser.c,v 1.131 2001/02/09 18:37:33 roberto Exp roberto $
 ** LL(1) Parser and code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -209,7 +209,7 @@ static int search_local (LexState *ls, TString *n, expdesc *var) {
 static void singlevar (LexState *ls, TString *n, expdesc *var) {
   int level = search_local(ls, n, var);
   if (level >= 1)  /* neither local (0) nor global (-1)? */
-    luaX_syntaxerror(ls, "cannot access a variable in outer scope", n->str);
+    luaX_syntaxerror(ls, "cannot access a variable in outer scope", getstr(n));
   else if (level == -1)  /* global? */
     var->u.index = string_constant(ls->fs, n);
 }
@@ -235,12 +235,12 @@ static void pushupvalue (LexState *ls, TString *n) {
   int level = search_local(ls, n, &v);
   if (level == -1) {  /* global? */
     if (fs->prev == NULL)
-      luaX_syntaxerror(ls, "cannot access an upvalue at top level", n->str);
+      luaX_syntaxerror(ls, "cannot access an upvalue at top level", getstr(n));
     v.u.index = string_constant(fs->prev, n);
   }
   else if (level != 1)
     luaX_syntaxerror(ls,
-         "upvalue must be global or local to immediately outer scope", n->str);
+      "upvalue must be global or local to immediately outer scope", getstr(n));
   luaK_code1(fs, OP_PUSHUPVALUE, indexupvalue(ls, &v));
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 1.64 2001/02/06 18:18:58 roberto Exp roberto $
+** $Id: ltests.c,v 1.65 2001/02/09 19:53:16 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -201,7 +201,7 @@ static int liststrings (lua_State *L) {
   lua_newtable(L);
   for (i=0; i<p->sizekstr; i++) {
     lua_pushnumber(L, i+1);
-    lua_pushstring(L, p->kstr[i]->str);
+    lua_pushstring(L, getstr(p->kstr[i]));
     lua_settable(L, -3);
   }
   return 1;
@@ -537,7 +537,9 @@ static int testC (lua_State *L) {
       lua_pushnumber(L, lua_tonumber(L, getnum));
     }
     else if EQ("tostring") {
-      lua_pushstring(L, lua_tostring(L, getnum));
+      const char *s = lua_tostring(L, getnum);
+      lua_assert((unsigned long)s % 4 == 0);  /* check alignment */
+      lua_pushstring(L, s);
     }
     else if EQ("tonumber") {
       lua_pushnumber(L, lua_tonumber(L, getnum));
