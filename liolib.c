@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 1.38 1999/04/14 20:40:32 roberto Exp $
+** $Id: liolib.c,v 1.39 1999/05/05 19:22:26 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -477,7 +477,7 @@ static void io_debug (void) {
 #define MAXMESSAGE	(MESSAGESIZE*10)
 
 
-#define MAXSRC		40
+#define MAXSRC		60
 
 
 static void errorfb (void) {
@@ -494,7 +494,7 @@ static void errorfb (void) {
     lua_funcinfo(func, &chunkname, &linedefined);
     luaL_chunkid(buffchunk, chunkname, sizeof(buffchunk));
     if (level == 2) strcat(buff, "Active Stack:\n");
-    strcat(buff, "\t");
+    strcat(buff, "  ");
     if (strlen(buff) > MAXMESSAGE-MESSAGESIZE) {
       strcat(buff, "...\n");
       break;  /* buffer is full */
@@ -508,11 +508,11 @@ static void errorfb (void) {
         break;
       default: {
         if (linedefined == 0)
-          sprintf(buff+strlen(buff), "main of %.50s", buffchunk);
+          sprintf(buff+strlen(buff), "main of %.70s", buffchunk);
         else if (linedefined < 0)
-          sprintf(buff+strlen(buff), "%.50s", buffchunk);
+          sprintf(buff+strlen(buff), "%.70s", buffchunk);
         else
-          sprintf(buff+strlen(buff), "function <%d:%.50s>",
+          sprintf(buff+strlen(buff), "function <%d:%.70s>",
                   linedefined, buffchunk);
         chunkname = NULL;
       }
@@ -520,7 +520,7 @@ static void errorfb (void) {
     if ((currentline = lua_currentline(func)) > 0)
       sprintf(buff+strlen(buff), " at line %d", currentline);
     if (chunkname)
-      sprintf(buff+strlen(buff), " [%.50s]", buffchunk);
+      sprintf(buff+strlen(buff), " [%.70s]", buffchunk);
     strcat(buff, "\n");
   }
   func = lua_rawgetglobal("_ALERT");

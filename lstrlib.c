@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.29 1999/04/30 14:12:05 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.30 1999/05/05 19:22:26 roberto Exp roberto $
 ** Standard library for strings and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -117,7 +117,7 @@ static void str_char (void) {
 ** =======================================================
 */
 
-#define MAX_CAPT 9
+#define MAX_CAPT 32
 
 struct Capture {
   char *src_end;  /* end ('\0') of source string */

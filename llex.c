@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 1.33 1999/03/11 18:59:19 roberto Exp roberto $
+** $Id: llex.c,v 1.34 1999/03/25 21:05:05 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -41,14 +41,14 @@ void luaX_init (void) {
 }
 
 
-#define MAXSRC          40
+#define MAXSRC          80
 
 void luaX_syntaxerror (LexState *ls, char *s, char *token) {
   char buff[MAXSRC];
   luaL_chunkid(buff, zname(ls->lex_z), sizeof(buff));
   if (token[0] == '\0')
     token = "<eof>";
-  luaL_verror("%.100s;\n  last token read: `%.50s' at line %d in %.50s",
+  luaL_verror("%.100s;\n  last token read: `%.50s' at line %d in %.80s",
               s, token, ls->linenumber, buff);
 }
 
@@ -70,7 +70,7 @@ void luaX_token2str (int token, char *s) {
 
 
 static void luaX_invalidchar (LexState *ls, int c) {
-  char buff[10];
+  char buff[8];
   sprintf(buff, "0x%02X", c);
   luaX_syntaxerror(ls, "invalid control char", buff);
 }
@@ -106,17 +106,15 @@ void luaX_setinput (LexState *LS, ZIO *z)
 ** =======================================================
 */
 
-#define PRAGMASIZE	20
+#define PRAGMASIZE	80
 
-static void skipspace (LexState *LS)
-{
+static void skipspace (LexState *LS) {
   while (LS->current == ' ' || LS->current == '\t' || LS->current == '\r')
     next(LS);
 }
 
 
-static int checkcond (LexState *LS, char *buff)
-{
+static int checkcond (LexState *LS, char *buff) {
   static char *opts[] = {"nil", "1", NULL};
   int i = luaL_findstring(buff, opts);
   if (i >= 0) return i;
@@ -129,8 +127,7 @@ static int checkcond (LexState *LS, char *buff)
 }
 
 
-static void readname (LexState *LS, char *buff)
-{
+static void readname (LexState *LS, char *buff) {
   int i = 0;
   skipspace(LS);
   while (isalnum(LS->current) || LS->current == '_') {
@@ -148,8 +145,7 @@ static void readname (LexState *LS, char *buff)
 static void inclinenumber (LexState *LS);
 
 
-static void ifskip (LexState *LS)
-{
+static void ifskip (LexState *LS) {
   while (LS->ifstate[LS->iflevel].skip) {
     if (LS->current == '\n')
       inclinenumber(LS);
@@ -160,8 +156,7 @@ static void ifskip (LexState *LS)
 }
 
 
-static void inclinenumber (LexState *LS)
-{
+static void inclinenumber (LexState *LS) {
   static char *pragmas [] =
     {"debug", "nodebug", "endinput", "end", "ifnot", "if", "else", NULL};
   next(LS);  /* skip '\n' */
