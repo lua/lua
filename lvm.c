@@ -56,7 +56,7 @@ int luaV_tostring (lua_State *L, TObject *obj) {
     return 0;
   else {
     char s[32];  /* 16 digits, sign, point and \0  (+ some extra...) */
-    lua_number2str(s, nvalue(obj));  /* convert `s' to number */
+    lua_number2str(s, nvalue(obj));
     setsvalue(obj, luaS_new(L, s));
     return 1;
   }
@@ -559,20 +559,23 @@ StkId luaV_execute (lua_State *L) {
         break;
       }
       case OP_TFORLOOP: {
-        Table *t;
-        int n;
         int j = GETARG_sBc(i);
+        int loop = 0;
         pc += j;  /* jump back before tests (for error messages) */
-        if (ttype(ra) != LUA_TTABLE)
-          luaD_error(L, "`for' table must be a table");
-        runtime_check(L, ttype(ra+1) == LUA_TNUMBER);
-        t = hvalue(ra);
-        n = cast(int, nvalue(ra+1));
-        n = luaH_nexti(t, n, ra+2);
-        if (n != -1) {  /* repeat loop? */
-          setnvalue(ra+1, n);  /* index */
+        if (ttype(ra) == LUA_TTABLE) {
+          Table *t = hvalue(ra);
+          loop = luaH_next(L, t, ra+1);
+        }
+        else if (ttype(ra) == LUA_TFUNCTION) {
+          setobj(ra+1, ra);
+          L->top = ra+2;  /* no arguments */
+          luaD_call(L, ra+1, 2);
+          L->top = L->ci->top;
+          loop = (ttype(ra+1) != LUA_TNIL);
         }
         else
+          luaD_error(L, "`for' value must be a table or function");
+        if (!loop)
           pc -= j;  /* undo jump */
         break;
       }
