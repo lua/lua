@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.26 2004/04/30 20:13:38 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.27 2004/05/31 18:51:50 roberto Exp roberto $
 ** See Copyright Notice in lua.h
 */
 
@@ -14,8 +14,6 @@
 
 
 /* ORDER OP */
-
-#ifdef LUA_OPNAMES
 
 const char *const luaP_opnames[NUM_OPCODES] = {
   "MOVE",
@@ -57,7 +55,6 @@ const char *const luaP_opnames[NUM_OPCODES] = {
   "VARARG"
 };
 
-#endif
 
 #define opmode(t,a,b,c,m) (((t)<<7) | ((a)<<6) | ((b)<<4) | ((c)<<2) | (m))
 
