@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.20 2005/03/28 17:17:53 roberto Exp roberto $
+** $Id: ldo.c,v 2.21 2005/03/29 16:20:48 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -253,6 +253,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     func = tryfuncTM(L, func);  /* check the `function' tag method */
   funcr = savestack(L, func);
   cl = &clvalue(func)->l;
+  L->ci->savedpc = L->savedpc;
   if (!cl->isC) {  /* Lua function? prepare its call */
     CallInfo *ci;
     StkId st, base;
@@ -273,7 +274,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     L->base = ci->base = base;
     ci->top = L->base + p->maxstacksize;
     lua_assert(ci->top <= L->stack_last);
-    ci->savedpc = p->code;  /* starting point */
+    L->savedpc = p->code;  /* starting point */
     ci->tailcalls = 0;
     ci->nresults = nresults;
     for (st = L->top; st < ci->top; st++)
@@ -325,6 +326,7 @@ void luaD_poscall (lua_State *L, int wanted, StkId firstResult) {
   res = L->ci->func;  /* res == final position of 1st result */
   L->ci--;
   L->base = L->ci->base;  /* restore base */
+  L->savedpc = L->ci->savedpc;  /* restore savedpc */
   /* move results to correct place */
   while (wanted != 0 && firstResult < L->top) {
     setobjs2s(L, res++, firstResult++);
@@ -451,6 +453,7 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
     L->nCcalls = oldnCcalls;
     L->ci = restoreci(L, old_ci);
     L->base = L->ci->base;
+    L->savedpc = L->ci->savedpc;
     L->allowhook = old_allowhooks;
     restore_stack_limit(L);
   }

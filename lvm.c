@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.35 2005/03/28 17:17:53 roberto Exp roberto $
+** $Id: lvm.c,v 2.36 2005/04/04 18:12:51 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -59,9 +59,8 @@ int luaV_tostring (lua_State *L, StkId obj) {
 
 static void traceexec (lua_State *L, const Instruction *pc) {
   lu_byte mask = L->hookmask;
-  CallInfo *ci = L->ci;
-  const Instruction *oldpc = ci->savedpc;
-  ci->savedpc = pc;
+  const Instruction *oldpc = L->savedpc;
+  L->savedpc = pc;
   if (mask > LUA_MASKLINE) {  /* instruction-hook set? */
     if (L->hookcount == 0) {
       resethookcount(L);
@@ -70,7 +69,7 @@ static void traceexec (lua_State *L, const Instruction *pc) {
     }
   }
   if (mask & LUA_MASKLINE) {
-    Proto *p = ci_func(ci)->l.p;
+    Proto *p = ci_func(L->ci)->l.p;
     int npc = pcRel(pc, p);
     int newline = getline(p, npc);
     /* call linehook when enter a new function, when jump back (loop),
@@ -81,17 +80,13 @@ static void traceexec (lua_State *L, const Instruction *pc) {
 }
 
 
-static void prepTMcall (lua_State *L, const TValue *f,
+static void callTMres (lua_State *L, StkId res, const TValue *f,
                         const TValue *p1, const TValue *p2) {
+  ptrdiff_t result = savestack(L, res);
+  luaD_checkstack(L, 3);
   setobj2s(L, L->top, f);  /* push function */
   setobj2s(L, L->top+1, p1);  /* 1st argument */
   setobj2s(L, L->top+2, p2);  /* 2nd argument */
-}
-
-
-static void callTMres (lua_State *L, StkId res) {
-  ptrdiff_t result = savestack(L, res);
-  luaD_checkstack(L, 3);
   L->top += 3;
   luaD_call(L, L->top - 3, 1);
   res = restorestack(L, result);
@@ -101,8 +96,12 @@ static void callTMres (lua_State *L, StkId res) {
 
 
 
-static void callTM (lua_State *L) {
+static void callTM (lua_State *L, const TValue *f, const TValue *p1,                                const TValue *p2, const TValue *p3) {
   luaD_checkstack(L, 4);
+  setobj2s(L, L->top, f);  /* push function */
+  setobj2s(L, L->top+1, p1);  /* 1st argument */
+  setobj2s(L, L->top+2, p2);  /* 2nd argument */
+  setobj2s(L, L->top+3, p3);  /* 3th argument */
   L->top += 4;
   luaD_call(L, L->top - 4, 0);
 }
@@ -125,8 +124,7 @@ void luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val) {
     else if (ttisnil(tm = luaT_gettmbyobj(L, t, TM_INDEX)))
       luaG_typeerror(L, t, "index");
     if (ttisfunction(tm)) {
-      prepTMcall(L, tm, t, key);
-      callTMres(L, val);
+      callTMres(L, val, tm, t, key);
       return;
     }
     t = tm;  /* else repeat with `tm' */ 
@@ -153,9 +151,7 @@ void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
     else if (ttisnil(tm = luaT_gettmbyobj(L, t, TM_NEWINDEX)))
       luaG_typeerror(L, t, "index");
     if (ttisfunction(tm)) {
-      prepTMcall(L, tm, t, key);
-      setobj2s(L, L->top+3, val);  /* 3th argument */
-      callTM(L);
+      callTM(L, tm, t, key, val);
       return;
     }
     t = tm;  /* else repeat with `tm' */ 
@@ -170,8 +166,7 @@ static int call_binTM (lua_State *L, const TValue *p1, const TValue *p2,
   if (ttisnil(tm))
     tm = luaT_gettmbyobj(L, p2, event);  /* try second operand */
   if (!ttisfunction(tm)) return 0;
-  prepTMcall(L, tm, p1, p2);
-  callTMres(L, res);
+  callTMres(L, res, tm, p1, p2);
   return 1;
 }
 
@@ -198,8 +193,7 @@ static int call_orderTM (lua_State *L, const TValue *p1, const TValue *p2,
   tm2 = luaT_gettmbyobj(L, p2, event);
   if (!luaO_rawequalObj(tm1, tm2))  /* different metamethods? */
     return -1;
-  prepTMcall(L, tm1, p1, p2);
-  callTMres(L, L->top);
+  callTMres(L, L->top, tm1, p1, p2);
   return !l_isfalse(L->top);
 }
 
@@ -278,8 +272,7 @@ int luaV_equalval (lua_State *L, const TValue *t1, const TValue *t2) {
     default: return gcvalue(t1) == gcvalue(t2);
   }
   if (tm == NULL) return 0;  /* no TM? */
-  prepTMcall(L, tm, t1, t2);
-  callTMres(L, L->top);  /* call TM */
+  callTMres(L, L->top, tm, t1, t2);  /* call TM */
   return !l_isfalse(L->top);
 }
 
@@ -369,7 +362,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
   if (L->hookmask & LUA_MASKCALL)
     luaD_callhook(L, LUA_HOOKCALL, -1);
  retentry:  /* entry point when returning to old functions */
-  pc = L->ci->savedpc;
+  pc = L->savedpc;
   cl = &clvalue(L->ci->func)->l;
   k = cl->p->k;
   /* main loop of interpreter */
@@ -381,14 +374,14 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         (--L->hookcount == 0 || L->hookmask & LUA_MASKLINE)) {
       traceexec(L, pc);  /***/
       if (L->status == LUA_YIELD) {  /* did hook yield? */
-        L->ci->savedpc = pc - 1;
+        L->savedpc = pc - 1;
         return NULL;
       }
     }
     /* warning!! several calls may realloc the stack and invalidate `ra' */
     base = L->base;
     ra = RA(i);
-    L->ci->savedpc = pc;
+    L->savedpc = pc;
     lua_assert(base == L->ci->base);
     lua_assert(base <= L->top && L->top <= L->stack + L->stacksize);
     lua_assert(L->top == L->ci->top || luaG_checkopenop(i));
@@ -634,7 +627,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
             setobjs2s(L, func+aux, pfunc+aux);
           ci->top = L->top = func+aux;  /* correct top */
           lua_assert(L->top == L->base + clvalue(func)->l.p->maxstacksize);
-          ci->savedpc = (ci+1)->savedpc;
+          ci->savedpc = L->savedpc;
           ci->tailcalls++;  /* one more call lost */
           L->ci--;  /* remove new frame */
           goto callentry;

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.12 2004/12/20 15:50:00 roberto Exp roberto $
+** $Id: ldebug.c,v 2.13 2005/04/04 18:12:51 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -34,8 +34,9 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name);
 
 
 static int currentpc (lua_State *L, CallInfo *ci) {
-  UNUSED(L);
   if (!isLua(ci)) return -1;  /* function is not a Lua function? */
+  if (ci == L->ci)
+    ci->savedpc = L->savedpc;
   return pcRel(ci->savedpc, ci_func(ci)->l.p);
 }
 
