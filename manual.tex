@@ -1,8 +1,7 @@
-% $Id: manual.tex,v 2.8 1997/06/27 22:38:49 roberto Exp roberto $
+% $Id: manual.tex,v 2.9 1997/07/01 17:41:34 roberto Exp roberto $
 
 \documentstyle[fullpage,11pt,bnf]{article}
 
-\newcommand{\rw}[1]{{\bf #1}}
 \newcommand{\See}[1]{Section~\ref{#1}}
 \newcommand{\see}[1]{(see \See{#1})}
 \newcommand{\M}[1]{\emph{#1}}
@@ -39,7 +38,7 @@ Waldemar Celes
 \tecgraf\ --- Computer Science Department --- PUC-Rio
 }
 
-\date{\small \verb$Date: 1997/06/27 22:38:49 $}
+\date{\small \verb$Date: 1997/07/01 17:41:34 $}
 
 \maketitle
 
@@ -167,14 +166,14 @@ Before the first assignment, the value of a global variable is \nil;
 this default can be changed \see{tag-method}.
 
 The unit of execution of Lua is called a \Def{chunk}.
-The syntax%
-\footnote{As usual, \rep{\emph{a}} means 0 or more \emph{a}'s,
-\opt{\emph{a}} means an optional \emph{a} and \oneormore{\emph{a}} means
-one or more \emph{a}'s.}
-for chunks is:
+The syntax for chunks is:
 \begin{Produc}
 \produc{chunk}{\rep{stat \Or function} \opt{ret}}
 \end{Produc}%
+(As usual, \rep{\emph{a}} means 0 or more \emph{a}'s,
+\opt{\emph{a}} means an optional \emph{a} and \oneormore{\emph{a}} means
+one or more \emph{a}'s.)
+
 A chunk may contain statements and function definitions,
 and may be in a file or in a string inside the host program.
 A chunk may optionally end with a \verb|return| statement \see{return}.
@@ -182,10 +181,10 @@ When a chunk is executed, first all its functions and statements are compiled,
 then the statements are executed in sequential order.
 All modifications a chunk effects on the global environment persist
 after its end.
-Those include modifications to global variables and definitions
-of new functions%
-\footnote{Actually, a function definition is an
-assignment to a global variable \see{TypesSec}.}.
+Those include modifications to global variables
+and definitions of new functions
+(actually, a function definition is an
+assignment to a global variable \see{TypesSec}).
 
 Chunks may be pre-compiled into binary form;
 see program \IndexVerb{luac} for details.
@@ -207,7 +206,9 @@ There are six \Index{basic types} in Lua: \Def{nil}, \Def{number},
 \emph{Nil} is the type of the value \nil,
 whose main property is to be different from any other value.
 \emph{Number} represents real (floating-point) numbers,
-while \emph{string} has the usual meaning.
+while \emph{string} has the usual meaning;
+notice that Lua is \Index{eight-bit clean},
+so strings can have ISO characters.
 The function \verb|type| returns a string describing the type
 of a given value \see{pdf-type}.
 
@@ -275,9 +276,11 @@ This section describes the lexis, the syntax and the semantics of Lua.
 
 \subsection{Lexical Conventions} \label{lexical}
 
-Lua is a case-sensitive language.
 \Index{Identifiers} can be any string of letters, digits, and underscores,
 not beginning with a digit.
+The definition of letter depends on the current locale:
+Any character considered alphabetic by the current locale
+can be used in an identifier.
 The following words are reserved, and cannot be used as identifiers:
 \index{reserved words}
 \begin{verbatim}
@@ -286,6 +289,9 @@ The following words are reserved, and cannot be used as identifiers:
       nil       not       or        repeat
       return    then      until     while
 \end{verbatim}
+Lua is a case-sensitive language:
+\T{and} is a reserved word, but \T{And} and \T{\'and}
+(if the locale permits) are two other different identifiers.
 
 The following strings denote other \Index{tokens}:
 \begin{verbatim}
@@ -307,9 +313,9 @@ other quoted strings.
 \Index{Comments} start anywhere outside a string with a
 double hyphen (\verb|--|) and run until the end of the line.
 Moreover,
-the first line of a chunk file is skipped if it starts with \verb|#|%
-\footnote{This facility allows the use of Lua as a script interpreter
-in Unix systems \see{lua-sa}.}.
+the first line of a chunk file is skipped if it starts with \verb|#|.
+This facility allows the use of Lua as a script interpreter
+in Unix systems \see{lua-sa}.
 
 \Index{Numerical constants} may be written with an optional decimal part,
 and an optional decimal exponent.
@@ -325,9 +331,9 @@ The \verb|$| can be followed by any of the following directives:
 \begin{description}
 \item[\T{debug}] --- turn on some debugging facilities \see{pragma}.
 \item[\T{nodebug}] --- turn off some debugging facilities \see{pragma}.
-\item[{\tt if \M{cond}}] --- starts a conditional part.
+\item[\T{if \M{cond}}] --- starts a conditional part.
 If \M{cond} is false, then this part is skipped by the lexical analyzer.
-\item[{\tt ifnot \M{cond}}] --- starts a conditional part.
+\item[\T{ifnot \M{cond}}] --- starts a conditional part.
 If \M{cond} is true, then this part is skipped by the lexical analyzer.
 \item[\T{end}] --- ends a conditional part.
 \item[\T{else}] --- starts an ``else'' conditional part,
@@ -439,9 +445,9 @@ an assignment \verb|x = val|, where \verb|x| is a global variable,
 is equivalent to a call \verb|setglobal('x', val)|;
 an assignment \verb|t[i] = val| is equivalent to
 \verb|settable_event(t, i, val)|.
-See \See{tag-method} for a description of these functions%
-\footnote{Function \verb|setglobal| is pre-defined in Lua.
-Function \T{settable\_event} is used only for explanatory purposes.}.
+See \See{tag-method} for a description of these functions.
+(Function \verb|setglobal| is pre-defined in Lua.
+Function \T{settable\_event} is used only for explanatory purposes.)
 
 The syntax \verb|var.NAME| is just syntactic sugar for
 \verb|var["NAME"]|:
@@ -515,9 +521,9 @@ An access to a global variable \verb|x| is equivalent to a
 call \verb|getglobal('x')|;
 an access to an indexed variable \verb|t[i]| is equivalent to
 a call \verb|gettable_event(t, i)|.
-See \See{tag-method} for a description of these functions%
-\footnote{Function \verb|getglobal| is pre-defined in Lua.
-Function \T{gettable\_event} is used only for explanatory purposes.}.
+See \See{tag-method} for a description of these functions.
+(Function \verb|getglobal| is pre-defined in Lua.
+Function \T{gettable\_event} is used only for explanatory purposes.)
 
 The non-terminal \M{exp1} is used to indicate that the values
 returned by an expression must be adjusted to one single value:
@@ -563,9 +569,6 @@ If both arguments are numbers, then they are compared as such.
 Otherwise, if both arguments are strings,
 their values are compared using lexicographical order.
 Otherwise, the ``order'' tag method is called \see{tag-method}.
-%Note that the conversion rules of Section~\ref{coercion}
-%do apply to order operators.
-%Thus, \verb|"2">"12"| evaluates to true.
 
 \subsubsection{Logical Operators}
 Like control structures, all logical operators
@@ -643,7 +646,7 @@ is essentially equivalent to:
 The form \emph{ffieldlist1} initializes other fields in a table:
 \begin{Produc}
 \produc{ffieldlist1}{ffield \rep{\ter{,} ffield} \opt{\ter{,}}}
-\produc{ffield}{\ter{[} exp \ter{]} \ter {=} exp \Or name \ter{=} exp}
+\produc{ffield}{\ter{[} exp \ter{]} \ter{=} exp \Or name \ter{=} exp}
 \end{Produc}%
 For example:
 \begin{verbatim}
@@ -1322,7 +1325,7 @@ The use of explicit nested blocks is strongly encouraged.
 
 \subsection{Executing Lua Code}
 A host program can execute Lua chunks written in a file or in a string
-using the following functions:%
+using the following functions:
 \Deffunc{lua_dofile}\Deffunc{lua_dostring}
 \begin{verbatim}
 int lua_dofile   (char *filename);
@@ -1967,7 +1970,7 @@ The following combinations are allowed in describing a character class:
 \item[\T{\%U}] --- represents all non upper case letter characters.
 \item[\T{\%w}] --- represents all alphanumeric characters.
 \item[\T{\%W}] --- represents all non alphanumeric characters.
-\item[{\tt \%\M{x}}] (where \M{x} is any non alphanumeric character)  ---
+\item[\T{\%\M{x}}] (where \M{x} is any non alphanumeric character)  ---
 represents the character \M{x}.
 This is the standard way to escape the magic characters \verb|()%.[*-?|.
 \item[\T{[char-set]}] ---
@@ -1976,16 +1979,20 @@ characters in char-set.
 To include a \verb|]| in char-set, it must be the first character.
 A range of characters may be specified by
 separating the end characters of the range with a \verb|-|;
-e.g., \verb|A-Z| specifies the upper case characters.
+e.g., \verb|A-Z| specifies the English upper case characters.
 If \verb|-| appears as the first or last character of char-set,
 then it represents itself.
 All classes \verb|%|\emph{x} described above can also be used as
 components in a char-set.
 All other characters in char-set represent themselves.
-\item[{\tt [\^{ }char-set]}] ---
+\item[\T{[\^{ }char-set]}] ---
 represents the complement of char-set,
 where char-set is interpreted as above.
 \end{description}
+
+The definitions of letter, space, etc depend on the current locale.
+In particular, the class \verb|[a-z]| may not be equivalent to \verb|%l|.
+The second form should be preferred for more portable programs.
 
 \paragraph{Pattern Item:}
 a \Def{pattern item} may be:
@@ -2006,11 +2013,11 @@ these repetition items will always match the shortest possible sequence.
 a single character class followed by \verb|?|,
 which matches 0 or 1 occurrence of a character in the class;
 \item
-{\tt \%\M{n}}, for \M{n} between 1 and 9;
+\T{\%\M{n}}, for \M{n} between 1 and 9;
 such item matches a sub-string equal to the n-th captured string
 (see below);
 \item
-{\tt \%b\M{xy}}, where \M{x} and \M{y} are two distinct characters;
+\T{\%b\M{xy}}, where \M{x} and \M{y} are two distinct characters;
 such item matches strings that start with \M{x}, end with \M{y},
 and where the \M{x} and \M{y} are \emph{balanced}.
 That means that, if one reads the string from left to write,
@@ -2038,6 +2045,7 @@ the part of the string matching \verb|"a*(.)%w(%s*)"| is
 stored as the first capture (and therefore has number 1);
 the character matching \verb|.| is captured with number 2,
 and the part matching \verb|%s*| has number 3.
+
 
 \subsection{Mathematical Functions} \label{mathlib}
 
@@ -2101,8 +2109,6 @@ When called with a file name, it opens the named file,
 sets its handle as the value of \verb|_INPUT|,
 and returns this value.
 It does not close the current input file.
-%When called with a file handle returned by a previous call,
-%it simply assigns it to \verb|_INPUT|.
 When called without parameters,
 it closes the \verb|_INPUT| file,
 and restores \verb|stdin| as the value of \verb|_INPUT|.
@@ -2130,8 +2136,6 @@ and returns this value.
 It does not close the current output file.
 Notice that, if the file already exists,
 then it will be \emph{completely erased} with this operation.
-%When called with a file handle returned by a previous call,
-%it restores the file as the current output.
 When called without parameters,
 this function closes the \verb|_OUTPUT| file,
 and restores \verb|stdout| as the value of \verb|_OUTPUT|.
@@ -2203,15 +2207,13 @@ from the input if it belongs to the class;
 it never fails.
 A character class followed by \verb|*| reads until a character that
 does not belong to the class, or end of file;
-since it can match a sequence of zero characters, it never fails.%
-\footnote{
+since it can match a sequence of zero characters, it never fails.
 Notice that the behavior of read patterns is different from
 the regular pattern matching behavior,
 where a \verb|*| expands to the maximum length \emph{such that}
 the rest of the pattern does not fail.
 With the read pattern behavior
 there is no need for backtracking the reading.
-}
 
 A pattern item may contain sub-patterns enclosed in curly brackets,
 that describe \Def{skips}.
@@ -2269,6 +2271,17 @@ or \nil\ if the variable is not defined.
 This function is equivalent to the C function \verb|system|.
 It passes \verb|command| to be executed by an operating system shell.
 It returns an error code, which is system-dependent.
+
+\subsubsection*{\ff \T{setlocale (locale [, category])}}\Deffunc{setlocale}
+
+This function is an interface to the ANSI C function \verb|setlocale|.
+\verb|locale| is a string specifing a locale;
+\verb|category| is a number describing which category to change:
+0 is \verb|LC_ALL|, 1 is \verb|LC_COLLATE|, 2 is \verb|LC_CTYPE|,
+3 is \verb|LC_MONETARY|, 4 is \verb|LC_NUMERIC|, and 5 is \verb|LC_TIME|;
+the default category is \verb|LC_ALL|.
+The function returns the name of the new locale,
+or \nil\ if the request cannot be honored.
 
 
 \section{The Debugger Interface} \label{debugI}
