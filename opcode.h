@@ -1,6 +1,6 @@
 /*
 ** TeCGraf - PUC-Rio
-** $Id: opcode.h,v 2.1 1994/04/20 22:07:57 celes Exp celes $
+** $Id: opcode.h,v 2.2 1994/07/19 21:27:18 celes Exp celes $
 */
 
 #ifndef opcode_h
@@ -34,6 +34,12 @@ typedef union
  float f;
 } CodeFloat;
 
+typedef union
+{
+ struct {char c1; char c2; char c3; char c4;} m;
+ Byte *b;
+} CodeCode;
+
 typedef enum 
 { 
  PUSHNIL,
@@ -42,6 +48,7 @@ typedef enum
  PUSHWORD,
  PUSHFLOAT,
  PUSHSTRING,
+ PUSHFUNCTION,
  PUSHLOCAL0, PUSHLOCAL1, PUSHLOCAL2, PUSHLOCAL3, PUSHLOCAL4,
  PUSHLOCAL5, PUSHLOCAL6, PUSHLOCAL7, PUSHLOCAL8, PUSHLOCAL9,
  PUSHLOCAL,
@@ -142,6 +149,8 @@ typedef struct
 
 #define get_word(code,pc)    {code.m.c1 = *pc++; code.m.c2 = *pc++;}
 #define get_float(code,pc)   {code.m.c1 = *pc++; code.m.c2 = *pc++;\
+                              code.m.c3 = *pc++; code.m.c4 = *pc++;}
+#define get_code(code,pc)    {code.m.c1 = *pc++; code.m.c2 = *pc++;\
                               code.m.c3 = *pc++; code.m.c4 = *pc++;}
  
 

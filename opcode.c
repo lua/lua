@@ -3,7 +3,7 @@
 ** TecCGraf - PUC-Rio
 */
 
-char *rcs_opcode="$Id: opcode.c,v 2.2 1994/07/19 21:27:18 celes Exp celes $";
+char *rcs_opcode="$Id: opcode.c,v 2.3 1994/08/03 14:15:46 celes Exp celes $";
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -211,6 +211,14 @@ int lua_execute (Byte *pc)
     tag(top) = T_STRING; svalue(top++) = lua_constant[code.w];
    }
    break;
+
+   case PUSHFUNCTION:
+   {
+    CodeCode code;
+    get_code(code,pc);
+    tag(top) = T_FUNCTION; bvalue(top++) = code.b;
+   }
+   break;
    
    case PUSHLOCAL0: case PUSHLOCAL1: case PUSHLOCAL2:
    case PUSHLOCAL3: case PUSHLOCAL4: case PUSHLOCAL5:
@@ -235,7 +243,7 @@ int lua_execute (Byte *pc)
      return 1;
     }
     {
-     Object *h = lua_hashdefine (avalue(top-1), top);
+     Object *h = lua_hashget (avalue(top-1), top);
      if (h == NULL) return 1;
      *(top-1) = *h;
     }
@@ -773,7 +781,7 @@ Object *lua_getfield (Object *object, char *field)
   Object ref;
   tag(&ref) = T_STRING;
   svalue(&ref) = lua_createstring(field);
-  return (lua_hashdefine(avalue(object), &ref));
+  return (lua_hashget(avalue(object), &ref));
  }
 }
 
@@ -791,7 +799,7 @@ Object *lua_getindexed (Object *object, float index)
   Object ref;
   tag(&ref) = T_NUMBER;
   nvalue(&ref) = index;
-  return (lua_hashdefine(avalue(object), &ref));
+  return (lua_hashget(avalue(object), &ref));
  }
 }
 
@@ -1025,6 +1033,7 @@ void lua_print (void)
  {
   if      (lua_isnumber(obj))    printf("%g\n",lua_getnumber (obj));
   else if (lua_isstring(obj))    printf("%s\n",lua_getstring (obj));
+  else if (lua_isfunction(obj))  printf("function: %p\n",bvalue(obj));
   else if (lua_iscfunction(obj)) printf("cfunction: %p\n",lua_getcfunction (obj));
   else if (lua_isuserdata(obj))  printf("userdata: %p\n",lua_getuserdata (obj));
   else if (lua_istable(obj))     printf("table: %p\n",obj);
