@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.142 2004/04/30 20:13:38 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.143 2004/05/10 17:50:51 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -362,6 +362,19 @@ static int luaB_unpack (lua_State *L) {
 }
 
 
+static int luaB_select (lua_State *L) {
+  int i = luaL_checkint(L, 1);
+  int n = lua_gettop(L);
+  if (i < 0 || i >= n)  /* index out of range? */
+    return 0;
+  if (i == 0)
+    lua_pushinteger(L, n-1);
+  else
+    lua_pushvalue(L, i+1);
+  return 1;
+}
+
+
 static int luaB_pcall (lua_State *L) {
   int status;
   luaL_checkany(L, 1);
@@ -566,6 +579,7 @@ static const luaL_reg base_funcs[] = {
   {"type", luaB_type},
   {"assert", luaB_assert},
   {"unpack", luaB_unpack},
+  {"select", luaB_select},
   {"rawequal", luaB_rawequal},
   {"rawget", luaB_rawget},
   {"rawset", luaB_rawset},
