@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.41 2005/04/06 17:30:13 roberto Exp roberto $
+** $Id: luaconf.h,v 1.42 2005/04/07 13:09:07 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -95,29 +95,26 @@
 @@ LUA_API is a mark for all core API functions.
 @@ LUALIB_API is a mark for all standard library functions.
 ** CHANGE them if you need to define those functions in some special way.
-** For instance, if you want to create two Windows DLLs, one with the
-** core, the other with the libraries, you may want to use the following
-** definition (define LUA_BUILD_AS_DLL to get it).
+** For instance, if you want to create one Windows DLL with the core and
+** the libraries, you may want to use the following definition (define
+** LUA_BUILD_AS_DLL to get it).
 */
-#if defined (LUA_BUILD_AS_DLL)
+#if defined(LUA_BUILD_AS_DLL)
 
-#if defined(LUA_CORE)
+#if defined(LUA_CORE) || defined(LUA_LIB)
 #define LUA_API __declspec(__dllexport)
 #else
 #define LUA_API __declspec(__dllimport)
-#endif
-#if defined(LUA_LIB)
-#define LUALIB_API __declspec(__dllexport)
-#else
-#define LUALIB_API __declspec(__dllimport)
 #endif
 
 #else
 
 #define LUA_API		extern
-#define LUALIB_API	extern
 
 #endif
+
+/* more often then not the libs go together with the core */
+#define LUALIB_API	LUA_API
 
 
 /*
