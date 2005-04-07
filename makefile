@@ -1,111 +1,97 @@
-#
-## $Id: makefile,v 2.3 2004/09/01 13:49:20 roberto Exp $
-## Makefile
-## See Copyright Notice in lua.h
-#
+# makefile for building Lua
+# see INSTALL for installation instructions
+# see ../Makefile and luaconf.h for further customization
 
+# == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT =======================
 
-#CONFIGURATION
+CWARNS= -pedantic -Waggregate-return -Wcast-align \
+        -Wmissing-prototypes -Wpointer-arith -Wshadow \
+        -Wsign-compare -Wstrict-prototypes -Wundef -Wwrite-strings
+# -Wcast-qual
 
 # -DEXTERNMEMCHECK -DHARDSTACKTESTS
-# DEBUG = -g -DLUA_USER_H='"ltests.h"'
-OPTIMIZE =  -O2 -march=pentium \
+# -g -DLUA_USER_H='"ltests.h"'
 # -fomit-frame-pointer #-pg -malign-double
+TESTS= -g -DLUA_USER_H='"ltests.h"'
+
+LOCAL = $(TESTS) $(CWARNS)
 
 
-# -DUSE_TMPNAME??
-CONFIG = $(DEBUG) $(OPTIMIZE)
+CC= gcc
+CFLAGS= -O2 -Wall $(MYCFLAGS)
+AR= ar rcu
+RANLIB= ranlib
+RM= rm -f
+
+MYCFLAGS= $(LOCAL)
+MYLDFLAGS=
+MYLIBS=
 
 
-# Compilation parameters
-CC = gcc
-CWARNS = -Wall -pedantic \
-	-Waggregate-return \
-	-Wcast-align \
-	-Wmissing-prototypes \
-	-Wnested-externs \
-	-Wpointer-arith \
-	-Wshadow \
-	-Wsign-compare \
-	-Wstrict-prototypes \
-	-Wundef \
-	-Wwrite-strings \
-#	-Wcast-qual
+# enable Linux goodies
+MYCFLAGS= $(LOCAL) -DLUA_DL_DLOPEN -DLUA_USE_READLINE
+MYLDFLAGS= -Wl,-E
+MYLIBS= -ldl -lreadline -lhistory -lncurses
 
 
-CFLAGS = $(CONFIG) $(CWARNS)  # -ansi
+
+# == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
 
 
-# To make early versions
-CO_OPTIONS =
+LIBS = -lm
 
+CORE_T=	liblua.a
+CORE_O=	lapi.o lcode.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o lmem.o \
+	lobject.o lopcodes.o lparser.o lstate.o lstring.o ltable.o ltm.o  \
+	lundump.o lvm.o lzio.o ltests.o
+AUX_O=	lauxlib.o
+LIB_O=	lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o lstrlib.o \
+	loadlib.o linit.o
 
-AR = ar
-ARFLAGS	= rvl
+LUA_T=	lua
+LUA_O=	lua.o
 
+LUAC_T=	luac
+LUAC_O=	luac.o print.o
 
-# Aplication modules
-LUAOBJS = \
-	lstate.o \
-	lapi.o \
-	lmem.o \
-	lstring.o \
-	ltable.o \
-	ltm.o \
-	lvm.o \
-	ldo.o \
-	lobject.o \
-	lfunc.o \
-	lgc.o \
-	lcode.o \
-	lparser.o \
-	llex.o \
-	lopcodes.o \
-	lundump.o \
-	ldump.o \
-	lzio.o \
-	ldebug.o \
-	ltests.o 
+ALL_T= $(CORE_T) $(LUA_T) $(LUAC_T)
+ALL_O= $(CORE_O) $(LUA_O) $(LUAC_O) $(AUX_O) $(LIB_O)
+ALL_A= $(CORE_T)
 
-LIBOBJS = 	\
-	lauxlib.o \
-	lbaselib.o \
-        ltablib.o \
-	lmathlib.o \
- 	liolib.o \
-	linit.o \
-	loslib.o \
-	lstrlib.o \
-	ldblib.o \
-	loadlib.o
+all:	$(ALL_T)
 
+o:	$(ALL_O)
 
-lua : lua.o liblua.a liblualib.a
-	$(CC) $(CFLAGS) -o $@ lua.o -Wl,-E -L. -llua -llualib -lm -ldl
+a:	$(ALL_A)
 
-liblua.a : $(LUAOBJS)
-	$(AR) $(ARFLAGS) $@  $?
-	ranlib $@
+$(CORE_T): $(CORE_O) $(AUX_O) $(LIB_O)
+	$(AR) $@ $?
+	$(RANLIB) $@
 
-liblualib.a : $(LIBOBJS)
-	$(AR) $(ARFLAGS) $@  $?
-	ranlib $@
+$(LUA_T): $(LUA_O) $(CORE_T)
+	$(CC) -o $@ $(MYLDFLAGS) $(LUA_O) $(CORE_T) $(LIBS) $(MYLIBS) $(DL)
 
-liblua.so.1.0 : lua.o
-	ld -o liblua.so.1.0 $(LUAOBJS)
+$(LUAC_T): $(LUAC_O) $(CORE_T)
+	$(CC) -o $@ $(MYLDFLAGS) $(LUAC_O) $(CORE_T) $(LIBS) $(MYLIBS)
 
+clean:
+	$(RM) $(ALL_T) $(ALL_O)
 
-clear	:
-	rcsclean
-	rm -f *.o *.a
+depend:
+	@$(CC) $(CFLAGS) -MM *.c
 
+echo:
+	@echo "CC = $(CC)"
+	@echo "CFLAGS = $(CFLAGS)"
+	@echo "AR = $(AR)"
+	@echo "RANLIB = $(RANLIB)"
+	@echo "RM = $(RM)"
+	@echo "MYCFLAGS = $(MYCFLAGS)"
+	@echo "MYLDFLAGS = $(MYLDFLAGS)"
+	@echo "MYLIBS = $(MYLIBS)"
+	@echo "DL = $(DL)"
 
-%.h : RCS/%.h,v
-	co $(CO_OPTIONS) $@
-
-%.c : RCS/%.c,v
-	co $(CO_OPTIONS) $@
-
+# DO NOT DELETE
 
 lapi.o: lapi.c lua.h luaconf.h lapi.h lobject.h llimits.h ldebug.h \
   lstate.h ltm.h lzio.h lmem.h ldo.h lfunc.h lgc.h lstring.h ltable.h \
@@ -164,3 +150,5 @@ lvm.o: lvm.c lua.h luaconf.h ldebug.h lstate.h lobject.h llimits.h ltm.h \
   lzio.h lmem.h ldo.h lfunc.h lgc.h lopcodes.h lstring.h ltable.h lvm.h
 lzio.o: lzio.c lua.h luaconf.h llimits.h lmem.h lstate.h lobject.h ltm.h \
   lzio.h
+
+# (end of Makefile)
