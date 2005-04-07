@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.18 2005/03/09 16:28:07 roberto Exp roberto $
+** $Id: lparser.c,v 2.19 2005/03/16 16:59:21 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -32,10 +32,6 @@
 #define getlocvar(fs, i)	((fs)->f->locvars[(fs)->actvar[i]])
 
 #define luaY_checklimit(fs,v,l,m)	if ((v)>(l)) errorlimit(fs,l,m)
-
-#define enterlevel(ls) if (++(ls)->nestlevel > LUAI_MAXPARSERLEVEL) \
-	luaX_lexerror(ls, "chunk has too many syntax levels", 0)
-#define leavelevel(ls)	((ls)->nestlevel--)
 
 
 /*
@@ -295,6 +291,15 @@ static void adjust_assign (LexState *ls, int nvars, int nexps, expdesc *e) {
 }
 
 
+static void enterlevel (LexState *ls) {
+  if (++ls->L->nCcalls > LUAI_MAXCCALLS)
+	luaX_lexerror(ls, "chunk has too many syntax levels", 0);
+}
+
+
+#define leavelevel(ls)	((ls)->L->nCcalls--)
+
+
 static void enterblock (FuncState *fs, BlockCnt *bl, int isbreakable) {
   bl->breaklist = NO_JUMP;
   bl->isbreakable = isbreakable;
@@ -395,7 +400,6 @@ Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, const char *name) {
   struct LexState lexstate;
   struct FuncState funcstate;
   lexstate.buff = buff;
-  lexstate.nestlevel = 0;
   luaX_setinput(L, &lexstate, z, luaS_new(L, name));
   open_func(&lexstate, &funcstate);
   funcstate.f->is_vararg = NEWSTYLEVARARG;
@@ -405,7 +409,6 @@ Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, const char *name) {
   close_func(&lexstate);
   lua_assert(funcstate.prev == NULL);
   lua_assert(funcstate.f->nups == 0);
-  lua_assert(lexstate.nestlevel == 0);
   lua_assert(lexstate.fs == NULL);
   return funcstate.f;
 }
