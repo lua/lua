@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.36 2005/04/04 18:12:51 roberto Exp roberto $
+** $Id: lvm.c,v 2.37 2005/04/05 13:41:29 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -642,16 +642,15 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         }
       }
       case OP_RETURN: {
-        CallInfo *ci = L->ci - 1;  /* previous function frame */
         int b = GETARG_B(i);
         if (b != 0) L->top = ra+b-1;
         if (L->openupval) luaF_close(L, base);
         if (--nexeccalls == 0)  /* was previous function running `here'? */
           return ra;  /* no: return */
         else {  /* yes: continue its execution */
-          int nresults = (ci+1)->nresults;
-          lua_assert(isLua(ci));
-          lua_assert(GET_OPCODE(*(ci->savedpc - 1)) == OP_CALL);
+          int nresults = L->ci->nresults;
+          lua_assert(isLua(L->ci - 1));
+          lua_assert(GET_OPCODE(*((L->ci - 1)->savedpc - 1)) == OP_CALL);
           luaD_poscall(L, nresults, ra);
           if (nresults >= 0) L->top = L->ci->top;
           goto retentry;
