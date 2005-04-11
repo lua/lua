@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.139 2005/03/29 16:47:48 roberto Exp roberto $
+** $Id: lua.c,v 1.140 2005/03/30 19:50:29 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -102,15 +102,14 @@ static void print_version (void) {
 }
 
 
-static int getargs (lua_State *L, char *argv[], int n) {
-  int i, narg;
-  for (i=n+1; argv[i]; i++) {
-    luaL_checkstack(L, 1, "too many arguments to script");
+static int getargs (lua_State *L, int argc, char **argv, int n) {
+  int narg = argc - (n + 1);  /* number of arguments to the script */
+  int i;
+  luaL_checkstack(L, narg + 3, "too many arguments to script");
+  for (i=n+1; i < argc; i++)
     lua_pushstring(L, argv[i]);
-  }
-  narg = i-(n+1);  /* number of arguments to the script (not to `lua.c') */
   lua_newtable(L);
-  for (i=0; argv[i]; i++) {
+  for (i=0; i < argc; i++) {
     lua_pushstring(L, argv[i]);
     lua_rawseti(L, -2, i - n);
   }
@@ -230,7 +229,7 @@ static int checkvar (lua_State *L) {
 
 #define clearinteractive(i)	(*i &= 2)
 
-static int handle_argv (lua_State *L, char *argv[], int *interactive) {
+static int handle_argv (lua_State *L, int argc, char **argv, int *interactive) {
   if (argv[1] == NULL) {  /* no arguments? */
     *interactive = 0;
     if (lua_stdin_is_tty())
@@ -303,9 +302,9 @@ static int handle_argv (lua_State *L, char *argv[], int *interactive) {
       }
     } endloop:
     if (argv[i] != NULL) {
-      const char *filename = argv[i];
-      int narg = getargs(L, argv, i);  /* collect arguments */
       int status;
+      const char *filename = argv[i];
+      int narg = getargs(L, argc, argv, i);  /* collect arguments */
       lua_setglobal(L, "arg");
       clearinteractive(interactive);
       status = luaL_loadfile(L, filename);
@@ -347,7 +346,7 @@ static int pmain (lua_State *L) {
   luaopen_stdlibs(L);  /* open libraries */
   status = handle_luainit(L);
   if (status == 0) {
-    status = handle_argv(L, s->argv, &interactive);
+    status = handle_argv(L, s->argc, s->argv, &interactive);
     if (status == 0 && interactive) dotty(L);
   }
   s->status = status;
@@ -355,7 +354,7 @@ static int pmain (lua_State *L) {
 }
 
 
-int main (int argc, char *argv[]) {
+int main (int argc, char **argv) {
   int status;
   struct Smain s;
   lua_State *L = lua_open();  /* create state */
