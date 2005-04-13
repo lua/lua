@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.140 2005/03/30 19:50:29 roberto Exp roberto $
+** $Id: lua.c,v 1.141 2005/04/11 18:01:35 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -343,7 +343,7 @@ static int pmain (lua_State *L) {
   int interactive = 1;
   if (s->argv[0] && s->argv[0][0]) progname = s->argv[0];
   globalL = L;
-  luaopen_stdlibs(L);  /* open libraries */
+  luaL_openlibs(L);  /* open libraries */
   status = handle_luainit(L);
   if (status == 0) {
     status = handle_argv(L, s->argc, s->argv, &interactive);
