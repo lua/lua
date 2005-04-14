@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.13 2005/04/04 18:12:51 roberto Exp roberto $
+** $Id: ldebug.c,v 2.14 2005/04/05 13:41:29 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -90,15 +90,15 @@ LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
     if (f_isLua(ci))  /* Lua function? */
       level -= ci->tailcalls;  /* skip lost tail calls */
   }
-  if (level > 0 || ci == L->base_ci) status = 0;  /* there is no such level */
-  else if (level < 0) {  /* level is of a lost tail call */
-    status = 1;
-    ar->i_ci = 0;
-  }
-  else {
+  if (level == 0 && ci > L->base_ci) {  /* level found? */
     status = 1;
     ar->i_ci = ci - L->base_ci;
   }
+  else if (level < 0) {  /* level is of a lost tail call? */
+    status = 1;
+    ar->i_ci = 0;
+  }
+  else status = 0;  /* no such level */
   lua_unlock(L);
   return status;
 }
