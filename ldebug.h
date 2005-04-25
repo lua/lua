@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.h,v 2.1 2003/12/10 12:13:36 roberto Exp roberto $
+** $Id: ldebug.h,v 2.2 2004/06/02 19:07:55 roberto Exp roberto $
 ** Auxiliary functions from Debug Interface module
 ** See Copyright Notice in lua.h
 */
@@ -18,13 +18,16 @@
 #define resethookcount(L)	(L->hookcount = L->basehookcount)
 
 
-void luaG_typeerror (lua_State *L, const TValue *o, const char *opname);
-void luaG_concaterror (lua_State *L, StkId p1, StkId p2);
-void luaG_aritherror (lua_State *L, const TValue *p1, const TValue *p2);
-int luaG_ordererror (lua_State *L, const TValue *p1, const TValue *p2);
-void luaG_runerror (lua_State *L, const char *fmt, ...);
-void luaG_errormsg (lua_State *L);
-int luaG_checkcode (const Proto *pt);
-int luaG_checkopenop (Instruction i);
+LUAI_FUNC void luaG_typeerror (lua_State *L, const TValue *o,
+                                             const char *opname);
+LUAI_FUNC void luaG_concaterror (lua_State *L, StkId p1, StkId p2);
+LUAI_FUNC void luaG_aritherror (lua_State *L, const TValue *p1,
+                                              const TValue *p2);
+LUAI_FUNC int luaG_ordererror (lua_State *L, const TValue *p1,
+                                             const TValue *p2);
+LUAI_FUNC void luaG_runerror (lua_State *L, const char *fmt, ...);
+LUAI_FUNC void luaG_errormsg (lua_State *L);
+LUAI_FUNC int luaG_checkcode (const Proto *pt);
+LUAI_FUNC int luaG_checkopenop (Instruction i);
 
 #endif

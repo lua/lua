@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.42 2005/04/07 13:09:07 roberto Exp roberto $
+** $Id: luaconf.h,v 1.43 2005/04/07 13:52:45 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -115,6 +115,20 @@
 
 /* more often then not the libs go together with the core */
 #define LUALIB_API	LUA_API
+
+
+/*
+@@ LUAI_FUNC is a mark for all extern functions that are not to be
+@* exported to outside modules.
+** CHANGE it if you need to mark them in some special way. Gcc mark
+** them as "hidden" to optimize their call when Lua is compiled as a
+** shared library.
+*/
+#if defined(__GNUC__) && ((__GNUC__*100 + __GNUC_MINOR__) >= 302)
+#define LUAI_FUNC	__attribute__((visibility("hidden")))
+#else
+#define LUAI_FUNC	extern
+#endif
 
 
 /*

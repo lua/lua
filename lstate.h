@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.18 2005/03/22 16:04:29 roberto Exp roberto $
+** $Id: lstate.h,v 2.19 2005/04/05 13:41:29 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -160,8 +160,8 @@ union GCObject {
 #define obj2gco(v)	(cast(GCObject *, (v)))
 
 
-lua_State *luaE_newthread (lua_State *L);
-void luaE_freethread (lua_State *L, lua_State *L1);
+LUAI_FUNC lua_State *luaE_newthread (lua_State *L);
+LUAI_FUNC void luaE_freethread (lua_State *L, lua_State *L1);
 
 #endif
 

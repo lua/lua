@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.h,v 2.2 2004/05/14 19:25:09 roberto Exp roberto $
+** $Id: lvm.h,v 2.3 2005/04/04 18:12:51 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -22,13 +22,15 @@
 	(ttype(o1) == ttype(o2) && luaV_equalval(L, o1, o2))
 
 
-int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r);
-int luaV_equalval (lua_State *L, const TValue *t1, const TValue *t2);
-const TValue *luaV_tonumber (const TValue *obj, TValue *n);
-int luaV_tostring (lua_State *L, StkId obj);
-void luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val);
-void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val);
-StkId luaV_execute (lua_State *L, int nexeccalls);
-void luaV_concat (lua_State *L, int total, int last);
+LUAI_FUNC int luaV_lessthan (lua_State *L, const TValue *l, const TValue *r);
+LUAI_FUNC int luaV_equalval (lua_State *L, const TValue *t1, const TValue *t2);
+LUAI_FUNC const TValue *luaV_tonumber (const TValue *obj, TValue *n);
+LUAI_FUNC int luaV_tostring (lua_State *L, StkId obj);
+LUAI_FUNC void luaV_gettable (lua_State *L, const TValue *t, TValue *key,
+                                            StkId val);
+LUAI_FUNC void luaV_settable (lua_State *L, const TValue *t, TValue *key,
+                                            StkId val);
+LUAI_FUNC StkId luaV_execute (lua_State *L, int nexeccalls);
+LUAI_FUNC void luaV_concat (lua_State *L, int total, int last);
 
 #endif

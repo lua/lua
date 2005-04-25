@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.11 2005/02/10 13:25:02 roberto Exp roberto $
+** $Id: lgc.h,v 2.12 2005/02/23 17:30:22 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -95,15 +95,15 @@
 	{ if (iswhite(obj2gco(o)) && isblack(obj2gco(p))) \
 		luaC_barrierback(L,obj2gco(p)); }
 
-size_t luaC_separateudata (lua_State *L, int all);
-void luaC_callGCTM (lua_State *L);
-void luaC_freeall (lua_State *L);
-void luaC_step (lua_State *L);
-void luaC_fullgc (lua_State *L);
-void luaC_link (lua_State *L, GCObject *o, lu_byte tt);
-void luaC_linkupval (lua_State *L, UpVal *uv);
-void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v);
-void luaC_barrierback (lua_State *L, GCObject *o);
+LUAI_FUNC size_t luaC_separateudata (lua_State *L, int all);
+LUAI_FUNC void luaC_callGCTM (lua_State *L);
+LUAI_FUNC void luaC_freeall (lua_State *L);
+LUAI_FUNC void luaC_step (lua_State *L);
+LUAI_FUNC void luaC_fullgc (lua_State *L);
+LUAI_FUNC void luaC_link (lua_State *L, GCObject *o, lu_byte tt);
+LUAI_FUNC void luaC_linkupval (lua_State *L, UpVal *uv);
+LUAI_FUNC void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v);
+LUAI_FUNC void luaC_barrierback (lua_State *L, GCObject *o);
 
 
 #endif
