@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.8 2004/12/03 20:44:19 roberto Exp roberto $
+** $Id: llex.c,v 2.9 2004/12/03 20:54:12 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -202,6 +202,7 @@ static int skip_sep (LexState *ls) {
 
 static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
   int cont = 0;
+  (void)(cont);  /* avoid warnings when `cont' is not used */
   save_and_next(ls);  /* skip 2nd `[' */
   if (currIsNewline(ls))  /* string starts with a newline? */
     inclinenumber(ls);  /* skip it */
@@ -211,27 +212,41 @@ static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
         luaX_lexerror(ls, (seminfo) ? "unfinished long string" :
                                    "unfinished long comment", TK_EOS);
         break;  /* to avoid warnings */
-      case '[':
+#if defined(LUA_COMPAT_LSTR)
+      case '[': {
         if (skip_sep(ls) == sep) {
           save_and_next(ls);  /* skip 2nd `[' */
           cont++;
+#if LUA_COMPAT_LSTR == 1
+          if (sep == 0)
+            luaX_lexerror(ls, "nesting of [[...]] is deprecated", '[');
+#endif
         }
-        continue;
-      case ']':
+        break;
+      }
+#endif
+      case ']': {
         if (skip_sep(ls) == sep) {
           save_and_next(ls);  /* skip 2nd `]' */
-          if (cont-- == 0) goto endloop;
+#if defined(LUA_COMPAT_LSTR) && LUA_COMPAT_LSTR == 2
+          cont--;
+          if (sep == 0 && cont >= 0) break;
+#endif
+          goto endloop;
         }
-        continue;
+        break;
+      }
       case '\n':
-      case '\r':
+      case '\r': {
         save(ls, '\n');
         inclinenumber(ls);
         if (!seminfo) luaZ_resetbuffer(ls->buff);  /* avoid wasting space */
-        continue;
-      default:
+        break;
+      }
+      default: {
         if (seminfo) save_and_next(ls);
         else next(ls);
+      }
     }
   } endloop:
   if (seminfo)
