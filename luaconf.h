@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.44 2005/04/25 19:24:10 roberto Exp roberto $
+** $Id: luaconf.h,v 1.45 2005/04/27 18:37:51 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -124,7 +124,9 @@
 ** them as "hidden" to optimize their call when Lua is compiled as a
 ** shared library.
 */
-#if defined(__GNUC__) && ((__GNUC__*100 + __GNUC_MINOR__) >= 302)
+#if defined(luaall_c)
+#define LUAI_FUNC	static
+#elif defined(__GNUC__) && ((__GNUC__*100 + __GNUC_MINOR__) >= 302)
 #define LUAI_FUNC	__attribute__((visibility("hidden")))
 #else
 #define LUAI_FUNC	extern
