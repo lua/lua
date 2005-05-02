@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.37 2005/04/05 13:41:29 roberto Exp roberto $
+** $Id: lvm.c,v 2.38 2005/04/11 18:01:29 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -527,9 +527,9 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
           setnvalue(ra, luai_numunm(nb));
         }
         else {
-          setnilvalue(&temp);
-          if (!call_binTM(L, RB(i), &temp, ra, TM_UNM))  /***/
-            luaG_aritherror(L, RB(i), &temp);
+          rb = RB(i);  /* `tonumber' erased `rb' */
+          if (!call_binTM(L, rb, &luaO_nilobject, ra, TM_UNM))  /***/
+            luaG_aritherror(L, rb, &luaO_nilobject);
         }
         continue;
       }
@@ -540,15 +540,12 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
       }
       case OP_SIZ: {
         const TValue *rb = RB(i);
-        switch (ttype(rb)) {
-          case LUA_TTABLE:
-            setnvalue(ra, cast(lua_Number, luaH_getn(hvalue(rb))));
-            break;
-          case LUA_TSTRING:
-            setnvalue(ra, cast(lua_Number, tsvalue(rb)->len));
-            break;
-          default:  /* no metamethod?? */
-            luaG_typeerror(L, rb, "get the size of");
+        if (ttype(rb) == LUA_TTABLE) {
+          setnvalue(ra, cast(lua_Number, luaH_getn(hvalue(rb))));
+        }
+        else {  /* try metamethod */
+          if (!call_binTM(L, rb, &luaO_nilobject, ra, TM_SIZ))  /***/
+            luaG_typeerror(L, rb, "get size of");
         }
         continue;
       }
