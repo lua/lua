@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.19 2005/03/16 16:58:41 roberto Exp roberto $
+** $Id: ltable.c,v 2.20 2005/04/01 13:51:37 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -469,7 +469,8 @@ const TValue *luaH_get (Table *t, const TValue *key) {
     case LUA_TSTRING: return luaH_getstr(t, rawtsvalue(key));
     case LUA_TNUMBER: {
       int k;
-      lua_number2int(k, (nvalue(key)));
+      lua_Number n = nvalue(key);
+      lua_number2int(k, n);
       if (luai_numeq(cast(lua_Number, k), nvalue(key)))  /* index is integer? */
         return luaH_getnum(t, k);  /* use specialized version */
       /* else go through */

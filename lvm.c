@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.39 2005/05/02 17:49:43 roberto Exp roberto $
+** $Id: lvm.c,v 2.40 2005/05/03 19:01:17 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -50,7 +50,8 @@ int luaV_tostring (lua_State *L, StkId obj) {
     return 0;
   else {
     char s[LUAI_MAXNUMBER2STR];
-    lua_number2str(s, nvalue(obj));
+    lua_Number n = nvalue(obj);
+    lua_number2str(s, n);
     setsvalue2s(L, obj, luaS_new(L, s));
     return 1;
   }

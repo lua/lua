@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.45 2005/04/27 18:37:51 roberto Exp roberto $
+** $Id: luaconf.h,v 1.46 2005/04/29 13:53:59 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -421,10 +421,10 @@
 
 /* On  Windows/Pentium, resort to assembler */
 #elif !defined(__STRICT_ANSI__) && defined(_MSC_VER) && defined(_M_IX86)
-#define lua_number2int(i,d)	__asm { \
-	fld d \
-	fistp i \
-	}
+#define lua_number2int(i,d)	\
+	__asm fld d; \
+	__asm fistp i;
+
 
 /* on Pentium machines compliant with C99, you can try lrint */
 #elif defined (__i386) && defined(__STDC_VERSION__) && \
@@ -445,7 +445,7 @@
 /* On a GNU or Windows/Pentium, resort to assembler */
 #if (defined(__GNUC__) && defined(__i386)) || \
     (defined(_MSC_VER) && defined(_M_IX86))
-#define lua_number2integer(i,n)		lua_number2int((i), (n))
+#define lua_number2integer(i,n)		lua_number2int(i, n)
 
 /* this option always work, but may be slow */
 #else
