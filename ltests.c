@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.22 2005/03/23 17:51:11 roberto Exp roberto $
+** $Id: ltests.c,v 2.23 2005/03/28 17:17:53 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -281,8 +281,10 @@ static void checkstack (global_State *g, lua_State *L1) {
   }
   checkliveness(g, gt(L1));
   if (L1->base_ci) {
-    for (ci = L1->base_ci; ci <= L1->ci; ci++)
+    for (ci = L1->base_ci; ci <= L1->ci; ci++) {
       lua_assert(ci->top <= L1->stack_last);
+      lua_assert(lua_checkpc(L1, ci));
+    }
   }
   else lua_assert(L1->size_ci == 0);
   if (L1->stack) {
@@ -333,6 +335,18 @@ printf(">>> %d  %s  %02x\n", g->gcstate, luaT_typenames[o->gch.tt], o->gch.marke
       }
       default: lua_assert(0);
     }
+  }
+}
+
+
+int lua_checkpc (lua_State *L, pCallInfo ci) {
+  if (ci == L->base_ci || !f_isLua(ci)) return 1;
+  else {
+    Proto *p = ci_func(ci)->l.p;
+    if (ci < L->ci)
+      return p->code <= ci->savedpc && ci->savedpc <= p->code + p->sizecode;
+    else
+      return p->code <= L->savedpc && L->savedpc <= p->code + p->sizecode;
   }
 }
 

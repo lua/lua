@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.12 2005/03/18 18:55:45 roberto Exp roberto $
+** $Id: ltests.h,v 2.13 2005/04/13 17:24:20 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -47,7 +47,10 @@ void *debug_realloc (void *ud, void *block, size_t osize, size_t nsize);
 #endif
 
 
+typedef struct CallInfo *pCallInfo;
+
 int lua_checkmemory (lua_State *L);
+int lua_checkpc (lua_State *L, pCallInfo ci);
 
 
 /* test for lock/unlock */
