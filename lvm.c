@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.40 2005/05/03 19:01:17 roberto Exp roberto $
+** $Id: lvm.c,v 2.41 2005/05/03 19:30:17 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -712,14 +712,6 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
           setobjs2s(L, cb-1, cb);  /* save control variable */
           dojump(L, pc, GETARG_sBx(*pc) + 1);  /* jump back */
         }
-        continue;
-      }
-      case OP_TFORPREP: {  /* for compatibility only */
-        if (ttistable(ra)) {
-          setobjs2s(L, ra+1, ra);
-          setobj2s(L, ra, luaH_getstr(hvalue(gt(L)), luaS_new(L, "next")));
-        }
-        dojump(L, pc, GETARG_sBx(i));
         continue;
       }
       case OP_SETLIST: {

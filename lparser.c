@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.22 2005/04/29 12:43:47 roberto Exp roberto $
+** $Id: lparser.c,v 2.23 2005/05/04 16:36:23 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1070,7 +1070,7 @@ static void forbody (LexState *ls, int base, int line, int nvars, int isnum) {
   int prep, endfor;
   adjustlocalvars(ls, 3);  /* control variables */
   checknext(ls, TK_DO);
-  prep = luaK_codeAsBx(fs, (isnum ? OP_FORPREP : OP_TFORPREP), base, NO_JUMP);
+  prep = isnum ? luaK_codeAsBx(fs, OP_FORPREP, base, NO_JUMP) : luaK_jump(fs);
   enterblock(fs, &bl, 0);  /* scope for declared variables */
   adjustlocalvars(ls, nvars);
   luaK_reserveregs(fs, nvars);

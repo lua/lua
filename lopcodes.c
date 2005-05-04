@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.31 2005/03/08 18:00:16 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.32 2005/03/16 16:59:21 roberto Exp roberto $
 ** See Copyright Notice in lua.h
 */
 
@@ -49,7 +49,6 @@ const char *const luaP_opnames[NUM_OPCODES+1] = {
   "FORLOOP",
   "FORPREP",
   "TFORLOOP",
-  "TFORPREP",
   "SETLIST",
   "CLOSE",
   "CLOSURE",
@@ -95,7 +94,6 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 1, OpArgR, OpArgN, iAsBx)		/* OP_FORLOOP */
  ,opmode(0, 1, OpArgR, OpArgN, iAsBx)		/* OP_FORPREP */
  ,opmode(1, 0, OpArgN, OpArgU, iABC)		/* OP_TFORLOOP */
- ,opmode(0, 0, OpArgR, OpArgN, iAsBx)		/* OP_TFORPREP */
  ,opmode(0, 0, OpArgU, OpArgU, iABC)		/* OP_SETLIST */
  ,opmode(0, 0, OpArgN, OpArgN, iABC)		/* OP_CLOSE */
  ,opmode(0, 1, OpArgU, OpArgN, iABx)		/* OP_CLOSURE */
