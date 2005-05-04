@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.21 2005/04/27 18:53:53 roberto Exp roberto $
+** $Id: lparser.c,v 2.22 2005/04/29 12:43:47 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -834,7 +834,7 @@ static const struct {
 
 
 /*
-** subexpr -> (simplexep | unop subexpr) { binop subexpr }
+** subexpr -> (simpleexp | unop subexpr) { binop subexpr }
 ** where `binop' is any binary operator with a priority higher than `limit'
 */
 static BinOpr subexpr (LexState *ls, expdesc *v, unsigned int limit) {
