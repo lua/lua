@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.23 2005/05/04 16:36:23 roberto Exp roberto $
+** $Id: lparser.c,v 2.24 2005/05/04 20:42:28 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -87,10 +87,10 @@ static void error_expected (LexState *ls, int token) {
 
 
 static void errorlimit (FuncState *fs, int limit, const char *what) {
-  const char *msg = (fs->f->lineDefined == 0) ?
+  const char *msg = (fs->f->linedefined == 0) ?
     luaO_pushfstring(fs->L, "main function has more than %d %s", limit, what) :
     luaO_pushfstring(fs->L, "function at line %d has more than %d %s",
-                            fs->f->lineDefined, limit, what);
+                            fs->f->linedefined, limit, what);
   luaX_lexerror(fs->ls, msg, 0);
 }
 
@@ -591,7 +591,7 @@ static void body (LexState *ls, expdesc *e, int needself, int line) {
   /* body ->  `(' parlist `)' chunk END */
   FuncState new_fs;
   open_func(ls, &new_fs);
-  new_fs.f->lineDefined = line;
+  new_fs.f->linedefined = line;
   checknext(ls, '(');
   if (needself) {
     new_localvarliteral(ls, "self", 0);
@@ -600,6 +600,7 @@ static void body (LexState *ls, expdesc *e, int needself, int line) {
   parlist(ls);
   checknext(ls, ')');
   chunk(ls);
+  new_fs.f->lastlinedefined = ls->linenumber;
   check_match(ls, TK_END, TK_FUNCTION, line);
   close_func(ls);
   pushclosure(ls, &new_fs, e);

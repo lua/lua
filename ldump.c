@@ -1,5 +1,5 @@
 /*
-** $Id: ldump.c,v 2.3 2004/07/09 18:24:41 roberto Exp $
+** $Id: ldump.c,v 2.4 2004/10/04 19:01:12 roberto Exp roberto $
 ** save pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -136,7 +136,8 @@ static void DumpConstants(const Proto* f, DumpState* D)
 static void DumpFunction(const Proto* f, const TString* p, DumpState* D)
 {
  DumpString((f->source==p) ? NULL : f->source,D);
- DumpInt(f->lineDefined,D);
+ DumpInt(f->linedefined,D);
+ DumpInt(f->lastlinedefined,D);
  DumpByte(f->nups,D);
  DumpByte(f->numparams,D);
  DumpByte(f->is_vararg,D);

@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.2 2004/04/30 20:13:38 roberto Exp $
+** $Id: lundump.c,v 2.3 2004/10/04 19:01:12 roberto Exp roberto $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -201,7 +201,8 @@ static Proto* LoadFunction (LoadState* S, TString* p)
  setptvalue2s(L, L->top, f);
  incr_top(L);
  f->source=LoadString(S); if (f->source==NULL) f->source=p;
- f->lineDefined=LoadInt(S);
+ f->linedefined=LoadInt(S);
+ f->lastlinedefined=LoadInt(S);
  f->nups=LoadByte(S);
  f->numparams=LoadByte(S);
  f->is_vararg=LoadByte(S);

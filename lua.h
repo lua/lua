@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.204 2005/03/23 17:51:11 roberto Exp roberto $
+** $Id: lua.h,v 1.205 2005/03/28 17:17:53 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -345,6 +345,7 @@ struct lua_Debug {
   int currentline;	/* (l) */
   int nups;		/* (u) number of upvalues */
   int linedefined;	/* (S) */
+  int lastlinedefined;	/* (S) */
   char short_src[LUA_IDSIZE]; /* (S) */
   /* private part */
   int i_ci;  /* active function */

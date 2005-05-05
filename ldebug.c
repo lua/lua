@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.15 2005/04/14 13:30:47 roberto Exp roberto $
+** $Id: ldebug.c,v 2.16 2005/05/04 20:42:28 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -157,7 +157,8 @@ static void funcinfo (lua_Debug *ar, StkId func) {
   }
   else {
     ar->source = getstr(cl->l.p->source);
-    ar->linedefined = cl->l.p->lineDefined;
+    ar->linedefined = cl->l.p->linedefined;
+    ar->lastlinedefined = cl->l.p->lastlinedefined;
     ar->what = (ar->linedefined == 0) ? "main" : "Lua";
   }
   luaO_chunkid(ar->short_src, ar->source, LUA_IDSIZE);
