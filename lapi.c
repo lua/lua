@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.37 2005/04/04 18:12:51 roberto Exp roberto $
+** $Id: lapi.c,v 2.38 2005/04/05 15:35:15 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -319,7 +319,8 @@ LUA_API lua_Integer lua_tointeger (lua_State *L, int idx) {
   const TValue *o = index2adr(L, idx);
   if (tonumber(o, &n)) {
     lua_Integer res;
-    lua_number2integer(res, nvalue(o));
+    lua_Number num = nvalue(o);
+    lua_number2integer(res, num);
     return res;
   }
   else
@@ -587,6 +588,9 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
     case LUA_TUSERDATA:
       mt = uvalue(obj)->metatable;
       break;
+    default:
+      mt = G(L)->mt[ttype(obj)];
+      break;
   }
   if (mt == NULL)
     res = 0;
@@ -681,7 +685,6 @@ LUA_API void lua_rawseti (lua_State *L, int idx, int n) {
 LUA_API int lua_setmetatable (lua_State *L, int objindex) {
   TValue *obj;
   Table *mt;
-  int res = 1;
   lua_lock(L);
   api_checknelems(L, 1);
   obj = index2adr(L, objindex);
@@ -706,13 +709,13 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
       break;
     }
     default: {
-      res = 0;  /* cannot set */
+      G(L)->mt[ttype(obj)] = mt;
       break;
     }
   }
   L->top--;
   lua_unlock(L);
-  return res;
+  return 1;
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.30 2005/03/16 17:00:21 roberto Exp roberto $
+** $Id: lgc.c,v 2.31 2005/03/22 16:04:29 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -493,6 +493,13 @@ void luaC_freeall (lua_State *L) {
 }
 
 
+static void markmt (global_State *g) {
+  int i;
+  for (i=0; i<NUM_TAGS; i++)
+    if (g->mt[i]) markobject(g, g->mt[i]);
+}
+
+
 /* mark root set */
 static void markroot (lua_State *L) {
   global_State *g = G(L);
@@ -503,6 +510,7 @@ static void markroot (lua_State *L) {
   /* make global table be traversed before main stack */
   markvalue(g, gt(g->mainthread));
   markvalue(g, registry(L));
+  markmt(g);
   g->gcstate = GCSpropagate;
 }
 
@@ -529,6 +537,7 @@ static void atomic (lua_State *L) {
   g->weak = NULL;
   lua_assert(!iswhite(obj2gco(g->mainthread)));
   markobject(g, L);  /* mark running thread */
+  markmt(g);  /* mark basic metatables (again) */
   propagateall(g);
   /* remark gray again */
   g->gray = g->grayagain;

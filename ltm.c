@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.3 2004/04/30 20:13:38 roberto Exp roberto $
+** $Id: ltm.c,v 2.4 2005/03/08 18:00:16 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -32,7 +32,7 @@ void luaT_init (lua_State *L) {
     "__index", "__newindex",
     "__gc", "__mode", "__eq",
     "__add", "__sub", "__mul", "__div", "__mod",
-    "__pow", "__unm", "__lt", "__le",
+    "__pow", "__unm", "__siz", "__lt", "__le",
     "__concat", "__call"
   };
   int i;
@@ -68,8 +68,8 @@ const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
       mt = uvalue(o)->metatable;
       break;
     default:
-      mt = NULL;
+      mt = G(L)->mt[ttype(o)];
   }
-  return (mt ?  luaH_getstr(mt, G(L)->tmname[event]) : &luaO_nilobject);
+  return (mt ? luaH_getstr(mt, G(L)->tmname[event]) : &luaO_nilobject);
 }
 
