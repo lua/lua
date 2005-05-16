@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.94 2005/03/08 20:10:05 roberto Exp roberto $
+** $Id: ldblib.c,v 1.95 2005/05/05 20:47:02 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -77,6 +77,17 @@ static lua_State *getthread (lua_State *L, int *arg) {
 }
 
 
+static void treatstackoption (lua_State *L, lua_State *L1, const char *fname) {
+  if (L == L1) {
+    lua_pushvalue(L, -2);
+    lua_remove(L, -3);
+  }
+  else
+    lua_xmove(L1, L, 1);
+  lua_setfield(L, -2, fname);
+}
+
+
 static int db_getinfo (lua_State *L) {
   lua_Debug ar;
   int arg;
@@ -99,34 +110,25 @@ static int db_getinfo (lua_State *L) {
   if (!lua_getinfo(L1, options, &ar))
     return luaL_argerror(L, arg+2, "invalid option");
   lua_newtable(L);
-  for (; *options; options++) {
-    switch (*options) {
-      case 'S':
-        settabss(L, "source", ar.source);
-        settabss(L, "short_src", ar.short_src);
-        settabsi(L, "linedefined", ar.linedefined);
-        settabsi(L, "lastlinedefined", ar.lastlinedefined);
-        settabss(L, "what", ar.what);
-        break;
-      case 'l':
-        settabsi(L, "currentline", ar.currentline);
-        break;
-      case 'u':
-        settabsi(L, "nups", ar.nups);
-        break;
-      case 'n':
-        settabss(L, "name", ar.name);
-        settabss(L, "namewhat", ar.namewhat);
-        break;
-      case 'f':
-        if (L == L1)
-          lua_pushvalue(L, -2);
-        else
-          lua_xmove(L1, L, 1);
-        lua_setfield(L, -2, "func");
-        break;
-    }
+  if (strchr(options, 'S')) {
+    settabss(L, "source", ar.source);
+    settabss(L, "short_src", ar.short_src);
+    settabsi(L, "linedefined", ar.linedefined);
+    settabsi(L, "lastlinedefined", ar.lastlinedefined);
+    settabss(L, "what", ar.what);
   }
+  if (strchr(options, 'l'))
+    settabsi(L, "currentline", ar.currentline);
+  if (strchr(options, 'u'))
+    settabsi(L, "nups", ar.nups);
+  if (strchr(options, 'n')) {
+    settabss(L, "name", ar.name);
+    settabss(L, "namewhat", ar.namewhat);
+  }
+  if (strchr(options, 'L'))
+    treatstackoption(L, L1, "activelines");
+  if (strchr(options, 'f'))
+    treatstackoption(L, L1, "func");
   return 1;  /* return table */
 }
     

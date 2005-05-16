@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.16 2005/05/04 20:42:28 roberto Exp roberto $
+** $Id: ldebug.c,v 2.17 2005/05/05 20:47:02 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -148,8 +148,7 @@ LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
 }
 
 
-static void funcinfo (lua_Debug *ar, StkId func) {
-  Closure *cl = clvalue(func);
+static void funcinfo (lua_Debug *ar, Closure *cl) {
   if (cl->c.isC) {
     ar->source = "=[C]";
     ar->linedefined = -1;
@@ -168,17 +167,36 @@ static void funcinfo (lua_Debug *ar, StkId func) {
 static void info_tailcall (lua_State *L, lua_Debug *ar) {
   ar->name = ar->namewhat = "";
   ar->what = "tail";
-  ar->linedefined = ar->currentline = -1;
+  ar->lastlinedefined = ar->linedefined = ar->currentline = -1;
   ar->source = "=(tail call)";
   luaO_chunkid(ar->short_src, ar->source, LUA_IDSIZE);
   ar->nups = 0;
-  setnilvalue(L->top);
+}
+
+
+static void collectvalidlines (lua_State *L, Closure *f) {
+  if (f == NULL || f->c.isC) {
+    setnilvalue(L->top);
+  }
+  else {
+    Table *t = luaH_new(L, 0, 0);
+    int *lineinfo = f->l.p->lineinfo;
+    int i;
+    for (i=0; i<f->l.p->sizelineinfo; i++)
+      setbvalue(luaH_setnum(L, t, lineinfo[i]), 1);
+    sethvalue(L, L->top, t); 
+  }
+  incr_top(L);
 }
 
 
 static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
-                    StkId f, CallInfo *ci) {
+                    Closure *f, CallInfo *ci) {
   int status = 1;
+  if (f == NULL) {
+    info_tailcall(L, ar);
+    return status;
+  }
   for (; *what; what++) {
     switch (*what) {
       case 'S': {
@@ -190,7 +208,7 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
         break;
       }
       case 'u': {
-        ar->nups = clvalue(f)->c.nupvalues;
+        ar->nups = f->c.nupvalues;
         break;
       }
       case 'n': {
@@ -201,10 +219,9 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
         }
         break;
       }
-      case 'f': {
-        setobj2s(L, L->top, f);
+      case 'L':
+      case 'f':  /* handled by lua_getinfo */
         break;
-      }
       default: status = 0;  /* invalid option */
     }
   }
@@ -213,23 +230,31 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
 
 
 LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
-  int status = 1;
+  int status;
+  Closure *f = NULL;
+  CallInfo *ci = NULL;
   lua_lock(L);
   if (*what == '>') {
-    StkId f = L->top - 1;
-    if (!ttisfunction(f))
+    StkId func = L->top - 1;
+    if (!ttisfunction(func))
       luaG_runerror(L, "value for `lua_getinfo' is not a function");
-    status = auxgetinfo(L, what + 1, ar, f, NULL);
+    what++;  /* skip the '>' */
+    f = clvalue(func);
     L->top--;  /* pop function */
   }
   else if (ar->i_ci != 0) {  /* no tail call? */
-    CallInfo *ci = L->base_ci + ar->i_ci;
+    ci = L->base_ci + ar->i_ci;
     lua_assert(ttisfunction(ci->func));
-    status = auxgetinfo(L, what, ar, ci->func, ci);
+    f = clvalue(ci->func);
   }
-  else
-    info_tailcall(L, ar);
-  if (strchr(what, 'f')) incr_top(L);
+  status = auxgetinfo(L, what, ar, f, ci);
+  if (strchr(what, 'f')) {
+    if (f == NULL) setnilvalue(L->top);
+    else setclvalue(L, L->top, f);
+    incr_top(L);
+  }
+  if (strchr(what, 'L'))
+    collectvalidlines(L, f);
   lua_unlock(L);
   return status;
 }
