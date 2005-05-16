@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.111 2005/03/22 16:54:29 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.112 2005/05/05 15:34:03 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -525,8 +525,8 @@ static int str_find (lua_State *L) {
 
 static int gfind_aux (lua_State *L) {
   MatchState ms;
-  const char *s = lua_tostring(L, lua_upvalueindex(1));
-  size_t ls = lua_strlen(L, lua_upvalueindex(1));
+  size_t ls;
+  const char *s = lua_tolstring(L, lua_upvalueindex(1), &ls);
   const char *p = lua_tostring(L, lua_upvalueindex(2));
   const char *src;
   ms.L = L;
@@ -563,8 +563,8 @@ static void add_s (MatchState *ms, luaL_Buffer *b,
                    const char *s, const char *e) {
   lua_State *L = ms->L;
   if (lua_isstring(L, 3)) {
-    const char *news = lua_tostring(L, 3);
-    size_t l = lua_strlen(L, 3);
+    size_t l;
+    const char *news = lua_tolstring(L, 3, &l);
     size_t i;
     for (i=0; i<l; i++) {
       if (news[i] != L_ESC)

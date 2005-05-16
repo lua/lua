@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.38 2005/04/05 15:35:15 roberto Exp roberto $
+** $Id: lapi.c,v 2.39 2005/05/05 15:34:03 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -334,18 +334,20 @@ LUA_API int lua_toboolean (lua_State *L, int idx) {
 }
 
 
-LUA_API const char *lua_tostring (lua_State *L, int idx) {
+LUA_API const char *lua_tolstring (lua_State *L, int idx, size_t *len) {
   StkId o = index2adr(L, idx);
-  if (ttisstring(o))
-    return svalue(o);
-  else {
-    const char *s;
+  if (!ttisstring(o)) {
     lua_lock(L);  /* `luaV_tostring' may create a new string */
-    s = (luaV_tostring(L, o) ? svalue(o) : NULL);
+    if (!luaV_tostring(L, o)) {  /* conversion failed? */
+      if (len != NULL) *len = 0;
+      lua_unlock(L);
+      return NULL;
+    }
     luaC_checkGC(L);
     lua_unlock(L);
-    return s;
   }
+  if (len != NULL) *len = tsvalue(o)->len;
+  return svalue(o);
 }
 
 

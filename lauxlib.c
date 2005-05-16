@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.129 2005/02/23 17:30:22 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.130 2005/03/16 16:58:41 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -158,9 +158,8 @@ LUALIB_API void luaL_checkany (lua_State *L, int narg) {
 
 
 LUALIB_API const char *luaL_checklstring (lua_State *L, int narg, size_t *len) {
-  const char *s = lua_tostring(L, narg);
+  const char *s = lua_tolstring(L, narg, len);
   if (!s) tag_error(L, narg, LUA_TSTRING);
-  if (len) *len = lua_strlen(L, narg);
   return s;
 }
 
@@ -497,9 +496,10 @@ LUALIB_API void luaL_pushresult (luaL_Buffer *B) {
 
 LUALIB_API void luaL_addvalue (luaL_Buffer *B) {
   lua_State *L = B->L;
-  size_t vl = lua_strlen(L, -1);
+  size_t vl;
+  const char *s = lua_tolstring(L, -1, &vl);
   if (vl <= bufffree(B)) {  /* fit into buffer? */
-    memcpy(B->p, lua_tostring(L, -1), vl);  /* put it there */
+    memcpy(B->p, s, vl);  /* put it there */
     B->p += vl;
     lua_pop(L, 1);  /* remove from stack */
   }

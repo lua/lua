@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.205 2005/03/28 17:17:53 roberto Exp roberto $
+** $Id: lua.h,v 1.206 2005/05/05 20:47:02 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org	mailto:info@lua.org
@@ -148,6 +148,7 @@ LUA_API lua_Number      (lua_tonumber) (lua_State *L, int idx);
 LUA_API lua_Integer     (lua_tointeger) (lua_State *L, int idx);
 LUA_API int             (lua_toboolean) (lua_State *L, int idx);
 LUA_API const char     *(lua_tostring) (lua_State *L, int idx);
+LUA_API const char     *(lua_tolstring) (lua_State *L, int idx, size_t *len);
 LUA_API size_t          (lua_objsize) (lua_State *L, int idx);
 LUA_API lua_CFunction   (lua_tocfunction) (lua_State *L, int idx);
 LUA_API void	       *(lua_touserdata) (lua_State *L, int idx);
@@ -274,6 +275,8 @@ LUA_API lua_Alloc (lua_getallocf) (lua_State *L, void **ud);
 
 #define lua_setglobal(L,s)	lua_setfield(L, LUA_GLOBALSINDEX, (s))
 #define lua_getglobal(L,s)	lua_getfield(L, LUA_GLOBALSINDEX, (s))
+
+#define lua_tostring(L,i)	lua_tolstring(L, (i), NULL)
 
 
 
