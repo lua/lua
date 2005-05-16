@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.17 2005/05/05 20:47:02 roberto Exp roberto $
+** $Id: ldebug.c,v 2.18 2005/05/16 18:45:15 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -236,8 +236,7 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
   lua_lock(L);
   if (*what == '>') {
     StkId func = L->top - 1;
-    if (!ttisfunction(func))
-      luaG_runerror(L, "value for `lua_getinfo' is not a function");
+    luai_apicheck(L, ttisfunction(func));
     what++;  /* skip the '>' */
     f = clvalue(func);
     L->top--;  /* pop function */
@@ -549,7 +548,7 @@ void luaG_typeerror (lua_State *L, const TValue *o, const char *op) {
   const char *kind = (isinstack(L->ci, o)) ?
                          getobjname(L, L->ci, o - L->base, &name) : NULL;
   if (kind)
-    luaG_runerror(L, "attempt to %s %s `%s' (a %s value)",
+    luaG_runerror(L, "attempt to %s %s " LUA_SM " (a %s value)",
                 op, kind, name, t);
   else
     luaG_runerror(L, "attempt to %s a %s value", op, t);

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.11 2005/03/09 16:28:07 roberto Exp roberto $
+** $Id: lobject.c,v 2.12 2005/03/28 12:53:40 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -184,7 +184,7 @@ void luaO_chunkid (char *out, const char *source, int bufflen) {
     if (*source == '@') {
       int l;
       source++;  /* skip the `@' */
-      bufflen -= sizeof(" `...' ");
+      bufflen -= sizeof(" '...' ");
       l = strlen(source);
       strcpy(out, "");
       if (l>bufflen) {

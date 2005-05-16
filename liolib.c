@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.58 2005/02/18 12:40:02 roberto Exp roberto $
+** $Id: liolib.c,v 2.59 2005/03/18 18:01:14 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -319,8 +319,6 @@ static int g_read (lua_State *L, FILE *f, int first) {
             read_chars(L, f, ~((size_t)0));  /* read MAX_SIZE_T chars */
             success = 1; /* always success */
             break;
-          case 'w':  /* word */
-            return luaL_error(L, "obsolete option `*w' to `read'");
           default:
             return luaL_argerror(L, n, "invalid format");
         }

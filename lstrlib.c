@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.112 2005/05/05 15:34:03 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.113 2005/05/16 19:21:11 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -200,14 +200,14 @@ static const char *classend (MatchState *ms, const char *p) {
   switch (*p++) {
     case L_ESC: {
       if (*p == '\0')
-        luaL_error(ms->L, "malformed pattern (ends with `%%')");
+        luaL_error(ms->L, "malformed pattern (ends with '%%')");
       return p+1;
     }
     case '[': {
       if (*p == '^') p++;
       do {  /* look for a `]' */
         if (*p == '\0')
-          luaL_error(ms->L, "malformed pattern (missing `]')");
+          luaL_error(ms->L, "malformed pattern (missing ']')");
         if (*(p++) == L_ESC && *p != '\0')
           p++;  /* skip escapes (e.g. `%]') */
       } while (*p != ']');
@@ -382,7 +382,7 @@ static const char *match (MatchState *ms, const char *s, const char *p) {
           const char *ep; char previous;
           p += 2;
           if (*p != '[')
-            luaL_error(ms->L, "missing `[' after `%%f' in pattern");
+            luaL_error(ms->L, "missing '[' after '%%f' in pattern");
           ep = classend(ms, p);  /* points to what is next */
           previous = (s == ms->src_init) ? '\0' : *(s-1);
           if (matchbracketclass(uchar(previous), p, ep-1) ||
@@ -705,8 +705,6 @@ static int str_format (lua_State *L) {
       char form[MAX_FORMAT];  /* to store the format (`%...') */
       char buff[MAX_ITEM];  /* to store the formatted item */
       int hasprecision = 0;
-      if (isdigit(uchar(*strfrmt)) && *(strfrmt+1) == '$')
-        return luaL_error(L, "obsolete option (d$) to `format'");
       arg++;
       strfrmt = scanformat(L, strfrmt, form, &hasprecision);
       switch (*strfrmt++) {
@@ -725,7 +723,7 @@ static int str_format (lua_State *L) {
         }
         case 'q': {
           addquoted(L, &b, arg);
-          continue;  /* skip the `addsize' at the end */
+          continue;  /* skip the 'addsize' at the end */
         }
         case 's': {
           size_t l;
@@ -743,7 +741,7 @@ static int str_format (lua_State *L) {
           }
         }
         default: {  /* also treat cases `pnLlh' */
-          return luaL_error(L, "invalid option to `format'");
+          return luaL_error(L, "invalid option to " LUA_SM, "format");
         }
       }
       luaL_addlstring(&b, buff, strlen(buff));

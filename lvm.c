@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.41 2005/05/03 19:30:17 roberto Exp roberto $
+** $Id: lvm.c,v 2.42 2005/05/04 20:42:28 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -688,11 +688,11 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         const TValue *pstep = ra+2;
         L->savedpc = pc;  /* next steps may throw errors */
         if (!tonumber(init, ra))
-          luaG_runerror(L, "`for' initial value must be a number");
+          luaG_runerror(L, "'for' initial value must be a number");
         else if (!tonumber(plimit, ra+1))
-          luaG_runerror(L, "`for' limit must be a number");
+          luaG_runerror(L, "'for' limit must be a number");
         else if (!tonumber(pstep, ra+2))
-          luaG_runerror(L, "`for' step must be a number");
+          luaG_runerror(L, "'for' step must be a number");
         setnvalue(ra, luai_numsub(nvalue(ra), nvalue(pstep)));
         dojump(L, pc, GETARG_sBx(i));
         continue;

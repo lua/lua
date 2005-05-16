@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.6 2005/03/09 16:28:07 roberto Exp roberto $
+** $Id: loslib.c,v 1.7 2005/03/18 18:02:04 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -113,7 +113,7 @@ static int getfield (lua_State *L, const char *key, int d) {
     res = (int)lua_tointeger(L, -1);
   else {
     if (d < 0)
-      return luaL_error(L, "field `%s' missing in date table", key);
+      return luaL_error(L, "field " LUA_SM " missing in date table", key);
     res = d;
   }
   lua_pop(L, 1);
@@ -151,7 +151,7 @@ static int io_date (lua_State *L) {
     if (strftime(b, sizeof(b), s, stm))
       lua_pushstring(L, b);
     else
-      return luaL_error(L, "`date' format too long");
+      return luaL_error(L, LUA_SM " format too long", "date");
   }
   return 1;
 }

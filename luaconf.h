@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.46 2005/04/29 13:53:59 roberto Exp $
+** $Id: luaconf.h,v 1.47 2005/05/03 19:30:17 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -140,6 +140,11 @@
 #define lua_assert(c)		((void)0)
 
 
+/*
+@@ LUA_SM describes how variable strings appear in error messages.
+** CHANGE it if you want a different appearance.
+*/
+#define LUA_SM		"'%s'"
 
 /*
 ** {==================================================================
@@ -151,7 +156,7 @@
 
 /*
 @@ lua_stdin_is_tty is a function to detect whether the standard input is
-@* a `tty' (that is, is interactive).
+@* a 'tty' (that is, is interactive).
 ** CHANGE it if you have a better definition for non-POSIX/non-Windows
 ** systems.
 */
@@ -238,7 +243,7 @@
 ** collection. (Higher values mean coarser collections. 0 represents
 ** infinity, where each step performs a full collection.)
 */
-#define LUAI_GCMUL	200 /* GC runs `twice the speed' of memory allocation */
+#define LUAI_GCMUL	200 /* GC runs 'twice the speed' of memory allocation */
 
 
 /*
@@ -250,22 +255,22 @@
 
 /*
 @@ LUA_COMPAT_PATH controls compatibility about LUA_PATH.
-** CHANGE it to 1 if you want `require' to look for global LUA_PATH
+** CHANGE it to 1 if you want 'require' to look for global LUA_PATH
 ** before checking package.path.
 */
 #define LUA_COMPAT_PATH		0
 
 /*
 @@ LUA_COMPAT_LOADLIB controls compatibility about global loadlib.
-** CHANGE it to 1 if you want a global `loadlib' function (otherwise
-** the function is only available as `package.loadlib').
+** CHANGE it to 1 if you want a global 'loadlib' function (otherwise
+** the function is only available as 'package.loadlib').
 */
 #define LUA_COMPAT_LOADLIB	1
 
 /*
 @@ LUA_COMPAT_VARARG controls compatibility with old vararg feature.
-** CHANGE it to 1 if you want vararg functions that do not use `...'
-** to get an `arg' table with their extra arguments.
+** CHANGE it to 1 if you want vararg functions that do not use '...'
+** to get an 'arg' table with their extra arguments.
 */
 #define LUA_COMPAT_VARARG	1
 
@@ -317,7 +322,7 @@
 @@ LUAI_MEM is an a signed integer big enough to count the total memory
 @* used by Lua.
 ** CHANGE here if for some weird reason the default definitions are not
-** good enough for your machine. (The `else' definition always works,
+** good enough for your machine. (The 'else' definition always works,
 ** but may waste space on machines with 64-bit longs.) Probably you do
 ** not need to change this.
 */
@@ -393,7 +398,7 @@
 
 /*
 @@ LUAI_MAXEXPWHILE is the maximum size of code for expressions
-@* controling a `while' loop.
+@* controling a 'while' loop.
 */
 #define LUAI_MAXEXPWHILE	100
 
@@ -466,7 +471,7 @@
 
 /*
 @@ LUA_NUMBER is the type of numbers in Lua.
-@@ LUAI_UACNUMBER is the result of an `usual argument conversion'
+@@ LUAI_UACNUMBER is the result of an 'usual argument conversion'
 @* over a number.
 */
 #define LUA_NUMBER	double

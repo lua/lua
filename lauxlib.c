@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.130 2005/03/16 16:58:41 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.131 2005/05/16 19:21:11 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -47,11 +47,12 @@ LUALIB_API int luaL_argerror (lua_State *L, int narg, const char *extramsg) {
   if (strcmp(ar.namewhat, "method") == 0) {
     narg--;  /* do not count `self' */
     if (narg == 0)  /* error is in the self argument itself? */
-      return luaL_error(L, "calling `%s' on bad self (%s)", ar.name, extramsg);
+      return luaL_error(L, "calling " LUA_SM " on bad self (%s)",
+                           ar.name, extramsg);
   }
   if (ar.name == NULL)
     ar.name = "?";
-  return luaL_error(L, "bad argument #%d to `%s' (%s)",
+  return luaL_error(L, "bad argument #%d to " LUA_SM " (%s)",
                         narg, ar.name, extramsg);
 }
 
@@ -244,7 +245,7 @@ LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
       luaL_setfield(L, LUA_GLOBALSINDEX, libname);
     }
     else if (!lua_istable(L, -1))
-      luaL_error(L, "name conflict for library `%s'", libname);
+      luaL_error(L, "name conflict for library " LUA_SM, libname);
     lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
     lua_pushvalue(L, -2);
     lua_setfield(L, -2, libname);  /* _LOADED[modname] = new table */
@@ -365,7 +366,8 @@ LUALIB_API const char *luaL_searchpath (lua_State *L, const char *name,
   for (;;) {
     const char *fname;
     if ((p = pushnexttemplate(L, p)) == NULL) {
-      lua_pushfstring(L, "no readable `%s' in path `%s'", name, path);
+      lua_pushfstring(L, "no readable " LUA_SM " in path " LUA_SM "",
+                         name, path);
       return NULL;
     }
     fname = luaL_gsub(L, lua_tostring(L, -1), LUA_PATH_MARK, name);
