@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.96 2005/05/16 18:45:15 roberto Exp roberto $
+** $Id: ldblib.c,v 1.97 2005/05/16 21:19:00 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -48,8 +48,8 @@ static int db_setfenv (lua_State *L) {
   luaL_checktype(L, 2, LUA_TTABLE);
   lua_settop(L, 2);
   if (lua_setfenv(L, 1) == 0)
-    luaL_error(L, LUA_SM " cannot change environment of given object",
-                  "setfenv");
+    luaL_error(L, LUA_QL("setfenv")
+                  " cannot change environment of given object");
   return 1;
 }
 
@@ -348,7 +348,7 @@ static int db_errorfb (lua_State *L) {
     if (ar.currentline > 0)
       lua_pushfstring(L, "%d:", ar.currentline);
     if (*ar.namewhat != '\0')  /* is there a name? */
-        lua_pushfstring(L, " in function " LUA_SM, ar.name);
+        lua_pushfstring(L, " in function " LUA_QS, ar.name);
     else {
       if (*ar.what == 'm')  /* main? */
         lua_pushfstring(L, " in main chunk");

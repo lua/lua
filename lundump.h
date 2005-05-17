@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.h,v 1.34 2003/08/25 19:51:54 roberto Exp roberto $
+** $Id: lundump.h,v 1.35 2005/04/25 19:24:10 roberto Exp roberto $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -18,7 +18,7 @@ LUAI_FUNC Proto* luaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff,
 LUAI_FUNC int luaU_endianness (void);
 
 /* dump one chunk; from ldump.c */
-LUAI_FUNC int luaU_dump (lua_State* L, const Proto* Main, lua_Chunkwriter w,
+LUAI_FUNC int luaU_dump (lua_State* L, const Proto* Main, lua_Writer w,
                                        void* data, int strip);
 
 /* print one chunk; from print.c */

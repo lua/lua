@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.47 2005/05/03 19:30:17 roberto Exp roberto $
+** $Id: luaconf.h,v 1.48 2005/05/16 21:19:00 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -13,13 +13,11 @@
 
 
 /*
-** {==================================================================
-** Index (search for keyword to find corresponding entry)
+** ==================================================================
+** Search for "@@" to find all configurable definitions.
 ** ===================================================================
 */
 
-
-/* }================================================================== */
 
 
 
@@ -67,17 +65,17 @@
 /*
 @@ LUA_PATHSEP is the character that separates templates in a path.
 ** CHANGE it if for some reason your system cannot use a
-** semicolon. (E.g., a semicolon may be a too common character in
+** semicolon. (E.g., if a semicolon is a common character in
 ** file/directory names.) Probably you do not need to change this.
 */
 #define LUA_PATHSEP	';'
 
 
 /*
-@@ LUA_PATH_MARK is ths string that marks the substitution points in a
+@@ LUA_PATH_MARK is the string that marks the substitution points in a
 @* template.
-** CHANGE it if for some reason your system cannot use an interogation
-** mark.  (E.g., an interogation mark may be a too common character in
+** CHANGE it if for some reason your system cannot use an interrogation
+** mark.  (E.g., if an interogation mark is a common character in
 ** file/directory names.) Probably you do not need to change this.
 */
 #define LUA_PATH_MARK	"?"
@@ -113,16 +111,16 @@
 
 #endif
 
-/* more often then not the libs go together with the core */
+/* more often than not the libs go together with the core */
 #define LUALIB_API	LUA_API
 
 
 /*
 @@ LUAI_FUNC is a mark for all extern functions that are not to be
 @* exported to outside modules.
-** CHANGE it if you need to mark them in some special way. Gcc mark
-** them as "hidden" to optimize their call when Lua is compiled as a
-** shared library.
+** CHANGE it if you need to mark them in some special way. Gcc (versions
+** 3.2 and later) mark them as "hidden" to optimize their call when Lua
+** is compiled as a shared library.
 */
 #if defined(luaall_c)
 #define LUAI_FUNC	static
@@ -141,10 +139,20 @@
 
 
 /*
-@@ LUA_SM describes how variable strings appear in error messages.
+@@ LUA_QL describes how error messages quote program elements.
 ** CHANGE it if you want a different appearance.
 */
-#define LUA_SM		"'%s'"
+#define LUA_QL(x)	"'" x "'"
+#define LUA_QS		LUA_QL("%s")
+
+
+/*
+@@ LUA_IDSIZE gives the maximum size for the description of the source
+@* of a function in debug information.
+** CHANGE it if you a different size.
+*/
+#define LUA_IDSIZE	60
+
 
 /*
 ** {==================================================================
@@ -155,8 +163,8 @@
 #if defined(lua_c) || defined(luaall_c)
 
 /*
-@@ lua_stdin_is_tty is a function to detect whether the standard input is
-@* a 'tty' (that is, is interactive).
+@@ lua_stdin_is_tty detects whether the standard input is a 'tty' (that
+@* is, whether we're running lua interactively).
 ** CHANGE it if you have a better definition for non-POSIX/non-Windows
 ** systems.
 */
@@ -191,7 +199,8 @@
 
 
 /*
-@@ LUA_MAXINPUT is the maximum length for an input line
+@@ LUA_MAXINPUT is the maximum length for an input line in the
+@* stand-alone interpreter.
 ** CHANGE it if you need longer lines.
 */
 #define LUA_MAXINPUT	512
@@ -200,10 +209,10 @@
 /*
 @@ lua_readline defines how to show a prompt and then read a line from
 @* the standard input.
-@@ lua_saveline defines how to "save" a read line.
+@@ lua_saveline defines how to "save" a read line in a "history".
 @@ lua_freeline defines how to free a line read by lua_readline.
-** CHANGE them if you want to improve this functionality (e.g., using GNU
-** readline and history facilities).
+** CHANGE them if you want to improve this functionality (e.g., by using
+** GNU readline and history facilities).
 */
 #if !defined(__STRICT_ANSI__) && defined(LUA_USE_READLINE)
 #include <stdio.h>
@@ -317,14 +326,14 @@
 /*
 @@ LUAI_UINT32 is an unsigned integer with at least 32 bits.
 @@ LUAI_INT32 is an signed integer with at least 32 bits.
-@@ LUAI_UMEM is an an unsigned integer big enough to count the total
+@@ LUAI_UMEM is an unsigned integer big enough to count the total
 @* memory used by Lua.
-@@ LUAI_MEM is an a signed integer big enough to count the total memory
+@@ LUAI_MEM is a signed integer big enough to count the total memory
 @* used by Lua.
 ** CHANGE here if for some weird reason the default definitions are not
-** good enough for your machine. (The 'else' definition always works,
-** but may waste space on machines with 64-bit longs.) Probably you do
-** not need to change this.
+** good enough for your machine. (The definitions in the 'else'
+** part always works, but may waste space on machines with 64-bit
+** longs.) Probably you do not need to change this.
 */
 #if LUAI_BITSINT >= 32
 #define LUAI_UINT32	unsigned int
@@ -352,7 +361,8 @@
 
 
 /*
-@@ LUAI_MAXCSTACK limits the number of slots that a C function can use.
+@@ LUAI_MAXCSTACK limits the number of Lua stack slots that a C function
+@* can use.
 ** CHANGE it if you need lots of (Lua) stack space for your C
 ** functions. This limit is arbitrary; its only purpose is to stop C
 ** functions to consume unlimited stack space.
@@ -379,7 +389,7 @@
 @@ LUAI_MAXCCALLS is the maximum depth for nested C calls (short) and
 @* syntactical nested non-terminals in a program.
 */
-#define LUAI_MAXCCALLS	200
+#define LUAI_MAXCCALLS		200
 
 
 /*
@@ -420,7 +430,7 @@
 ** in C is extremely slow, so any alternative is worth trying.
 */
 
-/* On a GNU/Pentium, resort to assembler */
+/* On a gcc/Pentium, resort to assembler */
 #if !defined(__STRICT_ANSI__) && defined(__GNUC__) && defined(__i386)
 #define lua_number2int(i,d)	__asm__ ("fistpl %0":"=m"(i):"t"(d):"st")
 
@@ -433,10 +443,10 @@
 
 /* on Pentium machines compliant with C99, you can try lrint */
 #elif defined (__i386) && defined(__STDC_VERSION__) && \
-                                 (__STDC_VERSION__ >= 199900L)
+				 (__STDC_VERSION__ >= 199900L)
 #define lua_number2int(i,d)	((i)=lrint(d))
 
-/* this option always work, but may be slow */
+/* this option always works, but may be slow */
 #else
 #define lua_number2int(i,d)	((i)=(int)(d))
 
@@ -447,14 +457,14 @@
 @@ lua_number2integer is a macro to convert lua_Number to lua_Integer.
 ** CHANGE (see lua_number2int).
 */
-/* On a GNU or Windows/Pentium, resort to assembler */
+/* On a gcc or Windows/Pentium, resort to assembler */
 #if (defined(__GNUC__) && defined(__i386)) || \
     (defined(_MSC_VER) && defined(_M_IX86))
 #define lua_number2integer(i,n)		lua_number2int(i, n)
 
-/* this option always work, but may be slow */
+/* this option always works, but may be slow */
 #else
-#define lua_number2integer(i,d)     ((i)=(lua_Integer)(d))
+#define lua_number2integer(i,d)		((i)=(lua_Integer)(d))
 
 #endif
 
@@ -462,6 +472,7 @@
 
 /*
 ** {==================================================================
+@@ LUA_NUMBER is the type of numbers in Lua.
 ** CHANGE the following definitions only if you want to build Lua
 ** with a number type different from double. You may also need to
 ** change lua_number2int & lua_number2integer.
@@ -470,7 +481,6 @@
 
 
 /*
-@@ LUA_NUMBER is the type of numbers in Lua.
 @@ LUAI_UACNUMBER is the result of an 'usual argument conversion'
 @* over a number.
 */
@@ -512,9 +522,9 @@
 /*
 @@ LUAI_USER_ALIGNMENT_T is a type that requires maximum alignment.
 ** CHANGE it if your system requires alignments larger than double. (For
-** instance, if your system supports long double and those long doubles
-** must be aligned in 16-byte boundaries, then you should add long
-** double in the union.) Probably you do not need to change this.
+** instance, if your system supports long doubles and they must be
+** aligned in 16-byte boundaries, then you should add long double in the
+** union.) Probably you do not need to change this.
 */
 #define LUAI_USER_ALIGNMENT_T	union { double u; void *s; long l; }
 
@@ -535,7 +545,7 @@
 #define luai_jmpbuf	int  /* dummy variable */
 
 #elif !defined(__STRICT_ANSI__) && (defined(unix) || defined(__unix) || \
-                                    defined(__unix__))
+				    defined(__unix__))
 /* in Unix, try _longjmp/_setjmp (more efficient) */
 #define LUAI_THROW(L,c)	_longjmp((c)->b, 1)
 #define LUAI_TRY(L,c,a)	if (_setjmp((c)->b) == 0) { a }
@@ -589,7 +599,7 @@
 ** dynamic-library system for your platform (either Windows' DLL, Mac's
 ** dyld, or Unix's dlopen). If your system is some kind of Unix, there
 ** is a good chance that it has dlopen, so LUA_DL_DLOPEN will work for
-** it.  To use dlopen you also need to adapt the makefile (probably
+** it.  To use dlopen you also need to adapt the src/Makefile (probably
 ** adding -ldl to the linker options), so Lua does not select it
 ** automatically.  (When you change the makefile to add -ldl, you must
 ** also add -DLUA_USE_DLOPEN.)
@@ -611,7 +621,7 @@
 @@ lua_lock/lua_unlock are macros for thread synchronization inside the
 @* Lua core. This is an attempt to simplify the implementation of a
 @* multithreaded version of Lua.
-** CHANGE them only if you know what you are doing. all accesses to
+** CHANGE them only if you know what you are doing. All accesses to
 ** the global state and to global objects are synchronized.  Because
 ** threads can read the stack of other threads (when running garbage
 ** collection), a thread must also synchronize any write-access to its
@@ -650,7 +660,10 @@
 
 /* =================================================================== */
 
-/* Local configuration */
+/*
+** Local configuration. You can use this space to add your redefinitions
+** without modifying the main part of the file.
+*/
 
 
 

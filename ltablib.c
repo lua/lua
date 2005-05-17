@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.29 2005/03/28 17:17:53 roberto Exp roberto $
+** $Id: ltablib.c,v 1.30 2005/05/16 21:19:00 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -65,7 +65,7 @@ static int setn (lua_State *L) {
 #ifndef luaL_setn
   luaL_setn(L, 1, luaL_checkint(L, 2));
 #else
-  luaL_error(L, LUA_SM " is obsolete", "setn");
+  luaL_error(L, LUA_QL("setn") " is obsolete");
 #endif
   lua_pushvalue(L, 1);
   return 1;

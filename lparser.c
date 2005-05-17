@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.25 2005/05/05 20:47:02 roberto Exp roberto $
+** $Id: lparser.c,v 2.26 2005/05/16 21:19:00 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -82,7 +82,7 @@ static void anchor_token (LexState *ls) {
 
 static void error_expected (LexState *ls, int token) {
   luaX_syntaxerror(ls,
-      luaO_pushfstring(ls->L, LUA_SM " expected", luaX_token2str(ls, token)));
+      luaO_pushfstring(ls->L, LUA_QS " expected", luaX_token2str(ls, token)));
 }
 
 
@@ -125,7 +125,7 @@ static void check_match (LexState *ls, int what, int who, int where) {
       error_expected(ls, what);
     else {
       luaX_syntaxerror(ls, luaO_pushfstring(ls->L,
-             LUA_SM " expected (to close " LUA_SM " at line %d)",
+             LUA_QS " expected (to close " LUA_QS " at line %d)",
               luaX_token2str(ls, what), luaX_token2str(ls, who), where));
     }
   }
@@ -577,7 +577,7 @@ static void parlist (LexState *ls) {
           f->is_vararg = 1;
           break;
         }
-        default: luaX_syntaxerror(ls, "<name> or '...' expected");
+        default: luaX_syntaxerror(ls, "<name> or " LUA_QL("...") " expected");
       }
     } while (!f->is_vararg && testnext(ls, ','));
   }
@@ -765,7 +765,7 @@ static void simpleexp (LexState *ls, expdesc *v) {
     case TK_DOTS: {  /* vararg */
       FuncState *fs = ls->fs;
       check_condition(ls, fs->f->is_vararg,
-                      "cannot use '...' outside a vararg function");
+                      "cannot use " LUA_QL("...") " outside a vararg function");
       fs->f->is_vararg = NEWSTYLEVARARG;
       init_exp(v, VVARARG, luaK_codeABC(fs, OP_VARARG, 0, 1, 0));
       break;
@@ -1017,7 +1017,7 @@ static void whilestat (LexState *ls, int line) {
   fs->jpc = NO_JUMP;
   sizeexp = fs->pc - expinit;  /* size of expression code */
   if (sizeexp > LUAI_MAXEXPWHILE) 
-    luaX_syntaxerror(ls, "'while' condition too complex");
+    luaX_syntaxerror(ls, LUA_QL("while") " condition too complex");
   for (i = 0; i < sizeexp; i++)  /* save `exp' code */
     codeexp[i] = fs->f->code[expinit + i];
   fs->pc = expinit;  /* remove `exp' code */
@@ -1141,7 +1141,7 @@ static void forstat (LexState *ls, int line) {
   switch (ls->t.token) {
     case '=': fornum(ls, varname, line); break;
     case ',': case TK_IN: forlist(ls, varname); break;
-    default: luaX_syntaxerror(ls, "'=' or 'in' expected");
+    default: luaX_syntaxerror(ls, LUA_QL("=") " or " LUA_QL("in") " expected");
   }
   check_match(ls, TK_END, TK_FOR, line);
   leaveblock(fs);  /* loop scope (`break' jumps to this point) */

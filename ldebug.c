@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.18 2005/05/16 18:45:15 roberto Exp roberto $
+** $Id: ldebug.c,v 2.19 2005/05/16 21:19:00 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -548,7 +548,7 @@ void luaG_typeerror (lua_State *L, const TValue *o, const char *op) {
   const char *kind = (isinstack(L->ci, o)) ?
                          getobjname(L, L->ci, o - L->base, &name) : NULL;
   if (kind)
-    luaG_runerror(L, "attempt to %s %s " LUA_SM " (a %s value)",
+    luaG_runerror(L, "attempt to %s %s " LUA_QS " (a %s value)",
                 op, kind, name, t);
   else
     luaG_runerror(L, "attempt to %s a %s value", op, t);

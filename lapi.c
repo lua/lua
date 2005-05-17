@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.39 2005/05/05 15:34:03 roberto Exp roberto $
+** $Id: lapi.c,v 2.40 2005/05/16 19:21:11 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -846,7 +846,7 @@ LUA_API int lua_cpcall (lua_State *L, lua_CFunction func, void *ud) {
 }
 
 
-LUA_API int lua_load (lua_State *L, lua_Chunkreader reader, void *data,
+LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
                       const char *chunkname) {
   ZIO z;
   int status;
@@ -859,7 +859,7 @@ LUA_API int lua_load (lua_State *L, lua_Chunkreader reader, void *data,
 }
 
 
-LUA_API int lua_dump (lua_State *L, lua_Chunkwriter writer, void *data) {
+LUA_API int lua_dump (lua_State *L, lua_Writer writer, void *data) {
   int status;
   TValue *o;
   lua_lock(L);

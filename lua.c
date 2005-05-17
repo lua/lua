@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.142 2005/04/13 17:24:20 roberto Exp roberto $
+** $Id: lua.c,v 1.143 2005/05/16 21:19:00 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -44,9 +44,9 @@ static void print_usage (void) {
   "usage: %s [options] [script [args]].\n"
   "Available options are:\n"
   "  -        execute stdin as a file\n"
-  "  -e stat  execute string 'stat'\n"
-  "  -i       enter interactive mode after executing 'script'\n"
-  "  -l name  require library 'name'\n"
+  "  -e stat  execute string " LUA_QL("stat") "\n"
+  "  -i       enter interactive mode after executing " LUA_QL("script") "\n"
+  "  -l name  require library " LUA_QL("name") "\n"
   "  -v       show version information\n"
   "  -w       trap access to undefined globals\n"
   "  --       stop handling options\n" ,
@@ -209,8 +209,9 @@ static void dotty (lua_State *L) {
       lua_getglobal(L, "print");
       lua_insert(L, 1);
       if (lua_pcall(L, lua_gettop(L)-1, 0, 0) != 0)
-        l_message(progname, lua_pushfstring(L, "error calling 'print' (%s)",
-                                               lua_tostring(L, -1)));
+        l_message(progname, lua_pushfstring(L,
+                               "error calling " LUA_QL("print") " (%s)",
+                               lua_tostring(L, -1)));
     }
   }
   lua_settop(L, 0);  /* clear stack */
@@ -222,7 +223,7 @@ static void dotty (lua_State *L) {
 static int checkvar (lua_State *L) {
   const char *name = lua_tostring(L, 2);
   if (name)
-    luaL_error(L, "attempt to access undefined variable " LUA_SM, name);
+    luaL_error(L, "attempt to access undefined variable " LUA_QS, name);
   return 0;
 }
 

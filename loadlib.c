@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.26 2005/04/13 17:24:20 roberto Exp roberto $
+** $Id: loadlib.c,v 1.27 2005/05/16 21:19:00 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -191,7 +191,7 @@ static void *ll_load (lua_State *L, const char *path) {
 static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
   NSSymbol nss = NSLookupSymbolInModule((NSModule)lib, sym);
   if (nss == NULL) {
-    lua_pushfstring(L, "symbol " LUA_SM " not found", sym);
+    lua_pushfstring(L, "symbol " LUA_QS " not found", sym);
     return NULL;
   }
   return (lua_CFunction)NSAddressOfSymbol(nss);
@@ -213,9 +213,9 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 
 
 #if defined(__ELF__) || defined(__sun) || defined(sgi) || defined(__hpux)
-#define DLMSG "'loadlib' not enabled; check your Lua installation"
+#define DLMSG LUA_QL("loadlib") " not enabled; check your Lua installation"
 #else
-#define DLMSG		"'loadlib' not supported"
+#define DLMSG		LUA_QL("loadlib") " not supported"
 #endif
 
 static void ll_unloadlib (void *lib) {
@@ -327,11 +327,11 @@ static int loader_Lua (lua_State *L) {
     path = lua_tostring(L, -1);
   }
   if (path == NULL)
-    luaL_error(L, LUA_SM " must be a string", "package.path");
+    luaL_error(L, LUA_QL("package.path") " must be a string");
   fname = luaL_searchpath(L, fname, path);
   if (fname == NULL) return 0;  /* library not found in this path */
   if (luaL_loadfile(L, fname) != 0)
-    luaL_error(L, "error loading package " LUA_SM " (%s)",
+    luaL_error(L, "error loading package " LUA_QS " (%s)",
                   name, lua_tostring(L, -1));
   return 1;  /* library loaded successfully */
 }
@@ -345,13 +345,13 @@ static int loader_C (lua_State *L) {
   lua_getfield(L, LUA_ENVIRONINDEX, "cpath");
   path = lua_tostring(L, -1);
   if (path == NULL)
-    luaL_error(L, LUA_SM " must be a string", "package.cpath");
+    luaL_error(L, LUA_QL("package.cpath") " must be a string");
   fname = luaL_searchpath(L, fname, path);
   if (fname == NULL) return 0;  /* library not found in this path */
   funcname = luaL_gsub(L, name, ".", LUA_OFSEP);
   funcname = lua_pushfstring(L, "%s%s", POF, funcname);
   if (ll_loadfunc(L, fname, funcname) != 1)
-    luaL_error(L, "error loading package " LUA_SM " (%s)",
+    luaL_error(L, "error loading package " LUA_QS " (%s)",
                   name, lua_tostring(L, -2));
   return 1;  /* library loaded successfully */
 }
@@ -360,7 +360,7 @@ static int loader_C (lua_State *L) {
 static int loader_preload (lua_State *L) {
   lua_getfield(L, LUA_ENVIRONINDEX, "preload");
   if (!lua_istable(L, -1))
-    luaL_error(L, LUA_SM " must be a table", "package.preload");
+    luaL_error(L, LUA_QL("package.preload") " must be a table");
   lua_getfield(L, -1, luaL_checkstring(L, 1));
   return 1;
 }
@@ -380,11 +380,11 @@ static int ll_require (lua_State *L) {
   /* iterate over available loaders */
   lua_getfield(L, LUA_ENVIRONINDEX, "loaders");
   if (!lua_istable(L, -1))
-    luaL_error(L, LUA_SM " must be a table", "package.loaders");
+    luaL_error(L, LUA_QL("package.loaders") " must be a table");
   for (i=1;; i++) {
     lua_rawgeti(L, -1, i);  /* get a loader */
     if (lua_isnil(L, -1))
-      return luaL_error(L, "package " LUA_SM " not found", name);
+      return luaL_error(L, "package " LUA_QS " not found", name);
     lua_pushstring(L, name);
     lua_call(L, 1, 1);  /* call it */
     if (lua_isnil(L, -1)) lua_pop(L, 1);
@@ -423,7 +423,7 @@ static int ll_module (lua_State *L) {
     luaL_setfield(L, LUA_GLOBALSINDEX, modname);
   }
   else if (!lua_istable(L, -1))
-    return luaL_error(L, "name conflict for module " LUA_SM, modname);
+    return luaL_error(L, "name conflict for module " LUA_QS, modname);
   /* check whether table already has a _NAME field */
   lua_getfield(L, -1, "_NAME");
   if (!lua_isnil(L, -1))  /* is table an initialized module? */

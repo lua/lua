@@ -1,5 +1,5 @@
 /*
-** $Id: ldump.c,v 2.4 2004/10/04 19:01:12 roberto Exp roberto $
+** $Id: ldump.c,v 2.5 2005/05/05 20:47:02 roberto Exp roberto $
 ** save pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -21,7 +21,7 @@
 
 typedef struct {
  lua_State* L;
- lua_Chunkwriter writer;
+ lua_Writer writer;
  void* data;
  int strip;
  int status;
@@ -164,7 +164,8 @@ static void DumpHeader(DumpState* D)
 /*
 ** dump Lua function as precompiled chunk
 */
-int luaU_dump (lua_State* L, const Proto* f, lua_Chunkwriter w, void* data, int strip)
+int luaU_dump (lua_State* L, const Proto* f, lua_Writer w, void* data,
+                             int strip)
 {
  DumpState D;
  D.L=L;

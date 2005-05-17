@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.174 2005/05/16 19:21:11 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.175 2005/05/16 21:19:00 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -39,8 +39,8 @@ static int luaB_print (lua_State *L) {
     lua_call(L, 1, 1);
     s = lua_tostring(L, -1);  /* get result */
     if (s == NULL)
-      return luaL_error(L, LUA_SM " must return a string to " LUA_SM,
-                           "tostring", "print");
+      return luaL_error(L, LUA_QL("tostring") " must return a string to "
+                           LUA_QL("print"));
     if (i>1) fputs("\t", stdout);
     fputs(s, stdout);
     lua_pop(L, 1);  /* pop result */
@@ -149,8 +149,8 @@ static int luaB_setfenv (lua_State *L) {
     return 0;
   }
   else if (lua_iscfunction(L, -2) || lua_setfenv(L, -2) == 0)
-    luaL_error(L, LUA_SM " cannot change environment of given object",
-                  "setfenv");
+    luaL_error(L,
+          LUA_QL("setfenv") " cannot change environment of given object");
   return 1;
 }
 
