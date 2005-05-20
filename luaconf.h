@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.49 2005/05/17 19:49:15 roberto Exp roberto $
+** $Id: luaconf.h,v 1.50 2005/05/20 15:53:42 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -257,31 +257,31 @@
 
 /*
 @@ LUA_COMPAT_GETN controls compatibility with old getn behavior.
-** CHANGE it to 1 if you want exact compatibility with the behavior of
-** setn/getn in Lua 5.0.
+** CHANGE it (define it) if you want exact compatibility with the
+** behavior of setn/getn in Lua 5.0.
 */
-#define LUA_COMPAT_GETN		0
+#undef LUA_COMPAT_GETN
 
 /*
 @@ LUA_COMPAT_PATH controls compatibility about LUA_PATH.
-** CHANGE it to 1 if you want 'require' to look for global LUA_PATH
-** before checking package.path.
+** CHANGE it (define it) if you want 'require' to look for global
+** LUA_PATH before checking package.path.
 */
-#define LUA_COMPAT_PATH		0
+#undef LUA_COMPAT_PATH
 
 /*
 @@ LUA_COMPAT_LOADLIB controls compatibility about global loadlib.
-** CHANGE it to 1 if you want a global 'loadlib' function (otherwise
-** the function is only available as 'package.loadlib').
+** CHANGE it to undefined as soon as you do not need a global 'loadlib'
+** function (the function is still available as 'package.loadlib').
 */
-#define LUA_COMPAT_LOADLIB	1
+#define LUA_COMPAT_LOADLIB
 
 /*
 @@ LUA_COMPAT_VARARG controls compatibility with old vararg feature.
-** CHANGE it to 1 if you want vararg functions that do not use '...'
-** to get an 'arg' table with their extra arguments.
+** CHANGE it to undefined as soon as your programs use '...' to access
+** vararg parameters (instead of the old 'arg' table).
 */
-#define LUA_COMPAT_VARARG	1
+#define LUA_COMPAT_VARARG
 
 /*
 @@ LUA_COMPAT_LSTR controls compatibility with old long string nesting

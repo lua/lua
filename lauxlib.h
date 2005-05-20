@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.74 2005/01/10 17:31:50 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.75 2005/03/29 16:20:48 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -15,7 +15,7 @@
 #include "lua.h"
 
 
-#if !LUA_COMPAT_GETN
+#if !defined(LUA_COMPAT_GETN)
 #define luaL_getn(L,i)          lua_objsize(L, i)
 #define luaL_setn(L,i,j)        ((void)0)  /* no op! */
 #endif

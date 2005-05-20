@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.27 2005/05/16 21:19:00 roberto Exp roberto $
+** $Id: loadlib.c,v 1.28 2005/05/17 19:49:15 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -315,7 +315,7 @@ static int loader_Lua (lua_State *L) {
   const char *name = luaL_checkstring(L, 1);
   const char *fname = luaL_gsub(L, name, ".", LUA_DIRSEP);
   const char *path = NULL;
-#if LUA_COMPAT_PATH
+#if defined(LUA_COMPAT_PATH)
   /* try first `LUA_PATH' for compatibility */
   lua_pushstring(L, "LUA_PATH");
   lua_rawget(L, LUA_GLOBALSINDEX);
@@ -508,7 +508,7 @@ LUALIB_API int luaopen_loadlib (lua_State *L) {
   lua_setfield(L, -2, "preload");
   /* create `loadlib' function */
   lua_pushcfunction(L, ll_loadlib);
-#if LUA_COMPAT_LOADLIB
+#if defined(LUA_COMPAT_LOADLIB)
   lua_pushvalue(L, -1);
   lua_setfield(L, LUA_GLOBALSINDEX, "loadlib");
 #endif
