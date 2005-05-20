@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.42 2005/03/16 16:59:21 roberto Exp roberto $
+** $Id: lcode.h,v 1.43 2005/04/25 19:24:10 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -34,7 +34,7 @@ typedef enum BinOpr {
 
 #define binopistest(op)	((op) >= OPR_NE)
 
-typedef enum UnOpr { OPR_MINUS, OPR_NOT, OPR_SIZE, OPR_NOUNOPR } UnOpr;
+typedef enum UnOpr { OPR_MINUS, OPR_NOT, OPR_LEN, OPR_NOUNOPR } UnOpr;
 
 
 #define getcode(fs,e)	((fs)->f->code[(e)->info])

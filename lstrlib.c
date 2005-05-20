@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.114 2005/05/16 21:19:00 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.115 2005/05/17 19:49:15 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -780,7 +780,7 @@ static void createmetatable (lua_State *L) {
   lua_pushvalue(L, -2);  /* string library... */
   lua_setfield(L, -2, "__index");  /* ...is the __index metamethod */
   lua_getfield(L, -2, "len");
-  lua_setfield(L, -2, "__siz");
+  lua_setfield(L, -2, "__len");
   lua_pop(L, 1);  /* pop metatable */
 }
 

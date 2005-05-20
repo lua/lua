@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.175 2005/05/16 21:19:00 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.176 2005/05/17 19:49:15 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -331,13 +331,6 @@ static int luaB_assert (lua_State *L) {
 }
 
 
-static int luaB_getn (lua_State *L) {
-  luaL_checktype(L, 1, LUA_TTABLE);
-  lua_pushinteger(L, lua_objsize(L, 1));
-  return 1;
-}
-
-
 static int luaB_unpack (lua_State *L) {
   int i = luaL_optint(L, 2, 1);
   int e = luaL_optint(L, 3, -1);
@@ -454,7 +447,6 @@ static const luaL_reg base_funcs[] = {
   {"tostring", luaB_tostring},
   {"type", luaB_type},
   {"assert", luaB_assert},
-  {"getn", luaB_getn},
   {"unpack", luaB_unpack},
   {"select", luaB_select},
   {"rawequal", luaB_rawequal},

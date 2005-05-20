@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.22 2005/05/16 21:19:00 roberto Exp roberto $
+** $Id: ltable.c,v 2.23 2005/05/17 19:49:15 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -120,7 +120,7 @@ static int arrayindex (const TValue *key) {
     lua_Number n = nvalue(key);
     int k;
     lua_number2int(k, n);
-    if (luai_numeq(cast(lua_Number, k), nvalue(key)))
+    if (luai_numeq(L, cast(lua_Number, k), nvalue(key)))
       return k;
   }
   return -1;  /* `key' did not match some condition */
@@ -437,7 +437,7 @@ const TValue *luaH_getnum (Table *t, int key) {
     lua_Number nk = cast(lua_Number, key);
     Node *n = hashnum(t, nk);
     do {  /* check whether `key' is somewhere in the chain */
-      if (ttisnumber(gkey(n)) && luai_numeq(nvalue(gkey(n)), nk))
+      if (ttisnumber(gkey(n)) && luai_numeq(L, nvalue(gkey(n)), nk))
         return gval(n);  /* that's it */
       else n = gnext(n);
     } while (n);
@@ -471,7 +471,7 @@ const TValue *luaH_get (Table *t, const TValue *key) {
       int k;
       lua_Number n = nvalue(key);
       lua_number2int(k, n);
-      if (luai_numeq(cast(lua_Number, k), nvalue(key)))  /* index is integer? */
+      if (luai_numeq(L, cast(lua_Number, k), nvalue(key))) /* index is int? */
         return luaH_getnum(t, k);  /* use specialized version */
       /* else go through */
     }
@@ -495,7 +495,7 @@ TValue *luaH_set (lua_State *L, Table *t, const TValue *key) {
     return cast(TValue *, p);
   else {
     if (ttisnil(key)) luaG_runerror(L, "table index is nil");
-    else if (ttisnumber(key) && !luai_numeq(nvalue(key), nvalue(key)))
+    else if (ttisnumber(key) && !luai_numeq(L, nvalue(key), nvalue(key)))
       luaG_runerror(L, "table index is NaN");
     return newkey(L, t, key);
   }

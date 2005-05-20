@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.48 2005/05/16 21:19:00 roberto Exp roberto $
+** $Id: luaconf.h,v 1.49 2005/05/17 19:49:15 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -437,8 +437,8 @@
 /* On  Windows/Pentium, resort to assembler */
 #elif !defined(__STRICT_ANSI__) && defined(_MSC_VER) && defined(_M_IX86)
 #define lua_number2int(i,d)	\
-	__asm fld d; \
-	__asm fistp i;
+	__asm fld d \
+	__asm fistp i
 
 
 /* on Pentium machines compliant with C99, you can try lrint */
@@ -505,16 +505,16 @@
 /*
 @@ The luai_num* macros define the primitive operations over numbers.
 */
-#define luai_numadd(a,b)	((a)+(b))
-#define luai_numsub(a,b)	((a)-(b))
-#define luai_nummul(a,b)	((a)*(b))
-#define luai_numdiv(a,b)	((a)/(b))
-#define luai_nummod(a,b)	((a) - floor((a)/(b))*(b))
-#define luai_numpow(a,b)	pow(a,b)
-#define luai_numunm(a)		(-(a))
-#define luai_numeq(a,b)		((a)==(b))
-#define luai_numlt(a,b)		((a)<(b))
-#define luai_numle(a,b)		((a)<=(b))
+#define luai_numadd(L,a,b)	((a)+(b))
+#define luai_numsub(L,a,b)	((a)-(b))
+#define luai_nummul(L,a,b)	((a)*(b))
+#define luai_numdiv(L,a,b)	((a)/(b))
+#define luai_nummod(L,a,b)	((a) - floor((a)/(b))*(b))
+#define luai_numpow(L,a,b)	pow(a,b)
+#define luai_numunm(L,a)	(-(a))
+#define luai_numeq(L,a,b)	((a)==(b))
+#define luai_numlt(L,a,b)	((a)<(b))
+#define luai_numle(L,a,b)	((a)<=(b))
 
 /* }================================================================== */
 
