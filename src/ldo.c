@@ -1,10 +1,11 @@
 /*
-** $Id: ldo.c,v 2.14 2005/02/18 12:40:02 roberto Exp $
+** $Id: ldo.c,v 2.23 2005/05/03 19:01:17 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
 
 
+#include <setjmp.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -42,7 +43,7 @@
 /* chain list of long jump buffers */
 struct lua_longjmp {
   struct lua_longjmp *previous;
-  l_jmpbuf b;
+  luai_jmpbuf b;
   volatile int status;  /* error code */
 };
 
@@ -70,9 +71,10 @@ static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
 void luaD_throw (lua_State *L, int errcode) {
   if (L->errorJmp) {
     L->errorJmp->status = errcode;
-    L_THROW(L, L->errorJmp);
+    LUAI_THROW(L, L->errorJmp);
   }
   else {
+    L->status = errcode;
     if (G(L)->panic) G(L)->panic(L);
     exit(EXIT_FAILURE);
   }
@@ -84,7 +86,7 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
   lj.status = 0;
   lj.previous = L->errorJmp;  /* chain new error handler */
   L->errorJmp = &lj;
-  L_TRY(L, &lj,
+  LUAI_TRY(L, &lj,
     (*f)(L, ud);
   );
   L->errorJmp = lj.previous;  /* restore old error handler */
@@ -94,10 +96,10 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
 
 static void restore_stack_limit (lua_State *L) {
   lua_assert(L->stack_last - L->stack == L->stacksize - EXTRA_STACK - 1);
-  if (L->size_ci > LUA_MAXCALLS) {  /* there was an overflow? */
+  if (L->size_ci > LUAI_MAXCALLS) {  /* there was an overflow? */
     int inuse = (L->ci - L->base_ci);
-    if (inuse + 1 < LUA_MAXCALLS)  /* can `undo' overflow? */
-      luaD_reallocCI(L, LUA_MAXCALLS);
+    if (inuse + 1 < LUAI_MAXCALLS)  /* can `undo' overflow? */
+      luaD_reallocCI(L, LUAI_MAXCALLS);
   }
 }
 
@@ -114,6 +116,7 @@ static void correctstack (lua_State *L, TValue *oldstack) {
     ci->top = (ci->top - oldstack) + L->stack;
     ci->base = (ci->base - oldstack) + L->stack;
     ci->func = (ci->func - oldstack) + L->stack;
+    lua_assert(lua_checkpc(L, ci));
   }
   L->base = L->ci->base;
 }
@@ -133,7 +136,7 @@ void luaD_reallocstack (lua_State *L, int newsize) {
 void luaD_reallocCI (lua_State *L, int newsize) {
   CallInfo *oldci = L->base_ci;
   luaM_reallocvector(L, L->base_ci, L->size_ci, newsize, CallInfo);
-  L->size_ci = cast(unsigned short, newsize);
+  L->size_ci = newsize;
   L->ci = (L->ci - oldci) + L->base_ci;
   L->end_ci = L->base_ci + L->size_ci - 1;
 }
@@ -148,11 +151,11 @@ void luaD_growstack (lua_State *L, int n) {
 
 
 static CallInfo *growCI (lua_State *L) {
-  if (L->size_ci > LUA_MAXCALLS)  /* overflow while handling overflow? */
+  if (L->size_ci > LUAI_MAXCALLS)  /* overflow while handling overflow? */
     luaD_throw(L, LUA_ERRERR);
   else {
     luaD_reallocCI(L, 2*L->size_ci);
-    if (L->size_ci > LUA_MAXCALLS)
+    if (L->size_ci > LUAI_MAXCALLS)
       luaG_runerror(L, "stack overflow");
   }
   return ++L->ci;
@@ -195,16 +198,18 @@ static StkId adjust_varargs (lua_State *L, int nfixargs, int actual,
     for (; actual < nfixargs; ++actual)
       setnilvalue(L->top++);
   }
+#if LUA_COMPAT_VARARG
   if (style != NEWSTYLEVARARG) {  /* compatibility with old-style vararg */
     int nvar = actual - nfixargs;  /* number of extra arguments */
     luaC_checkGC(L);
     htab = luaH_new(L, nvar, 1);  /* create `arg' table */
     for (i=0; i<nvar; i++)  /* put extra arguments into `arg' table */
-      setobj2n(L, luaH_setnum(L, htab, i+LUA_FIRSTINDEX), L->top - nvar + i);
+      setobj2n(L, luaH_setnum(L, htab, i+1), L->top - nvar + i);
     /* store counter in field `n' */
     setnvalue(luaH_setstr(L, htab, luaS_newliteral(L, "n")),
                                    cast(lua_Number, nvar));
   }
+#endif
   /* move fixed parameters to final position */
   fixed = L->top - actual;  /* first fixed argument */
   base = L->top;  /* final position of first argument */
@@ -249,6 +254,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     func = tryfuncTM(L, func);  /* check the `function' tag method */
   funcr = savestack(L, func);
   cl = &clvalue(func)->l;
+  L->ci->savedpc = L->savedpc;
   if (!cl->isC) {  /* Lua function? prepare its call */
     CallInfo *ci;
     StkId st, base;
@@ -269,7 +275,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     L->base = ci->base = base;
     ci->top = L->base + p->maxstacksize;
     lua_assert(ci->top <= L->stack_last);
-    ci->savedpc = p->code;  /* starting point */
+    L->savedpc = p->code;  /* starting point */
     ci->tailcalls = 0;
     ci->nresults = nresults;
     for (st = L->top; st < ci->top; st++)
@@ -321,6 +327,7 @@ void luaD_poscall (lua_State *L, int wanted, StkId firstResult) {
   res = L->ci->func;  /* res == final position of 1st result */
   L->ci--;
   L->base = L->ci->base;  /* restore base */
+  L->savedpc = L->ci->savedpc;  /* restore savedpc */
   /* move results to correct place */
   while (wanted != 0 && firstResult < L->top) {
     setobjs2s(L, res++, firstResult++);
@@ -339,10 +346,10 @@ void luaD_poscall (lua_State *L, int wanted, StkId firstResult) {
 ** function position.
 */ 
 void luaD_call (lua_State *L, StkId func, int nResults) {
-  if (++L->nCcalls >= LUA_MAXCCALLS) {
-    if (L->nCcalls == LUA_MAXCCALLS)
+  if (++L->nCcalls >= LUAI_MAXCCALLS) {
+    if (L->nCcalls == LUAI_MAXCCALLS)
       luaG_runerror(L, "C stack overflow");
-    else if (L->nCcalls >= (LUA_MAXCCALLS + (LUA_MAXCCALLS>>3)))
+    else if (L->nCcalls >= (LUAI_MAXCCALLS + (LUAI_MAXCCALLS>>3)))
       luaD_throw(L, LUA_ERRERR);  /* error while handing stack error */
   }
   if (luaD_precall(L, func, nResults) == PCRLUA) {  /* is a Lua function? */
@@ -434,7 +441,7 @@ LUA_API int lua_yield (lua_State *L, int nresults) {
 int luaD_pcall (lua_State *L, Pfunc func, void *u,
                 ptrdiff_t old_top, ptrdiff_t ef) {
   int status;
-  unsigned short oldnCcalls = L->nCcalls;
+  int oldnCcalls = L->nCcalls;
   ptrdiff_t old_ci = saveci(L, L->ci);
   lu_byte old_allowhooks = L->allowhook;
   ptrdiff_t old_errfunc = L->errfunc;
@@ -447,6 +454,7 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
     L->nCcalls = oldnCcalls;
     L->ci = restoreci(L, old_ci);
     L->base = L->ci->base;
+    L->savedpc = L->ci->savedpc;
     L->allowhook = old_allowhooks;
     restore_stack_limit(L);
   }

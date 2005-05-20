@@ -1,5 +1,5 @@
 /*
-** $Id: lzio.c,v 1.29 2004/04/30 20:13:38 roberto Exp $
+** $Id: lzio.c,v 1.30 2005/05/17 19:49:15 roberto Exp $
 ** a generic input stream interface
 ** See Copyright Notice in lua.h
 */
@@ -43,7 +43,7 @@ int luaZ_lookahead (ZIO *z) {
 }
 
 
-void luaZ_init (lua_State *L, ZIO *z, lua_Chunkreader reader, void *data) {
+void luaZ_init (lua_State *L, ZIO *z, lua_Reader reader, void *data) {
   z->L = L;
   z->reader = reader;
   z->data = data;

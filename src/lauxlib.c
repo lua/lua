@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.129 2005/02/23 17:30:22 roberto Exp $
+** $Id: lauxlib.c,v 1.133 2005/05/17 19:49:15 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -25,12 +25,7 @@
 #include "lauxlib.h"
 
 
-/* number of prereserved references (for internal use) */
-#define RESERVED_REFS	2
-
-/* reserved references */
-#define FREELIST_REF	1	/* free list of references */
-#define ARRAYSIZE_REF	2	/* array sizes */
+#define FREELIST_REF	0	/* free list of references */
 
 
 /* convert a stack index to positive */
@@ -52,11 +47,12 @@ LUALIB_API int luaL_argerror (lua_State *L, int narg, const char *extramsg) {
   if (strcmp(ar.namewhat, "method") == 0) {
     narg--;  /* do not count `self' */
     if (narg == 0)  /* error is in the self argument itself? */
-      return luaL_error(L, "calling `%s' on bad self (%s)", ar.name, extramsg);
+      return luaL_error(L, "calling " LUA_QS " on bad self (%s)",
+                           ar.name, extramsg);
   }
   if (ar.name == NULL)
     ar.name = "?";
-  return luaL_error(L, "bad argument #%d to `%s' (%s)",
+  return luaL_error(L, "bad argument #%d to " LUA_QS " (%s)",
                         narg, ar.name, extramsg);
 }
 
@@ -163,9 +159,8 @@ LUALIB_API void luaL_checkany (lua_State *L, int narg) {
 
 
 LUALIB_API const char *luaL_checklstring (lua_State *L, int narg, size_t *len) {
-  const char *s = lua_tostring(L, narg);
+  const char *s = lua_tolstring(L, narg, len);
   if (!s) tag_error(L, narg, LUA_TSTRING);
-  if (len) *len = lua_strlen(L, narg);
   return s;
 }
 
@@ -250,7 +245,7 @@ LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
       luaL_setfield(L, LUA_GLOBALSINDEX, libname);
     }
     else if (!lua_istable(L, -1))
-      luaL_error(L, "name conflict for library `%s'", libname);
+      luaL_error(L, "name conflict for library " LUA_QS, libname);
     lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
     lua_pushvalue(L, -2);
     lua_setfield(L, -2, libname);  /* _LOADED[modname] = new table */
@@ -275,6 +270,8 @@ LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
 ** =======================================================
 */
 
+#ifndef luaL_getn
+
 static int checkint (lua_State *L, int topop) {
   int n = (lua_type(L, -1) == LUA_TNUMBER) ? lua_tointeger(L, -1) : -1;
   lua_pop(L, topop);
@@ -283,7 +280,7 @@ static int checkint (lua_State *L, int topop) {
 
 
 static void getsizes (lua_State *L) {
-  lua_rawgeti(L, LUA_REGISTRYINDEX, ARRAYSIZE_REF);
+  lua_getfield(L, LUA_REGISTRYINDEX, "LUA_SIZES");
   if (lua_isnil(L, -1)) {  /* no `size' table? */
     lua_pop(L, 1);  /* remove nil */
     lua_newtable(L);  /* create it */
@@ -292,7 +289,7 @@ static void getsizes (lua_State *L) {
     lua_pushliteral(L, "kv");
     lua_setfield(L, -2, "__mode");  /* metatable(N).__mode = "kv" */
     lua_pushvalue(L, -1);
-    lua_rawseti(L, LUA_REGISTRYINDEX, ARRAYSIZE_REF);  /* store in register */
+    lua_setfield(L, LUA_REGISTRYINDEX, "LUA_SIZES");  /* store in register */
   }
 }
 
@@ -307,31 +304,6 @@ LUALIB_API void luaL_setn (lua_State *L, int t, int n) {
 }
 
 
-/* find an `n' such that t[n] ~= nil and t[n+1] == nil */
-static int countn (lua_State *L, int t) {
-  int i = LUA_FIRSTINDEX - 1;
-  int j = 2;
-  /* find `i' such that i <= n < i*2 (= j) */
-  for (;;) {
-    lua_rawgeti(L, t, j);
-    if (lua_isnil(L, -1)) break;
-    lua_pop(L, 1);
-    i = j;
-    j = i*2;
-  }
-  lua_pop(L, 1);
-  /* i <= n < j; do a binary search */
-  while (i < j-1) {
-    int m = (i+j)/2;
-    lua_rawgeti(L, t, m);
-    if (lua_isnil(L, -1)) j = m;
-    else i = m;
-    lua_pop(L, 1);
-  }
-  return i - LUA_FIRSTINDEX + 1;
-}
-
-
 LUALIB_API int luaL_getn (lua_State *L, int t) {
   int n;
   t = abs_index(L, t);
@@ -341,8 +313,10 @@ LUALIB_API int luaL_getn (lua_State *L, int t) {
   if ((n = checkint(L, 2)) >= 0) return n;
   lua_getfield(L, t, "n");  /* else try t.n */
   if ((n = checkint(L, 1)) >= 0) return n;
-  return countn(L, t);
+  return lua_objsize(L, t);
 }
+
+#endif
 
 /* }====================================================== */
 
@@ -392,7 +366,8 @@ LUALIB_API const char *luaL_searchpath (lua_State *L, const char *name,
   for (;;) {
     const char *fname;
     if ((p = pushnexttemplate(L, p)) == NULL) {
-      lua_pushfstring(L, "no readable `%s' in path `%s'", name, path);
+      lua_pushfstring(L, "no readable " LUA_QS " in path " LUA_QS "",
+                         name, path);
       return NULL;
     }
     fname = luaL_gsub(L, lua_tostring(L, -1), LUA_PATH_MARK, name);
@@ -523,9 +498,10 @@ LUALIB_API void luaL_pushresult (luaL_Buffer *B) {
 
 LUALIB_API void luaL_addvalue (luaL_Buffer *B) {
   lua_State *L = B->L;
-  size_t vl = lua_strlen(L, -1);
+  size_t vl;
+  const char *s = lua_tolstring(L, -1, &vl);
   if (vl <= bufffree(B)) {  /* fit into buffer? */
-    memcpy(B->p, lua_tostring(L, -1), vl);  /* put it there */
+    memcpy(B->p, s, vl);  /* put it there */
     B->p += vl;
     lua_pop(L, 1);  /* remove from stack */
   }
@@ -562,11 +538,8 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
     lua_rawseti(L, t, FREELIST_REF);  /* (t[FREELIST_REF] = t[ref]) */
   }
   else {  /* no free elements */
-    ref = luaL_getn(L, t);
-    if (ref < RESERVED_REFS)
-      ref = RESERVED_REFS;  /* skip reserved references */
+    ref = lua_objsize(L, t);
     ref++;  /* create new reference */
-    luaL_setn(L, t, ref);
   }
   lua_rawseti(L, t, ref);
   return ref;

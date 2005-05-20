@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.30 2004/12/02 12:59:10 roberto Exp $
+** $Id: lopcodes.c,v 1.33 2005/05/04 20:42:28 roberto Exp $
 ** See Copyright Notice in lua.h
 */
 
@@ -32,9 +32,11 @@ const char *const luaP_opnames[NUM_OPCODES+1] = {
   "SUB",
   "MUL",
   "DIV",
+  "MOD",
   "POW",
   "UNM",
   "NOT",
+  "SIZ",
   "CONCAT",
   "JMP",
   "EQ",
@@ -47,7 +49,6 @@ const char *const luaP_opnames[NUM_OPCODES+1] = {
   "FORLOOP",
   "FORPREP",
   "TFORLOOP",
-  "TFORPREP",
   "SETLIST",
   "CLOSE",
   "CLOSURE",
@@ -76,9 +77,11 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_SUB */
  ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_MUL */
  ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_DIV */
+ ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_MOD */
  ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_POW */
  ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_UNM */
  ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_NOT */
+ ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_SIZ */
  ,opmode(0, 1, OpArgR, OpArgR, iABC)		/* OP_CONCAT */
  ,opmode(0, 0, OpArgR, OpArgN, iAsBx)		/* OP_JMP */
  ,opmode(1, 0, OpArgK, OpArgK, iABC)		/* OP_EQ */
@@ -91,7 +94,6 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 1, OpArgR, OpArgN, iAsBx)		/* OP_FORLOOP */
  ,opmode(0, 1, OpArgR, OpArgN, iAsBx)		/* OP_FORPREP */
  ,opmode(1, 0, OpArgN, OpArgU, iABC)		/* OP_TFORLOOP */
- ,opmode(0, 0, OpArgR, OpArgN, iAsBx)		/* OP_TFORPREP */
  ,opmode(0, 0, OpArgU, OpArgU, iABC)		/* OP_SETLIST */
  ,opmode(0, 0, OpArgN, OpArgN, iABC)		/* OP_CLOSE */
  ,opmode(0, 1, OpArgU, OpArgN, iABx)		/* OP_CLOSURE */

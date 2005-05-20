@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.16 2005/02/23 17:30:22 roberto Exp $
+** $Id: lstate.h,v 2.21 2005/05/05 15:34:03 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -83,12 +83,13 @@ typedef struct global_State {
   lu_mem totalbytes;  /* number of bytes currently allocated */
   lu_mem estimate;  /* an estimate of number of bytes actually in use */
   lu_mem gcdept;  /* how much GC is `behind schedule' */
-  int gcpace;  /* size of pause between successive GCs */
+  int gcpause;  /* size of pause between successive GCs */
   int gcstepmul;  /* GC `granularity' */
   lua_CFunction panic;  /* to be called in unprotected errors */
   TValue _registry;
   struct lua_State *mainthread;
   UpVal uvhead;  /* head of double-linked list of all open upvalues */
+  struct Table *mt[NUM_TAGS];  /* metatables for basic types */
   TString *tmname[TM_N];  /* array with tag-method names */
 } global_State;
 
@@ -102,12 +103,13 @@ struct lua_State {
   StkId base;  /* base of current function */
   global_State *l_G;
   CallInfo *ci;  /* call info for current function */
+  const Instruction *savedpc;  /* `savedpc' of current function */
   StkId stack_last;  /* last free slot in the stack */
   StkId stack;  /* stack base */
   int stacksize;
   CallInfo *end_ci;  /* points after end of ci array*/
   CallInfo *base_ci;  /* array of CallInfo's */
-  unsigned short size_ci;  /* size of array `base_ci' */
+  int size_ci;  /* size of array `base_ci' */
   unsigned short nCcalls;  /* number of nested C calls */
   lu_byte hookmask;
   lu_byte allowhook;
@@ -159,8 +161,8 @@ union GCObject {
 #define obj2gco(v)	(cast(GCObject *, (v)))
 
 
-lua_State *luaE_newthread (lua_State *L);
-void luaE_freethread (lua_State *L, lua_State *L1);
+LUAI_FUNC lua_State *luaE_newthread (lua_State *L);
+LUAI_FUNC void luaE_freethread (lua_State *L, lua_State *L1);
 
 #endif
 

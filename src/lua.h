@@ -1,8 +1,8 @@
 /*
-** $Id: lua.h,v 1.202 2005/02/18 12:40:02 roberto Exp $
+** $Id: lua.h,v 1.208 2005/05/17 19:49:15 roberto Exp $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
-** http://www.lua.org	mailto:info@lua.org
+** http://www.lua.org
 ** See Copyright Notice at the end of this file
 */
 
@@ -17,7 +17,7 @@
 #include "luaconf.h"
 
 
-#define LUA_VERSION	"Lua 5.1 (work5)"
+#define LUA_VERSION	"Lua 5.1 (work6)"
 #define LUA_VERSION_NUM	501
 #define LUA_COPYRIGHT	"Copyright (C) 1994-2005 Tecgraf, PUC-Rio"
 #define LUA_AUTHORS 	"R. Ierusalimschy, L. H. de Figueiredo & W. Celes"
@@ -55,10 +55,9 @@ typedef int (*lua_CFunction) (lua_State *L);
 /*
 ** functions that read/write blocks when loading/dumping Lua chunks
 */
-typedef const char * (*lua_Chunkreader) (lua_State *L, void *ud, size_t *sz);
+typedef const char * (*lua_Reader) (lua_State *L, void *ud, size_t *sz);
 
-typedef int (*lua_Chunkwriter) (lua_State *L, const void* p,
-                                size_t sz, void* ud);
+typedef int (*lua_Writer) (lua_State *L, const void* p, size_t sz, void* ud);
 
 
 /*
@@ -70,21 +69,18 @@ typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 /*
 ** basic types
 */
-#define LUA_TNONE	(-1)
+#define LUA_TNONE		(-1)
 
-#define LUA_TNIL	0
-#define LUA_TBOOLEAN	1
+#define LUA_TNIL		0
+#define LUA_TBOOLEAN		1
 #define LUA_TLIGHTUSERDATA	2
-#define LUA_TNUMBER	3
-#define LUA_TSTRING	4
-#define LUA_TTABLE	5
-#define LUA_TFUNCTION	6
-#define LUA_TUSERDATA	7
-#define LUA_TTHREAD	8
+#define LUA_TNUMBER		3
+#define LUA_TSTRING		4
+#define LUA_TTABLE		5
+#define LUA_TFUNCTION		6
+#define LUA_TUSERDATA		7
+#define LUA_TTHREAD		8
 
-
-/* first index for arrays */
-#define LUA_FIRSTINDEX		1
 
 
 /* minimum Lua stack available to a C function */
@@ -94,7 +90,7 @@ typedef void * (*lua_Alloc) (void *ud, void *ptr, size_t osize, size_t nsize);
 /*
 ** generic extra include file
 */
-#ifdef LUA_USER_H
+#if defined(LUA_USER_H)
 #include LUA_USER_H
 #endif
 
@@ -150,7 +146,7 @@ LUA_API int            (lua_lessthan) (lua_State *L, int idx1, int idx2);
 LUA_API lua_Number      (lua_tonumber) (lua_State *L, int idx);
 LUA_API lua_Integer     (lua_tointeger) (lua_State *L, int idx);
 LUA_API int             (lua_toboolean) (lua_State *L, int idx);
-LUA_API const char     *(lua_tostring) (lua_State *L, int idx);
+LUA_API const char     *(lua_tolstring) (lua_State *L, int idx, size_t *len);
 LUA_API size_t          (lua_objsize) (lua_State *L, int idx);
 LUA_API lua_CFunction   (lua_tocfunction) (lua_State *L, int idx);
 LUA_API void	       *(lua_touserdata) (lua_State *L, int idx);
@@ -204,11 +200,11 @@ LUA_API int   (lua_setfenv) (lua_State *L, int idx);
 */
 LUA_API void  (lua_call) (lua_State *L, int nargs, int nresults);
 LUA_API int   (lua_pcall) (lua_State *L, int nargs, int nresults, int errfunc);
-LUA_API int (lua_cpcall) (lua_State *L, lua_CFunction func, void *ud);
-LUA_API int   (lua_load) (lua_State *L, lua_Chunkreader reader, void *dt,
+LUA_API int   (lua_cpcall) (lua_State *L, lua_CFunction func, void *ud);
+LUA_API int   (lua_load) (lua_State *L, lua_Reader reader, void *dt,
                                         const char *chunkname);
 
-LUA_API int (lua_dump) (lua_State *L, lua_Chunkwriter writer, void *data);
+LUA_API int (lua_dump) (lua_State *L, lua_Writer writer, void *data);
 
 
 /*
@@ -227,7 +223,7 @@ LUA_API int  (lua_status) (lua_State *L);
 #define LUA_GCCOLLECT		2
 #define LUA_GCCOUNT		3
 #define LUA_GCSTEP		4
-#define LUA_GCSETPACE		5
+#define LUA_GCSETPAUSE		5
 #define LUA_GCSETSTEPMUL	6
 
 LUA_API int (lua_gc) (lua_State *L, int what, int data);
@@ -278,6 +274,8 @@ LUA_API lua_Alloc (lua_getallocf) (lua_State *L, void **ud);
 #define lua_setglobal(L,s)	lua_setfield(L, LUA_GLOBALSINDEX, (s))
 #define lua_getglobal(L,s)	lua_getfield(L, LUA_GLOBALSINDEX, (s))
 
+#define lua_tostring(L,i)	lua_tolstring(L, (i), NULL)
+
 
 
 /*
@@ -290,7 +288,8 @@ LUA_API lua_Alloc (lua_getallocf) (lua_State *L, void **ud);
 
 #define lua_getgccount(L)	lua_gc(L, LUA_GCCOUNT, 0)
 
-
+#define lua_Chunkreader		lua_Reader
+#define lua_Chunkwriter		lua_Writer
 
 
 
@@ -321,6 +320,8 @@ LUA_API lua_Alloc (lua_getallocf) (lua_State *L, void **ud);
 
 typedef struct lua_Debug lua_Debug;  /* activation record */
 
+
+/* Functions to be called by the debuger in specific events */
 typedef void (*lua_Hook) (lua_State *L, lua_Debug *ar);
 
 
@@ -337,8 +338,6 @@ LUA_API int lua_gethookmask (lua_State *L);
 LUA_API int lua_gethookcount (lua_State *L);
 
 
-#define LUA_IDSIZE	60
-
 struct lua_Debug {
   int event;
   const char *name;	/* (n) */
@@ -348,6 +347,7 @@ struct lua_Debug {
   int currentline;	/* (l) */
   int nups;		/* (u) number of upvalues */
   int linedefined;	/* (S) */
+  int lastlinedefined;	/* (S) */
   char short_src[LUA_IDSIZE]; /* (S) */
   /* private part */
   int i_ci;  /* active function */
@@ -357,7 +357,7 @@ struct lua_Debug {
 
 
 /******************************************************************************
-* Copyright (C) 1994-2004 Tecgraf, PUC-Rio.  All rights reserved.
+* Copyright (C) 1994-2005 Tecgraf, PUC-Rio.  All rights reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the

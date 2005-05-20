@@ -1,5 +1,5 @@
 /*
-** $Id: luac.c,v 1.49 2004/09/01 21:22:34 lhf Exp $
+** $Id: luac.c,v 1.50 2005/05/12 00:26:50 lhf Exp $
 ** Lua compiler (saves bytecodes to files; also list bytecodes)
 ** See Copyright Notice in lua.h
 */
@@ -150,8 +150,6 @@ static int writer(lua_State* L, const void* p, size_t size, void* u)
  UNUSED(L);
  return (fwrite(p,size,1,(FILE*)u)!=1) && (size!=0);
 }
-
-void unprint(lua_State* L, const char* name);
 
 struct Smain {
   int argc;

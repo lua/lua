@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.114 2004/12/02 12:59:10 roberto Exp $
+** $Id: lopcodes.h,v 1.119 2005/05/04 20:42:28 roberto Exp $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -51,9 +51,9 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 /*
 ** limits for opcode arguments.
 ** we use (signed) int to manipulate most arguments,
-** so they must fit in LUA_BITSINT-1 bits (-1 for sign)
+** so they must fit in LUAI_BITSINT-1 bits (-1 for sign)
 */
-#if SIZE_Bx < LUA_BITSINT-1
+#if SIZE_Bx < LUAI_BITSINT-1
 #define MAXARG_Bx        ((1<<SIZE_Bx)-1)
 #define MAXARG_sBx        (MAXARG_Bx>>1)         /* `sBx' is signed */
 #else
@@ -172,9 +172,11 @@ OP_ADD,/*	A B C	R(A) := RK(B) + RK(C)				*/
 OP_SUB,/*	A B C	R(A) := RK(B) - RK(C)				*/
 OP_MUL,/*	A B C	R(A) := RK(B) * RK(C)				*/
 OP_DIV,/*	A B C	R(A) := RK(B) / RK(C)				*/
+OP_MOD,/*	A B C	R(A) := RK(B) % RK(C)				*/
 OP_POW,/*	A B C	R(A) := RK(B) ^ RK(C)				*/
 OP_UNM,/*	A B	R(A) := -R(B)					*/
 OP_NOT,/*	A B	R(A) := not R(B)				*/
+OP_SIZ,/*	A B	R(A) := size of R(B)				*/
 
 OP_CONCAT,/*	A B C	R(A) := R(B).. ... ..R(C)			*/
 
@@ -195,8 +197,6 @@ OP_FORPREP,/*	A sBx	R(A)-=R(A+2); pc+=sBx				*/
 
 OP_TFORLOOP,/*	A C	R(A+2), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2)); 
                         if R(A+2) ~= nil then pc++			*/
-OP_TFORPREP,/*	A sBx	if type(R(A)) == table then R(A+1):=R(A), R(A):=next;
-			pc+=sBx					*/
 
 OP_SETLIST,/*	A B C	R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B	*/
 

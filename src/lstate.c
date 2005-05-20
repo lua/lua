@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.25 2005/02/23 17:30:22 roberto Exp $
+** $Id: lstate.c,v 2.31 2005/05/05 15:34:03 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -24,20 +24,9 @@
 #include "ltm.h"
 
 
-/*
-** macro to allow the inclusion of user information in Lua state
-*/
-#ifndef LUA_USERSTATE
-#define EXTRASPACE	0
-#else
-union UEXTRASPACE {L_Umaxalign a; LUA_USERSTATE b;};
-#define EXTRASPACE (sizeof(union UEXTRASPACE))
-#endif
-
-
-#define state_size(x)	(sizeof(x) + EXTRASPACE)
-#define tostate(l)	(cast(lua_State *, cast(lu_byte *, l) + EXTRASPACE))
-#define fromstate(l)	(cast(lu_byte *, (l)) - EXTRASPACE)
+#define state_size(x)	(sizeof(x) + LUAI_EXTRASPACE)
+#define fromstate(l)	(cast(lu_byte *, (l)) - LUAI_EXTRASPACE)
+#define tostate(l)   (cast(lua_State *, cast(lu_byte *, l) + LUAI_EXTRASPACE))
 
 
 /*
@@ -51,18 +40,21 @@ typedef struct LG {
 
 
 static void stack_init (lua_State *L1, lua_State *L) {
+  /* initialize CallInfo array */
+  L1->base_ci = luaM_newvector(L, BASIC_CI_SIZE, CallInfo);
+  L1->ci = L1->base_ci;
+  L1->size_ci = BASIC_CI_SIZE;
+  L1->end_ci = L1->base_ci + L1->size_ci - 1;
+  /* initialize stack array */
   L1->stack = luaM_newvector(L, BASIC_STACK_SIZE + EXTRA_STACK, TValue);
   L1->stacksize = BASIC_STACK_SIZE + EXTRA_STACK;
   L1->top = L1->stack;
   L1->stack_last = L1->stack+(L1->stacksize - EXTRA_STACK)-1;
-  L1->base_ci = luaM_newvector(L, BASIC_CI_SIZE, CallInfo);
-  L1->ci = L1->base_ci;
+  /* initialize first ci */
   L1->ci->func = L1->top;
   setnilvalue(L1->top++);  /* `function' entry for this `ci' */
   L1->base = L1->ci->base = L1->top;
   L1->ci->top = L1->top + LUA_MINSTACK;
-  L1->size_ci = BASIC_CI_SIZE;
-  L1->end_ci = L1->base_ci + L1->size_ci - 1;
 }
 
 
@@ -105,6 +97,7 @@ static void preinit_state (lua_State *L, global_State *g) {
   L->nCcalls = 0;
   L->status = 0;
   L->base_ci = L->ci = NULL;
+  L->savedpc = NULL;
   L->errfunc = 0;
   setnilvalue(gt(L));
 }
@@ -148,6 +141,7 @@ void luaE_freethread (lua_State *L, lua_State *L1) {
 
 
 LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
+  int i;
   lua_State *L;
   global_State *g;
   void *l = (*f)(ud, NULL, 0, state_size(LG));
@@ -181,16 +175,17 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->weak = NULL;
   g->tmudata = NULL;
   g->totalbytes = sizeof(LG);
-  g->gcpace = 200;  /* 200% (wait memory to double before next collection) */
-  g->gcstepmul = 200;  /* GC runs `twice the speed' of memory allocation */
+  g->gcpause = LUAI_GCPAUSE;
+  g->gcstepmul = LUAI_GCMUL;
   g->gcdept = 0;
+  for (i=0; i<NUM_TAGS; i++) g->mt[i] = NULL;
   if (luaD_rawrunprotected(L, f_luaopen, NULL) != 0) {
     /* memory allocation error: free partial state */
     close_state(L);
     L = NULL;
   }
   else
-    lua_userstateopen(L);
+    luai_userstateopen(L);
   return L;
 }
 

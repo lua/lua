@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.4 2005/01/10 19:16:29 roberto Exp $
+** $Id: loslib.c,v 1.9 2005/05/17 19:49:15 roberto Exp $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -57,16 +57,13 @@ static int io_rename (lua_State *L) {
 
 
 static int io_tmpname (lua_State *L) {
-#if !USE_TMPNAME
-  luaL_error(L, "`tmpname' not supported");
-  return 0;
-#else
-  char buff[L_tmpnam];
-  if (tmpnam(buff) != buff)
-    return luaL_error(L, "unable to generate a unique filename in `tmpname'");
+  char buff[LUA_TMPNAMBUFSIZE];
+  int err;
+  lua_tmpnam(buff, err);
+  if (err)
+    return luaL_error(L, "unable to generate a unique filename");
   lua_pushstring(L, buff);
   return 1;
-#endif
 }
 
 
@@ -116,7 +113,7 @@ static int getfield (lua_State *L, const char *key, int d) {
     res = (int)lua_tointeger(L, -1);
   else {
     if (d < 0)
-      return luaL_error(L, "field `%s' missing in date table", key);
+      return luaL_error(L, "field " LUA_QS " missing in date table", key);
     res = d;
   }
   lua_pop(L, 1);
@@ -154,7 +151,7 @@ static int io_date (lua_State *L) {
     if (strftime(b, sizeof(b), s, stm))
       lua_pushstring(L, b);
     else
-      return luaL_error(L, "`date' format too long");
+      return luaL_error(L, LUA_QL("date") " format too long");
   }
   return 1;
 }

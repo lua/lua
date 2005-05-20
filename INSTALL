@@ -5,17 +5,20 @@ This is Lua 5.1 (work).
   Building Lua on a Unix system should be very easy: simply doing "make"
   should work. This will build Lua in the src directory.
 
+  See below for customization instructions. We strongly recommend that
+  you enable dynamic loading.
+
   If you want to install Lua in an official place in your system, then
   do "make install". The official place and the way to install files are
   defined in Makefile. You must have the right permissions to install files.
 
   If you want to install Lua locally, then do "make local". This will
-  create directories bin, include, lib, man and install Lua there as
+  create directories bin, include, lib, man, and install Lua there as
   follows:
 
     bin:	lua luac
     include:	lua.h luaconf.h lualib.h lauxlib.h
-    lib:	liblua.a liblualib.a
+    lib:	liblua.a
     man/man1:	lua.1 luac.1
 
   These are the only directories you need for development.
@@ -38,25 +41,23 @@ This is Lua 5.1 (work).
 
   On the other hand, if you need to select some Lua features, you'll need
   to edit src/luaconf.h. The edited file will be the one installed, and
-  will be used by any Lua clients that you build, to ensure consistency.
+  it will be used by any Lua clients that you build, to ensure consistency.
 
 * Installation on Windows and other systems
   -----------------------------------------
   The instructions for building Lua on other systems depend on the compiler
   you use. You'll need to create projects (or whatever your compiler uses)
-  for building the core library, the standard library, the interpreter, and
-  the compiler, as follows:
+  for building the library, the interpreter, and the compiler, as follows:
 
-  core lib:	lapi.c lcode.c ldebug.c ldo.c ldump.c lfunc.c lgc.c llex.c
-                lmem.c lobject.c lopcodes.c lparser.c lstate.c lstring.c
+  library:	lapi.c lcode.c ldebug.c ldo.c ldump.c lfunc.c lgc.c llex.c
+		lmem.c lobject.c lopcodes.c lparser.c lstate.c lstring.c
 		ltable.c ltm.c lundump.c lvm.c lzio.c
+		lauxlib.c lbaselib.c ldblib.c liolib.c lmathlib.c loslib.c
+		ltablib.c lstrlib.c loadlib.c linit.c
 
-  standard lib:	lauxlib.c lbaselib.c ldblib.c liolib.c lmathlib.c loslib.c
-  		ltablib.c lstrlib.c loadlib.c linit.c
+  interpreter:	library, lua.c
 
-  interpreter:	core lib, standard lib, lua.c
-
-  compiler:	core lib, lauxlib.c luac.c print.c
+  compiler:	library, luac.c print.c
 
   If all you want is to build the Lua interpreter, you may put all .c files
   in a single project, except for luac.c and print.c.

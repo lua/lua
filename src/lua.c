@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.135 2005/01/10 17:21:10 roberto Exp $
+** $Id: lua.c,v 1.144 2005/05/17 19:49:15 roberto Exp $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -18,19 +18,10 @@
 #include "lualib.h"
 
 
-/*
-** generic extra include file
-*/
-#ifdef LUA_USERCONFIG
-#include LUA_USERCONFIG
-#endif
-
-
-
 
 static lua_State *globalL = NULL;
 
-static const char *progname = PROGNAME;
+static const char *progname = LUA_PROGNAME;
 
 
 
@@ -53,10 +44,11 @@ static void print_usage (void) {
   "usage: %s [options] [script [args]].\n"
   "Available options are:\n"
   "  -        execute stdin as a file\n"
-  "  -e stat  execute string `stat'\n"
-  "  -i       enter interactive mode after executing `script'\n"
-  "  -l name  load and run library `name'\n"
+  "  -e stat  execute string " LUA_QL("stat") "\n"
+  "  -i       enter interactive mode after executing " LUA_QL("script") "\n"
+  "  -l name  require library " LUA_QL("name") "\n"
   "  -v       show version information\n"
+  "  -w       trap access to undefined globals\n"
   "  --       stop handling options\n" ,
   progname);
 }
@@ -110,15 +102,14 @@ static void print_version (void) {
 }
 
 
-static int getargs (lua_State *L, char *argv[], int n) {
-  int i, narg;
-  for (i=n+1; argv[i]; i++) {
-    luaL_checkstack(L, 1, "too many arguments to script");
+static int getargs (lua_State *L, int argc, char **argv, int n) {
+  int narg = argc - (n + 1);  /* number of arguments to the script */
+  int i;
+  luaL_checkstack(L, narg + 3, "too many arguments to script");
+  for (i=n+1; i < argc; i++)
     lua_pushstring(L, argv[i]);
-  }
-  narg = i-(n+1);  /* number of arguments to the script (not to `lua.c') */
   lua_newtable(L);
-  for (i=0; argv[i]; i++) {
+  for (i=0; i < argc; i++) {
     lua_pushstring(L, argv[i]);
     lua_rawseti(L, -2, i - n);
   }
@@ -139,54 +130,18 @@ static int dostring (lua_State *L, const char *s, const char *name) {
 
 
 static int dolibrary (lua_State *L, const char *name) {
-  luaL_getfield(L, LUA_GLOBALSINDEX, "package.path");
-  if (!lua_isstring(L, -1)) {
-    l_message(progname, "`package.path' must be a string");
-    return 1;
-  }
-  name = luaL_searchpath(L, name, lua_tostring(L, -1));
-  if (name == NULL) return report(L, 1);
-  else  return dofile(L, name);
+  lua_getglobal(L, "require");
+  lua_pushstring(L, name);
+  return report(L, lua_pcall(L, 1, 0, 0));
 }
-
-
-
-/*
-** this macro defines a function to show the prompt and reads the
-** next line for manual input
-*/
-#ifndef lua_readline
-#define lua_readline(L,prompt)		readline(L,prompt)
-
-/* maximum length of an input line */
-#ifndef MAXINPUT
-#define MAXINPUT	512
-#endif
-
-
-static int readline (lua_State *L, const char *prompt) {
-  static char buffer[MAXINPUT];
-  if (prompt) {
-    fputs(prompt, stdout);
-    fflush(stdout);
-  }
-  if (fgets(buffer, sizeof(buffer), stdin) == NULL)
-    return 0;  /* read fails */
-  else {
-    lua_pushstring(L, buffer);
-    return 1;
-  }
-}
-
-#endif
 
 
 static const char *get_prompt (lua_State *L, int firstline) {
-  const char *p = NULL;
+  const char *p;
   lua_pushstring(L, firstline ? "_PROMPT" : "_PROMPT2");
   lua_rawget(L, LUA_GLOBALSINDEX);
   p = lua_tostring(L, -1);
-  if (p == NULL) p = (firstline ? PROMPT : PROMPT2);
+  if (p == NULL) p = (firstline ? LUA_PROMPT : LUA_PROMPT2);
   lua_pop(L, 1);  /* remove global */
   return p;
 }
@@ -194,7 +149,7 @@ static const char *get_prompt (lua_State *L, int firstline) {
 
 static int incomplete (lua_State *L, int status) {
   if (status == LUA_ERRSYNTAX &&
-         strstr(lua_tostring(L, -1), "near `<eof>'") != NULL) {
+         strstr(lua_tostring(L, -1), "<eof>") != NULL) {
     lua_pop(L, 1);
     return 1;
   }
@@ -203,23 +158,40 @@ static int incomplete (lua_State *L, int status) {
 }
 
 
+static int pushline (lua_State *L, int firstline) {
+  char buffer[LUA_MAXINPUT];
+  char *b = buffer;
+  size_t l;
+  const char *prmt = get_prompt(L, firstline);
+  if (lua_readline(L, b, prmt) == 0)
+    return 0;  /* no input */
+  l = strlen(b);
+  if (l > 0 && b[l-1] == '\n')  /* line ends with newline? */
+    b[l-1] = '\0';  /* remove it */
+  if (firstline && b[0] == '=')  /* first line starts with `=' ? */
+    lua_pushfstring(L, "return %s", b+1);  /* change it to `return' */
+  else
+    lua_pushstring(L, b);
+  lua_freeline(L, b);
+  return 1;
+}
+
+
 static int loadline (lua_State *L) {
   int status;
   lua_settop(L, 0);
-  if (lua_readline(L, get_prompt(L, 1)) == 0)  /* no input? */
-    return -1;
-  if (lua_tostring(L, -1)[0] == '=') {  /* line starts with `=' ? */
-    lua_pushfstring(L, "return %s", lua_tostring(L, -1)+1);/* `=' -> `return' */
-    lua_remove(L, -2);  /* remove original line */
-  }
+  if (!pushline(L, 1))
+    return -1;  /* no input */
   for (;;) {  /* repeat until gets a complete line */
     status = luaL_loadbuffer(L, lua_tostring(L, 1), lua_strlen(L, 1), "=stdin");
     if (!incomplete(L, status)) break;  /* cannot try to add lines? */
-    if (lua_readline(L, get_prompt(L, 0)) == 0)  /* no more input? */
+    if (!pushline(L, 0))  /* no more input? */
       return -1;
-    lua_concat(L, lua_gettop(L));  /* join lines */
+    lua_pushliteral(L, "\n");  /* add a new line... */
+    lua_insert(L, -2);  /* ...between the two lines */
+    lua_concat(L, 3);  /* join them */
   }
-  lua_saveline(L, lua_tostring(L, 1));
+  lua_saveline(L, 1);
   lua_remove(L, 1);  /* remove line */
   return status;
 }
@@ -237,8 +209,9 @@ static void dotty (lua_State *L) {
       lua_getglobal(L, "print");
       lua_insert(L, 1);
       if (lua_pcall(L, lua_gettop(L)-1, 0, 0) != 0)
-        l_message(progname, lua_pushfstring(L, "error calling `print' (%s)",
-                                               lua_tostring(L, -1)));
+        l_message(progname, lua_pushfstring(L,
+                               "error calling " LUA_QL("print") " (%s)",
+                               lua_tostring(L, -1)));
     }
   }
   lua_settop(L, 0);  /* clear stack */
@@ -250,17 +223,17 @@ static void dotty (lua_State *L) {
 static int checkvar (lua_State *L) {
   const char *name = lua_tostring(L, 2);
   if (name)
-    luaL_error(L, "attempt to access undefined variable `%s'", name);
+    luaL_error(L, "attempt to access undefined variable " LUA_QS, name);
   return 0;
 }
 
 
 #define clearinteractive(i)	(*i &= 2)
 
-static int handle_argv (lua_State *L, char *argv[], int *interactive) {
+static int handle_argv (lua_State *L, int argc, char **argv, int *interactive) {
   if (argv[1] == NULL) {  /* no arguments? */
     *interactive = 0;
-    if (stdin_is_tty())
+    if (lua_stdin_is_tty())
       dotty(L);
     else
       dofile(L, NULL);  /* executes stdin as a file */
@@ -330,9 +303,9 @@ static int handle_argv (lua_State *L, char *argv[], int *interactive) {
       }
     } endloop:
     if (argv[i] != NULL) {
-      const char *filename = argv[i];
-      int narg = getargs(L, argv, i);  /* collect arguments */
       int status;
+      const char *filename = argv[i];
+      int narg = getargs(L, argc, argv, i);  /* collect arguments */
       lua_setglobal(L, "arg");
       clearinteractive(interactive);
       status = luaL_loadfile(L, filename);
@@ -371,10 +344,10 @@ static int pmain (lua_State *L) {
   int interactive = 1;
   if (s->argv[0] && s->argv[0][0]) progname = s->argv[0];
   globalL = L;
-  luaopen_stdlibs(L);  /* open libraries */
+  luaL_openlibs(L);  /* open libraries */
   status = handle_luainit(L);
   if (status == 0) {
-    status = handle_argv(L, s->argv, &interactive);
+    status = handle_argv(L, s->argc, s->argv, &interactive);
     if (status == 0 && interactive) dotty(L);
   }
   s->status = status;
@@ -382,7 +355,7 @@ static int pmain (lua_State *L) {
 }
 
 
-int main (int argc, char *argv[]) {
+int main (int argc, char **argv) {
   int status;
   struct Smain s;
   lua_State *L = lua_open();  /* create state */

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.27 2005/02/23 17:30:22 roberto Exp $
+** $Id: lgc.c,v 2.32 2005/05/05 15:34:03 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -57,7 +57,7 @@
 		reallymarkobject(g, obj2gco(t)); }
 
 
-#define setthreshold(g)  (g->GCthreshold = (g->estimate/100) * g->gcpace)
+#define setthreshold(g)  (g->GCthreshold = (g->estimate/100) * g->gcpause)
 
 
 static void removeentry (Node *n) {
@@ -242,7 +242,7 @@ static void traverseclosure (global_State *g, Closure *cl) {
 static void checkstacksizes (lua_State *L, StkId max) {
   int ci_used = L->ci - L->base_ci;  /* number of `ci' in use */
   int s_used = max - L->stack;  /* part of stack in use */
-  if (L->size_ci > LUA_MAXCALLS)  /* handling overflow? */
+  if (L->size_ci > LUAI_MAXCALLS)  /* handling overflow? */
     return;  /* do not touch the stacks */
   if (4*ci_used < L->size_ci && 2*BASIC_CI_SIZE < L->size_ci)
     luaD_reallocCI(L, L->size_ci/2);  /* still big enough... */
@@ -493,6 +493,13 @@ void luaC_freeall (lua_State *L) {
 }
 
 
+static void markmt (global_State *g) {
+  int i;
+  for (i=0; i<NUM_TAGS; i++)
+    if (g->mt[i]) markobject(g, g->mt[i]);
+}
+
+
 /* mark root set */
 static void markroot (lua_State *L) {
   global_State *g = G(L);
@@ -503,6 +510,7 @@ static void markroot (lua_State *L) {
   /* make global table be traversed before main stack */
   markvalue(g, gt(g->mainthread));
   markvalue(g, registry(L));
+  markmt(g);
   g->gcstate = GCSpropagate;
 }
 
@@ -529,6 +537,7 @@ static void atomic (lua_State *L) {
   g->weak = NULL;
   lua_assert(!iswhite(obj2gco(g->mainthread)));
   markobject(g, L);  /* mark running thread */
+  markmt(g);  /* mark basic metatables (again) */
   propagateall(g);
   /* remark gray again */
   g->gray = g->grayagain;
@@ -539,7 +548,7 @@ static void atomic (lua_State *L) {
   propagateall(g);  /* remark, to propagate `preserveness' */
   cleartable(g->weak);  /* remove collected objects from weak tables */
   /* flip current white */
-  g->currentwhite = otherwhite(g);
+  g->currentwhite = cast(lu_byte, otherwhite(g));
   g->sweepstrgc = 0;
   g->sweepgc = &g->rootgc;
   g->gcstate = GCSsweepstring;

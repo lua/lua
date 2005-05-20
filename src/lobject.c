@@ -1,11 +1,12 @@
 /*
-** $Id: lobject.c,v 2.8 2005/01/10 18:17:39 roberto Exp $
+** $Id: lobject.c,v 2.13 2005/05/16 21:19:00 roberto Exp $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
 
 #include <ctype.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -28,7 +29,8 @@ const TValue luaO_nilobject = {{NULL}, LUA_TNIL};
 
 /*
 ** converts an integer to a "floating point byte", represented as
-** (mmmmmxxx), where the real value is (xxx) * 2^(mmmmm)
+** (eeeeexxx), where the real value is (1xxx) * 2^(eeeee - 1) if
+** eeeee != 0 and (xxx) otherwise.
 */
 int luaO_int2fb (unsigned int x) {
   int e = 0;  /* expoent */
@@ -73,7 +75,7 @@ int luaO_rawequalObj (const TValue *t1, const TValue *t2) {
     case LUA_TNIL:
       return 1;
     case LUA_TNUMBER:
-      return num_eq(nvalue(t1), nvalue(t2));
+      return luai_numeq(nvalue(t1), nvalue(t2));
     case LUA_TBOOLEAN:
       return bvalue(t1) == bvalue(t2);  /* boolean true must be 1 !! */
     case LUA_TLIGHTUSERDATA:
@@ -182,7 +184,7 @@ void luaO_chunkid (char *out, const char *source, int bufflen) {
     if (*source == '@') {
       int l;
       source++;  /* skip the `@' */
-      bufflen -= sizeof(" `...' ");
+      bufflen -= sizeof(" '...' ");
       l = strlen(source);
       strcpy(out, "");
       if (l>bufflen) {

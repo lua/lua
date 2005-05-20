@@ -13,6 +13,9 @@ lua.ico
 	A Lua icon for Windows (and web sites, as favicon.ico).
 	Drawn by hand by Markus Gritsch <gritsch@iue.tuwien.ac.at>.
 
+lua.pc
+	pkg-config data for Lua
+
 min.c
 	A minimal Lua interpreter.
 	Good for learning and for starting your own.
@@ -20,6 +23,3 @@ min.c
 noparser.c
 	Linking with noparser.o avoids loading the parsing modules in lualib.a.
 	Do "make noparser" to see a demo.
-
-saconfig.c
-	Configuration for Lua interpreter.

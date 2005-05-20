@@ -9,20 +9,21 @@ CFLAGS= -O2 -Wall $(MYCFLAGS)
 AR= ar rcu
 RANLIB= ranlib
 RM= rm -f
+LIBS= -lm $(MYLIBS)
 
 MYCFLAGS=
 MYLDFLAGS=
-MYLIBS= -lm
-DL= -ldl -Wl,-E			# enable dynamic loading in Linux
+MYLIBS=
+# enable dynamic loading and line editing in Linux
+# MYCFLAGS= -DLUA_USE_DLOPEN -DLUA_USE_READLINE
+# MYLIBS= -Wl,-E -ldl -lreadline -lhistory -lncurses
 
 # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
 
-CORE_T=	liblua.a
+LUA_A=	liblua.a
 CORE_O=	lapi.o lcode.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o lmem.o \
 	lobject.o lopcodes.o lparser.o lstate.o lstring.o ltable.o ltm.o  \
 	lundump.o lvm.o lzio.o
-
-LIB_T=	liblualib.a
 LIB_O=	lauxlib.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o \
 	lstrlib.o loadlib.o linit.o
 
@@ -30,11 +31,11 @@ LUA_T=	lua
 LUA_O=	lua.o
 
 LUAC_T=	luac
-LUAC_O=	luac.o print.o lauxlib.o
+LUAC_O=	luac.o print.o
 
-ALL_T= $(CORE_T) $(LIB_T) $(LUA_T) $(LUAC_T)
 ALL_O= $(CORE_O) $(LIB_O) $(LUA_O) $(LUAC_O)
-ALL_A= $(CORE_T) $(LIB_T)
+ALL_T= $(LUA_A) $(LUA_T) $(LUAC_T)
+ALL_A= $(LUA_A)
 
 all:	$(ALL_T)
 
@@ -42,25 +43,21 @@ o:	$(ALL_O)
 
 a:	$(ALL_A)
 
-$(CORE_T): $(CORE_O)
+$(LUA_A): $(CORE_O) $(LIB_O)
 	$(AR) $@ $?
 	$(RANLIB) $@
 
-$(LIB_T): $(LIB_O)
-	$(AR) $@ $?
-	$(RANLIB) $@
+$(LUA_T): $(LUA_O) $(LUA_A)
+	$(CC) -o $@ $(MYLDFLAGS) $(LUA_O) $(LUA_A) $(LIBS)
 
-$(LUA_T): $(LUA_O) $(CORE_T) $(LIB_T)
-	$(CC) -o $@ $(MYLDFLAGS) $(LUA_O) -L. -llua -llualib $(MYLIBS) $(DL)
-
-$(LUAC_T): $(LUAC_O) $(CORE_T)
-	$(CC) -o $@ $(MYLDFLAGS) $(LUAC_O) -L. -llua $(MYLIBS)
+$(LUAC_T): $(LUAC_O) $(LUA_A)
+	$(CC) -o $@ $(MYLDFLAGS) $(LUAC_O) $(LUA_A) $(LIBS)
 
 clean:
 	$(RM) $(ALL_T) $(ALL_O)
 
 depend:
-	@$(CC) $(CFLAGS) -MM *.c
+	@$(CC) $(CFLAGS) -MM l*.c print.c
 
 echo:
 	@echo "CC = $(CC)"
@@ -71,7 +68,6 @@ echo:
 	@echo "MYCFLAGS = $(MYCFLAGS)"
 	@echo "MYLDFLAGS = $(MYLDFLAGS)"
 	@echo "MYLIBS = $(MYLIBS)"
-	@echo "DL = $(DL)"
 
 # DO NOT DELETE
 

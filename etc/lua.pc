@@ -1,0 +1,24 @@
+# lua.pc -- pkg-config data for Lua
+
+# vars from install Makefile
+# grep ^INSTALL_...= ../Makefile
+INSTALL_TOP= /usr/local
+INSTALL_BIN= $(INSTALL_TOP)/bin
+INSTALL_INC= $(INSTALL_TOP)/include
+INSTALL_LIB= $(INSTALL_TOP)/lib
+INSTALL_MAN= $(INSTALL_TOP)/man/man1
+# grep ^V= ../Makefile
+V= 5.1
+
+prefix=${INSTALL_TOP}
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: Lua
+Description: An Extensible Extension Language
+Version: ${V}
+Requires: 
+Libs: -L${libdir} -llua -lm
+Cflags: -I${includedir}
+

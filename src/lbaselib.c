@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.169 2005/02/28 17:24:41 roberto Exp $
+** $Id: lbaselib.c,v 1.176 2005/05/17 19:49:15 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -39,7 +39,8 @@ static int luaB_print (lua_State *L) {
     lua_call(L, 1, 1);
     s = lua_tostring(L, -1);  /* get result */
     if (s == NULL)
-      return luaL_error(L, "`tostring' must return a string to `print'");
+      return luaL_error(L, LUA_QL("tostring") " must return a string to "
+                           LUA_QL("print"));
     if (i>1) fputs("\t", stdout);
     fputs(s, stdout);
     lua_pop(L, 1);  /* pop result */
@@ -148,7 +149,8 @@ static int luaB_setfenv (lua_State *L) {
     return 0;
   }
   else if (lua_iscfunction(L, -2) || lua_setfenv(L, -2) == 0)
-    luaL_error(L, "`setfenv' cannot change environment of given object");
+    luaL_error(L,
+          LUA_QL("setfenv") " cannot change environment of given object");
   return 1;
 }
 
@@ -164,6 +166,7 @@ static int luaB_rawequal (lua_State *L) {
 static int luaB_rawget (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
   luaL_checkany(L, 2);
+  lua_settop(L, 2);
   lua_rawget(L, 1);
   return 1;
 }
@@ -172,6 +175,7 @@ static int luaB_rawset (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
   luaL_checkany(L, 2);
   luaL_checkany(L, 3);
+  lua_settop(L, 3);
   lua_rawset(L, 1);
   return 1;
 }
@@ -185,9 +189,9 @@ static int luaB_gcinfo (lua_State *L) {
 
 static int luaB_collectgarbage (lua_State *L) {
   static const char *const opts[] = {"stop", "restart", "collect",
-    "count", "step", "setpace", "setstepmul", NULL};
+    "count", "step", "setpause", "setstepmul", NULL};
   static const int optsnum[] = {LUA_GCSTOP, LUA_GCRESTART, LUA_GCCOLLECT,
-    LUA_GCCOUNT, LUA_GCSTEP, LUA_GCSETPACE, LUA_GCSETSTEPMUL};
+    LUA_GCCOUNT, LUA_GCSTEP, LUA_GCSETPAUSE, LUA_GCSETSTEPMUL};
   int o = luaL_findstring(luaL_optstring(L, 1, "collect"), opts);
   int ex = luaL_optinteger(L, 2, 0);
   luaL_argcheck(L, o >= 0, 1, "invalid option");
@@ -238,7 +242,7 @@ static int luaB_ipairs (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
   lua_pushvalue(L, lua_upvalueindex(1));  /* return generator, */
   lua_pushvalue(L, 1);  /* state, */
-  lua_pushinteger(L, LUA_FIRSTINDEX - 1);  /* and initial value */
+  lua_pushinteger(L, 0);  /* and initial value */
   return 3;
 }
 
@@ -292,11 +296,8 @@ static const char *generic_reader (lua_State *L, void *ud, size_t *size) {
     return NULL;
   }
   else if (lua_isstring(L, -1)) {
-    const char *res;
     lua_replace(L, 3);  /* save string in a reserved stack slot */
-    res = lua_tostring(L, 3);
-    *size = lua_strlen(L, 3);
-    return res;
+    return lua_tolstring(L, 3, size);
   }
   else luaL_error(L, "reader function must return a string");
   return NULL;  /* to avoid warnings */
@@ -330,13 +331,20 @@ static int luaB_assert (lua_State *L) {
 }
 
 
+static int luaB_getn (lua_State *L) {
+  luaL_checktype(L, 1, LUA_TTABLE);
+  lua_pushinteger(L, lua_objsize(L, 1));
+  return 1;
+}
+
+
 static int luaB_unpack (lua_State *L) {
-  int i = luaL_optint(L, 2, LUA_FIRSTINDEX);
+  int i = luaL_optint(L, 2, 1);
   int e = luaL_optint(L, 3, -1);
   int n;
   luaL_checktype(L, 1, LUA_TTABLE);
   if (e == -1)
-    e = luaL_getn(L, 1) + LUA_FIRSTINDEX - 1;
+    e = luaL_getn(L, 1);
   n = e - i + 1;  /* number of elements */
   if (n <= 0) return 0;  /* empty range */
   luaL_checkstack(L, n, "table too big to unpack");
@@ -446,6 +454,7 @@ static const luaL_reg base_funcs[] = {
   {"tostring", luaB_tostring},
   {"type", luaB_type},
   {"assert", luaB_assert},
+  {"getn", luaB_getn},
   {"unpack", luaB_unpack},
   {"select", luaB_select},
   {"rawequal", luaB_rawequal},

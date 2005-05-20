@@ -1,5 +1,5 @@
 /*
-** $Id: lfunc.c,v 2.9 2005/02/18 12:40:02 roberto Exp $
+** $Id: lfunc.c,v 2.11 2005/05/05 20:47:02 roberto Exp $
 ** Auxiliary functions to manipulate prototypes and closures
 ** See Copyright Notice in lua.h
 */
@@ -105,10 +105,6 @@ void luaF_close (lua_State *L, StkId level) {
     else {
       unlinkupval(uv);
       setobj(L, &uv->u.value, uv->v);
-      if (isgray(o)) {
-        gray2black(o);  /* closed upvalues are never gray */
-        luaC_barrier(L, uv, &uv->u.value);
-      }
       uv->v = &uv->u.value;  /* now current value lives here */
       luaC_linkupval(L, uv);  /* link upvalue into `gcroot' list */
     }
@@ -135,7 +131,8 @@ Proto *luaF_newproto (lua_State *L) {
   f->lineinfo = NULL;
   f->sizelocvars = 0;
   f->locvars = NULL;
-  f->lineDefined = 0;
+  f->linedefined = 0;
+  f->lastlinedefined = 0;
   f->source = NULL;
   return f;
 }

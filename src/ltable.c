@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.15 2005/01/10 18:17:39 roberto Exp $
+** $Id: ltable.c,v 2.23 2005/05/17 19:49:15 roberto Exp $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -18,6 +18,7 @@
 ** Hence even when the load factor reaches 100%, performance remains good.
 */
 
+#include <math.h>
 #include <string.h>
 
 #define ltable_c
@@ -37,10 +38,10 @@
 /*
 ** max size of array part is 2^MAXBITS
 */
-#if LUA_BITSINT > 26
+#if LUAI_BITSINT > 26
 #define MAXBITS		26
 #else
-#define MAXBITS		(LUA_BITSINT-2)
+#define MAXBITS		(LUAI_BITSINT-2)
 #endif
 
 #define MAXASIZE	(1 << MAXBITS)
@@ -119,7 +120,7 @@ static int arrayindex (const TValue *key) {
     lua_Number n = nvalue(key);
     int k;
     lua_number2int(k, n);
-    if (num_eq(cast(lua_Number, k), nvalue(key)))
+    if (luai_numeq(cast(lua_Number, k), nvalue(key)))
       return k;
   }
   return -1;  /* `key' did not match some condition */
@@ -150,7 +151,7 @@ static int findindex (lua_State *L, Table *t, StkId key) {
       }
       else n = gnext(n);
     } while (n);
-    luaG_runerror(L, "invalid key for `next'");  /* key not found */
+    luaG_runerror(L, "invalid key to " LUA_QL("next"));  /* key not found */
     return 0;  /* to avoid warnings */
   }
 }
@@ -436,7 +437,7 @@ const TValue *luaH_getnum (Table *t, int key) {
     lua_Number nk = cast(lua_Number, key);
     Node *n = hashnum(t, nk);
     do {  /* check whether `key' is somewhere in the chain */
-      if (ttisnumber(gkey(n)) && num_eq(nvalue(gkey(n)), nk))
+      if (ttisnumber(gkey(n)) && luai_numeq(nvalue(gkey(n)), nk))
         return gval(n);  /* that's it */
       else n = gnext(n);
     } while (n);
@@ -468,8 +469,9 @@ const TValue *luaH_get (Table *t, const TValue *key) {
     case LUA_TSTRING: return luaH_getstr(t, rawtsvalue(key));
     case LUA_TNUMBER: {
       int k;
-      lua_number2int(k, (nvalue(key)));
-      if (num_eq(cast(lua_Number, k), nvalue(key)))  /* is an integer index? */
+      lua_Number n = nvalue(key);
+      lua_number2int(k, n);
+      if (luai_numeq(cast(lua_Number, k), nvalue(key)))  /* index is integer? */
         return luaH_getnum(t, k);  /* use specialized version */
       /* else go through */
     }
@@ -493,7 +495,7 @@ TValue *luaH_set (lua_State *L, Table *t, const TValue *key) {
     return cast(TValue *, p);
   else {
     if (ttisnil(key)) luaG_runerror(L, "table index is nil");
-    else if (ttisnumber(key) && !num_eq(nvalue(key), nvalue(key)))
+    else if (ttisnumber(key) && !luai_numeq(nvalue(key), nvalue(key)))
       luaG_runerror(L, "table index is NaN");
     return newkey(L, t, key);
   }
@@ -521,5 +523,52 @@ TValue *luaH_setstr (lua_State *L, Table *t, TString *key) {
     setsvalue(L, &k, key);
     return newkey(L, t, &k);
   }
+}
+
+
+static int unbound_search (Table *t, unsigned int j) {
+  unsigned int i = j;  /* i is zero or a present index */
+  j = j+1;
+  /* find `i' and `j' such that i is present and j is not */
+  while (!ttisnil(luaH_getnum(t, j))) {
+    i = j;
+    j = i*2;
+    if (j > cast(unsigned int, MAX_INT)) {  /* overflow? */
+      /* table was built with bad purposes: resort to linear search */
+      i = 1;
+      while (!ttisnil(luaH_getnum(t, i))) i++;
+      return i - 1;
+    }
+  }
+  /* now do a binary search between them */
+  while (i < j-1) {
+    unsigned int m = (i+j)/2;
+    if (ttisnil(luaH_getnum(t, m))) j = m;
+    else i = m;
+  }
+  return i;
+}
+
+
+/*
+** Try to find a boundary in table `t'. A `boundary' is an integer index
+** such that t[i] is non-nil and t[i+1] is nil (and 0 if t[1] is nil).
+*/
+int luaH_getn (Table *t) {
+  unsigned int j = t->sizearray;
+  if (j > 0 && ttisnil(&t->array[j - 1])) {
+    /* there is a boundary in the array part: (binary) search for it */
+    unsigned int i = 0;
+    while (j - i > 1) {
+      unsigned int m = (i+j)/2;
+      if (ttisnil(&t->array[m - 1])) j = m;
+      else i = m;
+    }
+    return i;
+  }
+  /* else must find a boundary in hash part */
+  else if (t->node == &luaH_dummynode)  /* hash part is empty? */
+    return j;  /* that is easy... */
+  else return unbound_search(t, j);
 }
 

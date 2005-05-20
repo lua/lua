@@ -22,6 +22,5 @@ Here is a one-line summary of each program:
    table.lua		make table, grouping all data for the same item
    trace-calls.lua	trace calls
    trace-globals.lua	trace assigments to global variables
-   undefined.lua	catch "undefined" global variables
    xd.lua		hex dump
 

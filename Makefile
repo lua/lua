@@ -4,8 +4,9 @@
 
 # == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT =======================
 
-# Where to install. The installation starts in the src directory, so take
-# care if INSTALL_TOP is not an absolute path.
+# Where to install. The installation starts in the src directory, so take care
+# if INSTALL_TOP is not an absolute path. (Man pages are installed from the
+# doc directory.)
 #
 INSTALL_TOP= /usr/local
 INSTALL_BIN= $(INSTALL_TOP)/bin
@@ -23,12 +24,14 @@ INSTALL_DATA= cp
 
 # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
 
-V= 5.1
-
+# What to install.
 TO_BIN= lua luac
 TO_INC= lua.h luaconf.h lualib.h lauxlib.h
-TO_LIB= liblua.a liblualib.a
+TO_LIB= liblua.a
 TO_MAN= lua.1 luac.1
+
+# Lua version. Currently used only for messages.
+V= 5.1
 
 all clean:
 	cd src; $(MAKE) $@
@@ -65,6 +68,14 @@ echo:
 	@echo ""
 	@echo "See also src/luaconf.h ."
 	@echo ""
+
+# echo private config parameters
+pecho:
+	@echo "V = $(V)"
+	@echo "TO_BIN = $(TO_BIN)"
+	@echo "TO_INC = $(TO_INC)"
+	@echo "TO_LIB = $(TO_LIB)"
+	@echo "TO_MAN = $(TO_MAN)"
 
 # echo config parameters as Lua code
 # uncomment the last sed expression if you want nil instead of empty strings

@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.11 2005/02/18 12:40:02 roberto Exp $
+** $Id: lobject.h,v 2.13 2005/05/05 20:47:02 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -244,7 +244,8 @@ typedef struct Proto {
   int sizelineinfo;
   int sizep;  /* size of `p' */
   int sizelocvars;
-  int lineDefined;
+  int linedefined;
+  int lastlinedefined;
   GCObject *gclist;
   lu_byte nups;  /* number of upvalues */
   lu_byte numparams;
@@ -360,16 +361,15 @@ extern const TValue luaO_nilobject;
 
 #define ceillog2(x)	(luaO_log2((x)-1) + 1)
 
-int luaO_log2 (unsigned int x);
-int luaO_int2fb (unsigned int x);
-int luaO_fb2int (int x);
-
-int luaO_rawequalObj (const TValue *t1, const TValue *t2);
-int luaO_str2d (const char *s, lua_Number *result);
-
-const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp);
-const char *luaO_pushfstring (lua_State *L, const char *fmt, ...);
-void luaO_chunkid (char *out, const char *source, int len);
+LUAI_FUNC int luaO_log2 (unsigned int x);
+LUAI_FUNC int luaO_int2fb (unsigned int x);
+LUAI_FUNC int luaO_fb2int (int x);
+LUAI_FUNC int luaO_rawequalObj (const TValue *t1, const TValue *t2);
+LUAI_FUNC int luaO_str2d (const char *s, lua_Number *result);
+LUAI_FUNC const char *luaO_pushvfstring (lua_State *L, const char *fmt,
+                                                       va_list argp);
+LUAI_FUNC const char *luaO_pushfstring (lua_State *L, const char *fmt, ...);
+LUAI_FUNC void luaO_chunkid (char *out, const char *source, int len);
 
 
 #endif

@@ -20,10 +20,10 @@ all:
 	@echo 'choose a target:' $(ALL)
 
 min:	min.c
-	$(CC) $(CFLAGS) -o $@ $@.c -L$(LIB) -llua -llualib
+	$(CC) $(CFLAGS) -o $@ $@.c -L$(LIB) -llua $(MYLIBS)
 
 noparser: noparser.o
-	$(CC) noparser.o $(SRC)/lua.o -L$(LIB) -llua -llualib $(MYLIBS)
+	$(CC) noparser.o $(SRC)/lua.o -L$(LIB) -llua $(MYLIBS)
 	$(BIN)/luac $(TST)/hello.lua
 	-./a.out luac.out
 	-./a.out -e'a=1'

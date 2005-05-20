@@ -1,5 +1,5 @@
 /*
-** $Id: print.c,v 1.49 2004/11/25 09:31:41 lhf Exp $
+** $Id: print.c,v 1.50 2005/05/12 00:26:50 lhf Exp $
 ** print bytecodes
 ** See Copyright Notice in lua.h
 */
@@ -76,9 +76,6 @@ static void PrintCode(const Proto* f)
   int bx=GETARG_Bx(i);
   int sbx=GETARG_sBx(i);
   int line=getline(f,pc);
-#if 0
-  printf("%0*lX",Sizeof(i)*2,i);
-#endif
   printf("\t%d\t",pc+1);
   if (line>0) printf("[%d]\t",line); else printf("[-]\t");
   printf("%-9s\t",luaP_opnames[o]);
@@ -133,7 +130,6 @@ static void PrintCode(const Proto* f)
    case OP_JMP:
    case OP_FORLOOP:
    case OP_FORPREP:
-   case OP_TFORPREP:
     printf("\t; to %d",sbx+pc+2);
     break;
    case OP_CLOSURE:
@@ -146,28 +142,25 @@ static void PrintCode(const Proto* f)
  }
 }
 
-static const char* Source(const Proto* f)
-{
- const char* s=getstr(f->source);
- if (*s=='@' || *s=='=')
-  return s+1;
- else if (*s==LUA_SIGNATURE[0])
-  return "(bstring)";
- else
-  return "(string)";
-}
-
 #define SS(x)	(x==1)?"":"s"
 #define S(x)	x,SS(x)
 
 static void PrintHeader(const Proto* f)
 {
- printf("\n%s <%s:%d> (%d instruction%s, %d bytes at %p)\n",
- 	(f->lineDefined==0)?"main":"function",Source(f),f->lineDefined,
+ const char* s=getstr(f->source);
+ if (*s=='@' || *s=='=')
+  s++;
+ else if (*s==LUA_SIGNATURE[0])
+  s="(bstring)";
+ else
+  s="(string)";
+ printf("\n%s <%s:%d,%d> (%d instruction%s, %d bytes at %p)\n",
+ 	(f->linedefined==0)?"main":"function",s,
+	f->linedefined,f->lastlinedefined,
 	S(f->sizecode),f->sizecode*Sizeof(Instruction),VOID(f));
  printf("%d%s param%s, %d stack%s, %d upvalue%s, ",
-	f->numparams,f->is_vararg?"+":"",SS(f->numparams),S(f->maxstacksize),
-	S(f->nups));
+	f->numparams,f->is_vararg?"+":"",SS(f->numparams),
+	S(f->maxstacksize),S(f->nups));
  printf("%d local%s, %d constant%s, %d function%s\n",
 	S(f->sizelocvars),S(f->sizek),S(f->sizep));
 }
