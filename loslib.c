@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.8 2005/05/16 21:19:00 roberto Exp roberto $
+** $Id: loslib.c,v 1.9 2005/05/17 19:49:15 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -197,9 +197,8 @@ static int io_setloc (lua_State *L) {
   static const char *const catnames[] = {"all", "collate", "ctype", "monetary",
      "numeric", "time", NULL};
   const char *l = lua_tostring(L, 1);
-  int op = luaL_findstring(luaL_optstring(L, 2, "all"), catnames);
+  int op = luaL_checkoption(L, 2, "all", catnames);
   luaL_argcheck(L, l || lua_isnoneornil(L, 1), 1, "string expected");
-  luaL_argcheck(L, op != -1, 2, "invalid option");
   lua_pushstring(L, setlocale(cat[op], l));
   return 1;
 }

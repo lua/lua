@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.59 2005/03/18 18:01:14 roberto Exp roberto $
+** $Id: liolib.c,v 2.60 2005/05/16 21:19:00 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -400,9 +400,8 @@ static int f_seek (lua_State *L) {
   static const int mode[] = {SEEK_SET, SEEK_CUR, SEEK_END};
   static const char *const modenames[] = {"set", "cur", "end", NULL};
   FILE *f = tofile(L);
-  int op = luaL_findstring(luaL_optstring(L, 2, "cur"), modenames);
+  int op = luaL_checkoption(L, 2, "cur", modenames);
   lua_Integer offset = luaL_optinteger(L, 3, 0);
-  luaL_argcheck(L, op != -1, 2, "invalid mode");
   op = fseek(f, offset, mode[op]);
   if (op)
     return pushresult(L, 0, NULL);  /* error */
@@ -417,8 +416,7 @@ static int f_setvbuf (lua_State *L) {
   static const int mode[] = {_IONBF, _IOFBF, _IOLBF};
   static const char *const modenames[] = {"no", "full", "line", NULL};
   FILE *f = tofile(L);
-  int op = luaL_findstring(luaL_checkstring(L, 2), modenames);
-  luaL_argcheck(L, op != -1, 2, "invalid mode");
+  int op = luaL_checkoption(L, 2, NULL, modenames);
   return pushresult(L, setvbuf(f, NULL, mode[op], 0) == 0, NULL);
 }
 
