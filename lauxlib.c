@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.134 2005/05/25 13:21:26 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.135 2005/05/31 14:25:18 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -103,7 +103,8 @@ LUALIB_API int luaL_checkoption (lua_State *L, int narg, const char *def,
   for (i=0; lst[i]; i++)
     if (strcmp(lst[i], name) == 0)
       return i;
-  return luaL_error(L, "invalid option " LUA_QS, name);
+  return luaL_argerror(L, narg,
+                       lua_pushfstring(L, "invalid option " LUA_QS, name));
 }
 
 
