@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.40 2005/05/16 19:21:11 roberto Exp roberto $
+** $Id: lapi.c,v 2.41 2005/05/17 19:49:15 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -153,7 +153,7 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
 
 
 LUA_API int lua_gettop (lua_State *L) {
-  return (L->top - L->base);
+  return cast(int, L->top - L->base);
 }
 
 
@@ -972,7 +972,7 @@ LUA_API void lua_concat (lua_State *L, int n) {
   luaC_checkGC(L);
   api_checknelems(L, n);
   if (n >= 2) {
-    luaV_concat(L, n, L->top - L->base - 1);
+    luaV_concat(L, n, cast(int, L->top - L->base) - 1);
     L->top -= (n-1);
   }
   else if (n == 0) {  /* push empty string */

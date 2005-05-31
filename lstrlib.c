@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.115 2005/05/17 19:49:15 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.116 2005/05/20 15:53:42 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -461,7 +461,7 @@ static const char *lmemfind (const char *s1, size_t l1,
 
 
 static void push_onecapture (MatchState *ms, int i) {
-  int l = ms->capture[i].len;
+  ptrdiff_t l = ms->capture[i].len;
   if (l == CAP_UNFINISHED) luaL_error(ms->L, "unfinished capture");
   if (l == CAP_POSITION)
     lua_pushinteger(ms->L, ms->capture[i].init - ms->src_init + 1);
@@ -539,7 +539,7 @@ static int gfind_aux (lua_State *L) {
     const char *e;
     ms.level = 0;
     if ((e = match(&ms, src, p)) != NULL) {
-      int newstart = e-s;
+      lua_Integer newstart = e-s;
       if (e == src) newstart++;  /* empty match? go at least one position */
       lua_pushinteger(L, newstart);
       lua_replace(L, lua_upvalueindex(3));

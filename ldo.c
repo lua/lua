@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.23 2005/05/03 19:01:17 roberto Exp roberto $
+** $Id: ldo.c,v 2.24 2005/05/20 19:09:05 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -97,7 +97,7 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
 static void restore_stack_limit (lua_State *L) {
   lua_assert(L->stack_last - L->stack == L->stacksize - EXTRA_STACK - 1);
   if (L->size_ci > LUAI_MAXCALLS) {  /* there was an overflow? */
-    int inuse = (L->ci - L->base_ci);
+    int inuse = cast(int, L->ci - L->base_ci);
     if (inuse + 1 < LUAI_MAXCALLS)  /* can `undo' overflow? */
       luaD_reallocCI(L, LUAI_MAXCALLS);
   }
@@ -173,7 +173,7 @@ void luaD_callhook (lua_State *L, int event, int line) {
     if (event == LUA_HOOKTAILRET)
       ar.i_ci = 0;  /* tail call; no debug information about it */
     else
-      ar.i_ci = L->ci - L->base_ci;
+      ar.i_ci = cast(int, L->ci - L->base_ci);
     luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
     L->ci->top = L->top + LUA_MINSTACK;
     lua_assert(L->ci->top <= L->stack_last);
@@ -260,7 +260,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     StkId st, base;
     Proto *p = cl->p;
     if (p->is_vararg) {  /* varargs? */
-      int nargs = L->top - restorestack(L, funcr) - 1;
+      int nargs = cast(int, L->top - restorestack(L, funcr)) - 1;
       luaD_checkstack(L, p->maxstacksize + nargs);
       base = adjust_varargs(L, p->numparams, nargs, p->is_vararg);
       func = restorestack(L, funcr);
@@ -380,7 +380,7 @@ static void resume (lua_State *L, void *ud) {
     }  /* else yielded inside a hook: just continue its execution */
   }
   L->status = 0;
-  firstResult = luaV_execute(L, L->ci - L->base_ci);
+  firstResult = luaV_execute(L, cast(int, L->ci - L->base_ci));
   if (firstResult != NULL) {   /* return? */
     luaD_poscall(L, LUA_MULTRET, firstResult);  /* finalize this coroutine */
   }

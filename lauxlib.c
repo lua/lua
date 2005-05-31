@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.133 2005/05/17 19:49:15 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.134 2005/05/25 13:21:26 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -338,7 +338,7 @@ static const char *pushnexttemplate (lua_State *L, const char *path) {
 LUALIB_API const char *luaL_gsub (lua_State *L, const char *s, const char *p,
                                                                const char *r) {
   const char *wild;
-  int l = strlen(p);
+  size_t l = strlen(p);
   luaL_Buffer b;
   luaL_buffinit(L, &b);
   while ((wild = strstr(s, p)) != NULL) {

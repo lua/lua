@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.13 2005/05/16 21:19:00 roberto Exp roberto $
+** $Id: lobject.c,v 2.14 2005/05/20 15:53:42 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -159,7 +159,7 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
     fmt = e+2;
   }
   pushstr(L, fmt);
-  luaV_concat(L, n+1, L->top - L->base - 1);
+  luaV_concat(L, n+1, cast(int, L->top - L->base) - 1);
   L->top -= n;
   return svalue(L->top - 1);
 }
@@ -175,26 +175,26 @@ const char *luaO_pushfstring (lua_State *L, const char *fmt, ...) {
 }
 
 
-void luaO_chunkid (char *out, const char *source, int bufflen) {
+void luaO_chunkid (char *out, const char *source, size_t bufflen) {
   if (*source == '=') {
     strncpy(out, source+1, bufflen);  /* remove first char */
     out[bufflen-1] = '\0';  /* ensures null termination */
   }
   else {  /* out = "source", or "...source" */
     if (*source == '@') {
-      int l;
+      size_t l;
       source++;  /* skip the `@' */
       bufflen -= sizeof(" '...' ");
       l = strlen(source);
       strcpy(out, "");
-      if (l>bufflen) {
+      if (l > bufflen) {
         source += (l-bufflen);  /* get last part of file name */
         strcat(out, "...");
       }
       strcat(out, source);
     }
     else {  /* out = [string "string"] */
-      int len = strcspn(source, "\n\r");  /* stop at first newline */
+      size_t len = strcspn(source, "\n\r");  /* stop at first newline */
       bufflen -= sizeof(" [string \"...\"] ");
       if (len > bufflen) len = bufflen;
       strcpy(out, "[string \"");

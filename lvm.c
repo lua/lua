@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.44 2005/05/17 19:49:15 roberto Exp roberto $
+** $Id: lvm.c,v 2.45 2005/05/20 15:53:42 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -720,7 +720,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         int last;
         Table *h;
         if (n == 0) {
-          n = L->top - ra - 1;
+          n = cast(int, L->top - ra) - 1;
           L->top = L->ci->top;
         }
         if (c == 0) c = cast(int, *pc++);
@@ -764,7 +764,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         int b = GETARG_B(i) - 1;
         int j;
         CallInfo *ci = L->ci;
-        int n = ci->base - ci->func - cl->p->numparams - 1;
+        int n = cast(int, ci->base - ci->func) - cl->p->numparams - 1;
         if (b == LUA_MULTRET) {
           b = n;
           L->top = ra + n;

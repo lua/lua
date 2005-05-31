@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.31 2005/03/22 16:04:29 roberto Exp roberto $
+** $Id: lgc.c,v 2.32 2005/05/05 15:34:03 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -240,8 +240,8 @@ static void traverseclosure (global_State *g, Closure *cl) {
 
 
 static void checkstacksizes (lua_State *L, StkId max) {
-  int ci_used = L->ci - L->base_ci;  /* number of `ci' in use */
-  int s_used = max - L->stack;  /* part of stack in use */
+  int ci_used = cast(int, L->ci - L->base_ci);  /* number of `ci' in use */
+  int s_used = cast(int, max - L->stack);  /* part of stack in use */
   if (L->size_ci > LUAI_MAXCALLS)  /* handling overflow? */
     return;  /* do not touch the stacks */
   if (4*ci_used < L->size_ci && 2*BASIC_CI_SIZE < L->size_ci)

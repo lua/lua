@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.19 2005/05/16 21:19:00 roberto Exp roberto $
+** $Id: ldebug.c,v 2.20 2005/05/17 19:49:15 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -92,7 +92,7 @@ LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
   }
   if (level == 0 && ci > L->base_ci) {  /* level found? */
     status = 1;
-    ar->i_ci = ci - L->base_ci;
+    ar->i_ci = cast(int, ci - L->base_ci);
   }
   else if (level < 0) {  /* level is of a lost tail call? */
     status = 1;
@@ -546,7 +546,8 @@ void luaG_typeerror (lua_State *L, const TValue *o, const char *op) {
   const char *name = NULL;
   const char *t = luaT_typenames[ttype(o)];
   const char *kind = (isinstack(L->ci, o)) ?
-                         getobjname(L, L->ci, o - L->base, &name) : NULL;
+                         getobjname(L, L->ci, cast(int, o - L->base), &name) :
+                         NULL;
   if (kind)
     luaG_runerror(L, "attempt to %s %s " LUA_QS " (a %s value)",
                 op, kind, name, t);

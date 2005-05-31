@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 2.3 2004/10/04 19:01:12 roberto Exp roberto $
+** $Id: lundump.c,v 2.4 2005/05/05 20:47:02 roberto Exp roberto $
 ** load pre-compiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -40,9 +40,9 @@ static int ezgetc (LoadState* S)
  return c;
 }
 
-static void ezread (LoadState* S, void* b, int n)
+static void ezread (LoadState* S, void* b, size_t n)
 {
- int r=luaZ_read(S->Z,b,n);
+ size_t r=luaZ_read(S->Z,b,n);
  if (r!=0) unexpectedEOZ(S);
 }
 
@@ -51,7 +51,7 @@ static void LoadBlock (LoadState* S, void* b, size_t size)
  if (S->swap)
  {
   char* p=(char*) b+size-1;
-  int n=size;
+  size_t n=size;
   while (n--) *p--=(char)ezgetc(S);
  }
  else
@@ -66,7 +66,7 @@ static void LoadVector (LoadState* S, void* b, int m, size_t size)
   while (m--)
   {
    char* p=q+size-1;
-   int n=size;
+   size_t n=size;
    while (n--) *p--=(char)ezgetc(S);
    q+=size;
   }
