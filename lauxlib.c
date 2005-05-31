@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.135 2005/05/31 14:25:18 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.136 2005/05/31 14:31:50 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -317,7 +317,7 @@ LUALIB_API int luaL_getn (lua_State *L, int t) {
   if ((n = checkint(L, 2)) >= 0) return n;
   lua_getfield(L, t, "n");  /* else try t.n */
   if ((n = checkint(L, 1)) >= 0) return n;
-  return lua_objsize(L, t);
+  return lua_objlen(L, t);
 }
 
 #endif
@@ -542,7 +542,7 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
     lua_rawseti(L, t, FREELIST_REF);  /* (t[FREELIST_REF] = t[ref]) */
   }
   else {  /* no free elements */
-    ref = lua_objsize(L, t);
+    ref = lua_objlen(L, t);
     ref++;  /* create new reference */
   }
   lua_rawseti(L, t, ref);

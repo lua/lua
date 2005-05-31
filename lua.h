@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.207 2005/05/16 19:21:11 roberto Exp roberto $
+** $Id: lua.h,v 1.208 2005/05/17 19:49:15 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Tecgraf: Computer Graphics Technology Group, PUC-Rio, Brazil
 ** http://www.lua.org
@@ -147,7 +147,7 @@ LUA_API lua_Number      (lua_tonumber) (lua_State *L, int idx);
 LUA_API lua_Integer     (lua_tointeger) (lua_State *L, int idx);
 LUA_API int             (lua_toboolean) (lua_State *L, int idx);
 LUA_API const char     *(lua_tolstring) (lua_State *L, int idx, size_t *len);
-LUA_API size_t          (lua_objsize) (lua_State *L, int idx);
+LUA_API size_t          (lua_objlen) (lua_State *L, int idx);
 LUA_API lua_CFunction   (lua_tocfunction) (lua_State *L, int idx);
 LUA_API void	       *(lua_touserdata) (lua_State *L, int idx);
 LUA_API lua_State      *(lua_tothread) (lua_State *L, int idx);
@@ -257,7 +257,7 @@ LUA_API lua_Alloc (lua_getallocf) (lua_State *L, void **ud);
 
 #define lua_pushcfunction(L,f)	lua_pushcclosure(L, (f), 0)
 
-#define lua_strlen(L,i)		lua_objsize(L, (i))
+#define lua_strlen(L,i)		lua_objlen(L, (i))
 
 #define lua_isfunction(L,n)	(lua_type(L, (n)) == LUA_TFUNCTION)
 #define lua_istable(L,n)	(lua_type(L, (n)) == LUA_TTABLE)

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.23 2005/03/28 17:17:53 roberto Exp roberto $
+** $Id: ltests.c,v 2.24 2005/05/03 19:01:17 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -882,7 +882,7 @@ static int testC (lua_State *L) {
       lua_pushstring(L1, s);
     }
     else if EQ("objsize") {
-      lua_pushinteger(L1, lua_objsize(L1, getindex));
+      lua_pushinteger(L1, lua_objlen(L1, getindex));
     }
     else if EQ("tocfunction") {
       lua_pushcfunction(L1, lua_tocfunction(L1, getindex));
