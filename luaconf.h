@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.50 2005/05/20 15:53:42 roberto Exp roberto $
+** $Id: luaconf.h,v 1.51 2005/05/20 19:09:05 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -19,6 +19,16 @@
 */
 
 
+
+
+/*
+@@ LUA_ANSI controls the use of non-ansi features.
+** CHANGE it (define it) if you want Lua to avoid the use of any
+** non-ansi feature or library.
+*/
+#if defined(__STRICT_ANSI__)
+#define LUA_ANSI
+#endif
 
 
 /*
@@ -168,10 +178,10 @@
 ** CHANGE it if you have a better definition for non-POSIX/non-Windows
 ** systems.
 */
-#if !defined(__STRICT_ANSI__) && defined(_POSIX_C_SOURCE)
+#if !defined(LUA_ANSI) && defined(_POSIX_C_SOURCE)
 #include <unistd.h>
 #define lua_stdin_is_tty()	isatty(0)
-#elif !defined(__STRICT_ANSI__) && defined(_WIN32)
+#elif !defined(LUA_ANSI) && defined(_WIN32)
 #include <io.h>
 #include <stdio.h>
 #define lua_stdin_is_tty()	_isatty(_fileno(stdin))
@@ -214,7 +224,7 @@
 ** CHANGE them if you want to improve this functionality (e.g., by using
 ** GNU readline and history facilities).
 */
-#if !defined(__STRICT_ANSI__) && defined(LUA_USE_READLINE)
+#if !defined(LUA_ANSI) && defined(LUA_USE_READLINE)
 #include <stdio.h>
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -431,14 +441,12 @@
 */
 
 /* On a gcc/Pentium, resort to assembler */
-#if !defined(__STRICT_ANSI__) && defined(__GNUC__) && defined(__i386)
+#if !defined(LUA_ANSI) && defined(__GNUC__) && defined(__i386)
 #define lua_number2int(i,d)	__asm__ ("fistpl %0":"=m"(i):"t"(d):"st")
 
 /* On  Windows/Pentium, resort to assembler */
-#elif !defined(__STRICT_ANSI__) && defined(_MSC_VER) && defined(_M_IX86)
-#define lua_number2int(i,d)	\
-	__asm fld d \
-	__asm fistp i
+#elif !defined(LUA_ANSI) && defined(_MSC_VER) && defined(_M_IX86)
+#define lua_number2int(i,d)	__asm fld d   __asm fistp i
 
 
 /* on Pentium machines compliant with C99, you can try lrint */
@@ -485,7 +493,7 @@
 @* over a number.
 */
 #define LUA_NUMBER	double
-#define LUAI_UACNUMBER	LUA_NUMBER
+#define LUAI_UACNUMBER	double
 
 
 /*
@@ -544,7 +552,7 @@
 	{ if ((c)->status == 0) (c)->status = -1; }
 #define luai_jmpbuf	int  /* dummy variable */
 
-#elif !defined(__STRICT_ANSI__) && (defined(unix) || defined(__unix) || \
+#elif !defined(LUA_ANSI) && (defined(unix) || defined(__unix) || \
 				    defined(__unix__))
 /* in Unix, try _longjmp/_setjmp (more efficient) */
 #define LUAI_THROW(L,c)	_longjmp((c)->b, 1)
@@ -578,7 +586,7 @@
 */
 #if defined(loslib_c) || defined(luaall_c)
 
-#if !defined(__STRICT_ANSI__) && defined(_POSIX_C_SOURCE)
+#if !defined(LUA_ANSI) && defined(_POSIX_C_SOURCE)
 #include <unistd.h>
 #define LUA_TMPNAMBUFSIZE	32
 #define lua_tmpnam(b,e)	{ \
@@ -606,7 +614,7 @@
 ** If you do not want any kind of dynamic library, undefine all these
 ** options (or just remove these definitions).
 */
-#if !defined(__STRICT_ANSI__) 
+#if !defined(LUA_ANSI) 
 #if defined(_WIN32)
 #define LUA_DL_DLL
 #elif defined(__APPLE__) && defined(__MACH__)
