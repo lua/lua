@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.143 2005/05/16 21:19:00 roberto Exp roberto $
+** $Id: lua.c,v 1.144 2005/05/17 19:49:15 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -149,7 +149,7 @@ static const char *get_prompt (lua_State *L, int firstline) {
 
 static int incomplete (lua_State *L, int status) {
   if (status == LUA_ERRSYNTAX &&
-         strstr(lua_tostring(L, -1), "<eof>") != NULL) {
+         strstr(lua_tostring(L, -1), LUA_QL("<eof>")) != NULL) {
     lua_pop(L, 1);
     return 1;
   }

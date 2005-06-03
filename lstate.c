@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.30 2005/04/05 15:57:59 roberto Exp roberto $
+** $Id: lstate.c,v 2.31 2005/05/05 15:34:03 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -83,7 +83,7 @@ static void f_luaopen (lua_State *L, void *ud) {
 
 
 static void preinit_state (lua_State *L, global_State *g) {
-  L->l_G = g;
+  G(L) = g;
   L->stack = NULL;
   L->stacksize = 0;
   L->errorJmp = NULL;
