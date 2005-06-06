@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.60 2005/05/16 21:19:00 roberto Exp roberto $
+** $Id: liolib.c,v 2.61 2005/05/25 13:21:26 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -20,8 +20,8 @@
 
 
 
-#define IO_INPUT		1
-#define IO_OUTPUT		2
+#define IO_INPUT	1
+#define IO_OUTPUT	2
 
 
 static const char *const fnames[] = {"input", "output"};
@@ -91,29 +91,45 @@ static FILE **newfile (lua_State *L) {
 }
 
 
+/*
+** this function has a separated environment, which defines the
+** correct __close for 'popen' files
+*/
+static int io_pclose (lua_State *L) {
+  FILE **p = topfile(L);
+  int ok = lua_pclose(L, *p);
+  if (ok) *p = NULL;
+  return pushresult(L, ok, NULL);
+}
+
+
+static int io_fclose (lua_State *L) {
+  FILE **p = topfile(L);
+  int ok = (fclose(*p) == 0);
+  if (ok) *p = NULL;
+  return pushresult(L, ok, NULL);
+}
+
+
 static int aux_close (lua_State *L) {
-  FILE *f = tofile(L);
-  if (f == stdin || f == stdout || f == stderr)
-    return 0;  /* file cannot be closed */
-  else {
-    int ok = (fclose(f) == 0);
-    if (ok)
-      *(FILE **)lua_touserdata(L, 1) = NULL;  /* mark file as closed */
-    return ok;
-  }
+  lua_getfenv(L, 1);
+  lua_getfield(L, -1, "__close");
+  return (lua_tocfunction(L, -1))(L);
 }
 
 
 static int io_close (lua_State *L) {
   if (lua_isnone(L, 1))
     lua_rawgeti(L, LUA_ENVIRONINDEX, IO_OUTPUT);
-  return pushresult(L, aux_close(L), NULL);
+  tofile(L);  /* make sure argument is a file */
+  return aux_close(L);
 }
 
 
 static int io_gc (lua_State *L) {
-  FILE **f = topfile(L);
-  if (*f != NULL)  /* ignore closed files */
+  FILE *f = *topfile(L);
+  /* ignore closed files and standard files */
+  if (f != NULL && f != stdin && f != stdout && f != stderr)
     aux_close(L);
   return 0;
 }
@@ -134,6 +150,15 @@ static int io_open (lua_State *L) {
   const char *mode = luaL_optstring(L, 2, "r");
   FILE **pf = newfile(L);
   *pf = fopen(filename, mode);
+  return (*pf == NULL) ? pushresult(L, 0, filename) : 1;
+}
+
+
+static int io_popen (lua_State *L) {
+  const char *filename = luaL_checkstring(L, 1);
+  const char *mode = luaL_optstring(L, 2, "r");
+  FILE **pf = newfile(L);
+  *pf = lua_popen(L, filename, mode);
   return (*pf == NULL) ? pushresult(L, 0, filename) : 1;
 }
 
@@ -352,7 +377,7 @@ static int io_readline (lua_State *L) {
     luaL_error(L, "file is already closed");
   sucess = read_line(L, f);
   if (ferror(f))
-    luaL_error(L, "%s", strerror(errno));
+    return luaL_error(L, "%s", strerror(errno));
   if (sucess) return 1;
   else {  /* EOF */
     if (lua_toboolean(L, lua_upvalueindex(2))) {  /* generator created file? */
@@ -439,6 +464,7 @@ static const luaL_reg iolib[] = {
   {"close", io_close},
   {"flush", io_flush},
   {"open", io_open},
+  {"popen", io_popen},
   {"read", io_read},
   {"tmpfile", io_tmpfile},
   {"type", io_type},
@@ -469,30 +495,37 @@ static void createmeta (lua_State *L) {
 }
 
 
-static void createupval (lua_State *L) {
-  lua_newtable(L);
-  /* create (and set) default files */
-  *newfile(L) = stdin;
-  lua_rawseti(L, -2, IO_INPUT);
-  *newfile(L) = stdout;
-  lua_rawseti(L, -2, IO_OUTPUT);
+static void createstdfile (lua_State *L, FILE *f, int k, const char *fname) {
+  *newfile(L) = f;
+  if (k > 0) {
+    lua_pushvalue(L, -1);
+    lua_rawseti(L, LUA_ENVIRONINDEX, k);
+  }
+  lua_setfield(L, -2, fname);
 }
-
 
 
 LUALIB_API int luaopen_io (lua_State *L) {
   createmeta(L);
-  createupval(L);
-  lua_pushvalue(L, -1);
+  /* create new (private) environment */
+  lua_newtable(L);
   lua_replace(L, LUA_ENVIRONINDEX);
+  /* open library */
   luaL_openlib(L, LUA_IOLIBNAME, iolib, 0);
-  /* put predefined file handles into `io' table */
-  lua_rawgeti(L, -2, IO_INPUT);  /* get current input from upval */
-  lua_setfield(L, -2, "stdin");  /* io.stdin = upval[IO_INPUT] */
-  lua_rawgeti(L, -2, IO_OUTPUT);  /* get current output from upval */
-  lua_setfield(L, -2, "stdout");  /* io.stdout = upval[IO_OUTPUT] */
-  *newfile(L) = stderr;
-  lua_setfield(L, -2, "stderr");  /* io.stderr = newfile(stderr) */
+  /* create (and set) default files */
+  createstdfile(L, stdin, IO_INPUT, "stdin");
+  createstdfile(L, stdout, IO_OUTPUT, "stdout");
+  createstdfile(L, stderr, 0, "stderr");
+  /* create environment for 'popen' */
+  lua_getfield(L, -1, "popen");
+  lua_newtable(L);
+  lua_pushcfunction(L, io_pclose);
+  lua_setfield(L, -2, "__close");
+  lua_setfenv(L, -2);
+  lua_pop(L, 1);  /* pop 'popen' */
+  /* set default close function */
+  lua_pushcfunction(L, io_fclose);
+  lua_setfield(L, LUA_ENVIRONINDEX, "__close");
   return 1;
 }
 
