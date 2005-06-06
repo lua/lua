@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.53 2005/04/07 13:09:07 roberto Exp roberto $
+** $Id: llex.h,v 1.54 2005/04/25 19:24:10 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -37,7 +37,7 @@ enum RESERVED {
 
 
 /* array with token `names' */
-extern const char *const luaX_tokens [];
+LUAI_DATA const char *const luaX_tokens [];
 
 
 typedef union {

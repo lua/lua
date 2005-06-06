@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.119 2005/05/04 20:42:28 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.120 2005/05/20 15:53:42 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -248,7 +248,7 @@ enum OpArgMask {
   OpArgK   /* argument is a constant or register/constant */
 };
 
-extern const lu_byte luaP_opmodes[NUM_OPCODES];
+LUAI_DATA const lu_byte luaP_opmodes[NUM_OPCODES];
 
 #define getOpMode(m)	(cast(enum OpMode, luaP_opmodes[m] & 3))
 #define getBMode(m)	(cast(enum OpArgMask, (luaP_opmodes[m] >> 4) & 3))
@@ -257,7 +257,7 @@ extern const lu_byte luaP_opmodes[NUM_OPCODES];
 #define testTMode(m)	(luaP_opmodes[m] & (1 << 7))
 
 
-extern const char *const luaP_opnames[NUM_OPCODES+1];  /* opcode names */
+LUAI_DATA const char *const luaP_opnames[NUM_OPCODES+1];  /* opcode names */
 
 
 /* number of list items to accumulate before a SETLIST instruction */

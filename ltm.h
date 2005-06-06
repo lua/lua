@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 2.4 2005/05/05 15:34:03 roberto Exp roberto $
+** $Id: ltm.h,v 2.5 2005/05/20 15:53:42 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -43,7 +43,7 @@ typedef enum {
 
 #define fasttm(l,et,e)	gfasttm(G(l), et, e)
 
-extern const char *const luaT_typenames[];
+LUAI_DATA const char *const luaT_typenames[];
 
 
 LUAI_FUNC const TValue *luaT_gettm (Table *events, TMS event, TString *ename);
