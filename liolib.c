@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.61 2005/05/25 13:21:26 roberto Exp roberto $
+** $Id: liolib.c,v 2.62 2005/06/06 13:30:52 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -442,7 +442,9 @@ static int f_setvbuf (lua_State *L) {
   static const char *const modenames[] = {"no", "full", "line", NULL};
   FILE *f = tofile(L);
   int op = luaL_checkoption(L, 2, NULL, modenames);
-  return pushresult(L, setvbuf(f, NULL, mode[op], 0) == 0, NULL);
+  lua_Integer sz = luaL_optinteger(L, 3, BUFSIZ);
+  int res = setvbuf(f, NULL, mode[op], sz);
+  return pushresult(L, res == 0, NULL);
 }
 
 
