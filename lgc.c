@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.32 2005/05/05 15:34:03 roberto Exp roberto $
+** $Id: lgc.c,v 2.33 2005/05/31 14:25:18 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -673,12 +673,13 @@ void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v) {
 }
 
 
-void luaC_barrierback (lua_State *L, GCObject *o) {
+void luaC_barrierback (lua_State *L, Table *t) {
   global_State *g = G(L);
+  GCObject *o = obj2gco(t);
   lua_assert(isblack(o) && !isdead(g, o));
   lua_assert(g->gcstate != GCSfinalize && g->gcstate != GCSpause);
   black2gray(o);  /* make table gray (again) */
-  gco2h(o)->gclist = g->grayagain;
+  t->gclist = g->grayagain;
   g->grayagain = o;
 }
 
