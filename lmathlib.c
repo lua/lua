@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.62 2005/01/07 20:00:33 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.63 2005/03/04 18:57:03 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -88,7 +88,7 @@ static int math_floor (lua_State *L) {
   return 1;
 }
 
-static int math_mod (lua_State *L) {
+static int math_fmod (lua_State *L) {
   lua_pushnumber(L, fmod(luaL_checknumber(L, 1), luaL_checknumber(L, 2)));
   return 1;
 }
@@ -226,7 +226,7 @@ static const luaL_reg mathlib[] = {
   {"atan2", math_atan2},
   {"ceil",  math_ceil},
   {"floor", math_floor},
-  {"mod",   math_mod},
+  {"fmod",   math_fmod},
   {"modf",   math_modf},
   {"frexp", math_frexp},
   {"ldexp", math_ldexp},
@@ -254,6 +254,10 @@ LUALIB_API int luaopen_math (lua_State *L) {
   lua_setfield(L, -2, "pi");
   lua_pushnumber(L, HUGE_VAL);
   lua_setfield(L, -2, "huge");
+#if defined(LUA_COMPAT_MOD)
+  lua_getfield(L, -1, "fmod");
+  lua_setfield(L, -2, "mod");
+#endif
   return 1;
 }
 
