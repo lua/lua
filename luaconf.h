@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.51 2005/05/20 19:09:05 roberto Exp roberto $
+** $Id: luaconf.h,v 1.52 2005/06/01 17:07:45 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -128,17 +128,24 @@
 /*
 @@ LUAI_FUNC is a mark for all extern functions that are not to be
 @* exported to outside modules.
-** CHANGE it if you need to mark them in some special way. Gcc (versions
-** 3.2 and later) mark them as "hidden" to optimize their call when Lua
-** is compiled as a shared library.
+@@ LUAI_DATA is a mark for all extern (const) variables that are not to
+@* be exported to outside modules.
+** CHANGE them if you need to mark them in some special way. Elf/gcc
+** (versions 3.2 and later) mark them as "hidden" to optimize access
+** when Lua is compiled as a shared library.
 */
 #if defined(luaall_c)
 #define LUAI_FUNC	static
-#elif defined(__GNUC__) && ((__GNUC__*100 + __GNUC_MINOR__) >= 302)
-#define LUAI_FUNC	__attribute__((visibility("hidden")))
+#define LUAI_DATA	/* empty */
+#elif defined(__GNUC__) && ((__GNUC__*100 + __GNUC_MINOR__) >= 302) && \
+      defined(__ELF__)
+#define LUAI_FUNC	__attribute__((visibility("hidden"))) extern
+#define LUAI_DATA	LUAI_FUNC
 #else
 #define LUAI_FUNC	extern
+#define LUAI_DATA	extern
 #endif
+
 
 
 /*
@@ -292,6 +299,13 @@
 ** vararg parameters (instead of the old 'arg' table).
 */
 #define LUA_COMPAT_VARARG
+
+/*
+@@ LUA_COMPAT_MOD controls compatibility with old math.mod function.
+** CHANGE it to undefined as soon as your programs change its uses
+** of math.mod to math.fmod or to the new '%' operator.
+*/
+#define LUA_COMPAT_MOD
 
 /*
 @@ LUA_COMPAT_LSTR controls compatibility with old long string nesting
@@ -601,6 +615,30 @@
 
 #endif
 
+
+/*
+@@ lua_popen spawns a new process connected to the current one through
+@* the file streams.
+** CHANGE it if you have a way to implement it in your system.
+*/
+#if !defined(LUA_ANSI) && defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 2
+
+#define lua_popen(L,c,m)	popen(c,m)
+#define lua_pclose(L,file)	(pclose(file) != -1)
+
+#elif !defined(LUA_ANSI) && defined(_WIN32)
+
+#define lua_popen(L,c,m)	_popen(c,m)
+#define lua_pclose(L,file)	(_pclose(file) != -1)
+
+#else
+
+#define lua_popen(L,c,m)  \
+	((void)c, (void)m, luaL_error(L, LUA_QL("popen") "not supported"), NULL)
+#define lua_pclose(L,file)		((void)file, 0)
+
+#endif
+
 /*
 @@ LUA_DL_* define which dynamic-library system Lua should use.
 ** CHANGE here if Lua has problems choosing the appropriate
@@ -676,3 +714,4 @@
 
 
 #endif
+
