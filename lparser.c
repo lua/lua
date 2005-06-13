@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.28 2005/05/20 15:53:42 roberto Exp roberto $
+** $Id: lparser.c,v 2.29 2005/06/13 14:15:54 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -795,7 +795,7 @@ static UnOpr getunopr (int op) {
   switch (op) {
     case TK_NOT: return OPR_NOT;
     case '-': return OPR_MINUS;
-    case '*': return OPR_LEN;
+    case '#': return OPR_LEN;
     default: return OPR_NOUNOPR;
   }
 }
