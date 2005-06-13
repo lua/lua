@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.20 2005/05/17 19:49:15 roberto Exp roberto $
+** $Id: ldebug.c,v 2.21 2005/05/31 14:25:18 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -276,7 +276,7 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
 static int precheck (const Proto *pt) {
   check(pt->maxstacksize <= MAXSTACK);
   check(pt->sizelineinfo == pt->sizecode || pt->sizelineinfo == 0);
-  lua_assert(pt->numparams+pt->is_vararg <= pt->maxstacksize);
+  lua_assert(pt->numparams+(pt->is_vararg & VARARG_HASARG) <= pt->maxstacksize);
   check(GET_OPCODE(pt->code[pt->sizecode-1]) == OP_RETURN);
   return 1;
 }
@@ -440,7 +440,8 @@ static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
         break;
       }
       case OP_VARARG: {
-        check(pt->is_vararg & NEWSTYLEVARARG);
+        check((pt->is_vararg & VARARG_ISVARARG) &&
+             !(pt->is_vararg & VARARG_NEEDSARG));
         b--;
         if (b == LUA_MULTRET) check(checkopenop(pt, pc));
         checkreg(pt, a+b-1);

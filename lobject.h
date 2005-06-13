@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.14 2005/05/31 14:25:18 roberto Exp roberto $
+** $Id: lobject.h,v 2.15 2005/06/06 13:30:25 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -254,8 +254,10 @@ typedef struct Proto {
 } Proto;
 
 
-/* mask for new-style vararg */
-#define NEWSTYLEVARARG		2
+/* masks for new-style vararg */
+#define VARARG_HASARG		1
+#define VARARG_ISVARARG		2
+#define VARARG_NEEDSARG		4
 
 
 typedef struct LocVar {
@@ -373,3 +375,4 @@ LUAI_FUNC void luaO_chunkid (char *out, const char *source, size_t len);
 
 
 #endif
+

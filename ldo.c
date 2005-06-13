@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.24 2005/05/20 19:09:05 roberto Exp roberto $
+** $Id: ldo.c,v 2.25 2005/05/31 14:25:18 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -199,8 +199,9 @@ static StkId adjust_varargs (lua_State *L, int nfixargs, int actual,
       setnilvalue(L->top++);
   }
 #if defined(LUA_COMPAT_VARARG)
-  if (style != NEWSTYLEVARARG) {  /* compatibility with old-style vararg */
+  if (style & VARARG_NEEDSARG) {  /* compatibility with old-style vararg */
     int nvar = actual - nfixargs;  /* number of extra arguments */
+    lua_assert(style & VARARG_HASARG);
     luaC_checkGC(L);
     htab = luaH_new(L, nvar, 1);  /* create `arg' table */
     for (i=0; i<nvar; i++)  /* put extra arguments into `arg' table */
