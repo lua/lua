@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.45 2005/05/20 15:53:42 roberto Exp roberto $
+** $Id: lvm.c,v 2.46 2005/05/31 14:25:18 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -364,8 +364,11 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
   TValue *k;
   const Instruction *pc;
  callentry:  /* entry point when calling new functions */
-  if (L->hookmask & LUA_MASKCALL)
+  if (L->hookmask & LUA_MASKCALL) {
+    L->savedpc++;  /* hooks assume 'pc' is already incremented */
     luaD_callhook(L, LUA_HOOKCALL, -1);
+    L->savedpc--;  /* correct 'pc' */
+  }
  retentry:  /* entry point when returning to old functions */
   pc = L->savedpc;
   cl = &clvalue(L->ci->func)->l;
