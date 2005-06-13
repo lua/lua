@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.25 2005/05/31 14:25:18 roberto Exp roberto $
+** $Id: ldo.c,v 2.26 2005/06/13 14:15:54 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -116,7 +116,6 @@ static void correctstack (lua_State *L, TValue *oldstack) {
     ci->top = (ci->top - oldstack) + L->stack;
     ci->base = (ci->base - oldstack) + L->stack;
     ci->func = (ci->func - oldstack) + L->stack;
-    lua_assert(lua_checkpc(L, ci));
   }
   L->base = L->ci->base;
 }
