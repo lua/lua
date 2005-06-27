@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.28 2005/05/17 19:49:15 roberto Exp roberto $
+** $Id: loadlib.c,v 1.29 2005/05/20 19:09:05 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -374,10 +374,7 @@ static int ll_require (lua_State *L) {
   lua_getfield(L, 2, name);
   if (lua_toboolean(L, -1))  /* is it there? */
     return 1;  /* package is already loaded; return its result */
-  /* else must load it; first mark it as loaded */
-  lua_pushboolean(L, 1);
-  lua_setfield(L, 2, name);  /* _LOADED[name] = true */
-  /* iterate over available loaders */
+  /* else must load it; iterate over available loaders */
   lua_getfield(L, LUA_ENVIRONINDEX, "loaders");
   if (!lua_istable(L, -1))
     luaL_error(L, LUA_QL("package.loaders") " must be a table");
@@ -390,6 +387,9 @@ static int ll_require (lua_State *L) {
     if (lua_isnil(L, -1)) lua_pop(L, 1);
     else break;  /* module loaded successfully */
   }
+  /* mark module as loaded */
+  lua_pushboolean(L, 1);
+  lua_setfield(L, 2, name);  /* _LOADED[name] = true */
   lua_pushvalue(L, 1);  /* pass name as argument to module */
   lua_call(L, 1, 1);  /* run loaded module */
   if (!lua_isnil(L, -1))  /* non-nil return? */
