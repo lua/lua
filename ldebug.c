@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.22 2005/06/13 14:15:54 roberto Exp roberto $
+** $Id: ldebug.c,v 2.23 2005/06/13 14:39:19 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -392,8 +392,8 @@ static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
       }
       case OP_TFORLOOP: {
         check(c >= 1);  /* at least one result (control variable) */
-        checkreg(pt, a+3+c);  /* space for results */
-        if (reg >= a+3) last = pc;  /* affect all regs above its call base */
+        checkreg(pt, a+2+c);  /* space for results */
+        if (reg >= a+2) last = pc;  /* affect all regs above its base */
         break;
       }
       case OP_FORLOOP:
