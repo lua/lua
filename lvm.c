@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.46 2005/05/31 14:25:18 roberto Exp roberto $
+** $Id: lvm.c,v 2.47 2005/06/13 14:15:22 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -311,8 +311,8 @@ void luaV_concat (lua_State *L, int total, int last) {
 }
 
 
-static StkId Arith (lua_State *L, StkId ra, const TValue *rb,
-                    const TValue *rc, TMS op) {
+static void Arith (lua_State *L, StkId ra, const TValue *rb,
+                   const TValue *rc, TMS op) {
   TValue tempb, tempc;
   const TValue *b, *c;
   if ((b = luaV_tonumber(rb, &tempb)) != NULL &&
@@ -330,7 +330,6 @@ static StkId Arith (lua_State *L, StkId ra, const TValue *rb,
   }
   else if (!call_binTM(L, rb, rc, ra, op))
     luaG_aritherror(L, rb, rc);
-  return L->base;
 }
 
 
