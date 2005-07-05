@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.52 2005/06/01 17:07:45 roberto Exp roberto $
+** $Id: luaconf.h,v 1.53 2005/06/13 21:20:28 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -166,7 +166,7 @@
 /*
 @@ LUA_IDSIZE gives the maximum size for the description of the source
 @* of a function in debug information.
-** CHANGE it if you a different size.
+** CHANGE it if you want a different size.
 */
 #define LUA_IDSIZE	60
 
@@ -256,18 +256,20 @@
 /*
 @@ LUAI_GCPAUSE defines the default pause between garbage-collector cycles
 @* as a percentage.
-** CHANGE it if you want the GC to run faster or slower (higher
-** values mean larger pauses which mean slower collection.)
+** CHANGE it if you want the GC to run faster or slower (higher values
+** mean larger pauses which mean slower collection.) You can also change
+** this value dynamically.
 */
 #define LUAI_GCPAUSE	200  /* 200% (wait memory to double before next GC) */
 
 
 /*
-@@ LUAI_GCMUL defines the speed of garbage collection relative to
+@@ LUAI_GCMUL defines the default speed of garbage collection relative to
 @* memory allocation as a percentage.
 ** CHANGE it if you want to change the granularity of the garbage
 ** collection. (Higher values mean coarser collections. 0 represents
-** infinity, where each step performs a full collection.)
+** infinity, where each step performs a full collection.) You can also
+** change this value dynamically.
 */
 #define LUAI_GCMUL	200 /* GC runs 'twice the speed' of memory allocation */
 
@@ -295,15 +297,15 @@
 
 /*
 @@ LUA_COMPAT_VARARG controls compatibility with old vararg feature.
-** CHANGE it to undefined as soon as your programs use '...' to access
-** vararg parameters (instead of the old 'arg' table).
+** CHANGE it to undefined as soon as your programs use only '...' to
+** access vararg parameters (instead of the old 'arg' table).
 */
 #define LUA_COMPAT_VARARG
 
 /*
 @@ LUA_COMPAT_MOD controls compatibility with old math.mod function.
-** CHANGE it to undefined as soon as your programs change its uses
-** of math.mod to math.fmod or to the new '%' operator.
+** CHANGE it to undefined as soon as your programs use 'math.fmod' or
+** the new '%' operator instead of 'math.mod'.
 */
 #define LUA_COMPAT_MOD
 
@@ -314,6 +316,20 @@
 ** off the advisory error when nesting [[...]].
 */
 #define LUA_COMPAT_LSTR		1
+
+/*
+@@ LUA_COMPAT_FIND controls compatibility with old 'string.find' behavior.
+** CHANGE it to undefined as soon as your programs use 'string.find' only
+** to find patterns.
+*/
+/*#define LUA_COMPAT_FIND*/
+
+/*
+@@ LUA_COMPAT_GFIND controls compatibility with old 'string.gfind' name.
+** CHANGE it to undefined as soon as you rename 'string.gfind' to
+** 'string.gmatch'.
+*/
+#define LUA_COMPAT_GFIND
 
 /*
 @@ luai_apicheck is the assert macro used by the Lua-C API.
