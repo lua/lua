@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.116 2005/05/20 15:53:42 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.117 2005/05/31 14:25:18 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -485,15 +485,15 @@ static int push_captures (MatchState *ms, const char *s, const char *e) {
 }
 
 
-static int str_find (lua_State *L) {
+static int str_find_aux (lua_State *L, int find) {
   size_t l1, l2;
   const char *s = luaL_checklstring(L, 1, &l1);
   const char *p = luaL_checklstring(L, 2, &l2);
   ptrdiff_t init = posrelat(luaL_optinteger(L, 3, 1), l1) - 1;
   if (init < 0) init = 0;
   else if ((size_t)(init) > l1) init = (ptrdiff_t)l1;
-  if (lua_toboolean(L, 4) ||  /* explicit request? */
-      strpbrk(p, SPECIALS) == NULL) {  /* or no special characters? */
+  if (find && (lua_toboolean(L, 4) ||  /* explicit request? */
+      strpbrk(p, SPECIALS) == NULL)) {  /* or no special characters? */
     /* do a plain search */
     const char *s2 = lmemfind(s+init, l1-init, p, l2);
     if (s2) {
@@ -513,18 +513,37 @@ static int str_find (lua_State *L) {
       const char *res;
       ms.level = 0;
       if ((res=match(&ms, s1, p)) != NULL) {
-        lua_pushinteger(L, s1-s+1);  /* start */
-        lua_pushinteger(L, res-s);   /* end */
-        return push_captures(&ms, NULL, 0) + 2;
+        if (find) {
+          lua_pushinteger(L, s1-s+1);  /* start */
+          lua_pushinteger(L, res-s);   /* end */
+#if defined(LUA_COMPAT_FIND)
+          return push_captures(&ms, NULL, 0) + 2;
+#else
+          return 2;
+#endif
+
+        }
+        else
+          return push_captures(&ms, s1, res);
       }
-    } while (s1++<ms.src_end && !anchor);
+    } while (s1++ < ms.src_end && !anchor);
   }
   lua_pushnil(L);  /* not found */
   return 1;
 }
 
 
-static int gfind_aux (lua_State *L) {
+static int str_find (lua_State *L) {
+  return str_find_aux(L, 1);
+}
+
+
+static int str_match (lua_State *L) {
+  return str_find_aux(L, 0);
+}
+
+
+static int gmatch_aux (lua_State *L) {
   MatchState ms;
   size_t ls;
   const char *s = lua_tolstring(L, lua_upvalueindex(1), &ls);
@@ -550,13 +569,19 @@ static int gfind_aux (lua_State *L) {
 }
 
 
-static int gfind (lua_State *L) {
+static int gmatch (lua_State *L) {
   luaL_checkstring(L, 1);
   luaL_checkstring(L, 2);
   lua_settop(L, 2);
   lua_pushinteger(L, 0);
-  lua_pushcclosure(L, gfind_aux, 3);
+  lua_pushcclosure(L, gmatch_aux, 3);
   return 1;
+}
+
+
+static int gfind_nodef (lua_State *L) {
+  return luaL_error(L, LUA_QL("string.gfind") " was renamed to "
+                       LUA_QL("string.gmatch"));
 }
 
 
@@ -765,8 +790,10 @@ static const luaL_reg strlib[] = {
   {"format", str_format},
   {"dump", str_dump},
   {"find", str_find},
-  {"gfind", gfind},
+  {"gfind", gfind_nodef},
+  {"gmatch", gmatch},
   {"gsub", str_gsub},
+  {"match", str_match},
   {NULL, NULL}
 };
 
@@ -790,6 +817,10 @@ static void createmetatable (lua_State *L) {
 */
 LUALIB_API int luaopen_string (lua_State *L) {
   luaL_openlib(L, LUA_STRLIBNAME, strlib, 0);
+#if defined(LUA_COMPAT_GFIND)
+  lua_getfield(L, -1, "gmatch");
+  lua_setfield(L, -2, "gfind");
+#endif
   createmetatable(L);
   return 1;
 }
