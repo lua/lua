@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.43 2005/05/31 14:34:02 roberto Exp roberto $
+** $Id: lapi.c,v 2.44 2005/07/05 14:30:31 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -618,6 +618,9 @@ LUA_API void lua_getfenv (lua_State *L, int idx) {
     case LUA_TUSERDATA:
       sethvalue(L, L->top, uvalue(o)->env);
       break;
+    case LUA_TTHREAD:
+      setobj2s(L, L->top,  gt(thvalue(o)));
+      break;
     default:
       setnilvalue(L->top);
       break;
@@ -735,6 +738,9 @@ LUA_API int lua_setfenv (lua_State *L, int idx) {
       break;
     case LUA_TUSERDATA:
       uvalue(o)->env = hvalue(L->top - 1);
+      break;
+    case LUA_TTHREAD:
+      sethvalue(L, gt(thvalue(o)), hvalue(L->top - 1));
       break;
     default:
       res = 0;
