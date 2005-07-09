@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.21 2005/05/05 15:34:03 roberto Exp roberto $
+** $Id: lstate.h,v 2.22 2005/06/03 20:15:58 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -19,10 +19,10 @@ struct lua_longjmp;  /* defined in ldo.c */
 
 
 /* table of globals */
-#define gt(L)	(&L->_gt)
+#define gt(L)	(&L->l_gt)
 
 /* registry */
-#define registry(L)	(&G(L)->_registry)
+#define registry(L)	(&G(L)->l_registry)
 
 
 /* extra stack space to handle TM calls and some other extras */
@@ -86,7 +86,7 @@ typedef struct global_State {
   int gcpause;  /* size of pause between successive GCs */
   int gcstepmul;  /* GC `granularity' */
   lua_CFunction panic;  /* to be called in unprotected errors */
-  TValue _registry;
+  TValue l_registry;
   struct lua_State *mainthread;
   UpVal uvhead;  /* head of double-linked list of all open upvalues */
   struct Table *mt[NUM_TAGS];  /* metatables for basic types */
@@ -101,7 +101,7 @@ struct lua_State {
   CommonHeader;
   StkId top;  /* first free slot in the stack */
   StkId base;  /* base of current function */
-  global_State *_G;
+  global_State *l_G;
   CallInfo *ci;  /* call info for current function */
   const Instruction *savedpc;  /* `savedpc' of current function */
   StkId stack_last;  /* last free slot in the stack */
@@ -117,7 +117,7 @@ struct lua_State {
   int basehookcount;
   int hookcount;
   lua_Hook hook;
-  TValue _gt;  /* table of globals */
+  TValue l_gt;  /* table of globals */
   TValue env;  /* temporary place for environments */
   GCObject *openupval;  /* list of open upvalues in this stack */
   GCObject *gclist;
@@ -126,7 +126,7 @@ struct lua_State {
 };
 
 
-#define G(L)	(L->_G)
+#define G(L)	(L->l_G)
 
 
 /*
