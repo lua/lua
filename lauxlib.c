@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.137 2005/05/31 14:34:02 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.138 2005/07/11 14:01:28 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -327,9 +327,9 @@ LUALIB_API int luaL_getn (lua_State *L, int t) {
 
 static const char *pushnexttemplate (lua_State *L, const char *path) {
   const char *l;
+  while (*path == *LUA_PATHSEP) path++;  /* skip separators */
   if (*path == '\0') return NULL;  /* no more templates */
-  if (*path == LUA_PATHSEP) path++;  /* skip separator */
-  l = strchr(path, LUA_PATHSEP);  /* find next separator */
+  l = strchr(path, *LUA_PATHSEP);  /* find next separator */
   if (l == NULL) l = path+strlen(path);
   lua_pushlstring(L, path, l - path);  /* template */
   return l;
