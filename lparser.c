@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.29 2005/06/13 14:15:54 roberto Exp roberto $
+** $Id: lparser.c,v 2.30 2005/06/13 14:25:29 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -300,7 +300,7 @@ static void enterlevel (LexState *ls) {
 #define leavelevel(ls)	((ls)->L->nCcalls--)
 
 
-static void enterblock (FuncState *fs, BlockCnt *bl, int isbreakable) {
+static void enterblock (FuncState *fs, BlockCnt *bl, lu_byte isbreakable) {
   bl->breaklist = NO_JUMP;
   bl->isbreakable = isbreakable;
   bl->nactvar = fs->nactvar;
