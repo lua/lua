@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.53 2005/06/13 21:20:28 roberto Exp roberto $
+** $Id: luaconf.h,v 1.54 2005/07/05 14:31:45 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -41,22 +41,27 @@
 ** non-conventional directories.
 */
 #if defined(_WIN32)
-#define LUA_ROOT	"C:\\Program Files\\Lua51"
-#define LUA_LDIR	LUA_ROOT "\\lua"
-#define LUA_CDIR	LUA_ROOT "\\dll"
+/*
+** In Windows, any exclamation mark ('!') in the path is replaced by the
+** path of the directory of the executable file of the current process.
+*/
+#define LUA_LDIR	"!\\lua"
+#define LUA_CDIR	"!\\dll"
 #define LUA_PATH_DEFAULT  \
-		"?.lua;"  LUA_LDIR"\\?.lua;"  LUA_LDIR"\\?\\init.lua"
-#define LUA_CPATH_DEFAULT	\
-	"?.dll;"  "l?.dll;"  LUA_CDIR"\\?.dll;"  LUA_CDIR"\\l?.dll"
+		"?.lua;"  LUA_LDIR"\\?.lua;"  LUA_LDIR"\\?\\init.lua;" \
+		          LUA_CDIR"\\?.lua;"  LUA_CDIR"\\?\\init.lua"
+#define LUA_CPATH_DEFAULT \
+	"?.dll;"  LUA_CDIR"\\?.dll;" LUA_CDIR"\\loadall.dll"
 
 #else
 #define LUA_ROOT	"/usr/local"
 #define LUA_LDIR	LUA_ROOT "/share/lua/5.1"
 #define LUA_CDIR	LUA_ROOT "/lib/lua/5.1"
 #define LUA_PATH_DEFAULT  \
-		"./?.lua;"  LUA_LDIR"/?.lua;"  LUA_LDIR"/?/init.lua"
-#define LUA_CPATH_DEFAULT	\
-	"./?.so;"  "./l?.so;"  LUA_CDIR"/?.so;"  LUA_CDIR"/l?.so"
+		"./?.lua;"  LUA_LDIR"/?.lua;"  LUA_LDIR"/?/init.lua;" \
+		            LUA_CDIR"/?.lua;"  LUA_CDIR"/?/init.lua"
+#define LUA_CPATH_DEFAULT \
+	"./?.so;"  LUA_CDIR"/?.so;" LUA_CDIR"/loadall.so"
 #endif
 
 
@@ -74,21 +79,17 @@
 
 /*
 @@ LUA_PATHSEP is the character that separates templates in a path.
-** CHANGE it if for some reason your system cannot use a
-** semicolon. (E.g., if a semicolon is a common character in
-** file/directory names.) Probably you do not need to change this.
-*/
-#define LUA_PATHSEP	';'
-
-
-/*
 @@ LUA_PATH_MARK is the string that marks the substitution points in a
 @* template.
-** CHANGE it if for some reason your system cannot use an interrogation
-** mark.  (E.g., if an interogation mark is a common character in
-** file/directory names.) Probably you do not need to change this.
+@@ LUA_EXECDIR in a Windows path is replaced by the executable's
+@* directory.
+** CHANGE them if for some reason your system cannot use those
+** characters. (E.g., if one of those characters is a common character
+** in file/directory names.) Probably you do not need to change them.
 */
+#define LUA_PATHSEP	";"
 #define LUA_PATH_MARK	"?"
+#define LUA_EXECDIR	"!"
 
 
 /*
@@ -464,45 +465,24 @@
 
 /*
 @@ lua_number2int is a macro to convert lua_Number to int.
-** CHANGE that if you know a faster way to convert a lua_Number to
+@@ lua_number2integer is a macro to convert lua_Number to lua_Integer.
+** CHANGE them if you know a faster way to convert a lua_Number to
 ** int (with any rounding method and without throwing errors) in your
 ** system. In Pentium machines, a naive typecast from double to int
 ** in C is extremely slow, so any alternative is worth trying.
 */
 
-/* On a gcc/Pentium, resort to assembler */
-#if !defined(LUA_ANSI) && defined(__GNUC__) && defined(__i386)
-#define lua_number2int(i,d)	__asm__ ("fistpl %0":"=m"(i):"t"(d):"st")
-
-/* On  Windows/Pentium, resort to assembler */
-#elif !defined(LUA_ANSI) && defined(_MSC_VER) && defined(_M_IX86)
-#define lua_number2int(i,d)	__asm fld d   __asm fistp i
-
-
-/* on Pentium machines compliant with C99, you can try lrint */
-#elif defined (__i386) && defined(__STDC_VERSION__) && \
-				 (__STDC_VERSION__ >= 199900L)
-#define lua_number2int(i,d)	((i)=lrint(d))
-
-/* this option always works, but may be slow */
-#else
-#define lua_number2int(i,d)	((i)=(int)(d))
-
-#endif
-
-
-/*
-@@ lua_number2integer is a macro to convert lua_Number to lua_Integer.
-** CHANGE (see lua_number2int).
-*/
-/* On a gcc or Windows/Pentium, resort to assembler */
-#if (defined(__GNUC__) && defined(__i386)) || \
-    (defined(_MSC_VER) && defined(_M_IX86))
+/* On a Pentium, resort to a trick */
+#if !defined(LUA_ANSI) && (defined(__i386) || defined (_M_IX86))
+union luai_Cast { double l_d; long l_l; };
+#define lua_number2int(i,d) \
+  { union luai_Cast u; u.l_d = d + 6755399441055744.0; (i) = u.l_l; }
 #define lua_number2integer(i,n)		lua_number2int(i, n)
 
 /* this option always works, but may be slow */
 #else
-#define lua_number2integer(i,d)		((i)=(lua_Integer)(d))
+#define lua_number2int(i,d)	((i)=(int)(d))
+#define lua_number2integer(i,d)	((i)=(lua_Integer)(d))
 
 #endif
 
@@ -517,12 +497,12 @@
 ** ===================================================================
 */
 
+#define LUA_NUMBER	double
 
 /*
 @@ LUAI_UACNUMBER is the result of an 'usual argument conversion'
 @* over a number.
 */
-#define LUA_NUMBER	double
 #define LUAI_UACNUMBER	double
 
 
@@ -572,7 +552,7 @@
 ** CHANGE them if you prefer to use longjmp/setjmp even with C++ or
 ** if want/don't want to use _longjmp/_setjmp instead of regular
 ** longjmp/setjmp. By default, Lua handles errors with exceptions when
-** compiling as C++ code, with _longjmp/_setjmp when compiling as C code
+* compiling as C++ code, with _longjmp/_setjmp when compiling as C code
 ** in a Unix system, and with longjmp/setjmp otherwise.
 */
 #if defined(__cplusplus)
