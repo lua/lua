@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.63 2005/03/04 18:57:03 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.64 2005/06/13 21:20:14 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -214,33 +214,33 @@ static int math_randomseed (lua_State *L) {
 
 static const luaL_reg mathlib[] = {
   {"abs",   math_abs},
-  {"sin",   math_sin},
-  {"sinh",   math_sinh},
-  {"cos",   math_cos},
-  {"cosh",   math_cosh},
-  {"tan",   math_tan},
-  {"tanh",   math_tanh},
-  {"asin",  math_asin},
   {"acos",  math_acos},
-  {"atan",  math_atan},
+  {"asin",  math_asin},
   {"atan2", math_atan2},
+  {"atan",  math_atan},
   {"ceil",  math_ceil},
+  {"cosh",   math_cosh},
+  {"cos",   math_cos},
+  {"deg",   math_deg},
+  {"exp",   math_exp},
   {"floor", math_floor},
   {"fmod",   math_fmod},
-  {"modf",   math_modf},
   {"frexp", math_frexp},
   {"ldexp", math_ldexp},
-  {"sqrt",  math_sqrt},
-  {"min",   math_min},
-  {"max",   math_max},
-  {"log",   math_log},
   {"log10", math_log10},
-  {"exp",   math_exp},
-  {"deg",   math_deg},
+  {"log",   math_log},
+  {"max",   math_max},
+  {"min",   math_min},
+  {"modf",   math_modf},
   {"pow",   math_pow},
   {"rad",   math_rad},
   {"random",     math_random},
   {"randomseed", math_randomseed},
+  {"sinh",   math_sinh},
+  {"sin",   math_sin},
+  {"sqrt",  math_sqrt},
+  {"tanh",   math_tanh},
+  {"tan",   math_tan},
   {NULL, NULL}
 };
 
