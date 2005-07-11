@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.24 2005/05/03 19:01:17 roberto Exp roberto $
+** $Id: ltests.c,v 2.25 2005/05/31 14:34:02 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -691,9 +691,16 @@ static int s2d (lua_State *L) {
   return 1;
 }
 
+
 static int d2s (lua_State *L) {
   double d = luaL_checknumber(L, 1);
   lua_pushlstring(L, cast(char *, &d), sizeof(d));
+  return 1;
+}
+
+
+static int num2int (lua_State *L) {
+  lua_pushinteger(L, lua_tointeger(L, 1));
   return 1;
 }
 
@@ -1112,6 +1119,7 @@ static const struct luaL_reg tests_funcs[] = {
   {"unref", unref},
   {"d2s", d2s},
   {"s2d", s2d},
+  {"num2int", num2int},
   {"upvalue", upvalue},
   {"newuserdata", newuserdata},
   {"pushuserdata", pushuserdata},
