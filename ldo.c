@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.26 2005/06/13 14:15:54 roberto Exp roberto $
+** $Id: ldo.c,v 2.27 2005/06/13 21:17:59 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -68,14 +68,41 @@ static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
 }
 
 
+static void restore_stack_limit (lua_State *L) {
+  lua_assert(L->stack_last - L->stack == L->stacksize - EXTRA_STACK - 1);
+  if (L->size_ci > LUAI_MAXCALLS) {  /* there was an overflow? */
+    int inuse = cast(int, L->ci - L->base_ci);
+    if (inuse + 1 < LUAI_MAXCALLS)  /* can `undo' overflow? */
+      luaD_reallocCI(L, LUAI_MAXCALLS);
+  }
+}
+
+
+static void resetstack (lua_State *L, int status) {
+  L->ci = L->base_ci;
+  L->base = L->ci->base;
+  luaF_close(L, L->base);  /* close eventual pending closures */
+  seterrorobj(L, status, L->base);
+  L->nCcalls = 0;
+  L->allowhook = 1;
+  restore_stack_limit(L);
+  L->errfunc = 0;
+  L->errorJmp = NULL;
+}
+
+
 void luaD_throw (lua_State *L, int errcode) {
   if (L->errorJmp) {
     L->errorJmp->status = errcode;
     LUAI_THROW(L, L->errorJmp);
   }
   else {
-    L->status = errcode;
-    if (G(L)->panic) G(L)->panic(L);
+    L->status = cast(lu_byte, errcode);
+    if (G(L)->panic) {
+      resetstack(L, errcode);
+      lua_unlock(L);
+      G(L)->panic(L);
+    }
     exit(EXIT_FAILURE);
   }
 }
@@ -91,16 +118,6 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
   );
   L->errorJmp = lj.previous;  /* restore old error handler */
   return lj.status;
-}
-
-
-static void restore_stack_limit (lua_State *L) {
-  lua_assert(L->stack_last - L->stack == L->stacksize - EXTRA_STACK - 1);
-  if (L->size_ci > LUAI_MAXCALLS) {  /* there was an overflow? */
-    int inuse = cast(int, L->ci - L->base_ci);
-    if (inuse + 1 < LUAI_MAXCALLS)  /* can `undo' overflow? */
-      luaD_reallocCI(L, LUAI_MAXCALLS);
-  }
 }
 
 /* }====================================================== */
@@ -408,7 +425,7 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
   }
   status = luaD_rawrunprotected(L, resume, &nargs);
   if (status != 0) {  /* error? */
-    L->status = status;  /* mark thread as `dead' */
+    L->status = cast(lu_byte, status);  /* mark thread as `dead' */
     seterrorobj(L, status, L->top);
   }
   else
@@ -441,7 +458,7 @@ LUA_API int lua_yield (lua_State *L, int nresults) {
 int luaD_pcall (lua_State *L, Pfunc func, void *u,
                 ptrdiff_t old_top, ptrdiff_t ef) {
   int status;
-  int oldnCcalls = L->nCcalls;
+  unsigned short oldnCcalls = L->nCcalls;
   ptrdiff_t old_ci = saveci(L, L->ci);
   lu_byte old_allowhooks = L->allowhook;
   ptrdiff_t old_errfunc = L->errfunc;
