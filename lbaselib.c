@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.178 2005/05/25 13:21:26 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.179 2005/07/07 15:48:29 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -270,15 +270,7 @@ static int luaB_loadstring (lua_State *L) {
 
 static int luaB_loadfile (lua_State *L) {
   const char *fname = luaL_optstring(L, 1, NULL);
-  const char *path = luaL_optstring(L, 2, NULL);
-  int status;
-  if (path == NULL)
-    status = luaL_loadfile(L, fname);
-  else {
-    fname = luaL_searchpath(L, fname, path);
-    status = (fname) ? luaL_loadfile(L, fname) : 1;
-  }
-  return load_aux(L, status);
+  return load_aux(L, luaL_loadfile(L, fname));
 }
 
 
@@ -438,30 +430,30 @@ static int luaB_newproxy (lua_State *L) {
 
 
 static const luaL_reg base_funcs[] = {
-  {"error", luaB_error},
-  {"getmetatable", luaB_getmetatable},
-  {"setmetatable", luaB_setmetatable},
-  {"getfenv", luaB_getfenv},
-  {"setfenv", luaB_setfenv},
-  {"next", luaB_next},
-  {"print", luaB_print},
-  {"tonumber", luaB_tonumber},
-  {"tostring", luaB_tostring},
-  {"type", luaB_type},
   {"assert", luaB_assert},
-  {"unpack", luaB_unpack},
-  {"select", luaB_select},
+  {"collectgarbage", luaB_collectgarbage},
+  {"dofile", luaB_dofile},
+  {"error", luaB_error},
+  {"gcinfo", luaB_gcinfo},
+  {"getfenv", luaB_getfenv},
+  {"getmetatable", luaB_getmetatable},
+  {"loadfile", luaB_loadfile},
+  {"load", luaB_load},
+  {"loadstring", luaB_loadstring},
+  {"next", luaB_next},
+  {"pcall", luaB_pcall},
+  {"print", luaB_print},
   {"rawequal", luaB_rawequal},
   {"rawget", luaB_rawget},
   {"rawset", luaB_rawset},
-  {"pcall", luaB_pcall},
+  {"select", luaB_select},
+  {"setfenv", luaB_setfenv},
+  {"setmetatable", luaB_setmetatable},
+  {"tonumber", luaB_tonumber},
+  {"tostring", luaB_tostring},
+  {"type", luaB_type},
+  {"unpack", luaB_unpack},
   {"xpcall", luaB_xpcall},
-  {"collectgarbage", luaB_collectgarbage},
-  {"gcinfo", luaB_gcinfo},
-  {"loadfile", luaB_loadfile},
-  {"dofile", luaB_dofile},
-  {"loadstring", luaB_loadstring},
-  {"load", luaB_load},
   {NULL, NULL}
 };
 
@@ -589,11 +581,11 @@ static int luaB_corunning (lua_State *L) {
 
 static const luaL_reg co_funcs[] = {
   {"create", luaB_cocreate},
-  {"wrap", luaB_cowrap},
   {"resume", luaB_coresume},
-  {"yield", luaB_yield},
-  {"status", luaB_costatus},
   {"running", luaB_corunning},
+  {"status", luaB_costatus},
+  {"wrap", luaB_cowrap},
+  {"yield", luaB_yield},
   {NULL, NULL}
 };
 
