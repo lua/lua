@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.31 2005/07/05 19:29:03 roberto Exp roberto $
+** $Id: loadlib.c,v 1.32 2005/07/11 16:41:57 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -329,48 +329,42 @@ static int ll_loadlib (lua_State *L) {
 */
 
 
-static int loader_Lua (lua_State *L) {
+static const char *findfile (lua_State *L, const char *pname) {
   const char *name = luaL_checkstring(L, 1);
   const char *fname = luaL_gsub(L, name, ".", LUA_DIRSEP);
-  const char *path = NULL;
-#if defined(LUA_COMPAT_PATH)
-  /* try first `LUA_PATH' for compatibility */
-  lua_pushstring(L, "LUA_PATH");
-  lua_rawget(L, LUA_GLOBALSINDEX);
+  const char *path;
+  lua_getfield(L, LUA_ENVIRONINDEX, pname);
   path = lua_tostring(L, -1);
-#endif
-  if (!path) {
-    lua_pop(L, 1);
-    lua_getfield(L, LUA_ENVIRONINDEX, "path");
-    path = lua_tostring(L, -1);
-  }
   if (path == NULL)
-    luaL_error(L, LUA_QL("package.path") " must be a string");
-  fname = luaL_searchpath(L, fname, path);
+    luaL_error(L, LUA_QL("package.%s") " must be a string", pname);
+  return luaL_searchpath(L, fname, path);
+}
+
+
+static void loaderror (lua_State *L, const char *msg) {
+  luaL_error(L, "error loading package " LUA_QS " (%s)",
+                lua_tostring(L, 1), msg);
+}
+
+
+static int loader_Lua (lua_State *L) {
+  const char *fname;
+  fname = findfile(L, "path");
   if (fname == NULL) return 0;  /* library not found in this path */
   if (luaL_loadfile(L, fname) != 0)
-    luaL_error(L, "error loading package " LUA_QS " (%s)",
-                  name, lua_tostring(L, -1));
+    loaderror(L, lua_tostring(L, -1));
   return 1;  /* library loaded successfully */
 }
 
 
 static int loader_C (lua_State *L) {
-  const char *name = luaL_checkstring(L, 1);
-  const char *fname = luaL_gsub(L, name, ".", LUA_DIRSEP);
-  const char *path;
   const char *funcname;
-  lua_getfield(L, LUA_ENVIRONINDEX, "cpath");
-  path = lua_tostring(L, -1);
-  if (path == NULL)
-    luaL_error(L, LUA_QL("package.cpath") " must be a string");
-  fname = luaL_searchpath(L, fname, path);
+  const char *fname = findfile(L, "cpath");
   if (fname == NULL) return 0;  /* library not found in this path */
-  funcname = luaL_gsub(L, name, ".", LUA_OFSEP);
-  funcname = lua_pushfstring(L, "%s%s", POF, funcname);
+  funcname = luaL_gsub(L, lua_tostring(L, 1), ".", LUA_OFSEP);
+  funcname = lua_pushfstring(L, POF"%s", funcname);
   if (ll_loadfunc(L, fname, funcname) != 1)
-    luaL_error(L, "error loading package " LUA_QS " (%s)",
-                  name, lua_tostring(L, -2));
+    loaderror(L, lua_tostring(L, -2));
   return 1;  /* library loaded successfully */
 }
 
@@ -384,13 +378,13 @@ static int loader_preload (lua_State *L) {
 }
 
 
-static void require_aux (lua_State *L, const char *name) {
+static int require_aux (lua_State *L, const char *name) {
   int i;
   int loadedtable = lua_gettop(L) + 1;
   lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
   lua_getfield(L, loadedtable, name);
   if (lua_toboolean(L, -1))  /* is it there? */
-    return;  /* package is already loaded; return its result */
+    return 1;  /* package is already loaded */
   /* else must load it; iterate over available loaders */
   lua_getfield(L, LUA_ENVIRONINDEX, "loaders");
   if (!lua_istable(L, -1))
@@ -398,7 +392,7 @@ static void require_aux (lua_State *L, const char *name) {
   for (i=1; ; i++) {
     lua_rawgeti(L, -1, i);  /* get a loader */
     if (lua_isnil(L, -1))
-      luaL_error(L, "package " LUA_QS " not found", name);
+      return 0;  /* package not found */
     lua_pushstring(L, name);
     lua_call(L, 1, 1);  /* call it */
     if (lua_isnil(L, -1)) lua_pop(L, 1);  /* did not found module */
@@ -416,7 +410,20 @@ static void require_aux (lua_State *L, const char *name) {
   if (!lua_isnil(L, -1))  /* non-nil return? */
     lua_setfield(L, loadedtable, name);  /* _LOADED[name] = returned value */
   lua_getfield(L, loadedtable, name);  /* return _LOADED[name] */
-  return;
+  return 1;
+}
+
+
+static void ll_error (lua_State *L, const char *name) {
+  const char *msg;
+  lua_settop(L, 1);
+  lua_getfield(L, LUA_ENVIRONINDEX, "path");
+  lua_getfield(L, LUA_ENVIRONINDEX, "cpath");
+  msg = lua_pushfstring(L, "package " LUA_QS " not found in following paths:\n"
+          "  Lua path: %s\n  C path:   %s\n", name,
+          lua_tostring(L, -2), lua_tostring(L, -1));
+  msg = luaL_gsub(L, msg, LUA_PATHSEP, "\n            ");
+  luaL_error(L, msg);
 }
 
 
@@ -429,7 +436,8 @@ static int ll_require (lua_State *L) {
     lua_pushlstring(L, name, pt - name);
     require_aux(L, lua_tostring(L, -1));
   }
-  require_aux(L, name);  /* load module itself */
+  if (!require_aux(L, name))  /* load module itself */
+    ll_error(L, name);
   return 1;
 }
   
@@ -490,15 +498,19 @@ static int ll_module (lua_State *L) {
 /* }====================================================== */
 
 
+/* auxiliary mark (for internal use) */
+#define AUXMARK		"\1"
+
 static void setpath (lua_State *L, const char *fname, const char *envname,
                                    const char *def) {
   const char *path = getenv(envname);
-  if (path == NULL) lua_pushstring(L, def);
+  if (path == NULL)  /* no environment variable? */
+    lua_pushstring(L, def);  /* use default */
   else {
-    /* replace ";;" by default path */
+    /* replace ";;" by ";AUXMARK;" and then AUXMARK by default path */
     path = luaL_gsub(L, path, LUA_PATHSEP LUA_PATHSEP,
-                              LUA_PATHSEP"\1"LUA_PATHSEP);
-    luaL_gsub(L, path, "\1", def);
+                              LUA_PATHSEP AUXMARK LUA_PATHSEP);
+    luaL_gsub(L, path, AUXMARK, def);
     lua_remove(L, -2);
   }
   setprogdir(L);
@@ -507,8 +519,8 @@ static void setpath (lua_State *L, const char *fname, const char *envname,
 
 
 static const luaL_reg ll_funcs[] = {
-  {"require", ll_require},
   {"module", ll_module},
+  {"require", ll_require},
   {NULL, NULL}
 };
 
