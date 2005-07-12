@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.31 2005/05/17 19:49:15 roberto Exp roberto $
+** $Id: ltablib.c,v 1.32 2005/07/11 18:48:02 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -241,10 +241,10 @@ static const luaL_reg tab_funcs[] = {
   {"foreach", foreach},
   {"foreachi", foreachi},
   {"getn", getn},
-  {"setn", setn},
-  {"sort", sort},
   {"insert", tinsert},
   {"remove", tremove},
+  {"setn", setn},
+  {"sort", sort},
   {NULL, NULL}
 };
 

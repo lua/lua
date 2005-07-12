@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.62 2005/06/06 13:30:52 roberto Exp roberto $
+** $Id: liolib.c,v 2.63 2005/06/06 18:42:21 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -460,12 +460,12 @@ static int f_flush (lua_State *L) {
 
 
 static const luaL_reg iolib[] = {
-  {"input", io_input},
-  {"output", io_output},
-  {"lines", io_lines},
   {"close", io_close},
   {"flush", io_flush},
+  {"input", io_input},
+  {"lines", io_lines},
   {"open", io_open},
+  {"output", io_output},
   {"popen", io_popen},
   {"read", io_read},
   {"tmpfile", io_tmpfile},
@@ -476,13 +476,13 @@ static const luaL_reg iolib[] = {
 
 
 static const luaL_reg flib[] = {
+  {"close", io_close},
   {"flush", f_flush},
-  {"read", f_read},
   {"lines", f_lines},
+  {"read", f_read},
   {"seek", f_seek},
   {"setvbuf", f_setvbuf},
   {"write", f_write},
-  {"close", io_close},
   {"__gc", io_gc},
   {"__tostring", io_tostring},
   {NULL, NULL}

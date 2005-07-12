@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.25 2005/05/31 14:34:02 roberto Exp roberto $
+** $Id: ltests.c,v 2.26 2005/07/11 14:00:59 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -719,12 +719,12 @@ static int newstate (lua_State *L) {
 
 static int loadlib (lua_State *L) {
   static const luaL_reg libs[] = {
+    {"baselibopen", luaopen_base},
+    {"dblibopen", luaopen_debug},
+    {"iolibopen", luaopen_io},
     {"mathlibopen", luaopen_math},
     {"strlibopen", luaopen_string},
-    {"iolibopen", luaopen_io},
     {"tablibopen", luaopen_table},
-    {"dblibopen", luaopen_debug},
-    {"baselibopen", luaopen_base},
     {NULL, NULL}
   };
   lua_State *L1 = cast(lua_State *,
@@ -1100,42 +1100,42 @@ static int auxsetf (lua_State *L) {
 
 
 static const struct luaL_reg tests_funcs[] = {
+  {"checkmemory", lua_checkmemory},
+  {"closestate", closestate},
+  {"d2s", d2s},
+  {"doonnewstack", doonnewstack},
+  {"doremote", doremote},
+  {"gccolor", get_gccolor},
+  {"gcstate", gcstate},
+  {"getfield", auxgetf},
+  {"getref", getref},
+  {"gsub", auxgsub},
   {"hash", hash_query},
+  {"int2fb", int2fb_aux},
   {"limits", get_limits},
   {"listcode", listcode},
   {"listk", listk},
   {"listlocals", listlocals},
   {"loadlib", loadlib},
-  {"stacklevel", stacklevel},
+  {"log2", log2_aux},
+  {"newstate", newstate},
+  {"newuserdata", newuserdata},
+  {"num2int", num2int},
+  {"pushuserdata", pushuserdata},
   {"querystr", string_query},
   {"querytab", table_query},
-  {"testC", testC},
-  {"checkmemory", lua_checkmemory},
-  {"gccolor", get_gccolor},
-  {"gcstate", gcstate},
-  {"trick", settrick},
   {"ref", tref},
-  {"getref", getref},
-  {"unref", unref},
-  {"d2s", d2s},
-  {"s2d", s2d},
-  {"num2int", num2int},
-  {"upvalue", upvalue},
-  {"newuserdata", newuserdata},
-  {"pushuserdata", pushuserdata},
-  {"udataval", udataval},
-  {"doonnewstack", doonnewstack},
-  {"newstate", newstate},
-  {"closestate", closestate},
-  {"doremote", doremote},
-  {"log2", log2_aux},
-  {"int2fb", int2fb_aux},
-  {"totalmem", mem_query},
   {"resume", coresume},
-  {"setyhook", setyhook},
-  {"gsub", auxgsub},
-  {"getfield", auxgetf},
+  {"s2d", s2d},
   {"setfield", auxsetf},
+  {"setyhook", setyhook},
+  {"stacklevel", stacklevel},
+  {"testC", testC},
+  {"totalmem", mem_query},
+  {"trick", settrick},
+  {"udataval", udataval},
+  {"unref", unref},
+  {"upvalue", upvalue},
   {NULL, NULL}
 };
 
