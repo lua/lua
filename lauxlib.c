@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.138 2005/07/11 14:01:28 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.139 2005/07/11 16:41:51 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -354,13 +354,10 @@ LUALIB_API const char *luaL_gsub (lua_State *L, const char *s, const char *p,
 
 
 static int readable (const char *fname) {
-  int err;
   FILE *f = fopen(fname, "r");  /* try to open file */
   if (f == NULL) return 0;  /* open failed */
-  getc(f);  /* try to read it */
-  err = ferror(f);
   fclose(f);
-  return (err == 0);
+  return 1;
 }
 
 
@@ -369,11 +366,8 @@ LUALIB_API const char *luaL_searchpath (lua_State *L, const char *name,
   const char *p = path;
   for (;;) {
     const char *fname;
-    if ((p = pushnexttemplate(L, p)) == NULL) {
-      lua_pushfstring(L, "no readable " LUA_QS " in path " LUA_QS "",
-                         name, path);
+    if ((p = pushnexttemplate(L, p)) == NULL)
       return NULL;
-    }
     fname = luaL_gsub(L, lua_tostring(L, -1), LUA_PATH_MARK, name);
     lua_remove(L, -2);  /* remove path template */
     if (readable(fname))  /* does file exist and is readable? */
