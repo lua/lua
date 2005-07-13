@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.139 2005/07/11 16:41:51 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.140 2005/07/12 14:32:48 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -325,16 +325,6 @@ LUALIB_API int luaL_getn (lua_State *L, int t) {
 /* }====================================================== */
 
 
-static const char *pushnexttemplate (lua_State *L, const char *path) {
-  const char *l;
-  while (*path == *LUA_PATHSEP) path++;  /* skip separators */
-  if (*path == '\0') return NULL;  /* no more templates */
-  l = strchr(path, *LUA_PATHSEP);  /* find next separator */
-  if (l == NULL) l = path+strlen(path);
-  lua_pushlstring(L, path, l - path);  /* template */
-  return l;
-}
-
 
 LUALIB_API const char *luaL_gsub (lua_State *L, const char *s, const char *p,
                                                                const char *r) {
@@ -352,29 +342,6 @@ LUALIB_API const char *luaL_gsub (lua_State *L, const char *s, const char *p,
   return lua_tostring(L, -1);
 }
 
-
-static int readable (const char *fname) {
-  FILE *f = fopen(fname, "r");  /* try to open file */
-  if (f == NULL) return 0;  /* open failed */
-  fclose(f);
-  return 1;
-}
-
-
-LUALIB_API const char *luaL_searchpath (lua_State *L, const char *name,
-                                                      const char *path) {
-  const char *p = path;
-  for (;;) {
-    const char *fname;
-    if ((p = pushnexttemplate(L, p)) == NULL)
-      return NULL;
-    fname = luaL_gsub(L, lua_tostring(L, -1), LUA_PATH_MARK, name);
-    lua_remove(L, -2);  /* remove path template */
-    if (readable(fname))  /* does file exist and is readable? */
-      return fname;  /* return that file name */
-    lua_pop(L, 1);  /* remove file name */ 
-  }
-}
 
 
 LUALIB_API const char *luaL_getfield (lua_State *L, int idx,

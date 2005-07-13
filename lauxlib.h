@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.78 2005/05/31 14:25:18 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.79 2005/05/31 14:34:02 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -61,9 +61,6 @@ LUALIB_API int (luaL_error) (lua_State *L, const char *fmt, ...);
 
 LUALIB_API int (luaL_checkoption) (lua_State *L, int narg, const char *def,
                                    const char *const lst[]);
-
-LUALIB_API const char *(luaL_searchpath) (lua_State *L, const char *name,
-                                                        const char *path);
 
 LUALIB_API int (luaL_ref) (lua_State *L, int t);
 LUALIB_API void (luaL_unref) (lua_State *L, int t, int ref);

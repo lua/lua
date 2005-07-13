@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.32 2005/07/11 16:41:57 roberto Exp roberto $
+** $Id: loadlib.c,v 1.33 2005/07/12 21:17:46 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -329,15 +329,41 @@ static int ll_loadlib (lua_State *L) {
 */
 
 
+static int readable (const char *fname) {
+  FILE *f = fopen(fname, "r");  /* try to open file */
+  if (f == NULL) return 0;  /* open failed */
+  fclose(f);
+  return 1;
+}
+
+
+static const char *pushnexttemplate (lua_State *L, const char *path) {
+  const char *l;
+  while (*path == *LUA_PATHSEP) path++;  /* skip separators */
+  if (*path == '\0') return NULL;  /* no more templates */
+  l = strchr(path, *LUA_PATHSEP);  /* find next separator */
+  if (l == NULL) l = path + strlen(path);
+  lua_pushlstring(L, path, l - path);  /* template */
+  return l;
+}
+
+
 static const char *findfile (lua_State *L, const char *pname) {
-  const char *name = luaL_checkstring(L, 1);
-  const char *fname = luaL_gsub(L, name, ".", LUA_DIRSEP);
   const char *path;
+  const char *name = luaL_checkstring(L, 1);
+  name = luaL_gsub(L, name, ".", LUA_DIRSEP);
   lua_getfield(L, LUA_ENVIRONINDEX, pname);
   path = lua_tostring(L, -1);
   if (path == NULL)
     luaL_error(L, LUA_QL("package.%s") " must be a string", pname);
-  return luaL_searchpath(L, fname, path);
+  while ((path = pushnexttemplate(L, path)) != NULL) {
+    const char *fname;
+    fname = luaL_gsub(L, lua_tostring(L, -1), LUA_PATH_MARK, name);
+    if (readable(fname))  /* does file exist and is readable? */
+      return fname;  /* return that file name */
+    lua_pop(L, 2);  /* remove path template and file name */ 
+  }
+  return NULL;  /* not found */
 }
 
 
@@ -414,16 +440,21 @@ static int require_aux (lua_State *L, const char *name) {
 }
 
 
-static void ll_error (lua_State *L, const char *name) {
-  const char *msg;
-  lua_settop(L, 1);
-  lua_getfield(L, LUA_ENVIRONINDEX, "path");
-  lua_getfield(L, LUA_ENVIRONINDEX, "cpath");
-  msg = lua_pushfstring(L, "package " LUA_QS " not found in following paths:\n"
-          "  Lua path: %s\n  C path:   %s\n", name,
-          lua_tostring(L, -2), lua_tostring(L, -1));
-  msg = luaL_gsub(L, msg, LUA_PATHSEP, "\n            ");
-  luaL_error(L, msg);
+static void require_check (lua_State *L, const char *name) {
+  if (!require_aux(L, name)) {  /* error? */
+    /* build and show error message */
+    const char *msg;
+    lua_settop(L, 1);
+    lua_getfield(L, LUA_ENVIRONINDEX, "path");
+    lua_getfield(L, LUA_ENVIRONINDEX, "cpath");
+    msg = lua_pushfstring(L,
+          "package " LUA_QS " not found in following paths:\n"
+          "  Lua path: %s\n"
+          "  C path:   %s\n", name,
+            lua_tostring(L, -2), lua_tostring(L, -1));
+    msg = luaL_gsub(L, msg, LUA_PATHSEP, "\n            ");
+    luaL_error(L, msg);
+  }
 }
 
 
@@ -436,8 +467,7 @@ static int ll_require (lua_State *L) {
     lua_pushlstring(L, name, pt - name);
     require_aux(L, lua_tostring(L, -1));
   }
-  if (!require_aux(L, name))  /* load module itself */
-    ll_error(L, name);
+  require_check(L, name);  /* load module itself */
   return 1;
 }
   
