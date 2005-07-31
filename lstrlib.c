@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.118 2005/07/05 14:30:38 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.119 2005/07/12 14:32:08 roberto Exp $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -600,8 +600,12 @@ static void add_s (MatchState *ms, luaL_Buffer *b,
         if (!isdigit(uchar(news[i])))
           luaL_putchar(b, news[i]);
         else {
-          int level = check_capture(ms, news[i]);
-          push_onecapture(ms, level);
+          if (news[i] == '0')
+            lua_pushlstring(L, s, e - s);  /* add whole match */
+          else {
+            int level = check_capture(ms, news[i]);
+            push_onecapture(ms, level);
+          }
           luaL_addvalue(b);  /* add capture to accumulated result */
         }
       }
