@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.44 2005/07/05 14:30:31 roberto Exp roberto $
+** $Id: lapi.c,v 2.45 2005/07/06 18:07:30 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -113,11 +113,11 @@ LUA_API void lua_xmove (lua_State *from, lua_State *to, int n) {
   if (from == to) return;
   lua_lock(to);
   api_checknelems(from, n);
-  api_check(L, G(from) == G(to));
+  api_check(from, G(from) == G(to));
+  api_check(from, to->ci->top - to->top >= n);
   from->top -= n;
   for (i = 0; i < n; i++) {
-    setobj2s(to, to->top, from->top + i);
-    api_incr_top(to);
+    setobj2s(to, to->top++, from->top + i);
   }
   lua_unlock(to);
 }
@@ -975,9 +975,9 @@ LUA_API int lua_next (lua_State *L, int idx) {
 
 LUA_API void lua_concat (lua_State *L, int n) {
   lua_lock(L);
-  luaC_checkGC(L);
   api_checknelems(L, n);
   if (n >= 2) {
+    luaC_checkGC(L);
     luaV_concat(L, n, cast(int, L->top - L->base) - 1);
     L->top -= (n-1);
   }
