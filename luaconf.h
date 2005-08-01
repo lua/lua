@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.54 2005/07/05 14:31:45 roberto Exp roberto $
+** $Id: luaconf.h,v 1.55 2005/07/11 17:10:35 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -83,6 +83,8 @@
 @* template.
 @@ LUA_EXECDIR in a Windows path is replaced by the executable's
 @* directory.
+@@ LUA_IGMARK is a mark to ignore all before it when bulding the
+@* luaopen_ function name.
 ** CHANGE them if for some reason your system cannot use those
 ** characters. (E.g., if one of those characters is a common character
 ** in file/directory names.) Probably you do not need to change them.
@@ -90,6 +92,7 @@
 #define LUA_PATHSEP	";"
 #define LUA_PATH_MARK	"?"
 #define LUA_EXECDIR	"!"
+#define LUA_IGMARK	":"
 
 
 /*
@@ -275,6 +278,7 @@
 #define LUAI_GCMUL	200 /* GC runs 'twice the speed' of memory allocation */
 
 
+
 /*
 @@ LUA_COMPAT_GETN controls compatibility with old getn behavior.
 ** CHANGE it (define it) if you want exact compatibility with the
@@ -283,18 +287,11 @@
 #undef LUA_COMPAT_GETN
 
 /*
-@@ LUA_COMPAT_PATH controls compatibility about LUA_PATH.
-** CHANGE it (define it) if you want 'require' to look for global
-** LUA_PATH before checking package.path.
-*/
-#undef LUA_COMPAT_PATH
-
-/*
 @@ LUA_COMPAT_LOADLIB controls compatibility about global loadlib.
 ** CHANGE it to undefined as soon as you do not need a global 'loadlib'
 ** function (the function is still available as 'package.loadlib').
 */
-#define LUA_COMPAT_LOADLIB
+#undef LUA_COMPAT_LOADLIB
 
 /*
 @@ LUA_COMPAT_VARARG controls compatibility with old vararg feature.
@@ -323,7 +320,7 @@
 ** CHANGE it to undefined as soon as your programs use 'string.find' only
 ** to find patterns.
 */
-/*#define LUA_COMPAT_FIND*/
+#define LUA_COMPAT_FIND
 
 /*
 @@ LUA_COMPAT_GFIND controls compatibility with old 'string.gfind' name.
@@ -331,6 +328,8 @@
 ** 'string.gmatch'.
 */
 #define LUA_COMPAT_GFIND
+
+
 
 /*
 @@ luai_apicheck is the assert macro used by the Lua-C API.
@@ -476,7 +475,7 @@
 #if !defined(LUA_ANSI) && (defined(__i386) || defined (_M_IX86))
 union luai_Cast { double l_d; long l_l; };
 #define lua_number2int(i,d) \
-  { union luai_Cast u; u.l_d = d + 6755399441055744.0; (i) = u.l_l; }
+  { volatile union luai_Cast u; u.l_d = (d) + 6755399441055744.0; (i) = u.l_l; }
 #define lua_number2integer(i,n)		lua_number2int(i, n)
 
 /* this option always works, but may be slow */
