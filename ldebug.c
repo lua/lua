@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.24 2005/06/28 13:01:31 roberto Exp roberto $
+** $Id: ldebug.c,v 2.25 2005/07/11 13:59:03 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -152,6 +152,7 @@ static void funcinfo (lua_Debug *ar, Closure *cl) {
   if (cl->c.isC) {
     ar->source = "=[C]";
     ar->linedefined = -1;
+    ar->lastlinedefined = -1;
     ar->what = "C";
   }
   else {

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.33 2005/05/31 14:25:18 roberto Exp roberto $
+** $Id: lgc.c,v 2.34 2005/06/07 18:53:45 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -528,10 +528,10 @@ static void remarkupvals (global_State *g) {
 static void atomic (lua_State *L) {
   global_State *g = G(L);
   size_t udsize;  /* total size of userdata to be finalized */
-  /* remark objects cautch by write barrier */
-  propagateall(g);
   /* remark occasional upvalues of (maybe) dead threads */
   remarkupvals(g);
+  /* traverse objects cautch by write barrier and by 'remarkupvals' */
+  propagateall(g);
   /* remark weak tables */
   g->gray = g->weak;
   g->weak = NULL;
