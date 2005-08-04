@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.64 2005/03/08 20:10:05 roberto Exp roberto $
+** $Id: llimits.h,v 1.65 2005/03/09 16:28:07 roberto Exp roberto $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -90,6 +90,16 @@ typedef lu_int32 Instruction;
 /* minimum size for string buffer */
 #ifndef LUA_MINBUFFER
 #define LUA_MINBUFFER	32
+#endif
+
+
+#ifndef lua_lock
+#define lua_lock(L)     ((void) 0) 
+#define lua_unlock(L)   ((void) 0)
+#endif
+
+#ifndef luai_threadyield
+#define luai_threadyield(L)     {lua_unlock(L); lua_lock(L);}
 #endif
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.55 2005/07/11 17:10:35 roberto Exp roberto $
+** $Id: luaconf.h,v 1.56 2005/08/01 15:05:09 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -552,7 +552,7 @@ union luai_Cast { double l_d; long l_l; };
 ** if want/don't want to use _longjmp/_setjmp instead of regular
 ** longjmp/setjmp. By default, Lua handles errors with exceptions when
 * compiling as C++ code, with _longjmp/_setjmp when compiling as C code
-** in a Unix system, and with longjmp/setjmp otherwise.
+** in some Unix systems, and with longjmp/setjmp otherwise.
 */
 #if defined(__cplusplus)
 /* C++ exceptions */
@@ -656,29 +656,6 @@ union luai_Cast { double l_d; long l_l; };
 #define LUA_DL_DLOPEN
 #endif
 #endif
-
-
-/*
-@@ lua_lock/lua_unlock are macros for thread synchronization inside the
-@* Lua core. This is an attempt to simplify the implementation of a
-@* multithreaded version of Lua.
-** CHANGE them only if you know what you are doing. All accesses to
-** the global state and to global objects are synchronized.  Because
-** threads can read the stack of other threads (when running garbage
-** collection), a thread must also synchronize any write-access to its
-** own stack.  Unsynchronized accesses are allowed only when reading its
-** own stack, or when reading immutable fields from global objects (such
-** as string values and udata values).
-*/
-#define lua_lock(L)	((void) 0)
-#define lua_unlock(L)	((void) 0)
-
-
-/*
-@@ lua_threadyield allows a thread switch in appropriate places in the core.
-** CHANGE it only if you know what you are doing. (See lua_lock.)
-*/
-#define luai_threadyield(L)	{lua_unlock(L); lua_lock(L);}
 
 
 /*
