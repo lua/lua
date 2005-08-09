@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.47 2005/06/13 14:15:22 roberto Exp roberto $
+** $Id: lvm.c,v 2.48 2005/07/05 14:31:20 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -548,14 +548,21 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
       }
       case OP_LEN: {
         const TValue *rb = RB(i);
-        if (ttype(rb) == LUA_TTABLE) {
-          setnvalue(ra, cast(lua_Number, luaH_getn(hvalue(rb))));
-        }
-        else {  /* try metamethod */
-          Protect(
-            if (!call_binTM(L, rb, &luaO_nilobject, ra, TM_LEN))
-              luaG_typeerror(L, rb, "get length of");
-          )
+        switch (ttype(rb)) {
+          case LUA_TTABLE: {
+            setnvalue(ra, cast(lua_Number, luaH_getn(hvalue(rb))));
+            break;
+          }
+          case LUA_TSTRING: {
+            setnvalue(ra, cast(lua_Number, tsvalue(rb)->len));
+            break;
+          }
+          default: {  /* try metamethod */
+            Protect(
+              if (!call_binTM(L, rb, &luaO_nilobject, ra, TM_LEN))
+                luaG_typeerror(L, rb, "get length of");
+            )
+          }
         }
         continue;
       }
