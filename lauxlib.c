@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.140 2005/07/12 14:32:48 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.141 2005/07/13 19:02:42 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -42,7 +42,8 @@
 
 LUALIB_API int luaL_argerror (lua_State *L, int narg, const char *extramsg) {
   lua_Debug ar;
-  lua_getstack(L, 0, &ar);
+  if (!lua_getstack(L, 0, &ar))  /* no stack frame? */
+    return luaL_error(L, "bad argument #%d (%s)", narg, extramsg);
   lua_getinfo(L, "n", &ar);
   if (strcmp(ar.namewhat, "method") == 0) {
     narg--;  /* do not count `self' */
