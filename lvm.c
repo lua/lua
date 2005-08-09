@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.48 2005/07/05 14:31:20 roberto Exp roberto $
+** $Id: lvm.c,v 2.49 2005/08/09 17:42:02 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -362,13 +362,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
   StkId base;
   TValue *k;
   const Instruction *pc;
- callentry:  /* entry point when calling new functions */
-  if (L->hookmask & LUA_MASKCALL) {
-    L->savedpc++;  /* hooks assume 'pc' is already incremented */
-    luaD_callhook(L, LUA_HOOKCALL, -1);
-    L->savedpc--;  /* correct 'pc' */
-  }
- retentry:  /* entry point when returning to old functions */
+ reentry:  /* entry point */
   pc = L->savedpc;
   cl = &clvalue(L->ci->func)->l;
   base = L->base;
@@ -618,7 +612,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         switch (luaD_precall(L, ra, nresults)) {
           case PCRLUA: {
             nexeccalls++;
-            goto callentry;  /* restart luaV_execute over new Lua function */
+            goto reentry;  /* restart luaV_execute over new Lua function */
           }
           case PCRC: {
             /* it was a C function (`precall' called it); adjust results */
@@ -652,7 +646,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
             ci->savedpc = L->savedpc;
             ci->tailcalls++;  /* one more call lost */
             L->ci--;  /* remove new frame */
-            goto callentry;
+            goto reentry;
           }
           case PCRC: {
             /* it was a C function (`precall' called it) */
@@ -677,7 +671,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
           lua_assert(GET_OPCODE(*((L->ci - 1)->savedpc - 1)) == OP_CALL);
           luaD_poscall(L, nresults, ra);
           if (nresults >= 0) L->top = L->ci->top;
-          goto retentry;
+          goto reentry;
         }
       }
       case OP_FORLOOP: {
