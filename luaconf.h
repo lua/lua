@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.56 2005/08/01 15:05:09 roberto Exp roberto $
+** $Id: luaconf.h,v 1.57 2005/08/04 13:37:10 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -548,10 +548,10 @@ union luai_Cast { double l_d; long l_l; };
 
 /*
 @@ LUAI_THROW/LUAI_TRY define how Lua does exception handling.
-** CHANGE them if you prefer to use longjmp/setjmp even with C++ or
-** if want/don't want to use _longjmp/_setjmp instead of regular
+** CHANGE them if you prefer to use longjmp/setjmp even with C++
+** or if want/don't to use _longjmp/_setjmp instead of regular
 ** longjmp/setjmp. By default, Lua handles errors with exceptions when
-* compiling as C++ code, with _longjmp/_setjmp when compiling as C code
+** compiling as C++ code, with _longjmp/_setjmp when compiling as C code
 ** in some Unix systems, and with longjmp/setjmp otherwise.
 */
 #if defined(__cplusplus)
@@ -561,8 +561,7 @@ union luai_Cast { double l_d; long l_l; };
 	{ if ((c)->status == 0) (c)->status = -1; }
 #define luai_jmpbuf	int  /* dummy variable */
 
-#elif !defined(LUA_ANSI) && (defined(unix) || defined(__unix) || \
-				    defined(__unix__))
+#elif !defined(LUA_ANSI) && (defined(__GLIBC__))
 /* in Unix, try _longjmp/_setjmp (more efficient) */
 #define LUAI_THROW(L,c)	_longjmp((c)->b, 1)
 #define LUAI_TRY(L,c,a)	if (_setjmp((c)->b) == 0) { a }
