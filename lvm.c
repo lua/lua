@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.49 2005/08/09 17:42:02 roberto Exp roberto $
+** $Id: lvm.c,v 2.50 2005/08/09 19:49:04 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -325,6 +325,7 @@ static void Arith (lua_State *L, StkId ra, const TValue *rb,
       case TM_DIV: setnvalue(ra, luai_numdiv(L, nb, nc)); break;
       case TM_MOD: setnvalue(ra, luai_nummod(L, nb, nc)); break;
       case TM_POW: setnvalue(ra, luai_numpow(L, nb, nc)); break;
+      case TM_UNM: setnvalue(ra, luai_numunm(L, nb)); break;
       default: lua_assert(0); break;
     }
   }
@@ -520,18 +521,13 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         continue;
       }
       case OP_UNM: {
-        const TValue *rb = RB(i);
-        TValue temp;
-        if (tonumber(rb, &temp)) {
+        TValue *rb = RB(i);
+        if (ttisnumber(rb)) {
           lua_Number nb = nvalue(rb);
           setnvalue(ra, luai_numunm(L, nb));
         }
         else {
-          rb = RB(i);  /* `tonumber' erased `rb' */
-          Protect(
-            if (!call_binTM(L, rb, &luaO_nilobject, ra, TM_UNM))
-              luaG_aritherror(L, rb, &luaO_nilobject);
-          )
+          Protect(Arith(L, ra, rb, rb, TM_UNM));
         }
         continue;
       }
