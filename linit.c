@@ -1,5 +1,5 @@
 /*
-** $Id: linit.c,v 1.10 2005/03/08 13:37:55 roberto Exp roberto $
+** $Id: linit.c,v 1.11 2005/04/13 17:24:20 roberto Exp roberto $
 ** Initialization of libraries for lua.c
 ** See Copyright Notice in lua.h
 */
@@ -22,7 +22,7 @@ static const luaL_reg lualibs[] = {
   {LUA_STRLIBNAME, luaopen_string},
   {LUA_MATHLIBNAME, luaopen_math},
   {LUA_DBLIBNAME, luaopen_debug},
-  {LUA_LOADLIBNAME, luaopen_loadlib},
+  {LUA_LOADLIBNAME, luaopen_package},
   {NULL, NULL}
 };
 
