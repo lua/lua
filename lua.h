@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.209 2005/05/31 14:34:02 roberto Exp roberto $
+** $Id: lua.h,v 1.210 2005/08/09 17:57:54 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Lua.org, PUC-Rio, Brazil
 ** http://www.lua.org
@@ -39,7 +39,7 @@
 #define lua_upvalueindex(i)	(LUA_GLOBALSINDEX-(i))
 
 
-/* return codes for `lua_pcall', `lua_resume', and `lua_status' */
+/* thread status; 0 is OK */
 #define LUA_YIELD	1
 #define LUA_ERRRUN	2
 #define LUA_ERRSYNTAX	3
