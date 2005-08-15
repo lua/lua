@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.9 2005/05/17 19:49:15 roberto Exp roberto $
+** $Id: loslib.c,v 1.10 2005/05/25 13:21:26 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -229,7 +229,7 @@ static const luaL_reg syslib[] = {
 
 
 LUALIB_API int luaopen_os (lua_State *L) {
-  luaL_openlib(L, LUA_OSLIBNAME, syslib, 0);
+  luaL_register(L, LUA_OSLIBNAME, syslib);
   return 1;
 }
 

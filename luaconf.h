@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.57 2005/08/04 13:37:10 roberto Exp roberto $
+** $Id: luaconf.h,v 1.58 2005/08/09 17:57:29 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -328,6 +328,15 @@
 ** 'string.gmatch'.
 */
 #define LUA_COMPAT_GFIND
+
+
+/*
+@@ LUA_COMPAT_OPENLIB controls compatibility with old 'luaL_openlib'
+@* behavior.
+** CHANGE it to undefined as soon as you replace to 'luaL_registry'
+** your uses of 'luaL_openlib'
+*/
+#define LUA_COMPAT_OPENLIB
 
 
 

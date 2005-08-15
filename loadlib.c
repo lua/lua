@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.36 2005/08/09 17:58:09 roberto Exp roberto $
+** $Id: loadlib.c,v 1.37 2005/08/10 18:06:58 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -625,7 +625,7 @@ LUALIB_API int luaopen_package (lua_State *L) {
 #endif
   lua_setfield(L, -2, "loadlib");
   lua_pushvalue(L, LUA_GLOBALSINDEX);
-  luaL_openlib(L, NULL, ll_funcs, 0);  /* open lib into global table */
+  luaL_register(L, NULL, ll_funcs);  /* open lib into global table */
   return 1;
 }
 

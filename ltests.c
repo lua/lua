@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.26 2005/07/11 14:00:59 roberto Exp roberto $
+** $Id: ltests.c,v 2.27 2005/07/12 14:32:08 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -730,7 +730,7 @@ static int loadlib (lua_State *L) {
   lua_State *L1 = cast(lua_State *,
                        cast(unsigned long, luaL_checknumber(L, 1)));
   lua_pushvalue(L1, LUA_GLOBALSINDEX);
-  luaL_openlib(L1, NULL, libs, 0);
+  luaL_register(L1, NULL, libs);
   return 0;
 }
 
@@ -1161,7 +1161,7 @@ int luaB_opentests (lua_State *L) {
   lua_assert(ud == cast(void *, &memcontrol));
   lua_atpanic(L, l_panic);
   lua_state = L;  /* keep first state to be opened */
-  luaL_openlib(L, "T", tests_funcs, 0);
+  luaL_register(L, "T", tests_funcs);
   atexit(fim);
   return 0;
 }

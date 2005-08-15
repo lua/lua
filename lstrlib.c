@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.120 2005/07/31 16:47:34 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.121 2005/08/09 17:42:02 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -58,7 +58,7 @@ static int str_reverse (lua_State *L) {
   luaL_Buffer b;
   const char *s = luaL_checklstring(L, 1, &l);
   luaL_buffinit(L, &b);
-  while (l--) luaL_putchar(&b, s[l]);
+  while (l--) luaL_addchar(&b, s[l]);
   luaL_pushresult(&b);
   return 1;
 }
@@ -71,7 +71,7 @@ static int str_lower (lua_State *L) {
   const char *s = luaL_checklstring(L, 1, &l);
   luaL_buffinit(L, &b);
   for (i=0; i<l; i++)
-    luaL_putchar(&b, tolower(uchar(s[i])));
+    luaL_addchar(&b, tolower(uchar(s[i])));
   luaL_pushresult(&b);
   return 1;
 }
@@ -84,7 +84,7 @@ static int str_upper (lua_State *L) {
   const char *s = luaL_checklstring(L, 1, &l);
   luaL_buffinit(L, &b);
   for (i=0; i<l; i++)
-    luaL_putchar(&b, toupper(uchar(s[i])));
+    luaL_addchar(&b, toupper(uchar(s[i])));
   luaL_pushresult(&b);
   return 1;
 }
@@ -127,7 +127,7 @@ static int str_char (lua_State *L) {
   for (i=1; i<=n; i++) {
     int c = luaL_checkint(L, i);
     luaL_argcheck(L, uchar(c) == c, i, "invalid value");
-    luaL_putchar(&b, uchar(c));
+    luaL_addchar(&b, uchar(c));
   }
   luaL_pushresult(&b);
   return 1;
@@ -594,11 +594,11 @@ static void add_s (MatchState *ms, luaL_Buffer *b,
     size_t i;
     for (i=0; i<l; i++) {
       if (news[i] != L_ESC)
-        luaL_putchar(b, news[i]);
+        luaL_addchar(b, news[i]);
       else {
         i++;  /* skip ESC */
         if (!isdigit(uchar(news[i])))
-          luaL_putchar(b, news[i]);
+          luaL_addchar(b, news[i]);
         else {
           if (news[i] == '0')
             lua_pushlstring(L, s, e - s);  /* add whole match */
@@ -651,7 +651,7 @@ static int str_gsub (lua_State *L) {
     if (e && e>src) /* non empty match? */
       src = e;  /* skip it */
     else if (src < ms.src_end)
-      luaL_putchar(&b, *src++);
+      luaL_addchar(&b, *src++);
     else break;
     if (anchor) break;
   }
@@ -673,12 +673,12 @@ static int str_gsub (lua_State *L) {
 static void addquoted (lua_State *L, luaL_Buffer *b, int arg) {
   size_t l;
   const char *s = luaL_checklstring(L, arg, &l);
-  luaL_putchar(b, '"');
+  luaL_addchar(b, '"');
   while (l--) {
     switch (*s) {
       case '"': case '\\': case '\n': {
-        luaL_putchar(b, '\\');
-        luaL_putchar(b, *s);
+        luaL_addchar(b, '\\');
+        luaL_addchar(b, *s);
         break;
       }
       case '\0': {
@@ -686,13 +686,13 @@ static void addquoted (lua_State *L, luaL_Buffer *b, int arg) {
         break;
       }
       default: {
-        luaL_putchar(b, *s);
+        luaL_addchar(b, *s);
         break;
       }
     }
     s++;
   }
-  luaL_putchar(b, '"');
+  luaL_addchar(b, '"');
 }
 
 
@@ -728,9 +728,9 @@ static int str_format (lua_State *L) {
   luaL_buffinit(L, &b);
   while (strfrmt < strfrmt_end) {
     if (*strfrmt != L_ESC)
-      luaL_putchar(&b, *strfrmt++);
+      luaL_addchar(&b, *strfrmt++);
     else if (*++strfrmt == L_ESC)
-      luaL_putchar(&b, *strfrmt++);  /* %% */
+      luaL_addchar(&b, *strfrmt++);  /* %% */
     else { /* format item */
       char form[MAX_FORMAT];  /* to store the format (`%...') */
       char buff[MAX_ITEM];  /* to store the formatted item */
@@ -818,7 +818,7 @@ static void createmetatable (lua_State *L) {
 ** Open string library
 */
 LUALIB_API int luaopen_string (lua_State *L) {
-  luaL_openlib(L, LUA_STRLIBNAME, strlib, 0);
+  luaL_register(L, LUA_STRLIBNAME, strlib);
 #if defined(LUA_COMPAT_GFIND)
   lua_getfield(L, -1, "gmatch");
   lua_setfield(L, -2, "gfind");
