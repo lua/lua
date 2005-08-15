@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.142 2005/08/09 12:30:19 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.143 2005/08/10 18:47:09 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -235,7 +235,13 @@ LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event) {
 }
 
 
-LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
+LUALIB_API void (luaL_register) (lua_State *L, const char *libname,
+                                const luaL_reg *l) {
+  luaI_openlib(L, libname, l, 0);
+}
+
+
+LUALIB_API void luaI_openlib (lua_State *L, const char *libname,
                               const luaL_reg *l, int nup) {
   if (libname) {
     /* check whether lib already exists */
@@ -338,7 +344,7 @@ LUALIB_API const char *luaL_gsub (lua_State *L, const char *s, const char *p,
     luaL_addstring(&b, r);  /* push replacement in place of pattern */
     s = wild + l;  /* continue after `p' */
   }
-  luaL_addstring(&b, s);  /* push last suffix (`n' already includes this) */
+  luaL_addstring(&b, s);  /* push last suffix */
   luaL_pushresult(&b);
   return lua_tostring(L, -1);
 }
@@ -446,7 +452,7 @@ LUALIB_API char *luaL_prepbuffer (luaL_Buffer *B) {
 
 LUALIB_API void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l) {
   while (l--)
-    luaL_putchar(B, *s++);
+    luaL_addchar(B, *s++);
 }
 
 
@@ -625,6 +631,12 @@ LUALIB_API int luaL_loadbuffer (lua_State *L, const char *buff, size_t size,
   ls.size = size;
   return lua_load(L, getS, &ls, name);
 }
+
+
+LUALIB_API int (luaL_loadstring) (lua_State *L, const char *s) {
+  return luaL_loadbuffer(L, s, strlen(s), s);
+}
+
 
 
 /* }====================================================== */
