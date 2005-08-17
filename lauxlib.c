@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.144 2005/08/15 14:12:32 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.145 2005/08/17 19:05:04 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -130,18 +130,15 @@ LUALIB_API void  luaL_getmetatable (lua_State *L, const char *tname) {
 
 
 LUALIB_API void *luaL_checkudata (lua_State *L, int ud, const char *tname) {
-  void *p = NULL;
-  if (lua_getmetatable(L, ud)) {
-    const char *tn;
-    lua_rawget(L, LUA_REGISTRYINDEX);  /* get registry[metatable] */
-    tn = lua_tostring(L, -1);
-    if (tn && (strcmp(tn, tname) == 0)) {
-      lua_pop(L, 1);
-      p = lua_touserdata(L, ud);
-    }
-  }
-  if (p == NULL)
-    luaL_typerror(L, ud, tname);
+  void *p = lua_touserdata(L, ud);
+  const char *tn;
+  if (p == NULL ||  /* if is not a userdata? */
+      !lua_getmetatable(L, ud) ||  /* has no metatable? */
+      (lua_rawget(L, LUA_REGISTRYINDEX),  /* get registry[metatable] */
+         (tn = lua_tostring(L, -1)) == NULL) ||  /* metatable not registered? */
+      (strcmp(tn, tname) != 0))  /* or wrong? */
+    luaL_typerror(L, ud, tname);  /* then error */
+  lua_pop(L, 1);  /* remove registry[metatable] */
   return p;
 }
 
