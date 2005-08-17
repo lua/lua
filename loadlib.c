@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.37 2005/08/10 18:06:58 roberto Exp roberto $
+** $Id: loadlib.c,v 1.38 2005/08/15 14:12:32 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -289,10 +289,8 @@ static void **ll_register (lua_State *L, const char *path) {
 */
 static int gctm (lua_State *L) {
   void **lib = (void **)luaL_checkudata(L, 1, "_LOADLIB");
-  if (lib) {
-    if (*lib) ll_unloadlib(*lib);
-    *lib = NULL;  /* mark library as closed */
-  }
+  if (*lib) ll_unloadlib(*lib);
+  *lib = NULL;  /* mark library as closed */
   return 0;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.64 2005/07/12 14:32:08 roberto Exp roberto $
+** $Id: liolib.c,v 2.65 2005/08/15 14:12:32 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -50,17 +50,17 @@ static void fileerror (lua_State *L, int arg, const char *filename) {
 }
 
 
-static FILE **topfile (lua_State *L) {
-  FILE **f = (FILE **)luaL_checkudata(L, 1, LUA_FILEHANDLE);
-  if (f == NULL) luaL_argerror(L, 1, "bad file");
-  return f;
-}
+#define topfile(L)	((FILE **)luaL_checkudata(L, 1, LUA_FILEHANDLE))
 
 
 static int io_type (lua_State *L) {
-  FILE **f = (FILE **)luaL_checkudata(L, 1, LUA_FILEHANDLE);
-  if (f == NULL) lua_pushnil(L);
-  else if (*f == NULL)
+  void *ud;
+  luaL_checkany(L, 1);
+  ud = lua_touserdata(L, 1);
+  lua_getfield(L, LUA_REGISTRYINDEX, LUA_FILEHANDLE);
+  if (ud == NULL || !lua_getmetatable(L, 1) || !lua_rawequal(L, -2, -1))
+    lua_pushnil(L);  /* not a file */
+  else if (*((FILE **)ud) == NULL)
     lua_pushliteral(L, "closed file");
   else
     lua_pushliteral(L, "file");
@@ -173,7 +173,6 @@ static int io_tmpfile (lua_State *L) {
 static FILE *getiofile (lua_State *L, int findex) {
   FILE *f;
   lua_rawgeti(L, LUA_ENVIRONINDEX, findex);
-  lua_assert(luaL_checkudata(L, -1, LUA_FILEHANDLE));
   f = *(FILE **)lua_touserdata(L, -1);
   if (f == NULL)
     luaL_error(L, "standard %s file is closed", fnames[findex - 1]);
@@ -194,7 +193,6 @@ static int g_iofile (lua_State *L, int f, const char *mode) {
       tofile(L);  /* check that it's a valid file handle */
       lua_pushvalue(L, 1);
     }
-    lua_assert(luaL_checkudata(L, -1, LUA_FILEHANDLE));
     lua_rawseti(L, LUA_ENVIRONINDEX, f);
   }
   /* return current value */
