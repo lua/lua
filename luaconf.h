@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.58 2005/08/09 17:57:29 roberto Exp roberto $
+** $Id: luaconf.h,v 1.59 2005/08/15 14:12:32 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -456,13 +456,6 @@
 
 
 /*
-@@ LUAI_MAXEXPWHILE is the maximum size of code for expressions
-@* controling a 'while' loop.
-*/
-#define LUAI_MAXEXPWHILE	100
-
-
-/*
 @@ LUAL_BUFFERSIZE is the buffer size used by the lauxlib buffer system.
 */
 #define LUAL_BUFFERSIZE		BUFSIZ
@@ -481,7 +474,8 @@
 */
 
 /* On a Pentium, resort to a trick */
-#if !defined(LUA_ANSI) && (defined(__i386) || defined (_M_IX86))
+#if !defined(LUA_ANSI) && !defined(__SSE2__) && \
+    (defined(__i386) || defined (_M_IX86))
 union luai_Cast { double l_d; long l_l; };
 #define lua_number2int(i,d) \
   { volatile union luai_Cast u; u.l_d = (d) + 6755399441055744.0; (i) = u.l_l; }

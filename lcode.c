@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.13 2005/05/20 15:53:42 roberto Exp roberto $
+** $Id: lcode.c,v 2.14 2005/06/07 18:53:45 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -535,6 +535,8 @@ void luaK_goiftrue (FuncState *fs, expdesc *e) {
     }
   }
   luaK_concat(fs, &e->f, pc);  /* insert last jump in `f' list */
+  luaK_patchtohere(fs, e->t);
+  e->t = NO_JUMP;
 }
 
 
@@ -560,6 +562,8 @@ void luaK_goiffalse (FuncState *fs, expdesc *e) {
     }
   }
   luaK_concat(fs, &e->t, pc);  /* insert last jump in `t' list */
+  luaK_patchtohere(fs, e->f);
+  e->f = NO_JUMP;
 }
 
 
@@ -636,14 +640,10 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
   switch (op) {
     case OPR_AND: {
       luaK_goiftrue(fs, v);
-      luaK_patchtohere(fs, v->t);
-      v->t = NO_JUMP;
       break;
     }
     case OPR_OR: {
       luaK_goiffalse(fs, v);
-      luaK_patchtohere(fs, v->f);
-      v->f = NO_JUMP;
       break;
     }
     case OPR_CONCAT: {
