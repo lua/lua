@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.146 2005/08/17 20:09:31 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.147 2005/08/18 16:04:05 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -117,28 +117,16 @@ LUALIB_API int luaL_newmetatable (lua_State *L, const char *tname) {
   lua_newtable(L);  /* create metatable */
   lua_pushvalue(L, -1);
   lua_setfield(L, LUA_REGISTRYINDEX, tname);  /* registry.name = metatable */
-  lua_pushvalue(L, -1);
-  lua_pushstring(L, tname);
-  lua_rawset(L, LUA_REGISTRYINDEX);  /* registry[metatable] = name */
   return 1;
-}
-
-
-LUALIB_API void  luaL_getmetatable (lua_State *L, const char *tname) {
-  lua_getfield(L, LUA_REGISTRYINDEX, tname);
 }
 
 
 LUALIB_API void *luaL_checkudata (lua_State *L, int ud, const char *tname) {
   void *p = lua_touserdata(L, ud);
-  const char *tn;
-  if (p == NULL ||  /* if is not a userdata? */
-      !lua_getmetatable(L, ud) ||  /* has no metatable? */
-      (lua_rawget(L, LUA_REGISTRYINDEX),  /* get registry[metatable] */
-         (tn = lua_tostring(L, -1)) == NULL) ||  /* metatable not registered? */
-      (strcmp(tn, tname) != 0))  /* or wrong? */
-    luaL_typerror(L, ud, tname);  /* then error */
-  lua_pop(L, 1);  /* remove registry[metatable] */
+  lua_getfield(L, LUA_REGISTRYINDEX, tname);  /* get correct metatable */
+  if (p == NULL || !lua_getmetatable(L, ud) || !lua_rawequal(L, -1, -2))
+    luaL_typerror(L, ud, tname);
+  lua_pop(L, 2);  /* remove both metatables */
   return p;
 }
 
