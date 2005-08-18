@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.145 2005/08/17 19:05:04 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.146 2005/08/17 20:09:31 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -388,9 +388,8 @@ LUALIB_API const char *luaL_setfield (lua_State *L, int idx,
       return fname;
     }
   }
-  lua_pushstring(L, fname);
-  lua_pushvalue(L, -3);  /* move value to the top */
-  lua_rawset(L, -3);  /* set last field */
+  lua_pushvalue(L, -2);  /* move value to the top */
+  lua_setfield(L, -2, fname);  /* set last field */
   lua_pop(L, 2);  /* remove value and table */
   return NULL;
 }
