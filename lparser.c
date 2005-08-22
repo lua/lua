@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.31 2005/07/11 14:01:37 roberto Exp roberto $
+** $Id: lparser.c,v 2.32 2005/08/17 18:32:09 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -239,35 +239,35 @@ static void markupval (FuncState *fs, int level) {
 }
 
 
-static void singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
-  if (fs == NULL)  /* no more levels? */
+static int singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
+  if (fs == NULL) {  /* no more levels? */
     init_exp(var, VGLOBAL, NO_REG);  /* default is global variable */
+    return VGLOBAL;
+  }
   else {
     int v = searchvar(fs, n);  /* look up at current level */
     if (v >= 0) {
       init_exp(var, VLOCAL, v);
       if (!base)
         markupval(fs, v);  /* local will be used as an upval */
+      return VLOCAL;
     }
     else {  /* not found at current level; try upper one */
-      singlevaraux(fs->prev, n, var, 0);
-      if (var->k == VGLOBAL) {
-        if (base)
-          var->info = luaK_stringK(fs, n);  /* info points to global name */
-      }
-      else {  /* LOCAL or UPVAL */
-        var->info = indexupvalue(fs, n, var);
-        var->k = VUPVAL;  /* upvalue in this level */
-      }
+      if (singlevaraux(fs->prev, n, var, 0) == VGLOBAL)
+        return VGLOBAL;
+      var->info = indexupvalue(fs, n, var);  /* else was LOCAL or UPVAL */
+      var->k = VUPVAL;  /* upvalue in this level */
+      return VUPVAL;
     }
   }
 }
 
 
-static TString *singlevar (LexState *ls, expdesc *var, int base) {
+static void singlevar (LexState *ls, expdesc *var) {
   TString *varname = str_checkname(ls);
-  singlevaraux(ls->fs, varname, var, base);
-  return varname;
+  FuncState *fs = ls->fs;
+  if (singlevaraux(fs, varname, var, 1) == VGLOBAL)
+    var->info = luaK_stringK(fs, varname);  /* info points to global name */
 }
 
 
@@ -694,7 +694,7 @@ static void prefixexp (LexState *ls, expdesc *v) {
       return;
     }
     case TK_NAME: {
-      singlevar(ls, v, 1);
+      singlevar(ls, v);
       return;
     }
     default: {
@@ -1214,7 +1214,7 @@ static void localstat (LexState *ls) {
 static int funcname (LexState *ls, expdesc *v) {
   /* funcname -> NAME {field} [`:' NAME] */
   int needself = 0;
-  singlevar(ls, v, 1);
+  singlevar(ls, v);
   while (ls->t.token == '.')
     field(ls, v);
   if (ls->t.token == ':') {
