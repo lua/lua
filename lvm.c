@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.50 2005/08/09 19:49:04 roberto Exp roberto $
+** $Id: lvm.c,v 2.51 2005/08/10 20:20:13 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -358,7 +358,7 @@ static void Arith (lua_State *L, StkId ra, const TValue *rb,
 #define Protect(x)	{ L->savedpc = pc; {x;}; base = L->base; }
 
 
-StkId luaV_execute (lua_State *L, int nexeccalls) {
+void luaV_execute (lua_State *L, int nexeccalls) {
   LClosure *cl;
   StkId base;
   TValue *k;
@@ -377,7 +377,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
       traceexec(L, pc);
       if (L->status == LUA_YIELD) {  /* did hook yield? */
         L->savedpc = pc - 1;
-        return NULL;
+        return;
       }
       base = L->base;
     }
@@ -617,7 +617,7 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
             continue;
           }
           default: {
-            return NULL;
+            return;  /* yield */
           }
         }
       }
@@ -644,13 +644,12 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
             L->ci--;  /* remove new frame */
             goto reentry;
           }
-          case PCRC: {
-            /* it was a C function (`precall' called it) */
+          case PCRC: {  /* it was a C function (`precall' called it) */
             base = L->base;
             continue;
           }
           default: {
-            return NULL;
+            return;  /* yield */
           }
         }
       }
@@ -659,14 +658,13 @@ StkId luaV_execute (lua_State *L, int nexeccalls) {
         if (b != 0) L->top = ra+b-1;
         if (L->openupval) luaF_close(L, base);
         L->savedpc = pc;
+        b = luaD_poscall(L, ra);
         if (--nexeccalls == 0)  /* was previous function running `here'? */
-          return ra;  /* no: return */
+          return;  /* no: return */
         else {  /* yes: continue its execution */
-          int nresults = L->ci->nresults;
-          lua_assert(isLua(L->ci - 1));
-          lua_assert(GET_OPCODE(*((L->ci - 1)->savedpc - 1)) == OP_CALL);
-          luaD_poscall(L, nresults, ra);
-          if (nresults >= 0) L->top = L->ci->top;
+          if (b) L->top = L->ci->top;
+          lua_assert(isLua(L->ci));
+          lua_assert(GET_OPCODE(*((L->ci)->savedpc - 1)) == OP_CALL);
           goto reentry;
         }
       }

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.28 2005/07/11 14:00:31 roberto Exp roberto $
+** $Id: ldo.c,v 2.29 2005/08/09 19:49:04 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -134,7 +134,7 @@ static void correctstack (lua_State *L, TValue *oldstack) {
     ci->base = (ci->base - oldstack) + L->stack;
     ci->func = (ci->func - oldstack) + L->stack;
   }
-  L->base = L->ci->base;
+  L->base = (L->base - oldstack) + L->stack;
 }
 
 
@@ -314,13 +314,14 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     L->base = ci->base = ci->func + 1;
     ci->top = L->top + LUA_MINSTACK;
     lua_assert(ci->top <= L->stack_last);
+    ci->nresults = nresults;
     if (L->hookmask & LUA_MASKCALL)
       luaD_callhook(L, LUA_HOOKCALL, -1);
     lua_unlock(L);
     n = (*curr_func(L)->c.f)(L);  /* do the actual call */
     lua_lock(L);
     if (n >= 0) {  /* no yielding? */
-      luaD_poscall(L, nresults, L->top - n);
+      luaD_poscall(L, L->top - n);
       return PCRC;
     }
     else {
@@ -342,22 +343,24 @@ static StkId callrethooks (lua_State *L, StkId firstResult) {
 }
 
 
-void luaD_poscall (lua_State *L, int wanted, StkId firstResult) { 
+int luaD_poscall (lua_State *L, StkId firstResult) {
   StkId res;
+  int wanted, i;
+  CallInfo *ci;
   if (L->hookmask & LUA_MASKRET)
     firstResult = callrethooks(L, firstResult);
-  res = L->ci->func;  /* res == final position of 1st result */
-  L->ci--;
-  L->base = L->ci->base;  /* restore base */
-  L->savedpc = L->ci->savedpc;  /* restore savedpc */
+  ci = L->ci--;
+  res = ci->func;  /* res == final position of 1st result */
+  wanted = ci->nresults;
+  L->base = (ci - 1)->base;  /* restore base */
+  L->savedpc = (ci - 1)->savedpc;  /* restore savedpc */
   /* move results to correct place */
-  while (wanted != 0 && firstResult < L->top) {
+  for (i = wanted; i != 0 && firstResult < L->top; i--)
     setobjs2s(L, res++, firstResult++);
-    wanted--;
-  }
-  while (wanted-- > 0)
+  while (i-- > 0)
     setnilvalue(res++);
   L->top = res;
+  return (wanted - LUA_MULTRET);  /* 0 iff wanted == LUA_MULTRET */
 }
 
 
@@ -374,41 +377,34 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
     else if (L->nCcalls >= (LUAI_MAXCCALLS + (LUAI_MAXCCALLS>>3)))
       luaD_throw(L, LUA_ERRERR);  /* error while handing stack error */
   }
-  if (luaD_precall(L, func, nResults) == PCRLUA) {  /* is a Lua function? */
-    StkId firstResult = luaV_execute(L, 1);  /* call it */
-    luaD_poscall(L, nResults, firstResult);
-  }
+  if (luaD_precall(L, func, nResults) == PCRLUA)  /* is a Lua function? */
+    luaV_execute(L, 1);  /* call it */
   L->nCcalls--;
   luaC_checkGC(L);
 }
 
 
 static void resume (lua_State *L, void *ud) {
-  StkId firstResult;
   StkId firstArg = cast(StkId, ud);
   CallInfo *ci = L->ci;
-  if (L->status != LUA_YIELD) {
+  if (L->status != LUA_YIELD) {  /* start coroutine */
     lua_assert(ci == L->base_ci && firstArg > L->base);
-    luaD_precall(L, firstArg - 1, LUA_MULTRET);  /* start coroutine */
+    if (luaD_precall(L, firstArg - 1, LUA_MULTRET) != PCRLUA)
+      return;
   }
   else {  /* resuming from previous yield */
     if (!f_isLua(ci)) {  /* `common' yield? */
       /* finish interrupted execution of `OP_CALL' */
-      int nresults = ci->nresults;
       lua_assert(GET_OPCODE(*((ci-1)->savedpc - 1)) == OP_CALL ||
                  GET_OPCODE(*((ci-1)->savedpc - 1)) == OP_TAILCALL);
-      luaD_poscall(L, nresults, firstArg);  /* complete it */
-      if (nresults >= 0) L->top = L->ci->top;
+      if (luaD_poscall(L, firstArg))  /* complete it... */
+        L->top = L->ci->top;  /* and correct top if not multiple results */
     }
-    else {  /* yielded inside a hook: just continue its execution */
+    else  /* yielded inside a hook: just continue its execution */
       L->base = L->ci->base;
-    }
   }
   L->status = 0;
-  firstResult = luaV_execute(L, cast(int, L->ci - L->base_ci));
-  if (firstResult != NULL) {   /* return? */
-    luaD_poscall(L, LUA_MULTRET, firstResult);  /* finalize this coroutine */
-  }
+  luaV_execute(L, cast(int, L->ci - L->base_ci));
 }
 
 
