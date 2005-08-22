@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.29 2005/08/09 19:49:04 roberto Exp roberto $
+** $Id: ldo.c,v 2.30 2005/08/22 18:54:49 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -48,7 +48,7 @@ struct lua_longjmp {
 };
 
 
-static void seterrorobj (lua_State *L, int errcode, StkId oldtop) {
+void luaD_seterrorobj (lua_State *L, int errcode, StkId oldtop) {
   switch (errcode) {
     case LUA_ERRMEM: {
       setsvalue2s(L, oldtop, luaS_newliteral(L, MEMERRMSG));
@@ -82,7 +82,7 @@ static void resetstack (lua_State *L, int status) {
   L->ci = L->base_ci;
   L->base = L->ci->base;
   luaF_close(L, L->base);  /* close eventual pending closures */
-  seterrorobj(L, status, L->base);
+  luaD_seterrorobj(L, status, L->base);
   L->nCcalls = 0;
   L->allowhook = 1;
   restore_stack_limit(L);
@@ -427,10 +427,11 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
     else if (L->ci != L->base_ci)
       return resume_error(L, "cannot resume non-suspended coroutine");
   }
+  luai_userstateresume(L, nargs);
   status = luaD_rawrunprotected(L, resume, L->top - nargs);
   if (status != 0) {  /* error? */
     L->status = cast(lu_byte, status);  /* mark thread as `dead' */
-    seterrorobj(L, status, L->top);
+    luaD_seterrorobj(L, status, L->top);
   }
   else
     status = L->status;
@@ -440,9 +441,8 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
 
 
 LUA_API int lua_yield (lua_State *L, int nresults) {
-  CallInfo *ci;
+  luai_userstateyield(L, nresults);
   lua_lock(L);
-  ci = L->ci;
   if (L->nCcalls > 0)
     luaG_runerror(L, "attempt to yield across metamethod/C-call boundary");
   L->base = L->top - nresults;  /* protect stack slots below */
@@ -464,7 +464,7 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
   if (status != 0) {  /* an error occurred? */
     StkId oldtop = restorestack(L, old_top);
     luaF_close(L, oldtop);  /* close eventual pending closures */
-    seterrorobj(L, status, oldtop);
+    luaD_seterrorobj(L, status, oldtop);
     L->nCcalls = oldnCcalls;
     L->ci = restoreci(L, old_ci);
     L->base = L->ci->base;

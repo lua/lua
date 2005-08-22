@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.h,v 2.4 2005/04/25 19:24:10 roberto Exp roberto $
+** $Id: ldo.h,v 2.5 2005/08/22 18:54:49 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -61,6 +61,7 @@ LUAI_FUNC void luaD_growstack (lua_State *L, int n);
 LUAI_FUNC void luaD_throw (lua_State *L, int errcode);
 LUAI_FUNC int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud);
 
+LUAI_FUNC void luaD_seterrorobj (lua_State *L, int errcode, StkId oldtop);
 
 #endif
 

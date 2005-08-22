@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.59 2005/08/15 14:12:32 roberto Exp roberto $
+** $Id: luaconf.h,v 1.60 2005/08/17 18:32:09 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -670,11 +670,15 @@ union luai_Cast { double l_d; long l_l; };
 
 
 /*
-@@ luai_userstateopen allows user-specific initialization on new threads.
-** CHANGE it if you defined LUAI_EXTRASPACE and need to initialize that
-** data whenever a new lua_State is created.
+@@ luai_userstate* allow user-specific actions on threads.
+** CHANGE them if you defined LUAI_EXTRASPACE and need to do something
+** extra when a thread is created/deleted/resumed/yielded.
 */
-#define luai_userstateopen(L)	((void)0)
+#define luai_userstateopen(L)		((void)0)
+#define luai_userstatefree(L)		((void)0)
+#define luai_userstateresume(L,n)	((void)0)
+#define luai_userstateyield(L,n)	((void)0)
+
 
 
 
