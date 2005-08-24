@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.h,v 2.5 2005/08/22 18:54:49 roberto Exp roberto $
+** $Id: ldo.h,v 2.6 2005/08/22 19:58:29 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -11,16 +11,6 @@
 #include "lobject.h"
 #include "lstate.h"
 #include "lzio.h"
-
-
-/*
-** macro to control inclusion of some hard tests on stack reallocation
-*/ 
-#ifndef HARDSTACKTESTS
-#define condhardstacktests(x)	((void)0)
-#else
-#define condhardstacktests(x)	x
-#endif
 
 
 #define luaD_checkstack(L,n)	\

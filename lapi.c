@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.45 2005/07/06 18:07:30 roberto Exp roberto $
+** $Id: lapi.c,v 2.46 2005/07/31 17:12:32 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -344,6 +344,7 @@ LUA_API const char *lua_tolstring (lua_State *L, int idx, size_t *len) {
       return NULL;
     }
     luaC_checkGC(L);
+    o = index2adr(L, idx);  /* previous call may reallocate the stack */
     lua_unlock(L);
   }
   if (len != NULL) *len = tsvalue(o)->len;

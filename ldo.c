@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.30 2005/08/22 18:54:49 roberto Exp roberto $
+** $Id: ldo.c,v 2.31 2005/08/22 19:58:29 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -205,19 +205,17 @@ void luaD_callhook (lua_State *L, int event, int line) {
 }
 
 
-static StkId adjust_varargs (lua_State *L, int nfixargs, int actual,
-                             int style) {
+static StkId adjust_varargs (lua_State *L, Proto *p, int actual) {
   int i;
+  int nfixargs = p->numparams;
   Table *htab = NULL;
   StkId base, fixed;
-  if (actual < nfixargs) {
-    for (; actual < nfixargs; ++actual)
-      setnilvalue(L->top++);
-  }
+  for (; actual < nfixargs; ++actual)
+    setnilvalue(L->top++);
 #if defined(LUA_COMPAT_VARARG)
-  if (style & VARARG_NEEDSARG) {  /* compatibility with old-style vararg */
+  if (p->is_vararg & VARARG_NEEDSARG) { /* compat. with old-style vararg? */
     int nvar = actual - nfixargs;  /* number of extra arguments */
-    lua_assert(style & VARARG_HASARG);
+    lua_assert(p->is_vararg & VARARG_HASARG);
     luaC_checkGC(L);
     htab = luaH_new(L, nvar, 1);  /* create `arg' table */
     for (i=0; i<nvar; i++)  /* put extra arguments into `arg' table */
@@ -276,16 +274,14 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     CallInfo *ci;
     StkId st, base;
     Proto *p = cl->p;
-    if (p->is_vararg) {  /* varargs? */
-      int nargs = cast(int, L->top - restorestack(L, funcr)) - 1;
-      luaD_checkstack(L, p->maxstacksize + nargs);
-      base = adjust_varargs(L, p->numparams, nargs, p->is_vararg);
-      func = restorestack(L, funcr);
-    }
-    else {
-      luaD_checkstack(L, p->maxstacksize);
-      func = restorestack(L, funcr);
+    luaD_checkstack(L, p->maxstacksize);
+    func = restorestack(L, funcr);
+    if (!p->is_vararg)  /* no varargs? */
       base = func + 1;
+    else {  /* vararg function */
+      int nargs = cast(int, L->top - func) - 1;
+      base = adjust_varargs(L, p, nargs);
+      func = restorestack(L, funcr);  /* previous call may change the stack */
     }
     ci = inc_ci(L);  /* now `enter' new function */
     ci->func = func;
