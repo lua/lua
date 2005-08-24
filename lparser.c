@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.32 2005/08/17 18:32:09 roberto Exp roberto $
+** $Id: lparser.c,v 2.33 2005/08/22 18:54:32 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -526,7 +526,6 @@ static void constructor (LexState *ls, expdesc *t) {
   checknext(ls, '{');
   do {
     lua_assert(cc.v.k == VVOID || cc.tostore > 0);
-    testnext(ls, ';');  /* compatibility only */
     if (ls->t.token == '}') break;
     closelistfield(fs, &cc);
     switch(ls->t.token) {
