@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.34 2005/06/07 18:53:45 roberto Exp roberto $
+** $Id: lgc.c,v 2.35 2005/08/04 13:37:38 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -287,7 +287,6 @@ static l_mem propagatemark (global_State *g) {
         black2gray(o);  /* keep it gray */
       return sizeof(Table) + sizeof(TValue) * h->sizearray +
                              sizeof(Node) * sizenode(h);
-      break;
     }
     case LUA_TFUNCTION: {
       Closure *cl = gco2cl(o);
@@ -295,7 +294,6 @@ static l_mem propagatemark (global_State *g) {
       traverseclosure(g, cl);
       return (cl->c.isC) ? sizeCclosure(cl->c.nupvalues) :
                            sizeLclosure(cl->l.nupvalues);
-      break;
     }
     case LUA_TTHREAD: {
       lua_State *th = gco2th(o);
@@ -306,7 +304,6 @@ static l_mem propagatemark (global_State *g) {
       traversestack(g, th);
       return sizeof(lua_State) + sizeof(TValue) * th->stacksize +
                                  sizeof(CallInfo) * th->size_ci;
-      break;
     }
     case LUA_TPROTO: {
       Proto *p = gco2p(o);
@@ -318,7 +315,6 @@ static l_mem propagatemark (global_State *g) {
                              sizeof(int) * p->sizelineinfo +
                              sizeof(LocVar) * p->sizelocvars +
                              sizeof(TString *) * p->sizeupvalues;
-      break;
     }
     default: lua_assert(0); return 0;
   }
