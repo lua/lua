@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.38 2005/08/15 14:12:32 roberto Exp roberto $
+** $Id: loadlib.c,v 1.39 2005/08/17 19:05:04 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -508,24 +508,29 @@ static int ll_module (lua_State *L) {
   const char *dot;
   lua_settop(L, 1);
   lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
-  /* try to find given table */
-  luaL_getfield(L, LUA_GLOBALSINDEX, modname);
-  if (lua_isnil(L, -1)) {  /* not found? */
+  lua_getfield(L, 2, modname);  /* get _LOADED[modname] */
+  if (!lua_istable(L, -1)) {  /* not found? */
     lua_pop(L, 1);  /* remove previous result */
-    lua_newtable(L);  /* create it */
-    /* register it with given name */
+    luaL_getfield(L, LUA_GLOBALSINDEX, modname);  /* try global variable */
+    if (!lua_istable(L, -1)) {
+      if (!lua_isnil(L, -1))
+        return luaL_error(L, "name conflict for module " LUA_QS, modname);
+      lua_pop(L, 1);
+      lua_newtable(L);  /* create it */
+      lua_pushvalue(L, -1);  /* register it with given name */
+      luaL_setfield(L, LUA_GLOBALSINDEX, modname);
+    }
     lua_pushvalue(L, -1);
-    luaL_setfield(L, LUA_GLOBALSINDEX, modname);
+    lua_setfield(L, 2, modname);  /* _LOADED[modname] = new table */
   }
-  else if (!lua_istable(L, -1))
-    return luaL_error(L, "name conflict for module " LUA_QS, modname);
   /* check whether table already has a _NAME field */
   lua_getfield(L, -1, "_NAME");
   if (!lua_isnil(L, -1))  /* is table an initialized module? */
     lua_pop(L, 1);
   else {  /* no; initialize it */
     lua_pop(L, 1);
-    lua_newtable(L);  /* create new metatable */
+    /* create new metatable */
+    lua_newtable(L);
     lua_pushvalue(L, LUA_GLOBALSINDEX);
     lua_setfield(L, -2, "__index");  /* mt.__index = _G */
     lua_setmetatable(L, -2);
@@ -540,8 +545,6 @@ static int ll_module (lua_State *L) {
     lua_pushlstring(L, modname, dot - modname);
     lua_setfield(L, -2, "_PACKAGE");
   }
-  lua_pushvalue(L, -1);
-  lua_setfield(L, 2, modname);  /* _LOADED[modname] = new table */
   setfenv(L);
   return 0;
 }

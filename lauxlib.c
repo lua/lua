@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.147 2005/08/18 16:04:05 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.148 2005/08/18 20:36:26 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -231,22 +231,23 @@ LUALIB_API void luaI_openlib (lua_State *L, const char *libname,
                               const luaL_reg *l, int nup) {
   if (libname) {
     /* check whether lib already exists */
-    luaL_getfield(L, LUA_GLOBALSINDEX, libname);
-    if (lua_isnil(L, -1)) {  /* not found? */
-      lua_pop(L, 1);  /* remove previous result */
-      lua_newtable(L);  /* create it */
-      if (lua_getmetatable(L, LUA_GLOBALSINDEX))
-        lua_setmetatable(L, -2);  /* share metatable with global table */
-      /* register it with given name */
-      lua_pushvalue(L, -1);
-      luaL_setfield(L, LUA_GLOBALSINDEX, libname);
-    }
-    else if (!lua_istable(L, -1))
-      luaL_error(L, "name conflict for library " LUA_QS, libname);
     lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
-    lua_pushvalue(L, -2);
-    lua_setfield(L, -2, libname);  /* _LOADED[modname] = new table */
-    lua_pop(L, 1);  /* remove _LOADED table */
+    lua_getfield(L, -1, libname);  /* get _LOADED[libname] */
+    if (!lua_istable(L, -1)) {  /* not found? */
+      lua_pop(L, 1);  /* remove previous result */
+      luaL_getfield(L, LUA_GLOBALSINDEX, libname);  /* try global variable */
+      if (!lua_istable(L, -1)) {
+        if (!lua_isnil(L, -1))
+          luaL_error(L, "name conflict for module " LUA_QS, libname);
+        lua_pop(L, 1);
+        lua_newtable(L);  /* create it */
+        lua_pushvalue(L, -1);  /* register it with given name */
+        luaL_setfield(L, LUA_GLOBALSINDEX, libname);
+      }
+      lua_pushvalue(L, -1);
+      lua_setfield(L, -3, libname);  /* _LOADED[libname] = new table */
+    }
+    lua_remove(L, -2);  /* remove _LOADED table */
     lua_insert(L, -(nup+1));  /* move library table to below upvalues */
   }
   for (; l->name; l++) {

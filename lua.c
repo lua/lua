@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.145 2005/06/03 20:16:16 roberto Exp roberto $
+** $Id: lua.c,v 1.146 2005/06/28 13:01:50 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -48,7 +48,6 @@ static void print_usage (void) {
   "  -i       enter interactive mode after executing " LUA_QL("script") "\n"
   "  -l name  require library " LUA_QL("name") "\n"
   "  -v       show version information\n"
-  "  -w       trap access to undefined globals\n"
   "  --       stop handling options\n" ,
   progname);
 }
@@ -223,14 +222,6 @@ static void dotty (lua_State *L) {
 }
 
 
-static int checkvar (lua_State *L) {
-  const char *name = lua_tostring(L, 2);
-  if (name)
-    luaL_error(L, "attempt to access undefined variable " LUA_QS, name);
-  return 0;
-}
-
-
 #define clearinteractive(i)	(*i &= 2)
 
 static int handle_argv (lua_State *L, int argc, char **argv, int *interactive) {
@@ -266,13 +257,6 @@ static int handle_argv (lua_State *L, int argc, char **argv, int *interactive) {
         case 'v': {
           clearinteractive(interactive);
           print_version();
-          break;
-        }
-        case 'w': {
-          if (lua_getmetatable(L, LUA_GLOBALSINDEX)) {
-            lua_pushcfunction(L, checkvar);
-            lua_setfield(L, -2, "__index");
-          }
           break;
         }
         case 'e': {
