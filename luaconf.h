@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.60 2005/08/17 18:32:09 roberto Exp roberto $
+** $Id: luaconf.h,v 1.61 2005/08/22 19:58:29 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -631,7 +631,7 @@ union luai_Cast { double l_d; long l_l; };
 #else
 
 #define lua_popen(L,c,m)  \
-	((void)c, (void)m, luaL_error(L, LUA_QL("popen") "not supported"), NULL)
+  ((void)c, (void)m, luaL_error(L, LUA_QL("popen") " not supported"), (FILE*)0)
 #define lua_pclose(L,file)		((void)file, 0)
 
 #endif
