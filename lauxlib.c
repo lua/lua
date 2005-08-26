@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.149 2005/08/25 15:39:16 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.150 2005/08/26 17:32:05 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -222,13 +222,13 @@ LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event) {
 
 
 LUALIB_API void (luaL_register) (lua_State *L, const char *libname,
-                                const luaL_reg *l) {
+                                const luaL_Reg *l) {
   luaI_openlib(L, libname, l, 0);
 }
 
 
 LUALIB_API void luaI_openlib (lua_State *L, const char *libname,
-                              const luaL_reg *l, int nup) {
+                              const luaL_Reg *l, int nup) {
   if (libname) {
     /* check whether lib already exists */
     lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");

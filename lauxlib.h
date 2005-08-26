@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.82 2005/08/18 20:36:26 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.83 2005/08/26 17:32:05 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -29,17 +29,17 @@
 #define LUA_ERRFILE     (LUA_ERRERR+1)
 
 
-typedef struct luaL_reg {
+typedef struct luaL_Reg {
   const char *name;
   lua_CFunction func;
-} luaL_reg;
+} luaL_Reg;
 
 
 
 LUALIB_API void (luaI_openlib) (lua_State *L, const char *libname,
-                                const luaL_reg *l, int nup);
+                                const luaL_Reg *l, int nup);
 LUALIB_API void (luaL_register) (lua_State *L, const char *libname,
-                                const luaL_reg *l);
+                                const luaL_Reg *l);
 LUALIB_API int (luaL_getmetafield) (lua_State *L, int obj, const char *e);
 LUALIB_API int (luaL_callmeta) (lua_State *L, int obj, const char *e);
 LUALIB_API int (luaL_typerror) (lua_State *L, int narg, const char *tname);
@@ -163,6 +163,8 @@ LUALIB_API void (luaL_pushresult) (luaL_Buffer *B);
 
 #define lua_getref(L,ref)       lua_rawgeti(L, LUA_REGISTRYINDEX, (ref))
 
+
+#define luaL_reg	luaL_Reg
 
 #endif
 

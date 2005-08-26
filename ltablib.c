@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.33 2005/07/12 14:32:08 roberto Exp roberto $
+** $Id: ltablib.c,v 1.34 2005/08/15 14:12:32 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -236,7 +236,7 @@ static int sort (lua_State *L) {
 /* }====================================================== */
 
 
-static const luaL_reg tab_funcs[] = {
+static const luaL_Reg tab_funcs[] = {
   {"concat", tconcat},
   {"foreach", foreach},
   {"foreachi", foreachi},

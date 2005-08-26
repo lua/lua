@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.180 2005/07/12 18:15:11 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.181 2005/08/15 14:12:32 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -429,7 +429,7 @@ static int luaB_newproxy (lua_State *L) {
 }
 
 
-static const luaL_reg base_funcs[] = {
+static const luaL_Reg base_funcs[] = {
   {"assert", luaB_assert},
   {"collectgarbage", luaB_collectgarbage},
   {"dofile", luaB_dofile},
@@ -579,7 +579,7 @@ static int luaB_corunning (lua_State *L) {
 }
 
 
-static const luaL_reg co_funcs[] = {
+static const luaL_Reg co_funcs[] = {
   {"create", luaB_cocreate},
   {"resume", luaB_coresume},
   {"running", luaB_corunning},

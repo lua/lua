@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.28 2005/08/15 14:12:32 roberto Exp roberto $
+** $Id: ltests.c,v 2.29 2005/08/26 17:32:05 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -718,7 +718,7 @@ static int newstate (lua_State *L) {
 
 
 static int loadlib (lua_State *L) {
-  static const luaL_reg libs[] = {
+  static const luaL_Reg libs[] = {
     {"baselibopen", luaopen_base},
     {"dblibopen", luaopen_debug},
     {"iolibopen", luaopen_io},
@@ -1082,7 +1082,7 @@ static int auxgsub (lua_State *L) {
 
 
 
-static const struct luaL_reg tests_funcs[] = {
+static const struct luaL_Reg tests_funcs[] = {
   {"checkmemory", lua_checkmemory},
   {"closestate", closestate},
   {"d2s", d2s},

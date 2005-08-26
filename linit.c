@@ -1,5 +1,5 @@
 /*
-** $Id: linit.c,v 1.11 2005/04/13 17:24:20 roberto Exp roberto $
+** $Id: linit.c,v 1.12 2005/08/10 18:06:58 roberto Exp roberto $
 ** Initialization of libraries for lua.c
 ** See Copyright Notice in lua.h
 */
@@ -14,7 +14,7 @@
 #include "lauxlib.h"
 
 
-static const luaL_reg lualibs[] = {
+static const luaL_Reg lualibs[] = {
   {"", luaopen_base},
   {LUA_TABLIBNAME, luaopen_table},
   {LUA_IOLIBNAME, luaopen_io},
@@ -28,7 +28,7 @@ static const luaL_reg lualibs[] = {
 
 
 LUALIB_API void luaL_openlibs (lua_State *L) {
-  const luaL_reg *lib = lualibs;
+  const luaL_Reg *lib = lualibs;
   for (; lib->func; lib++) {
     lua_pushcfunction(L, lib->func);
     lua_pushstring(L, lib->name);

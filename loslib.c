@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.10 2005/05/25 13:21:26 roberto Exp roberto $
+** $Id: loslib.c,v 1.11 2005/08/15 14:12:32 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -209,7 +209,7 @@ static int io_exit (lua_State *L) {
   return 0;  /* to avoid warnings */
 }
 
-static const luaL_reg syslib[] = {
+static const luaL_Reg syslib[] = {
   {"clock",     io_clock},
   {"date",      io_date},
   {"difftime",  io_difftime},

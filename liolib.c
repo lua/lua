@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.65 2005/08/15 14:12:32 roberto Exp roberto $
+** $Id: liolib.c,v 2.66 2005/08/17 19:05:04 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -457,7 +457,7 @@ static int f_flush (lua_State *L) {
 }
 
 
-static const luaL_reg iolib[] = {
+static const luaL_Reg iolib[] = {
   {"close", io_close},
   {"flush", io_flush},
   {"input", io_input},
@@ -473,7 +473,7 @@ static const luaL_reg iolib[] = {
 };
 
 
-static const luaL_reg flib[] = {
+static const luaL_Reg flib[] = {
   {"close", io_close},
   {"flush", f_flush},
   {"lines", f_lines},

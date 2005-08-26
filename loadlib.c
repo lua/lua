@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.40 2005/08/25 15:39:16 roberto Exp roberto $
+** $Id: loadlib.c,v 1.41 2005/08/26 17:32:05 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -567,13 +567,13 @@ static void setpath (lua_State *L, const char *fieldname, const char *envname,
 }
 
 
-static const luaL_reg pk_funcs[] = {
+static const luaL_Reg pk_funcs[] = {
   {"loadlib", ll_loadlib},
   {NULL, NULL}
 };
 
 
-static const luaL_reg ll_funcs[] = {
+static const luaL_Reg ll_funcs[] = {
   {"module", ll_module},
   {"require", ll_require},
   {NULL, NULL}

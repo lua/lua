@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.121 2005/08/09 17:42:02 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.122 2005/08/15 14:12:32 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -782,7 +782,7 @@ static int str_format (lua_State *L) {
 }
 
 
-static const luaL_reg strlib[] = {
+static const luaL_Reg strlib[] = {
   {"byte", str_byte},
   {"char", str_char},
   {"dump", str_dump},
