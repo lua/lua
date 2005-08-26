@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.148 2005/08/18 20:36:26 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.149 2005/08/25 15:39:16 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -66,7 +66,7 @@ LUALIB_API int luaL_typerror (lua_State *L, int narg, const char *tname) {
 
 
 static void tag_error (lua_State *L, int narg, int tag) {
-  luaL_typerror(L, narg, lua_typename(L, tag)); 
+  luaL_typerror(L, narg, lua_typename(L, tag));
 }
 
 
@@ -235,15 +235,9 @@ LUALIB_API void luaI_openlib (lua_State *L, const char *libname,
     lua_getfield(L, -1, libname);  /* get _LOADED[libname] */
     if (!lua_istable(L, -1)) {  /* not found? */
       lua_pop(L, 1);  /* remove previous result */
-      luaL_getfield(L, LUA_GLOBALSINDEX, libname);  /* try global variable */
-      if (!lua_istable(L, -1)) {
-        if (!lua_isnil(L, -1))
-          luaL_error(L, "name conflict for module " LUA_QS, libname);
-        lua_pop(L, 1);
-        lua_newtable(L);  /* create it */
-        lua_pushvalue(L, -1);  /* register it with given name */
-        luaL_setfield(L, LUA_GLOBALSINDEX, libname);
-      }
+      /* try global variable (and create one if it does not exist) */
+      if (luaL_findtable(L, LUA_GLOBALSINDEX, libname) != NULL)
+        luaL_error(L, "name conflict for module " LUA_QS, libname);
       lua_pushvalue(L, -1);
       lua_setfield(L, -3, libname);  /* _LOADED[libname] = new table */
     }
@@ -337,30 +331,13 @@ LUALIB_API const char *luaL_gsub (lua_State *L, const char *s, const char *p,
 }
 
 
-
-LUALIB_API const char *luaL_getfield (lua_State *L, int idx,
-                                                    const char *fname) {
+LUALIB_API const char *luaL_findtable (lua_State *L, int idx,
+                                       const char *fname) {
   const char *e;
   lua_pushvalue(L, idx);
-  while ((e = strchr(fname, '.')) != NULL) {
-    lua_pushlstring(L, fname, e - fname);
-    lua_rawget(L, -2);
-    lua_remove(L, -2);  /* remove previous table */
-    fname = e + 1;
-    if (!lua_istable(L, -1)) return fname;
-  }
-  lua_pushstring(L, fname);
-  lua_rawget(L, -2);  /* get last field */
-  lua_remove(L, -2);  /* remove previous table */
-  return NULL;
-}
-
-
-LUALIB_API const char *luaL_setfield (lua_State *L, int idx,
-                                                    const char *fname) {
-  const char *e;
-  lua_pushvalue(L, idx);
-  while ((e = strchr(fname, '.')) != NULL) {
+  do {
+    e = strchr(fname, '.');
+    if (e == NULL) e = fname + strlen(fname);
     lua_pushlstring(L, fname, e - fname);
     lua_rawget(L, -2);
     if (lua_isnil(L, -1)) {  /* no such field? */
@@ -370,16 +347,13 @@ LUALIB_API const char *luaL_setfield (lua_State *L, int idx,
       lua_pushvalue(L, -2);
       lua_settable(L, -4);  /* set new table into field */
     }
+    else if (!lua_istable(L, -1)) {  /* field has a non-table value? */
+      lua_pop(L, 2);  /* remove table and value */
+      return fname;  /* return problematic part of the name */
+    }
     lua_remove(L, -2);  /* remove previous table */
     fname = e + 1;
-    if (!lua_istable(L, -1)) {
-      lua_pop(L, 2);  /* remove table and value */
-      return fname;
-    }
-  }
-  lua_pushvalue(L, -2);  /* move value to the top */
-  lua_setfield(L, -2, fname);  /* set last field */
-  lua_pop(L, 2);  /* remove value and table */
+  } while (*e == '.');
   return NULL;
 }
 
@@ -635,7 +609,7 @@ static void *l_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
     free(ptr);
     return NULL;
   }
-  else 
+  else
     return realloc(ptr, nsize);
 }
 

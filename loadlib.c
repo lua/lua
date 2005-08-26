@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.39 2005/08/17 19:05:04 roberto Exp roberto $
+** $Id: loadlib.c,v 1.40 2005/08/25 15:39:16 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -511,15 +511,9 @@ static int ll_module (lua_State *L) {
   lua_getfield(L, 2, modname);  /* get _LOADED[modname] */
   if (!lua_istable(L, -1)) {  /* not found? */
     lua_pop(L, 1);  /* remove previous result */
-    luaL_getfield(L, LUA_GLOBALSINDEX, modname);  /* try global variable */
-    if (!lua_istable(L, -1)) {
-      if (!lua_isnil(L, -1))
-        return luaL_error(L, "name conflict for module " LUA_QS, modname);
-      lua_pop(L, 1);
-      lua_newtable(L);  /* create it */
-      lua_pushvalue(L, -1);  /* register it with given name */
-      luaL_setfield(L, LUA_GLOBALSINDEX, modname);
-    }
+    /* try global variable (and create one if it does not exist) */
+    if (luaL_findtable(L, LUA_GLOBALSINDEX, modname) != NULL)
+      return luaL_error(L, "name conflict for module " LUA_QS, modname);
     lua_pushvalue(L, -1);
     lua_setfield(L, 2, modname);  /* _LOADED[modname] = new table */
   }
@@ -573,6 +567,12 @@ static void setpath (lua_State *L, const char *fieldname, const char *envname,
 }
 
 
+static const luaL_reg pk_funcs[] = {
+  {"loadlib", ll_loadlib},
+  {NULL, NULL}
+};
+
+
 static const luaL_reg ll_funcs[] = {
   {"module", ll_module},
   {"require", ll_require},
@@ -591,9 +591,11 @@ LUALIB_API int luaopen_package (lua_State *L) {
   lua_pushcfunction(L, gctm);
   lua_setfield(L, -2, "__gc");
   /* create `package' table */
-  lua_newtable(L);
-  lua_pushvalue(L, -1);
-  lua_setglobal(L, LUA_LOADLIBNAME);
+  luaL_register(L, LUA_LOADLIBNAME, pk_funcs);
+#if defined(LUA_COMPAT_LOADLIB) 
+  lua_getfield(L, -1, "loadlib");
+  lua_setfield(L, LUA_GLOBALSINDEX, "loadlib");
+#endif
   lua_pushvalue(L, -1);
   lua_setfield(L, LUA_REGISTRYINDEX, "_PACKAGE");
   lua_pushvalue(L, -1);
@@ -618,15 +620,9 @@ LUALIB_API int luaopen_package (lua_State *L) {
   /* set field `preload' */
   lua_newtable(L);
   lua_setfield(L, -2, "preload");
-  /* create `loadlib' function */
-  lua_pushcfunction(L, ll_loadlib);
-#if defined(LUA_COMPAT_LOADLIB)
-  lua_pushvalue(L, -1);
-  lua_setfield(L, LUA_GLOBALSINDEX, "loadlib");
-#endif
-  lua_setfield(L, -2, "loadlib");
   lua_pushvalue(L, LUA_GLOBALSINDEX);
   luaL_register(L, NULL, ll_funcs);  /* open lib into global table */
-  return 1;
+  lua_pop(L, 1);
+  return 1;  /* return 'package' table */
 }
 

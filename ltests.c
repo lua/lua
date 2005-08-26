@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.27 2005/07/12 14:32:08 roberto Exp roberto $
+** $Id: ltests.c,v 2.28 2005/08/15 14:12:32 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -1078,23 +1078,6 @@ static int auxgsub (lua_State *L) {
 }
 
 
-static int auxgetf (lua_State *L) {
-  const char *s = luaL_checkstring(L, 1);
-  lua_settop(L, 2);
-  lua_pushstring(L, luaL_getfield(L, 2, s));
-  lua_assert(lua_gettop(L) == 4);
-  return 2;
-}
-
-
-static int auxsetf (lua_State *L) {
-  const char *s = luaL_checkstring(L, 1);
-  lua_settop(L, 3);
-  lua_pushstring(L, luaL_setfield(L, 2, s));
-  lua_assert(lua_gettop(L) == 3);
-  return 1;
-}
-
 /* }====================================================== */
 
 
@@ -1107,7 +1090,6 @@ static const struct luaL_reg tests_funcs[] = {
   {"doremote", doremote},
   {"gccolor", get_gccolor},
   {"gcstate", gcstate},
-  {"getfield", auxgetf},
   {"getref", getref},
   {"gsub", auxgsub},
   {"hash", hash_query},
@@ -1127,7 +1109,6 @@ static const struct luaL_reg tests_funcs[] = {
   {"ref", tref},
   {"resume", coresume},
   {"s2d", s2d},
-  {"setfield", auxsetf},
   {"setyhook", setyhook},
   {"stacklevel", stacklevel},
   {"testC", testC},
