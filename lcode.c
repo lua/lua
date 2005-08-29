@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.14 2005/06/07 18:53:45 roberto Exp roberto $
+** $Id: lcode.c,v 2.15 2005/08/17 18:32:09 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -53,6 +53,11 @@ int luaK_jump (FuncState *fs) {
 }
 
 
+void luaK_ret (FuncState *fs, int first, int nret) {
+  luaK_codeABC(fs, OP_RETURN, first, nret+1, 0);
+}
+
+
 static int condjump (FuncState *fs, OpCode op, int A, int B, int C) {
   luaK_codeABC(fs, op, A, B, C);
   return luaK_jump(fs);
@@ -101,49 +106,50 @@ static Instruction *getjumpcontrol (FuncState *fs, int pc) {
 ** check whether list has any jump that do not produce a value
 ** (or produce an inverted value)
 */
-static int need_value (FuncState *fs, int list, int cond) {
+static int need_value (FuncState *fs, int list) {
   for (; list != NO_JUMP; list = getjump(fs, list)) {
     Instruction i = *getjumpcontrol(fs, list);
-    if (GET_OPCODE(i) != OP_TEST || GETARG_C(i) != cond) return 1;
+    if (GET_OPCODE(i) != OP_TESTSET) return 1;
   }
   return 0;  /* not found */
 }
 
 
 static void patchtestreg (Instruction *i, int reg) {
-  if (reg == NO_REG) reg = GETARG_B(*i);
-  SETARG_A(*i, reg);
+  if (reg != NO_REG)
+    SETARG_A(*i, reg);
+  else  /* no register to put value; change TESTSET to TEST */
+    *i = CREATE_ABC(OP_TEST, GETARG_B(*i), 0, GETARG_C(*i));
 }
 
 
-static void patchlistaux (FuncState *fs, int list,
-          int ttarget, int treg, int ftarget, int freg, int dtarget) {
+static void removevalues (FuncState *fs, int list) {
+  for (; list != NO_JUMP; list = getjump(fs, list)) {
+    Instruction *i = getjumpcontrol(fs, list);
+    if (GET_OPCODE(*i) == OP_TESTSET)
+      patchtestreg(i, NO_REG);
+  }
+}
+
+
+static void patchlistaux (FuncState *fs, int list, int vtarget, int reg,
+                          int dtarget) {
   while (list != NO_JUMP) {
     int next = getjump(fs, list);
     Instruction *i = getjumpcontrol(fs, list);
-    if (GET_OPCODE(*i) != OP_TEST) {
-      lua_assert(dtarget != NO_JUMP);
+    if (GET_OPCODE(*i) == OP_TESTSET) {
+      patchtestreg(i, reg);
+      fixjump(fs, list, vtarget);
+    }
+    else
       fixjump(fs, list, dtarget);  /* jump to default target */
-    }
-    else {
-      if (GETARG_C(*i)) {
-        lua_assert(ttarget != NO_JUMP);
-        patchtestreg(i, treg);
-        fixjump(fs, list, ttarget);
-      }
-      else {
-        lua_assert(ftarget != NO_JUMP);
-        patchtestreg(i, freg);
-        fixjump(fs, list, ftarget);
-      }
-    }
     list = next;
   }
 }
 
 
 static void dischargejpc (FuncState *fs) {
-  patchlistaux(fs, fs->jpc, fs->pc, NO_REG, fs->pc, NO_REG, fs->pc);
+  patchlistaux(fs, fs->jpc, fs->pc, NO_REG, fs->pc);
   fs->jpc = NO_JUMP;
 }
 
@@ -153,7 +159,7 @@ void luaK_patchlist (FuncState *fs, int list, int target) {
     luaK_patchtohere(fs, list);
   else {
     lua_assert(target < fs->pc);
-    patchlistaux(fs, list, target, NO_REG, target, NO_REG, target);
+    patchlistaux(fs, list, target, NO_REG, target);
   }
 }
 
@@ -373,7 +379,7 @@ static void exp2reg (FuncState *fs, expdesc *e, int reg) {
     int final;  /* position after whole expression */
     int p_f = NO_JUMP;  /* position of an eventual LOAD false */
     int p_t = NO_JUMP;  /* position of an eventual LOAD true */
-    if (need_value(fs, e->t, 1) || need_value(fs, e->f, 0)) {
+    if (need_value(fs, e->t) || need_value(fs, e->f)) {
       int fj = NO_JUMP;  /* first jump (over LOAD ops.) */
       if (e->k != VJMP)
         fj = luaK_jump(fs);
@@ -382,8 +388,8 @@ static void exp2reg (FuncState *fs, expdesc *e, int reg) {
       luaK_patchtohere(fs, fj);
     }
     final = luaK_getlabel(fs);
-    patchlistaux(fs, e->f, p_f, NO_REG, final, reg, p_f);
-    patchlistaux(fs, e->t, final, reg, p_t, NO_REG, p_t);
+    patchlistaux(fs, e->f, final, reg, p_f);
+    patchlistaux(fs, e->t, final, reg, p_t);
   }
   e->f = e->t = NO_JUMP;
   e->info = reg;
@@ -492,7 +498,8 @@ void luaK_self (FuncState *fs, expdesc *e, expdesc *key) {
 
 static void invertjump (FuncState *fs, expdesc *e) {
   Instruction *pc = getjumpcontrol(fs, e->info);
-  lua_assert(testTMode(GET_OPCODE(*pc)) && GET_OPCODE(*pc) != OP_TEST);
+  lua_assert(testTMode(GET_OPCODE(*pc)) && GET_OPCODE(*pc) != OP_TESTSET &&
+                                           GET_OPCODE(*pc) != OP_TEST);
   SETARG_A(*pc, !(GETARG_A(*pc)));
 }
 
@@ -502,13 +509,13 @@ static int jumponcond (FuncState *fs, expdesc *e, int cond) {
     Instruction ie = getcode(fs, e);
     if (GET_OPCODE(ie) == OP_NOT) {
       fs->pc--;  /* remove previous OP_NOT */
-      return condjump(fs, OP_TEST, NO_REG, GETARG_B(ie), !cond);
+      return condjump(fs, OP_TEST, GETARG_B(ie), 0, !cond);
     }
     /* else go through */
   }
   discharge2anyreg(fs, e);
   freeexp(fs, e);
-  return condjump(fs, OP_TEST, NO_REG, e->info, cond);
+  return condjump(fs, OP_TESTSET, NO_REG, e->info, cond);
 }
 
 
@@ -597,6 +604,8 @@ static void codenot (FuncState *fs, expdesc *e) {
   }
   /* interchange true and false lists */
   { int temp = e->f; e->f = e->t; e->t = temp; }
+  removevalues(fs, e->f);
+  removevalues(fs, e->t);
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.33 2005/05/04 20:42:28 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.34 2005/05/20 15:53:42 roberto Exp $
 ** See Copyright Notice in lua.h
 */
 
@@ -43,6 +43,7 @@ const char *const luaP_opnames[NUM_OPCODES+1] = {
   "LT",
   "LE",
   "TEST",
+  "TESTSET",
   "CALL",
   "TAILCALL",
   "RETURN",
@@ -87,7 +88,8 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(1, 0, OpArgK, OpArgK, iABC)		/* OP_EQ */
  ,opmode(1, 0, OpArgK, OpArgK, iABC)		/* OP_LT */
  ,opmode(1, 0, OpArgK, OpArgK, iABC)		/* OP_LE */
- ,opmode(1, 1, OpArgR, OpArgU, iABC)		/* OP_TEST */
+ ,opmode(1, 0, OpArgR, OpArgU, iABC)		/* OP_TEST */
+ ,opmode(1, 1, OpArgR, OpArgU, iABC)		/* OP_TESTSET */
  ,opmode(0, 1, OpArgU, OpArgU, iABC)		/* OP_CALL */
  ,opmode(0, 1, OpArgU, OpArgU, iABC)		/* OP_TAILCALL */
  ,opmode(0, 0, OpArgU, OpArgN, iABC)		/* OP_RETURN */

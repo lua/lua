@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.33 2005/08/22 18:54:32 roberto Exp roberto $
+** $Id: lparser.c,v 2.34 2005/08/24 17:41:10 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -375,7 +375,7 @@ static void close_func (LexState *ls) {
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
   removevars(ls, 0);
-  luaK_codeABC(fs, OP_RETURN, 0, 1, 0);  /* final return */
+  luaK_ret(fs, 0, 0);  /* final return */
   luaM_reallocvector(L, f->code, f->sizecode, fs->pc, Instruction);
   f->sizecode = fs->pc;
   luaM_reallocvector(L, f->lineinfo, f->sizelineinfo, fs->pc, int);
@@ -981,7 +981,6 @@ static int cond (LexState *ls) {
   expdesc v;
   expr(ls, &v);  /* read condition */
   if (v.k == VNIL) v.k = VFALSE;  /* `falses' are all equal here */
-  else if (v.k == VK) v.k = VTRUE;  /* 'trues' too */
   luaK_goiftrue(ls->fs, &v);
   return v.f;
 }
@@ -1279,7 +1278,7 @@ static void retstat (LexState *ls) {
       }
     }
   }
-  luaK_codeABC(fs, OP_RETURN, first, nret+1, 0);
+  luaK_ret(fs, first, nret);
 }
 
 
