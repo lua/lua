@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.46 2005/07/31 17:12:32 roberto Exp roberto $
+** $Id: lapi.c,v 2.47 2005/08/24 16:15:49 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -875,7 +875,7 @@ LUA_API int lua_dump (lua_State *L, lua_Writer writer, void *data) {
   if (isLfunction(o))
     status = luaU_dump(L, clvalue(o)->l.p, writer, data, 0);
   else
-    status = 0;
+    status = 1;
   lua_unlock(L);
   return status;
 }
