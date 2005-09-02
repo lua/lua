@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.61 2005/08/22 19:58:29 roberto Exp roberto $
+** $Id: luaconf.h,v 1.62 2005/08/25 15:38:53 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -114,9 +114,9 @@
 #if defined(LUA_BUILD_AS_DLL)
 
 #if defined(LUA_CORE) || defined(LUA_LIB)
-#define LUA_API __declspec(__dllexport)
+#define LUA_API __declspec(dllexport)
 #else
-#define LUA_API __declspec(__dllimport)
+#define LUA_API __declspec(dllimport)
 #endif
 
 #else
