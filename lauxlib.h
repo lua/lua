@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.83 2005/08/26 17:32:05 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.84 2005/08/26 17:36:32 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -15,7 +15,10 @@
 #include "lua.h"
 
 
-#if !defined(LUA_COMPAT_GETN)
+#if defined(LUA_COMPAT_GETN)
+LUALIB_API int (luaL_getn) (lua_State *L, int t);
+LUALIB_API void (luaL_setn) (lua_State *L, int t, int n);
+#else
 #define luaL_getn(L,i)          ((int)lua_objlen(L, i))
 #define luaL_setn(L,i,j)        ((void)0)  /* no op! */
 #endif
@@ -70,9 +73,6 @@ LUALIB_API int (luaL_checkoption) (lua_State *L, int narg, const char *def,
 
 LUALIB_API int (luaL_ref) (lua_State *L, int t);
 LUALIB_API void (luaL_unref) (lua_State *L, int t, int ref);
-
-LUALIB_API int (luaL_getn) (lua_State *L, int t);
-LUALIB_API void (luaL_setn) (lua_State *L, int t, int n);
 
 LUALIB_API int (luaL_loadfile) (lua_State *L, const char *filename);
 LUALIB_API int (luaL_loadbuffer) (lua_State *L, const char *buff, size_t sz,
