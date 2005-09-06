@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.148 2005/08/25 19:55:38 roberto Exp roberto $
+** $Id: lua.c,v 1.149 2005/08/26 17:32:05 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -50,12 +50,14 @@ static void print_usage (void) {
   "  -v       show version information\n"
   "  --       stop handling options\n" ,
   progname);
+  fflush(stderr);
 }
 
 
 static void l_message (const char *pname, const char *msg) {
   if (pname) fprintf(stderr, "%s: ", pname);
   fprintf(stderr, "%s\n", msg);
+  fflush(stderr);
 }
 
 
@@ -222,6 +224,7 @@ static void dotty (lua_State *L) {
   }
   lua_settop(L, 0);  /* clear stack */
   fputs("\n", stdout);
+  fflush(stdout);
   progname = oldprogname;
 }
 
