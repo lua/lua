@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.42 2005/08/26 17:36:32 roberto Exp roberto $
+** $Id: loadlib.c,v 1.43 2005/08/31 23:17:29 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -93,18 +93,18 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 */
 
 #include <windows.h>
-#include "Shlwapi.h"
 
 
 #undef setprogdir
 
 void setprogdir (lua_State *L) {
   char buff[MAX_PATH + 1];
+  char *lb;
   DWORD nsize = sizeof(buff)/sizeof(char);
   DWORD n = GetModuleFileName(NULL, buff, nsize);
-  if (n == 0 || n == nsize)
+  if (n == 0 || n == nsize || (lb = strrchr(buff, '\\')) == NULL)
     luaL_error(L, "unable to get ModuleFileName");
-  PathRemoveFileSpec(buff);
+  *lb = '\0';
   luaL_gsub(L, lua_tostring(L, -1), LUA_EXECDIR, buff);
   lua_remove(L, -2);  /* remove original string */
 }
