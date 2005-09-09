@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.63 2005/09/02 19:53:25 roberto Exp roberto $
+** $Id: luaconf.h,v 1.64 2005/09/06 17:21:03 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -235,7 +235,7 @@
 ** CHANGE them if you want to improve this functionality (e.g., by using
 ** GNU readline and history facilities).
 */
-#if !defined(LUA_ANSI) && defined(LUA_USE_READLINE)
+#if defined(LUA_USE_READLINE)
 #include <stdio.h>
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -554,8 +554,8 @@ union luai_Cast { double l_d; long l_l; };
 ** CHANGE them if you prefer to use longjmp/setjmp even with C++
 ** or if want/don't to use _longjmp/_setjmp instead of regular
 ** longjmp/setjmp. By default, Lua handles errors with exceptions when
-** compiling as C++ code, with _longjmp/_setjmp when compiling as C code
-** in some Unix systems, and with longjmp/setjmp otherwise.
+** compiling as C++ code, with _longjmp/_setjmp when asked to use them,
+** and with longjmp/setjmp otherwise.
 */
 #if defined(__cplusplus)
 /* C++ exceptions */
@@ -564,7 +564,7 @@ union luai_Cast { double l_d; long l_l; };
 	{ if ((c)->status == 0) (c)->status = -1; }
 #define luai_jmpbuf	int  /* dummy variable */
 
-#elif !defined(LUA_ANSI) && (defined(__GLIBC__))
+#elif defined(LUA_USE_ULONGJMP)
 /* in Unix, try _longjmp/_setjmp (more efficient) */
 #define LUAI_THROW(L,c)	_longjmp((c)->b, 1)
 #define LUAI_TRY(L,c,a)	if (_setjmp((c)->b) == 0) { a }
