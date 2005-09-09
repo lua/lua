@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.53 2005/08/24 16:15:49 roberto Exp $
+** $Id: lvm.c,v 2.54 2005/08/29 20:49:21 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -568,8 +568,10 @@ void luaV_execute (lua_State *L, int nexeccalls) {
         continue;
       }
       case OP_EQ: {
+        TValue *rb = RKB(i);
+        TValue *rc = RKC(i);
         Protect(
-          if (equalobj(L, RKB(i), RKC(i)) == GETARG_A(i))
+          if (equalobj(L, rb, rc) == GETARG_A(i))
             dojump(L, pc, GETARG_sBx(*pc));
         )
         pc++;
