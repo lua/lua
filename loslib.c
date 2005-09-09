@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.11 2005/08/15 14:12:32 roberto Exp roberto $
+** $Id: loslib.c,v 1.12 2005/08/26 17:36:32 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -93,6 +93,8 @@ static void setfield (lua_State *L, const char *key, int value) {
 }
 
 static void setboolfield (lua_State *L, const char *key, int value) {
+  if (value < 0)  /* undefined? */
+    return;  /* does not set field */
   lua_pushboolean(L, value);
   lua_setfield(L, -2, key);
 }
