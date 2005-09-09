@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.31 2005/05/17 19:49:15 roberto Exp $
+** $Id: ltablib.c,v 1.35 2005/08/26 17:36:32 roberto Exp $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -109,7 +109,7 @@ static int tremove (lua_State *L) {
 }
 
 
-static int str_concat (lua_State *L) {
+static int tconcat (lua_State *L) {
   luaL_Buffer b;
   size_t lsep;
   const char *sep = luaL_optlstring(L, 2, "", &lsep);
@@ -236,21 +236,21 @@ static int sort (lua_State *L) {
 /* }====================================================== */
 
 
-static const luaL_reg tab_funcs[] = {
-  {"concat", str_concat},
+static const luaL_Reg tab_funcs[] = {
+  {"concat", tconcat},
   {"foreach", foreach},
   {"foreachi", foreachi},
   {"getn", getn},
-  {"setn", setn},
-  {"sort", sort},
   {"insert", tinsert},
   {"remove", tremove},
+  {"setn", setn},
+  {"sort", sort},
   {NULL, NULL}
 };
 
 
 LUALIB_API int luaopen_table (lua_State *L) {
-  luaL_openlib(L, LUA_TABLIBNAME, tab_funcs, 0);
+  luaL_register(L, LUA_TABLIBNAME, tab_funcs);
   return 1;
 }
 

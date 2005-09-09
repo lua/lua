@@ -1,4 +1,4 @@
-This is Lua 5.1 (work).
+This is Lua 5.1 (alpha).
 See HISTORY for a summary of changes since the last released version.
 
 * What is Lua?
@@ -27,9 +27,9 @@ See HISTORY for a summary of changes since the last released version.
 
 * Origin
   ------
-  Lua is developed at Tecgraf, the Computer Graphics Technology Group
-  of PUC-Rio (the Pontifical Catholic University of Rio de Janeiro in Brazil).
-  Tecgraf is a laboratory of the Department of Computer Science.
+  Lua is developed at Lua.org, a laboratory of the Department of Computer
+  Science of PUC-Rio (the Pontifical Catholic University of Rio de Janeiro
+  in Brazil).
   For more information about the authors, see http://www.lua.org/authors.html .
 
 (end of README)

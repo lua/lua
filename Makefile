@@ -26,7 +26,7 @@ INSTALL_DATA= cp
 
 # What to install.
 TO_BIN= lua luac
-TO_INC= lua.h luaconf.h lualib.h lauxlib.h
+TO_INC= lua.h luaconf.h lualib.h lauxlib.h ../etc/lua.hpp
 TO_LIB= liblua.a
 TO_MAN= lua.1 luac.1
 
@@ -48,6 +48,22 @@ install: all
 
 local:
 	$(MAKE) install INSTALL_TOP=.. INSTALL_EXEC="cp -p" INSTALL_DATA="cp -p"
+
+# convenience targets for usual platforms
+
+ansi:
+	cd src; $(MAKE) MYCFLAGS=-DLUA_ANSI
+
+linux:
+	cd src; $(MAKE) MYCFLAGS=-DLUA_USE_DLOPEN MYLIBS="-Wl,-E -ldl"
+
+bsd:
+	cd src; $(MAKE) MYCFLAGS=-DLUA_USE_DLOPEN MYLIBS="-Wl,-E"
+
+mingw:
+	cd src; $(MAKE) "LUA_A=lua51.dll" "LUA_T=lua.exe" \
+	"AR=gcc -shared -o" "RANLIB=strip --strip-unneeded" \
+	"MYCFLAGS=-DLUA_BUILD_AS_DLL" "MYLIBS=" MYLDFLAGS=-s" lua.exe
 
 # echo config parameters
 echo:

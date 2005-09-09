@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.32 2005/05/05 15:34:03 roberto Exp $
+** $Id: lgc.c,v 2.36 2005/08/24 17:06:36 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -240,8 +240,8 @@ static void traverseclosure (global_State *g, Closure *cl) {
 
 
 static void checkstacksizes (lua_State *L, StkId max) {
-  int ci_used = L->ci - L->base_ci;  /* number of `ci' in use */
-  int s_used = max - L->stack;  /* part of stack in use */
+  int ci_used = cast(int, L->ci - L->base_ci);  /* number of `ci' in use */
+  int s_used = cast(int, max - L->stack);  /* part of stack in use */
   if (L->size_ci > LUAI_MAXCALLS)  /* handling overflow? */
     return;  /* do not touch the stacks */
   if (4*ci_used < L->size_ci && 2*BASIC_CI_SIZE < L->size_ci)
@@ -287,7 +287,6 @@ static l_mem propagatemark (global_State *g) {
         black2gray(o);  /* keep it gray */
       return sizeof(Table) + sizeof(TValue) * h->sizearray +
                              sizeof(Node) * sizenode(h);
-      break;
     }
     case LUA_TFUNCTION: {
       Closure *cl = gco2cl(o);
@@ -295,7 +294,6 @@ static l_mem propagatemark (global_State *g) {
       traverseclosure(g, cl);
       return (cl->c.isC) ? sizeCclosure(cl->c.nupvalues) :
                            sizeLclosure(cl->l.nupvalues);
-      break;
     }
     case LUA_TTHREAD: {
       lua_State *th = gco2th(o);
@@ -306,7 +304,6 @@ static l_mem propagatemark (global_State *g) {
       traversestack(g, th);
       return sizeof(lua_State) + sizeof(TValue) * th->stacksize +
                                  sizeof(CallInfo) * th->size_ci;
-      break;
     }
     case LUA_TPROTO: {
       Proto *p = gco2p(o);
@@ -318,7 +315,6 @@ static l_mem propagatemark (global_State *g) {
                              sizeof(int) * p->sizelineinfo +
                              sizeof(LocVar) * p->sizelocvars +
                              sizeof(TString *) * p->sizeupvalues;
-      break;
     }
     default: lua_assert(0); return 0;
   }
@@ -528,10 +524,10 @@ static void remarkupvals (global_State *g) {
 static void atomic (lua_State *L) {
   global_State *g = G(L);
   size_t udsize;  /* total size of userdata to be finalized */
-  /* remark objects cautch by write barrier */
-  propagateall(g);
   /* remark occasional upvalues of (maybe) dead threads */
   remarkupvals(g);
+  /* traverse objects cautch by write barrier and by 'remarkupvals' */
+  propagateall(g);
   /* remark weak tables */
   g->gray = g->weak;
   g->weak = NULL;
@@ -673,12 +669,13 @@ void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v) {
 }
 
 
-void luaC_barrierback (lua_State *L, GCObject *o) {
+void luaC_barrierback (lua_State *L, Table *t) {
   global_State *g = G(L);
+  GCObject *o = obj2gco(t);
   lua_assert(isblack(o) && !isdead(g, o));
   lua_assert(g->gcstate != GCSfinalize && g->gcstate != GCSpause);
   black2gray(o);  /* make table gray (again) */
-  gco2h(o)->gclist = g->grayagain;
+  t->gclist = g->grayagain;
   g->grayagain = o;
 }
 

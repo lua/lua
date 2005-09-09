@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.9 2005/05/17 19:49:15 roberto Exp $
+** $Id: loslib.c,v 1.13 2005/09/09 18:22:46 roberto Exp $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -93,6 +93,8 @@ static void setfield (lua_State *L, const char *key, int value) {
 }
 
 static void setboolfield (lua_State *L, const char *key, int value) {
+  if (value < 0)  /* undefined? */
+    return;  /* does not set field */
   lua_pushboolean(L, value);
   lua_setfield(L, -2, key);
 }
@@ -197,9 +199,8 @@ static int io_setloc (lua_State *L) {
   static const char *const catnames[] = {"all", "collate", "ctype", "monetary",
      "numeric", "time", NULL};
   const char *l = lua_tostring(L, 1);
-  int op = luaL_findstring(luaL_optstring(L, 2, "all"), catnames);
+  int op = luaL_checkoption(L, 2, "all", catnames);
   luaL_argcheck(L, l || lua_isnoneornil(L, 1), 1, "string expected");
-  luaL_argcheck(L, op != -1, 2, "invalid option");
   lua_pushstring(L, setlocale(cat[op], l));
   return 1;
 }
@@ -210,7 +211,7 @@ static int io_exit (lua_State *L) {
   return 0;  /* to avoid warnings */
 }
 
-static const luaL_reg syslib[] = {
+static const luaL_Reg syslib[] = {
   {"clock",     io_clock},
   {"date",      io_date},
   {"difftime",  io_difftime},
@@ -230,7 +231,7 @@ static const luaL_reg syslib[] = {
 
 
 LUALIB_API int luaopen_os (lua_State *L) {
-  luaL_openlib(L, LUA_OSLIBNAME, syslib, 0);
+  luaL_register(L, LUA_OSLIBNAME, syslib);
   return 1;
 }
 

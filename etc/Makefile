@@ -14,13 +14,12 @@ MYLDFLAGS= -Wl,-E
 MYLIBS= -lm -ldl
 RM= rm -f
 
-ALL= min noparser.o 1
-
 all:
-	@echo 'choose a target:' $(ALL)
+	@echo 'choose a target: min noparser one clean'
 
 min:	min.c
-	$(CC) $(CFLAGS) -o $@ $@.c -L$(LIB) -llua $(MYLIBS)
+	$(CC) $(CFLAGS) $@.c -L$(LIB) -llua $(MYLIBS)
+	echo 'print"Hello there!"' | ./a.out
 
 noparser: noparser.o
 	$(CC) noparser.o $(SRC)/lua.o -L$(LIB) -llua $(MYLIBS)
@@ -28,9 +27,9 @@ noparser: noparser.o
 	-./a.out luac.out
 	-./a.out -e'a=1'
 
-1:
+one:
 	$(CC) $(CFLAGS) all.c $(MYLIBS)
 	./a.out $(TST)/hello.lua
 
 clean:
-	$(RM) $(ALL) a.out core core.* *.o luac.out
+	$(RM) noparser.o a.out core core.* *.o luac.out

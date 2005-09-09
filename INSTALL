@@ -1,12 +1,11 @@
-This is Lua 5.1 (work).
+This is Lua 5.1 (alpha).
 
 * Installation
   ------------
   Building Lua on a Unix system should be very easy: simply doing "make"
   should work. This will build Lua in the src directory.
 
-  See below for customization instructions. We strongly recommend that
-  you enable dynamic loading.
+  See below for customization instructions.
 
   If you want to install Lua in an official place in your system, then
   do "make install". The official place and the way to install files are
@@ -17,7 +16,7 @@ This is Lua 5.1 (work).
   follows:
 
     bin:	lua luac
-    include:	lua.h luaconf.h lualib.h lauxlib.h
+    include:	lua.h luaconf.h lualib.h lauxlib.h lua.hpp
     lib:	liblua.a
     man/man1:	lua.1 luac.1
 
@@ -43,6 +42,9 @@ This is Lua 5.1 (work).
   to edit src/luaconf.h. The edited file will be the one installed, and
   it will be used by any Lua clients that you build, to ensure consistency.
 
+  We strongly recommend that you enable dynamic loading. See src/luaconf.h
+  and also src/Makefile.
+
 * Installation on Windows and other systems
   -----------------------------------------
   The instructions for building Lua on other systems depend on the compiler
@@ -60,12 +62,15 @@ This is Lua 5.1 (work).
   compiler:	library, luac.c print.c
 
   If all you want is to build the Lua interpreter, you may put all .c files
-  in a single project, except for luac.c and print.c.
+  in a single project, except for luac.c and print.c. Or use etc/all.c.
 
   To use Lua as a library in your own programs, you'll need to know how to
   create and use libraries with your compiler.
 
   As mentioned above, you may edit luaconf.h to select some features before
   building Lua.
+
+  If you use Visual Studio .NET, you can use etc/luavs.bat
+  in its "Command Prompt".
 
 (end of INSTALL)

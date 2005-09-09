@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.41 2005/05/17 19:49:15 roberto Exp $
+** $Id: lapi.c,v 2.48 2005/09/01 17:42:22 roberto Exp $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -113,11 +113,11 @@ LUA_API void lua_xmove (lua_State *from, lua_State *to, int n) {
   if (from == to) return;
   lua_lock(to);
   api_checknelems(from, n);
-  api_check(L, G(from) == G(to));
+  api_check(from, G(from) == G(to));
+  api_check(from, to->ci->top - to->top >= n);
   from->top -= n;
   for (i = 0; i < n; i++) {
-    setobj2s(to, to->top, from->top + i);
-    api_incr_top(to);
+    setobj2s(to, to->top++, from->top + i);
   }
   lua_unlock(to);
 }
@@ -153,7 +153,7 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
 
 
 LUA_API int lua_gettop (lua_State *L) {
-  return (L->top - L->base);
+  return cast(int, L->top - L->base);
 }
 
 
@@ -344,6 +344,7 @@ LUA_API const char *lua_tolstring (lua_State *L, int idx, size_t *len) {
       return NULL;
     }
     luaC_checkGC(L);
+    o = index2adr(L, idx);  /* previous call may reallocate the stack */
     lua_unlock(L);
   }
   if (len != NULL) *len = tsvalue(o)->len;
@@ -351,7 +352,7 @@ LUA_API const char *lua_tolstring (lua_State *L, int idx, size_t *len) {
 }
 
 
-LUA_API size_t lua_objsize (lua_State *L, int idx) {
+LUA_API size_t lua_objlen (lua_State *L, int idx) {
   StkId o = index2adr(L, idx);
   switch (ttype(o)) {
     case LUA_TSTRING: return tsvalue(o)->len;
@@ -618,6 +619,9 @@ LUA_API void lua_getfenv (lua_State *L, int idx) {
     case LUA_TUSERDATA:
       sethvalue(L, L->top, uvalue(o)->env);
       break;
+    case LUA_TTHREAD:
+      setobj2s(L, L->top,  gt(thvalue(o)));
+      break;
     default:
       setnilvalue(L->top);
       break;
@@ -735,6 +739,9 @@ LUA_API int lua_setfenv (lua_State *L, int idx) {
       break;
     case LUA_TUSERDATA:
       uvalue(o)->env = hvalue(L->top - 1);
+      break;
+    case LUA_TTHREAD:
+      sethvalue(L, gt(thvalue(o)), hvalue(L->top - 1));
       break;
     default:
       res = 0;
@@ -868,7 +875,7 @@ LUA_API int lua_dump (lua_State *L, lua_Writer writer, void *data) {
   if (isLfunction(o))
     status = luaU_dump(L, clvalue(o)->l.p, writer, data, 0);
   else
-    status = 0;
+    status = 1;
   lua_unlock(L);
   return status;
 }
@@ -969,10 +976,10 @@ LUA_API int lua_next (lua_State *L, int idx) {
 
 LUA_API void lua_concat (lua_State *L, int n) {
   lua_lock(L);
-  luaC_checkGC(L);
   api_checknelems(L, n);
   if (n >= 2) {
-    luaV_concat(L, n, L->top - L->base - 1);
+    luaC_checkGC(L);
+    luaV_concat(L, n, cast(int, L->top - L->base) - 1);
     L->top -= (n-1);
   }
   else if (n == 0) {  /* push empty string */
@@ -985,7 +992,7 @@ LUA_API void lua_concat (lua_State *L, int n) {
 
 
 LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud) {
-  *ud = G(L)->ud;
+  if (ud) *ud = G(L)->ud;
   return G(L)->frealloc;
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.20 2005/05/17 19:49:15 roberto Exp $
+** $Id: ldebug.c,v 2.26 2005/08/04 13:37:38 roberto Exp $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -92,7 +92,7 @@ LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
   }
   if (level == 0 && ci > L->base_ci) {  /* level found? */
     status = 1;
-    ar->i_ci = ci - L->base_ci;
+    ar->i_ci = cast(int, ci - L->base_ci);
   }
   else if (level < 0) {  /* level is of a lost tail call? */
     status = 1;
@@ -152,6 +152,7 @@ static void funcinfo (lua_Debug *ar, Closure *cl) {
   if (cl->c.isC) {
     ar->source = "=[C]";
     ar->linedefined = -1;
+    ar->lastlinedefined = -1;
     ar->what = "C";
   }
   else {
@@ -164,7 +165,7 @@ static void funcinfo (lua_Debug *ar, Closure *cl) {
 }
 
 
-static void info_tailcall (lua_State *L, lua_Debug *ar) {
+static void info_tailcall (lua_Debug *ar) {
   ar->name = ar->namewhat = "";
   ar->what = "tail";
   ar->lastlinedefined = ar->linedefined = ar->currentline = -1;
@@ -194,7 +195,7 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
                     Closure *f, CallInfo *ci) {
   int status = 1;
   if (f == NULL) {
-    info_tailcall(L, ar);
+    info_tailcall(ar);
     return status;
   }
   for (; *what; what++) {
@@ -275,8 +276,11 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
 
 static int precheck (const Proto *pt) {
   check(pt->maxstacksize <= MAXSTACK);
+  lua_assert(pt->numparams+(pt->is_vararg & VARARG_HASARG) <= pt->maxstacksize);
+  lua_assert(!(pt->is_vararg & VARARG_NEEDSARG) ||
+              (pt->is_vararg & VARARG_HASARG));
+  check(pt->sizeupvalues <= pt->nups);
   check(pt->sizelineinfo == pt->sizecode || pt->sizelineinfo == 0);
-  lua_assert(pt->numparams+pt->is_vararg <= pt->maxstacksize);
   check(GET_OPCODE(pt->code[pt->sizecode-1]) == OP_RETURN);
   return 1;
 }
@@ -389,8 +393,8 @@ static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
       }
       case OP_TFORLOOP: {
         check(c >= 1);  /* at least one result (control variable) */
-        checkreg(pt, a+3+c);  /* space for results */
-        if (reg >= a+3) last = pc;  /* affect all regs above its call base */
+        checkreg(pt, a+2+c);  /* space for results */
+        if (reg >= a+2) last = pc;  /* affect all regs above its base */
         break;
       }
       case OP_FORLOOP:
@@ -440,7 +444,8 @@ static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
         break;
       }
       case OP_VARARG: {
-        check(pt->is_vararg & NEWSTYLEVARARG);
+        check((pt->is_vararg & VARARG_ISVARARG) &&
+             !(pt->is_vararg & VARARG_NEEDSARG));
         b--;
         if (b == LUA_MULTRET) check(checkopenop(pt, pc));
         checkreg(pt, a+b-1);
@@ -546,7 +551,8 @@ void luaG_typeerror (lua_State *L, const TValue *o, const char *op) {
   const char *name = NULL;
   const char *t = luaT_typenames[ttype(o)];
   const char *kind = (isinstack(L->ci, o)) ?
-                         getobjname(L, L->ci, o - L->base, &name) : NULL;
+                         getobjname(L, L->ci, cast(int, o - L->base), &name) :
+                         NULL;
   if (kind)
     luaG_runerror(L, "attempt to %s %s " LUA_QS " (a %s value)",
                 op, kind, name, t);

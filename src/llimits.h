@@ -1,5 +1,5 @@
 /*
-** $Id: llimits.h,v 1.65 2005/03/09 16:28:07 roberto Exp $
+** $Id: llimits.h,v 1.67 2005/08/24 16:15:49 roberto Exp $
 ** Limits, basic types, and some other `installation-dependent' definitions
 ** See Copyright Notice in lua.h
 */
@@ -92,5 +92,24 @@ typedef lu_int32 Instruction;
 #define LUA_MINBUFFER	32
 #endif
 
+
+#ifndef lua_lock
+#define lua_lock(L)     ((void) 0) 
+#define lua_unlock(L)   ((void) 0)
+#endif
+
+#ifndef luai_threadyield
+#define luai_threadyield(L)     {lua_unlock(L); lua_lock(L);}
+#endif
+
+
+/*
+** macro to control inclusion of some hard tests on stack reallocation
+*/ 
+#ifndef HARDSTACKTESTS
+#define condhardstacktests(x)	((void)0)
+#else
+#define condhardstacktests(x)	x
+#endif
 
 #endif

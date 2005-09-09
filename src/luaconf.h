@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.49a 2005/05/17 19:49:15 roberto Exp $
+** $Id: luaconf.h,v 1.65 2005/09/09 18:24:42 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -22,6 +22,16 @@
 
 
 /*
+@@ LUA_ANSI controls the use of non-ansi features.
+** CHANGE it (define it) if you want Lua to avoid the use of any
+** non-ansi feature or library.
+*/
+#if defined(__STRICT_ANSI__)
+#define LUA_ANSI
+#endif
+
+
+/*
 @@ LUA_PATH_DEFAULT is the default path that Lua uses to look for
 @* Lua libraries.
 @@ LUA_CPATH_DEFAULT is the default path that Lua uses to look for
@@ -31,22 +41,27 @@
 ** non-conventional directories.
 */
 #if defined(_WIN32)
-#define LUA_ROOT	"C:\\Program Files\\Lua51"
-#define LUA_LDIR	LUA_ROOT "\\lua"
-#define LUA_CDIR	LUA_ROOT "\\dll"
+/*
+** In Windows, any exclamation mark ('!') in the path is replaced by the
+** path of the directory of the executable file of the current process.
+*/
+#define LUA_LDIR	"!\\lua\\"
+#define LUA_CDIR	"!\\"
 #define LUA_PATH_DEFAULT  \
-		"?.lua;"  LUA_LDIR"\\?.lua;"  LUA_LDIR"\\?\\init.lua"
-#define LUA_CPATH_DEFAULT	\
-	"?.dll;"  "l?.dll;"  LUA_CDIR"\\?.dll;"  LUA_CDIR"\\l?.dll"
+		".\\?.lua;"  LUA_LDIR"?.lua;"  LUA_LDIR"?\\init.lua;" \
+		             LUA_CDIR"?.lua;"  LUA_CDIR"?\\init.lua"
+#define LUA_CPATH_DEFAULT \
+	".\\?.dll;"  LUA_CDIR"?.dll;" LUA_CDIR"loadall.dll"
 
 #else
-#define LUA_ROOT	"/usr/local"
-#define LUA_LDIR	LUA_ROOT "/share/lua/5.1"
-#define LUA_CDIR	LUA_ROOT "/lib/lua/5.1"
+#define LUA_ROOT	"/usr/local/"
+#define LUA_LDIR	LUA_ROOT "share/lua/5.1/"
+#define LUA_CDIR	LUA_ROOT "lib/lua/5.1/"
 #define LUA_PATH_DEFAULT  \
-		"./?.lua;"  LUA_LDIR"/?.lua;"  LUA_LDIR"/?/init.lua"
-#define LUA_CPATH_DEFAULT	\
-	"./?.so;"  "./l?.so;"  LUA_CDIR"/?.so;"  LUA_CDIR"/l?.so"
+		"./?.lua;"  LUA_LDIR"?.lua;"  LUA_LDIR"?/init.lua;" \
+		            LUA_CDIR"?.lua;"  LUA_CDIR"?/init.lua"
+#define LUA_CPATH_DEFAULT \
+	"./?.so;"  LUA_CDIR"?.so;" LUA_CDIR"loadall.so"
 #endif
 
 
@@ -64,21 +79,20 @@
 
 /*
 @@ LUA_PATHSEP is the character that separates templates in a path.
-** CHANGE it if for some reason your system cannot use a
-** semicolon. (E.g., if a semicolon is a common character in
-** file/directory names.) Probably you do not need to change this.
-*/
-#define LUA_PATHSEP	';'
-
-
-/*
 @@ LUA_PATH_MARK is the string that marks the substitution points in a
 @* template.
-** CHANGE it if for some reason your system cannot use an interrogation
-** mark.  (E.g., if an interogation mark is a common character in
-** file/directory names.) Probably you do not need to change this.
+@@ LUA_EXECDIR in a Windows path is replaced by the executable's
+@* directory.
+@@ LUA_IGMARK is a mark to ignore all before it when bulding the
+@* luaopen_ function name.
+** CHANGE them if for some reason your system cannot use those
+** characters. (E.g., if one of those characters is a common character
+** in file/directory names.) Probably you do not need to change them.
 */
+#define LUA_PATHSEP	";"
 #define LUA_PATH_MARK	"?"
+#define LUA_EXECDIR	"!"
+#define LUA_IGMARK	":"
 
 
 /*
@@ -100,9 +114,9 @@
 #if defined(LUA_BUILD_AS_DLL)
 
 #if defined(LUA_CORE) || defined(LUA_LIB)
-#define LUA_API __declspec(__dllexport)
+#define LUA_API __declspec(dllexport)
 #else
-#define LUA_API __declspec(__dllimport)
+#define LUA_API __declspec(dllimport)
 #endif
 
 #else
@@ -118,17 +132,24 @@
 /*
 @@ LUAI_FUNC is a mark for all extern functions that are not to be
 @* exported to outside modules.
-** CHANGE it if you need to mark them in some special way. Gcc (versions
-** 3.2 and later) mark them as "hidden" to optimize their call when Lua
-** is compiled as a shared library.
+@@ LUAI_DATA is a mark for all extern (const) variables that are not to
+@* be exported to outside modules.
+** CHANGE them if you need to mark them in some special way. Elf/gcc
+** (versions 3.2 and later) mark them as "hidden" to optimize access
+** when Lua is compiled as a shared library.
 */
 #if defined(luaall_c)
 #define LUAI_FUNC	static
-#elif defined(__GNUC__) && ((__GNUC__*100 + __GNUC_MINOR__) >= 302)
-#define LUAI_FUNC	__attribute__((visibility("hidden")))
+#define LUAI_DATA	/* empty */
+#elif defined(__GNUC__) && ((__GNUC__*100 + __GNUC_MINOR__) >= 302) && \
+      defined(__ELF__)
+#define LUAI_FUNC	__attribute__((visibility("hidden"))) extern
+#define LUAI_DATA	LUAI_FUNC
 #else
 #define LUAI_FUNC	extern
+#define LUAI_DATA	extern
 #endif
+
 
 
 /*
@@ -149,7 +170,7 @@
 /*
 @@ LUA_IDSIZE gives the maximum size for the description of the source
 @* of a function in debug information.
-** CHANGE it if you a different size.
+** CHANGE it if you want a different size.
 */
 #define LUA_IDSIZE	60
 
@@ -168,10 +189,10 @@
 ** CHANGE it if you have a better definition for non-POSIX/non-Windows
 ** systems.
 */
-#if !defined(__STRICT_ANSI__) && defined(_POSIX_C_SOURCE)
+#if !defined(LUA_ANSI) && defined(_POSIX_C_SOURCE)
 #include <unistd.h>
 #define lua_stdin_is_tty()	isatty(0)
-#elif !defined(__STRICT_ANSI__) && defined(_WIN32)
+#elif !defined(LUA_ANSI) && defined(_WIN32)
 #include <io.h>
 #include <stdio.h>
 #define lua_stdin_is_tty()	_isatty(_fileno(stdin))
@@ -214,7 +235,7 @@
 ** CHANGE them if you want to improve this functionality (e.g., by using
 ** GNU readline and history facilities).
 */
-#if !defined(__STRICT_ANSI__) && defined(LUA_USE_READLINE)
+#if defined(LUA_USE_READLINE)
 #include <stdio.h>
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -239,49 +260,52 @@
 /*
 @@ LUAI_GCPAUSE defines the default pause between garbage-collector cycles
 @* as a percentage.
-** CHANGE it if you want the GC to run faster or slower (higher
-** values mean larger pauses which mean slower collection.)
+** CHANGE it if you want the GC to run faster or slower (higher values
+** mean larger pauses which mean slower collection.) You can also change
+** this value dynamically.
 */
 #define LUAI_GCPAUSE	200  /* 200% (wait memory to double before next GC) */
 
 
 /*
-@@ LUAI_GCMUL defines the speed of garbage collection relative to
+@@ LUAI_GCMUL defines the default speed of garbage collection relative to
 @* memory allocation as a percentage.
 ** CHANGE it if you want to change the granularity of the garbage
 ** collection. (Higher values mean coarser collections. 0 represents
-** infinity, where each step performs a full collection.)
+** infinity, where each step performs a full collection.) You can also
+** change this value dynamically.
 */
 #define LUAI_GCMUL	200 /* GC runs 'twice the speed' of memory allocation */
 
 
-/*
-@@ LUA_COMPAT_GETN controls compatibility with old getn behavior.
-** CHANGE it to 1 if you want exact compatibility with the behavior of
-** setn/getn in Lua 5.0.
-*/
-#define LUA_COMPAT_GETN		0
 
 /*
-@@ LUA_COMPAT_PATH controls compatibility about LUA_PATH.
-** CHANGE it to 1 if you want 'require' to look for global LUA_PATH
-** before checking package.path.
+@@ LUA_COMPAT_GETN controls compatibility with old getn behavior.
+** CHANGE it (define it) if you want exact compatibility with the
+** behavior of setn/getn in Lua 5.0.
 */
-#define LUA_COMPAT_PATH		0
+#undef LUA_COMPAT_GETN
 
 /*
 @@ LUA_COMPAT_LOADLIB controls compatibility about global loadlib.
-** CHANGE it to 1 if you want a global 'loadlib' function (otherwise
-** the function is only available as 'package.loadlib').
+** CHANGE it to undefined as soon as you do not need a global 'loadlib'
+** function (the function is still available as 'package.loadlib').
 */
-#define LUA_COMPAT_LOADLIB	1
+#undef LUA_COMPAT_LOADLIB
 
 /*
 @@ LUA_COMPAT_VARARG controls compatibility with old vararg feature.
-** CHANGE it to 1 if you want vararg functions that do not use '...'
-** to get an 'arg' table with their extra arguments.
+** CHANGE it to undefined as soon as your programs use only '...' to
+** access vararg parameters (instead of the old 'arg' table).
 */
-#define LUA_COMPAT_VARARG	1
+#define LUA_COMPAT_VARARG
+
+/*
+@@ LUA_COMPAT_MOD controls compatibility with old math.mod function.
+** CHANGE it to undefined as soon as your programs use 'math.fmod' or
+** the new '%' operator instead of 'math.mod'.
+*/
+#define LUA_COMPAT_MOD
 
 /*
 @@ LUA_COMPAT_LSTR controls compatibility with old long string nesting
@@ -290,6 +314,31 @@
 ** off the advisory error when nesting [[...]].
 */
 #define LUA_COMPAT_LSTR		1
+
+/*
+@@ LUA_COMPAT_FIND controls compatibility with old 'string.find' behavior.
+** CHANGE it to undefined as soon as your programs use 'string.find' only
+** to find patterns.
+*/
+#define LUA_COMPAT_FIND
+
+/*
+@@ LUA_COMPAT_GFIND controls compatibility with old 'string.gfind' name.
+** CHANGE it to undefined as soon as you rename 'string.gfind' to
+** 'string.gmatch'.
+*/
+#define LUA_COMPAT_GFIND
+
+
+/*
+@@ LUA_COMPAT_OPENLIB controls compatibility with old 'luaL_openlib'
+@* behavior.
+** CHANGE it to undefined as soon as you replace to 'luaL_registry'
+** your uses of 'luaL_openlib'
+*/
+#define LUA_COMPAT_OPENLIB
+
+
 
 /*
 @@ luai_apicheck is the assert macro used by the Lua-C API.
@@ -407,13 +456,6 @@
 
 
 /*
-@@ LUAI_MAXEXPWHILE is the maximum size of code for expressions
-@* controling a 'while' loop.
-*/
-#define LUAI_MAXEXPWHILE	100
-
-
-/*
 @@ LUAL_BUFFERSIZE is the buffer size used by the lauxlib buffer system.
 */
 #define LUAL_BUFFERSIZE		BUFSIZ
@@ -424,47 +466,25 @@
 
 /*
 @@ lua_number2int is a macro to convert lua_Number to int.
-** CHANGE that if you know a faster way to convert a lua_Number to
+@@ lua_number2integer is a macro to convert lua_Number to lua_Integer.
+** CHANGE them if you know a faster way to convert a lua_Number to
 ** int (with any rounding method and without throwing errors) in your
 ** system. In Pentium machines, a naive typecast from double to int
 ** in C is extremely slow, so any alternative is worth trying.
 */
 
-/* On a gcc/Pentium, resort to assembler */
-#if !defined(__STRICT_ANSI__) && defined(__GNUC__) && defined(__i386)
-#define lua_number2int(i,d)	__asm__ ("fistpl %0":"=m"(i):"t"(d):"st")
-
-/* On  Windows/Pentium, resort to assembler */
-#elif !defined(__STRICT_ANSI__) && defined(_MSC_VER) && defined(_M_IX86)
-#define lua_number2int(i,d)	\
-	__asm fld d \
-	__asm fistp i
-
-
-/* on Pentium machines compliant with C99, you can try lrint */
-#elif defined (__i386) && defined(__STDC_VERSION__) && \
-				 (__STDC_VERSION__ >= 199900L)
-#define lua_number2int(i,d)	((i)=lrint(d))
-
-/* this option always works, but may be slow */
-#else
-#define lua_number2int(i,d)	((i)=(int)(d))
-
-#endif
-
-
-/*
-@@ lua_number2integer is a macro to convert lua_Number to lua_Integer.
-** CHANGE (see lua_number2int).
-*/
-/* On a gcc or Windows/Pentium, resort to assembler */
-#if (defined(__GNUC__) && defined(__i386)) || \
-    (defined(_MSC_VER) && defined(_M_IX86))
+/* On a Pentium, resort to a trick */
+#if !defined(LUA_ANSI) && !defined(__SSE2__) && \
+    (defined(__i386) || defined (_M_IX86))
+union luai_Cast { double l_d; long l_l; };
+#define lua_number2int(i,d) \
+  { volatile union luai_Cast u; u.l_d = (d) + 6755399441055744.0; (i) = u.l_l; }
 #define lua_number2integer(i,n)		lua_number2int(i, n)
 
 /* this option always works, but may be slow */
 #else
-#define lua_number2integer(i,d)		((i)=(lua_Integer)(d))
+#define lua_number2int(i,d)	((i)=(int)(d))
+#define lua_number2integer(i,d)	((i)=(lua_Integer)(d))
 
 #endif
 
@@ -479,13 +499,13 @@
 ** ===================================================================
 */
 
+#define LUA_NUMBER	double
 
 /*
 @@ LUAI_UACNUMBER is the result of an 'usual argument conversion'
 @* over a number.
 */
-#define LUA_NUMBER	double
-#define LUAI_UACNUMBER	LUA_NUMBER
+#define LUAI_UACNUMBER	double
 
 
 /*
@@ -505,16 +525,16 @@
 /*
 @@ The luai_num* macros define the primitive operations over numbers.
 */
-#define luai_numadd(a,b)	((a)+(b))
-#define luai_numsub(a,b)	((a)-(b))
-#define luai_nummul(a,b)	((a)*(b))
-#define luai_numdiv(a,b)	((a)/(b))
-#define luai_nummod(a,b)	((a) - floor((a)/(b))*(b))
-#define luai_numpow(a,b)	pow(a,b)
-#define luai_numunm(a)		(-(a))
-#define luai_numeq(a,b)		((a)==(b))
-#define luai_numlt(a,b)		((a)<(b))
-#define luai_numle(a,b)		((a)<=(b))
+#define luai_numadd(L,a,b)	((a)+(b))
+#define luai_numsub(L,a,b)	((a)-(b))
+#define luai_nummul(L,a,b)	((a)*(b))
+#define luai_numdiv(L,a,b)	((a)/(b))
+#define luai_nummod(L,a,b)	((a) - floor((a)/(b))*(b))
+#define luai_numpow(L,a,b)	pow(a,b)
+#define luai_numunm(L,a)	(-(a))
+#define luai_numeq(L,a,b)	((a)==(b))
+#define luai_numlt(L,a,b)	((a)<(b))
+#define luai_numle(L,a,b)	((a)<=(b))
 
 /* }================================================================== */
 
@@ -531,11 +551,11 @@
 
 /*
 @@ LUAI_THROW/LUAI_TRY define how Lua does exception handling.
-** CHANGE them if you prefer to use longjmp/setjmp even with C++ or
-** if want/don't want to use _longjmp/_setjmp instead of regular
+** CHANGE them if you prefer to use longjmp/setjmp even with C++
+** or if want/don't to use _longjmp/_setjmp instead of regular
 ** longjmp/setjmp. By default, Lua handles errors with exceptions when
-** compiling as C++ code, with _longjmp/_setjmp when compiling as C code
-** in a Unix system, and with longjmp/setjmp otherwise.
+** compiling as C++ code, with _longjmp/_setjmp when asked to use them,
+** and with longjmp/setjmp otherwise.
 */
 #if defined(__cplusplus)
 /* C++ exceptions */
@@ -544,8 +564,7 @@
 	{ if ((c)->status == 0) (c)->status = -1; }
 #define luai_jmpbuf	int  /* dummy variable */
 
-#elif !defined(__STRICT_ANSI__) && (defined(unix) || defined(__unix) || \
-				    defined(__unix__))
+#elif defined(LUA_USE_ULONGJMP)
 /* in Unix, try _longjmp/_setjmp (more efficient) */
 #define LUAI_THROW(L,c)	_longjmp((c)->b, 1)
 #define LUAI_TRY(L,c,a)	if (_setjmp((c)->b) == 0) { a }
@@ -578,7 +597,7 @@
 */
 #if defined(loslib_c) || defined(luaall_c)
 
-#if !defined(__STRICT_ANSI__) && defined(_POSIX_C_SOURCE)
+#if !defined(LUA_ANSI) && defined(_POSIX_C_SOURCE)
 #include <unistd.h>
 #define LUA_TMPNAMBUFSIZE	32
 #define lua_tmpnam(b,e)	{ \
@@ -590,6 +609,30 @@
 #define LUA_TMPNAMBUFSIZE	L_tmpnam
 #define lua_tmpnam(b,e)		{ e = (tmpnam(b) == NULL); }
 #endif
+
+#endif
+
+
+/*
+@@ lua_popen spawns a new process connected to the current one through
+@* the file streams.
+** CHANGE it if you have a way to implement it in your system.
+*/
+#if !defined(LUA_ANSI) && defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 2
+
+#define lua_popen(L,c,m)	popen(c,m)
+#define lua_pclose(L,file)	(pclose(file) != -1)
+
+#elif !defined(LUA_ANSI) && defined(_WIN32)
+
+#define lua_popen(L,c,m)	_popen(c,m)
+#define lua_pclose(L,file)	(_pclose(file) != -1)
+
+#else
+
+#define lua_popen(L,c,m)  \
+  ((void)c, (void)m, luaL_error(L, LUA_QL("popen") " not supported"), (FILE*)0)
+#define lua_pclose(L,file)		((void)file, 0)
 
 #endif
 
@@ -606,7 +649,7 @@
 ** If you do not want any kind of dynamic library, undefine all these
 ** options (or just remove these definitions).
 */
-#if !defined(__STRICT_ANSI__) 
+#if !defined(LUA_ANSI) 
 #if defined(_WIN32)
 #define LUA_DL_DLL
 #elif defined(__APPLE__) && defined(__MACH__)
@@ -615,29 +658,6 @@
 #define LUA_DL_DLOPEN
 #endif
 #endif
-
-
-/*
-@@ lua_lock/lua_unlock are macros for thread synchronization inside the
-@* Lua core. This is an attempt to simplify the implementation of a
-@* multithreaded version of Lua.
-** CHANGE them only if you know what you are doing. All accesses to
-** the global state and to global objects are synchronized.  Because
-** threads can read the stack of other threads (when running garbage
-** collection), a thread must also synchronize any write-access to its
-** own stack.  Unsynchronized accesses are allowed only when reading its
-** own stack, or when reading immutable fields from global objects (such
-** as string values and udata values).
-*/
-#define lua_lock(L)	((void) 0)
-#define lua_unlock(L)	((void) 0)
-
-
-/*
-@@ lua_threadyield allows a thread switch in appropriate places in the core.
-** CHANGE it only if you know what you are doing. (See lua_lock.)
-*/
-#define luai_threadyield(L)	{lua_unlock(L); lua_lock(L);}
 
 
 /*
@@ -650,11 +670,15 @@
 
 
 /*
-@@ luai_userstateopen allows user-specific initialization on new threads.
-** CHANGE it if you defined LUAI_EXTRASPACE and need to initialize that
-** data whenever a new lua_State is created.
+@@ luai_userstate* allow user-specific actions on threads.
+** CHANGE them if you defined LUAI_EXTRASPACE and need to do something
+** extra when a thread is created/deleted/resumed/yielded.
 */
-#define luai_userstateopen(L)	((void)0)
+#define luai_userstateopen(L)		((void)0)
+#define luai_userstatefree(L)		((void)0)
+#define luai_userstateresume(L,n)	((void)0)
+#define luai_userstateyield(L,n)	((void)0)
+
 
 
 
@@ -668,3 +692,4 @@
 
 
 #endif
+

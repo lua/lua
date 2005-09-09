@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.13 2005/05/05 20:47:02 roberto Exp $
+** $Id: lobject.h,v 2.17 2005/06/13 14:19:00 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -17,15 +17,17 @@
 
 
 /* tags for values visible from Lua */
-#define NUM_TAGS	LUA_TTHREAD
+#define LAST_TAG	LUA_TTHREAD
+
+#define NUM_TAGS	(LAST_TAG+1)
 
 
 /*
 ** Extra tags for non-values
 */
-#define LUA_TPROTO	(NUM_TAGS+1)
-#define LUA_TUPVAL	(NUM_TAGS+2)
-#define LUA_TDEADKEY	(NUM_TAGS+3)
+#define LUA_TPROTO	(LAST_TAG+1)
+#define LUA_TUPVAL	(LAST_TAG+2)
+#define LUA_TDEADKEY	(LAST_TAG+3)
 
 
 /*
@@ -254,8 +256,10 @@ typedef struct Proto {
 } Proto;
 
 
-/* mask for new-style vararg */
-#define NEWSTYLEVARARG		2
+/* masks for new-style vararg */
+#define VARARG_HASARG		1
+#define VARARG_ISVARARG		2
+#define VARARG_NEEDSARG		4
 
 
 typedef struct LocVar {
@@ -357,7 +361,7 @@ typedef struct Table {
 
 
 
-extern const TValue luaO_nilobject;
+LUAI_DATA const TValue luaO_nilobject;
 
 #define ceillog2(x)	(luaO_log2((x)-1) + 1)
 
@@ -369,7 +373,8 @@ LUAI_FUNC int luaO_str2d (const char *s, lua_Number *result);
 LUAI_FUNC const char *luaO_pushvfstring (lua_State *L, const char *fmt,
                                                        va_list argp);
 LUAI_FUNC const char *luaO_pushfstring (lua_State *L, const char *fmt, ...);
-LUAI_FUNC void luaO_chunkid (char *out, const char *source, int len);
+LUAI_FUNC void luaO_chunkid (char *out, const char *source, size_t len);
 
 
 #endif
+

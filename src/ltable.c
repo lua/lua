@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.23 2005/05/17 19:49:15 roberto Exp $
+** $Id: ltable.c,v 2.26 2005/07/11 14:01:37 roberto Exp $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -120,7 +120,7 @@ static int arrayindex (const TValue *key) {
     lua_Number n = nvalue(key);
     int k;
     lua_number2int(k, n);
-    if (luai_numeq(cast(lua_Number, k), nvalue(key)))
+    if (luai_numeq(L, cast(lua_Number, k), nvalue(key)))
       return k;
   }
   return -1;  /* `key' did not match some condition */
@@ -145,7 +145,7 @@ static int findindex (lua_State *L, Table *t, StkId key) {
       if (luaO_rawequalObj(key2tval(n), key) ||
             (ttype(gkey(n)) == LUA_TDEADKEY && iscollectable(key) &&
              gcvalue(gkey(n)) == gcvalue(key))) {
-        i = n - gnode(t, 0);  /* key index in hash table */
+        i = cast(int, n - gnode(t, 0));  /* key index in hash table */
         /* hash elements are numbered after array ones */
         return i + t->sizearray;
       }
@@ -376,7 +376,7 @@ void luaH_free (lua_State *L, Table *t) {
 }
 
 
-static Node *getfreepos (lua_State *L, Table *t) {
+static Node *getfreepos (Table *t) {
   while (t->lastfree-- > t->node) {
     if (ttisnil(gkey(t->lastfree)))
       return t->lastfree;
@@ -397,7 +397,7 @@ static TValue *newkey (lua_State *L, Table *t, const TValue *key) {
   Node *mp = luaH_mainposition(t, key);
   if (!ttisnil(gval(mp)) || mp == &luaH_dummynode) {
     Node *othern;
-    Node *n = getfreepos(L, t);  /* get a free place */
+    Node *n = getfreepos(t);  /* get a free place */
     if (n == NULL) {  /* cannot find a free place? */
       rehash(L, t, key);  /* grow table */
       return luaH_set(L, t, key);  /* re-insert key into grown table */
@@ -437,7 +437,7 @@ const TValue *luaH_getnum (Table *t, int key) {
     lua_Number nk = cast(lua_Number, key);
     Node *n = hashnum(t, nk);
     do {  /* check whether `key' is somewhere in the chain */
-      if (ttisnumber(gkey(n)) && luai_numeq(nvalue(gkey(n)), nk))
+      if (ttisnumber(gkey(n)) && luai_numeq(L, nvalue(gkey(n)), nk))
         return gval(n);  /* that's it */
       else n = gnext(n);
     } while (n);
@@ -471,7 +471,7 @@ const TValue *luaH_get (Table *t, const TValue *key) {
       int k;
       lua_Number n = nvalue(key);
       lua_number2int(k, n);
-      if (luai_numeq(cast(lua_Number, k), nvalue(key)))  /* index is integer? */
+      if (luai_numeq(L, cast(lua_Number, k), nvalue(key))) /* index is int? */
         return luaH_getnum(t, k);  /* use specialized version */
       /* else go through */
     }
@@ -495,7 +495,7 @@ TValue *luaH_set (lua_State *L, Table *t, const TValue *key) {
     return cast(TValue *, p);
   else {
     if (ttisnil(key)) luaG_runerror(L, "table index is nil");
-    else if (ttisnumber(key) && !luai_numeq(nvalue(key), nvalue(key)))
+    else if (ttisnumber(key) && !luai_numeq(L, nvalue(key), nvalue(key)))
       luaG_runerror(L, "table index is NaN");
     return newkey(L, t, key);
   }

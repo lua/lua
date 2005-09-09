@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.13 2005/04/25 19:24:10 roberto Exp $
+** $Id: lgc.h,v 2.15 2005/08/24 16:15:49 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -77,23 +77,24 @@
 #define luaC_white(g)	cast(lu_byte, (g)->currentwhite & WHITEBITS)
 
 
-#define luaC_checkGC(L) { if (G(L)->totalbytes >= G(L)->GCthreshold) \
+#define luaC_checkGC(L) { \
+  condhardstacktests(luaD_reallocstack(L, L->stacksize - EXTRA_STACK - 1)); \
+  if (G(L)->totalbytes >= G(L)->GCthreshold) \
 	luaC_step(L); }
 
 
 #define luaC_barrier(L,p,v) { if (valiswhite(v) && isblack(obj2gco(p)))  \
 	luaC_barrierf(L,obj2gco(p),gcvalue(v)); }
 
-#define luaC_barriert(L,p,v) { if (valiswhite(v) && isblack(obj2gco(p)))  \
-	luaC_barrierback(L,obj2gco(p)); }
+#define luaC_barriert(L,t,v) { if (valiswhite(v) && isblack(obj2gco(t)))  \
+	luaC_barrierback(L,t); }
 
 #define luaC_objbarrier(L,p,o)  \
 	{ if (iswhite(obj2gco(o)) && isblack(obj2gco(p))) \
 		luaC_barrierf(L,obj2gco(p),obj2gco(o)); }
 
-#define luaC_objbarriert(L,p,o)  \
-	{ if (iswhite(obj2gco(o)) && isblack(obj2gco(p))) \
-		luaC_barrierback(L,obj2gco(p)); }
+#define luaC_objbarriert(L,t,o)  \
+   { if (iswhite(obj2gco(o)) && isblack(obj2gco(t))) luaC_barrierback(L,t); }
 
 LUAI_FUNC size_t luaC_separateudata (lua_State *L, int all);
 LUAI_FUNC void luaC_callGCTM (lua_State *L);
@@ -103,7 +104,7 @@ LUAI_FUNC void luaC_fullgc (lua_State *L);
 LUAI_FUNC void luaC_link (lua_State *L, GCObject *o, lu_byte tt);
 LUAI_FUNC void luaC_linkupval (lua_State *L, UpVal *uv);
 LUAI_FUNC void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v);
-LUAI_FUNC void luaC_barrierback (lua_State *L, GCObject *o);
+LUAI_FUNC void luaC_barrierback (lua_State *L, Table *t);
 
 
 #endif

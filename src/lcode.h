@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.43 2005/04/25 19:24:10 roberto Exp $
+** $Id: lcode.h,v 1.45 2005/08/29 20:49:21 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -34,7 +34,7 @@ typedef enum BinOpr {
 
 #define binopistest(op)	((op) >= OPR_NE)
 
-typedef enum UnOpr { OPR_MINUS, OPR_NOT, OPR_SIZE, OPR_NOUNOPR } UnOpr;
+typedef enum UnOpr { OPR_MINUS, OPR_NOT, OPR_LEN, OPR_NOUNOPR } UnOpr;
 
 
 #define getcode(fs,e)	((fs)->f->code[(e)->info])
@@ -65,6 +65,7 @@ LUAI_FUNC void luaK_storevar (FuncState *fs, expdesc *var, expdesc *e);
 LUAI_FUNC void luaK_setreturns (FuncState *fs, expdesc *e, int nresults);
 LUAI_FUNC void luaK_setoneret (FuncState *fs, expdesc *e);
 LUAI_FUNC int luaK_jump (FuncState *fs);
+LUAI_FUNC void luaK_ret (FuncState *fs, int first, int nret);
 LUAI_FUNC void luaK_patchlist (FuncState *fs, int list, int target);
 LUAI_FUNC void luaK_patchtohere (FuncState *fs, int list);
 LUAI_FUNC void luaK_concat (FuncState *fs, int *l1, int l2);

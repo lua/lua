@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.h,v 2.4 2005/04/25 19:24:10 roberto Exp $
+** $Id: ldo.h,v 2.7 2005/08/24 16:15:49 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -11,16 +11,6 @@
 #include "lobject.h"
 #include "lstate.h"
 #include "lzio.h"
-
-
-/*
-** macro to control inclusion of some hard tests on stack reallocation
-*/ 
-#ifndef HARDSTACKTESTS
-#define condhardstacktests(x)	((void)0)
-#else
-#define condhardstacktests(x)	x
-#endif
 
 
 #define luaD_checkstack(L,n)	\
@@ -53,7 +43,7 @@ LUAI_FUNC int luaD_precall (lua_State *L, StkId func, int nresults);
 LUAI_FUNC void luaD_call (lua_State *L, StkId func, int nResults);
 LUAI_FUNC int luaD_pcall (lua_State *L, Pfunc func, void *u,
                                         ptrdiff_t oldtop, ptrdiff_t ef);
-LUAI_FUNC void luaD_poscall (lua_State *L, int wanted, StkId firstResult);
+LUAI_FUNC int luaD_poscall (lua_State *L, StkId firstResult);
 LUAI_FUNC void luaD_reallocCI (lua_State *L, int newsize);
 LUAI_FUNC void luaD_reallocstack (lua_State *L, int newsize);
 LUAI_FUNC void luaD_growstack (lua_State *L, int n);
@@ -61,6 +51,7 @@ LUAI_FUNC void luaD_growstack (lua_State *L, int n);
 LUAI_FUNC void luaD_throw (lua_State *L, int errcode);
 LUAI_FUNC int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud);
 
+LUAI_FUNC void luaD_seterrorobj (lua_State *L, int errcode, StkId oldtop);
 
 #endif
 

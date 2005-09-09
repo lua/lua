@@ -1,5 +1,5 @@
 /*
-** $Id: luac.c,v 1.50 2005/05/12 00:26:50 lhf Exp $
+** $Id: luac.c,v 1.51 2005/06/02 13:39:23 lhf Exp $
 ** Lua compiler (saves bytecodes to files; also list bytecodes)
 ** See Copyright Notice in lua.h
 */
@@ -53,7 +53,7 @@ static void cannot(const char* what)
 static void usage(const char* message)
 {
  if (*message=='-')
-  fprintf(stderr,"%s: unrecognized option `%s'\n",progname,message);
+  fprintf(stderr,"%s: unrecognized option " LUA_QS "\n",progname,message);
  else
   fprintf(stderr,"%s: %s\n",progname,message);
  fprintf(stderr,
@@ -61,7 +61,7 @@ static void usage(const char* message)
  "Available options are:\n"
  "  -        process stdin\n"
  "  -l       list\n"
- "  -o name  output to file `name' (default is \"%s\")\n"
+ "  -o name  output to file " LUA_QL("name") " (default is \"%s\")\n"
  "  -p       parse only\n"
  "  -s       strip debug information\n"
  "  -v       show version information\n"
@@ -92,7 +92,7 @@ static int doargs(int argc, char* argv[])
   else if (IS("-o"))			/* output file */
   {
    output=argv[++i];
-   if (output==NULL || *output==0) usage("`-o' needs argument");
+   if (output==NULL || *output==0) usage(LUA_QL("-o") " needs argument");
    if (IS("-")) output=NULL;
   }
   else if (IS("-p"))			/* parse only */

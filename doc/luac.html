@@ -1,7 +1,8 @@
-<!-- luac.man,v 1.25 2002/12/13 11:45:12 lhf Exp -->
+<!-- $Id: luac.man,v 1.26 2005/09/02 16:29:34 lhf Exp $ -->
 <HTML>
 <HEAD>
 <TITLE>LUAC man page</TITLE>
+<LINK REL="stylesheet" TYPE="text/css" HREF="lua.css">
 </HEAD>
 
 <BODY BGCOLOR="#FFFFFF">
@@ -44,14 +45,7 @@ option.
 <P>
 The binary files created by
 <B>luac</B>
-are portable to all architectures with the same word size.
-This means that
-binary files created on a 32-bit platform (such as Intel)
-can be read without change in another 32-bit platform (such as Sparc),
-even if the byte order (``endianness'') is different.
-On the other hand,
-binary files created on a 16-bit platform cannot be read in a 32-bit platform,
-nor vice-versa.
+are portable only among architectures with the same word size and byte order.
 <P>
 In the command line,
 you can mix
@@ -138,7 +132,6 @@ Error messages should be self explanatory.
 L. H. de Figueiredo,
 R. Ierusalimschy and
 W. Celes
-(<A HREF="mailto:lua-NO-SPAM-THANKS@tecgraf.puc-rio.br">lua AT tecgraf.puc-rio.br</A>)
 <!-- EOF -->
 </BODY>
 </HTML>

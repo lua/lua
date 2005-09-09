@@ -1,5 +1,5 @@
 -- trace calls
--- example: lua -ltrace-calls.lua bisect.lua
+-- example: lua -ltrace-calls bisect.lua
 
 local level=0
 

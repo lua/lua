@@ -1,5 +1,5 @@
-.\" lua.man,v 1.8 2003/04/02 00:05:20 lhf Exp
-.TH LUA 1 "2003/04/02 00:05:20"
+.\" $Id: lua.man,v 1.9 2005/09/02 16:29:34 lhf Exp $
+.TH LUA 1 "$Date: 2005/09/02 16:29:34 $"
 .SH NAME
 lua \- Lua interpreter
 .SH SYNOPSIS
@@ -141,9 +141,9 @@ enter interactive mode after
 .I script
 is executed.
 .TP
-.BI \-l " file"
+.BI \-l " module"
 call
-.BI require( file )
+.BI require( module )
 before executing
 .IR script.
 Typically used to load libraries
@@ -163,5 +163,4 @@ R. Ierusalimschy,
 L. H. de Figueiredo,
 and
 W. Celes
-(lua@tecgraf.puc-rio.br)
 .\" EOF

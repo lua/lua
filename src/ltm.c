@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.5 2005/05/05 15:34:03 roberto Exp $
+** $Id: ltm.c,v 2.6 2005/05/20 15:53:42 roberto Exp $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -32,7 +32,7 @@ void luaT_init (lua_State *L) {
     "__index", "__newindex",
     "__gc", "__mode", "__eq",
     "__add", "__sub", "__mul", "__div", "__mod",
-    "__pow", "__unm", "__siz", "__lt", "__le",
+    "__pow", "__unm", "__len", "__lt", "__le",
     "__concat", "__call"
   };
   int i;

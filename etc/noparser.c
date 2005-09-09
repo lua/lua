@@ -18,13 +18,14 @@
 #include "lparser.h"
 #include "lzio.h"
 
-void luaX_init (lua_State *L) {
+LUAI_FUNC void luaX_init (lua_State *L) {
   UNUSED(L);
 }
 
-Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, const char *name) {
+LUAI_FUNC Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, const char *name) {
   UNUSED(z);
   UNUSED(buff);
+  UNUSED(name);
   lua_pushliteral(L,"parser not loaded");
   lua_error(L);
   return NULL;
@@ -33,10 +34,17 @@ Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, const char *name) {
 #ifdef NODUMP
 #include "lundump.h"
 
-int luaU_dump (lua_State* L, const Proto* Main, lua_Chunkwriter w, void* data, int strip)
-{
- return 0;
- lua_pushliteral(L,"dumper not loaded");
- lua_error(L);
+LUAI_FUNC int luaU_dump (lua_State* L, const Proto* f, lua_Writer w, void* data, int strip) {
+  UNUSED(f);
+  UNUSED(w);
+  UNUSED(data);
+  UNUSED(strip);
+#if 1
+  UNUSED(L);
+  return 0;
+#else
+  lua_pushliteral(L,"dumper not loaded");
+  lua_error(L);
+#endif
 }
 #endif

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.144 2005/05/17 19:49:15 roberto Exp $
+** $Id: lua.c,v 1.150 2005/09/06 17:19:33 roberto Exp $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -48,15 +48,16 @@ static void print_usage (void) {
   "  -i       enter interactive mode after executing " LUA_QL("script") "\n"
   "  -l name  require library " LUA_QL("name") "\n"
   "  -v       show version information\n"
-  "  -w       trap access to undefined globals\n"
   "  --       stop handling options\n" ,
   progname);
+  fflush(stderr);
 }
 
 
 static void l_message (const char *pname, const char *msg) {
   if (pname) fprintf(stderr, "%s: ", pname);
   fprintf(stderr, "%s\n", msg);
+  fflush(stderr);
 }
 
 
@@ -72,14 +73,19 @@ static int report (lua_State *L, int status) {
 
 
 static int traceback (lua_State *L) {
-  luaL_getfield(L, LUA_GLOBALSINDEX, "debug.traceback");
-  if (!lua_isfunction(L, -1))
+  lua_getfield(L, LUA_GLOBALSINDEX, "debug");
+  if (!lua_istable(L, -1)) {
     lua_pop(L, 1);
-  else {
-    lua_pushvalue(L, 1);  /* pass error message */
-    lua_pushinteger(L, 2);  /* skip this function and traceback */
-    lua_call(L, 2, 1);  /* call debug.traceback */
+    return 1;
   }
+  lua_getfield(L, -1, "traceback");
+  if (!lua_isfunction(L, -1)) {
+    lua_pop(L, 2);
+    return 1;
+  }
+  lua_pushvalue(L, 1);  /* pass error message */
+  lua_pushinteger(L, 2);  /* skip this function and traceback */
+  lua_call(L, 2, 1);  /* call debug.traceback */
   return 1;
 }
 
@@ -138,8 +144,7 @@ static int dolibrary (lua_State *L, const char *name) {
 
 static const char *get_prompt (lua_State *L, int firstline) {
   const char *p;
-  lua_pushstring(L, firstline ? "_PROMPT" : "_PROMPT2");
-  lua_rawget(L, LUA_GLOBALSINDEX);
+  lua_getfield(L, LUA_GLOBALSINDEX, firstline ? "_PROMPT" : "_PROMPT2");
   p = lua_tostring(L, -1);
   if (p == NULL) p = (firstline ? LUA_PROMPT : LUA_PROMPT2);
   lua_pop(L, 1);  /* remove global */
@@ -148,13 +153,16 @@ static const char *get_prompt (lua_State *L, int firstline) {
 
 
 static int incomplete (lua_State *L, int status) {
-  if (status == LUA_ERRSYNTAX &&
-         strstr(lua_tostring(L, -1), "<eof>") != NULL) {
-    lua_pop(L, 1);
-    return 1;
+  if (status == LUA_ERRSYNTAX) {
+    size_t lmsg;
+    const char *msg = lua_tolstring(L, -1, &lmsg);
+    const char *tp = msg + lmsg - (sizeof(LUA_QL("<eof>")) - 1);
+    if (strstr(msg, LUA_QL("<eof>")) == tp) {
+      lua_pop(L, 1);
+      return 1;
+    }
   }
-  else
-    return 0;
+  return 0;  /* else... */
 }
 
 
@@ -216,15 +224,8 @@ static void dotty (lua_State *L) {
   }
   lua_settop(L, 0);  /* clear stack */
   fputs("\n", stdout);
+  fflush(stdout);
   progname = oldprogname;
-}
-
-
-static int checkvar (lua_State *L) {
-  const char *name = lua_tostring(L, 2);
-  if (name)
-    luaL_error(L, "attempt to access undefined variable " LUA_QS, name);
-  return 0;
 }
 
 
@@ -263,13 +264,6 @@ static int handle_argv (lua_State *L, int argc, char **argv, int *interactive) {
         case 'v': {
           clearinteractive(interactive);
           print_version();
-          break;
-        }
-        case 'w': {
-          if (lua_getmetatable(L, LUA_GLOBALSINDEX)) {
-            lua_pushcfunction(L, checkvar);
-            lua_setfield(L, -2, "__index");
-          }
           break;
         }
         case 'e': {

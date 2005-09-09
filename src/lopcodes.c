@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.33 2005/05/04 20:42:28 roberto Exp $
+** $Id: lopcodes.c,v 1.35 2005/08/29 20:49:21 roberto Exp $
 ** See Copyright Notice in lua.h
 */
 
@@ -36,13 +36,14 @@ const char *const luaP_opnames[NUM_OPCODES+1] = {
   "POW",
   "UNM",
   "NOT",
-  "SIZ",
+  "LEN",
   "CONCAT",
   "JMP",
   "EQ",
   "LT",
   "LE",
   "TEST",
+  "TESTSET",
   "CALL",
   "TAILCALL",
   "RETURN",
@@ -81,13 +82,14 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_POW */
  ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_UNM */
  ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_NOT */
- ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_SIZ */
+ ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_LEN */
  ,opmode(0, 1, OpArgR, OpArgR, iABC)		/* OP_CONCAT */
  ,opmode(0, 0, OpArgR, OpArgN, iAsBx)		/* OP_JMP */
  ,opmode(1, 0, OpArgK, OpArgK, iABC)		/* OP_EQ */
  ,opmode(1, 0, OpArgK, OpArgK, iABC)		/* OP_LT */
  ,opmode(1, 0, OpArgK, OpArgK, iABC)		/* OP_LE */
- ,opmode(1, 1, OpArgR, OpArgU, iABC)		/* OP_TEST */
+ ,opmode(1, 0, OpArgR, OpArgU, iABC)		/* OP_TEST */
+ ,opmode(1, 1, OpArgR, OpArgU, iABC)		/* OP_TESTSET */
  ,opmode(0, 1, OpArgU, OpArgU, iABC)		/* OP_CALL */
  ,opmode(0, 1, OpArgU, OpArgU, iABC)		/* OP_TAILCALL */
  ,opmode(0, 0, OpArgU, OpArgN, iABC)		/* OP_RETURN */

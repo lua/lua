@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.119 2005/05/04 20:42:28 roberto Exp $
+** $Id: lopcodes.h,v 1.122 2005/08/29 20:49:21 roberto Exp $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -176,7 +176,7 @@ OP_MOD,/*	A B C	R(A) := RK(B) % RK(C)				*/
 OP_POW,/*	A B C	R(A) := RK(B) ^ RK(C)				*/
 OP_UNM,/*	A B	R(A) := -R(B)					*/
 OP_NOT,/*	A B	R(A) := not R(B)				*/
-OP_SIZ,/*	A B	R(A) := size of R(B)				*/
+OP_LEN,/*	A B	R(A) := length of R(B)				*/
 
 OP_CONCAT,/*	A B C	R(A) := R(B).. ... ..R(C)			*/
 
@@ -186,7 +186,8 @@ OP_EQ,/*	A B C	if ((RK(B) == RK(C)) ~= A) then pc++		*/
 OP_LT,/*	A B C	if ((RK(B) <  RK(C)) ~= A) then pc++  		*/
 OP_LE,/*	A B C	if ((RK(B) <= RK(C)) ~= A) then pc++  		*/
 
-OP_TEST,/*	A B C	if (R(B) <=> C) then R(A) := R(B) else pc++	*/ 
+OP_TEST,/*	A C	if not (R(A) <=> C) then pc++			*/ 
+OP_TESTSET,/*	A B C	if (R(B) <=> C) then R(A) := R(B) else pc++	*/ 
 
 OP_CALL,/*	A B C	R(A), ... ,R(A+C-2) := R(A)(R(A+1), ... ,R(A+B-1)) */
 OP_TAILCALL,/*	A B C	return R(A)(R(A+1), ... ,R(A+B-1))		*/
@@ -248,7 +249,7 @@ enum OpArgMask {
   OpArgK   /* argument is a constant or register/constant */
 };
 
-extern const lu_byte luaP_opmodes[NUM_OPCODES];
+LUAI_DATA const lu_byte luaP_opmodes[NUM_OPCODES];
 
 #define getOpMode(m)	(cast(enum OpMode, luaP_opmodes[m] & 3))
 #define getBMode(m)	(cast(enum OpArgMask, (luaP_opmodes[m] >> 4) & 3))
@@ -257,7 +258,7 @@ extern const lu_byte luaP_opmodes[NUM_OPCODES];
 #define testTMode(m)	(luaP_opmodes[m] & (1 << 7))
 
 
-extern const char *const luaP_opnames[NUM_OPCODES+1];  /* opcode names */
+LUAI_DATA const char *const luaP_opnames[NUM_OPCODES+1];  /* opcode names */
 
 
 /* number of list items to accumulate before a SETLIST instruction */
