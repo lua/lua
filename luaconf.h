@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.65 2005/09/09 18:24:42 roberto Exp roberto $
+** $Id: luaconf.h,v 1.66 2005/09/14 17:23:03 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -675,6 +675,7 @@ union luai_Cast { double l_d; long l_l; };
 ** extra when a thread is created/deleted/resumed/yielded.
 */
 #define luai_userstateopen(L)		((void)0)
+#define luai_userstatethread(L,L1)	((void)0)
 #define luai_userstatefree(L)		((void)0)
 #define luai_userstateresume(L,n)	((void)0)
 #define luai_userstateyield(L,n)	((void)0)

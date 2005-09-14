@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.47 2005/08/24 16:15:49 roberto Exp roberto $
+** $Id: lapi.c,v 2.48 2005/09/01 17:42:22 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -141,7 +141,7 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
   setthvalue(L, L->top, L1);
   api_incr_top(L);
   lua_unlock(L);
-  luai_userstateopen(L1);
+  luai_userstatethread(L, L1);
   return L1;
 }
 
