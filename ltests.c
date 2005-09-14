@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.29 2005/08/26 17:32:05 roberto Exp roberto $
+** $Id: ltests.c,v 2.30 2005/08/26 17:36:32 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -737,7 +737,6 @@ static int loadlib (lua_State *L) {
 static int closestate (lua_State *L) {
   lua_State *L1 = cast(lua_State *, cast(unsigned long, luaL_checknumber(L, 1)));
   lua_close(L1);
-  lua_unlock(L);  /* close cannot unlock that */
   return 0;
 }
 
@@ -1121,39 +1120,26 @@ static const struct luaL_Reg tests_funcs[] = {
 };
 
 
-static void fim (void) {
-  if (!islocked)
-    lua_close(lua_state);
-  lua_assert(memcontrol.numblocks == 0);
-  lua_assert(memcontrol.total == 0);
-}
-
-
-static int l_panic (lua_State *L) {
-  UNUSED(L);
-  fprintf(stderr, "unable to recover; exiting\n");
-  return 0;
-}
-
-
 int luaB_opentests (lua_State *L) {
   void *ud;
   lua_assert(lua_getallocf(L, &ud) == debug_realloc);
   lua_assert(ud == cast(void *, &memcontrol));
-  lua_atpanic(L, l_panic);
   lua_state = L;  /* keep first state to be opened */
   luaL_register(L, "T", tests_funcs);
-  atexit(fim);
   return 0;
 }
 
 
 #undef main
 int main (int argc, char *argv[]) {
+  int ret;
   char *limit = getenv("MEMLIMIT");
   if (limit)
     memcontrol.memlimit = strtoul(limit, NULL, 10);
-  return l_main(argc, argv);
+  ret = l_main(argc, argv);
+  lua_assert(memcontrol.numblocks == 0);
+  lua_assert(memcontrol.total == 0);
+  return ret;
 }
 
 #endif

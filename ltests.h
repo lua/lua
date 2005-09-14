@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.14 2005/05/03 19:01:17 roberto Exp roberto $
+** $Id: ltests.h,v 2.15 2005/06/06 13:30:25 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -55,16 +55,19 @@ int lua_checkpc (lua_State *L, pCallInfo ci);
 
 /* test for lock/unlock */
 #undef luai_userstateopen
+#undef luai_userstatethread
 #undef lua_lock
 #undef lua_unlock
 #undef LUAI_EXTRASPACE
 
-LUAI_DATA int islocked;
-#define LUAI_EXTRASPACE		sizeof(double)
-#define getlock(l)	(*(cast(int **, l) - 1))
-#define luai_userstateopen(l)	getlock(l) = &islocked;
-#define lua_lock(l)     lua_assert((*getlock(l))++ == 0)
-#define lua_unlock(l)   lua_assert(--(*getlock(l)) == 0)
+struct L_EXTRA { int lock; int *plock; };
+#define LUAI_EXTRASPACE		sizeof(struct L_EXTRA)
+#define getlock(l)	(cast(struct L_EXTRA *, l) - 1)
+#define luai_userstateopen(l)  \
+	(getlock(l)->lock = 0, getlock(l)->plock = &(getlock(l)->lock))
+#define luai_userstatethread(l,l1)  (getlock(l1)->plock = getlock(l)->plock)
+#define lua_lock(l)     lua_assert((*getlock(l)->plock)++ == 0)
+#define lua_unlock(l)   lua_assert(--(*getlock(l)->plock) == 0)
 
 
 int luaB_opentests (lua_State *L);
