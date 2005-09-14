@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.64 2005/09/06 17:21:03 roberto Exp roberto $
+** $Id: luaconf.h,v 1.65 2005/09/09 18:24:42 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -92,7 +92,7 @@
 #define LUA_PATHSEP	";"
 #define LUA_PATH_MARK	"?"
 #define LUA_EXECDIR	"!"
-#define LUA_IGMARK	":"
+#define LUA_IGMARK	"-"
 
 
 /*
