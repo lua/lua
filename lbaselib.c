@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.181 2005/08/15 14:12:32 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.182 2005/08/26 17:36:32 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -349,8 +349,9 @@ static int luaB_select (lua_State *L) {
   }
   else {
     int i = luaL_checkint(L, 1);
-    if (i <= 0) i = 1;
-    else if (i >= n) i = n;
+    if (i < 0) i = n + i;
+    else if (i > n) i = n;
+    luaL_argcheck(L, 1 <= i, 1, "index out of range");
     return n - i;
   }
 }
