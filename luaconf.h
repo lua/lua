@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.66 2005/09/14 17:23:03 roberto Exp roberto $
+** $Id: luaconf.h,v 1.67 2005/09/14 17:44:48 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -316,19 +316,11 @@
 #define LUA_COMPAT_LSTR		1
 
 /*
-@@ LUA_COMPAT_FIND controls compatibility with old 'string.find' behavior.
-** CHANGE it to undefined as soon as your programs use 'string.find' only
-** to find patterns.
-*/
-#define LUA_COMPAT_FIND
-
-/*
 @@ LUA_COMPAT_GFIND controls compatibility with old 'string.gfind' name.
 ** CHANGE it to undefined as soon as you rename 'string.gfind' to
 ** 'string.gmatch'.
 */
 #define LUA_COMPAT_GFIND
-
 
 /*
 @@ LUA_COMPAT_OPENLIB controls compatibility with old 'luaL_openlib'

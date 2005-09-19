@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.122 2005/08/15 14:12:32 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.123 2005/08/26 17:36:32 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -516,12 +516,7 @@ static int str_find_aux (lua_State *L, int find) {
         if (find) {
           lua_pushinteger(L, s1-s+1);  /* start */
           lua_pushinteger(L, res-s);   /* end */
-#if defined(LUA_COMPAT_FIND)
           return push_captures(&ms, NULL, 0) + 2;
-#else
-          return 2;
-#endif
-
         }
         else
           return push_captures(&ms, s1, res);
