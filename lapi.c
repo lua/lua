@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.48 2005/09/01 17:42:22 roberto Exp roberto $
+** $Id: lapi.c,v 2.49 2005/09/14 17:44:48 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -992,8 +992,20 @@ LUA_API void lua_concat (lua_State *L, int n) {
 
 
 LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud) {
+  lua_Alloc f;
+  lua_lock(L);
   if (ud) *ud = G(L)->ud;
-  return G(L)->frealloc;
+  f = G(L)->frealloc;
+  lua_unlock(L);
+  return f;
+}
+
+
+LUA_API void lua_setallocf (lua_State *L, lua_Alloc f, void *ud) {
+  lua_lock(L);
+  G(L)->ud = ud;
+  G(L)->frealloc = f;
+  lua_unlock(L);
 }
 
 
