@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.15 2005/08/17 18:32:09 roberto Exp $
+** $Id: lcode.c,v 2.16 2005/08/29 20:49:21 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -29,14 +29,17 @@
 
 void luaK_nil (FuncState *fs, int from, int n) {
   Instruction *previous;
-  if (fs->pc > fs->lasttarget &&  /* no jumps to current position? */
-      GET_OPCODE(*(previous = &fs->f->code[fs->pc-1])) == OP_LOADNIL) {
-    int pfrom = GETARG_A(*previous);
-    int pto = GETARG_B(*previous);
-    if (pfrom <= from && from <= pto+1) {  /* can connect both? */
-      if (from+n-1 > pto)
-        SETARG_B(*previous, from+n-1);
-      return;
+  if (fs->pc > fs->lasttarget) {  /* no jumps to current position? */
+    if (fs->pc == 0)  /* function start? */
+      return;  /* positions are already clean */
+    if (GET_OPCODE(*(previous = &fs->f->code[fs->pc-1])) == OP_LOADNIL) {
+      int pfrom = GETARG_A(*previous);
+      int pto = GETARG_B(*previous);
+      if (pfrom <= from && from <= pto+1) {  /* can connect both? */
+        if (from+n-1 > pto)
+          SETARG_B(*previous, from+n-1);
+        return;
+      }
     }
   }
   luaK_codeABC(fs, OP_LOADNIL, from, from+n-1, 0);  /* else no optimization */
