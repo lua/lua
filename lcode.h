@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.44 2005/05/20 15:53:42 roberto Exp $
+** $Id: lcode.h,v 1.45 2005/08/29 20:49:21 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -24,7 +24,7 @@
 ** grep "ORDER OPR" if you change these enums
 */
 typedef enum BinOpr {
-  OPR_ADD, OPR_SUB, OPR_MULT, OPR_DIV, OPR_MOD, OPR_POW,
+  OPR_ADD, OPR_SUB, OPR_MUL, OPR_DIV, OPR_MOD, OPR_POW,
   OPR_CONCAT,
   OPR_NE, OPR_EQ,
   OPR_LT, OPR_LE, OPR_GT, OPR_GE,
@@ -37,7 +37,7 @@ typedef enum BinOpr {
 typedef enum UnOpr { OPR_MINUS, OPR_NOT, OPR_LEN, OPR_NOUNOPR } UnOpr;
 
 
-#define getcode(fs,e)	((fs)->f->code[(e)->info])
+#define getcode(fs,e)	((fs)->f->code[(e)->u.s.info])
 
 #define luaK_codeAsBx(fs,o,A,sBx)	luaK_codeABx(fs,o,A,(sBx)+MAXARG_sBx)
 

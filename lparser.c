@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.35 2005/08/29 20:49:21 roberto Exp roberto $
+** $Id: lparser.c,v 2.36 2005/09/30 14:21:56 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -144,7 +144,7 @@ static TString *str_checkname (LexState *ls) {
 static void init_exp (expdesc *e, expkind k, int i) {
   e->f = e->t = NO_JUMP;
   e->k = k;
-  e->info = i;
+  e->u.s.info = i;
 }
 
 
@@ -203,7 +203,7 @@ static int indexupvalue (FuncState *fs, TString *name, expdesc *v) {
   Proto *f = fs->f;
   int oldsize = f->sizeupvalues;
   for (i=0; i<f->nups; i++) {
-    if (fs->upvalues[i].k == v->k && fs->upvalues[i].info == v->info) {
+    if (fs->upvalues[i].k == v->k && fs->upvalues[i].info == v->u.s.info) {
       lua_assert(f->upvalues[i] == name);
       return i;
     }
@@ -217,7 +217,7 @@ static int indexupvalue (FuncState *fs, TString *name, expdesc *v) {
   luaC_objbarrier(fs->L, f, name);
   lua_assert(v->k == VLOCAL || v->k == VUPVAL);
   fs->upvalues[f->nups].k = cast(lu_byte, v->k);
-  fs->upvalues[f->nups].info = cast(lu_byte, v->info);
+  fs->upvalues[f->nups].info = cast(lu_byte, v->u.s.info);
   return f->nups++;
 }
 
@@ -255,7 +255,7 @@ static int singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
     else {  /* not found at current level; try upper one */
       if (singlevaraux(fs->prev, n, var, 0) == VGLOBAL)
         return VGLOBAL;
-      var->info = indexupvalue(fs, n, var);  /* else was LOCAL or UPVAL */
+      var->u.s.info = indexupvalue(fs, n, var);  /* else was LOCAL or UPVAL */
       var->k = VUPVAL;  /* upvalue in this level */
       return VUPVAL;
     }
@@ -267,7 +267,7 @@ static void singlevar (LexState *ls, expdesc *var) {
   TString *varname = str_checkname(ls);
   FuncState *fs = ls->fs;
   if (singlevaraux(fs, varname, var, 1) == VGLOBAL)
-    var->info = luaK_stringK(fs, varname);  /* info points to global name */
+    var->u.s.info = luaK_stringK(fs, varname);  /* info points to global name */
 }
 
 
@@ -472,8 +472,8 @@ static void recfield (LexState *ls, struct ConsControl *cc) {
   checknext(ls, '=');
   luaK_exp2RK(fs, &key);
   expr(ls, &val);
-  luaK_codeABC(fs, OP_SETTABLE, cc->t->info, luaK_exp2RK(fs, &key),
-                                             luaK_exp2RK(fs, &val));
+  luaK_codeABC(fs, OP_SETTABLE, cc->t->u.s.info, luaK_exp2RK(fs, &key),
+                                                 luaK_exp2RK(fs, &val));
   fs->freereg = reg;  /* free registers */
 }
 
@@ -483,7 +483,7 @@ static void closelistfield (FuncState *fs, struct ConsControl *cc) {
   luaK_exp2nextreg(fs, &cc->v);
   cc->v.k = VVOID;
   if (cc->tostore == LFIELDS_PER_FLUSH) {
-    luaK_setlist(fs, cc->t->info, cc->na, cc->tostore);  /* flush */
+    luaK_setlist(fs, cc->t->u.s.info, cc->na, cc->tostore);  /* flush */
     cc->tostore = 0;  /* no more items pending */
   }
 }
@@ -493,13 +493,13 @@ static void lastlistfield (FuncState *fs, struct ConsControl *cc) {
   if (cc->tostore == 0) return;
   if (hasmultret(cc->v.k)) {
     luaK_setmultret(fs, &cc->v);
-    luaK_setlist(fs, cc->t->info, cc->na, LUA_MULTRET);
+    luaK_setlist(fs, cc->t->u.s.info, cc->na, LUA_MULTRET);
     cc->na--;  /* do not count last expression (unknown number of elements) */
   }
   else {
     if (cc->v.k != VVOID)
       luaK_exp2nextreg(fs, &cc->v);
-    luaK_setlist(fs, cc->t->info, cc->na, cc->tostore);
+    luaK_setlist(fs, cc->t->u.s.info, cc->na, cc->tostore);
   }
 }
 
@@ -657,7 +657,7 @@ static void funcargs (LexState *ls, expdesc *f) {
     }
   }
   lua_assert(f->k == VNONRELOC);
-  base = f->info;  /* base register for call */
+  base = f->u.s.info;  /* base register for call */
   if (hasmultret(args.k))
     nparams = LUA_MULTRET;  /* open call */
   else {
@@ -746,7 +746,8 @@ static void simpleexp (LexState *ls, expdesc *v) {
                   constructor | FUNCTION body | primaryexp */
   switch (ls->t.token) {
     case TK_NUMBER: {
-      init_exp(v, VK, luaK_numberK(ls->fs, ls->t.seminfo.r));
+      init_exp(v, VKNUM, 0);
+      v->u.nval = ls->t.seminfo.r;
       break;
     }
     case TK_STRING: {
@@ -805,7 +806,7 @@ static BinOpr getbinopr (int op) {
   switch (op) {
     case '+': return OPR_ADD;
     case '-': return OPR_SUB;
-    case '*': return OPR_MULT;
+    case '*': return OPR_MUL;
     case '/': return OPR_DIV;
     case '%': return OPR_MOD;
     case '^': return OPR_POW;
@@ -927,18 +928,18 @@ static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
   int conflict = 0;
   for (; lh; lh = lh->prev) {
     if (lh->v.k == VINDEXED) {
-      if (lh->v.info == v->info) {  /* conflict? */
+      if (lh->v.u.s.info == v->u.s.info) {  /* conflict? */
         conflict = 1;
-        lh->v.info = extra;  /* previous assignment will use safe copy */
+        lh->v.u.s.info = extra;  /* previous assignment will use safe copy */
       }
-      if (lh->v.aux == v->info) {  /* conflict? */
+      if (lh->v.u.s.aux == v->u.s.info) {  /* conflict? */
         conflict = 1;
-        lh->v.aux = extra;  /* previous assignment will use safe copy */
+        lh->v.u.s.aux = extra;  /* previous assignment will use safe copy */
       }
     }
   }
   if (conflict) {
-    luaK_codeABC(fs, OP_MOVE, fs->freereg, v->info, 0);  /* make copy */
+    luaK_codeABC(fs, OP_MOVE, fs->freereg, v->u.s.info, 0);  /* make copy */
     luaK_reserveregs(fs, 1);
   }
 }
