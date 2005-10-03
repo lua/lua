@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.182 2005/08/26 17:36:32 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.183 2005/09/16 18:22:48 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -561,7 +561,7 @@ static int luaB_costatus (lua_State *L) {
             lua_pushliteral(L, "dead");
         else
           lua_pushliteral(L, "suspended");  /* initial state */
-        break;  
+        break;
       }
       default:  /* some error occured */
         lua_pushliteral(L, "dead");
@@ -602,8 +602,11 @@ static void auxopen (lua_State *L, const char *name,
 
 
 static void base_open (lua_State *L) {
+  /* set global _G */
   lua_pushvalue(L, LUA_GLOBALSINDEX);
-  luaL_register(L, NULL, base_funcs);  /* open lib into global table */
+  lua_setglobal(L, "_G");
+  /* open lib into global table */
+  luaL_register(L, "_G", base_funcs);
   lua_pushliteral(L, LUA_VERSION);
   lua_setglobal(L, "_VERSION");  /* set global _VERSION */
   /* `ipairs' and `pairs' need auxiliary functions as upvalues */
@@ -617,12 +620,6 @@ static void base_open (lua_State *L) {
   lua_setfield(L, -2, "__mode");  /* metatable(w).__mode = "kv" */
   lua_pushcclosure(L, luaB_newproxy, 1);
   lua_setglobal(L, "newproxy");  /* set global `newproxy' */
-  /* create register._LOADED to track loaded modules */
-  lua_newtable(L);
-  lua_setfield(L, LUA_REGISTRYINDEX, "_LOADED");
-  /* set global _G */
-  lua_pushvalue(L, LUA_GLOBALSINDEX);
-  lua_setglobal(L, "_G");
 }
 
 
