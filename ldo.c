@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.32 2005/08/24 16:15:49 roberto Exp roberto $
+** $Id: ldo.c,v 2.33 2005/09/09 18:16:28 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -316,13 +316,11 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     lua_unlock(L);
     n = (*curr_func(L)->c.f)(L);  /* do the actual call */
     lua_lock(L);
-    if (n >= 0) {  /* no yielding? */
+    if (n < 0)  /* yielding? */
+      return PCRYIELD;
+    else {
       luaD_poscall(L, L->top - n);
       return PCRC;
-    }
-    else {
-      ci->nresults = nresults;
-      return PCRYIELD;
     }
   }
 }
