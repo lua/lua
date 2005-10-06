@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.31 2005/09/14 17:48:57 roberto Exp roberto $
+** $Id: ltests.c,v 2.32 2005/09/20 17:55:10 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -725,6 +725,7 @@ static int loadlib (lua_State *L) {
     {"mathlibopen", luaopen_math},
     {"strlibopen", luaopen_string},
     {"tablibopen", luaopen_table},
+    {"packageopen", luaopen_package},
     {NULL, NULL}
   };
   lua_State *L1 = cast(lua_State *,
