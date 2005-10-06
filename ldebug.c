@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.25 2005/07/11 13:59:03 roberto Exp roberto $
+** $Id: ldebug.c,v 2.26 2005/08/04 13:37:38 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -321,7 +321,7 @@ static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
   last = pt->sizecode-1;  /* points to final return (a `neutral' instruction) */
   check(precheck(pt));
   for (pc = 0; pc < lastpc; pc++) {
-    const Instruction i = pt->code[pc];
+    Instruction i = pt->code[pc];
     OpCode op = GET_OPCODE(i);
     int a = GETARG_A(i);
     int b = 0;
@@ -348,7 +348,7 @@ static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
           check(0 <= dest && dest < pt->sizecode);
           if (dest > 0) {
             /* cannot jump to a setlist count */
-            const Instruction d = pt->code[dest-1];
+            Instruction d = pt->code[dest-1];
             check(!(GET_OPCODE(d) == OP_SETLIST && GETARG_C(d) == 0));
           }
         }
