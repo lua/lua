@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.55 2005/09/09 18:23:35 roberto Exp roberto $
+** $Id: lvm.c,v 2.56 2005/10/03 14:01:26 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -593,18 +593,18 @@ void luaV_execute (lua_State *L, int nexeccalls) {
         continue;
       }
       case OP_TEST: {
-        if (l_isfalse(ra) == GETARG_C(i)) pc++;
-        else
-          dojump(L, pc, GETARG_sBx(*pc) + 1);
+        if (l_isfalse(ra) != GETARG_C(i))
+          dojump(L, pc, GETARG_sBx(*pc));
+        pc++;
         continue;
       }
       case OP_TESTSET: {
         TValue *rb = RB(i);
-        if (l_isfalse(rb) == GETARG_C(i)) pc++;
-        else {
+        if (l_isfalse(rb) != GETARG_C(i)) {
           setobjs2s(L, ra, rb);
-          dojump(L, pc, GETARG_sBx(*pc) + 1);
+          dojump(L, pc, GETARG_sBx(*pc));
         }
+        pc++;
         continue;
       }
       case OP_CALL: {
@@ -710,12 +710,11 @@ void luaV_execute (lua_State *L, int nexeccalls) {
         Protect(luaD_call(L, cb, GETARG_C(i)));
         L->top = L->ci->top;
         cb = RA(i) + 3;  /* previous call may change the stack */
-        if (ttisnil(cb))  /* break loop? */
-          pc++;  /* skip jump (break loop) */
-        else {
+        if (!ttisnil(cb)) {  /* continue loop? */
           setobjs2s(L, cb-1, cb);  /* save control variable */
-          dojump(L, pc, GETARG_sBx(*pc) + 1);  /* jump back */
+          dojump(L, pc, GETARG_sBx(*pc));  /* jump back */
         }
+        pc++;
         continue;
       }
       case OP_SETLIST: {
