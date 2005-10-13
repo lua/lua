@@ -123,20 +123,22 @@ static int need_value (FuncState *fs, int list) {
 }
 
 
-static void patchtestreg (Instruction *i, int reg) {
-  if (reg != NO_REG)
+static int patchtestreg (FuncState *fs, int node, int reg) {
+  Instruction *i = getjumpcontrol(fs, node);
+  if (GET_OPCODE(*i) != OP_TESTSET)
+    return 0;  /* cannot patch other instructions */
+  if (reg != NO_REG && reg != GETARG_B(*i))
     SETARG_A(*i, reg);
-  else  /* no register to put value; change TESTSET to TEST */
+  else  /* no register to put value or register already has the value */
     *i = CREATE_ABC(OP_TEST, GETARG_B(*i), 0, GETARG_C(*i));
+
+  return 1;
 }
 
 
 static void removevalues (FuncState *fs, int list) {
-  for (; list != NO_JUMP; list = getjump(fs, list)) {
-    Instruction *i = getjumpcontrol(fs, list);
-    if (GET_OPCODE(*i) == OP_TESTSET)
-      patchtestreg(i, NO_REG);
-  }
+  for (; list != NO_JUMP; list = getjump(fs, list))
+      patchtestreg(fs, list, NO_REG);
 }
 
 
@@ -144,11 +146,8 @@ static void patchlistaux (FuncState *fs, int list, int vtarget, int reg,
                           int dtarget) {
   while (list != NO_JUMP) {
     int next = getjump(fs, list);
-    Instruction *i = getjumpcontrol(fs, list);
-    if (GET_OPCODE(*i) == OP_TESTSET) {
-      patchtestreg(i, reg);
+    if (patchtestreg(fs, list, reg))
       fixjump(fs, list, vtarget);
-    }
     else
       fixjump(fs, list, dtarget);  /* jump to default target */
     list = next;
@@ -392,9 +391,7 @@ static void exp2reg (FuncState *fs, expdesc *e, int reg) {
     int p_f = NO_JUMP;  /* position of an eventual LOAD false */
     int p_t = NO_JUMP;  /* position of an eventual LOAD true */
     if (need_value(fs, e->t) || need_value(fs, e->f)) {
-      int fj = NO_JUMP;  /* first jump (over LOAD ops.) */
-      if (e->k != VJMP)
-        fj = luaK_jump(fs);
+      int fj = (e->k == VJMP) ? NO_JUMP : luaK_jump(fs);
       p_f = code_label(fs, reg, 0, 1);
       p_t = code_label(fs, reg, 1, 0);
       luaK_patchtohere(fs, fj);
