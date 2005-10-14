@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.33 2005/09/09 18:16:28 roberto Exp roberto $
+** $Id: ldo.c,v 2.34 2005/10/06 20:44:22 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -426,6 +426,7 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
   if (status != 0) {  /* error? */
     L->status = cast(lu_byte, status);  /* mark thread as `dead' */
     luaD_seterrorobj(L, status, L->top);
+    L->ci->top = L->top;
   }
   else
     status = L->status;
