@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.150 2005/09/06 17:19:33 roberto Exp roberto $
+** $Id: lua.c,v 1.151 2005/10/14 18:15:46 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -42,13 +42,13 @@ static void laction (int i) {
 static void print_usage (void) {
   fprintf(stderr,
   "usage: %s [options] [script [args]].\n"
-  "'script' is a filename or '-' to execute stdin\n"
   "Available options are:\n"
   "  -e stat  execute string " LUA_QL("stat") "\n"
   "  -l name  require library " LUA_QL("name") "\n"
   "  -i       enter interactive mode after executing " LUA_QL("script") "\n"
   "  -v       show version information\n"
   "  --       stop handling options\n"
+  "  -        execute stdin and stop handling options\n"
   ,
   progname);
   fflush(stderr);
