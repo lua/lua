@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.46 2005/10/03 14:36:45 roberto Exp roberto $
+** $Id: loadlib.c,v 1.47 2005/10/06 20:46:10 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -442,7 +442,8 @@ static int loader_preload (lua_State *L) {
 }
 
 
-static const int sentinel = 0;
+static const int sentinel_ = 0;
+#define sentinel	((void *)&sentinel_)
 
 
 static int ll_require (lua_State *L) {
@@ -452,7 +453,7 @@ static int ll_require (lua_State *L) {
   lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
   lua_getfield(L, 2, name);
   if (lua_toboolean(L, -1)) {  /* is it there? */
-    if (lua_touserdata(L, -1) == &sentinel)  /* check loops */
+    if (lua_touserdata(L, -1) == sentinel)  /* check loops */
       luaL_error(L, "loop or previous error loading module " LUA_QS, name);
     return 1;  /* package is already loaded */
   }
@@ -469,14 +470,14 @@ static int ll_require (lua_State *L) {
     if (lua_isnil(L, -1)) lua_pop(L, 1);  /* did not found module */
     else break;  /* module loaded successfully */
   }
-  lua_pushlightuserdata(L, (void *)&sentinel);
+  lua_pushlightuserdata(L, sentinel);
   lua_setfield(L, 2, name);  /* _LOADED[name] = sentinel */
   lua_pushstring(L, name);  /* pass name as argument to module */
   lua_call(L, 1, 1);  /* run loaded module */
   if (!lua_isnil(L, -1))  /* non-nil return? */
     lua_setfield(L, 2, name);  /* _LOADED[name] = returned value */
   lua_getfield(L, 2, name);
-  if (lua_touserdata(L, -1) == &sentinel) {   /* module did not set a value? */
+  if (lua_touserdata(L, -1) == sentinel) {   /* module did not set a value? */
     lua_pushboolean(L, 1);  /* use true as result */
     lua_pushvalue(L, -1);  /* extra copy to be returned */
     lua_setfield(L, 2, name);  /* _LOADED[name] = true */
