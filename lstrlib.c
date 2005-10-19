@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.123 2005/08/26 17:36:32 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.124 2005/09/19 13:49:12 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -111,7 +111,9 @@ static int str_byte (lua_State *L) {
   if (posi <= 0) posi = 1;
   if ((size_t)pose > l) pose = l;
   if (posi > pose) return 0;  /* empty interval; return no values */
-  n = pose -  posi + 1;
+  n = (int)(pose -  posi + 1);
+  if (posi + n <= pose)  /* overflow? */
+    luaL_error(L, "string slice too long");
   luaL_checkstack(L, n, "string slice too long");
   for (i=0; i<n; i++)
     lua_pushinteger(L, uchar(s[posi+i-1]));

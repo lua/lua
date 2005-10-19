@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.67 2005/08/26 17:36:32 roberto Exp roberto $
+** $Id: liolib.c,v 2.68 2005/10/14 16:24:11 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -424,7 +424,7 @@ static int f_seek (lua_State *L) {
   static const char *const modenames[] = {"set", "cur", "end", NULL};
   FILE *f = tofile(L);
   int op = luaL_checkoption(L, 2, "cur", modenames);
-  lua_Integer offset = luaL_optinteger(L, 3, 0);
+  long offset = luaL_optlong(L, 3, 0);
   op = fseek(f, offset, mode[op]);
   if (op)
     return pushresult(L, 0, NULL);  /* error */
