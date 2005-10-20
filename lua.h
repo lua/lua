@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.212 2005/08/25 20:02:08 roberto Exp roberto $
+** $Id: lua.h,v 1.213 2005/09/20 17:55:10 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -221,9 +221,10 @@ LUA_API int  (lua_status) (lua_State *L);
 #define LUA_GCRESTART		1
 #define LUA_GCCOLLECT		2
 #define LUA_GCCOUNT		3
-#define LUA_GCSTEP		4
-#define LUA_GCSETPAUSE		5
-#define LUA_GCSETSTEPMUL	6
+#define LUA_GCCOUNTB		4
+#define LUA_GCSTEP		5
+#define LUA_GCSETPAUSE		6
+#define LUA_GCSETSTEPMUL	7
 
 LUA_API int (lua_gc) (lua_State *L, int what, int data);
 

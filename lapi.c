@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.49 2005/09/14 17:44:48 roberto Exp roberto $
+** $Id: lapi.c,v 2.50 2005/09/20 17:55:10 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -911,6 +911,10 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
     case LUA_GCCOUNT: {
       /* GC values are expressed in Kbytes: #bytes/2^10 */
       res = cast(int, g->totalbytes >> 10);
+      break;
+    }
+    case LUA_GCCOUNTB: {
+      res = cast(int, g->totalbytes & 0x3ff);
       break;
     }
     case LUA_GCSTEP: {

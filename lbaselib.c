@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.183 2005/09/16 18:22:48 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.184 2005/10/03 14:36:45 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -196,9 +196,23 @@ static int luaB_collectgarbage (lua_State *L) {
   static const int optsnum[] = {LUA_GCSTOP, LUA_GCRESTART, LUA_GCCOLLECT,
     LUA_GCCOUNT, LUA_GCSTEP, LUA_GCSETPAUSE, LUA_GCSETSTEPMUL};
   int o = luaL_checkoption(L, 1, "collect", opts);
-  int ex = luaL_optinteger(L, 2, 0);
-  lua_pushinteger(L, lua_gc(L, optsnum[o], ex));
-  return 1;
+  int ex = luaL_optint(L, 2, 0);
+  int res = lua_gc(L, optsnum[o], ex);
+  switch (optsnum[o]) {
+    case LUA_GCCOUNT: {
+      int b = lua_gc(L, LUA_GCCOUNTB, 0);
+      lua_pushnumber(L, ((lua_Number)res*1024 + b)/1000);
+      return 1;
+    }
+    case LUA_GCSTEP: {
+      lua_pushboolean(L, res);
+      return 1;
+    }
+    default: {
+      lua_pushnumber(L, res);
+      return 1;
+    }
+  }
 }
 
 
