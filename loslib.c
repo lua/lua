@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.12 2005/08/26 17:36:32 roberto Exp roberto $
+** $Id: loslib.c,v 1.13 2005/09/09 18:22:46 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -125,8 +125,8 @@ static int getfield (lua_State *L, const char *key, int d) {
 
 static int io_date (lua_State *L) {
   const char *s = luaL_optstring(L, 1, "%c");
-  lua_Number n = luaL_optnumber(L, 2, -1);
-  time_t t = (n == -1) ? time(NULL) : (time_t)n;
+  time_t t = lua_isnoneornil(L, 2) ? time(NULL) :
+                                     (time_t)luaL_checknumber(L, 2);
   struct tm *stm;
   if (*s == '!') {  /* UTC? */
     stm = gmtime(&t);

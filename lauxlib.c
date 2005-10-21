@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.154 2005/10/19 13:05:11 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.155 2005/10/20 11:35:25 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -176,8 +176,7 @@ LUALIB_API lua_Number luaL_checknumber (lua_State *L, int narg) {
 
 
 LUALIB_API lua_Number luaL_optnumber (lua_State *L, int narg, lua_Number def) {
-  if (lua_isnoneornil(L, narg)) return def;
-  else return luaL_checknumber(L, narg);
+  return luaL_opt(L, luaL_checknumber, narg, def);
 }
 
 
@@ -190,9 +189,8 @@ LUALIB_API lua_Integer luaL_checkinteger (lua_State *L, int narg) {
 
 
 LUALIB_API lua_Integer luaL_optinteger (lua_State *L, int narg,
-                                        lua_Integer def) {
-  if (lua_isnoneornil(L, narg)) return def;
-  else return luaL_checkinteger(L, narg);
+                                                      lua_Integer def) {
+  return luaL_opt(L, luaL_checkinteger, narg, def);
 }
 
 
