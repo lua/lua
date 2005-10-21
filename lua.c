@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.151 2005/10/14 18:15:46 roberto Exp roberto $
+** $Id: lua.c,v 1.152 2005/10/14 18:34:23 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -100,6 +100,8 @@ static int docall (lua_State *L, int narg, int clear) {
   status = lua_pcall(L, narg, (clear ? 0 : LUA_MULTRET), base);
   signal(SIGINT, SIG_DFL);
   lua_remove(L, base);  /* remove traceback function */
+  /* force a complete garbage collection in case of errors */
+  if (status != 0) lua_gc(L, LUA_GCCOLLECT, 0);
   return status;
 }
 
