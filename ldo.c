@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.34 2005/10/06 20:44:22 roberto Exp roberto $
+** $Id: ldo.c,v 2.35 2005/10/14 16:23:33 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -276,8 +276,11 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     Proto *p = cl->p;
     luaD_checkstack(L, p->maxstacksize);
     func = restorestack(L, funcr);
-    if (!p->is_vararg)  /* no varargs? */
+    if (!p->is_vararg) {  /* no varargs? */
       base = func + 1;
+      if (L->top > base + p->numparams)
+        L->top = base + p->numparams;
+    }
     else {  /* vararg function */
       int nargs = cast(int, L->top - func) - 1;
       base = adjust_varargs(L, p, nargs);
