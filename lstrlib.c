@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.124 2005/09/19 13:49:12 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.125 2005/10/19 13:05:11 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -462,28 +462,32 @@ static const char *lmemfind (const char *s1, size_t l1,
 }
 
 
-static void push_onecapture (MatchState *ms, int i) {
-  ptrdiff_t l = ms->capture[i].len;
-  if (l == CAP_UNFINISHED) luaL_error(ms->L, "unfinished capture");
-  if (l == CAP_POSITION)
-    lua_pushinteger(ms->L, ms->capture[i].init - ms->src_init + 1);
-  else
-    lua_pushlstring(ms->L, ms->capture[i].init, l);
+static void push_onecapture (MatchState *ms, int i, const char *s,
+                                                    const char *e) {
+  if (i >= ms->level) {
+    if (i == 0)  /* ms->level == 0, too */
+      lua_pushlstring(ms->L, s, e - s);  /* add whole match */
+    else
+      luaL_error(ms->L, "invalid capture index");
+  }
+  else {
+    ptrdiff_t l = ms->capture[i].len;
+    if (l == CAP_UNFINISHED) luaL_error(ms->L, "unfinished capture");
+    if (l == CAP_POSITION)
+      lua_pushinteger(ms->L, ms->capture[i].init - ms->src_init + 1);
+    else
+      lua_pushlstring(ms->L, ms->capture[i].init, l);
+  }
 }
 
 
 static int push_captures (MatchState *ms, const char *s, const char *e) {
   int i;
-  luaL_checkstack(ms->L, ms->level, "too many captures");
-  if (ms->level == 0 && s) {  /* no explicit captures? */
-    lua_pushlstring(ms->L, s, e-s);  /* return whole match */
-    return 1;
-  }
-  else {  /* return all captures */
-    for (i=0; i<ms->level; i++)
-      push_onecapture(ms, i);
-    return ms->level;  /* number of strings pushed */
-  }
+  int nlevels = (ms->level == 0 && s) ? 1 : ms->level;
+  luaL_checkstack(ms->L, nlevels, "too many captures");
+  for (i = 0; i < nlevels; i++)
+    push_onecapture(ms, i, s, e);
+  return nlevels;  /* number of strings pushed */
 }
 
 
@@ -582,42 +586,61 @@ static int gfind_nodef (lua_State *L) {
 }
 
 
-static void add_s (MatchState *ms, luaL_Buffer *b,
-                   const char *s, const char *e) {
-  lua_State *L = ms->L;
-  if (lua_isstring(L, 3)) {
-    size_t l;
-    const char *news = lua_tolstring(L, 3, &l);
-    size_t i;
-    for (i=0; i<l; i++) {
-      if (news[i] != L_ESC)
+static void add_s (MatchState *ms, luaL_Buffer *b, const char *s,
+                                                   const char *e) {
+  size_t l, i;
+  const char *news = lua_tolstring(ms->L, 3, &l);
+  for (i = 0; i < l; i++) {
+    if (news[i] != L_ESC)
+      luaL_addchar(b, news[i]);
+    else {
+      i++;  /* skip ESC */
+      if (!isdigit(uchar(news[i])))
         luaL_addchar(b, news[i]);
+      else if (news[i] == '0')
+          luaL_addlstring(b, s, e - s);
       else {
-        i++;  /* skip ESC */
-        if (!isdigit(uchar(news[i])))
-          luaL_addchar(b, news[i]);
-        else {
-          if (news[i] == '0')
-            lua_pushlstring(L, s, e - s);  /* add whole match */
-          else {
-            int level = check_capture(ms, news[i]);
-            push_onecapture(ms, level);
-          }
-          luaL_addvalue(b);  /* add capture to accumulated result */
-        }
+        push_onecapture(ms, news[i] - '1', s, e);
+        luaL_addvalue(b);  /* add capture to accumulated result */
       }
     }
   }
-  else {  /* is a function */
-    int n;
-    lua_pushvalue(L, 3);
-    n = push_captures(ms, s, e);
-    lua_call(L, n, 1);
-    if (lua_isstring(L, -1))
-      luaL_addvalue(b);  /* add return to accumulated result */
-    else
-      lua_pop(L, 1);  /* function result is not a string: pop it */
+}
+
+
+static void add_value (MatchState *ms, luaL_Buffer *b, const char *s,
+                                                       const char *e) {
+  lua_State *L = ms->L;
+  switch (lua_type(L, 3)) {
+    case LUA_TNUMBER:
+    case LUA_TSTRING: {
+      add_s(ms, b, s, e);
+      return;
+    }
+    case LUA_TFUNCTION: {
+      int n;
+      lua_pushvalue(L, 3);
+      n = push_captures(ms, s, e);
+      lua_call(L, n, 1);
+      break;
+    }
+    case LUA_TTABLE: {
+      push_onecapture(ms, 0, s, e);
+      lua_gettable(L, 3);
+      break;
+    }
+    default: {
+      luaL_argerror(L, 3, "string/function/table expected"); 
+      return;
+    }
   }
+  if (!lua_toboolean(L, -1)) {  /* nil or false? */
+    lua_pop(L, 1);
+    lua_pushlstring(L, s, e - s);  /* keep original text */
+  }
+  else if (!lua_isstring(L, -1))
+    luaL_error(L, "invalid replacement value"); 
+  luaL_addvalue(b);  /* add result to accumulator */
 }
 
 
@@ -630,9 +653,6 @@ static int str_gsub (lua_State *L) {
   int n = 0;
   MatchState ms;
   luaL_Buffer b;
-  luaL_argcheck(L,
-    lua_gettop(L) >= 3 && (lua_isstring(L, 3) || lua_isfunction(L, 3)),
-    3, "string or function expected");
   luaL_buffinit(L, &b);
   ms.L = L;
   ms.src_init = src;
@@ -643,7 +663,7 @@ static int str_gsub (lua_State *L) {
     e = match(&ms, src, p);
     if (e) {
       n++;
-      add_s(&ms, &b, src, e);
+      add_value(&ms, &b, src, e);
     }
     if (e && e>src) /* non empty match? */
       src = e;  /* skip it */
