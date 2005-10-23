@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.36 2005/09/20 17:56:47 roberto Exp roberto $
+** $Id: ltablib.c,v 1.37 2005/10/21 13:47:42 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -90,16 +90,23 @@ static int setn (lua_State *L) {
 static int tinsert (lua_State *L) {
   int e = aux_getn(L, 1) + 1;  /* first empty element */
   int pos;  /* where to insert new element */
-  if (lua_isnone(L, 3))  /* called with only 2 arguments */
-    pos = e;  /* insert new element at the end */
-  else {
-    int i;
-    pos = luaL_checkint(L, 2);  /* 2nd argument is the position */
-    if (pos > e) e = pos;  /* `grow' array if necessary */
-    lua_settop(L, 3);  /* function may be called with more than 3 args */
-    for (i = e; i > pos; i--) {  /* move up elements */
-      lua_rawgeti(L, 1, i-1);
-      lua_rawseti(L, 1, i);  /* t[i] = t[i-1] */
+  switch (lua_gettop(L)) {
+    case 2: {  /* called with only 2 arguments */
+      pos = e;  /* insert new element at the end */
+      break;
+    }
+    case 3: {
+      int i;
+      pos = luaL_checkint(L, 2);  /* 2nd argument is the position */
+      if (pos > e) e = pos;  /* `grow' array if necessary */
+      for (i = e; i > pos; i--) {  /* move up elements */
+        lua_rawgeti(L, 1, i-1);
+        lua_rawseti(L, 1, i);  /* t[i] = t[i-1] */
+      }
+      break;
+    }
+    default: {
+      return luaL_error(L, "wrong number of arguments to " LUA_QL("insert"));
     }
   }
   luaL_setn(L, 1, e);  /* new size */
