@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.16 2005/06/13 14:15:54 roberto Exp roberto $
+** $Id: lobject.h,v 2.17 2005/06/13 14:19:00 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -353,7 +353,7 @@ typedef struct Table {
 ** `module' operation for hashing (size is always a power of 2)
 */
 #define lmod(s,size) \
-	check_exp((size&(size-1))==0, (cast(int, (s) & ((size)-1))))
+	(check_exp((size&(size-1))==0, (cast(int, (s) & ((size)-1)))))
 
 
 #define twoto(x)	(1<<(x))
