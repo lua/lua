@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.17 2005/09/30 14:23:33 roberto Exp roberto $
+** $Id: lcode.c,v 2.19 2005/10/13 12:21:51 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -27,7 +27,7 @@
 #define hasjumps(e)	((e)->t != (e)->f)
 
 
-static int isnumeral(FuncState *fs, expdesc *e)	{
+static int isnumeral(expdesc *e) {
   return (e->k == VKNUM && e->t == NO_JUMP && e->f == NO_JUMP);
 }
 
@@ -627,21 +627,21 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
 }
 
 
-static int constfolding (FuncState *fs, OpCode op, expdesc *e1, expdesc *e2) {
+static int constfolding (OpCode op, expdesc *e1, expdesc *e2) {
   lua_Number v1, v2, r;
-  if (!isnumeral(fs, e1) || !isnumeral(fs, e2)) return 0;
+  if (!isnumeral(e1) || !isnumeral(e2)) return 0;
   v1 = e1->u.nval;
   v2 = e2->u.nval;
   switch (op) {
-    case OP_ADD: r = luai_numadd(fs->L, v1, v2); break;
-    case OP_SUB: r = luai_numsub(fs->L, v1, v2); break;
-    case OP_MUL: r = luai_nummul(fs->L, v1, v2); break;
+    case OP_ADD: r = luai_numadd(v1, v2); break;
+    case OP_SUB: r = luai_numsub(v1, v2); break;
+    case OP_MUL: r = luai_nummul(v1, v2); break;
     case OP_DIV:
       if (v2 == 0) return 0;  /* do not attempt to divide by 0 */
-      r = luai_numdiv(fs->L, v1, v2); break;
-    case OP_MOD: r = luai_nummod(fs->L, v1, v2); break;
-    case OP_POW: r = luai_numpow(fs->L, v1, v2); break;
-    case OP_UNM: r = luai_numunm(fs->L, v1); break;
+      r = luai_numdiv(v1, v2); break;
+    case OP_MOD: r = luai_nummod(v1, v2); break;
+    case OP_POW: r = luai_numpow(v1, v2); break;
+    case OP_UNM: r = luai_numunm(v1); break;
     case OP_LEN: return 0;  /* no constant folding for 'len' */
     default: lua_assert(0); r = 0; break;
   }
@@ -652,7 +652,7 @@ static int constfolding (FuncState *fs, OpCode op, expdesc *e1, expdesc *e2) {
 
 
 static void codearith (FuncState *fs, OpCode op, expdesc *e1, expdesc *e2) {
-  if (constfolding(fs, op, e1, e2))
+  if (constfolding(op, e1, e2))
     return;
   else {
     int o1 = luaK_exp2RK(fs, e1);
@@ -717,7 +717,7 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
       break;
     }
     default: {
-      if (!isnumeral(fs, v)) luaK_exp2RK(fs, v);
+      if (!isnumeral(v)) luaK_exp2RK(fs, v);
       break;
     }
   }
