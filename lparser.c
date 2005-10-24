@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.36 2005/09/30 14:21:56 roberto Exp roberto $
+** $Id: lparser.c,v 2.37 2005/10/03 14:02:40 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -184,7 +184,7 @@ static void new_localvar (LexState *ls, TString *name, int n) {
 
 static void adjustlocalvars (LexState *ls, int nvars) {
   FuncState *fs = ls->fs;
-  fs->nactvar += nvars;
+  fs->nactvar = cast(lu_byte, fs->nactvar + nvars);
   for (; nvars; nvars--) {
     getlocvar(fs, fs->nactvar - nvars).startpc = fs->pc;
   }

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.152 2005/10/14 18:34:23 roberto Exp roberto $
+** $Id: lua.c,v 1.153 2005/10/21 13:48:31 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -253,7 +253,7 @@ static int handle_script (lua_State *L, char **argv, int n) {
 }
 
 
-static int collectargs (lua_State *L, char **argv, int *pi, int *pv, int *pe) {
+static int collectargs (char **argv, int *pi, int *pv, int *pe) {
   int i;
   for (i = 1; argv[i] != NULL; i++) {
     if (argv[i][0] != '-')  /* not an option? */
@@ -333,7 +333,7 @@ static int pmain (lua_State *L) {
   luaL_openlibs(L);  /* open libraries */
   s->status = handle_luainit(L);
   if (s->status != 0) return 0;
-  script = collectargs(L, argv, &has_i, &has_v, &has_e);
+  script = collectargs(argv, &has_i, &has_v, &has_e);
   if (script < 0) {  /* invalid args? */
     print_usage();
     s->status = 1;
