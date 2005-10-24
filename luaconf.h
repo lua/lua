@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.68 2005/09/19 13:49:12 roberto Exp roberto $
+** $Id: luaconf.h,v 1.69 2005/10/13 12:22:53 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -266,17 +266,17 @@
 #include <stdio.h>
 #include <readline/readline.h>
 #include <readline/history.h>
-#define lua_readline(L,b,p)	(((b)=readline(p)) != NULL)
+#define lua_readline(L,b,p)	((void)L, ((b)=readline(p)) != NULL)
 #define lua_saveline(L,idx) \
 	if (lua_strlen(L,idx) > 0)  /* non-empty line? */ \
 	  add_history(lua_tostring(L, idx));  /* add it to history */
-#define lua_freeline(L,b)	free(b)
+#define lua_freeline(L,b)	((void)L, free(b))
 #else
 #define lua_readline(L,b,p)	\
 	(fputs(p, stdout), fflush(stdout),  /* show prompt */ \
 	fgets(b, LUA_MAXINPUT, stdin) != NULL)  /* get line */
-#define lua_saveline(L,idx)	((void)0)
-#define lua_freeline(L,b)	((void)0)
+#define lua_saveline(L,idx)	((void)L, (void)idx, (void)0)
+#define lua_freeline(L,b)	((void)L, (void)b, (void)0)
 #endif
 
 #endif
@@ -368,10 +368,10 @@
 */
 #if defined(LUA_USE_APICHECK)
 #include <assert.h>
-#define luai_apicheck(L,o) assert(o)
+#define luai_apicheck(L,o)	{ (void)L; assert(o); }
 #else
 /* (By default lua_assert is empty, so luai_apicheck is also empty.) */
-#define luai_apicheck(L,o)		lua_assert(o)
+#define luai_apicheck(L,o)	{ (void)L; lua_assert(o); }
 #endif
 
 
@@ -546,16 +546,16 @@ union luai_Cast { double l_d; long l_l; };
 */
 #if defined(LUA_CORE)
 #include <math.h>
-#define luai_numadd(L,a,b)	((a)+(b))
-#define luai_numsub(L,a,b)	((a)-(b))
-#define luai_nummul(L,a,b)	((a)*(b))
-#define luai_numdiv(L,a,b)	((a)/(b))
-#define luai_nummod(L,a,b)	((a) - floor((a)/(b))*(b))
-#define luai_numpow(L,a,b)	pow(a,b)
-#define luai_numunm(L,a)	(-(a))
-#define luai_numeq(L,a,b)	((a)==(b))
-#define luai_numlt(L,a,b)	((a)<(b))
-#define luai_numle(L,a,b)	((a)<=(b))
+#define luai_numadd(a,b)	((a)+(b))
+#define luai_numsub(a,b)	((a)-(b))
+#define luai_nummul(a,b)	((a)*(b))
+#define luai_numdiv(a,b)	((a)/(b))
+#define luai_nummod(a,b)	((a) - floor((a)/(b))*(b))
+#define luai_numpow(a,b)	(pow(a,b))
+#define luai_numunm(a)		(-(a))
+#define luai_numeq(a,b)		((a)==(b))
+#define luai_numlt(a,b)		((a)<(b))
+#define luai_numle(a,b)		((a)<=(b))
 #endif
 
 /* }================================================================== */
