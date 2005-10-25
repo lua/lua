@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.69 2005/10/13 12:22:53 roberto Exp roberto $
+** $Id: luaconf.h,v 1.70 2005/10/24 17:39:21 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -273,10 +273,10 @@
 #define lua_freeline(L,b)	((void)L, free(b))
 #else
 #define lua_readline(L,b,p)	\
-	(fputs(p, stdout), fflush(stdout),  /* show prompt */ \
+	((void)L, fputs(p, stdout), fflush(stdout),  /* show prompt */ \
 	fgets(b, LUA_MAXINPUT, stdin) != NULL)  /* get line */
-#define lua_saveline(L,idx)	((void)L, (void)idx, (void)0)
-#define lua_freeline(L,b)	((void)L, (void)b, (void)0)
+#define lua_saveline(L,idx)	{ (void)L; (void)idx; }
+#define lua_freeline(L,b)	{ (void)L; (void)b; }
 #endif
 
 #endif
@@ -643,19 +643,19 @@ union luai_Cast { double l_d; long l_l; };
 */
 #if defined(LUA_USE_POPEN)
 
-#define lua_popen(L,c,m)	popen(c,m)
-#define lua_pclose(L,file)	(pclose(file) != -1)
+#define lua_popen(L,c,m)	((void)L, popen(c,m))
+#define lua_pclose(L,file)	((void)L, (pclose(file) != -1))
 
 #elif !defined(LUA_ANSI) && defined(_WIN32)
 
-#define lua_popen(L,c,m)	_popen(c,m)
-#define lua_pclose(L,file)	(_pclose(file) != -1)
+#define lua_popen(L,c,m)	((void)L, _popen(c,m))
+#define lua_pclose(L,file)	((void)L, (_pclose(file) != -1))
 
 #else
 
 #define lua_popen(L,c,m)  \
   ((void)c, (void)m, luaL_error(L, LUA_QL("popen") " not supported"), (FILE*)0)
-#define lua_pclose(L,file)		((void)file, 0)
+#define lua_pclose(L,file)		((void)L, (void)file, 0)
 
 #endif
 
@@ -692,12 +692,12 @@ union luai_Cast { double l_d; long l_l; };
 ** CHANGE them if you defined LUAI_EXTRASPACE and need to do something
 ** extra when a thread is created/deleted/resumed/yielded.
 */
-#define luai_userstateopen(L)		((void)0)
-#define luai_userstateclose(L)		((void)0)
-#define luai_userstatethread(L,L1)	((void)0)
-#define luai_userstatefree(L)		((void)0)
-#define luai_userstateresume(L,n)	((void)0)
-#define luai_userstateyield(L,n)	((void)0)
+#define luai_userstateopen(L)		((void)L)
+#define luai_userstateclose(L)		((void)L)
+#define luai_userstatethread(L,L1)	((void)L)
+#define luai_userstatefree(L)		((void)L)
+#define luai_userstateresume(L,n)	((void)L)
+#define luai_userstateyield(L,n)	((void)L)
 
 
 
