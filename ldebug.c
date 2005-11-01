@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.26 2005/08/04 13:37:38 roberto Exp roberto $
+** $Id: ldebug.c,v 2.27 2005/10/06 20:43:44 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -109,40 +109,39 @@ static Proto *getluaproto (CallInfo *ci) {
 }
 
 
-LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
+static const char *findlocal (lua_State *L, CallInfo *ci, int n) {
   const char *name;
-  CallInfo *ci;
-  Proto *fp;
-  lua_lock(L);
-  name = NULL;
-  ci = L->base_ci + ar->i_ci;
-  fp = getluaproto(ci);
-  if (fp) {  /* is a Lua function? */
-    name = luaF_getlocalname(fp, n, currentpc(L, ci));
-    if (name)
-      luaA_pushobject(L, ci->base+(n-1));  /* push value */
+  Proto *fp = getluaproto(ci);
+  if (fp && (name = luaF_getlocalname(fp, n, currentpc(L, ci))) != NULL)
+    return name;  /* is a local variable in a Lua function */
+  else {
+    StkId limit = (ci == L->ci) ? L->top : (ci+1)->func;
+    if (limit - ci->base >= n && n > 0)  /* is 'n' inside 'ci' stack? */
+      return "(*temporary)";
+    else
+      return NULL;
   }
+}
+
+
+LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
+  CallInfo *ci = L->base_ci + ar->i_ci;
+  const char *name = findlocal(L, ci, n);
+  lua_lock(L);
+  if (name)
+      luaA_pushobject(L, ci->base + (n - 1));
   lua_unlock(L);
   return name;
 }
 
 
 LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
-  const char *name;
-  CallInfo *ci;
-  Proto *fp;
+  CallInfo *ci = L->base_ci + ar->i_ci;
+  const char *name = findlocal(L, ci, n);
   lua_lock(L);
-  name = NULL;
-  ci = L->base_ci + ar->i_ci;
-  fp = getluaproto(ci);
-  L->top--;  /* pop new value */
-  if (fp) {  /* is a Lua function? */
-    name = luaF_getlocalname(fp, n, currentpc(L, ci));
-    if (!name || name[0] == '(')  /* `(' starts private locals */
-      name = NULL;
-    else
-      setobjs2s(L, ci->base+(n-1), L->top);
-  }
+  if (name)
+      setobjs2s(L, ci->base + (n - 1), L->top - 1);
+  L->top--;  /* pop value */
   lua_unlock(L);
   return name;
 }
