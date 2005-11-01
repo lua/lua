@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.57 2005/10/13 12:21:26 roberto Exp roberto $
+** $Id: lvm.c,v 2.58 2005/10/24 17:37:52 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -65,7 +65,6 @@ static void traceexec (lua_State *L, const Instruction *pc) {
     if (L->hookcount == 0) {
       resethookcount(L);
       luaD_callhook(L, LUA_HOOKCOUNT, -1);
-      return;
     }
   }
   if (mask & LUA_MASKLINE) {
@@ -357,6 +356,19 @@ static void Arith (lua_State *L, StkId ra, const TValue *rb,
 #define Protect(x)	{ L->savedpc = pc; {x;}; base = L->base; }
 
 
+#define arith_op(op,tm) { \
+        TValue *rb = RKB(i); \
+        TValue *rc = RKC(i); \
+        if (ttisnumber(rb) && ttisnumber(rc)) { \
+          lua_Number nb = nvalue(rb), nc = nvalue(rc); \
+          setnvalue(ra, op(nb, nc)); \
+        } \
+        else \
+          Protect(Arith(L, ra, rb, rc, tm)); \
+      }
+
+
+
 void luaV_execute (lua_State *L, int nexeccalls) {
   LClosure *cl;
   StkId base;
@@ -454,69 +466,27 @@ void luaV_execute (lua_State *L, int nexeccalls) {
         continue;
       }
       case OP_ADD: {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
-        if (ttisnumber(rb) && ttisnumber(rc)) {
-          lua_Number nb = nvalue(rb), nc = nvalue(rc);
-          setnvalue(ra, luai_numadd(nb, nc));
-        }
-        else
-          Protect(Arith(L, ra, rb, rc, TM_ADD));
+        arith_op(luai_numadd, TM_ADD);
         continue;
       }
       case OP_SUB: {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
-        if (ttisnumber(rb) && ttisnumber(rc)) {
-          lua_Number nb = nvalue(rb), nc = nvalue(rc);
-          setnvalue(ra, luai_numsub(nb, nc));
-        }
-        else
-          Protect(Arith(L, ra, rb, rc, TM_SUB));
+        arith_op(luai_numsub, TM_SUB);
         continue;
       }
       case OP_MUL: {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
-        if (ttisnumber(rb) && ttisnumber(rc)) {
-          lua_Number nb = nvalue(rb), nc = nvalue(rc);
-          setnvalue(ra, luai_nummul(nb, nc));
-        }
-        else
-          Protect(Arith(L, ra, rb, rc, TM_MUL));
+        arith_op(luai_nummul, TM_MUL);
         continue;
       }
       case OP_DIV: {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
-        if (ttisnumber(rb) && ttisnumber(rc)) {
-          lua_Number nb = nvalue(rb), nc = nvalue(rc);
-          setnvalue(ra, luai_numdiv(nb, nc));
-        }
-        else
-          Protect(Arith(L, ra, rb, rc, TM_DIV));
+        arith_op(luai_numdiv, TM_DIV);
         continue;
       }
       case OP_MOD: {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
-        if (ttisnumber(rb) && ttisnumber(rc)) {
-          lua_Number nb = nvalue(rb), nc = nvalue(rc);
-          setnvalue(ra, luai_nummod(nb, nc));
-        }
-        else
-          Protect(Arith(L, ra, rb, rc, TM_MOD));
+        arith_op(luai_nummod, TM_MOD);
         continue;
       }
       case OP_POW: {
-        TValue *rb = RKB(i);
-        TValue *rc = RKC(i);
-        if (ttisnumber(rb) && ttisnumber(rc)) {
-          lua_Number nb = nvalue(rb), nc = nvalue(rc);
-          setnvalue(ra, luai_numpow(nb, nc));
-        }
-        else
-          Protect(Arith(L, ra, rb, rc, TM_POW));
+        arith_op(luai_numpow, TM_POW);
         continue;
       }
       case OP_UNM: {
