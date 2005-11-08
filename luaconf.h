@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.70 2005/10/24 17:39:21 roberto Exp $
+** $Id: luaconf.h,v 1.71 2005/10/25 13:36:28 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -483,31 +483,6 @@
 
 
 
-/*
-@@ lua_number2int is a macro to convert lua_Number to int.
-@@ lua_number2integer is a macro to convert lua_Number to lua_Integer.
-** CHANGE them if you know a faster way to convert a lua_Number to
-** int (with any rounding method and without throwing errors) in your
-** system. In Pentium machines, a naive typecast from double to int
-** in C is extremely slow, so any alternative is worth trying.
-*/
-
-/* On a Pentium, resort to a trick */
-#if !defined(LUA_ANSI) && !defined(__SSE2__) && \
-    (defined(__i386) || defined (_M_IX86))
-union luai_Cast { double l_d; long l_l; };
-#define lua_number2int(i,d) \
-  { volatile union luai_Cast u; u.l_d = (d) + 6755399441055744.0; (i) = u.l_l; }
-#define lua_number2integer(i,n)		lua_number2int(i, n)
-
-/* this option always works, but may be slow */
-#else
-#define lua_number2int(i,d)	((i)=(int)(d))
-#define lua_number2integer(i,d)	((i)=(lua_Integer)(d))
-
-#endif
-
-
 
 /*
 ** {==================================================================
@@ -556,6 +531,31 @@ union luai_Cast { double l_d; long l_l; };
 #define luai_numeq(a,b)		((a)==(b))
 #define luai_numlt(a,b)		((a)<(b))
 #define luai_numle(a,b)		((a)<=(b))
+#endif
+
+
+/*
+@@ lua_number2int is a macro to convert lua_Number to int.
+@@ lua_number2integer is a macro to convert lua_Number to lua_Integer.
+** CHANGE them if you know a faster way to convert a lua_Number to
+** int (with any rounding method and without throwing errors) in your
+** system. In Pentium machines, a naive typecast from double to int
+** in C is extremely slow, so any alternative is worth trying.
+*/
+
+/* On a Pentium, resort to a trick */
+#if !defined(LUA_ANSI) && !defined(__SSE2__) && \
+    (defined(__i386) || defined (_M_IX86))
+union luai_Cast { double l_d; long l_l; };
+#define lua_number2int(i,d) \
+  { volatile union luai_Cast u; u.l_d = (d) + 6755399441055744.0; (i) = u.l_l; }
+#define lua_number2integer(i,n)		lua_number2int(i, n)
+
+/* this option always works, but may be slow */
+#else
+#define lua_number2int(i,d)	((i)=(int)(d))
+#define lua_number2integer(i,d)	((i)=(lua_Integer)(d))
+
 #endif
 
 /* }================================================================== */
