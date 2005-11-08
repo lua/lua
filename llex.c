@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.11 2005/05/16 21:19:00 roberto Exp roberto $
+** $Id: llex.c,v 2.12 2005/05/17 19:49:15 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -155,28 +155,23 @@ void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, TString *source) {
 
 
 
+static int check_next (LexState *ls, const char *set) {
+  if (!strchr(set, ls->current))
+    return 0;
+  save_and_next(ls);
+  return 1;
+}
+
+
 
 /* LUA_NUMBER */
 static void read_numeral (LexState *ls, SemInfo *seminfo) {
-  while (isdigit(ls->current)) {
+  lua_assert(isdigit(ls->current));
+  do {
     save_and_next(ls);
-  }
-  if (ls->current == '.') {
-    save_and_next(ls);
-    if (ls->current == '.') {
-      save_and_next(ls);
-      luaX_lexerror(ls,
-                 "ambiguous syntax (decimal point x string concatenation)",
-                 TK_NUMBER);
-    }
-  }
-  while (isdigit(ls->current)) {
-    save_and_next(ls);
-  }
-  if (ls->current == 'e' || ls->current == 'E') {
-    save_and_next(ls);  /* read `E' */
-    if (ls->current == '+' || ls->current == '-')
-      save_and_next(ls);  /* optional exponent sign */
+  } while (isdigit(ls->current) || ls->current == '.');
+  if (check_next(ls, "Ee")) {  /* `E'? */
+    check_next(ls, "+-");  /* optional exponent sign */
     while (isdigit(ls->current)) {
       save_and_next(ls);
     }
@@ -375,12 +370,9 @@ int luaX_lex (LexState *ls, SemInfo *seminfo) {
       }
       case '.': {
         save_and_next(ls);
-        if (ls->current == '.') {
-          next(ls);
-          if (ls->current == '.') {
-            next(ls);
+        if (check_next(ls, ".")) {
+          if (check_next(ls, "."))
             return TK_DOTS;   /* ... */
-          }
           else return TK_CONCAT;   /* .. */
         }
         else if (!isdigit(ls->current)) return '.';
