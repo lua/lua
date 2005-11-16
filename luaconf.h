@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.71 2005/10/25 13:36:28 roberto Exp roberto $
+** $Id: luaconf.h,v 1.72 2005/11/08 19:45:58 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -32,17 +32,11 @@
 #if !defined(LUA_ANSI)
 
 #if defined(__linux__)
-#define LUA_USE_MKSTEMP
-#define LUA_USE_ISATTY
-#define LUA_USE_ULONGJMP
-#define LUA_USE_POPEN
+#define LUA_USE_POSIX
 #endif
 
 #if defined(__APPLE__) && defined(__MACH__)
-#define LUA_USE_MKSTEMP
-#define LUA_USE_ISATTY
-#define LUA_USE_ULONGJMP
-#define LUA_USE_POPEN
+#define LUA_USE_POSIX
 #define LUA_DL_DYLD
 #endif
 
@@ -54,6 +48,12 @@
 
 
 
+#if defined(LUA_USE_POSIX)
+#define LUA_USE_MKSTEMP
+#define LUA_USE_ISATTY
+#define LUA_USE_POPEN
+#define LUA_USE_ULONGJMP
+#endif
 
 
 /*
@@ -545,7 +545,7 @@
 
 /* On a Pentium, resort to a trick */
 #if !defined(LUA_ANSI) && !defined(__SSE2__) && \
-    (defined(__i386) || defined (_M_IX86))
+    (defined(__i386) || defined (_M_IX86) || defined(__i386__))
 union luai_Cast { double l_d; long l_l; };
 #define lua_number2int(i,d) \
   { volatile union luai_Cast u; u.l_d = (d) + 6755399441055744.0; (i) = u.l_l; }
