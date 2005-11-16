@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.72 2005/11/08 19:45:58 roberto Exp roberto $
+** $Id: luaconf.h,v 1.73 2005/11/16 11:56:28 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -28,26 +28,24 @@
 #define LUA_ANSI
 #endif
 
-
-#if !defined(LUA_ANSI)
-
-#if defined(__linux__)
+#if defined(LUA_USE_LINUX)
 #define LUA_USE_POSIX
+#define LUA_USE_DLOPEN		/* needs an extra library: -ldl */
+#define LUA_USE_READLINE	/* needs some extra libraries */
 #endif
 
-#if defined(__APPLE__) && defined(__MACH__)
+#if defined(LUA_USE_MACOSX)
 #define LUA_USE_POSIX
-#define LUA_DL_DYLD
-#endif
-
-#if defined(_WIN32)
-#define LUA_DL_DLL
-#endif
-
+#define LUA_DL_DYLD		/* does not need extra library */
 #endif
 
 
 
+/*
+@@ LUA_USE_POSIX includes all functionallity listed as X/Open System
+@* Interfaces Extension (XSI).
+** CHANGE it (define it) if your system is XSI compatible.
+*/
 #if defined(LUA_USE_POSIX)
 #define LUA_USE_MKSTEMP
 #define LUA_USE_ISATTY
@@ -675,6 +673,10 @@ union luai_Cast { double l_d; long l_l; };
 */
 #if defined(LUA_USE_DLOPEN)
 #define LUA_DL_DLOPEN
+#endif
+
+#if !defined(LUA_ANSI) && defined(_WIN32)
+#define LUA_DL_DLL
 #endif
 
 

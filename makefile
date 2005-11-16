@@ -29,7 +29,7 @@ MYLIBS=
 
 
 # enable Linux goodies
-MYCFLAGS= $(LOCAL) -DLUA_USE_DLOPEN -DLUA_USE_READLINE
+MYCFLAGS= $(LOCAL) -DLUA_USE_LINUX
 MYLDFLAGS= -Wl,-E
 MYLIBS= -ldl -lreadline -lhistory -lncurses
 
