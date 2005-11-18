@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.48 2005/09/01 17:42:22 roberto Exp $
+** $Id: lapi.c,v 2.51 2005/10/20 11:35:50 roberto Exp $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -141,7 +141,7 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
   setthvalue(L, L->top, L1);
   api_incr_top(L);
   lua_unlock(L);
-  luai_userstateopen(L1);
+  luai_userstatethread(L, L1);
   return L1;
 }
 
@@ -913,6 +913,10 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
       res = cast(int, g->totalbytes >> 10);
       break;
     }
+    case LUA_GCCOUNTB: {
+      res = cast(int, g->totalbytes & 0x3ff);
+      break;
+    }
     case LUA_GCSTEP: {
       lu_mem a = (cast(lu_mem, data) << 10);
       if (a <= g->totalbytes)
@@ -992,8 +996,20 @@ LUA_API void lua_concat (lua_State *L, int n) {
 
 
 LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud) {
+  lua_Alloc f;
+  lua_lock(L);
   if (ud) *ud = G(L)->ud;
-  return G(L)->frealloc;
+  f = G(L)->frealloc;
+  lua_unlock(L);
+  return f;
+}
+
+
+LUA_API void lua_setallocf (lua_State *L, lua_Alloc f, void *ud) {
+  lua_lock(L);
+  G(L)->ud = ud;
+  G(L)->frealloc = f;
+  lua_unlock(L);
 }
 
 

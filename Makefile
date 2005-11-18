@@ -55,15 +55,21 @@ ansi:
 	cd src; $(MAKE) MYCFLAGS=-DLUA_ANSI
 
 linux:
-	cd src; $(MAKE) MYCFLAGS=-DLUA_USE_DLOPEN MYLIBS="-Wl,-E -ldl"
+	cd src; $(MAKE) MYCFLAGS=-DLUA_USE_LINUX MYLIBS="-Wl,-E -ldl -lreadline -lhistory -lncurses"
+
+macosx:
+	cd src; $(MAKE) MYCFLAGS=-DLUA_USE_MACOSX
+
+posix:
+	cd src; $(MAKE) MYCFLAGS=-DLUA_USE_POSIX
 
 bsd:
-	cd src; $(MAKE) MYCFLAGS=-DLUA_USE_DLOPEN MYLIBS="-Wl,-E"
+	cd src; $(MAKE) MYCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN" MYLIBS="-Wl,-E"
 
 mingw:
 	cd src; $(MAKE) "LUA_A=lua51.dll" "LUA_T=lua.exe" \
 	"AR=gcc -shared -o" "RANLIB=strip --strip-unneeded" \
-	"MYCFLAGS=-DLUA_BUILD_AS_DLL" "MYLIBS=" MYLDFLAGS=-s" lua.exe
+	"MYCFLAGS=-DLUA_BUILD_AS_DLL" "MYLIBS=" "MYLDFLAGS=-s" lua.exe
 
 # echo config parameters
 echo:

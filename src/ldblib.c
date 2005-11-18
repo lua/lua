@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.101 2005/08/26 17:36:32 roberto Exp $
+** $Id: ldblib.c,v 1.103 2005/11/01 16:08:32 roberto Exp $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -17,6 +17,12 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
+
+
+static int db_getregistry (lua_State *L) {
+  lua_pushvalue(L, LUA_REGISTRYINDEX);
+  return 1;
+}
 
 
 static int db_getmetatable (lua_State *L) {
@@ -319,7 +325,7 @@ static int db_errorfb (lua_State *L) {
   lua_State *L1 = getthread(L, &arg);
   lua_Debug ar;
   if (lua_isnumber(L, arg+2)) {
-    level = lua_tointeger(L, arg+2);
+    level = (int)lua_tointeger(L, arg+2);
     lua_pop(L, 1);
   }
   else
@@ -371,6 +377,7 @@ static const luaL_Reg dblib[] = {
   {"gethook", db_gethook},
   {"getinfo", db_getinfo},
   {"getlocal", db_getlocal},
+  {"getregistry", db_getregistry},
   {"getmetatable", db_getmetatable},
   {"getupvalue", db_getupvalue},
   {"setfenv", db_setfenv},

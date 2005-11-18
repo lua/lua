@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.33 2005/09/09 18:16:28 roberto Exp $
+** $Id: ldo.c,v 2.36 2005/10/23 17:52:42 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -276,8 +276,11 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     Proto *p = cl->p;
     luaD_checkstack(L, p->maxstacksize);
     func = restorestack(L, funcr);
-    if (!p->is_vararg)  /* no varargs? */
+    if (!p->is_vararg) {  /* no varargs? */
       base = func + 1;
+      if (L->top > base + p->numparams)
+        L->top = base + p->numparams;
+    }
     else {  /* vararg function */
       int nargs = cast(int, L->top - func) - 1;
       base = adjust_varargs(L, p, nargs);
@@ -316,13 +319,11 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     lua_unlock(L);
     n = (*curr_func(L)->c.f)(L);  /* do the actual call */
     lua_lock(L);
-    if (n >= 0) {  /* no yielding? */
+    if (n < 0)  /* yielding? */
+      return PCRYIELD;
+    else {
       luaD_poscall(L, L->top - n);
       return PCRC;
-    }
-    else {
-      ci->nresults = nresults;
-      return PCRYIELD;
     }
   }
 }
@@ -428,6 +429,7 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
   if (status != 0) {  /* error? */
     L->status = cast(lu_byte, status);  /* mark thread as `dead' */
     luaD_seterrorobj(L, status, L->top);
+    L->ci->top = L->top;
   }
   else
     status = L->status;

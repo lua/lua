@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.212 2005/08/25 20:02:08 roberto Exp $
+** $Id: lua.h,v 1.214 2005/10/20 11:35:50 roberto Exp $
 ** Lua - An Extensible Extension Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -16,7 +16,7 @@
 #include "luaconf.h"
 
 
-#define LUA_VERSION	"Lua 5.1 (alpha)"
+#define LUA_VERSION	"Lua 5.1 (beta)"
 #define LUA_VERSION_NUM	501
 #define LUA_COPYRIGHT	"Copyright (C) 1994-2005 Lua.org, PUC-Rio"
 #define LUA_AUTHORS 	"R. Ierusalimschy, L. H. de Figueiredo & W. Celes"
@@ -221,9 +221,10 @@ LUA_API int  (lua_status) (lua_State *L);
 #define LUA_GCRESTART		1
 #define LUA_GCCOLLECT		2
 #define LUA_GCCOUNT		3
-#define LUA_GCSTEP		4
-#define LUA_GCSETPAUSE		5
-#define LUA_GCSETSTEPMUL	6
+#define LUA_GCCOUNTB		4
+#define LUA_GCSTEP		5
+#define LUA_GCSETPAUSE		6
+#define LUA_GCSETSTEPMUL	7
 
 LUA_API int (lua_gc) (lua_State *L, int what, int data);
 
@@ -239,6 +240,7 @@ LUA_API int   (lua_next) (lua_State *L, int idx);
 LUA_API void  (lua_concat) (lua_State *L, int n);
 
 LUA_API lua_Alloc (lua_getallocf) (lua_State *L, void **ud);
+LUA_API void lua_setallocf (lua_State *L, lua_Alloc f, void *ud);
 
 
 

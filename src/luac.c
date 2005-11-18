@@ -1,5 +1,5 @@
 /*
-** $Id: luac.c,v 1.51 2005/06/02 13:39:23 lhf Exp $
+** $Id: luac.c,v 1.52 2005/11/11 14:03:13 lhf Exp $
 ** Lua compiler (saves bytecodes to files; also list bytecodes)
 ** See Copyright Notice in lua.h
 */
@@ -23,13 +23,8 @@
 #include "lstring.h"
 #include "lundump.h"
 
-#ifndef PROGNAME
 #define PROGNAME	"luac"		/* default program name */
-#endif
-
-#ifndef OUTPUT
-#define	OUTPUT		"luac.out"	/* default output file */
-#endif
+#define	OUTPUT		PROGNAME ".out"	/* default output file */
 
 static int listing=0;			/* list bytecodes? */
 static int dumping=1;			/* dump bytecodes? */
@@ -152,15 +147,15 @@ static int writer(lua_State* L, const void* p, size_t size, void* u)
 }
 
 struct Smain {
-  int argc;
-  char **argv;
+ int argc;
+ char** argv;
 };
 
-static int pmain(lua_State *L)
+static int pmain(lua_State* L)
 {
- struct Smain *s = (struct Smain *)lua_touserdata(L, 1);
+ struct Smain* s = (struct Smain*)lua_touserdata(L, 1);
  int argc=s->argc;
- char **argv=s->argv;
+ char** argv=s->argv;
  Proto* f;
  int i;
  if (!lua_checkstack(L,argc)) fatal("too many input files");

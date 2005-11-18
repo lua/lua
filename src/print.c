@@ -1,5 +1,5 @@
 /*
-** $Id: print.c,v 1.52 2005/06/08 14:40:44 lhf Exp $
+** $Id: print.c,v 1.53 2005/11/11 14:03:13 lhf Exp $
 ** print bytecodes
 ** See Copyright Notice in lua.h
 */
@@ -7,12 +7,15 @@
 #include <ctype.h>
 #include <stdio.h>
 
+#define luac_c
 #define LUA_CORE
 
 #include "ldebug.h"
 #include "lobject.h"
 #include "lopcodes.h"
 #include "lundump.h"
+
+#define PrintFunction	luaU_print
 
 #define Sizeof(x)	((int)sizeof(x))
 #define VOID(p)		((const void*)(p))
@@ -203,7 +206,7 @@ static void PrintUpvalues(const Proto* f)
  }
 }
 
-void luaU_print(const Proto* f, int full)
+void PrintFunction(const Proto* f, int full)
 {
  int i,n=f->sizep;
  PrintHeader(f);
@@ -214,5 +217,5 @@ void luaU_print(const Proto* f, int full)
   PrintLocals(f);
   PrintUpvalues(f);
  }
- for (i=0; i<n; i++) luaU_print(f->p[i],full);
+ for (i=0; i<n; i++) PrintFunction(f->p[i],full);
 }

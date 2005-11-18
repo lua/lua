@@ -1,6 +1,6 @@
 /*
-** $Id: lundump.c,v 1.58 2005/09/02 01:54:47 lhf Exp $
-** load pre-compiled Lua chunks
+** $Id: lundump.c,v 1.59 2005/11/11 14:03:13 lhf Exp $
+** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
 
@@ -15,42 +15,34 @@
 #include "ldo.h"
 #include "lfunc.h"
 #include "lmem.h"
-#include "lopcodes.h"
+#include "lobject.h"
 #include "lstring.h"
 #include "lundump.h"
 #include "lzio.h"
-
-#ifdef LUAC_TRUST_BINARIES
-#define IF(c,s)
-#else
-#define IF(c,s)		if (c) error(S,s)
-#endif
 
 typedef struct {
  lua_State* L;
  ZIO* Z;
  Mbuffer* b;
  const char* name;
-#ifdef LUAC_SWAP_ON_LOAD
- int swap;
-#endif
 } LoadState;
 
-#ifdef LUAC_SWAP_ON_LOAD
-static void LoadMem (LoadState* S, void* b, int n, size_t size);
+#ifdef LUAC_TRUST_BINARIES
+#define IF(c,s)
 #else
-#define LoadMem(S,b,n,size)	LoadBlock(S,b,(n)*(size))
-#endif
-
-#define	LoadByte(S)		(lu_byte)LoadChar(S)
-#define LoadVar(S,x)		LoadMem(S,&x,1,sizeof(x))
-#define LoadVector(S,b,n,size)	LoadMem(S,b,n,size)
+#define IF(c,s)		if (c) error(S,s)
 
 static void error(LoadState* S, const char* why)
 {
- luaO_pushfstring(S->L,"%s: %s",S->name,why);
+ luaO_pushfstring(S->L,"%s: %s in precompiled chunk",S->name,why);
  luaD_throw(S->L,LUA_ERRSYNTAX);
 }
+#endif
+
+#define LoadMem(S,b,n,size)	LoadBlock(S,b,(n)*(size))
+#define	LoadByte(S)		(lu_byte)LoadChar(S)
+#define LoadVar(S,x)		LoadMem(S,&x,1,sizeof(x))
+#define LoadVector(S,b,n,size)	LoadMem(S,b,n,size)
 
 static void LoadBlock(LoadState* S, void* b, size_t size)
 {
@@ -102,39 +94,6 @@ static void LoadCode(LoadState* S, Proto* f)
  LoadVector(S,f->code,n,sizeof(Instruction));
 }
 
-static void LoadLocals(LoadState* S, Proto* f)
-{
- int i,n;
- n=LoadInt(S);
- f->locvars=luaM_newvector(S->L,n,LocVar);
- f->sizelocvars=n;
- for (i=0; i<n; i++) f->locvars[i].varname=NULL;
- for (i=0; i<n; i++)
- {
-  f->locvars[i].varname=LoadString(S);
-  f->locvars[i].startpc=LoadInt(S);
-  f->locvars[i].endpc=LoadInt(S);
- }
-}
-
-static void LoadLines(LoadState* S, Proto* f)
-{
- int n=LoadInt(S);
- f->lineinfo=luaM_newvector(S->L,n,int);
- f->sizelineinfo=n;
- LoadVector(S,f->lineinfo,n,sizeof(int));
-}
-
-static void LoadUpvalues(LoadState* S, Proto* f)
-{
- int i,n;
- n=LoadInt(S);
- f->upvalues=luaM_newvector(S->L,n,TString*);
- f->sizeupvalues=n;
- for (i=0; i<n; i++) f->upvalues[i]=NULL;
- for (i=0; i<n; i++) f->upvalues[i]=LoadString(S);
-}
-
 static Proto* LoadFunction(LoadState* S, TString* p);
 
 static void LoadConstants(LoadState* S, Proto* f)
@@ -174,6 +133,30 @@ static void LoadConstants(LoadState* S, Proto* f)
  for (i=0; i<n; i++) f->p[i]=LoadFunction(S,f->source);
 }
 
+static void LoadDebug(LoadState* S, Proto* f)
+{
+ int i,n;
+ n=LoadInt(S);
+ f->lineinfo=luaM_newvector(S->L,n,int);
+ f->sizelineinfo=n;
+ LoadVector(S,f->lineinfo,n,sizeof(int));
+ n=LoadInt(S);
+ f->locvars=luaM_newvector(S->L,n,LocVar);
+ f->sizelocvars=n;
+ for (i=0; i<n; i++) f->locvars[i].varname=NULL;
+ for (i=0; i<n; i++)
+ {
+  f->locvars[i].varname=LoadString(S);
+  f->locvars[i].startpc=LoadInt(S);
+  f->locvars[i].endpc=LoadInt(S);
+ }
+ n=LoadInt(S);
+ f->upvalues=luaM_newvector(S->L,n,TString*);
+ f->sizeupvalues=n;
+ for (i=0; i<n; i++) f->upvalues[i]=NULL;
+ for (i=0; i<n; i++) f->upvalues[i]=LoadString(S);
+}
+
 static Proto* LoadFunction(LoadState* S, TString* p)
 {
  Proto* f=luaF_newproto(S->L);
@@ -185,11 +168,9 @@ static Proto* LoadFunction(LoadState* S, TString* p)
  f->numparams=LoadByte(S);
  f->is_vararg=LoadByte(S);
  f->maxstacksize=LoadByte(S);
- LoadLines(S,f);
- LoadLocals(S,f);
- LoadUpvalues(S,f);
- LoadConstants(S,f);
  LoadCode(S,f);
+ LoadConstants(S,f);
+ LoadDebug(S,f);
  IF (!luaG_checkcode(f), "bad code");
  S->L->top--;
  return f;
@@ -201,9 +182,6 @@ static void LoadHeader(LoadState* S)
  char s[LUAC_HEADERSIZE];
  luaU_header(h);
  LoadBlock(S,s,LUAC_HEADERSIZE);
-#ifdef LUAC_SWAP_ON_LOAD
- S->swap=(s[6]!=h[6]); s[6]=h[6];
-#endif
  IF (memcmp(h,s,LUAC_HEADERSIZE)!=0, "bad header");
 }
 
@@ -236,55 +214,10 @@ void luaU_header (char* h)
  h+=sizeof(LUA_SIGNATURE)-1;
  *h++=(char)LUAC_VERSION;
  *h++=(char)LUAC_FORMAT;
- *h++=(char)*(char*)&x;
+ *h++=(char)*(char*)&x;				/* endianness */
  *h++=(char)sizeof(int);
  *h++=(char)sizeof(size_t);
  *h++=(char)sizeof(Instruction);
  *h++=(char)sizeof(lua_Number);
- *h++=(char)(((lua_Number)0.5)==0);
+ *h++=(char)(((lua_Number)0.5)==0);		/* is lua_Number integral? */
 }
-
-#ifdef LUAC_SWAP_ON_LOAD
-static void LoadMem (LoadState* S, void* b, int n, size_t size)
-{
- LoadBlock(S,b,n*size);
- if (S->swap)
- {
-  char* p=(char*) b;
-  char c;
-  switch (size)
-  {
-   case 1:
-  	break;
-   case 2:
-	while (n--)
-	{
-	 c=p[0]; p[0]=p[1]; p[1]=c;
-	 p+=2;
-	}
-  	break;
-   case 4:
-	while (n--)
-	{
-	 c=p[0]; p[0]=p[3]; p[3]=c;
-	 c=p[1]; p[1]=p[2]; p[2]=c;
-	 p+=4;
-	}
-  	break;
-   case 8:
-	while (n--)
-	{
-	 c=p[0]; p[0]=p[7]; p[7]=c;
-	 c=p[1]; p[1]=p[6]; p[6]=c;
-	 c=p[2]; p[2]=p[5]; p[5]=c;
-	 c=p[3]; p[3]=p[4]; p[4]=c;
-	 p+=8;
-	}
-  	break;
-   default:
-   	IF(1, "bad size");
-  	break;
-  }
- }
-}
-#endif

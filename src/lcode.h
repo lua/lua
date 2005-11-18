@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.h,v 1.45 2005/08/29 20:49:21 roberto Exp $
+** $Id: lcode.h,v 1.47 2005/11/08 19:44:31 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -24,7 +24,7 @@
 ** grep "ORDER OPR" if you change these enums
 */
 typedef enum BinOpr {
-  OPR_ADD, OPR_SUB, OPR_MULT, OPR_DIV, OPR_MOD, OPR_POW,
+  OPR_ADD, OPR_SUB, OPR_MUL, OPR_DIV, OPR_MOD, OPR_POW,
   OPR_CONCAT,
   OPR_NE, OPR_EQ,
   OPR_LT, OPR_LE, OPR_GT, OPR_GE,
@@ -37,13 +37,12 @@ typedef enum BinOpr {
 typedef enum UnOpr { OPR_MINUS, OPR_NOT, OPR_LEN, OPR_NOUNOPR } UnOpr;
 
 
-#define getcode(fs,e)	((fs)->f->code[(e)->info])
+#define getcode(fs,e)	((fs)->f->code[(e)->u.s.info])
 
 #define luaK_codeAsBx(fs,o,A,sBx)	luaK_codeABx(fs,o,A,(sBx)+MAXARG_sBx)
 
 #define luaK_setmultret(fs,e)	luaK_setreturns(fs, e, LUA_MULTRET)
 
-LUAI_FUNC int luaK_code (FuncState *fs, Instruction i, int line);
 LUAI_FUNC int luaK_codeABx (FuncState *fs, OpCode o, int A, unsigned int Bx);
 LUAI_FUNC int luaK_codeABC (FuncState *fs, OpCode o, int A, int B, int C);
 LUAI_FUNC void luaK_fixline (FuncState *fs, int line);
@@ -60,7 +59,6 @@ LUAI_FUNC int luaK_exp2RK (FuncState *fs, expdesc *e);
 LUAI_FUNC void luaK_self (FuncState *fs, expdesc *e, expdesc *key);
 LUAI_FUNC void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k);
 LUAI_FUNC void luaK_goiftrue (FuncState *fs, expdesc *e);
-LUAI_FUNC void luaK_goiffalse (FuncState *fs, expdesc *e);
 LUAI_FUNC void luaK_storevar (FuncState *fs, expdesc *var, expdesc *e);
 LUAI_FUNC void luaK_setreturns (FuncState *fs, expdesc *e, int nresults);
 LUAI_FUNC void luaK_setoneret (FuncState *fs, expdesc *e);

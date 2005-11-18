@@ -1,9 +1,11 @@
-This is Lua 5.1 (alpha).
+This is Lua 5.1 (beta).
 
 * Installation
   ------------
   Building Lua on a Unix system should be very easy: simply doing "make"
   should work. This will build Lua in the src directory.
+
+  There are also special make targets for ansi, linux, bsd, mingw.
 
   See below for customization instructions.
 

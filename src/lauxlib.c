@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.152 2005/09/06 17:20:11 roberto Exp $
+** $Id: lauxlib.c,v 1.156 2005/10/21 13:47:42 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -176,8 +176,7 @@ LUALIB_API lua_Number luaL_checknumber (lua_State *L, int narg) {
 
 
 LUALIB_API lua_Number luaL_optnumber (lua_State *L, int narg, lua_Number def) {
-  if (lua_isnoneornil(L, narg)) return def;
-  else return luaL_checknumber(L, narg);
+  return luaL_opt(L, luaL_checknumber, narg, def);
 }
 
 
@@ -190,16 +189,16 @@ LUALIB_API lua_Integer luaL_checkinteger (lua_State *L, int narg) {
 
 
 LUALIB_API lua_Integer luaL_optinteger (lua_State *L, int narg,
-                                        lua_Integer def) {
-  if (lua_isnoneornil(L, narg)) return def;
-  else return luaL_checkinteger(L, narg);
+                                                      lua_Integer def) {
+  return luaL_opt(L, luaL_checkinteger, narg, def);
 }
 
 
 LUALIB_API int luaL_getmetafield (lua_State *L, int obj, const char *event) {
   if (!lua_getmetatable(L, obj))  /* no metatable? */
     return 0;
-  lua_getfield(L, -1, event);
+  lua_pushstring(L, event);
+  lua_rawget(L, -2);
   if (lua_isnil(L, -1)) {
     lua_pop(L, 2);  /* remove metatable and metafield */
     return 0;
@@ -231,7 +230,7 @@ LUALIB_API void luaI_openlib (lua_State *L, const char *libname,
                               const luaL_Reg *l, int nup) {
   if (libname) {
     /* check whether lib already exists */
-    lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
+    luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED");
     lua_getfield(L, -1, libname);  /* get _LOADED[libname] */
     if (!lua_istable(L, -1)) {  /* not found? */
       lua_pop(L, 1);  /* remove previous result */
@@ -305,7 +304,7 @@ LUALIB_API int luaL_getn (lua_State *L, int t) {
   if ((n = checkint(L, 2)) >= 0) return n;
   lua_getfield(L, t, "n");  /* else try t.n */
   if ((n = checkint(L, 1)) >= 0) return n;
-  return lua_objlen(L, t);
+  return (int)lua_objlen(L, t);
 }
 
 #endif
@@ -470,7 +469,7 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
     lua_rawseti(L, t, FREELIST_REF);  /* (t[FREELIST_REF] = t[ref]) */
   }
   else {  /* no free elements */
-    ref = lua_objlen(L, t);
+    ref = (int)lua_objlen(L, t);
     ref++;  /* create new reference */
   }
   lua_rawseti(L, t, ref);
