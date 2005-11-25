@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.26 2005/07/11 14:01:37 roberto Exp roberto $
+** $Id: ltable.c,v 2.27 2005/10/24 17:37:52 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -495,7 +495,7 @@ TValue *luaH_set (lua_State *L, Table *t, const TValue *key) {
     return cast(TValue *, p);
   else {
     if (ttisnil(key)) luaG_runerror(L, "table index is nil");
-    else if (ttisnumber(key) && !luai_numeq(nvalue(key), nvalue(key)))
+    else if (ttisnumber(key) && luai_numisnan(nvalue(key)))
       luaG_runerror(L, "table index is NaN");
     return newkey(L, t, key);
   }

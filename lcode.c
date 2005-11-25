@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.21 2005/11/08 19:44:31 roberto Exp roberto $
+** $Id: lcode.c,v 2.22 2005/11/16 11:55:27 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -647,7 +647,7 @@ static int constfolding (OpCode op, expdesc *e1, expdesc *e2) {
     case OP_LEN: return 0;  /* no constant folding for 'len' */
     default: lua_assert(0); r = 0; break;
   }
-  if (r != r) return 0;  /* do not attempt to produce NaN */
+  if (luai_numisnan(r)) return 0;  /* do not attempt to produce NaN */
   e1->u.nval = r;
   return 1;
 }
