@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.73 2005/11/16 11:56:28 roberto Exp $
+** $Id: luaconf.h,v 1.74 2005/11/16 16:24:28 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -26,6 +26,11 @@
 */
 #if defined(__STRICT_ANSI__)
 #define LUA_ANSI
+#endif
+
+
+#if !defined(LUA_ANSI) && defined(_WIN32)
+#define LUA_WIN
 #endif
 
 #if defined(LUA_USE_LINUX)
@@ -217,7 +222,7 @@
 #if defined(LUA_USE_ISATTY)
 #include <unistd.h>
 #define lua_stdin_is_tty()	isatty(0)
-#elif !defined(LUA_ANSI) && defined(_WIN32)
+#elif defined(LUA_WIN)
 #include <io.h>
 #include <stdio.h>
 #define lua_stdin_is_tty()	_isatty(_fileno(stdin))
@@ -529,6 +534,7 @@
 #define luai_numeq(a,b)		((a)==(b))
 #define luai_numlt(a,b)		((a)<(b))
 #define luai_numle(a,b)		((a)<=(b))
+#define luai_numisnan(a)	(!luai_numeq((a), (a)))
 #endif
 
 
@@ -644,7 +650,7 @@ union luai_Cast { double l_d; long l_l; };
 #define lua_popen(L,c,m)	((void)L, popen(c,m))
 #define lua_pclose(L,file)	((void)L, (pclose(file) != -1))
 
-#elif !defined(LUA_ANSI) && defined(_WIN32)
+#elif defined(LUA_WIN)
 
 #define lua_popen(L,c,m)	((void)L, _popen(c,m))
 #define lua_pclose(L,file)	((void)L, (_pclose(file) != -1))
@@ -675,7 +681,7 @@ union luai_Cast { double l_d; long l_l; };
 #define LUA_DL_DLOPEN
 #endif
 
-#if !defined(LUA_ANSI) && defined(_WIN32)
+#if defined(LUA_WIN)
 #define LUA_DL_DLL
 #endif
 
