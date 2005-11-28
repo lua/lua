@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.153 2005/10/21 13:48:31 roberto Exp roberto $
+** $Id: lua.c,v 1.154 2005/10/24 17:38:47 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -215,7 +215,6 @@ static void dotty (lua_State *L) {
   int status;
   const char *oldprogname = progname;
   progname = NULL;
-  print_version();
   while ((status = loadline(L)) != -1) {
     if (status == 0) status = docall(L, 0, 0);
     report(L, status);
@@ -261,7 +260,7 @@ static int collectargs (char **argv, int *pi, int *pv, int *pe) {
     switch (argv[i][1]) {  /* option */
       case '-': return (argv[i+1] != NULL ? i+1 : 0);
       case '\0': return i;
-      case 'i': *pi = 1; break;
+      case 'i': *pi = 1;  /* go through */
       case 'v': *pv = 1; break;
       case 'e': *pe = 1;  /* go through */
       case 'l':
@@ -348,7 +347,10 @@ static int pmain (lua_State *L) {
   if (has_i)
     dotty(L);
   else if (script == 0 && !has_e && !has_v) {
-    if (lua_stdin_is_tty()) dotty(L);
+    if (lua_stdin_is_tty()) {
+      print_version();
+      dotty(L);
+    }
     else dofile(L, NULL);  /* executes stdin as a file */
   }
   return 0;
