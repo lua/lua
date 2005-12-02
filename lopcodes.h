@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.122 2005/08/29 20:49:21 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.123 2005/10/23 17:37:55 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -208,7 +208,7 @@ OP_VARARG/*	A B	R(A), R(A+1), ..., R(A+B-1) = vararg		*/
 } OpCode;
 
 
-#define NUM_OPCODES	(cast(int, OP_VARARG+1))
+#define NUM_OPCODES	(cast(int, OP_VARARG) + 1)
 
 
 
