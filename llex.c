@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.13 2005/11/08 19:45:14 roberto Exp roberto $
+** $Id: llex.c,v 2.14 2005/12/07 15:32:52 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -319,7 +319,7 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
 }
 
 
-int luaX_lex (LexState *ls, SemInfo *seminfo) {
+static int llex (LexState *ls, SemInfo *seminfo) {
   luaZ_resetbuffer(ls->buff);
   for (;;) {
     switch (ls->current) {
@@ -432,4 +432,20 @@ int luaX_lex (LexState *ls, SemInfo *seminfo) {
   }
 }
 
-#undef next
+
+void luaX_next (LexState *ls) {
+  ls->lastline = ls->linenumber;
+  if (ls->lookahead.token != TK_EOS) {  /* is there a look-ahead token? */
+    ls->t = ls->lookahead;  /* use this one */
+    ls->lookahead.token = TK_EOS;  /* and discharge it */
+  }
+  else
+    ls->t.token = llex(ls, &ls->t.seminfo);  /* read next token */
+}
+
+
+void luaX_lookahead (LexState *ls) {
+  lua_assert(ls->lookahead.token == TK_EOS);
+  ls->lookahead.token = llex(ls, &ls->lookahead.seminfo);
+}
+
