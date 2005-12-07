@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.47 2005/10/06 20:46:10 roberto Exp roberto $
+** $Id: loadlib.c,v 1.48 2005/10/17 18:01:51 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -236,11 +236,8 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 #define LIB_FAIL	"absent"
 
 
-#if defined(__ELF__) || defined(__sun) || defined(sgi) || defined(__hpux)
-#define DLMSG LUA_QL("loadlib") " not enabled; check your Lua installation"
-#else
-#define DLMSG		LUA_QL("loadlib") " not supported"
-#endif
+#define DLMSG	"dynamic libraries not enabled; check your Lua installation"
+
 
 static void ll_unloadlib (void *lib) {
   (void)lib;  /* to avoid warnings */
