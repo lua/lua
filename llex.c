@@ -1,11 +1,12 @@
 /*
-** $Id: llex.c,v 2.12 2005/05/17 19:49:15 roberto Exp roberto $
+** $Id: llex.c,v 2.13 2005/11/08 19:45:14 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
 
 
 #include <ctype.h>
+#include <locale.h>
 #include <string.h>
 
 #define llex_c
@@ -134,6 +135,8 @@ static void inclinenumber (LexState *ls) {
 
 
 void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, TString *source) {
+  struct lconv *cv = localeconv();
+  ls->decpoint = (cv ? cv->decimal_point[0] : '.');
   ls->L = L;
   ls->lookahead.token = TK_EOS;  /* no look-ahead token */
   ls->z = z;
@@ -163,6 +166,13 @@ static int check_next (LexState *ls, const char *set) {
 }
 
 
+static void correctbuff (LexState *ls, char from, char to) {
+  int n = luaZ_bufflen(ls->buff);
+  char *p = luaZ_buffer(ls->buff);
+  while (n--)
+    if (p[n] == from) p[n] = to;
+}
+
 
 /* LUA_NUMBER */
 static void read_numeral (LexState *ls, SemInfo *seminfo) {
@@ -177,8 +187,11 @@ static void read_numeral (LexState *ls, SemInfo *seminfo) {
     }
   }
   save(ls, '\0');
-  if (!luaO_str2d(luaZ_buffer(ls->buff), &seminfo->r))
+  correctbuff(ls, '.', ls->decpoint);  /* follow locale for decimal point */
+  if (!luaO_str2d(luaZ_buffer(ls->buff), &seminfo->r)) {
+    correctbuff(ls, ls->decpoint, '.');  /* undo change */
     luaX_lexerror(ls, "malformed number", TK_NUMBER);
+  }
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.54 2005/04/25 19:24:10 roberto Exp roberto $
+** $Id: llex.h,v 1.55 2005/06/06 13:30:25 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -63,6 +63,7 @@ typedef struct LexState {
   ZIO *z;  /* input stream */
   Mbuffer *buff;  /* buffer for tokens */
   TString *source;  /* current source name */
+  char decpoint;  /* locale decimal point */
 } LexState;
 
 
