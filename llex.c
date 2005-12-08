@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.14 2005/12/07 15:32:52 roberto Exp roberto $
+** $Id: llex.c,v 2.15 2005/12/07 15:43:05 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -135,8 +135,7 @@ static void inclinenumber (LexState *ls) {
 
 
 void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, TString *source) {
-  struct lconv *cv = localeconv();
-  ls->decpoint = (cv ? cv->decimal_point[0] : '.');
+  ls->decpoint = '.';
   ls->L = L;
   ls->lookahead.token = TK_EOS;  /* no look-ahead token */
   ls->z = z;
@@ -166,11 +165,25 @@ static int check_next (LexState *ls, const char *set) {
 }
 
 
-static void correctbuff (LexState *ls, char from, char to) {
+static void buffreplace (LexState *ls, char from, char to) {
   int n = luaZ_bufflen(ls->buff);
   char *p = luaZ_buffer(ls->buff);
   while (n--)
     if (p[n] == from) p[n] = to;
+}
+
+
+static void trydecpoint (LexState *ls, SemInfo *seminfo) {
+  /* format error: try to update decimal point separator */
+  struct lconv *cv = localeconv();
+  char old = ls->decpoint;
+  ls->decpoint = (cv ? cv->decimal_point[0] : '.');
+  buffreplace(ls, old, ls->decpoint);  /* try updated decimal separator */
+  if (!luaO_str2d(luaZ_buffer(ls->buff), &seminfo->r)) {
+    /* format error with correct decimal point: no more options */
+    buffreplace(ls, ls->decpoint, '.');  /* undo change (for error message) */
+    luaX_lexerror(ls, "malformed number", TK_NUMBER);
+  }
 }
 
 
@@ -187,11 +200,9 @@ static void read_numeral (LexState *ls, SemInfo *seminfo) {
     }
   }
   save(ls, '\0');
-  correctbuff(ls, '.', ls->decpoint);  /* follow locale for decimal point */
-  if (!luaO_str2d(luaZ_buffer(ls->buff), &seminfo->r)) {
-    correctbuff(ls, ls->decpoint, '.');  /* undo change */
-    luaX_lexerror(ls, "malformed number", TK_NUMBER);
-  }
+  buffreplace(ls, '.', ls->decpoint);  /* follow locale for decimal point */
+  if (!luaO_str2d(luaZ_buffer(ls->buff), &seminfo->r))  /* format error? */
+    trydecpoint(ls, seminfo); /* try to update decimal point separator */
 }
 
 
