@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.48 2005/10/17 18:01:51 roberto Exp roberto $
+** $Id: loadlib.c,v 1.49 2005/12/07 15:42:32 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -16,8 +16,9 @@
 #define loadlib_c
 #define LUA_LIB
 
-#include "lua.h"
 #include "lauxlib.h"
+#include "lobject.h"
+#include "lua.h"
 #include "lualib.h"
 
 
@@ -359,20 +360,23 @@ static const char *findfile (lua_State *L, const char *name,
   path = lua_tostring(L, -1);
   if (path == NULL)
     luaL_error(L, LUA_QL("package.%s") " must be a string", pname);
+  lua_pushstring(L, "");  /* error accumulator */
   while ((path = pushnexttemplate(L, path)) != NULL) {
     const char *filename;
     filename = luaL_gsub(L, lua_tostring(L, -1), LUA_PATH_MARK, name);
     if (readable(filename))  /* does file exist and is readable? */
       return filename;  /* return that file name */
     lua_pop(L, 2);  /* remove path template and file name */ 
+    luaO_pushfstring(L, "\n\tno file " LUA_QS, filename);
+    lua_concat(L, 2);
   }
   return NULL;  /* not found */
 }
 
 
-static void loaderror (lua_State *L) {
-  luaL_error(L, "error loading module " LUA_QS " (%s)",
-                lua_tostring(L, 1), lua_tostring(L, -1));
+static void loaderror (lua_State *L, const char *filename) {
+  luaL_error(L, "error loading module " LUA_QS " from file " LUA_QS ":\n\t%s",
+                lua_tostring(L, 1), filename, lua_tostring(L, -1));
 }
 
 
@@ -380,9 +384,9 @@ static int loader_Lua (lua_State *L) {
   const char *filename;
   const char *name = luaL_checkstring(L, 1);
   filename = findfile(L, name, "path");
-  if (filename == NULL) return 0;  /* library not found in this path */
+  if (filename == NULL) return 1;  /* library not found in this path */
   if (luaL_loadfile(L, filename) != 0)
-    loaderror(L);
+    loaderror(L, filename);
   return 1;  /* library loaded successfully */
 }
 
@@ -402,10 +406,10 @@ static int loader_C (lua_State *L) {
   const char *funcname;
   const char *name = luaL_checkstring(L, 1);
   const char *filename = findfile(L, name, "cpath");
-  if (filename == NULL) return 0;  /* library not found in this path */
+  if (filename == NULL) return 1;  /* library not found in this path */
   funcname = mkfuncname(L, name);
   if (ll_loadfunc(L, filename, funcname) != 0)
-    loaderror(L);
+    loaderror(L, filename);
   return 1;  /* library loaded successfully */
 }
 
@@ -419,22 +423,26 @@ static int loader_Croot (lua_State *L) {
   if (p == NULL) return 0;  /* is root */
   lua_pushlstring(L, name, p - name);
   filename = findfile(L, lua_tostring(L, -1), "cpath");
-  if (filename == NULL) return 0;  /* root not found */
+  if (filename == NULL) return 1;  /* root not found */
   funcname = mkfuncname(L, name);
   if ((stat = ll_loadfunc(L, filename, funcname)) != 0) {
-    if (stat == ERRFUNC) return 0;  /* function not found */
-    else
-      loaderror(L);  /* real error */
+    if (stat != ERRFUNC) loaderror(L, filename);  /* real error */
+    luaO_pushfstring(L, "\n\tno module " LUA_QS " in file " LUA_QS,
+                        name, filename);
+    return 1;  /* function not found */
   }
   return 1;
 }
 
 
 static int loader_preload (lua_State *L) {
+  const char *name = luaL_checkstring(L, 1);
   lua_getfield(L, LUA_ENVIRONINDEX, "preload");
   if (!lua_istable(L, -1))
     luaL_error(L, LUA_QL("package.preload") " must be a table");
-  lua_getfield(L, -1, luaL_checkstring(L, 1));
+  lua_getfield(L, -1, name);
+  if (lua_isnil(L, -1))  /* not found? */
+    luaO_pushfstring(L, "\n\tno field package.preload['%s']", name);
   return 1;
 }
 
@@ -458,14 +466,20 @@ static int ll_require (lua_State *L) {
   lua_getfield(L, LUA_ENVIRONINDEX, "loaders");
   if (!lua_istable(L, -1))
     luaL_error(L, LUA_QL("package.loaders") " must be a table");
+  lua_pushstring(L, "");  /* error message accumulator */
   for (i=1; ; i++) {
-    lua_rawgeti(L, -1, i);  /* get a loader */
+    lua_rawgeti(L, -2, i);  /* get a loader */
     if (lua_isnil(L, -1))
-      luaL_error(L, "module " LUA_QS " not found", name);
+      luaL_error(L, "module " LUA_QS " not found:%s",
+                    name, lua_tostring(L, -2));
     lua_pushstring(L, name);
     lua_call(L, 1, 1);  /* call it */
-    if (lua_isnil(L, -1)) lua_pop(L, 1);  /* did not found module */
-    else break;  /* module loaded successfully */
+    if (lua_isfunction(L, -1))  /* did it find module? */
+      break;  /* module loaded successfully */
+    else if (lua_isstring(L, -1))  /* loader returned error message? */
+      lua_concat(L, 2);  /* accumulate it */
+    else
+      lua_pop(L, 1);
   }
   lua_pushlightuserdata(L, sentinel);
   lua_setfield(L, 2, name);  /* _LOADED[name] = sentinel */
