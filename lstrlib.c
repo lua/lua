@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.127 2005/10/26 13:28:19 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.128 2005/12/15 18:53:34 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -740,7 +740,7 @@ static const char *scanformat (lua_State *L, const char *strfrmt, char *form) {
 
 
 static void addintlen (char *form) {
-  int l = strlen(form);
+  size_t l = strlen(form);
   char spec = form[l - 1];
   strcpy(form + l - 1, LUA_INTFRMLEN);
   form[l + sizeof(LUA_INTFRMLEN) - 2] = spec;
