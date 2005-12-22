@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.22 2005/11/16 11:55:27 roberto Exp roberto $
+** $Id: lcode.c,v 2.23 2005/11/25 13:29:32 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -196,7 +196,7 @@ void luaK_checkstack (FuncState *fs, int n) {
   if (newstack > fs->f->maxstacksize) {
     if (newstack >= MAXSTACK)
       luaX_syntaxerror(fs->ls, "function or expression too complex");
-    fs->f->maxstacksize = cast(lu_byte, newstack);
+    fs->f->maxstacksize = cast_byte(newstack);
   }
 }
 
@@ -227,11 +227,11 @@ static int addk (FuncState *fs, TValue *k, TValue *v) {
   Proto *f = fs->f;
   int oldsize = f->sizek;
   if (ttisnumber(idx)) {
-    lua_assert(luaO_rawequalObj(&fs->f->k[cast(int, nvalue(idx))], v));
-    return cast(int, nvalue(idx));
+    lua_assert(luaO_rawequalObj(&fs->f->k[cast_int(nvalue(idx))], v));
+    return cast_int(nvalue(idx));
   }
   else {  /* constant not found; create a new entry */
-    setnvalue(idx, cast(lua_Number, fs->nk));
+    setnvalue(idx, cast_num(fs->nk));
     luaM_growvector(L, f->k, fs->nk, f->sizek, TValue,
                     MAXARG_Bx, "constant table overflow");
     while (oldsize < f->sizek) setnilvalue(&f->k[oldsize++]);

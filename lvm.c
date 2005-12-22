@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.58 2005/10/24 17:37:52 roberto Exp roberto $
+** $Id: lvm.c,v 2.59 2005/11/01 16:08:45 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -509,11 +509,11 @@ void luaV_execute (lua_State *L, int nexeccalls) {
         const TValue *rb = RB(i);
         switch (ttype(rb)) {
           case LUA_TTABLE: {
-            setnvalue(ra, cast(lua_Number, luaH_getn(hvalue(rb))));
+            setnvalue(ra, cast_num(luaH_getn(hvalue(rb))));
             break;
           }
           case LUA_TSTRING: {
-            setnvalue(ra, cast(lua_Number, tsvalue(rb)->len));
+            setnvalue(ra, cast_num(tsvalue(rb)->len));
             break;
           }
           default: {  /* try metamethod */
@@ -693,10 +693,10 @@ void luaV_execute (lua_State *L, int nexeccalls) {
         int last;
         Table *h;
         if (n == 0) {
-          n = cast(int, L->top - ra) - 1;
+          n = cast_int(L->top - ra) - 1;
           L->top = L->ci->top;
         }
-        if (c == 0) c = cast(int, *pc++);
+        if (c == 0) c = cast_int(*pc++);
         runtime_check(L, ttistable(ra));
         h = hvalue(ra);
         last = ((c-1)*LFIELDS_PER_FLUSH) + n;
@@ -737,7 +737,7 @@ void luaV_execute (lua_State *L, int nexeccalls) {
         int b = GETARG_B(i) - 1;
         int j;
         CallInfo *ci = L->ci;
-        int n = cast(int, ci->base - ci->func) - cl->p->numparams - 1;
+        int n = cast_int(ci->base - ci->func) - cl->p->numparams - 1;
         if (b == LUA_MULTRET) {
           Protect(luaD_checkstack(L, n));
           ra = RA(i);  /* previous call may change the stack */

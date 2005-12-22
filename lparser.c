@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.38 2005/10/24 17:38:47 roberto Exp roberto $
+** $Id: lparser.c,v 2.39 2005/12/07 15:43:05 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -166,7 +166,7 @@ static void new_localvar (LexState *ls, TString *name, int n) {
 
 static void adjustlocalvars (LexState *ls, int nvars) {
   FuncState *fs = ls->fs;
-  fs->nactvar = cast(lu_byte, fs->nactvar + nvars);
+  fs->nactvar = cast_byte(fs->nactvar + nvars);
   for (; nvars; nvars--) {
     getlocvar(fs, fs->nactvar - nvars).startpc = fs->pc;
   }
@@ -198,8 +198,8 @@ static int indexupvalue (FuncState *fs, TString *name, expdesc *v) {
   f->upvalues[f->nups] = name;
   luaC_objbarrier(fs->L, f, name);
   lua_assert(v->k == VLOCAL || v->k == VUPVAL);
-  fs->upvalues[f->nups].k = cast(lu_byte, v->k);
-  fs->upvalues[f->nups].info = cast(lu_byte, v->u.s.info);
+  fs->upvalues[f->nups].k = cast_byte(v->k);
+  fs->upvalues[f->nups].info = cast_byte(v->u.s.info);
   return f->nups++;
 }
 
@@ -567,7 +567,7 @@ static void parlist (LexState *ls) {
     } while (!f->is_vararg && testnext(ls, ','));
   }
   adjustlocalvars(ls, nparams);
-  f->numparams = fs->nactvar - (f->is_vararg & VARARG_HASARG);
+  f->numparams = cast_byte(fs->nactvar - (f->is_vararg & VARARG_HASARG));
   luaK_reserveregs(fs, fs->nactvar);  /* reserve register for parameters */
 }
 

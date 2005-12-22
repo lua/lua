@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.32 2005/09/20 17:55:10 roberto Exp roberto $
+** $Id: ltests.c,v 2.33 2005/10/06 20:47:32 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -798,7 +798,7 @@ static int getnum_aux (lua_State *L, const char **pc) {
   int sig = 1;
   skip(pc);
   if (**pc == '.') {
-    res = cast(int, lua_tonumber(L, -1));
+    res = cast_int(lua_tonumber(L, -1));
     lua_pop(L, 1);
     (*pc)++;
     return res;
@@ -807,7 +807,7 @@ static int getnum_aux (lua_State *L, const char **pc) {
     sig = -1;
     (*pc)++;
   }
-  while (isdigit(cast(int, **pc))) res = res*10 + (*(*pc)++) - '0';
+  while (isdigit(cast_int(**pc))) res = res*10 + (*(*pc)++) - '0';
   return sig*res;
 }
   
@@ -994,7 +994,7 @@ static int testC (lua_State *L) {
 #ifndef luaL_setn
     else if EQ("setn") {
       int i = getindex;
-      int n = cast(int, lua_tonumber(L1, -1));
+      int n = cast_int(lua_tonumber(L1, -1));
       luaL_setn(L1, i, n);
       lua_pop(L1, 1);
     }

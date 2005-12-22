@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.27 2005/10/24 17:37:52 roberto Exp roberto $
+** $Id: ltable.c,v 2.28 2005/11/25 13:29:32 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -66,7 +66,7 @@
 /*
 ** number of ints inside a lua_Number
 */
-#define numints		cast(int, sizeof(lua_Number)/sizeof(int))
+#define numints		cast_int(sizeof(lua_Number)/sizeof(int))
 
 
 
@@ -120,7 +120,7 @@ static int arrayindex (const TValue *key) {
     lua_Number n = nvalue(key);
     int k;
     lua_number2int(k, n);
-    if (luai_numeq(cast(lua_Number, k), nvalue(key)))
+    if (luai_numeq(cast_num(k), nvalue(key)))
       return k;
   }
   return -1;  /* `key' did not match some condition */
@@ -145,7 +145,7 @@ static int findindex (lua_State *L, Table *t, StkId key) {
       if (luaO_rawequalObj(key2tval(n), key) ||
             (ttype(gkey(n)) == LUA_TDEADKEY && iscollectable(key) &&
              gcvalue(gkey(n)) == gcvalue(key))) {
-        i = cast(int, n - gnode(t, 0));  /* key index in hash table */
+        i = cast_int(n - gnode(t, 0));  /* key index in hash table */
         /* hash elements are numbered after array ones */
         return i + t->sizearray;
       }
@@ -161,7 +161,7 @@ int luaH_next (lua_State *L, Table *t, StkId key) {
   int i = findindex(L, t, key);  /* find original element */
   for (i++; i < t->sizearray; i++) {  /* try first array part */
     if (!ttisnil(&t->array[i])) {  /* a non-nil value? */
-      setnvalue(key, cast(lua_Number, i+1));
+      setnvalue(key, cast_num(i+1));
       setobj2s(L, key+1, &t->array[i]);
       return 1;
     }
@@ -286,7 +286,7 @@ static void setnodevector (lua_State *L, Table *t, int size) {
       setnilvalue(gval(gnode(t, i)));
     }
   }
-  t->lsizenode = cast(lu_byte, lsize);
+  t->lsizenode = cast_byte(lsize);
   t->lastfree = gnode(t, size);  /* all positions are free */
 }
 
@@ -356,7 +356,7 @@ Table *luaH_new (lua_State *L, int narray, int nhash) {
   Table *t = luaM_new(L, Table);
   luaC_link(L, obj2gco(t), LUA_TTABLE);
   t->metatable = NULL;
-  t->flags = cast(lu_byte, ~0);
+  t->flags = cast_byte(~0);
   /* temporary values (kept only if some malloc fails) */
   t->array = NULL;
   t->sizearray = 0;
@@ -434,7 +434,7 @@ const TValue *luaH_getnum (Table *t, int key) {
   if (cast(unsigned int, key-1) < cast(unsigned int, t->sizearray))
     return &t->array[key-1];
   else {
-    lua_Number nk = cast(lua_Number, key);
+    lua_Number nk = cast_num(key);
     Node *n = hashnum(t, nk);
     do {  /* check whether `key' is somewhere in the chain */
       if (ttisnumber(gkey(n)) && luai_numeq(nvalue(gkey(n)), nk))
@@ -471,7 +471,7 @@ const TValue *luaH_get (Table *t, const TValue *key) {
       int k;
       lua_Number n = nvalue(key);
       lua_number2int(k, n);
-      if (luai_numeq(cast(lua_Number, k), nvalue(key))) /* index is int? */
+      if (luai_numeq(cast_num(k), nvalue(key))) /* index is int? */
         return luaH_getnum(t, k);  /* use specialized version */
       /* else go through */
     }
@@ -508,7 +508,7 @@ TValue *luaH_setnum (lua_State *L, Table *t, int key) {
     return cast(TValue *, p);
   else {
     TValue k;
-    setnvalue(&k, cast(lua_Number, key));
+    setnvalue(&k, cast_num(key));
     return newkey(L, t, &k);
   }
 }

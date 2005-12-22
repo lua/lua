@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.50 2005/09/20 17:55:10 roberto Exp roberto $
+** $Id: lapi.c,v 2.51 2005/10/20 11:35:50 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -153,7 +153,7 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
 
 
 LUA_API int lua_gettop (lua_State *L) {
-  return cast(int, L->top - L->base);
+  return cast_int(L->top - L->base);
 }
 
 
@@ -430,7 +430,7 @@ LUA_API void lua_pushnumber (lua_State *L, lua_Number n) {
 
 LUA_API void lua_pushinteger (lua_State *L, lua_Integer n) {
   lua_lock(L);
-  setnvalue(L->top, cast(lua_Number, n));
+  setnvalue(L->top, cast_num(n));
   api_incr_top(L);
   lua_unlock(L);
 }
@@ -910,11 +910,11 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
     }
     case LUA_GCCOUNT: {
       /* GC values are expressed in Kbytes: #bytes/2^10 */
-      res = cast(int, g->totalbytes >> 10);
+      res = cast_int(g->totalbytes >> 10);
       break;
     }
     case LUA_GCCOUNTB: {
-      res = cast(int, g->totalbytes & 0x3ff);
+      res = cast_int(g->totalbytes & 0x3ff);
       break;
     }
     case LUA_GCSTEP: {
@@ -983,7 +983,7 @@ LUA_API void lua_concat (lua_State *L, int n) {
   api_checknelems(L, n);
   if (n >= 2) {
     luaC_checkGC(L);
-    luaV_concat(L, n, cast(int, L->top - L->base) - 1);
+    luaV_concat(L, n, cast_int(L->top - L->base) - 1);
     L->top -= (n-1);
   }
   else if (n == 0) {  /* push empty string */

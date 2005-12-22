@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.14 2005/10/21 13:47:42 roberto Exp roberto $
+** $Id: loslib.c,v 1.15 2005/12/15 18:17:49 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -179,7 +179,7 @@ static int os_time (lua_State *L) {
   if (t == (time_t)(-1))
     lua_pushnil(L);
   else
-    lua_pushnumber(L, t);
+    lua_pushnumber(L, (lua_Number)t);
   return 1;
 }
 
