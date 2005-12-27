@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.75 2005/11/25 13:29:11 roberto Exp roberto $
+** $Id: luaconf.h,v 1.76 2005/12/15 18:53:34 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -180,13 +180,6 @@
 #define LUAI_DATA	extern
 #endif
 
-
-
-/*
-@@ lua_assert describes the internal assertions in Lua.
-** CHANGE that only if you need to debug Lua.
-*/
-#define lua_assert(c)		((void)0)
 
 
 /*
@@ -373,8 +366,7 @@
 #include <assert.h>
 #define luai_apicheck(L,o)	{ (void)L; assert(o); }
 #else
-/* (By default lua_assert is empty, so luai_apicheck is also empty.) */
-#define luai_apicheck(L,o)	{ (void)L; lua_assert(o); }
+#define luai_apicheck(L,o)	{ (void)L; }
 #endif
 
 
