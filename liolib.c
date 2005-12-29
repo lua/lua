@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.68 2005/10/14 16:24:11 roberto Exp roberto $
+** $Id: liolib.c,v 2.69 2005/10/19 13:05:11 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -507,8 +507,8 @@ static void createstdfile (lua_State *L, FILE *f, int k, const char *fname) {
 
 LUALIB_API int luaopen_io (lua_State *L) {
   createmeta(L);
-  /* create new (private) environment */
-  lua_newtable(L);
+  /* create (private) environment (with fields IO_INPUT, IO_OUTPUT, __close) */
+  lua_createtable(L, 2, 1);
   lua_replace(L, LUA_ENVIRONINDEX);
   /* open library */
   luaL_register(L, LUA_IOLIBNAME, iolib);
@@ -518,7 +518,7 @@ LUALIB_API int luaopen_io (lua_State *L) {
   createstdfile(L, stderr, 0, "stderr");
   /* create environment for 'popen' */
   lua_getfield(L, -1, "popen");
-  lua_newtable(L);
+  lua_createtable(L, 0, 1);
   lua_pushcfunction(L, io_pclose);
   lua_setfield(L, -2, "__close");
   lua_setfenv(L, -2);

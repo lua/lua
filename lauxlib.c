@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.155 2005/10/20 11:35:25 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.156 2005/10/21 13:47:42 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -226,16 +226,24 @@ LUALIB_API void (luaL_register) (lua_State *L, const char *libname,
 }
 
 
+static int libsize (const luaL_Reg *l) {
+  int size = 0;
+  for (; l->name; l++) size++;
+  return size;
+}
+
+
 LUALIB_API void luaI_openlib (lua_State *L, const char *libname,
                               const luaL_Reg *l, int nup) {
   if (libname) {
+    int size = libsize(l);
     /* check whether lib already exists */
-    luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED");
+    luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", size);
     lua_getfield(L, -1, libname);  /* get _LOADED[libname] */
     if (!lua_istable(L, -1)) {  /* not found? */
       lua_pop(L, 1);  /* remove previous result */
       /* try global variable (and create one if it does not exist) */
-      if (luaL_findtable(L, LUA_GLOBALSINDEX, libname) != NULL)
+      if (luaL_findtable(L, LUA_GLOBALSINDEX, libname, size) != NULL)
         luaL_error(L, "name conflict for module " LUA_QS, libname);
       lua_pushvalue(L, -1);
       lua_setfield(L, -3, libname);  /* _LOADED[libname] = new table */
@@ -331,7 +339,7 @@ LUALIB_API const char *luaL_gsub (lua_State *L, const char *s, const char *p,
 
 
 LUALIB_API const char *luaL_findtable (lua_State *L, int idx,
-                                       const char *fname) {
+                                       const char *fname, int szhint) {
   const char *e;
   lua_pushvalue(L, idx);
   do {
@@ -341,7 +349,7 @@ LUALIB_API const char *luaL_findtable (lua_State *L, int idx,
     lua_rawget(L, -2);
     if (lua_isnil(L, -1)) {  /* no such field? */
       lua_pop(L, 1);  /* remove this nil */
-      lua_newtable(L);  /* create a new table for field */
+      lua_createtable(L, 0, (*e == '.' ? 1 : szhint)); /* new table for field */
       lua_pushlstring(L, fname, e - fname);
       lua_pushvalue(L, -2);
       lua_settable(L, -4);  /* set new table into field */

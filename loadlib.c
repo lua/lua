@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.49 2005/12/07 15:42:32 roberto Exp roberto $
+** $Id: loadlib.c,v 1.50 2005/12/19 20:56:39 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -550,7 +550,7 @@ static int ll_module (lua_State *L) {
   if (!lua_istable(L, -1)) {  /* not found? */
     lua_pop(L, 1);  /* remove previous result */
     /* try global variable (and create one if it does not exist) */
-    if (luaL_findtable(L, LUA_GLOBALSINDEX, modname) != NULL)
+    if (luaL_findtable(L, LUA_GLOBALSINDEX, modname, 1) != NULL)
       return luaL_error(L, "name conflict for module " LUA_QS, modname);
     lua_pushvalue(L, -1);
     lua_setfield(L, loaded, modname);  /* _LOADED[modname] = new table */
@@ -573,7 +573,7 @@ static int ll_module (lua_State *L) {
 static int ll_seeall (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
   if (!lua_getmetatable(L, 1)) {
-    lua_newtable(L); /* create new metatable */
+    lua_createtable(L, 0, 1); /* create new metatable */
     lua_pushvalue(L, -1);
     lua_setmetatable(L, 1);
   }
@@ -640,7 +640,7 @@ LUALIB_API int luaopen_package (lua_State *L) {
   lua_pushvalue(L, -1);
   lua_replace(L, LUA_ENVIRONINDEX);
   /* create `loaders' table */
-  lua_newtable(L);
+  lua_createtable(L, 0, sizeof(loaders)/sizeof(loaders[0]) - 1);
   /* fill it with pre-defined loaders */
   for (i=0; loaders[i] != NULL; i++) {
     lua_pushcfunction(L, loaders[i]);
@@ -654,7 +654,7 @@ LUALIB_API int luaopen_package (lua_State *L) {
                     LUA_EXECDIR "\n" LUA_IGMARK);
   lua_setfield(L, -2, "config");
   /* set field `loaded' */
-  luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED");
+  luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", 2);
   lua_setfield(L, -2, "loaded");
   /* set field `preload' */
   lua_newtable(L);

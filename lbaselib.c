@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.186 2005/10/21 13:47:42 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.187 2005/12/27 17:10:11 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -625,7 +625,7 @@ static void base_open (lua_State *L) {
   auxopen(L, "ipairs", luaB_ipairs, ipairsaux);
   auxopen(L, "pairs", luaB_pairs, luaB_next);
   /* `newproxy' needs a weaktable as upvalue */
-  lua_newtable(L);  /* new table `w' */
+  lua_createtable(L, 0, 1);  /* new table `w' */
   lua_pushvalue(L, -1);  /* `w' will be its own metatable */
   lua_setmetatable(L, -2);
   lua_pushliteral(L, "kv");

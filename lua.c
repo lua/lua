@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.155 2005/11/28 14:44:48 roberto Exp roberto $
+** $Id: lua.c,v 1.156 2005/12/29 12:30:16 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -120,7 +120,7 @@ static int getargs (lua_State *L, char **argv, int n) {
   luaL_checkstack(L, narg + 3, "too many arguments to script");
   for (i=n+1; i < argc; i++)
     lua_pushstring(L, argv[i]);
-  lua_newtable(L);
+  lua_createtable(L, narg, n + 1);
   for (i=0; i < argc; i++) {
     lua_pushstring(L, argv[i]);
     lua_rawseti(L, -2, i - n);
