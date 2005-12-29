@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.154 2005/10/24 17:38:47 roberto Exp roberto $
+** $Id: lua.c,v 1.155 2005/11/28 14:44:48 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -329,7 +329,9 @@ static int pmain (lua_State *L) {
   int has_i = 0, has_v = 0, has_e = 0;
   globalL = L;
   if (argv[0] && argv[0][0]) progname = argv[0];
+  lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
   luaL_openlibs(L);  /* open libraries */
+  lua_gc(L, LUA_GCRESTART, 0);
   s->status = handle_luainit(L);
   if (s->status != 0) return 0;
   script = collectargs(argv, &has_i, &has_v, &has_e);
