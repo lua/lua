@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.29 2005/12/22 16:19:56 roberto Exp roberto $
+** $Id: ltable.c,v 2.30 2006/01/10 12:51:53 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -70,7 +70,9 @@
 
 
 
-const Node luaH_dummynode_ = {
+#define dummynode		(&dummynode_)
+
+static const Node dummynode_ = {
   {{NULL}, LUA_TNIL},  /* value */
   {{{NULL}, LUA_TNIL, NULL}}  /* key */
 };
@@ -95,7 +97,7 @@ static Node *hashnum (const Table *t, lua_Number n) {
 ** returns the `main' position of an element in a table (that is, the index
 ** of its hash value)
 */
-Node *luaH_mainposition (const Table *t, const TValue *key) {
+static Node *mainposition (const Table *t, const TValue *key) {
   switch (ttype(key)) {
     case LUA_TNUMBER:
       return hashnum(t, nvalue(key));
@@ -139,7 +141,7 @@ static int findindex (lua_State *L, Table *t, StkId key) {
   if (0 < i && i <= t->sizearray)  /* is `key' inside array part? */
     return i-1;  /* yes; that's the index (corrected to C) */
   else {
-    Node *n = luaH_mainposition(t, key);
+    Node *n = mainposition(t, key);
     do {  /* check whether `key' is somewhere in the chain */
       /* key may be dead already, but it is ok to use it in `next' */
       if (luaO_rawequalObj(key2tval(n), key) ||
@@ -270,7 +272,7 @@ static void setarrayvector (lua_State *L, Table *t, int size) {
 static void setnodevector (lua_State *L, Table *t, int size) {
   int lsize;
   if (size == 0) {  /* no elements to hash part? */
-    t->node = cast(Node *, luaH_dummynode);  /* use common `dummynode' */
+    t->node = cast(Node *, dummynode);  /* use common `dummynode' */
     lsize = 0;
   }
   else {
@@ -317,13 +319,13 @@ static void resize (lua_State *L, Table *t, int nasize, int nhsize) {
     if (!ttisnil(gval(old)))
       setobjt2t(L, luaH_set(L, t, key2tval(old)), gval(old));
   }
-  if (nold != luaH_dummynode)
+  if (nold != dummynode)
     luaM_freearray(L, nold, twoto(oldhsize), Node);  /* free old array */
 }
 
 
 void luaH_resizearray (lua_State *L, Table *t, int nasize) {
-  int nsize = (t->node == luaH_dummynode) ? 0 : sizenode(t);
+  int nsize = (t->node == dummynode) ? 0 : sizenode(t);
   resize(L, t, nasize, nsize);
 }
 
@@ -362,7 +364,7 @@ Table *luaH_new (lua_State *L, int narray, int nhash) {
   t->array = NULL;
   t->sizearray = 0;
   t->lsizenode = 0;
-  t->node = cast(Node *, luaH_dummynode);
+  t->node = cast(Node *, dummynode);
   setarrayvector(L, t, narray);
   setnodevector(L, t, nhash);
   return t;
@@ -370,7 +372,7 @@ Table *luaH_new (lua_State *L, int narray, int nhash) {
 
 
 void luaH_free (lua_State *L, Table *t) {
-  if (t->node != luaH_dummynode)
+  if (t->node != dummynode)
     luaM_freearray(L, t->node, sizenode(t), Node);
   luaM_freearray(L, t->array, t->sizearray, TValue);
   luaM_free(L, t);
@@ -395,16 +397,16 @@ static Node *getfreepos (Table *t) {
 ** position), new key goes to an empty position. 
 */
 static TValue *newkey (lua_State *L, Table *t, const TValue *key) {
-  Node *mp = luaH_mainposition(t, key);
-  if (!ttisnil(gval(mp)) || mp == luaH_dummynode) {
+  Node *mp = mainposition(t, key);
+  if (!ttisnil(gval(mp)) || mp == dummynode) {
     Node *othern;
     Node *n = getfreepos(t);  /* get a free place */
     if (n == NULL) {  /* cannot find a free place? */
       rehash(L, t, key);  /* grow table */
       return luaH_set(L, t, key);  /* re-insert key into grown table */
     }
-    lua_assert(n != luaH_dummynode);
-    othern = luaH_mainposition(t, key2tval(mp));
+    lua_assert(n != dummynode);
+    othern = mainposition(t, key2tval(mp));
     if (othern != mp) {  /* is colliding node out of its main position? */
       /* yes; move colliding node into free position */
       while (gnext(othern) != mp) othern = gnext(othern);  /* find previous */
@@ -477,7 +479,7 @@ const TValue *luaH_get (Table *t, const TValue *key) {
       /* else go through */
     }
     default: {
-      Node *n = luaH_mainposition(t, key);
+      Node *n = mainposition(t, key);
       do {  /* check whether `key' is somewhere in the chain */
         if (luaO_rawequalObj(key2tval(n), key))
           return gval(n);  /* that's it */
@@ -568,8 +570,19 @@ int luaH_getn (Table *t) {
     return i;
   }
   /* else must find a boundary in hash part */
-  else if (t->node == luaH_dummynode)  /* hash part is empty? */
+  else if (t->node == dummynode)  /* hash part is empty? */
     return j;  /* that is easy... */
   else return unbound_search(t, j);
 }
 
+
+
+#if defined(LUA_DEBUG)
+
+Node *luaH_mainposition (const Table *t, const TValue *key) {
+  return mainposition(t, key);
+}
+
+int luaH_isdummy (Node *n) { return n == dummynode; }
+
+#endif
