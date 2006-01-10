@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.h,v 2.7 2005/04/25 19:24:10 roberto Exp roberto $
+** $Id: ltable.h,v 2.8 2005/06/06 13:30:25 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -11,14 +11,12 @@
 
 
 #define gnode(t,i)	(&(t)->node[i])
-#define gkey(n)		(&(n)->i_key)
+#define gkey(n)		(&(n)->i_key.nk)
 #define gval(n)		(&(n)->i_val)
-#define gnext(n)	((n)->i_key.next)
+#define gnext(n)	((n)->i_key.nk.next)
 
-#define key2tval(n)	(cast(const TValue *, gkey(n)))
+#define key2tval(n)	(&(n)->i_key.tvk)
 
-
-LUAI_DATA const Node luaH_dummynode;
 
 LUAI_FUNC const TValue *luaH_getnum (Table *t, int key);
 LUAI_FUNC TValue *luaH_setnum (lua_State *L, Table *t, int key);
@@ -34,6 +32,10 @@ LUAI_FUNC int luaH_getn (Table *t);
 
 /* exported only for debugging */
 LUAI_FUNC Node *luaH_mainposition (const Table *t, const TValue *key);
+
+#define luaH_dummynode		(&luaH_dummynode_)
+
+LUAI_DATA const Node luaH_dummynode_;
 
 
 #endif
