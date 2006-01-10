@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.33 2005/10/06 20:47:32 roberto Exp roberto $
+** $Id: ltests.c,v 2.34 2005/12/22 16:19:56 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -564,7 +564,7 @@ static int table_query (lua_State *L) {
   t = hvalue(obj_at(L, 1));
   if (i == -1) {
     lua_pushinteger(L, t->sizearray);
-    lua_pushinteger(L, t->node == &luaH_dummynode ? 0 : sizenode(t));
+    lua_pushinteger(L, t->node == luaH_dummynode ? 0 : sizenode(t));
     lua_pushinteger(L, t->lastfree - t->node);
   }
   else if (i < t->sizearray) {

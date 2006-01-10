@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.6 2005/05/20 15:53:42 roberto Exp roberto $
+** $Id: ltm.c,v 2.7 2005/12/22 16:19:56 roberto Exp roberto $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -70,6 +70,6 @@ const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
     default:
       mt = G(L)->mt[ttype(o)];
   }
-  return (mt ? luaH_getstr(mt, G(L)->tmname[event]) : &luaO_nilobject);
+  return (mt ? luaH_getstr(mt, G(L)->tmname[event]) : luaO_nilobject);
 }
 

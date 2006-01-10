@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.59 2005/11/01 16:08:45 roberto Exp roberto $
+** $Id: lvm.c,v 2.60 2005/12/22 16:19:56 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -518,7 +518,7 @@ void luaV_execute (lua_State *L, int nexeccalls) {
           }
           default: {  /* try metamethod */
             Protect(
-              if (!call_binTM(L, rb, &luaO_nilobject, ra, TM_LEN))
+              if (!call_binTM(L, rb, luaO_nilobject, ra, TM_LEN))
                 luaG_typeerror(L, rb, "get length of");
             )
           }
