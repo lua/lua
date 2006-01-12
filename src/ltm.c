@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.6 2005/05/20 15:53:42 roberto Exp $
+** $Id: ltm.c,v 2.8 2006/01/10 12:50:00 roberto Exp $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -51,7 +51,7 @@ const TValue *luaT_gettm (Table *events, TMS event, TString *ename) {
   const TValue *tm = luaH_getstr(events, ename);
   lua_assert(event <= TM_EQ);
   if (ttisnil(tm)) {  /* no tag method? */
-    events->flags |= cast(lu_byte, 1u<<event);  /* cache this fact */
+    events->flags |= cast_byte(1u<<event);  /* cache this fact */
     return NULL;
   }
   else return tm;
@@ -70,6 +70,6 @@ const TValue *luaT_gettmbyobj (lua_State *L, const TValue *o, TMS event) {
     default:
       mt = G(L)->mt[ttype(o)];
   }
-  return (mt ? luaH_getstr(mt, G(L)->tmname[event]) : &luaO_nilobject);
+  return (mt ? luaH_getstr(mt, G(L)->tmname[event]) : luaO_nilobject);
 }
 

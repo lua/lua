@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.154 2005/10/24 17:38:47 roberto Exp $
+** $Id: lua.c,v 1.157 2005/12/29 16:23:32 roberto Exp $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -120,7 +120,7 @@ static int getargs (lua_State *L, char **argv, int n) {
   luaL_checkstack(L, narg + 3, "too many arguments to script");
   for (i=n+1; i < argc; i++)
     lua_pushstring(L, argv[i]);
-  lua_newtable(L);
+  lua_createtable(L, narg, n + 1);
   for (i=0; i < argc; i++) {
     lua_pushstring(L, argv[i]);
     lua_rawseti(L, -2, i - n);
@@ -215,7 +215,6 @@ static void dotty (lua_State *L) {
   int status;
   const char *oldprogname = progname;
   progname = NULL;
-  print_version();
   while ((status = loadline(L)) != -1) {
     if (status == 0) status = docall(L, 0, 0);
     report(L, status);
@@ -261,7 +260,7 @@ static int collectargs (char **argv, int *pi, int *pv, int *pe) {
     switch (argv[i][1]) {  /* option */
       case '-': return (argv[i+1] != NULL ? i+1 : 0);
       case '\0': return i;
-      case 'i': *pi = 1; break;
+      case 'i': *pi = 1;  /* go through */
       case 'v': *pv = 1; break;
       case 'e': *pe = 1;  /* go through */
       case 'l':
@@ -330,7 +329,9 @@ static int pmain (lua_State *L) {
   int has_i = 0, has_v = 0, has_e = 0;
   globalL = L;
   if (argv[0] && argv[0][0]) progname = argv[0];
+  lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
   luaL_openlibs(L);  /* open libraries */
+  lua_gc(L, LUA_GCRESTART, 0);
   s->status = handle_luainit(L);
   if (s->status != 0) return 0;
   script = collectargs(argv, &has_i, &has_v, &has_e);
@@ -348,7 +349,10 @@ static int pmain (lua_State *L) {
   if (has_i)
     dotty(L);
   else if (script == 0 && !has_e && !has_v) {
-    if (lua_stdin_is_tty()) dotty(L);
+    if (lua_stdin_is_tty()) {
+      print_version();
+      dotty(L);
+    }
     else dofile(L, NULL);  /* executes stdin as a file */
   }
   return 0;

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.36 2005/10/23 17:52:42 roberto Exp $
+** $Id: ldo.c,v 2.37 2005/12/22 16:19:56 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -71,7 +71,7 @@ void luaD_seterrorobj (lua_State *L, int errcode, StkId oldtop) {
 static void restore_stack_limit (lua_State *L) {
   lua_assert(L->stack_last - L->stack == L->stacksize - EXTRA_STACK - 1);
   if (L->size_ci > LUAI_MAXCALLS) {  /* there was an overflow? */
-    int inuse = cast(int, L->ci - L->base_ci);
+    int inuse = cast_int(L->ci - L->base_ci);
     if (inuse + 1 < LUAI_MAXCALLS)  /* can `undo' overflow? */
       luaD_reallocCI(L, LUAI_MAXCALLS);
   }
@@ -97,7 +97,7 @@ void luaD_throw (lua_State *L, int errcode) {
     LUAI_THROW(L, L->errorJmp);
   }
   else {
-    L->status = cast(lu_byte, errcode);
+    L->status = cast_byte(errcode);
     if (G(L)->panic) {
       resetstack(L, errcode);
       lua_unlock(L);
@@ -189,7 +189,7 @@ void luaD_callhook (lua_State *L, int event, int line) {
     if (event == LUA_HOOKTAILRET)
       ar.i_ci = 0;  /* tail call; no debug information about it */
     else
-      ar.i_ci = cast(int, L->ci - L->base_ci);
+      ar.i_ci = cast_int(L->ci - L->base_ci);
     luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
     L->ci->top = L->top + LUA_MINSTACK;
     lua_assert(L->ci->top <= L->stack_last);
@@ -221,8 +221,7 @@ static StkId adjust_varargs (lua_State *L, Proto *p, int actual) {
     for (i=0; i<nvar; i++)  /* put extra arguments into `arg' table */
       setobj2n(L, luaH_setnum(L, htab, i+1), L->top - nvar + i);
     /* store counter in field `n' */
-    setnvalue(luaH_setstr(L, htab, luaS_newliteral(L, "n")),
-                                   cast(lua_Number, nvar));
+    setnvalue(luaH_setstr(L, htab, luaS_newliteral(L, "n")), cast_num(nvar));
   }
 #endif
   /* move fixed parameters to final position */
@@ -282,7 +281,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
         L->top = base + p->numparams;
     }
     else {  /* vararg function */
-      int nargs = cast(int, L->top - func) - 1;
+      int nargs = cast_int(L->top - func) - 1;
       base = adjust_varargs(L, p, nargs);
       func = restorestack(L, funcr);  /* previous call may change the stack */
     }
@@ -401,7 +400,7 @@ static void resume (lua_State *L, void *ud) {
       L->base = L->ci->base;
   }
   L->status = 0;
-  luaV_execute(L, cast(int, L->ci - L->base_ci));
+  luaV_execute(L, cast_int(L->ci - L->base_ci));
 }
 
 
@@ -427,7 +426,7 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
   lua_assert(L->errfunc == 0 && L->nCcalls == 0);
   status = luaD_rawrunprotected(L, resume, L->top - nargs);
   if (status != 0) {  /* error? */
-    L->status = cast(lu_byte, status);  /* mark thread as `dead' */
+    L->status = cast_byte(status);  /* mark thread as `dead' */
     luaD_seterrorobj(L, status, L->top);
     L->ci->top = L->top;
   }

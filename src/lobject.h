@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.18 2005/10/24 17:37:33 roberto Exp $
+** $Id: lobject.h,v 2.19 2006/01/10 12:51:53 roberto Exp $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -323,9 +323,12 @@ typedef union Closure {
 ** Tables
 */
 
-typedef struct TKey {
-  TValuefields;
-  struct Node *next;  /* for chaining */
+typedef union TKey {
+  struct {
+    TValuefields;
+    struct Node *next;  /* for chaining */
+  } nk;
+  TValue tvk;
 } TKey;
 
 
@@ -360,8 +363,9 @@ typedef struct Table {
 #define sizenode(t)	(twoto((t)->lsizenode))
 
 
+#define luaO_nilobject		(&luaO_nilobject_)
 
-LUAI_DATA const TValue luaO_nilobject;
+LUAI_DATA const TValue luaO_nilobject_;
 
 #define ceillog2(x)	(luaO_log2((x)-1) + 1)
 

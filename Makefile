@@ -4,6 +4,9 @@
 
 # == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT =======================
 
+# Your platform. See PLATS for possible values.
+PLAT= none
+
 # Where to install. The installation starts in the src directory, so take care
 # if INSTALL_TOP is not an absolute path. (Man pages are installed from the
 # doc directory.)
@@ -24,6 +27,9 @@ INSTALL_DATA= cp
 
 # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
 
+# Convenience platforms targets.
+PLATS= ansi bsd generic linux macosx mingw posix
+
 # What to install.
 TO_BIN= lua luac
 TO_INC= lua.h luaconf.h lualib.h lauxlib.h ../etc/lua.hpp
@@ -33,7 +39,9 @@ TO_MAN= lua.1 luac.1
 # Lua version. Currently used only for messages.
 V= 5.1
 
-all clean:
+all: $(PLAT)
+
+$(PLATS) clean:
 	cd src; $(MAKE) $@
 
 test:	all
@@ -49,27 +57,8 @@ install: all
 local:
 	$(MAKE) install INSTALL_TOP=.. INSTALL_EXEC="cp -p" INSTALL_DATA="cp -p"
 
-# convenience targets for usual platforms
-
-ansi:
-	cd src; $(MAKE) MYCFLAGS=-DLUA_ANSI
-
-linux:
-	cd src; $(MAKE) MYCFLAGS=-DLUA_USE_LINUX MYLIBS="-Wl,-E -ldl -lreadline -lhistory -lncurses"
-
-macosx:
-	cd src; $(MAKE) MYCFLAGS=-DLUA_USE_MACOSX
-
-posix:
-	cd src; $(MAKE) MYCFLAGS=-DLUA_USE_POSIX
-
-bsd:
-	cd src; $(MAKE) MYCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN" MYLIBS="-Wl,-E"
-
-mingw:
-	cd src; $(MAKE) "LUA_A=lua51.dll" "LUA_T=lua.exe" \
-	"AR=gcc -shared -o" "RANLIB=strip --strip-unneeded" \
-	"MYCFLAGS=-DLUA_BUILD_AS_DLL" "MYLIBS=" "MYLDFLAGS=-s" lua.exe
+none:
+	@echo "Please choose a platform: $(PLATS)"
 
 # echo config parameters
 echo:
@@ -80,6 +69,7 @@ echo:
 	@echo ""
 	@echo "These are the parameters currently set in Makefile to install Lua $V:"
 	@echo ""
+	@echo "PLAT = $(PLAT)"
 	@echo "INSTALL_TOP = $(INSTALL_TOP)"
 	@echo "INSTALL_BIN = $(INSTALL_BIN)"
 	@echo "INSTALL_INC = $(INSTALL_INC)"

@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.103 2005/11/01 16:08:32 roberto Exp $
+** $Id: ldblib.c,v 1.104 2005/12/29 15:32:11 roberto Exp $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -116,7 +116,7 @@ static int db_getinfo (lua_State *L) {
     return luaL_argerror(L, arg+1, "function or level expected");
   if (!lua_getinfo(L1, options, &ar))
     return luaL_argerror(L, arg+2, "invalid option");
-  lua_newtable(L);
+  lua_createtable(L, 0, 2);
   if (strchr(options, 'S')) {
     settabss(L, "source", ar.source);
     settabss(L, "short_src", ar.short_src);
@@ -246,7 +246,7 @@ static void gethooktable (lua_State *L) {
   lua_rawget(L, LUA_REGISTRYINDEX);
   if (!lua_istable(L, -1)) {
     lua_pop(L, 1);
-    lua_newtable(L);
+    lua_createtable(L, 0, 1);
     lua_pushlightuserdata(L, (void *)&KEY_HOOK);
     lua_pushvalue(L, -2);
     lua_rawset(L, LUA_REGISTRYINDEX);

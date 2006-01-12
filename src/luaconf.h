@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.74 2005/11/16 16:24:28 roberto Exp $
+** $Id: luaconf.h,v 1.77 2005/12/27 17:12:00 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -26,6 +26,11 @@
 */
 #if defined(__STRICT_ANSI__)
 #define LUA_ANSI
+#endif
+
+
+#if !defined(LUA_ANSI) && defined(_WIN32)
+#define LUA_WIN
 #endif
 
 #if defined(LUA_USE_LINUX)
@@ -178,13 +183,6 @@
 
 
 /*
-@@ lua_assert describes the internal assertions in Lua.
-** CHANGE that only if you need to debug Lua.
-*/
-#define lua_assert(c)		((void)0)
-
-
-/*
 @@ LUA_QL describes how error messages quote program elements.
 ** CHANGE it if you want a different appearance.
 */
@@ -217,7 +215,7 @@
 #if defined(LUA_USE_ISATTY)
 #include <unistd.h>
 #define lua_stdin_is_tty()	isatty(0)
-#elif !defined(LUA_ANSI) && defined(_WIN32)
+#elif defined(LUA_WIN)
 #include <io.h>
 #include <stdio.h>
 #define lua_stdin_is_tty()	_isatty(_fileno(stdin))
@@ -368,8 +366,7 @@
 #include <assert.h>
 #define luai_apicheck(L,o)	{ (void)L; assert(o); }
 #else
-/* (By default lua_assert is empty, so luai_apicheck is also empty.) */
-#define luai_apicheck(L,o)	{ (void)L; lua_assert(o); }
+#define luai_apicheck(L,o)	{ (void)L; }
 #endif
 
 
@@ -529,6 +526,7 @@
 #define luai_numeq(a,b)		((a)==(b))
 #define luai_numlt(a,b)		((a)<(b))
 #define luai_numle(a,b)		((a)<=(b))
+#define luai_numisnan(a)	(!luai_numeq((a), (a)))
 #endif
 
 
@@ -644,7 +642,7 @@ union luai_Cast { double l_d; long l_l; };
 #define lua_popen(L,c,m)	((void)L, popen(c,m))
 #define lua_pclose(L,file)	((void)L, (pclose(file) != -1))
 
-#elif !defined(LUA_ANSI) && defined(_WIN32)
+#elif defined(LUA_WIN)
 
 #define lua_popen(L,c,m)	((void)L, _popen(c,m))
 #define lua_pclose(L,file)	((void)L, (_pclose(file) != -1))
@@ -675,7 +673,7 @@ union luai_Cast { double l_d; long l_l; };
 #define LUA_DL_DLOPEN
 #endif
 
-#if !defined(LUA_ANSI) && defined(_WIN32)
+#if defined(LUA_WIN)
 #define LUA_DL_DLL
 #endif
 
@@ -701,6 +699,26 @@ union luai_Cast { double l_d; long l_l; };
 #define luai_userstateresume(L,n)	((void)L)
 #define luai_userstateyield(L,n)	((void)L)
 
+
+/*
+@@ LUA_INTFRMLEN is the length modifier for integer conversions
+@* in 'string.fomat'.
+@@ LUA_INTFRM_T is the integer type correspoding to the previous length
+@* modifier.
+** CHANGE them if your system supports long long or does not support long.
+*/
+
+#if defined(LUA_USELONGLONG)
+
+#define LUA_INTFRMLEN		"ll"
+#define LUA_INTFRM_T		long long
+
+#else
+
+#define LUA_INTFRMLEN		"l"
+#define LUA_INTFRM_T		long
+
+#endif
 
 
 

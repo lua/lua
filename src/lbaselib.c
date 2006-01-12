@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.186 2005/10/21 13:47:42 roberto Exp $
+** $Id: lbaselib.c,v 1.188 2005/12/29 15:32:11 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -201,7 +201,7 @@ static int luaB_collectgarbage (lua_State *L) {
   switch (optsnum[o]) {
     case LUA_GCCOUNT: {
       int b = lua_gc(L, LUA_GCCOUNTB, 0);
-      lua_pushnumber(L, ((lua_Number)res*1024 + b)/1000);
+      lua_pushnumber(L, ((lua_Number)res*1024 + b)/1024);
       return 1;
     }
     case LUA_GCSTEP: {
@@ -625,7 +625,7 @@ static void base_open (lua_State *L) {
   auxopen(L, "ipairs", luaB_ipairs, ipairsaux);
   auxopen(L, "pairs", luaB_pairs, luaB_next);
   /* `newproxy' needs a weaktable as upvalue */
-  lua_newtable(L);  /* new table `w' */
+  lua_createtable(L, 0, 1);  /* new table `w' */
   lua_pushvalue(L, -1);  /* `w' will be its own metatable */
   lua_setmetatable(L, -2);
   lua_pushliteral(L, "kv");

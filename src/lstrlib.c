@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.127 2005/10/26 13:28:19 roberto Exp $
+** $Id: lstrlib.c,v 1.130 2005/12/29 15:32:11 roberto Exp $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -683,8 +683,13 @@ static int str_gsub (lua_State *L) {
 
 /* maximum size of each formatted item (> len(format('%99.99f', -1e308))) */
 #define MAX_ITEM	512
-/* maximum size of each format specification (such as '%-099.99d') */
-#define MAX_FORMAT	20
+/* valid flags in a format specification */
+#define FLAGS	"-+ #0"
+/*
+** maximum size of each format specification (such as '%-099.99d')
+** (+10 accounts for %99.99x plus margin of error)
+*/
+#define MAX_FORMAT	(sizeof(FLAGS) + sizeof(LUA_INTFRMLEN) + 10)
 
 
 static void addquoted (lua_State *L, luaL_Buffer *b, int arg) {
@@ -712,27 +717,34 @@ static void addquoted (lua_State *L, luaL_Buffer *b, int arg) {
   luaL_addchar(b, '"');
 }
 
-
-static const char *scanformat (lua_State *L, const char *strfrmt,
-                                 char *form, int *hasprecision) {
+static const char *scanformat (lua_State *L, const char *strfrmt, char *form) {
   const char *p = strfrmt;
-  while (strchr("-+ #0", *p)) p++;  /* skip flags */
+  while (strchr(FLAGS, *p)) p++;  /* skip flags */
+  if ((size_t)(p - strfrmt) >= sizeof(FLAGS))
+    luaL_error(L, "invalid format (repeated flags)");
   if (isdigit(uchar(*p))) p++;  /* skip width */
   if (isdigit(uchar(*p))) p++;  /* (2 digits at most) */
   if (*p == '.') {
     p++;
-    *hasprecision = 1;
     if (isdigit(uchar(*p))) p++;  /* skip precision */
     if (isdigit(uchar(*p))) p++;  /* (2 digits at most) */
   }
   if (isdigit(uchar(*p)))
     luaL_error(L, "invalid format (width or precision too long)");
-  if (p-strfrmt+2 > MAX_FORMAT)  /* +2 to include `%' and the specifier */
-    luaL_error(L, "invalid format (too long)");
-  form[0] = L_ESC;
-  strncpy(form+1, strfrmt, p-strfrmt+1);
-  form[p-strfrmt+2] = 0;
+  *(form++) = '%';
+  strncpy(form, strfrmt, p - strfrmt + 1);
+  form += p - strfrmt + 1;
+  *form = '\0';
   return p;
+}
+
+
+static void addintlen (char *form) {
+  size_t l = strlen(form);
+  char spec = form[l - 1];
+  strcpy(form + l - 1, LUA_INTFRMLEN);
+  form[l + sizeof(LUA_INTFRMLEN) - 2] = spec;
+  form[l + sizeof(LUA_INTFRMLEN) - 1] = '\0';
 }
 
 
@@ -751,21 +763,26 @@ static int str_format (lua_State *L) {
     else { /* format item */
       char form[MAX_FORMAT];  /* to store the format (`%...') */
       char buff[MAX_ITEM];  /* to store the formatted item */
-      int hasprecision = 0;
       arg++;
-      strfrmt = scanformat(L, strfrmt, form, &hasprecision);
+      strfrmt = scanformat(L, strfrmt, form);
       switch (*strfrmt++) {
-        case 'c':  case 'd':  case 'i': {
-          sprintf(buff, form, luaL_checkint(L, arg));
+        case 'c': {
+          sprintf(buff, form, (int)luaL_checknumber(L, arg));
+          break;
+        }
+        case 'd':  case 'i': {
+          addintlen(form);
+          sprintf(buff, form, (LUA_INTFRM_T)luaL_checknumber(L, arg));
           break;
         }
         case 'o':  case 'u':  case 'x':  case 'X': {
-          sprintf(buff, form, (unsigned int)(luaL_checknumber(L, arg)));
+          addintlen(form);
+          sprintf(buff, form, (unsigned LUA_INTFRM_T)luaL_checknumber(L, arg));
           break;
         }
         case 'e':  case 'E': case 'f':
         case 'g': case 'G': {
-          sprintf(buff, form, luaL_checknumber(L, arg));
+          sprintf(buff, form, (double)luaL_checknumber(L, arg));
           break;
         }
         case 'q': {
@@ -775,7 +792,7 @@ static int str_format (lua_State *L) {
         case 's': {
           size_t l;
           const char *s = luaL_checklstring(L, arg, &l);
-          if (!hasprecision && l >= 100) {
+          if (!strchr(form, '.') && l >= 100) {
             /* no precision and string is too long to be formatted;
                keep original string */
             lua_pushvalue(L, arg);
@@ -820,7 +837,7 @@ static const luaL_Reg strlib[] = {
 
 
 static void createmetatable (lua_State *L) {
-  lua_newtable(L);  /* create metatable for strings */
+  lua_createtable(L, 0, 1);  /* create metatable for strings */
   lua_pushliteral(L, "");  /* dummy string */
   lua_pushvalue(L, -2);
   lua_setmetatable(L, -2);  /* set string metatable */

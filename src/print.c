@@ -1,5 +1,5 @@
 /*
-** $Id: print.c,v 1.53 2005/11/11 14:03:13 lhf Exp $
+** $Id: print.c,v 1.54 2006/01/11 22:49:27 lhf Exp $
 ** print bytecodes
 ** See Copyright Notice in lua.h
 */
@@ -36,7 +36,10 @@ static void PrintString(const Proto* f, int n)
    case '\r': printf("\\r"); break;
    case '\t': printf("\\t"); break;
    case '\v': printf("\\v"); break;
-   default:   printf(isprint((unsigned char)*s) ? "%c" : "\\%03d",*s);
+   default:	if (isprint((unsigned char)*s))
+   			printf("%c",*s);
+		else
+			printf("\\%03u",(unsigned char)*s);
   }
  }
  putchar('"');

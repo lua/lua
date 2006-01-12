@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.36 2005/08/24 17:06:36 roberto Exp $
+** $Id: lgc.c,v 2.37 2005/12/22 16:19:56 roberto Exp $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -29,11 +29,10 @@
 #define GCFINALIZECOST	100
 
 
-#define maskmarks \
-	cast(lu_byte, ~(bitmask(BLACKBIT)|WHITEBITS))
+#define maskmarks	cast_byte(~(bitmask(BLACKBIT)|WHITEBITS))
 
 #define makewhite(g,x)	\
-   ((x)->gch.marked = ((x)->gch.marked & maskmarks) | luaC_white(g))
+   ((x)->gch.marked = cast_byte(((x)->gch.marked & maskmarks) | luaC_white(g)))
 
 #define white2gray(x)	reset2bits((x)->gch.marked, WHITE0BIT, WHITE1BIT)
 #define black2gray(x)	resetbit((x)->gch.marked, BLACKBIT)
@@ -169,8 +168,8 @@ static int traversetable (global_State *g, Table *h) {
     weakvalue = (strchr(svalue(mode), 'v') != NULL);
     if (weakkey || weakvalue) {  /* is really weak? */
       h->marked &= ~(KEYWEAK | VALUEWEAK);  /* clear bits */
-      h->marked |= cast(lu_byte, (weakkey << KEYWEAKBIT) |
-                                 (weakvalue << VALUEWEAKBIT));
+      h->marked |= cast_byte((weakkey << KEYWEAKBIT) |
+                             (weakvalue << VALUEWEAKBIT));
       h->gclist = g->weak;  /* must be cleared after GC, ... */
       g->weak = obj2gco(h);  /* ... so put in the appropriate list */
     }
@@ -240,8 +239,8 @@ static void traverseclosure (global_State *g, Closure *cl) {
 
 
 static void checkstacksizes (lua_State *L, StkId max) {
-  int ci_used = cast(int, L->ci - L->base_ci);  /* number of `ci' in use */
-  int s_used = cast(int, max - L->stack);  /* part of stack in use */
+  int ci_used = cast_int(L->ci - L->base_ci);  /* number of `ci' in use */
+  int s_used = cast_int(max - L->stack);  /* part of stack in use */
   if (L->size_ci > LUAI_MAXCALLS)  /* handling overflow? */
     return;  /* do not touch the stacks */
   if (4*ci_used < L->size_ci && 2*BASIC_CI_SIZE < L->size_ci)
@@ -544,7 +543,7 @@ static void atomic (lua_State *L) {
   propagateall(g);  /* remark, to propagate `preserveness' */
   cleartable(g->weak);  /* remove collected objects from weak tables */
   /* flip current white */
-  g->currentwhite = cast(lu_byte, otherwhite(g));
+  g->currentwhite = cast_byte(otherwhite(g));
   g->sweepstrgc = 0;
   g->sweepgc = &g->rootgc;
   g->gcstate = GCSsweepstring;
