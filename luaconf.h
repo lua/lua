@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.76 2005/12/15 18:53:34 roberto Exp roberto $
+** $Id: luaconf.h,v 1.77 2005/12/27 17:12:00 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -702,7 +702,7 @@ union luai_Cast { double l_d; long l_l; };
 
 /*
 @@ LUA_INTFRMLEN is the length modifier for integer conversions
-@* in 'string.fomat'.
+@* in 'string.format'.
 @@ LUA_INTFRM_T is the integer type correspoding to the previous length
 @* modifier.
 ** CHANGE them if your system supports long long or does not support long.
