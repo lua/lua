@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.156 2005/10/21 13:47:42 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.157 2005/12/29 15:32:11 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -295,23 +295,33 @@ static void getsizes (lua_State *L) {
 
 LUALIB_API void luaL_setn (lua_State *L, int t, int n) {
   t = abs_index(L, t);
-  getsizes(L);
-  lua_pushvalue(L, t);
-  lua_pushinteger(L, n);
-  lua_rawset(L, -3);  /* sizes[t] = n */
-  lua_pop(L, 1);  /* remove `sizes' */
+  lua_pushliteral(L, "n");
+  lua_rawget(L, t);
+  if (checkint(L, 1) >= 0) {  /* is there a numeric field `n'? */
+    lua_pushliteral(L, "n");  /* use it */
+    lua_pushinteger(L, n);
+    lua_rawset(L, t);
+  }
+  else {  /* use `sizes' */
+    getsizes(L);
+    lua_pushvalue(L, t);
+    lua_pushinteger(L, n);
+    lua_rawset(L, -3);  /* sizes[t] = n */
+    lua_pop(L, 1);  /* remove `sizes' */
+  }
 }
 
 
 LUALIB_API int luaL_getn (lua_State *L, int t) {
   int n;
   t = abs_index(L, t);
-  getsizes(L);  /* try sizes[t] */
+  lua_pushliteral(L, "n");  /* try t.n */
+  lua_rawget(L, t);
+  if ((n = checkint(L, 1)) >= 0) return n;
+  getsizes(L);  /* else try sizes[t] */
   lua_pushvalue(L, t);
   lua_rawget(L, -2);
   if ((n = checkint(L, 2)) >= 0) return n;
-  lua_getfield(L, t, "n");  /* else try t.n */
-  if ((n = checkint(L, 1)) >= 0) return n;
   return (int)lua_objlen(L, t);
 }
 
