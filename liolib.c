@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.69 2005/10/19 13:05:11 roberto Exp roberto $
+** $Id: liolib.c,v 2.70 2005/12/29 15:32:11 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -28,6 +28,7 @@ static const char *const fnames[] = {"input", "output"};
 
 
 static int pushresult (lua_State *L, int i, const char *filename) {
+  int en = errno;  /* calls to Lua API may change this value */
   if (i) {
     lua_pushboolean(L, 1);
     return 1;
@@ -35,10 +36,10 @@ static int pushresult (lua_State *L, int i, const char *filename) {
   else {
     lua_pushnil(L);
     if (filename)
-      lua_pushfstring(L, "%s: %s", filename, strerror(errno));
+      lua_pushfstring(L, "%s: %s", filename, strerror(en));
     else
-      lua_pushfstring(L, "%s", strerror(errno));
-    lua_pushinteger(L, errno);
+      lua_pushfstring(L, "%s", strerror(en));
+    lua_pushinteger(L, en);
     return 3;
   }
 }
