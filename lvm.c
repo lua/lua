@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.60 2005/12/22 16:19:56 roberto Exp roberto $
+** $Id: lvm.c,v 2.61 2006/01/10 12:50:00 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -95,7 +95,8 @@ static void callTMres (lua_State *L, StkId res, const TValue *f,
 
 
 
-static void callTM (lua_State *L, const TValue *f, const TValue *p1,                                const TValue *p2, const TValue *p3) {
+static void callTM (lua_State *L, const TValue *f, const TValue *p1,
+                    const TValue *p2, const TValue *p3) {
   setobj2s(L, L->top, f);  /* push function */
   setobj2s(L, L->top+1, p1);  /* 1st argument */
   setobj2s(L, L->top+2, p2);  /* 2nd argument */
@@ -649,7 +650,8 @@ void luaV_execute (lua_State *L, int nexeccalls) {
         lua_Number step = nvalue(ra+2);
         lua_Number idx = luai_numadd(nvalue(ra), step); /* increment index */
         lua_Number limit = nvalue(ra+1);
-        if (step > 0 ? luai_numle(idx, limit) : luai_numle(limit, idx)) {
+        if (luai_numlt(0, step) ? luai_numle(idx, limit)
+                                : luai_numle(limit, idx)) {
           dojump(L, pc, GETARG_sBx(i));  /* jump back */
           setnvalue(ra, idx);  /* update internal index... */
           setnvalue(ra+3, idx);  /* ...and external index */

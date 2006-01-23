@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.77 2005/12/27 17:12:00 roberto Exp roberto $
+** $Id: luaconf.h,v 1.78 2006/01/13 19:36:28 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -488,6 +488,7 @@
 ** ===================================================================
 */
 
+#define LUA_NUMBER_DOUBLE
 #define LUA_NUMBER	double
 
 /*
