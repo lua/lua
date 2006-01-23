@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.16 2005/12/08 15:50:54 roberto Exp roberto $
+** $Id: llex.c,v 2.17 2005/12/22 16:19:56 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -193,12 +193,10 @@ static void read_numeral (LexState *ls, SemInfo *seminfo) {
   do {
     save_and_next(ls);
   } while (isdigit(ls->current) || ls->current == '.');
-  if (check_next(ls, "Ee")) {  /* `E'? */
+  if (check_next(ls, "Ee"))  /* `E'? */
     check_next(ls, "+-");  /* optional exponent sign */
-    while (isdigit(ls->current)) {
-      save_and_next(ls);
-    }
-  }
+  while (isalnum(ls->current) || ls->current == '_')
+    save_and_next(ls);
   save(ls, '\0');
   buffreplace(ls, '.', ls->decpoint);  /* follow locale for decimal point */
   if (!luaO_str2d(luaZ_buffer(ls->buff), &seminfo->r))  /* format error? */
