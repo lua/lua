@@ -1,4 +1,6 @@
-This is Lua 5.1.
+README for Lua 5.1
+
+See INSTALL for installation instructions.
 See HISTORY for a summary of changes since the last released version.
 
 * What is Lua?

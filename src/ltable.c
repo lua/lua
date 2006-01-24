@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.31 2006/01/10 13:13:06 roberto Exp $
+** $Id: ltable.c,v 2.32 2006/01/18 11:49:02 roberto Exp $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -122,7 +122,7 @@ static int arrayindex (const TValue *key) {
     lua_Number n = nvalue(key);
     int k;
     lua_number2int(k, n);
-    if (luai_numeq(cast_num(k), nvalue(key)))
+    if (luai_numeq(cast_num(k), n))
       return k;
   }
   return -1;  /* `key' did not match some condition */

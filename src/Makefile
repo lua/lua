@@ -1,5 +1,5 @@
 # makefile for building Lua
-# see INSTALL for installation instructions
+# see ../INSTALL for installation instructions
 # see ../Makefile and luaconf.h for further customization
 
 # == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT =======================
@@ -20,7 +20,7 @@ MYLIBS=
 
 # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
 
-PLATS= ansi bsd generic linux macosx mingw posix
+PLATS= ansi bsd generic linux macosx mingw posix solaris
 
 LUA_A=	liblua.a
 CORE_O=	lapi.o lcode.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o lmem.o \
@@ -74,7 +74,7 @@ echo:
 	@echo "MYLDFLAGS = $(MYLDFLAGS)"
 	@echo "MYLIBS = $(MYLIBS)"
 
-# convenience targets for usual platforms
+# convenience targets for popular platforms
 
 none:
 	@echo "Please choose a platform: $(PLATS)"
@@ -93,14 +93,20 @@ linux:
 
 macosx:
 	$(MAKE) all MYCFLAGS=-DLUA_USE_MACOSX
+# use this on Mac OS X 10.4
+#	$(MAKE) all MYCFLAGS="-DLUA_USE_MACOSX -DLUA_USE_READLINE" MYLIBS="-lreadline"
 
 mingw:
 	$(MAKE) "LUA_A=lua51.dll" "LUA_T=lua.exe" \
-	"AR=gcc -shared -o" "RANLIB=strip --strip-unneeded" \
+	"AR=$(CC) -shared -o" "RANLIB=strip --strip-unneeded" \
 	"MYCFLAGS=-DLUA_BUILD_AS_DLL" "MYLIBS=" "MYLDFLAGS=-s" lua.exe
 
 posix:
 	$(MAKE) all MYCFLAGS=-DLUA_USE_POSIX
+
+solaris:
+	$(MAKE) all MYCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN" MYLIBS="-ldl"
+
 
 # DO NOT DELETE
 

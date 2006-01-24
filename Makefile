@@ -16,6 +16,8 @@ INSTALL_BIN= $(INSTALL_TOP)/bin
 INSTALL_INC= $(INSTALL_TOP)/include
 INSTALL_LIB= $(INSTALL_TOP)/lib
 INSTALL_MAN= $(INSTALL_TOP)/man/man1
+INSTALL_LMOD= $(INSTALL_TOP)/share/lua/$V
+INSTALL_CMOD= $(INSTALL_TOP)/lib/lua/$V
 
 # How to install. You may prefer "install" instead of "cp" if you have it.
 # To remove debug information from binaries, use "install -s" in INSTALL_EXEC.
@@ -28,7 +30,7 @@ INSTALL_DATA= cp
 # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
 
 # Convenience platforms targets.
-PLATS= ansi bsd generic linux macosx mingw posix
+PLATS= ansi bsd generic linux macosx mingw posix solaris
 
 # What to install.
 TO_BIN= lua luac
@@ -39,7 +41,7 @@ TO_MAN= lua.1 luac.1
 # Lua version. Currently used only for messages.
 V= 5.1
 
-all: $(PLAT)
+all:	$(PLAT)
 
 $(PLATS) clean:
 	cd src; $(MAKE) $@
@@ -47,8 +49,8 @@ $(PLATS) clean:
 test:	all
 	src/lua test/hello.lua
 
-install: all
-	cd src; mkdir -p $(INSTALL_BIN) $(INSTALL_INC) $(INSTALL_LIB) $(INSTALL_MAN)
+install:
+	cd src; mkdir -p $(INSTALL_BIN) $(INSTALL_INC) $(INSTALL_LIB) $(INSTALL_MAN) $(INSTALL_LMOD) $(INSTALL_CMOD)
 	cd src; $(INSTALL_EXEC) $(TO_BIN) $(INSTALL_BIN)
 	cd src; $(INSTALL_DATA) $(TO_INC) $(INSTALL_INC)
 	cd src; $(INSTALL_DATA) $(TO_LIB) $(INSTALL_LIB)
@@ -77,6 +79,9 @@ echo:
 	@echo "INSTALL_MAN = $(INSTALL_MAN)"
 	@echo "INSTALL_EXEC = $(INSTALL_EXEC)"
 	@echo "INSTALL_DATA = $(INSTALL_DATA)"
+	@echo "INSTALL_LMOD = $(INSTALL_LMOD)"
+	@echo "INSTALL_CMOD = $(INSTALL_CMOD)"
+	@echo "INSTALL_CMOD = $(INSTALL_CMOD)"
 	@echo ""
 	@echo "See also src/luaconf.h ."
 	@echo ""

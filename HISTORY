@@ -1,4 +1,4 @@
-This is Lua 5.1.
+HISTORY for Lua 5.1
 
 * Changes from version 5.0 to 5.1
   -------------------------------
@@ -14,6 +14,7 @@ This is Lua 5.1.
   API:
   + new functions: lua_createtable, lua_get(set)field, lua_push(to)integer.
   + user supplies memory allocator (lua_open becomes lua_newstate).
+  + luaopen_* functionst be called through Lua.
   Implementation:
   + new configuration scheme via luaconf.h.
   + incremental garbage collection.

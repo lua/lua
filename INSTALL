@@ -1,4 +1,4 @@
-This is Lua 5.1.
+INSTALL for Lua 5.1
 
 * Building Lua
   ------------
@@ -8,7 +8,7 @@ This is Lua 5.1.
   Building Lua on Unix systems should be very easy. First do "make" and
   see if your platform is listed. If so, just do "make xxx", where xxx
   is your platform name. The platforms currently supported are:
-	ansi bsd generic linux macosx mingw posix
+	ansi bsd generic linux macosx mingw posix solaris
 
   See below for customization instructions and for instructions on how
   to build with other Windows compilers.

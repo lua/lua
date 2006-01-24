@@ -1174,7 +1174,7 @@ while all of them share the same <code>x</code>.
 
 <p>Because Lua is an embedded extension language,
 all Lua actions start from C code in the host program
-calling a function from the Lua library (see <a href="#lua_pcall"></a>).
+calling a function from the Lua library (see <a href="#lua_pcall"><code>lua_pcall</code></a>).
 Whenever an error occurs during Lua compilation or execution,
 control returns to C,
 which can take appropriate measures
@@ -1509,11 +1509,11 @@ called when Lua calls a value.
 <pre>
  function function_event (func, ...)
    if type(func) == "function" then
-     return func(unpack(arg))   -- primitive call
+     return func(...)   -- primitive call
    else
      local h = metatable(func).__call
      if h then
-       return h(func, unpack(arg))
+       return h(func, ...)
      else
        error("...")
      end
@@ -1553,7 +1553,7 @@ all accesses to global variables within that function (see <a href="#variables">
 They are used as the default environment for other Lua functions
 created by that function.
 
-<p>You can change the environment of a Lua function of the
+<p>You can change the environment of a Lua function or the
 running thread calling <a href="#pdf-setfenv"><code>setfenv</code></a>.
 You can get the environment of a Lua function or the running thread
 calling <a href="#pdf-getfenv"><code>getfenv</code></a>.
@@ -1565,8 +1565,8 @@ use the C API.
 
 <p>Lua performs automatic memory management.
 That means that
-you do not have to worry about allocating memory for new objects
-not about freeing it when the objects are no longer needed.
+you do not have to worry neither about allocating memory for new objects
+nor about freeing it when the objects are no longer needed.
 Lua manages memory automatically by running
 a <em>garbage collector</em> from time to time
 to collect all <em>dead objects</em>
@@ -2821,7 +2821,7 @@ onto the stack.
 Lua makes (or reuses) an internal copy of the given string,
 so the memory at <code>s</code> can be freed or reused immediately after
 the function returns.
-The string cannot embedded zeros;
+The string cannot contain embedded zeros;
 it is assumed to end at the first zero.
 
 <p><a name="lua_pushthread"></a>
@@ -3609,7 +3609,7 @@ or when it jumps back in the code (even to the same line).
 
 <p>Sets the value of a local variable of a given activation record.
 Parameters <code>ar</code> and <code>n</code> are as in <a href="#lua_getlocal"><code>lua_getlocal</code></a>
-(see <a href="#lua_getlocal"></a>).
+(see <a href="#lua_getlocal"><code>lua_getlocal</code></a>).
 <a href="#lua_setlocal"><code>lua_setlocal</code></a> assigns the value at the top of the stack
 to the variable and returns its name.
 It also pops the value from the stack.
@@ -3627,7 +3627,7 @@ the number of active local variables.
 
 <p>Sets the value of a closure's upvalue.
 Parameters <code>funcindex</code> and <code>n</code> are as in <a href="#lua_getupvalue"><code>lua_getupvalue</code></a>
-(see <a href="#lua_getupvalue"></a>).
+(see <a href="#lua_getupvalue"><code>lua_getupvalue</code></a>).
 It assigns the value at the top of the stack
 to the upvalue and returns its name.
 It also pops the value from the stack.
@@ -3995,9 +3995,9 @@ in the registry (see <a href="#luaL_newmetatable"><code>luaL_newmetatable</code>
 </pre>
 
 
-<p>Creates a copy of string <code>s</code> by replacing any occurrence
+<p>Creates a copy of string <code>s</code> by replacing
 any occurrence of the string <code>p</code>
-wth the string <code>r</code>.
+with the string <code>r</code>.
 Pushes the resulting string on the stack and returns it.
 
 <p><a name="luaL_loadbuffer"></a>
@@ -5302,6 +5302,8 @@ of table <code>t</code>.
 
 <p>Returns the largest positive numerical index of the given table,
 or zero if the table has no positive numerical indices.
+(To do its job this function does a linear traversal of
+the whole table.) 
 
 <p><a name="pdf-table.remove"></a><hr /><h3><code>table.remove (table [, pos])</code></h3>
 
@@ -6076,7 +6078,15 @@ use <code>collectgarbage("count")</code> instead.
 
 <p><h3>Changes in the API</h3>
 <ul>
-<li>
+
+<p><li>
+The <code>luaopen_*</code> functions (to open libraries)
+cannot be called directly,
+like a regular C function.
+They must be called through Lua,
+like a Lua function.
+
+<p><li>
 Function <code>lua_open</code> was replaced by <a href="#lua_newstate"><code>lua_newstate</code></a> to
 allow the user to set a memory allocation function.
 You can use <a href="#luaL_newstate"><code>luaL_newstate</code></a> from the standard library to
