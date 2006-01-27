@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.15 2005/12/15 18:17:49 roberto Exp roberto $
+** $Id: loslib.c,v 1.16 2005/12/22 16:19:56 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -21,6 +21,7 @@
 
 
 static int os_pushresult (lua_State *L, int i, const char *filename) {
+  int en = errno;  /* calls to Lua API may change this value */
   if (i) {
     lua_pushboolean(L, 1);
     return 1;
@@ -28,10 +29,10 @@ static int os_pushresult (lua_State *L, int i, const char *filename) {
   else {
     lua_pushnil(L);
     if (filename)
-      lua_pushfstring(L, "%s: %s", filename, strerror(errno));
+      lua_pushfstring(L, "%s: %s", filename, strerror(en));
     else
-      lua_pushfstring(L, "%s", strerror(errno));
-    lua_pushinteger(L, errno);
+      lua_pushfstring(L, "%s", strerror(en));
+    lua_pushinteger(L, en);
     return 3;
   }
 }
