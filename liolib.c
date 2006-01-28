@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.70 2005/12/29 15:32:11 roberto Exp roberto $
+** $Id: liolib.c,v 2.71 2006/01/17 13:54:02 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -283,7 +283,7 @@ static int read_line (lua_State *L, FILE *f) {
       return (lua_strlen(L, -1) > 0);  /* check whether read something */
     }
     l = strlen(p);
-    if (p[l-1] != '\n')
+    if (l == 0 || p[l-1] != '\n')
       luaL_addsize(&b, l);
     else {
       luaL_addsize(&b, l - 1);  /* do not include `eol' */
