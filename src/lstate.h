@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.23 2005/07/09 13:22:34 roberto Exp $
+** $Id: lstate.h,v 2.24 2006/02/06 18:27:59 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -49,8 +49,8 @@ typedef struct CallInfo {
   StkId base;  /* base for this function */
   StkId func;  /* function index in the stack */
   StkId	top;  /* top for this function */
-  int nresults;  /* expected number of results from this function */
   const Instruction *savedpc;
+  int nresults;  /* expected number of results from this function */
   int tailcalls;  /* number of tail calls lost under this entry */
 } CallInfo;
 
@@ -71,9 +71,9 @@ typedef struct global_State {
   void *ud;         /* auxiliary data to `frealloc' */
   lu_byte currentwhite;
   lu_byte gcstate;  /* state of garbage collector */
+  int sweepstrgc;  /* position of sweep in `strt' */
   GCObject *rootgc;  /* list of all collectable objects */
   GCObject **sweepgc;  /* position of sweep in `rootgc' */
-  int sweepstrgc;  /* position of sweep in `strt' */
   GCObject *gray;  /* list of gray objects */
   GCObject *grayagain;  /* list of objects to be traversed atomically */
   GCObject *weak;  /* list of weak tables (to be cleared) */
@@ -99,6 +99,7 @@ typedef struct global_State {
 */
 struct lua_State {
   CommonHeader;
+  lu_byte status;
   StkId top;  /* first free slot in the stack */
   StkId base;  /* base of current function */
   global_State *l_G;
@@ -106,14 +107,13 @@ struct lua_State {
   const Instruction *savedpc;  /* `savedpc' of current function */
   StkId stack_last;  /* last free slot in the stack */
   StkId stack;  /* stack base */
-  int stacksize;
   CallInfo *end_ci;  /* points after end of ci array*/
   CallInfo *base_ci;  /* array of CallInfo's */
+  int stacksize;
   int size_ci;  /* size of array `base_ci' */
   unsigned short nCcalls;  /* number of nested C calls */
   lu_byte hookmask;
   lu_byte allowhook;
-  lu_byte status;
   int basehookcount;
   int hookcount;
   lua_Hook hook;

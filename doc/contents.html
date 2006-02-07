@@ -154,24 +154,31 @@ Lua 5.1 Reference Manual
 <A HREF="manual.html#pdf-math.abs">math.abs</A><BR>
 <A HREF="manual.html#pdf-math.acos">math.acos</A><BR>
 <A HREF="manual.html#pdf-math.asin">math.asin</A><BR>
-<A HREF="manual.html#pdf-math.atan">math.atan</A><BR>
 <A HREF="manual.html#pdf-math.atan2">math.atan2</A><BR>
+<A HREF="manual.html#pdf-math.atan">math.atan</A><BR>
 <A HREF="manual.html#pdf-math.ceil">math.ceil</A><BR>
-<A HREF="manual.html#pdf-math.cos">math.cos</A><BR>
 <A HREF="manual.html#pdf-math.cosh">math.cosh</A><BR>
-<A HREF="manual.html#pdf-math.def">math.def</A><BR>
+<A HREF="manual.html#pdf-math.cos">math.cos</A><BR>
+<A HREF="manual.html#pdf-math.deg">math.deg</A><BR>
 <A HREF="manual.html#pdf-math.exp">math.exp</A><BR>
 <A HREF="manual.html#pdf-math.floor">math.floor</A><BR>
 <A HREF="manual.html#pdf-math.fmod">math.fmod</A><BR>
+<A HREF="manual.html#pdf-math.frexp">math.frexp</A><BR>
 <A HREF="manual.html#pdf-math.ldexp">math.ldexp</A><BR>
-<A HREF="manual.html#pdf-math.log">math.log</A><BR>
 <A HREF="manual.html#pdf-math.log10">math.log10</A><BR>
+<A HREF="manual.html#pdf-math.log">math.log</A><BR>
+<A HREF="manual.html#pdf-math.max">math.max</A><BR>
+<A HREF="manual.html#pdf-math.min">math.min</A><BR>
+<A HREF="manual.html#pdf-math.modf">math.modf</A><BR>
 <A HREF="manual.html#pdf-math.pow">math.pow</A><BR>
-<A HREF="manual.html#pdf-math.sin">math.sin</A><BR>
+<A HREF="manual.html#pdf-math.rad">math.rad</A><BR>
+<A HREF="manual.html#pdf-math.random">math.random</A><BR>
+<A HREF="manual.html#pdf-math.randomseed">math.randomseed</A><BR>
 <A HREF="manual.html#pdf-math.sinh">math.sinh</A><BR>
+<A HREF="manual.html#pdf-math.sin">math.sin</A><BR>
 <A HREF="manual.html#pdf-math.sqrt">math.sqrt</A><BR>
-<A HREF="manual.html#pdf-math.tan">math.tan</A><BR>
 <A HREF="manual.html#pdf-math.tanh">math.tanh</A><BR>
+<A HREF="manual.html#pdf-math.tan">math.tan</A><BR>
 <A HREF="manual.html#pdf-module">module</A><BR>
 <A HREF="manual.html#pdf-next">next</A><BR>
 <A HREF="manual.html#pdf-os.clock">os.clock</A><BR>
@@ -225,6 +232,7 @@ Lua 5.1 Reference Manual
 <A HREF="manual.html#pdf-type">type</A><BR>
 <A HREF="manual.html#pdf-unpack">unpack</A><BR>
 <A HREF="manual.html#pdf-xpcall">xpcall</A><BR>
+
 </TD>
 <TD>
 <H3>API</H3>
@@ -251,6 +259,7 @@ Lua 5.1 Reference Manual
 <A HREF="manual.html#lua_getallocf">lua_getallocf</A><BR>
 <A HREF="manual.html#lua_getfenv">lua_getfenv</A><BR>
 <A HREF="manual.html#lua_getfield">lua_getfield</A><BR>
+<A HREF="manual.html#lua_getglobal">lua_getglobal</A><BR>
 <A HREF="manual.html#lua_gethook">lua_gethook</A><BR>
 <A HREF="manual.html#lua_gethookcount">lua_gethookcount</A><BR>
 <A HREF="manual.html#lua_gethookmask">lua_gethookmask</A><BR>
@@ -300,12 +309,14 @@ Lua 5.1 Reference Manual
 <A HREF="manual.html#lua_rawgeti">lua_rawgeti</A><BR>
 <A HREF="manual.html#lua_rawset">lua_rawset</A><BR>
 <A HREF="manual.html#lua_rawseti">lua_rawseti</A><BR>
+<A HREF="manual.html#lua_register">lua_register</A><BR>
 <A HREF="manual.html#lua_remove">lua_remove</A><BR>
 <A HREF="manual.html#lua_replace">lua_replace</A><BR>
 <A HREF="manual.html#lua_resume">lua_resume</A><BR>
 <A HREF="manual.html#lua_setallocf">lua_setallocf</A><BR>
 <A HREF="manual.html#lua_setfenv">lua_setfenv</A><BR>
 <A HREF="manual.html#lua_setfield">lua_setfield</A><BR>
+<A HREF="manual.html#lua_setglobal">lua_setglobal</A><BR>
 <A HREF="manual.html#lua_sethook">lua_sethook</A><BR>
 <A HREF="manual.html#lua_setlocal">lua_setlocal</A><BR>
 <A HREF="manual.html#lua_setmetatable">lua_setmetatable</A><BR>
@@ -326,6 +337,7 @@ Lua 5.1 Reference Manual
 <A HREF="manual.html#lua_typename">lua_typename</A><BR>
 <A HREF="manual.html#lua_xmove">lua_xmove</A><BR>
 <A HREF="manual.html#lua_yield">lua_yield</A><BR>
+
 </TD>
 <TD>
 <H3>Auxiliary library</H3>
@@ -360,6 +372,7 @@ Lua 5.1 Reference Manual
 <A HREF="manual.html#luaL_loadstring">luaL_loadstring</A><BR>
 <A HREF="manual.html#luaL_newmetatable">luaL_newmetatable</A><BR>
 <A HREF="manual.html#luaL_newstate">luaL_newstate</A><BR>
+<A HREF="manual.html#luaL_openlibs">luaL_openlibs</A><BR>
 <A HREF="manual.html#luaL_optint">luaL_optint</A><BR>
 <A HREF="manual.html#luaL_optinteger">luaL_optinteger</A><BR>
 <A HREF="manual.html#luaL_optlong">luaL_optlong</A><BR>
@@ -374,6 +387,7 @@ Lua 5.1 Reference Manual
 <A HREF="manual.html#luaL_typerror">luaL_typerror</A><BR>
 <A HREF="manual.html#luaL_unref">luaL_unref</A><BR>
 <A HREF="manual.html#luaL_where">luaL_where</A><BR>
+
 </TD>
 </TR>
 </TABLE>
@@ -382,7 +396,7 @@ Lua 5.1 Reference Manual
 <HR>
 <SMALL>
 Last update:
-Tue Jan 10 10:10:22 BRST 2006
+Tue Feb  7 14:37:59 BRST 2006
 </SMALL>
 
 </BODY>

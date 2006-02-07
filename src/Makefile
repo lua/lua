@@ -107,6 +107,8 @@ posix:
 solaris:
 	$(MAKE) all MYCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN" MYLIBS="-ldl"
 
+# list targets that do not create files (but not all makes understand .PHONY)
+.PHONY: all $(PLATS) default o a clean depend echo none 
 
 # DO NOT DELETE
 

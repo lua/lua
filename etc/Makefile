@@ -8,14 +8,15 @@ SRC= $(TOP)/src
 TST= $(TOP)/test
 
 CC= gcc
-CFLAGS= -O2 -Wall $(MYCFLAGS)
-MYCFLAGS= -ansi -I$(INC)
+CFLAGS= -O2 -Wall -I$(INC) $(MYCFLAGS)
+MYCFLAGS= 
 MYLDFLAGS= -Wl,-E
-MYLIBS= -lm -ldl
+MYLIBS= -lm
+#MYLIBS= -lm -Wl,-E -ldl -lreadline -lhistory -lncurses
 RM= rm -f
 
-all:
-	@echo 'choose a target: min noparser one clean'
+default:
+	@echo 'Please choose a target: min noparser one clean'
 
 min:	min.c
 	$(CC) $(CFLAGS) $@.c -L$(LIB) -llua $(MYLIBS)
@@ -31,5 +32,13 @@ one:
 	$(CC) $(CFLAGS) all.c $(MYLIBS)
 	./a.out $(TST)/hello.lua
 
+strict:
+	-$(BIN)/lua -e 'print(a);b=2'
+	-$(BIN)/lua -lstrict -e 'print(a)'
+	-$(BIN)/lua -e 'function f() b=2 end f()'
+	-$(BIN)/lua -lstrict -e 'function f() b=2 end f()'
+
 clean:
-	$(RM) noparser.o a.out core core.* *.o luac.out
+	$(RM) a.out core core.* *.o luac.out
+
+.PHONY:	default min noparser one strict clean

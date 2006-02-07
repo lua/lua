@@ -28,13 +28,13 @@ protecting source code from accidental user changes,
 and
 off-line syntax checking.
 <P>
-Pre-compiling does not imply faster execution
+Precompiling does not imply faster execution
 because in Lua chunks are always compiled into bytecodes before being executed.
 <B>luac</B>
 simply allows those bytecodes to be saved in a file for later execution.
 <P>
-Pre-compiled chunks are not necessarily smaller than the corresponding source.
-The main goal in pre-compiling is faster loading.
+Precompiled chunks are not necessarily smaller than the corresponding source.
+The main goal in precompiling is faster loading.
 <P>
 The binary files created by
 <B>luac</B>
@@ -54,9 +54,9 @@ In the command line,
 you can mix
 text files containing Lua source and
 binary files containing precompiled chunks.
-This is useful to combine several precompiled chunks,
+This is useful because several precompiled chunks,
 even from different (but compatible) platforms,
-into a single precompiled chunk.
+can be combined into a single precompiled chunk.
 <P>
 You can use
 <B>'-'</B>

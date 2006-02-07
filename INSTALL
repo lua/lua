@@ -23,6 +23,9 @@ INSTALL for Lua 5.1
   place and the way to install files are defined in Makefile. You must
   have the right permissions to install files.
 
+  If you want to build and install Lua in one step, do "make xxx install",
+  where xxx is your platform name.
+
   If you want to install Lua locally, then do "make local". This will
   create directories bin, include, lib, man, and install Lua there as
   follows:

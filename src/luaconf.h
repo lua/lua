@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.79 2006/01/23 19:51:43 roberto Exp $
+** $Id: luaconf.h,v 1.80 2006/01/27 13:54:39 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -541,7 +541,7 @@
 */
 
 /* On a Pentium, resort to a trick */
-#if !defined(LUA_ANSI) && !defined(__SSE2__) && \
+#if defined(LUA_NUMBER_DOUBLE) && !defined(LUA_ANSI) && !defined(__SSE2__) && \
     (defined(__i386) || defined (_M_IX86) || defined(__i386__))
 union luai_Cast { double l_d; long l_l; };
 #define lua_number2int(i,d) \

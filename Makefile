@@ -22,10 +22,17 @@ INSTALL_CMOD= $(INSTALL_TOP)/lib/lua/$V
 # How to install. You may prefer "install" instead of "cp" if you have it.
 # To remove debug information from binaries, use "install -s" in INSTALL_EXEC.
 #
-INSTALL_EXEC= cp
-INSTALL_DATA= cp
-#INSTALL_EXEC= install -m 0755
-#INSTALL_DATA= install -m 0644
+INSTALL_EXEC= $(CP)
+INSTALL_DATA= $(CP)
+#INSTALL_EXEC= $(INSTALL) -m 0755
+#INSTALL_DATA= $(INSTALL) -m 0644
+
+# Utilities.
+CP= cp
+FIND= find
+INSTALL= install
+MKDIR= mkdir
+RANLIB= ranlib
 
 # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
 
@@ -46,21 +53,25 @@ all:	$(PLAT)
 $(PLATS) clean:
 	cd src; $(MAKE) $@
 
-test:	all
+test:	dummy
 	src/lua test/hello.lua
 
-install:
-	cd src; mkdir -p $(INSTALL_BIN) $(INSTALL_INC) $(INSTALL_LIB) $(INSTALL_MAN) $(INSTALL_LMOD) $(INSTALL_CMOD)
+install: dummy
+	cd src; $(MKDIR) -p $(INSTALL_BIN) $(INSTALL_INC) $(INSTALL_LIB) $(INSTALL_MAN) $(INSTALL_LMOD) $(INSTALL_CMOD)
 	cd src; $(INSTALL_EXEC) $(TO_BIN) $(INSTALL_BIN)
 	cd src; $(INSTALL_DATA) $(TO_INC) $(INSTALL_INC)
 	cd src; $(INSTALL_DATA) $(TO_LIB) $(INSTALL_LIB)
 	cd doc; $(INSTALL_DATA) $(TO_MAN) $(INSTALL_MAN)
+#	$(RANLIB) $(INSTALL_LIB)/$(TO_LIB)
 
 local:
 	$(MAKE) install INSTALL_TOP=.. INSTALL_EXEC="cp -p" INSTALL_DATA="cp -p"
 
 none:
 	@echo "Please choose a platform: $(PLATS)"
+
+# make may get confused with test/ and INSTALL in a case-insensitive OS
+dummy:
 
 # echo config parameters
 echo:
@@ -77,11 +88,10 @@ echo:
 	@echo "INSTALL_INC = $(INSTALL_INC)"
 	@echo "INSTALL_LIB = $(INSTALL_LIB)"
 	@echo "INSTALL_MAN = $(INSTALL_MAN)"
-	@echo "INSTALL_EXEC = $(INSTALL_EXEC)"
-	@echo "INSTALL_DATA = $(INSTALL_DATA)"
 	@echo "INSTALL_LMOD = $(INSTALL_LMOD)"
 	@echo "INSTALL_CMOD = $(INSTALL_CMOD)"
-	@echo "INSTALL_CMOD = $(INSTALL_CMOD)"
+	@echo "INSTALL_EXEC = $(INSTALL_EXEC)"
+	@echo "INSTALL_DATA = $(INSTALL_DATA)"
 	@echo ""
 	@echo "See also src/luaconf.h ."
 	@echo ""
@@ -104,6 +114,9 @@ lecho:
 
 # show what has changed since we unpacked
 newer:
-	@find . -newer MANIFEST -type f
+	@$(FIND) . -newer MANIFEST -type f
+
+# list targets that do not create files (but not all makes understand .PHONY)
+.PHONY: all $(PLATS) clean test install local none dummy echo pecho lecho newer
 
 # (end of Makefile)
