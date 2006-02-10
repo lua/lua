@@ -6059,7 +6059,7 @@ is a more portable solution.)
 
 <p><hr></hr>
 
-<p><h1>Incompatibilities with the Previous Version</h1>
+<p><a name="incompat"></a><h1>Incompatibilities with the Previous Version</h1>
 
 
 <p>Here we list the incompatibilities that may be found when moving a program
@@ -6117,6 +6117,10 @@ Function <code>loadlib</code> was renamed <a href="#pdf-package.loadlib"><code>p
 <p><li> 
 Function <code>math.mod</code> was renamed <a href="#pdf-math.fmod"><code>math.fmod</code></a>.
 (Option <code>LUA_COMPAT_MOD</code>)
+
+<p><li>
+Functions <code>table.foreach</code> and <code>table.foreachi</code> are deprecated.
+You can use a for loop with <code>pairs</code> or <code>ipairs</code> instead.
 
 <p><li>
 There were substantial changes in function <a href="#pdf-require"><code>require</code></a> due to

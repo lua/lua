@@ -16,7 +16,7 @@ MYLIBS= -lm
 RM= rm -f
 
 default:
-	@echo 'Please choose a target: min noparser one clean'
+	@echo 'Please choose a target: min noparser one strict clean'
 
 min:	min.c
 	$(CC) $(CFLAGS) $@.c -L$(LIB) -llua $(MYLIBS)
