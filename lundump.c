@@ -1,5 +1,5 @@
 /*
-** $Id: lundump.c,v 1.58 2005/09/02 01:54:47 lhf Exp lhf $
+** $Id: lundump.c,v 1.60 2006/02/16 15:53:49 lhf Exp $
 ** load precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -201,7 +201,7 @@ Proto* luaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* name)
  S.Z=Z;
  S.b=buff;
  LoadHeader(&S);
- return LoadFunction(&S,NULL);
+ return LoadFunction(&S,luaS_newliteral(L,"=?"));
 }
 
 /*
