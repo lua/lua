@@ -20,8 +20,8 @@ HISTORY for Lua 5.1
   + incremental garbage collection.
   + better handling of end-of-line in the lexer.
   + fully reentrant parser (new Lua function `load')
-  + better support for 64-bit machines (special thanks to Mike Pall).
-  + native loadlib support for Mac OS X (thanks to Matthew Cox).
+  + better support for 64-bit machines.
+  + native loadlib support for Mac OS X.
   + standard distribution in only one library (lualib.a merged into lua.a)
 
 * Changes from version 4.0 to 5.0

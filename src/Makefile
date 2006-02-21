@@ -20,7 +20,7 @@ MYLIBS=
 
 # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
 
-PLATS= ansi bsd generic linux macosx mingw posix solaris
+PLATS= aix ansi bsd generic linux macosx mingw posix solaris
 
 LUA_A=	liblua.a
 CORE_O=	lapi.o lcode.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o lmem.o \
@@ -79,6 +79,9 @@ echo:
 none:
 	@echo "Please choose a platform: $(PLATS)"
 
+aix:
+	$(MAKE) all CC="xlc" CFLAGS="-O2" MYCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN" MYLIBS="-ldl" MYLDFLAGS="-brtl -bexpall"
+
 ansi:
 	$(MAKE) all MYCFLAGS=-DLUA_ANSI
 
@@ -108,7 +111,7 @@ solaris:
 	$(MAKE) all MYCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN" MYLIBS="-ldl"
 
 # list targets that do not create files (but not all makes understand .PHONY)
-.PHONY: all $(PLATS) default o a clean depend echo none 
+.PHONY: all $(PLATS) default o a clean depend echo none
 
 # DO NOT DELETE
 

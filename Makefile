@@ -37,7 +37,7 @@ RANLIB= ranlib
 # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
 
 # Convenience platforms targets.
-PLATS= ansi bsd generic linux macosx mingw posix solaris
+PLATS= aix ansi bsd generic linux macosx mingw posix solaris
 
 # What to install.
 TO_BIN= lua luac
@@ -51,24 +51,28 @@ V= 5.1
 all:	$(PLAT)
 
 $(PLATS) clean:
-	cd src; $(MAKE) $@
+	cd src && $(MAKE) $@
 
 test:	dummy
 	src/lua test/hello.lua
 
 install: dummy
-	cd src; $(MKDIR) -p $(INSTALL_BIN) $(INSTALL_INC) $(INSTALL_LIB) $(INSTALL_MAN) $(INSTALL_LMOD) $(INSTALL_CMOD)
-	cd src; $(INSTALL_EXEC) $(TO_BIN) $(INSTALL_BIN)
-	cd src; $(INSTALL_DATA) $(TO_INC) $(INSTALL_INC)
-	cd src; $(INSTALL_DATA) $(TO_LIB) $(INSTALL_LIB)
-	cd doc; $(INSTALL_DATA) $(TO_MAN) $(INSTALL_MAN)
+	cd src && $(MKDIR) -p $(INSTALL_BIN) $(INSTALL_INC) $(INSTALL_LIB) $(INSTALL_MAN) $(INSTALL_LMOD) $(INSTALL_CMOD)
+	cd src && $(INSTALL_EXEC) $(TO_BIN) $(INSTALL_BIN)
+	cd src && $(INSTALL_DATA) $(TO_INC) $(INSTALL_INC)
+	cd src && $(INSTALL_DATA) $(TO_LIB) $(INSTALL_LIB)
+	cd doc && $(INSTALL_DATA) $(TO_MAN) $(INSTALL_MAN)
 #	$(RANLIB) $(INSTALL_LIB)/$(TO_LIB)
 
 local:
 	$(MAKE) install INSTALL_TOP=.. INSTALL_EXEC="cp -p" INSTALL_DATA="cp -p"
 
 none:
-	@echo "Please choose a platform: $(PLATS)"
+	@echo "Please do"
+	@echo "   make PLATFORM"
+	@echo "where PLATFORM is one of these:"
+	@echo "   $(PLATS)"
+	@echo "See INSTALL for complete instructions."
 
 # make may get confused with test/ and INSTALL in a case-insensitive OS
 dummy:
@@ -78,7 +82,7 @@ echo:
 	@echo ""
 	@echo "These are the parameters currently set in src/Makefile to build Lua $V:"
 	@echo ""
-	@cd src; $(MAKE) -s echo
+	@cd src && $(MAKE) -s echo
 	@echo ""
 	@echo "These are the parameters currently set in Makefile to install Lua $V:"
 	@echo ""
