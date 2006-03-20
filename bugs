@@ -1,4 +1,4 @@
---[[
+--[=[
 ** lua.stx / llex.c
 Tue Dec  2 10:45:48 EDT 1997
 >> BUG: "lastline" was not reset on function entry, so debug information
@@ -336,7 +336,7 @@ Thu Mar 20 11:40:12 EST 2003
 
 
 
---]]
+--]=]
 -----------------------------------------------------------------
 -- Lua 5.0 (final)
 
@@ -762,5 +762,38 @@ patch = [[
 183a185
 >   lua_settop(L, 3);
 ]],
+}
+
+
+Bug{
+what = [[weak tables that survive one collection are never collected]],
+
+report = [[Chromix, 02/01/2006]],
+
+example = [[
+a = {}
+print(gcinfo())
+for i = 1, 10000 do
+  a[i] = setmetatable({}, {__mode = "v"})
+end
+collectgarbage()
+a = nil
+collectgarbage()
+print(gcinfo())
+]],
+
+patch = [[
+* lgc.c
+@@ -366,7 +366,7 @@
+   GCObject *curr;
+   int count = 0;  /* number of collected items */
+   while ((curr = *p) != NULL) {
+-    if (curr->gch.marked > limit) {
++    if ((curr->gch.marked & ~(KEYWEAK | VALUEWEAK)) > limit) {
+       unmark(curr);
+       p = &curr->gch.next;
+     }
+]],
+
 }
 
