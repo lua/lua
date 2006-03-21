@@ -797,3 +797,45 @@ patch = [[
 
 }
 
+
+
+-----------------------------------------------------------------
+-- Lua 5.1
+
+Bug{
+what = [[In 16-bit machines, expressions and/or with numeric constants as the
+right operand may result in weird values]],
+
+report = [[Andreas Stenius, 15/03/2006]],
+
+example = [[
+print(false or 0)   -- on 16-bit machines
+]],
+
+patch = [[
+* lcode.c:
+@@ -731,17 +731,15 @@
+     case OPR_AND: {
+       lua_assert(e1->t == NO_JUMP);  /* list must be closed */
+       luaK_dischargevars(fs, e2);
+-      luaK_concat(fs, &e1->f, e2->f);
+-      e1->k = e2->k; e1->u.s.info = e2->u.s.info;
+-      e1->u.s.aux = e2->u.s.aux; e1->t = e2->t;
++      luaK_concat(fs, &e2->f, e1->f);
++      *e1 = *e2;
+       break;
+     }
+     case OPR_OR: {
+       lua_assert(e1->f == NO_JUMP);  /* list must be closed */
+       luaK_dischargevars(fs, e2);
+-      luaK_concat(fs, &e1->t, e2->t);
+-      e1->k = e2->k; e1->u.s.info = e2->u.s.info;
+-      e1->u.s.aux = e2->u.s.aux; e1->f = e2->f;
++      luaK_concat(fs, &e2->t, e1->t);
++      *e1 = *e2;
+       break;
+     }
+]],
+
+}
+
