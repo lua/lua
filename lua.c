@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.156 2005/12/29 12:30:16 roberto Exp roberto $
+** $Id: lua.c,v 1.157 2005/12/29 16:23:32 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -306,12 +306,12 @@ static int runargs (lua_State *L, char **argv, int n) {
 
 
 static int handle_luainit (lua_State *L) {
-  const char *init = getenv("LUA_INIT");
+  const char *init = getenv(LUA_INIT);
   if (init == NULL) return 0;  /* status OK */
   else if (init[0] == '@')
     return dofile(L, init+1);
   else
-    return dostring(L, init, "=LUA_INIT");
+    return dostring(L, init, "=" LUA_INIT);
 }
 
 
