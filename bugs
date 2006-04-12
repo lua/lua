@@ -923,3 +923,26 @@ patch = [[
 ]],
 
 }
+
+
+@Bug{
+what = [[lua_dostring/lua_dofile should return any values returned
+by the chunk]],
+
+patch = [[
+* lauxlib.h:
+@@ -108,9 +108,11 @@
+
+ #define luaL_typename(L,i)     lua_typename(L, lua_type(L,(i)))
+
+-#define luaL_dofile(L, fn)     (luaL_loadfile(L, fn) || lua_pcall(L, 0, 0, 0))
++#define luaL_dofile(L, fn) \
++       (luaL_loadfile(L, fn) || lua_pcall(L, 0, LUA_MULTRET, 0))
+
+-#define luaL_dostring(L, s)    (luaL_loadstring(L, s) || lua_pcall(L, 0, 0, 0))+#define luaL_dostring(L, s) \
++       (luaL_loadstring(L, s) || lua_pcall(L, 0, LUA_MULTRET, 0))
+
+ #define luaL_getmetatable(L,n) (lua_getfield(L, LUA_REGISTRYINDEX, (n)))
+]],
+
+}
