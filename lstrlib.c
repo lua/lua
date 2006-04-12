@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.129 2005/12/21 12:59:43 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.130 2005/12/29 15:32:11 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -701,6 +701,10 @@ static void addquoted (lua_State *L, luaL_Buffer *b, int arg) {
       case '"': case '\\': case '\n': {
         luaL_addchar(b, '\\');
         luaL_addchar(b, *s);
+        break;
+      }
+      case '\r': {
+        luaL_addlstring(b, "\\r", 2);
         break;
       }
       case '\0': {

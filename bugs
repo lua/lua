@@ -806,7 +806,7 @@ Bug{
 what = [[In 16-bit machines, expressions and/or with numeric constants as the
 right operand may result in weird values]],
 
-report = [[Andreas Stenius, 15/03/2006]],
+report = [[Andreas Stenius/Kein-Hong Man, 15/03/2006]],
 
 example = [[
 print(false or 0)   -- on 16-bit machines
@@ -877,3 +877,49 @@ patch = [[
 
 }
 
+
+Bug{
+what = [[
+In Windows,
+when Lua is used in an application that also uses DirectX,
+it may present an erractic behavior.
+THIS IS NOT A LUA BUG!
+The problem is that DirectX violates an ABI that Lua depends on.]],
+
+patch = [[
+The simplest solution is to use DirectX with
+the D3DCREATE_FPU_PRESERVE flag.
+
+Otherwise, you can change the definition of lua_number2int,
+in luaconf.h, to this one:
+#define lua_number2int(i,d)   __asm fld d   __asm fistp i
+]],
+
+}
+
+
+Bug{
+what = [[option '%q' in string.format does not handle '\r' correctly.]],
+
+example = [[
+local s = "a string with \r and \n and \r\n and \n\r"
+local c = string.format("return %q", s)
+assert(assert(loadstring(c))() == s)
+]],
+
+patch = [[
+* lstrlib.c:
+@@ -703,6 +703,10 @@
+         luaL_addchar(b, *s);
+         break;
+       }
++      case '\r': {
++        luaL_addlstring(b, "\\r", 2);
++        break;
++      }
+       case '\0': {
+         luaL_addlstring(b, "\\000", 4);
+         break;
+]],
+
+}
