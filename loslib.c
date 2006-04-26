@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.17 2006/01/27 13:54:31 roberto Exp roberto $
+** $Id: loslib.c,v 1.18 2006/03/09 18:08:22 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -123,8 +123,7 @@ static int getfield (lua_State *L, const char *key, int d) {
 
 static int os_date (lua_State *L) {
   const char *s = luaL_optstring(L, 1, "%c");
-  time_t t = lua_isnoneornil(L, 2) ? time(NULL) :
-                                     (time_t)luaL_checknumber(L, 2);
+  time_t t = luaL_opt(L, (time_t)luaL_checknumber, 2, time(NULL));
   struct tm *stm;
   if (*s == '!') {  /* UTC? */
     stm = gmtime(&t);
@@ -196,9 +195,8 @@ static int os_setlocale (lua_State *L) {
                       LC_NUMERIC, LC_TIME};
   static const char *const catnames[] = {"all", "collate", "ctype", "monetary",
      "numeric", "time", NULL};
-  const char *l = lua_tostring(L, 1);
+  const char *l = luaL_optstring(L, 1, NULL);
   int op = luaL_checkoption(L, 2, "all", catnames);
-  luaL_argcheck(L, l || lua_isnoneornil(L, 1), 1, "string expected");
   lua_pushstring(L, setlocale(cat[op], l));
   return 1;
 }
