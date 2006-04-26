@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.130 2005/12/29 15:32:11 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.131 2006/04/12 20:13:52 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -809,7 +809,8 @@ static int str_format (lua_State *L) {
           }
         }
         default: {  /* also treat cases `pnLlh' */
-          return luaL_error(L, "invalid option to " LUA_QL("format"));
+          return luaL_error(L, "invalid option " LUA_QL("%%%c") " to "
+                               LUA_QL("format"), *(strfrmt - 1));
         }
       }
       luaL_addlstring(&b, buff, strlen(buff));
