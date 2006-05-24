@@ -925,7 +925,7 @@ patch = [[
 }
 
 
-@Bug{
+Bug{
 what = [[lua_dostring/lua_dofile should return any values returned
 by the chunk]],
 
@@ -945,4 +945,32 @@ patch = [[
  #define luaL_getmetatable(L,n) (lua_getfield(L, LUA_REGISTRYINDEX, (n)))
 ]],
 
+}
+
+
+Bug{
+
+what = [[garbage collector does not compensate enough for finalizers]],
+
+patch = [[
+lgc.c:
+@@ -322,4 +322,6 @@
+
+-static void propagateall (global_State *g) {
+-  while (g->gray) propagatemark(g);
++static size_t propagateall (global_State *g) {
++  size_t m = 0;
++  while (g->gray) m += propagatemark(g);
++  return m;
+ }
+@@ -542,3 +544,3 @@
+   marktmu(g);  /* mark `preserved' userdata */
+-  propagateall(g);  /* remark, to propagate `preserveness' */
++  udsize += propagateall(g);  /* remark, to propagate `preserveness' */
+   cleartable(g->weak);  /* remove collected objects from weak tables */
+@@ -592,2 +594,4 @@
+         GCTM(L);
++        if (g->estimate > GCFINALIZECOST)
++          g->estimate -= GCFINALIZECOST;
+]]
 }
