@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.188 2005/12/29 15:32:11 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.189 2006/01/18 11:49:12 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -619,7 +619,7 @@ static void base_open (lua_State *L) {
   lua_setglobal(L, "_G");
   /* open lib into global table */
   luaL_register(L, "_G", base_funcs);
-  lua_pushliteral(L, LUA_VERSION);
+  lua_pushlstring(L, LUA_VERSION, 7);
   lua_setglobal(L, "_VERSION");  /* set global _VERSION */
   /* `ipairs' and `pairs' need auxiliary functions as upvalues */
   auxopen(L, "ipairs", luaB_ipairs, ipairsaux);
