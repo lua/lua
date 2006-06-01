@@ -45,7 +45,7 @@ TO_INC= lua.h luaconf.h lualib.h lauxlib.h ../etc/lua.hpp
 TO_LIB= liblua.a
 TO_MAN= lua.1 luac.1
 
-# Lua version. Currently used only for messages.
+# Lua version.
 V= 5.1
 
 all:	$(PLAT)

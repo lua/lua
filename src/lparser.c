@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.40 2005/12/22 16:19:56 roberto Exp $
+** $Id: lparser.c,v 2.41 2006/03/09 18:15:48 roberto Exp $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,7 @@
 #include "lparser.h"
 #include "lstate.h"
 #include "lstring.h"
-
+#include "ltable.h"
 
 
 

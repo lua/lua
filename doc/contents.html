@@ -2,14 +2,20 @@
 <HEAD>
 <TITLE>Lua 5.1 reference manual - contents</TITLE>
 <LINK REL="stylesheet" TYPE="text/css" HREF="lua.css">
+<style type="text/css">
+ul {
+	list-style-type: none ;
+	list-style-position: outside ;
+}
+</style>
 </HEAD>
 
-<BODY BGCOLOR="#FFFFFF">
+<BODY>
 
 <HR>
 <H1>
 <A HREF="http://www.lua.org/"><IMG SRC="logo.gif" ALT="Lua" BORDER=0></A>
-Lua 5.1 Reference Manual
+Reference manual for Lua 5.1
 </H1>
 
 <SMALL>
@@ -19,7 +25,7 @@ Lua 5.1 Reference Manual
 <HR>
 
 <H2>Contents</H2>
-<UL>
+<UL style="padding: 0">
 <LI><A HREF="#quick">Quick index</A>
 <P>
 <LI><A HREF="manual.html">Top</A>
@@ -86,6 +92,9 @@ Lua 5.1 Reference Manual
 <LI><A HREF="manual.html#5.2">5.2 - Coroutine Manipulation</A>
 <LI><A HREF="manual.html#5.3">5.3 - Modules</A>
 <LI><A HREF="manual.html#5.4">5.4 - String Manipulation</A>
+<UL>
+<LI><A HREF="manual.html#5.4.1">5.4.1 - Patterns</A>
+</UL>
 <LI><A HREF="manual.html#5.5">5.5 - Table Manipulation</A>
 <LI><A HREF="manual.html#5.6">5.6 - Mathematical Functions</A>
 <LI><A HREF="manual.html#5.7">5.7 - Input and Output Facilities</A>
@@ -93,8 +102,13 @@ Lua 5.1 Reference Manual
 <LI><A HREF="manual.html#5.9">5.9 - The Debug Library</A>
 </UL>
 <LI><A HREF="manual.html#6">6 - Lua Stand-alone</A>
-<LI><A HREF="manual.html#incompat">Incompatibilities with the Previous Version</A>
-<LI><A HREF="manual.html#BNF">The Complete Syntax of Lua</A>
+<LI><A HREF="manual.html#7">7 - Incompatibilities with the Previous Version</A>
+<UL>
+<LI><A HREF="manual.html#7.1">7.1 - Changes in the Language</A>
+<LI><A HREF="manual.html#7.2">7.2 - Changes in the Libraries</A>
+<LI><A HREF="manual.html#7.3">7.3 - Changes in the API</A>
+</UL>
+<LI><A HREF="manual.html#8">8 - The Complete Syntax of Lua</A>
 
 </UL>
 
@@ -156,31 +170,33 @@ Lua 5.1 Reference Manual
 <A HREF="manual.html#pdf-math.abs">math.abs</A><BR>
 <A HREF="manual.html#pdf-math.acos">math.acos</A><BR>
 <A HREF="manual.html#pdf-math.asin">math.asin</A><BR>
-<A HREF="manual.html#pdf-math.atan2">math.atan2</A><BR>
 <A HREF="manual.html#pdf-math.atan">math.atan</A><BR>
+<A HREF="manual.html#pdf-math.atan2">math.atan2</A><BR>
 <A HREF="manual.html#pdf-math.ceil">math.ceil</A><BR>
-<A HREF="manual.html#pdf-math.cosh">math.cosh</A><BR>
 <A HREF="manual.html#pdf-math.cos">math.cos</A><BR>
+<A HREF="manual.html#pdf-math.cosh">math.cosh</A><BR>
 <A HREF="manual.html#pdf-math.deg">math.deg</A><BR>
 <A HREF="manual.html#pdf-math.exp">math.exp</A><BR>
 <A HREF="manual.html#pdf-math.floor">math.floor</A><BR>
 <A HREF="manual.html#pdf-math.fmod">math.fmod</A><BR>
 <A HREF="manual.html#pdf-math.frexp">math.frexp</A><BR>
+<A HREF="manual.html#pdf-math.huge">math.huge</A><BR>
 <A HREF="manual.html#pdf-math.ldexp">math.ldexp</A><BR>
-<A HREF="manual.html#pdf-math.log10">math.log10</A><BR>
 <A HREF="manual.html#pdf-math.log">math.log</A><BR>
+<A HREF="manual.html#pdf-math.log10">math.log10</A><BR>
 <A HREF="manual.html#pdf-math.max">math.max</A><BR>
 <A HREF="manual.html#pdf-math.min">math.min</A><BR>
 <A HREF="manual.html#pdf-math.modf">math.modf</A><BR>
+<A HREF="manual.html#pdf-math.pi">math.pi</A><BR>
 <A HREF="manual.html#pdf-math.pow">math.pow</A><BR>
 <A HREF="manual.html#pdf-math.rad">math.rad</A><BR>
 <A HREF="manual.html#pdf-math.random">math.random</A><BR>
 <A HREF="manual.html#pdf-math.randomseed">math.randomseed</A><BR>
-<A HREF="manual.html#pdf-math.sinh">math.sinh</A><BR>
 <A HREF="manual.html#pdf-math.sin">math.sin</A><BR>
+<A HREF="manual.html#pdf-math.sinh">math.sinh</A><BR>
 <A HREF="manual.html#pdf-math.sqrt">math.sqrt</A><BR>
-<A HREF="manual.html#pdf-math.tanh">math.tanh</A><BR>
 <A HREF="manual.html#pdf-math.tan">math.tan</A><BR>
+<A HREF="manual.html#pdf-math.tanh">math.tanh</A><BR>
 <A HREF="manual.html#pdf-module">module</A><BR>
 <A HREF="manual.html#pdf-next">next</A><BR>
 <A HREF="manual.html#pdf-os.clock">os.clock</A><BR>
@@ -236,7 +252,7 @@ Lua 5.1 Reference Manual
 <A HREF="manual.html#pdf-xpcall">xpcall</A><BR>
 
 </TD>
-<TD>
+<TD WIDTH="35%">
 <H3>API</H3>
 <A HREF="manual.html#lua_Alloc">lua_Alloc</A><BR>
 <A HREF="manual.html#lua_CFunction">lua_CFunction</A><BR>
@@ -337,6 +353,7 @@ Lua 5.1 Reference Manual
 <A HREF="manual.html#lua_touserdata">lua_touserdata</A><BR>
 <A HREF="manual.html#lua_type">lua_type</A><BR>
 <A HREF="manual.html#lua_typename">lua_typename</A><BR>
+<A HREF="manual.html#lua_upvalueindex">lua_upvalueindex</A><BR>
 <A HREF="manual.html#lua_xmove">lua_xmove</A><BR>
 <A HREF="manual.html#lua_yield">lua_yield</A><BR>
 
@@ -365,6 +382,8 @@ Lua 5.1 Reference Manual
 <A HREF="manual.html#luaL_checkstring">luaL_checkstring</A><BR>
 <A HREF="manual.html#luaL_checktype">luaL_checktype</A><BR>
 <A HREF="manual.html#luaL_checkudata">luaL_checkudata</A><BR>
+<A HREF="manual.html#luaL_dofile">luaL_dofile</A><BR>
+<A HREF="manual.html#luaL_dostring">luaL_dostring</A><BR>
 <A HREF="manual.html#luaL_error">luaL_error</A><BR>
 <A HREF="manual.html#luaL_getmetafield">luaL_getmetafield</A><BR>
 <A HREF="manual.html#luaL_getmetatable">luaL_getmetatable</A><BR>
@@ -398,8 +417,11 @@ Lua 5.1 Reference Manual
 <HR>
 <SMALL>
 Last update:
-Fri Feb 10 17:15:37 BRST 2006
+Wed May 31 10:11:21 BRT 2006
 </SMALL>
+<!--
+Last change: new links
+-->
 
 </BODY>
 </HTML>
