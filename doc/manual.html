@@ -407,22 +407,6 @@ Square brackets are used to index a table:
 <pre>
 	var ::= prefixexp `<b>[</b>&acute; exp `<b>]</b>&acute;
 </pre><p>
-The first expression (<em>prefixexp</em>) should result in a table value;
-the second expression (<em>exp</em>)
-identifies a specific entry in this table.
-The expression denoting the table to be indexed has a restricted syntax;
-see <a href="#2.5">&sect;2.5</a> for details.
-
-
-<p>
-The syntax <code>var.Name</code> is just syntactic sugar for
-<code>var["Name"]</code> and is used to denote table fields:
-
-<pre>
-	var ::= prefixexp `<b>.</b>&acute; Name
-</pre>
-
-<p>
 The meaning of accesses to global variables 
 and table fields can be changed via metatables.
 An access to an indexed variable <code>t[i]</code> is equivalent to
@@ -432,6 +416,14 @@ a call <code>gettable_event(t,i)</code>.
 This function is not defined or callable in Lua.
 We use it here only for explanatory purposes.)
 
+
+<p>
+The syntax <code>var.Name</code> is just syntactic sugar for
+<code>var["Name"]</code>:
+
+<pre>
+	var ::= prefixexp `<b>.</b>&acute; Name
+</pre>
 
 <p>
 All global variables live as fields in ordinary Lua tables,
@@ -1625,7 +1617,7 @@ then Lua tries the second operand.
        return metatable(op1)[event] or metatable(op2)[event]
      end
 </pre><p>
-By ysing this function,
+By using this function,
 the behavior of the <code>op1 + op2</code> is
 
 <pre>
@@ -2299,8 +2291,8 @@ to grow the stack size.
 
 
 <p>
-Whenever Lua calls C, <a name="pdf-LUA_MINSTACK"><code>LUA_MINSTACK</code></a>
-it ensures that at least <code>LUA_MINSTACK</code> stack positions are available.
+Whenever Lua calls C,
+it ensures that at least <a name="pdf-LUA_MINSTACK"><code>LUA_MINSTACK</code></a> stack positions are available.
 <code>LUA_MINSTACK</code> is defined as 20,
 so that usually you do not have to worry about stack space
 unless your code has loops pushing elements onto the stack.
@@ -5777,6 +5769,10 @@ without invoking any metamethod.
 and <code>value</code> any Lua value.
 
 
+<p>
+This function returns <code>table</code>.
+
+
 
 
 <p>
@@ -7909,12 +7905,17 @@ then <code>getinfo</code> returns <b>nil</b>.
 
 
 <p>
-The returned table contains all the fields returned by <a href="#lua_getinfo"><code>lua_getinfo</code></a>,
+The returned table my contain all the fields returned by <a href="#lua_getinfo"><code>lua_getinfo</code></a>,
 with the string <code>what</code> describing which fields to fill in.
-The default for <code>what</code> is to get all information available.
+The default for <code>what</code> is to get all information available,
+except the table of valid lines.
 If present,
 the option '<code>f</code>'
 adds a field named <code>func</code> with the function itself.
+If present,
+the option '<code>L</code>'
+adds a field named <code>activelines</code> with the table of
+valid lines.
 
 
 <p>
@@ -7988,6 +7989,7 @@ The function returns <b>nil</b> if there is no upvalue with the given index.
 
 <p>
 Sets the environment of the given <code>object</code> to the given <code>table</code>.
+Returns <code>object</code>.
 
 
 
@@ -8446,7 +8448,7 @@ can only appear as the <em>last</em> statement of a block.
 <HR>
 <SMALL>
 Last update:
-Wed May 31 21:31:40 BRT 2006
+Fri Jun  2 14:33:44 BRT 2006
 </SMALL>
 
 </body></html>

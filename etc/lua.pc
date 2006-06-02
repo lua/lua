@@ -4,6 +4,8 @@
 
 # grep '^V=' ../Makefile
 V= 5.1
+# grep '^R=' ../Makefile
+R= 5.1.1
 
 # grep '^INSTALL_.*=' ../Makefile | sed 's/INSTALL_TOP/prefix/'
 prefix= /usr/local
@@ -14,14 +16,16 @@ INSTALL_MAN= ${prefix}/man/man1
 INSTALL_LMOD= ${prefix}/share/lua/${V}
 INSTALL_CMOD= ${prefix}/lib/lua/${V}
 
+# canonical vars
 exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
 includedir=${prefix}/include
 
 Name: Lua
 Description: An Extensible Extension Language
-Version: ${V}
+Version: ${R}
 Requires: 
 Libs: -L${libdir} -llua -lm
 Cflags: -I${includedir}
 
+# (end of lua.pc)
