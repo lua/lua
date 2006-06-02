@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.158 2006/04/10 18:27:23 roberto Exp roberto $
+** $Id: lua.c,v 1.159 2006/05/24 14:16:39 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -107,7 +107,7 @@ static int docall (lua_State *L, int narg, int clear) {
 
 
 static void print_version (void) {
-  l_message(NULL, LUA_VERSION "  " LUA_COPYRIGHT);
+  l_message(NULL, LUA_RELEASE "  " LUA_COPYRIGHT);
 }
 
 
