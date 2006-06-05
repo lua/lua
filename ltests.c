@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.35 2006/01/10 12:50:00 roberto Exp roberto $
+** $Id: ltests.c,v 2.36 2006/01/10 13:13:06 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -82,7 +82,7 @@ static void setnameval (lua_State *L, const char *name, int val) {
 #endif
 
 
-Memcontrol memcontrol = {0L, 0L, 0L, ULONG_MAX};
+Memcontrol memcontrol = {0L, 0L, 0L, 0L};
 
 
 static void *checkblock (void *block, size_t size) {
@@ -109,6 +109,10 @@ static void freeblock (Memcontrol *mc, void *block, size_t size) {
 void *debug_realloc (void *ud, void *block, size_t oldsize, size_t size) {
   Memcontrol *mc = cast(Memcontrol *, ud);
   lua_assert(oldsize == 0 || checkblocksize(block, oldsize));
+  if (mc->memlimit == 0) {  /* first time? */
+    char *limit = getenv("MEMLIMIT");  /* initialize memory limit */
+    mc->memlimit = limit ? strtoul(limit, NULL, 10) : ULONG_MAX;
+  }
   if (size == 0) {
     freeblock(mc, block, oldsize);
     return NULL;
@@ -1121,27 +1125,21 @@ static const struct luaL_Reg tests_funcs[] = {
 };
 
 
+static void checkfinalmem (void) {
+  lua_assert(memcontrol.numblocks == 0);
+  lua_assert(memcontrol.total == 0);
+}
+
+
 int luaB_opentests (lua_State *L) {
   void *ud;
+  atexit(checkfinalmem);
   lua_assert(lua_getallocf(L, &ud) == debug_realloc);
   lua_assert(ud == cast(void *, &memcontrol));
   lua_setallocf(L, lua_getallocf(L, NULL), ud);
   lua_state = L;  /* keep first state to be opened */
   luaL_register(L, "T", tests_funcs);
   return 0;
-}
-
-
-#undef main
-int main (int argc, char *argv[]) {
-  int ret;
-  char *limit = getenv("MEMLIMIT");
-  if (limit)
-    memcontrol.memlimit = strtoul(limit, NULL, 10);
-  ret = l_main(argc, argv);
-  lua_assert(memcontrol.numblocks == 0);
-  lua_assert(memcontrol.total == 0);
-  return ret;
 }
 
 #endif
