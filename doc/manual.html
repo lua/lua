@@ -7905,7 +7905,7 @@ then <code>getinfo</code> returns <b>nil</b>.
 
 
 <p>
-The returned table my contain all the fields returned by <a href="#lua_getinfo"><code>lua_getinfo</code></a>,
+The returned table may contain all the fields returned by <a href="#lua_getinfo"><code>lua_getinfo</code></a>,
 with the string <code>what</code> describing which fields to fill in.
 The default for <code>what</code> is to get all information available,
 except the table of valid lines.
@@ -8370,9 +8370,7 @@ is not a userdata of the expected type.
 
 <p>
 Here is the complete syntax of Lua in extended BNF.
-It does not describe operator priorities or some syntactical restrictions,
-such as <b>return</b> and <b>break</b> statements
-can only appear as the <em>last</em> statement of a block.
+(It does not describe operator precedences.)
 
 
 
@@ -8448,8 +8446,11 @@ can only appear as the <em>last</em> statement of a block.
 <HR>
 <SMALL>
 Last update:
-Fri Jun  2 14:33:44 BRT 2006
+Mon Jun  5 17:05:27 BRT 2006
 </SMALL>
+<!--
+Last change: ready for Lua 5.1.1
+-->
 
 </body></html>
 

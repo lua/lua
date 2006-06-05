@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.37 2005/12/22 16:19:56 roberto Exp $
+** $Id: ldo.c,v 2.38 2006/06/05 19:36:14 roberto Exp $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -383,12 +383,14 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
 static void resume (lua_State *L, void *ud) {
   StkId firstArg = cast(StkId, ud);
   CallInfo *ci = L->ci;
-  if (L->status != LUA_YIELD) {  /* start coroutine */
+  if (L->status == 0) {  /* start coroutine? */
     lua_assert(ci == L->base_ci && firstArg > L->base);
     if (luaD_precall(L, firstArg - 1, LUA_MULTRET) != PCRLUA)
       return;
   }
   else {  /* resuming from previous yield */
+    lua_assert(L->status == LUA_YIELD);
+    L->status = 0;
     if (!f_isLua(ci)) {  /* `common' yield? */
       /* finish interrupted execution of `OP_CALL' */
       lua_assert(GET_OPCODE(*((ci-1)->savedpc - 1)) == OP_CALL ||
@@ -399,7 +401,6 @@ static void resume (lua_State *L, void *ud) {
     else  /* yielded inside a hook: just continue its execution */
       L->base = L->ci->base;
   }
-  L->status = 0;
   luaV_execute(L, cast_int(L->ci - L->base_ci));
 }
 
