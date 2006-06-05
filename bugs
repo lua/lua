@@ -974,3 +974,42 @@ lgc.c:
 +          g->estimate -= GCFINALIZECOST;
 ]]
 }
+
+
+But{
+
+what = [[debug hooks may get wrong when mixed with coroutines]],
+
+report = [[by Ivko Stanilov, 03/06/2006]],
+
+example = [[
+co = coroutine.create(function (a,b)
+   coroutine.yield(a, b)
+   return b, "end"
+end)
+
+debug.sethook(co, function() end, "lcr")
+coroutine.resume(co, 100, 2000)
+coroutine.resume(co, 100, 2000)
+]],
+
+patch = [[
+* ldo.c:
+@@ -389,6 +389,7 @@
+       return;
+   }
+   else {  /* resuming from previous yield */
++    L->status = 0;
+     if (!f_isLua(ci)) {  /* `common' yield? */
+       /* finish interrupted execution of `OP_CALL' */
+       lua_assert(GET_OPCODE(*((ci-1)->savedpc - 1)) == OP_CALL ||
+@@ -399,7 +400,6 @@
+     else  /* yielded inside a hook: just continue its execution */
+       L->base = L->ci->base;
+   }
+-  L->status = 0;
+   luaV_execute(L, cast_int(L->ci - L->base_ci));
+ }
+]],
+
+}
