@@ -18,16 +18,14 @@ ul {
 Reference manual for Lua 5.1
 </H1>
 
-<SMALL>
-<A HREF="http://www.lua.org/copyright.html">Copyright</A>
-&copy; 2006 Lua.org, PUC-Rio.  All rights reserved.
-</SMALL>
+<A HREF="#contents">contents</A>
+&middot;
+<A HREF="#index">index</A>
 <HR>
-
-<H2>Contents</H2>
-<UL style="padding: 0">
-<LI><A HREF="#quick">Quick index</A>
 <P>
+
+<H2><A NAME="contents">Contents</A></H2>
+<UL style="padding: 0">
 <LI><A HREF="manual.html">Top</A>
 <LI><A HREF="manual.html#1">1 - Introduction</A>
 <LI><A HREF="manual.html#2">2 - The Language</A>
@@ -112,15 +110,44 @@ Reference manual for Lua 5.1
 
 </UL>
 
-<H2><A NAME="quick">Quick index</A></H2>
+<H2><A NAME="index">Index</A></H2>
 <TABLE>
 <TR VALIGN="top">
-<TD WIDTH="35%">
-<H3><A NAME="functions">Functions</A></H3>
+<TD WIDTH="20%">
+<H3><A NAME="functions">Lua functions</A></H3>
 <A HREF="manual.html#pdf-_G">_G</A><BR>
 <A HREF="manual.html#pdf-_VERSION">_VERSION</A><BR>
 <A HREF="manual.html#pdf-assert">assert</A><BR>
 <A HREF="manual.html#pdf-collectgarbage">collectgarbage</A><BR>
+<A HREF="manual.html#pdf-dofile">dofile</A><BR>
+<A HREF="manual.html#pdf-error">error</A><BR>
+<A HREF="manual.html#pdf-getfenv">getfenv</A><BR>
+<A HREF="manual.html#pdf-getmetatable">getmetatable</A><BR>
+<A HREF="manual.html#pdf-ipairs">ipairs</A><BR>
+<A HREF="manual.html#pdf-load">load</A><BR>
+<A HREF="manual.html#pdf-loadfile">loadfile</A><BR>
+<A HREF="manual.html#pdf-loadstring">loadstring</A><BR>
+<A HREF="manual.html#pdf-module">module</A><BR>
+<A HREF="manual.html#pdf-next">next</A><BR>
+<A HREF="manual.html#pdf-pairs">pairs</A><BR>
+<A HREF="manual.html#pdf-pcall">pcall</A><BR>
+<A HREF="manual.html#pdf-print">print</A><BR>
+<A HREF="manual.html#pdf-rawequal">rawequal</A><BR>
+<A HREF="manual.html#pdf-rawget">rawget</A><BR>
+<A HREF="manual.html#pdf-rawset">rawset</A><BR>
+<A HREF="manual.html#pdf-require">require</A><BR>
+<A HREF="manual.html#pdf-select">select</A><BR>
+<A HREF="manual.html#pdf-setfenv">setfenv</A><BR>
+<A HREF="manual.html#pdf-setmetatable">setmetatable</A><BR>
+<A HREF="manual.html#pdf-tonumber">tonumber</A><BR>
+<A HREF="manual.html#pdf-tostring">tostring</A><BR>
+<A HREF="manual.html#pdf-type">type</A><BR>
+<A HREF="manual.html#pdf-unpack">unpack</A><BR>
+<A HREF="manual.html#pdf-xpcall">xpcall</A><BR>
+
+</TD>
+<TD WIDTH="30%">
+<H3>&nbsp;</H3>
 <A HREF="manual.html#pdf-coroutine.create">coroutine.create</A><BR>
 <A HREF="manual.html#pdf-coroutine.resume">coroutine.resume</A><BR>
 <A HREF="manual.html#pdf-coroutine.running">coroutine.running</A><BR>
@@ -141,8 +168,6 @@ Reference manual for Lua 5.1
 <A HREF="manual.html#pdf-debug.setmetatable">debug.setmetatable</A><BR>
 <A HREF="manual.html#pdf-debug.setupvalue">debug.setupvalue</A><BR>
 <A HREF="manual.html#pdf-debug.traceback">debug.traceback</A><BR>
-<A HREF="manual.html#pdf-dofile">dofile</A><BR>
-<A HREF="manual.html#pdf-error">error</A><BR>
 <A HREF="manual.html#pdf-file:close">file:close</A><BR>
 <A HREF="manual.html#pdf-file:flush">file:flush</A><BR>
 <A HREF="manual.html#pdf-file:lines">file:lines</A><BR>
@@ -150,8 +175,6 @@ Reference manual for Lua 5.1
 <A HREF="manual.html#pdf-file:seek">file:seek</A><BR>
 <A HREF="manual.html#pdf-file:setvbuf">file:setvbuf</A><BR>
 <A HREF="manual.html#pdf-file:write">file:write</A><BR>
-<A HREF="manual.html#pdf-getfenv">getfenv</A><BR>
-<A HREF="manual.html#pdf-getmetatable">getmetatable</A><BR>
 <A HREF="manual.html#pdf-io.close">io.close</A><BR>
 <A HREF="manual.html#pdf-io.flush">io.flush</A><BR>
 <A HREF="manual.html#pdf-io.input">io.input</A><BR>
@@ -163,18 +186,14 @@ Reference manual for Lua 5.1
 <A HREF="manual.html#pdf-io.tmpfile">io.tmpfile</A><BR>
 <A HREF="manual.html#pdf-io.type">io.type</A><BR>
 <A HREF="manual.html#pdf-io.write">io.write</A><BR>
-<A HREF="manual.html#pdf-ipairs">ipairs</A><BR>
-<A HREF="manual.html#pdf-load">load</A><BR>
-<A HREF="manual.html#pdf-loadfile">loadfile</A><BR>
-<A HREF="manual.html#pdf-loadstring">loadstring</A><BR>
 <A HREF="manual.html#pdf-math.abs">math.abs</A><BR>
 <A HREF="manual.html#pdf-math.acos">math.acos</A><BR>
 <A HREF="manual.html#pdf-math.asin">math.asin</A><BR>
-<A HREF="manual.html#pdf-math.atan">math.atan</A><BR>
 <A HREF="manual.html#pdf-math.atan2">math.atan2</A><BR>
+<A HREF="manual.html#pdf-math.atan">math.atan</A><BR>
 <A HREF="manual.html#pdf-math.ceil">math.ceil</A><BR>
-<A HREF="manual.html#pdf-math.cos">math.cos</A><BR>
 <A HREF="manual.html#pdf-math.cosh">math.cosh</A><BR>
+<A HREF="manual.html#pdf-math.cos">math.cos</A><BR>
 <A HREF="manual.html#pdf-math.deg">math.deg</A><BR>
 <A HREF="manual.html#pdf-math.exp">math.exp</A><BR>
 <A HREF="manual.html#pdf-math.floor">math.floor</A><BR>
@@ -182,8 +201,8 @@ Reference manual for Lua 5.1
 <A HREF="manual.html#pdf-math.frexp">math.frexp</A><BR>
 <A HREF="manual.html#pdf-math.huge">math.huge</A><BR>
 <A HREF="manual.html#pdf-math.ldexp">math.ldexp</A><BR>
-<A HREF="manual.html#pdf-math.log">math.log</A><BR>
 <A HREF="manual.html#pdf-math.log10">math.log10</A><BR>
+<A HREF="manual.html#pdf-math.log">math.log</A><BR>
 <A HREF="manual.html#pdf-math.max">math.max</A><BR>
 <A HREF="manual.html#pdf-math.min">math.min</A><BR>
 <A HREF="manual.html#pdf-math.modf">math.modf</A><BR>
@@ -192,13 +211,11 @@ Reference manual for Lua 5.1
 <A HREF="manual.html#pdf-math.rad">math.rad</A><BR>
 <A HREF="manual.html#pdf-math.random">math.random</A><BR>
 <A HREF="manual.html#pdf-math.randomseed">math.randomseed</A><BR>
-<A HREF="manual.html#pdf-math.sin">math.sin</A><BR>
 <A HREF="manual.html#pdf-math.sinh">math.sinh</A><BR>
+<A HREF="manual.html#pdf-math.sin">math.sin</A><BR>
 <A HREF="manual.html#pdf-math.sqrt">math.sqrt</A><BR>
-<A HREF="manual.html#pdf-math.tan">math.tan</A><BR>
 <A HREF="manual.html#pdf-math.tanh">math.tanh</A><BR>
-<A HREF="manual.html#pdf-module">module</A><BR>
-<A HREF="manual.html#pdf-next">next</A><BR>
+<A HREF="manual.html#pdf-math.tan">math.tan</A><BR>
 <A HREF="manual.html#pdf-os.clock">os.clock</A><BR>
 <A HREF="manual.html#pdf-os.date">os.date</A><BR>
 <A HREF="manual.html#pdf-os.difftime">os.difftime</A><BR>
@@ -216,16 +233,6 @@ Reference manual for Lua 5.1
 <A HREF="manual.html#pdf-package.path">package.path</A><BR>
 <A HREF="manual.html#pdf-package.preload">package.preload</A><BR>
 <A HREF="manual.html#pdf-package.seeall">package.seeall</A><BR>
-<A HREF="manual.html#pdf-pairs">pairs</A><BR>
-<A HREF="manual.html#pdf-pcall">pcall</A><BR>
-<A HREF="manual.html#pdf-print">print</A><BR>
-<A HREF="manual.html#pdf-rawequal">rawequal</A><BR>
-<A HREF="manual.html#pdf-rawget">rawget</A><BR>
-<A HREF="manual.html#pdf-rawset">rawset</A><BR>
-<A HREF="manual.html#pdf-require">require</A><BR>
-<A HREF="manual.html#pdf-select">select</A><BR>
-<A HREF="manual.html#pdf-setfenv">setfenv</A><BR>
-<A HREF="manual.html#pdf-setmetatable">setmetatable</A><BR>
 <A HREF="manual.html#pdf-string.byte">string.byte</A><BR>
 <A HREF="manual.html#pdf-string.char">string.char</A><BR>
 <A HREF="manual.html#pdf-string.dump">string.dump</A><BR>
@@ -245,15 +252,10 @@ Reference manual for Lua 5.1
 <A HREF="manual.html#pdf-table.maxn">table.maxn</A><BR>
 <A HREF="manual.html#pdf-table.remove">table.remove</A><BR>
 <A HREF="manual.html#pdf-table.sort">table.sort</A><BR>
-<A HREF="manual.html#pdf-tonumber">tonumber</A><BR>
-<A HREF="manual.html#pdf-tostring">tostring</A><BR>
-<A HREF="manual.html#pdf-type">type</A><BR>
-<A HREF="manual.html#pdf-unpack">unpack</A><BR>
-<A HREF="manual.html#pdf-xpcall">xpcall</A><BR>
 
 </TD>
-<TD WIDTH="35%">
-<H3>API</H3>
+<TD WIDTH="25%">
+<H3>C API</H3>
 <A HREF="manual.html#lua_Alloc">lua_Alloc</A><BR>
 <A HREF="manual.html#lua_CFunction">lua_CFunction</A><BR>
 <A HREF="manual.html#lua_Debug">lua_Debug</A><BR>
@@ -359,7 +361,7 @@ Reference manual for Lua 5.1
 
 </TD>
 <TD>
-<H3>Auxiliary library</H3>
+<H3>auxiliary library</H3>
 <A HREF="manual.html#luaL_Buffer">luaL_Buffer</A><BR>
 <A HREF="manual.html#luaL_Reg">luaL_Reg</A><BR>
 <A HREF="manual.html#luaL_addchar">luaL_addchar</A><BR>
@@ -417,10 +419,10 @@ Reference manual for Lua 5.1
 <HR>
 <SMALL>
 Last update:
-Wed May 31 10:11:21 BRT 2006
+Tue Jun  6 14:55:31 BRT 2006
 </SMALL>
 <!--
-Last change: new links
+Last change: reformatted index
 -->
 
 </BODY>
