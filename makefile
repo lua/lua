@@ -18,7 +18,7 @@ LOCAL = $(TESTS) $(CWARNS)
 
 
 CC= gcc
-CFLAGS= -O2 -Wall $(MYCFLAGS)
+CFLAGS= -Wall $(MYCFLAGS) -O2
 AR= ar rcu
 RANLIB= ranlib
 RM= rm -f
@@ -75,6 +75,7 @@ $(LUAC_T): $(LUAC_O) $(CORE_T)
 	$(CC) -o $@ $(MYLDFLAGS) $(LUAC_O) $(CORE_T) $(LIBS) $(MYLIBS)
 
 clean:
+	rcsclean -u
 	$(RM) $(ALL_T) $(ALL_O)
 
 depend:
