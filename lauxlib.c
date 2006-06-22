@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.158 2006/01/16 12:42:21 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.159 2006/03/21 19:31:09 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -535,7 +535,7 @@ static const char *getF (lua_State *L, void *ud, size_t *size) {
     return "\n";
   }
   if (feof(lf->f)) return NULL;
-  *size = fread(lf->buff, 1, LUAL_BUFFERSIZE, lf->f);
+  *size = fread(lf->buff, 1, sizeof(lf->buff), lf->f);
   return (*size > 0) ? lf->buff : NULL;
 }
 

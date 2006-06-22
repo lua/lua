@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.41 2006/03/09 18:15:48 roberto Exp roberto $
+** $Id: lparser.c,v 2.42 2006/06/05 15:57:59 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -274,8 +274,8 @@ static void adjust_assign (LexState *ls, int nvars, int nexps, expdesc *e) {
 
 
 static void enterlevel (LexState *ls) {
-  if (++ls->L->nCcalls > LUAI_MAXCCALLS)
-	luaX_lexerror(ls, "chunk has too many syntax levels", 0);
+  ++ls->L->nCcalls;
+  luaY_checklimit(ls->fs, ls->L->nCcalls, LUAI_MAXCCALLS, "syntax levels");
 }
 
 

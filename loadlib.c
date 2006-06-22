@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.51 2005/12/29 15:32:11 roberto Exp roberto $
+** $Id: loadlib.c,v 1.52 2006/04/10 18:27:23 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -356,7 +356,7 @@ static const char *findfile (lua_State *L, const char *name,
   path = lua_tostring(L, -1);
   if (path == NULL)
     luaL_error(L, LUA_QL("package.%s") " must be a string", pname);
-  lua_pushstring(L, "");  /* error accumulator */
+  lua_pushliteral(L, "");  /* error accumulator */
   while ((path = pushnexttemplate(L, path)) != NULL) {
     const char *filename;
     filename = luaL_gsub(L, lua_tostring(L, -1), LUA_PATH_MARK, name);
@@ -462,7 +462,7 @@ static int ll_require (lua_State *L) {
   lua_getfield(L, LUA_ENVIRONINDEX, "loaders");
   if (!lua_istable(L, -1))
     luaL_error(L, LUA_QL("package.loaders") " must be a table");
-  lua_pushstring(L, "");  /* error message accumulator */
+  lua_pushliteral(L, "");  /* error message accumulator */
   for (i=1; ; i++) {
     lua_rawgeti(L, -2, i);  /* get a loader */
     if (lua_isnil(L, -1))
@@ -646,8 +646,8 @@ LUALIB_API int luaopen_package (lua_State *L) {
   setpath(L, "path", LUA_PATH, LUA_PATH_DEFAULT);  /* set field `path' */
   setpath(L, "cpath", LUA_CPATH, LUA_CPATH_DEFAULT); /* set field `cpath' */
   /* store config information */
-  lua_pushstring(L, LUA_DIRSEP "\n" LUA_PATHSEP "\n" LUA_PATH_MARK "\n"
-                    LUA_EXECDIR "\n" LUA_IGMARK);
+  lua_pushliteral(L, LUA_DIRSEP "\n" LUA_PATHSEP "\n" LUA_PATH_MARK "\n"
+                     LUA_EXECDIR "\n" LUA_IGMARK);
   lua_setfield(L, -2, "config");
   /* set field `loaded' */
   luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", 2);

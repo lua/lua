@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.131 2006/04/12 20:13:52 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.132 2006/04/26 20:41:19 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -185,7 +185,7 @@ typedef struct MatchState {
 static int check_capture (MatchState *ms, int l) {
   l -= '1';
   if (l < 0 || l >= ms->level || ms->capture[l].len == CAP_UNFINISHED)
-    return luaL_error(ms->L, "invalid capture index");
+    return luaL_error(ms->L, "invalid capture index %%%d", l + 1);
   return l;
 }
 

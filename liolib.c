@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.72 2006/01/28 12:59:13 roberto Exp roberto $
+** $Id: liolib.c,v 2.73 2006/05/08 20:14:16 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -139,7 +139,7 @@ static int io_gc (lua_State *L) {
 static int io_tostring (lua_State *L) {
   FILE *f = *topfile(L);
   if (f == NULL)
-    lua_pushstring(L, "file (closed)");
+    lua_pushliteral(L, "file (closed)");
   else
     lua_pushfstring(L, "file (%p)", f);
   return 1;
