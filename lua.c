@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.159 2006/05/24 14:16:39 roberto Exp roberto $
+** $Id: lua.c,v 1.160 2006/06/02 15:34:00 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -157,13 +157,15 @@ static const char *get_prompt (lua_State *L, int firstline) {
   return p;
 }
 
+/* mark in error messages for incomplete statements */
+#define mark	LUA_QL("<eof>")
+#define marklen	(sizeof(mark) - 1)
 
 static int incomplete (lua_State *L, int status) {
   if (status == LUA_ERRSYNTAX) {
     size_t lmsg;
     const char *msg = lua_tolstring(L, -1, &lmsg);
-    const char *tp = msg + lmsg - (sizeof(LUA_QL("<eof>")) - 1);
-    if (strstr(msg, LUA_QL("<eof>")) == tp) {
+    if (lmsg >= marklen && strcmp(msg + lmsg - marklen, mark) == 0) {
       lua_pop(L, 1);
       return 1;
     }
