@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.52 2006/04/10 18:27:23 roberto Exp roberto $
+** $Id: loadlib.c,v 1.53 2006/06/22 16:12:59 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -360,11 +360,12 @@ static const char *findfile (lua_State *L, const char *name,
   while ((path = pushnexttemplate(L, path)) != NULL) {
     const char *filename;
     filename = luaL_gsub(L, lua_tostring(L, -1), LUA_PATH_MARK, name);
+    lua_remove(L, -2);  /* remove path template */
     if (readable(filename))  /* does file exist and is readable? */
       return filename;  /* return that file name */
-    lua_pop(L, 2);  /* remove path template and file name */ 
     luaO_pushfstring(L, "\n\tno file " LUA_QS, filename);
-    lua_concat(L, 2);
+    lua_remove(L, -2);  /* remove file name */
+    lua_concat(L, 2);  /* add entry to possible error message */
   }
   return NULL;  /* not found */
 }
