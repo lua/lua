@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.62 2006/01/23 19:51:43 roberto Exp roberto $
+** $Id: lvm.c,v 2.63 2006/06/05 15:58:59 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -85,8 +85,8 @@ static void callTMres (lua_State *L, StkId res, const TValue *f,
   setobj2s(L, L->top, f);  /* push function */
   setobj2s(L, L->top+1, p1);  /* 1st argument */
   setobj2s(L, L->top+2, p2);  /* 2nd argument */
-  luaD_checkstack(L, 3);
   L->top += 3;
+  luaD_checkstack(L, 0);
   luaD_call(L, L->top - 3, 1);
   res = restorestack(L, result);
   L->top--;
@@ -101,8 +101,8 @@ static void callTM (lua_State *L, const TValue *f, const TValue *p1,
   setobj2s(L, L->top+1, p1);  /* 1st argument */
   setobj2s(L, L->top+2, p2);  /* 2nd argument */
   setobj2s(L, L->top+3, p3);  /* 3th argument */
-  luaD_checkstack(L, 4);
   L->top += 4;
+  luaD_checkstack(L, 0);
   luaD_call(L, L->top - 4, 0);
 }
 
@@ -455,9 +455,12 @@ void luaV_execute (lua_State *L, int nexeccalls) {
         continue;
       }
       case OP_NEWTABLE: {
-        int b = GETARG_B(i);
-        int c = GETARG_C(i);
-        sethvalue(L, ra, luaH_new(L, luaO_fb2int(b), luaO_fb2int(c)));
+        int asize = luaO_fb2int(GETARG_B(i));
+        int nsize = luaO_fb2int(GETARG_C(i));
+        Table *t = luaH_new(L);
+        sethvalue(L, ra, t);
+        if (asize > 0 || nsize > 0)
+          luaH_resize(L, t, asize, nsize);
         Protect(luaC_checkGC(L));
         continue;
       }
@@ -695,10 +698,7 @@ void luaV_execute (lua_State *L, int nexeccalls) {
         int c = GETARG_C(i);
         int last;
         Table *h;
-        if (n == 0) {
-          n = cast_int(L->top - ra) - 1;
-          L->top = L->ci->top;
-        }
+        if (n == 0) n = cast_int(L->top - ra) - 1;
         if (c == 0) c = cast_int(*pc++);
         runtime_check(L, ttistable(ra));
         h = hvalue(ra);
@@ -710,6 +710,7 @@ void luaV_execute (lua_State *L, int nexeccalls) {
           setobj2t(L, luaH_setnum(L, h, last--), val);
           luaC_barriert(L, h, val);
         }
+        L->top = L->ci->top;  /* correct top (in case of previous open call) */
         continue;
       }
       case OP_CLOSE: {
@@ -724,6 +725,7 @@ void luaV_execute (lua_State *L, int nexeccalls) {
         nup = p->nups;
         ncl = luaF_newLclosure(L, nup, cl->env);
         ncl->l.p = p;
+        setclvalue(L, ra, ncl);
         for (j=0; j<nup; j++, pc++) {
           if (GET_OPCODE(*pc) == OP_GETUPVAL)
             ncl->l.upvals[j] = cl->upvals[GETARG_B(*pc)];
@@ -732,7 +734,6 @@ void luaV_execute (lua_State *L, int nexeccalls) {
             ncl->l.upvals[j] = luaF_findupval(L, base + GETARG_B(*pc));
           }
         }
-        setclvalue(L, ra, ncl);
         Protect(luaC_checkGC(L));
         continue;
       }

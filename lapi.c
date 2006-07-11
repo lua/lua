@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.54 2006/06/02 15:34:00 roberto Exp roberto $
+** $Id: lapi.c,v 2.55 2006/06/07 12:37:17 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -42,9 +42,6 @@ const char lua_ident[] =
 
 #define api_checkvalidindex(L, i)	api_check(L, (i) != luaO_nilobject)
 
-#define api_incr_top(L)   {api_check(L, L->top < L->ci->top); L->top++;}
-
-
 
 static TValue *index2adr (lua_State *L, int idx) {
   if (idx > 0) {
@@ -86,12 +83,6 @@ static Table *getcurrenv (lua_State *L) {
 }
 
 
-void luaA_pushobject (lua_State *L, const TValue *o) {
-  setobj2s(L, L->top, o);
-  api_incr_top(L);
-}
-
-
 LUA_API int lua_checkstack (lua_State *L, int size) {
   int res;
   lua_lock(L);
@@ -130,19 +121,6 @@ LUA_API lua_CFunction lua_atpanic (lua_State *L, lua_CFunction panicf) {
   G(L)->panic = panicf;
   lua_unlock(L);
   return old;
-}
-
-
-LUA_API lua_State *lua_newthread (lua_State *L) {
-  lua_State *L1;
-  lua_lock(L);
-  luaC_checkGC(L);
-  L1 = luaE_newthread(L);
-  setthvalue(L, L->top, L1);
-  api_incr_top(L);
-  lua_unlock(L);
-  luai_userstatethread(L, L1);
-  return L1;
 }
 
 
@@ -539,13 +517,12 @@ LUA_API void lua_gettable (lua_State *L, int idx) {
 
 LUA_API void lua_getfield (lua_State *L, int idx, const char *k) {
   StkId t;
-  TValue key;
   lua_lock(L);
   t = index2adr(L, idx);
   api_checkvalidindex(L, t);
-  setsvalue(L, &key, luaS_new(L, k));
-  luaV_gettable(L, t, &key, L->top);
+  setsvalue2s(L, L->top, luaS_new(L, k));
   api_incr_top(L);
+  luaV_gettable(L, t, L->top - 1, L->top - 1);
   lua_unlock(L);
 }
 
@@ -572,10 +549,14 @@ LUA_API void lua_rawgeti (lua_State *L, int idx, int n) {
 
 
 LUA_API void lua_createtable (lua_State *L, int narray, int nrec) {
+  Table *t;
   lua_lock(L);
   luaC_checkGC(L);
-  sethvalue(L, L->top, luaH_new(L, narray, nrec));
+  t = luaH_new(L);
+  sethvalue(L, L->top, t);
   api_incr_top(L);
+  if (narray > 0 || nrec > 0)
+    luaH_resize(L, t, narray, nrec);
   lua_unlock(L);
 }
 
@@ -652,14 +633,13 @@ LUA_API void lua_settable (lua_State *L, int idx) {
 
 LUA_API void lua_setfield (lua_State *L, int idx, const char *k) {
   StkId t;
-  TValue key;
   lua_lock(L);
   api_checknelems(L, 1);
   t = index2adr(L, idx);
   api_checkvalidindex(L, t);
-  setsvalue(L, &key, luaS_new(L, k));
-  luaV_settable(L, t, &key, L->top - 1);
-  L->top--;  /* pop value */
+  setsvalue2s(L, L->top++, luaS_new(L, k));
+  luaV_settable(L, t, L->top - 1, L->top - 2);
+  L->top -= 2;  /* pop value and key */
   lua_unlock(L);
 }
 
@@ -907,7 +887,7 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
       break;
     }
     case LUA_GCCOLLECT: {
-      luaC_fullgc(L);
+      luaC_fullgc(L, 0);
       break;
     }
     case LUA_GCCOUNT: {

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.28 2005/11/01 16:08:52 roberto Exp roberto $
+** $Id: ldebug.c,v 2.29 2005/12/22 16:19:56 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -128,8 +128,10 @@ LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
   CallInfo *ci = L->base_ci + ar->i_ci;
   const char *name = findlocal(L, ci, n);
   lua_lock(L);
-  if (name)
-      luaA_pushobject(L, ci->base + (n - 1));
+  if (name) {
+    setobj2s(L, L->top, ci->base + (n - 1));
+    api_incr_top(L);
+  }
   lua_unlock(L);
   return name;
 }
@@ -177,16 +179,17 @@ static void info_tailcall (lua_Debug *ar) {
 static void collectvalidlines (lua_State *L, Closure *f) {
   if (f == NULL || f->c.isC) {
     setnilvalue(L->top);
+    incr_top(L);
   }
   else {
-    Table *t = luaH_new(L, 0, 0);
-    int *lineinfo = f->l.p->lineinfo;
     int i;
+    int *lineinfo = f->l.p->lineinfo;
+    Table *t = luaH_new(L);
+    sethvalue(L, L->top, t); 
+    incr_top(L);
     for (i=0; i<f->l.p->sizelineinfo; i++)
       setbvalue(luaH_setnum(L, t, lineinfo[i]), 1);
-    sethvalue(L, L->top, t); 
   }
-  incr_top(L);
 }
 
 

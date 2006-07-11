@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.31 2006/01/10 13:13:06 roberto Exp roberto $
+** $Id: ltable.c,v 2.32 2006/01/18 11:49:02 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -294,7 +294,7 @@ static void setnodevector (lua_State *L, Table *t, int size) {
 }
 
 
-static void resize (lua_State *L, Table *t, int nasize, int nhsize) {
+void luaH_resize (lua_State *L, Table *t, int nasize, int nhsize) {
   int i;
   int oldasize = t->sizearray;
   int oldhsize = t->lsizenode;
@@ -326,7 +326,7 @@ static void resize (lua_State *L, Table *t, int nasize, int nhsize) {
 
 void luaH_resizearray (lua_State *L, Table *t, int nasize) {
   int nsize = (t->node == dummynode) ? 0 : sizenode(t);
-  resize(L, t, nasize, nsize);
+  luaH_resize(L, t, nasize, nsize);
 }
 
 
@@ -345,7 +345,7 @@ static void rehash (lua_State *L, Table *t, const TValue *ek) {
   /* compute new size for array part */
   na = computesizes(nums, &nasize);
   /* resize the table to new computed sizes */
-  resize(L, t, nasize, totaluse - na);
+  luaH_resize(L, t, nasize, totaluse - na);
 }
 
 
@@ -355,18 +355,14 @@ static void rehash (lua_State *L, Table *t, const TValue *ek) {
 */
 
 
-Table *luaH_new (lua_State *L, int narray, int nhash) {
+Table *luaH_new (lua_State *L) {
   Table *t = luaM_new(L, Table);
   luaC_link(L, obj2gco(t), LUA_TTABLE);
   t->metatable = NULL;
   t->flags = cast_byte(~0);
-  /* temporary values (kept only if some malloc fails) */
   t->array = NULL;
   t->sizearray = 0;
-  t->lsizenode = 0;
-  t->node = cast(Node *, dummynode);
-  setarrayvector(L, t, narray);
-  setnodevector(L, t, nhash);
+  setnodevector(L, t, 0);
   return t;
 }
 

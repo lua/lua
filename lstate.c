@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.35 2005/10/06 20:46:25 roberto Exp roberto $
+** $Id: lstate.c,v 2.36 2006/05/24 14:15:50 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -12,6 +12,7 @@
 
 #include "lua.h"
 
+#include "lapi.h"
 #include "ldebug.h"
 #include "ldo.h"
 #include "lfunc.h"
@@ -71,8 +72,8 @@ static void f_luaopen (lua_State *L, void *ud) {
   global_State *g = G(L);
   UNUSED(ud);
   stack_init(L, L);  /* init stack */
-  sethvalue(L, gt(L), luaH_new(L, 0, 2));  /* table of globals */
-  sethvalue(L, registry(L), luaH_new(L, 0, 2));  /* registry */
+  sethvalue(L, gt(L), luaH_new(L));  /* table of globals */
+  sethvalue(L, registry(L), luaH_new(L));  /* registry */
   luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
   luaT_init(L);
   luaX_init(L);
@@ -116,9 +117,14 @@ static void close_state (lua_State *L) {
 }
 
 
-lua_State *luaE_newthread (lua_State *L) {
-  lua_State *L1 = tostate(luaM_malloc(L, state_size(lua_State)));
+LUA_API lua_State *lua_newthread (lua_State *L) {
+  lua_State *L1;
+  lua_lock(L);
+  luaC_checkGC(L);
+  L1 = tostate(luaM_malloc(L, state_size(lua_State)));
   luaC_link(L, obj2gco(L1), LUA_TTHREAD);
+  setthvalue(L, L->top, L1);
+  api_incr_top(L);
   preinit_state(L1, G(L));
   stack_init(L1, L);  /* init stack */
   setobj2n(L, gt(L1), gt(L));  /* share table of globals */
@@ -127,6 +133,8 @@ lua_State *luaE_newthread (lua_State *L) {
   L1->hook = L->hook;
   resethookcount(L1);
   lua_assert(iswhite(obj2gco(L1)));
+  lua_unlock(L);
+  luai_userstatethread(L, L1);
   return L1;
 }
 
@@ -152,6 +160,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   L->tt = LUA_TTHREAD;
   g->currentwhite = bit2mask(WHITE0BIT, FIXEDBIT);
   L->marked = luaC_white(g);
+  g->emergencygc = 0;
   set2bits(L->marked, FIXEDBIT, SFIXEDBIT);
   preinit_state(L, g);
   g->frealloc = f;
@@ -159,7 +168,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->mainthread = L;
   g->uvhead.u.l.prev = &g->uvhead;
   g->uvhead.u.l.next = &g->uvhead;
-  g->GCthreshold = 0;  /* mark it as unfinished state */
+  g->GCthreshold = MAX_LUMEM;  /* no GC while building state */
   g->strt.size = 0;
   g->strt.nuse = 0;
   g->strt.hash = NULL;

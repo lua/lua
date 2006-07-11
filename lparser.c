@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.42 2006/06/05 15:57:59 roberto Exp roberto $
+** $Id: lparser.c,v 2.43 2006/06/22 16:12:59 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -308,7 +308,7 @@ static void leaveblock (FuncState *fs) {
 
 
 static void pushclosure (LexState *ls, FuncState *func, expdesc *v) {
-  FuncState *fs = ls->fs;
+  FuncState *fs = ls->fs->prev;
   Proto *f = fs->f;
   int oldsize = f->sizep;
   int i;
@@ -327,8 +327,7 @@ static void pushclosure (LexState *ls, FuncState *func, expdesc *v) {
 
 static void open_func (LexState *ls, FuncState *fs) {
   lua_State *L = ls->L;
-  Proto *f = luaF_newproto(L);
-  fs->f = f;
+  Proto *f;
   fs->prev = ls->fs;  /* linked list of funcstates */
   fs->ls = ls;
   fs->L = L;
@@ -342,12 +341,15 @@ static void open_func (LexState *ls, FuncState *fs) {
   fs->nlocvars = 0;
   fs->nactvar = 0;
   fs->bl = NULL;
-  f->source = ls->source;
-  f->maxstacksize = 2;  /* registers 0/1 are always valid */
-  fs->h = luaH_new(L, 0, 0);
-  /* anchor table of constants and prototype (to avoid being collected) */
+  fs->h = luaH_new(L);
+  /* anchor table of constants (to avoid being collected) */
   sethvalue2s(L, L->top, fs->h);
   incr_top(L);
+  f = luaF_newproto(L);
+  fs->f = f;
+  f->source = ls->source;
+  f->maxstacksize = 2;  /* registers 0/1 are always valid */
+  /* anchor prototype (to avoid being collected) */
   setptvalue2s(L, L->top, f);
   incr_top(L);
 }
@@ -383,14 +385,18 @@ static void close_func (LexState *ls) {
 Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, const char *name) {
   struct LexState lexstate;
   struct FuncState funcstate;
+  TString *tname = luaS_new(L, name);
+  setsvalue2s(L, L->top, tname);  /* protect name */
+  incr_top(L);
   lexstate.buff = buff;
-  luaX_setinput(L, &lexstate, z, luaS_new(L, name));
+  luaX_setinput(L, &lexstate, z, tname);
   open_func(&lexstate, &funcstate);
   funcstate.f->is_vararg = VARARG_ISVARARG;  /* main func. is always vararg */
   luaX_next(&lexstate);  /* read first token */
   chunk(&lexstate);
   check(&lexstate, TK_EOS);
   close_func(&lexstate);
+  L->top--;
   lua_assert(funcstate.prev == NULL);
   lua_assert(funcstate.f->nups == 0);
   lua_assert(lexstate.fs == NULL);
@@ -588,8 +594,8 @@ static void body (LexState *ls, expdesc *e, int needself, int line) {
   chunk(ls);
   new_fs.f->lastlinedefined = ls->linenumber;
   check_match(ls, TK_END, TK_FUNCTION, line);
-  close_func(ls);
   pushclosure(ls, &new_fs, e);
+  close_func(ls);
 }
 
 

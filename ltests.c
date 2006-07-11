@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.36 2006/01/10 13:13:06 roberto Exp roberto $
+** $Id: ltests.c,v 2.37 2006/06/05 19:35:57 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -52,6 +52,12 @@ static void setnameval (lua_State *L, const char *name, int val) {
   lua_pushstring(L, name);
   lua_pushinteger(L, val);
   lua_settable(L, -3);
+}
+
+
+static void pushobject (lua_State *L, const TValue *o) {
+  setobj2s(L, L->top, o);
+  api_incr_top(L);
 }
 
 
@@ -108,7 +114,8 @@ static void freeblock (Memcontrol *mc, void *block, size_t size) {
 
 void *debug_realloc (void *ud, void *block, size_t oldsize, size_t size) {
   Memcontrol *mc = cast(Memcontrol *, ud);
-  lua_assert(oldsize == 0 || checkblocksize(block, oldsize));
+  lua_assert((oldsize == 0) ? block == NULL :
+                              block && checkblocksize(block, oldsize));
   if (mc->memlimit == 0) {  /* first time? */
     char *limit = getenv("MEMLIMIT");  /* initialize memory limit */
     mc->memlimit = limit ? strtoul(limit, NULL, 10) : ULONG_MAX;
@@ -447,7 +454,7 @@ static int listk (lua_State *L) {
   p = clvalue(obj_at(L, 1))->l.p;
   lua_createtable(L, p->sizek, 0);
   for (i=0; i<p->sizek; i++) {
-    luaA_pushobject(L, p->k+i);
+    pushobject(L, p->k+i);
     lua_rawseti(L, -2, i+1);
   }
   return 1;
@@ -573,18 +580,18 @@ static int table_query (lua_State *L) {
   }
   else if (i < t->sizearray) {
     lua_pushinteger(L, i);
-    luaA_pushobject(L, &t->array[i]);
+    pushobject(L, &t->array[i]);
     lua_pushnil(L); 
   }
   else if ((i -= t->sizearray) < sizenode(t)) {
     if (!ttisnil(gval(gnode(t, i))) ||
         ttisnil(gkey(gnode(t, i))) ||
         ttisnumber(gkey(gnode(t, i)))) {
-      luaA_pushobject(L, key2tval(gnode(t, i)));
+      pushobject(L, key2tval(gnode(t, i)));
     }
     else
       lua_pushliteral(L, "<undef>");
-    luaA_pushobject(L, gval(gnode(t, i)));
+    pushobject(L, gval(gnode(t, i)));
     if (gnext(&t->node[i]))
       lua_pushinteger(L, gnext(&t->node[i]) - t->node);
     else

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.37 2005/12/22 16:19:56 roberto Exp roberto $
+** $Id: ldo.c,v 2.38 2006/06/05 19:36:14 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -81,7 +81,7 @@ static void restore_stack_limit (lua_State *L) {
 static void resetstack (lua_State *L, int status) {
   L->ci = L->base_ci;
   L->base = L->ci->base;
-  luaF_close(L, L->base);  /* close eventual pending closures */
+  luaF_close(L, L->base);  /* close possible pending closures */
   luaD_seterrorobj(L, status, L->base);
   L->nCcalls = 0;
   L->allowhook = 1;
@@ -217,11 +217,13 @@ static StkId adjust_varargs (lua_State *L, Proto *p, int actual) {
     int nvar = actual - nfixargs;  /* number of extra arguments */
     lua_assert(p->is_vararg & VARARG_HASARG);
     luaC_checkGC(L);
-    htab = luaH_new(L, nvar, 1);  /* create `arg' table */
+    htab = luaH_new(L);  /* create `arg' table */
+    sethvalue(L, L->top++, htab);
     for (i=0; i<nvar; i++)  /* put extra arguments into `arg' table */
-      setobj2n(L, luaH_setnum(L, htab, i+1), L->top - nvar + i);
+      setobj2n(L, luaH_setnum(L, htab, i+1), L->top - nvar + i - 1);
     /* store counter in field `n' */
     setnvalue(luaH_setstr(L, htab, luaS_newliteral(L, "n")), cast_num(nvar));
+    L->top--;
   }
 #endif
   /* move fixed parameters to final position */
@@ -332,7 +334,7 @@ static StkId callrethooks (lua_State *L, StkId firstResult) {
   ptrdiff_t fr = savestack(L, firstResult);  /* next call may change stack */
   luaD_callhook(L, LUA_HOOKRET, -1);
   if (f_isLua(L->ci)) {  /* Lua function? */
-    while (L->ci->tailcalls--)  /* call hook for eventual tail calls */
+    while (L->ci->tailcalls--)  /* call hook for possible tail calls */
       luaD_callhook(L, LUA_HOOKTAILRET, -1);
   }
   return restorestack(L, fr);
@@ -461,7 +463,7 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
   status = luaD_rawrunprotected(L, func, u);
   if (status != 0) {  /* an error occurred? */
     StkId oldtop = restorestack(L, old_top);
-    luaF_close(L, oldtop);  /* close eventual pending closures */
+    luaF_close(L, oldtop);  /* close possible pending closures */
     luaD_seterrorobj(L, status, oldtop);
     L->nCcalls = oldnCcalls;
     L->ci = restoreci(L, old_ci);
@@ -494,12 +496,13 @@ static void f_parser (lua_State *L, void *ud) {
   luaC_checkGC(L);
   tf = ((c == LUA_SIGNATURE[0]) ? luaU_undump : luaY_parser)(L, p->z,
                                                              &p->buff, p->name);
+  setptvalue2s(L, L->top, tf);
+  incr_top(L);
   cl = luaF_newLclosure(L, tf->nups, hvalue(gt(L)));
   cl->l.p = tf;
-  for (i = 0; i < tf->nups; i++)  /* initialize eventual upvalues */
+  setclvalue(L, L->top - 1, cl);
+  for (i = 0; i < tf->nups; i++)  /* initialize upvalues */
     cl->l.upvals[i] = luaF_newupval(L);
-  setclvalue(L, L->top, cl);
-  incr_top(L);
 }
 
 

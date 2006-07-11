@@ -9,7 +9,7 @@ CWARNS= -pedantic -Waggregate-return -Wcast-align \
         -Wsign-compare -Wstrict-prototypes -Wundef -Wwrite-strings
 # -Wcast-qual
 
-# -DEXTERNMEMCHECK -DHARDSTACKTESTS
+# -DEXTERNMEMCHECK -DHARDSTACKTESTS -DHARDMEMTESTS
 # -g -DLUA_USER_H='"ltests.h"'
 # -fomit-frame-pointer #-pg -malign-double
 TESTS= -g -DLUA_USER_H='"ltests.h"'
