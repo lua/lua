@@ -1013,3 +1013,35 @@ patch = [[
 ]],
 
 }
+
+Bug{
+what = [[list constructors have wrong limit]],
+
+report = [[by Norman Ramsey, June 2006]],
+
+since = "Lua 5.1",
+
+example = [[
+a = {}
+a[1] = "x={1"
+for i = 2, 2^20 do
+  a[i] = 1
+end
+a[#a + 1] = "}"
+s = table.concat(a, ",")
+assert(loadstring(s))()
+print(#x)
+]],
+
+patch = [[
+* lparser.c:
+ static void listfield (LexState *ls, struct ConsControl *cc) {
+   expr(ls, &cc->v);
+-  luaY_checklimit(ls->fs, cc->na, MAXARG_Bx, "items in a constructor");
++  luaY_checklimit(ls->fs, cc->na, MAX_INT, "items in a constructor");
+   cc->na++;
+   cc->tostore++;
+ }
+]],
+
+}
