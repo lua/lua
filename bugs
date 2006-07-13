@@ -1014,6 +1014,11 @@ patch = [[
 
 }
 
+
+
+-----------------------------------------------------------------
+-- Lua 5.1.1
+
 Bug{
 what = [[list constructors have wrong limit]],
 
@@ -1035,6 +1040,8 @@ print(#x)
 
 patch = [[
 * lparser.c:
+@@ -489,7 +489,7 @@
+
  static void listfield (LexState *ls, struct ConsControl *cc) {
    expr(ls, &cc->v);
 -  luaY_checklimit(ls->fs, cc->na, MAXARG_Bx, "items in a constructor");
