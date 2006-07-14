@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.63 2006/06/05 15:58:59 roberto Exp roberto $
+** $Id: lvm.c,v 2.65 2006/07/14 14:40:12 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -455,12 +455,12 @@ void luaV_execute (lua_State *L, int nexeccalls) {
         continue;
       }
       case OP_NEWTABLE: {
-        int asize = luaO_fb2int(GETARG_B(i));
-        int nsize = luaO_fb2int(GETARG_C(i));
+        int b = GETARG_B(i);
+        int c = GETARG_C(i);
         Table *t = luaH_new(L);
         sethvalue(L, ra, t);
-        if (asize > 0 || nsize > 0)
-          luaH_resize(L, t, asize, nsize);
+        if (b != 0 || c != 0)
+          luaH_resize(L, t, luaO_fb2int(b), luaO_fb2int(c));
         Protect(luaC_checkGC(L));
         continue;
       }
@@ -523,7 +523,7 @@ void luaV_execute (lua_State *L, int nexeccalls) {
           }
           default: {  /* try metamethod */
             Protect(
-              if (!call_binTM(L, rb, luaO_nilobject, ra, TM_LEN))
+              if (!call_binTM(L, rb, rb, ra, TM_LEN))
                 luaG_typeerror(L, rb, "get length of");
             )
           }
