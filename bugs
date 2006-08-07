@@ -1052,3 +1052,46 @@ patch = [[
 ]],
 
 }
+
+
+Bug{
+what = [[wrong message error in some cases involving closures]],
+
+report = [[Shmuel Zeigerman, on 07/2006]],
+
+since = "Lua 5.1",
+
+example = [[
+local Var
+local function main()
+  NoSuchName (function() Var=0 end)
+end
+main()
+--> lua5.1: temp:3: attempt to call upvalue 'Var' (a nil value)
+]],
+
+patch = [[
+*ldebug.c:
+@@ -435,14 +435,16 @@
+         break;
+       }
+       case OP_CLOSURE: {
+-        int nup;
++        int nup, j;
+         check(b < pt->sizep);
+         nup = pt->p[b]->nups;
+         check(pc + nup < pt->sizecode);
+-        for (; nup>0; nup--) {
+-          OpCode op1 = GET_OPCODE(pt->code[pc+nup]);
++        for (j = 1; j <= nup; j++) {
++          OpCode op1 = GET_OPCODE(pt->code[pc + j]);
+           check(op1 == OP_GETUPVAL || op1 == OP_MOVE);
+         }
++        if (reg != NO_REG)  /* tracing? */
++          pc += nup;  /* do not 'execute' these pseudo-instructions */
+         break;
+       }
+       case OP_VARARG: {
+]],
+
+}
