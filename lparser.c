@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.44 2006/07/11 15:53:29 roberto Exp roberto $
+** $Id: lparser.c,v 2.45 2006/07/12 19:02:50 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -73,7 +73,7 @@ static void errorlimit (FuncState *fs, int limit, const char *what) {
     luaO_pushfstring(fs->L, "main function has more than %d %s", limit, what) :
     luaO_pushfstring(fs->L, "function at line %d has more than %d %s",
                             fs->f->linedefined, limit, what);
-  luaX_lexerror(fs->ls, msg, 0);
+  luaX_lexerror(fs->ls, msg, fs->ls->t.token);
 }
 
 
@@ -274,12 +274,13 @@ static void adjust_assign (LexState *ls, int nvars, int nexps, expdesc *e) {
 
 
 static void enterlevel (LexState *ls) {
-  ++ls->L->nCcalls;
-  luaY_checklimit(ls->fs, ls->L->nCcalls, LUAI_MAXCCALLS, "syntax levels");
+  global_State *g = G(ls->L);
+  ++g->nCcalls;
+  luaY_checklimit(ls->fs, g->nCcalls, LUAI_MAXCCALLS, "syntax levels");
 }
 
 
-#define leavelevel(ls)	((ls)->L->nCcalls--)
+#define leavelevel(ls)	(G((ls)->L)->nCcalls--)
 
 
 static void enterblock (FuncState *fs, BlockCnt *bl, lu_byte isbreakable) {

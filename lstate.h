@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.24 2006/02/06 18:27:59 roberto Exp roberto $
+** $Id: lstate.h,v 2.25 2006/07/11 15:53:29 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -69,6 +69,7 @@ typedef struct global_State {
   stringtable strt;  /* hash table for strings */
   lua_Alloc frealloc;  /* function to reallocate memory */
   void *ud;         /* auxiliary data to `frealloc' */
+  unsigned short nCcalls;  /* number of nested C calls */
   lu_byte currentwhite;
   lu_byte gcstate;  /* state of garbage collector */
   lu_byte emergencygc;  /* true when collect was trigged by alloc error */
@@ -112,7 +113,7 @@ struct lua_State {
   CallInfo *base_ci;  /* array of CallInfo's */
   int stacksize;
   int size_ci;  /* size of array `base_ci' */
-  unsigned short nCcalls;  /* number of nested C calls */
+  unsigned short baseCcalls;  /* number of nested C calls when resuming */
   lu_byte hookmask;
   lu_byte allowhook;
   int basehookcount;
