@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.83 2006/08/04 13:34:37 roberto Exp roberto $
+** $Id: luaconf.h,v 1.84 2006/08/07 19:14:30 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -341,14 +341,6 @@
 ** the new '%' operator instead of 'math.mod'.
 */
 #define LUA_COMPAT_MOD
-
-/*
-@@ LUA_COMPAT_LSTR controls compatibility with old long string nesting
-@* facility.
-** CHANGE it to 2 if you want the old behaviour, or undefine it to turn
-** off the advisory error when nesting [[...]].
-*/
-#define LUA_COMPAT_LSTR		1
 
 /*
 @@ LUA_COMPAT_GFIND controls compatibility with old 'string.gfind' name.
