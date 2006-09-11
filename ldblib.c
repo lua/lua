@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.103 2005/11/01 16:08:32 roberto Exp roberto $
+** $Id: ldblib.c,v 1.104 2005/12/29 15:32:11 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -138,7 +138,7 @@ static int db_getinfo (lua_State *L) {
     treatstackoption(L, L1, "func");
   return 1;  /* return table */
 }
-    
+
 
 static int db_getlocal (lua_State *L) {
   int arg;

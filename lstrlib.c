@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.132 2006/04/26 20:41:19 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.133 2006/06/22 16:12:59 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -630,7 +630,7 @@ static void add_value (MatchState *ms, luaL_Buffer *b, const char *s,
       break;
     }
     default: {
-      luaL_argerror(L, 3, "string/function/table expected"); 
+      luaL_argerror(L, 3, "string/function/table expected");
       return;
     }
   }
@@ -639,7 +639,7 @@ static void add_value (MatchState *ms, luaL_Buffer *b, const char *s,
     lua_pushlstring(L, s, e - s);  /* keep original text */
   }
   else if (!lua_isstring(L, -1))
-    luaL_error(L, "invalid replacement value (a %s)", luaL_typename(L, -1)); 
+    luaL_error(L, "invalid replacement value (a %s)", luaL_typename(L, -1));
   luaL_addvalue(b);  /* add result to accumulator */
 }
 

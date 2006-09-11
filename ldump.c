@@ -1,5 +1,5 @@
 /*
-** $Id: ldump.c,v 1.15 2006/02/16 15:53:49 lhf Exp $
+** $Id: ldump.c,v 2.8 2006/02/17 15:51:03 roberto Exp roberto $
 ** save precompiled Lua chunks
 ** See Copyright Notice in lua.h
 */
@@ -24,7 +24,7 @@ typedef struct {
 } DumpState;
 
 #define DumpMem(b,n,size,D)	DumpBlock(b,(n)*(size),D)
-#define DumpVar(x,D)	 	DumpMem(&x,1,sizeof(x),D)
+#define DumpVar(x,D)		DumpMem(&x,1,sizeof(x),D)
 
 static void DumpBlock(const void* b, size_t size, DumpState* D)
 {

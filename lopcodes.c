@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.36 2005/10/13 12:22:05 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.37 2005/11/08 19:45:36 roberto Exp roberto $
 ** See Copyright Notice in lua.h
 */
 
@@ -60,7 +60,7 @@ const char *const luaP_opnames[NUM_OPCODES+1] = {
 
 const lu_byte luaP_opmodes[NUM_OPCODES] = {
 /*       T  A    B       C     mode		   opcode	*/
-  opmode(0, 1, OpArgR, OpArgN, iABC) 		/* OP_MOVE */
+  opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_MOVE */
  ,opmode(0, 1, OpArgK, OpArgN, iABx)		/* OP_LOADK */
  ,opmode(0, 1, OpArgU, OpArgU, iABC)		/* OP_LOADBOOL */
  ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_LOADNIL */

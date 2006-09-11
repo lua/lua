@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.19 2006/01/10 12:51:53 roberto Exp roberto $
+** $Id: lobject.h,v 2.20 2006/01/18 11:37:34 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -337,7 +337,7 @@ typedef struct Node {
 
 typedef struct Table {
   CommonHeader;
-  lu_byte flags;  /* 1<<p means tagmethod(p) is not present */ 
+  lu_byte flags;  /* 1<<p means tagmethod(p) is not present */
   lu_byte lsizenode;  /* log2 of size of `node' array */
   struct Table *metatable;
   TValue *array;  /* array part */

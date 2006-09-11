@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.37 2006/07/11 15:53:29 roberto Exp roberto $
+** $Id: lstate.c,v 2.38 2006/08/15 19:59:20 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -37,7 +37,7 @@ typedef struct LG {
   lua_State l;
   global_State g;
 } LG;
-  
+
 
 
 static void stack_init (lua_State *L1, lua_State *L) {

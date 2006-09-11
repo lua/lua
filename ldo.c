@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.40 2006/08/15 19:59:20 roberto Exp roberto $
+** $Id: ldo.c,v 2.41 2006/09/11 12:44:56 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -368,7 +368,7 @@ int luaD_poscall (lua_State *L, StkId firstResult) {
 ** The arguments are on the stack, right after the function.
 ** When returns, all the results are on the stack, starting at the original
 ** function position.
-*/ 
+*/
 void luaD_call (lua_State *L, StkId func, int nResults) {
   global_State *g = G(L);
   lua_assert(g->nCcalls >= L->baseCcalls);
