@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.26 2006/06/22 16:12:59 roberto Exp roberto $
+** $Id: lcode.c,v 2.27 2006/08/07 19:14:30 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -235,8 +235,7 @@ static int addk (FuncState *fs, TValue *key, TValue *v) {
     int oldsize = f->sizek;
     k = fs->nk;
     setnvalue(idx, cast_num(k));
-    luaM_growvector(L, f->k, k, f->sizek, TValue, MAXARG_Bx,
-                       "constant table overflow");
+    luaM_growvector(L, f->k, k, f->sizek, TValue, MAXARG_Bx, "constant table");
     while (oldsize < f->sizek) setnilvalue(&f->k[oldsize++]);
     setobj(L, &f->k[k], v);
     fs->nk++;
@@ -787,11 +786,11 @@ static int luaK_code (FuncState *fs, Instruction i, int line) {
   dischargejpc(fs);  /* `pc' will change */
   /* put new instruction in code array */
   luaM_growvector(fs->L, f->code, fs->pc, f->sizecode, Instruction,
-                  MAX_INT, "code size overflow");
+                  MAX_INT, "code size");
   f->code[fs->pc] = i;
   /* save corresponding line information */
   luaM_growvector(fs->L, f->lineinfo, fs->pc, f->sizelineinfo, int,
-                  MAX_INT, "code size overflow");
+                  MAX_INT, "code size");
   f->lineinfo[fs->pc] = line;
   return fs->pc++;
 }

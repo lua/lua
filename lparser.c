@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.45 2006/07/12 19:02:50 roberto Exp roberto $
+** $Id: lparser.c,v 2.46 2006/08/15 19:59:20 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -145,7 +145,7 @@ static int registerlocalvar (LexState *ls, TString *varname) {
   Proto *f = fs->f;
   int oldsize = f->sizelocvars;
   luaM_growvector(ls->L, f->locvars, fs->nlocvars, f->sizelocvars,
-                  LocVar, SHRT_MAX, "too many local variables");
+                  LocVar, SHRT_MAX, "local-variable table");
   while (oldsize < f->sizelocvars) f->locvars[oldsize++].varname = NULL;
   f->locvars[fs->nlocvars].varname = varname;
   luaC_objbarrier(ls->L, f, varname);
@@ -314,7 +314,7 @@ static void pushclosure (LexState *ls, FuncState *func, expdesc *v) {
   int oldsize = f->sizep;
   int i;
   luaM_growvector(ls->L, f->p, fs->np, f->sizep, Proto *,
-                  MAXARG_Bx, "constant table overflow");
+                  MAXARG_Bx, "constant table");
   while (oldsize < f->sizep) f->p[oldsize++] = NULL;
   f->p[fs->np++] = func->f;
   luaC_objbarrier(ls->L, f, func->f);

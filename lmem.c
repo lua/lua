@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.c,v 1.70 2005/12/26 13:35:47 roberto Exp roberto $
+** $Id: lmem.c,v 1.71 2006/07/11 15:53:29 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -50,7 +50,7 @@ void *luaM_growaux_ (lua_State *L, void *block, int *size, size_t size_elems,
   int newsize;
   if (*size >= limit/2) {  /* cannot double it? */
     if (*size >= limit)  /* cannot grow even a little? */
-      luaG_runerror(L, errormsg);
+      luaG_runerror(L, "%s overflow (limit is %d)", errormsg, limit);
     newsize = limit;  /* still have at least one free place */
   }
   else {
