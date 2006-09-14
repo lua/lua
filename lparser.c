@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.46 2006/08/15 19:59:20 roberto Exp roberto $
+** $Id: lparser.c,v 2.47 2006/09/14 12:59:06 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -145,7 +145,7 @@ static int registerlocalvar (LexState *ls, TString *varname) {
   Proto *f = fs->f;
   int oldsize = f->sizelocvars;
   luaM_growvector(ls->L, f->locvars, fs->nlocvars, f->sizelocvars,
-                  LocVar, SHRT_MAX, "local-variable table");
+                  LocVar, SHRT_MAX, "local variables");
   while (oldsize < f->sizelocvars) f->locvars[oldsize++].varname = NULL;
   f->locvars[fs->nlocvars].varname = varname;
   luaC_objbarrier(ls->L, f, varname);
@@ -193,7 +193,7 @@ static int indexupvalue (FuncState *fs, TString *name, expdesc *v) {
   /* new one */
   luaY_checklimit(fs, f->nups + 1, LUAI_MAXUPVALUES, "upvalues");
   luaM_growvector(fs->L, f->upvalues, f->nups, f->sizeupvalues,
-                  TString *, MAX_INT, "");
+                  TString *, MAX_INT, "upvalues");
   while (oldsize < f->sizeupvalues) f->upvalues[oldsize++] = NULL;
   f->upvalues[f->nups] = name;
   luaC_objbarrier(fs->L, f, name);
@@ -314,7 +314,7 @@ static void pushclosure (LexState *ls, FuncState *func, expdesc *v) {
   int oldsize = f->sizep;
   int i;
   luaM_growvector(ls->L, f->p, fs->np, f->sizep, Proto *,
-                  MAXARG_Bx, "constant table");
+                  MAXARG_Bx, "constants");
   while (oldsize < f->sizep) f->p[oldsize++] = NULL;
   f->p[fs->np++] = func->f;
   luaC_objbarrier(ls->L, f, func->f);
