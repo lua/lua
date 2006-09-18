@@ -798,6 +798,32 @@ patch = [[
 }
 
 
+Bug{
+what = [[Some "not not exp" may not result in boolean values]],
+report = [[]],
+since = [[4.0]],
+example = [[
+-- should print false, but prints nil
+print(not not (nil and 4))
+]],
+patch = [[]],
+}
+
+
+Bug{
+what = [[On some machines, closing a "piped file" (created with io.popen)
+may crash Lua]],
+report = [[]],
+since = [[5.0]],
+example = [[
+-- only on some machines
+  f = io.popen("ls")
+  f:close()
+]],
+patch = [[]],
+}
+
+
 
 -----------------------------------------------------------------
 -- Lua 5.1
@@ -1094,4 +1120,32 @@ patch = [[
        case OP_VARARG: {
 ]],
 
+}
+
+
+Bug{
+what = [[string.format("%") reads past the string]],
+report = [[Roberto, on 09/2006]],
+since = [[5.0 (at least)]],
+example = [[print(string.format("%"))]],
+patch = [[
+*lstrlib.c:
+@@ -723,7 +723,7 @@
+
+ static const char *scanformat (lua_State *L, const char *strfrmt, char *form) {   const char *p = strfrmt;
+-  while (strchr(FLAGS, *p)) p++;  /* skip flags */
++  while (*p != '\0' && strchr(FLAGS, *p) != NULL) p++;  /* skip flags */
+   if ((size_t)(p - strfrmt) >= sizeof(FLAGS))
+     luaL_error(L, "invalid format (repeated flags)");
+   if (isdigit(uchar(*p))) p++;  /* skip width */
+]],
+}
+
+
+Bug{
+what = [[  ]],
+report = [[  ]],
+since = [[  ]],
+example = [[  ]],
+patch = [[  ]],
 }
