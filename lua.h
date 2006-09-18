@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.218 2006/06/02 15:34:00 roberto Exp roberto $
+** $Id: lua.h,v 1.219 2006/09/11 14:07:24 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -259,8 +259,6 @@ LUA_API void lua_setallocf (lua_State *L, lua_Alloc f, void *ud);
 
 #define lua_pushcfunction(L,f)	lua_pushcclosure(L, (f), 0)
 
-#define lua_strlen(L,i)		lua_objlen(L, (i))
-
 #define lua_isfunction(L,n)	(lua_type(L, (n)) == LUA_TFUNCTION)
 #define lua_istable(L,n)	(lua_type(L, (n)) == LUA_TTABLE)
 #define lua_islightuserdata(L,n)	(lua_type(L, (n)) == LUA_TLIGHTUSERDATA)
@@ -284,7 +282,9 @@ LUA_API void lua_setallocf (lua_State *L, lua_Alloc f, void *ud);
 ** compatibility macros and functions
 */
 
-#define lua_open()	luaL_newstate()
+#define lua_strlen(L,i)		lua_objlen(L, (i))
+
+#define lua_open()		luaL_newstate()
 
 #define lua_getregistry(L)	lua_pushvalue(L, LUA_REGISTRYINDEX)
 

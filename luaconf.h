@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.84 2006/08/07 19:14:30 roberto Exp roberto $
+** $Id: luaconf.h,v 1.85 2006/08/30 13:19:58 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -276,7 +276,7 @@
 #include <readline/history.h>
 #define lua_readline(L,b,p)	((void)L, ((b)=readline(p)) != NULL)
 #define lua_saveline(L,idx) \
-	if (lua_strlen(L,idx) > 0)  /* non-empty line? */ \
+	if (lua_objlen(L,idx) > 0)  /* non-empty line? */ \
 	  add_history(lua_tostring(L, idx));  /* add it to history */
 #define lua_freeline(L,b)	((void)L, free(b))
 #else

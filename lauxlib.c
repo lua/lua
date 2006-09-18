@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.159 2006/03/21 19:31:09 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.160 2006/06/22 16:12:59 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -411,9 +411,9 @@ static void adjuststack (luaL_Buffer *B) {
   if (B->lvl > 1) {
     lua_State *L = B->L;
     int toget = 1;  /* number of levels to concat */
-    size_t toplen = lua_strlen(L, -1);
+    size_t toplen = lua_objlen(L, -1);
     do {
-      size_t l = lua_strlen(L, -(toget+1));
+      size_t l = lua_objlen(L, -(toget+1));
       if (B->lvl - toget + 1 >= LIMIT || toplen > l) {
         toplen += l;
         toget++;
