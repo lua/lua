@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.21 2006/07/11 15:53:29 roberto Exp roberto $
+** $Id: llex.c,v 2.22 2006/08/30 13:19:58 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -162,7 +162,7 @@ void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, TString *source) {
 
 
 static int check_next (LexState *ls, const char *set) {
-  if (!strchr(set, ls->current))
+  if (ls->current == '\0' || !strchr(set, ls->current))
     return 0;
   save_and_next(ls);
   return 1;
