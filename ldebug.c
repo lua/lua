@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.31 2006/08/07 19:04:06 roberto Exp roberto $
+** $Id: ldebug.c,v 2.32 2006/09/11 14:07:24 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -58,6 +58,7 @@ LUA_API int lua_sethook (lua_State *L, lua_Hook func, int mask, int count) {
     mask = 0;
     func = NULL;
   }
+  L->oldpc = L->savedpc;
   L->hook = func;
   L->basehookcount = count;
   resethookcount(L);

@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.41 2006/09/11 12:44:56 roberto Exp roberto $
+** $Id: ldo.c,v 2.42 2006/09/11 14:07:24 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -346,8 +346,11 @@ int luaD_poscall (lua_State *L, StkId firstResult) {
   StkId res;
   int wanted, i;
   CallInfo *ci;
-  if (L->hookmask & LUA_MASKRET)
-    firstResult = callrethooks(L, firstResult);
+  if (L->hookmask & (LUA_MASKRET | LUA_MASKLINE)) {
+    if (L->hookmask & LUA_MASKRET)
+      firstResult = callrethooks(L, firstResult);
+    L->oldpc = (L->ci - 1)->savedpc;  /* set 'oldpc' for returning function */
+  }
   ci = L->ci--;
   res = ci->func;  /* res == final position of 1st result */
   wanted = ci->nresults;

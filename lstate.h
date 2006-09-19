@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.25 2006/07/11 15:53:29 roberto Exp $
+** $Id: lstate.h,v 2.26 2006/08/15 19:59:20 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -107,6 +107,7 @@ struct lua_State {
   global_State *l_G;
   CallInfo *ci;  /* call info for current function */
   const Instruction *savedpc;  /* `savedpc' of current function */
+  const Instruction *oldpc;  /* last pc traced */
   StkId stack_last;  /* last free slot in the stack */
   StkId stack;  /* stack base */
   CallInfo *end_ci;  /* points after end of ci array*/
