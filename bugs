@@ -1143,6 +1143,15 @@ patch = [[
 
 
 Bug{
+what = [[os.date throws an error when result is the empty string]],
+report = [[  ]],
+since = [[4.0]],
+example = [[print(os.date(""))]],
+patch = [[  ]],
+}
+
+
+Bug{
 what = [[  ]],
 report = [[  ]],
 since = [[  ]],
