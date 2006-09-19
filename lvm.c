@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.67 2006/09/11 14:07:24 roberto Exp roberto $
+** $Id: lvm.c,v 2.68 2006/09/19 13:57:50 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -281,8 +281,12 @@ void luaV_concat (lua_State *L, int total, int last) {
     if (!tostring(L, top-2) || !tostring(L, top-1)) {
       if (!call_binTM(L, top-2, top-1, top-2, TM_CONCAT))
         luaG_concaterror(L, top-2, top-1);
-    } else if (tsvalue(top-1)->len > 0) {  /* if len=0, do nothing */
-      /* at least two string values; get as many as possible */
+    } else if (tsvalue(top-1)->len == 0) {  /* second operand is empty? */
+      /* do nothing; result is already first operand */ ;
+    } else if (tsvalue(top-2)->len == 0) {  /* fist operand is empty? */
+        setsvalue2s(L, top-2, rawtsvalue(top-1));  /* result is second op. */
+    } else {
+      /* at least two (non-empty) string values; get as many as possible */
       size_t tl = tsvalue(top-1)->len;
       char *buffer;
       int i;
