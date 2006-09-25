@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.161 2006/09/18 14:03:18 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.162 2006/09/22 20:24:38 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -25,7 +25,11 @@
 #include "lauxlib.h"
 
 
-#define FREELIST_REF	0	/* free list of references */
+/* number of prereserved references (for internal use) */
+#define RESERVED_REFS   1	/* only FREELIST_REF is reserved */
+
+#define FREELIST_REF	1	/* free list of references */
+
 
 
 /* convert a stack index to positive */
@@ -494,6 +498,8 @@ LUALIB_API int luaL_ref (lua_State *L, int t) {
   }
   else {  /* no free elements */
     ref = (int)lua_objlen(L, t);
+    if (ref < RESERVED_REFS)
+      ref = RESERVED_REFS;  /* skip reserved references */
     ref++;  /* create new reference */
   }
   lua_rawseti(L, t, ref);
