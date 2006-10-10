@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.54 2006/07/03 20:16:49 roberto Exp roberto $
+** $Id: loadlib.c,v 1.55 2006/09/11 14:07:24 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -88,8 +88,6 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 ** This is an implementation of loadlib for Windows using native functions.
 ** =======================================================================
 */
-
-#include <windows.h>
 
 
 #undef setprogdir
@@ -382,7 +380,7 @@ static int loader_Lua (lua_State *L) {
   const char *name = luaL_checkstring(L, 1);
   filename = findfile(L, name, "path");
   if (filename == NULL) return 1;  /* library not found in this path */
-  if (luaL_loadfile(L, filename) != 0)
+  if (luaL_loadfile(L, filename) != LUA_OK)
     loaderror(L, filename);
   return 1;  /* library loaded successfully */
 }

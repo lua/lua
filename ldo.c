@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.42 2006/09/11 14:07:24 roberto Exp roberto $
+** $Id: ldo.c,v 2.43 2006/09/19 13:57:50 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -110,7 +110,7 @@ void luaD_throw (lua_State *L, int errcode) {
 int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
   unsigned short oldnCcalls = G(L)->nCcalls;
   struct lua_longjmp lj;
-  lj.status = 0;
+  lj.status = LUA_OK;
   lj.previous = L->errorJmp;  /* chain new error handler */
   L->errorJmp = &lj;
   LUAI_TRY(L, &lj,
@@ -391,14 +391,14 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
 static void resume (lua_State *L, void *ud) {
   StkId firstArg = cast(StkId, ud);
   CallInfo *ci = L->ci;
-  if (L->status == 0) {  /* start coroutine? */
+  if (L->status == LUA_OK) {  /* start coroutine? */
     lua_assert(ci == L->base_ci && firstArg > L->base);
     if (luaD_precall(L, firstArg - 1, LUA_MULTRET) != PCRLUA)
       return;
   }
   else {  /* resuming from previous yield */
     lua_assert(L->status == LUA_YIELD);
-    L->status = 0;
+    L->status = LUA_OK;
     if (!f_isLua(ci)) {  /* `common' yield? */
       /* finish interrupted execution of `OP_CALL' */
       lua_assert(GET_OPCODE(*((ci-1)->savedpc - 1)) == OP_CALL ||
@@ -426,7 +426,7 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
   int status;
   lua_lock(L);
   if (L->status != LUA_YIELD) {
-    if (L->status != 0)
+    if (L->status != LUA_OK)
       return resume_error(L, "cannot resume dead coroutine");
     else if (L->ci != L->base_ci)
       return resume_error(L, "cannot resume non-suspended coroutine");
@@ -437,7 +437,7 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
       return resume_error(L, "C stack overflow");
   L->baseCcalls = ++G(L)->nCcalls;
   status = luaD_rawrunprotected(L, resume, L->top - nargs);
-  if (status != 0) {  /* error? */
+  if (status != LUA_OK) {  /* error? */
     L->status = cast_byte(status);  /* mark thread as `dead' */
     luaD_seterrorobj(L, status, L->top);
     L->ci->top = L->top;
@@ -473,7 +473,7 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
   ptrdiff_t old_errfunc = L->errfunc;
   L->errfunc = ef;
   status = luaD_rawrunprotected(L, func, u);
-  if (status != 0) {  /* an error occurred? */
+  if (status != LUA_OK) {  /* an error occurred? */
     StkId oldtop = restorestack(L, old_top);
     luaF_close(L, oldtop);  /* close possible pending closures */
     luaD_seterrorobj(L, status, oldtop);

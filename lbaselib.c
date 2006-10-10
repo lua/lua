@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.191 2006/06/02 15:34:00 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.192 2006/09/11 14:07:24 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -264,7 +264,7 @@ static int luaB_ipairs (lua_State *L) {
 
 
 static int load_aux (lua_State *L, int status) {
-  if (status == 0)  /* OK? */
+  if (status == LUA_OK)
     return 1;
   else {
     lua_pushnil(L);
@@ -325,7 +325,7 @@ static int luaB_load (lua_State *L) {
 static int luaB_dofile (lua_State *L) {
   const char *fname = luaL_optstring(L, 1, NULL);
   int n = lua_gettop(L);
-  if (luaL_loadfile(L, fname) != 0) lua_error(L);
+  if (luaL_loadfile(L, fname) != LUA_OK) lua_error(L);
   lua_call(L, 0, LUA_MULTRET);
   return lua_gettop(L) - n;
 }
@@ -373,7 +373,7 @@ static int luaB_pcall (lua_State *L) {
   int status;
   luaL_checkany(L, 1);
   status = lua_pcall(L, lua_gettop(L) - 1, LUA_MULTRET, 0);
-  lua_pushboolean(L, (status == 0));
+  lua_pushboolean(L, (status == LUA_OK));
   lua_insert(L, 1);
   return lua_gettop(L);  /* return status + all results */
 }
@@ -385,7 +385,7 @@ static int luaB_xpcall (lua_State *L) {
   lua_settop(L, 2);
   lua_insert(L, 1);  /* put error function under function to be called */
   status = lua_pcall(L, 0, LUA_MULTRET, 1);
-  lua_pushboolean(L, (status == 0));
+  lua_pushboolean(L, (status == LUA_OK));
   lua_replace(L, 1);
   return lua_gettop(L);  /* return status + all results */
 }
@@ -481,13 +481,13 @@ static int auxresume (lua_State *L, lua_State *co, int narg) {
   int status;
   if (!lua_checkstack(co, narg))
     luaL_error(L, "too many arguments to resume");
-  if (lua_status(co) == 0 && lua_gettop(co) == 0) {
+  if (lua_status(co) == LUA_OK && lua_gettop(co) == 0) {
     lua_pushliteral(L, "cannot resume dead coroutine");
     return -1;  /* error flag */
   }
   lua_xmove(L, co, narg);
   status = lua_resume(co, narg);
-  if (status == 0 || status == LUA_YIELD) {
+  if (status == LUA_OK || status == LUA_YIELD) {
     int nres = lua_gettop(co);
     if (!lua_checkstack(L, nres))
       luaL_error(L, "too many results to resume");
@@ -565,7 +565,7 @@ static int luaB_costatus (lua_State *L) {
       case LUA_YIELD:
         lua_pushliteral(L, "suspended");
         break;
-      case 0: {
+      case LUA_OK: {
         lua_Debug ar;
         if (lua_getstack(co, 0, &ar) > 0)  /* does it have frames? */
           lua_pushliteral(L, "normal");  /* it is running */

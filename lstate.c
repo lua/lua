@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.38 2006/08/15 19:59:20 roberto Exp roberto $
+** $Id: lstate.c,v 2.39 2006/09/11 14:07:24 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -95,7 +95,7 @@ static void preinit_state (lua_State *L, global_State *g) {
   L->openupval = NULL;
   L->size_ci = 0;
   L->baseCcalls = 0;
-  L->status = 0;
+  L->status = LUA_OK;
   L->base_ci = L->ci = NULL;
   L->savedpc = NULL;
   L->errfunc = 0;
@@ -189,7 +189,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->gcstepmul = LUAI_GCMUL;
   g->gcdept = 0;
   for (i=0; i<NUM_TAGS; i++) g->mt[i] = NULL;
-  if (luaD_rawrunprotected(L, f_luaopen, NULL) != 0) {
+  if (luaD_rawrunprotected(L, f_luaopen, NULL) != LUA_OK) {
     /* memory allocation error: free partial state */
     close_state(L);
     L = NULL;
@@ -216,7 +216,7 @@ LUA_API void lua_close (lua_State *L) {
     L->ci = L->base_ci;
     L->base = L->top = L->ci->base;
     G(L)->nCcalls = 0;
-  } while (luaD_rawrunprotected(L, callallgcTM, NULL) != 0);
+  } while (luaD_rawrunprotected(L, callallgcTM, NULL) != LUA_OK);
   lua_assert(G(L)->tmudata == NULL);
   luai_userstateclose(L);
   close_state(L);
