@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.29 2006/09/14 18:42:28 roberto Exp roberto $
+** $Id: lcode.c,v 2.30 2006/09/22 19:14:17 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -782,7 +782,7 @@ void luaK_fixline (FuncState *fs, int line) {
 }
 
 
-static int luaK_code (FuncState *fs, Instruction i, int line) {
+static int luaK_code (FuncState *fs, Instruction i) {
   Proto *f = fs->f;
   dischargejpc(fs);  /* `pc' will change */
   /* put new instruction in code array */
@@ -792,7 +792,7 @@ static int luaK_code (FuncState *fs, Instruction i, int line) {
   /* save corresponding line information */
   luaM_growvector(fs->L, f->lineinfo, fs->pc, f->sizelineinfo, int,
                   MAX_INT, "opcodes");
-  f->lineinfo[fs->pc] = line;
+  f->lineinfo[fs->pc] = fs->ls->lastline;
   return fs->pc++;
 }
 
@@ -801,14 +801,14 @@ int luaK_codeABC (FuncState *fs, OpCode o, int a, int b, int c) {
   lua_assert(getOpMode(o) == iABC);
   lua_assert(getBMode(o) != OpArgN || b == 0);
   lua_assert(getCMode(o) != OpArgN || c == 0);
-  return luaK_code(fs, CREATE_ABC(o, a, b, c), fs->ls->lastline);
+  return luaK_code(fs, CREATE_ABC(o, a, b, c));
 }
 
 
 int luaK_codeABx (FuncState *fs, OpCode o, int a, unsigned int bc) {
   lua_assert(getOpMode(o) == iABx || getOpMode(o) == iAsBx);
   lua_assert(getCMode(o) == OpArgN);
-  return luaK_code(fs, CREATE_ABx(o, a, bc), fs->ls->lastline);
+  return luaK_code(fs, CREATE_ABx(o, a, bc));
 }
 
 
@@ -820,7 +820,7 @@ void luaK_setlist (FuncState *fs, int base, int nelems, int tostore) {
     luaK_codeABC(fs, OP_SETLIST, base, b, c);
   else {
     luaK_codeABC(fs, OP_SETLIST, base, b, 0);
-    luaK_code(fs, cast(Instruction, c), fs->ls->lastline);
+    luaK_code(fs, cast(Instruction, c));
   }
   fs->freereg = base + 1;  /* free registers with list values */
 }
