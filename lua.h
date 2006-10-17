@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.220 2006/09/18 14:03:18 roberto Exp roberto $
+** $Id: lua.h,v 1.221 2006/10/10 17:40:17 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -16,17 +16,17 @@
 #include "luaconf.h"
 
 
-#define LUA_VERSION	"Lua 5.1"
-#define LUA_RELEASE	"Lua 5.1.1"
-#define LUA_VERSION_NUM	501
+#define LUA_VERSION	"Lua 5.2"
+#define LUA_RELEASE	"Lua 5.2.0"
+#define LUA_VERSION_NUM	502
 #define LUA_COPYRIGHT	"Copyright (C) 1994-2006 Lua.org, PUC-Rio"
-#define LUA_AUTHORS	"R. Ierusalimschy, L. H. de Figueiredo & W. Celes"
+#define LUA_AUTHORS	"R. Ierusalimschy, L. H. de Figueiredo, W. Celes"
 
 
-/* mark for precompiled code (`<esc>Lua') */
+/* mark for precompiled code ('<esc>Lua') */
 #define	LUA_SIGNATURE	"\033Lua"
 
-/* option for multiple returns in `lua_pcall' and `lua_call' */
+/* option for multiple returns in 'lua_pcall' and 'lua_call' */
 #define LUA_MULTRET	(-1)
 
 
@@ -197,7 +197,7 @@ LUA_API int   (lua_setfenv) (lua_State *L, int idx);
 
 
 /*
-** `load' and `call' functions (load and run Lua code)
+** 'load' and 'call' functions (load and run Lua code)
 */
 LUA_API void  (lua_call) (lua_State *L, int nargs, int nresults);
 LUA_API int   (lua_pcall) (lua_State *L, int nargs, int nresults, int errfunc);
@@ -344,8 +344,8 @@ LUA_API int lua_gethookcount (lua_State *L);
 struct lua_Debug {
   int event;
   const char *name;	/* (n) */
-  const char *namewhat;	/* (n) `global', `local', `field', `method' */
-  const char *what;	/* (S) `Lua', `C', `main', `tail' */
+  const char *namewhat;	/* (n) 'global', 'local', 'field', 'method' */
+  const char *what;	/* (S) 'Lua', 'C', 'main', 'tail' */
   const char *source;	/* (S) */
   int currentline;	/* (l) */
   int nups;		/* (u) number of upvalues */
