@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.192 2006/09/11 14:07:24 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.193 2006/10/10 17:40:17 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -324,10 +324,10 @@ static int luaB_load (lua_State *L) {
 
 static int luaB_dofile (lua_State *L) {
   const char *fname = luaL_optstring(L, 1, NULL);
-  int n = lua_gettop(L);
+  lua_settop(L, 1);
   if (luaL_loadfile(L, fname) != LUA_OK) lua_error(L);
   lua_call(L, 0, LUA_MULTRET);
-  return lua_gettop(L) - n;
+  return lua_gettop(L) - 1;
 }
 
 
