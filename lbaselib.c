@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.193 2006/10/10 17:40:17 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.194 2006/10/20 19:30:53 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -381,10 +381,13 @@ static int luaB_pcall (lua_State *L) {
 
 static int luaB_xpcall (lua_State *L) {
   int status;
-  luaL_checkany(L, 2);
-  lua_settop(L, 2);
-  lua_insert(L, 1);  /* put error function under function to be called */
-  status = lua_pcall(L, 0, LUA_MULTRET, 1);
+  int n = lua_gettop(L);
+  luaL_argcheck(L, n >= 2, 2, "value expected");
+  lua_pushvalue(L, 1);  /* exchange function... */
+  lua_pushvalue(L, 2);  /* ...and error handler */
+  lua_replace(L, 1);
+  lua_replace(L, 2);
+  status = lua_pcall(L, n - 2, LUA_MULTRET, 1);
   lua_pushboolean(L, (status == LUA_OK));
   lua_replace(L, 1);
   return lua_gettop(L);  /* return status + all results */
