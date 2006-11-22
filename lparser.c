@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.48 2006/09/14 18:42:28 roberto Exp roberto $
+** $Id: lparser.c,v 2.49 2006/10/24 13:31:48 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -820,7 +820,7 @@ static const struct {
   lu_byte left;  /* left priority for each binary operator */
   lu_byte right; /* right priority */
 } priority[] = {  /* ORDER OPR */
-   {6, 6}, {6, 6}, {7, 7}, {7, 7}, {7, 7},  /* `+' `-' `/' `%' */
+   {6, 6}, {6, 6}, {7, 7}, {7, 7}, {7, 7},  /* `+' `-' `*' `/' `%' */
    {10, 9}, {5, 4},                 /* power and concat (right associative) */
    {3, 3}, {3, 3},                  /* equality and inequality */
    {3, 3}, {3, 3}, {3, 3}, {3, 3},  /* order */
