@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.32 2006/09/11 14:07:24 roberto Exp roberto $
+** $Id: ldebug.c,v 2.33 2006/09/19 13:57:50 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -168,7 +168,8 @@ static void funcinfo (lua_Debug *ar, Closure *cl) {
 
 
 static void info_tailcall (lua_Debug *ar) {
-  ar->name = ar->namewhat = "";
+  ar->name = NULL;
+  ar->namewhat = "";
   ar->what = "tail";
   ar->lastlinedefined = ar->linedefined = ar->currentline = -1;
   ar->source = "=(tail call)";
