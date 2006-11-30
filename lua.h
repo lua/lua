@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.221 2006/10/10 17:40:17 roberto Exp roberto $
+** $Id: lua.h,v 1.222 2006/10/17 19:59:04 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -24,7 +24,7 @@
 
 
 /* mark for precompiled code ('<esc>Lua') */
-#define	LUA_SIGNATURE	"\033Lua"
+#define LUA_SIGNATURE	"\033Lua"
 
 /* option for multiple returns in 'lua_pcall' and 'lua_call' */
 #define LUA_MULTRET	(-1)
