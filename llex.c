@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.22 2006/08/30 13:19:58 roberto Exp roberto $
+** $Id: llex.c,v 2.23 2006/09/18 16:06:41 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -34,14 +34,13 @@
 
 
 /* ORDER RESERVED */
-const char *const luaX_tokens [] = {
+static const char *const luaX_tokens [] = {
     "and", "break", "do", "else", "elseif",
     "end", "false", "for", "function", "if",
     "in", "local", "nil", "not", "or", "repeat",
     "return", "then", "true", "until", "while",
-    "..", "...", "==", ">=", "<=", "~=",
-    "<number>", "<name>", "<string>", "<eof>",
-    NULL
+    "..", "...", "==", ">=", "<=", "~=", "<eof>",
+    "<number>", "<name>", "<string>"
 };
 
 
@@ -79,10 +78,15 @@ const char *luaX_token2str (LexState *ls, int token) {
   if (token < FIRST_RESERVED) {
     lua_assert(token == cast(unsigned char, token));
     return (iscntrl(token)) ? luaO_pushfstring(ls->L, "char(%d)", token) :
-                              luaO_pushfstring(ls->L, "%c", token);
+                              luaO_pushfstring(ls->L, LUA_QL("%c"), token);
   }
-  else
-    return luaX_tokens[token-FIRST_RESERVED];
+  else {
+    const char *s = luaX_tokens[token - FIRST_RESERVED];
+    if (token < TK_EOS)
+      return luaO_pushfstring(ls->L, LUA_QS, s);
+    else
+      return s;
+  }
 }
 
 
@@ -92,7 +96,7 @@ static const char *txtToken (LexState *ls, int token) {
     case TK_STRING:
     case TK_NUMBER:
       save(ls, '\0');
-      return luaZ_buffer(ls->buff);
+      return luaO_pushfstring(ls->L, LUA_QS, luaZ_buffer(ls->buff));
     default:
       return luaX_token2str(ls, token);
   }
@@ -104,7 +108,7 @@ void luaX_lexerror (LexState *ls, const char *msg, int token) {
   luaO_chunkid(buff, getstr(ls->source), MAXSRC);
   msg = luaO_pushfstring(ls->L, "%s:%d: %s", buff, ls->linenumber, msg);
   if (token)
-    luaO_pushfstring(ls->L, "%s near " LUA_QS, msg, txtToken(ls, token));
+    luaO_pushfstring(ls->L, "%s near %s", msg, txtToken(ls, token));
   luaD_throw(ls->L, LUA_ERRSYNTAX);
 }
 

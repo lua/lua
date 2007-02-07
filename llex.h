@@ -1,5 +1,5 @@
 /*
-** $Id: llex.h,v 1.57 2005/12/07 15:43:05 roberto Exp roberto $
+** $Id: llex.h,v 1.58 2006/03/23 18:23:32 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -28,16 +28,12 @@ enum RESERVED {
   TK_IF, TK_IN, TK_LOCAL, TK_NIL, TK_NOT, TK_OR, TK_REPEAT,
   TK_RETURN, TK_THEN, TK_TRUE, TK_UNTIL, TK_WHILE,
   /* other terminal symbols */
-  TK_CONCAT, TK_DOTS, TK_EQ, TK_GE, TK_LE, TK_NE, TK_NUMBER,
-  TK_NAME, TK_STRING, TK_EOS
+  TK_CONCAT, TK_DOTS, TK_EQ, TK_GE, TK_LE, TK_NE, TK_EOS,
+  TK_NUMBER, TK_NAME, TK_STRING
 };
 
 /* number of reserved words */
 #define NUM_RESERVED	(cast(int, TK_WHILE-FIRST_RESERVED+1))
-
-
-/* array with token `names' */
-LUAI_DATA const char *const luaX_tokens [];
 
 
 typedef union {

@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.49 2006/10/24 13:31:48 roberto Exp roberto $
+** $Id: lparser.c,v 2.50 2006/11/22 11:02:03 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -64,7 +64,7 @@ static void anchor_token (LexState *ls) {
 
 static void error_expected (LexState *ls, int token) {
   luaX_syntaxerror(ls,
-      luaO_pushfstring(ls->L, LUA_QS " expected", luaX_token2str(ls, token)));
+      luaO_pushfstring(ls->L, "%s expected", luaX_token2str(ls, token)));
 }
 
 
@@ -109,7 +109,7 @@ static void check_match (LexState *ls, int what, int who, int where) {
       error_expected(ls, what);
     else {
       luaX_syntaxerror(ls, luaO_pushfstring(ls->L,
-             LUA_QS " expected (to close " LUA_QS " at line %d)",
+             "%s expected (to close %s at line %d)",
               luaX_token2str(ls, what), luaX_token2str(ls, who), where));
     }
   }
@@ -734,7 +734,7 @@ static void primaryexp (LexState *ls, expdesc *v) {
 
 
 static void simpleexp (LexState *ls, expdesc *v) {
-  /* simpleexp -> NUMBER | STRING | NIL | true | false | ... |
+  /* simpleexp -> NUMBER | STRING | NIL | TRUE | FALSE | ... |
                   constructor | FUNCTION body | primaryexp */
   switch (ls->t.token) {
     case TK_NUMBER: {
