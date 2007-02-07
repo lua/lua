@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.85 2006/08/30 13:19:58 roberto Exp roberto $
+** $Id: luaconf.h,v 1.86 2006/09/18 14:03:18 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -32,6 +32,12 @@
 #if !defined(LUA_ANSI) && defined(_WIN32)
 #define LUA_WIN
 #endif
+
+#if defined(LUA_WIN)
+#include <windows.h>
+#endif
+
+
 
 #if defined(LUA_USE_LINUX)
 #define LUA_USE_POSIX
