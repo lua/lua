@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.h,v 1.31 2005/04/25 19:24:10 roberto Exp roberto $
+** $Id: lmem.h,v 1.32 2006/09/14 18:42:28 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -37,10 +37,11 @@
 #define luaM_reallocvector(L, v,oldn,n,t) \
    ((v)=cast(t *, luaM_reallocv(L, v, oldn, n, sizeof(t))))
 
+LUAI_FUNC void *luaM_toobig (lua_State *L);
 
+/* not to be called directly */
 LUAI_FUNC void *luaM_realloc_ (lua_State *L, void *block, size_t oldsize,
                                                           size_t size);
-LUAI_FUNC void *luaM_toobig (lua_State *L);
 LUAI_FUNC void *luaM_growaux_ (lua_State *L, void *block, int *size,
                                size_t size_elem, int limit,
                                const char *what);
