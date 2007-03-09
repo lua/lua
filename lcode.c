@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.30 2006/09/22 19:14:17 roberto Exp roberto $
+** $Id: lcode.c,v 2.31 2006/10/10 17:39:00 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -443,18 +443,20 @@ void luaK_exp2val (FuncState *fs, expdesc *e) {
 int luaK_exp2RK (FuncState *fs, expdesc *e) {
   luaK_exp2val(fs, e);
   switch (e->k) {
-    case VKNUM:
     case VTRUE:
     case VFALSE:
     case VNIL: {
       if (fs->nk <= MAXINDEXRK) {  /* constant fit in RK operand? */
-        e->u.s.info = (e->k == VNIL)  ? nilK(fs) :
-                      (e->k == VKNUM) ? luaK_numberK(fs, e->u.nval) :
-                                        boolK(fs, (e->k == VTRUE));
+        e->u.s.info = (e->k == VNIL) ? nilK(fs) : boolK(fs, (e->k == VTRUE));
         e->k = VK;
         return RKASK(e->u.s.info);
       }
       else break;
+    }
+    case VKNUM: {
+      e->u.s.info = luaK_numberK(fs, e->u.nval);
+      e->k = VK;
+      /* go through */
     }
     case VK: {
       if (e->u.s.info <= MAXINDEXRK)  /* constant fit in argC? */
@@ -661,10 +663,16 @@ static void codearith (FuncState *fs, OpCode op, expdesc *e1, expdesc *e2) {
   if (constfolding(op, e1, e2))
     return;
   else {
-    int o1 = luaK_exp2RK(fs, e1);
     int o2 = (op != OP_UNM && op != OP_LEN) ? luaK_exp2RK(fs, e2) : 0;
-    freeexp(fs, e2);
-    freeexp(fs, e1);
+    int o1 = luaK_exp2RK(fs, e1);
+    if (o1 > o2) {
+      freeexp(fs, e1);
+      freeexp(fs, e2);
+    }
+    else {
+      freeexp(fs, e2);
+      freeexp(fs, e1);
+    }
     e1->u.s.info = luaK_codeABC(fs, op, 0, o1, o2);
     e1->k = VRELOCABLE;
   }
@@ -722,8 +730,13 @@ void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
       luaK_exp2nextreg(fs, v);  /* operand must be on the `stack' */
       break;
     }
-    default: {
+    case OPR_ADD: case OPR_SUB: case OPR_MUL: case OPR_DIV:
+    case OPR_MOD: case OPR_POW: {
       if (!isnumeral(v)) luaK_exp2RK(fs, v);
+      break;
+    }
+    default: {
+      luaK_exp2RK(fs, v);
       break;
     }
   }
