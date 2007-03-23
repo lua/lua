@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.191 2006/06/02 15:34:00 roberto Exp $
+** $Id: lbaselib.c,v 1.191a 2006/06/02 15:34:00 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -114,11 +114,11 @@ static int luaB_setmetatable (lua_State *L) {
 }
 
 
-static void getfunc (lua_State *L) {
+static void getfunc (lua_State *L, int opt) {
   if (lua_isfunction(L, 1)) lua_pushvalue(L, 1);
   else {
     lua_Debug ar;
-    int level = luaL_optint(L, 1, 1);
+    int level = opt ? luaL_optint(L, 1, 1) : luaL_checkint(L, 1);
     luaL_argcheck(L, level >= 0, 1, "level must be non-negative");
     if (lua_getstack(L, level, &ar) == 0)
       luaL_argerror(L, 1, "invalid level");
@@ -131,7 +131,7 @@ static void getfunc (lua_State *L) {
 
 
 static int luaB_getfenv (lua_State *L) {
-  getfunc(L);
+  getfunc(L, 1);
   if (lua_iscfunction(L, -1))  /* is a C function? */
     lua_pushvalue(L, LUA_GLOBALSINDEX);  /* return the thread's global env. */
   else
@@ -142,7 +142,7 @@ static int luaB_getfenv (lua_State *L) {
 
 static int luaB_setfenv (lua_State *L) {
   luaL_checktype(L, 2, LUA_TTABLE);
-  getfunc(L);
+  getfunc(L, 0);
   lua_pushvalue(L, 2);
   if (lua_isnumber(L, 1) && lua_tonumber(L, 1) == 0) {
     /* change environment of current thread */

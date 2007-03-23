@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.29 2005/12/22 16:19:56 roberto Exp $
+** $Id: ldebug.c,v 2.29a 2005/12/22 16:19:56 roberto Exp $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -432,14 +432,16 @@ static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
         break;
       }
       case OP_CLOSURE: {
-        int nup;
+        int nup, j;
         check(b < pt->sizep);
         nup = pt->p[b]->nups;
         check(pc + nup < pt->sizecode);
-        for (; nup>0; nup--) {
-          OpCode op1 = GET_OPCODE(pt->code[pc+nup]);
+        for (j = 1; j <= nup; j++) {
+          OpCode op1 = GET_OPCODE(pt->code[pc + j]);
           check(op1 == OP_GETUPVAL || op1 == OP_MOVE);
         }
+        if (reg != NO_REG)  /* tracing? */
+          pc += nup;  /* do not 'execute' these pseudo-instructions */
         break;
       }
       case OP_VARARG: {
