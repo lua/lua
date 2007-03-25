@@ -14,9 +14,14 @@ end
 
 mt.__declared = {}
 
+local function what ()
+  local d = debug.getinfo(3, "S")
+  return d and d.what or "C"
+end
+
 mt.__newindex = function (t, n, v)
   if not mt.__declared[n] then
-    local w = debug.getinfo(2, "S").what
+    local w = what()
     if w ~= "main" and w ~= "C" then
       error("assign to undeclared variable '"..n.."'", 2)
     end
@@ -26,7 +31,7 @@ mt.__newindex = function (t, n, v)
 end
   
 mt.__index = function (t, n)
-  if not mt.__declared[n] and debug.getinfo(2, "S").what ~= "C" then
+  if not mt.__declared[n] and what() ~= "C" then
     error("variable '"..n.."' is not declared", 2)
   end
   return rawget(t, n)

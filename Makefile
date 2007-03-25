@@ -9,7 +9,8 @@ PLAT= none
 
 # Where to install. The installation starts in the src directory, so take care
 # if INSTALL_TOP is not an absolute path. (Man pages are installed from the
-# doc directory.)
+# doc directory.) You may want to make these paths consistent with LUA_ROOT,
+# LUA_LDIR, and LUA_CDIR in luaconf.h (and also with etc/lua.pc).
 #
 INSTALL_TOP= /usr/local
 INSTALL_BIN= $(INSTALL_TOP)/bin
@@ -37,7 +38,7 @@ RANLIB= ranlib
 # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
 
 # Convenience platforms targets.
-PLATS= aix ansi bsd generic linux macosx mingw posix solaris
+PLATS= aix ansi bsd freebsd generic linux macosx mingw posix solaris
 
 # What to install.
 TO_BIN= lua luac
@@ -47,7 +48,7 @@ TO_MAN= lua.1 luac.1
 
 # Lua version and release.
 V= 5.1
-R= 5.1.1
+R= 5.1.2
 
 all:	$(PLAT)
 
@@ -119,11 +120,7 @@ lecho:
 	@$(MAKE) echo | grep = | sed -e 's/= /= "/' -e 's/$$/"/' #-e 's/""/nil/'
 	@echo "-- EOF"
 
-# show what has changed since we unpacked
-newer:
-	@$(FIND) . -newer MANIFEST -type f
-
 # list targets that do not create files (but not all makes understand .PHONY)
-.PHONY: all $(PLATS) clean test install local none dummy echo pecho lecho newer
+.PHONY: all $(PLATS) clean test install local none dummy echo pecho lecho
 
 # (end of Makefile)
