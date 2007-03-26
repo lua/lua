@@ -890,8 +890,8 @@ function definitions are explained in <a href="#2.5.9">&sect;2.5.9</a>;
 function calls are explained in <a href="#2.5.8">&sect;2.5.8</a>;
 table constructors are explained in <a href="#2.5.7">&sect;2.5.7</a>.
 Vararg expressions,
-denoted by three dots ('<code>...</code>'), can only be used inside
-vararg functions;
+denoted by three dots ('<code>...</code>'), can only be used when
+directly inside a vararg function;
 they are explained in <a href="#2.5.9">&sect;2.5.9</a>.
 
 
@@ -3222,7 +3222,7 @@ and returns this address.
 
 
 <p>
-Userdata represents C&nbsp;values in Lua.
+Userdata represent C&nbsp;values in Lua.
 A <em>full userdata</em> represents a block of memory.
 It is an object (like a table):
 you must create it, it can have its own metatable,
@@ -3498,7 +3498,7 @@ Pushes a light userdata onto the stack.
 
 
 <p>
-Userdata represents C&nbsp;values in Lua.
+Userdata represent C&nbsp;values in Lua.
 A <em>light userdata</em> represents a pointer.
 It is a value (like a number):
 you do not create it, it has no individual metatable,
@@ -8511,7 +8511,7 @@ Here is the complete syntax of Lua in extended BNF.
 <HR>
 <SMALL>
 Last update:
-Fri Mar 23 14:37:09 BRT 2007
+Mon Mar 26 12:59:26 BRT 2007
 </SMALL>
 <!--
 Last change: ready for Lua 5.1.2

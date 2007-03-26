@@ -8,7 +8,10 @@ INSTALL for Lua 5.1
   Building Lua on Unix systems should be very easy. First do "make" and
   see if your platform is listed. If so, just do "make xxx", where xxx
   is your platform name. The platforms currently supported are:
-	ansi bsd generic linux macosx mingw posix solaris
+    aix ansi bsd freebsd generic linux macosx mingw posix solaris
+
+  If your platform is not listed, try the closest one or posix, generic,
+  ansi, in this order.
 
   See below for customization instructions and for instructions on how
   to build with other Windows compilers.
@@ -81,8 +84,8 @@ INSTALL for Lua 5.1
 
   compiler:	library, luac.c print.c
 
-  If you use Visual Studio .NET, you can use etc/luavs.bat
-  in its "Command Prompt".
+  If you use Visual Studio .NET, you can use etc/luavs.bat in its
+  "Command Prompt".
 
   If all you want is to build the Lua interpreter, you may put all .c files
   in a single project, except for luac.c and print.c. Or just use etc/all.c.
