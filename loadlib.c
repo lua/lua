@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.55 2006/09/11 14:07:24 roberto Exp roberto $
+** $Id: loadlib.c,v 1.56 2006/10/10 17:40:17 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -16,9 +16,9 @@
 #define loadlib_c
 #define LUA_LIB
 
-#include "lauxlib.h"
-#include "lobject.h"
 #include "lua.h"
+
+#include "lauxlib.h"
 #include "lualib.h"
 
 
@@ -361,7 +361,7 @@ static const char *findfile (lua_State *L, const char *name,
     lua_remove(L, -2);  /* remove path template */
     if (readable(filename))  /* does file exist and is readable? */
       return filename;  /* return that file name */
-    luaO_pushfstring(L, "\n\tno file " LUA_QS, filename);
+    lua_pushfstring(L, "\n\tno file " LUA_QS, filename);
     lua_remove(L, -2);  /* remove file name */
     lua_concat(L, 2);  /* add entry to possible error message */
   }
@@ -422,8 +422,8 @@ static int loader_Croot (lua_State *L) {
   funcname = mkfuncname(L, name);
   if ((stat = ll_loadfunc(L, filename, funcname)) != 0) {
     if (stat != ERRFUNC) loaderror(L, filename);  /* real error */
-    luaO_pushfstring(L, "\n\tno module " LUA_QS " in file " LUA_QS,
-                        name, filename);
+    lua_pushfstring(L, "\n\tno module " LUA_QS " in file " LUA_QS,
+                       name, filename);
     return 1;  /* function not found */
   }
   return 1;
@@ -437,7 +437,7 @@ static int loader_preload (lua_State *L) {
     luaL_error(L, LUA_QL("package.preload") " must be a table");
   lua_getfield(L, -1, name);
   if (lua_isnil(L, -1))  /* not found? */
-    luaO_pushfstring(L, "\n\tno field package.preload['%s']", name);
+    lua_pushfstring(L, "\n\tno field package.preload['%s']", name);
   return 1;
 }
 
