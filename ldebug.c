@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.33 2006/09/19 13:57:50 roberto Exp roberto $
+** $Id: ldebug.c,v 2.34 2006/11/22 11:43:47 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -539,8 +539,7 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
   if (GET_OPCODE(i) == OP_CALL || GET_OPCODE(i) == OP_TAILCALL ||
       GET_OPCODE(i) == OP_TFORLOOP)
     return getobjname(L, ci, GETARG_A(i), name);
-  else
-    return NULL;  /* no useful name can be found */
+  return NULL;  /* else no useful name can be found */
 }
 
 
