@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.69 2006/09/19 14:06:45 roberto Exp roberto $
+** $Id: lvm.c,v 2.70 2007/02/09 13:04:52 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -162,7 +162,7 @@ static int call_binTM (lua_State *L, const TValue *p1, const TValue *p2,
   const TValue *tm = luaT_gettmbyobj(L, p1, event);  /* try first operand */
   if (ttisnil(tm))
     tm = luaT_gettmbyobj(L, p2, event);  /* try second operand */
-  if (!ttisfunction(tm)) return 0;
+  if (ttisnil(tm)) return 0;
   callTMres(L, res, tm, p1, p2);
   return 1;
 }
@@ -257,8 +257,7 @@ int luaV_equalval_ (lua_State *L, const TValue *t1, const TValue *t2) {
     case LUA_TLIGHTUSERDATA: return pvalue(t1) == pvalue(t2);
     case LUA_TUSERDATA: {
       if (uvalue(t1) == uvalue(t2)) return 1;
-      tm = get_compTM(L, uvalue(t1)->metatable, uvalue(t2)->metatable,
-                         TM_EQ);
+      tm = get_compTM(L, uvalue(t1)->metatable, uvalue(t2)->metatable, TM_EQ);
       break;  /* will try TM */
     }
     case LUA_TTABLE: {
@@ -278,12 +277,12 @@ void luaV_concat (lua_State *L, int total, int last) {
   do {
     StkId top = L->base + last + 1;
     int n = 2;  /* number of elements handled in this pass (at least 2) */
-    if (!tostring(L, top-2) || !tostring(L, top-1)) {
+    if (!(ttisstring(top-2) || ttisnumber(top-2)) || !tostring(L, top-1)) {
       if (!call_binTM(L, top-2, top-1, top-2, TM_CONCAT))
         luaG_concaterror(L, top-2, top-1);
     } else if (tsvalue(top-1)->len == 0) {  /* second operand is empty? */
-      /* do nothing; result is already first operand */ ;
-    } else if (tsvalue(top-2)->len == 0) {  /* fist operand is empty? */
+      (void)tostring(L, top - 2);  /* result is first operand */ ;
+    } else if (ttisstring(top-2) && tsvalue(top-2)->len == 0) {
         setsvalue2s(L, top-2, rawtsvalue(top-1));  /* result is second op. */
     } else {
       /* at least two (non-empty) string values; get as many as possible */
