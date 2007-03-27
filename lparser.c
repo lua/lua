@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.50 2006/11/22 11:02:03 roberto Exp roberto $
+** $Id: lparser.c,v 2.51 2007/02/07 17:49:18 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -336,7 +336,7 @@ static void open_func (LexState *ls, FuncState *fs) {
   fs->L = L;
   ls->fs = fs;
   fs->pc = 0;
-  fs->lasttarget = -1;
+  fs->lasttarget = 0;
   fs->jpc = NO_JUMP;
   fs->freereg = 0;
   fs->nk = 0;

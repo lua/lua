@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.31 2006/10/10 17:39:00 roberto Exp roberto $
+** $Id: lcode.c,v 2.32 2007/03/09 18:50:56 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -35,8 +35,6 @@ static int isnumeral(expdesc *e) {
 void luaK_nil (FuncState *fs, int from, int n) {
   Instruction *previous;
   if (fs->pc > fs->lasttarget) {  /* no jumps to current position? */
-    if (fs->pc == 0)  /* function start? */
-      return;  /* positions are already clean */
     previous = &fs->f->code[fs->pc-1];
     if (GET_OPCODE(*previous) == OP_LOADNIL) {
       int pfrom = GETARG_A(*previous);
