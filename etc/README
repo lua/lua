@@ -19,7 +19,8 @@ lua.pc
 	pkg-config data for Lua
 
 luavs.bat
-	Script to build Lua under "Visual Studio .NET Command Prompt".
+	Script to build Lua under "Visual Studio .NET Command Prompt",
+	contributed by Mike Pall. Run it from the toplevel as etc\luavs.bat.
 
 min.c
 	A minimal Lua interpreter.
