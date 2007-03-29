@@ -1,6 +1,4 @@
 rem script to build Lua under "Visual Studio .NET Command Prompt".
-rem contributed by Mike Pall.
-
 rem do not run it from this directory, run it from the toplevel: etc\luavs.bat
 rem it creates lua51.dll, lua51.lib, lua.exe, and luac.exe in src.
 
@@ -15,5 +13,3 @@ del lua.obj linit.obj lbaselib.obj ldblib.obj liolib.obj lmathlib.obj loslib.obj
 link /out:luac.exe *.obj
 del *.obj
 cd ..
-
-lauxlib.o
