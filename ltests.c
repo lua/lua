@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.39 2006/09/11 14:07:24 roberto Exp roberto $
+** $Id: ltests.c,v 2.40 2006/10/10 17:40:17 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -777,11 +777,6 @@ static int doremote (lua_State *L) {
 }
 
 
-static int log2_aux (lua_State *L) {
-  lua_pushinteger(L, luaO_log2(luaL_checkint(L, 1)));
-  return 1;
-}
-
 static int int2fb_aux (lua_State *L) {
   int b = luaO_int2fb(luaL_checkint(L, 1));
   lua_pushinteger(L, b);
@@ -1110,7 +1105,6 @@ static const struct luaL_Reg tests_funcs[] = {
   {"listk", listk},
   {"listlocals", listlocals},
   {"loadlib", loadlib},
-  {"log2", log2_aux},
   {"newstate", newstate},
   {"newuserdata", newuserdata},
   {"num2int", num2int},
