@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.20 2006/01/18 11:37:34 roberto Exp roberto $
+** $Id: lobject.h,v 2.21 2006/09/11 14:07:24 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -364,9 +364,6 @@ typedef struct Table {
 
 LUAI_DATA const TValue luaO_nilobject_;
 
-#define ceillog2(x)	(luaO_log2((x)-1) + 1)
-
-LUAI_FUNC int luaO_log2 (unsigned int x);
 LUAI_FUNC int luaO_int2fb (unsigned int x);
 LUAI_FUNC int luaO_fb2int (int x);
 LUAI_FUNC int luaO_rawequalObj (const TValue *t1, const TValue *t2);
