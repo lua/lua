@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.58 2006/10/17 20:00:07 roberto Exp roberto $
+** $Id: lapi.c,v 2.59 2007/02/07 14:28:00 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -415,20 +415,25 @@ LUA_API void lua_pushinteger (lua_State *L, lua_Integer n) {
 }
 
 
-LUA_API void lua_pushlstring (lua_State *L, const char *s, size_t len) {
+LUA_API const char *lua_pushlstring (lua_State *L, const char *s, size_t len) {
+  TString *ts;
   lua_lock(L);
   luaC_checkGC(L);
-  setsvalue2s(L, L->top, luaS_newlstr(L, s, len));
+  ts = luaS_newlstr(L, s, len);
+  setsvalue2s(L, L->top, ts);
   api_incr_top(L);
   lua_unlock(L);
+  return getstr(ts);
 }
 
 
-LUA_API void lua_pushstring (lua_State *L, const char *s) {
-  if (s == NULL)
+LUA_API const char *lua_pushstring (lua_State *L, const char *s) {
+  if (s == NULL) {
     lua_pushnil(L);
+    return NULL;
+  }
   else
-    lua_pushlstring(L, s, strlen(s));
+    return lua_pushlstring(L, s, strlen(s));
 }
 
 
