@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.35 2006/09/11 14:07:24 roberto Exp roberto $
+** $Id: ltable.c,v 2.36 2007/04/10 12:18:17 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -84,8 +84,8 @@ static const Node dummynode_ = {
 static Node *hashnum (const Table *t, lua_Number n) {
   unsigned int a[numints];
   int i;
-  n += 1;  /* normalize number (avoid -0) */
-  lua_assert(sizeof(a) <= sizeof(n));
+  if (luai_numeq(n, 0))  /* avoid problems with -0 */
+    return gnode(t, 0);
   memcpy(a, &n, sizeof(a));
   for (i = 1; i < numints; i++) a[0] += a[i];
   return hashmod(t, a[0]);
