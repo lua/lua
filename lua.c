@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.163 2006/09/18 14:03:18 roberto Exp roberto $
+** $Id: lua.c,v 1.164 2006/10/10 17:40:17 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -41,7 +41,7 @@ static void laction (int i) {
 
 static void print_usage (void) {
   fprintf(stderr,
-  "usage: %s [options] [script [args]].\n"
+  "usage: %s [options] [script [args]]\n"
   "Available options are:\n"
   "  -e stat  execute string " LUA_QL("stat") "\n"
   "  -l name  require library " LUA_QL("name") "\n"
@@ -73,20 +73,27 @@ static int report (lua_State *L, int status) {
 }
 
 
-static int traceback (lua_State *L) {
+static int gettraceback (lua_State *L) {
   lua_getfield(L, LUA_GLOBALSINDEX, "debug");
-  if (!lua_istable(L, -1)) {
-    lua_pop(L, 1);
-    return 1;
+  if (!lua_istable(L, -1)) return 0;
+  lua_getfield(L, -1, "traceback");  /* check 'debug.traceback' */
+  if (!lua_isfunction(L, -1)) return 0;
+  return 1;  /* there is a function 'debug.traceback' */
+}
+
+
+static int traceback (lua_State *L) {
+  if (lua_isnoneornil(L, 1))  /* no error object? */
+    return 1;  /* keep it that way */
+  if (!gettraceback(L))  /* no 'debug.traceback' function? */
+    lua_pushvalue(L, 1);  /* keep original message */
+  else {
+    lua_pushvalue(L, 1);  /* pass error message */
+    lua_pushinteger(L, 2);  /* skip this function and traceback */
+    lua_call(L, 2, 1);  /* call traceback */
   }
-  lua_getfield(L, -1, "traceback");
-  if (!lua_isfunction(L, -1)) {
-    lua_pop(L, 2);
-    return 1;
-  }
-  lua_pushvalue(L, 1);  /* pass error message */
-  lua_pushinteger(L, 2);  /* skip this function and traceback */
-  lua_call(L, 2, 1);  /* call debug.traceback */
+  if (!lua_isstring(L, -1) && !luaL_callmeta(L, 1, "__tostring"))
+    lua_pushliteral(L, "(no error message)");
   return 1;
 }
 
@@ -96,6 +103,7 @@ static int docall (lua_State *L, int narg, int clear) {
   int base = lua_gettop(L) - narg;  /* function index */
   lua_pushcfunction(L, traceback);  /* push traceback function */
   lua_insert(L, base);  /* put it under chunk and args */
+  globalL = L;  /* to be available to 'laction' */
   signal(SIGINT, laction);
   status = lua_pcall(L, narg, (clear ? 0 : LUA_MULTRET), base);
   signal(SIGINT, SIG_DFL);
@@ -160,7 +168,7 @@ static const char *get_prompt (lua_State *L, int firstline) {
 }
 
 /* mark in error messages for incomplete statements */
-#define mark	LUA_QL("<eof>")
+#define mark	"<eof>"
 #define marklen	(sizeof(mark) - 1)
 
 static int incomplete (lua_State *L, int status) {
@@ -344,7 +352,6 @@ static int pmain (lua_State *L) {
   char **argv = s->argv;
   int script;
   int has_i = 0, has_v = 0, has_e = 0;
-  globalL = L;
   if (argv[0] && argv[0][0]) progname = argv[0];
   lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
   luaL_openlibs(L);  /* open libraries */

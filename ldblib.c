@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.104 2005/12/29 15:32:11 roberto Exp roberto $
+** $Id: ldblib.c,v 1.105 2006/09/11 14:07:24 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -319,21 +319,18 @@ static int db_debug (lua_State *L) {
 #define LEVELS2	10	/* size of the second part of the stack */
 
 static int db_errorfb (lua_State *L) {
-  int level;
+  lua_Debug ar;
   int firstpart = 1;  /* still before eventual `...' */
   int arg;
   lua_State *L1 = getthread(L, &arg);
-  lua_Debug ar;
-  if (lua_isnumber(L, arg+2)) {
-    level = (int)lua_tointeger(L, arg+2);
-    lua_pop(L, 1);
-  }
-  else
-    level = (L == L1) ? 1 : 0;  /* level 0 may be this own function */
-  if (lua_gettop(L) == arg)
-    lua_pushliteral(L, "");
-  else if (!lua_isstring(L, arg+1)) return 1;  /* message is not a string */
-  else lua_pushliteral(L, "\n");
+  const char *msg = lua_tostring(L, arg + 1);
+  int level = (lua_isnumber(L, arg + 2)) ?
+                     (int)lua_tointeger(L, arg + 2) :
+                     (L == L1) ? 1 : 0;  /* level 0 may be this own function */
+  lua_settop(L, ++arg);
+  if (msg) lua_pushfstring(L, "%s\n", msg);
+  else if (!lua_isnil(L, arg))  /* is there a non-string 'msg'? */
+    return 1;  /* return it untouched */
   lua_pushliteral(L, "stack traceback:");
   while (lua_getstack(L1, level++, &ar)) {
     if (level > LEVELS1 && firstpart) {
