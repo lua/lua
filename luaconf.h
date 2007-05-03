@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.86 2006/09/18 14:03:18 roberto Exp roberto $
+** $Id: luaconf.h,v 1.87 2007/02/07 17:46:20 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -655,6 +655,18 @@ union luai_Cast { double l_d; long l_l; };
 #endif
 
 #endif
+
+
+/*
+@@ LUA_STRFTIMEOPTIONS is the list of valid conversion specifier
+@* characters for the 'strftime' function;
+@@ LUA_STRFTIMEPREFIX is the list of valid modifiers for
+@* that function.
+** CHANGE them if you want to use non-ansi options specific to your system.
+*/
+#define LUA_STRFTIMEOPTIONS	"aAbBcdHIjmMpSUwWxXyYz%"
+#define LUA_STRFTIMEPREFIX	""
+
 
 
 /*

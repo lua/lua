@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.19 2006/04/26 18:19:49 roberto Exp roberto $
+** $Id: loslib.c,v 1.20 2006/09/19 13:57:08 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -148,15 +148,25 @@ static int os_date (lua_State *L) {
   else {
     char cc[3];
     luaL_Buffer b;
-    cc[0] = '%'; cc[2] = '\0';
+    cc[0] = '%';
     luaL_buffinit(L, &b);
     for (; *s; s++) {
-      if (*s != '%' || *(s + 1) == '\0')  /* no conversion specifier? */
+      if (*s != '%')  /* no conversion specifier? */
         luaL_addchar(&b, *s);
       else {
         size_t reslen;
+        int i = 1;
         char buff[200];  /* should be big enough for any conversion result */
-        cc[1] = *(++s);
+        if (*(++s) != '\0' && strchr(LUA_STRFTIMEPREFIX, *s))
+          cc[i++] = *(s++);
+        if (*s != '\0' && strchr(LUA_STRFTIMEOPTIONS, *s))
+          cc[i++] = *s;
+        else {
+          const char *msg = lua_pushfstring(L,
+                              "invalid conversion specifier '%%%c'", *s);
+          return luaL_argerror(L, 1, msg);
+        }
+        cc[i] = '\0';
         reslen = strftime(buff, sizeof(buff), cc, stm);
         luaL_addlstring(&b, buff, reslen);
       }
