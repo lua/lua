@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.32 2007/03/09 18:50:56 roberto Exp roberto $
+** $Id: lcode.c,v 2.33 2007/03/27 14:11:38 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -647,8 +647,6 @@ static int constfolding (OpCode op, expdesc *e1, expdesc *e2) {
       if (v2 == 0) return 0;  /* do not attempt to divide by 0 */
       r = luai_nummod(NULL, v1, v2); break;
     case OP_POW: r = luai_numpow(NULL, v1, v2); break;
-    case OP_UNM: r = luai_numunm(NULL, v1); break;
-    case OP_LEN: return 0;  /* no constant folding for 'len' */
     default: lua_assert(0); r = 0; break;
   }
   if (luai_numisnan(NULL, r)) return 0;  /* do not attempt to produce NaN */
@@ -698,9 +696,12 @@ void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e) {
   e2.t = e2.f = NO_JUMP; e2.k = VKNUM; e2.u.nval = 0;
   switch (op) {
     case OPR_MINUS: {
-      if (e->k == VK)
-        luaK_exp2anyreg(fs, e);  /* cannot operate on non-numeric constants */
-      codearith(fs, OP_UNM, e, &e2);
+      if (isnumeral(e))  /* -constant? */
+        e->u.nval = luai_numunm(NULL, e->u.nval);
+      else {
+        luaK_exp2anyreg(fs, e);
+        codearith(fs, OP_UNM, e, &e2);
+      }
       break;
     }
     case OPR_NOT: codenot(fs, e); break;
