@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.34 2006/11/22 11:43:47 roberto Exp roberto $
+** $Id: ldebug.c,v 2.35 2007/03/26 18:35:34 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -531,15 +531,39 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int stackpos,
 
 
 static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
+  TMS tm = 0;
   Instruction i;
   if ((isLua(ci) && ci->tailcalls > 0) || !isLua(ci - 1))
     return NULL;  /* calling function is not Lua (or is unknown) */
   ci--;  /* calling function */
   i = ci_func(ci)->l.p->code[currentpc(L, ci)];
-  if (GET_OPCODE(i) == OP_CALL || GET_OPCODE(i) == OP_TAILCALL ||
-      GET_OPCODE(i) == OP_TFORLOOP)
-    return getobjname(L, ci, GETARG_A(i), name);
-  return NULL;  /* else no useful name can be found */
+  switch (GET_OPCODE(i)) {
+    case OP_CALL:
+    case OP_TAILCALL:
+    case OP_TFORLOOP:
+      return getobjname(L, ci, GETARG_A(i), name);
+    case OP_GETGLOBAL:
+    case OP_SELF:
+    case OP_GETTABLE: tm = TM_INDEX; break;
+    case OP_SETGLOBAL:
+    case OP_SETTABLE: tm = TM_NEWINDEX; break;
+    case OP_EQ: tm = TM_EQ; break;
+    case OP_ADD: tm = TM_ADD; break;
+    case OP_SUB: tm = TM_SUB; break;
+    case OP_MUL: tm = TM_MUL; break;
+    case OP_DIV: tm = TM_DIV; break;
+    case OP_MOD: tm = TM_MOD; break;
+    case OP_POW: tm = TM_POW; break;
+    case OP_UNM: tm = TM_UNM; break;
+    case OP_LEN: tm = TM_LEN; break;
+    case OP_LT: tm = TM_LT; break;
+    case OP_LE: tm = TM_LE; break;
+    case OP_CONCAT: tm = TM_CONCAT; break;
+    default:
+      return NULL;  /* else no useful name can be found */
+  }
+  *name = getstr(G(L)->tmname[tm]);
+  return "metamethod";
 }
 
 
