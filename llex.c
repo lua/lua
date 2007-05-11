@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.23 2006/09/18 16:06:41 roberto Exp roberto $
+** $Id: llex.c,v 2.24 2007/02/07 17:49:18 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -442,8 +442,9 @@ void luaX_next (LexState *ls) {
 }
 
 
-void luaX_lookahead (LexState *ls) {
+int luaX_lookahead (LexState *ls) {
   lua_assert(ls->lookahead.token == TK_EOS);
   ls->lookahead.token = llex(ls, &ls->lookahead.seminfo);
+  return ls->lookahead.token;
 }
 

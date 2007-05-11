@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.51 2007/02/07 17:49:18 roberto Exp roberto $
+** $Id: lparser.c,v 2.52 2007/03/27 14:11:38 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -522,8 +522,7 @@ static void constructor (LexState *ls, expdesc *t) {
     closelistfield(fs, &cc);
     switch(ls->t.token) {
       case TK_NAME: {  /* may be listfields or recfields */
-        luaX_lookahead(ls);
-        if (ls->lookahead.token != '=')  /* expression? */
+        if (luaX_lookahead(ls) != '=')  /* expression? */
           listfield(ls, &cc);
         else
           recfield(ls, &cc);
