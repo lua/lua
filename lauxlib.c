@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.165 2007/02/07 17:51:21 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.166 2007/04/19 20:21:53 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -125,7 +125,7 @@ LUALIB_API int luaL_newmetatable (lua_State *L, const char *tname) {
 }
 
 
-LUALIB_API void *luaL_checkudata (lua_State *L, int ud, const char *tname) {
+LUALIB_API void *luaL_testudata (lua_State *L, int ud, const char *tname) {
   void *p = lua_touserdata(L, ud);
   if (p != NULL) {  /* value is a userdata? */
     if (lua_getmetatable(L, ud)) {  /* does it have a metatable? */
@@ -136,8 +136,14 @@ LUALIB_API void *luaL_checkudata (lua_State *L, int ud, const char *tname) {
       }
     }
   }
-  luaL_typerror(L, ud, tname);  /* else error */
-  return NULL;  /* to avoid warnings */
+  return NULL;  /* value is not a userdata of the proper type */
+}
+
+
+LUALIB_API void *luaL_checkudata (lua_State *L, int ud, const char *tname) {
+  void *p = luaL_testudata(L, ud, tname);
+  if (p == NULL) luaL_typerror(L, ud, tname);
+  return p;
 }
 
 
