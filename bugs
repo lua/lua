@@ -1294,10 +1294,150 @@ patch = [[
 }
 
 Bug{
-what = [[  ]],
-report = [[  ]],
-since = [[  ]],
-example = [[  ]],
-patch = [[  ]],
+what = [[assignment of nil to parameter may be optimized away]],
+report = [[Thomas Lauer, on 03/2007]],
+since = [[5.1]],
+example = [[
+function f (a)
+  a=nil
+  return a
+end
+
+print(f("test"))
+]],
+patch = [[
+*lcode.c:
+@@ -35,16 +35,20 @@
+ void luaK_nil (FuncState *fs, int from, int n) {
+   Instruction *previous;
+   if (fs->pc > fs->lasttarget) {  /* no jumps to current position? */
+-    if (fs->pc == 0)  /* function start? */
+-      return;  /* positions are already clean */
+-    previous = &fs->f->code[fs->pc-1];
+-    if (GET_OPCODE(*previous) == OP_LOADNIL) {
+-      int pfrom = GETARG_A(*previous);
+-      int pto = GETARG_B(*previous);
+-      if (pfrom <= from && from <= pto+1) {  /* can connect both? */
+-        if (from+n-1 > pto)
+-          SETARG_B(*previous, from+n-1);
+-        return;
++    if (fs->pc == 0) {  /* function start? */
++      if (from >= fs->nactvar)
++        return;  /* positions are already clean */
++    }
++    else {
++      previous = &fs->f->code[fs->pc-1];
++      if (GET_OPCODE(*previous) == OP_LOADNIL) {
++        int pfrom = GETARG_A(*previous);
++        int pto = GETARG_B(*previous);
++        if (pfrom <= from && from <= pto+1) {  /* can connect both? */
++          if (from+n-1 > pto)
++            SETARG_B(*previous, from+n-1);
++          return;
++        }
+       }
+     }
+   }
+]],
 }
 
+
+Bug{
+what = [[__concat metamethod converts numbers to strings]],
+report = [[Paul Winwood, on 12/2006]],
+since = [[5.0]],
+example = [[
+a = {}
+setmetatable(a, {__concat = function (a,b) print(type(a), type(b)) end})
+a = 4 .. a
+]],
+patch = [[
+*lvm.c:
+@@ -281,10 +281,12 @@
+   do {
+     StkId top = L->base + last + 1;
+     int n = 2;  /* number of elements handled in this pass (at least 2) */
+-    if (!tostring(L, top-2) || !tostring(L, top-1)) {
++    if (!(ttisstring(top-2) || ttisnumber(top-2)) || !tostring(L, top-1)) {
+       if (!call_binTM(L, top-2, top-1, top-2, TM_CONCAT))
+         luaG_concaterror(L, top-2, top-1);
+-    } else if (tsvalue(top-1)->len > 0) {  /* if len=0, do nothing */
++    } else if (tsvalue(top-1)->len == 0)  /* second op is empty? */
++      (void)tostring(L, top - 2);  /* result is first op (as string) */
++    else {
+       /* at least two string values; get as many as possible */
+       size_t tl = tsvalue(top-1)->len;
+       char *buffer;
+]],
+}
+
+
+Bug{
+what = [[As a library, loadlib.c should not access Lua internals
+(via lobject.h)]],
+report = [[Jérôme Vuarand, on 03/2007]],
+since = [[5.0 (at least)]],
+example = [[the bug has no effect on external behavior]],
+patch = [[remove the '#include "lobject.h" and use
+'lua_pushfstring' instead of 'luaO_pushfstring']],
+}
+
+Bug{
+what = [[Lua may close standard files,
+which then may be used by C]],
+report = [[David Manura/Ross Berteig, on 04/2007]],
+since = [[ ]],
+example = [[
+io.close(io.stderr)
+-- in some systems, following attempts to write to 'stderr' may crash
+a = a + 1
+]],
+patch = [[
+]],
+}
+
+Bug{
+what = [[code generated for "-nil", "-true", and "-false" is wrong]],
+report = [[David Manura/Rici Lake, on 04/2007]],
+since = [[5.1]],
+example = [[print(-nil)]],
+patch = [[
+lcode.c:
+@@ -699,7 +699,7 @@
+   e2.t = e2.f = NO_JUMP; e2.k = VKNUM; e2.u.nval = 0;
+   switch (op) {
+     case OPR_MINUS: {
+-      if (e->k == VK)
++      if (!isnumeral(e))
+         luaK_exp2anyreg(fs, e);  /* cannot operate on non-numeric constants */
+       codearith(fs, OP_UNM, e, &e2);
+       break;
+]],
+}
+
+Bug{
+what = [[Count hook may be called without being set.]],
+report = [[Mike Pall, on May 2007]],
+since = [[?]],
+example = [[ ]],
+patch = [[
+lvm.c:
+@@ -61,7 +61,7 @@
+   lu_byte mask = L->hookmask;
+   const Instruction *oldpc = L->savedpc;
+   L->savedpc = pc;
+-  if (mask > LUA_MASKLINE) {  /* instruction-hook set? */
++  if ((mask & LUA_MASKCOUNT) && L->hookcount == 0) {
+     if (L->hookcount == 0) {
+       resethookcount(L);
+       luaD_callhook(L, LUA_HOOKCOUNT, -1);
+]],
+}
+
+Bug{
+what = [[ ]],
+report = [[ , on ]],
+since = [[i ]],
+example = [[ ]],
+patch = [[ ]],
+}
