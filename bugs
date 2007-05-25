@@ -1435,6 +1435,20 @@ lvm.c:
 }
 
 Bug{
+what = [[recursive coroutines may overflow C stack]],
+report = [[ , on ]],
+since = [[5.0]],
+example = [[
+a = function(a) coroutine.wrap(a)(a) end
+a(a)
+]],
+patch = [[The 'nCcalls' counter should be shared by all threads.
+(That is, it should be declared in the 'global_State' structure,
+not in 'lua_State'.)
+]],
+}
+
+Bug{
 what = [[ ]],
 report = [[ , on ]],
 since = [[i ]],
