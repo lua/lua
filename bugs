@@ -1417,7 +1417,7 @@ lcode.c:
 
 Bug{
 what = [[Count hook may be called without being set.]],
-report = [[Mike Pall, on May 2007]],
+report = [[Mike Pall, on 05/2007]],
 since = [[?]],
 example = [[ ]],
 patch = [[
@@ -1445,6 +1445,27 @@ a(a)
 patch = [[The 'nCcalls' counter should be shared by all threads.
 (That is, it should be declared in the 'global_State' structure,
 not in 'lua_State'.)
+]],
+}
+
+Bug{
+what = [[wrong error message in some concatenations]],
+report = [[Alex Davies, on 05/2007]],
+since = [[5.1.2]],
+example = [[a = nil; a = (1)..a]],
+patch = [[
+ldebug.c:
+@@ -563,8 +563,8 @@
+
+
+ void luaG_concaterror (lua_State *L, StkId p1, StkId p2) {
+-  if (ttisstring(p1)) p1 = p2;
+-  lua_assert(!ttisstring(p1));
++  if (ttisstring(p1) || ttisnumber(p1)) p1 = p2;
++  lua_assert(!ttisstring(p1) && !ttisnumber(p1));
+   luaG_typeerror(L, p1, "concatenate");
+ }
+
 ]],
 }
 
