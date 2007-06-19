@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.70 2007/02/09 13:04:52 roberto Exp roberto $
+** $Id: lvm.c,v 2.71 2007/03/26 15:56:23 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -566,14 +566,14 @@ void luaV_execute (lua_State *L, int nexeccalls) {
         continue;
       }
       case OP_TEST: {
-        if (l_isfalse(ra) != GETARG_C(i))
+        if (GETARG_C(i) ? !l_isfalse(ra) : l_isfalse(ra))
           dojump(L, GETARG_sBx(*L->savedpc));
         L->savedpc++;
         continue;
       }
       case OP_TESTSET: {
         TValue *rb = RB(i);
-        if (l_isfalse(rb) != GETARG_C(i)) {
+        if (GETARG_C(i) ? !l_isfalse(rb) : l_isfalse(rb)) {
           setobjs2s(L, ra, rb);
           dojump(L, GETARG_sBx(*L->savedpc));
         }
