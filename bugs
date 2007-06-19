@@ -1476,6 +1476,23 @@ ldebug.c:
 }
 
 Bug{
+what = [[Very small numbers all collide in the hash function.
+(This creates only performance problems; the behavoir is correct.)]],
+report = [[, on ]],
+since = [[Lua 5.0]],
+example = [[ ]],
+patch = [[
+ltable.c:
+87,88c87,88
+<   n += 1;  /* normalize number (avoid -0) */
+<   lua_assert(sizeof(a) <= sizeof(n));
+---
+>   if (luai_numeq(n, 0))  /* avoid problems with -0 */
+>     return gnode(t, 0);
+]],
+}
+
+Bug{
 what = [[ ]],
 report = [[ , on ]],
 since = [[i ]],
