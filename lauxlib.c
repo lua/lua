@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.167 2007/05/15 18:46:12 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.168 2007/06/21 13:48:04 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -25,13 +25,6 @@
 #include "lauxlib.h"
 
 
-/* number of prereserved references (for internal use) */
-#define RESERVED_REFS   1	/* only FREELIST_REF is reserved */
-
-#define FREELIST_REF	1	/* free list of references */
-
-
-
 /* convert a stack index to positive */
 #define abs_index(L, i)		((i) > 0 || (i) <= LUA_REGISTRYINDEX ? (i) : \
 					lua_gettop(L) + (i) + 1)
@@ -42,7 +35,6 @@
 ** Error-report functions
 ** =======================================================
 */
-
 
 LUALIB_API int luaL_argerror (lua_State *L, int narg, const char *extramsg) {
   lua_Debug ar;
@@ -100,18 +92,11 @@ LUALIB_API int luaL_error (lua_State *L, const char *fmt, ...) {
 /* }====================================================== */
 
 
-LUALIB_API int luaL_checkoption (lua_State *L, int narg, const char *def,
-                                 const char *const lst[]) {
-  const char *name = (def) ? luaL_optstring(L, narg, def) :
-                             luaL_checkstring(L, narg);
-  int i;
-  for (i=0; lst[i]; i++)
-    if (strcmp(lst[i], name) == 0)
-      return i;
-  return luaL_argerror(L, narg,
-                       lua_pushfstring(L, "invalid option " LUA_QS, name));
-}
-
+/*
+** {======================================================
+** Userdata's metatable manipulation
+** =======================================================
+*/
 
 LUALIB_API int luaL_newmetatable (lua_State *L, const char *tname) {
   lua_getfield(L, LUA_REGISTRYINDEX, tname);  /* get registry.name */
@@ -144,6 +129,27 @@ LUALIB_API void *luaL_checkudata (lua_State *L, int ud, const char *tname) {
   void *p = luaL_testudata(L, ud, tname);
   if (p == NULL) luaL_typerror(L, ud, tname);
   return p;
+}
+
+/* }====================================================== */
+
+
+/*
+** {======================================================
+** Argument check functions
+** =======================================================
+*/
+
+LUALIB_API int luaL_checkoption (lua_State *L, int narg, const char *def,
+                                 const char *const lst[]) {
+  const char *name = (def) ? luaL_optstring(L, narg, def) :
+                             luaL_checkstring(L, narg);
+  int i;
+  for (i=0; lst[i]; i++)
+    if (strcmp(lst[i], name) == 0)
+      return i;
+  return luaL_argerror(L, narg,
+                       lua_pushfstring(L, "invalid option " LUA_QS, name));
 }
 
 
@@ -208,6 +214,264 @@ LUALIB_API lua_Integer luaL_optinteger (lua_State *L, int narg,
                                                       lua_Integer def) {
   return luaL_opt(L, luaL_checkinteger, narg, def);
 }
+
+/* }====================================================== */
+
+
+/*
+** {======================================================
+** Generic Buffer manipulation
+** =======================================================
+*/
+
+
+#define bufflen(B)	((B)->p - (B)->buffer)
+#define bufffree(B)	((size_t)(LUAL_BUFFERSIZE - bufflen(B)))
+
+#define LIMIT	(LUA_MINSTACK/2)
+
+
+static int emptybuffer (luaL_Buffer *B) {
+  size_t l = bufflen(B);
+  if (l == 0) return 0;  /* put nothing on stack */
+  else {
+    lua_pushlstring(B->L, B->buffer, l);
+    B->p = B->buffer;
+    B->lvl++;
+    return 1;
+  }
+}
+
+
+static void adjuststack (luaL_Buffer *B) {
+  if (B->lvl > 1) {
+    lua_State *L = B->L;
+    int toget = 1;  /* number of levels to concat */
+    size_t toplen = lua_objlen(L, -1);
+    do {
+      size_t l = lua_objlen(L, -(toget+1));
+      if (B->lvl - toget + 1 >= LIMIT || toplen > l) {
+        toplen += l;
+        toget++;
+      }
+      else break;
+    } while (toget < B->lvl);
+    lua_concat(L, toget);
+    B->lvl = B->lvl - toget + 1;
+  }
+}
+
+
+LUALIB_API char *luaL_prepbuffer (luaL_Buffer *B) {
+  if (emptybuffer(B))
+    adjuststack(B);
+  return B->buffer;
+}
+
+
+LUALIB_API void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l) {
+  while (l--)
+    luaL_addchar(B, *s++);
+}
+
+
+LUALIB_API void luaL_addstring (luaL_Buffer *B, const char *s) {
+  luaL_addlstring(B, s, strlen(s));
+}
+
+
+LUALIB_API void luaL_pushresult (luaL_Buffer *B) {
+  emptybuffer(B);
+  lua_concat(B->L, B->lvl);
+  B->lvl = 1;
+}
+
+
+LUALIB_API void luaL_addvalue (luaL_Buffer *B) {
+  lua_State *L = B->L;
+  size_t vl;
+  const char *s = lua_tolstring(L, -1, &vl);
+  if (vl <= bufffree(B)) {  /* fit into buffer? */
+    memcpy(B->p, s, vl);  /* put it there */
+    B->p += vl;
+    lua_pop(L, 1);  /* remove from stack */
+  }
+  else {
+    if (emptybuffer(B))
+      lua_insert(L, -2);  /* put buffer before new value */
+    B->lvl++;  /* add new value into B stack */
+    adjuststack(B);
+  }
+}
+
+
+LUALIB_API void luaL_buffinit (lua_State *L, luaL_Buffer *B) {
+  B->L = L;
+  B->p = B->buffer;
+  B->lvl = 0;
+}
+
+/* }====================================================== */
+
+
+/*
+** {======================================================
+** Reference system
+** =======================================================
+*/
+
+/* number of prereserved references (for internal use) */
+#define RESERVED_REFS   1	/* only FREELIST_REF is reserved */
+
+#define FREELIST_REF	1	/* free list of references */
+
+
+LUALIB_API int luaL_ref (lua_State *L, int t) {
+  int ref;
+  t = abs_index(L, t);
+  if (lua_isnil(L, -1)) {
+    lua_pop(L, 1);  /* remove from stack */
+    return LUA_REFNIL;  /* `nil' has a unique fixed reference */
+  }
+  lua_rawgeti(L, t, FREELIST_REF);  /* get first free element */
+  ref = (int)lua_tointeger(L, -1);  /* ref = t[FREELIST_REF] */
+  lua_pop(L, 1);  /* remove it from stack */
+  if (ref != 0) {  /* any free element? */
+    lua_rawgeti(L, t, ref);  /* remove it from list */
+    lua_rawseti(L, t, FREELIST_REF);  /* (t[FREELIST_REF] = t[ref]) */
+  }
+  else {  /* no free elements */
+    ref = (int)lua_objlen(L, t);
+    if (ref < RESERVED_REFS)
+      ref = RESERVED_REFS;  /* skip reserved references */
+    ref++;  /* create new reference */
+  }
+  lua_rawseti(L, t, ref);
+  return ref;
+}
+
+
+LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
+  if (ref >= 0) {
+    t = abs_index(L, t);
+    lua_rawgeti(L, t, FREELIST_REF);
+    lua_rawseti(L, t, ref);  /* t[ref] = t[FREELIST_REF] */
+    lua_pushinteger(L, ref);
+    lua_rawseti(L, t, FREELIST_REF);  /* t[FREELIST_REF] = ref */
+  }
+}
+
+/* }====================================================== */
+
+
+/*
+** {======================================================
+** Load functions
+** =======================================================
+*/
+
+typedef struct LoadF {
+  int extraline;
+  FILE *f;
+  char buff[LUAL_BUFFERSIZE];
+} LoadF;
+
+
+static const char *getF (lua_State *L, void *ud, size_t *size) {
+  LoadF *lf = (LoadF *)ud;
+  (void)L;
+  if (lf->extraline) {
+    lf->extraline = 0;
+    *size = 1;
+    return "\n";
+  }
+  if (feof(lf->f)) return NULL;
+  *size = fread(lf->buff, 1, sizeof(lf->buff), lf->f);
+  return (*size > 0) ? lf->buff : NULL;
+}
+
+
+static int errfile (lua_State *L, const char *what, int fnameindex) {
+  const char *serr = strerror(errno);
+  const char *filename = lua_tostring(L, fnameindex) + 1;
+  lua_pushfstring(L, "cannot %s %s: %s", what, filename, serr);
+  lua_remove(L, fnameindex);
+  return LUA_ERRFILE;
+}
+
+
+LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
+  LoadF lf;
+  int status, readstatus;
+  int c;
+  int fnameindex = lua_gettop(L) + 1;  /* index of filename on the stack */
+  lf.extraline = 0;
+  if (filename == NULL) {
+    lua_pushliteral(L, "=stdin");
+    lf.f = stdin;
+  }
+  else {
+    lua_pushfstring(L, "@%s", filename);
+    lf.f = fopen(filename, "r");
+    if (lf.f == NULL) return errfile(L, "open", fnameindex);
+  }
+  c = getc(lf.f);
+  if (c == '#') {  /* Unix exec. file? */
+    lf.extraline = 1;
+    while ((c = getc(lf.f)) != EOF && c != '\n') ;  /* skip first line */
+    if (c == '\n') c = getc(lf.f);
+  }
+  if (c == LUA_SIGNATURE[0] && filename) {  /* binary file? */
+    lf.f = freopen(filename, "rb", lf.f);  /* reopen in binary mode */
+    if (lf.f == NULL) return errfile(L, "reopen", fnameindex);
+    /* skip eventual `#!...' */
+   while ((c = getc(lf.f)) != EOF && c != LUA_SIGNATURE[0]) ;
+    lf.extraline = 0;
+  }
+  ungetc(c, lf.f);
+  status = lua_load(L, getF, &lf, lua_tostring(L, -1));
+  readstatus = ferror(lf.f);
+  if (filename) fclose(lf.f);  /* close file (even in case of errors) */
+  if (readstatus) {
+    lua_settop(L, fnameindex);  /* ignore results from `lua_load' */
+    return errfile(L, "read", fnameindex);
+  }
+  lua_remove(L, fnameindex);
+  return status;
+}
+
+
+typedef struct LoadS {
+  const char *s;
+  size_t size;
+} LoadS;
+
+
+static const char *getS (lua_State *L, void *ud, size_t *size) {
+  LoadS *ls = (LoadS *)ud;
+  (void)L;
+  if (ls->size == 0) return NULL;
+  *size = ls->size;
+  ls->size = 0;
+  return ls->s;
+}
+
+
+LUALIB_API int luaL_loadbuffer (lua_State *L, const char *buff, size_t size,
+                                const char *name) {
+  LoadS ls;
+  ls.s = buff;
+  ls.size = size;
+  return lua_load(L, getS, &ls, name);
+}
+
+
+LUALIB_API int luaL_loadstring (lua_State *L, const char *s) {
+  return luaL_loadbuffer(L, s, strlen(s), s);
+}
+
+/* }====================================================== */
+
 
 
 LUALIB_API int luaL_getmetafield (lua_State *L, int obj, const char *event) {
@@ -330,251 +594,6 @@ LUALIB_API const char *luaL_findtable (lua_State *L, int idx,
   } while (*e == '.');
   return NULL;
 }
-
-
-
-/*
-** {======================================================
-** Generic Buffer manipulation
-** =======================================================
-*/
-
-
-#define bufflen(B)	((B)->p - (B)->buffer)
-#define bufffree(B)	((size_t)(LUAL_BUFFERSIZE - bufflen(B)))
-
-#define LIMIT	(LUA_MINSTACK/2)
-
-
-static int emptybuffer (luaL_Buffer *B) {
-  size_t l = bufflen(B);
-  if (l == 0) return 0;  /* put nothing on stack */
-  else {
-    lua_pushlstring(B->L, B->buffer, l);
-    B->p = B->buffer;
-    B->lvl++;
-    return 1;
-  }
-}
-
-
-static void adjuststack (luaL_Buffer *B) {
-  if (B->lvl > 1) {
-    lua_State *L = B->L;
-    int toget = 1;  /* number of levels to concat */
-    size_t toplen = lua_objlen(L, -1);
-    do {
-      size_t l = lua_objlen(L, -(toget+1));
-      if (B->lvl - toget + 1 >= LIMIT || toplen > l) {
-        toplen += l;
-        toget++;
-      }
-      else break;
-    } while (toget < B->lvl);
-    lua_concat(L, toget);
-    B->lvl = B->lvl - toget + 1;
-  }
-}
-
-
-LUALIB_API char *luaL_prepbuffer (luaL_Buffer *B) {
-  if (emptybuffer(B))
-    adjuststack(B);
-  return B->buffer;
-}
-
-
-LUALIB_API void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l) {
-  while (l--)
-    luaL_addchar(B, *s++);
-}
-
-
-LUALIB_API void luaL_addstring (luaL_Buffer *B, const char *s) {
-  luaL_addlstring(B, s, strlen(s));
-}
-
-
-LUALIB_API void luaL_pushresult (luaL_Buffer *B) {
-  emptybuffer(B);
-  lua_concat(B->L, B->lvl);
-  B->lvl = 1;
-}
-
-
-LUALIB_API void luaL_addvalue (luaL_Buffer *B) {
-  lua_State *L = B->L;
-  size_t vl;
-  const char *s = lua_tolstring(L, -1, &vl);
-  if (vl <= bufffree(B)) {  /* fit into buffer? */
-    memcpy(B->p, s, vl);  /* put it there */
-    B->p += vl;
-    lua_pop(L, 1);  /* remove from stack */
-  }
-  else {
-    if (emptybuffer(B))
-      lua_insert(L, -2);  /* put buffer before new value */
-    B->lvl++;  /* add new value into B stack */
-    adjuststack(B);
-  }
-}
-
-
-LUALIB_API void luaL_buffinit (lua_State *L, luaL_Buffer *B) {
-  B->L = L;
-  B->p = B->buffer;
-  B->lvl = 0;
-}
-
-/* }====================================================== */
-
-
-LUALIB_API int luaL_ref (lua_State *L, int t) {
-  int ref;
-  t = abs_index(L, t);
-  if (lua_isnil(L, -1)) {
-    lua_pop(L, 1);  /* remove from stack */
-    return LUA_REFNIL;  /* `nil' has a unique fixed reference */
-  }
-  lua_rawgeti(L, t, FREELIST_REF);  /* get first free element */
-  ref = (int)lua_tointeger(L, -1);  /* ref = t[FREELIST_REF] */
-  lua_pop(L, 1);  /* remove it from stack */
-  if (ref != 0) {  /* any free element? */
-    lua_rawgeti(L, t, ref);  /* remove it from list */
-    lua_rawseti(L, t, FREELIST_REF);  /* (t[FREELIST_REF] = t[ref]) */
-  }
-  else {  /* no free elements */
-    ref = (int)lua_objlen(L, t);
-    if (ref < RESERVED_REFS)
-      ref = RESERVED_REFS;  /* skip reserved references */
-    ref++;  /* create new reference */
-  }
-  lua_rawseti(L, t, ref);
-  return ref;
-}
-
-
-LUALIB_API void luaL_unref (lua_State *L, int t, int ref) {
-  if (ref >= 0) {
-    t = abs_index(L, t);
-    lua_rawgeti(L, t, FREELIST_REF);
-    lua_rawseti(L, t, ref);  /* t[ref] = t[FREELIST_REF] */
-    lua_pushinteger(L, ref);
-    lua_rawseti(L, t, FREELIST_REF);  /* t[FREELIST_REF] = ref */
-  }
-}
-
-
-
-/*
-** {======================================================
-** Load functions
-** =======================================================
-*/
-
-typedef struct LoadF {
-  int extraline;
-  FILE *f;
-  char buff[LUAL_BUFFERSIZE];
-} LoadF;
-
-
-static const char *getF (lua_State *L, void *ud, size_t *size) {
-  LoadF *lf = (LoadF *)ud;
-  (void)L;
-  if (lf->extraline) {
-    lf->extraline = 0;
-    *size = 1;
-    return "\n";
-  }
-  if (feof(lf->f)) return NULL;
-  *size = fread(lf->buff, 1, sizeof(lf->buff), lf->f);
-  return (*size > 0) ? lf->buff : NULL;
-}
-
-
-static int errfile (lua_State *L, const char *what, int fnameindex) {
-  const char *serr = strerror(errno);
-  const char *filename = lua_tostring(L, fnameindex) + 1;
-  lua_pushfstring(L, "cannot %s %s: %s", what, filename, serr);
-  lua_remove(L, fnameindex);
-  return LUA_ERRFILE;
-}
-
-
-LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
-  LoadF lf;
-  int status, readstatus;
-  int c;
-  int fnameindex = lua_gettop(L) + 1;  /* index of filename on the stack */
-  lf.extraline = 0;
-  if (filename == NULL) {
-    lua_pushliteral(L, "=stdin");
-    lf.f = stdin;
-  }
-  else {
-    lua_pushfstring(L, "@%s", filename);
-    lf.f = fopen(filename, "r");
-    if (lf.f == NULL) return errfile(L, "open", fnameindex);
-  }
-  c = getc(lf.f);
-  if (c == '#') {  /* Unix exec. file? */
-    lf.extraline = 1;
-    while ((c = getc(lf.f)) != EOF && c != '\n') ;  /* skip first line */
-    if (c == '\n') c = getc(lf.f);
-  }
-  if (c == LUA_SIGNATURE[0] && filename) {  /* binary file? */
-    lf.f = freopen(filename, "rb", lf.f);  /* reopen in binary mode */
-    if (lf.f == NULL) return errfile(L, "reopen", fnameindex);
-    /* skip eventual `#!...' */
-   while ((c = getc(lf.f)) != EOF && c != LUA_SIGNATURE[0]) ;
-    lf.extraline = 0;
-  }
-  ungetc(c, lf.f);
-  status = lua_load(L, getF, &lf, lua_tostring(L, -1));
-  readstatus = ferror(lf.f);
-  if (filename) fclose(lf.f);  /* close file (even in case of errors) */
-  if (readstatus) {
-    lua_settop(L, fnameindex);  /* ignore results from `lua_load' */
-    return errfile(L, "read", fnameindex);
-  }
-  lua_remove(L, fnameindex);
-  return status;
-}
-
-
-typedef struct LoadS {
-  const char *s;
-  size_t size;
-} LoadS;
-
-
-static const char *getS (lua_State *L, void *ud, size_t *size) {
-  LoadS *ls = (LoadS *)ud;
-  (void)L;
-  if (ls->size == 0) return NULL;
-  *size = ls->size;
-  ls->size = 0;
-  return ls->s;
-}
-
-
-LUALIB_API int luaL_loadbuffer (lua_State *L, const char *buff, size_t size,
-                                const char *name) {
-  LoadS ls;
-  ls.s = buff;
-  ls.size = size;
-  return lua_load(L, getS, &ls, name);
-}
-
-
-LUALIB_API int luaL_loadstring (lua_State *L, const char *s) {
-  return luaL_loadbuffer(L, s, strlen(s), s);
-}
-
-
-
-/* }====================================================== */
 
 
 static void *l_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
