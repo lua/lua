@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.41 2007/04/10 12:17:52 roberto Exp roberto $
+** $Id: ltests.c,v 2.42 2007/04/17 13:19:53 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -996,16 +996,8 @@ static int testC (lua_State *L) {
     }
     else if EQ("getn") {
       int i = getindex;
-      lua_pushinteger(L1, luaL_getn(L1, i));
+      lua_pushinteger(L1, lua_objlen(L1, i));
     }
-#ifndef luaL_setn
-    else if EQ("setn") {
-      int i = getindex;
-      int n = cast_int(lua_tonumber(L1, -1));
-      luaL_setn(L1, i, n);
-      lua_pop(L1, 1);
-    }
-#endif
     else if EQ("throw") {
 #if defined(__cplusplus)
 static struct X { int x; } x;

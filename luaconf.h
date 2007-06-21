@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.87 2007/02/07 17:46:20 roberto Exp roberto $
+** $Id: luaconf.h,v 1.88 2007/05/03 20:49:29 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -321,32 +321,11 @@
 
 
 /*
-@@ LUA_COMPAT_GETN controls compatibility with old getn behavior.
-** CHANGE it (define it) if you want exact compatibility with the
-** behavior of setn/getn in Lua 5.0.
-*/
-#undef LUA_COMPAT_GETN
-
-/*
-@@ LUA_COMPAT_LOADLIB controls compatibility about global loadlib.
-** CHANGE it to undefined as soon as you do not need a global 'loadlib'
-** function (the function is still available as 'package.loadlib').
-*/
-#undef LUA_COMPAT_LOADLIB
-
-/*
 @@ LUA_COMPAT_VARARG controls compatibility with old vararg feature.
 ** CHANGE it to undefined as soon as your programs use only '...' to
 ** access vararg parameters (instead of the old 'arg' table).
 */
 #define LUA_COMPAT_VARARG
-
-/*
-@@ LUA_COMPAT_MOD controls compatibility with old math.mod function.
-** CHANGE it to undefined as soon as your programs use 'math.fmod' or
-** the new '%' operator instead of 'math.mod'.
-*/
-#define LUA_COMPAT_MOD
 
 /*
 @@ LUA_COMPAT_GFIND controls compatibility with old 'string.gfind' name.
@@ -355,13 +334,6 @@
 */
 #define LUA_COMPAT_GFIND
 
-/*
-@@ LUA_COMPAT_OPENLIB controls compatibility with old 'luaL_openlib'
-@* behavior.
-** CHANGE it to undefined as soon as you replace to 'luaL_register'
-** your uses of 'luaL_openlib'
-*/
-#define LUA_COMPAT_OPENLIB
 
 
 

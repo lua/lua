@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.68 2006/08/07 19:01:56 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.69 2007/03/27 12:37:00 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -258,10 +258,6 @@ LUALIB_API int luaopen_math (lua_State *L) {
   lua_setfield(L, -2, "pi");
   lua_pushnumber(L, HUGE_VAL);
   lua_setfield(L, -2, "huge");
-#if defined(LUA_COMPAT_MOD)
-  lua_getfield(L, -1, "fmod");
-  lua_setfield(L, -2, "mod");
-#endif
   return 1;
 }
 
