@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.88 2007/05/03 20:49:29 roberto Exp roberto $
+** $Id: luaconf.h,v 1.89 2007/06/21 13:48:04 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -333,6 +333,14 @@
 ** 'string.gmatch'.
 */
 #define LUA_COMPAT_GFIND
+
+/*
+@@ LUA_COMPAT_DEBUGLIB controls compatibility with preloading
+@* the debug library.
+** CHANGE it to undefined as soon as you add 'require"debug"' everywhere
+** you need the debug library.
+*/
+#define LUA_COMPAT_DEBUGLIB
 
 
 
