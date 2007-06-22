@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.h,v 1.91 2007/06/21 13:48:04 roberto Exp roberto $
+** $Id: lauxlib.h,v 1.92 2007/06/22 15:33:54 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -78,8 +78,8 @@ LUALIB_API const char *(luaL_gsub) (lua_State *L, const char *s, const char *p,
 LUALIB_API const char *(luaL_findtable) (lua_State *L, int idx,
                                          const char *fname, int szhint);
 
-LUALIB_API const char *luaL_traceback (lua_State *L, lua_State *L1,
-                                       const char *msg, int level);
+LUALIB_API void luaL_traceback (lua_State *L, lua_State *L1,
+                                const char *msg, int level);
 
 
 

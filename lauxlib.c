@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.169 2007/06/21 14:09:59 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.170 2007/06/22 15:33:54 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -114,8 +114,8 @@ static int countlevels (lua_State *L) {
 }
 
 
-LUALIB_API const char *luaL_traceback (lua_State *L, lua_State *L1,
-                                       const char *msg, int level) {
+LUALIB_API void luaL_traceback (lua_State *L, lua_State *L1,
+                                const char *msg, int level) {
   lua_Debug ar;
   int top = lua_gettop(L);
   int numlevels = countlevels(L1);
@@ -138,7 +138,6 @@ LUALIB_API const char *luaL_traceback (lua_State *L, lua_State *L1,
     }
   }
   lua_concat(L, lua_gettop(L) - top);
-  return lua_tostring(L, -1);
 }
 
 /* }====================================================== */
