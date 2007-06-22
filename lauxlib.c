@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.168 2007/06/21 13:48:04 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.169 2007/06/21 14:09:59 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -87,6 +87,58 @@ LUALIB_API int luaL_error (lua_State *L, const char *fmt, ...) {
   va_end(argp);
   lua_concat(L, 2);
   return lua_error(L);
+}
+
+
+#define LEVELS1	12	/* size of the first part of the stack */
+#define LEVELS2	10	/* size of the second part of the stack */
+
+
+static void pushfuncname (lua_State *L, lua_Debug *ar) {
+  if (*ar->namewhat != '\0')  /* is there a name? */
+    lua_pushfstring(L, "function " LUA_QS, ar->name);
+  else if (*ar->what == 'm')  /* main? */
+      lua_pushfstring(L, "main chunk");
+  else if (*ar->what == 'C' || *ar->what == 't')
+    lua_pushliteral(L, " ?");  /* C function or tail call */
+  else
+    lua_pushfstring(L, "function <%s:%d>", ar->short_src, ar->linedefined);
+}
+
+
+static int countlevels (lua_State *L) {
+  lua_Debug ar;
+  int level = 1;
+  while (lua_getstack(L, level, &ar)) level++;
+  return level;
+}
+
+
+LUALIB_API const char *luaL_traceback (lua_State *L, lua_State *L1,
+                                       const char *msg, int level) {
+  lua_Debug ar;
+  int top = lua_gettop(L);
+  int numlevels = countlevels(L1);
+  int mark = (numlevels > LEVELS1 + LEVELS2) ? LEVELS1 : 0;
+  if (msg) lua_pushfstring(L, "%s\n", msg);
+  lua_pushliteral(L, "stack traceback:");
+  while (lua_getstack(L1, level++, &ar)) {
+    if (level == mark) {  /* too many levels? */
+      lua_pushliteral(L, "\n\t...");  /* add a '...' */
+      level = numlevels - LEVELS2;  /* and skip to last ones */
+    }
+    else {
+      lua_getinfo(L1, "Sln", &ar);
+      lua_pushfstring(L, "\n\t%s:", ar.short_src);
+      if (ar.currentline > 0)
+        lua_pushfstring(L, "%d:", ar.currentline);
+      lua_pushliteral(L, " in ");
+      pushfuncname(L, &ar);
+      lua_concat(L, lua_gettop(L) - top);
+    }
+  }
+  lua_concat(L, lua_gettop(L) - top);
+  return lua_tostring(L, -1);
 }
 
 /* }====================================================== */

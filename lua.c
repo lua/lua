@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.164 2006/10/10 17:40:17 roberto Exp roberto $
+** $Id: lua.c,v 1.165 2007/04/26 20:39:38 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -73,27 +73,14 @@ static int report (lua_State *L, int status) {
 }
 
 
-static int gettraceback (lua_State *L) {
-  lua_getfield(L, LUA_GLOBALSINDEX, "debug");
-  if (!lua_istable(L, -1)) return 0;
-  lua_getfield(L, -1, "traceback");  /* check 'debug.traceback' */
-  if (!lua_isfunction(L, -1)) return 0;
-  return 1;  /* there is a function 'debug.traceback' */
-}
-
-
 static int traceback (lua_State *L) {
-  if (lua_isnoneornil(L, 1))  /* no error object? */
-    return 1;  /* keep it that way */
-  if (!gettraceback(L))  /* no 'debug.traceback' function? */
-    lua_pushvalue(L, 1);  /* keep original message */
-  else {
-    lua_pushvalue(L, 1);  /* pass error message */
-    lua_pushinteger(L, 2);  /* skip this function and traceback */
-    lua_call(L, 2, 1);  /* call traceback */
+  const char *msg = lua_tostring(L, 1);
+  if (msg)
+    luaL_traceback(L, L, msg, 2);
+  else if (!lua_isnoneornil(L, 1)) {  /* is there an error object? */
+    if (!luaL_callmeta(L, 1, "__tostring"))  /* try its 'tostring' metamethod */
+      lua_pushliteral(L, "(no error message)");
   }
-  if (!lua_isstring(L, -1) && !luaL_callmeta(L, 1, "__tostring"))
-    lua_pushliteral(L, "(no error message)");
   return 1;
 }
 
