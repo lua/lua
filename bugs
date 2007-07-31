@@ -1382,6 +1382,11 @@ patch = [[remove the '#include "lobject.h" and use
 'lua_pushfstring' instead of 'luaO_pushfstring']],
 }
 
+
+
+-----------------------------------------------------------------
+-- Lua 5.1.2
+
 Bug{
 what = [[Lua may close standard files,
 which then may be used by C]],
@@ -1489,6 +1494,29 @@ ltable.c:
 ---
 >   if (luai_numeq(n, 0))  /* avoid problems with -0 */
 >     return gnode(t, 0);
+]],
+}
+
+Bug{
+what = [[Too many variables in an assignment may cause a
+C stack overflow]],
+report = [[Mike Pall, on 07/2007]],
+since = [[5.0]],
+example = [[
+$ ulimit -s 1024       # Reduce C stack to 1MB for quicker results
+$ lua -e 'local s = "a,"; for i=1,18 do s = s..s end print(loadstring("local a "..s.."a=nil", ""))'
+]],
+patch = [[
+lparser.c:
+@@ -938,6 +938,8 @@
+     primaryexp(ls, &nv.v);
+     if (nv.v.k == VLOCAL)
+       check_conflict(ls, lh, &nv.v);
++    luaY_checklimit(ls->fs, nvars, LUAI_MAXCCALLS - ls->L->nCcalls,
++                    "variable names");
+     assignment(ls, &nv, nvars+1);
+   }
+   else {  /* assignment -> `=' explist1 */
 ]],
 }
 

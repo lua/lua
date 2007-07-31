@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.52 2007/03/27 14:11:38 roberto Exp roberto $
+** $Id: lparser.c,v 2.53 2007/05/11 17:28:56 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -73,8 +73,8 @@ static void errorlimit (FuncState *fs, int limit, const char *what) {
   const char *where = (fs->f->linedefined == 0) ?
              "main function" :
              luaO_pushfstring(fs->L, "function at line %d", fs->f->linedefined);
-  msg = luaO_pushfstring(fs->L, "too many %s in %s (limit is %d)",
-                                what, where, limit);
+  msg = luaO_pushfstring(fs->L, "too many %s (limit is %d) in %s",
+                                what, limit, where);
   luaX_lexerror(fs->ls, msg, fs->ls->t.token);
 }
 
@@ -946,6 +946,8 @@ static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
     primaryexp(ls, &nv.v);
     if (nv.v.k == VLOCAL)
       check_conflict(ls, lh, &nv.v);
+    luaY_checklimit(ls->fs, nvars, LUAI_MAXCCALLS - G(ls->L)->nCcalls,
+                    "variable names");
     assignment(ls, &nv, nvars+1);
   }
   else {  /* assignment -> `=' explist1 */
