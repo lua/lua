@@ -1504,7 +1504,7 @@ report = [[Mike Pall, on 07/2007]],
 since = [[5.0]],
 example = [[
 $ ulimit -s 1024       # Reduce C stack to 1MB for quicker results
-$ lua -e 'local s = "a,"; for i=1,18 do s = s..s end print(loadstring("local a "..s.."a=nil", ""))'
+$ lua -e 'local s = "a,"; for i=1,18 do s = s..s end print(loadstring("local a;"..s.."a=nil", ""))'
 ]],
 patch = [[
 lparser.c:
