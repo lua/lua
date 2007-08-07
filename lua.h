@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.224 2007/02/07 17:54:52 roberto Exp roberto $
+** $Id: lua.h,v 1.225 2007/04/17 13:19:53 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -19,7 +19,7 @@
 #define LUA_VERSION	"Lua 5.2"
 #define LUA_RELEASE	"Lua 5.2.0"
 #define LUA_VERSION_NUM	502
-#define LUA_COPYRIGHT	"Copyright (C) 1994-2007 Lua.org, PUC-Rio"
+#define LUA_COPYRIGHT	LUA_RELEASE "  Copyright (C) 1994-2007 Lua.org, PUC-Rio"
 #define LUA_AUTHORS	"R. Ierusalimschy, L. H. de Figueiredo, W. Celes"
 
 
