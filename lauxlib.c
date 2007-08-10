@@ -1,11 +1,10 @@
 /*
-** $Id: lauxlib.c,v 1.170 2007/06/22 15:33:54 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.171 2007/06/22 15:39:34 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
 
 
-#include <ctype.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
