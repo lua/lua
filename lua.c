@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.166 2007/06/22 15:33:54 roberto Exp roberto $
+** $Id: lua.c,v 1.167 2007/08/07 16:53:40 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -76,7 +76,7 @@ static int report (lua_State *L, int status) {
 static int traceback (lua_State *L) {
   const char *msg = lua_tostring(L, 1);
   if (msg)
-    luaL_traceback(L, L, msg, 2);
+    luaL_traceback(L, L, msg, 1);
   else if (!lua_isnoneornil(L, 1)) {  /* is there an error object? */
     if (!luaL_callmeta(L, 1, "__tostring"))  /* try its 'tostring' metamethod */
       lua_pushliteral(L, "(no error message)");
@@ -141,7 +141,7 @@ static int dostring (lua_State *L, const char *s, const char *name) {
 static int dolibrary (lua_State *L, const char *name) {
   lua_getglobal(L, "require");
   lua_pushstring(L, name);
-  return report(L, lua_pcall(L, 1, 0, 0));
+  return report(L, docall(L, 1, 1));
 }
 
 

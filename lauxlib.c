@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.171 2007/06/22 15:39:34 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.172 2007/08/10 12:56:02 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -99,7 +99,7 @@ static void pushfuncname (lua_State *L, lua_Debug *ar) {
   else if (*ar->what == 'm')  /* main? */
       lua_pushfstring(L, "main chunk");
   else if (*ar->what == 'C' || *ar->what == 't')
-    lua_pushliteral(L, " ?");  /* C function or tail call */
+    lua_pushliteral(L, "?");  /* C function or tail call */
   else
     lua_pushfstring(L, "function <%s:%d>", ar->short_src, ar->linedefined);
 }
