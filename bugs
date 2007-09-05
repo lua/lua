@@ -1521,6 +1521,24 @@ lparser.c:
 }
 
 Bug{
+what = [[An error in a module loaded through the '-l' option
+shows no traceback]],
+report = [[David Manura, on 08/2007]],
+since = [[5.1]],
+example = [[lua -ltemp    (assuming temp.lua has an error)]],
+patch = [[
+lua.c:
+@@ -144,7 +144,7 @@
+ static int dolibrary (lua_State *L, const char *name) {
+   lua_getglobal(L, "require");
+   lua_pushstring(L, name);
+-  return report(L, lua_pcall(L, 1, 0, 0));
++  return report(L, docall(L, 1, 1));
+ }
+]],
+}
+
+Bug{
 what = [[ ]],
 report = [[ , on ]],
 since = [[i ]],
