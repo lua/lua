@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.71 2007/03/26 15:56:23 roberto Exp roberto $
+** $Id: lvm.c,v 2.72 2007/06/19 19:48:15 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -310,6 +310,33 @@ void luaV_concat (lua_State *L, int total, int last) {
 }
 
 
+static void objlen (lua_State *L, StkId ra, const TValue *rb) {
+  const TValue *tm;
+  switch (ttype(rb)) {
+    case LUA_TTABLE: {
+      Table *h = hvalue(rb);
+      tm = fasttm(L, h->metatable, TM_LEN);
+      if (tm) break;  /* metamethod? break switch to call it */
+      setnvalue(ra, cast_num(luaH_getn(h)));  /* else primitive len */
+      return;
+    }
+    case LUA_TSTRING: {
+      tm = fasttm(L, G(L)->mt[LUA_TSTRING], TM_LEN);
+      if (tm) break;  /* metamethod? break switch to call it */
+      setnvalue(ra, cast_num(tsvalue(rb)->len));
+      return;
+    }
+    default: {  /* try metamethod */
+      tm = luaT_gettmbyobj(L, rb, TM_LEN);
+      if (ttisnil(tm))  /* no metamethod? */
+        luaG_typeerror(L, rb, "get length of");
+      break;
+    }
+  }
+  callTMres(L, ra, tm, rb, luaO_nilobject);
+}
+
+
 static void Arith (lua_State *L, StkId ra, const TValue *rb,
                    const TValue *rc, TMS op) {
   TValue tempb, tempc;
@@ -509,23 +536,7 @@ void luaV_execute (lua_State *L, int nexeccalls) {
         continue;
       }
       case OP_LEN: {
-        const TValue *rb = RB(i);
-        switch (ttype(rb)) {
-          case LUA_TTABLE: {
-            setnvalue(ra, cast_num(luaH_getn(hvalue(rb))));
-            break;
-          }
-          case LUA_TSTRING: {
-            setnvalue(ra, cast_num(tsvalue(rb)->len));
-            break;
-          }
-          default: {  /* try metamethod */
-            Protect(
-              if (!call_binTM(L, rb, rb, ra, TM_LEN))
-                luaG_typeerror(L, rb, "get length of");
-            )
-          }
-        }
+        Protect(objlen(L, ra, RB(i)));
         continue;
       }
       case OP_CONCAT: {
