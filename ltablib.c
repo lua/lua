@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.39 2007/06/21 13:48:04 roberto Exp roberto $
+** $Id: ltablib.c,v 1.40 2007/06/21 13:50:53 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -133,7 +133,9 @@ static int tconcat (lua_State *L) {
   luaL_buffinit(L, &b);
   for (; i <= last; i++) {
     lua_rawgeti(L, 1, i);
-    luaL_argcheck(L, lua_isstring(L, -1), 1, "table contains non-strings");
+    if (!lua_isstring(L, -1))
+      return luaL_error(L, "invalid value (%s) at index %d in table for "
+                            LUA_QL("concat"), luaL_typename(L, -1), i);
     luaL_addvalue(&b);
     if (i != last)
       luaL_addlstring(&b, sep, lsep);
