@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.90 2007/06/22 16:59:11 roberto Exp roberto $
+** $Id: luaconf.h,v 1.91 2007/08/30 16:13:13 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -24,7 +24,7 @@
 ** CHANGE it (define it) if you want Lua to avoid the use of any
 ** non-ansi feature or library.
 */
-#if defined(__STRICT_ANSI__)
+#if !defined(LUA_ANSI) && defined(__STRICT_ANSI__)
 #define LUA_ANSI
 #endif
 
