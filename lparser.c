@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.53 2007/05/11 17:28:56 roberto Exp roberto $
+** $Id: lparser.c,v 2.54 2007/07/31 19:39:52 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -175,8 +175,7 @@ static void adjustlocalvars (LexState *ls, int nvars) {
 }
 
 
-static void removevars (LexState *ls, int tolevel) {
-  FuncState *fs = ls->fs;
+static void removevars (FuncState *fs, int tolevel) {
   while (fs->nactvar > tolevel)
     getlocvar(fs, --fs->nactvar).endpc = fs->pc;
 }
@@ -299,7 +298,7 @@ static void enterblock (FuncState *fs, BlockCnt *bl, lu_byte isbreakable) {
 static void leaveblock (FuncState *fs) {
   BlockCnt *bl = fs->bl;
   fs->bl = bl->previous;
-  removevars(fs->ls, bl->nactvar);
+  removevars(fs, bl->nactvar);
   if (bl->upval)
     luaK_codeABC(fs, OP_CLOSE, bl->nactvar, 0, 0);
   /* a block either controls scope or breaks (never both) */
@@ -362,7 +361,7 @@ static void close_func (LexState *ls) {
   lua_State *L = ls->L;
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
-  removevars(ls, 0);
+  removevars(fs, 0);
   luaK_ret(fs, 0, 0);  /* final return */
   luaM_reallocvector(L, f->code, f->sizecode, fs->pc, Instruction);
   f->sizecode = fs->pc;
