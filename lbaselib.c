@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.198 2007/06/21 13:48:04 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.199 2007/10/17 17:26:39 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -209,7 +209,7 @@ static int luaB_collectgarbage (lua_State *L) {
       return 1;
     }
     default: {
-      lua_pushnumber(L, res);
+      lua_pushinteger(L, res);
       return 1;
     }
   }
