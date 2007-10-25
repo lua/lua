@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.54 2007/07/31 19:39:52 roberto Exp roberto $
+** $Id: lparser.c,v 2.55 2007/10/18 11:01:52 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -75,7 +75,7 @@ static void errorlimit (FuncState *fs, int limit, const char *what) {
              luaO_pushfstring(fs->L, "function at line %d", fs->f->linedefined);
   msg = luaO_pushfstring(fs->L, "too many %s (limit is %d) in %s",
                                 what, limit, where);
-  luaX_lexerror(fs->ls, msg, fs->ls->t.token);
+  luaX_syntaxerror(fs->ls, msg);
 }
 
 
