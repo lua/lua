@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.39 2006/07/11 15:53:29 roberto Exp roberto $
+** $Id: lgc.c,v 2.40 2006/09/11 14:07:24 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -44,10 +44,6 @@
 #define markfinalized(u)	l_setbit((u)->marked, FINALIZEDBIT)
 
 
-#define KEYWEAK         bitmask(KEYWEAKBIT)
-#define VALUEWEAK       bitmask(VALUEWEAKBIT)
-
-
 
 #define markvalue(g,o) { checkconsistency(o); \
   if (iscollectable(o) && iswhite(gcvalue(o))) reallymarkobject(g,gcvalue(o)); }
@@ -57,6 +53,12 @@
 
 
 #define setthreshold(g)  (g->GCthreshold = (g->estimate/100) * g->gcpause)
+
+
+static void linktable (Table *h, GCObject **p) {
+  h->gclist = *p;
+  *p = obj2gco(h);
+}
 
 
 static void removeentry (Node *n) {
@@ -93,8 +95,7 @@ static void reallymarkobject (global_State *g, GCObject *o) {
       break;
     }
     case LUA_TTABLE: {
-      gco2h(o)->gclist = g->gray;
-      g->gray = o;
+      linktable(gco2h(o), &g->gray);
       break;
     }
     case LUA_TTHREAD: {
@@ -155,30 +156,9 @@ size_t luaC_separateudata (lua_State *L, int all) {
 }
 
 
-static int traversetable (global_State *g, Table *h) {
+static void traverseweakvalue (global_State *g, Table *h) {
   int i;
-  int weakkey = 0;
-  int weakvalue = 0;
-  const TValue *mode;
-  markobject(g, h->metatable);
-  mode = gfasttm(g, h->metatable, TM_MODE);
-  if (mode && ttisstring(mode)) {  /* is there a weak mode? */
-    weakkey = (strchr(svalue(mode), 'k') != NULL);
-    weakvalue = (strchr(svalue(mode), 'v') != NULL);
-    if (weakkey || weakvalue) {  /* is really weak? */
-      h->marked &= ~(KEYWEAK | VALUEWEAK);  /* clear bits */
-      h->marked |= cast_byte((weakkey << KEYWEAKBIT) |
-                             (weakvalue << VALUEWEAKBIT));
-      h->gclist = g->weak;  /* must be cleared after GC, ... */
-      g->weak = obj2gco(h);  /* ... so put in the appropriate list */
-    }
-  }
-  if (weakkey && weakvalue) return 1;
-  if (!weakvalue) {
-    i = h->sizearray;
-    while (i--)
-      markvalue(g, &h->array[i]);
-  }
+  linktable(h, &g->weakvalue);
   i = sizenode(h);
   while (i--) {
     Node *n = gnode(h, i);
@@ -187,11 +167,72 @@ static int traversetable (global_State *g, Table *h) {
       removeentry(n);  /* remove empty entries */
     else {
       lua_assert(!ttisnil(gkey(n)));
-      if (!weakkey) markvalue(g, gkey(n));
-      if (!weakvalue) markvalue(g, gval(n));
+      markvalue(g, gkey(n));
     }
   }
-  return weakkey || weakvalue;
+}
+
+
+static void traverseephemeron (global_State *g, Table *h) {
+  int i;
+  linktable(h, &g->weakkey);
+  i = h->sizearray;
+  while (i--)  /* mark array part (numeric keys are 'strong') */
+    markvalue(g, &h->array[i]);
+  i = sizenode(h);
+  while (i--) {
+    Node *n = gnode(h, i);
+    lua_assert(ttype(gkey(n)) != LUA_TDEADKEY || ttisnil(gval(n)));
+    if (ttisnil(gval(n)))
+      removeentry(n);  /* remove empty entries */
+    else {
+      lua_assert(!ttisnil(gkey(n)));
+      markvalue(g, gval(n));
+    }
+  }
+}
+
+
+static void traversestrongtable (global_State *g, Table *h) {
+  int i;
+  i = h->sizearray;
+  while (i--)
+    markvalue(g, &h->array[i]);
+  i = sizenode(h);
+  while (i--) {
+    Node *n = gnode(h, i);
+    lua_assert(ttype(gkey(n)) != LUA_TDEADKEY || ttisnil(gval(n)));
+    if (ttisnil(gval(n)))
+      removeentry(n);  /* remove empty entries */
+    else {
+      lua_assert(!ttisnil(gkey(n)));
+      markvalue(g, gkey(n));
+      markvalue(g, gval(n));
+    }
+  }
+}
+
+
+static void traversetable (global_State *g, Table *h) {
+  const TValue *mode = gfasttm(g, h->metatable, TM_MODE);
+  markobject(g, h->metatable);
+  if (mode && ttisstring(mode)) {  /* is there a weak mode? */
+    int weakkey = (strchr(svalue(mode), 'k') != NULL);
+    int weakvalue = (strchr(svalue(mode), 'v') != NULL);
+    if (weakkey || weakvalue) {  /* is really weak? */
+      black2gray(obj2gco(h));  /* keep table gray */
+      if (!weakkey)  /* strong keys? */
+        traverseweakvalue(g, h);
+      else if (!weakvalue)  /* strong values? */
+        traverseephemeron(g, h);
+      else {
+        lua_assert(weakkey && weakvalue);  /* nothing to traverse now */
+        linktable(h, &g->weakkeyvalue);
+      }
+      return;
+    }  /* else go through */
+  }
+  traversestrongtable(g, h);
 }
 
 
@@ -282,8 +323,7 @@ static l_mem propagatemark (global_State *g) {
     case LUA_TTABLE: {
       Table *h = gco2h(o);
       g->gray = h->gclist;
-      if (traversetable(g, h))  /* table is weak? */
-        black2gray(o);  /* keep it gray */
+      traversetable(g, h);
       return sizeof(Table) + sizeof(TValue) * h->sizearray +
                              sizeof(Node) * sizenode(h);
     }
@@ -352,14 +392,10 @@ static void cleartable (GCObject *l) {
   while (l) {
     Table *h = gco2h(l);
     int i = h->sizearray;
-    lua_assert(testbit(h->marked, VALUEWEAKBIT) ||
-               testbit(h->marked, KEYWEAKBIT));
-    if (testbit(h->marked, VALUEWEAKBIT)) {
-      while (i--) {
-        TValue *o = &h->array[i];
-        if (iscleared(o, 0))  /* value was collected? */
-          setnilvalue(o);  /* remove value */
-      }
+    while (i--) {
+      TValue *o = &h->array[i];
+      if (iscleared(o, 0))  /* value was collected? */
+        setnilvalue(o);  /* remove value */
     }
     i = sizenode(h);
     while (i--) {
@@ -516,7 +552,7 @@ static void markroot (lua_State *L) {
   global_State *g = G(L);
   g->gray = NULL;
   g->grayagain = NULL;
-  g->weak = NULL;
+  g->weakvalue = g->weakkey = g->weakkeyvalue = NULL;
   markobject(g, g->mainthread);
   /* make global table be traversed before main stack */
   markvalue(g, gt(g->mainthread));
@@ -543,12 +579,16 @@ static void atomic (lua_State *L) {
   remarkupvals(g);
   /* traverse objects cautch by write barrier and by 'remarkupvals' */
   propagateall(g);
-  /* remark weak tables */
-  g->gray = g->weak;
-  g->weak = NULL;
+  /* remark value-weak tables */
+  g->gray = g->weakvalue;
+  g->weakvalue = NULL;
   lua_assert(!iswhite(obj2gco(g->mainthread)));
   markobject(g, L);  /* mark running thread */
   markmt(g);  /* mark basic metatables (again) */
+  propagateall(g);
+  /* remark key-weak tables */
+  g->gray = g->weakkey;
+  g->weakkey = NULL;
   propagateall(g);
   /* remark gray again */
   g->gray = g->grayagain;
@@ -557,7 +597,10 @@ static void atomic (lua_State *L) {
   udsize = luaC_separateudata(L, 0);  /* separate userdata to be finalized */
   marktmu(g);  /* mark `preserved' userdata */
   udsize += propagateall(g);  /* remark, to propagate `preserveness' */
-  cleartable(g->weak);  /* remove collected objects from weak tables */
+  /* remove collected objects from weak tables */
+  cleartable(g->weakvalue);
+  cleartable(g->weakkey);
+  cleartable(g->weakkeyvalue);
   /* flip current white */
   g->currentwhite = cast_byte(otherwhite(g));
   g->sweepstrgc = 0;
@@ -656,7 +699,7 @@ void luaC_fullgc (lua_State *L, int isemergency) {
     /* reset other collector lists */
     g->gray = NULL;
     g->grayagain = NULL;
-    g->weak = NULL;
+    g->weakvalue = g->weakkey = g->weakkeyvalue = NULL;
     g->gcstate = GCSsweepstring;
   }
   lua_assert(g->gcstate != GCSpause && g->gcstate != GCSpropagate);

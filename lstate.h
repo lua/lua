@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.27 2006/09/19 13:57:50 roberto Exp roberto $
+** $Id: lstate.h,v 2.28 2007/02/07 17:48:52 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -78,7 +78,9 @@ typedef struct global_State {
   GCObject **sweepgc;  /* position of sweep in `rootgc' */
   GCObject *gray;  /* list of gray objects */
   GCObject *grayagain;  /* list of objects to be traversed atomically */
-  GCObject *weak;  /* list of weak tables (to be cleared) */
+  GCObject *weakvalue;  /* list of value-weak tables */
+  GCObject *weakkey;  /* list of key-weak tables */
+  GCObject *weakkeyvalue;  /* list of all-weak tables */
   GCObject *tmudata;  /* last element of list of userdata to be GC */
   Mbuffer buff;  /* temporary buffer for string concatentation */
   lu_mem GCthreshold;

@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.15 2005/08/24 16:15:49 roberto Exp roberto $
+** $Id: lgc.h,v 2.16 2006/07/11 15:53:29 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -44,8 +44,6 @@
 ** bit 1 - object is white (type 1)
 ** bit 2 - object is black
 ** bit 3 - for userdata: has been finalized
-** bit 3 - for tables: has weak keys
-** bit 4 - for tables: has weak values
 ** bit 5 - object is fixed (should not be collected)
 ** bit 6 - object is "super" fixed (only the main thread)
 */
@@ -55,8 +53,6 @@
 #define WHITE1BIT	1
 #define BLACKBIT	2
 #define FINALIZEDBIT	3
-#define KEYWEAKBIT	3
-#define VALUEWEAKBIT	4
 #define FIXEDBIT	5
 #define SFIXEDBIT	6
 #define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)
