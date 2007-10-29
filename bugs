@@ -1539,6 +1539,37 @@ lua.c:
 }
 
 Bug{
+what = [['gsub' may go wild when wrongly called without its third
+argument and with a large subject]],
+report = [[Florian Berger, on 10/2007]],
+since = [[5.1]],
+example = [[
+x = string.rep('a', 10000) .. string.rep('b', 10000)
+print(#string.gsub(x, 'b'))
+]],
+patch = [[
+lstrlib.c:
+@@ -631,6 +631,2 @@
+     }
+-    default: {
+-      luaL_argerror(L, 3, "string/function/table expected"); 
+-      return;
+-    }
+   }
+@@ -650,2 +646,3 @@
+   const char *p = luaL_checkstring(L, 2);
++  int  tr = lua_type(L, 3);
+   int max_s = luaL_optint(L, 4, srcl+1);
+@@ -655,2 +652,5 @@
+   luaL_Buffer b;
++  luaL_argcheck(L, tr == LUA_TNUMBER || tr == LUA_TSTRING ||
++                   tr == LUA_TFUNCTION || tr == LUA_TTABLE, 3,
++                      "string/function/table expected");
+   luaL_buffinit(L, &b);
+]],
+}
+
+Bug{
 what = [[ ]],
 report = [[ , on ]],
 since = [[i ]],
