@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.40 2006/10/10 17:40:17 roberto Exp roberto $
+** $Id: lstate.c,v 2.41 2007/10/29 16:51:20 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -182,9 +182,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->sweepgc = &g->rootgc;
   g->gray = NULL;
   g->grayagain = NULL;
-  g->weakvalue = NULL;
-  g->weakkey = NULL;
-  g->weakkeyvalue = NULL;
+  g->weak = g->ephemeron = g->allweak = NULL;
   g->tmudata = NULL;
   g->totalbytes = sizeof(LG);
   g->gcpause = LUAI_GCPAUSE;
