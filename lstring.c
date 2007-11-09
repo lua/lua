@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.8 2005/12/22 16:19:56 roberto Exp roberto $
+** $Id: lstring.c,v 2.9 2006/07/11 15:53:29 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -82,7 +82,8 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
        o != NULL;
        o = o->gch.next) {
     TString *ts = rawgco2ts(o);
-    if (ts->tsv.len == l && (memcmp(str, getstr(ts), l) == 0)) {
+    if (h == ts->tsv.hash && ts->tsv.len == l &&
+                             (memcmp(str, getstr(ts), l) == 0)) {
       /* string may be dead */
       if (isdead(G(L), o)) changewhite(o);
       return ts;
