@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.24 2006/11/22 11:02:03 roberto Exp roberto $
+** $Id: lobject.c,v 2.25 2007/04/10 12:18:17 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -161,36 +161,46 @@ const char *luaO_pushfstring (lua_State *L, const char *fmt, ...) {
 }
 
 
+
+#define LL(x)	(sizeof(x) - 1)
+#define RETS	"..."
+#define PRE	"[string \""
+#define POS	"\"]"
+
+#define addstr(a,b,l)	( memcpy(a,b,l), a += (l) )
+
 void luaO_chunkid (char *out, const char *source, size_t bufflen) {
-  if (*source == '=') {
-    strncpy(out, source+1, bufflen);  /* remove first char */
-    out[bufflen-1] = '\0';  /* ensures null termination */
+  size_t l = strlen(source);
+  if (*source == '=') {  /* 'literal' source */
+    if (l <= bufflen)  /* small enough? */
+      memcpy(out, source + 1, l);
+    else {  /* truncate it */
+      addstr(out, source + 1, bufflen - 1);
+      *out = '\0';
+    }
   }
-  else {  /* out = "source", or "...source" */
-    if (*source == '@') {
-      size_t l;
-      source++;  /* skip the `@' */
-      bufflen -= sizeof(" '...' ");
-      l = strlen(source);
-      strcpy(out, "");
-      if (l > bufflen) {
-        source += (l-bufflen);  /* get last part of file name */
-        strcat(out, "...");
-      }
-      strcat(out, source);
+  else if (*source == '@') {  /* file name */
+    if (l <= bufflen)  /* small enough? */
+      memcpy(out, source + 1, l);
+    else {  /* add '...' before rest of name */
+      addstr(out, RETS, LL(RETS));
+      bufflen -= LL(RETS);
+      memcpy(out, source + 1 + l - bufflen, bufflen);
     }
-    else {  /* out = [string "string"] */
-      size_t len = strcspn(source, "\n\r");  /* stop at first newline */
-      bufflen -= sizeof(" [string \"...\"] ");
-      if (len > bufflen) len = bufflen;
-      strcpy(out, "[string \"");
-      if (source[len] != '\0') {  /* must truncate? */
-        strncat(out, source, len);
-        strcat(out, "...");
-      }
-      else
-        strcat(out, source);
-      strcat(out, "\"]");
+  }
+  else {  /* string; format as [string "source"] */
+    const char *nl = strchr(source, '\n');  /* find first new line (if any) */
+    addstr(out, PRE, LL(PRE));  /* add prefix */
+    bufflen -= LL(PRE RETS POS);  /* save space for prefix+sufix */
+    if (l < bufflen && nl == NULL) {  /* small one-line source? */
+      addstr(out, source, l);  /* keep it */
     }
+    else {
+      if (nl != NULL) l = nl - source;  /* stop at first newline */
+      if (l > bufflen) l = bufflen;
+      addstr(out, source, l);
+      addstr(out, RETS, LL(RETS));
+    }
+    memcpy(out, POS, LL(POS) + 1);
   }
 }
