@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.137 2007/10/25 19:30:36 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.138 2007/10/29 15:51:10 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -732,7 +732,7 @@ static const char *scanformat (lua_State *L, const char *strfrmt, char *form) {
   if (isdigit(uchar(*p)))
     luaL_error(L, "invalid format (width or precision too long)");
   *(form++) = '%';
-  strncpy(form, strfrmt, p - strfrmt + 1);
+  memcpy(form, strfrmt, p - strfrmt + 1);
   form += p - strfrmt + 1;
   *form = '\0';
   return p;
