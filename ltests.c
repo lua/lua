@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.42 2007/04/17 13:19:53 roberto Exp roberto $
+** $Id: ltests.c,v 2.43 2007/06/21 13:48:04 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -37,7 +37,7 @@
 #if defined(LUA_DEBUG)
 
 
-int Trick = 0;
+int l_Trick = 0;
 
 
 static lua_State *lua_state = NULL;
@@ -88,7 +88,7 @@ static void pushobject (lua_State *L, const TValue *o) {
 #endif
 
 
-Memcontrol memcontrol = {0L, 0L, 0L, 0L};
+Memcontrol l_memcontrol = {0L, 0L, 0L, 0L};
 
 
 static void *checkblock (void *block, size_t size) {
@@ -493,20 +493,20 @@ static int get_limits (lua_State *L) {
 
 static int mem_query (lua_State *L) {
   if (lua_isnone(L, 1)) {
-    lua_pushinteger(L, memcontrol.total);
-    lua_pushinteger(L, memcontrol.numblocks);
-    lua_pushinteger(L, memcontrol.maxmem);
+    lua_pushinteger(L, l_memcontrol.total);
+    lua_pushinteger(L, l_memcontrol.numblocks);
+    lua_pushinteger(L, l_memcontrol.maxmem);
     return 3;
   }
   else {
-    memcontrol.memlimit = luaL_checkint(L, 1);
+    l_memcontrol.memlimit = luaL_checkint(L, 1);
     return 0;
   }
 }
 
 
 static int settrick (lua_State *L) {
-  Trick = lua_tointeger(L, 1);
+  l_Trick = lua_tointeger(L, 1);
   return 0;
 }
 
@@ -1120,8 +1120,8 @@ static const struct luaL_Reg tests_funcs[] = {
 
 
 static void checkfinalmem (void) {
-  lua_assert(memcontrol.numblocks == 0);
-  lua_assert(memcontrol.total == 0);
+  lua_assert(l_memcontrol.numblocks == 0);
+  lua_assert(l_memcontrol.total == 0);
 }
 
 
@@ -1129,7 +1129,7 @@ int luaB_opentests (lua_State *L) {
   void *ud;
   atexit(checkfinalmem);
   lua_assert(lua_getallocf(L, &ud) == debug_realloc);
-  lua_assert(ud == cast(void *, &memcontrol));
+  lua_assert(ud == cast(void *, &l_memcontrol));
   lua_setallocf(L, lua_getallocf(L, NULL), ud);
   lua_state = L;  /* keep first state to be opened */
   luaL_register(L, "T", tests_funcs);
