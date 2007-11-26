@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.91 2007/08/30 16:13:13 roberto Exp roberto $
+** $Id: luaconf.h,v 1.92 2007/09/14 13:26:03 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -273,8 +273,7 @@
 @* the standard input.
 @@ lua_saveline defines how to "save" a read line in a "history".
 @@ lua_freeline defines how to free a line read by lua_readline.
-** CHANGE them if you want to improve this functionality (e.g., by using
-** GNU readline and history facilities).
+** CHANGE them if you want to improve/adapt this functionality.
 */
 #if defined(LUA_USE_READLINE)
 #include <stdio.h>
