@@ -1570,6 +1570,31 @@ lstrlib.c:
 }
 
 Bug{
+what = [[table.remove removes last element of a table when given
+an out-of-bound index]],
+report = [[Patrick Donnelly, on 11/2007]],
+since = [[at least 5.0]],
+example = [[
+a = {1,2,3}
+table.remove(a, 4)
+print(a[3])   --> nil   (should be 3)
+]],
+patch = [[
+ltablib.c:
+@@ -118,7 +118,8 @@
+ static int tremove (lua_State *L) {
+   int e = aux_getn(L, 1);
+   int pos = luaL_optint(L, 2, e);
+-  if (e == 0) return 0;  /* table is `empty' */
++  if (!(1 <= pos && pos <= e))  /* position is outside bounds? */
++   return 0;  /* nothing to remove */
+   luaL_setn(L, 1, e - 1);  /* t.n = n-1 */
+   lua_rawgeti(L, 1, pos);  /* result = t[pos] */
+   for ( ;pos<e; pos++) {
+]],
+}
+
+Bug{
 what = [[ ]],
 report = [[ , on ]],
 since = [[i ]],

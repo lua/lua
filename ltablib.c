@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.40 2007/06/21 13:50:53 roberto Exp roberto $
+** $Id: ltablib.c,v 1.41 2007/09/12 20:53:24 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -110,7 +110,8 @@ static int tinsert (lua_State *L) {
 static int tremove (lua_State *L) {
   int e = aux_getn(L, 1);
   int pos = luaL_optint(L, 2, e);
-  if (e == 0) return 0;  /* table is `empty' */
+  if (!(1 <= pos && pos <= e))  /* position is outside bounds? */
+    return 0;  /* nothing to remove */
   lua_rawgeti(L, 1, pos);  /* result = t[pos] */
   for ( ;pos<e; pos++) {
     lua_rawgeti(L, 1, pos+1);
