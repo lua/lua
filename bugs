@@ -1595,6 +1595,27 @@ ltablib.c:
 }
 
 Bug{
+what = [[lua_setfenv may crash if called over an invalid object]],
+report = [[Mike Pall, on 11/2007]],
+since = [[5.1]],
+example = [[
+> debug.setfenv(3, {})
+]],
+patch = [[
+lapi.c:
+@@ -749,7 +749,7 @@
+       res = 0;
+       break;
+   }
+-  luaC_objbarrier(L, gcvalue(o), hvalue(L->top - 1));
++  if (res) luaC_objbarrier(L, gcvalue(o), hvalue(L->top - 1));
+   L->top--;
+   lua_unlock(L);
+   return res;
+]],
+}
+
+Bug{
 what = [[ ]],
 report = [[ , on ]],
 since = [[i ]],

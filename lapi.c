@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.60 2007/04/17 13:19:53 roberto Exp roberto $
+** $Id: lapi.c,v 2.61 2007/08/07 16:53:40 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -733,7 +733,7 @@ LUA_API int lua_setfenv (lua_State *L, int idx) {
       res = 0;
       break;
   }
-  luaC_objbarrier(L, gcvalue(o), hvalue(L->top - 1));
+  if (res) luaC_objbarrier(L, gcvalue(o), hvalue(L->top - 1));
   L->top--;
   lua_unlock(L);
   return res;
