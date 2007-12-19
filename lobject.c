@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.c,v 2.25 2007/04/10 12:18:17 roberto Exp roberto $
+** $Id: lobject.c,v 2.26 2007/11/09 18:54:25 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -15,6 +15,7 @@
 
 #include "lua.h"
 
+#include "ldebug.h"
 #include "ldo.h"
 #include "lmem.h"
 #include "lobject.h"
@@ -133,11 +134,9 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
         break;
       }
       default: {
-        char buff[3];
-        buff[0] = '%';
-        buff[1] = *(e+1);
-        buff[2] = '\0';
-        pushstr(L, buff);
+        luaG_runerror(L,
+            "invalid option " LUA_QL("%%%c") " to " LUA_QL("lua_pushfstring"),
+            *(e + 1));
         break;
       }
     }
