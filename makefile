@@ -12,20 +12,22 @@ CWARNS= -pedantic -Waggregate-return -Wcast-align \
 # -DEXTERNMEMCHECK -DHARDSTACKTESTS -DHARDMEMTESTS
 # -g -DLUA_USER_H='"ltests.h"'
 # -fomit-frame-pointer #-pg -malign-double
-TESTS= -g -DLUA_USER_H='"ltests.h"'
+# TESTS= -g -DLUA_USER_H='"ltests.h"'
 
 LOCAL = $(TESTS) $(CWARNS)
-
-
-CC= gcc
-CFLAGS= -Wall $(MYCFLAGS) -O2
-AR= ar rcu
-RANLIB= ranlib
-RM= rm -f
 
 MYCFLAGS= $(LOCAL)
 MYLDFLAGS=
 MYLIBS=
+
+
+CC= gcc
+CFLAGS= -Wall $(MYCFLAGS) -O2
+# CC= ~lhf/sunstudio12/bin/cc
+# CFLAGS= -xO5 -v -Xc -native -xstrconst
+AR= ar rcu
+RANLIB= ranlib
+RM= rm -f
 
 
 # enable Linux goodies
