@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.92 2007/09/14 13:26:03 roberto Exp roberto $
+** $Id: luaconf.h,v 1.93 2007/11/26 16:56:11 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -389,15 +389,11 @@
 */
 #if LUAI_BITSINT >= 32
 #define LUAI_UINT32	unsigned int
-#define LUAI_INT32	int
-#define LUAI_MAXINT32	INT_MAX
 #define LUAI_UMEM	size_t
 #define LUAI_MEM	ptrdiff_t
 #else
 /* 16-bit ints */
 #define LUAI_UINT32	unsigned long
-#define LUAI_INT32	long
-#define LUAI_MAXINT32	LONG_MAX
 #define LUAI_UMEM	unsigned long
 #define LUAI_MEM	long
 #endif
@@ -419,7 +415,7 @@
 ** functions. This limit is arbitrary; its only purpose is to stop C
 ** functions to consume unlimited stack space.
 */
-#define LUAI_MAXCSTACK	2048
+#define LUAI_MAXCSTACK	((int)((INT_MAX / (4*sizeof(LUA_NUMBER))) & 0xffff))
 
 
 
