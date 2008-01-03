@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.200 2007/10/25 19:31:05 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.201 2007/11/28 18:25:17 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -405,7 +405,7 @@ static int luaB_xpcall (lua_State *L) {
 
 static int luaB_tostring (lua_State *L) {
   luaL_checkany(L, 1);
-  luaL_tostring(L, 1);
+  luaL_tolstring(L, 1, NULL);
   return 1;
 }
 

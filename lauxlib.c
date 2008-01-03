@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.173 2007/09/05 17:17:39 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.174 2007/09/14 13:26:28 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -550,23 +550,28 @@ LUALIB_API int luaL_callmeta (lua_State *L, int obj, const char *event) {
 }
 
 
-LUALIB_API const char *luaL_tostring (lua_State *L, int idx) {
+LUALIB_API const char *luaL_tolstring (lua_State *L, int idx, size_t *len) {
   if (!luaL_callmeta(L, idx, "__tostring")) {  /* no metafield? */
     switch (lua_type(L, idx)) {
       case LUA_TNUMBER:
-        return lua_pushstring(L, lua_tostring(L, idx));
+        lua_pushstring(L, lua_tostring(L, idx));
+        break;
       case LUA_TSTRING:
         lua_pushvalue(L, idx);
         break;
       case LUA_TBOOLEAN:
-        return lua_pushstring(L, (lua_toboolean(L, idx) ? "true" : "false"));
+        lua_pushstring(L, (lua_toboolean(L, idx) ? "true" : "false"));
+        break;
       case LUA_TNIL:
-        return lua_pushliteral(L, "nil");
+        lua_pushliteral(L, "nil");
+        break;
       default:
-        return lua_pushfstring(L, "%s: %p", luaL_typename(L, idx),
+        lua_pushfstring(L, "%s: %p", luaL_typename(L, idx),
                                             lua_topointer(L, idx));
+        break;
     }
   }
+  if (len) *len = lua_objlen(L, -1);
   return lua_tostring(L, -1);
 }
 
