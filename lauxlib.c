@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.174 2007/09/14 13:26:28 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.175 2008/01/03 17:07:59 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -586,14 +586,13 @@ static int libsize (const luaL_Reg *l) {
 LUALIB_API void luaL_register (lua_State *L, const char *libname,
                                const luaL_Reg *l) {
   if (libname) {
-    int size = libsize(l);
     /* check whether lib already exists */
-    luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", size);
+    luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", 1);
     lua_getfield(L, -1, libname);  /* get _LOADED[libname] */
     if (!lua_istable(L, -1)) {  /* not found? */
       lua_pop(L, 1);  /* remove previous result */
       /* try global variable (and create one if it does not exist) */
-      if (luaL_findtable(L, LUA_GLOBALSINDEX, libname, size) != NULL)
+      if (luaL_findtable(L, LUA_GLOBALSINDEX, libname, libsize(l)) != NULL)
         luaL_error(L, "name conflict for module " LUA_QS, libname);
       lua_pushvalue(L, -1);
       lua_setfield(L, -3, libname);  /* _LOADED[libname] = new table */
