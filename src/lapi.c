@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.55 2006/06/07 12:37:17 roberto Exp $
+** $Id: lapi.c,v 2.55.1.3 2008/01/03 15:20:39 roberto Exp $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -120,6 +120,11 @@ LUA_API void lua_xmove (lua_State *from, lua_State *to, int n) {
     setobj2s(to, to->top++, from->top + i);
   }
   lua_unlock(to);
+}
+
+
+LUA_API void lua_setlevel (lua_State *from, lua_State *to) {
+  to->nCcalls = from->nCcalls;
 }
 
 
@@ -749,7 +754,7 @@ LUA_API int lua_setfenv (lua_State *L, int idx) {
       res = 0;
       break;
   }
-  luaC_objbarrier(L, gcvalue(o), hvalue(L->top - 1));
+  if (res) luaC_objbarrier(L, gcvalue(o), hvalue(L->top - 1));
   L->top--;
   lua_unlock(L);
   return res;

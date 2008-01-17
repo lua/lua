@@ -20,20 +20,15 @@ INSTALL_MAN= $(INSTALL_TOP)/man/man1
 INSTALL_LMOD= $(INSTALL_TOP)/share/lua/$V
 INSTALL_CMOD= $(INSTALL_TOP)/lib/lua/$V
 
-# How to install. You may prefer "install" instead of "cp" if you have it.
-# To remove debug information from binaries, use "install -s" in INSTALL_EXEC.
-#
-INSTALL_EXEC= $(CP)
-INSTALL_DATA= $(CP)
-#INSTALL_EXEC= $(INSTALL) -m 0755
-#INSTALL_DATA= $(INSTALL) -m 0644
+# How to install. If you don't have "install" (unlikely) then get install-sh at
+#	http://dev.w3.org/cvsweb/libwww/config/install-sh
+# or use cp instead.
+INSTALL_EXEC= $(INSTALL) -p -m 0755
+INSTALL_DATA= $(INSTALL) -p -m 0644
 
 # Utilities.
-CP= cp
-FIND= find
 INSTALL= install
 MKDIR= mkdir
-RANLIB= ranlib
 
 # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
 
@@ -48,7 +43,7 @@ TO_MAN= lua.1 luac.1
 
 # Lua version and release.
 V= 5.1
-R= 5.1.2
+R= 5.1.3
 
 all:	$(PLAT)
 
@@ -64,10 +59,9 @@ install: dummy
 	cd src && $(INSTALL_DATA) $(TO_INC) $(INSTALL_INC)
 	cd src && $(INSTALL_DATA) $(TO_LIB) $(INSTALL_LIB)
 	cd doc && $(INSTALL_DATA) $(TO_MAN) $(INSTALL_MAN)
-#	$(RANLIB) $(INSTALL_LIB)/$(TO_LIB)
 
 local:
-	$(MAKE) install INSTALL_TOP=.. INSTALL_EXEC="cp -p" INSTALL_DATA="cp -p"
+	$(MAKE) install INSTALL_TOP=..
 
 none:
 	@echo "Please do"

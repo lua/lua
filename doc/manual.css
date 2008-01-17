@@ -5,3 +5,9 @@ h3 code {
 pre {
 	font-size: 105% ;
 }
+
+span.apii {
+	float: right ;
+	font-family: inherit ;
+}
+

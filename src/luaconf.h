@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.82a 2006/04/10 18:27:23 roberto Exp $
+** $Id: luaconf.h,v 1.82.1.5 2008/01/17 14:04:20 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -442,7 +442,8 @@
 ** functions. This limit is arbitrary; its only purpose is to stop C
 ** functions to consume unlimited stack space.
 */
-#define LUAI_MAXCSTACK	2048
+#define LUAI_MCS_AUX	((int)(INT_MAX / (4*sizeof(LUA_NUMBER))))
+#define LUAI_MAXCSTACK	(LUAI_MCS_AUX > SHRT_MAX ? SHRT_MAX : LUAI_MCS_AUX)
 
 
 

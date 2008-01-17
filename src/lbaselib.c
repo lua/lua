@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.191a 2006/06/02 15:34:00 roberto Exp $
+** $Id: lbaselib.c,v 1.191.1.3 2008/01/03 15:20:39 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -477,15 +477,52 @@ static const luaL_Reg base_funcs[] = {
 ** =======================================================
 */
 
+#define CO_RUN	0	/* running */
+#define CO_SUS	1	/* suspended */
+#define CO_NOR	2	/* 'normal' (it resumed another coroutine) */
+#define CO_DEAD	3
+
+static const char *const statnames[] =
+    {"running", "suspended", "normal", "dead"};
+
+static int costatus (lua_State *L, lua_State *co) {
+  if (L == co) return CO_RUN;
+  switch (lua_status(co)) {
+    case LUA_YIELD:
+      return CO_SUS;
+    case 0: {
+      lua_Debug ar;
+      if (lua_getstack(co, 0, &ar) > 0)  /* does it have frames? */
+        return CO_NOR;  /* it is running */
+      else if (lua_gettop(co) == 0)
+          return CO_DEAD;
+      else
+        return CO_SUS;  /* initial state */
+    }
+    default:  /* some error occured */
+      return CO_DEAD;
+  }
+}
+
+
+static int luaB_costatus (lua_State *L) {
+  lua_State *co = lua_tothread(L, 1);
+  luaL_argcheck(L, co, 1, "coroutine expected");
+  lua_pushstring(L, statnames[costatus(L, co)]);
+  return 1;
+}
+
+
 static int auxresume (lua_State *L, lua_State *co, int narg) {
-  int status;
+  int status = costatus(L, co);
   if (!lua_checkstack(co, narg))
     luaL_error(L, "too many arguments to resume");
-  if (lua_status(co) == 0 && lua_gettop(co) == 0) {
-    lua_pushliteral(L, "cannot resume dead coroutine");
+  if (status != CO_SUS) {
+    lua_pushfstring(L, "cannot resume %s coroutine", statnames[status]);
     return -1;  /* error flag */
   }
   lua_xmove(L, co, narg);
+  lua_setlevel(L, co);
   status = lua_resume(co, narg);
   if (status == 0 || status == LUA_YIELD) {
     int nres = lua_gettop(co);
@@ -553,34 +590,6 @@ static int luaB_cowrap (lua_State *L) {
 
 static int luaB_yield (lua_State *L) {
   return lua_yield(L, lua_gettop(L));
-}
-
-
-static int luaB_costatus (lua_State *L) {
-  lua_State *co = lua_tothread(L, 1);
-  luaL_argcheck(L, co, 1, "coroutine expected");
-  if (L == co) lua_pushliteral(L, "running");
-  else {
-    switch (lua_status(co)) {
-      case LUA_YIELD:
-        lua_pushliteral(L, "suspended");
-        break;
-      case 0: {
-        lua_Debug ar;
-        if (lua_getstack(co, 0, &ar) > 0)  /* does it have frames? */
-          lua_pushliteral(L, "normal");  /* it is running */
-        else if (lua_gettop(co) == 0)
-            lua_pushliteral(L, "dead");
-        else
-          lua_pushliteral(L, "suspended");  /* initial state */
-        break;
-      }
-      default:  /* some error occured */
-        lua_pushliteral(L, "dead");
-        break;
-    }
-  }
-  return 1;
 }
 
 

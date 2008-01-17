@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.73 2006/05/08 20:14:16 roberto Exp $
+** $Id: liolib.c,v 2.73.1.2 2008/01/02 13:56:00 roberto Exp $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -106,8 +106,11 @@ static int io_pclose (lua_State *L) {
 
 static int io_fclose (lua_State *L) {
   FILE **p = topfile(L);
-  int ok = (fclose(*p) == 0);
-  *p = NULL;
+  int ok = 0;
+  if (*p != stdin && *p != stdout && *p != stderr) {
+    ok = (fclose(*p) == 0);
+    *p = NULL;
+  }
   return pushresult(L, ok, NULL);
 }
 
@@ -129,8 +132,7 @@ static int io_close (lua_State *L) {
 
 static int io_gc (lua_State *L) {
   FILE *f = *topfile(L);
-  /* ignore closed files and standard files */
-  if (f != NULL && f != stdin && f != stdout && f != stderr)
+  if (f != NULL)  /* ignore closed files */
     aux_close(L);
   return 0;
 }
