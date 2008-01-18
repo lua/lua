@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.106 2007/04/26 20:39:38 roberto Exp roberto $
+** $Id: ldblib.c,v 1.107 2007/06/22 15:33:54 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -255,17 +255,18 @@ static void gethooktable (lua_State *L) {
 
 
 static int db_sethook (lua_State *L) {
-  int arg;
+  int arg, mask, count;
+  lua_Hook func;
   lua_State *L1 = getthread(L, &arg);
   if (lua_isnoneornil(L, arg+1)) {
     lua_settop(L, arg+1);
-    lua_sethook(L1, NULL, 0, 0);  /* turn off hooks */
+    func = NULL; mask = 0; count = 0;  /* turn off hooks */
   }
   else {
     const char *smask = luaL_checkstring(L, arg+2);
-    int count = luaL_optint(L, arg+3, 0);
     luaL_checktype(L, arg+1, LUA_TFUNCTION);
-    lua_sethook(L1, hookf, makemask(smask, count), count);
+    count = luaL_optint(L, arg+3, 0);
+    func = hookf; mask = makemask(smask, count);
   }
   gethooktable(L1);
   lua_pushlightuserdata(L1, L1);
@@ -273,6 +274,7 @@ static int db_sethook (lua_State *L) {
   lua_xmove(L, L1, 1);
   lua_rawset(L1, -3);  /* set new hook */
   lua_pop(L1, 1);  /* remove hook table */
+  lua_sethook(L1, func, mask, count);
   return 0;
 }
 
