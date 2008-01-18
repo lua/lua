@@ -1,5 +1,5 @@
 /*
-** $Id: loslib.c,v 1.21 2007/05/03 20:49:29 roberto Exp roberto $
+** $Id: loslib.c,v 1.22 2007/09/14 13:26:28 roberto Exp roberto $
 ** Standard Operating System library
 ** See Copyright Notice in lua.h
 */
@@ -224,7 +224,7 @@ static int os_setlocale (lua_State *L) {
 
 
 static int os_exit (lua_State *L) {
-  return (exit(luaL_optint(L, 1, EXIT_SUCCESS)), 0);  /* avoid warnings */
+  exit(luaL_optint(L, 1, EXIT_SUCCESS));
 }
 
 static const luaL_Reg syslib[] = {
