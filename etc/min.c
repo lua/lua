@@ -18,7 +18,7 @@ static int print(lua_State *L)
   if (i>1) printf("\t");
   if (lua_isstring(L,i))
    printf("%s",lua_tostring(L,i));
-  else if (lua_isnil(L,i)==2)
+  else if (lua_isnil(L,i))
    printf("%s","nil");
   else if (lua_isboolean(L,i))
    printf("%s",lua_toboolean(L,i) ? "true" : "false");

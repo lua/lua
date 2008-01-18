@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.82.1.5 2008/01/17 14:04:20 roberto Exp $
+** $Id: luaconf.h,v 1.82.1.6 2008/01/18 17:07:48 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -667,7 +667,7 @@ union luai_Cast { double l_d; long l_l; };
 */
 #if defined(LUA_USE_POPEN)
 
-#define lua_popen(L,c,m)	((void)L, popen(c,m))
+#define lua_popen(L,c,m)	((void)L, fflush(NULL), popen(c,m))
 #define lua_pclose(L,file)	((void)L, (pclose(file) != -1))
 
 #elif defined(LUA_WIN)

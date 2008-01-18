@@ -1,10 +1,11 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 
 <head>
 <title>Lua 5.1 Reference Manual</title>
 <link rel="stylesheet" href="lua.css">
 <link rel="stylesheet" href="manual.css">
+<META HTTP-EQUIV="content-type" CONTENT="text/html; charset=iso-8859-1">
 </head>
 
 <body>
@@ -32,7 +33,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.43 2008/01/17 16:19:44 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.44 2008/01/18 16:41:50 roberto Exp $ -->
 
 
 
@@ -179,6 +180,7 @@ which can be specified as '<code>\0</code>'.
 
 <p>
 To put a double (single) quote, a newline, a backslash,
+a carriage return,
 or an embedded zero
 inside a literal string enclosed by double (single) quotes
 you must use an escape sequence.
@@ -2665,7 +2667,7 @@ of numerical arguments and returns their average and sum:
 
 
 <hr><h3><a name="lua_checkstack"><code>lua_checkstack</code></a></h3><p>
-<span class="apii">[-0, +0, <em>-</em>]</span>
+<span class="apii">[-0, +0, <em>m</em>]</span>
 <pre>int lua_checkstack (lua_State *L, int extra);</pre>
 
 <p>
@@ -3767,7 +3769,7 @@ The reader function may return pieces of any size greater than zero.
 
 
 <hr><h3><a name="lua_register"><code>lua_register</code></a></h3><p>
-<span class="apii">[-0, +0, <em>m</em>]</span>
+<span class="apii">[-0, +0, <em>e</em>]</span>
 <pre>void lua_register (lua_State *L,
                    const char *name,
                    lua_CFunction f);</pre>
@@ -4395,7 +4397,7 @@ Returns the current hook mask.
 
 
 <hr><h3><a name="lua_getinfo"><code>lua_getinfo</code></a></h3><p>
-<span class="apii">[-(0|1), +(0|1|2), <em>-</em>]</span>
+<span class="apii">[-(0|1), +(0|1|2), <em>m</em>]</span>
 <pre>int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar);</pre>
 
 <p>
@@ -8739,7 +8741,7 @@ Here is the complete syntax of Lua in extended BNF.
 <HR>
 <SMALL>
 Last update:
-Thu Jan 17 15:06:18 BRST 2008
+Fri Jan 18 14:50:20 BRST 2008
 </SMALL>
 <!--
 Last change: revised for Lua 5.1.3
