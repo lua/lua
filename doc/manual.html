@@ -33,7 +33,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.44 2008/01/18 16:41:50 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.45 2008/01/19 00:17:30 roberto Exp $ -->
 
 
 
@@ -3108,7 +3108,7 @@ and 0&nbsp;otherwise.
 
 
 <hr><h3><a name="lua_isstring"><code>lua_isstring</code></a></h3><p>
-<span class="apii">[-0, +0, <em>m</em>]</span>
+<span class="apii">[-0, +0, <em>-</em>]</span>
 <pre>int lua_isstring (lua_State *L, int index);</pre>
 
 <p>
@@ -3577,6 +3577,19 @@ you do not create it, it has no individual metatable,
 and it is not collected (as it was never created).
 A light userdata is equal to "any"
 light userdata with the same C&nbsp;address.
+
+
+
+
+
+<hr><h3><a name="lua_pushliteral"><code>lua_pushliteral</code></a></h3><p>
+<span class="apii">[-0, +1, <em>m</em>]</span>
+<pre>void lua_pushliteral (lua_State *L, const char *s);</pre>
+
+<p>
+This macro is equivalent to <a href="#lua_pushlstring"><code>lua_pushlstring</code></a>,
+but can be used only when <code>s</code> is a literal string.
+In these cases, it automatically provides the string length.
 
 
 
@@ -8741,7 +8754,7 @@ Here is the complete syntax of Lua in extended BNF.
 <HR>
 <SMALL>
 Last update:
-Fri Jan 18 14:50:20 BRST 2008
+Fri Jan 18 22:32:24 BRST 2008
 </SMALL>
 <!--
 Last change: revised for Lua 5.1.3
