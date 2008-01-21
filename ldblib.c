@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.107 2007/06/22 15:33:54 roberto Exp roberto $
+** $Id: ldblib.c,v 1.108 2008/01/18 17:14:47 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -268,13 +268,12 @@ static int db_sethook (lua_State *L) {
     count = luaL_optint(L, arg+3, 0);
     func = hookf; mask = makemask(smask, count);
   }
-  gethooktable(L1);
-  lua_pushlightuserdata(L1, L1);
+  gethooktable(L);
+  lua_pushlightuserdata(L, L1);
   lua_pushvalue(L, arg+1);
-  lua_xmove(L, L1, 1);
-  lua_rawset(L1, -3);  /* set new hook */
-  lua_pop(L1, 1);  /* remove hook table */
-  lua_sethook(L1, func, mask, count);
+  lua_rawset(L, -3);  /* set new hook */
+  lua_pop(L, 1);  /* remove hook table */
+  lua_sethook(L1, func, mask, count);  /* set hooks */
   return 0;
 }
 
@@ -288,11 +287,10 @@ static int db_gethook (lua_State *L) {
   if (hook != NULL && hook != hookf)  /* external hook? */
     lua_pushliteral(L, "external hook");
   else {
-    gethooktable(L1);
-    lua_pushlightuserdata(L1, L1);
-    lua_rawget(L1, -2);   /* get hook */
-    lua_remove(L1, -2);  /* remove hook table */
-    lua_xmove(L1, L, 1);
+    gethooktable(L);
+    lua_pushlightuserdata(L, L1);
+    lua_rawget(L, -2);   /* get hook */
+    lua_remove(L, -2);  /* remove hook table */
   }
   lua_pushstring(L, unmakemask(mask, buff));
   lua_pushinteger(L, lua_gethookcount(L1));
