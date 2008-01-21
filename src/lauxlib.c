@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.159.1.2 2008/01/17 14:04:41 roberto Exp $
+** $Id: lauxlib.c,v 1.159.1.3 2008/01/21 13:20:51 roberto Exp $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -535,7 +535,7 @@ static const char *getF (lua_State *L, void *ud, size_t *size) {
     return "\n";
   }
   if (feof(lf->f)) return NULL;
-  *size = fread(lf->buff, 1, LUAL_BUFFERSIZE, lf->f);
+  *size = fread(lf->buff, 1, sizeof(lf->buff), lf->f);
   return (*size > 0) ? lf->buff : NULL;
 }
 
@@ -570,9 +570,8 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
     while ((c = getc(lf.f)) != EOF && c != '\n') ;  /* skip first line */
     if (c == '\n') c = getc(lf.f);
   }
-  if (c == LUA_SIGNATURE[0] && lf.f != stdin) {  /* binary file? */
-    fclose(lf.f);
-    lf.f = fopen(filename, "rb");  /* reopen in binary mode */
+  if (c == LUA_SIGNATURE[0] && filename) {  /* binary file? */
+    lf.f = freopen(filename, "rb", lf.f);  /* reopen in binary mode */
     if (lf.f == NULL) return errfile(L, "reopen", fnameindex);
     /* skip eventual `#!...' */
    while ((c = getc(lf.f)) != EOF && c != LUA_SIGNATURE[0]) ;
@@ -581,7 +580,7 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
   ungetc(c, lf.f);
   status = lua_load(L, getF, &lf, lua_tostring(L, -1));
   readstatus = ferror(lf.f);
-  if (lf.f != stdin) fclose(lf.f);  /* close file (even in case of errors) */
+  if (filename) fclose(lf.f);  /* close file (even in case of errors) */
   if (readstatus) {
     lua_settop(L, fnameindex);  /* ignore results from `lua_load' */
     return errfile(L, "read", fnameindex);
