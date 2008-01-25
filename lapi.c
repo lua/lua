@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.61 2007/08/07 16:53:40 roberto Exp roberto $
+** $Id: lapi.c,v 2.62 2007/11/28 18:27:38 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -193,6 +193,7 @@ LUA_API void lua_replace (lua_State *L, int idx) {
     if (idx < LUA_GLOBALSINDEX)  /* function upvalue? */
       luaC_barrier(L, curr_func(L), L->top - 1);
   }
+  /* LUA_GLOBALSINDEX does not need gc barrier (threads are never black) */
   L->top--;
   lua_unlock(L);
 }
