@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.94 2008/01/02 16:36:19 roberto Exp roberto $
+** $Id: luaconf.h,v 1.95 2008/01/17 16:24:38 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -411,12 +411,20 @@
 /*
 @@ LUAI_MAXCSTACK limits the number of Lua stack slots that a C function
 @* can use.
-** CHANGE it if you need lots of (Lua) stack space for your C
-** functions. This limit is arbitrary; its only purpose is to stop C
-** functions to consume unlimited stack space.
+** CHANGE it if you need a different limit. This limit is arbitrary;
+** its only purpose is to stop C functions to consume unlimited stack
+** space.
 */
-#define LUAI_MCS_AUX    ((int)(INT_MAX / (4*sizeof(LUA_NUMBER))))
-#define LUAI_MAXCSTACK  (LUAI_MCS_AUX > SHRT_MAX ? SHRT_MAX : LUAI_MCS_AUX)
+/* life is simpler if stack size fits in an int (16 is an estimate
+   for the size of a Lua value) */
+#if SHRT_MAX < (INT_MAX / 16)
+#define LUAI_MCS_AUX	SHRT_MAX
+#else
+#define LUAI_MCS_AUX	(INT_MAX / 16)
+#endif
+
+/* reserve some space for pseudo-indices */
+#define LUAI_MAXCSTACK  (LUAI_MCS_AUX - 1000)
 
 
 
