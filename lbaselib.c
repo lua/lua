@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.201 2007/11/28 18:25:17 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.202 2008/01/03 17:07:59 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -483,7 +483,7 @@ static int auxresume (lua_State *L, lua_State *co, int narg) {
   status = lua_resume(co, narg);
   if (status == LUA_OK || status == LUA_YIELD) {
     int nres = lua_gettop(co);
-    if (!lua_checkstack(L, nres))
+    if (!lua_checkstack(L, nres + 1))
       return luaL_error(L, "too many results to resume");
     lua_xmove(co, L, nres);  /* move yielded values */
     return nres;
