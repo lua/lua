@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.29 2007/10/29 16:51:20 roberto Exp roberto $
+** $Id: lstate.h,v 2.30 2007/10/31 15:41:19 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -33,6 +33,11 @@ struct lua_longjmp;  /* defined in ldo.c */
 
 #define BASIC_STACK_SIZE        (2*LUA_MINSTACK)
 
+
+/* kinds of Garbage Collection */
+#define KGC_NORMAL	0
+#define KGC_FORCED	1	/* gc was forced by the program */
+#define KGC_EMERGENCY	2	/* gc was forced by an allocation failure */
 
 
 typedef struct stringtable {
@@ -72,7 +77,7 @@ typedef struct global_State {
   unsigned short nCcalls;  /* number of nested C calls */
   lu_byte currentwhite;
   lu_byte gcstate;  /* state of garbage collector */
-  lu_byte emergencygc;  /* true when collect was trigged by alloc error */
+  lu_byte gckind;  /* kind of GC running */
   int sweepstrgc;  /* position of sweep in `strt' */
   GCObject *rootgc;  /* list of all collectable objects */
   GCObject **sweepgc;  /* position of sweep in `rootgc' */
