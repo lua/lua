@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.41 2007/10/29 16:51:20 roberto Exp roberto $
+** $Id: lgc.c,v 2.42 2007/10/31 15:41:19 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -308,17 +308,18 @@ static void traverseclosure (global_State *g, Closure *cl) {
 
 
 static void checkstacksizes (lua_State *L, StkId max) {
-  int ci_used = cast_int(L->ci - L->base_ci);  /* number of `ci' in use */
-  int s_used = cast_int(max - L->stack);  /* part of stack in use */
-  if (L->size_ci > LUAI_MAXCALLS)  /* handling overflow? */
+  /* should not change the stack when  handling overflow or
+     during an emergency gc cycle */
+  if (L->size_ci > LUAI_MAXCALLS || G(L)->gckind == KGC_EMERGENCY)
     return;  /* do not touch the stacks */
-  if (4*ci_used < L->size_ci && 2*BASIC_CI_SIZE < L->size_ci)
-    luaD_reallocCI(L, L->size_ci/2);  /* still big enough... */
-  condhardstacktests(luaD_reallocCI(L, ci_used + 1));
-  if (4*s_used < L->stacksize &&
-      2*(BASIC_STACK_SIZE+EXTRA_STACK) < L->stacksize)
-    luaD_reallocstack(L, L->stacksize/2);  /* still big enough... */
-  condhardstacktests(luaD_reallocstack(L, s_used));
+  else {
+    int ci_used = cast_int(L->ci - L->base_ci) + 1;  /* number of `ci' in use */
+    int s_used = cast_int(max - L->stack) + 1;  /* part of stack in use */
+    if (2*ci_used < L->size_ci)
+      luaD_reallocCI(L, 2*ci_used);
+    if (2*s_used < (L->stacksize - EXTRA_STACK))
+      luaD_reallocstack(L, 2*s_used);
+  }
 }
 
 
@@ -337,8 +338,7 @@ static void traversestack (global_State *g, lua_State *l) {
     markvalue(g, o);
   for (; o <= lim; o++)
     setnilvalue(o);
-  if (!g->emergencygc)  /* cannot change stack in emergency... */
-    checkstacksizes(l, lim);  /* ...(mutator does not expect that change) */
+  checkstacksizes(l, lim);
 }
 
 
@@ -498,15 +498,9 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
 
 static void checkSizes (lua_State *L) {
   global_State *g = G(L);
-  /* check size of string hash */
-  if (g->strt.nuse < cast(lu_int32, g->strt.size/4) &&
-      g->strt.size > MINSTRTABSIZE*2)
-    luaS_resize(L, g->strt.size/2);  /* table is too big */
-  /* check size of buffer */
-  if (luaZ_sizebuffer(&g->buff) > LUA_MINBUFFER*2) {  /* buffer too big? */
-    size_t newsize = luaZ_sizebuffer(&g->buff) / 2;
-    luaZ_resizebuffer(L, &g->buff, newsize);
-  }
+  if (g->strt.nuse < cast(lu_int32, g->strt.size))
+    luaS_resize(L, 1 << luaO_ceillog2(g->strt.nuse));
+  luaZ_freebuffer(L, &g->buff);
 }
 
 
@@ -698,7 +692,7 @@ static l_mem singlestep (lua_State *L) {
 void luaC_step (lua_State *L) {
   global_State *g = G(L);
   l_mem lim = (GCSTEPSIZE/100) * g->gcstepmul;
-  lua_assert(!g->emergencygc);
+  lua_assert(g->gckind == KGC_NORMAL);
   if (lim == 0)
     lim = (MAX_LUMEM-1)/2;  /* no limit */
   g->gcdept += g->totalbytes - g->GCthreshold;
@@ -723,9 +717,9 @@ void luaC_step (lua_State *L) {
 
 
 void luaC_fullgc (lua_State *L, int isemergency) {
-  int stopstate;
   global_State *g = G(L);
-  g->emergencygc = isemergency;
+  lua_assert(g->gckind == KGC_NORMAL);
+  g->gckind = isemergency ? KGC_EMERGENCY : KGC_FORCED;
   if (g->gcstate <= GCSpropagate) {
     /* reset sweep marks to sweep all elements (returning them to white) */
     g->sweepstrgc = 0;
@@ -743,12 +737,15 @@ void luaC_fullgc (lua_State *L, int isemergency) {
     singlestep(L);
   }
   markroot(L);
-  /* do not run finalizers during emergency GC */
-  stopstate = isemergency ? GCSfinalize : GCSpause;
-  while (g->gcstate != stopstate)
+  /* run collector up to finalizers */
+  while (g->gcstate != GCSfinalize)
     singlestep(L);
+  g->gckind = KGC_NORMAL;
+  if (!isemergency) {  /* do not run finalizers during emergency GC */
+    while (g->gcstate != GCSpause)
+      singlestep(L);
+  }
   setthreshold(g);
-  g->emergencygc = 0;
 }
 
 
