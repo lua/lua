@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.44 2007/11/12 16:28:45 roberto Exp roberto $
+** $Id: ltests.c,v 2.45 2008/02/11 18:04:26 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -861,31 +861,31 @@ static int testC (lua_State *L) {
     const char *inst = getname;
     if EQ("") return 0;
     else if EQ("isnumber") {
-      lua_pushinteger(L1, lua_isnumber(L1, getindex));
+      lua_pushboolean(L1, lua_isnumber(L1, getindex));
     }
     else if EQ("isstring") {
-      lua_pushinteger(L1, lua_isstring(L1, getindex));
+      lua_pushboolean(L1, lua_isstring(L1, getindex));
     }
     else if EQ("istable") {
-      lua_pushinteger(L1, lua_istable(L1, getindex));
+      lua_pushboolean(L1, lua_istable(L1, getindex));
     }
     else if EQ("iscfunction") {
-      lua_pushinteger(L1, lua_iscfunction(L1, getindex));
+      lua_pushboolean(L1, lua_iscfunction(L1, getindex));
     }
     else if EQ("isfunction") {
-      lua_pushinteger(L1, lua_isfunction(L1, getindex));
+      lua_pushboolean(L1, lua_isfunction(L1, getindex));
     }
     else if EQ("isuserdata") {
-      lua_pushinteger(L1, lua_isuserdata(L1, getindex));
+      lua_pushboolean(L1, lua_isuserdata(L1, getindex));
     }
     else if EQ("isudataval") {
-      lua_pushinteger(L1, lua_islightuserdata(L1, getindex));
+      lua_pushboolean(L1, lua_islightuserdata(L1, getindex));
     }
     else if EQ("isnil") {
-      lua_pushinteger(L1, lua_isnil(L1, getindex));
+      lua_pushboolean(L1, lua_isnil(L1, getindex));
     }
     else if EQ("isnull") {
-      lua_pushinteger(L1, lua_isnone(L1, getindex));
+      lua_pushboolean(L1, lua_isnone(L1, getindex));
     }
     else if EQ("tonumber") {
       lua_pushnumber(L1, lua_tonumber(L1, getindex));
@@ -932,7 +932,7 @@ static int testC (lua_State *L) {
       lua_newuserdata(L1, getnum);
     }
     else if EQ("tobool") {
-      lua_pushinteger(L1, lua_toboolean(L1, getindex));
+      lua_pushboolean(L1, lua_toboolean(L1, getindex));
     }
     else if EQ("pushvalue") {
       lua_pushvalue(L1, getindex);
