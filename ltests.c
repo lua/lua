@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.43 2007/06/21 13:48:04 roberto Exp roberto $
+** $Id: ltests.c,v 2.44 2007/11/12 16:28:45 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -925,6 +925,9 @@ static int testC (lua_State *L) {
     else if EQ("pushbool") {
       lua_pushboolean(L1, getnum);
     }
+    else if EQ("newtable") {
+      lua_newtable(L1);
+    }
     else if EQ("newuserdata") {
       lua_newuserdata(L1, getnum);
     }
@@ -997,6 +1000,10 @@ static int testC (lua_State *L) {
     else if EQ("getn") {
       int i = getindex;
       lua_pushinteger(L1, lua_objlen(L1, i));
+    }
+    else if EQ("checkstack") {
+      if (!lua_checkstack(L1, getnum))
+        luaL_error(L, "C stack overflow");
     }
     else if EQ("throw") {
 #if defined(__cplusplus)
