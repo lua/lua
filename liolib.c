@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.76 2007/04/19 20:22:32 roberto Exp roberto $
+** $Id: liolib.c,v 2.77 2007/12/08 11:54:32 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -323,7 +323,7 @@ static int read_chars (lua_State *L, FILE *f, size_t n) {
     n -= nr;  /* still have to read `n' chars */
   } while (n > 0 && nr == rlen);  /* until end of count or eof */
   luaL_pushresult(&b);  /* close buffer */
-  return (n == 0 || lua_objlen(L, -1) > 0);
+  return (lua_objlen(L, -1) > 0);
 }
 
 
