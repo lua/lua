@@ -1690,7 +1690,7 @@ ldblib.c:
 
 Bug{
 what = [[LUAI_MAXCSTACK must be smaller than -LUA_REGISTRYINDEX]],
-report = [[Patrick Donnell, on 2008/02/11]],
+report = [[Patrick Donnelly, on 2008/02/11]],
 since = [[5.1.3]],
 example = [[
 j = 1e4
