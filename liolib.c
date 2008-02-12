@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.77 2007/12/08 11:54:32 roberto Exp roberto $
+** $Id: liolib.c,v 2.78 2008/02/12 16:51:03 roberto Exp roberto $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -310,20 +310,21 @@ static int read_line (lua_State *L, FILE *f) {
 
 
 static int read_chars (lua_State *L, FILE *f, size_t n) {
-  size_t rlen;  /* how much to read */
-  size_t nr;  /* number of chars actually read */
+  size_t tbr = n;  /* number of chars to be read */
+  size_t rlen;  /* how much to read in each cycle */
+  size_t nr;  /* number of chars actually read in each cycle */
   luaL_Buffer b;
   luaL_buffinit(L, &b);
   rlen = LUAL_BUFFERSIZE;  /* try to read that much each time */
   do {
     char *p = luaL_prepbuffer(&b);
-    if (rlen > n) rlen = n;  /* cannot read more than asked */
+    if (rlen > tbr) rlen = tbr;  /* cannot read more than asked */
     nr = fread(p, sizeof(char), rlen, f);
     luaL_addsize(&b, nr);
-    n -= nr;  /* still have to read `n' chars */
-  } while (n > 0 && nr == rlen);  /* until end of count or eof */
+    tbr -= nr;  /* still have to read 'tbr' chars */
+  } while (tbr > 0 && nr == rlen);  /* until end of count or eof */
   luaL_pushresult(&b);  /* close buffer */
-  return (lua_objlen(L, -1) > 0);
+  return (tbr < n);  /* true iff read something */
 }
 
 
@@ -386,13 +387,13 @@ static int f_read (lua_State *L) {
 
 static int io_readline (lua_State *L) {
   FILE *f = *(FILE **)lua_touserdata(L, lua_upvalueindex(1));
-  int sucess;
+  int success;
   if (f == NULL)  /* file is already closed? */
     luaL_error(L, "file is already closed");
-  sucess = read_line(L, f);
+  success = read_line(L, f);
   if (ferror(f))
     return luaL_error(L, "%s", strerror(errno));
-  if (sucess) return 1;
+  if (success) return 1;
   else {  /* EOF */
     if (lua_toboolean(L, lua_upvalueindex(2))) {  /* generator created file? */
       lua_settop(L, 0);
