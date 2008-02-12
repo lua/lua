@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.62 2007/11/28 18:27:38 roberto Exp roberto $
+** $Id: lapi.c,v 2.63 2008/01/25 13:42:12 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -64,6 +64,7 @@ static TValue *index2adr (lua_State *L, int idx) {
     default: {
       Closure *func = curr_func(L);
       idx = LUA_GLOBALSINDEX - idx;
+      api_check(L, idx <= UCHAR_MAX + 1);
       return (idx <= func->c.nupvalues)
                 ? &func->c.upvalue[idx-1]
                 : cast(TValue *, luaO_nilobject);
@@ -465,8 +466,9 @@ LUA_API const char *lua_pushfstring (lua_State *L, const char *fmt, ...) {
 LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   Closure *cl;
   lua_lock(L);
-  luaC_checkGC(L);
   api_checknelems(L, n);
+  api_check(L, n <= UCHAR_MAX);
+  luaC_checkGC(L);
   cl = luaF_newCclosure(L, n, getcurrenv(L));
   cl->c.f = fn;
   L->top -= n;
