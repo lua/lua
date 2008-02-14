@@ -1736,6 +1736,67 @@ lbaselib.c:
 }
 
 Bug{
+what = [[lua_checkstack may have arithmetic overflow for large 'size']],
+report = [[Patrick Donnelly, on 2008/02/12]],
+since = [[5.0]],
+example = [[
+print(unpack({1,2,3}, 0, 2^31-3))
+]],
+patch = [[
+--- lapi.c      2008/01/03 15:20:39     2.55.1.3
++++ lapi.c      2008/02/14 16:05:21
+@@ -93,15 +93,14 @@
+ 
+ 
+ LUA_API int lua_checkstack (lua_State *L, int size) {
+-  int res;
++  int res = 1;
+   lua_lock(L);
+-  if ((L->top - L->base + size) > LUAI_MAXCSTACK)
++  if (size > LUAI_MAXCSTACK || (L->top - L->base + size) > LUAI_MAXCSTACK)
+     res = 0;  /* stack overflow */
+-  else {
++  else if (size > 0) {
+     luaD_checkstack(L, size);
+     if (L->ci->top < L->top + size)
+       L->ci->top = L->top + size;
+-    res = 1;
+   }
+   lua_unlock(L);
+   return res;
+]],
+}
+
+Bug{
+what = [[unpack with maximum indices may crash due to arithmetic overflow]],
+report = [[Patrick Donnelly, on 2008/02/12]],
+since = [[5.1]],
+example = [[
+print(unpack({1,2,3}, 2^31-1, 2^31-1))
+]],
+patch = [[
+--- lbaselib.c  2008/02/11 16:24:24     1.191.1.5
++++ lbaselib.c  2008/02/14 16:10:25
+@@ -344,10 +344,12 @@
+   luaL_checktype(L, 1, LUA_TTABLE);
+   i = luaL_optint(L, 2, 1);
+   e = luaL_opt(L, luaL_checkint, 3, luaL_getn(L, 1));
++  if (i > e) return 0;  /* empty range */
+   n = e - i + 1;  /* number of elements */
+-  if (n <= 0) return 0;  /* empty range */
+-  luaL_checkstack(L, n, "table too big to unpack");
+-  for (; i<=e; i++)  /* push arg[i...e] */
++  if (n <= 0 || !lua_checkstack(L, n))  /* n <= 0 means arith. overflow */
++    return luaL_error(L, "too many results to unpack");
++  lua_rawgeti(L, 1, i);  /* push arg[i] (avoiding overflow problems) */
++  while (i++ < e)  /* push arg[i + 1...e] */
+     lua_rawgeti(L, 1, i);
+   return n;
+ }
+]],
+}
+
+Bug{
 what = [[ ]],
 report = [[ , on ]],
 since = [[i ]],
