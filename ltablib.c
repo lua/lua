@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.41 2007/09/12 20:53:24 roberto Exp roberto $
+** $Id: ltablib.c,v 1.42 2007/11/26 16:57:33 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -123,6 +123,15 @@ static int tremove (lua_State *L) {
 }
 
 
+static void addfield (lua_State *L, luaL_Buffer *b, int i) {
+  lua_rawgeti(L, 1, i);
+  if (!lua_isstring(L, -1))
+    luaL_error(L, "invalid value (%s) at index %d in table for "
+                  LUA_QL("concat"), luaL_typename(L, -1), i);
+    luaL_addvalue(b);
+}
+
+
 static int tconcat (lua_State *L) {
   luaL_Buffer b;
   size_t lsep;
@@ -132,15 +141,12 @@ static int tconcat (lua_State *L) {
   i = luaL_optint(L, 3, 1);
   last = luaL_opt(L, luaL_checkint, 4, (int)lua_objlen(L, 1));
   luaL_buffinit(L, &b);
-  for (; i <= last; i++) {
-    lua_rawgeti(L, 1, i);
-    if (!lua_isstring(L, -1))
-      return luaL_error(L, "invalid value (%s) at index %d in table for "
-                            LUA_QL("concat"), luaL_typename(L, -1), i);
-    luaL_addvalue(&b);
-    if (i != last)
-      luaL_addlstring(&b, sep, lsep);
+  for (; i < last; i++) {
+    addfield(L, &b, i);
+    luaL_addlstring(&b, sep, lsep);
   }
+  if (i == last)  /* add last value (if interval was not empty) */
+    addfield(L, &b, i);
   luaL_pushresult(&b);
   return 1;
 }
