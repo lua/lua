@@ -12,7 +12,7 @@ CWARNS= -pedantic -Waggregate-return -Wcast-align \
 # -DEXTERNMEMCHECK -DHARDSTACKTESTS -DHARDMEMTESTS
 # -g -DLUA_USER_H='"ltests.h"'
 # -fomit-frame-pointer #-pg -malign-double
-# TESTS= -g -DLUA_USER_H='"ltests.h"'
+# TESTS= -g -DLUA_USER_H='"ltests.h"' -O0
 
 LOCAL = $(TESTS) $(CWARNS)
 
@@ -22,7 +22,7 @@ MYLIBS=
 
 
 CC= gcc
-CFLAGS= -Wall $(MYCFLAGS) -O2
+CFLAGS= -Wall -O2 $(MYCFLAGS)
 # CC= ~lhf/sunstudio12/bin/cc
 # CFLAGS= -xO5 -v -Xc -native -xstrconst
 AR= ar rcu
