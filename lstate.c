@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.42 2007/10/31 15:41:19 roberto Exp roberto $
+** $Id: lstate.c,v 2.43 2008/02/11 15:45:30 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -107,8 +107,6 @@ static void close_state (lua_State *L) {
   global_State *g = G(L);
   luaF_close(L, L->stack);  /* close all upvalues for this thread */
   luaC_freeall(L);  /* collect all objects */
-  lua_assert(g->rootgc == obj2gco(L));
-  lua_assert(g->strt.nuse == 0);
   luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size, TString *);
   luaZ_freebuffer(L, &g->buff);
   freestack(L, L);
@@ -183,7 +181,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->gray = NULL;
   g->grayagain = NULL;
   g->weak = g->ephemeron = g->allweak = NULL;
-  g->tmudata = NULL;
+  g->tmudata = g->tobefnz = NULL;
   g->totalbytes = sizeof(LG);
   g->gcpause = LUAI_GCPAUSE;
   g->gcstepmul = LUAI_GCMUL;
@@ -210,14 +208,15 @@ LUA_API void lua_close (lua_State *L) {
   L = G(L)->mainthread;  /* only the main thread can be closed */
   lua_lock(L);
   luaF_close(L, L->stack);  /* close all upvalues for this thread */
-  luaC_separateudata(L, 1);  /* separate udata that have GC metamethods */
+  luaC_separateudata(L, 1);  /* separate all udata with GC metamethods */
+  lua_assert(G(L)->tmudata == NULL);
   L->errfunc = 0;  /* no error function during GC metamethods */
   do {  /* repeat until no more errors */
     L->ci = L->base_ci;
     L->base = L->top = L->ci->base;
     G(L)->nCcalls = 0;
   } while (luaD_rawrunprotected(L, callallgcTM, NULL) != LUA_OK);
-  lua_assert(G(L)->tmudata == NULL);
+  lua_assert(G(L)->tobefnz == NULL);
   luai_userstateclose(L);
   close_state(L);
 }

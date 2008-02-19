@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.16 2006/07/11 15:53:29 roberto Exp roberto $
+** $Id: lgc.h,v 2.17 2007/10/29 16:51:20 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -17,8 +17,13 @@
 #define GCSpause	0
 #define GCSpropagate	1
 #define GCSsweepstring	2
-#define GCSsweep	3
-#define GCSfinalize	4
+#define GCSsweeptmu	3
+#define GCSsweep	4
+#define GCSfinalize	5
+
+
+#define issweep(g) \
+	(GCSsweepstring <= (g)->gcstate && (g)->gcstate <= GCSsweep)
 
 
 /*
@@ -34,7 +39,6 @@
 #define testbit(x,b)	testbits(x, bitmask(b))
 #define set2bits(x,b1,b2)	setbits(x, (bit2mask(b1, b2)))
 #define reset2bits(x,b1,b2)	resetbits(x, (bit2mask(b1, b2)))
-#define test2bits(x,b1,b2)	testbits(x, (bit2mask(b1, b2)))
 
 
 
@@ -44,6 +48,7 @@
 ** bit 1 - object is white (type 1)
 ** bit 2 - object is black
 ** bit 3 - for userdata: has been finalized
+** bit 4 - for userdata: it's not in rootgc list (it's in tmudata or tobefnz)
 ** bit 5 - object is fixed (should not be collected)
 ** bit 6 - object is "super" fixed (only the main thread)
 */
@@ -53,12 +58,13 @@
 #define WHITE1BIT	1
 #define BLACKBIT	2
 #define FINALIZEDBIT	3
+#define SEPARATED	4
 #define FIXEDBIT	5
 #define SFIXEDBIT	6
 #define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)
 
 
-#define iswhite(x)      test2bits((x)->gch.marked, WHITE0BIT, WHITE1BIT)
+#define iswhite(x)      testbits((x)->gch.marked, WHITEBITS)
 #define isblack(x)      testbit((x)->gch.marked, BLACKBIT)
 #define isgray(x)	(!isblack(x) && !iswhite(x))
 
@@ -101,6 +107,7 @@ LUAI_FUNC void luaC_link (lua_State *L, GCObject *o, lu_byte tt);
 LUAI_FUNC void luaC_linkupval (lua_State *L, UpVal *uv);
 LUAI_FUNC void luaC_barrierf (lua_State *L, GCObject *o, GCObject *v);
 LUAI_FUNC void luaC_barrierback (lua_State *L, Table *t);
+LUAI_FUNC void luaC_checkfinalizer (lua_State *L, Udata *u);
 
 
 #endif

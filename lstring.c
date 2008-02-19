@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.9 2006/07/11 15:53:29 roberto Exp roberto $
+** $Id: lstring.c,v 2.10 2007/11/09 18:55:07 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -32,11 +32,11 @@ void luaS_resize (lua_State *L, int newsize) {
   for (i=0; i<tb->size; i++) {
     GCObject *p = tb->hash[i];
     while (p) {  /* for each node in the list */
-      GCObject *next = p->gch.next;  /* save next */
+      GCObject *next = gch(p)->next;  /* save next */
       unsigned int h = gco2ts(p)->hash;
       int h1 = lmod(h, newsize);  /* new position */
       lua_assert(cast_int(h%newsize) == lmod(h, newsize));
-      p->gch.next = newhash[h1];  /* chain it */
+      gch(p)->next = newhash[h1];  /* chain it */
       newhash[h1] = p;
       p = next;
     }
@@ -80,7 +80,7 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
     h = h ^ ((h<<5)+(h>>2)+cast(unsigned char, str[l1-1]));
   for (o = G(L)->strt.hash[lmod(h, G(L)->strt.size)];
        o != NULL;
-       o = o->gch.next) {
+       o = gch(o)->next) {
     TString *ts = rawgco2ts(o);
     if (h == ts->tsv.hash && ts->tsv.len == l &&
                              (memcmp(str, getstr(ts), l) == 0)) {
@@ -98,14 +98,10 @@ Udata *luaS_newudata (lua_State *L, size_t s, Table *e) {
   if (s > MAX_SIZET - sizeof(Udata))
     luaM_toobig(L);
   u = cast(Udata *, luaM_malloc(L, s + sizeof(Udata)));
-  u->uv.marked = luaC_white(G(L));  /* is not finalized */
-  u->uv.tt = LUA_TUSERDATA;
+  luaC_link(L, obj2gco(u), LUA_TUSERDATA);
   u->uv.len = s;
   u->uv.metatable = NULL;
   u->uv.env = e;
-  /* chain it on udata list (after main thread) */
-  u->uv.next = G(L)->mainthread->next;
-  G(L)->mainthread->next = obj2gco(u);
   return u;
 }
 

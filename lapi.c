@@ -1,12 +1,10 @@
 /*
-** $Id: lapi.c,v 2.64 2008/02/12 13:34:12 roberto Exp roberto $
+** $Id: lapi.c,v 2.65 2008/02/14 16:02:58 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
 
 
-#include <assert.h>
-#include <math.h>
 #include <stdarg.h>
 #include <string.h>
 
@@ -698,8 +696,10 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
     }
     case LUA_TUSERDATA: {
       uvalue(obj)->metatable = mt;
-      if (mt)
+      if (mt) {
         luaC_objbarrier(L, rawuvalue(obj), mt);
+        luaC_checkfinalizer(L, rawuvalue(obj));
+      }
       break;
     }
     default: {

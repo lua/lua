@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.45 2008/02/11 18:04:26 roberto Exp roberto $
+** $Id: ltests.c,v 2.46 2008/02/11 19:04:16 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -176,10 +176,10 @@ static int testobjref1 (global_State *g, GCObject *f, GCObject *t) {
 static void printobj (global_State *g, GCObject *o) {
   int i = 0;
   GCObject *p;
-  for (p = g->rootgc; p != o && p != NULL; p = p->gch.next) i++;
+  for (p = g->rootgc; p != o && p != NULL; p = gch(p)->next) i++;
   if (p == NULL) i = -1;
-  printf("%d:%s(%p)-%c(%02X)", i, luaT_typenames[o->gch.tt], (void *)o,
-           isdead(g,o)?'d':isblack(o)?'b':iswhite(o)?'w':'g', o->gch.marked);
+  printf("%d:%s(%p)-%c(%02X)", i, luaT_typenames[gch(o)->tt], (void *)o,
+           isdead(g,o)?'d':isblack(o)?'b':iswhite(o)?'w':'g', gch(o)->marked);
 }
 
 
@@ -198,7 +198,7 @@ static int testobjref (global_State *g, GCObject *f, GCObject *t) {
 #define checkobjref(g,f,t) lua_assert(testobjref(g,f,obj2gco(t)))
 
 #define checkvalref(g,f,t) lua_assert(!iscollectable(t) || \
-	((ttype(t) == (t)->value.gc->gch.tt) && testobjref(g,f,gcvalue(t))))
+	((ttype(t) == gch((t)->value.gc)->tt) && testobjref(g,f,gcvalue(t))))
 
 
 
@@ -285,7 +285,7 @@ static void checkstack (global_State *g, lua_State *L1) {
   CallInfo *ci;
   GCObject *uvo;
   lua_assert(!isdead(g, obj2gco(L1)));
-  for (uvo = L1->openupval; uvo != NULL; uvo = uvo->gch.next) {
+  for (uvo = L1->openupval; uvo != NULL; uvo = gch(uvo)->next) {
     UpVal *uv = gco2uv(uvo);
     lua_assert(uv->v != &uv->u.value);  /* must be open */
     lua_assert(!isblack(uvo));  /* open upvalues cannot be black */
@@ -308,14 +308,14 @@ static void checkstack (global_State *g, lua_State *L1) {
 
 static void checkobject (global_State *g, GCObject *o) {
   if (isdead(g, o))
-/*    lua_assert(g->gcstate == GCSsweepstring || g->gcstate == GCSsweep);*/
-{ if (!(g->gcstate == GCSsweepstring || g->gcstate == GCSsweep))
-printf(">>> %d  %s  %02x\n", g->gcstate, luaT_typenames[o->gch.tt], o->gch.marked);
+/*    lua_assert(issweep(g));*/
+{ if (!issweep(g))
+printf(">>> %d  %s  %02x\n", g->gcstate, luaT_typenames[gch(o)->tt], gch(o)->marked);
 }
   else {
     if (g->gcstate == GCSfinalize)
       lua_assert(iswhite(o));
-    switch (o->gch.tt) {
+    switch (gch(o)->tt) {
       case LUA_TUPVAL: {
         UpVal *uv = gco2uv(o);
         lua_assert(uv->v == &uv->u.value);  /* must be closed */
@@ -329,7 +329,7 @@ printf(">>> %d  %s  %02x\n", g->gcstate, luaT_typenames[o->gch.tt], o->gch.marke
         break;
       }
       case LUA_TTABLE: {
-        checktable(g, gco2h(o));
+        checktable(g, gco2t(o));
         break;
       }
       case LUA_TTHREAD: {
@@ -367,10 +367,10 @@ int lua_checkmemory (lua_State *L) {
   GCObject *o;
   UpVal *uv;
   checkstack(g, g->mainthread);
-  for (o = g->rootgc; o != obj2gco(g->mainthread); o = o->gch.next)
+  for (o = g->rootgc; o != NULL; o = gch(o)->next)
     checkobject(g, o);
-  for (o = o->gch.next; o != NULL; o = o->gch.next) {
-    lua_assert(o->gch.tt == LUA_TUSERDATA);
+  for (o = g->tmudata; o != NULL; o = gch(o)->next) {
+    lua_assert(!isdead(g, o));
     checkobject(g, o);
   }
   for (uv = g->uvhead.u.l.next; uv != &g->uvhead; uv = uv->u.l.next) {
@@ -534,8 +534,10 @@ static int gcstate (lua_State *L) {
   switch(G(L)->gcstate) {
     case GCSpropagate: lua_pushstring(L, "propagate"); break;
     case GCSsweepstring: lua_pushstring(L, "sweep strings"); break;
+    case GCSsweeptmu: lua_pushstring(L, "sweep udata with __gc"); break;
     case GCSsweep: lua_pushstring(L, "sweep"); break;
     case GCSfinalize: lua_pushstring(L, "finalize"); break;
+    default: lua_assert(0);
   }
   return 1;
 }
@@ -612,7 +614,7 @@ static int string_query (lua_State *L) {
   else if (s < tb->size) {
     GCObject *ts;
     int n = 0;
-    for (ts = tb->hash[s]; ts; ts = ts->gch.next) {
+    for (ts = tb->hash[s]; ts; ts = gch(ts)->next) {
       setsvalue2s(L, L->top, gco2ts(ts));
       incr_top(L);
       n++;

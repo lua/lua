@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.30 2007/10/31 15:41:19 roberto Exp roberto $
+** $Id: lstate.h,v 2.31 2008/02/11 15:45:30 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -83,10 +83,11 @@ typedef struct global_State {
   GCObject **sweepgc;  /* position of sweep in `rootgc' */
   GCObject *gray;  /* list of gray objects */
   GCObject *grayagain;  /* list of objects to be traversed atomically */
-  GCObject *weak;  /* list of (something) weak tables */
-  GCObject *ephemeron;  /* list of ephemeron tables */
+  GCObject *weak;  /* list of tables with weak values */
+  GCObject *ephemeron;  /* list of ephemeron tables (weak keys) */
   GCObject *allweak;  /* list of all-weak tables */
-  GCObject *tmudata;  /* last element of list of userdata to be GC */
+  GCObject *tmudata;  /* list of userdata with finalizers */
+  GCObject *tobefnz;  /* last element of list of userdata to be GC */
   Mbuffer buff;  /* temporary buffer for string concatentation */
   lu_mem GCthreshold;
   lu_mem totalbytes;  /* number of bytes currently allocated */
@@ -143,7 +144,7 @@ struct lua_State {
 ** Union of all collectable objects
 */
 union GCObject {
-  GCheader gch;
+  GCheader gch;  /* common header */
   union TString ts;
   union Udata u;
   union Closure cl;
@@ -154,13 +155,15 @@ union GCObject {
 };
 
 
+#define gch(o)		(&(o)->gch)
+
 /* macros to convert a GCObject into a specific value */
 #define rawgco2ts(o)	check_exp((o)->gch.tt == LUA_TSTRING, &((o)->ts))
 #define gco2ts(o)	(&rawgco2ts(o)->tsv)
 #define rawgco2u(o)	check_exp((o)->gch.tt == LUA_TUSERDATA, &((o)->u))
 #define gco2u(o)	(&rawgco2u(o)->uv)
 #define gco2cl(o)	check_exp((o)->gch.tt == LUA_TFUNCTION, &((o)->cl))
-#define gco2h(o)	check_exp((o)->gch.tt == LUA_TTABLE, &((o)->h))
+#define gco2t(o)	check_exp((o)->gch.tt == LUA_TTABLE, &((o)->h))
 #define gco2p(o)	check_exp((o)->gch.tt == LUA_TPROTO, &((o)->p))
 #define gco2uv(o)	check_exp((o)->gch.tt == LUA_TUPVAL, &((o)->uv))
 #define ngcotouv(o)	check_exp((o)->gch.tt == LUA_TUPVAL, &((o)->uv))
