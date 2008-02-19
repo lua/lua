@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.203 2008/02/11 19:14:52 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.204 2008/02/14 16:03:09 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -418,7 +418,9 @@ static int luaB_newproxy (lua_State *L) {
   if (lua_toboolean(L, 1) == 0)
     return 1;  /* no metatable */
   else if (lua_isboolean(L, 1)) {
-    lua_newtable(L);  /* create a new metatable `m' ... */
+    lua_createtable(L, 0, 1);  /* create a new metatable `m' ... */
+    lua_pushboolean(L, 1);
+    lua_setfield(L, -2, "__gc");  /* ... m.__gc = false (HACK!!)... */
     lua_pushvalue(L, -1);  /* ... and mark `m' as a valid metatable */
     lua_pushboolean(L, 1);
     lua_rawset(L, lua_upvalueindex(1));  /* weaktable[m] = true */
