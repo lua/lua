@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.204 2008/02/14 16:03:09 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.205 2008/02/19 18:54:09 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -583,9 +583,9 @@ static int luaB_costatus (lua_State *L) {
 
 
 static int luaB_corunning (lua_State *L) {
-  if (lua_pushthread(L))
-    lua_pushnil(L);  /* main thread is not a coroutine */
-  return 1;
+  int ismain = lua_pushthread(L);
+  lua_pushboolean(L, ismain);
+  return 2;
 }
 
 
