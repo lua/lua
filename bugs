@@ -1797,9 +1797,62 @@ patch = [[
 }
 
 Bug{
+what = [[The validator for precompiled code has several flaws that
+allow malicious binary code to crash the application]],
+report = [[Peter Cawley, on 2008/03/24]],
+since = [[5.0]],
+example = [[
+a = string.dump(function()return;end)
+a = a:gsub(string.char(30,37,122,128), string.char(34,0,0), 1)
+loadstring(a)()
+]],
+patch = [[ ]],
+}
+
+Bug{
+what = [[maliciously crafted precompiled code can blow the C stack]],
+report = [[Greg Falcon, on 2008/03/25]],
+since = [[5.0]],
+example = [[
+function crash(depth)
+  local init = '\27\76\117\97\81\0\1\4\4\4\8\0\7\0\0\0\61\115\116' ..
+               '\100\105\110\0\1\0\0\0\1\0\0\0\0\0\0\2\2\0\0\0\36' ..
+               '\0\0\0\30\0\128\0\0\0\0\0\1\0\0\0\0\0\0\0\1\0\0\0' ..
+               '\1\0\0\0\0\0\0\2'
+  local mid = '\1\0\0\0\30\0\128\0\0\0\0\0\0\0\0\0\1\0\0\0\1\0\0\0\0'
+  local fin = '\0\0\0\0\0\0\0\2\0\0\0\1\0\0\0\1\0\0\0\1\0\0\0\2\0' ..
+              '\0\0\97\0\1\0\0\0\1\0\0\0\0\0\0\0'
+  local lch = '\2\0\0\0\36\0\0\0\30\0\128\0\0\0\0\0\1\0\0\0\0\0\0' ..
+              '\0\1\0\0\0\1\0\0\0\0\0\0\2'
+  local rch = '\0\0\0\0\0\0\0\2\0\0\0\1\0\0\0\1\0\0\0\1\0\0\0\2\0' ..
+              '\0\0\97\0\1\0\0\0\1'
+  for i=1,depth do lch,rch = lch..lch,rch..rch end
+  loadstring(init .. lch .. mid .. rch .. fin)
+end
+for i=1,25 do print(i); crash(i) end
+]],
+patch = [[ ]],
+}
+
+Bug{
+what = [[code validator may reject (maliciously crafted) correct code]],
+report = [[Greg Falcon, on 2008/03/26]],
+since = [[5.0]],
+example = [[
+z={}
+for i=1,27290 do z[i]='1,' end
+z = 'if 1+1==2 then local a={' .. table.concat(z) .. '} end'
+func = loadstring(z)
+print(loadstring(string.dump(func)))
+]],
+patch = [[ ]],
+}
+
+Bug{
 what = [[ ]],
 report = [[ , on ]],
 since = [[i ]],
 example = [[ ]],
 patch = [[ ]],
 }
+
