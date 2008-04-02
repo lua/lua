@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.55 2007/10/18 11:01:52 roberto Exp roberto $
+** $Id: lparser.c,v 2.56 2007/10/25 16:45:47 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -315,7 +315,7 @@ static void pushclosure (LexState *ls, FuncState *func, expdesc *v) {
   int oldsize = f->sizep;
   int i;
   luaM_growvector(ls->L, f->p, fs->np, f->sizep, Proto *,
-                  MAXARG_Bx, "constants");
+                  MAXARG_Bx, "functions");
   while (oldsize < f->sizep) f->p[oldsize++] = NULL;
   f->p[fs->np++] = func->f;
   luaC_objbarrier(ls->L, f, func->f);
