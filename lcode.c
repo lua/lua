@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.33 2007/03/27 14:11:38 roberto Exp roberto $
+** $Id: lcode.c,v 2.34 2007/05/04 18:41:49 roberto Exp roberto $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -824,16 +824,24 @@ int luaK_codeABx (FuncState *fs, OpCode o, int a, unsigned int bc) {
 }
 
 
+static int luaK_codeAx (FuncState *fs, OpCode o, int a) {
+  lua_assert(getOpMode(o) == iAx);
+  return luaK_code(fs, CREATE_Ax(o, a));
+}
+
+
 void luaK_setlist (FuncState *fs, int base, int nelems, int tostore) {
   int c =  (nelems - 1)/LFIELDS_PER_FLUSH + 1;
   int b = (tostore == LUA_MULTRET) ? 0 : tostore;
   lua_assert(tostore != 0);
   if (c <= MAXARG_C)
     luaK_codeABC(fs, OP_SETLIST, base, b, c);
-  else {
+  else if (c <= MAXARG_Ax) {
     luaK_codeABC(fs, OP_SETLIST, base, b, 0);
-    luaK_code(fs, cast(Instruction, c));
+    luaK_codeAx(fs, OP_EXTRAARG, c);
   }
+  else
+    luaX_syntaxerror(fs->ls, "constructor too long");
   fs->freereg = base + 1;  /* free registers with list values */
 }
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.36 2007/05/09 15:49:36 roberto Exp roberto $
+** $Id: ldebug.c,v 2.37 2007/05/29 18:59:59 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -331,9 +331,9 @@ static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
     int b = 0;
     int c = 0;
     check(op < NUM_OPCODES);
-    checkreg(pt, a);
     switch (getOpMode(op)) {
       case iABC: {
+        checkreg(pt, a);
         b = GETARG_B(i);
         c = GETARG_C(i);
         check(checkArgMode(pt, b, getBMode(op)));
@@ -341,31 +341,27 @@ static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
         break;
       }
       case iABx: {
+        checkreg(pt, a);
         b = GETARG_Bx(i);
         if (getBMode(op) == OpArgK) check(b < pt->sizek);
         break;
       }
       case iAsBx: {
+        checkreg(pt, a);
         b = GETARG_sBx(i);
         if (getBMode(op) == OpArgR) {
           int dest = pc+1+b;
           check(0 <= dest && dest < pt->sizecode);
-          if (dest > 0) {
-            /* cannot jump to a setlist count */
-            Instruction d = pt->code[dest-1];
-            check(!(GET_OPCODE(d) == OP_SETLIST && GETARG_C(d) == 0));
-          }
         }
         break;
       }
+      case iAx: break;
     }
     if (testAMode(op)) {
       if (a == reg) last = pc;  /* change register `a' */
     }
-    if (testTMode(op)) {
-      check(pc+2 < pt->sizecode);  /* check skip */
+    if (testTMode(op))
       check(GET_OPCODE(pt->code[pc+1]) == OP_JMP);
-    }
     switch (op) {
       case OP_LOADBOOL: {
         check(c == 0 || pc+2 < pt->sizecode);  /* check its jump */
@@ -433,7 +429,7 @@ static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
       }
       case OP_SETLIST: {
         if (b > 0) checkreg(pt, a + b);
-        if (c == 0) pc++;
+        if (c == 0) check(GET_OPCODE(pt->code[pc + 1]) == OP_EXTRAARG);
         break;
       }
       case OP_CLOSURE: {

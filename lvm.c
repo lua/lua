@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.72 2007/06/19 19:48:15 roberto Exp roberto $
+** $Id: lvm.c,v 2.73 2007/09/10 17:59:32 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -704,7 +704,10 @@ void luaV_execute (lua_State *L, int nexeccalls) {
         int last;
         Table *h;
         if (n == 0) n = cast_int(L->top - ra) - 1;
-        if (c == 0) c = cast_int(*L->savedpc++);
+        if (c == 0) {
+          lua_assert(GET_OPCODE(*L->savedpc) == OP_EXTRAARG);
+          c = GETARG_Ax(*L->savedpc++);
+        }
         runtime_check(L, ttistable(ra));
         h = hvalue(ra);
         last = ((c-1)*LFIELDS_PER_FLUSH) + n;
@@ -763,6 +766,10 @@ void luaV_execute (lua_State *L, int nexeccalls) {
           }
         }
         continue;
+      }
+      case OP_EXTRAARG: {
+        luaG_runerror(L, "bad opcode");
+        return;
       }
     }
   }

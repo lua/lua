@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.125 2006/03/14 19:04:44 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.126 2006/09/11 14:07:24 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -28,7 +28,7 @@
 ===========================================================================*/
 
 
-enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
+enum OpMode {iABC, iABx, iAsBx, iAx};  /* basic instruction format */
 
 
 /*
@@ -38,6 +38,7 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 #define SIZE_B		9
 #define SIZE_Bx		(SIZE_C + SIZE_B)
 #define SIZE_A		8
+#define SIZE_Ax		(SIZE_C + SIZE_B + SIZE_A)
 
 #define SIZE_OP		6
 
@@ -46,6 +47,7 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 #define POS_C		(POS_A + SIZE_A)
 #define POS_B		(POS_C + SIZE_C)
 #define POS_Bx		POS_C
+#define POS_Ax		POS_A
 
 
 /*
@@ -61,6 +63,12 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 #define MAXARG_sBx        MAX_INT
 #endif
 
+#if SIZE_Ax < LUAI_BITSINT-1
+#define MAXARG_Ax	((1<<SIZE_Ax)-1)
+#else
+#define MAXARG_Ax	MAX_INT
+#endif
+
 
 #define MAXARG_A        ((1<<SIZE_A)-1)
 #define MAXARG_B        ((1<<SIZE_B)-1)
@@ -68,7 +76,7 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 
 
 /* creates a mask with `n' 1 bits at position `p' */
-#define MASK1(n,p)	((~((~(Instruction)0)<<n))<<p)
+#define MASK1(n,p)	((~((~(Instruction)0)<<(n)))<<(p))
 
 /* creates a mask with `n' 0 bits at position `p' */
 #define MASK0(n,p)	(~MASK1(n,p))
@@ -81,21 +89,24 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 #define SET_OPCODE(i,o)	((i) = (((i)&MASK0(SIZE_OP,POS_OP)) | \
 		((cast(Instruction, o)<<POS_OP)&MASK1(SIZE_OP,POS_OP))))
 
-#define GETARG_A(i)	(cast(int, ((i)>>POS_A) & MASK1(SIZE_A,0)))
-#define SETARG_A(i,u)	((i) = (((i)&MASK0(SIZE_A,POS_A)) | \
-		((cast(Instruction, u)<<POS_A)&MASK1(SIZE_A,POS_A))))
+#define getarg(i,pos,size)	(cast(int, ((i)>>pos) & MASK1(size,0)))
+#define setarg(i,v,pos,size)	((i) = (((i)&MASK0(size,pos)) | \
+                ((cast(Instruction, v)<<pos)&MASK1(size,pos))))
 
-#define GETARG_B(i)	(cast(int, ((i)>>POS_B) & MASK1(SIZE_B,0)))
-#define SETARG_B(i,b)	((i) = (((i)&MASK0(SIZE_B,POS_B)) | \
-		((cast(Instruction, b)<<POS_B)&MASK1(SIZE_B,POS_B))))
+#define GETARG_A(i)	getarg(i, POS_A, SIZE_A)
+#define SETARG_A(i,v)	setarg(i, v, POS_A, SIZE_A)
 
-#define GETARG_C(i)	(cast(int, ((i)>>POS_C) & MASK1(SIZE_C,0)))
-#define SETARG_C(i,b)	((i) = (((i)&MASK0(SIZE_C,POS_C)) | \
-		((cast(Instruction, b)<<POS_C)&MASK1(SIZE_C,POS_C))))
+#define GETARG_B(i)	getarg(i, POS_B, SIZE_B)
+#define SETARG_B(i,v)	setarg(i, v, POS_B, SIZE_B)
 
-#define GETARG_Bx(i)	(cast(int, ((i)>>POS_Bx) & MASK1(SIZE_Bx,0)))
-#define SETARG_Bx(i,b)	((i) = (((i)&MASK0(SIZE_Bx,POS_Bx)) | \
-		((cast(Instruction, b)<<POS_Bx)&MASK1(SIZE_Bx,POS_Bx))))
+#define GETARG_C(i)	getarg(i, POS_C, SIZE_C)
+#define SETARG_C(i,v)	setarg(i, v, POS_C, SIZE_C)
+
+#define GETARG_Bx(i)	getarg(i, POS_Bx, SIZE_Bx)
+#define SETARG_Bx(i,v)	setarg(i, v, POS_Bx, SIZE_Bx)
+
+#define GETARG_Ax(i)	getarg(i, POS_Ax, SIZE_Ax)
+#define SETARG_Ax(i,v)	setarg(i, v, POS_Ax, SIZE_Ax)
 
 #define GETARG_sBx(i)	(GETARG_Bx(i)-MAXARG_sBx)
 #define SETARG_sBx(i,b)	SETARG_Bx((i),cast(unsigned int, (b)+MAXARG_sBx))
@@ -109,6 +120,9 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 #define CREATE_ABx(o,a,bc)	((cast(Instruction, o)<<POS_OP) \
 			| (cast(Instruction, a)<<POS_A) \
 			| (cast(Instruction, bc)<<POS_Bx))
+
+#define CREATE_Ax(o,a)		((cast(Instruction, o)<<POS_OP) \
+			| (cast(Instruction, a)<<POS_A))
 
 
 /*
@@ -204,11 +218,13 @@ OP_SETLIST,/*	A B C	R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B	*/
 OP_CLOSE,/*	A	close all variables in the stack up to (>=) R(A)*/
 OP_CLOSURE,/*	A Bx	R(A) := closure(KPROTO[Bx], R(A), ... ,R(A+n))	*/
 
-OP_VARARG/*	A B	R(A), R(A+1), ..., R(A+B-1) = vararg		*/
+OP_VARARG,/*	A B	R(A), R(A+1), ..., R(A+B-1) = vararg		*/
+
+OP_EXTRAARG/*	Ax	extra argument for previous opcode		*/
 } OpCode;
 
 
-#define NUM_OPCODES	(cast(int, OP_VARARG) + 1)
+#define NUM_OPCODES	(cast(int, OP_EXTRAARG) + 1)
 
 
 
@@ -224,7 +240,7 @@ OP_VARARG/*	A B	R(A), R(A+1), ..., R(A+B-1) = vararg		*/
   (*) In OP_RETURN, if (B == 0) then return up to `top'
 
   (*) In OP_SETLIST, if (B == 0) then B = `top';
-      if (C == 0) then next `instruction' is real C
+      if (C == 0) then next `instruction' is EXTRAARG(real C)
 
   (*) For comparisons, A specifies what condition the test should accept
       (true or false).
