@@ -1806,7 +1806,51 @@ a = string.dump(function()return;end)
 a = a:gsub(string.char(30,37,122,128), string.char(34,0,0), 1)
 loadstring(a)()
 ]],
-patch = [[ ]],
+patch = [[
+--- ldebug.c    2007/12/28 15:32:23     2.29.1.3
++++ ldebug.c    2008/04/04 15:15:40
+@@ -275,12 +275,12 @@
+ 
+ static int precheck (const Proto *pt) {
+   check(pt->maxstacksize <= MAXSTACK);
+-  lua_assert(pt->numparams+(pt->is_vararg & VARARG_HASARG) <= pt->maxstacksize);
+-  lua_assert(!(pt->is_vararg & VARARG_NEEDSARG) ||
++  check(pt->numparams+(pt->is_vararg & VARARG_HASARG) <= pt->maxstacksize);
++  check(!(pt->is_vararg & VARARG_NEEDSARG) ||
+               (pt->is_vararg & VARARG_HASARG));
+   check(pt->sizeupvalues <= pt->nups);
+   check(pt->sizelineinfo == pt->sizecode || pt->sizelineinfo == 0);
+-  check(GET_OPCODE(pt->code[pt->sizecode-1]) == OP_RETURN);
++  check(pt->sizecode > 0 && GET_OPCODE(pt->code[pt->sizecode-1]) == OP_RETURN);
+   return 1;
+ }
+ 
+@@ -363,7 +363,11 @@
+     }
+     switch (op) {
+       case OP_LOADBOOL: {
+-        check(c == 0 || pc+2 < pt->sizecode);  /* check its jump */
++        if (c == 1) {  /* does it jump? */
++          check(pc+2 < pt->sizecode);  /* check its jump */
++          check(GET_OPCODE(pt->code[pc+1]) != OP_SETLIST ||
++                GETARG_C(pt->code[pc+1]) != 0);
++        }
+         break;
+       }
+       case OP_LOADNIL: {
+@@ -428,7 +432,10 @@
+       }
+       case OP_SETLIST: {
+         if (b > 0) checkreg(pt, a + b);
+-        if (c == 0) pc++;
++        if (c == 0) {
++          pc++;
++          check(pc < pt->sizecode - 1);
++        }
+         break;
+       }
+       case OP_CLOSURE: {
+]],
 }
 
 Bug{
@@ -1845,14 +1889,57 @@ z = 'if 1+1==2 then local a={' .. table.concat(z) .. '} end'
 func = loadstring(z)
 print(loadstring(string.dump(func)))
 ]],
-patch = [[ ]],
+patch = [[
+--- ldebug.c    2008/04/04 15:30:05     2.29.1.4
++++ ldebug.c    2008/04/04 15:47:10
+@@ -346,9 +346,18 @@
+           int dest = pc+1+b;
+           check(0 <= dest && dest < pt->sizecode);
+           if (dest > 0) {
+-            /* cannot jump to a setlist count */
+-            Instruction d = pt->code[dest-1];
+-            check(!(GET_OPCODE(d) == OP_SETLIST && GETARG_C(d) == 0));
++            int j;
++            /* check that it does not jump to a setlist count; this
++               is tricky, because the count from a previous setlist may
++               have the same value of an invalid setlist; so, we must
++               go all the way back to the first of them (if any) */
++            for (j = 0; j < dest; j++) {
++              Instruction d = pt->code[dest-1];
++              if (!(GET_OPCODE(d) == OP_SETLIST && GETARG_C(d) == 0)) break;
++            }
++            /* if 'j' is even, previous value is not a setlist (even if
++               it looks like one) */
++            check((j&1) == 0);
+           }
+         }
+         break;
+]],
 }
 
 Bug{
-what = [[ ]],
-report = [[ , on ]],
-since = [[i ]],
-example = [[ ]],
-patch = [[ ]],
+what = [[maliciously crafted precompiled code can inject invalid boolean
+values into Lua code]],
+report = [[Greg Falcon, on 2008/03/27]],
+since = [[5.0]],
+example = [[
+maybe = string.dump(function() return ({[true]=true})[true] end)
+maybe = maybe:gsub('\1\1','\1\2')
+maybe = loadstring(maybe)()
+assert(type(maybe) == "boolean" and maybe ~= true and maybe ~= false)
+]],
+patch = [[
+--- lundump.c   2008/01/18 16:39:11     2.7.1.2
++++ lundump.c   2008/04/04 15:50:39
+@@ -115,7 +115,7 @@
+        setnilvalue(o);
+        break;
+    case LUA_TBOOLEAN:
+-       setbvalue(o,LoadChar(S));
++       setbvalue(o,LoadChar(S)!=0);
+        break;
+    case LUA_TNUMBER:
+        setnvalue(o,LoadNumber(S));
+]],
 }
 
