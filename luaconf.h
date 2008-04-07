@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.95 2008/01/17 16:24:38 roberto Exp roberto $
+** $Id: luaconf.h,v 1.96 2008/02/11 19:17:19 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -304,7 +304,7 @@
 ** mean larger pauses which mean slower collection.) You can also change
 ** this value dynamically.
 */
-#define LUAI_GCPAUSE	200  /* 200% (wait memory to double before next GC) */
+#define LUAI_GCPAUSE	162  /* 162% (wait memory to double before next GC) */
 
 
 /*
