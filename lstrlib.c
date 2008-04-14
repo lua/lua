@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.138 2007/10/29 15:51:10 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.139 2007/11/12 14:10:09 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -499,7 +499,10 @@ static int str_find_aux (lua_State *L, int find) {
   const char *p = luaL_checklstring(L, 2, &l2);
   size_t init = posrelat(luaL_optinteger(L, 3, 1), l1);
   if (init < 1) init = 1;
-  else if (init > l1) init = l1 + 1;
+  else if (init > l1 + 1) {  /* start after string's end? */
+    lua_pushnil(L);  /* cannot find anything */
+    return 1;
+  }
   if (find && (lua_toboolean(L, 4) ||  /* explicit request? */
       strpbrk(p, SPECIALS) == NULL)) {  /* or no special characters? */
     /* do a plain search */
