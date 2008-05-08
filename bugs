@@ -1875,7 +1875,35 @@ function crash(depth)
 end
 for i=1,25 do print(i); crash(i) end
 ]],
-patch = [[ ]],
+patch = [[
+--- lundump.c   2008/04/04 16:00:45     2.7.1.3
++++ lundump.c   2008/04/04 19:51:41     2.7.1.4
+@@ -1,5 +1,5 @@
+ /*
+-** $Id: lundump.c,v 2.7.1.3 2008/04/04 16:00:45 roberto Exp $
++** $Id: lundump.c,v 2.7.1.4 2008/04/04 19:51:41 roberto Exp $
+ ** load precompiled Lua chunks
+ ** See Copyright Notice in lua.h
+ */
+@@ -161,7 +161,9 @@
+ 
+ static Proto* LoadFunction(LoadState* S, TString* p)
+ {
+- Proto* f=luaF_newproto(S->L);
++ Proto* f;
++ if (++S->L->nCcalls > LUAI_MAXCCALLS) error(S,"code too deep");
++ f=luaF_newproto(S->L);
+  setptvalue2s(S->L,S->L->top,f); incr_top(S->L);
+  f->source=LoadString(S); if (f->source==NULL) f->source=p;
+  f->linedefined=LoadInt(S);
+@@ -175,6 +177,7 @@
+  LoadDebug(S,f);
+  IF (!luaG_checkcode(f), "bad code");
+  S->L->top--;
++ S->L->nCcalls--;
+  return f;
+ }
+]],
 }
 
 Bug{
@@ -1905,7 +1933,7 @@ patch = [[
 +               have the same value of an invalid setlist; so, we must
 +               go all the way back to the first of them (if any) */
 +            for (j = 0; j < dest; j++) {
-+              Instruction d = pt->code[dest-1];
++              Instruction d = pt->code[dest-1-j];
 +              if (!(GET_OPCODE(d) == OP_SETLIST && GETARG_C(d) == 0)) break;
 +            }
 +            /* if 'j' is even, previous value is not a setlist (even if
