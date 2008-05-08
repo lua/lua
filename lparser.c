@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.56 2007/10/25 16:45:47 roberto Exp roberto $
+** $Id: lparser.c,v 2.57 2008/04/02 17:19:22 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -29,7 +29,7 @@
 
 #define hasmultret(k)		((k) == VCALL || (k) == VVARARG)
 
-#define getlocvar(fs, i)	((fs)->f->locvars[(fs)->actvar[i]])
+#define getlocvar(fs, i)	((fs)->f->locvars[(fs)->actvar[i].idx])
 
 #define luaY_checklimit(fs,v,l,m)	if ((v)>(l)) errorlimit(fs,l,m)
 
@@ -161,8 +161,9 @@ static int registerlocalvar (LexState *ls, TString *varname) {
 
 static void new_localvar (LexState *ls, TString *name, int n) {
   FuncState *fs = ls->fs;
+  int reg = registerlocalvar(ls, name);
   luaY_checklimit(fs, fs->nactvar+n+1, LUAI_MAXVARS, "local variables");
-  fs->actvar[fs->nactvar+n] = cast(unsigned short, registerlocalvar(ls, name));
+  fs->actvar[fs->nactvar+n].idx = cast(unsigned short, reg);
 }
 
 
