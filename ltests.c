@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.48 2008/04/02 17:38:54 roberto Exp roberto $
+** $Id: ltests.c,v 2.49 2008/06/12 14:20:49 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -1017,6 +1017,12 @@ static int testC (lua_State *L) {
       int i = getindex;
       lua_pushboolean(L1, luaL_testudata(L1, i, getname) != NULL);
     }
+    else if EQ("gsub") {
+      int a = getnum; int b = getnum; int c = getnum;
+      luaL_gsub(L1, lua_tostring(L1, a),
+                    lua_tostring(L, b),
+                    lua_tostring(L, c));
+    }
     else if EQ("throw") {
 #if defined(__cplusplus)
 static struct X { int x; } x;
@@ -1079,27 +1085,6 @@ static int coresume (lua_State *L) {
 
 
 
-/*
-** {======================================================
-** tests auxlib functions
-** =======================================================
-*/
-
-static int auxgsub (lua_State *L) {
-  const char *s1 = luaL_checkstring(L, 1);
-  const char *s2 = luaL_checkstring(L, 2);
-  const char *s3 = luaL_checkstring(L, 3);
-  lua_settop(L, 3);
-  luaL_gsub(L, s1, s2, s3);
-  lua_assert(lua_gettop(L) == 4);
-  return 1;
-}
-
-
-/* }====================================================== */
-
-
-
 static const struct luaL_Reg tests_funcs[] = {
   {"checkmemory", lua_checkmemory},
   {"closestate", closestate},
@@ -1109,7 +1094,6 @@ static const struct luaL_Reg tests_funcs[] = {
   {"gccolor", get_gccolor},
   {"gcstate", gcstate},
   {"getref", getref},
-  {"gsub", auxgsub},
   {"hash", hash_query},
   {"int2fb", int2fb_aux},
   {"limits", get_limits},
