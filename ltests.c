@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.49 2008/06/12 14:20:49 roberto Exp roberto $
+** $Id: ltests.c,v 2.50 2008/06/13 14:15:59 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -39,8 +39,6 @@
 
 int l_Trick = 0;
 
-
-static lua_State *lua_state = NULL;
 
 int islocked = 0;
 
@@ -1134,7 +1132,6 @@ int luaB_opentests (lua_State *L) {
   lua_assert(lua_getallocf(L, &ud) == debug_realloc);
   lua_assert(ud == cast(void *, &l_memcontrol));
   lua_setallocf(L, lua_getallocf(L, NULL), ud);
-  lua_state = L;  /* keep first state to be opened */
   luaL_register(L, "T", tests_funcs);
   return 0;
 }
