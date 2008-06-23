@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.50 2008/06/13 14:15:59 roberto Exp roberto $
+** $Id: ltests.c,v 2.51 2008/06/13 17:07:10 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -37,7 +37,7 @@
 #if defined(LUA_DEBUG)
 
 
-int l_Trick = 0;
+void *l_Trick = 0;
 
 
 int islocked = 0;
@@ -507,7 +507,7 @@ static int mem_query (lua_State *L) {
 
 
 static int settrick (lua_State *L) {
-  l_Trick = lua_tointeger(L, 1);
+  l_Trick = (L->base)->value.gc;
   return 0;
 }
 
