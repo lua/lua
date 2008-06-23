@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.44 2008/02/19 18:55:09 roberto Exp roberto $
+** $Id: lgc.c,v 2.45 2008/06/23 16:51:28 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -210,7 +210,6 @@ static void markbeingfnz (global_State *g) {
     do {
       u = gch(u)->next;
       lua_assert(testbit(gch(u)->marked, SEPARATED));
-      lua_assert(!iswhite(u));  /* must be marked, if left from previous GC */
       makewhite(g, u);
       reallymarkobject(g, u);
     } while (u != g->tobefnz);
@@ -664,12 +663,10 @@ size_t luaC_separateudata (lua_State *L, int all) {
   while ((curr = *p) != NULL) {
     lua_assert(ttisuserdata(gch(curr)) && !isfinalized(gco2u(curr)));
     lua_assert(testbit(gch(curr)->marked, SEPARATED));
-    if (all) makewhite(g, curr);  /* if 'all', collect all objects */
-    if (!iswhite(curr))  /* not being collected? */
+    if (!(all || iswhite(curr)))  /* not being collected? */
       p = &gch(curr)->next;  /* don't bother with it */
     else {
       l_setbit(gch(curr)->marked, FINALIZEDBIT); /* won't be finalized again */
-      reallymarkobject(g, curr);  /* won't be collected now */
       deadmem += sizeudata(gco2u(curr));
       *p = gch(curr)->next;  /* remove 'curr' from 'tmudata' list */
       /* link 'curr' at the end of 'tobefnz' list */
@@ -746,6 +743,7 @@ static void atomic (lua_State *L) {
   traverselistofgrays(g, &g->grayagain);  /* remark gray again */
   convergeephemerons(g);
   udsize = luaC_separateudata(L, 0);  /* separate userdata to be finalized */
+  markbeingfnz(g);  /* mark userdata that will be finalized */
   udsize += propagateall(g);  /* remark, to propagate `preserveness' */
   convergeephemerons(g);
   /* remove collected objects from weak tables */
