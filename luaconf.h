@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.96 2008/02/11 19:17:19 roberto Exp roberto $
+** $Id: luaconf.h,v 1.97 2008/04/07 18:58:42 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -182,7 +182,11 @@
 @* be exported to outside modules.
 ** CHANGE them if you need to mark them in some special way. Elf/gcc
 ** (versions 3.2 and later) mark them as "hidden" to optimize access
-** when Lua is compiled as a shared library.
+** when Lua is compiled as a shared library. Not all elf targets support
+** this attribute. Unfortunately, gcc does not offer a way to check
+** whether the target offers that support, and those without support
+** give a warning about it. To avoid these warnings, change to the
+** default definition.
 */
 #if defined(luaall_c)
 #define LUAI_FUNC	static
