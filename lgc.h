@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.h,v 2.17 2007/10/29 16:51:20 roberto Exp roberto $
+** $Id: lgc.h,v 2.18 2008/02/19 18:55:09 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -17,26 +17,24 @@
 #define GCSpause	0
 #define GCSpropagate	1
 #define GCSsweepstring	2
-#define GCSsweeptmu	3
-#define GCSsweep	4
-#define GCSfinalize	5
+#define GCSsweep	3
+#define GCSfinalize	4
 
 
-#define issweep(g) \
-	(GCSsweepstring <= (g)->gcstate && (g)->gcstate <= GCSsweep)
+#define issweep(g)  (GCSsweepstring <= (g)->gcstate && (g)->gcstate <= GCSsweep)
 
 
 /*
 ** some userful bit tricks
 */
-#define resetbits(x,m)	((x) &= cast(lu_byte, ~(m)))
-#define setbits(x,m)	((x) |= (m))
-#define testbits(x,m)	((x) & (m))
-#define bitmask(b)	(1<<(b))
-#define bit2mask(b1,b2)	(bitmask(b1) | bitmask(b2))
-#define l_setbit(x,b)	setbits(x, bitmask(b))
-#define resetbit(x,b)	resetbits(x, bitmask(b))
-#define testbit(x,b)	testbits(x, bitmask(b))
+#define resetbits(x,m)		((x) &= cast(lu_byte, ~(m)))
+#define setbits(x,m)		((x) |= (m))
+#define testbits(x,m)		((x) & (m))
+#define bitmask(b)		(1<<(b))
+#define bit2mask(b1,b2)		(bitmask(b1) | bitmask(b2))
+#define l_setbit(x,b)		setbits(x, bitmask(b))
+#define resetbit(x,b)		resetbits(x, bitmask(b))
+#define testbit(x,b)		testbits(x, bitmask(b))
 #define set2bits(x,b1,b2)	setbits(x, (bit2mask(b1, b2)))
 #define reset2bits(x,b1,b2)	resetbits(x, (bit2mask(b1, b2)))
 
@@ -48,7 +46,7 @@
 ** bit 1 - object is white (type 1)
 ** bit 2 - object is black
 ** bit 3 - for userdata: has been finalized
-** bit 4 - for userdata: it's not in rootgc list (it's in tmudata or tobefnz)
+** bit 4 - for userdata: it's in 2nd part of rootgc list or in tobefnz
 ** bit 5 - object is fixed (should not be collected)
 ** bit 6 - object is "super" fixed (only the main thread)
 */
@@ -99,7 +97,7 @@
    { if (iswhite(obj2gco(o)) && isblack(obj2gco(t))) luaC_barrierback(L,t); }
 
 LUAI_FUNC size_t luaC_separateudata (lua_State *L, int all);
-LUAI_FUNC void luaC_callGCTM (lua_State *L);
+LUAI_FUNC void luaC_callAllGCTM (lua_State *L);
 LUAI_FUNC void luaC_freeall (lua_State *L);
 LUAI_FUNC void luaC_step (lua_State *L);
 LUAI_FUNC void luaC_fullgc (lua_State *L, int isemergency);

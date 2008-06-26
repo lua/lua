@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.43 2008/02/11 15:45:30 roberto Exp roberto $
+** $Id: lstate.c,v 2.44 2008/02/19 18:55:09 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -181,7 +181,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->gray = NULL;
   g->grayagain = NULL;
   g->weak = g->ephemeron = g->allweak = NULL;
-  g->tmudata = g->tobefnz = NULL;
+  g->tobefnz = NULL;
   g->totalbytes = sizeof(LG);
   g->gcpause = LUAI_GCPAUSE;
   g->gcstepmul = LUAI_GCMUL;
@@ -200,7 +200,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
 
 static void callallgcTM (lua_State *L, void *ud) {
   UNUSED(ud);
-  luaC_callGCTM(L);  /* call GC metamethods for all udata */
+  luaC_callAllGCTM(L);  /* call GC metamethods for all udata */
 }
 
 
@@ -209,7 +209,7 @@ LUA_API void lua_close (lua_State *L) {
   lua_lock(L);
   luaF_close(L, L->stack);  /* close all upvalues for this thread */
   luaC_separateudata(L, 1);  /* separate all udata with GC metamethods */
-  lua_assert(G(L)->tmudata == NULL);
+  lua_assert(L->next == NULL);
   L->errfunc = 0;  /* no error function during GC metamethods */
   do {  /* repeat until no more errors */
     L->ci = L->base_ci;

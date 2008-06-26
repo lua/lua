@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.45 2008/06/23 16:51:28 roberto Exp roberto $
+** $Id: lgc.c,v 2.46 2008/06/23 22:07:44 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -79,7 +79,7 @@ static void removeentry (Node *n) {
 ** The next function tells whether a key or value can be cleared from
 ** a weak table. Non-collectable objects are never removed from weak
 ** tables. Strings behave as `values', so are never removed too. for
-** other objects: if really collected, cannot keep them; for userdata
+** other objects: if really collected, cannot keep them; for objects
 ** being finalized, keep them in keys, but not in values
 */
 static int iscleared (const TValue *o, int iskey) {
@@ -205,14 +205,11 @@ static void markmt (global_State *g) {
 
 
 static void markbeingfnz (global_State *g) {
-  GCObject *u = g->tobefnz;
-  if (u) {
-    do {
-      u = gch(u)->next;
-      lua_assert(testbit(gch(u)->marked, SEPARATED));
-      makewhite(g, u);
-      reallymarkobject(g, u);
-    } while (u != g->tobefnz);
+  GCObject *o;
+  for (o = g->tobefnz; o != NULL; o = gch(o)->next) {
+    lua_assert(testbit(gch(o)->marked, SEPARATED));
+    makewhite(g, o);
+    reallymarkobject(g, o);
   }
 }
 
@@ -228,7 +225,7 @@ static void markroot (lua_State *L) {
   markvalue(g, gt(g->mainthread));
   markvalue(g, registry(L));
   markmt(g);
-  markbeingfnz(g);  /* mark any finalizing userdata left from previous cycle */
+  markbeingfnz(g);  /* mark any finalizing object left from previous cycle */
   g->gcstate = GCSpropagate;
 }
 
@@ -573,17 +570,6 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
   return p;
 }
 
-
-/* sweep list where all objects are alive (dead udata were removed
-   when separated from this list) */
-static GCObject **unmarklist (global_State *g, GCObject **p, lu_mem count) {
-  for (; *p != NULL && count-- > 0; p = &gch(*p)->next) {
-     lua_assert(ttisuserdata(gch(*p)) && !isdead(g, *p));
-    makewhite(g, *p);
-  }
-  return p;
-}
-
 /* }====================================================== */
 
 
@@ -602,18 +588,14 @@ static void checkSizes (lua_State *L) {
 
 
 static Udata *udata2finalize (global_State *g) {
-  GCObject *o = gch(g->tobefnz)->next;  /* get first element */
-  Udata *udata = rawgco2u(o);
-  /* remove udata from `tobefnz' */
-  if (o == g->tobefnz)  /* last element? */
-    g->tobefnz = NULL;
-  else
-    gch(g->tobefnz)->next = udata->uv.next;
-  udata->uv.next = g->mainthread->next;  /* return it to `root' list */
-  g->mainthread->next = o;
-  resetbit(udata->uv.marked, SEPARATED);  /* mark it as such */
+  GCObject *o = g->tobefnz;  /* get first element */
+  g->tobefnz = gch(o)->next;  /* remove it from 'tobefnz' list */
+  gch(o)->next = g->rootgc;  /* return it to `root' list */
+  g->rootgc = o;
+  lua_assert(isfinalized(gch(o)));
+  resetbit(gch(o)->marked, SEPARATED);  /* mark it as such */
   makewhite(g, o);
-  return udata;
+  return rawgco2u(o);
 }
 
 
@@ -639,28 +621,21 @@ static void GCTM (lua_State *L) {
 /*
 ** Call all GC tag methods
 */
-void luaC_callGCTM (lua_State *L) {
-  global_State *g = G(L);
-  GCObject *last = g->tobefnz;
-  GCObject *curr;
-  if (last == NULL) return;  /* empty list? */
-  do {
-    curr = gch(g->tobefnz)->next;  /* element to be collected */
-    GCTM(L);
-  } while (curr != last);  /* go only until original last */
-  /* do not finalize new udata created during previous finalizations  */
-  while (g->tobefnz)
-    udata2finalize(g);  /* simply remove them from list */
+void luaC_callAllGCTM (lua_State *L) {
+  while (G(L)->tobefnz) GCTM(L);
 }
 
 
 /* move 'dead' udata that need finalization to list 'tobefnz' */
 size_t luaC_separateudata (lua_State *L, int all) {
   global_State *g = G(L);
-  size_t deadmem = 0;
-  GCObject **p = &g->tmudata;
+  size_t deadmem = 0;  /* total size of all objects to be finalized */
+  GCObject **p = &g->mainthread->next;
   GCObject *curr;
-  while ((curr = *p) != NULL) {
+  GCObject **lastnext = &g->tobefnz;
+  /* find last 'next' field in 'tobefnz' list (to insert elements in its end) */
+  while (*lastnext != NULL) lastnext = &gch(*lastnext)->next;
+  while ((curr = *p) != NULL) {  /* traverse all finalizable objects */
     lua_assert(ttisuserdata(gch(curr)) && !isfinalized(gco2u(curr)));
     lua_assert(testbit(gch(curr)->marked, SEPARATED));
     if (!(all || iswhite(curr)))  /* not being collected? */
@@ -668,15 +643,11 @@ size_t luaC_separateudata (lua_State *L, int all) {
     else {
       l_setbit(gch(curr)->marked, FINALIZEDBIT); /* won't be finalized again */
       deadmem += sizeudata(gco2u(curr));
-      *p = gch(curr)->next;  /* remove 'curr' from 'tmudata' list */
+      *p = gch(curr)->next;  /* remove 'curr' from 'rootgc' list */
       /* link 'curr' at the end of 'tobefnz' list */
-      if (g->tobefnz == NULL)  /* list is empty? */
-        g->tobefnz = gch(curr)->next = curr;  /* creates a circular list */
-      else {
-        gch(curr)->next = gch(g->tobefnz)->next;
-        gch(g->tobefnz)->next = curr;
-        g->tobefnz = curr;
-      }
+      gch(curr)->next = *lastnext;
+      *lastnext = curr;
+      lastnext = &gch(curr)->next;
     }
   }
   return deadmem;
@@ -689,13 +660,13 @@ void luaC_checkfinalizer (lua_State *L, Udata *u) {
       isfinalized(&u->uv) ||                        /* ... or is finalized... */
       gfasttm(g, u->uv.metatable, TM_GC) == NULL)  /* or has no finalization? */
     return;  /* nothing to be done */
-  else {  /* move 'u' from root list to 'tmudata' list */
+  else {  /* move 'u' to 2nd part of root list */
     GCObject **p;
     for (p = &g->rootgc; *p != obj2gco(u); p = &gch(*p)->next)
-      lua_assert(*p != NULL);  /* 'u' must be in this list */
+      lua_assert(*p != obj2gco(g->mainthread));  /* 'u' must be in this list */
     *p = u->uv.next;  /* remove 'u' from root list */
-    u->uv.next = g->tmudata;  /* link it in 'tmudata' list */
-    g->tmudata = obj2gco(u);
+    u->uv.next = g->mainthread->next;  /* re-link it in list */
+    g->mainthread->next = obj2gco(u);
     l_setbit(u->uv.marked, SEPARATED);  /* mark it as such */
   }
 }
@@ -716,9 +687,8 @@ void luaC_freeall (lua_State *L) {
   /* mask to collect all elements */
   g->currentwhite = WHITEBITS | bitmask(SFIXEDBIT);
   sweepwholelist(L, &g->rootgc);
-  lua_assert(g->rootgc == obj2gco(L));
-  sweepwholelist(L, &g->tmudata);
-  lua_assert(g->tmudata == NULL);
+  lua_assert(g->rootgc == obj2gco(g->mainthread));
+  lua_assert(g->mainthread->next == NULL);
   for (i = 0; i < g->strt.size; i++)  /* free all string lists */
     sweepwholelist(L, &g->strt.hash[i]);
   lua_assert(g->strt.nuse == 0);
@@ -781,18 +751,10 @@ static l_mem singlestep (lua_State *L) {
     case GCSsweepstring: {
       correctestimate(g, sweepwholelist(L, &g->strt.hash[g->sweepstrgc++]));
       if (g->sweepstrgc >= g->strt.size) {  /* nothing more to sweep? */
-        g->sweepgc = &g->tmudata;
-        g->gcstate = GCSsweeptmu;  /* end sweep-string phase */
-      }
-      return GCSWEEPCOST;
-    }
-    case GCSsweeptmu: {
-      g->sweepgc = unmarklist(g, g->sweepgc, GCSWEEPMAX);
-      if (*g->sweepgc == NULL) {  /* nothing more to sweep? */
         g->sweepgc = &g->rootgc;
         g->gcstate = GCSsweep;  /* sweep all other objects */
       }
-      return GCSWEEPMAX*GCSWEEPCOST;
+      return GCSWEEPCOST;
     }
     case GCSsweep: {
       correctestimate(g, g->sweepgc = sweeplist(L, g->sweepgc, GCSWEEPMAX));

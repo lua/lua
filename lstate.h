@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.32 2008/02/19 18:55:09 roberto Exp roberto $
+** $Id: lstate.h,v 2.33 2008/06/23 16:51:08 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -13,6 +13,32 @@
 #include "ltm.h"
 #include "lzio.h"
 
+
+/*
+
+** Some notes about garbage-collected objects:  All objects in Lua must
+** be kept somehow accessible until being freed.
+**
+** Lua keeps most objects linked in list g->rootgc. The link uses field
+** 'next' of the CommonHeader.
+**
+** Strings are kept in several lists headed by the array g->strt.hash.
+**
+** Open upvalues are not subject to independent garbage collection. They
+** are collected together with their respective threads. Lua keeps a
+** double-linked list with all open upvalues (g->uvhead) so that it can
+** mark objects referred by them. (They are always gray, so they must
+** be remarked in the atomic step. Usually their contents would be marked
+** when traversing the respective threads, but the thread may already be
+** dead, while the upvalue is still accessible through closures.)
+**
+** Userdata with finalizers are kept in the list g->rootgc, but after
+** the mainthread, which should be otherwise the last element in the
+** list, as it was the first one inserted there.
+**
+** The list g->tobefnz links all userdata being finalized.
+
+*/
 
 
 struct lua_longjmp;  /* defined in ldo.c */
@@ -86,8 +112,7 @@ typedef struct global_State {
   GCObject *weak;  /* list of tables with weak values */
   GCObject *ephemeron;  /* list of ephemeron tables (weak keys) */
   GCObject *allweak;  /* list of all-weak tables */
-  GCObject *tmudata;  /* list of userdata with finalizers */
-  GCObject *tobefnz;  /* last element of list of userdata to be GC */
+  GCObject *tobefnz;  /* list of userdata to be GC */
   Mbuffer buff;  /* temporary buffer for string concatentation */
   lu_mem GCthreshold;
   lu_mem totalbytes;  /* number of bytes currently allocated */

@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.51 2008/06/13 17:07:10 roberto Exp roberto $
+** $Id: ltests.c,v 2.52 2008/06/23 16:50:34 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -365,10 +365,15 @@ int lua_checkmemory (lua_State *L) {
   GCObject *o;
   UpVal *uv;
   checkstack(g, g->mainthread);
-  for (o = g->rootgc; o != NULL; o = gch(o)->next)
+  for (o = g->rootgc; o != obj2gco(g->mainthread); o = gch(o)->next) {
+    lua_assert(!testbits(o->gch.marked, bit2mask(SEPARATED, SFIXEDBIT)));
     checkobject(g, o);
-  for (o = g->tmudata; o != NULL; o = gch(o)->next) {
-    lua_assert(!isdead(g, o));
+  }
+  lua_assert(testbit(o->gch.marked, SFIXEDBIT));
+  for (o = gch(o)->next; o != NULL; o = gch(o)->next) {
+    lua_assert(gch(o)->tt == LUA_TUSERDATA &&
+               !isdead(g, o) &&
+               testbit(o->gch.marked, SEPARATED));
     checkobject(g, o);
   }
   for (uv = g->uvhead.u.l.next; uv != &g->uvhead; uv = uv->u.l.next) {
@@ -535,7 +540,6 @@ static int gcstate (lua_State *L) {
   switch(G(L)->gcstate) {
     case GCSpropagate: lua_pushstring(L, "propagate"); break;
     case GCSsweepstring: lua_pushstring(L, "sweep strings"); break;
-    case GCSsweeptmu: lua_pushstring(L, "sweep udata with __gc"); break;
     case GCSsweep: lua_pushstring(L, "sweep"); break;
     case GCSfinalize: lua_pushstring(L, "finalize"); break;
     default: lua_assert(0);
