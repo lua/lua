@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.167 2007/08/07 16:53:40 roberto Exp roberto $
+** $Id: lua.c,v 1.168 2007/09/05 17:17:39 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -68,6 +68,8 @@ static int report (lua_State *L, int status) {
     if (msg == NULL) msg = "(error object is not a string)";
     l_message(progname, msg);
     lua_pop(L, 1);
+    /* force a complete garbage collection in case of errors */
+    lua_gc(L, LUA_GCCOLLECT, 0);
   }
   return status;
 }
@@ -95,8 +97,6 @@ static int docall (lua_State *L, int narg, int clear) {
   status = lua_pcall(L, narg, (clear ? 0 : LUA_MULTRET), base);
   signal(SIGINT, SIG_DFL);
   lua_remove(L, base);  /* remove traceback function */
-  /* force a complete garbage collection in case of errors */
-  if (status != LUA_OK) lua_gc(L, LUA_GCCOLLECT, 0);
   return status;
 }
 
