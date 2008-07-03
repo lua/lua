@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.205 2008/02/19 18:54:09 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.206 2008/02/25 14:33:57 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -9,7 +9,6 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #define lbaselib_c
 #define LUA_LIB
