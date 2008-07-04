@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.65 2008/02/14 16:02:58 roberto Exp roberto $
+** $Id: lapi.c,v 2.66 2008/02/19 18:55:09 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -907,14 +907,14 @@ LUA_API int lua_gc (lua_State *L, int what, int data) {
     }
     case LUA_GCSTEP: {
       lu_mem a = (cast(lu_mem, data) << 10);
-      if (a <= g->totalbytes)
-        g->GCthreshold = g->totalbytes - a;
-      else
-        g->GCthreshold = 0;
-      while (g->GCthreshold <= g->totalbytes)
+      g->GCthreshold = (a <= g->totalbytes) ? g->totalbytes - a : 0;
+      while (g->GCthreshold <= g->totalbytes) {
         luaC_step(L);
-      if (g->gcstate == GCSpause)  /* end of cycle? */
-        res = 1;  /* signal it */
+        if (g->gcstate == GCSpause) {  /* end of cycle? */
+          res = 1;  /* signal it */
+          break;
+        }
+      }
       break;
     }
     case LUA_GCSETPAUSE: {
