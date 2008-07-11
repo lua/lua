@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.97 2008/04/07 18:58:42 roberto Exp roberto $
+** $Id: luaconf.h,v 1.98 2008/06/25 15:27:12 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -321,6 +321,14 @@
 */
 #define LUAI_GCMUL	200 /* GC runs 'twice the speed' of memory allocation */
 
+
+
+/*
+@@ LUA_COMPAT includes some macros and functions that supply some
+@* compatibility with previous versions.
+** CHANGE it (undefine it) if you do not need these compatibility facilities.
+*/
+#define LUA_COMPAT
 
 
 /*

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.227 2008/02/11 19:16:02 roberto Exp roberto $
+** $Id: lua.h,v 1.228 2008/05/09 16:51:44 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -282,6 +282,7 @@ LUA_API void lua_setallocf (lua_State *L, lua_Alloc f, void *ud);
 /*
 ** compatibility macros and functions
 */
+#if defined(LUA_COMPAT)
 
 #define lua_strlen(L,i)		lua_objlen(L, (i))
 
@@ -294,6 +295,7 @@ LUA_API void lua_setallocf (lua_State *L, lua_Alloc f, void *ud);
 #define lua_Chunkreader		lua_Reader
 #define lua_Chunkwriter		lua_Writer
 
+#endif
 
 
 /*
