@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: lundump.c,v 2.7.1.3 2008/04/04 16:00:45 roberto Exp $
-+** $Id: lundump.c,v 2.7.1.4 2008/04/04 19:51:41 roberto Exp $
+-** $Id: bugs,v 1.96 2008/05/08 16:55:08 roberto Exp roberto $
++** $Id: bugs,v 1.96 2008/05/08 16:55:08 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -1968,6 +1968,63 @@ patch = [[
         break;
     case LUA_TNUMBER:
         setnvalue(o,LoadNumber(S));
+]],
+}
+
+
+Bug{
+what = [['string.byte' gets confused with some out-of-range negative indices]],
+report = [[Mike Pall, on 2008/06/03]],
+since = [[5.1]],
+example = [[
+print(string.byte("abc", -5))   --> 97   98   99   (should print nothing)
+]],
+patch = [[
+--- lstrlib.c	2007/12/28 15:32:23	1.132.1.3
++++ lstrlib.c	2008/07/05 11:53:42
+@@ -35,7 +35,8 @@
+ 
+ static ptrdiff_t posrelat (ptrdiff_t pos, size_t len) {
+   /* relative string position: negative means back from end */
+-  return (pos>=0) ? pos : (ptrdiff_t)len+pos+1;
++  if (pos < 0) pos += (ptrdiff_t)len + 1;
++  return (pos >= 0) ? pos : 0;
+ }
+ 
+ 
+]],
+}
+
+
+Bug{
+what = [[user-requested GC step may loop forever]],
+report = [[Makoto Hamanaka, on 2008/07/01]],
+since = [[5.1]],
+example = [[
+collectgarbage("setpause", 100) -- small value
+collectgarbage("setstepmul", 2000) -- large value
+collectgarbage("step",0)
+]],
+patch = [[
+--- lapi.c	2008/02/14 16:46:39	2.55.1.4
++++ lapi.c	2008/07/04 18:34:48
+@@ -929,10 +929,13 @@
+         g->GCthreshold = g->totalbytes - a;
+       else
+         g->GCthreshold = 0;
+-      while (g->GCthreshold <= g->totalbytes)
++      while (g->GCthreshold <= g->totalbytes) {
+         luaC_step(L);
+-      if (g->gcstate == GCSpause)  /* end of cycle? */
+-        res = 1;  /* signal it */
++        if (g->gcstate == GCSpause) {  /* end of cycle? */
++          res = 1;  /* signal it */
++          break;
++        }
++      }
+       break;
+     }
+     case LUA_GCSETPAUSE: {
 ]],
 }
 
