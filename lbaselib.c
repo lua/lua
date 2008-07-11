@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.206 2008/02/25 14:33:57 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.207 2008/07/03 14:23:35 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -183,7 +183,7 @@ static int luaB_rawset (lua_State *L) {
 
 
 static int luaB_gcinfo (lua_State *L) {
-  lua_pushinteger(L, lua_getgccount(L));
+  lua_pushinteger(L, lua_gc(L, LUA_GCCOUNT, 0));
   return 1;
 }
 

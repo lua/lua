@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.169 2008/06/26 19:40:12 roberto Exp roberto $
+** $Id: lua.c,v 1.170 2008/06/26 19:47:51 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -373,7 +373,7 @@ static int pmain (lua_State *L) {
 int main (int argc, char **argv) {
   int status;
   struct Smain s;
-  lua_State *L = lua_open();  /* create state */
+  lua_State *L = luaL_newstate();  /* create state */
   if (L == NULL) {
     l_message(argv[0], "cannot create state: not enough memory");
     return EXIT_FAILURE;
