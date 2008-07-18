@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.98 2008/06/25 15:27:12 roberto Exp roberto $
+** $Id: luaconf.h,v 1.99 2008/07/11 17:50:31 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -324,11 +324,11 @@
 
 
 /*
-@@ LUA_COMPAT includes some macros and functions that supply some
+@@ LUA_COMPAT_API includes some macros and functions that supply some
 @* compatibility with previous versions.
 ** CHANGE it (undefine it) if you do not need these compatibility facilities.
 */
-#define LUA_COMPAT
+#define LUA_COMPAT_API
 
 
 /*

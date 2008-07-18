@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.21 2008/06/23 16:50:34 roberto Exp roberto $
+** $Id: ltests.h,v 2.22 2008/07/11 17:51:01 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -11,7 +11,7 @@
 #include <stdlib.h>
 
 /* do not use compatibility macros in Lua code */
-#undef LUA_COMPAT
+#undef LUA_COMPAT_API
 
 #define LUA_DEBUG
 
