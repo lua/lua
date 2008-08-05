@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.h,v 2.22 2008/07/11 17:51:01 roberto Exp roberto $
+** $Id: ltests.h,v 2.23 2008/07/18 19:58:10 roberto Exp roberto $
 ** Internal Header for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -84,5 +84,10 @@ int luaB_opentests (lua_State *L);
 #undef LUAL_BUFFERSIZE
 #define LUAL_BUFFERSIZE		23
 #define MINSTRTABSIZE		2
+
+
+#undef LUAI_USER_ALIGNMENT_T
+#define LUAI_USER_ALIGNMENT_T   union { char b[32]; }
+
 
 #endif
