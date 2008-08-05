@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.58 2007/06/21 13:52:27 roberto Exp roberto $
+** $Id: loadlib.c,v 1.59 2007/12/12 14:36:12 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -521,11 +521,14 @@ static int ll_require (lua_State *L) {
 
 static void setfenv (lua_State *L) {
   lua_Debug ar;
-  lua_getstack(L, 1, &ar);
-  lua_getinfo(L, "f", &ar);
-  lua_pushvalue(L, -2);
+  if (lua_getstack(L, 1, &ar) == 0 ||
+      lua_getinfo(L, "f", &ar) == 0 ||  /* get calling function */
+      lua_iscfunction(L, -1))
+    luaL_error(L, "function " LUA_QL("module")
+                  " not called from a Lua function");
+  lua_pushvalue(L, -2);  /* copy new environment table to top */
   lua_setfenv(L, -2);
-  lua_pop(L, 1);
+  lua_pop(L, 1);  /* remove function */
 }
 
 
