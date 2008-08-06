@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.96 2008/05/08 16:55:08 roberto Exp roberto $
-+** $Id: bugs,v 1.96 2008/05/08 16:55:08 roberto Exp roberto $
+-** $Id: bugs,v 1.97 2008/07/11 17:27:41 roberto Exp roberto $
++** $Id: bugs,v 1.97 2008/07/11 17:27:41 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2025,6 +2025,55 @@ patch = [[
        break;
      }
      case LUA_GCSETPAUSE: {
+]],
+}
+
+
+Bug{
+what = [['module' may change the environment of a C function]],
+report = [[Peter Cawley, on 2008/07/16]],
+since = [[5.1]],
+example = [[
+pcall(module, "xuxu")
+assert(debug.getfenv(pcall) == xuxu)
+]],
+patch = [[
+--- loadlib.c	2007/12/28 14:58:43	1.52.1.2
++++ loadlib.c	2008/08/05 19:39:00
+@@ -506,8 +506,11 @@
+ 
+ static void setfenv (lua_State *L) {
+   lua_Debug ar;
+-  lua_getstack(L, 1, &ar);
+-  lua_getinfo(L, "f", &ar);
++  if (lua_getstack(L, 1, &ar) == 0 ||
++      lua_getinfo(L, "f", &ar) == 0 ||  /* get calling function */
++      lua_iscfunction(L, -1))
++    luaL_error(L, "function " LUA_QL("module")
++                  " not called from a Lua function");
+   lua_pushvalue(L, -2);
+   lua_setfenv(L, -2);
+   lua_pop(L, 1);
+]],
+}
+
+
+Bug{
+what = [[internal macro 'svalue' is wrong]],
+report = [["Martijn van Buul, on 2008/08/04]],
+since = [[5.1]],
+example = [[
+/* in luaconf.h */
+#define LUAI_USER_ALIGNMENT_T   union { char b[32]; }
+]],
+patch = [[
+--- lobject.h	2007/12/27 13:02:25	2.20.1.1
++++ lobject.h	2008/08/05 19:40:48
+@@ -210,3 +210,3 @@
+ #define getstr(ts)	cast(const char *, (ts) + 1)
+-#define svalue(o)       getstr(tsvalue(o))
++#define svalue(o)       getstr(rawtsvalue(o))
+ 
 ]],
 }
 
