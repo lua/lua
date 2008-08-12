@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.191.1.4 2008/01/20 13:53:22 roberto Exp $
+** $Id: lbaselib.c,v 1.191.1.6 2008/02/14 16:46:22 roberto Exp $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -344,10 +344,12 @@ static int luaB_unpack (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
   i = luaL_optint(L, 2, 1);
   e = luaL_opt(L, luaL_checkint, 3, luaL_getn(L, 1));
+  if (i > e) return 0;  /* empty range */
   n = e - i + 1;  /* number of elements */
-  if (n <= 0) return 0;  /* empty range */
-  luaL_checkstack(L, n, "table too big to unpack");
-  for (; i<=e; i++)  /* push arg[i...e] */
+  if (n <= 0 || !lua_checkstack(L, n))  /* n <= 0 means arith. overflow */
+    return luaL_error(L, "too many results to unpack");
+  lua_rawgeti(L, 1, i);  /* push arg[i] (avoiding overflow problems) */
+  while (i++ < e)  /* push arg[i + 1...e] */
     lua_rawgeti(L, 1, i);
   return n;
 }
@@ -526,7 +528,7 @@ static int auxresume (lua_State *L, lua_State *co, int narg) {
   status = lua_resume(co, narg);
   if (status == 0 || status == LUA_YIELD) {
     int nres = lua_gettop(co);
-    if (!lua_checkstack(L, nres))
+    if (!lua_checkstack(L, nres + 1))
       luaL_error(L, "too many results to resume");
     lua_xmove(co, L, nres);  /* move yielded values */
     return nres;
