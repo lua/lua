@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.229 2008/07/11 17:50:31 roberto Exp roberto $
+** $Id: lua.h,v 1.230 2008/07/18 19:58:10 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -242,7 +242,7 @@ LUA_API int   (lua_next) (lua_State *L, int idx);
 LUA_API void  (lua_concat) (lua_State *L, int n);
 
 LUA_API lua_Alloc (lua_getallocf) (lua_State *L, void **ud);
-LUA_API void lua_setallocf (lua_State *L, lua_Alloc f, void *ud);
+LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 
 
 
@@ -330,17 +330,17 @@ typedef struct lua_Debug lua_Debug;  /* activation record */
 typedef void (*lua_Hook) (lua_State *L, lua_Debug *ar);
 
 
-LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar);
-LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar);
-LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n);
-LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n);
-LUA_API const char *lua_getupvalue (lua_State *L, int funcindex, int n);
-LUA_API const char *lua_setupvalue (lua_State *L, int funcindex, int n);
+LUA_API int (lua_getstack) (lua_State *L, int level, lua_Debug *ar);
+LUA_API int (lua_getinfo) (lua_State *L, const char *what, lua_Debug *ar);
+LUA_API const char *(lua_getlocal) (lua_State *L, const lua_Debug *ar, int n);
+LUA_API const char *(lua_setlocal) (lua_State *L, const lua_Debug *ar, int n);
+LUA_API const char *(lua_getupvalue) (lua_State *L, int funcindex, int n);
+LUA_API const char *(lua_setupvalue) (lua_State *L, int funcindex, int n);
 
-LUA_API int lua_sethook (lua_State *L, lua_Hook func, int mask, int count);
-LUA_API lua_Hook lua_gethook (lua_State *L);
-LUA_API int lua_gethookmask (lua_State *L);
-LUA_API int lua_gethookcount (lua_State *L);
+LUA_API int (lua_sethook) (lua_State *L, lua_Hook func, int mask, int count);
+LUA_API lua_Hook (lua_gethook) (lua_State *L);
+LUA_API int (lua_gethookmask) (lua_State *L);
+LUA_API int (lua_gethookcount) (lua_State *L);
 
 
 struct lua_Debug {
