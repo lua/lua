@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.33 2008/06/23 16:51:08 roberto Exp roberto $
+** $Id: lstate.h,v 2.34 2008/06/26 19:42:45 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -81,7 +81,8 @@ typedef struct CallInfo {
   StkId func;  /* function index in the stack */
   StkId	top;  /* top for this function */
   const Instruction *savedpc;
-  int nresults;  /* expected number of results from this function */
+  short nresults;  /* expected number of results from this function */
+  lu_byte status;
   int tailcalls;  /* number of tail calls lost under this entry */
 } CallInfo;
 
