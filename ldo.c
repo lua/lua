@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.45 2007/03/27 14:11:38 roberto Exp roberto $
+** $Id: ldo.c,v 2.46 2008/01/18 22:36:50 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -193,6 +193,7 @@ void luaD_callhook (lua_State *L, int event, int line) {
       ar.i_ci = cast_int(L->ci - L->base_ci);
     luaD_checkstack(L, LUA_MINSTACK);  /* ensure minimum stack size */
     L->ci->top = L->top + LUA_MINSTACK;
+    L->ci->status |= 1;  /* this level is running a hook */
     lua_assert(L->ci->top <= L->stack_last);
     L->allowhook = 0;  /* cannot call hooks inside a hook */
     lua_unlock(L);
@@ -202,6 +203,7 @@ void luaD_callhook (lua_State *L, int event, int line) {
     L->allowhook = 1;
     L->ci->top = restorestack(L, ci_top);
     L->top = restorestack(L, top);
+    L->ci->status &= ~1;  /* this level is not running a hook anymore */
   }
 }
 
@@ -264,6 +266,9 @@ static StkId tryfuncTM (lua_State *L, StkId func) {
    (condhardstacktests(luaD_reallocCI(L, L->size_ci)), ++L->ci))
 
 
+/*
+** returns true if function has been executed (C function)
+*/
 int luaD_precall (lua_State *L, StkId func, int nresults) {
   LClosure *cl;
   ptrdiff_t funcr;
@@ -292,6 +297,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     lua_assert(ci->top <= L->stack_last);
     L->savedpc = p->code;  /* starting point */
     ci->tailcalls = 0;
+    ci->status = 0;
     ci->nresults = nresults;
     for (st = L->top; st < ci->top; st++)
       setnilvalue(st);
@@ -301,7 +307,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
       luaD_callhook(L, LUA_HOOKCALL, -1);
       L->savedpc--;  /* correct 'pc' */
     }
-    return PCRLUA;
+    return 0;
   }
   else {  /* if is a C function, call it */
     CallInfo *ci;
@@ -318,12 +324,8 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     lua_unlock(L);
     n = (*curr_func(L)->c.f)(L);  /* do the actual call */
     lua_lock(L);
-    if (n < 0)  /* yielding? */
-      return PCRYIELD;
-    else {
-      luaD_poscall(L, L->top - n);
-      return PCRC;
-    }
+    luaD_poscall(L, L->top - n);
+    return 1;
   }
 }
 
@@ -378,7 +380,7 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
     else if (g->nCcalls >= (LUAI_MAXCCALLS + (LUAI_MAXCCALLS>>3)))
       luaD_throw(L, LUA_ERRERR);  /* error while handing stack error */
   }
-  if (luaD_precall(L, func, nResults) == PCRLUA)  /* is a Lua function? */
+  if (!luaD_precall(L, func, nResults))  /* is a Lua function? */
     luaV_execute(L, 1);  /* call it */
   g->nCcalls--;
   luaC_checkGC(L);
@@ -390,8 +392,8 @@ static void resume (lua_State *L, void *ud) {
   CallInfo *ci = L->ci;
   if (L->status == LUA_OK) {  /* start coroutine? */
     lua_assert(ci == L->base_ci && firstArg > L->base);
-    if (luaD_precall(L, firstArg - 1, LUA_MULTRET) != PCRLUA)
-      return;
+    if (luaD_precall(L, firstArg - 1, LUA_MULTRET))  /* C function? */
+      return;  /* done */
   }
   else {  /* resuming from previous yield */
     lua_assert(L->status == LUA_YIELD);
@@ -434,14 +436,14 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
       return resume_error(L, "C stack overflow");
   L->baseCcalls = ++G(L)->nCcalls;
   status = luaD_rawrunprotected(L, resume, L->top - nargs);
-  if (status != LUA_OK) {  /* error? */
+  if (status != LUA_OK && status != LUA_YIELD) {  /* error? */
     L->status = cast_byte(status);  /* mark thread as `dead' */
     luaD_seterrorobj(L, status, L->top);
     L->ci->top = L->top;
   }
   else {
     lua_assert(L->baseCcalls == G(L)->nCcalls);
-    status = L->status;
+    lua_assert(status == L->status);
   }
   --G(L)->nCcalls;
   L->baseCcalls = 0;
@@ -457,8 +459,11 @@ LUA_API int lua_yield (lua_State *L, int nresults) {
     luaG_runerror(L, "attempt to yield across metamethod/C-call boundary");
   L->base = L->top - nresults;  /* protect stack slots below */
   L->status = LUA_YIELD;
+  if (!isLua(L->ci))  /* not inside a hook? */
+    luaD_throw(L, LUA_YIELD);
+  lua_assert(L->ci->status & 1);  /* must be inside a hook */
   lua_unlock(L);
-  return -1;
+  return 0;  /* otherwise, return to 'luaD_callhook' */
 }
 
 
