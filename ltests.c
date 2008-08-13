@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.52 2008/06/23 16:50:34 roberto Exp roberto $
+** $Id: ltests.c,v 2.53 2008/06/26 19:42:45 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -1072,7 +1072,7 @@ static int coresume (lua_State *L) {
   lua_State *co = lua_tothread(L, 1);
   luaL_argcheck(L, co, 1, "coroutine expected");
   status = lua_resume(co, 0);
-  if (status != 0) {
+  if (status != LUA_OK && status != LUA_YIELD) {
     lua_pushboolean(L, 0);
     lua_insert(L, -2);
     return 2;  /* return false + error message */
