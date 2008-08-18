@@ -33,7 +33,7 @@ Freely available under the terms of the
 <!-- ====================================================================== -->
 <p>
 
-<!-- $Id: manual.of,v 1.47 2008/08/11 17:02:37 roberto Exp $ -->
+<!-- $Id: manual.of,v 1.48 2008/08/18 15:24:20 roberto Exp $ -->
 
 
 
@@ -1019,7 +1019,7 @@ Otherwise, if both arguments are strings,
 then their values are compared according to the current locale.
 Otherwise, Lua tries to call the "lt" or the "le"
 metamethod (see <a href="#2.8">&sect;2.8</a>).
-A comparsion <code>a &gt; b</code> is translated to <code>b &lt; a</code>
+A comparison <code>a &gt; b</code> is translated to <code>b &lt; a</code>
 and <code>a &gt;= b</code> is translated to <code>b &lt;= a</code>.
 
 
@@ -1554,7 +1554,7 @@ you must use the C&nbsp;API for that.
 <p>
 Tables and full userdata have individual metatables
 (although multiple tables and userdata can share their metatables).
-Values of all other types share one single metatable per type,
+Values of all other types share one single metatable per type;
 that is, there is one single metatable for all numbers,
 one for all strings, etc.
 
@@ -1994,7 +1994,7 @@ Lua manages memory automatically by running
 a <em>garbage collector</em> from time to time
 to collect all <em>dead objects</em>
 (that is, objects that are no longer accessible from Lua).
-All memory used by Lua are subject to automatic management:
+All memory used by Lua is subject to automatic management:
 tables, userdata, functions, threads, strings, etc.
 
 
@@ -5645,7 +5645,7 @@ Currently, Lua has the following standard libraries:
 
 <ul>
 
-<li>basic library;</li>
+<li>basic library,</li> which includes the coroutine sub-library;
 
 <li>package library;</li>
 
@@ -8791,7 +8791,7 @@ Here is the complete syntax of Lua in extended BNF.
 <HR>
 <SMALL>
 Last update:
-Tue Aug 12 11:59:28 BRT 2008
+Mon Aug 18 13:25:46 BRT 2008
 </SMALL>
 <!--
 Last change: revised for Lua 5.1.4
