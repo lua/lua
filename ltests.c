@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.53 2008/06/26 19:42:45 roberto Exp roberto $
+** $Id: ltests.c,v 2.54 2008/08/13 17:02:12 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -349,7 +349,7 @@ printf(">>> %d  %s  %02x\n", g->gcstate, luaT_typenames[gch(o)->tt], gch(o)->mar
 
 
 int lua_checkpc (lua_State *L, pCallInfo ci) {
-  if (ci == L->base_ci || !f_isLua(ci)) return 1;
+  if (ci == L->base_ci || !isLua(ci)) return 1;
   else {
     Proto *p = ci_func(ci)->l.p;
     if (ci < L->ci)

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.34 2008/06/26 19:42:45 roberto Exp roberto $
+** $Id: lstate.h,v 2.35 2008/08/13 17:01:33 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -82,16 +82,23 @@ typedef struct CallInfo {
   StkId	top;  /* top for this function */
   const Instruction *savedpc;
   short nresults;  /* expected number of results from this function */
-  lu_byte status;
+  lu_byte callstatus;
   int tailcalls;  /* number of tail calls lost under this entry */
 } CallInfo;
 
 
+/*
+** Bits in CallInfo status
+*/
+#define CIST_LUA	1	/* call is running a Lua function */
+#define CIST_HOOKED	2	/* call is running a debug hook */
+#define CIST_REENTRY	4	/* call is running on same invocation of
+                                   luaV_execute of previous call */
+
 
 #define curr_func(L)	(clvalue(L->ci->func))
 #define ci_func(ci)	(clvalue((ci)->func))
-#define f_isLua(ci)	(!ci_func(ci)->c.isC)
-#define isLua(ci)	(ttisfunction((ci)->func) && f_isLua(ci))
+#define isLua(ci)	((ci)->callstatus & CIST_LUA)
 
 
 /*

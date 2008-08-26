@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.74 2008/04/02 16:16:06 roberto Exp roberto $
+** $Id: lvm.c,v 2.75 2008/08/13 17:02:42 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -280,11 +280,14 @@ void luaV_concat (lua_State *L, int total, int last) {
     if (!(ttisstring(top-2) || ttisnumber(top-2)) || !tostring(L, top-1)) {
       if (!call_binTM(L, top-2, top-1, top-2, TM_CONCAT))
         luaG_concaterror(L, top-2, top-1);
-    } else if (tsvalue(top-1)->len == 0) {  /* second operand is empty? */
+    }
+    else if (tsvalue(top-1)->len == 0) {  /* second operand is empty? */
       (void)tostring(L, top - 2);  /* result is first operand */ ;
-    } else if (ttisstring(top-2) && tsvalue(top-2)->len == 0) {
+    }
+    else if (ttisstring(top-2) && tsvalue(top-2)->len == 0) {
         setsvalue2s(L, top-2, rawtsvalue(top-1));  /* result is second op. */
-    } else {
+    }
+    else {
       /* at least two (non-empty) string values; get as many as possible */
       size_t tl = tsvalue(top-1)->len;
       char *buffer;
@@ -397,7 +400,7 @@ static void Arith (lua_State *L, StkId ra, const TValue *rb,
 
 
 
-void luaV_execute (lua_State *L, int nexeccalls) {
+void luaV_execute (lua_State *L) {
   LClosure *cl;
   StkId base;
   TValue *k;
@@ -601,7 +604,7 @@ void luaV_execute (lua_State *L, int nexeccalls) {
           continue;
         }
         else {  /* Lua function */
-          nexeccalls++;
+          L->ci->callstatus |= CIST_REENTRY;
           goto reentry;  /* restart luaV_execute over new Lua function */
         }
       }
@@ -636,9 +639,9 @@ void luaV_execute (lua_State *L, int nexeccalls) {
         if (b != 0) L->top = ra+b-1;
         if (L->openupval) luaF_close(L, base);
         b = luaD_poscall(L, ra);
-        if (--nexeccalls == 0)  /* was previous function running `here'? */
-          return;  /* no: return */
-        else {  /* yes: continue its execution */
+        if (!((L->ci + 1)->callstatus & CIST_REENTRY))
+          return;  /* external invocation: return */
+        else {  /* invocation via reentry: continue execution */
           if (b) L->top = L->ci->top;
           lua_assert(isLua(L->ci));
           lua_assert(GET_OPCODE(*((L->ci)->savedpc - 1)) == OP_CALL);
