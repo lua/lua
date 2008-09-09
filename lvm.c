@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.75 2008/08/13 17:02:42 roberto Exp roberto $
+** $Id: lvm.c,v 2.76 2008/08/26 13:27:42 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -622,7 +622,7 @@ void luaV_execute (lua_State *L) {
           int aux;
           StkId func = ci->func;
           StkId pfunc = (ci+1)->func;  /* previous function index */
-          if (L->openupval) luaF_close(L, ci->base);
+          if (cl->p->sizep > 0) luaF_close(L, ci->base);
           L->base = ci->base = ci->func + ((ci+1)->base - pfunc);
           for (aux = 0; pfunc+aux < L->top; aux++)  /* move frame down */
             setobjs2s(L, func+aux, pfunc+aux);
@@ -637,7 +637,7 @@ void luaV_execute (lua_State *L) {
       case OP_RETURN: {
         int b = GETARG_B(i);
         if (b != 0) L->top = ra+b-1;
-        if (L->openupval) luaF_close(L, base);
+        if (cl->p->sizep > 0) luaF_close(L, base);
         b = luaD_poscall(L, ra);
         if (!((L->ci + 1)->callstatus & CIST_REENTRY))
           return;  /* external invocation: return */
