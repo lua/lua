@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.47 2008/08/13 17:02:42 roberto Exp roberto $
+** $Id: ldo.c,v 2.48 2008/08/26 13:27:42 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -374,7 +374,6 @@ int luaD_poscall (lua_State *L, StkId firstResult) {
 */
 void luaD_call (lua_State *L, StkId func, int nResults) {
   global_State *g = G(L);
-  lua_assert(g->nCcalls >= L->baseCcalls);
   if (++g->nCcalls >= LUAI_MAXCCALLS) {
     if (g->nCcalls == LUAI_MAXCCALLS)
       luaG_runerror(L, "C stack overflow");
@@ -385,6 +384,55 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
     luaV_execute(L);  /* call it */
   g->nCcalls--;
   luaC_checkGC(L);
+}
+
+
+static void unroll (lua_State *L) {
+  for (;;) {
+    Instruction inst;
+    luaV_execute(L);  /* execute up to higher C 'boundary' */
+    if (L->ci == L->base_ci)  /* stack is empty? */
+      return;  /* coroutine finished normally */
+    L->baseCcalls--;  /* undo increment that allows yields */
+    inst = *(L->savedpc - 1);  /* interrupted instruction */
+    switch (GET_OPCODE(inst)) {  /* finish its execution */
+      case OP_ADD: case OP_SUB: case OP_MUL: case OP_DIV:
+      case OP_MOD: case OP_POW: case OP_UNM: case OP_LEN:
+      case OP_GETGLOBAL: case OP_GETTABLE: case OP_SELF: {
+        setobjs2s(L, L->base + GETARG_A(inst), --L->top);
+        break;
+      }
+      case OP_LE: case OP_LT: case OP_EQ: {
+        int res;
+        L->top--;
+        res = !l_isfalse(L->top);
+        /* cannot call metamethod with K operand */
+        lua_assert(!ISK(GETARG_B(inst)));
+        if (GET_OPCODE(inst) == OP_LE &&  /* "<=" using "<" instead? */
+            ttisnil(luaT_gettmbyobj(L, L->base + GETARG_B(inst), TM_LE)))
+          res = !res;  /* invert result */
+        lua_assert(GET_OPCODE(*L->savedpc) == OP_JMP);
+        if (res == GETARG_A(inst))
+          L->savedpc += GETARG_sBx(*L->savedpc);  /* jump */
+        L->savedpc++;  /* skip jump instruction */
+        break;
+      }
+      case OP_SETGLOBAL: case OP_SETTABLE:
+        break;  /* nothing to be done */
+      case OP_TFORLOOP: {
+        StkId cb = L->base + GETARG_A(inst) + 3;
+        L->top = L->ci->top;
+        lua_assert(GET_OPCODE(*L->savedpc) == OP_JMP);
+        if (!ttisnil(cb)) {  /* continue loop? */
+          setobjs2s(L, cb - 1, cb);  /* save control variable */
+          L->savedpc += GETARG_sBx(*L->savedpc);  /* jump back */
+        }
+        L->savedpc++;
+        break;
+      }
+      default: lua_assert(0);
+    }
+  }
 }
 
 
@@ -399,17 +447,17 @@ static void resume (lua_State *L, void *ud) {
   else {  /* resuming from previous yield */
     lua_assert(L->status == LUA_YIELD);
     L->status = LUA_OK;
-    if (!isLua(ci)) {  /* `common' yield? */
+    if (isLua(ci))  /* yielded inside a hook? */
+      L->base = L->ci->base;  /* just continue its execution */
+    else {  /* 'common' yield */
       /* finish interrupted execution of `OP_CALL' */
       lua_assert(GET_OPCODE(*((ci-1)->savedpc - 1)) == OP_CALL ||
                  GET_OPCODE(*((ci-1)->savedpc - 1)) == OP_TAILCALL);
       if (luaD_poscall(L, firstArg))  /* complete it... */
         L->top = L->ci->top;  /* and correct top if not multiple results */
     }
-    else  /* yielded inside a hook: just continue its execution */
-      L->base = L->ci->base;
   }
-  luaV_execute(L);
+  unroll(L);
 }
 
 
@@ -432,10 +480,11 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
       return resume_error(L, "cannot resume non-suspended coroutine");
   }
   luai_userstateresume(L, nargs);
-  lua_assert(L->errfunc == 0 && L->baseCcalls == 0);
+  lua_assert(L->errfunc == 0); 
   if (G(L)->nCcalls >= LUAI_MAXCCALLS)
       return resume_error(L, "C stack overflow");
-  L->baseCcalls = ++G(L)->nCcalls;
+  ++G(L)->nCcalls;  /* count resume */
+  L->baseCcalls += G(L)->nCcalls;
   status = luaD_rawrunprotected(L, resume, L->top - nargs);
   if (status != LUA_OK && status != LUA_YIELD) {  /* error? */
     L->status = cast_byte(status);  /* mark thread as `dead' */
@@ -443,11 +492,10 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
     L->ci->top = L->top;
   }
   else {
-    lua_assert(L->baseCcalls == G(L)->nCcalls);
     lua_assert(status == L->status);
   }
+  L->baseCcalls -= G(L)->nCcalls;
   --G(L)->nCcalls;
-  L->baseCcalls = 0;
   lua_unlock(L);
   return status;
 }
@@ -456,6 +504,7 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
 LUA_API int lua_yield (lua_State *L, int nresults) {
   luai_userstateyield(L, nresults);
   lua_lock(L);
+/*printf("yield: %d - %d\n", G(L)->nCcalls, L->baseCcalls);*/
   if (G(L)->nCcalls > L->baseCcalls)
     luaG_runerror(L, "attempt to yield across metamethod/C-call boundary");
   L->base = L->top - nresults;  /* protect stack slots below */

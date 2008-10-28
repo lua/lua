@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.76 2008/08/26 13:27:42 roberto Exp roberto $
+** $Id: lvm.c,v 2.77 2008/09/09 13:53:02 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -76,31 +76,24 @@ static void traceexec (lua_State *L) {
 }
 
 
-static void callTMres (lua_State *L, StkId res, const TValue *f,
-                        const TValue *p1, const TValue *p2) {
-  ptrdiff_t result = savestack(L, res);
-  setobj2s(L, L->top, f);  /* push function */
-  setobj2s(L, L->top+1, p1);  /* 1st argument */
-  setobj2s(L, L->top+2, p2);  /* 2nd argument */
-  L->top += 3;
-  luaD_checkstack(L, 0);
-  luaD_call(L, L->top - 3, 1);
-  res = restorestack(L, result);
-  L->top--;
-  setobjs2s(L, res, L->top);
-}
-
-
-
 static void callTM (lua_State *L, const TValue *f, const TValue *p1,
-                    const TValue *p2, const TValue *p3) {
-  setobj2s(L, L->top, f);  /* push function */
-  setobj2s(L, L->top+1, p1);  /* 1st argument */
-  setobj2s(L, L->top+2, p2);  /* 2nd argument */
-  setobj2s(L, L->top+3, p3);  /* 3th argument */
-  L->top += 4;
+                    const TValue *p2, TValue *p3, int hasres) {
+  ptrdiff_t result = savestack(L, p3);
+  int oldbase = L->baseCcalls;
+  setobj2s(L, L->top++, f);  /* push function */
+  setobj2s(L, L->top++, p1);  /* 1st argument */
+  setobj2s(L, L->top++, p2);  /* 2nd argument */
+  if (!hasres)  /* no result? 'p3' is third argument */
+    setobj2s(L, L->top++, p3);  /* 3th argument */
   luaD_checkstack(L, 0);
-  luaD_call(L, L->top - 4, 0);
+  if (isLua(L->ci))  /* metamethod invoked from a Lua function? */
+    L->baseCcalls++;  /* allow it to yield */
+  luaD_call(L, L->top - (4 - hasres), hasres);
+  L->baseCcalls = oldbase;
+  if (hasres) {  /* if has result, move it to its place */
+    p3 = restorestack(L, result);
+    setobjs2s(L, p3, --L->top);
+  }
 }
 
 
@@ -121,7 +114,7 @@ void luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val) {
     else if (ttisnil(tm = luaT_gettmbyobj(L, t, TM_INDEX)))
       luaG_typeerror(L, t, "index");
     if (ttisfunction(tm)) {
-      callTMres(L, val, tm, t, key);
+      callTM(L, tm, t, key, val, 1);
       return;
     }
     t = tm;  /* else repeat with `tm' */
@@ -148,7 +141,7 @@ void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
     else if (ttisnil(tm = luaT_gettmbyobj(L, t, TM_NEWINDEX)))
       luaG_typeerror(L, t, "index");
     if (ttisfunction(tm)) {
-      callTM(L, tm, t, key, val);
+      callTM(L, tm, t, key, val, 0);
       return;
     }
     t = tm;  /* else repeat with `tm' */
@@ -163,7 +156,7 @@ static int call_binTM (lua_State *L, const TValue *p1, const TValue *p2,
   if (ttisnil(tm))
     tm = luaT_gettmbyobj(L, p2, event);  /* try second operand */
   if (ttisnil(tm)) return 0;
-  callTMres(L, res, tm, p1, p2);
+  callTM(L, tm, p1, p2, res, 1);
   return 1;
 }
 
@@ -190,7 +183,7 @@ static int call_orderTM (lua_State *L, const TValue *p1, const TValue *p2,
   tm2 = luaT_gettmbyobj(L, p2, event);
   if (!luaO_rawequalObj(tm1, tm2))  /* different metamethods? */
     return -1;
-  callTMres(L, L->top, tm1, p1, p2);
+  callTM(L, tm1, p1, p2, L->top, 1);
   return !l_isfalse(L->top);
 }
 
@@ -268,7 +261,7 @@ int luaV_equalval_ (lua_State *L, const TValue *t1, const TValue *t2) {
     default: return gcvalue(t1) == gcvalue(t2);
   }
   if (tm == NULL) return 0;  /* no TM? */
-  callTMres(L, L->top, tm, t1, t2);  /* call TM */
+  callTM(L, tm, t1, t2, L->top, 1);  /* call TM */
   return !l_isfalse(L->top);
 }
 
@@ -336,7 +329,7 @@ static void objlen (lua_State *L, StkId ra, const TValue *rb) {
       break;
     }
   }
-  callTMres(L, ra, tm, rb, luaO_nilobject);
+  callTM(L, tm, rb, luaO_nilobject, ra, 1);
 }
 
 
@@ -680,7 +673,9 @@ void luaV_execute (lua_State *L) {
         setobjs2s(L, cb+1, ra+1);
         setobjs2s(L, cb, ra);
         L->top = cb+3;  /* func. + 2 args (state and index) */
+        L->baseCcalls++;
         Protect(luaD_call(L, cb, GETARG_C(i)));
+        L->baseCcalls--;
         L->top = L->ci->top;
         cb = RA(i) + 3;  /* previous call may change the stack */
         if (!ttisnil(cb)) {  /* continue loop? */
