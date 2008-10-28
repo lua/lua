@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.57 2008/04/02 17:19:22 roberto Exp roberto $
+** $Id: lparser.c,v 2.58 2008/05/08 15:44:51 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1008,7 +1008,7 @@ static void whilestat (LexState *ls, int line) {
   enterblock(fs, &bl, 1);
   checknext(ls, TK_DO);
   block(ls);
-  luaK_patchlist(fs, luaK_jump(fs), whileinit);
+  luaK_jumpto(fs, whileinit);
   check_match(ls, TK_END, TK_WHILE, line);
   leaveblock(fs);
   luaK_patchtohere(fs, condexit);  /* false conditions finish the loop */
@@ -1029,13 +1029,13 @@ static void repeatstat (LexState *ls, int line) {
   condexit = cond(ls);  /* read condition (inside scope block) */
   if (!bl2.upval) {  /* no upvalues? */
     leaveblock(fs);  /* finish scope */
-    luaK_patchlist(ls->fs, condexit, repeat_init);  /* close the loop */
+    luaK_patchlist(fs, condexit, repeat_init);  /* close the loop */
   }
   else {  /* complete semantics when there are upvalues */
     breakstat(ls);  /* if condition then break */
     luaK_patchtohere(ls->fs, condexit);  /* else... */
     leaveblock(fs);  /* finish scope... */
-    luaK_patchlist(ls->fs, luaK_jump(fs), repeat_init);  /* and repeat */
+    luaK_jumpto(fs, repeat_init);  /* and repeat */
   }
   leaveblock(fs);  /* finish loop */
 }
@@ -1055,7 +1055,7 @@ static void forbody (LexState *ls, int base, int line, int nvars, int isnum) {
   /* forbody -> DO block */
   BlockCnt bl;
   FuncState *fs = ls->fs;
-  int prep, endfor;
+  int prep;
   adjustlocalvars(ls, 3);  /* control variables */
   checknext(ls, TK_DO);
   prep = isnum ? luaK_codeAsBx(fs, OP_FORPREP, base, NO_JUMP) : luaK_jump(fs);
@@ -1065,10 +1065,16 @@ static void forbody (LexState *ls, int base, int line, int nvars, int isnum) {
   block(ls);
   leaveblock(fs);  /* end of scope for declared variables */
   luaK_patchtohere(fs, prep);
-  endfor = (isnum) ? luaK_codeAsBx(fs, OP_FORLOOP, base, NO_JUMP) :
-                     luaK_codeABC(fs, OP_TFORLOOP, base, 0, nvars);
-  luaK_fixline(fs, line);  /* pretend that `OP_FOR' starts the loop */
-  luaK_patchlist(fs, (isnum ? endfor : luaK_jump(fs)), prep + 1);
+  if (isnum) {  /* numeric for? */
+    int endfor = luaK_codeAsBx(fs, OP_FORLOOP, base, NO_JUMP);
+    luaK_patchlist(fs, endfor, prep + 1);
+  }
+  else {  /* generic for */
+    luaK_codeABC(fs, OP_TFORLOOP, base, 0, nvars);
+    luaK_fixline(fs, line);
+    luaK_jumpto(fs, prep + 1);
+  }
+  luaK_fixline(fs, line);
 }
 
 
