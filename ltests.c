@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.54 2008/08/13 17:02:12 roberto Exp roberto $
+** $Id: ltests.c,v 2.55 2008/08/26 13:27:42 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -1049,6 +1049,7 @@ static struct X { int x; } x;
 */
 
 static void yieldf (lua_State *L, lua_Debug *ar) {
+  UNUSED(ar);
   lua_yield(L, 0);
 }
 
