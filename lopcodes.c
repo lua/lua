@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.38 2006/09/11 14:07:24 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.39 2008/04/02 16:16:06 roberto Exp roberto $
 ** See Copyright Notice in lua.h
 */
 
@@ -47,11 +47,12 @@ const char *const luaP_opnames[NUM_OPCODES+1] = {
   "RETURN",
   "FORLOOP",
   "FORPREP",
-  "TFORLOOP",
+  "TFORCALL",
   "SETLIST",
   "CLOSE",
   "CLOSURE",
   "VARARG",
+  "TFORLOOP",
   "EXTRAARG",
   NULL
 };
@@ -94,11 +95,12 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 0, OpArgU, OpArgN, iABC)		/* OP_RETURN */
  ,opmode(0, 1, OpArgR, OpArgN, iAsBx)		/* OP_FORLOOP */
  ,opmode(0, 1, OpArgR, OpArgN, iAsBx)		/* OP_FORPREP */
- ,opmode(1, 0, OpArgN, OpArgU, iABC)		/* OP_TFORLOOP */
+ ,opmode(0, 0, OpArgN, OpArgU, iABC)		/* OP_TFORCALL */
  ,opmode(0, 0, OpArgU, OpArgU, iABC)		/* OP_SETLIST */
  ,opmode(0, 0, OpArgN, OpArgN, iABC)		/* OP_CLOSE */
  ,opmode(0, 1, OpArgU, OpArgN, iABx)		/* OP_CLOSURE */
  ,opmode(0, 1, OpArgU, OpArgN, iABC)		/* OP_VARARG */
+ ,opmode(0, 1, OpArgR, OpArgN, iAsBx)		/* OP_TFORLOOP */
  ,opmode(0, 0, OpArgU, OpArgU, iAx)		/* OP_EXTRAARG */
 };
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.126 2006/09/11 14:07:24 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.127 2008/04/02 16:16:06 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -211,14 +211,15 @@ OP_FORLOOP,/*	A sBx	R(A)+=R(A+2);
 			if R(A) <?= R(A+1) then { pc+=sBx; R(A+3)=R(A) }*/
 OP_FORPREP,/*	A sBx	R(A)-=R(A+2); pc+=sBx				*/
 
-OP_TFORLOOP,/*	A C	R(A+3), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2));
-                        if R(A+3) ~= nil then R(A+2)=R(A+3) else pc++	*/
+OP_TFORCALL,/*	A C	R(A+3), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2));	*/
 OP_SETLIST,/*	A B C	R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B	*/
 
 OP_CLOSE,/*	A	close all variables in the stack up to (>=) R(A)*/
 OP_CLOSURE,/*	A Bx	R(A) := closure(KPROTO[Bx], R(A), ... ,R(A+n))	*/
 
 OP_VARARG,/*	A B	R(A), R(A+1), ..., R(A+B-1) = vararg		*/
+
+OP_TFORLOOP,/*	A sBx	if R(A+1) ~= nil then { R(A)=R(A+1); pc += sBx }*/
 
 OP_EXTRAARG/*	Ax	extra argument for previous opcode		*/
 } OpCode;
@@ -255,7 +256,7 @@ OP_EXTRAARG/*	Ax	extra argument for previous opcode		*/
 ** bits 2-3: C arg mode
 ** bits 4-5: B arg mode
 ** bit 6: instruction set register A
-** bit 7: operator is a test
+** bit 7: operator is a test (next instruction must be a jump)
 */
 
 enum OpArgMask {

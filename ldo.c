@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.48 2008/08/26 13:27:42 roberto Exp roberto $
+** $Id: ldo.c,v 2.49 2008/10/28 16:53:16 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -391,8 +391,10 @@ static void unroll (lua_State *L) {
   for (;;) {
     Instruction inst;
     luaV_execute(L);  /* execute up to higher C 'boundary' */
-    if (L->ci == L->base_ci)  /* stack is empty? */
+    if (L->ci == L->base_ci) {  /* stack is empty? */
+      lua_assert(L->baseCcalls == G(L)->nCcalls);
       return;  /* coroutine finished normally */
+    }
     L->baseCcalls--;  /* undo increment that allows yields */
     inst = *(L->savedpc - 1);  /* interrupted instruction */
     switch (GET_OPCODE(inst)) {  /* finish its execution */
@@ -419,15 +421,9 @@ static void unroll (lua_State *L) {
       }
       case OP_SETGLOBAL: case OP_SETTABLE:
         break;  /* nothing to be done */
-      case OP_TFORLOOP: {
-        StkId cb = L->base + GETARG_A(inst) + 3;
-        L->top = L->ci->top;
-        lua_assert(GET_OPCODE(*L->savedpc) == OP_JMP);
-        if (!ttisnil(cb)) {  /* continue loop? */
-          setobjs2s(L, cb - 1, cb);  /* save control variable */
-          L->savedpc += GETARG_sBx(*L->savedpc);  /* jump back */
-        }
-        L->savedpc++;
+      case OP_TFORCALL: {
+        lua_assert(GET_OPCODE(*L->savedpc) == OP_TFORLOOP);
+        L->top = L->ci->top;  /* correct top */
         break;
       }
       default: lua_assert(0);

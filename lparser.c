@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.58 2008/05/08 15:44:51 roberto Exp roberto $
+** $Id: lparser.c,v 2.59 2008/10/28 12:55:00 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -1055,7 +1055,7 @@ static void forbody (LexState *ls, int base, int line, int nvars, int isnum) {
   /* forbody -> DO block */
   BlockCnt bl;
   FuncState *fs = ls->fs;
-  int prep;
+  int prep, endfor;
   adjustlocalvars(ls, 3);  /* control variables */
   checknext(ls, TK_DO);
   prep = isnum ? luaK_codeAsBx(fs, OP_FORPREP, base, NO_JUMP) : luaK_jump(fs);
@@ -1065,15 +1065,14 @@ static void forbody (LexState *ls, int base, int line, int nvars, int isnum) {
   block(ls);
   leaveblock(fs);  /* end of scope for declared variables */
   luaK_patchtohere(fs, prep);
-  if (isnum) {  /* numeric for? */
-    int endfor = luaK_codeAsBx(fs, OP_FORLOOP, base, NO_JUMP);
-    luaK_patchlist(fs, endfor, prep + 1);
-  }
+  if (isnum)  /* numeric for? */
+    endfor = luaK_codeAsBx(fs, OP_FORLOOP, base, NO_JUMP);
   else {  /* generic for */
-    luaK_codeABC(fs, OP_TFORLOOP, base, 0, nvars);
+    luaK_codeABC(fs, OP_TFORCALL, base, 0, nvars);
     luaK_fixline(fs, line);
-    luaK_jumpto(fs, prep + 1);
+    endfor = luaK_codeAsBx(fs, OP_TFORLOOP, base + 2, NO_JUMP);
   }
+  luaK_patchlist(fs, endfor, prep + 1);
   luaK_fixline(fs, line);
 }
 

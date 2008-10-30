@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.77 2008/09/09 13:53:02 roberto Exp roberto $
+** $Id: lvm.c,v 2.78 2008/10/28 16:53:16 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -404,7 +404,7 @@ void luaV_execute (lua_State *L) {
   k = cl->p->k;
   /* main loop of interpreter */
   for (;;) {
-    const Instruction i = *(L->savedpc++);
+    Instruction i = *(L->savedpc++);
     StkId ra;
     if ((L->hookmask & (LUA_MASKLINE | LUA_MASKCOUNT)) &&
         (--L->hookcount == 0 || L->hookmask & LUA_MASKLINE)) {
@@ -667,22 +667,26 @@ void luaV_execute (lua_State *L) {
         dojump(L, GETARG_sBx(i));
         continue;
       }
-      case OP_TFORLOOP: {
+      case OP_TFORCALL: {
         StkId cb = ra + 3;  /* call base */
         setobjs2s(L, cb+2, ra+2);
         setobjs2s(L, cb+1, ra+1);
         setobjs2s(L, cb, ra);
-        L->top = cb+3;  /* func. + 2 args (state and index) */
-        L->baseCcalls++;
+        L->baseCcalls++;  /* allow yields */
+        L->top = cb + 3;  /* func. + 2 args (state and index) */
         Protect(luaD_call(L, cb, GETARG_C(i)));
-        L->baseCcalls--;
         L->top = L->ci->top;
-        cb = RA(i) + 3;  /* previous call may change the stack */
-        if (!ttisnil(cb)) {  /* continue loop? */
-          setobjs2s(L, cb-1, cb);  /* save control variable */
-          dojump(L, GETARG_sBx(*L->savedpc));  /* jump back */
+        L->baseCcalls--;
+        i = *(L->savedpc++);  /* go to next instruction */
+        ra = RA(i);
+        lua_assert(GET_OPCODE(i) == OP_TFORLOOP);
+        /* go through */
+      }
+      case OP_TFORLOOP: {
+        if (!ttisnil(ra + 1)) {  /* continue loop? */
+          setobjs2s(L, ra, ra + 1);  /* save control variable */
+          dojump(L, GETARG_sBx(i));  /* jump back */
         }
-        L->savedpc++;
         continue;
       }
       case OP_SETLIST: {
