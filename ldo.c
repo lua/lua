@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.49 2008/10/28 16:53:16 roberto Exp roberto $
+** $Id: ldo.c,v 2.50 2008/10/30 15:39:30 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -390,7 +390,7 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
 static void unroll (lua_State *L) {
   for (;;) {
     Instruction inst;
-    luaV_execute(L);  /* execute up to higher C 'boundary' */
+    luaV_execute(L);  /* execute down to higher C 'boundary' */
     if (L->ci == L->base_ci) {  /* stack is empty? */
       lua_assert(L->baseCcalls == G(L)->nCcalls);
       return;  /* coroutine finished normally */
@@ -405,27 +405,38 @@ static void unroll (lua_State *L) {
         break;
       }
       case OP_LE: case OP_LT: case OP_EQ: {
-        int res;
+        int res = !l_isfalse(L->top - 1);
         L->top--;
-        res = !l_isfalse(L->top);
-        /* cannot call metamethod with K operand */
+        /* metamethod should not be called when operand is K */
         lua_assert(!ISK(GETARG_B(inst)));
         if (GET_OPCODE(inst) == OP_LE &&  /* "<=" using "<" instead? */
             ttisnil(luaT_gettmbyobj(L, L->base + GETARG_B(inst), TM_LE)))
           res = !res;  /* invert result */
         lua_assert(GET_OPCODE(*L->savedpc) == OP_JMP);
-        if (res == GETARG_A(inst))
-          L->savedpc += GETARG_sBx(*L->savedpc);  /* jump */
-        L->savedpc++;  /* skip jump instruction */
+        if (res != GETARG_A(inst))  /* condition failed? */
+          L->savedpc++;  /* skip jump instruction */
         break;
       }
-      case OP_SETGLOBAL: case OP_SETTABLE:
-        break;  /* nothing to be done */
+      case OP_CONCAT: {
+        StkId top = L->top - 1;  /* top when __concat was called */
+        int last = cast_int(top - L->base) - 2;  /* last element and ... */
+        int b = GETARG_B(inst);      /* ... first element to concatenate */
+        int total = last - b + 1;  /* number of elements to concatenate */
+        setobj2s(L, top - 2, top);  /* put TM result in proper position */
+        L->top = L->ci->top;  /* correct top */
+        if (total > 1)  /* are there elements to concat? */
+          luaV_concat(L, total, last);  /* concat them (may yield again) */
+        /* move final result to final position */
+        setobj2s(L, L->base + GETARG_A(inst), L->base + b);
+        continue;
+      }
       case OP_TFORCALL: {
         lua_assert(GET_OPCODE(*L->savedpc) == OP_TFORLOOP);
         L->top = L->ci->top;  /* correct top */
         break;
       }
+      case OP_SETGLOBAL: case OP_SETTABLE:
+        break;  /* nothing to be done */
       default: lua_assert(0);
     }
   }
@@ -500,7 +511,6 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
 LUA_API int lua_yield (lua_State *L, int nresults) {
   luai_userstateyield(L, nresults);
   lua_lock(L);
-/*printf("yield: %d - %d\n", G(L)->nCcalls, L->baseCcalls);*/
   if (G(L)->nCcalls > L->baseCcalls)
     luaG_runerror(L, "attempt to yield across metamethod/C-call boundary");
   L->base = L->top - nresults;  /* protect stack slots below */

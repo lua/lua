@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.78 2008/10/28 16:53:16 roberto Exp roberto $
+** $Id: lvm.c,v 2.79 2008/10/30 15:39:30 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -271,8 +271,10 @@ void luaV_concat (lua_State *L, int total, int last) {
     StkId top = L->base + last + 1;
     int n = 2;  /* number of elements handled in this pass (at least 2) */
     if (!(ttisstring(top-2) || ttisnumber(top-2)) || !tostring(L, top-1)) {
+      L->top = top;  /* set top to current position (in case of yield) */
       if (!call_binTM(L, top-2, top-1, top-2, TM_CONCAT))
         luaG_concaterror(L, top-2, top-1);
+      L->top = L->ci->top;  /* restore top */
     }
     else if (tsvalue(top-1)->len == 0) {  /* second operand is empty? */
       (void)tostring(L, top - 2);  /* result is first operand */ ;
