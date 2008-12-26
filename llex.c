@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.27 2007/09/14 13:27:04 roberto Exp roberto $
+** $Id: llex.c,v 2.28 2007/10/25 16:45:47 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -74,9 +74,6 @@ void luaX_init (lua_State *L) {
 }
 
 
-#define MAXSRC          80
-
-
 const char *luaX_token2str (LexState *ls, int token) {
   if (token < FIRST_RESERVED) {
     lua_assert(token == cast(unsigned char, token));
@@ -107,8 +104,8 @@ static const char *txtToken (LexState *ls, int token) {
 
 
 static void lexerror (LexState *ls, const char *msg, int token) {
-  char buff[MAXSRC];
-  luaO_chunkid(buff, getstr(ls->source), MAXSRC);
+  char buff[LUA_IDSIZE];
+  luaO_chunkid(buff, getstr(ls->source), LUA_IDSIZE);
   msg = luaO_pushfstring(ls->L, "%s:%d: %s", buff, ls->linenumber, msg);
   if (token)
     luaO_pushfstring(ls->L, "%s near %s", msg, txtToken(ls, token));
