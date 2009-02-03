@@ -1,5 +1,5 @@
 /*
-** $Id: lstrlib.c,v 1.140 2008/04/14 15:54:59 roberto Exp roberto $
+** $Id: lstrlib.c,v 1.141 2008/06/12 14:21:18 roberto Exp roberto $
 ** Standard library for string operations and pattern-matching
 ** See Copyright Notice in lua.h
 */
@@ -600,8 +600,12 @@ static void add_s (MatchState *ms, luaL_Buffer *b, const char *s,
       luaL_addchar(b, news[i]);
     else {
       i++;  /* skip ESC */
-      if (!isdigit(uchar(news[i])))
+      if (!isdigit(uchar(news[i]))) {
+        if (news[i] != L_ESC)
+          luaL_error(ms->L, "invalid use of " LUA_QL("%c")
+                           " in replacement string", L_ESC);
         luaL_addchar(b, news[i]);
+      }
       else if (news[i] == '0')
           luaL_addlstring(b, s, e - s);
       else {
