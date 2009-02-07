@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.208 2008/07/11 17:51:01 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.209 2009/02/06 18:38:47 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -19,19 +19,6 @@
 #include "lualib.h"
 
 
-
-
-/*
-** If your system does not support `stdout', you can just remove this function.
-** If you need, you can define your own `print' function, following this
-** model but changing `writestring' to put the strings at a proper place
-** (a console window or a log file, for instance).
-*/
-static void writestring (const char *s, size_t l) {
-  fwrite(s, sizeof(char), l, stdout);
-}
-
-
 static int luaB_print (lua_State *L) {
   int n = lua_gettop(L);  /* number of arguments */
   int i;
@@ -46,11 +33,11 @@ static int luaB_print (lua_State *L) {
     if (s == NULL)
       return luaL_error(L, LUA_QL("tostring") " must return a string to "
                            LUA_QL("print"));
-    if (i>1) writestring("\t", 1);
-    writestring(s, l);
+    if (i>1) luai_writestring("\t", 1);
+    luai_writestring(s, l);
     lua_pop(L, 1);  /* pop result */
   }
-  writestring("\n", 1);
+  luai_writestring("\n", 1);
   return 0;
 }
 

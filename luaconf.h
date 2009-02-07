@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.99 2008/07/11 17:50:31 roberto Exp roberto $
+** $Id: luaconf.h,v 1.100 2008/07/18 19:58:10 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -218,6 +218,13 @@
 ** CHANGE it if you want a different size.
 */
 #define LUA_IDSIZE	60
+
+
+/*
+@@ luai_writestring defines how 'print' prints its results. 
+** CHANGE it if your system does not have a useful stdout.
+*/ 
+#define luai_writestring(s,l)	fwrite((s), sizeof(char), (l), stdout)
 
 
 /*
