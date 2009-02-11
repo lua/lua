@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.28 2007/10/25 16:45:47 roberto Exp roberto $
+** $Id: llex.c,v 2.29 2008/12/26 11:55:57 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -286,7 +286,7 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
           case 'r': c = '\r'; break;
           case 't': c = '\t'; break;
           case 'v': c = '\v'; break;
-          case '\n':  /* go through */
+          case '\n':
           case '\r': save(ls, '\n'); inclinenumber(ls); continue;
           case EOZ: continue;  /* will raise an error next loop */
           default: {
