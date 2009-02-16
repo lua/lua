@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.79 2008/10/30 15:39:30 roberto Exp roberto $
+** $Id: lvm.c,v 2.80 2008/11/06 12:43:51 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -319,8 +319,6 @@ static void objlen (lua_State *L, StkId ra, const TValue *rb) {
       return;
     }
     case LUA_TSTRING: {
-      tm = fasttm(L, G(L)->mt[LUA_TSTRING], TM_LEN);
-      if (tm) break;  /* metamethod? break switch to call it */
       setnvalue(ra, cast_num(tsvalue(rb)->len));
       return;
     }
