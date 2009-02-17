@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.179 2008/07/03 14:21:41 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.180 2009/02/13 19:39:34 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -355,6 +355,7 @@ LUALIB_API void luaL_addvalue (luaL_Buffer *B) {
 
 
 LUALIB_API void luaL_buffinit (lua_State *L, luaL_Buffer *B) {
+  luaL_checkstack(L, LIMIT + LUA_MINSTACK, "no space for new buffer");
   B->L = L;
   B->p = B->buffer;
   B->lvl = 0;
