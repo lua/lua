@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.46 2008/06/23 22:07:44 roberto Exp roberto $
+** $Id: lgc.c,v 2.47 2008/06/26 19:42:45 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -599,6 +599,12 @@ static Udata *udata2finalize (global_State *g) {
 }
 
 
+static void dothecall (lua_State *L, void *ud) {
+  UNUSED(ud);
+  luaD_call(L, L->top - 2, 0);
+}
+
+
 static void GCTM (lua_State *L) {
   global_State *g = G(L);
   Udata *udata = udata2finalize(g);
@@ -611,7 +617,7 @@ static void GCTM (lua_State *L) {
     setobj2s(L, L->top, tm);
     setuvalue(L, L->top+1, udata);
     L->top += 2;
-    luaD_call(L, L->top - 2, 0);
+    luaD_pcall(L, dothecall, NULL, savestack(L, L->top - 2), 0);
     L->allowhook = oldah;  /* restore hooks */
     g->GCthreshold = oldt;  /* restore threshold */
   }
