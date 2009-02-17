@@ -1,5 +1,5 @@
 /*
-** $Id: ldblib.c,v 1.108 2008/01/18 17:14:47 roberto Exp roberto $
+** $Id: ldblib.c,v 1.109 2008/01/21 13:37:08 roberto Exp roberto $
 ** Interface from Lua to its debug API
 ** See Copyright Notice in lua.h
 */
@@ -315,7 +315,7 @@ static int db_debug (lua_State *L) {
 }
 
 
-static int db_errorfb (lua_State *L) {
+static int db_traceback (lua_State *L) {
   int arg;
   lua_State *L1 = getthread(L, &arg);
   const char *msg = lua_tostring(L, arg + 1);
@@ -343,7 +343,7 @@ static const luaL_Reg dblib[] = {
   {"setlocal", db_setlocal},
   {"setmetatable", db_setmetatable},
   {"setupvalue", db_setupvalue},
-  {"traceback", db_errorfb},
+  {"traceback", db_traceback},
   {NULL, NULL}
 };
 
