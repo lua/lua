@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.55 2008/08/26 13:27:42 roberto Exp roberto $
+** $Id: ltests.c,v 2.56 2008/10/28 12:54:25 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -728,10 +728,17 @@ static int newstate (lua_State *L) {
   lua_Alloc f = lua_getallocf(L, &ud);
   lua_State *L1 = lua_newstate(f, ud);
   if (L1)
-    lua_pushinteger(L, (unsigned long)L1);
+    lua_pushlightuserdata(L, L1);
   else
     lua_pushnil(L);
   return 1;
+}
+
+
+static lua_State *getstate (lua_State *L) {
+  lua_State *L1 = cast(lua_State *, lua_touserdata(L, 1));
+  luaL_argcheck(L, L1 != NULL, 1, "state expected");
+  return L1;
 }
 
 
@@ -746,21 +753,20 @@ static int loadlib (lua_State *L) {
     {"packageopen", luaopen_package},
     {NULL, NULL}
   };
-  lua_State *L1 = cast(lua_State *,
-                       cast(unsigned long, luaL_checknumber(L, 1)));
+  lua_State *L1 = getstate(L);
   lua_pushvalue(L1, LUA_GLOBALSINDEX);
   luaL_register(L1, NULL, libs);
   return 0;
 }
 
 static int closestate (lua_State *L) {
-  lua_State *L1 = cast(lua_State *, cast(unsigned long, luaL_checknumber(L, 1)));
+  lua_State *L1 = getstate(L);
   lua_close(L1);
   return 0;
 }
 
 static int doremote (lua_State *L) {
-  lua_State *L1 = cast(lua_State *,cast(unsigned long,luaL_checknumber(L, 1)));
+  lua_State *L1 = getstate(L);
   size_t lcode;
   const char *code = luaL_checklstring(L, 2, &lcode);
   int status;
@@ -856,8 +862,8 @@ static int testC (lua_State *L) {
   char buff[30];
   lua_State *L1;
   const char *pc;
-  if (lua_isnumber(L, 1)) {
-    L1 = cast(lua_State *,cast(unsigned long,luaL_checknumber(L, 1)));
+  if (lua_isuserdata(L, 1)) {
+    L1 = getstate(L);
     pc = luaL_checkstring(L, 2);
   }
   else {
