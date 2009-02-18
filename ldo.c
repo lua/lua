@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.50 2008/10/30 15:39:30 roberto Exp roberto $
+** $Id: ldo.c,v 2.51 2008/11/06 12:43:51 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -78,18 +78,6 @@ static void restore_stack_limit (lua_State *L) {
 }
 
 
-static void resetstack (lua_State *L, int status) {
-  L->ci = L->base_ci;
-  L->base = L->ci->base;
-  luaF_close(L, L->base);  /* close possible pending closures */
-  luaD_seterrorobj(L, status, L->base);
-  L->allowhook = 1;
-  restore_stack_limit(L);
-  L->errfunc = 0;
-  L->errorJmp = NULL;
-}
-
-
 void luaD_throw (lua_State *L, int errcode) {
   if (L->errorJmp) {
     L->errorJmp->status = errcode;
@@ -98,7 +86,6 @@ void luaD_throw (lua_State *L, int errcode) {
   else {
     L->status = cast_byte(errcode);
     if (G(L)->panic) {
-      resetstack(L, errcode);
       lua_unlock(L);
       G(L)->panic(L);
     }
