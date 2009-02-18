@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.180 2009/02/13 19:39:34 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.181 2009/02/17 14:31:16 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -585,6 +585,7 @@ static int libsize (const luaL_Reg *l) {
 
 LUALIB_API void luaL_register (lua_State *L, const char *libname,
                                const luaL_Reg *l) {
+  lua_checkversion(L);
   if (libname) {
     /* check whether lib already exists */
     luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", 1);
