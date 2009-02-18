@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.100 2008/07/18 19:58:10 roberto Exp roberto $
+** $Id: luaconf.h,v 1.101 2009/02/07 12:23:15 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -331,6 +331,19 @@
 
 
 /*
+** {==================================================================
+** Compatibility with previous versions
+** ===================================================================
+*/
+
+/*
+@@ LUA_COMPAT_LOG10 defines the function 'log10' in the math library.
+** CHANGE it (undefine it) if as soon as you rewrite all calls 'log10(x)'
+** as 'log(x, 10)'
+*/
+#define LUA_COMPAT_LOG10
+
+/*
 @@ LUA_COMPAT_API includes some macros and functions that supply some
 @* compatibility with previous versions.
 ** CHANGE it (undefine it) if you do not need these compatibility facilities.
@@ -359,6 +372,8 @@
 ** you need the debug library.
 */
 #define LUA_COMPAT_DEBUGLIB
+
+/* }================================================================== */
 
 
 
