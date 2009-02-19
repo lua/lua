@@ -1,10 +1,9 @@
 /*
-** $Id: lobject.c,v 2.27 2007/12/19 17:24:38 roberto Exp roberto $
+** $Id: lobject.c,v 2.28 2008/01/30 18:05:23 roberto Exp roberto $
 ** Some generic functions over Lua objects
 ** See Copyright Notice in lua.h
 */
 
-#include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +14,7 @@
 
 #include "lua.h"
 
+#include "lctype.h"
 #include "ldebug.h"
 #include "ldo.h"
 #include "lmem.h"
@@ -95,7 +95,7 @@ int luaO_str2d (const char *s, lua_Number *result) {
   if (*endptr == 'x' || *endptr == 'X')  /* maybe an hexadecimal constant? */
     *result = cast_num(strtoul(s, &endptr, 16));
   if (*endptr == '\0') return 1;  /* most common case */
-  while (isspace(cast(unsigned char, *endptr))) endptr++;
+  while (lisspace(cast(unsigned char, *endptr))) endptr++;
   if (*endptr != '\0') return 0;  /* invalid trailing characters? */
   return 1;
 }

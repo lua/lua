@@ -1,11 +1,10 @@
 /*
-** $Id: ltests.c,v 2.56 2008/10/28 12:54:25 roberto Exp roberto $
+** $Id: ltests.c,v 2.57 2009/02/18 14:52:51 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
 
 
-#include <ctype.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,6 +18,7 @@
 #include "lapi.h"
 #include "lauxlib.h"
 #include "lcode.h"
+#include "lctype.h"
 #include "ldebug.h"
 #include "ldo.h"
 #include "lfunc.h"
@@ -826,7 +826,7 @@ static int getnum_aux (lua_State *L, const char **pc) {
     sig = -1;
     (*pc)++;
   }
-  while (isdigit(cast_int(**pc))) res = res*10 + (*(*pc)++) - '0';
+  while (lisdigit(cast(unsigned char, **pc))) res = res*10 + (*(*pc)++) - '0';
   return sig*res;
 }
 
