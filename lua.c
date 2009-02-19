@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.170 2008/06/26 19:47:51 roberto Exp roberto $
+** $Id: lua.c,v 1.171 2008/07/11 17:51:01 roberto Exp roberto $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -227,7 +227,7 @@ static void dotty (lua_State *L) {
     }
   }
   lua_settop(L, 0);  /* clear stack */
-  fputs("\n", stdout);
+  luai_writestring("\n", 1);
   fflush(stdout);
   progname = oldprogname;
 }
@@ -343,6 +343,7 @@ static int pmain (lua_State *L) {
   lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
   luaL_openlibs(L);  /* open libraries */
   lua_gc(L, LUA_GCRESTART, 0);
+  lua_checkversion(L);
   s->ok = (handle_luainit(L) == LUA_OK);
   if (!s->ok) return 0;
   script = collectargs(argv, &has_i, &has_v, &has_e);
