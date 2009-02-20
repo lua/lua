@@ -1,5 +1,5 @@
 /*
-** $Id: $
+** $Id: lctype.h,v 1.1 2009/02/19 17:18:25 roberto Exp roberto $
 ** 'ctype' functions for Lua
 ** See Copyright Notice in lua.h
 */
@@ -22,13 +22,13 @@
 #define MASK(B)		(1 << (B))
 
 
-#define lisalpha(x)	(lctypecode[x] & MASK(ALPHABIT))
-#define lisalnum(x)	(lctypecode[x] & (MASK(ALPHABIT) | MASK(DIGITBIT)))
-#define lisdigit(x)	(lctypecode[x] & MASK(DIGITBIT))
-#define lisspace(x)	(lctypecode[x] & MASK(SPACEBIT))
-#define lisprint(x)	(lctypecode[x] & MASK(PRINTBIT))
+#define lisalpha(x)	(luai_ctype_[x] & MASK(ALPHABIT))
+#define lisalnum(x)	(luai_ctype_[x] & (MASK(ALPHABIT) | MASK(DIGITBIT)))
+#define lisdigit(x)	(luai_ctype_[x] & MASK(DIGITBIT))
+#define lisspace(x)	(luai_ctype_[x] & MASK(SPACEBIT))
+#define lisprint(x)	(luai_ctype_[x] & MASK(PRINTBIT))
 
-LUAI_DATA const char lctypecode[UCHAR_MAX + 1];
+LUAI_DATA const char luai_ctype_[UCHAR_MAX + 1];
 
 #endif
 
