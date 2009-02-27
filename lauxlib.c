@@ -40,13 +40,65 @@
 #define LEVELS2	10	/* size of the second part of the stack */
 
 
+
+/*
+** search for 'objidx' in table at index -1.
+** return 1 + string at top if find a good name.
+*/
+static int findfield (lua_State *L, int objidx, int level) {
+  int found = 0;
+  if (level == 0 || !lua_istable(L, -1))
+    return 0;  /* not found */
+  lua_pushnil(L);  /* start 'next' loop */
+  while (!found && lua_next(L, -2)) {  /* for each pair in table */
+    if (lua_type(L, -2) == LUA_TSTRING) {  /* ignore non-string keys */
+      if (lua_rawequal(L, objidx, -1)) {  /* found object? */
+        lua_pop(L, 1);  /* remove value (but keep name) */
+        return 1;
+      }
+      else if (findfield(L, objidx, level - 1)) {  /* try recursively */
+        lua_remove(L, -2);  /* remove table (but keep name) */
+        lua_pushliteral(L, ".");
+        lua_insert(L, -2);  /* place '.' between the two names */
+        lua_concat(L, 3);
+        return 1;
+      }
+    }
+    lua_pop(L, 1);  /* remove value */
+  }
+  return 0;  /* not found */
+}
+
+
+static int pushglobalfuncname (lua_State *L, lua_Debug *ar) {
+  int top = lua_gettop(L);
+  lua_getinfo(L, "f", ar);  /* push function */
+  lua_pushvalue(L, LUA_GLOBALSINDEX);  /* push global table */
+  if (findfield(L, top + 1, 2)) {
+    lua_replace(L, top + 1);  /* move name to proper place */
+    lua_pop(L, 1);  /* remove other pushed value */
+    return 1;
+  }
+  else {
+    lua_settop(L, top);  /* remove function and global table */
+    return 0;
+  }
+}
+
+
 static void pushfuncname (lua_State *L, lua_Debug *ar) {
   if (*ar->namewhat != '\0')  /* is there a name? */
     lua_pushfstring(L, "function " LUA_QS, ar->name);
   else if (*ar->what == 'm')  /* main? */
       lua_pushfstring(L, "main chunk");
-  else if (*ar->what == 'C' || *ar->what == 't')
-    lua_pushliteral(L, "?");  /* C function or tail call */
+  else if (*ar->what == 'C' || *ar->what == 't') {
+    if (pushglobalfuncname(L, ar)) {
+      lua_pushfstring(L, "function " LUA_QS, lua_tostring(L, -1));
+      lua_remove(L, -2);  /* remove name */
+    }
+    else
+      lua_pushliteral(L, "?");  /* C function or tail call */
+  }
   else
     lua_pushfstring(L, "function <%s:%d>", ar->short_src, ar->linedefined);
 }
@@ -106,7 +158,7 @@ LUALIB_API int luaL_argerror (lua_State *L, int narg, const char *extramsg) {
       return luaL_error(L, "calling " LUA_QS " on bad self", ar.name);
   }
   if (ar.name == NULL)
-    ar.name = "?";
+    ar.name = (pushglobalfuncname(L, &ar)) ? lua_tostring(L, -1) : "?";
   return luaL_error(L, "bad argument #%d to " LUA_QS " (%s)",
                         narg, ar.name, extramsg);
 }
