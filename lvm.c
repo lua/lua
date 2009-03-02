@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.80 2008/11/06 12:43:51 roberto Exp roberto $
+** $Id: lvm.c,v 2.81 2009/02/16 20:09:28 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -399,7 +399,7 @@ void luaV_execute (lua_State *L) {
   TValue *k;
  reentry:  /* entry point */
   lua_assert(isLua(L->ci));
-  cl = &clvalue(L->ci->func)->l;
+  cl = &curr_func(L)->l;
   base = L->base;
   k = cl->p->k;
   /* main loop of interpreter */
