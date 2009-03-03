@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.57 2009/02/18 14:52:51 roberto Exp roberto $
+** $Id: ltests.c,v 2.58 2009/02/19 17:18:25 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -56,6 +56,13 @@ static void setnameval (lua_State *L, const char *name, int val) {
 static void pushobject (lua_State *L, const TValue *o) {
   setobj2s(L, L->top, o);
   api_incr_top(L);
+}
+
+
+static int tpanic (lua_State *L) {
+  fprintf(stderr, "PANIC: unprotected error in call to Lua API (%s)\n",
+                   lua_tostring(L, -1));
+  return (exit(EXIT_FAILURE), 0);  /* do not return to Lua */
 }
 
 
@@ -727,8 +734,10 @@ static int newstate (lua_State *L) {
   void *ud;
   lua_Alloc f = lua_getallocf(L, &ud);
   lua_State *L1 = lua_newstate(f, ud);
-  if (L1)
+  if (L1) {
+    lua_atpanic(L1, tpanic);
     lua_pushlightuserdata(L, L1);
+  }
   else
     lua_pushnil(L);
   return 1;
@@ -866,6 +875,10 @@ static int testC (lua_State *L) {
     L1 = getstate(L);
     pc = luaL_checkstring(L, 2);
   }
+  else if (lua_isthread(L, 1)) {
+    L1 = lua_tothread(L, 1);
+    pc = luaL_checkstring(L, 2);
+  }
   else {
     L1 = L;
     pc = luaL_checkstring(L, 1);
@@ -982,12 +995,12 @@ static int testC (lua_State *L) {
       int a = getindex;
       lua_pushboolean(L1, lua_equal(L1, a, getindex));
     }
-    else if EQ("rawcall") {
+    else if EQ("call") {
       int narg = getnum;
       int nres = getnum;
       lua_call(L1, narg, nres);
     }
-    else if EQ("call") {
+    else if EQ("pcall") {
       int narg = getnum;
       int nres = getnum;
       lua_pcall(L1, narg, nres, 0);
@@ -1139,6 +1152,7 @@ static void checkfinalmem (void) {
 
 int luaB_opentests (lua_State *L) {
   void *ud;
+  lua_atpanic(L, &tpanic);
   atexit(checkfinalmem);
   lua_assert(lua_getallocf(L, &ud) == debug_realloc);
   lua_assert(ud == cast(void *, &l_memcontrol));
