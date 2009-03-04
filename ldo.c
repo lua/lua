@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.52 2009/02/18 14:52:03 roberto Exp roberto $
+** $Id: ldo.c,v 2.53 2009/03/03 18:51:24 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -289,7 +289,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     ci->top = L->base + p->maxstacksize;
     lua_assert(ci->top <= L->stack_last);
     L->savedpc = p->code;  /* starting point */
-    ci->tailcalls = 0;
+    ci->u.l.tailcalls = 0;
     ci->callstatus = CIST_LUA;
     ci->nresults = nresults;
     for (st = L->top; st < ci->top; st++)
@@ -328,8 +328,8 @@ static StkId callrethooks (lua_State *L, StkId firstResult) {
   ptrdiff_t fr = savestack(L, firstResult);  /* next call may change stack */
   luaD_callhook(L, LUA_HOOKRET, -1);
   if (isLua(L->ci)) {  /* Lua function? */
-    while ((L->hookmask & LUA_MASKRET) && L->ci->tailcalls--) /* tail calls */
-      luaD_callhook(L, LUA_HOOKTAILRET, -1);
+    while ((L->hookmask & LUA_MASKRET) && L->ci->u.l.tailcalls--)
+      luaD_callhook(L, LUA_HOOKTAILRET, -1);  /* ret. hooks for tail calls */
   }
   return restorestack(L, fr);
 }

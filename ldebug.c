@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.41 2008/08/26 13:27:42 roberto Exp roberto $
+** $Id: ldebug.c,v 2.42 2008/10/30 15:39:30 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -89,7 +89,7 @@ LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
   for (ci = L->ci; level > 0 && ci > L->base_ci; ci--) {
     level--;
     if (isLua(ci))  /* Lua function? */
-      level -= ci->tailcalls;  /* skip lost tail calls */
+      level -= ci->u.l.tailcalls;  /* skip lost tail calls */
   }
   if (level == 0 && ci > L->base_ci) {  /* level found? */
     status = 1;
@@ -527,7 +527,7 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int stackpos,
 static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
   TMS tm = 0;
   Instruction i;
-  if ((isLua(ci) && ci->tailcalls > 0) || !isLua(ci - 1))
+  if ((isLua(ci) && ci->u.l.tailcalls > 0) || !isLua(ci - 1))
     return NULL;  /* calling function is not Lua (or is unknown) */
   ci--;  /* calling function */
   i = ci_func(ci)->l.p->code[currentpc(L, ci)];

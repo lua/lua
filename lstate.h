@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.36 2008/08/26 13:27:42 roberto Exp roberto $
+** $Id: lstate.h,v 2.37 2009/02/18 17:20:56 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -83,7 +83,11 @@ typedef struct CallInfo {
   const Instruction *savedpc;
   short nresults;  /* expected number of results from this function */
   lu_byte callstatus;
-  int tailcalls;  /* number of tail calls lost under this entry */
+  union {
+    struct {  /* only for Lua functions */
+      int tailcalls;  /* number of tail calls lost under this entry */
+    } l;
+  } u;
 } CallInfo;
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.81 2009/02/16 20:09:28 roberto Exp roberto $
+** $Id: lvm.c,v 2.82 2009/03/02 16:34:23 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -622,7 +622,7 @@ void luaV_execute (lua_State *L) {
           ci->top = L->top = func+aux;  /* correct top */
           lua_assert(L->top == L->base + clvalue(func)->l.p->maxstacksize);
           ci->savedpc = L->savedpc;
-          ci->tailcalls++;  /* one more call lost */
+          ci->u.l.tailcalls++;  /* one more call lost */
           L->ci--;  /* remove new frame */
           goto reentry;
         }
