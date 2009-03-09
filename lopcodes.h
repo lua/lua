@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.127 2008/04/02 16:16:06 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.128 2008/10/30 15:39:30 roberto Exp roberto $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -215,7 +215,7 @@ OP_TFORCALL,/*	A C	R(A+3), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2));	*/
 OP_SETLIST,/*	A B C	R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B	*/
 
 OP_CLOSE,/*	A	close all variables in the stack up to (>=) R(A)*/
-OP_CLOSURE,/*	A Bx	R(A) := closure(KPROTO[Bx], R(A), ... ,R(A+n))	*/
+OP_CLOSURE,/*	A Bx	R(A) := closure(KPROTO[Bx])			*/
 
 OP_VARARG,/*	A B	R(A), R(A+1), ..., R(A+B-1) = vararg		*/
 
@@ -231,22 +231,27 @@ OP_EXTRAARG/*	Ax	extra argument for previous opcode		*/
 
 /*===========================================================================
   Notes:
-  (*) In OP_CALL, if (B == 0) then B = top. C is the number of returns - 1,
-      and can be 0: OP_CALL then sets `top' to last_result+1, so
-      next open instruction (OP_CALL, OP_RETURN, OP_SETLIST) may use `top'.
+  (*) In OP_CALL, if (B == 0) then B = top. If (C == 0), then `top' is
+  set to last_result+1, so next open instruction (OP_CALL, OP_RETURN,
+  OP_SETLIST) may use `top'.
 
   (*) In OP_VARARG, if (B == 0) then use actual number of varargs and
-      set top (like in OP_CALL with C == 0).
+  set top (like in OP_CALL with C == 0).
 
-  (*) In OP_RETURN, if (B == 0) then return up to `top'
+  (*) In OP_RETURN, if (B == 0) then return up to `top'.
 
-  (*) In OP_SETLIST, if (B == 0) then B = `top';
-      if (C == 0) then next `instruction' is EXTRAARG(real C)
+  (*) In OP_SETLIST, if (B == 0) then B = `top'; if (C == 0) then next
+  `instruction' is EXTRAARG(real C).
 
   (*) For comparisons, A specifies what condition the test should accept
-      (true or false).
+  (true or false).
 
-  (*) All `skips' (pc++) assume that next instruction is a jump
+  (*) All `skips' (pc++) assume that next instruction is a jump.
+
+  (*) The OP_CLOSURE instruction is followed by a sequence of
+  instructions coding the upvalues: OP_MOVE A B if upvalue is local B,
+  or OP_GETUPVAL A B if upvalue is enclosing upvalue B.
+
 ===========================================================================*/
 
 
