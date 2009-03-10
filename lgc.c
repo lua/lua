@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.47 2008/06/26 19:42:45 roberto Exp roberto $
+** $Id: lgc.c,v 2.48 2009/02/17 19:47:58 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -601,7 +601,7 @@ static Udata *udata2finalize (global_State *g) {
 
 static void dothecall (lua_State *L, void *ud) {
   UNUSED(ud);
-  luaD_call(L, L->top - 2, 0);
+  luaD_call(L, L->top - 2, 0, 0);
 }
 
 

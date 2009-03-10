@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.37 2009/02/18 17:20:56 roberto Exp roberto $
+** $Id: lstate.h,v 2.38 2009/03/04 13:32:29 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -87,6 +87,9 @@ typedef struct CallInfo {
     struct {  /* only for Lua functions */
       int tailcalls;  /* number of tail calls lost under this entry */
     } l;
+    struct {  /* only for C functions */
+      lua_CFunction cont;  /* continuation in case of yields */
+    } c;
   } u;
 } CallInfo;
 
@@ -160,7 +163,7 @@ struct lua_State {
   CallInfo *base_ci;  /* array of CallInfo's */
   int stacksize;
   int size_ci;  /* size of array `base_ci' */
-  unsigned short baseCcalls;  /* number of nested C calls when resuming */
+  unsigned short nny;  /* number of non-yieldable calls in stack */
   lu_byte hookmask;
   lu_byte allowhook;
   int basehookcount;

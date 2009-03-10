@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.82 2009/03/02 16:34:23 roberto Exp roberto $
+** $Id: lvm.c,v 2.83 2009/03/04 13:32:29 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -79,17 +79,14 @@ static void traceexec (lua_State *L) {
 static void callTM (lua_State *L, const TValue *f, const TValue *p1,
                     const TValue *p2, TValue *p3, int hasres) {
   ptrdiff_t result = savestack(L, p3);
-  int oldbase = L->baseCcalls;
   setobj2s(L, L->top++, f);  /* push function */
   setobj2s(L, L->top++, p1);  /* 1st argument */
   setobj2s(L, L->top++, p2);  /* 2nd argument */
   if (!hasres)  /* no result? 'p3' is third argument */
     setobj2s(L, L->top++, p3);  /* 3th argument */
   luaD_checkstack(L, 0);
-  if (isLua(L->ci))  /* metamethod invoked from a Lua function? */
-    L->baseCcalls++;  /* allow it to yield */
-  luaD_call(L, L->top - (4 - hasres), hasres);
-  L->baseCcalls = oldbase;
+  /* metamethod may yield only when called from Lua code */
+  luaD_call(L, L->top - (4 - hasres), hasres, isLua(L->ci));
   if (hasres) {  /* if has result, move it to its place */
     p3 = restorestack(L, result);
     setobjs2s(L, p3, --L->top);
@@ -353,6 +350,61 @@ static void Arith (lua_State *L, StkId ra, const TValue *rb,
   }
   else if (!call_binTM(L, rb, rc, ra, op))
     luaG_aritherror(L, rb, rc);
+}
+
+
+/*
+** finish execution of an opcode interrupted by an yield
+*/
+void luaV_finishOp (lua_State *L) {
+  Instruction inst = *(L->savedpc - 1);  /* interrupted instruction */
+  switch (GET_OPCODE(inst)) {  /* finish its execution */
+    case OP_ADD: case OP_SUB: case OP_MUL: case OP_DIV:
+    case OP_MOD: case OP_POW: case OP_UNM: case OP_LEN:
+    case OP_GETGLOBAL: case OP_GETTABLE: case OP_SELF: {
+      setobjs2s(L, L->base + GETARG_A(inst), --L->top);
+      break;
+    }
+    case OP_LE: case OP_LT: case OP_EQ: {
+      int res = !l_isfalse(L->top - 1);
+      L->top--;
+      /* metamethod should not be called when operand is K */
+      lua_assert(!ISK(GETARG_B(inst)));
+      if (GET_OPCODE(inst) == OP_LE &&  /* "<=" using "<" instead? */
+          ttisnil(luaT_gettmbyobj(L, L->base + GETARG_B(inst), TM_LE)))
+        res = !res;  /* invert result */
+      lua_assert(GET_OPCODE(*L->savedpc) == OP_JMP);
+      if (res != GETARG_A(inst))  /* condition failed? */
+        L->savedpc++;  /* skip jump instruction */
+      break;
+    }
+    case OP_CONCAT: {
+      StkId top = L->top - 1;  /* top when __concat was called */
+      int last = cast_int(top - L->base) - 2;  /* last element and ... */
+      int b = GETARG_B(inst);      /* ... first element to concatenate */
+      int total = last - b + 1;  /* number of elements to concatenate */
+      setobj2s(L, top - 2, top);  /* put TM result in proper position */
+      L->top = L->ci->top;  /* correct top */
+      if (total > 1)  /* are there elements to concat? */
+        luaV_concat(L, total, last);  /* concat them (may yield again) */
+      /* move final result to final position */
+      setobj2s(L, L->base + GETARG_A(inst), L->base + b);
+      break;
+    }
+    case OP_TFORCALL: {
+      lua_assert(GET_OPCODE(*L->savedpc) == OP_TFORLOOP);
+      L->top = L->ci->top;  /* correct top */
+      break;
+    }
+    case OP_CALL: {
+      if (GETARG_C(inst) - 1 >= 0)  /* nresults >= 0? */
+        L->top = L->ci->top;  /* adjust results */
+      break;
+    }
+    case OP_TAILCALL: case OP_SETGLOBAL: case OP_SETTABLE:
+      break;
+    default: lua_assert(0);
+  }
 }
 
 
@@ -672,11 +724,9 @@ void luaV_execute (lua_State *L) {
         setobjs2s(L, cb+2, ra+2);
         setobjs2s(L, cb+1, ra+1);
         setobjs2s(L, cb, ra);
-        L->baseCcalls++;  /* allow yields */
         L->top = cb + 3;  /* func. + 2 args (state and index) */
-        Protect(luaD_call(L, cb, GETARG_C(i)));
+        Protect(luaD_call(L, cb, GETARG_C(i), 1));
         L->top = L->ci->top;
-        L->baseCcalls--;
         i = *(L->savedpc++);  /* go to next instruction */
         ra = RA(i);
         lua_assert(GET_OPCODE(i) == OP_TFORLOOP);
@@ -725,8 +775,8 @@ void luaV_execute (lua_State *L) {
         ncl = luaF_newLclosure(L, nup, cl->env);
         ncl->l.p = p;
         setclvalue(L, ra, ncl);
-        for (j=0; j<nup; j++, L->savedpc++) {
-          Instruction u = *L->savedpc;
+        for (j=0; j<nup; j++) {
+          Instruction u = *L->savedpc++;
           if (GET_OPCODE(u) == OP_GETUPVAL)
             ncl->l.upvals[j] = cl->upvals[GETARG_B(u)];
           else {

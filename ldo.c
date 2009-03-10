@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.53 2009/03/03 18:51:24 roberto Exp roberto $
+** $Id: ldo.c,v 2.54 2009/03/04 13:32:29 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -14,6 +14,7 @@
 
 #include "lua.h"
 
+#include "lapi.h"
 #include "ldebug.h"
 #include "ldo.h"
 #include "lfunc.h"
@@ -365,7 +366,7 @@ int luaD_poscall (lua_State *L, StkId firstResult) {
 ** When returns, all the results are on the stack, starting at the original
 ** function position.
 */
-void luaD_call (lua_State *L, StkId func, int nResults) {
+void luaD_call (lua_State *L, StkId func, int nResults, int allowyield) {
   global_State *g = G(L);
   if (++g->nCcalls >= LUAI_MAXCCALLS) {
     if (g->nCcalls == LUAI_MAXCCALLS)
@@ -373,64 +374,41 @@ void luaD_call (lua_State *L, StkId func, int nResults) {
     else if (g->nCcalls >= (LUAI_MAXCCALLS + (LUAI_MAXCCALLS>>3)))
       luaD_throw(L, LUA_ERRERR);  /* error while handing stack error */
   }
+  if (!allowyield) L->nny++;
   if (!luaD_precall(L, func, nResults))  /* is a Lua function? */
     luaV_execute(L);  /* call it */
+  if (!allowyield) L->nny--;
   g->nCcalls--;
   luaC_checkGC(L);
 }
 
 
+static void finishCcall (lua_State *L) {
+  int n;
+  lua_assert(L->ci->u.c.cont != NULL);  /* must have a continuation */
+  lua_assert(L->nny == 0);
+  /* finish 'luaD_call' */
+  G(L)->nCcalls--;
+  /* finish 'lua_callcont' */
+  adjustresults(L, (L->ci + 1)->nresults);
+  /* call continuation function */
+  lua_unlock(L);
+  n = (*L->ci->u.c.cont)(L);
+  lua_lock(L);
+  /* finish 'luaD_precall' */
+  luaD_poscall(L, L->top - n);
+}
+
+
 static void unroll (lua_State *L) {
   for (;;) {
-    Instruction inst;
-    luaV_execute(L);  /* execute down to higher C 'boundary' */
-    if (L->ci == L->base_ci) {  /* stack is empty? */
-      lua_assert(L->baseCcalls == G(L)->nCcalls);
+    if (L->ci == L->base_ci)  /* stack is empty? */
       return;  /* coroutine finished normally */
-    }
-    L->baseCcalls--;  /* undo increment that allows yields */
-    inst = *(L->savedpc - 1);  /* interrupted instruction */
-    switch (GET_OPCODE(inst)) {  /* finish its execution */
-      case OP_ADD: case OP_SUB: case OP_MUL: case OP_DIV:
-      case OP_MOD: case OP_POW: case OP_UNM: case OP_LEN:
-      case OP_GETGLOBAL: case OP_GETTABLE: case OP_SELF: {
-        setobjs2s(L, L->base + GETARG_A(inst), --L->top);
-        break;
-      }
-      case OP_LE: case OP_LT: case OP_EQ: {
-        int res = !l_isfalse(L->top - 1);
-        L->top--;
-        /* metamethod should not be called when operand is K */
-        lua_assert(!ISK(GETARG_B(inst)));
-        if (GET_OPCODE(inst) == OP_LE &&  /* "<=" using "<" instead? */
-            ttisnil(luaT_gettmbyobj(L, L->base + GETARG_B(inst), TM_LE)))
-          res = !res;  /* invert result */
-        lua_assert(GET_OPCODE(*L->savedpc) == OP_JMP);
-        if (res != GETARG_A(inst))  /* condition failed? */
-          L->savedpc++;  /* skip jump instruction */
-        break;
-      }
-      case OP_CONCAT: {
-        StkId top = L->top - 1;  /* top when __concat was called */
-        int last = cast_int(top - L->base) - 2;  /* last element and ... */
-        int b = GETARG_B(inst);      /* ... first element to concatenate */
-        int total = last - b + 1;  /* number of elements to concatenate */
-        setobj2s(L, top - 2, top);  /* put TM result in proper position */
-        L->top = L->ci->top;  /* correct top */
-        if (total > 1)  /* are there elements to concat? */
-          luaV_concat(L, total, last);  /* concat them (may yield again) */
-        /* move final result to final position */
-        setobj2s(L, L->base + GETARG_A(inst), L->base + b);
-        continue;
-      }
-      case OP_TFORCALL: {
-        lua_assert(GET_OPCODE(*L->savedpc) == OP_TFORLOOP);
-        L->top = L->ci->top;  /* correct top */
-        break;
-      }
-      case OP_SETGLOBAL: case OP_SETTABLE:
-        break;  /* nothing to be done */
-      default: lua_assert(0);
+    if (!isLua(L->ci))  /* C function? */
+      finishCcall(L);
+    else {  /* Lua function */
+      luaV_finishOp(L);  /* finish interrupted instruction */
+      luaV_execute(L);  /* execute down to higher C 'boundary' */
     }
   }
 }
@@ -441,23 +419,22 @@ static void resume (lua_State *L, void *ud) {
   CallInfo *ci = L->ci;
   if (L->status == LUA_OK) {  /* start coroutine? */
     lua_assert(ci == L->base_ci && firstArg > L->base);
-    if (luaD_precall(L, firstArg - 1, LUA_MULTRET))  /* C function? */
-      return;  /* done */
+    if (!luaD_precall(L, firstArg - 1, LUA_MULTRET))  /* Lua function? */
+      luaV_execute(L);  /* call it */
   }
   else {  /* resuming from previous yield */
     lua_assert(L->status == LUA_YIELD);
     L->status = LUA_OK;
-    if (isLua(ci))  /* yielded inside a hook? */
+    if (isLua(ci)) {  /* yielded inside a hook? */
       L->base = L->ci->base;  /* just continue its execution */
-    else {  /* 'common' yield */
-      /* finish interrupted execution of `OP_CALL' */
-      lua_assert(GET_OPCODE(*((ci-1)->savedpc - 1)) == OP_CALL ||
-                 GET_OPCODE(*((ci-1)->savedpc - 1)) == OP_TAILCALL);
-      if (luaD_poscall(L, firstArg))  /* complete it... */
-        L->top = L->ci->top;  /* and correct top if not multiple results */
+      luaV_execute(L);
     }
+    else {  /* 'common' yield */
+      G(L)->nCcalls--;  /* finish 'luaD_call' */
+      luaD_poscall(L, firstArg);  /* finish 'luaD_precall' */
+    }
+    unroll(L);
   }
-  unroll(L);
 }
 
 
@@ -484,7 +461,7 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
   if (G(L)->nCcalls >= LUAI_MAXCCALLS)
       return resume_error(L, "C stack overflow");
   ++G(L)->nCcalls;  /* count resume */
-  L->baseCcalls += G(L)->nCcalls;
+  L->nny = 0;  /* allow yields */
   status = luaD_rawrunprotected(L, resume, L->top - nargs);
   if (status != LUA_OK && status != LUA_YIELD) {  /* error? */
     L->status = cast_byte(status);  /* mark thread as `dead' */
@@ -494,7 +471,7 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
   else {
     lua_assert(status == L->status);
   }
-  L->baseCcalls -= G(L)->nCcalls;
+  L->nny = 1;  /* do not allow yields */
   --G(L)->nCcalls;
   lua_unlock(L);
   return status;
@@ -504,7 +481,7 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
 LUA_API int lua_yield (lua_State *L, int nresults) {
   luai_userstateyield(L, nresults);
   lua_lock(L);
-  if (G(L)->nCcalls > L->baseCcalls)
+  if (L->nny > 0)
     luaG_runerror(L, "attempt to yield across metamethod/C-call boundary");
   L->base = L->top - nresults;  /* protect stack slots below */
   L->status = LUA_YIELD;
@@ -521,6 +498,7 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
   int status;
   ptrdiff_t old_ci = saveci(L, L->ci);
   lu_byte old_allowhooks = L->allowhook;
+  unsigned short old_nny = L->nny;
   ptrdiff_t old_errfunc = L->errfunc;
   L->errfunc = ef;
   status = luaD_rawrunprotected(L, func, u);
@@ -532,6 +510,7 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
     L->base = L->ci->base;
     L->savedpc = L->ci->savedpc;
     L->allowhook = old_allowhooks;
+    L->nny = old_nny;
     restore_stack_limit(L);
   }
   L->errfunc = old_errfunc;

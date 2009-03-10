@@ -1,5 +1,5 @@
 /*
-** $Id: ltablib.c,v 1.43 2008/02/14 16:03:27 roberto Exp roberto $
+** $Id: ltablib.c,v 1.44 2008/04/07 18:43:00 roberto Exp roberto $
 ** Library for Table Manipulation
 ** See Copyright Notice in lua.h
 */
@@ -36,20 +36,28 @@ static int foreachi (lua_State *L) {
 }
 
 
+static int foreachcont (lua_State *L) {
+  for (;;) {
+    if (!lua_isnil(L, -1))
+      return 1;
+    lua_pop(L, 2);  /* remove value and result */
+    if (lua_next(L, 1) == 0)  /* no more elements? */
+      return 0;
+    lua_pushvalue(L, 2);  /* function */
+    lua_pushvalue(L, -3);  /* key */
+    lua_pushvalue(L, -3);  /* value */
+    lua_callcont(L, 2, 1, &foreachcont);
+  }
+}
+
+
 static int foreach (lua_State *L) {
   luaL_checktype(L, 1, LUA_TTABLE);
   luaL_checktype(L, 2, LUA_TFUNCTION);
   lua_pushnil(L);  /* first key */
-  while (lua_next(L, 1)) {
-    lua_pushvalue(L, 2);  /* function */
-    lua_pushvalue(L, -3);  /* key */
-    lua_pushvalue(L, -3);  /* value */
-    lua_call(L, 2, 1);
-    if (!lua_isnil(L, -1))
-      return 1;
-    lua_pop(L, 2);  /* remove value and result */
-  }
-  return 0;
+  lua_pushnil(L);  /* first value */
+  lua_pushnil(L);  /* first "return" */
+  return foreachcont(L);
 }
 
 

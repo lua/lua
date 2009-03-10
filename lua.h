@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.231 2008/08/13 14:08:49 roberto Exp roberto $
+** $Id: lua.h,v 1.232 2009/02/18 17:20:56 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -203,7 +203,9 @@ LUA_API int   (lua_setfenv) (lua_State *L, int idx);
 /*
 ** 'load' and 'call' functions (load and run Lua code)
 */
-LUA_API void  (lua_call) (lua_State *L, int nargs, int nresults);
+LUA_API void  (lua_callcont) (lua_State *L, int nargs, int nresults,
+                              lua_CFunction cont);
+
 LUA_API int   (lua_pcall) (lua_State *L, int nargs, int nresults, int errfunc);
 LUA_API int   (lua_cpcall) (lua_State *L, lua_CFunction func, void *ud);
 LUA_API int   (lua_load) (lua_State *L, lua_Reader reader, void *dt,
@@ -280,6 +282,8 @@ LUA_API void      (lua_setallocf) (lua_State *L, lua_Alloc f, void *ud);
 #define lua_getglobal(L,s)	lua_getfield(L, LUA_GLOBALSINDEX, (s))
 
 #define lua_tostring(L,i)	lua_tolstring(L, (i), NULL)
+
+#define lua_call(L,n,r)		lua_callcont(L, (n), (r), NULL);
 
 
 

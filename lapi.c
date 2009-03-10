@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.69 2009/02/18 17:20:56 roberto Exp roberto $
+** $Id: lapi.c,v 2.70 2009/02/19 17:15:13 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -757,21 +757,25 @@ LUA_API int lua_setfenv (lua_State *L, int idx) {
 */
 
 
-#define adjustresults(L,nres) \
-    { if (nres == LUA_MULTRET && L->top >= L->ci->top) L->ci->top = L->top; }
-
-
 #define checkresults(L,na,nr) \
      api_check(L, (nr) == LUA_MULTRET || (L->ci->top - L->top >= (nr) - (na)))
 
 
-LUA_API void lua_call (lua_State *L, int nargs, int nresults) {
+LUA_API void lua_callcont (lua_State *L, int nargs, int nresults,
+                           lua_CFunction cont) {
   StkId func;
   lua_lock(L);
+  /* cannot use continuations inside hooks */
+  api_check(L, cont == NULL || !isLua(L->ci));
   api_checknelems(L, nargs+1);
   checkresults(L, nargs, nresults);
   func = L->top - (nargs+1);
-  luaD_call(L, func, nresults);
+  if (cont) {
+    L->ci->u.c.cont = cont;
+    luaD_call(L, func, nresults, 1);
+  }
+  else
+    luaD_call(L, func, nresults, 0);
   adjustresults(L, nresults);
   lua_unlock(L);
 }
@@ -789,7 +793,7 @@ struct CallS {  /* data to `f_call' */
 
 static void f_call (lua_State *L, void *ud) {
   struct CallS *c = cast(struct CallS *, ud);
-  luaD_call(L, c->func, c->nresults);
+  luaD_call(L, c->func, c->nresults, 0);
 }
 
 
@@ -835,7 +839,7 @@ static void f_Ccall (lua_State *L, void *ud) {
   api_incr_top(L);
   setpvalue(L->top, c->ud);  /* push only argument */
   api_incr_top(L);
-  luaD_call(L, L->top - 2, 0);
+  luaD_call(L, L->top - 2, 0, 0);
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.42 2008/10/30 15:39:30 roberto Exp roberto $
+** $Id: ldebug.c,v 2.43 2009/03/04 13:32:29 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -628,7 +628,7 @@ void luaG_errormsg (lua_State *L) {
     setobjs2s(L, L->top, L->top - 1);  /* move argument */
     setobjs2s(L, L->top - 1, errfunc);  /* push function */
     incr_top(L);
-    luaD_call(L, L->top - 2, 1);  /* call it */
+    luaD_call(L, L->top - 2, 1, 0);  /* call it */
   }
   luaD_throw(L, LUA_ERRRUN);
 }
