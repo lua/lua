@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.30 2009/02/11 18:25:20 roberto Exp roberto $
+** $Id: llex.c,v 2.31 2009/02/19 17:18:25 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -206,7 +206,7 @@ static void read_numeral (LexState *ls, SemInfo *seminfo) {
   } while (lisdigit(ls->current) || ls->current == '.');
   if (check_next(ls, "Ee"))  /* `E'? */
     check_next(ls, "+-");  /* optional exponent sign */
-  while (lisalnum(ls->current) || ls->current == '_')
+  while (lislalnum(ls->current))
     save_and_next(ls);
   save(ls, '\0');
   buffreplace(ls, '.', ls->decpoint);  /* follow locale for decimal point */
@@ -408,12 +408,12 @@ static int llex (LexState *ls, SemInfo *seminfo) {
           read_numeral(ls, seminfo);
           return TK_NUMBER;
         }
-        else if (lisalpha(ls->current) || ls->current == '_') {
+        else if (lislalpha(ls->current)) {
           /* identifier or reserved word */
           TString *ts;
           do {
             save_and_next(ls);
-          } while (lisalnum(ls->current) || ls->current == '_');
+          } while (lislalnum(ls->current));
           ts = luaX_newstring(ls, luaZ_buffer(ls->buff),
                                   luaZ_bufflen(ls->buff));
           if (ts->tsv.reserved > 0)  /* reserved word? */
