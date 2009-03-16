@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.211 2009/03/10 17:14:37 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.212 2009/03/13 15:50:03 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -364,7 +364,6 @@ static int luaB_dofile (lua_State *L) {
 
 
 static int luaB_assert (lua_State *L) {
-  luaL_checkany(L, 1);
   if (!lua_toboolean(L, 1))
     return luaL_error(L, "%s", luaL_optstring(L, 2, "assertion failed!"));
   return lua_gettop(L);
