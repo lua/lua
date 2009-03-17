@@ -1,5 +1,5 @@
 /*
-** $Id: lmathlib.c,v 1.71 2009/02/18 13:06:05 roberto Exp roberto $
+** $Id: lmathlib.c,v 1.72 2009/02/18 13:17:10 roberto Exp roberto $
 ** Standard mathematical library
 ** See Copyright Notice in lua.h
 */
@@ -201,16 +201,16 @@ static int math_random (lua_State *L) {
       break;
     }
     case 1: {  /* only upper limit */
-      int u = luaL_checkint(L, 1);
-      luaL_argcheck(L, 1<=u, 1, "interval is empty");
-      lua_pushnumber(L, floor(r*u)+1);  /* int between 1 and `u' */
+      lua_Number u = luaL_checknumber(L, 1);
+      luaL_argcheck(L, 1.0 <= u, 1, "interval is empty");
+      lua_pushnumber(L, floor(r*u) + 1.0);  /* int between 1 and `u' */
       break;
     }
     case 2: {  /* lower and upper limits */
-      int l = luaL_checkint(L, 1);
-      int u = luaL_checkint(L, 2);
-      luaL_argcheck(L, l<=u, 2, "interval is empty");
-      lua_pushnumber(L, floor(r*(u-l+1))+l);  /* int between `l' and `u' */
+      lua_Number l = luaL_checknumber(L, 1);
+      lua_Number u = luaL_checknumber(L, 2);
+      luaL_argcheck(L, l <= u, 2, "interval is empty");
+      lua_pushnumber(L, floor(r*(u-l+1)) + l);  /* int between `l' and `u' */
       break;
     }
     default: return luaL_error(L, "wrong number of arguments");
