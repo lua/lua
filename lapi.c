@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.70 2009/02/19 17:15:13 roberto Exp roberto $
+** $Id: lapi.c,v 2.71 2009/03/10 17:14:37 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -761,17 +761,28 @@ LUA_API int lua_setfenv (lua_State *L, int idx) {
      api_check(L, (nr) == LUA_MULTRET || (L->ci->top - L->top >= (nr) - (na)))
 
 
-LUA_API void lua_callcont (lua_State *L, int nargs, int nresults,
-                           lua_CFunction cont) {
+LUA_API int lua_getctx (lua_State *L, int *ctx) {
+  if (L->ci->callstatus & CIST_CTX) {  /* call has ctx? */
+    *ctx = L->ci->u.c.ctx;
+    return LUA_YIELD;
+  }
+  else return LUA_OK;
+}
+
+
+LUA_API void lua_callk (lua_State *L, int nargs, int nresults, int ctx,
+                        lua_CFunction k) {
   StkId func;
   lua_lock(L);
   /* cannot use continuations inside hooks */
-  api_check(L, cont == NULL || !isLua(L->ci));
+  api_check(L, k == NULL || !isLua(L->ci));
   api_checknelems(L, nargs+1);
   checkresults(L, nargs, nresults);
   func = L->top - (nargs+1);
-  if (cont) {
-    L->ci->u.c.cont = cont;
+  if (k != NULL) {
+    L->ci->u.c.k = k;
+    L->ci->u.c.ctx = ctx;
+    L->ci->callstatus |= CIST_CTX;
     luaD_call(L, func, nresults, 1);
   }
   else

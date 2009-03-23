@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.54 2009/03/04 13:32:29 roberto Exp roberto $
+** $Id: ldo.c,v 2.55 2009/03/10 17:14:37 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -385,7 +385,7 @@ void luaD_call (lua_State *L, StkId func, int nResults, int allowyield) {
 
 static void finishCcall (lua_State *L) {
   int n;
-  lua_assert(L->ci->u.c.cont != NULL);  /* must have a continuation */
+  lua_assert(L->ci->u.c.k != NULL);  /* must have a continuation */
   lua_assert(L->nny == 0);
   /* finish 'luaD_call' */
   G(L)->nCcalls--;
@@ -393,7 +393,7 @@ static void finishCcall (lua_State *L) {
   adjustresults(L, (L->ci + 1)->nresults);
   /* call continuation function */
   lua_unlock(L);
-  n = (*L->ci->u.c.cont)(L);
+  n = (*L->ci->u.c.k)(L);
   lua_lock(L);
   /* finish 'luaD_precall' */
   luaD_poscall(L, L->top - n);
@@ -476,7 +476,6 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
   lua_unlock(L);
   return status;
 }
-
 
 LUA_API int lua_yield (lua_State *L, int nresults) {
   luai_userstateyield(L, nresults);

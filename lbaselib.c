@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.212 2009/03/13 15:50:03 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.213 2009/03/16 16:30:50 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -358,7 +358,7 @@ static int luaB_dofile (lua_State *L) {
   const char *fname = luaL_optstring(L, 1, NULL);
   lua_settop(L, 1);
   if (luaL_loadfile(L, fname) != LUA_OK) lua_error(L);
-  lua_callcont(L, 0, LUA_MULTRET, dofilecont);
+  lua_callk(L, 0, LUA_MULTRET, 0, dofilecont);
   return dofilecont(L);
 }
 

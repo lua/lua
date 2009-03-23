@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.38 2009/03/04 13:32:29 roberto Exp roberto $
+** $Id: lstate.h,v 2.39 2009/03/10 17:14:37 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -88,7 +88,8 @@ typedef struct CallInfo {
       int tailcalls;  /* number of tail calls lost under this entry */
     } l;
     struct {  /* only for C functions */
-      lua_CFunction cont;  /* continuation in case of yields */
+      int ctx;  /* context info. in case of yields */
+      lua_CFunction k;  /* continuation in case of yields */
     } c;
   } u;
 } CallInfo;
@@ -101,6 +102,7 @@ typedef struct CallInfo {
 #define CIST_HOOKED	2	/* call is running a debug hook */
 #define CIST_REENTRY	4	/* call is running on same invocation of
                                    luaV_execute of previous call */
+#define CIST_CTX	8	/* call has a ctx value */
 
 
 #define curr_func(L)	(clvalue(L->ci->func))
