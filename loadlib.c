@@ -1,5 +1,5 @@
 /*
-** $Id: loadlib.c,v 1.60 2008/08/05 19:25:42 roberto Exp roberto $
+** $Id: loadlib.c,v 1.61 2008/08/06 13:38:32 roberto Exp roberto $
 ** Dynamic library loader for Lua
 ** See Copyright Notice in lua.h
 **
@@ -43,7 +43,7 @@
 
 
 static void ll_unloadlib (void *lib);
-static void *ll_load (lua_State *L, const char *path);
+static void *ll_load (lua_State *L, const char *path, int seeglb);
 static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym);
 
 
@@ -65,8 +65,8 @@ static void ll_unloadlib (void *lib) {
 }
 
 
-static void *ll_load (lua_State *L, const char *path) {
-  void *lib = dlopen(path, RTLD_NOW);
+static void *ll_load (lua_State *L, const char *path, int seeglb) {
+  void *lib = dlopen(path, RTLD_NOW | (seeglb ? RTLD_GLOBAL : 0));
   if (lib == NULL) lua_pushstring(L, dlerror());
   return lib;
 }
@@ -122,8 +122,9 @@ static void ll_unloadlib (void *lib) {
 }
 
 
-static void *ll_load (lua_State *L, const char *path) {
+static void *ll_load (lua_State *L, const char *path, int seeglb) {
   HINSTANCE lib = LoadLibrary(path);
+  UNUSED(seeglb);  /* symbols are 'global' by default? */
   if (lib == NULL) pusherror(L);
   return lib;
 }
@@ -186,7 +187,7 @@ static void ll_unloadlib (void *lib) {
 }
 
 
-static void *ll_load (lua_State *L, const char *path) {
+static void *ll_load (lua_State *L, const char *path, int seeglb) {
   NSObjectFileImage img;
   NSObjectFileImageReturnCode ret;
   /* this would be a rare case, but prevents crashing if it happens */
@@ -196,8 +197,10 @@ static void *ll_load (lua_State *L, const char *path) {
   }
   ret = NSCreateObjectFileImageFromFile(path, &img);
   if (ret == NSObjectFileImageSuccess) {
-    NSModule mod = NSLinkModule(img, path, NSLINKMODULE_OPTION_PRIVATE |
-                       NSLINKMODULE_OPTION_RETURN_ON_ERROR);
+    NSModule mod = NSLinkModule(img,
+                                path,
+                                NSLINKMODULE_OPTION_RETURN_ON_ERROR |
+                                  (seeglb ? 0 : NSLINKMODULE_OPTION_PRIVATE));
     NSDestroyObjectFileImage(img);
     if (mod == NULL) pusherror(L);
     return mod;
@@ -235,19 +238,19 @@ static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
 
 
 static void ll_unloadlib (void *lib) {
-  (void)lib;  /* to avoid warnings */
+  UNUSED(lib);  /* to avoid warnings */
 }
 
 
-static void *ll_load (lua_State *L, const char *path) {
-  (void)path;  /* to avoid warnings */
+static void *ll_load (lua_State *L, const char *path, int seeglb) {
+  UNUSED(path);  /* to avoid warnings */
   lua_pushliteral(L, DLMSG);
   return NULL;
 }
 
 
 static lua_CFunction ll_sym (lua_State *L, void *lib, const char *sym) {
-  (void)lib; (void)sym;  /* to avoid warnings */
+  UNUSED(lib); UNUSED(sym);  /* to avoid warnings */
   lua_pushliteral(L, DLMSG);
   return NULL;
 }
@@ -291,9 +294,13 @@ static int gctm (lua_State *L) {
 
 static int ll_loadfunc (lua_State *L, const char *path, const char *sym) {
   void **reg = ll_register(L, path);
-  if (*reg == NULL) *reg = ll_load(L, path);
+  if (*reg == NULL) *reg = ll_load(L, path, *sym == '*');
   if (*reg == NULL)
     return ERRLIB;  /* unable to load library */
+  else if (*sym == '*') {  /* loading only library (no function)? */
+    lua_pushboolean(L, 1);  /* return 'true' */
+    return 0;
+  }
   else {
     lua_CFunction f = ll_sym(L, *reg, sym);
     if (f == NULL)
