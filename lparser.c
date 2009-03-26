@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.59 2008/10/28 12:55:00 roberto Exp roberto $
+** $Id: lparser.c,v 2.60 2008/10/30 15:39:30 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -394,7 +394,7 @@ Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, const char *name) {
   lexstate.buff = buff;
   luaX_setinput(L, &lexstate, z, tname);
   open_func(&lexstate, &funcstate);
-  funcstate.f->is_vararg = VARARG_ISVARARG;  /* main func. is always vararg */
+  funcstate.f->is_vararg = 1;  /* main func. is always vararg */
   luaX_next(&lexstate);  /* read first token */
   chunk(&lexstate);
   check(&lexstate, TK_EOS);
@@ -563,12 +563,7 @@ static void parlist (LexState *ls) {
         }
         case TK_DOTS: {  /* param -> `...' */
           luaX_next(ls);
-#if defined(LUA_COMPAT_VARARG)
-          /* use `arg' as default name */
-          new_localvarliteral(ls, "arg", nparams++);
-          f->is_vararg = VARARG_HASARG | VARARG_NEEDSARG;
-#endif
-          f->is_vararg |= VARARG_ISVARARG;
+          f->is_vararg = 1;
           break;
         }
         default: luaX_syntaxerror(ls, "<name> or " LUA_QL("...") " expected");
@@ -576,7 +571,7 @@ static void parlist (LexState *ls) {
     } while (!f->is_vararg && testnext(ls, ','));
   }
   adjustlocalvars(ls, nparams);
-  f->numparams = cast_byte(fs->nactvar - (f->is_vararg & VARARG_HASARG));
+  f->numparams = cast_byte(fs->nactvar);
   luaK_reserveregs(fs, fs->nactvar);  /* reserve register for parameters */
 }
 
@@ -761,7 +756,6 @@ static void simpleexp (LexState *ls, expdesc *v) {
       FuncState *fs = ls->fs;
       check_condition(ls, fs->f->is_vararg,
                       "cannot use " LUA_QL("...") " outside a vararg function");
-      fs->f->is_vararg &= ~VARARG_NEEDSARG;  /* don't need 'arg' */
       init_exp(v, VVARARG, luaK_codeABC(fs, OP_VARARG, 0, 1, 0));
       break;
     }

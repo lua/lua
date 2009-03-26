@@ -1,5 +1,5 @@
 /*
-** $Id: lobject.h,v 2.23 2008/01/30 18:05:23 roberto Exp roberto $
+** $Id: lobject.h,v 2.24 2008/08/05 19:26:23 roberto Exp roberto $
 ** Type definitions for Lua objects
 ** See Copyright Notice in lua.h
 */
@@ -251,12 +251,6 @@ typedef struct Proto {
   lu_byte is_vararg;
   lu_byte maxstacksize;
 } Proto;
-
-
-/* masks for new-style vararg */
-#define VARARG_HASARG		1
-#define VARARG_ISVARARG		2
-#define VARARG_NEEDSARG		4
 
 
 typedef struct LocVar {

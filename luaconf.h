@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.102 2009/02/18 13:17:10 roberto Exp roberto $
+** $Id: luaconf.h,v 1.103 2009/02/20 13:50:27 roberto Exp roberto $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -350,13 +350,6 @@
 */
 #define LUA_COMPAT_API
 
-
-/*
-@@ LUA_COMPAT_VARARG controls compatibility with old vararg feature.
-** CHANGE it to undefined as soon as your programs use only '...' to
-** access vararg parameters (instead of the old 'arg' table).
-*/
-#define LUA_COMPAT_VARARG
 
 /*
 @@ LUA_COMPAT_GFIND controls compatibility with old 'string.gfind' name.
