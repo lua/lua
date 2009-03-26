@@ -1,5 +1,5 @@
 /*
-** $Id: lctype.c,v 1.3 2009/03/10 17:42:33 roberto Exp roberto $
+** $Id: lctype.c,v 1.4 2009/03/11 13:27:32 roberto Exp roberto $
 ** 'ctype' functions for Lua
 ** See Copyright Notice in lua.h
 */
@@ -8,7 +8,8 @@
 
 #include "lctype.h"
 
-const char luai_ctype_[UCHAR_MAX + 1] = {
+const char luai_ctype_[UCHAR_MAX + 2] = {
+  0x00,  /* EOZ */
   0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,
   0x00,  0x08,  0x08,  0x08,  0x08,  0x08,  0x00,  0x00,
   0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,
