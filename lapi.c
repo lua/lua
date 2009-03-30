@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.71 2009/03/10 17:14:37 roberto Exp roberto $
+** $Id: lapi.c,v 2.72 2009/03/23 14:26:12 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -779,14 +779,14 @@ LUA_API void lua_callk (lua_State *L, int nargs, int nresults, int ctx,
   api_checknelems(L, nargs+1);
   checkresults(L, nargs, nresults);
   func = L->top - (nargs+1);
-  if (k != NULL) {
-    L->ci->u.c.k = k;
-    L->ci->u.c.ctx = ctx;
-    L->ci->callstatus |= CIST_CTX;
-    luaD_call(L, func, nresults, 1);
+  if (k != NULL && L->nny == 0) {  /* need to prepare continuation? */
+    L->ci->u.c.k = k;  /* save continuation */
+    L->ci->u.c.ctx = ctx;  /* save context */
+    L->ci->callstatus |= CIST_CTX;  /* mark that call has context */
+    luaD_call(L, func, nresults, 1);  /* do the call */
   }
-  else
-    luaD_call(L, func, nresults, 0);
+  else  /* no continuation or no yieldable */
+    luaD_call(L, func, nresults, 0);  /* just do the call */
   adjustresults(L, nresults);
   lua_unlock(L);
 }
