@@ -1,5 +1,5 @@
 /*
-** $Id: ltable.c,v 2.37 2007/04/18 19:24:35 roberto Exp roberto $
+** $Id: ltable.c,v 2.38 2008/01/30 18:05:23 roberto Exp roberto $
 ** Lua tables (hash)
 ** See Copyright Notice in lua.h
 */
@@ -376,7 +376,8 @@ void luaH_free (lua_State *L, Table *t) {
 
 
 static Node *getfreepos (Table *t) {
-  while (t->lastfree-- > t->node) {
+  while (t->lastfree > t->node) {
+    t->lastfree--;
     if (ttisnil(gkey(t->lastfree)))
       return t->lastfree;
   }
