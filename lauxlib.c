@@ -1,5 +1,5 @@
 /*
-** $Id: lauxlib.c,v 1.184 2009/02/27 18:18:19 roberto Exp roberto $
+** $Id: lauxlib.c,v 1.185 2009/03/31 17:25:08 roberto Exp roberto $
 ** Auxiliary functions for building Lua libraries
 ** See Copyright Notice in lua.h
 */
@@ -496,6 +496,9 @@ static const char *getF (lua_State *L, void *ud, size_t *size) {
     *size = 1;
     return "\n";
   }
+  /* 'fread' can return > 0 *and* set the EOF flag. If next call to
+     'getF' calls 'fread', terminal may still wait for user input.
+     The next check avoids this problem. */
   if (feof(lf->f)) return NULL;
   *size = fread(lf->buff, 1, sizeof(lf->buff), lf->f);
   return (*size > 0) ? lf->buff : NULL;
