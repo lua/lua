@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.h,v 2.3 2006/07/11 15:53:29 roberto Exp roberto $
+** $Id: lapi.h,v 2.4 2009/03/10 17:14:37 roberto Exp roberto $
 ** Auxiliary functions from Lua API
 ** See Copyright Notice in lua.h
 */
@@ -14,7 +14,7 @@
 #define api_incr_top(L)   {L->top++; api_check(L, L->top <= L->ci->top);}
 
 #define adjustresults(L,nres) \
-    { if ((nres) == LUA_MULTRET && L->top >= L->ci->top) L->ci->top = L->top; }
+    { if ((nres) == LUA_MULTRET && L->ci->top < L->top) L->ci->top = L->top; }
 
 
 #endif
