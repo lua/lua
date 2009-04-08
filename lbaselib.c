@@ -1,5 +1,5 @@
 /*
-** $Id: lbaselib.c,v 1.213 2009/03/16 16:30:50 roberto Exp roberto $
+** $Id: lbaselib.c,v 1.214 2009/03/23 14:26:12 roberto Exp roberto $
 ** Basic library
 ** See Copyright Notice in lua.h
 */
@@ -402,10 +402,23 @@ static int luaB_select (lua_State *L) {
 }
 
 
+static int pcallcont (lua_State *L) {
+  int errfunc;  /* call has an error function in bottom of the stack */
+  int status = lua_getctx(L, &errfunc);
+  lua_assert(status != LUA_OK);
+  lua_pushboolean(L, (status == LUA_YIELD));
+  if (errfunc)  /* came from xpcall? */
+    lua_replace(L, 1);  /* put result in place of error function */
+  else  /* came from pcall */
+    lua_insert(L, 1);  /* open space for result */
+  return lua_gettop(L);
+}
+
+
 static int luaB_pcall (lua_State *L) {
   int status;
   luaL_checkany(L, 1);
-  status = lua_pcall(L, lua_gettop(L) - 1, LUA_MULTRET, 0);
+  status = lua_pcallk(L, lua_gettop(L) - 1, LUA_MULTRET, 0, 0, pcallcont);
   lua_pushboolean(L, (status == LUA_OK));
   lua_insert(L, 1);
   return lua_gettop(L);  /* return status + all results */
@@ -420,7 +433,7 @@ static int luaB_xpcall (lua_State *L) {
   lua_pushvalue(L, 2);  /* ...and error handler */
   lua_replace(L, 1);
   lua_replace(L, 2);
-  status = lua_pcall(L, n - 2, LUA_MULTRET, 1);
+  status = lua_pcallk(L, n - 2, LUA_MULTRET, 1, 1, pcallcont);
   lua_pushboolean(L, (status == LUA_OK));
   lua_replace(L, 1);
   return lua_gettop(L);  /* return status + all results */

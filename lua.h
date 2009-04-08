@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.233 2009/03/10 17:14:37 roberto Exp roberto $
+** $Id: lua.h,v 1.234 2009/03/23 14:26:12 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -209,7 +209,10 @@ LUA_API void  (lua_callk) (lua_State *L, int nargs, int nresults, int ctx,
 
 LUA_API int   (lua_getctx) (lua_State *L, int *ctx);
 
-LUA_API int   (lua_pcall) (lua_State *L, int nargs, int nresults, int errfunc);
+LUA_API int   (lua_pcallk) (lua_State *L, int nargs, int nresults, int errfunc,
+                            int ctx, lua_CFunction k);
+#define lua_pcall(L,n,r,f)	lua_pcallk(L, (n), (r), (f), 0, NULL)
+
 LUA_API int   (lua_cpcall) (lua_State *L, lua_CFunction func, void *ud);
 LUA_API int   (lua_load) (lua_State *L, lua_Reader reader, void *dt,
                                         const char *chunkname);

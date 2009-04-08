@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.72 2009/03/23 14:26:12 roberto Exp roberto $
+** $Id: lapi.c,v 2.73 2009/03/30 18:39:20 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -762,9 +762,9 @@ LUA_API int lua_setfenv (lua_State *L, int idx) {
 
 
 LUA_API int lua_getctx (lua_State *L, int *ctx) {
-  if (L->ci->callstatus & CIST_CTX) {  /* call has ctx? */
-    *ctx = L->ci->u.c.ctx;
-    return LUA_YIELD;
+  if (L->ci->callstatus & CIST_YIELDED) {
+    if (ctx) *ctx = L->ci->u.c.ctx;
+    return L->ci->u.c.status;
   }
   else return LUA_OK;
 }
@@ -782,7 +782,6 @@ LUA_API void lua_callk (lua_State *L, int nargs, int nresults, int ctx,
   if (k != NULL && L->nny == 0) {  /* need to prepare continuation? */
     L->ci->u.c.k = k;  /* save continuation */
     L->ci->u.c.ctx = ctx;  /* save context */
-    L->ci->callstatus |= CIST_CTX;  /* mark that call has context */
     luaD_call(L, func, nresults, 1);  /* do the call */
   }
   else  /* no continuation or no yieldable */
@@ -809,7 +808,8 @@ static void f_call (lua_State *L, void *ud) {
 
 
 
-LUA_API int lua_pcall (lua_State *L, int nargs, int nresults, int errfunc) {
+LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
+                        int ctx, lua_CFunction k) {
   struct CallS c;
   int status;
   ptrdiff_t func;
@@ -824,8 +824,25 @@ LUA_API int lua_pcall (lua_State *L, int nargs, int nresults, int errfunc) {
     func = savestack(L, o);
   }
   c.func = L->top - (nargs+1);  /* function to be called */
-  c.nresults = nresults;
-  status = luaD_pcall(L, f_call, &c, savestack(L, c.func), func);
+  if (k == NULL || L->nny > 0) {  /* no continuation or no yieldable? */
+    c.nresults = nresults;  /* do a 'conventional' protected call */
+    status = luaD_pcall(L, f_call, &c, savestack(L, c.func), func);
+  }
+  else {  /* prepare continuation (call is already protected by 'resume') */
+    L->ci->u.c.k = k;  /* save continuation */
+    L->ci->u.c.ctx = ctx;  /* save context */
+    /* save information for error recovery */
+    L->ci->u.c.oldtop = savestack(L, c.func);
+    L->ci->u.c.old_allowhook = L->allowhook;
+    L->ci->u.c.old_errfunc = L->errfunc;
+    L->errfunc = func;
+    /* mark that function may do error recovery */
+    L->ci->callstatus |= CIST_YPCALL;
+    luaD_call(L, c.func, nresults, 1);  /* do the call */
+    L->ci->callstatus &= ~CIST_YPCALL;
+    L->errfunc = L->ci->u.c.old_errfunc;
+    status = LUA_OK;  /* if it is here, there were no errors */
+  }
   adjustresults(L, nresults);
   lua_unlock(L);
   return status;

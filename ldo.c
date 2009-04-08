@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.56 2009/03/23 14:26:12 roberto Exp roberto $
+** $Id: ldo.c,v 2.57 2009/03/26 12:56:38 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -369,9 +369,14 @@ static void finishCcall (lua_State *L) {
   lua_assert(L->nny == 0);
   /* finish 'luaD_call' */
   G(L)->nCcalls--;
-  /* finish 'lua_callcont' */
+  /* finish 'lua_callk' */
   adjustresults(L, (L->ci + 1)->nresults);
   /* call continuation function */
+  if (!(L->ci->callstatus & CIST_STAT))  /* no call status? */
+    L->ci->u.c.status = LUA_YIELD;  /* 'default' status */
+  lua_assert(L->ci->u.c.status != LUA_OK);
+  L->ci->callstatus = (L->ci->callstatus & ~(CIST_YPCALL | CIST_STAT))
+                    | CIST_YIELDED;
   lua_unlock(L);
   n = (*L->ci->u.c.k)(L);
   lua_lock(L);
@@ -380,7 +385,8 @@ static void finishCcall (lua_State *L) {
 }
 
 
-static void unroll (lua_State *L) {
+static void unroll (lua_State *L, void *ud) {
+  UNUSED(ud);
   for (;;) {
     if (L->ci == L->base_ci)  /* stack is empty? */
       return;  /* coroutine finished normally */
@@ -413,7 +419,7 @@ static void resume (lua_State *L, void *ud) {
       G(L)->nCcalls--;  /* finish 'luaD_call' */
       luaD_poscall(L, firstArg);  /* finish 'luaD_precall' */
     }
-    unroll(L);
+    unroll(L, NULL);
   }
 }
 
@@ -427,6 +433,39 @@ static int resume_error (lua_State *L, const char *msg) {
 }
 
 
+/*
+** check whether thread has a suspended protected call
+*/
+static CallInfo *findpcall (lua_State *L) {
+  CallInfo *ci;
+  for (ci = L->ci; ci > L->base_ci; ci--) {  /* search for first pcall */
+    if (ci->callstatus & CIST_YPCALL)
+      return ci;
+  }
+  return NULL;  /* no pending pcall */
+}
+
+
+static int recover (lua_State *L, int status) {
+  StkId oldtop;
+  CallInfo *ci = findpcall(L);
+  if (ci == NULL) return 0;  /* no recovery point */
+  /* "finish" luaD_pcall */
+  oldtop = restorestack(L, ci->u.c.oldtop);
+  luaF_close(L, oldtop);
+  luaD_seterrorobj(L, status, oldtop);
+  L->ci = ci;
+  L->base = L->ci->base;
+  L->allowhook = ci->u.c.old_allowhook;
+  L->nny = 0;  /* should be zero to be yieldable */
+  restore_stack_limit(L);
+  L->errfunc = ci->u.c.old_errfunc;
+  ci->callstatus |= CIST_STAT;  /* call has error status */
+  ci->u.c.status = status;  /* (here it is) */
+  return 1;  /* continue running the coroutine */
+}
+
+
 LUA_API int lua_resume (lua_State *L, int nargs) {
   int status;
   lua_lock(L);
@@ -437,20 +476,22 @@ LUA_API int lua_resume (lua_State *L, int nargs) {
       return resume_error(L, "cannot resume non-suspended coroutine");
   }
   luai_userstateresume(L, nargs);
-  lua_assert(L->errfunc == 0); 
   if (G(L)->nCcalls >= LUAI_MAXCCALLS)
       return resume_error(L, "C stack overflow");
   ++G(L)->nCcalls;  /* count resume */
   L->nny = 0;  /* allow yields */
   status = luaD_rawrunprotected(L, resume, L->top - nargs);
-  if (status != LUA_OK && status != LUA_YIELD) {  /* error? */
-    L->status = cast_byte(status);  /* mark thread as `dead' */
-    luaD_seterrorobj(L, status, L->top);
-    L->ci->top = L->top;
+  while (status != LUA_OK && status != LUA_YIELD) {  /* error? */
+    if (recover(L, status))  /* recover point? */
+      status = luaD_rawrunprotected(L, unroll, NULL);  /* run continuation */
+    else {  /* unrecoverable error */
+      L->status = cast_byte(status);  /* mark thread as `dead' */
+      luaD_seterrorobj(L, status, L->top);
+      L->ci->top = L->top;
+      break;
+    }
   }
-  else {
-    lua_assert(status == L->status);
-  }
+  lua_assert(status == L->status);
   L->nny = 1;  /* do not allow yields */
   --G(L)->nCcalls;
   lua_unlock(L);
