@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.58 2009/02/19 17:18:25 roberto Exp roberto $
+** $Id: ltests.c,v 2.59 2009/03/03 18:52:36 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -867,22 +867,10 @@ static int getindex_aux (lua_State *L, const char **pc) {
 #define getindex (getindex_aux(L, &pc))
 
 
-static int testC (lua_State *L) {
+static int testC (lua_State *L);
+
+static int runC (lua_State *L, lua_State *L1, const char *pc) {
   char buff[30];
-  lua_State *L1;
-  const char *pc;
-  if (lua_isuserdata(L, 1)) {
-    L1 = getstate(L);
-    pc = luaL_checkstring(L, 2);
-  }
-  else if (lua_isthread(L, 1)) {
-    L1 = lua_tothread(L, 1);
-    pc = luaL_checkstring(L, 2);
-  }
-  else {
-    L1 = L;
-    pc = luaL_checkstring(L, 1);
-  }
   for (;;) {
     const char *inst = getname;
     if EQ("") return 0;
@@ -1058,6 +1046,39 @@ static struct X { int x; } x;
   return 0;
 }
 
+
+static int testC (lua_State *L) {
+  lua_State *L1;
+  const char *pc;
+  if (lua_isuserdata(L, 1)) {
+    L1 = getstate(L);
+    pc = luaL_checkstring(L, 2);
+  }
+  else if (lua_isthread(L, 1)) {
+    L1 = lua_tothread(L, 1);
+    pc = luaL_checkstring(L, 2);
+  }
+  else {
+    L1 = L;
+    pc = luaL_checkstring(L, 1);
+  }
+  return runC(L, L1, pc);
+}
+
+
+static int Cfunc (lua_State *L) {
+  return runC(L, L, lua_tostring(L, lua_upvalueindex(1)));
+}
+
+
+static int makeCfunc (lua_State *L) {
+  luaL_checkstring(L, 1);
+  lua_settop(L, 1);
+  lua_pushcclosure(L, Cfunc, 1);
+  return 1;
+}
+
+
 /* }====================================================== */
 
 
@@ -1135,6 +1156,7 @@ static const struct luaL_Reg tests_funcs[] = {
   {"setyhook", setyhook},
   {"stacklevel", stacklevel},
   {"testC", testC},
+  {"makeCfunc", makeCfunc},
   {"totalmem", mem_query},
   {"trick", settrick},
   {"udataval", udataval},
