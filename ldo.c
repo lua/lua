@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.57 2009/03/26 12:56:38 roberto Exp roberto $
+** $Id: ldo.c,v 2.58 2009/04/08 18:04:33 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -251,6 +251,7 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
   funcr = savestack(L, func);
   cl = &clvalue(func)->l;
   L->ci->savedpc = L->savedpc;
+  L->ci->nresults = nresults;
   if (!cl->isC) {  /* Lua function? prepare its call */
     CallInfo *ci;
     StkId st, base;
@@ -272,7 +273,6 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     L->savedpc = p->code;  /* starting point */
     ci->u.l.tailcalls = 0;
     ci->callstatus = CIST_LUA;
-    ci->nresults = nresults;
     for (st = L->top; st < ci->top; st++)
       setnilvalue(st);
     L->top = ci->top;
@@ -292,7 +292,6 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     L->base = ci->base = ci->func + 1;
     ci->top = L->top + LUA_MINSTACK;
     lua_assert(ci->top <= L->stack_last);
-    ci->nresults = nresults;
     ci->callstatus = 0;
     if (L->hookmask & LUA_MASKCALL)
       luaD_callhook(L, LUA_HOOKCALL, -1);
@@ -327,7 +326,7 @@ int luaD_poscall (lua_State *L, StkId firstResult) {
   }
   ci = L->ci--;
   res = ci->func;  /* res == final position of 1st result */
-  wanted = ci->nresults;
+  wanted = (ci - 1)->nresults;
   L->base = (ci - 1)->base;  /* restore base */
   L->savedpc = (ci - 1)->savedpc;  /* restore savedpc */
   /* move results to correct place */
@@ -370,7 +369,7 @@ static void finishCcall (lua_State *L) {
   /* finish 'luaD_call' */
   G(L)->nCcalls--;
   /* finish 'lua_callk' */
-  adjustresults(L, (L->ci + 1)->nresults);
+  adjustresults(L, L->ci->nresults);
   /* call continuation function */
   if (!(L->ci->callstatus & CIST_STAT))  /* no call status? */
     L->ci->u.c.status = LUA_YIELD;  /* 'default' status */
