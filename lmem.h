@@ -1,5 +1,5 @@
 /*
-** $Id: lmem.h,v 1.32 2006/09/14 18:42:28 roberto Exp roberto $
+** $Id: lmem.h,v 1.33 2007/02/09 13:04:52 roberto Exp roberto $
 ** Interface to Memory Manager
 ** See Copyright Notice in lua.h
 */
@@ -23,7 +23,7 @@
 
 #define luaM_freemem(L, b, s)	luaM_realloc_(L, (b), (s), 0)
 #define luaM_free(L, b)		luaM_realloc_(L, (b), sizeof(*(b)), 0)
-#define luaM_freearray(L, b, n, t)   luaM_reallocv(L, (b), n, 0, sizeof(t))
+#define luaM_freearray(L, b, n)   luaM_reallocv(L, (b), n, 0, sizeof((b)[0]))
 
 #define luaM_malloc(L,t)	luaM_realloc_(L, NULL, 0, (t))
 #define luaM_new(L,t)		cast(t *, luaM_malloc(L, sizeof(t)))

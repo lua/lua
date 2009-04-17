@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.10 2007/11/09 18:55:07 roberto Exp roberto $
+** $Id: lstring.c,v 2.11 2008/02/19 18:55:09 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -41,7 +41,7 @@ void luaS_resize (lua_State *L, int newsize) {
       p = next;
     }
   }
-  luaM_freearray(L, tb->hash, tb->size, TString *);
+  luaM_freearray(L, tb->hash, tb->size);
   tb->size = newsize;
   tb->hash = newhash;
 }

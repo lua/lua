@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.50 2009/03/10 17:14:37 roberto Exp roberto $
+** $Id: lstate.c,v 2.51 2009/04/17 14:28:06 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -93,7 +93,7 @@ static void freestack (lua_State *L) {
   L->ci = &L->base_ci;  /* reset 'ci' list */
   luaE_freeCI(L);
   lua_assert(L->nci == 0);
-  luaM_freearray(L, L->stack, L->stacksize, TValue);
+  luaM_freearray(L, L->stack, L->stacksize);
 }
 
 
@@ -140,7 +140,7 @@ static void close_state (lua_State *L) {
   global_State *g = G(L);
   luaF_close(L, L->stack);  /* close all upvalues for this thread */
   luaC_freeall(L);  /* collect all objects */
-  luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size, TString *);
+  luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size);
   luaZ_freebuffer(L, &g->buff);
   freestack(L);
   lua_assert(g->totalbytes == sizeof(LG));
