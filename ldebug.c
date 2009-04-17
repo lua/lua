@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.44 2009/03/10 17:14:37 roberto Exp roberto $
+** $Id: ldebug.c,v 2.45 2009/03/26 12:56:38 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -86,18 +86,18 @@ LUA_API int lua_getstack (lua_State *L, int level, lua_Debug *ar) {
   int status;
   CallInfo *ci;
   lua_lock(L);
-  for (ci = L->ci; level > 0 && ci > L->base_ci; ci--) {
+  for (ci = L->ci; level > 0 && ci != &L->base_ci; ci = ci->previous) {
     level--;
     if (isLua(ci))  /* Lua function? */
       level -= ci->u.l.tailcalls;  /* skip lost tail calls */
   }
-  if (level == 0 && ci > L->base_ci) {  /* level found? */
+  if (level == 0 && ci != &L->base_ci) {  /* level found? */
     status = 1;
-    ar->i_ci = cast_int(ci - L->base_ci);
+    ar->i_ci = ci;
   }
   else if (level < 0) {  /* level is of a lost tail call? */
     status = 1;
-    ar->i_ci = 0;
+    ar->i_ci = NULL;
   }
   else status = 0;  /* no such level */
   lua_unlock(L);
@@ -116,7 +116,7 @@ static const char *findlocal (lua_State *L, CallInfo *ci, int n) {
   if (fp && (name = luaF_getlocalname(fp, n, currentpc(L, ci))) != NULL)
     return name;  /* is a local variable in a Lua function */
   else {
-    StkId limit = (ci == L->ci) ? L->top : (ci+1)->func;
+    StkId limit = (ci == L->ci) ? L->top : ci->next->func;
     if (limit - ci->base >= n && n > 0)  /* is 'n' inside 'ci' stack? */
       return "(*temporary)";
     else
@@ -126,7 +126,7 @@ static const char *findlocal (lua_State *L, CallInfo *ci, int n) {
 
 
 LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
-  CallInfo *ci = L->base_ci + ar->i_ci;
+  CallInfo *ci = ar->i_ci;
   const char *name = findlocal(L, ci, n);
   lua_lock(L);
   if (name) {
@@ -139,7 +139,7 @@ LUA_API const char *lua_getlocal (lua_State *L, const lua_Debug *ar, int n) {
 
 
 LUA_API const char *lua_setlocal (lua_State *L, const lua_Debug *ar, int n) {
-  CallInfo *ci = L->base_ci + ar->i_ci;
+  CallInfo *ci = ar->i_ci;
   const char *name = findlocal(L, ci, n);
   lua_lock(L);
   if (name)
@@ -246,8 +246,8 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
     f = clvalue(func);
     L->top--;  /* pop function */
   }
-  else if (ar->i_ci != 0) {  /* no tail call? */
-    ci = L->base_ci + ar->i_ci;
+  else if (ar->i_ci != NULL) {  /* no tail call? */
+    ci = ar->i_ci;
     lua_assert(ttisfunction(ci->func));
     f = clvalue(ci->func);
   }
@@ -525,9 +525,9 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int stackpos,
 static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
   TMS tm = 0;
   Instruction i;
-  if ((isLua(ci) && ci->u.l.tailcalls > 0) || !isLua(ci - 1))
+  if ((isLua(ci) && ci->u.l.tailcalls > 0) || !isLua(ci->previous))
     return NULL;  /* calling function is not Lua (or is unknown) */
-  ci--;  /* calling function */
+  ci = ci->previous;  /* calling function */
   i = ci_func(ci)->l.p->code[currentpc(L, ci)];
   switch (GET_OPCODE(i)) {
     case OP_CALL:

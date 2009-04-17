@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.h,v 2.10 2008/08/13 17:02:42 roberto Exp roberto $
+** $Id: ldo.h,v 2.11 2009/03/10 17:14:37 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -23,9 +23,6 @@
 
 #define savestack(L,p)		((char *)(p) - (char *)L->stack)
 #define restorestack(L,n)	((TValue *)((char *)L->stack + (n)))
-
-#define saveci(L,p)		((char *)(p) - (char *)L->base_ci)
-#define restoreci(L,n)		((CallInfo *)((char *)L->base_ci + (n)))
 
 
 /* type of protected functions, to be ran by `runprotected' */

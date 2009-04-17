@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.73 2009/03/30 18:39:20 roberto Exp roberto $
+** $Id: lapi.c,v 2.74 2009/04/08 18:04:33 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -72,7 +72,7 @@ static TValue *index2adr (lua_State *L, int idx) {
 
 
 static Table *getcurrenv (lua_State *L) {
-  if (L->ci == L->base_ci)  /* no enclosing function? */
+  if (L->ci->previous == NULL)  /* no enclosing function? */
     return hvalue(gt(L));  /* use global table as environment */
   else {
     Closure *func = curr_func(L);
@@ -185,7 +185,7 @@ LUA_API void lua_replace (lua_State *L, int idx) {
   StkId o;
   lua_lock(L);
   /* explicit test for incompatible code */
-  if (idx == LUA_ENVIRONINDEX && L->ci == L->base_ci)
+  if (idx == LUA_ENVIRONINDEX && L->ci->previous == NULL)
     luaG_runerror(L, "no calling environment");
   api_checknelems(L, 1);
   o = index2adr(L, idx);

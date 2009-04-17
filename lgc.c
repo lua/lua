@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.48 2009/02/17 19:47:58 roberto Exp roberto $
+** $Id: lgc.c,v 2.49 2009/03/10 17:14:37 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -379,38 +379,34 @@ static void traverseclosure (global_State *g, Closure *cl) {
 }
 
 
-static void checkstacksizes (lua_State *L, StkId max) {
-  /* should not change the stack when  handling overflow or
-     during an emergency gc cycle */
-  if (L->size_ci > LUAI_MAXCALLS || G(L)->gckind == KGC_EMERGENCY)
-    return;  /* do not touch the stacks */
+static void checkstacksize (lua_State *L, StkId max) {
+  /* should not change the stack during an emergency gc cycle */
+  if (G(L)->gckind == KGC_EMERGENCY)
+    return;  /* do not touch the stack */
   else {
-    int ci_used = cast_int(L->ci - L->base_ci) + 1;  /* number of `ci' in use */
     int s_used = cast_int(max - L->stack) + 1;  /* part of stack in use */
-    if (2*ci_used < L->size_ci)
-      luaD_reallocCI(L, 2*ci_used);
     if (2*s_used < (L->stacksize - EXTRA_STACK))
       luaD_reallocstack(L, 2*s_used);
   }
 }
 
 
-static void traversestack (global_State *g, lua_State *l) {
+static void traversestack (global_State *g, lua_State *L) {
   StkId o, lim;
   CallInfo *ci;
-  if (l->stack == NULL || l->base_ci == NULL)
+  if (L->stack == NULL)
     return;  /* stack not completely built yet */
-  markvalue(g, gt(l));
-  lim = l->top;
-  for (ci = l->base_ci; ci <= l->ci; ci++) {
-    lua_assert(ci->top <= l->stack_last);
+  markvalue(g, gt(L));
+  lim = L->top;
+  for (ci = L->ci; ci != NULL; ci = ci->previous) {
+    lua_assert(ci->top <= L->stack_last);
     if (lim < ci->top) lim = ci->top;
   }
-  for (o = l->stack; o < l->top; o++)
+  for (o = L->stack; o < L->top; o++)
     markvalue(g, o);
   for (; o <= lim; o++)
     setnilvalue(o);
-  checkstacksizes(l, lim);
+  checkstacksize(L, lim);
 }
 
 
@@ -445,7 +441,7 @@ static l_mem propagatemark (global_State *g) {
       black2gray(o);
       traversestack(g, th);
       return sizeof(lua_State) + sizeof(TValue) * th->stacksize +
-                                 sizeof(CallInfo) * th->size_ci;
+                                 sizeof(CallInfo) * th->nci;
     }
     case LUA_TPROTO: {
       Proto *p = gco2p(o);
@@ -554,8 +550,11 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
   global_State *g = G(L);
   int deadmask = otherwhite(g);
   while ((curr = *p) != NULL && count-- > 0) {
-    if (ttisthread(gch(curr)))  /* sweep open upvalues of each thread */
-      sweepwholelist(L, &gco2th(curr)->openupval);
+    if (ttisthread(gch(curr))) {
+      lua_State *L1 = gco2th(curr);
+      sweepwholelist(L, &L1->openupval);  /* sweep open upvalues */
+      luaE_freeCI(L1);  /* free extra CallInfo slots */
+    }
     if ((gch(curr)->marked ^ WHITEBITS) & deadmask) {  /* not dead? */
       lua_assert(!isdead(g, curr) || testbit(gch(curr)->marked, FIXEDBIT));
       makewhite(g, curr);  /* make it white (for next cycle) */

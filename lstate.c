@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.49 2009/02/18 17:20:56 roberto Exp roberto $
+** $Id: lstate.c,v 2.50 2009/03/10 17:14:37 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -40,12 +40,41 @@ typedef struct LG {
 
 
 
+/*
+** maximum number of nested calls made by error-handling function
+*/
+#define LUAI_EXTRACALLS		10
+
+
+CallInfo *luaE_extendCI (lua_State *L) {
+  CallInfo *ci = luaM_new(L, CallInfo);
+  lua_assert(L->ci->next == NULL);
+  L->ci->next = ci;
+  ci->previous = L->ci;
+  ci->next = NULL;
+  if (++L->nci >= LUAI_MAXCALLS) {
+    if (L->nci == LUAI_MAXCALLS)  /* overflow? */
+      luaG_runerror(L, "stack overflow");
+    if (L->nci >= LUAI_MAXCALLS + LUAI_EXTRACALLS)  /* again? */
+      luaD_throw(L, LUA_ERRERR);  /* error while handling overflow */
+  }
+  return ci;
+}
+
+
+void luaE_freeCI (lua_State *L) {
+  CallInfo *ci = L->ci;
+  CallInfo *next = ci->next;
+  ci->next = NULL;
+  while ((ci = next) != NULL) {
+    next = ci->next;
+    luaM_free(L, ci);
+    L->nci--;
+  }
+}
+
+
 static void stack_init (lua_State *L1, lua_State *L) {
-  /* initialize CallInfo array */
-  L1->base_ci = luaM_newvector(L, BASIC_CI_SIZE, CallInfo);
-  L1->ci = L1->base_ci;
-  L1->size_ci = BASIC_CI_SIZE;
-  L1->end_ci = L1->base_ci + L1->size_ci - 1;
   /* initialize stack array */
   L1->stack = luaM_newvector(L, BASIC_STACK_SIZE + EXTRA_STACK, TValue);
   L1->stacksize = BASIC_STACK_SIZE + EXTRA_STACK;
@@ -53,16 +82,18 @@ static void stack_init (lua_State *L1, lua_State *L) {
   L1->stack_last = L1->stack+(L1->stacksize - EXTRA_STACK)-1;
   /* initialize first ci */
   L1->ci->func = L1->top;
-  setnilvalue(L1->top++);  /* `function' entry for this `ci' */
+  setnilvalue(L1->top++);  /* 'function' entry for this 'ci' */
   L1->base = L1->ci->base = L1->top;
   L1->ci->top = L1->top + LUA_MINSTACK;
   L1->ci->callstatus = 0;
 }
 
 
-static void freestack (lua_State *L, lua_State *L1) {
-  luaM_freearray(L, L1->base_ci, L1->size_ci, CallInfo);
-  luaM_freearray(L, L1->stack, L1->stacksize, TValue);
+static void freestack (lua_State *L) {
+  L->ci = &L->base_ci;  /* reset 'ci' list */
+  luaE_freeCI(L);
+  lua_assert(L->nci == 0);
+  luaM_freearray(L, L->stack, L->stacksize, TValue);
 }
 
 
@@ -94,10 +125,11 @@ static void preinit_state (lua_State *L, global_State *g) {
   L->allowhook = 1;
   resethookcount(L);
   L->openupval = NULL;
-  L->size_ci = 0;
   L->nny = 1;
   L->status = LUA_OK;
-  L->base_ci = L->ci = NULL;
+  L->base_ci.next = L->base_ci.previous = NULL;
+  L->ci = &L->base_ci;
+  L->nci = 0;
   L->savedpc = NULL;
   L->errfunc = 0;
   setnilvalue(gt(L));
@@ -110,7 +142,7 @@ static void close_state (lua_State *L) {
   luaC_freeall(L);  /* collect all objects */
   luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size, TString *);
   luaZ_freebuffer(L, &g->buff);
-  freestack(L, L);
+  freestack(L);
   lua_assert(g->totalbytes == sizeof(LG));
   (*g->frealloc)(g->ud, fromstate(L), state_size(LG), 0);
 }
@@ -142,7 +174,7 @@ void luaE_freethread (lua_State *L, lua_State *L1) {
   luaF_close(L1, L1->stack);  /* close all upvalues for this thread */
   lua_assert(L1->openupval == NULL);
   luai_userstatefree(L1);
-  freestack(L, L1);
+  freestack(L1);
   luaM_freemem(L, fromstate(L1), state_size(lua_State));
 }
 
@@ -210,4 +242,5 @@ LUA_API void lua_close (lua_State *L) {
   luai_userstateclose(L);
   close_state(L);
 }
+
 

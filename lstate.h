@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.40 2009/03/23 14:26:12 roberto Exp roberto $
+** $Id: lstate.h,v 2.41 2009/04/08 18:04:33 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -80,8 +80,9 @@ typedef struct CallInfo {
   StkId base;  /* base for this function */
   StkId func;  /* function index in the stack */
   StkId	top;  /* top for this function */
+  struct CallInfo *previous, *next;  /* dynamic call link */
   const Instruction *savedpc;
-  short nresults;  /* expected number of results from this function */
+  short nresults;  /* expected number of results from a call */
   lu_byte callstatus;
   union {
     struct {  /* only for Lua functions */
@@ -163,14 +164,12 @@ struct lua_State {
   StkId base;  /* base of current function */
   global_State *l_G;
   CallInfo *ci;  /* call info for current function */
+  int nci;  /* number of total CallInfo structures linked */
   const Instruction *savedpc;  /* `savedpc' of current function */
   const Instruction *oldpc;  /* last pc traced */
   StkId stack_last;  /* last free slot in the stack */
   StkId stack;  /* stack base */
-  CallInfo *end_ci;  /* points after end of ci array*/
-  CallInfo *base_ci;  /* array of CallInfo's */
   int stacksize;
-  int size_ci;  /* size of array `base_ci' */
   unsigned short nny;  /* number of non-yieldable calls in stack */
   lu_byte hookmask;
   lu_byte allowhook;
@@ -183,6 +182,7 @@ struct lua_State {
   GCObject *gclist;
   struct lua_longjmp *errorJmp;  /* current error recover point */
   ptrdiff_t errfunc;  /* current error handling function (stack index) */
+  CallInfo base_ci;  /* CallInfo for first level (C calling Lua) */
 };
 
 
@@ -223,6 +223,9 @@ union GCObject {
 
 
 LUAI_FUNC void luaE_freethread (lua_State *L, lua_State *L1);
+LUAI_FUNC CallInfo *luaE_extendCI (lua_State *L);
+LUAI_FUNC void luaE_freeCI (lua_State *L);
+
 
 #endif
 

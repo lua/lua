@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.83 2009/03/04 13:32:29 roberto Exp roberto $
+** $Id: lvm.c,v 2.84 2009/03/10 17:14:37 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -663,19 +663,19 @@ void luaV_execute (lua_State *L) {
         }
         else {
           /* tail call: put new frame in place of previous one */
-          CallInfo *ci = L->ci - 1;  /* previous frame */
-          int aux;
+          StkId pfunc = L->ci->func;  /* called function index */
+          CallInfo *ci = L->ci->previous;  /* caller frame */
           StkId func = ci->func;
-          StkId pfunc = (ci+1)->func;  /* previous function index */
+          int aux;
           if (cl->p->sizep > 0) luaF_close(L, ci->base);
-          L->base = ci->base = ci->func + ((ci+1)->base - pfunc);
+          L->base = ci->base = ci->func + (L->ci->base - pfunc);
           for (aux = 0; pfunc+aux < L->top; aux++)  /* move frame down */
             setobjs2s(L, func+aux, pfunc+aux);
           ci->top = L->top = func+aux;  /* correct top */
           lua_assert(L->top == L->base + clvalue(func)->l.p->maxstacksize);
           ci->savedpc = L->savedpc;
           ci->u.l.tailcalls++;  /* one more call lost */
-          L->ci--;  /* remove new frame */
+          L->ci = ci;  /* remove new frame */
           goto reentry;
         }
       }
@@ -684,7 +684,7 @@ void luaV_execute (lua_State *L) {
         if (b != 0) L->top = ra+b-1;
         if (cl->p->sizep > 0) luaF_close(L, base);
         b = luaD_poscall(L, ra);
-        if (!((L->ci + 1)->callstatus & CIST_REENTRY))
+        if (!(L->ci->next->callstatus & CIST_REENTRY))
           return;  /* external invocation: return */
         else {  /* invocation via reentry: continue execution */
           if (b) L->top = L->ci->top;

@@ -1,5 +1,5 @@
 /*
-** $Id: lua.h,v 1.234 2009/03/23 14:26:12 roberto Exp roberto $
+** $Id: lua.h,v 1.235 2009/04/08 18:04:33 roberto Exp roberto $
 ** Lua - An Extensible Extension Language
 ** Lua.org, PUC-Rio, Brazil (http://www.lua.org)
 ** See Copyright Notice at the end of this file
@@ -367,7 +367,7 @@ struct lua_Debug {
   int lastlinedefined;	/* (S) */
   char short_src[LUA_IDSIZE]; /* (S) */
   /* private part */
-  int i_ci;  /* active function */
+  struct CallInfo *i_ci;  /* active function */
 };
 
 /* }====================================================================== */
