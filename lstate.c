@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.51 2009/04/17 14:28:06 roberto Exp roberto $
+** $Id: lstate.c,v 2.52 2009/04/17 14:40:13 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -130,7 +130,6 @@ static void preinit_state (lua_State *L, global_State *g) {
   L->base_ci.next = L->base_ci.previous = NULL;
   L->ci = &L->base_ci;
   L->nci = 0;
-  L->savedpc = NULL;
   L->errfunc = 0;
   setnilvalue(gt(L));
 }

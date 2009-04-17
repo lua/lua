@@ -1,5 +1,5 @@
 /*
-** $Id: ltests.c,v 2.60 2009/04/14 19:10:17 roberto Exp roberto $
+** $Id: ltests.c,v 2.61 2009/04/17 14:28:06 roberto Exp roberto $
 ** Internal Module for Debugging of the Lua Implementation
 ** See Copyright Notice in lua.h
 */
@@ -285,6 +285,16 @@ static void checkclosure (global_State *g, Closure *cl) {
 }
 
 
+static int lua_checkpc (pCallInfo ci) {
+  if (!isLua(ci)) return 1;
+  else {
+    Proto *p = ci_func(ci)->l.p;
+    return p->code <= ci->u.l.savedpc &&
+           ci->u.l.savedpc <= p->code + p->sizecode;
+  }
+}
+
+
 static void checkstack (global_State *g, lua_State *L1) {
   StkId o;
   CallInfo *ci;
@@ -298,7 +308,7 @@ static void checkstack (global_State *g, lua_State *L1) {
   checkliveness(g, gt(L1));
   for (ci = L1->ci; ci != NULL; ci = ci->previous) {
     lua_assert(ci->top <= L1->stack_last);
-    lua_assert(lua_checkpc(L1, ci));
+    lua_assert(lua_checkpc(ci));
   }
   if (L1->stack) {
     for (o = L1->stack; o < L1->top; o++)
@@ -348,18 +358,6 @@ printf(">>> %d  %s  %02x\n", g->gcstate, luaT_typenames[gch(o)->tt], gch(o)->mar
       }
       default: lua_assert(0);
     }
-  }
-}
-
-
-int lua_checkpc (lua_State *L, pCallInfo ci) {
-  if (!isLua(ci)) return 1;
-  else {
-    Proto *p = ci_func(ci)->l.p;
-    if (ci != L->ci)
-      return p->code <= ci->savedpc && ci->savedpc <= p->code + p->sizecode;
-    else
-      return p->code <= L->savedpc && L->savedpc <= p->code + p->sizecode;
   }
 }
 

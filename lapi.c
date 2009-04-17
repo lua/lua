@@ -1,5 +1,5 @@
 /*
-** $Id: lapi.c,v 2.74 2009/04/08 18:04:33 roberto Exp roberto $
+** $Id: lapi.c,v 2.75 2009/04/17 14:28:06 roberto Exp roberto $
 ** Lua API
 ** See Copyright Notice in lua.h
 */
@@ -829,18 +829,19 @@ LUA_API int lua_pcallk (lua_State *L, int nargs, int nresults, int errfunc,
     status = luaD_pcall(L, f_call, &c, savestack(L, c.func), func);
   }
   else {  /* prepare continuation (call is already protected by 'resume') */
-    L->ci->u.c.k = k;  /* save continuation */
-    L->ci->u.c.ctx = ctx;  /* save context */
+    CallInfo *ci = L->ci;
+    ci->u.c.k = k;  /* save continuation */
+    ci->u.c.ctx = ctx;  /* save context */
     /* save information for error recovery */
-    L->ci->u.c.oldtop = savestack(L, c.func);
-    L->ci->u.c.old_allowhook = L->allowhook;
-    L->ci->u.c.old_errfunc = L->errfunc;
+    ci->u.c.oldtop = savestack(L, c.func);
+    ci->u.c.old_allowhook = L->allowhook;
+    ci->u.c.old_errfunc = L->errfunc;
     L->errfunc = func;
     /* mark that function may do error recovery */
-    L->ci->callstatus |= CIST_YPCALL;
+    ci->callstatus |= CIST_YPCALL;
     luaD_call(L, c.func, nresults, 1);  /* do the call */
-    L->ci->callstatus &= ~CIST_YPCALL;
-    L->errfunc = L->ci->u.c.old_errfunc;
+    ci->callstatus &= ~CIST_YPCALL;
+    L->errfunc = ci->u.c.old_errfunc;
     status = LUA_OK;  /* if it is here, there were no errors */
   }
   adjustresults(L, nresults);

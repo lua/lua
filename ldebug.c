@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.45 2009/03/26 12:56:38 roberto Exp roberto $
+** $Id: ldebug.c,v 2.46 2009/04/17 14:28:06 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -35,9 +35,7 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name);
 
 static int currentpc (lua_State *L, CallInfo *ci) {
   if (!isLua(ci)) return -1;  /* function is not a Lua function? */
-  if (ci == L->ci)
-    ci->savedpc = L->savedpc;
-  return pcRel(ci->savedpc, ci_func(ci)->l.p);
+  return pcRel(ci->u.l.savedpc, ci_func(ci)->l.p);
 }
 
 
@@ -58,7 +56,7 @@ LUA_API int lua_sethook (lua_State *L, lua_Hook func, int mask, int count) {
     mask = 0;
     func = NULL;
   }
-  L->oldpc = L->savedpc;
+  L->oldpc = NULL;
   L->hook = func;
   L->basehookcount = count;
   resethookcount(L);

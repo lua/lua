@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.41 2009/04/08 18:04:33 roberto Exp roberto $
+** $Id: lstate.h,v 2.42 2009/04/17 14:28:06 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -81,11 +81,11 @@ typedef struct CallInfo {
   StkId func;  /* function index in the stack */
   StkId	top;  /* top for this function */
   struct CallInfo *previous, *next;  /* dynamic call link */
-  const Instruction *savedpc;
   short nresults;  /* expected number of results from a call */
   lu_byte callstatus;
   union {
     struct {  /* only for Lua functions */
+      const Instruction *savedpc;
       int tailcalls;  /* number of tail calls lost under this entry */
     } l;
     struct {  /* only for C functions */
@@ -165,7 +165,6 @@ struct lua_State {
   global_State *l_G;
   CallInfo *ci;  /* call info for current function */
   int nci;  /* number of total CallInfo structures linked */
-  const Instruction *savedpc;  /* `savedpc' of current function */
   const Instruction *oldpc;  /* last pc traced */
   StkId stack_last;  /* last free slot in the stack */
   StkId stack;  /* stack base */
