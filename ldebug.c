@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.46 2009/04/17 14:28:06 roberto Exp roberto $
+** $Id: ldebug.c,v 2.47 2009/04/17 22:00:01 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -33,14 +33,14 @@
 static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name);
 
 
-static int currentpc (lua_State *L, CallInfo *ci) {
+static int currentpc (CallInfo *ci) {
   if (!isLua(ci)) return -1;  /* function is not a Lua function? */
   return pcRel(ci->u.l.savedpc, ci_func(ci)->l.p);
 }
 
 
-static int currentline (lua_State *L, CallInfo *ci) {
-  int pc = currentpc(L, ci);
+static int currentline (CallInfo *ci) {
+  int pc = currentpc(ci);
   if (pc < 0)
     return -1;  /* only active lua functions have current-line information */
   else
@@ -111,7 +111,7 @@ static Proto *getluaproto (CallInfo *ci) {
 static const char *findlocal (lua_State *L, CallInfo *ci, int n) {
   const char *name;
   Proto *fp = getluaproto(ci);
-  if (fp && (name = luaF_getlocalname(fp, n, currentpc(L, ci))) != NULL)
+  if (fp && (name = luaF_getlocalname(fp, n, currentpc(ci))) != NULL)
     return name;  /* is a local variable in a Lua function */
   else {
     StkId limit = (ci == L->ci) ? L->top : ci->next->func;
@@ -207,7 +207,7 @@ static int auxgetinfo (lua_State *L, const char *what, lua_Debug *ar,
         break;
       }
       case 'l': {
-        ar->currentline = (ci) ? currentline(L, ci) : -1;
+        ar->currentline = (ci) ? currentline(ci) : -1;
         break;
       }
       case 'u': {
@@ -477,7 +477,7 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int stackpos,
                                const char **name) {
   if (isLua(ci)) {  /* a Lua function? */
     Proto *p = ci_func(ci)->l.p;
-    int pc = currentpc(L, ci);
+    int pc = currentpc(ci);
     Instruction i;
     *name = luaF_getlocalname(p, stackpos+1, pc);
     if (*name)  /* is a local? */
@@ -526,7 +526,7 @@ static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
   if ((isLua(ci) && ci->u.l.tailcalls > 0) || !isLua(ci->previous))
     return NULL;  /* calling function is not Lua (or is unknown) */
   ci = ci->previous;  /* calling function */
-  i = ci_func(ci)->l.p->code[currentpc(L, ci)];
+  i = ci_func(ci)->l.p->code[currentpc(ci)];
   switch (GET_OPCODE(i)) {
     case OP_CALL:
     case OP_TAILCALL:
@@ -610,7 +610,7 @@ static void addinfo (lua_State *L, const char *msg) {
   CallInfo *ci = L->ci;
   if (isLua(ci)) {  /* is Lua code? */
     char buff[LUA_IDSIZE];  /* add file:line information */
-    int line = currentline(L, ci);
+    int line = currentline(ci);
     luaO_chunkid(buff, getstr(getluaproto(ci)->source), LUA_IDSIZE);
     luaO_pushfstring(L, "%s:%d: %s", buff, line, msg);
   }
