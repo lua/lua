@@ -1880,8 +1880,8 @@ patch = [[
 +++ lundump.c   2008/04/04 19:51:41     2.7.1.4
 @@ -1,5 +1,5 @@
  /*
--** $Id: bugs,v 1.97 2008/07/11 17:27:41 roberto Exp roberto $
-+** $Id: bugs,v 1.97 2008/07/11 17:27:41 roberto Exp roberto $
+-** $Id: bugs,v 1.98 2008/08/06 13:32:45 roberto Exp roberto $
++** $Id: bugs,v 1.98 2008/08/06 13:32:45 roberto Exp roberto $
  ** load precompiled Lua chunks
  ** See Copyright Notice in lua.h
  */
@@ -2074,6 +2074,34 @@ patch = [[
 -#define svalue(o)       getstr(tsvalue(o))
 +#define svalue(o)       getstr(rawtsvalue(o))
  
+]],
+}
+
+
+-----------------------------------------------------------------
+-- Lua 5.1.4
+
+Bug{
+what = [[malicious zero-length string in binary code may segfault Lua]],
+report = [["Peter Cawley, on 2008/09/01]],
+since = [[5.1]],
+example = [[
+loadstring(('').dump(function()X''end):gsub('\2%z%z%zX','\0\0\0'))()
+]],
+patch = [[
+]],
+}
+
+
+Bug{
+what = [[wrong code generation for some particular boolean expressions]],
+report = [["Brian Kelley, on 2009/04/15]],
+since = [[5.0]],
+example = [[
+print(((1 or false) and true) or false)   --> 1
+-- should be 'true'
+]],
+patch = [[
 ]],
 }
 
