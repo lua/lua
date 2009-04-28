@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.52 2009/04/17 14:40:13 roberto Exp roberto $
+** $Id: lstate.c,v 2.53 2009/04/17 22:00:01 roberto Exp roberto $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -75,9 +75,12 @@ void luaE_freeCI (lua_State *L) {
 
 
 static void stack_init (lua_State *L1, lua_State *L) {
+  int i;
   /* initialize stack array */
   L1->stack = luaM_newvector(L, BASIC_STACK_SIZE + EXTRA_STACK, TValue);
   L1->stacksize = BASIC_STACK_SIZE + EXTRA_STACK;
+  for (i = 0; i < BASIC_STACK_SIZE + EXTRA_STACK; i++)
+    setnilvalue(L1->stack + i);  /* erase new stack */
   L1->top = L1->stack;
   L1->stack_last = L1->stack+(L1->stacksize - EXTRA_STACK)-1;
   /* initialize first ci */

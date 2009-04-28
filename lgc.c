@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.49 2009/03/10 17:14:37 roberto Exp roberto $
+** $Id: lgc.c,v 2.50 2009/04/17 14:28:06 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -379,34 +379,17 @@ static void traverseclosure (global_State *g, Closure *cl) {
 }
 
 
-static void checkstacksize (lua_State *L, StkId max) {
-  /* should not change the stack during an emergency gc cycle */
-  if (G(L)->gckind == KGC_EMERGENCY)
-    return;  /* do not touch the stack */
-  else {
-    int s_used = cast_int(max - L->stack) + 1;  /* part of stack in use */
-    if (2*s_used < (L->stacksize - EXTRA_STACK))
-      luaD_reallocstack(L, 2*s_used);
-  }
-}
-
-
 static void traversestack (global_State *g, lua_State *L) {
-  StkId o, lim;
-  CallInfo *ci;
+  StkId o;
   if (L->stack == NULL)
     return;  /* stack not completely built yet */
-  markvalue(g, gt(L));
-  lim = L->top;
-  for (ci = L->ci; ci != NULL; ci = ci->previous) {
-    lua_assert(ci->top <= L->stack_last);
-    if (lim < ci->top) lim = ci->top;
-  }
+  markvalue(g, gt(L));  /* mark global table */
   for (o = L->stack; o < L->top; o++)
     markvalue(g, o);
-  for (; o <= lim; o++)
-    setnilvalue(o);
-  checkstacksize(L, lim);
+  if (g->gcstate == GCSatomic) {  /* final traversal? */
+    for (; o <= L->stack_last; o++)  /* clear not-marked stack slice */
+      setnilvalue(o);
+  }
 }
 
 
@@ -542,7 +525,35 @@ static void freeobj (lua_State *L, GCObject *o) {
 }
 
 
+static int stackinuse (lua_State *L) {
+  CallInfo *ci;
+  StkId lim = L->top;
+  for (ci = L->ci; ci != NULL; ci = ci->previous) {
+    lua_assert(ci->top <= L->stack_last);
+    if (lim < ci->top) lim = ci->top;
+  }
+  return cast_int(lim - L->stack) + 1;  /* part of stack in use */
+}
+
+
 #define sweepwholelist(L,p)	sweeplist(L,p,MAX_LUMEM)
+static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count);
+
+
+static void sweepthread (lua_State *L, lua_State *L1, int alive) {
+  if (L1->stack == NULL) return;  /* stack not completely built yet */
+  sweepwholelist(L, &L1->openupval);  /* sweep open upvalues */
+  if (L1->nci < LUAI_MAXCALLS)  /* not handling stack overflow? */
+    luaE_freeCI(L1);  /* free extra CallInfo slots */
+  /* should not change the stack during an emergency gc cycle */
+  if (alive && G(L)->gckind != KGC_EMERGENCY) {
+    int goodsize = 5 * stackinuse(L1) / 4 + LUA_MINSTACK;
+    if ((L1->stacksize - EXTRA_STACK) > goodsize)
+      luaD_reallocstack(L1, goodsize);
+    else 
+      condhardstacktests(luaD_reallocstack(L, L1->stacksize - EXTRA_STACK - 1));
+  }
+}
 
 
 static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
@@ -550,12 +561,10 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
   global_State *g = G(L);
   int deadmask = otherwhite(g);
   while ((curr = *p) != NULL && count-- > 0) {
-    if (ttisthread(gch(curr))) {
-      lua_State *L1 = gco2th(curr);
-      sweepwholelist(L, &L1->openupval);  /* sweep open upvalues */
-      luaE_freeCI(L1);  /* free extra CallInfo slots */
-    }
-    if ((gch(curr)->marked ^ WHITEBITS) & deadmask) {  /* not dead? */
+    int alive = (gch(curr)->marked ^ WHITEBITS) & deadmask;
+    if (ttisthread(gch(curr)))
+      sweepthread(L, gco2th(curr), alive);
+    if (alive) {
       lua_assert(!isdead(g, curr) || testbit(gch(curr)->marked, FIXEDBIT));
       makewhite(g, curr);  /* make it white (for next cycle) */
       p = &gch(curr)->next;
@@ -704,6 +713,7 @@ static void atomic (lua_State *L) {
   global_State *g = G(L);
   size_t udsize;  /* total size of userdata to be finalized */
   /* remark occasional upvalues of (maybe) dead threads */
+  g->gcstate = GCSatomic;
   remarkupvals(g);
   /* traverse objects cautch by write barrier and by 'remarkupvals' */
   propagateall(g);

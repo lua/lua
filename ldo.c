@@ -1,5 +1,5 @@
 /*
-** $Id: ldo.c,v 2.61 2009/04/17 22:00:01 roberto Exp roberto $
+** $Id: ldo.c,v 2.62 2009/04/26 21:55:35 roberto Exp roberto $
 ** Stack and Call structure of Lua
 ** See Copyright Notice in lua.h
 */
@@ -131,9 +131,12 @@ static void correctstack (lua_State *L, TValue *oldstack) {
 
 void luaD_reallocstack (lua_State *L, int newsize) {
   TValue *oldstack = L->stack;
+  int lim = L->stacksize;
   int realsize = newsize + 1 + EXTRA_STACK;
   lua_assert(L->stack_last - L->stack == L->stacksize - EXTRA_STACK - 1);
   luaM_reallocvector(L, L->stack, L->stacksize, realsize, TValue);
+  for (; lim < realsize; lim++)
+    setnilvalue(L->stack + lim); /* erase new segment */
   L->stacksize = realsize;
   L->stack_last = L->stack+newsize;
   correctstack(L, oldstack);
@@ -182,14 +185,13 @@ static StkId adjust_varargs (lua_State *L, Proto *p, int actual) {
   int i;
   int nfixargs = p->numparams;
   StkId base, fixed;
-  for (; actual < nfixargs; ++actual)
-    setnilvalue(L->top++);
+  lua_assert(actual >= nfixargs);
   /* move fixed parameters to final position */
   fixed = L->top - actual;  /* first fixed argument */
   base = L->top;  /* final position of first argument */
   for (i=0; i<nfixargs; i++) {
-    setobjs2s(L, L->top++, fixed+i);
-    setnilvalue(fixed+i);
+    setobjs2s(L, L->top++, fixed + i);
+    setnilvalue(fixed + i);
   }
   return base;
 }
@@ -227,17 +229,19 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
   L->ci->nresults = nresults;
   if (!cl->isC) {  /* Lua function? prepare its call */
     CallInfo *ci;
-    StkId st, base;
+    int nparams, nargs;
+    StkId base;
     Proto *p = cl->p;
     luaD_checkstack(L, p->maxstacksize);
     func = restorestack(L, funcr);
+    nargs = cast_int(L->top - func) - 1;  /* number of real arguments */
+    nparams = p->numparams;  /* number of expected parameters */
+    for (; nargs < nparams; nargs++)
+      setnilvalue(L->top++);  /* complete missing arguments */
     if (!p->is_vararg)  /* no varargs? */
       base = func + 1;
-    else {  /* vararg function */
-      int nargs = cast_int(L->top - func) - 1;
+    else  /* vararg function */
       base = adjust_varargs(L, p, nargs);
-      func = restorestack(L, funcr);  /* previous call may change the stack */
-    }
     ci = next_ci(L);  /* now 'enter' new function */
     ci->func = func;
     L->base = ci->base = base;
@@ -246,8 +250,6 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     ci->u.l.savedpc = p->code;  /* starting point */
     ci->u.l.tailcalls = 0;
     ci->callstatus = CIST_LUA;
-    for (st = L->top; st < ci->top; st++)
-      setnilvalue(st);
     L->top = ci->top;
     if (L->hookmask & LUA_MASKCALL) {
       ci->u.l.savedpc++;  /* hooks assume 'pc' is already incremented */
