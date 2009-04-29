@@ -1,5 +1,5 @@
 /*
-** $Id: lgc.c,v 2.50 2009/04/17 14:28:06 roberto Exp roberto $
+** $Id: lgc.c,v 2.51 2009/04/28 19:04:36 roberto Exp roberto $
 ** Garbage Collector
 ** See Copyright Notice in lua.h
 */
@@ -589,8 +589,12 @@ static GCObject **sweeplist (lua_State *L, GCObject **p, lu_mem count) {
 
 static void checkSizes (lua_State *L) {
   global_State *g = G(L);
-  if (g->strt.nuse < cast(lu_int32, g->strt.size))
-    luaS_resize(L, 1 << luaO_ceillog2(g->strt.nuse));
+  if (g->strt.nuse < cast(lu_int32, g->strt.size)) {
+    /* size could be the smaller power of 2 larger than 'nuse' */
+    int size = 1 << luaO_ceillog2(g->strt.nuse);
+    if (size < g->strt.size)  /* current table too large? */
+      luaS_resize(L, size);  /* shrink it */
+  }
   luaZ_freebuffer(L, &g->buff);
 }
 
