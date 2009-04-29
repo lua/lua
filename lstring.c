@@ -1,5 +1,5 @@
 /*
-** $Id: lstring.c,v 2.11 2008/02/19 18:55:09 roberto Exp roberto $
+** $Id: lstring.c,v 2.12 2009/04/17 14:40:13 roberto Exp roberto $
 ** String table (keeps all strings handled by Lua)
 ** See Copyright Notice in lua.h
 */
@@ -20,30 +20,32 @@
 
 
 void luaS_resize (lua_State *L, int newsize) {
-  GCObject **newhash;
-  stringtable *tb;
   int i;
+  stringtable *tb = &G(L)->strt;
   if (G(L)->gcstate == GCSsweepstring)
     return;  /* cannot resize during GC traverse */
-  newhash = luaM_newvector(L, newsize, GCObject *);
-  tb = &G(L)->strt;
-  for (i=0; i<newsize; i++) newhash[i] = NULL;
+  if (newsize > tb->size) {
+    luaM_reallocvector(L, tb->hash, tb->size, newsize, GCObject *);
+    for (i = tb->size; i < newsize; i++) tb->hash[i] = NULL;
+  }
   /* rehash */
   for (i=0; i<tb->size; i++) {
     GCObject *p = tb->hash[i];
+    tb->hash[i] = NULL;
     while (p) {  /* for each node in the list */
       GCObject *next = gch(p)->next;  /* save next */
-      unsigned int h = gco2ts(p)->hash;
-      int h1 = lmod(h, newsize);  /* new position */
-      lua_assert(cast_int(h%newsize) == lmod(h, newsize));
-      gch(p)->next = newhash[h1];  /* chain it */
-      newhash[h1] = p;
+      unsigned int h = lmod(gco2ts(p)->hash, newsize);  /* new position */
+      gch(p)->next = tb->hash[h];  /* chain it */
+      tb->hash[h] = p;
       p = next;
     }
   }
-  luaM_freearray(L, tb->hash, tb->size);
+  if (newsize < tb->size) {
+    /* shrinking slice must be empty */
+    lua_assert(tb->hash[newsize] == NULL && tb->hash[tb->size - 1] == NULL);
+    luaM_reallocvector(L, tb->hash, tb->size, newsize, GCObject *);
+  }
   tb->size = newsize;
-  tb->hash = newhash;
 }
 
 
@@ -84,12 +86,12 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
     TString *ts = rawgco2ts(o);
     if (h == ts->tsv.hash && ts->tsv.len == l &&
                              (memcmp(str, getstr(ts), l) == 0)) {
-      /* string may be dead */
-      if (isdead(G(L), o)) changewhite(o);
+      if (isdead(G(L), o))  /* string is dead (but was not collected yet)? */
+        changewhite(o);  /* resurrect it */
       return ts;
     }
   }
-  return newlstr(L, str, l, h);  /* not found */
+  return newlstr(L, str, l, h);  /* not found; create a new string */
 }
 
 
