@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.47 2009/04/17 22:00:01 roberto Exp roberto $
+** $Id: ldebug.c,v 2.48 2009/04/27 18:58:31 roberto Exp roberto $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -264,89 +264,33 @@ LUA_API int lua_getinfo (lua_State *L, const char *what, lua_Debug *ar) {
 
 /*
 ** {======================================================
-** Symbolic Execution and code checker
+** Symbolic Execution
 ** =======================================================
 */
-
-#define check(x)		if (!(x)) return 0;
-
-#define checkreg(pt,reg)	check((reg) < (pt)->maxstacksize)
-
-
-
-static int precheck (const Proto *pt) {
-  check(pt->maxstacksize <= MAXSTACK);
-  check(pt->numparams <= pt->maxstacksize);
-  check(pt->sizeupvalues == pt->nups || pt->sizeupvalues == 0);
-  check(pt->sizelineinfo == pt->sizecode || pt->sizelineinfo == 0);
-  check(pt->sizecode > 0 && GET_OPCODE(pt->code[pt->sizecode-1]) == OP_RETURN);
-  return 1;
-}
-
-
-#define checkopenop(pt,pc)	luaG_checkopenop((pt)->code[(pc)+1])
-
-int luaG_checkopenop (Instruction i) {
-  switch (GET_OPCODE(i)) {
-    case OP_CALL:
-    case OP_TAILCALL:
-    case OP_RETURN:
-    case OP_SETLIST: {
-      check(GETARG_B(i) == 0);
-      return 1;
-    }
-    default: return 0;  /* invalid instruction after an open call */
-  }
-}
-
-
-static int checkArgMode (const Proto *pt, int r, enum OpArgMask mode) {
-  switch (mode) {
-    case OpArgN: check(r == 0); break;
-    case OpArgU: break;
-    case OpArgR: checkreg(pt, r); break;
-    case OpArgK:
-      check(ISK(r) ? INDEXK(r) < pt->sizek : r < pt->maxstacksize);
-      break;
-  }
-  return 1;
-}
 
 
 static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
   int pc;
   int last;  /* stores position of last instruction that changed `reg' */
   last = pt->sizecode-1;  /* points to final return (a `neutral' instruction) */
-  check(precheck(pt));
   for (pc = 0; pc < lastpc; pc++) {
     Instruction i = pt->code[pc];
     OpCode op = GET_OPCODE(i);
     int a = GETARG_A(i);
     int b = 0;
     int c = 0;
-    check(op < NUM_OPCODES);
     switch (getOpMode(op)) {
       case iABC: {
-        checkreg(pt, a);
         b = GETARG_B(i);
         c = GETARG_C(i);
-        check(checkArgMode(pt, b, getBMode(op)));
-        check(checkArgMode(pt, c, getCMode(op)));
         break;
       }
       case iABx: {
-        checkreg(pt, a);
         b = GETARG_Bx(i);
-        if (getBMode(op) == OpArgK) check(b < pt->sizek);
         break;
       }
       case iAsBx: {
-        checkreg(pt, a);
         b = GETARG_sBx(i);
-        if (getBMode(op) == OpArgR) {
-          int dest = pc+1+b;
-          check(0 <= dest && dest < pt->sizecode);
-        }
         break;
       }
       case iAx: break;
@@ -354,49 +298,23 @@ static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
     if (testAMode(op)) {
       if (a == reg) last = pc;  /* change register `a' */
     }
-    if (testTMode(op))
-      check(GET_OPCODE(pt->code[pc+1]) == OP_JMP);
     switch (op) {
-      case OP_LOADBOOL: {
-        check(c == 0 || pc+2 < pt->sizecode);  /* check its jump */
-        break;
-      }
       case OP_LOADNIL: {
         if (a <= reg && reg <= b)
           last = pc;  /* set registers from `a' to `b' */
         break;
       }
-      case OP_GETUPVAL:
-      case OP_SETUPVAL: {
-        check(b < pt->nups);
-        break;
-      }
-      case OP_GETGLOBAL:
-      case OP_SETGLOBAL: {
-        check(ttisstring(&pt->k[b]));
-        break;
-      }
       case OP_SELF: {
-        checkreg(pt, a+1);
         if (reg == a+1) last = pc;
         break;
       }
-      case OP_CONCAT: {
-        check(b < c);  /* at least two operands */
-        break;
-      }
       case OP_TFORCALL: {
-        check(c >= 1);  /* at least one result (control variable) */
-        checkreg(pt, a+2+c);  /* space for results */
-        check(GET_OPCODE(pt->code[pc+1]) == OP_TFORLOOP);
         if (reg >= a+2) last = pc;  /* affect all regs above its base */
         break;
       }
       case OP_TFORLOOP:
       case OP_FORLOOP:
       case OP_FORPREP:
-        checkreg(pt, a+3);
-        /* go through */
       case OP_JMP: {
         int dest = pc+1+b;
         /* not full check and jump is forward and do not skip `lastpc'? */
@@ -406,46 +324,16 @@ static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
       }
       case OP_CALL:
       case OP_TAILCALL: {
-        if (b != 0) {
-          checkreg(pt, a+b-1);
-        }
-        c--;  /* c = num. returns */
-        if (c == LUA_MULTRET) {
-          check(checkopenop(pt, pc));
-        }
-        else if (c != 0)
-          checkreg(pt, a+c-1);
         if (reg >= a) last = pc;  /* affect all registers above base */
         break;
       }
-      case OP_RETURN: {
-        b--;  /* b = num. returns */
-        if (b > 0) checkreg(pt, a+b-1);
-        break;
-      }
-      case OP_SETLIST: {
-        if (b > 0) checkreg(pt, a + b);
-        if (c == 0) check(GET_OPCODE(pt->code[pc + 1]) == OP_EXTRAARG);
-        break;
-      }
       case OP_CLOSURE: {
-        int nup, j;
-        check(b < pt->sizep);
-        nup = pt->p[b]->nups;
-        check(pc + nup < pt->sizecode);
-        for (j = 1; j <= nup; j++) {
-          OpCode op1 = GET_OPCODE(pt->code[pc + j]);
-          check(op1 == OP_GETUPVAL || op1 == OP_MOVE);
-        }
-        if (reg != NO_REG)  /* tracing? */
-          pc += nup;  /* do not 'execute' these pseudo-instructions */
+        int nup = pt->p[b]->nups;
+        pc += nup;  /* do not 'execute' pseudo-instructions */
         break;
       }
       case OP_VARARG: {
-        check(pt->is_vararg);
-        b--;
-        if (b == LUA_MULTRET) check(checkopenop(pt, pc));
-        checkreg(pt, a+b-1);
+        b--;  /* ??? */
         break;
       }
       default: break;
@@ -458,11 +346,6 @@ static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
 #undef checkreg
 
 /* }====================================================== */
-
-
-int luaG_checkcode (const Proto *pt) {
-  return (symbexec(pt, pt->sizecode, NO_REG) != 0);
-}
 
 
 static const char *kname (Proto *p, int c) {

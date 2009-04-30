@@ -1,5 +1,5 @@
 /*
-** $Id: lparser.c,v 2.60 2008/10/30 15:39:30 roberto Exp roberto $
+** $Id: lparser.c,v 2.61 2009/03/26 12:56:38 roberto Exp roberto $
 ** Lua Parser
 ** See Copyright Notice in lua.h
 */
@@ -376,7 +376,6 @@ static void close_func (LexState *ls) {
   f->sizelocvars = fs->nlocvars;
   luaM_reallocvector(L, f->upvalues, f->sizeupvalues, f->nups, TString *);
   f->sizeupvalues = f->nups;
-  lua_assert(luaG_checkcode(f));
   lua_assert(fs->bl == NULL);
   ls->fs = fs->prev;
   L->top -= 2;  /* remove table and prototype from the stack */

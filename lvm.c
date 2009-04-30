@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.85 2009/04/17 14:28:06 roberto Exp roberto $
+** $Id: lvm.c,v 2.86 2009/04/17 22:00:01 roberto Exp roberto $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -468,7 +468,6 @@ void luaV_execute (lua_State *L) {
     ra = RA(i);
     lua_assert(base == ci->base && base == L->base);
     lua_assert(base <= L->top && L->top <= L->stack + L->stacksize);
-    lua_assert(L->top == ci->top || luaG_checkopenop(i));
     switch (GET_OPCODE(i)) {
       case OP_MOVE: {
         setobjs2s(L, ra, RB(i));
