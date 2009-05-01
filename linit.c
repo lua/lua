@@ -1,5 +1,5 @@
 /*
-** $Id: linit.c,v 1.15 2007/06/22 16:59:11 roberto Exp roberto $
+** $Id: linit.c,v 1.16 2008/01/02 16:16:28 roberto Exp roberto $
 ** Initialization of libraries for lua.c
 ** See Copyright Notice in lua.h
 */
@@ -15,7 +15,7 @@
 
 
 /*
-** these libs are preloaded in Lua and are readily available to any program
+** these libs are loaded by lua.c and are readily available to any program
 */
 static const luaL_Reg lualibs[] = {
   {"_G", luaopen_base},
@@ -30,7 +30,7 @@ static const luaL_Reg lualibs[] = {
 
 
 /*
-** these libs must be required before used
+** these libs are preloaded and must be required before used
 */
 static const luaL_Reg luareqlibs[] = {
   {LUA_DBLIBNAME, luaopen_debug},
@@ -39,12 +39,14 @@ static const luaL_Reg luareqlibs[] = {
 
 
 LUALIB_API void luaL_openlibs (lua_State *L) {
+  /* call open functions from 'lualibs' */
   const luaL_Reg *lib = lualibs;
   for (; lib->func; lib++) {
     lua_pushcfunction(L, lib->func);
     lua_pushstring(L, lib->name);
     lua_call(L, 1, 0);
   }
+  /* add open functions from 'luareqlibs' into 'package.preload' table */
   lib = luareqlibs;
   luaL_findtable(L, LUA_GLOBALSINDEX, "package.preload", 0);
   for (; lib->func; lib++) {
