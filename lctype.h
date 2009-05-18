@@ -1,5 +1,5 @@
 /*
-** $Id: lctype.h,v 1.4 2009/03/11 13:27:32 roberto Exp roberto $
+** $Id: lctype.h,v 1.5 2009/03/26 18:53:52 roberto Exp roberto $
 ** 'ctype' functions for Lua
 ** See Copyright Notice in lua.h
 */
@@ -18,6 +18,7 @@
 #define PRINTBIT	2
 #define SPACEBIT	3
 #define XDIGITBIT	4
+#define UPPERBIT	5
 
 
 #define MASK(B)		(1 << (B))
@@ -33,6 +34,7 @@
 */
 #define lislalpha(c)	testprop(c, MASK(ALPHABIT))
 #define lislalnum(c)	testprop(c, (MASK(ALPHABIT) | MASK(DIGITBIT)))
+#define lisupper(c)	testprop(c, MASK(UPPERBIT))
 #define lisdigit(c)	testprop(c, MASK(DIGITBIT))
 #define lisspace(c)	testprop(c, MASK(SPACEBIT))
 #define lisprint(c)	testprop(c, MASK(PRINTBIT))
