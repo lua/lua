@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.31 2009/02/19 17:18:25 roberto Exp roberto $
+** $Id: llex.c,v 2.32 2009/03/11 13:27:32 roberto Exp roberto $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -29,7 +29,6 @@
 
 
 
-
 #define currIsNewline(ls)	(ls->current == '\n' || ls->current == '\r')
 
 
@@ -52,14 +51,14 @@ static void lexerror (LexState *ls, const char *msg, int token);
 
 static void save (LexState *ls, int c) {
   Mbuffer *b = ls->buff;
-  if (b->n + 1 > b->buffsize) {
+  if (luaZ_bufflen(b) + 1 > luaZ_sizebuffer(b)) {
     size_t newsize;
-    if (b->buffsize >= MAX_SIZET/2)
+    if (luaZ_sizebuffer(b) >= MAX_SIZET/2)
       lexerror(ls, "lexical element too long", 0);
-    newsize = b->buffsize * 2;
+    newsize = luaZ_sizebuffer(b) * 2;
     luaZ_resizebuffer(ls->L, b, newsize);
   }
-  b->buffer[b->n++] = cast(char, c);
+  b->buffer[luaZ_bufflen(b)++] = cast(char, c);
 }
 
 
@@ -264,6 +263,48 @@ static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
 }
 
 
+static int hexavalue (int c) {
+  if (lisdigit(c)) return c - '0';
+  else if (lisupper(c)) return c - 'A' + 10;
+  else return c - 'a' + 10;
+}
+
+
+static int readhexaesc (LexState *ls) {
+  int c1, c2 = EOZ;
+  if (!lisxdigit(c1 = next(ls)) || !lisxdigit(c2 = next(ls))) {
+    luaZ_resetbuffer(ls->buff);  /* prepare error message */
+    save(ls, '\\'); save(ls, 'x');
+    if (c1 != EOZ) save(ls, c1);
+    if (c2 != EOZ) save(ls, c2);
+    lexerror(ls, "hexadecimal digit expected", TK_STRING);
+  }
+  return (hexavalue(c1) << 4) + hexavalue(c2);
+}
+
+
+static int readdecesc (LexState *ls) {
+  int c1 = ls->current, c2, c3;
+  int c = c1 - '0';
+  if (lisdigit(c2 = next(ls))) {
+    c = 10*c + c2 - '0';
+    if (lisdigit(c3 = next(ls))) {
+      c = 10*c + c3 - '0';
+      if (c > UCHAR_MAX) {
+        luaZ_resetbuffer(ls->buff);  /* prepare error message */
+        save(ls, '\\');
+        save(ls, c1); save(ls, c2); save(ls, c3);
+        lexerror(ls, "decimal escape too large", TK_STRING);
+      }
+      return c;
+    }
+  }
+  /* else, has read one character that was not a digit */
+  zungetc(ls->z);  /* return it to input stream */
+  return c;
+}
+
+
 static void read_string (LexState *ls, int del, SemInfo *seminfo) {
   save_and_next(ls);
   while (ls->current != del) {
@@ -275,8 +316,8 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
       case '\r':
         lexerror(ls, "unfinished string", TK_STRING);
         continue;  /* to avoid warnings */
-      case '\\': {
-        int c;
+      case '\\': {  /* escape sequences */
+        int c;  /* final character to be saved */
         next(ls);  /* do not save the `\' */
         switch (ls->current) {
           case 'a': c = '\a'; break;
@@ -286,28 +327,20 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
           case 'r': c = '\r'; break;
           case 't': c = '\t'; break;
           case 'v': c = '\v'; break;
+          case 'x': c = readhexaesc(ls); break;
           case '\n':
           case '\r': save(ls, '\n'); inclinenumber(ls); continue;
           case EOZ: continue;  /* will raise an error next loop */
           default: {
             if (!lisdigit(ls->current))
-              save_and_next(ls);  /* handles \\, \", \', and \? */
-            else {  /* \xxx */
-              int i = 0;
-              c = 0;
-              do {
-                c = 10*c + (ls->current-'0');
-                next(ls);
-              } while (++i<3 && lisdigit(ls->current));
-              if (c > UCHAR_MAX)
-                lexerror(ls, "escape sequence too large", TK_STRING);
-              save(ls, c);
-            }
-            continue;
+              c = ls->current;  /* handles \\, \", \', and \? */
+            else  /* digital escape \ddd */
+              c = readdecesc(ls);
+            break;
           }
         }
-        save(ls, c);
         next(ls);
+        save(ls, c);
         continue;
       }
       default:
